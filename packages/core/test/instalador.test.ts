@@ -195,4 +195,50 @@ describe('Instalador', () => {
     expect(await inst.instalado('nginx', 'x')).toBe(false);
     await inst.desinstalar('nginx', 'no-existe');
   });
+
+  it('si el cambio de PHP falla restaura lo anterior y reporta error', async () => {
+    const z1 = zip({ 'php-cgi.exe': 'v1' });
+    const z2 = zip({ 'php-cgi.exe': 'v2' });
+    const v = (z: Buffer, version: string): VersionDisponible => ({
+      servicio: 'php',
+      version,
+      rama: '8.4',
+      url: 'https://ejemplo.test/php.zip',
+      sha256: sha(z),
+      formato: 'zip',
+    });
+    await new Instalador(rutas, eventos, fetchDe(z1)).instalar(v(z1, '8.4.26'));
+    progreso.length = 0;
+    const { rename } = await import('node:fs/promises');
+    let n = 0;
+    const inst = new Instalador(rutas, eventos, fetchDe(z2), {
+      renombrar: async (de, a) => {
+        n++;
+        if (n === 2) throw new Error('bloqueado');
+        await rename(de, a);
+      },
+    });
+    await expect(inst.instalar(v(z2, '8.4.27-1'))).rejects.toThrow(
+      /se restauró la versión anterior/,
+    );
+    expect(await readFile(path.join(rutas.bin('php', '8.4'), 'php-cgi.exe'), 'utf8')).toBe('v1');
+    expect(progreso.some((p) => p.fase === 'listo')).toBe(false);
+    expect(progreso.at(-1)?.fase).toBe('error');
+    expect(await readdir(rutas.tmp())).toEqual([]);
+  });
+
+  it('corta la descarga si no llegan datos', async () => {
+    const colgado = (() =>
+      Promise.resolve(
+        new Response(new ReadableStream<Uint8Array>({ start() {} }), {
+          headers: { 'content-length': '10' },
+        }),
+      )) as unknown as typeof fetch;
+    const inst = new Instalador(rutas, eventos, colgado, { tiempoSinDatosMs: 50 });
+    await expect(inst.instalar(vNginx(nginxZip))).rejects.toThrow(
+      'La descarga se detuvo: sin datos durante 0 s',
+    );
+    expect(progreso.at(-1)).toMatchObject({ fase: 'error' });
+    expect(await readdir(rutas.tmp())).toEqual([]);
+  });
 });

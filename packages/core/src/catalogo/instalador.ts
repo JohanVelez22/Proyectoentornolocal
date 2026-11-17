@@ -23,6 +23,13 @@ const EJECUTABLE: Record<ServicioInstalable, string> = {
   php: 'php-cgi.exe',
   cloudflared: 'cloudflared.exe',
 };
+export interface OpcionesInstalador {
+  /** Corta la descarga si no llegan bytes durante este tiempo. Por defecto 60000. */
+  tiempoSinDatosMs?: number;
+  /** Inyectable para pruebas. */
+  renombrar?: (de: string, a: string) => Promise<void>;
+}
+
 const MARCA = '.pel-version';
 const MSG_HASH = 'La descarga no coincide con la huella publicada';
 
@@ -31,6 +38,7 @@ export class Instalador {
     private readonly rutas: Rutas,
     private readonly eventos: Eventos<EventosNucleo>,
     private readonly f: typeof fetch = fetch,
+    private readonly opciones: OpcionesInstalador = {},
   ) {}
 
   /** Carpeta de instalación: PHP usa la rama, el resto la versión completa. */
@@ -99,6 +107,8 @@ export class Instalador {
     const stage = path.join(tmp, id);
     const previo = path.join(tmp, `${id}-previo`);
     let reemplazado = false;
+    let conservarPrevio = false;
+    const renombrar = this.opciones.renombrar ?? rename;
     try {
       await mkdir(tmp, { recursive: true });
       const hash = await this.descargar(v, archivo);
@@ -124,14 +134,26 @@ export class Instalador {
 
       await mkdir(path.dirname(destino), { recursive: true });
       if (existsSync(destino)) {
-        await rename(destino, previo);
+        await renombrar(destino, previo);
         reemplazado = true;
       }
       try {
-        await rename(origen, destino);
+        await renombrar(origen, destino);
       } catch (e) {
-        if (reemplazado) await rename(previo, destino).catch(() => undefined);
-        reemplazado = false;
+        if (reemplazado) {
+          const restaurado = await renombrar(previo, destino).then(
+            () => true,
+            () => false,
+          );
+          if (restaurado) reemplazado = false;
+          else conservarPrevio = true;
+          const detalle = e instanceof Error ? e.message : String(e);
+          throw new Error(
+            restaurado
+              ? `No se pudo reemplazar ${v.servicio} ${clave}; se restauró la versión anterior: ${detalle}`
+              : `No se pudo reemplazar ${v.servicio} ${clave} y tampoco restaurar la anterior (copia en ${previo}): ${detalle}`,
+          );
+        }
         if (await this.instalado(v.servicio, clave)) {
           this.emitir(v, 'listo', 100);
           return; // una instalación concurrente ganó
@@ -146,26 +168,49 @@ export class Instalador {
     } finally {
       await rm(archivo, { force: true }).catch(() => undefined);
       await rm(stage, { recursive: true, force: true }).catch(() => undefined);
-      if (reemplazado) await rm(previo, { recursive: true, force: true }).catch(() => undefined);
+      if (reemplazado && !conservarPrevio)
+        await rm(previo, { recursive: true, force: true }).catch(() => undefined);
     }
   }
 
   /** Descarga en streaming a `archivo` y devuelve el sha256 calculado. */
   private async descargar(v: VersionDisponible, archivo: string): Promise<string> {
-    const res = await this.f(v.url);
+    const limite = this.opciones.tiempoSinDatosMs ?? 60000;
+    const ctl = new AbortController();
+    let temporizador: NodeJS.Timeout | undefined;
+    const conLimite = <T>(p: Promise<T>): Promise<T> =>
+      new Promise<T>((resolve, reject) => {
+        temporizador = setTimeout(() => {
+          const e = new Error(
+            `La descarga se detuvo: sin datos durante ${Math.round(limite / 1000)} s`,
+          );
+          ctl.abort(e);
+          reject(e);
+        }, limite);
+        p.then(resolve, reject).finally(() => clearTimeout(temporizador));
+      });
+
+    const res = await conLimite(this.f(v.url, { signal: ctl.signal }));
     if (!res.ok || !res.body) {
       throw new Error(`No se pudo descargar ${v.servicio} ${v.version} (HTTP ${res.status})`);
     }
     const total = Number(res.headers.get('content-length') ?? 0);
     const hash = createHash('sha256');
     const fh = await open(archivo, 'w');
+    const lector = res.body.getReader();
     let recibido = 0;
     let ultimo = 0;
     try {
       this.emitir(v, 'descargando', 0);
-      for await (const trozo of res.body as unknown as AsyncIterable<Uint8Array>) {
+      for (;;) {
+        const { done, value: trozo } = await conLimite(lector.read());
+        if (done) break;
         hash.update(trozo);
-        await fh.write(trozo);
+        let desde = 0;
+        while (desde < trozo.length) {
+          const { bytesWritten } = await fh.write(trozo, desde, trozo.length - desde);
+          desde += bytesWritten;
+        }
         recibido += trozo.length;
         if (total > 0) {
           const pct = Math.min(99, Math.floor((recibido / total) * 100));
@@ -176,6 +221,7 @@ export class Instalador {
         }
       }
     } finally {
+      await lector.cancel().catch(() => undefined);
       await fh.close();
     }
     return hash.digest('hex');

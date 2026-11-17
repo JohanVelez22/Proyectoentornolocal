@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { listarVersiones, catalogo } from '../src/catalogo/catalogo';
+import { listarVersiones, catalogo, CatalogoSchema } from '../src/catalogo/catalogo';
 
 const releases = {
   '7.4': {
@@ -63,5 +63,15 @@ describe('catálogo', () => {
     await expect(listarVersiones('php', f2)).rejects.toThrow(
       /No se pudo consultar las versiones de php/,
     );
+  });
+
+  it('rechaza URLs http o de hosts no oficiales', () => {
+    const e = { ...catalogo.nginx[0] };
+    const prueba = (url: string) =>
+      CatalogoSchema.safeParse({ nginx: [{ ...e, url }], cloudflared: [] }).success;
+    expect(prueba('https://nginx.org/download/nginx-1.30.6.zip')).toBe(true);
+    expect(prueba('http://nginx.org/download/nginx-1.30.6.zip')).toBe(false);
+    expect(prueba('https://evil.example.com/nginx.zip')).toBe(false);
+    expect(prueba('https://nginx.org.evil.com/nginx.zip')).toBe(false);
   });
 });

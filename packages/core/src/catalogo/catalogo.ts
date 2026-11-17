@@ -15,15 +15,26 @@ export interface VersionDisponible {
   subcarpeta?: string;
 }
 
+const HOSTS_PERMITIDOS = ['nginx.org', 'github.com', 'windows.php.net', 'downloads.php.net'];
+
+export function urlOficial(texto: string): boolean {
+  try {
+    const u = new URL(texto);
+    return u.protocol === 'https:' && HOSTS_PERMITIDOS.includes(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
 const EntradaSchema = z.object({
   version: z.string().min(1),
-  url: z.url(),
+  url: z.string().refine(urlOficial, 'La URL debe ser https y de un host oficial'),
   sha256: z.string().regex(/^[0-9a-f]{64}$/),
   formato: z.enum(['zip', 'exe']),
   subcarpeta: z.string().optional(),
 });
 
-const CatalogoSchema = z.object({
+export const CatalogoSchema = z.object({
   nginx: z.array(EntradaSchema),
   cloudflared: z.array(EntradaSchema),
 });
@@ -62,11 +73,13 @@ async function versionesPhp(f: typeof fetch): Promise<VersionDisponible[]> {
     for (const variante of VARIANTES_PHP) {
       const zip = ZipPhpSchema.safeParse(entrada[variante]);
       if (!zip.success) continue;
+      const url = PHP_BASE + zip.data.zip.path;
+      if (!urlOficial(url)) continue;
       salida.push({
         servicio: 'php',
         version: entrada.version,
         rama,
-        url: PHP_BASE + zip.data.zip.path,
+        url,
         sha256: zip.data.zip.sha256,
         formato: 'zip',
       });
