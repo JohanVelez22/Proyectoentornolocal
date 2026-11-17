@@ -4,14 +4,16 @@ import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Ejecutor } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
-import type { Sitio } from '../tipos';
+import { SitioSchema, type Sitio } from '../tipos';
 
 function escaparRegex(t: string): string {
   return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function patronLinea(nombre: string): RegExp {
-  return new RegExp(`^(\\s*(?:export\\s+)?${escaparRegex(nombre)}\\s*=\\s*)(.*)$`);
+  return new RegExp(
+    `^((?:\\xEF\\xBB\\xBF)?\\s*(?:export\\s+)?${escaparRegex(nombre)}\\s*=\\s*)(.*)$`,
+  );
 }
 
 function separar(linea: string): { cuerpo: string; fin: string } {
@@ -99,6 +101,8 @@ interface EstadoPrevio {
   lineaOriginal: string | null;
   /** sha256 del .env tal como lo dejó aplicar (para saber si el usuario lo editó). */
   hashAplicado?: string;
+  /** Datos del sitio para restaurar aunque ya no exista en la configuración. */
+  sitio?: { carpeta: string; urlBaseVar: string; tipo: Sitio['tipo']; php: string | null };
 }
 
 const sha = (b: Buffer): string => createHash('sha256').update(b).digest('hex');
@@ -167,7 +171,12 @@ export class UrlBase {
       }
       await mkdir(path.dirname(estado), { recursive: true });
       await copyFile(env, path.join(s.carpeta, '.env.pel-respaldo'));
-      previo = { existia, valor, lineaOriginal };
+      previo = {
+        existia,
+        valor,
+        lineaOriginal,
+        sitio: { carpeta: s.carpeta, urlBaseVar: nombre, tipo: s.tipo, php: s.php },
+      };
       await writeFile(estado, JSON.stringify(previo, null, 2), 'utf8');
     }
     const nuevo = Buffer.from(ponerVariableEnv(original, nombre, url), 'latin1');
@@ -175,6 +184,26 @@ export class UrlBase {
     previo.hashAplicado = sha(nuevo);
     await writeFile(estado, JSON.stringify(previo, null, 2), 'utf8');
     return this.limpiarCache(s);
+  }
+
+  /** Restaura desde run/urlbase-<id>.json aunque el sitio ya no exista en la configuración. */
+  restaurarPorId(id: string): Promise<string | null> {
+    return this.serializar(id, async () => {
+      const archivo = path.join(this.d.rutas.base, 'run', `urlbase-${id}.json`);
+      if (!existsSync(archivo)) return null;
+      const previo = JSON.parse(await readFile(archivo, 'utf8')) as EstadoPrevio;
+      if (!previo.sitio) return null;
+      const s = SitioSchema.parse({
+        id,
+        nombre: id,
+        dominio: id,
+        carpeta: previo.sitio.carpeta,
+        tipo: previo.sitio.tipo,
+        php: previo.sitio.php,
+        urlBaseVar: previo.sitio.urlBaseVar,
+      });
+      return this.restaurarInterno(s);
+    });
   }
 
   private async restaurarInterno(s: Sitio): Promise<string | null> {

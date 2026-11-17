@@ -131,6 +131,7 @@ describe('UrlBase', () => {
     expect(JSON.parse(readFileSync(estadoPath(), 'utf8'))).toEqual({
       existia: true,
       hashAplicado: expect.any(String),
+      sitio: { carpeta, urlBaseVar: 'APP_URL', tipo: 'laravel', php: '8.3' },
       valor: 'http://wolf.test',
       lineaOriginal: 'APP_URL="http://wolf.test"',
     });
@@ -204,5 +205,35 @@ describe('UrlBase', () => {
     const r = ub.restaurar(sitio());
     await Promise.all([a, r]);
     expect(readFileSync(env(), 'utf8')).toBe(original);
+  });
+
+  it('BOM + APP_URL en la primera línea: se reemplaza en su sitio y se restaura byte a byte', async () => {
+    const original = Buffer.concat([
+      Buffer.from([0xef, 0xbb, 0xbf]),
+      Buffer.from('APP_URL=http://wolf.test\r\nB=2\r\n'),
+    ]);
+    writeFileSync(env(), original);
+    const ub = new UrlBase({ rutas, ejecutor: exec });
+    await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+    const medio = readFileSync(env());
+    expect(medio.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf]))).toBe(true);
+    expect(medio.toString('latin1').split('APP_URL=')).toHaveLength(2);
+    expect(medio.toString('utf8')).toContain('APP_URL=https://a.trycloudflare.com/\r\nB=2');
+    // Edición del usuario: fuerza la restauración por línea.
+    const editado = Buffer.concat([medio, Buffer.from('C=3\r\n')]);
+    writeFileSync(env(), editado);
+    await ub.restaurar(sitio());
+    expect(readFileSync(env()).equals(Buffer.concat([original, Buffer.from('C=3\r\n')]))).toBe(
+      true,
+    );
+  });
+
+  it('BOM sin ediciones: restauración idéntica', async () => {
+    const original = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from('APP_URL=x\n')]);
+    writeFileSync(env(), original);
+    const ub = new UrlBase({ rutas, ejecutor: exec });
+    await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+    await ub.restaurar(sitio());
+    expect(readFileSync(env()).equals(original)).toBe(true);
   });
 });

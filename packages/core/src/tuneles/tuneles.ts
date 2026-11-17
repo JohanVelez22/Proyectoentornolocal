@@ -16,7 +16,7 @@ export interface DepsTuneles {
   almacen: Pick<Almacen, 'leer'>;
   instalador: Pick<Instalador, 'instalados'>;
   rutas: Rutas;
-  urlBase: Pick<UrlBase, 'aplicar' | 'restaurar'>;
+  urlBase: Pick<UrlBase, 'aplicar' | 'restaurar' | 'restaurarPorId'>;
   eventos: Eventos<EventosNucleo>;
   opts?: { esperaMs?: number; intervaloMs?: number };
 }
@@ -46,6 +46,10 @@ export class Tuneles {
   private readonly abriendo = new Map<string, Promise<EstadoTunel>>();
   /** Se incrementa en cada cerrar() para invalidar aperturas en curso. */
   private readonly generacion = new Map<string, number>();
+  /** Cierres en curso: un abrir() del mismo sitio espera a que terminen. */
+  private readonly cierres = new Map<string, Promise<void>>();
+  /** Se incrementa en cada lanzamiento para no matar el proceso de una apertura más nueva. */
+  private readonly lanzamientos = new Map<string, number>();
   private readonly esperaMs: number;
   private readonly intervaloMs: number;
 
@@ -62,6 +66,8 @@ export class Tuneles {
   }
 
   abrir(sitioId: string): Promise<EstadoTunel> {
+    const cierre = this.cierres.get(sitioId);
+    if (cierre) return cierre.then(() => this.abrir(sitioId));
     const actual = this.mapa.get(sitioId);
     if (actual && actual.estado === 'activo') return Promise.resolve({ ...actual });
     const enCurso = this.abriendo.get(sitioId);
@@ -73,11 +79,27 @@ export class Tuneles {
     return p;
   }
 
-  async cerrar(sitioId: string): Promise<void> {
+  cerrar(sitioId: string): Promise<void> {
+    this.generacion.set(sitioId, this.gen(sitioId) + 1);
+    this.abriendo.delete(sitioId);
+    const previo = this.cierres.get(sitioId) ?? Promise.resolve();
+    const p: Promise<void> = previo
+      .catch(() => undefined)
+      .then(() => this.cerrarInterno(sitioId))
+      .finally(() => {
+        if (this.cierres.get(sitioId) === p) this.cierres.delete(sitioId);
+      });
+    this.cierres.set(sitioId, p);
+    return p;
+  }
+
+  private gen(sitioId: string): number {
+    return this.generacion.get(sitioId) ?? 0;
+  }
+
+  private async cerrarInterno(sitioId: string): Promise<void> {
     const id = PREFIJO + sitioId;
     this.cerrando.add(sitioId);
-    this.generacion.set(sitioId, (this.generacion.get(sitioId) ?? 0) + 1);
-    this.abriendo.delete(sitioId);
     try {
       await this.d.supervisor.detener(id);
       const sitio = await this.buscar(sitioId);
@@ -125,7 +147,15 @@ export class Tuneles {
       const m = /^urlbase-(.+)\.json$/.exec(f);
       if (!m || vivos.has(m[1]!)) continue;
       const sitio = await this.buscar(m[1]!);
-      if (sitio) await this.restaurarUrlBase(sitio);
+      if (sitio) {
+        await this.restaurarUrlBase(sitio);
+      } else {
+        try {
+          await this.d.urlBase.restaurarPorId(m[1]!);
+        } catch (e) {
+          console.error('No se pudo restaurar la URL base huérfana:', e);
+        }
+      }
     }
   }
 
@@ -143,6 +173,7 @@ export class Tuneles {
     const id = PREFIJO + sitioId;
     const logCloudflared = this.d.rutas.logs('tuneles', `${id}.log`);
     const logSalida = this.d.rutas.logs('tuneles', `${id}.salida.log`);
+    if (this.gen(sitioId) !== gen) return this.apagado(sitioId);
     this.fijar({ sitioId, estado: 'iniciando', url: null });
     try {
       // Evita leer una URL de una ejecución anterior.
@@ -157,6 +188,8 @@ export class Tuneles {
         mensaje: `No se pudo limpiar el log anterior del túnel: ${e instanceof Error ? e.message : String(e)}`,
       });
     }
+    const token = (this.lanzamientos.get(sitioId) ?? 0) + 1;
+    this.lanzamientos.set(sitioId, token);
     try {
       await this.d.supervisor.iniciar({
         id,
@@ -184,13 +217,27 @@ export class Tuneles {
       throw e;
     }
 
-    if ((this.generacion.get(sitioId) ?? 0) !== gen) return this.apagado(sitioId);
+    if (this.gen(sitioId) !== gen) {
+      // Se cerró mientras se lanzaba: este proceso quedaría huérfano. Solo se detiene si
+      // ninguna apertura más nueva lanzó otro proceso para el mismo túnel.
+      if (this.lanzamientos.get(sitioId) === token) {
+        this.cerrando.add(sitioId);
+        try {
+          await this.d.supervisor.detener(id);
+        } catch (e) {
+          console.error('No se pudo detener el túnel abandonado:', e);
+        } finally {
+          this.cerrando.delete(sitioId);
+        }
+      }
+      return this.apagado(sitioId);
+    }
     const limite = Date.now() + this.esperaMs;
     for (;;) {
-      if ((this.generacion.get(sitioId) ?? 0) !== gen) return this.apagado(sitioId);
+      if (this.gen(sitioId) !== gen) return this.apagado(sitioId);
       const url = extraerUrlTunel(leerTexto(logCloudflared) + '\n' + leerTexto(logSalida));
       if (url) return this.alEncontrarUrl(sitio, url, gen);
-      if ((this.generacion.get(sitioId) ?? 0) !== gen) return this.apagado(sitioId);
+      if (this.gen(sitioId) !== gen) return this.apagado(sitioId);
       const actual = this.mapa.get(sitioId);
       if (!actual || actual.estado !== 'iniciando')
         return actual ? { ...actual } : this.apagado(sitioId);
@@ -216,7 +263,7 @@ export class Tuneles {
   }
 
   private async alEncontrarUrl(sitio: Sitio, url: string, gen: number): Promise<EstadoTunel> {
-    if ((this.generacion.get(sitio.id) ?? 0) !== gen) return this.apagado(sitio.id);
+    if (this.gen(sitio.id) !== gen) return this.apagado(sitio.id);
     const sitioId = sitio.id;
     const pid = this.d.supervisor.pid(PREFIJO + sitioId);
     if (pid !== null) this.agregarRegistro({ sitioId, url, pid });
@@ -230,9 +277,13 @@ export class Tuneles {
       }
     }
     // Si el proceso murió o se cerró durante la aplicación, no se pisa ese estado.
-    if (this.mapa.get(sitioId)?.estado !== 'iniciando') {
-      // Se cerró o murió mientras se aplicaba: se garantiza que el .env vuelva.
-      if (sitio.urlBaseVar) await this.restaurarUrlBase(sitio);
+    const vigente = this.gen(sitioId) === gen;
+    if (!vigente || this.mapa.get(sitioId)?.estado !== 'iniciando') {
+      // Se cerró o murió mientras se aplicaba: se garantiza que el .env vuelva,
+      // salvo que una apertura más nueva ya sea la dueña del túnel.
+      const e = this.mapa.get(sitioId)?.estado;
+      const hayNueva = !vigente && (e === 'iniciando' || e === 'activo');
+      if (sitio.urlBaseVar && !hayNueva) await this.restaurarUrlBase(sitio);
       return this.estadoActual(sitioId);
     }
     return this.fijar({ sitioId, estado: 'activo', url, ...(mensaje ? { mensaje } : {}) });

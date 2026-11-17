@@ -28,6 +28,8 @@ let salidas: Array<(id: string, c: number | null) => void>;
 let escribirBanner: boolean;
 let destino: 'log' | 'salida';
 let fallaIniciar: boolean;
+let gateIniciar: Promise<void> | null;
+let gateDetener: Promise<void> | null;
 let instalados: string[];
 let sitios: Sitio[];
 let ejecutorLlamadas: string[][];
@@ -46,6 +48,7 @@ const sitio = (extra: Partial<Sitio> = {}): Sitio =>
 const supervisor = () =>
   ({
     iniciar: async (d: DefProceso) => {
+      if (gateIniciar) await gateIniciar;
       if (fallaIniciar) throw new Error('No se pudo iniciar');
       iniciados.push(d);
       estados.set(d.id, 'iniciando');
@@ -58,6 +61,7 @@ const supervisor = () =>
       }
     },
     detener: async (id: string) => {
+      if (gateDetener) await gateDetener;
       detenidos.push(id);
       estados.delete(id);
       pids.delete(id);
@@ -75,7 +79,7 @@ const exec: Ejecutor = async (cmd, args) => {
 let ubReal: UrlBase;
 function crear(
   opts = { esperaMs: 300, intervaloMs: 10 },
-  envolver?: (ub: UrlBase) => Pick<UrlBase, 'aplicar' | 'restaurar'>,
+  envolver?: (ub: UrlBase) => Pick<UrlBase, 'aplicar' | 'restaurar' | 'restaurarPorId'>,
 ) {
   ubReal = new UrlBase({ rutas, ejecutor: exec });
   const urlBase = envolver ? envolver(ubReal) : ubReal;
@@ -111,6 +115,8 @@ beforeEach(() => {
   escribirBanner = true;
   destino = 'log';
   fallaIniciar = false;
+  gateIniciar = null;
+  gateDetener = null;
   instalados = ['2025.1.0', '2026.3.0', '2026.10.1'];
   sitios = [sitio()];
   ejecutorLlamadas = [];
@@ -346,6 +352,7 @@ describe('Tuneles carreras y barrido (fix ronda 1)', () => {
         return ub.aplicar(s, u);
       },
       restaurar: (s) => ub.restaurar(s),
+      restaurarPorId: (id) => ub.restaurarPorId(id),
     }));
     const abrir = t.abrir('wolf');
     await dentro;
@@ -387,5 +394,51 @@ describe('Tuneles carreras y barrido (fix ronda 1)', () => {
     expect(e.estado).toBe('error');
     expect(e.mensaje).toContain('log anterior');
     expect(iniciados).toHaveLength(0);
+  });
+});
+
+describe('Tuneles guardas de generación (fix ronda 2)', () => {
+  it('cerrar() mientras iniciar() está en curso: el proceso lanzado se detiene', async () => {
+    let soltar!: () => void;
+    gateIniciar = new Promise<void>((r) => (soltar = r));
+    const t = crear({ esperaMs: 300, intervaloMs: 10 });
+    const abrir = t.abrir('wolf');
+    await new Promise((r) => setTimeout(r, 30));
+    await t.cerrar('wolf');
+    soltar();
+    const e = await abrir;
+    expect(e.estado).toBe('apagado');
+    expect(pids.has('tunel-wolf')).toBe(false);
+    expect(estados.has('tunel-wolf')).toBe(false);
+    expect(detenidos.length).toBeGreaterThanOrEqual(2);
+    expect(t.estados()).toEqual([]);
+  });
+
+  it('abrir() espera a que termine un cerrar() en curso del mismo sitio', async () => {
+    const t = crear();
+    await t.abrir('wolf');
+    let soltar!: () => void;
+    gateDetener = new Promise<void>((r) => (soltar = r));
+    const cerrar = t.cerrar('wolf');
+    const nuevo = t.abrir('wolf');
+    await new Promise((r) => setTimeout(r, 40));
+    expect(iniciados).toHaveLength(1);
+    gateDetener = null;
+    soltar();
+    await cerrar;
+    const e = await nuevo;
+    expect(iniciados).toHaveLength(2);
+    expect(e.estado).toBe('activo');
+  });
+
+  it('barrido: restaura por la ruta guardada aunque el sitio ya no exista', async () => {
+    const original = 'A=1\nAPP_URL=http://wolf.test\n';
+    writeFileSync(env(), original);
+    const t0 = crear();
+    await ubReal.aplicar(sitio(), 'https://x.trycloudflare.com/');
+    sitios = [];
+    await t0.restaurar();
+    expect(readFileSync(env(), 'utf8')).toBe(original);
+    expect(existsSync(path.join(rutas.base, 'run', 'urlbase-wolf.json'))).toBe(false);
   });
 });
