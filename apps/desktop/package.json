@@ -1,0 +1,33 @@
+{
+  "name": "@pel/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Entorno Local: aplicación de escritorio",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "dist": "electron-vite build && electron-builder --config electron-builder.yml",
+    "test": "vitest run",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@pel/core": "*",
+    "@vicons/ionicons5": "^0.13.0",
+    "naive-ui": "^2.45.3",
+    "pinia": "^4.1.0",
+    "vue": "^3.5.45",
+    "vue-router": "^5.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@vitejs/plugin-vue": "^6.0.11",
+    "electron": "^45.3.3",
+    "electron-builder": "^26.18.0",
+    "electron-vite": "^6.0.0",
+    "vite": "^7.0.0",
+    "vue-tsc": "^3.3.14"
+  }
+}

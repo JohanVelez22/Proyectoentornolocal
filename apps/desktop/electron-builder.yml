@@ -1,0 +1,14 @@
+appId: com.johanvelez.entornolocal
+productName: Entorno Local
+directories:
+  output: release
+  buildResources: resources
+files:
+  - out/**
+win:
+  target: nsis
+  icon: resources/icono.png
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
