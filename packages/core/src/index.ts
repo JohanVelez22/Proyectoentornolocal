@@ -4,6 +4,7 @@ export * from './rutas';
 export * from './almacen';
 export * from './eventos';
 export * from './sitios/detectar';
+export * from './sitios/sitios';
 export * from './nginx/plantillas';
 export * from './nginx/principal';
 export * from './hosts/bloque';

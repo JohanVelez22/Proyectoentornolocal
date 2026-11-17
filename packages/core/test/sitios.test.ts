@@ -1,0 +1,262 @@
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { Almacen } from '../src/almacen';
+import { Eventos, type EventosNucleo } from '../src/eventos';
+import { Rutas } from '../src/rutas';
+import { GestorSitios, ramasEnUso, upstreamsPara } from '../src/sitios/sitios';
+import type { Sitio } from '../src/tipos';
+
+let base: string;
+let rutas: Rutas;
+let carpeta: string;
+let nginxOk: boolean;
+let estado: 'apagado' | 'iniciando' | 'encendido' | 'error';
+let nginxInstalado: string[];
+let phpInstalado: string[];
+let llamadas: string[];
+let dominiosHosts: string[][];
+let hostsRes: { ok: true } | { ok: false; motivo: string; comandoManual: string };
+let emitidos: Sitio[][];
+
+function gestor(): GestorSitios {
+  const eventos = new Eventos<EventosNucleo>();
+  eventos.on('sitio:cambio', (l) => emitidos.push(l));
+  return new GestorSitios({
+    almacen: new Almacen(rutas),
+    rutas,
+    nginx: {
+      validar: async () => {
+        llamadas.push('validar');
+        return { ok: nginxOk, salida: nginxOk ? 'ok' : 'nginx: [emerg] fallo' };
+      },
+      recargar: async () => {
+        llamadas.push('recargar');
+        if (!nginxOk) throw new Error('nginx: [emerg] fallo');
+      },
+    },
+    estadoNginx: () => estado,
+    hosts: {
+      sincronizar: async (d: string[]) => {
+        dominiosHosts.push(d);
+        return hostsRes;
+      },
+    },
+    instalador: {
+      instalado: async (s: string, v: string) =>
+        (s === 'php' ? phpInstalado : nginxInstalado).includes(v),
+      instalados: async (s: string) => (s === 'nginx' ? nginxInstalado : phpInstalado),
+    },
+    eventos,
+  });
+}
+
+const datos = (dominio: string, extra: Partial<Omit<Sitio, 'id'>> = {}): Omit<Sitio, 'id'> => ({
+  nombre: dominio,
+  dominio,
+  alias: [],
+  carpeta,
+  tipo: 'estatico',
+  php: null,
+  puertoProxy: null,
+  reglasExtra: '',
+  urlBaseVar: null,
+  datosReales: false,
+  nota: '',
+  ...extra,
+});
+
+beforeEach(() => {
+  base = mkdtempSync(path.join(os.tmpdir(), 'pel-sitios-'));
+  rutas = new Rutas(base);
+  carpeta = path.join(base, 'proyecto con ñ');
+  mkdirSync(carpeta, { recursive: true });
+  writeFileSync(path.join(carpeta, 'index.html'), 'hola');
+  nginxOk = true;
+  estado = 'apagado';
+  nginxInstalado = ['1.28.0'];
+  phpInstalado = ['8.4'];
+  llamadas = [];
+  dominiosHosts = [];
+  hostsRes = { ok: true };
+  emitidos = [];
+});
+afterEach(() => rmSync(base, { recursive: true, force: true }));
+
+describe('GestorSitios', () => {
+  it('crea un sitio con id derivado del dominio y emite el cambio', async () => {
+    const g = gestor();
+    const s = await g.crear(datos('mi-app.test'));
+    expect(s.id).toBe('mi-app');
+    expect(await g.listar()).toHaveLength(1);
+    expect(emitidos).toHaveLength(1);
+    const s2 = await g.crear(datos('mi.app.test'));
+    expect(s2.id).toBe('mi-app-2');
+  });
+
+  it('rechaza dominios duplicados (también contra alias)', async () => {
+    const g = gestor();
+    await g.crear(datos('a.test', { alias: ['b.test'] }));
+    await expect(g.crear(datos('a.test'))).rejects.toThrow(
+      'Ya existe un sitio con el dominio a.test',
+    );
+    await expect(g.crear(datos('b.test'))).rejects.toThrow(
+      'Ya existe un sitio con el dominio b.test',
+    );
+  });
+
+  it('rechaza dominio sin .test', async () => {
+    await expect(gestor().crear(datos('a.com'))).rejects.toThrow(
+      'El dominio debe terminar en .test',
+    );
+  });
+
+  it('proxy exige puerto', async () => {
+    await expect(gestor().crear(datos('p.test', { tipo: 'proxy' }))).rejects.toThrow(
+      'Un sitio proxy necesita un puerto',
+    );
+    const s = await gestor().crear(
+      datos('p.test', { tipo: 'proxy', puertoProxy: 3000, carpeta: '' }),
+    );
+    expect(s.puertoProxy).toBe(3000);
+  });
+
+  it('exige PHP instalado para laravel/ci3/personalizado', async () => {
+    const g = gestor();
+    await expect(g.crear(datos('l.test', { tipo: 'laravel', php: '8.3' }))).rejects.toThrow(
+      'PHP 8.3 no está instalado. Instálelo desde Servicios.',
+    );
+    await expect(g.crear(datos('l.test', { tipo: 'laravel', php: '8.4' }))).resolves.toBeDefined();
+  });
+
+  it('exige que la carpeta exista', async () => {
+    const falsa = path.join(base, 'noexiste');
+    await expect(gestor().crear(datos('c.test', { carpeta: falsa }))).rejects.toThrow(
+      `La carpeta no existe: ${falsa}`,
+    );
+  });
+
+  it('permite 10 sitios sin límite', async () => {
+    const g = gestor();
+    for (let i = 0; i < 10; i++) await g.crear(datos(`s${i}.test`));
+    expect(await g.listar()).toHaveLength(10);
+  });
+
+  it('editar revalida unicidad excluyéndose a sí mismo', async () => {
+    const g = gestor();
+    const a = await g.crear(datos('a.test'));
+    await g.crear(datos('b.test'));
+    await expect(g.editar(a.id, { nota: 'x' })).resolves.toMatchObject({ nota: 'x', id: 'a' });
+    await expect(g.editar(a.id, { dominio: 'b.test' })).rejects.toThrow(
+      'Ya existe un sitio con el dominio b.test',
+    );
+    await expect(g.editar('nada', { nota: 'x' })).rejects.toThrow();
+  });
+
+  it('aplicar escribe vhosts, valida y sincroniza hosts con dominios y alias', async () => {
+    const g = gestor();
+    await g.crear(datos('b.test', { alias: ['z.test'] }));
+    await g.crear(datos('a.test'));
+    const r = await g.aplicar();
+    expect(r.nginx.ok).toBe(true);
+    expect(llamadas).toEqual(['validar']);
+    const v = readFileSync(rutas.vhost('b'), 'utf8');
+    expect(v).toContain('server_name b.test z.test;');
+    expect(v).toContain('sitios/b.access.log');
+    expect(dominiosHosts[0]).toEqual(['a.test', 'b.test', 'z.test']);
+    expect(r.hosts).toEqual({ ok: true });
+  });
+
+  it('aplicar recarga si nginx está encendido', async () => {
+    estado = 'encendido';
+    const g = gestor();
+    await g.crear(datos('a.test'));
+    await g.aplicar();
+    expect(llamadas).toEqual(['recargar']);
+  });
+
+  it('si nginx no está instalado no valida y lo avisa', async () => {
+    nginxInstalado = [];
+    const g = gestor();
+    await g.crear(datos('a.test'));
+    const r = await g.aplicar();
+    expect(r.nginx.ok).toBe(true);
+    expect(r.nginx.salida).toContain('Nginx no está instalado');
+    expect(llamadas).toEqual([]);
+    expect(existsSync(rutas.vhost('a'))).toBe(true);
+  });
+
+  it('aplicar con validación fallida deja el vhost anterior intacto', async () => {
+    const g = gestor();
+    await g.crear(datos('a.test'));
+    await g.aplicar();
+    const antes = readFileSync(rutas.vhost('a'), 'utf8');
+    await g.editar('a', { reglasExtra: 'cosa_rara on;' });
+    await g.crear(datos('n.test'));
+    nginxOk = false;
+    const r = await g.aplicar();
+    expect(r.nginx.ok).toBe(false);
+    expect(r.nginx.salida).toContain('[emerg] fallo');
+    expect(readFileSync(rutas.vhost('a'), 'utf8')).toBe(antes);
+    expect(existsSync(rutas.vhost('n'))).toBe(false);
+  });
+
+  it('un fallo al recargar también restaura', async () => {
+    const g = gestor();
+    await g.crear(datos('a.test'));
+    await g.aplicar();
+    const antes = readFileSync(rutas.vhost('a'), 'utf8');
+    estado = 'encendido';
+    nginxOk = false;
+    await g.editar('a', { reglasExtra: 'x;' });
+    const r = await g.aplicar();
+    expect(r.nginx.ok).toBe(false);
+    expect(readFileSync(rutas.vhost('a'), 'utf8')).toBe(antes);
+  });
+
+  it('informa el fallo de hosts', async () => {
+    hostsRes = { ok: false, motivo: 'cancelado', comandoManual: 'cmd' };
+    const g = gestor();
+    await g.crear(datos('a.test'));
+    const r = await g.aplicar();
+    expect(r.hosts).toEqual({ ok: false, motivo: 'cancelado', comandoManual: 'cmd' });
+  });
+
+  it('borrar elimina el vhost pero no la carpeta del proyecto', async () => {
+    const g = gestor();
+    await g.crear(datos('a.test'));
+    await g.aplicar();
+    await g.borrar('a');
+    await g.aplicar();
+    expect(existsSync(rutas.vhost('a'))).toBe(false);
+    expect(existsSync(carpeta)).toBe(true);
+    expect(await g.listar()).toHaveLength(0);
+  });
+});
+
+describe('proveedores de PHP', () => {
+  const s = (tipo: Sitio['tipo'], php: string | null): Sitio => ({
+    ...datos(`${tipo}${php}.test`),
+    id: `${tipo}${php}`,
+    tipo,
+    php,
+  });
+  it('ramasEnUso ignora proxy/estático y ordena sin duplicados', () => {
+    expect(
+      ramasEnUso([
+        s('laravel', '8.4'),
+        s('laravel', '8.3'),
+        s('estatico', '7.4'),
+        s('proxy', '8.0'),
+        s('personalizado', '8.4'),
+        s('personalizado', null),
+      ]),
+    ).toEqual(['8.3', '8.4']);
+  });
+  it('upstreamsPara solo incluye ramas en uso e instaladas', () => {
+    expect(upstreamsPara([s('laravel', '8.4'), s('laravel', '8.3')], 2, ['8.4', '8.2'])).toEqual([
+      { version: '8.4', puertos: [9840, 9841] },
+    ]);
+  });
+});

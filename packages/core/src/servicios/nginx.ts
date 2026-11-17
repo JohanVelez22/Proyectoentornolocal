@@ -132,6 +132,16 @@ export class ServicioNginx {
     return base;
   }
 
+  /** Genera y valida la configuración (reemplaza nginx.conf solo si es válida) sin iniciar ni recargar. */
+  async validar(): Promise<{ ok: boolean; salida: string }> {
+    try {
+      await this.prepararYProbar();
+      return { ok: true, salida: 'La configuración de nginx es válida.' };
+    } catch (e) {
+      return { ok: false, salida: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
   async iniciar(): Promise<void> {
     const cfg = await this.leerConfig();
     const puerto = cfg.servicios.nginx.puerto;

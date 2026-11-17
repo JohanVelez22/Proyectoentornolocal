@@ -202,6 +202,20 @@ describe('ServicioNginx', () => {
     expect(existsSync(path.join(etc, 'fastcgi_params'))).toBe(true);
   });
 
+  it('validar prueba y reemplaza la config sin iniciar ni lanzar', async () => {
+    sembrarNginx('1.28.0');
+    const r = await crear().validar();
+    expect(r.ok).toBe(true);
+    expect(iniciados).toHaveLength(0);
+    expect(readFileSync(rutas.nginxConf(), 'utf8')).toContain('server 127.0.0.1:9840;');
+    writeFileSync(rutas.nginxConf(), 'conf anterior');
+    codigoExec = 1;
+    const mal = await crear().validar();
+    expect(mal.ok).toBe(false);
+    expect(mal.salida).toMatch(/\[emerg\] fallo/);
+    expect(readFileSync(rutas.nginxConf(), 'utf8')).toBe('conf anterior');
+  });
+
   it('con el puerto ocupado lanza ErrorPuertoOcupado con nombre y PID', async () => {
     sembrarNginx('1.28.0');
     ocupados.set(80, { pid: 1234, nombre: 'nginx.exe' });
