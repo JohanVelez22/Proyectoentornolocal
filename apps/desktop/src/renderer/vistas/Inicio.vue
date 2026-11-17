@@ -8,10 +8,11 @@ import {
   SwapHorizontal,
   Warning,
 } from '@vicons/ionicons5';
-import { NAlert, NButton, NCard, NIcon, NModal, NSpace, NTag, useMessage } from 'naive-ui';
-import { computed, ref, type Component } from 'vue';
+import { NAlert, NButton, NCard, NIcon, NSpace, NTag } from 'naive-ui';
+import { computed, type Component } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '../api';
+import AvisoHosts from '../componentes/AvisoHosts.vue';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
@@ -26,8 +27,7 @@ const servicios = useServicios();
 const sitios = useSitios();
 const tuneles = useTuneles();
 const hosts = useHosts();
-const { ejecutar, ocupado } = useAccion();
-const message = useMessage();
+const { ejecutar } = useAccion();
 
 interface Tile {
   clave: string;
@@ -89,24 +89,6 @@ const listaTuneles = computed(() =>
   }),
 );
 
-/* Corregir hosts */
-const fallo = ref<{ motivo: string; comandoManual: string } | null>(null);
-const verInstrucciones = ref(false);
-const textoMotivo = computed(() =>
-  fallo.value ? (t.hosts.motivos[fallo.value.motivo] ?? fallo.value.motivo) : '',
-);
-
-async function corregirHosts(): Promise<void> {
-  const r = await ejecutar('hosts', () => hosts.sincronizar(), { tituloError: t.hosts.fallo });
-  if (!r) return;
-  if (r.ok) {
-    fallo.value = null;
-    message.success(t.hosts.corregido);
-  } else {
-    fallo.value = { motivo: r.motivo, comandoManual: r.comandoManual };
-  }
-}
-
 function copiar(texto: string): void {
   void ejecutar('copiar', () => api().sistema.copiar(texto), { exito: es.acciones.copiado });
 }
@@ -140,28 +122,7 @@ function abrir(url: string): void {
       </component>
     </section>
 
-    <NAlert
-      v-if="hosts.pendientes.length"
-      type="warning"
-      :title="t.hosts.titulo"
-      class="aviso-hosts"
-    >
-      <p class="aviso-texto">{{ t.hosts.texto }}</p>
-      <NSpace size="small" class="dominios">
-        <NTag v-for="d in hosts.pendientes" :key="d" size="small" :bordered="false">{{ d }}</NTag>
-      </NSpace>
-      <NAlert v-if="fallo" type="error" :show-icon="false" class="fallo">
-        {{ textoMotivo }}
-      </NAlert>
-      <NSpace size="small">
-        <NButton type="warning" :loading="ocupado('hosts')" @click="corregirHosts">
-          {{ t.hosts.corregir }}
-        </NButton>
-        <NButton v-if="fallo" secondary @click="verInstrucciones = true">
-          {{ t.hosts.verInstrucciones }}
-        </NButton>
-      </NSpace>
-    </NAlert>
+    <AvisoHosts />
 
     <NAlert v-if="hosts.duplicadosFuera.length" type="info" class="aviso-hosts" :show-icon="true">
       {{ t.hosts.duplicados }}
@@ -215,28 +176,6 @@ function abrir(url: string): void {
         <p v-else class="vacio">{{ t.tuneles.vacio }}</p>
       </NCard>
     </div>
-
-    <NModal
-      v-model:show="verInstrucciones"
-      preset="card"
-      :title="t.hosts.modalTitulo"
-      class="modal-hosts"
-      :style="{ width: '640px', maxWidth: '92vw' }"
-    >
-      <p class="aviso-texto">{{ t.hosts.modalTexto }}</p>
-      <pre class="comando">{{ fallo?.comandoManual }}</pre>
-      <template #footer>
-        <NSpace justify="end">
-          <NButton @click="verInstrucciones = false">{{ es.acciones.cerrar }}</NButton>
-          <NButton type="primary" @click="fallo && copiar(fallo.comandoManual)">
-            <template #icon
-              ><NIcon><Copy /></NIcon
-            ></template>
-            {{ es.acciones.copiar }}
-          </NButton>
-        </NSpace>
-      </template>
-    </NModal>
   </div>
 </template>
 
@@ -317,14 +256,8 @@ function abrir(url: string): void {
 .aviso-hosts {
   margin-bottom: 18px;
 }
-.aviso-texto {
-  margin: 0 0 10px;
-}
 .dominios {
   margin: 8px 0 12px;
-}
-.fallo {
-  margin-bottom: 12px;
 }
 .columnas {
   display: grid;
@@ -373,19 +306,6 @@ function abrir(url: string): void {
 .vacio {
   margin: 6px 0;
   opacity: 0.6;
-}
-.comando {
-  margin: 0;
-  padding: 12px 14px;
-  max-height: 220px;
-  overflow: auto;
-  border-radius: 8px;
-  background: rgba(128, 128, 128, 0.1);
-  font-family: var(--fuente-mono);
-  font-size: 12px;
-  white-space: pre-wrap;
-  word-break: break-all;
-  user-select: all;
 }
 @media (max-width: 1080px) {
   .tiles {

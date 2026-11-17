@@ -3,11 +3,17 @@ import { computed } from 'vue';
 import type { EstadoServicio, EstadoTunel } from '../../shared/api';
 import { es } from '../i18n/es';
 
-type Estado = EstadoServicio['estado'] | EstadoTunel['estado'];
+/** `aviso`: funciona a medias (p. ej. un sitio al que le falta el hosts); ámbar sin pulso. */
+type Estado = EstadoServicio['estado'] | EstadoTunel['estado'] | 'aviso';
 
-const props = withDefaults(defineProps<{ estado: Estado; soloPunto?: boolean }>(), {
-  soloPunto: false,
-});
+const props = withDefaults(
+  defineProps<{
+    estado: Estado;
+    soloPunto?: boolean;
+    /** Texto propio en lugar del genérico. */ etiqueta?: string;
+  }>(),
+  { soloPunto: false, etiqueta: undefined },
+);
 
 const tono = computed(() => {
   switch (props.estado) {
@@ -20,18 +26,20 @@ const tono = computed(() => {
       return 'error';
     case 'externo':
       return 'externo';
+    case 'aviso':
+      return 'aviso';
     default:
       return 'apagado';
   }
 });
 
-const etiqueta = computed(() => es.estado[props.estado]);
+const texto = computed(() => props.etiqueta ?? es.estado[props.estado]);
 </script>
 
 <template>
-  <span class="estado-punto" :class="`tono-${tono}`" role="status" :aria-label="etiqueta">
+  <span class="estado-punto" :class="`tono-${tono}`" role="status" :aria-label="texto">
     <span class="punto" aria-hidden="true" />
-    <span v-if="!soloPunto" class="texto">{{ etiqueta }}</span>
+    <span v-if="!soloPunto" class="texto">{{ texto }}</span>
   </span>
 </template>
 
@@ -70,6 +78,9 @@ const etiqueta = computed(() => es.estado[props.estado]);
 }
 .tono-externo {
   --tono: #2563eb;
+}
+.tono-aviso {
+  --tono: #d97706;
 }
 .tono-espera .punto::after {
   content: '';
