@@ -26,12 +26,22 @@ function nucleoFalso() {
     tuneles: { abrir: vi.fn(), cerrar: vi.fn(), renovar: vi.fn(), estados: vi.fn() },
     instalador: { instalar: vi.fn(), instalados: vi.fn() },
     hosts: { sincronizar: vi.fn(async () => ({ ok: true })) },
-    config: { leer: vi.fn(), guardar: vi.fn() },
+    config: { leer: vi.fn() },
     estadoGeneral: vi.fn(),
+    guardarAjustes: vi.fn(async () => ({ aplicar: {}, reiniciados: [], errores: [] })),
+    detenerTodo: vi.fn(),
     guardarSitio: vi.fn(),
     borrarSitio: vi.fn(),
     detectarProyecto: vi.fn(),
-    listarVersiones: vi.fn(),
+    listarVersiones: vi.fn(async (servicio: string) => [
+      {
+        servicio,
+        version: '1.28.0',
+        url: 'https://nginx.org/download/nginx-1.28.0.zip',
+        sha256: 'a'.repeat(64),
+        formato: 'zip',
+      },
+    ]),
   };
   return { nucleo: crudo as unknown as NucleoIpc, crudo, oyentes };
 }
@@ -171,5 +181,66 @@ describe('registrarIpc', () => {
     expect(crudo.estadoGeneral).not.toHaveBeenCalled();
     await canales.get('entorno:estadoGeneral')!('bueno');
     expect(crudo.estadoGeneral).toHaveBeenCalled();
+  });
+
+  it('ajustes.guardar pasa solo puerto y trabajadores validados a Nucleo.guardarAjustes', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const r = (await canales.get('entorno:ajustes.guardar')!(
+      {},
+      { puerto: 8080, trabajadores: 3, sitios: [], servicios: {} },
+    )) as { ok: boolean };
+    expect(r.ok).toBe(true);
+    expect(crudo.guardarAjustes).toHaveBeenCalledWith({ puerto: 8080, trabajadores: 3 });
+    for (const malo of [
+      { puerto: 0, trabajadores: 2 },
+      { puerto: 65536, trabajadores: 2 },
+      { puerto: '80', trabajadores: 2 },
+      { puerto: 80, trabajadores: 9 },
+      { puerto: 80, trabajadores: 1.5 },
+      null,
+    ]) {
+      const x = (await canales.get('entorno:ajustes.guardar')!({}, malo)) as { ok: boolean };
+      expect(x.ok, JSON.stringify(malo)).toBe(false);
+    }
+    expect(crudo.guardarAjustes).toHaveBeenCalledTimes(1);
+    expect(canales.has('entorno:config.guardar')).toBe(false);
+  });
+
+  it('instalador.instalar re-resuelve la versión en el catálogo e ignora url/sha del renderer', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const r = (await canales.get('entorno:instalador.instalar')!(
+      {},
+      { servicio: 'nginx', version: '1.28.0', url: 'https://malo.example/x.zip', sha256: 'b' },
+    )) as { ok: boolean };
+    expect(r.ok).toBe(true);
+    expect(crudo.listarVersiones).toHaveBeenCalledWith('nginx');
+    expect(crudo.instalador.instalar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://nginx.org/download/nginx-1.28.0.zip',
+        sha256: 'a'.repeat(64),
+      }),
+    );
+    for (const malo of [
+      { servicio: 'nginx', version: '9.9.9' },
+      { servicio: 'mysql', version: '1.28.0' },
+      { servicio: 'nginx' },
+      'nginx',
+    ]) {
+      const x = (await canales.get('entorno:instalador.instalar')!({}, malo)) as { ok: boolean };
+      expect(x.ok, JSON.stringify(malo)).toBe(false);
+    }
+    expect(crudo.instalador.instalar).toHaveBeenCalledTimes(1);
+  });
+
+  it('servicios.detenerTodo usa Nucleo.detenerTodo (cierra túneles primero)', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    await canales.get('entorno:servicios.detenerTodo')!({});
+    expect(crudo.detenerTodo).toHaveBeenCalled();
   });
 });

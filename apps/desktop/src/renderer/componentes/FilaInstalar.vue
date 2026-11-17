@@ -3,7 +3,7 @@ import { CloudDownload } from '@vicons/ionicons5';
 import { NButton, NIcon, NProgress, NSelect, NTag, type SelectOption } from 'naive-ui';
 import { computed, onMounted, ref } from 'vue';
 import type { ProgresoInstalacion, VersionDisponible } from '../../shared/api';
-import { api, plano } from '../api';
+import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 import { useServicios, type ServicioInstalable } from '../stores/servicios';
@@ -59,7 +59,7 @@ async function instalar(): Promise<void> {
   const ok = await ejecutar(
     `instalar-${props.servicio}`,
     async () => {
-      await api().instalador.instalar(plano(v));
+      await api().instalador.instalar({ servicio: v.servicio, version: v.version });
       return true;
     },
     { exito: t.exito(textos.value.nombre, v.version) },

@@ -10,15 +10,19 @@ import {
   NInputGroup,
   NInputNumber,
   NSkeleton,
+  useMessage,
+  useNotification,
 } from 'naive-ui';
 import { computed, onMounted, ref } from 'vue';
 import type { Config } from '../../shared/api';
-import { api, plano } from '../api';
+import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 
 const t = es.ajustes;
 const { ejecutar, ocupado } = useAccion();
+const message = useMessage();
+const notification = useNotification();
 
 const config = ref<Config | null>(null);
 const carpeta = ref('');
@@ -59,25 +63,30 @@ onMounted(() => {
 
 async function guardar(): Promise<void> {
   if (!config.value || !valido.value) return;
-  // Se relee para no pisar cambios hechos desde otra parte (p. ej. un sitio nuevo).
-  const ok = await ejecutar(
-    'guardar',
-    async () => {
-      const actual = await api().config.leer();
-      const nueva: Config = plano({
-        ...actual,
-        servicios: {
-          ...actual.servicios,
-          nginx: { ...actual.servicios.nginx, puerto: puerto.value ?? 80 },
-          php: { ...actual.servicios.php, trabajadores: trabajadores.value ?? 2 },
-        },
-      });
-      await api().config.guardar(nueva);
-      return nueva;
-    },
-    { exito: t.guardado },
-  );
-  if (ok) config.value = ok;
+  // Solo viajan puerto y trabajadores: el núcleo los guarda en su cola y los aplica.
+  const r = await ejecutar('guardar', async () => {
+    const res = await api().ajustes.guardar({
+      puerto: puerto.value ?? 80,
+      trabajadores: trabajadores.value ?? 2,
+    });
+    return { res, config: await api().config.leer() };
+  });
+  if (!r) return;
+  config.value = r.config;
+  const fallos = [
+    ...(r.res.aplicar.nginx.ok ? [] : [r.res.aplicar.nginx.salida]),
+    ...r.res.errores,
+  ];
+  if (fallos.length) {
+    notification.warning({
+      title: t.errorAplicar,
+      content: fallos.join('\n'),
+      duration: 10000,
+      keepAliveOnHover: true,
+    });
+  } else {
+    message.success(t.guardado(r.res.reiniciados));
+  }
 }
 
 function abrirCarpeta(): void {

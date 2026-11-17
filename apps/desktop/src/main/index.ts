@@ -181,7 +181,7 @@ if (!app.requestSingleInstanceLock()) {
     bandeja = crearBandeja(rutaIcono, {
       abrir: mostrarVentana,
       iniciarTodo: () => void n.servicios.iniciarTodo().catch((e) => console.error(e)),
-      detenerTodo: () => void n.servicios.detenerTodo().catch((e) => console.error(e)),
+      detenerTodo: () => void n.detenerTodo().catch((e) => console.error(e)),
       salir: () => void salir(),
     });
   });

@@ -291,12 +291,17 @@ export const es = {
     carpetaDatosAyuda: 'Binarios, configuración y registros. Se puede abrir, no cambiar.',
     servicios: 'Servicios',
     puertoNginx: 'Puerto de Nginx',
-    puertoNginxAyuda: 'Normalmente 80. Si lo cambia, las URL locales llevarán el puerto.',
+    puertoNginxAyuda:
+      'Normalmente 80. Si no es 80, las URL locales llevarán el puerto. Los túneles abiertos siguen en el puerto anterior: renuévelos.',
     trabajadores: 'Trabajadores PHP',
     trabajadoresAyuda:
       'Procesos php-cgi por versión. Más trabajadores atienden más peticiones a la vez.',
-    nota: 'Los cambios se aplican al reiniciar los servicios.',
-    guardado: 'Ajustes guardados. Reinicie los servicios para aplicarlos.',
+    nota: 'Al guardar se regeneran los sitios con el puerto nuevo. Si Nginx está encendido se reinicia (o se recarga si el puerto no cambió), y las versiones de PHP encendidas se reinician si cambian los trabajadores.',
+    guardado: (reiniciados: string[]) =>
+      reiniciados.length
+        ? `Ajustes guardados y aplicados. Reiniciado: ${reiniciados.join(', ')}.`
+        : 'Ajustes guardados y aplicados.',
+    errorAplicar: 'Ajustes guardados, pero no se pudieron aplicar del todo',
     acerca: 'Acerca de',
     versionPrograma: 'Versión del programa',
   },

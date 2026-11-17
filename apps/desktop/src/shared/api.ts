@@ -1,4 +1,5 @@
 import type {
+  AjustesServicios,
   Config,
   EstadoGeneral,
   EstadoHosts,
@@ -7,6 +8,7 @@ import type {
   EventosNucleo,
   ProgresoInstalacion,
   ProyectoDetectado,
+  ResultadoAjustes,
   ResultadoAplicar,
   ResultadoSync,
   Sitio,
@@ -14,6 +16,7 @@ import type {
 } from '@pel/core';
 
 export type {
+  AjustesServicios,
   Config,
   EstadoGeneral,
   EstadoHosts,
@@ -22,11 +25,15 @@ export type {
   EventosNucleo,
   ProgresoInstalacion,
   ProyectoDetectado,
+  ResultadoAjustes,
   ResultadoAplicar,
   ResultadoSync,
   Sitio,
   VersionDisponible,
 };
+
+/** Lo único que el renderer elige al instalar: el proceso principal re-resuelve la URL y la huella. */
+export type SeleccionVersion = Pick<VersionDisponible, 'servicio' | 'version'>;
 
 export type DatosSitio = Omit<Sitio, 'id'>;
 
@@ -55,11 +62,12 @@ export interface ApiEntorno {
     iniciar(id: string): Promise<void>;
     detener(id: string): Promise<void>;
     iniciarTodo(): Promise<void>;
+    /** Cierra primero los túneles (devolviendo los .env) y luego detiene los servicios. */
     detenerTodo(): Promise<void>;
   };
   instalador: {
     listarVersiones(servicio: VersionDisponible['servicio']): Promise<VersionDisponible[]>;
-    instalar(version: VersionDisponible): Promise<void>;
+    instalar(seleccion: SeleccionVersion): Promise<void>;
     instalados(servicio: string): Promise<string[]>;
   };
   tuneles: {
@@ -74,7 +82,10 @@ export interface ApiEntorno {
   detectarProyecto(carpeta: string): Promise<ProyectoDetectado>;
   config: {
     leer(): Promise<Config>;
-    guardar(config: Config): Promise<void>;
+  };
+  ajustes: {
+    /** Guarda puerto y trabajadores, regenera los vhosts y reinicia lo que haga falta. */
+    guardar(ajustes: AjustesServicios): Promise<ResultadoAjustes>;
   };
   sistema: ApiSistema;
   /** Suscribe a un evento del núcleo; devuelve la función para cancelar. */
@@ -110,7 +121,7 @@ export const RUTAS_IPC = [
   'hosts.sincronizar',
   'detectarProyecto',
   'config.leer',
-  'config.guardar',
+  'ajustes.guardar',
   'sistema.elegirCarpeta',
   'sistema.abrirUrl',
   'sistema.abrirCarpeta',

@@ -7,7 +7,15 @@ import {
   type ResultadoIpc,
   type RutaIpc,
 } from '../shared/api';
-import { carpetaExistente, idNoVacio, objetoPlano, texto, urlHttp } from './validacion';
+import {
+  carpetaExistente,
+  enteroEn,
+  idNoVacio,
+  objetoPlano,
+  servicioInstalable,
+  texto,
+  urlHttp,
+} from './validacion';
 
 export interface IpcMainLike {
   handle(canal: string, fn: (evento: unknown, ...args: unknown[]) => unknown): void;
@@ -40,13 +48,18 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'servicios.detener': (n, _s, id) =>
     n.servicios.detener(idNoVacio(id) as Parameters<Nucleo['servicios']['detener']>[0]),
   'servicios.iniciarTodo': (n) => n.servicios.iniciarTodo(),
-  'servicios.detenerTodo': (n) => n.servicios.detenerTodo(),
+  'servicios.detenerTodo': (n) => n.detenerTodo(),
   'instalador.listarVersiones': (n, _s, servicio) =>
     n.listarVersiones(idNoVacio(servicio, 'servicio') as Parameters<Nucleo['listarVersiones']>[0]),
-  'instalador.instalar': (n, _s, v) =>
-    n.instalador.instalar(
-      objetoPlano<Parameters<Nucleo['instalador']['instalar']>[0]>(v, 'versión'),
-    ),
+  // El renderer solo elige servicio y versión: URL, huella y carpeta salen del catálogo oficial.
+  'instalador.instalar': async (n, _s, sel) => {
+    const o = objetoPlano<Record<string, unknown>>(sel, 'versión');
+    const servicio = servicioInstalable(o['servicio']);
+    const version = idNoVacio(o['version'], 'versión');
+    const v = (await n.listarVersiones(servicio)).find((x) => x.version === version);
+    if (!v) throw new Error(`La versión ${version} de ${servicio} no está en el catálogo`);
+    return n.instalador.instalar(v);
+  },
   'instalador.instalados': (n, _s, servicio) =>
     n.instalador.instalados(idNoVacio(servicio, 'servicio')),
   'tuneles.abrir': (n, _s, id) => n.tuneles.abrir(idNoVacio(id)),
@@ -59,8 +72,13 @@ const TABLA: Record<RutaIpc, Manejador> = {
   },
   detectarProyecto: (n, _s, carpeta) => n.detectarProyecto(texto(carpeta, 'carpeta')),
   'config.leer': (n) => n.config.leer(),
-  'config.guardar': (n, _s, c) =>
-    n.config.guardar(objetoPlano<Parameters<Nucleo['config']['guardar']>[0]>(c, 'config')),
+  'ajustes.guardar': (n, _s, a) => {
+    const o = objetoPlano<Record<string, unknown>>(a, 'ajustes');
+    return n.guardarAjustes({
+      puerto: enteroEn(o['puerto'], 1, 65535, 'puerto'),
+      trabajadores: enteroEn(o['trabajadores'], 1, 8, 'trabajadores'),
+    });
+  },
   'sistema.elegirCarpeta': (_n, s) => s.elegirCarpeta(),
   'sistema.abrirUrl': (_n, s, url) => s.abrirUrl(urlHttp(url)),
   'sistema.abrirCarpeta': async (_n, s, ruta) => s.abrirCarpeta(await carpetaExistente(ruta)),

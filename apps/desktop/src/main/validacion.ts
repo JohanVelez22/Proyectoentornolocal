@@ -22,6 +22,23 @@ export function objetoPlano<T extends object>(v: unknown, nombre = 'objeto'): T 
   return v as T;
 }
 
+/** Entero dentro de [min, max]. */
+export function enteroEn(v: unknown, min: number, max: number, nombre = 'valor'): number {
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < min || v > max) {
+    throw new Error(`Argumento no válido: ${nombre} (entre ${min} y ${max})`);
+  }
+  return v;
+}
+
+const INSTALABLES = ['nginx', 'php', 'cloudflared'] as const;
+
+export function servicioInstalable(v: unknown): (typeof INSTALABLES)[number] {
+  if (typeof v !== 'string' || !(INSTALABLES as readonly string[]).includes(v)) {
+    throw new Error('Argumento no válido: servicio');
+  }
+  return v as (typeof INSTALABLES)[number];
+}
+
 /** Solo direcciones http/https. */
 export function urlHttp(v: unknown): string {
   const t = texto(v, 'url');

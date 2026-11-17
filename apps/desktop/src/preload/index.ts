@@ -49,7 +49,9 @@ const api: ApiEntorno = {
   detectarProyecto: (carpeta) => invocar('detectarProyecto', carpeta),
   config: {
     leer: () => invocar('config.leer'),
-    guardar: (c) => invocar('config.guardar', c),
+  },
+  ajustes: {
+    guardar: (a) => invocar('ajustes.guardar', a),
   },
   sistema: {
     elegirCarpeta: () => invocar('sistema.elegirCarpeta'),
