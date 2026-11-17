@@ -232,6 +232,73 @@ describe('Supervisor', () => {
     await s.cerrar();
   });
 
+  it('spawn fallido (pid undefined + error asíncrono) rechaza iniciar sin tumbar el proceso', async () => {
+    const hijo = new HijoFalso(0) as unknown as EventEmitter & { pid: number | undefined };
+    hijo.pid = undefined;
+    const s = new Supervisor(rutas, plataforma(), eventos, {
+      spawn: (() => {
+        setTimeout(() => hijo.emit('error', new Error('spawn ENOENT')), 0);
+        return hijo;
+      }) as never,
+      sonda: async () => true,
+    });
+    await expect(s.iniciar(def())).rejects.toThrow('No se pudo iniciar nginx');
+    await vi.advanceTimersByTimeAsync(10);
+    expect(s.estado('nginx')).toBe('error');
+    expect(emitidos.at(-1)?.mensaje).toContain('No se pudo iniciar nginx');
+    await s.cerrar();
+  });
+
+  it('timeout de 15 s mata el árbol y su salida posterior no reinicia', async () => {
+    sondaOk = false;
+    const s = crear();
+    await s.iniciar(def());
+    await vi.advanceTimersByTimeAsync(18000);
+    expect(matados).toEqual([1000]);
+    expect(s.estado('nginx')).toBe('error');
+    morir(hijos[0]!);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(hijos).toHaveLength(1);
+    await s.cerrar();
+  });
+
+  it('iniciar sobre una entrada en error con PID vivo mata el anterior', async () => {
+    const s = crear();
+    await s.iniciar(def({ reiniciar: false }));
+    const internas = s as unknown as { entradas: Map<string, { estado: string }> };
+    internas.entradas.get('nginx')!.estado = 'error';
+    await s.iniciar(def());
+    expect(matados).toEqual([1000]);
+    morir(hijos[0]!);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(hijos).toHaveLength(2);
+    expect(s.pid('nginx')).toBe(1001);
+    await s.cerrar();
+  });
+
+  it('una salida tras cerrar() no reinicia', async () => {
+    const s = crear();
+    await s.iniciar(def());
+    await s.cerrar();
+    morir(hijos[0]!);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(hijos).toHaveLength(1);
+  });
+
+  it('detener limpia la entrada aunque matarArbol rechace', async () => {
+    const s = crear();
+    await s.iniciar(def());
+    const p = plataforma();
+    p.matarArbol = async () => {
+      throw new Error('fallo');
+    };
+    (s as unknown as { plataforma: Plataforma }).plataforma = p;
+    await expect(s.detener('nginx')).rejects.toThrow('fallo');
+    expect(s.estado('nginx')).toBe('apagado');
+    expect(JSON.parse(readFileSync(rutas.estado(), 'utf8'))).toEqual([]);
+    await s.cerrar();
+  });
+
   it('readoptar adopta un PID vivo con el mismo ejecutable sin lanzar otro', async () => {
     vivos.set(555, 'NGINX.exe');
     writeFileSync(rutas.estado(), registro(555));

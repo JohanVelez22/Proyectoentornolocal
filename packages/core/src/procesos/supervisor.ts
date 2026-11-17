@@ -76,6 +76,7 @@ export class Supervisor {
   private readonly intervaloMs: number;
   private bucle: ReturnType<typeof setInterval> | null = null;
   private evaluando = false;
+  private cerrado = false;
 
   constructor(
     private readonly rutas: Rutas,
@@ -103,7 +104,21 @@ export class Supervisor {
   async iniciar(def: DefProceso): Promise<void> {
     const actual = this.entradas.get(def.id);
     if (actual && actual.estado !== 'error' && actual.estado !== 'apagado') return;
-    if (actual?.temporizador) clearTimeout(actual.temporizador);
+    if (actual) {
+      actual.detenido = true;
+      if (actual.temporizador) clearTimeout(actual.temporizador);
+      actual.temporizador = null;
+      const viejo = actual.pid;
+      actual.pid = null;
+      this.hijos.delete(def.id);
+      if (viejo !== null) {
+        try {
+          await this.plataforma.matarArbol(viejo);
+        } catch (e) {
+          console.error('No se pudo cerrar el proceso anterior:', e);
+        }
+      }
+    }
     const entrada: Entrada = {
       def,
       estado: 'iniciando',
@@ -116,8 +131,9 @@ export class Supervisor {
       ultimoEmitido: '',
     };
     this.entradas.set(def.id, entrada);
-    this.lanzar(entrada);
+    const fallo = this.lanzar(entrada, true);
     this.guardarEstado();
+    if (fallo !== null) throw new Error(`No se pudo iniciar ${def.id}: ${fallo}`);
     this.arrancarBucle();
   }
 
@@ -130,12 +146,15 @@ export class Supervisor {
     const pid = entrada.pid;
     entrada.pid = null;
     this.hijos.delete(id);
-    if (pid !== null) await this.plataforma.matarArbol(pid);
-    entrada.estado = 'apagado';
-    entrada.mensaje = undefined;
-    this.emitir(entrada);
-    this.entradas.delete(id);
-    this.guardarEstado();
+    try {
+      if (pid !== null) await this.plataforma.matarArbol(pid);
+    } finally {
+      entrada.estado = 'apagado';
+      entrada.mensaje = undefined;
+      this.emitir(entrada);
+      this.entradas.delete(id);
+      this.guardarEstado();
+    }
   }
 
   /** Adopta los procesos de estado.json cuyo PID sigue vivo y es el mismo ejecutable. */
@@ -181,6 +200,7 @@ export class Supervisor {
   }
 
   async cerrar(): Promise<void> {
+    this.cerrado = true;
     if (this.bucle) clearInterval(this.bucle);
     this.bucle = null;
     for (const e of this.entradas.values()) {
@@ -196,13 +216,15 @@ export class Supervisor {
     }, this.intervaloMs);
   }
 
-  private lanzar(entrada: Entrada): void {
+  /** Devuelve null si lanzó, o el detalle del fallo. */
+  private lanzar(entrada: Entrada, inicial = false): string | null {
     const { def } = entrada;
     entrada.inicio = Date.now();
     entrada.encendidoDesde = null;
     entrada.estado = 'iniciando';
     entrada.mensaje = undefined;
     let fd: number | null = null;
+    let fallo: string | null = null;
     try {
       mkdirSync(path.dirname(def.log), { recursive: true });
       fd = openSync(def.log, 'a');
@@ -214,21 +236,38 @@ export class Supervisor {
         windowsHide: true,
         stdio: ['ignore', fd, fd],
       });
-      hijo.unref?.();
-      if (hijo.pid === undefined) throw new Error('No se pudo lanzar el proceso');
       const pid = hijo.pid;
-      entrada.pid = pid;
-      this.hijos.set(def.id, hijo);
-      hijo.once('exit', (codigo: number | null) => this.alMorir(entrada, pid, codigo));
-      hijo.once('error', () => this.alMorir(entrada, pid, null));
+      // El listener de error va antes que cualquier otra comprobación: un spawn fallido
+      // emite 'error' en el siguiente tick y, sin listener, tumbaría el proceso anfitrión.
+      hijo.once('error', (err: Error) => {
+        if (pid !== undefined) this.alMorir(entrada, pid, null, err.message);
+      });
+      hijo.unref?.();
+      if (pid === undefined) {
+        fallo = 'el ejecutable no se pudo lanzar';
+      } else {
+        entrada.pid = pid;
+        this.hijos.set(def.id, hijo);
+        hijo.once('exit', (codigo: number | null) => this.alMorir(entrada, pid, codigo));
+      }
     } catch (e) {
       entrada.pid = null;
-      this.alMorir(entrada, null, null, e instanceof Error ? e.message : String(e));
-      return;
+      fallo = e instanceof Error ? e.message : String(e);
     } finally {
       if (fd !== null) closeSync(fd);
     }
-    this.emitir(entrada);
+    if (fallo === null) {
+      this.emitir(entrada);
+      return null;
+    }
+    if (inicial) {
+      entrada.estado = 'error';
+      entrada.mensaje = `No se pudo iniciar ${def.id}: ${fallo}`;
+      this.emitir(entrada);
+    } else {
+      this.alMorir(entrada, null, null, fallo);
+    }
+    return fallo;
   }
 
   private alMorir(
@@ -237,7 +276,7 @@ export class Supervisor {
     codigo: number | null,
     motivo?: string,
   ): void {
-    if (entrada.detenido) return;
+    if (entrada.detenido || this.cerrado) return;
     if (pid !== null && entrada.pid !== pid) return; // ya gestionado
     const { def } = entrada;
     entrada.pid = null;
@@ -259,7 +298,7 @@ export class Supervisor {
       this.guardarEstado();
       entrada.temporizador = setTimeout(() => {
         entrada.temporizador = null;
-        if (entrada.detenido) return;
+        if (entrada.detenido || this.cerrado) return;
         this.lanzar(entrada);
         this.guardarEstado();
       }, espera);
@@ -272,7 +311,7 @@ export class Supervisor {
   }
 
   private async evaluar(): Promise<void> {
-    if (this.evaluando) return;
+    if (this.evaluando || this.cerrado) return;
     this.evaluando = true;
     try {
       for (const entrada of [...this.entradas.values()]) {
@@ -303,8 +342,18 @@ export class Supervisor {
           entrada.encendidoDesde = null;
           entrada.inicio = ahora;
         } else if (entrada.estado === 'iniciando' && ahora - entrada.inicio >= LIMITE_ARRANQUE_MS) {
+          // Se mata el árbol para no dejar un proceso huérfano sin seguimiento.
+          entrada.detenido = true;
+          entrada.pid = null;
+          this.hijos.delete(entrada.def.id);
+          try {
+            await this.plataforma.matarArbol(pid);
+          } catch (e) {
+            console.error('No se pudo cerrar el proceso que no respondió:', e);
+          }
           entrada.estado = 'error';
           entrada.mensaje = this.colaLog(entrada.def.log) || 'El servicio no responde';
+          this.guardarEstado();
         }
         this.emitir(entrada);
       }
