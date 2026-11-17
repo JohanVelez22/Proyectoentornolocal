@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import type { Ejecutor } from '../src/plataforma/tipos';
 import type { DefProceso, EstadoProceso } from '../src/procesos/supervisor';
@@ -274,12 +274,11 @@ describe('Tuneles cierre inesperado, renovar y restauración', () => {
     await t.abrir('wolf');
     estados.set('tunel-wolf', 'error');
     salidas.forEach((f) => f('tunel-wolf', 1));
-    await new Promise((r) => setTimeout(r, 30));
+    await vi.waitFor(() => expect(readFileSync(env(), 'utf8')).toBe(original));
     expect(t.estados()[0]).toMatchObject({
       estado: 'error',
       mensaje: 'El túnel se cerró. Use Renovar.',
     });
-    expect(readFileSync(env(), 'utf8')).toBe(original);
   });
 
   it('ignora salidas de procesos que no son túneles', async () => {

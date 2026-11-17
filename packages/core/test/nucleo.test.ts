@@ -31,6 +31,7 @@ const crear = async (): Promise<Nucleo> => {
   const n = await Nucleo.crear({
     base,
     plataforma,
+    sonda: async () => false,
     fetch: (async () => new Response('{}')) as typeof fetch,
   });
   nucleos.push(n);
@@ -64,6 +65,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
   for (const n of nucleos) await n.cerrar({ detenerServicios: false });
   rmSync(base, { recursive: true, force: true });
 });
@@ -101,6 +103,7 @@ describe('Nucleo', () => {
     const n = await Nucleo.crear({
       base,
       plataforma,
+      sonda: async () => false,
       fetch: (async () => new Response('{}')) as typeof fetch,
       alIniciar: (e) => e.on('hosts:estado', (h) => visto.push(h)),
     });
@@ -251,7 +254,6 @@ describe('Nucleo', () => {
     vi.spyOn(Supervisor.prototype, 'readoptar').mockRejectedValue(new Error('boom'));
     await expect(crear()).rejects.toThrow('boom');
     expect(cerrar).toHaveBeenCalled();
-    vi.restoreAllMocks();
   });
 
   it('solo los estados agregados llegan al flujo público; los eventos crudos del supervisor no', async () => {
@@ -272,10 +274,7 @@ describe('Nucleo', () => {
     internos.emit('servicio:estado', crudo('tunel-x'));
     internos.emit('servicio:estado', crudo('nginx'));
     await vi.waitFor(() => expect(vistos.length).toBeGreaterThan(0));
-    const ids = vistos.map((v) => v.id);
-    expect(ids).toContain('nginx');
-    expect(ids).not.toContain('php-8.4-0');
-    expect(ids.some((i) => i.startsWith('tunel-'))).toBe(false);
+    expect(vistos.map((v) => v.id)).toEqual(['nginx']);
     expect(vistos.find((v) => v.id === 'nginx')).toMatchObject({
       nombre: 'Nginx',
       puertos: [80],
