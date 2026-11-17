@@ -24,5 +24,18 @@ export default tseslint.config(
       parserOptions: { parser: tseslint.parser },
       globals: { window: 'readonly' },
     },
+    rules: {
+      // TypeScript (vue-tsc) ya verifica los nombres globales, incluidos los tipos del DOM.
+      'no-undef': 'off',
+      // Las vistas se nombran por su sección (Inicio, Sitios, Ajustes…).
+      'vue/multi-word-component-names': 'off',
+      // El formato del template lo decide Prettier; estas reglas chocan con él.
+      'vue/max-attributes-per-line': 'off',
+      'vue/html-indent': 'off',
+      'vue/html-closing-bracket-newline': 'off',
+      'vue/singleline-html-element-content-newline': 'off',
+      'vue/multiline-html-element-content-newline': 'off',
+      'vue/html-self-closing': 'off',
+    },
   },
 );
