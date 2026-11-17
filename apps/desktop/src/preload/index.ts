@@ -20,6 +20,7 @@ async function invocar<T>(ruta: RutaIpc, ...args: unknown[]): Promise<T> {
 
 const api: ApiEntorno = {
   estadoGeneral: () => invocar('estadoGeneral'),
+  carpetaDatos: () => invocar('carpetaDatos'),
   sitios: {
     listar: () => invocar('sitios.listar'),
     guardar: (datos, id) => invocar('sitios.guardar', datos, id),

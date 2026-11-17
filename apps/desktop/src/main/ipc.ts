@@ -22,9 +22,10 @@ export type NucleoIpc = Nucleo;
 
 type Manejador = (nucleo: NucleoIpc, sistema: ApiSistema, ...args: unknown[]) => unknown;
 
-/** Tabla expl�cita: el renderer solo puede invocar estas rutas; cada una valida sus argumentos. */
+/** Tabla explícita: el renderer solo puede invocar estas rutas; cada una valida sus argumentos. */
 const TABLA: Record<RutaIpc, Manejador> = {
   estadoGeneral: (n) => n.estadoGeneral(),
+  carpetaDatos: (n) => n.rutas.base,
   'sitios.listar': (n) => n.sitios.listar(),
   'sitios.guardar': (n, _s, datos, id) =>
     n.guardarSitio(
@@ -44,7 +45,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
     n.listarVersiones(idNoVacio(servicio, 'servicio') as Parameters<Nucleo['listarVersiones']>[0]),
   'instalador.instalar': (n, _s, v) =>
     n.instalador.instalar(
-      objetoPlano<Parameters<Nucleo['instalador']['instalar']>[0]>(v, 'versi�n'),
+      objetoPlano<Parameters<Nucleo['instalador']['instalar']>[0]>(v, 'versión'),
     ),
   'instalador.instalados': (n, _s, servicio) =>
     n.instalador.instalados(idNoVacio(servicio, 'servicio')),

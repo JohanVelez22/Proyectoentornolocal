@@ -42,6 +42,8 @@ export interface ApiSistema {
 
 export interface ApiEntorno {
   estadoGeneral(): Promise<EstadoGeneral>;
+  /** Carpeta de datos del programa (solo lectura). */
+  carpetaDatos(): Promise<string>;
   sitios: {
     listar(): Promise<Sitio[]>;
     guardar(datos: DatosSitio, id?: string): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }>;
@@ -88,6 +90,7 @@ export const PREFIJO_CANAL = 'entorno:';
 /** Rutas permitidas (también las únicas que el preload sabe invocar). */
 export const RUTAS_IPC = [
   'estadoGeneral',
+  'carpetaDatos',
   'sitios.listar',
   'sitios.guardar',
   'sitios.borrar',
