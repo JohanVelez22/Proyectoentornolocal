@@ -6,3 +6,6 @@ export * from './eventos';
 export * from './sitios/detectar';
 export * from './nginx/plantillas';
 export * from './nginx/principal';
+export * from './hosts/bloque';
+export * from './hosts/hosts';
+export * from './plataforma/index';
