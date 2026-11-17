@@ -1,0 +1,27 @@
+{
+  "name": "proyectoentornolocal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Entorno Local: gestor propio de entorno de desarrollo local",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint . && prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9",
+    "eslint": "^9",
+    "prettier": "^3",
+    "typescript": "^5",
+    "typescript-eslint": "^8",
+    "vitest": "^5.1.0"
+  }
+}
