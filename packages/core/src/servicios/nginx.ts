@@ -97,6 +97,7 @@ export class ServicioNginx {
       sitesDir: path.dirname(this.rutas.vhost('x')),
       phpUpstreams: await this.obtenerUpstreams(),
       logsDir: this.rutas.logs(),
+      puerto: (await this.leerConfig()).servicios.nginx.puerto,
     });
     await mkdir(this.rutas.logs(), { recursive: true });
     await mkdir(path.dirname(this.rutas.vhost('x')), { recursive: true });

@@ -29,6 +29,13 @@ describe('nombreUpstream / puertosPhp', () => {
 });
 
 describe('generarVhost', () => {
+  it('estático y personalizado niegan archivos ocultos salvo .well-known', () => {
+    const regla = 'location ~* /\\.(?!well-known) { deny all; }';
+    expect(generarVhost(sitio({ tipo: 'estatico' }), o)).toContain(regla);
+    expect(generarVhost(sitio({ tipo: 'personalizado', php: null }), o)).toContain(regla);
+    expect(generarVhost(sitio({ tipo: 'personalizado', php: '8.4' }), o)).toContain(regla);
+  });
+
   it('laravel', () => {
     const v = generarVhost(
       sitio({
@@ -139,8 +146,23 @@ describe('generarVhost', () => {
 });
 
 describe('generarNginxPrincipal', () => {
+  it('servidor por defecto: 404 breve para un Host desconocido, antes de los sitios', () => {
+    const c = generarNginxPrincipal({
+      prefijo: 'C:/D/nginx',
+      sitesDir: 'C:/D/sites',
+      phpUpstreams: [],
+      logsDir: 'C:/D/logs',
+      puerto: 8089,
+    });
+    expect(c).toContain('listen 8089 default_server;');
+    expect(c).toContain('server_name _;');
+    expect(c).toMatch(/return 404 '[^']*Sitio no encontrado en Entorno Local[^']*';/);
+    expect(c.indexOf('default_server')).toBeLessThan(c.indexOf('include "C:/D/sites/*.conf";'));
+  });
+
   it('genera upstreams, include e ítems base', () => {
     const c = generarNginxPrincipal({
+      puerto: 80,
       prefijo: 'C:\\Datos\\nginx',
       sitesDir: 'C:\\Datos\\etc\\nginx\\sites',
       phpUpstreams: [{ version: '8.3', puertos: [9830, 9831] }],

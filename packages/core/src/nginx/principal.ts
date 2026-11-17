@@ -6,6 +6,13 @@ export function puertosPhp(version: string, trabajadores: number): number[] {
   return Array.from({ length: trabajadores }, (_, i) => base + i);
 }
 
+const PAGINA_404 =
+  '<!doctype html><html lang="es"><meta charset="utf-8"><title>Sitio no encontrado</title>' +
+  '<body style="font-family:system-ui,sans-serif;margin:3em;color:#333">' +
+  '<h1>Sitio no encontrado en Entorno Local</h1>' +
+  '<p>Ningún sitio de Entorno Local responde a este nombre. Revise la dirección o el dominio del sitio.</p>' +
+  '</body></html>';
+
 const limpiar = (ruta: string): string => ruta.replace(/\\/g, '/').replace(/\/+$/, '');
 
 export function generarNginxPrincipal(o: {
@@ -13,6 +20,8 @@ export function generarNginxPrincipal(o: {
   sitesDir: string;
   phpUpstreams: { version: string; puertos: number[] }[];
   logsDir: string;
+  /** Puerto de escucha: el servidor por defecto atiende los Host desconocidos. */
+  puerto: number;
 }): string {
   const prefijo = limpiar(o.prefijo);
   const logs = limpiar(o.logsDir);
@@ -43,6 +52,15 @@ export function generarNginxPrincipal(o: {
       `    uwsgi_temp_path "${prefijo}/temp/uwsgi";`,
       `    scgi_temp_path "${prefijo}/temp/scgi";`,
       ...upstreams,
+      // Host desconocido (un túnel mal dirigido o un dominio mal escrito): 404 propio en vez
+      // de servir el primer sitio que encuentre nginx.
+      '    server {',
+      `        listen ${o.puerto} default_server;`,
+      '        server_name _;',
+      '        charset utf-8;',
+      '        default_type text/html;',
+      `        return 404 '${PAGINA_404}';`,
+      '    }',
       `    include "${limpiar(o.sitesDir)}/*.conf";`,
       '}',
     ].join('\n') + '\n'

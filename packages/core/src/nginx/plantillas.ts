@@ -11,6 +11,9 @@ export function nombreUpstream(version: string): string {
 
 const barras = (ruta: string): string => ruta.replace(/\\/g, '/');
 
+/** Niega archivos y carpetas ocultos (.env, .git…) salvo .well-known. */
+const OCULTOS = 'location ~* /\\.(?!well-known) { deny all; }';
+
 function bloqueFastcgi(up: string): string[] {
   return [
     `    fastcgi_pass ${up};`,
@@ -29,7 +32,7 @@ function bloqueLaravel(up: string): string[] {
     'location / { try_files $uri $uri/ /index.php?$query_string; }',
     ...bloqueIndexPhp(up),
     'location ~* \\.php$ { return 404; }',
-    'location ~* /\\.(?!well-known) { deny all; }',
+    OCULTOS,
   ];
 }
 
@@ -83,7 +86,7 @@ export function generarVhost(s: Sitio, o: OpcionesVhost): string {
       cuerpo = bloqueCi3(up);
       break;
     case 'estatico':
-      cuerpo = ['index index.html;', 'location / { try_files $uri $uri/ =404; }'];
+      cuerpo = ['index index.html;', 'location / { try_files $uri $uri/ =404; }', OCULTOS];
       break;
     case 'proxy':
       if (s.puertoProxy === null)
@@ -91,7 +94,7 @@ export function generarVhost(s: Sitio, o: OpcionesVhost): string {
       cuerpo = bloqueProxy(s.puertoProxy);
       break;
     case 'personalizado':
-      cuerpo = s.php ? ['location ~* \\.php$ {', ...bloqueFastcgi(up), '}'] : [];
+      cuerpo = [OCULTOS, ...(s.php ? ['location ~* \\.php$ {', ...bloqueFastcgi(up), '}'] : [])];
       break;
   }
 
