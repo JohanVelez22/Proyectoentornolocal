@@ -1,0 +1,324 @@
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { Ejecutor, Plataforma } from '../src/plataforma/tipos';
+import type { DefProceso, EstadoProceso } from '../src/procesos/supervisor';
+import { Rutas } from '../src/rutas';
+import { ErrorPuertoOcupado, ServicioNginx } from '../src/servicios/nginx';
+import { ServicioPhp } from '../src/servicios/php';
+import { Servicios } from '../src/servicios/servicios';
+import { ConfigSchema, type Config } from '../src/tipos';
+
+let base: string;
+let rutas: Rutas;
+let iniciados: DefProceso[];
+let detenidos: string[];
+let estados: Map<string, EstadoProceso>;
+let pids: Map<string, number>;
+let ocupados: Map<number, { pid: number; nombre: string }>;
+let respuestas: Set<number>;
+let llamadas: { cmd: string; args: string[] }[];
+let codigoExec: number;
+let cfg: Config;
+
+const supervisor = () =>
+  ({
+    iniciar: async (d: DefProceso) => {
+      iniciados.push(d);
+      estados.set(d.id, 'iniciando');
+      pids.set(d.id, 1000 + iniciados.length);
+    },
+    detener: async (id: string) => {
+      detenidos.push(id);
+      estados.delete(id);
+      pids.delete(id);
+    },
+    estado: (id: string) => estados.get(id) ?? 'apagado',
+    pid: (id: string) => pids.get(id) ?? null,
+  }) as never;
+
+const plataforma = (): Plataforma =>
+  ({
+    quienUsaPuerto: async (p: number) => ocupados.get(p) ?? null,
+    procesoVivo: async () => ({ vivo: false }),
+    ejecutable: (n: string) => `${n}.exe`,
+  }) as unknown as Plataforma;
+
+const exec: Ejecutor = async (cmd, args) => {
+  llamadas.push({ cmd, args });
+  return { codigo: codigoExec, stdout: '', stderr: codigoExec ? 'nginx: [emerg] fallo' : 'ok' };
+};
+
+const instalador = (nginx: string[], php: string[]) =>
+  ({
+    instalados: async (s: string) => (s === 'nginx' ? nginx : php),
+    instalado: async (s: string, v: string) => (s === 'nginx' ? nginx : php).includes(v),
+  }) as never;
+
+function sembrarNginx(v: string): string {
+  const bin = rutas.bin('nginx', v);
+  mkdirSync(path.join(bin, 'conf'), { recursive: true });
+  writeFileSync(path.join(bin, 'conf', 'mime.types'), 'types {}');
+  writeFileSync(path.join(bin, 'conf', 'fastcgi_params'), 'fastcgi_param X 1;');
+  return bin;
+}
+
+function sembrarPhp(v: string): string {
+  const bin = rutas.bin('php', v);
+  mkdirSync(bin, { recursive: true });
+  writeFileSync(
+    path.join(bin, 'php.ini-development'),
+    [
+      '; extension_dir = "ext"',
+      ';extension=curl',
+      ';extension=fileinfo',
+      ';extension=gd',
+      ';extension=intl',
+      ';extension=mbstring',
+      ';extension=openssl',
+      ';extension=pdo_mysql',
+      ';extension=pdo_pgsql',
+      ';extension=pdo_sqlite',
+      ';extension=pgsql',
+      ';extension=sqlite3',
+      ';extension=zip',
+      'memory_limit = 128M',
+      ';date.timezone =',
+      '',
+    ].join('\r\n'),
+  );
+  return bin;
+}
+
+beforeEach(() => {
+  base = mkdtempSync(path.join(os.tmpdir(), 'pel-serv-'));
+  rutas = new Rutas(base);
+  iniciados = [];
+  detenidos = [];
+  estados = new Map();
+  pids = new Map();
+  ocupados = new Map();
+  respuestas = new Set();
+  llamadas = [];
+  codigoExec = 0;
+  cfg = ConfigSchema.parse({});
+});
+afterEach(() => rmSync(base, { recursive: true, force: true }));
+
+describe('ServicioPhp', () => {
+  const crear = () =>
+    new ServicioPhp(rutas, plataforma(), supervisor(), instalador([], ['8.4']), async () => cfg);
+
+  it('genera php.ini con extensiones y valores', async () => {
+    const bin = sembrarPhp('8.4');
+    await crear().generarIni('8.4');
+    const ini = readFileSync(rutas.phpIni('8.4'), 'utf8');
+    expect(ini).toContain(`extension_dir="${bin.replace(/\\/g, '/')}/ext"`);
+    for (const e of [
+      'curl',
+      'fileinfo',
+      'gd',
+      'intl',
+      'mbstring',
+      'openssl',
+      'pdo_mysql',
+      'pdo_pgsql',
+      'pdo_sqlite',
+      'pgsql',
+      'sqlite3',
+      'zip',
+      'sodium',
+    ])
+      expect(ini).toMatch(new RegExp(`^extension=${e}\\s*$`, 'm'));
+    expect(ini).not.toMatch(/^;extension=curl/m);
+    expect(ini).toMatch(/^memory_limit\s*=\s*512M\s*$/m);
+    expect(ini).not.toContain('128M');
+    expect(ini).toMatch(/^upload_max_filesize\s*=\s*64M\s*$/m);
+    expect(ini).toMatch(/^post_max_size\s*=\s*64M\s*$/m);
+    expect(ini).toMatch(/^date\.timezone\s*=\s*America\/Bogota\s*$/m);
+    expect(ini).toMatch(/^cgi\.fix_pathinfo\s*=\s*0\s*$/m);
+  });
+
+  it('inicia dos procesos en 9840 y 9841 con PHP_FCGI_MAX_REQUESTS=0', async () => {
+    sembrarPhp('8.4');
+    await crear().iniciar('8.4');
+    expect(iniciados.map((d) => [d.id, d.puerto])).toEqual([
+      ['php-8.4-0', 9840],
+      ['php-8.4-1', 9841],
+    ]);
+    const d = iniciados[0]!;
+    expect(d.env?.PHP_FCGI_MAX_REQUESTS).toBe('0');
+    expect(d.reiniciar).toBe(true);
+    expect(d.args).toEqual(['-c', rutas.phpIni('8.4'), '-b', '127.0.0.1:9840']);
+    expect(d.log).toBe(rutas.logs('php-8.4.log'));
+    expect(existsSync(rutas.phpIni('8.4'))).toBe(true);
+  });
+
+  it('lanza ErrorPuertoOcupado si un puerto está ocupado y no inicia ninguno', async () => {
+    sembrarPhp('8.4');
+    ocupados.set(9841, { pid: 55, nombre: 'FlyEnv.exe' });
+    await expect(crear().iniciar('8.4')).rejects.toMatchObject({ puerto: 9841, pid: 55 });
+    expect(iniciados).toHaveLength(0);
+  });
+
+  it('detiene todos los trabajadores', async () => {
+    sembrarPhp('8.4');
+    await crear().iniciar('8.4');
+    await crear().detener('8.4');
+    expect(detenidos).toEqual(expect.arrayContaining(['php-8.4-0', 'php-8.4-1']));
+  });
+
+  it('falla si PHP no está instalado', async () => {
+    await expect(crear().iniciar('8.3')).rejects.toThrow(/PHP 8\.3 no está instalado/);
+  });
+});
+
+describe('ServicioNginx', () => {
+  const crear = (inst = instalador(['1.28.0'], [])) =>
+    new ServicioNginx(
+      rutas,
+      plataforma(),
+      supervisor(),
+      inst,
+      async () => cfg,
+      async () => [{ version: '8.4', puertos: [9840, 9841] }],
+      exec,
+    );
+
+  it('inicia con -p y -c, prueba la config antes y copia mime.types', async () => {
+    const bin = sembrarNginx('1.28.0');
+    await crear().iniciar();
+    expect(llamadas[0]!.args).toEqual(['-t', '-p', bin, '-c', rutas.nginxConf()]);
+    const d = iniciados[0]!;
+    expect(d.id).toBe('nginx');
+    expect(d.args).toEqual(['-p', bin, '-c', rutas.nginxConf()]);
+    expect(d.puerto).toBe(80);
+    expect(d.reiniciar).toBe(true);
+    expect(d.log).toBe(rutas.logs('nginx.log'));
+    expect(readFileSync(rutas.nginxConf(), 'utf8')).toContain('server 127.0.0.1:9840;');
+    const etc = path.dirname(rutas.nginxConf());
+    expect(existsSync(path.join(etc, 'mime.types'))).toBe(true);
+    expect(existsSync(path.join(etc, 'fastcgi_params'))).toBe(true);
+  });
+
+  it('con el puerto ocupado lanza ErrorPuertoOcupado con nombre y PID', async () => {
+    sembrarNginx('1.28.0');
+    ocupados.set(80, { pid: 1234, nombre: 'nginx.exe' });
+    const err = await crear()
+      .iniciar()
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ErrorPuertoOcupado);
+    expect((err as Error).message).toBe(
+      'El puerto 80 lo usa nginx.exe (PID 1234). Ciérrelo o cambie el puerto en Ajustes.',
+    );
+    expect(iniciados).toHaveLength(0);
+  });
+
+  it('no es conflicto si el PID es nuestro nginx', async () => {
+    sembrarNginx('1.28.0');
+    estados.set('nginx', 'encendido');
+    pids.set('nginx', 77);
+    ocupados.set(80, { pid: 77, nombre: 'nginx.exe' });
+    await expect(crear().iniciar()).resolves.toBeUndefined();
+  });
+
+  it('lanza el error de nginx si la config no es válida', async () => {
+    sembrarNginx('1.28.0');
+    codigoExec = 1;
+    await expect(crear().iniciar()).rejects.toThrow(/\[emerg\] fallo/);
+    expect(iniciados).toHaveLength(0);
+  });
+
+  it('falla si nginx no está instalado', async () => {
+    await expect(crear(instalador([], [])).iniciar()).rejects.toThrow(
+      'Nginx no está instalado. Instálelo desde Servicios.',
+    );
+  });
+
+  it('usa la versión configurada si está instalada, si no la más reciente', async () => {
+    sembrarNginx('1.26.0');
+    const bin = sembrarNginx('1.28.0');
+    cfg.servicios.nginx.version = '1.26.0';
+    await crear(instalador(['1.26.0', '1.28.0'], [])).iniciar();
+    expect(iniciados[0]!.args[1]).toBe(rutas.bin('nginx', '1.26.0'));
+    iniciados = [];
+    estados.clear();
+    cfg.servicios.nginx.version = '9.9.9';
+    await crear(instalador(['1.26.0', '1.28.0'], [])).iniciar();
+    expect(iniciados[0]!.args[1]).toBe(bin);
+  });
+
+  it('recargar es no-op si nginx no corre y usa -s reload si corre', async () => {
+    sembrarNginx('1.28.0');
+    await crear().recargar();
+    expect(llamadas).toHaveLength(0);
+    estados.set('nginx', 'encendido');
+    await crear().recargar();
+    expect(llamadas.at(-1)!.args).toEqual([
+      '-s',
+      'reload',
+      '-p',
+      rutas.bin('nginx', '1.28.0'),
+      '-c',
+      rutas.nginxConf(),
+    ]);
+  });
+
+  it('detener hace quit y luego libera en el supervisor', async () => {
+    sembrarNginx('1.28.0');
+    estados.set('nginx', 'encendido');
+    pids.set('nginx', 5);
+    await crear().detener();
+    expect(llamadas[0]!.args.slice(0, 2)).toEqual(['-s', 'quit']);
+    expect(detenidos).toContain('nginx');
+  });
+});
+
+describe('Servicios', () => {
+  const crear = (opts: { ramas?: string[] } = {}) =>
+    new Servicios({
+      rutas,
+      plataforma: plataforma(),
+      supervisor: supervisor(),
+      instalador: instalador(['1.28.0'], ['8.4']),
+      leerConfig: async () => cfg,
+      ramasEnUso: async () => opts.ramas ?? ['8.4'],
+      sonda: async (p) => respuestas.has(p),
+      exec,
+    });
+
+  it('estados() marca 3306 como externo cuando la sonda responde', async () => {
+    respuestas.add(3306);
+    const e = await crear().estados();
+    const my = e.find((s) => s.id === 'mysql');
+    expect(my).toMatchObject({ estado: 'externo', nombre: 'MySQL (externo)', puertos: [3306] });
+    expect(e.find((s) => s.id === 'postgresql')).toBeUndefined();
+  });
+
+  it('agrega los trabajadores de PHP en un estado', async () => {
+    estados.set('php-8.4-0', 'encendido');
+    estados.set('php-8.4-1', 'iniciando');
+    const e = await crear().estados();
+    expect(e.find((s) => s.id === 'php-8.4')).toMatchObject({
+      estado: 'iniciando',
+      version: '8.4',
+      puertos: [9840, 9841],
+    });
+    estados.set('php-8.4-1', 'encendido');
+    expect((await crear().estados()).find((s) => s.id === 'php-8.4')!.estado).toBe('encendido');
+    estados.set('php-8.4-1', 'error');
+    expect((await crear().estados()).find((s) => s.id === 'php-8.4')!.estado).toBe('error');
+  });
+
+  it('iniciarTodo arranca PHP y luego nginx; detenerTodo al revés', async () => {
+    sembrarNginx('1.28.0');
+    sembrarPhp('8.4');
+    const s = crear();
+    await s.iniciarTodo();
+    expect(iniciados.map((d) => d.id)).toEqual(['php-8.4-0', 'php-8.4-1', 'nginx']);
+    await s.detenerTodo();
+    expect(detenidos[0]).toBe('nginx');
+    expect(detenidos.slice(1)).toContain('php-8.4-0');
+  });
+});

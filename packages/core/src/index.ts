@@ -13,3 +13,6 @@ export * from './catalogo/catalogo';
 export * from './catalogo/instalador';
 export * from './procesos/sonda';
 export * from './procesos/supervisor';
+export * from './servicios/nginx';
+export * from './servicios/php';
+export * from './servicios/servicios';
