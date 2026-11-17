@@ -130,6 +130,7 @@ describe('UrlBase', () => {
     await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
     expect(JSON.parse(readFileSync(estadoPath(), 'utf8'))).toEqual({
       existia: true,
+      hashAplicado: expect.any(String),
       valor: 'http://wolf.test',
       lineaOriginal: 'APP_URL="http://wolf.test"',
     });
@@ -165,5 +166,43 @@ describe('UrlBase', () => {
     const m = await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
     expect(m).toContain('caché de configuración');
     expect(readFileSync(env(), 'utf8')).toContain('APP_URL=');
+  });
+
+  it('dos APP_URL y un byte latin1: idéntico byte a byte tras aplicar y restaurar', async () => {
+    const original = Buffer.concat([
+      Buffer.from('APP_URL=http://a.test\r\nNOMBRE=Jos'),
+      Buffer.from([0xe9]),
+      Buffer.from('\r\nAPP_URL=http://b.test\r\n'),
+    ]);
+    writeFileSync(env(), original);
+    const ub = new UrlBase({ rutas, ejecutor: exec });
+    await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+    const medio = readFileSync(env()).toString('latin1');
+    expect(medio).toContain('APP_URL=https://a.trycloudflare.com/\r\n');
+    expect(medio).toContain('APP_URL=http://b.test');
+    await ub.restaurar(sitio());
+    expect(readFileSync(env()).equals(original)).toBe(true);
+    expect(existsSync(path.join(carpeta, '.env.pel-respaldo'))).toBe(false);
+  });
+
+  it('si el usuario editó el .env entre medias, restaura solo la línea', async () => {
+    writeFileSync(env(), 'APP_URL=http://a.test\nAPP_URL=http://b.test\n');
+    const ub = new UrlBase({ rutas, ejecutor: exec });
+    await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+    writeFileSync(env(), readFileSync(env(), 'utf8') + 'NUEVA=1\n');
+    await ub.restaurar(sitio());
+    expect(readFileSync(env(), 'utf8')).toBe(
+      'APP_URL=http://a.test\nAPP_URL=http://b.test\nNUEVA=1\n',
+    );
+  });
+
+  it('aplicar y restaurar concurrentes se serializan por sitio', async () => {
+    const original = 'A=1\n';
+    writeFileSync(env(), original);
+    const ub = new UrlBase({ rutas, ejecutor: exec });
+    const a = ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+    const r = ub.restaurar(sitio());
+    await Promise.all([a, r]);
+    expect(readFileSync(env(), 'utf8')).toBe(original);
   });
 });

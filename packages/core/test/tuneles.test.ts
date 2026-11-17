@@ -72,8 +72,13 @@ const exec: Ejecutor = async (cmd, args) => {
   return { codigo: 0, stdout: '', stderr: '' };
 };
 
-function crear(opts = { esperaMs: 300, intervaloMs: 10 }) {
-  const urlBase = new UrlBase({ rutas, ejecutor: exec });
+let ubReal: UrlBase;
+function crear(
+  opts = { esperaMs: 300, intervaloMs: 10 },
+  envolver?: (ub: UrlBase) => Pick<UrlBase, 'aplicar' | 'restaurar'>,
+) {
+  ubReal = new UrlBase({ rutas, ejecutor: exec });
+  const urlBase = envolver ? envolver(ubReal) : ubReal;
   return new Tuneles({
     supervisor: supervisor(),
     sitios: { listar: async () => sitios },
@@ -323,5 +328,64 @@ describe('Tuneles cierre inesperado, renovar y restauración', () => {
     expect(JSON.parse(readFileSync(path.join(rutas.base, 'run', 'tuneles.json'), 'utf8'))).toEqual(
       [],
     );
+  });
+});
+
+describe('Tuneles carreras y barrido (fix ronda 1)', () => {
+  it('cerrar() durante aplicar: el .env vuelve a su original', async () => {
+    const original = 'APP_NAME=Wolf\nAPP_URL=http://wolf.test\n';
+    writeFileSync(env(), original);
+    let soltar!: () => void;
+    const puerta = new Promise<void>((r) => (soltar = r));
+    let entro!: () => void;
+    const dentro = new Promise<void>((r) => (entro = r));
+    const t = crear({ esperaMs: 300, intervaloMs: 10 }, (ub) => ({
+      aplicar: async (s, u) => {
+        entro();
+        await puerta;
+        return ub.aplicar(s, u);
+      },
+      restaurar: (s) => ub.restaurar(s),
+    }));
+    const abrir = t.abrir('wolf');
+    await dentro;
+    await t.cerrar('wolf');
+    soltar();
+    await abrir;
+    expect(readFileSync(env(), 'utf8')).toBe(original);
+    expect(existsSync(path.join(rutas.base, 'run', 'urlbase-wolf.json'))).toBe(false);
+  });
+
+  it('barrido: un urlbase-<id>.json huérfano se restaura en restaurar()', async () => {
+    const original = 'A=1\nAPP_URL=http://wolf.test\n';
+    writeFileSync(env(), original);
+    const t0 = crear();
+    await ubReal.aplicar(sitio(), 'https://x.trycloudflare.com/');
+    expect(readFileSync(env(), 'utf8')).not.toBe(original);
+    await t0.restaurar();
+    expect(readFileSync(env(), 'utf8')).toBe(original);
+    expect(existsSync(path.join(rutas.base, 'run', 'urlbase-wolf.json'))).toBe(false);
+  });
+
+  it('cerrar() durante un abrir() en curso: el siguiente abrir() empieza de cero', async () => {
+    escribirBanner = false;
+    const t = crear({ esperaMs: 2000, intervaloMs: 10 });
+    const primero = t.abrir('wolf');
+    await new Promise((r) => setTimeout(r, 40));
+    await t.cerrar('wolf');
+    escribirBanner = true;
+    const e = await t.abrir('wolf');
+    expect(e.estado).toBe('activo');
+    expect(iniciados).toHaveLength(2);
+    expect((await primero).estado).toBe('apagado');
+  });
+
+  it('no se puede limpiar el log anterior: estado error con mensaje, sin lanzar', async () => {
+    const log = rutas.logs('tuneles', 'tunel-wolf.log');
+    mkdirSync(path.join(log, 'dentro'), { recursive: true });
+    const e = await crear().abrir('wolf');
+    expect(e.estado).toBe('error');
+    expect(e.mensaje).toContain('log anterior');
+    expect(iniciados).toHaveLength(0);
   });
 });

@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Almacen } from '../almacen';
 import type { Instalador } from '../catalogo/instalador';
@@ -44,6 +44,8 @@ export class Tuneles {
   private readonly mapa = new Map<string, EstadoTunel>();
   private readonly cerrando = new Set<string>();
   private readonly abriendo = new Map<string, Promise<EstadoTunel>>();
+  /** Se incrementa en cada cerrar() para invalidar aperturas en curso. */
+  private readonly generacion = new Map<string, number>();
   private readonly esperaMs: number;
   private readonly intervaloMs: number;
 
@@ -64,7 +66,9 @@ export class Tuneles {
     if (actual && actual.estado === 'activo') return Promise.resolve({ ...actual });
     const enCurso = this.abriendo.get(sitioId);
     if (enCurso) return enCurso;
-    const p = this.abrirInterno(sitioId).finally(() => this.abriendo.delete(sitioId));
+    const p: Promise<EstadoTunel> = this.abrirInterno(sitioId).finally(() => {
+      if (this.abriendo.get(sitioId) === p) this.abriendo.delete(sitioId);
+    });
     this.abriendo.set(sitioId, p);
     return p;
   }
@@ -72,6 +76,8 @@ export class Tuneles {
   async cerrar(sitioId: string): Promise<void> {
     const id = PREFIJO + sitioId;
     this.cerrando.add(sitioId);
+    this.generacion.set(sitioId, (this.generacion.get(sitioId) ?? 0) + 1);
+    this.abriendo.delete(sitioId);
     try {
       await this.d.supervisor.detener(id);
       const sitio = await this.buscar(sitioId);
@@ -104,9 +110,27 @@ export class Tuneles {
       if (sitio) await this.restaurarUrlBase(sitio);
     }
     this.escribirRegistros(vivos);
+    await this.barrerHuerfanos(new Set(vivos.map((v) => v.sitioId)));
+  }
+
+  /** Restaura todo run/urlbase-<id>.json cuyo sitio no tiene un túnel vivo. */
+  private async barrerHuerfanos(vivos: Set<string>): Promise<void> {
+    let archivos: string[] = [];
+    try {
+      archivos = readdirSync(path.join(this.d.rutas.base, 'run'));
+    } catch {
+      return;
+    }
+    for (const f of archivos) {
+      const m = /^urlbase-(.+)\.json$/.exec(f);
+      if (!m || vivos.has(m[1]!)) continue;
+      const sitio = await this.buscar(m[1]!);
+      if (sitio) await this.restaurarUrlBase(sitio);
+    }
   }
 
   private async abrirInterno(sitioId: string): Promise<EstadoTunel> {
+    const gen = this.generacion.get(sitioId) ?? 0;
     const sitio = await this.buscar(sitioId);
     if (!sitio) throw new Error('Sitio no encontrado');
     const versiones = await this.d.instalador.instalados('cloudflared');
@@ -119,12 +143,20 @@ export class Tuneles {
     const id = PREFIJO + sitioId;
     const logCloudflared = this.d.rutas.logs('tuneles', `${id}.log`);
     const logSalida = this.d.rutas.logs('tuneles', `${id}.salida.log`);
-    // Evita leer una URL de una ejecución anterior.
-    rmSync(logCloudflared, { force: true });
-    rmSync(logSalida, { force: true });
-    mkdirSync(path.dirname(logCloudflared), { recursive: true });
-
     this.fijar({ sitioId, estado: 'iniciando', url: null });
+    try {
+      // Evita leer una URL de una ejecución anterior.
+      mkdirSync(path.dirname(logCloudflared), { recursive: true });
+      rmSync(logCloudflared, { force: true });
+      rmSync(logSalida, { force: true });
+    } catch (e) {
+      return this.fijar({
+        sitioId,
+        estado: 'error',
+        url: null,
+        mensaje: `No se pudo limpiar el log anterior del túnel: ${e instanceof Error ? e.message : String(e)}`,
+      });
+    }
     try {
       await this.d.supervisor.iniciar({
         id,
@@ -152,10 +184,13 @@ export class Tuneles {
       throw e;
     }
 
+    if ((this.generacion.get(sitioId) ?? 0) !== gen) return this.apagado(sitioId);
     const limite = Date.now() + this.esperaMs;
     for (;;) {
+      if ((this.generacion.get(sitioId) ?? 0) !== gen) return this.apagado(sitioId);
       const url = extraerUrlTunel(leerTexto(logCloudflared) + '\n' + leerTexto(logSalida));
-      if (url) return this.alEncontrarUrl(sitio, url);
+      if (url) return this.alEncontrarUrl(sitio, url, gen);
+      if ((this.generacion.get(sitioId) ?? 0) !== gen) return this.apagado(sitioId);
       const actual = this.mapa.get(sitioId);
       if (!actual || actual.estado !== 'iniciando')
         return actual ? { ...actual } : this.apagado(sitioId);
@@ -180,11 +215,13 @@ export class Tuneles {
     });
   }
 
-  private async alEncontrarUrl(sitio: Sitio, url: string): Promise<EstadoTunel> {
+  private async alEncontrarUrl(sitio: Sitio, url: string, gen: number): Promise<EstadoTunel> {
+    if ((this.generacion.get(sitio.id) ?? 0) !== gen) return this.apagado(sitio.id);
     const sitioId = sitio.id;
     const pid = this.d.supervisor.pid(PREFIJO + sitioId);
     if (pid !== null) this.agregarRegistro({ sitioId, url, pid });
     let mensaje: string | undefined;
+    if (this.mapa.get(sitioId)?.estado !== 'iniciando') return this.estadoActual(sitioId);
     if (sitio.urlBaseVar) {
       try {
         mensaje = (await this.d.urlBase.aplicar(sitio, `${url}/`)) ?? undefined;
@@ -193,9 +230,11 @@ export class Tuneles {
       }
     }
     // Si el proceso murió o se cerró durante la aplicación, no se pisa ese estado.
-    const actual = this.mapa.get(sitioId);
-    if (!actual || actual.estado !== 'iniciando')
-      return actual ? { ...actual } : this.apagado(sitioId);
+    if (this.mapa.get(sitioId)?.estado !== 'iniciando') {
+      // Se cerró o murió mientras se aplicaba: se garantiza que el .env vuelva.
+      if (sitio.urlBaseVar) await this.restaurarUrlBase(sitio);
+      return this.estadoActual(sitioId);
+    }
     return this.fijar({ sitioId, estado: 'activo', url, ...(mensaje ? { mensaje } : {}) });
   }
 
@@ -206,9 +245,9 @@ export class Tuneles {
     const actual = this.mapa.get(sitioId);
     if (!actual || actual.estado === 'apagado' || actual.estado === 'error') return;
     this.fijar({ sitioId, estado: 'error', url: actual.url, mensaje: MSG_CERRADO });
-    this.quitarRegistro(sitioId);
     const sitio = await this.buscar(sitioId);
     if (sitio) await this.restaurarUrlBase(sitio);
+    this.quitarRegistro(sitioId);
   }
 
   private async restaurarUrlBase(sitio: Sitio): Promise<void> {
@@ -221,6 +260,11 @@ export class Tuneles {
 
   private async buscar(sitioId: string): Promise<Sitio | undefined> {
     return (await this.d.sitios.listar()).find((s) => s.id === sitioId);
+  }
+
+  private estadoActual(sitioId: string): EstadoTunel {
+    const a = this.mapa.get(sitioId);
+    return a ? { ...a } : this.apagado(sitioId);
   }
 
   private apagado(sitioId: string): EstadoTunel {
