@@ -52,8 +52,8 @@ describe('generarVhost', () => {
       'fastcgi_pass php84;',
       'include fastcgi_params;',
       'fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;',
-      'location ~ \\.php$ { return 404; }',
-      'location ~ /\\.(?!well-known) { deny all; }',
+      'location ~* \\.php$ { return 404; }',
+      'location ~* /\\.(?!well-known) { deny all; }',
     ])
       expect(v).toContain(l);
   });
@@ -68,7 +68,7 @@ describe('generarVhost', () => {
       expect(v).toContain(`location ^~ /${d}/ { deny all; }`);
     expect(v.indexOf('location ^~ /application/')).toBeLessThan(v.indexOf('location / {'));
     expect(v.indexOf('add_header X-Foo')).toBeLessThan(v.indexOf('location ^~ /application/'));
-    expect(v).toContain('location ~ /\\. { deny all; }');
+    expect(v).toContain('location ~* /\\. { deny all; }');
     expect(v).toContain(
       'location ~* \\.(sql|md|rst|lock|log|ini|sh|py|bak|old|dist|dump|backup)$ { deny all; }',
     );
@@ -76,7 +76,32 @@ describe('generarVhost', () => {
     expect(v).toContain('location ^~ /vendor/ {');
     expect(v).toContain('try_files $uri $uri/ /index.php$is_args$query_string;');
     expect(v).toContain('fastcgi_pass php83;');
-    expect(v).toContain('location ~ \\.php$ { return 404; }');
+    expect(v).toContain('location ~* \\.php$ { return 404; }');
+  });
+
+  it('reglas regex sin distinguir mayúsculas y bloque vendor completo', () => {
+    const ci = generarVhost(sitio({ tipo: 'codeigniter3', php: '8.3' }), o);
+    const lv = generarVhost(sitio({ tipo: 'laravel', php: '8.3' }), o);
+    expect(ci).toContain('location ~* \\.php$ { return 404; }');
+    expect(lv).toContain('location ~* \\.php$ { return 404; }');
+    expect(lv).toContain('location ~* /\\.(?!well-known) { deny all; }');
+    expect(ci).toContain('location ~* /\\. { deny all; }');
+    expect(ci).not.toMatch(/location ~ /);
+    expect(lv).not.toMatch(/location ~ /);
+    const vendor = ci.slice(ci.indexOf('location ^~ /vendor/ {'));
+    const bloque = vendor.slice(0, vendor.indexOf('try_files $uri =404;'));
+    expect(bloque).toContain('location ~* /\\. { deny all; }');
+    expect(bloque).toContain('location ~* \\.(php\\d?|phtml|phar|phps)$ { deny all; }');
+    expect(bloque).toContain('(composer|package)(-lock)?\\.json$ { deny all; }');
+    expect(bloque).toContain('\\.(sql|md|rst|lock|log|ini|sh|py|bak|old|dist|dump|backup)$');
+    const pers = generarVhost(sitio({ tipo: 'personalizado', php: '8.4' }), o);
+    expect(pers).toContain('location ~* \\.php$ {');
+  });
+
+  it('proxy sin puerto lanza error', () => {
+    expect(() => generarVhost(sitio({ tipo: 'proxy', dominio: 'p.test' }), o)).toThrow(
+      'El sitio p.test necesita un puerto de proxy',
+    );
   });
 
   it('estático', () => {
@@ -101,7 +126,7 @@ describe('generarVhost', () => {
     const v = generarVhost(sitio({ tipo: 'personalizado', php: '8.4', reglasExtra: '# mío' }), o);
     expect(v).toContain('root "C:/Proyectos/a";');
     expect(v).toContain('# mío');
-    expect(v).toContain('location ~ \\.php$ {');
+    expect(v).toContain('location ~* \\.php$ {');
     expect(v).toContain('fastcgi_pass php84;');
     expect(generarVhost(sitio({ tipo: 'personalizado' }), o)).not.toContain('fastcgi');
   });

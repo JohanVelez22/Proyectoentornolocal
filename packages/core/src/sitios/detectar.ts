@@ -72,7 +72,7 @@ export async function detectarProyecto(carpeta: string): Promise<ProyectoDetecta
     const tiene = env !== null && /^\s*APP_BASE_URL\s*=/m.test(env);
     return {
       tipo: 'codeigniter3',
-      php: await versionPhp(carpeta),
+      php: null, // composer.json de CI3 trae el mínimo (>=5.3.7), no la versión a usar
       sugerenciaDominio,
       urlBaseVar: tiene ? 'APP_BASE_URL' : null,
     };

@@ -28,8 +28,8 @@ function bloqueLaravel(up: string): string[] {
     'index index.php index.html;',
     'location / { try_files $uri $uri/ /index.php?$query_string; }',
     ...bloqueIndexPhp(up),
-    'location ~ \\.php$ { return 404; }',
-    'location ~ /\\.(?!well-known) { deny all; }',
+    'location ~* \\.php$ { return 404; }',
+    'location ~* /\\.(?!well-known) { deny all; }',
   ];
 }
 
@@ -39,16 +39,19 @@ function bloqueCi3(up: string): string[] {
     ...['application', 'system', 'sql', 'docs', 'tests'].map(
       (d) => `location ^~ /${d}/ { deny all; }`,
     ),
-    'location ~ /\\. { deny all; }',
+    'location ~* /\\. { deny all; }',
     'location ~* \\.(sql|md|rst|lock|log|ini|sh|py|bak|old|dist|dump|backup)$ { deny all; }',
     'location ~* (^|/)(composer|package)(-lock)?\\.json$ { deny all; }',
     'location ^~ /vendor/ {',
-    '    location ~* \\.php$ { deny all; }',
+    '    location ~* /\\. { deny all; }',
+    '    location ~* \\.(php\\d?|phtml|phar|phps)$ { deny all; }',
+    '    location ~* \\.(sql|md|rst|lock|log|ini|sh|py|bak|old|dist|dump|backup)$ { deny all; }',
+    '    location ~* (^|/)(composer|package)(-lock)?\\.json$ { deny all; }',
     '    try_files $uri =404;',
     '}',
     'location / { try_files $uri $uri/ /index.php$is_args$query_string; }',
     ...bloqueIndexPhp(up),
-    'location ~ \\.php$ { return 404; }',
+    'location ~* \\.php$ { return 404; }',
   ];
 }
 
@@ -88,7 +91,7 @@ export function generarVhost(s: Sitio, o: OpcionesVhost): string {
       cuerpo = bloqueProxy(s.puertoProxy);
       break;
     case 'personalizado':
-      cuerpo = s.php ? ['location ~ \\.php$ {', ...bloqueFastcgi(up), '}'] : [];
+      cuerpo = s.php ? ['location ~* \\.php$ {', ...bloqueFastcgi(up), '}'] : [];
       break;
   }
 

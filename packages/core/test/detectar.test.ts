@@ -51,6 +51,15 @@ describe('detectarProyecto', () => {
     expect((await detectarProyecto(d)).urlBaseVar).toBeNull();
   });
 
+  it('codeigniter3 no deriva php de composer.json', async () => {
+    const d = await carpeta('ci-composer');
+    await mkdir(join(d, 'application'));
+    await mkdir(join(d, 'system/core'), { recursive: true });
+    await writeFile(join(d, 'system/core/CodeIgniter.php'), '');
+    await writeFile(join(d, 'composer.json'), JSON.stringify({ require: { php: '>=5.3.7' } }));
+    expect((await detectarProyecto(d)).php).toBeNull();
+  });
+
   it('detecta estático y personalizado', async () => {
     const d = await carpeta('Sitio Web');
     await writeFile(join(d, 'index.html'), '');
