@@ -11,7 +11,7 @@ import type { EstadoTunel, Sitio } from '../tipos';
 import { extraerUrlTunel } from './url';
 
 export interface DepsTuneles {
-  supervisor: Pick<Supervisor, 'iniciar' | 'detener' | 'estado' | 'pid' | 'alSalir'>;
+  supervisor: Pick<Supervisor, 'iniciar' | 'detener' | 'estado' | 'pid' | 'alSalir' | 'ids'>;
   sitios: Pick<GestorSitios, 'listar'>;
   almacen: Pick<Almacen, 'leer'>;
   instalador: Pick<Instalador, 'instalados'>;
@@ -121,18 +121,54 @@ export class Tuneles {
   async restaurar(): Promise<void> {
     const registros = this.leerRegistros();
     const vivos: RegistroTunel[] = [];
+    const muertos: RegistroTunel[] = [];
     for (const r of registros) {
       const id = PREFIJO + r.sitioId;
       if (this.d.supervisor.estado(id) !== 'apagado' && this.d.supervisor.pid(id) === r.pid) {
         vivos.push(r);
         this.fijar({ sitioId: r.sitioId, estado: 'activo', url: r.url });
-        continue;
+      } else {
+        muertos.push(r);
       }
+    }
+    // cloudflared readoptado sin registro vigente: nadie lo controla, se detiene.
+    const vigentes = new Set(vivos.map((v) => PREFIJO + v.sitioId));
+    for (const id of this.d.supervisor.ids()) {
+      if (!id.startsWith(PREFIJO) || vigentes.has(id)) continue;
+      const sitioId = id.slice(PREFIJO.length);
+      this.cerrando.add(sitioId);
+      try {
+        await this.d.supervisor.detener(id);
+      } catch (e) {
+        console.error('No se pudo detener el túnel huérfano:', e);
+      } finally {
+        this.cerrando.delete(sitioId);
+      }
+    }
+    for (const r of muertos) {
       const sitio = await this.buscar(r.sitioId);
       if (sitio) await this.restaurarUrlBase(sitio);
     }
     this.escribirRegistros(vivos);
     await this.barrerHuerfanos(new Set(vivos.map((v) => v.sitioId)));
+  }
+
+  /**
+   * Cierra todos los túneles (al apagar o con "Detener todo"): primero devuelve los .env
+   * —lo más importante si el cierre se corta— y luego cierra los procesos en paralelo.
+   * Devuelve los errores (no lanza).
+   */
+  async cerrarTodos(): Promise<unknown[]> {
+    const ids = [...new Set([...this.estados().map((t) => t.sitioId), ...this.abriendo.keys()])];
+    await Promise.allSettled(
+      ids.map(async (id) => {
+        const sitio = await this.buscar(id);
+        if (sitio) await this.restaurarUrlBase(sitio);
+        else await this.d.urlBase.restaurarPorId(id);
+      }),
+    );
+    const r = await Promise.allSettled(ids.map((id) => this.cerrar(id)));
+    return r.filter((x) => x.status === 'rejected').map((x) => x.reason);
   }
 
   /** Restaura todo run/urlbase-<id>.json cuyo sitio no tiene un túnel vivo. */

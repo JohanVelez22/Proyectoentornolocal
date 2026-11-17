@@ -93,6 +93,11 @@ export class Supervisor {
     return this.entradas.get(id)?.estado ?? 'apagado';
   }
 
+  /** Ids de todos los procesos que el supervisor conoce (lanzados o readoptados). */
+  ids(): string[] {
+    return [...this.entradas.keys()];
+  }
+
   pid(id: string): number | null {
     return this.entradas.get(id)?.pid ?? null;
   }

@@ -33,6 +33,9 @@ let gateDetener: Promise<void> | null;
 let instalados: string[];
 let sitios: Sitio[];
 let ejecutorLlamadas: string[][];
+let entradasIniciar: number;
+let entradasDetener: number;
+let alDetener: (() => void) | null;
 
 const sitio = (extra: Partial<Sitio> = {}): Sitio =>
   SitioSchema.parse({
@@ -48,6 +51,7 @@ const sitio = (extra: Partial<Sitio> = {}): Sitio =>
 const supervisor = () =>
   ({
     iniciar: async (d: DefProceso) => {
+      entradasIniciar++;
       if (gateIniciar) await gateIniciar;
       if (fallaIniciar) throw new Error('No se pudo iniciar');
       iniciados.push(d);
@@ -61,6 +65,8 @@ const supervisor = () =>
       }
     },
     detener: async (id: string) => {
+      entradasDetener++;
+      alDetener?.();
       if (gateDetener) await gateDetener;
       detenidos.push(id);
       estados.delete(id);
@@ -68,6 +74,7 @@ const supervisor = () =>
     },
     estado: (id: string) => estados.get(id) ?? 'apagado',
     pid: (id: string) => pids.get(id) ?? null,
+    ids: () => [...estados.keys()],
     alSalir: (fn: (id: string, c: number | null) => void) => salidas.push(fn),
   }) as never;
 
@@ -120,6 +127,9 @@ beforeEach(() => {
   instalados = ['2025.1.0', '2026.3.0', '2026.10.1'];
   sitios = [sitio()];
   ejecutorLlamadas = [];
+  entradasIniciar = 0;
+  entradasDetener = 0;
+  alDetener = null;
 });
 afterEach(() => rmSync(base, { recursive: true, force: true }));
 
@@ -211,10 +221,9 @@ describe('Tuneles.abrir', () => {
     escribirBanner = false;
     const t = crear({ esperaMs: 5000, intervaloMs: 10 });
     const p = t.abrir('wolf');
-    setTimeout(() => {
-      estados.set('tunel-wolf', 'error');
-      salidas.forEach((f) => f('tunel-wolf', 1));
-    }, 40);
+    await vi.waitFor(() => expect(iniciados).toHaveLength(1));
+    estados.set('tunel-wolf', 'error');
+    salidas.forEach((f) => f('tunel-wolf', 1));
     const e = await p;
     expect(e.estado).toBe('error');
     expect(e.mensaje).toBe('El túnel se cerró. Use Renovar.');
@@ -377,7 +386,7 @@ describe('Tuneles carreras y barrido (fix ronda 1)', () => {
     escribirBanner = false;
     const t = crear({ esperaMs: 2000, intervaloMs: 10 });
     const primero = t.abrir('wolf');
-    await new Promise((r) => setTimeout(r, 40));
+    await vi.waitFor(() => expect(iniciados).toHaveLength(1));
     await t.cerrar('wolf');
     escribirBanner = true;
     const e = await t.abrir('wolf');
@@ -402,7 +411,7 @@ describe('Tuneles guardas de generación (fix ronda 2)', () => {
     gateIniciar = new Promise<void>((r) => (soltar = r));
     const t = crear({ esperaMs: 300, intervaloMs: 10 });
     const abrir = t.abrir('wolf');
-    await new Promise((r) => setTimeout(r, 30));
+    await vi.waitFor(() => expect(entradasIniciar).toBe(1));
     await t.cerrar('wolf');
     soltar();
     const e = await abrir;
@@ -420,7 +429,9 @@ describe('Tuneles guardas de generación (fix ronda 2)', () => {
     gateDetener = new Promise<void>((r) => (soltar = r));
     const cerrar = t.cerrar('wolf');
     const nuevo = t.abrir('wolf');
-    await new Promise((r) => setTimeout(r, 40));
+    await vi.waitFor(() => expect(entradasDetener).toBe(1));
+    // Unas vueltas del bucle de eventos: el abrir() sigue esperando al cierre.
+    for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
     expect(iniciados).toHaveLength(1);
     gateDetener = null;
     soltar();
@@ -439,5 +450,42 @@ describe('Tuneles guardas de generación (fix ronda 2)', () => {
     await t0.restaurar();
     expect(readFileSync(env(), 'utf8')).toBe(original);
     expect(existsSync(path.join(rutas.base, 'run', 'urlbase-wolf.json'))).toBe(false);
+  });
+});
+
+describe('Tuneles huérfanos y cierre total (ola final)', () => {
+  it('restaurar() detiene un cloudflared readoptado que no figura en tuneles.json', async () => {
+    estados.set('tunel-viejo', 'encendido');
+    pids.set('tunel-viejo', 99);
+    estados.set('nginx', 'encendido');
+    const t = crear();
+    await t.restaurar();
+    expect(detenidos).toEqual(['tunel-viejo']);
+    expect(t.estados()).toEqual([]);
+  });
+
+  it('restaurar() detiene un túnel readoptado cuyo PID no coincide con el registro', async () => {
+    const t0 = crear();
+    await t0.abrir('wolf');
+    pids.set('tunel-wolf', 555);
+    const t = crear();
+    await t.restaurar();
+    expect(detenidos).toEqual(['tunel-wolf']);
+    expect(t.estados()).toEqual([]);
+  });
+
+  it('cerrarTodos() devuelve el .env antes de detener cloudflared', async () => {
+    const original = 'A=1\n';
+    writeFileSync(env(), original);
+    const t = crear();
+    await t.abrir('wolf');
+    let envAlDetener: string | null = null;
+    alDetener = () => {
+      envAlDetener = readFileSync(env(), 'utf8');
+    };
+    expect(await t.cerrarTodos()).toEqual([]);
+    expect(envAlDetener).toBe(original);
+    expect(detenidos).toEqual(['tunel-wolf']);
+    expect(t.estados()).toEqual([]);
   });
 });

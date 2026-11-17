@@ -306,6 +306,7 @@ describe('Supervisor', () => {
     await s.readoptar();
     expect(hijos).toHaveLength(0);
     expect(s.pid('nginx')).toBe(555);
+    expect(s.ids()).toEqual(['nginx']);
     await vi.advanceTimersByTimeAsync(3000);
     expect(s.estado('nginx')).toBe('encendido');
     await s.cerrar();
