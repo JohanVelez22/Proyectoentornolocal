@@ -11,3 +11,5 @@ export * from './hosts/hosts';
 export * from './plataforma/index';
 export * from './catalogo/catalogo';
 export * from './catalogo/instalador';
+export * from './procesos/sonda';
+export * from './procesos/supervisor';
