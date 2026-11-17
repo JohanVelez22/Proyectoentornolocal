@@ -11,6 +11,12 @@ El repositorio se llama `Proyectoentornolocal`. El diseño completo está en `do
 - **Sitios `.test`:** detecta Laravel, CodeIgniter 3, estático, proxy (Vite, FastAPI, Node…) o personalizado. Genera el vhost con reglas de seguridad (bloqueo de `.env`, archivos ocultos y carpetas internas de CodeIgniter) y valida con `nginx -t` antes de recargar. Las rutas con espacios y tildes funcionan.
 - **Archivo hosts:** escribe solo su propio bloque (`# >>> Proyectoentornolocal`), pide permiso de administrador una vez por cambio y, si se cancela, ofrece el comando para pegar a mano. Avisa si un dominio ya estaba fuera del bloque (por ejemplo, escrito por FlyEnv).
 - **Túneles rápidos de Cloudflare:** un interruptor por sitio abre `https://…trycloudflare.com` hacia el sitio, cambia la variable de URL base del `.env` mientras está abierto y la restaura al cerrarlo.
+  - El `.env` se escribe siempre de forma atómica (archivo temporal en la misma carpeta y renombrado). Antes del primer cambio se guarda una copia en `run/urlbase-<id>.respaldo` dentro de la carpeta de datos del programa, **nunca en la carpeta del proyecto** (no se copian secretos al repositorio del cliente). Si existe un `.env.pel-respaldo` de una versión anterior, se usa y se borra.
+  - Al cerrar, si nadie tocó el `.env` se devuelven sus bytes exactos y se borra la copia. Si el `.env` cambió mientras el túnel estaba abierto, se restaura solo la línea de la variable y la copia se conserva como `run/urlbase-<id>.respaldo-<fecha>` (la aplicación lo avisa).
+  - Editar un sitio con el túnel abierto (carpeta, variable o dominio) cierra el túnel primero; el `.env` vuelve en la carpeta original.
+  - Al cerrar sesión o apagar Windows, los `.env` se restauran de forma síncrona antes de cerrar los procesos. "Detener todo" (bandeja o Servicios) también cierra primero los túneles.
+- **Host desconocido:** Nginx responde 404 con una página breve "Sitio no encontrado en Entorno Local" en lugar de servir el primer sitio.
+- **Ajustes:** el puerto de Nginx y los trabajadores de PHP se aplican al guardar: se regeneran los vhosts con el puerto nuevo, Nginx se reinicia si estaba encendido y cambió el puerto (si no, se recarga) y las ramas de PHP encendidas se reinician si cambian los trabajadores. Los túneles abiertos siguen en el puerto anterior: renuévelos.
 - **Reapertura segura:** al reabrir la aplicación con servicios corriendo, los reutiliza por PID y ejecutable en lugar de duplicarlos.
 - **Bases de datos externas:** MySQL (3306) y PostgreSQL (5432) que ya estén corriendo aparecen como "externo".
 
@@ -71,6 +77,12 @@ Genera el instalador NSIS en `apps/desktop/release/` (`Entorno Local Setup <vers
 | 3    | Integración: túneles con nombre, servidor MCP, Node y Python, CLI `pel`, importar sitios de FlyEnv, HTTPS local, contenedores y MailPit | Pendiente |
 | 4    | Multiplataforma: macOS y Linux (php-fpm, instaladores dmg y AppImage, CI)                                                               | Pendiente |
 | 5    | Extras: Ollama y modelos locales, más servicios del catálogo                                                                            | Pendiente |
+
+Pendiente para la fase 2 (detectado en la revisión del MVP):
+
+- Aviso cuando un proyecto Laravel no confía en el proxy del túnel (`TrustProxies`): sin él, Laravel genera enlaces `http://` detrás de `https://…trycloudflare.com`.
+- Detectar "Tunnel not found" de Cloudflare aunque el proceso `cloudflared` siga vivo (hoy el túnel figura activo).
+- Quitar de la lista de Servicios las entradas que ya no existen (por ejemplo, una rama de PHP desinstalada).
 
 ## Licencia
 
