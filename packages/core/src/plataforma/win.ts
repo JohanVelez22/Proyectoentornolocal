@@ -14,6 +14,7 @@ export const ejecutorPorDefecto: Ejecutor = (cmd, args, opts) =>
         windowsHide: true,
         encoding: 'utf8',
         timeout: opts?.timeoutMs,
+        cwd: opts?.cwd,
         maxBuffer: 16 * 1024 * 1024,
       },
       (err, stdout, stderr) => {

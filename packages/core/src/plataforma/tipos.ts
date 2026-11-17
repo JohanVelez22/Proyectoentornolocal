@@ -14,5 +14,5 @@ export interface Plataforma {
 export type Ejecutor = (
   cmd: string,
   args: string[],
-  opts?: { timeoutMs?: number },
+  opts?: { timeoutMs?: number; cwd?: string },
 ) => Promise<{ codigo: number; stdout: string; stderr: string }>;
