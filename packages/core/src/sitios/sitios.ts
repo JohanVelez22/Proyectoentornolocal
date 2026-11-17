@@ -72,19 +72,33 @@ const limpiarDominios = <T extends { dominio: string; alias: string[] }>(s: T): 
 });
 
 export class GestorSitios {
+  private cola: Promise<unknown> = Promise.resolve();
+
   constructor(private readonly d: DepsSitios) {}
+
+  /** Ejecuta las operaciones una a la vez, en orden de llegada. */
+  private serializar<T>(fn: () => Promise<T>): Promise<T> {
+    const r = this.cola.then(fn, fn);
+    this.cola = r.catch(() => undefined);
+    return r;
+  }
 
   async listar(): Promise<Sitio[]> {
     return (await this.d.almacen.leer()).sitios;
   }
 
-  private async validar(datos: Omit<Sitio, 'id'>, otros: Sitio[]): Promise<void> {
+  private async validar(datos: Omit<Sitio, 'id'>, otros: Sitio[], previo?: Sitio): Promise<void> {
     if (!datos.dominio.endsWith('.test') || datos.dominio === '.test') {
       throw new Error('El dominio debe terminar en .test');
     }
-    if (datos.alias.some((a) => !a.endsWith('.test'))) {
+    if (datos.alias.some((a) => !a.endsWith('.test') || a === '.test')) {
       throw new Error('El dominio debe terminar en .test');
     }
+    if (datos.alias.includes(datos.dominio)) {
+      throw new Error(`El alias ${datos.dominio} es igual al dominio del sitio`);
+    }
+    const repetido = datos.alias.find((a, i) => datos.alias.indexOf(a) !== i);
+    if (repetido) throw new Error(`El alias ${repetido} está repetido`);
     for (const p of [datos.dominio, ...datos.alias]) {
       if (otros.some((o) => o.dominio === p || o.alias.includes(p))) {
         throw new Error(`Ya existe un sitio con el dominio ${p}`);
@@ -94,15 +108,28 @@ export class GestorSitios {
       if (datos.puertoProxy === null) throw new Error('Un sitio proxy necesita un puerto');
       return;
     }
+    const cambioTipo = !previo || previo.tipo !== datos.tipo;
     const usaPhp =
       datos.tipo === 'laravel' || datos.tipo === 'codeigniter3' || datos.tipo === 'personalizado';
-    if (usaPhp && datos.php && !(await this.d.instalador.instalado('php', datos.php))) {
+    if (usaPhp && !datos.php) throw new Error('Seleccione una versión de PHP para este sitio');
+    if (
+      usaPhp &&
+      datos.php &&
+      (cambioTipo || previo.php !== datos.php) &&
+      !(await this.d.instalador.instalado('php', datos.php))
+    ) {
       throw new Error(`PHP ${datos.php} no está instalado. Instálelo desde Servicios.`);
     }
-    if (!existsSync(datos.carpeta)) throw new Error(`La carpeta no existe: ${datos.carpeta}`);
+    if ((cambioTipo || previo.carpeta !== datos.carpeta) && !existsSync(datos.carpeta)) {
+      throw new Error(`La carpeta no existe: ${datos.carpeta}`);
+    }
   }
 
-  async crear(datos: Omit<Sitio, 'id'>): Promise<Sitio> {
+  crear(datos: Omit<Sitio, 'id'>): Promise<Sitio> {
+    return this.serializar(() => this.crearSinCola(datos));
+  }
+
+  private async crearSinCola(datos: Omit<Sitio, 'id'>): Promise<Sitio> {
     const cfg = await this.d.almacen.leer();
     const limpio = limpiarDominios(SitioSchema.omit({ id: true }).parse(datos));
     await this.validar(limpio, cfg.sitios);
@@ -117,7 +144,11 @@ export class GestorSitios {
     return sitio;
   }
 
-  async editar(id: string, cambios: Partial<Sitio>): Promise<Sitio> {
+  editar(id: string, cambios: Partial<Sitio>): Promise<Sitio> {
+    return this.serializar(() => this.editarSinCola(id, cambios));
+  }
+
+  private async editarSinCola(id: string, cambios: Partial<Sitio>): Promise<Sitio> {
     const cfg = await this.d.almacen.leer();
     const i = cfg.sitios.findIndex((s) => s.id === id);
     if (i < 0) throw new Error(`No existe el sitio ${id}`);
@@ -125,6 +156,7 @@ export class GestorSitios {
     await this.validar(
       nuevo,
       cfg.sitios.filter((s) => s.id !== id),
+      cfg.sitios[i],
     );
     cfg.sitios[i] = nuevo;
     await this.d.almacen.guardar(cfg);
@@ -133,7 +165,11 @@ export class GestorSitios {
   }
 
   /** Quita el sitio de la configuración. Nunca toca la carpeta del proyecto. */
-  async borrar(id: string): Promise<void> {
+  borrar(id: string): Promise<void> {
+    return this.serializar(() => this.borrarSinCola(id));
+  }
+
+  private async borrarSinCola(id: string): Promise<void> {
     const cfg = await this.d.almacen.leer();
     cfg.sitios = cfg.sitios.filter((s) => s.id !== id);
     await this.d.almacen.guardar(cfg);
@@ -155,47 +191,70 @@ export class GestorSitios {
     for (const [n, c] of previo) await writeFile(path.join(dir, n), c, 'utf8');
   }
 
-  async aplicar(): Promise<ResultadoAplicar> {
+  aplicar(): Promise<ResultadoAplicar> {
+    return this.serializar(() => this.aplicarSinCola());
+  }
+
+  private async aplicarSinCola(): Promise<ResultadoAplicar> {
     const cfg = await this.d.almacen.leer();
     const dir = path.dirname(this.d.rutas.vhost('x'));
     await mkdir(dir, { recursive: true });
     await mkdir(this.d.rutas.logs('sitios'), { recursive: true });
     const previo = await this.instantanea(dir);
 
-    const vigentes = new Set(cfg.sitios.map((s) => `${s.id}.conf`));
-    for (const n of previo.keys()) {
-      if (!vigentes.has(n)) await rm(path.join(dir, n), { force: true });
-    }
-    for (const s of cfg.sitios) {
-      const contenido = generarVhost(s, {
-        puertoNginx: cfg.servicios.nginx.puerto,
-        rutasLogs: {
-          acceso: this.d.rutas.logs('sitios', `${s.id}.access.log`),
-          error: this.d.rutas.logs('sitios', `${s.id}.error.log`),
-        },
-      });
-      await writeFile(this.d.rutas.vhost(s.id), contenido, 'utf8');
-    }
-
     let nginx: { ok: boolean; salida: string };
-    if ((await this.d.instalador.instalados('nginx')).length === 0) {
-      nginx = {
-        ok: true,
-        salida: 'Nginx no está instalado; la configuración se validará al iniciarlo.',
-      };
-    } else if (this.d.estadoNginx() === 'encendido') {
-      try {
-        await this.d.nginx.recargar();
-        nginx = { ok: true, salida: 'Nginx recargado.' };
-      } catch (e) {
-        nginx = { ok: false, salida: e instanceof Error ? e.message : String(e) };
+    try {
+      const vigentes = new Set(cfg.sitios.map((s) => `${s.id}.conf`));
+      for (const n of previo.keys()) {
+        if (!vigentes.has(n)) await rm(path.join(dir, n), { force: true });
       }
-    } else {
-      nginx = await this.d.nginx.validar();
+      for (const s of cfg.sitios) {
+        const contenido = generarVhost(s, {
+          puertoNginx: cfg.servicios.nginx.puerto,
+          rutasLogs: {
+            acceso: this.d.rutas.logs('sitios', `${s.id}.access.log`),
+            error: this.d.rutas.logs('sitios', `${s.id}.error.log`),
+          },
+        });
+        await writeFile(this.d.rutas.vhost(s.id), contenido, 'utf8');
+      }
+
+      if ((await this.d.instalador.instalados('nginx')).length === 0) {
+        nginx = {
+          ok: true,
+          salida: 'Nginx no está instalado; la configuración se validará al iniciarlo.',
+        };
+      } else if (this.d.estadoNginx() === 'encendido') {
+        try {
+          await this.d.nginx.recargar();
+          nginx = { ok: true, salida: 'Nginx recargado.' };
+        } catch (e) {
+          nginx = { ok: false, salida: e instanceof Error ? e.message : String(e) };
+        }
+      } else {
+        nginx = await this.d.nginx.validar();
+      }
+    } catch (e) {
+      nginx = {
+        ok: false,
+        salida: `No se pudo aplicar la configuración de los sitios: ${e instanceof Error ? e.message : String(e)}`,
+      };
     }
 
-    if (!nginx.ok) await this.restaurar(dir, previo);
+    if (!nginx.ok) {
+      try {
+        await this.restaurar(dir, previo);
+      } catch (e) {
+        nginx = {
+          ok: false,
+          salida: `${nginx.salida}
+No se pudo restaurar la configuración anterior: ${e instanceof Error ? e.message : String(e)}`,
+        };
+      }
+    }
 
+    // Los hosts se sincronizan aunque nginx falle: una entrada sin vhost es inofensiva
+    // y evita pedir otra vez permiso de administrador (UAC) más adelante.
     const dominios = [...new Set(cfg.sitios.flatMap((s) => [s.dominio, ...s.alias]))].sort();
     const r = await this.d.hosts.sincronizar(dominios);
     const hosts = r.ok

@@ -19,6 +19,7 @@ let llamadas: string[];
 let dominiosHosts: string[][];
 let hostsRes: { ok: true } | { ok: false; motivo: string; comandoManual: string };
 let emitidos: Sitio[][];
+let gestorValidarHook: (() => void) | null = null;
 
 function gestor(): GestorSitios {
   const eventos = new Eventos<EventosNucleo>();
@@ -29,6 +30,7 @@ function gestor(): GestorSitios {
     nginx: {
       validar: async () => {
         llamadas.push('validar');
+        gestorValidarHook?.();
         return { ok: nginxOk, salida: nginxOk ? 'ok' : 'nginx: [emerg] fallo' };
       },
       recargar: async () => {
@@ -81,6 +83,7 @@ beforeEach(() => {
   dominiosHosts = [];
   hostsRes = { ok: true };
   emitidos = [];
+  gestorValidarHook = null;
 });
 afterEach(() => rmSync(base, { recursive: true, force: true }));
 
@@ -232,6 +235,91 @@ describe('GestorSitios', () => {
     expect(existsSync(rutas.vhost('a'))).toBe(false);
     expect(existsSync(carpeta)).toBe(true);
     expect(await g.listar()).toHaveLength(0);
+  });
+});
+
+describe('GestorSitios robustez', () => {
+  it('si generar un vhost lanza, restaura los archivos anteriores byte a byte', async () => {
+    const g = gestor();
+    await g.crear(datos('a.test'));
+    await g.crear(datos('b.test'));
+    await g.aplicar();
+    const a = readFileSync(rutas.vhost('a'), 'utf8');
+    const b = readFileSync(rutas.vhost('b'), 'utf8');
+    await g.borrar('b');
+    await g.crear(datos('c.test'));
+    await g.editar('a', { reglasExtra: 'x;' });
+    // corrompe la config guardada: un laravel sin php hace lanzar a generarVhost
+    const cfg = JSON.parse(readFileSync(rutas.config(), 'utf8'));
+    cfg.sitios.push({
+      ...cfg.sitios[0],
+      id: 'roto',
+      dominio: 'roto.test',
+      tipo: 'laravel',
+      php: null,
+    });
+    writeFileSync(rutas.config(), JSON.stringify(cfg));
+    const r = await g.aplicar();
+    expect(r.nginx.ok).toBe(false);
+    expect(r.nginx.salida).toContain('No se pudo aplicar');
+    expect(readFileSync(rutas.vhost('a'), 'utf8')).toBe(a);
+    expect(readFileSync(rutas.vhost('b'), 'utf8')).toBe(b);
+    expect(existsSync(rutas.vhost('c'))).toBe(false);
+  });
+
+  it('exige versión de PHP en laravel, codeigniter3 y personalizado', async () => {
+    const g = gestor();
+    for (const tipo of ['laravel', 'codeigniter3', 'personalizado'] as const) {
+      await expect(g.crear(datos(`${tipo}.test`, { tipo }))).rejects.toThrow(
+        'Seleccione una versión de PHP para este sitio',
+      );
+    }
+  });
+
+  it('dos crear() concurrentes persisten ambos', async () => {
+    const g = gestor();
+    await Promise.all([g.crear(datos('a.test')), g.crear(datos('b.test'))]);
+    expect((await g.listar()).map((s) => s.id).sort()).toEqual(['a', 'b']);
+  });
+
+  it('si la restauración falla agrega el detalle pero conserva el error original', async () => {
+    const g = gestor();
+    await g.crear(datos('a.test'));
+    await g.aplicar();
+    await g.editar('a', { nota: 'n' });
+    nginxOk = false;
+    gestorValidarHook = () => {
+      rmSync(rutas.vhost('a'));
+      mkdirSync(rutas.vhost('a'));
+    };
+    const r = await g.aplicar();
+    expect(r.nginx.ok).toBe(false);
+    expect(r.nginx.salida).toContain('[emerg] fallo');
+    expect(r.nginx.salida).toContain('No se pudo restaurar la configuración anterior:');
+  });
+
+  it('rechaza alias igual al dominio, repetidos y sin .test', async () => {
+    const g = gestor();
+    await expect(g.crear(datos('a.test', { alias: ['a.test'] }))).rejects.toThrow(
+      /igual al dominio/,
+    );
+    await expect(g.crear(datos('a.test', { alias: ['x.test', 'x.test'] }))).rejects.toThrow(
+      /repetido/,
+    );
+    await expect(g.crear(datos('a.test', { alias: ['x.com'] }))).rejects.toThrow(
+      'El dominio debe terminar en .test',
+    );
+  });
+
+  it('editar una nota no revalida carpeta ni PHP', async () => {
+    const g = gestor();
+    const s = await g.crear(datos('l.test', { tipo: 'laravel', php: '8.4' }));
+    rmSync(carpeta, { recursive: true });
+    phpInstalado = [];
+    await expect(g.editar(s.id, { nota: 'x' })).resolves.toMatchObject({ nota: 'x' });
+    await expect(g.editar(s.id, { carpeta: path.join(base, 'otra') })).rejects.toThrow(
+      'La carpeta no existe',
+    );
   });
 });
 
