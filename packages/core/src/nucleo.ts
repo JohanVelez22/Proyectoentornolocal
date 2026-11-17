@@ -45,9 +45,10 @@ const dominiosDe = (sitios: Sitio[]): string[] => [
 export class Nucleo {
   private temporizador: ReturnType<typeof setInterval> | null = null;
   private sondeando = false;
-  /** Última firma conocida por servicio: k = estado/pid/mensaje, p = puertos (solo si los aportó el sondeo). */
-  private readonly ultimo = new Map<string, { k: string; p: string | null }>();
-  private emitiendoSondeo = false;
+  /** Última firma emitida por servicio agregado. */
+  private readonly ultimo = new Map<string, string>();
+  private pendiente = false;
+  private cerrado = false;
 
   readonly detectarProyecto = detectarProyecto;
   readonly listarVersiones = listarVersiones;
@@ -63,17 +64,13 @@ export class Nucleo {
     readonly sitios: GestorSitios,
     readonly tuneles: Tuneles,
     almacen: Almacen,
+    internos: Eventos<EventosNucleo>,
   ) {
     this.config = {
       leer: () => almacen.leer(),
       guardar: (c) => almacen.guardar(c),
     };
-    eventos.on('servicio:estado', (e) => {
-      this.ultimo.set(e.id, {
-        k: JSON.stringify([e.estado, e.pid, e.mensaje ?? null]),
-        p: this.emitiendoSondeo ? JSON.stringify(e.puertos) : null,
-      });
-    });
+    internos.on('servicio:estado', () => this.pedirRecalculo());
   }
 
   static async crear(o: OpcionesNucleo = {}): Promise<Nucleo> {
@@ -83,7 +80,9 @@ export class Nucleo {
     const eventos = new Eventos<EventosNucleo>();
     const almacen = new Almacen(rutas);
     const leerConfig = () => almacen.leer();
-    const supervisor = new Supervisor(rutas, plataforma, eventos, {
+    // Bus interno del supervisor: sus eventos crudos (php-8.4-0, tunel-x) nunca llegan a la UI.
+    const internos = new Eventos<EventosNucleo>();
+    const supervisor = new Supervisor(rutas, plataforma, internos, {
       ...(o.spawn ? { spawn: o.spawn } : {}),
       ...(o.sonda ? { sonda: o.sonda } : {}),
     });
@@ -142,11 +141,18 @@ export class Nucleo {
       sitios,
       tuneles,
       almacen,
+      internos,
     );
     o.alIniciar?.(eventos);
-    await supervisor.readoptar();
-    await tuneles.restaurar();
-    await hosts.estado(dominiosDe(await sitios.listar()));
+    try {
+      await supervisor.readoptar();
+      await tuneles.restaurar();
+      await hosts.estado(dominiosDe(await sitios.listar()));
+    } catch (e) {
+      nucleo.cerrado = true;
+      await supervisor.cerrar().catch(() => undefined);
+      throw e;
+    }
     return nucleo;
   }
 
@@ -185,24 +191,38 @@ export class Nucleo {
     this.temporizador = setInterval(() => void this.sondear(), INTERVALO_SONDEO_MS);
   }
 
+  /** Un evento interno del supervisor pide recalcular; las ráfagas se funden en un solo recálculo. */
+  private pedirRecalculo(): void {
+    if (this.cerrado) return;
+    if (this.sondeando) {
+      this.pendiente = true;
+      return;
+    }
+    void this.sondear();
+  }
+
   private async sondear(): Promise<void> {
     if (this.sondeando) return;
     this.sondeando = true;
     try {
-      const estados = await this.servicios.estados();
-      if (!this.temporizador) return;
-      for (const e of estados) {
-        const k = JSON.stringify([e.estado, e.pid, e.mensaje ?? null]);
-        const p = JSON.stringify(e.puertos);
-        const previo = this.ultimo.get(e.id);
-        if (previo && previo.k === k && (previo.p === null || previo.p === p)) continue;
-        this.emitiendoSondeo = true;
-        try {
+      do {
+        this.pendiente = false;
+        const estados = await this.servicios.estados();
+        if (this.cerrado) return;
+        for (const e of estados) {
+          const firma = JSON.stringify([
+            e.estado,
+            e.pid,
+            e.puertos,
+            e.mensaje ?? null,
+            e.nombre,
+            e.version,
+          ]);
+          if (this.ultimo.get(e.id) === firma) continue;
+          this.ultimo.set(e.id, firma);
           this.eventos.emit('servicio:estado', e);
-        } finally {
-          this.emitiendoSondeo = false;
         }
-      }
+      } while (this.pendiente);
     } catch (err) {
       console.error('Error al sondear los servicios:', err);
     } finally {
@@ -211,18 +231,37 @@ export class Nucleo {
   }
 
   async cerrar(o: { detenerServicios: boolean }): Promise<void> {
+    this.cerrado = true;
     if (this.temporizador) clearInterval(this.temporizador);
     this.temporizador = null;
-    if (o.detenerServicios) {
-      for (const t of this.tuneles.estados()) {
-        try {
-          await this.tuneles.cerrar(t.sitioId);
-        } catch (e) {
-          console.error('No se pudo cerrar el túnel:', e);
-        }
+    let primero: unknown;
+    let fallo = false;
+    const anotar = (e: unknown): void => {
+      if (!fallo) {
+        fallo = true;
+        primero = e;
       }
-      await this.servicios.detenerTodo();
+    };
+    try {
+      if (o.detenerServicios) {
+        for (const t of this.tuneles.estados()) {
+          try {
+            await this.tuneles.cerrar(t.sitioId);
+          } catch (e) {
+            anotar(e);
+          }
+        }
+        await this.servicios.detenerTodo();
+      }
+    } catch (e) {
+      anotar(e);
+    } finally {
+      try {
+        await this.supervisor.cerrar();
+      } catch (e) {
+        anotar(e);
+      }
     }
-    await this.supervisor.cerrar();
+    if (fallo) throw primero;
   }
 }

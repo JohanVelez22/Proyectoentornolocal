@@ -81,7 +81,7 @@ export class Supervisor {
   constructor(
     private readonly rutas: Rutas,
     private readonly plataforma: Plataforma,
-    private readonly eventos: Eventos<EventosNucleo>,
+    readonly eventos: Eventos<EventosNucleo>,
     opts: OpcionesSupervisor = {},
   ) {
     this.intervaloMs = opts.intervaloMs ?? 3000;

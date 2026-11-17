@@ -2,7 +2,9 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Eventos, type EventosNucleo } from '../src/eventos';
 import { Nucleo } from '../src/nucleo';
+import { Supervisor } from '../src/procesos/supervisor';
 import type { Plataforma } from '../src/plataforma/tipos';
 import type { EstadoHosts, EstadoServicio, Sitio } from '../src/tipos';
 
@@ -227,5 +229,57 @@ describe('Nucleo', () => {
     await n.cerrar({ detenerServicios: true });
     expect(cerrar).toHaveBeenCalledWith('a');
     expect(detener).toHaveBeenCalled();
+  });
+
+  it('cerrar cierra el supervisor aunque falle un túnel o detenerTodo, y relanza el primer error', async () => {
+    const n = await crear();
+    vi.spyOn(n.tuneles, 'estados').mockReturnValue([
+      { sitioId: 'a', estado: 'activo', url: 'https://x.trycloudflare.com' },
+    ]);
+    vi.spyOn(n.tuneles, 'cerrar').mockRejectedValue(new Error('túnel'));
+    vi.spyOn(n.servicios, 'detenerTodo').mockRejectedValue(new Error('detener'));
+    const sup = vi.spyOn(
+      (n as unknown as { supervisor: { cerrar(): Promise<void> } }).supervisor,
+      'cerrar',
+    );
+    await expect(n.cerrar({ detenerServicios: true })).rejects.toThrow('túnel');
+    expect(sup).toHaveBeenCalled();
+  });
+
+  it('crear cierra el supervisor y relanza si falla un paso posterior', async () => {
+    const cerrar = vi.spyOn(Supervisor.prototype, 'cerrar');
+    vi.spyOn(Supervisor.prototype, 'readoptar').mockRejectedValue(new Error('boom'));
+    await expect(crear()).rejects.toThrow('boom');
+    expect(cerrar).toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
+  it('solo los estados agregados llegan al flujo público; los eventos crudos del supervisor no', async () => {
+    const n = await crear();
+    const internos = (n as unknown as { supervisor: { eventos: Eventos<EventosNucleo> } })
+      .supervisor.eventos;
+    const vistos: EstadoServicio[] = [];
+    n.eventos.on('servicio:estado', (e) => vistos.push(e));
+    const crudo = (id: string): EstadoServicio => ({
+      id,
+      nombre: id,
+      version: null,
+      estado: 'encendido',
+      puertos: [],
+      pid: 1,
+    });
+    internos.emit('servicio:estado', crudo('php-8.4-0'));
+    internos.emit('servicio:estado', crudo('tunel-x'));
+    internos.emit('servicio:estado', crudo('nginx'));
+    await vi.waitFor(() => expect(vistos.length).toBeGreaterThan(0));
+    const ids = vistos.map((v) => v.id);
+    expect(ids).toContain('nginx');
+    expect(ids).not.toContain('php-8.4-0');
+    expect(ids.some((i) => i.startsWith('tunel-'))).toBe(false);
+    expect(vistos.find((v) => v.id === 'nginx')).toMatchObject({
+      nombre: 'Nginx',
+      puertos: [80],
+      estado: 'apagado',
+    });
   });
 });
