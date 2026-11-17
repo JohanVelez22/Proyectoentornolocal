@@ -132,8 +132,10 @@ describe.skipIf(!esWindows)('integración real en Windows', () => {
     log('base temporal:', base);
     nucleo = await Nucleo.crear({ base, plataforma: plataformaSegura() });
     const cfg = await nucleo.config.leer();
-    cfg.servicios.nginx.puerto = PUERTO;
-    await nucleo.config.guardar(cfg);
+    await nucleo.guardarAjustes({
+      puerto: PUERTO,
+      trabajadores: cfg.servicios.php.trabajadores,
+    });
   });
 
   afterAll(async () => {

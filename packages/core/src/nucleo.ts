@@ -11,7 +11,14 @@ import { Supervisor } from './procesos/supervisor';
 import { Rutas, rutaBasePorDefecto } from './rutas';
 import { Servicios } from './servicios/servicios';
 import { detectarProyecto } from './sitios/detectar';
-import { GestorSitios, ramasEnUso, upstreamsPara, type ResultadoAplicar } from './sitios/sitios';
+import {
+  GestorSitios,
+  ramasEnUso,
+  upstreamsPara,
+  validarAjustes,
+  type AjustesServicios,
+  type ResultadoAplicar,
+} from './sitios/sitios';
 import { UrlBase } from './sitios/urlbase';
 import type { Config, EstadoHosts, EstadoServicio, EstadoTunel, Sitio } from './tipos';
 import { Tuneles } from './tuneles/tuneles';
@@ -36,7 +43,36 @@ export interface EstadoGeneral {
   hosts: EstadoHosts;
 }
 
+export interface ResultadoAjustes {
+  aplicar: ResultadoAplicar;
+  /** Servicios reiniciados para tomar los ajustes nuevos (p. ej. "Nginx", "PHP 8.4"). */
+  reiniciados: string[];
+  /** Fallos al reiniciar servicios (los ajustes quedan guardados igual). */
+  errores: string[];
+}
+
 const INTERVALO_SONDEO_MS = 3000;
+
+const mensajeDe = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+/** Lee el estado del archivo hosts sin impedir el arranque: un fallo se informa en el estado. */
+async function estadoHostsSeguro(
+  hosts: GestorHosts,
+  eventos: Eventos<EventosNucleo>,
+  dominios: string[],
+): Promise<EstadoHosts> {
+  try {
+    return await hosts.estado(dominios);
+  } catch (e) {
+    const fallo: EstadoHosts = {
+      pendientes: [],
+      duplicadosFuera: [],
+      mensaje: `No se pudo revisar el archivo hosts: ${mensajeDe(e)}`,
+    };
+    eventos.emit('hosts:estado', fallo);
+    return fallo;
+  }
+}
 
 const dominiosDe = (sitios: Sitio[]): string[] => [
   ...new Set(sitios.flatMap((s) => [s.dominio, ...s.alias])),
@@ -52,7 +88,8 @@ export class Nucleo {
 
   readonly detectarProyecto = detectarProyecto;
   readonly listarVersiones = listarVersiones;
-  readonly config: { leer(): Promise<Config>; guardar(c: Config): Promise<void> };
+  /** Solo lectura: los cambios pasan por guardarSitio/guardarAjustes, que además aplican. */
+  readonly config: { leer(): Promise<Config> };
 
   private constructor(
     readonly rutas: Rutas,
@@ -68,7 +105,6 @@ export class Nucleo {
   ) {
     this.config = {
       leer: () => almacen.leer(),
-      guardar: (c) => almacen.guardar(c),
     };
     internos.on('servicio:estado', () => this.pedirRecalculo());
   }
@@ -147,7 +183,7 @@ export class Nucleo {
     try {
       await supervisor.readoptar();
       await tuneles.restaurar();
-      await hosts.estado(dominiosDe(await sitios.listar()));
+      await estadoHostsSeguro(hosts, eventos, dominiosDe(await sitios.listar()));
     } catch (e) {
       nucleo.cerrado = true;
       await supervisor.cerrar().catch(() => undefined);
@@ -162,7 +198,7 @@ export class Nucleo {
       servicios: await this.servicios.estados(),
       sitios,
       tuneles: this.tuneles.estados(),
-      hosts: await this.hosts.estado(dominiosDe(sitios)),
+      hosts: await estadoHostsSeguro(this.hosts, this.eventos, dominiosDe(sitios)),
     };
   }
 
@@ -171,8 +207,83 @@ export class Nucleo {
     datos: Omit<Sitio, 'id'>,
     id?: string,
   ): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }> {
+    if (id) await this.cerrarTunelSiCambia(id, datos);
     const sitio = id ? await this.sitios.editar(id, datos) : await this.sitios.crear(datos);
     return { sitio, aplicar: await this.sitios.aplicar() };
+  }
+
+  /**
+   * Si el sitio tiene un túnel abierto (o abriéndose) y cambia algo de lo que depende el túnel
+   * o su .env (carpeta, variable de URL base o dominio), se cierra antes de editar: así el .env
+   * vuelve a su estado original en la carpeta de siempre.
+   */
+  private async cerrarTunelSiCambia(id: string, datos: Omit<Sitio, 'id'>): Promise<void> {
+    const t = this.tuneles.estados().find((x) => x.sitioId === id);
+    if (!t || (t.estado !== 'activo' && t.estado !== 'iniciando')) return;
+    const actual = (await this.sitios.listar()).find((s) => s.id === id);
+    if (!actual) return;
+    const cambia =
+      actual.carpeta !== datos.carpeta ||
+      (actual.urlBaseVar ?? null) !== (datos.urlBaseVar ?? null) ||
+      actual.dominio !== datos.dominio.trim().toLowerCase();
+    if (cambia) await this.tuneles.cerrar(id);
+  }
+
+  /**
+   * Guarda el puerto de Nginx y los trabajadores de PHP y los pone en marcha: regenera los
+   * vhosts (nuevo `listen`), reinicia Nginx si estaba encendido y cambió el puerto (si no, lo
+   * recarga) y reinicia las ramas de PHP encendidas si cambiaron los trabajadores.
+   */
+  async guardarAjustes(a: AjustesServicios): Promise<ResultadoAjustes> {
+    validarAjustes(a);
+    const previo = await this.config.leer();
+    await this.sitios.guardarAjustes(a);
+    const reiniciados: string[] = [];
+    const errores: string[] = [];
+    const vivo = (id: string): boolean => {
+      const e = this.supervisor.estado(id);
+      return e === 'encendido' || e === 'iniciando';
+    };
+
+    if (a.trabajadores !== previo.servicios.php.trabajadores) {
+      for (const v of await this.instalador.instalados('php')) {
+        if (!vivo(this.servicios.php.idTrabajador(v, 0))) continue;
+        try {
+          await this.servicios.detener(`php-${v}`);
+          await this.servicios.iniciar(`php-${v}`);
+          reiniciados.push(`PHP ${v}`);
+        } catch (e) {
+          errores.push(`PHP ${v}: ${mensajeDe(e)}`);
+        }
+      }
+    }
+
+    const reiniciarNginx = a.puerto !== previo.servicios.nginx.puerto && vivo('nginx');
+    if (reiniciarNginx) {
+      try {
+        await this.servicios.detener('nginx');
+      } catch (e) {
+        errores.push(`Nginx: ${mensajeDe(e)}`);
+      }
+    }
+    const aplicar = await this.sitios.aplicar();
+    if (reiniciarNginx && aplicar.nginx.ok) {
+      try {
+        await this.servicios.iniciar('nginx');
+        reiniciados.push('Nginx');
+        aplicar.nginx = { ok: true, salida: `Nginx reiniciado en el puerto ${a.puerto}.` };
+      } catch (e) {
+        aplicar.nginx = { ok: false, salida: mensajeDe(e) };
+      }
+    }
+    return { aplicar, reiniciados, errores };
+  }
+
+  /** "Detener todo": cierra primero los túneles (devolviendo los .env) y luego los servicios. */
+  async detenerTodo(): Promise<void> {
+    const errores = await this.tuneles.cerrarTodos();
+    await this.servicios.detenerTodo();
+    if (errores.length) throw errores[0];
   }
 
   /** Cierra el túnel del sitio, lo quita de la configuración y aplica. */
@@ -244,13 +355,8 @@ export class Nucleo {
     };
     try {
       if (o.detenerServicios) {
-        for (const t of this.tuneles.estados()) {
-          try {
-            await this.tuneles.cerrar(t.sitioId);
-          } catch (e) {
-            anotar(e);
-          }
-        }
+        // Primero los .env (lo crítico si el cierre se corta), luego los túneles en paralelo.
+        for (const e of await this.tuneles.cerrarTodos()) anotar(e);
         await this.servicios.detenerTodo();
       }
     } catch (e) {

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { Nucleo } from '../src/nucleo';
 import { Supervisor } from '../src/procesos/supervisor';
+import type { UrlBase } from '../src/sitios/urlbase';
 import type { Plataforma } from '../src/plataforma/tipos';
 import type { EstadoHosts, EstadoServicio, Sitio } from '../src/tipos';
 
@@ -247,6 +248,167 @@ describe('Nucleo', () => {
     );
     await expect(n.cerrar({ detenerServicios: true })).rejects.toThrow('túnel');
     expect(sup).toHaveBeenCalled();
+  });
+
+  describe('editar un sitio con el túnel abierto', () => {
+    let carpetaB: string;
+    const original = Buffer.from('APP_NAME=A\r\nAPP_URL="http://demo.test"\r\nX=1');
+    const envB = 'APP_URL=http://b.test\n';
+
+    /** Deja el .env como lo deja un túnel abierto, sin lanzar cloudflared. */
+    const abrirTunelFalso = async (n: Nucleo): Promise<void> => {
+      const sitio = (await n.sitios.listar())[0]!;
+      const urlBase = (n.tuneles as unknown as { d: { urlBase: UrlBase } }).d.urlBase;
+      await urlBase.aplicar(sitio, 'https://falso.trycloudflare.com/');
+      vi.spyOn(n.tuneles, 'estados').mockReturnValue([
+        { sitioId: sitio.id, estado: 'activo', url: 'https://falso.trycloudflare.com' },
+      ]);
+    };
+
+    beforeEach(() => {
+      carpetaB = path.join(base, 'proyecto B');
+      mkdirSync(carpetaB);
+      writeFileSync(path.join(carpetaB, '.env'), envB);
+      writeFileSync(path.join(carpeta, '.env'), original);
+    });
+
+    it('cambio de carpeta A→B: cierra el túnel antes, A queda idéntico y B intacto', async () => {
+      const n = await crear();
+      await n.guardarSitio(datos({ urlBaseVar: 'APP_URL' }));
+      await abrirTunelFalso(n);
+      expect(readFileSync(path.join(carpeta, '.env'), 'utf8')).toContain('falso.trycloudflare');
+      const cerrar = vi.spyOn(n.tuneles, 'cerrar');
+      await n.guardarSitio(datos({ urlBaseVar: 'APP_URL', carpeta: carpetaB }), 'demo');
+      expect(cerrar).toHaveBeenCalledWith('demo');
+      expect(readFileSync(path.join(carpeta, '.env')).equals(original)).toBe(true);
+      expect(readFileSync(path.join(carpetaB, '.env'), 'utf8')).toBe(envB);
+    });
+
+    it('urlBaseVar → null: cierra el túnel y A queda idéntico', async () => {
+      const n = await crear();
+      await n.guardarSitio(datos({ urlBaseVar: 'APP_URL' }));
+      await abrirTunelFalso(n);
+      await n.guardarSitio(datos({ urlBaseVar: null }), 'demo');
+      expect(readFileSync(path.join(carpeta, '.env')).equals(original)).toBe(true);
+    });
+
+    it('un cambio que no afecta al túnel (nota) no lo cierra', async () => {
+      const n = await crear();
+      await n.guardarSitio(datos({ urlBaseVar: 'APP_URL' }));
+      await abrirTunelFalso(n);
+      const cerrar = vi.spyOn(n.tuneles, 'cerrar');
+      await n.guardarSitio(datos({ urlBaseVar: 'APP_URL', nota: 'x' }), 'demo');
+      expect(cerrar).not.toHaveBeenCalled();
+    });
+
+    it('cambio de dominio también cierra el túnel', async () => {
+      const n = await crear();
+      await n.guardarSitio(datos({ urlBaseVar: 'APP_URL' }));
+      await abrirTunelFalso(n);
+      const cerrar = vi.spyOn(n.tuneles, 'cerrar');
+      await n.guardarSitio(datos({ urlBaseVar: 'APP_URL', dominio: 'otro.test' }), 'demo');
+      expect(cerrar).toHaveBeenCalledWith('demo');
+    });
+  });
+
+  it('detenerTodo cierra primero los túneles y después los servicios', async () => {
+    const n = await crear();
+    const orden: string[] = [];
+    vi.spyOn(n.tuneles, 'cerrarTodos').mockImplementation(async () => {
+      orden.push('tuneles');
+      return [];
+    });
+    vi.spyOn(n.servicios, 'detenerTodo').mockImplementation(async () => {
+      orden.push('servicios');
+    });
+    await n.detenerTodo();
+    expect(orden).toEqual(['tuneles', 'servicios']);
+  });
+
+  describe('guardarAjustes', () => {
+    it('guarda solo puerto y trabajadores y regenera los vhosts con el nuevo listen', async () => {
+      const n = await crear();
+      await n.guardarSitio(datos());
+      const r = await n.guardarAjustes({ puerto: 8089, trabajadores: 3 });
+      expect(r.errores).toEqual([]);
+      expect(r.reiniciados).toEqual([]);
+      const cfg = await n.config.leer();
+      expect(cfg.servicios.nginx.puerto).toBe(8089);
+      expect(cfg.servicios.php.trabajadores).toBe(3);
+      expect(cfg.sitios).toHaveLength(1);
+      expect(readFileSync(n.rutas.vhost('demo'), 'utf8')).toContain('listen 8089;');
+    });
+
+    it('rechaza valores fuera de rango sin guardar', async () => {
+      const n = await crear();
+      await expect(n.guardarAjustes({ puerto: 70000, trabajadores: 2 })).rejects.toThrow(
+        'entre 1 y 65535',
+      );
+      await expect(n.guardarAjustes({ puerto: 80, trabajadores: 0 })).rejects.toThrow(
+        'entre 1 y 8',
+      );
+      expect((await n.config.leer()).servicios.nginx.puerto).toBe(80);
+    });
+
+    it('con Nginx encendido y otro puerto: lo detiene, aplica y lo vuelve a iniciar', async () => {
+      const n = await crear();
+      const sup = (n as unknown as { supervisor: Supervisor }).supervisor;
+      vi.spyOn(sup, 'estado').mockImplementation((id) =>
+        id === 'nginx' ? 'encendido' : 'apagado',
+      );
+      const orden: string[] = [];
+      vi.spyOn(n.servicios, 'detener').mockImplementation(async (id) => {
+        orden.push(`detener ${id}`);
+      });
+      vi.spyOn(n.servicios, 'iniciar').mockImplementation(async (id) => {
+        orden.push(`iniciar ${id}`);
+      });
+      const aplicar = n.sitios.aplicar.bind(n.sitios);
+      vi.spyOn(n.sitios, 'aplicar').mockImplementation(async () => {
+        orden.push('aplicar');
+        return aplicar();
+      });
+      const r = await n.guardarAjustes({ puerto: 8090, trabajadores: 2 });
+      expect(orden).toEqual(['detener nginx', 'aplicar', 'iniciar nginx']);
+      expect(r.reiniciados).toEqual(['Nginx']);
+      expect(r.aplicar.nginx).toEqual({ ok: true, salida: 'Nginx reiniciado en el puerto 8090.' });
+    });
+
+    it('si cambian los trabajadores reinicia las ramas de PHP encendidas', async () => {
+      const n = await crear();
+      const sup = (n as unknown as { supervisor: Supervisor }).supervisor;
+      vi.spyOn(sup, 'estado').mockImplementation((id) =>
+        id === 'php-8.4-0' ? 'encendido' : 'apagado',
+      );
+      vi.spyOn(n.instalador, 'instalados').mockImplementation(async (s) =>
+        s === 'php' ? ['8.3', '8.4'] : [],
+      );
+      const orden: string[] = [];
+      vi.spyOn(n.servicios, 'detener').mockImplementation(async (id) => {
+        orden.push(`detener ${id}`);
+      });
+      vi.spyOn(n.servicios, 'iniciar').mockImplementation(async (id) => {
+        orden.push(`iniciar ${id}`);
+      });
+      const r = await n.guardarAjustes({ puerto: 80, trabajadores: 4 });
+      expect(orden).toEqual(['detener php-8.4', 'iniciar php-8.4']);
+      expect(r.reiniciados).toEqual(['PHP 8.4']);
+    });
+  });
+
+  it('un dominio inválido en config.json no impide arrancar: hosts se degrada a un mensaje', async () => {
+    writeFileSync(
+      path.join(base, 'config.json'),
+      JSON.stringify({
+        version: 1,
+        sitios: [{ ...datos(), id: 'mal', dominio: 'mal dominio.test' }],
+      }),
+    );
+    const n = await crear();
+    const g = await n.estadoGeneral();
+    expect(g.sitios).toHaveLength(1);
+    expect(g.hosts.mensaje).toContain('No se pudo revisar el archivo hosts');
+    expect(g.hosts.mensaje).toContain('mal dominio.test');
   });
 
   it('crear cierra el supervisor y relanza si falla un paso posterior', async () => {
