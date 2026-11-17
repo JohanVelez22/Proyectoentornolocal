@@ -1,7 +1,7 @@
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { carpetaTemporal } from './temporales';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { GestorHosts } from '../src/hosts/hosts';
 import type { Plataforma, ResultadoEscritura } from '../src/plataforma/tipos';
@@ -29,7 +29,7 @@ function falsa(): Plataforma {
 }
 
 beforeEach(async () => {
-  ruta = join(await mkdtemp(join(tmpdir(), 'pel-hosts-')), 'hosts');
+  ruta = join(await carpetaTemporal('pel-hosts-'), 'hosts');
   await writeFile(ruta, '127.0.0.1  localhost\r\n', 'utf8');
   llamadas = 0;
   resultado = { ok: true };
@@ -98,7 +98,7 @@ describe('GestorHosts', () => {
 
 describe('GestorHosts con lectura fallida', () => {
   it('no eleva ni sobrescribe si hosts no se puede leer', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'pel-dir-'));
+    const dir = await carpetaTemporal('pel-dir-');
     const p = { ...falsa(), rutaHosts: () => dir }; // leer un directorio da EISDIR
     const g = new GestorHosts(p, eventos);
     const vistos: { mensaje?: string }[] = [];
@@ -110,7 +110,7 @@ describe('GestorHosts con lectura fallida', () => {
   });
 
   it('si hosts no existe (ENOENT) se trata como vacío', async () => {
-    ruta = join(await mkdtemp(join(tmpdir(), 'pel-no-')), 'no-existe');
+    ruta = join(await carpetaTemporal('pel-no-'), 'no-existe');
     const g = new GestorHosts(falsa(), eventos);
     expect(await g.sincronizar(['a.test'])).toEqual({ ok: true });
   });
@@ -202,7 +202,7 @@ describe('PlataformaWindows con ejecutor falso', () => {
   });
 
   it('escribirComoAdmin detecta cancelación y denegación', async () => {
-    const destino = join(await mkdtemp(join(tmpdir(), 'pel-adm-')), 'hosts');
+    const destino = join(await carpetaTemporal('pel-adm-'), 'hosts');
     await writeFile(destino, 'viejo', 'utf8');
     const cancel = new PlataformaWindows(async () => ({
       codigo: 1,

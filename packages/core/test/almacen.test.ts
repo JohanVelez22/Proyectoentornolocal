@@ -1,14 +1,14 @@
-import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { carpetaTemporal } from './temporales';
 import { Almacen } from '../src/almacen';
 import { Eventos } from '../src/eventos';
 import { Rutas } from '../src/rutas';
 
 let rutas: Rutas;
 beforeEach(async () => {
-  rutas = new Rutas(await mkdtemp(join(tmpdir(), 'pel-')));
+  rutas = new Rutas(await carpetaTemporal('pel-'));
   await rutas.asegurar();
 });
 
