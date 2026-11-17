@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { Almacen } from '../almacen';
 import type { Instalador } from '../catalogo/instalador';
 import type { Eventos, EventosNucleo } from '../eventos';
+import { DOMINIO_VALIDO } from '../hosts/bloque';
 import type { GestorHosts } from '../hosts/hosts';
 import { generarVhost } from '../nginx/plantillas';
 import { puertosPhp } from '../nginx/principal';
@@ -24,6 +25,20 @@ export interface DepsSitios {
   hosts: Pick<GestorHosts, 'sincronizar'>;
   instalador: Pick<Instalador, 'instalado' | 'instalados'>;
   eventos: Pick<Eventos<EventosNucleo>, 'emit'>;
+}
+
+export interface AjustesServicios {
+  puerto: number;
+  trabajadores: number;
+}
+
+export function validarAjustes(a: AjustesServicios): void {
+  if (!Number.isInteger(a.puerto) || a.puerto < 1 || a.puerto > 65535) {
+    throw new Error('El puerto de Nginx debe ser un número entre 1 y 65535');
+  }
+  if (!Number.isInteger(a.trabajadores) || a.trabajadores < 1 || a.trabajadores > 8) {
+    throw new Error('Los trabajadores de PHP deben ser entre 1 y 8');
+  }
 }
 
 const comparar = (a: string, b: string): number => {
@@ -61,7 +76,7 @@ const slug = (dominio: string): string =>
     .replace(/\.test$/, '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/\p{Diacritic}/gu, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'sitio';
 
@@ -93,6 +108,13 @@ export class GestorSitios {
     }
     if (datos.alias.some((a) => !a.endsWith('.test') || a === '.test')) {
       throw new Error('El dominio debe terminar en .test');
+    }
+    for (const d of [datos.dominio, ...datos.alias]) {
+      if (!DOMINIO_VALIDO.test(d)) {
+        throw new Error(
+          `Dominio inválido: ${d}. Use solo letras, números, guiones y puntos (sin tildes ni espacios).`,
+        );
+      }
     }
     if (datos.alias.includes(datos.dominio)) {
       throw new Error(`El alias ${datos.dominio} es igual al dominio del sitio`);
@@ -162,6 +184,20 @@ export class GestorSitios {
     await this.d.almacen.guardar(cfg);
     this.d.eventos.emit('sitio:cambio', cfg.sitios);
     return nuevo;
+  }
+
+  /**
+   * Guarda solo el puerto de Nginx y los trabajadores de PHP (en la cola, para no pisar un
+   * sitio que se esté guardando a la vez). No aplica: el llamador decide cómo.
+   */
+  guardarAjustes(a: AjustesServicios): Promise<void> {
+    return this.serializar(async () => {
+      validarAjustes(a);
+      const cfg = await this.d.almacen.leer();
+      cfg.servicios.nginx.puerto = a.puerto;
+      cfg.servicios.php.trabajadores = a.trabajadores;
+      await this.d.almacen.guardar(cfg);
+    });
   }
 
   /** Quita el sitio de la configuración. Nunca toca la carpeta del proyecto. */

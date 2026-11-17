@@ -19,7 +19,8 @@ function ubicarBloque(contenido: string): [number, number] | null {
   return [desde, finIni + fin.index + fin[0].length];
 }
 
-const DOMINIO_VALIDO = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/;
+/** Nombre de dominio aceptable en el archivo hosts (minúsculas, sin espacios). */
+export const DOMINIO_VALIDO = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/;
 
 /** Normaliza (trim + minúsculas), valida, quita duplicados y ordena. Lanza si hay un dominio inválido. */
 export function normalizarDominios(dominios: string[]): string[] {

@@ -311,6 +311,39 @@ describe('GestorSitios robustez', () => {
     );
   });
 
+  it('rechaza dominios y alias que el archivo hosts no admite', async () => {
+    const g = gestor();
+    await expect(g.crear(datos('mi sitio.test'))).rejects.toThrow(
+      'Dominio inválido: mi sitio.test',
+    );
+    await expect(g.crear(datos('señal.test'))).rejects.toThrow('Dominio inválido: señal.test');
+    await expect(g.crear(datos('ok.test', { alias: ['-mal.test'] }))).rejects.toThrow(
+      'Dominio inválido: -mal.test',
+    );
+    expect(await g.listar()).toEqual([]);
+  });
+
+  it('guardarAjustes guarda solo puerto y trabajadores, y valida los rangos', async () => {
+    const g = gestor();
+    await g.crear(datos('a.test'));
+    await g.guardarAjustes({ puerto: 8081, trabajadores: 3 });
+    const cfg = await new Almacen(rutas).leer();
+    expect(cfg.servicios.nginx.puerto).toBe(8081);
+    expect(cfg.servicios.php.trabajadores).toBe(3);
+    expect(cfg.sitios).toHaveLength(1);
+    await expect(g.guardarAjustes({ puerto: 0, trabajadores: 2 })).rejects.toThrow(
+      'entre 1 y 65535',
+    );
+    await expect(g.guardarAjustes({ puerto: 65536, trabajadores: 2 })).rejects.toThrow(
+      'entre 1 y 65535',
+    );
+    await expect(g.guardarAjustes({ puerto: 80, trabajadores: 9 })).rejects.toThrow('entre 1 y 8');
+    await expect(g.guardarAjustes({ puerto: 80, trabajadores: 1.5 })).rejects.toThrow(
+      'entre 1 y 8',
+    );
+    expect((await new Almacen(rutas).leer()).servicios.nginx.puerto).toBe(8081);
+  });
+
   it('editar una nota no revalida carpeta ni PHP', async () => {
     const g = gestor();
     const s = await g.crear(datos('l.test', { tipo: 'laravel', php: '8.4' }));
