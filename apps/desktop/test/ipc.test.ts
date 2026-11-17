@@ -138,4 +138,38 @@ describe('registrarIpc', () => {
     oyentes.get('tunel:estado')!({});
     expect(enviados).toEqual([]);
   });
+
+  it('valida los argumentos en la frontera', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    for (const [ruta, args] of [
+      ['servicios.iniciar', [42]],
+      ['servicios.iniciar', ['']],
+      ['sitios.guardar', ['no-objeto']],
+      ['tuneles.abrir', [{}]],
+      ['detectarProyecto', [null]],
+      ['sistema.abrirUrl', ['file:///c:/a.exe']],
+      ['sistema.abrirCarpeta', [123]],
+    ] as [string, unknown[]][]) {
+      const r = (await canales.get(`entorno:${ruta}`)!({}, ...args)) as { ok: boolean };
+      expect(r.ok, ruta).toBe(false);
+    }
+    expect(crudo.servicios.iniciar).not.toHaveBeenCalled();
+    expect(sistema.abrirUrl).not.toHaveBeenCalled();
+    expect(sistema.abrirCarpeta).not.toHaveBeenCalled();
+  });
+
+  it('rechaza emisores que no son la ventana principal', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema, (e) => e === 'bueno');
+    expect(await canales.get('entorno:estadoGeneral')!('malo')).toEqual({
+      ok: false,
+      error: { mensaje: 'Origen no permitido' },
+    });
+    expect(crudo.estadoGeneral).not.toHaveBeenCalled();
+    await canales.get('entorno:estadoGeneral')!('bueno');
+    expect(crudo.estadoGeneral).toHaveBeenCalled();
+  });
 });
