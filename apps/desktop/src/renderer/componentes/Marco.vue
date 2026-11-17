@@ -21,6 +21,7 @@ import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 import type { SeccionNav } from '../router';
 import { detenerEntorno, iniciarEntorno } from '../stores/entorno';
+import { resumenPastilla } from '../utilidades/pastilla';
 import { useServicios } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
 
@@ -31,6 +32,7 @@ const tuneles = useTuneles();
 const { ejecutar } = useAccion();
 
 const contraido = ref(false);
+const falloArranque = ref(false);
 
 const icono = (c: Component) => () => h(NIcon, null, { default: () => h(c) });
 const opciones: MenuOption[] = (
@@ -46,19 +48,31 @@ const opciones: MenuOption[] = (
 const seccion = computed<SeccionNav>(() => route.meta.seccion ?? 'inicio');
 const titulo = computed(() => es.nav[seccion.value]);
 
-const resumen = computed(() =>
-  servicios.cargado
-    ? `${es.resumenGlobal.servicios(servicios.encendidos)} · ${es.resumenGlobal.tuneles(tuneles.activos.length)}`
-    : es.resumenGlobal.cargando,
+const pastilla = computed(() =>
+  resumenPastilla({
+    cargado: servicios.cargado,
+    fallo: falloArranque.value,
+    encendidos: servicios.encendidos,
+    tuneles: tuneles.activos.length,
+    hayError: servicios.lista.some((s) => s.estado === 'error'),
+  }),
 );
-const hayError = computed(() => servicios.lista.some((s) => s.estado === 'error'));
 
 function navegar(clave: string): void {
   void router.push({ name: clave });
 }
 
 onMounted(() => {
-  void ejecutar('arranque', iniciarEntorno, { tituloError: es.errores.arranque });
+  void ejecutar(
+    'arranque',
+    async () => {
+      await iniciarEntorno();
+      return true;
+    },
+    { tituloError: es.errores.arranque },
+  ).then((ok) => {
+    falloArranque.value = !ok;
+  });
 });
 onBeforeUnmount(detenerEntorno);
 </script>
@@ -113,9 +127,13 @@ onBeforeUnmount(detenerEntorno);
     <NLayout class="principal">
       <NLayoutHeader class="cabecera">
         <h1>{{ titulo }}</h1>
-        <div class="pastilla" :class="{ viva: servicios.encendidos > 0, alerta: hayError }">
+        <div
+          class="pastilla"
+          :class="{ viva: pastilla.tono === 'viva', alerta: pastilla.tono === 'alerta' }"
+          role="status"
+        >
           <span class="pastilla-punto" aria-hidden="true" />
-          {{ resumen }}
+          {{ pastilla.texto }}
         </div>
       </NLayoutHeader>
       <NLayoutContent class="contenido" :native-scrollbar="false" content-class="contenido-interno">

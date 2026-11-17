@@ -8,9 +8,11 @@ import TarjetaServicio from '../componentes/TarjetaServicio.vue';
 import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 import { useServicios, type ServicioInstalable } from '../stores/servicios';
+import { useTuneles } from '../stores/tuneles';
 
 const t = es.servicios;
 const servicios = useServicios();
+const tuneles = useTuneles();
 const { ejecutar, ocupado } = useAccion();
 
 const instalables: ServicioInstalable[] = ['nginx', 'php', 'cloudflared'];
@@ -24,8 +26,11 @@ const visibles = computed(() =>
   nadaInstalado.value ? servicios.lista.filter((s) => s.estado === 'externo') : servicios.lista,
 );
 const administrables = computed(() => visibles.value.filter((s) => s.estado !== 'externo'));
-const algunoEncendido = computed(() =>
-  administrables.value.some((s) => s.estado === 'encendido' || s.estado === 'iniciando'),
+// "Detener todo" también cierra los túneles: se habilita si hay alguno abierto.
+const algunoEncendido = computed(
+  () =>
+    administrables.value.some((s) => s.estado === 'encendido' || s.estado === 'iniciando') ||
+    Object.values(tuneles.porSitio).some((t) => t.estado === 'activo' || t.estado === 'iniciando'),
 );
 
 function iniciarTodo(): void {

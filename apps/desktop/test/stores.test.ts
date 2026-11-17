@@ -118,6 +118,12 @@ describe('stores de la interfaz', () => {
     expect(servicios.porId['php-8.4']?.estado).toBe('apagado');
   });
 
+  it('si la carga inicial falla, servicios queda cargado (no "Conectando…" para siempre)', async () => {
+    falsa.api.estadoGeneral.mockRejectedValueOnce(new Error('sin núcleo'));
+    await expect(iniciarEntorno()).rejects.toThrow('sin núcleo');
+    expect(useServicios().cargado).toBe(true);
+  });
+
   it('se suscribe una sola vez aunque iniciar se llame dos veces', async () => {
     await iniciarEntorno();
     await iniciarEntorno();

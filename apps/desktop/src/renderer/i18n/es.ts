@@ -21,6 +21,8 @@ export const es = {
     servicios: (n: number) => plural(n, 'servicio encendido', 'servicios encendidos'),
     tuneles: (n: number) => plural(n, 'túnel activo', 'túneles activos'),
     cargando: 'Conectando con el núcleo…',
+    conErrores: 'con errores',
+    sinConexion: 'Sin conexión con el núcleo',
   },
   estado: {
     encendido: 'Encendido',
@@ -276,7 +278,7 @@ export const es = {
     titulo: 'Túneles',
     descripcion: 'Enlaces públicos temporales de Cloudflare para mostrar un sitio fuera de su red.',
     explicacion:
-      'Los túneles rápidos cambian de dirección cada vez que se abren o renuevan, y solo funcionan mientras este equipo esté encendido y Entorno Local abierto.',
+      'Los túneles rápidos cambian de dirección cada vez que se abren o renuevan, y solo funcionan mientras este equipo esté encendido y sus procesos sigan vivos (si sale de Entorno Local dejándolos encendidos, siguen activos).',
     columnas: { sitio: 'Sitio', estado: 'Estado', url: 'Enlace', acciones: 'Acciones' },
     vacioTitulo: 'No hay túneles abiertos',
     vacio: 'Encienda el interruptor de túnel de un sitio para obtener un enlace público.',

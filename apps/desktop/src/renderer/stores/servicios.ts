@@ -39,6 +39,10 @@ export const useServicios = defineStore('servicios', () => {
     cargado.value = true;
   }
 
+  function marcarCargado(): void {
+    cargado.value = true;
+  }
+
   function aplicarProgreso(p: ProgresoInstalacion): void {
     progreso.value[claveProgreso(p)] = p;
     if (p.fase === 'listo') void cargarInstalados(p.servicio).catch(() => undefined);
@@ -83,6 +87,7 @@ export const useServicios = defineStore('servicios', () => {
     encendidos,
     aplicar,
     hidratar,
+    marcarCargado,
     aplicarProgreso,
     progresoDe,
     olvidarProgreso,

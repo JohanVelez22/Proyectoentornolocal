@@ -17,11 +17,16 @@ export async function iniciarEntorno(): Promise<void> {
   sitios.iniciar();
   tuneles.iniciar();
   hosts.iniciar();
-  const general = await api().estadoGeneral();
-  servicios.hidratar(general.servicios);
-  sitios.hidratar(general.sitios);
-  tuneles.hidratar(general.tuneles);
-  hosts.hidratar(general.hosts);
+  try {
+    const general = await api().estadoGeneral();
+    servicios.hidratar(general.servicios);
+    sitios.hidratar(general.sitios);
+    tuneles.hidratar(general.tuneles);
+    hosts.hidratar(general.hosts);
+  } finally {
+    // Aunque falle la carga inicial, la interfaz no se queda en "Conectando…".
+    servicios.marcarCargado();
+  }
 }
 
 export function detenerEntorno(): void {
