@@ -189,7 +189,7 @@ describe('ServicioNginx', () => {
   it('inicia con -p y -c, prueba la config antes y copia mime.types', async () => {
     const bin = sembrarNginx('1.28.0');
     await crear().iniciar();
-    expect(llamadas[0]!.args).toEqual(['-t', '-p', bin, '-c', rutas.nginxConf()]);
+    expect(llamadas[0]!.args).toEqual(['-t', '-p', bin, '-c', `${rutas.nginxConf()}.nuevo`]);
     const d = iniciados[0]!;
     expect(d.id).toBe('nginx');
     expect(d.args).toEqual(['-p', bin, '-c', rutas.nginxConf()]);
@@ -228,6 +228,27 @@ describe('ServicioNginx', () => {
     codigoExec = 1;
     await expect(crear().iniciar()).rejects.toThrow(/\[emerg\] fallo/);
     expect(iniciados).toHaveLength(0);
+  });
+
+  it('crea logs y temp bajo el prefijo antes de probar', async () => {
+    const bin = sembrarNginx('1.28.0');
+    await crear().iniciar();
+    expect(existsSync(path.join(bin, 'logs'))).toBe(true);
+    expect(existsSync(path.join(bin, 'temp'))).toBe(true);
+  });
+
+  it('si -t falla conserva intacto el nginx.conf anterior y borra el candidato', async () => {
+    sembrarNginx('1.28.0');
+    mkdirSync(path.dirname(rutas.nginxConf()), { recursive: true });
+    writeFileSync(rutas.nginxConf(), 'conf anterior');
+    codigoExec = 1;
+    await expect(crear().iniciar()).rejects.toThrow(/\[emerg\] fallo/);
+    expect(readFileSync(rutas.nginxConf(), 'utf8')).toBe('conf anterior');
+    expect(existsSync(`${rutas.nginxConf()}.nuevo`)).toBe(false);
+    estados.set('nginx', 'encendido');
+    await expect(crear().recargar()).rejects.toThrow();
+    expect(readFileSync(rutas.nginxConf(), 'utf8')).toBe('conf anterior');
+    expect(llamadas.some((l) => l.args[1] === 'reload')).toBe(false);
   });
 
   it('falla si nginx no está instalado', async () => {

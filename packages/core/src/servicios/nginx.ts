@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { copyFile, mkdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Instalador } from '../catalogo/instalador';
 import { generarNginxPrincipal } from '../nginx/principal';
@@ -75,6 +75,9 @@ export class ServicioNginx {
 
   private async argsBase(): Promise<{ bin: string; args: string[] }> {
     const bin = this.rutas.bin('nginx', await this.versionActiva());
+    // nginx abre <prefijo>/logs/error.log antes de leer el conf y usa <prefijo>/temp/*
+    await mkdir(path.join(bin, 'logs'), { recursive: true });
+    await mkdir(path.join(bin, 'temp'), { recursive: true });
     return { bin, args: ['-p', bin, '-c', this.rutas.nginxConf()] };
   }
 
@@ -88,7 +91,7 @@ export class ServicioNginx {
     }
   }
 
-  private async generarConf(bin: string): Promise<void> {
+  private async generarConf(bin: string, destino: string): Promise<void> {
     const contenido = generarNginxPrincipal({
       prefijo: bin,
       sitesDir: path.dirname(this.rutas.vhost('x')),
@@ -98,11 +101,12 @@ export class ServicioNginx {
     await mkdir(this.rutas.logs(), { recursive: true });
     await mkdir(path.dirname(this.rutas.vhost('x')), { recursive: true });
     await this.copiarIncluidos(bin);
-    await writeFile(this.rutas.nginxConf(), contenido, 'utf8');
+    await writeFile(destino, contenido, 'utf8');
   }
 
-  async probarConfig(): Promise<{ ok: boolean; salida: string }> {
-    const { bin, args } = await this.argsBase();
+  async probarConfig(conf?: string): Promise<{ ok: boolean; salida: string }> {
+    const { bin, args: base } = await this.argsBase();
+    const args = conf ? ['-p', bin, '-c', conf] : base;
     await this.copiarIncluidos(bin);
     const r = await this.exec(
       path.join(bin, this.plataforma.ejecutable('nginx')),
@@ -114,12 +118,17 @@ export class ServicioNginx {
     return { ok: r.codigo === 0, salida: `${r.stderr}${r.stdout}`.trim() };
   }
 
-  /** Regenera el conf principal y lo valida; lanza con la salida de nginx si falla. */
+  /** Genera un candidato, lo valida y solo entonces reemplaza nginx.conf. */
   private async prepararYProbar(): Promise<{ bin: string; args: string[] }> {
     const base = await this.argsBase();
-    await this.generarConf(base.bin);
-    const prueba = await this.probarConfig();
-    if (!prueba.ok) throw new Error(prueba.salida || 'La configuración de nginx no es válida');
+    const candidato = `${this.rutas.nginxConf()}.nuevo`;
+    await this.generarConf(base.bin, candidato);
+    const prueba = await this.probarConfig(candidato);
+    if (!prueba.ok) {
+      await rm(candidato, { force: true });
+      throw new Error(prueba.salida || 'La configuración de nginx no es válida');
+    }
+    await rename(candidato, this.rutas.nginxConf());
     return base;
   }
 
