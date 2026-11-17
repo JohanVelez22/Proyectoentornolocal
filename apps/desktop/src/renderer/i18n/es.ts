@@ -199,6 +199,7 @@ export const es = {
     cambiarCarpeta: 'Cambiar',
     detectando: 'Analizando el proyecto…',
     detectado: (tipo: string) => `Detectado: ${tipo}`,
+    sinDeteccionAlEditar: 'La detección automática solo se aplica al crear; revise tipo y PHP.',
     nombre: 'Nombre',
     nombreAyuda: 'Solo para reconocerlo en la lista.',
     nombreCopia: (nombre: string) => `${nombre} (copia)`,

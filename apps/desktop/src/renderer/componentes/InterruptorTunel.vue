@@ -123,7 +123,7 @@ function cambiar(valor: boolean): void {
                 circle
                 size="tiny"
                 :aria-label="t.renovar"
-                @click="renovar(sitio.id)"
+                @click="renovar(sitio)"
               >
                 <template #icon
                   ><NIcon><Refresh /></NIcon
@@ -137,12 +137,19 @@ function cambiar(valor: boolean): void {
 
       <template v-else-if="fase === 'error'">
         <span class="error" :title="tunel.mensaje">{{ tunel.mensaje || t.error }}</span>
-        <NButton size="tiny" secondary @click="renovar(sitio.id)">
-          <template #icon
-            ><NIcon><Refresh /></NIcon
-          ></template>
-          {{ es.acciones.renovar }}
-        </NButton>
+        <NTooltip :disabled="!bloqueo">
+          <template #trigger>
+            <span>
+              <NButton size="tiny" secondary :disabled="!!bloqueo" @click="renovar(sitio)">
+                <template #icon
+                  ><NIcon><Refresh /></NIcon
+                ></template>
+                {{ es.acciones.renovar }}
+              </NButton>
+            </span>
+          </template>
+          {{ bloqueo }}
+        </NTooltip>
       </template>
 
       <span v-else class="tenue">{{ t.apagadoAyuda }}</span>

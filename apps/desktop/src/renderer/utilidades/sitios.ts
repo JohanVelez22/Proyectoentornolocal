@@ -115,8 +115,15 @@ export function derivarEstadoSitio(
 /* ───────────── Túnel ───────────── */
 
 /**
- * Motivo por el que no se puede abrir un túnel, o null si se puede. Un túnel ya abierto (o con
- * error) siempre se puede cerrar, así que solo se bloquea el encendido.
+ * Publicar (abrir o renovar) un túnel de un sitio con datos reales exige confirmación.
+ */
+export function requiereConfirmacion(sitio: Pick<Sitio, 'datosReales'> | undefined): boolean {
+  return sitio?.datosReales === true;
+}
+
+/**
+ * Motivo por el que no se puede abrir (o reintentar tras un error) un túnel, o null si se puede.
+ * Un túnel activo o abriéndose nunca se bloquea: siempre se puede cerrar.
  */
 export function motivoTunelBloqueado(o: {
   nginx: EstadoNginx;
@@ -124,7 +131,8 @@ export function motivoTunelBloqueado(o: {
   cloudflaredInstalado: boolean | undefined;
   tunel: EstadoTunel['estado'];
 }): string | null {
-  if (o.tunel !== 'apagado') return null;
+  // Activo o abriéndose siempre se puede cerrar; apagado o con error se va a (re)abrir.
+  if (o.tunel === 'activo' || o.tunel === 'iniciando') return null;
   if (o.cloudflaredInstalado === false) return es.tunel.sinCloudflared;
   if (o.nginx !== 'encendido') return es.tunel.sinNginx;
   return null;

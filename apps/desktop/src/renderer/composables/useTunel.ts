@@ -2,6 +2,7 @@ import { useDialog } from 'naive-ui';
 import type { Sitio } from '../../shared/api';
 import { api } from '../api';
 import { es } from '../i18n/es';
+import { requiereConfirmacion } from '../utilidades/sitios';
 import { useAccion } from './useAccion';
 
 /**
@@ -15,7 +16,7 @@ export function useTunel() {
 
   /** Con datos reales se pide confirmación antes de publicar. Devuelve false si se cancela. */
   function confirmarPublicar(sitio: Pick<Sitio, 'datosReales'>): Promise<boolean> {
-    if (!sitio.datosReales) return Promise.resolve(true);
+    if (!requiereConfirmacion(sitio)) return Promise.resolve(true);
     return new Promise((resolve) => {
       let respondido = false;
       const responder = (v: boolean): void => {
@@ -49,7 +50,10 @@ export function useTunel() {
     await ejecutar(`cerrar-${sitioId}`, () => api().tuneles.cerrar(sitioId));
   }
 
-  async function renovar(sitioId: string): Promise<void> {
+  /** Renovar publica un enlace nuevo: con datos reales se confirma igual que al abrir. */
+  async function renovar(sitio: Pick<Sitio, 'id' | 'datosReales'>): Promise<void> {
+    if (!(await confirmarPublicar(sitio))) return;
+    const sitioId = sitio.id;
     await ejecutar(`renovar-${sitioId}`, () => api().tuneles.renovar(sitioId), {
       tituloError: t.tituloError,
     });

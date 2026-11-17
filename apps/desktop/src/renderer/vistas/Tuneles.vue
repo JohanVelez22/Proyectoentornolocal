@@ -9,25 +9,29 @@ import {
   NTooltip,
   type DataTableColumns,
 } from 'naive-ui';
-import { computed, h, type Component } from 'vue';
+import { computed, h, onMounted, type Component } from 'vue';
 import { useRouter } from 'vue-router';
 import type { EstadoTunel } from '../../shared/api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import { useTunel } from '../composables/useTunel';
 import { es } from '../i18n/es';
+import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
 import { useTuneles } from '../stores/tuneles';
+import { motivoTunelBloqueado } from '../utilidades/sitios';
 
 const t = es.tuneles;
 const tt = es.tunel;
 const router = useRouter();
 const sitios = useSitios();
 const tuneles = useTuneles();
+const servicios = useServicios();
 const { cerrar, renovar, abrirUrl, copiar, ocupado, trabajando } = useTunel();
 
 interface Fila extends EstadoTunel {
   nombre: string;
   dominio: string;
+  datosReales: boolean;
 }
 
 const filas = computed<Fila[]>(() =>
@@ -39,10 +43,26 @@ const filas = computed<Fila[]>(() =>
         ...tun,
         nombre: sitio?.nombre || sitio?.dominio || t.sinNombre,
         dominio: sitio?.dominio ?? tun.sitioId,
+        datosReales: sitio?.datosReales ?? false,
       };
     })
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
 );
+
+/** Reintentar un túnel con error necesita Nginx encendido y cloudflared instalado. */
+const bloqueo = (f: Fila): string | null => {
+  const v = servicios.instalados['cloudflared'];
+  return motivoTunelBloqueado({
+    nginx: servicios.porId['nginx']?.estado,
+    cloudflaredInstalado: v === undefined ? undefined : v.length > 0,
+    tunel: f.estado,
+  });
+};
+
+onMounted(() => {
+  // Para saber si un túnel con error se puede reintentar.
+  void servicios.cargarInstalados('cloudflared').catch(() => undefined);
+});
 
 const claveFila = (f: Fila): string => f.sitioId;
 
@@ -139,11 +159,11 @@ const columnas: DataTableColumns<Fila> = [
           alPulsar: () => url && copiar(url),
         }),
         botonIcono({
-          etiqueta: tt.renovar,
+          etiqueta: bloqueo(f) ?? tt.renovar,
           icono: Refresh,
           cargando: ocupado(`renovar-${f.sitioId}`),
-          deshabilitado: ocupadoFila || f.estado === 'iniciando',
-          alPulsar: () => void renovar(f.sitioId),
+          deshabilitado: ocupadoFila || f.estado === 'iniciando' || !!bloqueo(f),
+          alPulsar: () => void renovar({ id: f.sitioId, datosReales: f.datosReales }),
         }),
         botonIcono({
           etiqueta: tt.cerrar,

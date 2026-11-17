@@ -13,6 +13,7 @@ import {
   nombreDeCarpeta,
   normalizarAlias,
   ordenarSitios,
+  requiereConfirmacion,
   sitioVacio,
   urlLocal,
   validarFormularioSitio,
@@ -95,12 +96,32 @@ describe('motivoTunelBloqueado', () => {
     ).toBeNull();
   });
 
-  it('un túnel abierto o con error siempre se puede cerrar', () => {
-    for (const tunel of ['activo', 'iniciando', 'error'] as const) {
+  it('reintentar un túnel con error también exige Nginx encendido y cloudflared', () => {
+    expect(
+      motivoTunelBloqueado({ nginx: 'apagado', cloudflaredInstalado: true, tunel: 'error' }),
+    ).toBe('Encienda Nginx primero');
+    expect(
+      motivoTunelBloqueado({ nginx: 'encendido', cloudflaredInstalado: false, tunel: 'error' }),
+    ).toBe('Instale cloudflared en Servicios');
+    expect(
+      motivoTunelBloqueado({ nginx: 'encendido', cloudflaredInstalado: true, tunel: 'error' }),
+    ).toBeNull();
+  });
+
+  it('un túnel activo o abriéndose siempre se puede cerrar', () => {
+    for (const tunel of ['activo', 'iniciando'] as const) {
       expect(motivoTunelBloqueado({ nginx: 'apagado', cloudflaredInstalado: false, tunel })).toBe(
         null,
       );
     }
+  });
+});
+
+describe('requiereConfirmacion (abrir y renovar)', () => {
+  it('solo los sitios con datos reales piden confirmación antes de publicar', () => {
+    expect(requiereConfirmacion(sitio({ datosReales: true }))).toBe(true);
+    expect(requiereConfirmacion(sitio({ datosReales: false }))).toBe(false);
+    expect(requiereConfirmacion(undefined)).toBe(false);
   });
 });
 

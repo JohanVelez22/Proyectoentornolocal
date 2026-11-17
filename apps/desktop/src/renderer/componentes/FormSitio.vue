@@ -68,6 +68,8 @@ const errorServidor = ref<string | null>(null);
 const salidaNginx = ref<string | null>(null);
 const detectado = ref<string | null>(null);
 const avisoPhp = ref<string | null>(null);
+/** Al editar, la carpeta cambió y no se volvió a detectar el proyecto. */
+const carpetaCambiada = ref(false);
 /** Nombre puesto automáticamente desde la carpeta (se reemplaza si cambia la carpeta). */
 let nombreAuto = '';
 
@@ -121,6 +123,7 @@ function reiniciar(o: ObjetivoForm): void {
   salidaNginx.value = null;
   detectado.value = null;
   avisoPhp.value = null;
+  carpetaCambiada.value = false;
   if (o.modo === 'editar') {
     const { id: idSitio, ...resto } = o.sitio;
     id.value = idSitio;
@@ -160,7 +163,10 @@ async function elegirCarpeta(): Promise<void> {
     datos.value.nombre = nombreAuto;
   }
   // Al editar solo se cambia la ruta: el resto ya lo eligió el usuario.
-  if (modo.value === 'editar') return;
+  if (modo.value === 'editar') {
+    carpetaCambiada.value = true;
+    return;
+  }
   const r = await ejecutar('detectar', () => api().detectarProyecto(carpeta));
   if (!r) return;
   datos.value.tipo = r.tipo;
@@ -285,6 +291,9 @@ function alCambiarVisible(v: boolean): void {
                   {{ t.detectado(detectado) }}
                 </NTag>
                 <small v-if="datos.tipo === 'laravel'" class="ayuda">{{ t.raizLaravel }}</small>
+                <small v-if="carpetaCambiada" class="ayuda aviso-carpeta">
+                  {{ t.sinDeteccionAlEditar }}
+                </small>
               </div>
             </div>
           </NFormItem>
@@ -556,6 +565,10 @@ function alCambiarVisible(v: boolean): void {
 .ayuda.bloque {
   display: block;
   margin: -14px 0 18px;
+}
+.aviso-carpeta {
+  color: #d97706;
+  opacity: 1;
 }
 .ancho {
   width: 100%;
