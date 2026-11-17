@@ -16,7 +16,7 @@ import { extraerZip } from './zip';
 import type { Eventos, EventosNucleo } from '../eventos';
 import type { Rutas } from '../rutas';
 import type { ProgresoInstalacion } from '../tipos';
-import type { ServicioInstalable, VersionDisponible } from './catalogo';
+import { urlOficial, type ServicioInstalable, type VersionDisponible } from './catalogo';
 
 const EJECUTABLE: Record<ServicioInstalable, string> = {
   nginx: 'nginx.exe',
@@ -31,6 +31,21 @@ export interface OpcionesInstalador {
 }
 
 const MARCA = '.pel-version';
+/** Clave de carpeta: "8.4", "1.28.0", "2026.10.1"… nunca separadores ni "..". */
+const CLAVE_VALIDA = /^\d+\.\d+(\.[\w.-]+)?$/;
+
+/** Rechaza versiones que no vienen del catálogo oficial o que escaparían de bin/<servicio>. */
+export function validarVersion(v: VersionDisponible, clave: string): void {
+  if (!Object.hasOwn(EJECUTABLE, v.servicio)) {
+    throw new Error(`Servicio no instalable: ${String(v.servicio)}`);
+  }
+  if (typeof v.url !== 'string' || !urlOficial(v.url)) {
+    throw new Error('La descarga debe ser https y de un sitio oficial');
+  }
+  if (typeof clave !== 'string' || !CLAVE_VALIDA.test(clave) || clave.includes('..')) {
+    throw new Error(`Versión no válida: ${String(clave)}`);
+  }
+}
 const MSG_HASH = 'La descarga no coincide con la huella publicada';
 
 export class Instalador {
@@ -86,6 +101,7 @@ export class Instalador {
 
   async instalar(v: VersionDisponible): Promise<void> {
     const clave = this.clave(v);
+    validarVersion(v, clave);
     const destino = this.rutas.bin(v.servicio, clave);
     if (await this.instalado(v.servicio, clave)) {
       // Idempotente, salvo que PHP traiga un parche distinto al instalado.

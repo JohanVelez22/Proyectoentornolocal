@@ -4,7 +4,7 @@ import { mkdtemp, readdir, readFile, rm, mkdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { crc32 } from 'node:zlib';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Instalador } from '../src/catalogo/instalador';
 import type { VersionDisponible } from '../src/catalogo/catalogo';
 import { Eventos, type EventosNucleo } from '../src/eventos';
@@ -91,8 +91,8 @@ const nginxZip = zip({
 
 const vNginx = (zipBuf: Buffer, sha256 = sha(zipBuf)): VersionDisponible => ({
   servicio: 'nginx',
-  version: 'x',
-  url: 'https://ejemplo.test/nginx-x.zip',
+  version: '1.28.0',
+  url: 'https://nginx.org/download/nginx-1.28.0.zip',
   sha256,
   formato: 'zip',
   subcarpeta: 'nginx-x',
@@ -102,9 +102,11 @@ describe('Instalador', () => {
   it('instala nginx en bin/nginx/x y emite las fases en orden', async () => {
     const inst = new Instalador(rutas, eventos, fetchDe(nginxZip));
     await inst.instalar(vNginx(nginxZip));
-    expect(await readFile(path.join(rutas.bin('nginx', 'x'), 'nginx.exe'), 'utf8')).toBe('EXE');
-    expect(await inst.instalado('nginx', 'x')).toBe(true);
-    expect(await inst.instalados('nginx')).toEqual(['x']);
+    expect(await readFile(path.join(rutas.bin('nginx', '1.28.0'), 'nginx.exe'), 'utf8')).toBe(
+      'EXE',
+    );
+    expect(await inst.instalado('nginx', '1.28.0')).toBe(true);
+    expect(await inst.instalados('nginx')).toEqual(['1.28.0']);
     const fases = [...new Set(progreso.map((p) => p.fase))];
     expect(fases).toEqual(['descargando', 'verificando', 'extrayendo', 'listo']);
     expect(progreso.at(-1)?.porcentaje).toBe(100);
@@ -113,12 +115,35 @@ describe('Instalador', () => {
     expect(await readdir(rutas.tmp())).toEqual([]);
   });
 
+  it('rechaza servicio desconocido, URL no oficial y claves de carpeta peligrosas sin descargar', async () => {
+    const f = vi.fn(fetchDe(nginxZip));
+    const inst = new Instalador(rutas, eventos, f as unknown as typeof fetch);
+    const base = vNginx(nginxZip);
+    await expect(
+      inst.instalar({ ...base, servicio: 'mysql' as VersionDisponible['servicio'] }),
+    ).rejects.toThrow('Servicio no instalable');
+    await expect(inst.instalar({ ...base, url: 'https://malo.example/nginx.zip' })).rejects.toThrow(
+      'sitio oficial',
+    );
+    await expect(inst.instalar({ ...base, url: 'http://nginx.org/nginx.zip' })).rejects.toThrow(
+      'sitio oficial',
+    );
+    for (const version of ['..', '../../x', '1.2/../../x', '1.2\\..\\x', '1.2..3', 'x', '']) {
+      await expect(inst.instalar({ ...base, version })).rejects.toThrow('Versión no válida');
+    }
+    await expect(
+      inst.instalar({ ...base, servicio: 'php', version: '8.4.1', rama: '../8.4' }),
+    ).rejects.toThrow('Versión no válida');
+    expect(f).not.toHaveBeenCalled();
+    expect(await readdir(path.join(rutas.base, 'bin')).catch(() => [])).toEqual([]);
+  });
+
   it('con hash incorrecto no deja nada en bin/ y lanza', async () => {
     const inst = new Instalador(rutas, eventos, fetchDe(nginxZip));
     await expect(inst.instalar(vNginx(nginxZip, 'f'.repeat(64)))).rejects.toThrow(
       'La descarga no coincide con la huella publicada',
     );
-    expect(existsSync(rutas.bin('nginx', 'x'))).toBe(false);
+    expect(existsSync(rutas.bin('nginx', '1.28.0'))).toBe(false);
     expect(await inst.instalados('nginx')).toEqual([]);
     expect(progreso.at(-1)).toMatchObject({
       fase: 'error',
@@ -158,7 +183,7 @@ describe('Instalador', () => {
     await inst.instalar({
       servicio: 'cloudflared',
       version: '1.0',
-      url: 'https://ejemplo.test/cf.exe',
+      url: 'https://github.com/cloudflare/cloudflared/releases/download/1.0/cf.exe',
       sha256: sha(exe),
       formato: 'exe',
     });
@@ -175,7 +200,7 @@ describe('Instalador', () => {
       servicio: 'php',
       version,
       rama: '8.4',
-      url: 'https://ejemplo.test/php.zip',
+      url: 'https://windows.php.net/downloads/releases/php.zip',
       sha256: sha(z),
       formato: 'zip',
     });
@@ -191,8 +216,8 @@ describe('Instalador', () => {
   it('desinstalar borra la carpeta y tolera inexistentes', async () => {
     const inst = new Instalador(rutas, eventos, fetchDe(nginxZip));
     await inst.instalar(vNginx(nginxZip));
-    await inst.desinstalar('nginx', 'x');
-    expect(await inst.instalado('nginx', 'x')).toBe(false);
+    await inst.desinstalar('nginx', '1.28.0');
+    expect(await inst.instalado('nginx', '1.28.0')).toBe(false);
     await inst.desinstalar('nginx', 'no-existe');
   });
 
@@ -203,7 +228,7 @@ describe('Instalador', () => {
       servicio: 'php',
       version,
       rama: '8.4',
-      url: 'https://ejemplo.test/php.zip',
+      url: 'https://windows.php.net/downloads/releases/php.zip',
       sha256: sha(z),
       formato: 'zip',
     });
