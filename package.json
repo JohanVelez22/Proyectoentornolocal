@@ -14,6 +14,7 @@
   ],
   "scripts": {
     "test": "npm run test --workspaces --if-present",
+    "test:win": "npm run test:win -w @pel/core",
     "lint": "eslint . && prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "npm run dev --workspaces --if-present",
