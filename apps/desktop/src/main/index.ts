@@ -1,9 +1,10 @@
 import { join } from 'node:path';
 import { BrowserWindow, app, clipboard, dialog, ipcMain, shell, type Tray } from 'electron';
-import { Nucleo } from '@pel/core';
+import { Nucleo, Rutas, rutaBasePorDefecto } from '@pel/core';
 import type { ApiSistema } from '../shared/api';
 import { crearBandeja } from './bandeja';
 import { registrarIpc } from './ipc';
+import { registrarFinDeSesion } from './sesion';
 import { carpetaExistente, urlHttp } from './validacion';
 
 let ventana: BrowserWindow | null = null;
@@ -13,7 +14,10 @@ let saliendo = false;
 let preguntandoSalida = false;
 let cierreSistema: Promise<void> | null = null;
 
-const rutaIcono = join(__dirname, '../../resources/icono.png');
+// Empaquetado, el icono va en resources/ (extraResources); en desarrollo, junto al código.
+const rutaIcono = app.isPackaged
+  ? join(process.resourcesPath, 'icono.png')
+  : join(__dirname, '../../resources/icono.png');
 const TIEMPO_CIERRE_SISTEMA_MS = 5000;
 
 const sistema: ApiSistema = {
@@ -79,8 +83,12 @@ function crearVentana(): BrowserWindow {
     e.preventDefault();
     v.hide();
   });
-  // Logout/apagado de Windows: cierre limpio sin diálogo.
-  v.on('session-end', () => void cerrarPorSistema());
+  // Logout/apagado de Windows: .env restaurados de forma síncrona y luego cierre sin diálogo.
+  registrarFinDeSesion(
+    v,
+    () => nucleo?.rutas ?? new Rutas(rutaBasePorDefecto()),
+    () => void cerrarPorSistema(),
+  );
 
   v.webContents.setWindowOpenHandler(({ url }) => {
     try {
@@ -131,8 +139,11 @@ async function salir(): Promise<void> {
       defaultId: 0,
       cancelId: 2,
     };
-    const r = ventana
-      ? await dialog.showMessageBox(ventana, opciones)
+    // Con la ventana oculta (salir desde la bandeja) el diálogo va sin padre: si no, quedaría
+    // pegado a una ventana invisible.
+    const padre = ventana && !ventana.isDestroyed() && ventana.isVisible() ? ventana : null;
+    const r = padre
+      ? await dialog.showMessageBox(padre, opciones)
       : await dialog.showMessageBox(opciones);
     if (r.response === 2) return;
     saliendo = true;

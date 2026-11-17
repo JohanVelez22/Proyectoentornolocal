@@ -5,6 +5,10 @@ directories:
   buildResources: resources
 files:
   - out/**
+# El icono de ventana y bandeja se lee en tiempo de ejecución desde process.resourcesPath.
+extraResources:
+  - from: resources/icono.png
+    to: icono.png
 win:
   target: nsis
   icon: resources/icono.png
