@@ -1,10 +1,25 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Ejecutor } from '../src/plataforma/tipos';
 import { Rutas } from '../src/rutas';
-import { ponerVariableEnv, UrlBase } from '../src/sitios/urlbase';
+import {
+  escribirAtomico,
+  ponerVariableEnv,
+  restaurarUrlBaseSincrono,
+  UrlBase,
+} from '../src/sitios/urlbase';
 import { SitioSchema, type Sitio } from '../src/tipos';
 import { extraerUrlTunel } from '../src/tuneles/url';
 
@@ -71,6 +86,9 @@ describe('UrlBase', () => {
     });
   const env = () => path.join(carpeta, '.env');
   const estadoPath = () => path.join(rutas.base, 'run', 'urlbase-s1.json');
+  const respaldoPath = () => path.join(rutas.base, 'run', 'urlbase-s1.respaldo');
+  const copiasRespaldo = () =>
+    readdirSync(path.join(rutas.base, 'run')).filter((f) => f.startsWith('urlbase-s1.respaldo-'));
 
   beforeEach(() => {
     base = mkdtempSync(path.join(os.tmpdir(), 'pel-ub-'));
@@ -88,10 +106,12 @@ describe('UrlBase', () => {
     const ub = new UrlBase({ rutas, ejecutor: exec });
     await ub.aplicar(sitio(), 'https://a-b.trycloudflare.com/');
     expect(readFileSync(env(), 'utf8')).toContain('APP_URL=https://a-b.trycloudflare.com/\r\n');
-    expect(readFileSync(path.join(carpeta, '.env.pel-respaldo'), 'utf8')).toBe(original);
+    expect(readFileSync(respaldoPath(), 'utf8')).toBe(original);
+    expect(existsSync(path.join(carpeta, '.env.pel-respaldo'))).toBe(false);
     await ub.restaurar(sitio());
     expect(readFileSync(env(), 'utf8')).toBe(original);
     expect(existsSync(estadoPath())).toBe(false);
+    expect(existsSync(respaldoPath())).toBe(false);
   });
 
   it('variable ausente con salto final: queda idéntico', async () => {
@@ -119,7 +139,7 @@ describe('UrlBase', () => {
     const ub = new UrlBase({ rutas, ejecutor: exec });
     await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
     await ub.aplicar(sitio(), 'https://b.trycloudflare.com/');
-    expect(readFileSync(path.join(carpeta, '.env.pel-respaldo'), 'utf8')).toBe(original);
+    expect(readFileSync(respaldoPath(), 'utf8')).toBe(original);
     await ub.restaurar(sitio());
     expect(readFileSync(env(), 'utf8')).toBe(original);
   });
@@ -183,7 +203,7 @@ describe('UrlBase', () => {
     expect(medio).toContain('APP_URL=http://b.test');
     await ub.restaurar(sitio());
     expect(readFileSync(env()).equals(original)).toBe(true);
-    expect(existsSync(path.join(carpeta, '.env.pel-respaldo'))).toBe(false);
+    expect(existsSync(respaldoPath())).toBe(false);
   });
 
   it('si el usuario editó el .env entre medias, restaura solo la línea', async () => {
@@ -191,10 +211,173 @@ describe('UrlBase', () => {
     const ub = new UrlBase({ rutas, ejecutor: exec });
     await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
     writeFileSync(env(), readFileSync(env(), 'utf8') + 'NUEVA=1\n');
-    await ub.restaurar(sitio());
+    const aviso = await ub.restaurar(sitio());
     expect(readFileSync(env(), 'utf8')).toBe(
       'APP_URL=http://a.test\nAPP_URL=http://b.test\nNUEVA=1\n',
     );
+    // Restauración por línea: el respaldo se conserva con fecha y se avisa.
+    expect(existsSync(respaldoPath())).toBe(false);
+    const copias = copiasRespaldo();
+    expect(copias).toHaveLength(1);
+    expect(readFileSync(path.join(rutas.base, 'run', copias[0]!), 'utf8')).toBe(
+      'APP_URL=http://a.test\nAPP_URL=http://b.test\n',
+    );
+    expect(aviso).toContain('se restauró solo la variable APP_URL');
+    expect(aviso).toContain(copias[0]!);
+  });
+
+  it('restauración por hash borra el respaldo sin dejar copias', async () => {
+    writeFileSync(env(), 'APP_URL=http://a.test\n');
+    const ub = new UrlBase({ rutas, ejecutor: exec });
+    await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+    expect(await ub.restaurar(sitio())).toBeNull();
+    expect(copiasRespaldo()).toEqual([]);
+    expect(existsSync(respaldoPath())).toBe(false);
+  });
+
+  describe('sitio editado con el túnel abierto', () => {
+    let carpetaB: string;
+    const original = Buffer.concat([
+      Buffer.from('APP_NAME=A\r\nAPP_URL="http://a.test"\r\nN=Jos'),
+      Buffer.from([0xe9]),
+      Buffer.from('\r\n'),
+    ]);
+    const envB = 'APP_NAME=B\nAPP_URL=http://b.test\n';
+    beforeEach(() => {
+      carpetaB = path.join(base, 'Proyecto B');
+      mkdirSync(carpetaB);
+      writeFileSync(path.join(carpetaB, '.env'), envB);
+      writeFileSync(env(), original);
+    });
+
+    it('cambio de carpeta A→B: A vuelve byte a byte y B queda intacto', async () => {
+      const ub = new UrlBase({ rutas, ejecutor: exec });
+      await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+      expect(readFileSync(env(), 'latin1')).toContain('https://a.trycloudflare.com/');
+      await ub.restaurar(sitio({ carpeta: carpetaB }));
+      expect(readFileSync(env()).equals(original)).toBe(true);
+      expect(readFileSync(path.join(carpetaB, '.env'), 'utf8')).toBe(envB);
+      expect(existsSync(estadoPath())).toBe(false);
+    });
+
+    it('urlBaseVar → null: A vuelve byte a byte', async () => {
+      const ub = new UrlBase({ rutas, ejecutor: exec });
+      await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+      await ub.restaurar(sitio({ urlBaseVar: null }));
+      expect(readFileSync(env()).equals(original)).toBe(true);
+      expect(existsSync(estadoPath())).toBe(false);
+    });
+
+    it('la limpieza de caché usa la carpeta, tipo y PHP guardados al aplicar', async () => {
+      mkdirSync(path.join(carpeta, 'bootstrap', 'cache'), { recursive: true });
+      writeFileSync(path.join(carpeta, 'bootstrap', 'cache', 'config.php'), '<?php');
+      const ub = new UrlBase({ rutas, ejecutor: exec });
+      await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+      llamadas = [];
+      await ub.restaurar(sitio({ carpeta: carpetaB, tipo: 'estatico', php: null }));
+      expect(llamadas).toHaveLength(1);
+      expect(llamadas[0]!.cmd).toBe(path.join(rutas.bin('php', '8.3'), 'php.exe'));
+      expect(llamadas[0]!.opts?.cwd).toBe(carpeta);
+    });
+
+    it('aplicar con otra carpeta restaura primero la anterior', async () => {
+      const ub = new UrlBase({ rutas, ejecutor: exec });
+      await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+      await ub.aplicar(sitio({ carpeta: carpetaB }), 'https://b.trycloudflare.com/');
+      expect(readFileSync(env()).equals(original)).toBe(true);
+      await ub.restaurar(sitio({ carpeta: carpetaB }));
+      expect(readFileSync(path.join(carpetaB, '.env'), 'utf8')).toBe(envB);
+    });
+  });
+
+  it('usa y borra un .env.pel-respaldo antiguo de la carpeta del proyecto', async () => {
+    const original = 'A=1\n';
+    writeFileSync(env(), 'A=1\nAPP_URL=https://viejo.trycloudflare.com/\n');
+    writeFileSync(path.join(carpeta, '.env.pel-respaldo'), original);
+    mkdirSync(path.join(rutas.base, 'run'), { recursive: true });
+    writeFileSync(
+      estadoPath(),
+      JSON.stringify({
+        existia: false,
+        valor: null,
+        lineaOriginal: null,
+        hashAplicado: createHash('sha256').update(readFileSync(env())).digest('hex'),
+        sitio: { carpeta, urlBaseVar: 'APP_URL', tipo: 'estatico', php: null },
+      }),
+    );
+    const ub = new UrlBase({ rutas, ejecutor: exec });
+    expect(await ub.restaurarPorId('s1')).toBeNull();
+    expect(readFileSync(env(), 'utf8')).toBe(original);
+    expect(existsSync(path.join(carpeta, '.env.pel-respaldo'))).toBe(false);
+  });
+
+  it('si falta el .env al restaurar, conserva el respaldo con fecha y avisa', async () => {
+    writeFileSync(env(), 'A=1\n');
+    const ub = new UrlBase({ rutas, ejecutor: exec });
+    await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+    rmSync(env());
+    const aviso = await ub.restaurar(sitio());
+    expect(aviso).toContain('No se encontró');
+    expect(copiasRespaldo()).toHaveLength(1);
+  });
+
+  describe('escritura atómica', () => {
+    it('reintenta el rename ante EBUSY y escribe el archivo', async () => {
+      writeFileSync(env(), 'A=1\n');
+      let fallos = 2;
+      const renombrar = async (de: string, a: string): Promise<void> => {
+        if (fallos-- > 0) throw Object.assign(new Error('ocupado'), { code: 'EBUSY' });
+        renameSync(de, a);
+      };
+      await escribirAtomico(env(), Buffer.from('B=2\n'), { renombrar });
+      expect(readFileSync(env(), 'utf8')).toBe('B=2\n');
+      expect(readdirSync(carpeta).filter((f) => f.includes('pel-tmp'))).toEqual([]);
+    });
+
+    it('si el rename falla siempre, el .env original queda intacto y sin temporales', async () => {
+      writeFileSync(env(), 'A=1\n');
+      const renombrar = async (): Promise<void> => {
+        throw Object.assign(new Error('denegado'), { code: 'EPERM' });
+      };
+      const ub = new UrlBase({ rutas, ejecutor: exec, renombrar });
+      await expect(ub.aplicar(sitio(), 'https://a.trycloudflare.com/')).rejects.toThrow('denegado');
+      expect(readFileSync(env(), 'utf8')).toBe('A=1\n');
+      expect(readdirSync(carpeta).filter((f) => f.includes('pel-tmp'))).toEqual([]);
+    });
+  });
+
+  describe('restaurarUrlBaseSincrono', () => {
+    it('restaura byte a byte sin ediciones y limpia el estado y la caché de Laravel', async () => {
+      const original = Buffer.concat([
+        Buffer.from('APP_URL=http://a.test\r\nX='),
+        Buffer.from([0xf1]),
+      ]);
+      writeFileSync(env(), original);
+      mkdirSync(path.join(carpeta, 'bootstrap', 'cache'), { recursive: true });
+      const ub = new UrlBase({ rutas, ejecutor: exec });
+      await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+      writeFileSync(path.join(carpeta, 'bootstrap', 'cache', 'config.php'), '<?php');
+      expect(restaurarUrlBaseSincrono(rutas)).toEqual([]);
+      expect(readFileSync(env()).equals(original)).toBe(true);
+      expect(existsSync(estadoPath())).toBe(false);
+      expect(existsSync(respaldoPath())).toBe(false);
+      expect(existsSync(path.join(carpeta, 'bootstrap', 'cache', 'config.php'))).toBe(false);
+    });
+
+    it('conserva el respaldo con fecha si el .env se editó', async () => {
+      writeFileSync(env(), 'APP_URL=http://a.test\n');
+      const ub = new UrlBase({ rutas, ejecutor: exec });
+      await ub.aplicar(sitio(), 'https://a.trycloudflare.com/');
+      writeFileSync(env(), readFileSync(env(), 'utf8') + 'NUEVA=1\n');
+      const avisos = restaurarUrlBaseSincrono(rutas);
+      expect(readFileSync(env(), 'utf8')).toBe('APP_URL=http://a.test\nNUEVA=1\n');
+      expect(avisos).toHaveLength(1);
+      expect(copiasRespaldo()).toHaveLength(1);
+    });
+
+    it('sin carpeta run no hace nada', () => {
+      expect(restaurarUrlBaseSincrono(new Rutas(path.join(base, 'nada')))).toEqual([]);
+    });
   });
 
   it('aplicar y restaurar concurrentes se serializan por sitio', async () => {
