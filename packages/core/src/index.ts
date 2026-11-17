@@ -9,3 +9,5 @@ export * from './nginx/principal';
 export * from './hosts/bloque';
 export * from './hosts/hosts';
 export * from './plataforma/index';
+export * from './catalogo/catalogo';
+export * from './catalogo/instalador';

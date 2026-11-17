@@ -1,0 +1,19 @@
+{
+  "nginx": [
+    {
+      "version": "1.30.6",
+      "url": "https://nginx.org/download/nginx-1.30.6.zip",
+      "sha256": "c6ee35edb0a861063323f709192ae50d1eefaf2ea7d00678bd2b22d8542dc61e",
+      "formato": "zip",
+      "subcarpeta": "nginx-1.30.6"
+    }
+  ],
+  "cloudflared": [
+    {
+      "version": "2026.11.1",
+      "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-windows-amd64.exe",
+      "sha256": "341deda3db5ec498a0482254d6c38c0b7cf01a30c37bb5dd95d2216d08955e35",
+      "formato": "exe"
+    }
+  ]
+}
