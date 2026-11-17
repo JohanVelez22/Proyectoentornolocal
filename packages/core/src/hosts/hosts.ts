@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import type { Eventos, EventosNucleo } from '../eventos';
 import type { Plataforma } from '../plataforma/tipos';
 import type { EstadoHosts } from '../tipos';
-import { analizarHosts, aplicarBloque } from './bloque';
+import { analizarHosts, aplicarBloque, normalizarDominios } from './bloque';
 
 export type ResultadoSync = { ok: true } | { ok: false; motivo: string; comandoManual: string };
 
@@ -16,11 +16,19 @@ export function comandoManualPara(destino: string, contenido: string): string {
   );
 }
 
+class ErrorLecturaHosts extends Error {
+  constructor(readonly codigo: string) {
+    super(`No se pudo leer el archivo hosts: ${codigo}`);
+  }
+}
+
 async function leerHosts(ruta: string): Promise<string> {
   try {
     return await readFile(ruta, 'utf8');
-  } catch {
-    return '';
+  } catch (e) {
+    const code = (e as { code?: string }).code;
+    if (code === 'ENOENT') return '';
+    throw new ErrorLecturaHosts(code ?? 'desconocido');
   }
 }
 
@@ -31,8 +39,17 @@ export class GestorHosts {
   ) {}
 
   async estado(dominios: string[], mensaje?: string): Promise<EstadoHosts> {
-    const { enBloque, fuera } = analizarHosts(await leerHosts(this.p.rutaHosts()));
-    const pedidos = [...new Set(dominios.map((d) => d.toLowerCase()))].sort();
+    const pedidos = normalizarDominios(dominios);
+    let texto: string;
+    try {
+      texto = await leerHosts(this.p.rutaHosts());
+    } catch (e) {
+      if (!(e instanceof ErrorLecturaHosts)) throw e;
+      const fallo: EstadoHosts = { pendientes: pedidos, duplicadosFuera: [], mensaje: e.message };
+      this.eventos.emit('hosts:estado', fallo);
+      return fallo;
+    }
+    const { enBloque, fuera } = analizarHosts(texto);
     const e: EstadoHosts = {
       pendientes: pedidos.filter((d) => !enBloque.includes(d)),
       duplicadosFuera: pedidos.filter((d) => fuera.includes(d)),
@@ -44,7 +61,14 @@ export class GestorHosts {
 
   async sincronizar(dominios: string[]): Promise<ResultadoSync> {
     const destino = this.p.rutaHosts();
-    const actual = await leerHosts(destino);
+    let actual: string;
+    try {
+      actual = await leerHosts(destino);
+    } catch (e) {
+      if (!(e instanceof ErrorLecturaHosts)) throw e;
+      await this.estado(dominios);
+      return { ok: false, motivo: 'error', comandoManual: '' };
+    }
     const nuevo = aplicarBloque(actual, dominios);
     if (nuevo === actual) {
       await this.estado(dominios);

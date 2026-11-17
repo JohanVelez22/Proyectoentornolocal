@@ -74,6 +74,24 @@ describe('aplicarBloque', () => {
   });
 });
 
+describe('dominios inválidos', () => {
+  it('rechaza espacios, saltos de línea y marcadores', () => {
+    for (const d of [
+      'a.test\n1.1.1.1 x',
+      'a b',
+      '',
+      '# <<< Proyectoentornolocal',
+      '-a.test',
+      'a..test',
+    ]) {
+      expect(() => aplicarBloque('x\n', [d])).toThrow(/Dominio inválido/);
+    }
+  });
+  it('normaliza espacios y mayúsculas', () => {
+    expect(aplicarBloque('', [' A.Test '])).toContain('127.0.0.1  a.test');
+  });
+});
+
 describe('analizarHosts', () => {
   it('ignora comentarios y comentarios en línea', () => {
     const a = analizarHosts('# 1.1.1.1 no.test\r\n127.0.0.1 uno.test dos.test # nota\r\n');

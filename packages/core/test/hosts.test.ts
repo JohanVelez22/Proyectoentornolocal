@@ -96,6 +96,26 @@ describe('GestorHosts', () => {
   });
 });
 
+describe('GestorHosts con lectura fallida', () => {
+  it('no eleva ni sobrescribe si hosts no se puede leer', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pel-dir-'));
+    const p = { ...falsa(), rutaHosts: () => dir }; // leer un directorio da EISDIR
+    const g = new GestorHosts(p, eventos);
+    const vistos: { mensaje?: string }[] = [];
+    eventos.on('hosts:estado', (e) => vistos.push(e));
+    const r = await g.sincronizar(['a.test']);
+    expect(r).toMatchObject({ ok: false, motivo: 'error' });
+    expect(llamadas).toBe(0);
+    expect(vistos[0]?.mensaje).toContain('No se pudo leer el archivo hosts: EISDIR');
+  });
+
+  it('si hosts no existe (ENOENT) se trata como vacío', async () => {
+    ruta = join(await mkdtemp(join(tmpdir(), 'pel-no-')), 'no-existe');
+    const g = new GestorHosts(falsa(), eventos);
+    expect(await g.sincronizar(['a.test'])).toEqual({ ok: true });
+  });
+});
+
 const NETSTAT = `
 Conexiones activas
 
@@ -114,6 +134,13 @@ describe('intérpretes', () => {
     expect(interpretarNetstat(NETSTAT, 9830)).toBe(777);
     expect(interpretarNetstat(NETSTAT, 8080)).toBe(555);
     expect(interpretarNetstat(NETSTAT, 81)).toBeNull();
+  });
+
+  it('interpretarNetstat acepta estado localizado y [::1]', () => {
+    const es =
+      '  TCP    [::1]:5173             [::]:0                 ESCUCHANDO      4242\n  TCP    0.0.0.0:3000   0.0.0.0:0   ESCUCHANDO   99\n';
+    expect(interpretarNetstat(es, 5173)).toBe(4242);
+    expect(interpretarNetstat(es, 3000)).toBe(99);
   });
 
   it('interpretarTasklist lee el CSV y el mensaje sin coincidencias', () => {
@@ -159,6 +186,19 @@ describe('PlataformaWindows con ejecutor falso', () => {
     const p = new PlataformaWindows(async () => ({ codigo: 0, stdout: '', stderr: '' }));
     await expect(p.abrirUrl('file:///c:/x')).rejects.toThrow();
     await expect(p.abrirUrl('https://a.test')).resolves.toBeUndefined();
+  });
+
+  it('abrirUrl lanza rundll32 con un solo argumento y sin cmd', async () => {
+    const llamadas: [string, string[]][] = [];
+    const p = new PlataformaWindows(async (c, a) => {
+      llamadas.push([c, a]);
+      return { codigo: 0, stdout: '', stderr: '' };
+    });
+    await p.abrirUrl('https://a.test/?x=1&calc.exe');
+    expect(llamadas).toEqual([
+      ['rundll32', ['url.dll,FileProtocolHandler', 'https://a.test/?x=1&calc.exe']],
+    ]);
+    expect(llamadas.some(([c]) => c === 'cmd')).toBe(false);
   });
 
   it('escribirComoAdmin detecta cancelación y denegación', async () => {

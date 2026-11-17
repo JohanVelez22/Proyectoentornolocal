@@ -32,13 +32,14 @@ export function interpretarNetstat(salida: string, puerto: number): number | nul
   for (const linea of salida.split(/\r?\n/)) {
     const c = linea.trim().split(/\s+/);
     if (c.length < 5 || c[0]?.toUpperCase() !== 'TCP') continue;
-    if (c[3]?.toUpperCase() !== 'LISTENING') continue;
+    // Un socket en escucha tiene remoto sin destino; no se depende del texto (localizado) del estado.
+    if (!['0.0.0.0:0', '[::]:0', '*:*'].includes(c[2] ?? '')) continue;
     const local = c[1] ?? '';
     const i = local.lastIndexOf(':');
     if (i < 0 || Number(local.slice(i + 1)) !== puerto) continue;
     const host = local.slice(0, i);
-    if (host !== '0.0.0.0' && host !== '[::]' && host !== '127.0.0.1') continue;
-    const pid = Number(c[4]);
+    if (host !== '0.0.0.0' && host !== '[::]' && host !== '[::1]' && host !== '127.0.0.1') continue;
+    const pid = Number(c[c.length - 1]);
     if (Number.isInteger(pid)) return pid;
   }
   return null;
@@ -116,8 +117,16 @@ export class PlataformaWindows implements Plataforma {
   }
 
   async abrirUrl(url: string): Promise<void> {
-    if (!/^https?:\/\//i.test(url)) throw new Error(`URL no permitida: ${url}`);
-    await this.ejecutar('cmd', ['/c', 'start', '""', url]);
+    let u: URL;
+    try {
+      u = new URL(url);
+    } catch {
+      throw new Error(`URL no permitida: ${url}`);
+    }
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+      throw new Error(`URL no permitida: ${url}`);
+    }
+    await this.ejecutar('rundll32', ['url.dll,FileProtocolHandler', u.href]);
   }
 
   ejecutable(nombre: 'nginx' | 'php-cgi' | 'php' | 'cloudflared'): string {

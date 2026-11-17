@@ -19,9 +19,22 @@ function ubicarBloque(contenido: string): [number, number] | null {
   return [desde, finIni + fin.index + fin[0].length];
 }
 
+const DOMINIO_VALIDO = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/;
+
+/** Normaliza (trim + minúsculas), valida, quita duplicados y ordena. Lanza si hay un dominio inválido. */
+export function normalizarDominios(dominios: string[]): string[] {
+  const salida = new Set<string>();
+  for (const bruto of dominios) {
+    const d = bruto.trim().toLowerCase();
+    if (!DOMINIO_VALIDO.test(d)) throw new Error(`Dominio inválido: ${bruto}`);
+    salida.add(d);
+  }
+  return [...salida].sort();
+}
+
 export function aplicarBloque(contenido: string, dominios: string[]): string {
   const salto = saltoPredominante(contenido);
-  const unicos = [...new Set(dominios.map((d) => d.trim().toLowerCase()).filter(Boolean))].sort();
+  const unicos = normalizarDominios(dominios);
   const bloque =
     unicos.length === 0
       ? ''
