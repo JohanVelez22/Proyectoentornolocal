@@ -99,6 +99,15 @@ describe('extraerZip', () => {
     expect(existsSync(path.join(dir, 'fuera.txt'))).toBe(false);
   });
 
+  it('acepta nombres que solo empiezan por ".." (no salen del destino)', async () => {
+    const archivo = path.join(dir, 'puntos.zip');
+    writeFileSync(archivo, zipDeflate({ '..foo': 'a', 'dir/..bar.txt': 'b' }));
+    const destino = path.join(dir, 'salida');
+    await extraerZip(archivo, destino);
+    expect(readFileSync(path.join(destino, '..foo'), 'utf8')).toBe('a');
+    expect(readFileSync(path.join(destino, 'dir', '..bar.txt'), 'utf8')).toBe('b');
+  });
+
   it('rechaza rutas absolutas dentro del zip', async () => {
     const archivo = path.join(dir, 'abs.zip');
     writeFileSync(archivo, zipDeflate({ 'C:/Windows/x.txt': 'mal' }));

@@ -37,7 +37,7 @@ export async function extraerZip(archivo: string, destino: string): Promise<void
           }
           const final = path.resolve(raiz, nombre);
           const rel = path.relative(raiz, final);
-          if (rel.startsWith('..') || path.isAbsolute(rel)) {
+          if (rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel)) {
             throw new Error(`El zip contiene una ruta fuera del destino: ${entrada.fileName}`);
           }
           if (nombre.endsWith('/')) {
