@@ -12,7 +12,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
-import extract from 'extract-zip';
+import { extraerZip } from './zip';
 import type { Eventos, EventosNucleo } from '../eventos';
 import type { Rutas } from '../rutas';
 import type { ProgresoInstalacion } from '../tipos';
@@ -119,7 +119,7 @@ export class Instalador {
       await mkdir(stage, { recursive: true });
       let origen = stage;
       if (v.formato === 'zip') {
-        await extract(archivo, { dir: stage });
+        await extraerZip(archivo, stage);
         if (v.subcarpeta) origen = path.join(stage, v.subcarpeta);
       } else {
         await copyFile(archivo, path.join(stage, EJECUTABLE[v.servicio]));

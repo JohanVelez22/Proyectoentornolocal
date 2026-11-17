@@ -6,13 +6,15 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "test:win": "vitest run -c vitest.int.config.ts"
   },
   "devDependencies": {
-    "@types/node": "^22.20.5"
+    "@types/node": "^22.20.5",
+    "@types/yauzl": "^2.10.3"
   },
   "dependencies": {
-    "extract-zip": "^2.0.1",
+    "yauzl": "^3.4.0",
     "zod": "^4.6.7"
   }
 }
