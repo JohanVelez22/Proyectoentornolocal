@@ -81,10 +81,24 @@ export function interpretarTasklist(salida: string): { pid: number; nombre: stri
 
 const comillaSimple = (s: string): string => s.replace(/'/g, "''");
 
+/** ¿Existe el proceso? `process.kill(pid, 0)` no envía nada: solo lo consulta al sistema. */
+export function pidExiste(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    // EPERM: existe pero es de otro usuario o del sistema.
+    return (e as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
 export class PlataformaWindows implements Plataforma {
   private contador = 0;
 
-  constructor(private readonly ejecutar: Ejecutor = ejecutorPorDefecto) {}
+  constructor(
+    private readonly ejecutar: Ejecutor = ejecutorPorDefecto,
+    private readonly existe: (pid: number) => boolean = pidExiste,
+  ) {}
 
   rutaHosts(): string {
     const raiz = process.env.SystemRoot ?? 'C:\\Windows';
@@ -188,7 +202,10 @@ export class PlataformaWindows implements Plataforma {
       timeoutMs: 15000,
     });
     const p = interpretarTasklist(t.stdout);
-    return p && p.pid === pid ? { vivo: true, ejecutable: p.nombre } : { vivo: false };
+    if (p && p.pid === pid) return { vivo: true, ejecutable: p.nombre };
+    // Con el sistema ocupado tasklist puede fallar o volver vacío con el proceso vivo: darlo
+    // por muerto dejaba el servicio en "error" y su proceso huérfano. Se confirma antes.
+    return this.existe(pid) ? { vivo: true } : { vivo: false };
   }
 
   async matarArbol(pid: number): Promise<void> {

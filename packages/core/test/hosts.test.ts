@@ -7,6 +7,7 @@ import { GestorHosts } from '../src/hosts/hosts';
 import type { Plataforma, ResultadoEscritura } from '../src/plataforma/tipos';
 import {
   PlataformaWindows,
+  pidExiste,
   ejecutorPorDefecto,
   interpretarNetstat,
   interpretarTasklist,
@@ -210,12 +211,34 @@ describe('PlataformaWindows con ejecutor falso', () => {
       stderr: '',
     }));
     expect(await vivo.procesoVivo(10)).toEqual({ vivo: true, ejecutable: 'php-cgi.exe' });
-    const muerto = new PlataformaWindows(async () => ({
-      codigo: 0,
-      stdout: 'INFORMACIÓN: nada',
-      stderr: '',
-    }));
+    const muerto = new PlataformaWindows(
+      async () => ({
+        codigo: 0,
+        stdout: 'INFORMACIÓN: nada',
+        stderr: '',
+      }),
+      () => false,
+    );
     expect(await muerto.procesoVivo(10)).toEqual({ vivo: false });
+  });
+
+  it('procesoVivo no da por muerto un proceso vivo si tasklist falla', async () => {
+    const consultados: number[] = [];
+    const p = new PlataformaWindows(
+      async () => ({ codigo: 1, stdout: '', stderr: 'ERROR: tiempo agotado' }),
+      (pid) => {
+        consultados.push(pid);
+        return pid === 10;
+      },
+    );
+    expect(await p.procesoVivo(10)).toEqual({ vivo: true });
+    expect(await p.procesoVivo(11)).toEqual({ vivo: false });
+    expect(consultados).toEqual([10, 11]);
+  });
+
+  it('pidExiste consulta el sistema real', () => {
+    expect(pidExiste(process.pid)).toBe(true);
+    expect(pidExiste(2 ** 30)).toBe(false);
   });
 
   it('abrirUrl rechaza esquemas que no son http(s)', async () => {
