@@ -256,6 +256,51 @@ describe('ClienteMysql', () => {
     expect(consultas.filter((q) => q.sql.startsWith('ALTER USER'))).toHaveLength(2);
   });
 
+  it('usuario existente: la clave se cambia al final, tras los GRANT', async () => {
+    const { cliente, consultas } = montar([{ n: 1 }]);
+    await cliente.conectar(cx);
+    await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva' });
+    const sqls = consultas.map((q) => q.sql);
+    const ultimoGrant = sqls.map((x) => x.startsWith('GRANT')).lastIndexOf(true);
+    const primerAlter = sqls.findIndex((x) => x.startsWith('ALTER USER'));
+    expect(primerAlter).toBeGreaterThan(ultimoGrant);
+  });
+
+  it('usuario existente: si un GRANT falla, la clave no se cambia', async () => {
+    const consultas: string[] = [];
+    const cliente = new ClienteMysql(async () => ({
+      query: async (sql: string) => {
+        consultas.push(sql);
+        if (sql.startsWith('GRANT')) throw Object.assign(new Error('x'), { code: 'ER_X' });
+        return [[{ n: 1 }]] as never;
+      },
+      end: async () => undefined,
+    }));
+    await cliente.conectar(cx);
+    const e = await cliente
+      .crearBase('mi_bd', { usuario: 'app', clave: 'nueva' })
+      .catch((x: Error) => x);
+    expect((e as Error).message).not.toMatch(/clave/);
+    expect(consultas.some((x) => x.startsWith('ALTER USER'))).toBe(false);
+  });
+
+  it('usuario existente: si falla tras cambiar la clave, el error lo dice', async () => {
+    let alters = 0;
+    const cliente = new ClienteMysql(async () => ({
+      query: async (sql: string) => {
+        if (sql.startsWith('ALTER USER') && ++alters === 2) {
+          throw Object.assign(new Error('x'), { code: 'ER_X' });
+        }
+        return [[{ n: 1 }]] as never;
+      },
+      end: async () => undefined,
+    }));
+    await cliente.conectar(cx);
+    await expect(cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva' })).rejects.toThrow(
+      /La clave del usuario app ya se cambió/,
+    );
+  });
+
   it('usuario nuevo: sin ALTER USER', async () => {
     const { cliente, consultas } = montar([{ n: 0 }]);
     await cliente.conectar(cx);

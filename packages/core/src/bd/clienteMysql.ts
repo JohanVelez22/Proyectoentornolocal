@@ -141,24 +141,31 @@ export class ClienteMysql {
       }
       if (!clave) throw new Error('Indique una clave para el usuario de la base.');
     }
+    let claveCambiada = false;
     try {
       await this.filas(`CREATE DATABASE IF NOT EXISTS ${bd} CHARACTER SET utf8mb4`);
       if (usuario === undefined) return { usuarioActualizado: false };
       const f = await this.filas('SELECT COUNT(*) AS n FROM mysql.user WHERE User = ?', [usuario]);
       const existia = Number(f[0]?.n ?? 0) > 0;
-      for (const host of ['localhost', '127.0.0.1']) {
+      const hosts = ['localhost', '127.0.0.1'];
+      for (const host of hosts) {
         await this.filas(`CREATE USER IF NOT EXISTS ?@'${host}' IDENTIFIED BY ?`, [usuario, clave]);
-        if (existia) await this.filas(`ALTER USER ?@'${host}' IDENTIFIED BY ?`, [usuario, clave]);
         await this.filas(`GRANT ALL PRIVILEGES ON ${bd}.* TO ?@'${host}'`, [usuario]);
       }
-      return existia
-        ? {
-            usuarioActualizado: true,
-            aviso: `El usuario ${usuario} ya existía: su clave se cambió a la nueva.`,
-          }
-        : { usuarioActualizado: false };
+      if (!existia) return { usuarioActualizado: false };
+      // La clave de un usuario existente se cambia al FINAL: si algo anterior falla, no se toca.
+      for (const host of hosts) {
+        await this.filas(`ALTER USER ?@'${host}' IDENTIFIED BY ?`, [usuario, clave]);
+        claveCambiada = true;
+      }
+      return {
+        usuarioActualizado: true,
+        aviso: `El usuario ${usuario} ya existía: su clave se cambió a la nueva.`,
+      };
     } catch (e) {
-      throw traducir(e, `crear la base ${nombre}`);
+      const err = traducir(e, `crear la base ${nombre}`);
+      if (claveCambiada) err.message += ` La clave del usuario ${usuario} ya se cambió a la nueva.`;
+      throw err;
     }
   }
 
