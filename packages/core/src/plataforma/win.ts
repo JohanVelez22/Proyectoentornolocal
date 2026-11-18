@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
+import { interpretarNetstatTodos } from './netstat';
 import type {
   Ejecutor,
   MuestraPlataforma,
@@ -60,21 +61,15 @@ export function interpretarTasklistTodos(salida: string): Map<number, string> {
   return res;
 }
 
+/** Hosts locales que cuentan como "en escucha" para un servicio propio. */
+const HOSTS_ESCUCHA = new Set(['0.0.0.0', '::', '::1', '127.0.0.1']);
+
+/** PID TCP en escucha en el puerto (todas las interfaces o loopback), o null. */
 export function interpretarNetstat(salida: string, puerto: number): number | null {
-  for (const linea of salida.split(/\r?\n/)) {
-    const c = linea.trim().split(/\s+/);
-    if (c.length < 5 || c[0]?.toUpperCase() !== 'TCP') continue;
-    // Un socket en escucha tiene remoto sin destino; no se depende del texto (localizado) del estado.
-    if (!['0.0.0.0:0', '[::]:0', '*:*'].includes(c[2] ?? '')) continue;
-    const local = c[1] ?? '';
-    const i = local.lastIndexOf(':');
-    if (i < 0 || Number(local.slice(i + 1)) !== puerto) continue;
-    const host = local.slice(0, i);
-    if (host !== '0.0.0.0' && host !== '[::]' && host !== '[::1]' && host !== '127.0.0.1') continue;
-    const pid = Number(c[c.length - 1]);
-    if (Number.isInteger(pid)) return pid;
-  }
-  return null;
+  const f = interpretarNetstatTodos(salida).find(
+    (x) => x.protocolo === 'TCP' && x.puerto === puerto && HOSTS_ESCUCHA.has(x.direccion),
+  );
+  return f ? f.pid : null;
 }
 
 export function interpretarTasklist(salida: string): { pid: number; nombre: string } | null {

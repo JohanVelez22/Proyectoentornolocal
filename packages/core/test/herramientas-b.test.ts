@@ -52,18 +52,25 @@ const NETSTAT_ES = [
   '',
 ].join('\r\n');
 
-const TABLA = [
-  '4|0|System',
-  '900|700|svchost.exe',
-  '1200|50|nginx.exe',
-  '3100|3000|node.exe',
-  '3000|50|cmd.exe',
-  '50|10|electron.exe',
-  '10|1|explorer.exe',
-  '4000|1|postgres.exe',
-  '2500|1|chrome.exe',
-  '2600|1|svchost.exe',
-].join('\r\n');
+/** Hora de creación falsa (FILETIME) de cada PID en la tabla. */
+const creadoDe = (pid: number): string => `13${pid}`;
+
+const TABLA = (
+  [
+    [4, 0, 'System'],
+    [900, 700, 'svchost.exe'],
+    [1200, 50, 'nginx.exe'],
+    [3100, 3000, 'node.exe'],
+    [3000, 50, 'cmd.exe'],
+    [50, 10, 'electron.exe'],
+    [10, 1, 'explorer.exe'],
+    [4000, 1, 'postgres.exe'],
+    [2500, 1, 'chrome.exe'],
+    [2600, 1, 'svchost.exe'],
+  ] as const
+)
+  .map(([pid, padre, nombre]) => `${pid}|${padre}|${pid === 4 ? '' : creadoDe(pid)}|${nombre}`)
+  .join('\r\n');
 
 interface Llamada {
   cmd: string;
@@ -77,6 +84,8 @@ function falso(o: {
   /** Nombre del PID en tasklist en cada consulta sucesiva (null: no existe). */
   nombres?: Record<number, (string | null)[]>;
   taskkill?: { codigo: number; stderr?: string };
+  /** Hora de creación que devuelve la consulta por PID (por defecto la de la tabla). */
+  creados?: Record<number, string | null>;
 }): { ejecutar: Ejecutor; llamadas: Llamada[] } {
   const llamadas: Llamada[] = [];
   const consultas = new Map<number, number>();
@@ -86,6 +95,12 @@ function falso(o: {
     if (exe.startsWith('netstat'))
       return Promise.resolve({ codigo: 0, stdout: o.netstat ?? '', stderr: '' });
     if (exe.startsWith('powershell')) {
+      const filtro = /ProcessId=(\d+)/.exec(args.join(' '));
+      if (filtro) {
+        const pid = Number(filtro[1]);
+        const c = o.creados && pid in o.creados ? o.creados[pid] : creadoDe(pid);
+        return Promise.resolve({ codigo: 0, stdout: c === null ? '' : `${c}\r\n`, stderr: '' });
+      }
       return Promise.resolve(
         o.tabla === null
           ? { codigo: 1, stdout: '', stderr: 'falló' }
@@ -98,7 +113,7 @@ function falso(o: {
         const filas = (o.tabla ?? TABLA)
           .split(/\r?\n/)
           .map((l) => l.split('|'))
-          .map(([pid, , nombre]) => `"${nombre}","${pid}","Console","1","1.000 K"`);
+          .map(([pid, , , nombre]) => `"${nombre}","${pid}","Console","1","1.000 K"`);
         return Promise.resolve({ codigo: 0, stdout: filas.join('\r\n'), stderr: '' });
       }
       const pid = Number(filtro.slice(7));
@@ -147,9 +162,9 @@ describe('interpretarNetstatTodos', () => {
 
 describe('interpretarTablaProcesos', () => {
   it('lee pid, padre y nombre', () => {
-    const t = interpretarTablaProcesos('12|4|a.exe\r\nmal\r\n13|12|b b.exe');
-    expect(t.get(12)).toEqual({ padre: 4, nombre: 'a.exe' });
-    expect(t.get(13)).toEqual({ padre: 12, nombre: 'b b.exe' });
+    const t = interpretarTablaProcesos('12|4|1339|a.exe\r\nmal\r\n13|12||b b.exe');
+    expect(t.get(12)).toEqual({ padre: 4, creado: '1339', nombre: 'a.exe' });
+    expect(t.get(13)).toEqual({ padre: 12, creado: null, nombre: 'b b.exe' });
     expect(t.size).toBe(2);
   });
 });
@@ -168,6 +183,7 @@ describe('HerramientasPuertos.puertosEnUso', () => {
       lista.find((p) => p.puerto === puerto && p.protocolo === protocolo);
     expect(de(80)).toMatchObject({ pid: 1200, nombre: 'nginx.exe', propio: true }); // hijo de la app
     expect(de(5173)).toMatchObject({ pid: 3100, nombre: 'node.exe', propio: true }); // hijo de un proceso del supervisor
+    expect(de(5173)?.creado).toBe(creadoDe(3100));
     expect(de(135)).toMatchObject({ pid: 900, nombre: 'svchost.exe', propio: false });
     expect(de(5353, 'UDP')).toMatchObject({ pid: 2500, nombre: 'chrome.exe', propio: false });
     // Un solo registro por protocolo, puerto y PID aunque escuche en IPv4 e IPv6.
@@ -200,7 +216,7 @@ describe('HerramientasPuertos.puertosEnUso', () => {
 
 describe('HerramientasPuertos.finalizarProceso', () => {
   // Aquí cmd.exe (3000) y su hijo node.exe (3100) no cuelgan de la app.
-  const tabla = TABLA.replace('3000|50|cmd.exe', '3000|1|cmd.exe');
+  const tabla = TABLA.replace(`3000|50|${creadoDe(3000)}|`, `3000|1|${creadoDe(3000)}|`);
   const crear = (o: Parameters<typeof falso>[0], propios: number[] = []) => {
     const f = falso({ tabla, ...o });
     const h = new HerramientasPuertos({
@@ -287,6 +303,32 @@ describe('HerramientasPuertos.finalizarProceso', () => {
     await expect(h.finalizarProceso(3100, 'node', { forzar: true })).resolves.toMatchObject({
       pid: 3100,
     });
+  });
+
+  it('sin tabla de procesos no se sabe si es propio: solo con forzar', async () => {
+    const { h, llamadas } = crear({ tabla: null, nombres: { 3100: ['node.exe'] } });
+    await expect(h.finalizarProceso(3100, 'node')).rejects.toThrow(/comprobar.*forzar/);
+    expect(mato(llamadas)).toBe(false);
+    await expect(h.finalizarProceso(3100, 'node', { forzar: true })).resolves.toMatchObject({
+      pid: 3100,
+    });
+  });
+
+  it('compara la hora de creación de la lista antes de matar', async () => {
+    const { h, llamadas } = crear({ nombres: { 3100: ['node.exe'] }, creados: { 3100: '999' } });
+    await expect(h.finalizarProceso(3100, 'node', { creado: creadoDe(3100) })).rejects.toThrow(
+      'El proceso cambió; actualice la lista',
+    );
+    expect(mato(llamadas)).toBe(false);
+    const sinHora = crear({ nombres: { 3100: ['node.exe'] }, creados: { 3100: null } });
+    await expect(
+      sinHora.h.finalizarProceso(3100, 'node', { creado: creadoDe(3100) }),
+    ).rejects.toThrow('El proceso cambió; actualice la lista');
+    expect(mato(sinHora.llamadas)).toBe(false);
+    const igual = crear({ nombres: { 3100: ['node.exe'] } });
+    await expect(
+      igual.h.finalizarProceso(3100, 'node', { creado: creadoDe(3100) }),
+    ).resolves.toMatchObject({ pid: 3100 });
   });
 
   it('vuelve a comprobar el nombre justo antes de matar (PID reutilizado)', async () => {
@@ -461,6 +503,8 @@ describe('validarDominiosLibres', () => {
     [['x'.repeat(64) + '.test'], /no es válido/],
     [['a_b.test'], /no es válido/],
     [['256.1.1.1'], /no es válido/],
+    [['fe80::1%12'], /no es válido/],
+    [['[fe80::1%eth0]'], /no es válido/],
     [['http://a.test'], /no es válido/],
     [[`${'a.'.repeat(130)}test`], /no es válido/],
     [[42 as unknown as string], /no es válido/],

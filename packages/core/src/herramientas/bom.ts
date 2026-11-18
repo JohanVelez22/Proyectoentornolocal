@@ -106,7 +106,12 @@ async function crearCopia(archivo: string): Promise<string> {
   throw new Error('Hay demasiadas copias .bak-bom de este archivo.');
 }
 
-/** Escribe en un temporal de la misma carpeta y lo renombra encima: nunca queda a medias. */
+/**
+ * Escribe en un temporal de la misma carpeta y lo renombra encima: nunca queda a medias.
+ * El renombrado NO conserva atributos ni ACL del original (el archivo nuevo hereda los de la
+ * carpeta); la copia `.bak-bom` sí es fiel al contenido. Un archivo de solo lectura hace fallar
+ * el renombrado y se informa como `error` en su resultado, sin tocarlo.
+ */
 async function escribirAtomico(archivo: string, datos: Buffer): Promise<void> {
   const tmp = path.join(
     path.dirname(archivo),

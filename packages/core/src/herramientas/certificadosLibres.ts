@@ -24,6 +24,8 @@ function validarUno(entrada: unknown): string {
   if (typeof entrada !== 'string') throw new Error(`"${String(entrada)}" no es válido.`);
   let n = entrada.trim().toLowerCase();
   if (/^\[.*\]$/.test(n)) n = n.slice(1, -1);
+  // Una IPv6 con zona (`fe80::1%12`) solo vale en esa máquina: no va en un certificado.
+  if (n.includes('%')) throw new Error(`"${entrada}" no es válido: quite la zona (%…) de la IPv6.`);
   if (isIPv4(n) || isIPv6(n)) return n;
   if (n.includes('*')) {
     // Solo un comodín a la izquierda, de un nivel, y sobre al menos dos etiquetas (`*.x.test`).
