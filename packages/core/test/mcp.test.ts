@@ -1,6 +1,6 @@
 import http from 'node:http';
 import net from 'node:net';
-import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   HERRAMIENTAS_MCP,
   ServidorMcp,
+  type CierreConfirmacion,
   type OperacionesMcp,
   type SolicitudConfirmacion,
 } from '../src/mcp/servidor';
@@ -43,6 +44,7 @@ function operacionesFalsas(carpeta = 'C:/no-existe'): OperacionesMcp {
     abrirTunel: vi.fn(async () => ({ estado: 'activo', url: 'https://x.trycloudflare.com' })),
     cerrarTunel: vi.fn(async () => undefined),
     ejecutarReceta: vi.fn(async () => ({ estado: 'listo' })),
+    resumenReceta: vi.fn(async () => ({ proyecto: 'Demo', pasos: ['Composer', 'Migraciones'] })),
     traerCambios: vi.fn(async () => ({ actualizado: true })),
     leerRegistro: vi.fn(async (_id: string, n: number) =>
       Array.from({ length: n }, (_, i) => `l${i}`),
@@ -57,6 +59,8 @@ interface Montaje {
   puerto: number;
   url: string;
   confirmaciones: SolicitudConfirmacion[];
+  cierres: CierreConfirmacion[];
+  token: { valor: string };
 }
 
 async function montar(
@@ -64,17 +68,28 @@ async function montar(
 ): Promise<Montaje> {
   const ops = o.ops ?? operacionesFalsas();
   const confirmaciones: SolicitudConfirmacion[] = [];
+  const cierres: CierreConfirmacion[] = [];
+  const token = { valor: TOKEN };
   const servidor = new ServidorMcp({
     operaciones: ops,
-    token: async () => TOKEN,
+    token: async () => token.valor,
     puerto: async () => 0,
     emitirConfirmacion: (s) => confirmaciones.push(s),
+    emitirCierre: (c) => cierres.push(c),
     ...(o.plazoConfirmacionMs !== undefined ? { plazoConfirmacionMs: o.plazoConfirmacionMs } : {}),
   });
   servidores.push(servidor);
   await servidor.iniciar();
   const puerto = servidor.estado().puerto!;
-  return { servidor, ops, puerto, url: `http://127.0.0.1:${puerto}/mcp`, confirmaciones };
+  return {
+    servidor,
+    ops,
+    puerto,
+    url: `http://127.0.0.1:${puerto}/mcp`,
+    confirmaciones,
+    cierres,
+    token,
+  };
 }
 
 async function conectar(url: string, token = TOKEN): Promise<Client> {
@@ -253,6 +268,23 @@ describe('ServidorMcp: seguridad HTTP', () => {
     expect(r).toBe(404);
   });
 
+  it('recargarToken: el servidor en marcha usa el token nuevo al instante', async () => {
+    const m = await montar();
+    const nuevo = 'c'.repeat(64);
+    m.token.valor = nuevo;
+    await m.servidor.recargarToken();
+    const viejo = await postCrudo(m.puerto, {
+      Host: `127.0.0.1:${m.puerto}`,
+      Authorization: `Bearer ${TOKEN}`,
+    });
+    expect(viejo.codigo).toBe(401);
+    const ok = await postCrudo(m.puerto, {
+      Host: `127.0.0.1:${m.puerto}`,
+      Authorization: `Bearer ${nuevo}`,
+    });
+    expect(ok.codigo).toBe(200);
+  });
+
   it('el token nunca aparece en el estado', async () => {
     const m = await montar();
     expect(JSON.stringify(m.servidor.estado())).not.toContain(TOKEN);
@@ -419,10 +451,12 @@ describe('ServidorMcp: acciones destructivas', () => {
     expect(sol).toMatchObject({ herramienta: 'borrar_base' });
     expect(sol.resumen).toContain('tienda');
     expect(m.ops.borrarBase).not.toHaveBeenCalled();
+    expect(sol.datos).toEqual({ motor: 'mysql', base: 'tienda' });
     expect(m.servidor.responderConfirmacion(sol.id, true)).toBe(true);
     const r = await llamada;
     expect(r.isError).toBeFalsy();
     expect(m.ops.borrarBase).toHaveBeenCalledWith('mysql', 'tienda', 'tienda');
+    expect(m.cierres).toEqual([{ id: sol.id, motivo: 'aprobada' }]);
   });
 
   it('rechazada, no borra y devuelve un error', async () => {
@@ -438,6 +472,7 @@ describe('ServidorMcp: acciones destructivas', () => {
     expect(r.isError).toBe(true);
     expect(textoDe(r)).toMatch(/rechaz/i);
     expect(m.ops.borrarBase).not.toHaveBeenCalled();
+    expect(m.cierres).toEqual([{ id: sol.id, motivo: 'rechazada' }]);
   });
 
   it('sin respuesta en el plazo, rechaza', async () => {
@@ -450,6 +485,7 @@ describe('ServidorMcp: acciones destructivas', () => {
     expect(r.isError).toBe(true);
     expect(textoDe(r)).toMatch(/tiempo/i);
     expect(m.ops.finalizarProceso).not.toHaveBeenCalled();
+    expect(m.cierres).toEqual([{ id: m.confirmaciones[0]!.id, motivo: 'vencida' }]);
     // Una respuesta tardía (id vencido) se ignora.
     expect(m.servidor.responderConfirmacion(m.confirmaciones[0]!.id, true)).toBe(false);
     expect(m.ops.finalizarProceso).not.toHaveBeenCalled();
@@ -469,6 +505,7 @@ describe('ServidorMcp: acciones destructivas', () => {
     });
     const sol = await esperarConfirmacion(m);
     expect(sol.resumen).toContain('4321');
+    expect(sol.datos).toEqual({ pid: 4321, nombre: 'node.exe' });
     m.servidor.responderConfirmacion(sol.id, true);
     await llamada;
     expect(m.ops.finalizarProceso).toHaveBeenCalledWith(4321, 'node.exe');
@@ -489,6 +526,101 @@ describe('ServidorMcp: acciones destructivas', () => {
     await detencion;
     expect(m.servidor.responderConfirmacion(sol.id, true)).toBe(false);
     expect(m.ops.borrarBase).not.toHaveBeenCalled();
+    expect(m.cierres).toEqual([{ id: sol.id, motivo: 'detenido' }]);
+  });
+
+  it('si el cliente corta la solicitud, la confirmación se cancela y no se ejecuta', async () => {
+    const m = await montar();
+    const req = http.request({
+      host: '127.0.0.1',
+      port: m.puerto,
+      path: '/mcp',
+      method: 'POST',
+      headers: {
+        Host: `127.0.0.1:${m.puerto}`,
+        Authorization: `Bearer ${TOKEN}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json, text/event-stream',
+      },
+    });
+    req.on('error', () => undefined);
+    req.end(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 7,
+        method: 'tools/call',
+        params: { name: 'borrar_base', arguments: { motor: 'mysql', nombre: 'tienda' } },
+      }),
+    );
+    const sol = await esperarConfirmacion(m);
+    req.destroy();
+    for (let i = 0; i < 200 && m.cierres.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    expect(m.cierres).toEqual([{ id: sol.id, motivo: 'cancelada' }]);
+    expect(m.servidor.responderConfirmacion(sol.id, true)).toBe(false);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(m.ops.borrarBase).not.toHaveBeenCalled();
+  });
+
+  it('valida el nombre de la base según el motor antes de pedir confirmación', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    for (const [motor, nombre] of [
+      ['postgresql', 'Tienda'],
+      ['mysql', 'tien-da'],
+      ['mysql', 'a\nb'],
+      ['mongodb', 'a\u202eb'],
+    ] as const) {
+      const r = await c.callTool({ name: 'borrar_base', arguments: { motor, nombre } });
+      expect(r.isError).toBe(true);
+      const r2 = await c.callTool({
+        name: 'restaurar_base',
+        arguments: { motor, archivo: 'x.sql', base: nombre },
+      });
+      expect(r2.isError).toBe(true);
+    }
+    expect(m.confirmaciones).toHaveLength(0);
+  });
+
+  it('valida el nombre del proceso (sin saltos de línea ni caracteres bidi)', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    for (const nombre of ['node\n.exe', 'no\u202ede.exe', 'a/b.exe']) {
+      const r = await c.callTool({ name: 'finalizar_proceso', arguments: { pid: 4321, nombre } });
+      expect(r.isError).toBe(true);
+    }
+    expect(m.confirmaciones).toHaveLength(0);
+  });
+
+  it('ejecutar_receta pide confirmación con el proyecto y sus pasos', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    const llamada = c.callTool({ name: 'ejecutar_receta', arguments: { sitioId: 'demo' } });
+    const sol = await esperarConfirmacion(m);
+    expect(sol.herramienta).toBe('ejecutar_receta');
+    expect(sol.datos).toEqual({ proyecto: 'Demo', pasos: ['Composer', 'Migraciones'] });
+    expect(sol.resumen).toContain('Demo');
+    expect(sol.resumen).toContain('Migraciones');
+    expect(m.ops.ejecutarReceta).not.toHaveBeenCalled();
+    m.servidor.responderConfirmacion(sol.id, true);
+    expect((await llamada).isError).toBeFalsy();
+    expect(m.ops.ejecutarReceta).toHaveBeenCalledWith('demo');
+  });
+
+  it('ejecutar_receta limpia saltos de línea y bidi del resumen y los datos', async () => {
+    const ops = operacionesFalsas();
+    ops.resumenReceta = vi.fn(async () => ({ proyecto: 'De\nmo\u202e', pasos: ['Paso\r\n1'] }));
+    const m = await montar({ ops });
+    const c = await conectar(m.url);
+    const llamada = c.callTool({ name: 'ejecutar_receta', arguments: { sitioId: 'demo' } });
+    const sol = await esperarConfirmacion(m);
+    const prohibidos = /[\r\n\u202a-\u202e\u2066-\u2069]/;
+    expect(sol.resumen).not.toMatch(prohibidos);
+    expect(sol.datos.proyecto).not.toMatch(prohibidos);
+    expect(sol.datos.pasos?.[0]).not.toMatch(prohibidos);
+    m.servidor.responderConfirmacion(sol.id, false);
+    await llamada;
   });
 
   describe('restaurar_base', () => {
@@ -520,6 +652,38 @@ describe('ServidorMcp: acciones destructivas', () => {
       }
       expect(m.confirmaciones).toHaveLength(0);
       expect(m.ops.restaurarBase).not.toHaveBeenCalled();
+    });
+
+    it('rechaza una unión (junction) dentro de la carpeta que apunta afuera', async () => {
+      const { m, carpeta } = await conRespaldos();
+      const afuera = path.join(carpeta, '..', 'afuera');
+      await mkdir(afuera);
+      await writeFile(path.join(afuera, 'secreto.sql'), 'x');
+      await symlink(afuera, path.join(carpeta, 'enlace'), 'junction');
+      const c = await conectar(m.url);
+      for (const archivo of ['enlace/secreto.sql', path.join(carpeta, 'enlace', 'secreto.sql')]) {
+        const r = await c.callTool({
+          name: 'restaurar_base',
+          arguments: { motor: 'mysql', archivo, base: 'tienda' },
+        });
+        expect(r.isError).toBe(true);
+        expect(textoDe(r)).toMatch(/carpeta de respaldos/);
+      }
+      expect(m.confirmaciones).toHaveLength(0);
+    });
+
+    it('admite un respaldo cuyo nombre empieza con ".."', async () => {
+      const { m, carpeta } = await conRespaldos();
+      await writeFile(path.join(carpeta, '..raro.sql'), 'x');
+      const c = await conectar(m.url);
+      const llamada = c.callTool({
+        name: 'restaurar_base',
+        arguments: { motor: 'mysql', archivo: '..raro.sql', base: 'tienda' },
+      });
+      const sol = await esperarConfirmacion(m);
+      expect(sol.datos).toMatchObject({ motor: 'mysql', base: 'tienda', archivo: '..raro.sql' });
+      m.servidor.responderConfirmacion(sol.id, true);
+      expect((await llamada).isError).toBeFalsy();
     });
 
     it('con un nombre relativo a la carpeta y aprobado, restaura', async () => {
@@ -622,8 +786,25 @@ describe('Nucleo: servidor MCP', () => {
       }
       expect(solicitudes[0]).toMatchObject({ herramienta: 'borrar_base' });
       expect(JSON.stringify(solicitudes)).not.toContain(token);
+      const cierres: unknown[] = [];
+      n.eventos.on('mcp:confirmacion-cerrada', (x) => cierres.push(x));
       expect(n.responderConfirmacionMcp(solicitudes[0]!.id, false)).toBe(true);
+      expect(cierres).toEqual([{ id: solicitudes[0]!.id, motivo: 'rechazada' }]);
       expect((await borrar).isError).toBe(true);
+
+      await n.regenerarTokenMcp();
+      const cred2 = JSON.parse(await readFile(path.join(base, 'etc', 'credenciales.json'), 'utf8'));
+      const token2 = cred2.mcp.clave as string;
+      expect(token2).not.toBe(token);
+      expect(Buffer.from(token2, 'base64url').length).toBeGreaterThanOrEqual(32);
+      const viejo = await postCrudo(puerto, {
+        Host: `127.0.0.1:${puerto}`,
+        Authorization: `Bearer ${token}`,
+      });
+      expect(viejo.codigo).toBe(401);
+      const c2 = await conectar(`http://127.0.0.1:${puerto}/mcp`, token2);
+      expect((await c2.callTool({ name: 'listar_proyectos', arguments: {} })).isError).toBeFalsy();
+      expect(await n.configuracionMcp()).toContain(token2);
 
       await n.detenerMcp();
       expect(n.estadoMcp().activo).toBe(false);

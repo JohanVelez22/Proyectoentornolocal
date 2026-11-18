@@ -222,6 +222,7 @@ export class Nucleo {
       token: () => this.tokenMcp(),
       puerto: async () => (await this.config.leer()).mcp.puerto,
       emitirConfirmacion: (s) => this.eventos.emit('mcp:confirmar', s),
+      emitirCierre: (c) => this.eventos.emit('mcp:confirmacion-cerrada', c),
     });
   }
 
@@ -801,6 +802,18 @@ export class Nucleo {
     return c.clave;
   }
 
+  /**
+   * Token nuevo en etc/credenciales.json; el servidor en marcha deja de aceptar el anterior al
+   * instante. No se devuelve: la ventana lo copia con configuracionMcp.
+   */
+  async regenerarTokenMcp(): Promise<void> {
+    await this.almacenCredenciales.guardar('mcp', {
+      usuario: 'mcp',
+      clave: randomBytes(32).toString('base64url'),
+    });
+    await this.mcp.recargarToken();
+  }
+
   /** Solo los ids de servicio conocidos (uno desconocido no debe llegar a PHP como versión). */
   private async idServicioMcp(id: string): Promise<IdServicio> {
     if (id === 'nginx' || id === 'ftp' || (IDS_SERVICIO_DATOS as readonly string[]).includes(id)) {
@@ -812,8 +825,9 @@ export class Nucleo {
   }
 
   /**
-   * Lo que publica el servidor MCP, con los mismos métodos que usa la ventana. Recetas, git,
-   * registros y puertos se agregan cuando el núcleo los integre (Task 11).
+   * Lo que publica el servidor MCP, con los mismos métodos que usa la ventana. Recetas
+   * (`ejecutarReceta` y `resumenReceta`), git, registros y puertos se agregan cuando el núcleo
+   * los integre (Task 11).
    */
   private operacionesMcp(): OperacionesMcp {
     return {

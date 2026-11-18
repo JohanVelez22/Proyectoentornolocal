@@ -7,6 +7,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
+import { NOMBRE_BD_MONGO } from '../bd/basesDeDatos';
+import { NOMBRE_BD_MYSQL } from '../bd/clienteMysql';
+import { NOMBRE_BD_PG } from '../bd/clientePostgres';
 import type { MotorBd } from '../bd/env';
 
 /**
@@ -37,6 +40,8 @@ export interface OperacionesMcp {
   cerrarTunel(sitioId: string): Promise<unknown>;
   /** El motor de recetas exige `sitio.confiado`. */
   ejecutarReceta?(sitioId: string): Promise<unknown>;
+  /** Nombre del proyecto y títulos de los pasos que correría la receta (para confirmar). */
+  resumenReceta?(sitioId: string): Promise<{ proyecto: string; pasos: string[] }>;
   traerCambios?(sitioId: string): Promise<unknown>;
   /** Últimas `lineas` líneas (ya saneadas) de una fuente de registro. */
   leerRegistro?(id: string, lineas: number): Promise<string[]>;
@@ -44,11 +49,33 @@ export interface OperacionesMcp {
   finalizarProceso?(pid: number, confirmacion: string): Promise<unknown>;
 }
 
+/** Datos estructurados de una confirmación (ya validados y sin saltos de línea ni bidi). */
+export interface DatosConfirmacion {
+  motor?: MotorBd;
+  base?: string;
+  /** Nombre del archivo de respaldo (sin carpeta). */
+  archivo?: string;
+  sobrescribir?: boolean;
+  pid?: number;
+  nombre?: string;
+  proyecto?: string;
+  pasos?: string[];
+}
+
 /** Lo que el núcleo emite como `'mcp:confirmar'` para que la ventana pregunte. */
 export interface SolicitudConfirmacion {
   id: string;
   herramienta: string;
   resumen: string;
+  datos: DatosConfirmacion;
+}
+
+export type MotivoCierre = 'vencida' | 'rechazada' | 'aprobada' | 'cancelada' | 'detenido';
+
+/** Se emite como `'mcp:confirmacion-cerrada'` siempre que una confirmación deja de estar pendiente. */
+export interface CierreConfirmacion {
+  id: string;
+  motivo: MotivoCierre;
 }
 
 export interface EstadoMcp {
@@ -65,7 +92,9 @@ export interface DepsMcp {
   /** Puerto configurado (0 = cualquiera libre; solo para pruebas). */
   puerto: () => Promise<number>;
   emitirConfirmacion: (s: SolicitudConfirmacion) => void;
-  /** Plazo para que la ventana responda (60 s por defecto). */
+  /** La ventana cierra el diálogo de esa confirmación (respondida, vencida o cancelada). */
+  emitirCierre?: (c: CierreConfirmacion) => void;
+  /** Plazo para que la ventana responda (45 s por defecto). */
   plazoConfirmacionMs?: number;
   version?: string;
 }
@@ -92,7 +121,7 @@ export const HERRAMIENTAS_MCP = [
 const DIRECCION = '127.0.0.1';
 const RUTA = '/mcp';
 const LIMITE_CUERPO_BYTES = 1024 * 1024;
-const PLAZO_CONFIRMACION_MS = 60_000;
+const PLAZO_CONFIRMACION_MS = 45_000;
 const MAX_CONFIRMACIONES_PENDIENTES = 10;
 export const LINEAS_REGISTRO_POR_DEFECTO = 200;
 export const MAX_LINEAS_REGISTRO = 2000;
@@ -114,6 +143,25 @@ const idServicio = z
   );
 
 const mensajeDe = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+/** Controles, saltos de línea y marcas de dirección (bidi): nunca en lo que muestra la ventana. */
+// eslint-disable-next-line no-control-regex -- se buscan justamente los caracteres de control.
+const PROHIBIDOS = /[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
+const PROHIBIDOS_G = new RegExp(PROHIBIDOS.source, 'g');
+const NOMBRE_PROCESO = /^[\w .-]{1,260}$/;
+const MAX_PASOS_RESUMEN = 50;
+
+/** Texto de terceros (p. ej. de wolfcore.yml) apto para el diálogo: una línea, acotada. */
+const limpiar = (t: string, max = 120): string =>
+  t.replace(PROHIBIDOS_G, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+
+/** Nombre de base válido para el motor (los mismos patrones que el resto del núcleo). */
+function validarNombreBase(m: MotorBd, nombre: string): void {
+  const patron =
+    m === 'postgresql' ? NOMBRE_BD_PG : m === 'mongodb' ? NOMBRE_BD_MONGO : NOMBRE_BD_MYSQL;
+  if (!patron.test(nombre))
+    throw new Error(`El nombre de base "${limpiar(nombre)}" no es válido para ${m}.`);
+}
 
 class ErrorCuerpo extends Error {
   constructor(
@@ -164,23 +212,21 @@ function leerCuerpo(req: http.IncomingMessage, limite: number): Promise<string> 
 function estaDentro(carpeta: string, hijo: string): boolean {
   const norm = (p: string): string => (process.platform === 'win32' ? p.toLowerCase() : p);
   const rel = path.relative(norm(carpeta), norm(hijo));
-  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+  return rel !== '' && rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
 }
 
 interface Pendiente {
-  resolver: (aprobado: boolean) => void;
-  rechazar: (e: Error) => void;
-  temporizador: ReturnType<typeof setTimeout>;
+  /** Cierra la confirmación una sola vez: limpia el plazo, avisa a la ventana y resuelve. */
+  terminar: (motivo: MotivoCierre) => void;
 }
 
 /**
  * Servidor MCP local (transporte HTTP streamable del SDK oficial, sin sesiones) en
  * 127.0.0.1:<puerto>. Exige `Authorization: Bearer <token>`, rechaza Host ajenos (DNS rebinding)
  * y cualquier `Origin` (un navegador nunca debe llegar). Las herramientas destructivas
- * (`restaurar_base`, `borrar_base`, `finalizar_proceso`) piden confirmación en la ventana.
- *
- * `ejecutar_receta` no pide confirmación: el motor de recetas ya exige que el proyecto esté
- * marcado como "Confío en este repositorio", y sus pasos no borran datos sin confirmar.
+ * (`restaurar_base`, `borrar_base`, `finalizar_proceso`) y `ejecutar_receta` piden confirmación
+ * en la ventana; la espera depende de la solicitud: si el cliente la corta, se cancela y la
+ * acción no se ejecuta aunque luego llegue la aprobación.
  */
 export class ServidorMcp {
   private http: http.Server | null = null;
@@ -244,14 +290,20 @@ export class ServidorMcp {
     this.http = servidor;
   }
 
+  /**
+   * Vuelve a leer el token (p. ej. tras regenerarlo): el servidor en marcha acepta solo el nuevo
+   * desde ya.
+   */
+  async recargarToken(): Promise<void> {
+    const token = await this.d.token();
+    if (token.length < 32) throw new Error('El token del servidor MCP no es válido.');
+    if (this.http) this.huellaToken = huella(token);
+  }
+
   /** Detiene el servidor, cierra las conexiones y rechaza las confirmaciones pendientes. */
   async detener(): Promise<void> {
     await this.arrancando?.catch(() => undefined);
-    for (const [id, p] of this.pendientes) {
-      clearTimeout(p.temporizador);
-      this.pendientes.delete(id);
-      p.rechazar(new Error('El servidor MCP se detuvo antes de la confirmación.'));
-    }
+    for (const p of [...this.pendientes.values()]) p.terminar('detenido');
     const servidor = this.http;
     this.http = null;
     this.puertoActual = null;
@@ -294,9 +346,7 @@ export class ServidorMcp {
   responderConfirmacion(id: string, aprobado: boolean): boolean {
     const p = this.pendientes.get(id);
     if (!p) return false;
-    clearTimeout(p.temporizador);
-    this.pendientes.delete(id);
-    p.resolver(aprobado === true);
+    p.terminar(aprobado === true ? 'aprobada' : 'rechazada');
     return true;
   }
 
@@ -349,12 +399,15 @@ export class ServidorMcp {
         } else responder(res, 400, 'El cuerpo no es JSON válido.');
         return;
       }
-      const mcp = this.crearServidorMcp();
+      // Si la conexión se cierra (respuesta enviada o cliente que corta), lo pendiente se cancela.
+      const solicitud = new AbortController();
+      const mcp = this.crearServidorMcp(solicitud.signal);
       const transporte = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,
       });
       res.on('close', () => {
+        solicitud.abort();
         void transporte.close();
         void mcp.close();
       });
@@ -368,8 +421,34 @@ export class ServidorMcp {
 
   /* ───────────── Confirmaciones ───────────── */
 
-  private pedirConfirmacion(herramienta: string, resumen: string): Promise<void> {
+  /**
+   * Pide confirmación a la ventana y, solo si se aprueba y la solicitud sigue viva, ejecuta
+   * `accion`. Toda salida de la espera emite `emitirCierre` con su motivo.
+   */
+  private async confirmarYEjecutar(
+    herramienta: string,
+    resumen: string,
+    datos: DatosConfirmacion,
+    signal: AbortSignal,
+    accion: () => Promise<unknown>,
+  ): Promise<unknown> {
+    await this.pedirConfirmacion(herramienta, limpiar(resumen, 2000), datos, signal);
+    if (signal.aborted) {
+      throw new Error('El cliente MCP canceló la solicitud: no se ejecutó la acción.');
+    }
+    return accion();
+  }
+
+  private pedirConfirmacion(
+    herramienta: string,
+    resumen: string,
+    datos: DatosConfirmacion,
+    signal: AbortSignal,
+  ): Promise<void> {
     if (!this.http) return Promise.reject(new Error('El servidor MCP está detenido.'));
+    if (signal.aborted) {
+      return Promise.reject(new Error('El cliente MCP canceló la solicitud.'));
+    }
     if (this.pendientes.size >= MAX_CONFIRMACIONES_PENDIENTES) {
       return Promise.reject(
         new Error(
@@ -379,26 +458,37 @@ export class ServidorMcp {
     }
     const id = randomUUID();
     const plazo = this.d.plazoConfirmacionMs ?? PLAZO_CONFIRMACION_MS;
-    const espera = new Promise<boolean>((resolver, rechazar) => {
-      const temporizador = setTimeout(() => {
-        this.pendientes.delete(id);
-        rechazar(
-          new Error(
-            `Se agotó el tiempo de espera: nadie confirmó "${herramienta}" en WolfCore Dev en ${Math.round(plazo / 1000)} s.`,
-          ),
-        );
-      }, plazo);
-      this.pendientes.set(id, { resolver, rechazar, temporizador });
+    const errores: Record<Exclude<MotivoCierre, 'aprobada'>, string> = {
+      vencida: `Se agotó el tiempo de espera: nadie confirmó "${herramienta}" en WolfCore Dev en ${Math.round(plazo / 1000)} s.`,
+      rechazada: `El usuario rechazó "${herramienta}" en WolfCore Dev.`,
+      cancelada: `El cliente MCP canceló la solicitud: no se ejecutó "${herramienta}".`,
+      detenido: 'El servidor MCP se detuvo antes de la confirmación.',
+    };
+    const espera = new Promise<void>((resolve, reject) => {
+      const terminar = (motivo: MotivoCierre): void => {
+        if (!this.pendientes.delete(id)) return;
+        clearTimeout(temporizador);
+        signal.removeEventListener('abort', alAbortar);
+        try {
+          this.d.emitirCierre?.({ id, motivo });
+        } catch (e) {
+          console.error('No se pudo avisar el cierre de la confirmación MCP:', mensajeDe(e));
+        }
+        if (motivo === 'aprobada') resolve();
+        else reject(new Error(errores[motivo]));
+      };
+      const alAbortar = (): void => terminar('cancelada');
+      const temporizador = setTimeout(() => terminar('vencida'), plazo);
+      signal.addEventListener('abort', alAbortar, { once: true });
+      this.pendientes.set(id, { terminar });
     });
     try {
-      this.d.emitirConfirmacion({ id, herramienta, resumen });
+      this.d.emitirConfirmacion({ id, herramienta, resumen, datos });
     } catch (e) {
-      this.responderConfirmacion(id, false);
       console.error('No se pudo pedir la confirmación MCP:', mensajeDe(e));
+      this.pendientes.get(id)?.terminar('cancelada');
     }
-    return espera.then((aprobado) => {
-      if (!aprobado) throw new Error(`El usuario rechazó "${herramienta}" en WolfCore Dev.`);
-    });
+    return espera;
   }
 
   /** Ruta real del respaldo, solo si es un archivo dentro de la carpeta de respaldos. */
@@ -419,6 +509,9 @@ export class ServidorMcp {
     }
     // Un enlace o unión dentro de la carpeta podría apuntar afuera.
     if (!estaDentro(carpeta, real)) throw fuera;
+    if (PROHIBIDOS.test(path.basename(real))) {
+      throw new Error('El nombre del respaldo tiene caracteres no permitidos.');
+    }
     if (!(await stat(real)).isFile())
       throw new Error('Elija un archivo de respaldo, no una carpeta.');
     return real;
@@ -426,7 +519,7 @@ export class ServidorMcp {
 
   /* ───────────── Herramientas ───────────── */
 
-  private crearServidorMcp(): McpServer {
+  private crearServidorMcp(solicitud: AbortSignal): McpServer {
     const ops = this.d.operaciones;
     const mcp = new McpServer({ name: 'wolfcore', version: this.d.version ?? '0.1.0' });
     const ejecutar = async (fn: () => Promise<unknown>): Promise<CallToolResult> => {
@@ -437,6 +530,9 @@ export class ServidorMcp {
         return { isError: true, content: [{ type: 'text', text: mensajeDe(e) }] };
       }
     };
+    /** Se aborta si el cliente corta la conexión o cancela la llamada (notifications/cancelled). */
+    const senal = (extra: { signal: AbortSignal }): AbortSignal =>
+      AbortSignal.any([solicitud, extra.signal]);
     const disponible = <T>(op: T | undefined, nombre: string): T => {
       if (!op) throw new Error(`La herramienta "${nombre}" no está disponible en esta versión.`);
       return op;
@@ -530,14 +626,18 @@ export class ServidorMcp {
         },
         annotations: destructiva,
       },
-      ({ motor: m, archivo, base, sobrescribir }) =>
+      ({ motor: m, archivo, base, sobrescribir }, extra) =>
         ejecutar(async () => {
+          validarNombreBase(m, base);
           const ruta = await this.rutaRespaldo(archivo);
-          await this.pedirConfirmacion(
+          const nombre = path.basename(ruta);
+          return this.confirmarYEjecutar(
             'restaurar_base',
-            `Restaurar ${path.basename(ruta)} en la base "${base}" (${m})${sobrescribir ? ', reemplazando sus tablas' : ''}.`,
+            `Restaurar ${nombre} en la base "${base}" (${m})${sobrescribir ? ', reemplazando sus tablas' : ''}.`,
+            { motor: m, base, archivo: nombre, sobrescribir },
+            senal(extra),
+            () => ops.restaurarBase(m, ruta, base, { confirmarSobrescribir: sobrescribir }),
           );
-          return ops.restaurarBase(m, ruta, base, { confirmarSobrescribir: sobrescribir });
         }),
     );
     mcp.registerTool(
@@ -548,13 +648,16 @@ export class ServidorMcp {
         inputSchema: { motor, nombre: nombreBase },
         annotations: destructiva,
       },
-      ({ motor: m, nombre }) =>
+      ({ motor: m, nombre }, extra) =>
         ejecutar(async () => {
-          await this.pedirConfirmacion(
+          validarNombreBase(m, nombre);
+          return this.confirmarYEjecutar(
             'borrar_base',
             `Borrar la base "${nombre}" (${m}). No se puede deshacer.`,
+            { motor: m, base: nombre },
+            senal(extra),
+            () => ops.borrarBase(m, nombre, nombre),
           );
-          return ops.borrarBase(m, nombre, nombre);
         }),
     );
     mcp.registerTool(
@@ -579,12 +682,25 @@ export class ServidorMcp {
       'ejecutar_receta',
       {
         description:
-          'Ejecuta la receta de puesta en marcha de un proyecto (solo si está marcado como "Confío en este repositorio").',
+          'Ejecuta la receta de puesta en marcha de un proyecto (solo si está marcado como "Confío en este repositorio"). Pide confirmación en la ventana de WolfCore Dev.',
         inputSchema: { sitioId },
         annotations: cambio,
       },
-      ({ sitioId: id }) =>
-        ejecutar(() => disponible(ops.ejecutarReceta, 'ejecutar_receta').call(ops, id)),
+      ({ sitioId: id }, extra) =>
+        ejecutar(async () => {
+          const correr = disponible(ops.ejecutarReceta, 'ejecutar_receta');
+          const describir = disponible(ops.resumenReceta, 'ejecutar_receta');
+          const r = await describir.call(ops, id);
+          const proyecto = limpiar(r.proyecto) || limpiar(id);
+          const pasos = r.pasos.slice(0, MAX_PASOS_RESUMEN).map((p) => limpiar(p));
+          return this.confirmarYEjecutar(
+            'ejecutar_receta',
+            `Ejecutar la receta de "${proyecto}": ${pasos.length ? pasos.join(', ') : 'sin pasos'}.`,
+            { proyecto, pasos },
+            senal(extra),
+            () => correr.call(ops, id),
+          );
+        }),
     );
     mcp.registerTool(
       'traer_cambios',
@@ -626,14 +742,19 @@ export class ServidorMcp {
         },
         annotations: destructiva,
       },
-      ({ pid, nombre }) =>
+      ({ pid, nombre }, extra) =>
         ejecutar(async () => {
           const finalizar = disponible(ops.finalizarProceso, 'finalizar_proceso');
-          await this.pedirConfirmacion(
+          if (!NOMBRE_PROCESO.test(nombre)) {
+            throw new Error('El nombre del proceso no es válido (p. ej. node.exe).');
+          }
+          return this.confirmarYEjecutar(
             'finalizar_proceso',
             `Finalizar el proceso ${nombre} (PID ${pid}).`,
+            { pid, nombre },
+            senal(extra),
+            () => finalizar.call(ops, pid, nombre),
           );
-          return finalizar.call(ops, pid, nombre);
         }),
     );
     return mcp;

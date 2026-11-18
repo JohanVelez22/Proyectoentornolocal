@@ -155,10 +155,29 @@ const ClaveCredencialSchema = z.union([
   z.literal('mcp'),
 ]);
 
-/** Contenido de etc/credenciales.json (fuera de config.json: nunca viaja por config.leer). */
+/**
+ * Contenido de etc/credenciales.json (fuera de config.json: nunca viaja por config.leer). Las
+ * claves conocidas se validan; las desconocidas (de una versión futura) se conservan tal cual
+ * para que guardar no las borre.
+ */
 export const ArchivoCredencialesSchema = z
-  .record(ClaveCredencialSchema, CredencialesSchema)
-  .transform((r): ArchivoCredenciales => r)
+  .record(z.string(), z.unknown())
+  .transform((r, ctx): ArchivoCredenciales => {
+    const res: Record<string, unknown> = {};
+    for (const [clave, valor] of Object.entries(r)) {
+      if (!ClaveCredencialSchema.safeParse(clave).success) {
+        res[clave] = valor;
+        continue;
+      }
+      const c = CredencialesSchema.safeParse(valor);
+      if (!c.success) {
+        ctx.addIssue({ code: 'custom', message: `Credencial no válida: ${clave}`, path: [clave] });
+        return z.NEVER;
+      }
+      res[clave] = c.data;
+    }
+    return res as ArchivoCredenciales;
+  })
   .prefault({} as never);
 export type ArchivoCredenciales = Partial<Record<ClaveCredencial, Credenciales>>;
 

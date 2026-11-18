@@ -1,5 +1,5 @@
 import type { MotorBd } from './bd/env';
-import type { SolicitudConfirmacion } from './mcp/servidor';
+import type { CierreConfirmacion, SolicitudConfirmacion } from './mcp/servidor';
 import type { MuestraSistema } from './monitor/metricas';
 import type { SugerenciaProyecto } from './proyectos/vigilar';
 import type { EstadoHosts, EstadoServicio, EstadoTunel, ProgresoInstalacion, Sitio } from './tipos';
@@ -49,6 +49,8 @@ export type EventosNucleo = {
   'registro:lineas': { id: string; lineas: string[] };
   /** Un cliente MCP pide una acción destructiva: la ventana responde con responderConfirmacionMcp. */
   'mcp:confirmar': SolicitudConfirmacion;
+  /** Esa confirmación ya no está pendiente (aprobada, rechazada, vencida, cancelada o detenido). */
+  'mcp:confirmacion-cerrada': CierreConfirmacion;
 };
 
 export class Eventos<M extends Record<string, unknown>> {

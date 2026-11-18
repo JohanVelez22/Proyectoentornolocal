@@ -105,3 +105,24 @@ describe('AlmacenCredenciales', () => {
     expect(archivos.some((f) => f.startsWith('credenciales.corrupto-'))).toBe(true);
   });
 });
+
+describe('AlmacenCredenciales: claves desconocidas', () => {
+  it('conserva las claves que no conoce al guardar (una versión futura no se corrompe)', async () => {
+    await mkdir(join(rutas.credenciales(), '..'), { recursive: true });
+    await writeFile(
+      rutas.credenciales(),
+      JSON.stringify({
+        futuro: { algo: 1, lista: ['a'] },
+        mysql: { usuario: 'u', clave: 'c' },
+      }),
+    );
+    const c = new AlmacenCredenciales(rutas);
+    await c.guardar('mcp', { usuario: 'mcp', clave: 'k' });
+    const datos = JSON.parse(await readFile(rutas.credenciales(), 'utf8'));
+    expect(datos.futuro).toEqual({ algo: 1, lista: ['a'] });
+    expect(datos.mysql).toEqual({ usuario: 'u', clave: 'c' });
+    expect(datos.mcp).toEqual({ usuario: 'mcp', clave: 'k' });
+    const nombres = await readdir(join(rutas.credenciales(), '..'));
+    expect(nombres.some((n) => n.includes('corrupto'))).toBe(false);
+  });
+});
