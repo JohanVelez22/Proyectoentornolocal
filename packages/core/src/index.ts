@@ -55,3 +55,6 @@ export * from './git/git';
 export * from './git/github';
 export * from './monitor/metricas';
 export * from './monitor/registros';
+export * from './herramientas/puertos';
+export * from './herramientas/bom';
+export * from './herramientas/certificadosLibres';

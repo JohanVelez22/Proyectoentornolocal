@@ -156,8 +156,11 @@ export class GestorHttps {
   private vigente(pem: string, dominios: string[], ca: ParCertificado): boolean {
     try {
       const c = forge.pki.certificateFromPem(pem);
-      const san = c.getExtension('subjectAltName') as { altNames?: { value: string }[] } | null;
-      const actuales = (san?.altNames ?? []).map((a) => a.value).join('\n');
+      const san = c.getExtension('subjectAltName') as {
+        altNames?: { value: string; ip?: string }[];
+      } | null;
+      // Las IP (tipo 7) se comparan por su texto, no por los bytes de `value`.
+      const actuales = (san?.altNames ?? []).map((a) => a.ip ?? a.value).join('\n');
       if (actuales !== dominios.join('\n')) return false;
       if (c.validity.notAfter.getTime() - this.ahora.getTime() < MARGEN_RENOVAR_DIAS * DIA_MS) {
         return false;

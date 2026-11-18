@@ -1,4 +1,5 @@
 import { createHash, generateKeyPairSync, randomBytes } from 'node:crypto';
+import { isIP } from 'node:net';
 import forge from 'node-forge';
 
 export interface ParCertificado {
@@ -87,7 +88,11 @@ export function emitirCertificado(
     { name: 'basicConstraints', cA: false, critical: true },
     { name: 'keyUsage', digitalSignature: true, keyEncipherment: true, critical: true },
     { name: 'extKeyUsage', serverAuth: true },
-    { name: 'subjectAltName', altNames: dominios.map((d) => ({ type: 2, value: d })) },
+    {
+      name: 'subjectAltName',
+      // Las IP van como iPAddress (tipo 7): los navegadores no aceptan una IP en un dNSName.
+      altNames: dominios.map((d) => (isIP(d) ? { type: 7, ip: d } : { type: 2, value: d })),
+    },
     { name: 'subjectKeyIdentifier' },
     { name: 'authorityKeyIdentifier', keyIdentifier: caKeyId(caCert) },
   ]);
