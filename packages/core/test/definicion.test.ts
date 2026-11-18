@@ -584,14 +584,14 @@ describe('detener: espera y detenerTodos', () => {
         throw new Error('no limpio');
       },
     });
-    const sup = supervisor();
+    const sup = supervisor() as { detener: (id: string) => Promise<void> };
     const original = sup.detener.bind(sup);
     sup.detener = async (id: string) => {
       await original(id);
       if (id === 'redis') throw new Error('redis no se detuvo');
     };
     const defs = [lenta('mysql', 3306), lenta('redis', 6379), pgDef];
-    const s = crear(defs, { supervisor: sup });
+    const s = crear(defs, { supervisor: sup as never });
     for (const d of defs) estados.set(d.id, 'encendido');
     for (const [i, d] of defs.entries()) pids.set(d.id, 2000 + i);
     const fin = s.detenerTodo().catch((e: unknown) => e);
