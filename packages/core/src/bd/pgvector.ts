@@ -24,8 +24,8 @@ export interface DepsPgvector {
   /** Por defecto %ProgramFiles(x86)%. */
   programFilesX86?: string;
   /** Detiene PostgreSQL de forma limpia; devuelve si estaba en marcha. */
-  detenerPostgres?: () => Promise<boolean>;
-  iniciarPostgres?: () => Promise<void>;
+  detenerPostgres: () => Promise<boolean>;
+  iniciarPostgres: () => Promise<void>;
   /** Reloj en milisegundos (para pruebas). */
   ahora?: () => number;
 }
@@ -33,8 +33,12 @@ export interface DepsPgvector {
 export const MSG_SIN_HERRAMIENTAS = 'Instale primero las herramientas de compilación';
 export const MSG_SIN_POSTGRES = 'PostgreSQL no está instalado';
 export const MSG_EN_CURSO = 'Ya hay una instalación de pgvector en curso';
-export const MSG_COPIA =
-  'No se pudo copiar pgvector a PostgreSQL. Detenga PostgreSQL e inténtelo de nuevo.';
+export const MSG_COPIA_PARADO =
+  'No se pudo copiar pgvector a la carpeta de PostgreSQL (puede faltar permiso o un archivo seguir en uso).';
+export const MSG_COPIA_REINICIADO =
+  MSG_COPIA_PARADO + ' PostgreSQL se volvió a encender; inténtelo de nuevo.';
+export const MSG_COPIA_SIN_PARAR =
+  'No se pudo copiar pgvector a la carpeta de PostgreSQL (puede faltar permiso de escritura).';
 const MSG_CANCELADO = 'Windows no concedió permiso de administrador o la instalación se canceló.';
 const MARCA_INSTALAR = 'WOLFCORE-INSTALAR-PGVECTOR';
 /** Winget: reinicio requerido (la instalación sí terminó). */
@@ -215,6 +219,8 @@ export class InstaladorPgvector {
     const ultimas: string[] = [];
     let detenido = false;
     let enCopia = false;
+    let falloCopia = false;
+    let falloReinicio: string | null = null;
     let error: unknown = null;
     try {
       const codigo = this.d.rutas.bin('pgvector-src', v.version);
@@ -237,7 +243,7 @@ export class InstaladorPgvector {
       ];
       await writeFile(script, lineas.join('\r\n'), 'utf8');
       // PostgreSQL mantiene abierto vector.dll si ya lo cargó: se detiene durante la copia.
-      detenido = (await this.d.detenerPostgres?.()) ?? false;
+      detenido = await this.d.detenerPostgres();
       const r = await this.lanzar(process.env.ComSpec ?? 'cmd.exe', ['/d', '/c', script], {
         cwd: codigo,
         alLinea: (l) => {
@@ -251,23 +257,39 @@ export class InstaladorPgvector {
           if (this.permitir()) this.emitir(v.version, 'compilando', 50, l);
         },
       });
-      if (r.codigo !== 0) {
-        if (enCopia) throw new Error(MSG_COPIA);
+      if (r.codigo !== 0 && !enCopia) {
         const detalle = ultimas.join(' ');
         throw new Error(`No se pudo compilar pgvector${detalle ? `: ${detalle}` : '.'}`);
       }
+      if (r.codigo !== 0 && enCopia) falloCopia = true;
     } catch (e) {
       error = e;
     } finally {
       await rm(script, { force: true }).catch(() => undefined);
       if (detenido) {
         try {
-          await this.d.iniciarPostgres?.();
+          await this.d.iniciarPostgres();
         } catch (e) {
-          const d = e instanceof Error ? e.message : String(e);
-          error ??= new Error(`pgvector se instaló, pero PostgreSQL no pudo iniciar: ${d}`);
+          falloReinicio = e instanceof Error ? e.message : String(e);
         }
       }
+    }
+    if (falloCopia) {
+      error = new Error(
+        !detenido
+          ? MSG_COPIA_SIN_PARAR
+          : falloReinicio === null
+            ? MSG_COPIA_REINICIADO
+            : MSG_COPIA_PARADO,
+      );
+    }
+    if (falloReinicio !== null) {
+      const adicional = `Además, PostgreSQL no pudo volver a iniciar: ${falloReinicio}. Enciéndalo desde Servicios.`;
+      error = new Error(
+        error instanceof Error
+          ? `${error.message} ${adicional}`
+          : `pgvector se instaló. ${adicional}`,
+      );
     }
     if (error) {
       this.emitir(v.version, 'error', 0, error instanceof Error ? error.message : String(error));

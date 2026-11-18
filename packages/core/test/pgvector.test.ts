@@ -249,9 +249,43 @@ describe('InstaladorPgvector', () => {
     codigo = 2;
     lineas = ['link vector.dll', 'WOLFCORE-INSTALAR-PGVECTOR', 'Acceso denegado'];
     await expect(crear().compilarEInstalar()).rejects.toThrow(
-      'No se pudo copiar pgvector a PostgreSQL. Detenga PostgreSQL e inténtelo de nuevo.',
+      'No se pudo copiar pgvector a la carpeta de PostgreSQL (puede faltar permiso o un archivo seguir en uso). PostgreSQL se volvió a encender; inténtelo de nuevo.',
     );
     expect(orden).toEqual(['detener', 'compilar', 'iniciar']);
+  });
+
+  it('copia fallida con PostgreSQL parado no habla de reinicio', async () => {
+    codigo = 2;
+    lineas = ['WOLFCORE-INSTALAR-PGVECTOR'];
+    await expect(crear().compilarEInstalar()).rejects.toThrow(
+      'No se pudo copiar pgvector a la carpeta de PostgreSQL (puede faltar permiso de escritura).',
+    );
+    expect(orden).toEqual(['detener', 'compilar']);
+  });
+
+  it('informa a la vez el fallo principal y el del reinicio', async () => {
+    pgCorriendo = true;
+    pgFalla = true;
+    codigo = 2;
+    lineas = ['WOLFCORE-INSTALAR-PGVECTOR'];
+    const e = await crear()
+      .compilarEInstalar()
+      .catch((x: Error) => x);
+    expect((e as Error).message).toContain('No se pudo copiar pgvector');
+    expect((e as Error).message).not.toContain('se volvió a encender');
+    expect((e as Error).message).toContain(
+      'Además, PostgreSQL no pudo volver a iniciar: no arranca. Enciéndalo desde Servicios.',
+    );
+    pgFalla = true;
+    const f = await crear()
+      .compilarEInstalar()
+      .catch((x: Error) => x);
+    expect((f as Error).message).toContain('No se pudo copiar');
+    codigo = 0;
+    const g = await crear()
+      .compilarEInstalar()
+      .catch((x: Error) => x);
+    expect((g as Error).message).toContain('pgvector se instaló. Además');
   });
 
   it('si falla la compilación también reinicia PostgreSQL', async () => {
@@ -282,6 +316,8 @@ describe('InstaladorPgvector', () => {
       versionPostgres: async () => pgVersion,
       existe: (p) => p === VSWHERE || p === VCVARS || existsSync(p),
       programFilesX86: 'C:\\PF86',
+      detenerPostgres: async () => false,
+      iniciarPostgres: async () => undefined,
       ahora: () => 1000,
     });
     progreso.length = 0;
