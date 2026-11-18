@@ -13,7 +13,11 @@ import type { Eventos, EventosNucleo } from '../eventos';
 import type { Plataforma } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import type { EstadoServicio } from '../tipos';
-import { crearLanzadorOculto, type LanzadorOculto } from '../plataforma/lanzarOculto';
+import {
+  crearLanzadorOculto,
+  LanzadorNoDisponible,
+  type LanzadorOculto,
+} from '../plataforma/lanzarOculto';
 import { puertoResponde } from './sonda';
 
 export interface DefProceso {
@@ -78,7 +82,8 @@ export class Supervisor {
   private readonly hijos = new Map<string, childProcess.ChildProcess>();
   private readonly oyentesSalida: Array<(id: string, codigo: number | null) => void> = [];
   private readonly spawnFn: typeof childProcess.spawn;
-  private readonly lanzarOculto: LanzadorOculto | null;
+  /** Se pasa a null si el lanzador no está disponible en este equipo (se usa el spawn clásico). */
+  private lanzarOculto: LanzadorOculto | null;
   private readonly sonda: (puerto: number) => Promise<boolean>;
   private readonly intervaloMs: number;
   private bucle: ReturnType<typeof setInterval> | null = null;
@@ -97,9 +102,26 @@ export class Supervisor {
       opts.lanzarOculto !== undefined
         ? opts.lanzarOculto
         : process.platform === 'win32' && !opts.spawn
-          ? crearLanzadorOculto()
+          ? crearLanzadorOculto({
+              procesoVivo: (pid) => plataforma.procesoVivo(pid),
+              matarArbol: (pid) => plataforma.matarArbol(pid),
+              carpetaTmp: rutas.tmp(),
+            })
           : null;
     this.sonda = opts.sonda ?? ((p) => puertoResponde(p));
+  }
+
+  /** ¿El proceso con ese PID es el ejecutable de `comando`? (sin nombre conocido, se acepta). */
+  private esNuestro(info: { vivo: boolean; ejecutable?: string }, comando: string): boolean {
+    if (!info.vivo) return false;
+    if (info.ejecutable === undefined) return true;
+    return info.ejecutable.toLowerCase() === path.win32.basename(comando).toLowerCase();
+  }
+
+  /** Mata el árbol solo si el PID sigue siendo nuestro: un PID reutilizado es de otro programa. */
+  private async matarSiEsNuestro(pid: number, comando: string): Promise<void> {
+    if (!this.esNuestro(await this.plataforma.procesoVivo(pid), comando)) return;
+    await this.plataforma.matarArbol(pid);
   }
 
   estado(id: string): EstadoProceso {
@@ -148,7 +170,7 @@ export class Supervisor {
       this.hijos.delete(def.id);
       if (viejo !== null) {
         try {
-          await this.plataforma.matarArbol(viejo);
+          await this.matarSiEsNuestro(viejo, actual.def.comando);
         } catch (e) {
           console.error('No se pudo cerrar el proceso anterior:', e);
         }
@@ -182,7 +204,7 @@ export class Supervisor {
     entrada.pid = null;
     this.hijos.delete(id);
     try {
-      if (pid !== null) await this.plataforma.matarArbol(pid);
+      if (pid !== null) await this.matarSiEsNuestro(pid, entrada.def.comando);
     } finally {
       entrada.estado = 'apagado';
       entrada.mensaje = undefined;
@@ -264,9 +286,21 @@ export class Supervisor {
       mkdirSync(path.dirname(def.log), { recursive: true });
       fd = openSync(def.log, 'a');
       writeSync(fd, `--- ${new Date().toISOString()} iniciar ${def.id} ---\n`);
+      let pidOculto: number | null = null;
       if (this.lanzarOculto) {
+        try {
+          pidOculto = await this.lanzarOculto(def, fd);
+        } catch (e) {
+          if (!(e instanceof LanzadorNoDisponible)) throw e;
+          this.lanzarOculto = null;
+          console.warn(
+            `WolfCore Dev no puede usar PowerShell para arrancar los servicios sin ventanas (${e.message}). Se arrancan de la forma clásica: pueden aparecer ventanas de consola.`,
+          );
+        }
+      }
+      if (pidOculto !== null) {
         // Sin manejador del hijo: su muerte la detecta el sondeo (procesoVivo), como al readoptar.
-        const pid = await this.lanzarOculto(def, fd);
+        const pid = pidOculto;
         if (entrada.detenido || this.cerrado || this.entradas.get(def.id) !== entrada) {
           // Se detuvo mientras arrancaba: no se deja un proceso sin seguimiento.
           await this.plataforma.matarArbol(pid).catch(() => undefined);
@@ -371,7 +405,8 @@ export class Supervisor {
         if (pid === null || entrada.detenido) continue;
         const info = await this.plataforma.procesoVivo(pid);
         if (entrada.pid !== pid || entrada.detenido) continue;
-        if (!info.vivo) {
+        // Un PID que ahora es de otro ejecutable (reutilizado) cuenta como muerto: nunca se toca.
+        if (!this.esNuestro(info, entrada.def.comando)) {
           this.alMorir(entrada, pid, null);
           continue;
         }
