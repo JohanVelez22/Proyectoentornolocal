@@ -1,5 +1,22 @@
 import type * as childProcess from 'node:child_process';
+import path from 'node:path';
 import { Almacen, AlmacenCredenciales, migrarCredenciales } from './almacen';
+import {
+  BasesDeDatos,
+  type BaseListada,
+  type DatosConexion,
+  type MotorBd,
+  type OpcionesCrearBase,
+  type ResultadoCrear,
+} from './bd/basesDeDatos';
+import { detectarFormato, type FormatoRespaldo } from './bd/formato';
+import { InstaladorPgvector, type ResultadoBuildTools } from './bd/pgvector';
+import {
+  Respaldos,
+  type OpcionesRestaurar,
+  type OrigenImportar,
+  type ResultadoRestaurar,
+} from './bd/respaldos';
 import { Instalador } from './catalogo/instalador';
 import { listarVersiones } from './catalogo/catalogo';
 import { Eventos, type EventosNucleo } from './eventos';
@@ -10,11 +27,13 @@ import { Adminer } from './herramientas/adminer';
 import { Composer } from './herramientas/composer';
 import { PathUsuario } from './herramientas/pathUsuario';
 import { Terminal } from './herramientas/terminal';
+import { bloqueEnvIa, ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
 import { crearPlataforma } from './plataforma/index';
 import type { Ejecutor, Plataforma } from './plataforma/tipos';
 import { ejecutorPorDefecto } from './plataforma/win';
 import { Supervisor } from './procesos/supervisor';
 import { Rutas } from './rutas';
+import { Mailpit } from './servicios/mailpit';
 import { Servicios } from './servicios/servicios';
 import { detectarProyecto } from './sitios/detectar';
 import {
@@ -35,6 +54,7 @@ import type {
   EstadoTunel,
   IdServicioDatos,
   Sitio,
+  TipoSitio,
 } from './tipos';
 import { Tuneles } from './tuneles/tuneles';
 
@@ -67,6 +87,26 @@ export interface ResultadoAjustes {
   /** Fallos al reiniciar servicios (los ajustes quedan guardados igual). */
   errores: string[];
 }
+
+interface ModulosNucleo {
+  bd: BasesDeDatos;
+  respaldos: Respaldos;
+  pgvector: InstaladorPgvector;
+  https: GestorHttps;
+  composer: Composer;
+  terminal: Terminal;
+  pathUsuario: PathUsuario;
+  adminer: Adminer;
+  ftp: ServidorFtp;
+  ollama: ClienteOllama;
+  mailpit: Mailpit;
+  credenciales: AlmacenCredenciales;
+  puertoOllama: { valor: number };
+}
+
+/** Puerto HTTPS: el estándar 443 o uno de usuario (1024–65535). */
+const puertoHttpsValido = (p: number): boolean =>
+  Number.isInteger(p) && (p === 443 || (p >= 1024 && p <= 65535));
 
 const INTERVALO_SONDEO_MS = 3000;
 
@@ -109,13 +149,22 @@ export class Nucleo {
   readonly config: { leer(): Promise<Config> };
   /** Aviso de la migración de la carpeta de datos (si hubo algo que informar). */
   avisoInicio: string | null = null;
-  private almacenCredenciales!: AlmacenCredenciales;
-  private ftp!: ServidorFtp;
-  private gestorHttps!: GestorHttps;
-  private composer!: Composer;
-  private adminer!: Adminer;
-  private terminal!: Terminal;
-  private pathUsuario!: PathUsuario;
+  /** Arranque de los servicios con `autoIniciar` (tras readoptar); resuelve con los errores. */
+  arranqueAutomatico: Promise<string[]> = Promise.resolve([]);
+  readonly bd: BasesDeDatos;
+  readonly respaldos: Respaldos;
+  readonly pgvector: InstaladorPgvector;
+  readonly https: GestorHttps;
+  readonly composer: Composer;
+  readonly terminal: Terminal;
+  readonly pathUsuario: PathUsuario;
+  readonly adminer: Adminer;
+  readonly ftp: ServidorFtp;
+  readonly ollama: ClienteOllama;
+  readonly mailpit: Mailpit;
+  private readonly almacenCredenciales: AlmacenCredenciales;
+  /** Puerto de Ollama según la configuración (ClienteOllama lo lee de forma síncrona). */
+  private readonly puertoOllama: { valor: number };
 
   private constructor(
     readonly rutas: Rutas,
@@ -128,11 +177,25 @@ export class Nucleo {
     readonly tuneles: Tuneles,
     almacen: Almacen,
     internos: Eventos<EventosNucleo>,
+    m: ModulosNucleo,
   ) {
     this.config = {
       // ConfigSchema no incluye credenciales: viven en etc/credenciales.json.
       leer: () => almacen.leer(),
     };
+    this.bd = m.bd;
+    this.respaldos = m.respaldos;
+    this.pgvector = m.pgvector;
+    this.https = m.https;
+    this.composer = m.composer;
+    this.terminal = m.terminal;
+    this.pathUsuario = m.pathUsuario;
+    this.adminer = m.adminer;
+    this.ftp = m.ftp;
+    this.ollama = m.ollama;
+    this.mailpit = m.mailpit;
+    this.almacenCredenciales = m.credenciales;
+    this.puertoOllama = m.puertoOllama;
     internos.on('servicio:estado', () => this.pedirRecalculo());
   }
 
@@ -226,6 +289,71 @@ export class Nucleo {
       eventos,
     });
 
+    const exec = o.ejecutor ?? ejecutorPorDefecto;
+    const composer = new Composer({
+      rutas,
+      plataforma,
+      instalador,
+      exec,
+      leerConfig,
+      asegurarPhpIni: (r) => servicios.php.asegurarPhpIni(r),
+    });
+    const bd = new BasesDeDatos({ servicios, credenciales, rutas, exec });
+    const vivo = (id: string): boolean => {
+      const e = supervisor.estado(id);
+      return e === 'encendido' || e === 'iniciando';
+    };
+    const puertoOllama = { valor: (await leerConfig()).servicios.datos.ollama.puerto };
+    const modulos: ModulosNucleo = {
+      bd,
+      respaldos: new Respaldos({ bd, servicios, rutas, exec, eventos, plataforma }),
+      pgvector: new InstaladorPgvector({
+        rutas,
+        eventos,
+        exec,
+        instalador,
+        versionPostgres: async () => {
+          const def = servicios.datos.def('postgresql');
+          if (!def) return null;
+          try {
+            return await servicios.datos.versionActiva(def);
+          } catch {
+            return null;
+          }
+        },
+        // Detención limpia de nuestro PostgreSQL (libera vector.dll); dice si estaba en marcha.
+        detenerPostgres: async () => {
+          if (!vivo('postgresql')) return false;
+          await servicios.detener('postgresql');
+          return true;
+        },
+        iniciarPostgres: () => servicios.iniciar('postgresql'),
+      }),
+      https,
+      composer,
+      terminal: new Terminal({
+        rutas,
+        asegurarPhpIni: (r) => servicios.php.asegurarPhpIni(r),
+        phpPorDefecto: () => composer.phpPorDefecto(),
+      }),
+      pathUsuario: new PathUsuario({ rutas, ...(o.ejecutor ? { exec: o.ejecutor } : {}) }),
+      adminer,
+      ftp,
+      ollama: new ClienteOllama({
+        base: () => `http://127.0.0.1:${puertoOllama.valor}`,
+        modelosDir: () =>
+          path.join(
+            rutas.datos('ollama', 'actual', () => 'actual'),
+            'models',
+          ),
+        emitir: (p) => eventos.emit('ia:progreso', p),
+        ...(o.fetch ? { fetch: o.fetch } : {}),
+      }),
+      mailpit: o.fetch ? new Mailpit(undefined, o.fetch) : new Mailpit(),
+      credenciales,
+      puertoOllama,
+    };
+
     const nucleo = new Nucleo(
       rutas,
       eventos,
@@ -237,26 +365,9 @@ export class Nucleo {
       tuneles,
       almacen,
       internos,
+      modulos,
     );
     nucleo.avisoInicio = avisoInicio;
-    nucleo.almacenCredenciales = credenciales;
-    nucleo.ftp = ftp;
-    nucleo.gestorHttps = https;
-    nucleo.adminer = adminer;
-    nucleo.composer = new Composer({
-      rutas,
-      plataforma,
-      instalador,
-      exec: o.ejecutor ?? ejecutorPorDefecto,
-      leerConfig,
-      asegurarPhpIni: (r) => servicios.php.asegurarPhpIni(r),
-    });
-    nucleo.terminal = new Terminal({
-      rutas,
-      asegurarPhpIni: (r) => servicios.php.asegurarPhpIni(r),
-      phpPorDefecto: () => nucleo.composer.phpPorDefecto(),
-    });
-    nucleo.pathUsuario = new PathUsuario({ rutas, ...(o.ejecutor ? { exec: o.ejecutor } : {}) });
     o.alIniciar?.(eventos);
     try {
       await supervisor.readoptar();
@@ -267,22 +378,188 @@ export class Nucleo {
       await supervisor.cerrar().catch(() => undefined);
       throw e;
     }
+    // Sin bloquear el arranque: un fallo queda en el estado del servicio y en el registro.
+    nucleo.arranqueAutomatico = servicios.datos
+      .iniciarAutomaticos()
+      .then((errores) => errores.map(mensajeDe))
+      .catch((e: unknown) => [mensajeDe(e)])
+      .then((errores) => {
+        for (const m of errores) console.error('No se pudo iniciar un servicio automático:', m);
+        return errores;
+      });
     return nucleo;
   }
 
   /** Estado de la autoridad de certificados local (creada / instalada en el almacén del usuario). */
   estadoHttps(): ReturnType<GestorHttps['estado']> {
-    return this.gestorHttps.estado();
+    return this.https.estado();
   }
 
   /** Crea la autoridad de WolfCore Dev si falta y la instala en el almacén del usuario. */
   instalarCA(): Promise<ResultadoCA> {
-    return this.gestorHttps.instalarCA();
+    return this.https.instalarCA();
   }
 
   /** Quita la autoridad del almacén del usuario (los sitios vuelven a HTTP al aplicar). */
   quitarCA(): Promise<ResultadoCA> {
-    return this.gestorHttps.quitarCA();
+    return this.https.quitarCA();
+  }
+
+  /** Guarda el puerto HTTPS (443 o 1024–65535) y aplica: los vhosts y nginx lo toman. */
+  async cambiarPuertoHttps(puerto: number): Promise<ResultadoAplicar> {
+    if (!puertoHttpsValido(puerto)) {
+      throw new Error('El puerto HTTPS debe ser 443 o un número entre 1024 y 65535.');
+    }
+    await this.sitios.modificarConfig((c) => {
+      c.https.puerto = puerto;
+    });
+    return this.sitios.aplicar();
+  }
+
+  // ---- Servicios ----
+
+  /** Cambia el puerto de un servicio propio (1024–65535, libre); lo reinicia si estaba encendido. */
+  cambiarPuertoServicio(id: IdServicioDatos, puerto: number): Promise<void> {
+    return this.servicios.cambiarPuerto(id, puerto);
+  }
+
+  /** Borra los datos de un servicio; `confirmacion` debe ser su id. */
+  borrarDatosServicio(id: IdServicioDatos, confirmacion: string): Promise<void> {
+    return this.servicios.borrarDatos(id, confirmacion);
+  }
+
+  // ---- Bases de datos ----
+
+  listarBases(motor: MotorBd): Promise<BaseListada[]> {
+    return this.bd.listar(motor);
+  }
+
+  crearBase(motor: MotorBd, nombre: string, opts?: OpcionesCrearBase): Promise<ResultadoCrear> {
+    return this.bd.crear(motor, nombre, opts);
+  }
+
+  /** Borra una base; `confirmacion` debe ser su nombre exacto. */
+  borrarBase(motor: MotorBd, nombre: string, confirmacion: string): Promise<void> {
+    return this.bd.borrar(motor, nombre, confirmacion);
+  }
+
+  /** Datos de conexión del motor, con su clave (solo para "Datos de conexión"). */
+  conexionBd(motor: MotorBd): Promise<DatosConexion> {
+    return this.bd.conexion(motor);
+  }
+
+  bloqueEnvBd(
+    motor: MotorBd,
+    base: string,
+    tipoProyecto: TipoSitio | 'generico',
+    envActual?: string,
+  ): Promise<string> {
+    return this.bd.bloqueEnv(motor, base, tipoProyecto, envActual);
+  }
+
+  /** true si la base existe y tiene tablas (para pedir confirmación antes de sobrescribir). */
+  tieneTablas(motor: MotorBd, base: string): Promise<boolean> {
+    return this.bd.tieneTablas(motor, base);
+  }
+
+  /** Formato de un respaldo según sus primeros bytes. */
+  formatoRespaldo(archivo: string): Promise<FormatoRespaldo> {
+    return detectarFormato(archivo);
+  }
+
+  restaurarBase(
+    motor: MotorBd,
+    archivo: string,
+    base: string,
+    opts?: OpcionesRestaurar,
+  ): Promise<ResultadoRestaurar> {
+    return this.respaldos.restaurar(motor, archivo, base, opts);
+  }
+
+  respaldarBase(
+    motor: MotorBd,
+    base: string,
+    carpetaDestino?: string,
+  ): Promise<{ archivo: string }> {
+    return this.respaldos.respaldar(motor, base, carpetaDestino);
+  }
+
+  /** Copia una base de otro servidor (solo se lee el origen) a una base local. */
+  importarBase(
+    motor: MotorBd,
+    origen: OrigenImportar,
+    destinoBase: string,
+    opts?: OpcionesRestaurar,
+  ): Promise<ResultadoRestaurar> {
+    return this.respaldos.importar(motor, origen, destinoBase, opts);
+  }
+
+  // ---- pgvector ----
+
+  estadoPgvector(): ReturnType<InstaladorPgvector['estado']> {
+    return this.pgvector.estado();
+  }
+
+  instalarBuildTools(): Promise<ResultadoBuildTools> {
+    return this.pgvector.instalarBuildTools();
+  }
+
+  compilarPgvector(): Promise<{ version: string }> {
+    return this.pgvector.compilarEInstalar();
+  }
+
+  activarVector(base: string): Promise<void> {
+    return this.bd.activarVector(base);
+  }
+
+  // ---- IA local (Ollama) ----
+
+  private async refrescarPuertoOllama(): Promise<void> {
+    this.puertoOllama.valor = (await this.config.leer()).servicios.datos.ollama.puerto;
+  }
+
+  async modelosIa(): Promise<ModeloOllama[]> {
+    await this.refrescarPuertoOllama();
+    return this.ollama.modelos();
+  }
+
+  /** Descarga un modelo; el avance llega por el evento `ia:progreso`. */
+  async descargarModelo(nombre: string): Promise<void> {
+    await this.refrescarPuertoOllama();
+    return this.ollama.descargar(nombre);
+  }
+
+  cancelarDescargaModelo(nombre: string): boolean {
+    return this.ollama.cancelarDescarga(nombre);
+  }
+
+  async borrarModelo(nombre: string): Promise<void> {
+    await this.refrescarPuertoOllama();
+    return this.ollama.borrar(nombre);
+  }
+
+  async probarModelo(nombre: string, texto: string): Promise<string> {
+    await this.refrescarPuertoOllama();
+    return this.ollama.probar(nombre, texto);
+  }
+
+  espacioIa(): Promise<number> {
+    return this.ollama.espacioUsado();
+  }
+
+  async bloqueEnvIa(): Promise<string> {
+    await this.refrescarPuertoOllama();
+    return bloqueEnvIa(this.puertoOllama.valor);
+  }
+
+  modelosSugeridos(): string[] {
+    return [...SUGERIDOS];
+  }
+
+  // ---- Correo (Mailpit) ----
+
+  noLeidosCorreo(): Promise<number> {
+    return this.mailpit.noLeidos();
   }
 
   /** Instala Composer y regenera los shims de tools/bin. */
@@ -398,13 +675,20 @@ export class Nucleo {
     const resto: Omit<Sitio, 'id'> = { ...datos };
     delete resto.ftp;
     if (id) await this.cerrarTunelSiCambia(id, datos);
-    const carpetaPrevia = id
-      ? (await this.sitios.listar()).find((s) => s.id === id)?.carpeta
-      : null;
+    const previo = id ? (await this.sitios.listar()).find((s) => s.id === id) : undefined;
     const sitio = id ? await this.sitios.editar(id, resto) : await this.sitios.crear(resto);
     // Las sesiones FTP abiertas siguen en la carpeta vieja: se cortan al cambiarla.
-    if (id && carpetaPrevia !== undefined && carpetaPrevia !== sitio.carpeta) {
+    if (id && previo && previo.carpeta !== sitio.carpeta) {
       await this.ftp.cortarSesiones(id);
+    }
+    // HTTPS recién activado: el certificado (y la CA, si falta) se emite antes de aplicar.
+    if (sitio.https && !previo?.https) {
+      try {
+        await this.https.asegurarCertificado(sitio);
+      } catch (e) {
+        // aplicar lo reintenta y, si vuelve a fallar, lo informa en su resultado.
+        console.error('No se pudo emitir el certificado del sitio:', mensajeDe(e));
+      }
     }
     return { sitio, aplicar: await this.sitios.aplicar() };
   }
@@ -552,6 +836,8 @@ export class Nucleo {
       }
     };
     try {
+      // Que el arranque automático no siga encendiendo servicios mientras se cierra.
+      await this.arranqueAutomatico;
       if (o.detenerServicios) {
         // Primero los .env (lo crítico si el cierre se corta), luego los túneles en paralelo.
         for (const e of await this.tuneles.cerrarTodos()) anotar(e);

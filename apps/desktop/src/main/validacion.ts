@@ -1,5 +1,16 @@
 import { stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import {
+  IDS_SERVICIO_DATOS,
+  NOMBRE_BD_MONGO,
+  NOMBRE_BD_MYSQL,
+  NOMBRE_BD_PG,
+  NOMBRE_MODELO_OLLAMA,
+  TIPOS_SITIO,
+  type IdServicioDatos,
+  type MotorBd,
+  type TipoSitio,
+} from '@pel/core';
 
 export function texto(v: unknown, nombre = 'valor'): string {
   if (typeof v !== 'string') throw new Error(`Argumento no válido: ${nombre}`);
@@ -30,7 +41,19 @@ export function enteroEn(v: unknown, min: number, max: number, nombre = 'valor')
   return v;
 }
 
-const INSTALABLES = ['nginx', 'php', 'cloudflared'] as const;
+const INSTALABLES = [
+  'nginx',
+  'php',
+  'cloudflared',
+  'mysql',
+  'mariadb',
+  'postgresql',
+  'redis',
+  'mongodb',
+  'mongosh',
+  'mailpit',
+  'ollama',
+] as const;
 
 export function servicioInstalable(v: unknown): (typeof INSTALABLES)[number] {
   if (typeof v !== 'string' || !(INSTALABLES as readonly string[]).includes(v)) {
@@ -63,4 +86,106 @@ export async function carpetaExistente(v: unknown): Promise<string> {
     // cae al error común
   }
   throw new Error('La ruta no es una carpeta');
+}
+
+/** Devuelve la ruta absoluta si existe y es un archivo (no una carpeta). */
+export async function archivoExistente(v: unknown): Promise<string> {
+  const ruta = resolve(texto(v, 'archivo'));
+  try {
+    if ((await stat(ruta)).isFile()) return ruta;
+  } catch {
+    // cae al error común
+  }
+  throw new Error('El archivo no existe');
+}
+
+export function booleano(v: unknown, nombre = 'valor'): boolean {
+  if (typeof v !== 'boolean') throw new Error(`Argumento no válido: ${nombre}`);
+  return v;
+}
+
+const tieneControl = (t: string): boolean => [...t].some((c) => c.charCodeAt(0) < 0x20);
+
+/**
+ * Texto de largo acotado y sin caracteres de control. El mensaje de error nunca repite el valor
+ * (puede ser una clave).
+ */
+export function textoAcotado(v: unknown, min: number, max: number, nombre = 'valor'): string {
+  if (typeof v !== 'string' || v.length < min || v.length > max || tieneControl(v)) {
+    throw new Error(`Argumento no válido: ${nombre}`);
+  }
+  return v;
+}
+
+/** Puerto elegido por el usuario para un servicio propio. */
+export function puertoUsuario(v: unknown): number {
+  return enteroEn(v, 1024, 65535, 'puerto');
+}
+
+/** Puerto HTTPS: 443 o uno de usuario. */
+export function puertoHttps(v: unknown): number {
+  if (typeof v === 'number' && Number.isInteger(v) && (v === 443 || (v >= 1024 && v <= 65535))) {
+    return v;
+  }
+  throw new Error('Argumento no válido: puerto (443 o entre 1024 y 65535)');
+}
+
+const MOTORES = ['mysql', 'mariadb', 'postgresql', 'mongodb'] as const;
+
+export function motorBd(v: unknown): MotorBd {
+  if (typeof v !== 'string' || !(MOTORES as readonly string[]).includes(v)) {
+    throw new Error('Argumento no válido: motor');
+  }
+  return v as MotorBd;
+}
+
+/** Motores con respaldo, restauración e importación (no MongoDB). */
+export function motorSql(v: unknown): Exclude<MotorBd, 'mongodb'> {
+  const m = motorBd(v);
+  if (m === 'mongodb') throw new Error('Argumento no válido: motor');
+  return m;
+}
+
+const NOMBRE_POR_MOTOR: Record<MotorBd, RegExp> = {
+  mysql: NOMBRE_BD_MYSQL,
+  mariadb: NOMBRE_BD_MYSQL,
+  postgresql: NOMBRE_BD_PG,
+  mongodb: NOMBRE_BD_MONGO,
+};
+
+/** Nombre de base (o de usuario) con la misma regla que aplica el núcleo para ese motor. */
+export function nombreBase(motor: MotorBd, v: unknown, nombre = 'nombre de la base'): string {
+  if (typeof v !== 'string' || !NOMBRE_POR_MOTOR[motor].test(v)) {
+    throw new Error(`Argumento no válido: ${nombre}`);
+  }
+  return v;
+}
+
+export function nombreModelo(v: unknown): string {
+  if (typeof v !== 'string' || !NOMBRE_MODELO_OLLAMA.test(v)) {
+    throw new Error('Argumento no válido: modelo');
+  }
+  return v;
+}
+
+export function idServicioDatos(v: unknown): IdServicioDatos {
+  if (typeof v !== 'string' || !(IDS_SERVICIO_DATOS as readonly string[]).includes(v)) {
+    throw new Error('Argumento no válido: servicio');
+  }
+  return v as IdServicioDatos;
+}
+
+export function tipoProyecto(v: unknown): TipoSitio | 'generico' {
+  if (v === 'generico') return v;
+  if (typeof v !== 'string' || !(TIPOS_SITIO as readonly string[]).includes(v)) {
+    throw new Error('Argumento no válido: tipo de proyecto');
+  }
+  return v as TipoSitio;
+}
+
+/** Rama de PHP ("8.4") o null (el más reciente instalado). */
+export function ramaPhp(v: unknown): string | null {
+  if (v === null) return null;
+  if (typeof v !== 'string' || !/^\d+\.\d+$/.test(v)) throw new Error('Argumento no válido: rama');
+  return v;
 }

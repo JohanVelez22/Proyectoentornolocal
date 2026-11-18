@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { BrowserWindow, app, clipboard, dialog, ipcMain, shell, type Tray } from 'electron';
-import { Nucleo, Rutas, rutaBasePorDefecto } from '@pel/core';
+import { Nucleo, type Rutas } from '@pel/core';
 import type { ApiSistema } from '../shared/api';
 import { crearBandeja } from './bandeja';
 import { registrarIpc } from './ipc';
@@ -25,6 +25,12 @@ const sistema: ApiSistema = {
     const r = ventana
       ? await dialog.showOpenDialog(ventana, { properties: ['openDirectory'] })
       : await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    return r.canceled || !r.filePaths[0] ? null : r.filePaths[0];
+  },
+  async elegirArchivo() {
+    const r = ventana
+      ? await dialog.showOpenDialog(ventana, { properties: ['openFile'] })
+      : await dialog.showOpenDialog({ properties: ['openFile'] });
     return r.canceled || !r.filePaths[0] ? null : r.filePaths[0];
   },
   async abrirUrl(url) {
@@ -60,7 +66,8 @@ function urlPropia(url: string): boolean {
   }
 }
 
-function crearVentana(): BrowserWindow {
+/** `rutas` son las del Nucleo ya creado: si la migración volvió a la carpeta vieja, es esa. */
+function crearVentana(rutas: Rutas): BrowserWindow {
   const v = new BrowserWindow({
     width: 1200,
     height: 780,
@@ -86,7 +93,7 @@ function crearVentana(): BrowserWindow {
   // Logout/apagado de Windows: .env restaurados de forma síncrona y luego cierre sin diálogo.
   registrarFinDeSesion(
     v,
-    () => nucleo?.rutas ?? new Rutas(rutaBasePorDefecto()),
+    () => rutas,
     () => void cerrarPorSistema(),
   );
 
@@ -179,7 +186,7 @@ if (!app.requestSingleInstanceLock()) {
       return;
     }
     const n = nucleo;
-    const v = crearVentana();
+    const v = crearVentana(n.rutas);
     ventana = v;
     registrarIpc(
       n,

@@ -5,7 +5,9 @@ import type { ProgresoIa } from '../eventos';
 export const SUGERIDOS = ['llama3.2', 'qwen2.5-coder', 'mistral', 'nomic-embed-text'];
 
 const BASE_POR_DEFECTO = 'http://127.0.0.1:11434';
-const NOMBRE_VALIDO = /^[a-z0-9][a-z0-9._:/-]{0,127}$/i;
+/** Nombres de modelo de Ollama aceptados (p. ej. llama3.2, qwen2.5-coder:7b). */
+export const NOMBRE_MODELO_OLLAMA = /^[a-z0-9][a-z0-9._:/-]{0,127}$/i;
+const NOMBRE_VALIDO = NOMBRE_MODELO_OLLAMA;
 
 const MS_LISTA = 5_000;
 const MS_PROBAR = 120_000;

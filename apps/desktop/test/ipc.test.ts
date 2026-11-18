@@ -1,4 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import { registrarIpc, type IpcMainLike, type NucleoIpc, type VentanaLike } from '../src/main/ipc';
 import { CANAL_EVENTO, RUTAS_IPC } from '../src/shared/api';
 
@@ -33,6 +36,56 @@ function nucleoFalso() {
     guardarSitio: vi.fn(),
     borrarSitio: vi.fn(),
     detectarProyecto: vi.fn(),
+    avisoInicio: 'aviso',
+    ...Object.fromEntries(
+      [
+        'cambiarPuertoServicio',
+        'borrarDatosServicio',
+        'listarBases',
+        'crearBase',
+        'borrarBase',
+        'conexionBd',
+        'bloqueEnvBd',
+        'tieneTablas',
+        'formatoRespaldo',
+        'restaurarBase',
+        'respaldarBase',
+        'importarBase',
+        'estadoPgvector',
+        'instalarBuildTools',
+        'compilarPgvector',
+        'activarVector',
+        'estadoHttps',
+        'instalarCA',
+        'quitarCA',
+        'cambiarPuertoHttps',
+        'versionComposer',
+        'instalarComposer',
+        'actualizarComposer',
+        'cambiarPhpPorDefecto',
+        'abrirTerminal',
+        'estadoPathUsuario',
+        'cambiarPathUsuario',
+        'instalarAdminer',
+        'disponibilidadAdminer',
+        'urlAdminer',
+        'activarFtp',
+        'desactivarFtp',
+        'regenerarClaveFtp',
+        'ftpSoloLectura',
+        'credencialesFtp',
+        'ftpRedLocal',
+        'modelosIa',
+        'descargarModelo',
+        'cancelarDescargaModelo',
+        'borrarModelo',
+        'probarModelo',
+        'espacioIa',
+        'bloqueEnvIa',
+        'modelosSugeridos',
+        'noLeidosCorreo',
+      ].map((m) => [m, vi.fn(async () => undefined)]),
+    ),
     listarVersiones: vi.fn(async (servicio: string) => [
       {
         servicio,
@@ -48,6 +101,7 @@ function nucleoFalso() {
 
 const sistema = {
   elegirCarpeta: vi.fn(),
+  elegirArchivo: vi.fn(),
   abrirUrl: vi.fn(),
   abrirCarpeta: vi.fn(),
   copiar: vi.fn(),
@@ -132,7 +186,9 @@ describe('registrarIpc', () => {
       [CANAL_EVENTO, { nombre: 'servicio:estado', dato: { id: 'nginx' } }],
     ]);
     expect([...oyentes.keys()].sort()).toEqual([
+      'bd:progreso',
       'hosts:estado',
+      'ia:progreso',
       'instalacion:progreso',
       'servicio:estado',
       'sitio:cambio',
@@ -226,7 +282,7 @@ describe('registrarIpc', () => {
     );
     for (const malo of [
       { servicio: 'nginx', version: '9.9.9' },
-      { servicio: 'mysql', version: '1.28.0' },
+      { servicio: 'composer', version: '1.28.0' },
       { servicio: 'nginx' },
       'nginx',
     ]) {
@@ -242,5 +298,253 @@ describe('registrarIpc', () => {
     registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
     await canales.get('entorno:servicios.detenerTodo')!({});
     expect(crudo.detenerTodo).toHaveBeenCalled();
+  });
+  it('registra exactamente la lista de rutas de la Etapa A', () => {
+    const { ipcMain, canales } = ipcFalso();
+    registrarIpc(nucleoFalso().nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    expect([...canales.keys()].map((c) => c.slice('entorno:'.length)).sort()).toEqual(
+      [
+        'estadoGeneral',
+        'carpetaDatos',
+        'avisoInicio',
+        'sitios.listar',
+        'sitios.guardar',
+        'sitios.borrar',
+        'sitios.aplicar',
+        'servicios.estados',
+        'servicios.iniciar',
+        'servicios.detener',
+        'servicios.iniciarTodo',
+        'servicios.detenerTodo',
+        'servicios.cambiarPuerto',
+        'servicios.borrarDatos',
+        'bd.listar',
+        'bd.crear',
+        'bd.borrar',
+        'bd.conexion',
+        'bd.bloqueEnv',
+        'bd.tieneTablas',
+        'bd.formato',
+        'bd.restaurar',
+        'bd.respaldar',
+        'bd.importar',
+        'pgvector.estado',
+        'pgvector.instalarBuildTools',
+        'pgvector.compilarEInstalar',
+        'pgvector.activar',
+        'https.estado',
+        'https.instalarCA',
+        'https.quitarCA',
+        'https.cambiarPuerto',
+        'composer.version',
+        'composer.instalar',
+        'composer.actualizar',
+        'composer.cambiarPhpPorDefecto',
+        'terminal.abrir',
+        'path.estado',
+        'path.cambiar',
+        'adminer.instalar',
+        'adminer.disponibilidad',
+        'adminer.url',
+        'ftp.activar',
+        'ftp.desactivar',
+        'ftp.regenerarClave',
+        'ftp.soloLectura',
+        'ftp.credenciales',
+        'ftp.redLocal',
+        'ia.modelos',
+        'ia.descargar',
+        'ia.cancelar',
+        'ia.borrar',
+        'ia.probar',
+        'ia.espacioUsado',
+        'ia.bloqueEnv',
+        'ia.sugeridos',
+        'mailpit.noLeidos',
+        'instalador.listarVersiones',
+        'instalador.instalar',
+        'instalador.instalados',
+        'tuneles.abrir',
+        'tuneles.cerrar',
+        'tuneles.renovar',
+        'tuneles.estados',
+        'hosts.sincronizar',
+        'detectarProyecto',
+        'config.leer',
+        'ajustes.guardar',
+        'sistema.elegirCarpeta',
+        'sistema.elegirArchivo',
+        'sistema.abrirUrl',
+        'sistema.abrirCarpeta',
+        'sistema.copiar',
+        'sistema.version',
+      ].sort(),
+    );
+  });
+
+  it('rechaza argumentos inválidos en cada familia nueva sin llamar al núcleo', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const carpeta = mkdtempSync(path.join(os.tmpdir(), 'pel-ipc-'));
+    try {
+      for (const [ruta, args] of [
+        ['servicios.cambiarPuerto', ['mysql', 80]],
+        ['servicios.cambiarPuerto', ['nginx', 3308]],
+        ['servicios.borrarDatos', ['../etc', 'x']],
+        ['bd.listar', ['oracle']],
+        ['bd.crear', ['postgresql', 'Mayusculas']],
+        ['bd.crear', ['mysql', 'a;DROP']],
+        ['bd.crear', ['mongodb', 'x', { usuario: 'u' }]],
+        ['bd.borrar', ['mysql', 'x', 42]],
+        ['bd.conexion', ['redis']],
+        ['bd.bloqueEnv', ['mysql', 'x', 'rails']],
+        ['bd.tieneTablas', ['mongodb', 'x']],
+        ['bd.formato', [path.join(carpeta, 'no-existe.sql')]],
+        ['bd.formato', [carpeta]],
+        ['bd.restaurar', ['mysql', carpeta, 'x']],
+        ['bd.restaurar', ['mongodb', path.join(carpeta, 'a.sql'), 'x']],
+        ['bd.respaldar', ['mysql', 'x', path.join(carpeta, 'no-existe')]],
+        [
+          'bd.importar',
+          ['mysql', { host: 'h', puerto: 0, usuario: 'u', clave: 'c', base: 'b' }, 'x'],
+        ],
+        [
+          'bd.importar',
+          ['mysql', { host: 'h', puerto: 3306, usuario: 'u', clave: 'c', base: 'b' }, 'x y'],
+        ],
+        ['pgvector.activar', ['Ventas']],
+        ['https.cambiarPuerto', [80]],
+        ['https.cambiarPuerto', ['443']],
+        ['composer.cambiarPhpPorDefecto', ['8']],
+        ['terminal.abrir', ['']],
+        ['path.cambiar', ['si']],
+        ['adminer.url', ['mysql', 'root; x']],
+        ['ftp.activar', [null]],
+        ['ftp.soloLectura', ['s1', 'true']],
+        ['ftp.redLocal', [1]],
+        ['ia.descargar', ['../x']],
+        ['ia.cancelar', ['']],
+        ['ia.borrar', [{}]],
+        ['ia.probar', ['llama3.2', '']],
+        ['instalador.instalar', [{ servicio: 'pgvector-src', version: '1.28.0' }]],
+      ] as [string, unknown[]][]) {
+        const r = (await canales.get(`entorno:${ruta}`)!({}, ...args)) as { ok: boolean };
+        expect(r.ok, `${ruta} ${JSON.stringify(args)}`).toBe(false);
+      }
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
+    for (const m of [
+      'cambiarPuertoServicio',
+      'borrarDatosServicio',
+      'listarBases',
+      'crearBase',
+      'borrarBase',
+      'conexionBd',
+      'bloqueEnvBd',
+      'tieneTablas',
+      'formatoRespaldo',
+      'restaurarBase',
+      'respaldarBase',
+      'importarBase',
+      'activarVector',
+      'cambiarPuertoHttps',
+      'cambiarPhpPorDefecto',
+      'abrirTerminal',
+      'cambiarPathUsuario',
+      'urlAdminer',
+      'activarFtp',
+      'ftpSoloLectura',
+      'ftpRedLocal',
+      'descargarModelo',
+      'cancelarDescargaModelo',
+      'borrarModelo',
+      'probarModelo',
+    ]) {
+      expect((crudo as unknown as Record<string, Mock>)[m], m).not.toHaveBeenCalled();
+    }
+  });
+
+  it('pasa los argumentos validados de las rutas nuevas al núcleo', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    const f = crudo as unknown as Record<string, Mock>;
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const carpeta = mkdtempSync(path.join(os.tmpdir(), 'pel-ipc-'));
+    const archivo = path.join(carpeta, 'Backup-08-10-2026.sql');
+    writeFileSync(archivo, 'select 1;');
+    const llamar = async (ruta: string, ...args: unknown[]) =>
+      (await canales.get(`entorno:${ruta}`)!({}, ...args)) as { ok: boolean };
+    try {
+      expect((await llamar('servicios.cambiarPuerto', 'mysql', 3308)).ok).toBe(true);
+      expect(f['cambiarPuertoServicio']).toHaveBeenCalledWith('mysql', 3308);
+      expect(
+        (
+          await llamar('bd.restaurar', 'postgresql', archivo, 'backup', {
+            confirmarSobrescribir: true,
+            otra: 'x',
+          })
+        ).ok,
+      ).toBe(true);
+      expect(f['restaurarBase']).toHaveBeenCalledWith('postgresql', archivo, 'backup', {
+        confirmarSobrescribir: true,
+      });
+      expect((await llamar('bd.respaldar', 'mysql', 'ventas', carpeta)).ok).toBe(true);
+      expect(f['respaldarBase']).toHaveBeenCalledWith('mysql', 'ventas', carpeta);
+      expect((await llamar('bd.formato', archivo)).ok).toBe(true);
+      expect((await llamar('https.cambiarPuerto', 443)).ok).toBe(true);
+      expect((await llamar('composer.cambiarPhpPorDefecto', null)).ok).toBe(true);
+      expect((await llamar('ia.descargar', 'qwen2.5-coder:7b')).ok).toBe(true);
+      expect(f['descargarModelo']).toHaveBeenCalledWith('qwen2.5-coder:7b');
+      expect(await llamar('avisoInicio')).toEqual({ ok: true, valor: 'aviso' });
+      expect(
+        (await llamar('instalador.instalar', { servicio: 'mysql', version: '1.28.0' })).ok,
+      ).toBe(true);
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
+  });
+
+  it('bd.importar nunca devuelve la clave de origen en un error', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    const f = crudo as unknown as Record<string, Mock>;
+    const clave = 'S3creta-#$-clave';
+    f['importarBase']!.mockRejectedValueOnce(
+      new Error(`Acceso denegado para root con la clave ${clave} en 10.0.0.5`),
+    );
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const origen = { host: '10.0.0.5', puerto: 3306, usuario: 'root', clave, base: 'ventas' };
+    const r = (await canales.get('entorno:bd.importar')!({}, 'mysql', origen, 'ventas_copia')) as {
+      ok: boolean;
+      error: { mensaje: string };
+    };
+    expect(r.ok).toBe(false);
+    expect(r.error.mensaje).toContain('***');
+    expect(JSON.stringify(r)).not.toContain(clave);
+    expect(f['importarBase']).toHaveBeenCalledWith('mysql', origen, 'ventas_copia', undefined);
+    // Una clave inválida (con salto de línea) tampoco se repite en el error de validación.
+    const mala = 'otra\nclave-secreta';
+    const x = await canales.get('entorno:bd.importar')!(
+      {},
+      'mysql',
+      { ...origen, clave: mala },
+      'd',
+    );
+    expect(JSON.stringify(x)).not.toContain('clave-secreta');
+  });
+
+  it('reenvía bd:progreso e ia:progreso', () => {
+    const { ipcMain } = ipcFalso();
+    const { nucleo, oyentes } = nucleoFalso();
+    const { ventana, enviados } = ventanaFalsa();
+    registrarIpc(nucleo, ipcMain, ventana, sistema);
+    oyentes.get('bd:progreso')!({ linea: 'x' });
+    oyentes.get('ia:progreso')!({ modelo: 'm' });
+    expect(enviados.map((e) => (e[1] as { nombre: string }).nombre)).toEqual([
+      'bd:progreso',
+      'ia:progreso',
+    ]);
   });
 });

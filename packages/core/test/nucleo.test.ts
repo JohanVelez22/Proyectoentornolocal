@@ -5,6 +5,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { Nucleo } from '../src/nucleo';
 import { Supervisor } from '../src/procesos/supervisor';
+import { BasesDeDatos } from '../src/bd/basesDeDatos';
+import { InstaladorPgvector } from '../src/bd/pgvector';
+import { Respaldos } from '../src/bd/respaldos';
+import { ServidorFtp } from '../src/ftp/servidorFtp';
+import { Adminer } from '../src/herramientas/adminer';
+import { Composer } from '../src/herramientas/composer';
+import { PathUsuario } from '../src/herramientas/pathUsuario';
+import { Terminal } from '../src/herramientas/terminal';
+import { GestorHttps } from '../src/https/certificados';
+import { ClienteOllama } from '../src/ia/ollama';
+import { ServiciosDatos } from '../src/servicios/definicion';
+import { Mailpit } from '../src/servicios/mailpit';
 import type { UrlBase } from '../src/sitios/urlbase';
 import type { Plataforma } from '../src/plataforma/tipos';
 import type { EstadoHosts, EstadoServicio, Sitio } from '../src/tipos';
@@ -558,5 +570,155 @@ describe('FTP en el núcleo', () => {
     mkdirSync(otra);
     await n.guardarSitio(datos({ carpeta: otra }), sitio.id);
     expect(cortar).toHaveBeenCalledWith(sitio.id);
+  });
+});
+
+describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
+  it('expone bd, respaldos, pgvector, https, herramientas, ftp, ollama y mailpit', async () => {
+    const n = await crear();
+    expect(n.bd).toBeInstanceOf(BasesDeDatos);
+    expect(n.respaldos).toBeInstanceOf(Respaldos);
+    expect(n.pgvector).toBeInstanceOf(InstaladorPgvector);
+    expect(n.https).toBeInstanceOf(GestorHttps);
+    expect(n.composer).toBeInstanceOf(Composer);
+    expect(n.terminal).toBeInstanceOf(Terminal);
+    expect(n.pathUsuario).toBeInstanceOf(PathUsuario);
+    expect(n.adminer).toBeInstanceOf(Adminer);
+    expect(n.ftp).toBeInstanceOf(ServidorFtp);
+    expect(n.ollama).toBeInstanceOf(ClienteOllama);
+    expect(n.mailpit).toBeInstanceOf(Mailpit);
+  });
+
+  it('las acciones de bases de datos pasan por el servicio (apagado: "Encienda …")', async () => {
+    const n = await crear();
+    await expect(n.listarBases('mysql')).rejects.toThrow('Encienda MySQL');
+    await expect(n.conexionBd('postgresql')).rejects.toThrow('Encienda PostgreSQL');
+    await expect(n.activarVector('demo')).rejects.toThrow('Encienda PostgreSQL');
+    await expect(n.respaldarBase('mongodb', 'x')).rejects.toThrow('MongoDB');
+  });
+
+  it('Ollama usa el puerto configurado, la carpeta data/ollama/actual/models y emite ia:progreso', async () => {
+    const urls: string[] = [];
+    const n = await Nucleo.crear({
+      base,
+      plataforma,
+      sonda: async () => false,
+      fetch: (async (u: string) => {
+        urls.push(String(u));
+        if (String(u).endsWith('/api/pull')) {
+          return new Response(
+            '{"status":"pulling","completed":1,"total":2}\n{"status":"success"}\n',
+          );
+        }
+        return new Response(JSON.stringify({ models: [{ name: 'llama3.2', size: 5 }] }));
+      }) as typeof fetch,
+    });
+    nucleos.push(n);
+    await n.sitios.modificarConfig((c) => {
+      c.servicios.datos.ollama.puerto = 12345;
+    });
+    expect(await n.modelosIa()).toEqual([{ nombre: 'llama3.2', tamanoBytes: 5, modificado: '' }]);
+    expect(urls.at(-1)).toBe('http://127.0.0.1:12345/api/tags');
+    expect(await n.bloqueEnvIa()).toContain('OLLAMA_BASE_URL=http://127.0.0.1:12345');
+    const progreso: unknown[] = [];
+    n.eventos.on('ia:progreso', (p) => progreso.push(p));
+    await n.descargarModelo('llama3.2');
+    expect(progreso.length).toBeGreaterThan(0);
+    const modelos = path.join(base, 'data', 'ollama', 'actual', 'models');
+    mkdirSync(modelos, { recursive: true });
+    writeFileSync(path.join(modelos, 'blob'), 'x'.repeat(10));
+    expect(await n.espacioIa()).toBe(10);
+  });
+
+  it('Mailpit usa el fetch del núcleo', async () => {
+    const n = await Nucleo.crear({
+      base,
+      plataforma,
+      sonda: async () => false,
+      fetch: (async () => new Response('{"unread":3}')) as typeof fetch,
+    });
+    nucleos.push(n);
+    expect(await n.noLeidosCorreo()).toBe(3);
+  });
+
+  it('pgvector detiene PostgreSQL solo si corría y lo vuelve a iniciar con Servicios', async () => {
+    const n = await crear();
+    const deps = (
+      n.pgvector as unknown as {
+        d: {
+          detenerPostgres(): Promise<boolean>;
+          iniciarPostgres(): Promise<void>;
+          versionPostgres(): Promise<string | null>;
+        };
+      }
+    ).d;
+    const detener = vi.spyOn(n.servicios, 'detener').mockResolvedValue(undefined);
+    const iniciar = vi.spyOn(n.servicios, 'iniciar').mockResolvedValue(undefined);
+    expect(await deps.detenerPostgres()).toBe(false);
+    expect(detener).not.toHaveBeenCalled();
+    await deps.iniciarPostgres();
+    expect(iniciar).toHaveBeenCalledWith('postgresql');
+    expect(await deps.versionPostgres()).toBeNull();
+    expect(await n.estadoPgvector()).toMatchObject({ instalado: false, version: null });
+  });
+
+  it('al encender inicia los servicios con autoIniciar después de readoptar', async () => {
+    const orden: string[] = [];
+    const readoptar = Supervisor.prototype.readoptar;
+    vi.spyOn(Supervisor.prototype, 'readoptar').mockImplementation(async function (
+      this: Supervisor,
+    ) {
+      orden.push('readoptar');
+      return readoptar.call(this);
+    });
+    vi.spyOn(ServiciosDatos.prototype, 'iniciarAutomaticos').mockImplementation(async () => {
+      orden.push('automaticos');
+      return [];
+    });
+    const n = await crear();
+    await n.arranqueAutomatico;
+    expect(orden).toEqual(['readoptar', 'automaticos']);
+  });
+
+  it('guardarSitio emite el certificado antes de aplicar cuando https pasa a true', async () => {
+    const n = await crear();
+    const { sitio } = await n.guardarSitio(datos());
+    const orden: string[] = [];
+    const asegurar = n.https.asegurarCertificado.bind(n.https);
+    vi.spyOn(n.https, 'asegurarCertificado').mockImplementation(async (s) => {
+      orden.push(`cert:${s.id}`);
+      return asegurar(s);
+    });
+    const aplicar = n.sitios.aplicar.bind(n.sitios);
+    vi.spyOn(n.sitios, 'aplicar').mockImplementation(async () => {
+      orden.push('aplicar');
+      return aplicar();
+    });
+    await n.guardarSitio(datos({ nota: 'sin https' }), sitio.id);
+    expect(orden).toEqual(['aplicar']);
+    orden.length = 0;
+    const r = await n.guardarSitio(datos({ https: true }), sitio.id);
+    expect(orden[0]).toBe(`cert:${sitio.id}`);
+    expect(orden).toContain('aplicar');
+    expect(r.aplicar.httpsPendiente).toEqual([]);
+  });
+
+  it('cambiarPuertoHttps guarda el puerto y aplica', async () => {
+    const n = await crear();
+    const aplicar = vi.spyOn(n.sitios, 'aplicar');
+    await n.cambiarPuertoHttps(8443);
+    expect((await n.config.leer()).https.puerto).toBe(8443);
+    expect(aplicar).toHaveBeenCalled();
+    await expect(n.cambiarPuertoHttps(80)).rejects.toThrow('puerto');
+  });
+
+  it('cambiarPuertoServicio y borrarDatosServicio delegan en Servicios', async () => {
+    const n = await crear();
+    const cambiar = vi.spyOn(n.servicios, 'cambiarPuerto').mockResolvedValue(undefined);
+    const borrar = vi.spyOn(n.servicios, 'borrarDatos').mockResolvedValue(undefined);
+    await n.cambiarPuertoServicio('mysql', 3308);
+    await n.borrarDatosServicio('mysql', 'mysql');
+    expect(cambiar).toHaveBeenCalledWith('mysql', 3308);
+    expect(borrar).toHaveBeenCalledWith('mysql', 'mysql');
   });
 });

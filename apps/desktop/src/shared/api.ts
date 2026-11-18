@@ -1,36 +1,80 @@
 import type {
   AjustesServicios,
+  BaseListada,
   Config,
+  Credenciales,
+  DatosConexion,
+  DisponibilidadAdminer,
   EstadoGeneral,
   EstadoHosts,
   EstadoServicio,
   EstadoTunel,
   EventosNucleo,
+  FormatoRespaldo,
+  IdServicioDatos,
+  ModeloOllama,
+  MotorBd,
+  OpcionesCrearBase,
+  OpcionesRestaurar,
+  OrigenImportar,
+  ProgresoBd,
+  ProgresoIa,
   ProgresoInstalacion,
   ProyectoDetectado,
   ResultadoAjustes,
   ResultadoAplicar,
+  ResultadoBuildTools,
+  ResultadoCA,
+  ResultadoCrear,
+  ResultadoRestaurar,
   ResultadoSync,
   Sitio,
+  TipoSitio,
   VersionDisponible,
 } from '@pel/core';
 
 export type {
   AjustesServicios,
+  BaseListada,
   Config,
+  Credenciales,
+  DatosConexion,
+  DisponibilidadAdminer,
   EstadoGeneral,
   EstadoHosts,
   EstadoServicio,
   EstadoTunel,
   EventosNucleo,
+  FormatoRespaldo,
+  IdServicioDatos,
+  ModeloOllama,
+  MotorBd,
+  OpcionesCrearBase,
+  OpcionesRestaurar,
+  OrigenImportar,
+  ProgresoBd,
+  ProgresoIa,
   ProgresoInstalacion,
   ProyectoDetectado,
   ResultadoAjustes,
   ResultadoAplicar,
+  ResultadoBuildTools,
+  ResultadoCA,
+  ResultadoCrear,
+  ResultadoRestaurar,
   ResultadoSync,
   Sitio,
+  TipoSitio,
   VersionDisponible,
 };
+
+export type MotorSql = Exclude<MotorBd, 'mongodb'>;
+
+export interface EstadoPgvector {
+  buildTools: boolean;
+  instalado: boolean;
+  version: string | null;
+}
 
 /** Lo único que el renderer elige al instalar: el proceso principal re-resuelve la URL y la huella. */
 export type SeleccionVersion = Pick<VersionDisponible, 'servicio' | 'version'>;
@@ -40,6 +84,8 @@ export type DatosSitio = Omit<Sitio, 'id'>;
 export interface ApiSistema {
   /** Abre el selector de carpetas; devuelve null si se cancela. */
   elegirCarpeta(): Promise<string | null>;
+  /** Abre el selector de archivos (p. ej. un respaldo); devuelve null si se cancela. */
+  elegirArchivo(): Promise<string | null>;
   /** Solo http/https. */
   abrirUrl(url: string): Promise<void>;
   abrirCarpeta(ruta: string): Promise<void>;
@@ -64,7 +110,97 @@ export interface ApiEntorno {
     iniciarTodo(): Promise<void>;
     /** Cierra primero los túneles (devolviendo los .env) y luego detiene los servicios. */
     detenerTodo(): Promise<void>;
+    /** 1024–65535 y libre; reinicia el servicio si estaba encendido. */
+    cambiarPuerto(id: IdServicioDatos, puerto: number): Promise<void>;
+    /** `confirmacion` debe ser el id del servicio. */
+    borrarDatos(id: IdServicioDatos, confirmacion: string): Promise<void>;
   };
+  bd: {
+    listar(motor: MotorBd): Promise<BaseListada[]>;
+    crear(motor: MotorBd, nombre: string, opciones?: OpcionesCrearBase): Promise<ResultadoCrear>;
+    /** `confirmacion` debe ser el nombre exacto de la base. */
+    borrar(motor: MotorBd, nombre: string, confirmacion: string): Promise<void>;
+    /** Datos de conexión con la clave: solo para el diálogo "Datos de conexión". */
+    conexion(motor: MotorBd): Promise<DatosConexion>;
+    bloqueEnv(
+      motor: MotorBd,
+      base: string,
+      tipoProyecto: TipoSitio | 'generico',
+      envActual?: string,
+    ): Promise<string>;
+    tieneTablas(motor: MotorSql, base: string): Promise<boolean>;
+    formato(archivo: string): Promise<FormatoRespaldo>;
+    restaurar(
+      motor: MotorSql,
+      archivo: string,
+      base: string,
+      opciones?: OpcionesRestaurar,
+    ): Promise<ResultadoRestaurar>;
+    respaldar(motor: MotorSql, base: string, carpetaDestino?: string): Promise<{ archivo: string }>;
+    /** Solo se lee el servidor de origen. */
+    importar(
+      motor: MotorSql,
+      origen: OrigenImportar,
+      destinoBase: string,
+      opciones?: OpcionesRestaurar,
+    ): Promise<ResultadoRestaurar>;
+  };
+  pgvector: {
+    estado(): Promise<EstadoPgvector>;
+    instalarBuildTools(): Promise<ResultadoBuildTools>;
+    compilarEInstalar(): Promise<{ version: string }>;
+    activar(base: string): Promise<void>;
+  };
+  https: {
+    estado(): Promise<{ caCreada: boolean; caInstalada: boolean }>;
+    instalarCA(): Promise<ResultadoCA>;
+    quitarCA(): Promise<ResultadoCA>;
+    cambiarPuerto(puerto: number): Promise<ResultadoAplicar>;
+  };
+  composer: {
+    version(): Promise<string | null>;
+    instalar(): Promise<void>;
+    actualizar(): Promise<string>;
+    /** Rama de PHP de la terminal y los shims (null = la más reciente instalada). */
+    cambiarPhpPorDefecto(rama: string | null): Promise<void>;
+  };
+  terminal: {
+    abrir(sitioId: string): Promise<void>;
+  };
+  path: {
+    estado(): Promise<boolean>;
+    cambiar(activar: boolean): Promise<{ aviso: string }>;
+  };
+  adminer: {
+    instalar(): Promise<void>;
+    disponibilidad(): Promise<DisponibilidadAdminer>;
+    /** URL sin clave; null si Adminer no soporta el motor. */
+    url(motor: MotorBd, usuario: string): Promise<string | null>;
+  };
+  ftp: {
+    activar(sitioId: string): Promise<Credenciales>;
+    desactivar(sitioId: string): Promise<void>;
+    regenerarClave(sitioId: string): Promise<string>;
+    soloLectura(sitioId: string, valor: boolean): Promise<void>;
+    credenciales(sitioId: string): Promise<Credenciales | null>;
+    redLocal(valor: boolean): Promise<void>;
+  };
+  ia: {
+    modelos(): Promise<ModeloOllama[]>;
+    /** El avance llega por el evento `ia:progreso`. */
+    descargar(nombre: string): Promise<void>;
+    cancelar(nombre: string): Promise<boolean>;
+    borrar(nombre: string): Promise<void>;
+    probar(nombre: string, texto: string): Promise<string>;
+    espacioUsado(): Promise<number>;
+    bloqueEnv(): Promise<string>;
+    sugeridos(): Promise<string[]>;
+  };
+  mailpit: {
+    noLeidos(): Promise<number>;
+  };
+  /** Aviso del arranque (p. ej. la migración de la carpeta de datos), o null. */
+  avisoInicio(): Promise<string | null>;
   instalador: {
     listarVersiones(servicio: VersionDisponible['servicio']): Promise<VersionDisponible[]>;
     instalar(seleccion: SeleccionVersion): Promise<void>;
@@ -111,6 +247,52 @@ export const RUTAS_IPC = [
   'servicios.detener',
   'servicios.iniciarTodo',
   'servicios.detenerTodo',
+  'servicios.cambiarPuerto',
+  'servicios.borrarDatos',
+  'bd.listar',
+  'bd.crear',
+  'bd.borrar',
+  'bd.conexion',
+  'bd.bloqueEnv',
+  'bd.tieneTablas',
+  'bd.formato',
+  'bd.restaurar',
+  'bd.respaldar',
+  'bd.importar',
+  'pgvector.estado',
+  'pgvector.instalarBuildTools',
+  'pgvector.compilarEInstalar',
+  'pgvector.activar',
+  'https.estado',
+  'https.instalarCA',
+  'https.quitarCA',
+  'https.cambiarPuerto',
+  'composer.version',
+  'composer.instalar',
+  'composer.actualizar',
+  'composer.cambiarPhpPorDefecto',
+  'terminal.abrir',
+  'path.estado',
+  'path.cambiar',
+  'adminer.instalar',
+  'adminer.disponibilidad',
+  'adminer.url',
+  'ftp.activar',
+  'ftp.desactivar',
+  'ftp.regenerarClave',
+  'ftp.soloLectura',
+  'ftp.credenciales',
+  'ftp.redLocal',
+  'ia.modelos',
+  'ia.descargar',
+  'ia.cancelar',
+  'ia.borrar',
+  'ia.probar',
+  'ia.espacioUsado',
+  'ia.bloqueEnv',
+  'ia.sugeridos',
+  'mailpit.noLeidos',
+  'avisoInicio',
   'instalador.listarVersiones',
   'instalador.instalar',
   'instalador.instalados',
@@ -123,6 +305,7 @@ export const RUTAS_IPC = [
   'config.leer',
   'ajustes.guardar',
   'sistema.elegirCarpeta',
+  'sistema.elegirArchivo',
   'sistema.abrirUrl',
   'sistema.abrirCarpeta',
   'sistema.copiar',
@@ -136,4 +319,6 @@ export const EVENTOS_IPC = [
   'tunel:estado',
   'instalacion:progreso',
   'hosts:estado',
+  'bd:progreso',
+  'ia:progreso',
 ] as const satisfies readonly (keyof EventosNucleo)[];

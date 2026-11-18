@@ -20,7 +20,9 @@ export interface ConexionBaja {
 
 export type FabricaConexion = (c: ConexionMysql) => Promise<ConexionBaja>;
 
-const NOMBRE = /^[A-Za-z0-9_]{1,64}$/;
+/** Nombres de base y de usuario válidos en MySQL y MariaDB. */
+export const NOMBRE_BD_MYSQL = /^[A-Za-z0-9_]{1,64}$/;
+const NOMBRE = NOMBRE_BD_MYSQL;
 const SISTEMA = ['mysql', 'information_schema', 'performance_schema', 'sys'];
 const USUARIOS_RESERVADOS = [
   'root',

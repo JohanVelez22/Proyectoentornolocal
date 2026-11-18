@@ -24,7 +24,9 @@ export interface ConexionBajaPg {
 
 export type FabricaConexionPg = (c: ConexionPostgres) => Promise<ConexionBajaPg>;
 
-const NOMBRE = /^[a-z_][a-z0-9_]{0,62}$/;
+/** Nombres de base y de rol válidos en PostgreSQL. */
+export const NOMBRE_BD_PG = /^[a-z_][a-z0-9_]{0,62}$/;
+const NOMBRE = NOMBRE_BD_PG;
 const SISTEMA = ['postgres', 'template0', 'template1'];
 const ROLES_RESERVADOS = ['postgres'];
 

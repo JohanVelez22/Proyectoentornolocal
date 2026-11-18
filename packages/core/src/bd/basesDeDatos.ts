@@ -35,7 +35,9 @@ export interface DepsBasesDeDatos {
   fabricas?: { mysql?: FabricaConexion; postgres?: FabricaConexionPg };
 }
 
-const NOMBRE_MONGO = /^[A-Za-z0-9_-]{1,63}$/;
+/** Nombres de base válidos en MongoDB. */
+export const NOMBRE_BD_MONGO = /^[A-Za-z0-9_-]{1,63}$/;
+const NOMBRE_MONGO = NOMBRE_BD_MONGO;
 const SISTEMA_MONGO = ['admin', 'local', 'config'];
 const USUARIO: Record<MotorBd, string> = {
   mysql: 'root',
@@ -194,6 +196,11 @@ export class BasesDeDatos {
       });
     }
     return this.conMysql(motor, (c) => c.tieneTablas(nombre));
+  }
+
+  /** Activa pgvector en una base de PostgreSQL (la extensión es por base). */
+  async activarVector(base: string): Promise<void> {
+    await this.conPostgres((c) => c.activarVector(base));
   }
 
   async borrar(motor: MotorBd, nombre: string, confirmacion: string): Promise<void> {
