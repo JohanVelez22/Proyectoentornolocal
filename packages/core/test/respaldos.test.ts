@@ -413,50 +413,236 @@ describe('restaurar', () => {
     expect(lanzados[0]!.entrada).toBe(sql.replace('USE otra3;', '-- USE otra3;'));
   });
 
-  it("datos con \\' (ambiguos según el modo) no se alteran; un USE posterior aborta", async () => {
+  // --- Filtro: una lectura fiable por motor (ronda 4) ---
+
+  const NO_NEUTRALIZABLE =
+    'El respaldo contiene instrucciones de cambio de base que no se pueden neutralizar con seguridad; no se restauró.';
+
+  it.each([
+    ["MySQL: 'O\\'Brien' y '\\r '", "INSERT INTO t VALUES ('O\\'Brien','x\\r y');\n"],
+    ["MySQL: 'O\\'Brien' y '\\u '", "INSERT INTO t VALUES ('O\\'Brien','x\\u y');\n"],
+    [
+      'MySQL: \\u dentro de una sentencia (--binary-mode lo manda al servidor)',
+      'SELECT 1\n\\u other\n;\n',
+    ],
+  ])('MySQL deja intactos los datos (%s)', async (_n, sql) => {
+    const r = await armar().restaurar('mysql', fixture('m.sql', sql), 'tienda');
+    expect(lanzados[0]!.entrada).toBe(sql);
+    expect(lanzados[0]!.args).toContain('--binary-mode');
+    expect(r.advertencias).toEqual([]);
+  });
+
+  it("MySQL: tras 'O\\'Brien', un USE posterior se comenta sin abortar", async () => {
     const datos = "INSERT INTO t VALUES ('O\\'Brien'),('x');\nINSERT INTO t VALUES (2);\n";
-    await armar().restaurar('mysql', fixture('m.sql', datos), 'tienda');
-    expect(lanzados[0]!.entrada).toBe(datos);
-    await expect(
-      armar().restaurar('mysql', fixture('m2.sql', `${datos}USE otra;\n`), 'tienda'),
-    ).rejects.toThrow(/no se pueden neutralizar con seguridad/);
+    const r = await armar().restaurar('mysql', fixture('m.sql', `${datos}USE otra;\n`), 'tienda');
+    expect(lanzados[0]!.entrada).toBe(`${datos}-- USE otra;\n`);
+    expect(r.advertencias.join('\n')).toContain('USE otra;');
+  });
+
+  it("MySQL: mysqldump con datos O\\'Brien y --routines restaura y comenta los ALTER DATABASE", async () => {
+    const sql =
+      '-- MySQL dump 10.13  Distrib 8.4.3, for Win64 (x86_64)\n' +
+      '/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;\n' +
+      "/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;\n" +
+      'DROP TABLE IF EXISTS `clientes`;\n' +
+      'CREATE TABLE `clientes` (\n  `id` int NOT NULL,\n  `nombre` varchar(80) DEFAULT NULL\n) ENGINE=InnoDB;\n' +
+      'LOCK TABLES `clientes` WRITE;\n' +
+      "INSERT INTO `clientes` VALUES (1,'O\\'Brien'),(2,'C:\\\\ruta\\\\'),(3,'dice \\\"hola\\\"');\n" +
+      'UNLOCK TABLES;\n' +
+      '/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;\n' +
+      "/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES' */ ;\n" +
+      'DELIMITER ;;\n' +
+      '/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `t1` BEFORE INSERT ON `clientes` FOR EACH ROW BEGIN\n' +
+      "  SET NEW.nombre = CONCAT(NEW.nombre, '\\'');\n" +
+      'END */;;\n' +
+      'DELIMITER ;\n' +
+      '/*!50003 SET sql_mode              = @saved_sql_mode */ ;\n' +
+      'ALTER DATABASE `tienda` CHARACTER SET latin1 COLLATE latin1_swedish_ci ;\n' +
+      'DELIMITER ;;\n' +
+      "CREATE DEFINER=`root`@`localhost` PROCEDURE `p`()\nBEGIN\n  SELECT 'it\\'s';\nEND ;;\n" +
+      'DELIMITER ;\n' +
+      'ALTER DATABASE `tienda` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci ;\n' +
+      '/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;\n';
+    const r = await armar().restaurar('mysql', fixture('m.sql', sql), 'tienda');
+    expect(lanzados[0]!.entrada).toBe(
+      sql
+        .replace(
+          'ALTER DATABASE `tienda` CHARACTER SET latin1',
+          '-- ALTER DATABASE `tienda` CHARACTER SET latin1',
+        )
+        .replace(
+          'ALTER DATABASE `tienda` CHARACTER SET utf8mb4',
+          '-- ALTER DATABASE `tienda` CHARACTER SET utf8mb4',
+        ),
+    );
+    expect(r.advertencias).toHaveLength(2);
   });
 
   it.each([
     [
-      'PG: \\connect tras cerrar un comentario de bloque',
+      'NO_BACKSLASH_ESCAPES declarado',
+      "SET sql_mode='NO_BACKSLASH_ESCAPES';\nSELECT 'a\\';\nUSE other;\n",
+      true,
+    ],
+    [
+      'sin NO_BACKSLASH_ESCAPES el USE cae dentro del texto',
+      "INSERT INTO t VALUES ('a\\';\nUSE other;\n');\n",
+      false,
+    ],
+    [
+      'un sql_mode no literal desconocido mantiene el modo anterior',
+      "SET sql_mode='NO_BACKSLASH_ESCAPES';\nSET sql_mode=@desconocida;\nSELECT 'a\\';\nUSE other;\n",
+      true,
+    ],
+    [
+      'SET sql_mode = @saved_sql_mode vuelve al modo guardado',
+      "/*!50003 SET @saved_sql_mode = @@sql_mode */ ;\n/*!50003 SET sql_mode = 'NO_BACKSLASH_ESCAPES' */ ;\n" +
+        "/*!50003 SET sql_mode = @saved_sql_mode */ ;\nINSERT INTO t VALUES ('O\\'Brien');\nUSE other;\n",
+      true,
+    ],
+    [
+      'ANSI_QUOTES: "…" es un identificador',
+      'SET SESSION sql_mode=\'ANSI_QUOTES\';\nSELECT "a\\";\nUSE other;\n',
+      true,
+    ],
+    [
+      'sin ANSI_QUOTES: "…" es un texto con escapes',
+      'INSERT INTO t VALUES ("a\\";\nUSE other;\n");\n',
+      false,
+    ],
+    [
+      'SET GLOBAL sql_mode no cambia la sesión',
+      "SET GLOBAL sql_mode='NO_BACKSLASH_ESCAPES';\nINSERT INTO t VALUES ('a\\';\nUSE other;\n');\n",
+      false,
+    ],
+  ])('MySQL sigue el sql_mode declarado (%s)', async (_n, sql, comenta) => {
+    await armar().restaurar('mysql', fixture('m.sql', sql), 'tienda');
+    expect(lanzados[0]!.entrada).toBe(comenta ? sql.replace('USE other;', '-- USE other;') : sql);
+  });
+
+  it.each([
+    ['MySQL: USE dentro de /*! … */', 'mysql', '/*!40101 SET x=1\nUSE otra2 */;\n', '17.12'],
+    ['MySQL: CREATE DATABASE tras /* sin cerrar', 'mysql', '/* x\nCREATE DATABASE y;\n', '17.12'],
+    [
+      'PG: DROP DATABASE dentro de un comentario de bloque',
+      'postgresql',
+      '/* x\nDROP DATABASE y;\n*/\n',
+      '17.12',
+    ],
+    [
+      'PG estricto: \\connect tras cerrar un comentario de bloque',
       'postgresql',
       '/* x\n*/ \\connect postgres\n',
+      '17.2',
     ],
-    ['MySQL: USE dentro de /*! … */', 'mysql', '/*!40101 SET x=1\nUSE otra2 */;\n'],
     [
-      'PG: standard_conforming_strings = off',
+      'PG estricto: standard_conforming_strings = off',
       'postgresql',
       "SET standard_conforming_strings = off;\nSELECT 'a\\'b';\n\\connect postgres\n",
+      '17.2',
     ],
     [
-      'MySQL: NO_BACKSLASH_ESCAPES',
-      'mysql',
-      "SET sql_mode='NO_BACKSLASH_ESCAPES';\nSELECT 'a\\';\n\\u other\n",
+      "PG estricto: \\connect tras 'a\\'b' (modo por defecto)",
+      'postgresql',
+      "SELECT 'a\\'b';\n\\connect postgres\n",
+      '17.2',
     ],
     [
-      "MySQL: USE tras un texto con \\' ambiguo",
-      'mysql',
-      "INSERT INTO t VALUES ('a\\'\nUSE otra;');\n",
+      "PG estricto: ('C:\\', 'b\\c') se lee distinto en cada modo",
+      'postgresql',
+      "INSERT INTO t VALUES ('C:\\', 'b\\c');\n",
+      '17.2',
     ],
-  ])('aborta si no puede neutralizar con seguridad (%s)', async (_n, motor, sql) => {
-    await expect(
-      armar().restaurar(motor as MotorBd, fixture('s.sql', sql), 'tienda'),
-    ).rejects.toThrow(
-      'El respaldo contiene instrucciones de cambio de base que no se pueden neutralizar con seguridad; no se restauró.',
-    );
+    [
+      'PG estricto: un COPY que solo una lectura ve empezar',
+      'postgresql',
+      "COMMENT ON TABLE t IS 'ruta C:\\';\nCOPY t (a) FROM stdin;\n1\t\\N\n\\.\n",
+      '17.2',
+    ],
+    [
+      'PG estricto: \\connect en la parte larga de una línea ya enviada',
+      'postgresql',
+      `INSERT INTO t VALUES (1);${' '.repeat(5000)}\\connect postgres\nSELECT 1;\n`,
+      '17.2',
+    ],
+  ])('aborta si no puede neutralizar con seguridad (%s)', async (_n, motor, sql, psql) => {
+    versionPsql = psql;
+    const e = (await armar()
+      .restaurar(motor as MotorBd, fixture('s.sql', sql), 'tienda')
+      .catch((x: unknown) => x)) as Error;
+    expect(e).toBeInstanceOf(Error);
+    expect(e.message.startsWith(NO_NEUTRALIZABLE)).toBe(true);
+    if (motor === 'postgresql' && psql === '17.2')
+      expect(e.message).toMatch(/Actualice PostgreSQL/);
+  });
+
+  it('PG con \\restrict: una lectura con el modo declarado (sin abortar)', async () => {
+    // Lo que con psql sin \restrict aborta, aquí se resuelve con el modo declarado.
+    const casos: [string, string][] = [
+      [
+        "SET standard_conforming_strings = off;\nSELECT 'a\\'b';\n\\connect postgres\n",
+        "SET standard_conforming_strings = off;\nSELECT 'a\\'b';\n-- \\connect postgres\n",
+      ],
+      // Fuera de SQL normal o a mitad de línea: pasa tal cual y psql (restringido) lo rechaza.
+      ['/* x\n*/ \\connect postgres\n', '/* x\n*/ \\connect postgres\n'],
+      ['SELECT 1; \\c postgres\n', 'SELECT 1; \\c postgres\n'],
+      [
+        `INSERT INTO t VALUES (1);${' '.repeat(5000)}\\connect postgres\n`,
+        `INSERT INTO t VALUES (1);${' '.repeat(5000)}\\connect postgres\n`,
+      ],
+    ];
+    for (const [sql, esperado] of casos) {
+      lanzados = [];
+      await armar().restaurar('postgresql', fixture('p.sql', sql), 'tienda');
+      expect(lanzados[0]!.restrict).toMatch(/^[0-9a-f]{32}$/);
+      expect(lanzados[0]!.entrada).toBe(esperado);
+    }
+  });
+
+  it("PG con \\restrict: ('C:\\', 'b\\c') con scs=on y luego el \\unrestrict del archivo", async () => {
+    const insert = "INSERT INTO t VALUES ('C:\\', 'b\\c');\n";
+    const sql =
+      '\\restrict ABC123\nSET standard_conforming_strings = on;\n' +
+      insert +
+      '\\unrestrict ABC123\n';
+    const r = await armar().restaurar('postgresql', fixture('p.sql', sql), 'tienda');
+    expect(lanzados[0]!.entrada).toBe(`SET standard_conforming_strings = on;\n${insert}`);
+    expect(r.advertencias.join('\n')).toContain('\\unrestrict ABC123');
+    expect(r.advertencias.join('\n')).not.toContain('INSERT');
+  });
+
+  it("PG con \\restrict: COMMENT 'ruta C:\\' y luego un COPY con \\N se reconoce", async () => {
+    const copia =
+      'COPY public.t (a, b) FROM stdin;\n1\t\\N\n2\tC:\\\\x\n\\connect otra\nDROP DATABASE x;\n\\.\n';
+    const sql =
+      "\\restrict K1\nCOMMENT ON TABLE public.t IS 'ruta C:\\';\n" + copia + '\\unrestrict K1\n';
+    await armar().restaurar('postgresql', fixture('p.sql', sql), 'tienda');
+    expect(lanzados[0]!.entrada).toBe(`COMMENT ON TABLE public.t IS 'ruta C:\\';\n${copia}`);
+  });
+
+  it('PG con \\restrict: un \\unrestrict que no empieza en SQL normal pasa tal cual', async () => {
+    const sql = '/* comentario\n\\unrestrict K2\n*/\nSELECT 1;\n';
+    await armar().restaurar('postgresql', fixture('p.sql', sql), 'tienda');
+    expect(lanzados[0]!.entrada).toBe(sql);
+  });
+
+  it('PG: COPY a mitad de línea y comentarios anidados', async () => {
+    const sql =
+      'SET x = 1; COPY t (a) FROM stdin;\n\\connect dato\n\\.\n' +
+      "/* a /* b */ 'no es texto */\n\\connect postgres\n";
+    for (const v of ['17.12', '17.2']) {
+      versionPsql = v;
+      lanzados = [];
+      await armar().restaurar('postgresql', fixture('p.sql', sql), 'tienda');
+      expect(lanzados[0]!.entrada).toBe(sql.replace('\\connect postgres', '-- \\connect postgres'));
+    }
   });
 
   it('el modo de escapes declarado se sigue: sin dudas, se comenta', async () => {
-    // Con escapes desactivados, 'a\' cierra el texto: \u queda fuera y en SQL normal.
-    const sql = "SET sql_mode='NO_BACKSLASH_ESCAPES';\nSELECT 'a\\b';\n\\u other\n";
+    // Con escapes desactivados, 'a\' cierra el texto: el USE queda fuera y en SQL normal.
+    const sql = "SET sql_mode='NO_BACKSLASH_ESCAPES';\nSELECT 'a\\b';\nUSE other;\n";
     await armar().restaurar('mysql', fixture('s.sql', sql), 'tienda');
-    expect(lanzados[0]!.entrada).toBe(sql.replace('\\u other', '-- \\u other'));
+    expect(lanzados[0]!.entrada).toBe(sql.replace('USE other;', '-- USE other;'));
   });
 
   it('psql 17.6+: la entrada empieza por \\restrict y se quitan los del archivo', async () => {
@@ -494,6 +680,8 @@ describe('restaurar', () => {
     expect(mariadbConSandbox('10.11.8')).toBe(true);
     expect(mariadbConSandbox('10.6.17')).toBe(false);
     expect(mariadbConSandbox('11.8.2')).toBe(true);
+    // 11.3 no consta: sin --sandbox.
+    expect(mariadbConSandbox('11.3.2')).toBe(false);
   });
 
   it.each([
@@ -509,7 +697,6 @@ describe('restaurar', () => {
       "SELECT E'it\\'s';\nSELECT 1;\n\\connect postgres\n",
       '\\connect postgres',
     ],
-    ['MySQL: \\u dentro de una sentencia', 'mysql', 'SELECT 1\n\\u other\n;\n', '\\u other'],
     [
       'PG: $ dentro de un nombre no abre un cuerpo $$',
       'postgresql',
@@ -522,24 +709,85 @@ describe('restaurar', () => {
       "SELECT 1 -- 'abc\nUSE otra;\n",
       'USE otra;',
     ],
-    [
-      'PG: \\c a mitad de línea',
-      'postgresql',
-      'SELECT 1; \\c postgres\n',
-      'SELECT 1; \\c postgres',
-    ],
   ])('filtra el cambio de base (%s)', async (_n, motor, sql, linea) => {
-    const r = await armar().restaurar(motor as MotorBd, fixture('s.sql', sql), 'tienda');
-    expect(lanzados[0]!.entrada).toBe(sql.replace(linea, `-- ${linea}`));
-    expect(r.advertencias.join('\n')).toContain(linea);
+    for (const v of ['17.12', '17.2']) {
+      versionPsql = v;
+      lanzados = [];
+      const r = await armar().restaurar(motor as MotorBd, fixture('s.sql', sql), 'tienda');
+      expect(lanzados[0]!.entrada).toBe(sql.replace(linea, `-- ${linea}`));
+      expect(r.advertencias.join('\n')).toContain(linea);
+    }
   });
 
-  it('un \\connect en la parte larga de una línea ya enviada detiene la restauración', async () => {
-    const sql = `INSERT INTO t VALUES (1);${' '.repeat(5000)}\\connect postgres\nSELECT 1;\n`;
-    await expect(
-      armar().restaurar('postgresql', fixture('largo.sql', sql), 'tienda'),
-    ).rejects.toThrow(/cambio de base/);
+  it('PG sin \\restrict: \\c a mitad de línea se comenta', async () => {
+    versionPsql = '17.2';
+    const sql = 'SELECT 1; \\c postgres\n';
+    await armar().restaurar('postgresql', fixture('s.sql', sql), 'tienda');
+    expect(lanzados[0]!.entrada).toBe('-- SELECT 1; \\c postgres\n');
   });
+
+  /** Las líneas de datos (INSERT y filas de COPY) salen idénticas, nunca comentadas. */
+  function datosIntactos(entrada: string, datos: string[]): void {
+    const salida = entrada.split('\n');
+    for (const d of datos) {
+      expect(salida).toContain(d);
+      expect(salida).not.toContain(`-- ${d}`);
+    }
+  }
+
+  it('ninguna línea de datos se altera en MySQL', async () => {
+    const datos = [
+      "INSERT INTO `t` VALUES (1,'O\\'Brien','x\\r y','C:\\\\'),(2,'\\u otra','\\\\'),(3,'a\\nb');",
+      "INSERT INTO `t` VALUES (4,'USE otra; -- \\'x'),(5,'#'),(6,'/*'),(7,'\\\\connect x');",
+      "INSERT INTO `t` VALUES (8,'línea 1",
+      'USE otra;',
+      'DROP DATABASE tienda;',
+      "\\u otra');",
+      "INSERT INTO `t` VALUES (9,\"comillas \\\" dobles\"),(10,'it''s');",
+    ];
+    const sql =
+      "/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;\n" +
+      `${datos.join('\n')}\nUSE \`otra\`;\nINSERT INTO t VALUES (11);\n`;
+    const r = await armar().restaurar('mysql', fixture('m.sql', sql), 'tienda');
+    const entrada = lanzados[0]!.entrada!;
+    datosIntactos(entrada, [...datos, 'INSERT INTO t VALUES (11);']);
+    expect(entrada).toContain('\n-- USE `otra`;\n');
+    expect(r.advertencias).toHaveLength(1);
+  });
+
+  for (const [modo, v] of [
+    ['con \\restrict', '17.12'],
+    ['sin \\restrict', '17.2'],
+  ] as const) {
+    it(`ninguna línea de datos se altera en PostgreSQL ${modo}`, async () => {
+      versionPsql = v;
+      const filas = [
+        '1\t\\N\tC:\\\\ruta\\\\',
+        '2\t\\connect otra\t\\\\!',
+        '\\connect otra',
+        'DROP DATABASE tienda;',
+        "3\tO'Brien\t\\t\\n",
+      ];
+      const inserts = [
+        "INSERT INTO public.t VALUES (4, E'it\\'s', 'O''Brien', E'C:\\\\');",
+        "INSERT INTO public.t VALUES (5, 'línea 1",
+        '\\connect otra',
+        "DROP DATABASE tienda;');",
+        'INSERT INTO public.t VALUES (6, $x$ \\! cmd $x$, $$',
+        'CREATE DATABASE y;',
+        '$$);',
+      ];
+      const sql =
+        "SET standard_conforming_strings = on;\nSELECT pg_catalog.set_config('search_path', '', false);\n" +
+        'CREATE TABLE public.t (a int, b text, c text);\n' +
+        `COPY public.t (a, b, c) FROM stdin;\n${filas.join('\n')}\n\\.\n` +
+        `${inserts.join('\n')}\n\\connect postgres\nCREATE DATABASE otra;\n`;
+      await armar().restaurar('postgresql', fixture('p.sql', sql), 'tienda');
+      const entrada = lanzados[0]!.entrada!;
+      datosIntactos(entrada, [...filas, ...inserts]);
+      expect(entrada.endsWith('-- \\connect postgres\n-- CREATE DATABASE otra;\n')).toBe(true);
+    });
+  }
 
   it('un respaldo previo vacío detiene todo antes de borrar', async () => {
     conTablas = true;
