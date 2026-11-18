@@ -106,6 +106,64 @@ export interface ResultadoCrearBasePg {
   aviso?: string;
 }
 
+/**
+ * Bloque DO que pasa a un rol (%L, lo completa format() en el servidor) los objetos que no son
+ * del sistema ni de una extensión. Tablas antes que secuencias: las de una columna serial o
+ * identity cambian con su tabla (cambiarlas aparte da error).
+ */
+export const SQL_ASIGNAR_DUENO = `DO $wolfcore$
+DECLARE
+  dueno text := %L;
+  rol oid := (SELECT oid FROM pg_roles WHERE rolname = dueno);
+  r record;
+BEGIN
+  FOR r IN
+    SELECT n.nspname FROM pg_namespace n
+    WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+      AND n.nspowner <> rol
+      AND n.nspowner IS DISTINCT FROM to_regrole('pg_database_owner')::oid
+      AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_namespace'::regclass
+                      AND d.objid = n.oid AND d.deptype = 'e')
+  LOOP
+    EXECUTE format('ALTER SCHEMA %%I OWNER TO %%I', r.nspname, dueno);
+  END LOOP;
+  FOR r IN
+    SELECT c.oid, c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
+      AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+      AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_class'::regclass
+                      AND d.objid = c.oid AND d.deptype = 'e')
+    ORDER BY c.relkind = 'S', c.oid
+  LOOP
+    CONTINUE WHEN (SELECT relowner FROM pg_class WHERE oid = r.oid) = rol;
+    EXECUTE format('ALTER %%s %%s OWNER TO %%I',
+      CASE r.relkind WHEN 'v' THEN 'VIEW' WHEN 'm' THEN 'MATERIALIZED VIEW'
+        WHEN 'f' THEN 'FOREIGN TABLE' WHEN 'S' THEN 'SEQUENCE' ELSE 'TABLE' END,
+      r.oid::regclass, dueno);
+  END LOOP;
+  FOR r IN
+    SELECT p.oid, p.prokind FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' AND p.proowner <> rol
+      AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_proc'::regclass
+                      AND d.objid = p.oid AND d.deptype = 'e')
+  LOOP
+    EXECUTE format('ALTER %%s %%s OWNER TO %%I',
+      CASE r.prokind WHEN 'a' THEN 'AGGREGATE' WHEN 'p' THEN 'PROCEDURE' ELSE 'FUNCTION' END,
+      r.oid::regprocedure, dueno);
+  END LOOP;
+  FOR r IN
+    SELECT t.oid, t.typtype FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE t.typtype IN ('e', 'd', 'r') AND t.typowner <> rol
+      AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+      AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_type'::regclass
+                      AND d.objid = t.oid AND d.deptype = 'e')
+  LOOP
+    EXECUTE format('ALTER %%s %%s OWNER TO %%I',
+      CASE r.typtype WHEN 'd' THEN 'DOMAIN' ELSE 'TYPE' END, r.oid::regtype, dueno);
+  END LOOP;
+END
+$wolfcore$`;
+
 /** Administración básica de bases en PostgreSQL. */
 export class ClientePostgres {
   private con: ConexionBajaPg | null = null;
@@ -193,20 +251,23 @@ export class ClientePostgres {
       }
       if (!clave) throw new Error('Indique una clave para el usuario de la base.');
     }
+    let claveCambiada = false;
     try {
       let existia = false;
-      if (usuario !== undefined) {
-        const r = await this.filas('SELECT COUNT(*) AS n FROM pg_roles WHERE rolname = $1', [
-          usuario,
-        ]);
-        existia = Number(r[0]?.n ?? 0) > 0;
-        // El propio servidor arma la sentencia con la clave entre comillas (%L).
-        const verbo = existia ? 'ALTER ROLE' : 'CREATE ROLE';
+      // El propio servidor arma la sentencia con la clave entre comillas (%L).
+      const rolConClave = async (verbo: 'CREATE ROLE' | 'ALTER ROLE'): Promise<void> => {
         const [orden] = await this.filas(
           `SELECT format('${verbo} %I LOGIN PASSWORD %L', $1::text, $2::text) AS s`,
           [usuario, clave],
         );
         await this.filas(String(orden?.s ?? ''));
+      };
+      if (usuario !== undefined) {
+        const r = await this.filas('SELECT COUNT(*) AS n FROM pg_roles WHERE rolname = $1', [
+          usuario,
+        ]);
+        existia = Number(r[0]?.n ?? 0) > 0;
+        if (!existia) await rolConClave('CREATE ROLE');
       }
       const hay = await this.filas('SELECT COUNT(*) AS n FROM pg_database WHERE datname = $1', [
         nombre,
@@ -221,14 +282,58 @@ export class ClientePostgres {
         await this.filas(`ALTER DATABASE ${bd} OWNER TO ${rol}`);
       }
       if (usuario === undefined) return { usuarioActualizado: false };
-      return existia
-        ? {
-            usuarioActualizado: true,
-            aviso: `El usuario ${usuario} ya existía: su clave se cambió a la nueva.`,
-          }
-        : { usuarioActualizado: false };
+      if (!existia) return { usuarioActualizado: false };
+      // La clave de un rol existente se cambia al FINAL: si algo anterior falla, queda como estaba.
+      await rolConClave('ALTER ROLE');
+      claveCambiada = true;
+      return {
+        usuarioActualizado: true,
+        aviso: `El usuario ${usuario} ya existía: su clave se cambió a la nueva.`,
+      };
     } catch (e) {
-      throw traducir(e, `crear la base ${nombre}`);
+      const err = traducir(e, `crear la base ${nombre}`);
+      if (claveCambiada) err.message += ` La clave del usuario ${usuario} ya se cambió a la nueva.`;
+      throw err;
+    }
+  }
+
+  /** Dueño actual de la base (null si no existe). */
+  async duenoBase(nombre: string): Promise<string | null> {
+    validarNombrePg(nombre);
+    try {
+      const f = await this.filas(
+        'SELECT pg_get_userbyid(datdba) AS dueno FROM pg_database WHERE datname = $1',
+        [nombre],
+      );
+      return f[0] ? String(f[0].dueno) : null;
+    } catch (e) {
+      throw traducir(e, `leer el dueño de la base ${nombre}`);
+    }
+  }
+
+  /**
+   * Devuelve la base y sus objetos a `dueno`: la base, los esquemas que no son del sistema, las
+   * tablas, vistas, secuencias, tablas foráneas, funciones, procedimientos, tipos y dominios.
+   * Tras restaurar como superusuario (pg_restore --no-owner o psql) todo quedaría a nombre de
+   * este y el usuario del proyecto no podría leer sus propias tablas. Se omiten los objetos de
+   * extensiones y el esquema public cuando es de pg_database_owner (PG15+).
+   */
+  async asignarDueno(nombre: string, dueno: string): Promise<void> {
+    const bd = id(nombre);
+    noSistema(nombre, 'crear');
+    try {
+      const [orden] = await this.filas(
+        `SELECT format('ALTER DATABASE ${bd} OWNER TO %I', $1::text) AS s`,
+        [dueno],
+      );
+      await this.filas(String(orden?.s ?? ''));
+      const [bloque] = await this.filas('SELECT format($1, $2::text) AS s', [
+        SQL_ASIGNAR_DUENO,
+        dueno,
+      ]);
+      await this.enBase(nombre, (q) => q.query(String(bloque?.s ?? '')));
+    } catch (e) {
+      throw traducir(e, `asignar el dueño ${dueno} a la base ${nombre}`);
     }
   }
 

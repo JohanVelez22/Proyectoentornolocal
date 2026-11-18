@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { EventEmitter } from 'node:events';
 import {
   ClientePostgres,
+  SQL_ASIGNAR_DUENO,
   abrirCliente,
   validarNombrePg,
   type ClientePg,
@@ -236,6 +237,86 @@ describe('ClientePostgres', () => {
     expect(r.usuarioActualizado).toBe(true);
     expect(r.aviso).toMatch(/ya existía/);
     expect(consultas.some((q) => q.sql.includes("'ALTER ROLE"))).toBe(true);
+  });
+
+  it('rol existente: la clave se cambia DESPUÉS de crear la base', async () => {
+    const { cliente, consultas } = montar((sql) =>
+      sql.includes('FROM pg_roles') ? [{ n: 1 }] : sql.includes('format(') ? [{ s: 'ORDEN' }] : [],
+    );
+    await cliente.conectar(cx);
+    await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva' });
+    const sqls = consultas.map((q) => q.sql);
+    const iBd = sqls.findIndex((x) => x.startsWith('CREATE DATABASE'));
+    const iClave = sqls.findIndex((x) => x.includes("'ALTER ROLE"));
+    expect(iBd).toBeGreaterThanOrEqual(0);
+    expect(iClave).toBeGreaterThan(iBd);
+    expect(sqls.some((x) => x.includes("'CREATE ROLE"))).toBe(false);
+  });
+
+  it('rol existente: si crear la base falla, la clave NO se cambia', async () => {
+    const consultas: string[] = [];
+    const cliente = new ClientePostgres(async () => ({
+      query: async (sql: string) => {
+        consultas.push(sql);
+        if (sql.startsWith('CREATE DATABASE'))
+          throw Object.assign(new Error('x'), { code: '42501' });
+        return { rows: sql.includes('FROM pg_roles') ? [{ n: 1 }] : [] };
+      },
+      end: async () => undefined,
+    }));
+    await cliente.conectar(cx);
+    await expect(cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva' })).rejects.toThrow(
+      /permiso denegado/,
+    );
+    expect(consultas.some((x) => x.includes('ALTER ROLE'))).toBe(false);
+  });
+
+  it('duenoBase lee pg_database.datdba (null si no existe)', async () => {
+    const { cliente, consultas } = montar((sql) =>
+      sql.includes('datdba') ? [{ dueno: 'app' }] : [],
+    );
+    await cliente.conectar(cx);
+    expect(await cliente.duenoBase('mi_bd')).toBe('app');
+    expect(consultas[0]!.params).toEqual(['mi_bd']);
+    const vacio = montar(() => []);
+    await vacio.cliente.conectar(cx);
+    expect(await vacio.cliente.duenoBase('mi_bd')).toBeNull();
+  });
+
+  it('asignarDueno: ALTER DATABASE y el bloque DO dentro de la base, con el rol citado por el servidor', async () => {
+    const { cliente, consultas, conexiones } = montar((sql) =>
+      sql.startsWith('SELECT format(') ? [{ s: `ORDEN ${consultas.length}` }] : [],
+    );
+    await cliente.conectar(cx);
+    await cliente.asignarDueno('mi_bd', 'App"Rol');
+    expect(consultas[0]).toEqual({
+      sql: `SELECT format('ALTER DATABASE "mi_bd" OWNER TO %I', $1::text) AS s`,
+      params: ['App"Rol'],
+    });
+    expect(consultas[1]!.sql).toBe('ORDEN 1');
+    expect(consultas[2]!.params).toEqual([SQL_ASIGNAR_DUENO, 'App"Rol']);
+    expect(consultas[3]!.sql).toBe('ORDEN 3');
+    // el DO corre conectado a la base restaurada
+    expect(conexiones.at(-1)!.base).toBe('mi_bd');
+    expect(conexiones.at(-1)!.cerrada).toBe(true);
+  });
+
+  it('el bloque DO solo tiene un %L y el resto de % escapados para format()', () => {
+    expect(SQL_ASIGNAR_DUENO.match(/(?<!%)%[A-Za-z]/g)).toEqual(['%L']);
+    for (const t of [
+      'TABLE',
+      'VIEW',
+      'MATERIALIZED VIEW',
+      'SEQUENCE',
+      'FUNCTION',
+      'PROCEDURE',
+      'DOMAIN',
+      'TYPE',
+    ]) {
+      expect(SQL_ASIGNAR_DUENO).toContain(`'${t}'`);
+    }
+    expect(SQL_ASIGNAR_DUENO).toContain('ALTER SCHEMA %%I OWNER TO %%I');
+    expect(SQL_ASIGNAR_DUENO).toContain("deptype = 'e'");
   });
 
   it('errores de pg salen en español sin SQL ni claves', async () => {

@@ -98,6 +98,8 @@ let lanzados: Lanzado[];
 let ejecutados: { cmd: string; args: string[]; env?: Record<string, string> }[];
 let creadas: { motor: MotorBd; base: string }[];
 let conTablas: boolean;
+/** Dueño que devuelve el PostgreSQL local falso (null: la base no existe). */
+let duenoLocal: string | null;
 let respuestaLanzar: (l: Lanzado) => { codigo: number; lineas?: string[] };
 let respuestaTar: (args: string[]) => { codigo: number };
 let documentos: string;
@@ -173,7 +175,15 @@ function armar(extra: Partial<DepsRespaldos> = {}): Respaldos {
       if (LOCALES.includes(c.puerto)) {
         consultasLocal.push(s);
         orden.push(`sql: ${s}`);
-        const filas = s.startsWith('SELECT version()') ? [{ version: 'PostgreSQL 17.2' }] : [];
+        const filas = s.startsWith('SELECT version()')
+          ? [{ version: 'PostgreSQL 17.2' }]
+          : s.includes('pg_get_userbyid(datdba)')
+            ? duenoLocal === null
+              ? []
+              : [{ dueno: duenoLocal }]
+            : s.startsWith('SELECT format(')
+              ? [{ s: `ORDEN(${s.includes('ALTER DATABASE') ? 'base' : 'objetos'})` }]
+              : [];
         return tipo === 'pg' ? { rows: filas } : [filas];
       }
       consultasOrigen.push(s);
@@ -237,6 +247,7 @@ beforeEach(async () => {
   ejecutados = [];
   creadas = [];
   conTablas = false;
+  duenoLocal = null;
   respuestaLanzar = (l) => {
     if (l.cmd.includes('dump')) volcadoFalso(l);
     return { codigo: 0 };
@@ -345,6 +356,7 @@ describe('restaurar', () => {
     expect(existsSync(previo)).toBe(true);
     expect(orden).toEqual([
       'pg_dump.exe',
+      expect.stringMatching(/^sql: SELECT pg_get_userbyid\(datdba\)/),
       expect.stringMatching(/^sql: SELECT pg_terminate_backend\(pid\).*pid <> pg_backend_pid\(\)/),
       'sql: SELECT version() AS version',
       'sql: DROP DATABASE "diamantes" WITH (FORCE)',
@@ -354,6 +366,58 @@ describe('restaurar', () => {
     expect(lanzados[0]!.args.at(-1)).toBe('diamantes');
     expect(lanzados[1]!.args).not.toContain('--clean');
     for (const l of lanzados) sinClaves(l);
+  });
+
+  it('PostgreSQL: sobrescribir conserva el dueño original y le devuelve los objetos restaurados', async () => {
+    conTablas = true;
+    duenoLocal = 'app_tienda';
+    await armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes', {
+      confirmarSobrescribir: true,
+    });
+    const i = orden.indexOf('pg_restore.exe');
+    expect(
+      orden.indexOf(
+        'sql: SELECT pg_get_userbyid(datdba) AS dueno FROM pg_database WHERE datname = $1',
+      ),
+    ).toBeLessThan(orden.indexOf('sql: DROP DATABASE "diamantes" WITH (FORCE)'));
+    expect(orden.slice(i + 1)).toEqual([
+      expect.stringMatching(/^sql: SELECT format\('ALTER DATABASE "diamantes" OWNER TO %I'/),
+      'sql: ORDEN(base)',
+      'sql: SELECT format($1, $2::text) AS s',
+      'sql: ORDEN(objetos)',
+    ]);
+  });
+
+  it('PostgreSQL: restaurar en una base vacía de un usuario le devuelve los objetos', async () => {
+    duenoLocal = 'app_tienda';
+    await armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes');
+    expect(orden.slice(orden.indexOf('pg_restore.exe') + 1)).toContain('sql: ORDEN(objetos)');
+  });
+
+  it('PostgreSQL: si el dueño ya es el superusuario o no hay base, no reasigna nada', async () => {
+    duenoLocal = 'postgres';
+    await armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes');
+    duenoLocal = null;
+    await armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes');
+    expect(orden.filter((o) => o.includes('format('))).toEqual([]);
+  });
+
+  it('PostgreSQL: si la restauración falla tras reemplazar, igual devuelve la base a su dueño', async () => {
+    conTablas = true;
+    duenoLocal = 'app_tienda';
+    respuestaLanzar = (l) => {
+      if (l.cmd.includes('pg_dump')) {
+        volcadoFalso(l);
+        return { codigo: 0 };
+      }
+      return { codigo: 2, lineas: ['pg_restore: error: algo'] };
+    };
+    await expect(
+      armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes', {
+        confirmarSobrescribir: true,
+      }),
+    ).rejects.toThrow(/La base original se reemplazó/);
+    expect(orden.slice(orden.indexOf('pg_restore.exe') + 1)).toContain('sql: ORDEN(base)');
   });
 
   it('en MySQL sobrescribir también borra y crea la base', async () => {

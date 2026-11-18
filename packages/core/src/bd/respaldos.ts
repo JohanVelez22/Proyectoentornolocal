@@ -1048,6 +1048,30 @@ export class Respaldos {
     return archivo;
   }
 
+  /** Con una conexión breve de administración a PostgreSQL. */
+  private async conPg<T>(con: DatosConexion, fn: (c: ClientePostgres) => Promise<T>): Promise<T> {
+    const c = new ClientePostgres(this.d.fabricas?.postgres);
+    await c.conectar({
+      host: con.host,
+      puerto: con.puerto,
+      usuario: con.usuario,
+      clave: con.clave ?? '',
+    });
+    try {
+      return await fn(c);
+    } finally {
+      await c.cerrar();
+    }
+  }
+
+  private duenoPg(base: string, con: DatosConexion): Promise<string | null> {
+    return this.conPg(con, (c) => c.duenoBase(base));
+  }
+
+  private asignarDuenoPg(base: string, dueno: string, con: DatosConexion): Promise<void> {
+    return this.conPg(con, (c) => c.asignarDueno(base, dueno));
+  }
+
   /** Borra la base destino (PostgreSQL: antes cierra las demás conexiones a ella). */
   private async borrarParaReemplazar(motor: MotorSql, base: string): Promise<void> {
     const con = await this.d.bd.conexion(motor);
@@ -1117,20 +1141,41 @@ export class Respaldos {
       const fuente = await this.preparar(ruta, tmp, 0);
       this.revisarFamilia(m, fuente);
       const claves = [con.clave ?? '', ...clavesExtra];
+      // PostgreSQL: se restaura como superusuario; el dueño de la base (el usuario del proyecto)
+      // se lee ANTES de borrarla o crearla y al final se le devuelven la base y sus objetos.
+      let dueno: string | null = null;
+      const leerDueno = async (): Promise<void> => {
+        if (m === 'postgresql') dueno = await this.duenoPg(base, con);
+      };
+      const devolverDueno = async (): Promise<void> => {
+        if (dueno && dueno !== con.usuario) await this.asignarDuenoPg(base, dueno, con);
+      };
       if (!tablas) {
         if (await this.d.bd.tieneTablas(m, base)) {
           // Aparecieron tablas mientras se preparaba el archivo: no se toca nada.
           throw errorConTablas(base);
         }
+        await leerDueno();
         await this.d.bd.crear(m, base);
-        return await this.ejecutarRestauracion(operacion, m, fuente, base, con, claves);
+        const r = await this.ejecutarRestauracion(operacion, m, fuente, base, con, claves);
+        await devolverDueno();
+        return r;
       }
       // Sobrescribir = reemplazar: respaldo de seguridad verificado, base nueva y restauración.
       const respaldoPrevio = await this.respaldoDeSeguridad(m, base);
+      await leerDueno();
       await this.borrarParaReemplazar(m, base);
       try {
         await this.d.bd.crear(m, base);
-        const r = await this.ejecutarRestauracion(operacion, m, fuente, base, con, claves);
+        let r: ResultadoRestaurar;
+        try {
+          r = await this.ejecutarRestauracion(operacion, m, fuente, base, con, claves);
+        } catch (e) {
+          // La base nueva no se queda a nombre del superusuario aunque la restauración falle.
+          await devolverDueno().catch(() => undefined);
+          throw e;
+        }
+        await devolverDueno();
         return { ...r, respaldoPrevio };
       } catch (e) {
         throw new ErrorTrasReemplazo(base, respaldoPrevio, e);
