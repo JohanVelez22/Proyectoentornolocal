@@ -20,7 +20,7 @@ import { computed, onMounted, ref } from 'vue';
 import { PUERTO_ADMINER, type Config, type ResultadoCA } from '../../shared/api';
 import { api } from '../api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
-import { useAccion } from '../composables/useAccion';
+import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 
 const t = es.ajustes;
@@ -74,6 +74,8 @@ const opcionesPhp = computed<SelectOption[]>(() => [
   ...(ramasPhp.value ?? []).map((r) => ({ value: r, label: `PHP ${r}` })),
 ]);
 const enPath = ref<boolean | null>(null);
+/** Error al leer cada sección: uno no deja en blanco a los demás. */
+const errores = ref<{ ca?: string; php?: string; path?: string }>({});
 
 onMounted(() => {
   void ejecutar('cargar', async () => {
@@ -90,17 +92,26 @@ onMounted(() => {
     puertoHttps.value = c.https.puerto;
     phpPorDefecto.value = c.herramientas.phpPorDefecto ?? '';
   });
-  void ejecutar('cargarExtra', async () => {
-    const [estadoCa, ramas, path] = await Promise.all([
-      api().https.estado(),
-      api().instalador.instalados('php'),
-      api().path.estado(),
-    ]);
-    ca.value = estadoCa;
-    ramasPhp.value = ramas;
-    enPath.value = path;
-  });
+  void cargarExtra();
 });
+
+async function cargarExtra(): Promise<void> {
+  const [estadoCa, ramas, path] = await Promise.allSettled([
+    api().https.estado(),
+    api().instalador.instalados('php'),
+    api().path.estado(),
+  ]);
+  const error = (r: PromiseRejectedResult): string => t.errorSeccion(mensajeDeError(r.reason));
+  errores.value = {
+    ...(estadoCa.status === 'rejected' ? { ca: error(estadoCa) } : {}),
+    ...(ramas.status === 'rejected' ? { php: error(ramas) } : {}),
+    ...(path.status === 'rejected' ? { path: error(path) } : {}),
+  };
+  if (estadoCa.status === 'fulfilled') ca.value = estadoCa.value;
+  if (ramas.status === 'fulfilled') ramasPhp.value = ramas.value;
+  else ramasPhp.value = [];
+  if (path.status === 'fulfilled') enPath.value = path.value;
+}
 
 async function guardar(): Promise<void> {
   if (!config.value || !valido.value) return;
@@ -209,9 +220,24 @@ async function cambiarPhp(valor: string): Promise<void> {
   if (!ok) phpPorDefecto.value = antes;
 }
 
-async function cambiarPath(): Promise<void> {
+function cambiarPath(): void {
   if (enPath.value === null) return;
-  const activar = !enPath.value;
+  if (!enPath.value) {
+    void aplicarPath(true);
+    return;
+  }
+  dialog.warning({
+    title: tt.pathQuitarTitulo,
+    content: tt.pathQuitarTexto,
+    positiveText: tt.pathQuitar,
+    negativeText: es.acciones.cancelar,
+    onPositiveClick: () => {
+      void aplicarPath(false);
+    },
+  });
+}
+
+async function aplicarPath(activar: boolean): Promise<void> {
   const r = await ejecutar('path', async () => {
     const res = await api().path.cambiar(activar);
     enPath.value = await api().path.estado();
@@ -300,7 +326,8 @@ async function cambiarPath(): Promise<void> {
         <NFormItem :label="th.autoridad">
           <div class="campo">
             <div class="fila-estado">
-              <NSkeleton v-if="!ca" text :width="140" />
+              <span v-if="errores.ca && !ca" class="ayuda error">{{ errores.ca }}</span>
+              <NSkeleton v-else-if="!ca" text :width="140" />
               <EstadoPunto
                 v-else
                 :estado="ca.caInstalada ? 'encendido' : 'apagado'"
@@ -392,7 +419,8 @@ async function cambiarPath(): Promise<void> {
                 :disabled="!config || !ramasPhp?.length"
                 @update:value="cambiarPhp"
               />
-              <small class="ayuda">
+              <small v-if="errores.php" class="ayuda error">{{ errores.php }}</small>
+              <small v-else class="ayuda">
                 {{ ramasPhp && !ramasPhp.length ? tt.phpSinInstalar : tt.phpPorDefectoAyuda }}
               </small>
             </div>
@@ -407,7 +435,8 @@ async function cambiarPath(): Promise<void> {
         <NFormItem :label="tt.path" class="separado">
           <div class="campo">
             <div class="fila-estado">
-              <NSkeleton v-if="enPath === null" text :width="140" />
+              <span v-if="errores.path" class="ayuda error">{{ errores.path }}</span>
+              <NSkeleton v-else-if="enPath === null" text :width="140" />
               <EstadoPunto
                 v-else
                 :estado="enPath ? 'encendido' : 'apagado'"

@@ -149,8 +149,19 @@ export const es = {
     borrarDatos: {
       opcion: 'Borrar datos',
       titulo: (nombre: string) => `Borrar los datos de ${nombre}`,
-      texto:
-        'Se borran todas las bases, usuarios y archivos de este servicio. No se puede deshacer. El programa sigue instalado.',
+      /** Qué se pierde, según el servicio. */
+      que: {
+        mysql: 'todas las bases y usuarios de MySQL',
+        mariadb: 'todas las bases y usuarios de MariaDB',
+        postgresql: 'todas las bases y usuarios de PostgreSQL',
+        redis: 'todas las claves y datos guardados en Redis',
+        mongodb: 'todas las bases, colecciones y datos de MongoDB',
+        mailpit: 'todos los correos atrapados por Mailpit',
+        ollama: 'todos los modelos descargados de Ollama',
+      } as Record<string, string>,
+      texto: (que: string) =>
+        `Se borran ${que}. No se puede deshacer. El programa sigue instalado.`,
+      generico: (nombre: string) => `todos los datos de ${nombre}`,
       pedir: (id: string) => `Para confirmar, escriba ${id}`,
       boton: 'Borrar datos',
       hecho: (nombre: string) => `Datos de ${nombre} borrados`,
@@ -177,6 +188,7 @@ export const es = {
       usoTexto: 'composer',
       ayuda: 'Use «Terminal aquí» en un sitio, o agregue WolfCore Dev al PATH en Ajustes.',
       instaladoOk: 'Composer instalado',
+      sinPhp: 'Instale PHP primero',
       actualizado: (v: string) => `Composer actualizado: ${v}`,
     },
     adminer: {
@@ -196,7 +208,8 @@ export const es = {
     externo: 'Administrado fuera de WolfCore Dev',
     verDetalle: 'Ver detalle del error',
     vacioTitulo: 'Aún no hay servicios',
-    vacio: 'Instale Nginx y una versión de PHP para empezar.',
+    vacio:
+      'Todavía no hay servicios instalados. Empiece por Nginx y PHP para sus sitios, o por una base de datos.',
     irAInstalar: 'Ir a instalar',
   },
   instalar: {
@@ -405,6 +418,7 @@ export const es = {
         ? `Ajustes guardados y aplicados. Reiniciado: ${reiniciados.join(', ')}.`
         : 'Ajustes guardados y aplicados.',
     errorAplicar: 'Ajustes guardados, pero no se pudieron aplicar del todo',
+    errorSeccion: (detalle: string) => `No se pudo leer este dato: ${detalle}`,
     acerca: 'Acerca de',
     versionPrograma: 'Versión del programa',
     https: {
@@ -449,6 +463,9 @@ export const es = {
       pathAgregar: 'Agregar al PATH del usuario',
       pathQuitar: 'Quitar del PATH',
       pathTitulo: 'PATH actualizado',
+      pathQuitarTitulo: '¿Quitar WolfCore Dev del PATH?',
+      pathQuitarTexto:
+        'php y composer de WolfCore Dev dejarán de estar disponibles en las terminales nuevas. Las terminales abiertas no cambian.',
       adminer: 'Puerto de Adminer',
       adminerAyuda: 'Adminer se sirve solo en este equipo, en esta dirección fija.',
     },

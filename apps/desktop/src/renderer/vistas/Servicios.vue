@@ -27,29 +27,15 @@ const gruposInstalar: { titulo: string; servicios: InstalableCatalogo[] }[] = [
 ];
 const seccionInstalar = ref<HTMLElement | null>(null);
 
-/** Sin Nginx ni PHP instalados solo tiene sentido mostrar los servicios externos. */
-const nadaInstalado = computed(
-  () => servicios.instalados['nginx']?.length === 0 && servicios.instalados['php']?.length === 0,
-);
-const visibles = computed(() =>
-  nadaInstalado.value ? servicios.lista.filter((s) => s.estado === 'externo') : servicios.lista,
-);
 /** Grupos con algo que mostrar; Herramientas siempre está (Composer y Adminer). */
 const grupos = computed<GrupoServicios[]>(() => {
-  const res = servicios.grupos
-    .map((g) => ({
-      ...g,
-      servicios: nadaInstalado.value
-        ? g.servicios.filter((s) => s.estado === 'externo')
-        : g.servicios,
-    }))
-    .filter((g) => g.servicios.length > 0);
+  const res = [...servicios.grupos];
   if (!res.some((g) => g.categoria === 'herramientas')) {
     res.push({ categoria: 'herramientas', servicios: [] });
   }
   return res;
 });
-const administrables = computed(() => visibles.value.filter((s) => s.estado !== 'externo'));
+const administrables = computed(() => servicios.visibles.filter((s) => s.estado !== 'externo'));
 // "Detener todo" también cierra los túneles: se habilita si hay alguno abierto.
 const algunoEncendido = computed(
   () =>
@@ -104,7 +90,7 @@ onMounted(() => {
       </NSpace>
     </div>
 
-    <div v-if="nadaInstalado || (servicios.cargado && !visibles.length)" class="vacio">
+    <div v-if="servicios.cargado && servicios.nadaInstalado" class="vacio">
       <NEmpty :description="t.vacio" size="large">
         <template #icon>
           <NIcon><Server /></NIcon>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { CloudDownload, Grid, Open, Refresh, Terminal } from '@vicons/ionicons5';
-import { NButton, NIcon, NProgress, NSkeleton, useMessage } from 'naive-ui';
+import { NButton, NIcon, NProgress, NSkeleton, NTooltip, useMessage } from 'naive-ui';
 import { computed, onMounted, ref, watch } from 'vue';
 import { PUERTO_ADMINER, type DisponibilidadAdminer } from '../../shared/api';
 import { api } from '../api';
@@ -41,16 +41,32 @@ const estado = computed<{ punto: 'encendido' | 'apagado' | 'aviso'; etiqueta: st
     : { punto: 'aviso', etiqueta: t.adminer.sinPhp };
 });
 
+/** Composer necesita PHP para instalarse y para correr. */
+const sinPhp = computed(() => esComposer.value && servicios.instalados['php']?.length === 0);
+
 const ayuda = computed(() => {
-  if (esComposer.value) return instalada.value ? t.composer.ayuda : null;
+  if (esComposer.value) {
+    return instalada.value ? t.composer.ayuda : sinPhp.value ? t.composer.sinPhp : null;
+  }
   const d = disponibilidad.value;
   return instalada.value && d && !d.disponible ? d.motivo : null;
 });
 
-/** Progreso de la descarga en curso (si el núcleo lo informa). */
-const progreso = computed(
-  () => servicios.progresoDe(props.herramienta).find((p) => p.fase !== 'listo') ?? null,
+/**
+ * Progreso de la descarga en curso (si el núcleo lo informa). Un error no se queda pegado: la
+ * notificación ya lo explicó y el progreso se olvida al terminar o al reintentar.
+ */
+const progreso = computed(() =>
+  ocupado('instalar') || ocupado('actualizar')
+    ? (servicios
+        .progresoDe(props.herramienta)
+        .find((p) => p.fase !== 'listo' && p.fase !== 'error') ?? null)
+    : null,
 );
+
+function olvidarProgreso(): void {
+  for (const p of servicios.progresoDe(props.herramienta)) servicios.olvidarProgreso(p);
+}
 
 async function cargar(): Promise<void> {
   if (esComposer.value) {
@@ -66,6 +82,8 @@ async function cargar(): Promise<void> {
 }
 
 async function instalar(): Promise<void> {
+  if (sinPhp.value) return;
+  olvidarProgreso();
   const ok = await ejecutar(
     'instalar',
     async () => {
@@ -74,6 +92,7 @@ async function instalar(): Promise<void> {
     },
     { exito: textos.value.instaladoOk },
   );
+  olvidarProgreso();
   if (ok) await cargar();
 }
 
@@ -88,7 +107,12 @@ function abrirAdminer(): void {
   void ejecutar('abrir', () => api().sistema.abrirUrl(urlAdminer));
 }
 
-onMounted(() => void cargar());
+onMounted(() => {
+  void cargar();
+  if (esComposer.value && servicios.instalados['php'] === undefined) {
+    void ejecutar('php', () => servicios.cargarInstalados('php'));
+  }
+});
 // Adminer depende de que haya un PHP encendido: se vuelve a consultar cuando cambia.
 watch(
   () => servicios.encendidos,
@@ -138,18 +162,26 @@ watch(
 
     <footer class="pie">
       <template v-if="cargada">
-        <NButton
-          v-if="!instalada"
-          size="small"
-          type="primary"
-          :loading="ocupado('instalar')"
-          @click="instalar"
-        >
-          <template #icon
-            ><NIcon><CloudDownload /></NIcon
-          ></template>
-          {{ es.acciones.instalar }}
-        </NButton>
+        <NTooltip v-if="!instalada" :disabled="!sinPhp">
+          <template #trigger>
+            <!-- El span recibe el puntero aunque el botón esté deshabilitado. -->
+            <span tabindex="-1">
+              <NButton
+                size="small"
+                type="primary"
+                :disabled="sinPhp"
+                :loading="ocupado('instalar')"
+                @click="instalar"
+              >
+                <template #icon
+                  ><NIcon><CloudDownload /></NIcon
+                ></template>
+                {{ es.acciones.instalar }}
+              </NButton>
+            </span>
+          </template>
+          {{ t.composer.sinPhp }}
+        </NTooltip>
         <NButton
           v-else-if="esComposer"
           size="small"

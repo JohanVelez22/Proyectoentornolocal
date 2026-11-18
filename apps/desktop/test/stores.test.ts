@@ -309,4 +309,47 @@ describe('stores de la interfaz', () => {
     expect(falsa.api.ftp.redLocal).toHaveBeenCalledWith(true);
     expect(servicios.redLocalFtp).toBe(true);
   });
+  it('con solo una base de datos instalada no se muestra "nada instalado" (sin Nginx ni PHP)', async () => {
+    const servicios = useServicios();
+    servicios.instalados['nginx'] = [];
+    servicios.instalados['php'] = [];
+    servicios.hidratar([
+      nginx,
+      { ...nginx, id: 'ftp', nombre: 'FTP', categoria: 'herramienta', puertos: [2121] },
+      { ...nginx, id: 'mysql', nombre: 'MySQL', categoria: 'bd', puertos: [3306] },
+    ]);
+    expect(servicios.nadaInstalado).toBe(false);
+    // Nginx sin instalar y apagado no se muestra; MySQL y el FTP integrado sí.
+    expect(servicios.visibles.map((s) => s.id)).toEqual(['ftp', 'mysql']);
+    expect(servicios.grupos.map((g) => g.categoria)).toEqual(['bd', 'herramientas']);
+  });
+
+  it('"nada instalado" ignora los externos y el FTP integrado', async () => {
+    const servicios = useServicios();
+    servicios.instalados['nginx'] = [];
+    servicios.instalados['php'] = [];
+    servicios.hidratar([
+      nginx,
+      { ...nginx, id: 'ftp', nombre: 'FTP', categoria: 'herramienta', puertos: [2121] },
+      {
+        ...nginx,
+        id: 'postgresql',
+        nombre: 'PostgreSQL (externo)',
+        categoria: 'bd',
+        estado: 'externo',
+        puertos: [5432],
+      },
+    ]);
+    expect(servicios.nadaInstalado).toBe(true);
+    expect(servicios.visibles.map((s) => s.id)).toEqual(['ftp', 'postgresql']);
+
+    // Mientras no se sabe qué hay instalado no se afirma que no hay nada.
+    servicios.instalados = {};
+    expect(servicios.nadaInstalado).toBe(false);
+    expect(servicios.visibles.map((s) => s.id)).toContain('nginx');
+
+    // Con Nginx instalado deja de estar vacío.
+    servicios.instalados['nginx'] = ['1.28.0'];
+    expect(servicios.nadaInstalado).toBe(false);
+  });
 });

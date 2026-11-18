@@ -56,6 +56,15 @@ const externo = computed(() => props.servicio.estado === 'externo');
 const encendido = computed(() => props.servicio.estado === 'encendido');
 const iniciando = computed(() => props.servicio.estado === 'iniciando');
 const trabajando = computed(() => ocupado('cambiar'));
+/** Mientras corre una acción de esta tarjeta no se ofrece otra que la pise. */
+const tarjetaOcupada = computed(
+  () =>
+    ocupado('cambiar') ||
+    ocupado('puerto') ||
+    ocupado('borrar') ||
+    ocupado('auto') ||
+    iniciando.value,
+);
 const esFtp = computed(() => props.servicio.id === 'ftp');
 /** Servicio propio con puerto, datos y arranque automático (no los externos). */
 const deDatos = computed(() => esServicioDatos(props.servicio.id) && !externo.value);
@@ -131,17 +140,30 @@ async function borrarDatos(): Promise<void> {
 // ---- Menú ⋯ ----
 const iconoMenu = (c: Component) => () => h(NIcon, null, { default: () => h(c) });
 const opciones = computed<DropdownOption[]>(() => [
-  { key: 'puerto', label: t.cambiarPuerto, icon: iconoMenu(SwapHorizontal) },
+  {
+    key: 'puerto',
+    label: t.cambiarPuerto,
+    icon: iconoMenu(SwapHorizontal),
+    disabled: tarjetaOcupada.value,
+  },
   { type: 'divider', key: 'd1' },
   {
     key: 'borrar',
     label: t.borrarDatos.opcion,
     icon: iconoMenu(TrashOutline),
+    disabled: tarjetaOcupada.value,
     props: { style: 'color: #dc2626' },
   },
 ]);
 
+const textoBorrar = computed(() =>
+  t.borrarDatos.texto(
+    t.borrarDatos.que[props.servicio.id] ?? t.borrarDatos.generico(props.servicio.nombre),
+  ),
+);
+
 function elegir(clave: string): void {
+  if (tarjetaOcupada.value) return;
   if (clave === 'puerto') abrirDialogoPuerto();
   if (clave === 'borrar') {
     confirmacion.value = '';
@@ -212,6 +234,7 @@ function cambiarRedLocal(valor: boolean): void {
           circle
           :aria-label="`${es.acciones.masAcciones}: ${servicio.nombre}`"
           :title="es.acciones.masAcciones"
+          :disabled="tarjetaOcupada"
         >
           <template #icon
             ><NIcon><EllipsisHorizontal /></NIcon
@@ -232,6 +255,7 @@ function cambiarRedLocal(valor: boolean): void {
             type="primary"
             class="enlace"
             :aria-label="t.cambiarPuertoDe(servicio.nombre)"
+            :disabled="tarjetaOcupada"
             @click="abrirDialogoPuerto"
           >
             {{ t.cambiarPuerto }}
@@ -254,6 +278,7 @@ function cambiarRedLocal(valor: boolean): void {
           type="warning"
           secondary
           :loading="ocupado('puerto')"
+          :disabled="!ocupado('puerto') && tarjetaOcupada"
           class="conflicto-boton"
           @click="usarAlternativo"
         >
@@ -377,7 +402,7 @@ function cambiarRedLocal(valor: boolean): void {
     >
       <p class="advertencia">
         <NIcon :size="18"><Warning /></NIcon>
-        <span>{{ t.borrarDatos.texto }}</span>
+        <span>{{ textoBorrar }}</span>
       </p>
       <NForm :show-feedback="false" @submit.prevent="borrarDatos">
         <NFormItem :label="t.borrarDatos.pedir(servicio.id)">

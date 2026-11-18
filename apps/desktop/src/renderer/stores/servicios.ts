@@ -108,10 +108,27 @@ export const useServicios = defineStore('servicios', () => {
   const encendidos = computed(() => lista.value.filter((s) => s.estado === 'encendido').length);
 
   /** Solo los grupos con servicios, en el orden de `CATEGORIAS`. */
+  /**
+   * Nginx aparece siempre en los estados del núcleo, aunque no esté instalado: en ese caso (y si
+   * no está en marcha por fuera) se oculta. El resto solo llega si está instalado (o es externo).
+   */
+  const nginxSinInstalar = computed(() => instalados.value['nginx']?.length === 0);
+  const visibles = computed(() =>
+    lista.value.filter(
+      (s) => !(s.id === 'nginx' && nginxSinInstalar.value && s.estado === 'apagado'),
+    ),
+  );
+  /** Ningún servicio propio instalado (los externos y el FTP integrado no cuentan). */
+  const nadaInstalado = computed(
+    () =>
+      nginxSinInstalar.value &&
+      !visibles.value.some((s) => s.estado !== 'externo' && s.id !== 'ftp'),
+  );
+
   const grupos = computed<GrupoServicios[]>(() =>
     CATEGORIAS.map((categoria) => ({
       categoria,
-      servicios: lista.value.filter((s) => categoriaDe(s) === categoria),
+      servicios: visibles.value.filter((s) => categoriaDe(s) === categoria),
     })).filter((g) => g.servicios.length > 0),
   );
 
@@ -205,6 +222,8 @@ export const useServicios = defineStore('servicios', () => {
     autoIniciar,
     redLocalFtp,
     lista,
+    visibles,
+    nadaInstalado,
     grupos,
     encendidos,
     aplicar,
