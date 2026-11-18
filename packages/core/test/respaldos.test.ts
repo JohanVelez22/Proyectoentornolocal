@@ -432,6 +432,17 @@ describe('restaurar', () => {
     expect(r.advertencias).toEqual([]);
   });
 
+  it('MariaDB: el aviso de --ssl-verify-server-cert del cliente no es una advertencia', async () => {
+    respuestaLanzar = () => ({
+      codigo: 0,
+      lineas: [
+        'WARNING: option --ssl-verify-server-cert is disabled, because of an insecure passwordless login.',
+      ],
+    });
+    const r = await armar().restaurar('mariadb', fixture('m.sql', 'SELECT 1;\n'), 'tienda');
+    expect(r.advertencias).toEqual([]);
+  });
+
   it("MySQL: tras 'O\\'Brien', un USE posterior se comenta sin abortar", async () => {
     const datos = "INSERT INTO t VALUES ('O\\'Brien'),('x');\nINSERT INTO t VALUES (2);\n";
     const r = await armar().restaurar('mysql', fixture('m.sql', `${datos}USE otra;\n`), 'tienda');

@@ -71,6 +71,11 @@ const SISTEMA: Record<MotorSql, string[]> = {
   mariadb: ['mysql', 'information_schema', 'performance_schema', 'sys'],
   postgresql: ['postgres', 'template0', 'template1'],
 };
+/**
+ * Aviso del cliente de MariaDB 11.4 en cada conexión cuando la clave va por MYSQL_PWD (la cree
+ * "sin clave"): no dice nada del respaldo y saldría como advertencia en cada restauración.
+ */
+const RUIDO_CLIENTE = /option --ssl-verify-server-cert is disabled/i;
 const RESPALDO_DENTRO = /\.(sql|dump|backup)(\.gz)?$/i;
 const MAX_ADVERTENCIAS = 200;
 const INTERVALO_PROGRESO_MS = 100;
@@ -1324,7 +1329,13 @@ export class Respaldos {
         '--force',
         base,
       ];
-      s = this.salida(operacion, motor, base, claves, (l) => /^(ERROR|Warning)\b/i.test(l));
+      s = this.salida(
+        operacion,
+        motor,
+        base,
+        claves,
+        (l) => /^(ERROR|Warning)\b/i.test(l) && !RUIDO_CLIENTE.test(l),
+      );
       entrada = this.flujoSql(fuente, 'mysql', s, total);
       // Con --force sigue tras un error de una sentencia y sale con 1: eso es una advertencia.
       // Perder la conexión (2006/2013) o no poder entrar sí es un fallo.
@@ -1406,8 +1417,12 @@ export class Respaldos {
         origen.base,
       ];
     }
-    const s = this.salida(operacion, motor, etiqueta, claves, (l) =>
-      /warning|advertencia/i.test(l),
+    const s = this.salida(
+      operacion,
+      motor,
+      etiqueta,
+      claves,
+      (l) => /warning|advertencia/i.test(l) && !RUIDO_CLIENTE.test(l),
     );
     let codigo: number;
     try {
