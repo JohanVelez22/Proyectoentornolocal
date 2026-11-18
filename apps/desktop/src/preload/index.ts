@@ -4,6 +4,7 @@ import {
   EVENTOS_IPC,
   PREFIJO_CANAL,
   type ApiEntorno,
+  type DatosError,
   type ResultadoIpc,
   type RutaIpc,
 } from '../shared/api';
@@ -11,8 +12,9 @@ import {
 async function invocar<T>(ruta: RutaIpc, ...args: unknown[]): Promise<T> {
   const r = (await ipcRenderer.invoke(`${PREFIJO_CANAL}${ruta}`, ...args)) as ResultadoIpc<T>;
   if (!r.ok) {
-    const e = new Error(r.error.mensaje) as Error & { codigo?: string };
+    const e = new Error(r.error.mensaje) as Error & { codigo?: string; datos?: DatosError };
     if (r.error.codigo) e.codigo = r.error.codigo;
+    if (r.error.datos) e.datos = r.error.datos;
     throw e;
   }
   return r.valor;
@@ -44,6 +46,8 @@ const api: ApiEntorno = {
     conexion: (motor) => invocar('bd.conexion', motor),
     bloqueEnv: (motor, base, tipo, envActual) =>
       invocar('bd.bloqueEnv', motor, base, tipo, envActual),
+    bloqueEnvSitio: (sitioId, motor, base) => invocar('bd.bloqueEnvSitio', sitioId, motor, base),
+    carpetaRespaldos: () => invocar('bd.carpetaRespaldos'),
     tieneTablas: (motor, base) => invocar('bd.tieneTablas', motor, base),
     formato: (archivo) => invocar('bd.formato', archivo),
     restaurar: (motor, archivo, base, opciones) =>

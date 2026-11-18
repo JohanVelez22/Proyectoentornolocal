@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { Warning } from '@vicons/ionicons5';
 import { NFormItem, NIcon, NInput } from 'naive-ui';
+import { onMounted } from 'vue';
 import { es } from '../i18n/es';
+import { useBd } from '../stores/bd';
 
 /** Aviso de que la base destino se reemplazará, con la confirmación escrita de su nombre. */
 defineProps<{ base: string }>();
 const escrito = defineModel<string>({ required: true });
 
 const t = es.bd.reemplazo;
+const bd = useBd();
+
+// La carpeta real (Documentos puede estar en OneDrive o redirigido); el texto es el respaldo.
+onMounted(() => void bd.cargarCarpetaRespaldos());
 </script>
 
 <template>
@@ -18,7 +24,7 @@ const t = es.bd.reemplazo;
     </div>
     <p>{{ t.texto(base) }}</p>
     <p class="donde">
-      {{ t.donde }} <code>{{ t.carpetaPorDefecto }}</code>
+      {{ t.donde }} <code>{{ bd.carpetaRespaldos ?? t.carpetaPorDefecto }}</code>
     </p>
     <p class="otra">{{ t.otraBase }}</p>
   </div>

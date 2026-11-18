@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
-import { Nucleo } from '../src/nucleo';
+import { LIMITE_ENV_BYTES, Nucleo } from '../src/nucleo';
 import { Supervisor } from '../src/procesos/supervisor';
 import { BasesDeDatos } from '../src/bd/basesDeDatos';
 import { InstaladorPgvector } from '../src/bd/pgvector';
@@ -836,5 +836,68 @@ describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
     await n.borrarDatosServicio('mysql', 'mysql');
     expect(cambiar).toHaveBeenCalledWith('mysql', 3308);
     expect(borrar).toHaveBeenCalledWith('mysql', 'mysql');
+  });
+
+  describe('bloque .env por sitio', () => {
+    const conexion = {
+      host: '127.0.0.1' as const,
+      puerto: 3308,
+      usuario: 'root',
+      clave: 'clave-local',
+    };
+
+    /** El sitio va directo al config.json (sin validar PHP ni aplicar nginx). */
+    const conSitio = async (tipo: Sitio['tipo']): Promise<Nucleo> => {
+      writeFileSync(
+        path.join(base, 'config.json'),
+        JSON.stringify({ version: 1, sitios: [{ id: 'demo', ...datos({ tipo, php: '8.4' }) }] }),
+      );
+      return crear();
+    };
+
+    it('lee el .env del sitio (desde config) y devuelve solo el bloque', async () => {
+      const n = await conSitio('codeigniter3');
+      const secreto = 'encryption.key = hex2bin:SECRETO_DEL_PROYECTO';
+      writeFileSync(
+        path.join(carpeta, '.env'),
+        `CI_ENVIRONMENT = development\n${secreto}\n# database.default.hostname = localhost\n`,
+      );
+      vi.spyOn(n.bd, 'conexion').mockResolvedValue(conexion);
+      const bloque = await n.bloqueEnvSitio('demo', 'mysql', 'tienda');
+      expect(bloque).toContain('database.default.hostname = 127.0.0.1');
+      expect(bloque).toContain('database.default.database = tienda');
+      expect(bloque).not.toContain('SECRETO_DEL_PROYECTO');
+      expect(bloque).not.toContain('CI_ENVIRONMENT');
+    });
+
+    it('sin .env usa el formato por defecto; un sitio inexistente se rechaza', async () => {
+      const n = await conSitio('laravel');
+      vi.spyOn(n.bd, 'conexion').mockResolvedValue(conexion);
+      expect(await n.bloqueEnvSitio('demo', 'mysql', 'tienda')).toContain('DB_CONNECTION=mysql');
+      await expect(n.bloqueEnvSitio('otro', 'mysql', 'tienda')).rejects.toThrow(
+        'El sitio ya no existe',
+      );
+    });
+
+    it('solo lee los primeros 256 KB del .env', async () => {
+      const n = await conSitio('codeigniter3');
+      // La marca de CodeIgniter 4 queda fuera del límite: no se detecta.
+      writeFileSync(
+        path.join(carpeta, '.env'),
+        `${'#'.repeat(LIMITE_ENV_BYTES)}\ndatabase.default.hostname = localhost\n`,
+      );
+      vi.spyOn(n.bd, 'conexion').mockResolvedValue(conexion);
+      const bloque = await n.bloqueEnvSitio('demo', 'mysql', 'tienda');
+      expect(bloque).not.toContain('database.default');
+      expect(bloque).toContain('DB_HOST=127.0.0.1');
+    });
+  });
+
+  it('carpetaRespaldos usa la carpeta Documentos real de la plataforma', async () => {
+    plataforma = { ...falsa(), carpetaDocumentos: async () => 'D:/OneDrive/Documentos' };
+    const n = await crear();
+    expect(await n.carpetaRespaldos()).toBe(
+      path.join('D:/OneDrive/Documentos', 'WolfCore Dev', 'Respaldos'),
+    );
   });
 });

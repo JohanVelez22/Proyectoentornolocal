@@ -933,6 +933,14 @@ const NO_RECONOCIDO =
 export class Respaldos {
   constructor(private readonly d: DepsRespaldos) {}
 
+  /**
+   * Carpeta por defecto de los respaldos (también la de las copias de seguridad automáticas):
+   * `<Documentos>\WolfCore Dev\Respaldos`, con la carpeta Documentos real (OneDrive, redirigida).
+   */
+  async carpetaRespaldos(): Promise<string> {
+    return path.join(await this.d.plataforma.carpetaDocumentos(), 'WolfCore Dev', 'Respaldos');
+  }
+
   private get lanzar(): Lanzador {
     return this.d.lanzar ?? lanzadorPorDefecto;
   }
@@ -1431,9 +1439,7 @@ export class Respaldos {
     prefijo: string,
   ): Promise<{ archivo: string }> {
     const con = await this.d.bd.conexion(m);
-    const carpeta = carpetaDestino
-      ? path.resolve(carpetaDestino)
-      : path.join(await this.d.plataforma.carpetaDocumentos(), 'WolfCore Dev', 'Respaldos');
+    const carpeta = carpetaDestino ? path.resolve(carpetaDestino) : await this.carpetaRespaldos();
     await mkdir(carpeta, { recursive: true });
     const ext = m === 'postgresql' ? '.dump' : '.sql';
     const raiz = path.join(carpeta, `${prefijo}-${sello(this.ahora())}`);

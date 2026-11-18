@@ -4,6 +4,7 @@ import {
   EVENTOS_IPC,
   PREFIJO_CANAL,
   type ApiSistema,
+  type DatosError,
   type ResultadoIpc,
   type RutaIpc,
 } from '../shared/api';
@@ -90,8 +91,13 @@ async function sinClave<T>(clave: string, fn: () => Promise<T>): Promise<T> {
   } catch (e) {
     const mensaje = e instanceof Error ? e.message : String(e);
     const codigo = (e as { codigo?: unknown } | null)?.codigo;
-    const limpio = clave ? mensaje.split(clave).join('***') : mensaje;
-    throw Object.assign(new Error(limpio), typeof codigo === 'string' ? { codigo } : {});
+    const limpiar = (t: string): string => (clave ? t.split(clave).join('***') : t);
+    const previo = (e as { respaldoPrevio?: unknown } | null)?.respaldoPrevio;
+    throw Object.assign(
+      new Error(limpiar(mensaje)),
+      typeof codigo === 'string' ? { codigo } : {},
+      typeof previo === 'string' ? { respaldoPrevio: limpiar(previo) } : {},
+    );
   }
 }
 
@@ -163,6 +169,11 @@ const TABLA: Record<RutaIpc, Manejador> = {
       envActual === undefined ? undefined : textoAcotadoEnv(envActual),
     );
   },
+  'bd.bloqueEnvSitio': (n, _s, sitioId, motor, base) => {
+    const m = motorBd(motor);
+    return n.bloqueEnvSitio(textoAcotado(sitioId, 1, 128, 'sitio'), m, nombreBase(m, base));
+  },
+  'bd.carpetaRespaldos': (n) => n.carpetaRespaldos(),
   'bd.tieneTablas': (n, _s, motor, base) => {
     const m = motorSql(motor);
     return n.tieneTablas(m, nombreBase(m, base));
@@ -271,12 +282,32 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'sistema.version': (_n, s) => s.version(),
 };
 
+/** Máximo de un dato estructurado de error (una ruta). */
+const MAX_DATO_ERROR = 1024;
+
+/**
+ * Datos estructurados del error, por lista blanca: solo `respaldoPrevio` (texto acotado). Nunca
+ * la traza, la causa ni otras propiedades del error.
+ */
+function datosError(e: unknown): DatosError | undefined {
+  const previo = (e as { respaldoPrevio?: unknown } | null)?.respaldoPrevio;
+  if (typeof previo !== 'string' || previo === '' || previo.length > MAX_DATO_ERROR) {
+    return undefined;
+  }
+  return { respaldoPrevio: previo };
+}
+
 function aError(e: unknown): ResultadoIpc<never> {
   const mensaje = e instanceof Error ? e.message : String(e);
   const codigo = (e as { codigo?: unknown } | null)?.codigo;
+  const datos = datosError(e);
   return {
     ok: false,
-    error: typeof codigo === 'string' ? { mensaje, codigo } : { mensaje },
+    error: {
+      mensaje,
+      ...(typeof codigo === 'string' ? { codigo } : {}),
+      ...(datos ? { datos } : {}),
+    },
   };
 }
 

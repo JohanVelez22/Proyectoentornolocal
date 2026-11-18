@@ -5,36 +5,47 @@ import {
   NFormItem,
   NIcon,
   NModal,
-  NRadioButton,
-  NRadioGroup,
+  NSelect,
   NSkeleton,
   NTooltip,
   useMessage,
 } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
-import type { DatosConexion, MotorBd, TipoSitio } from '../../shared/api';
+import type { DatosConexion, MotorBd } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
+import { useSitios } from '../stores/sitios';
 
 /** Datos de conexión de una base y su bloque .env. La clave solo vive mientras está abierto. */
 const props = defineProps<{ motor: MotorBd; base: string }>();
 const mostrar = defineModel<boolean>('show', { required: true });
 
-type TipoEnv = Extract<TipoSitio, 'laravel' | 'codeigniter3'> | 'generico';
+/** Valor del selector cuando no se elige un sitio. */
+const GENERICO = '';
 
 const t = es.bd.dialogoConexion;
 const message = useMessage();
+const sitios = useSitios();
 const { ejecutar, ocupado } = useAccion();
 
 const datos = ref<DatosConexion | null>(null);
 const bloque = ref('');
 const verClave = ref(false);
-const tipo = ref<TipoEnv>('laravel');
+/** Id del sitio cuyo .env se toma como referencia, o GENERICO. */
+const sitioId = ref<string>(GENERICO);
 
-const tipos = computed<TipoEnv[]>(() =>
-  props.motor === 'mongodb' ? ['generico'] : ['laravel', 'codeigniter3', 'generico'],
-);
+/** MongoDB solo tiene MONGODB_URI: no depende del proyecto. */
+const conSitios = computed(() => props.motor !== 'mongodb' && sitios.lista.length > 0);
+const opcionesSitio = computed(() => [
+  ...[...sitios.lista]
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+    .map((s) => ({
+      label: `${s.nombre} · ${es.sitios.tipos[s.tipo] ?? s.tipo}`,
+      value: s.id,
+    })),
+  { label: t.generico, value: GENERICO },
+]);
 
 const filas = computed(() => {
   const d = datos.value;
@@ -57,21 +68,28 @@ function olvidar(): void {
 }
 
 async function cargarBloque(): Promise<void> {
-  const b = await ejecutar('bloque', () => api().bd.bloqueEnv(props.motor, props.base, tipo.value));
+  const id = sitioId.value;
+  const b = await ejecutar('bloque', () =>
+    id === GENERICO
+      ? api().bd.bloqueEnv(props.motor, props.base, 'generico')
+      : api().bd.bloqueEnvSitio(id, props.motor, props.base),
+  );
+  // Si se cambió de sitio mientras tanto, este bloque ya no vale.
+  if (id !== sitioId.value) return;
   if (b !== undefined && mostrar.value) bloque.value = b;
 }
 
 watch(mostrar, async (v) => {
   olvidar();
   if (!v) return;
-  tipo.value = props.motor === 'mongodb' ? 'generico' : 'laravel';
+  sitioId.value = GENERICO;
   const d = await ejecutar('datos', () => api().bd.conexion(props.motor));
   if (!mostrar.value) return;
   datos.value = d ?? null;
   if (d) await cargarBloque();
 });
 
-watch(tipo, () => {
+watch(sitioId, () => {
   if (mostrar.value && datos.value) void cargarBloque();
 });
 
@@ -141,10 +159,13 @@ function copiar(texto: string): void {
         </div>
       </dl>
 
-      <NFormItem v-if="tipos.length > 1" :label="t.tipo" :show-feedback="false" class="tipo">
-        <NRadioGroup v-model:value="tipo" size="small">
-          <NRadioButton v-for="x in tipos" :key="x" :value="x">{{ t.tipos[x] }}</NRadioButton>
-        </NRadioGroup>
+      <NFormItem v-if="conSitios" :label="t.sitio" :feedback="t.sitioAyuda" class="tipo">
+        <NSelect
+          v-model:value="sitioId"
+          :options="opcionesSitio"
+          size="small"
+          :consistent-menu-width="false"
+        />
       </NFormItem>
 
       <div class="env">

@@ -135,6 +135,13 @@ export interface ApiEntorno {
       tipoProyecto: TipoSitio | 'generico',
       envActual?: string,
     ): Promise<string>;
+    /**
+     * Bloque .env para el proyecto de un sitio: el núcleo lee el .env del sitio (para respetar
+     * sus variables) y devuelve solo el bloque generado.
+     */
+    bloqueEnvSitio(sitioId: string, motor: MotorBd, base: string): Promise<string>;
+    /** Carpeta real de respaldos y copias de seguridad automáticas (Documentos\WolfCore Dev\Respaldos). */
+    carpetaRespaldos(): Promise<string>;
     tieneTablas(motor: MotorSql, base: string): Promise<boolean>;
     formato(archivo: string): Promise<FormatoRespaldo>;
     restaurar(
@@ -239,8 +246,17 @@ export interface ApiEntorno {
   on<K extends keyof EventosNucleo>(nombre: K, fn: (dato: EventosNucleo[K]) => void): () => void;
 }
 
+/**
+ * Datos estructurados que pueden acompañar un error (lista blanca en el proceso principal):
+ * `respaldoPrevio` es la copia de seguridad hecha antes de reemplazar una base.
+ */
+export interface DatosError {
+  respaldoPrevio?: string;
+}
+
 export type ResultadoIpc<T = unknown> =
-  { ok: true; valor: T } | { ok: false; error: { mensaje: string; codigo?: string } };
+  | { ok: true; valor: T }
+  | { ok: false; error: { mensaje: string; codigo?: string; datos?: DatosError } };
 
 export const CANAL_EVENTO = 'entorno:evento';
 export const PREFIJO_CANAL = 'entorno:';
@@ -266,6 +282,8 @@ export const RUTAS_IPC = [
   'bd.borrar',
   'bd.conexion',
   'bd.bloqueEnv',
+  'bd.bloqueEnvSitio',
+  'bd.carpetaRespaldos',
   'bd.tieneTablas',
   'bd.formato',
   'bd.restaurar',

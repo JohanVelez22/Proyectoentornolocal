@@ -91,7 +91,7 @@ watch(baseOrigen, (b) => {
 });
 
 async function continuar(): Promise<void> {
-  if (!completo.value || bd.enCurso) return;
+  if (!completo.value || bd.enCurso || ocupado('revisar')) return;
   const tablas = await ejecutar('revisar', () => api().bd.tieneTablas(props.motor, destino.value));
   if (tablas === undefined) return;
   if (opcionesRestaurar(tablas, false) === null) {
@@ -177,8 +177,8 @@ function cerrar(): void {
             :feedback="host.trim() ? '' : t.faltaHost"
           >
             <NInput
-              placeholder=""
               v-model:value="host"
+              placeholder=""
               :input-props="{ spellcheck: false, autocomplete: 'off' }"
               class="mono"
             />
@@ -201,16 +201,16 @@ function cerrar(): void {
         <div class="fila">
           <NFormItem :label="t.usuario" class="crece">
             <NInput
-              placeholder=""
               v-model:value="usuario"
+              placeholder=""
               :input-props="{ spellcheck: false, autocomplete: 'off' }"
               class="mono"
             />
           </NFormItem>
           <NFormItem :label="t.clave" class="crece" :feedback="t.claveAyuda">
             <NInput
-              placeholder=""
               v-model:value="clave"
+              placeholder=""
               type="password"
               show-password-on="click"
               :input-props="{ autocomplete: 'new-password' }"
@@ -219,8 +219,8 @@ function cerrar(): void {
         </div>
         <NFormItem :label="t.baseOrigen">
           <NInput
-            placeholder=""
             v-model:value="baseOrigen"
+            placeholder=""
             :input-props="{ spellcheck: false, autocomplete: 'off' }"
             class="mono"
           />
@@ -233,8 +233,8 @@ function cerrar(): void {
         :feedback="destino && problemaDestino ? textoProblema : t.destinoAyuda"
       >
         <NInput
-          placeholder=""
           v-model:value="destino"
+          placeholder=""
           :input-props="{ spellcheck: false, autocomplete: 'off' }"
           class="mono"
           @update:value="destinoTocado = true"

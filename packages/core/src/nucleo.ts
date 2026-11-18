@@ -1,4 +1,5 @@
 import type * as childProcess from 'node:child_process';
+import { open } from 'node:fs/promises';
 import path from 'node:path';
 import { Almacen, AlmacenCredenciales, migrarCredenciales } from './almacen';
 import {
@@ -513,6 +514,23 @@ export class Nucleo {
     return this.bd.bloqueEnv(motor, base, tipoProyecto, envActual);
   }
 
+  /**
+   * Bloque de conexión para el `.env` de un sitio: la carpeta sale de la configuración (nunca
+   * del renderer), se lee su `.env` (máx. 256 KB; si no hay, vacío) para respetar las variables
+   * que ya usa, y se usa el tipo del sitio. Devuelve solo el bloque generado, nunca el `.env`.
+   */
+  async bloqueEnvSitio(sitioId: string, motor: MotorBd, base: string): Promise<string> {
+    const sitio = (await this.config.leer()).sitios.find((s) => s.id === sitioId);
+    if (!sitio) throw new Error('El sitio ya no existe.');
+    const envActual = await leerEnvAcotado(path.join(sitio.carpeta, '.env'));
+    return this.bd.bloqueEnv(motor, base, sitio.tipo, envActual);
+  }
+
+  /** Carpeta real donde se guardan los respaldos y las copias de seguridad automáticas. */
+  carpetaRespaldos(): Promise<string> {
+    return this.respaldos.carpetaRespaldos();
+  }
+
   /** true si la base existe y tiene tablas (para pedir confirmación antes de sobrescribir). */
   tieneTablas(motor: MotorBd, base: string): Promise<boolean> {
     return this.bd.tieneTablas(motor, base);
@@ -910,5 +928,23 @@ export class Nucleo {
       }
     }
     if (fallo) throw primero;
+  }
+}
+
+/** Máximo que se lee del `.env` de un proyecto para detectar sus variables. */
+export const LIMITE_ENV_BYTES = 256 * 1024;
+
+/** Primeros 256 KB del archivo como texto; '' si no existe o no se puede leer. */
+async function leerEnvAcotado(ruta: string): Promise<string> {
+  let f: Awaited<ReturnType<typeof open>> | null = null;
+  try {
+    f = await open(ruta, 'r');
+    const buf = Buffer.alloc(LIMITE_ENV_BYTES);
+    const { bytesRead } = await f.read(buf, 0, LIMITE_ENV_BYTES, 0);
+    return buf.subarray(0, bytesRead).toString('utf8');
+  } catch {
+    return '';
+  } finally {
+    await f?.close().catch(() => undefined);
   }
 }

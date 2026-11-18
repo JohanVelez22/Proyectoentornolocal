@@ -79,8 +79,8 @@ async function crear(): Promise<void> {
         :feedback="nombre ? texto(problema) : ''"
       >
         <NInput
-          placeholder=""
           v-model:value="nombre"
+          placeholder=""
           :input-props="{ spellcheck: false, autocomplete: 'off' }"
           class="mono"
           autofocus
@@ -102,16 +102,16 @@ async function crear(): Promise<void> {
             :feedback="usuario ? texto(problemaUsuario) : ''"
           >
             <NInput
-              placeholder=""
               v-model:value="usuario"
+              placeholder=""
               :input-props="{ spellcheck: false, autocomplete: 'off' }"
               class="mono"
             />
           </NFormItem>
           <NFormItem :label="t.clave" class="crece" :feedback="clave ? '' : t.faltaClave">
             <NInput
-              placeholder=""
               v-model:value="clave"
+              placeholder=""
               type="password"
               show-password-on="click"
               :input-props="{ autocomplete: 'new-password' }"

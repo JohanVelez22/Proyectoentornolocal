@@ -313,7 +313,7 @@ export const es = {
       } as Record<string, string>,
       trasReemplazo: 'La base original se reemplazó y la restauración no terminó',
       trasReemplazoAyuda:
-        'Sus datos anteriores están a salvo en la copia de seguridad. Puede restaurarla con «Restaurar respaldo».',
+        'Sus datos anteriores están en la copia de seguridad indicada. Puede restaurarla con «Restaurar respaldo».',
     },
     progreso: {
       titulo: 'Registro',
@@ -324,7 +324,9 @@ export const es = {
       } as Record<string, (base: string) => string>,
       vacio: 'Esperando la salida de la herramienta…',
       limitado: (n: number) => `Se muestran las últimas ${n} líneas.`,
-      noCierre: 'Puede seguir usando WolfCore Dev; no cierre el programa hasta que termine.',
+      noCierre:
+        'No cierre el programa hasta que termine. Puede salir de esta pantalla y volver: aquí verá el resultado.',
+      otraEnCurso: 'Ya hay una operación en curso; espere a que termine.',
       ver: 'Ver detalle',
       descartar: 'Descartar',
     },
@@ -396,6 +398,7 @@ export const es = {
       titulo: (base: string) => `Respaldar ${base}`,
       destino: 'Se guardará en',
       porDefecto: 'Documentos\\WolfCore Dev\\Respaldos (carpeta por defecto)',
+      porDefectoEn: (carpeta: string) => `${carpeta} (carpeta por defecto)`,
       cambiar: 'Elegir otra carpeta…',
       porDefectoVolver: 'Usar la carpeta por defecto',
       formato: {
@@ -406,6 +409,10 @@ export const es = {
       boton: 'Respaldar',
     },
     dialogoConexion: {
+      sitio: 'Proyecto',
+      sitioAyuda:
+        'Se lee el .env del sitio para usar las variables que ya tiene (por ejemplo, CodeIgniter 4). Su contenido no se muestra ni se copia.',
+      generico: 'Genérico (formato Laravel)',
       titulo: (base: string) => `Conexión a ${base}`,
       host: 'Servidor',
       puerto: 'Puerto',
@@ -416,12 +423,6 @@ export const es = {
       mostrar: 'Mostrar clave',
       ocultar: 'Ocultar clave',
       copiarDato: (dato: string) => `Copiar ${dato}`,
-      tipo: 'Tipo de proyecto',
-      tipos: {
-        laravel: 'Laravel',
-        codeigniter3: 'CodeIgniter',
-        generico: 'Genérico',
-      } as Record<string, string>,
       env: 'Bloque para el archivo .env',
       envAyuda: 'Péguelo en el .env de su proyecto. WolfCore Dev no escribe en sus proyectos.',
       copiarEnv: 'Copiar bloque',

@@ -48,6 +48,8 @@ function nucleoFalso() {
         'borrarBase',
         'conexionBd',
         'bloqueEnvBd',
+        'bloqueEnvSitio',
+        'carpetaRespaldos',
         'tieneTablas',
         'formatoRespaldo',
         'restaurarBase',
@@ -327,6 +329,8 @@ describe('registrarIpc', () => {
         'bd.borrar',
         'bd.conexion',
         'bd.bloqueEnv',
+        'bd.bloqueEnvSitio',
+        'bd.carpetaRespaldos',
         'bd.tieneTablas',
         'bd.formato',
         'bd.restaurar',
@@ -551,6 +555,93 @@ describe('registrarIpc', () => {
       'd',
     );
     expect(JSON.stringify(x)).not.toContain('clave-secreta');
+  });
+
+  it('un error solo lleva datos estructurados de la lista blanca (respaldoPrevio)', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    const f = crudo as unknown as Record<string, Mock>;
+    const previo = 'C:/Users/x/Documents/WolfCore Dev/Respaldos/d-antes.dump';
+    const error = Object.assign(new Error('No se pudo completar la restauración de d.'), {
+      codigo: 'tras-reemplazo',
+      respaldoPrevio: previo,
+      clave: 'secreto-1',
+      detalle: { interno: 'secreto-2' },
+      cause: new Error('secreto-3'),
+    });
+    f['restaurarBase']!.mockRejectedValueOnce(error);
+    f['importarBase']!.mockRejectedValueOnce(error);
+    f['respaldarBase']!.mockRejectedValueOnce(
+      Object.assign(new Error('x'), { respaldoPrevio: 'a'.repeat(1025) }),
+    );
+    f['tieneTablas']!.mockRejectedValueOnce(Object.assign(new Error('y'), { respaldoPrevio: 42 }));
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const carpeta = mkdtempSync(path.join(os.tmpdir(), 'pel-ipc-'));
+    const archivo = path.join(carpeta, 'd.dump');
+    writeFileSync(archivo, 'PGDMP');
+    try {
+      sistema.elegirArchivo.mockResolvedValueOnce(archivo);
+      await canales.get('entorno:sistema.elegirArchivo')!({});
+      const r = await canales.get('entorno:bd.restaurar')!({}, 'postgresql', archivo, 'd', {
+        confirmarSobrescribir: true,
+      });
+      expect(r).toEqual({
+        ok: false,
+        error: {
+          mensaje: 'No se pudo completar la restauración de d.',
+          codigo: 'tras-reemplazo',
+          datos: { respaldoPrevio: previo },
+        },
+      });
+      expect(JSON.stringify(r)).not.toMatch(/secreto|stack|cause/);
+      // Importar (que enmascara la clave) conserva el dato.
+      const origen = { host: 'h', puerto: 3306, usuario: 'root', clave: 'k', base: 'd' };
+      const i = (await canales.get('entorno:bd.importar')!({}, 'mysql', origen, 'd')) as {
+        error: { datos?: unknown };
+      };
+      expect(i.error.datos).toEqual({ respaldoPrevio: previo });
+      // Demasiado largo o de otro tipo: no viaja.
+      const largo = (await canales.get('entorno:bd.respaldar')!({}, 'mysql', 'd')) as {
+        error: Record<string, unknown>;
+      };
+      expect(largo.error).not.toHaveProperty('datos');
+      const numero = (await canales.get('entorno:bd.tieneTablas')!({}, 'mysql', 'd')) as {
+        error: Record<string, unknown>;
+      };
+      expect(numero.error).not.toHaveProperty('datos');
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
+  });
+
+  it('bd.bloqueEnvSitio valida el sitio y pasa al núcleo solo id, motor y base', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    const f = crudo as unknown as Record<string, Mock>;
+    f['bloqueEnvSitio']!.mockResolvedValue('DB_HOST=127.0.0.1\n');
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const llamar = (...a: unknown[]) => canales.get('entorno:bd.bloqueEnvSitio')!({}, ...a);
+    for (const malo of [
+      ['', 'mysql', 'tienda'],
+      [42, 'mysql', 'tienda'],
+      ['x'.repeat(129), 'mysql', 'tienda'],
+      ['demo\n', 'mysql', 'tienda'],
+      ['demo', 'oracle', 'tienda'],
+      ['demo', 'postgresql', 'Tienda'],
+    ]) {
+      expect(((await llamar(...malo)) as { ok: boolean }).ok).toBe(false);
+    }
+    expect(f['bloqueEnvSitio']).not.toHaveBeenCalled();
+    expect(await llamar('demo', 'mysql', 'tienda', 'C:/otra/carpeta')).toEqual({
+      ok: true,
+      valor: 'DB_HOST=127.0.0.1\n',
+    });
+    expect(f['bloqueEnvSitio']).toHaveBeenCalledWith('demo', 'mysql', 'tienda');
+    f['carpetaRespaldos']!.mockResolvedValue('D:/Docs/WolfCore Dev/Respaldos');
+    expect(await canales.get('entorno:bd.carpetaRespaldos')!({})).toEqual({
+      ok: true,
+      valor: 'D:/Docs/WolfCore Dev/Respaldos',
+    });
   });
 
   it('reenvía bd:progreso e ia:progreso', () => {

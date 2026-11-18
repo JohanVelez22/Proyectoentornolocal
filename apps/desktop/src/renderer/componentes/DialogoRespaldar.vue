@@ -26,6 +26,7 @@ const operacion = computed(() => (lanzado.value ? bd.operacion : null));
 
 watch(mostrar, (v) => {
   if (!v) return;
+  void bd.cargarCarpetaRespaldos();
   carpeta.value = null;
   lanzado.value = false;
 });
@@ -71,7 +72,9 @@ function cerrar(): void {
         <span class="etiqueta">{{ t.destino }}</span>
         <div class="ruta">
           <NIcon :size="18"><Folder /></NIcon>
-          <code>{{ carpeta ?? t.porDefecto }}</code>
+          <code>{{
+            carpeta ?? (bd.carpetaRespaldos ? t.porDefectoEn(bd.carpetaRespaldos) : t.porDefecto)
+          }}</code>
         </div>
         <div class="botones">
           <NButton size="small" :loading="ocupado('elegir')" @click="elegirCarpeta">

@@ -63,6 +63,7 @@ export const useBd = defineStore('bd', () => {
   const pgvector = ref<EstadoPgvector | null>(null);
   const lineasPgvector = ref<LineaRegistro[]>([]);
   const tareaPgvector = ref<TareaPgvector | null>(null);
+  const carpetaRespaldos = ref<string | null>(null);
   let contador = 0;
   let bajas: (() => void)[] = [];
 
@@ -84,8 +85,9 @@ export const useBd = defineStore('bd', () => {
     lineas.value = [];
   }
 
+  /** Solo mientras corre una operación: líneas sueltas no ensucian un resultado ya mostrado. */
   function aplicarProgreso(p: ProgresoBd): void {
-    agregarLinea(p.linea);
+    if (enCurso.value) agregarLinea(p.linea);
   }
 
   function aplicarProgresoInstalacion(p: ProgresoInstalacion): void {
@@ -111,24 +113,46 @@ export const useBd = defineStore('bd', () => {
     }
   }
 
-  function empezar(tipo: TipoOperacion, motor: MotorSql, base: string): void {
-    if (enCurso.value) throw new Error('Ya hay una operación en curso; espere a que termine.');
-    limpiarLineas();
-    operacion.value = { tipo, motor, base, estado: 'corriendo' };
-  }
-
-  function fallar(e: unknown): void {
-    if (!operacion.value) return;
+  /** Error de una operación: el respaldo previo llega estructurado; el mensaje es el respaldo. */
+  function conError(o: OperacionBd, e: unknown): OperacionBd {
     const mensaje = mensajeDeError(e);
     const tras = esErrorTrasReemplazo(e);
-    operacion.value = {
-      ...operacion.value,
+    const datos = (e as { datos?: { respaldoPrevio?: unknown } } | null)?.datos;
+    const previo =
+      typeof datos?.respaldoPrevio === 'string' ? datos.respaldoPrevio : respaldoEnMensaje(mensaje);
+    return {
+      ...o,
       estado: 'error',
       error: mensaje,
       trasReemplazo: tras,
-      respaldoPrevio: tras ? respaldoEnMensaje(mensaje) : null,
+      respaldoPrevio: tras ? previo : null,
     };
   }
+
+  /**
+   * Corre una operación larga y deja su resultado (o error) en `operacion`. Nunca lanza: si ya
+   * hay otra en curso, devuelve un error sin tocar la que corre.
+   */
+  async function correr(
+    tipo: TipoOperacion,
+    motor: MotorSql,
+    base: string,
+    fn: () => Promise<Partial<OperacionBd>>,
+  ): Promise<OperacionBd> {
+    let o: OperacionBd = { tipo, motor, base, estado: 'corriendo' };
+    if (enCurso.value) return { ...o, estado: 'error', error: es.bd.progreso.otraEnCurso };
+    try {
+      limpiarLineas();
+      operacion.value = o;
+      o = { ...o, ...(await fn()), estado: 'ok' };
+    } catch (e) {
+      o = conError(o, e);
+    }
+    operacion.value = o;
+    return o;
+  }
+
+  const opciones = (confirmar: boolean) => (confirmar ? { confirmarSobrescribir: true } : {});
 
   /** Restaura un respaldo; el resultado (o el error) queda en `operacion`. Nunca lanza. */
   async function restaurar(
@@ -137,20 +161,11 @@ export const useBd = defineStore('bd', () => {
     base: string,
     confirmarSobrescribir: boolean,
   ): Promise<OperacionBd> {
-    empezar('restaurar', motor, base);
-    try {
-      const r = await api().bd.restaurar(
-        motor,
-        archivo,
-        base,
-        confirmarSobrescribir ? { confirmarSobrescribir: true } : {},
-      );
-      operacion.value = { ...operacion.value!, estado: 'ok', resultado: r };
-    } catch (e) {
-      fallar(e);
-    }
-    void cargarBases(motor);
-    return operacion.value!;
+    const o = await correr('restaurar', motor, base, async () => ({
+      resultado: await api().bd.restaurar(motor, archivo, base, opciones(confirmarSobrescribir)),
+    }));
+    if (o === operacion.value) void cargarBases(motor);
+    return o;
   }
 
   /**
@@ -163,35 +178,32 @@ export const useBd = defineStore('bd', () => {
     destino: string,
     confirmarSobrescribir: boolean,
   ): Promise<OperacionBd> {
-    empezar('importar', motor, destino);
-    try {
-      const r = await api().bd.importar(
+    const o = await correr('importar', motor, destino, async () => ({
+      resultado: await api().bd.importar(
         motor,
         plano(origen),
         destino,
-        confirmarSobrescribir ? { confirmarSobrescribir: true } : {},
-      );
-      operacion.value = { ...operacion.value!, estado: 'ok', resultado: r };
-    } catch (e) {
-      fallar(e);
-    }
-    void cargarBases(motor);
-    return operacion.value!;
+        opciones(confirmarSobrescribir),
+      ),
+    }));
+    if (o === operacion.value) void cargarBases(motor);
+    return o;
   }
 
-  async function respaldar(
-    motor: MotorSql,
-    base: string,
-    carpeta: string | null,
-  ): Promise<OperacionBd> {
-    empezar('respaldar', motor, base);
+  function respaldar(motor: MotorSql, base: string, carpeta: string | null): Promise<OperacionBd> {
+    return correr('respaldar', motor, base, async () => ({
+      archivo: (await api().bd.respaldar(motor, base, carpeta ?? undefined)).archivo,
+    }));
+  }
+
+  /** Carpeta real de respaldos (Documentos puede estar en OneDrive o redirigido). */
+  async function cargarCarpetaRespaldos(): Promise<void> {
+    if (carpetaRespaldos.value) return;
     try {
-      const r = await api().bd.respaldar(motor, base, carpeta ?? undefined);
-      operacion.value = { ...operacion.value!, estado: 'ok', archivo: r.archivo };
-    } catch (e) {
-      fallar(e);
+      carpetaRespaldos.value = await api().bd.carpetaRespaldos();
+    } catch {
+      // Se muestra la ruta por defecto como texto.
     }
-    return operacion.value!;
   }
 
   /** Olvida una operación terminada (la que está en curso no se puede descartar). */
@@ -247,6 +259,7 @@ export const useBd = defineStore('bd', () => {
     pgvector,
     lineasPgvector,
     tareaPgvector,
+    carpetaRespaldos,
     enCurso,
     agregarLinea,
     limpiarLineas,
@@ -254,6 +267,7 @@ export const useBd = defineStore('bd', () => {
     restaurar,
     importar,
     respaldar,
+    cargarCarpetaRespaldos,
     descartarOperacion,
     cargarPgvector,
     instalarBuildTools,

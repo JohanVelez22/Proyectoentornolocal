@@ -171,9 +171,14 @@ describe('store de Bases de datos', () => {
     vi.unstubAllGlobals();
   });
 
-  it('el registro de bd:progreso conserva solo las últimas líneas', () => {
+  it('el registro de bd:progreso conserva solo las últimas líneas', async () => {
     const bd = useBd();
     bd.iniciar();
+    let terminar!: (v: { advertencias: string[] }) => void;
+    falsa.api.bd.restaurar.mockImplementationOnce(
+      () => new Promise((r) => (terminar = r)) as never,
+    );
+    const p = bd.restaurar('postgresql', 'C:/x/d.dump', 'd', false);
     for (let i = 0; i < LIMITE_LINEAS + 120; i++) {
       falsa.emitir('bd:progreso', {
         operacion: 'restaurar',
@@ -187,6 +192,20 @@ describe('store de Bases de datos', () => {
     expect(bd.lineas.at(-1)!.texto).toBe(`línea ${LIMITE_LINEAS + 119}`);
     // Claves únicas para la lista.
     expect(new Set(bd.lineas.map((l) => l.n)).size).toBe(LIMITE_LINEAS);
+    terminar({ advertencias: [] });
+    await p;
+  });
+
+  it('las líneas que llegan sin una operación en curso se ignoran', async () => {
+    const bd = useBd();
+    bd.iniciar();
+    const linea = { operacion: 'restaurar' as const, motor: 'mysql' as const, base: 'd' };
+    falsa.emitir('bd:progreso', { ...linea, linea: 'antes' });
+    expect(bd.lineas).toEqual([]);
+    await bd.restaurar('mysql', 'C:/a.sql', 'd', false);
+    // Terminada: una línea tardía no ensucia el resultado mostrado.
+    falsa.emitir('bd:progreso', { ...linea, linea: 'tarde' });
+    expect(bd.lineas).toEqual([]);
   });
 
   it('el progreso de pgvector y de las Build Tools va a su propio registro', () => {
@@ -248,6 +267,17 @@ describe('store de Bases de datos', () => {
       trasReemplazo: true,
       respaldoPrevio: 'C:\\R\\d-antes.dump',
     });
+
+    // Con el dato estructurado del IPC se usa ese, no el mensaje.
+    bd.descartarOperacion();
+    falsa.api.bd.restaurar.mockRejectedValueOnce(
+      Object.assign(new Error('Falló tras reemplazar d.'), {
+        codigo: 'tras-reemplazo',
+        datos: { respaldoPrevio: 'D:/OneDrive/Documentos/WolfCore Dev/Respaldos/d-antes.dump' },
+      }),
+    );
+    const d = await bd.restaurar('postgresql', 'C:/x/d.dump', 'd', true);
+    expect(d.respaldoPrevio).toBe('D:/OneDrive/Documentos/WolfCore Dev/Respaldos/d-antes.dump');
   });
 
   it('no permite dos operaciones a la vez ni descartar la que está en curso', async () => {
@@ -258,12 +288,40 @@ describe('store de Bases de datos', () => {
     );
     const p = bd.restaurar('mysql', 'C:\\a.sql', 'a', false);
     expect(bd.enCurso).toBe(true);
-    await expect(bd.respaldar('mysql', 'b', null)).rejects.toThrow(/en curso/);
+    // Nunca lanza: devuelve un error y no toca la operación en curso.
+    const otra = await bd.respaldar('mysql', 'b', null);
+    expect(otra).toMatchObject({ estado: 'error', base: 'b' });
+    expect(otra.error).toMatch(/en curso/);
+    expect(falsa.api.bd.respaldar).not.toHaveBeenCalled();
+    expect(bd.operacion).toMatchObject({ estado: 'corriendo', base: 'a' });
     bd.descartarOperacion();
     expect(bd.operacion?.estado).toBe('corriendo');
     terminar({ advertencias: [] });
     await p;
     expect(bd.enCurso).toBe(false);
+  });
+
+  it('un fallo inesperado al llamar al núcleo también queda como error (no lanza)', async () => {
+    const bd = useBd();
+    vi.stubGlobal('window', {});
+    const o = await bd.respaldar('mysql', 'b', null);
+    expect(o.estado).toBe('error');
+    expect(bd.enCurso).toBe(false);
+  });
+
+  it('carga la carpeta real de respaldos una vez y tolera un fallo', async () => {
+    const bd = useBd();
+    const carpeta = vi.fn(async () => 'D:/OneDrive/Documentos/WolfCore Dev/Respaldos');
+    (falsa.api.bd as Record<string, unknown>)['carpetaRespaldos'] = carpeta;
+    await bd.cargarCarpetaRespaldos();
+    await bd.cargarCarpetaRespaldos();
+    expect(bd.carpetaRespaldos).toBe('D:/OneDrive/Documentos/WolfCore Dev/Respaldos');
+    expect(carpeta).toHaveBeenCalledTimes(1);
+    setActivePinia(createPinia());
+    carpeta.mockRejectedValueOnce(new Error('x'));
+    const otro = useBd();
+    await otro.cargarCarpetaRespaldos();
+    expect(otro.carpetaRespaldos).toBeNull();
   });
 
   it('una lista que no se puede leer deja el mensaje y no bases viejas', async () => {
