@@ -1,4 +1,4 @@
-import { appendFile, mkdir, rename, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, open, rename, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
@@ -96,6 +96,7 @@ describe('muestraSistemaWindows', () => {
     expect(script).toContain('IDProcess=12 OR IDProcess=40');
     expect(script).toContain('Get-NetAdapterStatistics');
     expect(script).toContain('ConvertTo-Json -Compress');
+    expect(script).toContain('Get-NetAdapter -Physical');
   });
 
   it('sin PIDs no consulta procesos (solo la red)', async () => {
@@ -320,6 +321,28 @@ describe('Metricas', () => {
     expect(una.length).toBeGreaterThanOrEqual(19);
     expect(una.length).toBeLessThanOrEqual(21);
     expect(met.ultimos(60).length).toBe(todas.length);
+    expect(met.ultimos(Number.NaN).length).toBe(todas.length);
+    expect(met.ultimos(Number.POSITIVE_INFINITY).length).toBe(todas.length);
+  });
+
+  it('una muestra en curso al pausar no se emite ni se guarda', async () => {
+    vi.useFakeTimers();
+    let soltar: () => void = () => undefined;
+    const met = crear({
+      consultar: () =>
+        new Promise<MuestraPlataforma>((r) => {
+          soltar = () => r({ procesos: [], red: null });
+        }),
+    });
+    const vistas: number[] = [];
+    eventos.on('metricas:muestra', (m) => vistas.push(m.marca));
+    met.iniciar();
+    await vi.advanceTimersByTimeAsync(10);
+    met.pausar();
+    soltar();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(vistas).toEqual([]);
+    expect(met.ultimos()).toEqual([]);
   });
 });
 
@@ -414,6 +437,25 @@ describe('Registros', () => {
       expect(porId.get('tunel:tienda')!.grupo).toBe('tunel');
       expect(porId.get('php:8.4')!.grupo).toBe('php');
       expect(porId.get('laravel:tienda')!.sitioId).toBe('tienda');
+    });
+
+    it('laravel.log que por un enlace sale de la carpeta del sitio no se lista', async () => {
+      const fuera = join(base, 'fuera');
+      await mkdir(fuera, { recursive: true });
+      await writeFile(join(fuera, 'laravel.log'), 'secreto\n');
+      const carpeta = join(base, 'proyecto');
+      await mkdir(join(carpeta, 'storage'), { recursive: true });
+      await symlink(fuera, join(carpeta, 'storage', 'logs'), 'junction');
+      const buena = join(base, 'buena');
+      await mkdir(join(buena, 'storage', 'logs'), { recursive: true });
+      sitios = [
+        sitio({ id: 'malo', tipo: 'laravel', carpeta }),
+        sitio({ id: 'bueno', tipo: 'laravel', carpeta: buena }),
+      ];
+      const ids = (await registros.fuentes()).map((f) => f.id);
+      expect(ids).not.toContain('laravel:malo');
+      expect(ids).toContain('laravel:bueno');
+      await expect(registros.leerFinal('laravel:malo')).rejects.toThrow(/no existe/i);
     });
 
     it('sin carpeta de logs devuelve solo las fuentes de los sitios', async () => {
@@ -526,6 +568,67 @@ describe('Registros', () => {
       await appendFile(ruta, 'z\n');
       await new Promise((r) => setTimeout(r, 150));
       expect(lineasDe(ID)).toEqual(['x', 'y']);
+    });
+  });
+
+  describe('seguir (casos límite)', () => {
+    it('una línea de más de 64 KB se emite en partes sin partir un carácter UTF-8', async () => {
+      const ruta = rutas.logs('redis.log');
+      await writeFile(ruta, '');
+      const dejar = await registros.seguir('servicio:redis');
+      // 'a' + 'ñ'×70000 (140 KB): el corte a los 128 KB cae a mitad de una 'ñ'.
+      await appendFile(ruta, 'a' + 'ñ'.repeat(70_000) + '\nfin\n');
+      await vi.waitFor(() => expect(lineasDe('servicio:redis').at(-1)).toBe('fin'));
+      const lineas = lineasDe('servicio:redis');
+      expect(lineas.length).toBeGreaterThanOrEqual(3);
+      expect(lineas.join('')).not.toContain('\uFFFD');
+      dejar();
+    });
+
+    it('un error al abrir que se repite se registra una sola vez', async () => {
+      const ruta = rutas.logs('redis.log');
+      await writeFile(ruta, '');
+      let fallar = false;
+      const errores = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const r = new Registros({
+        rutas,
+        eventos,
+        leerSitios: async () => [],
+        rutaLogProceso: () => 'x',
+        intervaloMs: 10,
+        abrir: (async (p: string, f: string) => {
+          if (fallar) throw Object.assign(new Error('ocupado'), { code: 'EBUSY' });
+          return open(p, f);
+        }) as never,
+      });
+      try {
+        const dejar = await r.seguir('servicio:redis');
+        fallar = true;
+        await new Promise((res) => setTimeout(res, 150));
+        expect(errores).toHaveBeenCalledTimes(1);
+        fallar = false;
+        await appendFile(ruta, 'ok\n');
+        await vi.waitFor(() => expect(lineasDe('servicio:redis')).toEqual(['ok']));
+        fallar = true;
+        await new Promise((res) => setTimeout(res, 100));
+        expect(errores).toHaveBeenCalledTimes(2);
+        dejar();
+      } finally {
+        r.cerrar();
+        errores.mockRestore();
+      }
+    });
+
+    it('tras cerrar, seguir (posterior o pendiente) no crea colas', async () => {
+      const ruta = rutas.logs('redis.log');
+      await writeFile(ruta, '');
+      const pendiente = registros.seguir('servicio:redis');
+      registros.cerrar();
+      await expect(pendiente).rejects.toThrow(/cerrado/i);
+      await expect(registros.seguir('servicio:redis')).rejects.toThrow(/cerrado/i);
+      await appendFile(ruta, 'x\n');
+      await new Promise((res) => setTimeout(res, 120));
+      expect(recibidas).toEqual([]);
     });
   });
 

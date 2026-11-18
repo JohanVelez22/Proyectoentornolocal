@@ -141,7 +141,10 @@ export function interpretarMuestraWindows(salida: string): MuestraPlataforma {
   return { procesos, red: adaptadores > 0 ? { rx, tx } : null };
 }
 
-/** Script de la muestra: CPU y RAM de los PIDs pedidos y los contadores de red, en JSON compacto. */
+/**
+ * Script de la muestra: CPU y RAM de los PIDs pedidos y los contadores de red de los adaptadores
+ * físicos, en JSON compacto.
+ */
 export function scriptMuestraWindows(pids: number[]): string {
   const validos = [...new Set(pids)].filter((p) => Number.isInteger(p) && p > 0);
   const filtro = validos.map((p) => `IDProcess=${p}`).join(' OR ');
@@ -154,7 +157,9 @@ export function scriptMuestraWindows(pids: number[]): string {
           `$p = @(Get-CimInstance -ClassName Win32_PerfFormattedData_PerfProc_Process -Filter "${filtro}" | Select-Object IDProcess,PercentProcessorTime,WorkingSetPrivate,WorkingSet,ElapsedTime)`,
         ]
       : []),
-    '$n = @(Get-NetAdapterStatistics | Select-Object Name,ReceivedBytes,SentBytes)',
+    // Solo adaptadores físicos: los virtuales (Hyper-V, VPN, WSL) repiten el mismo tráfico.
+    '$f = @(Get-NetAdapter -Physical | ForEach-Object Name)',
+    '$n = @(Get-NetAdapterStatistics | Where-Object { $f -contains $_.Name } | Select-Object Name,ReceivedBytes,SentBytes)',
     'ConvertTo-Json -Compress -Depth 3 -InputObject ([pscustomobject]@{ p = $p; n = $n })',
   ].join('\n');
 }

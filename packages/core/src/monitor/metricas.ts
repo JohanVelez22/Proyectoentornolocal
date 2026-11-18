@@ -91,6 +91,8 @@ export class Metricas {
   private bufer: MuestraSistema[] = [];
   private temporizador: ReturnType<typeof setInterval> | null = null;
   private enCurso: Promise<MuestraSistema> | null = null;
+  /** Sube en cada pausar(): una muestra empezada antes no se guarda ni se emite. */
+  private generacion = 0;
   private cpuAnterior: { ocupado: number; total: number } | null = null;
   private redAnterior: { rx: number; tx: number; marca: number } | null = null;
 
@@ -108,6 +110,7 @@ export class Metricas {
   }
 
   pausar(): void {
+    this.generacion++;
     if (this.temporizador) clearInterval(this.temporizador);
     this.temporizador = null;
   }
@@ -118,11 +121,14 @@ export class Metricas {
 
   /** Muestras de los últimos `min` minutos (como mucho, los 5 que se guardan). */
   ultimos(min = 5): MuestraSistema[] {
-    const desde = this.ahora() - acotar(min, 0, 5) * 60_000;
+    const desde = this.ahora() - acotar(Number.isFinite(min) ? min : 5, 0, 5) * 60_000;
     return this.bufer.filter((m) => m.marca >= desde);
   }
 
-  /** Toma una muestra (o devuelve la que ya está en curso), la guarda y la emite. No lanza. */
+  /**
+   * Toma una muestra (o devuelve la que ya está en curso), la guarda y la emite. No lanza. Si se
+   * pausa mientras está en curso, se devuelve pero no se guarda ni se emite.
+   */
   muestrear(): Promise<MuestraSistema> {
     if (this.enCurso) return this.enCurso;
     const p = this.tomar().finally(() => {
@@ -138,6 +144,7 @@ export class Metricas {
   }
 
   private async tomar(): Promise<MuestraSistema> {
+    const generacion = this.generacion;
     const conocidos: { id: string; pid: number }[] = [];
     for (const id of this.d.supervisor.ids()) {
       const pid = this.d.supervisor.pid(id);
@@ -176,6 +183,7 @@ export class Metricas {
       red: this.red(externa.red, marca),
       procesos,
     };
+    if (generacion !== this.generacion) return muestra;
     this.guardar(muestra);
     this.d.eventos.emit('metricas:muestra', muestra);
     return muestra;

@@ -1,5 +1,5 @@
 import { watch, type FSWatcher } from 'node:fs';
-import { open, readdir } from 'node:fs/promises';
+import { open, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import type { Eventos, EventosNucleo } from '../eventos';
 import { idSupervisor } from '../proyectos/procesos';
@@ -32,7 +32,11 @@ export interface DepsRegistros {
   rutaLogProceso: (sitioId: string, procesoId: string) => string;
   /** Cada cuánto se revisa un archivo seguido aunque `fs.watch` no avise (ms). */
   intervaloMs?: number;
+  /** Para abrir los archivos seguidos (en las pruebas, uno que falla). */
+  abrir?: Abrir;
 }
+
+type Abrir = (ruta: string, flags: 'r') => ReturnType<typeof open>;
 
 /** Líneas como mucho por evento 'registro:lineas'. */
 export const MAX_LINEAS_LOTE = 500;
@@ -73,18 +77,21 @@ class Cola {
   private cerrada = false;
   private temporizador: ReturnType<typeof setInterval> | null = null;
   private vigilante: FSWatcher | null = null;
+  /** Último error registrado: el mismo error repetido en cada revisión se registra una vez. */
+  private ultimoError: string | null = null;
 
   constructor(
     private readonly ruta: string,
     private readonly emitir: (lineas: string[]) => void,
     private readonly intervaloMs: number,
+    private readonly abrir: Abrir,
   ) {}
 
   /** Se sitúa al final del archivo (solo emite lo que llegue después) y empieza a vigilar. */
   async arrancar(): Promise<void> {
     this.revisando = true;
     try {
-      const fh = await open(this.ruta, 'r');
+      const fh = await this.abrir(this.ruta, 'r');
       try {
         const st = await fh.stat({ bigint: true });
         this.identidad = identidadDe(st);
@@ -135,14 +142,25 @@ class Cola {
       try {
         do {
           this.pendiente = false;
-          await this.revisar().catch((e: unknown) =>
-            console.error('No se pudo leer el registro:', e),
-          );
+          try {
+            await this.revisar();
+            this.ultimoError = null;
+          } catch (e) {
+            this.registrarError(e);
+          }
         } while (this.pendiente && !this.cerrada);
       } finally {
         this.revisando = false;
       }
     })();
+  }
+
+  private registrarError(e: unknown): void {
+    const err = e as NodeJS.ErrnoException;
+    const clave = `${err?.code ?? ''}:${err?.message ?? String(e)}`;
+    if (clave === this.ultimoError) return;
+    this.ultimoError = clave;
+    console.error(`No se pudo leer el registro ${this.ruta}:`, e);
   }
 
   private reiniciar(): void {
@@ -154,7 +172,7 @@ class Cola {
   private async revisar(): Promise<void> {
     let fh;
     try {
-      fh = await open(this.ruta, 'r');
+      fh = await this.abrir(this.ruta, 'r');
     } catch (e) {
       if (!noExiste(e)) throw e;
       // Se borró o se está rotando: el próximo archivo se lee desde el principio.
@@ -210,11 +228,24 @@ class Cola {
     // Copia: `trozo` es el búfer de lectura, que se reutiliza.
     this.resto = Buffer.from(datos.subarray(inicio));
     if (this.resto.length > MAX_BYTES_RESTO) {
+      // Se emite hasta el último carácter completo; sus bytes sueltos esperan a la próxima lectura.
+      const corte = finCaracterCompleto(this.resto);
       if (this.descartarPrimera) this.descartarPrimera = false;
-      else lineas.push(lineaDe(this.resto));
-      this.resto = Buffer.alloc(0);
+      else lineas.push(lineaDe(this.resto.subarray(0, corte)));
+      this.resto = Buffer.from(this.resto.subarray(corte));
     }
   }
+}
+
+/** Largo de `b` sin el último carácter UTF-8 si quedó incompleto (cortado a mitad). */
+export function finCaracterCompleto(b: Buffer): number {
+  for (let i = b.length - 1; i >= Math.max(0, b.length - 4); i--) {
+    const x = b[i]!;
+    if ((x & 0xc0) === 0x80) continue; // byte de continuación
+    const largo = x < 0x80 ? 1 : x >= 0xf0 ? 4 : x >= 0xe0 ? 3 : x >= 0xc0 ? 2 : 1;
+    return i + largo > b.length ? i : b.length;
+  }
+  return b.length;
 }
 
 /** Identidad del archivo (índice de NTFS / inodo): cambia si otro archivo ocupa el nombre. */
@@ -229,6 +260,7 @@ function identidadDe(st: { dev: bigint; ino: bigint }): string {
  */
 export class Registros {
   private readonly colas = new Map<string, { cola: Cola; cuenta: number; listo: Promise<void> }>();
+  private cerrado = false;
 
   constructor(private readonly d: DepsRegistros) {}
 
@@ -300,11 +332,13 @@ export class Registros {
           sitioId: s.id,
         });
       }
-      if (s.tipo === 'laravel') {
+      const laravelLog = path.join(s.carpeta, 'storage', 'logs', 'laravel.log');
+      // Un enlace (junction) en storage/ no puede sacar la lectura fuera de la carpeta del sitio.
+      if (s.tipo === 'laravel' && (await quedaDentro(s.carpeta, laravelLog))) {
         agregar({
           id: `laravel:${s.id}`,
           nombre: `${s.nombre}: laravel.log`,
-          ruta: path.join(s.carpeta, 'storage', 'logs', 'laravel.log'),
+          ruta: laravelLog,
           grupo: 'laravel',
           sitioId: s.id,
         });
@@ -319,11 +353,14 @@ export class Registros {
    * de seguir (idempotente).
    */
   async seguir(id: string): Promise<() => void> {
+    if (this.cerrado) throw new Error(ERROR_CERRADO);
     let entrada = this.colas.get(id);
     if (entrada) {
       entrada.cuenta++;
     } else {
       const fuente = await this.buscar(id);
+      // cerrar() pudo llegar mientras se buscaba la fuente.
+      if (this.cerrado) throw new Error(ERROR_CERRADO);
       // Otro seguir() del mismo id pudo crearla mientras se buscaba la fuente.
       entrada = this.colas.get(id);
       if (entrada) entrada.cuenta++;
@@ -332,6 +369,7 @@ export class Registros {
           fuente.ruta,
           (lineas) => this.d.eventos.emit('registro:lineas', { id, lineas }),
           this.d.intervaloMs ?? 1000,
+          this.d.abrir ?? ((r, f) => open(r, f)),
         );
         entrada = { cola, cuenta: 1, listo: cola.arrancar() };
         this.colas.set(id, entrada);
@@ -339,6 +377,7 @@ export class Registros {
     }
     const propia = entrada;
     await propia.listo;
+    if (this.cerrado) throw new Error(ERROR_CERRADO);
     let hecho = false;
     return () => {
       if (hecho) return;
@@ -394,6 +433,7 @@ export class Registros {
 
   /** Deja de seguir todo (al cerrar la app o la ventana). */
   cerrar(): void {
+    this.cerrado = true;
     for (const e of this.colas.values()) e.cola.cerrar();
     this.colas.clear();
   }
@@ -402,6 +442,30 @@ export class Registros {
     const f = (await this.fuentes()).find((x) => x.id === id);
     if (!f) throw new Error(`La fuente de registro no existe: ${id}`);
     return f;
+  }
+}
+
+const ERROR_CERRADO = 'El visor de registros está cerrado';
+
+/**
+ * ¿La ruta real de `ruta` queda dentro de la carpeta real `carpeta`? Se mira el ancestro existente
+ * más profundo hasta la carpeta (el log puede no existir aún); si nada existe, no hay enlace.
+ */
+async function quedaDentro(carpeta: string, ruta: string): Promise<boolean> {
+  const real = async (p: string): Promise<string | null> => realpath(p).catch(() => null);
+  const raizDeclarada = path.resolve(carpeta);
+  const raiz = (await real(raizDeclarada)) ?? raizDeclarada;
+  let actual = path.resolve(ruta);
+  for (;;) {
+    const r = await real(actual);
+    if (r !== null) {
+      const rel = path.relative(raiz, r);
+      return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+    }
+    if (actual === raizDeclarada) return true;
+    const padre = path.dirname(actual);
+    if (padre === actual) return true;
+    actual = padre;
   }
 }
 
