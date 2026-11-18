@@ -19,6 +19,8 @@ export * from './servicios/php';
 export * from './servicios/servicios';
 export * from './servicios/definicion';
 export * from './servicios/datos';
+export * from './servicios/bd/mysql';
+export * from './bd/clienteMysql';
 export * from './sitios/urlbase';
 export * from './tuneles/url';
 export * from './tuneles/tuneles';

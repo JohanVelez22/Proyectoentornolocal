@@ -14,6 +14,7 @@
     "@types/yauzl": "^2.10.3"
   },
   "dependencies": {
+    "mysql2": "^3.24.6",
     "yauzl": "^3.4.0",
     "zod": "^4.6.7"
   }
