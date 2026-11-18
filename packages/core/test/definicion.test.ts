@@ -630,11 +630,26 @@ describe('ronda de correcciones 1', () => {
         `El puerto ${p} ya está asignado a ${nombre}.`,
       );
     }
-    (cfg.servicios as { https?: { puerto: number } }).https = { puerto: 8443 };
+    await expect(s.cambiarPuerto('mysql', 443)).rejects.toThrow(/1024/);
+    await expect(s.cambiarPuerto('mysql', 50101)).resolves.toBeUndefined();
+  });
+
+  it('cambiarPuerto respeta el puerto HTTPS y el FTP configurados (cfg.https / cfg.ftp)', async () => {
+    const s = crear([defFalsa()]);
+    cfg.https.puerto = 8443;
+    cfg.ftp.puerto = 12121;
+    cfg.ftp.pasivos = [52000, 52020];
     await expect(s.cambiarPuerto('mysql', 8443)).rejects.toThrow(
       'El puerto 8443 ya está asignado a HTTPS.',
     );
-    await expect(s.cambiarPuerto('mysql', 50101)).resolves.toBeUndefined();
+    await expect(s.cambiarPuerto('mysql', 12121)).rejects.toThrow(
+      'El puerto 12121 ya está asignado a FTP.',
+    );
+    await expect(s.cambiarPuerto('mysql', 52010)).rejects.toThrow(
+      'El puerto 52010 ya está asignado a FTP (puertos pasivos).',
+    );
+    // Los valores por defecto ya no aplican cuando la configuración los cambió.
+    await expect(s.cambiarPuerto('mysql', 2121)).resolves.toBeUndefined();
   });
 
   it('dos servicios en conflicto: un solo netstat por estados() y caché de 15 s', async () => {

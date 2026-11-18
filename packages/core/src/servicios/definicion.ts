@@ -91,14 +91,20 @@ export const USUARIO_POR_DEFECTO: Record<IdServicioDatos, string> = {
   ollama: 'ollama',
 };
 
-/** Puertos fijos de la aplicación que ningún servicio de datos puede tomar. */
+/** Puertos de la aplicación (HTTPS, Adminer, FTP, PHP) que ningún servicio de datos puede tomar. */
 function puertosFijos(cfg: Config): { desde: number; hasta: number; nombre: string }[] {
-  const https = (cfg.servicios as { https?: { puerto?: number } }).https?.puerto ?? 443;
+  const https = cfg.https?.puerto ?? 443;
+  const ftp = cfg.ftp?.puerto ?? 2121;
+  const [pasivoMin, pasivoMax] = cfg.ftp?.pasivos ?? [50000, 50100];
   return [
     { desde: https, hasta: https, nombre: 'HTTPS' },
     { desde: 8090, hasta: 8090, nombre: 'Adminer' },
-    { desde: 2121, hasta: 2121, nombre: 'FTP' },
-    { desde: 50000, hasta: 50100, nombre: 'FTP (puertos pasivos)' },
+    { desde: ftp, hasta: ftp, nombre: 'FTP' },
+    {
+      desde: Math.min(pasivoMin, pasivoMax),
+      hasta: Math.max(pasivoMin, pasivoMax),
+      nombre: 'FTP (puertos pasivos)',
+    },
     { desde: 9000, hasta: 9999, nombre: 'PHP' },
   ];
 }
