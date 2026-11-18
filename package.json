@@ -18,7 +18,8 @@
     "lint": "eslint . && prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "npm run dev --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build --workspaces --if-present",
+    "test:win:pgvector": "npm run test:win:pgvector -w @pel/core"
   },
   "devDependencies": {
     "@eslint/js": "^9",
