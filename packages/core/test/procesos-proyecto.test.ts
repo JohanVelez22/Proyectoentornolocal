@@ -186,6 +186,7 @@ describe('iniciar', () => {
     expect(def.cwd).toBe(a.carpeta);
     // El puerto es informativo (proxy): no se usa como sonda de salud del supervisor.
     expect(def.puerto).toBeUndefined();
+    expect(def.puertoInformativo).toBe(5173);
     // Al readoptar se exige la misma hora de creación (node.exe es muy común).
     expect(def.exigirInicio).toBe(true);
     expect(def.reiniciar).toBe(false);

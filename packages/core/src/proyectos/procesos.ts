@@ -343,6 +343,7 @@ export class ProcesosProyecto {
       // Sin `puerto`: es informativo (proxy) y no sirve de sonda de salud; vite o un servidor
       // que escucha en otra interfaz o tarda en abrirlo no deben morir por eso.
       exigirInicio: true,
+      ...(p.puerto === null ? {} : { puertoInformativo: p.puerto }),
       log,
       reiniciar: p.reiniciar,
     };

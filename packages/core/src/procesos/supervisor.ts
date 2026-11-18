@@ -38,6 +38,8 @@ export interface DefProceso {
    * haber pasado a otro programa: si no coincide o no se puede leer, se olvida sin matar nada.
    */
   exigirInicio?: boolean;
+  /** Puerto que se muestra en el estado (`puertos`) sin usarse como sonda de salud. */
+  puertoInformativo?: number;
 }
 
 export type EstadoProceso = 'apagado' | 'iniciando' | 'encendido' | 'error';
@@ -76,6 +78,7 @@ interface RegistroEstado {
   cwd?: string;
   env?: Record<string, string>;
   exigirInicio?: boolean;
+  puertoInformativo?: number;
   /** Hora de creación del proceso (solo con exigirInicio). */
   creado?: string | null;
 }
@@ -260,6 +263,15 @@ export class Supervisor {
     for (const r of registros) {
       if (!r || typeof r.id !== 'string' || typeof r.pid !== 'number') continue;
       if (this.entradas.has(r.id)) continue;
+      // Procesos de proyecto guardados por versiones previas: misma regla que los nuevos (hora de
+      // creación obligatoria y el puerto solo informativo).
+      if (r.id.startsWith('proy-')) {
+        r.exigirInicio = true;
+        if (r.puerto !== undefined) {
+          r.puertoInformativo ??= r.puerto;
+          delete r.puerto;
+        }
+      }
       const info = await this.plataforma.procesoVivo(r.pid);
       const esperado = path.basename(String(r.ejecutable)).toLowerCase();
       if (!info.vivo || info.ejecutable?.toLowerCase() !== esperado) continue;
@@ -276,6 +288,7 @@ export class Supervisor {
           log: r.log,
           reiniciar: r.reiniciar ?? false,
           ...(r.exigirInicio ? { exigirInicio: true } : {}),
+          ...(r.puertoInformativo === undefined ? {} : { puertoInformativo: r.puertoInformativo }),
         },
         estado: 'iniciando',
         pid: r.pid,
@@ -450,6 +463,15 @@ export class Supervisor {
           this.alMorir(entrada, pid, null);
           continue;
         }
+        // No se pudo leer la hora de creación al lanzar: se reintenta mientras viva.
+        if (entrada.def.exigirInicio && entrada.creado === null) {
+          const creado = await this.horaCreacion(pid);
+          if (entrada.pid !== pid || entrada.detenido) continue;
+          if (creado !== null) {
+            entrada.creado = creado;
+            this.guardarEstado();
+          }
+        }
         const sano = entrada.def.puerto === undefined ? true : await this.sonda(entrada.def.puerto);
         if (entrada.pid !== pid || entrada.detenido) continue;
         const ahora = Date.now();
@@ -495,7 +517,12 @@ export class Supervisor {
       nombre: entrada.def.id,
       version: null,
       estado: entrada.estado,
-      puertos: entrada.def.puerto === undefined ? [] : [entrada.def.puerto],
+      puertos:
+        entrada.def.puerto !== undefined
+          ? [entrada.def.puerto]
+          : entrada.def.puertoInformativo !== undefined
+            ? [entrada.def.puertoInformativo]
+            : [],
       pid: entrada.pid,
       ...(entrada.mensaje === undefined ? {} : { mensaje: entrada.mensaje }),
     };
@@ -548,6 +575,9 @@ export class Supervisor {
         cwd: e.def.cwd,
         env: e.def.env,
         ...(e.def.exigirInicio ? { exigirInicio: true, creado: e.creado } : {}),
+        ...(e.def.puertoInformativo === undefined
+          ? {}
+          : { puertoInformativo: e.def.puertoInformativo }),
       });
     }
     const destino = this.rutas.estado();

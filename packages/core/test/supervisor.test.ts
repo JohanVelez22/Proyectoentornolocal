@@ -417,6 +417,67 @@ describe('Supervisor', () => {
       await s.cerrar();
     });
 
+    it('si no pudo leer la hora al lanzar, la reintenta en el sondeo y la guarda', async () => {
+      const s = crear();
+      let leer = false;
+      const plat = s['plataforma'] as Plataforma & {
+        inicioProceso: (pid: number) => Promise<string | null>;
+      };
+      plat.inicioProceso = async (pid) => (leer ? (creaciones.get(pid) ?? null) : null);
+      await s.iniciar(defNode());
+      const pid = s.pid('proy-demo-vite')!;
+      expect(JSON.parse(readFileSync(rutas.estado(), 'utf8'))[0].creado).toBeNull();
+      leer = true;
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(JSON.parse(readFileSync(rutas.estado(), 'utf8'))[0].creado).toBe(`t${pid}`);
+      await s.cerrar();
+    });
+
+    it('puertoInformativo se emite en puertos pero no es sonda: no lo mata', async () => {
+      sondaOk = false;
+      const s = crear();
+      await s.iniciar({ ...defNode(), puertoInformativo: 5173 });
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(s.estado('proy-demo-vite')).toBe('encendido');
+      expect(matados).toEqual([]);
+      expect(emitidos.at(-1)).toMatchObject({ id: 'proy-demo-vite', puertos: [5173] });
+      expect(JSON.parse(readFileSync(rutas.estado(), 'utf8'))[0].puertoInformativo).toBe(5173);
+      await s.cerrar();
+    });
+
+    it('una entrada proy- de una versión previa: exige la hora y su puerto no es sonda', async () => {
+      sondaOk = false;
+      vivos.set(777, 'node.exe');
+      creaciones.set(777, 't777');
+      vivos.set(778, 'node.exe');
+      creaciones.set(778, 't778');
+      const viejo = (id: string, pid: number, creado?: string) => ({
+        id,
+        pid,
+        ejecutable: 'C:/n/node.exe',
+        args: [],
+        puerto: 5173,
+        log: def().log,
+        reiniciar: false,
+        ...(creado ? { creado } : {}),
+      });
+      writeFileSync(
+        rutas.estado(),
+        JSON.stringify([viejo('proy-a-sinhora', 777), viejo('proy-b-conhora', 778, 't778')]),
+      );
+      const s = crear();
+      await s.readoptar();
+      expect(s.ids()).toEqual(['proy-b-conhora']);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(s.estado('proy-b-conhora')).toBe('encendido');
+      expect(matados).toEqual([]);
+      expect(emitidos.at(-1)).toMatchObject({ id: 'proy-b-conhora', puertos: [5173] });
+      const reg = JSON.parse(readFileSync(rutas.estado(), 'utf8'))[0];
+      expect(reg).toMatchObject({ exigirInicio: true, creado: 't778', puertoInformativo: 5173 });
+      expect(reg.puerto).toBeUndefined();
+      await s.cerrar();
+    });
+
     it('tras un reinicio guarda la hora del proceso nuevo', async () => {
       const s = crear();
       await s.iniciar({ ...defNode(), reiniciar: true });
