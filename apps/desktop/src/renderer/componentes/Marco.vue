@@ -13,10 +13,12 @@ import {
   NLayoutHeader,
   NLayoutSider,
   NMenu,
+  useNotification,
   type MenuOption,
 } from 'naive-ui';
 import { computed, h, onBeforeUnmount, onMounted, ref, type Component } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 import type { SeccionNav } from '../router';
@@ -30,6 +32,7 @@ const router = useRouter();
 const servicios = useServicios();
 const tuneles = useTuneles();
 const { ejecutar } = useAccion();
+const notification = useNotification();
 
 const contraido = ref(false);
 const falloArranque = ref(false);
@@ -72,8 +75,21 @@ onMounted(() => {
     { tituloError: es.errores.arranque },
   ).then((ok) => {
     falloArranque.value = !ok;
+    if (ok) void mostrarAvisoInicio();
   });
 });
+
+/** Aviso del arranque (p. ej. la migración de la carpeta de datos): queda hasta que se cierra. */
+async function mostrarAvisoInicio(): Promise<void> {
+  let aviso: string | null = null;
+  try {
+    aviso = await api().avisoInicio();
+  } catch {
+    return; // no es imprescindible: el resto de la interfaz ya funciona
+  }
+  if (!aviso) return;
+  notification.info({ title: es.avisoInicio.titulo, content: aviso, closable: true });
+}
 onBeforeUnmount(detenerEntorno);
 </script>
 

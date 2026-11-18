@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FolderOpen, InformationCircle } from '@vicons/ionicons5';
+import { FolderOpen, InformationCircle, LockClosed, Terminal } from '@vicons/ionicons5';
 import {
   NButton,
   NCard,
@@ -9,20 +9,27 @@ import {
   NInput,
   NInputGroup,
   NInputNumber,
+  NSelect,
   NSkeleton,
+  useDialog,
   useMessage,
   useNotification,
+  type SelectOption,
 } from 'naive-ui';
 import { computed, onMounted, ref } from 'vue';
-import type { Config } from '../../shared/api';
+import { PUERTO_ADMINER, type Config, type ResultadoCA } from '../../shared/api';
 import { api } from '../api';
+import EstadoPunto from '../componentes/EstadoPunto.vue';
 import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 
 const t = es.ajustes;
+const th = t.https;
+const tt = t.herramientas;
 const { ejecutar, ocupado } = useAccion();
 const message = useMessage();
 const notification = useNotification();
+const dialog = useDialog();
 
 const config = ref<Config | null>(null);
 const carpeta = ref('');
@@ -46,6 +53,28 @@ const valido = computed(
     trabajadores.value <= 8,
 );
 
+// ---- HTTPS ----
+const ca = ref<{ caCreada: boolean; caInstalada: boolean } | null>(null);
+const puertoHttps = ref<number | null>(443);
+const puertoHttpsValido = computed(
+  () =>
+    puertoHttps.value === 443 ||
+    (puertoHttps.value !== null && puertoHttps.value >= 1024 && puertoHttps.value <= 65535),
+);
+const puertoHttpsCambiado = computed(
+  () => !!config.value && puertoHttps.value !== config.value.https.puerto,
+);
+
+// ---- PHP por defecto y PATH ----
+const ramasPhp = ref<string[] | null>(null);
+/** '' representa "la más reciente instalada" (null en la configuración). */
+const phpPorDefecto = ref<string>('');
+const opcionesPhp = computed<SelectOption[]>(() => [
+  { value: '', label: tt.phpMasReciente },
+  ...(ramasPhp.value ?? []).map((r) => ({ value: r, label: `PHP ${r}` })),
+]);
+const enPath = ref<boolean | null>(null);
+
 onMounted(() => {
   void ejecutar('cargar', async () => {
     const [c, ruta, v] = await Promise.all([
@@ -58,6 +87,18 @@ onMounted(() => {
     version.value = v;
     puerto.value = c.servicios.nginx.puerto;
     trabajadores.value = c.servicios.php.trabajadores;
+    puertoHttps.value = c.https.puerto;
+    phpPorDefecto.value = c.herramientas.phpPorDefecto ?? '';
+  });
+  void ejecutar('cargarExtra', async () => {
+    const [estadoCa, ramas, path] = await Promise.all([
+      api().https.estado(),
+      api().instalador.instalados('php'),
+      api().path.estado(),
+    ]);
+    ca.value = estadoCa;
+    ramasPhp.value = ramas;
+    enPath.value = path;
   });
 });
 
@@ -91,6 +132,100 @@ async function guardar(): Promise<void> {
 
 function abrirCarpeta(): void {
   void ejecutar('abrir', () => api().sistema.abrirCarpeta(carpeta.value));
+}
+
+function avisarCA(r: ResultadoCA | undefined, exito: string): void {
+  if (!r) return;
+  if (r.ok) message.success(exito);
+  else if (r.motivo === 'cancelado') message.info(th.cancelado);
+  else
+    notification.error({
+      title: th.fallo,
+      content: r.mensaje,
+      duration: 10000,
+      keepAliveOnHover: true,
+    });
+}
+
+/** Instala (o reinstala) la autoridad en el almacén del usuario; Windows pide confirmar. */
+async function instalarCA(): Promise<void> {
+  const r = await ejecutar('ca', async () => {
+    const res = await api().https.instalarCA();
+    ca.value = await api().https.estado();
+    return res;
+  });
+  avisarCA(r, th.instaladaOk);
+}
+
+function quitarCA(): void {
+  dialog.warning({
+    title: th.quitarTitulo,
+    content: th.quitarTexto,
+    positiveText: th.quitar,
+    negativeText: es.acciones.cancelar,
+    onPositiveClick: async () => {
+      const r = await ejecutar('ca', async () => {
+        const res = await api().https.quitarCA();
+        ca.value = await api().https.estado();
+        return res;
+      });
+      avisarCA(r, th.quitadaOk);
+    },
+  });
+}
+
+async function guardarPuertoHttps(): Promise<void> {
+  const p = puertoHttps.value;
+  if (p === null || !puertoHttpsValido.value) return;
+  const r = await ejecutar('https', async () => {
+    const res = await api().https.cambiarPuerto(p);
+    return { res, config: await api().config.leer() };
+  });
+  if (!r) return;
+  config.value = r.config;
+  if (r.res.nginx.ok) {
+    message.success(th.puertoGuardado(p));
+  } else {
+    notification.warning({
+      title: th.puertoAplicarFallo,
+      content: r.res.nginx.salida,
+      duration: 10000,
+      keepAliveOnHover: true,
+    });
+  }
+}
+
+async function cambiarPhp(valor: string): Promise<void> {
+  const antes = phpPorDefecto.value;
+  phpPorDefecto.value = valor;
+  const ok = await ejecutar(
+    'php',
+    async () => {
+      await api().composer.cambiarPhpPorDefecto(valor === '' ? null : valor);
+      return true;
+    },
+    { exito: tt.phpGuardado },
+  );
+  if (!ok) phpPorDefecto.value = antes;
+}
+
+async function cambiarPath(): Promise<void> {
+  if (enPath.value === null) return;
+  const activar = !enPath.value;
+  const r = await ejecutar('path', async () => {
+    const res = await api().path.cambiar(activar);
+    enPath.value = await api().path.estado();
+    return res;
+  });
+  // "Abra una terminal nueva…": las terminales abiertas no ven el PATH nuevo.
+  if (r) {
+    notification.success({
+      title: tt.pathTitulo,
+      content: r.aviso,
+      duration: 12000,
+      keepAliveOnHover: true,
+    });
+  }
 }
 </script>
 
@@ -154,6 +289,147 @@ function abrirCarpeta(): void {
       </template>
     </NCard>
 
+    <NCard size="small" class="tarjeta">
+      <template #header>
+        <span class="titulo-tarjeta">
+          <NIcon :size="16"><LockClosed /></NIcon>
+          {{ th.titulo }}
+        </span>
+      </template>
+      <NForm label-placement="top" :show-feedback="false">
+        <NFormItem :label="th.autoridad">
+          <div class="campo">
+            <div class="fila-estado">
+              <NSkeleton v-if="!ca" text :width="140" />
+              <EstadoPunto
+                v-else
+                :estado="ca.caInstalada ? 'encendido' : 'apagado'"
+                :etiqueta="ca.caInstalada ? th.instalada : th.noInstalada"
+              />
+              <div class="botones">
+                <NButton
+                  v-if="!ca?.caInstalada"
+                  size="small"
+                  type="primary"
+                  :disabled="!ca"
+                  :loading="ocupado('ca')"
+                  @click="instalarCA"
+                >
+                  {{ th.instalar }}
+                </NButton>
+                <template v-else>
+                  <NButton size="small" secondary :loading="ocupado('ca')" @click="instalarCA">
+                    {{ th.reinstalar }}
+                  </NButton>
+                  <NButton
+                    size="small"
+                    secondary
+                    type="error"
+                    :disabled="ocupado('ca')"
+                    @click="quitarCA"
+                  >
+                    {{ th.quitar }}
+                  </NButton>
+                </template>
+              </div>
+            </div>
+            <small class="ayuda">{{ th.autoridadAyuda }}</small>
+          </div>
+        </NFormItem>
+        <NFormItem :label="th.puerto" class="separado">
+          <div class="campo">
+            <div class="fila-estado">
+              <NInputNumber
+                v-model:value="puertoHttps"
+                :min="1"
+                :max="65535"
+                :disabled="!config"
+                :status="puertoHttpsValido ? undefined : 'error'"
+                class="numero"
+              />
+              <NButton
+                size="small"
+                type="primary"
+                :disabled="!puertoHttpsCambiado || !puertoHttpsValido"
+                :loading="ocupado('https')"
+                @click="guardarPuertoHttps"
+              >
+                {{ es.acciones.guardar }}
+              </NButton>
+            </div>
+            <small class="ayuda" :class="{ error: !puertoHttpsValido }">
+              {{ puertoHttpsValido ? th.puertoAyuda : th.puertoRango }}
+            </small>
+          </div>
+        </NFormItem>
+      </NForm>
+      <template #action>
+        <span class="nota">
+          <NIcon :size="16"><InformationCircle /></NIcon>
+          <span>
+            {{ th.firefox }}
+            <code>security.enterprise_roots.enabled</code>.
+          </span>
+        </span>
+      </template>
+    </NCard>
+
+    <NCard size="small" class="tarjeta">
+      <template #header>
+        <span class="titulo-tarjeta">
+          <NIcon :size="16"><Terminal /></NIcon>
+          {{ tt.titulo }}
+        </span>
+      </template>
+      <NForm label-placement="top" :show-feedback="false">
+        <div class="dos">
+          <NFormItem :label="tt.phpPorDefecto">
+            <div class="campo">
+              <NSelect
+                :value="phpPorDefecto"
+                :options="opcionesPhp"
+                :loading="ramasPhp === null || ocupado('php')"
+                :disabled="!config || !ramasPhp?.length"
+                @update:value="cambiarPhp"
+              />
+              <small class="ayuda">
+                {{ ramasPhp && !ramasPhp.length ? tt.phpSinInstalar : tt.phpPorDefectoAyuda }}
+              </small>
+            </div>
+          </NFormItem>
+          <NFormItem :label="tt.adminer">
+            <div class="campo">
+              <NInput :value="`127.0.0.1:${PUERTO_ADMINER}`" readonly class="ruta" />
+              <small class="ayuda">{{ tt.adminerAyuda }}</small>
+            </div>
+          </NFormItem>
+        </div>
+        <NFormItem :label="tt.path" class="separado">
+          <div class="campo">
+            <div class="fila-estado">
+              <NSkeleton v-if="enPath === null" text :width="140" />
+              <EstadoPunto
+                v-else
+                :estado="enPath ? 'encendido' : 'apagado'"
+                :etiqueta="enPath ? tt.pathActivo : tt.pathInactivo"
+              />
+              <NButton
+                size="small"
+                :type="enPath ? 'default' : 'primary'"
+                :secondary="!!enPath"
+                :disabled="enPath === null"
+                :loading="ocupado('path')"
+                @click="cambiarPath"
+              >
+                {{ enPath ? tt.pathQuitar : tt.pathAgregar }}
+              </NButton>
+            </div>
+            <small class="ayuda">{{ tt.pathAyuda }}</small>
+          </div>
+        </NFormItem>
+      </NForm>
+    </NCard>
+
     <NCard :title="t.acerca" size="small" class="tarjeta">
       <dl class="acerca">
         <dt>{{ es.app.nombre }}</dt>
@@ -189,6 +465,10 @@ function abrirCarpeta(): void {
   font-size: 12px;
   opacity: 0.6;
 }
+.ayuda.error {
+  color: #dc2626;
+  opacity: 1;
+}
 .dos {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -206,6 +486,33 @@ function abrirCarpeta(): void {
   gap: 6px;
   font-size: 12.5px;
   opacity: 0.75;
+}
+.nota code {
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+}
+.titulo-tarjeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.fila-estado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+}
+.fila-estado .numero {
+  width: 160px;
+  margin-right: auto;
+}
+.botones {
+  display: flex;
+  gap: 8px;
+}
+.separado {
+  margin-top: 16px;
 }
 .acerca {
   display: flex;

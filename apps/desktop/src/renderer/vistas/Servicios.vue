@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { Play, Server, Stop } from '@vicons/ionicons5';
-import { NButton, NCard, NEmpty, NIcon, NSpace } from 'naive-ui';
-import { computed, ref } from 'vue';
+import { NButton, NCard, NEmpty, NIcon, NSkeleton, NSpace } from 'naive-ui';
+import { computed, onMounted, ref } from 'vue';
 import { api } from '../api';
 import FilaInstalar from '../componentes/FilaInstalar.vue';
+import TarjetaHerramienta from '../componentes/TarjetaHerramienta.vue';
 import TarjetaServicio from '../componentes/TarjetaServicio.vue';
 import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
-import { useServicios, type ServicioInstalable } from '../stores/servicios';
+import { useServicios, type GrupoServicios, type InstalableCatalogo } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
 
 const t = es.servicios;
@@ -15,7 +16,15 @@ const servicios = useServicios();
 const tuneles = useTuneles();
 const { ejecutar, ocupado } = useAccion();
 
-const instalables: ServicioInstalable[] = ['nginx', 'php', 'cloudflared'];
+/** Filas de "Instalar", agrupadas para que la lista larga se lea de un vistazo. */
+const gruposInstalar: { titulo: string; servicios: InstalableCatalogo[] }[] = [
+  { titulo: es.instalar.grupos.web, servicios: ['nginx', 'php'] },
+  {
+    titulo: es.instalar.grupos.bd,
+    servicios: ['mysql', 'mariadb', 'postgresql', 'redis', 'mongodb', 'mongosh'],
+  },
+  { titulo: es.instalar.grupos.otros, servicios: ['mailpit', 'ollama', 'cloudflared'] },
+];
 const seccionInstalar = ref<HTMLElement | null>(null);
 
 /** Sin Nginx ni PHP instalados solo tiene sentido mostrar los servicios externos. */
@@ -25,6 +34,21 @@ const nadaInstalado = computed(
 const visibles = computed(() =>
   nadaInstalado.value ? servicios.lista.filter((s) => s.estado === 'externo') : servicios.lista,
 );
+/** Grupos con algo que mostrar; Herramientas siempre está (Composer y Adminer). */
+const grupos = computed<GrupoServicios[]>(() => {
+  const res = servicios.grupos
+    .map((g) => ({
+      ...g,
+      servicios: nadaInstalado.value
+        ? g.servicios.filter((s) => s.estado === 'externo')
+        : g.servicios,
+    }))
+    .filter((g) => g.servicios.length > 0);
+  if (!res.some((g) => g.categoria === 'herramientas')) {
+    res.push({ categoria: 'herramientas', servicios: [] });
+  }
+  return res;
+});
 const administrables = computed(() => visibles.value.filter((s) => s.estado !== 'externo'));
 // "Detener todo" también cierra los túneles: se habilita si hay alguno abierto.
 const algunoEncendido = computed(
@@ -42,13 +66,17 @@ function detenerTodo(): void {
 function irAInstalar(): void {
   seccionInstalar.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+onMounted(() => {
+  void ejecutar('preferencias', () => servicios.cargarPreferencias());
+});
 </script>
 
 <template>
   <div class="servicios">
     <div class="barra">
       <p class="descripcion">{{ t.descripcion }}</p>
-      <NSpace size="small">
+      <NSpace size="small" :wrap="false">
         <NButton
           size="small"
           :disabled="!administrables.length || ocupado('detenerTodo')"
@@ -86,9 +114,35 @@ function irAInstalar(): void {
         </template>
       </NEmpty>
     </div>
-    <section v-if="visibles.length" class="rejilla" aria-live="polite">
-      <TarjetaServicio v-for="s in visibles" :key="s.id" :servicio="s" />
+
+    <!-- Mientras llega la primera foto se reserva el espacio de las tarjetas (sin saltos). -->
+    <section v-if="!servicios.cargado" class="grupo" aria-busy="true">
+      <NSkeleton text :width="120" class="esqueleto-titulo" />
+      <div class="rejilla">
+        <NSkeleton v-for="n in 3" :key="n" :height="148" :sharp="false" class="esqueleto" />
+      </div>
     </section>
+
+    <template v-else>
+      <section
+        v-for="g in grupos"
+        :key="g.categoria"
+        class="grupo"
+        :aria-labelledby="`grupo-${g.categoria}`"
+      >
+        <header class="cabeza-grupo">
+          <h2 :id="`grupo-${g.categoria}`">{{ t.grupos[g.categoria] }}</h2>
+          <small>{{ t.gruposAyuda[g.categoria] }}</small>
+        </header>
+        <div class="rejilla" aria-live="polite">
+          <TarjetaServicio v-for="s in g.servicios" :key="s.id" :servicio="s" />
+          <template v-if="g.categoria === 'herramientas'">
+            <TarjetaHerramienta herramienta="composer" />
+            <TarjetaHerramienta herramienta="adminer" />
+          </template>
+        </div>
+      </section>
+    </template>
 
     <section ref="seccionInstalar" class="instalar">
       <NCard size="small" class="tarjeta-instalar">
@@ -98,7 +152,10 @@ function irAInstalar(): void {
             <small>{{ es.instalar.descripcion }}</small>
           </div>
         </template>
-        <FilaInstalar v-for="s in instalables" :key="s" :servicio="s" />
+        <div v-for="g in gruposInstalar" :key="g.titulo" class="bloque-instalar">
+          <h3 class="subtitulo">{{ g.titulo }}</h3>
+          <FilaInstalar v-for="s in g.servicios" :key="s" :servicio="s" />
+        </div>
       </NCard>
     </section>
   </div>
@@ -116,10 +173,38 @@ function irAInstalar(): void {
   margin: 0;
   opacity: 0.65;
 }
+.grupo {
+  margin-bottom: 22px;
+}
+.cabeza-grupo {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 10px;
+}
+.cabeza-grupo h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+.cabeza-grupo small {
+  font-size: 12px;
+  opacity: 0.5;
+}
 .rejilla {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 14px;
+}
+.esqueleto {
+  border-radius: 12px;
+}
+.esqueleto-titulo {
+  margin-bottom: 10px;
 }
 .vacio {
   margin-bottom: 14px;
@@ -143,5 +228,16 @@ function irAInstalar(): void {
   font-size: 12px;
   font-weight: 400;
   opacity: 0.6;
+}
+.bloque-instalar + .bloque-instalar {
+  margin-top: 14px;
+}
+.subtitulo {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.55;
 }
 </style>

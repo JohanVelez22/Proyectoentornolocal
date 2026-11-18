@@ -9,7 +9,7 @@ import type {
 } from '../src/shared/api';
 import { iniciarEntorno } from '../src/renderer/stores/entorno';
 import { useHosts } from '../src/renderer/stores/hosts';
-import { useServicios } from '../src/renderer/stores/servicios';
+import { categoriaDe, puertoAlternativo, useServicios } from '../src/renderer/stores/servicios';
 import { useSitios } from '../src/renderer/stores/sitios';
 import { useTuneles } from '../src/renderer/stores/tuneles';
 
@@ -48,7 +48,21 @@ function apiFalsa(general: Partial<EstadoGeneral> = {}) {
       detener: vi.fn(),
       iniciarTodo: vi.fn(),
       detenerTodo: vi.fn(),
+      autoIniciar: vi.fn(async () => undefined),
     },
+    config: {
+      leer: vi.fn(async () => ({
+        ftp: { redLocal: false },
+        servicios: {
+          datos: Object.fromEntries(
+            ['mysql', 'mariadb', 'postgresql', 'redis', 'mongodb', 'mailpit', 'ollama'].map(
+              (id) => [id, { version: null, puerto: 1, autoIniciar: id === 'mysql' }],
+            ),
+          ),
+        },
+      })),
+    },
+    ftp: { redLocal: vi.fn(async () => undefined) },
     instalador: {
       listarVersiones: vi.fn(async () => []),
       instalar: vi.fn(),
@@ -209,5 +223,90 @@ describe('stores de la interfaz', () => {
     expect(tuneles.activos.map((t) => t.url)).toEqual(['https://abc.trycloudflare.com']);
     expect(hosts.pendientes).toEqual([]);
     expect(sitios.lista.map((s) => s.dominio)).toEqual(['uno.test']);
+  });
+  it('agrupa por categoría en el orden Web, PHP, Bases de datos, Correo, IA, Herramientas', async () => {
+    await iniciarEntorno();
+    const servicios = useServicios();
+    const s = (id: string, nombre: string, categoria?: EstadoServicio['categoria']) =>
+      servicios.aplicar({ ...nginx, id, nombre, ...(categoria ? { categoria } : {}) });
+    s('ollama', 'Ollama', 'ia');
+    s('ftp', 'FTP', 'herramienta');
+    s('mailpit', 'Mailpit', 'herramienta');
+    s('redis', 'Redis', 'bd');
+    s('mysql', 'MySQL', 'bd');
+
+    expect(servicios.grupos.map((g) => [g.categoria, g.servicios.map((x) => x.id)])).toEqual([
+      ['web', ['nginx']],
+      ['php', ['php-8.4']],
+      ['bd', ['mysql', 'redis']],
+      ['correo', ['mailpit']],
+      ['ia', ['ollama']],
+      ['herramientas', ['ftp']],
+    ]);
+    // Sin categoría (núcleo viejo) se deduce por el id.
+    expect(categoriaDe({ id: 'php-8.3' })).toBe('php');
+    expect(categoriaDe({ id: 'nginx' })).toBe('web');
+  });
+
+  it('un grupo sin servicios no aparece', async () => {
+    await iniciarEntorno();
+    expect(useServicios().grupos.map((g) => g.categoria)).toEqual(['web', 'php']);
+  });
+
+  it('lee el puerto alternativo del conflicto que el núcleo pone en mensaje', async () => {
+    expect(
+      puertoAlternativo('El puerto 3306 lo usa mysqld.exe (PID 42). Use el puerto 3308.'),
+    ).toBe(3308);
+    expect(puertoAlternativo('El puerto 5432 lo usa postgres.exe (PID 7).')).toBeNull();
+    expect(puertoAlternativo(undefined)).toBeNull();
+    expect(puertoAlternativo('Use el puerto 80.')).toBeNull();
+
+    await iniciarEntorno();
+    const servicios = useServicios();
+    falsa.emitir('servicio:estado', {
+      id: 'mysql',
+      nombre: 'MySQL',
+      categoria: 'bd',
+      version: '8.4.7',
+      estado: 'apagado',
+      puertos: [3306],
+      pid: null,
+      mensaje: 'El puerto 3306 lo usa mysqld.exe (PID 42). Use el puerto 3308.',
+    });
+    expect(puertoAlternativo(servicios.porId['mysql']?.mensaje)).toBe(3308);
+  });
+
+  it('ignora el progreso de las Build Tools (es de pgvector, no de Servicios)', async () => {
+    await iniciarEntorno();
+    const servicios = useServicios();
+    falsa.emitir('instalacion:progreso', {
+      servicio: 'buildtools',
+      version: '17',
+      fase: 'listo',
+      porcentaje: 100,
+    });
+    expect(servicios.progresoDe('buildtools')).toHaveLength(0);
+    expect(servicios.progreso).toEqual({});
+    expect(falsa.api.instalador.instalados).not.toHaveBeenCalledWith('buildtools');
+  });
+
+  it('autoIniciar se lee de la configuración y se cambia por IPC (y vuelve atrás si falla)', async () => {
+    const servicios = useServicios();
+    await servicios.cargarPreferencias();
+    expect(servicios.autoIniciar?.mysql).toBe(true);
+    expect(servicios.autoIniciar?.postgresql).toBe(false);
+    expect(servicios.redLocalFtp).toBe(false);
+
+    await servicios.cambiarAutoIniciar('postgresql', true);
+    expect(falsa.api.servicios.autoIniciar).toHaveBeenCalledWith('postgresql', true);
+    expect(servicios.autoIniciar?.postgresql).toBe(true);
+
+    falsa.api.servicios.autoIniciar.mockRejectedValueOnce(new Error('no'));
+    await expect(servicios.cambiarAutoIniciar('mysql', false)).rejects.toThrow('no');
+    expect(servicios.autoIniciar?.mysql).toBe(true);
+
+    await servicios.cambiarRedLocal(true);
+    expect(falsa.api.ftp.redLocal).toHaveBeenCalledWith(true);
+    expect(servicios.redLocalFtp).toBe(true);
   });
 });

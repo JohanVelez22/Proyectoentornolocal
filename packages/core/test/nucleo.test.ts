@@ -712,6 +712,17 @@ describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
     await expect(n.cambiarPuertoHttps(80)).rejects.toThrow('puerto');
   });
 
+  it('autoIniciarServicio guarda la preferencia sin tocar el servicio', async () => {
+    const n = await crear();
+    const iniciar = vi.spyOn(n.servicios, 'iniciar');
+    await n.autoIniciarServicio('postgresql', true);
+    expect((await n.config.leer()).servicios.datos.postgresql.autoIniciar).toBe(true);
+    await n.autoIniciarServicio('postgresql', false);
+    expect((await n.config.leer()).servicios.datos.postgresql.autoIniciar).toBe(false);
+    expect(iniciar).not.toHaveBeenCalled();
+    await expect(n.autoIniciarServicio('nginx' as never, true)).rejects.toThrow('arranque');
+  });
+
   it('cambiarPuertoServicio y borrarDatosServicio delegan en Servicios', async () => {
     const n = await crear();
     const cambiar = vi.spyOn(n.servicios, 'cambiarPuerto').mockResolvedValue(undefined);

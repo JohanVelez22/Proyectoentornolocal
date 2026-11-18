@@ -6,9 +6,9 @@ import type { ProgresoInstalacion, VersionDisponible } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
-import { useServicios, type ServicioInstalable } from '../stores/servicios';
+import { useServicios, type InstalableCatalogo } from '../stores/servicios';
 
-const props = defineProps<{ servicio: ServicioInstalable }>();
+const props = defineProps<{ servicio: InstalableCatalogo }>();
 
 const t = es.instalar;
 const textos = computed(() => t.servicios[props.servicio]);

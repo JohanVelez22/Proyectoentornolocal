@@ -1,13 +1,79 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import type { EstadoServicio, ProgresoInstalacion, VersionDisponible } from '../../shared/api';
+import type {
+  EstadoServicio,
+  IdServicioDatos,
+  ProgresoInstalacion,
+  VersionDisponible,
+} from '../../shared/api';
 import { api } from '../api';
 
-/** La interfaz solo ofrece estos hasta que se sumen los servicios nuevos de la Etapa A. */
-export type ServicioInstalable = Extract<
-  VersionDisponible['servicio'],
-  'nginx' | 'php' | 'cloudflared'
->;
+/** Todo lo que la interfaz sabe instalar (Composer y Adminer tienen su propia tarjeta). */
+export type ServicioInstalable = Exclude<VersionDisponible['servicio'], 'pgvector-src'>;
+
+/** Los que se instalan eligiendo una versión del catálogo (sección "Instalar"). */
+export const INSTALABLES_CATALOGO = [
+  'nginx',
+  'php',
+  'cloudflared',
+  'mysql',
+  'mariadb',
+  'postgresql',
+  'redis',
+  'mongodb',
+  'mongosh',
+  'mailpit',
+  'ollama',
+] as const satisfies readonly ServicioInstalable[];
+export type InstalableCatalogo = (typeof INSTALABLES_CATALOGO)[number];
+
+/** Progreso que no es de esta pantalla (las Build Tools de pgvector van en Bases de datos). */
+const PROGRESO_AJENO = new Set(['buildtools']);
+
+/** Servicios propios con puerto configurable, datos y arranque automático. */
+export const IDS_DATOS: readonly IdServicioDatos[] = [
+  'mysql',
+  'mariadb',
+  'postgresql',
+  'redis',
+  'mongodb',
+  'mailpit',
+  'ollama',
+];
+
+export function esServicioDatos(id: string): id is IdServicioDatos {
+  return (IDS_DATOS as readonly string[]).includes(id);
+}
+
+/** Grupos de la pantalla Servicios, en el orden en que se muestran. */
+export const CATEGORIAS = ['web', 'php', 'bd', 'correo', 'ia', 'herramientas'] as const;
+export type CategoriaUi = (typeof CATEGORIAS)[number];
+
+export function categoriaDe(s: Pick<EstadoServicio, 'id' | 'categoria'>): CategoriaUi {
+  if (s.id === 'mailpit') return 'correo';
+  switch (s.categoria) {
+    case 'web':
+    case 'php':
+    case 'bd':
+    case 'ia':
+      return s.categoria;
+    case 'herramienta':
+      return 'herramientas';
+    default:
+      return s.id === 'nginx' ? 'web' : s.id.startsWith('php-') ? 'php' : 'herramientas';
+  }
+}
+
+/**
+ * Puerto alternativo que propone el núcleo cuando el puerto está ocupado por otro programa
+ * ("El puerto 3306 lo usa mysqld.exe (PID 42). Use el puerto 3308.").
+ */
+export function puertoAlternativo(mensaje: string | undefined): number | null {
+  const m = mensaje?.match(/Use el puerto (\d{2,5})\./);
+  if (!m) return null;
+  const p = Number(m[1]);
+  return p >= 1024 && p <= 65535 ? p : null;
+}
 
 const claveProgreso = (p: Pick<ProgresoInstalacion, 'servicio' | 'version'>): string =>
   `${p.servicio}@${p.version}`;
@@ -23,15 +89,31 @@ function orden(a: EstadoServicio, b: EstadoServicio): number {
     : a.nombre.localeCompare(b.nombre, 'es');
 }
 
+export interface GrupoServicios {
+  categoria: CategoriaUi;
+  servicios: EstadoServicio[];
+}
+
 export const useServicios = defineStore('servicios', () => {
   const porId = ref<Record<string, EstadoServicio>>({});
   const progreso = ref<Record<string, ProgresoInstalacion>>({});
   const instalados = ref<Record<string, string[]>>({});
   const cargado = ref(false);
+  /** Preferencias leídas de la configuración (null hasta cargarlas). */
+  const autoIniciar = ref<Partial<Record<IdServicioDatos, boolean>> | null>(null);
+  const redLocalFtp = ref<boolean | null>(null);
   let bajas: (() => void)[] = [];
 
   const lista = computed(() => Object.values(porId.value).sort(orden));
   const encendidos = computed(() => lista.value.filter((s) => s.estado === 'encendido').length);
+
+  /** Solo los grupos con servicios, en el orden de `CATEGORIAS`. */
+  const grupos = computed<GrupoServicios[]>(() =>
+    CATEGORIAS.map((categoria) => ({
+      categoria,
+      servicios: lista.value.filter((s) => categoriaDe(s) === categoria),
+    })).filter((g) => g.servicios.length > 0),
+  );
 
   function aplicar(estado: EstadoServicio): void {
     porId.value[estado.id] = estado;
@@ -48,6 +130,7 @@ export const useServicios = defineStore('servicios', () => {
   }
 
   function aplicarProgreso(p: ProgresoInstalacion): void {
+    if (PROGRESO_AJENO.has(p.servicio)) return;
     progreso.value[claveProgreso(p)] = p;
     if (p.fase === 'listo') void cargarInstalados(p.servicio).catch(() => undefined);
   }
@@ -66,6 +149,38 @@ export const useServicios = defineStore('servicios', () => {
     const v = await api().instalador.instalados(servicio);
     instalados.value[servicio] = v;
     return v;
+  }
+
+  /** Lee de la configuración el arranque automático de cada servicio y la red local del FTP. */
+  async function cargarPreferencias(): Promise<void> {
+    const c = await api().config.leer();
+    autoIniciar.value = Object.fromEntries(
+      IDS_DATOS.map((id) => [id, c.servicios.datos[id].autoIniciar]),
+    );
+    redLocalFtp.value = c.ftp.redLocal;
+  }
+
+  /** Cambio optimista: si el núcleo lo rechaza se vuelve al valor anterior y se relanza. */
+  async function cambiarAutoIniciar(id: IdServicioDatos, valor: boolean): Promise<void> {
+    const antes = autoIniciar.value?.[id] ?? false;
+    autoIniciar.value = { ...autoIniciar.value, [id]: valor };
+    try {
+      await api().servicios.autoIniciar(id, valor);
+    } catch (e) {
+      autoIniciar.value = { ...autoIniciar.value, [id]: antes };
+      throw e;
+    }
+  }
+
+  async function cambiarRedLocal(valor: boolean): Promise<void> {
+    const antes = redLocalFtp.value;
+    redLocalFtp.value = valor;
+    try {
+      await api().ftp.redLocal(valor);
+    } catch (e) {
+      redLocalFtp.value = antes;
+      throw e;
+    }
   }
 
   /** Se suscribe a los eventos una sola vez; nunca se pide refresco manual. */
@@ -87,7 +202,10 @@ export const useServicios = defineStore('servicios', () => {
     progreso,
     instalados,
     cargado,
+    autoIniciar,
+    redLocalFtp,
     lista,
+    grupos,
     encendidos,
     aplicar,
     hidratar,
@@ -96,6 +214,9 @@ export const useServicios = defineStore('servicios', () => {
     progresoDe,
     olvidarProgreso,
     cargarInstalados,
+    cargarPreferencias,
+    cambiarAutoIniciar,
+    cambiarRedLocal,
     iniciar,
     detener,
   };

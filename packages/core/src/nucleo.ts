@@ -56,6 +56,7 @@ import type {
   Sitio,
   TipoSitio,
 } from './tipos';
+import { IDS_SERVICIO_DATOS } from './tipos';
 import { Tuneles } from './tuneles/tuneles';
 
 export interface OpcionesNucleo {
@@ -421,6 +422,16 @@ export class Nucleo {
   /** Cambia el puerto de un servicio propio (1024–65535, libre); lo reinicia si estaba encendido. */
   cambiarPuertoServicio(id: IdServicioDatos, puerto: number): Promise<void> {
     return this.servicios.cambiarPuerto(id, puerto);
+  }
+
+  /** Marca si el servicio se enciende al iniciar WolfCore Dev (no lo enciende ni lo apaga ahora). */
+  async autoIniciarServicio(id: IdServicioDatos, valor: boolean): Promise<void> {
+    if (!(IDS_SERVICIO_DATOS as readonly string[]).includes(id)) {
+      throw new Error('El servicio no admite el arranque automático.');
+    }
+    await this.sitios.modificarConfig((c) => {
+      c.servicios.datos[id].autoIniciar = valor;
+    });
   }
 
   /** Borra los datos de un servicio; `confirmacion` debe ser su id. */

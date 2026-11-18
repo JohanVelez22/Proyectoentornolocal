@@ -129,6 +129,8 @@ const TABLA: Record<RutaIpc, Manejador> = {
     n.cambiarPuertoServicio(idServicioDatos(id), puertoUsuario(puerto)),
   'servicios.borrarDatos': (n, _s, id, confirmacion) =>
     n.borrarDatosServicio(idServicioDatos(id), textoAcotado(confirmacion, 0, 64, 'confirmación')),
+  'servicios.autoIniciar': (n, _s, id, valor) =>
+    n.autoIniciarServicio(idServicioDatos(id), booleano(valor, 'autoIniciar')),
   'bd.listar': (n, _s, motor) => n.listarBases(motorBd(motor)),
   'bd.crear': (n, _s, motor, nombre, opciones) => {
     const m = motorBd(motor);

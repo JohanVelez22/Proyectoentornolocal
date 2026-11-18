@@ -1,35 +1,190 @@
 <script setup lang="ts">
-import { CodeSlash, Layers, Power, Server } from '@vicons/ionicons5';
-import { NButton, NCollapse, NCollapseItem, NIcon } from 'naive-ui';
-import { computed } from 'vue';
+import {
+  ChatbubbleEllipses,
+  CodeSlash,
+  CloudUpload,
+  EllipsisHorizontal,
+  Layers,
+  Mail,
+  Power,
+  Server,
+  SwapHorizontal,
+  TrashOutline,
+  Warning,
+} from '@vicons/ionicons5';
+import {
+  NButton,
+  NCollapse,
+  NCollapseItem,
+  NDropdown,
+  NForm,
+  NFormItem,
+  NIcon,
+  NInput,
+  NInputNumber,
+  NModal,
+  NSwitch,
+  useDialog,
+  type DropdownOption,
+} from 'naive-ui';
+import { computed, h, ref, type Component } from 'vue';
 import type { EstadoServicio } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
+import { categoriaDe, esServicioDatos, puertoAlternativo, useServicios } from '../stores/servicios';
 import EstadoPunto from './EstadoPunto.vue';
 
 const props = defineProps<{ servicio: EstadoServicio }>();
 
 const t = es.servicios;
+const servicios = useServicios();
+const dialog = useDialog();
 const { ejecutar, ocupado } = useAccion();
 
-const icono = computed(() =>
-  props.servicio.id === 'nginx'
-    ? Server
-    : props.servicio.id.startsWith('php-')
-      ? CodeSlash
-      : Layers,
-);
+const ICONOS: Record<ReturnType<typeof categoriaDe>, Component> = {
+  web: Server,
+  php: CodeSlash,
+  bd: Layers,
+  correo: Mail,
+  ia: ChatbubbleEllipses,
+  herramientas: CloudUpload,
+};
+const icono = computed(() => ICONOS[categoriaDe(props.servicio)]);
+
 const externo = computed(() => props.servicio.estado === 'externo');
 const encendido = computed(() => props.servicio.estado === 'encendido');
 const iniciando = computed(() => props.servicio.estado === 'iniciando');
 const trabajando = computed(() => ocupado('cambiar'));
+const esFtp = computed(() => props.servicio.id === 'ftp');
+/** Servicio propio con puerto, datos y arranque automático (no los externos). */
+const deDatos = computed(() => esServicioDatos(props.servicio.id) && !externo.value);
+const puertoPrincipal = computed(() => props.servicio.puertos[0] ?? null);
+const alternativo = computed(() =>
+  deDatos.value && !encendido.value ? puertoAlternativo(props.servicio.mensaje) : null,
+);
 
 function cambiar(): void {
   const id = props.servicio.id;
   void ejecutar('cambiar', () =>
-    encendido.value ? api().servicios.detener(id) : api().servicios.iniciar(id),
+    encendido.value || iniciando.value ? api().servicios.detener(id) : api().servicios.iniciar(id),
   );
+}
+
+const estiloDialogo = { width: '420px', maxWidth: 'calc(100vw - 32px)' };
+
+// ---- Puerto ----
+const dialogoPuerto = ref(false);
+const puertoNuevo = ref<number | null>(null);
+const puertoValido = computed(
+  () => puertoNuevo.value !== null && puertoNuevo.value >= 1024 && puertoNuevo.value <= 65535,
+);
+const puertoIgual = computed(() => puertoNuevo.value === puertoPrincipal.value);
+
+function abrirDialogoPuerto(): void {
+  puertoNuevo.value = alternativo.value ?? puertoPrincipal.value;
+  dialogoPuerto.value = true;
+}
+
+async function aplicarPuerto(puerto: number): Promise<boolean> {
+  const id = props.servicio.id;
+  if (!esServicioDatos(id)) return false;
+  const ok = await ejecutar(
+    'puerto',
+    async () => {
+      await api().servicios.cambiarPuerto(id, puerto);
+      return true;
+    },
+    { exito: t.puertoCambiado(props.servicio.nombre, puerto) },
+  );
+  return !!ok;
+}
+
+async function guardarPuerto(): Promise<void> {
+  if (!puertoValido.value || puertoIgual.value || puertoNuevo.value === null) return;
+  if (await aplicarPuerto(puertoNuevo.value)) dialogoPuerto.value = false;
+}
+
+function usarAlternativo(): void {
+  if (alternativo.value !== null) void aplicarPuerto(alternativo.value);
+}
+
+// ---- Borrar datos ----
+const dialogoBorrar = ref(false);
+const confirmacion = ref('');
+const confirmado = computed(() => confirmacion.value === props.servicio.id);
+
+async function borrarDatos(): Promise<void> {
+  const id = props.servicio.id;
+  if (!confirmado.value || !esServicioDatos(id)) return;
+  const ok = await ejecutar(
+    'borrar',
+    async () => {
+      await api().servicios.borrarDatos(id, confirmacion.value);
+      return true;
+    },
+    { exito: t.borrarDatos.hecho(props.servicio.nombre) },
+  );
+  if (ok) dialogoBorrar.value = false;
+}
+
+// ---- Menú ⋯ ----
+const iconoMenu = (c: Component) => () => h(NIcon, null, { default: () => h(c) });
+const opciones = computed<DropdownOption[]>(() => [
+  { key: 'puerto', label: t.cambiarPuerto, icon: iconoMenu(SwapHorizontal) },
+  { type: 'divider', key: 'd1' },
+  {
+    key: 'borrar',
+    label: t.borrarDatos.opcion,
+    icon: iconoMenu(TrashOutline),
+    props: { style: 'color: #dc2626' },
+  },
+]);
+
+function elegir(clave: string): void {
+  if (clave === 'puerto') abrirDialogoPuerto();
+  if (clave === 'borrar') {
+    confirmacion.value = '';
+    dialogoBorrar.value = true;
+  }
+}
+
+// ---- Arranque automático ----
+const autoIniciar = computed(() =>
+  esServicioDatos(props.servicio.id)
+    ? (servicios.autoIniciar?.[props.servicio.id] ?? false)
+    : false,
+);
+
+function cambiarAutoIniciar(valor: boolean): void {
+  const id = props.servicio.id;
+  if (!esServicioDatos(id)) return;
+  void ejecutar('auto', () => servicios.cambiarAutoIniciar(id, valor), {
+    exito: valor
+      ? t.autoIniciarActivado(props.servicio.nombre)
+      : t.autoIniciarDesactivado(props.servicio.nombre),
+  });
+}
+
+// ---- FTP ----
+function cambiarRedLocal(valor: boolean): void {
+  const aplicar = (): Promise<unknown> =>
+    ejecutar('redLocal', () => servicios.cambiarRedLocal(valor), {
+      exito: valor ? t.ftp.redLocalActivada : t.ftp.redLocalDesactivada,
+    });
+  if (!valor) {
+    void aplicar();
+    return;
+  }
+  dialog.warning({
+    title: t.ftp.avisoTitulo,
+    content: t.ftp.avisoTexto,
+    positiveText: t.ftp.avisoConfirmar,
+    negativeText: es.acciones.cancelar,
+    onPositiveClick: () => {
+      void aplicar();
+    },
+  });
 }
 </script>
 
@@ -44,12 +199,44 @@ function cambiar(): void {
         <span class="version">{{ servicio.version ?? t.sinVersion }}</span>
       </div>
       <EstadoPunto :estado="servicio.estado" />
+      <NDropdown
+        v-if="deDatos"
+        trigger="click"
+        :options="opciones"
+        placement="bottom-end"
+        @select="elegir"
+      >
+        <NButton
+          size="tiny"
+          quaternary
+          circle
+          :aria-label="`${es.acciones.masAcciones}: ${servicio.nombre}`"
+          :title="es.acciones.masAcciones"
+        >
+          <template #icon
+            ><NIcon><EllipsisHorizontal /></NIcon
+          ></template>
+        </NButton>
+      </NDropdown>
     </header>
 
     <dl class="datos">
       <div>
-        <dt>{{ t.puertos }}</dt>
-        <dd>{{ servicio.puertos.length ? servicio.puertos.join(', ') : t.sinPuertos }}</dd>
+        <dt>{{ servicio.puertos.length > 1 ? t.puertos : t.puerto }}</dt>
+        <dd class="puerto">
+          <span>{{ servicio.puertos.length ? servicio.puertos.join(', ') : t.sinPuertos }}</span>
+          <NButton
+            v-if="deDatos"
+            text
+            size="tiny"
+            type="primary"
+            class="enlace"
+            :aria-label="t.cambiarPuertoDe(servicio.nombre)"
+            @click="abrirDialogoPuerto"
+          >
+            {{ t.cambiarPuerto }}
+          </NButton>
+        </dd>
       </div>
       <div>
         <dt>{{ t.pid }}</dt>
@@ -57,15 +244,68 @@ function cambiar(): void {
       </div>
     </dl>
 
-    <NCollapse v-if="servicio.estado === 'error' && servicio.mensaje" class="detalle-error">
+    <div v-if="alternativo !== null" class="conflicto" role="alert">
+      <NIcon :size="16" class="conflicto-icono"><Warning /></NIcon>
+      <div class="conflicto-cuerpo">
+        <strong>{{ t.conflicto }}</strong>
+        <span>{{ servicio.mensaje }}</span>
+        <NButton
+          size="tiny"
+          type="warning"
+          secondary
+          :loading="ocupado('puerto')"
+          class="conflicto-boton"
+          @click="usarAlternativo"
+        >
+          {{ t.usarPuerto(alternativo) }}
+        </NButton>
+      </div>
+    </div>
+    <NCollapse v-else-if="servicio.estado === 'error' && servicio.mensaje" class="detalle-error">
       <NCollapseItem :title="t.verDetalle" name="error">
         <pre>{{ servicio.mensaje }}</pre>
       </NCollapseItem>
     </NCollapse>
     <p v-else-if="servicio.mensaje" class="mensaje">{{ servicio.mensaje }}</p>
 
+    <label v-if="deDatos" class="opcion">
+      <NSwitch
+        size="small"
+        :value="autoIniciar"
+        :loading="ocupado('auto')"
+        :disabled="servicios.autoIniciar === null"
+        :aria-label="`${t.autoIniciar}: ${servicio.nombre}`"
+        @update:value="cambiarAutoIniciar"
+      />
+      <span>{{ t.autoIniciar }}</span>
+    </label>
+
+    <div v-if="esFtp" class="opcion-bloque">
+      <label class="opcion">
+        <NSwitch
+          size="small"
+          :value="servicios.redLocalFtp ?? false"
+          :loading="ocupado('redLocal')"
+          :disabled="servicios.redLocalFtp === null"
+          :aria-label="t.ftp.redLocal"
+          @update:value="cambiarRedLocal"
+        />
+        <span>{{ t.ftp.redLocal }}</span>
+      </label>
+      <small class="ayuda">{{ t.ftp.redLocalAyuda }}</small>
+    </div>
+
     <footer class="pie">
       <span v-if="externo" class="externo">{{ t.externo }}</span>
+      <label v-else-if="esFtp" class="opcion">
+        <span>{{ t.ftp.interruptor }}</span>
+        <NSwitch
+          :value="encendido || iniciando"
+          :loading="trabajando || iniciando"
+          :aria-label="t.ftp.interruptor"
+          @update:value="cambiar"
+        />
+      </label>
       <NButton
         v-else
         size="small"
@@ -81,6 +321,92 @@ function cambiar(): void {
         {{ encendido ? es.acciones.apagar : es.acciones.encender }}
       </NButton>
     </footer>
+
+    <NModal
+      v-model:show="dialogoPuerto"
+      preset="card"
+      :title="t.dialogoPuerto.titulo(servicio.nombre)"
+      size="small"
+      :bordered="false"
+      :style="estiloDialogo"
+      :mask-closable="!ocupado('puerto')"
+    >
+      <NForm :show-feedback="true" @submit.prevent="guardarPuerto">
+        <NFormItem
+          :label="t.dialogoPuerto.etiqueta"
+          :validation-status="puertoValido ? undefined : 'error'"
+          :feedback="
+            !puertoValido ? t.dialogoPuerto.rango : puertoIgual ? t.dialogoPuerto.igual : ''
+          "
+        >
+          <NInputNumber
+            v-model:value="puertoNuevo"
+            :min="1024"
+            :max="65535"
+            :show-button="false"
+            class="campo-puerto"
+            autofocus
+          />
+        </NFormItem>
+      </NForm>
+      <p class="ayuda">{{ t.dialogoPuerto.ayuda }}</p>
+      <template #action>
+        <div class="acciones-dialogo">
+          <NButton size="small" @click="dialogoPuerto = false">{{ es.acciones.cancelar }}</NButton>
+          <NButton
+            size="small"
+            type="primary"
+            :disabled="!puertoValido || puertoIgual"
+            :loading="ocupado('puerto')"
+            @click="guardarPuerto"
+          >
+            {{ t.dialogoPuerto.guardar }}
+          </NButton>
+        </div>
+      </template>
+    </NModal>
+
+    <NModal
+      v-model:show="dialogoBorrar"
+      preset="card"
+      :title="t.borrarDatos.titulo(servicio.nombre)"
+      size="small"
+      :bordered="false"
+      :style="estiloDialogo"
+      :mask-closable="!ocupado('borrar')"
+    >
+      <p class="advertencia">
+        <NIcon :size="18"><Warning /></NIcon>
+        <span>{{ t.borrarDatos.texto }}</span>
+      </p>
+      <NForm :show-feedback="false" @submit.prevent="borrarDatos">
+        <NFormItem :label="t.borrarDatos.pedir(servicio.id)">
+          <NInput
+            v-model:value="confirmacion"
+            :placeholder="servicio.id"
+            :input-props="{ spellcheck: false, autocomplete: 'off' }"
+            class="campo-confirmar"
+          />
+        </NFormItem>
+      </NForm>
+      <template #action>
+        <div class="acciones-dialogo">
+          <NButton size="small" @click="dialogoBorrar = false">{{ es.acciones.cancelar }}</NButton>
+          <NButton
+            size="small"
+            type="error"
+            :disabled="!confirmado"
+            :loading="ocupado('borrar')"
+            @click="borrarDatos"
+          >
+            <template #icon
+              ><NIcon><TrashOutline /></NIcon
+            ></template>
+            {{ t.borrarDatos.boton }}
+          </NButton>
+        </div>
+      </template>
+    </NModal>
   </article>
 </template>
 
@@ -147,6 +473,40 @@ function cambiar(): void {
   font-family: var(--fuente-mono);
   font-size: 13px;
 }
+.puerto {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.enlace {
+  font-family: var(--fuente);
+  font-size: 12px;
+}
+.conflicto {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(217, 119, 6, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  font-size: 12px;
+}
+.conflicto-icono {
+  color: #d97706;
+  flex: none;
+  margin-top: 1px;
+}
+.conflicto-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.conflicto-boton {
+  align-self: flex-start;
+  margin-top: 4px;
+}
 .detalle-error pre {
   margin: 0;
   padding: 10px;
@@ -162,6 +522,23 @@ function cambiar(): void {
   font-size: 12px;
   opacity: 0.7;
 }
+.opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.opcion-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ayuda {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.6;
+}
 .pie {
   margin-top: auto;
   display: flex;
@@ -172,5 +549,27 @@ function cambiar(): void {
 .externo {
   font-size: 12px;
   opacity: 0.7;
+}
+.campo-puerto {
+  width: 160px;
+}
+.campo-puerto :deep(input),
+.campo-confirmar :deep(input) {
+  font-family: var(--fuente-mono);
+}
+.advertencia {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-size: 13px;
+}
+.advertencia .n-icon {
+  color: #dc2626;
+  flex: none;
+}
+.acciones-dialogo {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 </style>

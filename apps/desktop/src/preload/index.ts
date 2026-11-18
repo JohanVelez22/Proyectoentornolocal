@@ -35,6 +35,7 @@ const api: ApiEntorno = {
     detenerTodo: () => invocar('servicios.detenerTodo'),
     cambiarPuerto: (id, puerto) => invocar('servicios.cambiarPuerto', id, puerto),
     borrarDatos: (id, confirmacion) => invocar('servicios.borrarDatos', id, confirmacion),
+    autoIniciar: (id, valor) => invocar('servicios.autoIniciar', id, valor),
   },
   bd: {
     listar: (motor) => invocar('bd.listar', motor),

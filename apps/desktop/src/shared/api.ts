@@ -70,6 +70,9 @@ export type {
 
 export type MotorSql = Exclude<MotorBd, 'mongodb'>;
 
+/** Puerto fijo de Adminer (igual que `PUERTO_ADMINER` del núcleo; solo se muestra). */
+export const PUERTO_ADMINER = 8090;
+
 export interface EstadoPgvector {
   buildTools: boolean;
   instalado: boolean;
@@ -114,6 +117,8 @@ export interface ApiEntorno {
     cambiarPuerto(id: IdServicioDatos, puerto: number): Promise<void>;
     /** `confirmacion` debe ser el id del servicio. */
     borrarDatos(id: IdServicioDatos, confirmacion: string): Promise<void>;
+    /** Encender (o no) el servicio al iniciar WolfCore Dev; no lo enciende ahora. */
+    autoIniciar(id: IdServicioDatos, valor: boolean): Promise<void>;
   };
   bd: {
     listar(motor: MotorBd): Promise<BaseListada[]>;
@@ -249,6 +254,7 @@ export const RUTAS_IPC = [
   'servicios.detenerTodo',
   'servicios.cambiarPuerto',
   'servicios.borrarDatos',
+  'servicios.autoIniciar',
   'bd.listar',
   'bd.crear',
   'bd.borrar',

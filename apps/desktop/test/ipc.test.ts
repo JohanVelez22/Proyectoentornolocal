@@ -3,7 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import { registrarIpc, type IpcMainLike, type NucleoIpc, type VentanaLike } from '../src/main/ipc';
-import { CANAL_EVENTO, RUTAS_IPC } from '../src/shared/api';
+import { PUERTO_ADMINER as PUERTO_ADMINER_NUCLEO } from '@pel/core';
+import { CANAL_EVENTO, PUERTO_ADMINER, RUTAS_IPC } from '../src/shared/api';
 
 type Manejador = (evento: unknown, ...args: unknown[]) => unknown;
 
@@ -41,6 +42,7 @@ function nucleoFalso() {
       [
         'cambiarPuertoServicio',
         'borrarDatosServicio',
+        'autoIniciarServicio',
         'listarBases',
         'crearBase',
         'borrarBase',
@@ -318,6 +320,7 @@ describe('registrarIpc', () => {
         'servicios.detenerTodo',
         'servicios.cambiarPuerto',
         'servicios.borrarDatos',
+        'servicios.autoIniciar',
         'bd.listar',
         'bd.crear',
         'bd.borrar',
@@ -392,6 +395,8 @@ describe('registrarIpc', () => {
         ['servicios.cambiarPuerto', ['mysql', 80]],
         ['servicios.cambiarPuerto', ['nginx', 3308]],
         ['servicios.borrarDatos', ['../etc', 'x']],
+        ['servicios.autoIniciar', ['ftp', true]],
+        ['servicios.autoIniciar', ['mysql', 'true']],
         ['bd.listar', ['oracle']],
         ['bd.crear', ['postgresql', 'Mayusculas']],
         ['bd.crear', ['mysql', 'a;DROP']],
@@ -438,6 +443,7 @@ describe('registrarIpc', () => {
     for (const m of [
       'cambiarPuertoServicio',
       'borrarDatosServicio',
+      'autoIniciarServicio',
       'listarBases',
       'crearBase',
       'borrarBase',
@@ -479,6 +485,8 @@ describe('registrarIpc', () => {
     try {
       expect((await llamar('servicios.cambiarPuerto', 'mysql', 3308)).ok).toBe(true);
       expect(f['cambiarPuertoServicio']).toHaveBeenCalledWith('mysql', 3308);
+      expect((await llamar('servicios.autoIniciar', 'postgresql', true)).ok).toBe(true);
+      expect(f['autoIniciarServicio']).toHaveBeenCalledWith('postgresql', true);
       expect(
         (
           await llamar('bd.restaurar', 'postgresql', archivo, 'backup', {
@@ -546,5 +554,11 @@ describe('registrarIpc', () => {
       'bd:progreso',
       'ia:progreso',
     ]);
+  });
+});
+
+describe('constantes compartidas', () => {
+  it('el puerto de Adminer que muestra la interfaz es el del núcleo', () => {
+    expect(PUERTO_ADMINER).toBe(PUERTO_ADMINER_NUCLEO);
   });
 });
