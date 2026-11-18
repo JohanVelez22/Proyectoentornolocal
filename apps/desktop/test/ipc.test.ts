@@ -37,7 +37,7 @@ function nucleoFalso() {
     guardarSitio: vi.fn(),
     borrarSitio: vi.fn(),
     detectarProyecto: vi.fn(),
-    avisoInicio: 'aviso',
+    tomarAvisoInicio: vi.fn().mockReturnValueOnce('aviso').mockReturnValue(null),
     ...Object.fromEntries(
       [
         'cambiarPuertoServicio',
@@ -188,6 +188,7 @@ describe('registrarIpc', () => {
       [CANAL_EVENTO, { nombre: 'servicio:estado', dato: { id: 'nginx' } }],
     ]);
     expect([...oyentes.keys()].sort()).toEqual([
+      'aviso:inicio',
       'bd:progreso',
       'hosts:estado',
       'ia:progreso',
@@ -432,6 +433,7 @@ describe('registrarIpc', () => {
         ['ia.cancelar', ['']],
         ['ia.borrar', [{}]],
         ['ia.probar', ['llama3.2', '']],
+        ['ia.probar', ['llama3.2', 'a\u0000b']],
         ['instalador.instalar', [{ servicio: 'pgvector-src', version: '1.28.0' }]],
       ] as [string, unknown[]][]) {
         const r = (await canales.get(`entorno:${ruta}`)!({}, ...args)) as { ok: boolean };
@@ -483,6 +485,11 @@ describe('registrarIpc', () => {
     const llamar = async (ruta: string, ...args: unknown[]) =>
       (await canales.get(`entorno:${ruta}`)!({}, ...args)) as { ok: boolean };
     try {
+      // Las rutas de archivo y carpeta solo valen si salieron de los diálogos.
+      sistema.elegirArchivo.mockResolvedValueOnce(archivo);
+      sistema.elegirCarpeta.mockResolvedValueOnce(carpeta);
+      await llamar('sistema.elegirArchivo');
+      await llamar('sistema.elegirCarpeta');
       expect((await llamar('servicios.cambiarPuerto', 'mysql', 3308)).ok).toBe(true);
       expect(f['cambiarPuertoServicio']).toHaveBeenCalledWith('mysql', 3308);
       expect((await llamar('servicios.autoIniciar', 'postgresql', true)).ok).toBe(true);
@@ -506,6 +513,9 @@ describe('registrarIpc', () => {
       expect((await llamar('ia.descargar', 'qwen2.5-coder:7b')).ok).toBe(true);
       expect(f['descargarModelo']).toHaveBeenCalledWith('qwen2.5-coder:7b');
       expect(await llamar('avisoInicio')).toEqual({ ok: true, valor: 'aviso' });
+      // Ya leído: una recarga del renderer no lo vuelve a recibir.
+      expect(await llamar('avisoInicio')).toEqual({ ok: true, valor: null });
+      expect((await llamar('ia.probar', 'llama3.2', 'línea 1\r\n\tlínea 2')).ok).toBe(true);
       expect(
         (await llamar('instalador.instalar', { servicio: 'mysql', version: '1.28.0' })).ok,
       ).toBe(true);
@@ -560,5 +570,53 @@ describe('registrarIpc', () => {
 describe('constantes compartidas', () => {
   it('el puerto de Adminer que muestra la interfaz es el del núcleo', () => {
     expect(PUERTO_ADMINER).toBe(PUERTO_ADMINER_NUCLEO);
+  });
+  it('las rutas de archivo y carpeta solo aceptan lo elegido en los diálogos', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    const f = crudo as unknown as Record<string, Mock>;
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const carpeta = mkdtempSync(path.join(os.tmpdir(), 'pel-ipc-'));
+    const archivo = path.join(carpeta, 'respaldo.sql');
+    writeFileSync(archivo, 'select 1;');
+    const llamar = async (ruta: string, ...args: unknown[]) =>
+      (await canales.get(`entorno:${ruta}`)!({}, ...args)) as {
+        ok: boolean;
+        error?: { mensaje: string };
+      };
+    try {
+      // Existe, pero no salió de un diálogo.
+      expect((await llamar('bd.formato', archivo)).error?.mensaje).toBe(
+        'Elija el archivo desde el diálogo',
+      );
+      expect((await llamar('bd.restaurar', 'mysql', archivo, 'x')).error?.mensaje).toBe(
+        'Elija el archivo desde el diálogo',
+      );
+      expect((await llamar('bd.respaldar', 'mysql', 'x', carpeta)).error?.mensaje).toBe(
+        'Elija la carpeta desde el diálogo',
+      );
+      // Un diálogo cancelado no registra nada.
+      sistema.elegirArchivo.mockResolvedValueOnce(null);
+      expect(await llamar('sistema.elegirArchivo')).toEqual({ ok: true, valor: null });
+      expect((await llamar('bd.formato', archivo)).ok).toBe(false);
+      expect(f['formatoRespaldo']).not.toHaveBeenCalled();
+      expect(f['restaurarBase']).not.toHaveBeenCalled();
+      expect(f['respaldarBase']).not.toHaveBeenCalled();
+      // Elegido: vale aunque cambien mayúsculas o separadores.
+      sistema.elegirArchivo.mockResolvedValueOnce(archivo);
+      sistema.elegirCarpeta.mockResolvedValueOnce(carpeta + path.sep);
+      expect(await llamar('sistema.elegirArchivo')).toEqual({ ok: true, valor: archivo });
+      await llamar('sistema.elegirCarpeta');
+      const variante = archivo.toUpperCase().replace(/\\/g, '/');
+      expect(
+        (await llamar('bd.formato', process.platform === 'win32' ? variante : archivo)).ok,
+      ).toBe(true);
+      expect((await llamar('bd.respaldar', 'mysql', 'x', carpeta)).ok).toBe(true);
+      // Elegido en el diálogo pero ya no existe: lo rechaza archivoExistente.
+      rmSync(archivo);
+      expect((await llamar('bd.formato', archivo)).error?.mensaje).toBe('El archivo no existe');
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
   });
 });

@@ -204,7 +204,10 @@ export interface ApiEntorno {
   mailpit: {
     noLeidos(): Promise<number>;
   };
-  /** Aviso del arranque (p. ej. la migración de la carpeta de datos), o null. */
+  /**
+   * Avisos de inicio pendientes (migración de la carpeta de datos, servicios que no encendieron),
+   * o null. Se entregan una sola vez; el evento viso:inicio avisa que hay uno nuevo.
+   */
   avisoInicio(): Promise<string | null>;
   instalador: {
     listarVersiones(servicio: VersionDisponible['servicio']): Promise<VersionDisponible[]>;
@@ -327,4 +330,5 @@ export const EVENTOS_IPC = [
   'hosts:estado',
   'bd:progreso',
   'ia:progreso',
+  'aviso:inicio',
 ] as const satisfies readonly (keyof EventosNucleo)[];

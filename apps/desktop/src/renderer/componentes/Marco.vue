@@ -65,6 +65,8 @@ function navegar(clave: string): void {
   void router.push({ name: clave });
 }
 
+let bajaAviso: (() => void) | null = null;
+
 onMounted(() => {
   void ejecutar(
     'arranque',
@@ -77,6 +79,8 @@ onMounted(() => {
     falloArranque.value = !ok;
     if (ok) void mostrarAvisoInicio();
   });
+  // Avisos que llegan después (p. ej. un servicio automático que no encendió).
+  bajaAviso = api().on('aviso:inicio', () => void mostrarAvisoInicio());
 });
 
 /** Aviso del arranque (p. ej. la migración de la carpeta de datos): queda hasta que se cierra. */
@@ -90,7 +94,10 @@ async function mostrarAvisoInicio(): Promise<void> {
   if (!aviso) return;
   notification.info({ title: es.avisoInicio.titulo, content: aviso, closable: true });
 }
-onBeforeUnmount(detenerEntorno);
+onBeforeUnmount(() => {
+  bajaAviso?.();
+  detenerEntorno();
+});
 </script>
 
 <template>

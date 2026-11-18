@@ -189,3 +189,47 @@ export function ramaPhp(v: unknown): string | null {
   if (typeof v !== 'string' || !/^\d+\.\d+$/.test(v)) throw new Error('Argumento no válido: rama');
   return v;
 }
+
+/**
+ * Rutas que el usuario eligió en los diálogos de esta sesión. Las rutas que leen o escriben
+ * archivos (restaurar, formato, carpeta de respaldo) solo aceptan rutas de aquí: el renderer no
+ * puede inventar una ruta.
+ */
+export class RutasElegidas {
+  private readonly rutas = new Set<string>();
+
+  /** Misma ruta aunque cambien mayúsculas, separadores o la barra final (Windows). */
+  private clave(ruta: string): string {
+    return resolve(ruta).replace(/\//g, '\\').replace(/\\+$/, '').toLowerCase();
+  }
+
+  registrar(ruta: string | null): string | null {
+    if (ruta) this.rutas.add(this.clave(ruta));
+    return ruta;
+  }
+
+  exigir(v: unknown, tipo: 'archivo' | 'carpeta'): string {
+    const t = texto(v, tipo);
+    if (!this.rutas.has(this.clave(t))) {
+      throw new Error(
+        tipo === 'archivo'
+          ? 'Elija el archivo desde el diálogo'
+          : 'Elija la carpeta desde el diálogo',
+      );
+    }
+    return t;
+  }
+}
+
+/** Como textoAcotado, pero admite tabulador y saltos de línea (texto escrito por el usuario). */
+export function textoLibre(v: unknown, min: number, max: number, nombre = 'valor'): string {
+  if (
+    typeof v !== 'string' ||
+    v.length < min ||
+    v.length > max ||
+    [...v].some((c) => c.charCodeAt(0) < 0x20 && !'\t\r\n'.includes(c))
+  ) {
+    throw new Error(`Argumento no válido: ${nombre}`);
+  }
+  return v;
+}

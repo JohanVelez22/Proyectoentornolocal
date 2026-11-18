@@ -15,7 +15,9 @@ import { PathUsuario } from '../src/herramientas/pathUsuario';
 import { Terminal } from '../src/herramientas/terminal';
 import { GestorHttps } from '../src/https/certificados';
 import { ClienteOllama } from '../src/ia/ollama';
-import { ServiciosDatos } from '../src/servicios/definicion';
+import { Instalador } from '../src/catalogo/instalador';
+import { Servicios } from '../src/servicios/servicios';
+import '../src/servicios/ollama';
 import { Mailpit } from '../src/servicios/mailpit';
 import type { UrlBase } from '../src/sitios/urlbase';
 import type { Plataforma } from '../src/plataforma/tipos';
@@ -56,6 +58,23 @@ const crear = async (): Promise<Nucleo> => {
   return n;
 };
 
+/** Marca servicios con autoIniciar en el config.json antes de crear el núcleo. */
+const autoIniciar = (...ids: string[]): void => {
+  writeFileSync(
+    path.join(base, 'config.json'),
+    JSON.stringify({
+      version: 1,
+      servicios: { datos: Object.fromEntries(ids.map((id) => [id, { autoIniciar: true }])) },
+    }),
+  );
+  const instalados = Instalador.prototype.instalados;
+  vi.spyOn(Instalador.prototype, 'instalados').mockImplementation(async function (
+    this: Instalador,
+    servicio: string,
+  ) {
+    return ids.includes(servicio) ? ['1.0.0'] : instalados.call(this, servicio);
+  });
+};
 const datos = (extra: Partial<Omit<Sitio, 'id'>> = {}): Omit<Sitio, 'id'> => ({
   nombre: 'Demo',
   dominio: 'demo.test',
@@ -671,13 +690,83 @@ describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
       orden.push('readoptar');
       return readoptar.call(this);
     });
-    vi.spyOn(ServiciosDatos.prototype, 'iniciarAutomaticos').mockImplementation(async () => {
-      orden.push('automaticos');
-      return [];
+    autoIniciar('mailpit');
+    vi.spyOn(Servicios.prototype, 'iniciar').mockImplementation(async (id) => {
+      orden.push(`iniciar:${id}`);
     });
     const n = await crear();
+    expect(await n.arranqueAutomatico).toEqual([]);
+    expect(orden).toEqual(['readoptar', 'iniciar:mailpit']);
+    expect(n.tomarAvisoInicio()).toBeNull();
+  });
+
+  it('si un servicio automático falla, deja un aviso de inicio que se entrega una sola vez', async () => {
+    autoIniciar('mailpit');
+    vi.spyOn(Servicios.prototype, 'iniciar').mockRejectedValue(new Error('puerto 1025 ocupado'));
+    const avisos: string[] = [];
+    const n = await Nucleo.crear({
+      base,
+      plataforma,
+      sonda: async () => false,
+      fetch: (async () => new Response('{}')) as typeof fetch,
+      alIniciar: (e) => e.on('aviso:inicio', (a) => avisos.push(a)),
+    });
+    nucleos.push(n);
     await n.arranqueAutomatico;
-    expect(orden).toEqual(['readoptar', 'automaticos']);
+    expect(avisos).toEqual(['No se pudieron encender al iniciar: Mailpit: puerto 1025 ocupado']);
+    expect(n.tomarAvisoInicio()).toBe(avisos[0]);
+    expect(n.tomarAvisoInicio()).toBeNull();
+  });
+
+  it('el aviso de la migración se entrega una sola vez', async () => {
+    const n = await Nucleo.crear({
+      plataforma,
+      sonda: async () => false,
+      fetch: (async () => new Response('{}')) as typeof fetch,
+      migracion: async () => ({ resultado: 'fallida', base, aviso: 'aviso de prueba' }),
+    });
+    nucleos.push(n);
+    await n.arranqueAutomatico;
+    expect(n.tomarAvisoInicio()).toBe('aviso de prueba');
+    expect(n.tomarAvisoInicio()).toBeNull();
+  });
+
+  it('cerrar durante un arranque automático lento cierra los túneles antes y no enciende más', async () => {
+    autoIniciar('mailpit', 'ollama');
+    const orden: string[] = [];
+    let soltar!: () => void;
+    vi.spyOn(Servicios.prototype, 'iniciar').mockImplementation((id) => {
+      orden.push(`iniciar:${id}`);
+      return new Promise<void>((r) => {
+        soltar = () => {
+          orden.push(`listo:${id}`);
+          r();
+        };
+      });
+    });
+    vi.spyOn(Servicios.prototype, 'detenerTodo').mockImplementation(async () => {
+      orden.push('detenerTodo');
+    });
+    const n = await crear();
+    await vi.waitFor(() => expect(orden).toEqual(['iniciar:mailpit']));
+    vi.spyOn(n.tuneles, 'cerrarTodos').mockImplementation(async () => {
+      orden.push('tuneles');
+      return [];
+    });
+    const cierre = n.cerrar({ detenerServicios: true });
+    await vi.waitFor(() => expect(orden).toContain('tuneles'));
+    expect(orden).toEqual(['iniciar:mailpit', 'tuneles']);
+    soltar();
+    await cierre;
+    expect(orden).toEqual(['iniciar:mailpit', 'tuneles', 'listo:mailpit', 'detenerTodo']);
+  });
+
+  it('cerrar sin detener servicios no espera al arranque automático', async () => {
+    autoIniciar('mailpit');
+    vi.spyOn(Servicios.prototype, 'iniciar').mockImplementation(() => new Promise<void>(() => {}));
+    const n = await crear();
+    await n.cerrar({ detenerServicios: false });
+    nucleos.splice(nucleos.indexOf(n), 1);
   });
 
   it('guardarSitio emite el certificado antes de aplicar cuando https pasa a true', async () => {

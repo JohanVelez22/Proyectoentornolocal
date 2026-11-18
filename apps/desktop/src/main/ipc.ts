@@ -22,9 +22,11 @@ import {
   puertoHttps,
   puertoUsuario,
   ramaPhp,
+  RutasElegidas,
   servicioInstalable,
   texto,
   textoAcotado,
+  textoLibre,
   tipoProyecto,
   urlHttp,
 } from './validacion';
@@ -104,7 +106,10 @@ export interface VentanaLike {
 
 export type NucleoIpc = Nucleo;
 
-type Manejador = (nucleo: NucleoIpc, sistema: ApiSistema, ...args: unknown[]) => unknown;
+/** Lo que ve cada manejador además del núcleo: el sistema y las rutas elegidas en diálogos. */
+type Contexto = ApiSistema & { elegidas: RutasElegidas };
+
+type Manejador = (nucleo: NucleoIpc, sistema: Contexto, ...args: unknown[]) => unknown;
 
 /** Tabla explícita: el renderer solo puede invocar estas rutas; cada una valida sus argumentos. */
 const TABLA: Record<RutaIpc, Manejador> = {
@@ -145,7 +150,9 @@ const TABLA: Record<RutaIpc, Manejador> = {
       textoAcotado(confirmacion, 0, 64, 'confirmación'),
     );
   },
-  // Única respuesta con la clave del motor (diálogo "Datos de conexión"); nunca se registra.
+  // Rutas que devuelven secretos (nunca se registran): bd.conexion (clave del motor),
+  // bd.crear (clave generada del usuario nuevo), ftp.activar, ftp.regenerarClave y
+  // ftp.credenciales (clave FTP del sitio).
   'bd.conexion': (n, _s, motor) => n.conexionBd(motorBd(motor)),
   'bd.bloqueEnv': (n, _s, motor, base, tipo, envActual) => {
     const m = motorBd(motor);
@@ -160,20 +167,23 @@ const TABLA: Record<RutaIpc, Manejador> = {
     const m = motorSql(motor);
     return n.tieneTablas(m, nombreBase(m, base));
   },
-  'bd.formato': async (n, _s, archivo) => n.formatoRespaldo(await archivoExistente(archivo)),
-  'bd.restaurar': async (n, _s, motor, archivo, base, opciones) => {
+  'bd.formato': async (n, s, archivo) =>
+    n.formatoRespaldo(await archivoExistente(s.elegidas.exigir(archivo, 'archivo'))),
+  'bd.restaurar': async (n, s, motor, archivo, base, opciones) => {
     const m = motorSql(motor);
     const b = nombreBase(m, base);
     const o = opcionesRestaurar(opciones);
-    return n.restaurarBase(m, await archivoExistente(archivo), b, o);
+    return n.restaurarBase(m, await archivoExistente(s.elegidas.exigir(archivo, 'archivo')), b, o);
   },
-  'bd.respaldar': async (n, _s, motor, base, carpeta) => {
+  'bd.respaldar': async (n, s, motor, base, carpeta) => {
     const m = motorSql(motor);
     const b = nombreBase(m, base);
     return n.respaldarBase(
       m,
       b,
-      carpeta === undefined ? undefined : await carpetaExistente(carpeta),
+      carpeta === undefined
+        ? undefined
+        : await carpetaExistente(s.elegidas.exigir(carpeta, 'carpeta')),
     );
   },
   'bd.importar': (n, _s, motor, origen, destino, opciones) => {
@@ -216,12 +226,13 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'ia.cancelar': (n, _s, nombre) => n.cancelarDescargaModelo(nombreModelo(nombre)),
   'ia.borrar': (n, _s, nombre) => n.borrarModelo(nombreModelo(nombre)),
   'ia.probar': (n, _s, nombre, prompt) =>
-    n.probarModelo(nombreModelo(nombre), textoAcotado(prompt, 1, 4000, 'texto')),
+    n.probarModelo(nombreModelo(nombre), textoLibre(prompt, 1, 4000, 'texto')),
   'ia.espacioUsado': (n) => n.espacioIa(),
   'ia.bloqueEnv': (n) => n.bloqueEnvIa(),
   'ia.sugeridos': (n) => n.modelosSugeridos(),
   'mailpit.noLeidos': (n) => n.noLeidosCorreo(),
-  avisoInicio: (n) => n.avisoInicio,
+  // Se entrega una sola vez: una recarga del renderer no lo vuelve a mostrar.
+  avisoInicio: (n) => n.tomarAvisoInicio(),
   'instalador.listarVersiones': (n, _s, servicio) =>
     n.listarVersiones(idNoVacio(servicio, 'servicio') as Parameters<Nucleo['listarVersiones']>[0]),
   // El renderer solo elige servicio y versión: URL, huella y carpeta salen del catálogo oficial.
@@ -252,8 +263,8 @@ const TABLA: Record<RutaIpc, Manejador> = {
       trabajadores: enteroEn(o['trabajadores'], 1, 8, 'trabajadores'),
     });
   },
-  'sistema.elegirCarpeta': (_n, s) => s.elegirCarpeta(),
-  'sistema.elegirArchivo': (_n, s) => s.elegirArchivo(),
+  'sistema.elegirCarpeta': async (_n, s) => s.elegidas.registrar(await s.elegirCarpeta()),
+  'sistema.elegirArchivo': async (_n, s) => s.elegidas.registrar(await s.elegirArchivo()),
   'sistema.abrirUrl': (_n, s, url) => s.abrirUrl(urlHttp(url)),
   'sistema.abrirCarpeta': async (_n, s, ruta) => s.abrirCarpeta(await carpetaExistente(ruta)),
   'sistema.copiar': (_n, s, t) => s.copiar(texto(t, 'texto')),
@@ -276,12 +287,14 @@ export function registrarIpc(
   ventana: VentanaLike,
   sistema: ApiSistema,
   emisorValido: (evento: unknown) => boolean = () => true,
+  elegidas: RutasElegidas = new RutasElegidas(),
 ): () => void {
+  const contexto: Contexto = { ...sistema, elegidas };
   for (const [ruta, fn] of Object.entries(TABLA) as [RutaIpc, Manejador][]) {
     ipcMain.handle(`${PREFIJO_CANAL}${ruta}`, async (e, ...args) => {
       try {
         if (!emisorValido(e)) throw new Error('Origen no permitido');
-        const valor = await (fn as (...a: unknown[]) => unknown)(nucleo, sistema, ...args);
+        const valor = await (fn as (...a: unknown[]) => unknown)(nucleo, contexto, ...args);
         return { ok: true, valor } satisfies ResultadoIpc;
       } catch (e) {
         return aError(e);

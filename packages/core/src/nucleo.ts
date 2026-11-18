@@ -152,6 +152,7 @@ export class Nucleo {
   avisoInicio: string | null = null;
   /** Arranque de los servicios con `autoIniciar` (tras readoptar); resuelve con los errores. */
   arranqueAutomatico: Promise<string[]> = Promise.resolve([]);
+  private readonly avisosPendientes: string[] = [];
   readonly bd: BasesDeDatos;
   readonly respaldos: Respaldos;
   readonly pgvector: InstaladorPgvector;
@@ -379,16 +380,52 @@ export class Nucleo {
       await supervisor.cerrar().catch(() => undefined);
       throw e;
     }
-    // Sin bloquear el arranque: un fallo queda en el estado del servicio y en el registro.
-    nucleo.arranqueAutomatico = servicios.datos
+    if (avisoInicio) nucleo.avisosPendientes.push(avisoInicio);
+    // Sin bloquear el arranque: un fallo queda en el estado del servicio y en un aviso.
+    nucleo.arranqueAutomatico = nucleo
       .iniciarAutomaticos()
-      .then((errores) => errores.map(mensajeDe))
       .catch((e: unknown) => [mensajeDe(e)])
       .then((errores) => {
         for (const m of errores) console.error('No se pudo iniciar un servicio automático:', m);
+        if (errores.length > 0 && !nucleo.cerrado) {
+          const aviso = `No se pudieron encender al iniciar: ${errores.join('; ')}`;
+          nucleo.avisosPendientes.push(aviso);
+          nucleo.eventos.emit('aviso:inicio', aviso);
+        }
         return errores;
       });
     return nucleo;
+  }
+
+  /** Enciende los servicios instalados con `autoIniciar`; se detiene si el núcleo se cierra. */
+  private async iniciarAutomaticos(): Promise<string[]> {
+    const cfg = await this.config.leer();
+    const errores: string[] = [];
+    for (const id of IDS_SERVICIO_DATOS) {
+      if (this.cerrado) break;
+      if (!cfg.servicios.datos[id].autoIniciar) continue;
+      const def = this.servicios.datos.def(id);
+      if (!def) continue;
+      if ((await this.instalador.instalados(id)).length === 0) continue;
+      if (this.cerrado) break;
+      try {
+        await this.servicios.iniciar(id);
+      } catch (e) {
+        errores.push(`${def.nombre}: ${mensajeDe(e)}`);
+      }
+    }
+    return errores;
+  }
+
+  /**
+   * Avisos de inicio pendientes (migración de la carpeta de datos, fallos del arranque
+   * automático) unidos en un texto, o null. Se entregan una sola vez: quedan marcados como leídos.
+   */
+  tomarAvisoInicio(): string | null {
+    if (this.avisosPendientes.length === 0) return null;
+    const texto = this.avisosPendientes.join('\n\n');
+    this.avisosPendientes.length = 0;
+    return texto;
   }
 
   /** Estado de la autoridad de certificados local (creada / instalada en el almacén del usuario). */
@@ -847,11 +884,12 @@ export class Nucleo {
       }
     };
     try {
-      // Que el arranque automático no siga encendiendo servicios mientras se cierra.
-      await this.arranqueAutomatico;
       if (o.detenerServicios) {
         // Primero los .env (lo crítico si el cierre se corta), luego los túneles en paralelo.
         for (const e of await this.tuneles.cerrarTodos()) anotar(e);
+        // `cerrado` ya impide encender más servicios; se espera el que esté arrancando para
+        // detenerlo también.
+        await this.arranqueAutomatico;
         await this.servicios.detenerTodo();
       }
     } catch (e) {

@@ -24,6 +24,8 @@ export type EventosNucleo = {
   'hosts:estado': EstadoHosts;
   'bd:progreso': ProgresoBd;
   'ia:progreso': ProgresoIa;
+  /** Hay un aviso de inicio nuevo (p. ej. servicios que no encendieron); se lee con tomarAvisoInicio. */
+  'aviso:inicio': string;
 };
 
 export class Eventos<M extends Record<string, unknown>> {
