@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -6,6 +6,7 @@ import { Client } from 'basic-ftp';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Almacen, AlmacenCredenciales } from '../src/almacen';
 import { ServidorFtp } from '../src/ftp/servidorFtp';
+import { SistemaArchivosEncerrado } from '../src/ftp/sistemaArchivos';
 import { Rutas } from '../src/rutas';
 import type { Sitio } from '../src/tipos';
 import { carpetaTemporal } from './temporales';
@@ -169,12 +170,50 @@ describe('ServidorFtp', () => {
     'a.txt:x',
     '..  /x',
     'nul',
-  ])('rechaza la ruta %j', async (ruta) => {
+    'nul .txt',
+    'COM1 .log',
+  ])('rechaza la ruta %j', { timeout: 20000 }, async (ruta) => {
     const c = await conClave();
     await expect(c.cd(ruta)).rejects.toThrow();
     await expect(c.list(ruta)).rejects.toThrow();
     await expect(c.uploadFrom(archivoLocal(), ruta)).rejects.toThrow();
     await expect(c.downloadTo(path.join(base, 'd.txt'), ruta)).rejects.toThrow();
+  });
+
+  it('un error al abrir el flujo (STOR sobre una carpeta) no revela rutas locales', async () => {
+    mkdirSync(path.join(sitio, 'carpeta'));
+    const fs = new SistemaArchivosEncerrado({}, { root: sitio, soloLectura: () => false });
+    const { stream } = await fs.write('carpeta');
+    const e = await new Promise<Error>((resolve) => stream.once('error', resolve));
+    expect(e.message).not.toContain(base);
+    expect(e.message).not.toMatch(/[A-Za-z]:\|pel-ftp/);
+    const lectura = await fs.read('index.html');
+    rmSync(path.join(sitio, 'index.html'));
+    const e2 = await new Promise<Error | null>((resolve) => {
+      lectura.stream.once('error', resolve);
+      lectura.stream.once('end', () => resolve(null));
+      lectura.stream.resume();
+    });
+    if (e2) expect(e2.message).not.toContain(base);
+  });
+
+  it('PORT y EPRT (modo activo) se rechazan', async () => {
+    const c = await conClave();
+    await expect(c.send('PORT 127,0,0,1,200,10')).rejects.toThrow(/502/);
+    await expect(c.send('EPRT |1|127.0.0.1|51210|')).rejects.toThrow(/502/);
+  });
+
+  it('renombrar hacia fuera del sitio se deniega', async () => {
+    const c = await conClave();
+    await expect(c.rename('index.html', '../../x')).rejects.toThrow(/Acceso denegado/);
+    await expect(c.rename('index.html', 'C:\\x')).rejects.toThrow(/Acceso denegado/);
+    expect(existsSync(path.join(sitio, 'index.html'))).toBe(true);
+  });
+
+  it('cortarSesiones cierra las sesiones abiertas del sitio', async () => {
+    const c = await conClave();
+    await servidor.cortarSesiones('demo');
+    await expect(c.list()).rejects.toThrow();
   });
 
   it('el rechazo de una ruta fuera del sitio dice "Acceso denegado"', async () => {

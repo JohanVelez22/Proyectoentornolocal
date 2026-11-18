@@ -542,4 +542,21 @@ describe('FTP en el núcleo', () => {
     await n.borrarSitio(sitio.id);
     expect(await n.credencialesFtp(sitio.id)).toBeNull();
   });
+
+  it('cambiar la carpeta de un sitio corta sus sesiones FTP', async () => {
+    const n = await crear();
+    const { sitio } = await n.guardarSitio(datos());
+    const cortar = vi
+      .spyOn(
+        (n as unknown as { ftp: { cortarSesiones(id: string): Promise<void> } }).ftp,
+        'cortarSesiones',
+      )
+      .mockResolvedValue(undefined);
+    await n.guardarSitio(datos({ nota: 'solo nota' }), sitio.id);
+    expect(cortar).not.toHaveBeenCalled();
+    const otra = path.join(base, 'otra');
+    mkdirSync(otra);
+    await n.guardarSitio(datos({ carpeta: otra }), sitio.id);
+    expect(cortar).toHaveBeenCalledWith(sitio.id);
+  });
 });

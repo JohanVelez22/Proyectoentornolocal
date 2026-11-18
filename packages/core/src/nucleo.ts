@@ -398,7 +398,14 @@ export class Nucleo {
     const resto: Omit<Sitio, 'id'> = { ...datos };
     delete resto.ftp;
     if (id) await this.cerrarTunelSiCambia(id, datos);
+    const carpetaPrevia = id
+      ? (await this.sitios.listar()).find((s) => s.id === id)?.carpeta
+      : null;
     const sitio = id ? await this.sitios.editar(id, resto) : await this.sitios.crear(resto);
+    // Las sesiones FTP abiertas siguen en la carpeta vieja: se cortan al cambiarla.
+    if (id && carpetaPrevia !== undefined && carpetaPrevia !== sitio.carpeta) {
+      await this.ftp.cortarSesiones(id);
+    }
     return { sitio, aplicar: await this.sitios.aplicar() };
   }
 

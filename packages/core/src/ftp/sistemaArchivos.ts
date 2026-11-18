@@ -40,7 +40,7 @@ export const ACCESO_DENEGADO = 'Acceso denegado';
 const errorFs = (mensaje: string, codigo = 550): Error =>
   new biblioteca.ftpErrors.FileSystemError(mensaje, codigo);
 
-const NOMBRES_RESERVADOS = /^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])(\..*)?$/i;
+const NOMBRES_RESERVADOS = /^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])\s*(\..*)?$/i;
 
 /** Resultado de interpretar una ruta del cliente dentro del espacio virtual del sitio. */
 export interface RutaVirtual {
@@ -238,6 +238,9 @@ export class SistemaArchivosEncerrado extends BaseFileSystem {
       const { disco, virtual } = await this.ubicar(nombre);
       if (virtual.segmentos.length === 0) throw errorFs(ACCESO_DENEGADO);
       const stream = createWriteStream(disco, { flags: append ? 'a+' : 'w+', start });
+      stream.once('error', (e) => {
+        e.message = traducir(e).message; // sin rutas locales en la respuesta 550/551
+      });
       stream.once('close', () => stream.end());
       return { stream, clientPath: virtual.cliente };
     } catch (e) {
@@ -252,10 +255,11 @@ export class SistemaArchivosEncerrado extends BaseFileSystem {
     try {
       const { disco, virtual } = await this.ubicar(nombre);
       if ((await stat(disco)).isDirectory()) throw errorFs('No se puede leer una carpeta');
-      return {
-        stream: createReadStream(disco, { flags: 'r', start }),
-        clientPath: virtual.cliente,
-      };
+      const stream = createReadStream(disco, { flags: 'r', start });
+      stream.once('error', (e) => {
+        e.message = traducir(e).message;
+      });
+      return { stream, clientPath: virtual.cliente };
     } catch (e) {
       throw traducir(e);
     }

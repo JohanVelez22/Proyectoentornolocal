@@ -107,6 +107,8 @@ export class ServidorFtp {
       pasv_min: Math.min(...pasivos),
       pasv_max: Math.max(...pasivos),
       anonymous: false,
+      // Solo modo pasivo: sin PORT/EPRT el servidor nunca abre conexiones hacia el cliente.
+      blacklist: ['PORT', 'EPRT'],
       log: registroSilencioso(),
     });
     // ftp-srv se cierra con process.exit() ante estas señales: aquí no debe tocarlas.
@@ -176,7 +178,7 @@ export class ServidorFtp {
   }
 
   /** Corta las sesiones abiertas del sitio (al desactivarlo o cambiar la clave). */
-  private async cortarSesiones(sitioId: string): Promise<void> {
+  async cortarSesiones(sitioId: string): Promise<void> {
     const s = this.servidor;
     if (!s) return;
     const ids = [...this.sesiones].filter(([, sitio]) => sitio === sitioId).map(([id]) => id);
