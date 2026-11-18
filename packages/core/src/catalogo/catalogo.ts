@@ -15,7 +15,9 @@ export type ServicioInstalable =
   | 'ollama'
   | 'composer'
   | 'adminer'
-  | 'pgvector-src';
+  | 'pgvector-src'
+  | 'node'
+  | 'python';
 
 /** Con 'archivo' la descarga se copia tal cual con el nombre de `ejecutable`. */
 export type FormatoPaquete = 'zip' | 'exe' | 'archivo';
@@ -36,6 +38,8 @@ export const EJECUTABLE_POR_SERVICIO: Record<ServicioInstalable, string> = {
   composer: 'composer.phar',
   adminer: 'adminer.php',
   'pgvector-src': 'Makefile.win',
+  node: 'node.exe',
+  python: 'python.exe',
 };
 
 export function ejecutableDe(servicio: string): string | undefined {
@@ -70,6 +74,8 @@ const HOSTS_PERMITIDOS = [
   'fastdl.mongodb.org',
   'downloads.mongodb.com',
   'getcomposer.org',
+  'nodejs.org',
+  'api.nuget.org',
 ];
 
 export function urlOficial(texto: string): boolean {
@@ -106,6 +112,8 @@ export const CatalogoSchema = z.object({
   composer: Lista,
   adminer: Lista,
   'pgvector-src': Lista,
+  node: Lista,
+  python: Lista,
 });
 
 export const catalogo = CatalogoSchema.parse(catalogoCrudo);

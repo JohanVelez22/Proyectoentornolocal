@@ -66,6 +66,7 @@ import './servicios/bd/redis';
 import './servicios/bd/mongodb';
 import './servicios/mailpit';
 import './servicios/ollama';
+import { Runtimes } from './runtimes/runtimes';
 
 export interface OpcionesNucleo {
   base?: string;
@@ -346,6 +347,7 @@ export class Nucleo {
         rutas,
         asegurarPhpIni: (r) => servicios.php.asegurarPhpIni(r),
         phpPorDefecto: () => composer.phpPorDefecto(),
+        runtimes: new Runtimes(rutas),
       }),
       pathUsuario: new PathUsuario({ rutas, ...(o.ejecutor ? { exec: o.ejecutor } : {}) }),
       adminer,

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { literalPowerShell } from '../plataforma/lanzarOculto';
 import type { Rutas } from '../rutas';
+import type { ResolutorRuntimes, SitioConRuntimes } from '../runtimes/runtimes';
 import type { Sitio } from '../tipos';
 
 /** Lanza un proceso separado de nosotros y con ventana propia (sin shell). */
@@ -37,6 +38,8 @@ export interface DepsTerminal {
   asegurarPhpIni?: (rama: string) => Promise<string>;
   /** Rama de PHP por defecto cuando el sitio no tiene una instalada. */
   phpPorDefecto?: () => Promise<string | null>;
+  /** Node y Python del proyecto: sus carpetas van tras PHP y antes de tools/bin. */
+  runtimes?: ResolutorRuntimes;
 }
 
 const RAMA = /^\d+\.\d+$/;
@@ -52,8 +55,14 @@ export class Terminal {
     this.lanzar = d.lanzar ?? lanzarSeparado;
   }
 
-  /** Entorno con PATH = [bin/php/<rama>] + tools/bin + PATH actual (se respeta el nombre `Path`). */
-  private async entornoConPath(php: string | null): Promise<NodeJS.ProcessEnv> {
+  /**
+   * Entorno con PATH = [bin/php/<rama>] + [node, node_modules/.bin, python, Scripts] + tools/bin
+   * + PATH actual (se respeta el nombre `Path`).
+   */
+  private async entornoConPath(
+    php: string | null,
+    sitio?: SitioConRuntimes,
+  ): Promise<NodeJS.ProcessEnv> {
     const env: NodeJS.ProcessEnv = { ...this.entorno };
     const clave = Object.keys(env).find((k) => k.toLowerCase() === 'path') ?? 'Path';
     const nuevo: string[] = [];
@@ -67,6 +76,9 @@ export class Terminal {
       env.WOLFCORE_PHPINI = ini;
       env.PHPRC = path.dirname(ini);
     }
+    if (sitio && this.d.runtimes) {
+      nuevo.push(...this.d.runtimes.carpetasPath(await this.d.runtimes.paraProyecto(sitio)));
+    }
     nuevo.push(this.d.rutas.herramientas('bin'));
     if (env[clave]) nuevo.push(env[clave]!);
     env[clave] = nuevo.join(';');
@@ -74,11 +86,11 @@ export class Terminal {
   }
 
   /** Abre una terminal en la carpeta del sitio con su PHP, Composer y herramientas en el PATH. */
-  async abrir(sitio: Pick<Sitio, 'carpeta' | 'php'>): Promise<void> {
+  async abrir(sitio: Pick<Sitio, 'carpeta' | 'php'> & SitioConRuntimes): Promise<void> {
     if (!this.existe(sitio.carpeta)) {
       throw new Error(`La carpeta del sitio no existe: ${sitio.carpeta}`);
     }
-    const env = await this.entornoConPath(sitio.php);
+    const env = await this.entornoConPath(sitio.php, sitio);
     const local = this.entorno.LOCALAPPDATA;
     const wt = local ? path.win32.join(local, 'Microsoft', 'WindowsApps', 'wt.exe') : null;
     if (wt && this.existe(wt)) {
