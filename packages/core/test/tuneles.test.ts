@@ -4,7 +4,11 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import type { Ejecutor } from '../src/plataforma/tipos';
-import type { DefProceso, EstadoProceso } from '../src/procesos/supervisor';
+import {
+  ErrorDetenidoAlIniciar,
+  type DefProceso,
+  type EstadoProceso,
+} from '../src/procesos/supervisor';
 import { Rutas } from '../src/rutas';
 import { UrlBase } from '../src/sitios/urlbase';
 import { SitioSchema, type EstadoTunel, type Sitio } from '../src/tipos';
@@ -29,6 +33,7 @@ let escribirBanner: boolean;
 let destino: 'log' | 'salida';
 let fallaIniciar: boolean;
 let gateIniciar: Promise<void> | null;
+let detenerAlSoltar = false;
 let gateDetener: Promise<void> | null;
 let instalados: string[];
 let sitios: Sitio[];
@@ -52,7 +57,10 @@ const supervisor = () =>
   ({
     iniciar: async (d: DefProceso) => {
       entradasIniciar++;
-      if (gateIniciar) await gateIniciar;
+      if (gateIniciar) {
+        await gateIniciar;
+        if (detenerAlSoltar) throw new ErrorDetenidoAlIniciar(d.id);
+      }
       if (fallaIniciar) throw new Error('No se pudo iniciar');
       iniciados.push(d);
       estados.set(d.id, 'iniciando');
@@ -123,6 +131,7 @@ beforeEach(() => {
   destino = 'log';
   fallaIniciar = false;
   gateIniciar = null;
+  detenerAlSoltar = false;
   gateDetener = null;
   instalados = ['2025.1.0', '2026.3.0', '2026.10.1'];
   sitios = [sitio()];
@@ -406,6 +415,21 @@ describe('Tuneles carreras y barrido (fix ronda 1)', () => {
 });
 
 describe('Tuneles guardas de generación (fix ronda 2)', () => {
+  it('cerrar() mientras iniciar() lanza ErrorDetenidoAlIniciar: apagado, sin error', async () => {
+    let soltar!: () => void;
+    gateIniciar = new Promise<void>((r) => (soltar = r));
+    detenerAlSoltar = true;
+    const t = crear({ esperaMs: 300, intervaloMs: 10 });
+    const abrir = t.abrir('wolf');
+    await vi.waitFor(() => expect(entradasIniciar).toBe(1));
+    await t.cerrar('wolf');
+    soltar();
+    const e = await abrir;
+    expect(e.estado).toBe('apagado');
+    expect(e.mensaje).toBeUndefined();
+    expect(t.estados()).toEqual([]);
+  });
+
   it('cerrar() mientras iniciar() está en curso: el proceso lanzado se detiene', async () => {
     let soltar!: () => void;
     gateIniciar = new Promise<void>((r) => (soltar = r));

@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { AlmacenCredenciales } from '../almacen';
 import type { Ejecutor, Plataforma } from '../plataforma/tipos';
 import { pidExiste } from '../plataforma/win';
-import type { DefProceso } from '../procesos/supervisor';
+import { ErrorDetenidoAlIniciar, type DefProceso } from '../procesos/supervisor';
 import type { Rutas } from '../rutas';
 import {
   IDS_SERVICIO_DATOS,
@@ -323,7 +323,7 @@ export class ServiciosDatos {
     const ctx = await this.contexto(def, version, cfg);
     await this.prepararDatos(def, ctx);
     const proceso = await def.proceso(ctx);
-    await this.d.supervisor.iniciar({ ...proceso, id: def.id });
+    await this.d.supervisor.iniciar({ ...proceso, id: def.id, nombre: def.nombre });
   }
 
   detener(id: IdServicioDatos): Promise<void> {
@@ -477,7 +477,7 @@ export class ServiciosDatos {
       try {
         await this.iniciar(def.id);
       } catch (e) {
-        errores.push(e);
+        if (!(e instanceof ErrorDetenidoAlIniciar)) errores.push(e);
       }
     }
     return errores;

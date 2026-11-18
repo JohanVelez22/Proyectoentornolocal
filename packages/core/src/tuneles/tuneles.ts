@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { Almacen } from '../almacen';
 import type { Instalador } from '../catalogo/instalador';
 import type { Eventos, EventosNucleo } from '../eventos';
-import type { Supervisor } from '../procesos/supervisor';
+import { ErrorDetenidoAlIniciar, type Supervisor } from '../procesos/supervisor';
 import type { Rutas } from '../rutas';
 import type { GestorSitios } from '../sitios/sitios';
 import type { UrlBase } from '../sitios/urlbase';
@@ -244,6 +244,10 @@ export class Tuneles {
         reiniciar: false,
       });
     } catch (e) {
+      // Cerrado a propósito mientras arrancaba: no es un error.
+      if (e instanceof ErrorDetenidoAlIniciar || this.gen(sitioId) !== gen) {
+        return this.apagado(sitioId);
+      }
       this.fijar({
         sitioId,
         estado: 'error',

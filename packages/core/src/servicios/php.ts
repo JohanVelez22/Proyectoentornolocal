@@ -128,6 +128,7 @@ export class ServicioPhp {
     for (const [i, puerto] of puertos.entries()) {
       await this.supervisor.iniciar({
         id: this.idTrabajador(version, i),
+        nombre: `PHP ${version}`,
         comando: path.join(bin, this.plataforma.ejecutable('php-cgi')),
         args: ['-c', this.rutas.phpIni(version), '-b', `127.0.0.1:${puerto}`],
         cwd: bin,

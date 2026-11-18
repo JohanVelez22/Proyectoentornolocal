@@ -2,7 +2,7 @@ import type { ServidorFtp } from '../ftp/servidorFtp';
 import { puertosPhp } from '../nginx/principal';
 import type { Ejecutor, Plataforma } from '../plataforma/tipos';
 import { puertoResponde } from '../procesos/sonda';
-import type { EstadoProceso } from '../procesos/supervisor';
+import { ErrorDetenidoAlIniciar, type EstadoProceso } from '../procesos/supervisor';
 import { AlmacenCredenciales } from '../almacen';
 import type { Rutas } from '../rutas';
 import type { Config, EstadoServicio, IdServicioDatos } from '../tipos';
@@ -184,7 +184,16 @@ export class Servicios {
     return this.d.ftp;
   }
 
+  /** Si el usuario lo detuvo mientras arrancaba, es una parada normal: no es un error. */
   async iniciar(id: IdServicio): Promise<void> {
+    try {
+      await this.iniciarSinTolerancia(id);
+    } catch (e) {
+      if (!(e instanceof ErrorDetenidoAlIniciar)) throw e;
+    }
+  }
+
+  private iniciarSinTolerancia(id: IdServicio): Promise<void> {
     if (id === 'nginx') return this.nginx.iniciar();
     if (id === 'ftp') return this.ftpObligatorio().iniciar();
     if (esIdServicioDatos(id)) return this.datos.iniciar(id);
@@ -218,7 +227,7 @@ export class Servicios {
       }
       await this.nginx.iniciar();
     } catch (e) {
-      errores.push(e);
+      if (!(e instanceof ErrorDetenidoAlIniciar)) errores.push(e);
     }
     errores.push(...(await this.datos.iniciarAutomaticos()));
     primero(errores);

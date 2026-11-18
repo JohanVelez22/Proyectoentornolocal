@@ -35,6 +35,8 @@ export function useAccion() {
       if (opciones.exito) message.success(opciones.exito);
       return r;
     } catch (e) {
+      // Detenido a propósito mientras arrancaba: es una parada normal, no un error.
+      if ((e as { codigo?: unknown } | null)?.codigo === 'detenido-al-iniciar') return undefined;
       notification.error({
         title: opciones.tituloError ?? es.errores.titulo,
         content: mensajeDeError(e),

@@ -171,6 +171,7 @@ export class ServicioNginx {
     const { bin, args } = await this.prepararYProbar();
     await this.supervisor.iniciar({
       id: 'nginx',
+      nombre: 'nginx',
       comando: path.join(bin, this.plataforma.ejecutable('nginx')),
       args,
       cwd: bin,

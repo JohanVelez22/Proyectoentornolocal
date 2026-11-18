@@ -23,6 +23,8 @@ import { puertoResponde } from './sonda';
 export interface DefProceso {
   /** 'nginx', 'php-8.4-0', 'tunel-<sitio>' */
   id: string;
+  /** Nombre legible para los mensajes (por defecto, el id). */
+  nombre?: string;
   comando: string;
   args: string[];
   cwd?: string;
@@ -36,8 +38,12 @@ export type EstadoProceso = 'apagado' | 'iniciando' | 'encendido' | 'error';
 
 /** iniciar() no terminó: el proceso se detuvo (o se cerró la app) mientras arrancaba. */
 export class ErrorDetenidoAlIniciar extends Error {
-  constructor(readonly id: string) {
-    super(`${id} se detuvo mientras arrancaba: no quedó encendido.`);
+  readonly codigo = 'detenido-al-iniciar';
+  constructor(
+    readonly id: string,
+    nombre?: string,
+  ) {
+    super(`${nombre ?? id} se detuvo mientras arrancaba: no quedó encendido.`);
   }
 }
 
@@ -200,7 +206,7 @@ export class Supervisor {
     if (fallo !== null) throw new Error(`No se pudo iniciar ${def.id}: ${fallo}`);
     if (entrada.detenido || this.cerrado || this.entradas.get(def.id) !== entrada) {
       // Se detuvo (o se cerró el supervisor) mientras arrancaba: no quedó nada encendido.
-      throw new ErrorDetenidoAlIniciar(def.id);
+      throw new ErrorDetenidoAlIniciar(def.id, def.nombre);
     }
     this.arrancarBucle();
   }
