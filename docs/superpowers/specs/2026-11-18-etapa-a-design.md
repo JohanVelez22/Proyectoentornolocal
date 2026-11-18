@@ -1,6 +1,6 @@
 # WolfCore Dev — Etapa A: HTTPS, bases de datos, Composer y correo
 
-Fecha: 2026-11-18 · Estado: borrador para aprobación · Base: rama `feat/mvp-windows` (MVP terminado)
+Fecha: 2026-11-18 · Estado: aprobado por el usuario (2026-11-18) · Base: rama `feat/mvp-windows` (MVP terminado)
 
 ## 1. Para qué
 
@@ -131,6 +131,8 @@ Todos usan el supervisor, el catálogo verificado por SHA-256 y el estado real (
   - **Mantenimiento:** borrar un modelo, probarlo con un chat mínimo de una línea y ver el espacio usado en disco.
 - **Datos de conexión:** URL base, endpoint compatible con OpenAI (`http://127.0.0.1:11434/v1`) y un bloque `.env` de ejemplo (`OLLAMA_BASE_URL`, `OPENAI_BASE_URL`) para Laravel o para el bot FastAPI.
 - La descarga de modelos puede pesar varios GB, así que se muestra el tamaño antes de confirmar cuando la API lo informa.
+
+- **Hermes Agent y otros agentes:** Ollama es el motor de modelos; Hermes Agent (instalado en el equipo, v0.23.1), Claude Code y Codex son agentes que lo usan. El módulo "Agentes IA" (detectar, conectar a Ollama o al MCP de WolfCore Dev con un clic, abrir en el proyecto) va en la **Etapa B** junto al servidor MCP, como hace FlyEnv.
 
 ### 4.5c Servidor FTP (agregado a pedido del usuario)
 - **Servidor FTP integrado:** usa la librería `ftp-srv` (MIT) dentro del proceso del núcleo, sin binarios extra. Es un servicio más con encender, apagar, estado y puerto.
