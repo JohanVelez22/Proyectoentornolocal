@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync } from 'node:fs';
 import { lstat, mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -217,7 +217,9 @@ class Salida {
 /**
  * Líneas que cambiarían de base (o la crearían o borrarían) durante un restore. Se comentan
  * SIEMPRE, salvo que el léxico esté seguro de que la línea cae dentro de un texto entre
- * comillas o de un cuerpo $tag$ (o en los datos de un COPY). El BOM se quita antes de probar.
+ * comillas o de un cuerpo $tag$ (o en los datos de un COPY). Si hay que neutralizarla pero el
+ * estado al principio de la línea no es SQL normal y seguro (comentario de bloque, texto, dudas),
+ * la restauración se aborta. El BOM se quita antes de probar.
  */
 const CAMBIO_BASE: Record<'pg' | 'mysql', RegExp> = {
   pg: /^\s*(?:\\c(?:onnect)?(?:\s|$)|(?:CREATE|DROP|ALTER)\s+DATABASE\b)/i,
@@ -229,17 +231,23 @@ const META_CONEXION: Record<'pg' | 'mysql', RegExp> = {
   pg: /\\c(?:onnect)?(?=\s|$)/y,
   mysql: /\\[ur](?=\s|$)/y,
 };
+/** Líneas \restrict / \unrestrict propias del archivo (pg_dump 17.6+): se quitan. */
+const RESTRICT = /^\s*\\(?:un)?restrict\b/;
 /** Solo se mira el principio de cada línea (un INSERT puede medir megas). */
 const MAX_CABEZA_LINEA = 4096;
 /** BOM de UTF-8 leído en latin1 (0xEF 0xBB 0xBF), escrito con códigos para que no se pierda. */
 const BOM_LATIN1 = String.fromCharCode(0xef, 0xbb, 0xbf);
 const ETIQUETA_DOLAR = /\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/y;
 const ESPACIO = /\s/;
-const IDENTIFICADOR = /[A-Za-z0-9_$\x80-\xff]/;
+const esIdentificador = (c: string): boolean => /[A-Za-z0-9_$]/.test(c) || c.charCodeAt(0) >= 0x80;
+
+export const MENSAJE_NO_NEUTRALIZABLE =
+  'El respaldo contiene instrucciones de cambio de base que no se pueden neutralizar con seguridad; no se restauró.';
 
 interface EstadoLexico {
   modo: 'normal' | 'comilla' | 'dolar' | 'bloque' | 'linea';
   comilla: string;
+  /** El texto abierto acepta \ como escape. */
   escapes: boolean;
   etiqueta: string;
   resto: string;
@@ -248,57 +256,38 @@ interface EstadoLexico {
   cola: string;
   ant: string;
   ant2: string;
+  /** Hipótesis sobre los textos '…' (y "…" en MySQL): ¿la \ escapa? */
+  escapesTexto: boolean;
 }
 
 /**
- * Sigue la sintaxis SQL lo justo para saber dónde hay textos entre comillas ('…', "…", `…`,
- * E'…' con escapes \ en PostgreSQL, \ en MySQL), cuerpos $tag$ y comentarios. Trabaja en
- * latin1 (los bytes ≥ 0x80 de UTF-8 nunca son sintaxis) y por trozos. Además marca si vio un
- * meta-comando de cambio de conexión (\c, \connect; \u, \r) fuera de comillas.
+ * Una lectura de la sintaxis SQL bajo una hipótesis sobre los escapes con \: comillas
+ * ('…', "…", `…`, E'…' de PostgreSQL), cuerpos $tag$ y comentarios. Trabaja en latin1 (los bytes
+ * ≥ 0x80 de UTF-8 nunca son sintaxis) y por trozos. Marca si vio un meta-comando fuera de
+ * comillas (\c/\connect, \u/\r; con `estricto`, cualquier \).
  */
-class Lexico {
-  private e: EstadoLexico = {
-    modo: 'normal',
-    comilla: '',
-    escapes: false,
-    etiqueta: '',
-    resto: '',
-    inicio: true,
-    delimitador: ';',
-    cola: '',
-    ant: '\n',
-    ant2: '\n',
-  };
-  /** Se vio un meta-comando de cambio de conexión desde el último `limpiarMeta`. */
+class Hipotesis {
+  e: EstadoLexico;
   meta = false;
 
-  constructor(private readonly mysql: boolean) {}
-
-  guardar(): EstadoLexico {
-    return { ...this.e };
-  }
-
-  volver(e: EstadoLexico): void {
-    this.e = { ...e };
-  }
-
-  /** Seguro de estar dentro de un texto o de un cuerpo $tag$ (lo único que evita filtrar). */
-  dentroDeTexto(): boolean {
-    return (this.e.modo === 'comilla' || this.e.modo === 'dolar') && this.e.resto === '';
-  }
-
-  /** Seguro de que la línea que empieza ahora inicia una sentencia. */
-  enInicio(): boolean {
-    return this.e.modo === 'normal' && this.e.inicio && this.e.resto === '';
-  }
-
-  /** Tras DELIMITER o un COPY: estado limpio al principio de sentencia. */
-  reiniciar(delimitador?: string): void {
-    this.e.modo = 'normal';
-    this.e.resto = '';
-    this.e.inicio = true;
-    this.e.cola = '';
-    if (delimitador !== undefined) this.e.delimitador = delimitador;
+  constructor(
+    private readonly mysql: boolean,
+    private readonly estricto: boolean,
+    escapesTexto: boolean,
+  ) {
+    this.e = {
+      modo: 'normal',
+      comilla: '',
+      escapes: false,
+      etiqueta: '',
+      resto: '',
+      inicio: true,
+      delimitador: ';',
+      cola: '',
+      ant: '\n',
+      ant2: '\n',
+      escapesTexto,
+    };
   }
 
   private significativo(c: string): void {
@@ -321,13 +310,17 @@ class Lexico {
       const c = t[i]!;
       if (c === '\\' && e.modo !== 'comilla' && e.modo !== 'dolar') {
         // psql y mysql ejecutan los meta-comandos en cualquier punto fuera de comillas.
-        const patron = META_CONEXION[this.mysql ? 'mysql' : 'pg'];
-        patron.lastIndex = i;
-        if (patron.exec(t)) {
+        if (this.estricto) {
           this.meta = true;
-        } else if (n - i < 10 && !t.includes('\n', i)) {
-          e.resto = t.slice(i);
-          return;
+        } else {
+          const patron = META_CONEXION[this.mysql ? 'mysql' : 'pg'];
+          patron.lastIndex = i;
+          if (patron.exec(t)) {
+            this.meta = true;
+          } else if (n - i < 10 && !t.includes('\n', i)) {
+            e.resto = t.slice(i);
+            return;
+          }
         }
       }
       switch (e.modo) {
@@ -408,12 +401,12 @@ class Lexico {
       } else if (c === "'" || c === '"' || c === '`') {
         e.comilla = c;
         e.modo = 'comilla';
-        // MySQL: \ escapa en todo texto. PostgreSQL: solo en E'…' (la E no es parte de un nombre).
-        e.escapes =
-          this.mysql ||
-          (c === "'" && (e.ant === 'E' || e.ant === 'e') && !IDENTIFICADOR.test(e.ant2));
+        const textoE = (e.ant === 'E' || e.ant === 'e') && !esIdentificador(e.ant2);
+        e.escapes = this.mysql
+          ? c !== '`' && e.escapesTexto
+          : c === "'" && (textoE || e.escapesTexto);
         this.significativo(c);
-      } else if (c === '$' && !this.mysql && !IDENTIFICADOR.test(e.ant)) {
+      } else if (c === '$' && !this.mysql && !esIdentificador(e.ant)) {
         ETIQUETA_DOLAR.lastIndex = i;
         const m = ETIQUETA_DOLAR.exec(t);
         if (m) {
@@ -436,44 +429,144 @@ class Lexico {
   }
 }
 
-/** Un meta-comando de cambio de base quedó en la parte larga de una línea ya enviada. */
-const MENSAJE_META_TARDIO =
-  'El respaldo tiene un cambio de base (\\connect o \\u) dentro de una línea muy larga; se detuvo la restauración.';
+/**
+ * Dos lecturas en paralelo: con el modo de escapes declarado y con el contrario. Mientras no
+ * coinciden (p. ej. tras un texto con \' cuyo sentido depende del modo), nada es seguro: una
+ * línea solo se considera dentro de un texto, o en SQL normal, si ambas lo dicen.
+ */
+class Lexico {
+  private readonly h: [Hipotesis, Hipotesis];
+  meta = false;
+
+  constructor(mysql: boolean, estricto: boolean) {
+    const porDefecto = mysql; // MySQL: \ escapa; PostgreSQL: standard_conforming_strings = on
+    this.h = [
+      new Hipotesis(mysql, estricto, porDefecto),
+      new Hipotesis(mysql, estricto, !porDefecto),
+    ];
+  }
+
+  guardar(): [EstadoLexico, EstadoLexico] {
+    return [{ ...this.h[0].e }, { ...this.h[1].e }];
+  }
+
+  volver(s: [EstadoLexico, EstadoLexico]): void {
+    this.h[0].e = { ...s[0] };
+    this.h[1].e = { ...s[1] };
+  }
+
+  /** Ambas lecturas están dentro de un texto o de un cuerpo $tag$. */
+  dentroDeTexto(): boolean {
+    return this.h.every(
+      (x) => (x.e.modo === 'comilla' || x.e.modo === 'dolar') && x.e.resto === '',
+    );
+  }
+
+  /** Ambas lecturas están en SQL normal (fuera de textos y comentarios). */
+  limpio(): boolean {
+    return this.h.every((x) => x.e.modo === 'normal' && x.e.resto === '');
+  }
+
+  /** Ambas lecturas ven que la línea que empieza ahora inicia una sentencia. */
+  enInicio(): boolean {
+    return this.limpio() && this.h.every((x) => x.e.inicio);
+  }
+
+  /** Tras DELIMITER o un COPY: estado limpio al principio de sentencia. */
+  reiniciar(delimitador?: string): void {
+    for (const x of this.h) {
+      x.e.modo = 'normal';
+      x.e.resto = '';
+      x.e.inicio = true;
+      x.e.cola = '';
+      if (delimitador !== undefined) x.e.delimitador = delimitador;
+    }
+  }
+
+  /** El archivo declaró su modo de escapes (SET standard_conforming_strings / sql_mode). */
+  fijarEscapes(escapes: boolean): void {
+    this.h[0].e.escapesTexto = escapes;
+    this.h[1].e.escapesTexto = !escapes;
+  }
+
+  avanzar(texto: string): void {
+    for (const x of this.h) {
+      x.meta = false;
+      x.avanzar(texto);
+      if (x.meta) this.meta = true;
+    }
+  }
+}
+
+/** Modo de escapes que declara una línea, o null si no declara ninguno. */
+function escapesDeclarados(tipo: 'pg' | 'mysql', linea: string): boolean | null {
+  if (tipo === 'pg') {
+    const m =
+      /\bstandard_conforming_strings\b\s*(?:=|\bTO\b)\s*'?(on|off)\b/i.exec(linea) ??
+      /set_config\(\s*'standard_conforming_strings'\s*,\s*'(on|off)'/i.exec(linea);
+    return m ? m[1]!.toLowerCase() === 'off' : null;
+  }
+  const m = /\bsql_mode\s*=\s*([^;]*)/i.exec(linea);
+  return m ? !/NO_BACKSLASH_ESCAPES/i.test(m[1]!) : null;
+}
+
+export interface OpcionesFiltro {
+  /** PostgreSQL: clave para `\restrict` (psql 17.6+): se envía como primera línea. */
+  claveRestrict?: string;
+  /** Sin `\restrict`: cualquier meta-comando fuera de comillas se neutraliza. */
+  estricto?: boolean;
+}
 
 /**
  * Comenta (`-- `) las líneas que harían salir de la base destino: `USE otra`, `\connect otra`,
- * `\u otra`, `CREATE/DROP DATABASE`. A prueba de fallos: solo deja pasar una línea así si el
- * léxico está seguro de que cae dentro de un texto entre comillas, de un cuerpo $tag$ o de los
- * datos de un `COPY … FROM stdin`. Si un meta-comando aparece en la parte de una línea larga que
- * ya se envió, corta el flujo con error.
+ * `\u otra`, `CREATE/DROP DATABASE`. A prueba de fallos: solo deja pasar una línea así si las
+ * dos lecturas del léxico están seguras de que cae dentro de un texto, de un cuerpo $tag$ o de
+ * los datos de un `COPY … FROM stdin`. Si hay que neutralizarla y la línea no empieza en SQL
+ * normal y seguro, o si un meta-comando aparece en la parte de una línea larga que ya se envió,
+ * corta el flujo con `MENSAJE_NO_NEUTRALIZABLE`. En PostgreSQL antepone `\restrict <clave>` y
+ * quita los `\restrict`/`\unrestrict` del archivo.
  */
 export class FiltroCambioDeBase extends Transform {
   private cabeza: Buffer[] = [];
   private largo = 0;
   private enCabeza = true;
   private enCopy = false;
-  /** La línea en curso no pasa por el léxico (comentada, meta-comando, DELIMITER, COPY). */
+  /** La línea en curso no pasa por el léxico (comentada, quitada, meta-comando, COPY). */
   private saltarLinea = false;
+  /** La línea en curso se quitó: tampoco se envía el resto. */
+  private quitarLinea = false;
   private copyAlTerminar = false;
   private delimitadorAlTerminar: string | undefined;
+  private escapesAlTerminar: boolean | null = null;
+  private prefijoEnviado = false;
   private readonly lexico: Lexico;
 
   constructor(
     private readonly tipo: 'pg' | 'mysql',
     private readonly alOmitir: (linea: string) => void,
+    private readonly opciones: OpcionesFiltro = {},
   ) {
     super();
-    this.lexico = new Lexico(tipo === 'mysql');
+    this.lexico = new Lexico(tipo === 'mysql', opciones.estricto === true);
+  }
+
+  private prefijo(): void {
+    if (this.prefijoEnviado) return;
+    this.prefijoEnviado = true;
+    if (this.opciones.claveRestrict) {
+      this.push(Buffer.from(`\\restrict ${this.opciones.claveRestrict}\n`));
+    }
   }
 
   override _transform(trozo: Buffer, _cod: BufferEncoding, cb: TransformCallback): void {
+    this.prefijo();
     let i = 0;
     while (i < trozo.length) {
       const j = trozo.indexOf(0x0a, i);
       if (!this.enCabeza) {
         const fin = j === -1 ? trozo.length : j + 1;
         if (!this.cuerpo(trozo.subarray(i, fin))) {
-          cb(new Error(MENSAJE_META_TARDIO));
+          cb(new Error(MENSAJE_NO_NEUTRALIZABLE));
           return;
         }
         i = fin;
@@ -487,7 +580,10 @@ export class FiltroCambioDeBase extends Transform {
       const completa = j !== -1 && corte === finLinea;
       i = corte;
       if (completa || this.largo >= MAX_CABEZA_LINEA) {
-        this.soltar(completa);
+        if (!this.soltar(completa)) {
+          cb(new Error(MENSAJE_NO_NEUTRALIZABLE));
+          return;
+        }
         if (completa) this.finDeLinea();
         else this.enCabeza = false;
       }
@@ -496,12 +592,17 @@ export class FiltroCambioDeBase extends Transform {
   }
 
   override _flush(cb: TransformCallback): void {
-    if (this.largo > 0) this.soltar(true);
+    this.prefijo();
+    if (this.largo > 0 && !this.soltar(true)) {
+      cb(new Error(MENSAJE_NO_NEUTRALIZABLE));
+      return;
+    }
     cb();
   }
 
   /** Resto de una línea larga: pasa tal cual, pero el léxico lo sigue leyendo. */
   private cuerpo(b: Buffer): boolean {
+    if (this.quitarLinea) return true;
     if (!this.enCopy && !this.saltarLinea) {
       this.lexico.meta = false;
       this.lexico.avanzar(b.toString('latin1'));
@@ -516,13 +617,17 @@ export class FiltroCambioDeBase extends Transform {
     if (this.delimitadorAlTerminar !== undefined || this.copyAlTerminar) {
       this.lexico.reiniciar(this.delimitadorAlTerminar);
     }
+    if (this.escapesAlTerminar !== null) this.lexico.fijarEscapes(this.escapesAlTerminar);
     this.saltarLinea = false;
+    this.quitarLinea = false;
     this.delimitadorAlTerminar = undefined;
+    this.escapesAlTerminar = null;
     if (this.copyAlTerminar) this.enCopy = true;
     this.copyAlTerminar = false;
   }
 
-  private soltar(completa: boolean): void {
+  /** false si la línea no se puede neutralizar con seguridad. */
+  private soltar(completa: boolean): boolean {
     const b = Buffer.concat(this.cabeza);
     this.cabeza = [];
     this.largo = 0;
@@ -531,39 +636,48 @@ export class FiltroCambioDeBase extends Transform {
       // Datos de COPY: hasta la línea "\.". No se tocan.
       if (/^\\\.\r?\n?$/.test(texto)) this.enCopy = false;
       this.push(b);
-      return;
+      return true;
     }
     const enTexto = this.lexico.dentroDeTexto();
+    const limpio = this.lexico.limpio();
     const inicio = this.lexico.enInicio();
+    const sinBom = texto.startsWith(BOM_LATIN1) ? texto.slice(3) : texto;
+    if (this.tipo === 'pg' && !enTexto && RESTRICT.test(sinBom)) {
+      // \restrict / \unrestrict del archivo: fuera (manda el nuestro).
+      if (!limpio) return false;
+      this.alOmitir(b.toString('utf8').trim().slice(0, 200));
+      this.saltarLinea = true;
+      this.quitarLinea = true;
+      return true;
+    }
     const antes = this.lexico.guardar();
     this.lexico.meta = false;
     this.lexico.avanzar(texto);
     const conMeta = this.lexico.meta;
-    const sinBom = texto.startsWith(BOM_LATIN1) ? texto.slice(3) : texto;
     if (conMeta || (!enTexto && CAMBIO_BASE[this.tipo].test(sinBom))) {
+      // Solo se comenta si la línea empieza en SQL normal y seguro; si no, se aborta.
+      if (!limpio) return false;
       // La línea entera pasa a ser un comentario: el léxico sigue como antes de ella.
       this.lexico.volver(antes);
       this.alOmitir(b.toString('utf8').trim().slice(0, 200));
       this.push(Buffer.from('-- '));
       this.push(b);
       this.saltarLinea = true;
-      return;
+      return true;
     }
+    if (inicio) this.escapesAlTerminar = escapesDeclarados(this.tipo, sinBom);
     if (!enTexto && this.tipo === 'pg' && /^\s*\\/.test(texto)) {
-      // Otro meta-comando de psql (\set, \encoding…): ocupa la línea; no es SQL.
+      // Otro meta-comando de psql (\set, \encoding…): con \restrict, psql lo rechaza.
       this.lexico.volver(antes);
       this.push(b);
       this.saltarLinea = true;
-      return;
+      return true;
     }
     const delim = this.tipo === 'mysql' && inicio ? /^\s*DELIMITER\s+(\S+)/i.exec(texto) : null;
     if (delim) {
-      this.push(b);
       this.saltarLinea = true;
       this.delimitadorAlTerminar = delim[1];
-      return;
-    }
-    if (
+    } else if (
       inicio &&
       this.tipo === 'pg' &&
       /^\s*COPY\s/i.test(texto) &&
@@ -573,6 +687,7 @@ export class FiltroCambioDeBase extends Transform {
       this.saltarLinea = true;
     }
     this.push(b);
+    return true;
   }
 }
 
@@ -949,6 +1064,7 @@ export class Respaldos {
     tipo: 'pg' | 'mysql',
     s: Salida,
     total: number,
+    opciones: OpcionesFiltro = {},
   ): Readable {
     let ultimoMb = -1;
     const contador = new Contador((leidos) => {
@@ -962,8 +1078,10 @@ export class Respaldos {
     if (fuente.gz) pasos.push(createGunzip());
     if (fuente.utf16) pasos.push(new DeUtf16(fuente.utf16));
     pasos.push(
-      new FiltroCambioDeBase(tipo, (l) =>
-        s.aviso(`Se omitió una línea que cambiaba de base: ${l}`),
+      new FiltroCambioDeBase(
+        tipo,
+        (l) => s.aviso(`Se omitió una línea que cambiaba de base: ${l}`),
+        opciones,
       ),
     );
     return encadenar(createReadStream(fuente.ruta), ...pasos);
@@ -1006,21 +1124,31 @@ export class Respaldos {
       } else {
         exe = (await this.herramienta(motor, 'cliente')).exe;
         args = ['-X', '-q', '--no-password', '-v', 'ON_ERROR_STOP=0', ...conexion, '-f', '-'];
+        // Con \restrict, psql rechaza cualquier meta-comando posterior (\!, \o, \i, \connect…).
+        // Un psql sin \restrict: se neutraliza todo meta-comando fuera de comillas.
+        const filtro: OpcionesFiltro = (await this.psqlRestringe(exe))
+          ? { claveRestrict: randomBytes(16).toString('hex') }
+          : { estricto: true };
         s = this.salida(operacion, motor, base, claves, (l) =>
           /\b(ERROR|FATAL|WARNING|ADVERTENCIA):/.test(l),
         );
-        entrada = this.flujoSql(fuente, 'pg', s, total);
+        entrada = this.flujoSql(fuente, 'pg', s, total, filtro);
         correcto = (c) => c === 0;
       }
     } else {
       if (fuente.tipo !== 'sql') throw new Error('Este respaldo es de PostgreSQL.');
-      exe = (await this.herramienta(motor, 'cliente')).exe;
+      const cliente = await this.herramienta(motor, 'cliente');
+      exe = cliente.exe;
       env = { MYSQL_PWD: clave };
       args = [
         `--host=${con.host}`,
         `--port=${con.puerto}`,
         `--user=${con.usuario}`,
         '--default-character-set=utf8mb4',
+        // Sin comandos del cliente (\!, source, tee, \u…) salvo \C y DELIMITER.
+        '--binary-mode',
+        // MariaDB reciente: además, nada que toque archivos ni ejecute programas.
+        ...(motor === 'mariadb' && mariadbConSandbox(cliente.version) ? ['--sandbox'] : []),
         '--force',
         base,
       ];
@@ -1044,6 +1172,9 @@ export class Respaldos {
       const z = (e as { code?: unknown } | null)?.code;
       if (typeof z === 'string' && z.startsWith('Z_')) {
         throw new Error('El archivo .gz está dañado o incompleto: la restauración quedó a medias.');
+      }
+      if (e instanceof Error && e.message === MENSAJE_NO_NEUTRALIZABLE) {
+        throw new Error(MENSAJE_NO_NEUTRALIZABLE);
       }
       throw new Error(
         `No se pudo restaurar la base ${base}: ${enmascarar(e instanceof Error ? e.message : String(e), claves)}`,
@@ -1166,6 +1297,15 @@ export class Respaldos {
       );
     }
     return { archivo: final };
+  }
+
+  /** true si el psql local acepta `\restrict` (si no se sabe, false: modo estricto). */
+  private async psqlRestringe(exe: string): Promise<boolean> {
+    try {
+      return psqlConRestrict((await this.d.exec(exe, ['--version'], { timeoutMs: 15_000 })).stdout);
+    } catch {
+      return false;
+    }
   }
 
   /** Versión del cliente local (`--version`); si no se entiende, la del servidor instalado. */
@@ -1295,6 +1435,36 @@ export class Respaldos {
       await rm(tmp, OPCIONES_BORRADO).catch(() => undefined);
     }
   }
+}
+
+/** psql con \restrict (CVE-2025-8714): 13.22, 14.19, 15.14, 16.10, 17.6 o posterior. */
+export function psqlConRestrict(texto: string): boolean {
+  const v = leerVersion(texto, /\(PostgreSQL\)\s+(\d+)(?:\.(\d+))?/);
+  if (!v) return false;
+  if (v.mayor >= 18) return true;
+  const minimo: Record<number, number> = { 13: 22, 14: 19, 15: 14, 16: 10, 17: 6 };
+  const m = minimo[v.mayor];
+  return m !== undefined && v.menor >= m;
+}
+
+/** mariadb --sandbox: 10.5.25, 10.6.18, 10.11.8, 11.0.6, 11.1.5, 11.2.4, 11.3.2, 11.4.2 o posterior. */
+export function mariadbConSandbox(version: string): boolean {
+  const m = /^(\d+)\.(\d+)\.(\d+)/.exec(version);
+  if (!m) return false;
+  const [mayor, menor, parche] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (mayor > 11 || (mayor === 11 && menor > 4)) return true;
+  const minimo: Record<string, number> = {
+    '10.5': 25,
+    '10.6': 18,
+    '10.11': 8,
+    '11.0': 6,
+    '11.1': 5,
+    '11.2': 4,
+    '11.3': 2,
+    '11.4': 2,
+  };
+  const p = minimo[`${mayor}.${menor}`];
+  return p !== undefined && parche >= p;
 }
 
 /** Falló la restauración después de borrar la base original (queda su respaldo previo). */

@@ -11,7 +11,13 @@ import type { Readable } from 'node:stream';
 import { createGunzip, crc32, deflateRawSync, gzipSync } from 'node:zlib';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { detectarFormato } from '../src/bd/formato';
-import { encadenar, Respaldos, type DepsRespaldos } from '../src/bd/respaldos';
+import {
+  encadenar,
+  mariadbConSandbox,
+  psqlConRestrict,
+  Respaldos,
+  type DepsRespaldos,
+} from '../src/bd/respaldos';
 import type { MotorBd } from '../src/bd/env';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { lanzadorPorDefecto } from '../src/plataforma/lanzar';
@@ -78,6 +84,9 @@ interface Lanzado {
   cmd: string;
   args: string[];
   env: Record<string, string>;
+  /** Clave del `
+estrict` que abría la entrada (se quita de `entrada`). */
+  restrict: string | null;
   entrada: string | null;
   /** Lo que había en el archivo pasado por -f / último argumento al momento de lanzar. */
   archivo: Buffer | null;
@@ -97,6 +106,7 @@ let consultasLocal: string[];
 let orden: string[];
 let secuenciaTablas: boolean[];
 let versionOrigen: string;
+let versionPsql: string;
 let progreso: EventosNucleo['bd:progreso'][];
 let reloj: number;
 
@@ -124,23 +134,33 @@ function armar(extra: Partial<DepsRespaldos> = {}): Respaldos {
       return { ...respuestaTar(args), stdout: '', stderr: 'tar: error' };
     if (args.includes('--version')) {
       const b = path.basename(cmd);
-      const salida = b.startsWith('pg_')
-        ? `${b.replace('.exe', '')} (PostgreSQL) 17.2`
-        : b.startsWith('mariadb')
-          ? 'mariadb-dump from 11.4.4-MariaDB, client 10.19 for Win64 (AMD64)'
-          : 'mysqldump  Ver 8.4.3 for Win64 on x86_64 (MySQL Community Server - GPL)';
+      const salida =
+        b.startsWith('pg_') || b.startsWith('psql')
+          ? `${b.replace('.exe', '')} (PostgreSQL) ${versionPsql}`
+          : b.startsWith('mariadb')
+            ? 'mariadb-dump from 11.4.4-MariaDB, client 10.19 for Win64 (AMD64)'
+            : 'mysqldump  Ver 8.4.3 for Win64 on x86_64 (MySQL Community Server - GPL)';
       return { codigo: 0, stdout: salida, stderr: '' };
     }
     return { codigo: 0, stdout: '', stderr: '' };
   };
   const lanzar: Lanzador = async (cmd, args, opts) => {
-    const entrada = opts?.entrada
+    let entrada = opts?.entrada
       ? (await leerTodo(opts.entrada as Readable)).toString('utf8')
       : null;
+    const m = entrada ? /^\\restrict ([^\n]*)\n/.exec(entrada) : null;
+    if (m) entrada = entrada!.slice(m[0].length);
     const f = args.indexOf('-f');
     const ruta = f >= 0 ? args[f + 1] : args.at(-1);
     const archivo = ruta && ruta !== '-' && existsSync(ruta) ? readFileSync(ruta) : null;
-    const l: Lanzado = { cmd, args, env: opts?.env ?? {}, entrada, archivo };
+    const l: Lanzado = {
+      cmd,
+      args,
+      env: opts?.env ?? {},
+      entrada,
+      archivo,
+      restrict: m ? m[1]! : null,
+    };
     lanzados.push(l);
     orden.push(path.basename(cmd));
     const r = respuestaLanzar(l);
@@ -227,6 +247,7 @@ beforeEach(async () => {
   orden = [];
   secuenciaTablas = [];
   versionOrigen = '17.2';
+  versionPsql = '17.12';
   progreso = [];
   reloj = Date.UTC(2026, 10, 18, 14, 30);
 });
@@ -384,15 +405,95 @@ describe('restaurar', () => {
     );
   });
 
-  it('el filtro de MySQL respeta escapes y DELIMITER, y filtra dentro de /*! */', async () => {
+  it('el filtro de MySQL sigue DELIMITER', async () => {
     const sql =
-      "INSERT INTO t VALUES ('a\\'\nUSE otra;');\n" +
-      '/*!40101 SET x=1\nUSE otra2 */;\n' +
+      "INSERT INTO t VALUES ('O''Brien'),('x');\n" +
       'DELIMITER ;;\nCREATE PROCEDURE p() BEGIN SELECT 1; END;;\nUSE otra3;\n';
     await armar().restaurar('mysql', fixture('m.sql', sql), 'tienda');
-    expect(lanzados[0]!.entrada).toBe(
-      sql.replace('USE otra2', '-- USE otra2').replace('USE otra3;', '-- USE otra3;'),
+    expect(lanzados[0]!.entrada).toBe(sql.replace('USE otra3;', '-- USE otra3;'));
+  });
+
+  it("datos con \\' (ambiguos según el modo) no se alteran; un USE posterior aborta", async () => {
+    const datos = "INSERT INTO t VALUES ('O\\'Brien'),('x');\nINSERT INTO t VALUES (2);\n";
+    await armar().restaurar('mysql', fixture('m.sql', datos), 'tienda');
+    expect(lanzados[0]!.entrada).toBe(datos);
+    await expect(
+      armar().restaurar('mysql', fixture('m2.sql', `${datos}USE otra;\n`), 'tienda'),
+    ).rejects.toThrow(/no se pueden neutralizar con seguridad/);
+  });
+
+  it.each([
+    [
+      'PG: \\connect tras cerrar un comentario de bloque',
+      'postgresql',
+      '/* x\n*/ \\connect postgres\n',
+    ],
+    ['MySQL: USE dentro de /*! … */', 'mysql', '/*!40101 SET x=1\nUSE otra2 */;\n'],
+    [
+      'PG: standard_conforming_strings = off',
+      'postgresql',
+      "SET standard_conforming_strings = off;\nSELECT 'a\\'b';\n\\connect postgres\n",
+    ],
+    [
+      'MySQL: NO_BACKSLASH_ESCAPES',
+      'mysql',
+      "SET sql_mode='NO_BACKSLASH_ESCAPES';\nSELECT 'a\\';\n\\u other\n",
+    ],
+    [
+      "MySQL: USE tras un texto con \\' ambiguo",
+      'mysql',
+      "INSERT INTO t VALUES ('a\\'\nUSE otra;');\n",
+    ],
+  ])('aborta si no puede neutralizar con seguridad (%s)', async (_n, motor, sql) => {
+    await expect(
+      armar().restaurar(motor as MotorBd, fixture('s.sql', sql), 'tienda'),
+    ).rejects.toThrow(
+      'El respaldo contiene instrucciones de cambio de base que no se pueden neutralizar con seguridad; no se restauró.',
     );
+  });
+
+  it('el modo de escapes declarado se sigue: sin dudas, se comenta', async () => {
+    // Con escapes desactivados, 'a\' cierra el texto: \u queda fuera y en SQL normal.
+    const sql = "SET sql_mode='NO_BACKSLASH_ESCAPES';\nSELECT 'a\\b';\n\\u other\n";
+    await armar().restaurar('mysql', fixture('s.sql', sql), 'tienda');
+    expect(lanzados[0]!.entrada).toBe(sql.replace('\\u other', '-- \\u other'));
+  });
+
+  it('psql 17.6+: la entrada empieza por \\restrict y se quitan los del archivo', async () => {
+    const sql = '\\restrict abc123\nCREATE TABLE t (a int);\n\\unrestrict abc123\n';
+    const r = await armar().restaurar('postgresql', fixture('p.sql', sql), 'tienda');
+    const l = lanzados[0]!;
+    expect(l.restrict).toMatch(/^[0-9a-f]{32}$/);
+    expect(l.restrict).not.toBe('abc123');
+    expect(l.entrada).toBe('CREATE TABLE t (a int);\n');
+    expect(r.advertencias.join('\n')).toContain('\\unrestrict abc123');
+    expect(
+      ejecutados.some((e) => path.basename(e.cmd) === 'psql.exe' && e.args.includes('--version')),
+    ).toBe(true);
+  });
+
+  it('psql sin \\restrict: se neutraliza cualquier meta-comando', async () => {
+    versionPsql = '17.2';
+    const sql = "SELECT '\\! en texto';\n\\! del x\n\\o archivo\nSELECT 1; \\g |cmd\n";
+    await armar().restaurar('postgresql', fixture('p.sql', sql), 'tienda');
+    const l = lanzados[0]!;
+    expect(l.restrict).toBeNull();
+    expect(l.entrada).toBe(
+      "SELECT '\\! en texto';\n-- \\! del x\n-- \\o archivo\n-- SELECT 1; \\g |cmd\n",
+    );
+  });
+
+  it('versiones con \\restrict y con --sandbox', () => {
+    expect(psqlConRestrict('psql (PostgreSQL) 17.12')).toBe(true);
+    expect(psqlConRestrict('psql (PostgreSQL) 17.5')).toBe(false);
+    expect(psqlConRestrict('psql (PostgreSQL) 16.10')).toBe(true);
+    expect(psqlConRestrict('psql (PostgreSQL) 18.1')).toBe(true);
+    expect(psqlConRestrict('otra cosa')).toBe(false);
+    expect(mariadbConSandbox('11.4.14')).toBe(true);
+    expect(mariadbConSandbox('11.4.1')).toBe(false);
+    expect(mariadbConSandbox('10.11.8')).toBe(true);
+    expect(mariadbConSandbox('10.6.17')).toBe(false);
+    expect(mariadbConSandbox('11.8.2')).toBe(true);
   });
 
   it.each([
@@ -591,6 +692,7 @@ describe('restaurar', () => {
       '--port=3306',
       '--user=root',
       '--default-character-set=utf8mb4',
+      '--binary-mode',
       '--force',
       'tienda',
     ]);
@@ -605,6 +707,7 @@ describe('restaurar', () => {
   it('MariaDB usa mariadb.exe', async () => {
     await armar().restaurar('mariadb', fixture('m.sql', 'SELECT 1;\n'), 'tienda');
     expect(lanzados[0]!.cmd).toBe(path.join(rutas.bin('mariadb', '11.4.4'), 'bin', 'mariadb.exe'));
+    expect(lanzados[0]!.args).toEqual(expect.arrayContaining(['--binary-mode', '--sandbox']));
     expect(lanzados[0]!.args).toContain('--port=3307');
   });
 
