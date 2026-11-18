@@ -22,6 +22,39 @@ export type FabricaConexion = (c: ConexionMysql) => Promise<ConexionBaja>;
 
 const NOMBRE = /^[A-Za-z0-9_]{1,64}$/;
 const SISTEMA = ['mysql', 'information_schema', 'performance_schema', 'sys'];
+const USUARIOS_RESERVADOS = [
+  'root',
+  'mysql.sys',
+  'mysql.session',
+  'mysql.infoschema',
+  'mariadb.sys',
+];
+
+function noSistema(nombre: string, verbo: 'borrar' | 'crear'): void {
+  if (SISTEMA.includes(nombre.toLowerCase())) {
+    throw new Error(`No se puede ${verbo} la base del sistema ${nombre}.`);
+  }
+}
+
+/** Mensaje claro, sin el SQL ni claves, para un error de mysql2. */
+function traducir(e: unknown, accion: string): Error {
+  const codigo = (e as { code?: unknown } | null)?.code;
+  const c = typeof codigo === 'string' ? codigo : '';
+  let motivo = 'el servidor rechazó la operación';
+  if (c === 'ER_DB_CREATE_EXISTS') motivo = 'la base ya existe';
+  else if (c === 'ER_DB_DROP_EXISTS') motivo = 'la base no existe';
+  else if (c.includes('ACCESS_DENIED') || c.includes('DBACCESS_DENIED'))
+    motivo = 'permiso denegado';
+  else if (c === 'ECONNREFUSED' || c === 'PROTOCOL_CONNECTION_LOST')
+    motivo = 'se perdió la conexión con el servidor';
+  return new Error(`No se pudo ${accion}: ${motivo}${c ? ` (${c})` : ''}.`);
+}
+
+export interface ResultadoCrearBase {
+  /** true si el usuario ya existía y su clave se cambió a la indicada. */
+  usuarioActualizado: boolean;
+  aviso?: string;
+}
 
 export function validarNombreBd(nombre: string): void {
   if (!NOMBRE.test(nombre)) {
@@ -92,26 +125,49 @@ export class ClienteMysql {
     return filas.map((f) => ({ nombre: String(f.nombre), tamanoBytes: Number(f.tam) }));
   }
 
-  async crearBase(nombre: string, opts: { usuario?: string; clave?: string } = {}): Promise<void> {
+  async crearBase(
+    nombre: string,
+    opts: { usuario?: string; clave?: string } = {},
+  ): Promise<ResultadoCrearBase> {
     const bd = id(nombre);
+    noSistema(nombre, 'crear');
     const { usuario, clave } = opts;
     if (usuario !== undefined) {
       validarNombreBd(usuario);
+      if (USUARIOS_RESERVADOS.includes(usuario.toLowerCase())) {
+        throw new Error(`El usuario "${usuario}" está reservado: elija otro nombre.`);
+      }
       if (!clave) throw new Error('Indique una clave para el usuario de la base.');
     }
-    await this.filas(`CREATE DATABASE IF NOT EXISTS ${bd} CHARACTER SET utf8mb4`);
-    if (usuario === undefined) return;
-    for (const host of ['localhost', '127.0.0.1']) {
-      await this.filas("CREATE USER IF NOT EXISTS ?@'" + host + "' IDENTIFIED BY ?", [
-        usuario,
-        clave,
-      ]);
-      await this.filas(`GRANT ALL PRIVILEGES ON ${bd}.* TO ?@'${host}'`, [usuario]);
+    try {
+      await this.filas(`CREATE DATABASE IF NOT EXISTS ${bd} CHARACTER SET utf8mb4`);
+      if (usuario === undefined) return { usuarioActualizado: false };
+      const f = await this.filas('SELECT COUNT(*) AS n FROM mysql.user WHERE User = ?', [usuario]);
+      const existia = Number(f[0]?.n ?? 0) > 0;
+      for (const host of ['localhost', '127.0.0.1']) {
+        await this.filas(`CREATE USER IF NOT EXISTS ?@'${host}' IDENTIFIED BY ?`, [usuario, clave]);
+        if (existia) await this.filas(`ALTER USER ?@'${host}' IDENTIFIED BY ?`, [usuario, clave]);
+        await this.filas(`GRANT ALL PRIVILEGES ON ${bd}.* TO ?@'${host}'`, [usuario]);
+      }
+      return existia
+        ? {
+            usuarioActualizado: true,
+            aviso: `El usuario ${usuario} ya existía: su clave se cambió a la nueva.`,
+          }
+        : { usuarioActualizado: false };
+    } catch (e) {
+      throw traducir(e, `crear la base ${nombre}`);
     }
   }
 
   async borrarBase(nombre: string): Promise<void> {
-    await this.filas(`DROP DATABASE ${id(nombre)}`);
+    const bd = id(nombre);
+    noSistema(nombre, 'borrar');
+    try {
+      await this.filas(`DROP DATABASE ${bd}`);
+    } catch (e) {
+      throw traducir(e, `borrar la base ${nombre}`);
+    }
   }
 
   async tieneTablas(nombre: string): Promise<boolean> {

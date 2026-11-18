@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
@@ -8,13 +9,16 @@ import type { CtxServicio, DefServicio } from '../definicion';
 export type VarianteMysql = 'mysql' | 'mariadb';
 
 const exe = (c: CtxServicio, nombre: string): string => path.join(c.bin, 'bin', nombre);
+/** Primer ejecutable que exista en bin/ (el nombre mariadb-* gana al heredado mysql_*). */
+const elegir = (c: CtxServicio, candidatos: string[]): string =>
+  exe(c, candidatos.find((n) => existsSync(exe(c, n))) ?? candidatos[0]!);
 const adelante = (p: string): string => p.replaceAll('\\', '/');
 
 /** Contenido del my.ini; las rutas llevan "/" porque MySQL trata "\" como escape. */
 export function contenidoIni(v: VarianteMysql, datadir: string, puerto: number): string {
   const lineas = [
     '[mysqld]',
-    `datadir=${adelante(datadir)}`,
+    `datadir="${adelante(datadir)}"`,
     `port=${puerto}`,
     'bind-address=127.0.0.1',
     'character-set-server=utf8mb4',
@@ -43,11 +47,21 @@ function falla(nombre: string, c: CtxServicio, salida: string): Error {
   return new Error(`No se pudo inicializar ${nombre}${detalle ? `: ${detalle}` : '.'}`);
 }
 
+/** root por socket/localhost y también por TCP a 127.0.0.1, sin depender de la resolución de nombres. */
+function sqlRoot(clave: string): string {
+  return [
+    `ALTER USER 'root'@'localhost' IDENTIFIED BY '${clave}';`,
+    `CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED BY '${clave}';`,
+    `ALTER USER 'root'@'127.0.0.1' IDENTIFIED BY '${clave}';`,
+    "GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION;",
+    '',
+  ].join('\n');
+}
+
 export function defMysql(v: VarianteMysql): DefServicio {
   const mysql = v === 'mysql';
   const nombre = mysql ? 'MySQL' : 'MariaDB';
   const servidor = mysql ? 'mysqld.exe' : 'mariadbd.exe';
-  const admin = mysql ? 'mysqladmin.exe' : 'mariadb-admin.exe';
 
   const def: DefServicio = {
     id: v,
@@ -57,15 +71,15 @@ export function defMysql(v: VarianteMysql): DefServicio {
     puertoAlternativo: mysql ? 3308 : 3309,
 
     async inicializar(c) {
+      const ini = await escribirIni(c, v);
+      await mkdir(c.rutas.tmp(), { recursive: true });
+      const clave = c.credenciales.clave.replaceAll('\\', '\\\\').replaceAll("'", "\\'");
       if (mysql) {
-        const ini = await escribirIni(c, v);
         // La clave viaja en un archivo temporal (nunca en args): MySQL ejecuta el
         // init-file durante --initialize, cuando el usuario root ya existe.
-        await mkdir(c.rutas.tmp(), { recursive: true });
         const sql = path.join(c.rutas.tmp(), `init-${randomUUID()}.sql`);
-        const clave = c.credenciales.clave.replaceAll('\\', '\\\\').replaceAll("'", "\\'");
         try {
-          await writeFile(sql, `ALTER USER 'root'@'localhost' IDENTIFIED BY '${clave}';\n`, 'utf8');
+          await writeFile(sql, sqlRoot(clave), 'utf8');
           const r = await c.exec(exe(c, servidor), [
             `--defaults-file=${ini}`,
             '--initialize-insecure',
@@ -77,12 +91,17 @@ export function defMysql(v: VarianteMysql): DefServicio {
         }
         return;
       }
-      await escribirIni(c, v);
       await mkdir(path.dirname(c.datos), { recursive: true });
-      const r = await c.exec(exe(c, 'mariadb-install-db.exe'), [
+      const instalar = await c.exec(elegir(c, ['mariadb-install-db.exe', 'mysql_install_db.exe']), [
         `--datadir=${c.datos}`,
-        `--password=${c.credenciales.clave}`,
       ]);
+      if (instalar.codigo !== 0) throw falla(nombre, c, instalar.stderr || instalar.stdout);
+      // La clave entra por la entrada estándar del servidor en modo bootstrap.
+      const r = await c.exec(
+        exe(c, servidor),
+        [`--defaults-file=${ini}`, '--bootstrap', '--console'],
+        { entrada: 'FLUSH PRIVILEGES;\n' + sqlRoot(clave) },
+      );
       if (r.codigo !== 0) throw falla(nombre, c, r.stderr || r.stdout);
     },
 
@@ -101,22 +120,13 @@ export function defMysql(v: VarianteMysql): DefServicio {
     },
 
     async detenerLimpio(c: CtxServicio): Promise<void> {
-      // La clave va en un archivo temporal de credenciales del cliente, no en args.
-      await mkdir(c.rutas.tmp(), { recursive: true });
-      const cred = path.join(c.rutas.tmp(), `cli-${randomUUID()}.cnf`);
-      const clave = c.credenciales.clave.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
-      try {
-        await writeFile(cred, `[client]\nuser=root\npassword="${clave}"\n`, 'utf8');
-        const r = await c.exec(exe(c, admin), [
-          `--defaults-extra-file=${cred}`,
-          '--host=127.0.0.1',
-          `--port=${c.puerto}`,
-          'shutdown',
-        ]);
-        if (r.codigo !== 0) throw new Error(`No se pudo apagar ${nombre} de forma limpia.`);
-      } finally {
-        await rm(cred, { force: true });
-      }
+      // La clave va por la variable de entorno del cliente: no aparece en args ni en disco.
+      const r = await c.exec(
+        elegir(c, mysql ? ['mysqladmin.exe'] : ['mariadb-admin.exe', 'mysqladmin.exe']),
+        ['--user=root', '--host=127.0.0.1', `--port=${c.puerto}`, 'shutdown'],
+        { env: { MYSQL_PWD: c.credenciales.clave } },
+      );
+      if (r.codigo !== 0) throw new Error(`No se pudo apagar ${nombre} de forma limpia.`);
     },
   };
   return def;
