@@ -26,6 +26,36 @@ export const MARCADOR_PUERTO = '{puerto}';
 /** Líneas de registro que se guardan por paso (las últimas). */
 export const MAX_LINEAS_PASO = 500;
 
+/** Largo máximo de una línea del registro; lo que sobra se corta con "…". */
+export const MAX_BYTES_LINEA = 4096;
+
+/** Plazo para que un paso termine tras cancelar; después se da por colgado. */
+export const GRACIA_CANCELACION_MS = 10_000;
+const MENSAJE_SIN_RESPUESTA = 'Cancelado: el paso no respondió';
+
+const SECRETOS: [RegExp, string][] = [
+  // Credenciales en URLs: esquema://usuario:clave@host
+  [/(:\/\/)[^\s/@:]+:[^\s/@]*@/g, '$1***@'],
+  // password=…, PASSWORD=…, DB_PASSWORD=…, --password=…
+  [/(password\s*=\s*)("[^"]*"|'[^']*'|\S+)/gi, '$1***'],
+  // Clave pegada de mysql: -pclave
+  [/(^|\s)-p(?=\S)\S+/g, '$1-p***'],
+  // Tokens de GitHub
+  [/\bgithub_pat_[A-Za-z0-9_]+/g, 'github_pat_***'],
+  [/\b(gh[pousr])_[A-Za-z0-9]+/g, '$1_***'],
+];
+
+/**
+ * Enmascara credenciales (URLs con usuario:clave, password=…, -p de mysql, tokens de GitHub) y
+ * corta la línea a MAX_BYTES_LINEA caracteres con "…". Se aplica a todo lo que el motor emite y
+ * guarda.
+ */
+export function sanear(texto: string): string {
+  let t = texto;
+  for (const [patron, reemplazo] of SECRETOS) t = t.replace(patron, reemplazo);
+  return t.length > MAX_BYTES_LINEA ? t.slice(0, MAX_BYTES_LINEA) + '…' : t;
+}
+
 /* ───────────── Receta por defecto ───────────── */
 
 /** Proceso uvicorn de un proyecto FastAPI (con el Python del .venv del proyecto). */
@@ -96,9 +126,7 @@ export function recetaPorDefecto(det: Deteccion): PasoReceta[] {
       if (det.tieneComposer) composer();
       env();
       bdCrear();
-      if (motor) {
-        paso('bd-restaurar', 'Restaurar un respaldo', { opcional: true, args: { motor } });
-      }
+      // bd-restaurar no va por defecto: el asistente lo agrega si el usuario elige un respaldo.
       if (det.tipo === 'codeigniter4') {
         paso('migrar', 'Migrar la base de datos (spark migrate)', {
           args: { comando: ['php', 'spark', 'migrate'] },
@@ -194,6 +222,8 @@ export interface DepsRecetas {
   sitio: (id: string) => Sitio | undefined | Promise<Sitio | undefined>;
   /** Receta de un sitio. Por defecto, `recetaEfectiva` sobre la detección de su carpeta. */
   receta?: (sitio: Sitio) => Promise<PasoReceta[]>;
+  /** Plazo de gracia tras cancelar (ms). Por defecto GRACIA_CANCELACION_MS. */
+  graciaCancelacionMs?: number;
 }
 
 const RecetaSchema = z.array(PasoRecetaSchema).superRefine((r, ctx) => {
@@ -394,9 +424,13 @@ export class EjecutorRecetas {
       e.estado = control.signal.aborted ? 'cancelada' : (fallo?.estado ?? general(pasos));
       this.guardar(e);
       await this.escrituras.get(sitioId);
-      return fallo && e.estado === 'error'
-        ? fallo
-        : { estado: e.estado as ResultadoReceta['estado'] };
+      if (e.estado === 'error') {
+        // El paso que acaba de fallar o, si no (p. ej. soloPaso), el primero que sigue en error.
+        if (fallo) return fallo;
+        const primero = pasos.find((p) => p.estado === 'error')!;
+        return { estado: 'error', pasoId: primero.id, mensaje: primero.mensaje };
+      }
+      return { estado: e.estado as ResultadoReceta['estado'] };
     } finally {
       if (this.activas.get(sitioId) === control) this.activas.delete(sitioId);
     }
@@ -439,7 +473,7 @@ export class EjecutorRecetas {
     try {
       const impl = this.d.pasos.obtener(paso.tipo);
       if (!impl) throw new Error(`No hay implementación para el paso de tipo "${paso.tipo}"`);
-      await Promise.resolve().then(() =>
+      const trabajo = Promise.resolve().then(() =>
         impl({
           sitio,
           paso: sinEstado(paso),
@@ -447,15 +481,26 @@ export class EjecutorRecetas {
           senal,
           linea: (texto) => {
             if (!vivo) return;
-            for (const l of String(texto)
+            for (const bruta of String(texto)
               .replace(/\r?\n$/, '')
               .split(/\r?\n/)) {
+              const l = sanear(bruta);
               agregar(l);
               this.emitir(sitioId, paso.id, 'corriendo', l);
             }
           },
         }),
       );
+      if ((await this.esperarPaso(trabajo, senal)) === 'colgado') {
+        // No respondió a la cancelación: se suelta (su resultado, si llega, se ignora).
+        vivo = false;
+        paso.estado = 'error';
+        paso.mensaje = MENSAJE_SIN_RESPUESTA;
+        agregar(MENSAJE_SIN_RESPUESTA);
+        this.emitir(sitioId, paso.id, 'error', MENSAJE_SIN_RESPUESTA);
+        this.guardar(e);
+        return null;
+      }
       vivo = false;
       paso.estado = 'listo';
       this.emitir(sitioId, paso.id, 'listo');
@@ -468,7 +513,7 @@ export class EjecutorRecetas {
         this.emitir(sitioId, paso.id, 'pendiente');
         return null;
       }
-      const mensaje = mensajeError(err);
+      const mensaje = sanear(mensajeError(err));
       paso.estado = 'error';
       paso.mensaje = mensaje;
       agregar(mensaje);
@@ -476,6 +521,28 @@ export class EjecutorRecetas {
       this.guardar(e);
       return { estado: 'error', pasoId: paso.id, mensaje };
     }
+  }
+
+  /**
+   * Espera al paso. Si se cancela y no termina dentro del plazo de gracia devuelve 'colgado';
+   * si termina, 'ok' o su error.
+   */
+  private esperarPaso(trabajo: Promise<void>, senal: AbortSignal): Promise<'ok' | 'colgado'> {
+    const gracia = this.d.graciaCancelacionMs ?? GRACIA_CANCELACION_MS;
+    return new Promise((resolve, reject) => {
+      let reloj: ReturnType<typeof setTimeout> | undefined;
+      const alAbortar = (): void => {
+        reloj = setTimeout(() => resolve('colgado'), gracia);
+      };
+      if (senal.aborted) alAbortar();
+      else senal.addEventListener('abort', alAbortar, { once: true });
+      trabajo
+        .then(() => resolve('ok'), reject)
+        .finally(() => {
+          clearTimeout(reloj);
+          senal.removeEventListener('abort', alAbortar);
+        });
+    });
   }
 
   private emitir(sitioId: string, pasoId: string, estado: EstadoPasoReceta, linea?: string): void {

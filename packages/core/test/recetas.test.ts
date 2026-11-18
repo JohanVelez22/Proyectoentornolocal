@@ -8,9 +8,12 @@ import type { Deteccion } from '../src/proyectos/detectar';
 import { RegistroPasos, type ContextoPaso } from '../src/proyectos/pasos';
 import {
   EjecutorRecetas,
+  GRACIA_CANCELACION_MS,
+  MAX_BYTES_LINEA,
   MENSAJE_NO_CONFIADO,
   recetaEfectiva,
   recetaPorDefecto,
+  sanear,
 } from '../src/proyectos/recetas';
 import { Rutas } from '../src/rutas';
 import type { Sitio } from '../src/tipos';
@@ -58,6 +61,8 @@ function pasosFalsos() {
   const orden: string[] = [];
   const fallos = new Map<string, number>(); // id → cuántas veces más falla
   const esperas = new Map<string, Promise<void>>();
+  /** Pasos que no hacen caso a la señal de cancelación. */
+  const sordos = new Set<string>();
   const contextos: ContextoPaso[] = [];
   const registro = new RegistroPasos();
   registro.registrar('comando', async (ctx) => {
@@ -68,7 +73,9 @@ function pasosFalsos() {
     if (espera) {
       await new Promise<void>((resolve, reject) => {
         void espera.then(resolve);
-        ctx.senal.addEventListener('abort', () => reject(new Error('abortado')));
+        if (!sordos.has(ctx.paso.id)) {
+          ctx.senal.addEventListener('abort', () => reject(new Error('abortado')));
+        }
       });
     }
     const f = fallos.get(ctx.paso.id) ?? 0;
@@ -78,10 +85,12 @@ function pasosFalsos() {
     }
     ctx.linea(`fin ${ctx.paso.id}`);
   });
-  return { orden, fallos, esperas, contextos, registro };
+  return { orden, fallos, esperas, sordos, contextos, registro };
 }
 
-async function montar(o: { sitio?: Sitio; receta?: PasoReceta[]; base?: string } = {}) {
+async function montar(
+  o: { sitio?: Sitio; receta?: PasoReceta[]; base?: string; gracia?: number } = {},
+) {
   const base = o.base ?? (await carpetaTemporal('pel-receta-'));
   const rutas = new Rutas(base);
   const eventos = new Eventos<EventosNucleo>();
@@ -95,6 +104,7 @@ async function montar(o: { sitio?: Sitio; receta?: PasoReceta[]; base?: string }
     pasos: falsos.registro,
     sitio: (id) => (id === s.id ? s : undefined),
     receta: () => Promise.resolve(o.receta ?? RECETA),
+    graciaCancelacionMs: o.gracia,
   });
   return { base, rutas, eventos, progreso, ejecutor, ...falsos, s };
 }
@@ -382,6 +392,89 @@ describe('EjecutorRecetas', () => {
     expect(m.ejecutor.estado(m.s.id).estado).toBe('inactiva');
   });
 
+  it('cancelar no se cuelga si el paso no hace caso a la señal', async () => {
+    const m = await montar({ gracia: 30 });
+    const tarde = diferida();
+    m.esperas.set('dos', tarde.promesa);
+    m.sordos.add('dos');
+    const corriendo = m.ejecutor.ejecutar(m.s.id, {});
+    await new Promise((r) => setTimeout(r, 10));
+    expect(m.ejecutor.cancelar(m.s.id)).toBe(true);
+    const r = await corriendo;
+    expect(r.estado).toBe('cancelada');
+    const e = m.ejecutor.estado(m.s.id);
+    expect(e.estado).toBe('cancelada');
+    expect(estadosDe(e)).toEqual({ uno: 'listo', dos: 'error', tres: 'pendiente' });
+    expect(e.pasos[1]!.mensaje).toBe('Cancelado: el paso no respondió');
+    expect(m.progreso.at(-1)).toEqual({
+      sitioId: m.s.id,
+      pasoId: 'dos',
+      estado: 'error',
+      linea: 'Cancelado: el paso no respondió',
+    });
+    const guardado = JSON.parse(
+      await readFile(join(m.base, 'run', `receta-${m.s.id}.json`), 'utf8'),
+    ) as { estado: string };
+    expect(guardado.estado).toBe('cancelada');
+    // La reserva quedó libre aunque el paso siga vivo.
+    expect(m.ejecutor.cancelar(m.s.id)).toBe(false);
+    const n = m.progreso.length;
+    // Si el paso colgado termina después, su resultado se ignora.
+    tarde.resolver();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(m.progreso.length).toBe(n);
+    expect(estadosDe(m.ejecutor.estado(m.s.id)).dos).toBe('error');
+    m.esperas.delete('dos');
+    m.sordos.delete('dos');
+    expect((await m.ejecutor.ejecutar(m.s.id, { desde: 'dos' })).estado).toBe('lista');
+  });
+
+  it('el plazo de gracia por defecto es de 10 s', () => {
+    expect(GRACIA_CANCELACION_MS).toBe(10_000);
+  });
+
+  it('soloPaso que deja otro paso en error devuelve ese paso y su mensaje', async () => {
+    const m = await montar();
+    m.fallos.set('dos', 1);
+    await m.ejecutor.ejecutar(m.s.id, {});
+    const r = await m.ejecutor.ejecutar(m.s.id, { soloPaso: 'tres' });
+    expect(r).toEqual({ estado: 'error', pasoId: 'dos', mensaje: 'falló dos' });
+  });
+
+  it('enmascara secretos y trunca las líneas antes de emitir y guardar', async () => {
+    const base = await carpetaTemporal('pel-receta-');
+    const eventos = new Eventos<EventosNucleo>();
+    const progreso: ProgresoReceta[] = [];
+    eventos.on('receta:progreso', (p) => progreso.push(p));
+    const larga = 'x'.repeat(10_000);
+    const registro = new RegistroPasos({
+      comando: (ctx) => {
+        ctx.linea('clonando https://yo:Sup3rClave@github.com/a/b.git');
+        ctx.linea('mysql -uroot -pSecreto123 tienda');
+        ctx.linea(larga);
+        return Promise.reject(new Error('DB_PASSWORD=Secreto123 token ghp_abcdefghij1234567890'));
+      },
+    });
+    const ejecutor = new EjecutorRecetas({
+      rutas: new Rutas(base),
+      eventos,
+      pasos: registro,
+      sitio: () => sitio(),
+      receta: () => Promise.resolve([RECETA[0]!]),
+    });
+    const r = await ejecutor.ejecutar('tienda-test', {});
+    expect(r.mensaje).toBe('DB_PASSWORD=*** token ghp_***');
+    const lineas = progreso.flatMap((p) => (p.linea === undefined ? [] : [p.linea]));
+    expect(lineas[0]).toBe('clonando https://***@github.com/a/b.git');
+    expect(lineas[1]).toBe('mysql -uroot -p*** tienda');
+    expect(lineas[2]).toBe('x'.repeat(MAX_BYTES_LINEA) + '…');
+    const guardado = await readFile(join(base, 'run', 'receta-tienda-test.json'), 'utf8');
+    for (const secreto of ['Sup3rClave', 'Secreto123', 'ghp_abcdefghij']) {
+      expect(guardado).not.toContain(secreto);
+      expect(JSON.stringify(progreso)).not.toContain(secreto);
+    }
+  });
+
   it('rechaza ids de sitio que no sirven como nombre de archivo', async () => {
     const m = await montar();
     expect(() => m.rutas.receta('../fuera')).toThrow();
@@ -444,16 +537,9 @@ describe('recetaPorDefecto', () => {
     expect(sinBuild).not.toContain('npm-build');
   });
 
-  it('CodeIgniter 3: composer si existe, .env, bd, restaurar opcional y sitio', () => {
+  it('CodeIgniter 3: composer si existe, .env, bd y sitio (restaurar lo agrega el asistente)', () => {
     const r = recetaPorDefecto(det({ tipo: 'codeigniter3', php: null, tienePackageJson: false }));
-    expect(tipos(r)).toEqual([
-      'composer-install',
-      'env-crear',
-      'bd-crear',
-      'bd-restaurar',
-      'sitio-crear',
-    ]);
-    expect(r.find((p) => p.tipo === 'bd-restaurar')!.opcional).toBe(true);
+    expect(tipos(r)).toEqual(['composer-install', 'env-crear', 'bd-crear', 'sitio-crear']);
     const sinComposer = recetaPorDefecto(
       det({ tipo: 'codeigniter3', tieneComposer: false, tienePackageJson: false }),
     );
@@ -466,7 +552,6 @@ describe('recetaPorDefecto', () => {
       'composer-install',
       'env-crear',
       'bd-crear',
-      'bd-restaurar',
       'migrar',
       'sitio-crear',
     ]);
@@ -508,6 +593,12 @@ describe('recetaPorDefecto', () => {
     expect(sitioCrear.procesos[0]!.comando).toContain('uvicorn');
     expect(sitioCrear.procesos[0]!.comando).toContain('{puerto}');
     expect(tipos(recetaPorDefecto({ ...d, pgvector: false }))).not.toContain('pgvector-activar');
+  });
+
+  it('ninguna receta por defecto restaura un respaldo', () => {
+    for (const tipo of ['laravel', 'codeigniter3', 'codeigniter4', 'fastapi'] as const) {
+      expect(tipos(recetaPorDefecto(det({ tipo })))).not.toContain('bd-restaurar');
+    }
   });
 
   it('sin base de datos detectada no agrega bd-crear', () => {
@@ -557,5 +648,30 @@ describe('recetaEfectiva', () => {
     const dir = await carpetaTemporal('pel-receta-yml-');
     await writeFile(join(dir, 'wolfcore.yml'), 'receta: [ {id: a, tipo: nada, titulo: x} ]\n');
     await expect(recetaEfectiva(dir, det())).rejects.toThrow('wolfcore.yml no es válido');
+  });
+});
+
+describe('sanear', () => {
+  it('enmascara credenciales, contraseñas y tokens', () => {
+    expect(sanear('git clone https://usuario:clave@host/x')).toBe('git clone https://***@host/x');
+    expect(sanear('postgresql://u:p@127.0.0.1:5432/db')).toBe('postgresql://***@127.0.0.1:5432/db');
+    expect(sanear('password=abc otra')).toBe('password=*** otra');
+    expect(sanear('PASSWORD="a b c"')).toBe('PASSWORD=***');
+    expect(sanear('mysqldump --password=abc base')).toBe('mysqldump --password=*** base');
+    expect(sanear('mysql -h 127.0.0.1 -pclave')).toBe('mysql -h 127.0.0.1 -p***');
+    expect(sanear('token gho_ABCDEFGHIJ1234567890 fin')).toBe('token gho_*** fin');
+    expect(sanear('github_pat_11ABCDEFG_abcdefghijklmnop')).toBe('github_pat_***');
+  });
+
+  it('no toca texto normal', () => {
+    for (const t of ['npm ci', 'php artisan migrate --force', 'https://github.com/a/b', '-p 80']) {
+      expect(sanear(t)).toBe(t);
+    }
+  });
+
+  it('trunca a 4 KB con "…"', () => {
+    expect(MAX_BYTES_LINEA).toBe(4096);
+    expect(sanear('a'.repeat(5000))).toBe('a'.repeat(4096) + '…');
+    expect(sanear('a'.repeat(4096))).toBe('a'.repeat(4096));
   });
 });
