@@ -30,12 +30,18 @@ export class PathUsuario {
     return this.d.rutas.herramientas('bin');
   }
 
+  private tipo = 'REG_EXPAND_SZ';
+
   /** Valor actual ('' si el usuario no tiene Path); falla si no se puede leer con seguridad. */
   private async leer(): Promise<string> {
+    this.tipo = 'REG_EXPAND_SZ';
     const r = await this.exec('reg', ['query', CLAVE, '/v', 'Path'], { timeoutMs: 15_000 });
     if (r.codigo === 0) {
-      const m = /^\s*Path\s+REG_\w+\s*(.*?)\s*$/im.exec(r.stdout);
-      if (m) return m[1] ?? '';
+      const m = /^\s*Path\s+(REG_\w+)\s*(.*?)\s*$/im.exec(r.stdout);
+      if (m) {
+        this.tipo = m[1] ?? 'REG_EXPAND_SZ';
+        return m[2] ?? '';
+      }
       throw new Error('No se pudo interpretar el PATH del usuario. No se cambió nada.');
     }
     // Sin valor Path: solo es seguro tratarlo como vacío si la clave sí se puede leer.
@@ -47,12 +53,15 @@ export class PathUsuario {
   private async escribir(valor: string, anterior: string): Promise<void> {
     const respaldo = path.join(this.d.rutas.base, 'etc', 'path-usuario.respaldo.txt');
     await mkdir(path.dirname(respaldo), { recursive: true });
-    await writeFile(respaldo, anterior, 'utf8');
-    const r = await this.exec(
-      'reg',
-      ['add', CLAVE, '/v', 'Path', '/t', 'REG_EXPAND_SZ', '/d', valor, '/f'],
-      { timeoutMs: 15_000 },
-    );
+    // Se conserva el ORIGINAL: el respaldo no se pisa en cambios posteriores.
+    await writeFile(respaldo, anterior, { encoding: 'utf8', flag: 'wx' }).catch((e: unknown) => {
+      if ((e as { code?: string }).code !== 'EEXIST') throw e;
+    });
+    // REG_SZ se respeta salvo que el valor lleve %VARS%; si no, REG_EXPAND_SZ.
+    const tipo = this.tipo === 'REG_SZ' && !valor.includes('%') ? 'REG_SZ' : 'REG_EXPAND_SZ';
+    const r = await this.exec('reg', ['add', CLAVE, '/v', 'Path', '/t', tipo, '/d', valor, '/f'], {
+      timeoutMs: 15_000,
+    });
     if (r.codigo !== 0) {
       throw new Error(`No se pudo guardar el PATH del usuario. ${r.stderr.trim()}`.trim());
     }

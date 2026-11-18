@@ -37,15 +37,28 @@ describe('Composer', () => {
       },
       exec: exec ?? (async () => ({ codigo: 0, stdout: '', stderr: '' })),
       leerConfig: async () => ConfigSchema.parse(cfg),
+      asegurarPhpIni: async (r) => rutas.phpIni(r),
     });
 
   it('escribe los shims con el contenido exacto', async () => {
     await crear().crearShims('8.4');
     const php = path.join(rutas.bin('php', '8.4'), 'php.exe');
+    const ini = rutas.phpIni('8.4');
     const phar = path.join(rutas.bin('composer', '2.11.2'), 'composer.phar');
     const dir = path.join(base, 'tools', 'bin');
-    expect(readFileSync(path.join(dir, 'php.cmd'), 'utf8')).toBe(`@"${php}" %*\r\n`);
-    expect(readFileSync(path.join(dir, 'composer.cmd'), 'utf8')).toBe(`@"${php}" "${phar}" %*\r\n`);
+    const cuerpo = (extra: string): string =>
+      [
+        '@echo off',
+        'if defined WOLFCORE_PHP goto sitio',
+        `"${php}" -c "${ini}"${extra} %*`,
+        'exit /b %ERRORLEVEL%',
+        ':sitio',
+        `"%WOLFCORE_PHP%" -c "%WOLFCORE_PHPINI%"${extra} %*`,
+        'exit /b %ERRORLEVEL%',
+        '',
+      ].join('\r\n');
+    expect(readFileSync(path.join(dir, 'php.cmd'), 'utf8')).toBe(cuerpo(''));
+    expect(readFileSync(path.join(dir, 'composer.cmd'), 'utf8')).toBe(cuerpo(` "${phar}"`));
   });
 
   it('rechaza una versión de PHP que escaparía de bin/php', async () => {
@@ -67,6 +80,8 @@ describe('Composer', () => {
     expect(await c.version()).toBe('2.11.2');
     expect(llamada!.cmd).toBe(path.join(rutas.bin('php', '8.4'), 'php.exe'));
     expect(llamada!.args).toEqual([
+      '-c',
+      rutas.phpIni('8.4'),
       path.join(rutas.bin('composer', '2.11.2'), 'composer.phar'),
       '--version',
     ]);
@@ -85,6 +100,7 @@ describe('Composer', () => {
     });
     await c.actualizar();
     expect(args.slice(-1)).toEqual(['self-update']);
+    expect(args.slice(0, 2)).toEqual(['-c', rutas.phpIni('8.4')]);
   });
 });
 
@@ -99,6 +115,8 @@ describe('Terminal', () => {
       rutas,
       entorno: { Path: 'C:\\Windows', LOCALAPPDATA: 'C:\\Users\\u\\AppData\\Local' },
       existe: (p) => (p === wt ? conWt : existsSync(p)),
+      asegurarPhpIni: async (r) => rutas.phpIni(r),
+      phpPorDefecto: async () => '8.2',
       lanzar: async (cmd, args, o) => {
         llamadas.push({ cmd, args, ...o });
       },
@@ -116,6 +134,9 @@ describe('Terminal', () => {
     expect(llamadas[0]!.env.Path).toBe(
       [rutas.bin('php', '8.4'), path.join(base, 'tools', 'bin'), 'C:\\Windows'].join(';'),
     );
+    expect(llamadas[0]!.env.WOLFCORE_PHP).toBe(path.join(rutas.bin('php', '8.4'), 'php.exe'));
+    expect(llamadas[0]!.env.WOLFCORE_PHPINI).toBe(rutas.phpIni('8.4'));
+    expect(llamadas[0]!.env.PHPRC).toBe(path.dirname(rutas.phpIni('8.4')));
     expect(Object.keys(llamadas[0]!.env).filter((k) => /^path$/i.test(k))).toEqual(['Path']);
   });
 
@@ -131,6 +152,9 @@ describe('Terminal', () => {
       `Set-Location -LiteralPath '${rara.replace(/'/g, "''")}'`,
     ]);
     expect(llamadas[0]!.env.Path!.startsWith(path.join(base, 'tools', 'bin'))).toBe(true);
+    // sin PHP propio: el php.ini y el PHP por defecto
+    expect(llamadas[0]!.env.WOLFCORE_PHP).toBe(path.join(rutas.bin('php', '8.2'), 'php.exe'));
+    expect(llamadas[0]!.env.WOLFCORE_PHPINI).toBe(rutas.phpIni('8.2'));
   });
 
   it('carpeta inexistente: error claro y no lanza nada', async () => {
@@ -146,7 +170,7 @@ describe('PathUsuario', () => {
   const entrada = (): string => path.join(base, 'tools', 'bin');
   /** Registro falso: guarda el valor y el tipo. */
   const fake = (inicial: string | null, tipo = 'REG_EXPAND_SZ') => {
-    const reg = { valor: inicial, tipo, escrituras: 0 };
+    const reg = { valor: inicial, tipo, escrituras: 0, tipoEscrito: '' };
     const exec: Ejecutor = async (cmd, args) => {
       expect(cmd).toBe('reg');
       if (args[0] === 'query') {
@@ -164,18 +188,12 @@ describe('PathUsuario', () => {
           stderr: '',
         };
       }
-      expect(args.slice(0, 7)).toEqual([
-        'add',
-        'HKCU\\Environment',
-        '/v',
-        'Path',
-        '/t',
-        'REG_EXPAND_SZ',
-        '/d',
-      ]);
+      expect(args.slice(0, 5)).toEqual(['add', 'HKCU\\Environment', '/v', 'Path', '/t']);
+      expect(args[6]).toBe('/d');
+      reg.tipoEscrito = args[5]!;
       expect(args[8]).toBe('/f');
       reg.valor = args[7]!;
-      reg.tipo = 'REG_EXPAND_SZ';
+      reg.tipo = args[5]!;
       reg.escrituras++;
       return { codigo: 0, stdout: '', stderr: '' };
     };
@@ -226,6 +244,20 @@ describe('PathUsuario', () => {
     });
     await expect(p.agregar()).rejects.toThrow();
     expect(reg.escrituras).toBe(0);
+  });
+
+  it('conserva REG_SZ si el valor ya lo era', async () => {
+    const { reg, p } = fake('C:\\A', 'REG_SZ');
+    await p.agregar();
+    expect(reg.tipoEscrito).toBe('REG_SZ');
+  });
+
+  it('el respaldo conserva el ORIGINAL en cambios posteriores', async () => {
+    const { p } = fake('C:\\A');
+    await p.agregar();
+    await p.quitar();
+    await p.agregar();
+    expect(readFileSync(path.join(base, 'etc', 'path-usuario.respaldo.txt'), 'utf8')).toBe('C:\\A');
   });
 
   it('guarda un respaldo del valor anterior antes de escribir', async () => {

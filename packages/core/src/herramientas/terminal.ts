@@ -32,6 +32,10 @@ export interface DepsTerminal {
   entorno?: NodeJS.ProcessEnv;
   existe?: (ruta: string) => boolean;
   lanzar?: LanzadorSeparado;
+  /** php.ini de la rama (lo genera si falta). */
+  asegurarPhpIni?: (rama: string) => Promise<string>;
+  /** Rama de PHP por defecto cuando el sitio no tiene una instalada. */
+  phpPorDefecto?: () => Promise<string | null>;
 }
 
 const RAMA = /^\d+\.\d+$/;
@@ -48,12 +52,19 @@ export class Terminal {
   }
 
   /** Entorno con PATH = [bin/php/<rama>] + tools/bin + PATH actual (se respeta el nombre `Path`). */
-  private entornoConPath(php: string | null): NodeJS.ProcessEnv {
+  private async entornoConPath(php: string | null): Promise<NodeJS.ProcessEnv> {
     const env: NodeJS.ProcessEnv = { ...this.entorno };
     const clave = Object.keys(env).find((k) => k.toLowerCase() === 'path') ?? 'Path';
     const nuevo: string[] = [];
-    if (php && RAMA.test(php) && this.existe(this.d.rutas.bin('php', php))) {
-      nuevo.push(this.d.rutas.bin('php', php));
+    let rama: string | null =
+      php && RAMA.test(php) && this.existe(this.d.rutas.bin('php', php)) ? php : null;
+    if (rama) nuevo.push(this.d.rutas.bin('php', rama));
+    else rama = (await this.d.phpPorDefecto?.()) ?? null;
+    if (rama && RAMA.test(rama) && this.d.asegurarPhpIni) {
+      const ini = await this.d.asegurarPhpIni(rama);
+      env.WOLFCORE_PHP = path.join(this.d.rutas.bin('php', rama), 'php.exe');
+      env.WOLFCORE_PHPINI = ini;
+      env.PHPRC = path.dirname(ini);
     }
     nuevo.push(this.d.rutas.herramientas('bin'));
     if (env[clave]) nuevo.push(env[clave]!);
@@ -66,7 +77,7 @@ export class Terminal {
     if (!this.existe(sitio.carpeta)) {
       throw new Error(`La carpeta del sitio no existe: ${sitio.carpeta}`);
     }
-    const env = this.entornoConPath(sitio.php);
+    const env = await this.entornoConPath(sitio.php);
     const local = this.entorno.LOCALAPPDATA;
     const wt = local ? path.win32.join(local, 'Microsoft', 'WindowsApps', 'wt.exe') : null;
     if (wt && this.existe(wt)) {

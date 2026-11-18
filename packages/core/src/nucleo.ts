@@ -166,8 +166,12 @@ export class Nucleo {
       rutas,
       instalador,
       leerConfig,
-      phpEncendido: (rama) =>
-        [0, 1, 2, 3].some((i) => supervisor.estado(`php-${rama}-${i}`) === 'encendido'),
+      phpEncendido: async (rama) => {
+        const n = (await leerConfig()).servicios.php.trabajadores;
+        return Array.from({ length: n }, (_, i) => i).some(
+          (i) => supervisor.estado(`php-${rama}-${i}`) === 'encendido',
+        );
+      },
     });
     const servicios = new Servicios({
       rutas,
@@ -236,8 +240,13 @@ export class Nucleo {
       instalador,
       exec: o.ejecutor ?? ejecutorPorDefecto,
       leerConfig,
+      asegurarPhpIni: (r) => servicios.php.asegurarPhpIni(r),
     });
-    nucleo.terminal = new Terminal({ rutas });
+    nucleo.terminal = new Terminal({
+      rutas,
+      asegurarPhpIni: (r) => servicios.php.asegurarPhpIni(r),
+      phpPorDefecto: () => nucleo.composer.phpPorDefecto(),
+    });
     nucleo.pathUsuario = new PathUsuario({ rutas, ...(o.ejecutor ? { exec: o.ejecutor } : {}) });
     o.alIniciar?.(eventos);
     try {

@@ -30,7 +30,7 @@ export interface DepsAdminer {
   instalador: Pick<Instalador, 'instalar' | 'instalados'>;
   leerConfig: () => Promise<Config>;
   /** ¿Algún trabajador de esa rama de PHP está encendido? */
-  phpEncendido: (rama: string) => boolean;
+  phpEncendido: (rama: string) => boolean | Promise<boolean>;
 }
 
 export type DisponibilidadAdminer =
@@ -66,13 +66,18 @@ export class Adminer {
     );
   }
 
+  private async masNuevaEncendida(ramas: string[]): Promise<string | undefined> {
+    for (const r of ramas) if (await this.d.phpEncendido(r)) return r;
+    return undefined;
+  }
+
   private async ramas(): Promise<string[]> {
     return [...(await this.d.instalador.instalados('php'))].sort(compararVersiones).reverse();
   }
 
   async disponibilidad(): Promise<DisponibilidadAdminer> {
     if (!this.instalado()) return { disponible: false, motivo: MOTIVO_SIN_ADMINER };
-    const rama = (await this.ramas()).find((r) => this.d.phpEncendido(r));
+    const rama = await this.masNuevaEncendida(await this.ramas());
     return rama ? { disponible: true, rama } : { disponible: false, motivo: MOTIVO_SIN_PHP };
   }
 
@@ -84,7 +89,7 @@ export class Adminer {
   async configNginx(): Promise<{ raiz: string; puertos: number[] } | null> {
     if (!this.instalado()) return null;
     const ramas = await this.ramas();
-    const rama = ramas.find((r) => this.d.phpEncendido(r)) ?? ramas[0];
+    const rama = (await this.masNuevaEncendida(ramas)) ?? ramas[0];
     if (!rama) return null;
     const cfg = await this.d.leerConfig();
     return { raiz: this.raiz(), puertos: puertosPhp(rama, cfg.servicios.php.trabajadores) };

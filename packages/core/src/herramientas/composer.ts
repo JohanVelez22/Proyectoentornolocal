@@ -13,12 +13,29 @@ export interface DepsComposer {
   instalador: Pick<Instalador, 'instalar' | 'instalados'>;
   exec: Ejecutor;
   leerConfig: () => Promise<Config>;
+  /** php.ini de la rama (lo genera si falta). */
+  asegurarPhpIni: (rama: string) => Promise<string>;
 }
 
 /** Rama de PHP: "8.4". Evita que una versión escape de bin/php. */
 const RAMA = /^\d+\.\d+$/;
 /** En un .cmd, `%` se duplica para que no se expanda. */
 const paraCmd = (ruta: string): string => ruta.replace(/%/g, '%%');
+
+/** Contenido de un shim .cmd (CRLF); `phar` null = php.exe a secas. */
+export function shim(php: string, ini: string, phar: string | null): string {
+  const extra = phar ? ` "${phar}"` : '';
+  return [
+    '@echo off',
+    'if defined WOLFCORE_PHP goto sitio',
+    `"${php}" -c "${ini}"${extra} %*`,
+    'exit /b %ERRORLEVEL%',
+    ':sitio',
+    `"%WOLFCORE_PHP%" -c "%WOLFCORE_PHPINI%"${extra} %*`,
+    'exit /b %ERRORLEVEL%',
+    '',
+  ].join('\r\n');
+}
 
 export class Composer {
   constructor(private readonly d: DepsComposer) {}
@@ -55,7 +72,10 @@ export class Composer {
     const php = await this.phpPorDefecto();
     const phar = await this.rutaPhar();
     if (!php || !phar) return null;
-    const r = await this.d.exec(this.phpExe(php), [phar, '--version'], { timeoutMs: 30_000 });
+    const ini = await this.d.asegurarPhpIni(php);
+    const r = await this.d.exec(this.phpExe(php), ['-c', ini, phar, '--version'], {
+      timeoutMs: 30_000,
+    });
     if (r.codigo !== 0) return null;
     return /Composer version (\S+)/.exec(r.stdout)?.[1] ?? null;
   }
@@ -64,27 +84,30 @@ export class Composer {
     const php = await this.phpPorDefecto();
     const phar = await this.rutaPhar();
     if (!php || !phar) throw new Error('Instale PHP y Composer antes de actualizar.');
-    const r = await this.d.exec(this.phpExe(php), [phar, 'self-update'], { timeoutMs: 120_000 });
+    const ini = await this.d.asegurarPhpIni(php);
+    const r = await this.d.exec(this.phpExe(php), ['-c', ini, phar, 'self-update'], {
+      timeoutMs: 120_000,
+    });
     if (r.codigo !== 0) {
       throw new Error(`No se pudo actualizar Composer. ${(r.stderr || r.stdout).trim()}`.trim());
     }
     return r.stdout.trim();
   }
 
-  /** Escribe tools/bin/php.cmd y, si Composer está instalado, tools/bin/composer.cmd. */
+  /**
+   * Escribe tools/bin/php.cmd y, si Composer está instalado, tools/bin/composer.cmd. Prefieren el
+   * PHP y el php.ini del sitio (WOLFCORE_PHP / WOLFCORE_PHPINI, que fija la terminal del sitio);
+   * si no están definidos, usan el PHP por defecto y su php.ini.
+   */
   async crearShims(phpPorDefecto: string): Promise<void> {
     const php = paraCmd(this.phpExe(phpPorDefecto));
+    const ini = paraCmd(await this.d.asegurarPhpIni(phpPorDefecto));
     const dir = this.d.rutas.herramientas('bin');
     await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, 'php.cmd'), `@"${php}" %*\r\n`, 'utf8');
+    await writeFile(path.join(dir, 'php.cmd'), shim(php, ini, null), 'utf8');
     const phar = await this.rutaPhar();
-    if (phar) {
-      await writeFile(
-        path.join(dir, 'composer.cmd'),
-        `@"${php}" "${paraCmd(phar)}" %*\r\n`,
-        'utf8',
-      );
-    }
+    if (phar)
+      await writeFile(path.join(dir, 'composer.cmd'), shim(php, ini, paraCmd(phar)), 'utf8');
   }
 
   /** Regenera los shims con el PHP por defecto actual (tras cambiarlo o instalar PHP/Composer). */

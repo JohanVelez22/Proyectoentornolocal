@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { puertosPhp } from '../nginx/principal';
@@ -85,6 +86,13 @@ export class ServicioPhp {
     const destino = this.rutas.phpIni(version);
     await mkdir(path.dirname(destino), { recursive: true });
     await writeFile(destino, lineas.join('\r\n'), 'utf8');
+  }
+
+  /** Ruta del php.ini de la rama; lo genera si todavía no existe. */
+  async asegurarPhpIni(version: string): Promise<string> {
+    const ini = this.rutas.phpIni(version);
+    if (!existsSync(ini)) await this.generarIni(version);
+    return ini;
   }
 
   async iniciar(version: string): Promise<void> {
