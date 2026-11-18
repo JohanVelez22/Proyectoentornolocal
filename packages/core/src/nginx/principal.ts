@@ -9,8 +9,8 @@ export function puertosPhp(version: string, trabajadores: number): number[] {
 const PAGINA_404 =
   '<!doctype html><html lang="es"><meta charset="utf-8"><title>Sitio no encontrado</title>' +
   '<body style="font-family:system-ui,sans-serif;margin:3em;color:#333">' +
-  '<h1>Sitio no encontrado en Entorno Local</h1>' +
-  '<p>Ningún sitio de Entorno Local responde a este nombre. Revise la dirección o el dominio del sitio.</p>' +
+  '<h1>Sitio no encontrado en WolfCore Dev</h1>' +
+  '<p>Ningún sitio de WolfCore Dev responde a este nombre. Revise la dirección o el dominio del sitio.</p>' +
   '</body></html>';
 
 const limpiar = (ruta: string): string => ruta.replace(/\\/g, '/').replace(/\/+$/, '');

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { analizarHosts, aplicarBloque } from '../src/hosts/bloque';
 
-const INI = '# >>> Proyectoentornolocal (no editar a mano)';
-const FIN = '# <<< Proyectoentornolocal';
+const INI = '# >>> WolfCore Dev (no editar a mano)';
+const FIN = '# <<< WolfCore Dev';
 
 describe('aplicarBloque', () => {
   it('crea el bloque en un hosts sin él y conserva lo demás', () => {
@@ -74,16 +74,37 @@ describe('aplicarBloque', () => {
   });
 });
 
+describe('bloque con el nombre anterior', () => {
+  const VIEJO_INI = '# >>> Proyectoentornolocal (no editar a mano)';
+  const VIEJO_FIN = '# <<< Proyectoentornolocal';
+  const viejo = `${VIEJO_INI}\r\n127.0.0.1  a.test\r\n::1  a.test\r\n${VIEJO_FIN}\r\n`;
+  it('lo reemplaza por el nuevo sin duplicar y conserva las líneas de afuera', () => {
+    const antes = '1.1.1.1 x\r\n';
+    const despues = '2.2.2.2 y\r\n';
+    const r = aplicarBloque(antes + viejo + despues, ['nuevo.test']);
+    expect(r).toBe(
+      `${antes}${INI}\r\n127.0.0.1  nuevo.test\r\n::1  nuevo.test\r\n${FIN}\r\n${despues}`,
+    );
+    expect(r).not.toContain('Proyectoentornolocal');
+  });
+  it('si conviven el viejo y el nuevo, no queda ninguno de los viejos', () => {
+    const nuevo = `${INI}\r\n127.0.0.1  b.test\r\n${FIN}\r\n`;
+    const r = aplicarBloque(`x\r\n${viejo}${nuevo}`, ['c.test']);
+    expect(r).not.toContain('Proyectoentornolocal');
+    expect(r.split(INI).length - 1).toBe(1);
+    expect(analizarHosts(r).enBloque).toEqual(['c.test']);
+  });
+  it('lista vacía elimina el bloque viejo', () => {
+    expect(aplicarBloque(`x\r\n${viejo}`, [])).toBe('x\r\n');
+  });
+  it('analizarHosts reconoce el bloque viejo', () => {
+    expect(analizarHosts(viejo).enBloque).toEqual(['a.test']);
+  });
+});
+
 describe('dominios inválidos', () => {
   it('rechaza espacios, saltos de línea y marcadores', () => {
-    for (const d of [
-      'a.test\n1.1.1.1 x',
-      'a b',
-      '',
-      '# <<< Proyectoentornolocal',
-      '-a.test',
-      'a..test',
-    ]) {
+    for (const d of ['a.test\n1.1.1.1 x', 'a b', '', '# <<< WolfCore Dev', '-a.test', 'a..test']) {
       expect(() => aplicarBloque('x\n', [d])).toThrow(/Dominio inválido/);
     }
   });

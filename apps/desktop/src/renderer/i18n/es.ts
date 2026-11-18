@@ -4,7 +4,7 @@ const plural = (n: number, uno: string, varios: string): string => `${n} ${n ===
 
 export const es = {
   app: {
-    nombre: 'Entorno Local',
+    nombre: 'WolfCore Dev',
     lema: 'PHP y Nginx sin complicaciones',
     version: 'Versión',
   },
@@ -80,7 +80,7 @@ export const es = {
       fallo: 'No se pudo actualizar el archivo hosts',
       verInstrucciones: 'Ver instrucciones',
       duplicados:
-        'Estos dominios ya están en hosts fuera del bloque de Entorno Local (se conservan):',
+        'Estos dominios ya están en hosts fuera del bloque de WolfCore Dev (se conservan):',
       motivos: {
         cancelado: 'Se canceló el permiso de administrador. El archivo hosts quedó igual.',
         denegado:
@@ -108,7 +108,7 @@ export const es = {
     pid: 'PID',
     sinVersion: 'sin versión',
     sinPuertos: '—',
-    externo: 'Administrado fuera de Entorno Local',
+    externo: 'Administrado fuera de WolfCore Dev',
     verDetalle: 'Ver detalle del error',
     vacioTitulo: 'Aún no hay servicios',
     vacio: 'Instale Nginx y una versión de PHP para empezar.',
@@ -147,7 +147,7 @@ export const es = {
     sinResultados: (q: string) => `Ningún sitio coincide con «${q}».`,
     vacioTitulo: 'Todavía no hay sitios',
     vacio:
-      'Elija la carpeta de un proyecto y Entorno Local detecta si es Laravel, CodeIgniter o estático.',
+      'Elija la carpeta de un proyecto y WolfCore Dev detecta si es Laravel, CodeIgniter o estático.',
     agregar: 'Agregar sitio',
     total: (n: number) => plural(n, 'sitio', 'sitios'),
     abrirSitio: (dominio: string) => `Abrir ${dominio} en el navegador`,
@@ -278,7 +278,7 @@ export const es = {
     titulo: 'Túneles',
     descripcion: 'Enlaces públicos temporales de Cloudflare para mostrar un sitio fuera de su red.',
     explicacion:
-      'Los túneles rápidos cambian de dirección cada vez que se abren o renuevan, y solo funcionan mientras este equipo esté encendido y sus procesos sigan vivos (si sale de Entorno Local dejándolos encendidos, siguen activos).',
+      'Los túneles rápidos cambian de dirección cada vez que se abren o renuevan, y solo funcionan mientras este equipo esté encendido y sus procesos sigan vivos (si sale de WolfCore Dev dejándolos encendidos, siguen activos).',
     columnas: { sitio: 'Sitio', estado: 'Estado', url: 'Enlace', acciones: 'Acciones' },
     vacioTitulo: 'No hay túneles abiertos',
     vacio: 'Encienda el interruptor de túnel de un sitio para obtener un enlace público.',

@@ -10,7 +10,7 @@ export interface AccionesBandeja {
 export function crearBandeja(rutaIcono: string, a: AccionesBandeja): Tray {
   const icono = nativeImage.createFromPath(rutaIcono).resize({ width: 16, height: 16 });
   const tray = new Tray(icono);
-  tray.setToolTip('Entorno Local');
+  tray.setToolTip('WolfCore Dev');
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Abrir', click: a.abrir },

@@ -67,7 +67,7 @@ function crearVentana(): BrowserWindow {
     minWidth: 960,
     minHeight: 640,
     show: false,
-    title: 'Entorno Local',
+    title: 'WolfCore Dev',
     icon: rutaIcono,
     webPreferences: {
       preload: join(__dirname, '../preload/index.cjs'),
@@ -133,7 +133,7 @@ async function salir(): Promise<void> {
   try {
     const opciones = {
       type: 'question' as const,
-      title: 'Entorno Local',
+      title: 'WolfCore Dev',
       message: '¿Apagar los servicios?',
       buttons: ['Sí, apagar', 'No, dejarlos encendidos', 'Cancelar'],
       defaultId: 0,
@@ -174,7 +174,7 @@ if (!app.requestSingleInstanceLock()) {
       nucleo = await Nucleo.crear();
     } catch (e) {
       const detalle = e instanceof Error ? e.message : String(e);
-      dialog.showErrorBox('Entorno Local', `No se pudo iniciar el núcleo: ${detalle}`);
+      dialog.showErrorBox('WolfCore Dev', `No se pudo iniciar el núcleo: ${detalle}`);
       app.exit(1);
       return;
     }

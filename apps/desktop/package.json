@@ -1,8 +1,9 @@
 {
   "name": "@pel/desktop",
+  "productName": "WolfCore Dev",
   "version": "0.1.0",
   "private": true,
-  "description": "Entorno Local: aplicación de escritorio",
+  "description": "WolfCore Dev: aplicación de escritorio",
   "author": "Johan Velez",
   "type": "module",
   "main": "./out/main/index.js",

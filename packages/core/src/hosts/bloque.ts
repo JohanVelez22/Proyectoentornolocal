@@ -1,5 +1,5 @@
-export const MARCA_INICIO = '# >>> Proyectoentornolocal (no editar a mano)';
-export const MARCA_FIN = '# <<< Proyectoentornolocal';
+export const MARCA_INICIO = '# >>> WolfCore Dev (no editar a mano)';
+export const MARCA_FIN = '# <<< WolfCore Dev';
 
 function saltoPredominante(contenido: string): string {
   const crlf = (contenido.match(/\r\n/g) ?? []).length;
@@ -10,11 +10,16 @@ function saltoPredominante(contenido: string): string {
 
 /** Posiciones [inicio, fin) del bloque (incluye el salto final de la marca de cierre). */
 function ubicarBloque(contenido: string): [number, number] | null {
-  const ini = /^(\uFEFF)?[ \t]*# >>> Proyectoentornolocal[^\r\n]*(?:\r?\n|$)/m.exec(contenido);
+  const ini =
+    /^(\uFEFF)?[ \t]*# >>> (?:WolfCore Dev|Proyectoentornolocal)[^\r\n]*(?:\r?\n|$)/m.exec(
+      contenido,
+    );
   if (!ini) return null;
   const desde = ini.index + (ini[1] ? 1 : 0);
   const finIni = ini.index + ini[0].length;
-  const fin = /^[ \t]*# <<< Proyectoentornolocal[^\r\n]*(?:\r?\n|$)/m.exec(contenido.slice(finIni));
+  const fin = /^[ \t]*# <<< (?:WolfCore Dev|Proyectoentornolocal)[^\r\n]*(?:\r?\n|$)/m.exec(
+    contenido.slice(finIni),
+  );
   if (!fin) return null;
   return [desde, finIni + fin.index + fin[0].length];
 }
@@ -44,7 +49,14 @@ export function aplicarBloque(contenido: string, dominios: string[]): string {
         ) + salto;
 
   const pos = ubicarBloque(contenido);
-  if (pos) return contenido.slice(0, pos[0]) + bloque + contenido.slice(pos[1]);
+  if (pos) {
+    let resto = contenido.slice(pos[1]);
+    // Si quedan bloques duplicados (viejo y nuevo), se eliminan: no debe quedar ninguno.
+    for (let otro = ubicarBloque(resto); otro; otro = ubicarBloque(resto)) {
+      resto = resto.slice(0, otro[0]) + resto.slice(otro[1]);
+    }
+    return contenido.slice(0, pos[0]) + bloque + resto;
+  }
   if (!bloque) return contenido;
   const sep = contenido.length === 0 || contenido.endsWith('\n') ? '' : salto;
   return contenido + sep + bloque;
@@ -57,11 +69,11 @@ export function analizarHosts(contenido: string): { enBloque: string[]; fuera: s
   let dentro = false;
   for (const linea of texto.split(/\r?\n/)) {
     const t = linea.trim();
-    if (t.startsWith('# >>> Proyectoentornolocal')) {
+    if (/^# >>> (?:WolfCore Dev|Proyectoentornolocal)/.test(t)) {
       dentro = true;
       continue;
     }
-    if (t.startsWith('# <<< Proyectoentornolocal')) {
+    if (/^# <<< (?:WolfCore Dev|Proyectoentornolocal)/.test(t)) {
       dentro = false;
       continue;
     }

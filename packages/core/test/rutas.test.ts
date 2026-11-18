@@ -21,7 +21,7 @@ const sitio = (o: Partial<Sitio>): Sitio => ({
 describe('rutas', () => {
   it('ruta base en Windows', () => {
     expect(rutaBasePorDefecto({ LOCALAPPDATA: String.raw`C:\X` }, 'win32')).toBe(
-      String.raw`C:\X\Proyectoentornolocal`,
+      String.raw`C:\X\WolfCoreDev`,
     );
   });
   it('raizDeSitio', () => {

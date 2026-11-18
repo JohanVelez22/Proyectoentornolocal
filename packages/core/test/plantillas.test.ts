@@ -156,7 +156,7 @@ describe('generarNginxPrincipal', () => {
     });
     expect(c).toContain('listen 8089 default_server;');
     expect(c).toContain('server_name _;');
-    expect(c).toMatch(/return 404 '[^']*Sitio no encontrado en Entorno Local[^']*';/);
+    expect(c).toMatch(/return 404 '[^']*Sitio no encontrado en WolfCore Dev[^']*';/);
     expect(c.indexOf('default_server')).toBeLessThan(c.indexOf('include "C:/D/sites/*.conf";'));
   });
 

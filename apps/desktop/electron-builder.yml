@@ -1,5 +1,5 @@
-appId: com.johanvelez.entornolocal
-productName: Entorno Local
+appId: com.johanvelez.wolfcoredev
+productName: WolfCore Dev
 directories:
   output: release
   buildResources: resources

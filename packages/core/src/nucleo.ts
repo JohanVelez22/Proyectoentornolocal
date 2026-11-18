@@ -19,6 +19,7 @@ import {
   type AjustesServicios,
   type ResultadoAplicar,
 } from './sitios/sitios';
+import { migrarCarpetaDatos } from './migracion';
 import { UrlBase } from './sitios/urlbase';
 import type { Config, EstadoHosts, EstadoServicio, EstadoTunel, Sitio } from './tipos';
 import { Tuneles } from './tuneles/tuneles';
@@ -110,6 +111,7 @@ export class Nucleo {
   }
 
   static async crear(o: OpcionesNucleo = {}): Promise<Nucleo> {
+    if (o.base === undefined) await migrarCarpetaDatos();
     const rutas = new Rutas(o.base ?? rutaBasePorDefecto());
     await rutas.asegurar();
     const plataforma = o.plataforma ?? crearPlataforma();
