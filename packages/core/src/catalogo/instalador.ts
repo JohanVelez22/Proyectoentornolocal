@@ -16,13 +16,8 @@ import { extraerZip } from './zip';
 import type { Eventos, EventosNucleo } from '../eventos';
 import type { Rutas } from '../rutas';
 import type { ProgresoInstalacion } from '../tipos';
-import { urlOficial, type ServicioInstalable, type VersionDisponible } from './catalogo';
+import { ejecutableDe, urlOficial, type VersionDisponible } from './catalogo';
 
-const EJECUTABLE: Record<ServicioInstalable, string> = {
-  nginx: 'nginx.exe',
-  php: 'php-cgi.exe',
-  cloudflared: 'cloudflared.exe',
-};
 export interface OpcionesInstalador {
   /** Corta la descarga si no llegan bytes durante este tiempo. Por defecto 60000. */
   tiempoSinDatosMs?: number;
@@ -34,10 +29,20 @@ const MARCA = '.pel-version';
 /** Clave de carpeta: "8.4", "1.28.0", "2026.10.1"… nunca separadores ni "..". */
 const CLAVE_VALIDA = /^\d+\.\d+(\.[\w.-]+)?$/;
 
+/** Ruta relativa sin unidad, raíz ni "..". */
+function rutaRelativaSegura(r: unknown): boolean {
+  if (typeof r !== 'string' || r === '' || r.includes('\0')) return false;
+  if (/^([a-zA-Z]:|[\\/])/.test(r)) return false;
+  return !r.split(/[\\/]/).some((p) => p === '..' || p === '');
+}
+
 /** Rechaza versiones que no vienen del catálogo oficial o que escaparían de bin/<servicio>. */
 export function validarVersion(v: VersionDisponible, clave: string): void {
-  if (!Object.hasOwn(EJECUTABLE, v.servicio)) {
+  if (ejecutableDe(v.servicio) === undefined) {
     throw new Error(`Servicio no instalable: ${String(v.servicio)}`);
+  }
+  if (v.ejecutable !== undefined && !rutaRelativaSegura(v.ejecutable)) {
+    throw new Error(`Ejecutable no válido: ${String(v.ejecutable)}`);
   }
   if (typeof v.url !== 'string' || !urlOficial(v.url)) {
     throw new Error('La descarga debe ser https y de un sitio oficial');
@@ -62,7 +67,7 @@ export class Instalador {
   }
 
   async instalado(servicio: string, version: string): Promise<boolean> {
-    const exe = EJECUTABLE[servicio as ServicioInstalable];
+    const exe = ejecutableDe(servicio);
     if (!exe) return false;
     return existsSync(path.join(this.rutas.bin(servicio, version), exe));
   }
@@ -117,6 +122,7 @@ export class Instalador {
       throw new Error(msg);
     }
 
+    const exe = v.ejecutable ?? (ejecutableDe(v.servicio) as string);
     const id = `${v.servicio}-${v.version}-${randomBytes(4).toString('hex')}`;
     const tmp = this.rutas.tmp();
     const archivo = path.join(tmp, `${id}.${v.formato}`);
@@ -138,13 +144,15 @@ export class Instalador {
         await extraerZip(archivo, stage);
         if (v.subcarpeta) origen = path.join(stage, v.subcarpeta);
       } else {
-        await copyFile(archivo, path.join(stage, EJECUTABLE[v.servicio]));
+        // 'exe' y 'archivo': el archivo se copia tal cual con el nombre de `ejecutable`.
+        await mkdir(path.dirname(path.join(stage, exe)), { recursive: true });
+        await copyFile(archivo, path.join(stage, exe));
       }
       if (!(await stat(origen).catch(() => null))?.isDirectory()) {
         throw new Error('El paquete descargado no tiene la estructura esperada');
       }
-      if (!existsSync(path.join(origen, EJECUTABLE[v.servicio]))) {
-        throw new Error(`El paquete descargado no contiene ${EJECUTABLE[v.servicio]}`);
+      if (!existsSync(path.join(origen, exe))) {
+        throw new Error(`El paquete descargado no contiene ${exe}`);
       }
       await writeFile(path.join(origen, MARCA), v.version);
 

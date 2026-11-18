@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { listarVersiones, catalogo, CatalogoSchema } from '../src/catalogo/catalogo';
+import {
+  listarVersiones,
+  catalogo,
+  CatalogoSchema,
+  ejecutableDe,
+  urlOficial,
+} from '../src/catalogo/catalogo';
 
 const releases = {
   '7.4': {
@@ -73,5 +79,48 @@ describe('catálogo', () => {
     expect(prueba('http://nginx.org/download/nginx-1.30.6.zip')).toBe(false);
     expect(prueba('https://evil.example.com/nginx.zip')).toBe(false);
     expect(prueba('https://nginx.org.evil.com/nginx.zip')).toBe(false);
+  });
+
+  it('sirve desde catalogo.json los servicios nuevos con ejecutable y huella', async () => {
+    const esperado: Record<string, string> = {
+      mysql: 'bin/mysqld.exe',
+      mariadb: 'bin/mariadbd.exe',
+      postgresql: 'pgsql/bin/postgres.exe',
+      redis: 'redis-server.exe',
+      mongodb: 'bin/mongod.exe',
+      mongosh: 'bin/mongosh.exe',
+      mailpit: 'mailpit.exe',
+      ollama: 'ollama.exe',
+      composer: 'composer.phar',
+      adminer: 'adminer.php',
+      'pgvector-src': 'Makefile.win',
+    };
+    for (const [servicio, ejecutable] of Object.entries(esperado)) {
+      const v = await listarVersiones(servicio as 'mysql');
+      expect(v.length, servicio).toBeGreaterThan(0);
+      expect(v[0]).toMatchObject({ servicio, ejecutable });
+      expect(v[0]?.sha256).toMatch(/^[0-9a-f]{64}$/);
+      expect(urlOficial(v[0]?.url ?? '')).toBe(true);
+      expect(ejecutableDe(servicio as 'mysql')).toBe(ejecutable);
+    }
+    expect(catalogo.composer[0]?.formato).toBe('archivo');
+    expect(catalogo.adminer[0]?.formato).toBe('archivo');
+  });
+
+  it('nginx, php y cloudflared conservan su ejecutable de siempre', () => {
+    expect(ejecutableDe('nginx')).toBe('nginx.exe');
+    expect(ejecutableDe('php')).toBe('php-cgi.exe');
+    expect(ejecutableDe('cloudflared')).toBe('cloudflared.exe');
+  });
+
+  it('el esquema acepta entradas nuevas y rechaza hosts fuera de la lista', () => {
+    const e = { ...catalogo.mysql[0]! };
+    const prueba = (url: string, formato: string = 'zip') =>
+      CatalogoSchema.safeParse({ ...catalogo, mysql: [{ ...e, url, formato }] }).success;
+    expect(prueba('https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.13-winx64.zip')).toBe(true);
+    expect(prueba('https://getcomposer.org/download/2.11.2/composer.phar', 'archivo')).toBe(true);
+    expect(prueba('https://evil.example.com/mysql.zip')).toBe(false);
+    expect(prueba('https://cdn.mysql.com.evil.com/mysql.zip')).toBe(false);
+    expect(prueba('https://cdn.mysql.com/mysql.zip', 'tar')).toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdtemp, readdir, readFile, rm, mkdir } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, mkdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { crc32 } from 'node:zlib';
@@ -120,7 +120,7 @@ describe('Instalador', () => {
     const inst = new Instalador(rutas, eventos, f as unknown as typeof fetch);
     const base = vNginx(nginxZip);
     await expect(
-      inst.instalar({ ...base, servicio: 'mysql' as VersionDisponible['servicio'] }),
+      inst.instalar({ ...base, servicio: 'xyz' as VersionDisponible['servicio'] }),
     ).rejects.toThrow('Servicio no instalable');
     await expect(inst.instalar({ ...base, url: 'https://malo.example/nginx.zip' })).rejects.toThrow(
       'sitio oficial',
@@ -191,6 +191,60 @@ describe('Instalador', () => {
       await readFile(path.join(rutas.bin('cloudflared', '1.0'), 'cloudflared.exe'), 'utf8'),
     ).toBe('MZ-cloudflared');
     expect(await inst.instalado('cloudflared', '1.0')).toBe(true);
+  });
+
+  it("formato 'archivo' copia composer.phar a bin/composer/<v>/composer.phar", async () => {
+    const phar = Buffer.from('#!/usr/bin/env php composer');
+    const inst = new Instalador(rutas, eventos, fetchDe(phar));
+    await inst.instalar({
+      servicio: 'composer',
+      version: '2.11.2',
+      url: 'https://getcomposer.org/download/2.11.2/composer.phar',
+      sha256: sha(phar),
+      formato: 'archivo',
+      ejecutable: 'composer.phar',
+    });
+    expect(
+      await readFile(path.join(rutas.bin('composer', '2.11.2'), 'composer.phar'), 'utf8'),
+    ).toBe('#!/usr/bin/env php composer');
+    expect(await inst.instalado('composer', '2.11.2')).toBe(true);
+    expect(await inst.instalados('composer')).toEqual(['2.11.2']);
+  });
+
+  it('instalado(postgresql) comprueba pgsql/bin/postgres.exe', async () => {
+    const inst = new Instalador(rutas, eventos, fetchDe(nginxZip));
+    const dir = rutas.bin('postgresql', '17.12');
+    await mkdir(path.join(dir, 'pgsql', 'bin'), { recursive: true });
+    expect(await inst.instalado('postgresql', '17.12')).toBe(false);
+    await writeFile(path.join(dir, 'pgsql', 'bin', 'postgres.exe'), 'x');
+    expect(await inst.instalado('postgresql', '17.12')).toBe(true);
+  });
+
+  it('instala un zip con ejecutable anidado y sin subcarpeta (mysql)', async () => {
+    const z = zip({
+      'mysql-8.4.13-winx64/bin/mysqld.exe': 'MYSQLD',
+      'mysql-8.4.13-winx64/README': 'r',
+    });
+    const inst = new Instalador(rutas, eventos, fetchDe(z));
+    await inst.instalar({
+      servicio: 'mysql',
+      version: '8.4.13',
+      url: 'https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.13-winx64.zip',
+      sha256: sha(z),
+      formato: 'zip',
+      subcarpeta: 'mysql-8.4.13-winx64',
+      ejecutable: 'bin/mysqld.exe',
+    });
+    expect(await inst.instalado('mysql', '8.4.13')).toBe(true);
+  });
+
+  it('rechaza un ejecutable que escapa de la carpeta', async () => {
+    const inst = new Instalador(rutas, eventos, fetchDe(nginxZip));
+    for (const ejecutable of ['../x.exe', '/abs.exe', 'C:/x.exe', 'a\\..\\b.exe']) {
+      await expect(inst.instalar({ ...vNginx(nginxZip), ejecutable })).rejects.toThrow(
+        'Ejecutable no válido',
+      );
+    }
   });
 
   it('php se instala en la rama y un parche nuevo reemplaza al anterior', async () => {

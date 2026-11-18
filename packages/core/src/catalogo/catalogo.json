@@ -5,7 +5,8 @@
       "url": "https://nginx.org/download/nginx-1.30.6.zip",
       "sha256": "c6ee35edb0a861063323f709192ae50d1eefaf2ea7d00678bd2b22d8542dc61e",
       "formato": "zip",
-      "subcarpeta": "nginx-1.30.6"
+      "subcarpeta": "nginx-1.30.6",
+      "ejecutable": "nginx.exe"
     }
   ],
   "cloudflared": [
@@ -13,7 +14,113 @@
       "version": "2026.11.1",
       "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-windows-amd64.exe",
       "sha256": "341deda3db5ec498a0482254d6c38c0b7cf01a30c37bb5dd95d2216d08955e35",
-      "formato": "exe"
+      "formato": "exe",
+      "ejecutable": "cloudflared.exe"
+    }
+  ],
+  "mysql": [
+    {
+      "version": "8.4.13",
+      "url": "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.13-winx64.zip",
+      "sha256": "e9cd98b1d23f122987b1afca26ad942efec5891481103d48ae3cde237fa3ea54",
+      "formato": "zip",
+      "subcarpeta": "mysql-8.4.13-winx64",
+      "ejecutable": "bin/mysqld.exe"
+    }
+  ],
+  "mariadb": [
+    {
+      "version": "11.4.14",
+      "url": "https://archive.mariadb.org/mariadb-11.4.14/winx64-packages/mariadb-11.4.14-winx64.zip",
+      "sha256": "9d9b410eb7b65f6616f29d933d76ee90cf7af4ba179a2d437e0f09f5bf6650df",
+      "formato": "zip",
+      "subcarpeta": "mariadb-11.4.14-winx64",
+      "ejecutable": "bin/mariadbd.exe"
+    }
+  ],
+  "postgresql": [
+    {
+      "version": "17.12",
+      "url": "https://get.enterprisedb.com/postgresql/postgresql-17.12-1-windows-x64-binaries.zip",
+      "sha256": "a2cd8a774389347b70be7748ac4a37ef43cb6ee539c5fc3e85ae264b15e4a04c",
+      "formato": "zip",
+      "ejecutable": "pgsql/bin/postgres.exe"
+    }
+  ],
+  "redis": [
+    {
+      "version": "8.10.3",
+      "url": "https://github.com/redis-windows/redis-windows/releases/download/8.10.3/Redis-8.10.3-Windows-x64-msys2.zip",
+      "sha256": "af16df340525b431e9ec8dabfd625d5e7a233f82805b5418819904ea909c447f",
+      "formato": "zip",
+      "subcarpeta": "Redis-8.10.3-Windows-x64-msys2",
+      "ejecutable": "redis-server.exe"
+    }
+  ],
+  "mongodb": [
+    {
+      "version": "8.0.38",
+      "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.0.38.zip",
+      "sha256": "85147ae32f9bb9a2e5a0a3875b0ffcc4423ab7a49bc4f75cb4bbc9811883d3de",
+      "formato": "zip",
+      "subcarpeta": "mongodb-win32-x86_64-windows-8.0.38",
+      "ejecutable": "bin/mongod.exe"
+    }
+  ],
+  "mongosh": [
+    {
+      "version": "2.14.2",
+      "url": "https://downloads.mongodb.com/compass/mongosh-2.14.2-win32-x64.zip",
+      "sha256": "93072fa3466fdd309c3e40ec0b1e8b805a90ef7e455868320117b3d2c756a4bc",
+      "formato": "zip",
+      "subcarpeta": "mongosh-2.14.2-win32-x64",
+      "ejecutable": "bin/mongosh.exe"
+    }
+  ],
+  "mailpit": [
+    {
+      "version": "1.34.0",
+      "url": "https://github.com/axllent/mailpit/releases/download/v1.34.0/mailpit-windows-amd64.zip",
+      "sha256": "8f080d41374bf22686606374a0a483c8563c1bf29ae078179792392ff8c911d7",
+      "formato": "zip",
+      "ejecutable": "mailpit.exe"
+    }
+  ],
+  "ollama": [
+    {
+      "version": "0.40.16",
+      "url": "https://github.com/ollama/ollama/releases/download/v0.40.16/ollama-windows-amd64.zip",
+      "sha256": "50fcf5ad54277f2fa5d173ebfc93bcb017adbc0c9ef2314daabc96ca9e6aa64e",
+      "formato": "zip",
+      "ejecutable": "ollama.exe"
+    }
+  ],
+  "composer": [
+    {
+      "version": "2.11.2",
+      "url": "https://getcomposer.org/download/2.11.2/composer.phar",
+      "sha256": "dd158c0afd41d15fac89e1b4e47b5d42911fe316c3687cd5edac98319b25d028",
+      "formato": "archivo",
+      "ejecutable": "composer.phar"
+    }
+  ],
+  "adminer": [
+    {
+      "version": "6.3.0",
+      "url": "https://github.com/vrana/adminer/releases/download/v6.3.0/adminer-6.3.0.php",
+      "sha256": "641e1a31e8cc333a309e202ef9446e1fd38c2069ed5f9ee509b80d70089d0503",
+      "formato": "archivo",
+      "ejecutable": "adminer.php"
+    }
+  ],
+  "pgvector-src": [
+    {
+      "version": "0.8.7",
+      "url": "https://github.com/pgvector/pgvector/archive/refs/tags/v0.8.7.zip",
+      "sha256": "7b3b8188a5cc0aa96db3c8f3fca1e78a8a612c46545065490c76448705c6b29e",
+      "formato": "zip",
+      "subcarpeta": "pgvector-0.8.7",
+      "ejecutable": "Makefile.win"
     }
   ]
 }

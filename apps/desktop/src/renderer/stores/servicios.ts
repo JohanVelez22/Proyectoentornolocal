@@ -3,7 +3,11 @@ import { computed, ref } from 'vue';
 import type { EstadoServicio, ProgresoInstalacion, VersionDisponible } from '../../shared/api';
 import { api } from '../api';
 
-export type ServicioInstalable = VersionDisponible['servicio'];
+/** La interfaz solo ofrece estos hasta que se sumen los servicios nuevos de la Etapa A. */
+export type ServicioInstalable = Extract<
+  VersionDisponible['servicio'],
+  'nginx' | 'php' | 'cloudflared'
+>;
 
 const claveProgreso = (p: Pick<ProgresoInstalacion, 'servicio' | 'version'>): string =>
   `${p.servicio}@${p.version}`;
