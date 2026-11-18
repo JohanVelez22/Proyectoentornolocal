@@ -88,9 +88,11 @@ describe('Redis', () => {
     const c = ctx('redis', '8.10.3', 6379, def);
     await def.inicializar(c);
     const p1 = await def.proceso(c);
-    expect(readFileSync(p1.args[0]!, 'utf8')).toContain('port 6379');
+    // redis-server (msys2) no entiende rutas de Windows: nombre relativo a su carpeta de trabajo.
+    expect(p1.args).toEqual(['redis.conf']);
+    expect(readFileSync(path.join(p1.cwd!, p1.args[0]!), 'utf8')).toContain('port 6379');
     const p2 = await def.proceso({ ...c, puerto: 6380 });
-    expect(readFileSync(p2.args[0]!, 'utf8')).toContain('port 6380');
+    expect(readFileSync(path.join(p2.cwd!, p2.args[0]!), 'utf8')).toContain('port 6380');
     expect(p2).toMatchObject({
       id: 'redis',
       comando: path.join(c.bin, 'redis-server.exe'),

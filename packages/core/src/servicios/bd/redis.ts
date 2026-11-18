@@ -48,11 +48,13 @@ export function defRedis(): DefServicio {
       const conf = rutaConf(c);
       await mkdir(path.dirname(conf), { recursive: true });
       await writeFile(conf, contenidoRedis(c.datos, c.puerto), 'utf8');
+      // El build msys2 toma una ruta de Windows (C:\… o C:/…) como relativa y no abre el
+      // archivo: se arranca en la carpeta del conf y se le pasa solo el nombre.
       return {
         id: 'redis',
         comando: exe(c, 'redis-server.exe'),
-        args: [conf],
-        cwd: c.bin,
+        args: [path.basename(conf)],
+        cwd: path.dirname(conf),
         puerto: c.puerto,
         log: c.rutas.logs('redis.log'),
         reiniciar: false,
