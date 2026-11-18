@@ -4,6 +4,12 @@ WolfCore Dev es un reemplazo propio de FlyEnv y ServBay, para uso personal. Es u
 
 **Cambio de nombre:** el programa se llamaba "Entorno Local" (Proyectoentornolocal). Ahora el nombre visible es **WolfCore Dev** (`appId` `com.johanvelez.wolfcoredev`). El repositorio y los paquetes npm conservan su nombre. La carpeta de datos pasó de `%LOCALAPPDATA%\Proyectoentornolocal` a `%LOCALAPPDATA%\WolfCoreDev`: si al iniciar existe la vieja y no la nueva, se renombra sola una vez (si el renombrado falla porque algo la tiene abierta, se usa la vieja esa vez, se avisa y se reintenta en el próximo inicio). El bloque del archivo hosts pasa a `# >>> WolfCore Dev (no editar a mano)` / `# <<< WolfCore Dev` en la siguiente sincronización.
 
+**Desinstalar la app vieja "Entorno Local":** como cambió el `appId` (antes `com.johanvelez.entornolocal`), el instalador de WolfCore Dev **no reemplaza** a la versión anterior: las dos quedan instaladas, cada una con su acceso directo. Antes de abrir WolfCore Dev por primera vez:
+
+1. Cierre "Entorno Local" desde su icono de la bandeja (**Salir** → **Sí, apagar**) para que suelte los puertos y la carpeta de datos (si sigue abierta, el renombrado de la carpeta falla y se reintenta en el siguiente inicio).
+2. Desinstálela en **Configuración → Aplicaciones → Aplicaciones instaladas → Entorno Local → Desinstalar**. El desinstalador quita el programa, no la carpeta de datos: bases, sitios y certificados siguen en `%LOCALAPPDATA%\WolfCoreDev` (o en la vieja hasta que se renombre).
+3. Si había agregado las herramientas al PATH con la versión vieja, esa entrada apunta a `%LOCALAPPDATA%\Proyectoentornolocal\tools\bin`, que tras el renombrado ya no existe: quítela a mano de las variables de entorno del usuario y use **Ajustes → PATH del usuario → Agregar al PATH del usuario** en WolfCore Dev.
+
 Diseños: MVP en `docs/superpowers/specs/2026-11-17-proyectoentornolocal-design.md`, Etapa A en `docs/superpowers/specs/2026-11-18-etapa-a-design.md`.
 
 ## Qué trae
