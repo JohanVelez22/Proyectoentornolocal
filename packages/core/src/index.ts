@@ -58,3 +58,4 @@ export * from './monitor/registros';
 export * from './herramientas/puertos';
 export * from './herramientas/bom';
 export * from './herramientas/certificadosLibres';
+export * from './mcp/servidor';

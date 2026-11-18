@@ -1,4 +1,5 @@
 import type { MotorBd } from './bd/env';
+import type { SolicitudConfirmacion } from './mcp/servidor';
 import type { MuestraSistema } from './monitor/metricas';
 import type { SugerenciaProyecto } from './proyectos/vigilar';
 import type { EstadoHosts, EstadoServicio, EstadoTunel, ProgresoInstalacion, Sitio } from './tipos';
@@ -46,6 +47,8 @@ export type EventosNucleo = {
   'metricas:muestra': MuestraSistema;
   /** Líneas nuevas (saneadas) de una fuente de registro que se está siguiendo. */
   'registro:lineas': { id: string; lineas: string[] };
+  /** Un cliente MCP pide una acción destructiva: la ventana responde con responderConfirmacionMcp. */
+  'mcp:confirmar': SolicitudConfirmacion;
 };
 
 export class Eventos<M extends Record<string, unknown>> {

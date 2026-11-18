@@ -143,12 +143,16 @@ export const CredencialesSchema = z.object({
 });
 export type Credenciales = z.infer<typeof CredencialesSchema>;
 
-/** Clave de una credencial: un servicio propio o el acceso FTP de un sitio (`ftp:<id>`). */
-export type ClaveCredencial = IdServicioDatos | `ftp:${string}`;
+/**
+ * Clave de una credencial: un servicio propio, el acceso FTP de un sitio (`ftp:<id>`) o el token
+ * del servidor MCP (`mcp`, en `clave`).
+ */
+export type ClaveCredencial = IdServicioDatos | `ftp:${string}` | 'mcp';
 
 const ClaveCredencialSchema = z.union([
   z.enum(IDS_SERVICIO_DATOS),
   z.templateLiteral(['ftp:', z.string()]),
+  z.literal('mcp'),
 ]);
 
 /** Contenido de etc/credenciales.json (fuera de config.json: nunca viaja por config.leer). */
@@ -177,6 +181,13 @@ export const ConfigSchema = z.object({
       pasivos: z
         .tuple([z.number().int().min(1024).max(65535), z.number().int().min(1024).max(65535)])
         .default([50000, 50100]),
+    })
+    .prefault({}),
+  /** Servidor MCP local (127.0.0.1); el token vive en etc/credenciales.json, nunca aquí. */
+  mcp: z
+    .object({
+      activo: z.boolean().default(false),
+      puerto: z.number().int().min(1024).max(65535).default(7790),
     })
     .prefault({}),
   herramientas: z

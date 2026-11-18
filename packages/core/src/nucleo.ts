@@ -1,4 +1,5 @@
 import type * as childProcess from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { open } from 'node:fs/promises';
 import path from 'node:path';
 import { Almacen, AlmacenCredenciales, migrarCredenciales } from './almacen';
@@ -35,7 +36,8 @@ import { ejecutorPorDefecto } from './plataforma/win';
 import { Supervisor } from './procesos/supervisor';
 import { Rutas } from './rutas';
 import { Mailpit } from './servicios/mailpit';
-import { Servicios } from './servicios/servicios';
+import { Servicios, type IdServicio } from './servicios/servicios';
+import { ServidorMcp, type EstadoMcp, type OperacionesMcp } from './mcp/servidor';
 import { detectarSitio } from './sitios/detectar';
 import {
   GestorSitios,
@@ -180,6 +182,8 @@ export class Nucleo {
   private readonly almacenCredenciales: AlmacenCredenciales;
   /** Puerto de Ollama según la configuración (ClienteOllama lo lee de forma síncrona). */
   private readonly puertoOllama: { valor: number };
+  /** Servidor MCP local; se maneja con iniciarMcp/detenerMcp (que guardan `mcp.activo`). */
+  readonly mcp: ServidorMcp;
 
   private constructor(
     readonly rutas: Rutas,
@@ -213,6 +217,12 @@ export class Nucleo {
     this.almacenCredenciales = m.credenciales;
     this.puertoOllama = m.puertoOllama;
     internos.on('servicio:estado', () => this.pedirRecalculo());
+    this.mcp = new ServidorMcp({
+      operaciones: this.operacionesMcp(),
+      token: () => this.tokenMcp(),
+      puerto: async () => (await this.config.leer()).mcp.puerto,
+      emitirConfirmacion: (s) => this.eventos.emit('mcp:confirmar', s),
+    });
   }
 
   static async crear(o: OpcionesNucleo = {}): Promise<Nucleo> {
@@ -421,6 +431,12 @@ export class Nucleo {
       throw e;
     }
     if (avisoInicio) nucleo.avisosPendientes.push(avisoInicio);
+    if ((await leerConfig()).mcp.activo) {
+      // Un puerto ocupado no impide el arranque: queda como aviso.
+      await nucleo.mcp.iniciar().catch((e: unknown) => {
+        nucleo.avisosPendientes.push(`No se pudo iniciar el servidor MCP: ${mensajeDe(e)}`);
+      });
+    }
     // Sin bloquear el arranque: un fallo queda en el estado del servicio y en un aviso.
     nucleo.arranqueAutomatico = nucleo
       .iniciarAutomaticos()
@@ -774,6 +790,96 @@ export class Nucleo {
     return this.almacenCredenciales.leer(id);
   }
 
+  // ---- Servidor MCP ----
+
+  /** Token del MCP en etc/credenciales.json (`mcp`); se genera la primera vez (32 bytes). */
+  private async tokenMcp(): Promise<string> {
+    const c = await this.almacenCredenciales.obtenerOCrear('mcp', () => ({
+      usuario: 'mcp',
+      clave: randomBytes(32).toString('base64url'),
+    }));
+    return c.clave;
+  }
+
+  /** Solo los ids de servicio conocidos (uno desconocido no debe llegar a PHP como versión). */
+  private async idServicioMcp(id: string): Promise<IdServicio> {
+    if (id === 'nginx' || id === 'ftp' || (IDS_SERVICIO_DATOS as readonly string[]).includes(id)) {
+      return id as IdServicio;
+    }
+    const rama = /^php-(.+)$/.exec(id)?.[1];
+    if (rama && (await this.instalador.instalados('php')).includes(rama)) return id as IdServicio;
+    throw new Error(`El servicio "${id}" no existe.`);
+  }
+
+  /**
+   * Lo que publica el servidor MCP, con los mismos métodos que usa la ventana. Recetas, git,
+   * registros y puertos se agregan cuando el núcleo los integre (Task 11).
+   */
+  private operacionesMcp(): OperacionesMcp {
+    return {
+      estadoGeneral: () => this.estadoGeneral(),
+      listarProyectos: () => this.sitios.listar(),
+      estadoServicios: () => this.servicios.estados(),
+      iniciarServicio: async (id) => this.servicios.iniciar(await this.idServicioMcp(id)),
+      detenerServicio: async (id) => this.servicios.detener(await this.idServicioMcp(id)),
+      listarBases: (motor) => this.listarBases(motor),
+      crearBase: (motor, nombre) => this.crearBase(motor, nombre),
+      respaldarBase: (motor, base) => this.respaldarBase(motor, base),
+      restaurarBase: (motor, archivo, base, opts) => this.restaurarBase(motor, archivo, base, opts),
+      borrarBase: (motor, nombre, confirmacion) => this.borrarBase(motor, nombre, confirmacion),
+      carpetaRespaldos: () => this.carpetaRespaldos(),
+      abrirTunel: (sitioId) => this.tuneles.abrir(sitioId),
+      cerrarTunel: (sitioId) => this.tuneles.cerrar(sitioId),
+    };
+  }
+
+  estadoMcp(): EstadoMcp {
+    return this.mcp.estado();
+  }
+
+  /** Inicia el servidor MCP y lo deja activo para los próximos arranques. */
+  async iniciarMcp(): Promise<EstadoMcp> {
+    await this.mcp.iniciar();
+    await this.sitios.modificarConfig((c) => {
+      c.mcp.activo = true;
+    });
+    return this.mcp.estado();
+  }
+
+  /** Detiene el servidor MCP y lo deja inactivo. */
+  async detenerMcp(): Promise<void> {
+    await this.mcp.detener();
+    await this.sitios.modificarConfig((c) => {
+      c.mcp.activo = false;
+    });
+  }
+
+  /** Cambia el puerto del MCP (1024–65535); si estaba en marcha, lo reinicia en el nuevo. */
+  async cambiarPuertoMcp(puerto: number): Promise<EstadoMcp> {
+    if (!Number.isInteger(puerto) || puerto < 1024 || puerto > 65535) {
+      throw new Error('El puerto del servidor MCP debe ser un número entre 1024 y 65535.');
+    }
+    const activo = this.mcp.estado().activo;
+    await this.sitios.modificarConfig((c) => {
+      c.mcp.puerto = puerto;
+    });
+    if (activo) {
+      await this.mcp.detener();
+      await this.mcp.iniciar();
+    }
+    return this.mcp.estado();
+  }
+
+  /** JSON para "Copiar configuración para Claude Code" (lleva el token: solo al portapapeles). */
+  configuracionMcp(): Promise<string> {
+    return this.mcp.configuracionClaude();
+  }
+
+  /** Respuesta de la ventana a `'mcp:confirmar'`; un id desconocido o vencido se ignora. */
+  responderConfirmacionMcp(id: string, aprobado: boolean): boolean {
+    return this.mcp.responderConfirmacion(id, aprobado);
+  }
+
   async estadoGeneral(): Promise<EstadoGeneral> {
     const sitios = await this.sitios.listar();
     return {
@@ -958,6 +1064,9 @@ export class Nucleo {
     this.cerrado = true;
     if (this.temporizador) clearInterval(this.temporizador);
     this.temporizador = null;
+    await this.mcp.detener().catch((e: unknown) => {
+      console.error('No se pudo detener el servidor MCP:', mensajeDe(e));
+    });
     let primero: unknown;
     let fallo = false;
     const anotar = (e: unknown): void => {

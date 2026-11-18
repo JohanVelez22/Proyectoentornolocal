@@ -10,7 +10,6 @@ import {
   type ClaveCredencial,
   type Config,
   type Credenciales,
-  type IdServicioDatos,
 } from './tipos';
 
 export function configPorDefecto(): Config {
@@ -116,7 +115,7 @@ export class AlmacenCredenciales {
   }
 
   /** Devuelve las guardadas o guarda y devuelve las que da `crear`. */
-  obtenerOCrear(id: IdServicioDatos, crear: () => Credenciales): Promise<Credenciales> {
+  obtenerOCrear(id: ClaveCredencial, crear: () => Credenciales): Promise<Credenciales> {
     return this.serializar(async () => {
       const todas = await this.todas();
       const actual = todas[id];
