@@ -1,5 +1,5 @@
 import { stat } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
 import {
   IDS_SERVICIO_DATOS,
   NOMBRE_BD_MONGO,
@@ -54,6 +54,8 @@ const INSTALABLES = [
   'mongosh',
   'mailpit',
   'ollama',
+  'node',
+  'python',
 ] as const;
 
 /** Todo lo que el catálogo puede dejar en bin/ (también herramientas): para `instalados`. */
@@ -249,4 +251,61 @@ export function textoLibre(v: unknown, min: number, max: number, nombre = 'valor
     throw new Error(`Argumento no válido: ${nombre}`);
   }
   return v;
+}
+
+/* ───────────── Etapa B ───────────── */
+
+/** Id de sitio, de paso, de proceso o de fuente de registro: texto corto y sin controles. */
+export function idCorto(v: unknown, nombre = 'id', max = 128): string {
+  const t = textoAcotado(v, 1, max, nombre);
+  if (t.trim() === '') throw new Error(`Argumento no válido: ${nombre}`);
+  return t;
+}
+
+/** Ruta absoluta (aún puede no existir), sin controles y de largo razonable. */
+export function rutaAbsoluta(v: unknown, nombre = 'ruta'): string {
+  const t = textoAcotado(v, 3, 260, nombre);
+  if (!isAbsolute(t) || t.startsWith('\\\\')) throw new Error(`Argumento no válido: ${nombre}`);
+  return resolve(t);
+}
+
+export function tipoRuntime(v: unknown): 'node' | 'python' {
+  if (v !== 'node' && v !== 'python') throw new Error('Argumento no válido: runtime');
+  return v;
+}
+
+/** PID de un proceso (los del sistema los rechaza el núcleo con su propio mensaje). */
+export function pid(v: unknown): number {
+  return enteroEn(v, 1, 0xffffffff, 'pid');
+}
+
+/** Lista de textos con largo y cantidad acotados. */
+export function listaTextos(
+  v: unknown,
+  maxElementos: number,
+  maxLargo: number,
+  nombre = 'lista',
+): string[] {
+  if (!Array.isArray(v) || v.length === 0 || v.length > maxElementos) {
+    throw new Error(`Argumento no válido: ${nombre}`);
+  }
+  return v.map((x) => textoAcotado(x, 1, maxLargo, nombre));
+}
+
+/** Tamaño máximo (JSON) de una receta o de un wolfcore.yml que manda la interfaz. */
+export const MAX_BYTES_RECETA = 64 * 1024;
+/** Pasos como máximo en una receta que manda la interfaz. */
+export const MAX_PASOS_RECETA = 50;
+
+/** Objeto (o arreglo) serializable que no pasa de `max` caracteres en JSON. */
+export function acotadoJson<T>(v: unknown, max: number, nombre: string): T {
+  let largo: number;
+  try {
+    largo = JSON.stringify(v)?.length ?? 0;
+  } catch {
+    throw new Error(`Argumento no válido: ${nombre}`);
+  }
+  if (largo === 0 || largo > max)
+    throw new Error(`Argumento no válido: ${nombre} (demasiado grande)`);
+  return v as T;
 }

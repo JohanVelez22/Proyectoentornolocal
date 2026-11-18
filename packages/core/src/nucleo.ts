@@ -277,7 +277,7 @@ export class Nucleo {
    * Token de GitHub para lo que no pasa por la ventana (MCP). Lo fija el proceso principal
    * (safeStorage); el núcleo nunca lo guarda, lo registra ni lo emite.
    */
-  private proveedorTokenGithub: () => string | null = () => null;
+  private proveedorTokenGithub: () => string | null | Promise<string | null> = () => null;
 
   private constructor(
     readonly rutas: Rutas,
@@ -1014,7 +1014,8 @@ export class Nucleo {
         if (!receta) throw new Error('Primero hay que describir y confirmar la receta.');
         return this.recetas.ejecutar(sitioId, { receta });
       },
-      traerCambios: (sitioId) => this.traerCambios(sitioId, this.proveedorTokenGithub()),
+      traerCambios: async (sitioId) =>
+        this.traerCambios(sitioId, await this.proveedorTokenGithub()),
       leerRegistro: (id, lineas) => this.registros.leerFinal(id, lineas),
       finalizarProceso: (pid, confirmacion) => this.puertos.finalizarProceso(pid, confirmacion),
       estadoGeneral: () => this.estadoGeneral(),
@@ -1143,7 +1144,7 @@ export class Nucleo {
    * Fija de dónde sale el token de GitHub para lo que no pasa por la ventana (MCP). Solo lo
    * llama el proceso principal.
    */
-  fijarProveedorTokenGithub(fn: () => string | null): void {
+  fijarProveedorTokenGithub(fn: () => string | null | Promise<string | null>): void {
     this.proveedorTokenGithub = fn;
   }
 

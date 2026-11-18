@@ -130,6 +130,75 @@ const api: ApiEntorno = {
     abrirCarpeta: (ruta) => invocar('sistema.abrirCarpeta', ruta),
     copiar: (texto) => invocar('sistema.copiar', texto),
     version: () => invocar('sistema.version'),
+    guardarArchivo: (nombre) => invocar('sistema.guardarArchivo', nombre),
+    elegirArchivos: () => invocar('sistema.elegirArchivos'),
+  },
+  proyectos: {
+    detectar: (carpeta) => invocar('proyectos.detectar', carpeta),
+    configLeer: (carpeta) => invocar('proyectos.configLeer', carpeta),
+    configGuardar: (sitioId, config) => invocar('proyectos.configGuardar', sitioId, config),
+    recetaPorDefecto: (carpeta) => invocar('proyectos.recetaPorDefecto', carpeta),
+    ejecutarReceta: (sitioId, opciones) => invocar('proyectos.ejecutarReceta', sitioId, opciones),
+    omitirPaso: (sitioId, pasoId) => invocar('proyectos.omitirPaso', sitioId, pasoId),
+    estadoReceta: (sitioId) => invocar('proyectos.estadoReceta', sitioId),
+    cancelarReceta: (sitioId) => invocar('proyectos.cancelarReceta', sitioId),
+    resumenReceta: (sitioId) => invocar('proyectos.resumenReceta', sitioId),
+  },
+  git: {
+    disponible: () => invocar('git.disponible'),
+    clonar: (url, destino) => invocar('git.clonar', url, destino),
+    estado: (sitioId) => invocar('git.estado', sitioId),
+    traerCambios: (sitioId) => invocar('git.traerCambios', sitioId),
+  },
+  github: {
+    repos: (opciones) => invocar('github.repos', opciones),
+    guardarToken: (token) => invocar('github.guardarToken', token),
+    borrarToken: () => invocar('github.borrarToken'),
+    hayToken: () => invocar('github.hayToken'),
+    instalarGh: () => invocar('github.instalarGh'),
+    iniciarSesionGh: () => invocar('github.iniciarSesionGh'),
+  },
+  runtimes: {
+    instalados: (tipo) => invocar('runtimes.instalados', tipo),
+    proyecto: (sitioId) => invocar('runtimes.proyecto', sitioId),
+  },
+  procesos: {
+    iniciar: (sitioId, procesoId) => invocar('procesos.iniciar', sitioId, procesoId),
+    detener: (sitioId, procesoId) => invocar('procesos.detener', sitioId, procesoId),
+    estados: (sitioId) => invocar('procesos.estados', sitioId),
+  },
+  vigilar: {
+    sugerencias: () => invocar('vigilar.sugerencias'),
+    cambiarCarpeta: (carpeta) => invocar('vigilar.cambiarCarpeta', carpeta),
+  },
+  metricas: {
+    iniciar: () => invocar('metricas.iniciar'),
+    pausar: () => invocar('metricas.pausar'),
+    ultimos: (min) => invocar('metricas.ultimos', min),
+  },
+  registros: {
+    fuentes: () => invocar('registros.fuentes'),
+    seguir: (id) => invocar('registros.seguir', id),
+    dejar: (id) => invocar('registros.dejar', id),
+    leerFinal: (id, lineas) => invocar('registros.leerFinal', id, lineas),
+    abrirCarpeta: (id) => invocar('registros.abrirCarpeta', id),
+  },
+  herramientas: {
+    puertos: () => invocar('herramientas.puertos'),
+    finalizarProceso: (pid, confirmacion, opciones) =>
+      invocar('herramientas.finalizarProceso', pid, confirmacion, opciones),
+    limpiarBom: (rutas, simular) => invocar('herramientas.limpiarBom', rutas, simular),
+    emitirCertificado: (dominios, destino) =>
+      invocar('herramientas.emitirCertificado', dominios, destino),
+  },
+  mcp: {
+    estado: () => invocar('mcp.estado'),
+    iniciar: () => invocar('mcp.iniciar'),
+    detener: () => invocar('mcp.detener'),
+    cambiarPuerto: (puerto) => invocar('mcp.cambiarPuerto', puerto),
+    configuracion: () => invocar('mcp.configuracion'),
+    regenerarToken: () => invocar('mcp.regenerarToken'),
+    responderConfirmacion: (id, aprobado) => invocar('mcp.responderConfirmacion', id, aprobado),
   },
   on(nombre, fn) {
     if (!(EVENTOS_IPC as readonly string[]).includes(nombre)) return () => undefined;

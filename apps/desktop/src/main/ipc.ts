@@ -1,4 +1,6 @@
-import type { Nucleo } from '@pel/core';
+import { writeFile } from 'node:fs/promises';
+import { PasoRecetaSchema, validarUrlGit, type Nucleo, type OpcionesReceta } from '@pel/core';
+import { SECRETOS_NO_DISPONIBLES, type SecretosGithub } from './secretos';
 import {
   CANAL_EVENTO,
   EVENTOS_IPC,
@@ -12,8 +14,16 @@ import {
   archivoExistente,
   booleano,
   carpetaExistente,
+  acotadoJson,
   enteroEn,
+  idCorto,
   idNoVacio,
+  listaTextos,
+  MAX_BYTES_RECETA,
+  MAX_PASOS_RECETA,
+  pid,
+  rutaAbsoluta,
+  tipoRuntime,
   idServicioDatos,
   motorBd,
   motorSql,
@@ -113,8 +123,195 @@ export interface VentanaLike {
 
 export type NucleoIpc = Nucleo;
 
-/** Lo que ve cada manejador además del núcleo: el sistema y las rutas elegidas en diálogos. */
-type Contexto = ApiSistema & { elegidas: RutasElegidas };
+/** Lo que usa el IPC del almacén del token de GitHub (nunca devuelve el token al renderer). */
+export type SecretosIpc = Pick<
+  SecretosGithub,
+  'guardarTokenGithub' | 'leerTokenGithub' | 'borrarTokenGithub' | 'hayTokenGithub'
+>;
+
+/**
+ * Muestreo de métricas: corre solo si la interfaz lo pidió (Inicio abierto) Y la ventana está
+ * visible. Ocultar o minimizar la ventana lo pausa; mostrarla lo reanuda si seguía pedido.
+ */
+export class ControlMetricas {
+  private pedido = false;
+  private visible = true;
+
+  constructor(private readonly m: Pick<Nucleo, 'iniciarMetricas' | 'pausarMetricas'>) {}
+
+  iniciar(): void {
+    this.pedido = true;
+    this.aplicar();
+  }
+
+  pausar(): void {
+    this.pedido = false;
+    this.aplicar();
+  }
+
+  /** La ventana se mostró (true) u ocultó/minimizó (false). */
+  visibilidad(visible: boolean): void {
+    this.visible = visible;
+    this.aplicar();
+  }
+
+  private aplicar(): void {
+    if (this.pedido && this.visible) this.m.iniciarMetricas();
+    else this.m.pausarMetricas();
+  }
+}
+
+/** Fuentes que se pueden seguir a la vez por ventana. */
+export const MAX_SEGUIMIENTOS = 16;
+
+interface EmisorLike {
+  once?: (evento: 'destroyed', fn: () => void) => unknown;
+}
+
+/**
+ * Fuentes de registro seguidas por cada webContents. Se sueltan con `dejar`, al destruirse el
+ * webContents, al borrar el sitio de la fuente y al cerrar el IPC.
+ */
+export class Seguimientos {
+  private readonly porEmisor = new Map<
+    object,
+    Map<string, { dejar: Promise<() => void>; sitioId?: string }>
+  >();
+  /** Emisor por defecto (pruebas, o un evento sin `sender`). */
+  private readonly anonimo = {};
+
+  private clave(emisor: unknown): object {
+    return typeof emisor === 'object' && emisor !== null ? emisor : this.anonimo;
+  }
+
+  async seguir(n: Nucleo, emisor: unknown, id: string): Promise<void> {
+    const clave = this.clave(emisor);
+    let mapa = this.porEmisor.get(clave);
+    if (mapa?.has(id)) return;
+    if (mapa && mapa.size >= MAX_SEGUIMIENTOS) {
+      throw new Error(`Se pueden seguir como mucho ${MAX_SEGUIMIENTOS} registros a la vez.`);
+    }
+    const fuente = (await n.fuentesRegistro()).find((f) => f.id === id);
+    if (!fuente) throw new Error('La fuente de registro no existe.');
+    if (!mapa) {
+      mapa = new Map();
+      this.porEmisor.set(clave, mapa);
+      const once = (emisor as EmisorLike | null)?.once;
+      if (typeof once === 'function') {
+        once.call(emisor, 'destroyed', () => this.dejarEmisor(clave));
+      }
+    }
+    if (mapa.has(id)) return;
+    const dejar = n.seguirRegistro(id);
+    mapa.set(id, { dejar, ...(fuente.sitioId ? { sitioId: fuente.sitioId } : {}) });
+    try {
+      await dejar;
+    } catch (e) {
+      if (mapa.get(id)?.dejar === dejar) mapa.delete(id);
+      throw e;
+    }
+  }
+
+  private soltar(e: { dejar: Promise<() => void> }): void {
+    void e.dejar.then((f) => f()).catch(() => undefined);
+  }
+
+  dejar(emisor: unknown, id: string): void {
+    const mapa = this.porEmisor.get(this.clave(emisor));
+    const e = mapa?.get(id);
+    if (!mapa || !e) return;
+    mapa.delete(id);
+    this.soltar(e);
+  }
+
+  dejarEmisor(clave: object): void {
+    const mapa = this.porEmisor.get(clave);
+    if (!mapa) return;
+    this.porEmisor.delete(clave);
+    for (const e of mapa.values()) this.soltar(e);
+  }
+
+  /** Suelta las fuentes de un sitio (antes de borrarlo: libera sus archivos de log). */
+  dejarSitio(sitioId: string): void {
+    for (const mapa of this.porEmisor.values()) {
+      for (const [id, e] of mapa) {
+        if (e.sitioId !== sitioId) continue;
+        mapa.delete(id);
+        this.soltar(e);
+      }
+    }
+  }
+
+  dejarTodo(): void {
+    for (const clave of [...this.porEmisor.keys()]) this.dejarEmisor(clave);
+  }
+
+  /** Cuántas fuentes sigue un emisor (para pruebas). */
+  cuantas(emisor?: unknown): number {
+    return this.porEmisor.get(this.clave(emisor))?.size ?? 0;
+  }
+}
+
+export interface OpcionesIpc {
+  secretos?: SecretosIpc;
+  metricas?: ControlMetricas;
+  seguimientos?: Seguimientos;
+}
+
+/** Lo que ve cada manejador además del núcleo: el sistema, las rutas elegidas y el emisor. */
+type Contexto = ApiSistema & {
+  elegidas: RutasElegidas;
+  secretos: SecretosIpc;
+  metricas: ControlMetricas;
+  seguimientos: Seguimientos;
+  /** webContents que hizo la llamada (para atar los seguimientos de registros). */
+  emisor: unknown;
+};
+
+/** Opciones de ejecución de receta: ids acotados y receta validada (archivos de diálogos). */
+async function opcionesReceta(v: unknown, elegidas: RutasElegidas): Promise<OpcionesReceta> {
+  if (v === undefined) return {};
+  const o = objetoPlano<Record<string, unknown>>(v, 'opciones');
+  const r: OpcionesReceta = {};
+  if (o['desde'] !== undefined) r.desde = idCorto(o['desde'], 'paso', 64);
+  if (o['soloPaso'] !== undefined) r.soloPaso = idCorto(o['soloPaso'], 'paso', 64);
+  if (o['receta'] !== undefined) {
+    acotadoJson(o['receta'], MAX_BYTES_RECETA, 'receta');
+    if (!Array.isArray(o['receta']) || o['receta'].length > MAX_PASOS_RECETA) {
+      throw new Error('Argumento no válido: receta');
+    }
+    const p = PasoRecetaSchema.array().safeParse(o['receta']);
+    if (!p.success) throw new Error('Argumento no válido: receta');
+    for (const paso of p.data) {
+      if (paso.id.length > 64) throw new Error('Argumento no válido: paso');
+      // Un archivo (el respaldo de bd-restaurar) solo puede venir de un diálogo.
+      if (paso.args && paso.args['archivo'] !== undefined) {
+        paso.args['archivo'] = await archivoExistente(
+          elegidas.exigir(paso.args['archivo'], 'archivo'),
+        );
+      }
+    }
+    r.receta = p.data;
+  }
+  return r;
+}
+
+/** Ruta del .key junto al .crt elegido. */
+function rutaClave(destino: string): string {
+  const sinExt = destino.replace(/\.(crt|pem|cer)$/i, '');
+  return `${sinExt}.key`;
+}
+
+/** Ejecuta con el token guardado (o sin él); ningún error puede repetirlo. */
+async function conToken<T>(s: Contexto, fn: (token: string | null) => Promise<T>): Promise<T> {
+  const token = await s.secretos.leerTokenGithub();
+  const valor = await sinClave(token ?? '', () => fn(token));
+  // Red de seguridad: un resultado que llevara el token no sale del proceso principal.
+  if (token && JSON.stringify(valor ?? null).includes(token)) {
+    throw new Error('La respuesta contenía el token de GitHub y no se envió.');
+  }
+  return valor;
+}
 
 type Manejador = (nucleo: NucleoIpc, sistema: Contexto, ...args: unknown[]) => unknown;
 
@@ -128,7 +325,12 @@ const TABLA: Record<RutaIpc, Manejador> = {
       objetoPlano<Parameters<Nucleo['guardarSitio']>[0]>(datos, 'datos'),
       id === undefined ? undefined : idNoVacio(id),
     ),
-  'sitios.borrar': (n, _s, id) => n.borrarSitio(idNoVacio(id)),
+  // Se dejan de seguir sus registros antes de borrarlo: el visor no debe retener sus archivos.
+  'sitios.borrar': (n, s, id) => {
+    const sitioId = idNoVacio(id);
+    s.seguimientos.dejarSitio(sitioId);
+    return n.borrarSitio(sitioId);
+  },
   'sitios.aplicar': (n) => n.sitios.aplicar(),
   'servicios.estados': (n) => n.servicios.estados(),
   'servicios.iniciar': (n, _s, id) =>
@@ -281,6 +483,163 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'sistema.abrirCarpeta': async (_n, s, ruta) => s.abrirCarpeta(await carpetaExistente(ruta)),
   'sistema.copiar': (_n, s, t) => s.copiar(texto(t, 'texto')),
   'sistema.version': (_n, s) => s.version(),
+  'sistema.guardarArchivo': async (_n, s, nombre) =>
+    s.elegidas.registrar(
+      await s.guardarArchivo(
+        nombre === undefined ? undefined : textoAcotado(nombre, 1, 200, 'nombre'),
+      ),
+    ),
+  'sistema.elegirArchivos': async (_n, s) => {
+    const rutas = await s.elegirArchivos();
+    for (const r of rutas) s.elegidas.registrar(r);
+    return rutas;
+  },
+
+  // ---- Proyectos y recetas ----
+  'proyectos.detectar': async (n, _s, carpeta) =>
+    n.detectarCarpetaProyecto(await carpetaExistente(carpeta)),
+  'proyectos.configLeer': async (n, _s, carpeta) =>
+    n.leerConfigProyecto(await carpetaExistente(carpeta)),
+  // Solo en la carpeta de un proyecto ya montado (la ruta sale de la configuración).
+  'proyectos.configGuardar': async (n, _s, sitioId, config) => {
+    const id = idCorto(sitioId, 'sitio');
+    const datos = acotadoJson<unknown>(
+      objetoPlano(config, 'configuración'),
+      MAX_BYTES_RECETA,
+      'configuración',
+    );
+    const sitio = (await n.sitios.listar()).find((x) => x.id === id);
+    if (!sitio) throw new Error('El proyecto ya no existe.');
+    return n.guardarConfigProyecto(sitio.carpeta, datos);
+  },
+  'proyectos.recetaPorDefecto': async (n, _s, carpeta) =>
+    n.recetaPropuesta(await carpetaExistente(carpeta)),
+  'proyectos.ejecutarReceta': async (n, s, sitioId, opciones) => {
+    const id = idCorto(sitioId, 'sitio');
+    return n.ejecutarReceta(id, await opcionesReceta(opciones, s.elegidas));
+  },
+  'proyectos.omitirPaso': (n, _s, sitioId, pasoId) =>
+    n.omitirPasoReceta(idCorto(sitioId, 'sitio'), idCorto(pasoId, 'paso', 64)),
+  'proyectos.estadoReceta': (n, _s, sitioId) => n.estadoReceta(idCorto(sitioId, 'sitio')),
+  'proyectos.cancelarReceta': (n, _s, sitioId) => n.cancelarReceta(idCorto(sitioId, 'sitio')),
+  'proyectos.resumenReceta': (n, _s, sitioId) => n.resumenReceta(idCorto(sitioId, 'sitio')),
+
+  // ---- Git y GitHub: el token lo agrega este proceso; nunca vuelve al renderer ----
+  'git.disponible': (n) => n.disponibilidadGit(),
+  'git.clonar': (n, s, url, destino) => {
+    const u = textoAcotado(url, 1, 2048, 'url');
+    validarUrlGit(u);
+    const d = rutaAbsoluta(destino, 'destino');
+    return conToken(s, (token) => n.clonarRepo(u, d, token));
+  },
+  'git.estado': (n, _s, sitioId) => n.estadoGit(idCorto(sitioId, 'sitio')),
+  'git.traerCambios': (n, s, sitioId) => {
+    const id = idCorto(sitioId, 'sitio');
+    return conToken(s, (token) => n.traerCambios(id, token));
+  },
+  'github.repos': (n, s, opciones) => {
+    const o =
+      opciones === undefined ? {} : objetoPlano<Record<string, unknown>>(opciones, 'opciones');
+    const buscar =
+      o['buscar'] === undefined ? undefined : textoAcotado(o['buscar'], 0, 100, 'buscar');
+    const pagina = o['pagina'] === undefined ? undefined : enteroEn(o['pagina'], 1, 100, 'página');
+    return conToken(s, (token) =>
+      n.reposGithub({
+        ...(buscar ? { buscar } : {}),
+        ...(pagina ? { pagina } : {}),
+        ...(token ? { token } : {}),
+      }),
+    );
+  },
+  'github.guardarToken': async (_n, s, token) => {
+    const t = textoAcotado(token, 1, 512, 'token');
+    await sinClave(t, () => s.secretos.guardarTokenGithub(t));
+  },
+  'github.borrarToken': (_n, s) => s.secretos.borrarTokenGithub(),
+  'github.hayToken': (_n, s) => s.secretos.hayTokenGithub() === true,
+  'github.instalarGh': (n) => n.instalarGh(),
+  'github.iniciarSesionGh': (n) => n.iniciarSesionGh(),
+
+  // ---- Runtimes y procesos de proyecto ----
+  'runtimes.instalados': (n, _s, tipo) => n.runtimesInstalados(tipoRuntime(tipo)),
+  'runtimes.proyecto': (n, _s, sitioId) => n.runtimesProyecto(idCorto(sitioId, 'sitio')),
+  'procesos.iniciar': (n, _s, sitioId, procesoId) =>
+    n.iniciarProceso(idCorto(sitioId, 'sitio'), idCorto(procesoId, 'proceso', 64)),
+  'procesos.detener': (n, _s, sitioId, procesoId) =>
+    n.detenerProceso(idCorto(sitioId, 'sitio'), idCorto(procesoId, 'proceso', 64)),
+  'procesos.estados': (n, _s, sitioId) => n.estadosProcesos(idCorto(sitioId, 'sitio')),
+
+  // ---- Carpeta vigilada ----
+  'vigilar.sugerencias': (n) => n.sugerenciasProyectos(),
+  'vigilar.cambiarCarpeta': async (n, s, carpeta) =>
+    n.cambiarCarpetaVigilada(
+      carpeta === null ? null : await carpetaExistente(s.elegidas.exigir(carpeta, 'carpeta')),
+    ),
+
+  // ---- Métricas (solo con la ventana visible) y registros (por id, nunca por ruta) ----
+  'metricas.iniciar': (_n, s) => s.metricas.iniciar(),
+  'metricas.pausar': (_n, s) => s.metricas.pausar(),
+  'metricas.ultimos': (n, _s, min) =>
+    n.ultimasMetricas(min === undefined ? 5 : enteroEn(min, 1, 5, 'minutos')),
+  'registros.fuentes': (n) => n.fuentesRegistro(),
+  'registros.seguir': (n, s, id) => s.seguimientos.seguir(n, s.emisor, idCorto(id, 'fuente', 300)),
+  'registros.dejar': (_n, s, id) => s.seguimientos.dejar(s.emisor, idCorto(id, 'fuente', 300)),
+  'registros.leerFinal': (n, _s, id, lineas) =>
+    n.leerRegistro(
+      idCorto(id, 'fuente', 300),
+      lineas === undefined ? 500 : enteroEn(lineas, 1, 5000, 'líneas'),
+    ),
+  'registros.abrirCarpeta': async (n, s, id) =>
+    s.abrirCarpeta(await n.carpetaRegistro(idCorto(id, 'fuente', 300))),
+
+  // ---- Herramientas ----
+  'herramientas.puertos': (n) => n.puertosEnUso(),
+  'herramientas.finalizarProceso': (n, _s, p, confirmacion, opciones) => {
+    const o =
+      opciones === undefined ? {} : objetoPlano<Record<string, unknown>>(opciones, 'opciones');
+    return n.finalizarProceso(pid(p), textoAcotado(confirmacion, 1, 260, 'confirmación'), {
+      ...(o['forzar'] === undefined ? {} : { forzar: booleano(o['forzar'], 'forzar') }),
+      ...(o['creado'] === undefined || o['creado'] === null
+        ? {}
+        : { creado: textoAcotado(o['creado'], 1, 40, 'creado') }),
+    });
+  },
+  'herramientas.limpiarBom': async (n, s, rutas, simular) => {
+    const lista = listaTextos(rutas, 1000, 260, 'rutas').map((r) =>
+      s.elegidas.exigir(r, 'archivo'),
+    );
+    return n.limpiarBom(lista, booleano(simular, 'simular'));
+  },
+  'herramientas.emitirCertificado': async (n, s, dominios, destino) => {
+    const lista = listaTextos(dominios, 20, 255, 'dominios');
+    const crt = s.elegidas.exigir(destino, 'archivo');
+    const key = rutaClave(crt);
+    const { certPem, clavePem } = await n.emitirCertificadoLibre(lista);
+    try {
+      // La clave no se elige en el diálogo: nunca se pisa un archivo que ya exista.
+      await writeFile(key, clavePem, { flag: 'wx', mode: 0o600 });
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === 'EEXIST') {
+        throw new Error(`Ya existe ${key}: elija otro nombre para el certificado.`);
+      }
+      throw new Error('No se pudo guardar la clave del certificado.');
+    }
+    await writeFile(crt, certPem);
+    return { certificado: crt, clave: key };
+  },
+
+  // ---- Servidor MCP ----
+  'mcp.estado': (n) => n.estadoMcp(),
+  'mcp.iniciar': (n) => n.iniciarMcp(),
+  'mcp.detener': (n) => n.detenerMcp(),
+  'mcp.cambiarPuerto': (n, _s, puerto) => n.cambiarPuertoMcp(puertoUsuario(puerto)),
+  // Lleva el token del MCP: va directo al portapapeles y no se devuelve.
+  'mcp.configuracion': async (n, s) => {
+    await s.copiar(await n.configuracionMcp());
+  },
+  'mcp.regenerarToken': (n) => n.regenerarTokenMcp(),
+  'mcp.responderConfirmacion': (n, _s, id, aprobado) =>
+    n.responderConfirmacionMcp(idCorto(id, 'confirmación', 64), booleano(aprobado, 'aprobado')),
 };
 
 /** Máximo de un dato estructurado de error (una ruta). */
@@ -320,13 +679,26 @@ export function registrarIpc(
   sistema: ApiSistema,
   emisorValido: (evento: unknown) => boolean = () => true,
   elegidas: RutasElegidas = new RutasElegidas(),
+  opciones: OpcionesIpc = {},
 ): () => void {
-  const contexto: Contexto = { ...sistema, elegidas };
+  const seguimientos = opciones.seguimientos ?? new Seguimientos();
+  const contexto: Omit<Contexto, 'emisor'> = {
+    ...sistema,
+    elegidas,
+    secretos: opciones.secretos ?? SECRETOS_NO_DISPONIBLES,
+    metricas: opciones.metricas ?? new ControlMetricas(nucleo),
+    seguimientos,
+  };
   for (const [ruta, fn] of Object.entries(TABLA) as [RutaIpc, Manejador][]) {
     ipcMain.handle(`${PREFIJO_CANAL}${ruta}`, async (e, ...args) => {
       try {
         if (!emisorValido(e)) throw new Error('Origen no permitido');
-        const valor = await (fn as (...a: unknown[]) => unknown)(nucleo, contexto, ...args);
+        const emisor = (e as { sender?: unknown } | null)?.sender;
+        const valor = await (fn as (...a: unknown[]) => unknown)(
+          nucleo,
+          { ...contexto, emisor },
+          ...args,
+        );
         return { ok: true, valor } satisfies ResultadoIpc;
       } catch (e) {
         return aError(e);
@@ -339,5 +711,8 @@ export function registrarIpc(
       ventana.webContents.send(CANAL_EVENTO, { nombre, dato });
     }),
   );
-  return () => bajas.forEach((b) => b());
+  return () => {
+    bajas.forEach((b) => b());
+    seguimientos.dejarTodo();
+  };
 }

@@ -1,9 +1,19 @@
 import { join } from 'node:path';
-import { BrowserWindow, app, clipboard, dialog, ipcMain, shell, type Tray } from 'electron';
+import {
+  BrowserWindow,
+  app,
+  clipboard,
+  dialog,
+  ipcMain,
+  safeStorage,
+  shell,
+  type Tray,
+} from 'electron';
 import { Nucleo, type Rutas } from '@pel/core';
 import type { ApiSistema } from '../shared/api';
 import { crearBandeja } from './bandeja';
-import { registrarIpc } from './ipc';
+import { ControlMetricas, registrarIpc } from './ipc';
+import { SecretosGithub } from './secretos';
 import { registrarFinDeSesion, topeCierre } from './sesion';
 import { carpetaExistente, urlHttp } from './validacion';
 
@@ -44,6 +54,19 @@ const sistema: ApiSistema = {
   },
   async version() {
     return app.getVersion();
+  },
+  async guardarArchivo(nombreSugerido) {
+    const opciones = nombreSugerido ? { defaultPath: nombreSugerido } : {};
+    const r = ventana
+      ? await dialog.showSaveDialog(ventana, opciones)
+      : await dialog.showSaveDialog(opciones);
+    return r.canceled || !r.filePath ? null : r.filePath;
+  },
+  async elegirArchivos() {
+    const r = ventana
+      ? await dialog.showOpenDialog(ventana, { properties: ['openFile', 'multiSelections'] })
+      : await dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'] });
+    return r.canceled ? [] : r.filePaths;
   },
 };
 
@@ -190,12 +213,27 @@ if (!app.requestSingleInstanceLock()) {
     const n = nucleo;
     const v = crearVentana(n.rutas);
     ventana = v;
+    // El token de GitHub vive cifrado en etc/github.token: solo este proceso lo lee.
+    const secretos = new SecretosGithub(n.rutas.tokenGithub(), safeStorage);
+    n.fijarProveedorTokenGithub(() => secretos.leerTokenGithub());
+    // Métricas solo con la ventana visible (oculta en la bandeja o minimizada: en pausa).
+    const metricas = new ControlMetricas(n);
+    const visible = (): void => metricas.visibilidad(v.isVisible() && !v.isMinimized());
+    v.on('show', visible);
+    v.on('hide', visible);
+    v.on('minimize', visible);
+    v.on('restore', visible);
+    visible();
+    // Una acción destructiva pedida por un cliente MCP trae la ventana al frente.
+    n.eventos.on('mcp:confirmar', () => mostrarVentana());
     registrarIpc(
       n,
       ipcMain,
       v,
       sistema,
       (e) => (e as { senderFrame?: unknown } | null)?.senderFrame === v.webContents.mainFrame,
+      undefined,
+      { secretos, metricas },
     );
     n.iniciarSondeo();
     bandeja = crearBandeja(rutaIcono, {

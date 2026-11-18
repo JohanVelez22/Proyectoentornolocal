@@ -1,8 +1,15 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi, type Mock } from 'vitest';
-import { registrarIpc, type IpcMainLike, type NucleoIpc, type VentanaLike } from '../src/main/ipc';
+import {
+  ControlMetricas,
+  registrarIpc,
+  Seguimientos,
+  type IpcMainLike,
+  type NucleoIpc,
+  type VentanaLike,
+} from '../src/main/ipc';
 import { PUERTO_ADMINER as PUERTO_ADMINER_NUCLEO } from '@pel/core';
 import { CANAL_EVENTO, PUERTO_ADMINER, RUTAS_IPC } from '../src/shared/api';
 
@@ -88,8 +95,53 @@ function nucleoFalso() {
         'bloqueEnvIa',
         'modelosSugeridos',
         'noLeidosCorreo',
+        // Etapa B
+        'detectarCarpetaProyecto',
+        'leerConfigProyecto',
+        'guardarConfigProyecto',
+        'recetaPropuesta',
+        'ejecutarReceta',
+        'omitirPasoReceta',
+        'estadoReceta',
+        'cancelarReceta',
+        'resumenReceta',
+        'disponibilidadGit',
+        'clonarRepo',
+        'estadoGit',
+        'traerCambios',
+        'reposGithub',
+        'instalarGh',
+        'iniciarSesionGh',
+        'runtimesInstalados',
+        'runtimesProyecto',
+        'iniciarProceso',
+        'detenerProceso',
+        'estadosProcesos',
+        'sugerenciasProyectos',
+        'cambiarCarpetaVigilada',
+        'iniciarMetricas',
+        'pausarMetricas',
+        'ultimasMetricas',
+        'leerRegistro',
+        'carpetaRegistro',
+        'puertosEnUso',
+        'finalizarProceso',
+        'limpiarBom',
+        'emitirCertificadoLibre',
+        'estadoMcp',
+        'iniciarMcp',
+        'detenerMcp',
+        'cambiarPuertoMcp',
+        'configuracionMcp',
+        'regenerarTokenMcp',
+        'responderConfirmacionMcp',
       ].map((m) => [m, vi.fn(async () => undefined)]),
     ),
+    fuentesRegistro: vi.fn(async () => [
+      { id: 'nginx', nombre: 'Nginx', grupo: 'nginx' },
+      { id: 'sitio:s1:error', nombre: 'Errores', grupo: 'sitio', sitioId: 's1' },
+    ]),
+    seguirRegistro: vi.fn(async () => vi.fn()),
     listarVersiones: vi.fn(async (servicio: string) => [
       {
         servicio,
@@ -110,6 +162,8 @@ const sistema = {
   abrirCarpeta: vi.fn(),
   copiar: vi.fn(),
   version: vi.fn(async () => '1.2.3'),
+  guardarArchivo: vi.fn(async (): Promise<string | null> => null),
+  elegirArchivos: vi.fn(async (): Promise<string[]> => []),
 };
 
 function ventanaFalsa(destruida = false) {
@@ -192,9 +246,16 @@ describe('registrarIpc', () => {
     expect([...oyentes.keys()].sort()).toEqual([
       'aviso:inicio',
       'bd:progreso',
+      'git:progreso',
       'hosts:estado',
       'ia:progreso',
       'instalacion:progreso',
+      'mcp:confirmacion-cerrada',
+      'mcp:confirmar',
+      'metricas:muestra',
+      'proyectos:sugerencias',
+      'receta:progreso',
+      'registro:lineas',
       'servicio:estado',
       'sitio:cambio',
       'tunel:estado',
@@ -319,7 +380,7 @@ describe('registrarIpc', () => {
     await canales.get('entorno:servicios.detenerTodo')!({});
     expect(crudo.detenerTodo).toHaveBeenCalled();
   });
-  it('registra exactamente la lista de rutas de la Etapa A', () => {
+  it('registra exactamente la lista de rutas de las etapas A y B', () => {
     const { ipcMain, canales } = ipcFalso();
     registrarIpc(nucleoFalso().nucleo, ipcMain, ventanaFalsa().ventana, sistema);
     expect([...canales.keys()].map((c) => c.slice('entorno:'.length)).sort()).toEqual(
@@ -401,6 +462,54 @@ describe('registrarIpc', () => {
         'sistema.abrirCarpeta',
         'sistema.copiar',
         'sistema.version',
+        // Etapa B
+        'sistema.guardarArchivo',
+        'sistema.elegirArchivos',
+        'proyectos.detectar',
+        'proyectos.configLeer',
+        'proyectos.configGuardar',
+        'proyectos.recetaPorDefecto',
+        'proyectos.ejecutarReceta',
+        'proyectos.omitirPaso',
+        'proyectos.estadoReceta',
+        'proyectos.cancelarReceta',
+        'proyectos.resumenReceta',
+        'git.disponible',
+        'git.clonar',
+        'git.estado',
+        'git.traerCambios',
+        'github.repos',
+        'github.guardarToken',
+        'github.borrarToken',
+        'github.hayToken',
+        'github.instalarGh',
+        'github.iniciarSesionGh',
+        'runtimes.instalados',
+        'runtimes.proyecto',
+        'procesos.iniciar',
+        'procesos.detener',
+        'procesos.estados',
+        'vigilar.sugerencias',
+        'vigilar.cambiarCarpeta',
+        'metricas.iniciar',
+        'metricas.pausar',
+        'metricas.ultimos',
+        'registros.fuentes',
+        'registros.seguir',
+        'registros.dejar',
+        'registros.leerFinal',
+        'registros.abrirCarpeta',
+        'herramientas.puertos',
+        'herramientas.finalizarProceso',
+        'herramientas.limpiarBom',
+        'herramientas.emitirCertificado',
+        'mcp.estado',
+        'mcp.iniciar',
+        'mcp.detener',
+        'mcp.cambiarPuerto',
+        'mcp.configuracion',
+        'mcp.regenerarToken',
+        'mcp.responderConfirmacion',
       ].sort(),
     );
   });
@@ -724,5 +833,375 @@ describe('constantes compartidas', () => {
     } finally {
       rmSync(carpeta, { recursive: true, force: true });
     }
+  });
+});
+
+describe('IPC de la Etapa B', () => {
+  const TOKEN = 'ghp_TokenFalsoDePrueba1234567890';
+
+  function secretosFalsos(token: string | null = TOKEN) {
+    let guardado = token;
+    return {
+      guardarTokenGithub: vi.fn(async (t: string) => {
+        guardado = t;
+      }),
+      leerTokenGithub: vi.fn(async () => guardado),
+      borrarTokenGithub: vi.fn(async () => {
+        guardado = null;
+      }),
+      hayTokenGithub: vi.fn(() => guardado !== null),
+    };
+  }
+
+  function montar(o: { secretos?: ReturnType<typeof secretosFalsos> } = {}) {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo, oyentes } = nucleoFalso();
+    const f = crudo as unknown as Record<string, Mock>;
+    const secretos = o.secretos ?? secretosFalsos();
+    const seguimientos = new Seguimientos();
+    const metricas = new ControlMetricas(nucleo);
+    const { ventana, enviados } = ventanaFalsa();
+    const baja = registrarIpc(nucleo, ipcMain, ventana, sistema, () => true, undefined, {
+      secretos,
+      seguimientos,
+      metricas,
+    });
+    const llamar = async (ruta: string, ...args: unknown[]) =>
+      (await canales.get(`entorno:${ruta}`)!({}, ...args)) as {
+        ok: boolean;
+        valor?: unknown;
+        error?: { mensaje: string };
+      };
+    const llamarDesde = async (evento: unknown, ruta: string, ...args: unknown[]) =>
+      (await canales.get(`entorno:${ruta}`)!(evento, ...args)) as { ok: boolean };
+    return {
+      f,
+      crudo,
+      oyentes,
+      secretos,
+      seguimientos,
+      metricas,
+      enviados,
+      baja,
+      llamar,
+      llamarDesde,
+    };
+  }
+
+  it('rechaza argumentos inválidos de cada familia sin llamar al núcleo', async () => {
+    const { f, llamar } = montar();
+    const largo = 'x'.repeat(5000);
+    const carpeta = mkdtempSync(path.join(os.tmpdir(), 'pel-ipcb-'));
+    try {
+      for (const [ruta, args] of [
+        ['proyectos.detectar', [42]],
+        ['proyectos.detectar', [path.join(carpeta, 'no-existe')]],
+        ['proyectos.configLeer', [null]],
+        ['proyectos.configGuardar', ['', {}]],
+        ['proyectos.configGuardar', ['s1', 'no-objeto']],
+        ['proyectos.configGuardar', ['s1', { env: { A: largo.repeat(20) } }]],
+        ['proyectos.recetaPorDefecto', [{}]],
+        ['proyectos.ejecutarReceta', [42]],
+        ['proyectos.ejecutarReceta', ['s1', { desde: '' }]],
+        ['proyectos.ejecutarReceta', ['s1', { receta: 'x' }]],
+        ['proyectos.ejecutarReceta', ['s1', { receta: [{ id: 'a', tipo: 'rm-rf', titulo: '' }] }]],
+        [
+          'proyectos.ejecutarReceta',
+          [
+            's1',
+            {
+              receta: Array.from({ length: 51 }, (_, i) => ({
+                id: `p${i}`,
+                tipo: 'comando',
+                titulo: 't',
+              })),
+            },
+          ],
+        ],
+        ['proyectos.omitirPaso', ['s1', largo]],
+        ['proyectos.estadoReceta', ['a\nb']],
+        ['proyectos.cancelarReceta', [undefined]],
+        ['proyectos.resumenReceta', [largo]],
+        ['git.clonar', ['file:///c:/repo', 'C:\\Proyectos\\x']],
+        ['git.clonar', ['https://github.com/a/b.git', 'relativa\\x']],
+        ['git.clonar', ['--upload-pack=malo', 'C:\\Proyectos\\x']],
+        ['git.clonar', ['https://usuario:clave@github.com/a/b.git', 'C:\\Proyectos\\x']],
+        ['git.clonar', [`https://github.com/${largo}`, 'C:\\Proyectos\\x']],
+        ['git.estado', [{}]],
+        ['git.traerCambios', ['']],
+        ['github.repos', ['no-objeto']],
+        ['github.repos', [{ pagina: 0 }]],
+        ['github.repos', [{ buscar: largo }]],
+        ['github.guardarToken', ['']],
+        ['github.guardarToken', [largo]],
+        ['runtimes.instalados', ['php']],
+        ['runtimes.proyecto', [3]],
+        ['procesos.iniciar', ['s1', '']],
+        ['procesos.detener', [null, 'web']],
+        ['procesos.estados', ['']],
+        ['vigilar.cambiarCarpeta', [carpeta]],
+        ['vigilar.cambiarCarpeta', [42]],
+        ['metricas.ultimos', [6]],
+        ['metricas.ultimos', ['5']],
+        ['registros.seguir', ['']],
+        ['registros.seguir', ['no-existe']],
+        ['registros.leerFinal', ['nginx', 5001]],
+        ['registros.abrirCarpeta', [42]],
+        ['herramientas.finalizarProceso', [0, 'x']],
+        ['herramientas.finalizarProceso', [1.5, 'x']],
+        ['herramientas.finalizarProceso', [1234, '']],
+        ['herramientas.finalizarProceso', [1234, 'node.exe', { forzar: 'si' }]],
+        ['herramientas.limpiarBom', [[path.join(carpeta, 'a.php')], true]],
+        ['herramientas.limpiarBom', [[], true]],
+        ['herramientas.limpiarBom', [['x'], 'true']],
+        ['herramientas.emitirCertificado', [['a.test'], path.join(carpeta, 'a.crt')]],
+        ['herramientas.emitirCertificado', [[], path.join(carpeta, 'a.crt')]],
+        ['mcp.cambiarPuerto', [80]],
+        ['mcp.responderConfirmacion', ['', true]],
+        ['mcp.responderConfirmacion', ['abc', 'si']],
+        ['sistema.guardarArchivo', [largo]],
+      ] as [string, unknown[]][]) {
+        const r = await llamar(ruta, ...args);
+        expect(r.ok, `${ruta} ${JSON.stringify(args).slice(0, 80)}`).toBe(false);
+      }
+      for (const m of [
+        'detectarCarpetaProyecto',
+        'leerConfigProyecto',
+        'guardarConfigProyecto',
+        'recetaPropuesta',
+        'ejecutarReceta',
+        'omitirPasoReceta',
+        'estadoReceta',
+        'cancelarReceta',
+        'resumenReceta',
+        'clonarRepo',
+        'estadoGit',
+        'traerCambios',
+        'reposGithub',
+        'runtimesInstalados',
+        'runtimesProyecto',
+        'iniciarProceso',
+        'detenerProceso',
+        'estadosProcesos',
+        'cambiarCarpetaVigilada',
+        'ultimasMetricas',
+        'seguirRegistro',
+        'leerRegistro',
+        'carpetaRegistro',
+        'finalizarProceso',
+        'limpiarBom',
+        'emitirCertificadoLibre',
+        'cambiarPuertoMcp',
+        'responderConfirmacionMcp',
+      ]) {
+        expect(f[m], m).not.toHaveBeenCalled();
+      }
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
+  });
+
+  it('pasa los argumentos validados al núcleo', async () => {
+    const { f, crudo, llamar } = montar();
+    const carpeta = mkdtempSync(path.join(os.tmpdir(), 'pel-ipcb-'));
+    try {
+      crudo.sitios.listar.mockResolvedValue([{ id: 's1', carpeta }] as never);
+      expect((await llamar('proyectos.detectar', carpeta)).ok).toBe(true);
+      expect(f['detectarCarpetaProyecto']).toHaveBeenCalledWith(path.resolve(carpeta));
+      expect((await llamar('proyectos.configGuardar', 's1', { version: 1 })).ok).toBe(true);
+      expect(f['guardarConfigProyecto']).toHaveBeenCalledWith(carpeta, { version: 1 });
+      await llamar('proyectos.ejecutarReceta', 's1', { soloPaso: 'migrar', otra: 'x' });
+      expect(f['ejecutarReceta']).toHaveBeenCalledWith('s1', { soloPaso: 'migrar' });
+      await llamar('procesos.iniciar', 's1', 'web');
+      expect(f['iniciarProceso']).toHaveBeenCalledWith('s1', 'web');
+      await llamar('runtimes.instalados', 'node');
+      expect(f['runtimesInstalados']).toHaveBeenCalledWith('node');
+      await llamar('registros.leerFinal', 'nginx');
+      expect(f['leerRegistro']).toHaveBeenCalledWith('nginx', 500);
+      await llamar('herramientas.finalizarProceso', 4321, 'node.exe', {
+        forzar: true,
+        creado: '133000000000000000',
+      });
+      expect(f['finalizarProceso']).toHaveBeenCalledWith(4321, 'node.exe', {
+        forzar: true,
+        creado: '133000000000000000',
+      });
+      await llamar('mcp.responderConfirmacion', 'c1', false);
+      expect(f['responderConfirmacionMcp']).toHaveBeenCalledWith('c1', false);
+      await llamar('vigilar.cambiarCarpeta', null);
+      expect(f['cambiarCarpetaVigilada']).toHaveBeenCalledWith(null);
+      // Node y Python se instalan desde el catálogo como los demás.
+      for (const servicio of ['node', 'python']) {
+        const r = await llamar('instalador.instalar', { servicio, version: '1.28.0' });
+        expect(r.ok, servicio).toBe(true);
+        expect((await llamar('instalador.instalados', servicio)).ok, servicio).toBe(true);
+      }
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
+  });
+
+  it('el archivo de bd-restaurar de una receta debe venir de un diálogo', async () => {
+    const { f, llamar } = montar();
+    const carpeta = mkdtempSync(path.join(os.tmpdir(), 'pel-ipcb-'));
+    const archivo = path.join(carpeta, 'respaldo.sql');
+    writeFileSync(archivo, 'select 1;');
+    const receta = [
+      { id: 'bd-restaurar', tipo: 'bd-restaurar', titulo: 'Restaurar', args: { archivo } },
+    ];
+    try {
+      const r = await llamar('proyectos.ejecutarReceta', 's1', { receta });
+      expect(r.error?.mensaje).toBe('Elija el archivo desde el diálogo');
+      expect(f['ejecutarReceta']).not.toHaveBeenCalled();
+      sistema.elegirArchivo.mockResolvedValueOnce(archivo);
+      await llamar('sistema.elegirArchivo');
+      expect((await llamar('proyectos.ejecutarReceta', 's1', { receta })).ok).toBe(true);
+      expect(f['ejecutarReceta']).toHaveBeenCalledWith('s1', {
+        receta: [expect.objectContaining({ args: { archivo: path.resolve(archivo) } })],
+      });
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
+  });
+
+  it('el token de GitHub nunca aparece en un resultado ni en un error', async () => {
+    const { f, secretos, llamar } = montar();
+    // El núcleo falso repite todo lo que recibe, también en sus errores.
+    const eco = (...a: unknown[]) => JSON.stringify(a);
+    f['clonarRepo']!.mockImplementation(async (...a: unknown[]) => {
+      throw new Error(`falló el clon: ${eco(...a)}`);
+    });
+    f['traerCambios']!.mockImplementation(async (...a: unknown[]) => ({ eco: eco(...a) }));
+    f['reposGithub']!.mockImplementation(async (...a: unknown[]) => {
+      throw Object.assign(new Error(`api: ${eco(...a)}`), { codigo: 'X' });
+    });
+    const salidas: unknown[] = [];
+    salidas.push(await llamar('git.clonar', 'https://github.com/a/b.git', 'C:\\Proyectos\\b'));
+    salidas.push(await llamar('git.traerCambios', 's1'));
+    salidas.push(await llamar('github.repos', { buscar: 'b' }));
+    salidas.push(await llamar('github.hayToken'));
+    salidas.push(await llamar('github.guardarToken', TOKEN));
+    secretos.guardarTokenGithub.mockRejectedValueOnce(new Error(`no vale ${TOKEN}`));
+    salidas.push(await llamar('github.guardarToken', TOKEN));
+    for (const s of salidas) expect(JSON.stringify(s)).not.toContain(TOKEN);
+    // Pero sí llegó al núcleo, que es quien lo pasa a git y a la API.
+    expect(f['clonarRepo']).toHaveBeenCalledWith(
+      'https://github.com/a/b.git',
+      path.resolve('C:\\Proyectos\\b'),
+      TOKEN,
+    );
+    expect(f['traerCambios']).toHaveBeenCalledWith('s1', TOKEN);
+    expect(f['reposGithub']).toHaveBeenCalledWith({ buscar: 'b', token: TOKEN });
+    expect(salidas[3]).toEqual({ ok: true, valor: true });
+    // traerCambios "devolvió" el token: no se envía.
+    expect(salidas[1]).toMatchObject({ ok: false });
+  });
+
+  it('sin token guardado, git y GitHub van sin token', async () => {
+    const { f, llamar } = montar({ secretos: secretosFalsos(null) });
+    await llamar('git.clonar', 'owner/repo', 'C:\\Proyectos\\repo');
+    expect(f['clonarRepo']).toHaveBeenCalledWith(
+      'owner/repo',
+      path.resolve('C:\\Proyectos\\repo'),
+      null,
+    );
+    await llamar('github.repos');
+    expect(f['reposGithub']).toHaveBeenCalledWith({});
+    expect(await llamar('github.hayToken')).toEqual({ ok: true, valor: false });
+  });
+
+  it('mcp.configuracion copia al portapapeles y no devuelve el token del MCP', async () => {
+    const { f, llamar } = montar();
+    f['configuracionMcp']!.mockResolvedValueOnce('{"token":"secreto-mcp"}');
+    const r = await llamar('mcp.configuracion');
+    expect(r).toEqual({ ok: true });
+    expect(sistema.copiar).toHaveBeenCalledWith('{"token":"secreto-mcp"}');
+  });
+
+  it('los registros seguidos se sueltan con dejar, al destruir la ventana y al borrar el sitio', async () => {
+    const { crudo, seguimientos, llamarDesde, baja } = montar();
+    const dejar = vi.fn();
+    crudo.seguirRegistro.mockResolvedValue(dejar);
+    let destruido: () => void = () => undefined;
+    const sender = { once: (_e: string, fn: () => void) => void (destruido = fn) };
+    const ev = { sender };
+    expect((await llamarDesde(ev, 'registros.seguir', 'nginx')).ok).toBe(true);
+    await llamarDesde(ev, 'registros.seguir', 'nginx');
+    expect(crudo.seguirRegistro).toHaveBeenCalledTimes(1);
+    await llamarDesde(ev, 'registros.dejar', 'nginx');
+    await vi.waitFor(() => expect(dejar).toHaveBeenCalledTimes(1));
+
+    await llamarDesde(ev, 'registros.seguir', 'nginx');
+    await llamarDesde(ev, 'registros.seguir', 'sitio:s1:error');
+    expect(seguimientos.cuantas(sender)).toBe(2);
+    await llamarDesde(ev, 'sitios.borrar', 's1');
+    expect(seguimientos.cuantas(sender)).toBe(1);
+    await vi.waitFor(() => expect(dejar).toHaveBeenCalledTimes(2));
+    destruido();
+    expect(seguimientos.cuantas(sender)).toBe(0);
+    await vi.waitFor(() => expect(dejar).toHaveBeenCalledTimes(3));
+
+    await llamarDesde(ev, 'registros.seguir', 'nginx');
+    baja();
+    await vi.waitFor(() => expect(dejar).toHaveBeenCalledTimes(4));
+  });
+
+  it('las métricas solo corren pedidas y con la ventana visible', async () => {
+    const { f, metricas, llamar } = montar();
+    await llamar('metricas.iniciar');
+    expect(f['iniciarMetricas']).toHaveBeenCalledTimes(1);
+    metricas.visibilidad(false);
+    expect(f['pausarMetricas']).toHaveBeenCalledTimes(1);
+    metricas.visibilidad(true);
+    expect(f['iniciarMetricas']).toHaveBeenCalledTimes(2);
+    await llamar('metricas.pausar');
+    metricas.visibilidad(false);
+    metricas.visibilidad(true);
+    // Sin pedido, mostrar la ventana no reanuda.
+    expect(f['iniciarMetricas']).toHaveBeenCalledTimes(2);
+  });
+
+  it('emitirCertificado guarda los PEM en la ruta del diálogo y nunca pisa una clave', async () => {
+    const { f, llamar } = montar();
+    const carpeta = mkdtempSync(path.join(os.tmpdir(), 'pel-ipcb-'));
+    const crt = path.join(carpeta, 'mi.test.crt');
+    f['emitirCertificadoLibre']!.mockResolvedValue({ certPem: 'CERT', clavePem: 'CLAVE' });
+    try {
+      sistema.guardarArchivo.mockResolvedValueOnce(crt);
+      expect(await llamar('sistema.guardarArchivo', 'mi.test.crt')).toEqual({
+        ok: true,
+        valor: crt,
+      });
+      const r = await llamar('herramientas.emitirCertificado', ['mi.test'], crt);
+      expect(r).toEqual({
+        ok: true,
+        valor: { certificado: crt, clave: path.join(carpeta, 'mi.test.key') },
+      });
+      expect(readFileSync(crt, 'utf8')).toBe('CERT');
+      expect(readFileSync(path.join(carpeta, 'mi.test.key'), 'utf8')).toBe('CLAVE');
+      expect(JSON.stringify(r)).not.toContain('CLAVE');
+      const otra = await llamar('herramientas.emitirCertificado', ['mi.test'], crt);
+      expect(otra.error?.mensaje).toMatch(/Ya existe/);
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
+  });
+
+  it('limpiarBom solo acepta rutas elegidas en diálogos', async () => {
+    const { f, llamar } = montar();
+    const carpeta = mkdtempSync(path.join(os.tmpdir(), 'pel-ipcb-'));
+    const a = path.join(carpeta, 'a.php');
+    try {
+      sistema.elegirArchivos.mockResolvedValueOnce([a]);
+      await llamar('sistema.elegirArchivos');
+      expect((await llamar('herramientas.limpiarBom', [a], true)).ok).toBe(true);
+      expect(f['limpiarBom']).toHaveBeenCalledWith([a], true);
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
+  });
+
+  it('la lista de rutas compartida coincide con la tabla del proceso principal', () => {
+    expect(new Set(RUTAS_IPC).size).toBe(RUTAS_IPC.length);
   });
 });

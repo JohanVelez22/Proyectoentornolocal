@@ -1,4 +1,28 @@
 import type {
+  CierreConfirmacion,
+  ConfigProyecto,
+  Deteccion,
+  DisponibilidadGit,
+  EstadoGit,
+  EstadoMcp,
+  EstadoProcesoPublico,
+  EstadoReceta,
+  FuenteRegistroPublica,
+  MuestraSistema,
+  OpcionesReceta,
+  PasoReceta,
+  ProgresoReceta,
+  PuertoEnUso,
+  RecetaPropuesta,
+  RepoGithub,
+  ResultadoBom,
+  ResultadoReceta,
+  ResultadoTraer,
+  ResumenReceta,
+  RuntimesProyecto,
+  SolicitudConfirmacion,
+  SugerenciaProyecto,
+  TipoRuntime,
   AjustesServicios,
   BaseListada,
   Config,
@@ -35,6 +59,30 @@ import type {
 } from '@pel/core';
 
 export type {
+  CierreConfirmacion,
+  ConfigProyecto,
+  Deteccion,
+  DisponibilidadGit,
+  EstadoGit,
+  EstadoMcp,
+  EstadoProcesoPublico,
+  EstadoReceta,
+  FuenteRegistroPublica,
+  MuestraSistema,
+  OpcionesReceta,
+  PasoReceta,
+  ProgresoReceta,
+  PuertoEnUso,
+  RecetaPropuesta,
+  RepoGithub,
+  ResultadoBom,
+  ResultadoReceta,
+  ResultadoTraer,
+  ResumenReceta,
+  RuntimesProyecto,
+  SolicitudConfirmacion,
+  SugerenciaProyecto,
+  TipoRuntime,
   AjustesServicios,
   BaseListada,
   Config,
@@ -96,6 +144,32 @@ export interface ApiSistema {
   abrirCarpeta(ruta: string): Promise<void>;
   copiar(texto: string): Promise<void>;
   version(): Promise<string>;
+  /**
+   * Diálogo "Guardar como" (p. ej. un certificado); la ruta elegida queda registrada para las
+   * rutas que escriben archivos. null si se cancela.
+   */
+  guardarArchivo(nombreSugerido?: string): Promise<string | null>;
+  /** Selector de varios archivos (p. ej. para quitar el BOM); [] si se cancela. */
+  elegirArchivos(): Promise<string[]>;
+}
+
+/** Lo que se puede pedir al ejecutar una receta desde la interfaz. */
+export interface OpcionesRecetaIpc {
+  /** Corre desde este paso hasta el final. */
+  desde?: string;
+  /** Corre solo este paso (Reintentar). */
+  soloPaso?: string;
+  /**
+   * La receta editada en el asistente (como mucho 50 pasos). El archivo de `bd-restaurar`
+   * (`args.archivo`) debe venir de `sistema.elegirArchivo`.
+   */
+  receta?: PasoReceta[];
+}
+
+/** Rutas escritas al emitir un certificado libre (el .key va junto al .crt elegido). */
+export interface CertificadoGuardado {
+  certificado: string;
+  clave: string;
 }
 
 export interface ApiEntorno {
@@ -241,6 +315,115 @@ export interface ApiEntorno {
     /** Guarda puerto y trabajadores, regenera los vhosts y reinicia lo que haga falta. */
     guardar(ajustes: AjustesServicios): Promise<ResultadoAjustes>;
   };
+  /* ───────────── Etapa B ───────────── */
+  proyectos: {
+    /** Detección ampliada de una carpeta existente (tipo, servicios, runtimes, dominio). */
+    detectar(carpeta: string): Promise<Deteccion>;
+    /** wolfcore.yml de la carpeta (null si no hay). */
+    configLeer(carpeta: string): Promise<ConfigProyecto | null>;
+    /** Escribe wolfcore.yml en la carpeta del proyecto (se valida en el núcleo). */
+    configGuardar(sitioId: string, config: ConfigProyecto): Promise<void>;
+    /** Receta que correría la carpeta (wolfcore.yml o la de por defecto) y su detección. */
+    recetaPorDefecto(carpeta: string): Promise<RecetaPropuesta>;
+    /** Exige "Confío en este repositorio"; el avance llega por `receta:progreso`. */
+    ejecutarReceta(sitioId: string, opciones?: OpcionesRecetaIpc): Promise<ResultadoReceta>;
+    /** Marca el paso como omitido y sigue con el siguiente. */
+    omitirPaso(sitioId: string, pasoId: string): Promise<ResultadoReceta>;
+    estadoReceta(sitioId: string): Promise<EstadoReceta>;
+    /** false si no había receta en curso. */
+    cancelarReceta(sitioId: string): Promise<boolean>;
+    /** Comando real de cada paso y si la receta cambió desde que se marcó "Confío…". */
+    resumenReceta(sitioId: string): Promise<ResumenReceta>;
+  };
+  git: {
+    disponible(): Promise<DisponibilidadGit>;
+    /**
+     * Clona (https://…, git@… u owner/name) en `destino` (ruta absoluta que no existe o está
+     * vacía). Si hay un token guardado lo agrega el proceso principal. Progreso: `git:progreso`.
+     */
+    clonar(url: string, destino: string): Promise<void>;
+    estado(sitioId: string): Promise<EstadoGit>;
+    /** Con cambios locales o ramas divergidas no toca nada y lo dice. */
+    traerCambios(sitioId: string): Promise<ResultadoTraer>;
+  };
+  github: {
+    repos(opciones?: { buscar?: string; pagina?: number }): Promise<RepoGithub[]>;
+    /** Se guarda cifrado en el proceso principal; nunca vuelve a la interfaz. */
+    guardarToken(token: string): Promise<void>;
+    borrarToken(): Promise<void>;
+    /** Solo si hay un token guardado. */
+    hayToken(): Promise<boolean>;
+    instalarGh(): Promise<void>;
+    iniciarSesionGh(): Promise<void>;
+  };
+  runtimes: {
+    instalados(tipo: TipoRuntime): Promise<string[]>;
+    /** Versiones que usará el proyecto y avisos (versión pedida que falta, rangos…). */
+    proyecto(sitioId: string): Promise<RuntimesProyecto>;
+  };
+  procesos: {
+    iniciar(sitioId: string, procesoId: string): Promise<void>;
+    detener(sitioId: string, procesoId: string): Promise<void>;
+    /** Sin la ruta del log (se ve con `registros`, fuente `proy-<sitio>-<proceso>`). */
+    estados(sitioId: string): Promise<EstadoProcesoPublico[]>;
+  };
+  vigilar: {
+    sugerencias(): Promise<SugerenciaProyecto[]>;
+    /** Carpeta elegida con `sistema.elegirCarpeta`, o null para dejar de vigilar. */
+    cambiarCarpeta(carpeta: string | null): Promise<void>;
+  };
+  metricas: {
+    /** Empieza a muestrear cada 3 s mientras la ventana esté visible (`metricas:muestra`). */
+    iniciar(): Promise<void>;
+    pausar(): Promise<void>;
+    /** Muestras de los últimos `min` minutos (1–5). */
+    ultimos(min?: number): Promise<MuestraSistema[]>;
+  };
+  registros: {
+    /** Fuentes sin ruta: la interfaz solo conoce el id. */
+    fuentes(): Promise<FuenteRegistroPublica[]>;
+    /** Empieza a recibir `registro:lineas` de la fuente (hasta que se llame a `dejar`). */
+    seguir(id: string): Promise<void>;
+    dejar(id: string): Promise<void>;
+    /** Últimas líneas (saneadas), hasta 5000. */
+    leerFinal(id: string, lineas?: number): Promise<string[]>;
+    /** Abre la carpeta del archivo de la fuente. */
+    abrirCarpeta(id: string): Promise<void>;
+  };
+  herramientas: {
+    puertos(): Promise<PuertoEnUso[]>;
+    /**
+     * `confirmacion` es el nombre del proceso. `creado` es el de la lista de puertos (evita
+     * matar un PID reutilizado); `forzar` permite los procesos propios.
+     */
+    finalizarProceso(
+      pid: number,
+      confirmacion: string,
+      opciones?: { forzar?: boolean; creado?: string | null },
+    ): Promise<{ pid: number; nombre: string }>;
+    /** Rutas elegidas con `sistema.elegirArchivos` o `sistema.elegirCarpeta`. */
+    limpiarBom(rutas: string[], simular: boolean): Promise<ResultadoBom[]>;
+    /**
+     * Emite un certificado de la CA local y lo guarda en `destino` (de `sistema.guardarArchivo`)
+     * y su clave junto a él (.key). Los PEM nunca pasan por la interfaz.
+     */
+    emitirCertificado(dominios: string[], destino: string): Promise<CertificadoGuardado>;
+  };
+  mcp: {
+    estado(): Promise<EstadoMcp>;
+    iniciar(): Promise<EstadoMcp>;
+    detener(): Promise<void>;
+    cambiarPuerto(puerto: number): Promise<EstadoMcp>;
+    /** Copia al portapapeles la configuración para Claude Code (lleva el token: no se devuelve). */
+    configuracion(): Promise<void>;
+    /** Token nuevo: el anterior deja de valer al instante. */
+    regenerarToken(): Promise<void>;
+    /**
+     * Respuesta al diálogo de `mcp:confirmar` (los `datos` se muestran como texto plano). false si
+     * la confirmación ya no estaba pendiente.
+     */
+    responderConfirmacion(id: string, aprobado: boolean): Promise<boolean>;
+  };
   sistema: ApiSistema;
   /** Suscribe a un evento del núcleo; devuelve la función para cancelar. */
   on<K extends keyof EventosNucleo>(nombre: K, fn: (dato: EventosNucleo[K]) => void): () => void;
@@ -340,6 +523,53 @@ export const RUTAS_IPC = [
   'sistema.abrirCarpeta',
   'sistema.copiar',
   'sistema.version',
+  'proyectos.detectar',
+  'proyectos.configLeer',
+  'proyectos.configGuardar',
+  'proyectos.recetaPorDefecto',
+  'proyectos.ejecutarReceta',
+  'proyectos.omitirPaso',
+  'proyectos.estadoReceta',
+  'proyectos.cancelarReceta',
+  'proyectos.resumenReceta',
+  'git.disponible',
+  'git.clonar',
+  'git.estado',
+  'git.traerCambios',
+  'github.repos',
+  'github.guardarToken',
+  'github.borrarToken',
+  'github.hayToken',
+  'github.instalarGh',
+  'github.iniciarSesionGh',
+  'runtimes.instalados',
+  'runtimes.proyecto',
+  'procesos.iniciar',
+  'procesos.detener',
+  'procesos.estados',
+  'vigilar.sugerencias',
+  'vigilar.cambiarCarpeta',
+  'metricas.iniciar',
+  'metricas.pausar',
+  'metricas.ultimos',
+  'registros.fuentes',
+  'registros.seguir',
+  'registros.dejar',
+  'registros.leerFinal',
+  'registros.abrirCarpeta',
+  'herramientas.puertos',
+  'herramientas.finalizarProceso',
+  'herramientas.limpiarBom',
+  'herramientas.emitirCertificado',
+  'mcp.estado',
+  'mcp.iniciar',
+  'mcp.detener',
+  'mcp.cambiarPuerto',
+  'mcp.configuracion',
+  'mcp.regenerarToken',
+  'mcp.responderConfirmacion',
+  'sistema.guardarArchivo',
+  'sistema.elegirArchivos',
 ] as const;
 export type RutaIpc = (typeof RUTAS_IPC)[number];
 
@@ -352,4 +582,11 @@ export const EVENTOS_IPC = [
   'bd:progreso',
   'ia:progreso',
   'aviso:inicio',
+  'receta:progreso',
+  'git:progreso',
+  'proyectos:sugerencias',
+  'metricas:muestra',
+  'registro:lineas',
+  'mcp:confirmar',
+  'mcp:confirmacion-cerrada',
 ] as const satisfies readonly (keyof EventosNucleo)[];
