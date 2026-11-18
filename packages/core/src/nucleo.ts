@@ -67,6 +67,7 @@ import './servicios/bd/mongodb';
 import './servicios/mailpit';
 import './servicios/ollama';
 import { Runtimes } from './runtimes/runtimes';
+import { ProcesosProyecto } from './proyectos/procesos';
 
 export interface OpcionesNucleo {
   base?: string;
@@ -112,6 +113,7 @@ interface ModulosNucleo {
   mailpit: Mailpit;
   credenciales: AlmacenCredenciales;
   puertoOllama: { valor: number };
+  procesos: ProcesosProyecto;
 }
 
 /** Puerto HTTPS: el estándar 443 o uno de usuario (1024–65535). */
@@ -173,6 +175,8 @@ export class Nucleo {
   readonly ftp: ServidorFtp;
   readonly ollama: ClienteOllama;
   readonly mailpit: Mailpit;
+  /** Procesos supervisados de los proyectos (npm run dev, uvicorn…). */
+  readonly procesos: ProcesosProyecto;
   private readonly almacenCredenciales: AlmacenCredenciales;
   /** Puerto de Ollama según la configuración (ClienteOllama lo lee de forma síncrona). */
   private readonly puertoOllama: { valor: number };
@@ -205,6 +209,7 @@ export class Nucleo {
     this.ftp = m.ftp;
     this.ollama = m.ollama;
     this.mailpit = m.mailpit;
+    this.procesos = m.procesos;
     this.almacenCredenciales = m.credenciales;
     this.puertoOllama = m.puertoOllama;
     internos.on('servicio:estado', () => this.pedirRecalculo());
@@ -237,6 +242,9 @@ export class Nucleo {
     // sitios y servicios se referencian entre sí: se resuelven de forma perezosa.
     // eslint-disable-next-line prefer-const
     let sitios!: GestorSitios;
+    // Los procesos de proyecto necesitan servicios (PHP) y composer: también perezosos.
+    // eslint-disable-next-line prefer-const
+    let procesos!: ProcesosProyecto;
     const https = new GestorHttps({ rutas, plataforma, pidNginx: () => supervisor.pid('nginx') });
     const credenciales = new AlmacenCredenciales(rutas, (fn) => sitios.enCola(fn));
     const adminer = new Adminer({
@@ -275,6 +283,10 @@ export class Nucleo {
       ...(o.ejecutor ? { exec: o.ejecutor } : {}),
       httpsPrincipal: async () => https.datosPrincipal((await leerConfig()).https.puerto),
       adminerPrincipal: () => adminer.configNginx(),
+      procesosProyecto: {
+        estadosServicio: () => procesos.estadosServicio(),
+        detenerTodos: () => procesos.detenerTodos(),
+      },
     });
     sitios = new GestorSitios({
       almacen,
@@ -309,6 +321,22 @@ export class Nucleo {
       exec,
       leerConfig,
       asegurarPhpIni: (r) => servicios.php.asegurarPhpIni(r),
+    });
+    const runtimes = new Runtimes(rutas);
+    procesos = new ProcesosProyecto({
+      rutas,
+      supervisor,
+      runtimes,
+      leerSitios: () => sitios.listar(),
+      php: async (rama) => {
+        const instaladas = await instalador.instalados('php');
+        const elegida = rama && instaladas.includes(rama) ? rama : await composer.phpPorDefecto();
+        if (!elegida) throw new Error('No hay PHP instalado: instálelo desde Servicios.');
+        return {
+          exe: path.join(rutas.bin('php', elegida), 'php.exe'),
+          ini: await servicios.php.asegurarPhpIni(elegida),
+        };
+      },
     });
     const bd = new BasesDeDatos({ servicios, credenciales, rutas, exec });
     const vivo = (id: string): boolean => {
@@ -347,7 +375,7 @@ export class Nucleo {
         rutas,
         asegurarPhpIni: (r) => servicios.php.asegurarPhpIni(r),
         phpPorDefecto: () => composer.phpPorDefecto(),
-        runtimes: new Runtimes(rutas),
+        runtimes,
       }),
       pathUsuario: new PathUsuario({ rutas, ...(o.ejecutor ? { exec: o.ejecutor } : {}) }),
       adminer,
@@ -365,6 +393,7 @@ export class Nucleo {
       mailpit: o.fetch ? new Mailpit(undefined, o.fetch) : new Mailpit(),
       credenciales,
       puertoOllama,
+      procesos,
     };
 
     const nucleo = new Nucleo(
@@ -408,7 +437,10 @@ export class Nucleo {
     return nucleo;
   }
 
-  /** Enciende los servicios instalados con `autoIniciar`; se detiene si el núcleo se cierra. */
+  /**
+   * Enciende los servicios instalados con `autoIniciar` y luego los procesos de proyecto con
+   * `autoIniciar`; se detiene si el núcleo se cierra.
+   */
   private async iniciarAutomaticos(): Promise<string[]> {
     const cfg = await this.config.leer();
     const errores: string[] = [];
@@ -425,6 +457,8 @@ export class Nucleo {
         errores.push(`${def.nombre}: ${mensajeDe(e)}`);
       }
     }
+    // Después de los servicios (los procesos suelen usar la base de datos).
+    if (!this.cerrado) errores.push(...(await this.procesos.autoIniciar(() => !this.cerrado)));
     return errores;
   }
 
@@ -774,6 +808,12 @@ export class Nucleo {
         console.error('No se pudo emitir el certificado del sitio:', mensajeDe(e));
       }
     }
+    // Un proceso quitado del sitio deja de estar supervisado.
+    if (id && previo) {
+      for (const e of await this.procesos.detenerHuerfanos()) {
+        console.error('No se pudo detener un proceso quitado del proyecto:', mensajeDe(e));
+      }
+    }
     return { sitio, aplicar: await this.sitios.aplicar() };
   }
 
@@ -844,20 +884,27 @@ export class Nucleo {
     return { aplicar, reiniciados, errores };
   }
 
-  /** "Detener todo": cierra primero los túneles (devolviendo los .env) y luego los servicios. */
+  /**
+   * "Detener todo": cierra primero los túneles (devolviendo los .env) y luego los procesos de
+   * proyecto y los servicios.
+   */
   async detenerTodo(): Promise<void> {
     const errores = await this.tuneles.cerrarTodos();
     await this.servicios.detenerTodo();
     if (errores.length) throw errores[0];
   }
 
-  /** Cierra el túnel del sitio, lo quita de la configuración y aplica. */
+  /**
+   * Cierra el túnel del sitio, detiene sus procesos, lo quita de la configuración y aplica. Si
+   * un proceso no se pudo detener, no se borra (quedaría sin seguimiento).
+   */
   async borrarSitio(id: string): Promise<ResultadoAplicar> {
     try {
       await this.tuneles.cerrar(id);
     } catch {
       // el túnel puede no estar abierto
     }
+    await this.procesos.detenerSitio(id);
     await this.ftp.desactivarSitio(id).catch(() => undefined);
     await this.sitios.borrar(id);
     return this.sitios.aplicar();

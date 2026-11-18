@@ -177,6 +177,7 @@ describe('validarFormularioSitio', () => {
         autoIniciar: true,
         reiniciar: false,
         puerto: 5173,
+        proxy: false,
       };
       expect(validarFormularioSitio(datos({ tipo, procesos: [proceso] }), [])).toEqual({});
       expect(limpiarDatos(datos({ tipo, puertoProxy: 8001 })).puertoProxy).toBe(8001);

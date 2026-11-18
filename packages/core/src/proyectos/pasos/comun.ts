@@ -120,47 +120,70 @@ const venvScripts = (carpeta: string): string => path.join(carpeta, '.venv', 'Sc
 export const pythonVenv = (carpeta: string): string =>
   path.join(venvScripts(carpeta), 'python.exe');
 
+/** Lo que hace falta para armar el entorno de un proyecto (pasos de receta y procesos). */
+export type DepsEntorno = Pick<DepsPasos, 'rutas' | 'runtimes' | 'php' | 'entorno'>;
+
+export interface EntornoProyecto extends Herramientas {
+  /** Solo las variables que se agregan o cambian respecto del entorno base (PATH, PHPRC…). */
+  cambios: Record<string, string>;
+  /** Avisos de los runtimes (versiones pedidas que no están instaladas, rangos…), sin sanear. */
+  avisos: string[];
+}
+
 /**
- * Entorno de un paso: PATH = [PHP] + [.venv\Scripts] + [Node, node_modules\.bin, Python,
+ * Entorno de un proyecto: PATH = [PHP] + [.venv\Scripts] + [Node, node_modules\.bin, Python,
  * Scripts] + tools\bin + PATH actual (respeta el nombre `Path`). El Scripts del .venv va antes
- * que el Python del runtime. Los avisos de los runtimes salen como líneas del paso.
+ * que el Python del runtime. Lo usan los pasos de receta y los procesos supervisados.
  */
-export async function herramientas(
-  ctx: ContextoPaso,
-  d: DepsPasos,
+export async function entornoProyecto(
+  sitio: Sitio,
+  carpeta: string,
+  d: DepsEntorno,
   o: { php?: boolean } = {},
-): Promise<Herramientas> {
+): Promise<EntornoProyecto> {
   const base = d.entorno ?? process.env;
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(base)) if (v !== undefined) env[k] = v;
   const clave = Object.keys(env).find((k) => k.toLowerCase() === 'path') ?? 'Path';
+  const cambios: Record<string, string> = {};
   const nuevo: string[] = [];
   let php: Herramientas['php'];
   if (o.php) {
-    php = await d.php(ctx.sitio.php ?? null);
+    php = await d.php(sitio.php ?? null);
     nuevo.push(path.dirname(php.exe));
-    env.PHPRC = path.dirname(php.ini);
-    env.WOLFCORE_PHP = php.exe;
-    env.WOLFCORE_PHPINI = php.ini;
+    cambios.PHPRC = path.dirname(php.ini);
+    cambios.WOLFCORE_PHP = php.exe;
+    cambios.WOLFCORE_PHPINI = php.ini;
   }
-  if (await existe(venvScripts(ctx.carpeta))) {
-    nuevo.push(venvScripts(ctx.carpeta));
-    env.VIRTUAL_ENV = path.join(ctx.carpeta, '.venv');
+  if (await existe(venvScripts(carpeta))) {
+    nuevo.push(venvScripts(carpeta));
+    cambios.VIRTUAL_ENV = path.join(carpeta, '.venv');
   }
-  const rt = await d.runtimes.paraProyecto(ctx.sitio);
-  for (const a of rt.avisos) ctx.linea(sanear(`Aviso: ${a}`));
+  const rt = await d.runtimes.paraProyecto(sitio);
   const versiones: VersionesRuntime = {};
   if (rt.node) versiones.node = rt.node;
   if (rt.python) versiones.python = rt.python;
   nuevo.push(...d.runtimes.carpetasPath(versiones));
   nuevo.push(d.rutas.herramientas('bin'));
   if (env[clave]) nuevo.push(env[clave]);
-  env[clave] = nuevo.join(';');
-  return { env, versiones, ...(php ? { php } : {}) };
+  cambios[clave] = nuevo.join(';');
+  Object.assign(env, cambios);
+  return { env, cambios, versiones, avisos: [...rt.avisos], ...(php ? { php } : {}) };
+}
+
+/** Entorno de un paso (ver `entornoProyecto`). Los avisos de los runtimes salen como líneas. */
+export async function herramientas(
+  ctx: ContextoPaso,
+  d: DepsPasos,
+  o: { php?: boolean } = {},
+): Promise<Herramientas> {
+  const r = await entornoProyecto(ctx.sitio, ctx.carpeta, d, o);
+  for (const a of r.avisos) ctx.linea(sanear(`Aviso: ${a}`));
+  return { env: r.env, versiones: r.versiones, ...(r.php ? { php: r.php } : {}) };
 }
 
 /** node.exe del proyecto; error claro si no hay Node. */
-export function nodeExe(d: DepsPasos, h: Herramientas): string {
+export function nodeExe(d: Pick<DepsPasos, 'runtimes'>, h: Herramientas): string {
   if (!h.versiones.node) {
     throw new Error('No hay Node instalado para este proyecto: instálelo desde Servicios.');
   }
@@ -168,7 +191,11 @@ export function nodeExe(d: DepsPasos, h: Herramientas): string {
 }
 
 /** Script de npm (o npx) del Node del proyecto: se lanza con node.exe, sin shell. */
-export function cliNpm(d: DepsPasos, h: Herramientas, cual: 'npm' | 'npx'): string {
+export function cliNpm(
+  d: Pick<DepsPasos, 'runtimes'>,
+  h: Herramientas,
+  cual: 'npm' | 'npx',
+): string {
   return path.join(
     d.runtimes.rutaBin('node', h.versiones.node!),
     'node_modules',
@@ -179,11 +206,54 @@ export function cliNpm(d: DepsPasos, h: Herramientas, cual: 'npm' | 'npx'): stri
 }
 
 /** python.exe del runtime del proyecto; error claro si no hay Python. */
-export function pythonExe(d: DepsPasos, h: Herramientas): string {
+export function pythonExe(d: Pick<DepsPasos, 'runtimes'>, h: Herramientas): string {
   if (!h.versiones.python) {
     throw new Error('No hay Python instalado para este proyecto: instálelo desde Servicios.');
   }
   return path.join(d.runtimes.rutaBin('python', h.versiones.python), 'python.exe');
+}
+
+/** Nombre de un programa para resolverlo: en minúsculas y sin `.exe`. */
+export const nombrePrograma = (programa: string): string =>
+  programa.toLowerCase().replace(/\.exe$/, '');
+
+/** ¿El programa necesita el PHP del proyecto en el entorno? */
+export const usaPhp = (programa: string): boolean => nombrePrograma(programa) === 'php';
+
+/**
+ * Resuelve el programa de un comando (sin shell): `php`, `node`, `npm`, `npx` y `python` pasan a
+ * los del proyecto (python: el del .venv si hay). Rechaza .cmd y .bat, que necesitan una consola.
+ * `h` debe traer PHP si `usaPhp(programa)`.
+ */
+export async function resolverPrograma(
+  comando: string[],
+  carpeta: string,
+  d: Pick<DepsPasos, 'runtimes'>,
+  h: Herramientas,
+): Promise<{ cmd: string; args: string[] }> {
+  const [programa, ...resto] = comando;
+  if (/\.(cmd|bat)$/i.test(programa!)) {
+    throw new Error(
+      'Los archivos .cmd y .bat necesitan una consola y aquí no se usa shell: use el programa directamente.',
+    );
+  }
+  const nombre = nombrePrograma(programa!);
+  switch (nombre) {
+    case 'php':
+      return { cmd: h.php!.exe, args: ['-c', h.php!.ini, ...resto] };
+    case 'node':
+      return { cmd: nodeExe(d, h), args: resto };
+    case 'npm':
+    case 'npx':
+      return { cmd: nodeExe(d, h), args: [cliNpm(d, h, nombre), ...resto] };
+    case 'python':
+      return {
+        cmd: (await existe(pythonVenv(carpeta))) ? pythonVenv(carpeta) : pythonExe(d, h),
+        args: resto,
+      };
+    default:
+      return { cmd: programa!, args: resto };
+  }
 }
 
 /**

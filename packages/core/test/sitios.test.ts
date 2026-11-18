@@ -306,6 +306,7 @@ describe('GestorSitios robustez', () => {
       autoIniciar: true,
       reiniciar: true,
       puerto: 8001,
+      proxy: false,
     };
     const s = await g.crear(datos('api.test', { tipo: 'fastapi', procesos: [proceso] }));
     expect(s.procesos).toEqual([proceso]);
@@ -317,6 +318,26 @@ describe('GestorSitios robustez', () => {
     ).rejects.toThrow('El proceso uvicorn está repetido');
     await g.aplicar();
     expect(readFileSync(rutas.vhost('api'), 'utf8')).toContain('proxy_pass http://127.0.0.1:8001;');
+  });
+
+  it('solo un proceso puede ser el destino del proxy y necesita puerto', async () => {
+    const g = gestor();
+    const p = (id: string, puerto: number | null) => ({
+      id,
+      nombre: id,
+      comando: ['x'],
+      cwd: 'raiz',
+      autoIniciar: false,
+      reiniciar: false,
+      puerto,
+      proxy: true,
+    });
+    await expect(
+      g.crear(datos('dos.test', { tipo: 'fastapi', procesos: [p('a', 8001), p('b', 8002)] })),
+    ).rejects.toThrow('Solo un proceso puede ser el destino del proxy');
+    await expect(
+      g.crear(datos('sin.test', { tipo: 'fastapi', puertoProxy: 8000, procesos: [p('a', null)] })),
+    ).rejects.toThrow('El proceso a es el destino del proxy y necesita un puerto');
   });
 
   it('dos crear() concurrentes persisten ambos', async () => {

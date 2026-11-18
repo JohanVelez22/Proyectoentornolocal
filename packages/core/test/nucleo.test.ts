@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { LIMITE_ENV_BYTES, Nucleo } from '../src/nucleo';
 import { Supervisor } from '../src/procesos/supervisor';
+import { ProcesosProyecto } from '../src/proyectos/procesos';
 import { BasesDeDatos } from '../src/bd/basesDeDatos';
 import { InstaladorPgvector } from '../src/bd/pgvector';
 import { Respaldos } from '../src/bd/respaldos';
@@ -178,6 +179,25 @@ describe('Nucleo', () => {
     expect(await n.sitios.listar()).toEqual([]);
   });
 
+  it('borrarSitio detiene los procesos del proyecto antes de borrarlo; si fallan, no borra', async () => {
+    const n = await crear();
+    await n.guardarSitio(datos());
+    const orden: string[] = [];
+    const detener = vi.spyOn(n.procesos, 'detenerSitio').mockImplementation(async (id) => {
+      orden.push(`procesos:${id}`);
+    });
+    const borrar = n.sitios.borrar.bind(n.sitios);
+    vi.spyOn(n.sitios, 'borrar').mockImplementation(async (id) => {
+      orden.push('borrar');
+      return borrar(id);
+    });
+    detener.mockRejectedValueOnce(new Error('no se pudo detener'));
+    await expect(n.borrarSitio('demo')).rejects.toThrow('no se pudo detener');
+    expect(await n.sitios.listar()).toHaveLength(1);
+    await n.borrarSitio('demo');
+    expect(orden).toEqual(['procesos:demo', 'borrar']);
+  });
+
   it('borrarSitio ignora el error de túnel no abierto', async () => {
     const n = await crear();
     await n.guardarSitio(datos());
@@ -275,6 +295,54 @@ describe('Nucleo', () => {
     await n.cerrar({ detenerServicios: true });
     expect(cerrar).toHaveBeenCalledWith('a');
     expect(detener).toHaveBeenCalled();
+  });
+
+  it('cerrar con detenerServicios: túneles primero, luego procesos de proyecto y servicios', async () => {
+    const n = await crear();
+    const orden: string[] = [];
+    vi.spyOn(n.tuneles, 'estados').mockReturnValue([
+      { sitioId: 'a', estado: 'activo', url: 'https://x.trycloudflare.com' },
+    ]);
+    vi.spyOn(n.tuneles, 'cerrar').mockImplementation(async () => {
+      orden.push('tunel');
+    });
+    vi.spyOn(n.procesos, 'detenerTodos').mockImplementation(async () => {
+      orden.push('procesos');
+      return [];
+    });
+    await n.cerrar({ detenerServicios: true });
+    expect(orden.slice(0, 2)).toEqual(['tunel', 'procesos']);
+  });
+
+  it('al iniciar arranca los procesos de proyecto con autoIniciar y estadoGeneral los muestra', async () => {
+    const auto = vi
+      .spyOn(ProcesosProyecto.prototype, 'autoIniciar')
+      .mockResolvedValue(['demo.test: No hay Node instalado']);
+    const n = await crear();
+    expect(await n.arranqueAutomatico).toEqual(['demo.test: No hay Node instalado']);
+    expect(auto).toHaveBeenCalledTimes(1);
+    await n.guardarSitio(
+      datos({
+        procesos: [
+          {
+            id: 'cola',
+            nombre: 'Cola',
+            comando: ['php', 'artisan', 'queue:work'],
+            cwd: 'raiz',
+            autoIniciar: false,
+            reiniciar: true,
+            puerto: null,
+            proxy: false,
+          },
+        ],
+      }),
+    );
+    const g = await n.estadoGeneral();
+    expect(g.servicios.find((s) => s.id === 'proy-demo-cola')).toMatchObject({
+      categoria: 'proyecto',
+      estado: 'apagado',
+      nombre: 'Cola (demo.test)',
+    });
   });
 
   it('cerrar cierra el supervisor aunque falle un túnel o detenerTodo, y relanza el primer error', async () => {

@@ -841,6 +841,7 @@ describe('sitio-crear', () => {
             autoIniciar: true,
             reiniciar: true,
             puerto: 5174,
+            proxy: false,
           },
         ],
       },
@@ -859,6 +860,23 @@ describe('sitio-crear', () => {
       ['otro', 8001],
     ]);
     expect(procesos.find((p) => p.id === 'api')!.comando).toEqual(['x', '--port=8000']);
+  });
+
+  it('puertoProxy sale del proceso marcado con proxy aunque vite vaya antes', async () => {
+    const a = await armar({ sitio: { tipo: 'fastapi', php: null } });
+    await correr(a, 'sitio-crear', {
+      tipo: 'fastapi',
+      procesos: [
+        { id: 'vite', comando: ['npm', 'run', 'dev', '--', '--port', '{puerto}'] },
+        { id: 'uvicorn', comando: ['uvicorn', 'app:app', '--port', '{puerto}'], proxy: true },
+      ],
+    });
+    const datos = a.guardados[0]!.datos;
+    expect(datos.procesos.map((p) => [p.id, p.puerto])).toEqual([
+      ['vite', 8000],
+      ['uvicorn', 8001],
+    ]);
+    expect(datos.puertoProxy).toBe(8001);
   });
 });
 

@@ -77,6 +77,8 @@ function procesoUvicorn(): ProcesoProyecto {
     autoIniciar: true,
     reiniciar: true,
     puerto: null,
+    // Destino del proxy de Nginx aunque luego se agregue otro proceso con puerto (vite).
+    proxy: true,
   };
 }
 

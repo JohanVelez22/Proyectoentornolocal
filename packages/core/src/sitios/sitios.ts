@@ -135,6 +135,13 @@ export class GestorSitios {
       (p, i) => datos.procesos.findIndex((q) => q.id === p.id) !== i,
     );
     if (repetidoProc) throw new Error(`El proceso ${repetidoProc.id} está repetido`);
+    const marcados = datos.procesos.filter((p) => p.proxy);
+    if (marcados.length > 1) {
+      throw new Error('Solo un proceso puede ser el destino del proxy');
+    }
+    if (marcados[0] && marcados[0].puerto === null) {
+      throw new Error(`El proceso ${marcados[0].id} es el destino del proxy y necesita un puerto`);
+    }
     if (datos.tipo === 'proxy') {
       if (datos.puertoProxy === null) throw new Error('Un sitio proxy necesita un puerto');
       return;

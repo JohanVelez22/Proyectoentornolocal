@@ -8,6 +8,7 @@ import {
   escribirConfigProyecto,
   leerConfigProyecto,
   motorBdDe,
+  ProcesoProyectoSchema,
   type ConfigProyecto,
 } from '../src/proyectos/config';
 import { detectarProyecto } from '../src/proyectos/detectar';
@@ -454,6 +455,7 @@ describe('modelo de Sitio y retrocompatibilidad', () => {
       autoIniciar: false,
       reiniciar: false,
       puerto: 8001,
+      proxy: false,
     });
   });
 
@@ -561,6 +563,7 @@ describe('plantillas nuevas', () => {
             autoIniciar: false,
             reiniciar: false,
             puerto: null,
+            proxy: false,
           },
           {
             id: 'vite',
@@ -570,12 +573,24 @@ describe('plantillas nuevas', () => {
             autoIniciar: true,
             reiniciar: false,
             puerto: 5173,
+            proxy: false,
           },
         ],
       }),
       o,
     );
     expect(conProceso).toContain('proxy_pass http://127.0.0.1:5173;');
+    const marcado = generarVhost(
+      sitio({
+        tipo: 'fastapi',
+        procesos: [
+          ProcesoProyectoSchema.parse({ id: 'vite', comando: ['npm'], puerto: 5173 }),
+          ProcesoProyectoSchema.parse({ id: 'api', comando: ['py'], puerto: 8001, proxy: true }),
+        ],
+      }),
+      o,
+    );
+    expect(marcado).toContain('proxy_pass http://127.0.0.1:8001;');
     expect(() => generarVhost(sitio({ tipo: 'node' }), o)).toThrow(
       'El sitio a.test necesita un puerto de proxy o un proceso con puerto',
     );

@@ -26,20 +26,38 @@ export const TIPOS_PROXY: readonly TipoSitio[] = ['proxy', 'fastapi', 'node'];
 
 /**
  * Comando de larga duración del proyecto (npm run dev, queue:work, uvicorn…), supervisado.
- * `cwd`: 'raiz' (la carpeta del proyecto) o una ruta relativa a ella.
+ * `cwd`: 'raiz' (la carpeta del proyecto) o una ruta relativa a ella, dentro de la carpeta.
+ * El id no lleva guiones: el supervisor usa `proy-<sitio>-<proceso>` y el id del sitio sí puede
+ * llevarlos, así que el último guion separa siempre las dos partes.
+ * `proxy`: este proceso es el destino del proxy de Nginx (ver `procesoDelProxy`).
  */
 export const ProcesoProyectoSchema = z.object({
   id: z
     .string()
-    .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, 'Use solo letras, números, guiones y guiones bajos'),
+    .regex(
+      /^[A-Za-z0-9][A-Za-z0-9_]*$/,
+      'El id del proceso lleva solo letras, números y guiones bajos',
+    ),
   nombre: z.string().default(''),
   comando: z.array(z.string().min(1)).min(1, 'El comando no puede estar vacío'),
   cwd: z.string().min(1).default('raiz'),
   autoIniciar: z.boolean().default(false),
   reiniciar: z.boolean().default(false),
   puerto: z.number().int().min(1).max(65535).nullable().default(null),
+  proxy: z.boolean().default(false),
 });
 export type ProcesoProyecto = z.infer<typeof ProcesoProyectoSchema>;
+
+/**
+ * Proceso al que apunta el proxy de un sitio FastAPI o Node cuando el sitio no fija
+ * `puertoProxy`: el marcado con `proxy: true` (con puerto) y, si ninguno lo está, el primero con
+ * puerto. En la receta de FastAPI, uvicorn lleva la marca: un vite agregado antes no la quita.
+ */
+export function procesoDelProxy(procesos: readonly ProcesoProyecto[]): ProcesoProyecto | undefined {
+  return (
+    procesos.find((p) => p.proxy && p.puerto !== null) ?? procesos.find((p) => p.puerto !== null)
+  );
+}
 
 export const SitioSchema = z.object({
   id: z.string(),
@@ -188,13 +206,18 @@ export const ConfigSchema = z.object({
 });
 export type Config = z.infer<typeof ConfigSchema>;
 
+/** Puerto al que Nginx envía un sitio FastAPI o Node: `puertoProxy` o el de `procesoDelProxy`. */
+export function puertoDelProxy(s: Pick<Sitio, 'puertoProxy' | 'procesos'>): number | null {
+  return s.puertoProxy ?? procesoDelProxy(s.procesos)?.puerto ?? null;
+}
+
 export function raizDeSitio(s: Sitio): string {
   return s.tipo === 'laravel' || s.tipo === 'codeigniter4'
     ? `${s.carpeta.replace(/[\\/]+$/, '')}/public`
     : s.carpeta;
 }
 
-export type CategoriaServicio = 'web' | 'php' | 'bd' | 'herramienta' | 'ia';
+export type CategoriaServicio = 'web' | 'php' | 'bd' | 'herramienta' | 'ia' | 'proyecto';
 
 export interface EstadoServicio {
   id: string;

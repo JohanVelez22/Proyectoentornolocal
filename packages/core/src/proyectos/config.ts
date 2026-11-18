@@ -120,7 +120,8 @@ const CABECERA = [
   '   receta    pasos de instalación, en orden. Solo se ejecutan si marca',
   '             "Confío en este repositorio" en ese proyecto.',
   '   procesos  comandos de larga duración (npm run dev, queue:work, uvicorn…) con',
-  '             id, nombre, comando (lista), cwd, autoIniciar, reiniciar y puerto.',
+  '             id, nombre, comando (lista), cwd, autoIniciar, reiniciar, puerto y proxy',
+  '             (true en el proceso al que apunta el sitio, p. ej. uvicorn y no vite).',
 ].join('\n');
 
 const CLAVES: readonly (keyof ConfigProyecto)[] = [

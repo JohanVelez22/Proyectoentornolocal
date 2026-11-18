@@ -113,9 +113,13 @@ export const useServicios = defineStore('servicios', () => {
    * no está en marcha por fuera) se oculta. El resto solo llega si está instalado (o es externo).
    */
   const nginxSinInstalar = computed(() => instalados.value['nginx']?.length === 0);
+  // Los procesos de proyecto (categoría 'proyecto') llegan por el mismo evento, pero se muestran
+  // en su proyecto y en Inicio, no en la pantalla Servicios.
   const visibles = computed(() =>
     lista.value.filter(
-      (s) => !(s.id === 'nginx' && nginxSinInstalar.value && s.estado === 'apagado'),
+      (s) =>
+        s.categoria !== 'proyecto' &&
+        !(s.id === 'nginx' && nginxSinInstalar.value && s.estado === 'apagado'),
     ),
   );
   /** Ningún servicio propio instalado (los externos y el FTP integrado no cuentan). */

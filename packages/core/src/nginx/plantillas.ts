@@ -1,4 +1,4 @@
-import { raizDeSitio, TIPOS_CON_PHP, type Sitio } from '../tipos';
+import { puertoDelProxy, raizDeSitio, TIPOS_CON_PHP, type Sitio } from '../tipos';
 
 export interface OpcionesVhost {
   puertoNginx: number;
@@ -152,7 +152,7 @@ export function generarVhost(s: Sitio, o: OpcionesVhost): string {
       break;
     case 'fastapi':
     case 'node': {
-      const puerto = s.puertoProxy ?? s.procesos.find((p) => p.puerto !== null)?.puerto ?? null;
+      const puerto = puertoDelProxy(s);
       if (puerto === null) {
         throw new Error(
           `El sitio ${s.dominio} necesita un puerto de proxy o un proceso con puerto`,

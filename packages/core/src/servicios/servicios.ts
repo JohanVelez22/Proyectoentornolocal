@@ -21,6 +21,7 @@ import {
   type UpstreamPhp,
 } from './nginx';
 import { ServicioPhp } from './php';
+import type { ProcesosProyecto } from '../proyectos/procesos';
 
 export interface DepsServicios {
   rutas: Rutas;
@@ -50,6 +51,8 @@ export interface DepsServicios {
   adminerPrincipal?: () => Promise<{ raiz: string; puertos: number[] } | null>;
   /** Servidor FTP del proceso: aparece como servicio "ftp" (herramienta). */
   ftp?: Pick<ServidorFtp, 'estado' | 'iniciar' | 'detener'>;
+  /** Procesos de los proyectos: aparecen en los estados y se detienen primero en detenerTodo. */
+  procesosProyecto?: Pick<ProcesosProyecto, 'estadosServicio' | 'detenerTodos'>;
 }
 
 export type IdServicio = 'nginx' | 'ftp' | `php-${string}` | IdServicioDatos;
@@ -161,6 +164,7 @@ export class Servicios {
     res.push(...propios);
 
     if (this.d.ftp) res.push(await this.d.ftp.estado());
+    if (this.d.procesosProyecto) res.push(...(await this.d.procesosProyecto.estadosServicio()));
 
     for (const ext of EXTERNOS) {
       if (propios.some((p) => p.id === ext.id)) continue;
@@ -233,8 +237,14 @@ export class Servicios {
     primero(errores);
   }
 
+  /** Primero los procesos de proyecto (usan las bases y PHP), luego Nginx, PHP y el resto. */
   async detenerTodo(): Promise<void> {
     const errores: unknown[] = [];
+    try {
+      errores.push(...((await this.d.procesosProyecto?.detenerTodos()) ?? []));
+    } catch (e) {
+      errores.push(e);
+    }
     try {
       await this.nginx.detener();
       for (const v of await this.d.instalador.instalados('php')) await this.php.detener(v);

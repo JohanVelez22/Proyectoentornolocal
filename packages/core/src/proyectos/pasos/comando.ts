@@ -1,15 +1,5 @@
 import type { ImplementacionPaso } from '../pasos';
-import { existe } from '../archivos';
-import {
-  argsDe,
-  cliNpm,
-  herramientas,
-  lanzar,
-  nodeExe,
-  pythonExe,
-  pythonVenv,
-  type DepsPasos,
-} from './comun';
+import { argsDe, herramientas, lanzar, resolverPrograma, usaPhp, type DepsPasos } from './comun';
 
 function comandoDe(v: unknown): string[] {
   if (
@@ -28,33 +18,14 @@ function comandoDe(v: unknown): string[] {
  */
 export function pasoComando(d: DepsPasos): ImplementacionPaso {
   return async (ctx) => {
-    const [programa, ...resto] = comandoDe(argsDe(ctx).comando);
-    if (/\.(cmd|bat)$/i.test(programa!)) {
+    const comando = comandoDe(argsDe(ctx).comando);
+    if (/\.(cmd|bat)$/i.test(comando[0]!)) {
       throw new Error(
         'Los archivos .cmd y .bat necesitan una consola y los pasos no usan shell: use el programa directamente.',
       );
     }
-    const nombre = programa!.toLowerCase().replace(/\.exe$/, '');
-    const h = await herramientas(ctx, d, { php: nombre === 'php' });
-    let cmd = programa!;
-    let args = resto;
-    switch (nombre) {
-      case 'php':
-        cmd = h.php!.exe;
-        args = ['-c', h.php!.ini, ...resto];
-        break;
-      case 'node':
-        cmd = nodeExe(d, h);
-        break;
-      case 'npm':
-      case 'npx':
-        cmd = nodeExe(d, h);
-        args = [cliNpm(d, h, nombre), ...resto];
-        break;
-      case 'python':
-        cmd = (await existe(pythonVenv(ctx.carpeta))) ? pythonVenv(ctx.carpeta) : pythonExe(d, h);
-        break;
-    }
-    await lanzar(ctx, d, h, cmd, args, [programa, ...resto].join(' '));
+    const h = await herramientas(ctx, d, { php: usaPhp(comando[0]!) });
+    const { cmd, args } = await resolverPrograma(comando, ctx.carpeta, d, h);
+    await lanzar(ctx, d, h, cmd, args, comando.join(' '));
   };
 }

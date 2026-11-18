@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { z } from 'zod';
 import {
+  procesoDelProxy,
   ProcesoProyectoSchema,
   TIPOS_PROXY,
   TIPOS_SITIO,
@@ -86,7 +87,7 @@ export function pasoSitioCrear(d: DepsPasos): ImplementacionPaso {
       typeof args.tipo === 'string' && (TIPOS_SITIO as readonly string[]).includes(args.tipo)
         ? (args.tipo as TipoSitio)
         : actual.tipo;
-    const conPuerto = procesos.find((p) => p.puerto !== null);
+    const conPuerto = procesoDelProxy(procesos);
     const { id, ...resto } = actual;
     const datos = {
       ...resto,
