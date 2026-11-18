@@ -59,6 +59,13 @@ import type {
 } from './tipos';
 import { IDS_SERVICIO_DATOS } from './tipos';
 import { Tuneles } from './tuneles/tuneles';
+// Registran sus DefServicio al cargarse: el núcleo no depende de que alguien importe index.ts.
+import './servicios/bd/mysql';
+import './servicios/bd/postgresql';
+import './servicios/bd/redis';
+import './servicios/bd/mongodb';
+import './servicios/mailpit';
+import './servicios/ollama';
 
 export interface OpcionesNucleo {
   base?: string;
