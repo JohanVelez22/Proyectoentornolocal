@@ -1,7 +1,8 @@
 import type { Plataforma } from './tipos';
 import { PlataformaWindows } from './win';
 
-export type { Plataforma, Ejecutor, ResultadoEscritura } from './tipos';
+export type { Plataforma, Ejecutor, Lanzador, OpcionesLanzar, ResultadoEscritura } from './tipos';
+export { lanzadorPorDefecto } from './lanzar';
 export {
   PlataformaWindows,
   interpretarNetstat,

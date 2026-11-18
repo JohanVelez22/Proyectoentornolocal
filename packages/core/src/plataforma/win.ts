@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Ejecutor, Plataforma, ResultadoEscritura } from './tipos';
 
@@ -170,5 +170,31 @@ export class PlataformaWindows implements Plataforma {
 
   ejecutable(nombre: 'nginx' | 'php-cgi' | 'php' | 'cloudflared'): string {
     return `${nombre}.exe`;
+  }
+
+  private documentos: string | null = null;
+
+  async carpetaDocumentos(): Promise<string> {
+    if (this.documentos) return this.documentos;
+    try {
+      // UTF-8 para que una carpeta con tildes (o redirigida a OneDrive) llegue bien.
+      const r = await this.ejecutar(
+        'powershell',
+        [
+          '-NoProfile',
+          '-Command',
+          "[Console]::OutputEncoding=[Text.Encoding]::UTF8; [Environment]::GetFolderPath('MyDocuments')",
+        ],
+        { timeoutMs: 15000 },
+      );
+      const ruta = r.stdout.trim();
+      if (r.codigo === 0 && path.win32.isAbsolute(ruta)) {
+        this.documentos = ruta;
+        return ruta;
+      }
+    } catch {
+      // se usa la ruta de siempre
+    }
+    return path.win32.join(process.env.USERPROFILE ?? homedir(), 'Documents');
   }
 }

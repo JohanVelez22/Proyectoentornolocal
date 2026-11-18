@@ -31,6 +31,7 @@ function falsa(): Plataforma {
     matarArbol: async () => undefined,
     abrirUrl: async () => undefined,
     ejecutable: (n) => `${n}.exe`,
+    carpetaDocumentos: async () => ruta,
   };
 }
 

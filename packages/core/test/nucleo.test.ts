@@ -27,6 +27,7 @@ const falsa = (): Plataforma => ({
   matarArbol: async () => undefined,
   abrirUrl: async () => undefined,
   ejecutable: (n) => `${n}.exe`,
+  carpetaDocumentos: async () => hostsArchivo,
 });
 
 const crear = async (): Promise<Nucleo> => {

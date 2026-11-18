@@ -1,4 +1,13 @@
+import type { MotorBd } from './bd/env';
 import type { EstadoHosts, EstadoServicio, EstadoTunel, ProgresoInstalacion, Sitio } from './tipos';
+
+export interface ProgresoBd {
+  operacion: 'restaurar' | 'respaldar' | 'importar';
+  motor: MotorBd;
+  base: string;
+  /** Una línea de la salida de la herramienta (sin claves). */
+  linea: string;
+}
 
 export type EventosNucleo = {
   'servicio:estado': EstadoServicio;
@@ -6,6 +15,7 @@ export type EventosNucleo = {
   'tunel:estado': EstadoTunel;
   'instalacion:progreso': ProgresoInstalacion;
   'hosts:estado': EstadoHosts;
+  'bd:progreso': ProgresoBd;
 };
 
 export class Eventos<M extends Record<string, unknown>> {

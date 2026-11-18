@@ -181,6 +181,19 @@ export class BasesDeDatos {
     return this.conMysql(motor, (c) => c.crearBase(nombre, opts));
   }
 
+  /** true si la base existe y tiene alguna tabla (false si no existe). */
+  async tieneTablas(motor: MotorBd, nombre: string): Promise<boolean> {
+    if (motor === 'mongodb') throw new Error('MongoDB no se revisa por tablas.');
+    if (motor === 'postgresql') {
+      return this.conPostgres(async (c) => {
+        // Conectar a una base que no existe fallaría: se mira antes la lista.
+        const hay = await c.listarBases();
+        return hay.some((b) => b.nombre === nombre) && c.tieneTablas(nombre);
+      });
+    }
+    return this.conMysql(motor, (c) => c.tieneTablas(nombre));
+  }
+
   async borrar(motor: MotorBd, nombre: string, confirmacion: string): Promise<void> {
     await this.estado(motor);
     if (confirmacion !== nombre) {

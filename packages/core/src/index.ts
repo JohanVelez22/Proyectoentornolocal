@@ -32,3 +32,5 @@ export * from './sitios/urlbase';
 export * from './tuneles/url';
 export * from './tuneles/tuneles';
 export * from './nucleo';
+export * from './bd/formato';
+export * from './bd/respaldos';

@@ -1,3 +1,5 @@
+import type { Readable } from 'node:stream';
+
 export type ResultadoEscritura =
   { ok: true } | { ok: false; motivo: 'cancelado' | 'denegado' | 'error'; detalle?: string };
 
@@ -11,6 +13,8 @@ export interface Plataforma {
   matarArbol(pid: number): Promise<void>;
   abrirUrl(url: string): Promise<void>;
   ejecutable(nombre: 'nginx' | 'php-cgi' | 'php' | 'cloudflared'): string;
+  /** Carpeta "Documentos" del usuario (puede estar redirigida, p. ej. a OneDrive). */
+  carpetaDocumentos(): Promise<string>;
 }
 
 export type Ejecutor = (
@@ -25,3 +29,20 @@ export type Ejecutor = (
     entrada?: string;
   },
 ) => Promise<{ codigo: number; stdout: string; stderr: string }>;
+
+export interface OpcionesLanzar {
+  cwd?: string;
+  /** Variables extra (p. ej. PGPASSWORD) solo para este proceso; nunca se persisten. */
+  env?: Record<string, string>;
+  /** Flujo que se copia a la entrada estándar respetando la contrapresión (archivos grandes). */
+  entrada?: Readable;
+  /** Cada línea de salida, a medida que llega (sin el salto). */
+  alLinea?: (linea: string, flujo: 'stdout' | 'stderr') => void;
+}
+
+/** Como `Ejecutor`, pero en streaming: no junta la salida en memoria. */
+export type Lanzador = (
+  cmd: string,
+  args: string[],
+  opts?: OpcionesLanzar,
+) => Promise<{ codigo: number }>;

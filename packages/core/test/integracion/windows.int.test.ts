@@ -46,6 +46,7 @@ function plataformaSegura(): Plataforma {
     duenosDePuertos: (ps) => real.duenosDePuertos(ps),
     procesoVivo: (p) => real.procesoVivo(p),
     matarArbol: (p) => real.matarArbol(p),
+    carpetaDocumentos: () => real.carpetaDocumentos(),
     abrirUrl: async () => undefined,
     ejecutable: (n) => real.ejecutable(n),
   };

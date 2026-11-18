@@ -170,6 +170,12 @@ export class ClienteMysql {
     }
   }
 
+  /** Versión del servidor (p. ej. "8.4.3" o "11.4.4-MariaDB"); es una consulta de solo lectura. */
+  async version(): Promise<string> {
+    const f = await this.filas('SELECT version() AS version');
+    return String(f[0]?.version ?? '');
+  }
+
   async tieneTablas(nombre: string): Promise<boolean> {
     validarNombreBd(nombre);
     const f = await this.filas(

@@ -1,0 +1,726 @@
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import type { Readable } from 'node:stream';
+import { crc32, deflateRawSync, gzipSync } from 'node:zlib';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { detectarFormato } from '../src/bd/formato';
+import { Respaldos, type DepsRespaldos } from '../src/bd/respaldos';
+import type { MotorBd } from '../src/bd/env';
+import { Eventos, type EventosNucleo } from '../src/eventos';
+import { lanzadorPorDefecto } from '../src/plataforma/lanzar';
+import type { Ejecutor, Lanzador } from '../src/plataforma/tipos';
+import { PlataformaWindows } from '../src/plataforma/win';
+import { Rutas } from '../src/rutas';
+import type { EstadoServicio } from '../src/tipos';
+import { carpetaTemporal } from './temporales';
+
+const CLAVE = 'ClaveLocal#987';
+const CLAVE_ORIGEN = 'ClaveOrigen$123';
+const PGDMP = Buffer.concat([Buffer.from('PGDMP'), Buffer.from([1, 16, 0, 4, 8, 1, 1, 1])]);
+const TAR = path.win32.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe');
+
+/** Zip mínimo (deflate) para los fixtures. */
+function zip(archivos: Record<string, Buffer | string>): Buffer {
+  const locales: Buffer[] = [];
+  const centrales: Buffer[] = [];
+  let offset = 0;
+  for (const [nombre, contenido] of Object.entries(archivos)) {
+    const n = Buffer.from(nombre);
+    const d = Buffer.isBuffer(contenido) ? contenido : Buffer.from(contenido);
+    const c0 = deflateRawSync(d);
+    const l = Buffer.alloc(30);
+    l.writeUInt32LE(0x04034b50, 0);
+    l.writeUInt16LE(20, 4);
+    l.writeUInt16LE(8, 8);
+    l.writeUInt32LE(crc32(d), 14);
+    l.writeUInt32LE(c0.length, 18);
+    l.writeUInt32LE(d.length, 22);
+    l.writeUInt16LE(n.length, 26);
+    const c = Buffer.alloc(46);
+    c.writeUInt32LE(0x02014b50, 0);
+    c.writeUInt16LE(20, 4);
+    c.writeUInt16LE(20, 6);
+    c.writeUInt16LE(8, 10);
+    c.writeUInt32LE(crc32(d), 16);
+    c.writeUInt32LE(c0.length, 20);
+    c.writeUInt32LE(d.length, 24);
+    c.writeUInt16LE(n.length, 28);
+    c.writeUInt32LE(offset, 42);
+    locales.push(l, n, c0);
+    centrales.push(c, n);
+    offset += 30 + n.length + c0.length;
+  }
+  const cd = Buffer.concat(centrales);
+  const fin = Buffer.alloc(22);
+  fin.writeUInt32LE(0x06054b50, 0);
+  const total = Object.keys(archivos).length;
+  fin.writeUInt16LE(total, 8);
+  fin.writeUInt16LE(total, 10);
+  fin.writeUInt32LE(cd.length, 12);
+  fin.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locales, cd, fin]);
+}
+
+async function leerTodo(s: Readable): Promise<Buffer> {
+  const partes: Buffer[] = [];
+  for await (const p of s) partes.push(Buffer.from(p as Buffer));
+  return Buffer.concat(partes);
+}
+
+interface Lanzado {
+  cmd: string;
+  args: string[];
+  env: Record<string, string>;
+  entrada: string | null;
+  /** Lo que había en el archivo pasado por -f / último argumento al momento de lanzar. */
+  archivo: Buffer | null;
+}
+
+let dir: string;
+let rutas: Rutas;
+let lanzados: Lanzado[];
+let ejecutados: { cmd: string; args: string[]; env?: Record<string, string> }[];
+let creadas: { motor: MotorBd; base: string }[];
+let conTablas: boolean;
+let respuestaLanzar: (l: Lanzado) => { codigo: number; lineas?: string[] };
+let respuestaTar: (args: string[]) => { codigo: number };
+let documentos: string;
+let consultasOrigen: string[];
+let versionOrigen: string;
+let progreso: EventosNucleo['bd:progreso'][];
+let reloj: number;
+
+const estado = (id: string, version: string, puerto: number): EstadoServicio =>
+  ({ id, nombre: id, version, estado: 'encendido', puertos: [puerto], pid: 1 }) as EstadoServicio;
+
+function exes(): void {
+  const crear = (rel: string): void => {
+    const p = path.join(rutas.base, rel);
+    mkdirSync(path.dirname(p), { recursive: true });
+    writeFileSync(p, '');
+  };
+  for (const n of ['mysql.exe', 'mysqldump.exe']) crear(`bin/mysql/8.4.3/bin/${n}`);
+  for (const n of ['mariadb.exe', 'mariadb-dump.exe']) crear(`bin/mariadb/11.4.4/bin/${n}`);
+  for (const n of ['psql.exe', 'pg_dump.exe', 'pg_restore.exe'])
+    crear(`bin/postgresql/17.2/pgsql/bin/${n}`);
+}
+
+function armar(extra: Partial<DepsRespaldos> = {}): Respaldos {
+  const eventos = new Eventos<EventosNucleo>();
+  eventos.on('bd:progreso', (p) => progreso.push(p));
+  const exec: Ejecutor = async (cmd, args, opts) => {
+    ejecutados.push({ cmd, args, env: opts?.env });
+    if (cmd.toLowerCase().endsWith('tar.exe'))
+      return { ...respuestaTar(args), stdout: '', stderr: 'tar: error' };
+    if (args.includes('--version')) {
+      const b = path.basename(cmd);
+      const salida = b.startsWith('pg_')
+        ? `${b.replace('.exe', '')} (PostgreSQL) 17.2`
+        : b.startsWith('mariadb')
+          ? 'mariadb-dump from 11.4.4-MariaDB, client 10.19 for Win64 (AMD64)'
+          : 'mysqldump  Ver 8.4.3 for Win64 on x86_64 (MySQL Community Server - GPL)';
+      return { codigo: 0, stdout: salida, stderr: '' };
+    }
+    return { codigo: 0, stdout: '', stderr: '' };
+  };
+  const lanzar: Lanzador = async (cmd, args, opts) => {
+    const entrada = opts?.entrada
+      ? (await leerTodo(opts.entrada as Readable)).toString('utf8')
+      : null;
+    const f = args.indexOf('-f');
+    const ruta = f >= 0 ? args[f + 1] : args.at(-1);
+    const archivo = ruta && ruta !== '-' && existsSync(ruta) ? readFileSync(ruta) : null;
+    const l: Lanzado = { cmd, args, env: opts?.env ?? {}, entrada, archivo };
+    lanzados.push(l);
+    const r = respuestaLanzar(l);
+    for (const linea of r.lineas ?? []) opts?.alLinea?.(linea, 'stderr');
+    return { codigo: r.codigo };
+  };
+  const fabricaOrigen = (tipo: 'mysql' | 'pg') => async () => ({
+    query: async (s: string) => {
+      consultasOrigen.push(s);
+      const filas = [{ v: versionOrigen, version: versionOrigen }];
+      return tipo === 'pg' ? { rows: filas } : [filas];
+    },
+    end: async () => undefined,
+  });
+  const deps: DepsRespaldos = {
+    bd: {
+      conexion: async (motor: MotorBd) => ({
+        host: '127.0.0.1' as const,
+        puerto: motor === 'postgresql' ? 5432 : motor === 'mariadb' ? 3307 : 3306,
+        usuario: motor === 'postgresql' ? 'postgres' : 'root',
+        clave: CLAVE,
+      }),
+      crear: async (motor: MotorBd, base: string) => {
+        creadas.push({ motor, base });
+        return { usuarioActualizado: false };
+      },
+      tieneTablas: async () => conTablas,
+    },
+    servicios: {
+      estados: async () => [
+        estado('mysql', '8.4.3', 3306),
+        estado('mariadb', '11.4.4', 3307),
+        estado('postgresql', '17.2', 5432),
+      ],
+    },
+    rutas,
+    exec,
+    lanzar,
+    eventos,
+    plataforma: { carpetaDocumentos: async () => documentos },
+    fabricas: { mysql: fabricaOrigen('mysql') as never, postgres: fabricaOrigen('pg') as never },
+    reloj: () => new Date(reloj),
+    rutaTar: TAR,
+    ...extra,
+  };
+  return new Respaldos(deps);
+}
+
+/** Simula pg_dump/mysqldump: escribe el archivo de salida indicado en args. */
+function volcadoFalso(l: Lanzado): void {
+  const f = l.args.indexOf('-f');
+  const r = l.args.find((a) => a.startsWith('--result-file='));
+  const destino = f >= 0 ? l.args[f + 1]! : r!.slice('--result-file='.length);
+  writeFileSync(
+    destino,
+    l.cmd.includes('pg_dump') ? PGDMP : '-- MySQL dump\nCREATE TABLE t (id int);\n',
+  );
+}
+
+beforeEach(async () => {
+  dir = await carpetaTemporal('pel-resp-');
+  rutas = new Rutas(path.join(dir, 'base'));
+  exes();
+  documentos = path.join(dir, 'Documentos');
+  lanzados = [];
+  ejecutados = [];
+  creadas = [];
+  conTablas = false;
+  respuestaLanzar = (l) => {
+    if (l.cmd.includes('dump')) volcadoFalso(l);
+    return { codigo: 0 };
+  };
+  respuestaTar = () => ({ codigo: 0 });
+  consultasOrigen = [];
+  versionOrigen = '17.2';
+  progreso = [];
+  reloj = Date.UTC(2026, 10, 18, 14, 30);
+});
+
+function fixture(nombre: string, contenido: Buffer | string): string {
+  const p = path.join(dir, nombre);
+  writeFileSync(p, contenido);
+  return p;
+}
+
+const sinClaves = (l: Lanzado): void => {
+  for (const a of l.args) {
+    expect(a).not.toContain(CLAVE);
+    expect(a).not.toContain(CLAVE_ORIGEN);
+  }
+};
+
+describe('detectarFormato', () => {
+  it('detecta por bytes mágicos y no por extensión', async () => {
+    expect(await detectarFormato(fixture('plano.sql', 'CREATE TABLE t (id int);\n'))).toBe('sql');
+    expect(await detectarFormato(fixture('diamantes.sql', PGDMP))).toBe('pgdump');
+    expect(await detectarFormato(fixture('a.sql.gz', gzipSync('SELECT 1;')))).toBe('gz');
+    expect(await detectarFormato(fixture('a.zip', zip({ 'a.sql': 'SELECT 1;' })))).toBe('zip');
+    expect(
+      await detectarFormato(fixture('a.rar', Buffer.from('Rar!\x1a\x07\x01\x00', 'latin1'))),
+    ).toBe('rar');
+    expect(
+      await detectarFormato(
+        fixture('a.7z', Buffer.from([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c, 0, 4])),
+      ),
+    ).toBe('7z');
+    expect(await detectarFormato(fixture('raro.sql', Buffer.from([0, 1, 2, 3, 0, 0, 9])))).toBe(
+      'desconocido',
+    );
+    expect(await detectarFormato(fixture('vacio.sql', ''))).toBe('desconocido');
+    // mysqldump redirigido en PowerShell 5.1 queda en UTF-16LE con BOM.
+    const utf16 = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('SELECT 1;\n', 'utf16le')]);
+    expect(await detectarFormato(fixture('ps.sql', utf16))).toBe('sql');
+  });
+});
+
+describe('restaurar', () => {
+  it('rechaza una base con tablas sin confirmación y no ejecuta nada', async () => {
+    conTablas = true;
+    const r = armar();
+    await expect(r.restaurar('postgresql', fixture('d.sql', PGDMP), 'diamantes')).rejects.toThrow(
+      'La base diamantes ya tiene tablas',
+    );
+    expect(lanzados).toEqual([]);
+    expect(ejecutados).toEqual([]);
+    expect(creadas).toEqual([]);
+  });
+
+  it('pg_dump custom (aunque se llame .sql) va a pg_restore sin dueño ni privilegios', async () => {
+    const archivo = fixture('diamantes.sql', PGDMP);
+    const res = await armar().restaurar('postgresql', archivo, 'diamantes');
+    expect(res).toEqual({ advertencias: [] });
+    expect(creadas).toEqual([{ motor: 'postgresql', base: 'diamantes' }]);
+    const l = lanzados[0]!;
+    expect(l.cmd).toBe(
+      path.join(rutas.bin('postgresql', '17.2'), 'pgsql', 'bin', 'pg_restore.exe'),
+    );
+    expect(l.args).toEqual([
+      '--no-owner',
+      '--no-privileges',
+      '--verbose',
+      '--no-password',
+      '-h',
+      '127.0.0.1',
+      '-p',
+      '5432',
+      '-U',
+      'postgres',
+      '-d',
+      'diamantes',
+      archivo,
+    ]);
+    expect(l.env.PGPASSWORD).toBe(CLAVE);
+    sinClaves(l);
+  });
+
+  it('con confirmación sobre una base con tablas limpia los objetos del respaldo', async () => {
+    conTablas = true;
+    await armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes', {
+      confirmarSobrescribir: true,
+    });
+    expect(lanzados[0]!.args).toEqual(expect.arrayContaining(['--clean', '--if-exists']));
+  });
+
+  it('sql plano en PostgreSQL va por psql con ON_ERROR_STOP=0 sin salir de la base', async () => {
+    const sql =
+      'CREATE DATABASE otra;\n\\connect otra\nCREATE TABLE t (id int);\n' +
+      'COPY t (id) FROM stdin;\n\\connect dato\n\\.\n';
+    await armar().restaurar('postgresql', fixture('p.sql', sql), 'tienda');
+    const l = lanzados[0]!;
+    expect(path.basename(l.cmd)).toBe('psql.exe');
+    expect(l.args).toEqual([
+      '-X',
+      '-q',
+      '--no-password',
+      '-v',
+      'ON_ERROR_STOP=0',
+      '-h',
+      '127.0.0.1',
+      '-p',
+      '5432',
+      '-U',
+      'postgres',
+      '-d',
+      'tienda',
+      '-f',
+      '-',
+    ]);
+    expect(l.env.PGPASSWORD).toBe(CLAVE);
+    // Los cambios de base se comentan; los datos de COPY no se tocan.
+    expect(l.entrada).toBe(
+      '-- CREATE DATABASE otra;\n-- \\connect otra\nCREATE TABLE t (id int);\n' +
+        'COPY t (id) FROM stdin;\n\\connect dato\n\\.\n',
+    );
+    sinClaves(l);
+  });
+
+  it('sql en MySQL va por stdin a mysql <base> y no cambia de base', async () => {
+    const sql = '-- MySQL dump\nCREATE DATABASE `otra`;\nUSE `otra`;\nINSERT INTO t VALUES (1);\n';
+    const res = await armar().restaurar('mysql', fixture('m.sql', sql), 'tienda');
+    const l = lanzados[0]!;
+    expect(l.cmd).toBe(path.join(rutas.bin('mysql', '8.4.3'), 'bin', 'mysql.exe'));
+    expect(l.args).toEqual([
+      '--host=127.0.0.1',
+      '--port=3306',
+      '--user=root',
+      '--default-character-set=utf8mb4',
+      '--force',
+      'tienda',
+    ]);
+    expect(l.env.MYSQL_PWD).toBe(CLAVE);
+    expect(l.entrada).toBe(
+      '-- MySQL dump\n-- CREATE DATABASE `otra`;\n-- USE `otra`;\nINSERT INTO t VALUES (1);\n',
+    );
+    expect(res.advertencias.join('\n')).toContain('USE `otra`');
+    sinClaves(l);
+  });
+
+  it('MariaDB usa mariadb.exe', async () => {
+    await armar().restaurar('mariadb', fixture('m.sql', 'SELECT 1;\n'), 'tienda');
+    expect(lanzados[0]!.cmd).toBe(path.join(rutas.bin('mariadb', '11.4.4'), 'bin', 'mariadb.exe'));
+    expect(lanzados[0]!.args).toContain('--port=3307');
+  });
+
+  it('un .sql en UTF-16 se convierte a UTF-8', async () => {
+    const utf16 = Buffer.concat([
+      Buffer.from([0xff, 0xfe]),
+      Buffer.from('SELECT "ñ";\n', 'utf16le'),
+    ]);
+    await armar().restaurar('mysql', fixture('ps.sql', utf16), 'tienda');
+    expect(lanzados[0]!.entrada).toBe('SELECT "ñ";\n');
+  });
+
+  it('un .gz de sql se descomprime en streaming hacia mysql', async () => {
+    await armar().restaurar(
+      'mysql',
+      fixture('m.sql.gz', gzipSync('INSERT INTO t VALUES (2);\n')),
+      'tienda',
+    );
+    expect(lanzados[0]!.entrada).toBe('INSERT INTO t VALUES (2);\n');
+  });
+
+  it('un .gz de pg_dump se descomprime a un temporal que luego se borra', async () => {
+    const archivo = fixture('d.dump.gz', gzipSync(PGDMP));
+    await armar().restaurar('postgresql', archivo, 'diamantes');
+    const l = lanzados[0]!;
+    const ruta = l.args.at(-1)!;
+    expect(ruta).not.toBe(archivo);
+    expect(ruta.startsWith(rutas.tmp())).toBe(true);
+    expect(l.archivo?.subarray(0, 5).toString()).toBe('PGDMP');
+    expect(existsSync(ruta)).toBe(false);
+    expect(readFileSync(archivo)).toEqual(gzipSync(PGDMP));
+  });
+
+  it('un .zip/.rar se extrae con el tar de System32 y se elige el único respaldo', async () => {
+    respuestaTar = (args) => {
+      const destino = args[args.indexOf('-C') + 1]!;
+      mkdirSync(path.join(destino, 'carpeta'), { recursive: true });
+      writeFileSync(path.join(destino, 'carpeta', 'Diamantes.sql'), PGDMP);
+      writeFileSync(path.join(destino, 'leame.txt'), 'hola');
+      return { codigo: 0 };
+    };
+    const archivo = fixture('Diamantes.rar', Buffer.from('Rar!\x1a\x07\x01\x00', 'latin1'));
+    await armar().restaurar('postgresql', archivo, 'diamantes');
+    const tar = ejecutados.find((e) => e.cmd === TAR)!;
+    expect(tar.args.slice(0, 2)).toEqual(['-xf', archivo]);
+    expect(tar.args[2]).toBe('-C');
+    expect(tar.args[3]!.startsWith(rutas.tmp())).toBe(true);
+    const l = lanzados[0]!;
+    expect(path.basename(l.cmd)).toBe('pg_restore.exe');
+    expect(path.basename(l.args.at(-1)!)).toBe('Diamantes.sql');
+    expect(readdirSync(rutas.tmp())).toEqual([]);
+  });
+
+  it('si tar falla, pide descomprimir a mano y no restaura ni crea la base', async () => {
+    respuestaTar = () => ({ codigo: 1 });
+    const archivo = fixture('Diamantes.rar', Buffer.from('Rar!\x1a\x07\x01\x00', 'latin1'));
+    await expect(armar().restaurar('postgresql', archivo, 'diamantes')).rejects.toThrow(
+      'Descomprima el archivo y elija el .sql o .dump que contiene',
+    );
+    expect(lanzados).toEqual([]);
+    expect(creadas).toEqual([]);
+    expect(readdirSync(rutas.tmp())).toEqual([]);
+  });
+
+  it('si hay varios respaldos dentro, pide elegir uno', async () => {
+    respuestaTar = (args) => {
+      const destino = args[args.indexOf('-C') + 1]!;
+      writeFileSync(path.join(destino, 'a.sql'), 'SELECT 1;');
+      writeFileSync(path.join(destino, 'b.dump'), PGDMP);
+      return { codigo: 0 };
+    };
+    await expect(
+      armar().restaurar('postgresql', fixture('x.zip', zip({ 'a.sql': '1' })), 'tienda'),
+    ).rejects.toThrow('Hay varios respaldos dentro; descomprima y elija uno');
+    expect(lanzados).toEqual([]);
+  });
+
+  it.runIf(process.platform === 'win32' && existsSync(TAR))(
+    'el tar real de Windows extrae un .zip con un pg_dump llamado .sql',
+    async () => {
+      respuestaTar = undefined as never;
+      const real: Ejecutor = async (cmd, args, opts) => {
+        const { ejecutorPorDefecto } = await import('../src/plataforma/win');
+        return ejecutorPorDefecto(cmd, args, opts);
+      };
+      const archivo = fixture('d.zip', zip({ 'respaldo/Diamantes.sql': PGDMP }));
+      await armar({ exec: real }).restaurar('postgresql', archivo, 'diamantes');
+      expect(path.basename(lanzados[0]!.args.at(-1)!)).toBe('Diamantes.sql');
+      expect(lanzados[0]!.archivo?.subarray(0, 5).toString()).toBe('PGDMP');
+    },
+  );
+
+  it('no restaura un pg_dump en MySQL', async () => {
+    await expect(armar().restaurar('mysql', fixture('d.sql', PGDMP), 'tienda')).rejects.toThrow(
+      /PostgreSQL/,
+    );
+    expect(lanzados).toEqual([]);
+    expect(creadas).toEqual([]);
+  });
+
+  it('pg_restore con errores ignorados devuelve advertencias', async () => {
+    respuestaLanzar = () => ({
+      codigo: 1,
+      lineas: [
+        'pg_restore: processing data for table "public.clientes"',
+        'pg_restore: error: could not execute query: ERROR:  role "diamantes_app" does not exist',
+        'pg_restore: warning: errors ignored on restore: 1',
+      ],
+    });
+    const r = await armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes');
+    expect(r.advertencias).toEqual([
+      'pg_restore: error: could not execute query: ERROR:  role "diamantes_app" does not exist',
+      'pg_restore: warning: errors ignored on restore: 1',
+    ]);
+  });
+
+  it('un fallo real se informa sin la clave', async () => {
+    respuestaLanzar = () => ({
+      codigo: 1,
+      lineas: [`pg_restore: error: connection failed: password "${CLAVE}" rejected`],
+    });
+    const p = armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes');
+    await expect(p).rejects.toThrow(/No se pudo restaurar la base diamantes/);
+    await expect(p).rejects.not.toThrow(CLAVE);
+  });
+
+  it('emite bd:progreso sin claves y como mucho 10 por segundo', async () => {
+    respuestaLanzar = () => ({
+      codigo: 0,
+      lineas: [
+        ...Array.from({ length: 20 }, (_, i) => `pg_restore: processing item ${i}`),
+        `pg_restore: clave ${CLAVE}`,
+      ],
+    });
+    await armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes');
+    expect(progreso.length).toBeGreaterThan(0);
+    expect(progreso.length).toBeLessThanOrEqual(2); // reloj detenido: la primera y la última
+    expect(progreso[0]).toEqual({
+      operacion: 'restaurar',
+      motor: 'postgresql',
+      base: 'diamantes',
+      linea: expect.any(String),
+    });
+    expect(progreso.at(-1)!.linea).toBe('pg_restore: clave ***');
+  });
+
+  it('valida el nombre y las bases del sistema antes de tocar nada', async () => {
+    const r = armar();
+    await expect(r.restaurar('postgresql', fixture('d.dump', PGDMP), 'Mala-Base')).rejects.toThrow(
+      /no es válido/,
+    );
+    await expect(r.restaurar('mysql', fixture('m.sql', 'SELECT 1;'), 'mysql')).rejects.toThrow(
+      /sistema/,
+    );
+    await expect(r.restaurar('mongodb', fixture('m.sql', 'x'), 'tienda')).rejects.toThrow(
+      /MongoDB/,
+    );
+    expect(lanzados).toEqual([]);
+  });
+});
+
+describe('respaldar', () => {
+  it('pg_dump -Fc a Documentos\\WolfCore Dev\\Respaldos con fecha', async () => {
+    reloj = new Date(2026, 10, 18, 9, 5).getTime();
+    const r = await armar().respaldar('postgresql', 'diamantes');
+    const esperado = path.join(
+      documentos,
+      'WolfCore Dev',
+      'Respaldos',
+      'diamantes-20261118-0905.dump',
+    );
+    expect(r).toEqual({ archivo: esperado });
+    expect(readFileSync(esperado).subarray(0, 5).toString()).toBe('PGDMP');
+    const l = lanzados[0]!;
+    expect(path.basename(l.cmd)).toBe('pg_dump.exe');
+    expect(l.args.slice(0, 2)).toEqual(['-Fc', '--verbose']);
+    expect(l.args).toEqual(
+      expect.arrayContaining(['-h', '127.0.0.1', '-p', '5432', '-U', 'postgres']),
+    );
+    expect(l.args.at(-1)).toBe('diamantes');
+    expect(l.env.PGPASSWORD).toBe(CLAVE);
+    sinClaves(l);
+    expect(readdirSync(path.dirname(esperado))).toEqual(['diamantes-20261118-0905.dump']);
+  });
+
+  it('mysqldump con transacción única, rutinas y triggers a la carpeta elegida', async () => {
+    reloj = new Date(2026, 0, 2, 23, 59).getTime();
+    const carpeta = path.join(dir, 'elegida');
+    const r = await armar().respaldar('mysql', 'tienda', carpeta);
+    expect(r.archivo).toBe(path.join(carpeta, 'tienda-20260102-2359.sql'));
+    const l = lanzados[0]!;
+    expect(path.basename(l.cmd)).toBe('mysqldump.exe');
+    expect(l.args).toEqual(
+      expect.arrayContaining(['--single-transaction', '--routines', '--triggers']),
+    );
+    expect(l.args.some((a) => a.startsWith('--result-file='))).toBe(true);
+    expect(l.args.at(-1)).toBe('tienda');
+    expect(l.env.MYSQL_PWD).toBe(CLAVE);
+    sinClaves(l);
+  });
+
+  it('no pisa un respaldo del mismo minuto', async () => {
+    const r = armar();
+    const a = await r.respaldar('mysql', 'tienda', dir);
+    const b = await r.respaldar('mysql', 'tienda', dir);
+    expect(b.archivo).not.toBe(a.archivo);
+  });
+
+  it('si falla, borra el archivo a medias', async () => {
+    respuestaLanzar = (l) => {
+      volcadoFalso(l);
+      return { codigo: 2, lineas: ['mysqldump: Got error: 1049: Unknown database'] };
+    };
+    const carpeta = path.join(dir, 'fallo');
+    await expect(armar().respaldar('mysql', 'tienda', carpeta)).rejects.toThrow(
+      /No se pudo respaldar la base tienda/,
+    );
+    expect(readdirSync(carpeta)).toEqual([]);
+  });
+});
+
+describe('importar', () => {
+  const origenPg = {
+    host: '127.0.0.1',
+    puerto: 5433,
+    usuario: 'flyenv',
+    clave: CLAVE_ORIGEN,
+    base: 'dollar',
+  };
+  const origenMy = { ...origenPg, puerto: 3308, base: 'dollar' };
+
+  it('vuelca el origen (solo lectura) y restaura en la base local', async () => {
+    versionOrigen = 'PostgreSQL 16.4, compiled by Visual C++ build 1940, 64-bit';
+    const r = await armar().importar('postgresql', origenPg, 'dollar');
+    expect(r.advertencias).toEqual([]);
+    expect(consultasOrigen).toEqual(['SELECT version() AS version']);
+    const [volcado, restauracion] = lanzados;
+    expect(path.basename(volcado!.cmd)).toBe('pg_dump.exe');
+    expect(volcado!.args).toEqual(
+      expect.arrayContaining(['-Fc', '-h', '127.0.0.1', '-p', '5433', '-U', 'flyenv']),
+    );
+    expect(volcado!.args.at(-1)).toBe('dollar');
+    expect(volcado!.env.PGPASSWORD).toBe(CLAVE_ORIGEN);
+    expect(path.basename(restauracion!.cmd)).toBe('pg_restore.exe');
+    expect(restauracion!.args).toEqual(expect.arrayContaining(['-p', '5432', '-d', 'dollar']));
+    expect(restauracion!.env.PGPASSWORD).toBe(CLAVE);
+    for (const l of lanzados) sinClaves(l);
+    expect(readdirSync(rutas.tmp())).toEqual([]);
+  });
+
+  it('si el origen PostgreSQL es más nuevo, dice qué versión instalar', async () => {
+    versionOrigen = 'PostgreSQL 18.1 on x86_64-pc-linux-gnu';
+    await expect(armar().importar('postgresql', origenPg, 'dollar')).rejects.toThrow(
+      /PostgreSQL 18/,
+    );
+    expect(lanzados).toEqual([]);
+  });
+
+  it('MySQL compara mayor y menor', async () => {
+    versionOrigen = '9.1.0';
+    await expect(armar().importar('mysql', origenMy, 'dollar')).rejects.toThrow(/MySQL 9\.1/);
+    expect(lanzados).toEqual([]);
+    versionOrigen = '8.0.36-log';
+    await armar().importar('mysql', origenMy, 'dollar');
+    const v = lanzados[0]!;
+    expect(path.basename(v.cmd)).toBe('mysqldump.exe');
+    expect(v.args).toEqual(expect.arrayContaining(['--single-transaction', '--port=3308']));
+    expect(v.env.MYSQL_PWD).toBe(CLAVE_ORIGEN);
+    for (const l of lanzados) sinClaves(l);
+  });
+
+  it('un origen MariaDB no se importa en MySQL', async () => {
+    versionOrigen = '10.11.6-MariaDB';
+    await expect(armar().importar('mysql', origenMy, 'dollar')).rejects.toThrow(/MariaDB/);
+  });
+
+  it('borra el temporal aunque la restauración falle', async () => {
+    versionOrigen = 'PostgreSQL 17.0';
+    respuestaLanzar = (l) => {
+      if (l.cmd.includes('pg_dump')) {
+        volcadoFalso(l);
+        return { codigo: 0 };
+      }
+      return { codigo: 1, lineas: ['pg_restore: error: fatal'] };
+    };
+    await expect(armar().importar('postgresql', origenPg, 'dollar')).rejects.toThrow();
+    expect(lanzados).toHaveLength(2);
+    expect(readdirSync(rutas.tmp())).toEqual([]);
+  });
+
+  it('borra el temporal aunque el volcado falle, sin mostrar la clave', async () => {
+    versionOrigen = 'PostgreSQL 17.0';
+    respuestaLanzar = (l) => {
+      volcadoFalso(l);
+      return { codigo: 1, lineas: [`pg_dump: error: password ${CLAVE_ORIGEN} failed`] };
+    };
+    const p = armar().importar('postgresql', origenPg, 'dollar');
+    await expect(p).rejects.toThrow(/origen/);
+    await expect(p).rejects.not.toThrow(CLAVE_ORIGEN);
+    expect(readdirSync(rutas.tmp())).toEqual([]);
+  });
+
+  it('rechaza un destino con tablas antes de contactar al origen', async () => {
+    conTablas = true;
+    await expect(armar().importar('postgresql', origenPg, 'dollar')).rejects.toThrow(
+      'La base dollar ya tiene tablas',
+    );
+    expect(consultasOrigen).toEqual([]);
+    expect(lanzados).toEqual([]);
+  });
+
+  it('no importa una base sobre sí misma', async () => {
+    await expect(
+      armar().importar('postgresql', { ...origenPg, puerto: 5432 }, 'dollar'),
+    ).rejects.toThrow(/misma base/);
+  });
+});
+
+describe('lanzadorPorDefecto', () => {
+  it('pasa un flujo grande por stdin con contrapresión y lee líneas', async () => {
+    const { Readable } = await import('node:stream');
+    const lineas: string[] = [];
+    const datos = Buffer.alloc(4 * 1024 * 1024, 'a');
+    const r = await lanzadorPorDefecto(
+      process.execPath,
+      [
+        '-e',
+        "let n=0;process.stdin.on('data',d=>n+=d.length).on('end',()=>console.log('total '+n))",
+      ],
+      { entrada: Readable.from([datos]), alLinea: (l) => lineas.push(l) },
+    );
+    expect(r.codigo).toBe(0);
+    expect(lineas).toEqual([`total ${datos.length}`]);
+  });
+
+  it('si el proceso sale sin leer stdin, no revienta con EPIPE', async () => {
+    const { Readable } = await import('node:stream');
+    const datos = Buffer.alloc(8 * 1024 * 1024, 'b');
+    const r = await lanzadorPorDefecto(process.execPath, ['-e', 'process.exit(3)'], {
+      entrada: Readable.from([datos]),
+    });
+    expect(r.codigo).toBe(3);
+  });
+
+  it('pasa las variables de entorno', async () => {
+    const lineas: string[] = [];
+    await lanzadorPorDefecto(process.execPath, ['-e', 'console.log(process.env.PEL_X)'], {
+      env: { PEL_X: 'hola' },
+      alLinea: (l) => lineas.push(l),
+    });
+    expect(lineas).toEqual(['hola']);
+  });
+});
+
+describe('carpetaDocumentos', () => {
+  it('usa la carpeta Mis documentos de Windows y, si falla, %USERPROFILE%\\Documents', async () => {
+    const ok = new PlataformaWindows(async () => ({
+      codigo: 0,
+      stdout: 'D:\\Docs\r\n',
+      stderr: '',
+    }));
+    expect(await ok.carpetaDocumentos()).toBe('D:\\Docs');
+    const mal = new PlataformaWindows(async () => ({ codigo: 1, stdout: '', stderr: 'x' }));
+    const perfil = process.env.USERPROFILE;
+    process.env.USERPROFILE = 'C:\\Users\\prueba';
+    try {
+      expect(await mal.carpetaDocumentos()).toBe('C:\\Users\\prueba\\Documents');
+    } finally {
+      if (perfil === undefined) delete process.env.USERPROFILE;
+      else process.env.USERPROFILE = perfil;
+    }
+  });
+});

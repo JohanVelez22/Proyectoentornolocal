@@ -240,6 +240,12 @@ export class ClientePostgres {
     }
   }
 
+  /** Texto de `SELECT version()` (p. ej. "PostgreSQL 17.2, compiled by…"); solo lectura. */
+  async version(): Promise<string> {
+    const f = await this.filas('SELECT version() AS version');
+    return String(f[0]?.version ?? '');
+  }
+
   async tieneTablas(nombre: string): Promise<boolean> {
     validarNombrePg(nombre);
     try {
