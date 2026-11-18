@@ -10,6 +10,7 @@ import type { EstadoServicio } from '../src/tipos';
 const CLAVE = 'ClaveSecreta123';
 let base: string;
 let sql: { motor: string; sql: string; params?: unknown[] }[];
+let cierres: number;
 let ejecuciones: { cmd: string; args: string[] }[];
 let salidaMongo: { codigo: number; stdout: string; stderr: string };
 
@@ -26,7 +27,9 @@ function armar(estados: EstadoServicio[]): BasesDeDatos {
       sql.push({ motor, sql: s, params });
       return motor === 'pg' ? { rows: [] } : [[{ nombre: 'b', tam: 0, n: 0 }]];
     },
-    end: async () => undefined,
+    end: async () => {
+      cierres++;
+    },
   });
   return new BasesDeDatos({
     servicios: { estados: async () => estados },
@@ -47,6 +50,7 @@ const todos = (): EstadoServicio[] => [
 beforeEach(() => {
   base = mkdtempSync(path.join(os.tmpdir(), 'bdd-'));
   sql = [];
+  cierres = 0;
   ejecuciones = [];
   salidaMongo = { codigo: 0, stdout: '[]', stderr: '' };
 });
@@ -174,6 +178,7 @@ describe('mysql, mariadb y postgresql', () => {
     expect(Array.isArray(await b.listar('mysql'))).toBe(true);
     await b.listar('postgresql');
     expect(sql.map((s) => s.motor)).toEqual(['mysql', 'pg']);
+    expect(cierres).toBe(2);
   });
 
   it('borrar exige que la confirmación sea el nombre y no ejecuta nada si no', async () => {
@@ -192,6 +197,42 @@ describe('mysql, mariadb y postgresql', () => {
     expect(sql.some((s) => s.sql.startsWith('CREATE DATABASE'))).toBe(true);
     await expect(b.crear('mysql', 'mysql')).rejects.toThrow(/base del sistema/);
     await expect(b.crear('postgresql', 'Mala-Base')).rejects.toThrow(/no es válido/);
+  });
+});
+
+describe('valores del .env', () => {
+  const RARA = 'p#a ss"x$y';
+  const con = (clave: string) =>
+    new BasesDeDatos({
+      servicios: { estados: async () => todos() },
+      credenciales: { leer: async () => ({ usuario: 'x', clave }) },
+      rutas: new Rutas(base),
+      exec: async () => salidaMongo,
+    });
+
+  it('entrecomilla y escapa lo que dotenv malinterpretaría', async () => {
+    const t = await con(RARA).bloqueEnv('mysql', 'tienda', 'laravel');
+    expect(t).toContain('DB_PASSWORD="p#a ss\\"x\\$y"\n');
+    expect(t).toContain('DB_DATABASE=tienda\n');
+    const ci = await con(RARA).bloqueEnv(
+      'mysql',
+      'tienda',
+      'codeigniter3',
+      'database.default.port = 1\n',
+    );
+    expect(ci).toContain('database.default.password = "p#a ss\\"x\\$y"\n');
+  });
+
+  it('rechaza saltos de línea en base, usuario o clave', async () => {
+    await expect(con('a\nDB_HOST=evil').bloqueEnv('mysql', 'x', 'laravel')).rejects.toThrow(
+      'Valor no válido para .env',
+    );
+    await expect(con('a\rb').bloqueEnv('mysql', 'x', 'laravel')).rejects.toThrow(
+      'Valor no válido para .env',
+    );
+    await expect(con('ok').bloqueEnv('mysql', 'x\ny', 'laravel')).rejects.toThrow(
+      'Valor no válido para .env',
+    );
   });
 });
 
@@ -220,6 +261,29 @@ describe('MongoDB', () => {
     ]);
     expect(ejecuciones[0]!.cmd).toBe(exe);
     expect(ejecuciones[0]!.args).toEqual(expect.arrayContaining(['--port', '27017', '--quiet']));
+  });
+
+  it('una respuesta no JSON, un banner o algo que no es lista se rechaza', async () => {
+    instalarMongosh();
+    for (const stdout of ['Current Mongosh Log ID: abc\n', '{"nombre":"a"}', 'null']) {
+      salidaMongo = { codigo: 0, stdout, stderr: '' };
+      await expect(armar(todos()).listar('mongodb')).rejects.toThrow(/no se entiende/);
+    }
+  });
+
+  it('listar descarta entradas sin nombre', async () => {
+    instalarMongosh();
+    salidaMongo = {
+      codigo: 0,
+      stdout: JSON.stringify([
+        { nombre: '', tamanoBytes: 1 },
+        null,
+        { tamanoBytes: 2 },
+        { nombre: 'ok' },
+      ]),
+      stderr: '',
+    };
+    expect(await armar(todos()).listar('mongodb')).toEqual([{ nombre: 'ok', tamanoBytes: 0 }]);
   });
 
   it('crear y borrar arman el JS solo con nombres validados', async () => {

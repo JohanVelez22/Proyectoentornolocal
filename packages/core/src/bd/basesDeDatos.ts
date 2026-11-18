@@ -151,7 +151,9 @@ export class BasesDeDatos {
         "EJSON.stringify(db.getSiblingDB('admin').adminCommand({listDatabases:1}).databases" +
           '.map(d=>({nombre:d.name,tamanoBytes:d.sizeOnDisk})))',
       );
-      bases = (Array.isArray(r) ? (r as BaseListada[]) : [])
+      if (!Array.isArray(r)) throw new Error('MongoDB devolvió una respuesta que no se entiende.');
+      bases = (r as BaseListada[])
+        .filter((b) => b && typeof b.nombre === 'string' && b.nombre !== '')
         .filter((b) => !SISTEMA_MONGO.includes(b.nombre))
         .map((b) => ({ nombre: String(b.nombre), tamanoBytes: Number(b.tamanoBytes) || 0 }));
     } else if (motor === 'postgresql') {
