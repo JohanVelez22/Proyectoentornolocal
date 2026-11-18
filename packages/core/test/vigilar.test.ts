@@ -97,7 +97,7 @@ describe('vigilar', () => {
     eventos.on('proyectos:sugerencias', oyente);
     await vigilante.vigilar(base);
     await mkdir(join(base, 'basura'));
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 800));
     expect(oyente).not.toHaveBeenCalled();
   });
 
@@ -108,7 +108,7 @@ describe('vigilar', () => {
     await vigilante.vigilar(base);
     await vigilante.vigilar(null);
     await laravel(base, 'tarde');
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 800));
     expect(oyente).not.toHaveBeenCalled();
   });
 
@@ -116,7 +116,7 @@ describe('vigilar', () => {
     await expect(vigilante.vigilar(join(base, 'no-existe'))).resolves.toBeUndefined();
   });
 
-  it('si la carpeta vigilada desaparece no se cae y la lista queda vacía', async () => {
+  it('si la carpeta vigilada desaparece emite [] y no lanza', async () => {
     const dir = join(base, 'raiz');
     await mkdir(dir);
     await laravel(dir, 'uno');
@@ -125,7 +125,46 @@ describe('vigilar', () => {
     eventos.on('proyectos:sugerencias', oyente);
     await vigilante.vigilar(dir);
     await rm(dir, { recursive: true, force: true });
-    await new Promise((r) => setTimeout(r, 400));
+    await vi.waitFor(() => expect(oyente).toHaveBeenCalledWith([]), { timeout: 5000 });
     expect(await vigilante.sugerencias()).toEqual([]);
+  });
+
+  it('tras vigilar(null), sugerencias() da [] aunque la config tenga carpeta', async () => {
+    await laravel(base, 'uno');
+    config.proyectos.carpetaVigilada = base;
+    await vigilante.vigilar(null);
+    expect(await vigilante.sugerencias()).toEqual([]);
+  });
+
+  it('descarta un refresco lento si hubo otro después', async () => {
+    const a = await laravel(base, 'uno');
+    config.proyectos.carpetaVigilada = base;
+    let llamada = 0;
+    const lento = new VigilanteProyectos({
+      leerConfig: async () => {
+        const n = ++llamada;
+        // la 2.ª lectura (primer refresco) tarda más que la 3.ª (segundo refresco)
+        if (n === 2) await new Promise((r) => setTimeout(r, 300));
+        return config;
+      },
+      eventos,
+      esperaMs: 20,
+    });
+    const oyente = vi.fn();
+    eventos.on('proyectos:sugerencias', oyente);
+    try {
+      await lento.vigilar(base); // lectura 1: línea base
+      const b = await laravel(base, 'dos');
+      await new Promise((r) => setTimeout(r, 100)); // dispara el refresco lento (lectura 2)
+      await rm(b, { recursive: true, force: true });
+      await new Promise((r) => setTimeout(r, 100)); // refresco rápido (lectura 3): lista == base
+      await new Promise((r) => setTimeout(r, 500));
+      // el resultado viejo (con "dos") nunca debe emitirse
+      for (const c of oyente.mock.calls) {
+        expect(c[0].map((x: { carpeta: string }) => x.carpeta)).toEqual([a]);
+      }
+    } finally {
+      lento.dispose();
+    }
   });
 });

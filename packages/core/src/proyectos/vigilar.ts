@@ -1,5 +1,5 @@
 import { watch, type FSWatcher } from 'node:fs';
-import { readdir } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import type { Eventos, EventosNucleo } from '../eventos';
 import type { Config } from '../tipos';
@@ -40,13 +40,19 @@ export class VigilanteProyectos {
   private ultima: string | null = null;
   /** Cada cambio de vigilancia invalida los cálculos que estaban en curso. */
   private generacion = 0;
+  /** Número del último refresco lanzado: un resultado que no es el último se descarta. */
+  private secuencia = 0;
+  /** Se llamó a vigilar(): manda sobre la carpeta de la config (aunque sea null). */
+  private fijada = false;
+  private primerEvento = 0;
 
   constructor(private readonly d: DepsVigilante) {}
 
   /** Sugerencias de la carpeta vigilada en la configuración (vacío si no hay o no existe). */
   async sugerencias(): Promise<SugerenciaProyecto[]> {
     const cfg = await this.d.leerConfig();
-    return this.calcular(this.carpeta ?? cfg.proyectos.carpetaVigilada, cfg);
+    const carpeta = this.fijada ? this.carpeta : cfg.proyectos.carpetaVigilada;
+    return this.calcular(carpeta, cfg);
   }
 
   private async calcular(carpeta: string | null, cfg: Config): Promise<SugerenciaProyecto[]> {
@@ -81,6 +87,7 @@ export class VigilanteProyectos {
     this.detener();
     const gen = this.generacion;
     this.carpeta = carpeta;
+    this.fijada = true;
     this.ultima = null;
     if (!carpeta) return;
     try {
@@ -98,27 +105,49 @@ export class VigilanteProyectos {
     try {
       const cfg = await this.d.leerConfig();
       const lista = await this.calcular(carpeta, cfg);
-      if (gen === this.generacion) this.ultima = JSON.stringify(lista.map((s) => s.carpeta));
+      if (gen === this.generacion && this.ultima === null) {
+        this.ultima = JSON.stringify(lista.map((s) => s.carpeta));
+      }
     } catch {
       // sin línea base: el primer cambio emite
     }
   }
 
   private programar(): void {
-    if (this.temporizador) clearTimeout(this.temporizador);
+    const espera = this.d.esperaMs ?? 1000;
+    const ahora = Date.now();
+    if (this.temporizador) {
+      // Al borrar la carpeta Windows lanza eventos sin parar: tope de espera para no postergar siempre.
+      if (ahora - this.primerEvento >= espera * 5) return;
+      clearTimeout(this.temporizador);
+    } else {
+      this.primerEvento = ahora;
+    }
     const gen = this.generacion;
     this.temporizador = setTimeout(() => {
       this.temporizador = null;
       void this.refrescar(gen);
-    }, this.d.esperaMs ?? 1000);
+    }, espera);
     this.temporizador.unref();
   }
 
   private async refrescar(gen: number): Promise<void> {
+    const mia = ++this.secuencia;
     try {
       const cfg = await this.d.leerConfig();
       const lista = await this.calcular(this.carpeta, cfg);
-      if (gen !== this.generacion) return;
+      if (gen !== this.generacion || mia !== this.secuencia) return;
+      if (
+        this.carpeta &&
+        !(await stat(this.carpeta).then(
+          (e) => e.isDirectory(),
+          () => false,
+        ))
+      ) {
+        // La carpeta ya no existe: se deja de vigilar (los eventos no paran) y se avisa una vez.
+        this.cerrarVigia();
+        if (gen !== this.generacion || mia !== this.secuencia) return;
+      }
       const firma = JSON.stringify(lista.map((s) => s.carpeta));
       if (firma === this.ultima) return;
       this.ultima = firma;
@@ -132,6 +161,10 @@ export class VigilanteProyectos {
     this.generacion++;
     if (this.temporizador) clearTimeout(this.temporizador);
     this.temporizador = null;
+    this.cerrarVigia();
+  }
+
+  private cerrarVigia(): void {
     try {
       this.vigia?.close();
     } catch {
@@ -143,5 +176,6 @@ export class VigilanteProyectos {
   dispose(): void {
     this.detener();
     this.carpeta = null;
+    this.fijada = true;
   }
 }
