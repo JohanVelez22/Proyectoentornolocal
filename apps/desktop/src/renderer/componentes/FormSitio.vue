@@ -43,6 +43,7 @@ import {
   redirigirHabilitado,
   sitioVacio,
   usaPhp,
+  usaProxy,
   validarFormularioSitio,
   type CampoSitio,
   type ObjetivoForm,
@@ -405,7 +406,7 @@ function alCambiarVisible(v: boolean): void {
             </NFormItem>
 
             <NFormItem
-              v-else-if="datos.tipo === 'proxy'"
+              v-else-if="usaProxy(datos.tipo)"
               :label="t.puertoProxy"
               :feedback="error('puertoProxy')"
               :validation-status="error('puertoProxy') ? 'error' : undefined"
@@ -428,7 +429,7 @@ function alCambiarVisible(v: boolean): void {
           >
             {{ avisoPhp }}
           </NAlert>
-          <small v-if="datos.tipo === 'proxy'" class="ayuda bloque">{{ t.puertoProxyAyuda }}</small>
+          <small v-if="usaProxy(datos.tipo)" class="ayuda bloque">{{ t.puertoProxyAyuda }}</small>
 
           <NFormItem
             :label="t.urlBaseVar"

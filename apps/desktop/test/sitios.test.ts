@@ -37,6 +37,10 @@ const sitio = (o: Partial<Sitio> = {}): Sitio => ({
   datosReales: false,
   https: false,
   redirigirHttps: false,
+  confiado: false,
+  git: null,
+  procesos: [],
+  runtimes: {},
   nota: '',
   ...o,
 });
@@ -155,6 +159,28 @@ describe('validarFormularioSitio', () => {
     expect(validarFormularioSitio(datos({ tipo: 'proxy', php: null }), []).puertoProxy).toBe(
       'Un sitio proxy necesita un puerto',
     );
+  });
+
+  it('tipos nuevos: CI4 y WordPress piden PHP; FastAPI y Node, un puerto', () => {
+    for (const tipo of ['codeigniter4', 'wordpress'] as const) {
+      expect(validarFormularioSitio(datos({ tipo, php: null }), []).php).toBeDefined();
+      expect(validarFormularioSitio(datos({ tipo }), [])).toEqual({});
+    }
+    for (const tipo of ['fastapi', 'node'] as const) {
+      expect(validarFormularioSitio(datos({ tipo, php: null }), []).puertoProxy).toBeDefined();
+      expect(validarFormularioSitio(datos({ tipo, puertoProxy: 8001 }), [])).toEqual({});
+      const proceso = {
+        id: 'dev',
+        nombre: 'Dev',
+        comando: ['npm', 'run', 'dev'],
+        cwd: 'raiz',
+        autoIniciar: true,
+        reiniciar: false,
+        puerto: 5173,
+      };
+      expect(validarFormularioSitio(datos({ tipo, procesos: [proceso] }), [])).toEqual({});
+      expect(limpiarDatos(datos({ tipo, puertoProxy: 8001 })).puertoProxy).toBe(8001);
+    }
   });
 
   it('detecta dominios o alias ya usados por otro sitio', () => {

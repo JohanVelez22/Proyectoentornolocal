@@ -19,11 +19,23 @@ export const TIPOS: readonly TipoSitio[] = [
   'estatico',
   'proxy',
   'personalizado',
+  'codeigniter4',
+  'wordpress',
+  'fastapi',
+  'node',
 ];
 
 /** Tipos que necesitan una versión de PHP (igual que el núcleo). */
 export const usaPhp = (tipo: TipoSitio): boolean =>
-  tipo === 'laravel' || tipo === 'codeigniter3' || tipo === 'personalizado';
+  tipo === 'laravel' ||
+  tipo === 'codeigniter3' ||
+  tipo === 'codeigniter4' ||
+  tipo === 'wordpress' ||
+  tipo === 'personalizado';
+
+/** Tipos que Nginx sirve como proxy hacia un puerto local (igual que el núcleo). */
+export const usaProxy = (tipo: TipoSitio): boolean =>
+  tipo === 'proxy' || tipo === 'fastapi' || tipo === 'node';
 
 export const SUFIJO = '.test';
 
@@ -219,6 +231,10 @@ export function sitioVacio(): DatosSitio {
     datosReales: false,
     https: false,
     redirigirHttps: false,
+    confiado: false,
+    git: null,
+    procesos: [],
+    runtimes: {},
     nota: '',
   };
 }
@@ -247,7 +263,7 @@ export function limpiarDatos(d: DatosSitio): DatosSitio {
     dominio: d.dominio.trim().toLowerCase(),
     alias: d.alias.map((a) => a.trim().toLowerCase()).filter(Boolean),
     php: usaPhp(d.tipo) ? d.php : null,
-    puertoProxy: d.tipo === 'proxy' ? d.puertoProxy : null,
+    puertoProxy: usaProxy(d.tipo) ? d.puertoProxy : null,
     urlBaseVar: d.urlBaseVar?.trim() || null,
     redirigirHttps: d.https && d.redirigirHttps,
     nota: d.nota.trim(),
@@ -296,10 +312,12 @@ export function validarFormularioSitio(
     if (!errores.alias && aliasOcupado) errores.alias = t.ocupado(aliasOcupado);
   }
 
-  if (d.tipo === 'proxy') {
+  if (usaProxy(d.tipo)) {
     const p = d.puertoProxy;
-    if (p === null) errores.puertoProxy = t.puertoFalta;
-    else if (!Number.isInteger(p) || p < 1 || p > 65535) errores.puertoProxy = t.puertoRango;
+    const conProceso = d.tipo !== 'proxy' && d.procesos.some((x) => x.puerto !== null);
+    if (p === null) {
+      if (!conProceso) errores.puertoProxy = t.puertoFalta;
+    } else if (!Number.isInteger(p) || p < 1 || p > 65535) errores.puertoProxy = t.puertoRango;
   } else if (usaPhp(d.tipo) && !d.php) {
     errores.php = t.php;
   }

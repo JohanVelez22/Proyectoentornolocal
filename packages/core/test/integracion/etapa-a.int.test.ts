@@ -87,6 +87,10 @@ const datosSitio = (extra: Partial<Omit<Sitio, 'id'>>): Omit<Sitio, 'id'> => ({
   datosReales: false,
   https: false,
   redirigirHttps: false,
+  confiado: false,
+  git: null,
+  procesos: [],
+  runtimes: {},
   nota: '',
   ...extra,
 });

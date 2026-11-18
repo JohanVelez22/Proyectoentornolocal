@@ -35,6 +35,7 @@ import {
   urlHttps,
   urlLocal,
   usaPhp,
+  usaProxy,
 } from '../utilidades/sitios';
 import EstadoPunto from './EstadoPunto.vue';
 import InterruptorTunel from './InterruptorTunel.vue';
@@ -156,7 +157,7 @@ function abrirCarpeta(): void {
             {{ t.php(sitio.php) }}
           </NTag>
           <NTag
-            v-if="sitio.tipo === 'proxy' && sitio.puertoProxy"
+            v-if="usaProxy(sitio.tipo) && sitio.puertoProxy"
             size="small"
             :bordered="false"
             class="etiqueta mono"

@@ -11,7 +11,7 @@ import { generarVhost } from '../nginx/plantillas';
 import { puertosPhp } from '../nginx/principal';
 import type { Rutas } from '../rutas';
 import type { ServicioNginx, UpstreamPhp } from '../servicios/nginx';
-import { SitioSchema, type Config, type Sitio } from '../tipos';
+import { SitioSchema, TIPOS_CON_PHP, TIPOS_PROXY, type Config, type Sitio } from '../tipos';
 
 export type ResultadoAplicar = {
   nginx: { ok: boolean; salida: string };
@@ -60,7 +60,7 @@ const comparar = (a: string, b: string): number => {
 export function ramasEnUso(sitios: Sitio[]): string[] {
   const set = new Set<string>();
   for (const s of sitios) {
-    if (s.tipo !== 'proxy' && s.tipo !== 'estatico' && s.php) set.add(s.php);
+    if (TIPOS_CON_PHP.includes(s.tipo) && s.php) set.add(s.php);
   }
   return [...set].sort(comparar);
 }
@@ -131,13 +131,25 @@ export class GestorSitios {
         throw new Error(`Ya existe un sitio con el dominio ${p}`);
       }
     }
+    const repetidoProc = datos.procesos.find(
+      (p, i) => datos.procesos.findIndex((q) => q.id === p.id) !== i,
+    );
+    if (repetidoProc) throw new Error(`El proceso ${repetidoProc.id} está repetido`);
     if (datos.tipo === 'proxy') {
       if (datos.puertoProxy === null) throw new Error('Un sitio proxy necesita un puerto');
       return;
     }
+    if (
+      TIPOS_PROXY.includes(datos.tipo) &&
+      datos.puertoProxy === null &&
+      !datos.procesos.some((p) => p.puerto !== null)
+    ) {
+      throw new Error(
+        'Un sitio FastAPI o Node necesita un puerto de proxy o un proceso con puerto',
+      );
+    }
     const cambioTipo = !previo || previo.tipo !== datos.tipo;
-    const usaPhp =
-      datos.tipo === 'laravel' || datos.tipo === 'codeigniter3' || datos.tipo === 'personalizado';
+    const usaPhp = TIPOS_CON_PHP.includes(datos.tipo);
     if (usaPhp && !datos.php) throw new Error('Seleccione una versión de PHP para este sitio');
     if (
       usaPhp &&

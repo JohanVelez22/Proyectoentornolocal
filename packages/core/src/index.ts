@@ -45,3 +45,5 @@ export * from './ftp/servidorFtp';
 export * from './ftp/sistemaArchivos';
 export * from './ia/ollama';
 export * from './runtimes/runtimes';
+export * from './proyectos/config';
+export * from './proyectos/detectar';

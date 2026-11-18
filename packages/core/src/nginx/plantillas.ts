@@ -1,4 +1,4 @@
-import { raizDeSitio, type Sitio } from '../tipos';
+import { raizDeSitio, TIPOS_CON_PHP, type Sitio } from '../tipos';
 
 export interface OpcionesVhost {
   puertoNginx: number;
@@ -73,6 +73,42 @@ function bloqueCi3(up: string): string[] {
   ];
 }
 
+/** Extensiones que nunca se sirven (respaldos, registros, configuración). */
+const SENSIBLES =
+  'location ~* \\.(sql|md|rst|lock|log|ini|sh|py|bak|old|dist|dump|backup)$ { deny all; }';
+
+/** CodeIgniter 4: raíz en public/ (app/ y writable/ quedan fuera), index.php como único PHP. */
+function bloqueCi4(up: string): string[] {
+  return [
+    'index index.php index.html;',
+    'location / { try_files $uri $uri/ /index.php$is_args$query_string; }',
+    ...bloqueIndexPhp(up),
+    OCULTOS,
+    SENSIBLES,
+    'location ~* \\.php$ { return 404; }',
+  ];
+}
+
+/**
+ * WordPress ejecuta muchos .php (wp-admin, wp-login…), así que se permite PHP en general salvo
+ * wp-config.php, xmlrpc.php y cualquier PHP dentro de uploads.
+ */
+function bloqueWordpress(up: string): string[] {
+  return [
+    'index index.php index.html;',
+    'location = /wp-config.php { deny all; }',
+    'location = /xmlrpc.php { deny all; }',
+    OCULTOS,
+    'location ~* ^/wp-content/uploads/.*\\.(php\\d?|phtml|phar|phps)$ { deny all; }',
+    'location ~* \\.(sql|log|ini|sh|bak|old|dist|dump|backup)$ { deny all; }',
+    'location / { try_files $uri $uri/ /index.php?$args; }',
+    'location ~* \\.php$ {',
+    '    try_files $uri =404;',
+    ...bloqueFastcgi(up),
+    '}',
+  ];
+}
+
 function bloqueProxy(puerto: number): string[] {
   return [
     'location / {',
@@ -88,7 +124,7 @@ function bloqueProxy(puerto: number): string[] {
 }
 
 export function generarVhost(s: Sitio, o: OpcionesVhost): string {
-  const necesitaPhp = s.tipo === 'laravel' || s.tipo === 'codeigniter3';
+  const necesitaPhp = TIPOS_CON_PHP.includes(s.tipo) && s.tipo !== 'personalizado';
   if (necesitaPhp && !s.php) throw new Error(`El sitio ${s.dominio} necesita una versión de PHP`);
   const up = s.php ? nombreUpstream(s.php) : '';
 
@@ -100,6 +136,12 @@ export function generarVhost(s: Sitio, o: OpcionesVhost): string {
     case 'codeigniter3':
       cuerpo = bloqueCi3(up);
       break;
+    case 'codeigniter4':
+      cuerpo = bloqueCi4(up);
+      break;
+    case 'wordpress':
+      cuerpo = bloqueWordpress(up);
+      break;
     case 'estatico':
       cuerpo = ['index index.html;', 'location / { try_files $uri $uri/ =404; }', OCULTOS];
       break;
@@ -108,6 +150,17 @@ export function generarVhost(s: Sitio, o: OpcionesVhost): string {
         throw new Error(`El sitio ${s.dominio} necesita un puerto de proxy`);
       cuerpo = bloqueProxy(s.puertoProxy);
       break;
+    case 'fastapi':
+    case 'node': {
+      const puerto = s.puertoProxy ?? s.procesos.find((p) => p.puerto !== null)?.puerto ?? null;
+      if (puerto === null) {
+        throw new Error(
+          `El sitio ${s.dominio} necesita un puerto de proxy o un proceso con puerto`,
+        );
+      }
+      cuerpo = bloqueProxy(puerto);
+      break;
+    }
     case 'personalizado':
       cuerpo = [OCULTOS, ...(s.php ? ['location ~* \\.php$ {', ...bloqueFastcgi(up), '}'] : [])];
       break;

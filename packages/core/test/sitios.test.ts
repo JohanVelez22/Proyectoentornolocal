@@ -67,6 +67,10 @@ const datos = (dominio: string, extra: Partial<Omit<Sitio, 'id'>> = {}): Omit<Si
   datosReales: false,
   https: false,
   redirigirHttps: false,
+  confiado: false,
+  git: null,
+  procesos: [],
+  runtimes: {},
   nota: '',
   ...extra,
 });
@@ -276,6 +280,43 @@ describe('GestorSitios robustez', () => {
         'Seleccione una versión de PHP para este sitio',
       );
     }
+  });
+
+  it('codeigniter4 y wordpress exigen PHP; fastapi y node no', async () => {
+    const g = gestor();
+    for (const tipo of ['codeigniter4', 'wordpress'] as const) {
+      await expect(g.crear(datos(`${tipo}.test`, { tipo }))).rejects.toThrow(
+        'Seleccione una versión de PHP para este sitio',
+      );
+      expect((await g.crear(datos(`${tipo}-ok.test`, { tipo, php: '8.4' }))).php).toBe('8.4');
+    }
+    expect(ramasEnUso(await g.listar())).toEqual(['8.4']);
+  });
+
+  it('fastapi y node necesitan un puerto de proxy o un proceso con puerto', async () => {
+    const g = gestor();
+    await expect(g.crear(datos('api.test', { tipo: 'fastapi' }))).rejects.toThrow(
+      'Un sitio FastAPI o Node necesita un puerto de proxy o un proceso con puerto',
+    );
+    const proceso = {
+      id: 'uvicorn',
+      nombre: 'Uvicorn',
+      comando: ['uvicorn', 'app:app'],
+      cwd: 'raiz',
+      autoIniciar: true,
+      reiniciar: true,
+      puerto: 8001,
+    };
+    const s = await g.crear(datos('api.test', { tipo: 'fastapi', procesos: [proceso] }));
+    expect(s.procesos).toEqual([proceso]);
+    expect((await g.crear(datos('web.test', { tipo: 'node', puertoProxy: 5173 }))).tipo).toBe(
+      'node',
+    );
+    await expect(
+      g.crear(datos('dup.test', { tipo: 'fastapi', procesos: [proceso, proceso] })),
+    ).rejects.toThrow('El proceso uvicorn está repetido');
+    await g.aplicar();
+    expect(readFileSync(rutas.vhost('api'), 'utf8')).toContain('proxy_pass http://127.0.0.1:8001;');
   });
 
   it('dos crear() concurrentes persisten ambos', async () => {

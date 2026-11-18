@@ -2,20 +2,24 @@ import { existsSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ejecutableDe } from '../catalogo/catalogo';
+import { leerConfigProyecto } from '../proyectos/config';
 import type { Rutas } from '../rutas';
 
 export type TipoRuntime = 'node' | 'python';
 export type VersionesRuntime = { node?: string; python?: string };
 
-/** Lo que `paraProyecto` necesita de un sitio (el campo `runtimes` lo agrega la Task 2). */
+/** Lo que `paraProyecto` necesita de un sitio. */
 export interface SitioConRuntimes {
   carpeta: string;
   runtimes?: { node?: string | null; python?: string | null } | null;
 }
 
+/** Versiones elegidas para un proyecto y avisos en español para mostrar al usuario. */
+export type RuntimesProyecto = VersionesRuntime & { avisos: string[] };
+
 /** Resolutor que usan Terminal y los procesos de proyecto. */
 export interface ResolutorRuntimes {
-  paraProyecto(sitio: SitioConRuntimes): Promise<VersionesRuntime>;
+  paraProyecto(sitio: SitioConRuntimes): Promise<RuntimesProyecto>;
   /** Carpetas a anteponer al PATH, en orden, para las versiones dadas. */
   carpetasPath(versiones: VersionesRuntime): string[];
 }
@@ -158,39 +162,68 @@ async function leer(ruta: string): Promise<string | null> {
   }
 }
 
-const quitarComillas = (v: string): string =>
-  v
-    .replace(/\s+#.*$/, '')
-    .trim()
-    .replace(/^(["'])(.*)\1$/, '$2')
-    .trim();
-
-/** `runtimes:` de wolfcore.yml (solo claves node/python de ese bloque; sin dependencia de YAML). */
-function pistasWolfcore(texto: string): VersionesRuntime {
-  const salida: VersionesRuntime = {};
-  let dentro = false;
-  for (const linea of texto.split(/\r?\n/)) {
-    if (/^\s*(#.*)?$/.test(linea)) continue;
-    if (/^runtimes\s*:\s*(#.*)?$/.test(linea)) {
-      dentro = true;
-      continue;
-    }
-    if (!dentro) continue;
-    if (!/^\s/.test(linea)) break; // otra clave de primer nivel
-    const m = /^\s+(node|python)\s*:\s*(.*)$/.exec(linea);
-    if (m) {
-      const v = quitarComillas(m[2]!);
-      if (v) salida[m[1] as TipoRuntime] = v;
-    }
-  }
-  return salida;
-}
-
 const primeraLinea = (t: string | null): string | undefined =>
   t
     ?.split(/\r?\n/)
     .map((l) => l.trim())
     .find((l) => l !== '' && !l.startsWith('#'));
+
+/**
+ * Una pista de versión. `fija`: el proyecto pide esa versión (sitio, wolfcore.yml, .nvmrc,
+ * .node-version, .python-version); si no está instalada, no se usa ninguna. Las orientativas
+ * (engines.node, requires-python) caen a la más nueva instalada.
+ */
+export interface PistaRuntime {
+  valor: string;
+  origen: string;
+  fija: boolean;
+}
+
+async function enginesNode(carpeta: string): Promise<string | undefined> {
+  const t = await leer(path.join(carpeta, 'package.json'));
+  if (t === null) return undefined;
+  try {
+    const j: unknown = JSON.parse(t);
+    const engines = (j as { engines?: { node?: unknown } } | null)?.engines;
+    return typeof engines?.node === 'string' ? engines.node : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function requiresPython(carpeta: string): Promise<string | undefined> {
+  const t = await leer(path.join(carpeta, 'pyproject.toml'));
+  return t === null ? undefined : /^\s*requires-python\s*=\s*["']([^"']+)["']/m.exec(t)?.[1];
+}
+
+/** Pistas de los archivos de versión del proyecto, en orden de prioridad (sin wolfcore.yml). */
+export async function pistasArchivos(
+  carpeta: string,
+): Promise<Record<TipoRuntime, PistaRuntime[]>> {
+  const pista = (valor: string | undefined, origen: string, fija: boolean): PistaRuntime[] =>
+    valor ? [{ valor, origen, fija }] : [];
+  return {
+    node: [
+      ...pista(primeraLinea(await leer(path.join(carpeta, '.nvmrc'))), '.nvmrc', true),
+      ...pista(
+        primeraLinea(await leer(path.join(carpeta, '.node-version'))),
+        '.node-version',
+        true,
+      ),
+      ...pista(await enginesNode(carpeta), 'package.json', false),
+    ],
+    python: [
+      ...pista(
+        primeraLinea(await leer(path.join(carpeta, '.python-version'))),
+        '.python-version',
+        true,
+      ),
+      ...pista(await requiresPython(carpeta), 'pyproject.toml', false),
+    ],
+  };
+}
+
+const NOMBRE: Record<TipoRuntime, string> = { node: 'Node', python: 'Python' };
 
 export class Runtimes implements ResolutorRuntimes {
   constructor(private readonly rutas: Rutas) {}
@@ -211,61 +244,49 @@ export class Runtimes implements ResolutorRuntimes {
     return ordenar(nombres.filter((n) => existsSync(path.join(this.rutas.bin(tipo, n), exe))));
   }
 
-  /** Prioridad: sitio.runtimes → wolfcore.yml → archivos de versión → la más nueva instalada. */
-  async paraProyecto(sitio: SitioConRuntimes): Promise<VersionesRuntime> {
-    const yml = pistasWolfcore((await leer(path.join(sitio.carpeta, 'wolfcore.yml'))) ?? '');
-    const res: VersionesRuntime = {};
-
-    const nodes = await this.instalados('node');
-    if (nodes.length > 0) {
-      const v = this.resolver(nodes, [
-        sitio.runtimes?.node,
-        yml.node,
-        primeraLinea(await leer(path.join(sitio.carpeta, '.nvmrc'))),
-        primeraLinea(await leer(path.join(sitio.carpeta, '.node-version'))),
-        await this.enginesNode(sitio.carpeta),
-      ]);
-      if (v) res.node = v;
+  /**
+   * Prioridad: sitio.runtimes → wolfcore.yml → archivos de versión → la más nueva instalada.
+   * Decide la primera pista que se entiende (ver `PistaRuntime` para qué pasa si no se cumple).
+   */
+  async paraProyecto(sitio: SitioConRuntimes): Promise<RuntimesProyecto> {
+    const res: RuntimesProyecto = { avisos: [] };
+    let yml: { node: string | null; python: string | null } = { node: null, python: null };
+    try {
+      yml = (await leerConfigProyecto(sitio.carpeta)) ?? yml;
+    } catch (e) {
+      res.avisos.push(`${e instanceof Error ? e.message : String(e)}. Se ignora.`);
     }
-    const pys = await this.instalados('python');
-    if (pys.length > 0) {
-      const v = this.resolver(pys, [
-        sitio.runtimes?.python,
-        yml.python,
-        primeraLinea(await leer(path.join(sitio.carpeta, '.python-version'))),
-        await this.requiresPython(sitio.carpeta),
-      ]);
-      if (v) res.python = v;
+    const archivos = await pistasArchivos(sitio.carpeta);
+    for (const tipo of ['node', 'python'] as const) {
+      const pistas: PistaRuntime[] = [];
+      const delSitio = sitio.runtimes?.[tipo];
+      if (delSitio) pistas.push({ valor: delSitio, origen: 'sitio', fija: true });
+      if (yml[tipo]) pistas.push({ valor: yml[tipo], origen: 'wolfcore.yml', fija: true });
+      pistas.push(...archivos[tipo]);
+      const instaladas = await this.instalados(tipo);
+      const pista = pistas.find((p) => predicado(p.valor) !== null);
+      if (!pista) {
+        const v = elegirVersion(instaladas, undefined);
+        if (v) res[tipo] = v;
+        continue;
+      }
+      const v = elegirVersion(instaladas, pista.valor);
+      if (v) {
+        res[tipo] = v;
+        continue;
+      }
+      const pide = `El proyecto pide ${NOMBRE[tipo]} ${pista.valor}, que no está instalado`;
+      const masNueva = pista.fija ? undefined : elegirVersion(instaladas, undefined);
+      if (masNueva) {
+        res[tipo] = masNueva;
+        res.avisos.push(
+          `${pide}; se usa ${NOMBRE[tipo]} ${masNueva}. Instálelo desde Servicios si hace falta.`,
+        );
+      } else {
+        res.avisos.push(`${pide}. Instálelo desde Servicios.`);
+      }
     }
     return res;
-  }
-
-  /** La primera pista que se entiende decide; si nada la cumple, no se elige versión. */
-  private resolver(
-    instaladas: string[],
-    candidatas: (string | null | undefined)[],
-  ): string | undefined {
-    for (const c of candidatas) {
-      if (c && predicado(c)) return elegirVersion(instaladas, c);
-    }
-    return elegirVersion(instaladas, undefined);
-  }
-
-  private async enginesNode(carpeta: string): Promise<string | undefined> {
-    const t = await leer(path.join(carpeta, 'package.json'));
-    if (t === null) return undefined;
-    try {
-      const j: unknown = JSON.parse(t);
-      const engines = (j as { engines?: { node?: unknown } } | null)?.engines;
-      return typeof engines?.node === 'string' ? engines.node : undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
-  private async requiresPython(carpeta: string): Promise<string | undefined> {
-    const t = await leer(path.join(carpeta, 'pyproject.toml'));
-    return t === null ? undefined : /^\s*requires-python\s*=\s*["']([^"']+)["']/m.exec(t)?.[1];
   }
 
   /** Node: carpeta de node.exe (npm/npx) y su node_modules/.bin. Python: carpeta y Scripts. */

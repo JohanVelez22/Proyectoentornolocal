@@ -113,21 +113,29 @@ describe('Runtimes.paraProyecto', () => {
     expect(await armar().paraProyecto({ carpeta: c })).toEqual({
       node: '24.22.3',
       python: '3.13.17',
+      avisos: [],
     });
   });
   it('wolfcore.yml manda sobre .nvmrc y package.json', async () => {
     const c = await proyecto({
-      'wolfcore.yml': 'nombre: x\nruntimes:\n  node: "20"\n  python: 3.12 # comentario\n',
+      'wolfcore.yml': 'version: 1\nnode: "20"\npython: 3.12 # comentario\n',
       '.nvmrc': '22',
       'package.json': '{"engines":{"node":">=24"}}',
     });
     expect(await armar().paraProyecto({ carpeta: c })).toEqual({
       node: '20.20.2',
       python: '3.12.10',
+      avisos: [],
     });
   });
+  it('wolfcore.yml inválido se ignora con aviso', async () => {
+    const c = await proyecto({ 'wolfcore.yml': 'node: [20\n', '.nvmrc': '22' });
+    const r = await armar().paraProyecto({ carpeta: c });
+    expect(r.node).toBe('22.11.0');
+    expect(r.avisos).toEqual([expect.stringMatching(/^wolfcore\.yml no es válido/)]);
+  });
   it('sitio.runtimes (si existe) manda sobre todo', async () => {
-    const c = await proyecto({ '.nvmrc': '22' });
+    const c = await proyecto({ '.nvmrc': '22', 'wolfcore.yml': 'node: "20"\n' });
     expect(await armar().paraProyecto({ carpeta: c, runtimes: { node: '24' } })).toMatchObject({
       node: '24.22.3',
     });
@@ -154,13 +162,44 @@ describe('Runtimes.paraProyecto', () => {
     const c = await proyecto({ 'pyproject.toml': "[project]\nrequires-python = '~=3.12'\n" });
     expect((await armar().paraProyecto({ carpeta: c })).python).toBe('3.13.17');
   });
-  it('pista sin versión instalada que la cumpla: no se elige ninguna', async () => {
-    const c = await proyecto({ '.nvmrc': '16' });
-    expect((await armar().paraProyecto({ carpeta: c })).node).toBeUndefined();
+  it('versión fijada (sitio, wolfcore.yml, .nvmrc, .python-version) sin instalar: ninguna y aviso', async () => {
+    const c = await proyecto({ '.nvmrc': '16', '.python-version': '3.9' });
+    expect(await armar().paraProyecto({ carpeta: c })).toEqual({
+      avisos: [
+        'El proyecto pide Node 16, que no está instalado. Instálelo desde Servicios.',
+        'El proyecto pide Python 3.9, que no está instalado. Instálelo desde Servicios.',
+      ],
+    });
+    const y = await proyecto({ 'wolfcore.yml': 'node: "18"\n' });
+    expect((await armar().paraProyecto({ carpeta: y })).avisos).toEqual([
+      'El proyecto pide Node 18, que no está instalado. Instálelo desde Servicios.',
+    ]);
+    const s = await proyecto({});
+    const r = await armar().paraProyecto({ carpeta: s, runtimes: { python: '3.11' } });
+    expect(r.python).toBeUndefined();
+    expect(r.node).toBe('24.22.3');
   });
-  it('sin nada instalado devuelve {}', async () => {
+  it('rango orientativo (engines, requires-python) sin cumplir: la más nueva y aviso', async () => {
+    const c = await proyecto({
+      'package.json': '{"engines":{"node":">=99"}}',
+      'pyproject.toml': '[project]\nrequires-python = "<3.10"\n',
+    });
+    expect(await armar().paraProyecto({ carpeta: c })).toEqual({
+      node: '24.22.3',
+      python: '3.13.17',
+      avisos: [
+        'El proyecto pide Node >=99, que no está instalado; se usa Node 24.22.3. Instálelo desde Servicios si hace falta.',
+        'El proyecto pide Python <3.10, que no está instalado; se usa Python 3.13.17. Instálelo desde Servicios si hace falta.',
+      ],
+    });
+  });
+  it('sin nada instalado: vacío; con una versión pedida, aviso', async () => {
     const c = await proyecto({});
-    expect(await new Runtimes(rutas).paraProyecto({ carpeta: c })).toEqual({});
+    expect(await new Runtimes(rutas).paraProyecto({ carpeta: c })).toEqual({ avisos: [] });
+    const d = await proyecto({ 'package.json': '{"engines":{"node":">=20"}}' });
+    expect(await new Runtimes(rutas).paraProyecto({ carpeta: d })).toEqual({
+      avisos: ['El proyecto pide Node >=20, que no está instalado. Instálelo desde Servicios.'],
+    });
   });
 });
 

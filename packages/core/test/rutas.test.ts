@@ -19,6 +19,10 @@ const sitio = (o: Partial<Sitio>): Sitio => ({
   datosReales: false,
   https: false,
   redirigirHttps: false,
+  confiado: false,
+  git: null,
+  procesos: [],
+  runtimes: {},
   nota: '',
   ...o,
 });

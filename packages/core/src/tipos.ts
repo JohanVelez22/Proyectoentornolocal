@@ -6,8 +6,40 @@ export const TIPOS_SITIO = [
   'estatico',
   'proxy',
   'personalizado',
+  'codeigniter4',
+  'wordpress',
+  'fastapi',
+  'node',
 ] as const;
 export type TipoSitio = (typeof TIPOS_SITIO)[number];
+
+/** Tipos que necesitan PHP (FastCGI). */
+export const TIPOS_CON_PHP: readonly TipoSitio[] = [
+  'laravel',
+  'codeigniter3',
+  'codeigniter4',
+  'wordpress',
+  'personalizado',
+];
+/** Tipos que Nginx sirve como proxy inverso hacia un puerto local. */
+export const TIPOS_PROXY: readonly TipoSitio[] = ['proxy', 'fastapi', 'node'];
+
+/**
+ * Comando de larga duración del proyecto (npm run dev, queue:work, uvicorn…), supervisado.
+ * `cwd`: 'raiz' (la carpeta del proyecto) o una ruta relativa a ella.
+ */
+export const ProcesoProyectoSchema = z.object({
+  id: z
+    .string()
+    .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, 'Use solo letras, números, guiones y guiones bajos'),
+  nombre: z.string().default(''),
+  comando: z.array(z.string().min(1)).min(1, 'El comando no puede estar vacío'),
+  cwd: z.string().min(1).default('raiz'),
+  autoIniciar: z.boolean().default(false),
+  reiniciar: z.boolean().default(false),
+  puerto: z.number().int().min(1).max(65535).nullable().default(null),
+});
+export type ProcesoProyecto = z.infer<typeof ProcesoProyectoSchema>;
 
 export const SitioSchema = z.object({
   id: z.string(),
@@ -33,6 +65,21 @@ export const SitioSchema = z.object({
     })
     .nullable()
     .optional(),
+  /** "Confío en este repositorio": sin esto no se ejecuta su receta. */
+  confiado: z.boolean().default(false),
+  /** Remoto (siempre sin credenciales) y rama del repositorio, si es un clon de Git. */
+  git: z
+    .object({
+      remoto: z.string().nullable().default(null),
+      rama: z.string().nullable().default(null),
+    })
+    .nullable()
+    .default(null),
+  procesos: z.array(ProcesoProyectoSchema).default([]),
+  /** Versiones fijadas para este sitio; mandan sobre wolfcore.yml y los archivos de versión. */
+  runtimes: z
+    .object({ node: z.string().min(1).optional(), python: z.string().min(1).optional() })
+    .default({}),
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 
@@ -142,7 +189,9 @@ export const ConfigSchema = z.object({
 export type Config = z.infer<typeof ConfigSchema>;
 
 export function raizDeSitio(s: Sitio): string {
-  return s.tipo === 'laravel' ? `${s.carpeta.replace(/[\\/]+$/, '')}/public` : s.carpeta;
+  return s.tipo === 'laravel' || s.tipo === 'codeigniter4'
+    ? `${s.carpeta.replace(/[\\/]+$/, '')}/public`
+    : s.carpeta;
 }
 
 export type CategoriaServicio = 'web' | 'php' | 'bd' | 'herramienta' | 'ia';

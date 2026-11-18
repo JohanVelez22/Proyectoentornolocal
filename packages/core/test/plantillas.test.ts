@@ -18,6 +18,10 @@ const sitio = (o: Partial<Sitio>): Sitio => ({
   nota: '',
   https: false,
   redirigirHttps: false,
+  confiado: false,
+  git: null,
+  procesos: [],
+  runtimes: {},
   ...o,
 });
 const o = { puertoNginx: 80, rutasLogs: { acceso: 'C:\\L\\a.log', error: 'C:\\L\\e.log' } };

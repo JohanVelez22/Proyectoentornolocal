@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { carpetaTemporal } from './temporales';
-import { detectarProyecto } from '../src/sitios/detectar';
+import { detectarSitio as detectarProyecto } from '../src/sitios/detectar';
 
 async function carpeta(nombre: string): Promise<string> {
   const base = await carpetaTemporal('pel-det-');

@@ -203,6 +203,10 @@ describe('aplicar con HTTPS', () => {
     nota: '',
     https: true,
     redirigirHttps: false,
+    confiado: false,
+    git: null,
+    procesos: [],
+    runtimes: {},
     ...extra,
   });
   const vhost = () => readFileSync(rutas.vhost('a'), 'utf8');

@@ -39,6 +39,10 @@ describe('Almacen', () => {
       datosReales: true,
       https: false,
       redirigirHttps: false,
+      confiado: false,
+      git: null,
+      procesos: [],
+      runtimes: {},
       nota: 'n',
     });
     await a.guardar(c);

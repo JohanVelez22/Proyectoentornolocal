@@ -218,6 +218,10 @@ describe('stores de la interfaz', () => {
         datosReales: false,
         https: false,
         redirigirHttps: false,
+        confiado: false,
+        git: null,
+        procesos: [],
+        runtimes: {},
         nota: '',
       },
     ]);

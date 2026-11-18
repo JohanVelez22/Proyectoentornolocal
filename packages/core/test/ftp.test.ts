@@ -45,6 +45,10 @@ const sitioBase = (carpeta: string): Sitio => ({
   nota: '',
   https: false,
   redirigirHttps: false,
+  confiado: false,
+  git: null,
+  procesos: [],
+  runtimes: {},
 });
 
 const nuevoCliente = (): Client => {

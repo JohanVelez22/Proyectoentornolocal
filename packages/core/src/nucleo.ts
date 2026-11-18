@@ -36,7 +36,7 @@ import { Supervisor } from './procesos/supervisor';
 import { Rutas } from './rutas';
 import { Mailpit } from './servicios/mailpit';
 import { Servicios } from './servicios/servicios';
-import { detectarProyecto } from './sitios/detectar';
+import { detectarSitio } from './sitios/detectar';
 import {
   GestorSitios,
   ramasEnUso,
@@ -153,7 +153,7 @@ export class Nucleo {
   private pendiente = false;
   private cerrado = false;
 
-  readonly detectarProyecto = detectarProyecto;
+  readonly detectarProyecto = detectarSitio;
   readonly listarVersiones = listarVersiones;
   /** Solo lectura: los cambios pasan por guardarSitio/guardarAjustes, que además aplican. */
   readonly config: { leer(): Promise<Config> };
