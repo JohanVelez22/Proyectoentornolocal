@@ -157,6 +157,12 @@ export type ArchivoCredenciales = Partial<Record<ClaveCredencial, Credenciales>>
 export const ConfigSchema = z.object({
   version: z.literal(1).default(1),
   sitios: z.array(SitioSchema).default([]),
+  proyectos: z
+    .object({
+      /** Carpeta cuyas subcarpetas se sugieren como proyectos nuevos; null = no vigilar. */
+      carpetaVigilada: z.string().nullable().default(null),
+    })
+    .prefault({}),
   https: z.object({ puerto: z.number().int().min(1).max(65535).default(443) }).prefault({}),
   ftp: z
     .object({

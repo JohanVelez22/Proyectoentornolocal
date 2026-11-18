@@ -271,14 +271,21 @@ async function tipoDe(
   return { tipo: indexPhp ? 'personalizado' : 'estatico', urlBaseVar: null, php: null };
 }
 
-/** Detecta el tipo de proyecto, sus versiones, servicios y lo que necesita su receta. */
-export async function detectarProyecto(carpeta: string): Promise<Deteccion> {
+/**
+ * Detecta el tipo de proyecto, sus versiones, servicios y lo que necesita su receta.
+ * `opciones.pgvector: false` se salta el escaneo del código (más barato, sin la pista de pgvector).
+ */
+export async function detectarProyecto(
+  carpeta: string,
+  opciones: { pgvector?: boolean } = {},
+): Promise<Deteccion> {
   const composer = await leerJson(join(carpeta, 'composer.json'));
   const pkg = await leerJson(join(carpeta, 'package.json'));
   const { tipo, urlBaseVar, php } = await tipoDe(carpeta, composer, pkg);
   const pistas = await pistasArchivos(carpeta);
   const servicios = serviciosDeEnv(await variablesEnv(carpeta));
-  const pgvector = await usaPgvector(carpeta);
+  // Escanear el código es lo caro: las sugerencias de la carpeta vigilada lo omiten.
+  const pgvector = opciones.pgvector === false ? false : await usaPgvector(carpeta);
   if (pgvector && motorBdDe(servicios) === null) servicios.unshift('postgresql');
   const scripts = pkg?.scripts;
   return {
