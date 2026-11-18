@@ -44,6 +44,11 @@ export interface OpcionesLanzar {
   /** Cada línea de salida, a medida que llega (sin el salto). */
   alLinea?: (linea: string, flujo: 'stdout' | 'stderr') => void;
   /**
+   * Corta también en `\r` (progreso que reescribe la línea, como el de git): cada tramo llega en
+   * vivo y se omiten los tramos vacíos. Por defecto solo se corta en `\n`.
+   */
+  cortarEnRetorno?: boolean;
+  /**
    * Al abortarse mata el proceso y su árbol de hijos (taskkill /T en Windows). Si ya estaba
    * abortada, no se lanza nada y la promesa se rechaza con "Cancelado".
    */

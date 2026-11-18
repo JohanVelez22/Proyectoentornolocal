@@ -1,34 +1,39 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { GitHub, interpretarGhRepoList } from '../src/git/github';
+import { GitHub, interpretarGhApiRepos } from '../src/git/github';
 import type { Ejecutor } from '../src/plataforma/tipos';
 
 const TOKEN = 'ghp_TokenDePruebaMuySecreto1234567890';
 
 const GH = path.win32.join('C:\\Program Files\\GitHub CLI', 'gh.exe');
 
+/** Salida de `gh api --paginate --slurp /user/repos…`: un arreglo por página. */
 const salidaGh = JSON.stringify([
-  {
-    name: 'rents',
-    nameWithOwner: 'johan/rents',
-    isPrivate: true,
-    description: 'Alquileres',
-    updatedAt: '2026-11-10T10:00:00Z',
-    url: 'https://github.com/johan/rents',
-  },
-  {
-    name: 'coffe',
-    nameWithOwner: 'johan/coffe',
-    isPrivate: false,
-    description: null,
-    updatedAt: '2026-11-12T10:00:00Z',
-    url: 'https://github.com/johan/coffe',
-  },
+  [
+    {
+      name: 'rents',
+      full_name: 'johan/rents',
+      private: true,
+      description: 'Alquileres',
+      updated_at: '2026-11-10T10:00:00Z',
+      html_url: 'https://github.com/johan/rents',
+    },
+  ],
+  [
+    {
+      name: 'coffe',
+      full_name: 'org/coffe',
+      private: false,
+      description: null,
+      updated_at: '2026-11-12T10:00:00Z',
+      html_url: 'https://github.com/org/coffe',
+    },
+  ],
 ]);
 
-describe('interpretarGhRepoList', () => {
-  it('convierte la salida JSON de gh repo list', () => {
-    expect(interpretarGhRepoList(salidaGh)).toEqual([
+describe('interpretarGhApiRepos', () => {
+  it('convierte las páginas de gh api /user/repos (mismo formato que la API REST)', () => {
+    expect(interpretarGhApiRepos(salidaGh)).toEqual([
       {
         nombre: 'rents',
         completo: 'johan/rents',
@@ -39,18 +44,18 @@ describe('interpretarGhRepoList', () => {
       },
       {
         nombre: 'coffe',
-        completo: 'johan/coffe',
+        completo: 'org/coffe',
         privado: false,
         descripcion: '',
         actualizado: '2026-11-12T10:00:00Z',
-        url: 'https://github.com/johan/coffe',
+        url: 'https://github.com/org/coffe',
       },
     ]);
   });
 
-  it('ignora entradas mal formadas y falla con JSON inválido', () => {
-    expect(interpretarGhRepoList('[{"name":1}]')).toEqual([]);
-    expect(() => interpretarGhRepoList('no es json')).toThrow();
+  it('acepta un arreglo plano, ignora entradas mal formadas y falla con JSON inválido', () => {
+    expect(interpretarGhApiRepos('[{"name":"a","full_name":"x/a"},{"name":1}]')).toHaveLength(1);
+    expect(() => interpretarGhApiRepos('no es json')).toThrow();
   });
 });
 
@@ -76,7 +81,7 @@ function crear(o: {
       (async (cmd, args, opts) => {
         llamadas.push({ cmd, args, env: opts?.env });
         if (args[0] === 'auth') return { codigo: o.sesion ? 0 : 1, stdout: '', stderr: '' };
-        if (args[0] === 'repo') return { codigo: 0, stdout: salidaGh, stderr: '' };
+        if (args[0] === 'api') return { codigo: 0, stdout: salidaGh, stderr: '' };
         return { codigo: 0, stdout: '', stderr: '' };
       }),
     fetch:
@@ -88,18 +93,19 @@ function crear(o: {
 }
 
 describe('GitHub.repos', () => {
-  it('con sesión de gh usa gh repo list --json, busca y pagina', async () => {
+  it('con sesión de gh usa gh api /user/repos paginado (mismas afiliaciones), busca y pagina', async () => {
     const llamadas: Llamada[] = [];
     const gh = crear({ sesion: true, llamadas });
-    const r = await gh.repos({ buscar: 'COF' });
-    expect(r.map((x) => x.completo)).toEqual(['johan/coffe']);
-    const lista = llamadas.find((l) => l.args[0] === 'repo')!;
+    const r = await gh.repos({ buscar: 'COF', token: TOKEN });
+    expect(r.map((x) => x.completo)).toEqual(['org/coffe']);
+    const lista = llamadas.find((l) => l.args[0] === 'api')!;
     expect(lista.cmd).toBe(GH);
-    expect(lista.args.slice(0, 2)).toEqual(['repo', 'list']);
-    expect(lista.args).toContain('--json');
-    expect(lista.args[lista.args.indexOf('--json') + 1]).toBe(
-      'name,nameWithOwner,isPrivate,description,updatedAt,url',
-    );
+    expect(lista.args).toContain('--paginate');
+    expect(lista.args).toContain('--slurp');
+    const ruta = lista.args.find((a) => a.startsWith('/user/repos?'))!;
+    expect(ruta).toContain('affiliation=owner,collaborator,organization_member');
+    expect(ruta).toContain('per_page=100');
+    expect(JSON.stringify(llamadas)).not.toContain(TOKEN);
     expect(await gh.repos({ pagina: 2 })).toEqual([]);
   });
 
@@ -154,6 +160,21 @@ describe('GitHub.repos', () => {
     expect(e.message).not.toContain(TOKEN);
   });
 
+  it.each([
+    [403, '0'],
+    [429, '0'],
+  ])('%i con x-ratelimit-remaining=0 avisa del límite de la API', async (status, resto) => {
+    const falso = (async () =>
+      new Response('{}', {
+        status,
+        headers: { 'x-ratelimit-remaining': resto },
+      })) as typeof fetch;
+    const gh = crear({ sesion: false, gh: false, fetch: falso });
+    await expect(gh.repos({ token: TOKEN })).rejects.toThrow(
+      'Se alcanzó el límite de la API de GitHub; intente más tarde o conecte gh',
+    );
+  });
+
   it('un token con caracteres raros se rechaza antes de usarlo', async () => {
     const gh = crear({ sesion: false, gh: false });
     const e = (await gh.repos({ token: 'abc\r\nX-Otra: 1' }).catch((x: Error) => x)) as Error;
@@ -181,6 +202,20 @@ describe('GitHub.instalarGh e iniciarSesionGh', () => {
     await gh.instalarGh();
     expect(llamadas[0]!.cmd).toBe('winget');
     expect(llamadas[0]!.args.slice(0, 4)).toEqual(['install', '--id', 'GitHub.cli', '-e']);
+  });
+
+  it('instalarGh sin winget da un mensaje claro', async () => {
+    const sinWinget = (codigo: boolean): GitHub =>
+      new GitHub({
+        entorno: { Path: '' },
+        existe: () => false,
+        exec: async () => {
+          if (codigo) return { codigo: 1, stdout: '', stderr: 'spawn winget ENOENT' };
+          throw Object.assign(new Error('spawn winget ENOENT'), { code: 'ENOENT' });
+        },
+      });
+    await expect(sinWinget(true).instalarGh()).rejects.toThrow(/No se encontró winget/);
+    await expect(sinWinget(false).instalarGh()).rejects.toThrow(/No se encontró winget/);
   });
 
   it('iniciarSesionGh abre gh auth login --web en una terminal visible', async () => {

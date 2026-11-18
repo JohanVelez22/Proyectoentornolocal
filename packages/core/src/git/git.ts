@@ -70,7 +70,15 @@ export interface DepsGit {
   lanzar?: Lanzador;
   entorno?: NodeJS.ProcessEnv;
   existe?: (ruta: string) => boolean;
+  /** Plazo máximo de un clon (30 min por defecto); al vencer se corta como una cancelación. */
+  plazoClonMs?: number;
 }
+
+/** Plazo por defecto de un clon. */
+export const PLAZO_CLON_MS = 30 * 60_000;
+
+/** ssh sin preguntas: falla en vez de pedir clave; acepta solo hosts nuevos (no cambiados). */
+export const SSH_EN_LOTE = 'ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new';
 
 /**
  * Valida la URL de un clon: https:// (sin credenciales), git@host:ruta o owner/name (con gh).
@@ -170,7 +178,7 @@ export function clasificarCambios(archivos: string[]): CambiosTraidos {
     if (base === 'composer.lock') c.composerLock = true;
     else if (base === 'package-lock.json') c.packageLock = true;
     else if (/^requirements.*\.txt$/i.test(base)) c.requirements = true;
-    if (/(^|\/)(migrations|alembic\/versions)\//.test(a)) c.migraciones.push(a);
+    if (/(^|\/)(migrations|alembic\/versions)\//i.test(a)) c.migraciones.push(a);
   }
   return c;
 }
@@ -207,8 +215,10 @@ export class Git {
   private readonly lanzar: Lanzador;
   private readonly entorno: NodeJS.ProcessEnv;
   private readonly existe: (ruta: string) => boolean;
+  private readonly plazoClonMs: number;
 
   constructor(d: DepsGit = {}) {
+    this.plazoClonMs = d.plazoClonMs ?? PLAZO_CLON_MS;
     this.exec = d.exec ?? ejecutorPorDefecto;
     this.lanzar = d.lanzar ?? lanzadorPorDefecto;
     this.entorno = d.entorno ?? process.env;
@@ -246,14 +256,17 @@ export class Git {
   }
 
   /**
-   * Variables de entorno para git: sin preguntas por terminal ni trazas y, con token, la cabecera
-   * Authorization por GIT_CONFIG_COUNT/KEY/VALUE (nunca en argumentos, URL ni .git/config). La
-   * cabecera va con clave por URL (solo https://github.com/) y, si se da `url`, solo se agrega
-   * cuando apunta a github.com.
+   * Variables de entorno para git: sin preguntas (ni terminal ni askpass) ni trazas y, con token,
+   * la cabecera Authorization por GIT_CONFIG_COUNT/KEY/VALUE (nunca en argumentos, URL ni
+   * .git/config). La cabecera va con clave por URL (solo https://github.com/) y, si se da `url`,
+   * solo se agrega cuando apunta a github.com. Para ssh (URL git@ o sin URL, como en fetch) se usa
+   * ssh en modo lote, salvo que el usuario tenga su propio GIT_SSH_COMMAND o GIT_SSH.
    */
   entornoGit(token?: string, url?: string): Record<string, string> {
     const env: Record<string, string> = {
       GIT_TERMINAL_PROMPT: '0',
+      GIT_ASKPASS: '',
+      SSH_ASKPASS: '',
       GCM_INTERACTIVE: 'never',
       GIT_TRACE: '0',
       GIT_TRACE_CURL: '0',
@@ -261,15 +274,20 @@ export class Git {
       // GIT_CURL_VERBOSE no se toca: git la activa con solo existir (aun con "0").
       GIT_TRACE_REDACT: '1',
     };
+    const config: [string, string][] = [['core.askPass', '']];
     if (token && (url === undefined || esGithubHttps(url))) {
       validarToken(token);
-      Object.assign(env, {
-        GIT_CONFIG_COUNT: '2',
-        GIT_CONFIG_KEY_0: 'credential.helper',
-        GIT_CONFIG_VALUE_0: '',
-        GIT_CONFIG_KEY_1: CLAVE_CABECERA,
-        GIT_CONFIG_VALUE_1: `Authorization: Basic ${basicDe(token)}`,
-      });
+      config.push(['credential.helper', '']);
+      config.push([CLAVE_CABECERA, `Authorization: Basic ${basicDe(token)}`]);
+    }
+    env.GIT_CONFIG_COUNT = String(config.length);
+    config.forEach(([k, v], i) => {
+      env[`GIT_CONFIG_KEY_${i}`] = k;
+      env[`GIT_CONFIG_VALUE_${i}`] = v;
+    });
+    const sshPropio = this.entorno.GIT_SSH_COMMAND || this.entorno.GIT_SSH;
+    if (!sshPropio && (url === undefined || url.startsWith('git@'))) {
+      env.GIT_SSH_COMMAND = SSH_EN_LOTE;
     }
     return env;
   }
@@ -283,11 +301,11 @@ export class Git {
     const absoluto = path.resolve(destino);
     const existia = await this.verificarDestino(absoluto);
     // Carpeta más alta que no existía: es lo que hay que quitar si el clon falla.
-    let creada = absoluto;
-    while (!existia && !existsSync(path.dirname(creada)) && path.dirname(creada) !== creada) {
-      creada = path.dirname(creada);
-    }
-    if (!existia) await mkdir(path.dirname(absoluto), { recursive: true });
+    // mkdir devuelve la primera carpeta que creó (undefined si ya existían todas): es lo que hay
+    // que quitar si el clon falla.
+    const creada = existia
+      ? absoluto
+      : ((await mkdir(path.dirname(absoluto), { recursive: true })) ?? absoluto);
 
     const token = o.token;
     let cmd: string;
@@ -309,7 +327,7 @@ export class Git {
 
     const finales: string[] = [];
     const alLinea = (l: string): void => {
-      // El progreso de git reescribe la línea con \r: se toma el último tramo.
+      // El lanzador ya corta en \r (progreso en vivo); por si acaso, se toma el último tramo.
       const tramo = l
         .split('\r')
         .filter((x) => x.trim())
@@ -320,11 +338,34 @@ export class Git {
       if (finales.length > 20) finales.shift();
       o.alProgreso?.(limpio);
     };
+    // Señal propia: se aborta con la del llamador o al vencer el plazo.
+    const control = new AbortController();
+    let vencido = false;
+    const alAbortar = (): void => control.abort();
+    if (o.senal?.aborted) control.abort();
+    o.senal?.addEventListener('abort', alAbortar, { once: true });
+    const reloj = setTimeout(() => {
+      vencido = true;
+      control.abort();
+    }, this.plazoClonMs);
+    const soltar = (): void => {
+      clearTimeout(reloj);
+      o.senal?.removeEventListener('abort', alAbortar);
+    };
+    const minutos = Math.max(1, Math.round(this.plazoClonMs / 60_000));
+    const mensajePlazo = `El clon superó el plazo de ${minutos} min y se canceló`;
     let codigo: number;
     try {
-      ({ codigo } = await this.lanzar(cmd, args, { env, alLinea, senal: o.senal }));
+      ({ codigo } = await this.lanzar(cmd, args, {
+        env,
+        alLinea,
+        senal: control.signal,
+        cortarEnRetorno: true,
+      }));
     } catch (e) {
+      soltar();
       await this.deshacer(existia, absoluto, creada);
+      if (vencido) throw new Error(mensajePlazo);
       if ((e as { code?: unknown }).code === 'ENOENT') {
         throw new Error(
           tipo === 'gh'
@@ -337,8 +378,10 @@ export class Git {
         `No se pudo clonar: ${sinSecretos((e as Error).message ?? String(e), token)}`,
       );
     }
+    soltar();
     if (codigo !== 0) {
       await this.deshacer(existia, absoluto, creada);
+      if (vencido) throw new Error(mensajePlazo);
       if (o.senal?.aborted) throw new Error(MENSAJE_CANCELADO);
       const detalle = resumen(finales.join('\n'), token) || `código ${codigo}`;
       const credenciales =

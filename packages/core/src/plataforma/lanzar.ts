@@ -8,17 +8,25 @@ import type { Lanzador } from './tipos';
 /** Una línea más larga que esto se corta (un INSERT de varios MB no debe quedar en memoria). */
 const MAX_LINEA = 4000;
 
-function porLineas(flujo: Readable, alLinea: (l: string) => void): void {
+function porLineas(flujo: Readable, alLinea: (l: string) => void, cortarEnRetorno = false): void {
   const dec = new StringDecoder('utf8');
   let resto = '';
   const soltar = (l: string): void => {
     const limpia = l.endsWith('\r') ? l.slice(0, -1) : l;
+    // Al cortar en \r, el \n de un \r\n deja un tramo vacío: se omite.
+    if (cortarEnRetorno && !limpia) return;
     alLinea(limpia.length > MAX_LINEA ? `${limpia.slice(0, MAX_LINEA)}…` : limpia);
+  };
+  const corte = (t: string): number => {
+    const n = t.indexOf('\n');
+    if (!cortarEnRetorno) return n;
+    const r = t.indexOf('\r');
+    return r < 0 ? n : n < 0 ? r : Math.min(n, r);
   };
   flujo.on('data', (b: Buffer) => {
     resto += dec.write(b);
     let i: number;
-    while ((i = resto.indexOf('\n')) >= 0) {
+    while ((i = corte(resto)) >= 0) {
       soltar(resto.slice(0, i));
       resto = resto.slice(i + 1);
     }
@@ -97,8 +105,8 @@ export const lanzadorPorDefecto: Lanzador = (cmd, args, opts = {}) =>
     let errorEntrada: unknown = null;
     let terminado = false;
     const alLinea = opts.alLinea;
-    porLineas(hijo.stdout!, (l) => alLinea?.(l, 'stdout'));
-    porLineas(hijo.stderr!, (l) => alLinea?.(l, 'stderr'));
+    porLineas(hijo.stdout!, (l) => alLinea?.(l, 'stdout'), opts.cortarEnRetorno);
+    porLineas(hijo.stderr!, (l) => alLinea?.(l, 'stderr'), opts.cortarEnRetorno);
     if (opts.entrada && hijo.stdin) {
       hijo.stdin.on('error', () => undefined);
       pipeline(opts.entrada, hijo.stdin).catch((e: unknown) => {

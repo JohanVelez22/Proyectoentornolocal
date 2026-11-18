@@ -106,24 +106,64 @@ describe('Git.clonar con un ejecutor falso', () => {
     expect(args.join(' ')).not.toContain(BASIC);
     const env = opts!.env!;
     expect(env.GIT_TERMINAL_PROMPT).toBe('0');
-    expect(env.GIT_CONFIG_COUNT).toBe('2');
-    expect(env.GIT_CONFIG_KEY_0).toBe('credential.helper');
+    expect(env.GIT_ASKPASS).toBe('');
+    expect(env.SSH_ASKPASS).toBe('');
+    expect(env.GIT_CONFIG_COUNT).toBe('3');
+    expect(env.GIT_CONFIG_KEY_0).toBe('core.askPass');
     expect(env.GIT_CONFIG_VALUE_0).toBe('');
-    expect(env.GIT_CONFIG_KEY_1).toBe('http.https://github.com/.extraHeader');
-    expect(env.GIT_CONFIG_VALUE_1).toBe(`Authorization: Basic ${BASIC}`);
+    expect(env.GIT_CONFIG_KEY_1).toBe('credential.helper');
+    expect(env.GIT_CONFIG_VALUE_1).toBe('');
+    expect(env.GIT_CONFIG_KEY_2).toBe('http.https://github.com/.extraHeader');
+    expect(env.GIT_CONFIG_VALUE_2).toBe(`Authorization: Basic ${BASIC}`);
+    // https: no se fuerza el ssh
+    expect(env.GIT_SSH_COMMAND).toBeUndefined();
+    // el progreso llega en vivo: el lanzador corta también en \r
+    expect(opts!.cortarEnRetorno).toBe(true);
     expect(progreso.join('\n')).not.toContain(TOKEN);
     expect(progreso.join('\n')).not.toContain(BASIC);
     expect(progreso).toContain('Receiving 100%');
   });
 
-  it('sin token no agrega cabeceras ni toca credential.helper', async () => {
+  it('sin token: sin cabeceras ni credential.helper, sin askpass y ssh en modo lote', async () => {
     const dir = await carpetaTemporal('pel-git-');
     const llamadas: { cmd: string; args: string[]; opts?: OpcionesLanzar }[] = [];
     const git = new Git({ ...sinRutas, lanzar: lanzadorFalso([], 0, llamadas) });
     await git.clonar('git@github.com:dueno/repo.git', path.join(dir, 'r'));
     const env = llamadas[0]!.opts!.env!;
     expect(env.GIT_TERMINAL_PROMPT).toBe('0');
-    expect(env.GIT_CONFIG_COUNT).toBeUndefined();
+    expect(env.GIT_ASKPASS).toBe('');
+    expect(env.GIT_CONFIG_COUNT).toBe('1');
+    expect(env.GIT_CONFIG_KEY_0).toBe('core.askPass');
+    expect(JSON.stringify(env)).not.toMatch(/extraHeader|credential\.helper/);
+    expect(env.GIT_SSH_COMMAND).toBe('ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new');
+  });
+
+  it('respeta el GIT_SSH_COMMAND propio del usuario', async () => {
+    const dir = await carpetaTemporal('pel-git-');
+    const llamadas: { cmd: string; args: string[]; opts?: OpcionesLanzar }[] = [];
+    const git = new Git({
+      existe: () => false,
+      entorno: { Path: '', GIT_SSH_COMMAND: 'ssh -i C:/llave' },
+      lanzar: lanzadorFalso([], 0, llamadas),
+    });
+    await git.clonar('git@github.com:dueno/repo.git', path.join(dir, 'r'));
+    expect(llamadas[0]!.opts!.env!.GIT_SSH_COMMAND).toBeUndefined();
+  });
+
+  it('un clon que supera el plazo se corta y deja todo como estaba', async () => {
+    const dir = await carpetaTemporal('pel-git-');
+    const destino = path.join(dir, 'lento');
+    const git = new Git({
+      ...sinRutas,
+      plazoClonMs: 30,
+      lanzar: async (_c, args, opts) => {
+        mkdirSync(args[args.length - 1]!, { recursive: true });
+        await new Promise<void>((r) => opts!.senal!.addEventListener('abort', () => r()));
+        return { codigo: 1 };
+      },
+    });
+    await expect(git.clonar('https://github.com/a/b', destino)).rejects.toThrow(/plazo/);
+    expect(existsSync(destino)).toBe(false);
   });
 
   it('no manda el token a un host que no es github.com', async () => {
@@ -382,6 +422,7 @@ describe('Git.traerCambios con un ejecutor falso', () => {
               'web/package-lock.json',
               'database/migrations/2026_11_01_000000_crear_tabla.php',
               'app/migrations/0002_auto.py',
+              'app/Database/Migrations/2026-11-01-000000_CrearUsuarios.php',
               'requirements-dev.txt',
               'README.md',
             ].join('\n'),
@@ -399,6 +440,7 @@ describe('Git.traerCambios con un ejecutor falso', () => {
         migraciones: [
           'database/migrations/2026_11_01_000000_crear_tabla.php',
           'app/migrations/0002_auto.py',
+          'app/Database/Migrations/2026-11-01-000000_CrearUsuarios.php',
         ],
         requirements: true,
       },
