@@ -214,132 +214,216 @@ class Salida {
   }
 }
 
-/** Patrones de líneas que cambiarían de base (o la crearían o borrarían) durante un restore. */
+/**
+ * Líneas que cambiarían de base (o la crearían o borrarían) durante un restore. Se comentan
+ * SIEMPRE, salvo que el léxico esté seguro de que la línea cae dentro de un texto entre
+ * comillas o de un cuerpo $tag$ (o en los datos de un COPY). El BOM se quita antes de probar.
+ */
 const CAMBIO_BASE: Record<'pg' | 'mysql', RegExp> = {
-  pg: /^(?:ï»¿)?\s*(?:\\c(?:onnect)?(?:\s|$)|(?:CREATE|DROP|ALTER)\s+DATABASE\b)/i,
+  pg: /^\s*(?:\\c(?:onnect)?(?:\s|$)|(?:CREATE|DROP|ALTER)\s+DATABASE\b)/i,
   mysql:
-    /^(?:ï»¿)?\s*(?:\/\*!\d*\s*)?(?:USE[\s`]|\\u\s|CONNECT\s|\\r\s|(?:CREATE|DROP|ALTER)\s+(?:DATABASE|SCHEMA)\b)/i,
+    /^\s*(?:\/\*!\d*\s*)?(?:USE(?:[\s`;]|$)|\\[ur](?:\s|$)|CONNECT(?:[\s;]|$)|(?:CREATE|DROP|ALTER)\s+(?:DATABASE|SCHEMA)\b)/i,
+};
+/** Meta-comando de cambio de conexión en cualquier punto de la línea (fuera de comillas). */
+const META_CONEXION: Record<'pg' | 'mysql', RegExp> = {
+  pg: /\\c(?:onnect)?(?=\s|$)/y,
+  mysql: /\\[ur](?=\s|$)/y,
 };
 /** Solo se mira el principio de cada línea (un INSERT puede medir megas). */
 const MAX_CABEZA_LINEA = 4096;
+/** BOM de UTF-8 leído en latin1 (0xEF 0xBB 0xBF), escrito con códigos para que no se pierda. */
+const BOM_LATIN1 = String.fromCharCode(0xef, 0xbb, 0xbf);
 const ETIQUETA_DOLAR = /\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/y;
 const ESPACIO = /\s/;
+const IDENTIFICADOR = /[A-Za-z0-9_$\x80-\xff]/;
+
+interface EstadoLexico {
+  modo: 'normal' | 'comilla' | 'dolar' | 'bloque' | 'linea';
+  comilla: string;
+  escapes: boolean;
+  etiqueta: string;
+  resto: string;
+  inicio: boolean;
+  delimitador: string;
+  cola: string;
+  ant: string;
+  ant2: string;
+}
 
 /**
- * Sigue la sintaxis SQL lo justo para saber si una línea empieza una sentencia: comillas
- * ('…', "…", `…`; en MySQL con escapes \), cuerpos $tag$ de PostgreSQL y comentarios. Trabaja
- * en latin1 (los bytes ≥ 0x80 de UTF-8 nunca son sintaxis) y por trozos.
+ * Sigue la sintaxis SQL lo justo para saber dónde hay textos entre comillas ('…', "…", `…`,
+ * E'…' con escapes \ en PostgreSQL, \ en MySQL), cuerpos $tag$ y comentarios. Trabaja en
+ * latin1 (los bytes ≥ 0x80 de UTF-8 nunca son sintaxis) y por trozos. Además marca si vio un
+ * meta-comando de cambio de conexión (\c, \connect; \u, \r) fuera de comillas.
  */
 class Lexico {
-  modo: 'normal' | 'comilla' | 'dolar' | 'bloque' | 'linea' = 'normal';
-  private comilla = '';
-  private etiqueta = '';
-  /** Lo que quedó al final de un trozo sin poder decidir (p. ej. un "$" o un "-"). */
-  private resto = '';
-  /** true si lo último significativo cerró una sentencia (o al principio del flujo). */
-  inicio = true;
-  private delimitador = ';';
-  private cola = '';
+  private e: EstadoLexico = {
+    modo: 'normal',
+    comilla: '',
+    escapes: false,
+    etiqueta: '',
+    resto: '',
+    inicio: true,
+    delimitador: ';',
+    cola: '',
+    ant: '\n',
+    ant2: '\n',
+  };
+  /** Se vio un meta-comando de cambio de conexión desde el último `limpiarMeta`. */
+  meta = false;
 
   constructor(private readonly mysql: boolean) {}
 
-  /** true si la línea que empieza ahora es, sin duda, el comienzo de una sentencia. */
-  enInicio(): boolean {
-    return this.modo === 'normal' && this.inicio && this.resto === '';
+  guardar(): EstadoLexico {
+    return { ...this.e };
   }
 
-  /** Tras una línea que no se analiza (comentada, meta-comando de psql, DELIMITER). */
+  volver(e: EstadoLexico): void {
+    this.e = { ...e };
+  }
+
+  /** Seguro de estar dentro de un texto o de un cuerpo $tag$ (lo único que evita filtrar). */
+  dentroDeTexto(): boolean {
+    return (this.e.modo === 'comilla' || this.e.modo === 'dolar') && this.e.resto === '';
+  }
+
+  /** Seguro de que la línea que empieza ahora inicia una sentencia. */
+  enInicio(): boolean {
+    return this.e.modo === 'normal' && this.e.inicio && this.e.resto === '';
+  }
+
+  /** Tras DELIMITER o un COPY: estado limpio al principio de sentencia. */
   reiniciar(delimitador?: string): void {
-    this.modo = 'normal';
-    this.resto = '';
-    this.inicio = true;
-    this.cola = '';
-    if (delimitador !== undefined) this.delimitador = delimitador;
+    this.e.modo = 'normal';
+    this.e.resto = '';
+    this.e.inicio = true;
+    this.e.cola = '';
+    if (delimitador !== undefined) this.e.delimitador = delimitador;
   }
 
   private significativo(c: string): void {
-    this.cola = (this.cola + c).slice(-8);
-    this.inicio = this.cola.endsWith(this.delimitador);
+    const e = this.e;
+    e.cola = (e.cola + c).slice(-8);
+    e.inicio = e.cola.endsWith(e.delimitador);
+  }
+
+  private anterior(c: string): void {
+    this.e.ant2 = this.e.ant;
+    this.e.ant = c;
   }
 
   avanzar(trozo: string): void {
-    const t = this.resto + trozo;
-    this.resto = '';
+    const e = this.e;
+    const t = e.resto + trozo;
+    e.resto = '';
     const n = t.length;
     for (let i = 0; i < n; i++) {
       const c = t[i]!;
-      switch (this.modo) {
+      if (c === '\\' && e.modo !== 'comilla' && e.modo !== 'dolar') {
+        // psql y mysql ejecutan los meta-comandos en cualquier punto fuera de comillas.
+        const patron = META_CONEXION[this.mysql ? 'mysql' : 'pg'];
+        patron.lastIndex = i;
+        if (patron.exec(t)) {
+          this.meta = true;
+        } else if (n - i < 10 && !t.includes('\n', i)) {
+          e.resto = t.slice(i);
+          return;
+        }
+      }
+      switch (e.modo) {
         case 'linea':
-          if (c === '\n') this.modo = 'normal';
+          if (c === '\n') e.modo = 'normal';
+          this.anterior(c);
           continue;
         case 'bloque':
           if (c === '*') {
             if (i + 1 >= n) {
-              this.resto = '*';
+              e.resto = '*';
               return;
             }
             if (t[i + 1] === '/') {
-              this.modo = 'normal';
+              e.modo = 'normal';
               i++;
             }
           }
+          this.anterior(c);
           continue;
         case 'comilla':
-          if (c === '\\' && this.mysql) {
+          if (c === '\\' && e.escapes) {
             if (i + 1 >= n) {
-              this.resto = '\\';
+              e.resto = '\\';
               return;
             }
             i++;
-          } else if (c === this.comilla) {
-            this.modo = 'normal';
+          } else if (c === e.comilla) {
+            e.modo = 'normal';
           }
+          this.anterior(c);
           continue;
         case 'dolar':
           if (c === '$') {
-            if (n - i < this.etiqueta.length && this.etiqueta.startsWith(t.slice(i))) {
-              this.resto = t.slice(i);
+            if (n - i < e.etiqueta.length && e.etiqueta.startsWith(t.slice(i))) {
+              e.resto = t.slice(i);
               return;
             }
-            if (t.startsWith(this.etiqueta, i)) {
-              this.modo = 'normal';
-              i += this.etiqueta.length - 1;
+            if (t.startsWith(e.etiqueta, i)) {
+              e.modo = 'normal';
+              i += e.etiqueta.length - 1;
               this.significativo('$');
             }
           }
+          this.anterior(c);
           continue;
         default:
           break;
       }
-      if (ESPACIO.test(c)) continue;
+      if (ESPACIO.test(c)) {
+        this.anterior(c);
+        continue;
+      }
       const sig = t[i + 1];
       if ((c === '-' || c === '/') && sig === undefined) {
-        this.resto = c;
+        e.resto = c;
         return;
       }
       if (c === '-' && sig === '-') {
-        this.modo = 'linea';
-        i++;
+        // En MySQL "--" es comentario solo si le sigue un espacio, un control o el fin.
+        const tercero = t[i + 2];
+        if (this.mysql && tercero === undefined) {
+          e.resto = t.slice(i);
+          return;
+        }
+        if (!this.mysql || tercero!.charCodeAt(0) <= 0x20) {
+          e.modo = 'linea';
+          i++;
+          this.anterior('-');
+          continue;
+        }
+        this.significativo(c);
       } else if (c === '#' && this.mysql) {
-        this.modo = 'linea';
+        e.modo = 'linea';
       } else if (c === '/' && sig === '*') {
-        this.modo = 'bloque';
+        e.modo = 'bloque';
         i++;
       } else if (c === "'" || c === '"' || c === '`') {
-        this.comilla = c;
-        this.modo = 'comilla';
+        e.comilla = c;
+        e.modo = 'comilla';
+        // MySQL: \ escapa en todo texto. PostgreSQL: solo en E'…' (la E no es parte de un nombre).
+        e.escapes =
+          this.mysql ||
+          (c === "'" && (e.ant === 'E' || e.ant === 'e') && !IDENTIFICADOR.test(e.ant2));
         this.significativo(c);
-      } else if (c === '$' && !this.mysql) {
+      } else if (c === '$' && !this.mysql && !IDENTIFICADOR.test(e.ant)) {
         ETIQUETA_DOLAR.lastIndex = i;
         const m = ETIQUETA_DOLAR.exec(t);
         if (m) {
-          this.etiqueta = m[0];
-          this.modo = 'dolar';
+          e.etiqueta = m[0];
+          e.modo = 'dolar';
           i += m[0].length - 1;
           this.significativo('$');
         } else if (n - i < 64 && !t.includes('\n', i)) {
           // Puede ser una etiqueta partida entre trozos: se decide con el siguiente.
-          this.resto = t.slice(i);
+          e.resto = t.slice(i);
           return;
         } else {
           this.significativo(c);
@@ -347,22 +431,28 @@ class Lexico {
       } else {
         this.significativo(c);
       }
+      this.anterior(t[i]!);
     }
   }
 }
 
+/** Un meta-comando de cambio de base quedó en la parte larga de una línea ya enviada. */
+const MENSAJE_META_TARDIO =
+  'El respaldo tiene un cambio de base (\\connect o \\u) dentro de una línea muy larga; se detuvo la restauración.';
+
 /**
  * Comenta (`-- `) las líneas que harían salir de la base destino: `USE otra`, `\connect otra`,
- * `CREATE/DROP DATABASE`. Así nada del respaldo cae en otra base. Solo actúa al principio de una
- * sentencia (nunca dentro de un texto entre comillas, un cuerpo $$…$$ o los datos de un
- * `COPY … FROM stdin`); si no está seguro, no toca la línea.
+ * `\u otra`, `CREATE/DROP DATABASE`. A prueba de fallos: solo deja pasar una línea así si el
+ * léxico está seguro de que cae dentro de un texto entre comillas, de un cuerpo $tag$ o de los
+ * datos de un `COPY … FROM stdin`. Si un meta-comando aparece en la parte de una línea larga que
+ * ya se envió, corta el flujo con error.
  */
 export class FiltroCambioDeBase extends Transform {
   private cabeza: Buffer[] = [];
   private largo = 0;
   private enCabeza = true;
   private enCopy = false;
-  /** La línea en curso no pasa por el léxico (comentada o meta-comando). */
+  /** La línea en curso no pasa por el léxico (comentada, meta-comando, DELIMITER, COPY). */
   private saltarLinea = false;
   private copyAlTerminar = false;
   private delimitadorAlTerminar: string | undefined;
@@ -382,7 +472,10 @@ export class FiltroCambioDeBase extends Transform {
       const j = trozo.indexOf(0x0a, i);
       if (!this.enCabeza) {
         const fin = j === -1 ? trozo.length : j + 1;
-        this.cuerpo(trozo.subarray(i, fin));
+        if (!this.cuerpo(trozo.subarray(i, fin))) {
+          cb(new Error(MENSAJE_META_TARDIO));
+          return;
+        }
         i = fin;
         if (j !== -1) this.finDeLinea();
         continue;
@@ -408,14 +501,21 @@ export class FiltroCambioDeBase extends Transform {
   }
 
   /** Resto de una línea larga: pasa tal cual, pero el léxico lo sigue leyendo. */
-  private cuerpo(b: Buffer): void {
-    if (!this.enCopy && !this.saltarLinea) this.lexico.avanzar(b.toString('latin1'));
+  private cuerpo(b: Buffer): boolean {
+    if (!this.enCopy && !this.saltarLinea) {
+      this.lexico.meta = false;
+      this.lexico.avanzar(b.toString('latin1'));
+      if (this.lexico.meta) return false;
+    }
     this.push(b);
+    return true;
   }
 
   private finDeLinea(): void {
     this.enCabeza = true;
-    if (this.saltarLinea) this.lexico.reiniciar(this.delimitadorAlTerminar);
+    if (this.delimitadorAlTerminar !== undefined || this.copyAlTerminar) {
+      this.lexico.reiniciar(this.delimitadorAlTerminar);
+    }
     this.saltarLinea = false;
     this.delimitadorAlTerminar = undefined;
     if (this.copyAlTerminar) this.enCopy = true;
@@ -433,16 +533,25 @@ export class FiltroCambioDeBase extends Transform {
       this.push(b);
       return;
     }
+    const enTexto = this.lexico.dentroDeTexto();
     const inicio = this.lexico.enInicio();
-    if (inicio && CAMBIO_BASE[this.tipo].test(texto)) {
+    const antes = this.lexico.guardar();
+    this.lexico.meta = false;
+    this.lexico.avanzar(texto);
+    const conMeta = this.lexico.meta;
+    const sinBom = texto.startsWith(BOM_LATIN1) ? texto.slice(3) : texto;
+    if (conMeta || (!enTexto && CAMBIO_BASE[this.tipo].test(sinBom))) {
+      // La línea entera pasa a ser un comentario: el léxico sigue como antes de ella.
+      this.lexico.volver(antes);
       this.alOmitir(b.toString('utf8').trim().slice(0, 200));
       this.push(Buffer.from('-- '));
       this.push(b);
       this.saltarLinea = true;
       return;
     }
-    if (inicio && this.tipo === 'pg' && /^\s*\\/.test(texto)) {
-      // Meta-comando de psql (\set, \encoding…): ocupa la línea y no lleva ";".
+    if (!enTexto && this.tipo === 'pg' && /^\s*\\/.test(texto)) {
+      // Otro meta-comando de psql (\set, \encoding…): ocupa la línea; no es SQL.
+      this.lexico.volver(antes);
       this.push(b);
       this.saltarLinea = true;
       return;
@@ -461,11 +570,8 @@ export class FiltroCambioDeBase extends Transform {
       (/FROM\s+stdin\s*;/i.test(texto) || !completa)
     ) {
       this.copyAlTerminar = true;
-      this.push(b);
       this.saltarLinea = true;
-      return;
     }
-    this.lexico.avanzar(texto);
     this.push(b);
   }
 }
@@ -632,15 +738,27 @@ export class Respaldos {
 
   /** Respaldo automático de la base que se va a reemplazar; si falla, no se toca nada. */
   private async respaldoDeSeguridad(motor: MotorSql, base: string): Promise<string> {
+    let archivo: string;
     try {
-      return (await this.respaldarComo(motor, base, undefined, `${base}-antes-de-sobrescribir`))
-        .archivo;
+      ({ archivo } = await this.respaldarComo(
+        motor,
+        base,
+        undefined,
+        `${base}-antes-de-sobrescribir`,
+      ));
     } catch (e) {
       const detalle = e instanceof Error ? e.message : String(e);
       throw new Error(
         `No se sobrescribió la base ${base}: falló su respaldo previo y no se tocó nada. ${detalle}`,
       );
     }
+    if (!(await respaldoValido(archivo, motor))) {
+      await rm(archivo, { force: true }).catch(() => undefined);
+      throw new Error(
+        `No se sobrescribió la base ${base}: su respaldo previo quedó vacío o incompleto; no se tocó nada.`,
+      );
+    }
+    return archivo;
   }
 
   /** Borra la base destino (PostgreSQL: antes cierra las demás conexiones a ella). */
@@ -657,7 +775,9 @@ export class Respaldos {
       await c.conectar(datos);
       try {
         await c.terminarConexiones(base);
-        await c.borrarBase(base);
+        // Desde PostgreSQL 13, WITH (FORCE) cierra también las conexiones que entren entretanto.
+        const v = leerVersion(await c.version(), /PostgreSQL\s+(\d+)(?:\.(\d+))?/);
+        await c.borrarBase(base, { forzar: (v?.mayor ?? 0) >= 13 });
       } finally {
         await c.cerrar();
       }
@@ -709,19 +829,25 @@ export class Respaldos {
     try {
       const fuente = await this.preparar(ruta, tmp, 0);
       this.revisarFamilia(m, fuente);
-      let respaldoPrevio: string | undefined;
-      if (tablas) {
-        // Sobrescribir = reemplazar: respaldo de seguridad, base nueva y luego la restauración.
-        respaldoPrevio = await this.respaldoDeSeguridad(m, base);
-        await this.borrarParaReemplazar(m, base);
-      } else if (await this.d.bd.tieneTablas(m, base)) {
-        // Aparecieron tablas mientras se preparaba el archivo: no se toca nada.
-        throw errorConTablas(base);
-      }
-      await this.d.bd.crear(m, base);
       const claves = [con.clave ?? '', ...clavesExtra];
-      const r = await this.ejecutarRestauracion(operacion, m, fuente, base, con, claves);
-      return respaldoPrevio ? { ...r, respaldoPrevio } : r;
+      if (!tablas) {
+        if (await this.d.bd.tieneTablas(m, base)) {
+          // Aparecieron tablas mientras se preparaba el archivo: no se toca nada.
+          throw errorConTablas(base);
+        }
+        await this.d.bd.crear(m, base);
+        return await this.ejecutarRestauracion(operacion, m, fuente, base, con, claves);
+      }
+      // Sobrescribir = reemplazar: respaldo de seguridad verificado, base nueva y restauración.
+      const respaldoPrevio = await this.respaldoDeSeguridad(m, base);
+      await this.borrarParaReemplazar(m, base);
+      try {
+        await this.d.bd.crear(m, base);
+        const r = await this.ejecutarRestauracion(operacion, m, fuente, base, con, claves);
+        return { ...r, respaldoPrevio };
+      } catch (e) {
+        throw new ErrorTrasReemplazo(base, respaldoPrevio, e);
+      }
     } finally {
       await rm(tmp, OPCIONES_BORRADO).catch(() => undefined);
     }
@@ -1169,6 +1295,45 @@ export class Respaldos {
       await rm(tmp, OPCIONES_BORRADO).catch(() => undefined);
     }
   }
+}
+
+/** Falló la restauración después de borrar la base original (queda su respaldo previo). */
+export class ErrorTrasReemplazo extends Error {
+  constructor(
+    base: string,
+    readonly respaldoPrevio: string,
+    causa: unknown,
+  ) {
+    super(
+      `No se pudo completar la restauración de ${base}. La base original se reemplazó; su copia de seguridad está en ${respaldoPrevio}. Puede restaurarla desde Bases de datos.`,
+      { cause: causa },
+    );
+  }
+}
+
+/**
+ * El respaldo previo sirve: existe, no está vacío y, si es de PostgreSQL, empieza por PGDMP;
+ * si es SQL, trae al menos un CREATE, INSERT o COPY.
+ */
+async function respaldoValido(ruta: string, motor: MotorSql): Promise<boolean> {
+  let tam: number;
+  try {
+    tam = (await stat(ruta)).size;
+  } catch {
+    return false;
+  }
+  if (tam === 0) return false;
+  if (motor === 'postgresql') {
+    return (await leerCabeza(ruta, 5)).toString('latin1') === 'PGDMP';
+  }
+  const patron = /\b(CREATE|INSERT|COPY)\s/i;
+  let cola = '';
+  for await (const trozo of createReadStream(ruta)) {
+    const t = cola + (trozo as Buffer).toString('latin1');
+    if (patron.test(t)) return true;
+    cola = t.slice(-16);
+  }
+  return false;
 }
 
 class ErrorVolcado extends Error {

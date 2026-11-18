@@ -243,11 +243,12 @@ export class ClientePostgres {
     }
   }
 
-  async borrarBase(nombre: string): Promise<void> {
+  /** `forzar` (PostgreSQL 13+) agrega WITH (FORCE): cierra las conexiones que queden abiertas. */
+  async borrarBase(nombre: string, opts: { forzar?: boolean } = {}): Promise<void> {
     const bd = id(nombre);
     noSistema(nombre, 'borrar');
     try {
-      await this.filas(`DROP DATABASE ${bd}`);
+      await this.filas(`DROP DATABASE ${bd}${opts.forzar ? ' WITH (FORCE)' : ''}`);
     } catch (e) {
       throw traducir(e, `borrar la base ${nombre}`);
     }

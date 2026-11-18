@@ -153,7 +153,8 @@ function armar(extra: Partial<DepsRespaldos> = {}): Respaldos {
       if (LOCALES.includes(c.puerto)) {
         consultasLocal.push(s);
         orden.push(`sql: ${s}`);
-        return tipo === 'pg' ? { rows: [] } : [[]];
+        const filas = s.startsWith('SELECT version()') ? [{ version: 'PostgreSQL 17.2' }] : [];
+        return tipo === 'pg' ? { rows: filas } : [filas];
       }
       consultasOrigen.push(s);
       const filas = [{ v: versionOrigen, version: versionOrigen }];
@@ -324,7 +325,8 @@ describe('restaurar', () => {
     expect(orden).toEqual([
       'pg_dump.exe',
       expect.stringMatching(/^sql: SELECT pg_terminate_backend\(pid\).*pid <> pg_backend_pid\(\)/),
-      'sql: DROP DATABASE "diamantes"',
+      'sql: SELECT version() AS version',
+      'sql: DROP DATABASE "diamantes" WITH (FORCE)',
       'crear',
       'pg_restore.exe',
     ]);
@@ -367,24 +369,128 @@ describe('restaurar', () => {
     expect(creadas).toEqual([]);
   });
 
-  it('el filtro no toca líneas dentro de textos ni de cuerpos $$', async () => {
+  it('el filtro solo deja pasar lo que está seguro dentro de textos o cuerpos $$', async () => {
     const sql =
       "INSERT INTO t VALUES ('linea 1\nDROP DATABASE x;\nUSE otra;');\n" +
       'CREATE FUNCTION f() RETURNS void AS $cuerpo$\nDROP DATABASE y;\n$cuerpo$ LANGUAGE sql;\n' +
       'SELECT 1\nDROP DATABASE z;\n' +
       '\\set x 1\nDROP DATABASE w;\n';
     await armar().restaurar('postgresql', fixture('p.sql', sql), 'tienda');
-    // Solo la última: va tras un meta-comando de psql, es inicio de sentencia.
-    expect(lanzados[0]!.entrada).toBe(sql.replace('DROP DATABASE w;', '-- DROP DATABASE w;'));
+    // Fuera de un texto se filtra aunque no sea inicio de sentencia (a prueba de fallos).
+    expect(lanzados[0]!.entrada).toBe(
+      sql
+        .replace('DROP DATABASE z;', '-- DROP DATABASE z;')
+        .replace('DROP DATABASE w;', '-- DROP DATABASE w;'),
+    );
   });
 
-  it('el filtro de MySQL respeta escapes, comentarios y DELIMITER', async () => {
+  it('el filtro de MySQL respeta escapes y DELIMITER, y filtra dentro de /*! */', async () => {
     const sql =
       "INSERT INTO t VALUES ('a\\'\nUSE otra;');\n" +
       '/*!40101 SET x=1\nUSE otra2 */;\n' +
       'DELIMITER ;;\nCREATE PROCEDURE p() BEGIN SELECT 1; END;;\nUSE otra3;\n';
     await armar().restaurar('mysql', fixture('m.sql', sql), 'tienda');
-    expect(lanzados[0]!.entrada).toBe(sql.replace('USE otra3;', '-- USE otra3;'));
+    expect(lanzados[0]!.entrada).toBe(
+      sql.replace('USE otra2', '-- USE otra2').replace('USE otra3;', '-- USE otra3;'),
+    );
+  });
+
+  it.each([
+    [
+      'PG: \\connect tras una sentencia sin terminar',
+      'postgresql',
+      'CREATE TABLE t (a int)\n\\connect postgres\nDROP TABLE x;\n',
+      '\\connect postgres',
+    ],
+    [
+      "PG: \\connect tras E'it\\'s'",
+      'postgresql',
+      "SELECT E'it\\'s';\nSELECT 1;\n\\connect postgres\n",
+      '\\connect postgres',
+    ],
+    ['MySQL: \\u dentro de una sentencia', 'mysql', 'SELECT 1\n\\u other\n;\n', '\\u other'],
+    [
+      'PG: $ dentro de un nombre no abre un cuerpo $$',
+      'postgresql',
+      'SELECT a$b$ FROM t;\n\\c postgres\n',
+      '\\c postgres',
+    ],
+    [
+      'MySQL: "-- " es comentario y no abre comillas',
+      'mysql',
+      "SELECT 1 -- 'abc\nUSE otra;\n",
+      'USE otra;',
+    ],
+    [
+      'PG: \\c a mitad de línea',
+      'postgresql',
+      'SELECT 1; \\c postgres\n',
+      'SELECT 1; \\c postgres',
+    ],
+  ])('filtra el cambio de base (%s)', async (_n, motor, sql, linea) => {
+    const r = await armar().restaurar(motor as MotorBd, fixture('s.sql', sql), 'tienda');
+    expect(lanzados[0]!.entrada).toBe(sql.replace(linea, `-- ${linea}`));
+    expect(r.advertencias.join('\n')).toContain(linea);
+  });
+
+  it('un \\connect en la parte larga de una línea ya enviada detiene la restauración', async () => {
+    const sql = `INSERT INTO t VALUES (1);${' '.repeat(5000)}\\connect postgres\nSELECT 1;\n`;
+    await expect(
+      armar().restaurar('postgresql', fixture('largo.sql', sql), 'tienda'),
+    ).rejects.toThrow(/cambio de base/);
+  });
+
+  it('un respaldo previo vacío detiene todo antes de borrar', async () => {
+    conTablas = true;
+    respuestaLanzar = (l) => {
+      if (l.cmd.includes('pg_dump')) writeFileSync(l.args[l.args.indexOf('-f') + 1]!, '');
+      return { codigo: 0 };
+    };
+    await expect(
+      armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes', {
+        confirmarSobrescribir: true,
+      }),
+    ).rejects.toThrow(
+      'No se sobrescribió la base diamantes: su respaldo previo quedó vacío o incompleto; no se tocó nada.',
+    );
+    expect(orden).toEqual(['pg_dump.exe']);
+    expect(consultasLocal).toEqual([]);
+    expect(creadas).toEqual([]);
+  });
+
+  it('un respaldo previo SQL sin sentencias tampoco sirve', async () => {
+    conTablas = true;
+    respuestaLanzar = (l) => {
+      const r = l.args.find((a) => a.startsWith('--result-file='));
+      if (r) writeFileSync(r.slice('--result-file='.length), '-- MySQL dump\n-- nada\n');
+      return { codigo: 0 };
+    };
+    await expect(
+      armar().restaurar('mysql', fixture('m.sql', 'SELECT 1;\n'), 'tienda', {
+        confirmarSobrescribir: true,
+      }),
+    ).rejects.toThrow(/vacío o incompleto/);
+    expect(consultasLocal).toEqual([]);
+  });
+
+  it('si falla después de borrar, avisa dónde quedó el respaldo previo', async () => {
+    conTablas = true;
+    respuestaLanzar = (l) => {
+      if (l.cmd.includes('dump')) {
+        volcadoFalso(l);
+        return { codigo: 0 };
+      }
+      return { codigo: 1, lineas: ['pg_restore: error: fatal'] };
+    };
+    const p = armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes', {
+      confirmarSobrescribir: true,
+    });
+    const error = (await p.catch((e: unknown) => e)) as Error & { respaldoPrevio?: string };
+    expect(error.respaldoPrevio).toMatch(/diamantes-antes-de-sobrescribir-\d{8}-\d{4}\.dump$/);
+    expect(error.message).toBe(
+      `No se pudo completar la restauración de diamantes. La base original se reemplazó; su copia de seguridad está en ${error.respaldoPrevio}. Puede restaurarla desde Bases de datos.`,
+    );
+    expect(existsSync(error.respaldoPrevio!)).toBe(true);
   });
 
   it('un INSERT de varias líneas cuya 2.ª empieza por DROP DATABASE queda intacto', async () => {
