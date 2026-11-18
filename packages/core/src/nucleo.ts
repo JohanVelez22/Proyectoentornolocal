@@ -5,6 +5,10 @@ import { listarVersiones } from './catalogo/catalogo';
 import { Eventos, type EventosNucleo } from './eventos';
 import { GestorHosts } from './hosts/hosts';
 import { GestorHttps, type ResultadoCA } from './https/certificados';
+import { Adminer } from './herramientas/adminer';
+import { Composer } from './herramientas/composer';
+import { PathUsuario } from './herramientas/pathUsuario';
+import { Terminal } from './herramientas/terminal';
 import { crearPlataforma } from './plataforma/index';
 import type { Ejecutor, Plataforma } from './plataforma/tipos';
 import { ejecutorPorDefecto } from './plataforma/win';
@@ -106,6 +110,10 @@ export class Nucleo {
   avisoInicio: string | null = null;
   private almacenCredenciales!: AlmacenCredenciales;
   private gestorHttps!: GestorHttps;
+  private composer!: Composer;
+  private adminer!: Adminer;
+  private terminal!: Terminal;
+  private pathUsuario!: PathUsuario;
 
   private constructor(
     readonly rutas: Rutas,
@@ -154,6 +162,13 @@ export class Nucleo {
     let sitios!: GestorSitios;
     const https = new GestorHttps({ rutas, plataforma, pidNginx: () => supervisor.pid('nginx') });
     const credenciales = new AlmacenCredenciales(rutas, (fn) => sitios.enCola(fn));
+    const adminer = new Adminer({
+      rutas,
+      instalador,
+      leerConfig,
+      phpEncendido: (rama) =>
+        [0, 1, 2, 3].some((i) => supervisor.estado(`php-${rama}-${i}`) === 'encendido'),
+    });
     const servicios = new Servicios({
       rutas,
       plataforma,
@@ -172,6 +187,7 @@ export class Nucleo {
       ...(o.sonda ? { sonda: o.sonda } : {}),
       ...(o.ejecutor ? { exec: o.ejecutor } : {}),
       httpsPrincipal: async () => https.datosPrincipal((await leerConfig()).https.puerto),
+      adminerPrincipal: () => adminer.configNginx(),
     });
     sitios = new GestorSitios({
       almacen,
@@ -213,6 +229,16 @@ export class Nucleo {
     nucleo.avisoInicio = avisoInicio;
     nucleo.almacenCredenciales = credenciales;
     nucleo.gestorHttps = https;
+    nucleo.adminer = adminer;
+    nucleo.composer = new Composer({
+      rutas,
+      plataforma,
+      instalador,
+      exec: o.ejecutor ?? ejecutorPorDefecto,
+      leerConfig,
+    });
+    nucleo.terminal = new Terminal({ rutas });
+    nucleo.pathUsuario = new PathUsuario({ rutas, ...(o.ejecutor ? { exec: o.ejecutor } : {}) });
     o.alIniciar?.(eventos);
     try {
       await supervisor.readoptar();
@@ -239,6 +265,62 @@ export class Nucleo {
   /** Quita la autoridad del almacén del usuario (los sitios vuelven a HTTP al aplicar). */
   quitarCA(): Promise<ResultadoCA> {
     return this.gestorHttps.quitarCA();
+  }
+
+  /** Instala Composer y regenera los shims de tools/bin. */
+  instalarComposer(): Promise<void> {
+    return this.composer.instalar();
+  }
+
+  versionComposer(): Promise<string | null> {
+    return this.composer.version();
+  }
+
+  actualizarComposer(): Promise<string> {
+    return this.composer.actualizar();
+  }
+
+  /** Fija el PHP de los shims (null = el más reciente instalado) y los regenera. */
+  async cambiarPhpPorDefecto(rama: string | null): Promise<void> {
+    if (rama !== null && !(await this.instalador.instalados('php')).includes(rama)) {
+      throw new Error(`PHP ${rama} no está instalado.`);
+    }
+    await this.sitios.modificarConfig((c) => {
+      c.herramientas.phpPorDefecto = rama;
+    });
+    await this.composer.sincronizarShims();
+  }
+
+  /** Abre una terminal en la carpeta del sitio con su PHP y Composer en el PATH. */
+  async abrirTerminal(sitioId: string): Promise<void> {
+    const sitio = (await this.sitios.listar()).find((s) => s.id === sitioId);
+    if (!sitio) throw new Error('El sitio no existe.');
+    await this.composer.sincronizarShims();
+    await this.terminal.abrir(sitio);
+  }
+
+  estadoPathUsuario(): Promise<boolean> {
+    return this.pathUsuario.estado();
+  }
+
+  /** Agrega o quita tools/bin del PATH del usuario; el aviso dice cómo ver el cambio. */
+  async cambiarPathUsuario(activar: boolean): Promise<{ aviso: string }> {
+    if (activar) await this.composer.sincronizarShims();
+    return activar ? this.pathUsuario.agregar() : this.pathUsuario.quitar();
+  }
+
+  /** Instala Adminer (se sirve en 127.0.0.1:8090 al aplicar la configuración de nginx). */
+  instalarAdminer(): Promise<void> {
+    return this.adminer.instalar();
+  }
+
+  disponibilidadAdminer(): ReturnType<Adminer['disponibilidad']> {
+    return this.adminer.disponibilidad();
+  }
+
+  /** URL de Adminer para un motor, sin clave; null si Adminer no lo soporta. */
+  urlAdminer(motor: string, usuario: string): Promise<string | null> {
+    return this.adminer.urlPara(motor, usuario);
   }
 
   /** Usuario y clave de un servicio propio para "Datos de conexión" (null si aún no se generaron). */

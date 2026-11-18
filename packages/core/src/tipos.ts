@@ -75,6 +75,12 @@ export const ConfigSchema = z.object({
   version: z.literal(1).default(1),
   sitios: z.array(SitioSchema).default([]),
   https: z.object({ puerto: z.number().int().min(1).max(65535).default(443) }).prefault({}),
+  herramientas: z
+    .object({
+      /** Rama de PHP de los shims de tools/bin; null = la más reciente instalada. */
+      phpPorDefecto: z.string().nullable().default(null),
+    })
+    .prefault({}),
   servicios: z
     .object({
       nginx: z

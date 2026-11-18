@@ -72,6 +72,11 @@ export class ServicioNginx {
       crt: string;
       key: string;
     } | null> = async () => null,
+    /** Vhost interno de Adminer (null si no está instalado). */
+    private readonly adminer: () => Promise<{
+      raiz: string;
+      puertos: number[];
+    } | null> = async () => null,
   ) {}
 
   /** Versión configurada si está instalada; si no, la más reciente instalada. */
@@ -105,6 +110,7 @@ export class ServicioNginx {
 
   private async generarConf(bin: string, destino: string): Promise<void> {
     const https = await this.httpsPrincipal();
+    const adminer = await this.adminer();
     const contenido = generarNginxPrincipal({
       prefijo: bin,
       sitesDir: path.dirname(this.rutas.vhost('x')),
@@ -112,6 +118,7 @@ export class ServicioNginx {
       logsDir: this.rutas.logs(),
       puerto: (await this.leerConfig()).servicios.nginx.puerto,
       ...(https ? { https } : {}),
+      ...(adminer ? { adminer } : {}),
     });
     await mkdir(this.rutas.logs(), { recursive: true });
     await mkdir(path.dirname(this.rutas.vhost('x')), { recursive: true });

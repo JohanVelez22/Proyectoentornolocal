@@ -43,6 +43,8 @@ export interface DepsServicios {
   exec?: Ejecutor;
   /** Certificado de localhost del servidor por defecto (null si el HTTPS no es usable). */
   httpsPrincipal?: () => Promise<{ puerto: number; crt: string; key: string } | null>;
+  /** Carpeta y puertos PHP del vhost interno de Adminer (null si no está instalado). */
+  adminerPrincipal?: () => Promise<{ raiz: string; puertos: number[] } | null>;
 }
 
 export type IdServicio = 'nginx' | `php-${string}` | IdServicioDatos;
@@ -95,6 +97,7 @@ export class Servicios {
       upstreams,
       d.exec,
       d.httpsPrincipal,
+      d.adminerPrincipal,
     );
     this.php = new ServicioPhp(d.rutas, d.plataforma, d.supervisor, d.instalador, d.leerConfig);
     const definiciones = d.definiciones;

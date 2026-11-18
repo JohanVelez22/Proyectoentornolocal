@@ -13,7 +13,42 @@ const PAGINA_404 =
   '<p>Ningún sitio de WolfCore Dev responde a este nombre. Revise la dirección o el dominio del sitio.</p>' +
   '</body></html>';
 
+/** Puerto del vhost interno de Adminer (solo 127.0.0.1). */
+export const PUERTO_ADMINER = 8090;
+
 const limpiar = (ruta: string): string => ruta.replace(/\\/g, '/').replace(/\/+$/, '');
+
+/** Solo index.php (y estáticos); lo demás, 404. Escucha únicamente en 127.0.0.1. */
+function bloqueAdminer(a: { raiz: string; puertos: number[] }): string[] {
+  const raiz = limpiar(a.raiz);
+  const php = [
+    '            fastcgi_pass adminer_php;',
+    '            include fastcgi_params;',
+    `            fastcgi_param SCRIPT_FILENAME "${raiz}/index.php";`,
+    '            fastcgi_param SCRIPT_NAME /index.php;',
+  ];
+  return [
+    '    upstream adminer_php {',
+    ...a.puertos.map((p) => `        server 127.0.0.1:${p};`),
+    '    }',
+    '    server {',
+    `        listen 127.0.0.1:${PUERTO_ADMINER};`,
+    '        server_name 127.0.0.1 localhost;',
+    `        root "${raiz}";`,
+    '        index index.php;',
+    '        location = / {',
+    ...php,
+    '        }',
+    '        location = /index.php {',
+    ...php,
+    '        }',
+    '        location ~* \\.(css|js|png|gif|ico|svg|woff2?)$ { try_files $uri =404; }',
+    '        location / {',
+    '            return 404;',
+    '        }',
+    '    }',
+  ];
+}
 
 export function generarNginxPrincipal(o: {
   prefijo: string;
@@ -24,6 +59,8 @@ export function generarNginxPrincipal(o: {
   puerto: number;
   /** También escucha por HTTPS con el certificado de localhost (solo si el HTTPS es usable). */
   https?: { puerto: number; crt: string; key: string };
+  /** Vhost interno de Adminer: carpeta con index.php y puertos del PHP que lo atiende. */
+  adminer?: { raiz: string; puertos: number[] };
 }): string {
   const prefijo = limpiar(o.prefijo);
   const logs = limpiar(o.logsDir);
@@ -70,6 +107,7 @@ export function generarNginxPrincipal(o: {
       '        default_type text/html;',
       `        return 404 '${PAGINA_404}';`,
       '    }',
+      ...(o.adminer ? bloqueAdminer(o.adminer) : []),
       `    include "${limpiar(o.sitesDir)}/*.conf";`,
       '}',
     ].join('\n') + '\n'

@@ -85,6 +85,10 @@ export class Rutas {
   config(): string {
     return path.join(this.base, 'config.json');
   }
+  /** Herramientas propias: tools/<...>. Los shims viven en tools/bin. */
+  herramientas(...p: string[]): string {
+    return path.join(this.base, 'tools', ...p);
+  }
   tmp(): string {
     return path.join(this.base, 'tmp');
   }
