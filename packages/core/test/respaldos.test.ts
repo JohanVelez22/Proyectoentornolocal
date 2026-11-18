@@ -100,6 +100,7 @@ let creadas: { motor: MotorBd; base: string }[];
 let conTablas: boolean;
 /** Dueño que devuelve el PostgreSQL local falso (null: la base no existe). */
 let duenoLocal: string | null;
+let fallaObjetos = false;
 let respuestaLanzar: (l: Lanzado) => { codigo: number; lineas?: string[] };
 let respuestaTar: (args: string[]) => { codigo: number };
 let documentos: string;
@@ -175,6 +176,7 @@ function armar(extra: Partial<DepsRespaldos> = {}): Respaldos {
       if (LOCALES.includes(c.puerto)) {
         consultasLocal.push(s);
         orden.push(`sql: ${s}`);
+        if (fallaObjetos && s === 'ORDEN(objetos)') throw new Error('permiso denegado');
         const filas = s.startsWith('SELECT version()')
           ? [{ version: 'PostgreSQL 17.2' }]
           : s.includes('pg_get_userbyid(datdba)')
@@ -248,6 +250,7 @@ beforeEach(async () => {
   creadas = [];
   conTablas = false;
   duenoLocal = null;
+  fallaObjetos = false;
   respuestaLanzar = (l) => {
     if (l.cmd.includes('dump')) volcadoFalso(l);
     return { codigo: 0 };
@@ -386,6 +389,19 @@ describe('restaurar', () => {
       'sql: SELECT format($1, $2::text) AS s',
       'sql: ORDEN(objetos)',
     ]);
+  });
+
+  it('PostgreSQL: si devolver el dueño falla tras restaurar, devuelve éxito con advertencia', async () => {
+    conTablas = true;
+    duenoLocal = 'app_tienda';
+    fallaObjetos = true;
+    const r = await armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes', {
+      confirmarSobrescribir: true,
+    });
+    expect(r.advertencias).toContain(
+      'Los datos se restauraron, pero no se pudo devolver la propiedad al usuario app_tienda: No se pudo asignar el dueño app_tienda a la base diamantes: el servidor rechazó la operación.',
+    );
+    expect(r.respaldoPrevio).toBeDefined();
   });
 
   it('PostgreSQL: restaurar en una base vacía de un usuario le devuelve los objetos', async () => {

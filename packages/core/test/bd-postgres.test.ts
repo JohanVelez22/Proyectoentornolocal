@@ -316,6 +316,9 @@ describe('ClientePostgres', () => {
       expect(SQL_ASIGNAR_DUENO).toContain(`'${t}'`);
     }
     expect(SQL_ASIGNAR_DUENO).toContain('ALTER SCHEMA %%I OWNER TO %%I');
+    // Agregados sin argumentos: f(*), no f().
+    expect(SQL_ASIGNAR_DUENO).toContain('p.pronargs');
+    expect(SQL_ASIGNAR_DUENO).toContain("r.oid::regproc::text || '(*)'");
     expect(SQL_ASIGNAR_DUENO).toContain("deptype = 'e'");
   });
 

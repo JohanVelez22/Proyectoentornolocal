@@ -1147,8 +1147,15 @@ export class Respaldos {
       const leerDueno = async (): Promise<void> => {
         if (m === 'postgresql') dueno = await this.duenoPg(base, con);
       };
-      const devolverDueno = async (): Promise<void> => {
-        if (dueno && dueno !== con.usuario) await this.asignarDuenoPg(base, dueno, con);
+      // Devuelve una advertencia si no pudo: los datos ya están restaurados, no es un fallo.
+      const devolverDueno = async (): Promise<string | null> => {
+        if (!dueno || dueno === con.usuario) return null;
+        try {
+          await this.asignarDuenoPg(base, dueno, con);
+          return null;
+        } catch (e) {
+          return `Los datos se restauraron, pero no se pudo devolver la propiedad al usuario ${dueno}: ${e instanceof Error ? e.message : String(e)}`;
+        }
       };
       if (!tablas) {
         if (await this.d.bd.tieneTablas(m, base)) {
@@ -1158,8 +1165,8 @@ export class Respaldos {
         await leerDueno();
         await this.d.bd.crear(m, base);
         const r = await this.ejecutarRestauracion(operacion, m, fuente, base, con, claves);
-        await devolverDueno();
-        return r;
+        const aviso = await devolverDueno();
+        return aviso ? { ...r, advertencias: [...r.advertencias, aviso] } : r;
       }
       // Sobrescribir = reemplazar: respaldo de seguridad verificado, base nueva y restauración.
       const respaldoPrevio = await this.respaldoDeSeguridad(m, base);
@@ -1175,8 +1182,12 @@ export class Respaldos {
           await devolverDueno().catch(() => undefined);
           throw e;
         }
-        await devolverDueno();
-        return { ...r, respaldoPrevio };
+        const aviso = await devolverDueno();
+        return {
+          ...r,
+          ...(aviso ? { advertencias: [...r.advertencias, aviso] } : {}),
+          respaldoPrevio,
+        };
       } catch (e) {
         throw new ErrorTrasReemplazo(base, respaldoPrevio, e);
       }

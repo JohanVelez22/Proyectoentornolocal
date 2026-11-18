@@ -142,14 +142,16 @@ BEGIN
       r.oid::regclass, dueno);
   END LOOP;
   FOR r IN
-    SELECT p.oid, p.prokind FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    SELECT p.oid, p.prokind, p.pronargs FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' AND p.proowner <> rol
       AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_proc'::regclass
                       AND d.objid = p.oid AND d.deptype = 'e')
   LOOP
     EXECUTE format('ALTER %%s %%s OWNER TO %%I',
       CASE r.prokind WHEN 'a' THEN 'AGGREGATE' WHEN 'p' THEN 'PROCEDURE' ELSE 'FUNCTION' END,
-      r.oid::regprocedure, dueno);
+      -- Un agregado sin argumentos se escribe f(*), no f().
+      CASE WHEN r.prokind = 'a' AND r.pronargs = 0 THEN r.oid::regproc::text || '(*)'
+        ELSE r.oid::regprocedure::text END, dueno);
   END LOOP;
   FOR r IN
     SELECT t.oid, t.typtype FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
