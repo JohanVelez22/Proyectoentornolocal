@@ -285,6 +285,40 @@ describe('ServidorMcp: seguridad HTTP', () => {
     expect(ok.codigo).toBe(200);
   });
 
+  it('recargarToken durante el arranque: gana el token nuevo', async () => {
+    let soltarPuerto!: () => void;
+    const puertoListo = new Promise<void>((r) => (soltarPuerto = r));
+    const token = { valor: TOKEN };
+    const s = new ServidorMcp({
+      operaciones: operacionesFalsas(),
+      token: async () => token.valor,
+      puerto: async () => {
+        await puertoListo;
+        return 0;
+      },
+      emitirConfirmacion: () => undefined,
+    });
+    servidores.push(s);
+    const arranque = s.iniciar();
+    await new Promise((r) => setTimeout(r, 10));
+    const nuevo = 'd'.repeat(64);
+    token.valor = nuevo;
+    const recarga = s.recargarToken();
+    soltarPuerto();
+    await Promise.all([arranque, recarga]);
+    const puerto = s.estado().puerto!;
+    const viejo = await postCrudo(puerto, {
+      Host: `127.0.0.1:${puerto}`,
+      Authorization: `Bearer ${TOKEN}`,
+    });
+    expect(viejo.codigo).toBe(401);
+    const ok = await postCrudo(puerto, {
+      Host: `127.0.0.1:${puerto}`,
+      Authorization: `Bearer ${nuevo}`,
+    });
+    expect(ok.codigo).toBe(200);
+  });
+
   it('el token nunca aparece en el estado', async () => {
     const m = await montar();
     expect(JSON.stringify(m.servidor.estado())).not.toContain(TOKEN);
@@ -586,7 +620,7 @@ describe('ServidorMcp: acciones destructivas', () => {
   it('valida el nombre del proceso (sin saltos de línea ni caracteres bidi)', async () => {
     const m = await montar();
     const c = await conectar(m.url);
-    for (const nombre of ['node\n.exe', 'no\u202ede.exe', 'a/b.exe']) {
+    for (const nombre of ['node\n.exe', 'no\u202ede.exe', 'a/b.exe', 'no\u200bde.exe']) {
       const r = await c.callTool({ name: 'finalizar_proceso', arguments: { pid: 4321, nombre } });
       expect(r.isError).toBe(true);
     }
@@ -610,15 +644,18 @@ describe('ServidorMcp: acciones destructivas', () => {
 
   it('ejecutar_receta limpia saltos de línea y bidi del resumen y los datos', async () => {
     const ops = operacionesFalsas();
-    ops.resumenReceta = vi.fn(async () => ({ proyecto: 'De\nmo\u202e', pasos: ['Paso\r\n1'] }));
+    ops.resumenReceta = vi.fn(async () => ({
+      proyecto: 'De\nmo\u202e\u200b\u200c\u200d\u2060\ufeff',
+      pasos: ['Paso\r\n1\ufeff', 'Otro\u200d\u2060'],
+    }));
     const m = await montar({ ops });
     const c = await conectar(m.url);
     const llamada = c.callTool({ name: 'ejecutar_receta', arguments: { sitioId: 'demo' } });
     const sol = await esperarConfirmacion(m);
-    const prohibidos = /[\r\n\u202a-\u202e\u2066-\u2069]/;
+    const prohibidos = /[\r\n\u202a-\u202e\u2066-\u2069\u200b-\u200d\u2060\ufeff]/;
     expect(sol.resumen).not.toMatch(prohibidos);
     expect(sol.datos.proyecto).not.toMatch(prohibidos);
-    expect(sol.datos.pasos?.[0]).not.toMatch(prohibidos);
+    for (const paso of sol.datos.pasos ?? []) expect(paso).not.toMatch(prohibidos);
     m.servidor.responderConfirmacion(sol.id, false);
     await llamada;
   });

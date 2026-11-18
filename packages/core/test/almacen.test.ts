@@ -126,3 +126,24 @@ describe('AlmacenCredenciales: claves desconocidas', () => {
     expect(nombres.some((n) => n.includes('corrupto'))).toBe(false);
   });
 });
+
+describe('AlmacenCredenciales: claves peligrosas', () => {
+  it('ignora __proto__, constructor y prototype (sin contaminar prototipos)', async () => {
+    await mkdir(join(rutas.credenciales(), '..'), { recursive: true });
+    await writeFile(
+      rutas.credenciales(),
+      '{"__proto__": {"contaminado": true}, "constructor": {"prototype": {"contaminado": true}},' +
+        ' "prototype": 1, "mysql": {"usuario": "u", "clave": "c"}}',
+    );
+    const c = new AlmacenCredenciales(rutas);
+    const todas = await c.todas();
+    expect(todas.mysql).toEqual({ usuario: 'u', clave: 'c' });
+    expect(Object.keys(todas)).toEqual(['mysql']);
+    expect((todas as Record<string, unknown>).contaminado).toBeUndefined();
+    expect(({} as Record<string, unknown>).contaminado).toBeUndefined();
+    await c.guardar('mcp', { usuario: 'mcp', clave: 'k' });
+    const texto = await readFile(rutas.credenciales(), 'utf8');
+    expect(texto).not.toMatch(/__proto__|constructor|prototype|contaminado/);
+    expect(({} as Record<string, unknown>).contaminado).toBeUndefined();
+  });
+});

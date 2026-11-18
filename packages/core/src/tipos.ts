@@ -160,11 +160,15 @@ const ClaveCredencialSchema = z.union([
  * claves conocidas se validan; las desconocidas (de una versión futura) se conservan tal cual
  * para que guardar no las borre.
  */
+const CLAVES_PELIGROSAS = new Set(['__proto__', 'constructor', 'prototype']);
+
 export const ArchivoCredencialesSchema = z
   .record(z.string(), z.unknown())
   .transform((r, ctx): ArchivoCredenciales => {
     const res: Record<string, unknown> = {};
     for (const [clave, valor] of Object.entries(r)) {
+      // Nunca se copian claves que tocan prototipos (un archivo editado a mano o malicioso).
+      if (CLAVES_PELIGROSAS.has(clave)) continue;
       if (!ClaveCredencialSchema.safeParse(clave).success) {
         res[clave] = valor;
         continue;

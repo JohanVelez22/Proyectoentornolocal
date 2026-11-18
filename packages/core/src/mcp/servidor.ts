@@ -144,9 +144,13 @@ const idServicio = z
 
 const mensajeDe = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
-/** Controles, saltos de línea y marcas de dirección (bidi): nunca en lo que muestra la ventana. */
-// eslint-disable-next-line no-control-regex -- se buscan justamente los caracteres de control.
-const PROHIBIDOS = /[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
+/**
+ * Controles, saltos de línea (también U+2028/U+2029), marcas de dirección (bidi) y caracteres
+ * invisibles (U+200B–U+200D, U+2060, U+FEFF): nunca en lo que muestra la ventana.
+ */
+const PROHIBIDOS =
+  // eslint-disable-next-line no-control-regex -- se buscan justamente los caracteres de control.
+  /[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060\u2066-\u2069\ufeff]/;
 const PROHIBIDOS_G = new RegExp(PROHIBIDOS.source, 'g');
 const NOMBRE_PROCESO = /^[\w .-]{1,260}$/;
 const MAX_PASOS_RESUMEN = 50;
@@ -295,6 +299,8 @@ export class ServidorMcp {
    * desde ya.
    */
   async recargarToken(): Promise<void> {
+    // Un arranque en curso leyó el token anterior: se espera a que termine para pisarlo.
+    await this.arrancando?.catch(() => undefined);
     const token = await this.d.token();
     if (token.length < 32) throw new Error('El token del servidor MCP no es válido.');
     if (this.http) this.huellaToken = huella(token);
