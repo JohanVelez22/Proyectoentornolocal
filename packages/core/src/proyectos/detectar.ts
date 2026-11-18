@@ -1,8 +1,9 @@
 import type { Dirent } from 'node:fs';
-import { access, readdir, readFile, stat } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pistasArchivos } from '../runtimes/runtimes';
 import type { TipoSitio } from '../tipos';
+import { existe, leerTexto } from './archivos';
 import { motorBdDe, type ServicioProyecto } from './config';
 
 /** Lo que se sabe de una carpeta de proyecto; la receta por defecto (Task 3) parte de aquí. */
@@ -27,24 +28,6 @@ export interface Deteccion {
   dominioSugerido: string;
   /** Variable del .env con la URL base del sitio (APP_URL, APP_BASE_URL) o null. */
   urlBaseVar: string | null;
-}
-
-async function existe(ruta: string): Promise<boolean> {
-  try {
-    await access(ruta);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function leerTexto(ruta: string): Promise<string | null> {
-  try {
-    const t = await readFile(ruta, 'utf8');
-    return t.charCodeAt(0) === 0xfeff ? t.slice(1) : t;
-  } catch {
-    return null;
-  }
 }
 
 async function leerJson(ruta: string): Promise<Record<string, unknown> | null> {
@@ -174,7 +157,16 @@ const OMITIR = new Set([
   '__pycache__',
   '.idea',
   '.vscode',
+  'dist',
+  'build',
+  '.next',
+  '.nuxt',
+  'coverage',
 ]);
+/** Rutas relativas (con /) que tampoco se recorren: compilados del proyecto. */
+const OMITIR_RUTAS = new Set(['public/build']);
+/** Niveles de carpetas bajo la raíz que se recorren (la raíz es el nivel 0). */
+export const MAX_PROFUNDIDAD_ESCANEO = 6;
 const EXTENSIONES_TEXTO =
   /\.(php|py|sql|js|mjs|cjs|ts|txt|toml|json|lock|ya?ml|cfg|ini|prisma|rb|go|env|example)$/i;
 export const MAX_ARCHIVOS_ESCANEO = 2000;
@@ -195,10 +187,10 @@ export async function usaPgvector(
   carpeta: string,
   maxArchivos = MAX_ARCHIVOS_ESCANEO,
 ): Promise<boolean> {
-  const cola = [carpeta];
+  const cola: { dir: string; rel: string; nivel: number }[] = [{ dir: carpeta, rel: '', nivel: 0 }];
   let vistos = 0;
   while (cola.length > 0) {
-    const dir = cola.shift()!;
+    const { dir, rel, nivel } = cola.shift()!;
     let entradas: Dirent[];
     try {
       entradas = await readdir(dir, { withFileTypes: true });
@@ -208,7 +200,11 @@ export async function usaPgvector(
     for (const e of entradas) {
       const ruta = join(dir, e.name);
       if (e.isDirectory()) {
-        if (!OMITIR.has(e.name.toLowerCase())) cola.push(ruta);
+        const nombre = e.name.toLowerCase();
+        const relHijo = rel ? `${rel}/${nombre}` : nombre;
+        if (nivel < MAX_PROFUNDIDAD_ESCANEO && !OMITIR.has(nombre) && !OMITIR_RUTAS.has(relHijo)) {
+          cola.push({ dir: ruta, rel: relHijo, nivel: nivel + 1 });
+        }
         continue;
       }
       if (!e.isFile() || !EXTENSIONES_TEXTO.test(e.name)) continue;

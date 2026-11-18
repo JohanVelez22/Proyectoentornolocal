@@ -1,7 +1,8 @@
 import { existsSync } from 'node:fs';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { ejecutableDe } from '../catalogo/catalogo';
+import { leerTexto } from '../proyectos/archivos';
 import { leerConfigProyecto } from '../proyectos/config';
 import type { Rutas } from '../rutas';
 
@@ -153,14 +154,7 @@ export function elegirVersion(
   return lista.find((v) => pred(triple(v)));
 }
 
-async function leer(ruta: string): Promise<string | null> {
-  try {
-    const t = await readFile(ruta, 'utf8');
-    return t.charCodeAt(0) === 0xfeff ? t.slice(1) : t;
-  } catch {
-    return null;
-  }
-}
+const leer = leerTexto;
 
 const primeraLinea = (t: string | null): string | undefined =>
   t

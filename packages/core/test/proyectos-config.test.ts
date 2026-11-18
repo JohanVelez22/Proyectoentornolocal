@@ -207,6 +207,30 @@ describe('detectarProyecto (ampliada)', () => {
     expect(r.servicios).toEqual(['postgresql']);
   });
 
+  it('pgvector: no mira compilados (dist, build, .next, public/build…) ni más allá de 6 niveles', async () => {
+    const d = await proyecto('compilado', {
+      'requirements.txt': 'fastapi\n',
+      'dist/app.js': 'const e = "vector(1536)";',
+      'build/x.sql': 'embedding vector(1536)',
+      '.next/server/a.js': 'pgvector',
+      '.nuxt/b.js': 'pgvector',
+      'coverage/c.json': '"pgvector"',
+      'public/build/assets/d.js': 'pgvector',
+      'a/b/c/d/e/f/g/profundo.sql': 'CREATE EXTENSION vector;',
+    });
+    expect((await detectarProyecto(d)).pgvector).toBe(false);
+    const seis = await proyecto('seis', {
+      'requirements.txt': 'fastapi\n',
+      'a/b/c/d/e/f/ok.sql': 'CREATE EXTENSION vector;',
+    });
+    expect((await detectarProyecto(seis)).pgvector).toBe(true);
+    const publico = await proyecto('publico', {
+      'requirements.txt': 'fastapi\n',
+      'public/js/x.js': 'import pgvector from "pgvector"',
+    });
+    expect((await detectarProyecto(publico)).pgvector).toBe(true);
+  });
+
   it('archivos grandes (> 1 MB) no se leen', async () => {
     const d = await proyecto('grande', {
       'requirements.txt': 'fastapi\n',
@@ -318,6 +342,62 @@ describe('wolfcore.yml', () => {
         'receta:\n  - {id: a, tipo: migrar, titulo: A}\n  - {id: a, tipo: npm-ci, titulo: B}\n',
     });
     await expect(leerConfigProyecto(dup)).rejects.toThrow(/repetido/);
+  });
+
+  it('no reemplaza un wolfcore.yml existente que no se puede leer', async () => {
+    const original = 'php: [8.3\n# a mano\n';
+    const d = await proyecto('roto2', { 'wolfcore.yml': original });
+    await expect(escribirConfigProyecto(d, completa)).rejects.toThrow(/wolfcore\.yml no es válido/);
+    expect(await readFile(join(d, 'wolfcore.yml'), 'utf8')).toBe(original);
+    const lista = await proyecto('lista2', { 'wolfcore.yml': '- a\n' });
+    await expect(escribirConfigProyecto(lista, completa)).rejects.toThrow(/mapa de claves/);
+    expect(await readFile(join(lista, 'wolfcore.yml'), 'utf8')).toBe('- a\n');
+  });
+
+  it('archivo de más de 1 MB: error en español, al leer y al escribir', async () => {
+    const d = await proyecto('enorme', {
+      'wolfcore.yml': `php: "8.3"\n# ${'x'.repeat(1024 * 1024)}\n`,
+    });
+    await expect(leerConfigProyecto(d)).rejects.toThrow(
+      'wolfcore.yml no es válido: el archivo pesa más de 1 MB',
+    );
+    await expect(escribirConfigProyecto(d, completa)).rejects.toThrow(/pesa más de 1 MB/);
+  });
+
+  it('conserva CRLF al reescribir y LF si el original era LF', async () => {
+    const d = await proyecto('crlf', { 'wolfcore.yml': '# mío\r\nversion: 1\r\nphp: "8.3"\r\n' });
+    await escribirConfigProyecto(d, { ...(await leerConfigProyecto(d))!, php: '8.4' });
+    const texto = await readFile(join(d, 'wolfcore.yml'), 'utf8');
+    expect(texto).toContain('# mío\r\nversion: 1\r\n');
+    expect(texto.replace(/\r\n/g, '')).not.toContain('\n');
+    expect((await leerConfigProyecto(d))!.php).toBe('8.4');
+    const lf = await proyecto('lf', { 'wolfcore.yml': 'php: "8.3"\n' });
+    await escribirConfigProyecto(lf, completa);
+    expect(await readFile(join(lf, 'wolfcore.yml'), 'utf8')).not.toContain('\r');
+  });
+
+  it('acepta BOM al inicio', async () => {
+    const d = await proyecto('bom', { 'wolfcore.yml': '﻿version: 1\nphp: "8.2"\n' });
+    expect((await leerConfigProyecto(d))!.php).toBe('8.2');
+  });
+
+  it('etiqueta desconocida (!!js/function): error, no se ejecuta nada', async () => {
+    const d = await proyecto('tag', {
+      'wolfcore.yml': 'php: !!js/function "function () { globalThis.__pwn = 1; }"\n',
+    });
+    await expect(leerConfigProyecto(d)).rejects.toThrow(/wolfcore\.yml no es válido/);
+    expect((globalThis as { __pwn?: number }).__pwn).toBeUndefined();
+  });
+
+  it('exceso de alias (bomba de alias): error', async () => {
+    let texto = 'a0: &a0 [x, x, x, x, x, x, x, x, x, x]\n';
+    for (let i = 1; i < 8; i++) {
+      texto += `a${i}: &a${i} [${Array(10)
+        .fill(`*a${i - 1}`)
+        .join(', ')}]\n`;
+    }
+    const d = await proyecto('alias', { 'wolfcore.yml': texto });
+    await expect(leerConfigProyecto(d)).rejects.toThrow(/wolfcore\.yml no es válido.*alias/i);
   });
 
   it('motorBdDe: el primer motor de base de datos', () => {

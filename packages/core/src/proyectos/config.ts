@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Document, isMap, isScalar, parseDocument } from 'yaml';
 import { z } from 'zod';
@@ -38,13 +38,8 @@ export const PasoRecetaSchema = z.object({
   args: z.record(z.string(), z.unknown()).optional(),
   opcional: z.boolean().optional(),
 });
-export type PasoReceta = {
-  id: string;
-  tipo: TipoPaso;
-  titulo: string;
-  args?: Record<string, unknown>;
-  opcional?: boolean;
-};
+/** `{id; tipo: TipoPaso; titulo; args?: Record<string, unknown>; opcional?: boolean}` */
+export type PasoReceta = z.infer<typeof PasoRecetaSchema>;
 
 /* ───────────── Servicios que pide un proyecto ───────────── */
 
@@ -152,7 +147,12 @@ function errorConfig(detalle: string): Error {
  * (`php: 8.10`) se toman del texto original para no perder ceros ni decimales.
  */
 function aObjeto(doc: Document): unknown {
-  const js: unknown = doc.toJS();
+  let js: unknown;
+  try {
+    js = doc.toJS({ maxAliasCount: MAX_ALIAS });
+  } catch (e) {
+    throw errorConfig(mensajeError(e));
+  }
   if (js === null || js === undefined) return {};
   if (typeof js !== 'object' || Array.isArray(js) || !isMap(doc.contents)) {
     throw errorConfig('el archivo debe ser un mapa de claves (clave: valor)');
@@ -186,23 +186,44 @@ function validar(datos: unknown): ConfigProyecto {
   throw errorConfig(detalle);
 }
 
-async function leerDocumento(ruta: string): Promise<Document | null> {
+/** Tamaño máximo de wolfcore.yml. */
+export const MAX_BYTES_CONFIG = 1024 * 1024;
+/** Alias YAML permitidos al convertir (evita la "bomba de alias"). */
+const MAX_ALIAS = 100;
+
+interface Leido {
+  doc: Document;
+  /** El original usaba fin de línea CRLF. */
+  crlf: boolean;
+}
+
+/**
+ * Lee y analiza el archivo: null si no existe; error en español si es demasiado grande, no es
+ * YAML válido o usa etiquetas desconocidas (p. ej. !!js/function: nunca se ejecuta nada).
+ */
+async function leerDocumento(ruta: string): Promise<Leido | null> {
   let texto: string;
   try {
+    if ((await stat(ruta)).size > MAX_BYTES_CONFIG) {
+      throw errorConfig('el archivo pesa más de 1 MB');
+    }
     texto = await readFile(ruta, 'utf8');
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw e;
   }
-  const doc = parseDocument(texto.replace(/^\uFEFF/, ''), { uniqueKeys: true });
-  if (doc.errors.length > 0) throw errorConfig(doc.errors[0]!.message.split('\n')[0]!);
-  return doc;
+  const sinBom = texto.charCodeAt(0) === 0xfeff ? texto.slice(1) : texto;
+  const doc = parseDocument(sinBom, { uniqueKeys: true });
+  const problema = doc.errors[0] ?? doc.warnings[0];
+  if (problema) throw errorConfig(problema.message.split('\n')[0]!);
+  return { doc, crlf: texto.includes('\r\n') };
 }
 
 /** Lee `wolfcore.yml` de la carpeta. null si no existe; error en español si no es válido. */
 export async function leerConfigProyecto(carpeta: string): Promise<ConfigProyecto | null> {
-  const doc = await leerDocumento(path.join(carpeta, ARCHIVO_CONFIG_PROYECTO));
-  if (!doc) return null;
+  const leido = await leerDocumento(path.join(carpeta, ARCHIVO_CONFIG_PROYECTO));
+  if (!leido) return null;
+  const { doc } = leido;
   try {
     return validar(aObjeto(doc));
   } catch (e) {
@@ -213,26 +234,30 @@ export async function leerConfigProyecto(carpeta: string): Promise<ConfigProyect
 }
 
 /**
- * Escribe `wolfcore.yml`. Si ya existe y se puede leer, conserva sus comentarios y las claves
- * que WolfCore Dev no conoce; si no, lo crea con una cabecera que explica los campos.
+ * Escribe `wolfcore.yml`. Si ya existe, conserva sus comentarios, las claves que WolfCore Dev
+ * no conoce y su fin de línea (CRLF o LF); si no, lo crea con una cabecera que explica los
+ * campos. Un archivo existente que no se puede leer NO se reemplaza: se lanza el error y el
+ * llamador decide.
  */
 export async function escribirConfigProyecto(carpeta: string, c: ConfigProyecto): Promise<void> {
   const datos = validar(c);
   const ruta = path.join(carpeta, ARCHIVO_CONFIG_PROYECTO);
-  let doc: Document | null = null;
-  try {
-    doc = await leerDocumento(ruta);
-    if (doc && !isMap(doc.contents)) doc = null;
-  } catch {
-    doc = null; // un archivo roto se reemplaza entero
-  }
-  if (!doc) {
+  const leido = await leerDocumento(ruta);
+  let doc: Document;
+  if (leido && leido.doc.contents !== null) {
+    if (!isMap(leido.doc.contents)) {
+      throw errorConfig('el archivo debe ser un mapa de claves (clave: valor)');
+    }
+    doc = leido.doc;
+  } else {
+    // Sin archivo, o vacío / solo comentarios: se arma con la cabecera.
     doc = new Document({});
     doc.commentBefore = CABECERA;
   }
   for (const clave of CLAVES) doc.set(clave, datos[clave]);
 
-  const texto = doc.toString({ lineWidth: 0 });
+  let texto = doc.toString({ lineWidth: 0 });
+  if (leido?.crlf) texto = texto.replace(/\r?\n/g, '\r\n');
   const tmp = `${ruta}.${randomBytes(4).toString('hex')}.tmp`;
   try {
     await writeFile(tmp, texto, 'utf8');
