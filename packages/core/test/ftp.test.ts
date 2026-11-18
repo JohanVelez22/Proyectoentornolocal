@@ -88,7 +88,9 @@ beforeEach(async () => {
   almacen = new Almacen(rutas);
   credenciales = new AlmacenCredenciales(rutas);
   puerto = await puertoLibre();
-  const pasivo = await puertoLibre();
+  // El rango pasivo es [pasivo, pasivo + 20] y zod exige ≤ 65535: se descartan los puertos altos.
+  let pasivo = await puertoLibre();
+  while (pasivo > 65000) pasivo = await puertoLibre();
   const cfg = await almacen.leer();
   cfg.sitios.push(sitioBase(sitio));
   cfg.ftp = { puerto, redLocal: false, pasivos: [pasivo, pasivo + 20] };
