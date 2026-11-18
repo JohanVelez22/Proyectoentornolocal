@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { BasesDeDatos, DatosConexion, MotorBd } from '../../bd/basesDeDatos';
+import { validarNombreBd } from '../../bd/clienteMysql';
 import type { OpcionesRestaurar, ResultadoRestaurar } from '../../bd/respaldos';
 import { MENSAJE_CANCELADO } from '../../plataforma/lanzar';
 import type { Lanzador } from '../../plataforma/tipos';
@@ -71,7 +72,10 @@ export function nombreBase(
   args: Record<string, unknown> = {},
 ): string {
   const dado = texto(args.base);
-  if (dado) return dado;
+  if (dado) {
+    validarNombreBd(dado);
+    return dado;
+  }
   let n = sitio.dominio
     .toLowerCase()
     .replace(/\.test$/, '')

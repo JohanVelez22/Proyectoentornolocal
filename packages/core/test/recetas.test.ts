@@ -555,9 +555,8 @@ describe('recetaPorDefecto', () => {
       'migrar',
       'sitio-crear',
     ]);
-    expect(r.find((p) => p.tipo === 'migrar')!.args).toMatchObject({
-      comando: ['php', 'spark', 'migrate'],
-    });
+    // El paso migrar decide spark/artisan por el tipo: la receta no lleva comando.
+    expect(r.find((p) => p.tipo === 'migrar')!.args?.comando).toBeUndefined();
   });
 
   it('FastAPI: venv, pip, .env, bd, pgvector si se detecta y sitio proxy con uvicorn', () => {

@@ -1,14 +1,14 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { carpetaTemporal } from './temporales';
-import { lanzadorPorDefecto } from '../src/plataforma/lanzar';
+import { lanzadorPorDefecto, matarArbol, rutaTaskkill } from '../src/plataforma/lanzar';
 import type { Lanzador, OpcionesLanzar } from '../src/plataforma/tipos';
 import { TIPOS_PASO, type PasoReceta, type TipoPaso } from '../src/proyectos/config';
 import { RegistroPasos, type ContextoPaso } from '../src/proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from '../src/proyectos/pasos/index';
 import { nombreBase } from '../src/proyectos/pasos/comun';
-import { recetaPorDefecto } from '../src/proyectos/recetas';
+import { recetaEfectiva, recetaPorDefecto } from '../src/proyectos/recetas';
 import { detectarProyecto } from '../src/proyectos/detectar';
 import { leerVariablesEnv } from '../src/proyectos/detectar';
 import { Rutas } from '../src/rutas';
@@ -363,9 +363,11 @@ describe('env-crear', () => {
     await escribir(a.carpeta, '.env', 'VIEJO=1\n');
     await escribir(a.carpeta, '.env.example', EJEMPLO_LARAVEL);
     await correr(a, 'env-crear', { sobrescribir: true });
-    expect(await readFile(join(a.base, 'run', 'env-tienda-test.respaldo'), 'utf8')).toBe(
-      'VIEJO=1\n',
+    const respaldos = (await readdir(join(a.base, 'run'))).filter((n) =>
+      /^env-tienda-test-\d{8}-\d{6}-\d{3}\.respaldo$/.test(n),
     );
+    expect(respaldos).toHaveLength(1);
+    expect(await readFile(join(a.base, 'run', respaldos[0]!), 'utf8')).toBe('VIEJO=1\n');
     const nuevo = await leer(a.carpeta, '.env');
     expect(nuevo).not.toContain('VIEJO');
     expect(nuevo).toContain('APP_KEY=');
@@ -895,5 +897,129 @@ describe('comando', () => {
     await expect(correr(a, 'comando', { comando: 'rm -rf /' })).rejects.toThrow(/comando/);
     await expect(correr(a, 'comando', { comando: ['build.cmd'] })).rejects.toThrow(/\.cmd/);
     expect(a.llamadas).toHaveLength(0);
+  });
+});
+
+/* ───────────── Ronda de arreglos ───────────── */
+
+describe('ronda de arreglos', () => {
+  it('recetaEfectiva quita de wolfcore.yml las confirmaciones (sobrescribir, confirmarSobrescribir, archivo)', async () => {
+    const carpeta = await carpetaTemporal('pel-pasos-yml-');
+    await escribir(
+      carpeta,
+      'wolfcore.yml',
+      [
+        'version: 1',
+        'receta:',
+        '  - id: env',
+        '    tipo: env-crear',
+        '    titulo: Env',
+        '    args: { sobrescribir: true, https: false }',
+        '  - id: rest',
+        '    tipo: bd-restaurar',
+        '    titulo: Restaurar',
+        '    args: { archivo: "C:/x.sql", confirmarSobrescribir: true, motor: mysql }',
+        '',
+      ].join('\n'),
+    );
+    const r = await recetaEfectiva(carpeta, await detectarProyecto(carpeta));
+    expect(r.map((p) => p.args)).toEqual([{ https: false }, { motor: 'mysql' }]);
+  });
+
+  it('matarArbol no lanza taskkill si el proceso ya salió y usa la ruta absoluta', () => {
+    const llamadas: { cmd: string; args: readonly string[] }[] = [];
+    const lanzarFalso = ((cmd: string, args: readonly string[]) => {
+      llamadas.push({ cmd, args });
+      return { once: () => undefined };
+    }) as unknown as NonNullable<Parameters<typeof matarArbol>[1]['lanzar']>;
+    const hijo = { pid: 1234, kill: () => true };
+    matarArbol(hijo, { salio: true, plataforma: 'win32', lanzar: lanzarFalso });
+    expect(llamadas).toHaveLength(0);
+    matarArbol(hijo, {
+      salio: false,
+      plataforma: 'win32',
+      lanzar: lanzarFalso,
+      env: { SystemRoot: 'D:\\Win' },
+    });
+    expect(llamadas).toEqual([
+      { cmd: 'D:\\Win\\System32\\taskkill.exe', args: ['/PID', '1234', '/T', '/F'] },
+    ]);
+    expect(rutaTaskkill({})).toBe('C:\\Windows\\System32\\taskkill.exe');
+  });
+
+  it('env-crear con args.usuario sin args.clave falla sin escribir', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, '.env.example', EJEMPLO_LARAVEL);
+    await expect(correr(a, 'env-crear', { usuario: 'tienda' })).rejects.toThrow(/clave/);
+    await expect(leer(a.carpeta, '.env')).rejects.toThrow();
+  });
+
+  it('wolfcore.yml: valores con salto de línea fallan y las claves de la BD se ignoran con aviso', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, '.env.example', EJEMPLO_LARAVEL);
+    await escribir(
+      a.carpeta,
+      'wolfcore.yml',
+      'version: 1\nenv:\n  DB_PASSWORD: robada\n  DATABASE_URL: x\n  database.default.hostname: h\n  OK: si\n',
+    );
+    const lineas = await correr(a, 'env-crear');
+    const env = await leer(a.carpeta, '.env');
+    expect(env).toContain(`DB_PASSWORD='${CLAVE}'`);
+    expect(env).not.toContain('robada');
+    expect(env).not.toContain('DATABASE_URL');
+    expect(env).not.toContain('database.default');
+    expect(env).toContain('OK=si');
+    expect(lineas.filter((l) => /Aviso/.test(l))).toHaveLength(3);
+
+    const b = await armar();
+    await escribir(b.carpeta, '.env.example', EJEMPLO_LARAVEL);
+    await escribir(b.carpeta, 'wolfcore.yml', 'version: 1\nenv:\n  X: "a\\nb"\n');
+    await expect(correr(b, 'env-crear')).rejects.toThrow(/salto de línea/);
+    await expect(leer(b.carpeta, '.env')).rejects.toThrow();
+  });
+
+  it('nombreBase valida args.base', () => {
+    expect(() => nombreBase({ dominio: 'x.test' }, { base: 'a;DROP' })).toThrow(/no es válido/);
+    expect(() => nombreBase({ dominio: 'x.test' }, { base: 'x'.repeat(65) })).toThrow();
+  });
+
+  it('migrar avisa que ignora args.comando', async () => {
+    const a = await armar({ sitio: { tipo: 'codeigniter4' } });
+    const lineas = await correr(a, 'migrar', { comando: ['rm', '-rf'] });
+    expect(lineas.join('\n')).toMatch(/se ignora args\.comando/);
+    expect(a.llamadas[0]!.args).toEqual(['-c', a.phpIni, 'spark', 'migrate']);
+  });
+
+  it('APP_URL usa el https real del sitio guardado', async () => {
+    const a = await armar();
+    a.deps.leerSitio = async () => ({ ...a.sitio, https: false });
+    a.registro = registrarPasosReales(new RegistroPasos(), a.deps);
+    await escribir(a.carpeta, '.env.example', EJEMPLO_LARAVEL);
+    await correr(a, 'env-crear', { https: true });
+    expect(await leer(a.carpeta, '.env')).toContain('APP_URL=http://tienda.test\n');
+  });
+
+  it('dos sobrescrituras guardan dos respaldos distintos', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, '.env.example', EJEMPLO_LARAVEL);
+    await escribir(a.carpeta, '.env', 'UNO=1\n');
+    await correr(a, 'env-crear', { sobrescribir: true });
+    await new Promise((r) => setTimeout(r, 5));
+    await correr(a, 'env-crear', { sobrescribir: true });
+    const respaldos = (await readdir(join(a.base, 'run'))).filter((n) => n.endsWith('.respaldo'));
+    expect(respaldos).toHaveLength(2);
+  });
+
+  it('storage-link recrea un enlace roto', async () => {
+    const a = await armar();
+    const destino = join(a.carpeta, 'storage', 'app', 'public');
+    await mkdir(destino, { recursive: true });
+    await mkdir(join(a.carpeta, 'public'), { recursive: true });
+    const enlace = join(a.carpeta, 'public', 'storage');
+    await symlink(destino, enlace, 'junction');
+    await rm(destino, { recursive: true });
+    await correr(a, 'storage-link');
+    expect(a.llamadas.map((l) => l.args)).toEqual([['-c', a.phpIni, 'artisan', 'storage:link']]);
+    await expect(readdir(join(a.carpeta, 'public'))).resolves.toEqual([]);
   });
 });

@@ -1,4 +1,5 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { StringDecoder } from 'node:string_decoder';
@@ -43,10 +44,31 @@ const esCierreDelHijo = (e: unknown): boolean => {
  * se entrega por líneas. Resuelve con el código de salida; rechaza si el ejecutable no existe o
  * si falla la lectura de la entrada (archivo dañado, .gz incompleto).
  */
+/** taskkill.exe por ruta absoluta (no se busca en el PATH ni en la carpeta del proyecto). */
+export function rutaTaskkill(env: NodeJS.ProcessEnv = process.env): string {
+  return path.win32.join(
+    env.SystemRoot ?? env.SYSTEMROOT ?? 'C:\\Windows',
+    'System32',
+    'taskkill.exe',
+  );
+}
+
+export interface OpcionesMatar {
+  /** El proceso ya salió: su PID podría ser de otro proceso y no se toca. */
+  salio: boolean;
+  plataforma?: NodeJS.Platform;
+  env?: NodeJS.ProcessEnv;
+  lanzar?: typeof spawn;
+}
+
 /** Mata el proceso y sus hijos: en Windows `taskkill /T /F`; en otros sistemas, SIGKILL. */
-function matarArbol(hijo: ChildProcess): void {
-  if (process.platform === 'win32' && hijo.pid !== undefined) {
-    const k = spawn('taskkill', ['/PID', String(hijo.pid), '/T', '/F'], {
+export function matarArbol(
+  hijo: { pid?: number | undefined; kill(senal?: NodeJS.Signals): boolean },
+  o: OpcionesMatar,
+): void {
+  if (o.salio) return;
+  if ((o.plataforma ?? process.platform) === 'win32' && hijo.pid !== undefined) {
+    const k = (o.lanzar ?? spawn)(rutaTaskkill(o.env), ['/PID', String(hijo.pid), '/T', '/F'], {
       windowsHide: true,
       stdio: 'ignore',
     });
@@ -86,7 +108,11 @@ export const lanzadorPorDefecto: Lanzador = (cmd, args, opts = {}) =>
       });
     }
     const senal = opts.senal;
-    const alAbortar = (): void => matarArbol(hijo);
+    let salio = false;
+    hijo.once('exit', () => {
+      salio = true;
+    });
+    const alAbortar = (): void => matarArbol(hijo, { salio });
     senal?.addEventListener('abort', alAbortar, { once: true });
     const soltarSenal = (): void => senal?.removeEventListener('abort', alAbortar);
     hijo.on('error', (e) => {

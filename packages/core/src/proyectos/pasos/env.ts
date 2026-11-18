@@ -26,6 +26,17 @@ export const MENSAJE_ENV_EXISTE = 'Ya existe .env; no se modificó';
 
 const CI4_FORMATO = /^\s*#?\s*database\.default\.\w+\s*=/m;
 const CLAVE_VALIDA = /^[A-Za-z_][A-Za-z0-9_.]*$/;
+/** Claves del bloque de conexión: wolfcore.yml no las puede pisar. */
+const CLAVES_BD = /^(DB_[A-Za-z0-9_]*|database\.default\..+|DATABASE_URL|MONGODB_URI)$/;
+
+/** AAAAMMDD-HHmmss-mmm en hora local (cada respaldo del .env tiene su propio archivo). */
+function sello(f: Date): string {
+  const n = (v: number, l = 2): string => String(v).padStart(l, '0');
+  return (
+    `${f.getFullYear()}${n(f.getMonth() + 1)}${n(f.getDate())}-` +
+    `${n(f.getHours())}${n(f.getMinutes())}${n(f.getSeconds())}-${n(f.getMilliseconds(), 3)}`
+  );
+}
 
 const escapar = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const activa = (clave: string): RegExp =>
@@ -156,7 +167,7 @@ function valorDe(t: string, clave: string): string | undefined {
 /**
  * Crea el .env del proyecto:
  * 1. Si ya existe no lo toca (salvo `args.sobrescribir`, que antes copia el actual a
- *    run/env-<id>.respaldo; la confirmación la pide la interfaz).
+ *    run/env-<id>-<fecha>.respaldo; la confirmación la pide la interfaz).
  * 2. Parte de .env.example (o .env.sample, .env.dist, `env` de CI4) o, sin ninguno, de un mínimo
  *    según el tipo.
  * 3. Rellena la URL y el nombre, la conexión de la BD (con el lector del tipo), Mailpit si está
@@ -195,7 +206,9 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
     };
 
     // URL y nombre.
-    const https = typeof args.https === 'boolean' ? args.https : true;
+    // El https real del sitio guardado manda; si no se puede leer, el del paso (o https).
+    const guardado = await d.leerSitio?.(sitio.id);
+    const https = guardado ? guardado.https : typeof args.https === 'boolean' ? args.https : true;
     const varUrl = variableUrl(sitio.tipo, sitio.urlBaseVar, t);
     if (varUrl) {
       const barra = sitio.tipo === 'codeigniter3' || sitio.tipo === 'codeigniter4' ? '/' : '';
@@ -212,8 +225,15 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
       const x = { ...(await d.bd.conexion(motor)) };
       const usuario = texto(args.usuario);
       if (usuario) {
+        const clave = texto(args.clave);
+        // Nunca se mezcla un usuario propio con la clave del administrador del motor.
+        if (!clave) {
+          throw new Error(
+            `Indique también la clave del usuario ${usuario} (args.clave) para escribirla en el .env.`,
+          );
+        }
         x.usuario = usuario;
-        x.clave = texto(args.clave) ?? x.clave;
+        x.clave = clave;
       }
       const conUrl =
         tieneClave(t, 'DATABASE_URL') || (sitio.tipo === 'fastapi' && !tieneClave(t, 'DB_HOST'));
@@ -245,28 +265,40 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
     }
 
     // Valores extra de wolfcore.yml.
+    let extra: Record<string, string> = {};
     try {
-      const config = await leerConfigProyecto(carpeta);
-      for (const [clave, valor] of Object.entries(config?.env ?? {})) {
-        if (!CLAVE_VALIDA.test(clave)) {
-          ctx.linea(sanear(`Aviso: se ignora la variable "${clave}" de wolfcore.yml.`));
-          continue;
-        }
-        poner(clave, valor);
-      }
+      extra = (await leerConfigProyecto(carpeta))?.env ?? {};
     } catch (e) {
       ctx.linea(sanear(`Aviso: ${e instanceof Error ? e.message : String(e)}`));
+    }
+    for (const [clave, valor] of Object.entries(extra)) {
+      if (!CLAVE_VALIDA.test(clave)) {
+        ctx.linea(sanear(`Aviso: se ignora la variable "${clave}" de wolfcore.yml.`));
+        continue;
+      }
+      if (CLAVES_BD.test(clave)) {
+        ctx.linea(
+          sanear(
+            `Aviso: se ignora ${clave} de wolfcore.yml: la conexión a la base la escribe WolfCore Dev.`,
+          ),
+        );
+        continue;
+      }
+      if (/[\r\n]/.test(valor)) {
+        throw new Error(`El valor de ${clave} en wolfcore.yml no puede llevar un salto de línea.`);
+      }
+      poner(clave, valor);
     }
 
     comprobarSenal(ctx);
     if (yaExiste) {
       const respaldo = path.join(
         path.dirname(d.rutas.receta(sitio.id)),
-        `env-${sitio.id}.respaldo`,
+        `env-${sitio.id}-${sello(new Date())}.respaldo`,
       );
       await mkdir(path.dirname(respaldo), { recursive: true });
       await copyFile(destino, respaldo);
-      ctx.linea(`Se guardó una copia del .env anterior en run/env-${sitio.id}.respaldo.`);
+      ctx.linea(`Se guardó una copia del .env anterior en run/${path.basename(respaldo)}.`);
     }
     await escribirAtomico(destino, Buffer.from(t, 'utf8'));
     ctx.linea(

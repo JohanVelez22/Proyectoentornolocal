@@ -128,9 +128,8 @@ export function recetaPorDefecto(det: Deteccion): PasoReceta[] {
       bdCrear();
       // bd-restaurar no va por defecto: el asistente lo agrega si el usuario elige un respaldo.
       if (det.tipo === 'codeigniter4') {
-        paso('migrar', 'Migrar la base de datos (spark migrate)', {
-          args: { comando: ['php', 'spark', 'migrate'] },
-        });
+        // El paso migrar elige `php spark migrate` por el tipo del sitio.
+        paso('migrar', 'Migrar la base de datos (spark migrate)');
       }
       sitio();
       break;
@@ -153,12 +152,26 @@ export function recetaPorDefecto(det: Deteccion): PasoReceta[] {
 }
 
 /**
- * Receta que se ejecuta para una carpeta: la de `wolfcore.yml` si trae pasos; si no (o no hay
- * archivo), la receta por defecto. Un wolfcore.yml no válido lanza su error en español.
+ * Argumentos que solo puede dar el usuario desde la interfaz (confirmaciones y rutas elegidas en
+ * un diálogo): un wolfcore.yml del repositorio nunca los trae.
+ */
+export const ARGS_SOLO_INTERFAZ = ['sobrescribir', 'confirmarSobrescribir', 'archivo'] as const;
+
+function sinArgsDeInterfaz(p: PasoReceta): PasoReceta {
+  if (!p.args) return p;
+  const args = { ...p.args };
+  for (const k of ARGS_SOLO_INTERFAZ) delete args[k];
+  return { ...p, args };
+}
+
+/**
+ * Receta que se ejecuta para una carpeta: la de `wolfcore.yml` si trae pasos (sin los argumentos
+ * de `ARGS_SOLO_INTERFAZ`); si no (o no hay archivo), la receta por defecto. Un wolfcore.yml no
+ * válido lanza su error en español.
  */
 export async function recetaEfectiva(carpeta: string, det: Deteccion): Promise<PasoReceta[]> {
   const config = await leerConfigProyecto(carpeta);
-  if (config && config.receta.length > 0) return config.receta;
+  if (config && config.receta.length > 0) return config.receta.map(sinArgsDeInterfaz);
   return recetaPorDefecto(det);
 }
 
