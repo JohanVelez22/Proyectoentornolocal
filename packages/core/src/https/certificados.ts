@@ -61,11 +61,22 @@ export class GestorHttps {
     };
   }
 
-  private async asegurarCA(): Promise<ParCertificado> {
+  private creandoCA: Promise<ParCertificado> | null = null;
+
+  /** Una sola creación a la vez: dos primeras llamadas concurrentes no generan dos CA. */
+  private asegurarCA(): Promise<ParCertificado> {
+    this.creandoCA ??= this.crearCA().finally(() => {
+      this.creandoCA = null;
+    });
+    return this.creandoCA;
+  }
+
+  private async crearCA(): Promise<ParCertificado> {
     if (this.caCreada()) return this.leerCA();
     const ca = generarCA(this.ahora);
     await mkdir(path.dirname(this.d.rutas.caCrt()), { recursive: true });
-    // La clave privada nunca se registra; vive solo bajo la carpeta de datos del usuario.
+    // La clave privada nunca se registra. El modo 0o600 no hace nada en Windows: la protección
+    // real es la ACL del perfil del usuario (la carpeta de datos está en %LOCALAPPDATA%).
     await writeFile(this.d.rutas.caKey(), ca.keyPem, { encoding: 'utf8', mode: 0o600 });
     await writeFile(this.d.rutas.caCrt(), ca.certPem, 'utf8');
     return ca;
@@ -115,8 +126,17 @@ export class GestorHttps {
     puerto: number,
   ): Promise<{ puerto: number; crt: string; key: string } | null> {
     if (!this.caCreada() || !(await this.puertoUsable(puerto))) return null;
-    const c = await this.asegurarCertificado({ id: '_localhost', dominio: 'localhost', alias: [] });
-    return { puerto, ...c };
+    try {
+      const c = await this.asegurarCertificado({
+        id: '_localhost',
+        dominio: 'localhost',
+        alias: [],
+      });
+      return { puerto, ...c };
+    } catch {
+      // Sin certificado de localhost nginx debe arrancar igual, solo con HTTP.
+      return null;
+    }
   }
 
   private vigente(pem: string, dominios: string[], ca: ParCertificado): boolean {

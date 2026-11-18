@@ -155,18 +155,32 @@ export class PlataformaWindows implements Plataforma {
 
   async certificadoInstalado(huella: string): Promise<boolean> {
     if (!/^[0-9A-Fa-f]{40}$/.test(huella)) return false;
-    const r = await this.ejecutar('certutil', ['-user', '-verifystore', 'Root', huella], {
+    const r = await this.ejecutar('certutil', ['-user', '-store', 'Root', huella], {
       timeoutMs: 15000,
     });
     return r.codigo === 0;
   }
 
-  /** certutil siempre sobre el almacén del usuario; un código distinto de 0 es que se canceló. */
+  /**
+   * certutil siempre sobre el almacén del usuario. Solo ERROR_CANCELLED (0x800704C7) es una
+   * cancelación; "no encontrado" (0x80092004) al quitar ya es el resultado buscado.
+   */
   private async certutil(args: string[]): Promise<ResultadoEscritura> {
     // Sin límite corto: Windows muestra su propio aviso de confirmación y espera al usuario.
     const r = await this.ejecutar('certutil', args, { timeoutMs: 120000 });
     if (r.codigo === 0) return { ok: true };
-    return { ok: false, motivo: 'cancelado', detalle: `${r.stderr}${r.stdout}`.trim() };
+    const texto = `${r.stderr}${r.stdout}`.trim();
+    const bajo = texto.toLowerCase();
+    if (r.codigo === -2147023673 || bajo.includes('0x800704c7') || bajo.includes('cancel')) {
+      return { ok: false, motivo: 'cancelado', detalle: texto };
+    }
+    if (
+      args.includes('-delstore') &&
+      (r.codigo === -2146885628 || bajo.includes('0x80092004') || bajo.includes('not found'))
+    ) {
+      return { ok: true };
+    }
+    return { ok: false, motivo: 'error', detalle: texto };
   }
 
   async procesoVivo(pid: number): Promise<{ vivo: boolean; ejecutable?: string }> {

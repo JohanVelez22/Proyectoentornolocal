@@ -53,6 +53,20 @@ export function generarCA(ahora: Date = new Date()): ParCertificado {
   };
 }
 
+/** SubjectKeyIdentifier de la CA (SHA-1 de su clave pública), como lo calcula node-forge. */
+function caKeyId(caCert: forge.pki.Certificate): string {
+  const ski = caCert.getExtension('subjectKeyIdentifier') as {
+    subjectKeyIdentifier?: string;
+  } | null;
+  return ski?.subjectKeyIdentifier
+    ? forge.util.hexToBytes(ski.subjectKeyIdentifier)
+    : (forge.pki.getPublicKeyFingerprint(caCert.publicKey as forge.pki.rsa.PublicKey, {
+        type: 'RSAPublicKey',
+        md: forge.md.sha1.create(),
+        encoding: 'binary',
+      }) as string);
+}
+
 export function emitirCertificado(
   ca: ParCertificado,
   dominios: string[],
@@ -75,6 +89,7 @@ export function emitirCertificado(
     { name: 'extKeyUsage', serverAuth: true },
     { name: 'subjectAltName', altNames: dominios.map((d) => ({ type: 2, value: d })) },
     { name: 'subjectKeyIdentifier' },
+    { name: 'authorityKeyIdentifier', keyIdentifier: caKeyId(caCert) },
   ]);
   cert.sign(caKey, forge.md.sha256.create());
   return {

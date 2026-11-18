@@ -7,6 +7,7 @@ import { Almacen } from '../src/almacen';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { emitirCertificado, generarCA, huellaSha1 } from '../src/https/ca';
 import { GestorHttps } from '../src/https/certificados';
+import { PlataformaWindows } from '../src/plataforma/win';
 import { Rutas } from '../src/rutas';
 import { GestorSitios } from '../src/sitios/sitios';
 import { ConfigSchema, type Sitio } from '../src/tipos';
@@ -242,5 +243,90 @@ describe('aplicar con HTTPS', () => {
     const { g } = montar();
     await g.crear(nuevo({ https: false }));
     expect((await g.aplicar()).httpsPendiente).toEqual([]);
+  });
+});
+
+describe('PlataformaWindows: certutil', () => {
+  const con = (codigo: number, stdout = '', stderr = '') => {
+    const llamadas: string[][] = [];
+    const p = new PlataformaWindows(async (_c, args) => {
+      llamadas.push(args);
+      return { codigo, stdout, stderr };
+    });
+    return { p, llamadas };
+  };
+
+  it('addstore ok', async () => {
+    const { p, llamadas } = con(0);
+    expect(await p.instalarCertificadoUsuario('C:/ca.crt')).toEqual({ ok: true });
+    expect(llamadas[0]).toEqual(['-user', '-addstore', 'Root', 'C:/ca.crt']);
+  });
+  it('cancelar (0x800704C7) es cancelado, por código o por texto', async () => {
+    const a = await con(-2147023673).p.instalarCertificadoUsuario('x');
+    expect(a).toMatchObject({ ok: false, motivo: 'cancelado' });
+    const b = await con(
+      1,
+      'CertUtil: -addstore: 0x800704c7 (WIN32: 1223)',
+    ).p.instalarCertificadoUsuario('x');
+    expect(b).toMatchObject({ ok: false, motivo: 'cancelado' });
+  });
+  it('otro fallo es error con detalle, no cancelado', async () => {
+    const r = await con(1, 'acceso denegado').p.instalarCertificadoUsuario('x');
+    expect(r).toEqual({ ok: false, motivo: 'error', detalle: 'acceso denegado' });
+  });
+  it('delstore: no encontrado cuenta como hecho', async () => {
+    const h = 'A'.repeat(40);
+    expect(await con(-2146885628).p.quitarCertificadoUsuario(h)).toEqual({ ok: true });
+    expect(await con(1, '0x80092004').p.quitarCertificadoUsuario(h)).toEqual({ ok: true });
+    expect(await con(5, 'boom').p.quitarCertificadoUsuario(h)).toMatchObject({
+      ok: false,
+      motivo: 'error',
+    });
+  });
+  it('addstore con "no encontrado" sigue siendo error', async () => {
+    expect(await con(-2146885628).p.instalarCertificadoUsuario('x')).toMatchObject({
+      motivo: 'error',
+    });
+  });
+  it('certificadoInstalado usa -store con la huella', async () => {
+    const { p, llamadas } = con(0);
+    expect(await p.certificadoInstalado('B'.repeat(40))).toBe(true);
+    expect(llamadas[0]).toEqual(['-user', '-store', 'Root', 'B'.repeat(40)]);
+    expect(await con(1).p.certificadoInstalado('B'.repeat(40))).toBe(false);
+  });
+});
+
+describe('robustez de GestorHttps', () => {
+  it('dos primeras llamadas concurrentes crean una sola CA', async () => {
+    const g = gestorHttps();
+    const [a, b] = await Promise.all([
+      g.asegurarCertificado({ id: 'a', dominio: 'a.test', alias: [] }),
+      g.asegurarCertificado({ id: 'b', dominio: 'b.test', alias: [] }),
+    ]);
+    const ca = forge.pki.certificateFromPem(readFileSync(rutas.caCrt(), 'utf8'));
+    for (const x of [a, b]) {
+      expect(ca.verify(forge.pki.certificateFromPem(readFileSync(x.crt, 'utf8')))).toBe(true);
+    }
+  });
+
+  it('datosPrincipal devuelve null si no se puede emitir el certificado', async () => {
+    const g = gestorHttps();
+    await g.instalarCA();
+    mkdirSync(path.join(base, 'certs'), { recursive: true });
+    // Una carpeta ocupa el lugar del .crt: escribirlo falla.
+    mkdirSync(rutas.certCrt('_localhost'));
+    mkdirSync(rutas.certKey('_localhost'));
+    expect(await g.datosPrincipal(443)).toBeNull();
+  });
+
+  it('los certificados de sitio llevan AuthorityKeyIdentifier y SubjectKeyIdentifier', () => {
+    const ca = generarCA();
+    const c = forge.pki.certificateFromPem(emitirCertificado(ca, ['a.test']).certPem);
+    expect(c.getExtension('authorityKeyIdentifier')).toBeTruthy();
+    expect(c.getExtension('subjectKeyIdentifier')).toBeTruthy();
+    const caCert = forge.pki.certificateFromPem(ca.certPem);
+    const aki = c.getExtension('authorityKeyIdentifier') as { value: string };
+    const ski = caCert.getExtension('subjectKeyIdentifier') as { subjectKeyIdentifier: string };
+    expect(forge.util.bytesToHex(aki.value).includes(ski.subjectKeyIdentifier)).toBe(true);
   });
 });
