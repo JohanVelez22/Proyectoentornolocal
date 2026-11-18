@@ -2,6 +2,7 @@
 import {
   Globe as IconoSitios,
   Home as IconoInicio,
+  Layers as IconoBases,
   Server as IconoServicios,
   Settings as IconoAjustes,
   SwapHorizontal as IconoTuneles,
@@ -43,6 +44,7 @@ const opciones: MenuOption[] = (
     ['inicio', IconoInicio],
     ['sitios', IconoSitios],
     ['servicios', IconoServicios],
+    ['basesDeDatos', IconoBases],
     ['tuneles', IconoTuneles],
     ['ajustes', IconoAjustes],
   ] as const

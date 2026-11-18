@@ -142,7 +142,9 @@ describe('stores de la interfaz', () => {
     await iniciarEntorno();
     await iniciarEntorno();
     expect(falsa.cuantos('servicio:estado')).toBe(1);
-    expect(falsa.cuantos('instalacion:progreso')).toBe(1);
+    // Servicios y Bases de datos (registro de pgvector), una vez cada uno.
+    expect(falsa.cuantos('instalacion:progreso')).toBe(2);
+    expect(falsa.cuantos('bd:progreso')).toBe(1);
     expect(falsa.cuantos('sitio:cambio')).toBe(1);
     expect(falsa.cuantos('tunel:estado')).toBe(1);
     expect(falsa.cuantos('hosts:estado')).toBe(1);

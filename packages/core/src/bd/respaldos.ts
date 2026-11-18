@@ -1632,6 +1632,9 @@ export function mariadbConSandbox(version: string): boolean {
 
 /** Falló la restauración después de borrar la base original (queda su respaldo previo). */
 export class ErrorTrasReemplazo extends Error {
+  /** El IPC lo reenvía: la interfaz lo muestra destacado (el mensaje nombra el respaldo previo). */
+  readonly codigo = 'tras-reemplazo';
+
   constructor(
     base: string,
     readonly respaldoPrevio: string,

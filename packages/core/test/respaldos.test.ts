@@ -834,7 +834,11 @@ describe('restaurar', () => {
     const p = armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes', {
       confirmarSobrescribir: true,
     });
-    const error = (await p.catch((e: unknown) => e)) as Error & { respaldoPrevio?: string };
+    const error = (await p.catch((e: unknown) => e)) as Error & {
+      respaldoPrevio?: string;
+      codigo?: string;
+    };
+    expect(error.codigo).toBe('tras-reemplazo');
     expect(error.respaldoPrevio).toMatch(/diamantes-antes-de-sobrescribir-\d{8}-\d{4}\.dump$/);
     expect(error.message).toBe(
       `No se pudo completar la restauración de diamantes. La base original se reemplazó; su copia de seguridad está en ${error.respaldoPrevio}. Puede restaurarla desde Bases de datos.`,

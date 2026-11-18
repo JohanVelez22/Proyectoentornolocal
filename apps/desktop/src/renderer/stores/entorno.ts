@@ -1,4 +1,5 @@
 import { api } from '../api';
+import { useBd } from './bd';
 import { useHosts } from './hosts';
 import { useServicios } from './servicios';
 import { useSitios } from './sitios';
@@ -17,6 +18,8 @@ export async function iniciarEntorno(): Promise<void> {
   sitios.iniciar();
   tuneles.iniciar();
   hosts.iniciar();
+  // Bases de datos: el registro de progreso sigue llegando aunque se cambie de pantalla.
+  useBd().iniciar();
   try {
     const general = await api().estadoGeneral();
     servicios.hidratar(general.servicios);
@@ -34,4 +37,5 @@ export function detenerEntorno(): void {
   useSitios().detener();
   useTuneles().detener();
   useHosts().detener();
+  useBd().detener();
 }

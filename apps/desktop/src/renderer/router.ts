@@ -25,6 +25,12 @@ const rutas: RouteRecordRaw[] = [
     meta: { seccion: 'servicios' },
   },
   {
+    path: '/bases-de-datos',
+    name: 'basesDeDatos',
+    component: () => import('./vistas/BasesDeDatos.vue'),
+    meta: { seccion: 'basesDeDatos' },
+  },
+  {
     path: '/tuneles',
     name: 'tuneles',
     component: () => import('./vistas/Tuneles.vue'),
