@@ -68,7 +68,8 @@ export class Composer {
     return [...instaladas].sort(compararVersiones).at(-1) ?? null;
   }
 
-  private async rutaPhar(): Promise<string | null> {
+  /** composer.phar de la versión instalada más nueva, o null si Composer no está instalado. */
+  async rutaPhar(): Promise<string | null> {
     const v = [...(await this.d.instalador.instalados('composer'))].sort(compararVersiones).at(-1);
     return v ? path.join(this.d.rutas.bin('composer', v), 'composer.phar') : null;
   }

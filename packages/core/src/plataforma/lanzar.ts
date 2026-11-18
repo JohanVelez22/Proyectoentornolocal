@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { StringDecoder } from 'node:string_decoder';
@@ -43,8 +43,29 @@ const esCierreDelHijo = (e: unknown): boolean => {
  * se entrega por líneas. Resuelve con el código de salida; rechaza si el ejecutable no existe o
  * si falla la lectura de la entrada (archivo dañado, .gz incompleto).
  */
+/** Mata el proceso y sus hijos: en Windows `taskkill /T /F`; en otros sistemas, SIGKILL. */
+function matarArbol(hijo: ChildProcess): void {
+  if (process.platform === 'win32' && hijo.pid !== undefined) {
+    const k = spawn('taskkill', ['/PID', String(hijo.pid), '/T', '/F'], {
+      windowsHide: true,
+      stdio: 'ignore',
+    });
+    k.once('error', () => hijo.kill());
+    return;
+  }
+  hijo.kill('SIGKILL');
+}
+
+/** Error con el que se rechaza un lanzamiento cuya señal ya estaba abortada. */
+export const MENSAJE_CANCELADO = 'Cancelado';
+
 export const lanzadorPorDefecto: Lanzador = (cmd, args, opts = {}) =>
   new Promise((resolve, reject) => {
+    if (opts.senal?.aborted) {
+      opts.entrada?.destroy();
+      reject(new Error(MENSAJE_CANCELADO));
+      return;
+    }
     const hijo = spawn(cmd, args, {
       windowsHide: true,
       cwd: opts.cwd,
@@ -64,13 +85,19 @@ export const lanzadorPorDefecto: Lanzador = (cmd, args, opts = {}) =>
         hijo.kill();
       });
     }
+    const senal = opts.senal;
+    const alAbortar = (): void => matarArbol(hijo);
+    senal?.addEventListener('abort', alAbortar, { once: true });
+    const soltarSenal = (): void => senal?.removeEventListener('abort', alAbortar);
     hijo.on('error', (e) => {
       terminado = true;
+      soltarSenal();
       opts.entrada?.destroy();
       reject(e);
     });
     hijo.on('close', (codigo) => {
       terminado = true;
+      soltarSenal();
       opts.entrada?.destroy();
       if (errorEntrada) reject(errorEntrada);
       else resolve({ codigo: codigo ?? 1 });

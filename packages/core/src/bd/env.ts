@@ -75,7 +75,8 @@ export function bloqueEnv(
   if (motor === 'mongodb') {
     return `MONGODB_URI=${valorEnv(`mongodb://${datos.host}:${datos.puerto}/${base}`)}\n`;
   }
-  const ci4 = tipo === 'codeigniter3' && CI4.test(envActual);
+  // CodeIgniter 4 siempre usa database.default.*; un CodeIgniter 3 solo si ya trae ese formato.
+  const ci4 = tipo === 'codeigniter4' || (tipo === 'codeigniter3' && CI4.test(envActual));
   // CodeIgniter 3 sin el formato de CI4: el lector propio de index.php (sin escapes).
   const estilo: EstiloEnv = ci4 ? 'ci4' : tipo === 'codeigniter3' ? 'literal' : 'dotenv';
   const clave = valorEnv(datos.clave ?? '', estilo);

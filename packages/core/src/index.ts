@@ -48,4 +48,5 @@ export * from './runtimes/runtimes';
 export * from './proyectos/config';
 export * from './proyectos/detectar';
 export * from './proyectos/pasos';
+export * from './proyectos/pasos/index';
 export * from './proyectos/recetas';

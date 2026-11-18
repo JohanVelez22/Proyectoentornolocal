@@ -43,6 +43,11 @@ export interface OpcionesLanzar {
   entrada?: Readable;
   /** Cada línea de salida, a medida que llega (sin el salto). */
   alLinea?: (linea: string, flujo: 'stdout' | 'stderr') => void;
+  /**
+   * Al abortarse mata el proceso y su árbol de hijos (taskkill /T en Windows). Si ya estaba
+   * abortada, no se lanza nada y la promesa se rechaza con "Cancelado".
+   */
+  senal?: AbortSignal;
 }
 
 /** Como `Ejecutor`, pero en streaming: no junta la salida en memoria. */
