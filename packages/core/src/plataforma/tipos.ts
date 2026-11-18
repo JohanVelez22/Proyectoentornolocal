@@ -9,6 +9,11 @@ export interface Plataforma {
   quienUsaPuerto(puerto: number): Promise<{ pid: number; nombre: string } | null>;
   /** Dueños de varios puertos en una sola consulta; los libres no aparecen en el mapa. */
   duenosDePuertos(puertos: number[]): Promise<Map<number, { pid: number; nombre: string }>>;
+  /** Agrega el .crt al almacén de certificados raíz del USUARIO (Windows pide confirmación). */
+  instalarCertificadoUsuario(rutaCrt: string): Promise<ResultadoEscritura>;
+  quitarCertificadoUsuario(huella: string): Promise<ResultadoEscritura>;
+  /** ¿Está en el almacén raíz del usuario el certificado con esa huella SHA-1? */
+  certificadoInstalado(huella: string): Promise<boolean>;
   procesoVivo(pid: number): Promise<{ vivo: boolean; ejecutable?: string }>;
   matarArbol(pid: number): Promise<void>;
   abrirUrl(url: string): Promise<void>;

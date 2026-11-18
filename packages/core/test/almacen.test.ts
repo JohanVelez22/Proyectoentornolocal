@@ -37,6 +37,8 @@ describe('Almacen', () => {
       reglasExtra: '',
       urlBaseVar: 'APP_URL',
       datosReales: true,
+      https: false,
+      redirigirHttps: false,
       nota: 'n',
     });
     await a.guardar(c);

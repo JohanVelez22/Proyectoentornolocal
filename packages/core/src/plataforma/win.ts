@@ -143,6 +143,32 @@ export class PlataformaWindows implements Plataforma {
     return res;
   }
 
+  async instalarCertificadoUsuario(rutaCrt: string): Promise<ResultadoEscritura> {
+    return this.certutil(['-user', '-addstore', 'Root', rutaCrt]);
+  }
+
+  async quitarCertificadoUsuario(huella: string): Promise<ResultadoEscritura> {
+    if (!/^[0-9A-Fa-f]{40}$/.test(huella))
+      return { ok: false, motivo: 'error', detalle: 'Huella no válida' };
+    return this.certutil(['-user', '-delstore', 'Root', huella]);
+  }
+
+  async certificadoInstalado(huella: string): Promise<boolean> {
+    if (!/^[0-9A-Fa-f]{40}$/.test(huella)) return false;
+    const r = await this.ejecutar('certutil', ['-user', '-verifystore', 'Root', huella], {
+      timeoutMs: 15000,
+    });
+    return r.codigo === 0;
+  }
+
+  /** certutil siempre sobre el almacén del usuario; un código distinto de 0 es que se canceló. */
+  private async certutil(args: string[]): Promise<ResultadoEscritura> {
+    // Sin límite corto: Windows muestra su propio aviso de confirmación y espera al usuario.
+    const r = await this.ejecutar('certutil', args, { timeoutMs: 120000 });
+    if (r.codigo === 0) return { ok: true };
+    return { ok: false, motivo: 'cancelado', detalle: `${r.stderr}${r.stdout}`.trim() };
+  }
+
   async procesoVivo(pid: number): Promise<{ vivo: boolean; ejecutable?: string }> {
     const t = await this.ejecutar('tasklist', ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'], {
       timeoutMs: 15000,

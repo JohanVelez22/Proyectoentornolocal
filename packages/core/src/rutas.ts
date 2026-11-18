@@ -61,6 +61,18 @@ export class Rutas {
   vhost(id: string): string {
     return path.join(this.base, 'etc', 'nginx', 'sites', `${id}.conf`);
   }
+  caCrt(): string {
+    return path.join(this.base, 'ca', 'wolfcore-dev-ca.crt');
+  }
+  caKey(): string {
+    return path.join(this.base, 'ca', 'wolfcore-dev-ca.key');
+  }
+  certCrt(id: string): string {
+    return path.join(this.base, 'certs', id + '.crt');
+  }
+  certKey(id: string): string {
+    return path.join(this.base, 'certs', id + '.key');
+  }
   phpIni(version: string): string {
     return path.join(this.base, 'etc', 'php', version, 'php.ini');
   }

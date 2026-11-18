@@ -59,6 +59,9 @@ const plataforma = (): Plataforma =>
       consultas.push(ps);
       return new Map(ps.filter((x) => ocupados.has(x)).map((x) => [x, ocupados.get(x)!]));
     },
+    instalarCertificadoUsuario: async () => ({ ok: true as const }),
+    quitarCertificadoUsuario: async () => ({ ok: true as const }),
+    certificadoInstalado: async () => false,
     procesoVivo: async () => ({ vivo: false }),
     ejecutable: (n: string) => `${n}.exe`,
   }) as unknown as Plataforma;

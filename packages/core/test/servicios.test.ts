@@ -41,6 +41,9 @@ const supervisor = () =>
 const plataforma = (): Plataforma =>
   ({
     quienUsaPuerto: async (p: number) => ocupados.get(p) ?? null,
+    instalarCertificadoUsuario: async () => ({ ok: true as const }),
+    quitarCertificadoUsuario: async () => ({ ok: true as const }),
+    certificadoInstalado: async () => false,
     procesoVivo: async () => ({ vivo: false }),
     ejecutable: (n: string) => `${n}.exe`,
   }) as unknown as Plataforma;

@@ -66,6 +66,12 @@ export class ServicioNginx {
     private readonly leerConfig: () => Promise<Config>,
     private readonly obtenerUpstreams: () => Promise<UpstreamPhp[]> = async () => [],
     private readonly exec: Ejecutor = ejecutorPorDefecto,
+    /** Certificado de localhost para el servidor por defecto; null si el HTTPS no es usable. */
+    private readonly httpsPrincipal: () => Promise<{
+      puerto: number;
+      crt: string;
+      key: string;
+    } | null> = async () => null,
   ) {}
 
   /** Versión configurada si está instalada; si no, la más reciente instalada. */
@@ -98,12 +104,14 @@ export class ServicioNginx {
   }
 
   private async generarConf(bin: string, destino: string): Promise<void> {
+    const https = await this.httpsPrincipal();
     const contenido = generarNginxPrincipal({
       prefijo: bin,
       sitesDir: path.dirname(this.rutas.vhost('x')),
       phpUpstreams: await this.obtenerUpstreams(),
       logsDir: this.rutas.logs(),
       puerto: (await this.leerConfig()).servicios.nginx.puerto,
+      ...(https ? { https } : {}),
     });
     await mkdir(this.rutas.logs(), { recursive: true });
     await mkdir(path.dirname(this.rutas.vhost('x')), { recursive: true });

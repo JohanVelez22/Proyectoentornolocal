@@ -44,6 +44,14 @@ function plataformaSegura(): Plataforma {
     },
     quienUsaPuerto: (p) => real.quienUsaPuerto(p),
     duenosDePuertos: (ps) => real.duenosDePuertos(ps),
+    // Nunca se toca el almacén de certificados real desde las pruebas.
+    instalarCertificadoUsuario: async () => {
+      throw new Error('La prueba no debe instalar certificados');
+    },
+    quitarCertificadoUsuario: async () => {
+      throw new Error('La prueba no debe quitar certificados');
+    },
+    certificadoInstalado: async () => false,
     procesoVivo: (p) => real.procesoVivo(p),
     matarArbol: (p) => real.matarArbol(p),
     carpetaDocumentos: () => real.carpetaDocumentos(),
@@ -123,6 +131,8 @@ const datosSitio = (extra: Partial<Omit<Sitio, 'id'>>): Omit<Sitio, 'id'> => ({
   reglasExtra: '',
   urlBaseVar: null,
   datosReales: false,
+  https: false,
+  redirigirHttps: false,
   nota: '',
   ...extra,
 });

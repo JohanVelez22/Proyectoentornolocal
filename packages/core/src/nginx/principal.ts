@@ -22,6 +22,8 @@ export function generarNginxPrincipal(o: {
   logsDir: string;
   /** Puerto de escucha: el servidor por defecto atiende los Host desconocidos. */
   puerto: number;
+  /** También escucha por HTTPS con el certificado de localhost (solo si el HTTPS es usable). */
+  https?: { puerto: number; crt: string; key: string };
 }): string {
   const prefijo = limpiar(o.prefijo);
   const logs = limpiar(o.logsDir);
@@ -56,6 +58,13 @@ export function generarNginxPrincipal(o: {
       // de servir el primer sitio que encuentre nginx.
       '    server {',
       `        listen ${o.puerto} default_server;`,
+      ...(o.https
+        ? [
+            `        listen ${o.https.puerto} ssl default_server;`,
+            `        ssl_certificate "${limpiar(o.https.crt)}";`,
+            `        ssl_certificate_key "${limpiar(o.https.key)}";`,
+          ]
+        : []),
       '        server_name _;',
       '        charset utf-8;',
       '        default_type text/html;',

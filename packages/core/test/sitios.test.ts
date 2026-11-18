@@ -65,6 +65,8 @@ const datos = (dominio: string, extra: Partial<Omit<Sitio, 'id'>> = {}): Omit<Si
   reglasExtra: '',
   urlBaseVar: null,
   datosReales: false,
+  https: false,
+  redirigirHttps: false,
   nota: '',
   ...extra,
 });

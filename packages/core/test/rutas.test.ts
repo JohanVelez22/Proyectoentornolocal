@@ -14,6 +14,8 @@ const sitio = (o: Partial<Sitio>): Sitio => ({
   reglasExtra: '',
   urlBaseVar: null,
   datosReales: false,
+  https: false,
+  redirigirHttps: false,
   nota: '',
   ...o,
 });

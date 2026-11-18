@@ -179,6 +179,8 @@ export function sitioVacio(): DatosSitio {
     reglasExtra: '',
     urlBaseVar: null,
     datosReales: false,
+    https: false,
+    redirigirHttps: false,
     nota: '',
   };
 }

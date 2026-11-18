@@ -22,6 +22,8 @@ export const SitioSchema = z.object({
   urlBaseVar: z.string().nullable().default(null),
   datosReales: z.boolean().default(false),
   nota: z.string().default(''),
+  https: z.boolean().default(false),
+  redirigirHttps: z.boolean().default(false),
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 
@@ -72,6 +74,7 @@ export type ArchivoCredenciales = z.infer<typeof ArchivoCredencialesSchema>;
 export const ConfigSchema = z.object({
   version: z.literal(1).default(1),
   sitios: z.array(SitioSchema).default([]),
+  https: z.object({ puerto: z.number().int().min(1).max(65535).default(443) }).prefault({}),
   servicios: z
     .object({
       nginx: z

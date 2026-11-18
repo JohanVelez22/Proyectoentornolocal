@@ -23,6 +23,9 @@ const falsa = (): Plataforma => ({
   },
   quienUsaPuerto: async () => null,
   duenosDePuertos: async () => new Map(),
+  instalarCertificadoUsuario: async () => ({ ok: true as const }),
+  quitarCertificadoUsuario: async () => ({ ok: true as const }),
+  certificadoInstalado: async () => false,
   procesoVivo: async () => ({ vivo: false }),
   matarArbol: async () => undefined,
   abrirUrl: async () => undefined,
@@ -52,6 +55,8 @@ const datos = (extra: Partial<Omit<Sitio, 'id'>> = {}): Omit<Sitio, 'id'> => ({
   reglasExtra: '',
   urlBaseVar: null,
   datosReales: false,
+  https: false,
+  redirigirHttps: false,
   nota: '',
   ...extra,
 });

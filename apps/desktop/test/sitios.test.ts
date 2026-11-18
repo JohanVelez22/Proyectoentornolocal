@@ -31,6 +31,8 @@ const sitio = (o: Partial<Sitio> = {}): Sitio => ({
   reglasExtra: '',
   urlBaseVar: 'APP_URL',
   datosReales: false,
+  https: false,
+  redirigirHttps: false,
   nota: '',
   ...o,
 });
@@ -274,11 +276,14 @@ describe('lista de sitios', () => {
   });
 
   it('traduce el resultado de aplicar al aviso de hosts', () => {
-    expect(falloHostsDe({ nginx: { ok: true, salida: '' }, hosts: { ok: true } })).toBeNull();
+    expect(
+      falloHostsDe({ nginx: { ok: true, salida: '' }, hosts: { ok: true }, httpsPendiente: [] }),
+    ).toBeNull();
     expect(
       falloHostsDe({
         nginx: { ok: true, salida: '' },
         hosts: { ok: false, motivo: 'cancelado', comandoManual: 'Copy-Item x' },
+        httpsPendiente: [],
       }),
     ).toEqual({ motivo: 'cancelado', comandoManual: 'Copy-Item x' });
   });

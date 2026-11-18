@@ -16,6 +16,8 @@ const sitio = (o: Partial<Sitio>): Sitio => ({
   urlBaseVar: null,
   datosReales: false,
   nota: '',
+  https: false,
+  redirigirHttps: false,
   ...o,
 });
 const o = { puertoNginx: 80, rutasLogs: { acceso: 'C:\\L\\a.log', error: 'C:\\L\\e.log' } };
@@ -179,5 +181,66 @@ describe('generarNginxPrincipal', () => {
     expect(c).toContain('error_log "C:/Datos/logs/nginx-error.log";');
     expect(c).toContain('pid "C:/Datos/logs/nginx.pid";');
     expect(c).toContain('client_body_temp_path "C:/Datos/nginx/temp/client_body";');
+  });
+});
+
+describe('generarVhost con HTTPS', () => {
+  const https = { puerto: 443, crt: 'C:\\C\\a.crt', key: 'C:\\C\\a.key' };
+  const REDIR =
+    'set $pel_redir 1; if ($http_cf_connecting_ip) { set $pel_redir 0; } if ($http_x_forwarded_proto = "https") { set $pel_redir 0; } if ($pel_redir) { return 301 https://$host$request_uri; }';
+
+  it('sin opciones https no emite ssl aunque el sitio lo pida', () => {
+    expect(generarVhost(sitio({ https: true }), o)).not.toContain('ssl');
+  });
+
+  it('con https agrega listen ssl, http2 y los certificados', () => {
+    const v = generarVhost(sitio({ https: true }), { ...o, https });
+    expect(v).toContain('listen 80;');
+    expect(v).toContain('listen 443 ssl;');
+    expect(v).toContain('http2 on;');
+    expect(v).toContain('ssl_certificate "C:/C/a.crt";');
+    expect(v).toContain('ssl_certificate_key "C:/C/a.key";');
+    expect(v).not.toContain('pel_redir');
+  });
+
+  it('con redirección: el server HTTP redirige salvo túnel y el HTTPS no redirige nunca', () => {
+    const v = generarVhost(sitio({ https: true, redirigirHttps: true }), { ...o, https });
+    const [http, ssl] = v.split('\nserver {');
+    expect(http).toContain(REDIR);
+    expect(http).toContain('listen 80;');
+    expect(http).not.toContain('ssl_certificate');
+    expect(ssl).toContain('listen 443 ssl;');
+    expect(ssl).not.toContain('pel_redir');
+    // El túnel de Cloudflare llega por HTTP con estas cabeceras: nunca debe redirigir.
+    expect(v.indexOf('$http_cf_connecting_ip')).toBeLessThan(v.indexOf('return 301'));
+  });
+
+  it('con un puerto distinto de 443 la redirección incluye el puerto', () => {
+    const v = generarVhost(sitio({ https: true, redirigirHttps: true }), {
+      ...o,
+      https: { ...https, puerto: 8443 },
+    });
+    expect(v).toContain('return 301 https://$host:8443$request_uri;');
+  });
+});
+
+describe('generarNginxPrincipal con HTTPS', () => {
+  const principal = {
+    prefijo: 'C:\\n',
+    sitesDir: 'C:\\s',
+    phpUpstreams: [],
+    logsDir: 'C:\\l',
+    puerto: 80,
+  };
+  it('escucha también en el puerto HTTPS con el certificado de localhost', () => {
+    const c = generarNginxPrincipal({
+      ...principal,
+      https: { puerto: 443, crt: 'C:\\c\\l.crt', key: 'C:\\c\\l.key' },
+    });
+    expect(c).toContain('listen 443 ssl default_server;');
+    expect(c).toContain('ssl_certificate "C:/c/l.crt";');
+  });
+  it('sin https no escucha en 443', () => {
+    expect(generarNginxPrincipal(principal)).not.toContain('ssl');
   });
 });

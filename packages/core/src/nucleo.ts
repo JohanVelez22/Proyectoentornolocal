@@ -4,6 +4,7 @@ import { Instalador } from './catalogo/instalador';
 import { listarVersiones } from './catalogo/catalogo';
 import { Eventos, type EventosNucleo } from './eventos';
 import { GestorHosts } from './hosts/hosts';
+import { GestorHttps, type ResultadoCA } from './https/certificados';
 import { crearPlataforma } from './plataforma/index';
 import type { Ejecutor, Plataforma } from './plataforma/tipos';
 import { ejecutorPorDefecto } from './plataforma/win';
@@ -104,6 +105,7 @@ export class Nucleo {
   /** Aviso de la migración de la carpeta de datos (si hubo algo que informar). */
   avisoInicio: string | null = null;
   private almacenCredenciales!: AlmacenCredenciales;
+  private gestorHttps!: GestorHttps;
 
   private constructor(
     readonly rutas: Rutas,
@@ -150,6 +152,7 @@ export class Nucleo {
     // sitios y servicios se referencian entre sí: se resuelven de forma perezosa.
     // eslint-disable-next-line prefer-const
     let sitios!: GestorSitios;
+    const https = new GestorHttps({ rutas, plataforma, pidNginx: () => supervisor.pid('nginx') });
     const credenciales = new AlmacenCredenciales(rutas, (fn) => sitios.enCola(fn));
     const servicios = new Servicios({
       rutas,
@@ -168,6 +171,7 @@ export class Nucleo {
         ),
       ...(o.sonda ? { sonda: o.sonda } : {}),
       ...(o.ejecutor ? { exec: o.ejecutor } : {}),
+      httpsPrincipal: async () => https.datosPrincipal((await leerConfig()).https.puerto),
     });
     sitios = new GestorSitios({
       almacen,
@@ -177,6 +181,7 @@ export class Nucleo {
       hosts,
       instalador,
       eventos,
+      https,
     });
     await migrarCredenciales(rutas, almacen, credenciales);
     const urlBase = new UrlBase({
@@ -207,6 +212,7 @@ export class Nucleo {
     );
     nucleo.avisoInicio = avisoInicio;
     nucleo.almacenCredenciales = credenciales;
+    nucleo.gestorHttps = https;
     o.alIniciar?.(eventos);
     try {
       await supervisor.readoptar();
@@ -218,6 +224,21 @@ export class Nucleo {
       throw e;
     }
     return nucleo;
+  }
+
+  /** Estado de la autoridad de certificados local (creada / instalada en el almacén del usuario). */
+  estadoHttps(): ReturnType<GestorHttps['estado']> {
+    return this.gestorHttps.estado();
+  }
+
+  /** Crea la autoridad de WolfCore Dev si falta y la instala en el almacén del usuario. */
+  instalarCA(): Promise<ResultadoCA> {
+    return this.gestorHttps.instalarCA();
+  }
+
+  /** Quita la autoridad del almacén del usuario (los sitios vuelven a HTTP al aplicar). */
+  quitarCA(): Promise<ResultadoCA> {
+    return this.gestorHttps.quitarCA();
   }
 
   /** Usuario y clave de un servicio propio para "Datos de conexión" (null si aún no se generaron). */

@@ -200,6 +200,8 @@ describe('stores de la interfaz', () => {
         reglasExtra: '',
         urlBaseVar: null,
         datosReales: false,
+        https: false,
+        redirigirHttps: false,
         nota: '',
       },
     ]);

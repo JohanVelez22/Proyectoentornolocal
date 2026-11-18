@@ -5,6 +5,7 @@ import type { Almacen } from '../almacen';
 import type { Instalador } from '../catalogo/instalador';
 import type { Eventos, EventosNucleo } from '../eventos';
 import { DOMINIO_VALIDO } from '../hosts/bloque';
+import type { GestorHttps } from '../https/certificados';
 import type { GestorHosts } from '../hosts/hosts';
 import { generarVhost } from '../nginx/plantillas';
 import { puertosPhp } from '../nginx/principal';
@@ -15,6 +16,8 @@ import { SitioSchema, type Config, type Sitio } from '../tipos';
 export type ResultadoAplicar = {
   nginx: { ok: boolean; salida: string };
   hosts: { ok: boolean; motivo?: string; comandoManual?: string };
+  /** Sitios con HTTPS pedido cuyo vhost salió solo en HTTP (puerto ocupado o sin autoridad de certificados). */
+  httpsPendiente: string[];
 };
 
 export interface DepsSitios {
@@ -25,6 +28,8 @@ export interface DepsSitios {
   hosts: Pick<GestorHosts, 'sincronizar'>;
   instalador: Pick<Instalador, 'instalado' | 'instalados'>;
   eventos: Pick<Eventos<EventosNucleo>, 'emit'>;
+  /** Sin esto, ningún sitio sale con HTTPS. */
+  https?: Pick<GestorHttps, 'caCreada' | 'puertoUsable' | 'asegurarCertificado'>;
 }
 
 export interface AjustesServicios {
@@ -253,13 +258,26 @@ export class GestorSitios {
     const previo = await this.instantanea(dir);
 
     let nginx: { ok: boolean; salida: string };
+    const httpsPendiente: string[] = [];
     try {
+      const puertoHttps = cfg.https.puerto;
+      const httpsUsable =
+        !!this.d.https && this.d.https.caCreada() && (await this.d.https.puertoUsable(puertoHttps));
       const vigentes = new Set(cfg.sitios.map((s) => `${s.id}.conf`));
       for (const n of previo.keys()) {
         if (!vigentes.has(n)) await rm(path.join(dir, n), { force: true });
       }
       for (const s of cfg.sitios) {
+        let https: { puerto: number; crt: string; key: string } | undefined;
+        if (s.https) {
+          if (httpsUsable && this.d.https) {
+            https = { puerto: puertoHttps, ...(await this.d.https.asegurarCertificado(s)) };
+          } else {
+            httpsPendiente.push(s.id);
+          }
+        }
         const contenido = generarVhost(s, {
+          ...(https ? { https } : {}),
           puertoNginx: cfg.servicios.nginx.puerto,
           rutasLogs: {
             acceso: this.d.rutas.logs('sitios', `${s.id}.access.log`),
@@ -312,6 +330,6 @@ No se pudo restaurar la configuración anterior: ${e instanceof Error ? e.messag
       : { ok: false, motivo: r.motivo, comandoManual: r.comandoManual };
 
     this.d.eventos.emit('sitio:cambio', cfg.sitios);
-    return { nginx, hosts };
+    return { nginx, hosts, httpsPendiente };
   }
 }

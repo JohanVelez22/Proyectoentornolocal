@@ -3,6 +3,21 @@ import { raizDeSitio, type Sitio } from '../tipos';
 export interface OpcionesVhost {
   puertoNginx: number;
   rutasLogs: { acceso: string; error: string };
+  /** Solo si el HTTPS es usable (CA creada, puerto libre o propio, certificado emitido). */
+  https?: { puerto: number; crt: string; key: string };
+}
+
+/**
+ * Redirige a HTTPS salvo en los túneles: Cloudflare entra por HTTP con Cf-Connecting-Ip (y
+ * X-Forwarded-Proto https) y redirigirlo crearía un bucle.
+ */
+function redireccion(puertoHttps: number): string {
+  const destino = puertoHttps === 443 ? '$host' : `$host:${puertoHttps}`;
+  return (
+    'set $pel_redir 1; if ($http_cf_connecting_ip) { set $pel_redir 0; } ' +
+    'if ($http_x_forwarded_proto = "https") { set $pel_redir 0; } ' +
+    `if ($pel_redir) { return 301 https://${destino}$request_uri; }`
+  );
 }
 
 export function nombreUpstream(version: string): string {
@@ -98,15 +113,31 @@ export function generarVhost(s: Sitio, o: OpcionesVhost): string {
       break;
   }
 
-  const cabecera = [
-    `listen ${o.puertoNginx};`,
-    `server_name ${[s.dominio, ...s.alias].join(' ')};`,
+  const hosts = [`server_name ${[s.dominio, ...s.alias].join(' ')};`];
+  const resto = [
     'charset utf-8;',
     `root "${barras(raizDeSitio(s))}";`,
     `access_log "${barras(o.rutasLogs.acceso)}";`,
     `error_log "${barras(o.rutasLogs.error)}";`,
   ];
   const extra = s.reglasExtra.trim() ? s.reglasExtra.replace(/\r\n/g, '\n').trim().split('\n') : [];
-  const interior = [...cabecera, ...extra, ...cuerpo].map((l) => `    ${l}`);
-  return ['server {', ...interior, '}'].join('\n') + '\n';
+  const servidor = (escuchas: string[], previo: string[] = []): string =>
+    [
+      'server {',
+      ...[...escuchas, ...hosts, ...resto, ...previo, ...extra, ...cuerpo].map((l) => `    ${l}`),
+      '}',
+    ].join('\n') + '\n';
+
+  const http = [`listen ${o.puertoNginx};`];
+  const https = o.https && s.https ? o.https : null;
+  if (!https) return servidor(http);
+  const ssl = [
+    `listen ${https.puerto} ssl;`,
+    'http2 on;',
+    `ssl_certificate "${barras(https.crt)}";`,
+    `ssl_certificate_key "${barras(https.key)}";`,
+  ];
+  if (!s.redirigirHttps) return servidor([...http, ...ssl]);
+  // Dos servidores: el HTTP redirige (salvo túnel) y el HTTPS nunca, para no crear un bucle.
+  return servidor(http, [redireccion(https.puerto)]) + '\n' + servidor(ssl);
 }
