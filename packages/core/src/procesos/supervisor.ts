@@ -32,6 +32,12 @@ export interface DefProceso {
   puerto?: number;
   log: string;
   reiniciar: boolean;
+  /**
+   * Al readoptar exige, además del PID y el ejecutable, la misma hora de creación
+   * (`Plataforma.inicioProceso`). Para ejecutables comunes (node.exe, python.exe) cuyo PID puede
+   * haber pasado a otro programa: si no coincide o no se puede leer, se olvida sin matar nada.
+   */
+  exigirInicio?: boolean;
 }
 
 export type EstadoProceso = 'apagado' | 'iniciando' | 'encendido' | 'error';
@@ -69,6 +75,9 @@ interface RegistroEstado {
   reiniciar: boolean;
   cwd?: string;
   env?: Record<string, string>;
+  exigirInicio?: boolean;
+  /** Hora de creación del proceso (solo con exigirInicio). */
+  creado?: string | null;
 }
 
 interface Entrada {
@@ -79,6 +88,8 @@ interface Entrada {
   inicio: number;
   encendidoDesde: number | null;
   intentos: number;
+  /** Hora de creación del proceso actual (solo con `def.exigirInicio`). */
+  creado: string | null;
   detenido: boolean;
   temporizador: ReturnType<typeof setTimeout> | null;
   mensaje?: string;
@@ -155,6 +166,11 @@ export class Supervisor {
     return this.entradas.get(id)?.mensaje;
   }
 
+  /** Reinicios seguidos tras caídas (vuelve a 0 tras 60 s encendido). */
+  reinicios(id: string): number {
+    return this.entradas.get(id)?.intentos ?? 0;
+  }
+
   /**
    * Antes de un apagado limpio: la salida que venga no cuenta como caída (no se reinicia).
    * La entrada se conserva hasta `detener`.
@@ -196,6 +212,7 @@ export class Supervisor {
       inicio: Date.now(),
       encendidoDesde: null,
       intentos: 0,
+      creado: null,
       detenido: false,
       temporizador: null,
       ultimoEmitido: '',
@@ -246,6 +263,8 @@ export class Supervisor {
       const info = await this.plataforma.procesoVivo(r.pid);
       const esperado = path.basename(String(r.ejecutable)).toLowerCase();
       if (!info.vivo || info.ejecutable?.toLowerCase() !== esperado) continue;
+      // PID reutilizado por otro proceso del mismo ejecutable: se olvida, sin matarlo.
+      if (r.exigirInicio && (!r.creado || (await this.horaCreacion(r.pid)) !== r.creado)) continue;
       const entrada: Entrada = {
         def: {
           id: r.id,
@@ -256,12 +275,14 @@ export class Supervisor {
           puerto: r.puerto,
           log: r.log,
           reiniciar: r.reiniciar ?? false,
+          ...(r.exigirInicio ? { exigirInicio: true } : {}),
         },
         estado: 'iniciando',
         pid: r.pid,
         inicio: Date.now(),
         encendidoDesde: null,
         intentos: 0,
+        creado: r.creado ?? null,
         detenido: false,
         temporizador: null,
         ultimoEmitido: '',
@@ -324,6 +345,7 @@ export class Supervisor {
           return null;
         }
         entrada.pid = pid;
+        await this.anotarCreacion(entrada, pid);
         this.emitir(entrada);
         return null;
       }
@@ -355,6 +377,7 @@ export class Supervisor {
       if (fd !== null) closeSync(fd);
     }
     if (fallo === null) {
+      if (entrada.pid !== null) await this.anotarCreacion(entrada, entrada.pid);
       this.emitir(entrada);
       return null;
     }
@@ -482,6 +505,24 @@ export class Supervisor {
     this.eventos.emit('servicio:estado', estado);
   }
 
+  /** Hora de creación del PID, o null si no se puede leer. */
+  private async horaCreacion(pid: number): Promise<string | null> {
+    if (!this.plataforma.inicioProceso) return null;
+    try {
+      return await this.plataforma.inicioProceso(pid);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Con `exigirInicio`, guarda la hora de creación del proceso recién lanzado. */
+  private async anotarCreacion(entrada: Entrada, pid: number): Promise<void> {
+    entrada.creado = null;
+    if (!entrada.def.exigirInicio) return;
+    const creado = await this.horaCreacion(pid);
+    if (entrada.pid === pid) entrada.creado = creado;
+  }
+
   private colaLog(archivo: string): string {
     try {
       const lineas = readFileSync(archivo, 'utf8').split(/\r?\n/);
@@ -506,6 +547,7 @@ export class Supervisor {
         reiniciar: e.def.reiniciar,
         cwd: e.def.cwd,
         env: e.def.env,
+        ...(e.def.exigirInicio ? { exigirInicio: true, creado: e.creado } : {}),
       });
     }
     const destino = this.rutas.estado();

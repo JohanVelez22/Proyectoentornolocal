@@ -27,17 +27,21 @@ export const TIPOS_PROXY: readonly TipoSitio[] = ['proxy', 'fastapi', 'node'];
 /**
  * Comando de larga duración del proyecto (npm run dev, queue:work, uvicorn…), supervisado.
  * `cwd`: 'raiz' (la carpeta del proyecto) o una ruta relativa a ella, dentro de la carpeta.
- * El id no lleva guiones: el supervisor usa `proy-<sitio>-<proceso>` y el id del sitio sí puede
- * llevarlos, así que el último guion separa siempre las dos partes.
+ * El id no lleva guiones (se cambian por `_`): el supervisor usa `proy-<sitio>-<proceso>` y el
+ * id del sitio sí puede llevarlos, así que el último guion separa siempre las dos partes.
  * `proxy`: este proceso es el destino del proxy de Nginx (ver `procesoDelProxy`).
  */
 export const ProcesoProyectoSchema = z.object({
-  id: z
-    .string()
-    .regex(
-      /^[A-Za-z0-9][A-Za-z0-9_]*$/,
-      'El id del proceso lleva solo letras, números y guiones bajos',
-    ),
+  // Los guiones pasan a guiones bajos (un config.json viejo con 'npm-dev' no queda corrupto).
+  id: z.preprocess(
+    (v) => (typeof v === 'string' ? v.replace(/-/g, '_') : v),
+    z
+      .string()
+      .regex(
+        /^[A-Za-z0-9][A-Za-z0-9_]*$/,
+        'El id del proceso lleva solo letras, números y guiones bajos',
+      ),
+  ),
   nombre: z.string().default(''),
   comando: z.array(z.string().min(1)).min(1, 'El comando no puede estar vacío'),
   cwd: z.string().min(1).default('raiz'),

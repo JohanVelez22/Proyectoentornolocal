@@ -51,7 +51,7 @@ export function separarIdSupervisor(id: string): { sitioId: string; procesoId: s
 /** Lo que se usa del supervisor (en las pruebas, uno falso). */
 export type SupervisorProcesos = Pick<
   Supervisor,
-  'iniciar' | 'detener' | 'estado' | 'pid' | 'mensaje' | 'ids'
+  'iniciar' | 'detener' | 'estado' | 'pid' | 'mensaje' | 'ids' | 'reinicios'
 >;
 
 export interface DepsProcesosProyecto extends DepsEntorno {
@@ -74,6 +74,8 @@ export interface EstadoProcesoProyecto {
   mensaje?: string;
   /** Avisos del último arranque (runtimes que faltan, rangos de versión…). */
   avisos: string[];
+  /** Reinicios seguidos tras caídas (vuelve a 0 tras 60 s encendido). */
+  reinicios: number;
   autoIniciar: boolean;
   reiniciar: boolean;
   /** Nginx envía el sitio a este proceso (`puertoDelProxy`). */
@@ -98,6 +100,8 @@ export class ProcesosProyecto {
   private readonly fallos = new Map<string, string>();
   /** Cada `detener` cambia la generación: un `iniciar` en preparación ya no arranca. */
   private readonly generacion = new Map<string, number>();
+  /** Ids con un `iniciar` en preparación (aún no llegaron al supervisor). */
+  private readonly preparando = new Set<string>();
 
   constructor(private readonly d: DepsProcesosProyecto) {}
 
@@ -111,7 +115,24 @@ export class ProcesosProyecto {
     const id = idSupervisor(sitioId, procesoId);
     // Antes de cualquier espera: un detener posterior debe notarse.
     const gen = this.generacion.get(id) ?? 0;
+    this.preparando.add(id);
+    try {
+      await this.iniciarPreparado(id, gen, sitioId, procesoId);
+    } finally {
+      this.preparando.delete(id);
+    }
+  }
+
+  private async iniciarPreparado(
+    id: string,
+    gen: number,
+    sitioId: string,
+    procesoId: string,
+  ): Promise<void> {
     const { sitio, proceso } = await this.buscar(sitioId, procesoId);
+    // Ya en marcha: no se toca (ni se escribe en su log).
+    const actual = this.d.supervisor.estado(id);
+    if (actual === 'encendido' || actual === 'iniciando') return;
     const log = this.rutaLog(sitioId, procesoId);
     let def: DefProceso;
     try {
@@ -216,7 +237,8 @@ export class ProcesosProyecto {
     filtro: (s: { sitioId: string; procesoId: string }, id: string) => boolean,
   ): Promise<unknown[]> {
     const errores: unknown[] = [];
-    for (const id of this.d.supervisor.ids()) {
+    // También los que se están preparando: su generación sube y ya no arrancan.
+    for (const id of new Set([...this.d.supervisor.ids(), ...this.preparando])) {
       const s = separarIdSupervisor(id);
       if (!s || !filtro(s, id)) continue;
       try {
@@ -269,6 +291,7 @@ export class ProcesosProyecto {
       puerto: p.puerto,
       ...(mensaje === undefined ? {} : { mensaje }),
       avisos: [...(this.avisos.get(id) ?? [])],
+      reinicios: sup.reinicios(id),
       autoIniciar: p.autoIniciar,
       reiniciar: p.reiniciar,
       proxy,
@@ -317,7 +340,9 @@ export class ProcesosProyecto {
       args,
       cwd,
       env: entorno.cambios,
-      ...(p.puerto === null ? {} : { puerto: p.puerto }),
+      // Sin `puerto`: es informativo (proxy) y no sirve de sonda de salud; vite o un servidor
+      // que escucha en otra interfaz o tarda en abrirlo no deben morir por eso.
+      exigirInicio: true,
       log,
       reiniciar: p.reiniciar,
     };

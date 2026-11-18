@@ -222,6 +222,23 @@ describe('PlataformaWindows con ejecutor falso', () => {
     expect(await muerto.procesoVivo(10)).toEqual({ vivo: false });
   });
 
+  it('inicioProceso lee la hora de creación de Win32_Process; null si no hay o falla', async () => {
+    const vistos: string[][] = [];
+    const p = new PlataformaWindows(async (cmd, args) => {
+      vistos.push([cmd, ...args]);
+      return { codigo: 0, stdout: '134079123456789012\r\n', stderr: '' };
+    });
+    expect(await p.inicioProceso(1234)).toBe('134079123456789012');
+    expect(vistos[0]!.join(' ')).toContain('ProcessId=1234');
+    const vacio = new PlataformaWindows(async () => ({ codigo: 0, stdout: '', stderr: '' }));
+    expect(await vacio.inicioProceso(8)).toBeNull();
+    const falla = new PlataformaWindows(async () => {
+      throw new Error('sin powershell');
+    });
+    expect(await falla.inicioProceso(8)).toBeNull();
+    expect(await p.inicioProceso(-1)).toBeNull();
+  });
+
   it('procesoVivo no da por muerto un proceso vivo si tasklist falla', async () => {
     const consultados: number[] = [];
     const p = new PlataformaWindows(

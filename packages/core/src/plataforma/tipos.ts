@@ -15,6 +15,11 @@ export interface Plataforma {
   /** ¿Está en el almacén raíz del usuario el certificado con esa huella SHA-1? */
   certificadoInstalado(huella: string): Promise<boolean>;
   procesoVivo(pid: number): Promise<{ vivo: boolean; ejecutable?: string }>;
+  /**
+   * Hora de creación del proceso (texto opaco: se compara por igualdad), o null si no existe o no
+   * se pudo leer. Distingue un PID reutilizado por otro proceso con el mismo ejecutable.
+   */
+  inicioProceso?(pid: number): Promise<string | null>;
   matarArbol(pid: number): Promise<void>;
   abrirUrl(url: string): Promise<void>;
   ejecutable(nombre: 'nginx' | 'php-cgi' | 'php' | 'cloudflared'): string;

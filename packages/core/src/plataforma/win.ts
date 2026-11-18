@@ -208,6 +208,27 @@ export class PlataformaWindows implements Plataforma {
     return this.existe(pid) ? { vivo: true } : { vivo: false };
   }
 
+  async inicioProceso(pid: number): Promise<string | null> {
+    if (!Number.isInteger(pid) || pid <= 0) return null;
+    try {
+      // CreationDate de Win32_Process como FILETIME UTC: no depende de la zona ni del idioma.
+      const r = await this.ejecutar(
+        'powershell',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `$p = Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}'; if ($p) { $p.CreationDate.ToFileTimeUtc() }`,
+        ],
+        { timeoutMs: 15000 },
+      );
+      const texto = r.stdout.trim();
+      return r.codigo === 0 && /^\d+$/.test(texto) ? texto : null;
+    } catch {
+      return null;
+    }
+  }
+
   async matarArbol(pid: number): Promise<void> {
     await this.ejecutar('taskkill', ['/PID', String(pid), '/T', '/F'], { timeoutMs: 15000 });
   }

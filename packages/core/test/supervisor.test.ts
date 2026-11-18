@@ -21,6 +21,8 @@ class HijoFalso extends EventEmitter {
 let base: string;
 let rutas: Rutas;
 let vivos: Map<number, string>;
+/** Hora de creación (FILETIME en texto) de cada PID vivo. */
+let creaciones: Map<number, string>;
 let hijos: HijoFalso[];
 let sondaOk: boolean;
 let siguientePid: number;
@@ -36,11 +38,13 @@ const plataforma = (): Plataforma =>
       matados.push(pid);
       vivos.delete(pid);
     },
+    inicioProceso: async (pid: number) => creaciones.get(pid) ?? null,
   }) as unknown as Plataforma;
 
 const fakeSpawn = ((cmd: string) => {
   const h = new HijoFalso(siguientePid++);
   vivos.set(h.pid, path.basename(cmd));
+  creaciones.set(h.pid, `t${h.pid}`);
   hijos.push(h);
   return h;
 }) as never;
@@ -90,6 +94,7 @@ beforeEach(() => {
   mkdirSync(path.join(base, 'run'), { recursive: true });
   rutas = new Rutas(base);
   vivos = new Map();
+  creaciones = new Map();
   hijos = [];
   matados = [];
   sondaOk = true;
@@ -350,6 +355,78 @@ describe('Supervisor', () => {
     expect(matados).toEqual([]);
     expect(JSON.parse(readFileSync(rutas.estado(), 'utf8'))).toEqual([]);
     await s.cerrar();
+  });
+
+  describe('exigirInicio (procesos de proyecto: node.exe/python.exe son comunes)', () => {
+    const defNode = (): DefProceso =>
+      def({
+        id: 'proy-demo-vite',
+        comando: 'C:/n/node.exe',
+        puerto: undefined,
+        exigirInicio: true,
+      });
+
+    it('guarda la hora de creación y readopta si PID, exe y hora coinciden', async () => {
+      const a = crear();
+      await a.iniciar(defNode());
+      const pid = a.pid('proy-demo-vite')!;
+      const reg = JSON.parse(readFileSync(rutas.estado(), 'utf8'));
+      expect(reg[0]).toMatchObject({ id: 'proy-demo-vite', exigirInicio: true, creado: `t${pid}` });
+      await a.cerrar();
+      const b = crear();
+      await b.readoptar();
+      expect(b.pid('proy-demo-vite')).toBe(pid);
+      expect(hijos).toHaveLength(1);
+      await b.cerrar();
+    });
+
+    it('un PID reutilizado por otro node.exe no se adopta ni se mata, y se olvida', async () => {
+      const a = crear();
+      await a.iniciar(defNode());
+      const pid = a.pid('proy-demo-vite')!;
+      await a.cerrar();
+      creaciones.set(pid, 'otra-hora'); // murió y Windows dio el PID a otro node.exe
+      const b = crear();
+      await b.readoptar();
+      expect(b.ids()).toEqual([]);
+      expect(matados).toEqual([]);
+      expect(JSON.parse(readFileSync(rutas.estado(), 'utf8'))).toEqual([]);
+      await b.cerrar();
+    });
+
+    it('sin hora guardada o sin poder leerla no se adopta', async () => {
+      vivos.set(777, 'node.exe');
+      writeFileSync(
+        rutas.estado(),
+        JSON.stringify([
+          {
+            id: 'proy-a-x',
+            pid: 777,
+            ejecutable: 'C:/n/node.exe',
+            args: [],
+            log: def().log,
+            reiniciar: false,
+            exigirInicio: true,
+          },
+        ]),
+      );
+      const s = crear();
+      await s.readoptar();
+      expect(s.ids()).toEqual([]);
+      expect(matados).toEqual([]);
+      await s.cerrar();
+    });
+
+    it('tras un reinicio guarda la hora del proceso nuevo', async () => {
+      const s = crear();
+      await s.iniciar({ ...defNode(), reiniciar: true });
+      morir(hijos.at(-1)!);
+      await vi.advanceTimersByTimeAsync(1000);
+      const pid = s.pid('proy-demo-vite')!;
+      expect(JSON.parse(readFileSync(rutas.estado(), 'utf8'))[0].creado).toBe(`t${pid}`);
+      expect(s.reinicios('proy-demo-vite')).toBe(1);
+      await s.cerrar();
+    });
   });
 
   it('readoptar tolera estado.json ausente o corrupto', async () => {

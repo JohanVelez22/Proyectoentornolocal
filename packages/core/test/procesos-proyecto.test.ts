@@ -52,6 +52,10 @@ class SupervisorFalso implements SupervisorProcesos {
   mensaje(id: string): string | undefined {
     return this.mensajes.get(id);
   }
+  readonly contadores = new Map<string, number>();
+  reinicios(id: string): number {
+    return this.contadores.get(id) ?? 0;
+  }
   ids(): string[] {
     return [...this.estados.keys()];
   }
@@ -156,8 +160,10 @@ describe('ids de supervisor', () => {
     expect(() => idSupervisor('', 'vite')).toThrow(/Id de proyecto no válido/);
   });
 
-  it('el esquema no acepta guiones en el id del proceso y `proxy` vale false por defecto', () => {
-    expect(ProcesoProyectoSchema.safeParse({ id: 'npm-dev', comando: ['x'] }).success).toBe(false);
+  it('el esquema cambia los guiones del id por guiones bajos y `proxy` vale false por defecto', () => {
+    // Un config.json viejo con 'npm-dev' no queda marcado como corrupto.
+    expect(ProcesoProyectoSchema.parse({ id: 'npm-dev', comando: ['x'] }).id).toBe('npm_dev');
+    expect(ProcesoProyectoSchema.safeParse({ id: '-x', comando: ['x'] }).success).toBe(false);
     expect(ProcesoProyectoSchema.parse({ id: 'npm_dev', comando: ['x'] }).proxy).toBe(false);
   });
 });
@@ -178,7 +184,10 @@ describe('iniciar', () => {
       'dev',
     ]);
     expect(def.cwd).toBe(a.carpeta);
-    expect(def.puerto).toBe(5173);
+    // El puerto es informativo (proxy): no se usa como sonda de salud del supervisor.
+    expect(def.puerto).toBeUndefined();
+    // Al readoptar se exige la misma hora de creación (node.exe es muy común).
+    expect(def.exigirInicio).toBe(true);
     expect(def.reiniciar).toBe(false);
     expect(def.log).toBe(a.rutas.logs('proyectos', 'demo-vite.log'));
     expect(await readFile(def.log, 'utf8')).toMatch(/\[WolfCore Dev\] .* > npm run dev\n/);
@@ -304,6 +313,41 @@ describe('iniciar', () => {
     soltar();
     await inicio;
     expect(a.sup.iniciados).toEqual([]);
+  });
+
+  it('detenerSitio y detenerTodos también cancelan un iniciar en preparación', async () => {
+    for (const detener of ['detenerSitio', 'detenerTodos'] as const) {
+      let soltar!: () => void;
+      const espera = new Promise<void>((r) => (soltar = r));
+      const a = await armar();
+      const original = a.procesos['d'].runtimes.paraProyecto;
+      a.procesos['d'].runtimes.paraProyecto = async (s) => {
+        await espera;
+        return original(s);
+      };
+      const inicio = a.procesos.iniciar('demo', 'vite');
+      await (detener === 'detenerSitio'
+        ? a.procesos.detenerSitio('demo')
+        : a.procesos.detenerTodos());
+      soltar();
+      await inicio;
+      expect(a.sup.iniciados).toEqual([]);
+    }
+  });
+
+  it('iniciar sobre un proceso ya encendido no hace nada (ni escribe en el log)', async () => {
+    const a = await armar();
+    a.sup.estados.set('proy-demo-vite', 'encendido');
+    await a.procesos.iniciar('demo', 'vite');
+    expect(a.sup.iniciados).toEqual([]);
+    await expect(readFile(a.procesos.rutaLog('demo', 'vite'), 'utf8')).rejects.toThrow();
+  });
+
+  it('estados() expone el contador de reinicios', async () => {
+    const a = await armar();
+    await a.procesos.iniciar('demo', 'vite');
+    a.sup.contadores.set('proy-demo-vite', 3);
+    expect((await a.procesos.estados('demo'))[0]!.reinicios).toBe(3);
   });
 });
 
@@ -478,36 +522,62 @@ class HijoFalso extends EventEmitter {
   unref = vi.fn();
 }
 
-describe('proceso que muere en bucle', () => {
-  it('reintenta con espera creciente y termina en error con el final del log, sin más lanzamientos', async () => {
-    const base = await carpetaTemporal('pel-procs-bucle-');
-    const rutas = new Rutas(base);
-    await mkdir(dirname(rutas.estado()), { recursive: true });
-    const vivos = new Set<number>();
-    const hijos: HijoFalso[] = [];
-    let siguiente = 1000;
-    const plataforma = {
-      procesoVivo: async (pid: number) =>
-        vivos.has(pid) ? { vivo: true, ejecutable: 'node.exe' } : { vivo: false },
-      matarArbol: async (pid: number) => {
-        vivos.delete(pid);
-      },
-    } as unknown as Plataforma;
-    const spawn = (() => {
-      const h = new HijoFalso(siguiente++);
-      vivos.add(h.pid);
-      hijos.push(h);
-      return h;
-    }) as never;
-    const eventos = new Eventos<EventosNucleo>();
-    const emitidos: EstadoServicio[] = [];
-    eventos.on('servicio:estado', (e) => emitidos.push(e));
-    vi.useFakeTimers();
-    const supervisor = new Supervisor(rutas, plataforma, eventos, {
-      spawn,
-      lanzarOculto: null,
-      sonda: async () => false,
-    });
+async function supervisorReal(): Promise<{
+  supervisor: Supervisor;
+  hijos: HijoFalso[];
+  vivos: Set<number>;
+  matados: number[];
+  emitidos: EstadoServicio[];
+}> {
+  const base = await carpetaTemporal('pel-procs-bucle-');
+  const rutas = new Rutas(base);
+  await mkdir(dirname(rutas.estado()), { recursive: true });
+  const vivos = new Set<number>();
+  const hijos: HijoFalso[] = [];
+  let siguiente = 1000;
+  const matados: number[] = [];
+  const plataforma = {
+    procesoVivo: async (pid: number) =>
+      vivos.has(pid) ? { vivo: true, ejecutable: 'node.exe' } : { vivo: false },
+    matarArbol: async (pid: number) => {
+      matados.push(pid);
+      vivos.delete(pid);
+    },
+    inicioProceso: async (pid: number) => (vivos.has(pid) ? `t${pid}` : null),
+  } as unknown as Plataforma;
+  const spawn = (() => {
+    const h = new HijoFalso(siguiente++);
+    vivos.add(h.pid);
+    hijos.push(h);
+    return h;
+  }) as never;
+  const eventos = new Eventos<EventosNucleo>();
+  const emitidos: EstadoServicio[] = [];
+  eventos.on('servicio:estado', (e) => emitidos.push(e));
+  vi.useFakeTimers();
+  const supervisor = new Supervisor(rutas, plataforma, eventos, {
+    spawn,
+    lanzarOculto: null,
+    sonda: async () => false,
+  });
+  return { supervisor, hijos, vivos, matados, emitidos };
+}
+
+describe('supervisor real', () => {
+  it('un puerto que no responde no mata el proceso (el puerto es informativo)', async () => {
+    const { supervisor, hijos, matados } = await supervisorReal();
+    const a = await armar({ supervisor, procesos: [proceso({ id: 'vite', puerto: 5173 })] });
+    await a.procesos.iniciar('demo', 'vite');
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(supervisor.estado('proy-demo-vite')).toBe('encendido');
+    expect(matados).toEqual([]);
+    expect(hijos).toHaveLength(1);
+    expect((await a.procesos.estados('demo'))[0]!.puerto).toBe(5173);
+    await supervisor.cerrar();
+  });
+
+  it('muerte en bucle: espera creciente y error con el final del log, sin más lanzamientos', async () => {
+    const { supervisor, hijos, vivos, emitidos } = await supervisorReal();
     const a = await armar({
       supervisor,
       procesos: [proceso({ id: 'vite', reiniciar: true })],
@@ -527,6 +597,7 @@ describe('proceso que muere en bucle', () => {
       await vi.advanceTimersByTimeAsync(espera);
     }
     expect(hijos).toHaveLength(6);
+    expect((await a.procesos.estados('demo'))[0]!.reinicios).toBe(5);
     await morir();
     expect(supervisor.estado('proy-demo-vite')).toBe('error');
     // Ya no se relanza: ni temporizadores ni procesos nuevos.
