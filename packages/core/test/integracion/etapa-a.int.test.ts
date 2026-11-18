@@ -889,7 +889,9 @@ describe.skipIf(!esWindows)('Etapa A: integración real en Windows', () => {
             texto = valorEnv(v, estilo);
           } catch (e) {
             resumen.push(`${estilo} V${i}: no representable (${(e as Error).message})`);
-            expect(estilo).toBe('literal');
+            // Solo los casos documentados: comillas en un extremo (CI3) o ${…} (CI4).
+            if (estilo === 'ci4') expect(v).toMatch(/\$\{\w+\}/);
+            else expect(estilo).toBe('literal');
             return;
           }
           lineas.push(`V${i}=${texto}`);

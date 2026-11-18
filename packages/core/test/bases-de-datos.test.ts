@@ -242,6 +242,14 @@ describe('valores del .env', () => {
     expect(valorEnv('C:\\x y', 'ci4')).toBe("'C:\\\\x y'");
   });
 
+  it('CodeIgniter 4 rechaza ${…} (lo expandiría aunque vaya entre comillas)', () => {
+    expect(() => valorEnv('clave${APP_NAME}', 'ci4')).toThrow(/CodeIgniter 4/);
+    expect(() => valorEnv("a'${X.y}", 'ci4')).toThrow(/CodeIgniter 4/);
+    // Un $ suelto o en otros lectores no es problema.
+    expect(valorEnv('$HOME y $', 'ci4')).toBe("'$HOME y $'");
+    expect(valorEnv('clave${APP_NAME}')).toBe("'clave${APP_NAME}'");
+  });
+
   it('CodeIgniter 3 (lector propio) no escapa y rechaza comillas en los extremos', async () => {
     const env = 'DB_HOST=localhost\n';
     const t = await con('a\\b c$').bloqueEnv('mysql', 'x', 'codeigniter3', env);

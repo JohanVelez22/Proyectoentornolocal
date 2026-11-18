@@ -41,6 +41,13 @@ export function valorEnv(v: string, estilo: EstiloEnv = 'dotenv'): string {
       'El valor empieza o termina con comillas y el .env de este proyecto no puede guardarlo así.',
     );
   }
+  if (estilo === 'ci4' && /\$\{[A-Za-z0-9_.]+\}/.test(v)) {
+    // DotEnv de CodeIgniter 4 reemplaza ${NOMBRE} por otra variable incluso entre comillas
+    // simples y no tiene escape para evitarlo.
+    throw new Error(
+      'El valor contiene ${…} y el .env de CodeIgniter 4 lo reemplazaría por otra variable.',
+    );
+  }
   if (estilo === 'ci4') {
     // CodeIgniter 4 decodifica \\ también entre comillas simples: se duplican siempre.
     if (!v.includes("'")) return `'${v.replace(/\\/g, '\\\\')}'`;
