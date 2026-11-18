@@ -27,6 +27,7 @@ export * from './servicios/bd/mongodb';
 export * from './servicios/mailpit';
 export * from './servicios/ollama';
 export * from './bd/clientePostgres';
+export * from './bd/basesDeDatos';
 export * from './sitios/urlbase';
 export * from './tuneles/url';
 export * from './tuneles/tuneles';
