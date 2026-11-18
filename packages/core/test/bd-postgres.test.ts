@@ -1,0 +1,293 @@
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { ClientePostgres, validarNombrePg } from '../src/bd/clientePostgres';
+import type { Ejecutor } from '../src/plataforma/tipos';
+import { Rutas } from '../src/rutas';
+import { DEFINICIONES } from '../src/servicios/datos';
+import type { CtxServicio } from '../src/servicios/definicion';
+import { defPostgresql } from '../src/servicios/bd/postgresql';
+
+let base: string;
+let llamadas: { cmd: string; args: string[]; pwfile?: string; env?: Record<string, string> }[];
+const CLAVE = 'Secr3toSuperClave99';
+
+const ctx = (exec: Ejecutor, puerto = 5432): CtxServicio => {
+  const rutas = new Rutas(base);
+  return {
+    rutas,
+    bin: rutas.bin('postgresql', '17.12'),
+    datos: rutas.datos('postgresql', '17.12', (v) => v.split('.')[0]!),
+    puerto,
+    version: '17.12',
+    credenciales: { usuario: 'postgres', clave: CLAVE },
+    exec,
+  };
+};
+
+beforeEach(() => {
+  base = mkdtempSync(path.join(os.tmpdir(), 'pel-pg-'));
+  llamadas = [];
+});
+afterEach(() => rmSync(base, { recursive: true, force: true }));
+
+/** Imita a initdb: lee el pwfile y crea la carpeta de datos con sus archivos de configuración. */
+const ejecutorFalso =
+  (codigo = 0, stderr = ''): Ejecutor =>
+  async (cmd, args, opts) => {
+    const pw = args.find((a) => a.startsWith('--pwfile='))?.slice('--pwfile='.length);
+    const d = args[args.indexOf('-D') + 1];
+    llamadas.push({
+      cmd,
+      args,
+      pwfile: pw ? readFileSync(pw, 'utf8') : undefined,
+      env: opts?.env,
+    });
+    if (d && codigo === 0 && cmd.endsWith('initdb.exe')) {
+      mkdirSync(d, { recursive: true });
+      writeFileSync(path.join(d, 'postgresql.conf'), '#port = 5432\n');
+      writeFileSync(path.join(d, 'pg_hba.conf'), 'local all all trust\n');
+    }
+    return { codigo, stdout: '', stderr };
+  };
+
+describe('defPostgresql', () => {
+  it('datos del servicio y registro', () => {
+    const def = defPostgresql();
+    expect(def).toMatchObject({
+      id: 'postgresql',
+      puertoPorDefecto: 5432,
+      puertoAlternativo: 5433,
+    });
+    expect(def.claveDatos!('17.12')).toBe('17');
+    expect(DEFINICIONES.map((d) => d.id)).toContain('postgresql');
+  });
+
+  it('initdb con los argumentos esperados y pwfile temporal borrado', async () => {
+    const c = ctx(ejecutorFalso());
+    await defPostgresql().inicializar(c);
+    const l = llamadas[0]!;
+    expect(l.cmd).toBe(path.join(c.bin, 'pgsql', 'bin', 'initdb.exe'));
+    expect(l.args.slice(0, 6)).toEqual(['-D', c.datos, '-U', 'postgres', '-E', 'UTF8']);
+    expect(l.args).toEqual(
+      expect.arrayContaining([
+        '--locale=C',
+        '--auth-local=scram-sha-256',
+        '--auth-host=scram-sha-256',
+      ]),
+    );
+    expect(l.pwfile?.trim()).toBe(CLAVE);
+    expect(JSON.stringify(l.args)).not.toContain(CLAVE);
+    const tmp = path.join(base, 'tmp');
+    expect(existsSync(tmp) ? readdirSync(tmp) : []).toEqual([]);
+  });
+
+  it('parchea postgresql.conf y deja pg_hba.conf solo con scram en loopback', async () => {
+    const c = ctx(ejecutorFalso(), 5433);
+    await defPostgresql().inicializar(c);
+    const conf = readFileSync(path.join(c.datos, 'postgresql.conf'), 'utf8');
+    expect(conf).toContain('port = 5433');
+    expect(conf).toContain("listen_addresses = '127.0.0.1'");
+    expect(conf).toContain("unix_socket_directories = ''");
+    const hba = readFileSync(path.join(c.datos, 'pg_hba.conf'), 'utf8');
+    expect(hba).toContain('host all all 127.0.0.1/32 scram-sha-256');
+    expect(hba).toContain('host all all ::1/128 scram-sha-256');
+    expect(hba).not.toMatch(/trust|local/);
+  });
+
+  it('el pwfile se borra aunque initdb falle y el error no filtra la clave', async () => {
+    const c = ctx(ejecutorFalso(1, `fallo con ${CLAVE}`));
+    const e = await defPostgresql()
+      .inicializar(c)
+      .catch((x: Error) => x);
+    expect((e as Error).message).toMatch(/PostgreSQL/);
+    expect((e as Error).message).not.toContain(CLAVE);
+    const tmp = path.join(base, 'tmp');
+    expect(existsSync(tmp) ? readdirSync(tmp) : []).toEqual([]);
+  });
+
+  it('proceso aplica el puerto en cada arranque y no lleva la clave', async () => {
+    const c = ctx(ejecutorFalso(), 5433);
+    const p = await defPostgresql().proceso(c);
+    expect(p.comando).toBe(path.join(c.bin, 'pgsql', 'bin', 'postgres.exe'));
+    expect(p.args).toEqual(['-D', c.datos, '-p', '5433', '-c', 'listen_addresses=127.0.0.1']);
+    expect(p.puerto).toBe(5433);
+    expect(JSON.stringify(p)).not.toContain(CLAVE);
+  });
+
+  it('detenerLimpio usa pg_ctl stop -m fast', async () => {
+    const c = ctx(ejecutorFalso());
+    await defPostgresql().detenerLimpio!(c);
+    const l = llamadas[0]!;
+    expect(l.cmd).toBe(path.join(c.bin, 'pgsql', 'bin', 'pg_ctl.exe'));
+    expect(l.args).toEqual(['stop', '-D', c.datos, '-m', 'fast', '-w', '-t', '15']);
+    expect(JSON.stringify(l)).not.toContain(CLAVE);
+  });
+
+  it('detenerLimpio falla en claro', async () => {
+    await expect(defPostgresql().detenerLimpio!(ctx(ejecutorFalso(1)))).rejects.toThrow(
+      /PostgreSQL/,
+    );
+  });
+});
+
+describe('nombres', () => {
+  it('valida', () => {
+    expect(() => validarNombrePg('mi_bd1')).not.toThrow();
+    expect(() => validarNombrePg('_x')).not.toThrow();
+    for (const n of ['1a', 'A', 'a-b', 'a"b', '', 'x'.repeat(64), 'a;drop']) {
+      expect(() => validarNombrePg(n)).toThrow();
+    }
+  });
+});
+
+describe('ClientePostgres', () => {
+  const montar = (respuestas: (sql: string) => unknown[] = () => []) => {
+    const consultas: { sql: string; params?: unknown[] }[] = [];
+    const conexiones: { base?: string; cerrada: boolean }[] = [];
+    const cliente = new ClientePostgres(async (c) => {
+      const reg: { base?: string; cerrada: boolean } = { base: c.base, cerrada: false };
+      conexiones.push(reg);
+      return {
+        query: async (sql: string, params?: unknown[]) => {
+          consultas.push({ sql, params });
+          return { rows: respuestas(sql) };
+        },
+        end: async () => {
+          reg.cerrada = true;
+        },
+      };
+    });
+    return { cliente, consultas, conexiones };
+  };
+  const cx = { host: '127.0.0.1', puerto: 5432, usuario: 'postgres', clave: CLAVE };
+
+  it('rechaza nombres peligrosos y de sistema sin consultar', async () => {
+    const { cliente, consultas } = montar();
+    await cliente.conectar(cx);
+    await expect(cliente.crearBase('a;drop')).rejects.toThrow();
+    await expect(cliente.borrarBase('a"b')).rejects.toThrow();
+    await expect(cliente.tieneTablas('A b')).rejects.toThrow();
+    for (const n of ['postgres', 'template0', 'template1']) {
+      await expect(cliente.borrarBase(n)).rejects.toThrow(/No se puede borrar la base del sistema/);
+      await expect(cliente.crearBase(n)).rejects.toThrow(/No se puede crear la base del sistema/);
+    }
+    await expect(cliente.crearBase('ok', { usuario: 'postgres', clave: 'x' })).rejects.toThrow(
+      /reservado/,
+    );
+    await expect(cliente.crearBase('ok', { usuario: 'u', clave: '' })).rejects.toThrow(/clave/);
+    expect(consultas).toHaveLength(0);
+  });
+
+  it('crearBase crea la base y el rol con identificadores y literales escapados por el servidor', async () => {
+    const { cliente, consultas } = montar();
+    await cliente.conectar(cx);
+    const r = await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'x' });
+    expect(r.usuarioActualizado).toBe(false);
+    const sqls = consultas.map((q) => q.sql);
+    expect(sqls).toContain(
+      "CREATE DATABASE \"mi_bd\" ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'",
+    );
+    expect(consultas.some((q) => q.sql.includes('format(') && q.params?.includes('x'))).toBe(true);
+    expect(sqls.some((s) => s.includes('GRANT ALL PRIVILEGES ON DATABASE "mi_bd" TO "app"'))).toBe(
+      true,
+    );
+  });
+
+  it('no recrea una base existente', async () => {
+    const { cliente, consultas } = montar((sql) =>
+      sql.includes('FROM pg_database') ? [{ n: 1 }] : [],
+    );
+    await cliente.conectar(cx);
+    await cliente.crearBase('mi_bd');
+    expect(consultas.some((q) => q.sql.startsWith('CREATE DATABASE'))).toBe(false);
+  });
+
+  it('rol existente: se actualiza y se avisa', async () => {
+    const { cliente, consultas } = montar((sql) =>
+      sql.includes('FROM pg_roles') ? [{ n: 1 }] : [],
+    );
+    await cliente.conectar(cx);
+    const r = await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva' });
+    expect(r.usuarioActualizado).toBe(true);
+    expect(r.aviso).toMatch(/ya existía/);
+    expect(consultas.some((q) => q.sql.includes("'ALTER ROLE"))).toBe(true);
+  });
+
+  it('errores de pg salen en español sin SQL ni claves', async () => {
+    const cliente = new ClientePostgres(async () => ({
+      query: async () => {
+        throw Object.assign(new Error('syntax error near PASSWORD SECRETA'), {
+          code: '42P04',
+          query: 'CREATE DATABASE x',
+        });
+      },
+      end: async () => undefined,
+    }));
+    await cliente.conectar(cx);
+    const e = await cliente
+      .crearBase('x', { usuario: 'u', clave: 'SECRETA' })
+      .catch((x: Error) => x);
+    expect((e as Error).message).toBe('No se pudo crear la base x: la base ya existe (42P04).');
+    const e2 = await cliente.borrarBase('x').catch((x: Error) => x);
+    expect((e2 as Error).message).not.toMatch(/DROP|SECRETA|syntax/);
+  });
+
+  it('borrarBase', async () => {
+    const { cliente, consultas } = montar();
+    await cliente.conectar(cx);
+    await cliente.borrarBase('mi_bd');
+    expect(consultas[0]!.sql).toBe('DROP DATABASE "mi_bd"');
+  });
+
+  it('listarBases excluye plantillas y postgres', async () => {
+    const { cliente, consultas } = montar(() => [{ nombre: 'a', tam: '2048' }]);
+    await cliente.conectar(cx);
+    expect(await cliente.listarBases()).toEqual([{ nombre: 'a', tamanoBytes: 2048 }]);
+    expect(consultas[0]!.params).toEqual([['postgres', 'template0', 'template1']]);
+  });
+
+  it('tieneTablas se conecta a esa base y la cierra', async () => {
+    const { cliente, conexiones } = montar(() => [{ n: 3 }]);
+    await cliente.conectar(cx);
+    expect(await cliente.tieneTablas('x')).toBe(true);
+    expect(conexiones.map((c) => c.base)).toEqual(['postgres', 'x']);
+    expect(conexiones[1]!.cerrada).toBe(true);
+  });
+
+  it('activarVector se conecta a la base y crea la extensión', async () => {
+    const { cliente, consultas, conexiones } = montar();
+    await cliente.conectar(cx);
+    await cliente.activarVector('mi_bd');
+    expect(consultas.at(-1)!.sql).toBe('CREATE EXTENSION IF NOT EXISTS vector');
+    expect(conexiones.at(-1)!.base).toBe('mi_bd');
+    expect(conexiones.at(-1)!.cerrada).toBe(true);
+  });
+
+  it('tieneVector consulta pg_available_extensions', async () => {
+    const a = montar(() => [{ n: 1 }]);
+    await a.cliente.conectar(cx);
+    expect(await a.cliente.tieneVector()).toBe(true);
+    expect(a.consultas[0]!.sql).toContain('pg_available_extensions');
+    const b = montar(() => [{ n: 0 }]);
+    await b.cliente.conectar(cx);
+    expect(await b.cliente.tieneVector()).toBe(false);
+  });
+
+  it('sin conexión falla claro y cerrar libera', async () => {
+    const { cliente, conexiones } = montar();
+    await expect(cliente.listarBases()).rejects.toThrow(/conect/i);
+    await cliente.conectar(cx);
+    await cliente.cerrar();
+    expect(conexiones[0]!.cerrada).toBe(true);
+  });
+});

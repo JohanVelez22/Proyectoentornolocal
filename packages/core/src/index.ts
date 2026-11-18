@@ -21,6 +21,8 @@ export * from './servicios/definicion';
 export * from './servicios/datos';
 export * from './servicios/bd/mysql';
 export * from './bd/clienteMysql';
+export * from './servicios/bd/postgresql';
+export * from './bd/clientePostgres';
 export * from './sitios/urlbase';
 export * from './tuneles/url';
 export * from './tuneles/tuneles';
