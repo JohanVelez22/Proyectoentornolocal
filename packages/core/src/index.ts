@@ -41,3 +41,5 @@ export * from './herramientas/composer';
 export * from './herramientas/terminal';
 export * from './herramientas/pathUsuario';
 export * from './herramientas/adminer';
+export * from './ftp/servidorFtp';
+export * from './ftp/sistemaArchivos';

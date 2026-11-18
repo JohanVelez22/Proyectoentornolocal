@@ -24,6 +24,15 @@ export const SitioSchema = z.object({
   nota: z.string().default(''),
   https: z.boolean().default(false),
   redirigirHttps: z.boolean().default(false),
+  /** Acceso FTP del sitio. La clave NO va aquí: está en etc/credenciales.json (`ftp:<id>`). */
+  ftp: z
+    .object({
+      activo: z.boolean().default(false),
+      usuario: z.string(),
+      soloLectura: z.boolean().default(false),
+    })
+    .nullable()
+    .optional(),
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 
@@ -65,16 +74,36 @@ export const CredencialesSchema = z.object({
 });
 export type Credenciales = z.infer<typeof CredencialesSchema>;
 
+/** Clave de una credencial: un servicio propio o el acceso FTP de un sitio (`ftp:<id>`). */
+export type ClaveCredencial = IdServicioDatos | `ftp:${string}`;
+
+const ClaveCredencialSchema = z.union([
+  z.enum(IDS_SERVICIO_DATOS),
+  z.templateLiteral(['ftp:', z.string()]),
+]);
+
 /** Contenido de etc/credenciales.json (fuera de config.json: nunca viaja por config.leer). */
 export const ArchivoCredencialesSchema = z
-  .partialRecord(z.enum(IDS_SERVICIO_DATOS), CredencialesSchema)
-  .default({});
-export type ArchivoCredenciales = z.infer<typeof ArchivoCredencialesSchema>;
+  .record(ClaveCredencialSchema, CredencialesSchema)
+  .transform((r): ArchivoCredenciales => r)
+  .prefault({} as never);
+export type ArchivoCredenciales = Partial<Record<ClaveCredencial, Credenciales>>;
 
 export const ConfigSchema = z.object({
   version: z.literal(1).default(1),
   sitios: z.array(SitioSchema).default([]),
   https: z.object({ puerto: z.number().int().min(1).max(65535).default(443) }).prefault({}),
+  ftp: z
+    .object({
+      puerto: z.number().int().min(1).max(65535).default(2121),
+      /** false: solo 127.0.0.1. true: escucha en todas las interfaces (red local). */
+      redLocal: z.boolean().default(false),
+      /** Rango de puertos del modo pasivo [mínimo, máximo]. */
+      pasivos: z
+        .tuple([z.number().int().min(1024).max(65535), z.number().int().min(1024).max(65535)])
+        .default([50000, 50100]),
+    })
+    .prefault({}),
   herramientas: z
     .object({
       /** Rama de PHP de los shims de tools/bin; null = la más reciente instalada. */

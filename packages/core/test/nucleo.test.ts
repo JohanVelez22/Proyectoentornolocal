@@ -443,7 +443,7 @@ describe('Nucleo', () => {
     internos.emit('servicio:estado', crudo('tunel-x'));
     internos.emit('servicio:estado', crudo('nginx'));
     await vi.waitFor(() => expect(vistos.length).toBeGreaterThan(0));
-    expect(vistos.map((v) => v.id)).toEqual(['nginx']);
+    expect(vistos.map((v) => v.id)).toEqual(['nginx', 'ftp']);
     expect(vistos.find((v) => v.id === 'nginx')).toMatchObject({
       nombre: 'Nginx',
       puertos: [80],
@@ -513,5 +513,33 @@ describe('Nucleo y credenciales', () => {
     const n = await crear();
     await n.config.leer();
     expect(await n.credenciales('postgresql')).toEqual({ usuario: 'postgres', clave });
+  });
+});
+
+describe('FTP en el núcleo', () => {
+  it('aparece como servicio "ftp", y su clave no viaja por config.leer', async () => {
+    const n = await crear();
+    const { sitio } = await n.guardarSitio(datos());
+    const estados = await n.servicios.estados();
+    expect(estados.find((e) => e.id === 'ftp')).toMatchObject({
+      categoria: 'herramienta',
+      estado: 'apagado',
+      puertos: [2121],
+    });
+    const cred = await n.activarFtp(sitio.id);
+    expect(cred.usuario).toBe(sitio.id);
+    expect(JSON.stringify(await n.config.leer())).not.toContain(cred.clave);
+    expect((await n.config.leer()).sitios[0]?.ftp).toEqual({
+      activo: true,
+      usuario: sitio.id,
+      soloLectura: false,
+    });
+    // Editar el sitio no pisa su FTP.
+    await n.guardarSitio(datos({ nota: 'otra' }), sitio.id);
+    expect((await n.config.leer()).sitios[0]?.ftp?.activo).toBe(true);
+    expect(await n.credencialesFtp(sitio.id)).toEqual(cred);
+    // Borrar el sitio borra su clave.
+    await n.borrarSitio(sitio.id);
+    expect(await n.credencialesFtp(sitio.id)).toBeNull();
   });
 });

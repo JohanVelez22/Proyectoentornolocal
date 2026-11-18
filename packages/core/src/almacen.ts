@@ -7,6 +7,7 @@ import {
   CredencialesSchema,
   IDS_SERVICIO_DATOS,
   type ArchivoCredenciales,
+  type ClaveCredencial,
   type Config,
   type Credenciales,
   type IdServicioDatos,
@@ -92,8 +93,26 @@ export class AlmacenCredenciales {
     }
   }
 
-  async leer(id: IdServicioDatos): Promise<Credenciales | null> {
+  async leer(id: ClaveCredencial): Promise<Credenciales | null> {
     return (await this.todas())[id] ?? null;
+  }
+
+  /** Guarda (o reemplaza) la credencial de `id`. */
+  guardar(id: ClaveCredencial, c: Credenciales): Promise<void> {
+    return this.serializar(async () => {
+      const todas = await this.todas();
+      await this.escribir({ ...todas, [id]: CredencialesSchema.parse(c) });
+    });
+  }
+
+  /** Quita la credencial de `id` (si no existe, no hace nada). */
+  borrar(id: ClaveCredencial): Promise<void> {
+    return this.serializar(async () => {
+      const todas = await this.todas();
+      if (!(id in todas)) return;
+      delete todas[id];
+      await this.escribir(todas);
+    });
   }
 
   /** Devuelve las guardadas o guarda y devuelve las que da `crear`. */

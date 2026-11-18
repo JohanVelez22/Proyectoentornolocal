@@ -3,6 +3,7 @@ import { Almacen, AlmacenCredenciales, migrarCredenciales } from './almacen';
 import { Instalador } from './catalogo/instalador';
 import { listarVersiones } from './catalogo/catalogo';
 import { Eventos, type EventosNucleo } from './eventos';
+import { ServidorFtp } from './ftp/servidorFtp';
 import { GestorHosts } from './hosts/hosts';
 import { GestorHttps, type ResultadoCA } from './https/certificados';
 import { Adminer } from './herramientas/adminer';
@@ -109,6 +110,7 @@ export class Nucleo {
   /** Aviso de la migración de la carpeta de datos (si hubo algo que informar). */
   avisoInicio: string | null = null;
   private almacenCredenciales!: AlmacenCredenciales;
+  private ftp!: ServidorFtp;
   private gestorHttps!: GestorHttps;
   private composer!: Composer;
   private adminer!: Adminer;
@@ -173,7 +175,13 @@ export class Nucleo {
         );
       },
     });
+    const ftp = new ServidorFtp({
+      leerConfig,
+      modificarConfig: (fn) => sitios.modificarConfig(fn),
+      credenciales,
+    });
     const servicios = new Servicios({
+      ftp,
       rutas,
       plataforma,
       supervisor,
@@ -232,6 +240,7 @@ export class Nucleo {
     );
     nucleo.avisoInicio = avisoInicio;
     nucleo.almacenCredenciales = credenciales;
+    nucleo.ftp = ftp;
     nucleo.gestorHttps = https;
     nucleo.adminer = adminer;
     nucleo.composer = new Composer({
@@ -332,6 +341,39 @@ export class Nucleo {
     return this.adminer.urlPara(motor, usuario);
   }
 
+  /** Activa el acceso FTP del sitio (usuario = id del sitio, clave aleatoria) y la devuelve. */
+  activarFtp(sitioId: string): Promise<Credenciales> {
+    return this.ftp.activarSitio(sitioId);
+  }
+
+  desactivarFtp(sitioId: string): Promise<void> {
+    return this.ftp.desactivarSitio(sitioId);
+  }
+
+  regenerarClaveFtp(sitioId: string): Promise<string> {
+    return this.ftp.regenerarClave(sitioId);
+  }
+
+  ftpSoloLectura(sitioId: string, valor: boolean): Promise<void> {
+    return this.ftp.soloLectura(sitioId, valor);
+  }
+
+  /** Usuario y clave FTP del sitio (null si no tiene FTP activo). */
+  credencialesFtp(sitioId: string): Promise<Credenciales | null> {
+    return this.ftp.credencialesFtp(sitioId);
+  }
+
+  /** Permite (o no) conectarse al FTP desde la red local; reinicia el servidor si estaba encendido. */
+  async ftpRedLocal(valor: boolean): Promise<void> {
+    await this.sitios.modificarConfig((c) => {
+      c.ftp.redLocal = valor;
+    });
+    if ((await this.ftp.estado()).estado === 'encendido') {
+      await this.ftp.detener();
+      await this.ftp.iniciar();
+    }
+  }
+
   /** Usuario y clave de un servicio propio para "Datos de conexión" (null si aún no se generaron). */
   credenciales(id: IdServicioDatos): Promise<Credenciales | null> {
     return this.almacenCredenciales.leer(id);
@@ -352,8 +394,11 @@ export class Nucleo {
     datos: Omit<Sitio, 'id'>,
     id?: string,
   ): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }> {
+    // El acceso FTP solo cambia con activarFtp/desactivarFtp/ftpSoloLectura.
+    const resto: Omit<Sitio, 'id'> = { ...datos };
+    delete resto.ftp;
     if (id) await this.cerrarTunelSiCambia(id, datos);
-    const sitio = id ? await this.sitios.editar(id, datos) : await this.sitios.crear(datos);
+    const sitio = id ? await this.sitios.editar(id, resto) : await this.sitios.crear(resto);
     return { sitio, aplicar: await this.sitios.aplicar() };
   }
 
@@ -438,6 +483,7 @@ export class Nucleo {
     } catch {
       // el túnel puede no estar abierto
     }
+    await this.ftp.desactivarSitio(id).catch(() => undefined);
     await this.sitios.borrar(id);
     return this.sitios.aplicar();
   }

@@ -1,3 +1,4 @@
+import type { ServidorFtp } from '../ftp/servidorFtp';
 import { puertosPhp } from '../nginx/principal';
 import type { Ejecutor, Plataforma } from '../plataforma/tipos';
 import { puertoResponde } from '../procesos/sonda';
@@ -45,9 +46,11 @@ export interface DepsServicios {
   httpsPrincipal?: () => Promise<{ puerto: number; crt: string; key: string } | null>;
   /** Carpeta y puertos PHP del vhost interno de Adminer (null si no está instalado). */
   adminerPrincipal?: () => Promise<{ raiz: string; puertos: number[] } | null>;
+  /** Servidor FTP del proceso: aparece como servicio "ftp" (herramienta). */
+  ftp?: Pick<ServidorFtp, 'estado' | 'iniciar' | 'detener'>;
 }
 
-export type IdServicio = 'nginx' | `php-${string}` | IdServicioDatos;
+export type IdServicio = 'nginx' | 'ftp' | `php-${string}` | IdServicioDatos;
 
 /** Se muestran solo mientras el servicio propio del mismo id no esté instalado. */
 const EXTERNOS = [
@@ -154,6 +157,8 @@ export class Servicios {
     const propios = await this.datos.estados(cfg);
     res.push(...propios);
 
+    if (this.d.ftp) res.push(await this.d.ftp.estado());
+
     for (const ext of EXTERNOS) {
       if (propios.some((p) => p.id === ext.id)) continue;
       if (await this.sonda(ext.puerto)) {
@@ -171,14 +176,21 @@ export class Servicios {
     return res;
   }
 
+  private ftpObligatorio(): NonNullable<DepsServicios['ftp']> {
+    if (!this.d.ftp) throw new Error('El servidor FTP no está disponible.');
+    return this.d.ftp;
+  }
+
   async iniciar(id: IdServicio): Promise<void> {
     if (id === 'nginx') return this.nginx.iniciar();
+    if (id === 'ftp') return this.ftpObligatorio().iniciar();
     if (esIdServicioDatos(id)) return this.datos.iniciar(id);
     return this.php.iniciar(id.slice('php-'.length));
   }
 
   async detener(id: IdServicio): Promise<void> {
     if (id === 'nginx') return this.nginx.detener();
+    if (id === 'ftp') return this.ftpObligatorio().detener();
     if (esIdServicioDatos(id)) return this.datos.detener(id);
     return this.php.detener(id.slice('php-'.length));
   }
@@ -218,6 +230,11 @@ export class Servicios {
       errores.push(e);
     }
     errores.push(...(await this.datos.detenerTodos()));
+    try {
+      await this.d.ftp?.detener();
+    } catch (e) {
+      errores.push(e);
+    }
     primero(errores);
   }
 }
