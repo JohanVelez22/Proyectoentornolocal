@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { InstaladorPgvector } from '../src/bd/pgvector';
 import type { Ejecutor, Lanzador } from '../src/plataforma/tipos';
@@ -25,6 +25,13 @@ describe('InstaladorPgvector', () => {
   let lineas: string[];
   let codigo: number;
   let wingetAusente: boolean;
+  let orden: string[];
+  let pgCorriendo: boolean;
+  let pgFalla: boolean;
+  let scripts: string[];
+  let espera: Promise<void> | null;
+  let reloj: number;
+  let codigoWinget: number;
 
   const exec: Ejecutor = async (cmd, args) => {
     llamadas.push({ cmd, args });
@@ -35,6 +42,14 @@ describe('InstaladorPgvector', () => {
       throw Object.assign(new Error('spawn winget ENOENT'), { code: 'ENOENT' });
     }
     const ultimo = args.at(-1) ?? '';
+    if (cmd === 'winget') {
+      llamadas.push({ cmd, args });
+      for (const l of lineas) opts?.alLinea?.(l, 'stdout');
+      return { codigo: codigoWinget };
+    }
+    scripts.push(ultimo);
+    orden.push('compilar');
+    if (espera) await espera;
     const bat = ultimo.endsWith('.cmd') ? await readFile(ultimo, 'utf8') : undefined;
     llamadas.push({ cmd, args, cwd: opts?.cwd, bat });
     for (const l of lineas) opts?.alLinea?.(l, 'stdout');
@@ -56,6 +71,15 @@ describe('InstaladorPgvector', () => {
       versionPostgres: async () => pgVersion,
       existe: existe ?? ((p) => p === VSWHERE || p === VCVARS || existsSync(p)),
       programFilesX86: 'C:\\PF86',
+      detenerPostgres: async () => {
+        orden.push('detener');
+        return pgCorriendo;
+      },
+      iniciarPostgres: async () => {
+        orden.push('iniciar');
+        if (pgFalla) throw new Error('no arranca');
+      },
+      ahora: () => (reloj += 200),
     });
 
   beforeEach(async () => {
@@ -71,6 +95,13 @@ describe('InstaladorPgvector', () => {
     lineas = ['cl vector.c', 'link vector.dll'];
     codigo = 0;
     wingetAusente = false;
+    orden = [];
+    pgCorriendo = false;
+    pgFalla = false;
+    scripts = [];
+    espera = null;
+    reloj = 0;
+    codigoWinget = 0;
   });
 
   it('busca las Build Tools con vswhere y los parámetros exactos', async () => {
@@ -130,13 +161,15 @@ describe('InstaladorPgvector', () => {
       '--override',
       '--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended',
     ]);
-    expect(progreso.some((p) => p.servicio === 'pgvector' && p.mensaje === 'Descargando')).toBe(
+    expect(progreso.some((p) => p.servicio === 'buildtools' && p.mensaje === 'Descargando')).toBe(
       true,
     );
+    expect(progreso.some((p) => p.servicio === 'pgvector')).toBe(false);
   });
 
   it('winget con código distinto de 0 explica la cancelación', async () => {
-    codigo = 1223;
+    codigoWinget = 1223;
+    vswhereSalida = '';
     const r = await crear().instalarBuildTools();
     expect(r).toMatchObject({ ok: false, motivo: 'fallo' });
     expect('detalle' in r && r.detalle).toBe(
@@ -153,10 +186,12 @@ describe('InstaladorPgvector', () => {
     expect(c.cwd).toBe(rutas.bin('pgvector-src', '0.8.7'));
     const pg = path.join(rutas.bin('postgresql', '17.5'), 'pgsql');
     expect(c.bat!.split(/\r?\n/).filter(Boolean)).toEqual([
+      '@chcp 65001 >nul',
       '@echo off',
       `call "${VCVARS}" || exit /b 1`,
       `set "PGROOT=${pg}"`,
       'nmake /F Makefile.win || exit /b 1',
+      'echo WOLFCORE-INSTALAR-PGVECTOR',
       'nmake /F Makefile.win install || exit /b 1',
     ]);
     expect(progreso.filter((p) => p.mensaje === 'link vector.dll')).toHaveLength(1);
@@ -178,5 +213,102 @@ describe('InstaladorPgvector', () => {
     codigo = 2;
     await expect(crear().compilarEInstalar()).rejects.toThrow(/No se pudo compilar pgvector/);
     expect(progreso.at(-1)).toMatchObject({ fase: 'error' });
+  });
+
+  it('un código de winget distinto de 0 es éxito si las herramientas ya están', async () => {
+    codigoWinget = -1978335189;
+    expect(await crear().instalarBuildTools()).toEqual({ ok: true });
+    codigoWinget = 3010;
+    vswhereSalida = '';
+    expect(await crear().instalarBuildTools()).toEqual({ ok: true });
+  });
+
+  it('chcp 65001 precede a la primera ruta con acentos', async () => {
+    const dir = await carpetaTemporal('pel-José-');
+    rutas = new Rutas(dir);
+    await crear().compilarEInstalar();
+    const bat = llamadas.find((l) => l.bat)!.bat!;
+    expect(bat.indexOf('chcp 65001')).toBeGreaterThanOrEqual(0);
+    expect(bat.indexOf('chcp 65001')).toBeLessThan(bat.indexOf('call "'));
+    expect(bat).toContain('José');
+  });
+
+  it('PostgreSQL en marcha: detiene, instala y vuelve a iniciar', async () => {
+    pgCorriendo = true;
+    await crear().compilarEInstalar();
+    expect(orden).toEqual(['detener', 'compilar', 'iniciar']);
+  });
+
+  it('PostgreSQL detenido no se inicia', async () => {
+    await crear().compilarEInstalar();
+    expect(orden).toEqual(['detener', 'compilar']);
+  });
+
+  it('si falla la copia, reinicia PostgreSQL y explica', async () => {
+    pgCorriendo = true;
+    codigo = 2;
+    lineas = ['link vector.dll', 'WOLFCORE-INSTALAR-PGVECTOR', 'Acceso denegado'];
+    await expect(crear().compilarEInstalar()).rejects.toThrow(
+      'No se pudo copiar pgvector a PostgreSQL. Detenga PostgreSQL e inténtelo de nuevo.',
+    );
+    expect(orden).toEqual(['detener', 'compilar', 'iniciar']);
+  });
+
+  it('si falla la compilación también reinicia PostgreSQL', async () => {
+    pgCorriendo = true;
+    codigo = 2;
+    await expect(crear().compilarEInstalar()).rejects.toThrow(/No se pudo compilar/);
+    expect(orden.at(-1)).toBe('iniciar');
+  });
+
+  it('descarta líneas de relleno y limita el ritmo', async () => {
+    lineas = ['|', '/ -', 'cl vector.c', 'cl otro.c'];
+    await crear().compilarEInstalar();
+    const msgs = progreso.map((p) => p.mensaje);
+    expect(msgs).not.toContain('|');
+    expect(msgs).not.toContain('/ -');
+    expect(msgs).toContain('cl vector.c');
+    // el reloj de la prueba avanza 200 ms por consulta: nada se pierde por ritmo
+    const rapido = new InstaladorPgvector({
+      rutas,
+      eventos,
+      exec,
+      lanzar,
+      instalador: {
+        instalar: async (v) => {
+          await mkdir(rutas.bin('pgvector-src', v.version), { recursive: true });
+        },
+      },
+      versionPostgres: async () => pgVersion,
+      existe: (p) => p === VSWHERE || p === VCVARS || existsSync(p),
+      programFilesX86: 'C:\\PF86',
+      ahora: () => 1000,
+    });
+    progreso.length = 0;
+    await rapido.compilarEInstalar();
+    expect(progreso.filter((p) => p.fase === 'compilando' && p.porcentaje === 50)).toHaveLength(1);
+  });
+
+  it('compila desde una extracción limpia y borra el script temporal', async () => {
+    const dir = rutas.bin('pgvector-src', '0.8.7');
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, 'viejo.obj'), 'x');
+    await crear().compilarEInstalar();
+    expect(existsSync(path.join(dir, 'viejo.obj'))).toBe(false);
+    expect(existsSync(scripts[0]!)).toBe(false);
+  });
+
+  it('rechaza una segunda instalación simultánea', async () => {
+    let soltar!: () => void;
+    espera = new Promise((res) => (soltar = res));
+    const i = crear();
+    const primera = i.compilarEInstalar();
+    await vi.waitFor(() => expect(scripts).toHaveLength(1));
+    await expect(i.compilarEInstalar()).rejects.toThrow(
+      'Ya hay una instalación de pgvector en curso',
+    );
+    soltar();
+    await primera;
+    await expect(i.compilarEInstalar()).resolves.toBeDefined();
   });
 });
