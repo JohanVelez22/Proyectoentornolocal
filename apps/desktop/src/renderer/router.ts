@@ -31,6 +31,18 @@ const rutas: RouteRecordRaw[] = [
     meta: { seccion: 'basesDeDatos' },
   },
   {
+    path: '/correo',
+    name: 'correo',
+    component: () => import('./vistas/Correo.vue'),
+    meta: { seccion: 'correo' },
+  },
+  {
+    path: '/ia-local',
+    name: 'iaLocal',
+    component: () => import('./vistas/IaLocal.vue'),
+    meta: { seccion: 'iaLocal' },
+  },
+  {
     path: '/tuneles',
     name: 'tuneles',
     component: () => import('./vistas/Tuneles.vue'),

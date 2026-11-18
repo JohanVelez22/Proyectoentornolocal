@@ -9,6 +9,15 @@ import { emitirCertificado, generarCA, huellaSha1, type ParCertificado } from '.
 export type ResultadoCA =
   { ok: true } | { ok: false; motivo: 'cancelado' | 'error'; mensaje: string };
 
+/** Estado completo de HTTPS para la interfaz: autoridad, puerto y quién lo ocupa. */
+export interface EstadoHttps {
+  caCreada: boolean;
+  caInstalada: boolean;
+  puerto: number;
+  /** Programa ajeno que usa el puerto HTTPS (los sitios quedan en HTTP), o null. */
+  ocupadoPor: { pid: number; nombre: string } | null;
+}
+
 export interface DepsHttps {
   rutas: Rutas;
   plataforma: Pick<
@@ -114,11 +123,16 @@ export class GestorHttps {
     return this.resultado(await this.d.plataforma.quitarCertificadoUsuario(huella), 'quitar');
   }
 
+  /** Programa ajeno que ocupa el puerto HTTPS, o null si está libre o lo usa nuestro nginx. */
+  async ocupantePuerto(puerto: number): Promise<{ pid: number; nombre: string } | null> {
+    const dueno = (await this.d.plataforma.duenosDePuertos([puerto])).get(puerto);
+    if (!dueno || this.d.pidNginx?.() === dueno.pid) return null;
+    return { pid: dueno.pid, nombre: dueno.nombre };
+  }
+
   /** El puerto HTTPS sirve si está libre o lo usa nuestro propio nginx. */
   async puertoUsable(puerto: number): Promise<boolean> {
-    const dueno = (await this.d.plataforma.duenosDePuertos([puerto])).get(puerto);
-    if (!dueno) return true;
-    return this.d.pidNginx?.() === dueno.pid;
+    return (await this.ocupantePuerto(puerto)) === null;
   }
 
   /** Opciones HTTPS del servidor por defecto (certificado de localhost) o null si no es usable. */

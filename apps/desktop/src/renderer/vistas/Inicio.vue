@@ -2,21 +2,25 @@
 import {
   Copy,
   Globe,
+  MailUnread,
   Open,
   Server,
   ShieldCheckmark,
+  Sparkles,
   SwapHorizontal,
   Warning,
 } from '@vicons/ionicons5';
 import { NAlert, NButton, NCard, NIcon, NSpace, NTag } from 'naive-ui';
-import { computed, type Component } from 'vue';
+import { computed, watch, type Component } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '../api';
 import AvisoHosts from '../componentes/AvisoHosts.vue';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import { useAccion } from '../composables/useAccion';
+import { useNoLeidos } from '../composables/useNoLeidos';
 import { es } from '../i18n/es';
 import { useHosts } from '../stores/hosts';
+import { useIa } from '../stores/ia';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
 import { useTuneles } from '../stores/tuneles';
@@ -28,11 +32,42 @@ const sitios = useSitios();
 const tuneles = useTuneles();
 const hosts = useHosts();
 const { ejecutar } = useAccion();
+const ia = useIa();
+const correo = useNoLeidos();
+const ti = es.inicioExtra;
+
+const mailpit = computed(() => servicios.porId['mailpit']);
+const ollama = computed(() => servicios.porId['ollama']);
+const ollamaEncendido = computed(() => ollama.value?.estado === 'encendido');
+// Los modelos se cuentan cuando Ollama está encendido (al entrar o al terminar de encender).
+watch(
+  ollamaEncendido,
+  (v) => {
+    if (v) void ia.cargarModelos();
+  },
+  { immediate: true },
+);
+
+/** Mosaico de correos: número si se pudo leer; si no, por qué no hay número. */
+const tileCorreo = computed(() => {
+  if (!mailpit.value) return { valor: ti.sinDato, detalle: ti.correoSinInstalar };
+  if (!correo.encendido.value) return { valor: ti.sinDato, detalle: ti.correoApagado };
+  if (correo.noLeidos.value === null) {
+    return { valor: ti.sinDato, detalle: correo.error.value ? ti.sinLeer : '' };
+  }
+  return { valor: correo.noLeidos.value, detalle: '' };
+});
+const tileIa = computed(() => {
+  if (!ollama.value) return { valor: ti.sinDato, detalle: ti.iaSinInstalar };
+  if (!ollamaEncendido.value) return { valor: ti.sinDato, detalle: ti.iaApagada };
+  if (!ia.modelos) return { valor: ti.sinDato, detalle: ia.errorModelos ? ti.sinLeer : '' };
+  return { valor: ia.modelos.length, detalle: '' };
+});
 
 interface Tile {
   clave: string;
   etiqueta: string;
-  valor: number;
+  valor: number | string;
   detalle: string;
   icono: Component;
   tono: 'neutro' | 'ok' | 'aviso';
@@ -74,6 +109,23 @@ const tiles = computed<Tile[]>(() => [
     detalle: hosts.pendientes.length ? t.tiles.hostsFaltan : t.tiles.hostsOk,
     icono: hosts.pendientes.length ? Warning : ShieldCheckmark,
     tono: hosts.pendientes.length ? 'aviso' : 'ok',
+  },
+  {
+    clave: 'correo',
+    etiqueta: ti.correo,
+    ...tileCorreo.value,
+    icono: MailUnread,
+    tono:
+      typeof tileCorreo.value.valor === 'number' && tileCorreo.value.valor > 0 ? 'ok' : 'neutro',
+    destino: 'correo',
+  },
+  {
+    clave: 'ia',
+    etiqueta: ti.modelos,
+    ...tileIa.value,
+    icono: Sparkles,
+    tono: typeof tileIa.value.valor === 'number' && tileIa.value.valor > 0 ? 'ok' : 'neutro',
+    destino: 'iaLocal',
   },
 ]);
 
@@ -186,7 +238,7 @@ function abrir(url: string): void {
 }
 .tiles {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }

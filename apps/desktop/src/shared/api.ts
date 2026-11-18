@@ -7,6 +7,7 @@ import type {
   DisponibilidadAdminer,
   EstadoGeneral,
   EstadoHosts,
+  EstadoHttps,
   EstadoServicio,
   EstadoTunel,
   EventosNucleo,
@@ -42,6 +43,7 @@ export type {
   DisponibilidadAdminer,
   EstadoGeneral,
   EstadoHosts,
+  EstadoHttps,
   EstadoServicio,
   EstadoTunel,
   EventosNucleo,
@@ -157,7 +159,8 @@ export interface ApiEntorno {
     activar(base: string): Promise<void>;
   };
   https: {
-    estado(): Promise<{ caCreada: boolean; caInstalada: boolean }>;
+    /** Autoridad local, puerto HTTPS y el programa ajeno que lo ocupa (si lo hay). */
+    estado(): Promise<EstadoHttps>;
     instalarCA(): Promise<ResultadoCA>;
     quitarCA(): Promise<ResultadoCA>;
     cambiarPuerto(puerto: number): Promise<ResultadoAplicar>;

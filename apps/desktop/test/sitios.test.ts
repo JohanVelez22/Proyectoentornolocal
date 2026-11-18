@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { DatosSitio, Sitio } from '../src/shared/api';
+import type { DatosSitio, EstadoHttps, Sitio } from '../src/shared/api';
 import {
   armarDominio,
   baseDominio,
   datosParaDuplicar,
   derivarEstadoSitio,
   elegirPhp,
+  estadoHttpsSitio,
   falloHostsDe,
   filtrarSitios,
   limpiarDatos,
@@ -13,11 +14,14 @@ import {
   nombreDeCarpeta,
   normalizarAlias,
   ordenarSitios,
+  redirigirHabilitado,
   requiereConfirmacion,
   sitioVacio,
+  urlHttps,
   urlLocal,
   validarFormularioSitio,
 } from '../src/renderer/utilidades/sitios';
+import { bloqueEnvCorreo } from '../src/renderer/utilidades/correo';
 
 const sitio = (o: Partial<Sitio> = {}): Sitio => ({
   id: 'wolf',
@@ -286,5 +290,70 @@ describe('lista de sitios', () => {
         httpsPendiente: [],
       }),
     ).toEqual({ motivo: 'cancelado', comandoManual: 'Copy-Item x' });
+  });
+});
+
+describe('HTTPS de un sitio', () => {
+  const estado = (o: Partial<EstadoHttps> = {}): EstadoHttps => ({
+    caCreada: true,
+    caInstalada: true,
+    puerto: 443,
+    ocupadoPor: null,
+    ...o,
+  });
+
+  it('"Redirigir a HTTPS" solo se habilita con HTTPS activo', () => {
+    expect(redirigirHabilitado({ https: false })).toBe(false);
+    expect(redirigirHabilitado({ https: true })).toBe(true);
+  });
+
+  it('al guardar sin HTTPS la redirección se apaga sola', () => {
+    const base = sitioVacio();
+    expect(
+      limpiarDatos({ ...base, carpeta: 'C:/x', https: false, redirigirHttps: true }).redirigirHttps,
+    ).toBe(false);
+    expect(
+      limpiarDatos({ ...base, carpeta: 'C:/x', https: true, redirigirHttps: true }).redirigirHttps,
+    ).toBe(true);
+  });
+
+  it('la URL https lleva el puerto solo si no es 443', () => {
+    expect(urlHttps('a.test', 443)).toBe('https://a.test');
+    expect(urlHttps('a.test', 8443)).toBe('https://a.test:8443');
+  });
+
+  it('explica por qué un sitio HTTPS está pendiente', () => {
+    const s = { https: true };
+    expect(
+      estadoHttpsSitio({ https: false }, estado({ ocupadoPor: { pid: 1, nombre: 'x' } })),
+    ).toEqual({ pendiente: null, sinConfianza: false });
+    expect(estadoHttpsSitio(s, null)).toEqual({ pendiente: null, sinConfianza: false });
+    expect(estadoHttpsSitio(s, estado())).toEqual({ pendiente: null, sinConfianza: false });
+    expect(
+      estadoHttpsSitio(s, estado({ ocupadoPor: { pid: 4321, nombre: 'nginx.exe' } })).pendiente,
+    ).toBe('HTTPS pendiente: el puerto 443 lo usa nginx.exe (PID 4321).');
+    expect(estadoHttpsSitio(s, estado({ caCreada: false, caInstalada: false })).pendiente).toMatch(
+      /^HTTPS pendiente: /,
+    );
+    expect(estadoHttpsSitio(s, estado({ caInstalada: false }))).toEqual({
+      pendiente: null,
+      sinConfianza: true,
+    });
+  });
+});
+
+describe('Correo', () => {
+  it('el bloque .env de Laravel apunta al SMTP local de Mailpit, sin usuario ni cifrado', () => {
+    expect(bloqueEnvCorreo()).toBe(
+      [
+        'MAIL_MAILER=smtp',
+        'MAIL_HOST=127.0.0.1',
+        'MAIL_PORT=1025',
+        'MAIL_USERNAME=null',
+        'MAIL_PASSWORD=null',
+        'MAIL_ENCRYPTION=null',
+      ].join('\n'),
+    );
+    expect(bloqueEnvCorreo(2525)).toContain('MAIL_PORT=2525');
   });
 });

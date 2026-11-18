@@ -3,8 +3,10 @@ import {
   Globe as IconoSitios,
   Home as IconoInicio,
   Layers as IconoBases,
+  Mail as IconoCorreo,
   Server as IconoServicios,
   Settings as IconoAjustes,
+  Sparkles as IconoIa,
   SwapHorizontal as IconoTuneles,
 } from '@vicons/ionicons5';
 import {
@@ -45,6 +47,8 @@ const opciones: MenuOption[] = (
     ['sitios', IconoSitios],
     ['servicios', IconoServicios],
     ['basesDeDatos', IconoBases],
+    ['correo', IconoCorreo],
+    ['iaLocal', IconoIa],
     ['tuneles', IconoTuneles],
     ['ajustes', IconoAjustes],
   ] as const

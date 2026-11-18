@@ -4,7 +4,9 @@ import {
   CreateOutline,
   EllipsisHorizontal,
   FolderOpen,
+  LockClosed,
   Open,
+  Terminal,
   TrashOutline,
   Warning,
 } from '@vicons/ionicons5';
@@ -25,10 +27,18 @@ import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 import { useHosts } from '../stores/hosts';
+import { useHttps } from '../stores/https';
 import { useServicios } from '../stores/servicios';
-import { derivarEstadoSitio, urlLocal, usaPhp } from '../utilidades/sitios';
+import {
+  derivarEstadoSitio,
+  estadoHttpsSitio,
+  urlHttps,
+  urlLocal,
+  usaPhp,
+} from '../utilidades/sitios';
 import EstadoPunto from './EstadoPunto.vue';
 import InterruptorTunel from './InterruptorTunel.vue';
+import SeccionFtpSitio from './SeccionFtpSitio.vue';
 
 const props = defineProps<{ sitio: Sitio }>();
 const emit = defineEmits<{
@@ -39,8 +49,10 @@ const emit = defineEmits<{
 }>();
 
 const t = es.sitios;
+const th = es.sitioHttps;
 const servicios = useServicios();
 const hosts = useHosts();
+const https = useHttps();
 const dialog = useDialog();
 const message = useMessage();
 const notification = useNotification();
@@ -52,6 +64,8 @@ const estado = computed(() =>
 );
 const nombre = computed(() => props.sitio.nombre || props.sitio.dominio);
 const url = computed(() => urlLocal(props.sitio.dominio, nginx.value?.puertos[0]));
+const urlSegura = computed(() => urlHttps(props.sitio.dominio, https.estado?.puerto ?? 443));
+const estadoHttps = computed(() => estadoHttpsSitio(props.sitio, https.estado));
 
 const icono = (c: Component) => () => h(NIcon, null, { default: () => h(c) });
 const opciones: DropdownOption[] = [
@@ -111,6 +125,13 @@ function confirmarBorrar(): void {
 function abrirSitio(): void {
   void ejecutar('abrir', () => api().sistema.abrirUrl(url.value));
 }
+function abrirSitioHttps(): void {
+  void ejecutar('abrirHttps', () => api().sistema.abrirUrl(urlSegura.value));
+}
+function abrirTerminal(): void {
+  if (ocupado('terminal')) return;
+  void ejecutar('terminal', () => api().terminal.abrir(props.sitio.id));
+}
 function abrirCarpeta(): void {
   void ejecutar('carpeta', () => api().sistema.abrirCarpeta(props.sitio.carpeta));
 }
@@ -164,15 +185,48 @@ function abrirCarpeta(): void {
             </template>
             {{ t.faltaHostsAyuda(estado.faltanEnHosts.join(', ')) }}
           </NTooltip>
+          <NTooltip v-if="sitio.https && !estadoHttps.pendiente">
+            <template #trigger>
+              <NTag size="small" type="success" :bordered="false" class="etiqueta" tabindex="0">
+                <template #icon
+                  ><NIcon><LockClosed /></NIcon
+                ></template>
+                {{ th.etiqueta }}
+              </NTag>
+            </template>
+            {{ th.candadoAyuda
+            }}<template v-if="sitio.redirigirHttps"> {{ th.redirige }}.</template>
+          </NTooltip>
+          <NTooltip v-if="estadoHttps.sinConfianza">
+            <template #trigger>
+              <NTag size="small" type="warning" :bordered="false" class="etiqueta" tabindex="0">
+                <template #icon
+                  ><NIcon><Warning /></NIcon
+                ></template>
+                {{ th.sinConfianza }}
+              </NTag>
+            </template>
+            {{ th.sinConfianzaAyuda }}
+          </NTooltip>
         </div>
         <div class="linea secundaria">
           <a
             class="dominio"
             :href="url"
-            :title="t.abrirSitio(sitio.dominio)"
+            :title="sitio.https ? th.abrirHttp(sitio.dominio) : t.abrirSitio(sitio.dominio)"
             @click.prevent="abrirSitio"
           >
-            {{ sitio.dominio }}
+            {{ sitio.https ? url : sitio.dominio }}
+          </a>
+          <a
+            v-if="sitio.https && !estadoHttps.pendiente"
+            class="dominio seguro"
+            :href="urlSegura"
+            :title="th.abrirHttps(urlSegura)"
+            @click.prevent="abrirSitioHttps"
+          >
+            <NIcon class="candado" aria-hidden="true"><LockClosed /></NIcon>
+            {{ urlSegura }}
           </a>
           <NTooltip v-if="sitio.alias.length">
             <template #trigger>
@@ -182,6 +236,13 @@ function abrirCarpeta(): void {
           </NTooltip>
           <span v-if="estado.punto !== 'aviso'" class="estado-texto">· {{ estado.etiqueta }}</span>
         </div>
+        <p v-if="estadoHttps.pendiente" class="https-pendiente" role="status">
+          <NIcon aria-hidden="true"><Warning /></NIcon>
+          <span>
+            {{ estadoHttps.pendiente }}
+            <span class="tenue">{{ th.pendienteAyuda }}</span>
+          </span>
+        </p>
         <p v-if="sitio.nota" class="nota">{{ sitio.nota }}</p>
       </div>
 
@@ -209,6 +270,23 @@ function abrirCarpeta(): void {
           </template>
           <span class="ruta">{{ sitio.carpeta }}</span>
         </NTooltip>
+        <NTooltip>
+          <template #trigger>
+            <NButton
+              size="small"
+              secondary
+              :loading="ocupado('terminal')"
+              :aria-label="es.terminalSitio.ayuda"
+              @click="abrirTerminal"
+            >
+              <template #icon
+                ><NIcon><Terminal /></NIcon
+              ></template>
+              {{ es.terminalSitio.boton }}
+            </NButton>
+          </template>
+          {{ es.terminalSitio.ayuda }}
+        </NTooltip>
         <NDropdown trigger="click" :options="opciones" placement="bottom-end" @select="elegir">
           <NButton
             size="small"
@@ -226,6 +304,7 @@ function abrirCarpeta(): void {
 
     <div class="pie">
       <InterruptorTunel :sitio="sitio" />
+      <SeccionFtpSitio :sitio="sitio" />
     </div>
   </article>
 </template>
@@ -286,6 +365,32 @@ function abrirCarpeta(): void {
   color: #6470e0;
   text-decoration: none;
 }
+.dominio.seguro {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #16a34a;
+}
+.candado {
+  font-size: 12px;
+}
+.https-pendiente {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #b45309;
+}
+.https-pendiente .n-icon {
+  margin-top: 2px;
+  flex: none;
+}
+.https-pendiente .tenue {
+  display: block;
+  color: inherit;
+  opacity: 0.8;
+}
 .dominio:hover {
   text-decoration: underline;
 }
@@ -319,6 +424,9 @@ function abrirCarpeta(): void {
   font-size: 12px;
 }
 .pie {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   padding: 8px 16px 10px 38px;
   border-top: 1px solid rgba(128, 128, 128, 0.14);
 }

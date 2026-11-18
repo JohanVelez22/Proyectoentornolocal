@@ -150,6 +150,15 @@ describe('GestorHttps', () => {
     expect(readFileSync(a.crt, 'utf8')).not.toBe(antes);
   });
 
+  it('ocupantePuerto: null si está libre o es nuestro nginx; si no, nombre y PID', async () => {
+    const g = gestorHttps();
+    expect(await g.ocupantePuerto(443)).toBeNull();
+    duenos.set(443, { pid: 10, nombre: 'nginx.exe' });
+    expect(await g.ocupantePuerto(443)).toEqual({ pid: 10, nombre: 'nginx.exe' });
+    pidNginx = 10;
+    expect(await g.ocupantePuerto(443)).toBeNull();
+  });
+
   it('puertoUsable: libre y propio sí; ocupado por otro no', async () => {
     const g = gestorHttps();
     expect(await g.puertoUsable(443)).toBe(true);

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CodeSlash, FolderOpen, Sparkles } from '@vicons/ionicons5';
+import { CodeSlash, FolderOpen, LockClosed, Sparkles } from '@vicons/ionicons5';
 import {
   NAlert,
   NButton,
@@ -19,6 +19,7 @@ import {
   NSwitch,
   NTag,
   useMessage,
+  useNotification,
   type SelectOption,
 } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
@@ -27,6 +28,7 @@ import type { DatosSitio, ResultadoAplicar } from '../../shared/api';
 import { api, plano } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
+import { useHttps } from '../stores/https';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
 import {
@@ -38,6 +40,7 @@ import {
   limpiarDatos,
   nombreDeCarpeta,
   normalizarAlias,
+  redirigirHabilitado,
   sitioVacio,
   usaPhp,
   validarFormularioSitio,
@@ -53,8 +56,11 @@ const emit = defineEmits<{
 }>();
 
 const t = es.formSitio;
+const th = es.formSitioHttps;
 const router = useRouter();
 const message = useMessage();
+const notification = useNotification();
+const https = useHttps();
 const servicios = useServicios();
 const sitios = useSitios();
 const { ejecutar, ocupado } = useAccion();
@@ -134,6 +140,7 @@ function reiniciar(o: ObjetivoForm): void {
   }
   nombreAuto = datos.value.nombre;
   void ejecutar('php', () => servicios.cargarInstalados('php'));
+  void https.cargar();
 }
 
 watch(
@@ -181,6 +188,43 @@ async function elegirCarpeta(): Promise<void> {
     usaPhp(r.tipo) && elegido.noInstalada && elegido.php
       ? t.phpNoInstalada(elegido.noInstalada, elegido.php)
       : null;
+}
+
+/* ───── HTTPS ───── */
+
+const puedeRedirigir = computed(() => redirigirHabilitado(datos.value));
+/** Solo se ofrece instalar la autoridad cuando se pidió HTTPS y se sabe que falta. */
+const faltaAutoridad = computed(
+  () => datos.value.https && https.estado !== null && !https.estado.caInstalada,
+);
+
+// Sin HTTPS no hay redirección posible: el interruptor se apaga y se deshabilita.
+watch(
+  () => datos.value.https,
+  (activo) => {
+    if (!activo) datos.value.redirigirHttps = false;
+    else void https.cargar();
+  },
+);
+
+/** Crea (si falta) e instala la autoridad en el almacén del usuario; Windows pide confirmar. */
+async function instalarCA(): Promise<void> {
+  if (ocupado('ca')) return;
+  const r = await ejecutar('ca', async () => {
+    const res = await api().https.instalarCA();
+    await https.cargar();
+    return res;
+  });
+  if (!r) return;
+  if (r.ok) message.success(th.instalada);
+  else if (r.motivo === 'cancelado') message.info(th.cancelado);
+  else
+    notification.error({
+      title: th.fallo,
+      content: r.mensaje,
+      duration: 10000,
+      keepAliveOnHover: true,
+    });
 }
 
 function crearAlias(texto: string): string {
@@ -413,6 +457,44 @@ function alCambiarVisible(v: boolean): void {
             <NSwitch v-model:value="datos.datosReales" :aria-label="t.datosReales" />
           </div>
 
+          <section class="https" :class="{ activo: datos.https }" :aria-label="th.titulo">
+            <div class="https-fila">
+              <span class="https-icono" aria-hidden="true"
+                ><NIcon :size="16"><LockClosed /></NIcon
+              ></span>
+              <div class="https-texto">
+                <strong>{{ th.https }}</strong>
+                <small class="ayuda">{{ th.httpsAyuda }}</small>
+              </div>
+              <NSwitch v-model:value="datos.https" :aria-label="th.https" />
+            </div>
+            <div class="https-fila" :class="{ deshabilitada: !puedeRedirigir }">
+              <span class="https-icono vacio" aria-hidden="true" />
+              <div class="https-texto">
+                <strong>{{ th.redirigir }}</strong>
+                <small class="ayuda">{{
+                  puedeRedirigir ? th.redirigirAyuda : th.redirigirDeshabilitado
+                }}</small>
+              </div>
+              <NSwitch
+                v-model:value="datos.redirigirHttps"
+                :disabled="!puedeRedirigir"
+                :aria-label="th.redirigir"
+              />
+            </div>
+            <NAlert
+              v-if="faltaAutoridad"
+              type="warning"
+              :title="th.sinAutoridadTitulo"
+              class="https-alerta"
+            >
+              <p class="https-alerta-texto">{{ th.sinAutoridadTexto }}</p>
+              <NButton size="small" type="primary" :loading="ocupado('ca')" @click="instalarCA">
+                {{ th.instalar }}
+              </NButton>
+            </NAlert>
+          </section>
+
           <NFormItem :label="t.nota">
             <NInput
               v-model:value="datos.nota"
@@ -602,6 +684,61 @@ function alCambiarVisible(v: boolean): void {
 .interruptor-reales strong {
   font-size: 13.5px;
   font-weight: 600;
+}
+.https {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.https.activo {
+  border-color: rgba(22, 163, 74, 0.4);
+  background: rgba(22, 163, 74, 0.05);
+}
+.https-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.https-fila.deshabilitada .https-texto {
+  opacity: 0.55;
+}
+.https-icono {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(128, 128, 128, 0.12);
+  flex: none;
+}
+.https.activo .https-icono:not(.vacio) {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.14);
+}
+.https-icono.vacio {
+  background: transparent;
+}
+.https-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.https-texto strong {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.https-alerta-texto {
+  margin: 0 0 8px;
+  font-size: 12.5px;
 }
 .avanzado-titulo {
   display: inline-flex;

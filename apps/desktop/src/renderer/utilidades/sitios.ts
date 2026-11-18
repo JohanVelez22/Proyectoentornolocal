@@ -1,5 +1,6 @@
 import type {
   DatosSitio,
+  EstadoHttps,
   EstadoServicio,
   EstadoTunel,
   ResultadoAplicar,
@@ -56,6 +57,43 @@ export function nombreDeCarpeta(ruta: string): string {
 
 export function urlLocal(dominio: string, puerto?: number | null): string {
   return puerto && puerto !== 80 ? `http://${dominio}:${puerto}` : `http://${dominio}`;
+}
+
+/* ───────────── HTTPS ───────────── */
+
+/** URL https del dominio; lleva el puerto solo si no es el estándar 443. */
+export function urlHttps(dominio: string, puerto: number): string {
+  return puerto === 443 ? `https://${dominio}` : `https://${dominio}:${puerto}`;
+}
+
+/** "Redirigir a HTTPS" solo tiene sentido (y solo se habilita) con HTTPS activo. */
+export function redirigirHabilitado(d: Pick<DatosSitio, 'https'>): boolean {
+  return d.https;
+}
+
+export interface EstadoHttpsSitio {
+  /** "HTTPS pendiente: …" si el sitio pidió HTTPS pero Nginx lo sirve solo por HTTP. */
+  pendiente: string | null;
+  /** HTTPS funciona, pero el navegador no confía todavía (autoridad sin instalar). */
+  sinConfianza: boolean;
+}
+
+/**
+ * Por qué un sitio con HTTPS no lo tiene todavía (puerto ocupado por otro programa o sin
+ * autoridad), igual que decide el núcleo al generar los vhosts. Sin estado conocido no se avisa.
+ */
+export function estadoHttpsSitio(
+  sitio: Pick<Sitio, 'https'>,
+  estado: EstadoHttps | null,
+): EstadoHttpsSitio {
+  const t = es.sitioHttps;
+  if (!sitio.https || !estado) return { pendiente: null, sinConfianza: false };
+  if (estado.ocupadoPor) {
+    const { nombre, pid } = estado.ocupadoPor;
+    return { pendiente: t.pendiente(t.ocupado(estado.puerto, nombre, pid)), sinConfianza: false };
+  }
+  if (!estado.caCreada) return { pendiente: t.pendiente(t.sinAutoridad), sinConfianza: false };
+  return { pendiente: null, sinConfianza: !estado.caInstalada };
 }
 
 /** Qué abre el formulario de sitio: uno nuevo, uno existente o una copia. */
@@ -211,6 +249,7 @@ export function limpiarDatos(d: DatosSitio): DatosSitio {
     php: usaPhp(d.tipo) ? d.php : null,
     puertoProxy: d.tipo === 'proxy' ? d.puertoProxy : null,
     urlBaseVar: d.urlBaseVar?.trim() || null,
+    redirigirHttps: d.https && d.redirigirHttps,
     nota: d.nota.trim(),
   };
 }

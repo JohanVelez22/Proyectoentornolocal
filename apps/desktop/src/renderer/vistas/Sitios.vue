@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { Add, Globe, Search } from '@vicons/ionicons5';
 import { NButton, NEmpty, NIcon, NInput } from 'naive-ui';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import type { ResultadoAplicar, Sitio } from '../../shared/api';
 import AvisoHosts from '../componentes/AvisoHosts.vue';
 import FilaSitio from '../componentes/FilaSitio.vue';
 import FormSitio from '../componentes/FormSitio.vue';
 import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
+import { useHttps } from '../stores/https';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
 import {
@@ -22,6 +23,7 @@ import {
 const t = es.sitios;
 const sitios = useSitios();
 const servicios = useServicios();
+const https = useHttps();
 const { ejecutar } = useAccion();
 
 /** El buscador solo aparece cuando la lista ya no se abarca de un vistazo. */
@@ -50,13 +52,24 @@ function duplicar(sitio: Sitio): void {
 /** Si hosts no se pudo escribir, el aviso queda fijo arriba con "Reintentar" e instrucciones. */
 function alAplicar(r: ResultadoAplicar): void {
   falloHosts.value = falloHostsDe(r);
+  // El estado de HTTPS (autoridad, puerto ocupado) puede haber cambiado al guardar.
+  void https.cargar();
 }
+
+// Si Nginx cambia de estado, el puerto HTTPS puede haber quedado libre u ocupado.
+watch(
+  () => servicios.porId['nginx']?.estado,
+  () => void https.cargar(),
+);
 
 onMounted(() => {
   // Para el selector de PHP y para saber si el túnel se puede abrir.
   void ejecutar('instalados', () =>
     Promise.all([servicios.cargarInstalados('php'), servicios.cargarInstalados('cloudflared')]),
   );
+  // Para los avisos de HTTPS pendiente y el aviso de red local del FTP.
+  void https.cargar();
+  if (servicios.redLocalFtp === null) void servicios.cargarPreferencias().catch(() => undefined);
 });
 </script>
 

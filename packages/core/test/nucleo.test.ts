@@ -792,6 +792,22 @@ describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
     expect(r.aplicar.httpsPendiente).toEqual([]);
   });
 
+  it('estadoHttps informa el puerto configurado y el programa ajeno que lo ocupa', async () => {
+    const n = await crear();
+    expect(await n.estadoHttps()).toEqual({
+      caCreada: false,
+      caInstalada: false,
+      puerto: 443,
+      ocupadoPor: null,
+    });
+    plataforma.duenosDePuertos = async (puertos) =>
+      new Map(puertos.map((p) => [p, { pid: 4321, nombre: 'nginx.exe' }]));
+    await n.cambiarPuertoHttps(8443);
+    const e = await n.estadoHttps();
+    expect(e.puerto).toBe(8443);
+    expect(e.ocupadoPor).toEqual({ pid: 4321, nombre: 'nginx.exe' });
+  });
+
   it('cambiarPuertoHttps guarda el puerto y aplica', async () => {
     const n = await crear();
     const aplicar = vi.spyOn(n.sitios, 'aplicar');

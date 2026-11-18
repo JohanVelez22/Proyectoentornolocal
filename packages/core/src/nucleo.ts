@@ -22,7 +22,7 @@ import { listarVersiones } from './catalogo/catalogo';
 import { Eventos, type EventosNucleo } from './eventos';
 import { ServidorFtp } from './ftp/servidorFtp';
 import { GestorHosts } from './hosts/hosts';
-import { GestorHttps, type ResultadoCA } from './https/certificados';
+import { GestorHttps, type EstadoHttps, type ResultadoCA } from './https/certificados';
 import { Adminer } from './herramientas/adminer';
 import { Composer } from './herramientas/composer';
 import { PathUsuario } from './herramientas/pathUsuario';
@@ -428,9 +428,17 @@ export class Nucleo {
     return texto;
   }
 
-  /** Estado de la autoridad de certificados local (creada / instalada en el almacén del usuario). */
-  estadoHttps(): ReturnType<GestorHttps['estado']> {
-    return this.https.estado();
+  /**
+   * Estado de HTTPS: autoridad local (creada / instalada en el almacén del usuario), puerto
+   * configurado y el programa ajeno que lo ocupa (con él, los sitios HTTPS quedan pendientes).
+   */
+  async estadoHttps(): Promise<EstadoHttps> {
+    const puerto = (await this.config.leer()).https.puerto;
+    const [ca, ocupadoPor] = await Promise.all([
+      this.https.estado(),
+      this.https.ocupantePuerto(puerto).catch(() => null),
+    ]);
+    return { ...ca, puerto, ocupadoPor };
   }
 
   /** Crea la autoridad de WolfCore Dev si falta y la instala en el almacén del usuario. */

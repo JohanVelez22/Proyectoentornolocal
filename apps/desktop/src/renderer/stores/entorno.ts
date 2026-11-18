@@ -1,6 +1,7 @@
 import { api } from '../api';
 import { useBd } from './bd';
 import { useHosts } from './hosts';
+import { useIa } from './ia';
 import { useServicios } from './servicios';
 import { useSitios } from './sitios';
 import { useTuneles } from './tuneles';
@@ -20,6 +21,8 @@ export async function iniciarEntorno(): Promise<void> {
   hosts.iniciar();
   // Bases de datos: el registro de progreso sigue llegando aunque se cambie de pantalla.
   useBd().iniciar();
+  // IA local: el avance de las descargas de modelos tampoco depende de la pantalla.
+  useIa().iniciar();
   try {
     const general = await api().estadoGeneral();
     servicios.hidratar(general.servicios);
@@ -38,4 +41,5 @@ export function detenerEntorno(): void {
   useTuneles().detener();
   useHosts().detener();
   useBd().detener();
+  useIa().detener();
 }
