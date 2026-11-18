@@ -8,7 +8,7 @@ import { crearPlataforma } from './plataforma/index';
 import type { Ejecutor, Plataforma } from './plataforma/tipos';
 import { ejecutorPorDefecto } from './plataforma/win';
 import { Supervisor } from './procesos/supervisor';
-import { Rutas, rutaBasePorDefecto } from './rutas';
+import { Rutas } from './rutas';
 import { Servicios } from './servicios/servicios';
 import { detectarProyecto } from './sitios/detectar';
 import {
