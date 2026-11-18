@@ -66,3 +66,18 @@ export type Lanzador = (
   args: string[],
   opts?: OpcionesLanzar,
 ) => Promise<{ codigo: number }>;
+
+/** Uso de un proceso tal como lo da el sistema (CPU sin normalizar: 100 = un núcleo lógico). */
+export interface UsoProceso {
+  pid: number;
+  cpu: number;
+  ramBytes: number;
+  uptimeS: number;
+}
+
+/** Lo que se lee del sistema en una sola consulta por muestra (métricas). */
+export interface MuestraPlataforma {
+  procesos: UsoProceso[];
+  /** Bytes acumulados recibidos y enviados por todos los adaptadores; null si no se pudo leer. */
+  red: { rx: number; tx: number } | null;
+}

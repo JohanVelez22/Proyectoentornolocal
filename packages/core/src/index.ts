@@ -53,3 +53,5 @@ export * from './proyectos/recetas';
 export * from './proyectos/procesos';
 export * from './git/git';
 export * from './git/github';
+export * from './monitor/metricas';
+export * from './monitor/registros';

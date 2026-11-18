@@ -3,7 +3,13 @@ import { randomUUID } from 'node:crypto';
 import { readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
-import type { Ejecutor, Plataforma, ResultadoEscritura } from './tipos';
+import type {
+  Ejecutor,
+  MuestraPlataforma,
+  Plataforma,
+  ResultadoEscritura,
+  UsoProceso,
+} from './tipos';
 
 export const ejecutorPorDefecto: Ejecutor = (cmd, args, opts) =>
   new Promise((resolve) => {
@@ -77,6 +83,109 @@ export function interpretarTasklist(salida: string): { pid: number; nombre: stri
     if (m) return { pid: Number(m[2]), nombre: m[1] ?? '' };
   }
   return null;
+}
+
+/* ───────────── Métricas (una sola consulta de PowerShell por muestra) ───────────── */
+
+const MUESTRA_VACIA = (): MuestraPlataforma => ({ procesos: [], red: null });
+
+/** Número finito y no negativo, o null. */
+function numero(v: unknown): number | null {
+  const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+  return typeof n === 'number' && Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/** ConvertTo-Json desenvuelve los arreglos de un elemento y deja null los vacíos. */
+function comoLista(v: unknown): Record<string, unknown>[] {
+  const lista = Array.isArray(v) ? v : v === null || v === undefined ? [] : [v];
+  return lista.filter((x): x is Record<string, unknown> => typeof x === 'object' && x !== null);
+}
+
+/**
+ * Interpreta la salida JSON del script de `muestraSistemaWindows` (`{p: procesos, n: adaptadores}`).
+ * Nunca lanza: lo que no se entienda se descarta.
+ */
+export function interpretarMuestraWindows(salida: string): MuestraPlataforma {
+  const i = salida.indexOf('{');
+  if (i < 0) return MUESTRA_VACIA();
+  let dato: unknown;
+  try {
+    dato = JSON.parse(salida.slice(i));
+  } catch {
+    return MUESTRA_VACIA();
+  }
+  if (typeof dato !== 'object' || dato === null || Array.isArray(dato)) return MUESTRA_VACIA();
+  const { p, n } = dato as { p?: unknown; n?: unknown };
+  const procesos: UsoProceso[] = [];
+  for (const x of comoLista(p)) {
+    const pid = numero(x.IDProcess);
+    if (pid === null || !Number.isInteger(pid) || pid <= 0) continue;
+    procesos.push({
+      pid,
+      cpu: numero(x.PercentProcessorTime) ?? 0,
+      ramBytes: numero(x.WorkingSetPrivate) ?? numero(x.WorkingSet) ?? 0,
+      uptimeS: numero(x.ElapsedTime) ?? 0,
+    });
+  }
+  let rx = 0;
+  let tx = 0;
+  let adaptadores = 0;
+  for (const x of comoLista(n)) {
+    const r = numero(x.ReceivedBytes);
+    const t = numero(x.SentBytes);
+    if (r === null || t === null) continue;
+    rx += r;
+    tx += t;
+    adaptadores++;
+  }
+  return { procesos, red: adaptadores > 0 ? { rx, tx } : null };
+}
+
+/** Script de la muestra: CPU y RAM de los PIDs pedidos y los contadores de red, en JSON compacto. */
+export function scriptMuestraWindows(pids: number[]): string {
+  const validos = [...new Set(pids)].filter((p) => Number.isInteger(p) && p > 0);
+  const filtro = validos.map((p) => `IDProcess=${p}`).join(' OR ');
+  return [
+    "$ErrorActionPreference = 'SilentlyContinue'",
+    '[Console]::OutputEncoding = [Text.Encoding]::UTF8',
+    '$p = @()',
+    ...(validos.length > 0
+      ? [
+          `$p = @(Get-CimInstance -ClassName Win32_PerfFormattedData_PerfProc_Process -Filter "${filtro}" | Select-Object IDProcess,PercentProcessorTime,WorkingSetPrivate,WorkingSet,ElapsedTime)`,
+        ]
+      : []),
+    '$n = @(Get-NetAdapterStatistics | Select-Object Name,ReceivedBytes,SentBytes)',
+    'ConvertTo-Json -Compress -Depth 3 -InputObject ([pscustomobject]@{ p = $p; n = $n })',
+  ].join('\n');
+}
+
+/**
+ * Una muestra del sistema con un solo PowerShell oculto (`windowsHide` del ejecutor), nunca uno
+ * por servicio. Si PowerShell falla o no responde, devuelve una muestra vacía (no lanza).
+ */
+export async function muestraSistemaWindows(
+  ejecutar: Ejecutor,
+  pids: number[],
+): Promise<MuestraPlataforma> {
+  try {
+    const r = await ejecutar(
+      'powershell',
+      [
+        '-NoLogo',
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-EncodedCommand',
+        Buffer.from(scriptMuestraWindows(pids), 'utf16le').toString('base64'),
+      ],
+      { timeoutMs: 10_000 },
+    );
+    if (r.codigo !== 0) return MUESTRA_VACIA();
+    return interpretarMuestraWindows(r.stdout);
+  } catch {
+    return MUESTRA_VACIA();
+  }
 }
 
 const comillaSimple = (s: string): string => s.replace(/'/g, "''");

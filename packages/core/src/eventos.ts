@@ -1,4 +1,5 @@
 import type { MotorBd } from './bd/env';
+import type { MuestraSistema } from './monitor/metricas';
 import type { SugerenciaProyecto } from './proyectos/vigilar';
 import type { EstadoHosts, EstadoServicio, EstadoTunel, ProgresoInstalacion, Sitio } from './tipos';
 
@@ -41,6 +42,10 @@ export type EventosNucleo = {
   'proyectos:sugerencias': SugerenciaProyecto[];
   /** Hay un aviso de inicio nuevo (p. ej. servicios que no encendieron); se lee con tomarAvisoInicio. */
   'aviso:inicio': string;
+  /** Una muestra de rendimiento (solo mientras las métricas están iniciadas). */
+  'metricas:muestra': MuestraSistema;
+  /** Líneas nuevas (saneadas) de una fuente de registro que se está siguiendo. */
+  'registro:lineas': { id: string; lineas: string[] };
 };
 
 export class Eventos<M extends Record<string, unknown>> {
