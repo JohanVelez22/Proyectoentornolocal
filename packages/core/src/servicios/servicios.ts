@@ -2,11 +2,17 @@ import { puertosPhp } from '../nginx/principal';
 import type { Ejecutor, Plataforma } from '../plataforma/tipos';
 import { puertoResponde } from '../procesos/sonda';
 import type { EstadoProceso } from '../procesos/supervisor';
+import { AlmacenCredenciales } from '../almacen';
 import type { Rutas } from '../rutas';
 import type { Config, EstadoServicio, IdServicioDatos } from '../tipos';
 import { ejecutorPorDefecto } from '../plataforma/win';
 import { DEFINICIONES } from './datos';
-import { esIdServicioDatos, ServiciosDatos, type DefServicio } from './definicion';
+import {
+  esIdServicioDatos,
+  ServiciosDatos,
+  type DefServicio,
+  type DepsServiciosDatos,
+} from './definicion';
 import {
   ServicioNginx,
   type InstaladorServicios,
@@ -21,10 +27,14 @@ export interface DepsServicios {
   supervisor: SupervisorServicios;
   instalador: InstaladorServicios;
   leerConfig: () => Promise<Config>;
-  /** Lee, modifica y guarda la configuración en la cola común (credenciales y puertos). */
+  /** Lee, modifica y guarda la configuración en la cola común (puertos de servicios). */
   modificarConfig: (fn: (c: Config) => void) => Promise<void>;
   /** Por defecto, el registro `DEFINICIONES` de servicios/datos.ts. */
   definiciones?: readonly DefServicio[];
+  /** Por defecto, etc/credenciales.json con cola propia. */
+  credenciales?: Pick<AlmacenCredenciales, 'leer' | 'obtenerOCrear'>;
+  /** Para pruebas: borrado recursivo de carpetas de datos. */
+  borrar?: DepsServiciosDatos['borrar'];
   /** Ramas de PHP usadas por al menos un sitio (las aporta la tarea 8). */
   ramasEnUso?: () => Promise<string[]>;
   /** Upstreams para nginx.conf; por defecto, ramas en uso que estén instaladas. */
@@ -92,6 +102,8 @@ export class Servicios {
       instalador: d.instalador,
       leerConfig: d.leerConfig,
       modificarConfig: d.modificarConfig,
+      credenciales: d.credenciales ?? new AlmacenCredenciales(d.rutas),
+      ...(d.borrar ? { borrar: d.borrar } : {}),
       sonda: this.sonda,
       exec: d.exec ?? ejecutorPorDefecto,
       definiciones: () => definiciones ?? DEFINICIONES,
@@ -104,7 +116,7 @@ export class Servicios {
 
     let versionNginx: string | null = null;
     try {
-      versionNginx = await this.nginx.versionActiva();
+      versionNginx = await this.nginx.versionActiva(cfg);
     } catch {
       versionNginx = null;
     }
@@ -133,7 +145,7 @@ export class Servicios {
       });
     }
 
-    const propios = await this.datos.estados();
+    const propios = await this.datos.estados(cfg);
     res.push(...propios);
 
     for (const ext of EXTERNOS) {

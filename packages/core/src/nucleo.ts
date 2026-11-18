@@ -1,5 +1,5 @@
 import type * as childProcess from 'node:child_process';
-import { Almacen } from './almacen';
+import { Almacen, AlmacenCredenciales, migrarCredenciales } from './almacen';
 import { Instalador } from './catalogo/instalador';
 import { listarVersiones } from './catalogo/catalogo';
 import { Eventos, type EventosNucleo } from './eventos';
@@ -21,7 +21,15 @@ import {
 } from './sitios/sitios';
 import { migrarCarpetaDatos } from './migracion';
 import { UrlBase } from './sitios/urlbase';
-import type { Config, EstadoHosts, EstadoServicio, EstadoTunel, Sitio } from './tipos';
+import type {
+  Config,
+  Credenciales,
+  EstadoHosts,
+  EstadoServicio,
+  EstadoTunel,
+  IdServicioDatos,
+  Sitio,
+} from './tipos';
 import { Tuneles } from './tuneles/tuneles';
 
 export interface OpcionesNucleo {
@@ -95,6 +103,7 @@ export class Nucleo {
   readonly config: { leer(): Promise<Config> };
   /** Aviso de la migración de la carpeta de datos (si hubo algo que informar). */
   avisoInicio: string | null = null;
+  private almacenCredenciales!: AlmacenCredenciales;
 
   private constructor(
     readonly rutas: Rutas,
@@ -109,6 +118,7 @@ export class Nucleo {
     internos: Eventos<EventosNucleo>,
   ) {
     this.config = {
+      // ConfigSchema no incluye credenciales: viven en etc/credenciales.json.
       leer: () => almacen.leer(),
     };
     internos.on('servicio:estado', () => this.pedirRecalculo());
@@ -140,6 +150,7 @@ export class Nucleo {
     // sitios y servicios se referencian entre sí: se resuelven de forma perezosa.
     // eslint-disable-next-line prefer-const
     let sitios!: GestorSitios;
+    const credenciales = new AlmacenCredenciales(rutas, (fn) => sitios.enCola(fn));
     const servicios = new Servicios({
       rutas,
       plataforma,
@@ -147,6 +158,7 @@ export class Nucleo {
       instalador,
       leerConfig,
       modificarConfig: (fn) => sitios.modificarConfig(fn),
+      credenciales,
       ramasEnUso: async () => ramasEnUso(await sitios.listar()),
       obtenerUpstreams: async () =>
         upstreamsPara(
@@ -166,6 +178,7 @@ export class Nucleo {
       instalador,
       eventos,
     });
+    await migrarCredenciales(rutas, almacen, credenciales);
     const urlBase = new UrlBase({
       rutas,
       ejecutor: o.ejecutor ?? ejecutorPorDefecto,
@@ -193,6 +206,7 @@ export class Nucleo {
       internos,
     );
     nucleo.avisoInicio = avisoInicio;
+    nucleo.almacenCredenciales = credenciales;
     o.alIniciar?.(eventos);
     try {
       await supervisor.readoptar();
@@ -204,6 +218,11 @@ export class Nucleo {
       throw e;
     }
     return nucleo;
+  }
+
+  /** Usuario y clave de un servicio propio para "Datos de conexión" (null si aún no se generaron). */
+  credenciales(id: IdServicioDatos): Promise<Credenciales | null> {
+    return this.almacenCredenciales.leer(id);
   }
 
   async estadoGeneral(): Promise<EstadoGeneral> {

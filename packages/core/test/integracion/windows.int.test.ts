@@ -43,6 +43,7 @@ function plataformaSegura(): Plataforma {
       return { ok: true };
     },
     quienUsaPuerto: (p) => real.quienUsaPuerto(p),
+    duenosDePuertos: (ps) => real.duenosDePuertos(ps),
     procesoVivo: (p) => real.procesoVivo(p),
     matarArbol: (p) => real.matarArbol(p),
     abrirUrl: async () => undefined,

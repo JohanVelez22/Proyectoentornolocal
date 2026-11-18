@@ -102,6 +102,23 @@ export class Supervisor {
     return this.entradas.get(id)?.pid ?? null;
   }
 
+  /** Último mensaje del proceso (p. ej. la cola del log tras un error). */
+  mensaje(id: string): string | undefined {
+    return this.entradas.get(id)?.mensaje;
+  }
+
+  /**
+   * Antes de un apagado limpio: la salida que venga no cuenta como caída (no se reinicia).
+   * La entrada se conserva hasta `detener`.
+   */
+  marcarDeteniendo(id: string): void {
+    const entrada = this.entradas.get(id);
+    if (!entrada) return;
+    entrada.detenido = true;
+    if (entrada.temporizador) clearTimeout(entrada.temporizador);
+    entrada.temporizador = null;
+  }
+
   alSalir(fn: (id: string, codigo: number | null) => void): void {
     this.oyentesSalida.push(fn);
   }
@@ -281,6 +298,12 @@ export class Supervisor {
     codigo: number | null,
     motivo?: string,
   ): void {
+    if (entrada.detenido && pid !== null && entrada.pid === pid) {
+      // Salida esperada tras marcarDeteniendo: se libera el PID sin reiniciar.
+      entrada.pid = null;
+      this.hijos.delete(entrada.def.id);
+      return;
+    }
     if (entrada.detenido || this.cerrado) return;
     if (pid !== null && entrada.pid !== pid) return; // ya gestionado
     const { def } = entrada;

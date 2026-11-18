@@ -22,6 +22,7 @@ const falsa = (): Plataforma => ({
     return { ok: true };
   },
   quienUsaPuerto: async () => null,
+  duenosDePuertos: async () => new Map(),
   procesoVivo: async () => ({ vivo: false }),
   matarArbol: async () => undefined,
   abrirUrl: async () => undefined,
@@ -456,5 +457,55 @@ describe('Nucleo.crear y la migración de la carpeta de datos', () => {
     nucleos.push(n);
     expect(n.rutas.base).toBe(base);
     expect(n.avisoInicio).toBe('aviso de prueba');
+  });
+});
+
+describe('Nucleo y credenciales', () => {
+  const clave = 'Abc123Abc123Abc123Ab';
+
+  it('migra las credenciales de config.json a etc/credenciales.json y config.leer no las devuelve', async () => {
+    writeFileSync(
+      path.join(base, 'config.json'),
+      JSON.stringify({
+        version: 1,
+        sitios: [],
+        credenciales: { mysql: { usuario: 'root', clave }, basura: { x: 1 } },
+      }),
+    );
+    const n = await crear();
+    const cfg = await n.config.leer();
+    expect(cfg).not.toHaveProperty('credenciales');
+    expect(JSON.stringify(cfg)).not.toContain(clave);
+    expect(readFileSync(path.join(base, 'config.json'), 'utf8')).not.toContain(clave);
+    expect(await n.credenciales('mysql')).toEqual({ usuario: 'root', clave });
+    expect(await n.credenciales('postgresql')).toBeNull();
+    const archivo = JSON.parse(readFileSync(path.join(base, 'etc', 'credenciales.json'), 'utf8'));
+    expect(archivo).toEqual({ mysql: { usuario: 'root', clave } });
+  });
+
+  it('la migración no pisa credenciales ya guardadas en etc/credenciales.json', async () => {
+    mkdirSync(path.join(base, 'etc'), { recursive: true });
+    writeFileSync(
+      path.join(base, 'etc', 'credenciales.json'),
+      JSON.stringify({ mysql: { usuario: 'root', clave: 'Nueva' } }),
+    );
+    writeFileSync(
+      path.join(base, 'config.json'),
+      JSON.stringify({ credenciales: { mysql: { usuario: 'root', clave: 'Vieja' } } }),
+    );
+    const n = await crear();
+    expect((await n.credenciales('mysql'))?.clave).toBe('Nueva');
+  });
+
+  it('un config.json corrupto no se lleva las credenciales', async () => {
+    mkdirSync(path.join(base, 'etc'), { recursive: true });
+    writeFileSync(
+      path.join(base, 'etc', 'credenciales.json'),
+      JSON.stringify({ postgresql: { usuario: 'postgres', clave } }),
+    );
+    writeFileSync(path.join(base, 'config.json'), '{ esto no es json');
+    const n = await crear();
+    await n.config.leer();
+    expect(await n.credenciales('postgresql')).toEqual({ usuario: 'postgres', clave });
   });
 });

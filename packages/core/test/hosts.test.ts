@@ -5,7 +5,12 @@ import { carpetaTemporal } from './temporales';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { GestorHosts } from '../src/hosts/hosts';
 import type { Plataforma, ResultadoEscritura } from '../src/plataforma/tipos';
-import { PlataformaWindows, interpretarNetstat, interpretarTasklist } from '../src/plataforma/win';
+import {
+  PlataformaWindows,
+  ejecutorPorDefecto,
+  interpretarNetstat,
+  interpretarTasklist,
+} from '../src/plataforma/win';
 
 let ruta: string;
 let llamadas: number;
@@ -21,6 +26,7 @@ function falsa(): Plataforma {
       return resultado;
     },
     quienUsaPuerto: async () => null,
+    duenosDePuertos: async () => new Map(),
     procesoVivo: async () => ({ vivo: false }),
     matarArbol: async () => undefined,
     abrirUrl: async () => undefined,
@@ -167,6 +173,32 @@ describe('PlataformaWindows con ejecutor falso', () => {
     expect(await p.quienUsaPuerto(81)).toBeNull();
   });
 
+  it('duenosDePuertos resuelve varios puertos con un solo netstat y un solo tasklist', async () => {
+    const llamadas: string[] = [];
+    const p = new PlataformaWindows(async (cmd) => {
+      llamadas.push(cmd);
+      return cmd === 'netstat'
+        ? { codigo: 0, stdout: NETSTAT, stderr: '' }
+        : {
+            codigo: 0,
+            stdout: [
+              '"nginx.exe","4321","Console","1","1 KB"',
+              '"FlyEnv.exe","777","Console","1","1 KB"',
+            ].join('\r\n'),
+            stderr: '',
+          };
+    });
+    const m = await p.duenosDePuertos([80, 9830, 8080, 81]);
+    expect(llamadas).toEqual(['netstat', 'tasklist']);
+    expect(m.get(80)).toEqual({ pid: 4321, nombre: 'nginx.exe' });
+    expect(m.get(9830)).toEqual({ pid: 777, nombre: 'FlyEnv.exe' });
+    expect(m.get(8080)).toEqual({ pid: 555, nombre: 'desconocido' });
+    expect(m.has(81)).toBe(false);
+    llamadas.length = 0;
+    expect((await p.duenosDePuertos([])).size).toBe(0);
+    expect(llamadas).toEqual([]);
+  });
+
   it('procesoVivo devuelve el ejecutable o no vivo', async () => {
     const vivo = new PlataformaWindows(async () => ({
       codigo: 0,
@@ -224,5 +256,17 @@ describe('PlataformaWindows con ejecutor falso', () => {
       return { codigo: 0, stdout: '', stderr: '' };
     });
     expect(await ok.escribirComoAdmin(destino, 'nuevo')).toEqual({ ok: true });
+  });
+});
+
+describe('ejecutorPorDefecto', () => {
+  it('pasa env extra y escribe la entrada estándar', async () => {
+    const r = await ejecutorPorDefecto(
+      process.execPath,
+      ['-e', 'process.stdin.on("data", (d) => process.stdout.write(process.env.PEL_X + ":" + d))'],
+      { env: { PEL_X: 'secreto' }, entrada: 'hola', timeoutMs: 10000 },
+    );
+    expect(r.codigo).toBe(0);
+    expect(r.stdout).toBe('secreto:hola');
   });
 });

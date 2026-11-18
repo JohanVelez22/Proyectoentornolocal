@@ -1,14 +1,21 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AlmacenCredenciales } from '../src/almacen';
 import type { Ejecutor, Plataforma } from '../src/plataforma/tipos';
+import { PlataformaWindows } from '../src/plataforma/win';
 import type { DefProceso, EstadoProceso } from '../src/procesos/supervisor';
-import { Rutas } from '../src/rutas';
+import { claveMayor, Rutas } from '../src/rutas';
 import { DEFINICIONES, registrarDefinicion } from '../src/servicios/datos';
-import { generarClave, type CtxServicio, type DefServicio } from '../src/servicios/definicion';
+import {
+  CACHE_CONFLICTOS_MS,
+  generarClave,
+  type CtxServicio,
+  type DefServicio,
+} from '../src/servicios/definicion';
 import { ErrorPuertoOcupado } from '../src/servicios/nginx';
-import { Servicios } from '../src/servicios/servicios';
+import { Servicios, type DepsServicios } from '../src/servicios/servicios';
 import { ConfigSchema, type Config } from '../src/tipos';
 
 let base: string;
@@ -22,6 +29,9 @@ let respuestas: Set<number>;
 let instalados: Record<string, string[]>;
 let cfg: Config;
 let guardados: number;
+let orden: string[];
+let mensajes: Map<string, string>;
+let consultas: number[][];
 
 const supervisor = () =>
   ({
@@ -31,17 +41,24 @@ const supervisor = () =>
       pids.set(d.id, 1000 + iniciados.length);
     },
     detener: async (id: string) => {
+      orden.push(`detener:${id}`);
       detenidos.push(id);
       estados.delete(id);
       pids.delete(id);
     },
     estado: (id: string) => estados.get(id) ?? 'apagado',
     pid: (id: string) => pids.get(id) ?? null,
+    marcarDeteniendo: (id: string) => orden.push(`marcar:${id}`),
+    mensaje: (id: string) => mensajes.get(id),
   }) as never;
 
 const plataforma = (): Plataforma =>
   ({
     quienUsaPuerto: async (p: number) => ocupados.get(p) ?? null,
+    duenosDePuertos: async (ps: number[]) => {
+      consultas.push(ps);
+      return new Map(ps.filter((x) => ocupados.has(x)).map((x) => [x, ocupados.get(x)!]));
+    },
     procesoVivo: async () => ({ vivo: false }),
     ejecutable: (n: string) => `${n}.exe`,
   }) as unknown as Plataforma;
@@ -94,7 +111,7 @@ function defFalsa(o: Partial<DefServicio> = {}): DefFalsa {
   return d;
 }
 
-const crear = (defs: DefServicio[]) =>
+const crear = (defs: DefServicio[], extra: Partial<DepsServicios> = {}) =>
   new Servicios({
     rutas,
     plataforma: plataforma(),
@@ -110,6 +127,7 @@ const crear = (defs: DefServicio[]) =>
     sonda: async (p) => respuestas.has(p),
     exec,
     definiciones: defs,
+    ...extra,
   });
 
 beforeEach(() => {
@@ -124,6 +142,9 @@ beforeEach(() => {
   instalados = { mysql: ['8.4.13'] };
   cfg = ConfigSchema.parse({});
   guardados = 0;
+  orden = [];
+  mensajes = new Map();
+  consultas = [];
 });
 afterEach(() => rmSync(base, { recursive: true, force: true }));
 
@@ -139,7 +160,11 @@ describe('Config de servicios de datos', () => {
       mailpit: { version: null, puerto: 1025, autoIniciar: false },
       ollama: { version: null, puerto: 11434, autoIniciar: false },
     });
-    expect(c.credenciales).toEqual({});
+    // Las credenciales viven en etc/credenciales.json, nunca en config.json.
+    expect(c).not.toHaveProperty('credenciales');
+    expect(
+      ConfigSchema.parse({ credenciales: { mysql: { usuario: 'a', clave: 'b' } } }),
+    ).not.toHaveProperty('credenciales');
   });
 
   it('conserva lo guardado y completa lo que falta', () => {
@@ -153,6 +178,17 @@ describe('rutas.datos', () => {
   it('usa data/<servicio>/<mayor.menor>', () => {
     expect(rutas.datos('mysql', '8.4.13')).toBe(path.join(base, 'data', 'mysql', '8.4'));
     expect(rutas.datos('postgresql', '17.12')).toBe(path.join(base, 'data', 'postgresql', '17.12'));
+  });
+
+  it('usa claveDatos si se indica y rechaza claves con separadores', () => {
+    expect(rutas.datos('postgresql', '17.12', claveMayor)).toBe(
+      path.join(base, 'data', 'postgresql', '17'),
+    );
+    expect(rutas.datos('ollama', '0.13.5', () => 'actual')).toBe(
+      path.join(base, 'data', 'ollama', 'actual'),
+    );
+    expect(() => rutas.datos('x', '1.0', () => '..')).toThrow();
+    expect(() => rutas.datos('x', '1.0', () => 'a/b')).toThrow();
   });
 });
 
@@ -193,7 +229,8 @@ describe('Servicios con definiciones', () => {
     expect(ctx.exec).toBe(exec);
     expect(ctx.credenciales.usuario).toBe('root');
     expect(ctx.credenciales.clave).toMatch(/^[A-Za-z0-9]{20}$/);
-    expect(cfg.credenciales.mysql).toEqual(ctx.credenciales);
+    expect(await new AlmacenCredenciales(rutas).leer('mysql')).toEqual(ctx.credenciales);
+    expect(cfg).not.toHaveProperty('credenciales');
     expect(existsSync(path.join(ctx.datos, '.pel-inicializado'))).toBe(true);
     expect(iniciados).toHaveLength(1);
     expect(iniciados[0]).toMatchObject({
@@ -220,7 +257,9 @@ describe('Servicios con definiciones', () => {
     expect(existsSync(rutas.datos('mysql', '8.4.13'))).toBe(false);
     expect(iniciados).toHaveLength(0);
     // las credenciales quedan para el siguiente intento
-    expect(cfg.credenciales.mysql?.clave).toMatch(/^[A-Za-z0-9]{20}$/);
+    expect((await new AlmacenCredenciales(rutas).leer('mysql'))?.clave).toMatch(
+      /^[A-Za-z0-9]{20}$/,
+    );
   });
 
   it('si la carpeta de datos ya existía no la borra al fallar', async () => {
@@ -490,5 +529,159 @@ describe('borrarDatos', () => {
     await s.borrarDatos('mysql', 'mysql');
     expect(detenidos).toEqual(['mysql']);
     expect(existsSync(path.join(base, 'data', 'mysql'))).toBe(false);
+  });
+});
+
+describe('ronda de correcciones 1', () => {
+  it('detener marca el proceso como deteniéndose antes del apagado limpio', async () => {
+    const d = defFalsa({
+      detenerLimpio: async () => {
+        orden.push('limpio');
+      },
+    });
+    const s = crear([d]);
+    await s.iniciar('mysql');
+    await s.detener('mysql');
+    expect(orden).toEqual(['marcar:mysql', 'limpio', 'detener:mysql']);
+  });
+
+  it('limpia una carpeta de datos que un intento anterior dejó a medias (.pel-creando)', async () => {
+    const datos = rutas.datos('mysql', '8.4.13');
+    mkdirSync(datos, { recursive: true });
+    writeFileSync(path.join(datos, 'basura'), 'a medias');
+    writeFileSync(`${datos}.pel-creando`, 'x');
+    const vistos: { datosExiste: boolean; creandoExiste: boolean }[] = [];
+    const d = defFalsa();
+    const original = d.inicializar.bind(d);
+    d.inicializar = async (ctx) => {
+      vistos.push({
+        datosExiste: existsSync(ctx.datos),
+        creandoExiste: existsSync(`${ctx.datos}.pel-creando`),
+      });
+      await original(ctx);
+    };
+    await crear([d]).iniciar('mysql');
+    expect(vistos).toEqual([{ datosExiste: false, creandoExiste: true }]);
+    expect(existsSync(path.join(datos, 'basura'))).toBe(false);
+    expect(existsSync(path.join(datos, '.pel-inicializado'))).toBe(true);
+    expect(existsSync(`${datos}.pel-creando`)).toBe(false);
+  });
+
+  it('si inicializar falla también quita .pel-creando', async () => {
+    const d = defFalsa();
+    d.fallar = true;
+    await expect(crear([d]).iniciar('mysql')).rejects.toThrow(/No se pudo preparar/);
+    const datos = rutas.datos('mysql', '8.4.13');
+    expect(existsSync(datos)).toBe(false);
+    expect(existsSync(`${datos}.pel-creando`)).toBe(false);
+  });
+
+  it('usa claveDatos del DefServicio para la carpeta de datos', async () => {
+    const d = defFalsa({ claveDatos: () => 'actual' });
+    await crear([d]).iniciar('mysql');
+    expect(d.inits[0]!.datos).toBe(path.join(base, 'data', 'mysql', 'actual'));
+  });
+
+  it('borrarDatos reintenta y explica el fallo en español', async () => {
+    const llamadas: [string, unknown][] = [];
+    const s = crear([defFalsa()], {
+      borrar: async (ruta, opciones) => {
+        llamadas.push([ruta, opciones]);
+        throw Object.assign(new Error('EBUSY: resource busy or locked'), { code: 'EBUSY' });
+      },
+    });
+    await expect(s.borrarDatos('mysql', 'mysql')).rejects.toThrow(
+      'No se pudieron borrar los datos de MySQL: cierre los programas que usen la carpeta e intente de nuevo.',
+    );
+    expect(llamadas).toEqual([
+      [
+        path.join(base, 'data', 'mysql'),
+        { recursive: true, force: true, maxRetries: 10, retryDelay: 200 },
+      ],
+    ]);
+  });
+
+  it('en error, estados() muestra el mensaje del supervisor (cola del log)', async () => {
+    estados.set('mysql', 'error');
+    mensajes.set('mysql', '[ERROR] InnoDB: no se pudo abrir ibdata1');
+    respuestas.add(3306);
+    ocupados.set(3306, { pid: 5, nombre: 'otro.exe' });
+    const my = (await crear([defFalsa()]).estados()).find((x) => x.id === 'mysql')!;
+    expect(my.estado).toBe('error');
+    expect(my.mensaje).toBe('[ERROR] InnoDB: no se pudo abrir ibdata1');
+  });
+
+  it('cambiarPuerto rechaza los puertos fijos de la aplicación', async () => {
+    const s = crear([defFalsa()]);
+    const casos: [number, string][] = [
+      [8090, 'Adminer'],
+      [2121, 'FTP'],
+      [50000, 'FTP (puertos pasivos)'],
+      [50100, 'FTP (puertos pasivos)'],
+      [9000, 'PHP'],
+      [9841, 'PHP'],
+      [9999, 'PHP'],
+    ];
+    for (const [p, nombre] of casos) {
+      await expect(s.cambiarPuerto('mysql', p)).rejects.toThrow(
+        `El puerto ${p} ya está asignado a ${nombre}.`,
+      );
+    }
+    (cfg.servicios as { https?: { puerto: number } }).https = { puerto: 8443 };
+    await expect(s.cambiarPuerto('mysql', 8443)).rejects.toThrow(
+      'El puerto 8443 ya está asignado a HTTPS.',
+    );
+    await expect(s.cambiarPuerto('mysql', 50101)).resolves.toBeUndefined();
+  });
+
+  it('dos servicios en conflicto: un solo netstat por estados() y caché de 15 s', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      instalados = { mysql: ['8.4.13'], redis: ['8.10.3'] };
+      respuestas = new Set([3306, 6379]);
+      const llamadas: string[] = [];
+      const netstat = [
+        '  TCP    127.0.0.1:3306         0.0.0.0:0              LISTENING       777',
+        '  TCP    0.0.0.0:6379           0.0.0.0:0              LISTENING       778',
+      ].join('\r\n');
+      const tasklist = [
+        '"FlyEnv.exe","777","Console","1","1 KB"',
+        '"redis.exe","778","Console","1","1 KB"',
+      ].join('\r\n');
+      const real = new PlataformaWindows(async (cmd) => {
+        llamadas.push(cmd);
+        return { codigo: 0, stdout: cmd === 'netstat' ? netstat : tasklist, stderr: '' };
+      });
+      const redis = defFalsa({
+        id: 'redis',
+        nombre: 'Redis',
+        puertoPorDefecto: 6379,
+        puertoAlternativo: 6380,
+      });
+      const s = crear([defFalsa(), redis], { plataforma: real });
+      const netstats = (): number => llamadas.filter((c) => c === 'netstat').length;
+
+      const e = await s.estados();
+      expect(netstats()).toBe(1);
+      expect(e.find((x) => x.id === 'mysql')!.mensaje).toBe(
+        'El puerto 3306 lo usa FlyEnv.exe (PID 777). Use el puerto 3308.',
+      );
+      expect(e.find((x) => x.id === 'redis')!.mensaje).toBe(
+        'El puerto 6379 lo usa redis.exe (PID 778). Use el puerto 6380.',
+      );
+
+      await s.estados();
+      expect(netstats()).toBe(1);
+      vi.setSystemTime(Date.now() + CACHE_CONFLICTOS_MS + 1);
+      await s.estados();
+      expect(netstats()).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sin puertos que respondan no consulta netstat', async () => {
+    await crear([defFalsa()]).estados();
+    expect(consultas).toEqual([]);
   });
 });

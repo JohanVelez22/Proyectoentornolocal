@@ -221,6 +221,34 @@ describe('Supervisor', () => {
     await s.cerrar();
   });
 
+  it('tras marcarDeteniendo una salida limpia nunca relanza el proceso', async () => {
+    const s = crear();
+    await s.iniciar(def());
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(s.estado('nginx')).toBe('encendido');
+    s.marcarDeteniendo('nginx');
+    morir(hijos[0]!); // p. ej. mysqladmin shutdown
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(hijos).toHaveLength(1);
+    expect(s.pid('nginx')).toBeNull();
+    await s.detener('nginx');
+    expect(matados).toEqual([]);
+    expect(s.estado('nginx')).toBe('apagado');
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(hijos).toHaveLength(1);
+    await s.cerrar();
+  });
+
+  it('mensaje() expone la cola del log cuando el proceso queda en error', async () => {
+    const s = crear();
+    await s.iniciar(def({ reiniciar: false }));
+    writeFileSync(def().log, 'linea 1\n[ERROR] puerto en uso\n');
+    morir(hijos[0]!);
+    expect(s.estado('nginx')).toBe('error');
+    expect(s.mensaje('nginx')).toContain('[ERROR] puerto en uso');
+    await s.cerrar();
+  });
+
   it('alSalir se invoca con id y código en una muerte inesperada', async () => {
     const s = crear();
     const fn = vi.fn();

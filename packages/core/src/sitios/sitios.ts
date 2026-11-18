@@ -186,6 +186,11 @@ export class GestorSitios {
     return nuevo;
   }
 
+  /** Ejecuta `fn` en la cola de escrituras de configuración (p. ej. etc/credenciales.json). */
+  enCola<T>(fn: () => Promise<T>): Promise<T> {
+    return this.serializar(fn);
+  }
+
   /** Lee, modifica y guarda la configuración en la misma cola que los sitios. */
   modificarConfig(fn: (c: Config) => void): Promise<void> {
     return this.serializar(async () => {

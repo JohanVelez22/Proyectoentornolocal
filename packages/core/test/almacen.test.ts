@@ -2,7 +2,8 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { carpetaTemporal } from './temporales';
-import { Almacen } from '../src/almacen';
+import { mkdir } from 'node:fs/promises';
+import { Almacen, AlmacenCredenciales } from '../src/almacen';
 import { Eventos } from '../src/eventos';
 import { Rutas } from '../src/rutas';
 
@@ -71,5 +72,30 @@ describe('Eventos', () => {
     off();
     e.emit('a', 2);
     expect(vistos).toEqual([1]);
+  });
+});
+
+describe('AlmacenCredenciales', () => {
+  it('genera una sola vez aunque se pida en paralelo y escribe de forma atómica', async () => {
+    const c = new AlmacenCredenciales(rutas);
+    let n = 0;
+    const crear = () => ({ usuario: 'root', clave: `clave${++n}` });
+    const [a, b] = await Promise.all([
+      c.obtenerOCrear('mysql', crear),
+      c.obtenerOCrear('mysql', crear),
+    ]);
+    expect(a).toEqual(b);
+    expect(n).toBe(1);
+    expect(JSON.parse(await readFile(rutas.credenciales(), 'utf8'))).toEqual({ mysql: a });
+    expect((await readdir(join(rutas.base, 'etc'))).filter((f) => f.endsWith('.tmp'))).toEqual([]);
+  });
+
+  it('un archivo corrupto se aparta como copia y no rompe la lectura', async () => {
+    await mkdir(join(rutas.base, 'etc'), { recursive: true });
+    await writeFile(rutas.credenciales(), '{ roto');
+    const c = new AlmacenCredenciales(rutas);
+    expect(await c.leer('mysql')).toBeNull();
+    const archivos = await readdir(join(rutas.base, 'etc'));
+    expect(archivos.some((f) => f.startsWith('credenciales.corrupto-'))).toBe(true);
   });
 });

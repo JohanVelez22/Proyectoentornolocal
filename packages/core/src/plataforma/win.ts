@@ -7,7 +7,7 @@ import type { Ejecutor, Plataforma, ResultadoEscritura } from './tipos';
 
 export const ejecutorPorDefecto: Ejecutor = (cmd, args, opts) =>
   new Promise((resolve) => {
-    execFile(
+    const hijo = execFile(
       cmd,
       args,
       {
@@ -16,6 +16,7 @@ export const ejecutorPorDefecto: Ejecutor = (cmd, args, opts) =>
         timeout: opts?.timeoutMs,
         cwd: opts?.cwd,
         maxBuffer: 16 * 1024 * 1024,
+        ...(opts?.env ? { env: { ...process.env, ...opts.env } } : {}),
       },
       (err, stdout, stderr) => {
         const code = (err as { code?: unknown } | null)?.code;
@@ -27,7 +28,31 @@ export const ejecutorPorDefecto: Ejecutor = (cmd, args, opts) =>
         });
       },
     );
+    if (opts?.entrada !== undefined) {
+      hijo.stdin?.on('error', () => undefined);
+      hijo.stdin?.end(opts.entrada);
+    }
   });
+
+/** PID en escucha de cada puerto pedido (una sola pasada por la salida de netstat). */
+export function interpretarNetstatVarios(salida: string, puertos: number[]): Map<number, number> {
+  const res = new Map<number, number>();
+  for (const p of new Set(puertos)) {
+    const pid = interpretarNetstat(salida, p);
+    if (pid !== null) res.set(p, pid);
+  }
+  return res;
+}
+
+/** Todas las filas "nombre","pid" de `tasklist /FO CSV /NH`. */
+export function interpretarTasklistTodos(salida: string): Map<number, string> {
+  const res = new Map<number, string>();
+  for (const linea of salida.split(/\r?\n/)) {
+    const m = /^"([^"]*)","(\d+)"/.exec(linea.trim());
+    if (m) res.set(Number(m[2]), m[1] ?? '');
+  }
+  return res;
+}
 
 export function interpretarNetstat(salida: string, puerto: number): number | null {
   for (const linea of salida.split(/\r?\n/)) {
@@ -103,6 +128,19 @@ export class PlataformaWindows implements Plataforma {
       timeoutMs: 15000,
     });
     return interpretarTasklist(t.stdout) ?? { pid, nombre: 'desconocido' };
+  }
+
+  async duenosDePuertos(puertos: number[]): Promise<Map<number, { pid: number; nombre: string }>> {
+    const res = new Map<number, { pid: number; nombre: string }>();
+    if (puertos.length === 0) return res;
+    const r = await this.ejecutar('netstat', ['-ano', '-p', 'TCP'], { timeoutMs: 15000 });
+    const pids = interpretarNetstatVarios(r.stdout, puertos);
+    if (pids.size === 0) return res;
+    const t = await this.ejecutar('tasklist', ['/FO', 'CSV', '/NH'], { timeoutMs: 15000 });
+    const nombres = interpretarTasklistTodos(t.stdout);
+    for (const [puerto, pid] of pids)
+      res.set(puerto, { pid, nombre: nombres.get(pid) ?? 'desconocido' });
+    return res;
   }
 
   async procesoVivo(pid: number): Promise<{ vivo: boolean; ejecutable?: string }> {

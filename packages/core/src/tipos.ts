@@ -57,7 +57,17 @@ const servicioDatos = (puerto: number) =>
     })
     .prefault({});
 
-const CredencialesSchema = z.object({ usuario: z.string().min(1), clave: z.string().min(1) });
+export const CredencialesSchema = z.object({
+  usuario: z.string().min(1),
+  clave: z.string().min(1),
+});
+export type Credenciales = z.infer<typeof CredencialesSchema>;
+
+/** Contenido de etc/credenciales.json (fuera de config.json: nunca viaja por config.leer). */
+export const ArchivoCredencialesSchema = z
+  .partialRecord(z.enum(IDS_SERVICIO_DATOS), CredencialesSchema)
+  .default({});
+export type ArchivoCredenciales = z.infer<typeof ArchivoCredencialesSchema>;
 
 export const ConfigSchema = z.object({
   version: z.literal(1).default(1),
@@ -90,8 +100,6 @@ export const ConfigSchema = z.object({
         .prefault({}),
     })
     .prefault({}),
-  /** Credenciales de los servicios propios; se generan la primera vez que hacen falta. */
-  credenciales: z.partialRecord(z.enum(IDS_SERVICIO_DATOS), CredencialesSchema).default({}),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 

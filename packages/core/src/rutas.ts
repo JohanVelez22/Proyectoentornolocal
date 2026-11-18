@@ -22,16 +22,38 @@ export function rutaBasePorDefecto(
   return path.posix.join(datos, nombre);
 }
 
+/** "8.4.13" → "8.4"; si no tiene esa forma, la versión tal cual. */
+export function claveMayorMenor(version: string): string {
+  const m = /^(\d+)\.(\d+)/.exec(version);
+  return m ? `${m[1]}.${m[2]}` : version;
+}
+
+/** "17.12" → "17"; si no empieza por un número, la versión tal cual. */
+export function claveMayor(version: string): string {
+  const m = /^(\d+)/.exec(version);
+  return m ? m[1]! : version;
+}
+
 export class Rutas {
   constructor(readonly base: string) {}
 
   bin(servicio: string, version: string): string {
     return path.join(this.base, 'bin', servicio, version);
   }
-  /** Datos de un servicio: data/<servicio>/<mayor.menor> (la versión es la clave instalada). */
-  datos(servicio: string, version: string): string {
-    const m = /^(\d+)\.(\d+)/.exec(version);
-    return path.join(this.base, 'data', servicio, m ? `${m[1]}.${m[2]}` : version);
+  /**
+   * Datos de un servicio: data/<servicio>/<clave>. La clave sale de `claveDatos(version)` (la
+   * del DefServicio) o, por defecto, es "mayor.menor" de la versión instalada.
+   */
+  datos(servicio: string, version: string, claveDatos?: (version: string) => string): string {
+    const clave = claveDatos ? claveDatos(version) : claveMayorMenor(version);
+    if (!clave || clave === '.' || clave === '..' || /[\\/:]/.test(clave)) {
+      throw new Error(`Clave de datos no válida: ${clave}`);
+    }
+    return path.join(this.base, 'data', servicio, clave);
+  }
+  /** Credenciales de los servicios propios (fuera de config.json). */
+  credenciales(): string {
+    return path.join(this.base, 'etc', 'credenciales.json');
   }
   nginxConf(): string {
     return path.join(this.base, 'etc', 'nginx', 'nginx.conf');

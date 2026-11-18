@@ -2,12 +2,14 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import type { AlmacenCredenciales } from '../almacen';
 import type { Ejecutor, Plataforma } from '../plataforma/tipos';
 import type { DefProceso } from '../procesos/supervisor';
 import type { Rutas } from '../rutas';
 import {
   IDS_SERVICIO_DATOS,
   type Config,
+  type Credenciales,
   type EstadoServicio,
   type IdServicioDatos,
 } from '../tipos';
@@ -18,16 +20,14 @@ import {
   type SupervisorServicios,
 } from './nginx';
 
-export interface Credenciales {
-  usuario: string;
-  clave: string;
-}
-
 export interface CtxServicio {
   rutas: Rutas;
   /** Carpeta de instalación: bin/<servicio>/<version>. */
   bin: string;
-  /** Carpeta de datos: data/<servicio>/<mayor.menor>. En `inicializar` puede no existir aún. */
+  /**
+   * Carpeta de datos: data/<servicio>/<claveDatos(version)>. En `inicializar` no existe aún
+   * (initdb y mysqld --initialize la exigen vacía o inexistente).
+   */
   datos: string;
   /** Puerto configurado; `proceso` debe aplicarlo en cada arranque (puede cambiar). */
   puerto: number;
@@ -35,7 +35,8 @@ export interface CtxServicio {
   version: string;
   /**
    * Nunca se escriben en logs, mensajes de error ni URL, ni en `args`/`env` del DefProceso
-   * (el supervisor los guarda en run/estado.json).
+   * (el supervisor los guarda en run/estado.json). Para un cliente puntual use `exec` con
+   * `env` (PGPASSWORD, MYSQL_PWD) o `entrada`.
    */
   credenciales: Credenciales;
   exec: Ejecutor;
@@ -48,6 +49,11 @@ export interface DefServicio {
   puertoPorDefecto: number;
   puertoAlternativo?: number;
   puertosExtra?: number[];
+  /**
+   * Subcarpeta de datos para una versión instalada. Por defecto "mayor.menor"
+   * (MySQL/MariaDB/MongoDB); PostgreSQL y Redis usan `claveMayor`, Mailpit y Ollama 'actual'.
+   */
+  claveDatos?(version: string): string;
   // Prepara datos y configuración la primera vez; debe ser idempotente.
   inicializar(ctx: CtxServicio): Promise<void>;
   // El supervisor lo lanza con este DefProceso.
@@ -58,6 +64,12 @@ export interface DefServicio {
 
 /** Marca que se escribe en la carpeta de datos tras un `inicializar` correcto. */
 export const MARCA_INICIALIZADO = '.pel-inicializado';
+/**
+ * Sufijo del archivo hermano (`data/<id>/<clave>.pel-creando`) que indica que la carpeta de
+ * datos la está creando WolfCore Dev. Va fuera de la carpeta porque `inicializar` la necesita
+ * vacía. Si sigue ahí sin `.pel-inicializado`, un intento anterior quedó a medias.
+ */
+export const SUFIJO_CREANDO = '.pel-creando';
 
 export const NOMBRE_SERVICIO: Record<IdServicioDatos, string> = {
   mysql: 'MySQL',
@@ -78,6 +90,18 @@ export const USUARIO_POR_DEFECTO: Record<IdServicioDatos, string> = {
   mailpit: 'mailpit',
   ollama: 'ollama',
 };
+
+/** Puertos fijos de la aplicación que ningún servicio de datos puede tomar. */
+function puertosFijos(cfg: Config): { desde: number; hasta: number; nombre: string }[] {
+  const https = (cfg.servicios as { https?: { puerto?: number } }).https?.puerto ?? 443;
+  return [
+    { desde: https, hasta: https, nombre: 'HTTPS' },
+    { desde: 8090, hasta: 8090, nombre: 'Adminer' },
+    { desde: 2121, hasta: 2121, nombre: 'FTP' },
+    { desde: 50000, hasta: 50100, nombre: 'FTP (puertos pasivos)' },
+    { desde: 9000, hasta: 9999, nombre: 'PHP' },
+  ];
+}
 
 const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -110,6 +134,12 @@ export function mensajeConflicto(
 const mensajeDe = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 const pausa = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 const ESPERA_APAGADO_MS = 10_000;
+/** Los dueños de puertos en conflicto se reutilizan durante este tiempo. */
+export const CACHE_CONFLICTOS_MS = 15_000;
+/** Reintentos de borrado: en Windows un antivirus o un explorador puede retener archivos. */
+const OPCIONES_BORRADO = { recursive: true, force: true, maxRetries: 10, retryDelay: 200 };
+
+type Duenos = Map<number, { pid: number; nombre: string }>;
 
 export interface DepsServiciosDatos {
   rutas: Rutas;
@@ -119,15 +149,19 @@ export interface DepsServiciosDatos {
   leerConfig: () => Promise<Config>;
   /** Lee, modifica y guarda la configuración en la cola común (para no pisar otras escrituras). */
   modificarConfig: (fn: (c: Config) => void) => Promise<void>;
+  credenciales: Pick<AlmacenCredenciales, 'leer' | 'obtenerOCrear'>;
   sonda: (puerto: number) => Promise<boolean>;
   exec: Ejecutor;
   /** Se consulta en cada llamada: las definiciones pueden registrarse después. */
   definiciones: () => readonly DefServicio[];
+  /** Para pruebas: borrado recursivo (por defecto `fs.rm`). */
+  borrar?: (ruta: string, opciones: typeof OPCIONES_BORRADO) => Promise<void>;
 }
 
 /** Ciclo de vida de los servicios declarados con `DefServicio`. */
 export class ServiciosDatos {
   private readonly colas = new Map<string, Promise<unknown>>();
+  private cacheDuenos: { clave: string; hasta: number; duenos: Duenos } | null = null;
 
   constructor(private readonly d: DepsServiciosDatos) {}
 
@@ -152,36 +186,35 @@ export class ServiciosDatos {
   }
 
   /** Versión configurada si está instalada; si no, la más reciente instalada. */
-  async versionActiva(def: DefServicio): Promise<string> {
-    const cfg = await this.d.leerConfig();
+  async versionActiva(def: DefServicio, cfg?: Config): Promise<string> {
+    const c = cfg ?? (await this.d.leerConfig());
     const instaladas = await this.d.instalador.instalados(def.id);
-    const elegida = cfg.servicios.datos[def.id].version;
+    const elegida = c.servicios.datos[def.id].version;
     if (elegida && instaladas.includes(elegida)) return elegida;
     const nueva = [...instaladas].sort(compararVersiones).at(-1);
     if (!nueva) throw new Error(`${def.nombre} no está instalado. Instálelo desde Servicios.`);
     return nueva;
   }
 
-  /** Credenciales guardadas o, la primera vez, generadas y guardadas. */
-  async credenciales(id: IdServicioDatos): Promise<Credenciales> {
-    const guardada = (await this.d.leerConfig()).credenciales[id];
-    if (guardada) return guardada;
-    const nueva = { usuario: USUARIO_POR_DEFECTO[id], clave: generarClave() };
-    let final: Credenciales = nueva;
-    await this.d.modificarConfig((c) => {
-      const actual = c.credenciales[id] ?? nueva;
-      c.credenciales[id] = actual;
-      final = actual;
-    });
-    return final;
+  /** Carpeta de datos de `def` para `version` (usa su `claveDatos`). */
+  carpetaDatos(def: DefServicio, version: string): string {
+    const clave = def.claveDatos;
+    return this.d.rutas.datos(def.id, version, clave ? (v) => clave.call(def, v) : undefined);
   }
 
-  private async contexto(def: DefServicio, version: string): Promise<CtxServicio> {
-    const cfg = await this.d.leerConfig();
+  /** Credenciales guardadas o, la primera vez, generadas y guardadas. */
+  credenciales(id: IdServicioDatos): Promise<Credenciales> {
+    return this.d.credenciales.obtenerOCrear(id, () => ({
+      usuario: USUARIO_POR_DEFECTO[id],
+      clave: generarClave(),
+    }));
+  }
+
+  private async contexto(def: DefServicio, version: string, cfg: Config): Promise<CtxServicio> {
     return {
       rutas: this.d.rutas,
       bin: this.d.rutas.bin(def.id, version),
-      datos: this.d.rutas.datos(def.id, version),
+      datos: this.carpetaDatos(def, version),
       puerto: cfg.servicios.datos[def.id].puerto,
       version,
       credenciales: await this.credenciales(def.id),
@@ -189,10 +222,11 @@ export class ServiciosDatos {
     };
   }
 
-  /** Nombre del servicio propio (otro, o un puerto extra de este) que ya tiene asignado `puerto`. */
-  private async asignadoA(id: IdServicioDatos, puerto: number): Promise<string | null> {
-    const cfg = await this.d.leerConfig();
+  /** Quién tiene ya asignado `puerto`: Nginx, un puerto fijo de la app u otro servicio propio. */
+  private asignadoA(id: IdServicioDatos, puerto: number, cfg: Config): string | null {
     if (cfg.servicios.nginx.puerto === puerto) return 'Nginx';
+    const fijo = puertosFijos(cfg).find((f) => puerto >= f.desde && puerto <= f.hasta);
+    if (fijo) return fijo.nombre;
     for (const otro of IDS_SERVICIO_DATOS) {
       const def = this.def(otro);
       const extras = def?.puertosExtra ?? [];
@@ -202,12 +236,11 @@ export class ServiciosDatos {
     return null;
   }
 
-  /** Puerto libre que se puede sugerir en lugar de `puerto`, si lo hay. */
-  private async alternativo(def: DefServicio, puerto: number): Promise<number | undefined> {
+  /** Candidato a sugerir en lugar de `puerto` (falta comprobar que esté libre). */
+  private candidatoAlternativo(def: DefServicio, puerto: number, cfg: Config): number | undefined {
     const c = puerto === def.puertoAlternativo ? def.puertoPorDefecto : def.puertoAlternativo;
     if (c === undefined || c === puerto) return undefined;
-    if ((await this.asignadoA(def.id, c)) !== null) return undefined;
-    return (await this.d.plataforma.quienUsaPuerto(c)) ? undefined : c;
+    return this.asignadoA(def.id, c, cfg) === null ? c : undefined;
   }
 
   private puertos(def: DefServicio, cfg: Config): number[] {
@@ -219,12 +252,27 @@ export class ServiciosDatos {
     return e === 'encendido' || e === 'iniciando';
   }
 
+  /** Una sola consulta (netstat + tasklist) para todos los puertos. */
+  private async duenos(puertos: number[], usarCache: boolean): Promise<Duenos> {
+    const unicos = [...new Set(puertos)].sort((a, b) => a - b);
+    const clave = unicos.join(',');
+    const ahora = Date.now();
+    const c = this.cacheDuenos;
+    if (usarCache && c && c.clave === clave && ahora < c.hasta) return c.duenos;
+    const duenos = await this.d.plataforma.duenosDePuertos(unicos);
+    this.cacheDuenos = { clave, hasta: ahora + CACHE_CONFLICTOS_MS, duenos };
+    return duenos;
+  }
+
   private async verificarPuertos(def: DefServicio, cfg: Config): Promise<void> {
-    for (const [i, puerto] of this.puertos(def, cfg).entries()) {
-      const uso = await this.d.plataforma.quienUsaPuerto(puerto);
+    const puertos = this.puertos(def, cfg);
+    const alt = this.candidatoAlternativo(def, puertos[0]!, cfg);
+    const duenos = await this.duenos(alt === undefined ? puertos : [...puertos, alt], false);
+    for (const [i, puerto] of puertos.entries()) {
+      const uso = duenos.get(puerto);
       if (!uso || this.d.supervisor.pid(def.id) === uso.pid) continue;
-      const alt = i === 0 ? await this.alternativo(def, puerto) : undefined;
-      throw new ErrorPuertoOcupado(puerto, uso.pid, uso.nombre, alt);
+      const libre = i === 0 && alt !== undefined && !duenos.has(alt) ? alt : undefined;
+      throw new ErrorPuertoOcupado(puerto, uso.pid, uso.nombre, libre);
     }
   }
 
@@ -232,14 +280,22 @@ export class ServiciosDatos {
   private async prepararDatos(def: DefServicio, ctx: CtxServicio): Promise<void> {
     const marca = path.join(ctx.datos, MARCA_INICIALIZADO);
     if (existsSync(marca)) return;
+    const creando = `${ctx.datos}${SUFIJO_CREANDO}`;
+    // Un intento anterior nuestro quedó a medias (p. ej. se cerró la app): se empieza de cero.
+    if (existsSync(creando)) await rm(ctx.datos, OPCIONES_BORRADO);
     const existia = existsSync(ctx.datos);
     try {
       await mkdir(path.dirname(ctx.datos), { recursive: true });
+      if (!existia) await writeFile(creando, new Date().toISOString(), 'utf8');
       await def.inicializar(ctx);
       await mkdir(ctx.datos, { recursive: true });
       await writeFile(marca, new Date().toISOString(), 'utf8');
+      await rm(creando, { force: true });
     } catch (e) {
-      if (!existia) await rm(ctx.datos, { recursive: true, force: true }).catch(() => undefined);
+      if (!existia) {
+        await rm(ctx.datos, OPCIONES_BORRADO).catch(() => undefined);
+        await rm(creando, { force: true }).catch(() => undefined);
+      }
       throw new Error(`No se pudo preparar ${def.nombre}: ${mensajeDe(e)}`, { cause: e });
     }
   }
@@ -251,9 +307,11 @@ export class ServiciosDatos {
   private async iniciarSinCola(id: IdServicioDatos): Promise<void> {
     const def = this.requerir(id);
     if (this.vivo(id)) return;
-    const version = await this.versionActiva(def);
-    await this.verificarPuertos(def, await this.d.leerConfig());
-    const ctx = await this.contexto(def, version);
+    const cfg = await this.d.leerConfig();
+    const version = await this.versionActiva(def, cfg);
+    this.cacheDuenos = null;
+    await this.verificarPuertos(def, cfg);
+    const ctx = await this.contexto(def, version, cfg);
     await this.prepararDatos(def, ctx);
     const proceso = await def.proceso(ctx);
     await this.d.supervisor.iniciar({ ...proceso, id: def.id });
@@ -266,9 +324,14 @@ export class ServiciosDatos {
   private async detenerSinCola(id: IdServicioDatos): Promise<void> {
     const def = this.requerir(id);
     const pid = this.d.supervisor.pid(id);
+    this.cacheDuenos = null;
     if (pid !== null && def.detenerLimpio) {
+      // Sin esto, la salida limpia contaría como caída y el supervisor lo relanzaría.
+      this.d.supervisor.marcarDeteniendo?.(id);
       try {
-        await def.detenerLimpio(await this.contexto(def, await this.versionActiva(def)));
+        const cfg = await this.d.leerConfig();
+        const version = await this.versionActiva(def, cfg);
+        await def.detenerLimpio(await this.contexto(def, version, cfg));
         const limite = Date.now() + ESPERA_APAGADO_MS;
         while (Date.now() < limite && (await this.d.plataforma.procesoVivo(pid)).vivo) {
           await pausa(200);
@@ -289,7 +352,7 @@ export class ServiciosDatos {
       }
       const cfg = await this.d.leerConfig();
       if (cfg.servicios.datos[id].puerto === puerto) return;
-      const otro = await this.asignadoA(id, puerto);
+      const otro = this.asignadoA(id, puerto, cfg);
       if (otro !== null) throw new Error(`El puerto ${puerto} ya está asignado a ${otro}.`);
       const uso = await this.d.plataforma.quienUsaPuerto(puerto);
       if (uso && uso.pid !== this.d.supervisor.pid(id)) {
@@ -299,6 +362,7 @@ export class ServiciosDatos {
       await this.d.modificarConfig((c) => {
         c.servicios.datos[id].puerto = puerto;
       });
+      this.cacheDuenos = null;
       if (estaba) {
         await this.detenerSinCola(id);
         await this.iniciarSinCola(id);
@@ -318,23 +382,33 @@ export class ServiciosDatos {
         if (this.def(id)) await this.detenerSinCola(id);
         else await this.d.supervisor.detener(id);
       }
-      await rm(path.dirname(this.d.rutas.datos(id, '0.0')), { recursive: true, force: true });
+      const borrar = this.d.borrar ?? rm;
+      try {
+        await borrar(path.join(this.d.rutas.base, 'data', id), OPCIONES_BORRADO);
+      } catch (e) {
+        throw new Error(
+          `No se pudieron borrar los datos de ${nombre}: cierre los programas que usen la carpeta e intente de nuevo.`,
+          { cause: e },
+        );
+      }
     });
   }
 
-  /** Estados de los servicios definidos e instalados, con conflicto de puerto en `mensaje`. */
-  async estados(): Promise<EstadoServicio[]> {
-    const cfg = await this.d.leerConfig();
+  /**
+   * Estados de los servicios definidos e instalados. Si un puerto propio lo ocupa otro proceso,
+   * el conflicto va en `mensaje`; si el proceso quedó en error, la cola de su log.
+   */
+  async estados(cfg?: Config): Promise<EstadoServicio[]> {
+    const c = cfg ?? (await this.d.leerConfig());
     const sup = this.d.supervisor;
-    const res: EstadoServicio[] = [];
+    const res: { estado: EstadoServicio; def: DefServicio; ocupados: number[] }[] = [];
     for (const def of this.d.definiciones()) {
       let version: string;
       try {
-        version = await this.versionActiva(def);
+        version = await this.versionActiva(def, c);
       } catch {
         continue; // no instalado: no se muestra
       }
-      const puertos = this.puertos(def, cfg);
       const pid = sup.pid(def.id);
       const estado: EstadoServicio = {
         id: def.id,
@@ -342,22 +416,46 @@ export class ServiciosDatos {
         categoria: def.categoria,
         version,
         estado: sup.estado(def.id),
-        puertos,
+        puertos: this.puertos(def, c),
         pid,
       };
-      if (pid === null) {
-        for (const [i, puerto] of puertos.entries()) {
-          if (!(await this.d.sonda(puerto))) continue;
-          const uso = await this.d.plataforma.quienUsaPuerto(puerto);
+      const error = estado.estado === 'error' ? sup.mensaje?.(def.id) : undefined;
+      if (error) estado.mensaje = error;
+      // Solo se buscan conflictos en puertos que responden y que no son de nuestro proceso.
+      const ocupados: number[] = [];
+      if (pid === null && !error) {
+        for (const p of estado.puertos) if (await this.d.sonda(p)) ocupados.push(p);
+      }
+      res.push({ estado, def, ocupados });
+    }
+
+    const consulta: number[] = [];
+    for (const r of res) {
+      if (r.ocupados.length === 0) continue;
+      consulta.push(...r.ocupados);
+      const alt = this.candidatoAlternativo(r.def, r.estado.puertos[0]!, c);
+      if (alt !== undefined) consulta.push(alt);
+    }
+    if (consulta.length > 0) {
+      const duenos = await this.duenos(consulta, true);
+      for (const r of res) {
+        for (const puerto of r.ocupados) {
+          const uso = duenos.get(puerto);
           if (!uso) continue;
-          const alt = i === 0 ? await this.alternativo(def, puerto) : undefined;
-          estado.mensaje = mensajeConflicto(puerto, uso, alt);
+          const alt =
+            puerto === r.estado.puertos[0]
+              ? this.candidatoAlternativo(r.def, puerto, c)
+              : undefined;
+          r.estado.mensaje = mensajeConflicto(
+            puerto,
+            uso,
+            alt !== undefined && !duenos.has(alt) ? alt : undefined,
+          );
           break;
         }
       }
-      res.push(estado);
     }
-    return res;
+    return res.map((r) => r.estado);
   }
 
   /** Inicia los instalados con `autoIniciar`; devuelve los errores sin cortar en el primero. */

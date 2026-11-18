@@ -26,7 +26,8 @@ export class ErrorPuertoOcupado extends Error {
   }
 }
 
-export type SupervisorServicios = Pick<Supervisor, 'iniciar' | 'detener' | 'estado' | 'pid'>;
+export type SupervisorServicios = Pick<Supervisor, 'iniciar' | 'detener' | 'estado' | 'pid'> &
+  Partial<Pick<Supervisor, 'marcarDeteniendo' | 'mensaje'>>;
 export type InstaladorServicios = Pick<Instalador, 'instalados' | 'instalado'>;
 export type UpstreamPhp = { version: string; puertos: number[] };
 
@@ -68,8 +69,8 @@ export class ServicioNginx {
   ) {}
 
   /** Versión configurada si está instalada; si no, la más reciente instalada. */
-  async versionActiva(): Promise<string> {
-    const cfg = await this.leerConfig();
+  async versionActiva(config?: Config): Promise<string> {
+    const cfg = config ?? (await this.leerConfig());
     const instaladas = await this.instalador.instalados('nginx');
     const elegida = cfg.servicios.nginx.version;
     if (elegida && instaladas.includes(elegida)) return elegida;
