@@ -47,3 +47,5 @@ export * from './ia/ollama';
 export * from './runtimes/runtimes';
 export * from './proyectos/config';
 export * from './proyectos/detectar';
+export * from './proyectos/pasos';
+export * from './proyectos/recetas';

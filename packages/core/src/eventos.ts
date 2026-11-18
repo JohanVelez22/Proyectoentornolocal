@@ -9,6 +9,17 @@ export interface ProgresoBd {
   linea: string;
 }
 
+/** Estado de un paso de receta (Task 3). */
+export type EstadoPasoReceta = 'pendiente' | 'corriendo' | 'listo' | 'error' | 'omitido';
+
+export interface ProgresoReceta {
+  sitioId: string;
+  pasoId: string;
+  estado: EstadoPasoReceta;
+  /** Una línea del registro en vivo del paso (o el mensaje del error). */
+  linea?: string;
+}
+
 export interface ProgresoIa {
   modelo: string;
   estado: string;
@@ -24,6 +35,7 @@ export type EventosNucleo = {
   'hosts:estado': EstadoHosts;
   'bd:progreso': ProgresoBd;
   'ia:progreso': ProgresoIa;
+  'receta:progreso': ProgresoReceta;
   /** Hay un aviso de inicio nuevo (p. ej. servicios que no encendieron); se lee con tomarAvisoInicio. */
   'aviso:inicio': string;
 };

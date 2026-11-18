@@ -1,0 +1,500 @@
+import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { z } from 'zod';
+import type { EstadoPasoReceta, Eventos, EventosNucleo } from '../eventos';
+import type { Rutas } from '../rutas';
+import type { ProcesoProyecto, Sitio } from '../tipos';
+import {
+  leerConfigProyecto,
+  motorBdDe,
+  PasoRecetaSchema,
+  type PasoReceta,
+  type TipoPaso,
+} from './config';
+import { detectarProyecto, type Deteccion } from './detectar';
+import type { RegistroPasos } from './pasos';
+
+export const MENSAJE_NO_CONFIADO = 'Marque "Confío en este repositorio" para ejecutar la receta';
+export const MENSAJE_EN_CURSO = 'Ya hay una receta en curso para este proyecto';
+const MENSAJE_INTERRUMPIDA = 'Se interrumpió al cerrar el programa';
+
+/** Marcador del puerto libre en el comando de un proceso; lo reemplaza el paso sitio-crear. */
+export const MARCADOR_PUERTO = '{puerto}';
+
+/** Líneas de registro que se guardan por paso (las últimas). */
+export const MAX_LINEAS_PASO = 500;
+
+/* ───────────── Receta por defecto ───────────── */
+
+/** Proceso uvicorn de un proyecto FastAPI (con el Python del .venv del proyecto). */
+function procesoUvicorn(): ProcesoProyecto {
+  return {
+    id: 'uvicorn',
+    nombre: 'uvicorn',
+    comando: [
+      '.venv\\Scripts\\python.exe',
+      '-m',
+      'uvicorn',
+      'app:app',
+      '--host',
+      '127.0.0.1',
+      '--port',
+      MARCADOR_PUERTO,
+    ],
+    cwd: 'raiz',
+    autoIniciar: true,
+    reiniciar: true,
+    puerto: null,
+  };
+}
+
+/**
+ * Receta por defecto según la detección (spec 3.1). El id de cada paso es su tipo. El sitio se
+ * crea siempre con HTTPS. En FastAPI el "proceso uvicorn" va dentro de `sitio-crear`
+ * (`args.procesos`): ese paso lo registra en `sitio.procesos` con un puerto libre (Task 4).
+ */
+export function recetaPorDefecto(det: Deteccion): PasoReceta[] {
+  const receta: PasoReceta[] = [];
+  const motor = motorBdDe(det.servicios);
+  const paso = (
+    tipo: TipoPaso,
+    titulo: string,
+    extra: Pick<PasoReceta, 'args' | 'opcional'> = {},
+  ): void => {
+    receta.push({ id: tipo, tipo, titulo, ...extra });
+  };
+  const composer = (): void => paso('composer-install', 'Instalar dependencias de PHP (composer)');
+  const env = (): void => paso('env-crear', 'Crear el archivo .env');
+  const bdCrear = (): void => {
+    if (motor) paso('bd-crear', 'Crear la base de datos', { args: { motor } });
+  };
+  const npm = (): void => {
+    if (!det.tienePackageJson) return;
+    paso('npm-ci', 'Instalar dependencias de Node (npm ci)');
+    if (det.scriptsNpm.includes('build')) paso('npm-build', 'Compilar recursos (npm run build)');
+  };
+  const sitio = (args: Record<string, unknown> = {}): void =>
+    paso('sitio-crear', `Crear el sitio ${det.dominioSugerido}`, {
+      args: { tipo: det.tipo, dominio: det.dominioSugerido, php: det.php, https: true, ...args },
+    });
+
+  switch (det.tipo) {
+    case 'laravel':
+      composer();
+      env();
+      paso('key-generate', 'Generar la clave de la aplicación');
+      bdCrear();
+      paso('migrar', 'Migrar la base de datos');
+      paso('storage-link', 'Enlazar storage (storage:link)');
+      npm();
+      sitio();
+      break;
+    case 'codeigniter3':
+    case 'codeigniter4':
+      if (det.tieneComposer) composer();
+      env();
+      bdCrear();
+      if (motor) {
+        paso('bd-restaurar', 'Restaurar un respaldo', { opcional: true, args: { motor } });
+      }
+      if (det.tipo === 'codeigniter4') {
+        paso('migrar', 'Migrar la base de datos (spark migrate)', {
+          args: { comando: ['php', 'spark', 'migrate'] },
+        });
+      }
+      sitio();
+      break;
+    case 'fastapi':
+      paso('python-venv', 'Crear el entorno virtual (.venv)');
+      if (det.tieneRequirements || det.tienePyproject) {
+        paso('pip-install', 'Instalar dependencias de Python (pip)');
+      }
+      env();
+      bdCrear();
+      if (det.pgvector) paso('pgvector-activar', 'Activar pgvector en la base');
+      sitio({ procesos: [procesoUvicorn()] });
+      break;
+    default:
+      if (det.tieneComposer) composer();
+      npm();
+      sitio();
+  }
+  return receta;
+}
+
+/**
+ * Receta que se ejecuta para una carpeta: la de `wolfcore.yml` si trae pasos; si no (o no hay
+ * archivo), la receta por defecto. Un wolfcore.yml no válido lanza su error en español.
+ */
+export async function recetaEfectiva(carpeta: string, det: Deteccion): Promise<PasoReceta[]> {
+  const config = await leerConfigProyecto(carpeta);
+  if (config && config.receta.length > 0) return config.receta;
+  return recetaPorDefecto(det);
+}
+
+/* ───────────── Estado ───────────── */
+
+export const ESTADOS_RECETA = [
+  'inactiva',
+  'corriendo',
+  'lista',
+  'error',
+  'cancelada',
+  'incompleta',
+] as const;
+/**
+ * - `inactiva`: nunca se ejecutó (o su estado se perdió).
+ * - `lista`: todos los pasos quedaron listos u omitidos.
+ * - `incompleta`: quedan pasos pendientes (p. ej. tras reintentar uno solo con `soloPaso`).
+ */
+export type EstadoGeneralReceta = (typeof ESTADOS_RECETA)[number];
+
+const ESTADOS_PASO = ['pendiente', 'corriendo', 'listo', 'error', 'omitido'] as const;
+
+const PasoConEstadoSchema = PasoRecetaSchema.extend({
+  estado: z.enum(ESTADOS_PASO),
+  /** Mensaje del error, si falló. */
+  mensaje: z.string().optional(),
+  /** Últimas líneas del registro del paso. */
+  log: z.array(z.string()).default([]),
+});
+export type PasoConEstado = z.infer<typeof PasoConEstadoSchema>;
+
+const EstadoRecetaSchema = z.object({
+  sitioId: z.string(),
+  estado: z.enum(ESTADOS_RECETA),
+  pasos: z.array(PasoConEstadoSchema),
+  /** Fecha ISO del último cambio; null si nunca se ejecutó. */
+  actualizado: z.string().nullable(),
+});
+export type EstadoReceta = z.infer<typeof EstadoRecetaSchema>;
+
+export interface ResultadoReceta {
+  estado: Exclude<EstadoGeneralReceta, 'inactiva' | 'corriendo'>;
+  /** Paso que falló. */
+  pasoId?: string;
+  mensaje?: string;
+}
+
+export interface OpcionesReceta {
+  /** Corre desde este paso hasta el final; los anteriores que no estaban listos quedan omitidos. */
+  desde?: string;
+  /** Corre solo este paso; los demás conservan su estado. */
+  soloPaso?: string;
+  /** Receta a usar (la que editó el usuario en el asistente); si falta, ver `ejecutar`. */
+  receta?: PasoReceta[];
+}
+
+export interface DepsRecetas {
+  rutas: Rutas;
+  eventos: Eventos<EventosNucleo>;
+  pasos: RegistroPasos;
+  sitio: (id: string) => Sitio | undefined | Promise<Sitio | undefined>;
+  /** Receta de un sitio. Por defecto, `recetaEfectiva` sobre la detección de su carpeta. */
+  receta?: (sitio: Sitio) => Promise<PasoReceta[]>;
+}
+
+const RecetaSchema = z.array(PasoRecetaSchema).superRefine((r, ctx) => {
+  const vistos = new Set<string>();
+  r.forEach((p, i) => {
+    if (vistos.has(p.id)) {
+      ctx.addIssue({ code: 'custom', path: [i, 'id'], message: `El id "${p.id}" está repetido` });
+    }
+    vistos.add(p.id);
+  });
+});
+
+const mensajeError = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+const inactiva = (sitioId: string): EstadoReceta => ({
+  sitioId,
+  estado: 'inactiva',
+  pasos: [],
+  actualizado: null,
+});
+
+function sinEstado(p: PasoConEstado): PasoReceta {
+  const { estado: _e, mensaje: _m, log: _l, ...def } = p;
+  void _e;
+  void _m;
+  void _l;
+  return def;
+}
+
+function general(pasos: readonly PasoConEstado[]): ResultadoReceta['estado'] {
+  if (pasos.some((p) => p.estado === 'error')) return 'error';
+  return pasos.every((p) => p.estado === 'listo' || p.estado === 'omitido')
+    ? 'lista'
+    : 'incompleta';
+}
+
+async function escribirAtomico(ruta: string, texto: string): Promise<void> {
+  await mkdir(path.dirname(ruta), { recursive: true });
+  const tmp = `${ruta}.${randomBytes(4).toString('hex')}.tmp`;
+  try {
+    await writeFile(tmp, texto, 'utf8');
+    for (let intento = 0; ; intento++) {
+      try {
+        await rename(tmp, ruta);
+        break;
+      } catch (e) {
+        // En Windows el destino puede estar abierto un instante por un lector.
+        const codigo = (e as NodeJS.ErrnoException).code;
+        if (intento >= 4 || (codigo !== 'EPERM' && codigo !== 'EBUSY')) throw e;
+        await new Promise((r) => setTimeout(r, 50 * (intento + 1)));
+      }
+    }
+  } catch (e) {
+    await rm(tmp, { force: true });
+    throw e;
+  }
+}
+
+/* ───────────── Motor ───────────── */
+
+/**
+ * Ejecuta la receta de un proyecto, un paso a la vez, con su registro en vivo por el evento
+ * `receta:progreso`. Si un paso falla se detiene y nada se deshace: el usuario reintenta
+ * (`soloPaso` o `desde`), omite (`omitir`) o cancela. Solo una receta por proyecto a la vez y
+ * solo con `sitio.confiado`. El estado se guarda en run/receta-<id>.json.
+ */
+export class EjecutorRecetas {
+  private readonly estados = new Map<string, EstadoReceta>();
+  private readonly activas = new Map<string, AbortController>();
+  private readonly escrituras = new Map<string, Promise<void>>();
+
+  constructor(private readonly d: DepsRecetas) {}
+
+  /**
+   * Ejecuta la receta. Sin opciones corre todos los pasos con la receta actual del proyecto
+   * (`opciones.receta` o la de `DepsRecetas.receta`). Con `desde`/`soloPaso` sigue con la receta
+   * de la última ejecución, si la hay.
+   */
+  ejecutar(sitioId: string, opciones: OpcionesReceta = {}): Promise<ResultadoReceta> {
+    return this.correr(sitioId, opciones, null);
+  }
+
+  /** Marca el paso como omitido y sigue desde el siguiente. */
+  omitir(sitioId: string, pasoId: string): Promise<ResultadoReceta> {
+    return this.correr(sitioId, {}, pasoId);
+  }
+
+  /** Cancela la receta en curso del proyecto. false si no había ninguna. */
+  cancelar(sitioId: string): boolean {
+    const control = this.activas.get(sitioId);
+    if (!control || control.signal.aborted) return false;
+    control.abort();
+    return true;
+  }
+
+  /** Estado de la receta (en memoria o el guardado en run/receta-<id>.json). */
+  estado(sitioId: string): EstadoReceta {
+    let e = this.estados.get(sitioId);
+    if (!e) {
+      e = this.cargar(sitioId);
+      this.estados.set(sitioId, e);
+    }
+    return structuredClone(e);
+  }
+
+  /** Lee el estado guardado. Un archivo dañado cuenta como "sin estado". */
+  private cargar(sitioId: string): EstadoReceta {
+    let datos: unknown;
+    try {
+      const texto = readFileSync(this.d.rutas.receta(sitioId), 'utf8');
+      datos = JSON.parse(texto.charCodeAt(0) === 0xfeff ? texto.slice(1) : texto);
+    } catch {
+      return inactiva(sitioId);
+    }
+    const r = EstadoRecetaSchema.safeParse(datos);
+    if (!r.success) return inactiva(sitioId);
+    const e = { ...r.data, sitioId };
+    if (e.estado === 'corriendo' || e.pasos.some((p) => p.estado === 'corriendo')) {
+      // El programa se cerró a mitad de la receta.
+      for (const p of e.pasos) {
+        if (p.estado === 'corriendo') {
+          p.estado = 'error';
+          p.mensaje = MENSAJE_INTERRUMPIDA;
+        }
+      }
+      e.estado = general(e.pasos);
+    }
+    return e;
+  }
+
+  private async correr(
+    sitioId: string,
+    op: OpcionesReceta,
+    omitirId: string | null,
+  ): Promise<ResultadoReceta> {
+    if (op.desde !== undefined && op.soloPaso !== undefined) {
+      throw new Error('Use "desde" o "soloPaso", no ambos');
+    }
+    if (this.activas.has(sitioId)) throw new Error(MENSAJE_EN_CURSO);
+    const control = new AbortController();
+    this.activas.set(sitioId, control);
+    try {
+      const sitio = await this.d.sitio(sitioId);
+      if (!sitio) throw new Error(`No existe el proyecto "${sitioId}"`);
+      if (sitio.confiado !== true) throw new Error(MENSAJE_NO_CONFIADO);
+
+      const previo = this.estado(sitioId);
+      const continua = op.desde !== undefined || op.soloPaso !== undefined || omitirId !== null;
+      const receta = await this.receta(sitio, op, continua ? previo : null);
+      const indice = (id: string): number => {
+        const i = receta.findIndex((p) => p.id === id);
+        if (i < 0) throw new Error(`El paso "${id}" no está en la receta`);
+        return i;
+      };
+
+      const anteriores = new Map(previo.pasos.map((p) => [p.id, p]));
+      const pasos: PasoConEstado[] = receta.map((def) => {
+        const a = continua ? anteriores.get(def.id) : undefined;
+        return a
+          ? { ...def, estado: a.estado, mensaje: a.mensaje, log: [...a.log] }
+          : { ...def, estado: 'pendiente', log: [] };
+      });
+
+      let aCorrer: number[];
+      const omitidos: number[] = [];
+      if (op.soloPaso !== undefined) {
+        aCorrer = [indice(op.soloPaso)];
+      } else if (op.desde !== undefined || omitirId !== null) {
+        const inicio = op.desde !== undefined ? indice(op.desde) : indice(omitirId!) + 1;
+        pasos.slice(0, inicio).forEach((p, i) => {
+          if (p.id === omitirId || (p.estado !== 'listo' && p.estado !== 'omitido')) {
+            p.estado = 'omitido';
+            p.mensaje = undefined;
+            omitidos.push(i);
+          }
+        });
+        aCorrer = pasos.map((_, i) => i).slice(inicio);
+      } else {
+        aCorrer = pasos.map((_, i) => i);
+      }
+      for (const i of aCorrer) {
+        Object.assign(pasos[i]!, { estado: 'pendiente', mensaje: undefined, log: [] });
+      }
+
+      const e: EstadoReceta = { sitioId, estado: 'corriendo', pasos, actualizado: null };
+      this.estados.set(sitioId, e);
+      for (const i of omitidos) this.emitir(sitioId, pasos[i]!.id, 'omitido');
+      for (const i of aCorrer) this.emitir(sitioId, pasos[i]!.id, 'pendiente');
+      this.guardar(e);
+
+      let fallo: ResultadoReceta | null = null;
+      for (const i of aCorrer) {
+        if (control.signal.aborted) break;
+        fallo = await this.correrPaso(sitio, e, pasos[i]!, control.signal);
+        if (fallo || control.signal.aborted) break;
+      }
+
+      e.estado = control.signal.aborted ? 'cancelada' : (fallo?.estado ?? general(pasos));
+      this.guardar(e);
+      await this.escrituras.get(sitioId);
+      return fallo && e.estado === 'error'
+        ? fallo
+        : { estado: e.estado as ResultadoReceta['estado'] };
+    } finally {
+      if (this.activas.get(sitioId) === control) this.activas.delete(sitioId);
+    }
+  }
+
+  private async receta(
+    sitio: Sitio,
+    op: OpcionesReceta,
+    previo: EstadoReceta | null,
+  ): Promise<PasoReceta[]> {
+    let receta: unknown;
+    if (op.receta) receta = op.receta;
+    else if (previo && previo.pasos.length > 0) receta = previo.pasos.map(sinEstado);
+    else if (this.d.receta) receta = await this.d.receta(sitio);
+    else receta = await recetaEfectiva(sitio.carpeta, await detectarProyecto(sitio.carpeta));
+    const r = RecetaSchema.safeParse(receta);
+    if (!r.success) {
+      throw new Error(`La receta no es válida: ${r.error.issues.map((i) => i.message).join('; ')}`);
+    }
+    return r.data;
+  }
+
+  /** Corre un paso. Devuelve el resultado de error si falló (no si se canceló). */
+  private async correrPaso(
+    sitio: Sitio,
+    e: EstadoReceta,
+    paso: PasoConEstado,
+    senal: AbortSignal,
+  ): Promise<ResultadoReceta | null> {
+    const { sitioId } = e;
+    paso.estado = 'corriendo';
+    this.emitir(sitioId, paso.id, 'corriendo');
+    this.guardar(e);
+
+    let vivo = true;
+    const agregar = (texto: string): void => {
+      paso.log.push(texto);
+      if (paso.log.length > MAX_LINEAS_PASO) paso.log.splice(0, paso.log.length - MAX_LINEAS_PASO);
+    };
+    try {
+      const impl = this.d.pasos.obtener(paso.tipo);
+      if (!impl) throw new Error(`No hay implementación para el paso de tipo "${paso.tipo}"`);
+      await Promise.resolve().then(() =>
+        impl({
+          sitio,
+          paso: sinEstado(paso),
+          carpeta: sitio.carpeta,
+          senal,
+          linea: (texto) => {
+            if (!vivo) return;
+            for (const l of String(texto)
+              .replace(/\r?\n$/, '')
+              .split(/\r?\n/)) {
+              agregar(l);
+              this.emitir(sitioId, paso.id, 'corriendo', l);
+            }
+          },
+        }),
+      );
+      vivo = false;
+      paso.estado = 'listo';
+      this.emitir(sitioId, paso.id, 'listo');
+      this.guardar(e);
+      return null;
+    } catch (err) {
+      vivo = false;
+      if (senal.aborted) {
+        paso.estado = 'pendiente';
+        this.emitir(sitioId, paso.id, 'pendiente');
+        return null;
+      }
+      const mensaje = mensajeError(err);
+      paso.estado = 'error';
+      paso.mensaje = mensaje;
+      agregar(mensaje);
+      this.emitir(sitioId, paso.id, 'error', mensaje);
+      this.guardar(e);
+      return { estado: 'error', pasoId: paso.id, mensaje };
+    }
+  }
+
+  private emitir(sitioId: string, pasoId: string, estado: EstadoPasoReceta, linea?: string): void {
+    this.d.eventos.emit(
+      'receta:progreso',
+      linea === undefined ? { sitioId, pasoId, estado } : { sitioId, pasoId, estado, linea },
+    );
+  }
+
+  /** Encola la escritura atómica del estado (una a la vez por proyecto). Nunca lanza. */
+  private guardar(e: EstadoReceta): void {
+    e.actualizado = new Date().toISOString();
+    const texto = JSON.stringify(e, null, 2) + '\n';
+    const anterior = this.escrituras.get(e.sitioId) ?? Promise.resolve();
+    const siguiente = anterior
+      .then(() => escribirAtomico(this.d.rutas.receta(e.sitioId), texto))
+      .catch((err: unknown) => {
+        console.error(`No se pudo guardar el estado de la receta de ${e.sitioId}:`, err);
+      });
+    this.escrituras.set(e.sitioId, siguiente);
+  }
+}

@@ -82,6 +82,13 @@ export class Rutas {
   estado(): string {
     return path.join(this.base, 'run', 'estado.json');
   }
+  /** Estado persistido de la receta de un sitio: run/receta-<id>.json. */
+  receta(sitioId: string): string {
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(sitioId) || sitioId.includes('..')) {
+      throw new Error(`Id de sitio no válido: ${sitioId}`);
+    }
+    return path.join(this.base, 'run', `receta-${sitioId}.json`);
+  }
   config(): string {
     return path.join(this.base, 'config.json');
   }
