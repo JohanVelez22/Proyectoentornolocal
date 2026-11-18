@@ -13,6 +13,7 @@ import type { Eventos, EventosNucleo } from '../eventos';
 import type { Plataforma } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import type { EstadoServicio } from '../tipos';
+import { crearLanzadorOculto, type LanzadorOculto } from '../plataforma/lanzarOculto';
 import { puertoResponde } from './sonda';
 
 export interface DefProceso {
@@ -33,6 +34,11 @@ export interface OpcionesSupervisor {
   intervaloMs?: number;
   spawn?: typeof childProcess.spawn;
   sonda?: (puerto: number) => Promise<boolean>;
+  /**
+   * Arranque sin ventanas (Windows): devuelve el PID real del servidor. Por defecto, en Windows y
+   * sin `spawn` inyectado, `crearLanzadorOculto()`; null fuerza el `spawn` desacoplado clásico.
+   */
+  lanzarOculto?: LanzadorOculto | null;
 }
 
 /** Registro persistido en run/estado.json (los campos extra permiten reiniciar tras readoptar). */
@@ -72,6 +78,7 @@ export class Supervisor {
   private readonly hijos = new Map<string, childProcess.ChildProcess>();
   private readonly oyentesSalida: Array<(id: string, codigo: number | null) => void> = [];
   private readonly spawnFn: typeof childProcess.spawn;
+  private readonly lanzarOculto: LanzadorOculto | null;
   private readonly sonda: (puerto: number) => Promise<boolean>;
   private readonly intervaloMs: number;
   private bucle: ReturnType<typeof setInterval> | null = null;
@@ -86,6 +93,12 @@ export class Supervisor {
   ) {
     this.intervaloMs = opts.intervaloMs ?? 3000;
     this.spawnFn = opts.spawn ?? childProcess.spawn;
+    this.lanzarOculto =
+      opts.lanzarOculto !== undefined
+        ? opts.lanzarOculto
+        : process.platform === 'win32' && !opts.spawn
+          ? crearLanzadorOculto()
+          : null;
     this.sonda = opts.sonda ?? ((p) => puertoResponde(p));
   }
 
@@ -153,7 +166,7 @@ export class Supervisor {
       ultimoEmitido: '',
     };
     this.entradas.set(def.id, entrada);
-    const fallo = this.lanzar(entrada, true);
+    const fallo = await this.lanzar(entrada, true);
     this.guardarEstado();
     if (fallo !== null) throw new Error(`No se pudo iniciar ${def.id}: ${fallo}`);
     this.arrancarBucle();
@@ -239,7 +252,7 @@ export class Supervisor {
   }
 
   /** Devuelve null si lanzó, o el detalle del fallo. */
-  private lanzar(entrada: Entrada, inicial = false): string | null {
+  private async lanzar(entrada: Entrada, inicial = false): Promise<string | null> {
     const { def } = entrada;
     entrada.inicio = Date.now();
     entrada.encendidoDesde = null;
@@ -251,6 +264,18 @@ export class Supervisor {
       mkdirSync(path.dirname(def.log), { recursive: true });
       fd = openSync(def.log, 'a');
       writeSync(fd, `--- ${new Date().toISOString()} iniciar ${def.id} ---\n`);
+      if (this.lanzarOculto) {
+        // Sin manejador del hijo: su muerte la detecta el sondeo (procesoVivo), como al readoptar.
+        const pid = await this.lanzarOculto(def, fd);
+        if (entrada.detenido || this.cerrado || this.entradas.get(def.id) !== entrada) {
+          // Se detuvo mientras arrancaba: no se deja un proceso sin seguimiento.
+          await this.plataforma.matarArbol(pid).catch(() => undefined);
+          return null;
+        }
+        entrada.pid = pid;
+        this.emitir(entrada);
+        return null;
+      }
       const hijo = this.spawnFn(def.comando, def.args, {
         cwd: def.cwd,
         env: { ...process.env, ...def.env },
@@ -327,8 +352,7 @@ export class Supervisor {
       entrada.temporizador = setTimeout(() => {
         entrada.temporizador = null;
         if (entrada.detenido || this.cerrado) return;
-        this.lanzar(entrada);
-        this.guardarEstado();
+        void this.lanzar(entrada).then(() => this.guardarEstado());
       }, espera);
       return;
     }
