@@ -9,6 +9,13 @@ export interface ProgresoBd {
   linea: string;
 }
 
+export interface ProgresoIa {
+  modelo: string;
+  estado: string;
+  completado: number;
+  total: number;
+}
+
 export type EventosNucleo = {
   'servicio:estado': EstadoServicio;
   'sitio:cambio': Sitio[];
@@ -16,6 +23,7 @@ export type EventosNucleo = {
   'instalacion:progreso': ProgresoInstalacion;
   'hosts:estado': EstadoHosts;
   'bd:progreso': ProgresoBd;
+  'ia:progreso': ProgresoIa;
 };
 
 export class Eventos<M extends Record<string, unknown>> {
