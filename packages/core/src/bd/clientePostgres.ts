@@ -18,6 +18,8 @@ export interface BasePostgres {
 export interface ConexionBajaPg {
   query(sql: string, params?: unknown[]): Promise<{ rows: unknown[] }>;
   end(): Promise<void>;
+  /** Avisa de errores asíncronos de la conexión (cierre por el administrador, red caída). */
+  on?(evento: 'error', fn: (e: unknown) => void): void;
 }
 
 export type FabricaConexionPg = (c: ConexionPostgres) => Promise<ConexionBajaPg>;
@@ -59,18 +61,42 @@ function traducir(e: unknown, accion: string): Error {
   return new Error(`No se pudo ${accion}: ${motivo}${c ? ` (${c})` : ''}.`);
 }
 
-const fabricaReal: FabricaConexionPg = async (c) => {
-  const cliente = new pg.Client({
-    host: c.host,
-    port: c.puerto,
-    user: c.usuario,
-    password: c.clave,
-    database: c.base ?? 'postgres',
-    connectionTimeoutMillis: 10_000,
+/** Lo mínimo de pg.Client que usa `abrirCliente` (permite probar con un falso). */
+export interface ClientePg extends ConexionBajaPg {
+  connect(): Promise<unknown>;
+  on(evento: 'error', fn: (e: unknown) => void): unknown;
+}
+
+/**
+ * Conecta un cliente. El escuchador de 'error' va ANTES de connect(): sin él, un apagado del
+ * servidor (57P01) o un reinicio de la conexión sería una excepción sin capturar en el proceso.
+ */
+export async function abrirCliente(cliente: ClientePg): Promise<ConexionBajaPg> {
+  const avisos: ((e: unknown) => void)[] = [];
+  cliente.on('error', (e) => {
+    for (const f of avisos) f(e);
   });
   await cliente.connect();
-  return cliente as unknown as ConexionBajaPg;
-};
+  return {
+    query: (sql, params) => cliente.query(sql, params),
+    end: () => cliente.end(),
+    on: (_evento, fn) => {
+      avisos.push(fn);
+    },
+  };
+}
+
+const fabricaReal: FabricaConexionPg = (c) =>
+  abrirCliente(
+    new pg.Client({
+      host: c.host,
+      port: c.puerto,
+      user: c.usuario,
+      password: c.clave,
+      database: c.base ?? 'postgres',
+      connectionTimeoutMillis: 10_000,
+    }) as unknown as ClientePg,
+  );
 
 export interface ResultadoCrearBasePg {
   /** true si el rol ya existía y su clave se cambió a la indicada. */
@@ -88,36 +114,51 @@ export class ClientePostgres {
   async conectar(c: ConexionPostgres): Promise<void> {
     await this.cerrar();
     try {
-      this.con = await this.fabrica({ ...c, base: c.base ?? 'postgres' });
+      this.con = await this.abrir(c);
       this.datos = c;
     } catch (e) {
       const m = e instanceof Error ? e.message : String(e);
       throw new Error(
-        `No se pudo conectar al servidor en el puerto ${c.puerto}: ${m.split(c.clave).join('***')}`,
+        `No se pudo conectar al servidor en el puerto ${c.puerto}: ${c.clave ? m.split(c.clave).join('***') : m}`,
       );
     }
+  }
+
+  /** Abre una conexión; si el servidor la cierra, se descarta y se reabre al usarla. */
+  private async abrir(c: ConexionPostgres): Promise<ConexionBajaPg> {
+    const con = await this.fabrica({ ...c, base: c.base ?? 'postgres' });
+    con.on?.('error', () => {
+      if (this.con === con) this.con = null;
+    });
+    return con;
   }
 
   async cerrar(): Promise<void> {
     const c = this.con;
     this.con = null;
+    this.datos = null;
     if (c) await c.end().catch(() => undefined);
   }
 
-  private conexion(): ConexionBajaPg {
-    if (!this.con || !this.datos) {
-      throw new Error('No hay conexión: conecte con el servidor primero.');
+  private async conexion(): Promise<ConexionBajaPg> {
+    if (!this.datos) throw new Error('No hay conexión: conecte con el servidor primero.');
+    if (!this.con) {
+      try {
+        this.con = await this.abrir(this.datos);
+      } catch {
+        throw new Error('Se perdió la conexión con el servidor y no se pudo restablecer.');
+      }
     }
     return this.con;
   }
 
   private async filas(sql: string, params?: unknown[]): Promise<Record<string, unknown>[]> {
-    return (await this.conexion().query(sql, params)).rows as Record<string, unknown>[];
+    return (await (await this.conexion()).query(sql, params)).rows as Record<string, unknown>[];
   }
 
   /** Abre una conexión breve a otra base con las mismas credenciales. */
   private async enBase<T>(base: string, fn: (q: ConexionBajaPg) => Promise<T>): Promise<T> {
-    this.conexion();
+    await this.conexion();
     const c = await this.fabrica({ ...this.datos!, base });
     try {
       return await fn(c);
@@ -151,27 +192,33 @@ export class ClientePostgres {
       if (!clave) throw new Error('Indique una clave para el usuario de la base.');
     }
     try {
+      let existia = false;
+      if (usuario !== undefined) {
+        const r = await this.filas('SELECT COUNT(*) AS n FROM pg_roles WHERE rolname = $1', [
+          usuario,
+        ]);
+        existia = Number(r[0]?.n ?? 0) > 0;
+        // El propio servidor arma la sentencia con la clave entre comillas (%L).
+        const verbo = existia ? 'ALTER ROLE' : 'CREATE ROLE';
+        const [orden] = await this.filas(
+          `SELECT format('${verbo} %I LOGIN PASSWORD %L', $1::text, $2::text) AS s`,
+          [usuario, clave],
+        );
+        await this.filas(String(orden?.s ?? ''));
+      }
       const hay = await this.filas('SELECT COUNT(*) AS n FROM pg_database WHERE datname = $1', [
         nombre,
       ]);
       if (Number(hay[0]?.n ?? 0) === 0) {
+        // El dueño de la base lo es también del esquema public (PG15+): puede crear tablas.
+        const dueno = usuario === undefined ? '' : ` OWNER ${rol}`;
         await this.filas(
-          `CREATE DATABASE ${bd} ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'`,
+          `CREATE DATABASE ${bd}${dueno} ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'`,
         );
+      } else if (usuario !== undefined) {
+        await this.filas(`ALTER DATABASE ${bd} OWNER TO ${rol}`);
       }
       if (usuario === undefined) return { usuarioActualizado: false };
-      const r = await this.filas('SELECT COUNT(*) AS n FROM pg_roles WHERE rolname = $1', [
-        usuario,
-      ]);
-      const existia = Number(r[0]?.n ?? 0) > 0;
-      // El propio servidor arma la sentencia con la clave entre comillas (%L).
-      const verbo = existia ? 'ALTER ROLE' : 'CREATE ROLE';
-      const [orden] = await this.filas(
-        `SELECT format('${verbo} %I LOGIN PASSWORD %L', $1::text, $2::text) AS s`,
-        [usuario, clave],
-      );
-      await this.filas(String(orden?.s ?? ''));
-      await this.filas(`GRANT ALL PRIVILEGES ON DATABASE ${bd} TO ${rol}`);
       return existia
         ? {
             usuarioActualizado: true,
@@ -213,6 +260,11 @@ export class ClientePostgres {
     try {
       await this.enBase(base, (q) => q.query('CREATE EXTENSION IF NOT EXISTS vector'));
     } catch (e) {
+      const c = (e as { code?: unknown } | null)?.code;
+      const m = e instanceof Error ? e.message : '';
+      if (c === '0A000' || c === '58P01' || /is not available|extension control file/.test(m)) {
+        throw new Error('pgvector no está instalado: use "Instalar pgvector" en Bases de datos.');
+      }
       throw traducir(e, `activar pgvector en ${base}`);
     }
   }

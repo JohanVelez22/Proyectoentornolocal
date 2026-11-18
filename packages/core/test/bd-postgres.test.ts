@@ -10,7 +10,13 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ClientePostgres, validarNombrePg } from '../src/bd/clientePostgres';
+import { EventEmitter } from 'node:events';
+import {
+  ClientePostgres,
+  abrirCliente,
+  validarNombrePg,
+  type ClientePg,
+} from '../src/bd/clientePostgres';
 import type { Ejecutor } from '../src/plataforma/tipos';
 import { Rutas } from '../src/rutas';
 import { DEFINICIONES } from '../src/servicios/datos';
@@ -134,9 +140,9 @@ describe('defPostgresql', () => {
   });
 
   it('detenerLimpio falla en claro', async () => {
-    await expect(defPostgresql().detenerLimpio!(ctx(ejecutorFalso(1)))).rejects.toThrow(
-      /PostgreSQL/,
-    );
+    await expect(
+      defPostgresql().detenerLimpio!(ctx(ejecutorFalso(1, 'pg_ctl: no responde'))),
+    ).rejects.toThrow(/PostgreSQL.*no responde/);
   });
 });
 
@@ -188,19 +194,28 @@ describe('ClientePostgres', () => {
     expect(consultas).toHaveLength(0);
   });
 
-  it('crearBase crea la base y el rol con identificadores y literales escapados por el servidor', async () => {
+  it('crearBase crea primero el rol y la base con ese dueño', async () => {
     const { cliente, consultas } = montar();
     await cliente.conectar(cx);
     const r = await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'x' });
     expect(r.usuarioActualizado).toBe(false);
     const sqls = consultas.map((q) => q.sql);
-    expect(sqls).toContain(
-      "CREATE DATABASE \"mi_bd\" ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'",
+    const iRol = sqls.findIndex((s) => s.includes("'CREATE ROLE"));
+    const iBd = sqls.indexOf(
+      "CREATE DATABASE \"mi_bd\" OWNER \"app\" ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'",
     );
+    expect(iRol).toBeGreaterThanOrEqual(0);
+    expect(iBd).toBeGreaterThan(iRol);
     expect(consultas.some((q) => q.sql.includes('format(') && q.params?.includes('x'))).toBe(true);
-    expect(sqls.some((s) => s.includes('GRANT ALL PRIVILEGES ON DATABASE "mi_bd" TO "app"'))).toBe(
-      true,
+  });
+
+  it('base existente con usuario: cambia el dueño', async () => {
+    const { cliente, consultas } = montar((sql) =>
+      sql.includes('FROM pg_database') ? [{ n: 1 }] : [],
     );
+    await cliente.conectar(cx);
+    await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'x' });
+    expect(consultas.some((q) => q.sql === 'ALTER DATABASE "mi_bd" OWNER TO "app"')).toBe(true);
   });
 
   it('no recrea una base existente', async () => {
@@ -281,6 +296,65 @@ describe('ClientePostgres', () => {
     const b = montar(() => [{ n: 0 }]);
     await b.cliente.conectar(cx);
     expect(await b.cliente.tieneVector()).toBe(false);
+  });
+
+  it('un error asíncrono de la conexión no revienta y la siguiente llamada reconecta', async () => {
+    const manejadores: ((e: unknown) => void)[] = [];
+    let n = 0;
+    const cliente = new ClientePostgres(async () => {
+      n++;
+      return {
+        query: async () => ({ rows: [] }),
+        end: async () => undefined,
+        on: (_e, fn) => {
+          manejadores.push(fn);
+        },
+      };
+    });
+    await cliente.conectar(cx);
+    expect(() => manejadores[0]!(new Error('terminating connection (57P01)'))).not.toThrow();
+    await cliente.listarBases();
+    expect(n).toBe(2);
+  });
+
+  it('abrirCliente escucha "error" antes de conectar', async () => {
+    const em = new EventEmitter();
+    let escuchando = -1;
+    const falso = Object.assign(em, {
+      connect: async () => {
+        escuchando = em.listenerCount('error');
+      },
+      query: async () => ({ rows: [] }),
+      end: async () => undefined,
+    }) as unknown as ClientePg;
+    const con = await abrirCliente(falso);
+    expect(escuchando).toBe(1);
+    let avisado = false;
+    con.on!('error', () => {
+      avisado = true;
+    });
+    expect(() => em.emit('error', new Error('boom'))).not.toThrow();
+    expect(avisado).toBe(true);
+  });
+
+  it('activarVector sin pgvector da un mensaje claro', async () => {
+    const cliente = new ClientePostgres(async () => ({
+      query: async () => {
+        throw Object.assign(new Error('extension "vector" is not available'), { code: '0A000' });
+      },
+      end: async () => undefined,
+    }));
+    await cliente.conectar(cx);
+    await expect(cliente.activarVector('x')).rejects.toThrow(
+      'pgvector no está instalado: use "Instalar pgvector" en Bases de datos.',
+    );
+  });
+
+  it('conectar con clave vacía no rompe el filtro del mensaje', async () => {
+    const cliente = new ClientePostgres(async () => {
+      throw new Error('boom');
+    });
+    await expect(cliente.conectar({ ...cx, clave: '' })).rejects.toThrow(/boom/);
   });
 
   it('sin conexión falla claro y cerrar libera', async () => {

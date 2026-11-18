@@ -98,7 +98,12 @@ export function defPostgresql(): DefServicio {
         '-t',
         '15',
       ]);
-      if (r.codigo !== 0) throw new Error('No se pudo apagar PostgreSQL de forma limpia.');
+      if (r.codigo !== 0) {
+        const detalle = (r.stderr || r.stdout).trim().split(/\r?\n/).slice(-2).join(' ');
+        throw new Error(
+          `No se pudo apagar PostgreSQL de forma limpia${detalle ? `: ${detalle}` : '.'}`,
+        );
+      }
     },
   };
 }
