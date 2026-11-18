@@ -28,9 +28,11 @@ Con esta etapa el programa cubre lo que FlyEnv y ServBay hacen en el día a día
    - **Adminer** integrado.
 5. **Composer**: instalado y verificado. Se ejecuta con el PHP de cada sitio. Incluye un botón "Terminal aquí" con PHP y Composer del sitio en el PATH y un botón opcional "Agregar al PATH del usuario".
 6. **Mailpit**: SMTP local, buzón web y bloque `.env` de correo para Laravel.
+7. **IA local con Ollama**: servicio, descarga y borrado de modelos con progreso, y datos de conexión (sección 4.5b).
+8. **Servidor FTP**: integrado, con usuario por sitio encerrado en su carpeta (sección 4.5c).
 
 ### Fuera de alcance (etapas B y C)
-MCP, Node/Python por proyecto, Git, túneles con nombre, contenedores, FTP, DNS propio, Apache/Caddy, copias programadas y Let's Encrypt.
+MCP, Node/Python por proyecto, Git, túneles con nombre, contenedores, FTPS/SFTP, DNS propio, Apache/Caddy, copias programadas y Let's Encrypt.
 
 ### Lo que sería un fracaso aunque funcione
 - Que una restauración o importación **toque el servidor de origen** o mezcle datos en una base existente sin preguntar.
@@ -118,8 +120,32 @@ Todos usan el supervisor, el catálogo verificado por SHA-256 y el estado real (
 - Botón "Abrir buzón" y bloque `.env` de correo para Laravel: `MAIL_MAILER=smtp`, `MAIL_HOST=127.0.0.1`, `MAIL_PORT=1025`, sin cifrado.
 - La pantalla Inicio muestra el número de correos sin leer, leído de la API de Mailpit.
 
+### 4.5b IA local con Ollama (agregado a pedido del usuario)
+- **Servicio Ollama:** se instala desde el zip oficial de Windows (`ollama-windows-amd64.zip`, releases de `ollama/ollama`, verificado por SHA-256) y corre como `ollama serve` bajo el supervisor.
+  - Escucha en `127.0.0.1:11434`.
+  - `OLLAMA_MODELS` apunta a `data/ollama/models`.
+  - Usa la GPU si existe, sin configuración.
+- **Pantalla "IA local":**
+  - **Modelos:** lista de modelos instalados (`/api/tags`) con su tamaño.
+  - **Descargar:** campo con sugerencias (llama3.2, qwen2.5-coder, mistral, nomic-embed-text para embeddings del bot) y barra de progreso real (`/api/pull` por streaming).
+  - **Mantenimiento:** borrar un modelo, probarlo con un chat mínimo de una línea y ver el espacio usado en disco.
+- **Datos de conexión:** URL base, endpoint compatible con OpenAI (`http://127.0.0.1:11434/v1`) y un bloque `.env` de ejemplo (`OLLAMA_BASE_URL`, `OPENAI_BASE_URL`) para Laravel o para el bot FastAPI.
+- La descarga de modelos puede pesar varios GB, así que se muestra el tamaño antes de confirmar cuando la API lo informa.
+
+### 4.5c Servidor FTP (agregado a pedido del usuario)
+- **Servidor FTP integrado:** usa la librería `ftp-srv` (MIT) dentro del proceso del núcleo, sin binarios extra. Es un servicio más con encender, apagar, estado y puerto.
+  - Puerto de control 2121 y puertos pasivos 50000–50100.
+  - **Solo escucha en 127.0.0.1 por defecto.** La opción "Permitir conexiones de la red local" usa 0.0.0.0 y avisa que el tráfico FTP va sin cifrar.
+- **Usuario por sitio:** cada sitio tiene el interruptor "FTP". Al activarlo se crea el usuario `<id del sitio>` con una clave aleatoria, encerrado en la carpeta del sitio, sin poder salir de ella.
+  - En la fila del sitio se muestran host, puerto, usuario y clave, con botón Copiar.
+  - Se puede regenerar la clave y elegir solo lectura.
+- No hay FTPS ni SFTP en esta etapa. Quedan anotados como mejora.
+- Pruebas:
+  - Unitarias: encierro en la carpeta (no permite `..` ni rutas absolutas), autenticación y solo lectura.
+  - Integración: subir y bajar un archivo con un cliente FTP de Node.
+
 ### 4.6 Interfaz
-- **Barra lateral:** Inicio, Sitios, Servicios, **Bases de datos**, **Correo**, Túneles, Ajustes.
+- **Barra lateral:** Inicio, Sitios, Servicios, **Bases de datos**, **Correo**, **IA local**, Túneles, Ajustes. El FTP se maneja en Servicios y en cada sitio.
 - **Servicios:** agrupa por categoría (Web, PHP, Bases de datos, Herramientas) y muestra el puerto con un enlace a "Usar otro puerto" si hay conflicto.
 - **Sitios:** el formulario gana los interruptores HTTPS y "Redirigir a HTTPS". La fila muestra el candado y los enlaces http y https. Se agrega el botón "Terminal aquí".
 - **Ajustes:**
