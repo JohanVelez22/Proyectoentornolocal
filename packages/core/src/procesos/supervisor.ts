@@ -34,6 +34,13 @@ export interface DefProceso {
 
 export type EstadoProceso = 'apagado' | 'iniciando' | 'encendido' | 'error';
 
+/** iniciar() no terminó: el proceso se detuvo (o se cerró la app) mientras arrancaba. */
+export class ErrorDetenidoAlIniciar extends Error {
+  constructor(readonly id: string) {
+    super(`${id} se detuvo mientras arrancaba: no quedó encendido.`);
+  }
+}
+
 export interface OpcionesSupervisor {
   intervaloMs?: number;
   spawn?: typeof childProcess.spawn;
@@ -191,6 +198,10 @@ export class Supervisor {
     const fallo = await this.lanzar(entrada, true);
     this.guardarEstado();
     if (fallo !== null) throw new Error(`No se pudo iniciar ${def.id}: ${fallo}`);
+    if (entrada.detenido || this.cerrado || this.entradas.get(def.id) !== entrada) {
+      // Se detuvo (o se cerró el supervisor) mientras arrancaba: no quedó nada encendido.
+      throw new ErrorDetenidoAlIniciar(def.id);
+    }
     this.arrancarBucle();
   }
 

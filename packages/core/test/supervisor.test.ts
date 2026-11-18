@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import type { Plataforma } from '../src/plataforma/tipos';
 import { puertoResponde } from '../src/procesos/sonda';
-import { Supervisor, type DefProceso } from '../src/procesos/supervisor';
+import { ErrorDetenidoAlIniciar, Supervisor, type DefProceso } from '../src/procesos/supervisor';
 import { Rutas } from '../src/rutas';
 import type { EstadoServicio } from '../src/tipos';
 
@@ -383,5 +383,28 @@ describe('puertoResponde', () => {
     expect(await puertoResponde(puerto)).toBe(true);
     await new Promise<void>((r) => srv.close(() => r()));
     expect(await puertoResponde(puerto, '127.0.0.1', 300)).toBe(false);
+  });
+});
+
+describe('detener a mitad de un arranque oculto', () => {
+  it('iniciar() no informa éxito: rechaza con ErrorDetenidoAlIniciar y mata el PID', async () => {
+    vi.useRealTimers();
+    let soltar!: (pid: number) => void;
+    const s = new Supervisor(rutas, plataforma(), eventos, {
+      intervaloMs: 3000,
+      sonda: async () => true,
+      lanzarOculto: () => new Promise<number>((r) => (soltar = r)),
+    });
+    const inicio = s.iniciar(def());
+    await vi.waitFor(() => expect(soltar).toBeTypeOf('function'));
+    await s.detener('nginx');
+    vivos.set(4321, 'nginx.exe');
+    soltar(4321);
+    const e = await inicio.catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(ErrorDetenidoAlIniciar);
+    expect((e as Error).message).toMatch(/se detuvo mientras arrancaba/);
+    expect(matados).toEqual([4321]);
+    expect(s.estado('nginx')).toBe('apagado');
+    await s.cerrar();
   });
 });
