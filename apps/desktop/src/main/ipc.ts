@@ -24,6 +24,7 @@ import {
   puertoUsuario,
   ramaPhp,
   RutasElegidas,
+  servicioDelCatalogo,
   servicioInstalable,
   texto,
   textoAcotado,
@@ -256,7 +257,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
     return n.instalador.instalar(v);
   },
   'instalador.instalados': (n, _s, servicio) =>
-    n.instalador.instalados(idNoVacio(servicio, 'servicio')),
+    n.instalador.instalados(servicioDelCatalogo(servicio)),
   'tuneles.abrir': (n, _s, id) => n.tuneles.abrir(idNoVacio(id)),
   'tuneles.cerrar': (n, _s, id) => n.tuneles.cerrar(idNoVacio(id)),
   'tuneles.renovar': (n, _s, id) => n.tuneles.renovar(idNoVacio(id)),

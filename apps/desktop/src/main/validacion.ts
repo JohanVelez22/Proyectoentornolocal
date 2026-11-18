@@ -9,6 +9,7 @@ import {
   TIPOS_SITIO,
   type IdServicioDatos,
   type MotorBd,
+  type ServicioInstalable,
   type TipoSitio,
 } from '@pel/core';
 
@@ -54,6 +55,22 @@ const INSTALABLES = [
   'mailpit',
   'ollama',
 ] as const;
+
+/** Todo lo que el catálogo puede dejar en bin/ (también herramientas): para `instalados`. */
+const DEL_CATALOGO = [
+  ...INSTALABLES,
+  'composer',
+  'adminer',
+  'pgvector-src',
+] as const satisfies readonly ServicioInstalable[];
+
+/** Un servicio o herramienta del catálogo; nada de rutas ni nombres arbitrarios. */
+export function servicioDelCatalogo(v: unknown): ServicioInstalable {
+  if (typeof v !== 'string' || !(DEL_CATALOGO as readonly string[]).includes(v)) {
+    throw new Error('Argumento no válido: servicio');
+  }
+  return v as ServicioInstalable;
+}
 
 export function servicioInstalable(v: unknown): (typeof INSTALABLES)[number] {
   if (typeof v !== 'string' || !(INSTALABLES as readonly string[]).includes(v)) {

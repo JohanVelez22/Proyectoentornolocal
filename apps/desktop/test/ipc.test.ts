@@ -297,6 +297,21 @@ describe('registrarIpc', () => {
     expect(crudo.instalador.instalar).toHaveBeenCalledTimes(1);
   });
 
+  it('instalador.instalados solo acepta servicios y herramientas del catálogo', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const llamar = (s: unknown) =>
+      canales.get('entorno:instalador.instalados')!({}, s) as Promise<{ ok: boolean }>;
+    for (const bueno of ['php', 'mysql', 'composer', 'adminer', 'pgvector-src']) {
+      expect((await llamar(bueno)).ok, bueno).toBe(true);
+    }
+    for (const malo of ['..', '..\\..\\Windows', 'php/../..', 'cualquiera', '', 3, null]) {
+      expect((await llamar(malo)).ok, String(malo)).toBe(false);
+    }
+    expect(crudo.instalador.instalados).toHaveBeenCalledTimes(5);
+  });
+
   it('servicios.detenerTodo usa Nucleo.detenerTodo (cierra túneles primero)', async () => {
     const { ipcMain, canales } = ipcFalso();
     const { nucleo, crudo } = nucleoFalso();
