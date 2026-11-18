@@ -89,6 +89,11 @@ export const SitioSchema = z.object({
     .optional(),
   /** "Confío en este repositorio": sin esto no se ejecuta su receta. */
   confiado: z.boolean().default(false),
+  /**
+   * Huella (SHA-256) de la receta efectiva cuando se marcó "Confío…"; la fija el núcleo (nunca la
+   * interfaz) y sirve para avisar si la receta cambió desde entonces. null = sin huella.
+   */
+  recetaConfiada: z.string().nullable().optional(),
   /** Remoto (siempre sin credenciales) y rama del repositorio, si es un clon de Git. */
   git: z
     .object({

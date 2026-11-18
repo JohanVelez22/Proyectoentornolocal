@@ -55,6 +55,10 @@ export class Rutas {
   credenciales(): string {
     return path.join(this.base, 'etc', 'credenciales.json');
   }
+  /** Token de GitHub cifrado con safeStorage (lo escribe y lee solo el proceso principal). */
+  tokenGithub(): string {
+    return path.join(this.base, 'etc', 'github.token');
+  }
   nginxConf(): string {
     return path.join(this.base, 'etc', 'nginx', 'nginx.conf');
   }

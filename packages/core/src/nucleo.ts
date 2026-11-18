@@ -68,8 +68,47 @@ import './servicios/bd/redis';
 import './servicios/bd/mongodb';
 import './servicios/mailpit';
 import './servicios/ollama';
-import { Runtimes } from './runtimes/runtimes';
-import { ProcesosProyecto } from './proyectos/procesos';
+import { Runtimes, type RuntimesProyecto, type TipoRuntime } from './runtimes/runtimes';
+import { ProcesosProyecto, type EstadoProcesoProyecto } from './proyectos/procesos';
+import {
+  escribirConfigProyecto,
+  leerConfigProyecto,
+  ConfigProyectoSchema,
+  type ConfigProyecto,
+  type PasoReceta,
+} from './proyectos/config';
+import { detectarProyecto as detectarProyectoB, type Deteccion } from './proyectos/detectar';
+import { RegistroPasos } from './proyectos/pasos';
+import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
+import {
+  EjecutorRecetas,
+  recetaEfectiva,
+  type EstadoReceta,
+  type OpcionesReceta,
+  type ResultadoReceta,
+} from './proyectos/recetas';
+import {
+  AVISO_RECETA_CAMBIADA,
+  buscarPuertoLibre,
+  comandoDePaso,
+  huellaReceta,
+} from './proyectos/resumen';
+import { VigilanteProyectos, type SugerenciaProyecto } from './proyectos/vigilar';
+import { Git, type DisponibilidadGit, type EstadoGit, type ResultadoTraer } from './git/git';
+import { GitHub, type OpcionesRepos, type RepoGithub } from './git/github';
+import { Metricas, type MuestraSistema } from './monitor/metricas';
+import { Registros, type FuenteRegistro } from './monitor/registros';
+import {
+  HerramientasPuertos,
+  type OpcionesFinalizar,
+  type PuertoEnUso,
+} from './herramientas/puertos';
+import { limpiarBom, type ResultadoBom } from './herramientas/bom';
+import { emitirCertificadoLibre } from './herramientas/certificadosLibres';
+import { muestraSistemaWindows } from './plataforma/win';
+import { lanzadorPorDefecto } from './plataforma/lanzar';
+import type { Lanzador, MuestraPlataforma } from './plataforma/tipos';
+import { PUERTO_ADMINER } from './nginx/principal';
 
 export interface OpcionesNucleo {
   base?: string;
@@ -84,6 +123,39 @@ export interface OpcionesNucleo {
   alIniciar?: (eventos: Eventos<EventosNucleo>) => void;
   /** Para pruebas: reemplaza la migración de la carpeta de datos (solo sin `base`). */
   migracion?: typeof migrarCarpetaDatos;
+  /** Para pruebas: lanzador de los comandos con streaming (pasos de receta, git). */
+  lanzar?: Lanzador;
+  /** PID del proceso principal y de su padre (por defecto, los de este proceso). */
+  pidApp?: number;
+  pidPadre?: number;
+  /** Para pruebas: consulta de CPU y RAM por PID (por defecto, un PowerShell por muestra). */
+  consultarMetricas?: (pids: number[]) => Promise<MuestraPlataforma>;
+  /** Para pruebas: ¿se puede escuchar en 127.0.0.1:puerto? */
+  probarPuerto?: (puerto: number) => Promise<boolean>;
+  /** Para pruebas: git y GitHub con dependencias falsas. */
+  git?: Git;
+  github?: GitHub;
+}
+
+/** Fuente de registro tal como la ve la interfaz: sin la ruta del archivo. */
+export type FuenteRegistroPublica = Omit<FuenteRegistro, 'ruta'>;
+
+/** Estado de un proceso de proyecto para la interfaz: sin la ruta del log. */
+export type EstadoProcesoPublico = Omit<EstadoProcesoProyecto, 'log'>;
+
+/** Resumen de la receta para confirmarla: el comando real de cada paso y si cambió. */
+export interface ResumenReceta {
+  proyecto: string;
+  pasos: string[];
+  /** La receta no es la que había al marcar "Confío en este repositorio" (o no hay huella). */
+  cambio: boolean;
+}
+
+/** Receta que se ejecutaría para una carpeta y de dónde sale. */
+export interface RecetaPropuesta {
+  receta: PasoReceta[];
+  origen: 'wolfcore.yml' | 'defecto';
+  deteccion: Deteccion;
 }
 
 export interface EstadoGeneral {
@@ -116,6 +188,14 @@ interface ModulosNucleo {
   credenciales: AlmacenCredenciales;
   puertoOllama: { valor: number };
   procesos: ProcesosProyecto;
+  runtimes: Runtimes;
+  recetas: EjecutorRecetas;
+  git: Git;
+  github: GitHub;
+  vigilante: VigilanteProyectos;
+  metricas: Metricas;
+  registros: Registros;
+  puertos: HerramientasPuertos;
 }
 
 /** Puerto HTTPS: el estándar 443 o uno de usuario (1024–65535). */
@@ -184,6 +264,20 @@ export class Nucleo {
   private readonly puertoOllama: { valor: number };
   /** Servidor MCP local; se maneja con iniciarMcp/detenerMcp (que guardan `mcp.activo`). */
   readonly mcp: ServidorMcp;
+  readonly runtimes: Runtimes;
+  /** Motor de recetas con los pasos reales registrados. */
+  readonly recetas: EjecutorRecetas;
+  readonly git: Git;
+  readonly github: GitHub;
+  readonly vigilante: VigilanteProyectos;
+  readonly metricas: Metricas;
+  readonly registros: Registros;
+  readonly puertos: HerramientasPuertos;
+  /**
+   * Token de GitHub para lo que no pasa por la ventana (MCP). Lo fija el proceso principal
+   * (safeStorage); el núcleo nunca lo guarda, lo registra ni lo emite.
+   */
+  private proveedorTokenGithub: () => string | null = () => null;
 
   private constructor(
     readonly rutas: Rutas,
@@ -216,6 +310,14 @@ export class Nucleo {
     this.procesos = m.procesos;
     this.almacenCredenciales = m.credenciales;
     this.puertoOllama = m.puertoOllama;
+    this.runtimes = m.runtimes;
+    this.recetas = m.recetas;
+    this.git = m.git;
+    this.github = m.github;
+    this.vigilante = m.vigilante;
+    this.metricas = m.metricas;
+    this.registros = m.registros;
+    this.puertos = m.puertos;
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
       operaciones: this.operacionesMcp(),
@@ -334,22 +436,28 @@ export class Nucleo {
       asegurarPhpIni: (r) => servicios.php.asegurarPhpIni(r),
     });
     const runtimes = new Runtimes(rutas);
+    /** php.exe y php.ini de la rama pedida o, si no está instalada, del PHP por defecto. */
+    const phpDe = async (rama: string | null): Promise<{ exe: string; ini: string }> => {
+      const instaladas = await instalador.instalados('php');
+      const elegida = rama && instaladas.includes(rama) ? rama : await composer.phpPorDefecto();
+      if (!elegida) throw new Error('No hay PHP instalado: instálelo desde Servicios.');
+      return {
+        exe: path.join(rutas.bin('php', elegida), 'php.exe'),
+        ini: await servicios.php.asegurarPhpIni(elegida),
+      };
+    };
     procesos = new ProcesosProyecto({
       rutas,
       supervisor,
       runtimes,
       leerSitios: () => sitios.listar(),
-      php: async (rama) => {
-        const instaladas = await instalador.instalados('php');
-        const elegida = rama && instaladas.includes(rama) ? rama : await composer.phpPorDefecto();
-        if (!elegida) throw new Error('No hay PHP instalado: instálelo desde Servicios.');
-        return {
-          exe: path.join(rutas.bin('php', elegida), 'php.exe'),
-          ini: await servicios.php.asegurarPhpIni(elegida),
-        };
-      },
+      php: phpDe,
     });
     const bd = new BasesDeDatos({ servicios, credenciales, rutas, exec });
+    const lanzar = o.lanzar ?? lanzadorPorDefecto;
+    // Los pasos de receta llaman a Nucleo.guardarSitio: se resuelve tras construir el núcleo.
+    // eslint-disable-next-line prefer-const
+    let nucleoRef!: Nucleo;
     const vivo = (id: string): boolean => {
       const e = supervisor.estado(id);
       return e === 'encendido' || e === 'iniciando';
@@ -405,7 +513,66 @@ export class Nucleo {
       credenciales,
       puertoOllama,
       procesos,
+      runtimes,
+      // Se crea abajo: necesita los pasos reales, que usan módulos de esta misma lista.
+      recetas: null as unknown as EjecutorRecetas,
+      git: o.git ?? new Git({ exec, lanzar }),
+      github: o.github ?? new GitHub({ exec }),
+      vigilante: new VigilanteProyectos({ leerConfig, eventos }),
+      metricas: new Metricas({
+        eventos,
+        supervisor,
+        consultar: o.consultarMetricas ?? ((p) => muestraSistemaWindows(exec, p)),
+        rutaDatos: rutas.base,
+      }),
+      registros: new Registros({
+        rutas,
+        eventos,
+        leerSitios: () => sitios.listar(),
+        rutaLogProceso: (sitioId, procesoId) => procesos.rutaLog(sitioId, procesoId),
+      }),
+      puertos: new HerramientasPuertos({
+        ejecutar: exec,
+        // Supervisor (servicios y procesos de proyecto): sus hijos también cuentan como propios.
+        pidsPropios: () =>
+          supervisor
+            .ids()
+            .map((id) => supervisor.pid(id))
+            .filter((p): p is number => p !== null),
+        ...(o.pidApp !== undefined ? { pidApp: o.pidApp } : {}),
+        ...(o.pidPadre !== undefined ? { pidPadre: o.pidPadre } : {}),
+      }),
     };
+    const depsPasos: DepsPasos = {
+      rutas,
+      lanzar,
+      runtimes,
+      php: phpDe,
+      composerPhar: () => composer.rutaPhar(),
+      bd,
+      restaurar: (motor, archivo, base, opts) =>
+        modulos.respaldos.restaurar(motor, archivo, base, opts),
+      mailpit: async () => {
+        if ((await instalador.instalados('mailpit')).length === 0) return null;
+        return { puerto: (await leerConfig()).servicios.datos.mailpit.puerto };
+      },
+      guardarSitio: (datos, id) => nucleoRef.guardarSitio(datos, id),
+      leerSitio: async (id) => (await sitios.listar()).find((s) => s.id === id),
+      puertoLibre: async ({ reservados, preferido }) =>
+        buscarPuertoLibre({
+          reservados: [...reservados, ...puertosReservados(await leerConfig(), preferido ?? null)],
+          preferido: preferido ?? null,
+          ...(o.probarPuerto ? { probar: o.probarPuerto } : {}),
+        }),
+    };
+    modulos.recetas = new EjecutorRecetas({
+      rutas,
+      eventos,
+      pasos: registrarPasosReales(new RegistroPasos(), depsPasos),
+      sitio: async (id) => (await sitios.listar()).find((s) => s.id === id),
+      receta: async (sitio) =>
+        recetaEfectiva(sitio.carpeta, await detectarProyectoB(sitio.carpeta)),
+    });
 
     const nucleo = new Nucleo(
       rutas,
@@ -420,6 +587,7 @@ export class Nucleo {
       internos,
       modulos,
     );
+    nucleoRef = nucleo;
     nucleo.avisoInicio = avisoInicio;
     o.alIniciar?.(eventos);
     try {
@@ -432,6 +600,8 @@ export class Nucleo {
       throw e;
     }
     if (avisoInicio) nucleo.avisosPendientes.push(avisoInicio);
+    // Nunca lanza: una carpeta vigilada que ya no existe solo deja de dar sugerencias.
+    await nucleo.vigilante.vigilar((await leerConfig()).proyectos.carpetaVigilada);
     if ((await leerConfig()).mcp.activo) {
       // Un puerto ocupado no impide el arranque: queda como aviso.
       await nucleo.mcp.iniciar().catch((e: unknown) => {
@@ -825,12 +995,28 @@ export class Nucleo {
   }
 
   /**
-   * Lo que publica el servidor MCP, con los mismos métodos que usa la ventana. Recetas
-   * (`ejecutarReceta` y `resumenReceta`), git, registros y puertos se agregan cuando el núcleo
-   * los integre (Task 11).
+   * Lo que publica el servidor MCP, con los mismos métodos que usa la ventana. `ejecutarReceta`
+   * corre exactamente la receta que `resumenReceta` describió para la confirmación (aunque el
+   * wolfcore.yml cambie mientras la ventana pregunta). `traerCambios` usa el token de GitHub que
+   * fija el proceso principal.
    */
   private operacionesMcp(): OperacionesMcp {
+    const descritas = new Map<string, PasoReceta[]>();
     return {
+      resumenReceta: async (sitioId) => {
+        const r = await this.resumenRecetaInterno(sitioId);
+        descritas.set(sitioId, r.receta);
+        return { proyecto: r.proyecto, pasos: r.pasos };
+      },
+      ejecutarReceta: async (sitioId) => {
+        const receta = descritas.get(sitioId);
+        descritas.delete(sitioId);
+        if (!receta) throw new Error('Primero hay que describir y confirmar la receta.');
+        return this.recetas.ejecutar(sitioId, { receta });
+      },
+      traerCambios: (sitioId) => this.traerCambios(sitioId, this.proveedorTokenGithub()),
+      leerRegistro: (id, lineas) => this.registros.leerFinal(id, lineas),
+      finalizarProceso: (pid, confirmacion) => this.puertos.finalizarProceso(pid, confirmacion),
       estadoGeneral: () => this.estadoGeneral(),
       listarProyectos: () => this.sitios.listar(),
       estadoServicios: () => this.servicios.estados(),
@@ -845,6 +1031,256 @@ export class Nucleo {
       abrirTunel: (sitioId) => this.tuneles.abrir(sitioId),
       cerrarTunel: (sitioId) => this.tuneles.cerrar(sitioId),
     };
+  }
+
+  // ---- Proyectos: detección, wolfcore.yml y recetas ----
+
+  private async sitioPorId(id: string): Promise<Sitio> {
+    const s = (await this.sitios.listar()).find((x) => x.id === id);
+    if (!s) throw new Error('El proyecto ya no existe.');
+    return s;
+  }
+
+  /** Detección ampliada (Etapa B): tipo, servicios, runtimes y dominio sugerido. */
+  detectarCarpetaProyecto(carpeta: string): Promise<Deteccion> {
+    return detectarProyectoB(carpeta);
+  }
+
+  /** wolfcore.yml de la carpeta, o null si no hay. */
+  leerConfigProyecto(carpeta: string): Promise<ConfigProyecto | null> {
+    return leerConfigProyecto(carpeta);
+  }
+
+  /** Valida y escribe wolfcore.yml en la carpeta. */
+  async guardarConfigProyecto(carpeta: string, datos: unknown): Promise<void> {
+    const r = ConfigProyectoSchema.safeParse(datos);
+    if (!r.success) {
+      throw new Error(
+        `La configuración del proyecto no es válida: ${r.error.issues
+          .slice(0, 5)
+          .map((i) => `${i.path.join('.') || 'raíz'}: ${i.message}`)
+          .join('; ')}`,
+      );
+    }
+    await escribirConfigProyecto(carpeta, r.data);
+  }
+
+  /** Receta que correría la carpeta (la de wolfcore.yml o la de por defecto) y su detección. */
+  async recetaPropuesta(carpeta: string): Promise<RecetaPropuesta> {
+    const deteccion = await detectarProyectoB(carpeta);
+    const config = await leerConfigProyecto(carpeta);
+    return {
+      receta: await recetaEfectiva(carpeta, deteccion),
+      origen: config && config.receta.length > 0 ? 'wolfcore.yml' : 'defecto',
+      deteccion,
+    };
+  }
+
+  /** Ejecuta la receta (exige `confiado`); el avance llega por `receta:progreso`. */
+  ejecutarReceta(sitioId: string, opciones: OpcionesReceta = {}): Promise<ResultadoReceta> {
+    return this.recetas.ejecutar(sitioId, opciones);
+  }
+
+  /** Marca el paso como omitido y sigue desde el siguiente. */
+  omitirPasoReceta(sitioId: string, pasoId: string): Promise<ResultadoReceta> {
+    return this.recetas.omitir(sitioId, pasoId);
+  }
+
+  estadoReceta(sitioId: string): EstadoReceta {
+    return this.recetas.estado(sitioId);
+  }
+
+  cancelarReceta(sitioId: string): boolean {
+    return this.recetas.cancelar(sitioId);
+  }
+
+  /** Huella de la receta efectiva de una carpeta; null si no se puede leer (wolfcore.yml roto). */
+  private async huellaCarpeta(carpeta: string): Promise<string | null> {
+    try {
+      return huellaReceta(await recetaEfectiva(carpeta, await detectarProyectoB(carpeta)));
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Huella que se guarda con el sitio: se toma al marcar "Confío…" (o al cambiar de carpeta), se
+   * conserva mientras siga marcado y se borra al desmarcarlo. Lo que mande la interfaz se ignora.
+   */
+  private async huellaPara(datos: Omit<Sitio, 'id'>, previo: Sitio | undefined) {
+    if (!datos.confiado) return null;
+    if (previo?.confiado && previo.carpeta === datos.carpeta) return previo.recetaConfiada ?? null;
+    return this.huellaCarpeta(datos.carpeta);
+  }
+
+  private async resumenRecetaInterno(
+    sitioId: string,
+  ): Promise<ResumenReceta & { receta: PasoReceta[] }> {
+    const sitio = await this.sitioPorId(sitioId);
+    const receta = await recetaEfectiva(sitio.carpeta, await detectarProyectoB(sitio.carpeta));
+    const cambio = !sitio.recetaConfiada || sitio.recetaConfiada !== huellaReceta(receta);
+    const pasos = receta.map(comandoDePaso);
+    return {
+      proyecto: sitio.nombre || sitio.dominio,
+      pasos: cambio ? [AVISO_RECETA_CAMBIADA, ...pasos] : pasos,
+      cambio,
+      receta,
+    };
+  }
+
+  /**
+   * Lo que correría la receta del proyecto, paso a paso con su comando real (acotado), y si
+   * cambió desde que se marcó "Confío en este repositorio".
+   */
+  async resumenReceta(sitioId: string): Promise<ResumenReceta> {
+    const { proyecto, pasos, cambio } = await this.resumenRecetaInterno(sitioId);
+    return { proyecto, pasos, cambio };
+  }
+
+  // ---- Git y GitHub (el token lo pasa el proceso principal; nunca se guarda aquí) ----
+
+  /**
+   * Fija de dónde sale el token de GitHub para lo que no pasa por la ventana (MCP). Solo lo
+   * llama el proceso principal.
+   */
+  fijarProveedorTokenGithub(fn: () => string | null): void {
+    this.proveedorTokenGithub = fn;
+  }
+
+  disponibilidadGit(): Promise<DisponibilidadGit> {
+    return this.git.disponible();
+  }
+
+  /** Clona en `destino`; cada línea de progreso (sin tokens) sale por `git:progreso`. */
+  clonarRepo(url: string, destino: string, token?: string | null): Promise<void> {
+    return this.git.clonar(url, destino, {
+      ...(token ? { token } : {}),
+      alProgreso: (linea) => this.eventos.emit('git:progreso', { destino, linea }),
+    });
+  }
+
+  async estadoGit(sitioId: string): Promise<EstadoGit> {
+    return this.git.estado((await this.sitioPorId(sitioId)).carpeta);
+  }
+
+  /** git fetch + avance rápido; con cambios locales o divergencia no toca nada. */
+  async traerCambios(sitioId: string, token?: string | null): Promise<ResultadoTraer> {
+    const carpeta = (await this.sitioPorId(sitioId)).carpeta;
+    return this.git.traerCambios(carpeta, token ? { token } : {});
+  }
+
+  reposGithub(o: OpcionesRepos = {}): Promise<RepoGithub[]> {
+    return this.github.repos(o);
+  }
+
+  instalarGh(): Promise<void> {
+    return this.github.instalarGh();
+  }
+
+  iniciarSesionGh(): Promise<void> {
+    return this.github.iniciarSesionGh();
+  }
+
+  // ---- Runtimes y procesos de proyecto ----
+
+  runtimesInstalados(tipo: TipoRuntime): Promise<string[]> {
+    return this.runtimes.instalados(tipo);
+  }
+
+  async runtimesProyecto(sitioId: string): Promise<RuntimesProyecto> {
+    return this.runtimes.paraProyecto(await this.sitioPorId(sitioId));
+  }
+
+  iniciarProceso(sitioId: string, procesoId: string): Promise<void> {
+    return this.procesos.iniciar(sitioId, procesoId);
+  }
+
+  detenerProceso(sitioId: string, procesoId: string): Promise<void> {
+    return this.procesos.detener(sitioId, procesoId);
+  }
+
+  /** Estado de los procesos del proyecto, sin la ruta del log. */
+  async estadosProcesos(sitioId: string): Promise<EstadoProcesoPublico[]> {
+    return (await this.procesos.estados(sitioId)).map(({ log: _log, ...resto }) => {
+      void _log;
+      return resto;
+    });
+  }
+
+  // ---- Carpeta vigilada ----
+
+  sugerenciasProyectos(): Promise<SugerenciaProyecto[]> {
+    return this.vigilante.sugerencias();
+  }
+
+  /** Guarda la carpeta vigilada (null = no vigilar) y empieza a vigilarla. */
+  async cambiarCarpetaVigilada(carpeta: string | null): Promise<void> {
+    await this.sitios.modificarConfig((c) => {
+      c.proyectos.carpetaVigilada = carpeta;
+    });
+    await this.vigilante.vigilar(carpeta);
+  }
+
+  // ---- Métricas y registros ----
+
+  iniciarMetricas(): void {
+    this.metricas.iniciar();
+  }
+
+  pausarMetricas(): void {
+    this.metricas.pausar();
+  }
+
+  ultimasMetricas(min = 5): MuestraSistema[] {
+    return this.metricas.ultimos(min);
+  }
+
+  /** Fuentes de registro sin la ruta del archivo (la interfaz solo conoce el id). */
+  async fuentesRegistro(): Promise<FuenteRegistroPublica[]> {
+    return (await this.registros.fuentes()).map(({ ruta: _ruta, ...resto }) => {
+      void _ruta;
+      return resto;
+    });
+  }
+
+  /** Empieza a emitir `registro:lineas` de la fuente; devuelve la función para dejar de seguir. */
+  seguirRegistro(id: string): Promise<() => void> {
+    return this.registros.seguir(id);
+  }
+
+  leerRegistro(id: string, lineas = 500): Promise<string[]> {
+    return this.registros.leerFinal(id, lineas);
+  }
+
+  /** Carpeta de una fuente de registro (para "Abrir carpeta" desde el proceso principal). */
+  async carpetaRegistro(id: string): Promise<string> {
+    const f = (await this.registros.fuentes()).find((x) => x.id === id);
+    if (!f) throw new Error('La fuente de registro no existe.');
+    return path.dirname(f.ruta);
+  }
+
+  // ---- Herramientas ----
+
+  puertosEnUso(): Promise<PuertoEnUso[]> {
+    return this.puertos.puertosEnUso();
+  }
+
+  finalizarProceso(
+    pid: number,
+    confirmacion: string,
+    o: OpcionesFinalizar = {},
+  ): Promise<{ pid: number; nombre: string }> {
+    return this.puertos.finalizarProceso(pid, confirmacion, o);
+  }
+
+  /** Quita el BOM de UTF-8 (con copia .bak-bom); `rutas` vienen de un diálogo. */
+  limpiarBom(rutas: string[], simular: boolean): Promise<ResultadoBom[]> {
+    return limpiarBom(rutas, { simular });
+  }
+
+  /** Certificado firmado por la CA local; devuelve los PEM (no escribe nada). */
+  emitirCertificadoLibre(dominios: string[]): Promise<{ certPem: string; clavePem: string }> {
+    return emitirCertificadoLibre(dominios, { rutas: this.rutas });
   }
 
   estadoMcp(): EstadoMcp {
@@ -914,6 +1350,7 @@ export class Nucleo {
     delete resto.ftp;
     if (id) await this.cerrarTunelSiCambia(id, datos);
     const previo = id ? (await this.sitios.listar()).find((s) => s.id === id) : undefined;
+    resto.recetaConfiada = await this.huellaPara(datos, previo);
     const sitio = id ? await this.sitios.editar(id, resto) : await this.sitios.crear(resto);
     // Las sesiones FTP abiertas siguen en la carpeta vieja: se cortan al cambiarla.
     if (id && previo && previo.carpeta !== sitio.carpeta) {
@@ -1078,6 +1515,14 @@ export class Nucleo {
     this.cerrado = true;
     if (this.temporizador) clearInterval(this.temporizador);
     this.temporizador = null;
+    // Primero lo que solo observa (vigilancia, métricas y registros), luego el MCP y al final
+    // túneles, procesos y servicios.
+    this.vigilante.dispose();
+    this.metricas.pausar();
+    this.registros.cerrar();
+    for (const s of await this.sitios.listar().catch(() => [] as Sitio[])) {
+      this.recetas.cancelar(s.id);
+    }
     await this.mcp.detener().catch((e: unknown) => {
       console.error('No se pudo detener el servidor MCP:', mensajeDe(e));
     });
@@ -1127,4 +1572,32 @@ async function leerEnvAcotado(ruta: string): Promise<string> {
   } finally {
     await f?.close().catch(() => undefined);
   }
+}
+
+/** Puerto de la interfaz web de Mailpit (fijo). */
+const PUERTO_WEB_MAILPIT = 8025;
+
+/**
+ * Puertos que un proceso de proyecto nuevo no puede tomar: los de los servicios (Nginx, HTTPS,
+ * FTP y su rango pasivo, bases de datos, Mailpit, Ollama, MCP, Adminer) y los de los procesos y
+ * proxies de los proyectos. `propio` (el puerto que el proceso ya tenía) no se cuenta como de otro
+ * proyecto, para que lo conserve si sigue libre.
+ */
+export function puertosReservados(cfg: Config, propio: number | null = null): number[] {
+  const r = new Set<number>([
+    cfg.servicios.nginx.puerto,
+    cfg.https.puerto,
+    cfg.ftp.puerto,
+    cfg.mcp.puerto,
+    PUERTO_ADMINER,
+    PUERTO_WEB_MAILPIT,
+    ...Object.values(cfg.servicios.datos).map((d) => d.puerto),
+  ]);
+  const [desde, hasta] = cfg.ftp.pasivos;
+  for (let p = Math.min(desde, hasta); p <= Math.max(desde, hasta); p++) r.add(p);
+  for (const s of cfg.sitios) {
+    if (s.puertoProxy !== null && s.puertoProxy !== propio) r.add(s.puertoProxy);
+    for (const p of s.procesos) if (p.puerto !== null && p.puerto !== propio) r.add(p.puerto);
+  }
+  return [...r];
 }

@@ -3,7 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
-import { LIMITE_ENV_BYTES, Nucleo } from '../src/nucleo';
+import { LIMITE_ENV_BYTES, Nucleo, puertosReservados } from '../src/nucleo';
+import type { OperacionesMcp } from '../src/mcp/servidor';
+import { ConfigSchema } from '../src/tipos';
+import { buscarPuertoLibre } from '../src/proyectos/resumen';
 import { Supervisor } from '../src/procesos/supervisor';
 import { ProcesosProyecto } from '../src/proyectos/procesos';
 import { BasesDeDatos } from '../src/bd/basesDeDatos';
@@ -980,6 +983,206 @@ describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
     const n = await crear();
     expect(await n.carpetaRespaldos()).toBe(
       path.join('D:/OneDrive/Documentos', 'WolfCore Dev', 'Respaldos'),
+    );
+  });
+});
+
+describe('Nucleo (Etapa B)', () => {
+  const ops = (n: Nucleo): OperacionesMcp =>
+    (n as unknown as { operacionesMcp(): OperacionesMcp }).operacionesMcp();
+
+  const yml = (comando: string[]): void =>
+    writeFileSync(
+      path.join(carpeta, 'wolfcore.yml'),
+      [
+        'version: 1',
+        'receta:',
+        '  - id: preparar',
+        '    tipo: comando',
+        '    titulo: Instalar dependencias',
+        '    args:',
+        `      comando: [${comando.map((c) => JSON.stringify(c)).join(', ')}]`,
+        '',
+      ].join('\n'),
+    );
+
+  it('operacionesMcp aporta receta, traer cambios, registros y finalizar proceso', async () => {
+    const n = await crear();
+    const o = ops(n);
+    for (const k of [
+      'ejecutarReceta',
+      'resumenReceta',
+      'traerCambios',
+      'leerRegistro',
+      'finalizarProceso',
+    ] as const) {
+      expect(typeof o[k], k).toBe('function');
+    }
+  });
+
+  it('resumenReceta muestra el comando real de cada paso, no el título', async () => {
+    yml(['node', 'scripts/borrar-todo.js', '--sin preguntar']);
+    const n = await crear();
+    await n.guardarSitio(datos({ confiado: true }));
+    const r = await n.resumenReceta('demo');
+    expect(r.cambio).toBe(false);
+    expect(r.proyecto).toBe('Demo');
+    expect(r.pasos).toEqual(['[comando] node scripts/borrar-todo.js "--sin preguntar"']);
+    expect(r.pasos.join(' ')).not.toContain('Instalar dependencias');
+  });
+
+  it('resumenReceta acota cada comando', async () => {
+    yml(['node', 'x'.repeat(500)]);
+    const n = await crear();
+    await n.guardarSitio(datos({ confiado: true }));
+    const [paso] = (await n.resumenReceta('demo')).pasos;
+    expect(paso!.length).toBeLessThanOrEqual(120);
+    expect(paso!.endsWith('…')).toBe(true);
+  });
+
+  it('marca la receta como cambiada si wolfcore.yml cambió desde que se marcó "Confío"', async () => {
+    yml(['node', 'a.js']);
+    const n = await crear();
+    await n.guardarSitio(datos({ confiado: true }));
+    // Guardar otra vez con "Confío" marcado conserva la huella original.
+    await n.guardarSitio({ ...datos({ confiado: true }), nota: 'x' }, 'demo');
+    yml(['node', 'b.js']);
+    await n.guardarSitio({ ...datos({ confiado: true }), nota: 'y' }, 'demo');
+    const r = await n.resumenReceta('demo');
+    expect(r.cambio).toBe(true);
+    expect(r.pasos[0]).toMatch(/AVISO: la receta cambió/);
+    expect(r.pasos[1]).toBe('[comando] node b.js');
+    // Desmarcar y volver a marcar acepta la receta nueva.
+    await n.guardarSitio(datos({ confiado: false }), 'demo');
+    expect((await n.sitios.listar())[0]!.recetaConfiada).toBeNull();
+    await n.guardarSitio(datos({ confiado: true }), 'demo');
+    expect((await n.resumenReceta('demo')).cambio).toBe(false);
+  });
+
+  it('la huella la fija el núcleo: la que manda la interfaz se ignora', async () => {
+    yml(['node', 'a.js']);
+    const n = await crear();
+    await n.guardarSitio(datos({ confiado: true }));
+    yml(['node', 'malo.js']);
+    await n.guardarSitio({ ...datos({ confiado: true }), recetaConfiada: 'f'.repeat(64) }, 'demo');
+    expect((await n.sitios.listar())[0]!.recetaConfiada).not.toBe('f'.repeat(64));
+    expect((await n.resumenReceta('demo')).cambio).toBe(true);
+  });
+
+  it('el MCP ejecuta exactamente la receta que describió para confirmar', async () => {
+    yml(['node', 'a.js']);
+    const n = await crear();
+    await n.guardarSitio(datos({ confiado: true }));
+    const ejecutar = vi.spyOn(n.recetas, 'ejecutar').mockResolvedValue({ estado: 'lista' });
+    const o = ops(n);
+    await expect(o.ejecutarReceta!('demo')).rejects.toThrow(/describir y confirmar/);
+    await o.resumenReceta!('demo');
+    yml(['node', 'cambiado-mientras-se-confirmaba.js']);
+    await o.ejecutarReceta!('demo');
+    const receta = ejecutar.mock.calls[0]![1]!.receta!;
+    expect(receta.map((p) => p.args?.['comando'])).toEqual([['node', 'a.js']]);
+    // Una descripción sirve para una sola ejecución.
+    await expect(o.ejecutarReceta!('demo')).rejects.toThrow(/describir y confirmar/);
+  });
+
+  it('traer_cambios del MCP usa el token que fija el proceso principal', async () => {
+    const n = await crear();
+    await n.guardarSitio(datos());
+    const traer = vi
+      .spyOn(n.git, 'traerCambios')
+      .mockResolvedValue({ actualizado: false, cambios: {} as never });
+    await ops(n).traerCambios!('demo');
+    expect(traer).toHaveBeenLastCalledWith(carpeta, {});
+    n.fijarProveedorTokenGithub(() => 'ghp_falso123');
+    await ops(n).traerCambios!('demo');
+    expect(traer).toHaveBeenLastCalledWith(carpeta, { token: 'ghp_falso123' });
+  });
+
+  it('clonarRepo emite git:progreso y pasa el token solo a git', async () => {
+    const n = await crear();
+    const lineas: unknown[] = [];
+    n.eventos.on('git:progreso', (p) => lineas.push(p));
+    const clonar = vi.spyOn(n.git, 'clonar').mockImplementation(async (_u, _d, o) => {
+      o?.alProgreso?.('Recibiendo objetos: 50%');
+    });
+    await n.clonarRepo('https://github.com/a/b.git', 'C:/Proyectos/b', 'ghp_falso123');
+    expect(clonar.mock.calls[0]![2]).toMatchObject({ token: 'ghp_falso123' });
+    expect(lineas).toEqual([{ destino: 'C:/Proyectos/b', linea: 'Recibiendo objetos: 50%' }]);
+    expect(JSON.stringify(lineas)).not.toContain('ghp_');
+  });
+
+  it('procesos y registros llegan a la interfaz sin rutas de archivo', async () => {
+    const n = await crear();
+    await n.guardarSitio(
+      datos({
+        procesos: [
+          {
+            id: 'web',
+            nombre: 'web',
+            comando: ['node', 'a.js'],
+            cwd: 'raiz',
+            autoIniciar: false,
+            reiniciar: false,
+            puerto: null,
+            proxy: false,
+          },
+        ],
+      }),
+    );
+    const procesos = await n.estadosProcesos('demo');
+    expect(procesos).toHaveLength(1);
+    expect(procesos[0]).not.toHaveProperty('log');
+    const fuentes = await n.fuentesRegistro();
+    expect(fuentes.length).toBeGreaterThan(0);
+    for (const f of fuentes) expect(f).not.toHaveProperty('ruta');
+    expect(await n.carpetaRegistro(fuentes[0]!.id)).toContain(base);
+    await expect(n.carpetaRegistro('no-existe')).rejects.toThrow(/no existe/);
+  });
+
+  it('cambiarCarpetaVigilada la guarda y la vigila', async () => {
+    const n = await crear();
+    const vigilar = vi.spyOn(n.vigilante, 'vigilar');
+    await n.cambiarCarpetaVigilada(base);
+    expect((await n.config.leer()).proyectos.carpetaVigilada).toBe(base);
+    expect(vigilar).toHaveBeenCalledWith(base);
+  });
+
+  it('al cerrar detiene vigilancia, métricas y registros antes que el MCP', async () => {
+    const n = await crear();
+    const orden: string[] = [];
+    vi.spyOn(n.vigilante, 'dispose').mockImplementation(() => void orden.push('vigilante'));
+    vi.spyOn(n.metricas, 'pausar').mockImplementation(() => void orden.push('metricas'));
+    vi.spyOn(n.registros, 'cerrar').mockImplementation(() => void orden.push('registros'));
+    vi.spyOn(n.mcp, 'detener').mockImplementation(async () => void orden.push('mcp'));
+    await n.cerrar({ detenerServicios: false });
+    nucleos.splice(nucleos.indexOf(n), 1);
+    expect(orden).toEqual(['vigilante', 'metricas', 'registros', 'mcp']);
+  });
+
+  it('puertosReservados reúne servicios y procesos de otros proyectos, menos el propio', () => {
+    const cfg = ConfigSchema.parse({
+      sitios: [
+        {
+          ...datos(),
+          id: 'otro',
+          puertoProxy: 5173,
+          procesos: [{ id: 'api', comando: ['x'], puerto: 8001 }],
+        },
+      ],
+    });
+    const r = puertosReservados(cfg);
+    for (const p of [80, 443, 2121, 3306, 5432, 7790, 8090, 8025, 50000, 50100, 5173, 8001]) {
+      expect(r, String(p)).toContain(p);
+    }
+    expect(puertosReservados(cfg, 8001)).not.toContain(8001);
+  });
+
+  it('buscarPuertoLibre respeta el preferido y salta los reservados y los ocupados', async () => {
+    const ocupados = new Set([8001]);
+    const probar = async (p: number): Promise<boolean> => !ocupados.has(p);
+    expect(await buscarPuertoLibre({ reservados: [], preferido: 8123, probar })).toBe(8123);
+    expect(await buscarPuertoLibre({ reservados: [8123, 8000], preferido: 8123, probar })).toBe(
+      8002,
     );
   });
 });

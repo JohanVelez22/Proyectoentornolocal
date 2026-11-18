@@ -39,6 +39,8 @@ export type EventosNucleo = {
   'bd:progreso': ProgresoBd;
   'ia:progreso': ProgresoIa;
   'receta:progreso': ProgresoReceta;
+  /** Una línea de progreso (saneada, sin tokens) del clon de `destino`. */
+  'git:progreso': { destino: string; linea: string };
   /** Cambió la lista de carpetas nuevas que parecen un proyecto (carpeta vigilada). */
   'proyectos:sugerencias': SugerenciaProyecto[];
   /** Hay un aviso de inicio nuevo (p. ej. servicios que no encendieron); se lee con tomarAvisoInicio. */
