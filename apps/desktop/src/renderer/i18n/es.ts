@@ -134,6 +134,7 @@ export const es = {
       descargando: 'Descargando',
       verificando: 'Verificando SHA-256',
       extrayendo: 'Extrayendo',
+      compilando: 'Compilando',
       listo: 'Instalado',
       error: 'Falló la instalación',
     },

@@ -131,7 +131,7 @@ export interface EstadoTunel {
 export interface ProgresoInstalacion {
   servicio: string;
   version: string;
-  fase: 'descargando' | 'verificando' | 'extrayendo' | 'listo' | 'error';
+  fase: 'descargando' | 'verificando' | 'extrayendo' | 'compilando' | 'listo' | 'error';
   porcentaje: number;
   mensaje?: string;
 }
