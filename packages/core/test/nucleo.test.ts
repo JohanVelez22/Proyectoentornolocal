@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -494,6 +494,16 @@ describe('Nucleo.crear y la migración de la carpeta de datos', () => {
     nucleos.push(n);
     expect(n.rutas.base).toBe(base);
     expect(n.avisoInicio).toBe('aviso de prueba');
+  });
+});
+
+describe('Nucleo.crear purga temporales', () => {
+  it('al arrancar borra los restos de restauraciones e importaciones interrumpidas', async () => {
+    mkdirSync(path.join(base, 'tmp', 'restaurar-viejo'), { recursive: true });
+    writeFileSync(path.join(base, 'tmp', 'lanzar-viejo.pid'), '1');
+    await crear();
+    expect(existsSync(path.join(base, 'tmp', 'restaurar-viejo'))).toBe(false);
+    expect(existsSync(path.join(base, 'tmp', 'lanzar-viejo.pid'))).toBe(false);
   });
 });
 

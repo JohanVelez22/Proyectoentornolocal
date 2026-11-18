@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readdir, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -91,6 +91,29 @@ export class Rutas {
   }
   tmp(): string {
     return path.join(this.base, 'tmp');
+  }
+
+  /**
+   * Borra de tmp/ lo que dejó una ejecución anterior interrumpida (cierre forzado, apagón):
+   * carpetas importar-* y restaurar-* (pueden ser volcados de GB) y archivos lanzar-*.pid. Solo al
+   * arrancar: la app es de instancia única, así que nada de eso está en uso.
+   */
+  async purgarTemporales(): Promise<void> {
+    let nombres: string[];
+    try {
+      nombres = await readdir(this.tmp());
+    } catch {
+      return;
+    }
+    for (const n of nombres) {
+      if (!/^(importar|restaurar)-/.test(n) && !/^lanzar-.*\.pid$/.test(n)) continue;
+      await rm(path.join(this.tmp(), n), {
+        recursive: true,
+        force: true,
+        maxRetries: 3,
+        retryDelay: 200,
+      }).catch(() => undefined);
+    }
   }
 
   async asegurar(): Promise<void> {

@@ -219,6 +219,7 @@ export class Nucleo {
     }
     const rutas = new Rutas(baseElegida);
     await rutas.asegurar();
+    await rutas.purgarTemporales();
     const plataforma = o.plataforma ?? crearPlataforma();
     const eventos = new Eventos<EventosNucleo>();
     const almacen = new Almacen(rutas);
