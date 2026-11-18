@@ -50,3 +50,5 @@ export * from './proyectos/detectar';
 export * from './proyectos/pasos';
 export * from './proyectos/pasos/index';
 export * from './proyectos/recetas';
+export * from './git/git';
+export * from './git/github';
