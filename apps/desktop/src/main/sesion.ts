@@ -1,5 +1,18 @@
 import { restaurarUrlBaseSincrono, type Rutas } from '@pel/core';
 
+/** Fin de sesión o apagado de Windows: el sistema no espera mucho más. */
+export const TOPE_CIERRE_FIN_SESION_MS = 5_000;
+/**
+ * Salida pedida (before-quit) sin fin de sesión: hay tiempo para el apagado limpio de las bases
+ * (cada una espera hasta 10 s a que su proceso termine; ahora en paralelo) más nginx y PHP.
+ */
+export const TOPE_CIERRE_SALIDA_MS = 20_000;
+
+/** Margen para apagar los servicios al cerrar sin diálogo. */
+export function topeCierre(finDeSesion: boolean): number {
+  return finDeSesion ? TOPE_CIERRE_FIN_SESION_MS : TOPE_CIERRE_SALIDA_MS;
+}
+
 export interface EmisorSesion {
   on(evento: 'query-session-end' | 'session-end', fn: () => void): unknown;
 }

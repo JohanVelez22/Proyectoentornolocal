@@ -4,6 +4,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AlmacenCredenciales } from '../almacen';
 import type { Ejecutor, Plataforma } from '../plataforma/tipos';
+import { pidExiste } from '../plataforma/win';
 import type { DefProceso } from '../procesos/supervisor';
 import type { Rutas } from '../rutas';
 import {
@@ -162,6 +163,8 @@ export interface DepsServiciosDatos {
   definiciones: () => readonly DefServicio[];
   /** Para pruebas: borrado recursivo (por defecto `fs.rm`). */
   borrar?: (ruta: string, opciones: typeof OPCIONES_BORRADO) => Promise<void>;
+  /** ¿Sigue vivo el PID? (por defecto `pidExiste`, sin lanzar procesos). */
+  existePid?: (pid: number) => boolean;
 }
 
 /** Ciclo de vida de los servicios declarados con `DefServicio`. */
@@ -338,10 +341,10 @@ export class ServiciosDatos {
         const cfg = await this.d.leerConfig();
         const version = await this.versionActiva(def, cfg);
         await def.detenerLimpio(await this.contexto(def, version, cfg));
+        // Consulta directa al sistema (sin lanzar tasklist cada 200 ms).
+        const existe = this.d.existePid ?? pidExiste;
         const limite = Date.now() + ESPERA_APAGADO_MS;
-        while (Date.now() < limite && (await this.d.plataforma.procesoVivo(pid)).vivo) {
-          await pausa(200);
-        }
+        while (Date.now() < limite && existe(pid)) await pausa(200);
       } catch {
         // si el apagado limpio falla, el supervisor lo detiene a la fuerza
       }
@@ -480,17 +483,15 @@ export class ServiciosDatos {
     return errores;
   }
 
-  /** Detiene los que el supervisor conoce; devuelve los errores sin cortar en el primero. */
+  /**
+   * Detiene en paralelo los que el supervisor conoce (cada apagado limpio puede tardar segundos:
+   * en serie no cabían en el margen de cierre); devuelve los errores sin cortar en el primero.
+   */
   async detenerTodos(): Promise<unknown[]> {
-    const errores: unknown[] = [];
-    for (const def of this.d.definiciones()) {
-      if (this.d.supervisor.estado(def.id) === 'apagado') continue;
-      try {
-        await this.detener(def.id);
-      } catch (e) {
-        errores.push(e);
-      }
-    }
-    return errores;
+    const activos = this.d
+      .definiciones()
+      .filter((def) => this.d.supervisor.estado(def.id) !== 'apagado');
+    const r = await Promise.allSettled(activos.map((def) => this.detener(def.id)));
+    return r.flatMap((x) => (x.status === 'rejected' ? [x.reason as unknown] : []));
   }
 }

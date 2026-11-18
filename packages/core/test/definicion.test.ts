@@ -130,6 +130,7 @@ const crear = (defs: DefServicio[], extra: Partial<DepsServicios> = {}) =>
     sonda: async (p) => respuestas.has(p),
     exec,
     definiciones: defs,
+    existePid: () => false,
     ...extra,
   });
 
@@ -532,6 +533,77 @@ describe('borrarDatos', () => {
     await s.borrarDatos('mysql', 'mysql');
     expect(detenidos).toEqual(['mysql']);
     expect(existsSync(path.join(base, 'data', 'mysql'))).toBe(false);
+  });
+});
+
+describe('detener: espera y detenerTodos', () => {
+  it('espera la salida con existePid (sin tasklist) y luego libera', async () => {
+    let vivos = 2;
+    const consultados: number[] = [];
+    let procesoVivoLlamado = false;
+    const d = defFalsa({ detenerLimpio: async () => undefined });
+    const plat = plataforma();
+    plat.procesoVivo = async () => {
+      procesoVivoLlamado = true;
+      return { vivo: true };
+    };
+    const s = crear([d], {
+      plataforma: plat,
+      existePid: (pid) => {
+        consultados.push(pid);
+        return vivos-- > 0;
+      },
+    });
+    await s.iniciar('mysql');
+    await s.detener('mysql');
+    expect(consultados).toEqual([1001, 1001, 1001]);
+    expect(procesoVivoLlamado).toBe(false);
+    expect(detenidos).toEqual(['mysql']);
+  });
+
+  it('detenerTodos apaga en paralelo y junta los errores sin cortar', async () => {
+    instalados = { mysql: ['8.4.13'], redis: ['8.10.3'], postgresql: ['17.12'] };
+    const empezados: string[] = [];
+    let soltar!: () => void;
+    const barrera = new Promise<void>((r) => (soltar = r));
+    const lenta = (id: 'mysql' | 'redis', puerto: number) =>
+      defFalsa({
+        id,
+        nombre: id,
+        puertoPorDefecto: puerto,
+        detenerLimpio: async () => {
+          empezados.push(id);
+          await barrera;
+        },
+      });
+    const pgDef = defFalsa({
+      id: 'postgresql',
+      nombre: 'PostgreSQL',
+      puertoPorDefecto: 5432,
+      detenerLimpio: async () => {
+        throw new Error('no limpio');
+      },
+    });
+    const sup = supervisor();
+    const original = sup.detener.bind(sup);
+    sup.detener = async (id: string) => {
+      await original(id);
+      if (id === 'redis') throw new Error('redis no se detuvo');
+    };
+    const defs = [lenta('mysql', 3306), lenta('redis', 6379), pgDef];
+    const s = crear(defs, { supervisor: sup });
+    for (const d of defs) estados.set(d.id, 'encendido');
+    for (const [i, d] of defs.entries()) pids.set(d.id, 2000 + i);
+    const fin = s.detenerTodo().catch((e: unknown) => e);
+    await vi.waitFor(() => expect(empezados.sort()).toEqual(['mysql', 'redis']));
+    soltar();
+    const e = await fin;
+    expect((e as Error).message).toMatch(/redis no se detuvo/);
+    expect(detenidos.filter((x) => defs.some((d) => d.id === x)).sort()).toEqual([
+      'mysql',
+      'postgresql',
+      'redis',
+    ]);
   });
 });
 

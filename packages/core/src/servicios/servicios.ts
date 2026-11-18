@@ -36,6 +36,8 @@ export interface DepsServicios {
   credenciales?: Pick<AlmacenCredenciales, 'leer' | 'obtenerOCrear'>;
   /** Para pruebas: borrado recursivo de carpetas de datos. */
   borrar?: DepsServiciosDatos['borrar'];
+  /** Para pruebas: ¿sigue vivo el PID? */
+  existePid?: DepsServiciosDatos['existePid'];
   /** Ramas de PHP usadas por al menos un sitio (las aporta la tarea 8). */
   ramasEnUso?: () => Promise<string[]>;
   /** Upstreams para nginx.conf; por defecto, ramas en uso que estén instaladas. */
@@ -113,6 +115,7 @@ export class Servicios {
       modificarConfig: d.modificarConfig,
       credenciales: d.credenciales ?? new AlmacenCredenciales(d.rutas),
       ...(d.borrar ? { borrar: d.borrar } : {}),
+      ...(d.existePid ? { existePid: d.existePid } : {}),
       sonda: this.sonda,
       exec: d.exec ?? ejecutorPorDefecto,
       definiciones: () => definiciones ?? DEFINICIONES,

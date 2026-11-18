@@ -4,7 +4,7 @@ import { Nucleo, type Rutas } from '@pel/core';
 import type { ApiSistema } from '../shared/api';
 import { crearBandeja } from './bandeja';
 import { registrarIpc } from './ipc';
-import { registrarFinDeSesion } from './sesion';
+import { registrarFinDeSesion, topeCierre } from './sesion';
 import { carpetaExistente, urlHttp } from './validacion';
 
 let ventana: BrowserWindow | null = null;
@@ -18,7 +18,6 @@ let cierreSistema: Promise<void> | null = null;
 const rutaIcono = app.isPackaged
   ? join(process.resourcesPath, 'icono.png')
   : join(__dirname, '../../resources/icono.png');
-const TIEMPO_CIERRE_SISTEMA_MS = 5000;
 
 const sistema: ApiSistema = {
   async elegirCarpeta() {
@@ -94,7 +93,7 @@ function crearVentana(rutas: Rutas): BrowserWindow {
   registrarFinDeSesion(
     v,
     () => rutas,
-    () => void cerrarPorSistema(),
+    () => void cerrarPorSistema(topeCierre(true)),
   );
 
   v.webContents.setWindowOpenHandler(({ url }) => {
@@ -115,15 +114,18 @@ function crearVentana(rutas: Rutas): BrowserWindow {
   return v;
 }
 
-/** Cierre sin diálogo (before-quit / session-end): apaga todo con un tope de 5 s y sale. */
-function cerrarPorSistema(): Promise<void> {
+/**
+ * Cierre sin diálogo (before-quit / session-end): apaga todo con un tope (5 s en fin de sesión,
+ * más margen si no) y sale.
+ */
+function cerrarPorSistema(topeMs: number): Promise<void> {
   if (cierreSistema) return cierreSistema;
   saliendo = true;
   cierreSistema = (async () => {
     try {
       await Promise.race([
         nucleo?.cerrar({ detenerServicios: true }),
-        new Promise<void>((r) => setTimeout(r, TIEMPO_CIERRE_SISTEMA_MS)),
+        new Promise<void>((r) => setTimeout(r, topeMs)),
       ]);
     } catch (e) {
       console.error('Error al cerrar el núcleo:', e);
@@ -174,7 +176,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', (e) => {
     if (saliendo) return;
     e.preventDefault();
-    void cerrarPorSistema();
+    void cerrarPorSistema(topeCierre(false));
   });
   void app.whenReady().then(async () => {
     try {

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Rutas, SitioSchema, UrlBase } from '@pel/core';
-import { registrarFinDeSesion } from '../src/main/sesion';
+import { registrarFinDeSesion, topeCierre } from '../src/main/sesion';
 
 let base: string;
 let carpeta: string;
@@ -79,5 +79,12 @@ describe('registrarFinDeSesion', () => {
     );
     v.emit('session-end');
     expect(apagar).toHaveBeenCalled();
+  });
+});
+
+describe('topeCierre', () => {
+  it('fin de sesión: 5 s; salida normal: más margen para el apagado limpio en paralelo', () => {
+    expect(topeCierre(true)).toBe(5_000);
+    expect(topeCierre(false)).toBeGreaterThanOrEqual(15_000);
   });
 });
