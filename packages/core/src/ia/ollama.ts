@@ -13,8 +13,9 @@ const MS_SIN_DATOS = 60_000;
 const MS_ENTRE_EVENTOS = 100; // como mucho 10 eventos por segundo y modelo
 
 /** Variables para que el código de un sitio use la IA local. */
-export function bloqueEnvIa(): string {
-  return `OLLAMA_BASE_URL=${BASE_POR_DEFECTO}\nOPENAI_BASE_URL=${BASE_POR_DEFECTO}/v1`;
+export function bloqueEnvIa(puerto = 11434): string {
+  const base = `http://127.0.0.1:${puerto}`;
+  return `OLLAMA_BASE_URL=${base}\nOPENAI_BASE_URL=${base}/v1`;
 }
 
 export interface ModeloOllama {
@@ -89,17 +90,23 @@ export class ClienteOllama {
     }
   }
 
+  /** Detalle ": mensaje" del cuerpo de error de Ollama, o cadena vacía. */
+  private async detalleError(r: RespuestaHttp): Promise<string> {
+    try {
+      const d = (await r.json()) as { error?: unknown };
+      if (typeof d.error === 'string') return `: ${d.error}`;
+    } catch {
+      /* sin cuerpo */
+    }
+    return '';
+  }
+
+  // La lectura del cuerpo no tiene tiempo máximo propio: el servicio es local y la espera de
+  // la cabecera ya está acotada por `llamar`.
   private async leerJson<T>(r: RespuestaHttp): Promise<T> {
     if (!r.ok) {
-      let detalle = '';
-      try {
-        const d = (await r.json()) as { error?: unknown };
-        if (typeof d.error === 'string') detalle = `: ${d.error}`;
-      } catch {
-        /* sin cuerpo */
-      }
       throw new ErrorOllama(
-        `Ollama respondió con un error (${r.status ?? 'desconocido'})${detalle}.`,
+        `Ollama respondió con un error (${r.status ?? 'desconocido'})${await this.detalleError(r)}.`,
       );
     }
     return (await r.json()) as T;
@@ -148,20 +155,22 @@ export class ClienteOllama {
 
   /** Aborta la descarga en curso; false si no había ninguna. */
   cancelarDescarga(nombre: string): boolean {
-    const ctl = this.descargas.get(nombre);
+    const clave = nombre.toLowerCase();
+    const ctl = this.descargas.get(clave);
     if (!ctl) return false;
     ctl.abort();
-    this.descargas.delete(nombre);
+    this.descargas.delete(clave);
     return true;
   }
 
   async descargar(nombre: string): Promise<void> {
     this.validar(nombre);
-    if (this.descargas.has(nombre)) {
+    const clave = nombre.toLowerCase();
+    if (this.descargas.has(clave)) {
       throw new ErrorOllama(`Ya se está descargando ${nombre}.`);
     }
     const ctl = new AbortController();
-    this.descargas.set(nombre, ctl);
+    this.descargas.set(clave, ctl);
     let estancado = false;
     let temporizador: ReturnType<typeof setTimeout> | undefined;
     const armar = (): void => {
@@ -176,6 +185,7 @@ export class ClienteOllama {
         ? new ErrorOllama(`La descarga de ${nombre} se detuvo: Ollama no envía datos.`, 'tiempo')
         : new ErrorOllama('Descarga cancelada', 'cancelado');
 
+    let lector: ReadableStreamDefaultReader<Uint8Array> | undefined;
     try {
       armar();
       let r: RespuestaHttp;
@@ -191,12 +201,15 @@ export class ClienteOllama {
         throw new ErrorOllama(APAGADO, 'apagado');
       }
       if (!r.ok || !r.body) {
+        const detalle = r.ok ? '' : await this.detalleError(r);
+        r.body?.cancel().catch(() => {});
         throw new ErrorOllama(
-          `Ollama no pudo descargar ${nombre} (error ${r.status ?? 'desconocido'}).`,
+          `Ollama no pudo descargar ${nombre} (error ${r.status ?? 'desconocido'})${detalle}.`,
         );
       }
 
-      const lector = r.body.getReader();
+      lector = r.body.getReader();
+      let exito = false;
       const dec = new TextDecoder('utf-8');
       let resto = '';
       let ultimoEmitido = -Infinity;
@@ -213,6 +226,7 @@ export class ClienteOllama {
         if (typeof d.error === 'string') {
           throw new ErrorOllama(`Ollama no pudo descargar ${nombre}: ${d.error}`);
         }
+        if (d.status === 'success') exito = true;
         const p: ProgresoIa = {
           modelo: nombre,
           estado: d.status ?? '',
@@ -246,11 +260,22 @@ export class ClienteOllama {
       }
       resto += dec.decode();
       linea(resto);
+      if (!exito) {
+        throw new ErrorOllama(`Se interrumpió la descarga de ${nombre}; inténtelo de nuevo.`);
+      }
       // Siempre se emite el estado final.
       if (pendiente) this.op.emitir?.(pendiente);
     } finally {
       clearTimeout(temporizador);
-      if (this.descargas.get(nombre) === ctl) this.descargas.delete(nombre);
+      if (lector) {
+        lector.cancel().catch(() => {});
+        try {
+          lector.releaseLock();
+        } catch {
+          /* aún hay una lectura pendiente */
+        }
+      }
+      if (this.descargas.get(clave) === ctl) this.descargas.delete(clave);
     }
   }
 

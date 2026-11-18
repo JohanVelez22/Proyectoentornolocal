@@ -182,6 +182,49 @@ describe('ClienteOllama', () => {
     expect(await c2.espacioUsado()).toBe(0);
   });
 
+  it('un flujo truncado sin success es un error', async () => {
+    const { c } = cliente(async () => flujo(['{"status":"pulling","completed":1,"total":9}\n']));
+    await expect(c.descargar('llama3.2')).rejects.toThrow(
+      'Se interrumpió la descarga de llama3.2; inténtelo de nuevo.',
+    );
+  });
+
+  it('cancela el lector cuando llega una línea de error', async () => {
+    let cancelado = false;
+    const enc = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(enc.encode('{"error":"boom"}\n'));
+      },
+      cancel() {
+        cancelado = true;
+      },
+    });
+    const { c } = cliente(async () => ({ ok: true, status: 200, json: async () => ({}), body }));
+    await expect(c.descargar('llama3.2')).rejects.toThrow('boom');
+    expect(cancelado).toBe(true);
+  });
+
+  it('pull con error HTTP muestra el detalle', async () => {
+    const { c } = cliente(async () => json({ error: 'sin espacio' }, 500));
+    await expect(c.descargar('llama3.2')).rejects.toThrow(
+      'Ollama no pudo descargar llama3.2 (error 500): sin espacio.',
+    );
+  });
+
+  it('no permite dos descargas del mismo modelo con otra capitalización', async () => {
+    const { c } = cliente(() => new Promise<Resp>(() => {}));
+    void c.descargar('Llama3.2').catch(() => {});
+    await expect(c.descargar('llama3.2')).rejects.toThrow('Ya se está descargando');
+    expect(c.cancelarDescarga('LLAMA3.2')).toBe(true);
+  });
+
+  it('bloqueEnvIa usa el puerto indicado', () => {
+    expect(bloqueEnvIa(11500)).toBe(
+      'OLLAMA_BASE_URL=http://127.0.0.1:11500\nOPENAI_BASE_URL=http://127.0.0.1:11500/v1',
+    );
+  });
+
   it('constantes', () => {
     expect(SUGERIDOS).toEqual(['llama3.2', 'qwen2.5-coder', 'mistral', 'nomic-embed-text']);
     expect(bloqueEnvIa()).toBe(
