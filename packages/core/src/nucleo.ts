@@ -35,6 +35,8 @@ export interface OpcionesNucleo {
   sonda?: (puerto: number) => Promise<boolean>;
   /** Se invoca con el bus de eventos antes de restaurar el estado, para no perder emisiones iniciales. */
   alIniciar?: (eventos: Eventos<EventosNucleo>) => void;
+  /** Para pruebas: reemplaza la migración de la carpeta de datos (solo sin `base`). */
+  migracion?: typeof migrarCarpetaDatos;
 }
 
 export interface EstadoGeneral {
@@ -91,6 +93,8 @@ export class Nucleo {
   readonly listarVersiones = listarVersiones;
   /** Solo lectura: los cambios pasan por guardarSitio/guardarAjustes, que además aplican. */
   readonly config: { leer(): Promise<Config> };
+  /** Aviso de la migración de la carpeta de datos (si hubo algo que informar). */
+  avisoInicio: string | null = null;
 
   private constructor(
     readonly rutas: Rutas,
@@ -111,8 +115,14 @@ export class Nucleo {
   }
 
   static async crear(o: OpcionesNucleo = {}): Promise<Nucleo> {
-    if (o.base === undefined) await migrarCarpetaDatos();
-    const rutas = new Rutas(o.base ?? rutaBasePorDefecto());
+    let avisoInicio: string | null = null;
+    let baseElegida = o.base;
+    if (baseElegida === undefined) {
+      const m = await (o.migracion ?? migrarCarpetaDatos)();
+      baseElegida = m.base;
+      avisoInicio = m.aviso ?? null;
+    }
+    const rutas = new Rutas(baseElegida);
     await rutas.asegurar();
     const plataforma = o.plataforma ?? crearPlataforma();
     const eventos = new Eventos<EventosNucleo>();
@@ -181,6 +191,7 @@ export class Nucleo {
       almacen,
       internos,
     );
+    nucleo.avisoInicio = avisoInicio;
     o.alIniciar?.(eventos);
     try {
       await supervisor.readoptar();

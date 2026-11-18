@@ -444,3 +444,17 @@ describe('Nucleo', () => {
     });
   });
 });
+
+describe('Nucleo.crear y la migración de la carpeta de datos', () => {
+  it('sin base usa la carpeta que devuelve la migración y expone el aviso', async () => {
+    const n = await Nucleo.crear({
+      plataforma,
+      sonda: async () => false,
+      fetch: (async () => new Response('{}')) as typeof fetch,
+      migracion: async () => ({ resultado: 'fallida', base, aviso: 'aviso de prueba' }),
+    });
+    nucleos.push(n);
+    expect(n.rutas.base).toBe(base);
+    expect(n.avisoInicio).toBe('aviso de prueba');
+  });
+});
