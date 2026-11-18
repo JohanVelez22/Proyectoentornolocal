@@ -1,4 +1,14 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import {
+  copyFileSync,
+  existsSync,
+  linkSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -41,11 +51,11 @@ describe('Composer', () => {
       asegurarPhpIni: async (r) => rutas.phpIni(r),
     });
 
-  it('escribe los shims con el contenido exacto', async () => {
+  it('escribe los shims con el contenido exacto (rutas relativas al shim)', async () => {
     await crear().crearShims('8.4');
-    const php = path.join(rutas.bin('php', '8.4'), 'php.exe');
-    const ini = rutas.phpIni('8.4');
-    const phar = path.join(rutas.bin('composer', '2.11.2'), 'composer.phar');
+    const php = '%~dp0..\\..\\bin\\php\\8.4\\php.exe';
+    const ini = '%~dp0..\\..\\etc\\php\\8.4\\php.ini';
+    const phar = '%~dp0..\\..\\bin\\composer\\2.11.2\\composer.phar';
     const dir = path.join(base, 'tools', 'bin');
     const cuerpo = (extra: string): string =>
       [
@@ -61,6 +71,60 @@ describe('Composer', () => {
     expect(readFileSync(path.join(dir, 'php.cmd'), 'utf8')).toBe(cuerpo(''));
     expect(readFileSync(path.join(dir, 'composer.cmd'), 'utf8')).toBe(cuerpo(` "${phar}"`));
   });
+
+  it('con una base con tildes y ñ, el shim no lleva ningún carácter no ASCII', async () => {
+    rutas = new Rutas(path.join(base, 'Usuarios', 'José Peña', 'WolfCore Dev'));
+    await crear().crearShims('8.4');
+    for (const f of ['php.cmd', 'composer.cmd']) {
+      const t = readFileSync(rutas.herramientas('bin', f), 'utf8');
+      expect(t).not.toMatch(/[^\x20-\x7e\r\n]/);
+      expect(t).toContain(
+        '"%~dp0..\\..\\bin\\php\\8.4\\php.exe" -c "%~dp0..\\..\\etc\\php\\8.4\\php.ini"',
+      );
+    }
+  });
+
+  it('relativaAlShim: otra unidad cae en la absoluta (con % duplicado)', async () => {
+    const { relativaAlShim } = await import('../src/herramientas/composer');
+    expect(relativaAlShim('C:\\b\\tools\\bin', 'D:\\x%y\\php.exe')).toBe('D:\\x%%y\\php.exe');
+    expect(relativaAlShim('C:\\b\\tools\\bin', 'C:\\b\\bin\\php\\8.4\\php.exe')).toBe(
+      '%~dp0..\\..\\bin\\php\\8.4\\php.exe',
+    );
+  });
+
+  it.skipIf(process.platform !== 'win32')(
+    'real: cmd.exe resuelve %~dp0 en una base con tildes (php.exe falso = node -c)',
+    async () => {
+      rutas = new Rutas(path.join(base, 'José Peña ñ'));
+      await crear().crearShims('8.4');
+      // php.exe falso: node.exe. `node -c <archivo>` lo abre para revisar su sintaxis; con un
+      // .ini se queja nombrando la ruta completa: así se ve que llegó entera, con tildes y ñ.
+      mkdirSync(rutas.bin('php', '8.4'), { recursive: true });
+      const exe = path.join(rutas.bin('php', '8.4'), 'php.exe');
+      try {
+        linkSync(process.execPath, exe);
+      } catch {
+        copyFileSync(process.execPath, exe);
+      }
+      mkdirSync(path.dirname(rutas.phpIni('8.4')), { recursive: true });
+      writeFileSync(rutas.phpIni('8.4'), '; php.ini de prueba\n');
+      const env = { ...process.env };
+      delete env.WOLFCORE_PHP;
+      delete env.WOLFCORE_PHPINI;
+      const r = spawnSync('cmd.exe', ['/d', '/c', rutas.herramientas('bin', 'php.cmd')], {
+        encoding: 'utf8',
+        windowsHide: true,
+        env,
+        timeout: 30_000,
+      });
+      const salida = `${r.stdout}${r.stderr}`;
+      expect(salida).not.toMatch(
+        /no se reconoce|not recognized|no puede encontrar|cannot find the path/i,
+      );
+      expect(salida).toContain(rutas.phpIni('8.4'));
+    },
+    60_000,
+  );
 
   it('rechaza una versión de PHP que escaparía de bin/php', async () => {
     await expect(crear().crearShims('..\\x')).rejects.toThrow(/no válida/);

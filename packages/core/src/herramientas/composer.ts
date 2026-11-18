@@ -22,6 +22,16 @@ const RAMA = /^\d+\.\d+$/;
 /** En un .cmd, `%` se duplica para que no se expanda. */
 const paraCmd = (ruta: string): string => ruta.replace(/%/g, '%%');
 
+/**
+ * Ruta de `destino` vista desde la carpeta del shim: `%~dp0..\..\bin\php\8.4\php.exe`.
+ * Sin ruta relativa posible (otra unidad), la absoluta.
+ */
+export function relativaAlShim(dirShim: string, destino: string): string {
+  const rel = path.win32.relative(dirShim, destino);
+  if (rel === '' || path.win32.isAbsolute(rel)) return paraCmd(destino);
+  return `%~dp0${paraCmd(rel)}`;
+}
+
 /** Contenido de un shim .cmd (CRLF); `phar` null = php.exe a secas. */
 export function shim(php: string, ini: string, phar: string | null): string {
   const extra = phar ? ` "${phar}"` : '';
@@ -97,17 +107,21 @@ export class Composer {
   /**
    * Escribe tools/bin/php.cmd y, si Composer está instalado, tools/bin/composer.cmd. Prefieren el
    * PHP y el php.ini del sitio (WOLFCORE_PHP / WOLFCORE_PHPINI, que fija la terminal del sitio);
-   * si no están definidos, usan el PHP por defecto y su php.ini.
+   * si no están definidos, usan el PHP por defecto y su php.ini. Las rutas van relativas al shim
+   * (%~dp0): cmd.exe lee el .cmd con la página de códigos OEM y una ruta absoluta con tildes o ñ
+   * (una carpeta de usuario "José") llegaría estropeada.
    */
   async crearShims(phpPorDefecto: string): Promise<void> {
-    const php = paraCmd(this.phpExe(phpPorDefecto));
-    const ini = paraCmd(await this.d.asegurarPhpIni(phpPorDefecto));
     const dir = this.d.rutas.herramientas('bin');
+    const php = relativaAlShim(dir, this.phpExe(phpPorDefecto));
+    const ini = relativaAlShim(dir, await this.d.asegurarPhpIni(phpPorDefecto));
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, 'php.cmd'), shim(php, ini, null), 'utf8');
     const phar = await this.rutaPhar();
-    if (phar)
-      await writeFile(path.join(dir, 'composer.cmd'), shim(php, ini, paraCmd(phar)), 'utf8');
+    if (phar) {
+      const rel = relativaAlShim(dir, phar);
+      await writeFile(path.join(dir, 'composer.cmd'), shim(php, ini, rel), 'utf8');
+    }
   }
 
   /** Regenera los shims con el PHP por defecto actual (tras cambiarlo o instalar PHP/Composer). */
