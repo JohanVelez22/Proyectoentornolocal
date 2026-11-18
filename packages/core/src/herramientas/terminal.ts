@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { literalPowerShell } from '../plataforma/lanzarOculto';
 import type { Rutas } from '../rutas';
 import type { Sitio } from '../tipos';
 
@@ -81,13 +82,16 @@ export class Terminal {
     const local = this.entorno.LOCALAPPDATA;
     const wt = local ? path.win32.join(local, 'Microsoft', 'WindowsApps', 'wt.exe') : null;
     if (wt && this.existe(wt)) {
-      await this.lanzar(wt, ['-d', sitio.carpeta], { cwd: sitio.carpeta, env });
+      // wt parte su línea de órdenes en cada `;` (aun entre comillas): la carpeta no viaja como
+      // argumento; "-d ." es el directorio de trabajo, que ya es la del sitio. Ventana nueva para
+      // que la pestaña reciba este entorno (PATH con PHP y tools/bin).
+      await this.lanzar(wt, ['-w', 'new', '-d', '.'], { cwd: sitio.carpeta, env });
       return;
     }
-    const literal = sitio.carpeta.replace(/'/g, "''");
+    // Comillas simples de PowerShell, también las tipográficas (’ cierra una cadena '…').
     await this.lanzar(
       'powershell.exe',
-      ['-NoExit', '-Command', `Set-Location -LiteralPath '${literal}'`],
+      ['-NoExit', '-Command', `Set-Location -LiteralPath ${literalPowerShell(sitio.carpeta)}`],
       { cwd: sitio.carpeta, env },
     );
   }

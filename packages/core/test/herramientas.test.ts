@@ -189,12 +189,12 @@ describe('Terminal', () => {
     return { t, llamadas, carpeta, wt };
   };
 
-  it('con wt.exe: wt -d <carpeta> y PATH con php, tools/bin y el actual', async () => {
+  it('con wt.exe: wt -w new -d . (cwd = carpeta) y PATH con php, tools/bin y el actual', async () => {
     const { t, llamadas, carpeta, wt } = armar(true);
     await t.abrir({ carpeta, php: '8.4' });
     expect(llamadas).toHaveLength(1);
     expect(llamadas[0]!.cmd).toBe(wt);
-    expect(llamadas[0]!.args).toEqual(['-d', carpeta]);
+    expect(llamadas[0]!.args).toEqual(['-w', 'new', '-d', '.']);
     expect(llamadas[0]!.cwd).toBe(carpeta);
     expect(llamadas[0]!.env.Path).toBe(
       [rutas.bin('php', '8.4'), path.join(base, 'tools', 'bin'), 'C:\\Windows'].join(';'),
@@ -220,6 +220,23 @@ describe('Terminal', () => {
     // sin PHP propio: el php.ini y el PHP por defecto
     expect(llamadas[0]!.env.WOLFCORE_PHP).toBe(path.join(rutas.bin('php', '8.2'), 'php.exe'));
     expect(llamadas[0]!.env.WOLFCORE_PHPINI).toBe(rutas.phpIni('8.2'));
+  });
+
+  it('con wt.exe: una carpeta con `;` no viaja en los argumentos (wt la partiría)', async () => {
+    const { t, llamadas } = armar(true);
+    const rara = path.join(base, 'a;b ñ');
+    mkdirSync(rara);
+    await t.abrir({ carpeta: rara, php: null });
+    expect(llamadas[0]!.args.join(' ')).not.toContain(';');
+    expect(llamadas[0]!.cwd).toBe(rara);
+  });
+
+  it('sin wt.exe: la comilla tipográfica también se duplica', async () => {
+    const { t, llamadas } = armar(false);
+    const rara = path.join(base, 'O’Brien');
+    mkdirSync(rara);
+    await t.abrir({ carpeta: rara, php: null });
+    expect(llamadas[0]!.args[2]).toBe(`Set-Location -LiteralPath '${rara.replace('’', '’’')}'`);
   });
 
   it('carpeta inexistente: error claro y no lanza nada', async () => {
