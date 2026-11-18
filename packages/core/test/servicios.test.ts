@@ -115,6 +115,26 @@ describe('ServicioPhp', () => {
   const crear = () =>
     new ServicioPhp(rutas, plataforma(), supervisor(), instalador([], ['8.4']), async () => cfg);
 
+  it('asegurarPhpIni: lo genera si falta y lo regenera si extension_dir no es el del bin actual', async () => {
+    const bin = sembrarPhp('8.4');
+    const ini = rutas.phpIni('8.4');
+    expect(await crear().asegurarPhpIni('8.4')).toBe(ini);
+    const correcto = `extension_dir="${bin.replace(/\\/g, '/')}/ext"`;
+    expect(readFileSync(ini, 'utf8')).toContain(correcto);
+    // con el extension_dir correcto no se toca (se conservan cambios a mano)
+    writeFileSync(ini, `${correcto}\r\n; a mano\r\n`);
+    await crear().asegurarPhpIni('8.4');
+    expect(readFileSync(ini, 'utf8')).toBe(`${correcto}\r\n; a mano\r\n`);
+    // carpeta de datos movida: extension_dir viejo → se regenera
+    writeFileSync(ini, 'extension_dir="C:/Users/viejo/WolfCore Dev/bin/php/8.4/ext"\r\n');
+    await crear().asegurarPhpIni('8.4');
+    expect(readFileSync(ini, 'utf8')).toContain(correcto);
+    // sin extension_dir → se regenera
+    writeFileSync(ini, 'memory_limit=1G\r\n');
+    await crear().asegurarPhpIni('8.4');
+    expect(readFileSync(ini, 'utf8')).toContain(correcto);
+  });
+
   it('genera php.ini con extensiones y valores', async () => {
     const bin = sembrarPhp('8.4');
     await crear().generarIni('8.4');

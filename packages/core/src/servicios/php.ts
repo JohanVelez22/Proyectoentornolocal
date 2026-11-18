@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { puertosPhp } from '../nginx/principal';
@@ -71,6 +70,11 @@ export class ServicioPhp {
     return `php-${version}-${i}`;
   }
 
+  /** Valor de extension_dir que corresponde al bin actual de la rama. */
+  private extensionDir(version: string): string {
+    return `"${this.rutas.bin('php', version).replace(/\\/g, '/')}/ext"`;
+  }
+
   async generarIni(version: string): Promise<void> {
     const bin = this.rutas.bin('php', version);
     let base: string;
@@ -80,7 +84,7 @@ export class ServicioPhp {
       throw new Error(`No se encontró php.ini-development de PHP ${version}. Reinstale PHP.`);
     }
     const lineas = base.replace(/^\uFEFF/, '').split(/\r?\n/);
-    fijar(lineas, 'extension_dir', `"${bin.replace(/\\/g, '/')}/ext"`);
+    fijar(lineas, 'extension_dir', this.extensionDir(version));
     for (const ext of EXTENSIONES) activarExtension(lineas, ext);
     for (const [k, v] of DIRECTIVAS) fijar(lineas, k, v);
     const destino = this.rutas.phpIni(version);
@@ -88,10 +92,20 @@ export class ServicioPhp {
     await writeFile(destino, lineas.join('\r\n'), 'utf8');
   }
 
-  /** Ruta del php.ini de la rama; lo genera si todavía no existe. */
+  /**
+   * Ruta del php.ini de la rama; lo genera si todavía no existe o si su extension_dir no apunta al
+   * bin actual (la carpeta de datos se movió o se renombró): si no, PHP no cargaría ninguna extensión.
+   */
   async asegurarPhpIni(version: string): Promise<string> {
     const ini = this.rutas.phpIni(version);
-    if (!existsSync(ini)) await this.generarIni(version);
+    let texto: string | null = null;
+    try {
+      texto = await readFile(ini, 'utf8');
+    } catch {
+      texto = null;
+    }
+    const actual = texto === null ? null : /^\s*extension_dir\s*=\s*(.*?)\s*$/m.exec(texto)?.[1];
+    if (actual !== this.extensionDir(version)) await this.generarIni(version);
     return ini;
   }
 
