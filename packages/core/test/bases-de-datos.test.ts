@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BasesDeDatos, type MotorBd } from '../src/bd/basesDeDatos';
+import { valorEnv } from '../src/bd/env';
 import type { Ejecutor } from '../src/plataforma/tipos';
 import { Rutas } from '../src/rutas';
 import type { EstadoServicio } from '../src/tipos';
@@ -210,9 +211,9 @@ describe('valores del .env', () => {
       exec: async () => salidaMongo,
     });
 
-  it('entrecomilla y escapa lo que dotenv malinterpretaría', async () => {
+  it('prefiere comillas simples (literales) si el valor no tiene comilla simple', async () => {
     const t = await con(RARA).bloqueEnv('mysql', 'tienda', 'laravel');
-    expect(t).toContain('DB_PASSWORD="p#a ss\\"x\\$y"\n');
+    expect(t).toContain(`DB_PASSWORD='p#a ss"x$y'\n`);
     expect(t).toContain('DB_DATABASE=tienda\n');
     const ci = await con(RARA).bloqueEnv(
       'mysql',
@@ -220,7 +221,38 @@ describe('valores del .env', () => {
       'codeigniter3',
       'database.default.port = 1\n',
     );
-    expect(ci).toContain('database.default.password = "p#a ss\\"x\\$y"\n');
+    expect(ci).toContain(`database.default.password = 'p#a ss"x$y'\n`);
+  });
+
+  it('una ruta de Windows va entre comillas simples, sin escapes (phpdotenv)', () => {
+    expect(valorEnv('C:\\Program Files\\nodejs\\npm.cmd')).toBe(
+      "'C:\\Program Files\\nodejs\\npm.cmd'",
+    );
+  });
+
+  it('con comilla simple usa dobles escapadas según el lector', () => {
+    const v = `a\\b"c'd$e#f g=h`;
+    expect(valorEnv(v)).toBe(`"a\\\\b\\"c'd\\$e#f g=h"`);
+    expect(valorEnv(v, 'ci4')).toBe(`"a\\\\b\\"c'd$e#f g=h"`);
+    expect(valorEnv(v, 'literal')).toBe(`"a\\b"c'd$e#f g=h"`);
+    expect(valorEnv("O'Brien")).toBe(`"O'Brien"`);
+  });
+
+  it('CodeIgniter 4 duplica las barras también entre comillas simples', () => {
+    expect(valorEnv('C:\\x y', 'ci4')).toBe("'C:\\\\x y'");
+  });
+
+  it('CodeIgniter 3 (lector propio) no escapa y rechaza comillas en los extremos', async () => {
+    const env = 'DB_HOST=localhost\n';
+    const t = await con('a\\b c$').bloqueEnv('mysql', 'x', 'codeigniter3', env);
+    expect(t).toContain(`DB_PASSWORD='a\\b c$'\n`);
+    const dobles = await con(`a'b\\c`).bloqueEnv('mysql', 'x', 'codeigniter3', env);
+    expect(dobles).toContain(`DB_PASSWORD="a'b\\c"\n`);
+    await expect(con(`"abc`).bloqueEnv('mysql', 'x', 'codeigniter3', env)).rejects.toThrow(
+      /empieza o termina con comillas/,
+    );
+    // En Laravel el mismo valor sí se puede escribir.
+    expect(await con(`"abc`).bloqueEnv('mysql', 'x', 'laravel')).toContain(`DB_PASSWORD='"abc'\n`);
   });
 
   it('rechaza saltos de línea en base, usuario o clave', async () => {

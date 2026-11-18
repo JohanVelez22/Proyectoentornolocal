@@ -16,9 +16,38 @@ const CON_LARAVEL = /^[ \t]*DB_CONNECTION[ \t]*=/m;
 
 const SIMPLE = /^[A-Za-z0-9_.:/@-]*$/;
 
-/** Valor listo para un .env: tal cual si es simple; si no, entre comillas dobles y escapado. */
-export function valorEnv(v: string): string {
+/**
+ * Cómo lee el proyecto los valores entre comillas:
+ * - `dotenv`: vlucas/phpdotenv (Laravel y genérico). Comillas simples = literal; dentro de
+ *   comillas dobles decodifica escapes y rechaza los que no conoce (p. ej. `\P`).
+ * - `ci4`: DotEnv de CodeIgniter 4. En ambas comillas decodifica `\\` y la comilla escapada.
+ * - `literal`: lector propio de CodeIgniter 3 (index.php de los proyectos WolfCore): quita las
+ *   comillas de los extremos con `trim($v, "\"'")` y no decodifica ningún escape.
+ */
+export type EstiloEnv = 'dotenv' | 'ci4' | 'literal';
+
+const COMILLA_EN_EXTREMO = /^["']|["']$/;
+
+/**
+ * Valor listo para un .env: tal cual si es simple; si no, entre comillas SIMPLES y sin
+ * escapes (una ruta como `C:\Program Files\x` se lee igual en todos los lectores). Solo si el
+ * valor contiene `'` van comillas dobles, escapadas según el lector del proyecto.
+ */
+export function valorEnv(v: string, estilo: EstiloEnv = 'dotenv'): string {
   if (SIMPLE.test(v)) return v;
+  if (estilo === 'literal' && COMILLA_EN_EXTREMO.test(v)) {
+    // trim($v, "\"'") se comería esas comillas: no hay forma de escribirlo sin perderlas.
+    throw new Error(
+      'El valor empieza o termina con comillas y el .env de este proyecto no puede guardarlo así.',
+    );
+  }
+  if (estilo === 'ci4') {
+    // CodeIgniter 4 decodifica \\ también entre comillas simples: se duplican siempre.
+    if (!v.includes("'")) return `'${v.replace(/\\/g, '\\\\')}'`;
+    return `"${v.replace(/[\\"]/g, '\\$&')}"`;
+  }
+  if (!v.includes("'")) return `'${v}'`;
+  if (estilo === 'literal') return `"${v}"`;
   return `"${v.replace(/[\\"$]/g, '\\$&')}"`;
 }
 
@@ -39,10 +68,13 @@ export function bloqueEnv(
   if (motor === 'mongodb') {
     return `MONGODB_URI=${valorEnv(`mongodb://${datos.host}:${datos.puerto}/${base}`)}\n`;
   }
-  const clave = valorEnv(datos.clave ?? '');
-  const usuario = valorEnv(datos.usuario);
-  const bd = valorEnv(base);
-  if (tipo === 'codeigniter3' && CI4.test(envActual)) {
+  const ci4 = tipo === 'codeigniter3' && CI4.test(envActual);
+  // CodeIgniter 3 sin el formato de CI4: el lector propio de index.php (sin escapes).
+  const estilo: EstiloEnv = ci4 ? 'ci4' : tipo === 'codeigniter3' ? 'literal' : 'dotenv';
+  const clave = valorEnv(datos.clave ?? '', estilo);
+  const usuario = valorEnv(datos.usuario, estilo);
+  const bd = valorEnv(base, estilo);
+  if (ci4) {
     const driver = motor === 'postgresql' ? 'Postgre' : 'MySQLi';
     return [
       `database.default.hostname = ${datos.host}`,
