@@ -496,7 +496,7 @@ const commit = (cwd: string, archivo: string, contenido: string): void => {
   correr(cwd, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', archivo);
 };
 
-describe.skipIf(!hayGit)('Git real (local)', () => {
+describe.skipIf(!hayGit)('Git real (local)', { timeout: 30_000 }, () => {
   /** Remoto bare + clon "trabajo" (el del usuario) + clon "otro" que empuja commits. */
   async function preparar(): Promise<{ trabajo: string; otro: string }> {
     const dir = await carpetaTemporal('pel-git-real-');
