@@ -10,7 +10,7 @@ import { generarVhost } from '../nginx/plantillas';
 import { puertosPhp } from '../nginx/principal';
 import type { Rutas } from '../rutas';
 import type { ServicioNginx, UpstreamPhp } from '../servicios/nginx';
-import { SitioSchema, type Sitio } from '../tipos';
+import { SitioSchema, type Config, type Sitio } from '../tipos';
 
 export type ResultadoAplicar = {
   nginx: { ok: boolean; salida: string };
@@ -184,6 +184,15 @@ export class GestorSitios {
     await this.d.almacen.guardar(cfg);
     this.d.eventos.emit('sitio:cambio', cfg.sitios);
     return nuevo;
+  }
+
+  /** Lee, modifica y guarda la configuración en la misma cola que los sitios. */
+  modificarConfig(fn: (c: Config) => void): Promise<void> {
+    return this.serializar(async () => {
+      const cfg = await this.d.almacen.leer();
+      fn(cfg);
+      await this.d.almacen.guardar(cfg);
+    });
   }
 
   /**

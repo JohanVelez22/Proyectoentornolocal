@@ -146,6 +146,7 @@ export class Nucleo {
       supervisor,
       instalador,
       leerConfig,
+      modificarConfig: (fn) => sitios.modificarConfig(fn),
       ramasEnUso: async () => ramasEnUso(await sitios.listar()),
       obtenerUpstreams: async () =>
         upstreamsPara(

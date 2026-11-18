@@ -28,6 +28,11 @@ export class Rutas {
   bin(servicio: string, version: string): string {
     return path.join(this.base, 'bin', servicio, version);
   }
+  /** Datos de un servicio: data/<servicio>/<mayor.menor> (la versión es la clave instalada). */
+  datos(servicio: string, version: string): string {
+    const m = /^(\d+)\.(\d+)/.exec(version);
+    return path.join(this.base, 'data', servicio, m ? `${m[1]}.${m[2]}` : version);
+  }
   nginxConf(): string {
     return path.join(this.base, 'etc', 'nginx', 'nginx.conf');
   }

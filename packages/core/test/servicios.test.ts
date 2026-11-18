@@ -50,11 +50,13 @@ const exec: Ejecutor = async (cmd, args) => {
   return { codigo: codigoExec, stdout: '', stderr: codigoExec ? 'nginx: [emerg] fallo' : 'ok' };
 };
 
-const instalador = (nginx: string[], php: string[]) =>
-  ({
-    instalados: async (s: string) => (s === 'nginx' ? nginx : php),
-    instalado: async (s: string, v: string) => (s === 'nginx' ? nginx : php).includes(v),
-  }) as never;
+const instalador = (nginx: string[], php: string[]) => {
+  const de = (s: string): string[] => (s === 'nginx' ? nginx : s === 'php' ? php : []);
+  return {
+    instalados: async (s: string) => de(s),
+    instalado: async (s: string, v: string) => de(s).includes(v),
+  } as never;
+};
 
 function sembrarNginx(v: string): string {
   const bin = rutas.bin('nginx', v);
@@ -318,6 +320,7 @@ describe('Servicios', () => {
       supervisor: supervisor(),
       instalador: instalador(['1.28.0'], ['8.4']),
       leerConfig: async () => cfg,
+      modificarConfig: async (fn) => fn(cfg),
       ramasEnUso: async () => opts.ramas ?? ['8.4'],
       sonda: async (p) => respuestas.has(p),
       exec,

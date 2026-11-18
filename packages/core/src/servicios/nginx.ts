@@ -14,9 +14,13 @@ export class ErrorPuertoOcupado extends Error {
     readonly puerto: number,
     readonly pid: number,
     readonly nombre: string,
+    /** Puerto libre que se sugiere usar en su lugar. */
+    readonly alternativo?: number,
   ) {
     super(
-      `El puerto ${puerto} lo usa ${nombre} (PID ${pid}). Ciérrelo o cambie el puerto en Ajustes.`,
+      alternativo === undefined
+        ? `El puerto ${puerto} lo usa ${nombre} (PID ${pid}). Ciérrelo o cambie el puerto en Ajustes.`
+        : `El puerto ${puerto} lo usa ${nombre} (PID ${pid}). Use el puerto ${alternativo}.`,
     );
     this.name = 'ErrorPuertoOcupado';
   }
@@ -39,7 +43,8 @@ export async function verificarPuerto(
   throw new ErrorPuertoOcupado(puerto, uso.pid, uso.nombre);
 }
 
-const comparar = (a: string, b: string): number => {
+/** Orden numérico de versiones "1.28.0" < "1.30.6". */
+export const compararVersiones = (a: string, b: string): number => {
   const pa = a.split('.').map((n) => Number.parseInt(n, 10) || 0);
   const pb = b.split('.').map((n) => Number.parseInt(n, 10) || 0);
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
@@ -68,7 +73,7 @@ export class ServicioNginx {
     const instaladas = await this.instalador.instalados('nginx');
     const elegida = cfg.servicios.nginx.version;
     if (elegida && instaladas.includes(elegida)) return elegida;
-    const nueva = [...instaladas].sort(comparar).at(-1);
+    const nueva = [...instaladas].sort(compararVersiones).at(-1);
     if (!nueva) throw new Error('Nginx no está instalado. Instálelo desde Servicios.');
     return nueva;
   }

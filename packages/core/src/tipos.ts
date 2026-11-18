@@ -25,6 +25,40 @@ export const SitioSchema = z.object({
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 
+/** Servicios no web administrados con un `DefServicio` (bases de datos, herramientas e IA). */
+export const IDS_SERVICIO_DATOS = [
+  'mysql',
+  'mariadb',
+  'postgresql',
+  'redis',
+  'mongodb',
+  'mailpit',
+  'ollama',
+] as const;
+export type IdServicioDatos = (typeof IDS_SERVICIO_DATOS)[number];
+
+/** Puertos por defecto (Global Constraints). */
+export const PUERTOS_POR_DEFECTO: Record<IdServicioDatos, number> = {
+  mysql: 3306,
+  mariadb: 3307,
+  postgresql: 5432,
+  redis: 6379,
+  mongodb: 27017,
+  mailpit: 1025,
+  ollama: 11434,
+};
+
+const servicioDatos = (puerto: number) =>
+  z
+    .object({
+      version: z.string().nullable().default(null),
+      puerto: z.number().int().min(1).max(65535).default(puerto),
+      autoIniciar: z.boolean().default(false),
+    })
+    .prefault({});
+
+const CredencialesSchema = z.object({ usuario: z.string().min(1), clave: z.string().min(1) });
+
 export const ConfigSchema = z.object({
   version: z.literal(1).default(1),
   sitios: z.array(SitioSchema).default([]),
@@ -43,8 +77,21 @@ export const ConfigSchema = z.object({
         })
         .prefault({}),
       cloudflared: z.object({ version: z.string().nullable().default(null) }).prefault({}),
+      datos: z
+        .object({
+          mysql: servicioDatos(PUERTOS_POR_DEFECTO.mysql),
+          mariadb: servicioDatos(PUERTOS_POR_DEFECTO.mariadb),
+          postgresql: servicioDatos(PUERTOS_POR_DEFECTO.postgresql),
+          redis: servicioDatos(PUERTOS_POR_DEFECTO.redis),
+          mongodb: servicioDatos(PUERTOS_POR_DEFECTO.mongodb),
+          mailpit: servicioDatos(PUERTOS_POR_DEFECTO.mailpit),
+          ollama: servicioDatos(PUERTOS_POR_DEFECTO.ollama),
+        })
+        .prefault({}),
     })
     .prefault({}),
+  /** Credenciales de los servicios propios; se generan la primera vez que hacen falta. */
+  credenciales: z.partialRecord(z.enum(IDS_SERVICIO_DATOS), CredencialesSchema).default({}),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 
@@ -52,9 +99,13 @@ export function raizDeSitio(s: Sitio): string {
   return s.tipo === 'laravel' ? `${s.carpeta.replace(/[\\/]+$/, '')}/public` : s.carpeta;
 }
 
+export type CategoriaServicio = 'web' | 'php' | 'bd' | 'herramienta' | 'ia';
+
 export interface EstadoServicio {
   id: string;
   nombre: string;
+  /** Agrupación en la UI. */
+  categoria?: CategoriaServicio;
   version: string | null;
   estado: 'apagado' | 'iniciando' | 'encendido' | 'error' | 'externo';
   puertos: number[];

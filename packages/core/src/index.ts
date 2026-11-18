@@ -17,6 +17,8 @@ export * from './procesos/supervisor';
 export * from './servicios/nginx';
 export * from './servicios/php';
 export * from './servicios/servicios';
+export * from './servicios/definicion';
+export * from './servicios/datos';
 export * from './sitios/urlbase';
 export * from './tuneles/url';
 export * from './tuneles/tuneles';

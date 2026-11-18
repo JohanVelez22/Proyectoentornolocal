@@ -3,7 +3,10 @@ import type { Ejecutor, Plataforma } from '../plataforma/tipos';
 import { puertoResponde } from '../procesos/sonda';
 import type { EstadoProceso } from '../procesos/supervisor';
 import type { Rutas } from '../rutas';
-import type { Config, EstadoServicio } from '../tipos';
+import type { Config, EstadoServicio, IdServicioDatos } from '../tipos';
+import { ejecutorPorDefecto } from '../plataforma/win';
+import { DEFINICIONES } from './datos';
+import { esIdServicioDatos, ServiciosDatos, type DefServicio } from './definicion';
 import {
   ServicioNginx,
   type InstaladorServicios,
@@ -18,6 +21,10 @@ export interface DepsServicios {
   supervisor: SupervisorServicios;
   instalador: InstaladorServicios;
   leerConfig: () => Promise<Config>;
+  /** Lee, modifica y guarda la configuración en la cola común (credenciales y puertos). */
+  modificarConfig: (fn: (c: Config) => void) => Promise<void>;
+  /** Por defecto, el registro `DEFINICIONES` de servicios/datos.ts. */
+  definiciones?: readonly DefServicio[];
   /** Ramas de PHP usadas por al menos un sitio (las aporta la tarea 8). */
   ramasEnUso?: () => Promise<string[]>;
   /** Upstreams para nginx.conf; por defecto, ramas en uso que estén instaladas. */
@@ -26,12 +33,17 @@ export interface DepsServicios {
   exec?: Ejecutor;
 }
 
-export type IdServicio = 'nginx' | `php-${string}`;
+export type IdServicio = 'nginx' | `php-${string}` | IdServicioDatos;
 
+/** Se muestran solo mientras el servicio propio del mismo id no esté instalado. */
 const EXTERNOS = [
   { id: 'mysql', nombre: 'MySQL (externo)', puerto: 3306 },
   { id: 'postgresql', nombre: 'PostgreSQL (externo)', puerto: 5432 },
 ];
+
+const primero = (errores: unknown[]): void => {
+  if (errores.length > 0) throw errores[0];
+};
 
 function agregar(estados: EstadoProceso[]): EstadoServicio['estado'] {
   if (estados.some((e) => e === 'error')) return 'error';
@@ -43,6 +55,7 @@ function agregar(estados: EstadoProceso[]): EstadoServicio['estado'] {
 export class Servicios {
   readonly nginx: ServicioNginx;
   readonly php: ServicioPhp;
+  readonly datos: ServiciosDatos;
   private readonly sonda: (puerto: number) => Promise<boolean>;
   private readonly ramasEnUso: () => Promise<string[]>;
 
@@ -71,6 +84,18 @@ export class Servicios {
       d.exec,
     );
     this.php = new ServicioPhp(d.rutas, d.plataforma, d.supervisor, d.instalador, d.leerConfig);
+    const definiciones = d.definiciones;
+    this.datos = new ServiciosDatos({
+      rutas: d.rutas,
+      plataforma: d.plataforma,
+      supervisor: d.supervisor,
+      instalador: d.instalador,
+      leerConfig: d.leerConfig,
+      modificarConfig: d.modificarConfig,
+      sonda: this.sonda,
+      exec: d.exec ?? ejecutorPorDefecto,
+      definiciones: () => definiciones ?? DEFINICIONES,
+    });
   }
 
   async estados(): Promise<EstadoServicio[]> {
@@ -87,6 +112,7 @@ export class Servicios {
     res.push({
       id: 'nginx',
       nombre: 'Nginx',
+      categoria: 'web',
       version: versionNginx,
       estado: sup.estado('nginx'),
       puertos: [cfg.servicios.nginx.puerto],
@@ -99,6 +125,7 @@ export class Servicios {
       res.push({
         id: `php-${version}`,
         nombre: `PHP ${version}`,
+        categoria: 'php',
         version,
         estado: agregar(ids.map((id) => sup.estado(id))),
         puertos,
@@ -106,11 +133,16 @@ export class Servicios {
       });
     }
 
+    const propios = await this.datos.estados();
+    res.push(...propios);
+
     for (const ext of EXTERNOS) {
+      if (propios.some((p) => p.id === ext.id)) continue;
       if (await this.sonda(ext.puerto)) {
         res.push({
           id: ext.id,
           nombre: ext.nombre,
+          categoria: 'bd',
           version: null,
           estado: 'externo',
           puertos: [ext.puerto],
@@ -123,24 +155,51 @@ export class Servicios {
 
   async iniciar(id: IdServicio): Promise<void> {
     if (id === 'nginx') return this.nginx.iniciar();
+    if (esIdServicioDatos(id)) return this.datos.iniciar(id);
     return this.php.iniciar(id.slice('php-'.length));
   }
 
   async detener(id: IdServicio): Promise<void> {
     if (id === 'nginx') return this.nginx.detener();
+    if (esIdServicioDatos(id)) return this.datos.detener(id);
     return this.php.detener(id.slice('php-'.length));
   }
 
+  /** Valida 1024–65535 y que esté libre, guarda y reinicia el servicio si estaba encendido. */
+  cambiarPuerto(id: IdServicioDatos, puerto: number): Promise<void> {
+    return this.datos.cambiarPuerto(id, puerto);
+  }
+
+  /** Borra los datos del servicio; `confirmacion` debe ser el id (p. ej. "mysql"). */
+  borrarDatos(id: IdServicioDatos, confirmacion: string): Promise<void> {
+    return this.datos.borrarDatos(id, confirmacion);
+  }
+
+  /** PHP y nginx, y luego los servicios con autoIniciar; un fallo no impide arrancar el resto. */
   async iniciarTodo(): Promise<void> {
-    const instaladas = await this.d.instalador.instalados('php');
-    for (const v of await this.ramasEnUso()) {
-      if (instaladas.includes(v)) await this.php.iniciar(v);
+    const errores: unknown[] = [];
+    try {
+      const instaladas = await this.d.instalador.instalados('php');
+      for (const v of await this.ramasEnUso()) {
+        if (instaladas.includes(v)) await this.php.iniciar(v);
+      }
+      await this.nginx.iniciar();
+    } catch (e) {
+      errores.push(e);
     }
-    await this.nginx.iniciar();
+    errores.push(...(await this.datos.iniciarAutomaticos()));
+    primero(errores);
   }
 
   async detenerTodo(): Promise<void> {
-    await this.nginx.detener();
-    for (const v of await this.d.instalador.instalados('php')) await this.php.detener(v);
+    const errores: unknown[] = [];
+    try {
+      await this.nginx.detener();
+      for (const v of await this.d.instalador.instalados('php')) await this.php.detener(v);
+    } catch (e) {
+      errores.push(e);
+    }
+    errores.push(...(await this.datos.detenerTodos()));
+    primero(errores);
   }
 }
