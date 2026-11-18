@@ -230,6 +230,19 @@ export class ClientePostgres {
     }
   }
 
+  /** Cierra las demás conexiones a `nombre` (no la propia), para poder borrarla. */
+  async terminarConexiones(nombre: string): Promise<void> {
+    validarNombrePg(nombre);
+    try {
+      await this.filas(
+        'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()',
+        [nombre],
+      );
+    } catch (e) {
+      throw traducir(e, `cerrar las conexiones a ${nombre}`);
+    }
+  }
+
   async borrarBase(nombre: string): Promise<void> {
     const bd = id(nombre);
     noSistema(nombre, 'borrar');

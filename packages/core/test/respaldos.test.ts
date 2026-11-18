@@ -1,10 +1,17 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import type { Readable } from 'node:stream';
-import { crc32, deflateRawSync, gzipSync } from 'node:zlib';
+import { createGunzip, crc32, deflateRawSync, gzipSync } from 'node:zlib';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { detectarFormato } from '../src/bd/formato';
-import { Respaldos, type DepsRespaldos } from '../src/bd/respaldos';
+import { encadenar, Respaldos, type DepsRespaldos } from '../src/bd/respaldos';
 import type { MotorBd } from '../src/bd/env';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { lanzadorPorDefecto } from '../src/plataforma/lanzar';
@@ -86,6 +93,9 @@ let respuestaLanzar: (l: Lanzado) => { codigo: number; lineas?: string[] };
 let respuestaTar: (args: string[]) => { codigo: number };
 let documentos: string;
 let consultasOrigen: string[];
+let consultasLocal: string[];
+let orden: string[];
+let secuenciaTablas: boolean[];
 let versionOrigen: string;
 let progreso: EventosNucleo['bd:progreso'][];
 let reloj: number;
@@ -132,12 +142,19 @@ function armar(extra: Partial<DepsRespaldos> = {}): Respaldos {
     const archivo = ruta && ruta !== '-' && existsSync(ruta) ? readFileSync(ruta) : null;
     const l: Lanzado = { cmd, args, env: opts?.env ?? {}, entrada, archivo };
     lanzados.push(l);
+    orden.push(path.basename(cmd));
     const r = respuestaLanzar(l);
     for (const linea of r.lineas ?? []) opts?.alLinea?.(linea, 'stderr');
     return { codigo: r.codigo };
   };
-  const fabricaOrigen = (tipo: 'mysql' | 'pg') => async () => ({
+  const LOCALES = [5432, 3306, 3307];
+  const fabricaOrigen = (tipo: 'mysql' | 'pg') => async (c: { puerto: number }) => ({
     query: async (s: string) => {
+      if (LOCALES.includes(c.puerto)) {
+        consultasLocal.push(s);
+        orden.push(`sql: ${s}`);
+        return tipo === 'pg' ? { rows: [] } : [[]];
+      }
       consultasOrigen.push(s);
       const filas = [{ v: versionOrigen, version: versionOrigen }];
       return tipo === 'pg' ? { rows: filas } : [filas];
@@ -154,9 +171,10 @@ function armar(extra: Partial<DepsRespaldos> = {}): Respaldos {
       }),
       crear: async (motor: MotorBd, base: string) => {
         creadas.push({ motor, base });
+        orden.push('crear');
         return { usuarioActualizado: false };
       },
-      tieneTablas: async () => conTablas,
+      tieneTablas: async () => secuenciaTablas.shift() ?? conTablas,
     },
     servicios: {
       estados: async () => [
@@ -204,6 +222,9 @@ beforeEach(async () => {
   };
   respuestaTar = () => ({ codigo: 0 });
   consultasOrigen = [];
+  consultasLocal = [];
+  orden = [];
+  secuenciaTablas = [];
   versionOrigen = '17.2';
   progreso = [];
   reloj = Date.UTC(2026, 10, 18, 14, 30);
@@ -286,12 +307,139 @@ describe('restaurar', () => {
     sinClaves(l);
   });
 
-  it('con confirmación sobre una base con tablas limpia los objetos del respaldo', async () => {
+  it('sobrescribir confirmado: respaldo previo, borra y crea la base, y luego restaura', async () => {
     conTablas = true;
-    await armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes', {
+    reloj = new Date(2026, 10, 18, 9, 5).getTime();
+    const r = await armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes', {
       confirmarSobrescribir: true,
     });
-    expect(lanzados[0]!.args).toEqual(expect.arrayContaining(['--clean', '--if-exists']));
+    const previo = path.join(
+      documentos,
+      'WolfCore Dev',
+      'Respaldos',
+      'diamantes-antes-de-sobrescribir-20261118-0905.dump',
+    );
+    expect(r).toEqual({ advertencias: [], respaldoPrevio: previo });
+    expect(existsSync(previo)).toBe(true);
+    expect(orden).toEqual([
+      'pg_dump.exe',
+      expect.stringMatching(/^sql: SELECT pg_terminate_backend\(pid\).*pid <> pg_backend_pid\(\)/),
+      'sql: DROP DATABASE "diamantes"',
+      'crear',
+      'pg_restore.exe',
+    ]);
+    expect(lanzados[0]!.args.at(-1)).toBe('diamantes');
+    expect(lanzados[1]!.args).not.toContain('--clean');
+    for (const l of lanzados) sinClaves(l);
+  });
+
+  it('en MySQL sobrescribir también borra y crea la base', async () => {
+    conTablas = true;
+    const r = await armar().restaurar('mysql', fixture('m.sql', 'SELECT 1;\n'), 'tienda', {
+      confirmarSobrescribir: true,
+    });
+    expect(path.basename(r.respaldoPrevio!)).toMatch(
+      /^tienda-antes-de-sobrescribir-\d{8}-\d{4}\.sql$/,
+    );
+    expect(orden).toEqual(['mysqldump.exe', 'sql: DROP DATABASE `tienda`', 'crear', 'mysql.exe']);
+  });
+
+  it('si el respaldo previo falla, no borra ni restaura nada', async () => {
+    conTablas = true;
+    respuestaLanzar = () => ({ codigo: 1, lineas: ['pg_dump: error: disco lleno'] });
+    await expect(
+      armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes', {
+        confirmarSobrescribir: true,
+      }),
+    ).rejects.toThrow(/respaldo previo y no se tocó nada/);
+    expect(orden).toEqual(['pg_dump.exe']);
+    expect(consultasLocal).toEqual([]);
+    expect(creadas).toEqual([]);
+    expect(readdirSync(path.join(documentos, 'WolfCore Dev', 'Respaldos'))).toEqual([]);
+  });
+
+  it('si aparecen tablas mientras se prepara el archivo, se detiene', async () => {
+    secuenciaTablas = [false, true];
+    await expect(
+      armar().restaurar('postgresql', fixture('d.dump', PGDMP), 'diamantes'),
+    ).rejects.toThrow('La base diamantes ya tiene tablas');
+    expect(lanzados).toEqual([]);
+    expect(creadas).toEqual([]);
+  });
+
+  it('el filtro no toca líneas dentro de textos ni de cuerpos $$', async () => {
+    const sql =
+      "INSERT INTO t VALUES ('linea 1\nDROP DATABASE x;\nUSE otra;');\n" +
+      'CREATE FUNCTION f() RETURNS void AS $cuerpo$\nDROP DATABASE y;\n$cuerpo$ LANGUAGE sql;\n' +
+      'SELECT 1\nDROP DATABASE z;\n' +
+      '\\set x 1\nDROP DATABASE w;\n';
+    await armar().restaurar('postgresql', fixture('p.sql', sql), 'tienda');
+    // Solo la última: va tras un meta-comando de psql, es inicio de sentencia.
+    expect(lanzados[0]!.entrada).toBe(sql.replace('DROP DATABASE w;', '-- DROP DATABASE w;'));
+  });
+
+  it('el filtro de MySQL respeta escapes, comentarios y DELIMITER', async () => {
+    const sql =
+      "INSERT INTO t VALUES ('a\\'\nUSE otra;');\n" +
+      '/*!40101 SET x=1\nUSE otra2 */;\n' +
+      'DELIMITER ;;\nCREATE PROCEDURE p() BEGIN SELECT 1; END;;\nUSE otra3;\n';
+    await armar().restaurar('mysql', fixture('m.sql', sql), 'tienda');
+    expect(lanzados[0]!.entrada).toBe(sql.replace('USE otra3;', '-- USE otra3;'));
+  });
+
+  it('un INSERT de varias líneas cuya 2.ª empieza por DROP DATABASE queda intacto', async () => {
+    const sql = "INSERT INTO t VALUES ('hola,\nDROP DATABASE tienda;\n');\n";
+    const r = await armar().restaurar('mysql', fixture('m.sql', sql), 'tienda');
+    expect(lanzados[0]!.entrada).toBe(sql);
+    expect(r.advertencias).toEqual([]);
+  });
+
+  it('un .sql en UTF-16BE se convierte a UTF-8', async () => {
+    const le = Buffer.from('SELECT "ñ";\n', 'utf16le');
+    const be = Buffer.from(le).swap16();
+    await armar().restaurar(
+      'mysql',
+      fixture('be.sql', Buffer.concat([Buffer.from([0xfe, 0xff]), be])),
+      'tienda',
+    );
+    expect(lanzados[0]!.entrada).toBe('SELECT "ñ";\n');
+  });
+
+  it('al elegir dentro del archivo ignora __MACOSX/ y ._*', async () => {
+    respuestaTar = (args) => {
+      const destino = args[args.indexOf('-C') + 1]!;
+      mkdirSync(path.join(destino, '__MACOSX', 'r'), { recursive: true });
+      mkdirSync(path.join(destino, 'r'), { recursive: true });
+      writeFileSync(path.join(destino, '__MACOSX', 'r', '._Diamantes.sql'), 'basura');
+      writeFileSync(path.join(destino, 'r', '._Diamantes.sql'), 'basura');
+      writeFileSync(path.join(destino, 'r', 'Diamantes.sql'), PGDMP);
+      return { codigo: 0 };
+    };
+    await armar().restaurar('postgresql', fixture('d.zip', zip({ 'x.sql': '1' })), 'diamantes');
+    expect(path.basename(lanzados[0]!.args.at(-1)!)).toBe('Diamantes.sql');
+  });
+
+  it('rechaza nombres con URL de conexión', async () => {
+    const r = armar();
+    await expect(
+      r.restaurar('postgresql', fixture('d.dump', PGDMP), 'postgresql://x@h/db'),
+    ).rejects.toThrow(/URL/);
+    await expect(
+      r.importar(
+        'postgresql',
+        { host: 'h', puerto: 5432, usuario: 'u', clave: 'c', base: 'postgres://h/db' },
+        'dollar',
+      ),
+    ).rejects.toThrow(/no es válido/);
+    await expect(
+      r.importar(
+        'mysql',
+        { host: 'h', puerto: 3306, usuario: 'u', clave: 'c', base: 'a://b' },
+        'x',
+      ),
+    ).rejects.toThrow(/no es válido/);
+    expect(lanzados).toEqual([]);
+    expect(consultasOrigen).toEqual([]);
   });
 
   it('sql plano en PostgreSQL va por psql con ON_ERROR_STOP=0 sin salir de la base', async () => {
@@ -666,6 +814,26 @@ describe('importar', () => {
     await expect(
       armar().importar('postgresql', { ...origenPg, puerto: 5432 }, 'dollar'),
     ).rejects.toThrow(/misma base/);
+  });
+});
+
+describe('encadenar', () => {
+  it('si el proceso sale antes de leer todo, cierra el archivo y todas las etapas', async () => {
+    const { PassThrough } = await import('node:stream');
+    const archivo = fixture('grande.sql.gz', gzipSync(Buffer.alloc(8 * 1024 * 1024, 'x')));
+    const lector = createReadStream(archivo, { highWaterMark: 1024 });
+    const gz = createGunzip();
+    const paso = new PassThrough();
+    const final = encadenar(lector, gz, paso);
+    const cerrado = new Promise<void>((r) => lector.on('close', () => r()));
+    const r = await lanzadorPorDefecto(process.execPath, ['-e', 'process.exit(0)'], {
+      entrada: final,
+    });
+    expect(r.codigo).toBe(0);
+    await cerrado;
+    expect(lector.destroyed).toBe(true);
+    expect(gz.destroyed).toBe(true);
+    expect(paso.destroyed).toBe(true);
   });
 });
 

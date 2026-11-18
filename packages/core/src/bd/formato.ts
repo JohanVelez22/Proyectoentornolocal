@@ -1,4 +1,5 @@
 import { open } from 'node:fs/promises';
+import { TextDecoder } from 'node:util';
 
 export type FormatoRespaldo = 'sql' | 'pgdump' | 'gz' | 'zip' | 'rar' | '7z' | 'desconocido';
 
@@ -10,6 +11,21 @@ const empieza = (b: Buffer, firma: number[]): boolean =>
 
 /** true si la cabeza trae la marca de orden de bytes de UTF-16LE (FF FE). */
 export const esUtf16le = (b: Buffer): boolean => empieza(b, [0xff, 0xfe]);
+
+/** Orden de bytes de un texto UTF-16 con BOM, o null si no lo es. */
+export function ordenUtf16(b: Buffer): 'le' | 'be' | null {
+  if (esUtf16le(b)) return 'le';
+  if (empieza(b, [0xfe, 0xff])) return 'be';
+  return null;
+}
+
+/** Texto de la cabeza, sea UTF-8 o UTF-16 (LE/BE). */
+export function textoCabeza(b: Buffer): string {
+  const orden = ordenUtf16(b);
+  return orden
+    ? new TextDecoder(orden === 'le' ? 'utf-16le' : 'utf-16be').decode(b)
+    : b.toString('utf8');
+}
 
 /** true si es un tar sin comprimir (firma "ustar" en el byte 257). */
 export const esTar = (b: Buffer): boolean =>
@@ -24,7 +40,7 @@ export function formatoDeCabeza(b: Buffer): FormatoRespaldo {
   if (empieza(b, [0x52, 0x61, 0x72, 0x21, 0x1a, 0x07])) return 'rar';
   if (empieza(b, [0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c])) return '7z';
   // Texto: UTF-16 con BOM (PowerShell 5.1 redirige así) o sin bytes nulos.
-  if (esUtf16le(b) || empieza(b, [0xfe, 0xff])) return 'sql';
+  if (ordenUtf16(b)) return 'sql';
   return b.includes(0) ? 'desconocido' : 'sql';
 }
 
