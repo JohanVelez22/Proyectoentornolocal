@@ -5,6 +5,10 @@ directories:
   buildResources: resources
 files:
   - out/**
+# El proceso principal va empaquetado por electron-vite y no usa módulos nativos. Sin esto,
+# electron-builder intenta compilar dtrace-provider (opcional de bunyan, vía ftp-srv) y exige
+# Visual Studio en el equipo que arma el instalador.
+npmRebuild: false
 # El icono de ventana y bandeja se lee en tiempo de ejecución desde process.resourcesPath.
 extraResources:
   - from: resources/icono.png
