@@ -8,6 +8,7 @@ import { PathUsuario } from '../src/herramientas/pathUsuario';
 import { Terminal } from '../src/herramientas/terminal';
 import { generarNginxPrincipal } from '../src/nginx/principal';
 import type { Ejecutor } from '../src/plataforma/tipos';
+import { ejecutorPorDefecto } from '../src/plataforma/win';
 import { Rutas } from '../src/rutas';
 import { ConfigSchema } from '../src/tipos';
 
@@ -168,34 +169,29 @@ describe('Terminal', () => {
 
 describe('PathUsuario', () => {
   const entrada = (): string => path.join(base, 'tools', 'bin');
-  /** Registro falso: guarda el valor y el tipo. */
-  const fake = (inicial: string | null, tipo = 'REG_EXPAND_SZ') => {
-    const reg = { valor: inicial, tipo, escrituras: 0, tipoEscrito: '' };
-    const exec: Ejecutor = async (cmd, args) => {
-      expect(cmd).toBe('reg');
-      if (args[0] === 'query') {
-        if (args.includes('/v')) {
-          if (reg.valor === null) return { codigo: 1, stdout: '', stderr: 'no hay' };
-          return {
-            codigo: 0,
-            stdout: `\r\nHKEY_CURRENT_USER\\Environment\r\n    Path    ${reg.tipo}    ${reg.valor}\r\n\r\n`,
-            stderr: '',
-          };
-        }
-        return {
-          codigo: 0,
-          stdout: 'HKEY_CURRENT_USER\\Environment\r\n    TEMP    REG_SZ    x\r\n',
-          stderr: '',
-        };
+  const b64 = (t: string): string => Buffer.from(t, 'utf16le').toString('base64');
+  /** Script que recibe PowerShell por -EncodedCommand. */
+  const script = (args: string[]): string =>
+    Buffer.from(args[args.indexOf('-EncodedCommand') + 1]!, 'base64').toString('utf16le');
+  /** Registro falso detrás de PowerShell: guarda el valor y el tipo (String / ExpandString). */
+  const fake = (inicial: string | null, tipo = 'ExpandString') => {
+    const reg = { valor: inicial, tipo, escrituras: 0, tipoEscrito: '', lecturas: 0 };
+    const exec: Ejecutor = async (cmd, args, opts) => {
+      expect(cmd).toBe('powershell');
+      const s = script(args);
+      expect(s).toContain("'Environment'");
+      if (s.includes('SetValue')) {
+        const m = /RegistryValueKind\]::(\w+)/.exec(s);
+        reg.tipoEscrito = m![1]!;
+        reg.tipo = m![1]!;
+        reg.valor = Buffer.from(opts!.entrada!, 'base64').toString('utf16le');
+        reg.escrituras++;
+        return { codigo: 0, stdout: '', stderr: '' };
       }
-      expect(args.slice(0, 5)).toEqual(['add', 'HKCU\\Environment', '/v', 'Path', '/t']);
-      expect(args[6]).toBe('/d');
-      reg.tipoEscrito = args[5]!;
-      expect(args[8]).toBe('/f');
-      reg.valor = args[7]!;
-      reg.tipo = args[5]!;
-      reg.escrituras++;
-      return { codigo: 0, stdout: '', stderr: '' };
+      expect(s).toContain('DoNotExpandEnvironmentNames');
+      reg.lecturas++;
+      if (reg.valor === null) return { codigo: 0, stdout: 'SIN', stderr: '' };
+      return { codigo: 0, stdout: `OK ${reg.tipo} ${b64(reg.valor)}\r\n`, stderr: '' };
     };
     return { reg, p: new PathUsuario({ rutas, exec }) };
   };
@@ -206,6 +202,24 @@ describe('PathUsuario', () => {
     expect(reg.valor).toBe(`%USERPROFILE%\\bin;C:\\Otro;${entrada()}`);
     expect(r.aviso).toMatch(/terminal nueva/);
     expect(await p.estado()).toBe(true);
+  });
+
+  it('rutas con tildes, ñ y comilla tipográfica llegan intactas (y al respaldo)', async () => {
+    const original = 'C:\\Users\\José Peña\\bin;C:\\Users\\O’Brien\\x;%X%';
+    const { reg, p } = fake(original);
+    await p.agregar();
+    expect(reg.valor).toBe(`${original};${entrada()}`);
+    expect(readFileSync(path.join(base, 'etc', 'path-usuario.respaldo.txt'), 'utf8')).toBe(
+      original,
+    );
+    await p.quitar();
+    expect(reg.valor).toBe(original);
+  });
+
+  it('se niega a escribir si lo leído trae U+FFFD (lectura dañada)', async () => {
+    const { reg, p } = fake('C:\\Users\\Jos\uFFFD\\bin');
+    await expect(p.agregar()).rejects.toThrow(/No se cambió nada/);
+    expect(reg.escrituras).toBe(0);
   });
 
   it('no duplica (ni con otra mayúscula o barra final)', async () => {
@@ -233,23 +247,49 @@ describe('PathUsuario', () => {
     expect(reg.valor).toBe(entrada());
   });
 
+  it('valor Path vacío: se lee como vacío', async () => {
+    const { reg, p } = fake('');
+    expect(await p.estado()).toBe(false);
+    await p.agregar();
+    expect(reg.valor).toBe(entrada());
+  });
+
   it('si no puede leer la clave, no escribe', async () => {
     const reg = { escrituras: 0 };
     const p = new PathUsuario({
       rutas,
       exec: async (_c, args) => {
-        if (args[0] === 'add') reg.escrituras++;
-        return { codigo: 1, stdout: '', stderr: 'error' };
+        if (script(args).includes('SetValue')) reg.escrituras++;
+        return { codigo: 3, stdout: '', stderr: 'error' };
       },
     });
     await expect(p.agregar()).rejects.toThrow();
     expect(reg.escrituras).toBe(0);
   });
 
+  it('salida irreconocible (otro tipo de valor): no escribe', async () => {
+    const reg = { escrituras: 0 };
+    const p = new PathUsuario({
+      rutas,
+      exec: async (_c, args) => {
+        if (script(args).includes('SetValue')) reg.escrituras++;
+        return { codigo: 0, stdout: 'OK MultiString QQA=', stderr: '' };
+      },
+    });
+    await expect(p.agregar()).rejects.toThrow(/No se cambió nada/);
+    expect(reg.escrituras).toBe(0);
+  });
+
   it('conserva REG_SZ si el valor ya lo era', async () => {
-    const { reg, p } = fake('C:\\A', 'REG_SZ');
+    const { reg, p } = fake('C:\\A', 'String');
     await p.agregar();
-    expect(reg.tipoEscrito).toBe('REG_SZ');
+    expect(reg.tipoEscrito).toBe('String');
+  });
+
+  it('REG_SZ con %VARS% pasa a REG_EXPAND_SZ', async () => {
+    const { reg, p } = fake('%X%\\bin', 'String');
+    await p.agregar();
+    expect(reg.tipoEscrito).toBe('ExpandString');
   });
 
   it('el respaldo conserva el ORIGINAL en cambios posteriores', async () => {
@@ -266,6 +306,60 @@ describe('PathUsuario', () => {
     expect(readFileSync(path.join(base, 'etc', 'path-usuario.respaldo.txt'), 'utf8')).toBe(
       'C:\\A;%X%',
     );
+  });
+
+  it('si al releer no quedó lo escrito, falla con un aviso', async () => {
+    let escrito = false;
+    const p = new PathUsuario({
+      rutas,
+      exec: async (_c, args) => {
+        if (script(args).includes('SetValue')) {
+          escrito = true;
+          return { codigo: 0, stdout: '', stderr: '' };
+        }
+        return {
+          codigo: 0,
+          stdout: `OK ExpandString ${b64(escrito ? 'otra' : 'C:\\A')}`,
+          stderr: '',
+        };
+      },
+    });
+    await expect(p.agregar()).rejects.toThrow(/no quedó como se esperaba/);
+  });
+
+  describe.skipIf(process.platform !== 'win32')('registro real (solo Windows)', () => {
+    const SUB = 'Software\\WolfCoreDevTest';
+    const borrarClave = async (): Promise<void> => {
+      await ejecutorPorDefecto('reg', ['delete', `HKCU\\${SUB}`, '/f'], { timeoutMs: 15_000 });
+    };
+    afterEach(borrarClave);
+
+    it('escribe y relee byte a byte en una clave temporal de HKCU', async () => {
+      await borrarClave();
+      const p = new PathUsuario({ rutas, subclave: SUB });
+      // Sin la clave no se escribe nada (Environment siempre existe).
+      await expect(p.agregar()).rejects.toThrow(/No se cambió nada/);
+      await ejecutorPorDefecto('reg', ['add', `HKCU\\${SUB}`, '/f'], { timeoutMs: 15_000 });
+      expect((await p.leer()).valor).toBe('');
+      await p.agregar();
+      expect(await p.leer()).toEqual({ valor: entrada(), tipo: 'ExpandString' });
+      // Se siembra un valor con tildes, ñ, comilla tipográfica y %VARS% (tipo REG_SZ).
+      const conTildes = 'C:\\Users\\José Peña\\bin;C:\\O’Brien;C:\\Ünïcødé ✓';
+      await ejecutorPorDefecto(
+        'powershell',
+        [
+          '-NoProfile',
+          '-Command',
+          `[Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('${SUB}').SetValue('Path', [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${b64(conTildes)}')), 'String')`,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(await p.leer()).toEqual({ valor: conTildes, tipo: 'String' });
+      await p.agregar();
+      expect(await p.leer()).toEqual({ valor: `${conTildes};${entrada()}`, tipo: 'String' });
+      await p.quitar();
+      expect(await p.leer()).toEqual({ valor: conTildes, tipo: 'String' });
+    }, 90_000);
   });
 });
 
