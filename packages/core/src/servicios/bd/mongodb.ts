@@ -5,6 +5,7 @@ import type { DefProceso } from '../../procesos/supervisor';
 import { registrarDefinicion } from '../datos';
 import type { CtxServicio, DefServicio } from '../definicion';
 import { compararVersiones } from '../nginx';
+import { nombreEjecutable } from '../../plataforma/sistema';
 
 const exe = (c: CtxServicio, nombre: string): string => path.join(c.bin, 'bin', nombre);
 
@@ -14,7 +15,7 @@ function mongosh(c: CtxServicio): string | null {
   if (!existsSync(carpeta)) return null;
   const versiones = readdirSync(carpeta).sort(compararVersiones).reverse();
   for (const v of versiones) {
-    const ruta = path.join(c.rutas.bin('mongosh', v), 'bin', 'mongosh.exe');
+    const ruta = path.join(c.rutas.bin('mongosh', v), 'bin', nombreEjecutable('mongosh'));
     if (existsSync(ruta)) return ruta;
   }
   return null;
@@ -36,7 +37,7 @@ export function defMongodb(): DefServicio {
     async proceso(c): Promise<DefProceso> {
       return {
         id: 'mongodb',
-        comando: exe(c, 'mongod.exe'),
+        comando: exe(c, nombreEjecutable('mongod')),
         args: ['--dbpath', c.datos, '--port', String(c.puerto), '--bind_ip', '127.0.0.1'],
         cwd: c.bin,
         puerto: c.puerto,

@@ -13,11 +13,13 @@ import type { Eventos, EventosNucleo } from '../eventos';
 import type { Plataforma } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import type { EstadoServicio } from '../tipos';
+import { lanzadorOcultoPara } from '../plataforma/index';
 import {
-  crearLanzadorOculto,
+  avisoSinLanzadorOculto,
   LanzadorNoDisponible,
   type LanzadorOculto,
 } from '../plataforma/lanzarOculto';
+import { nombreArchivoDeRuta } from '../plataforma/sistema';
 import { puertoResponde } from './sonda';
 
 export interface DefProceso {
@@ -60,8 +62,8 @@ export interface OpcionesSupervisor {
   spawn?: typeof childProcess.spawn;
   sonda?: (puerto: number) => Promise<boolean>;
   /**
-   * Arranque sin ventanas (Windows): devuelve el PID real del servidor. Por defecto, en Windows y
-   * sin `spawn` inyectado, `crearLanzadorOculto()`; null fuerza el `spawn` desacoplado clásico.
+   * Arranque sin ventanas: devuelve el PID real del servidor. Por defecto, sin `spawn` inyectado,
+   * el de la plataforma (`lanzadorOcultoPara`); null fuerza el `spawn` desacoplado clásico.
    */
   lanzarOculto?: LanzadorOculto | null;
 }
@@ -128,12 +130,8 @@ export class Supervisor {
     this.lanzarOculto =
       opts.lanzarOculto !== undefined
         ? opts.lanzarOculto
-        : process.platform === 'win32' && !opts.spawn
-          ? crearLanzadorOculto({
-              procesoVivo: (pid) => plataforma.procesoVivo(pid),
-              matarArbol: (pid) => plataforma.matarArbol(pid),
-              carpetaTmp: rutas.tmp(),
-            })
+        : !opts.spawn
+          ? lanzadorOcultoPara(plataforma, rutas.tmp())
           : null;
     this.sonda = opts.sonda ?? ((p) => puertoResponde(p));
   }
@@ -142,7 +140,7 @@ export class Supervisor {
   private esNuestro(info: { vivo: boolean; ejecutable?: string }, comando: string): boolean {
     if (!info.vivo) return false;
     if (info.ejecutable === undefined) return true;
-    return info.ejecutable.toLowerCase() === path.win32.basename(comando).toLowerCase();
+    return info.ejecutable.toLowerCase() === nombreArchivoDeRuta(comando).toLowerCase();
   }
 
   /** Mata el árbol solo si el PID sigue siendo nuestro: un PID reutilizado es de otro programa. */
@@ -344,9 +342,7 @@ export class Supervisor {
         } catch (e) {
           if (!(e instanceof LanzadorNoDisponible)) throw e;
           this.lanzarOculto = null;
-          console.warn(
-            `WolfCore Dev no puede usar PowerShell para arrancar los servicios sin ventanas (${e.message}). Se arrancan de la forma clásica: pueden aparecer ventanas de consola.`,
-          );
+          console.warn(avisoSinLanzadorOculto(e.message));
         }
       }
       if (pidOculto !== null) {

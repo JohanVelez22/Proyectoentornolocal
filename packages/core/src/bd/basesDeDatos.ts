@@ -12,6 +12,7 @@ import {
   type ResultadoCrearBasePg,
 } from './clientePostgres';
 import { bloqueEnv, type DatosConexion, type MotorBd } from './env';
+import { nombreEjecutable } from '../plataforma/sistema';
 
 export { bloqueEnv, type DatosConexion, type MotorBd } from './env';
 
@@ -65,7 +66,7 @@ function buscarMongosh(rutas: Rutas): string | null {
   const carpeta = path.dirname(rutas.bin('mongosh', '0'));
   if (!existsSync(carpeta)) return null;
   for (const v of readdirSync(carpeta).sort(compararVersiones).reverse()) {
-    const ruta = path.join(rutas.bin('mongosh', v), 'bin', 'mongosh.exe');
+    const ruta = path.join(rutas.bin('mongosh', v), 'bin', nombreEjecutable('mongosh'));
     if (existsSync(ruta)) return ruta;
   }
   return null;

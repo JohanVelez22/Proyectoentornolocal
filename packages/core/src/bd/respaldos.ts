@@ -24,6 +24,8 @@ import {
   ordenUtf16,
   textoCabeza,
 } from './formato';
+import { nombreEjecutable } from '../plataforma/sistema';
+import { rutaTarSistema } from '../plataforma/win';
 
 type MotorSql = Exclude<MotorBd, 'mongodb'>;
 type Operacion = ProgresoBd['operacion'];
@@ -955,10 +957,7 @@ export class Respaldos {
   }
 
   private tar(): string {
-    return (
-      this.d.rutaTar ??
-      path.win32.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe')
-    );
+    return this.d.rutaTar ?? rutaTarSistema();
   }
 
   private salida(
@@ -991,7 +990,11 @@ export class Respaldos {
     if (motor === 'postgresql') {
       carpeta = path.join(bin, 'pgsql', 'bin');
       candidatos = [
-        cual === 'cliente' ? 'psql.exe' : cual === 'volcado' ? 'pg_dump.exe' : 'pg_restore.exe',
+        cual === 'cliente'
+          ? nombreEjecutable('psql')
+          : cual === 'volcado'
+            ? nombreEjecutable('pg_dump')
+            : nombreEjecutable('pg_restore'),
       ];
     } else {
       carpeta = path.join(bin, 'bin');
@@ -999,9 +1002,9 @@ export class Respaldos {
       candidatos =
         motor === 'mariadb'
           ? volcado
-            ? ['mariadb-dump.exe', 'mysqldump.exe']
-            : ['mariadb.exe', 'mysql.exe']
-          : [volcado ? 'mysqldump.exe' : 'mysql.exe'];
+            ? [nombreEjecutable('mariadb-dump'), nombreEjecutable('mysqldump')]
+            : [nombreEjecutable('mariadb'), nombreEjecutable('mysql')]
+          : [volcado ? nombreEjecutable('mysqldump') : nombreEjecutable('mysql')];
     }
     const encontrado = candidatos.map((n) => path.join(carpeta, n)).find((p) => existsSync(p));
     if (!encontrado) {

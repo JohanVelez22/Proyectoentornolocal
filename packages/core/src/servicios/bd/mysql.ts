@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { DefProceso } from '../../procesos/supervisor';
 import { registrarDefinicion } from '../datos';
 import type { CtxServicio, DefServicio } from '../definicion';
+import { nombreEjecutable } from '../../plataforma/sistema';
 
 export type VarianteMysql = 'mysql' | 'mariadb';
 
@@ -61,7 +62,7 @@ function sqlRoot(clave: string): string {
 export function defMysql(v: VarianteMysql): DefServicio {
   const mysql = v === 'mysql';
   const nombre = mysql ? 'MySQL' : 'MariaDB';
-  const servidor = mysql ? 'mysqld.exe' : 'mariadbd.exe';
+  const servidor = mysql ? nombreEjecutable('mysqld') : nombreEjecutable('mariadbd');
 
   const def: DefServicio = {
     id: v,
@@ -92,9 +93,10 @@ export function defMysql(v: VarianteMysql): DefServicio {
         return;
       }
       await mkdir(path.dirname(c.datos), { recursive: true });
-      const instalar = await c.exec(elegir(c, ['mariadb-install-db.exe', 'mysql_install_db.exe']), [
-        `--datadir=${c.datos}`,
-      ]);
+      const instalar = await c.exec(
+        elegir(c, [nombreEjecutable('mariadb-install-db'), nombreEjecutable('mysql_install_db')]),
+        [`--datadir=${c.datos}`],
+      );
       if (instalar.codigo !== 0) throw falla(nombre, c, instalar.stderr || instalar.stdout);
       // La clave entra por la entrada estándar del servidor en modo bootstrap.
       const r = await c.exec(
@@ -122,7 +124,12 @@ export function defMysql(v: VarianteMysql): DefServicio {
     async detenerLimpio(c: CtxServicio): Promise<void> {
       // La clave va por la variable de entorno del cliente: no aparece en args ni en disco.
       const r = await c.exec(
-        elegir(c, mysql ? ['mysqladmin.exe'] : ['mariadb-admin.exe', 'mysqladmin.exe']),
+        elegir(
+          c,
+          mysql
+            ? [nombreEjecutable('mysqladmin')]
+            : [nombreEjecutable('mariadb-admin'), nombreEjecutable('mysqladmin')],
+        ),
         ['--user=root', '--host=127.0.0.1', `--port=${c.puerto}`, 'shutdown'],
         { env: { MYSQL_PWD: c.credenciales.clave } },
       );

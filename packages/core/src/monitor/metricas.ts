@@ -59,6 +59,13 @@ export interface DepsMetricas {
   supervisor: Pick<Supervisor, 'ids' | 'pid'>;
   /** Una sola consulta al sistema por muestra (en Windows, `muestraSistemaWindows`). */
   consultar: (pids: number[]) => Promise<MuestraPlataforma>;
+  /**
+   * Descendientes de los procesos supervisados (`Plataforma.descendientes`): su CPU y su RAM se
+   * suman al proceso (p. ej. uvicorn detrás del lanzador del venv). Sin esto, solo el proceso.
+   */
+  descendientes?: (pids: number[]) => Promise<Map<number, number[]>>;
+  /** Cada cuánto se vuelve a leer el árbol de procesos (por defecto, 15 s). */
+  refrescoDescendientesMs?: number;
   /** Carpeta de datos de WolfCore Dev (para el disco). */
   rutaDatos: string;
   sistema?: SistemaMetricas;
@@ -95,6 +102,8 @@ export class Metricas {
   private generacion = 0;
   private cpuAnterior: { ocupado: number; total: number } | null = null;
   private redAnterior: { rx: number; tx: number; marca: number } | null = null;
+  /** Último árbol leído: cambia poco y leerlo cuesta otra consulta al sistema. */
+  private arbol: { pids: string; marca: number; hijos: Map<number, number[]> } | null = null;
 
   constructor(private readonly d: DepsMetricas) {
     this.sistema = d.sistema ?? sistemaReal;
@@ -150,25 +159,41 @@ export class Metricas {
       const pid = this.d.supervisor.pid(id);
       if (pid !== null) conocidos.push({ id, pid });
     }
+    const hijos = await this.hijosDe(conocidos.map((c) => c.pid));
+    const consultados = new Set(conocidos.map((c) => c.pid));
+    for (const l of hijos.values()) for (const h of l) consultados.add(h);
     let externa: MuestraPlataforma = { procesos: [], red: null };
     try {
-      externa = await this.d.consultar(conocidos.map((c) => c.pid));
+      externa = await this.d.consultar(
+        hijos.size > 0 ? [...consultados] : conocidos.map((c) => c.pid),
+      );
     } catch {
       // Sin PowerShell la muestra sale igual con lo que da `os`.
     }
     const marca = this.ahora();
     const nucleos = Math.max(1, this.sistema.cpus().length);
     const porPid = new Map(externa.procesos.map((p) => [p.pid, p]));
+    const supervisados = new Set(conocidos.map((c) => c.pid));
     const procesos: ProcesoMuestra[] = [];
     for (const c of conocidos) {
       const u = porPid.get(c.pid);
       if (!u) continue;
+      let cpu = u.cpu;
+      let ramBytes = u.ramBytes;
+      for (const h of hijos.get(c.pid) ?? []) {
+        // Un descendiente que es otro proceso supervisado se cuenta en su propia fila.
+        if (supervisados.has(h)) continue;
+        const uh = porPid.get(h);
+        if (!uh) continue;
+        cpu += uh.cpu;
+        ramBytes += uh.ramBytes;
+      }
       const proy = separarIdSupervisor(c.id);
       procesos.push({
         id: c.id,
         pid: c.pid,
-        cpu: acotar(u.cpu / nucleos, 0, 100),
-        ramBytes: u.ramBytes,
+        cpu: acotar(cpu / nucleos, 0, 100),
+        ramBytes,
         uptimeS: u.uptimeS,
         ...(proy ? { sitioId: proy.sitioId, procesoId: proy.procesoId } : {}),
       });
@@ -187,6 +212,24 @@ export class Metricas {
     this.guardar(muestra);
     this.d.eventos.emit('metricas:muestra', muestra);
     return muestra;
+  }
+
+  /** Descendientes de los PIDs (de la caché si no cambiaron ni venció); vacío si falla. */
+  private async hijosDe(pids: number[]): Promise<Map<number, number[]>> {
+    if (!this.d.descendientes || pids.length === 0) return new Map();
+    const clave = [...pids].sort((a, b) => a - b).join(',');
+    const ahora = this.ahora();
+    const refresco = this.d.refrescoDescendientesMs ?? 15_000;
+    if (this.arbol && this.arbol.pids === clave && ahora - this.arbol.marca < refresco) {
+      return this.arbol.hijos;
+    }
+    try {
+      const hijos = await this.d.descendientes(pids);
+      this.arbol = { pids: clave, marca: ahora, hijos };
+      return hijos;
+    } catch {
+      return new Map();
+    }
   }
 
   /** CPU del equipo por diferencia con la muestra anterior (la primera, desde el arranque). */

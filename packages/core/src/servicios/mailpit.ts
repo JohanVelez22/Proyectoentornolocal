@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { DefProceso } from '../procesos/supervisor';
 import { registrarDefinicion } from './datos';
 import type { DefServicio } from './definicion';
+import { nombreEjecutable } from '../plataforma/sistema';
 
 const PUERTO_WEB = 8025;
 
@@ -22,7 +23,7 @@ export function defMailpit(): DefServicio {
     async proceso(c): Promise<DefProceso> {
       return {
         id: 'mailpit',
-        comando: path.join(c.bin, 'mailpit.exe'),
+        comando: path.join(c.bin, nombreEjecutable('mailpit')),
         args: [
           '--smtp',
           `127.0.0.1:${c.puerto}`,

@@ -4,6 +4,7 @@ import type { DefProceso } from '../../procesos/supervisor';
 import { claveMayor } from '../../rutas';
 import { registrarDefinicion } from '../datos';
 import type { CtxServicio, DefServicio } from '../definicion';
+import { nombreEjecutable } from '../../plataforma/sistema';
 
 // El zip (build msys2) trae los ejecutables en la raíz tras quitar la subcarpeta.
 const exe = (c: CtxServicio, nombre: string): string => path.join(c.bin, nombre);
@@ -52,7 +53,7 @@ export function defRedis(): DefServicio {
       // archivo: se arranca en la carpeta del conf y se le pasa solo el nombre.
       return {
         id: 'redis',
-        comando: exe(c, 'redis-server.exe'),
+        comando: exe(c, nombreEjecutable('redis-server')),
         args: [path.basename(conf)],
         cwd: path.dirname(conf),
         puerto: c.puerto,
@@ -62,7 +63,7 @@ export function defRedis(): DefServicio {
     },
 
     async detenerLimpio(c) {
-      const r = await c.exec(exe(c, 'redis-cli.exe'), [
+      const r = await c.exec(exe(c, nombreEjecutable('redis-cli')), [
         '-h',
         '127.0.0.1',
         '-p',

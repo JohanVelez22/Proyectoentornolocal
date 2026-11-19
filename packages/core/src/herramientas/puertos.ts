@@ -1,12 +1,8 @@
-import path from 'node:path';
 import { interpretarNetstatTodos, type ProtocoloPuerto } from '../plataforma/netstat';
+export { interpretarTablaProcesos, type ProcesoTabla } from '../plataforma/procesosWin';
+import { hijosPorPadre, ProcesosWindows, type ProcesoTabla } from '../plataforma/procesosWin';
 import type { Ejecutor } from '../plataforma/tipos';
-import {
-  ejecutorPorDefecto,
-  interpretarTasklist,
-  interpretarTasklistTodos,
-  PlataformaWindows,
-} from '../plataforma/win';
+import { ejecutorPorDefecto, PlataformaWindows } from '../plataforma/win';
 
 export {
   interpretarNetstatTodos,
@@ -28,12 +24,6 @@ export interface PuertoEnUso {
    * pudo leer. Se devuelve a `finalizarProceso` para no matar un PID reutilizado.
    */
   creado: string | null;
-}
-
-export interface ProcesoTabla {
-  padre: number;
-  creado: string | null;
-  nombre: string;
 }
 
 export interface OpcionesFinalizar {
@@ -84,36 +74,15 @@ const normalizar = (n: string): string =>
 
 const PID_MINIMO = 5;
 
-/** Líneas `pid|padre|creado|nombre` del script de la tabla de procesos (`creado` puede ir vacío). */
-export function interpretarTablaProcesos(salida: string): Map<number, ProcesoTabla> {
-  const res = new Map<number, ProcesoTabla>();
-  for (const linea of salida.split(/\r?\n/)) {
-    const m = /^(\d+)\|(\d+)\|(\d*)\|(.+)$/.exec(linea.trim());
-    if (m) {
-      res.set(Number(m[1]), {
-        padre: Number(m[2]),
-        creado: m[3] ? m[3] : null,
-        nombre: m[4]!.trim(),
-      });
-    }
-  }
-  return res;
-}
-
-/**
- * Una sola consulta CIM para toda la tabla. La hora de creación es la misma expresión que
- * `PlataformaWindows.inicioProceso` (`CreationDate.ToFileTimeUtc()`), así se comparan por igualdad.
- */
-const SCRIPT_TABLA =
-  "Get-CimInstance Win32_Process | ForEach-Object { $c = if ($_.CreationDate) { $_.CreationDate.ToFileTimeUtc() } else { '' }; '{0}|{1}|{2}|{3}' -f $_.ProcessId,$_.ParentProcessId,$c,$_.Name }";
-
 /** Puertos en uso y finalización controlada del proceso que ocupa uno. */
 export class HerramientasPuertos {
   private readonly ejecutar: Ejecutor;
   private readonly inicioProceso: (pid: number) => Promise<string | null>;
+  private readonly sistema: ProcesosWindows;
 
   constructor(private readonly d: DepsPuertos = {}) {
     this.ejecutar = d.ejecutar ?? ejecutorPorDefecto;
+    this.sistema = new ProcesosWindows(this.ejecutar, d.env ?? process.env);
     const plataforma = new PlataformaWindows(this.ejecutar);
     this.inicioProceso = d.inicioProceso ?? ((pid) => plataforma.inicioProceso(pid));
   }
@@ -126,30 +95,9 @@ export class HerramientasPuertos {
     return this.d.pidPadre ?? process.ppid;
   }
 
-  /** Ejecutables de Windows siempre por ruta absoluta (nunca del PATH ni de la carpeta actual). */
-  private sistema32(...partes: string[]): string {
-    const env = this.d.env ?? process.env;
-    return path.win32.join(
-      env.SystemRoot ?? env.SYSTEMROOT ?? 'C:\\Windows',
-      'System32',
-      ...partes,
-    );
-  }
-
   /** PID → padre, hora de creación y nombre en una sola consulta; null si no se pudo leer. */
-  private async tablaProcesos(): Promise<Map<number, ProcesoTabla> | null> {
-    try {
-      const r = await this.ejecutar(
-        this.sistema32('WindowsPowerShell', 'v1.0', 'powershell.exe'),
-        ['-NoProfile', '-NonInteractive', '-Command', SCRIPT_TABLA],
-        { timeoutMs: 20000 },
-      );
-      if (r.codigo !== 0) return null;
-      const t = interpretarTablaProcesos(r.stdout);
-      return t.size > 0 ? t : null;
-    } catch {
-      return null;
-    }
+  private tablaProcesos(): Promise<Map<number, ProcesoTabla> | null> {
+    return this.sistema.tabla();
   }
 
   /**
@@ -160,13 +108,7 @@ export class HerramientasPuertos {
   private propios(tabla: Map<number, ProcesoTabla> | null): Set<number> {
     const res = new Set<number>([this.pidApp, ...(this.d.pidsPropios?.() ?? [])]);
     if (!tabla) return res;
-    const hijos = new Map<number, number[]>();
-    for (const [pid, p] of tabla) {
-      if (pid === p.padre) continue;
-      const l = hijos.get(p.padre) ?? [];
-      l.push(pid);
-      hijos.set(p.padre, l);
-    }
+    const hijos = hijosPorPadre(tabla);
     const pendientes = [...res];
     while (pendientes.length > 0) {
       for (const h of hijos.get(pendientes.pop()!) ?? []) {
@@ -180,22 +122,13 @@ export class HerramientasPuertos {
   }
 
   async puertosEnUso(): Promise<PuertoEnUso[]> {
-    const r = await this.ejecutar(this.sistema32('NETSTAT.EXE'), ['-ano'], { timeoutMs: 15000 });
-    if (r.codigo !== 0 && r.stdout.trim() === '') {
-      throw new Error(
-        `No se pudieron leer los puertos en uso${r.stderr ? `: ${r.stderr.trim()}` : '.'}`,
-      );
-    }
-    const filas = interpretarNetstatTodos(r.stdout);
+    const filas = interpretarNetstatTodos(await this.sistema.netstat());
     const tabla = await this.tablaProcesos();
     let nombres: Map<number, string>;
     if (tabla) {
       nombres = new Map([...tabla].map(([pid, p]) => [pid, p.nombre]));
     } else {
-      const t = await this.ejecutar(this.sistema32('tasklist.exe'), ['/FO', 'CSV', '/NH'], {
-        timeoutMs: 15000,
-      });
-      nombres = interpretarTasklistTodos(t.stdout);
+      nombres = await this.sistema.nombres();
     }
     const propios = this.propios(tabla);
     const agrupado = new Map<string, PuertoEnUso>();
@@ -222,14 +155,8 @@ export class HerramientasPuertos {
   }
 
   /** Nombre actual del proceso (tasklist), o null si no existe. */
-  private async nombreDe(pid: number): Promise<string | null> {
-    const t = await this.ejecutar(
-      this.sistema32('tasklist.exe'),
-      ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'],
-      { timeoutMs: 15000 },
-    );
-    const p = interpretarTasklist(t.stdout);
-    return p && p.pid === pid ? p.nombre : null;
+  private nombreDe(pid: number): Promise<string | null> {
+    return this.sistema.nombreDe(pid);
   }
 
   /**
@@ -282,9 +209,7 @@ export class HerramientasPuertos {
     if (o.creado !== undefined && (await this.inicioProceso(pid)) !== o.creado) {
       throw new Error('El proceso cambió; actualice la lista.');
     }
-    const r = await this.ejecutar(this.sistema32('taskkill.exe'), ['/PID', String(pid), '/F'], {
-      timeoutMs: 15000,
-    });
+    const r = await this.sistema.finalizar(pid);
     if (r.codigo !== 0) {
       const detalle = `${r.stderr}${r.stdout}`.trim();
       throw new Error(

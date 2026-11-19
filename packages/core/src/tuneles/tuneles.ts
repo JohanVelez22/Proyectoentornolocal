@@ -9,6 +9,7 @@ import type { GestorSitios } from '../sitios/sitios';
 import type { UrlBase } from '../sitios/urlbase';
 import type { EstadoTunel, Sitio } from '../tipos';
 import { extraerUrlTunel } from './url';
+import { nombreEjecutable } from '../plataforma/sistema';
 
 export interface DepsTuneles {
   supervisor: Pick<Supervisor, 'iniciar' | 'detener' | 'estado' | 'pid' | 'alSalir' | 'ids'>;
@@ -229,7 +230,10 @@ export class Tuneles {
     try {
       await this.d.supervisor.iniciar({
         id,
-        comando: path.join(this.d.rutas.bin('cloudflared', version), 'cloudflared.exe'),
+        comando: path.join(
+          this.d.rutas.bin('cloudflared', version),
+          nombreEjecutable('cloudflared'),
+        ),
         args: [
           'tunnel',
           '--no-autoupdate',

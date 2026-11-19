@@ -54,6 +54,10 @@ export function citarArgumento(a: string): string {
 export const literalPowerShell = (t: string): string => `'${t.replace(/['‘’‚‛]/g, '$&$&')}'`;
 const literal = literalPowerShell;
 
+/** Aviso cuando el lanzador oculto no está disponible y se vuelve al spawn clásico. */
+export const avisoSinLanzadorOculto = (detalle: string): string =>
+  `WolfCore Dev no puede usar PowerShell para arrancar los servicios sin ventanas (${detalle}). Se arrancan de la forma clásica: pueden aparecer ventanas de consola.`;
+
 /** El lanzador no puede usarse en este equipo (PowerShell ausente o restringido): se usa el spawn clásico. */
 export class LanzadorNoDisponible extends Error {}
 

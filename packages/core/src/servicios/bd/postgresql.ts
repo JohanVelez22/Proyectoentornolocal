@@ -5,6 +5,7 @@ import type { DefProceso } from '../../procesos/supervisor';
 import { claveMayor } from '../../rutas';
 import { registrarDefinicion } from '../datos';
 import type { CtxServicio, DefServicio } from '../definicion';
+import { nombreEjecutable } from '../../plataforma/sistema';
 
 // El zip de EDB trae todo bajo pgsql/ (ver `ejecutable` del catálogo).
 const exe = (c: CtxServicio, nombre: string): string => path.join(c.bin, 'pgsql', 'bin', nombre);
@@ -53,7 +54,7 @@ export function defPostgresql(): DefServicio {
       const pwfile = path.join(c.rutas.tmp(), `pg-${randomUUID()}.pw`);
       try {
         await writeFile(pwfile, c.credenciales.clave + '\n', 'utf8');
-        const r = await c.exec(exe(c, 'initdb.exe'), [
+        const r = await c.exec(exe(c, nombreEjecutable('initdb')), [
           '-D',
           c.datos,
           '-U',
@@ -77,7 +78,7 @@ export function defPostgresql(): DefServicio {
       // El puerto se pasa en cada arranque: puede haber cambiado desde initdb.
       return {
         id: 'postgresql',
-        comando: exe(c, 'postgres.exe'),
+        comando: exe(c, nombreEjecutable('postgres')),
         args: ['-D', c.datos, '-p', String(c.puerto), '-c', 'listen_addresses=127.0.0.1'],
         cwd: c.bin,
         puerto: c.puerto,
@@ -88,7 +89,7 @@ export function defPostgresql(): DefServicio {
 
     async detenerLimpio(c) {
       // pg_ctl actúa sobre el directorio de datos: no necesita clave.
-      const r = await c.exec(exe(c, 'pg_ctl.exe'), [
+      const r = await c.exec(exe(c, nombreEjecutable('pg_ctl')), [
         'stop',
         '-D',
         c.datos,

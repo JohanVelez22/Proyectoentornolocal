@@ -1,39 +1,28 @@
-import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { literalPowerShell } from '../plataforma/lanzarOculto';
+import { nombreEjecutable } from '../plataforma/sistema';
+import {
+  abrirTerminalWindows,
+  lanzarSeparado,
+  type LanzadorSeparado,
+} from '../plataforma/terminalWin';
+import type { CapacidadesPlataforma } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import type { ResolutorRuntimes, SitioConRuntimes } from '../runtimes/runtimes';
 import type { Sitio } from '../tipos';
 
-/** Lanza un proceso separado de nosotros y con ventana propia (sin shell). */
-export type LanzadorSeparado = (
-  cmd: string,
-  args: string[],
-  opts: { cwd: string; env: NodeJS.ProcessEnv },
-) => Promise<void>;
-
-export const lanzarSeparado: LanzadorSeparado = (cmd, args, opts) =>
-  new Promise((resolve, reject) => {
-    const hijo = spawn(cmd, args, {
-      cwd: opts.cwd,
-      env: opts.env,
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: false,
-    });
-    hijo.once('error', reject);
-    hijo.once('spawn', () => {
-      hijo.unref();
-      resolve();
-    });
-  });
+export { lanzarSeparado, type LanzadorSeparado } from '../plataforma/terminalWin';
 
 export interface DepsTerminal {
   rutas: Rutas;
   entorno?: NodeJS.ProcessEnv;
   existe?: (ruta: string) => boolean;
   lanzar?: LanzadorSeparado;
+  /**
+   * Quien abre la terminal (`Plataforma.abrirTerminal`). Sin ella, la de Windows con `entorno`,
+   * `existe` y `lanzar` (compatibilidad con las pruebas anteriores).
+   */
+  plataforma?: Pick<CapacidadesPlataforma, 'abrirTerminal'>;
   /** php.ini de la rama (lo genera si falta). */
   asegurarPhpIni?: (rama: string) => Promise<string>;
   /** Rama de PHP por defecto cuando el sitio no tiene una instalada. */
@@ -47,12 +36,16 @@ const RAMA = /^\d+\.\d+$/;
 export class Terminal {
   private readonly entorno: NodeJS.ProcessEnv;
   private readonly existe: (ruta: string) => boolean;
-  private readonly lanzar: LanzadorSeparado;
+  private readonly plataforma: Pick<CapacidadesPlataforma, 'abrirTerminal'>;
 
   constructor(private readonly d: DepsTerminal) {
     this.entorno = d.entorno ?? process.env;
     this.existe = d.existe ?? existsSync;
-    this.lanzar = d.lanzar ?? lanzarSeparado;
+    const lanzar = d.lanzar ?? lanzarSeparado;
+    this.plataforma = d.plataforma ?? {
+      abrirTerminal: (cwd, o = {}) =>
+        abrirTerminalWindows(cwd, o, { entorno: this.entorno, existe: this.existe, lanzar }),
+    };
   }
 
   /**
@@ -72,7 +65,7 @@ export class Terminal {
     else rama = (await this.d.phpPorDefecto?.()) ?? null;
     if (rama && RAMA.test(rama) && this.d.asegurarPhpIni) {
       const ini = await this.d.asegurarPhpIni(rama);
-      env.WOLFCORE_PHP = path.join(this.d.rutas.bin('php', rama), 'php.exe');
+      env.WOLFCORE_PHP = path.join(this.d.rutas.bin('php', rama), nombreEjecutable('php'));
       env.WOLFCORE_PHPINI = ini;
       env.PHPRC = path.dirname(ini);
     }
@@ -91,20 +84,6 @@ export class Terminal {
       throw new Error(`La carpeta del sitio no existe: ${sitio.carpeta}`);
     }
     const env = await this.entornoConPath(sitio.php, sitio);
-    const local = this.entorno.LOCALAPPDATA;
-    const wt = local ? path.win32.join(local, 'Microsoft', 'WindowsApps', 'wt.exe') : null;
-    if (wt && this.existe(wt)) {
-      // wt parte su línea de órdenes en cada `;` (aun entre comillas): la carpeta no viaja como
-      // argumento; "-d ." es el directorio de trabajo, que ya es la del sitio. Ventana nueva para
-      // que la pestaña reciba este entorno (PATH con PHP y tools/bin).
-      await this.lanzar(wt, ['-w', 'new', '-d', '.'], { cwd: sitio.carpeta, env });
-      return;
-    }
-    // Comillas simples de PowerShell, también las tipográficas (’ cierra una cadena '…').
-    await this.lanzar(
-      'powershell.exe',
-      ['-NoExit', '-Command', `Set-Location -LiteralPath ${literalPowerShell(sitio.carpeta)}`],
-      { cwd: sitio.carpeta, env },
-    );
+    await this.plataforma.abrirTerminal(sitio.carpeta, { env });
   }
 }

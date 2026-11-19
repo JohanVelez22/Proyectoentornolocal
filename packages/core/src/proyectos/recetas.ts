@@ -15,6 +15,7 @@ import {
 } from './config';
 import { detectarProyecto, type Deteccion } from './detectar';
 import type { RegistroPasos } from './pasos';
+import { nombreEjecutable } from '../plataforma/sistema';
 
 export const MENSAJE_NO_CONFIADO = 'Marque "Confío en este repositorio" para ejecutar la receta';
 export const MENSAJE_EN_CURSO = 'Ya hay una receta en curso para este proyecto';
@@ -64,7 +65,7 @@ function procesoUvicorn(): ProcesoProyecto {
     id: 'uvicorn',
     nombre: 'uvicorn',
     comando: [
-      '.venv\\Scripts\\python.exe',
+      `.venv\\Scripts\\${nombreEjecutable('python')}`,
       '-m',
       'uvicorn',
       'app:app',

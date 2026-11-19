@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:net';
-import path from 'node:path';
 import type { PasoReceta } from './config';
+import { nombreArchivoDeRuta } from '../plataforma/sistema';
 
 /** Largo máximo del comando que se muestra por paso al confirmar (el diálogo corta a 120). */
 export const MAX_COMANDO_RESUMEN = 110;
@@ -46,7 +46,7 @@ export function comandoDePaso(p: PasoReceta): string {
       c = `crear la base de datos${texto(a.motor) ? ` en ${String(a.motor)}` : ''}${texto(a.base) ? ` ${String(a.base)}` : ''}`;
       break;
     case 'bd-restaurar':
-      c = `restaurar ${texto(a.archivo) ? path.win32.basename(String(a.archivo)) : 'un respaldo'}${a.confirmarSobrescribir === true ? ' (sobrescribe)' : ''}`;
+      c = `restaurar ${texto(a.archivo) ? nombreArchivoDeRuta(String(a.archivo)) : 'un respaldo'}${a.confirmarSobrescribir === true ? ' (sobrescribe)' : ''}`;
       break;
     case 'migrar':
       c = `php artisan migrate --force${a.semilla === true ? ' --seed' : ''} (CodeIgniter 4: php spark migrate)`;

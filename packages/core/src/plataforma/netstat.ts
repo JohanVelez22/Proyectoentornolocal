@@ -47,3 +47,21 @@ export function interpretarNetstatTodos(salida: string): FilaNetstat[] {
   }
   return res;
 }
+
+/** Todas las filas "nombre","pid" de `tasklist /FO CSV /NH`. */
+export function interpretarTasklistTodos(salida: string): Map<number, string> {
+  const res = new Map<number, string>();
+  for (const linea of salida.split(/\r?\n/)) {
+    const m = /^"([^"]*)","(\d+)"/.exec(linea.trim());
+    if (m) res.set(Number(m[2]), m[1] ?? '');
+  }
+  return res;
+}
+
+export function interpretarTasklist(salida: string): { pid: number; nombre: string } | null {
+  for (const linea of salida.split(/\r?\n/)) {
+    const m = /^"([^"]*)","(\d+)"/.exec(linea.trim());
+    if (m) return { pid: Number(m[2]), nombre: m[1] ?? '' };
+  }
+  return null;
+}

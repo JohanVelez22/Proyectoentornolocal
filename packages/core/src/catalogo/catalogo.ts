@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { nombreEjecutable } from '../plataforma/sistema';
 import catalogoCrudo from './catalogo.json' with { type: 'json' };
 
 export type ServicioInstalable =
@@ -24,22 +25,22 @@ export type FormatoPaquete = 'zip' | 'exe' | 'archivo';
 
 /** Ruta relativa, dentro del paquete, del binario principal que confirma la instalación. */
 export const EJECUTABLE_POR_SERVICIO: Record<ServicioInstalable, string> = {
-  nginx: 'nginx.exe',
-  php: 'php-cgi.exe',
-  cloudflared: 'cloudflared.exe',
-  mysql: 'bin/mysqld.exe',
-  mariadb: 'bin/mariadbd.exe',
-  postgresql: 'pgsql/bin/postgres.exe',
-  redis: 'redis-server.exe',
-  mongodb: 'bin/mongod.exe',
-  mongosh: 'bin/mongosh.exe',
-  mailpit: 'mailpit.exe',
-  ollama: 'ollama.exe',
+  nginx: nombreEjecutable('nginx'),
+  php: nombreEjecutable('php-cgi'),
+  cloudflared: nombreEjecutable('cloudflared'),
+  mysql: `bin/${nombreEjecutable('mysqld')}`,
+  mariadb: `bin/${nombreEjecutable('mariadbd')}`,
+  postgresql: `pgsql/bin/${nombreEjecutable('postgres')}`,
+  redis: nombreEjecutable('redis-server'),
+  mongodb: `bin/${nombreEjecutable('mongod')}`,
+  mongosh: `bin/${nombreEjecutable('mongosh')}`,
+  mailpit: nombreEjecutable('mailpit'),
+  ollama: nombreEjecutable('ollama'),
   composer: 'composer.phar',
   adminer: 'adminer.php',
   'pgvector-src': 'Makefile.win',
-  node: 'node.exe',
-  python: 'python.exe',
+  node: nombreEjecutable('node'),
+  python: nombreEjecutable('python'),
 };
 
 export function ejecutableDe(servicio: string): string | undefined {

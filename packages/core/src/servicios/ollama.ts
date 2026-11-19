@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { DefProceso } from '../procesos/supervisor';
 import { registrarDefinicion } from './datos';
 import type { DefServicio } from './definicion';
+import { nombreEjecutable } from '../plataforma/sistema';
 
 const modelos = (datos: string): string => path.join(datos, 'models');
 
@@ -21,7 +22,7 @@ export function defOllama(): DefServicio {
     async proceso(c): Promise<DefProceso> {
       return {
         id: 'ollama',
-        comando: path.join(c.bin, 'ollama.exe'),
+        comando: path.join(c.bin, nombreEjecutable('ollama')),
         args: ['serve'],
         cwd: c.bin,
         // Sin secretos: se guarda en run/estado.json sin problema.

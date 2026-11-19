@@ -12,6 +12,7 @@ import { motorBdDe, MOTORES_BD } from '../config';
 import { detectarProyecto, type Deteccion } from '../detectar';
 import type { ContextoPaso } from '../pasos';
 import { sanear } from '../recetas';
+import { nombreEjecutable } from '../../plataforma/sistema';
 
 /** Lo que necesitan los pasos reales. Todo se inyecta para poder probarlos sin procesos reales. */
 export interface DepsPasos {
@@ -123,7 +124,7 @@ export interface Herramientas {
 
 const venvScripts = (carpeta: string): string => path.join(carpeta, '.venv', 'Scripts');
 export const pythonVenv = (carpeta: string): string =>
-  path.join(venvScripts(carpeta), 'python.exe');
+  path.join(venvScripts(carpeta), nombreEjecutable('python'));
 
 /** Lo que hace falta para armar el entorno de un proyecto (pasos de receta y procesos). */
 export type DepsEntorno = Pick<DepsPasos, 'rutas' | 'runtimes' | 'php' | 'entorno'>;
@@ -192,7 +193,7 @@ export function nodeExe(d: Pick<DepsPasos, 'runtimes'>, h: Herramientas): string
   if (!h.versiones.node) {
     throw new Error('No hay Node instalado para este proyecto: instálelo desde Servicios.');
   }
-  return path.join(d.runtimes.rutaBin('node', h.versiones.node), 'node.exe');
+  return path.join(d.runtimes.rutaBin('node', h.versiones.node), nombreEjecutable('node'));
 }
 
 /** Script de npm (o npx) del Node del proyecto: se lanza con node.exe, sin shell. */
@@ -215,7 +216,7 @@ export function pythonExe(d: Pick<DepsPasos, 'runtimes'>, h: Herramientas): stri
   if (!h.versiones.python) {
     throw new Error('No hay Python instalado para este proyecto: instálelo desde Servicios.');
   }
-  return path.join(d.runtimes.rutaBin('python', h.versiones.python), 'python.exe');
+  return path.join(d.runtimes.rutaBin('python', h.versiones.python), nombreEjecutable('python'));
 }
 
 /** Nombre de un programa para resolverlo: en minúsculas y sin `.exe`. */

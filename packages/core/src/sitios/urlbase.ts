@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { Ejecutor } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import type { Sitio } from '../tipos';
+import { nombreEjecutable } from '../plataforma/sistema';
 
 function escaparRegex(t: string): string {
   return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -450,7 +451,7 @@ export class UrlBase {
   private async limpiarCache(s: DatosSitioPrevio): Promise<string | null> {
     if (s.tipo !== 'laravel' || !s.php) return null;
     if (!existsSync(path.join(s.carpeta, 'bootstrap', 'cache', 'config.php'))) return null;
-    const php = path.join(this.d.rutas.bin('php', s.php), 'php.exe');
+    const php = path.join(this.d.rutas.bin('php', s.php), nombreEjecutable('php'));
     try {
       const r = await this.d.ejecutor(php, ['artisan', 'config:clear'], {
         timeoutMs: 30_000,

@@ -11,6 +11,7 @@ import { NOMBRE_BD_MONGO } from '../bd/basesDeDatos';
 import { NOMBRE_BD_MYSQL } from '../bd/clienteMysql';
 import { NOMBRE_BD_PG } from '../bd/clientePostgres';
 import type { MotorBd } from '../bd/env';
+import { rutaComparable } from '../plataforma/sistema';
 
 /**
  * Lo que el servidor MCP publica del núcleo. `Nucleo` arma este objeto con sus propios métodos;
@@ -226,7 +227,7 @@ function leerCuerpo(req: http.IncomingMessage, limite: number): Promise<string> 
 
 /** true si `hijo` está dentro de `carpeta` (sin salir con `..`); Windows sin mayúsculas. */
 function estaDentro(carpeta: string, hijo: string): boolean {
-  const norm = (p: string): string => (process.platform === 'win32' ? p.toLowerCase() : p);
+  const norm = rutaComparable;
   const rel = path.relative(norm(carpeta), norm(hijo));
   return rel !== '' && rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
 }

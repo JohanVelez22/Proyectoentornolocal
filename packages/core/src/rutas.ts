@@ -1,26 +1,7 @@
 import { mkdir, readdir, rm } from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 
-export const NOMBRE_CARPETA = 'WolfCoreDev';
-export const NOMBRE_CARPETA_ANTERIOR = 'Proyectoentornolocal';
-
-export function rutaBasePorDefecto(
-  env: NodeJS.ProcessEnv = process.env,
-  plataforma: NodeJS.Platform = process.platform,
-): string {
-  const nombre = NOMBRE_CARPETA;
-  if (plataforma === 'win32') {
-    const local =
-      env.LOCALAPPDATA ?? path.win32.join(env.USERPROFILE ?? os.homedir(), 'AppData', 'Local');
-    return path.win32.join(local, nombre);
-  }
-  if (plataforma === 'darwin') {
-    return path.posix.join(os.homedir(), 'Library', 'Application Support', nombre);
-  }
-  const datos = env.XDG_DATA_HOME ?? path.posix.join(os.homedir(), '.local', 'share');
-  return path.posix.join(datos, nombre);
-}
+export { NOMBRE_CARPETA, NOMBRE_CARPETA_ANTERIOR, rutaBasePorDefecto } from './plataforma/carpetas';
 
 /** "8.4.13" → "8.4"; si no tiene esa forma, la versión tal cual. */
 export function claveMayorMenor(version: string): string {

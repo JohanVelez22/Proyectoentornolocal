@@ -13,6 +13,7 @@ import { existe } from '../archivos';
 import type { ImplementacionPaso } from '../pasos';
 import { MARCADOR_PUERTO, sanear } from '../recetas';
 import { argsDe, comprobarSenal, texto, type DepsPasos } from './comun';
+import { nombreEjecutable } from '../../plataforma/sistema';
 
 /** El python del .venv escrito relativo en la receta (`.venv\Scripts\python.exe`). */
 const PYTHON_VENV_RELATIVO = /^\.venv[\\/]Scripts[\\/]python(\.exe)?$/i;
@@ -28,7 +29,8 @@ async function ajustarComando(
   linea: (t: string) => void,
 ): Promise<string[]> {
   const c = [...comando];
-  if (PYTHON_VENV_RELATIVO.test(c[0]!)) c[0] = path.join(carpeta, '.venv', 'Scripts', 'python.exe');
+  if (PYTHON_VENV_RELATIVO.test(c[0]!))
+    c[0] = path.join(carpeta, '.venv', 'Scripts', nombreEjecutable('python'));
   const i = c.indexOf(MODULO_UVICORN);
   if (i >= 0 && c.includes('uvicorn') && !(await existe(path.join(carpeta, 'app.py')))) {
     if (await existe(path.join(carpeta, 'main.py'))) {

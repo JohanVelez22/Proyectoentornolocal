@@ -1,6 +1,9 @@
 import os from 'node:os';
-import { lanzarSeparado, type LanzadorSeparado } from '../herramientas/terminal';
-import { literalPowerShell } from '../plataforma/lanzarOculto';
+import {
+  comandoConsolaVisible,
+  lanzarSeparado,
+  type LanzadorSeparado,
+} from '../plataforma/terminalWin';
 import type { Ejecutor } from '../plataforma/tipos';
 import { ejecutorPorDefecto } from '../plataforma/win';
 import { Git, MENSAJE_TOKEN_INVALIDO, sinSecretos, validarToken } from './git';
@@ -197,14 +200,15 @@ export class GitHub {
     const gh = this.git.buscar('gh');
     if (!gh) throw new Error('GitHub CLI (gh) no está instalado: instálelo primero');
     const cwd = this.entorno.USERPROFILE || os.homedir();
-    await this.lanzar(
-      'powershell.exe',
-      [
-        '-NoExit',
-        '-Command',
-        `& ${literalPowerShell(gh)} auth login --web --hostname github.com --git-protocol https`,
-      ],
-      { cwd, env: { ...this.entorno } },
-    );
+    const c = comandoConsolaVisible(gh, [
+      'auth',
+      'login',
+      '--web',
+      '--hostname',
+      'github.com',
+      '--git-protocol',
+      'https',
+    ]);
+    await this.lanzar(c.cmd, c.args, { cwd, env: { ...this.entorno } });
   }
 }

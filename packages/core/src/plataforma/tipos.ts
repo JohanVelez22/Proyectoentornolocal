@@ -1,9 +1,83 @@
 import type { Readable } from 'node:stream';
+import type { LanzadorOculto } from './lanzarOculto';
 
 export type ResultadoEscritura =
   { ok: true } | { ok: false; motivo: 'cancelado' | 'denegado' | 'error'; detalle?: string };
 
-export interface Plataforma {
+/** Sistema y arquitectura de los binarios del catálogo. */
+export type IdCatalogo =
+  'win-x64' | 'win-arm64' | 'linux-x64' | 'linux-arm64' | 'mac-x64' | 'mac-arm64';
+
+/**
+ * PATH del usuario (en Windows, HKCU\Environment\Path), como lista de entradas no vacías.
+ * `escribir` guarda antes el valor anterior (el ORIGINAL, la primera vez) y comprueba lo escrito.
+ */
+export interface AccesoPathUsuario {
+  leer(): Promise<string[]>;
+  escribir(entradas: string[]): Promise<void>;
+  /** Valor crudo y su tipo, si el sistema lo distingue (diagnóstico y pruebas). */
+  valorCrudo?(): Promise<{ valor: string; tipo: string }>;
+}
+
+export interface OpcionesAbrirTerminal {
+  /** Variables que se agregan (o reemplazan) al entorno de la terminal; solo en ese proceso. */
+  env?: Record<string, string | undefined>;
+  /** Programa y argumentos a ejecutar en la terminal (sin shell intermedio cuando se puede). */
+  comando?: string[];
+}
+
+export interface RangoPuertos {
+  desde: number;
+  hasta: number;
+}
+
+export type EstadoServicioSistema = 'corriendo' | 'detenido' | 'otro' | 'no-existe';
+
+export interface ServicioSistema {
+  nombre: string;
+  estado: EstadoServicioSistema;
+}
+
+/**
+ * Lo que la Etapa C agregó a la interfaz. Todo lo que depende del sistema operativo pasa por
+ * aquí: fuera de `plataforma/` ningún módulo usa `process.platform`, `path.win32`, PowerShell,
+ * `netsh` ni nombres `.exe` (lo comprueba una prueba guardián).
+ */
+export interface CapacidadesPlataforma {
+  /** Carpeta de datos por defecto de WolfCore Dev. */
+  carpetaDatos(): string;
+  /** Carpeta personal del usuario (`~/.claude`, `~/.codex`, perfiles de Firefox…). */
+  carpetaInicio(): string;
+  idCatalogo(): IdCatalogo;
+  /** Nombre del archivo ejecutable (`php` → `php.exe` en Windows). */
+  nombreEjecutable(base: string): string;
+  /** Ruta de un ejecutable: primero el PATH, luego las carpetas `extras`; null si no está. */
+  buscarEjecutable(nombre: string, extras?: string[]): Promise<string | null>;
+  /** PATH del usuario; `respaldo` es el archivo donde se guarda el valor original. */
+  pathUsuario(o?: { respaldo?: string }): AccesoPathUsuario;
+  /** Fija (o borra con null) una variable de entorno persistente del usuario. */
+  variableUsuario(nombre: string, valor: string | null): Promise<ResultadoEscritura>;
+  /** Abre una terminal VISIBLE en `cwd` (la única ventana que se abre a pedido del usuario). */
+  abrirTerminal(cwd: string, o?: OpcionesAbrirTerminal): Promise<void>;
+  /** Lanzador de servidores sin ventanas; null si este sistema no lo necesita o no lo tiene. */
+  lanzadorOculto(carpetaTmp: string): LanzadorOculto | null;
+  /** Descendientes (hijos, nietos…) de cada PID, en una sola consulta. */
+  descendientes(pids: number[]): Promise<Map<number, number[]>>;
+  /** Rangos de puertos reservados por el sistema (Hyper-V, WSL, Docker). */
+  rangosReservados(protocolo: 'tcp'): Promise<RangoPuertos[]>;
+  serviciosSistema(nombres: string[]): Promise<ServicioSistema[]>;
+  /** ¿Está el redistribuible de Visual C++ 2015+ x64? (siempre true donde no aplica). */
+  vcRedistInstalado(): Promise<boolean>;
+  /** Carpetas de los perfiles de Firefox del usuario ([] si no hay Firefox). */
+  perfilesFirefox(): Promise<string[]>;
+}
+
+/**
+ * La interfaz que reciben los módulos. Las capacidades nuevas son opcionales para que las
+ * implementaciones parciales anteriores sigan valiendo; `completarPlataforma` da una
+ * `PlataformaCompleta`, que es lo que deben usar los módulos nuevos.
+ */
+export interface Plataforma extends Partial<CapacidadesPlataforma> {
   rutaHosts(): string;
   escribirComoAdmin(destino: string, contenido: string): Promise<ResultadoEscritura>;
   quienUsaPuerto(puerto: number): Promise<{ pid: number; nombre: string } | null>;
@@ -26,6 +100,8 @@ export interface Plataforma {
   /** Carpeta "Documentos" del usuario (puede estar redirigida, p. ej. a OneDrive). */
   carpetaDocumentos(): Promise<string>;
 }
+
+export type PlataformaCompleta = Plataforma & CapacidadesPlataforma;
 
 export type Ejecutor = (
   cmd: string,

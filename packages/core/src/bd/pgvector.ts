@@ -9,6 +9,7 @@ import { lanzadorPorDefecto } from '../plataforma/lanzar';
 import type { Ejecutor, Lanzador } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import type { ProgresoInstalacion } from '../tipos';
+import { interpreteComandos, rutaVcvars64, rutaVswhere } from '../plataforma/win';
 
 export interface DepsPgvector {
   rutas: Rutas;
@@ -93,9 +94,7 @@ export class InstaladorPgvector {
   }
 
   private vswhere(): string {
-    const pf =
-      this.d.programFilesX86 ?? process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)';
-    return path.win32.join(pf, 'Microsoft Visual Studio', 'Installer', 'vswhere.exe');
+    return rutaVswhere(this.d.programFilesX86);
   }
 
   /** Carpeta de las Build Tools con el compilador de C++ para x64, o null. */
@@ -211,7 +210,7 @@ export class InstaladorPgvector {
     const pg = await this.carpetaPostgres();
     if (!pg) throw new Error(MSG_SIN_POSTGRES);
     const vs = await this.rutaBuildTools();
-    const vcvars = vs ? path.win32.join(vs, 'VC', 'Auxiliary', 'Build', 'vcvars64.bat') : null;
+    const vcvars = vs ? rutaVcvars64(vs) : null;
     if (!vcvars || !this.existe(vcvars)) throw new Error(MSG_SIN_HERRAMIENTAS);
 
     const tmp = this.d.rutas.tmp();
@@ -244,7 +243,7 @@ export class InstaladorPgvector {
       await writeFile(script, lineas.join('\r\n'), 'utf8');
       // PostgreSQL mantiene abierto vector.dll si ya lo cargó: se detiene durante la copia.
       detenido = await this.d.detenerPostgres();
-      const r = await this.lanzar(process.env.ComSpec ?? 'cmd.exe', ['/d', '/c', script], {
+      const r = await this.lanzar(interpreteComandos(), ['/d', '/c', script], {
         cwd: codigo,
         alLinea: (l) => {
           if (l.trim() === MARCA_INSTALAR) {

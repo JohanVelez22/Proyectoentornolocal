@@ -1,0 +1,117 @@
+import path from 'node:path';
+import type { RangoPuertos, ServicioSistema } from './tipos';
+
+/**
+ * Rangos de `netsh interface ipv4 show excludedportrange protocol=tcp`. No depende del idioma:
+ * cuenta cada línea con dos números (y quizá el `*` de las exclusiones administradas).
+ */
+export function interpretarRangosReservados(salida: string): RangoPuertos[] {
+  const res: RangoPuertos[] = [];
+  for (const linea of salida.split(/\r?\n/)) {
+    const m = /^\s*(\d{1,5})\s+(\d{1,5})(?:\s+\*)?\s*$/.exec(linea);
+    if (!m) continue;
+    const desde = Number(m[1]);
+    const hasta = Number(m[2]);
+    if (desde < 1 || hasta > 65535 || hasta < desde) continue;
+    res.push({ desde, hasta });
+  }
+  return res;
+}
+
+/** Nombre de servicio de Windows aceptable en una consulta (sin comillas ni comodines). */
+export const NOMBRE_SERVICIO = /^[A-Za-z0-9_.-]{1,80}$/;
+
+/** Script de una sola consulta: `nombre|estado` por cada servicio que existe. */
+export function scriptServicios(nombres: string[]): string {
+  const lista = nombres.map((n) => `'${n}'`).join(',');
+  return [
+    "$ErrorActionPreference = 'SilentlyContinue'",
+    `Get-Service -Name ${lista} | ForEach-Object { '{0}|{1}' -f $_.Name,$_.Status }`,
+  ].join('\n');
+}
+
+/** Estado de cada servicio pedido; los que no aparecen en la salida no existen. */
+export function interpretarServiciosSistema(salida: string, nombres: string[]): ServicioSistema[] {
+  const vistos = new Map<string, string>();
+  for (const linea of salida.split(/\r?\n/)) {
+    const m = /^([^|]+)\|(\w+)$/.exec(linea.trim());
+    if (m) vistos.set(m[1]!.toLowerCase(), m[2]!);
+  }
+  return nombres.map((nombre) => {
+    const e = vistos.get(nombre.toLowerCase());
+    return {
+      nombre,
+      estado:
+        e === undefined
+          ? 'no-existe'
+          : e === 'Running'
+            ? 'corriendo'
+            : e === 'Stopped'
+              ? 'detenido'
+              : 'otro',
+    };
+  });
+}
+
+/** Valor `Installed` del Visual C++ 2015+ x64 (también bajo WOW6432Node). */
+export const SCRIPT_VCREDIST = [
+  "$ErrorActionPreference = 'SilentlyContinue'",
+  "$r = 'SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x64'",
+  "$w = 'SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x64'",
+  '$v = (Get-ItemProperty -Path "HKLM:\\$r").Installed',
+  'if ($v -ne 1) { $v = (Get-ItemProperty -Path "HKLM:\\$w").Installed }',
+  '[Console]::Out.Write([string]$v)',
+].join('\n');
+
+/** Nombre de variable de entorno del usuario que se puede fijar (nunca Path: tiene su propio acceso). */
+export const NOMBRE_VARIABLE = /^[A-Za-z_][A-Za-z0-9_]{0,99}$/;
+
+const comillas = (t: string): string => `'${t.replace(/'/g, "''")}'`;
+
+/** Fija la variable con el valor que llega por la entrada (Base64 de UTF-16LE), o la borra. */
+export function scriptVariableUsuario(nombre: string, borrar: boolean): string {
+  return [
+    "$ErrorActionPreference = 'Stop'",
+    "$k = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Environment')",
+    'try {',
+    borrar
+      ? `  $k.DeleteValue(${comillas(nombre)}, $false)`
+      : [
+          '  $b = [Console]::In.ReadToEnd().Trim()',
+          '  $v = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($b))',
+          `  $k.SetValue(${comillas(nombre)}, $v, [Microsoft.Win32.RegistryValueKind]::String)`,
+        ].join('\n'),
+    '} finally { $k.Close() }',
+  ].join('\n');
+}
+
+/** Carpetas de los perfiles de `profiles.ini` de Firefox (`base` es la carpeta del .ini). */
+export function interpretarProfilesIni(texto: string, base: string): string[] {
+  const res: string[] = [];
+  let actual: { esPerfil: boolean; ruta?: string; relativa?: boolean } = { esPerfil: false };
+  const cerrar = (): void => {
+    if (!actual.esPerfil || !actual.ruta) return;
+    const partes = actual.ruta.split(/[\\/]/).filter(Boolean);
+    res.push(
+      actual.relativa === false
+        ? path.win32.normalize(actual.ruta)
+        : path.win32.join(base, ...partes),
+    );
+  };
+  for (const cruda of texto.split(/\r?\n/)) {
+    const linea = cruda.trim();
+    const seccion = /^\[(.+)\]$/.exec(linea);
+    if (seccion) {
+      cerrar();
+      actual = { esPerfil: /^Profile\d+$/i.test(seccion[1]!) };
+      continue;
+    }
+    const kv = /^([^=]+)=(.*)$/.exec(linea);
+    if (!kv || !actual.esPerfil) continue;
+    const clave = kv[1]!.trim().toLowerCase();
+    if (clave === 'path') actual.ruta = kv[2]!.trim();
+    else if (clave === 'isrelative') actual.relativa = kv[2]!.trim() !== '0';
+  }
+  cerrar();
+  return res;
+}

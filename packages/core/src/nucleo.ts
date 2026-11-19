@@ -27,13 +27,14 @@ import { GestorHosts } from './hosts/hosts';
 import { GestorHttps, type EstadoHttps, type ResultadoCA } from './https/certificados';
 import { Adminer } from './herramientas/adminer';
 import { Composer } from './herramientas/composer';
-import { PathUsuario } from './herramientas/pathUsuario';
+import { PathUsuario, respaldoPathUsuario } from './herramientas/pathUsuario';
 import { abrirEnVsCode } from './herramientas/editor';
 import { Terminal } from './herramientas/terminal';
 import { bloqueEnvIa, ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
-import { crearPlataforma } from './plataforma/index';
+import { completarPlataforma, crearPlataforma } from './plataforma/index';
+import { nombreEjecutable } from './plataforma/sistema';
 import type { Ejecutor, Plataforma } from './plataforma/tipos';
-import { ejecutorPorDefecto } from './plataforma/win';
+import { ejecutorPorDefecto, PlataformaWindows } from './plataforma/win';
 import { Supervisor } from './procesos/supervisor';
 import { Rutas } from './rutas';
 import { Mailpit } from './servicios/mailpit';
@@ -352,6 +353,12 @@ export class Nucleo {
     await rutas.asegurar();
     await rutas.purgarTemporales();
     const plataforma = o.plataforma ?? crearPlataforma();
+    // Lo que una plataforma parcial (pruebas) no tenga lo pone la de Windows con el mismo ejecutor:
+    // es lo que hacía el núcleo antes de pasar todo por la plataforma.
+    const plat = completarPlataforma(
+      plataforma,
+      new PlataformaWindows(o.ejecutor ?? ejecutorPorDefecto),
+    );
     const eventos = new Eventos<EventosNucleo>();
     const almacen = new Almacen(rutas);
     const leerConfig = () => almacen.leer();
@@ -454,7 +461,7 @@ export class Nucleo {
       const elegida = rama && instaladas.includes(rama) ? rama : await composer.phpPorDefecto();
       if (!elegida) throw new Error('No hay PHP instalado: instálelo desde Servicios.');
       return {
-        exe: path.join(rutas.bin('php', elegida), 'php.exe'),
+        exe: path.join(rutas.bin('php', elegida), nombreEjecutable('php')),
         ini: await servicios.php.asegurarPhpIni(elegida),
       };
     };
@@ -507,8 +514,12 @@ export class Nucleo {
         asegurarPhpIni: (r) => servicios.php.asegurarPhpIni(r),
         phpPorDefecto: () => composer.phpPorDefecto(),
         runtimes,
+        plataforma: plat,
       }),
-      pathUsuario: new PathUsuario({ rutas, ...(o.ejecutor ? { exec: o.ejecutor } : {}) }),
+      pathUsuario: new PathUsuario({
+        rutas,
+        acceso: plat.pathUsuario({ respaldo: respaldoPathUsuario(rutas) }),
+      }),
       adminer,
       ftp,
       ollama: new ClienteOllama({
@@ -535,6 +546,8 @@ export class Nucleo {
         eventos,
         supervisor,
         consultar: o.consultarMetricas ?? ((p) => muestraSistemaWindows(exec, p)),
+        // Con una consulta de prueba no se lee el árbol de procesos real.
+        ...(o.consultarMetricas ? {} : { descendientes: (p: number[]) => plat.descendientes(p) }),
         rutaDatos: rutas.base,
       }),
       registros: new Registros({

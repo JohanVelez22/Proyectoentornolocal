@@ -6,6 +6,7 @@ import type { Ejecutor, Plataforma } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import { compararVersiones } from '../servicios/nginx';
 import type { Config } from '../tipos';
+import { relativaAlShim } from '../plataforma/win';
 
 export interface DepsComposer {
   rutas: Rutas;
@@ -19,18 +20,8 @@ export interface DepsComposer {
 
 /** Rama de PHP: "8.4". Evita que una versión escape de bin/php. */
 const RAMA = /^\d+\.\d+$/;
-/** En un .cmd, `%` se duplica para que no se expanda. */
-const paraCmd = (ruta: string): string => ruta.replace(/%/g, '%%');
 
-/**
- * Ruta de `destino` vista desde la carpeta del shim: `%~dp0..\..\bin\php\8.4\php.exe`.
- * Sin ruta relativa posible (otra unidad), la absoluta.
- */
-export function relativaAlShim(dirShim: string, destino: string): string {
-  const rel = path.win32.relative(dirShim, destino);
-  if (rel === '' || path.win32.isAbsolute(rel)) return paraCmd(destino);
-  return `%~dp0${paraCmd(rel)}`;
-}
+export { relativaAlShim } from '../plataforma/win';
 
 /** Contenido de un shim .cmd (CRLF); `phar` null = php.exe a secas. */
 export function shim(php: string, ini: string, phar: string | null): string {

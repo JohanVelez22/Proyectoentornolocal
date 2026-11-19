@@ -1,5 +1,6 @@
 import { rename, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { sistemaActual } from './plataforma/sistema';
 import { NOMBRE_CARPETA_ANTERIOR, rutaBasePorDefecto } from './rutas';
 
 export interface ResultadoMigracion {
@@ -35,7 +36,7 @@ async function existe(fs: FsMigracion, p: string): Promise<boolean> {
  */
 export async function migrarCarpetaDatos(
   env: NodeJS.ProcessEnv = process.env,
-  plataforma: NodeJS.Platform = process.platform,
+  plataforma: NodeJS.Platform = sistemaActual(),
   fs: FsMigracion = fsReal,
 ): Promise<ResultadoMigracion> {
   const nueva = rutaBasePorDefecto(env, plataforma);

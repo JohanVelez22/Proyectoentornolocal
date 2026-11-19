@@ -1,14 +1,38 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { readFile, rm, writeFile } from 'node:fs/promises';
-import { homedir, tmpdir } from 'node:os';
+import { arch, homedir, tmpdir } from 'node:os';
 import path from 'node:path';
-import { interpretarNetstatTodos } from './netstat';
+import { rutaBasePorDefecto } from './carpetas';
+import {
+  interpretarProfilesIni,
+  interpretarRangosReservados,
+  interpretarServiciosSistema,
+  NOMBRE_SERVICIO,
+  NOMBRE_VARIABLE,
+  SCRIPT_VCREDIST,
+  scriptServicios,
+  scriptVariableUsuario,
+} from './diagnosticoWin';
+import { crearLanzadorOculto, type LanzadorOculto } from './lanzarOculto';
+import { interpretarNetstatTodos, interpretarTasklist, interpretarTasklistTodos } from './netstat';
+import { aBase64, codificarPowerShell, PathUsuarioWindows } from './pathUsuarioWin';
+import { ProcesosWindows, descendientesEnTabla, rutaSistema32 } from './procesosWin';
+import { abrirTerminalWindows, lanzarSeparado, type LanzadorSeparado } from './terminalWin';
+import { nombreEjecutable, sistemaActual } from './sistema';
+
+export { interpretarTasklist, interpretarTasklistTodos } from './netstat';
 import type {
+  AccesoPathUsuario,
   Ejecutor,
+  IdCatalogo,
   MuestraPlataforma,
-  Plataforma,
+  OpcionesAbrirTerminal,
+  PlataformaCompleta,
+  RangoPuertos,
   ResultadoEscritura,
+  ServicioSistema,
   UsoProceso,
 } from './tipos';
 
@@ -51,16 +75,6 @@ export function interpretarNetstatVarios(salida: string, puertos: number[]): Map
   return res;
 }
 
-/** Todas las filas "nombre","pid" de `tasklist /FO CSV /NH`. */
-export function interpretarTasklistTodos(salida: string): Map<number, string> {
-  const res = new Map<number, string>();
-  for (const linea of salida.split(/\r?\n/)) {
-    const m = /^"([^"]*)","(\d+)"/.exec(linea.trim());
-    if (m) res.set(Number(m[2]), m[1] ?? '');
-  }
-  return res;
-}
-
 /** Hosts locales que cuentan como "en escucha" para un servicio propio. */
 const HOSTS_ESCUCHA = new Set(['0.0.0.0', '::', '::1', '127.0.0.1']);
 
@@ -70,14 +84,6 @@ export function interpretarNetstat(salida: string, puerto: number): number | nul
     (x) => x.protocolo === 'TCP' && x.puerto === puerto && HOSTS_ESCUCHA.has(x.direccion),
   );
   return f ? f.pid : null;
-}
-
-export function interpretarTasklist(salida: string): { pid: number; nombre: string } | null {
-  for (const linea of salida.split(/\r?\n/)) {
-    const m = /^"([^"]*)","(\d+)"/.exec(linea.trim());
-    if (m) return { pid: Number(m[2]), nombre: m[1] ?? '' };
-  }
-  return null;
 }
 
 /* ───────────── Métricas (una sola consulta de PowerShell por muestra) ───────────── */
@@ -201,13 +207,194 @@ export function pidExiste(pid: number): boolean {
   }
 }
 
-export class PlataformaWindows implements Plataforma {
+/**
+ * Ruta de un ejecutable en Windows: primero las carpetas del PATH (sin comillas ni vacías), luego
+ * `extras`. Se prueba `<nombre>.exe` en cada una; null si no está.
+ */
+export function buscarEjecutableWindows(
+  nombre: string,
+  o: { entorno: NodeJS.ProcessEnv; existe: (ruta: string) => boolean; extras?: readonly string[] },
+): string | null {
+  const clave = Object.keys(o.entorno).find((k) => k.toLowerCase() === 'path') ?? 'Path';
+  const dirs = (o.entorno[clave] ?? '')
+    .split(';')
+    .map((d) => d.trim().replace(/^"|"$/g, ''))
+    .filter(Boolean);
+  for (const dir of [...dirs, ...(o.extras ?? [])]) {
+    const r = path.win32.join(dir, nombreEjecutable(nombre));
+    if (o.existe(r)) return r;
+  }
+  return null;
+}
+
+/** En un .cmd, `%` se duplica para que no se expanda. */
+const paraCmd = (ruta: string): string => ruta.replace(/%/g, '%%');
+
+/**
+ * Ruta de `destino` vista desde la carpeta de un shim .cmd: `%~dp0..\..\bin\php\8.4\php.exe`.
+ * Sin ruta relativa posible (otra unidad), la absoluta.
+ */
+export function relativaAlShim(dirShim: string, destino: string): string {
+  const rel = path.win32.relative(dirShim, destino);
+  if (rel === '' || path.win32.isAbsolute(rel)) return paraCmd(destino);
+  return `%~dp0${paraCmd(rel)}`;
+}
+
+/** vswhere.exe del instalador de Visual Studio. */
+export function rutaVswhere(programFilesX86?: string): string {
+  const pf = programFilesX86 ?? process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)';
+  return path.win32.join(pf, 'Microsoft Visual Studio', 'Installer', 'vswhere.exe');
+}
+
+/** vcvars64.bat de una instalación de Visual Studio / Build Tools. */
+export const rutaVcvars64 = (vs: string): string =>
+  path.win32.join(vs, 'VC', 'Auxiliary', 'Build', 'vcvars64.bat');
+
+/** Intérprete de comandos del sistema (para ejecutar un .cmd). */
+export const interpreteComandos = (): string => process.env.ComSpec ?? 'cmd.exe';
+
+/** tar.exe de Windows (bsdtar en System32, no el de Git). */
+export const rutaTarSistema = (): string =>
+  path.win32.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe');
+
+export interface OpcionesPlataformaWindows {
+  /** Variables de entorno (por defecto, las del proceso). */
+  entorno?: NodeJS.ProcessEnv;
+  /** ¿Existe el archivo? (por defecto, `existsSync`). */
+  existeRuta?: (ruta: string) => boolean;
+  /** Lanzador de las ventanas visibles (terminal). */
+  lanzarSeparado?: LanzadorSeparado;
+  arquitectura?: string;
+}
+
+export class PlataformaWindows implements PlataformaCompleta {
   private contador = 0;
+  private readonly entorno: NodeJS.ProcessEnv;
+  private readonly existeRuta: (ruta: string) => boolean;
+  private readonly lanzarSeparado: LanzadorSeparado;
+  private readonly arquitectura: string;
 
   constructor(
     private readonly ejecutar: Ejecutor = ejecutorPorDefecto,
     private readonly existe: (pid: number) => boolean = pidExiste,
-  ) {}
+    o: OpcionesPlataformaWindows = {},
+  ) {
+    this.entorno = o.entorno ?? process.env;
+    this.existeRuta = o.existeRuta ?? existsSync;
+    this.lanzarSeparado = o.lanzarSeparado ?? lanzarSeparado;
+    this.arquitectura = o.arquitectura ?? arch();
+  }
+
+  carpetaDatos(): string {
+    return rutaBasePorDefecto(this.entorno, 'win32');
+  }
+
+  carpetaInicio(): string {
+    return this.entorno.USERPROFILE || homedir();
+  }
+
+  idCatalogo(): IdCatalogo {
+    return this.arquitectura === 'arm64' ? 'win-arm64' : 'win-x64';
+  }
+
+  nombreEjecutable(base: string): string {
+    return nombreEjecutable(base);
+  }
+
+  async buscarEjecutable(nombre: string, extras: string[] = []): Promise<string | null> {
+    return buscarEjecutableWindows(nombre, {
+      entorno: this.entorno,
+      existe: this.existeRuta,
+      extras,
+    });
+  }
+
+  pathUsuario(o: { respaldo?: string } = {}): AccesoPathUsuario {
+    return new PathUsuarioWindows({ exec: this.ejecutar, ...o });
+  }
+
+  async variableUsuario(nombre: string, valor: string | null): Promise<ResultadoEscritura> {
+    if (!NOMBRE_VARIABLE.test(nombre) || nombre.toLowerCase() === 'path') {
+      return { ok: false, motivo: 'error', detalle: `Nombre de variable no válido: ${nombre}` };
+    }
+    try {
+      const r = await this.ejecutar(
+        'powershell',
+        codificarPowerShell(scriptVariableUsuario(nombre, valor === null)),
+        { timeoutMs: 30_000, ...(valor !== null ? { entrada: aBase64(valor) } : {}) },
+      );
+      if (r.codigo === 0) return { ok: true };
+      const detalle = r.stderr.trim();
+      return detalle ? { ok: false, motivo: 'error', detalle } : { ok: false, motivo: 'error' };
+    } catch (e) {
+      return { ok: false, motivo: 'error', detalle: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  abrirTerminal(cwd: string, o: OpcionesAbrirTerminal = {}): Promise<void> {
+    return abrirTerminalWindows(cwd, o, {
+      entorno: this.entorno,
+      existe: this.existeRuta,
+      lanzar: this.lanzarSeparado,
+    });
+  }
+
+  /** Fuera de Windows (solo en pruebas) no hay PowerShell: ninguno. */
+  lanzadorOculto(carpetaTmp: string): LanzadorOculto | null {
+    if (sistemaActual() !== 'win32') return null;
+    return crearLanzadorOculto({
+      procesoVivo: (pid) => this.procesoVivo(pid),
+      matarArbol: (pid) => this.matarArbol(pid),
+      carpetaTmp,
+    });
+  }
+
+  async descendientes(pids: number[]): Promise<Map<number, number[]>> {
+    const tabla = await new ProcesosWindows(this.ejecutar, this.entorno).tabla();
+    if (!tabla) throw new Error('No se pudo leer la tabla de procesos.');
+    return descendientesEnTabla(tabla, pids);
+  }
+
+  async rangosReservados(protocolo: 'tcp'): Promise<RangoPuertos[]> {
+    const r = await this.ejecutar(
+      rutaSistema32(this.entorno, 'netsh.exe'),
+      ['interface', 'ipv4', 'show', 'excludedportrange', `protocol=${protocolo}`],
+      { timeoutMs: 15000 },
+    );
+    if (r.codigo !== 0) throw new Error(`netsh falló: ${r.stderr.trim() || r.codigo}`);
+    return interpretarRangosReservados(r.stdout);
+  }
+
+  async serviciosSistema(nombres: string[]): Promise<ServicioSistema[]> {
+    for (const n of nombres) {
+      if (!NOMBRE_SERVICIO.test(n)) throw new Error(`Nombre de servicio no válido: ${n}`);
+    }
+    if (nombres.length === 0) return [];
+    const r = await this.ejecutar('powershell', codificarPowerShell(scriptServicios(nombres)), {
+      timeoutMs: 20000,
+    });
+    return interpretarServiciosSistema(r.stdout, nombres);
+  }
+
+  async vcRedistInstalado(): Promise<boolean> {
+    const r = await this.ejecutar('powershell', codificarPowerShell(SCRIPT_VCREDIST), {
+      timeoutMs: 15000,
+    });
+    return r.codigo === 0 && r.stdout.trim() === '1';
+  }
+
+  async perfilesFirefox(): Promise<string[]> {
+    const appdata =
+      this.entorno.APPDATA ?? path.win32.join(this.carpetaInicio(), 'AppData', 'Roaming');
+    const base = path.win32.join(appdata, 'Mozilla', 'Firefox');
+    let texto: string;
+    try {
+      texto = await readFile(path.win32.join(base, 'profiles.ini'), 'utf8');
+    } catch {
+      return [];
+    }
+    return interpretarProfilesIni(texto, base);
+  }
 
   rutaHosts(): string {
     const raiz = process.env.SystemRoot ?? 'C:\\Windows';

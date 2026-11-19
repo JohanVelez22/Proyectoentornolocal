@@ -5,6 +5,7 @@ import { lanzadorPorDefecto, MENSAJE_CANCELADO } from '../plataforma/lanzar';
 import type { Ejecutor, Lanzador } from '../plataforma/tipos';
 import { ejecutorPorDefecto } from '../plataforma/win';
 import { sanear } from '../proyectos/recetas';
+import { buscarEjecutableWindows } from '../plataforma/win';
 
 export const MENSAJE_CAMBIOS_LOCALES =
   'Hay cambios sin guardar en la carpeta: guárdelos (commit) o descártelos antes de traer cambios. No se tocó nada.';
@@ -149,10 +150,6 @@ const esGithubHttps = (url: string): boolean => {
   }
 };
 
-function claveDePath(env: NodeJS.ProcessEnv): string {
-  return Object.keys(env).find((k) => k.toLowerCase() === 'path') ?? 'Path';
-}
-
 /** Últimas líneas útiles (fatal/error/remote) de la salida de git, sin secretos. */
 function resumen(texto: string, token?: string): string {
   const lineas = texto
@@ -227,15 +224,11 @@ export class Git {
 
   /** Ruta de git o gh: primero el PATH, luego las rutas conocidas; null si no está. */
   buscar(nombre: 'git' | 'gh'): string | null {
-    const dirs = (this.entorno[claveDePath(this.entorno)] ?? '')
-      .split(';')
-      .map((d) => d.trim().replace(/^"|"$/g, ''))
-      .filter(Boolean);
-    for (const dir of [...dirs, ...RUTAS_CONOCIDAS[nombre]]) {
-      const r = path.win32.join(dir, `${nombre}.exe`);
-      if (this.existe(r)) return r;
-    }
-    return null;
+    return buscarEjecutableWindows(nombre, {
+      entorno: this.entorno,
+      existe: this.existe,
+      extras: RUTAS_CONOCIDAS[nombre],
+    });
   }
 
   /** `git --version` / `gh --version` con plazo corto; [] si no está o no responde bien. */
