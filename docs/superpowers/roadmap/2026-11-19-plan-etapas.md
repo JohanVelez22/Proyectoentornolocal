@@ -202,7 +202,7 @@ Ubicación propuesta; se confirma y se convierte en tareas al retomar la Etapa C
 |---|---|
 | "Terminal aquí" no abre en la app instalada (fallo real) | QA, primero al retomar |
 | Revisión de diseño de la interfaz (alineación, espaciados, coherencia) con un agente especializado al cierre de cada etapa; auditoría grande | Cierre de cada etapa; grande en D |
-| Presets de IA: OpenRouter, Groq, Kilo, "omirouter" (por confirmar), LM Studio y modelos gratuitos de FreeLLMAPI | C |
+| Presets de IA: OpenRouter, Groq, Kilo, OmniRouter, LM Studio y modelos gratuitos de FreeLLMAPI | C |
 | Agente Opencode junto a Claude Code, Codex y Hermes | C |
 | Avisar cuando un proceso de proyecto termina (éxito o fallo), no solo cuando cae | C |
 | Idiomas: portugués y francés, sistema listo para más | C |
