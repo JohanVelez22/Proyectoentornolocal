@@ -26,8 +26,9 @@ export interface DepsHttps {
     | 'quitarCertificadoUsuario'
     | 'certificadoInstalado'
     | 'duenosDePuertos'
+    | 'descendientes'
   >;
-  /** PID de nuestro nginx (si corre): un puerto suyo cuenta como libre. */
+  /** PID de nuestro nginx (si corre): un puerto suyo (o de sus workers) cuenta como libre. */
   pidNginx?: () => number | null;
   ahora?: () => Date;
 }
@@ -126,7 +127,18 @@ export class GestorHttps {
   /** Programa ajeno que ocupa el puerto HTTPS, o null si está libre o lo usa nuestro nginx. */
   async ocupantePuerto(puerto: number): Promise<{ pid: number; nombre: string } | null> {
     const dueno = (await this.d.plataforma.duenosDePuertos([puerto])).get(puerto);
-    if (!dueno || this.d.pidNginx?.() === dueno.pid) return null;
+    if (!dueno) return null;
+    const maestro = this.d.pidNginx?.() ?? null;
+    if (maestro !== null) {
+      if (maestro === dueno.pid) return null;
+      // En Windows el socket que escucha suele figurar a nombre del worker (hijo del maestro):
+      // sin esto, al volver a aplicar, el 443 de nuestro propio nginx parecía ocupado por otro
+      // programa y los sitios quedaban en "HTTPS pendiente" (y volvían en la siguiente vez).
+      const hijos = this.d.plataforma.descendientes
+        ? ((await this.d.plataforma.descendientes([maestro]).catch(() => null))?.get(maestro) ?? [])
+        : [];
+      if (hijos.includes(dueno.pid)) return null;
+    }
     return { pid: dueno.pid, nombre: dueno.nombre };
   }
 

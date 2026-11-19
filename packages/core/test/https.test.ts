@@ -19,6 +19,7 @@ let quitados: string[];
 let duenos: Map<number, { pid: number; nombre: string }>;
 let resultadoInstalar: { ok: true } | { ok: false; motivo: 'cancelado'; detalle?: string };
 let pidNginx: number | null;
+let hijosNginx: Map<number, number[]>;
 
 beforeEach(() => {
   base = mkdtempSync(path.join(os.tmpdir(), 'pel-https-'));
@@ -28,6 +29,7 @@ beforeEach(() => {
   duenos = new Map();
   resultadoInstalar = { ok: true };
   pidNginx = null;
+  hijosNginx = new Map();
 });
 afterEach(() => rmSync(base, { recursive: true, force: true }));
 
@@ -48,6 +50,7 @@ function gestorHttps(ahora?: () => Date): GestorHttps {
       },
       certificadoInstalado: async () => instalados.length > 0 && quitados.length === 0,
       duenosDePuertos: async () => duenos,
+      descendientes: async (pids) => new Map(pids.map((p) => [p, hijosNginx.get(p) ?? []])),
     },
   });
 }
@@ -157,6 +160,20 @@ describe('GestorHttps', () => {
     expect(await g.ocupantePuerto(443)).toEqual({ pid: 10, nombre: 'nginx.exe' });
     pidNginx = 10;
     expect(await g.ocupantePuerto(443)).toBeNull();
+  });
+
+  it('ocupantePuerto: el worker de nuestro nginx (hijo del maestro) también es nuestro', async () => {
+    // Windows: netstat muestra el 443 a nombre del worker, no del maestro que vigila el supervisor.
+    const g = gestorHttps();
+    pidNginx = 10;
+    duenos.set(443, { pid: 11, nombre: 'nginx.exe' });
+    expect(await g.ocupantePuerto(443)).toEqual({ pid: 11, nombre: 'nginx.exe' });
+    hijosNginx.set(10, [11]);
+    expect(await g.ocupantePuerto(443)).toBeNull();
+    expect(await g.puertoUsable(443)).toBe(true);
+    // Un nginx ajeno (p. ej. el de FlyEnv) sigue contando como ocupado.
+    duenos.set(443, { pid: 99, nombre: 'nginx.exe' });
+    expect(await g.puertoUsable(443)).toBe(false);
   });
 
   it('puertoUsable: libre y propio sí; ocupado por otro no', async () => {
