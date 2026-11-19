@@ -21,6 +21,12 @@ const rutas: RouteRecordRaw[] = [
   // La pantalla se llamaba "Sitios": los enlaces viejos siguen funcionando.
   { path: '/sitios', redirect: '/proyectos' },
   {
+    path: '/agentes',
+    name: 'agentes',
+    component: () => import('./vistas/Agentes.vue'),
+    meta: { seccion: 'agentes' },
+  },
+  {
     path: '/servicios',
     name: 'servicios',
     component: () => import('./vistas/Servicios.vue'),

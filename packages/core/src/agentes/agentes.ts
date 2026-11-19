@@ -74,6 +74,11 @@ export type OrigenAgente = 'propio' | 'npm-usuario' | 'ejecutable';
 
 export interface EstadoAgente {
   id: IdAgente;
+  nombre: string;
+  /** Paquete oficial de npm que instalaría WolfCore Dev (null: solo guía). */
+  paquete: string | null;
+  /** Archivo de configuración que tocan registrar y quitar el MCP (en la carpeta del usuario). */
+  archivoConfig: string;
   instalado: boolean;
   ruta: string | null;
   /**
@@ -313,6 +318,9 @@ export class Agentes {
         const l = await this.lanzable(def);
         return {
           id,
+          nombre: def.nombre,
+          paquete: def.paquete,
+          archivoConfig: def.archivoConfig(this.inicio()),
           instalado: l !== null,
           ruta: l?.ruta ?? null,
           version: l?.version ?? null,

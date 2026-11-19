@@ -214,6 +214,8 @@ export const PreferenciasUiSchema = z
     acento: z.string().regex(ACENTO_UI).nullable().default(null).catch(null),
     /** El asistente de primer uso ya se completó u omitió. */
     asistenteVisto: z.boolean().default(false).catch(false),
+    /** Ya se mostró el aviso de costo al abrir un agente por primera vez. */
+    avisoCostoAgentes: z.boolean().default(false).catch(false),
   })
   .prefault({});
 export type PreferenciasUi = z.infer<typeof PreferenciasUiSchema>;
@@ -224,6 +226,7 @@ export const CambiosPreferenciasUiSchema = z.strictObject({
   idioma: z.enum(IDIOMAS_UI).optional(),
   acento: z.string().regex(ACENTO_UI).nullable().optional(),
   asistenteVisto: z.boolean().optional(),
+  avisoCostoAgentes: z.boolean().optional(),
 });
 export type CambiosPreferenciasUi = z.infer<typeof CambiosPreferenciasUiSchema>;
 

@@ -148,6 +148,12 @@ describe('Agentes: detección', () => {
       ['hermes', false, false, false],
     ]);
     expect(e[2]!.guia).toMatch(/^https:\/\/hermes-agent\.nousresearch\.com\//);
+    // Lo que muestran los diálogos: paquete que se instalaría y archivo que se tocaría.
+    expect(e.map((x) => [x.nombre, x.paquete, path.basename(x.archivoConfig)])).toEqual([
+      ['Claude Code', '@anthropic-ai/claude-code', '.claude.json'],
+      ['Codex CLI', '@openai/codex', 'config.toml'],
+      ['Hermes Agent', null, 'config.yaml'],
+    ]);
   });
 
   it('detecta el paquete propio, el npm global del usuario y el ejecutable sin ejecutarlo', async () => {

@@ -74,9 +74,17 @@ import type {
   ResultadoPruebaIa,
   TipoProveedorIa,
   VistaPreviaEnvIa,
+  EstadoAgente,
+  IdAgente,
+  OrigenAgente,
+  ResultadoRegistroMcp,
 } from '@pel/core';
 
 export type {
+  EstadoAgente,
+  IdAgente,
+  OrigenAgente,
+  ResultadoRegistroMcp,
   ConfigProveedorIa,
   ModeloIa,
   OpcionesEnvIa,
@@ -458,6 +466,30 @@ export interface ApiEntorno {
     estado(sitioId: string): Promise<EstadoGit>;
     /** Con cambios locales o ramas divergidas no toca nada y lo dice. */
     traerCambios(sitioId: string): Promise<ResultadoTraer>;
+    /**
+     * Mensaje de commit propuesto por el proveedor a partir de lo preparado (`git diff
+     * --cached` sin `.env*`, claves ni binarios). La clave la pone el proceso principal.
+     */
+    sugerirCommit(sitioId: string, proveedorId: string, modelo: string): Promise<string>;
+    /** "Hacer commit": solo lo preparado (`git commit -F -`); nunca `add` ni `push`. */
+    commitPreparado(sitioId: string, mensaje: string): Promise<void>;
+  };
+  /** Agentes de programación. Ninguno se abre ni se instala sin un clic del usuario. */
+  agentes: {
+    /** Detección sin ejecutar programas del usuario (versión null = desconocida). */
+    estado(): Promise<EstadoAgente[]>;
+    /** Versión a pedido (un ejecutable suelto se ejecuta con `--version`). */
+    version(id: IdAgente): Promise<string | null>;
+    /** Última versión del paquete oficial con el Node propio; `confirmado` sale del diálogo. */
+    instalar(id: IdAgente, confirmado: true): Promise<void>;
+    /** Entrada `wolfcore` en su configuración, con copia previa del archivo. */
+    registrarMcp(id: IdAgente, confirmado: true): Promise<ResultadoRegistroMcp>;
+    quitarMcp(id: IdAgente, confirmado: true): Promise<ResultadoRegistroMcp>;
+    /**
+     * Terminal visible en la carpeta del proyecto con el agente. Con `proveedorId`, el proceso
+     * principal pone la clave en el entorno de esa terminal (nunca pasa por aquí).
+     */
+    abrir(id: IdAgente, sitioId: string, proveedorId?: string): Promise<void>;
   };
   github: {
     repos(opciones?: { buscar?: string; pagina?: number }): Promise<RepoGithub[]>;
@@ -678,6 +710,12 @@ export const RUTAS_IPC = [
   'ia.probarMensaje',
   'ia.previsualizarEnv',
   'ia.escribirEnv',
+  'agentes.estado',
+  'agentes.version',
+  'agentes.instalar',
+  'agentes.registrarMcp',
+  'agentes.quitarMcp',
+  'agentes.abrir',
   'mailpit.noLeidos',
   'avisoInicio',
   'instalador.listarVersiones',
@@ -712,6 +750,8 @@ export const RUTAS_IPC = [
   'git.clonar',
   'git.estado',
   'git.traerCambios',
+  'git.sugerirCommit',
+  'git.commitPreparado',
   'github.repos',
   'github.guardarToken',
   'github.borrarToken',

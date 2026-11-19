@@ -34,7 +34,11 @@ import {
   booleano,
   carpetaExistente,
   claveIa,
+  confirmadoAgente,
   configProveedorIa,
+  idAgente,
+  idSitioAgente,
+  mensajeCommit,
   idProveedorIa,
   idSitioIa,
   modeloIa,
@@ -721,6 +725,34 @@ const TABLA: Record<RutaIpc, Manejador> = {
     const o = opcionesEnvIa(opciones);
     return conClaveIa(s, p, (k) => n.ia.escribirEnv(sitio, p, k, o));
   },
+  // ---- Agentes: nunca se abren solos; lo que escribe exige la confirmación del diálogo ----
+  'agentes.estado': (n) => n.agentes.estado(),
+  'agentes.version': (n, _s, id) => n.agentes.version(idAgente(id)),
+  'agentes.instalar': (n, _s, id, confirmado) =>
+    n.agentes.instalar(idAgente(id), confirmadoAgente(confirmado)),
+  'agentes.registrarMcp': (n, _s, id, confirmado) =>
+    n.agentes.registrarMcp(idAgente(id), confirmadoAgente(confirmado)),
+  'agentes.quitarMcp': (n, _s, id, confirmado) =>
+    n.agentes.quitarMcp(idAgente(id), confirmadoAgente(confirmado)),
+  // La clave del proveedor la pone este proceso: viaja solo al entorno de la terminal.
+  'agentes.abrir': (n, s, id, sitioId, proveedorId) => {
+    const a = idAgente(id);
+    const sitio = idSitioAgente(sitioId);
+    if (proveedorId === undefined || proveedorId === null) return n.agentes.abrir(a, sitio, {});
+    const p = idProveedorIa(proveedorId);
+    return conClaveIa(s, p, (k) =>
+      n.agentes.abrir(a, sitio, { proveedorIa: p, ...(k ? { clave: k } : {}) }),
+    );
+  },
+  'git.sugerirCommit': (n, s, sitioId, proveedorId, modelo) => {
+    const sitio = idSitioAgente(sitioId);
+    const p = idProveedorIa(proveedorId);
+    const m = modeloIa(modelo);
+    return conClaveIa(s, p, (k) => n.agentes.sugerirCommitSitio(sitio, p, k, m));
+  },
+  // Solo lo preparado: el núcleo hace `git commit -F -` (nunca add ni push).
+  'git.commitPreparado': (n, _s, sitioId, mensaje) =>
+    n.agentes.commitPreparado(idSitioAgente(sitioId), mensajeCommit(mensaje)),
   'mailpit.noLeidos': (n) => n.noLeidosCorreo(),
   // Se entrega una sola vez: una recarga del renderer no lo vuelve a mostrar.
   avisoInicio: (n) => n.tomarAvisoInicio(),

@@ -2,6 +2,7 @@
 import logo from '../assets/logo.png';
 import {
   Albums as IconoProyectos,
+  Chatbubbles as IconoAgentes,
   Construct as IconoHerramientas,
   DocumentText as IconoRegistros,
   Home as IconoInicio,
@@ -68,6 +69,7 @@ const icono = (c: Component) => () => h(NIcon, null, { default: () => h(c) });
 const ICONOS: Record<SeccionNav, Component> = {
   inicio: IconoInicio,
   proyectos: IconoProyectos,
+  agentes: IconoAgentes,
   servicios: IconoServicios,
   basesDeDatos: IconoBases,
   correo: IconoCorreo,

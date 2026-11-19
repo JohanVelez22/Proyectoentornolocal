@@ -562,6 +562,14 @@ describe('registrarIpc', () => {
         'mcp.configuracion',
         'mcp.regenerarToken',
         'mcp.responderConfirmacion',
+        'agentes.estado',
+        'agentes.version',
+        'agentes.instalar',
+        'agentes.registrarMcp',
+        'agentes.quitarMcp',
+        'agentes.abrir',
+        'git.sugerirCommit',
+        'git.commitPreparado',
       ].sort(),
     );
   });

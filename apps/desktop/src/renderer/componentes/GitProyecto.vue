@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CloudDownload, GitBranch, LogoGithub } from '@vicons/ionicons5';
+import { CloudDownload, GitBranch, LogoGithub, Sparkles } from '@vicons/ionicons5';
 import { NButton, NCheckbox, NIcon, NModal, NTag, NTooltip, useMessage } from 'naive-ui';
 import { computed, onMounted, ref, watch } from 'vue';
 import type { EstadoGit, PasoReceta as DefPaso, ResultadoTraer, Sitio } from '../../shared/api';
@@ -9,6 +9,7 @@ import { solicitudes } from '../composables/solicitudes';
 import { textos } from '../i18n';
 import { useProyectos } from '../stores/proyectos';
 import { etiquetaPaso, pasosSugeridos, urlWebRemoto } from '../utilidades/proyectos';
+import DialogoCommitIa from './DialogoCommitIa.vue';
 import PasoReceta from './PasoReceta.vue';
 
 /** Rama, cambios locales, "Traer cambios" (con los pasos sugeridos) y el enlace al remoto. */
@@ -26,6 +27,8 @@ const sugeridos = ref<{ paso: DefPaso; activo: boolean }[] | null>(null);
 const verCorrida = ref(false);
 const corrida = computed(() => proyectos.suelta(props.sitio.id));
 const traido = ref<ResultadoTraer | null>(null);
+/** "Sugerir commit": mensaje con IA y commit solo de lo preparado. */
+const commitIa = ref(false);
 
 async function cargar(): Promise<void> {
   try {
@@ -101,6 +104,17 @@ function abrirRemoto(): void {
     <span v-if="estado.atras" class="dato">· {{ t.atras(estado.atras) }}</span>
     <span v-if="estado.adelante" class="dato">· {{ t.adelante(estado.adelante) }}</span>
     <span class="espacio" />
+    <NTooltip v-if="estado.cambiosLocales > 0">
+      <template #trigger>
+        <NButton size="tiny" secondary @click="commitIa = true">
+          <template #icon
+            ><NIcon><Sparkles /></NIcon
+          ></template>
+          {{ t.commitIa.boton }}
+        </NButton>
+      </template>
+      {{ t.commitIa.ayuda }}
+    </NTooltip>
     <NTooltip>
       <template #trigger>
         <NButton size="tiny" secondary :loading="ocupado('traer')" @click="traer">
@@ -128,6 +142,8 @@ function abrirRemoto(): void {
       </template>
       {{ remotoWeb }}
     </NTooltip>
+
+    <DialogoCommitIa v-model:show="commitIa" :sitio="sitio" @hecho="cargar" />
 
     <NModal
       :show="sugeridos !== null"

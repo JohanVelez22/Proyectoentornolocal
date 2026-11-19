@@ -11,6 +11,7 @@ export const es = {
   nav: {
     inicio: 'Inicio',
     proyectos: 'Proyectos',
+    agentes: 'Agentes',
     servicios: 'Servicios',
     basesDeDatos: 'Bases de datos',
     correo: 'Correo',
@@ -237,6 +238,7 @@ export const es = {
         '{archivo} cambió mientras WolfCore Dev lo editaba: cierre el agente y vuelva a intentarlo. No se modificó.',
       'agentes.proveedor_incompatible': '{agente} no puede usar ese proveedor de IA.',
       'agentes.sin_cambios_preparados': 'No hay cambios preparados (git add) para describir.',
+      'agentes.argumento_invalido': 'Dato no válido ({campo}).',
       'git.commit_fallo': 'No se pudo hacer el commit: {detalle}',
       'git.mensaje_invalido': 'El mensaje de commit está vacío o no es válido.',
     },
@@ -1468,6 +1470,7 @@ export const es = {
         'Revise la receta y marque "Confío en este repositorio" en el asistente para poder ejecutarla.',
       runtimes: 'Avisos de versiones',
       verRegistros: 'Ver registros',
+      abrirAgente: 'Abrir un agente de IA',
       vscode: 'VS Code',
       vscodeAyuda: 'Abrir la carpeta del proyecto en Visual Studio Code',
       vscodeError: 'No se pudo abrir VS Code',
@@ -1496,6 +1499,23 @@ export const es = {
       corridaAyuda: 'No cambia la receta guardada del proyecto.',
       ahoraNo: 'Ahora no',
       errorEstado: 'No se pudo leer el estado de Git',
+      commitIa: {
+        boton: 'Sugerir commit',
+        ayuda:
+          'Propone con IA un mensaje para lo preparado (git add) y hace el commit si usted lo acepta.',
+        titulo: 'Commit con mensaje sugerido',
+        proveedor: 'Proveedor de IA',
+        modelo: 'Modelo',
+        sinProveedores:
+          'Configure un proveedor de IA en la nube (pantalla IA) para sugerir mensajes.',
+        privacidad:
+          'Se envía al proveedor el diff de lo preparado, sin .env, claves, certificados, archivos de credenciales ni binarios, y como mucho 20 000 caracteres. Gasta pocos tokens.',
+        sugerir: 'Sugerir mensaje',
+        mensaje: 'Mensaje (puede editarlo)',
+        commit: 'Hacer commit',
+        commitAyuda: 'Solo lo preparado (git add): no agrega archivos ni hace push.',
+        hecho: 'Commit hecho con lo preparado.',
+      },
     },
     procesos: {
       titulo: 'Procesos',
@@ -2136,6 +2156,78 @@ export const es = {
       },
       confirmar: 'Confirmar',
       cancelar: 'Cancelar',
+    },
+  },
+  agentes: {
+    descripcion:
+      'Claude Code, Codex CLI y Hermes Agent: detéctelos o instálelos, conéctelos al MCP de WolfCore Dev y ábralos en un proyecto. Ninguno se abre solo.',
+    recargar: 'Volver a detectar',
+    notaMcp:
+      'El MCP registrado solo autentica cuando el agente se abre desde WolfCore Dev ("Abrir en un proyecto"): el token va en la variable WOLFCORE_MCP_TOKEN de esa terminal y nunca queda escrito en la configuración del agente. Abierto por fuera, el agente ve la entrada «wolfcore» pero no puede conectarse.',
+    sitioElegido: (nombre: string) => `Elija un agente para abrirlo en ${nombre}.`,
+    instalado: 'Instalado',
+    noInstalado: 'No instalado',
+    version: (v: string) => `v${v}`,
+    versionDesconocida: 'Versión desconocida',
+    verVersion: 'Ver versión',
+    verVersionAyuda: 'Ejecuta el programa con --version (no se hace solo al abrir la pantalla).',
+    origen: {
+      propio: 'Instalado por WolfCore Dev',
+      'npm-usuario': 'npm global del usuario',
+      ejecutable: 'Programa del sistema',
+    },
+    mcpRegistrado: 'MCP registrado',
+    mcpSinRegistrar: 'MCP sin registrar',
+    instalar: 'Instalar',
+    instalando: 'Instalando…',
+    guia: 'Guía de instalación',
+    soloGuia:
+      'WolfCore Dev no lo instala (su instalador no tiene huella fija): siga la guía oficial.',
+    registrar: 'Registrar MCP',
+    quitar: 'Quitar MCP',
+    abrir: 'Abrir en un proyecto',
+    confirmarInstalar: {
+      titulo: (nombre: string) => `¿Instalar ${nombre}?`,
+      texto: (paquete: string) =>
+        `Se instala la última versión publicada de ${paquete} desde registry.npmjs.org, con el Node de WolfCore Dev y en su carpeta de datos.`,
+      aislado: 'No usa su configuración de npm ni toca su npm global. Puede tardar varios minutos.',
+      aceptar: 'Instalar',
+      hecho: (nombre: string) => `${nombre} quedó instalado.`,
+    },
+    confirmarRegistrar: {
+      titulo: (nombre: string) => `¿Registrar el MCP en ${nombre}?`,
+      texto:
+        'Se agrega (o actualiza) solo la entrada «wolfcore» de este archivo; lo demás queda igual:',
+      aceptar: 'Registrar',
+      hecho: (nombre: string) => `MCP registrado en ${nombre}.`,
+    },
+    confirmarQuitar: {
+      titulo: (nombre: string) => `¿Quitar el MCP de ${nombre}?`,
+      texto: 'Se quita solo la entrada «wolfcore» de este archivo; lo demás queda igual:',
+      aceptar: 'Quitar',
+      hecho: (nombre: string) => `MCP quitado de ${nombre}.`,
+    },
+    copiaPrevia:
+      'Antes de tocarlo se guarda una copia con fecha junto al archivo (<archivo>.wolfcore-AAAAMMDD-HHmmss.bak); se conservan las 5 más nuevas. Si el agente está abierto, ciérrelo antes.',
+    copiaHecha: (ruta: string) => `Copia previa: ${ruta}`,
+    dialogoAbrir: {
+      titulo: (nombre: string) => `Abrir ${nombre}`,
+      proyecto: 'Proyecto',
+      sinProyectos: 'Todavía no hay proyectos.',
+      proveedor: 'Proveedor de IA',
+      proveedorPropio: 'El que el agente tenga configurado',
+      proveedorAyuda:
+        'Con un proveedor, su clave va solo en el entorno de esa terminal: no se escribe en archivos ni en la línea de órdenes.',
+      aceptar: 'Abrir terminal',
+      hecho: (nombre: string) => `${nombre} se abrió en una terminal nueva.`,
+    },
+    costo: {
+      titulo: 'Antes de abrir un agente',
+      texto:
+        'Un agente de IA trabaja con su cuenta del proveedor: cada pedido consume tokens y puede costar dinero. También puede leer y cambiar los archivos del proyecto y ejecutar comandos.',
+      nunca:
+        'WolfCore Dev nunca abre un agente por su cuenta: siempre lo pide usted. Este aviso se muestra una sola vez.',
+      aceptar: 'Entendido, abrir',
     },
   },
   navGrupos: {

@@ -19,12 +19,15 @@ export const usePreferencias = defineStore('preferencias', () => {
   const tema = ref<TemaUi>('sistema');
   const acento = ref<string | null>(null);
   const asistenteVisto = ref(true);
+  /** Ya se avisó del costo de abrir un agente (se muestra una sola vez). */
+  const avisoCostoAgentes = ref(false);
   const cargado = ref(false);
 
   function aplicar(p: PreferenciasUi): void {
     tema.value = p.tema;
     acento.value = p.acento;
     asistenteVisto.value = p.asistenteVisto;
+    avisoCostoAgentes.value = p.avisoCostoAgentes;
     if (p.idioma) cambiarIdioma(p.idioma);
   }
 
@@ -42,6 +45,7 @@ export const usePreferencias = defineStore('preferencias', () => {
       idioma: idioma.value,
       acento: acento.value,
       asistenteVisto: asistenteVisto.value,
+      avisoCostoAgentes: avisoCostoAgentes.value,
     };
     aplicar({ ...previo, ...cambios });
     try {
@@ -57,6 +61,7 @@ export const usePreferencias = defineStore('preferencias', () => {
     idioma: computed<Idioma>(() => idioma.value),
     acento,
     asistenteVisto,
+    avisoCostoAgentes,
     cargado,
     cargar,
     guardar,
@@ -64,5 +69,6 @@ export const usePreferencias = defineStore('preferencias', () => {
     cambiarIdioma: (i: Idioma) => guardar({ idioma: i }),
     cambiarAcento: (a: string | null) => guardar({ acento: a }),
     marcarAsistenteVisto: () => guardar({ asistenteVisto: true }),
+    marcarAvisoCostoAgentes: () => guardar({ avisoCostoAgentes: true }),
   };
 });

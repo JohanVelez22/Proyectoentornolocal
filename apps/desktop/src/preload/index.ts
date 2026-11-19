@@ -183,11 +183,22 @@ const api: ApiEntorno = {
     crearSitio: (datos, receta) => invocar('proyectos.crearSitio', datos, receta),
     confiar: (sitioId) => invocar('proyectos.confiar', sitioId),
   },
+  agentes: {
+    estado: () => invocar('agentes.estado'),
+    version: (id) => invocar('agentes.version', id),
+    instalar: (id, confirmado) => invocar('agentes.instalar', id, confirmado),
+    registrarMcp: (id, confirmado) => invocar('agentes.registrarMcp', id, confirmado),
+    quitarMcp: (id, confirmado) => invocar('agentes.quitarMcp', id, confirmado),
+    abrir: (id, sitioId, proveedorId) => invocar('agentes.abrir', id, sitioId, proveedorId),
+  },
   git: {
     disponible: () => invocar('git.disponible'),
     clonar: (url, destino) => invocar('git.clonar', url, destino),
     estado: (sitioId) => invocar('git.estado', sitioId),
     traerCambios: (sitioId) => invocar('git.traerCambios', sitioId),
+    sugerirCommit: (sitioId, proveedorId, modelo) =>
+      invocar('git.sugerirCommit', sitioId, proveedorId, modelo),
+    commitPreparado: (sitioId, mensaje) => invocar('git.commitPreparado', sitioId, mensaje),
   },
   github: {
     repos: (opciones) => invocar('github.repos', opciones),

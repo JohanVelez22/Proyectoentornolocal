@@ -12,6 +12,7 @@ export const en: Textos = {
   nav: {
     inicio: 'Home',
     proyectos: 'Projects',
+    agentes: 'Agents',
     servicios: 'Services',
     basesDeDatos: 'Databases',
     correo: 'Mail',
@@ -232,6 +233,7 @@ export const en: Textos = {
         '{archivo} changed while WolfCore Dev was editing it: close the agent and try again. It was not modified.',
       'agentes.proveedor_incompatible': '{agente} cannot use that AI provider.',
       'agentes.sin_cambios_preparados': 'There are no staged changes (git add) to describe.',
+      'agentes.argumento_invalido': 'Invalid value ({campo}).',
       'git.commit_fallo': 'The commit failed: {detalle}',
       'git.mensaje_invalido': 'The commit message is empty or invalid.',
     },
@@ -1455,6 +1457,7 @@ export const en: Textos = {
         'Review the recipe and check "I trust this repository" in the wizard to be able to run it.',
       runtimes: 'Version warnings',
       verRegistros: 'View logs',
+      abrirAgente: 'Open an AI agent',
       vscode: 'VS Code',
       vscodeAyuda: 'Open the project folder in Visual Studio Code',
       vscodeError: 'Could not open VS Code',
@@ -1484,6 +1487,22 @@ export const en: Textos = {
       corridaAyuda: "Does not change the project's saved recipe.",
       ahoraNo: 'Not now',
       errorEstado: 'Could not read the Git status',
+      commitIa: {
+        boton: 'Suggest commit',
+        ayuda:
+          'Uses AI to propose a message for what is staged (git add) and commits if you accept it.',
+        titulo: 'Commit with a suggested message',
+        proveedor: 'AI provider',
+        modelo: 'Model',
+        sinProveedores: 'Set up a cloud AI provider (AI screen) to suggest messages.',
+        privacidad:
+          'The staged diff is sent to the provider, without .env, keys, certificates, credential files or binaries, and up to 20,000 characters. It uses few tokens.',
+        sugerir: 'Suggest message',
+        mensaje: 'Message (you can edit it)',
+        commit: 'Commit',
+        commitAyuda: 'Only what is staged (git add): it does not add files or push.',
+        hecho: 'Committed what was staged.',
+      },
     },
     procesos: {
       titulo: 'Processes',
@@ -2118,6 +2137,79 @@ export const en: Textos = {
       },
       confirmar: 'Confirm',
       cancelar: 'Cancel',
+    },
+  },
+  agentes: {
+    descripcion:
+      'Claude Code, Codex CLI and Hermes Agent: detect or install them, connect them to the WolfCore Dev MCP and open them in a project. None of them opens on its own.',
+    recargar: 'Detect again',
+    notaMcp:
+      'The registered MCP only authenticates when the agent is opened from WolfCore Dev ("Open in a project"): the token travels in the WOLFCORE_MCP_TOKEN variable of that terminal and is never written to the agent configuration. Opened elsewhere, the agent sees the «wolfcore» entry but cannot connect.',
+    sitioElegido: (nombre: string) => `Choose an agent to open it in ${nombre}.`,
+    instalado: 'Installed',
+    noInstalado: 'Not installed',
+    version: (v: string) => `v${v}`,
+    versionDesconocida: 'Unknown version',
+    verVersion: 'Check version',
+    verVersionAyuda: 'Runs the program with --version (never done just by opening this screen).',
+    origen: {
+      propio: 'Installed by WolfCore Dev',
+      'npm-usuario': 'User global npm',
+      ejecutable: 'System program',
+    },
+    mcpRegistrado: 'MCP registered',
+    mcpSinRegistrar: 'MCP not registered',
+    instalar: 'Install',
+    instalando: 'Installing…',
+    guia: 'Installation guide',
+    soloGuia:
+      'WolfCore Dev does not install it (its installer has no pinned hash): follow the official guide.',
+    registrar: 'Register MCP',
+    quitar: 'Remove MCP',
+    abrir: 'Open in a project',
+    confirmarInstalar: {
+      titulo: (nombre: string) => `Install ${nombre}?`,
+      texto: (paquete: string) =>
+        `The latest published version of ${paquete} is installed from registry.npmjs.org, with the WolfCore Dev Node and inside its data folder.`,
+      aislado:
+        'It does not use your npm configuration nor touch your global npm. It may take several minutes.',
+      aceptar: 'Install',
+      hecho: (nombre: string) => `${nombre} is installed.`,
+    },
+    confirmarRegistrar: {
+      titulo: (nombre: string) => `Register the MCP in ${nombre}?`,
+      texto:
+        'Only the «wolfcore» entry of this file is added (or updated); everything else stays the same:',
+      aceptar: 'Register',
+      hecho: (nombre: string) => `MCP registered in ${nombre}.`,
+    },
+    confirmarQuitar: {
+      titulo: (nombre: string) => `Remove the MCP from ${nombre}?`,
+      texto: 'Only the «wolfcore» entry of this file is removed; everything else stays the same:',
+      aceptar: 'Remove',
+      hecho: (nombre: string) => `MCP removed from ${nombre}.`,
+    },
+    copiaPrevia:
+      'Before touching it, a dated copy is saved next to the file (<file>.wolfcore-YYYYMMDD-HHmmss.bak); the 5 newest are kept. If the agent is open, close it first.',
+    copiaHecha: (ruta: string) => `Previous copy: ${ruta}`,
+    dialogoAbrir: {
+      titulo: (nombre: string) => `Open ${nombre}`,
+      proyecto: 'Project',
+      sinProyectos: 'There are no projects yet.',
+      proveedor: 'AI provider',
+      proveedorPropio: 'Whatever the agent has configured',
+      proveedorAyuda:
+        'With a provider, its key goes only into the environment of that terminal: it is never written to files or to the command line.',
+      aceptar: 'Open terminal',
+      hecho: (nombre: string) => `${nombre} opened in a new terminal.`,
+    },
+    costo: {
+      titulo: 'Before opening an agent',
+      texto:
+        'An AI agent works with your provider account: every request consumes tokens and may cost money. It can also read and change the project files and run commands.',
+      nunca:
+        'WolfCore Dev never opens an agent on its own: you always ask for it. This notice is shown only once.',
+      aceptar: 'Got it, open',
     },
   },
   navGrupos: {

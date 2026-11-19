@@ -142,6 +142,7 @@ export const PARAMETROS_ERROR = {
   'agentes.config_en_uso': ['archivo'],
   'agentes.proveedor_incompatible': ['agente'],
   'agentes.sin_cambios_preparados': [],
+  'agentes.argumento_invalido': ['campo'],
   'git.commit_fallo': ['detalle'],
   'git.mensaje_invalido': [],
 } as const satisfies Record<string, readonly string[]>;

@@ -10,6 +10,7 @@ import {
   Open,
   ShieldCheckmark,
   CodeSlash,
+  Chatbubbles,
   Terminal,
   TrashOutline,
   Warning,
@@ -27,6 +28,7 @@ import {
   type DropdownOption,
 } from 'naive-ui';
 import { computed, h, onMounted, ref, type Component } from 'vue';
+import { useRouter } from 'vue-router';
 import type { ResultadoAplicar, Sitio } from '../../shared/api';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
@@ -74,6 +76,7 @@ const dialog = useDialog();
 const message = useMessage();
 const notification = useNotification();
 const { ejecutar, ocupado } = useAccion();
+const router = useRouter();
 
 const nginx = computed(() => servicios.porId['nginx']);
 const estado = computed(() =>
@@ -89,6 +92,8 @@ const opciones: DropdownOption[] = [
   { key: 'editar', label: textos.acciones.editar, icon: icono(CreateOutline) },
   { key: 'duplicar', label: textos.acciones.duplicar, icon: icono(CopyOutline) },
   { key: 'registros', label: tp.tarjeta.verRegistros, icon: icono(DocumentText) },
+  // Lleva a Agentes con el proyecto elegido: el agente se abre allí, con su diálogo.
+  { key: 'agente', label: tp.tarjeta.abrirAgente, icon: icono(Chatbubbles) },
   { type: 'divider', key: 'd1' },
   {
     key: 'borrar',
@@ -102,6 +107,8 @@ function elegir(clave: string | number): void {
   if (clave === 'editar') emit('editar', props.sitio);
   else if (clave === 'duplicar') emit('duplicar', props.sitio);
   else if (clave === 'registros') emit('verRegistros', props.sitio);
+  else if (clave === 'agente')
+    void router.push({ name: 'agentes', query: { sitio: props.sitio.id } });
   else if (clave === 'borrar') confirmarBorrar();
 }
 

@@ -82,7 +82,13 @@ describe('Almacen', () => {
     const c = await new Almacen(rutas).leer();
     expect(c.servicios.nginx.puerto).toBe(8080);
     expect(c.proyectos.carpetaVigilada).toBe('C:/Proyectos');
-    expect(c.ui).toEqual({ tema: 'sistema', idioma: null, acento: null, asistenteVisto: false });
+    expect(c.ui).toEqual({
+      tema: 'sistema',
+      idioma: null,
+      acento: null,
+      asistenteVisto: false,
+      avisoCostoAgentes: false,
+    });
     const archivos = await readdir(join(rutas.config(), '..'));
     expect(archivos.some((f) => f.startsWith('config.corrupto'))).toBe(false);
   });
@@ -96,7 +102,13 @@ describe('Almacen', () => {
     );
     const c = await new Almacen(rutas).leer();
     expect(c.servicios.nginx.puerto).toBe(8081);
-    expect(c.ui).toEqual({ tema: 'sistema', idioma: null, acento: null, asistenteVisto: false });
+    expect(c.ui).toEqual({
+      tema: 'sistema',
+      idioma: null,
+      acento: null,
+      asistenteVisto: false,
+      avisoCostoAgentes: false,
+    });
     await writeFile(rutas.config(), JSON.stringify({ ui: 'texto', https: { puerto: 8443 } }));
     const d = await new Almacen(rutas).leer();
     expect(d.https.puerto).toBe(8443);

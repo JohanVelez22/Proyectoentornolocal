@@ -2,6 +2,9 @@ import { stat } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 import {
   ErrorWolf,
+  IDS_AGENTE,
+  MAX_MENSAJE_COMMIT,
+  type IdAgente,
   ID_PROVEEDOR_IA,
   IDS_SERVICIO_DATOS,
   TIPOS_PROVEEDOR_IA,
@@ -483,4 +486,48 @@ export function opcionesEnvIa(v: unknown): OpcionesEnvIa {
     salida.reemplazarAjenas = true;
   }
   return salida;
+}
+
+/* ───────────── Etapa C: agentes y commit sugerido ───────────── */
+
+/** Agente soportado (`IDS_AGENTE`); otro valor es `agentes.no_existe`. */
+export function idAgente(v: unknown): IdAgente {
+  if (typeof v !== 'string' || !(IDS_AGENTE as readonly string[]).includes(v)) {
+    throw new ErrorWolf('agentes.no_existe', 'Ese agente no está soportado.');
+  }
+  return v as IdAgente;
+}
+
+/** Confirmación del diálogo: exactamente `true` (si no, `agentes.sin_confirmar`). */
+export function confirmadoAgente(v: unknown): true {
+  if (v !== true) {
+    throw new ErrorWolf(
+      'agentes.sin_confirmar',
+      'Confirme la acción en el diálogo antes de continuar.',
+    );
+  }
+  return true;
+}
+
+/** Id de un sitio para las rutas de agentes y del commit (nunca una ruta). */
+export function idSitioAgente(v: unknown): string {
+  if (typeof v !== 'string' || v.length > 128 || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(v)) {
+    throw new ErrorWolf('agentes.argumento_invalido', 'Argumento no válido: sitio', {
+      campo: 'sitio',
+    });
+  }
+  return v;
+}
+
+/** Mensaje de "Hacer commit": texto no vacío, sin NUL, de hasta `MAX_MENSAJE_COMMIT`. */
+export function mensajeCommit(v: unknown): string {
+  if (
+    typeof v !== 'string' ||
+    v.trim() === '' ||
+    v.length > MAX_MENSAJE_COMMIT ||
+    v.includes('\0')
+  ) {
+    throw new ErrorWolf('git.mensaje_invalido', 'El mensaje de commit está vacío o no es válido.');
+  }
+  return v;
 }
