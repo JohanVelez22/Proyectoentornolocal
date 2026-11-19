@@ -1,6 +1,11 @@
 import pg from 'pg';
 import { ErrorWolf } from '../errores';
-import { errorClaveDistinta, type OpcionesCrearBaseMotor } from './clienteMysql';
+import {
+  errorClaveDistinta,
+  errorRolSinLogin,
+  errorUsuarioPrivilegiado,
+  type OpcionesCrearBaseMotor,
+} from './clienteMysql';
 
 export interface ConexionPostgres {
   host: string;
@@ -248,7 +253,9 @@ export class ClientePostgres {
       c = await this.fabrica({ ...this.datos, usuario, clave, base: 'postgres' });
     } catch (e) {
       const codigo = String((e as { code?: unknown } | null)?.code ?? '');
-      if (codigo === '28P01' || codigo === '28000') throw errorClaveDistinta(usuario);
+      if (codigo === '28P01') throw errorClaveDistinta(usuario);
+      // 28000: el servidor no deja entrar al rol (NOLOGIN o pg_hba), no es la clave.
+      if (codigo === '28000') throw errorRolSinLogin(usuario);
       throw new Error(
         `No se pudo comprobar la clave del usuario ${usuario}${codigo ? ` (${codigo})` : ''}; no se cambió nada.`,
       );
@@ -270,6 +277,9 @@ export class ClientePostgres {
         throw new Error(`El usuario "${usuario}" está reservado: elija otro nombre.`);
       }
       if (!clave) throw new Error('Indique una clave para el usuario de la base.');
+      if (/^pg_/i.test(usuario) || (this.datos && usuario === this.datos.usuario)) {
+        throw errorUsuarioPrivilegiado(usuario);
+      }
     }
     let claveCambiada = false;
     try {
@@ -283,10 +293,16 @@ export class ClientePostgres {
         await this.filas(String(orden?.s ?? ''));
       };
       if (usuario !== undefined) {
-        const r = await this.filas('SELECT COUNT(*) AS n FROM pg_roles WHERE rolname = $1', [
-          usuario,
-        ]);
+        const r = await this.filas(
+          'SELECT COUNT(*) AS n, bool_and(rolcanlogin) AS login, bool_or(rolsuper) AS super ' +
+            'FROM pg_roles WHERE rolname = $1',
+          [usuario],
+        );
         existia = Number(r[0]?.n ?? 0) > 0;
+        // Un superusuario o un rol NOLOGIN nunca se usan ni se tocan (ni con cambiarClave):
+        // nunca se hace ALTER ROLE … LOGIN sobre un rol que no podía entrar.
+        if (existia && r[0]?.super === true) throw errorUsuarioPrivilegiado(usuario);
+        if (existia && r[0]?.login === false) throw errorRolSinLogin(usuario);
         // Rol existente: su clave no se toca salvo pedido explícito; antes de crear nada se
         // comprueba que la indicada sea la suya.
         if (existia && !opts.cambiarClave) await this.comprobarClave(usuario, clave!);

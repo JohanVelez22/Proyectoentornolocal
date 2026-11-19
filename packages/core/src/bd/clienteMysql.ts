@@ -57,6 +57,22 @@ function traducir(e: unknown, accion: string): Error {
  * El usuario ya existe y la clave pedida no es la suya: no se cambia (otro proyecto puede usarla).
  * Para cambiarla hay que pedirlo a propósito (`cambiarClave`).
  */
+/** Un usuario que no se puede usar para un proyecto (el administrador, un rol del sistema…). */
+export const errorUsuarioPrivilegiado = (usuario: string): ErrorWolf =>
+  new ErrorWolf(
+    'bd.usuario_privilegiado',
+    `El usuario ${usuario} es un administrador o un rol del sistema: elija un usuario propio para el proyecto.`,
+    { usuario },
+  );
+
+/** El rol existe pero no puede entrar (NOLOGIN, o pg_hba lo rechaza). */
+export const errorRolSinLogin = (usuario: string): ErrorWolf =>
+  new ErrorWolf(
+    'bd.rol_sin_login',
+    `El usuario ${usuario} existe pero no puede iniciar sesión (rol sin LOGIN o regla de acceso del servidor). No se cambió nada.`,
+    { usuario },
+  );
+
 export const errorClaveDistinta = (usuario: string): ErrorWolf =>
   new ErrorWolf(
     'bd.usuario_clave_distinta',
@@ -161,7 +177,9 @@ export class ClienteMysql {
       c = await this.fabrica({ ...this.datos, usuario, clave });
     } catch (e) {
       const codigo = String((e as { code?: unknown } | null)?.code ?? '');
-      if (codigo.includes('ACCESS_DENIED')) throw errorClaveDistinta(usuario);
+      // Solo "acceso denegado" al autenticar es una clave distinta; cualquier otro código
+      // (cuenta bloqueada, sin red…) es un error genérico.
+      if (codigo === 'ER_ACCESS_DENIED_ERROR') throw errorClaveDistinta(usuario);
       throw new Error(
         `No se pudo comprobar la clave del usuario ${usuario}${codigo ? ` (${codigo})` : ''}; no se cambió nada.`,
       );
@@ -179,15 +197,21 @@ export class ClienteMysql {
         throw new Error(`El usuario "${usuario}" está reservado: elija otro nombre.`);
       }
       if (!clave) throw new Error('Indique una clave para el usuario de la base.');
+      if (this.datos && usuario.toLowerCase() === this.datos.usuario.toLowerCase()) {
+        throw errorUsuarioPrivilegiado(usuario);
+      }
     }
     let claveCambiada = false;
     let existia = false;
+    /** Cuentas (`usuario@host`) que ya tiene el usuario: los permisos van a esas. */
+    let hostsExistentes: string[] = [];
     if (usuario !== undefined) {
       try {
-        const f = await this.filas('SELECT COUNT(*) AS n FROM mysql.user WHERE User = ?', [
-          usuario,
-        ]);
-        existia = Number(f[0]?.n ?? 0) > 0;
+        const f = await this.filas('SELECT Host AS host FROM mysql.user WHERE User = ?', [usuario]);
+        hostsExistentes = f
+          .map((x) => x.host ?? x.Host)
+          .filter((h): h is string => typeof h === 'string' && h !== '');
+        existia = hostsExistentes.length > 0;
       } catch (e) {
         throw traducir(e, `crear la base ${nombre}`);
       }
@@ -198,12 +222,21 @@ export class ClienteMysql {
     try {
       await this.filas(`CREATE DATABASE IF NOT EXISTS ${bd} CHARACTER SET utf8mb4`);
       if (usuario === undefined) return { usuarioActualizado: false };
-      const hosts = ['localhost', '127.0.0.1'];
-      for (const host of hosts) {
-        await this.filas(`CREATE USER IF NOT EXISTS ?@'${host}' IDENTIFIED BY ?`, [usuario, clave]);
-        await this.filas(`GRANT ALL PRIVILEGES ON ${bd}.* TO ?@'${host}'`, [usuario]);
+      if (!existia) {
+        for (const host of ['localhost', '127.0.0.1']) {
+          await this.filas(`CREATE USER IF NOT EXISTS ?@'${host}' IDENTIFIED BY ?`, [
+            usuario,
+            clave,
+          ]);
+          await this.filas(`GRANT ALL PRIVILEGES ON ${bd}.* TO ?@'${host}'`, [usuario]);
+        }
+        return { usuarioActualizado: false };
       }
-      if (!existia) return { usuarioActualizado: false };
+      // Usuario existente: permisos a SUS cuentas; no se crean otras (una 'app'@'localhost'
+      // nueva taparía a la 'app'@'%' que ya usa el proyecto).
+      for (const host of hostsExistentes) {
+        await this.filas(`GRANT ALL PRIVILEGES ON ${bd}.* TO ?@?`, [usuario, host]);
+      }
       if (!opts.cambiarClave) {
         return {
           usuarioActualizado: false,
@@ -211,8 +244,8 @@ export class ClienteMysql {
         };
       }
       // La clave de un usuario existente se cambia al FINAL: si algo anterior falla, no se toca.
-      for (const host of hosts) {
-        await this.filas(`ALTER USER ?@'${host}' IDENTIFIED BY ?`, [usuario, clave]);
+      for (const host of hostsExistentes) {
+        await this.filas('ALTER USER ?@? IDENTIFIED BY ?', [usuario, host, clave]);
         claveCambiada = true;
       }
       return {

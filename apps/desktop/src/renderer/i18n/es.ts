@@ -94,6 +94,10 @@ export const es = {
       'bd.encender_servicio': 'Encienda {nombre} para administrar sus bases.',
       'bd.sin_credenciales': 'No hay credenciales guardadas de {nombre}.',
       'bd.confirmacion_borrado': 'Para borrar la base {nombre} escriba su nombre exacto.',
+      'bd.usuario_privilegiado':
+        'El usuario {usuario} es un administrador o un rol del sistema: elija un usuario propio para el proyecto.',
+      'bd.rol_sin_login':
+        'El usuario {usuario} existe pero no puede iniciar sesión (rol sin LOGIN o regla de acceso del servidor). No se cambió nada.',
       'bd.usuario_clave_distinta':
         'El usuario {usuario} ya existe con otra clave. Use su clave actual: no se cambia para no dejar sin conexión a otros proyectos.',
       'bd.mongosh_faltante': 'Falta mongosh: instálelo desde Servicios para administrar MongoDB.',

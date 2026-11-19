@@ -95,6 +95,10 @@ export const en: Textos = {
       'bd.encender_servicio': 'Start {nombre} to manage its databases.',
       'bd.sin_credenciales': 'There are no saved credentials for {nombre}.',
       'bd.confirmacion_borrado': 'To delete the database {nombre}, type its exact name.',
+      'bd.usuario_privilegiado':
+        'User {usuario} is an administrator or a system role: choose a dedicated user for the project.',
+      'bd.rol_sin_login':
+        'User {usuario} exists but cannot log in (role without LOGIN or a server access rule). Nothing was changed.',
       'bd.usuario_clave_distinta':
         'User {usuario} already exists with another password. Use its current password: it is not changed so other projects keep connecting.',
       'bd.mongosh_faltante': 'mongosh is missing: install it from Services to manage MongoDB.',

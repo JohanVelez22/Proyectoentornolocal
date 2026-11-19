@@ -35,6 +35,8 @@ export const PARAMETROS_ERROR = {
   'bd.confirmacion_borrado': ['nombre'],
   'bd.mongosh_faltante': [],
   'bd.usuario_clave_distinta': ['usuario'],
+  'bd.usuario_privilegiado': ['usuario'],
+  'bd.rol_sin_login': ['usuario'],
   // túneles, hosts y HTTPS
   'tuneles.sitio_no_encontrado': [],
   'tuneles.cloudflared_no_instalado': [],

@@ -250,7 +250,7 @@ describe('ClienteMysql', () => {
   });
 
   it('usuario existente: ALTER USER y aviso', async () => {
-    const { cliente, consultas } = montar([{ n: 1 }]);
+    const { cliente, consultas } = montar([{ host: 'localhost' }, { host: '127.0.0.1' }]);
     await cliente.conectar(cx);
     const r = await cliente.crearBase('mi_bd', {
       usuario: 'app',
@@ -263,7 +263,7 @@ describe('ClienteMysql', () => {
   });
 
   it('usuario existente: la clave se cambia al final, tras los GRANT', async () => {
-    const { cliente, consultas } = montar([{ n: 1 }]);
+    const { cliente, consultas } = montar([{ host: 'localhost' }, { host: '127.0.0.1' }]);
     await cliente.conectar(cx);
     await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva', cambiarClave: true });
     const sqls = consultas.map((q) => q.sql);
@@ -278,7 +278,7 @@ describe('ClienteMysql', () => {
       query: async (sql: string) => {
         consultas.push(sql);
         if (sql.startsWith('GRANT')) throw Object.assign(new Error('x'), { code: 'ER_X' });
-        return [[{ n: 1 }]] as never;
+        return [[{ host: 'localhost' }, { host: '127.0.0.1' }]] as never;
       },
       end: async () => undefined,
     }));
@@ -297,7 +297,7 @@ describe('ClienteMysql', () => {
         if (sql.startsWith('ALTER USER') && ++alters === 2) {
           throw Object.assign(new Error('x'), { code: 'ER_X' });
         }
-        return [[{ n: 1 }]] as never;
+        return [[{ host: 'localhost' }, { host: '127.0.0.1' }]] as never;
       },
       end: async () => undefined,
     }));
@@ -308,7 +308,7 @@ describe('ClienteMysql', () => {
   });
 
   it('usuario nuevo: sin ALTER USER', async () => {
-    const { cliente, consultas } = montar([{ n: 0 }]);
+    const { cliente, consultas } = montar([]);
     await cliente.conectar(cx);
     const r = await cliente.crearBase('mi_bd', {
       usuario: 'app',
@@ -390,7 +390,7 @@ describe('ClienteMysql: usuario existente no cambia de clave (QA bd)', () => {
       return {
         query: async (sql: string, params?: unknown[]) => {
           consultas.push({ sql, params });
-          return [sql.includes('mysql.user') ? [{ n: 1 }] : []] as never;
+          return [sql.includes('mysql.user') ? [{ host: '%' }] : []] as never;
         },
         end: async () => undefined,
       };
@@ -417,5 +417,69 @@ describe('ClienteMysql: usuario existente no cambia de clave (QA bd)', () => {
     expect(e).toMatchObject({ codigo: 'bd.usuario_clave_distinta', datos: { usuario: 'app' } });
     expect(String((e as Error).message)).not.toContain('claveOtra77');
     expect(consultas.some((q) => /^(ALTER|CREATE|GRANT)/.test(q.sql))).toBe(false);
+  });
+});
+
+describe('ClienteMysql: cuentas existentes y códigos (ronda de seguridad)', () => {
+  const cx = { host: '127.0.0.1', puerto: 3306, usuario: 'admin_wc', clave: CLAVE };
+  const montar = (hosts: string[], errorConexion?: string) => {
+    const consultas: { sql: string; params?: unknown[] }[] = [];
+    const cliente = new ClienteMysql(async (c) => {
+      if (c.usuario === 'app' && errorConexion) {
+        throw Object.assign(new Error('x'), { code: errorConexion });
+      }
+      return {
+        query: async (sql: string, params?: unknown[]) => {
+          consultas.push({ sql, params });
+          return [sql.includes('mysql.user') ? hosts.map((host) => ({ host })) : []] as never;
+        },
+        end: async () => undefined,
+      };
+    });
+    return { cliente, consultas };
+  };
+
+  it("'app'@'%' existente: GRANT a esa cuenta y ningún CREATE USER nuevo", async () => {
+    const { cliente, consultas } = montar(['%']);
+    await cliente.conectar(cx);
+    await cliente.crearBase('b', { usuario: 'app', clave: 'x' });
+    expect(consultas.some((q) => q.sql.startsWith('CREATE USER'))).toBe(false);
+    const grants = consultas.filter((q) => q.sql.startsWith('GRANT'));
+    expect(grants.map((q) => q.params)).toEqual([['app', '%']]);
+  });
+
+  it('cambiarClave: ALTER USER solo en las cuentas existentes', async () => {
+    const { cliente, consultas } = montar(['%']);
+    await cliente.conectar(cx);
+    await cliente.crearBase('b', { usuario: 'app', clave: 'nueva', cambiarClave: true });
+    const alters = consultas.filter((q) => q.sql.startsWith('ALTER USER'));
+    expect(alters.map((q) => q.params)).toEqual([['app', '%', 'nueva']]);
+  });
+
+  it('códigos raros al comprobar la clave no cuentan como clave distinta', async () => {
+    for (const codigo of ['ER_DBACCESS_DENIED_ERROR', 'ER_ACCOUNT_HAS_BEEN_LOCKED', 'ECONNRESET']) {
+      const { cliente, consultas } = montar(['%'], codigo);
+      await cliente.conectar(cx);
+      const e = await cliente
+        .crearBase('b', { usuario: 'app', clave: 'x' })
+        .catch((x: unknown) => x);
+      expect((e as { codigo?: string }).codigo).toBeUndefined();
+      expect((e as Error).message).toMatch(/No se pudo comprobar la clave/);
+      expect(consultas.some((q) => /^(CREATE|GRANT|ALTER)/.test(q.sql))).toBe(false);
+    }
+    const { cliente } = montar(['%'], 'ER_ACCESS_DENIED_ERROR');
+    await cliente.conectar(cx);
+    await expect(cliente.crearBase('b', { usuario: 'app', clave: 'x' })).rejects.toMatchObject({
+      codigo: 'bd.usuario_clave_distinta',
+    });
+  });
+
+  it('rechaza el propio usuario administrador', async () => {
+    const { cliente, consultas } = montar([]);
+    await cliente.conectar(cx);
+    await expect(cliente.crearBase('b', { usuario: 'admin_wc', clave: 'x' })).rejects.toMatchObject(
+      { codigo: 'bd.usuario_privilegiado' },
+    );
+    expect(consultas).toHaveLength(0);
   });
 });

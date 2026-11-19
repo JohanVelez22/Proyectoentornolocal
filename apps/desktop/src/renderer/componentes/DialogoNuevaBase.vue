@@ -67,6 +67,7 @@ function confirmarCambioClave(u: string): Promise<boolean> {
       onNegativeClick: () => resolver(false),
       onClose: () => resolver(false),
       onMaskClick: () => resolver(false),
+      onEsc: () => resolver(false),
     });
   });
 }

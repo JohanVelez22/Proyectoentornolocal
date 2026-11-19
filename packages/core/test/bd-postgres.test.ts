@@ -495,3 +495,74 @@ describe('ClientePostgres: rol existente no cambia de clave (QA bd)', () => {
     );
   });
 });
+
+describe('ClientePostgres: roles privilegiados y sin login (ronda de seguridad)', () => {
+  const cx = { host: '127.0.0.1', puerto: 5432, usuario: 'postgres', clave: CLAVE };
+  const montar = (rol: { login?: boolean; super?: boolean } | null, errorConexion?: string) => {
+    const consultas: string[] = [];
+    const cliente = new ClientePostgres(async (c) => {
+      if (c.usuario === 'app' && errorConexion) {
+        throw Object.assign(new Error('x'), { code: errorConexion });
+      }
+      return {
+        query: async (sql: string) => {
+          consultas.push(sql);
+          if (sql.includes('FROM pg_roles')) {
+            return {
+              rows: rol
+                ? [{ n: 1, login: rol.login ?? true, super: rol.super ?? false }]
+                : [{ n: 0 }],
+            };
+          }
+          return { rows: [] };
+        },
+        end: async () => undefined,
+      };
+    });
+    return { cliente, consultas };
+  };
+  const sinCambios = (consultas: string[]) =>
+    expect(consultas.some((s) => /^(CREATE|ALTER)/.test(s) || s.includes("'ALTER ROLE"))).toBe(
+      false,
+    );
+
+  it('rol NOLOGIN: error propio y nunca ALTER ROLE … LOGIN, ni con cambiarClave', async () => {
+    for (const cambiarClave of [false, true]) {
+      const { cliente, consultas } = montar({ login: false });
+      await cliente.conectar(cx);
+      await expect(
+        cliente.crearBase('b', { usuario: 'app', clave: 'x', cambiarClave }),
+      ).rejects.toMatchObject({ codigo: 'bd.rol_sin_login' });
+      sinCambios(consultas);
+    }
+  });
+
+  it('superusuario: rechazado', async () => {
+    const { cliente, consultas } = montar({ super: true });
+    await cliente.conectar(cx);
+    await expect(
+      cliente.crearBase('b', { usuario: 'app', clave: 'x', cambiarClave: true }),
+    ).rejects.toMatchObject({ codigo: 'bd.usuario_privilegiado' });
+    sinCambios(consultas);
+  });
+
+  it('28000 al comprobar la clave es "sin login", no "clave distinta"', async () => {
+    const { cliente, consultas } = montar({}, '28000');
+    await cliente.conectar(cx);
+    await expect(cliente.crearBase('b', { usuario: 'app', clave: 'x' })).rejects.toMatchObject({
+      codigo: 'bd.rol_sin_login',
+    });
+    sinCambios(consultas);
+  });
+
+  it('roles pg_* y el propio administrador se rechazan sin consultar', async () => {
+    const { cliente, consultas } = montar(null);
+    await cliente.conectar({ ...cx, usuario: 'admin_pg' });
+    for (const u of ['pg_read_all_data', 'admin_pg']) {
+      await expect(cliente.crearBase('b', { usuario: u, clave: 'x' })).rejects.toMatchObject({
+        codigo: 'bd.usuario_privilegiado',
+      });
+    }
+    expect(consultas).toHaveLength(0);
+  });
+});
