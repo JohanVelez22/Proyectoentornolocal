@@ -558,9 +558,9 @@ export class Nucleo {
       },
       guardarSitio: (datos, id) => nucleoRef.guardarSitio(datos, id),
       leerSitio: async (id) => (await sitios.listar()).find((s) => s.id === id),
-      puertoLibre: async ({ reservados, preferido }) =>
+      puertoLibre: async ({ reservados, preferido, sitioId }) =>
         buscarPuertoLibre({
-          reservados: [...reservados, ...puertosReservados(await leerConfig(), preferido ?? null)],
+          reservados: [...reservados, ...puertosReservados(await leerConfig(), sitioId ?? null)],
           preferido: preferido ?? null,
           ...(o.probarPuerto ? { probar: o.probarPuerto } : {}),
         }),
@@ -995,24 +995,26 @@ export class Nucleo {
   }
 
   /**
-   * Lo que publica el servidor MCP, con los mismos métodos que usa la ventana. `ejecutarReceta`
-   * corre exactamente la receta que `resumenReceta` describió para la confirmación (aunque el
-   * wolfcore.yml cambie mientras la ventana pregunta). `traerCambios` usa el token de GitHub que
-   * fija el proceso principal.
+   * Lo que publica el servidor MCP, con los mismos métodos que usa la ventana. `prepararReceta`
+   * ata la receta a la solicitud: su `ejecutar()` (una sola vez) corre exactamente la receta que
+   * se mostró al confirmar, aunque el wolfcore.yml cambie o se prepare otra mientras la ventana
+   * pregunta. `traerCambios` usa el token de GitHub que fija el proceso principal.
    */
   private operacionesMcp(): OperacionesMcp {
-    const descritas = new Map<string, PasoReceta[]>();
     return {
-      resumenReceta: async (sitioId) => {
+      prepararReceta: async (sitioId) => {
         const r = await this.resumenRecetaInterno(sitioId);
-        descritas.set(sitioId, r.receta);
-        return { proyecto: r.proyecto, pasos: r.pasos };
-      },
-      ejecutarReceta: async (sitioId) => {
-        const receta = descritas.get(sitioId);
-        descritas.delete(sitioId);
-        if (!receta) throw new Error('Primero hay que describir y confirmar la receta.');
-        return this.recetas.ejecutar(sitioId, { receta });
+        let usada = false;
+        return {
+          proyecto: r.proyecto,
+          pasos: r.pasos.filter((p) => p !== AVISO_RECETA_CAMBIADA),
+          ...(r.cambio ? { aviso: AVISO_RECETA_CAMBIADA } : {}),
+          ejecutar: () => {
+            if (usada) return Promise.reject(new Error('Esta receta preparada ya se usó.'));
+            usada = true;
+            return this.recetas.ejecutar(sitioId, { receta: r.receta });
+          },
+        };
       },
       traerCambios: async (sitioId) =>
         this.traerCambios(sitioId, await this.proveedorTokenGithub()),
@@ -1110,7 +1112,10 @@ export class Nucleo {
    */
   private async huellaPara(datos: Omit<Sitio, 'id'>, previo: Sitio | undefined) {
     if (!datos.confiado) return null;
-    if (previo?.confiado && previo.carpeta === datos.carpeta) return previo.recetaConfiada ?? null;
+    if (previo?.confiado) {
+      // Otra carpeta es otro código: sin huella hasta volver a marcar "Confío…".
+      return previo.carpeta === datos.carpeta ? (previo.recetaConfiada ?? null) : null;
+    }
     return this.huellaCarpeta(datos.carpeta);
   }
 
@@ -1174,12 +1179,31 @@ export class Nucleo {
     return this.github.repos(o);
   }
 
+  /** Operaciones de gh en curso: cada una corre de a una (winget y el login son interactivos). */
+  private readonly ghEnCurso = new Set<'instalar' | 'sesion'>();
+
+  private async unaVezGh(cual: 'instalar' | 'sesion', fn: () => Promise<void>): Promise<void> {
+    if (this.ghEnCurso.has(cual)) {
+      throw new Error(
+        cual === 'instalar'
+          ? 'Ya hay una instalación de GitHub CLI en curso.'
+          : 'Ya hay un inicio de sesión de GitHub CLI en curso.',
+      );
+    }
+    this.ghEnCurso.add(cual);
+    try {
+      await fn();
+    } finally {
+      this.ghEnCurso.delete(cual);
+    }
+  }
+
   instalarGh(): Promise<void> {
-    return this.github.instalarGh();
+    return this.unaVezGh('instalar', () => this.github.instalarGh());
   }
 
   iniciarSesionGh(): Promise<void> {
-    return this.github.iniciarSesionGh();
+    return this.unaVezGh('sesion', () => this.github.iniciarSesionGh());
   }
 
   // ---- Runtimes y procesos de proyecto ----
@@ -1581,10 +1605,10 @@ const PUERTO_WEB_MAILPIT = 8025;
 /**
  * Puertos que un proceso de proyecto nuevo no puede tomar: los de los servicios (Nginx, HTTPS,
  * FTP y su rango pasivo, bases de datos, Mailpit, Ollama, MCP, Adminer) y los de los procesos y
- * proxies de los proyectos. `propio` (el puerto que el proceso ya tenía) no se cuenta como de otro
- * proyecto, para que lo conserve si sigue libre.
+ * proxies de los demás proyectos. Los del sitio `sitioId` no cuentan: el paso que los asigna ya
+ * reserva los suyos que no cambian, y así un proceso conserva su puerto si sigue libre.
  */
-export function puertosReservados(cfg: Config, propio: number | null = null): number[] {
+export function puertosReservados(cfg: Config, sitioId: string | null = null): number[] {
   const r = new Set<number>([
     cfg.servicios.nginx.puerto,
     cfg.https.puerto,
@@ -1597,8 +1621,9 @@ export function puertosReservados(cfg: Config, propio: number | null = null): nu
   const [desde, hasta] = cfg.ftp.pasivos;
   for (let p = Math.min(desde, hasta); p <= Math.max(desde, hasta); p++) r.add(p);
   for (const s of cfg.sitios) {
-    if (s.puertoProxy !== null && s.puertoProxy !== propio) r.add(s.puertoProxy);
-    for (const p of s.procesos) if (p.puerto !== null && p.puerto !== propio) r.add(p.puerto);
+    if (s.id === sitioId) continue;
+    if (s.puertoProxy !== null) r.add(s.puertoProxy);
+    for (const p of s.procesos) if (p.puerto !== null) r.add(p.puerto);
   }
   return [...r];
 }

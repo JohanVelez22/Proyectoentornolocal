@@ -145,8 +145,9 @@ export interface ApiSistema {
   copiar(texto: string): Promise<void>;
   version(): Promise<string>;
   /**
-   * Diálogo "Guardar como" (p. ej. un certificado); la ruta elegida queda registrada para las
-   * rutas que escriben archivos. null si se cancela.
+   * Diálogo "Guardar como" (p. ej. un certificado); la ruta elegida queda registrada solo como
+   * destino de escritura (no sirve para rutas que leen, como restaurar o quitar el BOM). null si
+   * se cancela.
    */
   guardarArchivo(nombreSugerido?: string): Promise<string | null>;
   /** Selector de varios archivos (p. ej. para quitar el BOM); [] si se cancela. */
@@ -338,8 +339,13 @@ export interface ApiEntorno {
   git: {
     disponible(): Promise<DisponibilidadGit>;
     /**
-     * Clona (https://…, git@… u owner/name) en `destino` (ruta absoluta que no existe o está
-     * vacía). Si hay un token guardado lo agrega el proceso principal. Progreso: `git:progreso`.
+     * Clona (https://…, git@… u owner/name) en `destino`. Reglas del destino:
+     * - ruta absoluta que no existe o es una carpeta vacía;
+     * - su carpeta padre es la carpeta de proyectos (`config.proyectos.carpetaVigilada` o, si no
+     *   hay, `C:\Proyectos` si existe) o una carpeta elegida con `sistema.elegirCarpeta`.
+     *   Por defecto: `<carpeta de proyectos>\<nombre del repo>`.
+     * Si hay un token guardado lo agrega el proceso principal (si no se puede leer, se clona
+     * sin token y el error lo dice). Progreso: `git:progreso`.
      */
     clonar(url: string, destino: string): Promise<void>;
     estado(sitioId: string): Promise<EstadoGit>;

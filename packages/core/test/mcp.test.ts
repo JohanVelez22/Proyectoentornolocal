@@ -4,7 +4,7 @@ import { mkdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
 import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import {
   HERRAMIENTAS_MCP,
   ServidorMcp,
@@ -27,9 +27,18 @@ afterEach(async () => {
   for (const s of servidores.splice(0)) await s.detener();
 });
 
+/** Operaciones con la ejecución de la receta preparada (la que se aprobó) a la vista. */
+type OpsFalsas = OperacionesMcp & {
+  ejecutarPreparada: Mock<(sitioId: string, receta?: string) => Promise<unknown>>;
+};
+
 /** Operaciones falsas: cada una es un vi.fn con un resultado fijo. */
-function operacionesFalsas(carpeta = 'C:/no-existe'): OperacionesMcp {
+function operacionesFalsas(carpeta = 'C:/no-existe'): OpsFalsas {
+  const ejecutarPreparada = vi.fn<(sitioId: string, receta?: string) => Promise<unknown>>(
+    async () => ({ estado: 'listo' }),
+  );
   return {
+    ejecutarPreparada,
     estadoGeneral: vi.fn(async () => ({ servicios: [], sitios: [], tuneles: [] })),
     listarProyectos: vi.fn(async () => [{ id: 'demo', nombre: 'Demo' }]),
     estadoServicios: vi.fn(async () => [{ id: 'nginx', estado: 'encendido' }]),
@@ -43,8 +52,11 @@ function operacionesFalsas(carpeta = 'C:/no-existe'): OperacionesMcp {
     carpetaRespaldos: vi.fn(async () => carpeta),
     abrirTunel: vi.fn(async () => ({ estado: 'activo', url: 'https://x.trycloudflare.com' })),
     cerrarTunel: vi.fn(async () => undefined),
-    ejecutarReceta: vi.fn(async () => ({ estado: 'listo' })),
-    resumenReceta: vi.fn(async () => ({ proyecto: 'Demo', pasos: ['Composer', 'Migraciones'] })),
+    prepararReceta: vi.fn(async (sitioId: string) => ({
+      proyecto: 'Demo',
+      pasos: ['Composer', 'Migraciones'],
+      ejecutar: () => ejecutarPreparada(sitioId),
+    })),
     traerCambios: vi.fn(async () => ({ actualizado: true })),
     leerRegistro: vi.fn(async (_id: string, n: number) =>
       Array.from({ length: n }, (_, i) => `l${i}`),
@@ -636,17 +648,70 @@ describe('ServidorMcp: acciones destructivas', () => {
     expect(sol.datos).toEqual({ proyecto: 'Demo', pasos: ['Composer', 'Migraciones'] });
     expect(sol.resumen).toContain('Demo');
     expect(sol.resumen).toContain('Migraciones');
-    expect(m.ops.ejecutarReceta).not.toHaveBeenCalled();
+    const ejecutar = (m.ops as OpsFalsas).ejecutarPreparada;
+    expect(ejecutar).not.toHaveBeenCalled();
     m.servidor.responderConfirmacion(sol.id, true);
     expect((await llamada).isError).toBeFalsy();
-    expect(m.ops.ejecutarReceta).toHaveBeenCalledWith('demo');
+    expect(ejecutar).toHaveBeenCalledWith('demo');
+  });
+
+  it('ejecutar_receta: aprobar una solicitud ejecuta la receta que ella describió', async () => {
+    const ops = operacionesFalsas();
+    let version = 0;
+    ops.prepararReceta = vi.fn(async (sitioId: string) => {
+      const receta = `R${++version}`;
+      return {
+        proyecto: 'Demo',
+        pasos: [`[comando] ${receta}`],
+        ejecutar: () => ops.ejecutarPreparada(sitioId, receta),
+      };
+    });
+    const m = await montar({ ops });
+    const c = await conectar(m.url);
+    const a = c.callTool({ name: 'ejecutar_receta', arguments: { sitioId: 'demo' } });
+    const solA = await esperarConfirmacion(m);
+    const b = c.callTool({ name: 'ejecutar_receta', arguments: { sitioId: 'demo' } });
+    await vi.waitFor(() => expect(m.confirmaciones).toHaveLength(2));
+    const solB = m.confirmaciones[1]!;
+    expect(solA.datos.pasos).toEqual(['[comando] R1']);
+    expect(solB.datos.pasos).toEqual(['[comando] R2']);
+    m.servidor.responderConfirmacion(solA.id, true);
+    await a;
+    expect(ops.ejecutarPreparada).toHaveBeenCalledTimes(1);
+    expect(ops.ejecutarPreparada).toHaveBeenCalledWith('demo', 'R1');
+    m.servidor.responderConfirmacion(solB.id, false);
+    await b;
+    expect(ops.ejecutarPreparada).toHaveBeenCalledTimes(1);
+  });
+
+  it('ejecutar_receta: el aviso no cuenta en el tope de pasos y se dice cuántos se omiten', async () => {
+    const ops = operacionesFalsas();
+    ops.prepararReceta = vi.fn(async () => ({
+      proyecto: 'Demo',
+      aviso: 'AVISO: la receta cambió',
+      pasos: Array.from({ length: 60 }, (_, i) => `[comando] p${i}`),
+      ejecutar: async () => undefined,
+    }));
+    const m = await montar({ ops });
+    const c = await conectar(m.url);
+    const llamada = c.callTool({ name: 'ejecutar_receta', arguments: { sitioId: 'demo' } });
+    const sol = await esperarConfirmacion(m);
+    const pasos = sol.datos.pasos!;
+    expect(pasos[0]).toBe('AVISO: la receta cambió');
+    expect(pasos.filter((p) => p.startsWith('[comando]'))).toHaveLength(50);
+    expect(pasos.at(-1)).toBe('+10 pasos más');
+    expect(sol.resumen).toContain('AVISO: la receta cambió');
+    m.servidor.responderConfirmacion(sol.id, false);
+    await llamada;
   });
 
   it('ejecutar_receta limpia saltos de línea y bidi del resumen y los datos', async () => {
     const ops = operacionesFalsas();
-    ops.resumenReceta = vi.fn(async () => ({
+    ops.prepararReceta = vi.fn(async () => ({
       proyecto: 'De\nmo\u202e\u200b\u200c\u200d\u2060\ufeff',
+      aviso: 'Aviso\n\u202e',
       pasos: ['Paso\r\n1\ufeff', 'Otro\u200d\u2060'],
+      ejecutar: async () => undefined,
     }));
     const m = await montar({ ops });
     const c = await conectar(m.url);

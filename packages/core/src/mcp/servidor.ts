@@ -38,15 +38,27 @@ export interface OperacionesMcp {
   carpetaRespaldos(): Promise<string>;
   abrirTunel(sitioId: string): Promise<unknown>;
   cerrarTunel(sitioId: string): Promise<unknown>;
-  /** El motor de recetas exige `sitio.confiado`. */
-  ejecutarReceta?(sitioId: string): Promise<unknown>;
-  /** Nombre del proyecto y títulos de los pasos que correría la receta (para confirmar). */
-  resumenReceta?(sitioId: string): Promise<{ proyecto: string; pasos: string[] }>;
+  /**
+   * Prepara la receta de un proyecto para una solicitud: lo que se muestra al confirmar y
+   * `ejecutar()`, que corre exactamente esa receta (aunque mientras tanto se prepare otra). El
+   * motor de recetas exige `sitio.confiado`.
+   */
+  prepararReceta?(sitioId: string): Promise<RecetaPreparada>;
   traerCambios?(sitioId: string): Promise<unknown>;
   /** Últimas `lineas` líneas (ya saneadas) de una fuente de registro. */
   leerRegistro?(id: string, lineas: number): Promise<string[]>;
   /** `confirmacion` es el nombre del proceso. */
   finalizarProceso?(pid: number, confirmacion: string): Promise<unknown>;
+}
+
+/** Receta lista para confirmar y ejecutar, atada a una sola solicitud. */
+export interface RecetaPreparada {
+  proyecto: string;
+  /** Comando real de cada paso (acotado). */
+  pasos: string[];
+  /** Aviso que va primero (p. ej. la receta cambió desde que se marcó "Confío…"). */
+  aviso?: string;
+  ejecutar(): Promise<unknown>;
 }
 
 /** Datos estructurados de una confirmación (ya validados y sin saltos de línea ni bidi). */
@@ -694,17 +706,24 @@ export class ServidorMcp {
       },
       ({ sitioId: id }, extra) =>
         ejecutar(async () => {
-          const correr = disponible(ops.ejecutarReceta, 'ejecutar_receta');
-          const describir = disponible(ops.resumenReceta, 'ejecutar_receta');
-          const r = await describir.call(ops, id);
+          const preparar = disponible(ops.prepararReceta, 'ejecutar_receta');
+          // La receta queda atada a esta solicitud: aprobarla corre la que se describió aquí.
+          const r = await preparar.call(ops, id);
           const proyecto = limpiar(r.proyecto) || limpiar(id);
-          const pasos = r.pasos.slice(0, MAX_PASOS_RESUMEN).map((p) => limpiar(p));
+          const aviso = r.aviso ? limpiar(r.aviso) : '';
+          const visibles = r.pasos.slice(0, MAX_PASOS_RESUMEN).map((p) => limpiar(p));
+          const omitidos = r.pasos.length - visibles.length;
+          const pasos = [
+            ...(aviso ? [aviso] : []),
+            ...visibles,
+            ...(omitidos > 0 ? [`+${omitidos} pasos más`] : []),
+          ];
           return this.confirmarYEjecutar(
             'ejecutar_receta',
             `Ejecutar la receta de "${proyecto}": ${pasos.length ? pasos.join(', ') : 'sin pasos'}.`,
             { proyecto, pasos },
             senal(extra),
-            () => correr.call(ops, id),
+            () => r.ejecutar(),
           );
         }),
     );

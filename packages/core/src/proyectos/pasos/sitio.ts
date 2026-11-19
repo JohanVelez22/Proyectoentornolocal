@@ -71,7 +71,11 @@ export function pasoSitioCrear(d: DepsPasos): ImplementacionPaso {
       let puerto = p.puerto;
       if (lleva(comando)) {
         const previo = actual.procesos.find((x) => x.id === p.id)?.puerto ?? null;
-        puerto = await d.puertoLibre({ reservados: [...reservados], preferido: previo });
+        puerto = await d.puertoLibre({
+          reservados: [...reservados],
+          preferido: previo,
+          sitioId: ctx.sitio.id,
+        });
         const valor = String(puerto);
         comando = comando.map((x) => x.split(MARCADOR_PUERTO).join(valor));
         ctx.linea(`El proceso ${p.nombre || p.id} usará el puerto ${valor}.`);

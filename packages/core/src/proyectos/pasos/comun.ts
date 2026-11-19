@@ -45,7 +45,12 @@ export interface DepsPasos {
    * Un puerto libre que no esté en `reservados` (los de los servicios y los de otros procesos).
    * Si `preferido` sigue libre, ese.
    */
-  puertoLibre: (o: { reservados: number[]; preferido?: number | null }) => Promise<number>;
+  puertoLibre: (o: {
+    reservados: number[];
+    preferido?: number | null;
+    /** Sitio que pide el puerto: sus propios puertos no cuentan como de otro proyecto. */
+    sitioId?: string;
+  }) => Promise<number>;
   /** Detección de la carpeta (por defecto `detectarProyecto`). */
   detectar?: (carpeta: string) => Promise<Deteccion>;
   /** Entorno base de los procesos (por defecto `process.env`). */

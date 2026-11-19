@@ -209,27 +209,41 @@ export function ramaPhp(v: unknown): string | null {
   return v;
 }
 
+/** Para qué se eligió una ruta: `abrir` (leer, diálogo de abrir) o `guardar` (destino). */
+export type PropositoRuta = 'abrir' | 'guardar';
+
 /**
  * Rutas que el usuario eligió en los diálogos de esta sesión. Las rutas que leen o escriben
  * archivos (restaurar, formato, carpeta de respaldo) solo aceptan rutas de aquí: el renderer no
  * puede inventar una ruta.
  */
 export class RutasElegidas {
-  private readonly rutas = new Set<string>();
+  /** Clave de la ruta → para qué se eligió: leer (diálogo de abrir) o escribir (guardar como). */
+  private readonly rutas = new Map<string, Set<PropositoRuta>>();
 
   /** Misma ruta aunque cambien mayúsculas, separadores o la barra final (Windows). */
   private clave(ruta: string): string {
     return resolve(ruta).replace(/\//g, '\\').replace(/\\+$/, '').toLowerCase();
   }
 
-  registrar(ruta: string | null): string | null {
-    if (ruta) this.rutas.add(this.clave(ruta));
+  registrar(ruta: string | null, proposito: PropositoRuta = 'abrir'): string | null {
+    if (ruta) {
+      const k = this.clave(ruta);
+      const p = this.rutas.get(k) ?? new Set<PropositoRuta>();
+      p.add(proposito);
+      this.rutas.set(k, p);
+    }
     return ruta;
   }
 
-  exigir(v: unknown, tipo: 'archivo' | 'carpeta'): string {
+  /** ¿Se eligió esta ruta en un diálogo con ese propósito? */
+  tiene(ruta: string, proposito: PropositoRuta = 'abrir'): boolean {
+    return this.rutas.get(this.clave(ruta))?.has(proposito) === true;
+  }
+
+  exigir(v: unknown, tipo: 'archivo' | 'carpeta', proposito: PropositoRuta = 'abrir'): string {
     const t = texto(v, tipo);
-    if (!this.rutas.has(this.clave(t))) {
+    if (!this.tiene(t, proposito)) {
       throw new Error(
         tipo === 'archivo'
           ? 'Elija el archivo desde el diálogo'

@@ -1010,8 +1010,7 @@ describe('Nucleo (Etapa B)', () => {
     const n = await crear();
     const o = ops(n);
     for (const k of [
-      'ejecutarReceta',
-      'resumenReceta',
+      'prepararReceta',
       'traerCambios',
       'leerRegistro',
       'finalizarProceso',
@@ -1069,20 +1068,38 @@ describe('Nucleo (Etapa B)', () => {
     expect((await n.resumenReceta('demo')).cambio).toBe(true);
   });
 
-  it('el MCP ejecuta exactamente la receta que describió para confirmar', async () => {
+  it('el MCP ejecuta la receta de su propia solicitud aunque otra se prepare en medio', async () => {
     yml(['node', 'a.js']);
     const n = await crear();
     await n.guardarSitio(datos({ confiado: true }));
     const ejecutar = vi.spyOn(n.recetas, 'ejecutar').mockResolvedValue({ estado: 'lista' });
     const o = ops(n);
-    await expect(o.ejecutarReceta!('demo')).rejects.toThrow(/describir y confirmar/);
-    await o.resumenReceta!('demo');
+    const solicitudA = await o.prepararReceta!('demo');
     yml(['node', 'cambiado-mientras-se-confirmaba.js']);
-    await o.ejecutarReceta!('demo');
-    const receta = ejecutar.mock.calls[0]![1]!.receta!;
-    expect(receta.map((p) => p.args?.['comando'])).toEqual([['node', 'a.js']]);
-    // Una descripción sirve para una sola ejecución.
-    await expect(o.ejecutarReceta!('demo')).rejects.toThrow(/describir y confirmar/);
+    const solicitudB = await o.prepararReceta!('demo');
+    expect(solicitudA.pasos).toEqual(['[comando] node a.js']);
+    expect(solicitudA.aviso).toBeUndefined();
+    expect(solicitudB.aviso).toMatch(/AVISO: la receta cambió/);
+    expect(solicitudB.pasos).toEqual(['[comando] node cambiado-mientras-se-confirmaba.js']);
+    await solicitudA.ejecutar();
+    const comandos = (i: number) =>
+      ejecutar.mock.calls[i]![1]!.receta!.map((p) => p.args?.['comando']);
+    expect(comandos(0)).toEqual([['node', 'a.js']]);
+    await solicitudB.ejecutar();
+    expect(comandos(1)).toEqual([['node', 'cambiado-mientras-se-confirmaba.js']]);
+    // Cada preparación sirve para una sola ejecución.
+    await expect(solicitudA.ejecutar()).rejects.toThrow(/ya se usó/);
+  });
+
+  it('al cambiar la carpeta de un sitio confiado la huella se borra (el resumen avisará)', async () => {
+    yml(['node', 'a.js']);
+    const n = await crear();
+    await n.guardarSitio(datos({ confiado: true }));
+    const otra = path.join(base, 'otra');
+    mkdirSync(otra);
+    await n.guardarSitio(datos({ confiado: true, carpeta: otra }), 'demo');
+    expect((await n.sitios.listar())[0]!.recetaConfiada).toBeNull();
+    expect((await n.resumenReceta('demo')).cambio).toBe(true);
   });
 
   it('traer_cambios del MCP usa el token que fija el proceso principal', async () => {
@@ -1159,6 +1176,29 @@ describe('Nucleo (Etapa B)', () => {
     expect(orden).toEqual(['vigilante', 'metricas', 'registros', 'mcp']);
   });
 
+  it('instalarGh e iniciarSesionGh no se lanzan dos veces a la vez', async () => {
+    const n = await crear();
+    for (const [metodo, nucleoFn] of [
+      ['instalarGh', () => n.instalarGh()],
+      ['iniciarSesionGh', () => n.iniciarSesionGh()],
+    ] as const) {
+      let terminar!: () => void;
+      const espia = vi
+        .spyOn(n.github, metodo)
+        .mockImplementation(() => new Promise<void>((r) => (terminar = r)));
+      const primera = nucleoFn();
+      await expect(nucleoFn()).rejects.toThrow(/en curso/);
+      expect(espia).toHaveBeenCalledTimes(1);
+      terminar();
+      await primera;
+      // Terminada la primera, se puede volver a lanzar.
+      const otra = nucleoFn();
+      terminar();
+      await otra;
+      expect(espia).toHaveBeenCalledTimes(2);
+    }
+  });
+
   it('puertosReservados reúne servicios y procesos de otros proyectos, menos el propio', () => {
     const cfg = ConfigSchema.parse({
       sitios: [
@@ -1170,11 +1210,14 @@ describe('Nucleo (Etapa B)', () => {
         },
       ],
     });
-    const r = puertosReservados(cfg);
+    const r = puertosReservados(cfg, 'demo');
     for (const p of [80, 443, 2121, 3306, 5432, 7790, 8090, 8025, 50000, 50100, 5173, 8001]) {
       expect(r, String(p)).toContain(p);
     }
-    expect(puertosReservados(cfg, 8001)).not.toContain(8001);
+    // Solo se excluyen los puertos del propio sitio, no los de otro con el mismo número.
+    expect(puertosReservados(cfg, 'otro')).not.toContain(8001);
+    expect(puertosReservados(cfg, 'otro')).not.toContain(5173);
+    expect(puertosReservados(cfg, 'otro')).toContain(3306);
   });
 
   it('buscarPuertoLibre respeta el preferido y salta los reservados y los ocupados', async () => {

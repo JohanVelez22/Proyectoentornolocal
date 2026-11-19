@@ -1,4 +1,6 @@
-import { writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { PasoRecetaSchema, validarUrlGit, type Nucleo, type OpcionesReceta } from '@pel/core';
 import { SECRETOS_NO_DISPONIBLES, type SecretosGithub } from './secretos';
 import {
@@ -186,13 +188,15 @@ export class Seguimientos {
 
   async seguir(n: Nucleo, emisor: unknown, id: string): Promise<void> {
     const clave = this.clave(emisor);
+    const fuente = (await n.fuentesRegistro()).find((f) => f.id === id);
+    if (!fuente) throw new Error('La fuente de registro no existe.');
+    // Desde aquí todo es síncrono hasta registrar la entrada: dos llamadas simultáneas ven el
+    // mismo mapa, un solo oyente de 'destroyed' y el tope respetado.
     let mapa = this.porEmisor.get(clave);
     if (mapa?.has(id)) return;
     if (mapa && mapa.size >= MAX_SEGUIMIENTOS) {
       throw new Error(`Se pueden seguir como mucho ${MAX_SEGUIMIENTOS} registros a la vez.`);
     }
-    const fuente = (await n.fuentesRegistro()).find((f) => f.id === id);
-    if (!fuente) throw new Error('La fuente de registro no existe.');
     if (!mapa) {
       mapa = new Map();
       this.porEmisor.set(clave, mapa);
@@ -201,7 +205,6 @@ export class Seguimientos {
         once.call(emisor, 'destroyed', () => this.dejarEmisor(clave));
       }
     }
-    if (mapa.has(id)) return;
     const dejar = n.seguirRegistro(id);
     mapa.set(id, { dejar, ...(fuente.sitioId ? { sitioId: fuente.sitioId } : {}) });
     try {
@@ -303,14 +306,74 @@ function rutaClave(destino: string): string {
 }
 
 /** Ejecuta con el token guardado (o sin él); ningún error puede repetirlo. */
+export const AVISO_TOKEN_ILEGIBLE = 'el token guardado no se pudo leer; vuelva a guardarlo';
+
 async function conToken<T>(s: Contexto, fn: (token: string | null) => Promise<T>): Promise<T> {
-  const token = await s.secretos.leerTokenGithub();
-  const valor = await sinClave(token ?? '', () => fn(token));
+  // Un token que no se puede leer (safeStorage caído, archivo dañado) no impide los repos
+  // públicos: se sigue sin token y, si algo falla, se dice por qué podría ser.
+  let token: string | null = null;
+  let ilegible = false;
+  try {
+    token = await s.secretos.leerTokenGithub();
+  } catch {
+    ilegible = true;
+  }
+  let valor: T;
+  try {
+    valor = await sinClave(token ?? '', () => fn(token));
+  } catch (e) {
+    if (!ilegible) throw e;
+    const mensaje = e instanceof Error ? e.message : String(e);
+    throw Object.assign(new Error(`${mensaje} (${AVISO_TOKEN_ILEGIBLE})`), {
+      ...(typeof (e as { codigo?: unknown }).codigo === 'string'
+        ? { codigo: (e as { codigo: string }).codigo }
+        : {}),
+    });
+  }
   // Red de seguridad: un resultado que llevara el token no sale del proceso principal.
   if (token && JSON.stringify(valor ?? null).includes(token)) {
     throw new Error('La respuesta contenía el token de GitHub y no se envió.');
   }
   return valor;
+}
+
+/** Carpeta de proyectos por defecto si no hay carpeta vigilada (si existe). */
+export const CARPETA_PROYECTOS_POR_DEFECTO = 'C:\\Proyectos';
+
+const mismaRuta = (a: string, b: string): boolean => {
+  const k = (r: string): string =>
+    resolve(r)
+      .replace(/[\\/]+$/, '')
+      .toLowerCase();
+  return k(a) === k(b);
+};
+
+/**
+ * Destino de un clon: directo dentro de la carpeta de proyectos (la vigilada o, sin ella,
+ * C:\\Proyectos si existe) o de una carpeta elegida en el diálogo; que no exista o esté vacío.
+ */
+async function destinoClon(n: NucleoIpc, s: Contexto, v: unknown): Promise<string> {
+  const destino = rutaAbsoluta(v, 'destino');
+  const padre = dirname(destino);
+  const vigilada = (await n.config.leer())?.proyectos?.carpetaVigilada ?? null;
+  const base =
+    vigilada ?? (existsSync(CARPETA_PROYECTOS_POR_DEFECTO) ? CARPETA_PROYECTOS_POR_DEFECTO : null);
+  const permitida = (base !== null && mismaRuta(padre, base)) || s.elegidas.tiene(padre, 'abrir');
+  if (!permitida) {
+    throw new Error(
+      'Clone dentro de la carpeta de proyectos o de una carpeta elegida con "Elegir carpeta".',
+    );
+  }
+  await carpetaExistente(padre);
+  try {
+    const st = await stat(destino);
+    if (!st.isDirectory() || (await readdir(destino)).length > 0) {
+      throw new Error('La carpeta de destino ya existe y no está vacía.');
+    }
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+  }
+  return destino;
 }
 
 type Manejador = (nucleo: NucleoIpc, sistema: Contexto, ...args: unknown[]) => unknown;
@@ -483,11 +546,13 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'sistema.abrirCarpeta': async (_n, s, ruta) => s.abrirCarpeta(await carpetaExistente(ruta)),
   'sistema.copiar': (_n, s, t) => s.copiar(texto(t, 'texto')),
   'sistema.version': (_n, s) => s.version(),
+  // Solo sirve como destino (propósito 'guardar'), nunca para leer.
   'sistema.guardarArchivo': async (_n, s, nombre) =>
     s.elegidas.registrar(
       await s.guardarArchivo(
         nombre === undefined ? undefined : textoAcotado(nombre, 1, 200, 'nombre'),
       ),
+      'guardar',
     ),
   'sistema.elegirArchivos': async (_n, s) => {
     const rutas = await s.elegirArchivos();
@@ -526,10 +591,10 @@ const TABLA: Record<RutaIpc, Manejador> = {
 
   // ---- Git y GitHub: el token lo agrega este proceso; nunca vuelve al renderer ----
   'git.disponible': (n) => n.disponibilidadGit(),
-  'git.clonar': (n, s, url, destino) => {
+  'git.clonar': async (n, s, url, destino) => {
     const u = textoAcotado(url, 1, 2048, 'url');
     validarUrlGit(u);
-    const d = rutaAbsoluta(destino, 'destino');
+    const d = await destinoClon(n, s, destino);
     return conToken(s, (token) => n.clonarRepo(u, d, token));
   },
   'git.estado': (n, _s, sitioId) => n.estadoGit(idCorto(sitioId, 'sitio')),
@@ -612,7 +677,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
   },
   'herramientas.emitirCertificado': async (n, s, dominios, destino) => {
     const lista = listaTextos(dominios, 20, 255, 'dominios');
-    const crt = s.elegidas.exigir(destino, 'archivo');
+    const crt = s.elegidas.exigir(destino, 'archivo', 'guardar');
     const key = rutaClave(crt);
     const { certPem, clavePem } = await n.emitirCertificadoLibre(lista);
     try {
@@ -624,7 +689,13 @@ const TABLA: Record<RutaIpc, Manejador> = {
       }
       throw new Error('No se pudo guardar la clave del certificado.');
     }
-    await writeFile(crt, certPem);
+    try {
+      await writeFile(crt, certPem);
+    } catch {
+      // Sin certificado, la clave sola no sirve: no se deja suelta.
+      await rm(key, { force: true });
+      throw new Error('No se pudo guardar el certificado.');
+    }
     return { certificado: crt, clave: key };
   },
 

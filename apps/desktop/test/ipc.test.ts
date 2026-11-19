@@ -1,7 +1,7 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it, vi, type Mock } from 'vitest';
+import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import {
   ControlMetricas,
   registrarIpc,
@@ -838,6 +838,15 @@ describe('constantes compartidas', () => {
 
 describe('IPC de la Etapa B', () => {
   const TOKEN = 'ghp_TokenFalsoDePrueba1234567890';
+  const temporales: string[] = [];
+  const temporal = (): string => {
+    const d = mkdtempSync(path.join(os.tmpdir(), 'pel-ipcb-'));
+    temporales.push(d);
+    return d;
+  };
+  afterEach(() => {
+    for (const d of temporales.splice(0)) rmSync(d, { recursive: true, force: true });
+  });
 
   function secretosFalsos(token: string | null = TOKEN) {
     let guardado = token;
@@ -857,6 +866,9 @@ describe('IPC de la Etapa B', () => {
     const { ipcMain, canales } = ipcFalso();
     const { nucleo, crudo, oyentes } = nucleoFalso();
     const f = crudo as unknown as Record<string, Mock>;
+    // Carpeta de proyectos (la vigilada): los clones van directo dentro de ella.
+    const proyectos = temporal();
+    crudo.config.leer.mockResolvedValue({ proyectos: { carpetaVigilada: proyectos } });
     const secretos = o.secretos ?? secretosFalsos();
     const seguimientos = new Seguimientos();
     const metricas = new ControlMetricas(nucleo);
@@ -877,6 +889,7 @@ describe('IPC de la Etapa B', () => {
     return {
       f,
       crudo,
+      proyectos,
       oyentes,
       secretos,
       seguimientos,
@@ -1065,7 +1078,7 @@ describe('IPC de la Etapa B', () => {
   });
 
   it('el token de GitHub nunca aparece en un resultado ni en un error', async () => {
-    const { f, secretos, llamar } = montar();
+    const { f, secretos, proyectos, llamar } = montar();
     // El núcleo falso repite todo lo que recibe, también en sus errores.
     const eco = (...a: unknown[]) => JSON.stringify(a);
     f['clonarRepo']!.mockImplementation(async (...a: unknown[]) => {
@@ -1076,7 +1089,9 @@ describe('IPC de la Etapa B', () => {
       throw Object.assign(new Error(`api: ${eco(...a)}`), { codigo: 'X' });
     });
     const salidas: unknown[] = [];
-    salidas.push(await llamar('git.clonar', 'https://github.com/a/b.git', 'C:\\Proyectos\\b'));
+    salidas.push(
+      await llamar('git.clonar', 'https://github.com/a/b.git', path.join(proyectos, 'b')),
+    );
     salidas.push(await llamar('git.traerCambios', 's1'));
     salidas.push(await llamar('github.repos', { buscar: 'b' }));
     salidas.push(await llamar('github.hayToken'));
@@ -1087,7 +1102,7 @@ describe('IPC de la Etapa B', () => {
     // Pero sí llegó al núcleo, que es quien lo pasa a git y a la API.
     expect(f['clonarRepo']).toHaveBeenCalledWith(
       'https://github.com/a/b.git',
-      path.resolve('C:\\Proyectos\\b'),
+      path.join(proyectos, 'b'),
       TOKEN,
     );
     expect(f['traerCambios']).toHaveBeenCalledWith('s1', TOKEN);
@@ -1098,13 +1113,9 @@ describe('IPC de la Etapa B', () => {
   });
 
   it('sin token guardado, git y GitHub van sin token', async () => {
-    const { f, llamar } = montar({ secretos: secretosFalsos(null) });
-    await llamar('git.clonar', 'owner/repo', 'C:\\Proyectos\\repo');
-    expect(f['clonarRepo']).toHaveBeenCalledWith(
-      'owner/repo',
-      path.resolve('C:\\Proyectos\\repo'),
-      null,
-    );
+    const { f, proyectos, llamar } = montar({ secretos: secretosFalsos(null) });
+    await llamar('git.clonar', 'owner/repo', path.join(proyectos, 'repo'));
+    expect(f['clonarRepo']).toHaveBeenCalledWith('owner/repo', path.join(proyectos, 'repo'), null);
     await llamar('github.repos');
     expect(f['reposGithub']).toHaveBeenCalledWith({});
     expect(await llamar('github.hayToken')).toEqual({ ok: true, valor: false });
@@ -1199,6 +1210,93 @@ describe('IPC de la Etapa B', () => {
     } finally {
       rmSync(carpeta, { recursive: true, force: true });
     }
+  });
+
+  it('git.clonar solo clona dentro de la carpeta de proyectos o de una elegida, y en vacío', async () => {
+    const { f, proyectos, llamar } = montar();
+    // Directo en la carpeta de proyectos: vale.
+    expect((await llamar('git.clonar', 'owner/a', path.join(proyectos, 'a'))).ok).toBe(true);
+    // Más adentro, o en otra carpeta cualquiera: no.
+    const r1 = await llamar('git.clonar', 'owner/a', path.join(proyectos, 'x', 'a'));
+    expect(r1.error?.mensaje).toMatch(/carpeta de proyectos/);
+    const otra = temporal();
+    const r2 = await llamar('git.clonar', 'owner/a', path.join(otra, 'a'));
+    expect(r2.error?.mensaje).toMatch(/carpeta de proyectos/);
+    // Elegida en el diálogo: vale.
+    sistema.elegirCarpeta.mockResolvedValueOnce(otra);
+    await llamar('sistema.elegirCarpeta');
+    expect((await llamar('git.clonar', 'owner/a', path.join(otra, 'a'))).ok).toBe(true);
+    // El destino no debe existir o debe estar vacío.
+    mkdirSync(path.join(proyectos, 'vacia'));
+    expect((await llamar('git.clonar', 'owner/a', path.join(proyectos, 'vacia'))).ok).toBe(true);
+    mkdirSync(path.join(proyectos, 'llena'));
+    writeFileSync(path.join(proyectos, 'llena', 'x.txt'), 'x');
+    const r3 = await llamar('git.clonar', 'owner/a', path.join(proyectos, 'llena'));
+    expect(r3.error?.mensaje).toMatch(/no está vacía/);
+    expect(f['clonarRepo']).toHaveBeenCalledTimes(3);
+  });
+
+  it('si el token guardado no se puede leer, sigue sin token y lo dice si algo falla', async () => {
+    const secretos = secretosFalsos();
+    secretos.leerTokenGithub.mockRejectedValue(new Error('No se pudo descifrar'));
+    const { f, proyectos, llamar } = montar({ secretos });
+    // Un repo público funciona igual.
+    expect((await llamar('git.clonar', 'owner/a', path.join(proyectos, 'a'))).ok).toBe(true);
+    expect(f['clonarRepo']).toHaveBeenLastCalledWith('owner/a', path.join(proyectos, 'a'), null);
+    // Uno privado falla por autenticación: el error lo explica.
+    f['traerCambios']!.mockRejectedValueOnce(new Error('Authentication failed'));
+    const r = await llamar('git.traerCambios', 's1');
+    expect(r.error?.mensaje).toContain('Authentication failed');
+    expect(r.error?.mensaje).toContain('el token guardado no se pudo leer; vuelva a guardarlo');
+  });
+
+  it('los seguimientos aguantan llamadas simultáneas: un oyente y el tope de 16', async () => {
+    const { crudo, seguimientos, llamarDesde } = montar();
+    const ids = Array.from({ length: 20 }, (_, i) => `f${i}`);
+    crudo.fuentesRegistro.mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 1));
+      return ids.map((id) => ({ id, nombre: id, grupo: 'nginx' }));
+    });
+    const once = vi.fn();
+    const ev = { sender: { once } };
+    const r = await Promise.all(
+      [...ids, 'f0', 'f0', 'f1'].map((id) => llamarDesde(ev, 'registros.seguir', id)),
+    );
+    expect(once).toHaveBeenCalledTimes(1);
+    expect(seguimientos.cuantas(ev.sender)).toBe(16);
+    expect(crudo.seguirRegistro).toHaveBeenCalledTimes(16);
+    expect(r.filter((x) => !x.ok)).toHaveLength(4);
+  });
+
+  it('las rutas de guardar y las de abrir no se mezclan', async () => {
+    const { f, llamar } = montar();
+    const carpeta = temporal();
+    const abierto = path.join(carpeta, 'a.php');
+    const guardado = path.join(carpeta, 'b.crt');
+    sistema.elegirArchivo.mockResolvedValueOnce(abierto);
+    await llamar('sistema.elegirArchivo');
+    sistema.guardarArchivo.mockResolvedValueOnce(guardado);
+    await llamar('sistema.guardarArchivo', 'b.crt');
+    // Un archivo elegido para abrir no sirve de destino, ni uno de guardar para leer.
+    expect((await llamar('herramientas.emitirCertificado', ['a.test'], abierto)).ok).toBe(false);
+    expect((await llamar('herramientas.limpiarBom', [guardado], true)).ok).toBe(false);
+    expect((await llamar('bd.formato', guardado)).ok).toBe(false);
+    expect(f['emitirCertificadoLibre']).not.toHaveBeenCalled();
+    expect(f['limpiarBom']).not.toHaveBeenCalled();
+  });
+
+  it('emitirCertificado borra la clave si no pudo escribir el certificado', async () => {
+    const { f, llamar } = montar();
+    const carpeta = temporal();
+    // El destino es una carpeta: escribir el .crt falla después de escribir el .key.
+    const crt = path.join(carpeta, 'malo.crt');
+    mkdirSync(crt);
+    f['emitirCertificadoLibre']!.mockResolvedValue({ certPem: 'CERT', clavePem: 'CLAVE' });
+    sistema.guardarArchivo.mockResolvedValueOnce(crt);
+    await llamar('sistema.guardarArchivo', 'malo.crt');
+    const r = await llamar('herramientas.emitirCertificado', ['mi.test'], crt);
+    expect(r.ok).toBe(false);
+    expect(existsSync(path.join(carpeta, 'malo.key'))).toBe(false);
   });
 
   it('la lista de rutas compartida coincide con la tabla del proceso principal', () => {
