@@ -139,6 +139,7 @@ export const PARAMETROS_ERROR = {
   'agentes.instalacion_fallo': ['detalle'],
   'agentes.no_instalado': ['agente'],
   'agentes.config_ilegible': ['archivo'],
+  'agentes.config_en_uso': ['archivo'],
   'agentes.proveedor_incompatible': ['agente'],
   'agentes.sin_cambios_preparados': [],
   'git.commit_fallo': ['detalle'],

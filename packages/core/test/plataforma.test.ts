@@ -302,16 +302,30 @@ describe('PlataformaWindows con un ejecutor falso', () => {
         llamadas.push({ cmd, args, env: o.env });
       },
     });
-    await p.abrirTerminal('C:\\P', { env: { CLAVE: 'x' }, comando: ['claude', '--help'] });
+    // Sin variables propias: Windows Terminal (ventana nueva).
+    await p.abrirTerminal('C:\\P', { comando: ['claude', '--help'] });
     expect(llamadas[0]).toEqual({
       cmd: wt,
       args: ['-w', 'new', '-d', '.', 'claude', '--help'],
+      env: { LOCALAPPDATA: 'C:\\L', Path: 'C:\\W' },
+    });
+    // Con variables (clave, token, PATH del proyecto): nunca por wt, porque puede atenderlo un
+    // proceso de Windows Terminal ya abierto que no hereda este entorno. PowerShell sí.
+    await p.abrirTerminal('C:\\P', { env: { CLAVE: 'x' }, comando: ['claude', '--help'] });
+    expect(llamadas[1]).toEqual({
+      cmd: 'powershell.exe',
+      args: ['-NoExit', '-Command', "Set-Location -LiteralPath 'C:\\P'; & 'claude' --help"],
       env: { LOCALAPPDATA: 'C:\\L', Path: 'C:\\W', CLAVE: 'x' },
     });
+    expect(llamadas.filter((l) => l.cmd === wt && l.env.CLAVE !== undefined)).toEqual([]);
+    // Un env vacío (o solo con undefined) no cuenta como variables propias.
+    await p.abrirTerminal('C:\\P', { env: { NADA: undefined } });
+    expect(llamadas[2]!.cmd).toBe(wt);
+    llamadas.length = 0;
     hayWt = false;
     await p.abrirTerminal('C:\\P’s', { comando: ['C:\\A B\\claude.cmd', 'x;y'] });
-    expect(llamadas[1]!.cmd).toBe('powershell.exe');
-    expect(llamadas[1]!.args).toEqual([
+    expect(llamadas[0]!.cmd).toBe('powershell.exe');
+    expect(llamadas[0]!.args).toEqual([
       '-NoExit',
       '-Command',
       "Set-Location -LiteralPath 'C:\\P’’s'; & 'C:\\A B\\claude.cmd' 'x;y'",

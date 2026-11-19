@@ -24,20 +24,53 @@ export const MAX_DIFF_PREPARADO = 20_000;
 /** Largo máximo de un mensaje de commit. */
 export const MAX_MENSAJE_COMMIT = 10_000;
 
+/** Archivos que suelen guardar credenciales, por nombre exacto (en minúsculas). */
+const NOMBRES_SENSIBLES = new Set([
+  '.npmrc',
+  '.pypirc',
+  '.netrc',
+  'credentials.json',
+  // Composer (tokens de GitHub/GitLab/Packagist) y otras herramientas.
+  'auth.json',
+  '.git-credentials',
+  '.htpasswd',
+  'wp-config.php',
+  'kubeconfig',
+  '.dockercfg',
+  '.pgpass',
+  '.my.cnf',
+  '.s3cfg',
+  // Azure Functions: cadenas de conexión locales.
+  'local.settings.json',
+  'credentials.yml.enc',
+]);
+
+/** Archivos sensibles por su ruta (terminada en estas carpetas y nombre). */
+const RUTAS_SENSIBLES = [
+  'config/database.yml',
+  '.kube/config',
+  '.docker/config.json',
+  '.aws/credentials',
+  '.aws/config',
+];
+
 /**
  * Archivos que nunca salen hacia un proveedor de IA: `.env*`, claves y certificados, llaves SSH
- * y almacenes de claves.
+ * y almacenes de claves, y archivos de credenciales de herramientas comunes.
  */
 export function archivoSensible(ruta: string): boolean {
-  const nombre = ruta.split('/').pop()!.toLowerCase();
+  const minus = ruta.toLowerCase();
+  const nombre = minus.split('/').pop()!;
   return (
     nombre.startsWith('.env') ||
     /\.(?:pem|key|p12|pfx|jks|keystore|crt|cer|der|kdbx|asc|gpg)$/.test(nombre) ||
     /^id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?$/.test(nombre) ||
-    nombre === '.npmrc' ||
-    nombre === '.pypirc' ||
-    nombre === '.netrc' ||
-    nombre === 'credentials.json'
+    // Terraform: variables y estado guardan contraseñas y claves en claro.
+    /\.(?:tfvars|tfvars\.json|tfstate|tfstate\.backup)$/.test(nombre) ||
+    // secrets.yml, secrets.json, secrets.env… (Rails, Kubernetes, frameworks varios).
+    /^secrets\./.test(nombre) ||
+    NOMBRES_SENSIBLES.has(nombre) ||
+    RUTAS_SENSIBLES.some((r) => minus === r || minus.endsWith(`/${r}`))
   );
 }
 
@@ -589,7 +622,7 @@ export class Git {
   async diffPreparado(carpeta: string, max = MAX_DIFF_PREPARADO): Promise<DiffPreparado> {
     const n = await this.git(
       carpeta,
-      ['diff', '--cached', '--numstat', '-z', '--no-renames', '--no-ext-diff'],
+      ['diff', '--cached', '--numstat', '-z', '--no-renames', '--no-ext-diff', '--no-textconv'],
       { quotepath: false },
     );
     if (n.codigo !== 0) {
@@ -624,7 +657,10 @@ export class Git {
           'diff',
           '--cached',
           '--no-color',
+          // Ni diff externo ni textconv: un .gitattributes del repositorio podría ejecutar un
+          // comando configurado al describir los cambios.
           '--no-ext-diff',
+          '--no-textconv',
           '--no-renames',
           '--',
           `:(literal)${ruta}`,
@@ -658,7 +694,13 @@ export class Git {
         'El mensaje de commit está vacío o no es válido.',
       );
     }
-    const q = await this.git(carpeta, ['diff', '--cached', '--quiet', '--no-ext-diff']);
+    const q = await this.git(carpeta, [
+      'diff',
+      '--cached',
+      '--quiet',
+      '--no-ext-diff',
+      '--no-textconv',
+    ]);
     if (q.codigo === 0) {
       throw new ErrorWolf(
         'agentes.sin_cambios_preparados',

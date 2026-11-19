@@ -228,6 +228,8 @@ export const en: Textos = {
       'agentes.no_instalado': '{agente} is not installed.',
       'agentes.config_ilegible':
         '{archivo} could not be parsed; it was not changed. Check it by hand.',
+      'agentes.config_en_uso':
+        '{archivo} changed while WolfCore Dev was editing it: close the agent and try again. It was not modified.',
       'agentes.proveedor_incompatible': '{agente} cannot use that AI provider.',
       'agentes.sin_cambios_preparados': 'There are no staged changes (git add) to describe.',
       'git.commit_fallo': 'The commit failed: {detalle}',

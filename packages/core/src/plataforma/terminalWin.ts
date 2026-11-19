@@ -37,8 +37,13 @@ const argPowerShell = (a: string): string =>
   /^[A-Za-z0-9_.:=\\/-]+$/.test(a) ? a : literalPowerShell(a);
 
 /**
- * Terminal visible en `cwd`: Windows Terminal (ventana nueva) si está; si no, PowerShell. El
- * entorno es el de `entorno` más `o.env`.
+ * Terminal visible en `cwd`: Windows Terminal (ventana nueva) si está y no hay variables
+ * propias; si no, PowerShell. El entorno es el de `entorno` más `o.env`.
+ *
+ * Con variables propias (la clave de IA y el token del MCP de un agente, el PATH del proyecto)
+ * nunca se usa `wt`: aun con `-w new`, la ventana la puede crear un proceso de Windows Terminal
+ * que ya estaba abierto, con SU entorno, y las variables no llegarían. PowerShell es un proceso
+ * hijo nuestro y las recibe siempre.
  */
 export async function abrirTerminalWindows(
   cwd: string,
@@ -50,9 +55,9 @@ export async function abrirTerminalWindows(
   const local = d.entorno.LOCALAPPDATA;
   const wt = local ? path.win32.join(local, 'Microsoft', 'WindowsApps', 'wt.exe') : null;
   // wt parte su línea de órdenes en cada `;` (aun entre comillas): con un `;` se usa PowerShell.
-  if (wt && d.existe(wt) && !comando.some((a) => a.includes(';'))) {
+  const conVariables = Object.values(o.env ?? {}).some((v) => v !== undefined);
+  if (!conVariables && wt && d.existe(wt) && !comando.some((a) => a.includes(';'))) {
     // La carpeta no viaja como argumento: "-d ." es el directorio de trabajo, que ya es `cwd`.
-    // Ventana nueva para que la pestaña reciba este entorno.
     await d.lanzar(wt, ['-w', 'new', '-d', '.', ...comando], { cwd, env });
     return;
   }

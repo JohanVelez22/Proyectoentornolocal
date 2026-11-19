@@ -7,10 +7,15 @@ import {
   Agentes,
   INSTRUCCION_COMMIT,
   MAX_TOKENS_COMMIT,
+  NPMRC_AGENTES,
   limpiarMensajeCommit,
   type DepsAgentes,
 } from '../src/agentes/agentes';
-import { editarEntradaMcp, VARIABLE_TOKEN_MCP } from '../src/agentes/configArchivo';
+import {
+  editarConfigAgente,
+  editarEntradaMcp,
+  VARIABLE_TOKEN_MCP,
+} from '../src/agentes/configArchivo';
 import { REGISTRO_NPM_AGENTES, urlOficial } from '../src/catalogo/catalogo';
 import { archivoSensible, Git } from '../src/git/git';
 import type { ClienteIa, ConfigProveedorIa } from '../src/ia/proveedores';
@@ -145,8 +150,8 @@ describe('Agentes: detección', () => {
     expect(e[2]!.guia).toMatch(/^https:\/\/hermes-agent\.nousresearch\.com\//);
   });
 
-  it('detecta el paquete propio, el npm global del usuario y el ejecutable con su versión', async () => {
-    const { agentes, prefijo, plat } = await montar({
+  it('detecta el paquete propio, el npm global del usuario y el ejecutable sin ejecutarlo', async () => {
+    const { agentes, prefijo, plat, exec } = await montar({
       responder: (_c, a) =>
         a[0] === '--version' ? { codigo: 0, stdout: 'hermes 0.9.1\n' } : { codigo: 1 },
     });
@@ -156,9 +161,46 @@ describe('Agentes: detección', () => {
     const codex = paquete(global, '@openai/codex', 'codex', '0.50.0', 'bin/codex.js');
     plat.ejecutables.set('hermes', '/bin/hermes');
     const e = await agentes.estado();
-    expect(e[0]).toMatchObject({ instalado: true, ruta: cli, version: '2.1.0' });
-    expect(e[1]).toMatchObject({ instalado: true, ruta: codex, version: '0.50.0' });
-    expect(e[2]).toMatchObject({ instalado: true, ruta: '/bin/hermes', version: '0.9.1' });
+    expect(e[0]).toMatchObject({ instalado: true, ruta: cli, version: '2.1.0', origen: 'propio' });
+    expect(e[1]).toMatchObject({
+      instalado: true,
+      ruta: codex,
+      version: '0.50.0',
+      origen: 'npm-usuario',
+    });
+    // Un ejecutable del PATH o de ~/.local/bin no se ejecuta solo por abrir la pantalla:
+    // "versión desconocida" hasta que el usuario la pida.
+    expect(e[2]).toMatchObject({
+      instalado: true,
+      ruta: '/bin/hermes',
+      version: null,
+      origen: 'ejecutable',
+    });
+    expect(exec).not.toHaveBeenCalled();
+    // A pedido del usuario sí se pregunta `--version`.
+    expect(await agentes.version('hermes')).toBe('0.9.1');
+    expect(exec).toHaveBeenCalledTimes(1);
+    expect(exec.mock.calls[0]![0]).toBe('/bin/hermes');
+    expect(exec.mock.calls[0]![1]).toEqual(['--version']);
+    // De un paquete la versión sale de su package.json, sin ejecutar nada.
+    expect(await agentes.version('claude-code')).toBe('2.1.0');
+    expect(exec).toHaveBeenCalledTimes(1);
+  });
+
+  it('version de un agente que no está: null; de uno que no existe: agentes.no_existe', async () => {
+    const { agentes, exec } = await montar();
+    expect(await agentes.version('codex')).toBeNull();
+    await expect(agentes.version('otro' as never)).rejects.toMatchObject({
+      codigo: 'agentes.no_existe',
+    });
+    expect(exec).not.toHaveBeenCalled();
+  });
+
+  it('abrir no pregunta la versión de un ejecutable del PATH', async () => {
+    const { agentes, plat, exec } = await montar();
+    plat.ejecutables.set('claude', '/bin/claude');
+    await agentes.abrir('claude-code', 'tienda');
+    expect(exec).not.toHaveBeenCalled();
   });
 
   it('un binario declarado fuera de la carpeta del paquete no cuenta', async () => {
@@ -187,7 +229,8 @@ describe('Agentes: instalación', () => {
     await agentes.instalar('codex', true);
     const npm = path.join(dirNode, 'node_modules', 'npm', 'bin', 'npm-cli.js');
     const nodo = path.join(dirNode, plat.nombreEjecutable('node'));
-    const esperado = (p: string) => ({
+    const npmrc = path.join(prefijo, NPMRC_AGENTES);
+    const esperado = (p: string, scripts: boolean) => ({
       cmd: nodo,
       args: [
         npm,
@@ -197,12 +240,28 @@ describe('Agentes: instalación', () => {
         prefijo,
         '--registry',
         'https://registry.npmjs.org/',
+        // La configuración de npm del usuario (registro, proxy, scripts…) no cuenta: un archivo
+        // vacío de WolfCore Dev en su lugar.
+        '--userconfig',
+        npmrc,
+        '--globalconfig',
+        npmrc,
         '--no-fund',
         '--no-audit',
+        // Codex no tiene scripts de instalación; Claude Code sí los necesita (install.cjs).
+        ...(scripts ? [] : ['--ignore-scripts']),
         p,
       ],
     });
-    expect(llamadas).toEqual([esperado('@anthropic-ai/claude-code'), esperado('@openai/codex')]);
+    expect(llamadas).toEqual([
+      esperado('@anthropic-ai/claude-code', true),
+      esperado('@openai/codex', false),
+    ]);
+    expect(readFileSync(npmrc, 'utf8')).toBe('');
+    // Si alguien escribió en él, se vacía antes de instalar.
+    writeFileSync(npmrc, 'registry=https://otro.example.test/\n');
+    await agentes.instalar('codex', true);
+    expect(readFileSync(npmrc, 'utf8')).toBe('');
     expect(REGISTRO_NPM_AGENTES).toBe('https://registry.npmjs.org/');
     // El registro de npm no se vuelve un host del catálogo de binarios.
     expect(urlOficial('https://registry.npmjs.org/x.tgz')).toBe(false);
@@ -520,6 +579,48 @@ describe('Agentes: mensaje de commit sugerido', () => {
     for (const r of ['src/env.ts', 'README.md', 'llave.txt'])
       expect(archivoSensible(r), r).toBe(false);
   });
+
+  it('archivoSensible reconoce credenciales comunes de herramientas y frameworks', () => {
+    for (const r of [
+      'auth.json',
+      'composer/auth.json',
+      '.git-credentials',
+      'public/.htpasswd',
+      'infra/prod.tfvars',
+      'infra/prod.tfvars.json',
+      'infra/terraform.tfstate',
+      'infra/terraform.tfstate.backup',
+      'wp-config.php',
+      'web/wp-config.php',
+      'secrets.yml',
+      'config/secrets.json',
+      'secrets.env',
+      'kubeconfig',
+      '.kube/config',
+      '.dockercfg',
+      '.docker/config.json',
+      'config/database.yml',
+      'app/config/database.yml',
+      'config/credentials.yml.enc',
+      '.aws/credentials',
+      '.pgpass',
+      '.my.cnf',
+      '.s3cfg',
+      'local.settings.json',
+    ]) {
+      expect(archivoSensible(r), r).toBe(true);
+    }
+    for (const r of [
+      'database.yml',
+      'src/secretsManager.ts',
+      'docs/kubeconfig.md',
+      'config/app.php',
+      'wp-config-sample.php',
+      'package.json',
+    ]) {
+      expect(archivoSensible(r), r).toBe(false);
+    }
+  });
 });
 
 const hayGit = spawnSync('git', ['--version'], { windowsHide: true }).status === 0;
@@ -568,6 +669,30 @@ describe.skipIf(!hayGit)(
       expect(corto.truncado).toBe(true);
     });
 
+    it('el diff no usa textconv ni diff externo del repositorio (no ejecuta sus comandos)', async () => {
+      const dir = await repo();
+      // Un repositorio clonado puede traer .gitattributes con un driver; la configuración del
+      // driver (aquí en el repo) ejecutaría un comando al hacer `git diff`.
+      correr(dir, 'config', 'diff.raro.textconv', 'echo TEXTCONV-EJECUTADO');
+      correr(dir, 'config', 'diff.raro.command', 'echo EXTDIFF-EJECUTADO');
+      writeFileSync(path.join(dir, '.gitattributes'), '*.txt diff=raro\n');
+      writeFileSync(path.join(dir, 'nota.txt'), 'contenido real\n');
+      correr(dir, 'add', '-A');
+      const llamadas: string[][] = [];
+      const exec: Ejecutor = (cmd, args, o) => {
+        llamadas.push(args);
+        return ejecutorPorDefecto(cmd, args, o);
+      };
+      const d = await new Git({ exec }).diffPreparado(dir);
+      expect(d.diff).toContain('contenido real');
+      expect(d.diff).not.toContain('TEXTCONV-EJECUTADO');
+      expect(d.diff).not.toContain('EXTDIFF-EJECUTADO');
+      for (const a of llamadas.filter((x) => x.includes('diff'))) {
+        expect(a).toContain('--no-textconv');
+        expect(a).toContain('--no-ext-diff');
+      }
+    });
+
     it('commitPreparado hace commit solo de lo preparado, nunca add ni push', async () => {
       const dir = await repo();
       writeFileSync(path.join(dir, 'preparado.txt'), 'sí\n');
@@ -614,5 +739,90 @@ describe('Plataforma: prefijos de npm global del usuario', () => {
     expect(
       new PlataformaWindows(undefined, undefined, { entorno: {} }).carpetasNpmGlobal(),
     ).toEqual([]);
+  });
+});
+
+describe('Configuración de agentes: copias acotadas y cambios a la vez', () => {
+  const entrada = { type: 'http', url: URL_MCP };
+
+  it('guarda como mucho 5 copias por archivo (las más nuevas) y no toca otros archivos', async () => {
+    const dir = await carpetaTemporal('pel-ag-copias-');
+    const ruta = path.join(dir, '.claude.json');
+    writeFileSync(ruta, '{"a": 1}\n');
+    // Copias viejas propias (y una con sufijo por choque en el mismo segundo).
+    const viejas = [
+      '20260101-000000',
+      '20260102-000000',
+      '20260103-000000',
+      '20260104-000000',
+      '20260105-000000',
+      '20260105-000000-1',
+    ];
+    for (const v of viejas) writeFileSync(`${ruta}.wolfcore-${v}.bak`, v);
+    // Ajenos: no son copias nuestras (o son de otro archivo).
+    writeFileSync(`${ruta}.wolfcore-notas.bak`, 'mío');
+    writeFileSync(path.join(dir, 'otro.json.wolfcore-20250101-000000.bak'), 'otro');
+    mkdirSync(`${ruta}.wolfcore-20240101-000000.bak`);
+    const r = await editarConfigAgente(
+      ruta,
+      'json',
+      'mcpServers',
+      entrada,
+      new Date(2026, 10, 19, 10, 30, 0),
+    );
+    expect(r.respaldo).toBe(`${ruta}.wolfcore-20261119-103000.bak`);
+    expect(copias(dir, '.claude.json').sort()).toEqual(
+      [
+        '.claude.json.wolfcore-20240101-000000.bak',
+        '.claude.json.wolfcore-20260103-000000.bak',
+        '.claude.json.wolfcore-20260104-000000.bak',
+        '.claude.json.wolfcore-20260105-000000.bak',
+        '.claude.json.wolfcore-20260105-000000-1.bak',
+        '.claude.json.wolfcore-20261119-103000.bak',
+        '.claude.json.wolfcore-notas.bak',
+      ].sort(),
+    );
+    expect(existsSync(path.join(dir, 'otro.json.wolfcore-20250101-000000.bak'))).toBe(true);
+  });
+
+  it('si el archivo cambia mientras se edita, vuelve a leerlo una vez y conserva el cambio', async () => {
+    const dir = await carpetaTemporal('pel-ag-carrera-');
+    const ruta = path.join(dir, '.claude.json');
+    writeFileSync(ruta, '{"mcpServers": {"otro": {"url": "x"}}}\n');
+    let veces = 0;
+    const r = await editarConfigAgente(ruta, 'json', 'mcpServers', entrada, undefined, {
+      antesDeReemplazar: async () => {
+        veces++;
+        // El agente escribe su archivo justo entonces (solo la primera vez).
+        if (veces === 1) writeFileSync(ruta, '{"mcpServers": {"otro": {"url": "x"}}, "b": 2}\n');
+      },
+    });
+    expect(r.cambiado).toBe(true);
+    expect(veces).toBe(2);
+    const final = parse(readFileSync(ruta, 'utf8')) as Record<string, unknown>;
+    expect(final).toEqual({
+      mcpServers: { otro: { url: 'x' }, wolfcore: entrada },
+      b: 2,
+    });
+  });
+
+  it('si sigue cambiando, falla con agentes.config_en_uso y deja el archivo del agente', async () => {
+    const dir = await carpetaTemporal('pel-ag-carrera2-');
+    const ruta = path.join(dir, '.claude.json');
+    writeFileSync(ruta, '{"a": 0}\n');
+    let n = 0;
+    const e = await editarConfigAgente(ruta, 'json', 'mcpServers', entrada, undefined, {
+      antesDeReemplazar: async () => {
+        n++;
+        writeFileSync(ruta, `{"a": ${n}}\n`);
+      },
+    }).catch((x: unknown) => x);
+    expect(e).toMatchObject({
+      codigo: 'agentes.config_en_uso',
+      datos: { archivo: '.claude.json' },
+    });
+    // Queda lo que escribió el agente, no la edición de WolfCore Dev.
+    expect(readFileSync(ruta, 'utf8')).toBe(`{"a": ${n}}\n`);
+    expect(readdirSync(dir).filter((x) => x.includes('pel-tmp'))).toEqual([]);
   });
 });

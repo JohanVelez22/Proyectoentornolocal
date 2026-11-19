@@ -1,4 +1,4 @@
-import { lstat, readFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { REGISTRO_NPM_AGENTES } from '../catalogo/catalogo';
 import { ErrorWolf } from '../errores';
@@ -38,6 +38,11 @@ export interface DefAgente {
   binario: string;
   /** Paquete oficial de npm (null: WolfCore Dev no lo instala). */
   paquete: string | null;
+  /**
+   * El paquete necesita sus scripts de instalación (`postinstall`). Si no, se instala con
+   * `--ignore-scripts`: ningún paquete de la cadena ejecuta código al instalarse.
+   */
+  scriptsInstalacion: boolean;
   /** Guía oficial de instalación. */
   guia: string;
   formato: FormatoConfig;
@@ -61,11 +66,22 @@ export const AGENTES: Record<IdAgente, DefAgente> = {
   hermes: HERMES,
 };
 
+/**
+ * De dónde sale el agente: el prefijo de WolfCore Dev, el npm global del usuario (los dos se
+ * leen de su package.json) o un ejecutable suelto (PATH, ~/.local/bin…).
+ */
+export type OrigenAgente = 'propio' | 'npm-usuario' | 'ejecutable';
+
 export interface EstadoAgente {
   id: IdAgente;
   instalado: boolean;
   ruta: string | null;
+  /**
+   * Versión del package.json. De un ejecutable suelto es null ("versión desconocida"): mirar el
+   * estado nunca ejecuta programas del usuario; `Agentes.version` la pregunta a pedido.
+   */
   version: string | null;
+  origen: OrigenAgente | null;
   mcpRegistrado: boolean;
   /** WolfCore Dev puede instalarlo (paquete oficial de npm con el Node propio). */
   instalable: boolean;
@@ -78,6 +94,7 @@ interface Lanzable {
   previos: string[];
   ruta: string;
   version: string | null;
+  origen: OrigenAgente;
 }
 
 export interface ResultadoRegistroMcp {
@@ -118,6 +135,11 @@ const PLAZO_VERSION_MS = 10_000;
 export const MAX_TOKENS_COMMIT = 300;
 const CLAVE_VALIDA = /^[\x21-\x7e]{1,4096}$/;
 const SCRIPT_NODE = /\.(?:c|m)?js$/i;
+/**
+ * Archivo de configuración de npm (vacío) que usa la instalación de agentes en lugar del
+ * `.npmrc` del usuario y del global: ni su registro, ni su proxy, ni sus tokens, ni sus scripts.
+ */
+export const NPMRC_AGENTES = 'wolfcore-npmrc';
 
 export const INSTRUCCION_COMMIT =
   'Escribe un mensaje de commit para estos cambios preparados (git diff --cached). ' +
@@ -196,7 +218,11 @@ export class Agentes {
   }
 
   /** Paquete de npm instalado globalmente en `prefijo` → cómo se ejecuta su binario. */
-  private async desdePaquete(prefijo: string, def: DefAgente): Promise<Lanzable | null> {
+  private async desdePaquete(
+    prefijo: string,
+    def: DefAgente,
+    origen: OrigenAgente,
+  ): Promise<Lanzable | null> {
     if (!def.paquete) return null;
     for (const dir of [
       path.join(prefijo, 'node_modules', def.paquete),
@@ -219,9 +245,9 @@ export class Agentes {
       if (SCRIPT_NODE.test(ruta)) {
         const node = await this.nodeParaScripts();
         if (!node) continue;
-        return { cmd: node, previos: [ruta], ruta, version };
+        return { cmd: node, previos: [ruta], ruta, version, origen };
       }
-      return { cmd: ruta, previos: [], ruta, version };
+      return { cmd: ruta, previos: [], ruta, version, origen };
     }
     return null;
   }
@@ -241,12 +267,14 @@ export class Agentes {
 
   /**
    * Dónde está el agente: primero lo instalado por WolfCore Dev, luego el npm global del
-   * usuario y por último el ejecutable en el PATH o en sus carpetas conocidas.
+   * usuario y por último el ejecutable en el PATH o en sus carpetas conocidas. Nunca ejecuta
+   * nada: la versión de un ejecutable suelto queda null (ver `version`).
    */
   private async lanzable(def: DefAgente): Promise<Lanzable | null> {
-    const prefijos = [this.d.carpetaAgentes(), ...this.d.plataforma.carpetasNpmGlobal()];
-    for (const p of prefijos) {
-      const l = await this.desdePaquete(p, def);
+    const propio = await this.desdePaquete(this.d.carpetaAgentes(), def, 'propio');
+    if (propio) return propio;
+    for (const p of this.d.plataforma.carpetasNpmGlobal()) {
+      const l = await this.desdePaquete(p, def, 'npm-usuario');
       if (l) return l;
     }
     const exe = await this.d.plataforma.buscarEjecutable(
@@ -254,7 +282,18 @@ export class Agentes {
       def.carpetasConocidas(this.inicio()),
     );
     if (!exe) return null;
-    return { cmd: exe, previos: [], ruta: exe, version: await this.versionDe(exe, []) };
+    return { cmd: exe, previos: [], ruta: exe, version: null, origen: 'ejecutable' };
+  }
+
+  /**
+   * Versión del agente a pedido del usuario: la del package.json o, para un ejecutable suelto,
+   * `--version` (10 s). Null si no está o no la dice.
+   */
+  async version(id: IdAgente): Promise<string | null> {
+    const l = await this.lanzable(defAgente(id));
+    if (!l) return null;
+    if (l.version !== null || l.origen !== 'ejecutable') return l.version;
+    return this.versionDe(l.cmd, l.previos);
   }
 
   private async mcpRegistrado(def: DefAgente): Promise<boolean> {
@@ -277,6 +316,7 @@ export class Agentes {
           instalado: l !== null,
           ruta: l?.ruta ?? null,
           version: l?.version ?? null,
+          origen: l?.origen ?? null,
           mcpRegistrado: await this.mcpRegistrado(def),
           instalable: def.paquete !== null,
           guia: def.guia,
@@ -287,7 +327,10 @@ export class Agentes {
 
   /**
    * `npm install -g <paquete oficial>` con el Node propio, en la carpeta de WolfCore Dev y
-   * siempre contra `registry.npmjs.org` (aunque el usuario tenga otro registro configurado).
+   * siempre contra `registry.npmjs.org`. Se instala la ÚLTIMA versión publicada del paquete
+   * (sin versión fija: los agentes se actualizan seguido y una fija quedaría vieja enseguida).
+   * La configuración de npm del usuario no cuenta (`--userconfig`/`--globalconfig` apuntan a un
+   * archivo vacío propio) y, si el paquete no los necesita, sin scripts de instalación.
    */
   async instalar(id: IdAgente, confirmado: true): Promise<void> {
     const def = defAgente(id);
@@ -306,6 +349,11 @@ export class Agentes {
         'Instale Node desde Servicios para poder instalar el agente.',
       );
     }
+    const prefijo = this.d.carpetaAgentes();
+    const npmrc = path.join(prefijo, NPMRC_AGENTES);
+    await mkdir(prefijo, { recursive: true });
+    // Siempre vacío: si alguien escribió en él, no cuenta.
+    await writeFile(npmrc, '');
     const r = await this.d.exec(
       nn.node,
       [
@@ -313,14 +361,19 @@ export class Agentes {
         'install',
         '--global',
         '--prefix',
-        this.d.carpetaAgentes(),
+        prefijo,
         '--registry',
         REGISTRO_NPM_AGENTES,
+        '--userconfig',
+        npmrc,
+        '--globalconfig',
+        npmrc,
         '--no-fund',
         '--no-audit',
+        ...(def.scriptsInstalacion ? [] : ['--ignore-scripts']),
         def.paquete,
       ],
-      { timeoutMs: PLAZO_INSTALAR_MS, cwd: this.d.carpetaAgentes() },
+      { timeoutMs: PLAZO_INSTALAR_MS, cwd: prefijo },
     );
     if (r.codigo !== 0) {
       throw new ErrorWolf('agentes.instalacion_fallo', `No se pudo instalar ${def.nombre}.`, {

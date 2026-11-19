@@ -233,6 +233,8 @@ export const es = {
       'agentes.no_instalado': '{agente} no está instalado.',
       'agentes.config_ilegible':
         'No se pudo interpretar {archivo}; no se modificó. Revíselo a mano.',
+      'agentes.config_en_uso':
+        '{archivo} cambió mientras WolfCore Dev lo editaba: cierre el agente y vuelva a intentarlo. No se modificó.',
       'agentes.proveedor_incompatible': '{agente} no puede usar ese proveedor de IA.',
       'agentes.sin_cambios_preparados': 'No hay cambios preparados (git add) para describir.',
       'git.commit_fallo': 'No se pudo hacer el commit: {detalle}',

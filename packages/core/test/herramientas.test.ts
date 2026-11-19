@@ -194,12 +194,12 @@ describe('Terminal', () => {
     return { t, llamadas, carpeta, wt };
   };
 
-  it('con wt.exe: wt -w new -d . (cwd = carpeta) y PATH con php, tools/bin y el actual', async () => {
+  it('con wt.exe: el entorno propio va por PowerShell (wt podría no heredarlo); PATH con php, tools/bin y el actual', async () => {
     const { t, llamadas, carpeta, wt } = armar(true);
     await t.abrir({ carpeta, php: '8.4' });
     expect(llamadas).toHaveLength(1);
-    expect(llamadas[0]!.cmd).toBe(wt);
-    expect(llamadas[0]!.args).toEqual(['-w', 'new', '-d', '.']);
+    expect(llamadas[0]!.cmd).not.toBe(wt);
+    expect(llamadas[0]!.cmd).toBe('powershell.exe');
     expect(llamadas[0]!.cwd).toBe(carpeta);
     expect(llamadas[0]!.env.Path).toBe(
       [rutas.bin('php', '8.4'), path.join(base, 'tools', 'bin'), 'C:\\Windows'].join(';'),
@@ -227,12 +227,13 @@ describe('Terminal', () => {
     expect(llamadas[0]!.env.WOLFCORE_PHPINI).toBe(rutas.phpIni('8.2'));
   });
 
-  it('con wt.exe: una carpeta con `;` no viaja en los argumentos (wt la partiría)', async () => {
+  it('con wt.exe: una carpeta con `;` va entre comillas a PowerShell', async () => {
     const { t, llamadas } = armar(true);
     const rara = path.join(base, 'a;b ñ');
     mkdirSync(rara);
     await t.abrir({ carpeta: rara, php: null });
-    expect(llamadas[0]!.args.join(' ')).not.toContain(';');
+    expect(llamadas[0]!.cmd).toBe('powershell.exe');
+    expect(llamadas[0]!.args[2]).toBe(`Set-Location -LiteralPath '${rara}'`);
     expect(llamadas[0]!.cwd).toBe(rara);
   });
 

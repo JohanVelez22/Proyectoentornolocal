@@ -12,6 +12,8 @@ export const CODEX: DefAgente = {
   nombre: 'Codex CLI',
   binario: 'codex',
   paquete: '@openai/codex',
+  // Sin scripts de instalación (el binario llega como dependencia opcional por plataforma).
+  scriptsInstalacion: false,
   guia: 'https://developers.openai.com/codex/cli',
   formato: 'toml',
   seccion: 'mcp_servers',

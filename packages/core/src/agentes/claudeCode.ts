@@ -15,6 +15,9 @@ export const CLAUDE_CODE: DefAgente = {
   nombre: 'Claude Code',
   binario: 'claude',
   paquete: '@anthropic-ai/claude-code',
+  // Su `postinstall` (install.cjs) deja el binario nativo de la plataforma en `bin/`: sin él el
+  // paquete no funciona, así que sus scripts de instalación quedan permitidos.
+  scriptsInstalacion: true,
   guia: 'https://docs.anthropic.com/en/docs/claude-code/setup',
   formato: 'json',
   seccion: 'mcpServers',

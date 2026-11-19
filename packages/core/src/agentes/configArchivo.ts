@@ -1,4 +1,4 @@
-import { copyFile, lstat, mkdir, readFile, realpath } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, readdir, readFile, realpath, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { applyEdits, modify, parse, type ParseError } from 'jsonc-parser';
 import { parse as parseToml } from 'smol-toml';
@@ -248,6 +248,9 @@ export function editarEntradaMcp(
   return nuevo;
 }
 
+/** Copias con fecha que se guardan por archivo (las más nuevas). */
+export const MAX_COPIAS_CONFIG = 5;
+
 /** AAAAMMDD-HHmmss en hora local. */
 function sello(f: Date): string {
   const n = (v: number): string => String(v).padStart(2, '0');
@@ -257,9 +260,41 @@ function sello(f: Date): string {
   );
 }
 
+const escaparRegex = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /**
- * Copia con fecha junto al archivo (`<archivo>.wolfcore-<fecha>.bak`), sin pisar otra copia.
- * Devuelve su ruta, o null si el archivo no existía.
+ * Deja solo las `MAX_COPIAS_CONFIG` copias más nuevas de `ruta` (por su fecha y su número, no
+ * por la fecha del archivo, que la copia puede conservar). Solo cuentan archivos con el nombre
+ * exacto de una copia nuestra; un fallo al borrar una copia vieja no impide la edición.
+ */
+async function podarCopias(ruta: string): Promise<void> {
+  const dir = path.dirname(ruta);
+  const patron = new RegExp(
+    String.raw`^${escaparRegex(path.basename(ruta))}\.wolfcore-(\d{8}-\d{6})(?:-(\d+))?\.bak$`,
+  );
+  let nombres: string[];
+  try {
+    nombres = await readdir(dir);
+  } catch {
+    return;
+  }
+  const copias: { nombre: string; sello: string; n: number }[] = [];
+  for (const nombre of nombres) {
+    const m = patron.exec(nombre);
+    if (!m) continue;
+    const info = await lstat(path.join(dir, nombre)).catch(() => null);
+    if (!info?.isFile()) continue;
+    copias.push({ nombre, sello: m[1]!, n: m[2] ? Number(m[2]) : 0 });
+  }
+  copias.sort((a, b) => (a.sello === b.sello ? b.n - a.n : a.sello < b.sello ? 1 : -1));
+  for (const c of copias.slice(MAX_COPIAS_CONFIG)) {
+    await rm(path.join(dir, c.nombre), { force: true }).catch(() => undefined);
+  }
+}
+
+/**
+ * Copia con fecha junto al archivo (`<archivo>.wolfcore-<fecha>.bak`), sin pisar otra copia, y
+ * deja solo las `MAX_COPIAS_CONFIG` más nuevas. Devuelve su ruta, o null si el archivo no existía.
  */
 export async function respaldarConfigAgente(
   ruta: string,
@@ -272,6 +307,7 @@ export async function respaldarConfigAgente(
     const destino = `${base}${i ? `-${i}` : ''}.bak`;
     try {
       await copyFile(r.ruta, destino, 1 /* COPYFILE_EXCL */);
+      await podarCopias(ruta);
       return destino;
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== 'EEXIST' || i > 100) throw e;
@@ -286,9 +322,24 @@ export interface ResultadoEdicionConfig {
   cambiado: boolean;
 }
 
+/** Solo para pruebas: un punto justo antes de reemplazar el archivo. */
+export interface GanchosEdicionConfig {
+  antesDeReemplazar?: () => Promise<void>;
+}
+
+/** El archivo cambió entre la lectura y el reemplazo (lo escribió el agente). */
+class CambioConcurrente extends Error {}
+
+/** Reintentos si el archivo cambia mientras se edita (el agente lo está escribiendo). */
+const REINTENTOS_CAMBIO = 1;
+
 /**
  * Edita la entrada `wolfcore` del archivo de un agente: lee, edita y comprueba en memoria; solo
  * si todo va bien hace la copia con fecha y escribe de forma atómica (conserva el BOM).
+ *
+ * Justo antes del reemplazo vuelve a leer el archivo: si cambió (el agente abierto lo guardó),
+ * empieza de nuevo una vez con el contenido nuevo; si vuelve a cambiar, falla con
+ * `agentes.config_en_uso` sin pisar lo que escribió el agente.
  */
 export async function editarConfigAgente(
   ruta: string,
@@ -296,6 +347,31 @@ export async function editarConfigAgente(
   seccion: string,
   valor: ValorEntradaMcp | undefined,
   ahora?: Date,
+  ganchos: GanchosEdicionConfig = {},
+): Promise<ResultadoEdicionConfig> {
+  for (let intento = 0; ; intento++) {
+    try {
+      return await editarConfigUnaVez(ruta, formato, seccion, valor, ahora, ganchos);
+    } catch (e) {
+      if (!(e instanceof CambioConcurrente)) throw e;
+      if (intento >= REINTENTOS_CAMBIO) {
+        throw new ErrorWolf(
+          'agentes.config_en_uso',
+          `${path.basename(ruta)} cambió mientras se editaba: cierre el agente y vuelva a intentarlo.`,
+          { archivo: path.basename(ruta) },
+        );
+      }
+    }
+  }
+}
+
+async function editarConfigUnaVez(
+  ruta: string,
+  formato: FormatoConfig,
+  seccion: string,
+  valor: ValorEntradaMcp | undefined,
+  ahora: Date | undefined,
+  ganchos: GanchosEdicionConfig,
 ): Promise<ResultadoEdicionConfig> {
   const real = await rutaReal(ruta);
   const crudo = real.existe ? await readFile(real.ruta, 'utf8') : null;
@@ -306,6 +382,15 @@ export async function editarConfigAgente(
   if (texto !== null && nuevo === texto) return { respaldo: null, cambiado: false };
   const respaldo = await respaldarConfigAgente(ruta, ahora);
   await mkdir(path.dirname(real.ruta), { recursive: true });
-  await escribirAtomico(real.ruta, Buffer.from(bom + nuevo, 'utf8'));
+  await escribirAtomico(real.ruta, Buffer.from(bom + nuevo, 'utf8'), {
+    renombrar: async (tmp, destino) => {
+      await ganchos.antesDeReemplazar?.();
+      const ahoraTexto = await readFile(destino, 'utf8').catch((e: NodeJS.ErrnoException) =>
+        e.code === 'ENOENT' ? null : Promise.reject(e),
+      );
+      if (ahoraTexto !== crudo) throw new CambioConcurrente();
+      await rename(tmp, destino);
+    },
+  });
   return { respaldo, cambiado: true };
 }
