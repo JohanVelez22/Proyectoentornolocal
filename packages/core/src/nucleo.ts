@@ -38,7 +38,8 @@ import { Composer } from './herramientas/composer';
 import { PathUsuario, respaldoPathUsuario } from './herramientas/pathUsuario';
 import { abrirEnVsCode } from './herramientas/editor';
 import { Terminal } from './herramientas/terminal';
-import { bloqueEnvIa, ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
+import { ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
+import { bloqueEnvIa } from './ia/envIa';
 import { completarPlataforma, crearPlataforma } from './plataforma/index';
 import { nombreEjecutable } from './plataforma/sistema';
 import type { Ejecutor, Plataforma } from './plataforma/tipos';
@@ -999,7 +1000,11 @@ export class Nucleo {
 
   async bloqueEnvIa(): Promise<string> {
     await this.refrescarPuertoOllama();
-    return bloqueEnvIa(this.puertoOllama.valor);
+    const urlBase = `http://127.0.0.1:${this.puertoOllama.valor}`;
+    return bloqueEnvIa(
+      { id: 'ollama', tipo: 'ollama', nombre: 'Ollama', urlBase, modelo: null },
+      '',
+    );
   }
 
   modelosSugeridos(): string[] {

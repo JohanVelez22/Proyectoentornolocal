@@ -16,7 +16,7 @@ import {
   type OpcionesReceta,
   type PreferenciasUi,
 } from '@pel/core';
-import { SECRETOS_NO_DISPONIBLES, type SecretosGithub } from './secretos';
+import { SECRETOS_NO_DISPONIBLES, type AlmacenSecretos } from './secretos';
 import {
   CANAL_EVENTO,
   EVENTOS_IPC,
@@ -153,10 +153,18 @@ export interface VentanaLike {
 
 export type NucleoIpc = Nucleo;
 
-/** Lo que usa el IPC del almacén del token de GitHub (nunca devuelve el token al renderer). */
+/** Lo que usa el IPC del almacén de secretos (nunca devuelve un secreto al renderer). */
 export type SecretosIpc = Pick<
-  SecretosGithub,
-  'guardarTokenGithub' | 'leerTokenGithub' | 'borrarTokenGithub' | 'hayTokenGithub'
+  AlmacenSecretos,
+  | 'guardar'
+  | 'leer'
+  | 'borrar'
+  | 'hay'
+  | 'estado'
+  | 'guardarTokenGithub'
+  | 'leerTokenGithub'
+  | 'borrarTokenGithub'
+  | 'hayTokenGithub'
 >;
 
 /**

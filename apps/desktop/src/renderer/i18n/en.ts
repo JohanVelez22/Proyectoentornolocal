@@ -189,6 +189,25 @@ export const en: Textos = {
         'Some profiles are outside the Firefox folder: turn them on from CA trust, with their own confirmation.',
       'confianza.node_variable_cambiada':
         'NODE_EXTRA_CA_CERTS no longer points to the WolfCore Dev authority (it was changed by hand): it was not deleted.',
+      'ia.clave_invalida': 'The provider rejected the key: check it or create a new one.',
+      'ia.sin_saldo': 'The provider account has no balance or quota left.',
+      'ia.limite': 'The provider is rate limiting requests: wait a moment and try again.',
+      'ia.region': 'The provider does not serve your country or region.',
+      'ia.sin_red': 'Could not connect to the provider: check the network or the base URL.',
+      'ia.url_invalida':
+        'The base URL is not valid: use https:// (or http:// only to 127.0.0.1 or localhost), without user or password.',
+      'ia.plazo': 'The provider did not answer within {segundos} s.',
+      'ia.respuesta_rara': 'The provider returned something unexpected.',
+      'ia.cancelado': 'The request to the provider was cancelled.',
+      'ia.sin_clave': 'This provider needs a key: save it first.',
+      'ia.clave_mal_formada': 'The key is not valid (no spaces or line breaks).',
+      'ia.modelo_invalido': 'The model name is not valid.',
+      'ia.modelo_no_disponible': 'The model does not exist or your account has no access to it.',
+      'ia.proveedor_invalido': 'The provider settings are not valid.',
+      'ia.env_conflicto':
+        'The .env already defines {claves} with another value: confirm if you want to replace it.',
+      'ia.env_sin_confirmar':
+        'Confirm that you want to write the key to the .env (it is stored in plain text).',
     },
   },
   avisoInicio: {

@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ClienteOllama, SUGERIDOS, bloqueEnvIa } from '../src/ia/ollama';
+import { ClienteOllama, SUGERIDOS } from '../src/ia/ollama';
 import type { ProgresoIa } from '../src/eventos';
 import { carpetaTemporal } from './temporales';
 
@@ -219,16 +219,7 @@ describe('ClienteOllama', () => {
     expect(c.cancelarDescarga('LLAMA3.2')).toBe(true);
   });
 
-  it('bloqueEnvIa usa el puerto indicado', () => {
-    expect(bloqueEnvIa(11500)).toBe(
-      'OLLAMA_BASE_URL=http://127.0.0.1:11500\nOPENAI_BASE_URL=http://127.0.0.1:11500/v1',
-    );
-  });
-
   it('constantes', () => {
     expect(SUGERIDOS).toEqual(['llama3.2', 'qwen2.5-coder', 'mistral', 'nomic-embed-text']);
-    expect(bloqueEnvIa()).toBe(
-      'OLLAMA_BASE_URL=http://127.0.0.1:11434\nOPENAI_BASE_URL=http://127.0.0.1:11434/v1',
-    );
   });
 });

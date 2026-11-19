@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TIPOS_AVISO, type TipoAviso } from './avisos/tipos';
+import { ConfigIaSchema } from './ia/proveedores';
 
 export const TIPOS_SITIO = [
   'laravel',
@@ -319,6 +320,11 @@ export const ConfigSchema = z.object({
         .prefault({}),
     })
     .prefault({}),
+  /**
+   * Proveedores de IA en la nube (id, tipo, nombre, URL base, modelo). Las claves NUNCA van
+   * aquí: viven cifradas en etc/secretos/ y solo las lee el proceso principal.
+   */
+  ia: ConfigIaSchema,
   /** Preferencias de la interfaz (tema, idioma, acento, asistente de primer uso). */
   ui: PreferenciasUiSchema.catch(() => PreferenciasUiSchema.parse({})),
 });

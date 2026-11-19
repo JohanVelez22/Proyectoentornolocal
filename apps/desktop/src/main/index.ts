@@ -19,7 +19,7 @@ import { crearBandeja, menuBandeja, type AccionesBandeja } from './bandeja';
 import { textosMain } from './textos';
 import { programarDoctorAlIniciar } from './doctorInicio';
 import { ControlMetricas, registrarIpc } from './ipc';
-import { SecretosGithub } from './secretos';
+import { AlmacenSecretos } from './secretos';
 import { registrarFinDeSesion, topeCierre } from './sesion';
 import { carpetaExistente, urlHttp } from './validacion';
 
@@ -251,8 +251,9 @@ if (!app.requestSingleInstanceLock()) {
     }
     const v = crearVentana(n.rutas);
     ventana = v;
-    // El token de GitHub vive cifrado en etc/github.token: solo este proceso lo lee.
-    const secretos = new SecretosGithub(n.rutas.tokenGithub(), safeStorage);
+    // Token de GitHub y claves de IA: cifrados en etc/secretos/ (solo este proceso los lee). El
+    // token viejo de etc/github.token pasa solo al almacén nuevo la primera vez que se lee.
+    const secretos = new AlmacenSecretos(n.rutas.secretos(), n.rutas.tokenGithub(), safeStorage);
     n.fijarProveedorTokenGithub(() => secretos.leerTokenGithub());
     // Métricas solo con la ventana visible (oculta en la bandeja o minimizada: en pausa).
     const metricas = new ControlMetricas(n);

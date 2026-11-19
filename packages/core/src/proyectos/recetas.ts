@@ -45,6 +45,9 @@ const SECRETOS: [RegExp, string][] = [
   // Tokens de GitHub
   [/\bgithub_pat_[A-Za-z0-9_]+/g, 'github_pat_***'],
   [/\b(gh[pousr])_[A-Za-z0-9]+/g, '$1_***'],
+  // Claves de IA (OpenAI y compatibles, Anthropic, Google)
+  [/\bsk-[A-Za-z0-9_-]{16,}/g, 'sk-***'],
+  [/\bAIza[0-9A-Za-z_-]{30,}/g, 'AIza***'],
 ];
 
 /**

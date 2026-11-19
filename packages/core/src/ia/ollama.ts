@@ -1,6 +1,14 @@
 import { readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import type { ProgresoIa } from '../eventos';
+import { forma, numero, objeto, pedirJsonIa } from './http';
+import {
+  ordenarModelos,
+  validarModeloIa,
+  type ClienteIa,
+  type ContextoCliente,
+  type ModeloIa,
+} from './proveedores';
 
 export const SUGERIDOS = ['llama3.2', 'qwen2.5-coder', 'mistral', 'nomic-embed-text'];
 
@@ -13,12 +21,6 @@ const MS_LISTA = 5_000;
 const MS_PROBAR = 120_000;
 const MS_SIN_DATOS = 60_000;
 const MS_ENTRE_EVENTOS = 100; // como mucho 10 eventos por segundo y modelo
-
-/** Variables para que el código de un sitio use la IA local. */
-export function bloqueEnvIa(puerto = 11434): string {
-  const base = `http://127.0.0.1:${puerto}`;
-  return `OLLAMA_BASE_URL=${base}\nOPENAI_BASE_URL=${base}/v1`;
-}
 
 export interface ModeloOllama {
   nombre: string;
@@ -306,4 +308,69 @@ export class ClienteOllama {
     };
     return sumar(this.op.modelosDir());
   }
+}
+
+/**
+ * Adaptador de Ollama a `ClienteIa` (para un proveedor `ollama` de la lista, local o remoto):
+ * `GET /api/tags` y `POST /api/chat` sin flujo, con `num_predict` como tope de la respuesta.
+ * Sin clave; si se configura una (Ollama detrás de un proxy), va como `Authorization: Bearer`.
+ */
+export function clienteIaOllama(ctx: ContextoCliente): ClienteIa {
+  const cabeceras = (clave: string | null): Record<string, string> =>
+    clave ? { authorization: `Bearer ${clave}` } : {};
+  return {
+    async modelos(clave, o) {
+      const k = ctx.exigirClave(clave);
+      const d = objeto(
+        await pedirJsonIa({
+          tipo: ctx.tipo,
+          url: `${ctx.base}/api/tags`,
+          metodo: 'GET',
+          cabeceras: cabeceras(k),
+          clave: k,
+          ...(o?.senal ? { senal: o.senal } : {}),
+          plazoMs: ctx.plazoMs,
+          fetchImpl: ctx.fetchImpl,
+        }),
+      );
+      if (!d || !Array.isArray(d.models)) throw forma();
+      const lista: ModeloIa[] = [];
+      for (const m of d.models) {
+        const n = objeto(m)?.name;
+        if (typeof n === 'string' && n) lista.push({ id: n, nombre: n });
+      }
+      return ordenarModelos(lista);
+    },
+
+    async mensaje(clave, modelo, texto, o) {
+      validarModeloIa(modelo);
+      const k = ctx.exigirClave(clave);
+      const d = objeto(
+        await pedirJsonIa({
+          tipo: ctx.tipo,
+          url: `${ctx.base}/api/chat`,
+          metodo: 'POST',
+          cabeceras: cabeceras(k),
+          cuerpo: {
+            model: modelo,
+            messages: [{ role: 'user', content: texto }],
+            stream: false,
+            options: { num_predict: ctx.maxTokens(o) },
+          },
+          clave: k,
+          ...(o?.senal ? { senal: o.senal } : {}),
+          plazoMs: ctx.plazoMs,
+          fetchImpl: ctx.fetchImpl,
+        }),
+      );
+      const contenido = objeto(d?.message)?.content;
+      if (typeof contenido !== 'string') throw forma();
+      const entrada = numero(d?.prompt_eval_count);
+      const salida = numero(d?.eval_count);
+      return {
+        texto: contenido,
+        ...(entrada !== undefined && salida !== undefined ? { tokens: { entrada, salida } } : {}),
+      };
+    },
+  };
 }

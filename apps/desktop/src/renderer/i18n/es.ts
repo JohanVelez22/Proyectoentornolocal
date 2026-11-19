@@ -192,6 +192,26 @@ export const es = {
         'Hay perfiles fuera de la carpeta de Firefox: actívelos desde Confianza de la CA, con su confirmación aparte.',
       'confianza.node_variable_cambiada':
         'NODE_EXTRA_CA_CERTS ya no apunta a la autoridad de WolfCore Dev (se cambió a mano): no se borró.',
+      'ia.clave_invalida': 'El proveedor rechazó la clave: revísela o genere una nueva.',
+      'ia.sin_saldo': 'La cuenta del proveedor no tiene saldo o cuota disponible.',
+      'ia.limite': 'El proveedor limitó las peticiones: espere un momento y vuelva a probar.',
+      'ia.region': 'El proveedor no da servicio desde su país o región.',
+      'ia.sin_red': 'No se pudo conectar con el proveedor: revise la red o la URL base.',
+      'ia.url_invalida':
+        'La URL base no es válida: use https:// (o http:// solo hacia 127.0.0.1 o localhost), sin usuario ni clave.',
+      'ia.plazo': 'El proveedor no respondió en {segundos} s.',
+      'ia.respuesta_rara': 'El proveedor respondió algo inesperado.',
+      'ia.cancelado': 'Se canceló la petición al proveedor.',
+      'ia.sin_clave': 'Este proveedor necesita una clave: guárdela primero.',
+      'ia.clave_mal_formada':
+        'La clave no tiene un formato válido (sin espacios ni saltos de línea).',
+      'ia.modelo_invalido': 'El nombre del modelo no es válido.',
+      'ia.modelo_no_disponible': 'El modelo no existe o su cuenta no tiene acceso a él.',
+      'ia.proveedor_invalido': 'La configuración del proveedor no es válida.',
+      'ia.env_conflicto':
+        'El .env ya define {claves} con otro valor: confirme si quiere reemplazarlo.',
+      'ia.env_sin_confirmar':
+        'Confirme que quiere escribir la clave en el .env (queda en texto plano).',
     },
   },
   avisoInicio: {

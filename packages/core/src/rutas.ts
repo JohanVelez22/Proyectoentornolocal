@@ -40,6 +40,14 @@ export class Rutas {
   tokenGithub(): string {
     return path.join(this.base, 'etc', 'github.token');
   }
+  /** Secretos cifrados con safeStorage (token de GitHub, claves de IA): etc/secretos/. */
+  secretos(): string {
+    return path.join(this.base, 'etc', 'secretos');
+  }
+  /** Copias con fecha de los .env y .gitignore de proyectos antes de escribirlos. */
+  respaldosEnv(): string {
+    return path.join(this.base, 'etc', 'respaldos', 'env');
+  }
   nginxConf(): string {
     return path.join(this.base, 'etc', 'nginx', 'nginx.conf');
   }

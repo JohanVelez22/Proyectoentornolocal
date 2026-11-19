@@ -945,6 +945,12 @@ describe('IPC de la Etapa B', () => {
         guardado = null;
       }),
       hayTokenGithub: vi.fn(() => guardado !== null),
+      // Almacén genérico (claves de IA): sin uso en estas rutas.
+      guardar: vi.fn(async () => undefined),
+      leer: vi.fn(async () => null),
+      borrar: vi.fn(async () => undefined),
+      hay: vi.fn(() => false),
+      estado: vi.fn(async () => ({ configurada: false, final: null })),
     };
   }
 

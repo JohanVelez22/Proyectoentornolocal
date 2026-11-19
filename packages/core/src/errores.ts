@@ -107,6 +107,23 @@ export const PARAMETROS_ERROR = {
   'firefox.error': [],
   'firefox.fuera': [],
   'confianza.node_variable_cambiada': [],
+  // IA en la nube (nunca llevan la clave: `detalle` sale de sinSecretosIa)
+  'ia.clave_invalida': [],
+  'ia.sin_saldo': [],
+  'ia.limite': [],
+  'ia.region': [],
+  'ia.sin_red': [],
+  'ia.url_invalida': [],
+  'ia.plazo': ['segundos'],
+  'ia.respuesta_rara': ['estado', 'detalle'],
+  'ia.cancelado': [],
+  'ia.sin_clave': [],
+  'ia.clave_mal_formada': [],
+  'ia.modelo_invalido': [],
+  'ia.modelo_no_disponible': [],
+  'ia.proveedor_invalido': [],
+  'ia.env_conflicto': ['claves'],
+  'ia.env_sin_confirmar': [],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;
