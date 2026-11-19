@@ -215,5 +215,8 @@ Ubicación propuesta; se confirma y se convierte en tareas al retomar la Etapa C
 | Tareas programadas por sitio; túneles ngrok/Expose/Tailscale (ya estaban) | D |
 | Herramientas: QR de WiFi; imagen → .ico/.png; buscar texto en carpeta/archivo; comprimir PDF/imágenes/zip con peso antes y después | D |
 | Auditoría de contraseñas de BD: solo detectar contraseñas débiles contra una lista corta de las más comunes, con el límite explicado en la interfaz; sin fuerza bruta (alcance a confirmar con el usuario) | D |
+| Tarjeta del proyecto: "Terminal aquí" pasa a "Terminal"; acciones como íconos con tooltip (claro y oscuro); botón de base de datos (Adminer y phpMyAdmin con la base del proyecto) | QA, al retomar, junto al fallo de "Terminal" |
+| Terminal configurable: detectar PowerShell, Windows Terminal, cmd, Git Bash, pwsh (y la del sistema en Linux/macOS) y elegir o fijar una predeterminada | QA, al retomar |
+| Conversor de documentos local (docx, xlsx, pptx, pdf, csv, md, odt) con librerías de licencia permisiva; herramientas pesadas como LibreOffice solo opcionales y con aviso; nada sale del equipo | D |
 | Visor de esquema/diagrama de la base (tablas, relaciones, PK/FK) | F |
 | Repaso analítico de ServBay, FlyEnv, Flock, EnvKit, Laragon, Herd, Lerd, DBngin, Local y MAMP; actualizar la matriz | Tarea de bajo costo al retomar |
