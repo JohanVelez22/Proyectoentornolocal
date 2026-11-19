@@ -3,6 +3,13 @@
     'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont,
     'Helvetica Neue', Arial, sans-serif;
   --fuente-mono: 'Cascadia Mono', 'Cascadia Code', Consolas, 'SF Mono', Menlo, monospace;
+  /* Acento (App.vue los cambia según el tema y la preferencia). */
+  --acento: #4f5bd5;
+  --acento-rgb: 79, 91, 213;
+  --acento-claro: #6470e0;
+  --acento-oscuro: #3d48b8;
+  /* Duración de las transiciones de la interfaz. */
+  --transicion: 150ms;
 }
 
 html,

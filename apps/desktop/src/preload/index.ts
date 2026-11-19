@@ -170,6 +170,10 @@ const api: ApiEntorno = {
     detener: (sitioId, procesoId) => invocar('procesos.detener', sitioId, procesoId),
     estados: (sitioId) => invocar('procesos.estados', sitioId),
   },
+  preferencias: {
+    leer: () => invocar('preferencias.leer'),
+    guardar: (cambios) => invocar('preferencias.guardar', cambios),
+  },
   vigilar: {
     sugerencias: () => invocar('vigilar.sugerencias'),
     cambiarCarpeta: (carpeta) => invocar('vigilar.cambiarCarpeta', carpeta),

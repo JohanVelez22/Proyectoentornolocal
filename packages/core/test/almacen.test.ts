@@ -49,6 +49,39 @@ describe('Almacen', () => {
     expect(await a.leer()).toEqual(c);
     expect((await readdir(join(rutas.config(), '..'))).some((f) => f.endsWith('.tmp'))).toBe(false);
   });
+  it('un config.json viejo sin `ui` carga con las preferencias por defecto y no es corrupto', async () => {
+    const viejo = {
+      version: 1,
+      sitios: [],
+      proyectos: { carpetaVigilada: 'C:/Proyectos' },
+      servicios: { nginx: { version: '1.27.0', puerto: 8080 } },
+    };
+    await writeFile(rutas.config(), JSON.stringify(viejo));
+    const c = await new Almacen(rutas).leer();
+    expect(c.servicios.nginx.puerto).toBe(8080);
+    expect(c.proyectos.carpetaVigilada).toBe('C:/Proyectos');
+    expect(c.ui).toEqual({ tema: 'sistema', idioma: null, acento: null, asistenteVisto: false });
+    const archivos = await readdir(join(rutas.config(), '..'));
+    expect(archivos.some((f) => f.startsWith('config.corrupto'))).toBe(false);
+  });
+  it('un `ui` con valores raros cae a los valores por defecto sin perder el resto', async () => {
+    await writeFile(
+      rutas.config(),
+      JSON.stringify({
+        servicios: { nginx: { puerto: 8081 } },
+        ui: { tema: 'rosa', idioma: 'fr', acento: 'rojo', asistenteVisto: 'si' },
+      }),
+    );
+    const c = await new Almacen(rutas).leer();
+    expect(c.servicios.nginx.puerto).toBe(8081);
+    expect(c.ui).toEqual({ tema: 'sistema', idioma: null, acento: null, asistenteVisto: false });
+    await writeFile(rutas.config(), JSON.stringify({ ui: 'texto', https: { puerto: 8443 } }));
+    const d = await new Almacen(rutas).leer();
+    expect(d.https.puerto).toBe(8443);
+    expect(d.ui.tema).toBe('sistema');
+    const archivos = await readdir(join(rutas.config(), '..'));
+    expect(archivos.some((f) => f.startsWith('config.corrupto'))).toBe(false);
+  });
   it('JSON corrupto se renombra y devuelve la config por defecto', async () => {
     await writeFile(rutas.config(), '{no es json');
     const c = await new Almacen(rutas).leer();

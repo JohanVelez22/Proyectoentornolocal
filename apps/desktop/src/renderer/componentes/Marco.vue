@@ -205,8 +205,8 @@ onBeforeUnmount(() => {
   height: 32px;
   border-radius: 9px;
   color: #fff;
-  background: linear-gradient(135deg, #5b67e6, #3f49b8);
-  box-shadow: 0 2px 8px rgba(79, 91, 213, 0.35);
+  background: linear-gradient(135deg, var(--acento-claro), var(--acento-oscuro));
+  box-shadow: 0 2px 8px rgba(var(--acento-rgb), 0.35);
   flex: none;
 }
 .marca-texto {

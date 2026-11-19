@@ -111,13 +111,13 @@ async function elegido(e: Event): Promise<void> {
   padding: 0 14px;
   height: 34px;
   border-radius: 6px;
-  background: #4f5bd5;
+  background: var(--acento);
   color: #fff;
   font-size: 14px;
   cursor: pointer;
 }
 .boton:focus-within {
-  outline: 2px solid rgba(79, 91, 213, 0.5);
+  outline: 2px solid rgba(var(--acento-rgb), 0.5);
   outline-offset: 2px;
 }
 .boton input {

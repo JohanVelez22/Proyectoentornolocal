@@ -1,7 +1,15 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { PasoRecetaSchema, validarUrlGit, type Nucleo, type OpcionesReceta } from '@pel/core';
+import {
+  PasoRecetaSchema,
+  validarUrlGit,
+  type CambiosPreferenciasUi,
+  type IdiomaUi,
+  type Nucleo,
+  type OpcionesReceta,
+  type PreferenciasUi,
+} from '@pel/core';
 import { SECRETOS_NO_DISPONIBLES, type SecretosGithub } from './secretos';
 import {
   CANAL_EVENTO,
@@ -261,6 +269,15 @@ export interface OpcionesIpc {
   seguimientos?: Seguimientos;
   /** Carpeta de proyectos sin carpeta vigilada (`C:\\Proyectos`); se puede cambiar en pruebas. */
   carpetaProyectosPorDefecto?: string;
+  /** Idioma del sistema (`app.getLocale()`), para elegir el de la interfaz la primera vez. */
+  idiomaSistema?: () => string;
+  /** Aplica tema e idioma al proceso principal (`nativeTheme.themeSource`, bandeja, diálogos). */
+  aplicarPreferencias?: (p: PreferenciasUi) => void;
+}
+
+/** 'es' si el sistema está en español (es, es-419, es-AR…); si no, 'en'. */
+export function idiomaDeLocale(locale: string): IdiomaUi {
+  return /^es(?:[-_]|$)/i.test(locale.trim()) ? 'es' : 'en';
 }
 
 /** Lo que ve cada manejador además del núcleo: el sistema, las rutas elegidas y el emisor. */
@@ -272,6 +289,8 @@ type Contexto = ApiSistema & {
   /** webContents que hizo la llamada (para atar los seguimientos de registros). */
   emisor: unknown;
   carpetaProyectosPorDefecto: string;
+  idiomaSistema: () => string;
+  aplicarPreferencias: (p: PreferenciasUi) => void;
 };
 
 /** Opciones de ejecución de receta: ids acotados y receta validada (archivos de diálogos). */
@@ -667,6 +686,24 @@ const TABLA: Record<RutaIpc, Manejador> = {
     n.detenerProceso(idCorto(sitioId, 'sitio'), idCorto(procesoId, 'proceso', 64)),
   'procesos.estados': (n, _s, sitioId) => n.estadosProcesos(idCorto(sitioId, 'sitio')),
 
+  // ---- Preferencias de la interfaz ----
+  'preferencias.leer': async (n, s) => {
+    let p = await n.preferenciasUi();
+    if (p.idioma === null) {
+      p = await n.guardarPreferenciasUi({ idioma: idiomaDeLocale(s.idiomaSistema()) });
+    }
+    s.aplicarPreferencias(p);
+    return p;
+  },
+  // El núcleo valida cada campo de forma estricta (claves desconocidas o valores raros: error).
+  'preferencias.guardar': async (n, s, cambios) => {
+    const p = await n.guardarPreferenciasUi(
+      objetoPlano<CambiosPreferenciasUi>(cambios, 'preferencias'),
+    );
+    s.aplicarPreferencias(p);
+    return p;
+  },
+
   // ---- Carpeta vigilada ----
   'vigilar.sugerencias': (n) => n.sugerenciasProyectos(),
   'vigilar.cambiarCarpeta': async (n, s, carpeta) =>
@@ -796,6 +833,8 @@ export function registrarIpc(
     seguimientos,
     carpetaProyectosPorDefecto:
       opciones.carpetaProyectosPorDefecto ?? CARPETA_PROYECTOS_POR_DEFECTO,
+    idiomaSistema: opciones.idiomaSistema ?? (() => 'es'),
+    aplicarPreferencias: opciones.aplicarPreferencias ?? (() => undefined),
   };
   for (const [ruta, fn] of Object.entries(TABLA) as [RutaIpc, Manejador][]) {
     ipcMain.handle(`${PREFIJO_CANAL}${ruta}`, async (e, ...args) => {

@@ -190,6 +190,41 @@ export const ArchivoCredencialesSchema = z
   .prefault({} as never);
 export type ArchivoCredenciales = Partial<Record<ClaveCredencial, Credenciales>>;
 
+/** Temas de la interfaz: 'sistema' sigue al de Windows. */
+export const TEMAS_UI = ['sistema', 'claro', 'oscuro'] as const;
+export type TemaUi = (typeof TEMAS_UI)[number];
+/** Idiomas de la interfaz. */
+export const IDIOMAS_UI = ['es', 'en'] as const;
+export type IdiomaUi = (typeof IDIOMAS_UI)[number];
+/** Acento de la interfaz: un color #rrggbb. */
+export const ACENTO_UI = /^#[0-9a-f]{6}$/i;
+
+/**
+ * Preferencias de la interfaz (`config.json` → `ui`). Cada campo cae a su valor por defecto si
+ * viene mal (`catch`): un valor raro aquí nunca debe mandar todo el config a `corrupto`.
+ */
+export const PreferenciasUiSchema = z
+  .object({
+    tema: z.enum(TEMAS_UI).default('sistema').catch('sistema'),
+    /** null = aún no se eligió: la ventana lo detecta con el idioma del sistema la primera vez. */
+    idioma: z.enum(IDIOMAS_UI).nullable().default(null).catch(null),
+    /** null = el acento por defecto (índigo). */
+    acento: z.string().regex(ACENTO_UI).nullable().default(null).catch(null),
+    /** El asistente de primer uso ya se completó u omitió. */
+    asistenteVisto: z.boolean().default(false).catch(false),
+  })
+  .prefault({});
+export type PreferenciasUi = z.infer<typeof PreferenciasUiSchema>;
+
+/** Cambios que pide la interfaz: estrictos (un valor no válido es un error, no un reinicio). */
+export const CambiosPreferenciasUiSchema = z.strictObject({
+  tema: z.enum(TEMAS_UI).optional(),
+  idioma: z.enum(IDIOMAS_UI).optional(),
+  acento: z.string().regex(ACENTO_UI).nullable().optional(),
+  asistenteVisto: z.boolean().optional(),
+});
+export type CambiosPreferenciasUi = z.infer<typeof CambiosPreferenciasUiSchema>;
+
 export const ConfigSchema = z.object({
   version: z.literal(1).default(1),
   sitios: z.array(SitioSchema).default([]),
@@ -252,6 +287,8 @@ export const ConfigSchema = z.object({
         .prefault({}),
     })
     .prefault({}),
+  /** Preferencias de la interfaz (tema, idioma, acento, asistente de primer uso). */
+  ui: PreferenciasUiSchema.catch(() => PreferenciasUiSchema.parse({})),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 

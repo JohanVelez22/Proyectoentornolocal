@@ -60,7 +60,12 @@ import type {
   Sitio,
   TipoSitio,
 } from './tipos';
-import { IDS_SERVICIO_DATOS } from './tipos';
+import {
+  CambiosPreferenciasUiSchema,
+  IDS_SERVICIO_DATOS,
+  type CambiosPreferenciasUi,
+  type PreferenciasUi,
+} from './tipos';
 import { Tuneles } from './tuneles/tuneles';
 // Registran sus DefServicio al cargarse: el núcleo no depende de que alguien importe index.ts.
 import './servicios/bd/mysql';
@@ -1257,6 +1262,29 @@ export class Nucleo {
       c.proyectos.carpetaVigilada = carpeta;
     });
     await this.vigilante.vigilar(carpeta);
+  }
+
+  // ---- Preferencias de la interfaz ----
+
+  /** Tema, idioma, acento y asistente de primer uso (`config.json` → `ui`). */
+  async preferenciasUi(): Promise<PreferenciasUi> {
+    return (await this.config.leer()).ui;
+  }
+
+  /** Guarda solo los campos dados (validados) y devuelve las preferencias resultantes. */
+  async guardarPreferenciasUi(cambios: CambiosPreferenciasUi): Promise<PreferenciasUi> {
+    const p = CambiosPreferenciasUiSchema.safeParse(cambios);
+    if (!p.success) throw new Error('Preferencias no válidas.');
+    let res: PreferenciasUi | null = null;
+    await this.sitios.modificarConfig((c) => {
+      const nuevas: PreferenciasUi = { ...c.ui };
+      for (const [k, v] of Object.entries(p.data)) {
+        if (v !== undefined) (nuevas as Record<string, unknown>)[k] = v;
+      }
+      c.ui = nuevas;
+      res = nuevas;
+    });
+    return res ?? (await this.config.leer()).ui;
   }
 
   // ---- Métricas y registros ----

@@ -1268,6 +1268,7 @@ export const en: Textos = {
       finalizarTexto: (nombre: string, pid: number) =>
         `${nombre} (PID ${pid}) will be closed without saving anything it has open. Only use this if you know that program is not needed.`,
       finalizado: (nombre: string) => `${nombre} ended`,
+      verPuertos: 'View ports',
       errorPuertos: 'Could not check which programs are using the ports.',
     },
     procesos: {
@@ -1666,6 +1667,120 @@ export const en: Textos = {
       binario: (n: number) => `[binary, ${n} bytes]`,
       vacio: 'No messages yet.',
       tope: 'The last 500 messages are kept; each one is shown up to 10 KB.',
+    },
+  },
+  navGrupos: {
+    trabajo: 'Work',
+    entorno: 'Environment',
+    utilidades: 'Utilities',
+  },
+  barra: {
+    paleta: 'Search or run a command',
+    atajoPaleta: 'Ctrl+K',
+    tema: 'Change theme',
+    idioma: 'Change language',
+  },
+  preferencias: {
+    titulo: 'Appearance and language',
+    descripcion: 'Changes apply right away and are saved on this computer.',
+    tema: 'Theme',
+    temas: { sistema: 'System', claro: 'Light', oscuro: 'Dark' },
+    idioma: 'Language',
+    idiomas: { es: 'Español', en: 'English' },
+    acento: 'Accent color',
+    acentos: {
+      indigo: 'Indigo',
+      azul: 'Blue',
+      verde: 'Green',
+      violeta: 'Violet',
+      naranja: 'Orange',
+      rosa: 'Pink',
+    },
+    acentoPropio: (color: string) => `Custom (${color})`,
+    errorGuardar: 'Could not save the preference',
+    asistente: 'First-run wizard',
+    asistenteAyuda:
+      'Go through the initial steps again: projects folder, the basics, the CA, GitHub and the watched folder.',
+    asistenteAbrir: 'Open the wizard',
+  },
+  paleta: {
+    titulo: 'Command palette',
+    placeholder: 'Search for a screen, a service, a project or a tool…',
+    sinResultados: 'No command matches the search.',
+    ayuda: '↑ ↓ to move · Enter to run · Esc to close',
+    grupos: {
+      navegacion: 'Go to',
+      servicios: 'Services',
+      proyectos: 'Projects',
+      herramientas: 'Tools',
+      github: 'GitHub',
+      general: 'General',
+    },
+    irA: (pantalla: string) => `Go to ${pantalla}`,
+    encender: (servicio: string) => `Start ${servicio}`,
+    apagar: (servicio: string) => `Stop ${servicio}`,
+    iniciarTodo: 'Start all services',
+    detenerTodo: 'Stop all services',
+    abrirSitio: (nombre: string) => `Open ${nombre} in the browser`,
+    traerCambios: (nombre: string) => `Pull changes in ${nombre}`,
+    abrirHerramienta: (nombre: string) => `Open ${nombre}`,
+    clonar: 'Clone a repository from GitHub',
+    agregarProyecto: 'Add a project',
+    tema: (tema: string) => `Theme: ${tema}`,
+    idioma: (idioma: string) => `Language: ${idioma}`,
+    asistente: 'Open the first-run wizard',
+  },
+  asistenteInicio: {
+    titulo: 'Welcome to WolfCore Dev',
+    subtitulo:
+      'Five steps to get your environment ready. Nothing is installed or changed until you click the button in each step.',
+    paso: (n: number, total: number) => `Step ${n} of ${total}`,
+    anterior: 'Back',
+    siguiente: 'Next',
+    omitirTodo: 'Skip the wizard',
+    terminar: 'Finish',
+    hecho: 'Done',
+    reabrir: 'You can open it again from Settings.',
+    pasos: {
+      carpeta: {
+        titulo: 'Projects folder',
+        texto:
+          'Where you keep your projects. New repositories are cloned there, and it is the folder watched in the last step.',
+        elegir: 'Choose folder',
+        actual: (ruta: string) => `Chosen folder: ${ruta}`,
+        guardada: (ruta: string) => `Current folder: ${ruta}`,
+        ninguna: 'Not chosen: C:\\Proyectos is used if it exists.',
+      },
+      basicos: {
+        titulo: 'Install the basics',
+        texto:
+          'Nginx, PHP 8.4, Composer and Node LTS from their official sources, with verified checksums. Each one is installed only when you click its button.',
+        instalado: 'Installed',
+        instalar: (version: string) => `Install ${version}`,
+        sinVersion: 'No version in the catalog',
+        cargando: 'Looking for versions…',
+        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
+      },
+      ca: {
+        titulo: 'Trust the local authority',
+        texto:
+          'For .test sites to open over HTTPS without warnings, Windows must trust the WolfCore Dev authority. Windows will ask you to confirm.',
+        confiar: 'Trust the CA',
+        confiada: 'Windows already trusts the local authority.',
+      },
+      github: {
+        titulo: 'Connect GitHub',
+        texto:
+          'To see your repositories and clone them in one click. Use your GitHub CLI session or a personal token, stored encrypted on this computer.',
+      },
+      vigilar: {
+        titulo: 'Watch the folder',
+        texto:
+          'WolfCore Dev will suggest setting up each new folder that appears in the projects folder. Nothing is set up without your confirmation.',
+        activar: 'Watch this folder',
+        activa: (ruta: string) => `Watching ${ruta}`,
+        sinCarpeta: 'Choose the projects folder first (step 1).',
+      },
     },
   },
 };

@@ -1275,6 +1275,7 @@ export const es = {
       finalizarTexto: (nombre: string, pid: number) =>
         `Se cerrará ${nombre} (PID ${pid}) sin guardar lo que tenga abierto. Úselo solo si sabe que ese programa no hace falta.`,
       finalizado: (nombre: string) => `${nombre} finalizado`,
+      verPuertos: 'Ver puertos',
       errorPuertos: 'No se pudo revisar qué programas usan los puertos.',
     },
     procesos: {
@@ -1678,6 +1679,120 @@ export const es = {
       binario: (n: number) => `[binario, ${n} bytes]`,
       vacio: 'Sin mensajes todavía.',
       tope: 'Se guardan los últimos 500 mensajes; cada uno se muestra hasta 10 KB.',
+    },
+  },
+  navGrupos: {
+    trabajo: 'Trabajo',
+    entorno: 'Entorno',
+    utilidades: 'Utilidades',
+  },
+  barra: {
+    paleta: 'Buscar o ejecutar un comando',
+    atajoPaleta: 'Ctrl+K',
+    tema: 'Cambiar tema',
+    idioma: 'Cambiar idioma',
+  },
+  preferencias: {
+    titulo: 'Apariencia e idioma',
+    descripcion: 'Los cambios se aplican al instante y se guardan en este equipo.',
+    tema: 'Tema',
+    temas: { sistema: 'Sistema', claro: 'Claro', oscuro: 'Oscuro' },
+    idioma: 'Idioma',
+    idiomas: { es: 'Español', en: 'English' },
+    acento: 'Color de acento',
+    acentos: {
+      indigo: 'Índigo',
+      azul: 'Azul',
+      verde: 'Verde',
+      violeta: 'Violeta',
+      naranja: 'Naranja',
+      rosa: 'Rosa',
+    },
+    acentoPropio: (color: string) => `Personalizado (${color})`,
+    errorGuardar: 'No se pudo guardar la preferencia',
+    asistente: 'Asistente de primer uso',
+    asistenteAyuda:
+      'Vuelva a recorrer los pasos iniciales: carpeta de proyectos, lo básico, la CA, GitHub y la carpeta vigilada.',
+    asistenteAbrir: 'Abrir el asistente',
+  },
+  paleta: {
+    titulo: 'Paleta de comandos',
+    placeholder: 'Busque una pantalla, un servicio, un proyecto o una herramienta…',
+    sinResultados: 'Ningún comando coincide con la búsqueda.',
+    ayuda: '↑ ↓ para moverse · Enter para ejecutar · Esc para cerrar',
+    grupos: {
+      navegacion: 'Ir a',
+      servicios: 'Servicios',
+      proyectos: 'Proyectos',
+      herramientas: 'Herramientas',
+      github: 'GitHub',
+      general: 'General',
+    },
+    irA: (pantalla: string) => `Ir a ${pantalla}`,
+    encender: (servicio: string) => `Encender ${servicio}`,
+    apagar: (servicio: string) => `Apagar ${servicio}`,
+    iniciarTodo: 'Iniciar todos los servicios',
+    detenerTodo: 'Detener todos los servicios',
+    abrirSitio: (nombre: string) => `Abrir ${nombre} en el navegador`,
+    traerCambios: (nombre: string) => `Traer cambios en ${nombre}`,
+    abrirHerramienta: (nombre: string) => `Abrir ${nombre}`,
+    clonar: 'Clonar un repositorio desde GitHub',
+    agregarProyecto: 'Agregar un proyecto',
+    tema: (tema: string) => `Tema: ${tema}`,
+    idioma: (idioma: string) => `Idioma: ${idioma}`,
+    asistente: 'Abrir el asistente de primer uso',
+  },
+  asistenteInicio: {
+    titulo: 'Bienvenido a WolfCore Dev',
+    subtitulo:
+      'Cinco pasos para dejar el entorno listo. Nada se instala ni se cambia hasta que usted pulse el botón de cada paso.',
+    paso: (n: number, total: number) => `Paso ${n} de ${total}`,
+    anterior: 'Anterior',
+    siguiente: 'Siguiente',
+    omitirTodo: 'Omitir el asistente',
+    terminar: 'Terminar',
+    hecho: 'Hecho',
+    reabrir: 'Puede volver a abrirlo desde Ajustes.',
+    pasos: {
+      carpeta: {
+        titulo: 'Carpeta de proyectos',
+        texto:
+          'Dónde guarda sus proyectos. Ahí se clonan los repositorios nuevos y es la carpeta que se vigila en el último paso.',
+        elegir: 'Elegir carpeta',
+        actual: (ruta: string) => `Carpeta elegida: ${ruta}`,
+        guardada: (ruta: string) => `Carpeta actual: ${ruta}`,
+        ninguna: 'Sin elegir: se usa C:\\Proyectos si existe.',
+      },
+      basicos: {
+        titulo: 'Instalar lo básico',
+        texto:
+          'Nginx, PHP 8.4, Composer y Node LTS desde sus fuentes oficiales, con la huella verificada. Cada uno se instala solo al pulsar su botón.',
+        instalado: 'Instalado',
+        instalar: (version: string) => `Instalar ${version}`,
+        sinVersion: 'Sin versión en el catálogo',
+        cargando: 'Buscando versiones…',
+        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
+      },
+      ca: {
+        titulo: 'Confiar en la autoridad local',
+        texto:
+          'Para que los sitios .test abran por HTTPS sin avisos, Windows debe confiar en la autoridad de WolfCore Dev. Windows le pedirá confirmación.',
+        confiar: 'Confiar en la CA',
+        confiada: 'Windows ya confía en la autoridad local.',
+      },
+      github: {
+        titulo: 'Conectar GitHub',
+        texto:
+          'Para ver sus repositorios y clonarlos con un clic. Use la sesión de GitHub CLI o un token personal, que se guarda cifrado en este equipo.',
+      },
+      vigilar: {
+        titulo: 'Vigilar la carpeta',
+        texto:
+          'WolfCore Dev le sugerirá montar cada carpeta nueva que aparezca en la carpeta de proyectos. No se monta nada sin su confirmación.',
+        activar: 'Vigilar esta carpeta',
+        activa: (ruta: string) => `Vigilando ${ruta}`,
+        sinCarpeta: 'Elija primero la carpeta de proyectos (paso 1).',
+      },
     },
   },
 };

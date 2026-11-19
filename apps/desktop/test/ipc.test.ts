@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import {
   ControlMetricas,
+  idiomaDeLocale,
   registrarIpc,
   Seguimientos,
   type IpcMainLike,
@@ -496,6 +497,8 @@ describe('registrarIpc', () => {
         'procesos.iniciar',
         'procesos.detener',
         'procesos.estados',
+        'preferencias.leer',
+        'preferencias.guardar',
         'vigilar.sugerencias',
         'vigilar.cambiarCarpeta',
         'metricas.iniciar',
@@ -1376,5 +1379,60 @@ describe('IPC de la Etapa B', () => {
 
   it('la lista de rutas compartida coincide con la tabla del proceso principal', () => {
     expect(new Set(RUTAS_IPC).size).toBe(RUTAS_IPC.length);
+  });
+});
+
+describe('preferencias de la interfaz', () => {
+  it('idiomaDeLocale: español para es, es-419, es_AR; inglés para lo demás', () => {
+    expect(idiomaDeLocale('es')).toBe('es');
+    expect(idiomaDeLocale('es-419')).toBe('es');
+    expect(idiomaDeLocale('ES_ar')).toBe('es');
+    expect(idiomaDeLocale('en-US')).toBe('en');
+    expect(idiomaDeLocale('pt-BR')).toBe('en');
+    expect(idiomaDeLocale('estonian')).toBe('en');
+    expect(idiomaDeLocale('')).toBe('en');
+  });
+
+  it('leer detecta el idioma la primera vez, lo guarda y aplica el tema', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo } = nucleoFalso();
+    const base = { tema: 'oscuro', idioma: null, acento: null, asistenteVisto: false };
+    const crudo = nucleo as unknown as Record<string, Mock>;
+    crudo['preferenciasUi'] = vi.fn(async () => base);
+    crudo['guardarPreferenciasUi'] = vi.fn(async (c: object) => ({ ...base, ...c }));
+    const aplicarTema = vi.fn();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema, undefined, undefined, {
+      idiomaSistema: () => 'en-GB',
+      aplicarPreferencias: aplicarTema,
+    });
+    const r = (await canales.get('entorno:preferencias.leer')!({})) as {
+      valor: { idioma: string };
+    };
+    expect(r.valor.idioma).toBe('en');
+    expect(crudo['guardarPreferenciasUi']).toHaveBeenCalledWith({ idioma: 'en' });
+    expect(aplicarTema).toHaveBeenCalledWith(
+      expect.objectContaining({ tema: 'oscuro', idioma: 'en' }),
+    );
+  });
+
+  it('guardar pasa solo un objeto plano al núcleo y aplica el tema resultante', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo } = nucleoFalso();
+    const crudo = nucleo as unknown as Record<string, Mock>;
+    crudo['guardarPreferenciasUi'] = vi.fn(async () => ({
+      tema: 'claro',
+      idioma: 'es',
+      acento: null,
+      asistenteVisto: true,
+    }));
+    const aplicarTema = vi.fn();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema, undefined, undefined, {
+      aplicarPreferencias: aplicarTema,
+    });
+    const ok = await canales.get('entorno:preferencias.guardar')!({}, { tema: 'claro' });
+    expect(ok).toMatchObject({ ok: true });
+    expect(aplicarTema).toHaveBeenCalledWith(expect.objectContaining({ tema: 'claro' }));
+    const mal = await canales.get('entorno:preferencias.guardar')!({}, 'claro');
+    expect(mal).toMatchObject({ ok: false });
   });
 });

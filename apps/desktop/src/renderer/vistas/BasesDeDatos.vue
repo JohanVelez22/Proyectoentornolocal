@@ -644,8 +644,8 @@ function irAServicios(): void {
   margin-bottom: 16px;
   padding: 14px;
   border-radius: 12px;
-  border: 1px solid rgba(79, 91, 213, 0.3);
-  background: rgba(79, 91, 213, 0.05);
+  border: 1px solid rgba(var(--acento-rgb), 0.3);
+  background: rgba(var(--acento-rgb), 0.05);
 }
 .operacion-cabeza {
   display: flex;

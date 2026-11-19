@@ -1,4 +1,5 @@
 import { Menu, Tray, nativeImage } from 'electron';
+import type { TextosMain } from './textos';
 
 export interface AccionesBandeja {
   abrir(): void;
@@ -7,19 +8,24 @@ export interface AccionesBandeja {
   salir(): void;
 }
 
-export function crearBandeja(rutaIcono: string, a: AccionesBandeja): Tray {
+/** Menú de la bandeja en el idioma dado (se vuelve a armar al cambiar de idioma). */
+export function menuBandeja(tray: Tray, a: AccionesBandeja, t: TextosMain): void {
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: t.abrir, click: a.abrir },
+      { label: t.iniciarTodo, click: a.iniciarTodo },
+      { label: t.detenerTodo, click: a.detenerTodo },
+      { type: 'separator' },
+      { label: t.salir, click: a.salir },
+    ]),
+  );
+}
+
+export function crearBandeja(rutaIcono: string, a: AccionesBandeja, t: TextosMain): Tray {
   const icono = nativeImage.createFromPath(rutaIcono).resize({ width: 16, height: 16 });
   const tray = new Tray(icono);
   tray.setToolTip('WolfCore Dev');
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: 'Abrir', click: a.abrir },
-      { label: 'Iniciar todo', click: a.iniciarTodo },
-      { label: 'Detener todo', click: a.detenerTodo },
-      { type: 'separator' },
-      { label: 'Salir', click: a.salir },
-    ]),
-  );
+  menuBandeja(tray, a, t);
   tray.on('click', a.abrir);
   return tray;
 }

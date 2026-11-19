@@ -1165,6 +1165,27 @@ describe('Nucleo (Etapa B)', () => {
     expect(vigilar).toHaveBeenCalledWith(base);
   });
 
+  it('preferencias de la interfaz: por defecto, guardar parcial y rechazo estricto', async () => {
+    const n = await crear();
+    expect(await n.preferenciasUi()).toEqual({
+      tema: 'sistema',
+      idioma: null,
+      acento: null,
+      asistenteVisto: false,
+    });
+    expect(await n.guardarPreferenciasUi({ tema: 'oscuro', idioma: 'en' })).toMatchObject({
+      tema: 'oscuro',
+      idioma: 'en',
+      acento: null,
+    });
+    await n.guardarPreferenciasUi({ acento: '#0ea5e9' });
+    expect(await n.preferenciasUi()).toMatchObject({ tema: 'oscuro', acento: '#0ea5e9' });
+    await expect(n.guardarPreferenciasUi({ tema: 'rosa' } as never)).rejects.toThrow(/no válidas/);
+    await expect(n.guardarPreferenciasUi({ acento: 'red' })).rejects.toThrow(/no válidas/);
+    await expect(n.guardarPreferenciasUi({ otra: 1 } as never)).rejects.toThrow(/no válidas/);
+    expect((await n.preferenciasUi()).tema).toBe('oscuro');
+  });
+
   it('al cerrar detiene vigilancia, métricas y registros antes que el MCP', async () => {
     const n = await crear();
     const orden: string[] = [];

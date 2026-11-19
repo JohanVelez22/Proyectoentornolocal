@@ -237,7 +237,7 @@ watch(
   width: 36px;
   height: 36px;
   border-radius: 9px;
-  background: rgba(79, 91, 213, 0.12);
+  background: rgba(var(--acento-rgb), 0.12);
   color: #6470e0;
   flex: none;
 }

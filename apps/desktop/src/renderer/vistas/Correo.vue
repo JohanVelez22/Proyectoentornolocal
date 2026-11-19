@@ -284,7 +284,7 @@ function irAServicios(): void {
   height: 44px;
   border-radius: 12px;
   color: #6470e0;
-  background: rgba(79, 91, 213, 0.12);
+  background: rgba(var(--acento-rgb), 0.12);
   flex: none;
 }
 .contador-texto {

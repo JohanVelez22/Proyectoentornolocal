@@ -6,24 +6,44 @@ import {
   NMessageProvider,
   NNotificationProvider,
   darkTheme,
+  dateEnUS,
   dateEsAR,
+  enUS,
   esAR,
   useOsTheme,
 } from 'naive-ui';
-import { computed } from 'vue';
+import { computed, watchEffect } from 'vue';
 import Marco from './componentes/Marco.vue';
-import { temaClaro, temaOscuro } from './tema';
+import { idioma } from './i18n';
+import { esOscuro, usePreferencias } from './stores/preferencias';
+import { mezclar, primarioDe, temaDe } from './tema';
 
+const preferencias = usePreferencias();
 const osTheme = useOsTheme();
-const oscuro = computed(() => osTheme.value === 'dark');
+const oscuro = computed(() => esOscuro(preferencias.tema, osTheme.value === 'dark'));
+const ajustesTema = computed(() => temaDe(oscuro.value, preferencias.acento));
+const locale = computed(() => (idioma.value === 'es' ? esAR : enUS));
+const dateLocale = computed(() => (idioma.value === 'es' ? dateEsAR : dateEnUS));
+
+// El acento también llega a los estilos propios (bordes, fondos suaves, el logo).
+watchEffect(() => {
+  const p = primarioDe(preferencias.acento, oscuro.value);
+  const n = Number.parseInt(p.slice(1), 16);
+  const raiz = document.documentElement.style;
+  raiz.setProperty('--acento', p);
+  raiz.setProperty('--acento-rgb', `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`);
+  raiz.setProperty('--acento-claro', mezclar(p, 0.15));
+  raiz.setProperty('--acento-oscuro', mezclar(p, -0.2));
+  document.documentElement.dataset['tema'] = oscuro.value ? 'oscuro' : 'claro';
+});
 </script>
 
 <template>
   <NConfigProvider
     :theme="oscuro ? darkTheme : null"
-    :theme-overrides="oscuro ? temaOscuro : temaClaro"
-    :locale="esAR"
-    :date-locale="dateEsAR"
+    :theme-overrides="ajustesTema"
+    :locale="locale"
+    :date-locale="dateLocale"
     abstract
   >
     <NGlobalStyle />

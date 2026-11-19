@@ -85,7 +85,8 @@ describe('i18n', () => {
         else if (v && typeof v === 'object') recorrer(v);
       }
     };
-    recorrer(en);
+    // Los nombres de los idiomas van en su propio idioma ("Español" en ambos diccionarios).
+    recorrer({ ...en, preferencias: { ...en.preferencias, idiomas: {} } });
     expect(hojas.filter((h) => /[áéíóúñ¿¡]/.test(h))).toEqual([]);
   });
 

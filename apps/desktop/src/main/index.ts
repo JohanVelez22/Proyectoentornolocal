@@ -5,13 +5,15 @@ import {
   clipboard,
   dialog,
   ipcMain,
+  nativeTheme,
   safeStorage,
   shell,
   type Tray,
 } from 'electron';
-import { Nucleo, type Rutas } from '@pel/core';
+import { Nucleo, type IdiomaUi, type PreferenciasUi, type Rutas, type TemaUi } from '@pel/core';
 import type { ApiSistema } from '../shared/api';
-import { crearBandeja } from './bandeja';
+import { crearBandeja, menuBandeja, type AccionesBandeja } from './bandeja';
+import { textosMain } from './textos';
 import { ControlMetricas, registrarIpc } from './ipc';
 import { SecretosGithub } from './secretos';
 import { registrarFinDeSesion, topeCierre } from './sesion';
@@ -23,6 +25,8 @@ let nucleo: Nucleo | null = null;
 let saliendo = false;
 let preguntandoSalida = false;
 let cierreSistema: Promise<void> | null = null;
+let idioma: IdiomaUi | null = null;
+let accionesBandeja: AccionesBandeja | null = null;
 
 // Empaquetado, el icono va en resources/ (extraResources); en desarrollo, junto al código.
 const rutaIcono = app.isPackaged
@@ -69,6 +73,20 @@ const sistema: ApiSistema = {
     return r.canceled ? [] : r.filePaths;
   },
 };
+
+/** Tema de la ventana (barra de título, diálogos nativos y `prefers-color-scheme`). */
+function aplicarTema(tema: TemaUi): void {
+  nativeTheme.themeSource = tema === 'claro' ? 'light' : tema === 'oscuro' ? 'dark' : 'system';
+}
+
+/** Tema e idioma elegidos en la interfaz: ventana, bandeja y diálogos nativos. */
+function aplicarPreferencias(p: PreferenciasUi): void {
+  aplicarTema(p.tema);
+  const cambio = p.idioma !== idioma;
+  idioma = p.idioma;
+  if (cambio && bandeja && accionesBandeja)
+    menuBandeja(bandeja, accionesBandeja, textosMain(idioma));
+}
 
 function mostrarVentana(): void {
   if (!ventana || ventana.isDestroyed()) return;
@@ -166,8 +184,12 @@ async function salir(): Promise<void> {
     const opciones = {
       type: 'question' as const,
       title: 'WolfCore Dev',
-      message: '¿Apagar los servicios?',
-      buttons: ['Sí, apagar', 'No, dejarlos encendidos', 'Cancelar'],
+      message: textosMain(idioma).preguntaApagar,
+      buttons: [
+        textosMain(idioma).siApagar,
+        textosMain(idioma).noApagar,
+        textosMain(idioma).cancelar,
+      ],
       defaultId: 0,
       cancelId: 2,
     };
@@ -211,6 +233,14 @@ if (!app.requestSingleInstanceLock()) {
       return;
     }
     const n = nucleo;
+    // El tema guardado se aplica antes de crear la ventana (sin destello del tema contrario).
+    try {
+      const p = await n.preferenciasUi();
+      aplicarTema(p.tema);
+      idioma = p.idioma;
+    } catch {
+      // sin preferencias legibles: tema del sistema
+    }
     const v = crearVentana(n.rutas);
     ventana = v;
     // El token de GitHub vive cifrado en etc/github.token: solo este proceso lo lee.
@@ -233,15 +263,16 @@ if (!app.requestSingleInstanceLock()) {
       sistema,
       (e) => (e as { senderFrame?: unknown } | null)?.senderFrame === v.webContents.mainFrame,
       undefined,
-      { secretos, metricas },
+      { secretos, metricas, idiomaSistema: () => app.getLocale(), aplicarPreferencias },
     );
     n.iniciarSondeo();
-    bandeja = crearBandeja(rutaIcono, {
+    accionesBandeja = {
       abrir: mostrarVentana,
       iniciarTodo: () => void n.servicios.iniciarTodo().catch((e) => console.error(e)),
       detenerTodo: () => void n.detenerTodo().catch((e) => console.error(e)),
       salir: () => void salir(),
-    });
+    };
+    bandeja = crearBandeja(rutaIcono, accionesBandeja, textosMain(idioma));
   });
   // La app vive en la bandeja: no se cierra al ocultar la ventana.
   app.on('window-all-closed', () => undefined);

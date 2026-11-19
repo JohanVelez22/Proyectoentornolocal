@@ -265,7 +265,7 @@ function abrir(url: string): void {
   cursor: pointer;
 }
 .tile.clicable:hover {
-  border-color: rgba(79, 91, 213, 0.55);
+  border-color: rgba(var(--acento-rgb), 0.55);
 }
 .tile.clicable:focus-visible {
   outline: 2px solid #6470e0;

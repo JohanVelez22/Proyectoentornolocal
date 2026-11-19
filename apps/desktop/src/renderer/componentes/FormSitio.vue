@@ -591,7 +591,7 @@ function alCambiarVisible(v: boolean): void {
   width: 56px;
   height: 56px;
   border-radius: 14px;
-  background: rgba(79, 91, 213, 0.12);
+  background: rgba(var(--acento-rgb), 0.12);
   color: #6470e0;
   margin-bottom: 6px;
 }

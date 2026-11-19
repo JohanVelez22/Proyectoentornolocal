@@ -1,4 +1,6 @@
 import type {
+  CambiosPreferenciasUi,
+  PreferenciasUi,
   CierreConfirmacion,
   ConfigProyecto,
   Deteccion,
@@ -401,6 +403,15 @@ export interface ApiEntorno {
     /** Sin la ruta del log (se ve con `registros`, fuente `proy-<sitio>-<proceso>`). */
     estados(sitioId: string): Promise<EstadoProcesoPublico[]>;
   };
+  preferencias: {
+    /**
+     * Tema, idioma, acento y asistente visto. La primera vez el idioma sale del sistema
+     * (`app.getLocale()`) y queda guardado; el tema se aplica a la ventana (`nativeTheme`).
+     */
+    leer(): Promise<PreferenciasUi>;
+    /** Guarda solo los campos dados y aplica el tema; devuelve las preferencias resultantes. */
+    guardar(cambios: CambiosPreferenciasUi): Promise<PreferenciasUi>;
+  };
   vigilar: {
     sugerencias(): Promise<SugerenciaProyecto[]>;
     /** Carpeta elegida con `sistema.elegirCarpeta`, o null para dejar de vigilar. */
@@ -585,6 +596,8 @@ export const RUTAS_IPC = [
   'procesos.iniciar',
   'procesos.detener',
   'procesos.estados',
+  'preferencias.leer',
+  'preferencias.guardar',
   'vigilar.sugerencias',
   'vigilar.cambiarCarpeta',
   'metricas.iniciar',

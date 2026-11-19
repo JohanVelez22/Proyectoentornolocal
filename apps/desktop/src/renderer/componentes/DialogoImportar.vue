@@ -309,8 +309,8 @@ function cerrar(): void {
   margin-bottom: 14px;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid rgba(79, 91, 213, 0.3);
-  background: rgba(79, 91, 213, 0.08);
+  border: 1px solid rgba(var(--acento-rgb), 0.3);
+  background: rgba(var(--acento-rgb), 0.08);
   font-size: 12.5px;
   line-height: 1.45;
 }
