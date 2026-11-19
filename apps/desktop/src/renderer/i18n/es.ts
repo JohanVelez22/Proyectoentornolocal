@@ -129,6 +129,49 @@ export const es = {
       'proyectos.paso_no_omitible': 'El paso "Crear el sitio" no se puede omitir.',
       'mcp.token_invalido': 'El token del servidor MCP no es válido.',
       'mcp.solicitud_cancelada': 'El cliente MCP canceló la solicitud: no se ejecutó la acción.',
+      'doctor.puerto_ocupado': 'El puerto {puerto} de {servicio} lo usa otro programa ({proceso}).',
+      'doctor.puerto_iis': 'IIS ({programa}) ocupa el puerto {puerto} de {servicio}.',
+      'doctor.puerto_http_sys':
+        'Un servicio de Windows ({programa}) ocupa el puerto {puerto} de {servicio}.',
+      'doctor.puerto_flyenv':
+        '{programa} ocupa el puerto {puerto} de {servicio}. Ciérrelo o cambie el puerto de WolfCore Dev.',
+      'doctor.puerto_xampp': '{programa} ocupa el puerto {puerto} de {servicio}.',
+      'doctor.puerto_skype': '{programa} ocupa el puerto {puerto} de {servicio}.',
+      'doctor.puerto_reservado':
+        'El puerto {puerto} de {servicio} está en un rango reservado por Windows ({desde}-{hasta}: Hyper-V, WSL o Docker).',
+      'doctor.ca_por_vencer': 'La autoridad de certificados de WolfCore Dev vence en {dias} días.',
+      'doctor.ca_vencida': 'La autoridad de certificados de WolfCore Dev venció.',
+      'doctor.certificado_por_vencer': 'El certificado de {dominio} vence en {dias} días.',
+      'doctor.certificado_vencido': 'El certificado de {dominio} venció.',
+      'doctor.hosts_ilegible': 'No se pudo leer el archivo hosts.',
+      'doctor.hosts_utf16':
+        'El archivo hosts está guardado en UTF-16: Windows puede no leer sus entradas.',
+      'doctor.hosts_bloque_duplicado':
+        'El archivo hosts tiene {bloques} bloques de WolfCore Dev; debe haber uno.',
+      'doctor.hosts_bloque_sin_cierre':
+        'Un bloque de WolfCore Dev en el archivo hosts quedó sin su marca de cierre.',
+      'doctor.hosts_dominios_faltantes':
+        'Faltan {cantidad} dominios de sus sitios en el archivo hosts.',
+      'doctor.hosts_solo_lectura':
+        'El archivo hosts es de solo lectura (suele ponerlo un antivirus). WolfCore Dev igual puede escribirlo con permiso de administrador.',
+      'doctor.path_duplicados':
+        'El PATH del usuario tiene {cantidad} entradas repetidas de WolfCore Dev.',
+      'doctor.path_ajeno_delante':
+        'Otra carpeta con {programa} ({origen}) está antes que WolfCore Dev en el PATH: en las terminales se usará esa.',
+      'doctor.vcredist_ausente':
+        'Falta Microsoft Visual C++ 2015-2022 (x64): PHP y otros servicios no arrancan sin él.',
+      'doctor.antivirus_sin_exclusion':
+        'El antivirus revisa la carpeta de datos de WolfCore Dev: PHP y los servicios pueden arrancar lento.',
+      'doctor.servicio_en_error': '{servicio} está en error.',
+      'doctor.revision_fallida': 'No se pudo completar la revisión {revision}.',
+      'doctor.confirmacion_requerida': 'Confirme la reparación antes de aplicarla.',
+      'doctor.hallazgo_desconocido': 'Ese hallazgo ya no está: vuelva a revisar.',
+      'doctor.solo_informa':
+        'Este hallazgo no tiene una reparación automática: siga las indicaciones.',
+      'doctor.reparacion_fallida': 'No se pudo aplicar la reparación.',
+      'doctor.reparacion_cancelada': 'Se canceló el permiso de administrador: no se cambió nada.',
+      'doctor.reparacion_denegada': 'Windows o un antivirus negó el acceso: no se cambió nada.',
+      'doctor.sin_puerto_libre': 'No se encontró un puerto libre para mover el servicio.',
     },
   },
   avisoInicio: {

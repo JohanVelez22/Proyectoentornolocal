@@ -127,6 +127,48 @@ export const en: Textos = {
       'proyectos.paso_no_omitible': 'The "Create the site" step cannot be skipped.',
       'mcp.token_invalido': 'The MCP server token is not valid.',
       'mcp.solicitud_cancelada': 'The MCP client cancelled the request: the action was not run.',
+      'doctor.puerto_ocupado':
+        'Port {puerto} of {servicio} is used by another program ({proceso}).',
+      'doctor.puerto_iis': 'IIS ({programa}) is using port {puerto} of {servicio}.',
+      'doctor.puerto_http_sys':
+        'A Windows service ({programa}) is using port {puerto} of {servicio}.',
+      'doctor.puerto_flyenv':
+        '{programa} is using port {puerto} of {servicio}. Close it or change the WolfCore Dev port.',
+      'doctor.puerto_xampp': '{programa} is using port {puerto} of {servicio}.',
+      'doctor.puerto_skype': '{programa} is using port {puerto} of {servicio}.',
+      'doctor.puerto_reservado':
+        'Port {puerto} of {servicio} is in a range reserved by Windows ({desde}-{hasta}: Hyper-V, WSL or Docker).',
+      'doctor.ca_por_vencer': 'The WolfCore Dev certificate authority expires in {dias} days.',
+      'doctor.ca_vencida': 'The WolfCore Dev certificate authority has expired.',
+      'doctor.certificado_por_vencer': 'The certificate for {dominio} expires in {dias} days.',
+      'doctor.certificado_vencido': 'The certificate for {dominio} has expired.',
+      'doctor.hosts_ilegible': 'The hosts file could not be read.',
+      'doctor.hosts_utf16': 'The hosts file is saved as UTF-16: Windows may not read its entries.',
+      'doctor.hosts_bloque_duplicado':
+        'The hosts file has {bloques} WolfCore Dev blocks; there should be one.',
+      'doctor.hosts_bloque_sin_cierre':
+        'A WolfCore Dev block in the hosts file is missing its closing mark.',
+      'doctor.hosts_dominios_faltantes':
+        '{cantidad} of your site domains are missing from the hosts file.',
+      'doctor.hosts_solo_lectura':
+        'The hosts file is read-only (often set by an antivirus). WolfCore Dev can still write it with administrator permission.',
+      'doctor.path_duplicados': 'The user PATH has {cantidad} repeated WolfCore Dev entries.',
+      'doctor.path_ajeno_delante':
+        'Another folder with {programa} ({origen}) comes before WolfCore Dev in the PATH: terminals will use that one.',
+      'doctor.vcredist_ausente':
+        'Microsoft Visual C++ 2015-2022 (x64) is missing: PHP and other services will not start without it.',
+      'doctor.antivirus_sin_exclusion':
+        'The antivirus scans the WolfCore Dev data folder: PHP and services may start slowly.',
+      'doctor.servicio_en_error': '{servicio} is in an error state.',
+      'doctor.revision_fallida': 'The {revision} check could not be completed.',
+      'doctor.confirmacion_requerida': 'Confirm the fix before applying it.',
+      'doctor.hallazgo_desconocido': 'That finding is gone: run the check again.',
+      'doctor.solo_informa': 'This finding has no automatic fix: follow the instructions.',
+      'doctor.reparacion_fallida': 'The fix could not be applied.',
+      'doctor.reparacion_cancelada':
+        'The administrator permission was cancelled: nothing was changed.',
+      'doctor.reparacion_denegada': 'Windows or an antivirus denied access: nothing was changed.',
+      'doctor.sin_puerto_libre': 'No free port was found to move the service.',
     },
   },
   avisoInicio: {

@@ -111,7 +111,11 @@ import {
   buscarPuertoLibre,
   comandoDePaso,
   huellaReceta,
+  puertoLibreAhora,
 } from './proyectos/resumen';
+import { Doctor } from './doctor/doctor';
+import type { CodigoError } from './errores';
+import { esIdServicioDatos } from './servicios/definicion';
 import { VigilanteProyectos, type SugerenciaProyecto } from './proyectos/vigilar';
 import { Git, type DisponibilidadGit, type EstadoGit, type ResultadoTraer } from './git/git';
 import { GitHub, type OpcionesRepos, type RepoGithub } from './git/github';
@@ -217,6 +221,7 @@ interface ModulosNucleo {
   metricas: Metricas;
   registros: Registros;
   puertos: HerramientasPuertos;
+  doctor: Doctor;
   /** Dependencias de los pasos de receta (puerto libre…), también para crear proyectos. */
   depsPasos?: DepsPasos;
 }
@@ -249,6 +254,13 @@ async function estadoHostsSeguro(
     return fallo;
   }
 }
+
+/** Copias con fecha de lo que reescribe el Doctor (hosts, PATH, CA). */
+const carpetaRespaldosDoctor = (rutas: Rutas): string => path.join(rutas.base, 'etc', 'respaldos');
+
+/** Nginx o hosts que no se pudieron aplicar tras una reparación del Doctor. */
+const resultadoAplicarDoctor = (r: ResultadoAplicar): { ok: boolean; codigo?: CodigoError } =>
+  r.nginx.ok && r.hosts.ok ? { ok: true } : { ok: false, codigo: 'doctor.reparacion_fallida' };
 
 const dominiosDe = (sitios: Sitio[]): string[] => [
   ...new Set(sitios.flatMap((s) => [s.dominio, ...s.alias])),
@@ -301,6 +313,8 @@ export class Nucleo {
   readonly metricas: Metricas;
   readonly registros: Registros;
   readonly puertos: HerramientasPuertos;
+  /** Revisiones del entorno y reparaciones guiadas (pantalla Doctor). */
+  readonly doctor: Doctor;
   /**
    * Token de GitHub para lo que no pasa por la ventana (MCP). Lo fija el proceso principal
    * (safeStorage); el núcleo nunca lo guarda, lo registra ni lo emite.
@@ -348,6 +362,7 @@ export class Nucleo {
     this.metricas = m.metricas;
     this.registros = m.registros;
     this.puertos = m.puertos;
+    this.doctor = m.doctor;
     this.depsPasos = m.depsPasos;
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
@@ -583,6 +598,44 @@ export class Nucleo {
         leerSitios: () => sitios.listar(),
         rutaLogProceso: (sitioId, procesoId) => procesos.rutaLog(sitioId, procesoId),
       }),
+      doctor: new Doctor({
+        plataforma: plat,
+        carpetaDatos: rutas.base,
+        carpetaRespaldos: carpetaRespaldosDoctor(rutas),
+        servicios: () => servicios.estados(),
+        puertoHttps: async () => (await leerConfig()).https.puerto,
+        puertosPropios: async () => puertosReservados(await leerConfig()),
+        probarPuerto: o.probarPuerto ?? puertoLibreAhora,
+        puertoCambiable: (s) => s === 'nginx' || s === 'https' || esIdServicioDatos(s),
+        cambiarPuerto: (s, p) => nucleoRef.cambiarPuertoDesdeDoctor(s, p),
+        dominios: async () => dominiosDe(await sitios.listar()),
+        hosts,
+        https: {
+          vencimientos: async () => {
+            const lista = await sitios.listar();
+            return (await https.vencimientos()).map((v) => {
+              const s = lista.find((x) => x.id === v.id);
+              return s ? { ...v, nombre: s.dominio } : v;
+            });
+          },
+          regenerarCertificados: async () => resultadoAplicarDoctor(await sitios.aplicar()),
+          regenerarCA: async () => {
+            const r = await https.regenerarCA(carpetaRespaldosDoctor(rutas));
+            if (!r.ok) {
+              return {
+                ok: false,
+                codigo:
+                  r.motivo === 'cancelado'
+                    ? 'doctor.reparacion_cancelada'
+                    : 'doctor.reparacion_fallida',
+              };
+            }
+            return resultadoAplicarDoctor(await sitios.aplicar());
+          },
+        },
+        reintentarServicio: (id) => servicios.iniciar(id as IdServicio),
+        avisos,
+      }),
       puertos: new HerramientasPuertos({
         ejecutar: exec,
         // Supervisor (servicios y procesos de proyecto): sus hijos también cuentan como propios.
@@ -750,6 +803,21 @@ export class Nucleo {
   }
 
   // ---- Servicios ----
+
+  /** Reparación del Doctor: mueve el puerto de Nginx, el HTTPS o el de un servicio de datos. */
+  async cambiarPuertoDesdeDoctor(servicio: string, puerto: number): Promise<void> {
+    if (servicio === 'https') {
+      await this.cambiarPuertoHttps(puerto);
+      return;
+    }
+    if (servicio === 'nginx') {
+      const cfg = await this.config.leer();
+      await this.guardarAjustes({ puerto, trabajadores: cfg.servicios.php.trabajadores });
+      return;
+    }
+    if (esIdServicioDatos(servicio)) return this.cambiarPuertoServicio(servicio, puerto);
+    throw new Error(`El puerto de ${servicio} no se puede cambiar desde WolfCore Dev.`);
+  }
 
   /** Cambia el puerto de un servicio propio (1024–65535, libre); lo reinicia si estaba encendido. */
   cambiarPuertoServicio(id: IdServicioDatos, puerto: number): Promise<void> {

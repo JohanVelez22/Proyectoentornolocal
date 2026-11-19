@@ -924,6 +924,24 @@ describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
     expect(borrar).toHaveBeenCalledWith('mysql', 'mysql');
   });
 
+  it('Doctor: revisa hosts con la plataforma del núcleo y mueve puertos por servicio', async () => {
+    const n = await crear();
+    expect(await n.doctor.revisar(['hosts'])).toEqual([]);
+    const cambiar = vi.spyOn(n.servicios, 'cambiarPuerto').mockResolvedValue(undefined);
+    const ajustes = vi.spyOn(n, 'guardarAjustes').mockResolvedValue({
+      aplicar: { nginx: { ok: true, salida: '' }, hosts: { ok: true }, httpsPendiente: [] },
+      reiniciados: [],
+      errores: [],
+    });
+    await n.cambiarPuertoDesdeDoctor('mysql', 3310);
+    expect(cambiar).toHaveBeenCalledWith('mysql', 3310);
+    await n.cambiarPuertoDesdeDoctor('nginx', 8080);
+    expect(ajustes).toHaveBeenCalledWith({ puerto: 8080, trabajadores: expect.any(Number) });
+    await n.cambiarPuertoDesdeDoctor('https', 8443);
+    expect((await n.config.leer()).https.puerto).toBe(8443);
+    await expect(n.cambiarPuertoDesdeDoctor('php-8.3', 9100)).rejects.toThrow(/no se puede/);
+  });
+
   describe('bloque .env por sitio', () => {
     const conexion = {
       host: '127.0.0.1' as const,

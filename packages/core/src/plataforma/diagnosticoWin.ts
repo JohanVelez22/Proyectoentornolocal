@@ -115,3 +115,46 @@ export function interpretarProfilesIni(texto: string, base: string): string[] {
   cerrar();
   return res;
 }
+
+/** Defender: protección en tiempo real y carpetas excluidas, una por línea. */
+export const SCRIPT_ANTIVIRUS = [
+  "$ErrorActionPreference = 'Stop'",
+  '$s = Get-MpComputerStatus',
+  "[Console]::Out.WriteLine('activo=' + [int][bool]$s.RealTimeProtectionEnabled)",
+  "foreach ($e in @((Get-MpPreference).ExclusionPath)) { if ($e) { [Console]::Out.WriteLine('excl=' + $e) } }",
+].join('\n');
+
+const sinBarraFinal = (r: string): string =>
+  r
+    .trim()
+    .replace(/[\\/]+$/, '')
+    .toLowerCase();
+
+/**
+ * Salida de `SCRIPT_ANTIVIRUS` → estado para `carpeta`. Sin permiso de administrador Defender
+ * contesta "N/A: …" en lugar de las exclusiones: entonces `excluida` es null.
+ */
+export function interpretarAntivirus(
+  salida: string,
+  carpeta: string,
+): { activo: boolean; excluida: boolean | null } | null {
+  let activo: boolean | null = null;
+  const exclusiones: string[] = [];
+  let ilegible = false;
+  for (const linea of salida.split(/\r?\n/)) {
+    const t = linea.trim();
+    if (t.startsWith('activo=')) activo = t.slice(7) === '1';
+    else if (t.startsWith('excl=')) {
+      const e = t.slice(5);
+      if (/^N\/A\b/i.test(e)) ilegible = true;
+      else exclusiones.push(e);
+    }
+  }
+  if (activo === null) return null;
+  const objetivo = sinBarraFinal(carpeta);
+  const cubre = exclusiones.some((e) => {
+    const x = sinBarraFinal(e);
+    return x !== '' && (objetivo === x || objetivo.startsWith(x + '\\'));
+  });
+  return { activo, excluida: cubre ? true : ilegible ? null : false };
+}

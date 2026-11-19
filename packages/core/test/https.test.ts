@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import forge from 'node-forge';
@@ -323,6 +323,49 @@ describe('PlataformaWindows: certutil', () => {
     expect(await p.certificadoInstalado('B'.repeat(40))).toBe(true);
     expect(llamadas[0]).toEqual(['-user', '-store', 'Root', 'B'.repeat(40)]);
     expect(await con(1).p.certificadoInstalado('B'.repeat(40))).toBe(false);
+  });
+});
+
+describe('GestorHttps.regenerarCA (Doctor)', () => {
+  it('copia con fecha la CA y los certificados, quita la CA vieja y confía una nueva', async () => {
+    const g = gestorHttps();
+    await g.instalarCA();
+    await g.asegurarCertificado({ id: 's1', dominio: 'a.test', alias: [] });
+    const viejaCrt = readFileSync(rutas.caCrt(), 'utf8');
+    const viejaKey = readFileSync(rutas.caKey(), 'utf8');
+    const respaldo = path.join(base, 'respaldos');
+    expect(await g.regenerarCA(respaldo)).toEqual({ ok: true });
+    expect(quitados).toEqual([huellaSha1(viejaCrt)]);
+    expect(instalados).toHaveLength(2);
+    expect(readFileSync(rutas.caCrt(), 'utf8')).not.toBe(viejaCrt);
+    expect(existsSync(rutas.certCrt('s1'))).toBe(false);
+    const [copia] = readdirSync(respaldo);
+    expect(copia).toMatch(/^ca-/);
+    expect(readFileSync(path.join(respaldo, copia!, 'ca', 'wolfcore-dev-ca.key'), 'utf8')).toBe(
+      viejaKey,
+    );
+    expect(existsSync(path.join(respaldo, copia!, 'certs', 's1.crt'))).toBe(true);
+  });
+
+  it('si no se puede quitar la CA vieja, no se toca nada', async () => {
+    const g = gestorHttps();
+    await g.instalarCA();
+    const vieja = readFileSync(rutas.caCrt(), 'utf8');
+    const conFallo = new GestorHttps({
+      rutas,
+      plataforma: {
+        instalarCertificadoUsuario: async () => ({ ok: true }),
+        quitarCertificadoUsuario: async () => ({ ok: false, motivo: 'cancelado' }),
+        certificadoInstalado: async () => true,
+        duenosDePuertos: async () => new Map(),
+        descendientes: async () => new Map(),
+      },
+    });
+    expect(await conFallo.regenerarCA(path.join(base, 'respaldos'))).toMatchObject({
+      ok: false,
+      motivo: 'cancelado',
+    });
+    expect(readFileSync(rutas.caCrt(), 'utf8')).toBe(vieja);
   });
 });
 

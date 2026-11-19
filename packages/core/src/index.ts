@@ -36,6 +36,7 @@ export * from './sitios/urlbase';
 export * from './tuneles/url';
 export * from './tuneles/tuneles';
 export * from './nucleo';
+export * from './doctor/doctor';
 export * from './bd/formato';
 export * from './bd/respaldos';
 export * from './bd/pgvector';

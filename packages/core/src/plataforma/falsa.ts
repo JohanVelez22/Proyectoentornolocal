@@ -1,9 +1,11 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { LanzadorOculto } from './lanzarOculto';
 import { descendientesDeHijos } from './procesosWin';
 import type {
   AccesoPathUsuario,
+  ComandoManual,
+  EstadoAntivirus,
   IdCatalogo,
   OpcionesAbrirTerminal,
   PlataformaCompleta,
@@ -54,6 +56,14 @@ export class PlataformaFalsa implements PlataformaCompleta {
   rangos: RangoPuertos[] = [];
   servicios = new Map<string, ServicioSistema['estado']>();
   vcRedist = true;
+  /** Veces que se pidió instalar el VC++. */
+  vcRedistInstalaciones = 0;
+  /** Servicios del sistema detenidos con elevación. */
+  readonly serviciosDetenidos: string[] = [];
+  /** Veces que se quitó el solo lectura del hosts (lo quita de verdad en `rutaHosts`). */
+  soloLecturaQuitado = 0;
+  /** Lo que devuelve `antivirus` (null: sin antivirus o ilegible). */
+  antivirusEstado: EstadoAntivirus | null = null;
   firefox: string[] = [];
   documentos = '/documentos';
 
@@ -189,5 +199,31 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async perfilesFirefox(): Promise<string[]> {
     return [...this.firefox];
+  }
+
+  async detenerServicioSistema(nombre: string): Promise<ResultadoEscritura> {
+    this.serviciosDetenidos.push(nombre);
+    if (this.servicios.has(nombre)) this.servicios.set(nombre, 'detenido');
+    return { ok: true };
+  }
+
+  async quitarSoloLecturaHosts(): Promise<ResultadoEscritura> {
+    this.soloLecturaQuitado++;
+    await chmod(this.rutaHosts(), 0o666);
+    return { ok: true };
+  }
+
+  async instalarVcRedist(): Promise<ResultadoEscritura> {
+    this.vcRedistInstalaciones++;
+    this.vcRedist = true;
+    return { ok: true };
+  }
+
+  async antivirus(): Promise<EstadoAntivirus | null> {
+    return this.antivirusEstado;
+  }
+
+  comandoManual(c: ComandoManual): string {
+    return `comando-manual:${JSON.stringify(c)}`;
   }
 }

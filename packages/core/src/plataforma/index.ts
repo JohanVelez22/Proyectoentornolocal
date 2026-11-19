@@ -6,7 +6,9 @@ import { PlataformaWindows } from './win';
 export type {
   AccesoPathUsuario,
   CapacidadesPlataforma,
+  ComandoManual,
   Ejecutor,
+  EstadoAntivirus,
   EstadoServicioSistema,
   IdCatalogo,
   Lanzador,
@@ -36,6 +38,7 @@ export {
 } from './win';
 export { PlataformaFalsa, type OpcionesPlataformaFalsa } from './falsa';
 export {
+  interpretarAntivirus,
   interpretarProfilesIni,
   interpretarRangosReservados,
   interpretarServiciosSistema,
@@ -63,6 +66,11 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'serviciosSistema',
   'vcRedistInstalado',
   'perfilesFirefox',
+  'detenerServicioSistema',
+  'quitarSoloLecturaHosts',
+  'instalarVcRedist',
+  'antivirus',
+  'comandoManual',
 ];
 
 /**

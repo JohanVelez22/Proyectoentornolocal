@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import forge from 'node-forge';
 import type { Plataforma, ResultadoEscritura } from '../plataforma/tipos';
@@ -122,6 +122,33 @@ export class GestorHttps {
     if (!this.caCreada()) return { ok: true };
     const huella = huellaSha1(await readFile(this.d.rutas.caCrt(), 'utf8'));
     return this.resultado(await this.d.plataforma.quitarCertificadoUsuario(huella), 'quitar');
+  }
+
+  /**
+   * Regenera la CA (Doctor, CA vencida o por vencer). Primero copia la CA y los certificados a
+   * `carpetaRespaldo/ca-<fecha>`; luego quita la CA vieja del almacén del usuario (si eso falla
+   * o se cancela, no se toca nada), borra los archivos y crea y confía una nueva. Los
+   * certificados de los sitios se vuelven a emitir al aplicar.
+   */
+  async regenerarCA(carpetaRespaldo: string): Promise<ResultadoCA> {
+    if (!this.caCreada()) return this.instalarCA();
+    const carpetaCa = path.dirname(this.d.rutas.caCrt());
+    const carpetaCerts = path.dirname(this.d.rutas.certCrt('x'));
+    const destino = path.join(
+      carpetaRespaldo,
+      `ca-${this.ahora.toISOString().replace(/[:.]/g, '-')}`,
+    );
+    await mkdir(destino, { recursive: true });
+    await cp(carpetaCa, path.join(destino, 'ca'), { recursive: true, errorOnExist: true });
+    if (existsSync(carpetaCerts)) {
+      await cp(carpetaCerts, path.join(destino, 'certs'), { recursive: true, errorOnExist: true });
+    }
+    const quitada = await this.quitarCA();
+    if (!quitada.ok) return quitada;
+    await rm(this.d.rutas.caCrt(), { force: true });
+    await rm(this.d.rutas.caKey(), { force: true });
+    await rm(carpetaCerts, { recursive: true, force: true });
+    return this.instalarCA();
   }
 
   /** Programa ajeno que ocupa el puerto HTTPS, o null si está libre o lo usa nuestro nginx. */

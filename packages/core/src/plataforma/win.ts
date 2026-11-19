@@ -6,11 +6,13 @@ import { arch, homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { rutaBasePorDefecto } from './carpetas';
 import {
+  interpretarAntivirus,
   interpretarProfilesIni,
   interpretarRangosReservados,
   interpretarServiciosSistema,
   NOMBRE_SERVICIO,
   NOMBRE_VARIABLE,
+  SCRIPT_ANTIVIRUS,
   SCRIPT_VCREDIST,
   scriptServicios,
   scriptVariableUsuario,
@@ -19,6 +21,7 @@ import {
   codificarComando,
   MOTIVO_SALIDA_COPIA,
   PREFIJO_TEMPORAL_HOSTS,
+  SALIDA_COPIA,
   scriptCopiaHosts,
   scriptElevar,
   sha256,
@@ -33,6 +36,8 @@ import { nombreEjecutable, sistemaActual } from './sistema';
 export { interpretarTasklist, interpretarTasklistTodos } from './netstat';
 import type {
   AccesoPathUsuario,
+  ComandoManual,
+  EstadoAntivirus,
   Ejecutor,
   IdCatalogo,
   MuestraPlataforma,
@@ -395,6 +400,115 @@ export class PlataformaWindows implements PlataformaCompleta {
       timeoutMs: 15000,
     });
     return r.codigo === 0 && r.stdout.trim() === '1';
+  }
+
+  /**
+   * Corre `interno` en una PowerShell elevada (UAC) y espera su código. Se corta al cerrar la app
+   * (`cancelarEscriturasAdmin`) o al vencer `tiempoLimiteMs`.
+   */
+  private async elevar(interno: string, tiempoLimiteMs = 120_000): Promise<ResultadoEscritura> {
+    const ctl = new AbortController();
+    this.elevaciones.add(ctl);
+    try {
+      const r = await this.ejecutar(
+        'powershell',
+        ['-NoProfile', '-Command', scriptElevar(codificarComando(interno))],
+        { timeoutMs: tiempoLimiteMs, senal: ctl.signal },
+      );
+      if (r.codigo === 0) return { ok: true };
+      if (r.codigo === SALIDA_COPIA.cancelado || /cancel/i.test(r.stderr)) {
+        return { ok: false, motivo: 'cancelado' };
+      }
+      if (ctl.signal.aborted) return { ok: false, motivo: 'tiempo' };
+      return { ok: false, motivo: 'error', detalle: `código ${r.codigo}` };
+    } catch (e) {
+      return { ok: false, motivo: 'error', detalle: e instanceof Error ? e.message : String(e) };
+    } finally {
+      this.elevaciones.delete(ctl);
+    }
+  }
+
+  async detenerServicioSistema(nombre: string): Promise<ResultadoEscritura> {
+    if (!NOMBRE_SERVICIO.test(nombre)) throw new Error(`Nombre de servicio no válido: ${nombre}`);
+    return this.elevar(
+      [
+        "$ErrorActionPreference = 'Stop'",
+        `& ([IO.Path]::Combine([Environment]::SystemDirectory, 'sc.exe')) stop '${nombre}' | Out-Null`,
+        'exit $LASTEXITCODE',
+      ].join('\n'),
+    );
+  }
+
+  async quitarSoloLecturaHosts(): Promise<ResultadoEscritura> {
+    return this.elevar(
+      [
+        "$ErrorActionPreference = 'Stop'",
+        "$d = [IO.Path]::Combine([Environment]::SystemDirectory, 'drivers', 'etc', 'hosts')",
+        '[IO.File]::SetAttributes($d, ([IO.File]::GetAttributes($d) -band -bnot [IO.FileAttributes]::ReadOnly))',
+        'exit 0',
+      ].join('\n'),
+    );
+  }
+
+  async instalarVcRedist(): Promise<ResultadoEscritura> {
+    const local = this.entorno.LOCALAPPDATA;
+    const winget = await this.buscarEjecutable(
+      'winget',
+      local ? [path.win32.join(local, 'Microsoft', 'WindowsApps')] : [],
+    );
+    if (!winget) {
+      return { ok: false, motivo: 'error', detalle: 'winget no está disponible en este equipo' };
+    }
+    try {
+      // El instalador de Microsoft pide su propio permiso de administrador.
+      const r = await this.ejecutar(
+        winget,
+        [
+          'install',
+          '--id',
+          'Microsoft.VCRedist.2015+.x64',
+          '--exact',
+          '--silent',
+          '--disable-interactivity',
+          '--accept-package-agreements',
+          '--accept-source-agreements',
+        ],
+        { timeoutMs: 15 * 60_000 },
+      );
+      if (r.codigo === 0 || (await this.vcRedistInstalado())) return { ok: true };
+      return { ok: false, motivo: 'error', detalle: `winget terminó con el código ${r.codigo}` };
+    } catch (e) {
+      return { ok: false, motivo: 'error', detalle: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  async antivirus(carpeta: string): Promise<EstadoAntivirus | null> {
+    try {
+      const r = await this.ejecutar('powershell', codificarPowerShell(SCRIPT_ANTIVIRUS), {
+        timeoutMs: 20_000,
+      });
+      if (r.codigo !== 0) return null;
+      return interpretarAntivirus(r.stdout, carpeta);
+    } catch {
+      return null;
+    }
+  }
+
+  comandoManual(c: ComandoManual): string {
+    const comillas = (t: string): string => `'${t.replace(/'/g, "''")}'`;
+    switch (c.tipo) {
+      case 'liberar-rangos':
+        // Reiniciar WinNAT reparte de nuevo los rangos reservados de Hyper-V/WSL/Docker.
+        return 'net stop winnat; net start winnat';
+      case 'exclusion-antivirus':
+        return `Add-MpPreference -ExclusionPath ${comillas(c.carpeta)}`;
+      case 'quitar-solo-lectura-hosts':
+        return `attrib -R "${this.rutaHosts()}"`;
+      case 'detener-servicio':
+        return `Stop-Service -Name ${c.nombre}; Set-Service -Name ${c.nombre} -StartupType Manual`;
+      case 'instalar-vcredist':
+        return 'winget install --id Microsoft.VCRedist.2015+.x64 --exact';
+    }
   }
 
   async perfilesFirefox(): Promise<string[]> {

@@ -50,6 +50,25 @@ export interface ServicioSistema {
   estado: EstadoServicioSistema;
 }
 
+/** Estado del antivirus del sistema respecto de una carpeta (solo se lee; nunca se cambia). */
+export interface EstadoAntivirus {
+  /** ¿Está activa la protección en tiempo real? */
+  activo: boolean;
+  /** ¿La carpeta está excluida? null si no se pudo saber (p. ej. hace falta administrador). */
+  excluida: boolean | null;
+}
+
+/**
+ * Comandos que el usuario corre él mismo en una consola de administrador: el Doctor solo los
+ * muestra (cambiar la red o la seguridad del equipo lo decide el usuario).
+ */
+export type ComandoManual =
+  | { tipo: 'liberar-rangos' }
+  | { tipo: 'exclusion-antivirus'; carpeta: string }
+  | { tipo: 'quitar-solo-lectura-hosts' }
+  | { tipo: 'detener-servicio'; nombre: string }
+  | { tipo: 'instalar-vcredist' };
+
 /**
  * Lo que la Etapa C agregó a la interfaz. Todo lo que depende del sistema operativo pasa por
  * aquí: fuera de `plataforma/` ningún módulo usa `process.platform`, `path.win32`, PowerShell,
@@ -82,6 +101,16 @@ export interface CapacidadesPlataforma {
   vcRedistInstalado(): Promise<boolean>;
   /** Carpetas de los perfiles de Firefox del usuario ([] si no hay Firefox). */
   perfilesFirefox(): Promise<string[]>;
+  /** Detiene un servicio del sistema (p. ej. W3SVC de IIS) con elevación; nunca lo deshabilita. */
+  detenerServicioSistema(nombre: string): Promise<ResultadoEscritura>;
+  /** Quita el atributo de solo lectura del hosts del sistema, con elevación. */
+  quitarSoloLecturaHosts(): Promise<ResultadoEscritura>;
+  /** Instala el redistribuible de Visual C++ 2015+ x64 (el instalador pide su propio permiso). */
+  instalarVcRedist(): Promise<ResultadoEscritura>;
+  /** Estado del antivirus para `carpeta`; null si no hay o no se pudo leer. */
+  antivirus(carpeta: string): Promise<EstadoAntivirus | null>;
+  /** Texto del comando para la consola de administrador (no se ejecuta). */
+  comandoManual(c: ComandoManual): string;
 }
 
 /**

@@ -1,10 +1,17 @@
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import type { Eventos, EventosNucleo } from '../eventos';
 import { ErrorWolf } from '../errores';
 import type { Plataforma, ResultadoEscritura } from '../plataforma/tipos';
 import type { EstadoHosts } from '../tipos';
-import { analizarHosts, aplicarBloque, normalizarDominios } from './bloque';
+import {
+  analizarHosts,
+  aplicarBloque,
+  decodificarHosts,
+  normalizarDominios,
+  quitarMarcasRotas,
+} from './bloque';
 
 export type ResultadoSync =
   | { ok: true }
@@ -36,13 +43,19 @@ class ErrorLecturaHosts extends Error {
 }
 
 /** Texto del hosts y SHA-256 de sus bytes tal cual (`NINGUNO` si no existe). */
-async function leerHostsConHuella(ruta: string): Promise<{ texto: string; huella: string }> {
+async function leerHostsConHuella(
+  ruta: string,
+): Promise<{ texto: string; huella: string; bytes: Buffer }> {
   try {
     const b = await readFile(ruta);
-    return { texto: b.toString('utf8'), huella: createHash('sha256').update(b).digest('hex') };
+    return {
+      texto: b.toString('utf8'),
+      huella: createHash('sha256').update(b).digest('hex'),
+      bytes: b,
+    };
   } catch (e) {
     const code = (e as { code?: string }).code;
-    if (code === 'ENOENT') return { texto: '', huella: 'NINGUNO' };
+    if (code === 'ENOENT') return { texto: '', huella: 'NINGUNO', bytes: Buffer.alloc(0) };
     throw new ErrorLecturaHosts(code ?? 'desconocido');
   }
 }
@@ -55,6 +68,13 @@ export interface OpcionesSincronizar {
    * último UAC con el mismo contenido se haya cancelado o vencido. Los guardados automáticos no.
    */
   reintentar?: boolean;
+}
+
+/** Reparación guiada del Doctor: hosts en UTF-16, bloques duplicados o sin cierre. */
+export interface OpcionesReparar {
+  /** Carpeta donde queda la copia con fecha del hosts anterior (antes de escribir). */
+  carpetaRespaldo: string;
+  ahora?: () => Date;
 }
 
 /** Plazo por defecto para que el usuario conteste el UAC al escribir hosts. */
@@ -170,12 +190,26 @@ export class GestorHosts {
     return espera.promesa;
   }
 
+  /**
+   * Reescribe hosts entero en UTF-8 con un solo bloque bien formado (el Doctor): convierte
+   * UTF-16, quita marcas rotas y bloques duplicados y deja `dominios`. Antes de escribir guarda
+   * una copia con fecha de los bytes anteriores. Espera a la escritura en curso: nunca hay dos
+   * UAC a la vez. Siempre pide permiso (es un pedido explícito del usuario).
+   */
+  async reparar(dominios: string[], o: OpcionesReparar): Promise<ResultadoSync> {
+    while (this.enCurso || this.espera) {
+      await (this.espera?.promesa ?? this.enCurso)?.catch(() => undefined);
+    }
+    return this.arrancar(dominios, null, true, o);
+  }
+
   private arrancar(
     dominios: string[],
     sinElevarPor: string | null,
     reintentar: boolean,
+    reparar?: OpcionesReparar,
   ): Promise<ResultadoSync> {
-    const p = this.escribir(dominios, sinElevarPor, reintentar);
+    const p = this.escribir(dominios, sinElevarPor, reintentar, reparar);
     this.enCurso = p;
     void p.then(
       () => {
@@ -193,19 +227,23 @@ export class GestorHosts {
     dominios: string[],
     sinElevarPor: string | null,
     reintentar: boolean,
+    reparar?: OpcionesReparar,
   ): Promise<ResultadoSync> {
     const destino = this.p.rutaHosts();
     let actual: string;
     let huella: string;
+    let bytes: Buffer;
     try {
-      ({ texto: actual, huella } = await leerHostsConHuella(destino));
+      ({ texto: actual, huella, bytes } = await leerHostsConHuella(destino));
     } catch (e) {
       if (!(e instanceof ErrorLecturaHosts)) throw e;
       await this.estado(dominios);
       return { ok: false, motivo: 'error', comandoManual: '' };
     }
+    if (reparar) actual = quitarMarcasRotas(decodificarHosts(bytes).texto);
     const nuevo = aplicarBloque(actual, dominios);
-    if (nuevo === actual) {
+    const igual = reparar ? Buffer.from(nuevo, 'utf8').equals(bytes) : nuevo === actual;
+    if (igual) {
       this.ultimoFallo = null;
       await this.estado(dominios);
       return { ok: true };
@@ -216,6 +254,7 @@ export class GestorHosts {
       (!reintentar && this.ultimoFallo?.nuevo === nuevo ? this.ultimoFallo.motivo : null) ??
       // Un UAC anterior sigue abierto (la plataforma no lo cortó aún): no se abre otro.
       (this.viva ? 'tiempo' : null);
+    if (!motivoPrevio && reparar) await this.copiaConFecha(bytes, reparar);
     const r: ResultadoEscritura = motivoPrevio
       ? { ok: false, motivo: motivoPrevio as 'cancelado' | 'denegado' | 'tiempo' }
       : await this.escribirConPlazo(destino, nuevo, huella);
@@ -281,6 +320,21 @@ export class GestorHosts {
       throw e;
     } finally {
       clearTimeout(temporizador);
+    }
+  }
+
+  /** Copia de los bytes del hosts anterior: `hosts-<fecha>.txt` (nunca pisa otra). */
+  private async copiaConFecha(bytes: Buffer, o: OpcionesReparar): Promise<void> {
+    await mkdir(o.carpetaRespaldo, { recursive: true });
+    const fecha = (o.ahora?.() ?? new Date()).toISOString().replace(/[:.]/g, '-');
+    for (let n = 0; ; n++) {
+      const nombre = `hosts-${fecha}${n ? `-${n}` : ''}.txt`;
+      try {
+        await writeFile(path.join(o.carpetaRespaldo, nombre), bytes, { flag: 'wx' });
+        return;
+      } catch (e) {
+        if ((e as { code?: string }).code !== 'EEXIST' || n > 100) throw e;
+      }
     }
   }
 
