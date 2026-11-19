@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, type Hash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import {
   copyFile,
@@ -10,6 +10,7 @@ import {
   rm,
   stat,
   writeFile,
+  type FileHandle,
 } from 'node:fs/promises';
 import path from 'node:path';
 import { extraerZip } from './zip';
@@ -21,6 +22,8 @@ import { ejecutableDe, urlOficial, type VersionDisponible } from './catalogo';
 export interface OpcionesInstalador {
   /** Corta la descarga si no llegan bytes durante este tiempo. Por defecto 60000. */
   tiempoSinDatosMs?: number;
+  /** Esperas entre reintentos de descarga (ms); su largo es el número de reintentos. */
+  esperasReintentoMs?: number[];
   /** Inyectable para pruebas. */
   renombrar?: (de: string, a: string) => Promise<void>;
 }
@@ -197,15 +200,51 @@ export class Instalador {
     }
   }
 
-  /** Descarga en streaming a `archivo` y devuelve el sha256 calculado. */
+  /**
+   * Descarga en streaming a `archivo` y devuelve el sha256 calculado. Los fallos pasajeros (red
+   * cortada, sin datos, HTTP 408/429/5xx) se reintentan con espera creciente: si ya llegaron
+   * bytes se pide el resto con `Range` y, si el servidor responde 206 desde ese byte, se sigue
+   * (el hash continúa); si responde 200 se empieza de nuevo. La huella se verifica siempre al
+   * final sobre el archivo completo.
+   */
   private async descargar(v: VersionDisponible, archivo: string): Promise<string> {
+    const esperas = this.opciones.esperasReintentoMs ?? ESPERAS_REINTENTO_MS;
+    const estado: EstadoDescarga = {
+      hash: createHash('sha256'),
+      recibido: 0,
+      total: 0,
+      ultimo: 0,
+    };
+    const fh = await open(archivo, 'w');
+    try {
+      this.emitir(v, 'descargando', 0);
+      for (let intento = 0; ; intento++) {
+        try {
+          await this.descargarIntento(v, fh, estado);
+          return estado.hash.digest('hex');
+        } catch (e) {
+          if (!esPasajero(e) || intento >= esperas.length) throw e;
+          await new Promise((r) => setTimeout(r, esperas[intento]));
+        }
+      }
+    } finally {
+      await fh.close();
+    }
+  }
+
+  /** Un intento: desde cero o, si ya hay bytes, desde `estado.recibido` con `Range`. */
+  private async descargarIntento(
+    v: VersionDisponible,
+    fh: FileHandle,
+    estado: EstadoDescarga,
+  ): Promise<void> {
     const limite = this.opciones.tiempoSinDatosMs ?? 60000;
     const ctl = new AbortController();
-    let temporizador: NodeJS.Timeout | undefined;
+    // Un temporizador por llamada: uno compartido lo limpiaría el `finally` de la anterior.
     const conLimite = <T>(p: Promise<T>): Promise<T> =>
       new Promise<T>((resolve, reject) => {
-        temporizador = setTimeout(() => {
-          const e = new Error(
+        const temporizador = setTimeout(() => {
+          const e = new ErrorPasajero(
             `La descarga se detuvo: sin datos durante ${Math.round(limite / 1000)} s`,
           );
           ctl.abort(e);
@@ -214,40 +253,88 @@ export class Instalador {
         p.then(resolve, reject).finally(() => clearTimeout(temporizador));
       });
 
-    const res = await conLimite(this.f(v.url, { signal: ctl.signal }));
+    const desde = estado.recibido;
+    const res = await conLimite(
+      this.f(v.url, {
+        signal: ctl.signal,
+        ...(desde > 0 ? { headers: { Range: `bytes=${desde}-` } } : {}),
+      }),
+    );
     if (!res.ok || !res.body) {
-      throw new Error(`No se pudo descargar ${v.servicio} ${v.version} (HTTP ${res.status})`);
+      const msg = `No se pudo descargar ${v.servicio} ${v.version} (HTTP ${res.status})`;
+      await res.body?.cancel().catch(() => undefined);
+      throw ESTADOS_PASAJEROS.has(res.status) ? new ErrorPasajero(msg) : new Error(msg);
     }
-    const total = Number(res.headers.get('content-length') ?? 0);
-    const hash = createHash('sha256');
-    const fh = await open(archivo, 'w');
+    const inicioRango = /^bytes\s+(\d+)-/i.exec(res.headers.get('content-range') ?? '')?.[1];
+    if (desde > 0 && !(res.status === 206 && Number(inicioRango) === desde)) {
+      // El servidor no reanuda (o reanuda desde otro byte): se empieza de nuevo.
+      estado.hash = createHash('sha256');
+      estado.recibido = 0;
+      estado.ultimo = 0;
+      await fh.truncate(0);
+    }
+    const largo = Number(res.headers.get('content-length') ?? 0);
+    const totalRango = Number(/\/(\d+)\s*$/.exec(res.headers.get('content-range') ?? '')?.[1]);
+    if (totalRango > 0) estado.total = totalRango;
+    else if (largo > 0) estado.total = estado.recibido + largo;
+
     const lector = res.body.getReader();
-    let recibido = 0;
-    let ultimo = 0;
     try {
-      this.emitir(v, 'descargando', 0);
       for (;;) {
         const { done, value: trozo } = await conLimite(lector.read());
         if (done) break;
-        hash.update(trozo);
-        let desde = 0;
-        while (desde < trozo.length) {
-          const { bytesWritten } = await fh.write(trozo, desde, trozo.length - desde);
-          desde += bytesWritten;
+        let escrito = 0;
+        while (escrito < trozo.length) {
+          const { bytesWritten } = await fh.write(
+            trozo,
+            escrito,
+            trozo.length - escrito,
+            estado.recibido + escrito,
+          );
+          escrito += bytesWritten;
         }
-        recibido += trozo.length;
-        if (total > 0) {
-          const pct = Math.min(99, Math.floor((recibido / total) * 100));
-          if (pct > ultimo) {
-            ultimo = pct;
+        estado.hash.update(trozo);
+        estado.recibido += trozo.length;
+        if (estado.total > 0) {
+          const pct = Math.min(99, Math.floor((estado.recibido / estado.total) * 100));
+          if (pct > estado.ultimo) {
+            estado.ultimo = pct;
             this.emitir(v, 'descargando', pct);
           }
         }
       }
     } finally {
       await lector.cancel().catch(() => undefined);
-      await fh.close();
     }
-    return hash.digest('hex');
+    if (estado.total > 0 && estado.recibido < estado.total) {
+      throw new ErrorPasajero(
+        `La descarga terminó incompleta (${estado.recibido} de ${estado.total} bytes)`,
+      );
+    }
   }
+}
+
+/** Esperas entre intentos (ms): 3 reintentos tras el primer intento. */
+const ESPERAS_REINTENTO_MS = [2000, 5000, 15000];
+/** Respuestas HTTP que vale la pena reintentar. */
+const ESTADOS_PASAJEROS = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+class ErrorPasajero extends Error {}
+
+interface EstadoDescarga {
+  hash: Hash;
+  recibido: number;
+  total: number;
+  ultimo: number;
+}
+
+/** Fallos de red o de servidor que pueden pasar solos; la huella, una ruta o un 404, no. */
+function esPasajero(e: unknown): boolean {
+  if (e instanceof ErrorPasajero) return true;
+  if (e instanceof TypeError) return true; // fetch failed, terminated (undici)
+  const codigo = String((e as { code?: unknown; cause?: { code?: unknown } } | null)?.code ?? '');
+  const causa = String((e as { cause?: { code?: unknown } } | null)?.cause?.code ?? '');
+  return /^(ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE|EAI_AGAIN|ENOTFOUND|UND_ERR_\w+)$/.test(
+    codigo || causa,
+  );
 }

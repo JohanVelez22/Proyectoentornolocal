@@ -313,11 +313,125 @@ describe('Instalador', () => {
           headers: { 'content-length': '10' },
         }),
       )) as unknown as typeof fetch;
-    const inst = new Instalador(rutas, eventos, colgado, { tiempoSinDatosMs: 50 });
+    const inst = new Instalador(rutas, eventos, colgado, {
+      tiempoSinDatosMs: 50,
+      esperasReintentoMs: [],
+    });
     await expect(inst.instalar(vNginx(nginxZip))).rejects.toThrow(
       'La descarga se detuvo: sin datos durante 0 s',
     );
     expect(progreso.at(-1)).toMatchObject({ fase: 'error' });
     expect(await readdir(rutas.tmp())).toEqual([]);
+  });
+});
+
+describe('Instalador: reintentos de descarga (QA 7)', () => {
+  const grande = zip({
+    'nginx-x/nginx.exe': 'EXE'.repeat(5000),
+    'nginx-x/conf/nginx.conf': 'conf',
+  });
+  const mitad = Math.floor(grande.length / 2);
+  /** Respuesta que entrega `datos` y después se corta (como "terminated" de undici). */
+  const cortada = (datos: Buffer, total: number): Response =>
+    new Response(
+      new ReadableStream<Uint8Array>({
+        start(c) {
+          c.enqueue(datos);
+          setTimeout(() => c.error(new TypeError('terminated')), 5);
+        },
+      }),
+      { headers: { 'content-length': String(total) } },
+    );
+  const opciones = { esperasReintentoMs: [1, 1, 1] };
+
+  it('se corta a la mitad y reanuda con Range (206)', async () => {
+    const pedidos: (string | null)[] = [];
+    const f = (async (_u: string, init?: RequestInit) => {
+      const rango = new Headers(init?.headers).get('range');
+      pedidos.push(rango);
+      if (pedidos.length === 1) return cortada(grande.subarray(0, mitad), grande.length);
+      const desde = Number(/bytes=(\d+)-/.exec(rango ?? '')?.[1]);
+      return new Response(grande.subarray(desde), {
+        status: 206,
+        headers: {
+          'content-length': String(grande.length - desde),
+          'content-range': `bytes ${desde}-${grande.length - 1}/${grande.length}`,
+        },
+      });
+    }) as unknown as typeof fetch;
+    const inst = new Instalador(rutas, eventos, f, opciones);
+    await inst.instalar(vNginx(grande));
+    expect(pedidos).toEqual([null, `bytes=${mitad}-`]);
+    expect(await inst.instalado('nginx', '1.28.0')).toBe(true);
+    expect(progreso.at(-1)?.fase).toBe('listo');
+  });
+
+  it('si el servidor ignora Range (200), empieza de nuevo y la huella sigue verificándose', async () => {
+    let n = 0;
+    const f = (async () => {
+      n++;
+      if (n === 1) return cortada(grande.subarray(0, mitad), grande.length);
+      return new Response(grande, { headers: { 'content-length': String(grande.length) } });
+    }) as unknown as typeof fetch;
+    const inst = new Instalador(rutas, eventos, f, opciones);
+    await inst.instalar(vNginx(grande));
+    expect(n).toBe(2);
+    expect(await inst.instalado('nginx', '1.28.0')).toBe(true);
+  });
+
+  it('HTTP 503 y error de red se reintentan; 404 no', async () => {
+    let n = 0;
+    const f = (async () => {
+      n++;
+      if (n === 1) return new Response('ocupado', { status: 503 });
+      if (n === 2) throw new TypeError('fetch failed');
+      return new Response(grande, { headers: { 'content-length': String(grande.length) } });
+    }) as unknown as typeof fetch;
+    await new Instalador(rutas, eventos, f, opciones).instalar(vNginx(grande));
+    expect(n).toBe(3);
+
+    let m = 0;
+    const no = (async () => {
+      m++;
+      return new Response('no', { status: 404 });
+    }) as unknown as typeof fetch;
+    await expect(
+      new Instalador(rutas, eventos, no, opciones).instalar({
+        ...vNginx(grande),
+        version: '1.28.1',
+      }),
+    ).rejects.toThrow(/HTTP 404/);
+    expect(m).toBe(1);
+  });
+
+  it('tras agotar los reintentos falla con el último error y no deja temporales', async () => {
+    let n = 0;
+    const f = (async () => {
+      n++;
+      return cortada(grande.subarray(0, 10), grande.length);
+    }) as unknown as typeof fetch;
+    await expect(
+      new Instalador(rutas, eventos, f, opciones).instalar(vNginx(grande)),
+    ).rejects.toThrow(/terminated/);
+    expect(n).toBe(4);
+    expect(await readdir(rutas.tmp())).toEqual([]);
+  });
+
+  it('una reanudación con datos alterados no pasa la verificación de huella', async () => {
+    let n = 0;
+    const f = (async (_u: string, init?: RequestInit) => {
+      n++;
+      if (n === 1) return cortada(grande.subarray(0, mitad), grande.length);
+      const desde = Number(/bytes=(\d+)-/.exec(new Headers(init?.headers).get('range') ?? '')?.[1]);
+      const resto = Buffer.from(grande.subarray(desde));
+      resto[0] = resto[0]! ^ 0xff;
+      return new Response(resto, {
+        status: 206,
+        headers: { 'content-range': `bytes ${desde}-${grande.length - 1}/${grande.length}` },
+      });
+    }) as unknown as typeof fetch;
+    await expect(
+      new Instalador(rutas, eventos, f, opciones).instalar(vNginx(grande)),
+    ).rejects.toThrow('La descarga no coincide con la huella publicada');
   });
 });
