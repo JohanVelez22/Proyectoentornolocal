@@ -91,7 +91,7 @@ const tiles = computed<Tile[]>(() => [
     detalle: '',
     icono: Globe,
     tono: 'neutro',
-    destino: 'sitios',
+    destino: 'proyectos',
   },
   {
     clave: 'tuneles',

@@ -200,7 +200,7 @@ const columnas: DataTableColumns<Fila> = [
           <span class="vacio-texto">{{ t.vacio }}</span>
         </template>
         <template #extra>
-          <NButton type="primary" @click="router.push({ name: 'sitios' })">{{
+          <NButton type="primary" @click="router.push({ name: 'proyectos' })">{{
             t.irASitios
           }}</NButton>
         </template>

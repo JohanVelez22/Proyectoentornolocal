@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {
-  Globe as IconoSitios,
+  Albums as IconoProyectos,
   Home as IconoInicio,
   Layers as IconoBases,
   Mail as IconoCorreo,
@@ -44,7 +44,7 @@ const icono = (c: Component) => () => h(NIcon, null, { default: () => h(c) });
 const opciones: MenuOption[] = (
   [
     ['inicio', IconoInicio],
-    ['sitios', IconoSitios],
+    ['proyectos', IconoProyectos],
     ['servicios', IconoServicios],
     ['basesDeDatos', IconoBases],
     ['correo', IconoCorreo],

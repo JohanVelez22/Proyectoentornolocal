@@ -239,10 +239,16 @@ export function sitioVacio(): DatosSitio {
   };
 }
 
-/** Copia para "Duplicar": mismo proyecto y ajustes, dominio nuevo y sin alias (chocarían). */
+/**
+ * Copia para "Duplicar": mismo proyecto y ajustes, dominio nuevo y sin alias (chocarían). La
+ * copia no hereda "Confío en este repositorio" (hay que marcarlo de nuevo) ni los procesos
+ * (sus puertos chocarían con los del original).
+ */
 export function datosParaDuplicar(sitio: Sitio, existentes: readonly Sitio[]): DatosSitio {
-  const { id: _id, ...datos } = sitio;
+  const { id: _id, recetaConfiada: _huella, ftp: _ftp, ...datos } = sitio;
   void _id;
+  void _huella;
+  void _ftp;
   const usados = new Set(existentes.flatMap((s) => [s.dominio, ...s.alias]));
   const base = baseDominio(sitio.dominio);
   let dominio = `${base}-copia${SUFIJO}`;
@@ -251,6 +257,8 @@ export function datosParaDuplicar(sitio: Sitio, existentes: readonly Sitio[]): D
     ...datos,
     alias: [],
     dominio,
+    confiado: false,
+    procesos: [],
     nombre: es.formSitio.nombreCopia(sitio.nombre || sitio.dominio),
   };
 }

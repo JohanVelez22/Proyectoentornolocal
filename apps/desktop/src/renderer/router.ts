@@ -13,11 +13,13 @@ declare module 'vue-router' {
 const rutas: RouteRecordRaw[] = [
   { path: '/', name: 'inicio', component: Inicio, meta: { seccion: 'inicio' } },
   {
-    path: '/sitios',
-    name: 'sitios',
-    component: () => import('./vistas/Sitios.vue'),
-    meta: { seccion: 'sitios' },
+    path: '/proyectos',
+    name: 'proyectos',
+    component: () => import('./vistas/Proyectos.vue'),
+    meta: { seccion: 'proyectos' },
   },
+  // La pantalla se llamaba "Sitios": los enlaces viejos siguen funcionando.
+  { path: '/sitios', redirect: '/proyectos' },
   {
     path: '/servicios',
     name: 'servicios',

@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { Add, Globe, Search } from '@vicons/ionicons5';
+import { Add, Albums, Search } from '@vicons/ionicons5';
 import { NButton, NEmpty, NIcon, NInput } from 'naive-ui';
 import { computed, onMounted, ref, watch } from 'vue';
 import type { ResultadoAplicar, Sitio } from '../../shared/api';
+import AgregarProyecto from '../componentes/AgregarProyecto.vue';
+import AsistenteReceta from '../componentes/AsistenteReceta.vue';
 import AvisoHosts from '../componentes/AvisoHosts.vue';
-import FilaSitio from '../componentes/FilaSitio.vue';
 import FormSitio from '../componentes/FormSitio.vue';
+import RegistrosProyecto from '../componentes/RegistrosProyecto.vue';
+import SugerenciasProyectos from '../componentes/SugerenciasProyectos.vue';
+import TarjetaProyecto from '../componentes/TarjetaProyecto.vue';
 import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 import { useHttps } from '../stores/https';
+import { useProyectos } from '../stores/proyectos';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
 import {
@@ -19,9 +24,12 @@ import {
   type FalloHosts,
   type ObjetivoForm,
 } from '../utilidades/sitios';
+import type { ObjetivoAsistente } from '../utilidades/proyectos';
 
 const t = es.sitios;
+const tp = es.proyectos;
 const sitios = useSitios();
+const proyectos = useProyectos();
 const servicios = useServicios();
 const https = useHttps();
 const { ejecutar } = useAccion();
@@ -32,6 +40,9 @@ const UMBRAL_BUSCADOR = 5;
 const busqueda = ref('');
 const objetivo = ref<ObjetivoForm | null>(null);
 const falloHosts = ref<FalloHosts | null>(null);
+const agregando = ref(false);
+const asistente = ref<ObjetivoAsistente | null>(null);
+const registros = ref<Sitio | null>(null);
 
 const ordenados = computed(() => ordenarSitios(sitios.lista));
 const conBuscador = computed(() => sitios.lista.length > UMBRAL_BUSCADOR);
@@ -40,7 +51,23 @@ const visibles = computed(() =>
 );
 
 function nuevo(): void {
+  agregando.value = true;
+}
+/** "Agregar sin receta": el formulario de siempre. */
+function manual(): void {
+  agregando.value = false;
   objetivo.value = { modo: 'nuevo' };
+}
+/** Tras clonar o elegir una carpeta se abre el asistente de receta. */
+function preparar(d: { carpeta: string; remoto: string | null }): void {
+  agregando.value = false;
+  asistente.value = { modo: 'nuevo', carpeta: d.carpeta, remoto: d.remoto };
+}
+function verPreparacion(s: Sitio): void {
+  asistente.value = { modo: 'ver', sitioId: s.id };
+}
+function revisarReceta(s: Sitio): void {
+  asistente.value = { modo: 'revisar', sitioId: s.id };
 }
 function editar(sitio: Sitio): void {
   objetivo.value = { modo: 'editar', sitio };
@@ -70,38 +97,40 @@ onMounted(() => {
   // Para los avisos de HTTPS pendiente y el aviso de red local del FTP.
   void https.cargar();
   if (servicios.redLocalFtp === null) void servicios.cargarPreferencias().catch(() => undefined);
+  void proyectos.cargarSugerencias().catch(() => undefined);
 });
 </script>
 
 <template>
-  <div class="sitios">
+  <div class="proyectos">
     <div class="barra">
-      <p class="descripcion">{{ t.descripcion }}</p>
+      <p class="descripcion">{{ tp.descripcion }}</p>
       <NButton v-if="sitios.lista.length" type="primary" size="small" @click="nuevo">
         <template #icon
           ><NIcon><Add /></NIcon
         ></template>
-        {{ t.nuevo }}
+        {{ tp.agregar }}
       </NButton>
     </div>
 
     <AvisoHosts v-model:fallo="falloHosts" />
+    <SugerenciasProyectos @preparar="preparar" />
 
     <div v-if="!sitios.lista.length" class="vacio">
       <NEmpty size="large">
         <template #icon>
-          <NIcon><Globe /></NIcon>
+          <NIcon><Albums /></NIcon>
         </template>
         <template #default>
-          <strong class="vacio-titulo">{{ t.vacioTitulo }}</strong>
-          <span class="vacio-texto">{{ t.vacio }}</span>
+          <strong class="vacio-titulo">{{ tp.vacioTitulo }}</strong>
+          <span class="vacio-texto">{{ tp.vacio }}</span>
         </template>
         <template #extra>
           <NButton type="primary" size="large" @click="nuevo">
             <template #icon
               ><NIcon><Add /></NIcon
             ></template>
-            {{ t.agregar }}
+            {{ tp.agregar }}
           </NButton>
         </template>
       </NEmpty>
@@ -119,13 +148,16 @@ onMounted(() => {
 
       <section class="lista" aria-live="polite">
         <TransitionGroup name="fila">
-          <FilaSitio
+          <TarjetaProyecto
             v-for="s in visibles"
             :key="s.id"
             :sitio="s"
             @editar="editar"
             @duplicar="duplicar"
             @aplicado="alAplicar"
+            @ver-preparacion="verPreparacion"
+            @revisar-receta="revisarReceta"
+            @ver-registros="(x: Sitio) => (registros = x)"
           />
         </TransitionGroup>
         <p v-if="!visibles.length" class="sin-resultados">{{ t.sinResultados(busqueda.trim()) }}</p>
@@ -133,6 +165,14 @@ onMounted(() => {
     </template>
 
     <FormSitio :objetivo="objetivo" @cerrar="objetivo = null" @aplicado="alAplicar" />
+    <AgregarProyecto
+      :show="agregando"
+      @cerrar="agregando = false"
+      @preparar="preparar"
+      @manual="manual"
+    />
+    <AsistenteReceta :objetivo="asistente" @cerrar="asistente = null" @aplicado="alAplicar" />
+    <RegistrosProyecto :sitio="registros" @cerrar="registros = null" />
   </div>
 </template>
 

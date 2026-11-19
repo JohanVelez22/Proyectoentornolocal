@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import {
   CopyOutline,
+  Construct,
   CreateOutline,
+  DocumentText,
   EllipsisHorizontal,
   FolderOpen,
   LockClosed,
   Open,
+  ShieldCheckmark,
   Terminal,
   TrashOutline,
   Warning,
@@ -14,6 +17,7 @@ import {
   NButton,
   NDropdown,
   NIcon,
+  NProgress,
   NTag,
   NTooltip,
   useDialog,
@@ -21,13 +25,14 @@ import {
   useNotification,
   type DropdownOption,
 } from 'naive-ui';
-import { computed, h, type Component } from 'vue';
-import type { ResultadoAplicar, Sitio } from '../../shared/api';
+import { computed, h, onMounted, ref, type Component } from 'vue';
+import type { ResultadoAplicar, ResumenReceta, Sitio } from '../../shared/api';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 import { useHosts } from '../stores/hosts';
 import { useHttps } from '../stores/https';
+import { useProyectos } from '../stores/proyectos';
 import { useServicios } from '../stores/servicios';
 import {
   derivarEstadoSitio,
@@ -37,7 +42,10 @@ import {
   usaPhp,
   usaProxy,
 } from '../utilidades/sitios';
+import { avanceReceta } from '../utilidades/proyectos';
 import EstadoPunto from './EstadoPunto.vue';
+import GitProyecto from './GitProyecto.vue';
+import ProcesosProyecto from './ProcesosProyecto.vue';
 import InterruptorTunel from './InterruptorTunel.vue';
 import SeccionFtpSitio from './SeccionFtpSitio.vue';
 
@@ -47,9 +55,16 @@ const emit = defineEmits<{
   duplicar: [sitio: Sitio];
   /** Resultado de aplicar tras borrar, para que la vista muestre el aviso de hosts. */
   aplicado: [resultado: ResultadoAplicar];
+  /** Abrir el asistente con el progreso de la receta. */
+  verPreparacion: [sitio: Sitio];
+  /** Volver a revisar la receta (cambió desde que se confió en el proyecto). */
+  revisarReceta: [sitio: Sitio];
+  verRegistros: [sitio: Sitio];
 }>();
 
 const t = es.sitios;
+const tp = es.proyectos;
+const proyectos = useProyectos();
 const th = es.sitioHttps;
 const servicios = useServicios();
 const hosts = useHosts();
@@ -72,6 +87,7 @@ const icono = (c: Component) => () => h(NIcon, null, { default: () => h(c) });
 const opciones: DropdownOption[] = [
   { key: 'editar', label: es.acciones.editar, icon: icono(CreateOutline) },
   { key: 'duplicar', label: es.acciones.duplicar, icon: icono(CopyOutline) },
+  { key: 'registros', label: tp.tarjeta.verRegistros, icon: icono(DocumentText) },
   { type: 'divider', key: 'd1' },
   {
     key: 'borrar',
@@ -84,6 +100,7 @@ const opciones: DropdownOption[] = [
 function elegir(clave: string | number): void {
   if (clave === 'editar') emit('editar', props.sitio);
   else if (clave === 'duplicar') emit('duplicar', props.sitio);
+  else if (clave === 'registros') emit('verRegistros', props.sitio);
   else if (clave === 'borrar') confirmarBorrar();
 }
 
@@ -119,6 +136,63 @@ function confirmarBorrar(): void {
         });
         return true;
       }
+    },
+  });
+}
+
+/* ───── Receta y runtimes ───── */
+
+const receta = computed(() => proyectos.receta(props.sitio.id));
+const avance = computed(() => avanceReceta(receta.value));
+const avisosRuntimes = ref<string[]>([]);
+
+onMounted(() => {
+  void proyectos.cargarReceta(props.sitio.id).catch(() => undefined);
+  void api()
+    .runtimes.proyecto(props.sitio.id)
+    .then((r) => {
+      avisosRuntimes.value = r.avisos;
+    })
+    .catch(() => undefined);
+});
+
+/** "Reinstalar dependencias": muestra el comando real de cada paso antes de ejecutar. */
+async function reinstalar(): Promise<void> {
+  const resumen = await ejecutar('resumen', () => api().proyectos.resumenReceta(props.sitio.id));
+  if (resumen) confirmarReceta(resumen);
+}
+
+function confirmarReceta(resumen: ResumenReceta): void {
+  // Con cambio, el núcleo antepone su aviso: aquí se muestra el texto propio.
+  const pasos = resumen.cambio ? resumen.pasos.slice(1) : resumen.pasos;
+  dialog.info({
+    title: tp.tarjeta.reinstalarTitulo(nombre.value),
+    content: () =>
+      h('div', [
+        resumen.cambio ? h('p', { class: 'resumen-aviso' }, tp.asistente.recetaCambio) : null,
+        h('p', { class: 'resumen-texto' }, tp.tarjeta.reinstalarTexto),
+        h(
+          'ol',
+          { class: 'resumen-pasos' },
+          pasos.map((p) => h('li', p)),
+        ),
+      ]),
+    positiveText: tp.tarjeta.ejecutar,
+    negativeText: resumen.cambio ? tp.asistente.recargar : es.acciones.cancelar,
+    autoFocus: false,
+    onPositiveClick: () => {
+      proyectos.ejecutar(props.sitio.id).catch((e: unknown) => {
+        notification.error({
+          title: es.errores.titulo,
+          content: mensajeDeError(e),
+          duration: 10000,
+          keepAliveOnHover: true,
+        });
+      });
+      emit('verPreparacion', props.sitio);
+    },
+    onNegativeClick: () => {
+      if (resumen.cambio) emit('revisarReceta', props.sitio);
     },
   });
 }
@@ -164,6 +238,17 @@ function abrirCarpeta(): void {
           >
             {{ t.puerto(sitio.puertoProxy) }}
           </NTag>
+          <NTooltip v-if="sitio.confiado">
+            <template #trigger>
+              <NTag size="small" type="success" :bordered="false" class="etiqueta" tabindex="0">
+                <template #icon
+                  ><NIcon><ShieldCheckmark /></NIcon
+                ></template>
+                {{ tp.tarjeta.confiado }}
+              </NTag>
+            </template>
+            {{ tp.tarjeta.confiadoAyuda }}
+          </NTooltip>
           <NTooltip v-if="sitio.datosReales">
             <template #trigger>
               <NTag size="small" type="error" :bordered="false" class="etiqueta">
@@ -245,6 +330,11 @@ function abrirCarpeta(): void {
           </span>
         </p>
         <p v-if="sitio.nota" class="nota">{{ sitio.nota }}</p>
+        <ul v-if="avisosRuntimes.length" class="avisos" :aria-label="tp.tarjeta.runtimes">
+          <li v-for="(a, i) in avisosRuntimes" :key="i">
+            <NIcon aria-hidden="true"><Warning /></NIcon>{{ a }}
+          </li>
+        </ul>
       </div>
 
       <div class="acciones">
@@ -304,6 +394,59 @@ function abrirCarpeta(): void {
     </div>
 
     <div class="pie">
+      <GitProyecto :sitio="sitio" @ver-preparacion="emit('verPreparacion', sitio)" />
+      <div class="receta">
+        <span class="receta-titulo">{{ tp.tarjeta.receta }}</span>
+        <NTag
+          size="small"
+          :bordered="false"
+          :type="
+            receta.estado === 'lista'
+              ? 'success'
+              : receta.estado === 'error'
+                ? 'error'
+                : receta.estado === 'corriendo'
+                  ? 'info'
+                  : 'default'
+          "
+        >
+          {{ tp.estadoReceta[receta.estado] }}
+        </NTag>
+        <NProgress
+          v-if="receta.estado === 'corriendo'"
+          type="line"
+          :percentage="avance"
+          :show-indicator="false"
+          class="receta-barra"
+        />
+        <span class="espacio" />
+        <NButton
+          v-if="receta.estado !== 'inactiva'"
+          size="tiny"
+          quaternary
+          @click="emit('verPreparacion', sitio)"
+        >
+          {{ tp.tarjeta.verPreparacion }}
+        </NButton>
+        <NTooltip :disabled="sitio.confiado">
+          <template #trigger>
+            <NButton
+              size="tiny"
+              secondary
+              :disabled="!sitio.confiado || receta.estado === 'corriendo'"
+              :loading="ocupado('resumen')"
+              @click="reinstalar"
+            >
+              <template #icon
+                ><NIcon><Construct /></NIcon
+              ></template>
+              {{ tp.tarjeta.reinstalar }}
+            </NButton>
+          </template>
+          {{ tp.tarjeta.sinConfianza }}
+        </NTooltip>
+      </div>
+      <ProcesosProyecto :sitio="sitio" @aplicado="(r) => emit('aplicado', r)" />
       <InterruptorTunel :sitio="sitio" />
       <SeccionFtpSitio :sitio="sitio" />
     </div>
@@ -424,10 +567,43 @@ function abrirCarpeta(): void {
   font-family: var(--fuente-mono);
   font-size: 12px;
 }
+.avisos {
+  margin: 2px 0 0;
+  padding: 0;
+  font-size: 12px;
+  color: #b45309;
+}
+.avisos li {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.avisos .n-icon {
+  margin-top: 2px;
+  flex: none;
+}
+.receta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.receta-titulo {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+.receta-barra {
+  max-width: 140px;
+}
+.espacio {
+  flex: 1;
+}
 .pie {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   padding: 8px 16px 10px 38px;
   border-top: 1px solid rgba(128, 128, 128, 0.14);
 }
