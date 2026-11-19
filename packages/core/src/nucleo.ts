@@ -28,6 +28,7 @@ import { GestorHttps, type EstadoHttps, type ResultadoCA } from './https/certifi
 import { Adminer } from './herramientas/adminer';
 import { Composer } from './herramientas/composer';
 import { PathUsuario } from './herramientas/pathUsuario';
+import { abrirEnVsCode } from './herramientas/editor';
 import { Terminal } from './herramientas/terminal';
 import { bloqueEnvIa, ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
 import { crearPlataforma } from './plataforma/index';
@@ -80,6 +81,7 @@ import {
 import { detectarProyecto as detectarProyectoB, type Deteccion } from './proyectos/detectar';
 import { RegistroPasos } from './proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
+import { datosAlCrear } from './proyectos/pasos/sitio';
 import {
   EjecutorRecetas,
   recetaEfectiva,
@@ -196,6 +198,8 @@ interface ModulosNucleo {
   metricas: Metricas;
   registros: Registros;
   puertos: HerramientasPuertos;
+  /** Dependencias de los pasos de receta (puerto libre…), también para crear proyectos. */
+  depsPasos?: DepsPasos;
 }
 
 /** Puerto HTTPS: el estándar 443 o uno de usuario (1024–65535). */
@@ -278,6 +282,7 @@ export class Nucleo {
    * (safeStorage); el núcleo nunca lo guarda, lo registra ni lo emite.
    */
   private proveedorTokenGithub: () => string | null | Promise<string | null> = () => null;
+  private readonly depsPasos: DepsPasos | undefined;
 
   private constructor(
     readonly rutas: Rutas,
@@ -318,6 +323,7 @@ export class Nucleo {
     this.metricas = m.metricas;
     this.registros = m.registros;
     this.puertos = m.puertos;
+    this.depsPasos = m.depsPasos;
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
       operaciones: this.operacionesMcp(),
@@ -565,6 +571,7 @@ export class Nucleo {
           ...(o.probarPuerto ? { probar: o.probarPuerto } : {}),
         }),
     };
+    modulos.depsPasos = depsPasos;
     modulos.recetas = new EjecutorRecetas({
       rutas,
       eventos,
@@ -889,6 +896,11 @@ export class Nucleo {
       c.herramientas.phpPorDefecto = rama;
     });
     await this.composer.sincronizarShims();
+  }
+
+  /** Abre la carpeta del sitio en VS Code (la ruta sale de la configuración, nunca de afuera). */
+  async abrirEditor(sitioId: string): Promise<void> {
+    await abrirEnVsCode((await this.sitioPorId(sitioId)).carpeta);
   }
 
   /** Abre una terminal en la carpeta del sitio con su PHP y Composer en el PATH. */
@@ -1370,12 +1382,48 @@ export class Nucleo {
     datos: Omit<Sitio, 'id'>,
     id?: string,
   ): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }> {
+    return this.guardarSitioInterno(datos, id, false);
+  }
+
+  /**
+   * Proyecto nuevo del asistente: crea el sitio con lo que trae el paso `sitio-crear` de su receta
+   * (tipo, PHP, dominio, HTTPS y procesos con puerto libre), así un FastAPI o Node nace con su
+   * proxy y su puerto. Exige "Confío en este repositorio". Después se ejecuta la receta.
+   */
+  async crearSitioProyecto(
+    datos: Omit<Sitio, 'id'>,
+    receta: readonly PasoReceta[],
+  ): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }> {
+    if (datos.confiado !== true) {
+      throw new Error('Marque "Confío en este repositorio" para montar el proyecto.');
+    }
+    if (!this.depsPasos) throw new Error('Los pasos de receta no están disponibles.');
+    const args = receta.find((p) => p.tipo === 'sitio-crear')?.args ?? {};
+    return this.guardarSitio(await datosAlCrear(this.depsPasos, datos, args));
+  }
+
+  /**
+   * "Confío en este repositorio" otra vez: marca el sitio como confiado y toma la huella de la
+   * receta actual, en un solo guardado con los datos frescos del sitio.
+   */
+  async confiarReceta(sitioId: string): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }> {
+    const { id, ...resto } = await this.sitioPorId(sitioId);
+    return this.guardarSitioInterno({ ...resto, confiado: true }, id, true);
+  }
+
+  private async guardarSitioInterno(
+    datos: Omit<Sitio, 'id'>,
+    id: string | undefined,
+    renovarHuella: boolean,
+  ): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }> {
     // El acceso FTP solo cambia con activarFtp/desactivarFtp/ftpSoloLectura.
     const resto: Omit<Sitio, 'id'> = { ...datos };
     delete resto.ftp;
     if (id) await this.cerrarTunelSiCambia(id, datos);
     const previo = id ? (await this.sitios.listar()).find((s) => s.id === id) : undefined;
-    resto.recetaConfiada = await this.huellaPara(datos, previo);
+    resto.recetaConfiada = renovarHuella
+      ? await this.huellaCarpeta(datos.carpeta)
+      : await this.huellaPara(datos, previo);
     const sitio = id ? await this.sitios.editar(id, resto) : await this.sitios.crear(resto);
     // Las sesiones FTP abiertas siguen en la carpeta vieja: se cortan al cambiarla.
     if (id && previo && previo.carpeta !== sitio.carpeta) {

@@ -132,6 +132,7 @@ const api: ApiEntorno = {
     version: () => invocar('sistema.version'),
     guardarArchivo: (nombre) => invocar('sistema.guardarArchivo', nombre),
     elegirArchivos: () => invocar('sistema.elegirArchivos'),
+    abrirEditor: (sitioId) => invocar('sistema.abrirEditor', sitioId),
   },
   proyectos: {
     detectar: (carpeta) => invocar('proyectos.detectar', carpeta),
@@ -143,6 +144,8 @@ const api: ApiEntorno = {
     estadoReceta: (sitioId) => invocar('proyectos.estadoReceta', sitioId),
     cancelarReceta: (sitioId) => invocar('proyectos.cancelarReceta', sitioId),
     resumenReceta: (sitioId) => invocar('proyectos.resumenReceta', sitioId),
+    crearSitio: (datos, receta) => invocar('proyectos.crearSitio', datos, receta),
+    confiar: (sitioId) => invocar('proyectos.confiar', sitioId),
   },
   git: {
     disponible: () => invocar('git.disponible'),

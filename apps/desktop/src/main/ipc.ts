@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { PasoRecetaSchema, validarUrlGit, type Nucleo, type OpcionesReceta } from '@pel/core';
 import { SECRETOS_NO_DISPONIBLES, type SecretosGithub } from './secretos';
@@ -259,6 +259,8 @@ export interface OpcionesIpc {
   secretos?: SecretosIpc;
   metricas?: ControlMetricas;
   seguimientos?: Seguimientos;
+  /** Carpeta de proyectos sin carpeta vigilada (`C:\\Proyectos`); se puede cambiar en pruebas. */
+  carpetaProyectosPorDefecto?: string;
 }
 
 /** Lo que ve cada manejador además del núcleo: el sistema, las rutas elegidas y el emisor. */
@@ -269,6 +271,7 @@ type Contexto = ApiSistema & {
   seguimientos: Seguimientos;
   /** webContents que hizo la llamada (para atar los seguimientos de registros). */
   emisor: unknown;
+  carpetaProyectosPorDefecto: string;
 };
 
 /** Opciones de ejecución de receta: ids acotados y receta validada (archivos de diálogos). */
@@ -296,7 +299,27 @@ async function opcionesReceta(v: unknown, elegidas: RutasElegidas): Promise<Opci
     }
     r.receta = p.data;
   }
+  for (const k of ['guardada', 'suelta'] as const) {
+    if (o[k] === undefined) continue;
+    if (typeof o[k] !== 'boolean') throw new Error(`Argumento no válido: ${k}`);
+    if (o[k]) r[k] = true;
+  }
   return r;
+}
+
+/** Receta del asistente (obligatoria): misma validación que al ejecutar. */
+async function recetaObligatoria(v: unknown, elegidas: RutasElegidas) {
+  if (!Array.isArray(v)) throw new Error('Argumento no válido: receta');
+  return (await opcionesReceta({ receta: v }, elegidas)).receta ?? [];
+}
+
+/** Id de un sitio que existe: así nadie puede pasar una ruta en su lugar. */
+async function sitioExistente(n: NucleoIpc, v: unknown): Promise<string> {
+  const id = idCorto(v, 'sitio');
+  if (!(await n.sitios.listar()).some((s) => s.id === id)) {
+    throw new Error('El proyecto ya no existe.');
+  }
+  return id;
 }
 
 /** Ruta del .key junto al .crt elegido. */
@@ -356,8 +379,12 @@ async function destinoClon(n: NucleoIpc, s: Contexto, v: unknown): Promise<strin
   const destino = rutaAbsoluta(v, 'destino');
   const padre = dirname(destino);
   const vigilada = (await n.config.leer())?.proyectos?.carpetaVigilada ?? null;
-  const base =
-    vigilada ?? (existsSync(CARPETA_PROYECTOS_POR_DEFECTO) ? CARPETA_PROYECTOS_POR_DEFECTO : null);
+  const defecto = s.carpetaProyectosPorDefecto;
+  // Sin carpeta vigilada, la de por defecto se crea la primera vez (solo esa ruta exacta).
+  if (vigilada === null && mismaRuta(padre, defecto) && !existsSync(defecto)) {
+    await mkdir(defecto, { recursive: true });
+  }
+  const base = vigilada ?? (existsSync(defecto) ? defecto : null);
   const permitida = (base !== null && mismaRuta(padre, base)) || s.elegidas.tiene(padre, 'abrir');
   if (!permitida) {
     throw new Error(
@@ -546,6 +573,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'sistema.abrirCarpeta': async (_n, s, ruta) => s.abrirCarpeta(await carpetaExistente(ruta)),
   'sistema.copiar': (_n, s, t) => s.copiar(texto(t, 'texto')),
   'sistema.version': (_n, s) => s.version(),
+  'sistema.abrirEditor': async (n, _s, sitioId) => n.abrirEditor(await sitioExistente(n, sitioId)),
   // Solo sirve como destino (propósito 'guardar'), nunca para leer.
   'sistema.guardarArchivo': async (_n, s, nombre) =>
     s.elegidas.registrar(
@@ -588,6 +616,11 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'proyectos.estadoReceta': (n, _s, sitioId) => n.estadoReceta(idCorto(sitioId, 'sitio')),
   'proyectos.cancelarReceta': (n, _s, sitioId) => n.cancelarReceta(idCorto(sitioId, 'sitio')),
   'proyectos.resumenReceta': (n, _s, sitioId) => n.resumenReceta(idCorto(sitioId, 'sitio')),
+  'proyectos.crearSitio': async (n, s, datos, receta) => {
+    const d = objetoPlano<Parameters<Nucleo['crearSitioProyecto']>[0]>(datos, 'datos');
+    return n.crearSitioProyecto(d, await recetaObligatoria(receta, s.elegidas));
+  },
+  'proyectos.confiar': (n, _s, sitioId) => n.confiarReceta(idCorto(sitioId, 'sitio')),
 
   // ---- Git y GitHub: el token lo agrega este proceso; nunca vuelve al renderer ----
   'git.disponible': (n) => n.disponibilidadGit(),
@@ -759,6 +792,8 @@ export function registrarIpc(
     secretos: opciones.secretos ?? SECRETOS_NO_DISPONIBLES,
     metricas: opciones.metricas ?? new ControlMetricas(nucleo),
     seguimientos,
+    carpetaProyectosPorDefecto:
+      opciones.carpetaProyectosPorDefecto ?? CARPETA_PROYECTOS_POR_DEFECTO,
   };
   for (const [ruta, fn] of Object.entries(TABLA) as [RutaIpc, Manejador][]) {
     ipcMain.handle(`${PREFIJO_CANAL}${ruta}`, async (e, ...args) => {

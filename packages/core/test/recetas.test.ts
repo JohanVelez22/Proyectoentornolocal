@@ -475,6 +475,87 @@ describe('EjecutorRecetas', () => {
     }
   });
 
+  it('una corrida suelta (traer cambios) no reemplaza la receta guardada ni su estado', async () => {
+    const m = await montar();
+    await m.ejecutor.ejecutar(m.s.id, {});
+    const antes = m.ejecutor.estado(m.s.id);
+    const archivo = await readFile(m.rutas.receta(m.s.id), 'utf8');
+    m.orden.length = 0;
+    m.progreso.length = 0;
+    const suelta: PasoReceta[] = [{ id: 'dos', tipo: 'comando', titulo: '', args: { n: 9 } }];
+    const r = await m.ejecutor.ejecutar(m.s.id, { receta: suelta, suelta: true });
+    expect(r.estado).toBe('lista');
+    expect(m.orden).toEqual(['dos']);
+    expect(m.contextos.at(-1)!.paso.args).toEqual({ n: 9 });
+    // Los eventos de la corrida suelta van marcados; el estado y el archivo no cambian.
+    expect(m.progreso.length).toBeGreaterThan(0);
+    expect(m.progreso.every((p) => p.suelta === true)).toBe(true);
+    expect(m.ejecutor.estado(m.s.id)).toEqual(antes);
+    expect(await readFile(m.rutas.receta(m.s.id), 'utf8')).toBe(archivo);
+    // Reintentar sigue usando la receta guardada completa.
+    m.orden.length = 0;
+    await m.ejecutor.ejecutar(m.s.id, { desde: 'uno' });
+    expect(m.orden).toEqual(['uno', 'dos', 'tres']);
+  });
+
+  it('una corrida suelta exige su receta y no se combina con desde/soloPaso', async () => {
+    const m = await montar();
+    await expect(m.ejecutor.ejecutar(m.s.id, { suelta: true })).rejects.toThrow(/receta/);
+    await expect(
+      m.ejecutor.ejecutar(m.s.id, { suelta: true, receta: RECETA, desde: 'uno' }),
+    ).rejects.toThrow();
+  });
+
+  it('"guardada" repite la receta guardada sin args de interfaz y sin restaurar respaldos', async () => {
+    const receta: PasoReceta[] = [
+      { id: 'uno', tipo: 'comando', titulo: '', args: { n: 1, sobrescribir: true } },
+      {
+        id: 'bd-restaurar',
+        tipo: 'bd-restaurar',
+        titulo: '',
+        args: { archivo: 'C:/r/x.sql', confirmarSobrescribir: true },
+      },
+      { id: 'tres', tipo: 'comando', titulo: '', args: { n: 3 } },
+    ];
+    const m = await montar({ receta: RECETA });
+    const restaurados: unknown[] = [];
+    m.registro.registrar('bd-restaurar', (ctx) => {
+      restaurados.push(ctx.paso.args);
+      return Promise.resolve();
+    });
+    await m.ejecutor.ejecutar(m.s.id, { receta });
+    expect(restaurados).toHaveLength(1);
+    m.orden.length = 0;
+    const r = await m.ejecutor.ejecutar(m.s.id, { guardada: true });
+    expect(r.estado).toBe('lista');
+    expect(m.orden).toEqual(['uno', 'tres']);
+    expect(restaurados).toHaveLength(1);
+    expect(m.contextos.at(-2)!.paso.args).toEqual({ n: 1 });
+    expect(estadosDe(m.ejecutor.estado(m.s.id))).toEqual({
+      uno: 'listo',
+      'bd-restaurar': 'omitido',
+      tres: 'listo',
+    });
+  });
+
+  it('"guardada" sin receta guardada usa la del proyecto', async () => {
+    const m = await montar();
+    await m.ejecutor.ejecutar(m.s.id, { guardada: true });
+    expect(m.orden).toEqual(['uno', 'dos', 'tres']);
+  });
+
+  it('el paso sitio-crear no se puede omitir', async () => {
+    const receta: PasoReceta[] = [
+      { id: 'uno', tipo: 'comando', titulo: '' },
+      { id: 'sitio-crear', tipo: 'sitio-crear', titulo: '' },
+    ];
+    const m = await montar({ receta });
+    m.registro.registrar('sitio-crear', () => Promise.reject(new Error('sin puerto')));
+    await m.ejecutor.ejecutar(m.s.id, {});
+    await expect(m.ejecutor.omitir(m.s.id, 'sitio-crear')).rejects.toThrow(/no se puede omitir/);
+    expect(m.ejecutor.estado(m.s.id).pasos[1]!.estado).toBe('error');
+  });
+
   it('rechaza ids de sitio que no sirven como nombre de archivo', async () => {
     const m = await montar();
     expect(() => m.rutas.receta('../fuera')).toThrow();

@@ -761,11 +761,11 @@ describe('bd-crear, bd-restaurar y pgvector-activar', () => {
 /* ───────────── sitio ───────────── */
 
 describe('sitio-crear', () => {
-  it('guarda el sitio con tipo, PHP, dominio y HTTPS', async () => {
-    const a = await armar({ sitio: { php: null } });
+  it('en un sitio que ya existe no pisa tipo, PHP, dominio ni HTTPS (solo se aplican al crear)', async () => {
+    const a = await armar({ sitio: { php: '8.4' } });
     await correr(a, 'sitio-crear', {
-      tipo: 'laravel',
-      dominio: 'tienda.test',
+      tipo: 'codeigniter3',
+      dominio: 'otro.test',
       php: '8.3',
       https: true,
     });
@@ -775,8 +775,8 @@ describe('sitio-crear', () => {
     expect(g.datos).toMatchObject({
       tipo: 'laravel',
       dominio: 'tienda.test',
-      php: '8.3',
-      https: true,
+      php: '8.4',
+      https: false,
     });
     expect('id' in g.datos).toBe(false);
   });

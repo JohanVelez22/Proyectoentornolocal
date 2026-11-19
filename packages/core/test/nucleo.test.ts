@@ -6,6 +6,7 @@ import { Eventos, type EventosNucleo } from '../src/eventos';
 import { LIMITE_ENV_BYTES, Nucleo, puertosReservados } from '../src/nucleo';
 import type { OperacionesMcp } from '../src/mcp/servidor';
 import { ConfigSchema } from '../src/tipos';
+import type { PasoReceta } from '../src/proyectos/config';
 import { buscarPuertoLibre } from '../src/proyectos/resumen';
 import { Supervisor } from '../src/procesos/supervisor';
 import { ProcesosProyecto } from '../src/proyectos/procesos';
@@ -1197,6 +1198,65 @@ describe('Nucleo (Etapa B)', () => {
       await otra;
       expect(espia).toHaveBeenCalledTimes(2);
     }
+  });
+
+  it('crearSitioProyecto crea el sitio con los datos de sitio-crear, su proceso y su puerto', async () => {
+    const n = await Nucleo.crear({
+      base,
+      plataforma,
+      sonda: async () => false,
+      fetch: (async () => new Response('{}')) as typeof fetch,
+      probarPuerto: async () => true,
+    });
+    nucleos.push(n);
+    const receta: PasoReceta[] = [
+      { id: 'python-venv', tipo: 'python-venv', titulo: '' },
+      {
+        id: 'sitio-crear',
+        tipo: 'sitio-crear',
+        titulo: '',
+        args: {
+          tipo: 'fastapi',
+          dominio: 'bot.test',
+          php: null,
+          https: true,
+          procesos: [
+            {
+              id: 'uvicorn',
+              comando: ['uvicorn', 'app:app', '--port', '{puerto}'],
+              proxy: true,
+            },
+          ],
+        },
+      },
+    ];
+    await expect(n.crearSitioProyecto(datos({ confiado: false }), receta)).rejects.toThrow(
+      /Confío/,
+    );
+    const { sitio } = await n.crearSitioProyecto(
+      datos({ confiado: true, tipo: 'fastapi' }),
+      receta,
+    );
+    expect(sitio).toMatchObject({ tipo: 'fastapi', dominio: 'bot.test', https: true });
+    expect(sitio.procesos).toHaveLength(1);
+    const puerto = sitio.procesos[0]!.puerto!;
+    expect(puerto).toBeGreaterThanOrEqual(8000);
+    expect(sitio.procesos[0]!.comando).toEqual(['uvicorn', 'app:app', '--port', String(puerto)]);
+    expect(sitio.puertoProxy).toBe(puerto);
+    expect(sitio.recetaConfiada).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('confiarReceta toma la huella de la receta actual en un solo guardado', async () => {
+    yml(['node', 'a.js']);
+    const n = await crear();
+    await n.guardarSitio(datos({ confiado: true }));
+    yml(['node', 'b.js']);
+    expect((await n.resumenReceta('demo')).cambio).toBe(true);
+    const guardar = vi.spyOn(n.sitios, 'editar');
+    await n.confiarReceta('demo');
+    expect(guardar).toHaveBeenCalledTimes(1);
+    expect((await n.resumenReceta('demo')).cambio).toBe(false);
+    expect((await n.sitios.listar())[0]!.confiado).toBe(true);
   });
 
   it('puertosReservados reúne servicios y procesos de otros proyectos, menos el propio', () => {

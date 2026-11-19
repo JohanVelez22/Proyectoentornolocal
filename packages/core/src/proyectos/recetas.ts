@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
-import type { EstadoPasoReceta, Eventos, EventosNucleo } from '../eventos';
+import type { EstadoPasoReceta, Eventos, EventosNucleo, ProgresoReceta } from '../eventos';
 import type { Rutas } from '../rutas';
 import type { ProcesoProyecto, Sitio } from '../tipos';
 import {
@@ -228,7 +228,24 @@ export interface OpcionesReceta {
   soloPaso?: string;
   /** Receta a usar (la que editó el usuario en el asistente); si falta, ver `ejecutar`. */
   receta?: PasoReceta[];
+  /**
+   * Repite la receta guardada de la última corrida ("Reinstalar dependencias"), sin los
+   * argumentos de interfaz (`ARGS_SOLO_INTERFAZ`) y sin restaurar respaldos (esos pasos quedan
+   * omitidos). Sin receta guardada usa la del proyecto.
+   */
+  guardada?: boolean;
+  /**
+   * Corrida suelta (p. ej. los pasos sugeridos tras traer cambios): corre `receta` sin tocar la
+   * receta guardada ni su estado; sus eventos llevan `suelta: true`.
+   */
+  suelta?: boolean;
 }
+
+/** Mensaje al intentar omitir un paso que no se puede omitir. */
+export const MENSAJE_NO_OMITIBLE = 'El paso "Crear el sitio" no se puede omitir.';
+
+/** Pasos sin los que no queda proyecto: no se omiten. */
+const PASOS_NO_OMITIBLES: readonly TipoPaso[] = ['sitio-crear'];
 
 export interface DepsRecetas {
   rutas: Rutas;
@@ -309,6 +326,8 @@ export class EjecutorRecetas {
   private readonly estados = new Map<string, EstadoReceta>();
   private readonly activas = new Map<string, AbortController>();
   private readonly escrituras = new Map<string, Promise<void>>();
+  /** Proyectos con una corrida suelta en curso: ni se guarda ni reemplaza su estado. */
+  private readonly sueltas = new Set<string>();
 
   constructor(private readonly d: DepsRecetas) {}
 
@@ -377,6 +396,16 @@ export class EjecutorRecetas {
     if (op.desde !== undefined && op.soloPaso !== undefined) {
       throw new Error('Use "desde" o "soloPaso", no ambos');
     }
+    const parcial = op.desde !== undefined || op.soloPaso !== undefined || omitirId !== null;
+    if (op.suelta) {
+      if (!op.receta) throw new Error('Una corrida suelta necesita su receta');
+      if (parcial || op.guardada) {
+        throw new Error('Una corrida suelta no se combina con otras opciones');
+      }
+    }
+    if (op.guardada && (parcial || op.receta)) {
+      throw new Error('"guardada" no se combina con otras opciones');
+    }
     if (this.activas.has(sitioId)) throw new Error(MENSAJE_EN_CURSO);
     const control = new AbortController();
     this.activas.set(sitioId, control);
@@ -386,8 +415,11 @@ export class EjecutorRecetas {
       if (sitio.confiado !== true) throw new Error(MENSAJE_NO_CONFIADO);
 
       const previo = this.estado(sitioId);
-      const continua = op.desde !== undefined || op.soloPaso !== undefined || omitirId !== null;
-      const receta = await this.receta(sitio, op, continua ? previo : null);
+      const continua = parcial;
+      const guardada = op.guardada === true && previo.pasos.length > 0;
+      const receta = guardada
+        ? previo.pasos.map((p) => sinArgsDeInterfaz(sinEstado(p)))
+        : await this.receta(sitio, op, continua ? previo : null);
       const indice = (id: string): number => {
         const i = receta.findIndex((p) => p.id === id);
         if (i < 0) throw new Error(`El paso "${id}" no está en la receta`);
@@ -407,6 +439,9 @@ export class EjecutorRecetas {
       if (op.soloPaso !== undefined) {
         aCorrer = [indice(op.soloPaso)];
       } else if (op.desde !== undefined || omitirId !== null) {
+        if (omitirId !== null && PASOS_NO_OMITIBLES.includes(receta[indice(omitirId)]!.tipo)) {
+          throw new Error(MENSAJE_NO_OMITIBLE);
+        }
         const inicio = op.desde !== undefined ? indice(op.desde) : indice(omitirId!) + 1;
         pasos.slice(0, inicio).forEach((p, i) => {
           if (p.id === omitirId || (p.estado !== 'listo' && p.estado !== 'omitido')) {
@@ -416,6 +451,15 @@ export class EjecutorRecetas {
           }
         });
         aCorrer = pasos.map((_, i) => i).slice(inicio);
+      } else if (guardada) {
+        // Reinstalar no vuelve a restaurar respaldos: pisaría la base con datos viejos.
+        aCorrer = [];
+        pasos.forEach((p, i) => {
+          if (p.tipo === 'bd-restaurar') {
+            Object.assign(p, { estado: 'omitido', mensaje: undefined, log: [] });
+            omitidos.push(i);
+          } else aCorrer.push(i);
+        });
       } else {
         aCorrer = pasos.map((_, i) => i);
       }
@@ -424,7 +468,8 @@ export class EjecutorRecetas {
       }
 
       const e: EstadoReceta = { sitioId, estado: 'corriendo', pasos, actualizado: null };
-      this.estados.set(sitioId, e);
+      if (op.suelta) this.sueltas.add(sitioId);
+      else this.estados.set(sitioId, e);
       for (const i of omitidos) this.emitir(sitioId, pasos[i]!.id, 'omitido');
       for (const i of aCorrer) this.emitir(sitioId, pasos[i]!.id, 'pendiente');
       this.guardar(e);
@@ -447,7 +492,10 @@ export class EjecutorRecetas {
       }
       return { estado: e.estado as ResultadoReceta['estado'] };
     } finally {
-      if (this.activas.get(sitioId) === control) this.activas.delete(sitioId);
+      if (this.activas.get(sitioId) === control) {
+        this.activas.delete(sitioId);
+        this.sueltas.delete(sitioId);
+      }
     }
   }
 
@@ -561,14 +609,16 @@ export class EjecutorRecetas {
   }
 
   private emitir(sitioId: string, pasoId: string, estado: EstadoPasoReceta, linea?: string): void {
-    this.d.eventos.emit(
-      'receta:progreso',
-      linea === undefined ? { sitioId, pasoId, estado } : { sitioId, pasoId, estado, linea },
-    );
+    const p: ProgresoReceta =
+      linea === undefined ? { sitioId, pasoId, estado } : { sitioId, pasoId, estado, linea };
+    if (this.sueltas.has(sitioId)) p.suelta = true;
+    this.d.eventos.emit('receta:progreso', p);
   }
 
   /** Encola la escritura atómica del estado (una a la vez por proyecto). Nunca lanza. */
   private guardar(e: EstadoReceta): void {
+    // Una corrida suelta no reemplaza el estado guardado de la receta principal.
+    if (this.sueltas.has(e.sitioId)) return;
     e.actualizado = new Date().toISOString();
     const texto = JSON.stringify(e, null, 2) + '\n';
     const anterior = this.escrituras.get(e.sitioId) ?? Promise.resolve();

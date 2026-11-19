@@ -135,6 +135,9 @@ function nucleoFalso() {
         'configuracionMcp',
         'regenerarTokenMcp',
         'responderConfirmacionMcp',
+        'crearSitioProyecto',
+        'confiarReceta',
+        'abrirEditor',
       ].map((m) => [m, vi.fn(async () => undefined)]),
     ),
     fuentesRegistro: vi.fn(async () => [
@@ -465,6 +468,7 @@ describe('registrarIpc', () => {
         // Etapa B
         'sistema.guardarArchivo',
         'sistema.elegirArchivos',
+        'sistema.abrirEditor',
         'proyectos.detectar',
         'proyectos.configLeer',
         'proyectos.configGuardar',
@@ -474,6 +478,8 @@ describe('registrarIpc', () => {
         'proyectos.estadoReceta',
         'proyectos.cancelarReceta',
         'proyectos.resumenReceta',
+        'proyectos.crearSitio',
+        'proyectos.confiar',
         'git.disponible',
         'git.clonar',
         'git.estado',
@@ -862,13 +868,15 @@ describe('IPC de la Etapa B', () => {
     };
   }
 
-  function montar(o: { secretos?: ReturnType<typeof secretosFalsos> } = {}) {
+  function montar(o: { secretos?: ReturnType<typeof secretosFalsos>; sinVigilada?: string } = {}) {
     const { ipcMain, canales } = ipcFalso();
     const { nucleo, crudo, oyentes } = nucleoFalso();
     const f = crudo as unknown as Record<string, Mock>;
     // Carpeta de proyectos (la vigilada): los clones van directo dentro de ella.
     const proyectos = temporal();
-    crudo.config.leer.mockResolvedValue({ proyectos: { carpetaVigilada: proyectos } });
+    crudo.config.leer.mockResolvedValue({
+      proyectos: { carpetaVigilada: o.sinVigilada === undefined ? proyectos : null },
+    });
     const secretos = o.secretos ?? secretosFalsos();
     const seguimientos = new Seguimientos();
     const metricas = new ControlMetricas(nucleo);
@@ -877,6 +885,7 @@ describe('IPC de la Etapa B', () => {
       secretos,
       seguimientos,
       metricas,
+      ...(o.sinVigilada === undefined ? {} : { carpetaProyectosPorDefecto: o.sinVigilada }),
     });
     const llamar = async (ruta: string, ...args: unknown[]) =>
       (await canales.get(`entorno:${ruta}`)!({}, ...args)) as {
@@ -932,6 +941,14 @@ describe('IPC de la Etapa B', () => {
           ],
         ],
         ['proyectos.omitirPaso', ['s1', largo]],
+        ['proyectos.ejecutarReceta', ['s1', { suelta: 'si' }]],
+        ['proyectos.ejecutarReceta', ['s1', { guardada: 1 }]],
+        ['proyectos.crearSitio', ['no-objeto', []]],
+        ['proyectos.crearSitio', [{ nombre: 'x' }, 'x']],
+        ['proyectos.crearSitio', [{ nombre: 'x' }, [{ id: 'a', tipo: 'rm-rf', titulo: '' }]]],
+        ['proyectos.confiar', [largo]],
+        ['sistema.abrirEditor', ['C:\\Windows']],
+        ['sistema.abrirEditor', [42]],
         ['proyectos.estadoReceta', ['a\nb']],
         ['proyectos.cancelarReceta', [undefined]],
         ['proyectos.resumenReceta', [largo]],
@@ -1234,6 +1251,48 @@ describe('IPC de la Etapa B', () => {
     const r3 = await llamar('git.clonar', 'owner/a', path.join(proyectos, 'llena'));
     expect(r3.error?.mensaje).toMatch(/no está vacía/);
     expect(f['clonarRepo']).toHaveBeenCalledTimes(3);
+  });
+
+  it('sin carpeta vigilada, clonar en la carpeta por defecto la crea si falta (solo esa)', async () => {
+    const raiz = temporal();
+    const defecto = path.join(raiz, 'Proyectos');
+    const { f, llamar } = montar({ sinVigilada: defecto });
+    expect(existsSync(defecto)).toBe(false);
+    expect((await llamar('git.clonar', 'owner/a', path.join(defecto, 'a'))).ok).toBe(true);
+    expect(existsSync(defecto)).toBe(true);
+    expect(f['clonarRepo']!.mock.calls[0]!.slice(0, 2)).toEqual([
+      'owner/a',
+      path.join(defecto, 'a'),
+    ]);
+    // Otra carpeta que no existe no se crea.
+    const otra = path.join(raiz, 'Otra');
+    const r = await llamar('git.clonar', 'owner/a', path.join(otra, 'a'));
+    expect(r.ok).toBe(false);
+    expect(existsSync(otra)).toBe(false);
+  });
+
+  it('proyectos.crearSitio, proyectos.confiar y opciones guardada/suelta llegan al núcleo', async () => {
+    const { f, llamar } = montar();
+    const receta = [
+      { id: 'sitio-crear', tipo: 'sitio-crear', titulo: '', args: { tipo: 'fastapi' } },
+    ];
+    expect((await llamar('proyectos.crearSitio', { nombre: 'Bot' }, receta)).ok).toBe(true);
+    expect(f['crearSitioProyecto']).toHaveBeenCalledWith({ nombre: 'Bot' }, receta);
+    expect((await llamar('proyectos.confiar', 's1')).ok).toBe(true);
+    expect(f['confiarReceta']).toHaveBeenCalledWith('s1');
+    expect((await llamar('proyectos.ejecutarReceta', 's1', { guardada: true })).ok).toBe(true);
+    expect(f['ejecutarReceta']).toHaveBeenLastCalledWith('s1', { guardada: true });
+    const suelta = [{ id: 'migrar', tipo: 'migrar', titulo: '' }];
+    await llamar('proyectos.ejecutarReceta', 's1', { receta: suelta, suelta: true });
+    expect(f['ejecutarReceta']).toHaveBeenLastCalledWith('s1', { receta: suelta, suelta: true });
+  });
+
+  it('sistema.abrirEditor abre la carpeta del sitio por su id (nunca una ruta)', async () => {
+    const { f, llamar } = montar();
+    expect((await llamar('sistema.abrirEditor', 's1')).ok).toBe(true);
+    expect(f['abrirEditor']).toHaveBeenCalledWith('s1');
+    f['abrirEditor']!.mockRejectedValueOnce(new Error('No se encontró Visual Studio Code.'));
+    expect((await llamar('sistema.abrirEditor', 's1')).error?.mensaje).toMatch(/Visual Studio/);
   });
 
   it('si el token guardado no se puede leer, sigue sin token y lo dice si algo falla', async () => {

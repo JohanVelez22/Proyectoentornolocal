@@ -154,6 +154,12 @@ export interface ApiSistema {
   elegirArchivos(): Promise<string[]>;
 }
 
+/** Accesos del sistema que pasan por el núcleo (la ruta sale de la configuración del sitio). */
+export interface ApiSistemaNucleo {
+  /** Abre la carpeta del proyecto en VS Code; error claro si no está instalado. */
+  abrirEditor(sitioId: string): Promise<void>;
+}
+
 /** Lo que se puede pedir al ejecutar una receta desde la interfaz. */
 export interface OpcionesRecetaIpc {
   /** Corre desde este paso hasta el final. */
@@ -165,6 +171,16 @@ export interface OpcionesRecetaIpc {
    * (`args.archivo`) debe venir de `sistema.elegirArchivo`.
    */
   receta?: PasoReceta[];
+  /**
+   * "Reinstalar dependencias": repite la receta guardada (sin restaurar respaldos ni
+   * sobrescribir); sin receta guardada usa la del proyecto.
+   */
+  guardada?: boolean;
+  /**
+   * Corrida suelta (pasos sugeridos tras traer cambios): corre `receta` sin reemplazar la receta
+   * guardada; sus eventos llevan `suelta: true`.
+   */
+  suelta?: boolean;
 }
 
 /** Rutas escritas al emitir un certificado libre (el .key va junto al .crt elegido). */
@@ -335,6 +351,16 @@ export interface ApiEntorno {
     cancelarReceta(sitioId: string): Promise<boolean>;
     /** Comando real de cada paso y si la receta cambió desde que se marcó "Confío…". */
     resumenReceta(sitioId: string): Promise<ResumenReceta>;
+    /**
+     * Crea el proyecto del asistente (exige `confiado`) con los datos del paso `sitio-crear` de
+     * la receta: un FastAPI o Node nace con su proceso, su puerto y su proxy.
+     */
+    crearSitio(
+      datos: DatosSitio,
+      receta: PasoReceta[],
+    ): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }>;
+    /** Vuelve a marcar "Confío…" y toma la huella de la receta actual (un solo guardado). */
+    confiar(sitioId: string): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }>;
   };
   git: {
     disponible(): Promise<DisponibilidadGit>;
@@ -430,7 +456,7 @@ export interface ApiEntorno {
      */
     responderConfirmacion(id: string, aprobado: boolean): Promise<boolean>;
   };
-  sistema: ApiSistema;
+  sistema: ApiSistema & ApiSistemaNucleo;
   /** Suscribe a un evento del núcleo; devuelve la función para cancelar. */
   on<K extends keyof EventosNucleo>(nombre: K, fn: (dato: EventosNucleo[K]) => void): () => void;
 }
@@ -538,6 +564,8 @@ export const RUTAS_IPC = [
   'proyectos.estadoReceta',
   'proyectos.cancelarReceta',
   'proyectos.resumenReceta',
+  'proyectos.crearSitio',
+  'proyectos.confiar',
   'git.disponible',
   'git.clonar',
   'git.estado',
@@ -576,6 +604,7 @@ export const RUTAS_IPC = [
   'mcp.responderConfirmacion',
   'sistema.guardarArchivo',
   'sistema.elegirArchivos',
+  'sistema.abrirEditor',
 ] as const;
 export type RutaIpc = (typeof RUTAS_IPC)[number];
 

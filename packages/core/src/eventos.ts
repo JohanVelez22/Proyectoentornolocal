@@ -21,6 +21,8 @@ export interface ProgresoReceta {
   estado: EstadoPasoReceta;
   /** Una línea del registro en vivo del paso (o el mensaje del error). */
   linea?: string;
+  /** Es de una corrida suelta (p. ej. tras traer cambios): no cambia la receta guardada. */
+  suelta?: boolean;
 }
 
 export interface ProgresoIa {
