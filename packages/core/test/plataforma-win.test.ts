@@ -34,3 +34,52 @@ describe.skipIf(process.platform !== 'win32')('PlataformaWindows real (solo Wind
     }
   }, 30_000);
 });
+
+/**
+ * QA 8 (sospecha de sockets heredados): un servidor lanzado con el lanzador oculto
+ * (spawn → PowerShell → Process.Start, que en .NET hereda los handles heredables) no debe
+ * retener un puerto que este proceso escuchaba. Los sockets de Node/libuv se crean no
+ * heredables; si eso cambiara, el puerto quedaría LISTENING a nombre del PID muerto.
+ */
+describe.skipIf(process.platform !== 'win32')('handles heredados (solo Windows)', () => {
+  it('un servidor lanzado por el lanzador oculto no retiene el puerto del padre', async () => {
+    const { createServer } = await import('node:net');
+    const { mkdtemp, open, rm } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { crearLanzadorOculto } = await import('../src/plataforma/lanzarOculto');
+    const plat = new PlataformaWindows();
+    const dir = await mkdtemp(join(tmpdir(), 'pel-herencia-'));
+    const servidor = createServer();
+    await new Promise<void>((r) => servidor.listen(0, '127.0.0.1', r));
+    const puerto = (servidor.address() as { port: number }).port;
+    const log = await open(join(dir, 'hijo.log'), 'a');
+    let pid = 0;
+    try {
+      const lanzar = crearLanzadorOculto({
+        procesoVivo: (p) => plat.procesoVivo(p),
+        matarArbol: (p) => plat.matarArbol(p),
+        carpetaTmp: dir,
+      });
+      pid = await lanzar(
+        { comando: process.execPath, args: ['-e', 'setTimeout(() => {}, 60000)'] },
+        log.fd,
+      );
+      expect(pid).toBeGreaterThan(0);
+      await new Promise<void>((r) => servidor.close(() => r()));
+      // El puerto vuelve a estar libre aunque el hijo siga vivo.
+      expect((await plat.procesoVivo(pid)).vivo).toBe(true);
+      const otro = createServer();
+      await new Promise<void>((resolve, reject) => {
+        otro.once('error', reject);
+        otro.listen(puerto, '127.0.0.1', () => resolve());
+      });
+      await new Promise<void>((r) => otro.close(() => r()));
+      expect(await plat.quienUsaPuerto(puerto)).toBeNull();
+    } finally {
+      if (pid) await plat.matarArbol(pid);
+      await log.close();
+      await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+    }
+  }, 60_000);
+});
