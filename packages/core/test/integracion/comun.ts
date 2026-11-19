@@ -58,10 +58,10 @@ export function plataformaSegura(hostsCopia: string, documentos: string): Plataf
 export const CARPETA_CACHE =
   process.env.PEL_INT_CACHE ?? path.join(os.tmpdir(), 'pel-etapa-a-cache');
 
-const PAQUETE = /\.(zip|exe|phar|php)$/i;
+const PAQUETE = /\.(zip|exe|phar|php|nupkg)$/i;
 
 /**
- * `fetch` que guarda los paquetes descargados (zip, exe, phar, php) en CARPETA_CACHE y los
+ * `fetch` que guarda los paquetes descargados (zip, exe, phar, php, nupkg) en CARPETA_CACHE y los
  * sirve desde ahí en la siguiente corrida. La huella la sigue verificando el instalador.
  */
 export function fetchConCache(log: (...a: unknown[]) => void): typeof fetch {
