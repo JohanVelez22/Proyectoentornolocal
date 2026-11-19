@@ -11,7 +11,8 @@ import {
 } from '../../tipos';
 import { existe } from '../archivos';
 import type { ImplementacionPaso } from '../pasos';
-import { MARCADOR_PUERTO, sanear } from '../recetas';
+import { moduloAsgi } from '../detectar';
+import { carpetaDelPaso, MARCADOR_PUERTO, sanear } from '../recetas';
 import { argsDe, comprobarSenal, texto, type DepsPasos } from './comun';
 import { nombreEjecutable } from '../../plataforma/sistema';
 
@@ -20,21 +21,25 @@ const PYTHON_VENV_RELATIVO = /^\.venv[\\/]Scripts[\\/]python(\.exe)?$/i;
 const MODULO_UVICORN = 'app:app';
 
 /**
- * Ajusta el comando de un proceso a la carpeta: el python relativo del .venv pasa a ruta
- * absoluta y, en uvicorn, `app:app` se cambia por `main:app` si solo hay main.py.
+ * Ajusta el comando de un proceso a su carpeta de trabajo (la del proyecto o su `cwd`): el
+ * python relativo del .venv pasa a ruta absoluta y, en uvicorn, `app:app` se cambia por el
+ * módulo ASGI que se encuentre (`main:app`, `app.main:app`…) si no hay app.py.
  */
 async function ajustarComando(
   comando: string[],
-  carpeta: string,
+  raiz: string,
+  cwd: string,
   linea: (t: string) => void,
 ): Promise<string[]> {
+  const carpeta = carpetaDelPaso(raiz, cwd);
   const c = [...comando];
   if (PYTHON_VENV_RELATIVO.test(c[0]!))
     c[0] = path.join(carpeta, '.venv', 'Scripts', nombreEjecutable('python'));
   const i = c.indexOf(MODULO_UVICORN);
   if (i >= 0 && c.includes('uvicorn') && !(await existe(path.join(carpeta, 'app.py')))) {
-    if (await existe(path.join(carpeta, 'main.py'))) {
-      c[i] = 'main:app';
+    const modulo = await moduloAsgi(carpeta);
+    if (modulo) {
+      c[i] = modulo;
     } else {
       linea(
         'Aviso: no se encontró app.py ni main.py; revise el módulo de uvicorn (app:app) en los procesos del proyecto.',
@@ -72,7 +77,7 @@ export async function prepararProcesos(
     .filter((p) => !idsNuevos.has(p.id) && p.puerto !== null)
     .map((p) => p.puerto!);
   for (const p of nuevos.data) {
-    let comando = await ajustarComando(p.comando, carpeta, linea);
+    let comando = await ajustarComando(p.comando, carpeta, p.cwd, linea);
     let puerto = p.puerto;
     if (lleva(comando)) {
       const previo = actuales.find((x) => x.id === p.id)?.puerto ?? null;

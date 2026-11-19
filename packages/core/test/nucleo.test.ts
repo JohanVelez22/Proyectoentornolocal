@@ -1335,3 +1335,18 @@ describe('Nucleo.entornoSistema', () => {
     expect(r.variables.find((v) => v.nombre === 'USERNAME')?.valor).toBe('ana');
   });
 });
+
+describe('Nucleo: PHP por defecto al detectar (QA 4)', () => {
+  it('CI3 sin pista de PHP propone la 8.x más nueva instalada', async () => {
+    const n = await crear();
+    vi.spyOn(n.instalador, 'instalados').mockImplementation(async (s) =>
+      s === 'php' ? ['7.4', '8.3', '8.4'] : [],
+    );
+    const d = mkdtempSync(path.join(os.tmpdir(), 'pel-ci3-'));
+    mkdirSync(path.join(d, 'application'), { recursive: true });
+    mkdirSync(path.join(d, 'system', 'core'), { recursive: true });
+    writeFileSync(path.join(d, 'system', 'core', 'CodeIgniter.php'), '<?php');
+    expect((await n.detectarCarpetaProyecto(d)).php).toBe('8.4');
+    expect((await n.detectarProyecto(d)).php).toBe('8.4');
+  });
+});

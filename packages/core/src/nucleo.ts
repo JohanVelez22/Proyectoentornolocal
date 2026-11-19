@@ -47,7 +47,7 @@ import { Rutas } from './rutas';
 import { Mailpit } from './servicios/mailpit';
 import { Servicios, type IdServicio } from './servicios/servicios';
 import { ServidorMcp, type EstadoMcp, type OperacionesMcp } from './mcp/servidor';
-import { detectarSitio } from './sitios/detectar';
+import { detectarSitio, type ProyectoDetectado } from './sitios/detectar';
 import {
   GestorSitios,
   ramasEnUso,
@@ -91,7 +91,11 @@ import {
   type ConfigProyecto,
   type PasoReceta,
 } from './proyectos/config';
-import { detectarProyecto as detectarProyectoB, type Deteccion } from './proyectos/detectar';
+import {
+  detectarProyecto as detectarProyectoB,
+  phpPorDefecto,
+  type Deteccion,
+} from './proyectos/detectar';
 import { RegistroPasos } from './proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
 import { datosAlCrear } from './proyectos/pasos/sitio';
@@ -258,7 +262,6 @@ export class Nucleo {
   private pendiente = false;
   private cerrado = false;
 
-  readonly detectarProyecto = detectarSitio;
   readonly listarVersiones = listarVersiones;
   /** Solo lectura: los cambios pasan por guardarSitio/guardarAjustes, que además aplican. */
   readonly config: { leer(): Promise<Config> };
@@ -1099,9 +1102,19 @@ export class Nucleo {
     return s;
   }
 
-  /** Detección ampliada (Etapa B): tipo, servicios, runtimes y dominio sugerido. */
-  detectarCarpetaProyecto(carpeta: string): Promise<Deteccion> {
-    return detectarProyectoB(carpeta);
+  /**
+   * Detección ampliada (Etapa B): tipo, servicios, runtimes y dominio sugerido. Sin una versión
+   * de PHP en el proyecto, propone la rama 8.x más nueva instalada.
+   */
+  async detectarCarpetaProyecto(carpeta: string): Promise<Deteccion> {
+    const d = await detectarProyectoB(carpeta);
+    return { ...d, php: phpPorDefecto(d.tipo, d.php, await this.instalador.instalados('php')) };
+  }
+
+  /** Detección para el formulario de sitios (con el mismo PHP por defecto). */
+  async detectarProyecto(carpeta: string): Promise<ProyectoDetectado> {
+    const d = await detectarSitio(carpeta);
+    return { ...d, php: phpPorDefecto(d.tipo, d.php, await this.instalador.instalados('php')) };
   }
 
   /** wolfcore.yml de la carpeta, o null si no hay. */

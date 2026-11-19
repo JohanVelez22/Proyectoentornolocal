@@ -757,3 +757,19 @@ describe('sanear', () => {
     expect(sanear('a'.repeat(4096))).toBe('a'.repeat(4096));
   });
 });
+
+describe('args.carpeta de un paso (QA 2)', () => {
+  it('el paso corre en la subcarpeta; fuera del proyecto falla', async () => {
+    const m = await montar({
+      receta: [
+        { id: 'uno', tipo: 'comando', titulo: 'Uno', args: { carpeta: 'admin' } },
+        { id: 'dos', tipo: 'comando', titulo: 'Dos', args: { carpeta: '../fuera' } },
+      ],
+    });
+    const r = await m.ejecutor.ejecutar(m.s.id, {});
+    expect(m.contextos[0]!.carpeta).toBe(join(m.s.carpeta, 'admin'));
+    expect(r.estado).toBe('error');
+    expect(m.ejecutor.estado(m.s.id).pasos[1]!.estado).toBe('error');
+    expect(m.contextos).toHaveLength(1);
+  });
+});

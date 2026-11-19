@@ -58,10 +58,33 @@ export function sanear(texto: string): string {
   return t.length > MAX_BYTES_LINEA ? t.slice(0, MAX_BYTES_LINEA) + '…' : t;
 }
 
+/**
+ * Carpeta de trabajo de un paso: la del proyecto o, con `args.carpeta`, una subcarpeta relativa
+ * (FastAPI en `admin/`). Nunca sale del proyecto: rutas absolutas o con `..` se rechazan.
+ */
+export function carpetaDelPaso(raiz: string, sub: unknown): string {
+  if (sub === undefined || sub === null || sub === '' || sub === 'raiz') return raiz;
+  const rel = typeof sub === 'string' ? sub.replace(/\\/g, '/') : '';
+  const tramos = rel.split('/').filter((t) => t && t !== '.');
+  if (
+    !rel ||
+    rel.startsWith('/') ||
+    /^[a-z]:/i.test(rel) ||
+    tramos.length === 0 ||
+    tramos.some((t) => t === '..')
+  ) {
+    throw new Error(`La carpeta del paso debe estar dentro del proyecto: ${String(sub)}`);
+  }
+  return path.join(raiz, ...tramos);
+}
+
 /* ───────────── Receta por defecto ───────────── */
 
-/** Proceso uvicorn de un proyecto FastAPI (con el Python del .venv del proyecto). */
-function procesoUvicorn(): ProcesoProyecto {
+/**
+ * Proceso uvicorn de un proyecto FastAPI (con el Python del .venv del proyecto). Usa el módulo
+ * ASGI detectado (`app.main:app`) y, si la app está en una subcarpeta, corre ahí.
+ */
+function procesoUvicorn(det: Pick<Deteccion, 'moduloAsgi' | 'subcarpeta'> = {}): ProcesoProyecto {
   return {
     id: 'uvicorn',
     nombre: 'uvicorn',
@@ -69,13 +92,13 @@ function procesoUvicorn(): ProcesoProyecto {
       `.venv\\Scripts\\${nombreEjecutable('python')}`,
       '-m',
       'uvicorn',
-      'app:app',
+      det.moduloAsgi ?? 'app:app',
       '--host',
       '127.0.0.1',
       '--port',
       MARCADOR_PUERTO,
     ],
-    cwd: 'raiz',
+    cwd: det.subcarpeta ?? 'raiz',
     autoIniciar: true,
     reiniciar: true,
     puerto: null,
@@ -100,7 +123,9 @@ export function recetaPorDefecto(det: Deteccion): PasoReceta[] {
     receta.push({ id: tipo, tipo, titulo, ...extra });
   };
   const composer = (): void => paso('composer-install', 'Instalar dependencias de PHP (composer)');
-  const env = (): void => paso('env-crear', 'Crear el archivo .env');
+  // Con la app en una subcarpeta (FastAPI en admin/), los pasos de Python y el .env van ahí.
+  const enApp = det.subcarpeta ? { args: { carpeta: det.subcarpeta } } : {};
+  const env = (): void => paso('env-crear', 'Crear el archivo .env', enApp);
   const bdCrear = (): void => {
     if (motor) paso('bd-crear', 'Crear la base de datos', { args: { motor } });
   };
@@ -138,14 +163,14 @@ export function recetaPorDefecto(det: Deteccion): PasoReceta[] {
       sitio();
       break;
     case 'fastapi':
-      paso('python-venv', 'Crear el entorno virtual (.venv)');
+      paso('python-venv', 'Crear el entorno virtual (.venv)', enApp);
       if (det.tieneRequirements || det.tienePyproject) {
-        paso('pip-install', 'Instalar dependencias de Python (pip)');
+        paso('pip-install', 'Instalar dependencias de Python (pip)', enApp);
       }
       env();
       bdCrear();
       if (det.pgvector) paso('pgvector-activar', 'Activar pgvector en la base');
-      sitio({ procesos: [procesoUvicorn()] });
+      sitio({ procesos: [procesoUvicorn(det)] });
       break;
     default:
       if (det.tieneComposer) composer();
@@ -552,11 +577,12 @@ export class EjecutorRecetas {
     try {
       const impl = this.d.pasos.obtener(paso.tipo);
       if (!impl) throw new Error(`No hay implementación para el paso de tipo "${paso.tipo}"`);
+      const carpeta = carpetaDelPaso(sitio.carpeta, paso.args?.carpeta);
       const trabajo = Promise.resolve().then(() =>
         impl({
           sitio,
           paso: sinEstado(paso),
-          carpeta: sitio.carpeta,
+          carpeta,
           senal,
           linea: (texto) => {
             if (!vivo) return;

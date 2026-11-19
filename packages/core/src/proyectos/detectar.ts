@@ -2,7 +2,7 @@ import type { Dirent } from 'node:fs';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pistasArchivos } from '../runtimes/runtimes';
-import type { TipoSitio } from '../tipos';
+import { TIPOS_CON_PHP, type TipoSitio } from '../tipos';
 import { existe, leerTexto } from './archivos';
 import { motorBdDe, type ServicioProyecto } from './config';
 
@@ -28,6 +28,13 @@ export interface Deteccion {
   dominioSugerido: string;
   /** Variable del .env con la URL base del sitio (APP_URL, APP_BASE_URL) o null. */
   urlBaseVar: string | null;
+  /**
+   * Subcarpeta (relativa, con /) donde vive la aplicación cuando no está en la raíz (p. ej.
+   * FastAPI en `admin/`); null si está en la raíz. Opcional para las detecciones guardadas.
+   */
+  subcarpeta?: string | null;
+  /** Módulo ASGI para uvicorn (`app.main:app`, `main:app`…); null si no se encontró. */
+  moduloAsgi?: string | null;
 }
 
 async function leerJson(ruta: string): Promise<Record<string, unknown> | null> {
@@ -43,12 +50,28 @@ async function leerJson(ruta: string): Promise<Record<string, unknown> | null> {
   }
 }
 
+/** Nombres de carpeta que no dicen de qué proyecto se trata: el dominio sale de la de arriba. */
+const CARPETAS_GENERICAS = new Set([
+  'admin',
+  'api',
+  'app',
+  'backend',
+  'server',
+  'servidor',
+  'src',
+  'web',
+  'www',
+  'public',
+  'frontend',
+]);
+
 export function sugerirDominio(carpeta: string): string {
-  const nombre =
-    carpeta
-      .replace(/[\\/]+$/, '')
-      .split(/[\\/]/)
-      .pop() ?? '';
+  const tramos = carpeta.replace(/[\\/]+$/, '').split(/[\\/]/);
+  let nombre = tramos.pop() ?? '';
+  const arriba = tramos.at(-1);
+  if (CARPETAS_GENERICAS.has(nombre.toLowerCase()) && arriba && !/^[a-z]:$/i.test(arriba)) {
+    nombre = arriba;
+  }
   const limpio = nombre
     .toLowerCase()
     .normalize('NFD')
@@ -63,6 +86,44 @@ function versionPhp(composer: Record<string, unknown> | null): string | null {
   const req = (composer?.require as { php?: unknown } | undefined)?.php;
   const m = typeof req === 'string' ? /(\d+)\.(\d+)/.exec(req) : null;
   return m ? `${m[1]}.${m[2]}` : null;
+}
+
+const rama = (v: unknown): string | null => {
+  const m = typeof v === 'string' ? /^\s*v?(\d+)\.(\d+)/.exec(v) : null;
+  return m ? `${m[1]}.${m[2]}` : null;
+};
+
+/**
+ * PHP de un proyecto sin una versión útil en `require.php` (CI3 trae el mínimo `>=5.3.7`):
+ * `config.platform.php` de composer.json o el archivo `.php-version`.
+ */
+async function pistaPhp(
+  carpeta: string,
+  composer: Record<string, unknown> | null,
+): Promise<string | null> {
+  const plataforma = (composer?.config as { platform?: { php?: unknown } } | undefined)?.platform;
+  return rama(plataforma?.php) ?? rama(await leerTexto(join(carpeta, '.php-version')));
+}
+
+const compararRamas = (a: string, b: string): number => {
+  const [a1 = 0, a2 = 0] = a.split('.').map(Number);
+  const [b1 = 0, b2 = 0] = b.split('.').map(Number);
+  return a1 - b1 || a2 - b2;
+};
+
+/**
+ * PHP que se propone: la pista del proyecto si hay; si no, en los tipos con PHP, la rama 8.x más
+ * nueva entre las instaladas (null si no hay ninguna 8.x).
+ */
+export function phpPorDefecto(
+  tipo: TipoSitio,
+  pista: string | null,
+  instaladas: readonly string[],
+): string | null {
+  if (pista) return pista;
+  if (!TIPOS_CON_PHP.includes(tipo)) return null;
+  const ochos = instaladas.filter((v) => /^8\.\d+$/.test(v)).sort(compararRamas);
+  return ochos.at(-1) ?? null;
 }
 
 /* ───────────── .env.example ───────────── */
@@ -97,6 +158,36 @@ function motorDeUrl(url: string): ServicioProyecto | null {
   return m ? motorDeTexto(m[1]!) : null;
 }
 
+/**
+ * Sin driver declarado (CI3 con DB_HOST/DB_PORT/DB_NAME), el puerto estándar del .env decide.
+ * Solo si hay alguna otra clave de base de datos (DB_HOST o DB_NAME/DB_DATABASE).
+ */
+function motorDePuerto(vars: Map<string, string>): ServicioProyecto | null {
+  if (!['DB_HOST', 'DB_NAME', 'DB_DATABASE'].some((k) => vars.has(k))) return null;
+  const puerto = (vars.get('DB_PORT') ?? '').trim();
+  if (puerto === '5432') return 'postgresql';
+  if (puerto === '3306') return 'mysql';
+  if (puerto === '27017') return 'mongodb';
+  return null;
+}
+
+/**
+ * Driver de `application/config/database.php` de CodeIgniter 3:
+ * `'dbdriver' => 'postgre'` o `$db['default']['dbdriver'] = getenv('DB_DRIVER') ?: 'mysqli';`.
+ * Toma el primer nombre de motor entre comillas del valor.
+ */
+export function motorDeDatabasePhp(texto: string): ServicioProyecto | null {
+  const sinComentarios = texto.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*(\/\/|#).*$/gm, '');
+  const asignacion = /['"]dbdriver['"]\s*\]?\s*(?:=>|=)\s*([^,;\n]+)/gi;
+  for (let m = asignacion.exec(sinComentarios); m; m = asignacion.exec(sinComentarios)) {
+    for (const q of m[1]!.matchAll(/['"]([a-z0-9_]+)['"]/gi)) {
+      const motor = motorDeTexto(q[1]!);
+      if (motor) return motor;
+    }
+  }
+  return null;
+}
+
 const CLAVES_DRIVER = [
   'CACHE_STORE',
   'CACHE_DRIVER',
@@ -117,7 +208,10 @@ export function serviciosDeEnv(vars: Map<string, string>): ServicioProyecto[] {
   const motor =
     motorDeTexto(vars.get('DB_CONNECTION') ?? '') ??
     motorDeTexto(vars.get('database.default.DBDriver') ?? '') ??
-    motorDeUrl(vars.get('DATABASE_URL') ?? '');
+    motorDeTexto(vars.get('DB_DRIVER') ?? '') ??
+    motorDeTexto(vars.get('DB_DBDRIVER') ?? '') ??
+    motorDeUrl(vars.get('DATABASE_URL') ?? '') ??
+    motorDePuerto(vars);
   if (motor) salida.push(motor);
 
   if (vars.has('REDIS_HOST') || vars.has('REDIS_URL')) {
@@ -234,11 +328,81 @@ function dependencias(pkg: Record<string, unknown> | null): Set<string> {
 
 const FASTAPI = /(^|[^a-z0-9_-])fastapi([^a-z0-9_-]|$)/im;
 
+/** ¿Pide FastAPI el requirements.txt o el pyproject.toml de la carpeta? */
+async function pideFastapi(carpeta: string): Promise<boolean> {
+  for (const n of ['requirements.txt', 'pyproject.toml']) {
+    const t = await leerTexto(join(carpeta, n));
+    if (t !== null && FASTAPI.test(t)) return true;
+  }
+  return false;
+}
+
+/** Archivos donde suele estar la aplicación ASGI, en orden de preferencia. */
+const CANDIDATOS_ASGI = [
+  'app/main.py',
+  'main.py',
+  'app.py',
+  'src/main.py',
+  'app/app.py',
+  'api/main.py',
+  'src/app/main.py',
+];
+
+/** `app = FastAPI(` o `api: FastAPI = fastapi.FastAPI(` al inicio de una línea. */
+const VARIABLE_ASGI =
+  /^([A-Za-z_][A-Za-z0-9_]*)\s*(?::\s*[A-Za-z_][\w.]*\s*)?=\s*(?:[A-Za-z_][\w]*\.)*(?:FastAPI|Starlette)\s*\(/m;
+
+/**
+ * Módulo ASGI para uvicorn (`app.main:app`): el primer candidato que crea `FastAPI(...)`, con el
+ * nombre de su variable; si ninguno la crea, el primero que exista con `:app`. null si no hay.
+ */
+export async function moduloAsgi(carpeta: string): Promise<string | null> {
+  let primero: string | null = null;
+  for (const rel of CANDIDATOS_ASGI) {
+    const t = await leerTexto(join(carpeta, ...rel.split('/')));
+    if (t === null) continue;
+    const modulo = rel.replace(/\.py$/, '').split('/').join('.');
+    const m = VARIABLE_ASGI.exec(t);
+    if (m) return `${modulo}:${m[1]}`;
+    primero ??= `${modulo}:app`;
+  }
+  return primero;
+}
+
+/** Subcarpetas (un nivel) que se miran cuando la raíz no dice qué es; tope para repos grandes. */
+const MAX_SUBCARPETAS = 40;
+
+/** Primera subcarpeta directa con un FastAPI (`admin/requirements.txt` con fastapi), o null. */
+async function subcarpetaFastapi(carpeta: string): Promise<string | null> {
+  let entradas: Dirent[];
+  try {
+    entradas = await readdir(carpeta, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  const dirs = entradas
+    .filter((e) => e.isDirectory() && !e.name.startsWith('.') && !OMITIR.has(e.name.toLowerCase()))
+    .map((e) => e.name)
+    .sort()
+    .slice(0, MAX_SUBCARPETAS);
+  for (const n of dirs) if (await pideFastapi(join(carpeta, n))) return n;
+  return null;
+}
+
+interface TipoDetectado {
+  tipo: TipoSitio;
+  urlBaseVar: string | null;
+  php: string | null;
+  /** Motor de la base leído de la configuración del framework (CI3: database.php). */
+  motor?: ServicioProyecto | null;
+  subcarpeta?: string | null;
+}
+
 async function tipoDe(
   carpeta: string,
   composer: Record<string, unknown> | null,
   pkg: Record<string, unknown> | null,
-): Promise<{ tipo: TipoSitio; urlBaseVar: string | null; php: string | null }> {
+): Promise<TipoDetectado> {
   const hay = (...p: string[]): Promise<boolean> => existe(join(carpeta, ...p));
   if (await hay('artisan'))
     return { tipo: 'laravel', urlBaseVar: 'APP_URL', php: versionPhp(composer) };
@@ -248,17 +412,19 @@ async function tipoDe(
   if ((await hay('application')) && (await hay('system', 'core', 'CodeIgniter.php'))) {
     const env = await leerTexto(join(carpeta, '.env'));
     const tiene = env !== null && /^\s*APP_BASE_URL\s*=/m.test(env);
-    // composer.json de CI3 trae el mínimo (>=5.3.7), no la versión a usar
-    return { tipo: 'codeigniter3', urlBaseVar: tiene ? 'APP_BASE_URL' : null, php: null };
+    const database = await leerTexto(join(carpeta, 'application', 'config', 'database.php'));
+    // composer.json de CI3 trae el mínimo (>=5.3.7), no la versión a usar: solo pistas explícitas.
+    return {
+      tipo: 'codeigniter3',
+      urlBaseVar: tiene ? 'APP_BASE_URL' : null,
+      php: await pistaPhp(carpeta, composer),
+      motor: database === null ? null : motorDeDatabasePhp(database),
+    };
   }
   if ((await hay('wp-config-sample.php')) || (await hay('wp-includes'))) {
     return { tipo: 'wordpress', urlBaseVar: null, php: null };
   }
-  const req = await leerTexto(join(carpeta, 'requirements.txt'));
-  const pyproject = await leerTexto(join(carpeta, 'pyproject.toml'));
-  if ((req !== null && FASTAPI.test(req)) || (pyproject !== null && FASTAPI.test(pyproject))) {
-    return { tipo: 'fastapi', urlBaseVar: null, php: null };
-  }
+  if (await pideFastapi(carpeta)) return { tipo: 'fastapi', urlBaseVar: null, php: null };
   const indexPhp = await hay('index.php');
   const deps = dependencias(pkg);
   if (
@@ -268,12 +434,19 @@ async function tipoDe(
   ) {
     return { tipo: 'node', urlBaseVar: null, php: null };
   }
+  if (!indexPhp && !pkg) {
+    // Repositorio con la app en una subcarpeta (p. ej. el FastAPI en admin/).
+    const sub = await subcarpetaFastapi(carpeta);
+    if (sub) return { tipo: 'fastapi', urlBaseVar: null, php: null, subcarpeta: sub };
+  }
   return { tipo: indexPhp ? 'personalizado' : 'estatico', urlBaseVar: null, php: null };
 }
 
 /**
  * Detecta el tipo de proyecto, sus versiones, servicios y lo que necesita su receta.
  * `opciones.pgvector: false` se salta el escaneo del código (más barato, sin la pista de pgvector).
+ * Si la aplicación está en una subcarpeta (`subcarpeta`), las pistas de Python, el .env y los
+ * archivos de dependencias se leen de ahí.
  */
 export async function detectarProyecto(
   carpeta: string,
@@ -281,9 +454,11 @@ export async function detectarProyecto(
 ): Promise<Deteccion> {
   const composer = await leerJson(join(carpeta, 'composer.json'));
   const pkg = await leerJson(join(carpeta, 'package.json'));
-  const { tipo, urlBaseVar, php } = await tipoDe(carpeta, composer, pkg);
-  const pistas = await pistasArchivos(carpeta);
-  const servicios = serviciosDeEnv(await variablesEnv(carpeta));
+  const { tipo, urlBaseVar, php, motor, subcarpeta = null } = await tipoDe(carpeta, composer, pkg);
+  const app = subcarpeta ? join(carpeta, subcarpeta) : carpeta;
+  const pistas = await pistasArchivos(app);
+  const servicios = serviciosDeEnv(await variablesEnv(app));
+  if (motor && motorBdDe(servicios) === null) servicios.unshift(motor);
   // Escanear el código es lo caro: las sugerencias de la carpeta vigilada lo omiten.
   const pgvector = opciones.pgvector === false ? false : await usaPgvector(carpeta);
   if (pgvector && motorBdDe(servicios) === null) servicios.unshift('postgresql');
@@ -298,9 +473,11 @@ export async function detectarProyecto(
     tieneComposer: await existe(join(carpeta, 'composer.json')),
     tienePackageJson: await existe(join(carpeta, 'package.json')),
     scriptsNpm: scripts && typeof scripts === 'object' ? Object.keys(scripts) : [],
-    tieneRequirements: await existe(join(carpeta, 'requirements.txt')),
-    tienePyproject: await existe(join(carpeta, 'pyproject.toml')),
+    tieneRequirements: await existe(join(app, 'requirements.txt')),
+    tienePyproject: await existe(join(app, 'pyproject.toml')),
     dominioSugerido: sugerirDominio(carpeta),
     urlBaseVar,
+    subcarpeta,
+    moduloAsgi: tipo === 'fastapi' ? await moduloAsgi(app) : null,
   };
 }

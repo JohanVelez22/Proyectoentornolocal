@@ -60,6 +60,8 @@ describe('detectarProyecto (ampliada)', () => {
       tienePyproject: false,
       dominioSugerido: 'mi-tienda.test',
       urlBaseVar: 'APP_URL',
+      subcarpeta: null,
+      moduloAsgi: null,
     });
   });
 
@@ -133,6 +135,8 @@ describe('detectarProyecto (ampliada)', () => {
       tienePyproject: false,
       dominioSugerido: 'api-rapida.test',
       urlBaseVar: null,
+      subcarpeta: null,
+      moduloAsgi: 'app.main:app',
     });
   });
 

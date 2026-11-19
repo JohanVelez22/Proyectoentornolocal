@@ -1041,3 +1041,29 @@ describe('ronda de arreglos', () => {
     await expect(readdir(join(a.carpeta, 'public'))).resolves.toEqual([]);
   });
 });
+
+describe('sitio-crear con FastAPI en subcarpeta (QA 2)', () => {
+  it('el python del .venv y el módulo se buscan en el cwd del proceso', async () => {
+    const a = await armar({ sitio: { tipo: 'fastapi', php: null } });
+    await escribir(
+      a.carpeta,
+      'admin/app/main.py',
+      'from fastapi import FastAPI\napp = FastAPI()\n',
+    );
+    await correr(a, 'sitio-crear', {
+      tipo: 'fastapi',
+      procesos: [
+        {
+          id: 'uvicorn',
+          cwd: 'admin',
+          comando: ['.venv/Scripts/python.exe', '-m', 'uvicorn', 'app:app', '--port', '{puerto}'],
+          proxy: true,
+        },
+      ],
+    });
+    const proc = a.guardados[0]!.datos.procesos[0]!;
+    expect(proc.comando[3]).toBe('app.main:app');
+    expect(proc.comando[0]!.startsWith(join(a.carpeta, 'admin', '.venv'))).toBe(true);
+    expect(proc.cwd).toBe('admin');
+  });
+});
