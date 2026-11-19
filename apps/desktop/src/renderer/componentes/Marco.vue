@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   Albums as IconoProyectos,
+  Construct as IconoHerramientas,
   DocumentText as IconoRegistros,
   Home as IconoInicio,
   Layers as IconoBases,
@@ -52,6 +53,7 @@ const opciones: MenuOption[] = (
     ['correo', IconoCorreo],
     ['iaLocal', IconoIa],
     ['tuneles', IconoTuneles],
+    ['herramientas', IconoHerramientas],
     ['registros', IconoRegistros],
     ['ajustes', IconoAjustes],
   ] as const
