@@ -2,7 +2,14 @@ import type { Readable } from 'node:stream';
 import type { LanzadorOculto } from './lanzarOculto';
 
 export type ResultadoEscritura =
-  { ok: true } | { ok: false; motivo: 'cancelado' | 'denegado' | 'error'; detalle?: string };
+  | { ok: true }
+  | { ok: false; motivo: 'cancelado' | 'denegado' | 'error' | 'tiempo'; detalle?: string };
+
+/** Opciones de una escritura elevada (UAC). */
+export interface OpcionesEscrituraAdmin {
+  /** Plazo para que el usuario conteste el UAC; al vencer se corta y no se escribe nada. */
+  tiempoLimiteMs?: number;
+}
 
 /** Sistema y arquitectura de los binarios del catálogo. */
 export type IdCatalogo =
@@ -79,7 +86,11 @@ export interface CapacidadesPlataforma {
  */
 export interface Plataforma extends Partial<CapacidadesPlataforma> {
   rutaHosts(): string;
-  escribirComoAdmin(destino: string, contenido: string): Promise<ResultadoEscritura>;
+  escribirComoAdmin(
+    destino: string,
+    contenido: string,
+    o?: OpcionesEscrituraAdmin,
+  ): Promise<ResultadoEscritura>;
   quienUsaPuerto(puerto: number): Promise<{ pid: number; nombre: string } | null>;
   /** Dueños de varios puertos en una sola consulta; los libres no aparecen en el mapa. */
   duenosDePuertos(puertos: number[]): Promise<Map<number, { pid: number; nombre: string }>>;

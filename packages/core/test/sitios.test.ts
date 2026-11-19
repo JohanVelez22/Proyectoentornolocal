@@ -445,3 +445,62 @@ describe('proveedores de PHP', () => {
     ]);
   });
 });
+
+describe('GestorSitios: hosts fuera de la cola (QA 1)', () => {
+  it('un UAC sin responder no bloquea otros guardados de la configuración', async () => {
+    const eventos = new Eventos<EventosNucleo>();
+    let soltar: (r: { ok: true }) => void = () => undefined;
+    const g = new GestorSitios({
+      almacen: new Almacen(rutas),
+      rutas,
+      nginx: { validar: async () => ({ ok: true, salida: 'ok' }), recargar: async () => undefined },
+      estadoNginx: () => 'apagado',
+      hosts: { sincronizar: () => new Promise((r) => (soltar = r)) },
+      instalador: { instalado: async () => true, instalados: async () => ['1.28.0'] },
+      eventos,
+    });
+    await g.crear(datos('a.test'));
+    const aplicando = g.aplicar();
+    let listo = false;
+    void aplicando.then(() => (listo = true));
+    // Mientras el UAC sigue abierto, la cola atiende otros cambios.
+    await g.crear(datos('b.test'));
+    await g.modificarConfig((c) => void (c.servicios.nginx.puerto = 8080));
+    expect(await g.enCola(async () => 'credenciales')).toBe('credenciales');
+    expect(listo).toBe(false);
+    soltar({ ok: true });
+    expect((await aplicando).hosts).toEqual({ ok: true });
+  });
+
+  it('si hosts queda pendiente, el sitio con HTTPS también queda pendiente', async () => {
+    const eventos = new Eventos<EventosNucleo>();
+    const g = new GestorSitios({
+      almacen: new Almacen(rutas),
+      rutas,
+      nginx: { validar: async () => ({ ok: true, salida: 'ok' }), recargar: async () => undefined },
+      estadoNginx: () => 'apagado',
+      hosts: {
+        sincronizar: async () => ({
+          ok: false,
+          motivo: 'tiempo',
+          comandoManual: 'cmd',
+          pendientes: ['a.test'],
+        }),
+      },
+      instalador: { instalado: async () => true, instalados: async () => ['1.28.0'] },
+      eventos,
+      https: {
+        caCreada: () => true,
+        puertoUsable: async () => true,
+        asegurarCertificado: async () => ({ crt: 'c.crt', key: 'c.key' }),
+      },
+    });
+    await g.crear(datos('a.test', { https: true }));
+    await g.crear(datos('b.test', { https: true }));
+    const r = await g.aplicar();
+    expect(r.hosts).toEqual({ ok: false, motivo: 'tiempo', comandoManual: 'cmd' });
+    expect(r.httpsPendiente).toEqual(['a']);
+    // El sitio queda guardado con su vhost.
+    expect(existsSync(rutas.vhost('a'))).toBe(true);
+  });
+});

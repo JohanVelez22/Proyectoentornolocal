@@ -28,6 +28,7 @@ import type {
   Ejecutor,
   IdCatalogo,
   MuestraPlataforma,
+  OpcionesEscrituraAdmin,
   OpcionesAbrirTerminal,
   PlataformaCompleta,
   RangoPuertos,
@@ -401,7 +402,11 @@ export class PlataformaWindows implements PlataformaCompleta {
     return path.win32.join(raiz, 'System32', 'drivers', 'etc', 'hosts');
   }
 
-  async escribirComoAdmin(destino: string, contenido: string): Promise<ResultadoEscritura> {
+  async escribirComoAdmin(
+    destino: string,
+    contenido: string,
+    o: OpcionesEscrituraAdmin = {},
+  ): Promise<ResultadoEscritura> {
     const tmp = path.join(
       tmpdir(),
       `pel-hosts-${process.pid}-${++this.contador}-${randomUUID().slice(0, 8)}.txt`,
@@ -410,8 +415,17 @@ export class PlataformaWindows implements PlataformaCompleta {
       await writeFile(tmp, contenido, 'utf8');
       const interno = `Copy-Item -LiteralPath '${comillaSimple(tmp)}' -Destination '${comillaSimple(destino)}' -Force; ipconfig /flushdns | Out-Null`;
       const externo = `Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList '-NoProfile','-Command','${comillaSimple(interno)}'`;
-      const r = await this.ejecutar('powershell', ['-NoProfile', '-Command', externo]);
+      // Con plazo, el ejecutor corta la PowerShell que espera al UAC; el temporal se borra al
+      // salir (finally), así un UAC aceptado tarde no tiene qué copiar y hosts queda como estaba.
+      const desde = Date.now();
+      const r = await this.ejecutar(
+        'powershell',
+        ['-NoProfile', '-Command', externo],
+        o.tiempoLimiteMs ? { timeoutMs: o.tiempoLimiteMs } : undefined,
+      );
       if (r.codigo !== 0 && /cancel/i.test(r.stderr)) return { ok: false, motivo: 'cancelado' };
+      const vencido =
+        o.tiempoLimiteMs !== undefined && r.codigo !== 0 && Date.now() - desde >= o.tiempoLimiteMs;
       let actual: string | null = null;
       try {
         actual = await readFile(destino, 'utf8');
@@ -419,6 +433,7 @@ export class PlataformaWindows implements PlataformaCompleta {
         actual = null;
       }
       if (actual === contenido) return { ok: true };
+      if (vencido) return { ok: false, motivo: 'tiempo' };
       const detalle = r.stderr.trim();
       return detalle
         ? { ok: false, motivo: 'denegado', detalle }

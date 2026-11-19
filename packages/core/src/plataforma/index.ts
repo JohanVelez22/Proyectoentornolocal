@@ -11,6 +11,7 @@ export type {
   IdCatalogo,
   Lanzador,
   OpcionesAbrirTerminal,
+  OpcionesEscrituraAdmin,
   OpcionesLanzar,
   Plataforma,
   PlataformaCompleta,

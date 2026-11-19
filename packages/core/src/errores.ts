@@ -38,6 +38,7 @@ export const PARAMETROS_ERROR = {
   'tuneles.sitio_no_encontrado': [],
   'tuneles.cloudflared_no_instalado': [],
   'hosts.dominio_invalido': [],
+  'hosts.tiempo_agotado': ['segundos'],
   'https.sin_dominio': [],
   'https.sin_autoridad': [],
   // herramientas

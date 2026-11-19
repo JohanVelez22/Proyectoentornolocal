@@ -16,7 +16,10 @@ import { SitioSchema, TIPOS_CON_PHP, TIPOS_PROXY, type Config, type Sitio } from
 export type ResultadoAplicar = {
   nginx: { ok: boolean; salida: string };
   hosts: { ok: boolean; motivo?: string; comandoManual?: string };
-  /** Sitios con HTTPS pedido cuyo vhost salió solo en HTTP (puerto ocupado o sin autoridad de certificados). */
+  /**
+   * Sitios con HTTPS pedido cuyo vhost salió solo en HTTP (puerto ocupado o sin autoridad de
+   * certificados) o cuyo dominio quedó pendiente en hosts (UAC cancelado o sin respuesta).
+   */
   httpsPendiente: string[];
 };
 
@@ -265,11 +268,40 @@ export class GestorSitios {
     for (const [n, c] of previo) await writeFile(path.join(dir, n), c, 'utf8');
   }
 
-  aplicar(): Promise<ResultadoAplicar> {
-    return this.serializar(() => this.aplicarSinCola());
+  /**
+   * Genera los vhosts y recarga/valida Nginx en la cola; el archivo hosts se sincroniza FUERA de
+   * la cola: un UAC abierto (hasta su plazo) no frena otros guardados (sitios, credenciales, FTP).
+   */
+  async aplicar(): Promise<ResultadoAplicar> {
+    const { nginx, httpsPendiente, sitios } = await this.serializar(() => this.aplicarSinCola());
+    // Los hosts se sincronizan aunque nginx falle: una entrada sin vhost es inofensiva
+    // y evita pedir otra vez permiso de administrador (UAC) más adelante.
+    const dominios = [...new Set(sitios.flatMap((s) => [s.dominio, ...s.alias]))].sort();
+    const r = await this.d.hosts.sincronizar(dominios);
+    const hosts = r.ok
+      ? { ok: true }
+      : { ok: false, motivo: r.motivo, comandoManual: r.comandoManual };
+    if (!r.ok && r.pendientes?.length) {
+      const pendientes = new Set(r.pendientes);
+      for (const s of sitios) {
+        if (
+          s.https &&
+          !httpsPendiente.includes(s.id) &&
+          [s.dominio, ...s.alias].some((d) => pendientes.has(d))
+        ) {
+          httpsPendiente.push(s.id);
+        }
+      }
+    }
+    this.d.eventos.emit('sitio:cambio', sitios);
+    return { nginx, hosts, httpsPendiente };
   }
 
-  private async aplicarSinCola(): Promise<ResultadoAplicar> {
+  private async aplicarSinCola(): Promise<{
+    nginx: ResultadoAplicar['nginx'];
+    httpsPendiente: string[];
+    sitios: Sitio[];
+  }> {
     const cfg = await this.d.almacen.leer();
     const dir = path.dirname(this.d.rutas.vhost('x'));
     await mkdir(dir, { recursive: true });
@@ -340,15 +372,6 @@ No se pudo restaurar la configuración anterior: ${e instanceof Error ? e.messag
       }
     }
 
-    // Los hosts se sincronizan aunque nginx falle: una entrada sin vhost es inofensiva
-    // y evita pedir otra vez permiso de administrador (UAC) más adelante.
-    const dominios = [...new Set(cfg.sitios.flatMap((s) => [s.dominio, ...s.alias]))].sort();
-    const r = await this.d.hosts.sincronizar(dominios);
-    const hosts = r.ok
-      ? { ok: true }
-      : { ok: false, motivo: r.motivo, comandoManual: r.comandoManual };
-
-    this.d.eventos.emit('sitio:cambio', cfg.sitios);
-    return { nginx, hosts, httpsPendiente };
+    return { nginx, httpsPendiente, sitios: cfg.sitios };
   }
 }

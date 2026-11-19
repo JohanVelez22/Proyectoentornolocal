@@ -99,6 +99,8 @@ export const en: Textos = {
       'tuneles.sitio_no_encontrado': 'The project was not found.',
       'tuneles.cloudflared_no_instalado': 'cloudflared is not installed. Install it from Services.',
       'hosts.dominio_invalido': 'A domain is not valid.',
+      'hosts.tiempo_agotado':
+        'The administrator prompt got no answer within {segundos} s; the hosts file was not changed.',
       'https.sin_dominio': 'A certificate needs at least one domain.',
       'https.sin_autoridad':
         'The WolfCore Dev certificate authority does not exist. Install the CA from the HTTPS section before issuing certificates.',
@@ -140,7 +142,7 @@ export const en: Textos = {
       titulo: 'Some domains are missing from the hosts file',
       texto:
         'These domains do not point to your computer yet. To fix it, Windows will ask for administrator permission.',
-      corregir: 'Fix hosts',
+      corregir: 'Apply pending hosts',
       reintentarPermiso: 'Retry with permission',
       corregido: 'Hosts file updated',
       fallo: 'Could not update the hosts file',
@@ -149,6 +151,8 @@ export const en: Textos = {
         'These domains are already in hosts outside the WolfCore Dev block (they are kept):',
       motivos: {
         cancelado: 'Administrator permission was canceled. The hosts file was not changed.',
+        tiempo:
+          'Nobody answered the administrator prompt in time. The site was saved; the hosts file was not changed. Apply the pending entries when you can (one prompt for all).',
         denegado:
           'Windows did not allow writing to the hosts file. An antivirus may be blocking it.',
       } as Record<string, string>,

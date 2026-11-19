@@ -99,6 +99,8 @@ export const es = {
       'tuneles.cloudflared_no_instalado':
         'cloudflared no está instalado. Instálelo desde Servicios.',
       'hosts.dominio_invalido': 'Hay un dominio no válido.',
+      'hosts.tiempo_agotado':
+        'No hubo respuesta al permiso de administrador en {segundos} s; el archivo hosts quedó igual.',
       'https.sin_dominio': 'Un certificado necesita al menos un dominio.',
       'https.sin_autoridad':
         'No existe la autoridad de certificados de WolfCore Dev. Instale la CA desde la sección HTTPS antes de emitir certificados.',
@@ -142,7 +144,7 @@ export const es = {
       titulo: 'Hay dominios sin registrar en el archivo hosts',
       texto:
         'Estos dominios todavía no apuntan a su equipo. Al corregirlo, Windows pedirá permiso de administrador.',
-      corregir: 'Corregir hosts',
+      corregir: 'Aplicar hosts pendientes',
       reintentarPermiso: 'Reintentar con permiso',
       corregido: 'Archivo hosts actualizado',
       fallo: 'No se pudo actualizar el archivo hosts',
@@ -151,6 +153,8 @@ export const es = {
         'Estos dominios ya están en hosts fuera del bloque de WolfCore Dev (se conservan):',
       motivos: {
         cancelado: 'Se canceló el permiso de administrador. El archivo hosts quedó igual.',
+        tiempo:
+          'Nadie respondió el permiso de administrador a tiempo. El sitio se guardó; el archivo hosts quedó igual. Aplique los pendientes cuando pueda (un solo permiso para todos).',
         denegado:
           'Windows no permitió escribir el archivo hosts. Es posible que un antivirus lo bloquee.',
       } as Record<string, string>,

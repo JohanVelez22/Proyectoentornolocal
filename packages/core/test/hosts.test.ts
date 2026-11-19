@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -312,5 +313,119 @@ describe('ejecutorPorDefecto', () => {
     );
     expect(r.codigo).toBe(0);
     expect(r.stdout).toBe('secreto:hola');
+  });
+});
+
+describe('GestorHosts: UAC sin respuesta y agrupación (QA 1)', () => {
+  it('un UAC sin responder vence con motivo "tiempo" y deja hosts intacto', async () => {
+    const p = { ...falsa(), escribirComoAdmin: () => new Promise<ResultadoEscritura>(() => {}) };
+    const g = new GestorHosts(p, eventos, { tiempoLimiteMs: 30 });
+    const vistos: { mensaje?: string; pendientes: string[] }[] = [];
+    eventos.on('hosts:estado', (e) => vistos.push(e));
+    const r = await g.sincronizar(['a.test']);
+    expect(r).toMatchObject({ ok: false, motivo: 'tiempo' });
+    if (!r.ok) expect(r.comandoManual).toContain('ipconfig /flushdns');
+    expect(await readFile(ruta, 'utf8')).toBe('127.0.0.1  localhost\r\n');
+    expect(vistos.at(-1)?.pendientes).toEqual(['a.test']);
+    expect(vistos.at(-1)?.mensaje).toContain('no hubo respuesta');
+  });
+
+  it('el plazo se pasa a la plataforma para que corte la elevación', async () => {
+    const plazos: (number | undefined)[] = [];
+    const p = {
+      ...falsa(),
+      escribirComoAdmin: async (d: string, c: string, o?: { tiempoLimiteMs?: number }) => {
+        plazos.push(o?.tiempoLimiteMs);
+        await writeFile(d, c, 'utf8');
+        return { ok: true as const };
+      },
+    };
+    await new GestorHosts(p, eventos, { tiempoLimiteMs: 1234 }).sincronizar(['a.test']);
+    expect(plazos).toEqual([1234]);
+  });
+
+  it('pedidos seguidos mientras hay un UAC abierto se agrupan en una sola elevación más', async () => {
+    let soltar: () => void = () => undefined;
+    const p = {
+      ...falsa(),
+      escribirComoAdmin: async (d: string, c: string) => {
+        llamadas++;
+        if (llamadas === 1) await new Promise<void>((r) => (soltar = r));
+        await writeFile(d, c, 'utf8');
+        return { ok: true as const };
+      },
+    };
+    const g = new GestorHosts(p, eventos);
+    const a = g.sincronizar(['a.test']);
+    await new Promise((r) => setTimeout(r, 5));
+    const b = g.sincronizar(['a.test', 'b.test']);
+    const c = g.sincronizar(['a.test', 'b.test', 'c.test']);
+    soltar();
+    expect(await a).toEqual({ ok: true });
+    expect(await b).toEqual({ ok: true });
+    expect(await c).toEqual({ ok: true });
+    expect(llamadas).toBe(2);
+    expect(await readFile(ruta, 'utf8')).toContain('::1  c.test');
+  });
+
+  it('si el UAC abierto se cancela o vence, los pedidos en espera no abren otro', async () => {
+    let soltar: (r: ResultadoEscritura) => void = () => undefined;
+    const p = {
+      ...falsa(),
+      escribirComoAdmin: () => {
+        llamadas++;
+        return new Promise<ResultadoEscritura>((r) => (soltar = r));
+      },
+    };
+    const g = new GestorHosts(p, eventos);
+    const a = g.sincronizar(['a.test']);
+    await new Promise((r) => setTimeout(r, 5));
+    const b = g.sincronizar(['a.test', 'b.test']);
+    soltar({ ok: false, motivo: 'cancelado' });
+    expect(await a).toMatchObject({ ok: false, motivo: 'cancelado' });
+    const rb = await b;
+    expect(rb).toMatchObject({ ok: false, motivo: 'cancelado' });
+    if (!rb.ok) {
+      const b64 = /FromBase64String\('([^']+)'\)/.exec(rb.comandoManual)?.[1] ?? '';
+      expect(Buffer.from(b64, 'base64').toString('utf8')).toContain('127.0.0.1  b.test');
+    }
+    expect(llamadas).toBe(1);
+    expect((await g.estado(['a.test', 'b.test'])).pendientes).toEqual(['a.test', 'b.test']);
+  });
+});
+
+describe('PlataformaWindows.escribirComoAdmin con plazo (QA 1)', () => {
+  it('pasa el plazo al ejecutor y, si vence, informa "tiempo" sin tocar el destino', async () => {
+    const destino = join(await carpetaTemporal('pel-adm-'), 'hosts');
+    await writeFile(destino, 'viejo', 'utf8');
+    const opciones: ({ timeoutMs?: number } | undefined)[] = [];
+    let temporal = '';
+    const p = new PlataformaWindows(async (_c, args, o) => {
+      opciones.push(o);
+      temporal = /-LiteralPath ''([^']+)''/.exec(args.join(' '))?.[1] ?? '';
+      await new Promise((r) => setTimeout(r, 40));
+      return { codigo: 1, stdout: '', stderr: 'Command failed' };
+    });
+    expect(await p.escribirComoAdmin(destino, 'nuevo', { tiempoLimiteMs: 30 })).toEqual({
+      ok: false,
+      motivo: 'tiempo',
+    });
+    expect(opciones[0]?.timeoutMs).toBe(30);
+    expect(await readFile(destino, 'utf8')).toBe('viejo');
+    // El temporal se borra: un UAC aceptado tarde ya no tiene qué copiar.
+    expect(existsSync(temporal)).toBe(false);
+  });
+});
+
+describe('GestorHosts: pendientes en el resultado (QA 1)', () => {
+  it('un fallo informa qué dominios quedaron pendientes', async () => {
+    resultado = { ok: false, motivo: 'cancelado' };
+    await writeFile(
+      ruta,
+      '# >>> WolfCore Dev (no editar a mano)\r\n127.0.0.1  a.test\r\n::1  a.test\r\n# <<< WolfCore Dev\r\n',
+      'utf8',
+    );
+    const r = await new GestorHosts(falsa(), eventos).sincronizar(['a.test', 'b.test']);
+    expect(r).toMatchObject({ ok: false, pendientes: ['b.test'] });
   });
 });
