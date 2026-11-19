@@ -17,6 +17,13 @@ import { existe } from './archivos';
 import { entornoProyecto, resolverPrograma, usaPhp, type DepsEntorno } from './pasos/comun';
 import { sanear } from './recetas';
 
+/**
+ * Ruta relativa de wolfcore.json con los separadores de esta plataforma: el archivo se escribe a
+ * menudo en Windows (`bin\srv.exe`) y en POSIX la `\` sería parte del nombre.
+ */
+const conSeparadores = (ruta: string): string =>
+  path.sep === '/' ? ruta.replace(/\\/g, '/') : ruta;
+
 /** Prefijo de los ids de supervisor de los procesos de proyecto: `proy-<sitio>-<proceso>`. */
 export const PREFIJO_PROCESO = 'proy-';
 /** El id de un sitio sale de su dominio (letras, números y guiones). */
@@ -304,7 +311,7 @@ export class ProcesosProyecto {
     const carpeta = path.resolve(sitio.carpeta);
     if (!(await existe(carpeta))) throw new Error(`La carpeta del proyecto no existe: ${carpeta}`);
     if (p.cwd === 'raiz') return carpeta;
-    const cwd = path.resolve(carpeta, p.cwd);
+    const cwd = path.resolve(carpeta, conSeparadores(p.cwd));
     const rel = path.relative(carpeta, cwd);
     if (rel.startsWith('..') || path.isAbsolute(rel)) {
       throw new Error(`La carpeta del proceso debe estar dentro del proyecto: ${p.cwd}`);
@@ -331,7 +338,8 @@ export class ProcesosProyecto {
     this.avisos.set(id, avisos);
     const { cmd, args } = await resolverPrograma(p.comando, carpeta, this.d, entorno);
     // Una ruta relativa con carpetas (bin\server.exe) es relativa a la carpeta del proceso.
-    const comando = /[\\/]/.test(cmd) && !path.isAbsolute(cmd) ? path.resolve(cwd, cmd) : cmd;
+    const comando =
+      /[\\/]/.test(cmd) && !path.isAbsolute(cmd) ? path.resolve(cwd, conSeparadores(cmd)) : cmd;
     await this.escribirLog(log, [...avisos.map((a) => `Aviso: ${a}`), `> ${p.comando.join(' ')}`]);
     return {
       id,

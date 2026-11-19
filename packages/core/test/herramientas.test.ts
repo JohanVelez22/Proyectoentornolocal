@@ -175,7 +175,12 @@ describe('Terminal', () => {
     const carpeta = path.join(base, 'Mi Sitio ñ');
     mkdirSync(carpeta, { recursive: true });
     mkdirSync(rutas.bin('php', '8.4'), { recursive: true });
-    const wt = path.join('C:\\Users\\u\\AppData\\Local', 'Microsoft', 'WindowsApps', 'wt.exe');
+    const wt = path.win32.join(
+      'C:\\Users\\u\\AppData\\Local',
+      'Microsoft',
+      'WindowsApps',
+      'wt.exe',
+    );
     const t = new Terminal({
       rutas,
       entorno: { Path: 'C:\\Windows', LOCALAPPDATA: 'C:\\Users\\u\\AppData\\Local' },
