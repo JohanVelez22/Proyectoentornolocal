@@ -10,7 +10,7 @@ WolfCore Dev es un reemplazo propio de FlyEnv y ServBay, para uso personal. Es u
 2. Desinstálela en **Configuración → Aplicaciones → Aplicaciones instaladas → Entorno Local → Desinstalar**. El desinstalador quita el programa, no la carpeta de datos: bases, sitios y certificados siguen en `%LOCALAPPDATA%\WolfCoreDev` (o en la vieja hasta que se renombre).
 3. Si había agregado las herramientas al PATH con la versión vieja, esa entrada apunta a `%LOCALAPPDATA%\Proyectoentornolocal\tools\bin`, que tras el renombrado ya no existe: quítela a mano de las variables de entorno del usuario y use **Ajustes → PATH del usuario → Agregar al PATH del usuario** en WolfCore Dev.
 
-Diseños: MVP en `docs/superpowers/specs/2026-11-17-proyectoentornolocal-design.md`, Etapa A en `docs/superpowers/specs/2026-11-18-etapa-a-design.md`.
+Diseños: MVP en `docs/superpowers/specs/2026-11-17-proyectoentornolocal-design.md`, Etapa A en `docs/superpowers/specs/2026-11-18-etapa-a-design.md`, Etapa B en `docs/superpowers/specs/2026-11-19-etapa-b-design.md`.
 
 ## Qué trae
 
@@ -86,6 +86,32 @@ PostgreSQL usa pgvector compilado una vez en su equipo:
 - Pantalla **IA local**: modelos instalados, descarga con progreso (sugerencias: llama3.2, qwen2.5-coder, mistral, nomic-embed-text), borrar, probar con un mensaje y espacio usado. Los modelos pesan de 1 a más de 40 GB y solo se descargan cuando usted lo pide.
 - Datos de conexión: `http://127.0.0.1:11434` y el endpoint compatible con OpenAI `http://127.0.0.1:11434/v1`, con un bloque `.env` de ejemplo.
 
+### Proyectos (Etapa B)
+
+- **Agregar un proyecto** desde **Proyectos → Nuevo** de tres formas: un repositorio de **GitHub** (lista sus repos con `gh` o con un token que se guarda cifrado con `safeStorage`; nunca va en la URL, en `.git/config` ni en los registros), una **URL** de git cualquiera o una **carpeta** que ya existe. La **carpeta vigilada** (por ejemplo `C:\Proyectos`) sugiere sola las subcarpetas que parecen proyectos.
+- **Detección y recetas:** reconoce Laravel, CodeIgniter 3 y 4, FastAPI, Node, WordPress y estático, con sus versiones y servicios (lee `.env.example`). Propone una receta editable: Composer, `.env` (con la conexión a la base y Mailpit), `key:generate`, crear o restaurar la base, migraciones, `storage:link`, `npm ci` y `build`, `venv` y `pip`, y el sitio con HTTPS. Solo corre con **Confío en este repositorio** marcado; cada paso se puede reintentar, omitir o cancelar, y nunca pisa un `.env` existente sin confirmación.
+- **`wolfcore.yml`** en la raíz del proyecto fija tipo, dominio, versiones (PHP, Node, Python), variables extra del `.env`, procesos y una receta propia. Si la receta cambia después de confiar, se avisa antes de volver a correrla.
+- **Node y Python por proyecto:** Node (desde nodejs.org, verificado con `SHASUMS256`) y Python (paquete oficial de NuGet, con huella) se instalan en **Servicios**, varias versiones a la vez, sin tocar el PATH del sistema. Cada proyecto usa la que pide (`wolfcore.yml`, `.nvmrc`, `engines`, `.python-version`, `requires-python`) y su `.venv`.
+- **Procesos de proyecto** (`npm run dev`, `queue:work`, `uvicorn`…): supervisados con la consola oculta, con su log, reinicio con espera creciente y puerto libre automático. Un sitio FastAPI o Node envía su tráfico por proxy al proceso marcado.
+- **Traer cambios:** `git fetch` y avance rápido; con cambios locales o ramas divergentes no toca nada y avisa. Si llegan `composer.lock`, `package-lock.json`, migraciones o `requirements.txt`, ofrece los pasos que conviene correr.
+
+### Panel, registros y herramientas (Etapa B)
+
+- **Inicio:** servicios encendidos, proyectos, túneles y hosts de un vistazo, con CPU, RAM, disco y red del equipo y de cada servicio o proceso (se mide cada 3 s solo con la ventana visible).
+- **Registros:** sigue en vivo los logs de Nginx, PHP, los servicios, los sitios (también `storage/logs/laravel.log`), los procesos de proyecto y los túneles, con filtro por texto y nivel, pausa y **Abrir carpeta**.
+- **Herramientas** (sin conexión): QR, JSON, expresiones regulares, comparar textos, tiempo, puertos y procesos (finalizar con confirmación), limpieza del BOM de UTF-8, certificados con la CA local, cripto (hash, base64, URL, UUID, contraseñas, JWT), Markdown, entorno del sistema (PATH, versiones y variables con secretos ocultos), información de archivo y cliente WebSocket.
+
+### MCP para Claude Code (Etapa B)
+
+- **Ajustes → Servidor MCP** lo activa en `http://127.0.0.1:7790/mcp` (puerto configurable) con un token Bearer aleatorio. **Copiar configuración para Claude Code** deja en el portapapeles el comando `claude mcp add --transport http wolfcore …` y el bloque para `.mcp.json`; **Regenerar token** invalida el anterior.
+- Herramientas: estado general, proyectos, servicios (iniciar y detener), bases (listar, crear, respaldar, restaurar, borrar), túneles, ejecutar la receta, traer cambios, leer registros y finalizar procesos. Las acciones destructivas y las recetas piden confirmación en la ventana de WolfCore Dev.
+
+### Interfaz (Etapa B)
+
+- Tema **claro, oscuro o del sistema** (también la barra de título), color de acento e idioma **español o inglés**, en caliente.
+- **Ctrl+K** abre la paleta de comandos: ir a cualquier pantalla, encender o apagar todo, agregar o clonar proyectos y cambiar tema o idioma.
+- **Asistente de primer uso:** carpeta de proyectos, lo básico (Nginx, PHP 8.4, Composer y Node LTS), la CA de HTTPS, GitHub y la carpeta vigilada. Se puede repetir desde **Ajustes**.
+
 ## Carpeta de datos
 
 `%LOCALAPPDATA%\WolfCoreDev`:
@@ -107,7 +133,7 @@ Los proyectos nunca se mueven ni se borran.
 
 ## Estructura
 
-- `packages/core` (`@pel/core`): lógica en TypeScript puro, sin Electron. Cada acción es un método de `Nucleo` (pensado para el servidor MCP de la Etapa B).
+- `packages/core` (`@pel/core`): lógica en TypeScript puro, sin Electron. Cada acción es un método de `Nucleo`; el servidor MCP publica esos mismos métodos.
 - `apps/desktop` (`@pel/desktop`): la aplicación de escritorio (Electron + Vue 3 + Naive UI).
 
 ## Desarrollo
@@ -123,7 +149,7 @@ npm run typecheck   # TypeScript estricto
 
 ```bash
 npm test                    # pruebas unitarias (sin red ni procesos reales)
-npm run test:win            # integración real en Windows (MVP y Etapa A)
+npm run test:win            # integración real en Windows (MVP, Etapa A y Etapa B)
 npm run test:win:pgvector   # pgvector real: instala Build Tools (UAC, ~6 GB)
 ```
 
@@ -131,6 +157,7 @@ npm run test:win:pgvector   # pgvector real: instala Build Tools (UAC, ~6 GB)
 
 - MVP: Nginx 8089, PHP 8.4 y cloudflared; sitios estático, Laravel (ruta con espacio y Ñ) y CodeIgniter 3; reglas de seguridad y un túnel rápido (si Cloudflare no responde, ese paso se omite).
 - Etapa A: instala todos los servicios; en MySQL, MariaDB y PostgreSQL crea una base con datos (incluido `O'Brien` y una rutina), la respalda, la restaura en otra base, comprueba que una base con tablas se rechaza sin confirmar y se reemplaza (con copia previa) al confirmar, e importa desde el servidor; restaura un `pg_dump -Fc` guardado como `.sql` y un volcado plano; Redis `PING`, MongoDB con mongosh, un correo SMTP leído por la API de Mailpit, un sitio HTTPS verificado contra la CA temporal (y sin redirección cuando llega `Cf-Connecting-Ip`), FTP (subir, bajar y PORT rechazado), Composer por el atajo, el bloque `.env` leído con PHP real por phpdotenv, CodeIgniter 4 y el lector de CodeIgniter 3 de los proyectos WolfCore, Adminer, Ollama (`/api/tags`, **sin descargar modelos**), que ningún servicio abra ventanas de consola (ni con varias conexiones a PostgreSQL abiertas) y el apagado sin procesos huérfanos.
+- Etapa B (Nginx 18189, HTTPS 18543, MySQL 13406, MCP 17790): instala Node LTS y Python 3.12 desde el catálogo; clona `laravel/laravel` con git y corre su receta completa (Composer, `.env`, clave, MySQL, migrate, `storage:link`, `npm ci` y `build`, sitio HTTPS) hasta un 200 por HTTPS; un FastAPI mínimo con `venv`, `pip`, `uvicorn` supervisado y sitio proxy que responde 200; **Traer cambios** sobre un repositorio local que recibe un `composer.lock`; el MCP (lista de herramientas, rechazo sin token y `estado_general`); una muestra de métricas con los PID de los servicios y del proceso; y, al final, sin ventanas visibles ni procesos de la carpeta temporal. Las cachés de Composer, npm y pip van a la carpeta de caché de las pruebas.
 
 Nunca instala la CA en el almacén real, no toca el archivo hosts ni el PATH del usuario y al final borra la carpeta temporal. Los paquetes descargados quedan en `%TEMP%\pel-etapa-a-cache` para no volver a bajarlos (otra carpeta con `PEL_INT_CACHE`; `PEL_INT_CONSERVAR=1` conserva la carpeta temporal para revisarla). La primera vez descarga unos 3,5 GB.
 
@@ -161,9 +188,13 @@ Genera el instalador NSIS en `apps/desktop/release/` (`WolfCore Dev Setup <versi
 | ----- | ------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | MVP   | Windows: Nginx, PHP, sitios, hosts, túneles rápidos e interfaz                                                                  | Hecha     |
 | A     | HTTPS, MySQL, MariaDB, PostgreSQL + pgvector, Redis, MongoDB, módulo de bases de datos, Adminer, Composer, Mailpit, FTP, Ollama | Hecha     |
-| B     | Servidor MCP, agentes IA, Node y Python por proyecto, Git, túneles con nombre, herramientas (ver `docs/superpowers/roadmap/`)   | Pendiente |
-| C     | Contenedores, copias programadas, FTPS/SFTP y más servicios                                                                     | Pendiente |
-| D     | Multiplataforma: macOS y Linux                                                                                                  | Pendiente |
+| B     | Proyectos desde GitHub, recetas y `wolfcore.yml`, Node y Python, procesos, panel, registros, herramientas, MCP, temas e idiomas | En cierre |
+| C     | IA en la nube y Hermes, agentes, depuración de PHP; Podman/Docker mínimo (detectar, listar, encender y apagar)                  | Pendiente |
+| D     | Proyectos, compartir y respaldo del entorno                                                                                     | Pendiente |
+| E     | Multiplataforma (macOS y Linux), instaladores y CI                                                                              | Pendiente |
+| F     | Resto de paridad con los referentes y mejoras propias                                                                           | Pendiente |
+
+Plan aprobado de las etapas C a F: `docs/superpowers/roadmap/2026-11-19-plan-etapas.md`.
 
 ## Licencia
 
