@@ -20,6 +20,7 @@ import { computed, onMounted, ref } from 'vue';
 import { PUERTO_ADMINER, type Config, type ResultadoCA } from '../../shared/api';
 import { api } from '../api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
+import SeccionMcp from '../componentes/SeccionMcp.vue';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 
@@ -458,6 +459,8 @@ async function aplicarPath(activar: boolean): Promise<void> {
         </NFormItem>
       </NForm>
     </NCard>
+
+    <SeccionMcp />
 
     <NCard :title="t.acerca" size="small" class="tarjeta">
       <dl class="acerca">

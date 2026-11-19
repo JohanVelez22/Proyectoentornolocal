@@ -16,6 +16,7 @@ import { useRouter } from 'vue-router';
 import { api } from '../api';
 import AvisoHosts from '../componentes/AvisoHosts.vue';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
+import PanelRendimiento from '../componentes/PanelRendimiento.vue';
 import { useAccion } from '../composables/useAccion';
 import { useNoLeidos } from '../composables/useNoLeidos';
 import { es } from '../i18n/es';
@@ -184,6 +185,8 @@ function abrir(url: string): void {
         </NTag>
       </NSpace>
     </NAlert>
+
+    <PanelRendimiento />
 
     <div class="columnas">
       <NCard :title="t.servicios.titulo" size="small" class="tarjeta">

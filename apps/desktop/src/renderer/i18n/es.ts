@@ -1268,7 +1268,8 @@ export const es = {
       'Siga en vivo los registros de Nginx, PHP, los servicios, los sitios, los procesos de proyecto y los túneles.',
     fuente: 'Fuente',
     elegirFuente: 'Elija un registro',
-    sinFuentes: 'Todavía no hay registros. Aparecen cuando un servicio, sitio o proceso escribe el primero.',
+    sinFuentes:
+      'Todavía no hay registros. Aparecen cuando un servicio, sitio o proceso escribe el primero.',
     buscar: 'Filtrar por texto',
     niveles: { error: 'ERROR', warning: 'WARNING', info: 'INFO' } as Record<string, string>,
     pausar: 'Pausar',

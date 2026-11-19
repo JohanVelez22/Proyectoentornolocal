@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   Albums as IconoProyectos,
+  DocumentText as IconoRegistros,
   Home as IconoInicio,
   Layers as IconoBases,
   Mail as IconoCorreo,
@@ -23,6 +24,7 @@ import { computed, h, onBeforeUnmount, onMounted, ref, type Component } from 'vu
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
+import ConfirmacionMcp from './ConfirmacionMcp.vue';
 import { es } from '../i18n/es';
 import type { SeccionNav } from '../router';
 import { detenerEntorno, iniciarEntorno } from '../stores/entorno';
@@ -50,6 +52,7 @@ const opciones: MenuOption[] = (
     ['correo', IconoCorreo],
     ['iaLocal', IconoIa],
     ['tuneles', IconoTuneles],
+    ['registros', IconoRegistros],
     ['ajustes', IconoAjustes],
   ] as const
 ).map(([clave, c]) => ({ key: clave, label: es.nav[clave], icon: icono(c) }));
@@ -173,6 +176,8 @@ onBeforeUnmount(() => {
         </RouterView>
       </NLayoutContent>
     </NLayout>
+    <!-- Confirmaciones del servidor MCP: una sola instancia para toda la ventana. -->
+    <ConfirmacionMcp />
   </NLayout>
 </template>
 
