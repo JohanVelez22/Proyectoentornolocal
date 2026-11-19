@@ -30,6 +30,34 @@ const puertoLibre = (): Promise<number> =>
     });
   });
 
+const escuchaEn = (p: number): Promise<net.Server | null> =>
+  new Promise((resolve) => {
+    const s = net.createServer();
+    s.once('error', () => resolve(null));
+    s.listen(p, '127.0.0.1', () => resolve(s));
+  });
+
+/**
+ * Primer puerto de un bloque de `n` puertos libres en 127.0.0.1, fuera del rango efímero
+ * (Windows 49152+, Linux 32768+). Windows reparte los efímeros en orden: un rango pasivo sacado
+ * de `listen(0)` coincide con los siguientes puertos que el sistema da a otros sockets, y si
+ * ftp-srv no puede abrir el suyo la orden PASV/EPSV se queda colgada.
+ */
+const rangoPasivoLibre = async (n: number): Promise<number> => {
+  for (let intento = 0; intento < 50; intento++) {
+    const desde = 20000 + Math.floor(Math.random() * (32000 - 20000 - n));
+    const abiertos: net.Server[] = [];
+    for (let p = desde; p < desde + n; p++) {
+      const s = await escuchaEn(p);
+      if (!s) break;
+      abiertos.push(s);
+    }
+    await Promise.all(abiertos.map((s) => new Promise((r) => s.close(r))));
+    if (abiertos.length === n) return desde;
+  }
+  throw new Error('No hay un bloque de puertos libres para el modo pasivo');
+};
+
 const sitioBase = (carpeta: string): Sitio => ({
   id: 'demo',
   nombre: 'Demo',
@@ -88,9 +116,7 @@ beforeEach(async () => {
   almacen = new Almacen(rutas);
   credenciales = new AlmacenCredenciales(rutas);
   puerto = await puertoLibre();
-  // El rango pasivo es [pasivo, pasivo + 20] y zod exige ≤ 65535: se descartan los puertos altos.
-  let pasivo = await puertoLibre();
-  while (pasivo > 65000) pasivo = await puertoLibre();
+  const pasivo = await rangoPasivoLibre(21);
   const cfg = await almacen.leer();
   cfg.sitios.push(sitioBase(sitio));
   cfg.ftp = { puerto, redLocal: false, pasivos: [pasivo, pasivo + 20] };
@@ -139,7 +165,7 @@ describe('ServidorFtp', () => {
     expect(readFileSync(new Rutas(base).credenciales(), 'utf8')).toContain('ftp:demo');
   });
 
-  it('sube y baja un archivo', async () => {
+  it('sube y baja un archivo', { timeout: 20000 }, async () => {
     const c = await conClave();
     await c.uploadFrom(archivoLocal('origen.txt'), 'nuevo.txt');
     expect(readFileSync(path.join(sitio, 'nuevo.txt'), 'utf8')).toBe('x');
