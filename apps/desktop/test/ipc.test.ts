@@ -249,7 +249,9 @@ describe('registrarIpc', () => {
       [CANAL_EVENTO, { nombre: 'servicio:estado', dato: { id: 'nginx' } }],
     ]);
     expect([...oyentes.keys()].sort()).toEqual([
+      'aviso:abrir',
       'aviso:inicio',
+      'aviso:nuevo',
       'bd:progreso',
       'git:progreso',
       'hosts:estado',
@@ -471,6 +473,9 @@ describe('registrarIpc', () => {
         'sistema.guardarArchivo',
         'sistema.elegirArchivos',
         'sistema.abrirEditor',
+        'avisos.lista',
+        'avisos.marcarLeidos',
+        'avisos.limpiar',
         'proyectos.detectar',
         'proyectos.configLeer',
         'proyectos.configGuardar',

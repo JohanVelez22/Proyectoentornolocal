@@ -1743,6 +1743,19 @@ export const es = {
     entorno: 'Entorno',
     utilidades: 'Utilidades',
   },
+  avisos: {
+    campana: 'Avisos',
+    campanaConNuevos: (n: number) => `Avisos: ${n} sin leer`,
+    titulo: 'Centro de avisos',
+    vacio:
+      'No hay avisos. Aquí aparecerán las caídas de servicios, los puertos ocupados y los certificados por vencer.',
+    marcarTodos: 'Marcar todo como leído',
+    limpiar: 'Limpiar historial',
+    ver: 'Ver',
+    cerrar: 'Cerrar',
+    niveles: { info: 'Información', aviso: 'Aviso', error: 'Error' },
+    sinLeer: 'Sin leer',
+  },
   barra: {
     paleta: 'Buscar o ejecutar un comando',
     atajoPaleta: 'Ctrl+K',

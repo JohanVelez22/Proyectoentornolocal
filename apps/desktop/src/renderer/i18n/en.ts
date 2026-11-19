@@ -1728,6 +1728,19 @@ export const en: Textos = {
     entorno: 'Environment',
     utilidades: 'Utilities',
   },
+  avisos: {
+    campana: 'Notices',
+    campanaConNuevos: (n: number) => `Notices: ${n} unread`,
+    titulo: 'Notice center',
+    vacio:
+      'No notices. Service outages, ports in use and certificates about to expire will show up here.',
+    marcarTodos: 'Mark all as read',
+    limpiar: 'Clear history',
+    ver: 'View',
+    cerrar: 'Close',
+    niveles: { info: 'Information', aviso: 'Warning', error: 'Error' },
+    sinLeer: 'Unread',
+  },
   barra: {
     paleta: 'Search or run a command',
     atajoPaleta: 'Ctrl+K',

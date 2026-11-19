@@ -1,5 +1,6 @@
 export const VERSION = '0.1.0';
 export * from './tipos';
+export * from './avisos/avisos';
 export * from './errores';
 export * from './rutas';
 export * from './almacen';

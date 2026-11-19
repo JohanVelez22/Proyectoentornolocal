@@ -793,6 +793,16 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'mcp.regenerarToken': (n) => n.regenerarTokenMcp(),
   'mcp.responderConfirmacion': (n, _s, id, aprobado) =>
     n.responderConfirmacionMcp(idCorto(id, 'confirmación', 64), booleano(aprobado, 'aprobado')),
+
+  // ---- Centro de avisos ----
+  'avisos.lista': (n) => n.avisos.lista(),
+  // Sin ids marca todos; con ids, solo esos (lista acotada de ids cortos).
+  'avisos.marcarLeidos': (n, _s, ids) => {
+    n.avisos.marcarLeidos(ids === undefined ? undefined : listaTextos(ids, 200, 64, 'avisos'));
+  },
+  'avisos.limpiar': (n) => {
+    n.avisos.limpiar();
+  },
 };
 
 /** Máximo de un dato estructurado de error (una ruta). */

@@ -1,4 +1,5 @@
 import type {
+  Aviso,
   CambiosPreferenciasUi,
   PreferenciasUi,
   CierreConfirmacion,
@@ -62,6 +63,7 @@ import type {
 } from '@pel/core';
 
 export type {
+  Aviso,
   CierreConfirmacion,
   ConfigProyecto,
   Deteccion,
@@ -471,6 +473,13 @@ export interface ApiEntorno {
      */
     responderConfirmacion(id: string, aprobado: boolean): Promise<boolean>;
   };
+  avisos: {
+    /** Historial (hasta 200, los más nuevos primero). */
+    lista(): Promise<Aviso[]>;
+    /** Sin ids marca todos como leídos. */
+    marcarLeidos(ids?: string[]): Promise<void>;
+    limpiar(): Promise<void>;
+  };
   sistema: ApiSistema & ApiSistemaNucleo;
   /** Suscribe a un evento del núcleo; devuelve la función para cancelar. */
   on<K extends keyof EventosNucleo>(nombre: K, fn: (dato: EventosNucleo[K]) => void): () => void;
@@ -622,6 +631,9 @@ export const RUTAS_IPC = [
   'sistema.guardarArchivo',
   'sistema.elegirArchivos',
   'sistema.abrirEditor',
+  'avisos.lista',
+  'avisos.marcarLeidos',
+  'avisos.limpiar',
 ] as const;
 export type RutaIpc = (typeof RUTAS_IPC)[number];
 
@@ -634,6 +646,8 @@ export const EVENTOS_IPC = [
   'bd:progreso',
   'ia:progreso',
   'aviso:inicio',
+  'aviso:nuevo',
+  'aviso:abrir',
   'receta:progreso',
   'git:progreso',
   'proyectos:sugerencias',

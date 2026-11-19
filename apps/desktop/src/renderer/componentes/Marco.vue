@@ -24,13 +24,16 @@ import {
   useNotification,
   type MenuOption,
 } from 'naive-ui';
+import type { Aviso } from '../../shared/api';
 import { computed, h, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { solicitudes } from '../composables/solicitudes';
 import AsistenteInicio from './AsistenteInicio.vue';
+import CampanaAvisos from './CampanaAvisos.vue';
 import ConfirmacionMcp from './ConfirmacionMcp.vue';
+import PanelAvisos from './PanelAvisos.vue';
 import PaletaComandos from './PaletaComandos.vue';
 import SelectorIdioma from './SelectorIdioma.vue';
 import SelectorTema from './SelectorTema.vue';
@@ -41,6 +44,7 @@ import { useSitios } from '../stores/sitios';
 import type { SeccionNav } from '../router';
 import { detenerEntorno, iniciarEntorno } from '../stores/entorno';
 import { resumenPastilla } from '../utilidades/pastilla';
+import { useAvisos } from '../stores/avisos';
 import { useServicios } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
 
@@ -51,6 +55,8 @@ const tuneles = useTuneles();
 const { ejecutar } = useAccion();
 const notification = useNotification();
 
+const avisos = useAvisos();
+const panelAvisos = ref(false);
 const contraido = ref(false);
 const falloArranque = ref(false);
 
@@ -104,6 +110,13 @@ function navegar(clave: string): void {
   void router.push({ name: clave });
 }
 
+/** Lleva a la pantalla de la acción de un aviso (si su ruta existe en la aplicación). */
+function abrirAviso(a: Aviso): void {
+  panelAvisos.value = false;
+  const ruta = a.accion?.ruta;
+  if (ruta && router.hasRoute(ruta)) void router.push({ name: ruta });
+}
+
 // Primer uso: el asistente se abre solo una vez, con el entorno ya leído y sin proyectos.
 let asistenteRevisado = false;
 watch(
@@ -119,6 +132,9 @@ watch(
 let bajaAviso: (() => void) | null = null;
 
 onMounted(() => {
+  // El historial no es imprescindible: si no carga, la campana queda en cero.
+  void avisos.cargar().catch(() => undefined);
+  avisos.iniciar(abrirAviso);
   void ejecutar(
     'arranque',
     async () => {
@@ -147,6 +163,7 @@ async function mostrarAvisoInicio(): Promise<void> {
 }
 onBeforeUnmount(() => {
   bajaAviso?.();
+  avisos.detener();
   detenerEntorno();
 });
 </script>
@@ -200,6 +217,7 @@ onBeforeUnmount(() => {
             ></template>
             <kbd>{{ textos.barra.atajoPaleta }}</kbd>
           </NButton>
+          <CampanaAvisos @abrir="panelAvisos = true" />
           <SelectorIdioma compacto />
           <SelectorTema compacto />
           <div
@@ -222,6 +240,7 @@ onBeforeUnmount(() => {
       </NLayoutContent>
     </NLayout>
     <!-- Confirmaciones del servidor MCP: una sola instancia para toda la ventana. -->
+    <PanelAvisos v-model:visible="panelAvisos" @abrir="abrirAviso" />
     <ConfirmacionMcp />
     <PaletaComandos />
     <AsistenteInicio />

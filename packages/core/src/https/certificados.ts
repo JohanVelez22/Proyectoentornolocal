@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import forge from 'node-forge';
 import type { Plataforma, ResultadoEscritura } from '../plataforma/tipos';
@@ -181,6 +181,39 @@ export class GestorHttps {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Días que le quedan a la CA (`id: 'ca'`) y a cada certificado emitido (negativo: ya venció).
+   * Un archivo ilegible se omite.
+   */
+  async vencimientos(): Promise<{ id: string; dias: number }[]> {
+    const dias = (pem: string): number =>
+      Math.floor(
+        (forge.pki.certificateFromPem(pem).validity.notAfter.getTime() - this.ahora.getTime()) /
+          DIA_MS,
+      );
+    const res: { id: string; dias: number }[] = [];
+    try {
+      res.push({ id: 'ca', dias: dias(await readFile(this.d.rutas.caCrt(), 'utf8')) });
+    } catch {
+      // sin CA todavía
+    }
+    let nombres: string[] = [];
+    try {
+      nombres = await readdir(path.dirname(this.d.rutas.certCrt('x')));
+    } catch {
+      // sin certificados todavía
+    }
+    for (const n of nombres.filter((x) => x.endsWith('.crt'))) {
+      const id = n.slice(0, -'.crt'.length);
+      try {
+        res.push({ id, dias: dias(await readFile(this.d.rutas.certCrt(id), 'utf8')) });
+      } catch {
+        // certificado ilegible: se regenera al usarlo
+      }
+    }
+    return res;
   }
 
   /** Certificado del sitio (o de `localhost`): se regenera si cambian los dominios o vence pronto. */

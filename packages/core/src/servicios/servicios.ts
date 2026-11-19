@@ -1,3 +1,4 @@
+import type { EntradaAviso } from '../avisos/avisos';
 import type { ServidorFtp } from '../ftp/servidorFtp';
 import { ErrorWolf } from '../errores';
 import { puertosPhp } from '../nginx/principal';
@@ -16,6 +17,7 @@ import {
   type DepsServiciosDatos,
 } from './definicion';
 import {
+  ErrorPuertoOcupado,
   ServicioNginx,
   type InstaladorServicios,
   type SupervisorServicios,
@@ -54,6 +56,8 @@ export interface DepsServicios {
   ftp?: Pick<ServidorFtp, 'estado' | 'iniciar' | 'detener'>;
   /** Procesos de los proyectos: aparecen en los estados y se detienen primero en detenerTodo. */
   procesosProyecto?: Pick<ProcesosProyecto, 'estadosServicio' | 'detenerTodos'>;
+  /** Publica un aviso (centro de avisos); aquí, el puerto ocupado al iniciar un servicio. */
+  avisar?: (a: EntradaAviso) => unknown;
 }
 
 export type IdServicio = 'nginx' | 'ftp' | `php-${string}` | IdServicioDatos;
@@ -195,6 +199,15 @@ export class Servicios {
     try {
       await this.iniciarSinTolerancia(id);
     } catch (e) {
+      if (e instanceof ErrorPuertoOcupado) {
+        this.d.avisar?.({
+          nivel: 'error',
+          tipo: 'puerto-ocupado',
+          codigo: 'avisos.puerto_ocupado',
+          datos: { fuente: id, puerto: e.puerto, nombre: e.nombre },
+          accion: { ruta: 'servicios' },
+        });
+      }
       if (!(e instanceof ErrorDetenidoAlIniciar)) throw e;
     }
   }

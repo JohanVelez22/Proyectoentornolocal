@@ -4,6 +4,7 @@ import {
   app,
   clipboard,
   dialog,
+  Notification,
   ipcMain,
   nativeTheme,
   safeStorage,
@@ -12,6 +13,8 @@ import {
 } from 'electron';
 import { Nucleo, type IdiomaUi, type PreferenciasUi, type Rutas, type TemaUi } from '@pel/core';
 import type { ApiSistema } from '../shared/api';
+import { Notificador } from './notificaciones';
+import { textoAviso } from '../shared/textosAvisos';
 import { crearBandeja, menuBandeja, type AccionesBandeja } from './bandeja';
 import { textosMain } from './textos';
 import { ControlMetricas, registrarIpc } from './ipc';
@@ -258,6 +261,20 @@ if (!app.requestSingleInstanceLock()) {
     v.on('minimize', visible);
     v.on('restore', visible);
     visible();
+    // Notificaciones nativas de los avisos (solo con la ventana sin foco, con límite por tipo y fuente).
+    if (process.platform === 'win32') app.setAppUserModelId('com.johanvelez.wolfcoredev');
+    const notificador = new Notificador({
+      soportada: () => Notification.isSupported(),
+      crear: (o) => new Notification(o),
+      ventanaConFoco: () => !v.isDestroyed() && v.isVisible() && !v.isMinimized() && v.isFocused(),
+      permitida: (a) => n.avisos.nativaPermitida(a.tipo),
+      alClic: (a) => {
+        mostrarVentana();
+        n.avisos.marcarLeidos([a.id]);
+        n.eventos.emit('aviso:abrir', a);
+      },
+    });
+    n.eventos.on('aviso:nuevo', (a) => void notificador.mostrar(a, textoAviso(idioma, a)));
     // Una acción destructiva pedida por un cliente MCP trae la ventana al frente.
     n.eventos.on('mcp:confirmar', () => mostrarVentana());
     registrarIpc(

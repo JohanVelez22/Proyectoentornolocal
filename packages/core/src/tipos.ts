@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TIPOS_AVISO, type TipoAviso } from './avisos/tipos';
 
 export const TIPOS_SITIO = [
   'laravel',
@@ -301,6 +302,20 @@ export const ConfigSchema = z.object({
           mailpit: servicioDatos(PUERTOS_POR_DEFECTO.mailpit),
           ollama: servicioDatos(PUERTOS_POR_DEFECTO.ollama),
         })
+        .prefault({}),
+    })
+    .prefault({}),
+  /** Avisos: notificaciones nativas y qué tipos se muestran. */
+  avisos: z
+    .object({
+      nativas: z.boolean().default(true),
+      tipos: z
+        .object(
+          Object.fromEntries(TIPOS_AVISO.map((t) => [t, z.boolean().default(true)])) as Record<
+            TipoAviso,
+            z.ZodDefault<z.ZodBoolean>
+          >,
+        )
         .prefault({}),
     })
     .prefault({}),

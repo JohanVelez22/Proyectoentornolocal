@@ -1,3 +1,4 @@
+import type { Aviso } from './avisos/avisos';
 import type { MotorBd } from './bd/env';
 import type { CierreConfirmacion, SolicitudConfirmacion } from './mcp/servidor';
 import type { MuestraSistema } from './monitor/metricas';
@@ -47,6 +48,10 @@ export type EventosNucleo = {
   'proyectos:sugerencias': SugerenciaProyecto[];
   /** Hay un aviso de inicio nuevo (p. ej. servicios que no encendieron); se lee con tomarAvisoInicio. */
   'aviso:inicio': string;
+  /** Un aviso nuevo en el centro de avisos (ya con id, fecha y sin leer). */
+  'aviso:nuevo': Aviso;
+  /** El usuario hizo clic en la notificación nativa de este aviso: la interfaz navega a su acción. */
+  'aviso:abrir': Aviso;
   /** Una muestra de rendimiento (solo mientras las métricas están iniciadas). */
   'metricas:muestra': MuestraSistema;
   /** Líneas nuevas (saneadas) de una fuente de registro que se está siguiendo. */

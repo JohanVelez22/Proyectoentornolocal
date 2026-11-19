@@ -21,6 +21,13 @@ import {
 } from './bd/respaldos';
 import { Instalador } from './catalogo/instalador';
 import { listarVersiones } from './catalogo/catalogo';
+import {
+  CentroAvisos,
+  TIPOS_AVISO,
+  conectarFuentesAvisos,
+  revisarVencimientos,
+  type TipoAviso,
+} from './avisos/avisos';
 import { Eventos, type EventosNucleo } from './eventos';
 import { ServidorFtp } from './ftp/servidorFtp';
 import { GestorHosts } from './hosts/hosts';
@@ -183,6 +190,7 @@ export interface ResultadoAjustes {
 }
 
 interface ModulosNucleo {
+  avisos: CentroAvisos;
   bd: BasesDeDatos;
   respaldos: Respaldos;
   pgvector: InstaladorPgvector;
@@ -214,6 +222,8 @@ const puertoHttpsValido = (p: number): boolean =>
   Number.isInteger(p) && (p === 443 || (p >= 1024 && p <= 65535));
 
 const INTERVALO_SONDEO_MS = 3000;
+/** Revisión de vencimiento de la CA y de los certificados (cada 24 h y al iniciar). */
+const INTERVALO_VENCIMIENTOS_MS = 24 * 60 * 60 * 1000;
 
 const mensajeDe = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
@@ -257,6 +267,10 @@ export class Nucleo {
   /** Arranque de los servicios con `autoIniciar` (tras readoptar); resuelve con los errores. */
   arranqueAutomatico: Promise<string[]> = Promise.resolve([]);
   private readonly avisosPendientes: string[] = [];
+  /** Centro de avisos (historial, `aviso:nuevo`); las notificaciones nativas las muestra el proceso principal. */
+  readonly avisos: CentroAvisos;
+  private bajaFuentesAvisos: (() => void) | null = null;
+  private temporizadorVencimientos: ReturnType<typeof setInterval> | null = null;
   readonly bd: BasesDeDatos;
   readonly respaldos: Respaldos;
   readonly pgvector: InstaladorPgvector;
@@ -308,6 +322,7 @@ export class Nucleo {
       // ConfigSchema no incluye credenciales: viven en etc/credenciales.json.
       leer: () => almacen.leer(),
     };
+    this.avisos = m.avisos;
     this.bd = m.bd;
     this.respaldos = m.respaldos;
     this.pgvector = m.pgvector;
@@ -370,6 +385,11 @@ export class Nucleo {
     });
     const instalador = new Instalador(rutas, eventos, o.fetch ?? fetch);
     const hosts = new GestorHosts(plataforma, eventos);
+    const avisos = new CentroAvisos({
+      archivo: path.join(rutas.base, 'run', 'avisos.json'),
+      emitir: (a) => eventos.emit('aviso:nuevo', a),
+    });
+    avisos.fijarConfig((await leerConfig()).avisos);
 
     // sitios y servicios se referencian entre sí: se resuelven de forma perezosa.
     // eslint-disable-next-line prefer-const
@@ -396,6 +416,7 @@ export class Nucleo {
       credenciales,
     });
     const servicios = new Servicios({
+      avisar: (a) => avisos.publicar(a),
       ftp,
       rutas,
       plataforma,
@@ -483,6 +504,7 @@ export class Nucleo {
     };
     const puertoOllama = { valor: (await leerConfig()).servicios.datos.ollama.puerto };
     const modulos: ModulosNucleo = {
+      avisos,
       bd,
       respaldos: new Respaldos({ bd, servicios, rutas, exec, eventos, plataforma }),
       pgvector: new InstaladorPgvector({
@@ -615,6 +637,7 @@ export class Nucleo {
     );
     nucleoRef = nucleo;
     nucleo.avisoInicio = avisoInicio;
+    nucleo.bajaFuentesAvisos = conectarFuentesAvisos(eventos, avisos);
     o.alIniciar?.(eventos);
     try {
       await supervisor.readoptar();
@@ -634,6 +657,7 @@ export class Nucleo {
         nucleo.avisosPendientes.push(`No se pudo iniciar el servidor MCP: ${mensajeDe(e)}`);
       });
     }
+    nucleo.iniciarRevisionVencimientos();
     // Sin bloquear el arranque: un fallo queda en el estado del servicio y en un aviso.
     nucleo.arranqueAutomatico = nucleo
       .iniciarAutomaticos()
@@ -1611,6 +1635,36 @@ export class Nucleo {
     return this.sitios.aplicar();
   }
 
+  /** Revisa al iniciar (en segundo plano) y cada 24 h el vencimiento de la CA y los certificados. */
+  private iniciarRevisionVencimientos(): void {
+    const revisar = (): void => {
+      if (this.cerrado) return;
+      revisarVencimientos(this.https, this.avisos).catch((e: unknown) => {
+        console.error('No se pudo revisar el vencimiento de los certificados:', mensajeDe(e));
+      });
+    };
+    revisar();
+    this.temporizadorVencimientos = setInterval(revisar, INTERVALO_VENCIMIENTOS_MS);
+    this.temporizadorVencimientos.unref?.();
+  }
+
+  /** Cambia las preferencias de avisos (notificaciones nativas y tipos) y las guarda. */
+  async configurarAvisos(cambios: {
+    nativas?: boolean;
+    tipos?: Partial<Record<TipoAviso, boolean>>;
+  }): Promise<Config['avisos']> {
+    await this.sitios.modificarConfig((c) => {
+      if (cambios.nativas !== undefined) c.avisos.nativas = cambios.nativas;
+      for (const t of TIPOS_AVISO) {
+        const v = cambios.tipos?.[t];
+        if (v !== undefined) c.avisos.tipos[t] = v;
+      }
+    });
+    const nuevas = (await this.config.leer()).avisos;
+    this.avisos.fijarConfig(nuevas);
+    return nuevas;
+  }
+
   iniciarSondeo(): void {
     if (this.temporizador) return;
     this.temporizador = setInterval(() => void this.sondear(), INTERVALO_SONDEO_MS);
@@ -1659,6 +1713,11 @@ export class Nucleo {
     this.cerrado = true;
     if (this.temporizador) clearInterval(this.temporizador);
     this.temporizador = null;
+    if (this.temporizadorVencimientos) clearInterval(this.temporizadorVencimientos);
+    this.temporizadorVencimientos = null;
+    this.bajaFuentesAvisos?.();
+    this.bajaFuentesAvisos = null;
+    await this.avisos.guardado();
     // Primero lo que solo observa (vigilancia, métricas y registros), luego el MCP y al final
     // túneles, procesos y servicios.
     this.vigilante.dispose();

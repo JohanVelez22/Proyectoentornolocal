@@ -126,6 +126,11 @@ const api: ApiEntorno = {
   ajustes: {
     guardar: (a) => invocar('ajustes.guardar', a),
   },
+  avisos: {
+    lista: () => invocar('avisos.lista'),
+    marcarLeidos: (ids) => invocar('avisos.marcarLeidos', ids),
+    limpiar: () => invocar('avisos.limpiar'),
+  },
   sistema: {
     elegirCarpeta: () => invocar('sistema.elegirCarpeta'),
     elegirArchivo: () => invocar('sistema.elegirArchivo'),
