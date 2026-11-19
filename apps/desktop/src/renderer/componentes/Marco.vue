@@ -71,7 +71,7 @@ const ICONOS: Record<SeccionNav, Component> = {
   servicios: IconoServicios,
   basesDeDatos: IconoBases,
   correo: IconoCorreo,
-  iaLocal: IconoIa,
+  ia: IconoIa,
   tuneles: IconoTuneles,
   herramientas: IconoHerramientas,
   doctor: IconoDoctor,

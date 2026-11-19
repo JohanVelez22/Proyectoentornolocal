@@ -104,6 +104,21 @@ const api: ApiEntorno = {
     espacioUsado: () => invocar('ia.espacioUsado'),
     bloqueEnv: () => invocar('ia.bloqueEnv'),
     sugeridos: () => invocar('ia.sugeridos'),
+    proveedores: () => invocar('ia.proveedores'),
+    guardarProveedor: (proveedor, confirmarCambioUrl) =>
+      invocar('ia.guardarProveedor', proveedor, confirmarCambioUrl),
+    borrarProveedor: (id, opciones) => invocar('ia.borrarProveedor', id, opciones),
+    guardarClave: (id, clave) => invocar('ia.guardarClave', id, clave),
+    borrarClave: (id, opciones) => invocar('ia.borrarClave', id, opciones),
+    estadoClave: (id) => invocar('ia.estadoClave', id),
+    respaldosClave: (id) => invocar('ia.respaldosClave', id),
+    probarConexion: (id) => invocar('ia.probarConexion', id),
+    probarMensaje: (id, modelo, confirmacion) =>
+      invocar('ia.probarMensaje', id, modelo, confirmacion),
+    previsualizarEnv: (sitioId, proveedorId, modelo) =>
+      invocar('ia.previsualizarEnv', sitioId, proveedorId, modelo),
+    escribirEnv: (sitioId, proveedorId, opciones) =>
+      invocar('ia.escribirEnv', sitioId, proveedorId, opciones),
   },
   mailpit: { noLeidos: () => invocar('mailpit.noLeidos') },
   avisoInicio: () => invocar('avisoInicio'),

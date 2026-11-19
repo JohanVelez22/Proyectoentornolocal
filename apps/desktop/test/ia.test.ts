@@ -1,9 +1,39 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ApiEntorno, EventosNucleo, ModeloOllama } from '../src/shared/api';
+import type {
+  ApiEntorno,
+  EventosNucleo,
+  ModeloOllama,
+  ProveedorIaPublico,
+  ResultadoPruebaIa,
+} from '../src/shared/api';
+import {
+  PRESETS_COMPATIBLES as PRESETS_NUCLEO,
+  TIPOS_CON_CLAVE as CON_CLAVE_NUCLEO,
+  URL_BASE_POR_DEFECTO,
+} from '@pel/core';
 import { faseDe, porcentaje, useIa } from '../src/renderer/stores/ia';
+import {
+  claveEnmascarada,
+  idDeNombre,
+  PRESETS_COMPATIBLES,
+  TIPOS_CON_CLAVE,
+  URL_POR_DEFECTO,
+  urlEfectiva,
+} from '../src/renderer/utilidades/ia';
 
 type Oyente = (dato: unknown) => void;
+
+const PROVEEDOR: ProveedorIaPublico = {
+  id: 'openai',
+  tipo: 'openai',
+  nombre: 'OpenAI',
+  urlBase: null,
+  modelo: 'gpt-a',
+  clave: { configurada: false, final: null },
+};
+// Clave claramente falsa: la tienda nunca debe guardarla.
+const CLAVE = 'sk-falso-CENTINELA-store-00000000000wxyz';
 
 /** Promesa que la prueba resuelve o rechaza a mano (una descarga en curso). */
 function diferida<T = void>() {
@@ -42,6 +72,21 @@ function apiFalsa() {
       espacioUsado: vi.fn(async () => 1024),
       bloqueEnv: vi.fn(async () => 'OLLAMA_BASE_URL=http://127.0.0.1:11434'),
       sugeridos: vi.fn(async () => ['llama3.2']),
+      proveedores: vi.fn(async (): Promise<ProveedorIaPublico[]> => [PROVEEDOR]),
+      guardarProveedor: vi.fn(async (): Promise<ProveedorIaPublico[]> => [PROVEEDOR]),
+      borrarProveedor: vi.fn(async () => undefined),
+      guardarClave: vi.fn(async () => ({ configurada: true, final: 'wxyz' })),
+      borrarClave: vi.fn(async () => ({ sitiosLimpios: 0 })),
+      estadoClave: vi.fn(async () => ({ configurada: true, final: 'wxyz' })),
+      respaldosClave: vi.fn(async () => ({ sitios: [] })),
+      probarConexion: vi.fn(async (): Promise<ResultadoPruebaIa> => ({
+        ok: true,
+        latenciaMs: 120,
+        modelos: [{ id: 'gpt-a', nombre: 'gpt-a' }],
+      })),
+      probarMensaje: vi.fn(async () => ({ texto: 'ok', latenciaMs: 300 })),
+      previsualizarEnv: vi.fn(),
+      escribirEnv: vi.fn(),
     },
     on: vi.fn((nombre: string, fn: Oyente) => {
       const set = oyentes.get(nombre) ?? new Set<Oyente>();
@@ -164,5 +209,141 @@ describe('store de IA local', () => {
     await ia.borrar('llama3.2');
     expect(falsa.api.ia.borrar).toHaveBeenCalledWith('llama3.2');
     expect(falsa.api.ia.modelos).toHaveBeenCalled();
+  });
+});
+
+describe('store de IA en la nube', () => {
+  let falsa: ReturnType<typeof apiFalsa>;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    falsa = apiFalsa();
+    vi.stubGlobal('window', { entorno: falsa.api as unknown as ApiEntorno });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('probar conexión pasa por probando y queda ok con latencia y modelos', async () => {
+    const ia = useIa();
+    const d = diferida<ResultadoPruebaIa>();
+    falsa.api.ia.probarConexion.mockReturnValueOnce(d.promesa);
+    const p = ia.probarConexion('openai');
+    expect(ia.pruebas['openai']).toEqual({ estado: 'probando' });
+    d.resolver({ ok: true, latenciaMs: 120, modelos: [{ id: 'gpt-a', nombre: 'gpt-a' }] });
+    await p;
+    expect(ia.pruebas['openai']).toEqual({
+      estado: 'ok',
+      latenciaMs: 120,
+      modelos: [{ id: 'gpt-a', nombre: 'gpt-a' }],
+    });
+    expect(ia.modelosDe('openai')).toEqual(['gpt-a']);
+  });
+
+  it('un fallo del proveedor queda como error traducido con su código', async () => {
+    const ia = useIa();
+    falsa.api.ia.probarConexion.mockResolvedValueOnce({
+      ok: false,
+      latenciaMs: 80,
+      modelos: [],
+      error: { codigo: 'ia.clave_invalida' },
+    });
+    await ia.probarConexion('openai');
+    expect(ia.pruebas['openai']).toMatchObject({
+      estado: 'error',
+      codigo: 'ia.clave_invalida',
+      latenciaMs: 80,
+    });
+    expect((ia.pruebas['openai'] as { error: string }).error).toMatch(/clave/);
+    // Un rechazo del IPC también queda como error, sin lanzar.
+    falsa.api.ia.probarConexion.mockRejectedValueOnce(new Error('sin red'));
+    await ia.probarConexion('openai');
+    expect(ia.pruebas['openai']).toMatchObject({ estado: 'error', error: 'sin red' });
+  });
+
+  it('una prueba vieja que termina tarde no pisa la más nueva', async () => {
+    const ia = useIa();
+    const vieja = diferida<ResultadoPruebaIa>();
+    falsa.api.ia.probarConexion.mockReturnValueOnce(vieja.promesa);
+    const p1 = ia.probarConexion('openai');
+    const p2 = ia.probarConexion('openai');
+    await p2;
+    vieja.resolver({ ok: false, latenciaMs: 1, modelos: [], error: { codigo: 'ia.sin_red' } });
+    await p1;
+    expect(ia.pruebas['openai']).toMatchObject({ estado: 'ok' });
+  });
+
+  it('el mensaje de prueba manda la confirmación y guarda la respuesta', async () => {
+    const ia = useIa();
+    await ia.probarMensaje('openai', 'gpt-a');
+    expect(falsa.api.ia.probarMensaje).toHaveBeenCalledWith('openai', 'gpt-a', true);
+    expect(ia.mensajes['openai']).toEqual({ estado: 'ok', texto: 'ok', latenciaMs: 300 });
+    falsa.api.ia.probarMensaje.mockRejectedValueOnce(
+      Object.assign(new Error('x'), { codigo: 'ia.sin_saldo' }),
+    );
+    await ia.probarMensaje('openai', 'gpt-a');
+    expect(ia.mensajes['openai']).toMatchObject({ estado: 'error', codigo: 'ia.sin_saldo' });
+  });
+
+  it('guardar la clave solo deja {configurada, final}; la clave no queda en la tienda', async () => {
+    const ia = useIa();
+    await ia.cargarProveedores();
+    await ia.probarConexion('openai');
+    const estado = await ia.guardarClave('openai', CLAVE);
+    expect(estado).toEqual({ configurada: true, final: 'wxyz' });
+    expect(falsa.api.ia.guardarClave).toHaveBeenCalledWith('openai', CLAVE);
+    expect(ia.proveedores?.[0]?.clave).toEqual({ configurada: true, final: 'wxyz' });
+    // La prueba anterior ya no vale para la clave nueva.
+    expect(ia.pruebas['openai']).toBeUndefined();
+    expect(JSON.stringify(ia.$state)).not.toContain(CLAVE);
+  });
+
+  it('borrar la clave pasa la opción de limpiar copias y actualiza el estado', async () => {
+    const ia = useIa();
+    await ia.cargarProveedores();
+    falsa.api.ia.borrarClave.mockResolvedValueOnce({ sitiosLimpios: 2 });
+    expect(await ia.borrarClave('openai', true)).toBe(2);
+    expect(falsa.api.ia.borrarClave).toHaveBeenCalledWith('openai', { limpiarRespaldos: true });
+    expect(ia.proveedores?.[0]?.clave).toEqual({ configurada: false, final: null });
+  });
+
+  it('guardar un proveedor reemplaza la lista y propaga el pedido de confirmación', async () => {
+    const ia = useIa();
+    const datos = { id: 'openai', tipo: 'openai', nombre: 'OpenAI', urlBase: null, modelo: null };
+    await ia.guardarProveedor(datos as never);
+    expect(falsa.api.ia.guardarProveedor).toHaveBeenCalledWith(datos, undefined);
+    expect(ia.proveedores).toEqual([PROVEEDOR]);
+    falsa.api.ia.guardarProveedor.mockRejectedValueOnce(
+      Object.assign(new Error('confirme'), { codigo: 'ia.url_cambia_con_clave' }),
+    );
+    await expect(ia.guardarProveedor(datos as never)).rejects.toMatchObject({
+      codigo: 'ia.url_cambia_con_clave',
+    });
+    await ia.guardarProveedor(datos as never, true);
+    expect(falsa.api.ia.guardarProveedor).toHaveBeenLastCalledWith(datos, true);
+  });
+});
+
+describe('utilidades de IA en la nube', () => {
+  it('las copias de la interfaz coinciden con el núcleo', () => {
+    expect(URL_POR_DEFECTO).toEqual(URL_BASE_POR_DEFECTO);
+    expect(PRESETS_COMPATIBLES).toEqual(PRESETS_NUCLEO);
+    expect([...TIPOS_CON_CLAVE].sort()).toEqual([...CON_CLAVE_NUCLEO].sort());
+  });
+
+  it('id a partir del nombre, sin repetir', () => {
+    expect(idDeNombre('OpenRouter personal', 'compatible', [])).toBe('openrouter-personal');
+    expect(idDeNombre('Ñandú IA', 'openai', [])).toBe('nandu-ia');
+    expect(idDeNombre('***', 'gemini', ['gemini'])).toBe('gemini-2');
+    expect(idDeNombre('x'.repeat(80), 'openai', [])).toHaveLength(34);
+  });
+
+  it('URL efectiva y clave enmascarada', () => {
+    expect(urlEfectiva({ tipo: 'openai', urlBase: null })).toBe('https://api.openai.com/v1');
+    expect(urlEfectiva({ tipo: 'compatible', urlBase: 'https://a.example/v1/' })).toBe(
+      'https://a.example/v1',
+    );
+    expect(claveEnmascarada({ clave: { configurada: true, final: 'wxyz' } })).toBe('••••wxyz');
+    expect(claveEnmascarada({ clave: { configurada: false, final: null } })).toBeNull();
   });
 });

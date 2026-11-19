@@ -1,8 +1,15 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import type { ModeloOllama, ProgresoIa } from '../../shared/api';
+import type {
+  ConfigProveedorIa,
+  EstadoClaveIa,
+  ModeloIa,
+  ModeloOllama,
+  ProgresoIa,
+  ProveedorIaPublico,
+} from '../../shared/api';
 import { api } from '../api';
-import { mensajeDeError } from '../utilidades/errores';
+import { mensajeDeError, traducirError } from '../utilidades/errores';
 
 const esCancelacion = (e: unknown): boolean =>
   (e as { codigo?: unknown } | null)?.codigo === 'cancelado';
@@ -37,6 +44,28 @@ export interface DescargaIa {
   error?: string;
 }
 
+/** Resultado de "Probar conexión" de un proveedor en la nube. */
+export type EstadoPruebaIa =
+  | { estado: 'probando' }
+  | { estado: 'ok'; latenciaMs: number; modelos: ModeloIa[] }
+  | { estado: 'error'; error: string; codigo?: string; latenciaMs?: number };
+
+/** Resultado de "Probar un mensaje" (16 tokens como mucho). */
+export type EstadoMensajeIa =
+  | { estado: 'enviando' }
+  | {
+      estado: 'ok';
+      texto: string;
+      latenciaMs: number;
+      tokens?: { entrada: number; salida: number };
+    }
+  | { estado: 'error'; error: string; codigo?: string };
+
+const codigoDe = (e: unknown): string | undefined => {
+  const c = (e as { codigo?: unknown } | null)?.codigo;
+  return typeof c === 'string' ? c : undefined;
+};
+
 const EN_CURSO: readonly EstadoDescarga[] = ['descargando', 'cancelando'];
 const clave = (nombre: string): string => nombre.trim().toLowerCase();
 
@@ -49,6 +78,20 @@ export const useIa = defineStore('ia', () => {
   /** Descargas por nombre de modelo en minúsculas (las terminadas quedan hasta descartarlas). */
   const descargas = ref<Record<string, DescargaIa>>({});
   let baja: (() => void) | null = null;
+
+  // ---- IA en la nube: la clave nunca se guarda aquí (va directo al proceso principal) ----
+  const proveedores = ref<ProveedorIaPublico[] | null>(null);
+  const errorProveedores = ref<string | null>(null);
+  const pruebas = ref<Record<string, EstadoPruebaIa>>({});
+  const mensajes = ref<Record<string, EstadoMensajeIa>>({});
+  /** Turno de la última prueba y del último mensaje por proveedor (lo viejo no pisa lo nuevo). */
+  const turnos = new Map<string, number>();
+  const turno = (k: string): number => {
+    const n = (turnos.get(k) ?? 0) + 1;
+    turnos.set(k, n);
+    return n;
+  };
+  const vigente = (k: string, n: number): boolean => turnos.get(k) === n;
 
   const activas = computed(() =>
     Object.values(descargas.value).filter((d) => EN_CURSO.includes(d.estado)),
@@ -185,6 +228,119 @@ export const useIa = defineStore('ia', () => {
     return api().ia.probar(nombre, texto);
   }
 
+  async function cargarProveedores(): Promise<void> {
+    try {
+      proveedores.value = await api().ia.proveedores();
+      errorProveedores.value = null;
+    } catch (e) {
+      errorProveedores.value = mensajeDeError(e);
+    }
+  }
+
+  function olvidarResultados(id: string): void {
+    turno(`p:${id}`);
+    turno(`m:${id}`);
+    const { [id]: _p, ...restoP } = pruebas.value;
+    const { [id]: _m, ...restoM } = mensajes.value;
+    void _p;
+    void _m;
+    pruebas.value = restoP;
+    mensajes.value = restoM;
+  }
+
+  /** Lanza el error del IPC (p. ej. `ia.url_cambia_con_clave`: la vista pide confirmación). */
+  async function guardarProveedor(c: ConfigProveedorIa, confirmarCambioUrl?: true): Promise<void> {
+    const previo = proveedores.value?.find((p) => p.id === c.id);
+    proveedores.value = await api().ia.guardarProveedor(c, confirmarCambioUrl);
+    if (previo && (previo.urlBase !== c.urlBase || previo.tipo !== c.tipo)) {
+      olvidarResultados(c.id);
+    }
+  }
+
+  async function borrarProveedor(id: string, limpiarRespaldos: boolean): Promise<void> {
+    await api().ia.borrarProveedor(id, limpiarRespaldos ? { limpiarRespaldos: true } : undefined);
+    olvidarResultados(id);
+    await cargarProveedores();
+  }
+
+  function ponerClave(id: string, clave: EstadoClaveIa): void {
+    if (!proveedores.value) return;
+    proveedores.value = proveedores.value.map((p) => (p.id === id ? { ...p, clave } : p));
+  }
+
+  /** La clave pasa directo al IPC; aquí solo queda `{configurada, final}`. */
+  async function guardarClave(id: string, clave: string): Promise<EstadoClaveIa> {
+    const estado = await api().ia.guardarClave(id, clave);
+    ponerClave(id, estado);
+    olvidarResultados(id);
+    return estado;
+  }
+
+  /** Devuelve cuántos sitios quedaron sin copias del .env con la clave. */
+  async function borrarClave(id: string, limpiarRespaldos: boolean): Promise<number> {
+    const r = await api().ia.borrarClave(
+      id,
+      limpiarRespaldos ? { limpiarRespaldos: true } : undefined,
+    );
+    ponerClave(id, { configurada: false, final: null });
+    olvidarResultados(id);
+    return r.sitiosLimpios;
+  }
+
+  /** Lista los modelos del proveedor (gratis). Nunca lanza: el resultado queda en `pruebas`. */
+  async function probarConexion(id: string): Promise<void> {
+    const n = turno(`p:${id}`);
+    pruebas.value = { ...pruebas.value, [id]: { estado: 'probando' } };
+    let r: EstadoPruebaIa;
+    try {
+      const x = await api().ia.probarConexion(id);
+      r = x.ok
+        ? { estado: 'ok', latenciaMs: x.latenciaMs, modelos: x.modelos }
+        : {
+            estado: 'error',
+            latenciaMs: x.latenciaMs,
+            error: traducirError({
+              codigo: x.error?.codigo ?? 'ia.respuesta_rara',
+              ...(x.error?.datos ? { datos: x.error.datos } : {}),
+            }),
+            codigo: x.error?.codigo ?? 'ia.respuesta_rara',
+          };
+    } catch (e) {
+      const codigo = codigoDe(e);
+      r = { estado: 'error', error: mensajeDeError(e), ...(codigo ? { codigo } : {}) };
+    }
+    if (vigente(`p:${id}`, n)) pruebas.value = { ...pruebas.value, [id]: r };
+  }
+
+  /**
+   * Mensaje de prueba (gasta tokens). Solo se llama tras el diálogo de costo: manda la
+   * confirmación explícita que exige el proceso principal. Nunca lanza.
+   */
+  async function probarMensaje(id: string, modelo: string): Promise<void> {
+    const n = turno(`m:${id}`);
+    mensajes.value = { ...mensajes.value, [id]: { estado: 'enviando' } };
+    let r: EstadoMensajeIa;
+    try {
+      const x = await api().ia.probarMensaje(id, modelo, true);
+      r = {
+        estado: 'ok',
+        texto: x.texto,
+        latenciaMs: x.latenciaMs,
+        ...(x.tokens ? { tokens: x.tokens } : {}),
+      };
+    } catch (e) {
+      const codigo = codigoDe(e);
+      r = { estado: 'error', error: mensajeDeError(e), ...(codigo ? { codigo } : {}) };
+    }
+    if (vigente(`m:${id}`, n)) mensajes.value = { ...mensajes.value, [id]: r };
+  }
+
+  /** Ids de los modelos que listó la última prueba correcta. */
+  function modelosDe(id: string): string[] {
+    const p = pruebas.value[id];
+    return p?.estado === 'ok' ? p.modelos.map((m) => m.id) : [];
+  }
+
   /** Se suscribe una sola vez: el progreso sigue llegando aunque se cambie de pantalla. */
   function iniciar(): void {
     if (baja) return;
@@ -216,5 +372,17 @@ export const useIa = defineStore('ia', () => {
     probar,
     iniciar,
     detener,
+    proveedores,
+    errorProveedores,
+    pruebas,
+    mensajes,
+    cargarProveedores,
+    guardarProveedor,
+    borrarProveedor,
+    guardarClave,
+    borrarClave,
+    probarConexion,
+    probarMensaje,
+    modelosDe,
   };
 });

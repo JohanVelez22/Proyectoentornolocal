@@ -14,7 +14,7 @@ export const es = {
     servicios: 'Servicios',
     basesDeDatos: 'Bases de datos',
     correo: 'Correo',
-    iaLocal: 'IA local',
+    ia: 'IA',
     tuneles: 'Túneles',
     herramientas: 'Herramientas',
     doctor: 'Doctor',
@@ -214,6 +214,16 @@ export const es = {
         'Confirme que quiere escribir la clave en el .env (queda en texto plano).',
       'ia.env_versionado':
         'Git ya sigue el .env de este proyecto: el próximo commit subiría la clave aunque esté en .gitignore. Quítelo del índice con git rm --cached .env.',
+      'ia.env_versionado_desconocido':
+        'No se pudo comprobar si git ya sigue el .env de este proyecto: confirme aparte que quiere escribir la clave.',
+      'ia.proveedor_no_existe': 'El proveedor de IA ya no existe.',
+      'ia.url_cambia_con_clave':
+        'El proveedor tiene una clave guardada: confirme que quiere enviarla a la nueva URL.',
+      'ia.mensaje_sin_confirmar':
+        'Confirme el envío del mensaje de prueba (gasta tokens de su cuenta).',
+      'ia.clave_ilegible':
+        'No se pudo leer la clave guardada del proveedor: bórrela y vuelva a guardarla.',
+      'ia.argumento_invalido': 'Dato no válido ({campo}).',
     },
   },
   avisoInicio: {
@@ -1004,6 +1014,150 @@ export const es = {
     errorTitulo: 'Mailpit no pudo encender',
     encender: 'Encender Mailpit',
     verServicios: 'Ver en Servicios',
+  },
+  ia: {
+    descripcion:
+      'Proveedores de IA en la nube y modelos locales con Ollama. Las claves se guardan cifradas en este equipo y nunca se muestran.',
+    nube: {
+      titulo: 'IA en la nube',
+      agregar: 'Agregar proveedor',
+      vacio:
+        'Todavía no agregó ningún proveedor. Agregue OpenAI, Anthropic, Gemini, Hermes (Nous) o un compatible con OpenAI.',
+      errorLista: 'No se pudo leer la lista de proveedores',
+    },
+    local: { titulo: 'IA local (Ollama)' },
+    tipos: {
+      ollama: 'Ollama',
+      hermes: 'Hermes (Nous Research)',
+      gemini: 'Google Gemini',
+      openai: 'OpenAI',
+      anthropic: 'Anthropic Claude',
+      compatible: 'Compatible con OpenAI',
+    } as Record<string, string>,
+    tarjeta: {
+      clave: 'Clave',
+      sinClave: 'Sin clave',
+      claveIlegible: 'Guardada (no se pudo leer)',
+      url: 'URL base',
+      modeloPorDefecto: 'Modelo por defecto',
+      ninguno: 'Ninguno',
+      probarConexion: 'Probar conexión',
+      probarConexionAyuda: 'Lista los modelos del proveedor. No gasta tokens.',
+      probando: 'Probando…',
+      conectado: (ms: number, n: number) => `Conectado · ${ms} ms · ${n} modelos`,
+      verModelos: (n: number) => `Ver los ${n} modelos`,
+      fallo: 'No se pudo conectar',
+      probarMensaje: 'Probar un mensaje',
+      probarMensajeAyuda:
+        'Envía un mensaje corto fijo para comprobar que el modelo responde. Gasta unos pocos tokens.',
+      elegirModelo: 'Modelo para el mensaje',
+      sinModelo: 'Pruebe la conexión o fije un modelo por defecto para elegir uno.',
+      enviando: 'Enviando…',
+      respuesta: (ms: number) => `Respuesta en ${ms} ms`,
+      tokens: (entrada: number, salida: number) =>
+        `${entrada} tokens de entrada, ${salida} de salida`,
+      usar: 'Usar en un proyecto',
+      editar: 'Editar',
+      borrar: 'Borrar',
+      acciones: (nombre: string) => `Acciones de ${nombre}`,
+    },
+    costo: {
+      titulo: 'Probar un mensaje',
+      texto: (modelo: string, proveedor: string) =>
+        `Se enviará un mensaje corto y fijo al modelo ${modelo} de ${proveedor}. Gasta tokens de su cuenta: la respuesta se corta en 16 tokens y suele costar fracciones de centavo.`,
+      enviar: 'Enviar el mensaje',
+    },
+    dialogo: {
+      nuevo: 'Agregar proveedor de IA',
+      editar: (nombre: string) => `Editar ${nombre}`,
+      tipo: 'Tipo',
+      preset: 'Proveedor compatible',
+      presetAyuda: 'Rellena el nombre y la URL; puede cambiarlos.',
+      presetOtro: 'Otro',
+      nombre: 'Nombre',
+      urlBase: 'URL base',
+      urlAyuda: 'Vacía = la oficial. Solo https://, o http:// hacia 127.0.0.1 o [::1] (LM Studio).',
+      urlObligatoria: 'Escriba la URL base del proveedor compatible.',
+      modelo: 'Modelo por defecto (opcional)',
+      modeloAyuda: 'Se usa en el bloque .env (AI_MODEL) y en el mensaje de prueba.',
+      clave: 'Clave de API',
+      claveNueva: 'Pegue la clave',
+      claveGuardada: (final: string) =>
+        `Hay una clave guardada (${final}). Escriba otra solo si quiere reemplazarla.`,
+      claveAyuda:
+        'Se guarda cifrada en este equipo y nunca se vuelve a mostrar. Solo se ven los 4 últimos caracteres.',
+      claveOpcional: 'Opcional para servidores locales (LM Studio).',
+      borrarClave: 'Borrar la clave',
+      guardar: 'Guardar',
+      guardado: (nombre: string) => `${nombre} guardado`,
+      urlCambiaTitulo: 'La clave irá a otra URL',
+      urlCambiaTexto: (url: string) =>
+        `Este proveedor tiene una clave guardada. Desde ahora se enviará a ${url}. Confirme solo si confía en ese servidor.`,
+      urlCambiaConfirmar: 'Enviar la clave a la nueva URL',
+    },
+    borrar: {
+      claveTitulo: (nombre: string) => `¿Borrar la clave de ${nombre}?`,
+      claveTexto:
+        'La clave se borra de este equipo. Los .env donde la escribió no se tocan: cámbiela también allí si la revoca.',
+      proveedorTitulo: (nombre: string) => `¿Borrar ${nombre}?`,
+      proveedorTexto:
+        'Se borran el proveedor y su clave guardada. Los .env de sus proyectos no se tocan.',
+      respaldos: (n: number) =>
+        n === 1
+          ? 'Borrar también las copias del .env de 1 proyecto que tienen esta clave en texto plano'
+          : `Borrar también las copias del .env de ${n} proyectos que tienen esta clave en texto plano`,
+      respaldosAyuda:
+        'WolfCore Dev guarda copias del .env antes de escribirlo, fuera de los proyectos. Borrarlas no se puede deshacer.',
+      claveBorrada: 'Clave borrada',
+      proveedorBorrado: (nombre: string) => `${nombre} borrado`,
+      respaldosBorrados: (n: number) => `Se borraron las copias del .env de ${n} proyecto(s)`,
+    },
+    env: {
+      titulo: (nombre: string) => `Usar ${nombre} en un proyecto`,
+      proyecto: 'Proyecto',
+      sinProyectos: 'No hay proyectos montados.',
+      modelo: 'Modelo (AI_MODEL)',
+      modeloAyuda: 'Opcional. Elija uno de la lista o escríbalo.',
+      vista: 'Bloque que se escribirá en .env (la clave se muestra enmascarada)',
+      cargando: 'Preparando la vista previa…',
+      textoPlano:
+        'La clave quedará en texto plano en el .env del proyecto. Cualquiera con acceso a esa carpeta podrá leerla.',
+      copiaPrevia:
+        'El .env actual se copia antes, fuera del proyecto (en la carpeta de datos de WolfCore Dev).',
+      sinClave: 'Este proveedor necesita una clave: guárdela antes de usarlo en un proyecto.',
+      gitignoreFalta: 'El .gitignore del proyecto no ignora el .env.',
+      gitignoreNoExiste: 'El proyecto no tiene .gitignore.',
+      gitignoreOk: 'El .gitignore ya ignora el .env.',
+      agregarGitignore: 'Agregar .env al .gitignore',
+      gitignoreTitulo: 'Modificar .gitignore',
+      gitignoreTexto:
+        'Se agregará la línea .env al .gitignore del proyecto (o se creará el archivo), con una copia previa.',
+      gitignoreConfirmar: 'Agregar al .gitignore',
+      versionadoTitulo: 'Git ya sigue el .env de este proyecto',
+      versionadoTexto:
+        'Aunque esté en .gitignore, el próximo commit subiría la clave. Antes de escribirla, quítelo del índice y haga commit:',
+      desconocidoTitulo: 'No se pudo comprobar si git sigue el .env',
+      desconocidoTexto:
+        'Git no respondió (no está instalado o la carpeta no es de confianza). Si el .env ya está en el repositorio, el próximo commit subiría la clave. Revíselo con:',
+      aceptarVersionado: 'Entiendo el riesgo: escribir la clave igual',
+      aceptarTitulo: 'Escribir aunque git pueda subir la clave',
+      aceptarTexto:
+        'Si el .env está en el repositorio, la clave quedará en el próximo commit y en el historial. Hágalo solo si ya ejecutó git rm --cached .env o si el repositorio es solo suyo.',
+      aceptarConfirmar: 'Acepto el riesgo',
+      conflictoTitulo: 'El .env ya define estas variables con otro valor',
+      reemplazar: (claves: string) => `Reemplazar ${claves}`,
+      reemplazarTitulo: 'Reemplazar variables del .env',
+      reemplazarTexto: (claves: string) =>
+        `Se quitarán las líneas de ${claves} que ya tenía el .env y quedarán las del bloque de WolfCore Dev. El .env anterior se copia antes.`,
+      reemplazarConfirmar: 'Reemplazar',
+      escribir: 'Escribir en .env',
+      confirmarTitulo: 'Escribir la clave en texto plano',
+      confirmarTexto: (carpeta: string) =>
+        `La clave se escribirá sin cifrar en ${carpeta}. No comparta ese archivo ni lo suba a un repositorio.`,
+      confirmar: 'Escribir la clave',
+      escrito: (proyecto: string) => `Bloque de IA escrito en el .env de ${proyecto}`,
+      copiarComando: 'Copiar comando',
+    },
   },
   iaLocal: {
     descripcion:

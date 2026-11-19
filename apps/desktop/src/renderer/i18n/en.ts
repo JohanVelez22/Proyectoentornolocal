@@ -15,7 +15,7 @@ export const en: Textos = {
     servicios: 'Services',
     basesDeDatos: 'Databases',
     correo: 'Mail',
-    iaLocal: 'Local AI',
+    ia: 'AI',
     tuneles: 'Tunnels',
     herramientas: 'Tools',
     doctor: 'Doctor',
@@ -210,6 +210,15 @@ export const en: Textos = {
         'Confirm that you want to write the key to the .env (it is stored in plain text).',
       'ia.env_versionado':
         'Git already tracks the .env of this project: the next commit would upload the key even if it is in .gitignore. Remove it from the index with git rm --cached .env.',
+      'ia.env_versionado_desconocido':
+        'Could not check whether git already tracks the .env of this project: confirm separately that you want to write the key.',
+      'ia.proveedor_no_existe': 'The AI provider no longer exists.',
+      'ia.url_cambia_con_clave':
+        'The provider has a saved key: confirm that you want to send it to the new URL.',
+      'ia.mensaje_sin_confirmar':
+        'Confirm sending the test message (it spends tokens from your account).',
+      'ia.clave_ilegible': 'The saved provider key could not be read: delete it and save it again.',
+      'ia.argumento_invalido': 'Invalid value ({campo}).',
     },
   },
   avisoInicio: {
@@ -995,6 +1004,150 @@ export const en: Textos = {
     errorTitulo: 'Mailpit failed to start',
     encender: 'Start Mailpit',
     verServicios: 'View in Services',
+  },
+  ia: {
+    descripcion:
+      'Cloud AI providers and local models with Ollama. Keys are stored encrypted on this computer and are never shown.',
+    nube: {
+      titulo: 'Cloud AI',
+      agregar: 'Add provider',
+      vacio:
+        'You have not added any provider yet. Add OpenAI, Anthropic, Gemini, Hermes (Nous) or an OpenAI-compatible one.',
+      errorLista: 'Could not read the provider list',
+    },
+    local: { titulo: 'Local AI (Ollama)' },
+    tipos: {
+      ollama: 'Ollama',
+      hermes: 'Hermes (Nous Research)',
+      gemini: 'Google Gemini',
+      openai: 'OpenAI',
+      anthropic: 'Anthropic Claude',
+      compatible: 'OpenAI-compatible',
+    } as Record<string, string>,
+    tarjeta: {
+      clave: 'Key',
+      sinClave: 'No key',
+      claveIlegible: 'Saved (could not be read)',
+      url: 'Base URL',
+      modeloPorDefecto: 'Default model',
+      ninguno: 'None',
+      probarConexion: 'Test connection',
+      probarConexionAyuda: 'Lists the provider models. Spends no tokens.',
+      probando: 'Testing…',
+      conectado: (ms: number, n: number) => `Connected · ${ms} ms · ${n} models`,
+      verModelos: (n: number) => `Show the ${n} models`,
+      fallo: 'Could not connect',
+      probarMensaje: 'Test a message',
+      probarMensajeAyuda:
+        'Sends a short fixed message to check that the model answers. Spends a few tokens.',
+      elegirModelo: 'Model for the message',
+      sinModelo: 'Test the connection or set a default model to pick one.',
+      enviando: 'Sending…',
+      respuesta: (ms: number) => `Answer in ${ms} ms`,
+      tokens: (entrada: number, salida: number) => `${entrada} input tokens, ${salida} output`,
+      usar: 'Use in a project',
+      editar: 'Edit',
+      borrar: 'Delete',
+      acciones: (nombre: string) => `${nombre} actions`,
+    },
+    costo: {
+      titulo: 'Test a message',
+      texto: (modelo: string, proveedor: string) =>
+        `A short fixed message will be sent to the ${modelo} model of ${proveedor}. It spends tokens from your account: the answer is cut at 16 tokens and usually costs fractions of a cent.`,
+      enviar: 'Send the message',
+    },
+    dialogo: {
+      nuevo: 'Add AI provider',
+      editar: (nombre: string) => `Edit ${nombre}`,
+      tipo: 'Type',
+      preset: 'Compatible provider',
+      presetAyuda: 'Fills in the name and URL; you can change them.',
+      presetOtro: 'Other',
+      nombre: 'Name',
+      urlBase: 'Base URL',
+      urlAyuda:
+        'Empty = the official one. Only https://, or http:// to 127.0.0.1 or [::1] (LM Studio).',
+      urlObligatoria: 'Enter the base URL of the compatible provider.',
+      modelo: 'Default model (optional)',
+      modeloAyuda: 'Used in the .env block (AI_MODEL) and in the test message.',
+      clave: 'API key',
+      claveNueva: 'Paste the key',
+      claveGuardada: (final: string) =>
+        `A key is saved (${final}). Type another one only if you want to replace it.`,
+      claveAyuda:
+        'It is stored encrypted on this computer and never shown again. Only the last 4 characters are visible.',
+      claveOpcional: 'Optional for local servers (LM Studio).',
+      borrarClave: 'Delete the key',
+      guardar: 'Save',
+      guardado: (nombre: string) => `${nombre} saved`,
+      urlCambiaTitulo: 'The key will go to another URL',
+      urlCambiaTexto: (url: string) =>
+        `This provider has a saved key. From now on it will be sent to ${url}. Confirm only if you trust that server.`,
+      urlCambiaConfirmar: 'Send the key to the new URL',
+    },
+    borrar: {
+      claveTitulo: (nombre: string) => `Delete the ${nombre} key?`,
+      claveTexto:
+        'The key is deleted from this computer. The .env files where you wrote it are not touched: change it there too if you revoke it.',
+      proveedorTitulo: (nombre: string) => `Delete ${nombre}?`,
+      proveedorTexto:
+        'The provider and its saved key are deleted. The .env files of your projects are not touched.',
+      respaldos: (n: number) =>
+        n === 1
+          ? 'Also delete the .env copies of 1 project that hold this key in plain text'
+          : `Also delete the .env copies of ${n} projects that hold this key in plain text`,
+      respaldosAyuda:
+        'WolfCore Dev keeps copies of the .env before writing it, outside the projects. Deleting them cannot be undone.',
+      claveBorrada: 'Key deleted',
+      proveedorBorrado: (nombre: string) => `${nombre} deleted`,
+      respaldosBorrados: (n: number) => `The .env copies of ${n} project(s) were deleted`,
+    },
+    env: {
+      titulo: (nombre: string) => `Use ${nombre} in a project`,
+      proyecto: 'Project',
+      sinProyectos: 'There are no mounted projects.',
+      modelo: 'Model (AI_MODEL)',
+      modeloAyuda: 'Optional. Pick one from the list or type it.',
+      vista: 'Block that will be written to .env (the key is shown masked)',
+      cargando: 'Preparing the preview…',
+      textoPlano:
+        'The key will be stored in plain text in the project .env. Anyone with access to that folder will be able to read it.',
+      copiaPrevia:
+        'The current .env is copied first, outside the project (in the WolfCore Dev data folder).',
+      sinClave: 'This provider needs a key: save it before using it in a project.',
+      gitignoreFalta: 'The project .gitignore does not ignore .env.',
+      gitignoreNoExiste: 'The project has no .gitignore.',
+      gitignoreOk: '.gitignore already ignores .env.',
+      agregarGitignore: 'Add .env to .gitignore',
+      gitignoreTitulo: 'Change .gitignore',
+      gitignoreTexto:
+        'The line .env will be added to the project .gitignore (or the file will be created), with a previous copy.',
+      gitignoreConfirmar: 'Add to .gitignore',
+      versionadoTitulo: 'Git already tracks the .env of this project',
+      versionadoTexto:
+        'Even if it is in .gitignore, the next commit would upload the key. Before writing it, remove it from the index and commit:',
+      desconocidoTitulo: 'Could not check whether git tracks the .env',
+      desconocidoTexto:
+        'Git did not answer (it is not installed or the folder is not trusted). If the .env is already in the repository, the next commit would upload the key. Check it with:',
+      aceptarVersionado: 'I understand the risk: write the key anyway',
+      aceptarTitulo: 'Write even though git may upload the key',
+      aceptarTexto:
+        'If the .env is in the repository, the key will end up in the next commit and in the history. Do it only if you already ran git rm --cached .env or the repository is only yours.',
+      aceptarConfirmar: 'I accept the risk',
+      conflictoTitulo: 'The .env already defines these variables with another value',
+      reemplazar: (claves: string) => `Replace ${claves}`,
+      reemplazarTitulo: 'Replace .env variables',
+      reemplazarTexto: (claves: string) =>
+        `The ${claves} lines the .env already had will be removed and the WolfCore Dev block ones will stay. The previous .env is copied first.`,
+      reemplazarConfirmar: 'Replace',
+      escribir: 'Write to .env',
+      confirmarTitulo: 'Write the key in plain text',
+      confirmarTexto: (carpeta: string) =>
+        `The key will be written unencrypted in ${carpeta}. Do not share that file or upload it to a repository.`,
+      confirmar: 'Write the key',
+      escrito: (proyecto: string) => `AI block written to the .env of ${proyecto}`,
+      copiarComando: 'Copy command',
+    },
   },
   iaLocal: {
     descripcion:

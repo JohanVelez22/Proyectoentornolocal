@@ -126,7 +126,7 @@ const tiles = computed<Tile[]>(() => [
     ...tileIa.value,
     icono: Sparkles,
     tono: typeof tileIa.value.valor === 'number' && tileIa.value.valor > 0 ? 'ok' : 'neutro',
-    destino: 'iaLocal',
+    destino: 'ia',
   },
 ]);
 

@@ -38,6 +38,22 @@ function nucleoFalso() {
     tuneles: { abrir: vi.fn(), cerrar: vi.fn(), renovar: vi.fn(), estados: vi.fn() },
     instalador: { instalar: vi.fn(), instalados: vi.fn() },
     hosts: { sincronizar: vi.fn(async () => ({ ok: true })) },
+    ia: {
+      proveedores: vi.fn(async () => []),
+      proveedor: vi.fn(async (id: string) => ({ id })),
+      guardarProveedor: vi.fn(async () => []),
+      borrarProveedor: vi.fn(async () => undefined),
+      probarConexion: vi.fn(async () => ({ ok: true, latenciaMs: 1, modelos: [] })),
+      probarMensaje: vi.fn(async () => ({ texto: 'ok', latenciaMs: 1 })),
+      previsualizarEnv: vi.fn(async () => ({ bloque: '', gitignore: {}, existeEnv: false })),
+      escribirEnv: vi.fn(async () => ({
+        respaldo: false,
+        conflictos: [],
+        gitignoreAgregado: false,
+      })),
+      sitiosConRespaldosDeClave: vi.fn(async () => []),
+      limpiarRespaldosDeClave: vi.fn(async () => ({ sitios: 0 })),
+    },
     config: { leer: vi.fn() },
     estadoGeneral: vi.fn(),
     guardarAjustes: vi.fn(async () => ({ aplicar: {}, reiniciados: [], errores: [] })),
@@ -453,6 +469,17 @@ describe('registrarIpc', () => {
         'ia.espacioUsado',
         'ia.bloqueEnv',
         'ia.sugeridos',
+        'ia.proveedores',
+        'ia.guardarProveedor',
+        'ia.borrarProveedor',
+        'ia.guardarClave',
+        'ia.borrarClave',
+        'ia.estadoClave',
+        'ia.respaldosClave',
+        'ia.probarConexion',
+        'ia.probarMensaje',
+        'ia.previsualizarEnv',
+        'ia.escribirEnv',
         'mailpit.noLeidos',
         'instalador.listarVersiones',
         'instalador.instalar',
@@ -1515,5 +1542,235 @@ describe('preferencias de la interfaz', () => {
     expect(aplicarTema).toHaveBeenCalledWith(expect.objectContaining({ tema: 'claro' }));
     const mal = await canales.get('entorno:preferencias.guardar')!({}, 'claro');
     expect(mal).toMatchObject({ ok: false });
+  });
+});
+
+describe('IPC de IA en la nube', () => {
+  // Clave claramente falsa; nunca debe salir del proceso principal.
+  const CLAVE = 'sk-falso-CENTINELA-ipc-000000000000wxyz';
+
+  function secretosIa(inicial: string | null = CLAVE) {
+    const guardadas = new Map<string, string>();
+    if (inicial) guardadas.set('ia:openai', inicial);
+    return {
+      guardadas,
+      guardar: vi.fn(async (id: string, v: string) => void guardadas.set(id, v)),
+      leer: vi.fn(async (id: string) => guardadas.get(id) ?? null),
+      borrar: vi.fn(async (id: string) => void guardadas.delete(id)),
+      hay: vi.fn((id: string) => guardadas.has(id)),
+      estado: vi.fn(async (id: string) => {
+        const v = guardadas.get(id);
+        return { configurada: !!v, final: v ? v.slice(-4) : null };
+      }),
+      guardarTokenGithub: vi.fn(),
+      leerTokenGithub: vi.fn(async () => null),
+      borrarTokenGithub: vi.fn(),
+      hayTokenGithub: vi.fn(() => false),
+    };
+  }
+
+  function montarIa(secretos = secretosIa()) {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema, () => true, undefined, {
+      secretos: secretos as never,
+    });
+    const llamar = async (ruta: string, ...args: unknown[]) =>
+      (await canales.get(`entorno:${ruta}`)!({}, ...args)) as {
+        ok: boolean;
+        valor?: unknown;
+        error?: { mensaje: string; codigo?: string; datos?: Record<string, unknown> };
+      };
+    const ia = (crudo as unknown as { ia: Record<string, Mock> }).ia;
+    return { llamar, ia, secretos };
+  }
+
+  const PROVEEDOR = { id: 'openai', tipo: 'openai', nombre: 'OpenAI', urlBase: null, modelo: null };
+  const OPCIONES_ENV = { confirmado: true, agregarGitignore: true };
+
+  it('rechaza argumentos inválidos de cada familia con un código, sin llamar al núcleo', async () => {
+    const { llamar, ia, secretos } = montarIa();
+    const casos: [string, unknown[], string][] = [
+      ['ia.guardarProveedor', ['no-objeto'], 'ia.argumento_invalido'],
+      ['ia.guardarProveedor', [{ ...PROVEEDOR, id: 'Con Espacios' }], 'ia.argumento_invalido'],
+      ['ia.guardarProveedor', [{ ...PROVEEDOR, tipo: 'otro' }], 'ia.argumento_invalido'],
+      ['ia.guardarProveedor', [{ ...PROVEEDOR, nombre: '' }], 'ia.argumento_invalido'],
+      ['ia.guardarProveedor', [{ ...PROVEEDOR, nombre: 'a\nb' }], 'ia.argumento_invalido'],
+      [
+        'ia.guardarProveedor',
+        [{ ...PROVEEDOR, urlBase: `https://a.example/${'x'.repeat(600)}` }],
+        'ia.argumento_invalido',
+      ],
+      ['ia.guardarProveedor', [{ ...PROVEEDOR, modelo: 7 }], 'ia.argumento_invalido'],
+      // Una clave pegada en la configuración no se acepta (nunca va a config.json).
+      ['ia.guardarProveedor', [{ ...PROVEEDOR, clave: CLAVE }], 'ia.argumento_invalido'],
+      ['ia.guardarProveedor', [PROVEEDOR, 'si'], 'ia.argumento_invalido'],
+      ['ia.borrarProveedor', ['../openai'], 'ia.argumento_invalido'],
+      ['ia.borrarProveedor', ['openai', { limpiarRespaldos: 'si' }], 'ia.argumento_invalido'],
+      ['ia.guardarClave', ['openai', 'con espacios'], 'ia.clave_mal_formada'],
+      ['ia.guardarClave', ['openai', 'x'.repeat(4097)], 'ia.clave_mal_formada'],
+      ['ia.guardarClave', ['openai', 'línea\nnueva'], 'ia.clave_mal_formada'],
+      ['ia.guardarClave', ['openai', 12345], 'ia.clave_mal_formada'],
+      ['ia.guardarClave', ['OPENAI', CLAVE], 'ia.argumento_invalido'],
+      ['ia.borrarClave', ['openai', { limpiarRespaldos: 1 }], 'ia.argumento_invalido'],
+      ['ia.borrarClave', ['openai', { otra: true }], 'ia.argumento_invalido'],
+      ['ia.estadoClave', [42], 'ia.argumento_invalido'],
+      ['ia.respaldosClave', [''], 'ia.argumento_invalido'],
+      ['ia.probarConexion', [null], 'ia.argumento_invalido'],
+      ['ia.probarMensaje', ['openai', 'gpt-a'], 'ia.mensaje_sin_confirmar'],
+      ['ia.probarMensaje', ['openai', 'gpt-a', 'true'], 'ia.mensaje_sin_confirmar'],
+      ['ia.probarMensaje', ['openai', 'gpt-a', 1], 'ia.mensaje_sin_confirmar'],
+      ['ia.probarMensaje', ['openai', '../../x', true], 'ia.modelo_invalido'],
+      ['ia.previsualizarEnv', ['tienda\n', 'openai'], 'ia.argumento_invalido'],
+      ['ia.previsualizarEnv', ['tienda', 'openai', 'mal modelo'], 'ia.modelo_invalido'],
+      ['ia.escribirEnv', ['tienda', 'openai'], 'ia.env_sin_confirmar'],
+      ['ia.escribirEnv', ['tienda', 'openai', { agregarGitignore: true }], 'ia.env_sin_confirmar'],
+      [
+        'ia.escribirEnv',
+        ['tienda', 'openai', { confirmado: 'true', agregarGitignore: true }],
+        'ia.env_sin_confirmar',
+      ],
+      ['ia.escribirEnv', ['tienda', 'openai', { confirmado: true }], 'ia.argumento_invalido'],
+      [
+        'ia.escribirEnv',
+        ['tienda', 'openai', { ...OPCIONES_ENV, aceptarVersionado: 'si' }],
+        'ia.argumento_invalido',
+      ],
+      [
+        'ia.escribirEnv',
+        ['tienda', 'openai', { ...OPCIONES_ENV, reemplazarAjenas: 1 }],
+        'ia.argumento_invalido',
+      ],
+      [
+        'ia.escribirEnv',
+        ['tienda', 'openai', { ...OPCIONES_ENV, carpeta: 'C:\\otro' }],
+        'ia.argumento_invalido',
+      ],
+    ];
+    for (const [ruta, args, codigo] of casos) {
+      const r = await llamar(ruta, ...args);
+      expect(r.ok, `${ruta} ${JSON.stringify(args)}`).toBe(false);
+      expect(r.error?.codigo, `${ruta} ${JSON.stringify(args)}`).toBe(codigo);
+      expect(JSON.stringify(r)).not.toContain(CLAVE);
+    }
+    for (const [nombre, m] of Object.entries(ia)) {
+      if (nombre === 'proveedor') continue;
+      expect(m, nombre).not.toHaveBeenCalled();
+    }
+    expect(secretos.guardar).not.toHaveBeenCalled();
+    expect(secretos.borrar).not.toHaveBeenCalled();
+  });
+
+  it('ninguna respuesta ni error de las rutas de IA contiene la clave', async () => {
+    const { llamar, ia } = montarIa();
+    ia['proveedores']!.mockResolvedValue([PROVEEDOR]);
+    const salidas: unknown[] = [];
+    salidas.push(await llamar('ia.proveedores'));
+    salidas.push(await llamar('ia.estadoClave', 'openai'));
+    salidas.push(await llamar('ia.guardarClave', 'openai', CLAVE));
+    salidas.push(await llamar('ia.respaldosClave', 'openai'));
+    salidas.push(await llamar('ia.probarConexion', 'openai'));
+    salidas.push(await llamar('ia.probarMensaje', 'openai', 'gpt-a', true));
+    salidas.push(await llamar('ia.previsualizarEnv', 'tienda', 'openai', 'gpt-a'));
+    salidas.push(await llamar('ia.escribirEnv', 'tienda', 'openai', OPCIONES_ENV));
+    // Errores del núcleo que repiten la clave (mensaje y datos) salen limpios.
+    ia['probarMensaje']!.mockRejectedValueOnce(
+      new ErrorWolf('ia.respuesta_rara', `falló con ${CLAVE}`, { detalle: `eco ${CLAVE}` }),
+    );
+    salidas.push(await llamar('ia.probarMensaje', 'openai', 'gpt-a', true));
+    ia['escribirEnv']!.mockRejectedValueOnce(new Error(`no se pudo: ${CLAVE}`));
+    salidas.push(await llamar('ia.escribirEnv', 'tienda', 'openai', OPCIONES_ENV));
+    // Un resultado que la llevara (eco del proveedor, bloque sin enmascarar) no sale.
+    ia['probarMensaje']!.mockResolvedValueOnce({ texto: `eco ${CLAVE}`, latenciaMs: 1 });
+    const eco = await llamar('ia.probarMensaje', 'openai', 'gpt-a', true);
+    expect(eco.ok).toBe(false);
+    salidas.push(eco);
+    ia['previsualizarEnv']!.mockResolvedValueOnce({ bloque: `OPENAI_API_KEY=${CLAVE}` });
+    const bloque = await llamar('ia.previsualizarEnv', 'tienda', 'openai');
+    expect(bloque.ok).toBe(false);
+    salidas.push(bloque);
+    salidas.push(await llamar('ia.borrarClave', 'openai', { limpiarRespaldos: true }));
+    expect(JSON.stringify(salidas)).not.toContain(CLAVE);
+    expect(JSON.stringify(salidas)).not.toContain('CENTINELA');
+  });
+
+  it('la clave va del IPC al almacén; el renderer solo ve {configurada, final}', async () => {
+    const { llamar, secretos } = montarIa(secretosIa(null));
+    const r = await llamar('ia.guardarClave', 'openai', `  ${CLAVE}  `);
+    expect(r).toEqual({ ok: true, valor: { configurada: true, final: 'wxyz' } });
+    expect(secretos.guardar).toHaveBeenCalledWith('ia:openai', CLAVE);
+    expect(await llamar('ia.estadoClave', 'openai')).toEqual({
+      ok: true,
+      valor: { configurada: true, final: 'wxyz' },
+    });
+  });
+
+  it('la clave sale del almacén hacia el núcleo, nunca del renderer', async () => {
+    const { llamar, ia } = montarIa();
+    await llamar('ia.probarConexion', 'openai');
+    expect(ia['probarConexion']).toHaveBeenCalledWith('openai', CLAVE);
+    await llamar('ia.probarMensaje', 'openai', 'gpt-a', true);
+    expect(ia['probarMensaje']).toHaveBeenCalledWith('openai', CLAVE, 'gpt-a', true);
+    await llamar('ia.previsualizarEnv', 'tienda', 'openai');
+    expect(ia['previsualizarEnv']).toHaveBeenCalledWith('tienda', 'openai', CLAVE, undefined);
+    await llamar('ia.escribirEnv', 'tienda', 'openai', {
+      ...OPCIONES_ENV,
+      modelo: 'gpt-a',
+      aceptarVersionado: true,
+      reemplazarAjenas: false,
+    });
+    expect(ia['escribirEnv']).toHaveBeenCalledWith('tienda', 'openai', CLAVE, {
+      confirmado: true,
+      agregarGitignore: true,
+      modelo: 'gpt-a',
+      aceptarVersionado: true,
+    });
+  });
+
+  it('proveedores trae el estado de la clave; guardar pasa si ya hay clave y la confirmación', async () => {
+    const { llamar, ia } = montarIa();
+    ia['proveedores']!.mockResolvedValue([PROVEEDOR, { ...PROVEEDOR, id: 'groq' }]);
+    const r = await llamar('ia.proveedores');
+    expect(r.valor).toEqual([
+      { ...PROVEEDOR, clave: { configurada: true, final: 'wxyz' } },
+      { ...PROVEEDOR, id: 'groq', clave: { configurada: false, final: null } },
+    ]);
+    await llamar('ia.guardarProveedor', PROVEEDOR);
+    expect(ia['guardarProveedor']).toHaveBeenLastCalledWith(PROVEEDOR, { tieneClave: true });
+    await llamar('ia.guardarProveedor', { ...PROVEEDOR, id: 'groq' }, true);
+    expect(ia['guardarProveedor']).toHaveBeenLastCalledWith(
+      { ...PROVEEDOR, id: 'groq' },
+      { tieneClave: false, confirmarCambioUrl: true },
+    );
+  });
+
+  it('borrar la clave con limpiarRespaldos borra antes las copias del .env que la tienen', async () => {
+    const { llamar, ia, secretos } = montarIa();
+    ia['limpiarRespaldosDeClave']!.mockResolvedValueOnce({ sitios: 2 });
+    const r = await llamar('ia.borrarClave', 'openai', { limpiarRespaldos: true });
+    expect(r).toEqual({ ok: true, valor: { sitiosLimpios: 2 } });
+    expect(ia['limpiarRespaldosDeClave']).toHaveBeenCalledWith(CLAVE);
+    expect(secretos.guardadas.has('ia:openai')).toBe(false);
+    // Sin la opción, las copias quedan.
+    const s2 = montarIa();
+    await s2.llamar('ia.borrarClave', 'openai');
+    expect(s2.ia['limpiarRespaldosDeClave']).not.toHaveBeenCalled();
+    expect(s2.secretos.borrar).toHaveBeenCalledWith('ia:openai');
+  });
+
+  it('borrar un proveedor borra también su clave', async () => {
+    const { llamar, ia, secretos } = montarIa();
+    await llamar('ia.borrarProveedor', 'openai');
+    expect(ia['borrarProveedor']).toHaveBeenCalledWith('openai');
+    expect(secretos.borrar).toHaveBeenCalledWith('ia:openai');
+  });
+
+  it('una clave guardada que no se puede descifrar da ia.clave_ilegible', async () => {
+    const secretos = secretosIa();
+    secretos.leer.mockRejectedValueOnce(new Error('No se pudo descifrar'));
+    const { llamar, ia } = montarIa(secretos);
+    const r = await llamar('ia.probarConexion', 'openai');
+    expect(r.error?.codigo).toBe('ia.clave_ilegible');
+    expect(ia['probarConexion']).not.toHaveBeenCalled();
   });
 });

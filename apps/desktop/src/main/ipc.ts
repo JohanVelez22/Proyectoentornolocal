@@ -23,6 +23,7 @@ import {
   PREFIJO_CANAL,
   type ApiSistema,
   type DatosError,
+  type ProveedorIaPublico,
   type ResultadoIpc,
   type RutaIpc,
 } from '../shared/api';
@@ -30,6 +31,13 @@ import {
   archivoExistente,
   booleano,
   carpetaExistente,
+  claveIa,
+  configProveedorIa,
+  idProveedorIa,
+  idSitioIa,
+  modeloIa,
+  opcionesBorrarClaveIa,
+  opcionesEnvIa,
   acotadoJson,
   enteroEn,
   idCorto,
@@ -408,6 +416,48 @@ async function conToken<T>(s: Contexto, fn: (token: string | null) => Promise<T>
   return valor;
 }
 
+/** Clave guardada de un proveedor (null si no hay). Un fallo al descifrar nunca la repite. */
+async function claveIaGuardada(s: Contexto, id: string): Promise<string | null> {
+  try {
+    return await s.secretos.leer(`ia:${id}`);
+  } catch {
+    throw new ErrorWolf(
+      'ia.clave_ilegible',
+      'No se pudo leer la clave guardada del proveedor: bórrela y vuelva a guardarla.',
+    );
+  }
+}
+
+/**
+ * Ejecuta con la clave del almacén (nunca la del renderer). Los errores salen sin ella y un
+ * resultado que la llevara (eco del proveedor, un bloque sin enmascarar) no sale del proceso.
+ */
+async function conClaveIa<T>(
+  s: Contexto,
+  id: string,
+  fn: (clave: string | null) => Promise<T>,
+): Promise<T> {
+  const clave = await claveIaGuardada(s, id);
+  const valor = await sinClave(clave ?? '', () => fn(clave));
+  if (clave && JSON.stringify(valor ?? null).includes(clave)) {
+    throw new ErrorWolf('ia.respuesta_rara', 'La respuesta contenía la clave y no se envió.');
+  }
+  return valor;
+}
+
+/** Borra las copias del .env de los sitios donde alguna tiene la clave; cuántos sitios. */
+async function limpiarRespaldosIa(n: NucleoIpc, s: Contexto, id: string): Promise<number> {
+  return conClaveIa(s, id, async (k) => (await n.ia.limpiarRespaldosDeClave(k)).sitios);
+}
+
+/** Proveedores con lo único que el renderer ve de su clave: `{configurada, final}`. */
+async function proveedoresPublicos(n: NucleoIpc, s: Contexto): Promise<ProveedorIaPublico[]> {
+  const lista = await n.ia.proveedores();
+  return Promise.all(
+    lista.map(async (p) => ({ ...p, clave: await s.secretos.estado(`ia:${p.id}`) })),
+  );
+}
+
 /** Carpeta de proyectos por defecto si no hay carpeta vigilada (si existe). */
 export const CARPETA_PROYECTOS_POR_DEFECTO = 'C:\\Proyectos';
 
@@ -582,6 +632,78 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'ia.espacioUsado': (n) => n.espacioIa(),
   'ia.bloqueEnv': (n) => n.bloqueEnvIa(),
   'ia.sugeridos': (n) => n.modelosSugeridos(),
+
+  // ---- IA en la nube: la clave entra por guardarClave y solo la lee este proceso ----
+  'ia.proveedores': async (n, s) => proveedoresPublicos(n, s),
+  'ia.guardarProveedor': async (n, s, datos, confirmarCambioUrl) => {
+    const c = configProveedorIa(datos);
+    if (confirmarCambioUrl !== undefined && confirmarCambioUrl !== true) {
+      throw new ErrorWolf('ia.argumento_invalido', 'Argumento no válido: confirmacion', {
+        campo: 'confirmacion',
+      });
+    }
+    await n.ia.guardarProveedor(c, {
+      tieneClave: s.secretos.hay(`ia:${c.id}`),
+      ...(confirmarCambioUrl === true ? { confirmarCambioUrl: true } : {}),
+    });
+    return proveedoresPublicos(n, s);
+  },
+  'ia.borrarProveedor': async (n, s, id, opciones) => {
+    const p = idProveedorIa(id);
+    const o = opcionesBorrarClaveIa(opciones);
+    await n.ia.proveedor(p);
+    if (o.limpiarRespaldos) await limpiarRespaldosIa(n, s, p);
+    await n.ia.borrarProveedor(p);
+    await s.secretos.borrar(`ia:${p}`);
+  },
+  'ia.guardarClave': async (n, s, id, clave) => {
+    const p = idProveedorIa(id);
+    const k = claveIa(clave);
+    await n.ia.proveedor(p);
+    await sinClave(k, () => s.secretos.guardar(`ia:${p}`, k));
+    return s.secretos.estado(`ia:${p}`);
+  },
+  // Con `limpiarRespaldos`, antes borra las copias del .env de los sitios que tienen la clave.
+  'ia.borrarClave': async (n, s, id, opciones) => {
+    const p = idProveedorIa(id);
+    const o = opcionesBorrarClaveIa(opciones);
+    const sitiosLimpios = o.limpiarRespaldos ? await limpiarRespaldosIa(n, s, p) : 0;
+    await s.secretos.borrar(`ia:${p}`);
+    return { sitiosLimpios };
+  },
+  'ia.estadoClave': (_n, s, id) => s.secretos.estado(`ia:${idProveedorIa(id)}`),
+  'ia.respaldosClave': (n, s, id) => {
+    const p = idProveedorIa(id);
+    return conClaveIa(s, p, async (k) => ({ sitios: await n.ia.sitiosConRespaldosDeClave(k) }));
+  },
+  'ia.probarConexion': (n, s, id) => {
+    const p = idProveedorIa(id);
+    return conClaveIa(s, p, (k) => n.ia.probarConexion(p, k));
+  },
+  // Gasta tokens: solo con la confirmación del diálogo de costo (exactamente `true`).
+  'ia.probarMensaje': (n, s, id, modelo, confirmacion) => {
+    const p = idProveedorIa(id);
+    if (confirmacion !== true) {
+      throw new ErrorWolf(
+        'ia.mensaje_sin_confirmar',
+        'Confirme el envío del mensaje de prueba (gasta tokens de su cuenta).',
+      );
+    }
+    const m = modeloIa(modelo);
+    return conClaveIa(s, p, (k) => n.ia.probarMensaje(p, k, m, true));
+  },
+  'ia.previsualizarEnv': (n, s, sitioId, proveedorId, modelo) => {
+    const sitio = idSitioIa(sitioId);
+    const p = idProveedorIa(proveedorId);
+    const m = modelo === undefined ? undefined : modeloIa(modelo);
+    return conClaveIa(s, p, (k) => n.ia.previsualizarEnv(sitio, p, k, m));
+  },
+  'ia.escribirEnv': (n, s, sitioId, proveedorId, opciones) => {
+    const sitio = idSitioIa(sitioId);
+    const p = idProveedorIa(proveedorId);
+    const o = opcionesEnvIa(opciones);
+    return conClaveIa(s, p, (k) => n.ia.escribirEnv(sitio, p, k, o));
+  },
   'mailpit.noLeidos': (n) => n.noLeidosCorreo(),
   // Se entrega una sola vez: una recarga del renderer no lo vuelve a mostrar.
   avisoInicio: (n) => n.tomarAvisoInicio(),

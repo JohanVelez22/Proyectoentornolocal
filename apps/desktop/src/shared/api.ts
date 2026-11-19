@@ -66,9 +66,25 @@ import type {
   Reparacion,
   ResultadoFirefox,
   ResultadoReparacion,
+  ConfigProveedorIa,
+  ModeloIa,
+  OpcionesEnvIa,
+  ResultadoEnvIa,
+  ResultadoMensajeIa,
+  ResultadoPruebaIa,
+  TipoProveedorIa,
+  VistaPreviaEnvIa,
 } from '@pel/core';
 
 export type {
+  ConfigProveedorIa,
+  ModeloIa,
+  OpcionesEnvIa,
+  ResultadoEnvIa,
+  ResultadoMensajeIa,
+  ResultadoPruebaIa,
+  TipoProveedorIa,
+  VistaPreviaEnvIa,
   EstadoConfianza,
   Hallazgo,
   Reparacion,
@@ -137,6 +153,17 @@ export type {
 };
 
 export type MotorSql = Exclude<MotorBd, 'mongodb'>;
+
+/** Lo único que la interfaz ve de una clave de IA: si hay una y sus 4 últimos caracteres. */
+export interface EstadoClaveIa {
+  configurada: boolean;
+  final: string | null;
+}
+
+/** Proveedor de IA en la nube tal como lo ve la interfaz (sin la clave). */
+export interface ProveedorIaPublico extends ConfigProveedorIa {
+  clave: EstadoClaveIa;
+}
 
 /** Puerto fijo de Adminer (igual que `PUERTO_ADMINER` del núcleo; solo se muestra). */
 export const PUERTO_ADMINER = 8090;
@@ -319,6 +346,42 @@ export interface ApiEntorno {
     espacioUsado(): Promise<number>;
     bloqueEnv(): Promise<string>;
     sugeridos(): Promise<string[]>;
+    /* ── IA en la nube (la clave nunca vuelve a la interfaz) ── */
+    proveedores(): Promise<ProveedorIaPublico[]>;
+    /**
+     * Crea o actualiza un proveedor. Si ya tiene clave y cambia la URL efectiva, falla con
+     * `ia.url_cambia_con_clave` salvo con `confirmarCambioUrl` (diálogo aparte).
+     */
+    guardarProveedor(
+      proveedor: ConfigProveedorIa,
+      confirmarCambioUrl?: true,
+    ): Promise<ProveedorIaPublico[]>;
+    /** Borra el proveedor y su clave (y, con `limpiarRespaldos`, las copias del .env con ella). */
+    borrarProveedor(id: string, opciones?: { limpiarRespaldos?: boolean }): Promise<void>;
+    /** Va directo al almacén cifrado del proceso principal; solo devuelve el estado. */
+    guardarClave(id: string, clave: string): Promise<EstadoClaveIa>;
+    borrarClave(
+      id: string,
+      opciones?: { limpiarRespaldos?: boolean },
+    ): Promise<{ sitiosLimpios: number }>;
+    estadoClave(id: string): Promise<EstadoClaveIa>;
+    /** Sitios con copias del .env que contienen la clave del proveedor. */
+    respaldosClave(id: string): Promise<{ sitios: string[] }>;
+    /** Lista los modelos (no gasta tokens). Nunca falla por el proveedor: mire `ok`/`error`. */
+    probarConexion(id: string): Promise<ResultadoPruebaIa>;
+    /** Mensaje fijo con respuesta de 16 tokens como mucho; exige la confirmación del diálogo. */
+    probarMensaje(id: string, modelo: string, confirmacion: true): Promise<ResultadoMensajeIa>;
+    /** Bloque .env con la clave enmascarada y el estado de .gitignore y git del proyecto. */
+    previsualizarEnv(
+      sitioId: string,
+      proveedorId: string,
+      modelo?: string,
+    ): Promise<VistaPreviaEnvIa>;
+    escribirEnv(
+      sitioId: string,
+      proveedorId: string,
+      opciones: OpcionesEnvIa,
+    ): Promise<ResultadoEnvIa>;
   };
   mailpit: {
     noLeidos(): Promise<number>;
@@ -604,6 +667,17 @@ export const RUTAS_IPC = [
   'ia.espacioUsado',
   'ia.bloqueEnv',
   'ia.sugeridos',
+  'ia.proveedores',
+  'ia.guardarProveedor',
+  'ia.borrarProveedor',
+  'ia.guardarClave',
+  'ia.borrarClave',
+  'ia.estadoClave',
+  'ia.respaldosClave',
+  'ia.probarConexion',
+  'ia.probarMensaje',
+  'ia.previsualizarEnv',
+  'ia.escribirEnv',
   'mailpit.noLeidos',
   'avisoInicio',
   'instalador.listarVersiones',

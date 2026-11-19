@@ -39,11 +39,13 @@ const rutas: RouteRecordRaw[] = [
     meta: { seccion: 'correo' },
   },
   {
-    path: '/ia-local',
-    name: 'iaLocal',
-    component: () => import('./vistas/IaLocal.vue'),
-    meta: { seccion: 'iaLocal' },
+    path: '/ia',
+    name: 'ia',
+    component: () => import('./vistas/Ia.vue'),
+    meta: { seccion: 'ia' },
   },
+  // La pantalla se llamaba "IA local": los enlaces viejos siguen funcionando.
+  { path: '/ia-local', redirect: '/ia' },
   {
     path: '/tuneles',
     name: 'tuneles',

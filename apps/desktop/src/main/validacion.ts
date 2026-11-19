@@ -1,7 +1,14 @@
 import { stat } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 import {
+  ErrorWolf,
+  ID_PROVEEDOR_IA,
   IDS_SERVICIO_DATOS,
+  TIPOS_PROVEEDOR_IA,
+  validarModeloIa,
+  type ConfigProveedorIa,
+  type OpcionesEnvIa,
+  type TipoProveedorIa,
   NOMBRE_BD_MONGO,
   NOMBRE_BD_MYSQL,
   NOMBRE_BD_PG,
@@ -322,4 +329,153 @@ export function acotadoJson<T>(v: unknown, max: number, nombre: string): T {
   if (largo === 0 || largo > max)
     throw new Error(`Argumento no válido: ${nombre} (demasiado grande)`);
   return v as T;
+}
+
+/* ───────────── Etapa C: IA en la nube ───────────── */
+
+/** Error de argumento de las rutas de IA, con código (la interfaz lo traduce). */
+function argumentoIa(campo: string): ErrorWolf {
+  return new ErrorWolf('ia.argumento_invalido', `Argumento no válido: ${campo}`, { campo });
+}
+
+/** Id de un proveedor de IA (`ID_PROVEEDOR_IA`): sirve de nombre de archivo del secreto. */
+export function idProveedorIa(v: unknown): string {
+  if (typeof v !== 'string' || !ID_PROVEEDOR_IA.test(v)) throw argumentoIa('proveedor');
+  return v;
+}
+
+/** Id de un sitio para las rutas de IA (el núcleo busca la carpeta por él). */
+export function idSitioIa(v: unknown): string {
+  if (typeof v !== 'string' || v.length > 128 || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(v)) {
+    throw argumentoIa('sitio');
+  }
+  return v;
+}
+
+const CAMPOS_PROVEEDOR_IA = new Set(['id', 'tipo', 'nombre', 'urlBase', 'modelo']);
+/** Largo máximo de una URL base (como `ConfigProveedorIaSchema`). */
+export const MAX_URL_BASE_IA = 500;
+
+/**
+ * Configuración NO secreta de un proveedor. Solo los campos conocidos: una clave pegada aquí
+ * (o cualquier otro campo) se rechaza. La URL y el modelo los vuelve a validar el núcleo.
+ */
+export function configProveedorIa(v: unknown): ConfigProveedorIa {
+  let o: Record<string, unknown>;
+  try {
+    o = objetoPlano<Record<string, unknown>>(v, 'proveedor');
+  } catch {
+    throw argumentoIa('proveedor');
+  }
+  for (const k of Object.keys(o)) if (!CAMPOS_PROVEEDOR_IA.has(k)) throw argumentoIa('proveedor');
+  const tipo = o['tipo'];
+  if (typeof tipo !== 'string' || !(TIPOS_PROVEEDOR_IA as readonly string[]).includes(tipo)) {
+    throw argumentoIa('tipo');
+  }
+  const nombre = o['nombre'];
+  if (
+    typeof nombre !== 'string' ||
+    nombre.trim() === '' ||
+    nombre.length > 60 ||
+    tieneControl(nombre)
+  ) {
+    throw argumentoIa('nombre');
+  }
+  const urlBase = o['urlBase'] ?? null;
+  if (
+    urlBase !== null &&
+    (typeof urlBase !== 'string' || urlBase.length > MAX_URL_BASE_IA || tieneControl(urlBase))
+  ) {
+    throw argumentoIa('urlBase');
+  }
+  const modelo = o['modelo'] ?? null;
+  if (modelo !== null && (typeof modelo !== 'string' || modelo.length > 200)) {
+    throw argumentoIa('modelo');
+  }
+  return {
+    id: idProveedorIa(o['id']),
+    tipo: tipo as TipoProveedorIa,
+    nombre: nombre.trim(),
+    urlBase: urlBase === null || urlBase.trim() === '' ? null : urlBase.trim(),
+    modelo: modelo === null || modelo.trim() === '' ? null : modelo.trim(),
+  };
+}
+
+/** Clave de un proveedor: ASCII visible sin espacios, 1–4096. El error nunca la repite. */
+export function claveIa(v: unknown): string {
+  const t = typeof v === 'string' ? v.trim() : '';
+  if (!/^[\x21-\x7e]{1,4096}$/.test(t)) {
+    throw new ErrorWolf(
+      'ia.clave_mal_formada',
+      'La clave no tiene un formato válido: sin espacios ni saltos de línea y de hasta 4096 caracteres.',
+    );
+  }
+  return t;
+}
+
+/** Nombre de modelo de un proveedor (el núcleo lo vuelve a validar). */
+export function modeloIa(v: unknown): string {
+  if (typeof v !== 'string' || v.length > 200) {
+    throw new ErrorWolf('ia.modelo_invalido', 'El nombre del modelo no es válido.');
+  }
+  validarModeloIa(v);
+  return v;
+}
+
+/** Objeto plano solo con las claves permitidas (si no, error de argumento con `campo`). */
+function opcionesIa(v: unknown, campo: string, permitidas: readonly string[]) {
+  let o: Record<string, unknown>;
+  try {
+    o = objetoPlano<Record<string, unknown>>(v, campo);
+  } catch {
+    throw argumentoIa(campo);
+  }
+  for (const k of Object.keys(o)) if (!permitidas.includes(k)) throw argumentoIa(campo);
+  return o;
+}
+
+/** Confirmación aparte opcional: solo cuenta si es exactamente `true` (otro tipo = error). */
+function confirmacionOpcional(v: unknown, campo: string): boolean {
+  if (v === undefined) return false;
+  if (typeof v !== 'boolean') throw argumentoIa(campo);
+  return v;
+}
+
+/** `{limpiarRespaldos?}` al borrar una clave o un proveedor. */
+export function opcionesBorrarClaveIa(v: unknown): { limpiarRespaldos: boolean } {
+  if (v === undefined) return { limpiarRespaldos: false };
+  const o = opcionesIa(v, 'opciones', ['limpiarRespaldos']);
+  return { limpiarRespaldos: confirmacionOpcional(o['limpiarRespaldos'], 'limpiarRespaldos') };
+}
+
+/**
+ * Opciones de `ia.escribirEnv`. `confirmado` debe ser exactamente `true` (si no,
+ * `ia.env_sin_confirmar`); `agregarGitignore` es obligatorio; las confirmaciones aparte solo
+ * se pasan al núcleo cuando son `true`.
+ */
+export function opcionesEnvIa(v: unknown): OpcionesEnvIa {
+  const sinConfirmar = (): ErrorWolf =>
+    new ErrorWolf(
+      'ia.env_sin_confirmar',
+      'Confirme que quiere escribir la clave en el .env (queda en texto plano).',
+    );
+  if (v === undefined || v === null) throw sinConfirmar();
+  const o = opcionesIa(v, 'opciones', [
+    'modelo',
+    'confirmado',
+    'agregarGitignore',
+    'aceptarVersionado',
+    'reemplazarAjenas',
+  ]);
+  if (o['confirmado'] !== true) throw sinConfirmar();
+  if (typeof o['agregarGitignore'] !== 'boolean') throw argumentoIa('agregarGitignore');
+  const salida: OpcionesEnvIa = { confirmado: true, agregarGitignore: o['agregarGitignore'] };
+  if (o['modelo'] !== undefined) salida.modelo = modeloIa(o['modelo']);
+  if (confirmacionOpcional(o['aceptarVersionado'], 'aceptarVersionado')) {
+    salida.aceptarVersionado = true;
+  }
+  if (confirmacionOpcional(o['reemplazarAjenas'], 'reemplazarAjenas')) {
+    salida.reemplazarAjenas = true;
+  }
+  return salida;
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  Add,
   ChatbubbleEllipses,
   Close,
   CloudDownload,
@@ -14,6 +15,7 @@ import {
 import {
   NAlert,
   NButton,
+  NCheckbox,
   NEmpty,
   NIcon,
   NInput,
@@ -26,12 +28,15 @@ import {
   useMessage,
   type SelectOption,
 } from 'naive-ui';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, h, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import type { ModeloOllama } from '../../shared/api';
+import type { ModeloOllama, ProveedorIaPublico } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
+import DialogoEnvIa from '../componentes/DialogoEnvIa.vue';
+import DialogoProveedorIa from '../componentes/DialogoProveedorIa.vue';
 import IlustracionVacia from '../componentes/IlustracionVacia.vue';
+import TarjetaProveedorIa from '../componentes/TarjetaProveedorIa.vue';
 import { formatearFecha, textos } from '../i18n';
 import { porcentaje, useIa, type DescargaIa } from '../stores/ia';
 import { useServicios } from '../stores/servicios';
@@ -41,6 +46,7 @@ import { formatearTamano } from '../utilidades/bd';
 const NOMBRE_MODELO = /^[a-z0-9][a-z0-9._:/-]{0,127}$/i;
 
 const t = textos.iaLocal;
+const tn = textos.ia;
 const td = t.descargar;
 const tp = t.progreso;
 const router = useRouter();
@@ -68,7 +74,96 @@ onMounted(() => {
   void ia.cargarSugeridos();
   void ia.cargarEspacio();
   void cargarBloque();
+  void ia.cargarProveedores();
 });
+
+// ---- IA en la nube ----
+const dialogoProveedor = ref(false);
+const enEdicion = ref<ProveedorIaPublico | null>(null);
+const dialogoEnv = ref(false);
+const paraEnv = ref<ProveedorIaPublico | null>(null);
+
+function nuevoProveedor(): void {
+  enEdicion.value = null;
+  dialogoProveedor.value = true;
+}
+function editarProveedor(p: ProveedorIaPublico): void {
+  enEdicion.value = p;
+  dialogoProveedor.value = true;
+}
+function usarEnProyecto(p: ProveedorIaPublico): void {
+  paraEnv.value = p;
+  dialogoEnv.value = true;
+}
+
+/** Aviso de costo: el mensaje solo sale con el clic en "Enviar el mensaje". */
+function pedirMensaje(p: ProveedorIaPublico, modelo: string): void {
+  dialog.warning({
+    title: tn.costo.titulo,
+    content: tn.costo.texto(modelo, p.nombre),
+    positiveText: tn.costo.enviar,
+    negativeText: textos.acciones.cancelar,
+    autoFocus: false,
+    onPositiveClick: () => {
+      void ia.probarMensaje(p.id, modelo);
+    },
+  });
+}
+
+/**
+ * Borrar la clave o el proveedor. En el mismo diálogo se ofrece borrar las copias del .env que
+ * tienen esa clave en texto plano (desmarcado: borrarlas no se puede deshacer).
+ */
+async function pedirBorrado(p: ProveedorIaPublico, que: 'clave' | 'proveedor'): Promise<void> {
+  let sitiosConCopias: string[] = [];
+  if (p.clave.configurada) {
+    try {
+      sitiosConCopias = (await api().ia.respaldosClave(p.id)).sitios;
+    } catch {
+      sitiosConCopias = [];
+    }
+  }
+  const limpiar = ref(false);
+  const n = sitiosConCopias.length;
+  dialog.warning({
+    title: que === 'clave' ? tn.borrar.claveTitulo(p.nombre) : tn.borrar.proveedorTitulo(p.nombre),
+    content: () =>
+      h('div', { class: 'borrar-ia' }, [
+        h('p', que === 'clave' ? tn.borrar.claveTexto : tn.borrar.proveedorTexto),
+        n > 0
+          ? h(
+              NCheckbox,
+              {
+                checked: limpiar.value,
+                'onUpdate:checked': (v: boolean) => (limpiar.value = v),
+              },
+              () => tn.borrar.respaldos(n),
+            )
+          : null,
+        n > 0 ? h('small', { class: 'borrar-ia-ayuda' }, tn.borrar.respaldosAyuda) : null,
+      ]),
+    positiveText: textos.acciones.borrar,
+    negativeText: textos.acciones.cancelar,
+    autoFocus: false,
+    positiveButtonProps: { type: 'error' },
+    onPositiveClick: async () => {
+      const conCopias = limpiar.value;
+      if (que === 'clave') {
+        const r = await ejecutar(`borrar-clave-${p.id}`, () => ia.borrarClave(p.id, conCopias), {
+          exito: tn.borrar.claveBorrada,
+        });
+        if (r) message.info(tn.borrar.respaldosBorrados(r));
+        if (enEdicion.value?.id === p.id) {
+          enEdicion.value = ia.proveedores?.find((x) => x.id === p.id) ?? null;
+        }
+      } else {
+        await ejecutar(`borrar-${p.id}`, () => ia.borrarProveedor(p.id, conCopias), {
+          exito: tn.borrar.proveedorBorrado(p.nombre),
+        });
+      }
+    },
+  });
+}
 
 // La lista se lee al entrar y cada vez que Ollama termina de encender.
 watch(
@@ -220,6 +315,48 @@ const filasConexion = computed(() => [
 
 <template>
   <div class="ia">
+    <p class="descripcion">{{ tn.descripcion }}</p>
+
+    <!-- IA en la nube -->
+    <section class="nube" :aria-busy="ia.proveedores === null">
+      <header class="cabeza">
+        <h2>{{ tn.nube.titulo }}</h2>
+        <NButton size="small" type="primary" secondary class="agregar" @click="nuevoProveedor">
+          <template #icon
+            ><NIcon><Add /></NIcon
+          ></template>
+          {{ tn.nube.agregar }}
+        </NButton>
+      </header>
+      <NAlert v-if="ia.errorProveedores" type="error" :title="tn.nube.errorLista">
+        {{ ia.errorProveedores }}
+      </NAlert>
+      <NSkeleton v-else-if="ia.proveedores === null" height="120px" class="esqueleto" />
+      <p v-else-if="!ia.proveedores.length" class="sin-modelos">{{ tn.nube.vacio }}</p>
+      <div v-else class="tarjetas">
+        <TarjetaProveedorIa
+          v-for="p in ia.proveedores"
+          :key="p.id"
+          :proveedor="p"
+          :prueba="ia.pruebas[p.id]"
+          :mensaje="ia.mensajes[p.id]"
+          :modelos="ia.modelosDe(p.id)"
+          @probar="ia.probarConexion(p.id)"
+          @probar-mensaje="(m: string) => pedirMensaje(p, m)"
+          @usar="usarEnProyecto(p)"
+          @editar="editarProveedor(p)"
+          @borrar="pedirBorrado(p, 'proveedor')"
+        />
+      </div>
+    </section>
+    <DialogoProveedorIa
+      v-model:show="dialogoProveedor"
+      :proveedor="enEdicion"
+      @borrar-clave="(p: ProveedorIaPublico) => pedirBorrado(p, 'clave')"
+    />
+    <DialogoEnvIa v-if="paraEnv" v-model:show="dialogoEnv" :proveedor="paraEnv" />
+
+    <h2 class="titulo-local">{{ tn.local.titulo }}</h2>
     <p class="descripcion">{{ t.descripcion }}</p>
 
     <NSkeleton v-if="!instaladosListos && !servicio" height="120px" class="esqueleto" />
@@ -545,6 +682,34 @@ const filasConexion = computed(() => [
 <style scoped>
 .descripcion {
   margin: 0 0 18px;
+  opacity: 0.65;
+}
+.nube {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.agregar {
+  margin-left: auto;
+}
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+.titulo-local {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+:global(.borrar-ia p) {
+  margin: 0 0 10px;
+}
+:global(.borrar-ia-ayuda) {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
   opacity: 0.65;
 }
 .esqueleto {
