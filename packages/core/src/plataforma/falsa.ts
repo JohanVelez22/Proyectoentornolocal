@@ -75,6 +75,8 @@ export class PlataformaFalsa implements PlataformaCompleta {
   /** Veces que se leyeron las raíces del sistema. */
   raicesLeidas = 0;
   documentos = '/documentos';
+  /** Prefijos de `npm install -g` del usuario. */
+  npmGlobal: string[] = [];
 
   constructor(private readonly o: OpcionesPlataformaFalsa = {}) {}
 
@@ -151,6 +153,10 @@ export class PlataformaFalsa implements PlataformaCompleta {
   nombreEjecutable(base: string): string {
     const sufijo = this.o.sufijoEjecutable ?? '.exe';
     return sufijo && base.toLowerCase().endsWith(sufijo) ? base : base + sufijo;
+  }
+
+  carpetasNpmGlobal(): string[] {
+    return [...this.npmGlobal];
   }
 
   async buscarEjecutable(nombre: string): Promise<string | null> {

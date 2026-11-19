@@ -219,6 +219,19 @@ export const en: Textos = {
         'Confirm sending the test message (it spends tokens from your account).',
       'ia.clave_ilegible': 'The saved provider key could not be read: delete it and save it again.',
       'ia.argumento_invalido': 'Invalid value ({campo}).',
+      'agentes.no_existe': 'That agent is not supported.',
+      'agentes.sin_confirmar': 'Confirm the action in the dialog before continuing.',
+      'agentes.no_instalable':
+        'This agent is not installed from WolfCore Dev: follow the official guide ({guia}).',
+      'agentes.sin_node': 'Install Node from Services to be able to install the agent.',
+      'agentes.instalacion_fallo': 'The agent could not be installed: {detalle}',
+      'agentes.no_instalado': '{agente} is not installed.',
+      'agentes.config_ilegible':
+        '{archivo} could not be parsed; it was not changed. Check it by hand.',
+      'agentes.proveedor_incompatible': '{agente} cannot use that AI provider.',
+      'agentes.sin_cambios_preparados': 'There are no staged changes (git add) to describe.',
+      'git.commit_fallo': 'The commit failed: {detalle}',
+      'git.mensaje_invalido': 'The commit message is empty or invalid.',
     },
   },
   avisoInicio: {

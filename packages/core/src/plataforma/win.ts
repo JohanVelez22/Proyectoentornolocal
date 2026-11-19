@@ -330,6 +330,11 @@ export class PlataformaWindows implements PlataformaCompleta {
     return nombreEjecutable(base);
   }
 
+  carpetasNpmGlobal(): string[] {
+    const appData = this.entorno.APPDATA;
+    return appData ? [path.win32.join(appData, 'npm')] : [];
+  }
+
   async buscarEjecutable(nombre: string, extras: string[] = []): Promise<string | null> {
     return buscarEjecutableWindows(nombre, {
       entorno: this.entorno,

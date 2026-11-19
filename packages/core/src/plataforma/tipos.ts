@@ -95,6 +95,12 @@ export interface CapacidadesPlataforma {
   idCatalogo(): IdCatalogo;
   /** Nombre del archivo ejecutable (`php` → `php.exe` en Windows). */
   nombreEjecutable(base: string): string;
+  /**
+   * Prefijos de `npm install -g` del usuario (en Windows, `%APPDATA%
+pm`): donde buscar agentes
+   * instalados con su propio npm. Solo se leen.
+   */
+  carpetasNpmGlobal(): string[];
   /** Ruta de un ejecutable: primero el PATH, luego las carpetas `extras`; null si no está. */
   buscarEjecutable(nombre: string, extras?: string[]): Promise<string | null>;
   /** PATH del usuario; `respaldo` es el archivo donde se guarda el valor original. */

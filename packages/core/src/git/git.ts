@@ -5,8 +5,41 @@ import path from 'node:path';
 import { lanzadorPorDefecto, MENSAJE_CANCELADO } from '../plataforma/lanzar';
 import type { Ejecutor, Lanzador } from '../plataforma/tipos';
 import { ejecutorPorDefecto } from '../plataforma/win';
+import { enmascararSecretos } from '../patronesSecretos';
 import { sanear } from '../proyectos/recetas';
 import { buscarEjecutableWindows } from '../plataforma/win';
+
+/** Lo preparado para el próximo commit, listo para describir con una IA. */
+export interface DiffPreparado {
+  /** Diff (sin archivos sensibles ni binarios, secretos enmascarados, acotado). */
+  diff: string;
+  /** Archivos preparados que no se incluyeron (sensibles o binarios). */
+  omitidos: string[];
+  /** Se cortó al llegar al máximo. */
+  truncado: boolean;
+}
+
+/** Máximo de caracteres del diff que se manda a un proveedor de IA. */
+export const MAX_DIFF_PREPARADO = 20_000;
+/** Largo máximo de un mensaje de commit. */
+export const MAX_MENSAJE_COMMIT = 10_000;
+
+/**
+ * Archivos que nunca salen hacia un proveedor de IA: `.env*`, claves y certificados, llaves SSH
+ * y almacenes de claves.
+ */
+export function archivoSensible(ruta: string): boolean {
+  const nombre = ruta.split('/').pop()!.toLowerCase();
+  return (
+    nombre.startsWith('.env') ||
+    /\.(?:pem|key|p12|pfx|jks|keystore|crt|cer|der|kdbx|asc|gpg)$/.test(nombre) ||
+    /^id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?$/.test(nombre) ||
+    nombre === '.npmrc' ||
+    nombre === '.pypirc' ||
+    nombre === '.netrc' ||
+    nombre === 'credentials.json'
+  );
+}
 
 export const MENSAJE_CAMBIOS_LOCALES =
   'Hay cambios sin guardar en la carpeta: guárdelos (commit) o descártelos antes de traer cambios. No se tocó nada.';
@@ -547,5 +580,112 @@ export class Git {
     );
     const archivos = d.codigo === 0 ? d.stdout.split(/\r?\n/).filter(Boolean) : [];
     return { actualizado: true, cambios: clasificarCambios(archivos) };
+  }
+  /**
+   * Diff de lo preparado (`git diff --cached`) para describirlo: sin archivos sensibles
+   * (`archivoSensible`) ni binarios, con los secretos conocidos enmascarados y como mucho
+   * `max` caracteres. Solo lee: no cambia el índice ni el árbol.
+   */
+  async diffPreparado(carpeta: string, max = MAX_DIFF_PREPARADO): Promise<DiffPreparado> {
+    const n = await this.git(
+      carpeta,
+      ['diff', '--cached', '--numstat', '-z', '--no-renames', '--no-ext-diff'],
+      { quotepath: false },
+    );
+    if (n.codigo !== 0) {
+      if (/not a git repository/i.test(n.stderr)) {
+        throw new ErrorWolf(
+          'git.no_repositorio',
+          `La carpeta no es un repositorio de git: ${carpeta}`,
+        );
+      }
+      throw new Error(`No se pudo leer lo preparado: ${resumen(n.stderr)}`);
+    }
+    const incluidos: string[] = [];
+    const omitidos: string[] = [];
+    // Formato -z: "añadidas\tquitadas\truta\0"; un binario tiene "-\t-".
+    for (const reg of n.stdout.split('\0').filter(Boolean)) {
+      const m = /^(-|\d+)\t(-|\d+)\t(.*)$/s.exec(reg);
+      if (!m) continue;
+      const ruta = m[3]!;
+      if (m[1] === '-' || archivoSensible(ruta)) omitidos.push(ruta);
+      else incluidos.push(ruta);
+    }
+    let diff = '';
+    let truncado = false;
+    for (const ruta of incluidos) {
+      if (diff.length >= max) {
+        truncado = true;
+        break;
+      }
+      const r = await this.git(
+        carpeta,
+        [
+          'diff',
+          '--cached',
+          '--no-color',
+          '--no-ext-diff',
+          '--no-renames',
+          '--',
+          `:(literal)${ruta}`,
+        ],
+        { quotepath: false },
+      );
+      if (r.codigo !== 0) continue;
+      diff += r.stdout;
+    }
+    diff = enmascararSecretos(diff);
+    if (diff.length > max) {
+      diff = diff.slice(0, max);
+      truncado = true;
+    }
+    return { diff, omitidos, truncado };
+  }
+
+  /**
+   * "Hacer commit": `git commit -F -` con el mensaje por la entrada estándar, SOLO sobre lo
+   * preparado. Nunca hace `add`, `-a` ni `push`; sin nada preparado no hace nada.
+   */
+  async commitPreparado(carpeta: string, mensaje: string): Promise<void> {
+    if (
+      typeof mensaje !== 'string' ||
+      mensaje.trim() === '' ||
+      mensaje.length > MAX_MENSAJE_COMMIT ||
+      mensaje.includes('\0')
+    ) {
+      throw new ErrorWolf(
+        'git.mensaje_invalido',
+        'El mensaje de commit está vacío o no es válido.',
+      );
+    }
+    const q = await this.git(carpeta, ['diff', '--cached', '--quiet', '--no-ext-diff']);
+    if (q.codigo === 0) {
+      throw new ErrorWolf(
+        'agentes.sin_cambios_preparados',
+        'No hay cambios preparados (git add) para el commit.',
+      );
+    }
+    if (q.codigo !== 1) {
+      if (/not a git repository/i.test(q.stderr)) {
+        throw new ErrorWolf(
+          'git.no_repositorio',
+          `La carpeta no es un repositorio de git: ${carpeta}`,
+        );
+      }
+      throw new ErrorWolf('git.commit_fallo', 'No se pudo hacer el commit.', {
+        detalle: resumen(q.stderr),
+      });
+    }
+    const r = await this.exec(this.rutaGit(), ['commit', '--file=-', '--cleanup=strip'], {
+      cwd: carpeta,
+      timeoutMs: 120_000,
+      env: this.entornoGit(),
+      entrada: mensaje,
+    });
+    if (r.codigo !== 0) {
+      throw new ErrorWolf('git.commit_fallo', 'No se pudo hacer el commit.', {
+        detalle: resumen(`${r.stderr}\n${r.stdout}`),
+      });
+    }
   }
 }

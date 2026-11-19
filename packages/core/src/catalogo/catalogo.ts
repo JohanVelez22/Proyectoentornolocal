@@ -79,6 +79,13 @@ const HOSTS_PERMITIDOS = [
   'api.nuget.org',
 ];
 
+/**
+ * Registro de npm para instalar agentes (`npm install -g` de su paquete oficial). Va aparte de
+ * `HOSTS_PERMITIDOS`: el catálogo de binarios nunca descarga de él.
+ */
+export const HOST_REGISTRO_NPM = 'registry.npmjs.org';
+export const REGISTRO_NPM_AGENTES = `https://${HOST_REGISTRO_NPM}/`;
+
 export function urlOficial(texto: string): boolean {
   try {
     const u = new URL(texto);

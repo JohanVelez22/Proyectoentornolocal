@@ -377,6 +377,21 @@ describe('ServidorMcp: ciclo de vida', () => {
     await new Promise((r) => s.close(r));
   });
 
+  it('url y configuracionPara(agente) nombran la variable del token, nunca el token', async () => {
+    const m = await montar();
+    const url = `http://127.0.0.1:${m.puerto}/mcp`;
+    expect(await m.servidor.url()).toBe(url);
+    for (const a of ['claude-code', 'codex', 'hermes'] as const) {
+      const c = await m.servidor.configuracionPara(a);
+      expect(c).toContain(url);
+      expect(c).toContain('WOLFCORE_MCP_TOKEN');
+      expect(c).not.toContain(TOKEN);
+    }
+    expect(await m.servidor.configuracionPara('codex')).toBe(
+      `[mcp_servers.wolfcore]\nurl = "${url}"\nbearer_token_env_var = "WOLFCORE_MCP_TOKEN"\n`,
+    );
+  });
+
   it('configuracionClaude da el comando y el .mcp.json', async () => {
     const m = await montar();
     const c = JSON.parse(await m.servidor.configuracionClaude()) as {

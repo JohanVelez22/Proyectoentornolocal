@@ -49,6 +49,8 @@ import { Supervisor } from './procesos/supervisor';
 import { Rutas } from './rutas';
 import { Mailpit } from './servicios/mailpit';
 import { Servicios, type IdServicio } from './servicios/servicios';
+import { Agentes } from './agentes/agentes';
+import { ErrorWolf } from './errores';
 import { ServidorMcp, type EstadoMcp, type OperacionesMcp } from './mcp/servidor';
 import { detectarSitio, type ProyectoDetectado } from './sitios/detectar';
 import {
@@ -201,6 +203,8 @@ export interface ResultadoAjustes {
 }
 
 interface ModulosNucleo {
+  /** Agentes de programación (Claude Code, Codex CLI, Hermes Agent). */
+  agentes: Agentes;
   /** Proveedores de IA en la nube (config, pruebas y bloque .env por proyecto). */
   ia: GestorIa;
   avisos: CentroAvisos;
@@ -325,6 +329,8 @@ export class Nucleo {
   readonly confianza: ConfianzaCa;
   /** Proveedores de IA en la nube; la clave la pasa el proceso principal en cada llamada. */
   readonly ia: GestorIa;
+  /** Agentes: detección, instalación, MCP y apertura en un proyecto (nunca se lanzan solos). */
+  readonly agentes: Agentes;
   /**
    * Token de GitHub para lo que no pasa por la ventana (MCP). Lo fija el proceso principal
    * (safeStorage); el núcleo nunca lo guarda, lo registra ni lo emite.
@@ -375,6 +381,7 @@ export class Nucleo {
     this.doctor = m.doctor;
     this.confianza = m.confianza;
     this.ia = m.ia;
+    this.agentes = m.agentes;
     this.depsPasos = m.depsPasos;
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
@@ -542,14 +549,35 @@ export class Nucleo {
     };
     const puertoOllama = { valor: (await leerConfig()).servicios.datos.ollama.puerto };
     const git = o.git ?? new Git({ exec, lanzar });
+    const gestorIa = new GestorIa({
+      leerConfig,
+      modificarConfig: (fn) => sitios.modificarConfig(fn),
+      versionado: (carpeta) => git.versionado(carpeta),
+      carpetaRespaldos: () => rutas.respaldosEnv(),
+      ...(o.fetch ? { fetch: (u, i) => o.fetch!(u, i) } : {}),
+    });
     const modulos: ModulosNucleo = {
-      ia: new GestorIa({
-        leerConfig,
-        modificarConfig: (fn) => sitios.modificarConfig(fn),
-        versionado: (carpeta) => git.versionado(carpeta),
-        carpetaRespaldos: () => rutas.respaldosEnv(),
+      agentes: new Agentes({
+        plataforma: plat,
+        exec,
+        nodePropio: async () => {
+          // instalados() va de la más nueva a la más vieja.
+          const v = (await runtimes.instalados('node'))[0];
+          return v ? runtimes.rutaBin('node', v) : null;
+        },
+        carpetaAgentes: () => rutas.herramientas('agentes'),
+        mcp: { url: () => nucleoRef.mcp.url(), token: () => nucleoRef.tokenMcp() },
+        sitio: async (id) => {
+          const s = (await sitios.listar()).find((x) => x.id === id);
+          if (!s) throw new ErrorWolf('proyectos.no_existe', `No existe el proyecto ${id}`);
+          return { carpeta: s.carpeta };
+        },
+        proveedorIa: (id) => gestorIa.proveedor(id),
+        diffPreparado: (carpeta) => git.diffPreparado(carpeta),
+        commitPreparado: (carpeta, mensaje) => git.commitPreparado(carpeta, mensaje),
         ...(o.fetch ? { fetch: (u, i) => o.fetch!(u, i) } : {}),
       }),
+      ia: gestorIa,
       avisos,
       bd,
       respaldos: new Respaldos({ bd, servicios, rutas, exec, eventos, plataforma }),
@@ -1150,7 +1178,8 @@ export class Nucleo {
   // ---- Servidor MCP ----
 
   /** Token del MCP en etc/credenciales.json (`mcp`); se genera la primera vez (32 bytes). */
-  private async tokenMcp(): Promise<string> {
+  /** Token del MCP (solo para el entorno de un agente que abre el usuario; nunca se emite). */
+  async tokenMcp(): Promise<string> {
     const c = await this.almacenCredenciales.obtenerOCrear('mcp', () => ({
       usuario: 'mcp',
       clave: randomBytes(32).toString('base64url'),

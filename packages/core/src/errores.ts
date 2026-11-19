@@ -131,6 +131,18 @@ export const PARAMETROS_ERROR = {
   'ia.mensaje_sin_confirmar': [],
   'ia.clave_ilegible': [],
   'ia.argumento_invalido': ['campo'],
+  // agentes
+  'agentes.no_existe': [],
+  'agentes.sin_confirmar': [],
+  'agentes.no_instalable': ['guia'],
+  'agentes.sin_node': [],
+  'agentes.instalacion_fallo': ['detalle'],
+  'agentes.no_instalado': ['agente'],
+  'agentes.config_ilegible': ['archivo'],
+  'agentes.proveedor_incompatible': ['agente'],
+  'agentes.sin_cambios_preparados': [],
+  'git.commit_fallo': ['detalle'],
+  'git.mensaje_invalido': [],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

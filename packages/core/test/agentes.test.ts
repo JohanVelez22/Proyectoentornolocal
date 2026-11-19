@@ -1,0 +1,618 @@
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { parse } from 'jsonc-parser';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  Agentes,
+  INSTRUCCION_COMMIT,
+  MAX_TOKENS_COMMIT,
+  limpiarMensajeCommit,
+  type DepsAgentes,
+} from '../src/agentes/agentes';
+import { editarEntradaMcp, VARIABLE_TOKEN_MCP } from '../src/agentes/configArchivo';
+import { REGISTRO_NPM_AGENTES, urlOficial } from '../src/catalogo/catalogo';
+import { archivoSensible, Git } from '../src/git/git';
+import type { ClienteIa, ConfigProveedorIa } from '../src/ia/proveedores';
+import { PlataformaFalsa } from '../src/plataforma/falsa';
+import type { Ejecutor } from '../src/plataforma/tipos';
+import { ejecutorPorDefecto } from '../src/plataforma/win';
+import { carpetaTemporal } from './temporales';
+
+// Valores claramente falsos: nunca deben aparecer en argumentos ni en archivos de los agentes.
+const TOKEN_MCP = 'token-mcp-FALSO-agentes-0000000000000000000000';
+const CLAVE = 'sk-ant-falsa-CENTINELA-agentes-000000000000wxyz';
+const URL_MCP = 'http://127.0.0.1:47123/mcp';
+
+const ANTHROPIC: ConfigProveedorIa = {
+  id: 'anthropic',
+  tipo: 'anthropic',
+  nombre: 'Anthropic',
+  urlBase: null,
+  modelo: null,
+};
+const GEMINI: ConfigProveedorIa = {
+  id: 'gemini',
+  tipo: 'gemini',
+  nombre: 'Gemini',
+  urlBase: null,
+  modelo: null,
+};
+
+interface Montaje {
+  agentes: Agentes;
+  plat: PlataformaFalsa;
+  inicio: string;
+  prefijo: string;
+  dirNode: string;
+  proyecto: string;
+  exec: ReturnType<typeof vi.fn>;
+  llamadas: { cmd: string; args: string[] }[];
+}
+
+/** Ejecutor falso: registra cada llamada; `responder` decide el resultado (0 por defecto). */
+async function montar(
+  o: {
+    responder?: (
+      cmd: string,
+      args: string[],
+    ) =>
+      | Promise<{ codigo: number; stdout?: string; stderr?: string }>
+      | { codigo: number; stdout?: string; stderr?: string };
+    sinNode?: boolean;
+  } = {},
+): Promise<Montaje> {
+  const inicio = await carpetaTemporal('pel-ag-inicio-');
+  const prefijo = await carpetaTemporal('pel-ag-prefijo-');
+  const dirNode = await carpetaTemporal('pel-ag-node-');
+  const proyecto = await carpetaTemporal('pel-ag-proy-');
+  const plat = new PlataformaFalsa({ carpetaInicio: inicio });
+  if (!o.sinNode) {
+    writeFileSync(path.join(dirNode, plat.nombreEjecutable('node')), '');
+    mkdirSync(path.join(dirNode, 'node_modules', 'npm', 'bin'), { recursive: true });
+    writeFileSync(path.join(dirNode, 'node_modules', 'npm', 'bin', 'npm-cli.js'), '');
+  }
+  const llamadas: { cmd: string; args: string[] }[] = [];
+  const exec = vi.fn(async (cmd: string, args: string[]) => {
+    llamadas.push({ cmd, args });
+    const r = (await o.responder?.(cmd, args)) ?? { codigo: 0 };
+    return { codigo: r.codigo, stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
+  });
+  const deps: DepsAgentes = {
+    plataforma: plat,
+    exec: exec as unknown as Ejecutor,
+    nodePropio: async () => (o.sinNode ? null : dirNode),
+    carpetaAgentes: () => prefijo,
+    mcp: { url: async () => URL_MCP, token: async () => TOKEN_MCP },
+    sitio: async (id) => {
+      if (id !== 'tienda') throw new Error('no existe');
+      return { carpeta: proyecto };
+    },
+    proveedorIa: async (id) => {
+      if (id === 'anthropic') return ANTHROPIC;
+      if (id === 'gemini') return GEMINI;
+      throw new Error('no existe');
+    },
+    diffPreparado: async () => ({ diff: '', omitidos: [], truncado: false }),
+    commitPreparado: async () => undefined,
+    ahora: () => new Date(2026, 10, 19, 10, 30, 0),
+  };
+  return {
+    agentes: new Agentes(deps),
+    plat,
+    inicio,
+    prefijo,
+    dirNode,
+    proyecto,
+    exec,
+    llamadas,
+  };
+}
+
+/** Simula un paquete de npm instalado globalmente en `prefijo`. */
+function paquete(
+  prefijo: string,
+  nombre: string,
+  binario: string,
+  version: string,
+  bin = 'cli.js',
+) {
+  const dir = path.join(prefijo, 'node_modules', ...nombre.split('/'));
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    path.join(dir, 'package.json'),
+    JSON.stringify({ name: nombre, version, bin: { [binario]: bin } }),
+  );
+  if (!bin.includes('..')) {
+    mkdirSync(path.dirname(path.join(dir, bin)), { recursive: true });
+    writeFileSync(path.join(dir, bin), '#!/usr/bin/env node\n');
+  }
+  return path.join(dir, bin);
+}
+
+const copias = (dir: string, base: string): string[] =>
+  readdirSync(dir).filter((n) => n.startsWith(`${base}.wolfcore-`) && n.endsWith('.bak'));
+
+describe('Agentes: detección', () => {
+  it('sin nada instalado: no instalado; Claude y Codex instalables, Hermes solo con guía', async () => {
+    const { agentes } = await montar();
+    const e = await agentes.estado();
+    expect(e.map((x) => [x.id, x.instalado, x.instalable, x.mcpRegistrado])).toEqual([
+      ['claude-code', false, true, false],
+      ['codex', false, true, false],
+      ['hermes', false, false, false],
+    ]);
+    expect(e[2]!.guia).toMatch(/^https:\/\/hermes-agent\.nousresearch\.com\//);
+  });
+
+  it('detecta el paquete propio, el npm global del usuario y el ejecutable con su versión', async () => {
+    const { agentes, prefijo, plat } = await montar({
+      responder: (_c, a) =>
+        a[0] === '--version' ? { codigo: 0, stdout: 'hermes 0.9.1\n' } : { codigo: 1 },
+    });
+    const cli = paquete(prefijo, '@anthropic-ai/claude-code', 'claude', '2.1.0');
+    const global = await carpetaTemporal('pel-ag-npmg-');
+    plat.npmGlobal = [global];
+    const codex = paquete(global, '@openai/codex', 'codex', '0.50.0', 'bin/codex.js');
+    plat.ejecutables.set('hermes', '/bin/hermes');
+    const e = await agentes.estado();
+    expect(e[0]).toMatchObject({ instalado: true, ruta: cli, version: '2.1.0' });
+    expect(e[1]).toMatchObject({ instalado: true, ruta: codex, version: '0.50.0' });
+    expect(e[2]).toMatchObject({ instalado: true, ruta: '/bin/hermes', version: '0.9.1' });
+  });
+
+  it('un binario declarado fuera de la carpeta del paquete no cuenta', async () => {
+    const { agentes, prefijo } = await montar();
+    paquete(prefijo, '@anthropic-ai/claude-code', 'claude', '2.1.0', '../../fuera.js');
+    expect((await agentes.estado())[0]!.instalado).toBe(false);
+  });
+
+  it('mcpRegistrado lee la entrada wolfcore de cada archivo', async () => {
+    const { agentes, inicio } = await montar();
+    writeFileSync(
+      path.join(inicio, '.claude.json'),
+      JSON.stringify({ mcpServers: { wolfcore: { type: 'http', url: URL_MCP } } }),
+    );
+    mkdirSync(path.join(inicio, '.codex'));
+    writeFileSync(path.join(inicio, '.codex', 'config.toml'), '[mcp_servers.otro]\nurl = "x"\n');
+    const e = await agentes.estado();
+    expect(e.map((x) => x.mcpRegistrado)).toEqual([true, false, false]);
+  });
+});
+
+describe('Agentes: instalación', () => {
+  it('usa npm del Node propio con el paquete oficial, el prefijo propio y registry.npmjs.org', async () => {
+    const { agentes, llamadas, dirNode, prefijo, plat } = await montar();
+    await agentes.instalar('claude-code', true);
+    await agentes.instalar('codex', true);
+    const npm = path.join(dirNode, 'node_modules', 'npm', 'bin', 'npm-cli.js');
+    const nodo = path.join(dirNode, plat.nombreEjecutable('node'));
+    const esperado = (p: string) => ({
+      cmd: nodo,
+      args: [
+        npm,
+        'install',
+        '--global',
+        '--prefix',
+        prefijo,
+        '--registry',
+        'https://registry.npmjs.org/',
+        '--no-fund',
+        '--no-audit',
+        p,
+      ],
+    });
+    expect(llamadas).toEqual([esperado('@anthropic-ai/claude-code'), esperado('@openai/codex')]);
+    expect(REGISTRO_NPM_AGENTES).toBe('https://registry.npmjs.org/');
+    // El registro de npm no se vuelve un host del catálogo de binarios.
+    expect(urlOficial('https://registry.npmjs.org/x.tgz')).toBe(false);
+  });
+
+  it('sin confirmación, Hermes, sin Node o con fallo: errores con código y nada ejecutado de más', async () => {
+    const m = await montar({
+      responder: () => ({ codigo: 1, stderr: `npm ERR! 401 OPENAI_API_KEY=${CLAVE}` }),
+    });
+    await expect(m.agentes.instalar('claude-code', false as never)).rejects.toMatchObject({
+      codigo: 'agentes.sin_confirmar',
+    });
+    await expect(m.agentes.instalar('hermes', true)).rejects.toMatchObject({
+      codigo: 'agentes.no_instalable',
+      datos: { guia: expect.stringContaining('hermes-agent.nousresearch.com') },
+    });
+    expect(m.exec).not.toHaveBeenCalled();
+    const e = await m.agentes.instalar('codex', true).catch((x: unknown) => x);
+    expect(e).toMatchObject({ codigo: 'agentes.instalacion_fallo' });
+    expect(JSON.stringify(e)).not.toContain(CLAVE);
+    const sin = await montar({ sinNode: true });
+    await expect(sin.agentes.instalar('codex', true)).rejects.toMatchObject({
+      codigo: 'agentes.sin_node',
+    });
+    expect(sin.exec).not.toHaveBeenCalled();
+  });
+});
+
+describe('Agentes: registro del MCP', () => {
+  let m: Montaje;
+  beforeEach(async () => {
+    m = await montar();
+  });
+
+  it('Claude Code por su CLI: argumentos exactos, copia del archivo y sin el token', async () => {
+    const archivo = path.join(m.inicio, '.claude.json');
+    writeFileSync(archivo, '{"theme":"dark"}');
+    const cli = paquete(m.prefijo, '@anthropic-ai/claude-code', 'claude', '2.1.0');
+    m.exec.mockImplementation(async (cmd: string, args: string[]) => {
+      m.llamadas.push({ cmd, args });
+      if (args[1] === 'mcp' && args[2] === 'add') {
+        // La CLI real escribe la entrada (con la variable sin expandir).
+        const j = JSON.parse(readFileSync(archivo, 'utf8'));
+        j.mcpServers = { wolfcore: { type: 'http', url: args[8], headers: {} } };
+        writeFileSync(archivo, JSON.stringify(j));
+      }
+      return { codigo: 0, stdout: '', stderr: '' };
+    });
+    const r = await m.agentes.registrarMcp('claude-code', true);
+    expect(r.metodo).toBe('cli');
+    const add = m.llamadas.find((l) => l.args.includes('add'))!;
+    expect(add.args).toEqual([
+      cli,
+      'mcp',
+      'add',
+      '--transport',
+      'http',
+      '--scope',
+      'user',
+      'wolfcore',
+      URL_MCP,
+      '--header',
+      `Authorization: Bearer \${${VARIABLE_TOKEN_MCP}}`,
+    ]);
+    expect(JSON.stringify(m.llamadas)).not.toContain(TOKEN_MCP);
+    expect(r.respaldo).toBe(`${archivo}.wolfcore-20261119-103000.bak`);
+    expect(readFileSync(r.respaldo!, 'utf8')).toBe('{"theme":"dark"}');
+  });
+
+  it('Codex por su CLI con --bearer-token-env-var', async () => {
+    paquete(m.prefijo, '@openai/codex', 'codex', '0.50.0');
+    m.exec.mockImplementation(async (cmd: string, args: string[]) => {
+      m.llamadas.push({ cmd, args });
+      if (args.includes('add')) {
+        mkdirSync(path.join(m.inicio, '.codex'), { recursive: true });
+        writeFileSync(
+          path.join(m.inicio, '.codex', 'config.toml'),
+          `[mcp_servers.wolfcore]\nurl = "${URL_MCP}"\nbearer_token_env_var = "WOLFCORE_MCP_TOKEN"\n`,
+        );
+      }
+      return { codigo: 0, stdout: '', stderr: '' };
+    });
+    expect(await m.agentes.registrarMcp('codex', true)).toEqual({ respaldo: null, metodo: 'cli' });
+    expect(m.llamadas.find((l) => l.args.includes('add'))!.args.slice(1)).toEqual([
+      'mcp',
+      'add',
+      'wolfcore',
+      '--url',
+      URL_MCP,
+      '--bearer-token-env-var',
+      'WOLFCORE_MCP_TOKEN',
+    ]);
+  });
+
+  it('sin CLI, edita ~/.claude.json conservando comentarios y entradas ajenas, con copia', async () => {
+    const archivo = path.join(m.inicio, '.claude.json');
+    const original =
+      '{\n  // preferencias del usuario\n  "theme": "dark",\n  "mcpServers": {\n    "otro": { "command": "npx", "args": ["x"] },\n  },\n}\n';
+    writeFileSync(archivo, original);
+    const r = await m.agentes.registrarMcp('claude-code', true);
+    expect(r.metodo).toBe('archivo');
+    const nuevo = readFileSync(archivo, 'utf8');
+    expect(nuevo).toContain('// preferencias del usuario');
+    // jsonc-parser reformatea el objeto donde inserta; los datos ajenos quedan iguales.
+    expect(parse(nuevo).mcpServers.otro).toEqual({ command: 'npx', args: ['x'] });
+    expect(nuevo).toContain('"theme": "dark"');
+    expect(nuevo).toContain(`"Authorization": "Bearer \${WOLFCORE_MCP_TOKEN}"`);
+    expect(nuevo).toContain(URL_MCP);
+    expect(nuevo).not.toContain(TOKEN_MCP);
+    expect(readFileSync(r.respaldo!, 'utf8')).toBe(original);
+    expect(copias(m.inicio, '.claude.json')).toHaveLength(1);
+    expect(await m.agentes.estado().then((e) => e[0]!.mcpRegistrado)).toBe(true);
+  });
+
+  it('si la CLI falla, edita el archivo igual (sin perder la copia)', async () => {
+    paquete(m.prefijo, '@anthropic-ai/claude-code', 'claude', '2.1.0');
+    m.exec.mockResolvedValue({ codigo: 1, stdout: '', stderr: 'error' });
+    writeFileSync(path.join(m.inicio, '.claude.json'), '{"a":1}');
+    const r = await m.agentes.registrarMcp('claude-code', true);
+    expect(r.metodo).toBe('archivo');
+    expect(r.respaldo).not.toBeNull();
+    expect(JSON.parse(readFileSync(path.join(m.inicio, '.claude.json'), 'utf8'))).toMatchObject({
+      a: 1,
+      mcpServers: { wolfcore: { type: 'http', url: URL_MCP } },
+    });
+  });
+
+  it('TOML de Codex: reemplaza solo [mcp_servers.wolfcore] y conserva tablas ajenas y comentarios', async () => {
+    const dir = path.join(m.inicio, '.codex');
+    mkdirSync(dir);
+    const archivo = path.join(dir, 'config.toml');
+    writeFileSync(
+      archivo,
+      [
+        '# configuración del usuario',
+        'model = "o3"',
+        '',
+        '[mcp_servers.otro]',
+        'command = "npx"',
+        'args = ["-y", "otro"]',
+        '',
+        '[mcp_servers.wolfcore]',
+        'url = "http://127.0.0.1:1/viejo"',
+        '',
+        '[mcp_servers.wolfcore.env]',
+        'X = "1"',
+        '',
+        '[profiles.rapido]',
+        'model = "o4-mini" # comentario',
+        '',
+      ].join('\n'),
+    );
+    const r = await m.agentes.registrarMcp('codex', true);
+    expect(r.metodo).toBe('archivo');
+    const t = readFileSync(archivo, 'utf8');
+    expect(t).toContain('# configuración del usuario');
+    expect(t).toContain('[mcp_servers.otro]\ncommand = "npx"\nargs = ["-y", "otro"]');
+    expect(t).toContain('[profiles.rapido]\nmodel = "o4-mini" # comentario');
+    expect(t).not.toContain('viejo');
+    expect(t).not.toContain('[mcp_servers.wolfcore.env]');
+    expect(t).toContain(
+      `[mcp_servers.wolfcore]\nurl = "${URL_MCP}"\nbearer_token_env_var = "WOLFCORE_MCP_TOKEN"`,
+    );
+    expect(t).not.toContain(TOKEN_MCP);
+    expect(copias(dir, 'config.toml')).toHaveLength(1);
+  });
+
+  it('YAML de Hermes: agrega la entrada y conserva comentarios y servidores ajenos', async () => {
+    const dir = path.join(m.inicio, '.hermes');
+    mkdirSync(dir);
+    const archivo = path.join(dir, 'config.yaml');
+    writeFileSync(archivo, '# mío\nmodel: nous\nmcp_servers:\n  otro:\n    command: npx # sí\n');
+    const r = await m.agentes.registrarMcp('hermes', true);
+    expect(r.metodo).toBe('archivo');
+    const t = readFileSync(archivo, 'utf8');
+    expect(t).toContain('# mío');
+    expect(t).toContain('command: npx # sí');
+    expect(t).toContain('wolfcore:');
+    expect(t).toContain('Bearer ${WOLFCORE_MCP_TOKEN}');
+    expect(t).not.toContain(TOKEN_MCP);
+    expect(m.exec).not.toHaveBeenCalled();
+  });
+
+  it('un archivo que no se puede interpretar queda igual, sin copia y sin llamar a la CLI', async () => {
+    paquete(m.prefijo, '@anthropic-ai/claude-code', 'claude', '2.1.0');
+    const roto = '{ "theme": "dark", ';
+    writeFileSync(path.join(m.inicio, '.claude.json'), roto);
+    await expect(m.agentes.registrarMcp('claude-code', true)).rejects.toMatchObject({
+      codigo: 'agentes.config_ilegible',
+      datos: { archivo: '.claude.json' },
+    });
+    expect(readFileSync(path.join(m.inicio, '.claude.json'), 'utf8')).toBe(roto);
+    expect(copias(m.inicio, '.claude.json')).toEqual([]);
+    expect(m.exec).not.toHaveBeenCalled();
+    mkdirSync(path.join(m.inicio, '.codex'));
+    writeFileSync(path.join(m.inicio, '.codex', 'config.toml'), '[mcp_servers\nurl=');
+    await expect(m.agentes.registrarMcp('codex', true)).rejects.toMatchObject({
+      codigo: 'agentes.config_ilegible',
+    });
+    expect(readFileSync(path.join(m.inicio, '.codex', 'config.toml'), 'utf8')).toBe(
+      '[mcp_servers\nurl=',
+    );
+  });
+
+  it('una sección mcp_servers que no es tabla, o una edición que cambiaría otras cosas, se rechaza', () => {
+    expect(() =>
+      editarEntradaMcp('json', '{"mcpServers": 3}', 'mcpServers', { url: 'u' }, 'x.json'),
+    ).toThrow(expect.objectContaining({ codigo: 'agentes.config_ilegible' }));
+    // wolfcore definido con claves con punto: el borrado por tablas no lo alcanza.
+    expect(() =>
+      editarEntradaMcp(
+        'toml',
+        '[mcp_servers]\nwolfcore.url = "a"\n',
+        'mcp_servers',
+        { url: 'u' },
+        'c.toml',
+      ),
+    ).toThrow(expect.objectContaining({ codigo: 'agentes.config_ilegible' }));
+  });
+
+  it('sin confirmación no toca nada', async () => {
+    writeFileSync(path.join(m.inicio, '.claude.json'), '{}');
+    await expect(m.agentes.registrarMcp('claude-code', 'si' as never)).rejects.toMatchObject({
+      codigo: 'agentes.sin_confirmar',
+    });
+    expect(readFileSync(path.join(m.inicio, '.claude.json'), 'utf8')).toBe('{}');
+  });
+
+  it('quitarMcp quita solo la entrada wolfcore, con copia', async () => {
+    const archivo = path.join(m.inicio, '.claude.json');
+    writeFileSync(
+      archivo,
+      JSON.stringify({ mcpServers: { otro: { command: 'x' }, wolfcore: { url: URL_MCP } } }),
+    );
+    const r = await m.agentes.quitarMcp('claude-code', true);
+    expect(JSON.parse(readFileSync(archivo, 'utf8'))).toEqual({
+      mcpServers: { otro: { command: 'x' } },
+    });
+    expect(r.respaldo).not.toBeNull();
+  });
+});
+
+describe('Agentes: abrir en un proyecto', () => {
+  it('la clave y el token van solo en el entorno de ese proceso', async () => {
+    const m = await montar();
+    const cli = paquete(m.prefijo, '@anthropic-ai/claude-code', 'claude', '2.1.0');
+    await m.agentes.abrir('claude-code', 'tienda', { proveedorIa: 'anthropic', clave: CLAVE });
+    expect(m.plat.terminales).toHaveLength(1);
+    const t = m.plat.terminales[0]!;
+    expect(t.cwd).toBe(m.proyecto);
+    expect(t.env).toEqual({ ANTHROPIC_API_KEY: CLAVE, WOLFCORE_MCP_TOKEN: TOKEN_MCP });
+    expect(t.comando).toEqual([path.join(m.dirNode, m.plat.nombreEjecutable('node')), cli]);
+    expect(JSON.stringify(t.comando)).not.toContain(CLAVE);
+    // Nada escrito en la carpeta del usuario ni en el proyecto.
+    expect(readdirSync(m.inicio)).toEqual([]);
+    expect(readdirSync(m.proyecto)).toEqual([]);
+    expect(m.exec).not.toHaveBeenCalled();
+  });
+
+  it('sin proveedor solo lleva el token; con uno que el agente no admite, falla', async () => {
+    const m = await montar();
+    m.plat.ejecutables.set('claude', '/bin/claude');
+    await m.agentes.abrir('claude-code', 'tienda');
+    expect(m.plat.terminales[0]!.env).toEqual({ WOLFCORE_MCP_TOKEN: TOKEN_MCP });
+    expect(m.plat.terminales[0]!.comando).toEqual(['/bin/claude']);
+    await expect(
+      m.agentes.abrir('claude-code', 'tienda', { proveedorIa: 'gemini', clave: CLAVE }),
+    ).rejects.toMatchObject({ codigo: 'agentes.proveedor_incompatible' });
+    await expect(
+      m.agentes.abrir('claude-code', 'tienda', { proveedorIa: 'anthropic' }),
+    ).rejects.toMatchObject({ codigo: 'ia.sin_clave' });
+    expect(m.plat.terminales).toHaveLength(1);
+  });
+
+  it('un agente que no está instalado da agentes.no_instalado', async () => {
+    const m = await montar();
+    await expect(m.agentes.abrir('codex', 'tienda')).rejects.toMatchObject({
+      codigo: 'agentes.no_instalado',
+    });
+    expect(m.plat.terminales).toEqual([]);
+  });
+});
+
+describe('Agentes: mensaje de commit sugerido', () => {
+  it('manda la instrucción fija y el diff, con tope de tokens, y limpia la respuesta', async () => {
+    const m = await montar();
+    const deps = (m.agentes as unknown as { d: DepsAgentes }).d;
+    deps.diffPreparado = async () => ({
+      diff: 'diff --git a/x b/x\n+hola\n',
+      omitidos: [],
+      truncado: false,
+    });
+    const mensaje = vi.fn(async () => ({ texto: '```\nfeat: saludo\n```' }));
+    const cliente = { modelos: vi.fn(), mensaje } as unknown as ClienteIa;
+    expect(await m.agentes.sugerirCommit(m.proyecto, cliente, CLAVE, 'claude-x')).toBe(
+      'feat: saludo',
+    );
+    expect(mensaje).toHaveBeenCalledWith(
+      CLAVE,
+      'claude-x',
+      `${INSTRUCCION_COMMIT}diff --git a/x b/x\n+hola\n`,
+      { maxTokens: MAX_TOKENS_COMMIT },
+    );
+    deps.diffPreparado = async () => ({ diff: '', omitidos: ['.env'], truncado: false });
+    await expect(
+      m.agentes.sugerirCommit(m.proyecto, cliente, CLAVE, 'claude-x'),
+    ).rejects.toMatchObject({ codigo: 'agentes.sin_cambios_preparados' });
+    expect(limpiarMensajeCommit('"fix: algo"')).toBe('fix: algo');
+  });
+
+  it('archivoSensible reconoce .env*, claves y llaves', () => {
+    for (const r of ['.env', 'app/.env.local', 'certs/a.pem', 'x.key', 'id_ed25519', 'b.pfx']) {
+      expect(archivoSensible(r), r).toBe(true);
+    }
+    for (const r of ['src/env.ts', 'README.md', 'llave.txt'])
+      expect(archivoSensible(r), r).toBe(false);
+  });
+});
+
+const hayGit = spawnSync('git', ['--version'], { windowsHide: true }).status === 0;
+
+describe.skipIf(!hayGit)(
+  'Git real: diff preparado y commit solo de lo preparado',
+  { timeout: 30_000 },
+  () => {
+    const correr = (cwd: string, ...args: string[]): string => {
+      const r = spawnSync('git', args, { cwd, windowsHide: true, encoding: 'utf8' });
+      if (r.status !== 0) throw new Error(`git ${args.join(' ')}: ${r.stderr}`);
+      return r.stdout;
+    };
+
+    async function repo(): Promise<string> {
+      const dir = await carpetaTemporal('pel-ag-git-');
+      correr(dir, 'init', '-q');
+      correr(dir, 'config', 'user.name', 'Prueba');
+      correr(dir, 'config', 'user.email', 'prueba@example.test');
+      correr(dir, 'config', 'commit.gpgsign', 'false');
+      correr(dir, 'config', 'core.autocrlf', 'false');
+      writeFileSync(path.join(dir, 'base.txt'), 'base\n');
+      correr(dir, 'add', 'base.txt');
+      correr(dir, 'commit', '-q', '-m', 'base');
+      return dir;
+    }
+
+    it('el diff omite .env*, claves y binarios, enmascara secretos y se acota', async () => {
+      const dir = await repo();
+      mkdirSync(path.join(dir, 'src'));
+      writeFileSync(path.join(dir, 'src', 'app.js'), `const k = 'x';\nOPENAI_API_KEY=${CLAVE}\n`);
+      writeFileSync(path.join(dir, '.env'), `ANTHROPIC_API_KEY=${CLAVE}\n`);
+      writeFileSync(path.join(dir, 'server.pem'), '-----BEGIN PRIVATE KEY-----\n');
+      writeFileSync(path.join(dir, 'logo.png'), Buffer.from([0x89, 0x50, 0, 0, 1, 2, 3]));
+      correr(dir, 'add', '-A');
+      const git = new Git();
+      const d = await git.diffPreparado(dir);
+      expect(d.diff).toContain('src/app.js');
+      expect(d.diff).not.toContain(CLAVE);
+      expect(d.diff).not.toContain('.env');
+      expect(d.diff).not.toContain('PRIVATE KEY');
+      expect(d.omitidos.sort()).toEqual(['.env', 'logo.png', 'server.pem']);
+      expect(d.truncado).toBe(false);
+      const corto = await git.diffPreparado(dir, 40);
+      expect(corto.diff).toHaveLength(40);
+      expect(corto.truncado).toBe(true);
+    });
+
+    it('commitPreparado hace commit solo de lo preparado, nunca add ni push', async () => {
+      const dir = await repo();
+      writeFileSync(path.join(dir, 'preparado.txt'), 'sí\n');
+      writeFileSync(path.join(dir, 'base.txt'), 'cambiado sin preparar\n');
+      writeFileSync(path.join(dir, 'nuevo.txt'), 'sin seguir\n');
+      correr(dir, 'add', 'preparado.txt');
+      const llamadas: string[][] = [];
+      const exec: Ejecutor = (cmd, args, o) => {
+        llamadas.push(args);
+        return ejecutorPorDefecto(cmd, args, o);
+      };
+      const git = new Git({ exec });
+      await git.commitPreparado(dir, 'feat: solo lo preparado\n\nCuerpo.');
+      expect(correr(dir, 'log', '-1', '--format=%B').trim()).toBe(
+        'feat: solo lo preparado\n\nCuerpo.',
+      );
+      expect(correr(dir, 'show', '--name-only', '--format=', 'HEAD').trim()).toBe('preparado.txt');
+      const estado = correr(dir, 'status', '--porcelain');
+      expect(estado).toContain(' M base.txt');
+      expect(estado).toContain('?? nuevo.txt');
+      const planas = llamadas.flat();
+      expect(planas).not.toContain('add');
+      expect(planas).not.toContain('push');
+      expect(planas).not.toContain('-a');
+      expect(planas).not.toContain('--all');
+      await expect(git.commitPreparado(dir, 'otra')).rejects.toMatchObject({
+        codigo: 'agentes.sin_cambios_preparados',
+      });
+      await expect(git.commitPreparado(dir, '   ')).rejects.toMatchObject({
+        codigo: 'git.mensaje_invalido',
+      });
+      expect(existsSync(path.join(dir, '.git'))).toBe(true);
+    });
+  },
+);
+
+describe('Plataforma: prefijos de npm global del usuario', () => {
+  it('Windows usa la carpeta npm de APPDATA; sin APPDATA, ninguna', async () => {
+    const { PlataformaWindows } = await import('../src/plataforma/win');
+    const con = new PlataformaWindows(undefined, undefined, {
+      entorno: { APPDATA: 'C:\\Users\\u\\AppData\\Roaming' },
+    });
+    expect(con.carpetasNpmGlobal()).toEqual(['C:\\Users\\u\\AppData\\Roaming\\npm']);
+    expect(
+      new PlataformaWindows(undefined, undefined, { entorno: {} }).carpetasNpmGlobal(),
+    ).toEqual([]);
+  });
+});

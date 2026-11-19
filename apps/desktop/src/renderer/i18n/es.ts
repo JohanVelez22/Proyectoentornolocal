@@ -224,6 +224,19 @@ export const es = {
       'ia.clave_ilegible':
         'No se pudo leer la clave guardada del proveedor: bórrela y vuelva a guardarla.',
       'ia.argumento_invalido': 'Dato no válido ({campo}).',
+      'agentes.no_existe': 'Ese agente no está soportado.',
+      'agentes.sin_confirmar': 'Confirme la acción en el diálogo antes de continuar.',
+      'agentes.no_instalable':
+        'Este agente no se instala desde WolfCore Dev: siga la guía oficial ({guia}).',
+      'agentes.sin_node': 'Instale Node desde Servicios para poder instalar el agente.',
+      'agentes.instalacion_fallo': 'No se pudo instalar el agente: {detalle}',
+      'agentes.no_instalado': '{agente} no está instalado.',
+      'agentes.config_ilegible':
+        'No se pudo interpretar {archivo}; no se modificó. Revíselo a mano.',
+      'agentes.proveedor_incompatible': '{agente} no puede usar ese proveedor de IA.',
+      'agentes.sin_cambios_preparados': 'No hay cambios preparados (git add) para describir.',
+      'git.commit_fallo': 'No se pudo hacer el commit: {detalle}',
+      'git.mensaje_invalido': 'El mensaje de commit está vacío o no es válido.',
     },
   },
   avisoInicio: {

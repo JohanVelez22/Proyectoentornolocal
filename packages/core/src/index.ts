@@ -51,6 +51,11 @@ export * from './ia/ollama';
 export * from './ia/proveedores';
 export * from './ia/envIa';
 export * from './ia/gestorIa';
+export * from './agentes/agentes';
+export * from './agentes/configArchivo';
+export { CLAUDE_CODE } from './agentes/claudeCode';
+export { CODEX } from './agentes/codex';
+export { HERMES } from './agentes/hermes';
 export * from './patronesSecretos';
 export {
   clasificarErrorIa,

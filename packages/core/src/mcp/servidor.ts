@@ -361,6 +361,28 @@ export class ServidorMcp {
     );
   }
 
+  /** URL del servidor (`http://127.0.0.1:<puerto>/mcp`), en marcha o según la configuración. */
+  async url(): Promise<string> {
+    const puerto = this.puertoActual ?? (await this.d.puerto());
+    return `http://${DIRECCION}:${puerto}${RUTA}`;
+  }
+
+  /**
+   * Configuración para copiar a mano en un agente, con el token por la variable
+   * `WOLFCORE_MCP_TOKEN` (nunca el token): la línea de su CLI o el bloque de su archivo.
+   */
+  async configuracionPara(agente: 'claude-code' | 'codex' | 'hermes'): Promise<string> {
+    const url = await this.url();
+    const v = 'WOLFCORE_MCP_TOKEN';
+    if (agente === 'claude-code') {
+      return `claude mcp add --transport http --scope user wolfcore ${url} --header "Authorization: Bearer \${${v}}"`;
+    }
+    if (agente === 'codex') {
+      return `[mcp_servers.wolfcore]\nurl = "${url}"\nbearer_token_env_var = "${v}"\n`;
+    }
+    return `mcp_servers:\n  wolfcore:\n    url: "${url}"\n    headers:\n      Authorization: "Bearer \${${v}}"\n`;
+  }
+
   /**
    * Respuesta de la ventana a una solicitud `'mcp:confirmar'`. Devuelve false (y no hace nada)
    * si el id no existe o ya venció.
