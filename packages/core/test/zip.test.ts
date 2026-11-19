@@ -114,6 +114,29 @@ describe('extraerZip', () => {
     await expect(extraerZip(archivo, path.join(dir, 'salida'))).rejects.toThrow();
   });
 
+  it('omite los paquetes .asar (Electron los intercepta y la extracción fallaba con PostgreSQL)', async () => {
+    // El zip de PostgreSQL de EnterpriseDB trae pgAdmin 4 (una app de Electron) con
+    // runtime/resources/default_app.asar: dentro de Electron, escribir ese archivo con fs da
+    // "Invalid package". Ningún servicio necesita un .asar, así que se omite.
+    const archivo = path.join(dir, 'pg.zip');
+    writeFileSync(
+      archivo,
+      zipDeflate({
+        'pgsql/bin/postgres.exe': 'pg',
+        'pgsql/pgAdmin 4/runtime/resources/default_app.asar': 'asar',
+        'pgsql/pgAdmin 4/runtime/resources/App.ASAR/dentro.txt': 'x',
+        'pgsql/pgAdmin 4/runtime/resources/app.asar.unpacked/ok.txt': 'ok',
+      }),
+    );
+    const destino = path.join(dir, 'salida');
+    await extraerZip(archivo, destino);
+    const res = path.join(destino, 'pgsql', 'pgAdmin 4', 'runtime', 'resources');
+    expect(readFileSync(path.join(destino, 'pgsql', 'bin', 'postgres.exe'), 'utf8')).toBe('pg');
+    expect(existsSync(path.join(res, 'default_app.asar'))).toBe(false);
+    expect(existsSync(path.join(res, 'App.ASAR'))).toBe(false);
+    expect(readFileSync(path.join(res, 'app.asar.unpacked', 'ok.txt'), 'utf8')).toBe('ok');
+  });
+
   it('falla con un archivo que no es zip', async () => {
     const archivo = path.join(dir, 'roto.zip');
     writeFileSync(archivo, 'esto no es un zip');
