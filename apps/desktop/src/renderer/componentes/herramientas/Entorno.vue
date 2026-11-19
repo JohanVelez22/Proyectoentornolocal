@@ -5,9 +5,9 @@ import { computed, onMounted, ref } from 'vue';
 import type { EntornoSistema } from '../../../shared/api';
 import { api } from '../../api';
 import { useAccion } from '../../composables/useAccion';
-import { es } from '../../i18n/es';
+import { textos } from '../../i18n';
 
-const t = es.herramientas.entorno;
+const t = textos.herramientas.entorno;
 const { ejecutar, ocupado } = useAccion();
 
 const version = ref<string | null>(null);

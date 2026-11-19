@@ -2,9 +2,9 @@
  * Lo que corre dentro del Worker de Herramientas (regex y MD5). Separado para que el Worker no
  * arrastre markdown-it, diff ni bcryptjs.
  */
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 
-const t = es.herramientas.errores;
+const t = textos.herramientas.errores;
 
 export interface Coincidencia {
   indice: number;

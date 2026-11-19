@@ -2,7 +2,7 @@
 import { NButton, NInput } from 'naive-ui';
 import { ref } from 'vue';
 import { mensajeDeError } from '../../composables/useAccion';
-import { es } from '../../i18n/es';
+import { textos } from '../../i18n';
 import {
   compararTextos,
   MAX_TEXTO_DIFF,
@@ -10,7 +10,7 @@ import {
   type ResultadoDiff,
 } from '../../utilidades/herramientas';
 
-const t = es.herramientas.diff;
+const t = textos.herramientas.diff;
 const MAX_ARCHIVO = MAX_TEXTO_DIFF;
 const MAX_FILAS = 5000;
 

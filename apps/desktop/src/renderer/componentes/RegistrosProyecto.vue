@@ -5,7 +5,7 @@ import { computed, ref, watch } from 'vue';
 import type { FuenteRegistroPublica, Sitio } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import PanelProgreso from './PanelProgreso.vue';
 
 /**
@@ -15,7 +15,7 @@ import PanelProgreso from './PanelProgreso.vue';
 const props = defineProps<{ sitio: Sitio | null }>();
 const emit = defineEmits<{ cerrar: [] }>();
 
-const t = es.proyectos.registros;
+const t = textos.proyectos.registros;
 const { ejecutar, ocupado } = useAccion();
 
 const fuentes = ref<FuenteRegistroPublica[]>([]);

@@ -9,7 +9,7 @@ import {
 } from '@vicons/ionicons5';
 import { NButton, NIcon, NSpin } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { etiquetaPaso, sePuedeDesactivar, type PasoConEstado } from '../utilidades/proyectos';
 import PanelProgreso from './PanelProgreso.vue';
 
@@ -22,7 +22,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ reintentar: [pasoId: string]; omitir: [pasoId: string] }>();
 
-const t = es.proyectos;
+const t = textos.proyectos;
 const abierto = ref(false);
 const etiqueta = computed(() => etiquetaPaso(props.paso));
 const lineas = computed(() => props.paso.log.map((texto, n) => ({ n, texto })));

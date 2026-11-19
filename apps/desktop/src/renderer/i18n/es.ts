@@ -432,6 +432,7 @@ export const es = {
     },
     pgvector: {
       titulo: 'pgvector',
+      enCurso: 'Ya hay una instalación de pgvector en curso.',
       descripcion:
         'Búsqueda por similitud (embeddings) dentro de PostgreSQL. Se compila desde el código oficial.',
       instalado: (v: string | null) => (v ? `Instalado (versión ${v})` : 'Instalado'),
@@ -1232,6 +1233,17 @@ export const es = {
     sinDato: '—',
   },
   /* ───────────── Panel de rendimiento, visor de registros y MCP (Task 13) ───────────── */
+  unidades: {
+    bytes: ['B', 'KB', 'MB', 'GB', 'TB'],
+    porSegundo: '/s',
+    porcentaje: '%',
+    segundos: 's',
+    minutos: 'min',
+    horas: 'h',
+    dias: 'd',
+    /** Trabajador N de un servicio (p. ej. PHP 8.4 #2). */
+    trabajador: (n: string) => `#${n}`,
+  },
   panel: {
     titulo: 'Rendimiento',
     ventana: 'Últimos 5 minutos',
@@ -1519,7 +1531,7 @@ export const es = {
       enZona: 'En la zona elegida',
       desplazamiento: 'Desplazamiento',
       relativo: 'Relativo',
-      detectado: (unidad: 's' | 'ms') =>
+      detectado: (unidad: 's' | 'ms'): string =>
         unidad === 's' ? 'Leído en segundos' : 'Leído en milisegundos',
       timestampInvalido: 'Escriba solo cifras (puede llevar signo).',
       fechaInvalida: 'Use el formato AAAA-MM-DD HH:mm[:ss] con una fecha real.',

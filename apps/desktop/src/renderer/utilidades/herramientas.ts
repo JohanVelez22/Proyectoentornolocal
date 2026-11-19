@@ -6,13 +6,13 @@
 import { compare as compararBcrypt, hash as hashBcrypt, truncates } from 'bcryptjs';
 import { diffLines } from 'diff';
 import MarkdownIt, { type MarkdownIt as InstanciaMarkdown, type RendererRule } from 'markdown-it';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { aHex, md5, type Coincidencia, type ResultadoRegex } from './herramientasTrabajo';
 
 export { aHex, buscarCoincidencias, md5 } from './herramientasTrabajo';
 export type { Coincidencia, ResultadoRegex } from './herramientasTrabajo';
 
-const t = es.herramientas.errores;
+const t = textos.herramientas.errores;
 
 // ---------------------------------------------------------------- JSON
 
@@ -165,7 +165,7 @@ export function arbolJson(valor: unknown, max = 2000): NodoArbol[] {
     const nodos: NodoArbol[] = [];
     for (let i = 0; i < entradas.length; i++) {
       if (restantes <= 0) {
-        nodos.push({ key: `${ruta}/…`, label: es.herramientas.json.mas(entradas.length - i) });
+        nodos.push({ key: `${ruta}/…`, label: textos.herramientas.json.mas(entradas.length - i) });
         break;
       }
       restantes--;
@@ -545,7 +545,7 @@ export function decodificarJwt(token: string, ahora = Date.now()): JwtDecodifica
     carga,
     firma: partes[2] ?? '',
     firmaVerificada: false,
-    aviso: es.herramientas.cripto.firmaNoVerificada,
+    aviso: textos.herramientas.cripto.firmaNoVerificada,
     vencido: typeof exp === 'number' ? exp * 1000 < ahora : null,
   };
 }
@@ -576,7 +576,7 @@ export function renderizarMarkdown(texto: string): string {
     // Nada de imágenes: cargarlas sería una petición a la red (y el CSP las bloquea igual).
     const imagen: RendererRule = (tokens, idx, opciones, env, self) => {
       const alt = self.renderInlineAsText(tokens[idx]?.children ?? [], opciones, env);
-      const texto = es.herramientas.markdown.imagenOmitida(alt);
+      const texto = textos.herramientas.markdown.imagenOmitida(alt);
       return `<span class="imagen-omitida">${md?.utils.escapeHtml(texto) ?? ''}</span>`;
     };
     md.renderer.rules['image'] = imagen;

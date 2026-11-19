@@ -15,9 +15,9 @@ import { computed, h, onMounted, ref } from 'vue';
 import type { PuertoEnUso } from '../../../shared/api';
 import { api } from '../../api';
 import { useAccion } from '../../composables/useAccion';
-import { es } from '../../i18n/es';
+import { textos } from '../../i18n';
 
-const t = es.herramientas.puertos;
+const t = textos.herramientas.puertos;
 const { ejecutar, ocupado } = useAccion();
 const message = useMessage();
 
@@ -173,7 +173,7 @@ onMounted(() => void cargar());
       type="warning"
       :title="t.confirmarTitulo"
       :positive-text="t.finalizar"
-      :negative-text="es.acciones.cancelar"
+      :negative-text="textos.acciones.cancelar"
       :positive-button-props="{
         type: 'error',
         disabled: !confirmado,

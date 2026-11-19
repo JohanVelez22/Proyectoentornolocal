@@ -16,12 +16,12 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useRegistros } from '../stores/registros';
 import { useSitios } from '../stores/sitios';
 import { agruparFuentes, NIVELES_REGISTRO, type NivelRegistro } from '../utilidades/registros';
 
-const t = es.registros;
+const t = textos.registros;
 const route = useRoute();
 const registros = useRegistros();
 const sitios = useSitios();
@@ -115,8 +115,8 @@ function cambiarNiveles(v: (string | number)[]): void {
       />
       <NButton
         secondary
-        :aria-label="es.acciones.actualizar"
-        :title="es.acciones.actualizar"
+        :aria-label="textos.acciones.actualizar"
+        :title="textos.acciones.actualizar"
         :loading="ocupado('fuentes')"
         @click="cargarFuentes"
       >

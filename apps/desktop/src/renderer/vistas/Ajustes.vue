@@ -22,9 +22,9 @@ import { api } from '../api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import SeccionMcp from '../componentes/SeccionMcp.vue';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 
-const t = es.ajustes;
+const t = textos.ajustes;
 const th = t.https;
 const tt = t.herramientas;
 const { ejecutar, ocupado } = useAccion();
@@ -174,7 +174,7 @@ function quitarCA(): void {
     title: th.quitarTitulo,
     content: th.quitarTexto,
     positiveText: th.quitar,
-    negativeText: es.acciones.cancelar,
+    negativeText: textos.acciones.cancelar,
     onPositiveClick: async () => {
       const r = await ejecutar('ca', async () => {
         const res = await api().https.quitarCA();
@@ -231,7 +231,7 @@ function cambiarPath(): void {
     title: tt.pathQuitarTitulo,
     content: tt.pathQuitarTexto,
     positiveText: tt.pathQuitar,
-    negativeText: es.acciones.cancelar,
+    negativeText: textos.acciones.cancelar,
     onPositiveClick: () => {
       void aplicarPath(false);
     },
@@ -271,7 +271,7 @@ async function aplicarPath(activar: boolean): Promise<void> {
                 <template #icon
                   ><NIcon><FolderOpen /></NIcon
                 ></template>
-                {{ es.acciones.abrirCarpeta }}
+                {{ textos.acciones.abrirCarpeta }}
               </NButton>
             </NInputGroup>
             <small class="ayuda">{{ t.carpetaDatosAyuda }}</small>
@@ -310,7 +310,7 @@ async function aplicarPath(activar: boolean): Promise<void> {
             :loading="ocupado('guardar')"
             @click="guardar"
           >
-            {{ es.acciones.guardar }}
+            {{ textos.acciones.guardar }}
           </NButton>
         </div>
       </template>
@@ -382,7 +382,7 @@ async function aplicarPath(activar: boolean): Promise<void> {
                 :loading="ocupado('https')"
                 @click="guardarPuertoHttps"
               >
-                {{ es.acciones.guardar }}
+                {{ textos.acciones.guardar }}
               </NButton>
             </div>
             <small class="ayuda" :class="{ error: !puertoHttpsValido }">
@@ -464,7 +464,7 @@ async function aplicarPath(activar: boolean): Promise<void> {
 
     <NCard :title="t.acerca" size="small" class="tarjeta">
       <dl class="acerca">
-        <dt>{{ es.app.nombre }}</dt>
+        <dt>{{ textos.app.nombre }}</dt>
         <dd>
           {{ t.versionPrograma }} <code>{{ version || '…' }}</code>
         </dd>

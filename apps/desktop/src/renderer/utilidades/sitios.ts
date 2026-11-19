@@ -6,7 +6,7 @@ import type {
   ResultadoAplicar,
   Sitio,
 } from '../../shared/api';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 
 /** Lógica pura de la sección Sitios: sin Vue ni IPC, para poder probarla sola. */
 
@@ -98,7 +98,7 @@ export function estadoHttpsSitio(
   sitio: Pick<Sitio, 'https'>,
   estado: EstadoHttps | null,
 ): EstadoHttpsSitio {
-  const t = es.sitioHttps;
+  const t = textos.sitioHttps;
   if (!sitio.https || !estado) return { pendiente: null, sinConfianza: false };
   if (estado.ocupadoPor) {
     const { nombre, pid } = estado.ocupadoPor;
@@ -144,7 +144,7 @@ export function derivarEstadoSitio(
   nginx: EstadoNginx,
   pendientes: readonly string[],
 ): EstadoSitio {
-  const t = es.sitios.estado;
+  const t = textos.sitios.estado;
   const faltanEnHosts = [sitio.dominio, ...sitio.alias].filter((d) => pendientes.includes(d));
   switch (nginx) {
     case 'encendido':
@@ -183,8 +183,8 @@ export function motivoTunelBloqueado(o: {
 }): string | null {
   // Activo o abriéndose siempre se puede cerrar; apagado o con error se va a (re)abrir.
   if (o.tunel === 'activo' || o.tunel === 'iniciando') return null;
-  if (o.cloudflaredInstalado === false) return es.tunel.sinCloudflared;
-  if (o.nginx !== 'encendido') return es.tunel.sinNginx;
+  if (o.cloudflaredInstalado === false) return textos.tunel.sinCloudflared;
+  if (o.nginx !== 'encendido') return textos.tunel.sinNginx;
   return null;
 }
 
@@ -259,7 +259,7 @@ export function datosParaDuplicar(sitio: Sitio, existentes: readonly Sitio[]): D
     dominio,
     confiado: false,
     procesos: [],
-    nombre: es.formSitio.nombreCopia(sitio.nombre || sitio.dominio),
+    nombre: textos.formSitio.nombreCopia(sitio.nombre || sitio.dominio),
   };
 }
 
@@ -298,7 +298,7 @@ export function validarFormularioSitio(
   datos: DatosSitio,
   otros: readonly Pick<Sitio, 'dominio' | 'alias'>[],
 ): ErroresSitio {
-  const t = es.formSitio.errores;
+  const t = textos.formSitio.errores;
   const d = limpiarDatos(datos);
   const errores: ErroresSitio = {};
 

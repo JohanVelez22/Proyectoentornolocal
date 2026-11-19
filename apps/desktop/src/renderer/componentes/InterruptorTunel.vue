@@ -4,14 +4,14 @@ import { NButton, NIcon, NSpin, NSwitch, NTooltip } from 'naive-ui';
 import { computed } from 'vue';
 import type { EstadoTunel, Sitio } from '../../shared/api';
 import { useTunel } from '../composables/useTunel';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
 import { motivoTunelBloqueado } from '../utilidades/sitios';
 
 const props = defineProps<{ sitio: Sitio }>();
 
-const t = es.tunel;
+const t = textos.tunel;
 const servicios = useServicios();
 const tuneles = useTuneles();
 const { abrir, cerrar, renovar, abrirUrl, copiar, ocupado, trabajando } = useTunel();
@@ -144,7 +144,7 @@ function cambiar(valor: boolean): void {
                 <template #icon
                   ><NIcon><Refresh /></NIcon
                 ></template>
-                {{ es.acciones.renovar }}
+                {{ textos.acciones.renovar }}
               </NButton>
             </span>
           </template>

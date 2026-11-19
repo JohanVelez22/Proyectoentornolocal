@@ -4,7 +4,7 @@ import { NAlert, NButton, NIcon, NModal, NSpace, NTag, useMessage } from 'naive-
 import { computed, ref } from 'vue';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useHosts } from '../stores/hosts';
 import type { FalloHosts } from '../utilidades/sitios';
 
@@ -15,7 +15,7 @@ import type { FalloHosts } from '../utilidades/sitios';
  */
 const fallo = defineModel<FalloHosts | null>('fallo', { default: null });
 
-const t = es.inicio.hosts;
+const t = textos.inicio.hosts;
 const hosts = useHosts();
 const message = useMessage();
 const { ejecutar, ocupado } = useAccion();
@@ -40,7 +40,7 @@ async function corregir(): Promise<void> {
 function copiar(): void {
   const comando = fallo.value?.comandoManual;
   if (!comando) return;
-  void ejecutar('copiar', () => api().sistema.copiar(comando), { exito: es.acciones.copiado });
+  void ejecutar('copiar', () => api().sistema.copiar(comando), { exito: textos.acciones.copiado });
 }
 </script>
 
@@ -72,12 +72,12 @@ function copiar(): void {
       <pre class="comando">{{ fallo?.comandoManual }}</pre>
       <template #footer>
         <NSpace justify="end">
-          <NButton @click="verInstrucciones = false">{{ es.acciones.cerrar }}</NButton>
+          <NButton @click="verInstrucciones = false">{{ textos.acciones.cerrar }}</NButton>
           <NButton type="primary" :loading="ocupado('copiar')" @click="copiar">
             <template #icon
               ><NIcon><Copy /></NIcon
             ></template>
-            {{ es.acciones.copiar }}
+            {{ textos.acciones.copiar }}
           </NButton>
         </NSpace>
       </template>

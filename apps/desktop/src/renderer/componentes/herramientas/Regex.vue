@@ -2,14 +2,14 @@
 import { NCollapse, NCollapseItem, NInput } from 'naive-ui';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { crearTrabajador } from '../../composables/useHerramienta';
-import { es } from '../../i18n/es';
+import { textos } from '../../i18n';
 import {
   probarRegexConLimite,
   segmentosResaltado,
   type ResultadoRegex,
 } from '../../utilidades/herramientas';
 
-const t = es.herramientas.regex;
+const t = textos.herramientas.regex;
 const MS_LIMITE = 1500;
 const MAX_TEXTO = 200_000;
 

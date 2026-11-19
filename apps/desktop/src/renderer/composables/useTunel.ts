@@ -1,7 +1,7 @@
 import { useDialog } from 'naive-ui';
 import type { Sitio } from '../../shared/api';
 import { api } from '../api';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { requiereConfirmacion } from '../utilidades/sitios';
 import { useAccion } from './useAccion';
 
@@ -12,7 +12,7 @@ import { useAccion } from './useAccion';
 export function useTunel() {
   const dialog = useDialog();
   const { ejecutar, ocupado } = useAccion();
-  const t = es.tunel;
+  const t = textos.tunel;
 
   /** Con datos reales se pide confirmación antes de publicar. Devuelve false si se cancela. */
   function confirmarPublicar(sitio: Pick<Sitio, 'datosReales'>): Promise<boolean> {
@@ -28,7 +28,7 @@ export function useTunel() {
         title: t.confirmarTitulo,
         content: t.confirmarTexto,
         positiveText: t.confirmar,
-        negativeText: es.acciones.cancelar,
+        negativeText: textos.acciones.cancelar,
         autoFocus: false,
         onPositiveClick: () => responder(true),
         onNegativeClick: () => responder(false),
@@ -65,7 +65,7 @@ export function useTunel() {
 
   function copiar(url: string): void {
     void ejecutar(`copiar-${url}`, () => api().sistema.copiar(url), {
-      exito: es.acciones.copiado,
+      exito: textos.acciones.copiado,
     });
   }
 

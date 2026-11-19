@@ -5,12 +5,12 @@ import { computed, onMounted, ref } from 'vue';
 import type { ProgresoInstalacion, VersionDisponible } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos as tx } from '../i18n';
 import { useServicios, type InstalableCatalogo } from '../stores/servicios';
 
 const props = defineProps<{ servicio: InstalableCatalogo }>();
 
-const t = es.instalar;
+const t = tx.instalar;
 const textos = computed(() => t.servicios[props.servicio]);
 const servicios = useServicios();
 const { ejecutar, ocupado } = useAccion();
@@ -128,7 +128,7 @@ onMounted(() => {
         <template #icon
           ><NIcon><CloudDownload /></NIcon
         ></template>
-        {{ es.acciones.instalar }}
+        {{ tx.acciones.instalar }}
       </NButton>
     </div>
     <div v-if="progreso" class="progreso">

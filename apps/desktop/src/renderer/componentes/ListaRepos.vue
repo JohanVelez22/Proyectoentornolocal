@@ -3,7 +3,7 @@ import { LockClosed, Search } from '@vicons/ionicons5';
 import { NAlert, NButton, NEmpty, NIcon, NInput, NSpin, NTag, NTooltip } from 'naive-ui';
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { mensajeDeError } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { formatearFecha, textos } from '../i18n';
 import { useProyectos } from '../stores/proyectos';
 import type { RepoConMarca } from '../utilidades/proyectos';
 
@@ -11,7 +11,7 @@ import type { RepoConMarca } from '../utilidades/proyectos';
 defineProps<{ seleccionado: string | null }>();
 const emit = defineEmits<{ elegir: [repo: RepoConMarca] }>();
 
-const t = es.proyectos.github;
+const t = textos.proyectos.github;
 const proyectos = useProyectos();
 const buscar = ref(proyectos.buscarRepos);
 const cargando = ref(false);
@@ -37,10 +37,7 @@ watch(buscar, () => {
 onMounted(() => void cargar());
 onBeforeUnmount(() => clearTimeout(reloj));
 
-const fecha = (iso: string): string => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('es', { dateStyle: 'medium' });
-};
+const fecha = (iso: string): string => formatearFecha(iso, { dateStyle: 'medium' });
 </script>
 
 <template>

@@ -5,7 +5,7 @@ import { computed, ref, watch } from 'vue';
 import type { FormatoRespaldo, MotorSql } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { LIMITE_LINEAS, useBd } from '../stores/bd';
 import {
   confirmacionValida,
@@ -22,7 +22,7 @@ import ResultadoOperacion from './ResultadoOperacion.vue';
 const props = defineProps<{ motor: MotorSql; baseFija?: string | null }>();
 const mostrar = defineModel<boolean>('show', { required: true });
 
-const t = es.bd.dialogoRestaurar;
+const t = textos.bd.dialogoRestaurar;
 const bd = useBd();
 const { ejecutar, ocupado } = useAccion();
 
@@ -33,7 +33,7 @@ const formato = ref<FormatoRespaldo | null>(null);
 const base = ref('');
 const escrito = ref('');
 
-const nombreMotor = computed(() => es.bd.motores[props.motor] ?? props.motor);
+const nombreMotor = computed(() => textos.bd.motores[props.motor] ?? props.motor);
 const nombreArchivo = computed(() => archivo.value?.split(/[\\/]/).pop() ?? '');
 const corriendo = computed(() => paso.value === 'operacion' && bd.enCurso);
 const operacion = computed(() => (paso.value === 'operacion' ? bd.operacion : null));
@@ -42,12 +42,12 @@ const problema = computed(() => problemaNombre(props.motor, base.value));
 const textoProblema = computed(() => {
   const p = problema.value;
   if (!p) return '';
-  if (p === 'caracteres') return es.bd.nombre.caracteres[props.motor] ?? '';
-  return es.bd.nombre[p];
+  if (p === 'caracteres') return textos.bd.nombre.caracteres[props.motor] ?? '';
+  return textos.bd.nombre[p];
 });
 const avisoFormato = computed(() => {
-  if (formato.value === 'desconocido') return es.bd.formatoDesconocido;
-  if (formatoIncompatible(formato.value, props.motor)) return es.bd.formatoIncompatible;
+  if (formato.value === 'desconocido') return textos.bd.formatoDesconocido;
+  if (formatoIncompatible(formato.value, props.motor)) return textos.bd.formatoIncompatible;
   return null;
 });
 const puedeRestaurar = computed(
@@ -163,7 +163,7 @@ function cerrar(): void {
           :bordered="false"
           :type="avisoFormato ? 'warning' : 'info'"
         >
-          {{ es.bd.formatos[formato] ?? formato }}
+          {{ textos.bd.formatos[formato] ?? formato }}
         </NTag>
       </div>
       <p v-if="avisoFormato" class="aviso-formato" role="alert">
@@ -180,7 +180,7 @@ function cerrar(): void {
         <NInput
           v-model:value="base"
           :disabled="!!baseFija"
-          :placeholder="es.bd.nombre.etiqueta"
+          :placeholder="textos.bd.nombre.etiqueta"
           :input-props="{ spellcheck: false, autocomplete: 'off' }"
           class="mono"
         />
@@ -194,9 +194,9 @@ function cerrar(): void {
     <div v-else class="operacion">
       <p v-if="corriendo" class="corriendo">
         <NSpin :size="16" />
-        <span>{{ es.bd.progreso.corriendo.restaurar?.(base) }}</span>
+        <span>{{ textos.bd.progreso.corriendo.restaurar?.(base) }}</span>
       </p>
-      <p v-if="corriendo" class="tenue">{{ es.bd.progreso.noCierre }}</p>
+      <p v-if="corriendo" class="tenue">{{ textos.bd.progreso.noCierre }}</p>
       <PanelProgreso :lineas="bd.lineas" :limite="LIMITE_LINEAS" />
       <ResultadoOperacion
         v-if="operacion && operacion.estado !== 'corriendo'"
@@ -207,7 +207,7 @@ function cerrar(): void {
     <template #action>
       <div class="acciones">
         <template v-if="paso === 'datos'">
-          <NButton size="small" @click="cerrar">{{ es.acciones.cancelar }}</NButton>
+          <NButton size="small" @click="cerrar">{{ textos.acciones.cancelar }}</NButton>
           <NButton
             size="small"
             type="primary"
@@ -219,14 +219,14 @@ function cerrar(): void {
           </NButton>
         </template>
         <template v-else-if="paso === 'confirmar'">
-          <NButton size="small" @click="paso = 'datos'">{{ es.bd.reemplazo.volver }}</NButton>
+          <NButton size="small" @click="paso = 'datos'">{{ textos.bd.reemplazo.volver }}</NButton>
           <NButton
             size="small"
             type="error"
             :disabled="!confirmacionValida(base, escrito) || bd.enCurso"
             @click="confirmarReemplazo"
           >
-            {{ es.bd.reemplazo.confirmar }}
+            {{ textos.bd.reemplazo.confirmar }}
           </NButton>
         </template>
         <template v-else>
@@ -235,10 +235,10 @@ function cerrar(): void {
             size="small"
             @click="volverADatos"
           >
-            {{ es.acciones.reintentar }}
+            {{ textos.acciones.reintentar }}
           </NButton>
           <NButton size="small" type="primary" :disabled="corriendo" @click="cerrar">
-            {{ es.acciones.cerrar }}
+            {{ textos.acciones.cerrar }}
           </NButton>
         </template>
       </div>

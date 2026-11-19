@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { NButton, NInput } from 'naive-ui';
 import { computed, onBeforeUnmount, ref } from 'vue';
-import { es } from '../../i18n/es';
+import { formatearFecha, textos } from '../../i18n';
 import { agregarAcotado, recortarTexto, validarUrlWs } from '../../utilidades/herramientas';
 
-const t = es.herramientas.websocket;
+const t = textos.herramientas.websocket;
 const MAX_MENSAJES = 500;
 /** Lo que se muestra de cada mensaje (10 KB); el resto se descarta. */
 const MAX_MOSTRADO = 10 * 1024;
@@ -29,7 +29,7 @@ function anotar(tipo: Entrada['tipo'], texto: string): void {
     registro.value,
     {
       id: siguiente++,
-      hora: new Date().toLocaleTimeString('es'),
+      hora: formatearFecha(new Date(), { timeStyle: 'medium' }),
       tipo,
       texto: recortarTexto(texto, MAX_MOSTRADO),
     },

@@ -3,7 +3,7 @@ import { NAlert, NButton, NCard, NProgress, useDialog } from 'naive-ui';
 import { computed, onBeforeUnmount, onMounted } from 'vue';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useMetricas } from '../stores/metricas';
 import { useServicios } from '../stores/servicios';
 import {
@@ -17,7 +17,7 @@ import GraficaLinea from './GraficaLinea.vue';
 import TablaProcesos from './TablaProcesos.vue';
 
 /** Panel de rendimiento de Inicio: CPU, RAM, disco y red, alertas y procesos. */
-const t = es.panel;
+const t = textos.panel;
 const metricas = useMetricas();
 const servicios = useServicios();
 const dialog = useDialog();
@@ -61,7 +61,7 @@ function finalizar(a: AlertaPanel): void {
     title: t.alertas.finalizarTitulo,
     content: t.alertas.finalizarTexto(p.nombre, p.pid),
     positiveText: t.alertas.finalizar,
-    negativeText: es.acciones.cancelar,
+    negativeText: textos.acciones.cancelar,
     onPositiveClick: async () => {
       const r = await ejecutar(
         `finalizar-${p.pid}`,

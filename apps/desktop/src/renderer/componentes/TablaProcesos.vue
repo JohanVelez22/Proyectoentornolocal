@@ -6,7 +6,7 @@ import { useRouter } from 'vue-router';
 import type { MuestraSistema, PuertoEnUso } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
 import {
@@ -20,7 +20,7 @@ import { fuenteDeProceso } from '../utilidades/registros';
 /** Servicios y procesos de proyecto de la última muestra, con sus acciones. */
 const props = defineProps<{ procesos: MuestraSistema['procesos']; puertos: PuertoEnUso[] }>();
 
-const t = es.panel.procesos;
+const t = textos.panel.procesos;
 const router = useRouter();
 const servicios = useServicios();
 const sitios = useSitios();
@@ -72,7 +72,10 @@ const filas = computed<Fila[]>(() => {
       }
       const idServicio = servicioDeProceso(p.id);
       const servicio = servicios.porId[idServicio];
-      const trabajador = p.id !== idServicio ? ` #${p.id.slice(idServicio.length + 1)}` : '';
+      const trabajador =
+        p.id !== idServicio
+          ? ` ${textos.unidades.trabajador(p.id.slice(idServicio.length + 1))}`
+          : '';
       return {
         id: p.id,
         nombre: `${servicio?.nombre ?? idServicio}${trabajador}`,

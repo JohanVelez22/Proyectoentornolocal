@@ -25,7 +25,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { EstadoProcesoPublico, ResultadoAplicar, Sitio } from '../../shared/api';
 import { api, plano } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import {
   conProceso,
   errorProceso,
@@ -43,7 +43,7 @@ import PanelProgreso from './PanelProgreso.vue';
 const props = defineProps<{ sitio: Sitio }>();
 const emit = defineEmits<{ aplicado: [resultado: ResultadoAplicar] }>();
 
-const t = es.proyectos.procesos;
+const t = textos.proyectos.procesos;
 const dialog = useDialog();
 const message = useMessage();
 const { ejecutar, ocupado } = useAccion();
@@ -246,8 +246,8 @@ function quitar(p: ProcesoProyectoPublico): void {
   dialog.warning({
     title: t.quitarTitulo(p.nombre || p.id),
     content: t.quitarTexto,
-    positiveText: es.acciones.quitar,
-    negativeText: es.acciones.cancelar,
+    positiveText: textos.acciones.quitar,
+    negativeText: textos.acciones.cancelar,
     positiveButtonProps: { type: 'error' },
     autoFocus: false,
     onPositiveClick: async () => {
@@ -430,10 +430,10 @@ function quitar(p: ProcesoProyectoPublico): void {
       <template #footer>
         <div class="pie">
           <NButton :disabled="guardando" @click="editando = null">{{
-            es.acciones.cancelar
+            textos.acciones.cancelar
           }}</NButton>
           <NButton type="primary" :loading="guardando" @click="guardarProceso">
-            {{ es.acciones.guardar }}
+            {{ textos.acciones.guardar }}
           </NButton>
         </div>
       </template>

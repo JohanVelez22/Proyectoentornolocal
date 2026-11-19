@@ -14,7 +14,7 @@ import { computed, ref, watch } from 'vue';
 import type { DatosConexion, MotorBd } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useSitios } from '../stores/sitios';
 
 /** Datos de conexión de una base y su bloque .env. La clave solo vive mientras está abierto. */
@@ -24,7 +24,7 @@ const mostrar = defineModel<boolean>('show', { required: true });
 /** Valor del selector cuando no se elige un sitio. */
 const GENERICO = '';
 
-const t = es.bd.dialogoConexion;
+const t = textos.bd.dialogoConexion;
 const message = useMessage();
 const sitios = useSitios();
 const { ejecutar, ocupado } = useAccion();
@@ -41,7 +41,7 @@ const opcionesSitio = computed(() => [
   ...[...sitios.lista]
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
     .map((s) => ({
-      label: `${s.nombre} · ${es.sitios.tipos[s.tipo] ?? s.tipo}`,
+      label: `${s.nombre} · ${textos.sitios.tipos[s.tipo] ?? s.tipo}`,
       value: s.id,
     })),
   { label: t.generico, value: GENERICO },
@@ -96,7 +96,7 @@ watch(sitioId, () => {
 function copiar(texto: string): void {
   void ejecutar('copiar', async () => {
     await api().sistema.copiar(texto);
-    message.success(es.acciones.copiado);
+    message.success(textos.acciones.copiado);
   });
 }
 </script>

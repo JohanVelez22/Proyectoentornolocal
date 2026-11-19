@@ -5,14 +5,14 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { PUERTO_ADMINER, type DisponibilidadAdminer } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos as tx } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import EstadoPunto from './EstadoPunto.vue';
 
 /** Composer y Adminer: no son procesos, pero se instalan y se usan desde aquí. */
 const props = defineProps<{ herramienta: 'composer' | 'adminer' }>();
 
-const t = es.servicios;
+const t = tx.servicios;
 const servicios = useServicios();
 const { ejecutar, ocupado } = useAccion();
 const message = useMessage();
@@ -150,7 +150,7 @@ watch(
     <p v-if="ayuda" class="mensaje">{{ ayuda }}</p>
 
     <div v-if="progreso" class="progreso">
-      <span>{{ es.instalar.fases[progreso.fase] }} · {{ progreso.version }}</span>
+      <span>{{ tx.instalar.fases[progreso.fase] }} · {{ progreso.version }}</span>
       <NProgress
         type="line"
         :percentage="Math.round(progreso.porcentaje)"
@@ -176,7 +176,7 @@ watch(
                 <template #icon
                   ><NIcon><CloudDownload /></NIcon
                 ></template>
-                {{ es.acciones.instalar }}
+                {{ tx.acciones.instalar }}
               </NButton>
             </span>
           </template>
@@ -192,7 +192,7 @@ watch(
           <template #icon
             ><NIcon><Refresh /></NIcon
           ></template>
-          {{ es.acciones.actualizar }}
+          {{ tx.acciones.actualizar }}
         </NButton>
         <NButton
           v-else

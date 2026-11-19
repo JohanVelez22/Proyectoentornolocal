@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { NButton, NInput, NTabPane, NTabs, NTree, type TreeOption } from 'naive-ui';
 import { computed, ref } from 'vue';
-import { es } from '../../i18n/es';
+import { textos } from '../../i18n';
 import { useCopiar } from '../../composables/useHerramienta';
 import {
   arbolJson,
@@ -10,7 +10,7 @@ import {
   type ResultadoJson,
 } from '../../utilidades/herramientas';
 
-const t = es.herramientas.json;
+const t = textos.herramientas.json;
 const copiar = useCopiar();
 
 const entrada = ref('');
@@ -55,7 +55,7 @@ const arbol = computed<TreeOption[]>(() =>
             <NTabPane name="texto" :tab="t.resultado">
               <pre class="herr-salida">{{ resultado.texto }}</pre>
               <NButton size="small" quaternary @click="copiar(resultado.texto)">{{
-                es.herramientas.copiar
+                textos.herramientas.copiar
               }}</NButton>
             </NTabPane>
             <NTabPane name="arbol" :tab="t.arbol">

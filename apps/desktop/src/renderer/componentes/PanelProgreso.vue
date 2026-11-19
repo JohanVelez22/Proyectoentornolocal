@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import type { LineaRegistro } from '../stores/bd';
 
 /** Registro en vivo de la salida de una herramienta (psql, pg_restore, mysql, winget, nmake…). */
@@ -15,7 +15,7 @@ const props = withDefaults(
   { etiqueta: undefined, alto: 220 },
 );
 
-const t = es.bd.progreso;
+const t = textos.bd.progreso;
 const caja = ref<HTMLElement | null>(null);
 /** Si el usuario subió para leer, no se le mueve la vista. */
 let pegadoAbajo = true;

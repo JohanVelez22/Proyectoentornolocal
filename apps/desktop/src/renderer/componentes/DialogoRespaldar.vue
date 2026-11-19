@@ -5,7 +5,7 @@ import { computed, ref, watch } from 'vue';
 import type { MotorSql } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { LIMITE_LINEAS, useBd } from '../stores/bd';
 import PanelProgreso from './PanelProgreso.vue';
 import ResultadoOperacion from './ResultadoOperacion.vue';
@@ -14,7 +14,7 @@ import ResultadoOperacion from './ResultadoOperacion.vue';
 const props = defineProps<{ motor: MotorSql; base: string }>();
 const mostrar = defineModel<boolean>('show', { required: true });
 
-const t = es.bd.dialogoRespaldar;
+const t = textos.bd.dialogoRespaldar;
 const bd = useBd();
 const { ejecutar, ocupado } = useAccion();
 
@@ -89,7 +89,7 @@ function cerrar(): void {
     <div v-else class="operacion">
       <p v-if="corriendo" class="corriendo">
         <NSpin :size="16" />
-        <span>{{ es.bd.progreso.corriendo.respaldar?.(base) }}</span>
+        <span>{{ textos.bd.progreso.corriendo.respaldar?.(base) }}</span>
       </p>
       <PanelProgreso :lineas="bd.lineas" :limite="LIMITE_LINEAS" :alto="160" />
       <ResultadoOperacion
@@ -100,13 +100,13 @@ function cerrar(): void {
     <template #action>
       <div class="acciones">
         <template v-if="!lanzado">
-          <NButton size="small" @click="cerrar">{{ es.acciones.cancelar }}</NButton>
+          <NButton size="small" @click="cerrar">{{ textos.acciones.cancelar }}</NButton>
           <NButton size="small" type="primary" :disabled="bd.enCurso" @click="respaldar">
             {{ t.boton }}
           </NButton>
         </template>
         <NButton v-else size="small" type="primary" :disabled="corriendo" @click="cerrar">
-          {{ es.acciones.cerrar }}
+          {{ textos.acciones.cerrar }}
         </NButton>
       </div>
     </template>

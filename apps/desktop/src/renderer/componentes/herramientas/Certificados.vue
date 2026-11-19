@@ -4,10 +4,10 @@ import { computed, ref } from 'vue';
 import type { CertificadoGuardado } from '../../../shared/api';
 import { api } from '../../api';
 import { useAccion } from '../../composables/useAccion';
-import { es } from '../../i18n/es';
+import { textos } from '../../i18n';
 import { validarDominios } from '../../utilidades/herramientas';
 
-const t = es.herramientas.certificados;
+const t = textos.herramientas.certificados;
 const { ejecutar, ocupado } = useAccion();
 
 const texto = ref('');
@@ -72,7 +72,7 @@ function abrirCarpeta(): void {
         <dd>{{ guardado.clave }}</dd>
       </dl>
       <div>
-        <NButton secondary @click="abrirCarpeta">{{ es.acciones.abrirCarpeta }}</NButton>
+        <NButton secondary @click="abrirCarpeta">{{ textos.acciones.abrirCarpeta }}</NButton>
       </div>
     </template>
   </div>

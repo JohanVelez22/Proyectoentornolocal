@@ -3,12 +3,12 @@ import { Build, Construct, Sparkles } from '@vicons/ionicons5';
 import { NButton, NIcon, NSkeleton, NSpin, NTag, useDialog, useNotification } from 'naive-ui';
 import { computed, onMounted } from 'vue';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { LIMITE_LINEAS, useBd } from '../stores/bd';
 import PanelProgreso from './PanelProgreso.vue';
 
 /** Estado de pgvector y su instalación (Build Tools + compilación), con su registro en vivo. */
-const t = es.bd.pgvector;
+const t = textos.bd.pgvector;
 const bd = useBd();
 const dialog = useDialog();
 const notification = useNotification();
@@ -28,7 +28,7 @@ function pedirHerramientas(luego?: () => void): void {
     title: t.dialogoHerramientasTitulo,
     content: t.dialogoHerramientas,
     positiveText: t.instalarHerramientas,
-    negativeText: es.acciones.cancelar,
+    negativeText: textos.acciones.cancelar,
     onPositiveClick: () => {
       void instalarHerramientas(luego);
     },
@@ -47,7 +47,8 @@ async function instalarHerramientas(luego?: () => void): Promise<void> {
   }
   notification.error({
     title: t.falloHerramientas,
-    content: r.motivo === 'winget-ausente' ? t.sinWinget : (r.detalle ?? es.errores.desconocido),
+    content:
+      r.motivo === 'winget-ausente' ? t.sinWinget : (r.detalle ?? textos.errores.desconocido),
     duration: 0,
     closable: true,
   });
@@ -58,7 +59,7 @@ function pedirCompilar(): void {
     title: t.dialogoCompilarTitulo,
     content: t.dialogoCompilar,
     positiveText: t.continuar,
-    negativeText: es.acciones.cancelar,
+    negativeText: textos.acciones.cancelar,
     onPositiveClick: () => {
       void compilar();
     },

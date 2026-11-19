@@ -10,14 +10,14 @@ import {
   type ComponentPublicInstance,
 } from 'vue';
 import { mensajeDeError } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useConfirmacionesMcp } from '../stores/mcp';
 
 /**
  * Diálogo global de confirmación del servidor MCP. Muestra la primera solicitud de la cola; los
  * datos llegan del núcleo ya validados y se pintan SIEMPRE como texto (nunca como HTML).
  */
-const t = es.mcp.confirmacion;
+const t = textos.mcp.confirmacion;
 const mcp = useConfirmacionesMcp();
 const message = useMessage();
 const enviando = ref(false);

@@ -5,7 +5,7 @@ import { computed, ref, watch } from 'vue';
 import type { MotorSql, OrigenImportar } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { LIMITE_LINEAS, useBd } from '../stores/bd';
 import { useServicios } from '../stores/servicios';
 import {
@@ -26,7 +26,7 @@ import ResultadoOperacion from './ResultadoOperacion.vue';
 const props = defineProps<{ motor: MotorSql }>();
 const mostrar = defineModel<boolean>('show', { required: true });
 
-const t = es.bd.dialogoImportar;
+const t = textos.bd.dialogoImportar;
 const bd = useBd();
 const servicios = useServicios();
 const { ejecutar, ocupado } = useAccion();
@@ -43,7 +43,7 @@ const destinoTocado = ref(false);
 const escrito = ref('');
 const detectado = ref<number | null>(null);
 
-const nombreMotor = computed(() => es.bd.motores[props.motor] ?? props.motor);
+const nombreMotor = computed(() => textos.bd.motores[props.motor] ?? props.motor);
 const corriendo = computed(() => paso.value === 'operacion' && bd.enCurso);
 const operacion = computed(() => (paso.value === 'operacion' ? bd.operacion : null));
 
@@ -51,8 +51,8 @@ const problemaDestino = computed(() => problemaNombre(props.motor, destino.value
 const textoProblema = computed(() => {
   const p = problemaDestino.value;
   if (!p) return '';
-  if (p === 'caracteres') return es.bd.nombre.caracteres[props.motor] ?? '';
-  return es.bd.nombre[p];
+  if (p === 'caracteres') return textos.bd.nombre.caracteres[props.motor] ?? '';
+  return textos.bd.nombre[p];
 });
 const puertoValido = computed(
   () => puerto.value !== null && puerto.value >= 1 && puerto.value <= 65535,
@@ -249,9 +249,9 @@ function cerrar(): void {
     <div v-else class="operacion">
       <p v-if="corriendo" class="corriendo">
         <NSpin :size="16" />
-        <span>{{ es.bd.progreso.corriendo.importar?.(destino) }}</span>
+        <span>{{ textos.bd.progreso.corriendo.importar?.(destino) }}</span>
       </p>
-      <p v-if="corriendo" class="tenue">{{ es.bd.progreso.noCierre }}</p>
+      <p v-if="corriendo" class="tenue">{{ textos.bd.progreso.noCierre }}</p>
       <PanelProgreso :lineas="bd.lineas" :limite="LIMITE_LINEAS" />
       <ResultadoOperacion
         v-if="operacion && operacion.estado !== 'corriendo'"
@@ -262,7 +262,7 @@ function cerrar(): void {
     <template #action>
       <div class="acciones">
         <template v-if="paso === 'datos'">
-          <NButton size="small" @click="cerrar">{{ es.acciones.cancelar }}</NButton>
+          <NButton size="small" @click="cerrar">{{ textos.acciones.cancelar }}</NButton>
           <NButton
             size="small"
             type="primary"
@@ -274,14 +274,14 @@ function cerrar(): void {
           </NButton>
         </template>
         <template v-else-if="paso === 'confirmar'">
-          <NButton size="small" @click="paso = 'datos'">{{ es.bd.reemplazo.volver }}</NButton>
+          <NButton size="small" @click="paso = 'datos'">{{ textos.bd.reemplazo.volver }}</NButton>
           <NButton
             size="small"
             type="error"
             :disabled="!confirmacionValida(destino, escrito) || bd.enCurso"
             @click="confirmarReemplazo"
           >
-            {{ es.bd.reemplazo.confirmar }}
+            {{ textos.bd.reemplazo.confirmar }}
           </NButton>
         </template>
         <template v-else>
@@ -290,10 +290,10 @@ function cerrar(): void {
             size="small"
             @click="volverADatos"
           >
-            {{ es.acciones.reintentar }}
+            {{ textos.acciones.reintentar }}
           </NButton>
           <NButton size="small" type="primary" :disabled="corriendo" @click="cerrar">
-            {{ es.acciones.cerrar }}
+            {{ textos.acciones.cerrar }}
           </NButton>
         </template>
       </div>

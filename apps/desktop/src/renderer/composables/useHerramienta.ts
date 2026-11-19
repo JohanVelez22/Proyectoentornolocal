@@ -1,7 +1,7 @@
 import { useMessage } from 'naive-ui';
 import type { TrabajadorHerramienta } from '../utilidades/herramientas';
 import { api } from '../api';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 
 /** Worker nuevo por operación: si se cuelga, se termina sin afectar a las siguientes. */
 export function crearTrabajador(): TrabajadorHerramienta {
@@ -16,9 +16,9 @@ export function useCopiar() {
   return async (texto: string): Promise<void> => {
     try {
       await api().sistema.copiar(texto);
-      message.success(es.herramientas.copiado);
+      message.success(textos.herramientas.copiado);
     } catch (e) {
-      message.error((e as Error).message || es.errores.desconocido);
+      message.error((e as Error).message || textos.errores.desconocido);
     }
   };
 }

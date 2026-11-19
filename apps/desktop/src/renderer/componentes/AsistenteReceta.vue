@@ -21,7 +21,7 @@ import { computed, ref, watch } from 'vue';
 import type { RecetaPropuesta, ResultadoAplicar, ResultadoReceta } from '../../shared/api';
 import { api, plano } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useHttps } from '../stores/https';
 import { useProyectos } from '../stores/proyectos';
 import { useServicios } from '../stores/servicios';
@@ -62,8 +62,8 @@ import PasoReceta from './PasoReceta.vue';
 const props = defineProps<{ objetivo: ObjetivoAsistente | null }>();
 const emit = defineEmits<{ cerrar: []; aplicado: [resultado: ResultadoAplicar] }>();
 
-const t = es.proyectos.asistente;
-const tp = es.proyectos;
+const t = textos.proyectos.asistente;
+const tp = textos.proyectos;
 const proyectos = useProyectos();
 const sitios = useSitios();
 const servicios = useServicios();
@@ -160,7 +160,7 @@ async function cargarPropuesta(): Promise<void> {
       const e = elegirPhp(d.php, phps);
       d.php = e.php;
       avisoPhp.value =
-        e.noInstalada && e.php ? es.formSitio.phpNoInstalada(e.noInstalada, e.php) : null;
+        e.noInstalada && e.php ? textos.formSitio.phpNoInstalada(e.noInstalada, e.php) : null;
     }
     det.value = d;
     pasos.value = pasosAsistente(p.receta);
@@ -171,11 +171,14 @@ async function cargarPropuesta(): Promise<void> {
 
 /* ───── Configuración ───── */
 
-const opcionesTipo: SelectOption[] = TIPOS.map((v) => ({ value: v, label: es.sitios.tipos[v] }));
+const opcionesTipo: SelectOption[] = TIPOS.map((v) => ({
+  value: v,
+  label: textos.sitios.tipos[v],
+}));
 const opcionesPhp = computed<SelectOption[]>(() =>
   [...(servicios.instalados['php'] ?? [])]
     .sort((a, b) => b.localeCompare(a, 'es', { numeric: true }))
-    .map((v) => ({ value: v, label: es.sitios.php(v) })),
+    .map((v) => ({ value: v, label: textos.sitios.php(v) })),
 );
 const opcionesRuntime = (lista: string[], detectado: string | null): SelectOption[] => [
   { value: '', label: detectado ? t.detectado(detectado) : t.versionAuto },
@@ -481,7 +484,7 @@ function alCambiarVisible(v: boolean): void {
                 size="small"
                 class="mono"
                 :disabled="soloLectura"
-                :placeholder="es.formSitio.dominioPlaceholder"
+                :placeholder="textos.formSitio.dominioPlaceholder"
               >
                 <template #suffix><span class="sufijo">.test</span></template>
               </NInput>
@@ -643,7 +646,9 @@ function alCambiarVisible(v: boolean): void {
     <template #footer>
       <div class="pie">
         <template v-if="fase === 'configurar'">
-          <NButton :disabled="montando" @click="emit('cerrar')">{{ es.acciones.cancelar }}</NButton>
+          <NButton :disabled="montando" @click="emit('cerrar')">{{
+            textos.acciones.cancelar
+          }}</NButton>
           <NButton type="primary" :disabled="!puedeMontar" :loading="montando" @click="montar">
             {{ montando ? t.montando : t.montar }}
           </NButton>

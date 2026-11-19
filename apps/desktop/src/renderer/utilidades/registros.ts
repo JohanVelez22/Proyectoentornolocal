@@ -1,5 +1,5 @@
 import type { FuenteRegistroPublica, Sitio } from '../../shared/api';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 
 /** Líneas que guarda el visor por fuente (las más viejas se descartan). */
 export const CAPACIDAD_REGISTROS = 5000;
@@ -25,7 +25,8 @@ export class BuferLineas {
   private seq = 0;
 
   constructor(readonly capacidad = CAPACIDAD_REGISTROS) {
-    if (!Number.isInteger(capacidad) || capacidad < 1) throw new Error('Capacidad inválida');
+    if (!Number.isInteger(capacidad) || capacidad < 1)
+      throw new RangeError(`capacidad: ${capacidad}`);
     this.datos = new Array<LineaRegistro>(capacidad);
   }
 
@@ -107,7 +108,7 @@ export function filtrarLineas(
   });
 }
 
-const tr = es.registros;
+const tr = textos.registros;
 
 /** Nombre visible de una fuente, armado con su grupo y su id (no con el nombre del núcleo). */
 export function etiquetaFuente(

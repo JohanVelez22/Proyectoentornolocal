@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { EstadoServicio, EstadoTunel } from '../../shared/api';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 
 /** `aviso`: funciona a medias (p. ej. un sitio al que le falta el hosts); ámbar sin pulso. */
 type Estado = EstadoServicio['estado'] | EstadoTunel['estado'] | 'aviso';
@@ -33,7 +33,7 @@ const tono = computed(() => {
   }
 });
 
-const texto = computed(() => props.etiqueta ?? es.estado[props.estado]);
+const texto = computed(() => props.etiqueta ?? textos.estado[props.estado]);
 </script>
 
 <template>

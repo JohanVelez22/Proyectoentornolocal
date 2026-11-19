@@ -15,7 +15,7 @@ import {
 import { computed, ref, watch } from 'vue';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useProyectos } from '../stores/proyectos';
 import { useSitios } from '../stores/sitios';
 import {
@@ -40,7 +40,7 @@ const emit = defineEmits<{
   manual: [];
 }>();
 
-const t = es.proyectos;
+const t = textos.proyectos;
 const ta = t.agregarDialogo;
 const tg = t.github;
 const proyectos = useProyectos();
@@ -474,7 +474,9 @@ function alCambiarVisible(v: boolean): void {
 
     <template #footer>
       <div class="pie">
-        <NButton :disabled="clonando" @click="emit('cerrar')">{{ es.acciones.cancelar }}</NButton>
+        <NButton :disabled="clonando" @click="emit('cerrar')">{{
+          textos.acciones.cancelar
+        }}</NButton>
         <NButton
           v-if="pestana !== 'carpeta'"
           type="primary"

@@ -9,7 +9,7 @@ import type {
   Sitio,
   SugerenciaProyecto,
 } from '../../shared/api';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { nombreDeCarpeta, sitioVacio, usaPhp, usaProxy } from './sitios';
 
 /** Proceso de proyecto tal como se guarda en el sitio. */
@@ -200,7 +200,7 @@ export function sugerenciasVisibles(
  * se muestran como si fueran de WolfCore Dev).
  */
 export function etiquetaPaso(p: Pick<PasoReceta, 'tipo' | 'args'>): string {
-  const t = es.proyectos.pasos;
+  const t = textos.proyectos.pasos;
   const a = p.args ?? {};
   const texto = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v : null);
   switch (p.tipo) {
@@ -286,7 +286,7 @@ export function resumenReinstalar(
   pasos: readonly Pick<PasoReceta, 'tipo' | 'args'>[],
   cambio: boolean,
 ): { aviso: string | null; pasos: string[] } {
-  const t = es.proyectos;
+  const t = textos.proyectos;
   return {
     aviso: cambio ? t.tarjeta.recetaCambio : null,
     pasos: pasos.map((p) =>
@@ -647,7 +647,7 @@ export function errorProceso(
   p: ProcesoProyectoPublico,
   otros: readonly ProcesoProyectoPublico[],
 ): string | null {
-  const t = es.proyectos.procesos.errores;
+  const t = textos.proyectos.procesos.errores;
   if (!p.comando.length) return t.comando;
   if (p.puerto !== null && (!Number.isInteger(p.puerto) || p.puerto < 1 || p.puerto > 65535)) {
     return t.puerto;

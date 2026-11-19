@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { Bulb } from '@vicons/ionicons5';
 import { NButton, NIcon, NTag } from 'naive-ui';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useProyectos } from '../stores/proyectos';
 import { nombreDeCarpeta } from '../utilidades/sitios';
 
 /** Banner con las carpetas nuevas de la carpeta vigilada que parecen un proyecto. */
 const emit = defineEmits<{ preparar: [datos: { carpeta: string; remoto: string | null }] }>();
 
-const t = es.proyectos.sugerencias;
+const t = textos.proyectos.sugerencias;
 const proyectos = useProyectos();
 </script>
 
@@ -22,7 +22,7 @@ const proyectos = useProyectos();
       <li v-for="s in proyectos.sugerenciasPendientes" :key="s.carpeta" class="item">
         <span class="nombre" :title="s.carpeta">{{ nombreDeCarpeta(s.carpeta) }}</span>
         <NTag size="tiny" :bordered="false">{{
-          es.sitios.tiposCortos[s.deteccion.tipo] ?? s.deteccion.tipo
+          textos.sitios.tiposCortos[s.deteccion.tipo] ?? s.deteccion.tipo
         }}</NTag>
         <span class="ruta">{{ s.carpeta }}</span>
         <NButton

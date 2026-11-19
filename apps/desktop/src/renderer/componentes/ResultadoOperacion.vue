@@ -4,14 +4,14 @@ import { NButton, NCollapse, NCollapseItem, NIcon } from 'naive-ui';
 import { computed } from 'vue';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import type { OperacionBd } from '../stores/bd';
 import { carpetaDe } from '../utilidades/bd';
 
 /** Resultado de restaurar, importar o respaldar: archivo, copia previa, advertencias o error. */
 const props = defineProps<{ operacion: OperacionBd }>();
 
-const t = es.bd.resultado;
+const t = textos.bd.resultado;
 const { ejecutar } = useAccion();
 
 const titulo = computed(() => {
@@ -55,7 +55,7 @@ function abrirCarpeta(ruta: string): void {
         <template #icon
           ><NIcon><FolderOpen /></NIcon
         ></template>
-        {{ es.acciones.abrirCarpeta }}
+        {{ textos.acciones.abrirCarpeta }}
       </NButton>
     </div>
 
@@ -66,7 +66,7 @@ function abrirCarpeta(ruta: string): void {
         <template #icon
           ><NIcon><FolderOpen /></NIcon
         ></template>
-        {{ es.acciones.abrirCarpeta }}
+        {{ textos.acciones.abrirCarpeta }}
       </NButton>
     </div>
 

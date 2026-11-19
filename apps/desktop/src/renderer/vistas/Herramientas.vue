@@ -17,9 +17,9 @@ import {
 } from '@vicons/ionicons5';
 import { NDrawer, NDrawerContent, NEmpty, NIcon, NInput } from 'naive-ui';
 import { computed, defineAsyncComponent, ref, type Component } from 'vue';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 
-const t = es.herramientas;
+const t = textos.herramientas;
 type Clave = keyof typeof t.lista;
 
 const componentes: Record<Clave, Component> = {

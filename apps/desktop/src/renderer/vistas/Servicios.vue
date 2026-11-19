@@ -7,23 +7,23 @@ import FilaInstalar from '../componentes/FilaInstalar.vue';
 import TarjetaHerramienta from '../componentes/TarjetaHerramienta.vue';
 import TarjetaServicio from '../componentes/TarjetaServicio.vue';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useServicios, type GrupoServicios, type InstalableCatalogo } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
 
-const t = es.servicios;
+const t = textos.servicios;
 const servicios = useServicios();
 const tuneles = useTuneles();
 const { ejecutar, ocupado } = useAccion();
 
 /** Filas de "Instalar", agrupadas para que la lista larga se lea de un vistazo. */
 const gruposInstalar: { titulo: string; servicios: InstalableCatalogo[] }[] = [
-  { titulo: es.instalar.grupos.web, servicios: ['nginx', 'php'] },
+  { titulo: textos.instalar.grupos.web, servicios: ['nginx', 'php'] },
   {
-    titulo: es.instalar.grupos.bd,
+    titulo: textos.instalar.grupos.bd,
     servicios: ['mysql', 'mariadb', 'postgresql', 'redis', 'mongodb', 'mongosh'],
   },
-  { titulo: es.instalar.grupos.otros, servicios: ['mailpit', 'ollama', 'cloudflared'] },
+  { titulo: textos.instalar.grupos.otros, servicios: ['mailpit', 'ollama', 'cloudflared'] },
 ];
 const seccionInstalar = ref<HTMLElement | null>(null);
 
@@ -73,7 +73,7 @@ onMounted(() => {
           <template #icon
             ><NIcon><Play /></NIcon
           ></template>
-          {{ es.acciones.iniciarTodo }}
+          {{ textos.acciones.iniciarTodo }}
         </NButton>
         <NButton
           size="small"
@@ -85,7 +85,7 @@ onMounted(() => {
           <template #icon
             ><NIcon><Stop /></NIcon
           ></template>
-          {{ es.acciones.detenerTodo }}
+          {{ textos.acciones.detenerTodo }}
         </NButton>
       </NSpace>
     </div>
@@ -134,8 +134,8 @@ onMounted(() => {
       <NCard size="small" class="tarjeta-instalar">
         <template #header>
           <div class="cabeza-instalar">
-            <span>{{ es.instalar.titulo }}</span>
-            <small>{{ es.instalar.descripcion }}</small>
+            <span>{{ textos.instalar.titulo }}</span>
+            <small>{{ textos.instalar.descripcion }}</small>
           </div>
         </template>
         <div v-for="g in gruposInstalar" :key="g.titulo" class="bloque-instalar">

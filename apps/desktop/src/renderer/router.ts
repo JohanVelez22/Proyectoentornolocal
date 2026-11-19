@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router';
-import type { Textos } from './i18n/es';
+import type { Textos } from './i18n';
 import Inicio from './vistas/Inicio.vue';
 
 export type SeccionNav = Exclude<keyof Textos['nav'], 'contraer' | 'expandir'>;

@@ -27,7 +27,7 @@ import { useRouter } from 'vue-router';
 import type { DatosSitio, ResultadoAplicar } from '../../shared/api';
 import { api, plano } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useHttps } from '../stores/https';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
@@ -56,8 +56,8 @@ const emit = defineEmits<{
   aplicado: [resultado: ResultadoAplicar];
 }>();
 
-const t = es.formSitio;
-const th = es.formSitioHttps;
+const t = textos.formSitio;
+const th = textos.formSitioHttps;
 const router = useRouter();
 const message = useMessage();
 const notification = useNotification();
@@ -99,11 +99,11 @@ const opcionesPhp = computed<SelectOption[]>(() => {
   );
   const actual = datos.value.php;
   if (actual && !lista.includes(actual)) lista.push(actual);
-  return lista.map((v) => ({ value: v, label: es.sitios.php(v) }));
+  return lista.map((v) => ({ value: v, label: textos.sitios.php(v) }));
 });
 const opcionesTipo: SelectOption[] = TIPOS.map((tipo) => ({
   value: tipo,
-  label: es.sitios.tipos[tipo],
+  label: textos.sitios.tipos[tipo],
 }));
 const opcionesUrlBase: SelectOption[] = [
   { value: 'APP_URL', label: 'APP_URL' },
@@ -180,7 +180,7 @@ async function elegirCarpeta(): Promise<void> {
   datos.value.tipo = r.tipo;
   datos.value.urlBaseVar = r.urlBaseVar;
   if (modo.value === 'nuevo' || !datos.value.dominio) datos.value.dominio = r.sugerenciaDominio;
-  detectado.value = es.sitios.tipos[r.tipo] ?? r.tipo;
+  detectado.value = textos.sitios.tipos[r.tipo] ?? r.tipo;
   const instaladas =
     phpInstalados.value ?? (await ejecutar('php', () => servicios.cargarInstalados('php'))) ?? [];
   const elegido = elegirPhp(r.php, instaladas);
@@ -540,7 +540,7 @@ function alCambiarVisible(v: boolean): void {
       <template #footer>
         <div class="pie">
           <NButton :disabled="guardando" @click="emit('cerrar')">{{
-            es.acciones.cancelar
+            textos.acciones.cancelar
           }}</NButton>
           <NButton
             type="primary"

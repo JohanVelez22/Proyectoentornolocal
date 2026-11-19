@@ -5,13 +5,13 @@ import { computed, ref, watch } from 'vue';
 import type { Credenciales, Sitio } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
 
 const props = defineProps<{ sitio: Sitio }>();
 
-const t = es.ftpSitio;
+const t = textos.ftpSitio;
 const HOST = '127.0.0.1';
 const PUERTO_FTP_POR_DEFECTO = 2121;
 
@@ -82,7 +82,7 @@ function confirmarDesactivar(): void {
     title: t.desactivarTitulo,
     content: t.desactivarTexto,
     positiveText: t.desactivar,
-    negativeText: es.acciones.cancelar,
+    negativeText: textos.acciones.cancelar,
     autoFocus: false,
     positiveButtonProps: { type: 'error' },
     onPositiveClick: async () => {
@@ -104,7 +104,7 @@ function confirmarRegenerar(): void {
     title: t.regenerarTitulo,
     content: t.regenerarTexto,
     positiveText: t.regenerar,
-    negativeText: es.acciones.cancelar,
+    negativeText: textos.acciones.cancelar,
     autoFocus: false,
     onPositiveClick: async () => {
       const clave = await ejecutar('regenerar', () => api().ftp.regenerarClave(props.sitio.id), {
@@ -135,7 +135,7 @@ function encenderServidor(): void {
 }
 
 function copiar(texto: string): void {
-  void ejecutar('copiar', () => api().sistema.copiar(texto), { exito: es.acciones.copiado });
+  void ejecutar('copiar', () => api().sistema.copiar(texto), { exito: textos.acciones.copiado });
 }
 
 const filas = computed(() => {

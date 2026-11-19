@@ -14,14 +14,14 @@ import { useRouter } from 'vue-router';
 import type { EstadoTunel } from '../../shared/api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import { useTunel } from '../composables/useTunel';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
 import { useTuneles } from '../stores/tuneles';
 import { motivoTunelBloqueado } from '../utilidades/sitios';
 
-const t = es.tuneles;
-const tt = es.tunel;
+const t = textos.tuneles;
+const tt = textos.tunel;
 const router = useRouter();
 const sitios = useSitios();
 const tuneles = useTuneles();

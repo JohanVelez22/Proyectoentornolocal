@@ -11,7 +11,7 @@ import RegistrosProyecto from '../componentes/RegistrosProyecto.vue';
 import SugerenciasProyectos from '../componentes/SugerenciasProyectos.vue';
 import TarjetaProyecto from '../componentes/TarjetaProyecto.vue';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useHttps } from '../stores/https';
 import { useProyectos } from '../stores/proyectos';
 import { useServicios } from '../stores/servicios';
@@ -26,8 +26,8 @@ import {
 } from '../utilidades/sitios';
 import type { ObjetivoAsistente } from '../utilidades/proyectos';
 
-const t = es.sitios;
-const tp = es.proyectos;
+const t = textos.sitios;
+const tp = textos.proyectos;
 const sitios = useSitios();
 const proyectos = useProyectos();
 const servicios = useServicios();

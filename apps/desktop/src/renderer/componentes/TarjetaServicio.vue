@@ -31,13 +31,13 @@ import { computed, h, ref, type Component } from 'vue';
 import type { EstadoServicio } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { categoriaDe, esServicioDatos, puertoAlternativo, useServicios } from '../stores/servicios';
 import EstadoPunto from './EstadoPunto.vue';
 
 const props = defineProps<{ servicio: EstadoServicio }>();
 
-const t = es.servicios;
+const t = textos.servicios;
 const servicios = useServicios();
 const dialog = useDialog();
 const { ejecutar, ocupado } = useAccion();
@@ -202,7 +202,7 @@ function cambiarRedLocal(valor: boolean): void {
     title: t.ftp.avisoTitulo,
     content: t.ftp.avisoTexto,
     positiveText: t.ftp.avisoConfirmar,
-    negativeText: es.acciones.cancelar,
+    negativeText: textos.acciones.cancelar,
     onPositiveClick: () => {
       void aplicar();
     },
@@ -232,8 +232,8 @@ function cambiarRedLocal(valor: boolean): void {
           size="tiny"
           quaternary
           circle
-          :aria-label="`${es.acciones.masAcciones}: ${servicio.nombre}`"
-          :title="es.acciones.masAcciones"
+          :aria-label="`${textos.acciones.masAcciones}: ${servicio.nombre}`"
+          :title="textos.acciones.masAcciones"
           :disabled="tarjetaOcupada"
         >
           <template #icon
@@ -343,7 +343,7 @@ function cambiarRedLocal(valor: boolean): void {
         <template #icon
           ><NIcon><Power /></NIcon
         ></template>
-        {{ encendido ? es.acciones.apagar : es.acciones.encender }}
+        {{ encendido ? textos.acciones.apagar : textos.acciones.encender }}
       </NButton>
     </footer>
 
@@ -377,7 +377,9 @@ function cambiarRedLocal(valor: boolean): void {
       <p class="ayuda">{{ t.dialogoPuerto.ayuda }}</p>
       <template #action>
         <div class="acciones-dialogo">
-          <NButton size="small" @click="dialogoPuerto = false">{{ es.acciones.cancelar }}</NButton>
+          <NButton size="small" @click="dialogoPuerto = false">{{
+            textos.acciones.cancelar
+          }}</NButton>
           <NButton
             size="small"
             type="primary"
@@ -416,7 +418,9 @@ function cambiarRedLocal(valor: boolean): void {
       </NForm>
       <template #action>
         <div class="acciones-dialogo">
-          <NButton size="small" @click="dialogoBorrar = false">{{ es.acciones.cancelar }}</NButton>
+          <NButton size="small" @click="dialogoBorrar = false">{{
+            textos.acciones.cancelar
+          }}</NButton>
           <NButton
             size="small"
             type="error"

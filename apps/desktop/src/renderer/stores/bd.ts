@@ -12,14 +12,14 @@ import type {
   ResultadoRestaurar,
 } from '../../shared/api';
 import { api, plano } from '../api';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { esErrorTrasReemplazo, recortarLineas, respaldoEnMensaje } from '../utilidades/bd';
 
 /** Mensaje claro del núcleo (sin depender de naive-ui, para poder probar el store). */
 function mensajeDeError(e: unknown): string {
   if (e instanceof Error && e.message) return e.message;
   if (typeof e === 'string' && e) return e;
-  return es.errores.desconocido;
+  return textos.errores.desconocido;
 }
 
 /** Líneas que se conservan en cada registro de progreso (las más recientes). */
@@ -140,7 +140,7 @@ export const useBd = defineStore('bd', () => {
     fn: () => Promise<Partial<OperacionBd>>,
   ): Promise<OperacionBd> {
     let o: OperacionBd = { tipo, motor, base, estado: 'corriendo' };
-    if (enCurso.value) return { ...o, estado: 'error', error: es.bd.progreso.otraEnCurso };
+    if (enCurso.value) return { ...o, estado: 'error', error: textos.bd.progreso.otraEnCurso };
     try {
       limpiarLineas();
       operacion.value = o;
@@ -217,7 +217,7 @@ export const useBd = defineStore('bd', () => {
   }
 
   async function conTareaPgvector<T>(tarea: TareaPgvector, fn: () => Promise<T>): Promise<T> {
-    if (tareaPgvector.value) throw new Error('Ya hay una instalación de pgvector en curso.');
+    if (tareaPgvector.value) throw new Error(textos.bd.pgvector.enCurso);
     tareaPgvector.value = tarea;
     lineasPgvector.value = [];
     try {

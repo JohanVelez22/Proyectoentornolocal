@@ -4,7 +4,7 @@ import { computed, ref, watch } from 'vue';
 import type { MotorBd, OpcionesCrearBase } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { problemaNombre } from '../utilidades/bd';
 
 /** Crear una base vacía, opcionalmente con un usuario propio. */
@@ -12,7 +12,7 @@ const props = defineProps<{ motor: MotorBd }>();
 const mostrar = defineModel<boolean>('show', { required: true });
 const emit = defineEmits<{ creada: [nombre: string] }>();
 
-const t = es.bd.dialogoNueva;
+const t = textos.bd.dialogoNueva;
 const notification = useNotification();
 const { ejecutar, ocupado } = useAccion();
 
@@ -21,13 +21,13 @@ const conUsuario = ref(false);
 const usuario = ref('');
 const clave = ref('');
 
-const nombreMotor = computed(() => es.bd.motores[props.motor] ?? props.motor);
+const nombreMotor = computed(() => textos.bd.motores[props.motor] ?? props.motor);
 const esMongo = computed(() => props.motor === 'mongodb');
 
 function texto(p: ReturnType<typeof problemaNombre>): string {
   if (!p) return '';
-  if (p === 'caracteres') return es.bd.nombre.caracteres[props.motor] ?? '';
-  return es.bd.nombre[p];
+  if (p === 'caracteres') return textos.bd.nombre.caracteres[props.motor] ?? '';
+  return textos.bd.nombre[p];
 }
 const problema = computed(() => problemaNombre(props.motor, nombre.value));
 const problemaUsuario = computed(() =>
@@ -74,7 +74,7 @@ async function crear(): Promise<void> {
   >
     <NForm autocomplete="off" @submit.prevent="crear">
       <NFormItem
-        :label="es.bd.nombre.etiqueta"
+        :label="textos.bd.nombre.etiqueta"
         :validation-status="nombre && problema ? 'error' : undefined"
         :feedback="nombre ? texto(problema) : ''"
       >
@@ -123,7 +123,7 @@ async function crear(): Promise<void> {
     <template #action>
       <div class="acciones">
         <NButton size="small" :disabled="ocupado('crear')" @click="mostrar = false">
-          {{ es.acciones.cancelar }}
+          {{ textos.acciones.cancelar }}
         </NButton>
         <NButton
           size="small"

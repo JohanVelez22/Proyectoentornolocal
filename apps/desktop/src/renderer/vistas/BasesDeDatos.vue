@@ -41,7 +41,7 @@ import PanelProgreso from '../componentes/PanelProgreso.vue';
 import ResultadoOperacion from '../componentes/ResultadoOperacion.vue';
 import SeccionPgvector from '../componentes/SeccionPgvector.vue';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { LIMITE_LINEAS, useBd } from '../stores/bd';
 import { useServicios } from '../stores/servicios';
 import {
@@ -52,7 +52,7 @@ import {
   USUARIO_ADMIN,
 } from '../utilidades/bd';
 
-const t = es.bd;
+const t = textos.bd;
 const router = useRouter();
 const servicios = useServicios();
 const bd = useBd();
@@ -231,7 +231,7 @@ function irAServicios(): void {
           type="segment"
           size="small"
           class="pestanas"
-          :aria-label="es.nav.basesDeDatos"
+          :aria-label="textos.nav.basesDeDatos"
         >
           <NTab v-for="m in motores" :key="m" :name="m">
             <span class="pestana">
@@ -577,7 +577,7 @@ function irAServicios(): void {
       <template #action>
         <div class="acciones-dialogo">
           <NButton size="small" :disabled="ocupado('borrar')" @click="dlgBorrar = false">
-            {{ es.acciones.cancelar }}
+            {{ textos.acciones.cancelar }}
           </NButton>
           <NButton
             size="small"

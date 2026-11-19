@@ -3,7 +3,7 @@ import { NButton, NCheckbox, NInput, NInputNumber, NSwitch, NTabPane, NTabs } fr
 import { computed, ref } from 'vue';
 import { mensajeDeError } from '../../composables/useAccion';
 import { useCopiar } from '../../composables/useHerramienta';
-import { es } from '../../i18n/es';
+import { textos } from '../../i18n';
 import {
   aBase64,
   bcryptComparar,
@@ -19,7 +19,7 @@ import {
   type JwtDecodificado,
 } from '../../utilidades/herramientas';
 
-const t = es.herramientas.cripto;
+const t = textos.herramientas.cripto;
 const copiar = useCopiar();
 
 // Hash

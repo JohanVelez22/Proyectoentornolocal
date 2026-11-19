@@ -4,9 +4,9 @@ import { computed, ref } from 'vue';
 import type { ResultadoBom } from '../../../shared/api';
 import { api } from '../../api';
 import { useAccion } from '../../composables/useAccion';
-import { es } from '../../i18n/es';
+import { textos } from '../../i18n';
 
-const t = es.herramientas.bom;
+const t = textos.herramientas.bom;
 const { ejecutar, ocupado } = useAccion();
 
 const rutas = ref<string[]>([]);

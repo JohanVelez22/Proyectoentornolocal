@@ -30,7 +30,7 @@ import { computed, h, onMounted, ref, type Component } from 'vue';
 import type { ResultadoAplicar, Sitio } from '../../shared/api';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useHosts } from '../stores/hosts';
 import { useHttps } from '../stores/https';
 import { useProyectos } from '../stores/proyectos';
@@ -63,10 +63,10 @@ const emit = defineEmits<{
   verRegistros: [sitio: Sitio];
 }>();
 
-const t = es.sitios;
-const tp = es.proyectos;
+const t = textos.sitios;
+const tp = textos.proyectos;
 const proyectos = useProyectos();
-const th = es.sitioHttps;
+const th = textos.sitioHttps;
 const servicios = useServicios();
 const hosts = useHosts();
 const https = useHttps();
@@ -86,13 +86,13 @@ const estadoHttps = computed(() => estadoHttpsSitio(props.sitio, https.estado));
 
 const icono = (c: Component) => () => h(NIcon, null, { default: () => h(c) });
 const opciones: DropdownOption[] = [
-  { key: 'editar', label: es.acciones.editar, icon: icono(CreateOutline) },
-  { key: 'duplicar', label: es.acciones.duplicar, icon: icono(CopyOutline) },
+  { key: 'editar', label: textos.acciones.editar, icon: icono(CreateOutline) },
+  { key: 'duplicar', label: textos.acciones.duplicar, icon: icono(CopyOutline) },
   { key: 'registros', label: tp.tarjeta.verRegistros, icon: icono(DocumentText) },
   { type: 'divider', key: 'd1' },
   {
     key: 'borrar',
-    label: es.acciones.borrar,
+    label: textos.acciones.borrar,
     icon: icono(TrashOutline),
     props: { style: { color: '#dc2626' } },
   },
@@ -109,8 +109,8 @@ function confirmarBorrar(): void {
   const d = dialog.warning({
     title: t.borrar.titulo(nombre.value),
     content: t.borrar.texto,
-    positiveText: es.acciones.borrar,
-    negativeText: es.acciones.cancelar,
+    positiveText: textos.acciones.borrar,
+    negativeText: textos.acciones.cancelar,
     autoFocus: false,
     positiveButtonProps: { type: 'error' },
     onPositiveClick: async () => {
@@ -130,7 +130,7 @@ function confirmarBorrar(): void {
         return true;
       } catch (e) {
         notification.error({
-          title: es.errores.titulo,
+          title: textos.errores.titulo,
           content: mensajeDeError(e),
           duration: 10000,
           keepAliveOnHover: true,
@@ -191,7 +191,7 @@ async function reinstalar(): Promise<void> {
     onPositiveClick: () => {
       proyectos.reinstalar(props.sitio.id).catch((e: unknown) => {
         notification.error({
-          title: es.errores.titulo,
+          title: textos.errores.titulo,
           content: mensajeDeError(e),
           duration: 10000,
           keepAliveOnHover: true,
@@ -356,7 +356,7 @@ function abrirCarpeta(): void {
           <template #icon
             ><NIcon><Open /></NIcon
           ></template>
-          {{ es.acciones.abrir }}
+          {{ textos.acciones.abrir }}
         </NButton>
         <NTooltip>
           <template #trigger>
@@ -381,16 +381,16 @@ function abrirCarpeta(): void {
               size="small"
               secondary
               :loading="ocupado('terminal')"
-              :aria-label="es.terminalSitio.ayuda"
+              :aria-label="textos.terminalSitio.ayuda"
               @click="abrirTerminal"
             >
               <template #icon
                 ><NIcon><Terminal /></NIcon
               ></template>
-              {{ es.terminalSitio.boton }}
+              {{ textos.terminalSitio.boton }}
             </NButton>
           </template>
-          {{ es.terminalSitio.ayuda }}
+          {{ textos.terminalSitio.ayuda }}
         </NTooltip>
         <NTooltip>
           <template #trigger>
@@ -413,8 +413,8 @@ function abrirCarpeta(): void {
           <NButton
             size="small"
             quaternary
-            :aria-label="es.acciones.masAcciones"
-            :title="es.acciones.masAcciones"
+            :aria-label="textos.acciones.masAcciones"
+            :title="textos.acciones.masAcciones"
           >
             <template #icon
               ><NIcon><EllipsisHorizontal /></NIcon

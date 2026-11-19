@@ -4,11 +4,11 @@ import { NButton, NIcon, NInput, NSelect, useMessage } from 'naive-ui';
 import QRCode from 'qrcode';
 import { computed, onMounted, ref, watch } from 'vue';
 import { api } from '../../api';
-import { es } from '../../i18n/es';
+import { textos } from '../../i18n';
 import { useSitios } from '../../stores/sitios';
 import { useTuneles } from '../../stores/tuneles';
 
-const t = es.herramientas.qr;
+const t = textos.herramientas.qr;
 const tuneles = useTuneles();
 const sitios = useSitios();
 const message = useMessage();

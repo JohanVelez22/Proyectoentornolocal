@@ -7,7 +7,7 @@ import { api } from '../api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import { useAccion } from '../composables/useAccion';
 import { useNoLeidos } from '../composables/useNoLeidos';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import {
   PUERTO_BUZON,
@@ -16,7 +16,7 @@ import {
   bloqueEnvCorreo,
 } from '../utilidades/correo';
 
-const t = es.correo;
+const t = textos.correo;
 const router = useRouter();
 const servicios = useServicios();
 const { ejecutar, ocupado } = useAccion();
@@ -49,7 +49,7 @@ function abrirBuzon(): void {
   void ejecutar('buzon', () => api().sistema.abrirUrl(URL_BUZON));
 }
 function copiar(texto: string): void {
-  void ejecutar('copiar', () => api().sistema.copiar(texto), { exito: es.acciones.copiado });
+  void ejecutar('copiar', () => api().sistema.copiar(texto), { exito: textos.acciones.copiado });
 }
 function irAServicios(): void {
   void router.push({ name: 'servicios' });
@@ -124,7 +124,7 @@ function irAServicios(): void {
         <div class="contador-texto">
           <span class="contador-etiqueta">{{ t.noLeidos }}</span>
           <strong class="contador-valor" aria-live="polite">
-            {{ noLeidos === null ? es.inicioExtra.sinDato : noLeidos }}
+            {{ noLeidos === null ? textos.inicioExtra.sinDato : noLeidos }}
           </strong>
           <span v-if="error" class="error" role="alert">{{ t.noLeidosError }}: {{ error }}</span>
           <span v-else-if="noLeidos !== null" class="sr-only">{{ t.noLeidosValor(noLeidos) }}</span>

@@ -19,14 +19,14 @@ import EstadoPunto from '../componentes/EstadoPunto.vue';
 import PanelRendimiento from '../componentes/PanelRendimiento.vue';
 import { useAccion } from '../composables/useAccion';
 import { useNoLeidos } from '../composables/useNoLeidos';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useHosts } from '../stores/hosts';
 import { useIa } from '../stores/ia';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
 import { useTuneles } from '../stores/tuneles';
 
-const t = es.inicio;
+const t = textos.inicio;
 const router = useRouter();
 const servicios = useServicios();
 const sitios = useSitios();
@@ -35,7 +35,7 @@ const hosts = useHosts();
 const { ejecutar } = useAccion();
 const ia = useIa();
 const correo = useNoLeidos();
-const ti = es.inicioExtra;
+const ti = textos.inicioExtra;
 
 const mailpit = computed(() => servicios.porId['mailpit']);
 const ollama = computed(() => servicios.porId['ollama']);
@@ -143,7 +143,7 @@ const listaTuneles = computed(() =>
 );
 
 function copiar(texto: string): void {
-  void ejecutar('copiar', () => api().sistema.copiar(texto), { exito: es.acciones.copiado });
+  void ejecutar('copiar', () => api().sistema.copiar(texto), { exito: textos.acciones.copiado });
 }
 function abrir(url: string): void {
   void ejecutar(`abrir-${url}`, () => api().sistema.abrirUrl(url));
@@ -217,13 +217,13 @@ function abrir(url: string): void {
                 <template #icon
                   ><NIcon><Open /></NIcon
                 ></template>
-                {{ es.acciones.abrir }}
+                {{ textos.acciones.abrir }}
               </NButton>
               <NButton size="tiny" secondary @click="copiar(tun.url)">
                 <template #icon
                   ><NIcon><Copy /></NIcon
                 ></template>
-                {{ es.acciones.copiar }}
+                {{ textos.acciones.copiar }}
               </NButton>
             </NSpace>
           </li>

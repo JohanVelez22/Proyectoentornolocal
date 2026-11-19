@@ -31,7 +31,7 @@ import { useRouter } from 'vue-router';
 import type { ModeloOllama } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { formatearFecha, textos } from '../i18n';
 import { porcentaje, useIa, type DescargaIa } from '../stores/ia';
 import { useServicios } from '../stores/servicios';
 import { formatearTamano } from '../utilidades/bd';
@@ -39,7 +39,7 @@ import { formatearTamano } from '../utilidades/bd';
 /** Igual que `NOMBRE_MODELO_OLLAMA` del núcleo (que vuelve a validar). */
 const NOMBRE_MODELO = /^[a-z0-9][a-z0-9._:/-]{0,127}$/i;
 
-const t = es.iaLocal;
+const t = textos.iaLocal;
 const td = t.descargar;
 const tp = t.progreso;
 const router = useRouter();
@@ -86,15 +86,12 @@ function irAServicios(): void {
   void router.push({ name: 'servicios' });
 }
 function copiar(texto: string): void {
-  void ejecutar('copiar', () => api().sistema.copiar(texto), { exito: es.acciones.copiado });
+  void ejecutar('copiar', () => api().sistema.copiar(texto), { exito: textos.acciones.copiado });
 }
 
 // ---- Modelos ----
 const modelos = computed(() => ia.modelos ?? []);
-const fecha = (iso: string): string => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('es');
-};
+const fecha = (iso: string): string => formatearFecha(iso, { dateStyle: 'short' });
 /** "llama3.2" y "llama3.2:latest" son el mismo modelo. */
 const sinEtiquetaLatest = (n: string): string => n.toLowerCase().replace(/:latest$/, '');
 const instalado = (nombre: string): boolean =>
@@ -105,8 +102,8 @@ function confirmarBorrar(m: ModeloOllama): void {
   dialog.warning({
     title: t.borrarTitulo(m.nombre),
     content: t.borrarTexto(formatearTamano(m.tamanoBytes)),
-    positiveText: es.acciones.borrar,
-    negativeText: es.acciones.cancelar,
+    positiveText: textos.acciones.borrar,
+    negativeText: textos.acciones.cancelar,
     autoFocus: false,
     positiveButtonProps: { type: 'error' },
     onPositiveClick: async () => {
@@ -144,7 +141,7 @@ function pedirDescarga(): void {
     title: td.confirmarTitulo(n),
     content: td.confirmarTexto,
     positiveText: td.confirmar,
-    negativeText: es.acciones.cancelar,
+    negativeText: textos.acciones.cancelar,
     autoFocus: false,
     onPositiveClick: () => {
       nombreNuevo.value = '';
@@ -289,7 +286,7 @@ const filasConexion = computed(() => [
             <span class="espacio" tabindex="0">
               {{ t.espacio }}:
               <strong>{{
-                ia.espacio === null ? es.inicioExtra.sinDato : formatearTamano(ia.espacio)
+                ia.espacio === null ? textos.inicioExtra.sinDato : formatearTamano(ia.espacio)
               }}</strong>
             </span>
           </template>
@@ -429,7 +426,7 @@ const filasConexion = computed(() => [
               :disabled="d.estado === 'cancelando'"
               @click="cancelar(d)"
             >
-              {{ es.acciones.cancelar }}
+              {{ textos.acciones.cancelar }}
             </NButton>
             <NTooltip v-else>
               <template #trigger>
@@ -507,7 +504,7 @@ const filasConexion = computed(() => [
         <div v-for="f in filasConexion" :key="f.clave" class="dato">
           <dt>{{ f.etiqueta }}</dt>
           <dd>
-            <code>{{ f.valor ?? es.inicioExtra.sinDato }}</code>
+            <code>{{ f.valor ?? textos.inicioExtra.sinDato }}</code>
             <NTooltip v-if="f.valor">
               <template #trigger>
                 <NButton
@@ -536,7 +533,7 @@ const filasConexion = computed(() => [
           {{ t.conexion.copiarEnv }}
         </NButton>
       </div>
-      <pre class="bloque">{{ bloque ?? es.inicioExtra.sinDato }}</pre>
+      <pre class="bloque">{{ bloque ?? textos.inicioExtra.sinDato }}</pre>
       <small class="tenue">{{ t.conexion.envAyuda }}</small>
       <p class="etapa-b">
         <NIcon aria-hidden="true"><InformationCircle /></NIcon>

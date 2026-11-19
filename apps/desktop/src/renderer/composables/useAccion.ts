@@ -1,11 +1,11 @@
 import { useMessage, useNotification } from 'naive-ui';
 import { reactive } from 'vue';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 
 export function mensajeDeError(e: unknown): string {
   if (e instanceof Error && e.message) return e.message;
   if (typeof e === 'string' && e) return e;
-  return es.errores.desconocido;
+  return textos.errores.desconocido;
 }
 
 interface OpcionesAccion {
@@ -38,7 +38,7 @@ export function useAccion() {
       // Detenido a propósito mientras arrancaba: es una parada normal, no un error.
       if ((e as { codigo?: unknown } | null)?.codigo === 'detenido-al-iniciar') return undefined;
       notification.error({
-        title: opciones.tituloError ?? es.errores.titulo,
+        title: opciones.tituloError ?? textos.errores.titulo,
         content: mensajeDeError(e),
         duration: 10000,
         keepAliveOnHover: true,

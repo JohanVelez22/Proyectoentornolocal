@@ -2,10 +2,10 @@
 import { NSpin } from 'naive-ui';
 import { ref } from 'vue';
 import { crearTrabajador, useCopiar } from '../../composables/useHerramienta';
-import { es } from '../../i18n/es';
+import { formatearFecha, formatearNumero, textos } from '../../i18n';
 import { ejecutarEnTrabajador, hashTexto, tamanoLegible } from '../../utilidades/herramientas';
 
-const t = es.herramientas.infoArchivo;
+const t = textos.herramientas.infoArchivo;
 const MAX_BYTES = 200 * 1024 * 1024;
 const copiar = useCopiar();
 
@@ -38,7 +38,7 @@ async function elegido(e: Event): Promise<void> {
     nombre: archivo.name,
     tamano: archivo.size,
     tipo: archivo.type || t.sinTipo,
-    modificado: new Date(archivo.lastModified).toLocaleString('es'),
+    modificado: formatearFecha(archivo.lastModified, { dateStyle: 'medium', timeStyle: 'medium' }),
   };
   if (archivo.size > MAX_BYTES) {
     error.value = t.grande;
@@ -86,7 +86,7 @@ async function elegido(e: Event): Promise<void> {
       <dt>{{ t.nombre }}</dt>
       <dd>{{ info.nombre }}</dd>
       <dt>{{ t.tamano }}</dt>
-      <dd>{{ tamanoLegible(info.tamano) }} ({{ info.tamano.toLocaleString('es') }} B)</dd>
+      <dd>{{ tamanoLegible(info.tamano) }} ({{ formatearNumero(info.tamano) }} B)</dd>
       <dt>{{ t.tipo }}</dt>
       <dd>{{ info.tipo }}</dd>
       <dt>{{ t.modificado }}</dt>

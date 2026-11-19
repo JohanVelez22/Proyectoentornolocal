@@ -2,10 +2,10 @@
 import { NInput } from 'naive-ui';
 import { computed, ref } from 'vue';
 import { api } from '../../api';
-import { es } from '../../i18n/es';
+import { textos } from '../../i18n';
 import { renderizarMarkdown } from '../../utilidades/herramientas';
 
-const t = es.herramientas.markdown;
+const t = textos.herramientas.markdown;
 const texto = ref(t.ejemplo);
 
 /** Sanitizado: markdown-it con html:false (el HTML crudo sale escapado) y enlaces filtrados. */

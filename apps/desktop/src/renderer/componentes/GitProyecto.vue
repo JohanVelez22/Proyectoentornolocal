@@ -5,7 +5,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import type { EstadoGit, PasoReceta as DefPaso, ResultadoTraer, Sitio } from '../../shared/api';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import { useProyectos } from '../stores/proyectos';
 import { etiquetaPaso, pasosSugeridos, urlWebRemoto } from '../utilidades/proyectos';
 import PasoReceta from './PasoReceta.vue';
@@ -13,8 +13,8 @@ import PasoReceta from './PasoReceta.vue';
 /** Rama, cambios locales, "Traer cambios" (con los pasos sugeridos) y el enlace al remoto. */
 const props = defineProps<{ sitio: Sitio }>();
 
-const t = es.proyectos.git;
-const tt = es.proyectos.tarjeta;
+const t = textos.proyectos.git;
+const tt = textos.proyectos.tarjeta;
 const proyectos = useProyectos();
 const message = useMessage();
 const { ejecutar, ocupado } = useAccion();
@@ -121,7 +121,7 @@ function abrirRemoto(): void {
       :show="sugeridos !== null"
       preset="dialog"
       :title="t.sugeridosTitulo"
-      :positive-text="sugeridos?.length ? t.ejecutarSugeridos : es.acciones.cerrar"
+      :positive-text="sugeridos?.length ? t.ejecutarSugeridos : textos.acciones.cerrar"
       :negative-text="sugeridos?.length ? t.ahoraNo : undefined"
       :positive-button-props="{ disabled: !!sugeridos?.length && !sitio.confiado }"
       :auto-focus="false"
@@ -158,14 +158,14 @@ function abrirRemoto(): void {
       @update:show="(v: boolean) => !v && (verCorrida = false)"
     >
       <p class="nota">
-        {{ es.proyectos.estadoReceta[corrida?.estado ?? 'corriendo'] }} · {{ t.corridaAyuda }}
+        {{ textos.proyectos.estadoReceta[corrida?.estado ?? 'corriendo'] }} · {{ t.corridaAyuda }}
       </p>
       <ol class="corrida">
         <PasoReceta v-for="p in corrida?.pasos ?? []" :key="p.id" :paso="p" />
       </ol>
       <template #footer>
         <div class="pie">
-          <NButton @click="verCorrida = false">{{ es.acciones.cerrar }}</NButton>
+          <NButton @click="verCorrida = false">{{ textos.acciones.cerrar }}</NButton>
         </div>
       </template>
     </NModal>

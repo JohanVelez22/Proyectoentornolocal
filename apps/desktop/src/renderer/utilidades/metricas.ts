@@ -1,5 +1,5 @@
 import type { EstadoServicio, MuestraSistema, PuertoEnUso } from '../../shared/api';
-import { es } from '../i18n/es';
+import { formatearNumero, textos } from '../i18n';
 
 /** Muestras en 5 minutos a una cada 3 s. */
 export const MUESTRAS_VENTANA = 100;
@@ -100,39 +100,39 @@ export function trazoSerie(
   return { linea, area };
 }
 
-const UNIDADES = ['B', 'KB', 'MB', 'GB', 'TB'];
-
 export function formatoBytes(n: number): string {
   if (!Number.isFinite(n) || n < 0) return '—';
+  const unidades = textos.unidades.bytes;
   let v = n;
   let u = 0;
-  while (v >= 1024 && u < UNIDADES.length - 1) {
+  while (v >= 1024 && u < unidades.length - 1) {
     v /= 1024;
     u++;
   }
   const dec = u === 0 || v >= 100 ? 0 : v >= 10 ? 1 : 2;
-  return `${v.toLocaleString('es', { maximumFractionDigits: dec, minimumFractionDigits: 0 })} ${UNIDADES[u]}`;
+  return `${formatearNumero(v, { maximumFractionDigits: dec, minimumFractionDigits: 0 })} ${unidades[u]}`;
 }
 
 export function formatoBps(n: number): string {
-  return `${formatoBytes(n)}/s`;
+  return `${formatoBytes(n)}${textos.unidades.porSegundo}`;
 }
 
 export function formatoPorcentaje(n: number): string {
   if (!Number.isFinite(n)) return '—';
-  return `${n.toLocaleString('es', { maximumFractionDigits: n < 10 ? 1 : 0 })} %`;
+  return `${formatearNumero(n, { maximumFractionDigits: n < 10 ? 1 : 0 })} ${textos.unidades.porcentaje}`;
 }
 
 /** Tiempo encendido: "45 s", "12 min", "3 h 5 min", "2 d 4 h". */
 export function formatoDuracion(segundos: number): string {
   if (!Number.isFinite(segundos) || segundos < 0) return '—';
   const s = Math.floor(segundos);
-  if (s < 60) return `${s} s`;
+  const u = textos.unidades;
+  if (s < 60) return `${s} ${u.segundos}`;
   const min = Math.floor(s / 60);
-  if (min < 60) return `${min} min`;
+  if (min < 60) return `${min} ${u.minutos}`;
   const h = Math.floor(min / 60);
-  if (h < 24) return `${h} h ${min % 60} min`;
-  return `${Math.floor(h / 24)} d ${h % 24} h`;
+  if (h < 24) return `${h} ${u.horas} ${min % 60} ${u.minutos}`;
+  return `${Math.floor(h / 24)} ${u.dias} ${h % 24} ${u.horas}`;
 }
 
 /** Servicio al que pertenece un proceso del supervisor ('php-8.4-0' → 'php-8.4'). */
@@ -151,7 +151,7 @@ export interface AlertaPanel {
   proceso?: { pid: number; nombre: string; creado: string | null };
 }
 
-const ta = es.panel.alertas;
+const ta = textos.panel.alertas;
 const esPhpCgi = (nombre: string): boolean => /^php-cgi(\.exe)?$/i.test(nombre);
 
 /**

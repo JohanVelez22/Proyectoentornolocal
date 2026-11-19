@@ -26,7 +26,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import ConfirmacionMcp from './ConfirmacionMcp.vue';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import type { SeccionNav } from '../router';
 import { detenerEntorno, iniciarEntorno } from '../stores/entorno';
 import { resumenPastilla } from '../utilidades/pastilla';
@@ -57,10 +57,10 @@ const opciones: MenuOption[] = (
     ['registros', IconoRegistros],
     ['ajustes', IconoAjustes],
   ] as const
-).map(([clave, c]) => ({ key: clave, label: es.nav[clave], icon: icono(c) }));
+).map(([clave, c]) => ({ key: clave, label: textos.nav[clave], icon: icono(c) }));
 
 const seccion = computed<SeccionNav>(() => route.meta.seccion ?? 'inicio');
-const titulo = computed(() => es.nav[seccion.value]);
+const titulo = computed(() => textos.nav[seccion.value]);
 
 const pastilla = computed(() =>
   resumenPastilla({
@@ -85,7 +85,7 @@ onMounted(() => {
       await iniciarEntorno();
       return true;
     },
-    { tituloError: es.errores.arranque },
+    { tituloError: textos.errores.arranque },
   ).then((ok) => {
     falloArranque.value = !ok;
     if (ok) void mostrarAvisoInicio();
@@ -103,7 +103,7 @@ async function mostrarAvisoInicio(): Promise<void> {
     return; // no es imprescindible: el resto de la interfaz ya funciona
   }
   if (!aviso) return;
-  notification.info({ title: es.avisoInicio.titulo, content: aviso, closable: true });
+  notification.info({ title: textos.avisoInicio.titulo, content: aviso, closable: true });
 }
 onBeforeUnmount(() => {
   bajaAviso?.();
@@ -142,8 +142,8 @@ onBeforeUnmount(() => {
           </svg>
         </div>
         <div v-if="!contraido" class="marca-texto">
-          <strong>{{ es.app.nombre }}</strong>
-          <span>{{ es.app.lema }}</span>
+          <strong>{{ textos.app.nombre }}</strong>
+          <span>{{ textos.app.lema }}</span>
         </div>
       </div>
       <NMenu

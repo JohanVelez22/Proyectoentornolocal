@@ -17,11 +17,11 @@ import { computed, onMounted, ref } from 'vue';
 import type { EstadoMcp } from '../../shared/api';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
-import { es } from '../i18n/es';
+import { textos } from '../i18n';
 import EstadoPunto from './EstadoPunto.vue';
 
 /** Ajustes del servidor MCP. El token nunca llega a la interfaz: solo se copia o se regenera. */
-const t = es.mcp;
+const t = textos.mcp;
 const { ejecutar, ocupado } = useAccion();
 const dialog = useDialog();
 const message = useMessage();
@@ -104,7 +104,7 @@ function regenerar(): void {
     title: t.regenerarTitulo,
     content: t.regenerarTexto,
     positiveText: t.regenerar,
-    negativeText: es.acciones.cancelar,
+    negativeText: textos.acciones.cancelar,
     onPositiveClick: async () => {
       const ok = await ejecutar('mcp-token', async () => {
         await api().mcp.regenerarToken();
@@ -131,7 +131,7 @@ function regenerar(): void {
           <span v-if="errorCarga && !estado" class="ayuda error con-boton">
             {{ errorCarga }}
             <NButton size="tiny" secondary :loading="cargando" @click="cargar">
-              {{ es.acciones.reintentar }}
+              {{ textos.acciones.reintentar }}
             </NButton>
           </span>
           <NSkeleton v-else-if="!estado" text :width="140" />
@@ -168,7 +168,7 @@ function regenerar(): void {
                 :loading="ocupado('mcp-puerto')"
                 @click="guardarPuerto"
               >
-                {{ es.acciones.guardar }}
+                {{ textos.acciones.guardar }}
               </NButton>
             </div>
             <small class="ayuda" :class="{ error: !puertoValido }">

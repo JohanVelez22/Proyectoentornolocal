@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { NButton, NInput, NSelect } from 'naive-ui';
 import { computed, ref } from 'vue';
-import { es } from '../../i18n/es';
+import { localeIntl, textos } from '../../i18n';
 import {
   desplazamientoZona,
   fechaEnZonaAMs,
@@ -11,7 +11,7 @@ import {
   zonaValida,
 } from '../../utilidades/herramientas';
 
-const t = es.herramientas.tiempo;
+const t = textos.herramientas.tiempo;
 
 const zonaLocal = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const zonas = (() => {
@@ -31,7 +31,7 @@ const instante = ref<number | null>(Date.now() - (Date.now() % 1000));
 const errorTs = ref<string | null>(null);
 const errorFecha = ref<string | null>(null);
 
-const relativo = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
+const relativo = computed(() => new Intl.RelativeTimeFormat(localeIntl.value, { numeric: 'auto' }));
 
 function desdeTs(v: string): void {
   entradaTs.value = v;
@@ -85,7 +85,7 @@ const datos = computed(() => {
     [t.iso, new Date(ms).toISOString()],
     [t.enZona, `${formatearEnZona(ms, zona.value)} (${zona.value})`],
     [t.desplazamiento, textoDesplazamiento(desplazamientoZona(ms, zona.value))],
-    [t.relativo, relativo.format(Math.round(valor), u)],
+    [t.relativo, relativo.value.format(Math.round(valor), u)],
   ] as [string, string][];
 });
 </script>
