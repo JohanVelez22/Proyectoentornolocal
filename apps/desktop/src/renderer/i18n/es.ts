@@ -1457,7 +1457,7 @@ export const es = {
       descargar: 'Descargar PNG',
       vacio: 'Escriba algo para generar el código.',
       largo: 'El texto es demasiado largo para un QR.',
-      descargado: 'Se descargó la imagen del QR.',
+      descargado: 'Descarga iniciada.',
     },
     json: {
       entrada: 'JSON',
@@ -1504,6 +1504,9 @@ export const es = {
       resumen: (mas: number, menos: number) => `+${mas} · −${menos} líneas`,
       iguales: 'Los textos son iguales.',
       archivoGrande: 'El archivo supera 5 MB; elija uno más pequeño.',
+      textoGrande: 'Cada texto puede tener como máximo 5 MB.',
+      truncado: (mostradas: number, total: number) =>
+        `Se muestran las primeras ${mostradas} de ${total} filas.`,
     },
     tiempo: {
       timestamp: 'Timestamp (segundos o milisegundos)',
@@ -1613,7 +1616,9 @@ export const es = {
       vista: 'Vista previa',
       ejemplo:
         '# Título\n\nTexto con **negrita**, _cursiva_ y un [enlace](https://example.com).\n\n- Uno\n- Dos\n\n```\ncódigo\n```\n',
-      seguro: 'El HTML crudo se muestra como texto y los enlaces peligrosos se descartan.',
+      seguro:
+        'El HTML crudo se muestra como texto, los enlaces peligrosos se descartan y las imágenes no se cargan.',
+      imagenOmitida: (alt: string) => `[imagen${alt ? `: ${alt}` : ''}]`,
     },
     entorno: {
       aplicacion: 'Versión de WolfCore Dev',
@@ -1622,8 +1627,15 @@ export const es = {
       idioma: 'Idioma',
       zona: 'Zona horaria',
       nucleos: 'Núcleos lógicos',
-      pendiente:
-        'PATH, versiones de herramientas y variables de entorno necesitan una ruta del núcleo que aún no existe.',
+      actualizar: 'Actualizar',
+      path: 'PATH',
+      pathVacio: 'El PATH está vacío.',
+      herramientas: 'Herramientas de WolfCore Dev',
+      noInstalada: 'No instalada',
+      sinRespuesta: 'No respondió a tiempo',
+      variables: 'Variables de entorno',
+      filtro: 'Filtrar variables',
+      enmascarada: 'Valor oculto: el nombre parece de un secreto.',
     },
     infoArchivo: {
       elegir: 'Elegir archivo',
@@ -1653,7 +1665,7 @@ export const es = {
       recibido: 'Recibido',
       binario: (n: number) => `[binario, ${n} bytes]`,
       vacio: 'Sin mensajes todavía.',
-      tope: 'Se guardan los últimos 500 mensajes.',
+      tope: 'Se guardan los últimos 500 mensajes; cada uno se muestra hasta 10 KB.',
     },
   },
 };

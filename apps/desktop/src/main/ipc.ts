@@ -731,6 +731,8 @@ const TABLA: Record<RutaIpc, Manejador> = {
     }
     return { certificado: crt, clave: key };
   },
+  // Sin argumentos; el núcleo ya enmascara los valores con nombre de secreto.
+  'herramientas.entorno': (n) => n.entornoSistema(),
 
   // ---- Servidor MCP ----
   'mcp.estado': (n) => n.estadoMcp(),

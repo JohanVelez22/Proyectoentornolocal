@@ -3,10 +3,15 @@ import { NButton, NInput } from 'naive-ui';
 import { ref } from 'vue';
 import { mensajeDeError } from '../../composables/useAccion';
 import { es } from '../../i18n/es';
-import { compararTextos, type ResultadoDiff } from '../../utilidades/herramientas';
+import {
+  compararTextos,
+  MAX_TEXTO_DIFF,
+  tamanoTexto,
+  type ResultadoDiff,
+} from '../../utilidades/herramientas';
 
 const t = es.herramientas.diff;
-const MAX_ARCHIVO = 5 * 1024 * 1024;
+const MAX_ARCHIVO = MAX_TEXTO_DIFF;
 const MAX_FILAS = 5000;
 
 const izquierda = ref('');
@@ -31,6 +36,15 @@ async function cargar(e: Event, lado: 'izq' | 'der'): Promise<void> {
 
 function comparar(): void {
   error.value = null;
+  // Lo pegado tiene el mismo tope que un archivo: el diff es O(N·D) y la tabla, pesada.
+  if (
+    tamanoTexto(izquierda.value) > MAX_TEXTO_DIFF ||
+    tamanoTexto(derecha.value) > MAX_TEXTO_DIFF
+  ) {
+    resultado.value = null;
+    error.value = t.textoGrande;
+    return;
+  }
   try {
     resultado.value = compararTextos(izquierda.value, derecha.value);
   } catch (e) {
@@ -79,6 +93,14 @@ function comparar(): void {
     </div>
     <p v-if="error" class="herr-error">{{ error }}</p>
 
+    <p
+      v-if="
+        resultado && resultado.filas.length > MAX_FILAS && resultado.agregadas + resultado.quitadas
+      "
+      class="herr-tenue"
+    >
+      {{ t.truncado(MAX_FILAS, resultado.filas.length) }}
+    </p>
     <div v-if="resultado && resultado.agregadas + resultado.quitadas" class="tabla">
       <table>
         <tbody>

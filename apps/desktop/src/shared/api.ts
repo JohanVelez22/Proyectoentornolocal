@@ -4,6 +4,7 @@ import type {
   Deteccion,
   DisponibilidadGit,
   EstadoGit,
+  EntornoSistema,
   EstadoMcp,
   EstadoProcesoPublico,
   EstadoReceta,
@@ -64,6 +65,7 @@ export type {
   Deteccion,
   DisponibilidadGit,
   EstadoGit,
+  EntornoSistema,
   EstadoMcp,
   EstadoProcesoPublico,
   EstadoReceta,
@@ -440,6 +442,8 @@ export interface ApiEntorno {
      * y su clave junto a él (.key). Los PEM nunca pasan por la interfaz.
      */
     emitirCertificado(dominios: string[], destino: string): Promise<CertificadoGuardado>;
+    /** PATH, versiones de las herramientas y variables (los valores secretos llegan enmascarados). */
+    entorno(): Promise<EntornoSistema>;
   };
   mcp: {
     estado(): Promise<EstadoMcp>;
@@ -595,6 +599,7 @@ export const RUTAS_IPC = [
   'herramientas.finalizarProceso',
   'herramientas.limpiarBom',
   'herramientas.emitirCertificado',
+  'herramientas.entorno',
   'mcp.estado',
   'mcp.iniciar',
   'mcp.detener',

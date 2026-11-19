@@ -573,6 +573,13 @@ export function renderizarMarkdown(texto: string): string {
         : self.renderToken(tokens, idx, opciones);
     };
     md.renderer.rules['link_open'] = enlace;
+    // Nada de imágenes: cargarlas sería una petición a la red (y el CSP las bloquea igual).
+    const imagen: RendererRule = (tokens, idx, opciones, env, self) => {
+      const alt = self.renderInlineAsText(tokens[idx]?.children ?? [], opciones, env);
+      const texto = es.herramientas.markdown.imagenOmitida(alt);
+      return `<span class="imagen-omitida">${md?.utils.escapeHtml(texto) ?? ''}</span>`;
+    };
+    md.renderer.rules['image'] = imagen;
   }
   return md.render(texto);
 }
@@ -648,6 +655,18 @@ export function validarDominios(texto: string): { dominios: string[]; error?: st
   if (!dominios.length) return { dominios, error: t.sinDominios };
   if (dominios.length > MAX_DOMINIOS) return { dominios, error: t.muchosDominios(MAX_DOMINIOS) };
   return { dominios };
+}
+
+/** Recorta un texto largo para mostrarlo (p. ej. un mensaje WebSocket). */
+export function recortarTexto(texto: string, max: number): string {
+  return texto.length > max ? `${texto.slice(0, max)}…` : texto;
+}
+
+/** Tope del texto a comparar, pegado o cargado de archivo. */
+export const MAX_TEXTO_DIFF = 5 * 1024 * 1024;
+
+export function tamanoTexto(texto: string): number {
+  return new TextEncoder().encode(texto).length;
 }
 
 /** Tamaño legible en unidades binarias. */

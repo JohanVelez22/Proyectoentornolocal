@@ -2,10 +2,12 @@
 import { NButton, NInput } from 'naive-ui';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { es } from '../../i18n/es';
-import { agregarAcotado, validarUrlWs } from '../../utilidades/herramientas';
+import { agregarAcotado, recortarTexto, validarUrlWs } from '../../utilidades/herramientas';
 
 const t = es.herramientas.websocket;
 const MAX_MENSAJES = 500;
+/** Lo que se muestra de cada mensaje (10 KB); el resto se descarta. */
+const MAX_MOSTRADO = 10 * 1024;
 
 interface Entrada {
   id: number;
@@ -25,7 +27,12 @@ let siguiente = 0;
 function anotar(tipo: Entrada['tipo'], texto: string): void {
   registro.value = agregarAcotado(
     registro.value,
-    { id: siguiente++, hora: new Date().toLocaleTimeString('es'), tipo, texto },
+    {
+      id: siguiente++,
+      hora: new Date().toLocaleTimeString('es'),
+      tipo,
+      texto: recortarTexto(texto, MAX_MOSTRADO),
+    },
     MAX_MENSAJES,
   );
 }

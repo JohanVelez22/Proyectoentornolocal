@@ -193,6 +193,7 @@ const api: ApiEntorno = {
     limpiarBom: (rutas, simular) => invocar('herramientas.limpiarBom', rutas, simular),
     emitirCertificado: (dominios, destino) =>
       invocar('herramientas.emitirCertificado', dominios, destino),
+    entorno: () => invocar('herramientas.entorno'),
   },
   mcp: {
     estado: () => invocar('mcp.estado'),

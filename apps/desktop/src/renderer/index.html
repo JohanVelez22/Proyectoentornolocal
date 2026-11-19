@@ -2,6 +2,10 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      connect-src admite ws:/wss: solo para el cliente WebSocket de Herramientas, que conecta a la
+      URL que escribe el usuario (validada como ws:// o wss://). http(s) sigue limitado a 'self'.
+    -->
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:"

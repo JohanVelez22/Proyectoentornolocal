@@ -82,7 +82,8 @@ const confirmado = computed(
 
 async function finalizar(): Promise<boolean> {
   const f = elegido.value;
-  if (!f || !confirmado.value) return false;
+  // Enter doble o clic repetido: una sola petición.
+  if (!f || !confirmado.value || ocupado('finalizar')) return false;
   const r = await ejecutar('finalizar', () =>
     api().herramientas.finalizarProceso(f.pid, confirmacion.value.trim(), { creado: f.creado }),
   );

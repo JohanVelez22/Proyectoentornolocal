@@ -107,6 +107,7 @@ import {
 } from './herramientas/puertos';
 import { limpiarBom, type ResultadoBom } from './herramientas/bom';
 import { emitirCertificadoLibre } from './herramientas/certificadosLibres';
+import { entornoSistema, PLAZO_VERSION_MS, type EntornoSistema } from './herramientas/entorno';
 import { muestraSistemaWindows } from './plataforma/win';
 import { lanzadorPorDefecto } from './plataforma/lanzar';
 import type { Lanzador, MuestraPlataforma } from './plataforma/tipos';
@@ -1319,6 +1320,35 @@ export class Nucleo {
   emitirCertificadoLibre(dominios: string[]): Promise<{ certPem: string; clavePem: string }> {
     return emitirCertificadoLibre(dominios, { rutas: this.rutas });
   }
+
+  /**
+   * PATH, versiones de las herramientas de WolfCore Dev (lo instalado que ya se conoce; solo
+   * Composer, git y gh se consultan, con plazo) y variables con los secretos enmascarados.
+   */
+  entornoSistema(): Promise<EntornoSistema> {
+    const plazo = PLAZO_VERSION_MS;
+    return entornoSistema({
+      env: this.entornoProceso,
+      plazoMs: plazo,
+      herramientas: [
+        { nombre: 'PHP', leer: () => this.instalador.instalados('php') },
+        { nombre: 'Node.js', leer: () => this.runtimes.instalados('node') },
+        { nombre: 'Python', leer: () => this.runtimes.instalados('python') },
+        {
+          nombre: 'Composer',
+          leer: async () => {
+            const v = await this.composer.version();
+            return v ? [v] : [];
+          },
+        },
+        { nombre: 'git', leer: () => this.git.version('git', plazo) },
+        { nombre: 'gh', leer: () => this.git.version('gh', plazo) },
+      ],
+    });
+  }
+
+  /** Variables del proceso (sustituible en pruebas). */
+  entornoProceso: Record<string, string | undefined> = process.env;
 
   estadoMcp(): EstadoMcp {
     return this.mcp.estado();

@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   aBase64,
   agregarAcotado,
+  recortarTexto,
+  tamanoTexto,
+  MAX_TEXTO_DIFF,
   arbolJson,
   bcryptComparar,
   bcryptHash,
@@ -297,6 +300,13 @@ describe('Markdown', () => {
     expect(html).not.toMatch(/src="data/i);
   });
 
+  it('no carga imágenes remotas: deja el texto alternativo', () => {
+    const html = renderizarMarkdown('![logo <b>](https://example.com/a.png) y ![](http://x/y.gif)');
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('example.com');
+    expect(html).toContain('logo &lt;b&gt;');
+  });
+
   it('conserva los enlaces http y les pone rel', () => {
     const html = renderizarMarkdown('[web](https://example.com/a?b=1)');
     expect(html).toContain('href="https://example.com/a?b=1"');
@@ -333,6 +343,16 @@ describe('varios', () => {
     expect(validarUrlWs('http://example.com')).toBeNull();
     expect(validarUrlWs('javascript:alert(1)')).toBeNull();
     expect(validarUrlWs('')).toBeNull();
+  });
+
+  it('recorta los mensajes largos con puntos suspensivos', () => {
+    expect(recortarTexto('abc', 5)).toBe('abc');
+    expect(recortarTexto('abcdefgh', 5)).toBe('abcde…');
+  });
+
+  it('mide el texto en bytes UTF-8 para el tope del diff', () => {
+    expect(tamanoTexto('añ')).toBe(3);
+    expect(MAX_TEXTO_DIFF).toBe(5 * 1024 * 1024);
   });
 
   it('el registro de mensajes queda acotado', () => {

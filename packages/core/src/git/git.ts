@@ -238,6 +238,19 @@ export class Git {
     return null;
   }
 
+  /** `git --version` / `gh --version` con plazo corto; [] si no está o no responde bien. */
+  async version(nombre: 'git' | 'gh', plazoMs = 5000): Promise<string[]> {
+    const ruta = this.buscar(nombre);
+    if (!ruta) return [];
+    const r = await this.exec(ruta, ['--version'], {
+      timeoutMs: plazoMs,
+      env: { GH_NO_UPDATE_NOTIFIER: '1' },
+    });
+    if (r.codigo !== 0) return [];
+    const m = /version (\d+(?:\.\d+)+)/.exec(r.stdout);
+    return m?.[1] ? [m[1]] : [];
+  }
+
   private rutaGit(): string {
     return this.buscar('git') ?? 'git';
   }

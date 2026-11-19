@@ -1289,3 +1289,28 @@ describe('Nucleo (Etapa B)', () => {
     );
   });
 });
+
+describe('Nucleo.entornoSistema', () => {
+  it('reúne PATH, versiones conocidas y variables con los secretos enmascarados', async () => {
+    const n = await crear();
+    n.entornoProceso = { Path: 'C:/uno;C:/dos', GITHUB_TOKEN: 'ghp_secreto', USERNAME: 'ana' };
+    const version = vi
+      .spyOn(n.git, 'version')
+      .mockImplementation(async (nombre) => (nombre === 'git' ? ['2.47.1'] : []));
+    const r = await n.entornoSistema();
+    expect(r.path).toEqual(['C:/uno', 'C:/dos']);
+    expect(r.herramientas.map((h) => h.nombre)).toEqual([
+      'PHP',
+      'Node.js',
+      'Python',
+      'Composer',
+      'git',
+      'gh',
+    ]);
+    expect(r.herramientas.find((h) => h.nombre === 'git')?.versiones).toEqual(['2.47.1']);
+    expect(r.herramientas.find((h) => h.nombre === 'PHP')?.versiones).toEqual([]);
+    expect(version).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(r)).not.toContain('ghp_secreto');
+    expect(r.variables.find((v) => v.nombre === 'USERNAME')?.valor).toBe('ana');
+  });
+});

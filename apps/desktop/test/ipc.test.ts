@@ -128,6 +128,7 @@ function nucleoFalso() {
         'finalizarProceso',
         'limpiarBom',
         'emitirCertificadoLibre',
+        'entornoSistema',
         'estadoMcp',
         'iniciarMcp',
         'detenerMcp',
@@ -509,6 +510,7 @@ describe('registrarIpc', () => {
         'herramientas.finalizarProceso',
         'herramientas.limpiarBom',
         'herramientas.emitirCertificado',
+        'herramientas.entorno',
         'mcp.estado',
         'mcp.iniciar',
         'mcp.detener',
@@ -1227,6 +1229,20 @@ describe('IPC de la Etapa B', () => {
     } finally {
       rmSync(carpeta, { recursive: true, force: true });
     }
+  });
+
+  it('herramientas.entorno devuelve lo del núcleo', async () => {
+    const { f, llamar } = montar();
+    const entorno = {
+      path: ['C:\\x'],
+      herramientas: [{ nombre: 'git', versiones: ['2.47.1'] }],
+      variables: [{ nombre: 'API_KEY', valor: '••••••••', enmascarada: true }],
+    };
+    f['entornoSistema']!.mockResolvedValue(entorno);
+    const r = await llamar('herramientas.entorno');
+    expect(r.ok).toBe(true);
+    expect(r.valor).toEqual(entorno);
+    expect(f['entornoSistema']).toHaveBeenCalledTimes(1);
   });
 
   it('git.clonar solo clona dentro de la carpeta de proyectos o de una elegida, y en vacío', async () => {
