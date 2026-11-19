@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import type { Eventos, EventosNucleo } from '../eventos';
 import { ErrorWolf } from '../errores';
@@ -31,14 +32,26 @@ class ErrorLecturaHosts extends Error {
   }
 }
 
-async function leerHosts(ruta: string): Promise<string> {
+/** Texto del hosts y SHA-256 de sus bytes tal cual (`NINGUNO` si no existe). */
+async function leerHostsConHuella(ruta: string): Promise<{ texto: string; huella: string }> {
   try {
-    return await readFile(ruta, 'utf8');
+    const b = await readFile(ruta);
+    return { texto: b.toString('utf8'), huella: createHash('sha256').update(b).digest('hex') };
   } catch (e) {
     const code = (e as { code?: string }).code;
-    if (code === 'ENOENT') return '';
+    if (code === 'ENOENT') return { texto: '', huella: 'NINGUNO' };
     throw new ErrorLecturaHosts(code ?? 'desconocido');
   }
+}
+
+const leerHosts = async (ruta: string): Promise<string> => (await leerHostsConHuella(ruta)).texto;
+
+export interface OpcionesSincronizar {
+  /**
+   * Pedido explícito del usuario ("Aplicar hosts pendientes"): vuelve a pedir permiso aunque el
+   * último UAC con el mismo contenido se haya cancelado o vencido. Los guardados automáticos no.
+   */
+  reintentar?: boolean;
 }
 
 /** Plazo por defecto para que el usuario conteste el UAC al escribir hosts. */
@@ -75,7 +88,18 @@ export class GestorHosts {
   /** Escritura en curso (a lo sumo una: un solo UAC a la vez). */
   private enCurso: Promise<ResultadoSync> | null = null;
   /** Pedido agrupado que espera a la escritura en curso: se queda con los dominios más nuevos. */
-  private espera: { dominios: string[]; promesa: Promise<ResultadoSync> } | null = null;
+  private espera: {
+    dominios: string[];
+    reintentar: boolean;
+    promesa: Promise<ResultadoSync>;
+  } | null = null;
+  /**
+   * Escritura elevada de la plataforma todavía viva (aunque el respaldo propio ya haya
+   * respondido): mientras exista no se abre otro UAC.
+   */
+  private viva: Promise<unknown> | null = null;
+  /** Último contenido cuyo UAC se canceló o venció: no se vuelve a pedir solo. */
+  private ultimoFallo: { nuevo: string; motivo: 'cancelado' | 'tiempo' } | null = null;
 
   constructor(
     private readonly p: Plataforma,
@@ -112,15 +136,18 @@ export class GestorHosts {
    * nueva) que corre al terminar. Si ese UAC se canceló o venció, los agrupados no abren otro:
    * quedan pendientes hasta "Aplicar hosts pendientes", que pide UNA elevación para todos.
    */
-  sincronizar(dominios: string[]): Promise<ResultadoSync> {
-    if (!this.enCurso) return this.arrancar(dominios, null);
+  sincronizar(dominios: string[], o: OpcionesSincronizar = {}): Promise<ResultadoSync> {
+    const reintentar = o.reintentar === true;
+    if (!this.enCurso) return this.arrancar(dominios, null, reintentar);
     if (this.espera) {
       this.espera.dominios = dominios;
+      this.espera.reintentar ||= reintentar;
       return this.espera.promesa;
     }
     const previa = this.enCurso;
-    const espera: { dominios: string[]; promesa: Promise<ResultadoSync> } = {
+    const espera: { dominios: string[]; reintentar: boolean; promesa: Promise<ResultadoSync> } = {
       dominios,
+      reintentar,
       promesa: previa
         .then(
           (r) => r,
@@ -132,6 +159,7 @@ export class GestorHosts {
           return this.arrancar(
             espera.dominios,
             r && !r.ok && r.motivo !== 'error' ? r.motivo : null,
+            espera.reintentar,
           );
         }),
     };
@@ -139,8 +167,12 @@ export class GestorHosts {
     return espera.promesa;
   }
 
-  private arrancar(dominios: string[], sinElevarPor: string | null): Promise<ResultadoSync> {
-    const p = this.escribir(dominios, sinElevarPor);
+  private arrancar(
+    dominios: string[],
+    sinElevarPor: string | null,
+    reintentar: boolean,
+  ): Promise<ResultadoSync> {
+    const p = this.escribir(dominios, sinElevarPor, reintentar);
     this.enCurso = p;
     void p.then(
       () => {
@@ -154,11 +186,16 @@ export class GestorHosts {
   }
 
   /** Escribe con el plazo del UAC. Con `sinElevarPor`, no eleva: informa ese motivo. */
-  private async escribir(dominios: string[], sinElevarPor: string | null): Promise<ResultadoSync> {
+  private async escribir(
+    dominios: string[],
+    sinElevarPor: string | null,
+    reintentar: boolean,
+  ): Promise<ResultadoSync> {
     const destino = this.p.rutaHosts();
     let actual: string;
+    let huella: string;
     try {
-      actual = await leerHosts(destino);
+      ({ texto: actual, huella } = await leerHostsConHuella(destino));
     } catch (e) {
       if (!(e instanceof ErrorLecturaHosts)) throw e;
       await this.estado(dominios);
@@ -166,12 +203,24 @@ export class GestorHosts {
     }
     const nuevo = aplicarBloque(actual, dominios);
     if (nuevo === actual) {
+      this.ultimoFallo = null;
       await this.estado(dominios);
       return { ok: true };
     }
-    const r: ResultadoEscritura = sinElevarPor
-      ? { ok: false, motivo: sinElevarPor as 'cancelado' | 'denegado' | 'tiempo' }
-      : await this.escribirConPlazo(destino, nuevo);
+    // Sin pedido explícito, el mismo contenido cuyo UAC se canceló o venció no se vuelve a pedir.
+    const motivoPrevio =
+      sinElevarPor ??
+      (!reintentar && this.ultimoFallo?.nuevo === nuevo ? this.ultimoFallo.motivo : null) ??
+      // Un UAC anterior sigue abierto (la plataforma no lo cortó aún): no se abre otro.
+      (this.viva ? 'tiempo' : null);
+    const r: ResultadoEscritura = motivoPrevio
+      ? { ok: false, motivo: motivoPrevio as 'cancelado' | 'denegado' | 'tiempo' }
+      : await this.escribirConPlazo(destino, nuevo, huella);
+    if (!r.ok && (r.motivo === 'cancelado' || r.motivo === 'tiempo')) {
+      this.ultimoFallo = { nuevo, motivo: r.motivo };
+    } else if (r.ok) {
+      this.ultimoFallo = null;
+    }
     if (r.ok) {
       await this.estado(dominios);
       return { ok: true };
@@ -193,7 +242,11 @@ export class GestorHosts {
    * La plataforma recibe el plazo y corta la elevación; además hay un respaldo propio (plazo +
    * margen) por si no lo respeta, para que la cola de configuración nunca quede colgada.
    */
-  private async escribirConPlazo(destino: string, nuevo: string): Promise<ResultadoEscritura> {
+  private async escribirConPlazo(
+    destino: string,
+    nuevo: string,
+    hashPrevio: string,
+  ): Promise<ResultadoEscritura> {
     let temporizador: ReturnType<typeof setTimeout> | undefined;
     const respaldo =
       this.tiempoLimiteMs < MARGEN_PLAZO_MS
@@ -205,11 +258,17 @@ export class GestorHosts {
         respaldo,
       );
     });
+    const escritura = this.p.escribirComoAdmin(destino, nuevo, {
+      tiempoLimiteMs: this.tiempoLimiteMs,
+      hashPrevio,
+    });
+    this.viva = escritura;
+    const soltar = (): void => {
+      if (this.viva === escritura) this.viva = null;
+    };
+    escritura.then(soltar, soltar);
     try {
-      return await Promise.race([
-        this.p.escribirComoAdmin(destino, nuevo, { tiempoLimiteMs: this.tiempoLimiteMs }),
-        vencido,
-      ]);
+      return await Promise.race([escritura, vencido]);
     } catch (e) {
       if (e instanceof ErrorWolf && e.codigo === 'hosts.tiempo_agotado') {
         return { ok: false, motivo: 'tiempo' };
@@ -218,5 +277,15 @@ export class GestorHosts {
     } finally {
       clearTimeout(temporizador);
     }
+  }
+
+  /** Corta un UAC abierto (al cerrar la app o terminar la sesión de Windows). */
+  cancelarElevacion(): void {
+    this.p.cancelarEscriturasAdmin?.();
+  }
+
+  /** Borra los temporales de escrituras elevadas que quedaron de ejecuciones anteriores. */
+  async limpiarTemporales(): Promise<void> {
+    await this.p.limpiarTemporalesAdmin?.();
   }
 }

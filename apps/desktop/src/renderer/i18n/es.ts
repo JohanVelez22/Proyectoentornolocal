@@ -156,7 +156,7 @@ export const es = {
       motivos: {
         cancelado: 'Se canceló el permiso de administrador. El archivo hosts quedó igual.',
         tiempo:
-          'Nadie respondió el permiso de administrador a tiempo. El sitio se guardó; el archivo hosts quedó igual. Aplique los pendientes cuando pueda (un solo permiso para todos).',
+          'Nadie respondió el permiso de administrador a tiempo. El sitio se guardó; el archivo hosts quedó igual. Si aún ve el aviso de Windows, cancélelo (ya no hará nada). Aplique los pendientes cuando pueda (un solo permiso para todos).',
         denegado:
           'Windows no permitió escribir el archivo hosts. Es posible que un antivirus lo bloquee.',
       } as Record<string, string>,

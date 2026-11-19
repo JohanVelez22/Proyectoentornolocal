@@ -478,9 +478,9 @@ describe('Nucleo', () => {
         orden.push(`iniciar ${id}`);
       });
       const aplicar = n.sitios.aplicar.bind(n.sitios);
-      vi.spyOn(n.sitios, 'aplicar').mockImplementation(async () => {
+      vi.spyOn(n.sitios, 'aplicar').mockImplementation(async (o) => {
         orden.push('aplicar');
-        return aplicar();
+        return aplicar(o);
       });
       const r = await n.guardarAjustes({ puerto: 8090, trabajadores: 2 });
       expect(orden).toEqual(['detener nginx', 'aplicar', 'iniciar nginx']);

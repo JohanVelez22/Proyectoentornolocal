@@ -504,3 +504,48 @@ describe('GestorSitios: hosts fuera de la cola (QA 1)', () => {
     expect(existsSync(rutas.vhost('a'))).toBe(true);
   });
 });
+
+describe('GestorSitios.aplicar: orden y errores de hosts (ronda de seguridad)', () => {
+  const armar = (sincronizar: () => Promise<never | { ok: true }>, orden: string[]) => {
+    const eventos = new Eventos<EventosNucleo>();
+    eventos.on('sitio:cambio', () => orden.push('sitio:cambio'));
+    return new GestorSitios({
+      almacen: new Almacen(rutas),
+      rutas,
+      nginx: { validar: async () => ({ ok: true, salida: 'ok' }), recargar: async () => undefined },
+      estadoNginx: () => 'apagado',
+      hosts: {
+        sincronizar: async () => {
+          orden.push('hosts');
+          return sincronizar();
+        },
+      },
+      instalador: { instalado: async () => true, instalados: async () => ['1.28.0'] },
+      eventos,
+    });
+  };
+
+  it('emite sitio:cambio y corre trasNginx antes de hosts', async () => {
+    const orden: string[] = [];
+    const g = armar(async () => ({ ok: true }), orden);
+    await g.crear(datos('a.test'));
+    orden.length = 0;
+    const r = await g.aplicar({
+      trasNginx: async (n) => {
+        orden.push('trasNginx');
+        return { ok: n.ok, salida: 'Nginx reiniciado' };
+      },
+    });
+    expect(orden).toEqual(['sitio:cambio', 'trasNginx', 'hosts']);
+    expect(r.nginx.salida).toBe('Nginx reiniciado');
+  });
+
+  it('si sincronizar lanza, hosts queda {ok:false, motivo:error}', async () => {
+    const g = armar(async () => {
+      throw new Error('raro');
+    }, []);
+    await g.crear(datos('a.test'));
+    const r = await g.aplicar();
+    expect(r.hosts).toMatchObject({ ok: false, motivo: 'error' });
+  });
+});

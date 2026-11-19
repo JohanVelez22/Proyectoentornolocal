@@ -594,7 +594,11 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'tuneles.estados': (n) => n.tuneles.estados(),
   'hosts.sincronizar': async (n) => {
     const sitios = await n.sitios.listar();
-    return n.hosts.sincronizar([...new Set(sitios.flatMap((s) => [s.dominio, ...s.alias]))]);
+    // Pedido explícito ("Aplicar hosts pendientes"): vuelve a pedir permiso aunque el último
+    // UAC se haya cancelado o vencido.
+    return n.hosts.sincronizar([...new Set(sitios.flatMap((s) => [s.dominio, ...s.alias]))], {
+      reintentar: true,
+    });
   },
   detectarProyecto: (n, _s, carpeta) => n.detectarProyecto(texto(carpeta, 'carpeta')),
   'config.leer': (n) => n.config.leer(),

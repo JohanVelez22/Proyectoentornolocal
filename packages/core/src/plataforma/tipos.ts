@@ -9,6 +9,11 @@ export type ResultadoEscritura =
 export interface OpcionesEscrituraAdmin {
   /** Plazo para que el usuario conteste el UAC; al vencer se corta y no se escribe nada. */
   tiempoLimiteMs?: number;
+  /**
+   * SHA-256 (hex) del destino tal como se leyó al calcular `contenido` (`NINGUNO` si no existía):
+   * si cambió mientras se esperaba el permiso, no se copia.
+   */
+  hashPrevio?: string;
 }
 
 /** Sistema y arquitectura de los binarios del catálogo. */
@@ -91,6 +96,10 @@ export interface Plataforma extends Partial<CapacidadesPlataforma> {
     contenido: string,
     o?: OpcionesEscrituraAdmin,
   ): Promise<ResultadoEscritura>;
+  /** Corta las escrituras elevadas en curso (UAC abierto) al cerrar la app. */
+  cancelarEscriturasAdmin?(): void;
+  /** Borra los temporales de escrituras elevadas de ejecuciones anteriores. */
+  limpiarTemporalesAdmin?(): Promise<void>;
   quienUsaPuerto(puerto: number): Promise<{ pid: number; nombre: string } | null>;
   /** Dueños de varios puertos en una sola consulta; los libres no aparecen en el mapa. */
   duenosDePuertos(puertos: number[]): Promise<Map<number, { pid: number; nombre: string }>>;
@@ -124,6 +133,8 @@ export type Ejecutor = (
     env?: Record<string, string>;
     /** Texto que se escribe en la entrada estándar del proceso. */
     entrada?: string;
+    /** Al abortarse, se mata el proceso (p. ej. la PowerShell que espera un UAC al cerrar). */
+    senal?: AbortSignal;
   },
 ) => Promise<{ codigo: number; stdout: string; stderr: string }>;
 

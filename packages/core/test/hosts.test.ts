@@ -14,6 +14,14 @@ import {
   interpretarTasklist,
 } from '../src/plataforma/win';
 
+/** Script elevado (base64 de -EncodedCommand) que arma PlataformaWindows.escribirComoAdmin. */
+function scriptDe(args: string[]): string {
+  const b64 = /'-EncodedCommand','([A-Za-z0-9+/=]+)'/.exec(args.join(' '))?.[1] ?? '';
+  return Buffer.from(b64, 'base64').toString('utf16le');
+}
+/** Ruta del temporal que el script elevado copiaría. */
+const temporalDe = (args: string[]): string => /^\$t = '([^']+)'$/m.exec(scriptDe(args))?.[1] ?? '';
+
 let ruta: string;
 let llamadas: number;
 let resultado: ResultadoEscritura;
@@ -296,8 +304,7 @@ describe('PlataformaWindows con ejecutor falso', () => {
       motivo: 'denegado',
     });
     const ok = new PlataformaWindows(async (_c, args) => {
-      const m = /-LiteralPath ''([^']+)''/.exec(args.join(' '));
-      await writeFile(destino, await readFile(m?.[1] ?? '', 'utf8'), 'utf8');
+      await writeFile(destino, await readFile(temporalDe(args), 'utf8'), 'utf8');
       return { codigo: 0, stdout: '', stderr: '' };
     });
     expect(await ok.escribirComoAdmin(destino, 'nuevo')).toEqual({ ok: true });
@@ -402,7 +409,7 @@ describe('PlataformaWindows.escribirComoAdmin con plazo (QA 1)', () => {
     let temporal = '';
     const p = new PlataformaWindows(async (_c, args, o) => {
       opciones.push(o);
-      temporal = /-LiteralPath ''([^']+)''/.exec(args.join(' '))?.[1] ?? '';
+      temporal = temporalDe(args);
       await new Promise((r) => setTimeout(r, 40));
       return { codigo: 1, stdout: '', stderr: 'Command failed' };
     });
@@ -427,5 +434,60 @@ describe('GestorHosts: pendientes en el resultado (QA 1)', () => {
     );
     const r = await new GestorHosts(falsa(), eventos).sincronizar(['a.test', 'b.test']);
     expect(r).toMatchObject({ ok: false, pendientes: ['b.test'] });
+  });
+});
+
+describe('GestorHosts: no repetir UACs (ronda de seguridad)', () => {
+  it('tras cancelar, un guardado automático con lo mismo no vuelve a pedir; el pedido explícito sí', async () => {
+    resultado = { ok: false, motivo: 'cancelado' };
+    const g = new GestorHosts(falsa(), eventos);
+    expect(await g.sincronizar(['a.test'])).toMatchObject({ ok: false, motivo: 'cancelado' });
+    expect(await g.sincronizar(['a.test'])).toMatchObject({ ok: false, motivo: 'cancelado' });
+    expect(llamadas).toBe(1);
+    // Dominios distintos = contenido distinto: sí se pide.
+    await g.sincronizar(['a.test', 'b.test']);
+    expect(llamadas).toBe(2);
+    resultado = { ok: true };
+    expect(await g.sincronizar(['a.test', 'b.test'], { reintentar: true })).toEqual({ ok: true });
+    expect(llamadas).toBe(3);
+  });
+
+  it('mientras la escritura elevada anterior sigue viva no se abre otra', async () => {
+    let soltar: (r: ResultadoEscritura) => void = () => undefined;
+    const p = {
+      ...falsa(),
+      escribirComoAdmin: () => {
+        llamadas++;
+        return new Promise<ResultadoEscritura>((r) => (soltar = r));
+      },
+    };
+    const g = new GestorHosts(p, eventos, { tiempoLimiteMs: 20 });
+    expect(await g.sincronizar(['a.test'])).toMatchObject({ motivo: 'tiempo' });
+    expect(await g.sincronizar(['a.test', 'b.test'], { reintentar: true })).toMatchObject({
+      motivo: 'tiempo',
+    });
+    expect(llamadas).toBe(1);
+    soltar({ ok: false, motivo: 'tiempo' });
+    await new Promise((r) => setTimeout(r, 5));
+    await g.sincronizar(['a.test', 'b.test'], { reintentar: true });
+    expect(llamadas).toBe(2);
+  });
+
+  it('pasa a la plataforma la huella del hosts leído', async () => {
+    const huellas: (string | undefined)[] = [];
+    const p = {
+      ...falsa(),
+      escribirComoAdmin: async (_d: string, _c: string, o?: { hashPrevio?: string }) => {
+        huellas.push(o?.hashPrevio);
+        return { ok: false as const, motivo: 'denegado' as const };
+      },
+    };
+    await new GestorHosts(p, eventos).sincronizar(['a.test']);
+    const { createHash } = await import('node:crypto');
+    expect(huellas).toEqual([
+      createHash('sha256')
+        .update(await readFile(ruta))
+        .digest('hex'),
+    ]);
   });
 });

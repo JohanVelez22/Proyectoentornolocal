@@ -154,7 +154,7 @@ export const en: Textos = {
       motivos: {
         cancelado: 'Administrator permission was canceled. The hosts file was not changed.',
         tiempo:
-          'Nobody answered the administrator prompt in time. The site was saved; the hosts file was not changed. Apply the pending entries when you can (one prompt for all).',
+          'Nobody answered the administrator prompt in time. The site was saved; the hosts file was not changed. If you still see the Windows prompt, cancel it (it will no longer do anything). Apply the pending entries when you can (one prompt for all).',
         denegado:
           'Windows did not allow writing to the hosts file. An antivirus may be blocking it.',
       } as Record<string, string>,

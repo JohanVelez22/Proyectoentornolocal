@@ -272,12 +272,28 @@ export class GestorSitios {
    * Genera los vhosts y recarga/valida Nginx en la cola; el archivo hosts se sincroniza FUERA de
    * la cola: un UAC abierto (hasta su plazo) no frena otros guardados (sitios, credenciales, FTP).
    */
-  async aplicar(): Promise<ResultadoAplicar> {
-    const { nginx, httpsPendiente, sitios } = await this.serializar(() => this.aplicarSinCola());
+  async aplicar(
+    o: {
+      /** Corre tras aplicar Nginx y ANTES de hosts (p. ej. volver a encender Nginx). */
+      trasNginx?: (nginx: ResultadoAplicar['nginx']) => Promise<ResultadoAplicar['nginx']>;
+    } = {},
+  ): Promise<ResultadoAplicar> {
+    const aplicado = await this.serializar(() => this.aplicarSinCola());
+    const { httpsPendiente, sitios } = aplicado;
+    // Los sitios ya están aplicados: la interfaz se entera sin esperar al UAC.
+    this.d.eventos.emit('sitio:cambio', sitios);
+    // Lo que no debe esperar a un UAC (encender Nginx) va antes de hosts.
+    const nginx = o.trasNginx ? await o.trasNginx(aplicado.nginx) : aplicado.nginx;
     // Los hosts se sincronizan aunque nginx falle: una entrada sin vhost es inofensiva
     // y evita pedir otra vez permiso de administrador (UAC) más adelante.
     const dominios = [...new Set(sitios.flatMap((s) => [s.dominio, ...s.alias]))].sort();
-    const r = await this.d.hosts.sincronizar(dominios);
+    let r: Awaited<ReturnType<DepsSitios['hosts']['sincronizar']>>;
+    try {
+      r = await this.d.hosts.sincronizar(dominios);
+    } catch (e) {
+      console.error('No se pudo sincronizar el archivo hosts:', e instanceof Error ? e.message : e);
+      r = { ok: false, motivo: 'error', comandoManual: '' };
+    }
     const hosts = r.ok
       ? { ok: true }
       : { ok: false, motivo: r.motivo, comandoManual: r.comandoManual };
@@ -293,7 +309,6 @@ export class GestorSitios {
         }
       }
     }
-    this.d.eventos.emit('sitio:cambio', sitios);
     return { nginx, hosts, httpsPendiente };
   }
 

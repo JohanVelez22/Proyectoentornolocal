@@ -388,6 +388,8 @@ export class Nucleo {
     });
     const instalador = new Instalador(rutas, eventos, o.fetch ?? fetch);
     const hosts = new GestorHosts(plataforma, eventos);
+    // Temporales de hosts que dejó una ejecución anterior (cierre brusco con un UAC abierto).
+    void hosts.limpiarTemporales().catch(() => undefined);
     const avisos = new CentroAvisos({
       archivo: path.join(rutas.base, 'run', 'avisos.json'),
       emitir: (a) => eventos.emit('aviso:nuevo', a),
@@ -1611,16 +1613,19 @@ export class Nucleo {
         errores.push(`Nginx: ${mensajeDe(e)}`);
       }
     }
-    const aplicar = await this.sitios.aplicar();
-    if (reiniciarNginx && aplicar.nginx.ok) {
-      try {
-        await this.servicios.iniciar('nginx');
-        reiniciados.push('Nginx');
-        aplicar.nginx = { ok: true, salida: `Nginx reiniciado en el puerto ${a.puerto}.` };
-      } catch (e) {
-        aplicar.nginx = { ok: false, salida: mensajeDe(e) };
-      }
-    }
+    // Nginx se vuelve a encender ANTES de hosts: un UAC sin contestar no lo deja apagado.
+    const aplicar = await this.sitios.aplicar({
+      trasNginx: async (nginx) => {
+        if (!reiniciarNginx || !nginx.ok) return nginx;
+        try {
+          await this.servicios.iniciar('nginx');
+          reiniciados.push('Nginx');
+          return { ok: true, salida: `Nginx reiniciado en el puerto ${a.puerto}.` };
+        } catch (e) {
+          return { ok: false, salida: mensajeDe(e) };
+        }
+      },
+    });
     return { aplicar, reiniciados, errores };
   }
 
@@ -1726,6 +1731,8 @@ export class Nucleo {
 
   async cerrar(o: { detenerServicios: boolean }): Promise<void> {
     this.cerrado = true;
+    // Un UAC abierto no debe sobrevivir a la app: se corta la PowerShell que lo espera.
+    this.hosts.cancelarElevacion();
     if (this.temporizador) clearInterval(this.temporizador);
     this.temporizador = null;
     if (this.temporizadorVencimientos) clearInterval(this.temporizadorVencimientos);

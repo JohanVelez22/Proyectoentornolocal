@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { readFile, rm, writeFile } from 'node:fs/promises';
+import { readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { arch, homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { rutaBasePorDefecto } from './carpetas';
@@ -15,6 +15,13 @@ import {
   scriptServicios,
   scriptVariableUsuario,
 } from './diagnosticoWin';
+import {
+  codificarComando,
+  MOTIVO_SALIDA_COPIA,
+  PREFIJO_TEMPORAL_HOSTS,
+  scriptCopiaHosts,
+  sha256,
+} from './hostsAdmin';
 import { crearLanzadorOculto, type LanzadorOculto } from './lanzarOculto';
 import { interpretarNetstatTodos, interpretarTasklist, interpretarTasklistTodos } from './netstat';
 import { aBase64, codificarPowerShell, PathUsuarioWindows } from './pathUsuarioWin';
@@ -48,6 +55,7 @@ export const ejecutorPorDefecto: Ejecutor = (cmd, args, opts) =>
         timeout: opts?.timeoutMs,
         cwd: opts?.cwd,
         maxBuffer: 16 * 1024 * 1024,
+        ...(opts?.senal ? { signal: opts.senal } : {}),
         ...(opts?.env ? { env: { ...process.env, ...opts.env } } : {}),
       },
       (err, stdout, stderr) => {
@@ -195,8 +203,6 @@ export async function muestraSistemaWindows(
   }
 }
 
-const comillaSimple = (s: string): string => s.replace(/'/g, "''");
-
 /** ¿Existe el proceso? `process.kill(pid, 0)` no envía nada: solo lo consulta al sistema. */
 export function pidExiste(pid: number): boolean {
   try {
@@ -266,10 +272,15 @@ export interface OpcionesPlataformaWindows {
   /** Lanzador de las ventanas visibles (terminal). */
   lanzarSeparado?: LanzadorSeparado;
   arquitectura?: string;
+  /** Carpeta de los temporales de hosts (por defecto, %TEMP%). */
+  carpetaTemporal?: string;
 }
 
 export class PlataformaWindows implements PlataformaCompleta {
   private contador = 0;
+  /** PowerShell exteriores que esperan un UAC (se cortan al cerrar la app). */
+  private readonly elevaciones = new Set<AbortController>();
+  private readonly carpetaTemporal: string;
   private readonly entorno: NodeJS.ProcessEnv;
   private readonly existeRuta: (ruta: string) => boolean;
   private readonly lanzarSeparado: LanzadorSeparado;
@@ -284,6 +295,7 @@ export class PlataformaWindows implements PlataformaCompleta {
     this.existeRuta = o.existeRuta ?? existsSync;
     this.lanzarSeparado = o.lanzarSeparado ?? lanzarSeparado;
     this.arquitectura = o.arquitectura ?? arch();
+    this.carpetaTemporal = o.carpetaTemporal ?? tmpdir();
   }
 
   carpetaDatos(): string {
@@ -408,31 +420,46 @@ export class PlataformaWindows implements PlataformaCompleta {
     o: OpcionesEscrituraAdmin = {},
   ): Promise<ResultadoEscritura> {
     const tmp = path.join(
-      tmpdir(),
-      `pel-hosts-${process.pid}-${++this.contador}-${randomUUID().slice(0, 8)}.txt`,
+      this.carpetaTemporal,
+      `${PREFIJO_TEMPORAL_HOSTS}${process.pid}-${++this.contador}-${randomUUID().slice(0, 8)}.txt`,
     );
+    const ctl = new AbortController();
+    this.elevaciones.add(ctl);
     try {
-      await writeFile(tmp, contenido, 'utf8');
-      const interno = `Copy-Item -LiteralPath '${comillaSimple(tmp)}' -Destination '${comillaSimple(destino)}' -Force; ipconfig /flushdns | Out-Null`;
-      const externo = `Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList '-NoProfile','-Command','${comillaSimple(interno)}'`;
-      // Con plazo, el ejecutor corta la PowerShell que espera al UAC; el temporal se borra al
-      // salir (finally), así un UAC aceptado tarde no tiene qué copiar y hosts queda como estaba.
+      const datos = Buffer.from(contenido, 'utf8');
+      await writeFile(tmp, datos);
+      // El script elevado se comprueba a sí mismo antes de copiar: un UAC aceptado tarde (o un
+      // temporal que no se pudo borrar) no escribe nada.
+      const interno = scriptCopiaHosts({
+        temporal: tmp,
+        destino,
+        limiteUnixMs: o.tiempoLimiteMs ? Date.now() + o.tiempoLimiteMs : null,
+        hashTemporal: sha256(datos),
+        hashPrevio: o.hashPrevio ?? null,
+      });
+      const externo =
+        `$p = Start-Process powershell -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ArgumentList ` +
+        `'-NoProfile','-NonInteractive','-EncodedCommand','${codificarComando(interno)}'; exit $p.ExitCode`;
       const desde = Date.now();
-      const r = await this.ejecutar(
-        'powershell',
-        ['-NoProfile', '-Command', externo],
-        o.tiempoLimiteMs ? { timeoutMs: o.tiempoLimiteMs } : undefined,
-      );
+      const r = await this.ejecutar('powershell', ['-NoProfile', '-Command', externo], {
+        ...(o.tiempoLimiteMs ? { timeoutMs: o.tiempoLimiteMs } : {}),
+        senal: ctl.signal,
+      });
       if (r.codigo !== 0 && /cancel/i.test(r.stderr)) return { ok: false, motivo: 'cancelado' };
+      const mapeado = MOTIVO_SALIDA_COPIA[r.codigo];
+      if (mapeado) return mapeado;
       const vencido =
-        o.tiempoLimiteMs !== undefined && r.codigo !== 0 && Date.now() - desde >= o.tiempoLimiteMs;
-      let actual: string | null = null;
+        ctl.signal.aborted ||
+        (o.tiempoLimiteMs !== undefined &&
+          r.codigo !== 0 &&
+          Date.now() - desde >= o.tiempoLimiteMs);
+      let actual: Buffer | null = null;
       try {
-        actual = await readFile(destino, 'utf8');
+        actual = await readFile(destino);
       } catch {
         actual = null;
       }
-      if (actual === contenido) return { ok: true };
+      if (actual !== null && actual.equals(datos)) return { ok: true };
       if (vencido) return { ok: false, motivo: 'tiempo' };
       const detalle = r.stderr.trim();
       return detalle
@@ -441,7 +468,29 @@ export class PlataformaWindows implements PlataformaCompleta {
     } catch (e) {
       return { ok: false, motivo: 'error', detalle: e instanceof Error ? e.message : String(e) };
     } finally {
+      this.elevaciones.delete(ctl);
       await rm(tmp, { force: true }).catch(() => undefined);
+    }
+  }
+
+  /** Corta las PowerShell que esperan un UAC (al cerrar la app o terminar la sesión). */
+  cancelarEscriturasAdmin(): void {
+    for (const c of this.elevaciones) c.abort();
+    this.elevaciones.clear();
+  }
+
+  /** Borra los temporales de hosts que dejaron otras ejecuciones (otro PID). */
+  async limpiarTemporalesAdmin(): Promise<void> {
+    let nombres: string[];
+    try {
+      nombres = await readdir(this.carpetaTemporal);
+    } catch {
+      return;
+    }
+    for (const n of nombres) {
+      const m = new RegExp(`^${PREFIJO_TEMPORAL_HOSTS}(\\d+)-[\\w-]+\\.txt$`).exec(n);
+      if (!m || Number(m[1]) === process.pid) continue;
+      await rm(path.join(this.carpetaTemporal, n), { force: true }).catch(() => undefined);
     }
   }
 

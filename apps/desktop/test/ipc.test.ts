@@ -228,7 +228,9 @@ describe('registrarIpc', () => {
     ] as never);
     registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
     await canales.get('entorno:hosts.sincronizar')!({});
-    expect(crudo.hosts.sincronizar).toHaveBeenCalledWith(['a.test', 'b.test', 'c.test']);
+    expect(crudo.hosts.sincronizar).toHaveBeenCalledWith(['a.test', 'b.test', 'c.test'], {
+      reintentar: true,
+    });
   });
 
   it('pasa los argumentos al método del núcleo', async () => {
