@@ -5,6 +5,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import type { EstadoGit, PasoReceta as DefPaso, ResultadoTraer, Sitio } from '../../shared/api';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
+import { solicitudes } from '../composables/solicitudes';
 import { textos } from '../i18n';
 import { useProyectos } from '../stores/proyectos';
 import { etiquetaPaso, pasosSugeridos, urlWebRemoto } from '../utilidades/proyectos';
@@ -57,6 +58,17 @@ async function traer(): Promise<void> {
   traido.value = r;
   sugeridos.value = pasosSugeridos(r, guardada).map((paso) => ({ paso, activo: true }));
 }
+
+// "Traer cambios" pedido desde la paleta de comandos para este proyecto.
+watch(
+  () => solicitudes.traerCambios,
+  (id) => {
+    if (id !== props.sitio.id) return;
+    solicitudes.traerCambios = null;
+    if (!ocupado('traer')) void traer();
+  },
+  { immediate: true },
+);
 
 function ejecutarSugeridos(): void {
   const receta = (sugeridos.value ?? []).filter((p) => p.activo).map((p) => p.paso);

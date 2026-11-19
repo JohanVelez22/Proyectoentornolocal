@@ -2,7 +2,9 @@
 import { NAlert, NButton, NCard, NProgress, useDialog } from 'naive-ui';
 import { computed, onBeforeUnmount, onMounted } from 'vue';
 import { api } from '../api';
+import { useRouter } from 'vue-router';
 import { useAccion } from '../composables/useAccion';
+import { solicitudes } from '../composables/solicitudes';
 import { textos } from '../i18n';
 import { useMetricas } from '../stores/metricas';
 import { useServicios } from '../stores/servicios';
@@ -22,6 +24,13 @@ const metricas = useMetricas();
 const servicios = useServicios();
 const dialog = useDialog();
 const { ejecutar } = useAccion();
+const router = useRouter();
+
+/** Abre Herramientas → Puertos en uso (para ver quién ocupa un puerto). */
+function verPuertos(): void {
+  solicitudes.herramienta = 'puertos';
+  void router.push({ name: 'herramientas' });
+}
 
 const COLORES = { cpu: '#6470e0', ram: '#0ea5e9', bajada: '#16a34a', subida: '#d97706' };
 
@@ -94,9 +103,14 @@ function finalizar(a: AlertaPanel): void {
       >
         <div class="alerta-fila">
           <span>{{ a.texto }}</span>
-          <NButton v-if="a.proceso" size="tiny" secondary type="error" @click="finalizar(a)">
-            {{ t.alertas.finalizar }}
-          </NButton>
+          <span class="alerta-botones">
+            <NButton v-if="a.tipo !== 'ramAlta'" size="tiny" quaternary @click="verPuertos">
+              {{ t.alertas.verPuertos }}
+            </NButton>
+            <NButton v-if="a.proceso" size="tiny" secondary type="error" @click="finalizar(a)">
+              {{ t.alertas.finalizar }}
+            </NButton>
+          </span>
         </div>
       </NAlert>
       <NAlert v-if="metricas.errorPuertos" type="info" :show-icon="true" class="alerta">
@@ -219,6 +233,11 @@ function finalizar(a: AlertaPanel): void {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+.alerta-botones {
+  display: inline-flex;
+  gap: 6px;
+  flex: none;
 }
 .metricas {
   display: grid;

@@ -11,6 +11,7 @@ import RegistrosProyecto from '../componentes/RegistrosProyecto.vue';
 import SugerenciasProyectos from '../componentes/SugerenciasProyectos.vue';
 import TarjetaProyecto from '../componentes/TarjetaProyecto.vue';
 import { useAccion } from '../composables/useAccion';
+import { solicitudes } from '../composables/solicitudes';
 import { textos } from '../i18n';
 import { useHttps } from '../stores/https';
 import { useProyectos } from '../stores/proyectos';
@@ -82,6 +83,17 @@ function alAplicar(r: ResultadoAplicar): void {
   // El estado de HTTPS (autoridad, puerto ocupado) puede haber cambiado al guardar.
   void https.cargar();
 }
+
+// "Clonar desde GitHub" o "Agregar un proyecto" desde la paleta de comandos.
+watch(
+  () => solicitudes.agregarProyecto,
+  (v) => {
+    if (!v) return;
+    solicitudes.agregarProyecto = false;
+    agregando.value = true;
+  },
+  { immediate: true },
+);
 
 // Si Nginx cambia de estado, el puerto HTTPS puede haber quedado libre u ocupado.
 watch(

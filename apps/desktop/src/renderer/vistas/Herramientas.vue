@@ -16,7 +16,8 @@ import {
   Text,
 } from '@vicons/ionicons5';
 import { NDrawer, NDrawerContent, NEmpty, NIcon, NInput } from 'naive-ui';
-import { computed, defineAsyncComponent, ref, type Component } from 'vue';
+import { computed, defineAsyncComponent, ref, watch, type Component } from 'vue';
+import { solicitudes } from '../composables/solicitudes';
 import { textos } from '../i18n';
 
 const t = textos.herramientas;
@@ -70,6 +71,17 @@ const lista = computed(() => {
     return normalizar(`${h.nombre} ${h.descripcion}`).includes(q);
   });
 });
+
+// Pedido de la paleta de comandos o de una alerta de Inicio (p. ej. 'puertos').
+watch(
+  () => solicitudes.herramienta,
+  (c) => {
+    if (!c) return;
+    solicitudes.herramienta = null;
+    if (c in componentes) abierta.value = c as Clave;
+  },
+  { immediate: true },
+);
 
 const visible = computed({
   get: () => abierta.value !== null,

@@ -9,9 +9,11 @@ import {
   Server as IconoServicios,
   Settings as IconoAjustes,
   Sparkles as IconoIa,
+  Search as IconoBuscar,
   SwapHorizontal as IconoTuneles,
 } from '@vicons/ionicons5';
 import {
+  NButton,
   NIcon,
   NLayout,
   NLayoutContent,
@@ -21,12 +23,20 @@ import {
   useNotification,
   type MenuOption,
 } from 'naive-ui';
-import { computed, h, onBeforeUnmount, onMounted, ref, type Component } from 'vue';
+import { computed, h, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
+import { solicitudes } from '../composables/solicitudes';
+import AsistenteInicio from './AsistenteInicio.vue';
 import ConfirmacionMcp from './ConfirmacionMcp.vue';
-import { textos } from '../i18n';
+import PaletaComandos from './PaletaComandos.vue';
+import SelectorIdioma from './SelectorIdioma.vue';
+import SelectorTema from './SelectorTema.vue';
+import { idioma, textos } from '../i18n';
+import { GRUPOS_NAV } from '../navegacion';
+import { usePreferencias } from '../stores/preferencias';
+import { useSitios } from '../stores/sitios';
 import type { SeccionNav } from '../router';
 import { detenerEntorno, iniciarEntorno } from '../stores/entorno';
 import { resumenPastilla } from '../utilidades/pastilla';
@@ -43,21 +53,38 @@ const notification = useNotification();
 const contraido = ref(false);
 const falloArranque = ref(false);
 
+const preferencias = usePreferencias();
+const sitios = useSitios();
+
 const icono = (c: Component) => () => h(NIcon, null, { default: () => h(c) });
-const opciones: MenuOption[] = (
-  [
-    ['inicio', IconoInicio],
-    ['proyectos', IconoProyectos],
-    ['servicios', IconoServicios],
-    ['basesDeDatos', IconoBases],
-    ['correo', IconoCorreo],
-    ['iaLocal', IconoIa],
-    ['tuneles', IconoTuneles],
-    ['herramientas', IconoHerramientas],
-    ['registros', IconoRegistros],
-    ['ajustes', IconoAjustes],
-  ] as const
-).map(([clave, c]) => ({ key: clave, label: textos.nav[clave], icon: icono(c) }));
+const ICONOS: Record<SeccionNav, Component> = {
+  inicio: IconoInicio,
+  proyectos: IconoProyectos,
+  servicios: IconoServicios,
+  basesDeDatos: IconoBases,
+  correo: IconoCorreo,
+  iaLocal: IconoIa,
+  tuneles: IconoTuneles,
+  herramientas: IconoHerramientas,
+  registros: IconoRegistros,
+  ajustes: IconoAjustes,
+};
+const item = (k: SeccionNav): MenuOption => ({
+  key: k,
+  label: textos.nav[k],
+  icon: icono(ICONOS[k]),
+});
+/** Barra lateral agrupada (se rearma al cambiar de idioma). */
+const opciones = computed<MenuOption[]>(() => [
+  ...GRUPOS_NAV.map((g) => ({
+    type: 'group' as const,
+    key: `grupo-${g.grupo}`,
+    label: textos.navGrupos[g.grupo],
+    children: g.secciones.map(item),
+  })),
+  { type: 'divider' as const, key: 'division' },
+  item('ajustes'),
+]);
 
 const seccion = computed<SeccionNav>(() => route.meta.seccion ?? 'inicio');
 const titulo = computed(() => textos.nav[seccion.value]);
@@ -75,6 +102,18 @@ const pastilla = computed(() =>
 function navegar(clave: string): void {
   void router.push({ name: clave });
 }
+
+// Primer uso: el asistente se abre solo una vez, con el entorno ya leído y sin proyectos.
+let asistenteRevisado = false;
+watch(
+  () => [preferencias.cargado, servicios.cargado, preferencias.asistenteVisto] as const,
+  ([prefs, entorno, visto]) => {
+    if (asistenteRevisado || !prefs || !entorno) return;
+    asistenteRevisado = true;
+    if (!visto && sitios.lista.length === 0) solicitudes.asistente = true;
+  },
+  { immediate: true },
+);
 
 let bajaAviso: (() => void) | null = null;
 
@@ -161,25 +200,45 @@ onBeforeUnmount(() => {
     <NLayout class="principal">
       <NLayoutHeader class="cabecera">
         <h1>{{ titulo }}</h1>
-        <div
-          class="pastilla"
-          :class="{ viva: pastilla.tono === 'viva', alerta: pastilla.tono === 'alerta' }"
-          role="status"
-        >
-          <span class="pastilla-punto" aria-hidden="true" />
-          {{ pastilla.texto }}
+        <div class="cabecera-acciones">
+          <NButton
+            size="small"
+            secondary
+            class="boton-paleta"
+            :aria-label="textos.barra.paleta"
+            :title="textos.barra.paleta"
+            @click="solicitudes.paleta = true"
+          >
+            <template #icon
+              ><NIcon><IconoBuscar /></NIcon
+            ></template>
+            <kbd>{{ textos.barra.atajoPaleta }}</kbd>
+          </NButton>
+          <SelectorIdioma compacto />
+          <SelectorTema compacto />
+          <div
+            class="pastilla"
+            :class="{ viva: pastilla.tono === 'viva', alerta: pastilla.tono === 'alerta' }"
+            role="status"
+          >
+            <span class="pastilla-punto" aria-hidden="true" />
+            {{ pastilla.texto }}
+          </div>
         </div>
       </NLayoutHeader>
       <NLayoutContent class="contenido" :native-scrollbar="false" content-class="contenido-interno">
         <RouterView v-slot="{ Component: vista }">
           <Transition name="vista" mode="out-in">
-            <component :is="vista" />
+            <!-- Al cambiar de idioma la vista se vuelve a montar: ningún texto queda copiado viejo. -->
+            <component :is="vista" :key="`${route.name?.toString()}-${idioma}`" />
           </Transition>
         </RouterView>
       </NLayoutContent>
     </NLayout>
     <!-- Confirmaciones del servidor MCP: una sola instancia para toda la ventana. -->
     <ConfirmacionMcp />
+    <PaletaComandos />
+    <AsistenteInicio />
   </NLayout>
 </template>
 
@@ -243,7 +302,21 @@ onBeforeUnmount(() => {
   font-weight: 650;
   letter-spacing: -0.015em;
 }
+.cabecera-acciones {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.boton-paleta {
+  margin-right: 4px;
+}
+.boton-paleta kbd {
+  font-family: var(--fuente);
+  font-size: 11px;
+  opacity: 0.7;
+}
 .pastilla {
+  margin-left: 6px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -275,8 +348,8 @@ onBeforeUnmount(() => {
 .vista-enter-active,
 .vista-leave-active {
   transition:
-    opacity 0.14s ease,
-    transform 0.14s ease;
+    opacity var(--transicion) ease,
+    transform var(--transicion) ease;
 }
 .vista-enter-from {
   opacity: 0;
