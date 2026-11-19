@@ -32,6 +32,7 @@ import { Eventos, type EventosNucleo } from './eventos';
 import { ServidorFtp } from './ftp/servidorFtp';
 import { GestorHosts } from './hosts/hosts';
 import { GestorHttps, type EstadoHttps, type ResultadoCA } from './https/certificados';
+import { ConfianzaCa, type EstadoConfianza, type ResultadoFirefox } from './https/confianza';
 import { Adminer } from './herramientas/adminer';
 import { Composer } from './herramientas/composer';
 import { PathUsuario, respaldoPathUsuario } from './herramientas/pathUsuario';
@@ -222,6 +223,7 @@ interface ModulosNucleo {
   registros: Registros;
   puertos: HerramientasPuertos;
   doctor: Doctor;
+  confianza: ConfianzaCa;
   /** Dependencias de los pasos de receta (puerto libre…), también para crear proyectos. */
   depsPasos?: DepsPasos;
 }
@@ -315,6 +317,8 @@ export class Nucleo {
   readonly puertos: HerramientasPuertos;
   /** Revisiones del entorno y reparaciones guiadas (pantalla Doctor). */
   readonly doctor: Doctor;
+  /** Confianza de la CA en Node, Python y Firefox. */
+  readonly confianza: ConfianzaCa;
   /**
    * Token de GitHub para lo que no pasa por la ventana (MCP). Lo fija el proceso principal
    * (safeStorage); el núcleo nunca lo guarda, lo registra ni lo emite.
@@ -363,6 +367,7 @@ export class Nucleo {
     this.registros = m.registros;
     this.puertos = m.puertos;
     this.doctor = m.doctor;
+    this.confianza = m.confianza;
     this.depsPasos = m.depsPasos;
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
@@ -506,7 +511,13 @@ export class Nucleo {
         ini: await servicios.php.asegurarPhpIni(elegida),
       };
     };
+    const confianza = new ConfianzaCa({
+      rutas,
+      plataforma: plat,
+      carpetaRespaldos: carpetaRespaldosDoctor(rutas),
+    });
     procesos = new ProcesosProyecto({
+      confianza,
       rutas,
       supervisor,
       runtimes,
@@ -557,6 +568,7 @@ export class Nucleo {
         phpPorDefecto: () => composer.phpPorDefecto(),
         runtimes,
         plataforma: plat,
+        confianza,
       }),
       pathUsuario: new PathUsuario({
         rutas,
@@ -598,6 +610,7 @@ export class Nucleo {
         leerSitios: () => sitios.listar(),
         rutaLogProceso: (sitioId, procesoId) => procesos.rutaLog(sitioId, procesoId),
       }),
+      confianza,
       doctor: new Doctor({
         plataforma: plat,
         carpetaDatos: rutas.base,
@@ -642,6 +655,7 @@ export class Nucleo {
           },
         },
         reintentarServicio: (id) => servicios.iniciar(id as IdServicio),
+        confianza,
         avisos,
       }),
       puertos: new HerramientasPuertos({
@@ -1033,6 +1047,20 @@ export class Nucleo {
     if (!sitio) throw new Error('El sitio no existe.');
     await this.composer.sincronizarShims();
     await this.terminal.abrir(sitio);
+  }
+
+  estadoConfianza(): Promise<EstadoConfianza> {
+    return this.confianza.estado();
+  }
+
+  /** Fija o quita NODE_EXTRA_CA_CERTS como variable del usuario (el renderer ya confirmó). */
+  cambiarNodeGlobal(activar: boolean): Promise<EstadoConfianza> {
+    return this.confianza.nodeGlobal(activar);
+  }
+
+  /** Activa o quita la confianza en `user.js` de los perfiles de Firefox (ya confirmado). */
+  cambiarFirefoxConfianza(activar: boolean): Promise<ResultadoFirefox[]> {
+    return this.confianza.firefoxActivar(activar);
   }
 
   estadoPathUsuario(): Promise<boolean> {

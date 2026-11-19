@@ -585,3 +585,63 @@ describe('Doctor: revisar y reparar', () => {
     expect(d.ultimo().some((x) => x.codigo === 'doctor.vcredist_ausente')).toBe(false);
   });
 });
+
+describe('Doctor: confianza de la CA en Firefox', () => {
+  const perfiles = (lista: { perfil: string; activo: boolean; abierto: boolean }[]) => {
+    const activados: boolean[] = [];
+    return {
+      activados,
+      confianza: {
+        caCreada: () => true,
+        firefox: async () => lista,
+        firefoxActivar: async (a: boolean) => {
+          activados.push(a);
+          return lista.map((p) =>
+            p.abierto
+              ? { perfil: p.perfil, ok: false, codigo: 'firefox.abierto' as const }
+              : { perfil: p.perfil, ok: true },
+          );
+        },
+      },
+    };
+  };
+
+  it('sano: sin CA, sin Firefox o con todos los perfiles activos no hay hallazgo', async () => {
+    expect(await solo(new Doctor(deps()), ['confianza'])).toEqual([]);
+    const { confianza } = perfiles([{ perfil: 'a', activo: true, abierto: false }]);
+    expect(await solo(new Doctor(deps({ confianza })), ['confianza'])).toEqual([]);
+    const sinCa = { ...perfiles([{ perfil: 'a', activo: false, abierto: false }]).confianza };
+    sinCa.caCreada = () => false;
+    expect(await solo(new Doctor(deps({ confianza: sinCa })), ['confianza'])).toEqual([]);
+  });
+
+  it('perfil sin confianza: aviso con reparación que activa (con confirmación)', async () => {
+    const p = perfiles([
+      { perfil: 'a.default', activo: false, abierto: false },
+      { perfil: 'b', activo: true, abierto: false },
+    ]);
+    const d = new Doctor(deps({ confianza: p.confianza }));
+    const [h] = await solo(d, ['confianza']);
+    expect(h).toMatchObject({
+      revision: 'confianza',
+      gravedad: 'aviso',
+      codigo: 'doctor.firefox_sin_confianza',
+      datos: { cantidad: 1 },
+      reparacion: {
+        id: 'firefox-confianza',
+        codigo: 'doctor.reparaciones.firefox_confianza',
+        soloInforma: false,
+      },
+    });
+    expect(h!.evidencia).toContain('a.default');
+    expect(await d.reparar(h!.id, true)).toEqual({ ok: true });
+    expect(p.activados).toEqual([true]);
+  });
+
+  it('con Firefox abierto la reparación falla con firefox.abierto', async () => {
+    const p = perfiles([{ perfil: 'a', activo: false, abierto: true }]);
+    const d = new Doctor(deps({ confianza: p.confianza }));
+    const [h] = await solo(d, ['confianza']);
+    expect(await d.reparar(h!.id, true)).toEqual({ ok: false, codigo: 'firefox.abierto' });
+  });
+});

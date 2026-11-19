@@ -55,6 +55,10 @@ const ES: Diccionario = {
       titulo: 'Un certificado venció',
       cuerpo: `El certificado de ${limpio(d['fuente'], 'un sitio')} ya no es válido. Regenérelo.`,
     }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'El Doctor encontró errores en el entorno',
+      cuerpo: `Hay ${limpio(d['errores'], 'varios')} problemas que pueden impedir que el entorno funcione. Abra el Doctor para ver cómo repararlos.`,
+    }),
   },
   porTipo: {
     'servicio-caido': {
@@ -118,6 +122,10 @@ const EN: Diccionario = {
     'avisos.certificado_vencido': (d) => ({
       titulo: 'A certificate expired',
       cuerpo: `The certificate for ${limpio(d['fuente'], 'a site')} is no longer valid. Regenerate it.`,
+    }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'The Doctor found errors in the environment',
+      cuerpo: `${limpio(d['errores'], 'Several')} problems may keep the environment from working. Open the Doctor to see how to fix them.`,
     }),
   },
   porTipo: {

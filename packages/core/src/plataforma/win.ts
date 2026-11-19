@@ -1,11 +1,12 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { open, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { arch, homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { rutaBasePorDefecto } from './carpetas';
 import {
+  bloquesPem,
   interpretarAntivirus,
   interpretarProfilesIni,
   interpretarRangosReservados,
@@ -13,6 +14,7 @@ import {
   NOMBRE_SERVICIO,
   NOMBRE_VARIABLE,
   SCRIPT_ANTIVIRUS,
+  SCRIPT_RAICES,
   SCRIPT_VCREDIST,
   scriptServicios,
   scriptVariableUsuario,
@@ -570,6 +572,36 @@ export class PlataformaWindows implements PlataformaCompleta {
       return [];
     }
     return interpretarProfilesIni(texto, base);
+  }
+
+  /**
+   * Firefox abre `parent.lock` sin compartir y lo borra al cerrarse: si no se puede abrir, el
+   * perfil está en uso. Uno que se abre es un resto de un cierre brusco.
+   */
+  async firefoxEnUso(perfil: string): Promise<boolean> {
+    try {
+      const f = await open(path.win32.join(perfil, 'parent.lock'), 'r+');
+      await f.close();
+      return false;
+    } catch (e) {
+      const codigo = (e as NodeJS.ErrnoException).code;
+      return codigo === 'EBUSY' || codigo === 'EPERM' || codigo === 'EACCES';
+    }
+  }
+
+  async raicesSistema(): Promise<string> {
+    const r = await this.ejecutar('powershell', codificarPowerShell(SCRIPT_RAICES), {
+      timeoutMs: 30_000,
+    });
+    if (r.codigo !== 0) {
+      throw new Error(`No se pudieron leer las raíces del sistema: ${r.stderr.trim() || r.codigo}`);
+    }
+    return bloquesPem(r.stdout)
+      .map(
+        (b) => `${b}
+`,
+      )
+      .join('');
   }
 
   rutaHosts(): string {

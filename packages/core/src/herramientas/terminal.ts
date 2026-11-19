@@ -7,6 +7,7 @@ import {
   lanzarSeparado,
   type LanzadorSeparado,
 } from '../plataforma/terminalWin';
+import type { ConfianzaCa } from '../https/confianza';
 import type { CapacidadesPlataforma } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import type { ResolutorRuntimes, SitioConRuntimes } from '../runtimes/runtimes';
@@ -30,6 +31,8 @@ export interface DepsTerminal {
   phpPorDefecto?: () => Promise<string | null>;
   /** Node y Python del proyecto: sus carpetas van tras PHP y antes de tools/bin. */
   runtimes?: ResolutorRuntimes;
+  /** Confianza en la CA local (NODE_EXTRA_CA_CERTS, bundle de Python) para la terminal. */
+  confianza?: Pick<ConfianzaCa, 'envProyecto'>;
 }
 
 const RAMA = /^\d+\.\d+$/;
@@ -87,7 +90,10 @@ export class Terminal {
         `La carpeta del sitio no existe: ${sitio.carpeta}`,
       );
     }
-    const env = await this.entornoConPath(sitio.php, sitio);
+    const env = {
+      ...(await this.entornoConPath(sitio.php, sitio)),
+      ...(this.d.confianza ? await this.d.confianza.envProyecto(sitio).catch(() => ({})) : {}),
+    };
     await this.plataforma.abrirTerminal(sitio.carpeta, { env });
   }
 }

@@ -9,6 +9,7 @@ export * from './sitios/detectar';
 export * from './sitios/sitios';
 export * from './https/ca';
 export * from './https/certificados';
+export * from './https/confianza';
 export * from './nginx/plantillas';
 export * from './nginx/principal';
 export * from './hosts/bloque';

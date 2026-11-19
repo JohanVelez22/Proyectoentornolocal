@@ -17,6 +17,7 @@ import { Notificador } from './notificaciones';
 import { textoAviso } from '../shared/textosAvisos';
 import { crearBandeja, menuBandeja, type AccionesBandeja } from './bandeja';
 import { textosMain } from './textos';
+import { programarDoctorAlIniciar } from './doctorInicio';
 import { ControlMetricas, registrarIpc } from './ipc';
 import { SecretosGithub } from './secretos';
 import { registrarFinDeSesion, topeCierre } from './sesion';
@@ -287,6 +288,11 @@ if (!app.requestSingleInstanceLock()) {
       { secretos, metricas, idiomaSistema: () => app.getLocale(), aplicarPreferencias },
     );
     n.iniciarSondeo();
+    // El Doctor revisa una vez en segundo plano (nunca si la app ya se está cerrando) y, si hay
+    // errores, publica su aviso.
+    programarDoctorAlIniciar({
+      doctor: { revisar: () => (saliendo ? Promise.resolve([]) : n.doctor.revisar()) },
+    });
     accionesBandeja = {
       abrir: mostrarVentana,
       iniciarTodo: () => void n.servicios.iniciarTodo().catch((e) => console.error(e)),

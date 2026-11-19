@@ -7,6 +7,7 @@ import {
   Home as IconoInicio,
   Layers as IconoBases,
   Mail as IconoCorreo,
+  Medkit as IconoDoctor,
   Server as IconoServicios,
   Settings as IconoAjustes,
   Sparkles as IconoIa,
@@ -73,6 +74,7 @@ const ICONOS: Record<SeccionNav, Component> = {
   iaLocal: IconoIa,
   tuneles: IconoTuneles,
   herramientas: IconoHerramientas,
+  doctor: IconoDoctor,
   registros: IconoRegistros,
   ajustes: IconoAjustes,
 };

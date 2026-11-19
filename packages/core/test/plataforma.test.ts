@@ -341,6 +341,19 @@ describe('PathUsuario y Terminal con PlataformaFalsa', () => {
     expect(f.terminales[0]!.cwd).toBe(carpeta);
     expect(f.terminales[0]!.env?.Path).toBe(`${rutas.herramientas('bin')};C:\\W`);
   });
+
+  it('Terminal agrega las variables de confianza de la CA del sitio', async () => {
+    const f = new PlataformaFalsa();
+    const carpeta = await carpetaTemporal('pel-sitio-');
+    const t = new Terminal({
+      rutas,
+      entorno: { Path: 'C:\\W' },
+      plataforma: f,
+      confianza: { envProyecto: async () => ({ NODE_EXTRA_CA_CERTS: 'ca.crt' }) },
+    });
+    await t.abrir({ carpeta, php: null });
+    expect(f.terminales[0]!.env?.NODE_EXTRA_CA_CERTS).toBe('ca.crt');
+  });
 });
 
 describe('Metricas: suma de los descendientes', () => {

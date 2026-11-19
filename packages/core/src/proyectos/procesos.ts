@@ -1,3 +1,4 @@
+import type { ConfianzaCa } from '../https/confianza';
 import { appendFile, mkdir } from 'node:fs/promises';
 import { ErrorWolf } from '../errores';
 import path from 'node:path';
@@ -66,6 +67,8 @@ export interface DepsProcesosProyecto extends DepsEntorno {
   supervisor: SupervisorProcesos;
   /** Sitios tal como están guardados. */
   leerSitios: () => Promise<Sitio[]>;
+  /** Confianza en la CA local (NODE_EXTRA_CA_CERTS, bundle de Python). */
+  confianza?: Pick<ConfianzaCa, 'envProyecto'>;
 }
 
 export interface EstadoProcesoProyecto {
@@ -338,6 +341,11 @@ export class ProcesosProyecto {
       php: usaPhp(p.comando[0]!),
       carpetaVenv: cwd,
     });
+    // Variables de la CA: si fallan, el proceso arranca igual con la confianza de siempre.
+    const ca: Record<string, string> = this.d.confianza
+      ? await this.d.confianza.envProyecto(sitio, { carpetaVenv: cwd }).catch(() => ({}))
+      : {};
+    const cambios = { ...entorno.cambios, ...ca };
     const avisos = entorno.avisos.map((a) => sanear(a));
     this.avisos.set(id, avisos);
     const { cmd, args } = await resolverPrograma(p.comando, carpeta, this.d, entorno);
@@ -352,7 +360,7 @@ export class ProcesosProyecto {
       args,
       cwd,
       // PORT: muchos servidores de Node (y otros) toman de ahí el puerto asignado.
-      env: p.puerto === null ? entorno.cambios : { ...entorno.cambios, PORT: String(p.puerto) },
+      env: p.puerto === null ? cambios : { ...cambios, PORT: String(p.puerto) },
       // Sin `puerto`: es informativo (proxy) y no sirve de sonda de salud; vite o un servidor
       // que escucha en otra interfaz o tarda en abrirlo no deben morir por eso.
       exigirInicio: true,

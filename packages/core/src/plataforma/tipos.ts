@@ -107,6 +107,13 @@ export interface CapacidadesPlataforma {
   vcRedistInstalado(): Promise<boolean>;
   /** Carpetas de los perfiles de Firefox del usuario ([] si no hay Firefox). */
   perfilesFirefox(): Promise<string[]>;
+  /** ¿Firefox tiene abierto ese perfil? (su archivo de bloqueo está tomado). */
+  firefoxEnUso(perfil: string): Promise<boolean>;
+  /**
+   * Raíces de confianza del sistema en PEM (para el bundle de Python cuando el proyecto no trae
+   * `certifi`). Lanza si no se pudieron leer.
+   */
+  raicesSistema(): Promise<string>;
   /**
    * Detiene un servicio del sistema (p. ej. W3SVC de IIS) con elevación; nunca lo deshabilita. Si
    * otros servicios en marcha dependen de él, no detiene nada (error con el motivo).

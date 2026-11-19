@@ -65,6 +65,12 @@ export class PlataformaFalsa implements PlataformaCompleta {
   /** Lo que devuelve `antivirus` (null: sin antivirus o ilegible). */
   antivirusEstado: EstadoAntivirus | null = null;
   firefox: string[] = [];
+  /** Perfiles de Firefox abiertos (`firefoxEnUso`). */
+  readonly firefoxAbiertos = new Set<string>();
+  /** Raíces del sistema en PEM ('' = no hay; `raicesSistema` lanza). */
+  raices = '';
+  /** Veces que se leyeron las raíces del sistema. */
+  raicesLeidas = 0;
   documentos = '/documentos';
 
   constructor(private readonly o: OpcionesPlataformaFalsa = {}) {}
@@ -199,6 +205,16 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async perfilesFirefox(): Promise<string[]> {
     return [...this.firefox];
+  }
+
+  async firefoxEnUso(perfil: string): Promise<boolean> {
+    return this.firefoxAbiertos.has(perfil);
+  }
+
+  async raicesSistema(): Promise<string> {
+    this.raicesLeidas++;
+    if (!this.raices) throw new Error('Sin raíces del sistema (falsa)');
+    return this.raices;
   }
 
   async detenerServicioSistema(nombre: string): Promise<ResultadoEscritura> {

@@ -132,6 +132,17 @@ const api: ApiEntorno = {
     limpiar: () => invocar('avisos.limpiar'),
     configurar: (cambios) => invocar('avisos.configurar', cambios),
   },
+  doctor: {
+    revisar: (ids) => invocar('doctor.revisar', ids),
+    reparar: (id, confirmacion, reparacionId) =>
+      invocar('doctor.reparar', id, confirmacion, reparacionId),
+    ultimo: () => invocar('doctor.ultimo'),
+  },
+  confianza: {
+    estado: () => invocar('confianza.estado'),
+    nodeGlobal: (activar, confirmacion) => invocar('confianza.nodeGlobal', activar, confirmacion),
+    firefox: (activar, confirmacion) => invocar('confianza.firefox', activar, confirmacion),
+  },
   sistema: {
     elegirCarpeta: () => invocar('sistema.elegirCarpeta'),
     elegirArchivo: () => invocar('sistema.elegirArchivo'),

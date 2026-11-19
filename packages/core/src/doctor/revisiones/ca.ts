@@ -62,3 +62,41 @@ export async function revisarCertificados(d: DepsDoctor): Promise<HallazgoIntern
   }
   return res;
 }
+
+/**
+ * Perfiles de Firefox que no confían en las raíces del sistema (y por eso no en la CA). Solo si
+ * la CA existe; la reparación agrega el bloque marcado en `user.js` de cada perfil cerrado.
+ */
+export async function revisarConfianza(d: DepsDoctor): Promise<HallazgoInterno[]> {
+  const c = d.confianza;
+  if (!c || !c.caCreada()) return [];
+  const faltan = (await c.firefox()).filter((p) => !p.activo);
+  if (faltan.length === 0) return [];
+  return [
+    {
+      id: 'confianza:firefox',
+      revision: 'confianza',
+      gravedad: 'aviso',
+      codigo: 'doctor.firefox_sin_confianza',
+      datos: { cantidad: faltan.length },
+      evidencia: `Perfiles de Firefox sin la confianza: ${faltan
+        .map((p) => (p.abierto ? `${p.perfil} (abierto)` : p.perfil))
+        .join(', ')}`,
+      reparacion: {
+        id: 'firefox-confianza',
+        codigo: 'doctor.reparaciones.firefox_confianza',
+        requiereAdmin: false,
+        soloInforma: false,
+      },
+      aplicar: intentar(async () => {
+        const r = await c.firefoxActivar(true);
+        if (r.some((x) => x.codigo === 'firefox.abierto')) {
+          return { ok: false, codigo: 'firefox.abierto' };
+        }
+        return r.every((x) => x.ok)
+          ? { ok: true }
+          : { ok: false, codigo: 'doctor.reparacion_fallida' };
+      }),
+    },
+  ];
+}

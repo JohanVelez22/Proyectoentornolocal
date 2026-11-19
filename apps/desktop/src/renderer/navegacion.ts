@@ -4,7 +4,7 @@ import type { SeccionNav } from './router';
 export const GRUPOS_NAV = [
   { grupo: 'trabajo', secciones: ['inicio', 'proyectos'] },
   { grupo: 'entorno', secciones: ['servicios', 'basesDeDatos', 'correo', 'iaLocal', 'tuneles'] },
-  { grupo: 'utilidades', secciones: ['herramientas', 'registros'] },
+  { grupo: 'utilidades', secciones: ['herramientas', 'doctor', 'registros'] },
 ] as const satisfies readonly { grupo: string; secciones: readonly SeccionNav[] }[];
 
 export type GrupoNav = (typeof GRUPOS_NAV)[number]['grupo'];

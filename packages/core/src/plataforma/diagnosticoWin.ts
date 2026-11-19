@@ -158,3 +158,33 @@ export function interpretarAntivirus(
   });
   return { activo, excluida: cubre ? true : ilegible ? null : false };
 }
+
+/**
+ * Raíces de confianza del usuario (que incluyen las del equipo) en PEM, solo con .NET (sin el
+ * proveedor `Cert:`, que vive en un módulo). Se omiten las vencidas y las repetidas.
+ */
+export const SCRIPT_RAICES = [
+  "$ErrorActionPreference = 'Stop'",
+  '$vistas = @{}',
+  '$sb = [Text.StringBuilder]::new()',
+  "foreach ($u in 'CurrentUser','LocalMachine') {",
+  "  $s = [Security.Cryptography.X509Certificates.X509Store]::new('Root', $u)",
+  "  $s.Open('ReadOnly')",
+  '  foreach ($c in $s.Certificates) {',
+  '    if ($c.NotAfter -lt [DateTime]::Now -or $vistas.ContainsKey($c.Thumbprint)) { continue }',
+  '    $vistas[$c.Thumbprint] = 1',
+  '    [void]$sb.Append("-----BEGIN CERTIFICATE-----`n")',
+  "    [void]$sb.Append([Convert]::ToBase64String($c.RawData, 'InsertLineBreaks'))",
+  '    [void]$sb.Append("`n-----END CERTIFICATE-----`n")',
+  '  }',
+  '  $s.Close()',
+  '}',
+  '[Console]::Out.Write($sb.ToString())',
+].join('\n');
+
+/** Bloques `CERTIFICATE` de un texto, normalizados con `\n` (lo demás se descarta). */
+export function bloquesPem(texto: string): string[] {
+  return (texto.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g) ?? []).map(
+    (b) => b.replace(/\r\n?/g, '\n'),
+  );
+}

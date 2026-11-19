@@ -57,6 +57,12 @@ const rutas: RouteRecordRaw[] = [
     meta: { seccion: 'herramientas' },
   },
   {
+    path: '/doctor',
+    name: 'doctor',
+    component: () => import('./vistas/Doctor.vue'),
+    meta: { seccion: 'doctor' },
+  },
+  {
     path: '/registros',
     name: 'registros',
     component: () => import('./vistas/Registros.vue'),

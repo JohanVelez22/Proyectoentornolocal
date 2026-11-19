@@ -97,6 +97,14 @@ export const PARAMETROS_ERROR = {
   'doctor.ya_resuelto': [],
   'doctor.ca_vieja_sin_quitar': [],
   'doctor.ca_vuelta_atras_incompleta': [],
+  'doctor.firefox_sin_confianza': ['cantidad'],
+  // Confianza de la CA fuera del almacén de Windows
+  'confianza.sin_ca': [],
+  'confianza.sin_raices': [],
+  'confianza.node_variable_ajena': [],
+  'confianza.variable_fallida': [],
+  'firefox.abierto': [],
+  'firefox.error': [],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

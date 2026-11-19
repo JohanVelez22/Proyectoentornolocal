@@ -60,9 +60,21 @@ import type {
   Sitio,
   TipoSitio,
   VersionDisponible,
+  EstadoConfianza,
+  Hallazgo,
+  IdRevision,
+  Reparacion,
+  ResultadoFirefox,
+  ResultadoReparacion,
 } from '@pel/core';
 
 export type {
+  EstadoConfianza,
+  Hallazgo,
+  Reparacion,
+  IdRevision,
+  ResultadoFirefox,
+  ResultadoReparacion,
   Aviso,
   CierreConfirmacion,
   ConfigProyecto,
@@ -485,6 +497,27 @@ export interface ApiEntorno {
       tipos?: Partial<Config['avisos']['tipos']>;
     }): Promise<Config['avisos']>;
   };
+  doctor: {
+    /** Corre las revisiones pedidas (todas por defecto). */
+    revisar(ids?: IdRevision[]): Promise<Hallazgo[]>;
+    /**
+     * Aplica la reparación del hallazgo. `confirmacion` sale SOLO del diálogo que mostró qué se
+     * hará; `reparacionId` elige la alternativa (`cambiar-puerto`).
+     */
+    reparar(
+      hallazgoId: string,
+      confirmacion: true,
+      reparacionId?: 'cambiar-puerto',
+    ): Promise<ResultadoReparacion>;
+    ultimo(): Promise<Hallazgo[]>;
+  };
+  confianza: {
+    estado(): Promise<EstadoConfianza>;
+    /** NODE_EXTRA_CA_CERTS como variable del usuario (confirmado en un diálogo). */
+    nodeGlobal(activar: boolean, confirmacion: true): Promise<EstadoConfianza>;
+    /** Bloque de WolfCore Dev en user.js de cada perfil (confirmado en un diálogo). */
+    firefox(activar: boolean, confirmacion: true): Promise<ResultadoFirefox[]>;
+  };
   sistema: ApiSistema & ApiSistemaNucleo;
   /** Suscribe a un evento del núcleo; devuelve la función para cancelar. */
   on<K extends keyof EventosNucleo>(nombre: K, fn: (dato: EventosNucleo[K]) => void): () => void;
@@ -640,6 +673,12 @@ export const RUTAS_IPC = [
   'avisos.marcarLeidos',
   'avisos.limpiar',
   'avisos.configurar',
+  'doctor.revisar',
+  'doctor.reparar',
+  'doctor.ultimo',
+  'confianza.estado',
+  'confianza.nodeGlobal',
+  'confianza.firefox',
 ] as const;
 export type RutaIpc = (typeof RUTAS_IPC)[number];
 

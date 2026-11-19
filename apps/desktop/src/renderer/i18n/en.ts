@@ -18,6 +18,7 @@ export const en: Textos = {
     iaLocal: 'Local AI',
     tuneles: 'Tunnels',
     herramientas: 'Tools',
+    doctor: 'Doctor',
     registros: 'Logs',
     ajustes: 'Settings',
     contraer: 'Collapse menu',
@@ -174,6 +175,16 @@ export const en: Textos = {
       'doctor.sin_puerto_libre': 'No free port was found to move the service.',
       'doctor.ca_vuelta_atras_incompleta':
         'The new authority could not be applied and the rollback was incomplete. Check the HTTPS section; there is a dated copy in etc/respaldos.',
+      'doctor.firefox_sin_confianza':
+        'Firefox does not trust the WolfCore Dev authority in {cantidad} profiles (it uses its own store).',
+      'confianza.sin_ca': 'There is no certificate authority yet: create it from HTTPS.',
+      'confianza.sin_raices':
+        'No trusted roots were found for Python (neither certifi nor Windows): nothing was changed.',
+      'confianza.node_variable_ajena':
+        'You already have your own NODE_EXTRA_CA_CERTS: WolfCore Dev does not replace it.',
+      'confianza.variable_fallida': 'The user variable could not be changed.',
+      'firefox.abierto': 'Firefox is open: close it and try again.',
+      'firefox.error': 'The user.js of that profile could not be changed; it was left as it was.',
     },
   },
   avisoInicio: {
@@ -1801,6 +1812,113 @@ export const en: Textos = {
       binario: (n: number) => `[binary, ${n} bytes]`,
       vacio: 'No messages yet.',
       tope: 'The last 500 messages are kept; each one is shown up to 10 KB.',
+    },
+  },
+  doctor: {
+    descripcion:
+      'Checks ports, certificates, the hosts file, PATH, Visual C++, the antivirus and the services, and suggests how to fix them.',
+    revisarAhora: 'Check now',
+    revisando: 'Checking…',
+    sinRevision: 'There is no check yet. Click “Check now”.',
+    sinHallazgos: 'All good: no problems were found.',
+    gravedades: { error: 'Errors', aviso: 'Warnings', info: 'Information' },
+    evidencia: 'What was seen',
+    requiereAdmin: 'Asks for administrator permission',
+    comandoManual: 'Command for an administrator console (it does not run by itself):',
+    copiar: 'Copy command',
+    copiado: 'Command copied.',
+    reparar: 'Fix',
+    alternativa: 'Move the WolfCore Dev port',
+    soloInforma: 'WolfCore Dev does not change this on its own: follow the instructions.',
+    dialogo: {
+      titulo: 'Confirm the fix',
+      queHara: 'This is what will be done:',
+      admin: 'Windows will ask for administrator permission.',
+      puerto: (p: string | number) => `The new port will be ${p}.`,
+      aplicar: 'Apply',
+      cancelar: 'Cancel',
+    },
+    estados: {
+      aplicando: 'Applying…',
+      hecha: 'Fix applied.',
+      fallida: 'It could not be fixed.',
+    },
+    revisiones: {
+      puertos: 'Ports',
+      'rangos-reservados': 'Reserved ranges',
+      ca: 'Certificate authority',
+      certificados: 'Certificates',
+      confianza: 'CA trust',
+      hosts: 'Hosts file',
+      path: 'User PATH',
+      vcredist: 'Visual C++',
+      antivirus: 'Antivirus',
+      servicios: 'Services',
+    },
+    reparaciones: {
+      cambiar_puerto:
+        'Change the WolfCore Dev port to a free one. The other program is not touched.',
+      puerto_manual:
+        'Move the WolfCore Dev port out of the reserved range. Freeing the range is up to you, with the command shown.',
+      detener_iis:
+        'Stop the IIS service (W3SVC) to free the port. It is not disabled: it starts again when Windows restarts.',
+      regenerar_ca:
+        'Create a new certificate authority, trust it in Windows (it will ask you), issue the certificates again and remove the old one. A copy is saved first.',
+      regenerar_certificados: 'Issue the site certificates again and reload Nginx.',
+      hosts_reescribir:
+        'Rewrite the WolfCore Dev block of the hosts file in UTF-8, with a copy first. Other lines are not touched.',
+      hosts_solo_lectura: 'Remove the read-only attribute from the hosts file.',
+      path_duplicados:
+        'Remove repeated WolfCore Dev entries from the user PATH, with a copy of the previous value. Other entries are not touched.',
+      path_ajeno:
+        'Another tool comes first in PATH. WolfCore Dev does not remove it: move it if you need to.',
+      instalar_vcredist:
+        'Install Visual C++ 2015+ x64 with winget. The Microsoft installer asks for its own permission.',
+      antivirus:
+        'Adding the data folder to the antivirus exclusions is up to you, with the command shown.',
+      reintentar_servicio: 'Start the service again.',
+      firefox_confianza:
+        'Add to the user.js of each Firefox profile the preference that trusts the Windows authority, with a copy first. prefs.js is not touched and open profiles are skipped.',
+    },
+    confianza: {
+      titulo: 'CA trust',
+      texto:
+        'Windows already trusts the WolfCore Dev authority; Node, Python and Firefox use their own store.',
+      sinCa: 'There is no certificate authority yet. Create it from HTTPS to use this section.',
+      node: {
+        titulo: 'Node',
+        proyectos: 'Project processes and the Terminal get NODE_EXTRA_CA_CERTS with the authority.',
+        ajena: 'You already have your own NODE_EXTRA_CA_CERTS: WolfCore Dev does not replace it.',
+        global: 'Also as a user variable (for other terminals and programs)',
+        confirmarActivar:
+          'NODE_EXTRA_CA_CERTS will be set as a variable of your user. It affects programs you open afterwards; it is removed when you turn this off.',
+        confirmarDesactivar:
+          'The NODE_EXTRA_CA_CERTS variable set by WolfCore Dev will be removed.',
+      },
+      python: {
+        titulo: 'Python',
+        texto:
+          'Projects with a .venv get REQUESTS_CA_BUNDLE and SSL_CERT_FILE with the certifi roots (or the Windows ones) plus the authority. Never the authority alone.',
+      },
+      firefox: {
+        titulo: 'Firefox',
+        sinPerfiles: 'No Firefox profiles were found.',
+        activo: 'Trusts',
+        inactivo: 'Does not trust',
+        abierto: 'Open',
+        activar: 'Turn on in Firefox',
+        quitar: 'Remove from Firefox',
+        confirmarActivar:
+          'security.enterprise_roots.enabled will be added to the user.js of each profile, between WolfCore Dev markers and with a copy first in etc/respaldos. prefs.js is not touched. Profiles with Firefox open are skipped: close it first.',
+        confirmarQuitar:
+          'The WolfCore Dev block will be removed from the user.js of each profile (with a copy first). Your other preferences stay the same.',
+        resultadoOk: (n: number) => `Done in ${plural(n, 'profile', 'profiles')}.`,
+        resultadoAbiertos: (n: number) =>
+          `${plural(n, 'profile was', 'profiles were')} skipped because Firefox is open. Close it and try again.`,
+        resultadoError: (n: number) => `${plural(n, 'profile', 'profiles')} could not be changed.`,
+      },
+      confirmar: 'Confirm',
+      cancelar: 'Cancel',
     },
   },
   navGrupos: {

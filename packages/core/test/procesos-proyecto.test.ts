@@ -10,6 +10,7 @@ import {
   idSupervisor,
   ProcesosProyecto,
   separarIdSupervisor,
+  type DepsProcesosProyecto,
   type SupervisorProcesos,
 } from '../src/proyectos/procesos';
 import { Rutas } from '../src/rutas';
@@ -83,6 +84,7 @@ interface OpcionesArmado {
   avisos?: string[];
   sinNode?: boolean;
   supervisor?: SupervisorProcesos;
+  confianza?: DepsProcesosProyecto['confianza'];
 }
 
 async function armar(o: OpcionesArmado = {}): Promise<Armado> {
@@ -127,6 +129,7 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
       rutaBin: (tipo, version) => rutas.bin(tipo, version),
     },
     php: async () => ({ exe: phpExe, ini: phpIni }),
+    ...(o.confianza ? { confianza: o.confianza } : {}),
   });
   return { base, carpeta, rutas, sitios, sup, procesos, nodeDir, pythonDir, phpExe, phpIni };
 }
@@ -192,6 +195,35 @@ describe('iniciar', () => {
     expect(def.reiniciar).toBe(false);
     expect(def.log).toBe(a.rutas.logs('proyectos', 'demo-vite.log'));
     expect(await readFile(def.log, 'utf8')).toMatch(/\[WolfCore Dev\] .* > npm run dev\n/);
+  });
+
+  it('confianza de la CA: el proceso recibe las variables de ConfianzaCa (con la carpeta de trabajo)', async () => {
+    const pedidos: { carpeta: string; venv?: string }[] = [];
+    const a = await armar({
+      confianza: {
+        envProyecto: async (s, o) => {
+          pedidos.push({ carpeta: s.carpeta, ...(o?.carpetaVenv ? { venv: o.carpetaVenv } : {}) });
+          return { NODE_EXTRA_CA_CERTS: 'ca.crt', SSL_CERT_FILE: 'bundle.pem' };
+        },
+      },
+    });
+    await a.procesos.iniciar('demo', 'vite');
+    const def = a.sup.iniciados[0]!;
+    expect(def.env?.NODE_EXTRA_CA_CERTS).toBe('ca.crt');
+    expect(def.env?.SSL_CERT_FILE).toBe('bundle.pem');
+    expect(pedidos).toEqual([{ carpeta: a.carpeta, venv: a.carpeta }]);
+  });
+
+  it('si la confianza falla, el proceso arranca igual (sin esas variables)', async () => {
+    const a = await armar({
+      confianza: {
+        envProyecto: async () => {
+          throw new Error('roto');
+        },
+      },
+    });
+    await a.procesos.iniciar('demo', 'vite');
+    expect(a.sup.iniciados[0]!.env?.NODE_EXTRA_CA_CERTS).toBeUndefined();
   });
 
   it('PATH: Scripts del .venv antes que Node y Python del runtime, luego tools\\bin y el PATH', async () => {

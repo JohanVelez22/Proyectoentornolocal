@@ -4,6 +4,8 @@ import { dirname, resolve } from 'node:path';
 import {
   datosPermitidos,
   ErrorWolf,
+  IDS_REVISION,
+  type IdRevision,
   TIPOS_AVISO,
   type TipoAviso,
   PasoRecetaSchema,
@@ -818,7 +820,53 @@ const TABLA: Record<RutaIpc, Manejador> = {
   },
   // Preferencias: solo `nativas` (booleano) y `tipos` (tipos conocidos → booleano).
   'avisos.configurar': (n, _s, cambios) => n.configurarAvisos(cambiosAvisos(cambios)),
+
+  // ---- Doctor y confianza de la CA ----
+  'doctor.revisar': (n, _s, ids) => n.doctor.revisar(idsRevision(ids)),
+  'doctor.reparar': (n, _s, id, confirmacion, reparacionId) =>
+    n.doctor.reparar(
+      textoAcotado(id, 1, 200, 'hallazgo'),
+      confirmado(confirmacion),
+      alternativaDoctor(reparacionId),
+    ),
+  'doctor.ultimo': (n) => n.doctor.ultimo(),
+  'confianza.estado': (n) => n.estadoConfianza(),
+  'confianza.nodeGlobal': (n, _s, activar, confirmacion) => {
+    confirmado(confirmacion);
+    return n.cambiarNodeGlobal(booleano(activar, 'activar'));
+  },
+  'confianza.firefox': (n, _s, activar, confirmacion) => {
+    confirmado(confirmacion);
+    return n.cambiarFirefoxConfianza(booleano(activar, 'activar'));
+  },
 };
+
+/** Ids de revisión del renderer: solo los de `IDS_REVISION`, sin repetir de más. */
+function idsRevision(v: unknown): IdRevision[] | undefined {
+  if (v === undefined) return undefined;
+  if (!Array.isArray(v) || v.length > IDS_REVISION.length) {
+    throw new Error('Argumento no válido: revisiones');
+  }
+  for (const x of v) {
+    if (typeof x !== 'string' || !(IDS_REVISION as readonly string[]).includes(x)) {
+      throw new Error('Argumento no válido: revisiones');
+    }
+  }
+  return v as IdRevision[];
+}
+
+/** La confirmación de un diálogo: exactamente `true` (nunca un valor por defecto). */
+function confirmado(v: unknown): true {
+  if (v !== true) throw new Error('Argumento no válido: confirmacion');
+  return true;
+}
+
+/** Única reparación alternativa que existe: mover el puerto propio. */
+function alternativaDoctor(v: unknown): 'cambiar-puerto' | undefined {
+  if (v === undefined) return undefined;
+  if (v !== 'cambiar-puerto') throw new Error('Argumento no válido: reparación');
+  return v;
+}
 
 /** Cambios de preferencias de avisos del renderer, validados contra la lista de tipos. */
 function cambiosAvisos(v: unknown): {

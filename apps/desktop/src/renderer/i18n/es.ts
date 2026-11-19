@@ -17,6 +17,7 @@ export const es = {
     iaLocal: 'IA local',
     tuneles: 'Túneles',
     herramientas: 'Herramientas',
+    doctor: 'Doctor',
     registros: 'Registros',
     ajustes: 'Ajustes',
     contraer: 'Contraer menú',
@@ -177,6 +178,16 @@ export const es = {
       'doctor.sin_puerto_libre': 'No se encontró un puerto libre para mover el servicio.',
       'doctor.ca_vuelta_atras_incompleta':
         'No se pudo aplicar la autoridad nueva y la vuelta atrás quedó incompleta. Revise la sección HTTPS; hay una copia con fecha en etc/respaldos.',
+      'doctor.firefox_sin_confianza':
+        'Firefox no confía en la autoridad de WolfCore Dev en {cantidad} perfiles (usa su propio almacén).',
+      'confianza.sin_ca': 'Aún no hay autoridad de certificados: créela desde HTTPS.',
+      'confianza.sin_raices':
+        'No se encontraron raíces de confianza para Python (ni certifi ni las de Windows): no se cambió nada.',
+      'confianza.node_variable_ajena':
+        'Ya tiene su propia NODE_EXTRA_CA_CERTS: WolfCore Dev no la reemplaza.',
+      'confianza.variable_fallida': 'No se pudo cambiar la variable del usuario.',
+      'firefox.abierto': 'Firefox está abierto: ciérrelo y vuelva a intentarlo.',
+      'firefox.error': 'No se pudo cambiar el user.js de ese perfil; quedó como estaba.',
     },
   },
   avisoInicio: {
@@ -1817,6 +1828,113 @@ export const es = {
       binario: (n: number) => `[binario, ${n} bytes]`,
       vacio: 'Sin mensajes todavía.',
       tope: 'Se guardan los últimos 500 mensajes; cada uno se muestra hasta 10 KB.',
+    },
+  },
+  doctor: {
+    descripcion:
+      'Revisa puertos, certificados, el archivo hosts, el PATH, Visual C++, el antivirus y los servicios, y propone cómo repararlos.',
+    revisarAhora: 'Revisar ahora',
+    revisando: 'Revisando…',
+    sinRevision: 'Todavía no hay una revisión. Pulse «Revisar ahora».',
+    sinHallazgos: 'Todo en orden: no se encontraron problemas.',
+    gravedades: { error: 'Errores', aviso: 'Avisos', info: 'Información' },
+    evidencia: 'Lo que se vio',
+    requiereAdmin: 'Pide permiso de administrador',
+    comandoManual: 'Comando para una consola de administrador (no se ejecuta solo):',
+    copiar: 'Copiar comando',
+    copiado: 'Comando copiado.',
+    reparar: 'Reparar',
+    alternativa: 'Mover el puerto de WolfCore Dev',
+    soloInforma: 'WolfCore Dev no cambia esto por su cuenta: siga las indicaciones.',
+    dialogo: {
+      titulo: 'Confirmar la reparación',
+      queHara: 'Esto es lo que se hará:',
+      admin: 'Windows le pedirá permiso de administrador.',
+      puerto: (p: string | number) => `El nuevo puerto será ${p}.`,
+      aplicar: 'Aplicar',
+      cancelar: 'Cancelar',
+    },
+    estados: {
+      aplicando: 'Aplicando…',
+      hecha: 'Reparación aplicada.',
+      fallida: 'No se pudo reparar.',
+    },
+    revisiones: {
+      puertos: 'Puertos',
+      'rangos-reservados': 'Rangos reservados',
+      ca: 'Autoridad de certificados',
+      certificados: 'Certificados',
+      confianza: 'Confianza de la CA',
+      hosts: 'Archivo hosts',
+      path: 'PATH del usuario',
+      vcredist: 'Visual C++',
+      antivirus: 'Antivirus',
+      servicios: 'Servicios',
+    },
+    reparaciones: {
+      cambiar_puerto: 'Cambiar el puerto de WolfCore Dev a uno libre. El otro programa no se toca.',
+      puerto_manual:
+        'Mover el puerto de WolfCore Dev fuera del rango reservado. Liberar el rango lo decide usted con el comando que se muestra.',
+      detener_iis:
+        'Detener el servicio de IIS (W3SVC) para liberar el puerto. No se deshabilita: vuelve a arrancar al reiniciar Windows.',
+      regenerar_ca:
+        'Crear una autoridad de certificados nueva, confiarla en Windows (le pedirá confirmación), volver a emitir los certificados y quitar la anterior. Antes se guarda una copia.',
+      regenerar_certificados: 'Volver a emitir los certificados de los sitios y recargar Nginx.',
+      hosts_reescribir:
+        'Reescribir el bloque de WolfCore Dev en el archivo hosts en UTF-8, con una copia previa. Las líneas ajenas no se tocan.',
+      hosts_solo_lectura: 'Quitar el atributo de solo lectura del archivo hosts.',
+      path_duplicados:
+        'Quitar las entradas repetidas de WolfCore Dev del PATH del usuario, con copia del valor anterior. Las ajenas no se tocan.',
+      path_ajeno:
+        'Otra herramienta está antes en el PATH. WolfCore Dev no la quita: cámbiela de lugar si lo necesita.',
+      instalar_vcredist:
+        'Instalar Visual C++ 2015+ x64 con winget. El instalador de Microsoft pide su propio permiso.',
+      antivirus:
+        'Agregar la carpeta de datos a las exclusiones del antivirus lo decide usted, con el comando que se muestra.',
+      reintentar_servicio: 'Volver a iniciar el servicio.',
+      firefox_confianza:
+        'Agregar en el user.js de cada perfil de Firefox la preferencia que confía en la autoridad de Windows, con una copia previa. prefs.js no se toca y los perfiles abiertos se saltan.',
+    },
+    confianza: {
+      titulo: 'Confianza de la CA',
+      texto:
+        'Windows ya confía en la autoridad de WolfCore Dev; Node, Python y Firefox usan su propio almacén.',
+      sinCa: 'Todavía no hay autoridad de certificados. Créela desde HTTPS para usar esta sección.',
+      node: {
+        titulo: 'Node',
+        proyectos:
+          'Los procesos de proyecto y la Terminal reciben NODE_EXTRA_CA_CERTS con la autoridad.',
+        ajena: 'Ya tiene su propia NODE_EXTRA_CA_CERTS: WolfCore Dev no la reemplaza.',
+        global: 'También como variable del usuario (para otras terminales y programas)',
+        confirmarActivar:
+          'Se fijará NODE_EXTRA_CA_CERTS como variable de su usuario. Afecta a los programas que abra después; se quita al desactivar esta opción.',
+        confirmarDesactivar: 'Se quitará la variable NODE_EXTRA_CA_CERTS que puso WolfCore Dev.',
+      },
+      python: {
+        titulo: 'Python',
+        texto:
+          'Los proyectos con .venv reciben REQUESTS_CA_BUNDLE y SSL_CERT_FILE con las raíces de certifi (o las de Windows) más la autoridad. Nunca solo la autoridad.',
+      },
+      firefox: {
+        titulo: 'Firefox',
+        sinPerfiles: 'No se encontraron perfiles de Firefox.',
+        activo: 'Confía',
+        inactivo: 'No confía',
+        abierto: 'Abierto',
+        activar: 'Activar en Firefox',
+        quitar: 'Quitar de Firefox',
+        confirmarActivar:
+          'Se agregará security.enterprise_roots.enabled en el user.js de cada perfil, entre marcas de WolfCore Dev y con una copia previa en etc/respaldos. prefs.js no se toca. Los perfiles con Firefox abierto se saltan: ciérrelo antes.',
+        confirmarQuitar:
+          'Se quitará el bloque de WolfCore Dev del user.js de cada perfil (con copia previa). Sus otras preferencias quedan igual.',
+        resultadoOk: (n: number) => `Listo en ${plural(n, 'perfil', 'perfiles')}.`,
+        resultadoAbiertos: (n: number) =>
+          `${plural(n, 'perfil se saltó', 'perfiles se saltaron')} porque Firefox está abierto. Ciérrelo y vuelva a intentarlo.`,
+        resultadoError: (n: number) =>
+          `${plural(n, 'perfil no se pudo', 'perfiles no se pudieron')} cambiar.`,
+      },
+      confirmar: 'Confirmar',
+      cancelar: 'Cancelar',
     },
   },
   navGrupos: {

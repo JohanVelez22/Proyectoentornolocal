@@ -9,6 +9,7 @@ export const IDS_REVISION = [
   'rangos-reservados',
   'ca',
   'certificados',
+  'confianza',
   'hosts',
   'path',
   'vcredist',
@@ -95,6 +96,14 @@ export interface DepsDoctor {
     regenerarCA(): Promise<ResultadoReparacion>;
   };
   reintentarServicio(id: string): Promise<void>;
+  /** Confianza de la CA fuera del almacén de Windows (Firefox). Sin ella, no se revisa. */
+  confianza?: {
+    caCreada(): boolean;
+    firefox(): Promise<{ perfil: string; activo: boolean; abierto: boolean }[]>;
+    firefoxActivar(
+      activar: boolean,
+    ): Promise<{ perfil: string; ok: boolean; codigo?: 'firefox.abierto' | 'firefox.error' }[]>;
+  };
   avisos?: { publicar(a: EntradaAviso): unknown };
   /** Archivo con el PATH original (por defecto, `etc/path-usuario.respaldo.txt`). */
   respaldoPath?: string;

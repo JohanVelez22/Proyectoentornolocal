@@ -924,6 +924,17 @@ describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
     expect(borrar).toHaveBeenCalledWith('mysql', 'mysql');
   });
 
+  it('confianza de la CA: sin CA no hay nada; con CA los proyectos reciben NODE_EXTRA_CA_CERTS', async () => {
+    const n = await crear();
+    // Sin CA la revisión de confianza no consulta Firefox (nada del sistema real).
+    expect(await n.doctor.revisar(['confianza'])).toEqual([]);
+    expect(await n.confianza.envProyecto({ carpeta })).toEqual({});
+    await n.instalarCA();
+    expect(await n.confianza.envProyecto({ carpeta })).toEqual({
+      NODE_EXTRA_CA_CERTS: n.rutas.caCrt(),
+    });
+  });
+
   it('Doctor: revisa hosts con la plataforma del núcleo y mueve puertos por servicio', async () => {
     const n = await crear();
     expect(await n.doctor.revisar(['hosts'])).toEqual([]);

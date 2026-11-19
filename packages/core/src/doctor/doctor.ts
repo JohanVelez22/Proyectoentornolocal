@@ -1,5 +1,5 @@
 import { revisarAntivirus } from './revisiones/antivirus';
-import { revisarCa, revisarCertificados } from './revisiones/ca';
+import { revisarCa, revisarCertificados, revisarConfianza } from './revisiones/ca';
 import { revisarHosts } from './revisiones/hosts';
 import { revisarPath } from './revisiones/path';
 import { revisarPuertos, revisarRangosReservados } from './revisiones/puertos';
@@ -22,6 +22,7 @@ const REVISIONES: Record<IdRevision, Revision> = {
   'rangos-reservados': revisarRangosReservados,
   ca: revisarCa,
   certificados: revisarCertificados,
+  confianza: revisarConfianza,
   hosts: revisarHosts,
   path: revisarPath,
   vcredist: revisarVcRedist,

@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { carpetaTemporal } from './temporales';
@@ -218,6 +219,28 @@ describe('Plataforma: capacidades del Doctor', () => {
     expect(p.comandoManual({ tipo: 'instalar-vcredist' })).toMatch(
       /winget install --id Microsoft\.VCRedist\.2015\+\.x64 --exact --source winget/,
     );
+  });
+
+  it('raicesSistema: exporta las raíces de confianza por .NET (sin módulos) y devuelve solo PEM', async () => {
+    const pem = '-----BEGIN CERTIFICATE-----\r\nQUJD\r\n-----END CERTIFICATE-----\r\n';
+    const { llamadas, ejecutor } = grabar(0, `basura\r\n${pem}${pem.replace('QUJD', 'REVG')}`);
+    const r = await new PlataformaWindows(ejecutor).raicesSistema();
+    const s = directo(llamadas[0]!.args);
+    expect(s).toContain('X509Store');
+    expect(s).toContain("'Root'");
+    expect(s).not.toMatch(/Get-ChildItem|Cert:/);
+    expect(r).toBe(
+      '-----BEGIN CERTIFICATE-----\nQUJD\n-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----\nREVG\n-----END CERTIFICATE-----\n',
+    );
+    await expect(new PlataformaWindows(grabar(1).ejecutor).raicesSistema()).rejects.toThrow();
+  });
+
+  it('firefoxEnUso: sin parent.lock o con uno que se puede abrir (cierre brusco), no está en uso', async () => {
+    const dir = await carpetaTemporal('pel-ff-');
+    const p = new PlataformaWindows(grabar().ejecutor);
+    expect(await p.firefoxEnUso(dir)).toBe(false);
+    await writeFile(join(dir, 'parent.lock'), '');
+    expect(await p.firefoxEnUso(dir)).toBe(false);
   });
 
   it('comando manual de hosts: la ruta va con comillas seguras (también las tipográficas)', () => {
