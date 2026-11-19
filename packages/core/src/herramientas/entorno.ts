@@ -3,6 +3,8 @@
  * Dev y variables de entorno con los valores secretos enmascarados (nunca salen a la interfaz).
  */
 
+import { sanear } from '../proyectos/recetas';
+
 export interface VersionHerramienta {
   nombre: string;
   /** Vacío si no está instalada. */
@@ -55,6 +57,10 @@ export function carpetasPath(env: Record<string, string | undefined>, separador 
     .filter(Boolean);
 }
 
+function recortar(valor: string): string {
+  return valor.length > MAX_VALOR_VARIABLE ? `${valor.slice(0, MAX_VALOR_VARIABLE)}…` : valor;
+}
+
 export function variablesEnmascaradas(env: Record<string, string | undefined>): VariableEntorno[] {
   return Object.entries(env)
     .filter((e): e is [string, string] => typeof e[1] === 'string')
@@ -62,9 +68,8 @@ export function variablesEnmascaradas(env: Record<string, string | undefined>): 
       const enmascarada = esNombreSecreto(nombre);
       const v = enmascarada
         ? MASCARA
-        : valor.length > MAX_VALOR_VARIABLE
-          ? `${valor.slice(0, MAX_VALOR_VARIABLE)}…`
-          : valor;
+        : // Un nombre inocente (p. ej. DATABASE_URL) puede llevar credenciales en el valor.
+          recortar(sanear(valor));
       return { nombre, valor: v, enmascarada };
     })
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'en', { sensitivity: 'base' }));

@@ -109,3 +109,11 @@ describe('Git.version', () => {
     expect(await git.version('gh')).toEqual([]);
   });
 });
+
+describe('variables con credenciales en el valor', () => {
+  it('sanea un valor con usuario y clave aunque el nombre sea inocente', () => {
+    const [v] = variablesEnmascaradas({ DATABASE_URL: 'postgres://yo:clave123@127.0.0.1/app' });
+    expect(v!.enmascarada).toBe(false);
+    expect(v!.valor).not.toContain('clave123');
+  });
+});
