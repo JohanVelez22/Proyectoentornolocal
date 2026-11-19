@@ -58,18 +58,21 @@ export function scriptCopiaHosts(o: {
       : [
           `if ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() -gt ${Math.floor(o.limiteUnixMs)}) { exit ${SALIDA_COPIA.vencido} }`,
         ]),
+    // Solo .NET, sin cmdlets de módulos (Get-FileHash, Test-Path, Copy-Item): con un
+    // PSModulePath de PowerShell 7 heredado, Windows PowerShell no puede cargarlos.
+    'function Get-HuellaWolf([string]$r) { $s = [Security.Cryptography.SHA256]::Create(); try { [BitConverter]::ToString($s.ComputeHash([IO.File]::ReadAllBytes($r))).Replace([string][char]45, [string]::Empty) } finally { $s.Dispose() } }',
     `$t = ${literal(o.temporal)}`,
     `$d = ${literal(o.destino)}`,
-    `if (-not (Test-Path -LiteralPath $t)) { exit ${SALIDA_COPIA.sinTemporal} }`,
-    `if ((Get-FileHash -LiteralPath $t -Algorithm SHA256).Hash -ne ${literal(o.hashTemporal.toUpperCase())}) { exit ${SALIDA_COPIA.temporalAlterado} }`,
+    `if (-not [IO.File]::Exists($t)) { exit ${SALIDA_COPIA.sinTemporal} }`,
+    `if ((Get-HuellaWolf $t) -ne ${literal(o.hashTemporal.toUpperCase())}) { exit ${SALIDA_COPIA.temporalAlterado} }`,
     ...(o.hashPrevio === null
       ? []
       : [
-          `$h = if (Test-Path -LiteralPath $d) { (Get-FileHash -LiteralPath $d -Algorithm SHA256).Hash } else { 'NINGUNO' }`,
+          `$h = if ([IO.File]::Exists($d)) { Get-HuellaWolf $d } else { 'NINGUNO' }`,
           `if ($h -ne ${literal(o.hashPrevio.toUpperCase())}) { exit ${SALIDA_COPIA.hostsCambiado} }`,
         ]),
-    'Copy-Item -LiteralPath $t -Destination $d -Force',
-    'ipconfig /flushdns | Out-Null',
+    '[IO.File]::Copy($t, $d, $true)',
+    '& "$env:SystemRoot\\System32\\ipconfig.exe" /flushdns | Out-Null',
     `exit ${SALIDA_COPIA.ok}`,
   ];
   return lineas.join('\n');
