@@ -226,18 +226,22 @@ describe('PlataformaWindows con un ejecutor falso', () => {
     expect(scripts).toHaveLength(2);
   });
 
-  it('perfilesFirefox lee profiles.ini de %APPDATA% (vacío si no hay Firefox)', async () => {
-    const appdata = await carpetaTemporal('pel-ff-');
-    const p = new PlataformaWindows(undefined, undefined, { entorno: { APPDATA: appdata } });
-    expect(await p.perfilesFirefox()).toEqual([]);
-    const dir = path.join(appdata, 'Mozilla', 'Firefox');
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(
-      path.join(dir, 'profiles.ini'),
-      '[Profile0]\r\nIsRelative=1\r\nPath=Profiles/a.default\r\n',
-    );
-    expect(await p.perfilesFirefox()).toEqual([path.win32.join(dir, 'Profiles', 'a.default')]);
-  });
+  // Rutas de Windows sobre el disco real: solo tiene sentido en Windows.
+  it.skipIf(process.platform !== 'win32')(
+    'perfilesFirefox lee profiles.ini de %APPDATA% (vacío si no hay Firefox)',
+    async () => {
+      const appdata = await carpetaTemporal('pel-ff-');
+      const p = new PlataformaWindows(undefined, undefined, { entorno: { APPDATA: appdata } });
+      expect(await p.perfilesFirefox()).toEqual([]);
+      const dir = path.join(appdata, 'Mozilla', 'Firefox');
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(
+        path.join(dir, 'profiles.ini'),
+        '[Profile0]\r\nIsRelative=1\r\nPath=Profiles/a.default\r\n',
+      );
+      expect(await p.perfilesFirefox()).toEqual([path.win32.join(dir, 'Profiles', 'a.default')]);
+    },
+  );
 
   it('abrirTerminal con comando: Windows Terminal si existe; si no, PowerShell visible', async () => {
     const llamadas: { cmd: string; args: string[]; env: NodeJS.ProcessEnv }[] = [];
