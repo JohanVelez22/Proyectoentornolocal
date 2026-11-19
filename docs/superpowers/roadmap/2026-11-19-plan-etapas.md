@@ -64,7 +64,7 @@ WolfCore Dev: **Tiene** = hecho (MVP, A o B) · **Etapa X** = planificado · **N
 | Respaldo y perfiles del entorno completo (23) | Sí\* | ? | ? | ? | ? | ? | ? | Sí\* (instancias) | Sí\* (ZIP) | Pro\* | **Etapa D** |
 | Workspaces de arranque (24) | ? | ? | ? | ? | Sí\* | ? | ? | n/a | ? | ? | **Etapa D** |
 | Snapshots de BD con un clic (26) | ? | ? | ? | ? | ? | ? | ? | Sí\* | ? | ? | **Etapa D** |
-| Instancias paralelas de un servicio (25) | Sí\* | ? | ? | ? | ? | ? | ? | Sí\* | ? | ? | **Etapa F** |
+| Instancias paralelas de un servicio (25) | Sí\* | ? | ? | ? | ? | ? | ? | Sí\* | ? | ? | **Etapa C** (adelantado de F a pedido del usuario) |
 | Meilisearch, MinIO, RabbitMQ, Reverb… (28) | Sí\* | Sí | ? | Sí | ? | Pro | ? | n/a | ? | ? | **Etapa F** |
 | Contenedores Podman/Docker (46) | ? | No | No | ? | ? | ? | Sí | n/a | ? | ? | **Etapa F** |
 
@@ -97,7 +97,7 @@ WolfCore Dev: **Tiene** = hecho (MVP, A o B) · **Etapa X** = planificado · **N
 | App de bandeja | ? | ? | Sí | Sí | ? | ? | ? | ? | ? | ? | **Tiene** |
 | Notificaciones nativas (8) | Sí\* | ? | ? | Sí (toasts) | ? | Sí\* | ? | ? | ? | ? | **Etapa C** |
 | Doctor con reparaciones (36) | ? | ? | Sí (puertos) | Sí | Sí\* | Sí\* | ? | ? | ? | ? | **Etapa C** (hoy aviso de puerto con PID) |
-| Gestor de versiones con descarga y SHA (37) | Sí\* | Sí\* | ? | Sí | ? | Sí | ? | Sí\* | ? | ? | **Tiene** (catálogo con SHA-256); limpieza de versiones: **Etapa D** |
+| Gestor de versiones con descarga y SHA (37) | Sí\* | Sí\* | ? | Sí | ? | Sí | ? | Sí\* | ? | ? | **Tiene** (catálogo con SHA-256); catálogo en vivo de todos los servicios con huella oficial y cualquier versión por rama: **Etapa C** (adelantado); limpieza de versiones: **Etapa D** |
 | CLI `wolf` (38) | ? | ? | ? | ? | ? | Sí\* | Sí | ? | ? | ? | **Etapa D** |
 | Autoactualización | ? | ? | ? | Sí | ? | ? | ? | ? | ? | ? | **Etapa E** |
 | Desinstalación limpia (hosts, CA, PATH) (41) | ? | ? | ? | Sí (transparencia) | ? | ? | ? | ? | ? | ? | **Etapa E**; modo portable: **Etapa F** |
@@ -118,7 +118,7 @@ Para no pagar dos veces la multiplataforma, **la tarea 1 de C crea la capa `Plat
 
 **Alternativa:** si macOS/Linux urge más que los MUST de proyectos, se intercambian D y E. Costo: las funciones de D nacerían en tres sistemas y cada tarea crecería ~30 %.
 
-### Etapa C — IA en la nube, agentes y depuración PHP (~16 tareas)
+### Etapa C — IA en la nube, agentes y depuración PHP (~20 tareas)
 
 **Meta:** depurar cualquier proyecto PHP sin salir de WolfCore Dev y usar cualquier IA (local o nube) en los proyectos y desde agentes.
 
@@ -133,6 +133,8 @@ Para no pagar dos veces la multiplataforma, **la tarea 1 de C crea la capa `Plat
 - **Captura de `dump()`/`dd()`** (VarDumper en modo servidor + `auto_prepend_file`), con equivalentes para CI3 y Python; visor de errores sobre el visor de registros; herramientas MCP nuevas para dumps y errores.
 - **Notificaciones nativas** y centro de eventos (servicio caído, puerto ocupado, certificado por vencer, túnel caído).
 - **Doctor:** puertos (IIS, FlyEnv, Hyper-V/WSL reservando rangos), CA vencida, hosts dañado, PATH duplicado, VC++ ausente, antivirus; cada hallazgo con su reparación guiada. Confianza de la CA en Node, Python y Firefox (44).
+- **Catálogo en vivo** (adelantado a pedido del usuario): todos los servicios consultan su fuente oficial de versiones, como PHP con `releases.json`; cualquier versión publicada con filtro por rama; huella oficial verificada y, si la fuente no la publica, advertencia y confirmación; avisos de versiones nuevas con "Actualizar" (respaldo antes y sin borrar los datos de la versión anterior); la lista fija queda como respaldo sin conexión.
+- **Instancias paralelas de un servicio (25)** (adelantado de la Etapa F): varias versiones del mismo servicio de datos a la vez, cada una con su puerto, carpeta de datos y credenciales; la pantalla Bases de datos elige la instancia; pestaña "Versiones" por servicio como FlyEnv/ServBay.
 
 **Verificable aquí (Windows):** todo. Las pruebas de proveedores en la nube usan servidores falsos en las pruebas automáticas; la prueba real con cada proveedor necesita las claves del usuario y la hace él (o con su permiso).
 
@@ -162,7 +164,7 @@ Para no pagar dos veces la multiplataforma, **la tarea 1 de C crea la capa `Plat
   - **Confianza de la CA:** almacén de usuario (Windows); `update-ca-certificates`/`trust` y NSS (Linux); llavero (macOS).
   - **Puertos 80/443:** en Linux, `setcap cap_net_bind_service` o puertos altos con aviso; en macOS se pueden usar sin root.
   - **Procesos:** lanzar en segundo plano sin consola y cerrar al apagar el equipo (señales en lugar del lanzador oculto).
-- **Catálogo de binarios por SO** (sistema, arquitectura x64/arm64 y hash):
+- **Catálogo de binarios por SO** (sistema, arquitectura x64/arm64 y hash; las fuentes en vivo de la Etapa C ya reciben el `idCatalogo`, E agrega los archivos de cada SO):
   - MySQL, MariaDB, Ollama, Node, Mailpit y cloudflared publican binarios oficiales.
   - PHP y Nginx no los publican para macOS/Linux: se usan compilaciones estáticas de terceros (static-php-cli) verificadas por hash, o paquetes del sistema como alternativa.
   - pgvector se compila con `make`.
@@ -174,7 +176,7 @@ Para no pagar dos veces la multiplataforma, **la tarea 1 de C crea la capa `Plat
 
 ### Etapa F — Resto de paridad y superación (~16 tareas, se puede partir)
 
-DNS propio y comodín `*.proyecto.test` (45); Apache/Caddy y `.htaccess` real (14); FrankenPHP/Octane (12); contenedores Podman/Docker (46); instancias paralelas de un servicio (25); Meilisearch, MinIO, RabbitMQ y Reverb (28); inspector de SQL, jobs y HTTP (4); perfilado (6); inspector de webhooks (33); rama como subdominio con `git worktree`; WordPress completo (21); pruebas y calidad por sitio (43); ahorro de recursos y arranque perezoso (42); modo portable (41); sincronizar entre equipos (47); RAG local por proyecto con pgvector (48); restos técnicos: restauración con rol limitado, FTP pasivo por subred, FTPS/SFTP, *name constraints* en la CA.
+DNS propio y comodín `*.proyecto.test` (45); Apache/Caddy y `.htaccess` real (14); FrankenPHP/Octane (12); contenedores Podman/Docker (46); Meilisearch, MinIO, RabbitMQ y Reverb (28); inspector de SQL, jobs y HTTP (4); perfilado (6); inspector de webhooks (33); rama como subdominio con `git worktree`; WordPress completo (21); pruebas y calidad por sitio (43); ahorro de recursos y arranque perezoso (42); modo portable (41); sincronizar entre equipos (47); RAG local por proyecto con pgvector (48); restos técnicos: restauración con rol limitado, FTP pasivo por subred, FTPS/SFTP, *name constraints* en la CA.
 
 **Verificable aquí:** casi todo en Windows; los contenedores necesitan Docker Desktop o Podman instalados (con permiso del usuario).
 
