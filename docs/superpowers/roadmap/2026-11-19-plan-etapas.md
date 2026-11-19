@@ -1,6 +1,6 @@
 # WolfCore Dev — Plan de etapas después de la Etapa B
 
-Fecha: 2026-11-19 · Estado: **propuesta para aprobar** · Base: rama `feat/etapa-b` (tareas 1-14 hechas, 15 en curso, 16 pendiente)
+Fecha: 2026-11-19 · Estado: **aprobado (el usuario delegó el orden, 2026-11-19): C → D → E → F** · Base: rama `feat/etapa-b` (tareas 1-14 hechas, 15 en curso, 16 pendiente)
 
 Insumos: [referentes](2026-11-18-referentes.md) (48 funciones candidatas) · [EnvKit, GitHub y UI](2026-11-18-envkit-github-ui.md) · specs del [MVP](../specs/2026-11-17-proyectoentornolocal-design.md), [Etapa A](../specs/2026-11-18-etapa-a-design.md) y [Etapa B](../specs/2026-11-19-etapa-b-design.md) · README.
 
