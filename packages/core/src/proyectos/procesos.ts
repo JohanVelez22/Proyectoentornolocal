@@ -334,7 +334,10 @@ export class ProcesosProyecto {
   ): Promise<DefProceso> {
     const cwd = await this.carpetaDeTrabajo(sitio, p);
     const carpeta = path.resolve(sitio.carpeta);
-    const entorno = await entornoProyecto(sitio, carpeta, this.d, { php: usaPhp(p.comando[0]!) });
+    const entorno = await entornoProyecto(sitio, carpeta, this.d, {
+      php: usaPhp(p.comando[0]!),
+      carpetaVenv: cwd,
+    });
     const avisos = entorno.avisos.map((a) => sanear(a));
     this.avisos.set(id, avisos);
     const { cmd, args } = await resolverPrograma(p.comando, carpeta, this.d, entorno);
@@ -348,7 +351,8 @@ export class ProcesosProyecto {
       comando,
       args,
       cwd,
-      env: entorno.cambios,
+      // PORT: muchos servidores de Node (y otros) toman de ahí el puerto asignado.
+      env: p.puerto === null ? entorno.cambios : { ...entorno.cambios, PORT: String(p.puerto) },
       // Sin `puerto`: es informativo (proxy) y no sirve de sonda de salud; vite o un servidor
       // que escucha en otra interfaz o tarda en abrirlo no deben morir por eso.
       exigirInicio: true,

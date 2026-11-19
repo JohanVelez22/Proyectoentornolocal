@@ -5,7 +5,7 @@ import { Eventos, type EventosNucleo } from '../src/eventos';
 import { interpretarMuestraWindows, muestraSistemaWindows } from '../src/plataforma/win';
 import type { Ejecutor, MuestraPlataforma } from '../src/plataforma/tipos';
 import { Metricas, type DepsMetricas } from '../src/monitor/metricas';
-import { agruparLlamadas, Registros } from '../src/monitor/registros';
+import { agruparLlamadas, decodificarLinea, Registros } from '../src/monitor/registros';
 import { Rutas } from '../src/rutas';
 import { SitioSchema, type Sitio } from '../src/tipos';
 import { carpetaTemporal } from './temporales';
@@ -633,6 +633,24 @@ describe('Registros', () => {
   });
 
   describe('leerFinal', () => {
+    it('una línea en cp1252 (Python sin UTF-8) se lee sin caracteres rotos (QA 6)', async () => {
+      const ruta = rutas.logs('redis.log');
+      await mkdir(rutas.logs(), { recursive: true });
+      await writeFile(
+        ruta,
+        Buffer.concat([
+          Buffer.from('Aplicando migraci', 'latin1'),
+          Buffer.from([0xf3]),
+          Buffer.from('n\nñandú utf8\n', 'utf8'),
+        ]),
+      );
+      expect(await registros.leerFinal('servicio:redis')).toEqual([
+        'Aplicando migración',
+        'ñandú utf8',
+      ]);
+      expect(decodificarLinea(Buffer.from([0x63, 0x61, 0x66, 0xe9]))).toBe('café');
+    });
+
     it('las últimas N líneas, saneadas', async () => {
       const ruta = rutas.logs('redis.log');
       await writeFile(ruta, 'a\nb\npassword=xyz\nd');

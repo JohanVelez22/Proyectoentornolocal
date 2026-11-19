@@ -4,6 +4,9 @@ import path from 'node:path';
 import type { Eventos, EventosNucleo } from '../eventos';
 import { idSupervisor } from '../proyectos/procesos';
 import { sanear } from '../proyectos/recetas';
+import { decodificarLinea } from './decodificar';
+
+export { decodificarLinea } from './decodificar';
 import type { Rutas } from '../rutas';
 import type { Sitio } from '../tipos';
 
@@ -54,7 +57,7 @@ const BLOQUE = 64 * 1024;
 const SALTO = 0x0a;
 
 const sinRetorno = (t: string): string => (t.endsWith('\r') ? t.slice(0, -1) : t);
-const lineaDe = (b: Buffer): string => sanear(sinRetorno(b.toString('utf8')));
+const lineaDe = (b: Buffer): string => sanear(sinRetorno(decodificarLinea(b)));
 const noExiste = (e: unknown): boolean =>
   ['ENOENT', 'ENOTDIR'].includes((e as NodeJS.ErrnoException)?.code ?? '');
 
@@ -450,9 +453,14 @@ export class Registros {
         const i = datos.indexOf(SALTO);
         datos = i >= 0 ? datos.subarray(i + 1) : Buffer.alloc(0);
       }
-      const partes = datos.toString('utf8').split('\n');
-      if (partes.at(-1) === '') partes.pop();
-      return partes.slice(-n).map((l) => sanear(sinRetorno(l)));
+      const partes: Buffer[] = [];
+      let desde = 0;
+      for (let i = datos.indexOf(SALTO); i >= 0; i = datos.indexOf(SALTO, desde)) {
+        partes.push(datos.subarray(desde, i));
+        desde = i + 1;
+      }
+      if (desde < datos.length) partes.push(datos.subarray(desde));
+      return partes.slice(-n).map((l) => lineaDe(l));
     } finally {
       await fh.close();
     }

@@ -214,6 +214,27 @@ describe('iniciar', () => {
     expect(def.env?.PATH).toBeUndefined();
   });
 
+  it('Python en subcarpeta: .venv del cwd, UTF-8 forzado y PORT (QA 6)', async () => {
+    const a = await armar({
+      sitio: { tipo: 'fastapi', php: null },
+      procesos: [
+        proceso({
+          id: 'uvicorn',
+          comando: ['python', '-m', 'uvicorn', 'app.main:app'],
+          cwd: 'admin',
+          puerto: 8001,
+        }),
+      ],
+    });
+    await mkdir(join(a.carpeta, 'admin', '.venv', 'Scripts'), { recursive: true });
+    await a.procesos.iniciar('demo', 'uvicorn');
+    const def = a.sup.iniciados[0]!;
+    expect(def.env?.PYTHONUTF8).toBe('1');
+    expect(def.env?.PYTHONIOENCODING).toBe('utf-8');
+    expect(def.env?.VIRTUAL_ENV).toBe(join(a.carpeta, 'admin', '.venv'));
+    expect(def.env?.PORT).toBe('8001');
+  });
+
   it('python usa el del .venv; php lleva su php.ini y PHPRC', async () => {
     const a = await armar({
       sitio: { tipo: 'laravel', php: '8.4' },

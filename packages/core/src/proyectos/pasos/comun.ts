@@ -145,7 +145,7 @@ export async function entornoProyecto(
   sitio: Sitio,
   carpeta: string,
   d: DepsEntorno,
-  o: { php?: boolean } = {},
+  o: { php?: boolean; carpetaVenv?: string } = {},
 ): Promise<EntornoProyecto> {
   const base = d.entorno ?? process.env;
   const env: Record<string, string> = {};
@@ -161,11 +161,23 @@ export async function entornoProyecto(
     cambios.WOLFCORE_PHP = php.exe;
     cambios.WOLFCORE_PHPINI = php.ini;
   }
-  if (await existe(venvScripts(carpeta))) {
-    nuevo.push(venvScripts(carpeta));
-    cambios.VIRTUAL_ENV = path.join(carpeta, '.venv');
+  // El .venv puede estar en la carpeta de trabajo del proceso (FastAPI en admin/).
+  let conVenv = false;
+  for (const dir of [...new Set([o.carpetaVenv ?? carpeta, carpeta])]) {
+    if (await existe(venvScripts(dir))) {
+      nuevo.push(venvScripts(dir));
+      cambios.VIRTUAL_ENV = path.join(dir, '.venv');
+      conVenv = true;
+      break;
+    }
   }
   const rt = await d.runtimes.paraProyecto(sitio);
+  if (conVenv || rt.python || sitio.tipo === 'fastapi') {
+    // Python en Windows escribe en la página ANSI (cp1252) si no se le pide UTF-8: el log
+    // mostraría "migraci\uFFFDn". Con esto stdout/stderr salen en UTF-8.
+    cambios.PYTHONUTF8 = '1';
+    cambios.PYTHONIOENCODING = 'utf-8';
+  }
   const versiones: VersionesRuntime = {};
   if (rt.node) versiones.node = rt.node;
   if (rt.python) versiones.python = rt.python;

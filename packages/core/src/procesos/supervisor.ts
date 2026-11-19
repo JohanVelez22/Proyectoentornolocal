@@ -21,6 +21,7 @@ import {
 } from '../plataforma/lanzarOculto';
 import { nombreArchivoDeRuta } from '../plataforma/sistema';
 import { puertoResponde } from './sonda';
+import { decodificarLinea } from '../monitor/decodificar';
 
 export interface DefProceso {
   /** 'nginx', 'php-8.4-0', 'tunel-<sitio>' */
@@ -548,7 +549,11 @@ export class Supervisor {
 
   private colaLog(archivo: string): string {
     try {
-      const lineas = readFileSync(archivo, 'utf8').split(/\r?\n/);
+      // Línea a línea: una en cp1252 (Python sin UTF-8) no rompe las demás.
+      const lineas = readFileSync(archivo)
+        .toString('latin1')
+        .split(/\r?\n/)
+        .map((l) => decodificarLinea(Buffer.from(l, 'latin1')));
       while (lineas.length > 0 && lineas[lineas.length - 1] === '') lineas.pop();
       return lineas.slice(-LINEAS_LOG).join('\n');
     } catch {
