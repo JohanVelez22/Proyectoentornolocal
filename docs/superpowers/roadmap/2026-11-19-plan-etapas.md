@@ -214,7 +214,7 @@ Ubicación propuesta; se confirma y se convierte en tareas al retomar la Etapa C
 | Botón por proyecto a Adminer y phpMyAdmin (u otra) con la base del proyecto ya autenticada | D |
 | Tareas programadas por sitio; túneles ngrok/Expose/Tailscale (ya estaban) | D |
 | Herramientas: QR de WiFi; imagen → .ico/.png; buscar texto en carpeta/archivo; comprimir PDF/imágenes/zip con peso antes y después | D |
-| Auditoría de contraseñas de BD: solo detectar contraseñas débiles contra una lista corta de las más comunes, con el límite explicado en la interfaz; sin fuerza bruta (alcance a confirmar con el usuario) | D |
+| Auditoría de contraseñas (decidido): (1) medidor de fortaleza para una contraseña escrita, en local; (2) revisar los hashes de usuarios de una base montada contra una lista corta de contraseñas muy comunes y marcar las cuentas débiles **sin mostrar la contraseña**; (3) para una contraseña olvidada de la propia base, ofrecer **restablecerla** (nueva contraseña, con confirmación y copia previa) en vez de recuperarla. Sin fuerza bruta ni listas grandes; el límite se explica en la interfaz | D |
 | Tarjeta del proyecto: "Terminal aquí" pasa a "Terminal"; acciones como íconos con tooltip (claro y oscuro); botón de base de datos (Adminer y phpMyAdmin con la base del proyecto) | QA, al retomar, junto al fallo de "Terminal" |
 | Terminal configurable: detectar PowerShell, Windows Terminal, cmd, Git Bash, pwsh (y la del sistema en Linux/macOS) y elegir o fijar una predeterminada | QA, al retomar |
 | Conversor de documentos local (docx, xlsx, pptx, pdf, csv, md, odt) con librerías de licencia permisiva; herramientas pesadas como LibreOffice solo opcionales y con aviso; nada sale del equipo | D |
