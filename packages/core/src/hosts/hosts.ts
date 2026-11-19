@@ -20,9 +20,12 @@ export type ResultadoSync =
 export function comandoManualPara(destino: string, contenido: string): string {
   const b64 = Buffer.from(contenido, 'utf8').toString('base64');
   const ruta = destino.replace(/'/g, "''");
+  // Un hosts de solo lectura (antivirus "proteger hosts") se desbloquea y vuelve a quedar igual.
   return (
-    `[IO.File]::WriteAllText('${ruta}', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64}')), (New-Object Text.UTF8Encoding($false))); ` +
-    'ipconfig /flushdns'
+    `$r = '${ruta}'; $a = [IO.File]::GetAttributes($r); ` +
+    `[IO.File]::SetAttributes($r, ($a -band (-bnot [IO.FileAttributes]::ReadOnly))); ` +
+    `[IO.File]::WriteAllText($r, [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64}')), (New-Object Text.UTF8Encoding($false))); ` +
+    '[IO.File]::SetAttributes($r, $a); ipconfig /flushdns'
   );
 }
 
@@ -228,7 +231,9 @@ export class GestorHosts {
     const razon =
       r.motivo === 'error'
         ? `ocurrió un error${r.detalle ? ` (${r.detalle})` : ''}.`
-        : RAZONES[r.motivo];
+        : r.motivo === 'denegado' && r.detalle
+          ? `${RAZONES.denegado.slice(0, -1)}: ${r.detalle}.`
+          : RAZONES[r.motivo];
     const e = await this.estado(dominios, `No se pudo actualizar el archivo hosts: ${razon}`);
     return {
       ok: false,

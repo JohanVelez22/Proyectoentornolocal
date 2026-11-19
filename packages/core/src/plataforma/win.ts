@@ -20,6 +20,7 @@ import {
   MOTIVO_SALIDA_COPIA,
   PREFIJO_TEMPORAL_HOSTS,
   scriptCopiaHosts,
+  scriptElevar,
   sha256,
 } from './hostsAdmin';
 import { crearLanzadorOculto, type LanzadorOculto } from './lanzarOculto';
@@ -430,16 +431,16 @@ export class PlataformaWindows implements PlataformaCompleta {
       await writeFile(tmp, datos);
       // El script elevado se comprueba a sí mismo antes de copiar: un UAC aceptado tarde (o un
       // temporal que no se pudo borrar) no escribe nada.
+      // El hosts del sistema lo ubica el script elevado con la API (no con %SystemRoot%).
+      const esHostsSistema = destino.toLowerCase() === this.rutaHosts().toLowerCase();
       const interno = scriptCopiaHosts({
         temporal: tmp,
-        destino,
+        destino: esHostsSistema ? null : destino,
         limiteUnixMs: o.tiempoLimiteMs ? Date.now() + o.tiempoLimiteMs : null,
         hashTemporal: sha256(datos),
         hashPrevio: o.hashPrevio ?? null,
       });
-      const externo =
-        `$p = Start-Process powershell -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ArgumentList ` +
-        `'-NoProfile','-NonInteractive','-EncodedCommand','${codificarComando(interno)}'; exit $p.ExitCode`;
+      const externo = scriptElevar(codificarComando(interno));
       const desde = Date.now();
       const r = await this.ejecutar('powershell', ['-NoProfile', '-Command', externo], {
         ...(o.tiempoLimiteMs ? { timeoutMs: o.tiempoLimiteMs } : {}),
@@ -479,7 +480,7 @@ export class PlataformaWindows implements PlataformaCompleta {
     this.elevaciones.clear();
   }
 
-  /** Borra los temporales de hosts que dejaron otras ejecuciones (otro PID). */
+  /** Borra los temporales de hosts que dejaron otras ejecuciones (otro PID que ya terminó). */
   async limpiarTemporalesAdmin(): Promise<void> {
     let nombres: string[];
     try {
@@ -489,7 +490,8 @@ export class PlataformaWindows implements PlataformaCompleta {
     }
     for (const n of nombres) {
       const m = new RegExp(`^${PREFIJO_TEMPORAL_HOSTS}(\\d+)-[\\w-]+\\.txt$`).exec(n);
-      if (!m || Number(m[1]) === process.pid) continue;
+      // Solo los de procesos que ya no existen: otra instancia viva puede estar esperando su UAC.
+      if (!m || Number(m[1]) === process.pid || this.existe(Number(m[1]))) continue;
       await rm(path.join(this.carpetaTemporal, n), { force: true }).catch(() => undefined);
     }
   }

@@ -16,7 +16,7 @@ import {
 
 /** Script elevado (base64 de -EncodedCommand) que arma PlataformaWindows.escribirComoAdmin. */
 function scriptDe(args: string[]): string {
-  const b64 = /'-EncodedCommand','([A-Za-z0-9+/=]+)'/.exec(args.join(' '))?.[1] ?? '';
+  const b64 = /-EncodedCommand ([A-Za-z0-9+/=]+)/.exec(args.join(' '))?.[1] ?? '';
   return Buffer.from(b64, 'base64').toString('utf16le');
 }
 /** Ruta del temporal que el script elevado copiaría. */
@@ -101,6 +101,26 @@ describe('GestorHosts', () => {
     expect(vistos[0]?.mensaje).toBe(
       'No se pudo actualizar el archivo hosts: se canceló el permiso de administrador.',
     );
+  });
+
+  it('denegado con detalle (hosts protegido): el mensaje lo dice y el comando manual quita el solo lectura', async () => {
+    resultado = {
+      ok: false,
+      motivo: 'denegado',
+      detalle: 'el archivo hosts está protegido contra escritura',
+    };
+    const g = new GestorHosts(falsa(), eventos);
+    const vistos: { mensaje?: string }[] = [];
+    eventos.on('hosts:estado', (e) => vistos.push(e));
+    const r = await g.sincronizar(['a.test']);
+    expect(vistos[0]?.mensaje).toContain('protegido contra escritura');
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.comandoManual).toContain('[IO.FileAttributes]::ReadOnly');
+      expect(r.comandoManual.indexOf('ReadOnly')).toBeLessThan(
+        r.comandoManual.indexOf('WriteAllText'),
+      );
+    }
   });
 
   it('denegado: mensaje de acceso negado', async () => {
