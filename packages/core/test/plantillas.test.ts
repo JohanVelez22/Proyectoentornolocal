@@ -178,6 +178,8 @@ describe('generarNginxPrincipal', () => {
     expect(c).toContain('events {');
     expect(c).toContain('include mime.types;');
     expect(c).toContain('client_max_body_size 64m;');
+    // Dominios largos (wolfcore-diamantes.test) no deben romper `nginx -t`.
+    expect(c).toContain('server_names_hash_bucket_size 128;');
     expect(c).toContain('upstream php83 {');
     expect(c).toContain('server 127.0.0.1:9830;');
     expect(c).toContain('server 127.0.0.1:9831;');

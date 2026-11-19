@@ -85,6 +85,9 @@ export function generarNginxPrincipal(o: {
       '    sendfile on;',
       '    keepalive_timeout 65;',
       '    client_max_body_size 64m;',
+      // Con el valor por defecto (32 en muchos equipos) un dominio de ~22 letras o más, como
+      // wolfcore-diamantes.test, hace fallar `nginx -t` (could not build server_names_hash).
+      '    server_names_hash_bucket_size 128;',
       `    client_body_temp_path "${prefijo}/temp/client_body";`,
       `    proxy_temp_path "${prefijo}/temp/proxy";`,
       `    fastcgi_temp_path "${prefijo}/temp/fastcgi";`,
