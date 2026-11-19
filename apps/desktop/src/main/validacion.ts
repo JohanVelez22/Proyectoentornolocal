@@ -369,7 +369,12 @@ export function configProveedorIa(v: unknown): ConfigProveedorIa {
   }
   for (const k of Object.keys(o)) if (!CAMPOS_PROVEEDOR_IA.has(k)) throw argumentoIa('proveedor');
   const tipo = o['tipo'];
-  if (typeof tipo !== 'string' || !(TIPOS_PROVEEDOR_IA as readonly string[]).includes(tipo)) {
+  // Ollama tiene su propia sección (IA local): el diálogo de proveedores en la nube no lo manda.
+  if (
+    typeof tipo !== 'string' ||
+    tipo === 'ollama' ||
+    !(TIPOS_PROVEEDOR_IA as readonly string[]).includes(tipo)
+  ) {
     throw argumentoIa('tipo');
   }
   const nombre = o['nombre'];

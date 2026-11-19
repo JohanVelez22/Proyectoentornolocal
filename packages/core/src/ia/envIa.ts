@@ -258,6 +258,21 @@ export async function limpiarRespaldosEnv(
   }
 }
 
+/**
+ * Comprueba, sin escribir nada, que el bloque se podría poner en `<carpeta>/.env`: lanza
+ * `ia.env_conflicto` (o el error de un .env que no es un archivo normal) igual que
+ * `escribirEnvIa`. Sirve para no tocar otros archivos (el .gitignore) antes de saberlo.
+ */
+export async function comprobarEnvIa(
+  carpeta: string,
+  bloque: string,
+  o: { reemplazarAjenas?: boolean } = {},
+): Promise<{ conflictos: string[] }> {
+  const actual = await leerArchivoProyecto(path.join(carpeta, '.env'));
+  const r = aplicarBloqueEnvIa(actual ?? '', bloque, { reemplazarAjenas: o.reemplazarAjenas });
+  return { conflictos: r.conflictos };
+}
+
 export interface OpcionesEscribirEnvIa {
   /** Lo exige siempre: la interfaz avisó que la clave queda en texto plano. */
   confirmado: true;

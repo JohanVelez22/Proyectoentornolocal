@@ -1,5 +1,5 @@
-import { watch, type FSWatcher } from 'node:fs';
-import { readdir, stat } from 'node:fs/promises';
+import { watch } from 'node:fs';
+import { readdir, realpath, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import type { Eventos, EventosNucleo } from '../eventos';
 import type { Config } from '../tipos';
@@ -15,7 +15,23 @@ export interface DepsVigilante {
   eventos: Eventos<EventosNucleo>;
   /** Espera tras el último cambio antes de recalcular (1 s por defecto). */
   esperaMs?: number;
+  /**
+   * Revisión periódica además de la vigilancia del sistema (30 s por defecto): `fs.watch` puede
+   * perder o demorar eventos (FSEvents en macOS, carpetas de red, rutas con enlaces).
+   */
+  revisionMs?: number;
+  /** Vigilancia del sistema (`fs.watch` por defecto; las pruebas la sustituyen). */
+  crearVigia?: (carpeta: string, alCambiar: () => void) => VigiaCarpeta;
 }
+
+/** Lo que se usa de un `FSWatcher`. */
+export interface VigiaCarpeta {
+  close(): void;
+  on(evento: 'error', fn: () => void): unknown;
+}
+
+const vigiaFs = (carpeta: string, alCambiar: () => void): VigiaCarpeta =>
+  watch(carpeta, { persistent: false }, alCambiar);
 
 const IGNORADAS = new Set(['node_modules', 'vendor']);
 /** Detección sin parecer proyecto: carpeta vacía o sin marcas conocidas. */
@@ -34,7 +50,8 @@ function clave(ruta: string): string {
  * no son un sitio.
  */
 export class VigilanteProyectos {
-  private vigia: FSWatcher | null = null;
+  private vigia: VigiaCarpeta | null = null;
+  private revision: NodeJS.Timeout | null = null;
   private carpeta: string | null = null;
   private temporizador: NodeJS.Timeout | null = null;
   private ultima: string | null = null;
@@ -90,8 +107,12 @@ export class VigilanteProyectos {
     this.fijada = true;
     this.ultima = null;
     if (!carpeta) return;
+    // FSEvents (macOS) no siempre avisa si la ruta pasa por un enlace (/var → /private/var):
+    // se vigila la ruta real. Las sugerencias siguen usando la ruta pedida.
+    const real = await realpath(carpeta).catch(() => carpeta);
+    if (gen !== this.generacion) return;
     try {
-      this.vigia = watch(carpeta, { persistent: false }, () => this.programar());
+      this.vigia = (this.d.crearVigia ?? vigiaFs)(real, () => this.programar());
       // Si la carpeta desaparece o falla la vigilancia: se detiene y se recalcula una vez.
       this.vigia.on('error', () => {
         this.vigia?.close();
@@ -111,6 +132,13 @@ export class VigilanteProyectos {
     } catch {
       // sin línea base: el primer cambio emite
     }
+    // Respaldo de la vigilancia del sistema: una revisión cada tanto, después de la línea base
+    // (solo emite si la lista cambió).
+    if (gen !== this.generacion) return;
+    this.revision = setInterval(() => {
+      if (!this.temporizador) void this.refrescar(gen);
+    }, this.d.revisionMs ?? 30_000);
+    this.revision.unref();
   }
 
   private programar(): void {
@@ -146,6 +174,7 @@ export class VigilanteProyectos {
       ) {
         // La carpeta ya no existe: se deja de vigilar (los eventos no paran) y se avisa una vez.
         this.cerrarVigia();
+        this.pararRevision();
         if (gen !== this.generacion || mia !== this.secuencia) return;
       }
       const firma = JSON.stringify(lista.map((s) => s.carpeta));
@@ -162,6 +191,12 @@ export class VigilanteProyectos {
     if (this.temporizador) clearTimeout(this.temporizador);
     this.temporizador = null;
     this.cerrarVigia();
+    this.pararRevision();
+  }
+
+  private pararRevision(): void {
+    if (this.revision) clearInterval(this.revision);
+    this.revision = null;
   }
 
   private cerrarVigia(): void {

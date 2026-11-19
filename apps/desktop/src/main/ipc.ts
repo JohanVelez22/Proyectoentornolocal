@@ -3,12 +3,14 @@ import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import {
   datosPermitidos,
+  esClaveCorta,
   ErrorWolf,
   IDS_REVISION,
   type IdRevision,
   TIPOS_AVISO,
   type TipoAviso,
   PasoRecetaSchema,
+  quitarClave,
   validarUrlGit,
   type CambiosPreferenciasUi,
   type IdiomaUi,
@@ -126,14 +128,22 @@ function origenImportar(v: unknown): {
   };
 }
 
-/** Ejecuta `fn` y, si falla, quita `clave` del mensaje (nunca debe volver al renderer). */
-async function sinClave<T>(clave: string, fn: () => Promise<T>): Promise<T> {
+/**
+ * Ejecuta `fn` y, si falla, quita `clave` del mensaje (nunca debe volver al renderer). Por
+ * defecto la quita en cualquier sitio; las claves de IA usan `quitarClave` (las cortas solo
+ * como palabra suelta).
+ */
+async function sinClave<T>(
+  clave: string,
+  fn: () => Promise<T>,
+  quitar: (t: string, clave: string) => string = (t, c) => t.split(c).join('***'),
+): Promise<T> {
   try {
     return await fn();
   } catch (e) {
     const mensaje = e instanceof Error ? e.message : String(e);
     const codigo = (e as { codigo?: unknown } | null)?.codigo;
-    const limpiar = (t: string): string => (clave ? t.split(clave).join('***') : t);
+    const limpiar = (t: string): string => (clave ? quitar(t, clave) : t);
     const previo = (e as { respaldoPrevio?: unknown } | null)?.respaldoPrevio;
     if (e instanceof ErrorWolf) {
       // Sus datos ya salen por la lista blanca; se limpian igual por si llevaran la clave.
@@ -438,8 +448,10 @@ async function conClaveIa<T>(
   fn: (clave: string | null) => Promise<T>,
 ): Promise<T> {
   const clave = await claveIaGuardada(s, id);
-  const valor = await sinClave(clave ?? '', () => fn(clave));
-  if (clave && JSON.stringify(valor ?? null).includes(clave)) {
+  const valor = await sinClave(clave ?? '', () => fn(clave), quitarClave);
+  // Una clave corta ('x', 'lm-studio') no es un secreto real y aparecería en cualquier JSON:
+  // solo se bloquean por subcadena las claves largas.
+  if (clave && !esClaveCorta(clave) && JSON.stringify(valor ?? null).includes(clave)) {
     throw new ErrorWolf('ia.respuesta_rara', 'La respuesta contenía la clave y no se envió.');
   }
   return valor;
@@ -642,8 +654,12 @@ const TABLA: Record<RutaIpc, Manejador> = {
         campo: 'confirmacion',
       });
     }
+    // Una clave guardada sin proveedor (quedó de un borrado a medias) nunca se reutiliza para
+    // un proveedor nuevo con el mismo id: iría a una URL que el usuario no eligió con ella.
+    const existe = (await n.ia.proveedores()).some((p) => p.id === c.id);
+    if (!existe && s.secretos.hay(`ia:${c.id}`)) await s.secretos.borrar(`ia:${c.id}`);
     await n.ia.guardarProveedor(c, {
-      tieneClave: s.secretos.hay(`ia:${c.id}`),
+      tieneClave: existe && s.secretos.hay(`ia:${c.id}`),
       ...(confirmarCambioUrl === true ? { confirmarCambioUrl: true } : {}),
     });
     return proveedoresPublicos(n, s);
@@ -653,8 +669,9 @@ const TABLA: Record<RutaIpc, Manejador> = {
     const o = opcionesBorrarClaveIa(opciones);
     await n.ia.proveedor(p);
     if (o.limpiarRespaldos) await limpiarRespaldosIa(n, s, p);
-    await n.ia.borrarProveedor(p);
+    // Primero la clave: si falla, el proveedor sigue y no queda una clave huérfana.
     await s.secretos.borrar(`ia:${p}`);
+    await n.ia.borrarProveedor(p);
   },
   'ia.guardarClave': async (n, s, id, clave) => {
     const p = idProveedorIa(id);

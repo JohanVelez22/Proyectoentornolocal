@@ -13,7 +13,7 @@ const MIN_PARA_FINAL = 16;
  */
 export function sinSecretosIa(texto: string, clave?: string | null): string {
   let t = texto;
-  if (clave) t = t.split(clave).join('***');
+  if (clave) t = quitarClave(t, clave);
   t = enmascararSecretos(t);
   // Una sola línea: los controles (y cualquier espacio) pasan a ser un espacio.
   t = Array.from(t, (ch) => (ch.charCodeAt(0) < 0x20 || ch.charCodeAt(0) === 0x7f ? ' ' : ch))
@@ -21,6 +21,38 @@ export function sinSecretosIa(texto: string, clave?: string | null): string {
     .replace(/\s+/g, ' ')
     .trim();
   return t.length > MAX_DETALLE ? `${t.slice(0, MAX_DETALLE - 1)}…` : t;
+}
+
+/**
+ * Las claves más cortas que esto ('x', 'lm-studio', marcadores de servidores locales) no se
+ * buscan como subcadena: aparecerían en casi cualquier texto y darían coincidencias falsas.
+ */
+export const MIN_CLAVE_SUBCADENA = 12;
+
+export const esClaveCorta = (clave: string): boolean => clave.length < MIN_CLAVE_SUBCADENA;
+
+const escaparRe = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Quita la clave de un texto: una clave larga en cualquier sitio; una corta solo como palabra
+ * suelta (no dentro de otra palabra, para no destrozar el mensaje).
+ */
+export function quitarClave(texto: string, clave: string, reemplazo = '***'): string {
+  if (!clave) return texto;
+  if (!esClaveCorta(clave)) return texto.split(clave).join(reemplazo);
+  const re = new RegExp(`(?<![A-Za-z0-9_.-])${escaparRe(clave)}(?![A-Za-z0-9_.-])`, 'g');
+  return texto.replace(re, () => reemplazo);
+}
+
+/**
+ * ¿El texto de un `.env` (o de su copia) contiene la clave? Una clave larga, en cualquier
+ * sitio; una corta, solo como valor completo de una variable `*_API_KEY` (con o sin comillas).
+ */
+export function envContieneClave(texto: string, clave: string): boolean {
+  if (!clave) return false;
+  if (!esClaveCorta(clave)) return texto.includes(clave);
+  const re = new RegExp(`^[A-Z0-9_]*_API_KEY=["']?${escaparRe(clave)}["']?\\r?$`, 'm');
+  return re.test(texto);
 }
 
 /** `****` y los 4 últimos caracteres (solo si la clave es lo bastante larga para ocultar el resto). */

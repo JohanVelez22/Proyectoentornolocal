@@ -52,7 +52,15 @@ export * from './ia/proveedores';
 export * from './ia/envIa';
 export * from './ia/gestorIa';
 export * from './patronesSecretos';
-export { clasificarErrorIa, enmascararClave, finalDeClave, sinSecretosIa } from './ia/errores';
+export {
+  clasificarErrorIa,
+  enmascararClave,
+  envContieneClave,
+  esClaveCorta,
+  finalDeClave,
+  quitarClave,
+  sinSecretosIa,
+} from './ia/errores';
 export { VERSION_ANTHROPIC } from './ia/clienteAnthropic';
 export * from './runtimes/runtimes';
 export * from './proyectos/config';

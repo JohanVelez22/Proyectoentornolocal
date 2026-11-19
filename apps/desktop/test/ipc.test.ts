@@ -1765,6 +1765,69 @@ describe('IPC de IA en la nube', () => {
     expect(secretos.borrar).toHaveBeenCalledWith('ia:openai');
   });
 
+  it('borrar un proveedor borra primero la clave y después la configuración', async () => {
+    const { llamar, ia, secretos } = montarIa();
+    const orden: string[] = [];
+    secretos.borrar.mockImplementationOnce(async (id: string) => {
+      orden.push(`clave:${id}`);
+      secretos.guardadas.delete(id);
+    });
+    ia['borrarProveedor']!.mockImplementationOnce(async (id: string) => {
+      orden.push(`config:${id}`);
+    });
+    await llamar('ia.borrarProveedor', 'openai');
+    expect(orden).toEqual(['clave:ia:openai', 'config:openai']);
+    // Si no se pudo borrar la clave, la configuración queda (no hay clave huérfana).
+    const s2 = montarIa();
+    s2.secretos.borrar.mockRejectedValueOnce(new Error('disco lleno'));
+    const r = await s2.llamar('ia.borrarProveedor', 'openai');
+    expect(r.ok).toBe(false);
+    expect(s2.ia['borrarProveedor']).not.toHaveBeenCalled();
+  });
+
+  it('un proveedor nuevo con una clave huérfana del mismo id la borra antes de guardar', async () => {
+    const { llamar, ia, secretos } = montarIa();
+    ia['proveedores']!.mockResolvedValue([]);
+    const r = await llamar('ia.guardarProveedor', {
+      ...PROVEEDOR,
+      tipo: 'compatible',
+      urlBase: 'https://otro.example/v1',
+    });
+    expect(r.ok).toBe(true);
+    expect(secretos.borrar).toHaveBeenCalledWith('ia:openai');
+    expect(secretos.guardadas.has('ia:openai')).toBe(false);
+    expect(ia['guardarProveedor']).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 'openai' }),
+      { tieneClave: false },
+    );
+  });
+
+  it('el tipo ollama no se guarda como proveedor en la nube (el diálogo nunca lo manda)', async () => {
+    const { llamar, ia } = montarIa();
+    const r = await llamar('ia.guardarProveedor', { ...PROVEEDOR, id: 'local', tipo: 'ollama' });
+    expect(r.error?.codigo).toBe('ia.argumento_invalido');
+    expect(ia['guardarProveedor']).not.toHaveBeenCalled();
+  });
+
+  it('una clave corta no bloquea respuestas ni destroza errores por subcadena', async () => {
+    const { llamar, ia } = montarIa(secretosIa('x'));
+    ia['probarConexion']!.mockResolvedValueOnce({
+      ok: true,
+      latenciaMs: 1,
+      modelos: ['mixtral-8x7b', 'llama-3.1-70b'],
+    });
+    const r = await llamar('ia.probarConexion', 'openai');
+    expect(r).toMatchObject({ ok: true, valor: { modelos: ['mixtral-8x7b', 'llama-3.1-70b'] } });
+    ia['probarConexion']!.mockRejectedValueOnce(
+      new Error('error de sintaxis con x en la respuesta'),
+    );
+    const e = await llamar('ia.probarConexion', 'openai');
+    expect(e.error?.mensaje).toContain('error de sintaxis con *** en la respuesta');
+    const s2 = montarIa(secretosIa('lm-studio'));
+    s2.ia['previsualizarEnv']!.mockResolvedValueOnce({ bloque: 'APP_NAME=lm-studio-app' });
+    expect((await s2.llamar('ia.previsualizarEnv', 'tienda', 'openai')).ok).toBe(true);
+  });
+
   it('una clave guardada que no se puede descifrar da ia.clave_ilegible', async () => {
     const secretos = secretosIa();
     secretos.leer.mockRejectedValueOnce(new Error('No se pudo descifrar'));

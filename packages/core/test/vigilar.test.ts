@@ -22,7 +22,14 @@ beforeEach(async () => {
   base = await carpetaTemporal('pel-vig-');
   config = ConfigSchema.parse({});
   eventos = new Eventos<EventosNucleo>();
-  vigilante = new VigilanteProyectos({ leerConfig: async () => config, eventos, esperaMs: 40 });
+  // fs.watch en macOS (FSEvents) puede demorar segundos o perder eventos en carpetas temporales:
+  // la revisión periódica del producto lo cubre, y las esperas son amplias para la CI.
+  vigilante = new VigilanteProyectos({
+    leerConfig: async () => config,
+    eventos,
+    esperaMs: 40,
+    revisionMs: 500,
+  });
 });
 afterEach(() => vigilante.dispose());
 
@@ -86,9 +93,42 @@ describe('vigilar', () => {
     expect(oyente).not.toHaveBeenCalled();
     const a = await laravel(base, 'nuevo');
     await writeFile(join(a, 'otro'), '');
-    await vi.waitFor(() => expect(oyente).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    await vi.waitFor(() => expect(oyente).toHaveBeenCalledTimes(1), { timeout: 10_000 });
     expect(oyente.mock.calls[0]![0].map((s: { carpeta: string }) => s.carpeta)).toEqual([a]);
-  });
+    // Ni el evento tardío ni la revisión periódica emiten otra vez con la misma lista.
+    await new Promise((r) => setTimeout(r, 1200));
+    expect(oyente).toHaveBeenCalledTimes(1);
+  }, 20_000);
+
+  it('si la vigilancia del sistema no avisa (FSEvents en macOS), la revisión periódica lo detecta', async () => {
+    config.proyectos.carpetaVigilada = base;
+    // Un vigía que nunca avisa de nada: solo queda la revisión periódica.
+    const crearVigia = vi.fn(() => ({ close: () => undefined, on: () => undefined }));
+    const mudo = new VigilanteProyectos({
+      leerConfig: async () => config,
+      eventos,
+      esperaMs: 40,
+      revisionMs: 100,
+      crearVigia,
+    });
+    const oyente = vi.fn();
+    eventos.on('proyectos:sugerencias', oyente);
+    try {
+      await mudo.vigilar(base);
+      expect(crearVigia).toHaveBeenCalledTimes(1);
+      await new Promise((r) => setTimeout(r, 300));
+      expect(oyente).not.toHaveBeenCalled(); // sin cambios, la revisión no emite
+      const a = await laravel(base, 'nuevo');
+      await vi.waitFor(() => expect(oyente).toHaveBeenCalledTimes(1), { timeout: 5000 });
+      expect(oyente.mock.calls[0]![0].map((s: { carpeta: string }) => s.carpeta)).toEqual([a]);
+      await mudo.vigilar(null);
+      await laravel(base, 'tarde');
+      await new Promise((r) => setTimeout(r, 400));
+      expect(oyente).toHaveBeenCalledTimes(1); // detenida, la revisión tampoco sigue
+    } finally {
+      mudo.dispose();
+    }
+  }, 15_000);
 
   it('no emite si la lista no cambió', async () => {
     await laravel(base, 'uno');
@@ -125,9 +165,9 @@ describe('vigilar', () => {
     eventos.on('proyectos:sugerencias', oyente);
     await vigilante.vigilar(dir);
     await rm(dir, { recursive: true, force: true });
-    await vi.waitFor(() => expect(oyente).toHaveBeenCalledWith([]), { timeout: 5000 });
+    await vi.waitFor(() => expect(oyente).toHaveBeenCalledWith([]), { timeout: 10_000 });
     expect(await vigilante.sugerencias()).toEqual([]);
-  });
+  }, 20_000);
 
   it('tras vigilar(null), sugerencias() da [] aunque la config tenga carpeta', async () => {
     await laravel(base, 'uno');

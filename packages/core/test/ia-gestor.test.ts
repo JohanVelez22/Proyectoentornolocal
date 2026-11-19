@@ -297,3 +297,48 @@ describe('GestorIa: copias del .env con una clave', () => {
     expect(await gestor.sitiosConRespaldosDeClave(null)).toEqual([]);
   });
 });
+
+describe('GestorIa: menores de la revisión de T7', () => {
+  it('un conflicto en el .env no toca el .gitignore aunque se pidiera agregarlo', async () => {
+    const { gestor, proyecto, respaldos } = montar();
+    await gestor.guardarProveedor(OPENAI, { tieneClave: true });
+    writeFileSync(path.join(proyecto, '.env'), 'OPENAI_API_KEY=otra-clave-del-usuario\n');
+    writeFileSync(path.join(proyecto, '.gitignore'), 'node_modules\n');
+    await expect(
+      gestor.escribirEnv('tienda', 'openai', CENTINELA, {
+        confirmado: true,
+        agregarGitignore: true,
+      }),
+    ).rejects.toMatchObject({ codigo: 'ia.env_conflicto' });
+    expect(readFileSync(path.join(proyecto, '.gitignore'), 'utf8')).toBe('node_modules\n');
+    expect(existsSync(respaldos) ? readdirSync(respaldos) : []).toEqual([]);
+  });
+
+  it('un .env que no es un archivo normal tampoco toca el .gitignore', async () => {
+    const { gestor, proyecto } = montar();
+    await gestor.guardarProveedor(OPENAI, { tieneClave: true });
+    mkdirSync(path.join(proyecto, '.env'));
+    writeFileSync(path.join(proyecto, '.gitignore'), 'node_modules\n');
+    await expect(
+      gestor.escribirEnv('tienda', 'openai', CENTINELA, {
+        confirmado: true,
+        agregarGitignore: true,
+      }),
+    ).rejects.toThrow();
+    expect(readFileSync(path.join(proyecto, '.gitignore'), 'utf8')).toBe('node_modules\n');
+  });
+
+  it('una clave corta solo se busca en las copias como valor de una variable *_API_KEY', async () => {
+    const { gestor, respaldos } = montar();
+    mkdirSync(respaldos, { recursive: true });
+    const nombre = (sitio: string): string => `env-${sitio}-20261119-100001-000-a1b2c1.respaldo`;
+    writeFileSync(path.join(respaldos, nombre('tienda')), "OPENAI_API_KEY='lm-studio'\r\n");
+    writeFileSync(path.join(respaldos, nombre('blog')), 'APP_NAME=lm-studio-blog\nX=lm-studio\n');
+    writeFileSync(path.join(respaldos, nombre('foro')), 'APP_URL=https://example.test\n');
+    expect(await gestor.sitiosConRespaldosDeClave('lm-studio')).toEqual(['tienda']);
+    // 'x' aparece en casi cualquier archivo: nunca cuenta como coincidencia por subcadena.
+    expect(await gestor.sitiosConRespaldosDeClave('x')).toEqual([]);
+    expect(await gestor.limpiarRespaldosDeClave('x')).toEqual({ sitios: 0 });
+    expect(readdirSync(respaldos)).toHaveLength(3);
+  });
+});

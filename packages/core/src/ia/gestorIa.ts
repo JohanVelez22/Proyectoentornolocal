@@ -7,12 +7,13 @@ import {
   agregarEnvAGitignore,
   bloqueEnvIa,
   bloqueEnvIaEnmascarado,
+  comprobarEnvIa,
   escribirEnvIa,
   estadoGitignore,
   limpiarRespaldosEnv,
   type EstadoGitignore,
 } from './envIa';
-import { errorIa } from './errores';
+import { envContieneClave, errorIa } from './errores';
 import type { FetchIa } from './http';
 import {
   ConfigProveedorIaSchema,
@@ -242,6 +243,9 @@ export class GestorIa {
         'Git ya sigue el .env de este proyecto: el próximo commit subiría la clave aunque esté en .gitignore. Quítelo del índice con "git rm --cached .env" o confirme aparte.',
       );
     }
+    // Conflictos y .env raro se detectan antes de tocar el .gitignore: si la escritura no va a
+    // poder hacerse, no se cambia nada.
+    await comprobarEnvIa(s.carpeta, bloque, { reemplazarAjenas: o.reemplazarAjenas === true });
     const carpetaRespaldos = this.d.carpetaRespaldos();
     let gitignoreAgregado = false;
     if (o.agregarGitignore) {
@@ -280,7 +284,7 @@ export class GestorIa {
       try {
         const info = await lstat(ruta);
         if (!info.isFile() || info.size > MAX_BYTES_RESPALDO) continue;
-        if ((await readFile(ruta, 'utf8')).includes(clave)) sitios.add(m[1]!);
+        if (envContieneClave(await readFile(ruta, 'utf8'), clave)) sitios.add(m[1]!);
       } catch {
         // Una copia ilegible no impide revisar las demás.
       }
