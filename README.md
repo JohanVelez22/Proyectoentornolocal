@@ -188,7 +188,7 @@ Genera el instalador NSIS en `apps/desktop/release/` (`WolfCore Dev Setup <versi
 | ----- | ------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | MVP   | Windows: Nginx, PHP, sitios, hosts, túneles rápidos e interfaz                                                                  | Hecha     |
 | A     | HTTPS, MySQL, MariaDB, PostgreSQL + pgvector, Redis, MongoDB, módulo de bases de datos, Adminer, Composer, Mailpit, FTP, Ollama | Hecha     |
-| B     | Proyectos desde GitHub, recetas y `wolfcore.yml`, Node y Python, procesos, panel, registros, herramientas, MCP, temas e idiomas | En cierre |
+| B     | Proyectos desde GitHub, recetas y `wolfcore.yml`, Node y Python, procesos, panel, registros, herramientas, MCP, temas e idiomas | Terminada (el montaje de los 6 proyectos reales lo hace el usuario) |
 | C     | IA en la nube y Hermes, agentes, depuración de PHP; Podman/Docker mínimo (detectar, listar, encender y apagar)                  | Pendiente |
 | D     | Proyectos, compartir y respaldo del entorno                                                                                     | Pendiente |
 | E     | Multiplataforma (macOS y Linux), instaladores y CI                                                                              | Pendiente |
