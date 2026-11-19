@@ -110,6 +110,58 @@ export function puertoProxyCon(
 }
 
 /**
+ * El comando con el puerto puesto: el marcador `{puerto}` se reemplaza; en uvicorn sin `--port`
+ * se agregan `--host 127.0.0.1` (si falta) y `--port N`. Otros comandos quedan igual (reciben
+ * PORT en su entorno).
+ */
+function comandoConPuerto(comando: readonly string[], puerto: number): string[] {
+  const valor = String(puerto);
+  if (lleva([...comando])) return comando.map((x) => x.split(MARCADOR_PUERTO).join(valor));
+  const c = [...comando];
+  const esUvicorn = c.some((x) => /(^|[\\/])uvicorn(\.exe)?$/i.test(x));
+  if (esUvicorn && !c.some((x) => x === '--port' || x.startsWith('--port='))) {
+    if (!c.some((x) => x === '--host' || x.startsWith('--host='))) c.push('--host', '127.0.0.1');
+    c.push('--port', valor);
+  }
+  return c;
+}
+
+/**
+ * Al guardar un sitio FastAPI o Node cuyo proceso destino del proxy no tiene puerto, le asigna
+ * uno libre con la misma lógica que el paso sitio-crear (`puertoLibre`, que excluye los puertos
+ * de los servicios y de los demás proyectos), en vez de rechazar el guardado. Sin procesos no
+ * hay a quién asignarlo y la validación sigue pidiendo un puerto.
+ */
+export async function asignarPuertoProxy(
+  d: Pick<DepsPasos, 'puertoLibre'>,
+  datos: Omit<Sitio, 'id'>,
+  sitioId?: string,
+): Promise<Omit<Sitio, 'id'>> {
+  if (datos.tipo !== 'fastapi' && datos.tipo !== 'node') return datos;
+  const marcado = datos.procesos.find((p) => p.proxy);
+  const hayConPuerto = datos.procesos.some((p) => p.puerto !== null);
+  const objetivo =
+    marcado && marcado.puerto === null
+      ? marcado
+      : !hayConPuerto && datos.puertoProxy === null
+        ? (marcado ?? datos.procesos[0])
+        : undefined;
+  if (!objetivo) return datos;
+  const reservados = datos.procesos
+    .filter((p) => p !== objetivo && p.puerto !== null)
+    .map((p) => p.puerto!);
+  const puerto = await d.puertoLibre({
+    reservados,
+    preferido: datos.puertoProxy,
+    ...(sitioId ? { sitioId } : {}),
+  });
+  const procesos = datos.procesos.map((p) =>
+    p === objetivo ? { ...p, puerto, comando: comandoConPuerto(p.comando, puerto) } : p,
+  );
+  return { ...datos, procesos, puertoProxy: puertoProxyCon(datos.tipo, procesos, null) };
+}
+
+/**
  * Datos de un sitio nuevo con lo que trae el paso `sitio-crear` (tipo, PHP, dominio, HTTPS y sus
  * procesos con puerto). Solo se usa al crear el sitio: en uno que ya existe esos datos son del
  * usuario y el paso no los pisa.

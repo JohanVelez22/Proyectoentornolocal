@@ -98,7 +98,7 @@ import {
 } from './proyectos/detectar';
 import { RegistroPasos } from './proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
-import { datosAlCrear } from './proyectos/pasos/sitio';
+import { asignarPuertoProxy, datosAlCrear } from './proyectos/pasos/sitio';
 import {
   EjecutorRecetas,
   recetaEfectiva,
@@ -1525,10 +1525,12 @@ export class Nucleo {
     renovarHuella: boolean,
   ): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }> {
     // El acceso FTP solo cambia con activarFtp/desactivarFtp/ftpSoloLectura.
-    const resto: Omit<Sitio, 'id'> = { ...datos };
+    let resto: Omit<Sitio, 'id'> = { ...datos };
     delete resto.ftp;
     if (id) await this.cerrarTunelSiCambia(id, datos);
     const previo = id ? (await this.sitios.listar()).find((s) => s.id === id) : undefined;
+    // FastAPI/Node con el proceso del proxy sin puerto: se le asigna uno libre (no se rechaza).
+    if (this.depsPasos) resto = await asignarPuertoProxy(this.depsPasos, resto, id);
     resto.recetaConfiada = renovarHuella
       ? await this.huellaCarpeta(datos.carpeta)
       : await this.huellaPara(datos, previo);

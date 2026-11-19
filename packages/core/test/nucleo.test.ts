@@ -1350,3 +1350,64 @@ describe('Nucleo: PHP por defecto al detectar (QA 4)', () => {
     expect((await n.detectarProyecto(d)).php).toBe('8.4');
   });
 });
+
+describe('Nucleo: puerto automático al guardar FastAPI/Node (QA 3)', () => {
+  const nucleoConPuertos = async (): Promise<Nucleo> => {
+    const n = await Nucleo.crear({
+      base,
+      plataforma,
+      sonda: async () => false,
+      fetch: (async () => new Response('{}')) as typeof fetch,
+      probarPuerto: async () => true,
+    });
+    nucleos.push(n);
+    return n;
+  };
+  const uvicorn = (comando: string[]) => ({
+    id: 'uvicorn',
+    nombre: 'uvicorn',
+    comando,
+    cwd: 'raiz',
+    autoIniciar: true,
+    reiniciar: true,
+    puerto: null,
+    proxy: true,
+  });
+
+  it('un proceso proxy sin puerto recibe uno libre (y --port en uvicorn)', async () => {
+    const n = await nucleoConPuertos();
+    const { sitio } = await n.guardarSitio(
+      datos({ tipo: 'fastapi', php: null, procesos: [uvicorn(['uvicorn', 'app.main:app'])] }),
+    );
+    const p = sitio.procesos[0]!;
+    expect(p.puerto).toBeGreaterThanOrEqual(8000);
+    expect(p.comando).toEqual([
+      'uvicorn',
+      'app.main:app',
+      '--host',
+      '127.0.0.1',
+      '--port',
+      String(p.puerto),
+    ]);
+    expect(sitio.puertoProxy).toBe(p.puerto);
+  });
+
+  it('el marcador {puerto} se reemplaza y un segundo sitio no repite el puerto', async () => {
+    const n = await nucleoConPuertos();
+    const a = await n.guardarSitio(
+      datos({ tipo: 'node', php: null, procesos: [uvicorn(['node', 'server.js', '{puerto}'])] }),
+    );
+    const b = await n.guardarSitio(
+      datos({
+        dominio: 'otro.test',
+        tipo: 'node',
+        php: null,
+        procesos: [uvicorn(['node', 'server.js', '{puerto}'])],
+      }),
+    );
+    const pa = a.sitio.procesos[0]!.puerto!;
+    const pb = b.sitio.procesos[0]!.puerto!;
+    expect(a.sitio.procesos[0]!.comando).toEqual(['node', 'server.js', String(pa)]);
+    expect(pb).not.toBe(pa);
+  });
+});
