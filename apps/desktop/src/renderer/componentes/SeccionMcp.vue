@@ -16,7 +16,7 @@ import {
 import { computed, onMounted, ref } from 'vue';
 import type { EstadoMcp } from '../../shared/api';
 import { api } from '../api';
-import { useAccion } from '../composables/useAccion';
+import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 import EstadoPunto from './EstadoPunto.vue';
 
@@ -43,12 +43,24 @@ const direccion = computed(
   () => estado.value?.url ?? `http://127.0.0.1:${puertoGuardado.value ?? '—'}`,
 );
 
-onMounted(() => {
-  void ejecutar('mcp-cargar', async () => {
+/** Error al leer el estado: se muestra en la tarjeta con "Reintentar" (no solo en un aviso). */
+const errorCarga = ref<string | null>(null);
+const cargando = ref(false);
+
+async function cargar(): Promise<void> {
+  cargando.value = true;
+  try {
     const [e, c] = await Promise.all([api().mcp.estado(), api().config.leer()]);
+    errorCarga.value = null;
     aplicar(e, c.mcp.puerto);
-  });
-});
+  } catch (e) {
+    errorCarga.value = t.errorCargar(mensajeDeError(e));
+  } finally {
+    cargando.value = false;
+  }
+}
+
+onMounted(() => void cargar());
 
 function aplicar(e: EstadoMcp, puertoConfig?: number): void {
   estado.value = e;
@@ -116,7 +128,13 @@ function regenerar(): void {
     <NForm label-placement="top" :show-feedback="false">
       <NFormItem :label="t.estado">
         <div class="fila">
-          <NSkeleton v-if="!estado" text :width="140" />
+          <span v-if="errorCarga && !estado" class="ayuda error con-boton">
+            {{ errorCarga }}
+            <NButton size="tiny" secondary :loading="cargando" @click="cargar">
+              {{ es.acciones.reintentar }}
+            </NButton>
+          </span>
+          <NSkeleton v-else-if="!estado" text :width="140" />
           <EstadoPunto
             v-else
             :estado="estado.activo ? 'encendido' : 'apagado'"
@@ -240,6 +258,11 @@ function regenerar(): void {
 .ayuda.error {
   color: #dc2626;
   opacity: 1;
+}
+.con-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .botones {
   display: flex;

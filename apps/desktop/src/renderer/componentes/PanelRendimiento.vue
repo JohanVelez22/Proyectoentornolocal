@@ -81,7 +81,10 @@ function finalizar(a: AlertaPanel): void {
       <span class="nota">{{ metricas.muestreando ? t.ventana : t.pausado }}</span>
     </header>
 
-    <div v-if="alertas.length || metricas.errorPuertos" class="alertas">
+    <div v-if="alertas.length || metricas.errorPuertos || metricas.errorMuestreo" class="alertas">
+      <NAlert v-if="metricas.errorMuestreo" type="error" :show-icon="true" class="alerta">
+        {{ t.errorMuestreo(metricas.errorMuestreo) }}
+      </NAlert>
       <NAlert
         v-for="a in alertas"
         :key="a.clave"

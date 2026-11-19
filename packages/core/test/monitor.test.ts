@@ -5,7 +5,7 @@ import { Eventos, type EventosNucleo } from '../src/eventos';
 import { interpretarMuestraWindows, muestraSistemaWindows } from '../src/plataforma/win';
 import type { Ejecutor, MuestraPlataforma } from '../src/plataforma/tipos';
 import { Metricas, type DepsMetricas } from '../src/monitor/metricas';
-import { Registros } from '../src/monitor/registros';
+import { agruparLlamadas, Registros } from '../src/monitor/registros';
 import { Rutas } from '../src/rutas';
 import { SitioSchema, type Sitio } from '../src/tipos';
 import { carpetaTemporal } from './temporales';
@@ -656,5 +656,46 @@ describe('Registros', () => {
       sitios = [sitio({ id: 'a' })];
       expect(await registros.leerFinal('sitio:a:acceso')).toEqual([]);
     });
+  });
+});
+
+describe('agruparLlamadas (avisos de fs.watch)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('una ráfaga de avisos se convierte en una sola llamada tras la espera', () => {
+    vi.useFakeTimers();
+    const fn = vi.fn();
+    const g = agruparLlamadas(fn, 100);
+    for (let i = 0; i < 50; i++) g.llamar();
+    vi.advanceTimersByTime(99);
+    expect(fn).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(fn).toHaveBeenCalledTimes(1);
+    g.llamar();
+    vi.advanceTimersByTime(100);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('un flujo continuo de avisos no la posterga para siempre', () => {
+    vi.useFakeTimers();
+    const fn = vi.fn();
+    const g = agruparLlamadas(fn, 100);
+    for (let i = 0; i < 30; i++) {
+      g.llamar();
+      vi.advanceTimersByTime(20);
+    }
+    // 600 ms de avisos cada 20 ms: se revisa al menos cada 100 ms.
+    expect(fn.mock.calls.length).toBeGreaterThanOrEqual(5);
+    expect(fn.mock.calls.length).toBeLessThanOrEqual(7);
+  });
+
+  it('cancelar descarta el aviso pendiente', () => {
+    vi.useFakeTimers();
+    const fn = vi.fn();
+    const g = agruparLlamadas(fn, 100);
+    g.llamar();
+    g.cancelar();
+    vi.advanceTimersByTime(500);
+    expect(fn).not.toHaveBeenCalled();
   });
 });

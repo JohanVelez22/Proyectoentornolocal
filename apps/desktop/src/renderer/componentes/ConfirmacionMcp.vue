@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { NButton, NModal, NTag, useMessage } from 'naive-ui';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+  type ComponentPublicInstance,
+} from 'vue';
 import { mensajeDeError } from '../composables/useAccion';
 import { es } from '../i18n/es';
 import { useConfirmacionesMcp } from '../stores/mcp';
@@ -19,6 +27,18 @@ onBeforeUnmount(() => mcp.detener());
 
 const solicitud = computed(() => mcp.actual);
 const visible = computed(() => !!solicitud.value);
+const botonRechazar = ref<ComponentPublicInstance | null>(null);
+
+// Cada solicitud nueva pone el foco en "Rechazar" (Enter o Espacio nunca aprueban por descuido).
+// Se hace al desbloquearse los botones: un botón deshabilitado no puede recibir el foco.
+watch(
+  () => [solicitud.value?.id, mcp.bloqueada] as const,
+  async ([id, bloqueada]) => {
+    if (!id || bloqueada) return;
+    await nextTick();
+    requestAnimationFrame(() => (botonRechazar.value?.$el as HTMLElement | undefined)?.focus());
+  },
+);
 
 const ORDEN = ['proyecto', 'motor', 'base', 'archivo', 'sobrescribir', 'nombre', 'pid'];
 
@@ -49,14 +69,15 @@ const pasos = computed(() => {
 });
 
 async function responder(aprobado: boolean): Promise<void> {
-  if (!solicitud.value || enviando.value) return;
+  // Recién cambiada la solicitud, los botones no responden (ver ESPERA_CONFIRMACION_MS).
+  if (!solicitud.value || enviando.value || mcp.bloqueada) return;
   enviando.value = true;
   try {
     const ok = await mcp.responder(aprobado);
     if (ok) message.success(aprobado ? t.aprobada : t.rechazada);
     else message.warning(t.vencida);
   } catch (e) {
-    message.error(mensajeDeError(e));
+    message.error(t.falloRespuesta(mensajeDeError(e)));
   } finally {
     enviando.value = false;
   }
@@ -77,9 +98,14 @@ async function responder(aprobado: boolean): Promise<void> {
     :style="{ width: 'min(560px, calc(100vw - 32px))' }"
   >
     <template #header-extra>
-      <NTag v-if="mcp.total > 1" size="small" :bordered="false">
-        {{ t.pendientes(1, mcp.total) }}
-      </NTag>
+      <div class="etiquetas">
+        <NTag v-if="mcp.total > 1" size="small" :bordered="false">
+          {{ t.pendientes(1, mcp.total) }}
+        </NTag>
+        <NTag v-if="mcp.descartadas" size="small" type="warning" :bordered="false">
+          {{ t.descartadas(mcp.descartadas) }}
+        </NTag>
+      </div>
     </template>
     <template v-if="solicitud">
       <p class="resumen">{{ solicitud.resumen }}</p>
@@ -100,8 +126,19 @@ async function responder(aprobado: boolean): Promise<void> {
     </template>
     <template #footer>
       <div class="pie">
-        <NButton :disabled="enviando" @click="responder(false)">{{ t.rechazar }}</NButton>
-        <NButton type="primary" :loading="enviando" @click="responder(true)">
+        <NButton
+          ref="botonRechazar"
+          :disabled="enviando || mcp.bloqueada"
+          @click="responder(false)"
+        >
+          {{ t.rechazar }}
+        </NButton>
+        <NButton
+          type="primary"
+          :disabled="mcp.bloqueada"
+          :loading="enviando"
+          @click="responder(true)"
+        >
           {{ t.aprobar }}
         </NButton>
       </div>
@@ -150,6 +187,10 @@ async function responder(aprobado: boolean): Promise<void> {
   font-size: 12px;
   line-height: 1.5;
   word-break: break-word;
+}
+.etiquetas {
+  display: flex;
+  gap: 6px;
 }
 .pie {
   display: flex;

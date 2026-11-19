@@ -58,6 +58,30 @@ const lineaDe = (b: Buffer): string => sanear(sinRetorno(b.toString('utf8')));
 const noExiste = (e: unknown): boolean =>
   ['ENOENT', 'ENOTDIR'].includes((e as NodeJS.ErrnoException)?.code ?? '');
 
+/** Espera para agrupar los avisos de fs.watch (un archivo muy activo los dispara sin parar). */
+export const ESPERA_AVISO_WATCH_MS = 100;
+
+/**
+ * Agrupa una ráfaga de llamadas en una sola tras `ms`. Las que llegan mientras espera no la
+ * posponen: con un flujo continuo se llama, como mucho, una vez cada `ms`.
+ */
+export function agruparLlamadas(fn: () => void, ms: number): { llamar(): void; cancelar(): void } {
+  let t: ReturnType<typeof setTimeout> | null = null;
+  return {
+    llamar() {
+      if (t) return;
+      t = setTimeout(() => {
+        t = null;
+        fn();
+      }, ms);
+    },
+    cancelar() {
+      if (t) clearTimeout(t);
+      t = null;
+    },
+  };
+}
+
 /**
  * Sigue un archivo como `tail -f`: lectura incremental por posición en bytes. Tolera:
  * - anexado (lee solo lo nuevo; una línea sin salto espera al salto),
@@ -79,6 +103,8 @@ class Cola {
   private vigilante: FSWatcher | null = null;
   /** Último error registrado: el mismo error repetido en cada revisión se registra una vez. */
   private ultimoError: string | null = null;
+  /** Avisos de fs.watch agrupados (la revisión periódica no pasa por aquí). */
+  private readonly avisoWatch = agruparLlamadas(() => this.avisar(), ESPERA_AVISO_WATCH_MS);
 
   constructor(
     private readonly ruta: string,
@@ -109,7 +135,7 @@ class Cola {
     try {
       const nombre = path.basename(this.ruta);
       this.vigilante = watch(path.dirname(this.ruta), (_ev, f) => {
-        if (!f || f.toString() === nombre) this.avisar();
+        if (!f || f.toString() === nombre) this.avisoWatch.llamar();
       });
       this.vigilante.on('error', () => this.soltarVigilante());
     } catch {
@@ -122,6 +148,7 @@ class Cola {
     this.cerrada = true;
     if (this.temporizador) clearInterval(this.temporizador);
     this.temporizador = null;
+    this.avisoWatch.cancelar();
     this.soltarVigilante();
   }
 

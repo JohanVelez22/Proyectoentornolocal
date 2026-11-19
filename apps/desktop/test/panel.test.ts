@@ -7,9 +7,17 @@ import type {
   PuertoEnUso,
   SolicitudConfirmacion,
 } from '../src/shared/api';
-import { useConfirmacionesMcp } from '../src/renderer/stores/mcp';
+import {
+  ESPERA_CONFIRMACION_MS,
+  MAX_COLA_MCP,
+  useConfirmacionesMcp,
+} from '../src/renderer/stores/mcp';
 import { useMetricas } from '../src/renderer/stores/metricas';
-import { useRegistros } from '../src/renderer/stores/registros';
+import {
+  ESPERA_REFRESCO_MS,
+  LIMITE_INICIAL_REGISTROS,
+  useRegistros,
+} from '../src/renderer/stores/registros';
 import {
   agregarMuestra,
   calcularAlertas,
@@ -93,42 +101,61 @@ describe('búfer circular de registros', () => {
   it('guarda en orden y descarta las más viejas al pasar la capacidad', () => {
     const b = new BuferLineas(5);
     b.agregar(['1', '2', '3']);
-    expect(b.lista()).toEqual(['1', '2', '3']);
+    expect(b.textos()).toEqual(['1', '2', '3']);
     b.agregar(['4', '5', '6', '7']);
-    expect(b.lista()).toEqual(['3', '4', '5', '6', '7']);
+    expect(b.textos()).toEqual(['3', '4', '5', '6', '7']);
     expect(b.tamano).toBe(5);
     expect(b.descartadas).toBe(2);
     b.agregar(['8']);
-    expect(b.lista()).toEqual(['4', '5', '6', '7', '8']);
+    expect(b.textos()).toEqual(['4', '5', '6', '7', '8']);
   });
 
   it('un lote más grande que el búfer deja solo sus últimas líneas', () => {
     const b = new BuferLineas(3);
     b.agregar(['a']);
     b.agregar(['1', '2', '3', '4', '5']);
-    expect(b.lista()).toEqual(['3', '4', '5']);
+    expect(b.textos()).toEqual(['3', '4', '5']);
     expect(b.descartadas).toBe(3);
   });
 
   it('por defecto guarda 5000 líneas', () => {
     const b = new BuferLineas();
     b.agregar(Array.from({ length: 6200 }, (_, i) => `l${i}`));
-    const l = b.lista();
+    const l = b.textos();
     expect(l).toHaveLength(5000);
     expect(l[0]).toBe('l1200');
     expect(l[4999]).toBe('l6199');
+  });
+
+  it('cada línea guarda un seq creciente y su nivel calculado al insertar', () => {
+    const b = new BuferLineas(2);
+    b.agregar(['[error] uno', 'PHP Warning: dos']);
+    b.agregar(['tres']);
+    expect(b.lista()).toEqual([
+      { seq: 2, texto: 'PHP Warning: dos', nivel: 'warning' },
+      { seq: 3, texto: 'tres', nivel: null },
+    ]);
+    b.vaciar();
+    b.agregar(['[info] cuatro']);
+    expect(b.lista()[0]).toEqual({ seq: 4, texto: '[info] cuatro', nivel: 'info' });
   });
 
   it('vaciar deja el búfer como nuevo', () => {
     const b = new BuferLineas(2);
     b.agregar(['1', '2', '3']);
     b.vaciar();
-    expect(b.lista()).toEqual([]);
+    expect(b.textos()).toEqual([]);
     expect(b.descartadas).toBe(0);
   });
 });
 
 describe('filtros de registros', () => {
+  /** Las líneas del visor llegan del búfer ya con su nivel calculado. */
+  const filtrar = (ls: string[], f: Parameters<typeof filtrarLineas>[1]): string[] => {
+    const b = new BuferLineas(100);
+    b.agregar(ls);
+    return filtrarLineas(b.lista(), f).map((l) => l.texto);
+  };
   const lineas = [
     '2026/11/18 10:00:00 [error] 123#0: connect() failed',
     '[2026-11-18 10:00:01] local.ERROR: SQLSTATE[HY000]',
@@ -143,23 +170,21 @@ describe('filtros de registros', () => {
   });
 
   it('con todos los niveles y sin texto devuelve todo (también lo que no tiene nivel)', () => {
-    expect(filtrarLineas(lineas, { texto: '', niveles: ['error', 'warning', 'info'] })).toEqual(
-      lineas,
-    );
-    expect(filtrarLineas(lineas, { texto: '  ', niveles: [] })).toEqual(lineas);
+    expect(filtrar(lineas, { texto: '', niveles: ['error', 'warning', 'info'] })).toEqual(lineas);
+    expect(filtrar(lineas, { texto: '  ', niveles: [] })).toEqual(lineas);
   });
 
   it('filtra por nivel', () => {
-    expect(filtrarLineas(lineas, { texto: '', niveles: ['error'] })).toEqual(lineas.slice(0, 2));
-    expect(filtrarLineas(lineas, { texto: '', niveles: ['warning', 'info'] })).toEqual([
+    expect(filtrar(lineas, { texto: '', niveles: ['error'] })).toEqual(lineas.slice(0, 2));
+    expect(filtrar(lineas, { texto: '', niveles: ['warning', 'info'] })).toEqual([
       lineas[2],
       lineas[3],
     ]);
   });
 
   it('filtra por texto sin distinguir mayúsculas y combina con el nivel', () => {
-    expect(filtrarLineas(lineas, { texto: 'sqlstate', niveles: [] })).toEqual([lineas[1]]);
-    expect(filtrarLineas(lineas, { texto: 'local', niveles: ['info'] })).toEqual([lineas[3]]);
+    expect(filtrar(lineas, { texto: 'sqlstate', niveles: [] })).toEqual([lineas[1]]);
+    expect(filtrar(lineas, { texto: 'local', niveles: ['info'] })).toEqual([lineas[3]]);
   });
 });
 
@@ -352,36 +377,96 @@ describe('stores del panel, registros y MCP', () => {
     expect(falsa.api.herramientas.puertos).toHaveBeenCalledTimes(2);
   });
 
+  const textos = (ls: readonly { texto: string }[]): string[] => ls.map((l) => l.texto);
+
   it('registros: sigue la fuente, pausa sin perder líneas y deja de seguir al salir', async () => {
+    vi.useFakeTimers();
     const r = useRegistros();
     r.entrar();
     await r.elegir('nginx');
     expect(falsa.api.registros.leerFinal).toHaveBeenCalledWith('nginx', 5000);
     expect(falsa.api.registros.seguir).toHaveBeenCalledWith('nginx');
-    expect(r.lineas).toEqual(['nginx vieja 1', 'nginx vieja 2']);
+    expect(textos(r.lineas)).toEqual(['nginx vieja 1', 'nginx vieja 2']);
 
     falsa.emitir('registro:lineas', { id: 'nginx', lineas: ['nueva'] });
     falsa.emitir('registro:lineas', { id: 'otra', lineas: ['ajena'] });
-    expect(r.lineas).toEqual(['nginx vieja 1', 'nginx vieja 2', 'nueva']);
+    await vi.advanceTimersByTimeAsync(ESPERA_REFRESCO_MS);
+    expect(textos(r.lineas)).toEqual(['nginx vieja 1', 'nginx vieja 2', 'nueva']);
 
     r.pausar();
     falsa.emitir('registro:lineas', { id: 'nginx', lineas: ['en pausa 1', 'en pausa 2'] });
+    await vi.advanceTimersByTimeAsync(ESPERA_REFRESCO_MS);
     expect(r.lineas).toHaveLength(3);
     expect(r.nuevasEnPausa).toBe(2);
     r.reanudar();
     expect(r.lineas).toHaveLength(5);
 
     r.texto = 'pausa';
-    expect(r.visibles).toEqual(['en pausa 1', 'en pausa 2']);
+    expect(textos(r.visibles)).toEqual(['en pausa 1', 'en pausa 2']);
 
     await r.elegir('php:8.4');
     expect(falsa.api.registros.dejar).toHaveBeenCalledWith('nginx');
-    expect(r.lineas).toEqual(['php:8.4 vieja 1', 'php:8.4 vieja 2']);
+    expect(textos(r.lineas)).toEqual(['php:8.4 vieja 1', 'php:8.4 vieja 2']);
 
     await r.salir();
     expect(falsa.api.registros.dejar).toHaveBeenCalledWith('php:8.4');
     expect(falsa.cuantos('registro:lineas')).toBe(0);
     expect(r.actual).toBeNull();
+  });
+
+  it('registros: una ráfaga de lotes se pinta una sola vez y cada línea trae seq y nivel', async () => {
+    vi.useFakeTimers();
+    const r = useRegistros();
+    r.entrar();
+    await r.elegir('nginx');
+    const antes = r.lineas;
+    for (let i = 0; i < 50; i++) {
+      falsa.emitir('registro:lineas', { id: 'nginx', lineas: [`[error] lote ${i}`] });
+    }
+    // Hasta que pasa la espera no se recalcula nada.
+    expect(r.lineas).toBe(antes);
+    await vi.advanceTimersByTimeAsync(ESPERA_REFRESCO_MS);
+    expect(r.lineas).toHaveLength(52);
+    expect(r.lineas[51]).toMatchObject({ texto: '[error] lote 49', nivel: 'error' });
+    const seqs = r.lineas.map((l) => l.seq);
+    expect(new Set(seqs).size).toBe(52);
+    expect([...seqs].sort((a, b) => a - b)).toEqual(seqs);
+  });
+
+  it('registros: muestra las últimas N y "mostrar más" amplía', async () => {
+    falsa.api.registros.leerFinal.mockResolvedValueOnce(
+      Array.from({ length: 4000 }, (_, i) => `l${i}`),
+    );
+    const r = useRegistros();
+    r.entrar();
+    await r.elegir('nginx');
+    expect(r.visibles).toHaveLength(4000);
+    expect(r.mostradas).toHaveLength(LIMITE_INICIAL_REGISTROS);
+    expect(r.mostradas.at(-1)?.texto).toBe('l3999');
+    expect(r.ocultas).toBe(4000 - LIMITE_INICIAL_REGISTROS);
+    r.mostrarMas();
+    expect(r.ocultas).toBe(4000 - 2 * LIMITE_INICIAL_REGISTROS);
+    r.mostrarMas();
+    r.mostrarMas();
+    expect(r.ocultas).toBe(0);
+  });
+
+  it('registros: si se vuelve a entrar mientras salir espera, no se borra lo nuevo', async () => {
+    let soltarDejar: () => void = () => undefined;
+    const r = useRegistros();
+    r.entrar();
+    await r.elegir('nginx');
+    falsa.api.registros.dejar.mockImplementationOnce(
+      () => new Promise<undefined>((res) => (soltarDejar = () => res(undefined))),
+    );
+    const saliendo = r.salir();
+    r.entrar();
+    await r.elegir('php:8.4');
+    soltarDejar();
+    await saliendo;
+    expect(r.actual).toBe('php:8.4');
+    expect(textos(r.lineas)).toEqual(['php:8.4 vieja 1', 'php:8.4 vieja 2']);
+    expect(falsa.cuantos('registro:lineas')).toBe(1);
   });
 
   it('registros: si se cambia de fuente mientras carga, la anterior no queda seguida', async () => {
@@ -398,7 +483,17 @@ describe('stores del panel, registros y MCP', () => {
     await Promise.all([primera, segunda]);
     expect(falsa.api.registros.seguir).not.toHaveBeenCalledWith('nginx');
     expect(r.actual).toBe('php:8.4');
-    expect(r.lineas).not.toContain('tarde');
+    expect(textos(r.lineas)).not.toContain('tarde');
+  });
+
+  it('métricas: un fallo al iniciar el muestreo queda a la vista', async () => {
+    falsa.api.metricas.iniciar.mockRejectedValueOnce(new Error('sin núcleo'));
+    const { doc } = documentoFalso();
+    const m = useMetricas();
+    m.entrar(doc);
+    await esperar();
+    expect(m.errorMuestreo).toBe('sin núcleo');
+    m.salir();
   });
 
   describe('cola de confirmaciones MCP', () => {
@@ -412,6 +507,11 @@ describe('stores del panel, registros y MCP', () => {
       datos: { motor: 'mysql', base: 'tienda', sobrescribir: true },
       ...extra,
     });
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    const desbloquear = () => vi.advanceTimersByTimeAsync(ESPERA_CONFIRMACION_MS);
 
     it('abre la primera solicitud y encola las demás sin repetir', () => {
       const mcp = useConfirmacionesMcp();
@@ -429,12 +529,48 @@ describe('stores del panel, registros y MCP', () => {
       mcp.iniciar();
       falsa.emitir('mcp:confirmar', sol('a'));
       falsa.emitir('mcp:confirmar', sol('b'));
+      await desbloquear();
       await expect(mcp.responder(true)).resolves.toBe(true);
       expect(falsa.api.mcp.responderConfirmacion).toHaveBeenCalledWith('a', true);
       expect(mcp.actual?.id).toBe('b');
+      await desbloquear();
       await mcp.responder(false);
       expect(falsa.api.mcp.responderConfirmacion).toHaveBeenLastCalledWith('b', false);
       expect(mcp.actual).toBeNull();
+    });
+
+    it('tras cambiar la solicitud visible, los botones quedan bloqueados un momento', async () => {
+      const mcp = useConfirmacionesMcp();
+      mcp.iniciar();
+      falsa.emitir('mcp:confirmar', sol('a'));
+      falsa.emitir('mcp:confirmar', sol('b'));
+      expect(mcp.bloqueada).toBe(true);
+      await expect(mcp.responder(true)).resolves.toBe(false);
+      expect(falsa.api.mcp.responderConfirmacion).not.toHaveBeenCalled();
+      await desbloquear();
+      expect(mcp.bloqueada).toBe(false);
+
+      // Doble clic: responder A y enseguida otra vez no toca B.
+      const primera = mcp.responder(true);
+      const segunda = mcp.responder(true);
+      await expect(primera).resolves.toBe(true);
+      await expect(segunda).resolves.toBe(false);
+      expect(falsa.api.mcp.responderConfirmacion).toHaveBeenCalledTimes(1);
+      expect(falsa.api.mcp.responderConfirmacion).toHaveBeenCalledWith('a', true);
+      expect(mcp.actual?.id).toBe('b');
+      expect(mcp.bloqueada).toBe(true);
+    });
+
+    it('si la solicitud visible vence, la siguiente también llega bloqueada', async () => {
+      const mcp = useConfirmacionesMcp();
+      mcp.iniciar();
+      falsa.emitir('mcp:confirmar', sol('a'));
+      falsa.emitir('mcp:confirmar', sol('b'));
+      await desbloquear();
+      falsa.emitir('mcp:confirmacion-cerrada', { id: 'a', motivo: 'vencida' });
+      expect(mcp.actual?.id).toBe('b');
+      await expect(mcp.responder(true)).resolves.toBe(false);
+      expect(falsa.api.mcp.responderConfirmacion).not.toHaveBeenCalled();
     });
 
     it('se cierra con mcp:confirmacion-cerrada de ese id e ignora ids desconocidos', () => {
@@ -455,10 +591,34 @@ describe('stores del panel, registros y MCP', () => {
       mcp.iniciar();
       falsa.api.mcp.responderConfirmacion.mockResolvedValueOnce(false);
       falsa.emitir('mcp:confirmar', sol('a'));
+      await desbloquear();
       const r = mcp.responder(true);
       falsa.emitir('mcp:confirmar', sol('a'));
       expect(mcp.actual).toBeNull();
       await expect(r).resolves.toBe(false);
+    });
+
+    it('si responder falla, la solicitud vuelve al frente de la cola', async () => {
+      const mcp = useConfirmacionesMcp();
+      mcp.iniciar();
+      falsa.api.mcp.responderConfirmacion.mockRejectedValueOnce(new Error('IPC caído'));
+      falsa.emitir('mcp:confirmar', sol('a'));
+      falsa.emitir('mcp:confirmar', sol('b'));
+      await desbloquear();
+      await expect(mcp.responder(true)).rejects.toThrow('IPC caído');
+      expect(mcp.cola.map((s) => s.id)).toEqual(['a', 'b']);
+    });
+
+    it('cuenta las solicitudes descartadas por exceso y lo olvida al vaciarse', () => {
+      const mcp = useConfirmacionesMcp();
+      mcp.iniciar();
+      for (let i = 0; i < MAX_COLA_MCP + 3; i++) falsa.emitir('mcp:confirmar', sol(`s${i}`));
+      expect(mcp.total).toBe(MAX_COLA_MCP);
+      expect(mcp.descartadas).toBe(3);
+      for (let i = 0; i < MAX_COLA_MCP; i++) {
+        falsa.emitir('mcp:confirmacion-cerrada', { id: `s${i}`, motivo: 'vencida' });
+      }
+      expect(mcp.descartadas).toBe(0);
     });
 
     it('acepta listas largas de pasos (52) y deja de escuchar al detener', () => {

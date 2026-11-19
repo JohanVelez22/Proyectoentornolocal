@@ -10,6 +10,7 @@ import {
   NSelect,
   NSpace,
   NSpin,
+  useThemeVars,
 } from 'naive-ui';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -18,12 +19,7 @@ import { useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 import { useRegistros } from '../stores/registros';
 import { useSitios } from '../stores/sitios';
-import {
-  agruparFuentes,
-  NIVELES_REGISTRO,
-  nivelDeLinea,
-  type NivelRegistro,
-} from '../utilidades/registros';
+import { agruparFuentes, NIVELES_REGISTRO, type NivelRegistro } from '../utilidades/registros';
 
 const t = es.registros;
 const route = useRoute();
@@ -36,10 +32,12 @@ const caja = ref<HTMLElement | null>(null);
 /** Sigue el final mientras el usuario no suba a leer líneas anteriores. */
 const pegadoAlFinal = ref(true);
 
-/** Hasta 5000 líneas: se pintan como un solo bloque de texto con color por nivel. */
-const filas = computed(() =>
-  registros.visibles.map((texto, i) => ({ i, texto, nivel: nivelDeLinea(texto) })),
-);
+/** Colores por nivel del tema de Naive (siguen el tema claro u oscuro que esté activo). */
+const tema = useThemeVars();
+const coloresNivel = computed(() => ({
+  '--color-error': tema.value.errorColor,
+  '--color-aviso': tema.value.warningColor,
+}));
 
 async function cargarFuentes(): Promise<void> {
   await ejecutar('fuentes', () => registros.cargarFuentes());
@@ -60,7 +58,7 @@ onBeforeUnmount(() => {
 });
 
 watch(
-  () => registros.visibles,
+  () => registros.mostradas,
   async () => {
     if (!pegadoAlFinal.value) return;
     await nextTick();
@@ -79,7 +77,7 @@ function irAlFinal(): void {
 }
 
 function copiar(): void {
-  const lineas = registros.visibles;
+  const lineas = registros.visibles.map((l) => l.texto);
   void ejecutar('copiar', () => api().sistema.copiar(lineas.join('\n')), {
     exito: t.copiadas(lineas.length),
   });
@@ -188,6 +186,11 @@ function cambiarNiveles(v: (string | number)[]): void {
       </span>
     </div>
 
+    <div v-if="registros.ocultas" class="mas">
+      <span>{{ t.ocultas(registros.ocultas) }}</span>
+      <NButton size="tiny" secondary @click="registros.mostrarMas()">{{ t.mostrarMas }}</NButton>
+    </div>
+
     <div class="visor-envoltura">
       <NSpin :show="registros.cargando" class="spin">
         <div v-if="!registros.actual" class="vacio">
@@ -197,12 +200,13 @@ function cambiarNiveles(v: (string | number)[]): void {
           v-else
           ref="caja"
           class="visor"
+          :style="coloresNivel"
           tabindex="0"
           :aria-label="t.titulo"
           @scroll="alDesplazar"
-        ><template v-if="filas.length"><span
-            v-for="f in filas"
-            :key="f.i"
+        ><template v-if="registros.mostradas.length"><span
+            v-for="f in registros.mostradas"
+            :key="f.seq"
             class="linea"
             :class="f.nivel ? `nivel-${f.nivel}` : ''"
           >{{ f.texto }}
@@ -289,18 +293,17 @@ function cambiarNiveles(v: (string | number)[]): void {
   outline-offset: 2px;
 }
 .nivel-error {
-  color: #dc2626;
+  color: var(--color-error);
 }
 .nivel-warning {
-  color: #b45309;
+  color: var(--color-aviso);
 }
-@media (prefers-color-scheme: dark) {
-  .nivel-error {
-    color: #f87171;
-  }
-  .nivel-warning {
-    color: #fbbf24;
-  }
+.mas {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  opacity: 0.8;
 }
 .sin-lineas {
   opacity: 0.6;

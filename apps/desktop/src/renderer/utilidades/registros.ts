@@ -4,20 +4,29 @@ import { es } from '../i18n/es';
 /** Líneas que guarda el visor por fuente (las más viejas se descartan). */
 export const CAPACIDAD_REGISTROS = 5000;
 
+/** Una línea del visor: `seq` es único y creciente (sirve de clave); el nivel se calcula al insertar. */
+export interface LineaRegistro {
+  seq: number;
+  texto: string;
+  nivel: NivelRegistro | null;
+}
+
 /**
  * Búfer circular de líneas: agregar es O(lote) aunque lleguen miles por segundo y la memoria
  * queda acotada a `capacidad`. `lista()` devuelve una copia en orden (de la más vieja a la nueva).
  */
 export class BuferLineas {
-  private datos: string[];
+  private datos: LineaRegistro[];
   private inicio = 0;
   private cantidad = 0;
   /** Total agregado desde el último `vaciar` (para saber cuántas se descartaron). */
   private agregadas = 0;
+  /** No vuelve a cero al vaciar: las claves nunca se repiten. */
+  private seq = 0;
 
   constructor(readonly capacidad = CAPACIDAD_REGISTROS) {
     if (!Number.isInteger(capacidad) || capacidad < 1) throw new Error('Capacidad inválida');
-    this.datos = new Array<string>(capacidad);
+    this.datos = new Array<LineaRegistro>(capacidad);
   }
 
   get tamano(): number {
@@ -33,22 +42,28 @@ export class BuferLineas {
     this.agregadas += lineas.length;
     // De un lote más grande que el búfer solo sirven las últimas.
     const desde = Math.max(0, lineas.length - this.capacidad);
+    this.seq += desde;
     for (let i = desde; i < lineas.length; i++) {
+      const texto = lineas[i]!;
       const pos = (this.inicio + this.cantidad) % this.capacidad;
-      this.datos[pos] = lineas[i]!;
+      this.datos[pos] = { seq: ++this.seq, texto, nivel: nivelDeLinea(texto) };
       if (this.cantidad < this.capacidad) this.cantidad++;
       else this.inicio = (this.inicio + 1) % this.capacidad;
     }
   }
 
-  lista(): string[] {
+  lista(): LineaRegistro[] {
     const fin = this.inicio + this.cantidad;
     if (fin <= this.capacidad) return this.datos.slice(this.inicio, fin);
     return [...this.datos.slice(this.inicio), ...this.datos.slice(0, fin - this.capacidad)];
   }
 
+  textos(): string[] {
+    return this.lista().map((l) => l.texto);
+  }
+
   vaciar(): void {
-    this.datos = new Array<string>(this.capacidad);
+    this.datos = new Array<LineaRegistro>(this.capacidad);
     this.inicio = 0;
     this.cantidad = 0;
     this.agregadas = 0;
@@ -77,17 +92,17 @@ export interface FiltroRegistros {
   niveles: readonly NivelRegistro[];
 }
 
-export function filtrarLineas(lineas: readonly string[], filtro: FiltroRegistros): string[] {
+export function filtrarLineas(
+  lineas: readonly LineaRegistro[],
+  filtro: FiltroRegistros,
+): LineaRegistro[] {
   const texto = filtro.texto.trim().toLowerCase();
   const porNivel = filtro.niveles.length > 0 && filtro.niveles.length < NIVELES_REGISTRO.length;
   if (!texto && !porNivel) return [...lineas];
   const niveles = new Set(filtro.niveles);
   return lineas.filter((l) => {
-    if (texto && !l.toLowerCase().includes(texto)) return false;
-    if (porNivel) {
-      const n = nivelDeLinea(l);
-      if (!n || !niveles.has(n)) return false;
-    }
+    if (porNivel && (!l.nivel || !niveles.has(l.nivel))) return false;
+    if (texto && !l.texto.toLowerCase().includes(texto)) return false;
     return true;
   });
 }

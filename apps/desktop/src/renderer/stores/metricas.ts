@@ -21,6 +21,8 @@ export const useMetricas = defineStore('metricas', () => {
   const puertos = shallowRef<PuertoEnUso[]>([]);
   const errorPuertos = ref(false);
   const muestreando = ref(false);
+  /** Por qué no se pudo empezar o pausar el muestreo (se borra al lograrlo). */
+  const errorMuestreo = ref<string | null>(null);
   const ultima = computed(() => serie.value[serie.value.length - 1] ?? null);
 
   let control: ControlMuestreo | null = null;
@@ -59,9 +61,15 @@ export const useMetricas = defineStore('metricas', () => {
     documento = doc;
     baja = api().on('metricas:muestra', recibir);
     control = crearMuestreo({
-      iniciar: () => api().metricas.iniciar(),
+      iniciar: async () => {
+        await api().metricas.iniciar();
+        errorMuestreo.value = null;
+      },
       pausar: () => api().metricas.pausar(),
       documento: doc,
+      alError: (e) => {
+        errorMuestreo.value = e instanceof Error && e.message ? e.message : String(e);
+      },
     });
     alVisibilidad = () => {
       muestreando.value = control?.activo ?? false;
@@ -102,6 +110,7 @@ export const useMetricas = defineStore('metricas', () => {
     puertos,
     errorPuertos,
     muestreando,
+    errorMuestreo,
     entrar,
     salir,
     cargarPuertos,

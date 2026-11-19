@@ -1222,6 +1222,7 @@ export const es = {
     ventana: 'Últimos 5 minutos',
     pausado: 'En pausa mientras la ventana está oculta',
     esperando: 'Esperando la primera muestra…',
+    errorMuestreo: (detalle: string) => `No se pudo pedir el muestreo de rendimiento: ${detalle}`,
     cpu: 'CPU',
     ram: 'Memoria',
     disco: 'Disco de datos',
@@ -1285,6 +1286,9 @@ export const es = {
     limpiar: 'Limpiar',
     abrirCarpeta: 'Abrir carpeta',
     alFinal: 'Seguir el final',
+    mostrarMas: 'Mostrar más',
+    ocultas: (n: number) =>
+      n === 1 ? '1 línea anterior sin mostrar' : `${n} líneas anteriores sin mostrar`,
     vacio: 'Sin líneas todavía. Las nuevas aparecen aquí en cuanto se escriben.',
     sinCoincidencias: 'Ninguna línea coincide con el filtro.',
     cuenta: (visibles: number, total: number) =>
@@ -1337,6 +1341,7 @@ export const es = {
     regenerarTexto:
       'El token actual deja de valer al instante: los asistentes conectados tendrán que usar la configuración nueva.',
     regenerado: 'Token regenerado. Copie la configuración de nuevo.',
+    errorCargar: (detalle: string) => `No se pudo leer el estado del servidor MCP: ${detalle}`,
     confirmacion: {
       titulo: 'Un asistente pide confirmación',
       herramienta: 'Herramienta',
@@ -1346,6 +1351,12 @@ export const es = {
       aprobada: 'Acción aprobada',
       rechazada: 'Acción rechazada',
       vencida: 'La solicitud ya no estaba pendiente.',
+      descartadas: (n: number) =>
+        n === 1
+          ? 'y 1 más que no cupo (vencerá sola)'
+          : `y ${n} más que no cupieron (vencerán solas)`,
+      falloRespuesta: (detalle: string) =>
+        `No se pudo enviar la respuesta; la solicitud sigue pendiente. ${detalle}`,
       si: 'Sí',
       no: 'No',
       campos: {
