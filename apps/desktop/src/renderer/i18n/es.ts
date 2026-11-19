@@ -746,6 +746,25 @@ export const es = {
     errorAplicar: 'Ajustes guardados, pero no se pudieron aplicar del todo',
     errorSeccion: (detalle: string) => `No se pudo leer este dato: ${detalle}`,
     acerca: 'Acerca de',
+    avisos: {
+      titulo: 'Avisos',
+      descripcion:
+        'Qué avisos se guardan en la campana y si Windows muestra una notificación cuando la ventana no está a la vista.',
+      nativas: 'Notificaciones de Windows',
+      nativasAyuda:
+        'Solo cuando WolfCore Dev no está en primer plano; como mucho una por tipo cada 5 min.',
+      tiposTitulo: 'Tipos de aviso',
+      tipos: {
+        'servicio-caido': 'Un servicio se detuvo con un error',
+        'puerto-ocupado': 'Puerto ocupado al iniciar un servicio',
+        'certificado-por-vencer': 'Certificados por vencer',
+        'tunel-caido': 'Un túnel se cayó',
+        'proceso-error': 'Un proceso de proyecto falló',
+        doctor: 'Diagnóstico (Doctor)',
+        'contenedor-detenido': 'Un contenedor se detuvo',
+      } as Record<string, string>,
+      errorGuardar: 'No se pudieron guardar los avisos',
+    },
     versionPrograma: 'Versión del programa',
     https: {
       titulo: 'HTTPS',

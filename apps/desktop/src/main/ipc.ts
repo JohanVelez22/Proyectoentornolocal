@@ -4,6 +4,8 @@ import { dirname, resolve } from 'node:path';
 import {
   datosPermitidos,
   ErrorWolf,
+  TIPOS_AVISO,
+  type TipoAviso,
   PasoRecetaSchema,
   validarUrlGit,
   type CambiosPreferenciasUi,
@@ -810,7 +812,34 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'avisos.limpiar': (n) => {
     n.avisos.limpiar();
   },
+  // Preferencias: solo `nativas` (booleano) y `tipos` (tipos conocidos → booleano).
+  'avisos.configurar': (n, _s, cambios) => n.configurarAvisos(cambiosAvisos(cambios)),
 };
+
+/** Cambios de preferencias de avisos del renderer, validados contra la lista de tipos. */
+function cambiosAvisos(v: unknown): {
+  nativas?: boolean;
+  tipos?: Partial<Record<TipoAviso, boolean>>;
+} {
+  const o = objetoPlano<Record<string, unknown>>(v, 'avisos');
+  for (const k of Object.keys(o)) {
+    if (k !== 'nativas' && k !== 'tipos') throw new Error('Argumento no válido: avisos');
+  }
+  const salida: { nativas?: boolean; tipos?: Partial<Record<TipoAviso, boolean>> } = {};
+  if (o['nativas'] !== undefined) salida.nativas = booleano(o['nativas'], 'nativas');
+  if (o['tipos'] !== undefined) {
+    const t = objetoPlano<Record<string, unknown>>(o['tipos'], 'tipos');
+    const tipos: Partial<Record<TipoAviso, boolean>> = {};
+    for (const [k, valor] of Object.entries(t)) {
+      if (!(TIPOS_AVISO as readonly string[]).includes(k)) {
+        throw new Error('Argumento no válido: tipos');
+      }
+      tipos[k as TipoAviso] = booleano(valor, 'tipos');
+    }
+    salida.tipos = tipos;
+  }
+  return salida;
+}
 
 /** Máximo de un dato estructurado de error (una ruta). */
 const MAX_DATO_ERROR = 1024;

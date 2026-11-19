@@ -174,6 +174,23 @@ describe('IPC de avisos', () => {
     return { canales, avisos };
   }
 
+  function montarConConfig(configurarAvisos: ReturnType<typeof vi.fn>) {
+    const canales = new Map<string, (e: unknown, ...a: unknown[]) => unknown>();
+    const ipcMain: IpcMainLike = { handle: (c, fn) => void canales.set(c, fn) };
+    const nucleo = {
+      avisos: { lista: vi.fn(), marcarLeidos: vi.fn(), limpiar: vi.fn() },
+      configurarAvisos,
+      eventos: { on: () => () => undefined },
+    } as unknown as NucleoIpc;
+    registrarIpc(
+      nucleo,
+      ipcMain,
+      { isDestroyed: () => false, webContents: { send: vi.fn() } },
+      {} as never,
+    );
+    return { canales, nucleo };
+  }
+
   it('las tres rutas están en la lista blanca', () => {
     for (const r of ['avisos.lista', 'avisos.marcarLeidos', 'avisos.limpiar']) {
       expect(RUTAS_IPC).toContain(r);
@@ -189,6 +206,33 @@ describe('IPC de avisos', () => {
     expect(avisos.marcarLeidos).toHaveBeenLastCalledWith(undefined);
     await canales.get('entorno:avisos.limpiar')!({});
     expect(avisos.limpiar).toHaveBeenCalled();
+  });
+
+  it('configurar: nativas y tipos válidos llegan al núcleo; lo demás se rechaza', async () => {
+    const configurarAvisos = vi.fn(async () => ({ nativas: false, tipos: {} }));
+    const { canales, nucleo } = montarConConfig(configurarAvisos);
+    expect(RUTAS_IPC).toContain('avisos.configurar');
+    const ok = (await canales.get('entorno:avisos.configurar')!(
+      {},
+      { nativas: false, tipos: { 'servicio-caido': false } },
+    )) as { ok: boolean };
+    expect(ok.ok).toBe(true);
+    expect(configurarAvisos).toHaveBeenCalledWith({
+      nativas: false,
+      tipos: { 'servicio-caido': false },
+    });
+    for (const malo of [
+      { nativas: 'no' },
+      { tipos: { inventado: true } },
+      { tipos: { 'servicio-caido': 1 } },
+      { otra: true },
+      'x',
+    ]) {
+      const r = (await canales.get('entorno:avisos.configurar')!({}, malo)) as { ok: boolean };
+      expect(r.ok).toBe(false);
+    }
+    expect(configurarAvisos).toHaveBeenCalledTimes(1);
+    void nucleo;
   });
 
   it('rechaza ids que no son una lista de textos cortos', async () => {

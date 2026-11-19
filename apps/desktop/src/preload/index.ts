@@ -130,6 +130,7 @@ const api: ApiEntorno = {
     lista: () => invocar('avisos.lista'),
     marcarLeidos: (ids) => invocar('avisos.marcarLeidos', ids),
     limpiar: () => invocar('avisos.limpiar'),
+    configurar: (cambios) => invocar('avisos.configurar', cambios),
   },
   sistema: {
     elegirCarpeta: () => invocar('sistema.elegirCarpeta'),

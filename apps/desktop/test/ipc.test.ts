@@ -476,6 +476,7 @@ describe('registrarIpc', () => {
         'avisos.lista',
         'avisos.marcarLeidos',
         'avisos.limpiar',
+        'avisos.configurar',
         'proyectos.detectar',
         'proyectos.configLeer',
         'proyectos.configGuardar',

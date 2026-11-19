@@ -22,6 +22,7 @@ import { PUERTO_ADMINER, type Config, type ResultadoCA } from '../../shared/api'
 import { api } from '../api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import SeccionApariencia from '../componentes/SeccionApariencia.vue';
+import SeccionAvisos from '../componentes/SeccionAvisos.vue';
 import SeccionMcp from '../componentes/SeccionMcp.vue';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -263,6 +264,8 @@ async function aplicarPath(activar: boolean): Promise<void> {
     <p class="descripcion">{{ t.descripcion }}</p>
 
     <SeccionApariencia />
+
+    <SeccionAvisos />
 
     <NCard :title="t.general" size="small" class="tarjeta">
       <NForm label-placement="top" :show-feedback="false">

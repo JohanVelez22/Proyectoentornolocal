@@ -740,6 +740,25 @@ export const en: Textos = {
     errorAplicar: 'Settings saved, but they could not be fully applied',
     errorSeccion: (detalle: string) => `Could not read this value: ${detalle}`,
     acerca: 'About',
+    avisos: {
+      titulo: 'Notices',
+      descripcion:
+        'Which notices are kept in the bell and whether Windows shows a notification when the window is not in view.',
+      nativas: 'Windows notifications',
+      nativasAyuda:
+        'Only when WolfCore Dev is not in the foreground; at most one per type every 5 min.',
+      tiposTitulo: 'Notice types',
+      tipos: {
+        'servicio-caido': 'A service stopped with an error',
+        'puerto-ocupado': 'Port in use when starting a service',
+        'certificado-por-vencer': 'Certificates about to expire',
+        'tunel-caido': 'A tunnel went down',
+        'proceso-error': 'A project process failed',
+        doctor: 'Diagnostics (Doctor)',
+        'contenedor-detenido': 'A container stopped',
+      } as Record<string, string>,
+      errorGuardar: 'The notice settings could not be saved',
+    },
     versionPrograma: 'Program version',
     https: {
       titulo: 'HTTPS',

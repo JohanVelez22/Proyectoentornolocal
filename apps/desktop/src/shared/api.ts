@@ -479,6 +479,11 @@ export interface ApiEntorno {
     /** Sin ids marca todos como leídos. */
     marcarLeidos(ids?: string[]): Promise<void>;
     limpiar(): Promise<void>;
+    /** Notificaciones nativas y tipos de aviso activos; devuelve la configuración guardada. */
+    configurar(cambios: {
+      nativas?: boolean;
+      tipos?: Partial<Config['avisos']['tipos']>;
+    }): Promise<Config['avisos']>;
   };
   sistema: ApiSistema & ApiSistemaNucleo;
   /** Suscribe a un evento del núcleo; devuelve la función para cancelar. */
@@ -634,6 +639,7 @@ export const RUTAS_IPC = [
   'avisos.lista',
   'avisos.marcarLeidos',
   'avisos.limpiar',
+  'avisos.configurar',
 ] as const;
 export type RutaIpc = (typeof RUTAS_IPC)[number];
 
