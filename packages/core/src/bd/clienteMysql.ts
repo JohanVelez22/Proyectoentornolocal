@@ -57,6 +57,19 @@ function traducir(e: unknown, accion: string): Error {
  * El usuario ya existe y la clave pedida no es la suya: no se cambia (otro proyecto puede usarla).
  * Para cambiarla hay que pedirlo a propósito (`cambiarClave`).
  */
+/**
+ * ¿Es una línea de `SHOW GRANTS` con privilegios globales? `GRANT USAGE ON *.*` (sin permisos) no
+ * cuenta; cualquier otro permiso `ON *.*` (estático o dinámico, como SYSTEM_USER) o un PROXY sí.
+ */
+export function esPermisoGlobal(linea: unknown): boolean {
+  if (typeof linea !== 'string') return false;
+  const t = linea.trim();
+  if (/^GRANT\s+PROXY\s+ON\s/i.test(t)) return true;
+  const m = /^GRANT\s+(.+?)\s+ON\s+\*\.\*\s+TO\s/i.exec(t);
+  if (!m) return false;
+  return !/^USAGE$/i.test(m[1]!.trim()) || /WITH\s+GRANT\s+OPTION/i.test(t);
+}
+
 /** Un usuario que no se puede usar para un proyecto (el administrador, un rol del sistema…). */
 export const errorUsuarioPrivilegiado = (usuario: string): ErrorWolf =>
   new ErrorWolf(
@@ -207,12 +220,29 @@ export class ClienteMysql {
     let hostsExistentes: string[] = [];
     if (usuario !== undefined) {
       try {
-        const f = await this.filas('SELECT Host AS host FROM mysql.user WHERE User = ?', [usuario]);
+        const f = await this.filas(
+          'SELECT Host AS host, Super_priv AS super_priv, Grant_priv AS grant_priv FROM mysql.user WHERE User = ?',
+          [usuario],
+        );
         hostsExistentes = f
           .map((x) => x.host ?? x.Host)
           .filter((h): h is string => typeof h === 'string' && h !== '');
         existia = hostsExistentes.length > 0;
+        // Como con rolsuper en PostgreSQL: la clave de una cuenta con privilegios globales
+        // nunca se cambia desde aquí (podría ser la de otro administrador).
+        if (existia && opts.cambiarClave) {
+          if (f.some((x) => x.super_priv === 'Y' || x.grant_priv === 'Y')) {
+            throw errorUsuarioPrivilegiado(usuario);
+          }
+          for (const host of hostsExistentes) {
+            const grants = await this.filas('SHOW GRANTS FOR ?@?', [usuario, host]);
+            if (grants.some((g) => Object.values(g).some(esPermisoGlobal))) {
+              throw errorUsuarioPrivilegiado(usuario);
+            }
+          }
+        }
       } catch (e) {
+        if (e instanceof ErrorWolf) throw e;
         throw traducir(e, `crear la base ${nombre}`);
       }
       // Usuario existente: su clave no se toca salvo pedido explícito; antes de crear nada se

@@ -448,6 +448,95 @@ describe('ClienteMysql: cuentas existentes y códigos (ronda de seguridad)', () 
     expect(grants.map((q) => q.params)).toEqual([['app', '%']]);
   });
 
+  describe('cambiarClave sobre cuentas privilegiadas (como rolsuper en PostgreSQL)', () => {
+    const montarPriv = (filas: Record<string, string>[], grants: string[] = []) => {
+      const consultas: { sql: string; params?: unknown[] }[] = [];
+      const cliente = new ClienteMysql(async () => ({
+        query: async (sql: string, params?: unknown[]) => {
+          consultas.push({ sql, params });
+          if (sql.includes('mysql.user')) return [filas] as never;
+          if (sql.startsWith('SHOW GRANTS')) {
+            return [grants.map((g) => ({ [`Grants for app@%`]: g }))] as never;
+          }
+          return [[]] as never;
+        },
+        end: async () => undefined,
+      }));
+      return { cliente, consultas };
+    };
+    const sinTocar = (consultas: { sql: string }[]) =>
+      expect(consultas.some((q) => /^(CREATE|GRANT|ALTER)/.test(q.sql))).toBe(false);
+
+    it('Super_priv o Grant_priv = Y: bd.usuario_privilegiado y nada cambia', async () => {
+      for (const fila of [
+        { host: '%', super_priv: 'Y', grant_priv: 'N' },
+        { host: 'localhost', super_priv: 'N', grant_priv: 'Y' },
+      ]) {
+        const { cliente, consultas } = montarPriv([fila]);
+        await cliente.conectar(cx);
+        const e = await cliente
+          .crearBase('b', { usuario: 'app', clave: 'nueva', cambiarClave: true })
+          .catch((x: unknown) => x);
+        expect((e as { codigo?: string }).codigo).toBe('bd.usuario_privilegiado');
+        sinTocar(consultas);
+      }
+    });
+
+    it('privilegios globales ON *.* (SHOW GRANTS): bd.usuario_privilegiado', async () => {
+      for (const g of [
+        'GRANT ALL PRIVILEGES ON *.* TO `app`@`%`',
+        'GRANT SELECT, RELOAD ON *.* TO `app`@`%`',
+        'GRANT SYSTEM_USER ON *.* TO `app`@`%`',
+        "GRANT PROXY ON ''@'%' TO 'app'@'%' WITH GRANT OPTION",
+      ]) {
+        const { cliente, consultas } = montarPriv(
+          [{ host: '%', super_priv: 'N', grant_priv: 'N' }],
+          ['GRANT USAGE ON *.* TO `app`@`%`', g],
+        );
+        await cliente.conectar(cx);
+        const e = await cliente
+          .crearBase('b', { usuario: 'app', clave: 'nueva', cambiarClave: true })
+          .catch((x: unknown) => x);
+        expect((e as { codigo?: string }).codigo, g).toBe('bd.usuario_privilegiado');
+        sinTocar(consultas);
+      }
+    });
+
+    it('cuenta normal (USAGE ON *.* y permisos por base): sí se cambia la clave', async () => {
+      const { cliente, consultas } = montarPriv(
+        [{ host: '%', super_priv: 'N', grant_priv: 'N' }],
+        ['GRANT USAGE ON *.* TO `app`@`%`', 'GRANT ALL PRIVILEGES ON `otra`.* TO `app`@`%`'],
+      );
+      await cliente.conectar(cx);
+      const r = await cliente.crearBase('b', {
+        usuario: 'app',
+        clave: 'nueva',
+        cambiarClave: true,
+      });
+      expect(r.usuarioActualizado).toBe(true);
+      expect(consultas.filter((q) => q.sql.startsWith('SHOW GRANTS')).map((q) => q.params)).toEqual(
+        [['app', '%']],
+      );
+    });
+
+    it('si no se pueden leer los permisos, no se cambia nada', async () => {
+      const consultas: string[] = [];
+      const cliente = new ClienteMysql(async () => ({
+        query: async (sql: string) => {
+          consultas.push(sql);
+          if (sql.startsWith('SHOW GRANTS')) throw Object.assign(new Error('x'), { code: 'ER_X' });
+          return [sql.includes('mysql.user') ? [{ host: '%' }] : []] as never;
+        },
+        end: async () => undefined,
+      }));
+      await cliente.conectar(cx);
+      await expect(
+        cliente.crearBase('b', { usuario: 'app', clave: 'nueva', cambiarClave: true }),
+      ).rejects.toThrow();
+      expect(consultas.some((q) => /^(CREATE|GRANT|ALTER)/.test(q))).toBe(false);
+    });
+  });
+
   it('cambiarClave: ALTER USER solo en las cuentas existentes', async () => {
     const { cliente, consultas } = montar(['%']);
     await cliente.conectar(cx);
