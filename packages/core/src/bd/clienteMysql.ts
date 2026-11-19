@@ -1,4 +1,5 @@
 import { createConnection } from 'mysql2/promise';
+import { ErrorWolf } from '../errores';
 
 export interface ConexionMysql {
   host: string;
@@ -52,6 +53,25 @@ function traducir(e: unknown, accion: string): Error {
   return new Error(`No se pudo ${accion}: ${motivo}${c ? ` (${c})` : ''}.`);
 }
 
+/**
+ * El usuario ya existe y la clave pedida no es la suya: no se cambia (otro proyecto puede usarla).
+ * Para cambiarla hay que pedirlo a propósito (`cambiarClave`).
+ */
+export const errorClaveDistinta = (usuario: string): ErrorWolf =>
+  new ErrorWolf(
+    'bd.usuario_clave_distinta',
+    `El usuario ${usuario} ya existe con otra clave. Use su clave actual (no se cambia para no dejar sin conexión a otros proyectos) o elija "cambiar clave" a propósito.`,
+    { usuario },
+  );
+
+/** Opciones de `crearBase`. */
+export interface OpcionesCrearBaseMotor {
+  usuario?: string;
+  clave?: string;
+  /** Solo con confirmación explícita: si el usuario ya existe, su clave pasa a ser `clave`. */
+  cambiarClave?: boolean;
+}
+
 export interface ResultadoCrearBase {
   /** true si el usuario ya existía y su clave se cambió a la indicada. */
   usuarioActualizado: boolean;
@@ -83,6 +103,7 @@ const fabricaReal: FabricaConexion = async (c) =>
 /** Administración básica de bases en MySQL o MariaDB. */
 export class ClienteMysql {
   private con: ConexionBaja | null = null;
+  private datos: ConexionMysql | null = null;
 
   constructor(private readonly fabrica: FabricaConexion = fabricaReal) {}
 
@@ -90,6 +111,7 @@ export class ClienteMysql {
     await this.cerrar();
     try {
       this.con = await this.fabrica(c);
+      this.datos = c;
     } catch (e) {
       // el mensaje de mysql2 no incluye la clave, pero se filtra por si acaso
       const m = e instanceof Error ? e.message : String(e);
@@ -102,6 +124,7 @@ export class ClienteMysql {
   async cerrar(): Promise<void> {
     const c = this.con;
     this.con = null;
+    this.datos = null;
     if (c) await c.end().catch(() => undefined);
   }
 
@@ -127,10 +150,26 @@ export class ClienteMysql {
     return filas.map((f) => ({ nombre: String(f.nombre), tamanoBytes: Number(f.tam) }));
   }
 
-  async crearBase(
-    nombre: string,
-    opts: { usuario?: string; clave?: string } = {},
-  ): Promise<ResultadoCrearBase> {
+  /**
+   * ¿Entra `usuario` con `clave`? Se prueba con una conexión breve. Un acceso denegado lanza
+   * `bd.usuario_clave_distinta`; cualquier otro fallo, un error genérico (nunca se sigue).
+   */
+  private async comprobarClave(usuario: string, clave: string): Promise<void> {
+    if (!this.datos) throw new Error('No hay conexión: conecte con el servidor primero.');
+    let c: ConexionBaja;
+    try {
+      c = await this.fabrica({ ...this.datos, usuario, clave });
+    } catch (e) {
+      const codigo = String((e as { code?: unknown } | null)?.code ?? '');
+      if (codigo.includes('ACCESS_DENIED')) throw errorClaveDistinta(usuario);
+      throw new Error(
+        `No se pudo comprobar la clave del usuario ${usuario}${codigo ? ` (${codigo})` : ''}; no se cambió nada.`,
+      );
+    }
+    await c.end().catch(() => undefined);
+  }
+
+  async crearBase(nombre: string, opts: OpcionesCrearBaseMotor = {}): Promise<ResultadoCrearBase> {
     const bd = id(nombre);
     noSistema(nombre, 'crear');
     const { usuario, clave } = opts;
@@ -142,17 +181,35 @@ export class ClienteMysql {
       if (!clave) throw new Error('Indique una clave para el usuario de la base.');
     }
     let claveCambiada = false;
+    let existia = false;
+    if (usuario !== undefined) {
+      try {
+        const f = await this.filas('SELECT COUNT(*) AS n FROM mysql.user WHERE User = ?', [
+          usuario,
+        ]);
+        existia = Number(f[0]?.n ?? 0) > 0;
+      } catch (e) {
+        throw traducir(e, `crear la base ${nombre}`);
+      }
+      // Usuario existente: su clave no se toca salvo pedido explícito; antes de crear nada se
+      // comprueba que la indicada sea la suya.
+      if (existia && !opts.cambiarClave) await this.comprobarClave(usuario, clave!);
+    }
     try {
       await this.filas(`CREATE DATABASE IF NOT EXISTS ${bd} CHARACTER SET utf8mb4`);
       if (usuario === undefined) return { usuarioActualizado: false };
-      const f = await this.filas('SELECT COUNT(*) AS n FROM mysql.user WHERE User = ?', [usuario]);
-      const existia = Number(f[0]?.n ?? 0) > 0;
       const hosts = ['localhost', '127.0.0.1'];
       for (const host of hosts) {
         await this.filas(`CREATE USER IF NOT EXISTS ?@'${host}' IDENTIFIED BY ?`, [usuario, clave]);
         await this.filas(`GRANT ALL PRIVILEGES ON ${bd}.* TO ?@'${host}'`, [usuario]);
       }
       if (!existia) return { usuarioActualizado: false };
+      if (!opts.cambiarClave) {
+        return {
+          usuarioActualizado: false,
+          aviso: `El usuario ${usuario} ya existía: se usó su clave actual y se le dio acceso a la base ${nombre}.`,
+        };
+      }
       // La clave de un usuario existente se cambia al FINAL: si algo anterior falla, no se toca.
       for (const host of hosts) {
         await this.filas(`ALTER USER ?@'${host}' IDENTIFIED BY ?`, [usuario, clave]);

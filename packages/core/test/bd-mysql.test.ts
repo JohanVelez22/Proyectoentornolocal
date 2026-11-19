@@ -207,9 +207,11 @@ describe('ClienteMysql', () => {
     const { cliente, consultas } = montar();
     await cliente.conectar(cx);
     await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'x' });
-    expect(primera<{ sql: string; params?: unknown[] }>(consultas).sql).toBe(
-      'CREATE DATABASE IF NOT EXISTS `mi_bd` CHARACTER SET utf8mb4',
-    );
+    expect(
+      consultas.some(
+        (q) => q.sql === 'CREATE DATABASE IF NOT EXISTS `mi_bd` CHARACTER SET utf8mb4',
+      ),
+    ).toBe(true);
     expect(consultas.some((q) => q.sql.includes('GRANT ALL PRIVILEGES ON `mi_bd`.*'))).toBe(true);
     expect(consultas.some((q) => q.sql.includes('CREATE USER') && q.params?.includes('x'))).toBe(
       true,
@@ -250,7 +252,11 @@ describe('ClienteMysql', () => {
   it('usuario existente: ALTER USER y aviso', async () => {
     const { cliente, consultas } = montar([{ n: 1 }]);
     await cliente.conectar(cx);
-    const r = await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva' });
+    const r = await cliente.crearBase('mi_bd', {
+      usuario: 'app',
+      clave: 'nueva',
+      cambiarClave: true,
+    });
     expect(r.usuarioActualizado).toBe(true);
     expect(r.aviso).toMatch(/ya existía/);
     expect(consultas.filter((q) => q.sql.startsWith('ALTER USER'))).toHaveLength(2);
@@ -259,7 +265,7 @@ describe('ClienteMysql', () => {
   it('usuario existente: la clave se cambia al final, tras los GRANT', async () => {
     const { cliente, consultas } = montar([{ n: 1 }]);
     await cliente.conectar(cx);
-    await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva' });
+    await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva', cambiarClave: true });
     const sqls = consultas.map((q) => q.sql);
     const ultimoGrant = sqls.map((x) => x.startsWith('GRANT')).lastIndexOf(true);
     const primerAlter = sqls.findIndex((x) => x.startsWith('ALTER USER'));
@@ -278,7 +284,7 @@ describe('ClienteMysql', () => {
     }));
     await cliente.conectar(cx);
     const e = await cliente
-      .crearBase('mi_bd', { usuario: 'app', clave: 'nueva' })
+      .crearBase('mi_bd', { usuario: 'app', clave: 'nueva', cambiarClave: true })
       .catch((x: Error) => x);
     expect((e as Error).message).not.toMatch(/clave/);
     expect(consultas.some((x) => x.startsWith('ALTER USER'))).toBe(false);
@@ -296,15 +302,19 @@ describe('ClienteMysql', () => {
       end: async () => undefined,
     }));
     await cliente.conectar(cx);
-    await expect(cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva' })).rejects.toThrow(
-      /La clave del usuario app ya se cambió/,
-    );
+    await expect(
+      cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva', cambiarClave: true }),
+    ).rejects.toThrow(/La clave del usuario app ya se cambió/);
   });
 
   it('usuario nuevo: sin ALTER USER', async () => {
     const { cliente, consultas } = montar([{ n: 0 }]);
     await cliente.conectar(cx);
-    const r = await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva' });
+    const r = await cliente.crearBase('mi_bd', {
+      usuario: 'app',
+      clave: 'nueva',
+      cambiarClave: true,
+    });
     expect(r.usuarioActualizado).toBe(false);
     expect(consultas.some((q) => q.sql.startsWith('ALTER USER'))).toBe(false);
   });
@@ -363,5 +373,49 @@ describe('ClienteMysql', () => {
     await cliente.conectar(cx);
     await cliente.cerrar();
     expect(cerrada()).toBe(true);
+  });
+});
+
+describe('ClienteMysql: usuario existente no cambia de clave (QA bd)', () => {
+  const cx = { host: '127.0.0.1', puerto: 3306, usuario: 'root', clave: CLAVE };
+  /** Servidor falso: `app` ya existe con la clave `x`. */
+  const montar = () => {
+    const consultas: { sql: string; params?: unknown[] }[] = [];
+    const intentos: { usuario: string; clave: string }[] = [];
+    const cliente = new ClienteMysql(async (c) => {
+      intentos.push({ usuario: c.usuario, clave: c.clave });
+      if (c.usuario === 'app' && c.clave !== 'x') {
+        throw Object.assign(new Error('Access denied'), { code: 'ER_ACCESS_DENIED_ERROR' });
+      }
+      return {
+        query: async (sql: string, params?: unknown[]) => {
+          consultas.push({ sql, params });
+          return [sql.includes('mysql.user') ? [{ n: 1 }] : []] as never;
+        },
+        end: async () => undefined,
+      };
+    });
+    return { cliente, consultas, intentos };
+  };
+
+  it('misma clave: solo crea la base y da permisos, sin ALTER USER', async () => {
+    const { cliente, consultas, intentos } = montar();
+    await cliente.conectar(cx);
+    const r = await cliente.crearBase('b', { usuario: 'app', clave: 'x' });
+    expect(r.usuarioActualizado).toBe(false);
+    expect(intentos.some((i) => i.usuario === 'app')).toBe(true);
+    expect(consultas.some((q) => q.sql.startsWith('ALTER USER'))).toBe(false);
+    expect(consultas.some((q) => q.sql.includes('GRANT ALL PRIVILEGES ON `b`.*'))).toBe(true);
+  });
+
+  it('otra clave: error con código y no toca nada', async () => {
+    const { cliente, consultas } = montar();
+    await cliente.conectar(cx);
+    const e = await cliente
+      .crearBase('b', { usuario: 'app', clave: 'claveOtra77' })
+      .catch((x: unknown) => x);
+    expect(e).toMatchObject({ codigo: 'bd.usuario_clave_distinta', datos: { usuario: 'app' } });
+    expect(String((e as Error).message)).not.toContain('claveOtra77');
+    expect(consultas.some((q) => /^(ALTER|CREATE|GRANT)/.test(q.sql))).toBe(false);
   });
 });

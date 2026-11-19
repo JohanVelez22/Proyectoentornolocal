@@ -1,4 +1,6 @@
 import pg from 'pg';
+import { ErrorWolf } from '../errores';
+import { errorClaveDistinta, type OpcionesCrearBaseMotor } from './clienteMysql';
 
 export interface ConexionPostgres {
   host: string;
@@ -238,9 +240,25 @@ export class ClientePostgres {
     return filas.map((f) => ({ nombre: String(f.nombre), tamanoBytes: Number(f.tam) }));
   }
 
+  /** Como en MySQL: una conexión breve con el rol; contraseña rechazada = clave distinta. */
+  private async comprobarClave(usuario: string, clave: string): Promise<void> {
+    if (!this.datos) throw new Error('No hay conexión: conecte con el servidor primero.');
+    let c: ConexionBajaPg;
+    try {
+      c = await this.fabrica({ ...this.datos, usuario, clave, base: 'postgres' });
+    } catch (e) {
+      const codigo = String((e as { code?: unknown } | null)?.code ?? '');
+      if (codigo === '28P01' || codigo === '28000') throw errorClaveDistinta(usuario);
+      throw new Error(
+        `No se pudo comprobar la clave del usuario ${usuario}${codigo ? ` (${codigo})` : ''}; no se cambió nada.`,
+      );
+    }
+    await c.end().catch(() => undefined);
+  }
+
   async crearBase(
     nombre: string,
-    opts: { usuario?: string; clave?: string } = {},
+    opts: OpcionesCrearBaseMotor = {},
   ): Promise<ResultadoCrearBasePg> {
     const bd = id(nombre);
     noSistema(nombre, 'crear');
@@ -269,6 +287,9 @@ export class ClientePostgres {
           usuario,
         ]);
         existia = Number(r[0]?.n ?? 0) > 0;
+        // Rol existente: su clave no se toca salvo pedido explícito; antes de crear nada se
+        // comprueba que la indicada sea la suya.
+        if (existia && !opts.cambiarClave) await this.comprobarClave(usuario, clave!);
         if (!existia) await rolConClave('CREATE ROLE');
       }
       const hay = await this.filas('SELECT COUNT(*) AS n FROM pg_database WHERE datname = $1', [
@@ -285,6 +306,12 @@ export class ClientePostgres {
       }
       if (usuario === undefined) return { usuarioActualizado: false };
       if (!existia) return { usuarioActualizado: false };
+      if (!opts.cambiarClave) {
+        return {
+          usuarioActualizado: false,
+          aviso: `El usuario ${usuario} ya existía: se usó su clave actual y es el dueño de la base ${nombre}.`,
+        };
+      }
       // La clave de un rol existente se cambia al FINAL: si algo anterior falla, queda como estaba.
       await rolConClave('ALTER ROLE');
       claveCambiada = true;
@@ -293,6 +320,7 @@ export class ClientePostgres {
         aviso: `El usuario ${usuario} ya existía: su clave se cambió a la nueva.`,
       };
     } catch (e) {
+      if (e instanceof ErrorWolf) throw e;
       const err = traducir(e, `crear la base ${nombre}`);
       if (claveCambiada) err.message += ` La clave del usuario ${usuario} ya se cambió a la nueva.`;
       throw err;

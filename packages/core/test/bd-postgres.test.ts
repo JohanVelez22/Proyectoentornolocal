@@ -233,7 +233,11 @@ describe('ClientePostgres', () => {
       sql.includes('FROM pg_roles') ? [{ n: 1 }] : [],
     );
     await cliente.conectar(cx);
-    const r = await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva' });
+    const r = await cliente.crearBase('mi_bd', {
+      usuario: 'app',
+      clave: 'nueva',
+      cambiarClave: true,
+    });
     expect(r.usuarioActualizado).toBe(true);
     expect(r.aviso).toMatch(/ya existía/);
     expect(consultas.some((q) => q.sql.includes("'ALTER ROLE"))).toBe(true);
@@ -244,7 +248,7 @@ describe('ClientePostgres', () => {
       sql.includes('FROM pg_roles') ? [{ n: 1 }] : sql.includes('format(') ? [{ s: 'ORDEN' }] : [],
     );
     await cliente.conectar(cx);
-    await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva' });
+    await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva', cambiarClave: true });
     const sqls = consultas.map((q) => q.sql);
     const iBd = sqls.findIndex((x) => x.startsWith('CREATE DATABASE'));
     const iClave = sqls.findIndex((x) => x.includes("'ALTER ROLE"));
@@ -265,9 +269,9 @@ describe('ClientePostgres', () => {
       end: async () => undefined,
     }));
     await cliente.conectar(cx);
-    await expect(cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva' })).rejects.toThrow(
-      /permiso denegado/,
-    );
+    await expect(
+      cliente.crearBase('mi_bd', { usuario: 'app', clave: 'nueva', cambiarClave: true }),
+    ).rejects.toThrow(/permiso denegado/);
     expect(consultas.some((x) => x.includes('ALTER ROLE'))).toBe(false);
   });
 
@@ -447,5 +451,47 @@ describe('ClientePostgres', () => {
     await cliente.conectar(cx);
     await cliente.cerrar();
     expect(conexiones[0]!.cerrada).toBe(true);
+  });
+});
+
+describe('ClientePostgres: rol existente no cambia de clave (QA bd)', () => {
+  const cx = { host: '127.0.0.1', puerto: 5432, usuario: 'postgres', clave: CLAVE };
+  const montar = () => {
+    const consultas: string[] = [];
+    const cliente = new ClientePostgres(async (c) => {
+      if (c.usuario === 'app' && c.clave !== 'x') {
+        throw Object.assign(new Error('password authentication failed'), { code: '28P01' });
+      }
+      return {
+        query: async (sql: string) => {
+          consultas.push(sql);
+          return { rows: sql.includes('FROM pg_roles') ? [{ n: 1 }] : [] };
+        },
+        end: async () => undefined,
+      };
+    });
+    return { cliente, consultas };
+  };
+
+  it('misma clave: crea la base con ese dueño sin ALTER ROLE', async () => {
+    const { cliente, consultas } = montar();
+    await cliente.conectar(cx);
+    const r = await cliente.crearBase('b', { usuario: 'app', clave: 'x' });
+    expect(r.usuarioActualizado).toBe(false);
+    expect(consultas.some((s) => s.includes("'ALTER ROLE"))).toBe(false);
+    expect(consultas.some((s) => s.startsWith('CREATE DATABASE "b" OWNER "app"'))).toBe(true);
+  });
+
+  it('otra clave: error con código y no crea nada', async () => {
+    const { cliente, consultas } = montar();
+    await cliente.conectar(cx);
+    await expect(
+      cliente.crearBase('b', { usuario: 'app', clave: 'claveOtra77' }),
+    ).rejects.toMatchObject({
+      codigo: 'bd.usuario_clave_distinta',
+    });
+    expect(consultas.some((s) => /^(CREATE|ALTER)/.test(s) || s.includes("'ALTER ROLE"))).toBe(
+      false,
+    );
   });
 });

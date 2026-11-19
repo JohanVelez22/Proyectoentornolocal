@@ -77,15 +77,22 @@ function opcionesRestaurar(v: unknown): { confirmarSobrescribir?: boolean } | un
 function opcionesCrear(
   motor: MotorBdIpc,
   v: unknown,
-): { usuario?: string; clave?: string } | undefined {
+): { usuario?: string; clave?: string; cambiarClave?: boolean } | undefined {
   if (v === undefined) return undefined;
   const o = objetoPlano<Record<string, unknown>>(v, 'opciones');
-  if (motor === 'mongodb' && (o['usuario'] !== undefined || o['clave'] !== undefined)) {
+  if (
+    motor === 'mongodb' &&
+    (o['usuario'] !== undefined || o['clave'] !== undefined || o['cambiarClave'] !== undefined)
+  ) {
     throw new Error('Argumento no válido: opciones');
+  }
+  if (o['cambiarClave'] !== undefined && typeof o['cambiarClave'] !== 'boolean') {
+    throw new Error('Argumento no válido: cambiarClave');
   }
   return {
     ...(o['usuario'] === undefined ? {} : { usuario: nombreBase(motor, o['usuario'], 'usuario') }),
     ...(o['clave'] === undefined ? {} : { clave: textoAcotado(o['clave'], 1, 128, 'clave') }),
+    ...(o['cambiarClave'] === true ? { cambiarClave: true } : {}),
   };
 }
 

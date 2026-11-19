@@ -546,6 +546,7 @@ describe('registrarIpc', () => {
         ['bd.crear', ['postgresql', 'Mayusculas']],
         ['bd.crear', ['mysql', 'a;DROP']],
         ['bd.crear', ['mongodb', 'x', { usuario: 'u' }]],
+        ['bd.crear', ['mysql', 'x', { usuario: 'u', clave: 'c', cambiarClave: 'si' }]],
         ['bd.borrar', ['mysql', 'x', 42]],
         ['bd.conexion', ['redis']],
         ['bd.bloqueEnv', ['mysql', 'x', 'rails']],

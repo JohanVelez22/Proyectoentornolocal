@@ -25,6 +25,11 @@ export interface BaseListada {
 export interface OpcionesCrearBase {
   usuario?: string;
   clave?: string;
+  /**
+   * Si el usuario ya existe, cambiar su clave a `clave`. Solo tras una confirmación explícita:
+   * sin esto, un usuario existente conserva su clave y una distinta da `bd.usuario_clave_distinta`.
+   */
+  cambiarClave?: boolean;
 }
 
 export type ResultadoCrear = ResultadoCrearBase | ResultadoCrearBasePg;

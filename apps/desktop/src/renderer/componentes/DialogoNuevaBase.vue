@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { NButton, NCheckbox, NForm, NFormItem, NInput, NModal, useNotification } from 'naive-ui';
+import {
+  NButton,
+  NCheckbox,
+  NForm,
+  NFormItem,
+  NInput,
+  NModal,
+  useDialog,
+  useNotification,
+} from 'naive-ui';
 import { computed, ref, watch } from 'vue';
 import type { MotorBd, OpcionesCrearBase } from '../../shared/api';
 import { api } from '../api';
@@ -14,6 +23,7 @@ const emit = defineEmits<{ creada: [nombre: string] }>();
 
 const t = textos.bd.dialogoNueva;
 const notification = useNotification();
+const dialog = useDialog();
 const { ejecutar, ocupado } = useAccion();
 
 const nombre = ref('');
@@ -45,14 +55,42 @@ watch(mostrar, () => {
   clave.value = '';
 });
 
+/** Pide confirmación explícita para cambiar la clave de un usuario que ya existe. */
+function confirmarCambioClave(u: string): Promise<boolean> {
+  return new Promise((resolver) => {
+    dialog.warning({
+      title: t.cambiarClaveTitulo(u),
+      content: t.cambiarClaveTexto(u),
+      positiveText: t.cambiarClave,
+      negativeText: textos.acciones.cancelar,
+      onPositiveClick: () => resolver(true),
+      onNegativeClick: () => resolver(false),
+      onClose: () => resolver(false),
+      onMaskClick: () => resolver(false),
+    });
+  });
+}
+
 async function crear(): Promise<void> {
   if (!valido.value || ocupado('crear')) return;
   const n = nombre.value;
   const opciones: OpcionesCrearBase | undefined =
     conUsuario.value && !esMongo.value ? { usuario: usuario.value, clave: clave.value } : undefined;
-  const r = await ejecutar('crear', () => api().bd.crear(props.motor, n, opciones), {
-    exito: t.creada(n),
-  });
+  const r = await ejecutar(
+    'crear',
+    async () => {
+      try {
+        return await api().bd.crear(props.motor, n, opciones);
+      } catch (e) {
+        // Usuario existente con otra clave: solo se cambia si el usuario lo confirma.
+        const codigo = (e as { codigo?: unknown } | null)?.codigo;
+        if (codigo !== 'bd.usuario_clave_distinta' || !opciones) throw e;
+        if (!(await confirmarCambioClave(opciones.usuario ?? ''))) throw e;
+        return api().bd.crear(props.motor, n, { ...opciones, cambiarClave: true });
+      }
+    },
+    { exito: t.creada(n) },
+  );
   clave.value = '';
   if (!r) return;
   if (r.aviso) notification.warning({ title: t.creada(n), content: r.aviso, duration: 8000 });

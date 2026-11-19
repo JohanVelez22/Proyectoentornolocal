@@ -95,6 +95,8 @@ export const en: Textos = {
       'bd.encender_servicio': 'Start {nombre} to manage its databases.',
       'bd.sin_credenciales': 'There are no saved credentials for {nombre}.',
       'bd.confirmacion_borrado': 'To delete the database {nombre}, type its exact name.',
+      'bd.usuario_clave_distinta':
+        'User {usuario} already exists with another password. Use its current password: it is not changed so other projects keep connecting.',
       'bd.mongosh_faltante': 'mongosh is missing: install it from Services to manage MongoDB.',
       'tuneles.sitio_no_encontrado': 'The project was not found.',
       'tuneles.cloudflared_no_instalado': 'cloudflared is not installed. Install it from Services.',
@@ -442,6 +444,10 @@ export const en: Textos = {
       crear: 'Create database',
       creada: (base: string) => `Database ${base} created`,
       mongo: 'In MongoDB the database is created with an initial collection (_pel_init).',
+      cambiarClave: 'Change the password',
+      cambiarClaveTitulo: (u: string) => `User ${u} already exists with another password`,
+      cambiarClaveTexto: (u: string) =>
+        `If you change the password of ${u}, projects already using it will stop connecting until you update their .env. Normally you would use the current password. Change it anyway?`,
     },
     dialogoBorrar: {
       titulo: (base: string) => `Delete the ${base} database?`,

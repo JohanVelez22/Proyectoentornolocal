@@ -94,6 +94,8 @@ export const es = {
       'bd.encender_servicio': 'Encienda {nombre} para administrar sus bases.',
       'bd.sin_credenciales': 'No hay credenciales guardadas de {nombre}.',
       'bd.confirmacion_borrado': 'Para borrar la base {nombre} escriba su nombre exacto.',
+      'bd.usuario_clave_distinta':
+        'El usuario {usuario} ya existe con otra clave. Use su clave actual: no se cambia para no dejar sin conexión a otros proyectos.',
       'bd.mongosh_faltante': 'Falta mongosh: instálelo desde Servicios para administrar MongoDB.',
       'tuneles.sitio_no_encontrado': 'No se encontró el proyecto.',
       'tuneles.cloudflared_no_instalado':
@@ -448,6 +450,10 @@ export const es = {
       crear: 'Crear base',
       creada: (base: string) => `Base ${base} creada`,
       mongo: 'En MongoDB la base se crea con una colección inicial (_pel_init).',
+      cambiarClave: 'Cambiar la clave',
+      cambiarClaveTitulo: (u: string) => `El usuario ${u} ya existe con otra clave`,
+      cambiarClaveTexto: (u: string) =>
+        `Si cambia la clave de ${u}, los proyectos que ya la usan dejarán de conectar hasta que actualice su .env. Lo normal es usar la clave actual. ¿Cambiarla de todos modos?`,
     },
     dialogoBorrar: {
       titulo: (base: string) => `¿Borrar la base ${base}?`,
