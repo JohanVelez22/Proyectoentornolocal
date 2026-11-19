@@ -1,4 +1,5 @@
-import { copyFile, lstat, mkdir, readFile } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
+import { copyFile, lstat, mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { valorEnv, type EstiloEnv } from '../bd/env';
 import { ErrorWolf } from '../errores';
@@ -207,12 +208,54 @@ async function leerArchivoProyecto(ruta: string): Promise<string | null> {
   return readFile(ruta, 'utf8');
 }
 
+/** Ids de sitio que pueden ir en el nombre de una copia (como `rutas.receta`). */
+const ID_SITIO = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+/** Copias del .env que se guardan por sitio (las más viejas se borran). */
+export const MAX_RESPALDOS_ENV = 5;
+
+function validarSitio(sitioId: string): void {
+  if (typeof sitioId !== 'string' || !ID_SITIO.test(sitioId) || sitioId.includes('..')) {
+    throw new Error('Id de sitio no válido.');
+  }
+}
+
 /** Copia con fecha en `carpetaRespaldos` (fuera del proyecto: nunca acaba en el repositorio). */
 async function respaldar(ruta: string, carpetaRespaldos: string, prefijo: string): Promise<string> {
   await mkdir(carpetaRespaldos, { recursive: true });
-  const destino = path.join(carpetaRespaldos, `${prefijo}-${sello(new Date())}.respaldo`);
+  const nombre = `${prefijo}-${sello(new Date())}-${randomBytes(3).toString('hex')}.respaldo`;
+  const destino = path.join(carpetaRespaldos, nombre);
   await copyFile(ruta, destino);
   return destino;
+}
+
+/** Copias `env-<sitio>-…` (las de un sitio, o todas), de la más vieja a la más nueva. */
+async function copiasEnv(carpetaRespaldos: string, sitioId?: string): Promise<string[]> {
+  let nombres: string[];
+  try {
+    nombres = await readdir(carpetaRespaldos);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw e;
+  }
+  const re = sitioId
+    ? new RegExp(String.raw`^env-${escapar(sitioId)}-\d{8}-\d{6}-\d{3}-[0-9a-f]{6}\.respaldo$`)
+    : /^env-.+\.respaldo$/;
+  // Mismo prefijo por sitio: el orden del nombre es el de la fecha.
+  return nombres.filter((n) => re.test(n)).sort();
+}
+
+/**
+ * Borra las copias del .env de un sitio (o de todos sin `sitioId`). Llevan la clave en texto
+ * plano: se usa al borrar la clave de un proveedor, con la confirmación de la interfaz.
+ */
+export async function limpiarRespaldosEnv(
+  carpetaRespaldos: string,
+  sitioId?: string,
+): Promise<void> {
+  if (sitioId !== undefined) validarSitio(sitioId);
+  for (const n of await copiasEnv(carpetaRespaldos, sitioId)) {
+    await rm(path.join(carpetaRespaldos, n), { force: true });
+  }
 }
 
 export interface OpcionesEscribirEnvIa {
@@ -222,11 +265,21 @@ export interface OpcionesEscribirEnvIa {
   reemplazarAjenas?: boolean;
   /** Carpeta de las copias previas (en la carpeta de datos de WolfCore Dev). */
   carpetaRespaldos: string;
+  /** Id del sitio: va en el nombre de la copia (`env-<sitio>-<fecha>.respaldo`). */
+  sitioId: string;
+  /**
+   * ¿Git ya sigue el .env? (`Git.versionado`). true = el próximo commit subiría la clave;
+   * null = desconocido (no bloquea; la interfaz avisa).
+   */
+  versionado: (carpeta: string) => Promise<boolean | null>;
+  /** Confirmación aparte para escribir en un .env que git ya sigue. */
+  aceptarVersionado?: boolean;
 }
 
 /**
  * Escribe el bloque de IA en `<carpeta>/.env` de forma atómica, con copia previa con fecha del
- * archivo anterior. Si hay conflictos sin `reemplazarAjenas`, no toca nada.
+ * archivo anterior (como mucho `MAX_RESPALDOS_ENV` por sitio). No toca nada si hay conflictos
+ * sin `reemplazarAjenas` o si git ya sigue el .env sin `aceptarVersionado`.
  */
 export async function escribirEnvIa(
   carpeta: string,
@@ -239,13 +292,29 @@ export async function escribirEnvIa(
       'Confirme que quiere escribir la clave en el .env (queda en texto plano).',
     );
   }
+  validarSitio(o.sitioId);
+  if ((await o.versionado(carpeta)) === true && o.aceptarVersionado !== true) {
+    throw new ErrorWolf(
+      'ia.env_versionado',
+      'Git ya sigue el .env de este proyecto: el próximo commit subiría la clave aunque esté en .gitignore. Quítelo del índice con "git rm --cached .env" o confirme aparte.',
+    );
+  }
   const destino = path.join(carpeta, '.env');
   const actual = await leerArchivoProyecto(destino);
   const r = aplicarBloqueEnvIa(actual ?? '', bloque, {
     reemplazarAjenas: o.reemplazarAjenas === true,
   });
-  const respaldo = actual !== null ? await respaldar(destino, o.carpetaRespaldos, 'env') : null;
+  let respaldo: string | null = null;
+  if (actual !== null) {
+    respaldo = await respaldar(destino, o.carpetaRespaldos, `env-${o.sitioId}`);
+  }
   await escribirAtomico(destino, Buffer.from(r.texto, 'utf8'));
+  if (respaldo) {
+    const copias = await copiasEnv(o.carpetaRespaldos, o.sitioId);
+    for (const n of copias.slice(0, Math.max(0, copias.length - MAX_RESPALDOS_ENV))) {
+      await rm(path.join(o.carpetaRespaldos, n), { force: true });
+    }
+  }
   return { respaldo, conflictos: r.conflictos };
 }
 
@@ -272,12 +341,24 @@ function patronGitignore(p: string): RegExp | null {
   return new RegExp(anclado ? `^${re}$` : `^(?:.*/)?${re}$`);
 }
 
-/** Dice si el `.gitignore` de la carpeta existe y si ignora el `.env` de la raíz. */
+export interface EstadoGitignore {
+  existe: boolean;
+  ignoraEnv: boolean;
+  /** Git ya sigue el .env (null = desconocido o no se comprobó). .gitignore no lo destrapa. */
+  envVersionado: boolean | null;
+}
+
+/**
+ * Dice si el `.gitignore` de la carpeta existe, si ignora el `.env` de la raíz y, con
+ * `versionado` (`Git.versionado`), si git ya lo sigue.
+ */
 export async function estadoGitignore(
   carpeta: string,
-): Promise<{ existe: boolean; ignoraEnv: boolean }> {
+  o: { versionado?: (carpeta: string) => Promise<boolean | null> } = {},
+): Promise<EstadoGitignore> {
+  const envVersionado = o.versionado ? await o.versionado(carpeta) : null;
   const texto = await leerArchivoProyecto(path.join(carpeta, '.gitignore'));
-  if (texto === null) return { existe: false, ignoraEnv: false };
+  if (texto === null) return { existe: false, ignoraEnv: false, envVersionado };
   let ignora = false;
   for (const bruta of (texto.startsWith(BOM) ? texto.slice(1) : texto).split(/\r?\n/)) {
     const l = bruta.replace(/(?<!\\)\s+$/, '');
@@ -286,7 +367,7 @@ export async function estadoGitignore(
     const re = patronGitignore(negada ? l.slice(1) : l);
     if (re?.test('.env')) ignora = !negada;
   }
-  return { existe: true, ignoraEnv: ignora };
+  return { existe: true, ignoraEnv: ignora, envVersionado };
 }
 
 /** Agrega `.env` al `.gitignore` (lo crea si falta), con copia previa con fecha. */

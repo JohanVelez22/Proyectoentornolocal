@@ -198,7 +198,7 @@ export const es = {
       'ia.region': 'El proveedor no da servicio desde su país o región.',
       'ia.sin_red': 'No se pudo conectar con el proveedor: revise la red o la URL base.',
       'ia.url_invalida':
-        'La URL base no es válida: use https:// (o http:// solo hacia 127.0.0.1 o localhost), sin usuario ni clave.',
+        'La URL base no es válida: use https:// (o http:// solo hacia 127.0.0.1 o [::1]), sin usuario ni clave.',
       'ia.plazo': 'El proveedor no respondió en {segundos} s.',
       'ia.respuesta_rara': 'El proveedor respondió algo inesperado.',
       'ia.cancelado': 'Se canceló la petición al proveedor.',
@@ -212,6 +212,8 @@ export const es = {
         'El .env ya define {claves} con otro valor: confirme si quiere reemplazarlo.',
       'ia.env_sin_confirmar':
         'Confirme que quiere escribir la clave en el .env (queda en texto plano).',
+      'ia.env_versionado':
+        'Git ya sigue el .env de este proyecto: el próximo commit subiría la clave aunque esté en .gitignore. Quítelo del índice con git rm --cached .env.',
     },
   },
   avisoInicio: {

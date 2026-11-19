@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ConfigSchema } from '../src/tipos';
 import { ErrorWolf } from '../src/errores';
 import { sanear } from '../src/proyectos/recetas';
-import { clasificarErrorIa, sinSecretosIa, enmascararClave } from '../src/ia/errores';
+import { clasificarErrorIa, sinSecretosIa, enmascararClave, finalDeClave } from '../src/ia/errores';
+import { PATRONES_SECRETOS } from '../src/patronesSecretos';
 import {
   ConfigIaSchema,
   crearClienteIa,
@@ -103,10 +104,12 @@ async function capturar(fn: () => Promise<unknown>): Promise<ErrorWolf> {
 }
 
 describe('validarUrlBase', () => {
-  it('acepta https y http solo hacia 127.0.0.1 o localhost', () => {
+  it('acepta https y http solo hacia 127.0.0.1 o [::1]', () => {
     expect(() => validarUrlBase('https://api.openai.com/v1')).not.toThrow();
     expect(() => validarUrlBase('http://127.0.0.1:1234/v1')).not.toThrow();
-    expect(() => validarUrlBase('http://localhost:11434')).not.toThrow();
+    expect(() => validarUrlBase('http://[::1]:11434')).not.toThrow();
+    // localhost puede resolverse a otra cosa (archivo hosts, proxies): solo la IP.
+    expect(() => validarUrlBase('http://localhost:11434')).toThrow(ErrorWolf);
   });
 
   it('rechaza http remoto, credenciales, otros esquemas y basura', () => {
@@ -589,5 +592,28 @@ describe('utilidades', () => {
   it('enmascararClave deja solo los 4 últimos', () => {
     expect(enmascararClave(CLAVE)).toBe('****WXYZ');
     expect(enmascararClave('abc')).toBe('****');
+    // Con menos de 16 caracteres no se muestra ningún final.
+    expect(enmascararClave('sk-falso-123456')).toBe('****');
+    expect(finalDeClave('sk-falso-123456')).toBeNull();
+    expect(finalDeClave('sk-falso-1234567')).toBe('4567');
+  });
+
+  it('sanear y sinSecretosIa comparten patrones: gsk_, xai-, pplx-, hf_ y NOMBRE_API_KEY=/_TOKEN=/_SECRET=', () => {
+    const entrada = [
+      'a gsk_falso0123456789abcdef',
+      'b xai-falso0123456789abcdef',
+      'c pplx-falso0123456789abcdef',
+      'd hf_falso0123456789abcdef',
+      'MI_API_KEY=valor-falso-1',
+      ' SLACK_TOKEN = valor-falso-2',
+      'CLIENT_SECRET=valor-falso-3',
+    ].join(String.fromCharCode(10));
+    for (const salida of [sanear(entrada), sinSecretosIa(entrada)]) {
+      for (const s of ['gsk_falso', 'xai-falso', 'pplx-falso', 'hf_falso', 'valor-falso']) {
+        expect(salida).not.toContain(s);
+      }
+      expect(salida).toContain('MI_API_KEY=');
+    }
+    expect(PATRONES_SECRETOS.length).toBeGreaterThan(10);
   });
 });

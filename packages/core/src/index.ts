@@ -50,6 +50,7 @@ export * from './ftp/sistemaArchivos';
 export * from './ia/ollama';
 export * from './ia/proveedores';
 export * from './ia/envIa';
+export * from './patronesSecretos';
 export { clasificarErrorIa, enmascararClave, finalDeClave, sinSecretosIa } from './ia/errores';
 export { VERSION_ANTHROPIC } from './ia/clienteAnthropic';
 export * from './runtimes/runtimes';

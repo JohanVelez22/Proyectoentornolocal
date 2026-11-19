@@ -1,21 +1,11 @@
 import { ErrorWolf, type CodigoError, type DatosErrorWolf } from '../errores';
+import { enmascararSecretos } from '../patronesSecretos';
 import type { TipoProveedorIa } from './proveedores';
 
 /** Largo máximo del resumen de un cuerpo de error (cabe en `datos` de ErrorWolf). */
 const MAX_DETALLE = 200;
-
-/** Patrones de claves de proveedores conocidos (se enmascaran aunque no sean la clave usada). */
-const PATRONES_CLAVE: [RegExp, string][] = [
-  [/\bsk-[A-Za-z0-9_-]{8,}/g, 'sk-***'],
-  [/\bAIza[0-9A-Za-z_-]{20,}/g, 'AIza***'],
-  [/\bgsk_[A-Za-z0-9]{8,}/g, 'gsk_***'],
-  [/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, '$1 ***'],
-  [/(x-(?:api|goog-api)-key["']?\s*[:=]\s*["']?)[^\s"',}]+/gi, '$1***'],
-  [/([?&](?:key|api_key|apikey|token)=)[^&\s"']+/gi, '$1***'],
-  [/(:\/\/)[^\s/@:]+:[^\s/@]*@/g, '$1***@'],
-  [/\bgithub_pat_[A-Za-z0-9_]+/g, 'github_pat_***'],
-  [/\b(gh[pousr])_[A-Za-z0-9]+/g, '$1_***'],
-];
+/** Solo se muestran los 4 finales de claves de al menos 16 caracteres (12 siguen ocultos). */
+const MIN_PARA_FINAL = 16;
 
 /**
  * Resumen de un texto de un proveedor sin la clave usada (literal) ni nada que parezca una
@@ -24,7 +14,7 @@ const PATRONES_CLAVE: [RegExp, string][] = [
 export function sinSecretosIa(texto: string, clave?: string | null): string {
   let t = texto;
   if (clave) t = t.split(clave).join('***');
-  for (const [patron, reemplazo] of PATRONES_CLAVE) t = t.replace(patron, reemplazo);
+  t = enmascararSecretos(t);
   // Una sola línea: los controles (y cualquier espacio) pasan a ser un espacio.
   t = Array.from(t, (ch) => (ch.charCodeAt(0) < 0x20 || ch.charCodeAt(0) === 0x7f ? ' ' : ch))
     .join('')
@@ -35,13 +25,13 @@ export function sinSecretosIa(texto: string, clave?: string | null): string {
 
 /** `****` y los 4 últimos caracteres (solo si la clave es lo bastante larga para ocultar el resto). */
 export function enmascararClave(clave: string | null | undefined): string {
-  if (!clave || clave.length < 8) return '****';
+  if (!clave || clave.length < MIN_PARA_FINAL) return '****';
   return `****${clave.slice(-4)}`;
 }
 
 /** Los 4 últimos caracteres para la interfaz, o null si la clave es demasiado corta. */
 export function finalDeClave(clave: string | null | undefined): string | null {
-  if (!clave || clave.length < 8) return null;
+  if (!clave || clave.length < MIN_PARA_FINAL) return null;
   return clave.slice(-4);
 }
 
@@ -52,7 +42,7 @@ const MENSAJES: Partial<Record<CodigoError, string>> = {
   'ia.region': 'El proveedor no da servicio desde su país o región.',
   'ia.sin_red': 'No se pudo conectar con el proveedor: revise la red o la URL base.',
   'ia.url_invalida':
-    'La URL base no es válida: use https:// (o http:// solo hacia 127.0.0.1 o localhost), sin usuario ni clave.',
+    'La URL base no es válida: use https:// (o http:// solo hacia 127.0.0.1 o [::1]), sin usuario ni clave.',
   'ia.plazo': 'El proveedor tardó demasiado en responder.',
   'ia.respuesta_rara': 'El proveedor respondió algo inesperado.',
   'ia.cancelado': 'Se canceló la petición al proveedor.',

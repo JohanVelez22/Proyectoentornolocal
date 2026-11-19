@@ -62,10 +62,11 @@ export const ID_PROVEEDOR_IA = /^[a-z0-9][a-z0-9-]{0,39}$/;
 /** Nombres de modelo: los de OpenRouter llevan `/` y `:` (`meta-llama/llama-3:free`). */
 const NOMBRE_MODELO = /^[A-Za-z0-9][A-Za-z0-9._:@/+-]{0,199}$/;
 
-const HOSTS_LOCALES = new Set(['127.0.0.1', 'localhost', '[::1]']);
+// Solo IPs de bucle local: `localhost` puede apuntar a otro sitio (archivo hosts, proxies).
+const HOSTS_LOCALES = new Set(['127.0.0.1', '[::1]']);
 
 /**
- * Valida una URL base: `https://`, o `http://` solo hacia 127.0.0.1 o localhost (LM Studio,
+ * Valida una URL base: `https://`, o `http://` solo hacia 127.0.0.1 o [::1] (LM Studio,
  * Ollama). Sin usuario ni clave, sin consulta ni fragmento. El error nunca repite la URL.
  */
 export function validarUrlBase(url: string): void {
@@ -122,8 +123,9 @@ export const ConfigProveedorIaSchema = z
   });
 
 /**
- * `ia` de config.json: un proveedor inválido (o con campos de más, como una clave pegada por
- * error) se descarta sin perder los demás ni el resto de la configuración.
+ * `ia` de config.json. Un proveedor inválido (tipo desconocido, id o URL base no válidos) se
+ * descarta sin perder los demás ni el resto de la configuración; los campos de más (como una
+ * clave pegada por error) se quitan y el proveedor se conserva sin ellos.
  */
 export const ConfigIaSchema = z
   .object({

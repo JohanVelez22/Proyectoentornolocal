@@ -610,3 +610,60 @@ describe.skipIf(!hayRed)('Git real con red', () => {
     expect(existsSync(destino)).toBe(false);
   }, 120_000);
 });
+
+describe('Git.versionado', () => {
+  const gitReal = (cwd: string, ...args: string[]): void => {
+    const r = spawnSync('git', args, { cwd, windowsHide: true, stdio: 'ignore' });
+    if (r.status !== 0) throw new Error(`git ${args.join(' ')} falló`);
+  };
+
+  it.skipIf(!hayGit)(
+    'con un repositorio real: false sin agregar, true con el .env en el índice',
+    async () => {
+      const dir = await carpetaTemporal('pel-git-ver-');
+      gitReal(dir, 'init', '-q');
+      writeFileSync(path.join(dir, '.env'), 'APP=1\n');
+      const git = new Git();
+      expect(await git.versionado(dir)).toBe(false);
+      gitReal(dir, 'add', '.env');
+      expect(await git.versionado(dir)).toBe(true);
+    },
+  );
+
+  it('carpeta sin repositorio: false sin llamar a git', async () => {
+    const llamadas: string[][] = [];
+    const git = new Git({
+      ...sinRutas,
+      exec: async (_c, a) => {
+        llamadas.push(a);
+        return { codigo: 0, stdout: '.env\0', stderr: '' };
+      },
+    });
+    expect(await git.versionado(path.join('C:', 'no', 'repo'))).toBe(false);
+    expect(llamadas).toEqual([]);
+  });
+
+  it('git ausente o con error: null (desconocido), nunca false', async () => {
+    const git = new Git({
+      entorno: { Path: '' },
+      existe: (r) => r.endsWith('.git'),
+      exec: async () => ({ codigo: 1, stdout: '', stderr: 'spawn git ENOENT' }),
+    });
+    expect(await git.versionado(path.join('C:', 'repo'))).toBeNull();
+  });
+
+  it('usa ls-files sin shell, con el archivo tras "--"', async () => {
+    const llamadas: { args: string[]; cwd?: string }[] = [];
+    const git = new Git({
+      entorno: { Path: '' },
+      existe: (r) => r.endsWith('.git'),
+      exec: async (_c, a, o) => {
+        llamadas.push({ args: a, ...(o?.cwd ? { cwd: o.cwd } : {}) });
+        return { codigo: 0, stdout: '', stderr: '' };
+      },
+    });
+    const carpeta = path.join('C:', 'repo');
+    expect(await git.versionado(carpeta)).toBe(false);
+    expect(llamadas).toEqual([{ args: ['ls-files', '-z', '--', '.env'], cwd: carpeta }]);
+  });
+});

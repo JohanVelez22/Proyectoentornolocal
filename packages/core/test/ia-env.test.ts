@@ -9,6 +9,8 @@ import {
   bloqueEnvIaEnmascarado,
   escribirEnvIa,
   estadoGitignore,
+  limpiarRespaldosEnv,
+  type OpcionesEscribirEnvIa,
   MARCA_FIN_IA,
   MARCA_INICIO_IA,
 } from '../src/ia/envIa';
@@ -23,6 +25,18 @@ const config = (
   urlBase: string | null = null,
   modelo: string | null = null,
 ): ConfigProveedorIa => ({ id: `p-${tipo}`, tipo, nombre: tipo, urlBase, modelo });
+
+/** Opciones de escritura de prueba: sitio fijo y .env no versionado. */
+const opc = (
+  carpetaRespaldos: string,
+  extra: Partial<OpcionesEscribirEnvIa> = {},
+): OpcionesEscribirEnvIa => ({
+  confirmado: true,
+  carpetaRespaldos,
+  sitioId: 'mi-sitio',
+  versionado: async () => false,
+  ...extra,
+});
 
 const lineas = (b: string): string[] => b.split('\n').filter((l) => l && !l.startsWith('#'));
 
@@ -141,7 +155,7 @@ describe('escribirEnvIa', () => {
   it('exige confirmación', async () => {
     const dir = await carpetaTemporal('pel-envia-');
     await expect(
-      escribirEnvIa(dir, 'x', { confirmado: false as never, carpetaRespaldos: dir }),
+      escribirEnvIa(dir, 'x', { ...opc(dir), confirmado: false as never }),
     ).rejects.toMatchObject({ codigo: 'ia.env_sin_confirmar' });
   });
 
@@ -149,7 +163,7 @@ describe('escribirEnvIa', () => {
     const dir = await carpetaTemporal('pel-envia-');
     const resp = path.join(dir, 'respaldos');
     const bloque = bloqueEnvIa(config('gemini'), CLAVE);
-    const r = await escribirEnvIa(dir, bloque, { confirmado: true, carpetaRespaldos: resp });
+    const r = await escribirEnvIa(dir, bloque, opc(resp));
     expect(r.respaldo).toBeNull();
     expect(await readFile(path.join(dir, '.env'), 'utf8')).toBe(bloque);
   });
@@ -159,7 +173,7 @@ describe('escribirEnvIa', () => {
     const resp = path.join(await carpetaTemporal('pel-envia-r-'), 'env');
     await writeFile(path.join(dir, '.env'), `${BOM}APP=1\n`);
     const bloque = bloqueEnvIa(config('gemini'), CLAVE);
-    const r = await escribirEnvIa(dir, bloque, { confirmado: true, carpetaRespaldos: resp });
+    const r = await escribirEnvIa(dir, bloque, opc(resp));
     expect(r.respaldo).not.toBeNull();
     expect(path.dirname(r.respaldo!)).toBe(resp);
     expect(await readFile(r.respaldo!, 'utf8')).toBe(`${BOM}APP=1\n`);
@@ -171,10 +185,7 @@ describe('escribirEnvIa', () => {
     const dir = await carpetaTemporal('pel-envia-');
     await writeFile(path.join(dir, '.env'), 'GEMINI_API_KEY=otra\n');
     await expect(
-      escribirEnvIa(dir, bloqueEnvIa(config('gemini'), CLAVE), {
-        confirmado: true,
-        carpetaRespaldos: path.join(dir, 'r'),
-      }),
+      escribirEnvIa(dir, bloqueEnvIa(config('gemini'), CLAVE), opc(path.join(dir, 'r'))),
     ).rejects.toMatchObject({ codigo: 'ia.env_conflicto' });
     expect(await readFile(path.join(dir, '.env'), 'utf8')).toBe('GEMINI_API_KEY=otra\n');
   });
@@ -185,7 +196,7 @@ describe('.gitignore', () => {
     it(`"${patron}" ignora .env`, async () => {
       const dir = await carpetaTemporal('pel-gi-');
       await writeFile(path.join(dir, '.gitignore'), `node_modules\n# comentario\n${patron}\n`);
-      expect(await estadoGitignore(dir)).toEqual({ existe: true, ignoraEnv: true });
+      expect(await estadoGitignore(dir)).toMatchObject({ existe: true, ignoraEnv: true });
     });
   }
 
@@ -193,19 +204,19 @@ describe('.gitignore', () => {
     it(`"${patron}" no ignora .env`, async () => {
       const dir = await carpetaTemporal('pel-gi-');
       await writeFile(path.join(dir, '.gitignore'), `${patron}\n`);
-      expect(await estadoGitignore(dir)).toEqual({ existe: true, ignoraEnv: false });
+      expect(await estadoGitignore(dir)).toMatchObject({ existe: true, ignoraEnv: false });
     });
   }
 
   it('una negación posterior anula la regla', async () => {
     const dir = await carpetaTemporal('pel-gi-');
     await writeFile(path.join(dir, '.gitignore'), '.env*\n!.env\n');
-    expect(await estadoGitignore(dir)).toEqual({ existe: true, ignoraEnv: false });
+    expect(await estadoGitignore(dir)).toMatchObject({ existe: true, ignoraEnv: false });
   });
 
   it('sin .gitignore', async () => {
     const dir = await carpetaTemporal('pel-gi-');
-    expect(await estadoGitignore(dir)).toEqual({ existe: false, ignoraEnv: false });
+    expect(await estadoGitignore(dir)).toMatchObject({ existe: false, ignoraEnv: false });
   });
 
   it('agregarEnvAGitignore deja copia y conserva el contenido y CRLF', async () => {
@@ -217,7 +228,7 @@ describe('.gitignore', () => {
       'vendor\r\nnode_modules\r\n.env\r\n',
     );
     expect(await readFile(r.respaldo!, 'utf8')).toBe('vendor\r\nnode_modules');
-    expect(await estadoGitignore(dir)).toEqual({ existe: true, ignoraEnv: true });
+    expect(await estadoGitignore(dir)).toMatchObject({ existe: true, ignoraEnv: true });
     // Una segunda vez no duplica.
     await agregarEnvAGitignore(dir, resp);
     expect((await readFile(path.join(dir, '.gitignore'), 'utf8')).match(/^\.env$/gm)).toHaveLength(
@@ -230,5 +241,93 @@ describe('.gitignore', () => {
     const r = await agregarEnvAGitignore(dir, path.join(dir, 'r'));
     expect(r.respaldo).toBeNull();
     expect(await readFile(path.join(dir, '.gitignore'), 'utf8')).toBe('.env\n');
+  });
+});
+
+describe('.env versionado en git', () => {
+  it('estadoGitignore informa envVersionado con el comprobador dado (null si no hay)', async () => {
+    const dir = await carpetaTemporal('pel-gi-');
+    await writeFile(path.join(dir, '.gitignore'), '.env\n');
+    expect(await estadoGitignore(dir)).toEqual({
+      existe: true,
+      ignoraEnv: true,
+      envVersionado: null,
+    });
+    expect(await estadoGitignore(dir, { versionado: async () => true })).toEqual({
+      existe: true,
+      ignoraEnv: true,
+      envVersionado: true,
+    });
+  });
+
+  it('escribirEnvIa se niega si git ya versiona el .env, sin tocar nada', async () => {
+    const dir = await carpetaTemporal('pel-envia-');
+    await writeFile(path.join(dir, '.env'), 'APP=1\n');
+    const resp = path.join(dir, 'r');
+    await expect(
+      escribirEnvIa(
+        dir,
+        bloqueEnvIa(config('gemini'), CLAVE),
+        opc(resp, { versionado: async () => true }),
+      ),
+    ).rejects.toMatchObject({ codigo: 'ia.env_versionado' });
+    expect(await readFile(path.join(dir, '.env'), 'utf8')).toBe('APP=1\n');
+    // Con la confirmación aparte, sí.
+    await escribirEnvIa(
+      dir,
+      bloqueEnvIa(config('gemini'), CLAVE),
+      opc(resp, { versionado: async () => true, aceptarVersionado: true }),
+    );
+    expect(await readFile(path.join(dir, '.env'), 'utf8')).toContain('GEMINI_API_KEY=');
+  });
+
+  it('desconocido (sin git) no bloquea', async () => {
+    const dir = await carpetaTemporal('pel-envia-');
+    await escribirEnvIa(
+      dir,
+      bloqueEnvIa(config('gemini'), CLAVE),
+      opc(path.join(dir, 'r'), { versionado: async () => null }),
+    );
+    expect(await readFile(path.join(dir, '.env'), 'utf8')).toContain('GEMINI_API_KEY=');
+  });
+});
+
+describe('copias del .env', () => {
+  it('llevan el id del sitio, se quedan en 5 por sitio y se limpian al borrar la clave', async () => {
+    const dir = await carpetaTemporal('pel-envia-');
+    const otro = await carpetaTemporal('pel-envia-');
+    const resp = path.join(await carpetaTemporal('pel-envia-r-'), 'env');
+    await writeFile(path.join(dir, '.env'), 'APP=1\n');
+    await writeFile(path.join(otro, '.env'), 'APP=2\n');
+    await escribirEnvIa(otro, bloqueEnvIa(config('gemini'), CLAVE), opc(resp, { sitioId: 'otro' }));
+    for (let i = 0; i < 7; i++) {
+      await escribirEnvIa(
+        dir,
+        bloqueEnvIa(config('gemini'), `sk-falso-ronda-${i}-0123456789`),
+        opc(resp),
+      );
+    }
+    const nombres = await readdir(resp);
+    const propias = nombres.filter((n) => n.startsWith('env-mi-sitio-'));
+    expect(propias).toHaveLength(5);
+    expect(nombres.filter((n) => n.startsWith('env-otro-'))).toHaveLength(1);
+    await limpiarRespaldosEnv(resp, 'mi-sitio');
+    expect((await readdir(resp)).filter((n) => n.startsWith('env-mi-sitio-'))).toEqual([]);
+    expect((await readdir(resp)).filter((n) => n.startsWith('env-otro-'))).toHaveLength(1);
+    await limpiarRespaldosEnv(resp);
+    expect((await readdir(resp)).filter((n) => n.startsWith('env-'))).toEqual([]);
+  });
+
+  it('un id de sitio raro se rechaza', async () => {
+    const dir = await carpetaTemporal('pel-envia-');
+    await expect(
+      escribirEnvIa(dir, bloqueEnvIa(config('gemini'), CLAVE), opc(dir, { sitioId: '../x' })),
+    ).rejects.toThrow();
+    await expect(limpiarRespaldosEnv(dir, '../x')).rejects.toThrow();
+  });
+
+  it('limpiar una carpeta que no existe no falla', async () => {
+    const dir = await carpetaTemporal('pel-envia-');
+    await expect(limpiarRespaldosEnv(path.join(dir, 'nada'))).resolves.toBeUndefined();
   });
 });

@@ -9,6 +9,11 @@ export interface CifradoSeguro {
   isEncryptionAvailable(): boolean;
   encryptString(texto: string): Buffer;
   decryptString(cifrado: Buffer): string;
+  /**
+   * Solo en Linux: el respaldo elegido. 'basic_text' = sin llavero (cifra con una clave fija,
+   * equivale a texto plano): se rechaza.
+   */
+  getSelectedStorageBackend?(): string;
 }
 
 /** `github` (token de GitHub) o `ia:<id del proveedor>` (clave de un proveedor de IA). */
@@ -65,6 +70,13 @@ export class AlmacenSecretos {
 
   private exigirCifrado(): void {
     if (!this.cifrado.isEncryptionAvailable()) throw new Error(MENSAJE_SIN_CIFRADO);
+    let respaldo: string | undefined;
+    try {
+      respaldo = this.cifrado.getSelectedStorageBackend?.();
+    } catch {
+      // Fuera de Linux puede no existir o fallar: no aplica.
+    }
+    if (respaldo === 'basic_text') throw new Error(MENSAJE_SIN_CIFRADO);
   }
 
   private ruta(id: IdSecreto): string {

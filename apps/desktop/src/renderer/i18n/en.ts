@@ -195,7 +195,7 @@ export const en: Textos = {
       'ia.region': 'The provider does not serve your country or region.',
       'ia.sin_red': 'Could not connect to the provider: check the network or the base URL.',
       'ia.url_invalida':
-        'The base URL is not valid: use https:// (or http:// only to 127.0.0.1 or localhost), without user or password.',
+        'The base URL is not valid: use https:// (or http:// only to 127.0.0.1 or [::1]), without user or password.',
       'ia.plazo': 'The provider did not answer within {segundos} s.',
       'ia.respuesta_rara': 'The provider returned something unexpected.',
       'ia.cancelado': 'The request to the provider was cancelled.',
@@ -208,6 +208,8 @@ export const en: Textos = {
         'The .env already defines {claves} with another value: confirm if you want to replace it.',
       'ia.env_sin_confirmar':
         'Confirm that you want to write the key to the .env (it is stored in plain text).',
+      'ia.env_versionado':
+        'Git already tracks the .env of this project: the next commit would upload the key even if it is in .gitignore. Remove it from the index with git rm --cached .env.',
     },
   },
   avisoInicio: {

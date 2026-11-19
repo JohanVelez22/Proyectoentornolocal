@@ -252,6 +252,30 @@ export class Git {
     return this.buscar('git') ?? 'git';
   }
 
+  /**
+   * ¿Git ya sigue `archivo` (por defecto `.env`) en la carpeta? Un `.gitignore` no deja de
+   * seguir un archivo versionado: el próximo commit subiría lo que se escriba en él.
+   * - false: la carpeta no está en un repositorio (sin `.git` hacia arriba) o git no lo sigue.
+   * - true: está en el índice (`git ls-files -z -- <archivo>` lo lista).
+   * - null: desconocido (git no está, no responde o falla, p. ej. "dubious ownership").
+   * Sin shell: git con sus argumentos y el archivo detrás de `--`.
+   */
+  async versionado(carpeta: string, archivo = '.env'): Promise<boolean | null> {
+    let dir = path.resolve(carpeta);
+    for (;;) {
+      if (this.existe(path.join(dir, '.git'))) break;
+      const padre = path.dirname(dir);
+      if (padre === dir) return false;
+      dir = padre;
+    }
+    const r = await this.exec(this.rutaGit(), ['ls-files', '-z', '--', archivo], {
+      cwd: carpeta,
+      timeoutMs: 10_000,
+    });
+    if (r.codigo !== 0) return null;
+    return r.stdout.split('\0').some((l) => l === archivo);
+  }
+
   async disponible(): Promise<DisponibilidadGit> {
     const git = this.buscar('git');
     const gh = this.buscar('gh');

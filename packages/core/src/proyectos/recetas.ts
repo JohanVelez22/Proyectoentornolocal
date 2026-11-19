@@ -17,6 +17,7 @@ import {
 import { detectarProyecto, type Deteccion } from './detectar';
 import type { RegistroPasos } from './pasos';
 import { nombreEjecutable } from '../plataforma/sistema';
+import { enmascararSecretos } from '../patronesSecretos';
 
 export const MENSAJE_NO_CONFIADO = 'Marque "Confío en este repositorio" para ejecutar la receta';
 export const MENSAJE_EN_CURSO = 'Ya hay una receta en curso para este proyecto';
@@ -35,29 +36,14 @@ export const MAX_BYTES_LINEA = 4096;
 export const GRACIA_CANCELACION_MS = 10_000;
 const MENSAJE_SIN_RESPUESTA = 'Cancelado: el paso no respondió';
 
-const SECRETOS: [RegExp, string][] = [
-  // Credenciales en URLs: esquema://usuario:clave@host
-  [/(:\/\/)[^\s/@:]+:[^\s/@]*@/g, '$1***@'],
-  // password=…, PASSWORD=…, DB_PASSWORD=…, --password=…
-  [/(password\s*=\s*)("[^"]*"|'[^']*'|\S+)/gi, '$1***'],
-  // Clave pegada de mysql: -pclave
-  [/(^|\s)-p(?=\S)\S+/g, '$1-p***'],
-  // Tokens de GitHub
-  [/\bgithub_pat_[A-Za-z0-9_]+/g, 'github_pat_***'],
-  [/\b(gh[pousr])_[A-Za-z0-9]+/g, '$1_***'],
-  // Claves de IA (OpenAI y compatibles, Anthropic, Google)
-  [/\bsk-[A-Za-z0-9_-]{16,}/g, 'sk-***'],
-  [/\bAIza[0-9A-Za-z_-]{30,}/g, 'AIza***'],
-];
-
 /**
- * Enmascara credenciales (URLs con usuario:clave, password=…, -p de mysql, tokens de GitHub) y
+ * Enmascara credenciales (PATRONES_SECRETOS: URLs con usuario:clave, password=…, tokens y claves) y
  * corta la línea a MAX_BYTES_LINEA caracteres con "…". Se aplica a todo lo que el motor emite y
  * guarda.
  */
 export function sanear(texto: string): string {
   let t = texto;
-  for (const [patron, reemplazo] of SECRETOS) t = t.replace(patron, reemplazo);
+  t = enmascararSecretos(t);
   return t.length > MAX_BYTES_LINEA ? t.slice(0, MAX_BYTES_LINEA) + '…' : t;
 }
 

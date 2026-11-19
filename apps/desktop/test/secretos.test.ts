@@ -185,3 +185,25 @@ describe('AlmacenSecretos: claves de IA', () => {
     expect(await almacen().estado('ia:openai')).toEqual({ configurada: true, final: null });
   });
 });
+
+describe('AlmacenSecretos: cifrado en texto plano (Linux sin llavero)', () => {
+  it("con el respaldo 'basic_text' de safeStorage se niega a guardar y a leer", async () => {
+    const plano: CifradoSeguro = { ...cifrado(), getSelectedStorageBackend: () => 'basic_text' };
+    const s = new AlmacenSecretos(carpeta, viejo, plano);
+    await expect(s.guardar('ia:openai', CLAVE)).rejects.toThrow(MENSAJE_SIN_CIFRADO);
+    expect(existsSync(carpeta)).toBe(false);
+    mkdirSync(carpeta, { recursive: true });
+    writeFileSync(path.join(carpeta, 'ia-openai.bin'), cifrado().encryptString(CLAVE));
+    await expect(s.leer('ia:openai')).rejects.toThrow(MENSAJE_SIN_CIFRADO);
+  });
+
+  it('con un llavero real (gnome_libsecret) funciona', async () => {
+    const llavero: CifradoSeguro = {
+      ...cifrado(),
+      getSelectedStorageBackend: () => 'gnome_libsecret',
+    };
+    const s = new AlmacenSecretos(carpeta, viejo, llavero);
+    await s.guardar('ia:openai', CLAVE);
+    expect(await s.leer('ia:openai')).toBe(CLAVE);
+  });
+});
