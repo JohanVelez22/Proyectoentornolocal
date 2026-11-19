@@ -425,6 +425,7 @@ function alCambiarVisible(v: boolean): void {
             size="small"
             class="mono"
             :disabled="clonando"
+            :placeholder="ta.nombrePlaceholder"
             :status="nombreCarpeta && !nombreValido ? 'error' : undefined"
           />
         </label>

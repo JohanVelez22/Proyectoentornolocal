@@ -418,6 +418,7 @@ function alCambiarVisible(v: boolean): void {
                 :min="1"
                 :max="65535"
                 :show-button="false"
+                :placeholder="t.puertoPlaceholder"
                 :status="sinPuertoProxy ? 'error' : undefined"
               />
             </label>
@@ -451,7 +452,12 @@ function alCambiarVisible(v: boolean): void {
             </label>
             <label class="campo ancho">
               <span>{{ t.dominio }}</span>
-              <NInput v-model:value="dominioBase" size="small" class="mono">
+              <NInput
+                v-model:value="dominioBase"
+                size="small"
+                class="mono"
+                :placeholder="es.formSitio.dominioPlaceholder"
+              >
                 <template #suffix><span class="sufijo">.test</span></template>
               </NInput>
             </label>
@@ -474,7 +480,7 @@ function alCambiarVisible(v: boolean): void {
             <li
               v-for="(p, i) in pasos"
               :key="p.paso.id"
-              class="paso"
+              class="paso-config"
               :class="{ apagado: !p.activo || quitadosPorMotor.has(p.paso.id) }"
             >
               <NTooltip :disabled="sePuedeDesactivar(p.paso)">
@@ -734,7 +740,7 @@ function alCambiarVisible(v: boolean): void {
   flex-direction: column;
   gap: 4px;
 }
-.paso {
+.paso-config {
   list-style: none;
   display: flex;
   align-items: center;
@@ -744,7 +750,7 @@ function alCambiarVisible(v: boolean): void {
   background: rgba(128, 128, 128, 0.05);
   font-size: 13px;
 }
-.paso.apagado .etiqueta {
+.paso-config.apagado .etiqueta {
   opacity: 0.45;
   text-decoration: line-through;
 }

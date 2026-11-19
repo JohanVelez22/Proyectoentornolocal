@@ -21,6 +21,12 @@ export type PasoConEstado = EstadoReceta['pasos'][number];
 export type EstadoPaso = PasoConEstado['estado'];
 export type TipoPaso = PasoReceta['tipo'];
 
+/**
+ * Copia profunda de datos planos. No usa structuredClone: los pasos suelen venir de un estado
+ * reactivo (Proxy de Vue), que structuredClone no puede copiar.
+ */
+const copia = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+
 /** Líneas de registro que se guardan por paso (igual que el núcleo). */
 export const MAX_LINEAS_PASO = 500;
 
@@ -299,7 +305,7 @@ export const sePuedeDesactivar = (p: PasoReceta): boolean => !PASOS_FIJOS.includ
 export const sePuedeMover = (p: PasoReceta): boolean => p.opcional === true;
 
 export function pasosAsistente(receta: readonly PasoReceta[]): PasoAsistente[] {
-  return receta.map((paso) => ({ paso: structuredClone(paso), activo: true }));
+  return receta.map((paso) => ({ paso: copia(paso), activo: true }));
 }
 
 /** Mueve un paso opcional una posición (−1 arriba, +1 abajo). */
@@ -390,7 +396,7 @@ export function aplicarDeteccion(
   const motor = motorDe(d.servicios);
   const res: PasoAsistente[] = [];
   for (const p of pasos) {
-    const paso = structuredClone(p.paso);
+    const paso = copia(p.paso);
     if (paso.tipo === 'sitio-crear') {
       paso.args = {
         ...paso.args,
@@ -446,7 +452,13 @@ export function pasosSugeridos(
   const res: PasoReceta[] = [];
   const agregar = (tipo: TipoPaso): void => {
     const previo = guardada.find((p) => p.tipo === tipo);
-    res.push(previo ? structuredClone(previo) : { id: tipo, tipo, titulo: '' });
+    if (!previo) {
+      res.push({ id: tipo, tipo, titulo: '' });
+      return;
+    }
+    // Solo la definición del paso (la receta guardada trae también estado y registro).
+    const { id, titulo, args, opcional } = copia(previo);
+    res.push({ id, tipo, titulo, ...(args ? { args } : {}), ...(opcional ? { opcional } : {}) });
   };
   if (r.cambios.composerLock) agregar('composer-install');
   if (r.cambios.packageLock) {

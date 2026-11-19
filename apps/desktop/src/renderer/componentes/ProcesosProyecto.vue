@@ -380,7 +380,12 @@ function quitar(p: ProcesoProyectoPublico): void {
         <div class="dos">
           <label class="campo">
             <span>{{ t.cwd }}</span>
-            <NInput v-model:value="editando.cwd" size="small" class="mono" />
+            <NInput
+              v-model:value="editando.cwd"
+              size="small"
+              class="mono"
+              :placeholder="t.cwdPlaceholder"
+            />
             <small>{{ t.cwdAyuda }}</small>
           </label>
           <label class="campo">
@@ -391,6 +396,7 @@ function quitar(p: ProcesoProyectoPublico): void {
               :min="1"
               :max="65535"
               :show-button="false"
+              :placeholder="t.puertoNinguno"
               clearable
             />
             <small>{{ t.puertoAyuda }}</small>

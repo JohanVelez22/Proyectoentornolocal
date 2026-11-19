@@ -967,6 +967,7 @@ export const es = {
       destinoAyuda: (base: string) =>
         `Se clona en ${base}. Para otro lugar, use "Elegir carpeta…".`,
       nombreCarpeta: 'Nombre de la carpeta',
+      nombrePlaceholder: 'mi-proyecto',
       elegirDestino: 'Elegir carpeta…',
       destinoPorDefecto: 'Usar la carpeta de proyectos',
       clonar: 'Clonar',
@@ -1061,6 +1062,7 @@ export const es = {
       pythonInstalar: 'No hay Python instalado: instálelo en Servicios.',
       dominio: 'Dominio',
       puertoProxy: 'Puerto local',
+      puertoPlaceholder: '8000',
       receta: 'Pasos',
       recetaAyuda:
         'Se ejecutan en orden. Desactive los que no quiera; los opcionales se pueden mover.',
@@ -1159,8 +1161,10 @@ export const es = {
       comandoPlaceholder: 'npm run dev',
       comandoAyuda: 'Programa y argumentos, sin shell. Use comillas para argumentos con espacios.',
       cwd: 'Carpeta',
+      cwdPlaceholder: 'raiz',
       cwdAyuda: 'raiz o una subcarpeta del proyecto (por ejemplo, frontend).',
       puertoCampo: 'Puerto',
+      puertoNinguno: 'Ninguno',
       puertoAyuda: 'Solo informativo, salvo que el proceso sea el destino del proxy.',
       autoIniciar: 'Encender al iniciar WolfCore Dev',
       reiniciar: 'Reiniciar si se cae',

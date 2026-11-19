@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { reactive } from 'vue';
 import type {
   ApiEntorno,
   Deteccion,
@@ -335,6 +336,26 @@ describe('asistente de receta', () => {
       conRestaurar(pasos, 'C:\\r\\y.sql').filter((p) => p.paso.tipo === 'bd-restaurar'),
     ).toHaveLength(1);
     expect(sinRestaurar(pasos).map((p) => p.paso.id)).not.toContain('bd-restaurar');
+  });
+
+  it('funciona con pasos reactivos (Proxy de Vue), sin structuredClone', () => {
+    const pasos = reactive(pasosAsistente(receta));
+    const d = deteccionEditable(deteccion());
+    expect(() => aplicarDeteccion(pasos, d)).not.toThrow();
+    const guardada = reactive([{ ...receta[2]!, estado: 'listo', log: ['x'] }]);
+    const r = pasosSugeridos(
+      {
+        actualizado: true,
+        cambios: {
+          composerLock: false,
+          packageLock: false,
+          migraciones: ['m'],
+          requirements: false,
+        },
+      },
+      guardada,
+    );
+    expect(r).toEqual([{ id: 'migrar', tipo: 'migrar', titulo: '' }]);
   });
 
   it('solo se mueven los opcionales; sitio-crear no se puede desactivar', () => {
