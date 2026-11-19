@@ -165,6 +165,38 @@ describe('ServicioPhp', () => {
     expect(ini).toMatch(/^cgi\.fix_pathinfo\s*=\s*0\s*$/m);
   });
 
+  it('activa OPcache (si la rama trae php_opcache.dll) con revalidación inmediata (QA 5)', async () => {
+    const bin = sembrarPhp('8.4');
+    writeFileSync(
+      path.join(bin, 'php.ini-development'),
+      [
+        ';zend_extension=opcache',
+        'max_execution_time = 30',
+        '[opcache]',
+        ';opcache.enable=1',
+        ';opcache.revalidate_freq=2',
+      ].join('\r\n'),
+    );
+    mkdirSync(path.join(bin, 'ext'), { recursive: true });
+    writeFileSync(path.join(bin, 'ext', 'php_opcache.dll'), '');
+    await crear().generarIni('8.4');
+    const ini = readFileSync(rutas.phpIni('8.4'), 'utf8');
+    expect(ini).toMatch(/^zend_extension=opcache\s*$/m);
+    expect(ini).not.toMatch(/^;zend_extension=opcache/m);
+    expect(ini).toMatch(/^opcache\.enable=1\s*$/m);
+    expect(ini).toMatch(/^opcache\.validate_timestamps=1\s*$/m);
+    expect(ini).toMatch(/^opcache\.revalidate_freq=0\s*$/m);
+    expect(ini).toMatch(/^max_execution_time=120\s*$/m);
+    expect(ini).not.toMatch(/^max_execution_time\s*=\s*30/m);
+
+    // Sin el .dll (PHP 8.5 lo trae incorporado) no se agrega zend_extension: daría un aviso.
+    rmSync(path.join(bin, 'ext', 'php_opcache.dll'));
+    await crear().generarIni('8.4');
+    const sinDll = readFileSync(rutas.phpIni('8.4'), 'utf8');
+    expect(sinDll).not.toMatch(/^zend_extension=opcache/m);
+    expect(sinDll).toMatch(/^opcache\.enable=1\s*$/m);
+  });
+
   it('inicia dos procesos en 9840 y 9841 con PHP_FCGI_MAX_REQUESTS=0', async () => {
     sembrarPhp('8.4');
     await crear().iniciar('8.4');

@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ErrorWolf } from '../errores';
 import path from 'node:path';
@@ -29,7 +30,36 @@ const DIRECTIVAS: [string, string][] = [
   ['post_max_size', '64M'],
   ['date.timezone', 'America/Bogota'],
   ['cgi.fix_pathinfo', '0'],
+  // Desarrollo: la primera petición de un proyecto grande compila miles de clases; con 30 s
+  // (y sin OPcache) Laravel daba 500 por "Maximum execution time".
+  ['max_execution_time', '120'],
+  ['realpath_cache_size', '4096K'],
 ];
+
+/** OPcache para desarrollo: cachea, pero revisa cada archivo en cada petición (sin esperas). */
+const DIRECTIVAS_OPCACHE: [string, string][] = [
+  ['opcache.enable', '1'],
+  ['opcache.enable_cli', '0'],
+  ['opcache.validate_timestamps', '1'],
+  ['opcache.revalidate_freq', '0'],
+  ['opcache.memory_consumption', '256'],
+  ['opcache.interned_strings_buffer', '16'],
+  ['opcache.max_accelerated_files', '20000'],
+];
+
+/**
+ * Activa `zend_extension=opcache` (descomenta la línea o la agrega). Solo si la rama trae
+ * `php_opcache.dll`: en las que lo traen incorporado, cargarlo otra vez da un aviso.
+ */
+function activarOpcache(lineas: string[]): void {
+  const activa = /^\s*zend_extension\s*=\s*"?(php_)?opcache(\.dll)?"?\s*$/i;
+  if (lineas.some((l) => activa.test(l))) return;
+  const i = lineas.findIndex((l) =>
+    /^\s*;\s*zend_extension\s*=\s*"?(php_)?opcache(\.dll)?"?\s*$/i.test(l),
+  );
+  if (i >= 0) lineas[i] = 'zend_extension=opcache';
+  else lineas.push('zend_extension=opcache');
+}
 
 const escapar = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** Máximo de trabajadores que se intenta detener (cubre cambios de configuración en caliente). */
@@ -88,6 +118,8 @@ export class ServicioPhp {
     fijar(lineas, 'extension_dir', this.extensionDir(version));
     for (const ext of EXTENSIONES) activarExtension(lineas, ext);
     for (const [k, v] of DIRECTIVAS) fijar(lineas, k, v);
+    if (existsSync(path.join(bin, 'ext', 'php_opcache.dll'))) activarOpcache(lineas);
+    for (const [k, v] of DIRECTIVAS_OPCACHE) fijar(lineas, k, v);
     const destino = this.rutas.phpIni(version);
     await mkdir(path.dirname(destino), { recursive: true });
     await writeFile(destino, lineas.join('\r\n'), 'utf8');
