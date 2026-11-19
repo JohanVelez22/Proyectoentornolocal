@@ -1,3 +1,5 @@
+import { ErrorWolf } from '../errores';
+
 export const MARCA_INICIO = '# >>> WolfCore Dev (no editar a mano)';
 export const MARCA_FIN = '# <<< WolfCore Dev';
 
@@ -32,7 +34,8 @@ export function normalizarDominios(dominios: string[]): string[] {
   const salida = new Set<string>();
   for (const bruto of dominios) {
     const d = bruto.trim().toLowerCase();
-    if (!DOMINIO_VALIDO.test(d)) throw new Error(`Dominio inválido: ${bruto}`);
+    if (!DOMINIO_VALIDO.test(d))
+      throw new ErrorWolf('hosts.dominio_invalido', `Dominio inválido: ${bruto}`);
     salida.add(d);
   }
   return [...salida].sort();

@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { ErrorWolf } from '../errores';
 import path from 'node:path';
 import { nombreEjecutable } from '../plataforma/sistema';
 import {
@@ -81,7 +82,10 @@ export class Terminal {
   /** Abre una terminal en la carpeta del sitio con su PHP, Composer y herramientas en el PATH. */
   async abrir(sitio: Pick<Sitio, 'carpeta' | 'php'> & SitioConRuntimes): Promise<void> {
     if (!this.existe(sitio.carpeta)) {
-      throw new Error(`La carpeta del sitio no existe: ${sitio.carpeta}`);
+      throw new ErrorWolf(
+        'herramientas.carpeta_sitio_inexistente',
+        `La carpeta del sitio no existe: ${sitio.carpeta}`,
+      );
     }
     const env = await this.entornoConPath(sitio.php, sitio);
     await this.plataforma.abrirTerminal(sitio.carpeta, { env });

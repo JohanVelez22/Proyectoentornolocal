@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { ErrorWolf } from '../errores';
 import { readFile } from 'node:fs/promises';
 import { isIPv4, isIPv6 } from 'node:net';
 import { emitirCertificado } from '../https/ca';
@@ -21,11 +22,16 @@ const esNombre = (n: string): boolean =>
 
 /** Un nombre (o comodín) normalizado, o lanza con un mensaje en español. */
 function validarUno(entrada: unknown): string {
-  if (typeof entrada !== 'string') throw new Error(`"${String(entrada)}" no es válido.`);
+  if (typeof entrada !== 'string')
+    throw new ErrorWolf('herramientas.dominio_invalido', `"${String(entrada)}" no es válido.`);
   let n = entrada.trim().toLowerCase();
   if (/^\[.*\]$/.test(n)) n = n.slice(1, -1);
   // Una IPv6 con zona (`fe80::1%12`) solo vale en esa máquina: no va en un certificado.
-  if (n.includes('%')) throw new Error(`"${entrada}" no es válido: quite la zona (%…) de la IPv6.`);
+  if (n.includes('%'))
+    throw new ErrorWolf(
+      'herramientas.dominio_invalido',
+      `"${entrada}" no es válido: quite la zona (%…) de la IPv6.`,
+    );
   if (isIPv4(n) || isIPv6(n)) return n;
   if (n.includes('*')) {
     // Solo un comodín a la izquierda, de un nivel, y sobre al menos dos etiquetas (`*.x.test`).
@@ -36,21 +42,28 @@ function validarUno(entrada: unknown): string {
       resto.split('.').length < 2 ||
       !esNombre(resto)
     ) {
-      throw new Error(
+      throw new ErrorWolf(
+        'herramientas.dominio_invalido',
         `"${entrada}" no es un comodín válido: solo se admite "*." al principio y sobre un dominio de dos o más partes (por ejemplo *.misitio.test).`,
       );
     }
     return n;
   }
   if (n === '' || !esNombre(n))
-    throw new Error(`"${entrada}" no es válido como dominio ni como IP.`);
+    throw new ErrorWolf(
+      'herramientas.dominio_invalido',
+      `"${entrada}" no es válido como dominio ni como IP.`,
+    );
   return n;
 }
 
 /** Valida, normaliza (minúsculas, sin corchetes) y quita repetidos, conservando el orden. */
 export function validarDominiosLibres(dominios: unknown): string[] {
   if (!Array.isArray(dominios) || dominios.length === 0) {
-    throw new Error('Indique al menos un dominio o IP para el certificado.');
+    throw new ErrorWolf(
+      'herramientas.sin_seleccion',
+      'Indique al menos un dominio o IP para el certificado.',
+    );
   }
   const res: string[] = [];
   for (const d of dominios) {
@@ -58,7 +71,11 @@ export function validarDominiosLibres(dominios: unknown): string[] {
     if (!res.includes(n)) res.push(n);
   }
   if (res.length > MAX_DOMINIOS_LIBRES) {
-    throw new Error(`Un certificado admite como máximo ${MAX_DOMINIOS_LIBRES} dominios o IP.`);
+    throw new ErrorWolf(
+      'herramientas.demasiados_dominios',
+      `Un certificado admite como máximo ${MAX_DOMINIOS_LIBRES} dominios o IP.`,
+      { maximo: MAX_DOMINIOS_LIBRES },
+    );
   }
   return res;
 }
@@ -73,7 +90,8 @@ export async function emitirCertificadoLibre(
 ): Promise<{ certPem: string; clavePem: string }> {
   const lista = validarDominiosLibres(dominios);
   if (!existsSync(d.rutas.caCrt()) || !existsSync(d.rutas.caKey())) {
-    throw new Error(
+    throw new ErrorWolf(
+      'https.sin_autoridad',
       'No existe la autoridad de certificados de WolfCore Dev. Instale la CA desde la sección HTTPS antes de emitir certificados.',
     );
   }

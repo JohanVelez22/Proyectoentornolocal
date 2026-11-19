@@ -8,6 +8,9 @@ import {
   type ResultadoIpc,
   type RutaIpc,
 } from '../shared/api';
+import { crearBusEventos } from './eventos';
+
+const bus = crearBusEventos(ipcRenderer, CANAL_EVENTO, EVENTOS_IPC);
 
 async function invocar<T>(ruta: RutaIpc, ...args: unknown[]): Promise<T> {
   const r = (await ipcRenderer.invoke(`${PREFIJO_CANAL}${ruta}`, ...args)) as ResultadoIpc<T>;
@@ -208,16 +211,7 @@ const api: ApiEntorno = {
     regenerarToken: () => invocar('mcp.regenerarToken'),
     responderConfirmacion: (id, aprobado) => invocar('mcp.responderConfirmacion', id, aprobado),
   },
-  on(nombre, fn) {
-    if (!(EVENTOS_IPC as readonly string[]).includes(nombre)) return () => undefined;
-    const oyente = (_e: unknown, m: { nombre: string; dato: never }): void => {
-      if (m.nombre === nombre) fn(m.dato);
-    };
-    ipcRenderer.on(CANAL_EVENTO, oyente);
-    return () => {
-      ipcRenderer.removeListener(CANAL_EVENTO, oyente);
-    };
-  },
+  on: (nombre, fn) => bus.on(nombre, fn as (dato: never) => void),
 };
 
 contextBridge.exposeInMainWorld('entorno', api);

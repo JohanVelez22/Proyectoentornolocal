@@ -65,6 +65,63 @@ export const es = {
     titulo: 'No se pudo completar la acción',
     arranque: 'No se pudo leer el estado del entorno',
     desconocido: 'Ocurrió un error inesperado.',
+    codigos: {
+      'git.cambios_locales':
+        'Hay cambios sin guardar en la carpeta: guárdelos (commit) o descártelos antes de traer cambios. No se tocó nada.',
+      'git.divergencia':
+        'La rama divergió del remoto (hay commits locales y remotos distintos): resuélvalo a mano. No se tocó nada.',
+      'git.sin_upstream':
+        'La rama actual no sigue a ninguna rama remota: no hay de dónde traer cambios.',
+      'git.sin_rama': 'El repositorio está en un commit suelto (sin rama): no se tocó nada.',
+      'git.no_repositorio': 'La carpeta no es un repositorio de git.',
+      'git.destino_no_vacio': 'La carpeta de destino no está vacía.',
+      'git.destino_es_archivo': 'El destino es un archivo, no una carpeta.',
+      'git.no_encontrado': 'No se encontró git: instálelo primero.',
+      'git.gh_no_encontrado': 'No se encontró GitHub CLI (gh): instálelo primero.',
+      'git.plazo': 'El clon superó el plazo de {minutos} min y se canceló.',
+      'git.token_invalido': 'El token de GitHub no es válido.',
+      'git.url_con_credenciales':
+        'La URL no debe llevar usuario ni clave: use un token por separado.',
+      'servicios.desconocido': 'Servicio desconocido: {id}.',
+      'servicios.no_instalado': '{nombre} no está instalado. Instálelo desde Servicios.',
+      'servicios.puerto_invalido': 'El puerto debe ser un número entre 1024 y 65535.',
+      'servicios.puerto_asignado': 'El puerto {puerto} ya está asignado a {otro}.',
+      'servicios.puerto_ocupado':
+        'El puerto {puerto} lo usa {nombre} (PID {pid}). Ciérrelo o elija otro puerto.',
+      'servicios.confirmacion_borrado': 'Para borrar los datos de {nombre} escriba "{id}".',
+      'servicios.ftp_no_disponible': 'El servidor FTP no está disponible.',
+      'servicios.mailpit_no_responde': 'Mailpit no responde. Inícielo desde Servicios.',
+      'bd.encender_servicio': 'Encienda {nombre} para administrar sus bases.',
+      'bd.sin_credenciales': 'No hay credenciales guardadas de {nombre}.',
+      'bd.confirmacion_borrado': 'Para borrar la base {nombre} escriba su nombre exacto.',
+      'bd.mongosh_faltante': 'Falta mongosh: instálelo desde Servicios para administrar MongoDB.',
+      'tuneles.sitio_no_encontrado': 'No se encontró el proyecto.',
+      'tuneles.cloudflared_no_instalado':
+        'cloudflared no está instalado. Instálelo desde Servicios.',
+      'hosts.dominio_invalido': 'Hay un dominio no válido.',
+      'https.sin_dominio': 'Un certificado necesita al menos un dominio.',
+      'https.sin_autoridad':
+        'No existe la autoridad de certificados de WolfCore Dev. Instale la CA desde la sección HTTPS antes de emitir certificados.',
+      'herramientas.pid_invalido': 'El PID no es válido.',
+      'herramientas.pid_sistema': 'El PID {pid} es del sistema y no se puede finalizar.',
+      'herramientas.proceso_propio':
+        'No se puede finalizar WolfCore Dev ni el proceso que lo inició.',
+      'herramientas.proceso_inexistente': 'El proceso {pid} ya no existe.',
+      'herramientas.sin_vscode':
+        'No se encontró Visual Studio Code. Instálelo (code.visualstudio.com) o agregue "code" al PATH.',
+      'herramientas.carpeta_sitio_inexistente': 'La carpeta del proyecto no existe.',
+      'herramientas.ruta_no_absoluta': 'La ruta debe ser absoluta.',
+      'herramientas.sin_seleccion': 'Elija al menos un elemento.',
+      'herramientas.dominio_invalido': 'Hay un dominio o IP no válido.',
+      'herramientas.demasiados_dominios':
+        'Un certificado admite como máximo {maximo} dominios o IP.',
+      'proyectos.no_existe': 'No existe el proyecto.',
+      'proyectos.no_confiado': 'Marque "Confío en este repositorio" para ejecutar la receta.',
+      'proyectos.receta_en_curso': 'Ya hay una receta en curso para este proyecto.',
+      'proyectos.paso_no_omitible': 'El paso "Crear el sitio" no se puede omitir.',
+      'mcp.token_invalido': 'El token del servidor MCP no es válido.',
+      'mcp.solicitud_cancelada': 'El cliente MCP canceló la solicitud: no se ejecutó la acción.',
+    },
   },
   avisoInicio: {
     titulo: 'Aviso de WolfCore Dev',

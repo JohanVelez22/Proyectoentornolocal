@@ -1,4 +1,5 @@
 import { createHash, generateKeyPairSync, randomBytes } from 'node:crypto';
+import { ErrorWolf } from '../errores';
 import { isIP } from 'node:net';
 import forge from 'node-forge';
 
@@ -73,7 +74,8 @@ export function emitirCertificado(
   dominios: string[],
   ahora: Date = new Date(),
 ): ParCertificado {
-  if (dominios.length === 0) throw new Error('Un certificado necesita al menos un dominio');
+  if (dominios.length === 0)
+    throw new ErrorWolf('https.sin_dominio', 'Un certificado necesita al menos un dominio');
   const caCert = forge.pki.certificateFromPem(ca.certPem);
   const caKey = forge.pki.privateKeyFromPem(ca.keyPem);
   const { publica, privada } = nuevaClave(2048);

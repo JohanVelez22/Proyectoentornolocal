@@ -1,4 +1,5 @@
 import { buscarVsCode } from '../plataforma/vscodeWin';
+import { ErrorWolf } from '../errores';
 import { lanzarSeparado, type LanzadorSeparado } from '../plataforma/terminalWin';
 
 export { buscarVsCode } from '../plataforma/vscodeWin';
@@ -19,7 +20,7 @@ export interface DepsEditor {
  */
 export async function abrirEnVsCode(carpeta: string, d: DepsEditor = {}): Promise<void> {
   const exe = buscarVsCode(d);
-  if (!exe) throw new Error(MENSAJE_SIN_VSCODE);
+  if (!exe) throw new ErrorWolf('herramientas.sin_vscode', MENSAJE_SIN_VSCODE);
   const env: NodeJS.ProcessEnv = { ...(d.entorno ?? process.env) };
   for (const k of Object.keys(env)) {
     if (k.toUpperCase() === 'ELECTRON_RUN_AS_NODE') delete env[k];

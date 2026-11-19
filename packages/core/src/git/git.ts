@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { ErrorWolf } from '../errores';
 import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { lanzadorPorDefecto, MENSAJE_CANCELADO } from '../plataforma/lanzar';
@@ -106,14 +107,17 @@ export function validarUrlGit(url: string): { tipo: 'url' | 'gh' } {
   }
   if (u.protocol !== 'https:' || !u.hostname) throw mala();
   if (u.username || u.password) {
-    throw new Error('La URL no debe llevar usuario ni clave: use un token por separado');
+    throw new ErrorWolf(
+      'git.url_con_credenciales',
+      'La URL no debe llevar usuario ni clave: use un token por separado',
+    );
   }
   return { tipo: 'url' };
 }
 
 /** Valida el token antes de ponerlo en una cabecera (evita inyectar cabeceras o filtrarlo). */
 export function validarToken(token: string): void {
-  if (!TOKEN_VALIDO.test(token)) throw new Error(MENSAJE_TOKEN_INVALIDO);
+  if (!TOKEN_VALIDO.test(token)) throw new ErrorWolf('git.token_invalido', MENSAJE_TOKEN_INVALIDO);
 }
 
 const basicDe = (token: string): string =>
@@ -371,13 +375,14 @@ export class Git {
     } catch (e) {
       soltar();
       await this.deshacer(existia, absoluto, creada);
-      if (vencido) throw new Error(mensajePlazo);
+      if (vencido) throw new ErrorWolf('git.plazo', mensajePlazo, { minutos });
       if ((e as { code?: unknown }).code === 'ENOENT') {
-        throw new Error(
-          tipo === 'gh'
-            ? 'No se encontró GitHub CLI (gh): instálelo primero'
-            : 'No se encontró git: instálelo primero',
-        );
+        throw tipo === 'gh'
+          ? new ErrorWolf(
+              'git.gh_no_encontrado',
+              'No se encontró GitHub CLI (gh): instálelo primero',
+            )
+          : new ErrorWolf('git.no_encontrado', 'No se encontró git: instálelo primero');
       }
       if (o.senal?.aborted) throw new Error(MENSAJE_CANCELADO);
       throw new Error(
@@ -387,7 +392,7 @@ export class Git {
     soltar();
     if (codigo !== 0) {
       await this.deshacer(existia, absoluto, creada);
-      if (vencido) throw new Error(mensajePlazo);
+      if (vencido) throw new ErrorWolf('git.plazo', mensajePlazo, { minutos });
       if (o.senal?.aborted) throw new Error(MENSAJE_CANCELADO);
       const detalle = resumen(finales.join('\n'), token) || `código ${codigo}`;
       const credenciales =
@@ -404,9 +409,13 @@ export class Git {
   private async verificarDestino(destino: string): Promise<boolean> {
     const s = await stat(destino).catch(() => null);
     if (!s) return false;
-    if (!s.isDirectory()) throw new Error(`El destino es un archivo: ${destino}`);
+    if (!s.isDirectory())
+      throw new ErrorWolf('git.destino_es_archivo', `El destino es un archivo: ${destino}`);
     if ((await readdir(destino)).length > 0) {
-      throw new Error(`La carpeta de destino no está vacía: ${destino}`);
+      throw new ErrorWolf(
+        'git.destino_no_vacio',
+        `La carpeta de destino no está vacía: ${destino}`,
+      );
     }
     return true;
   }
@@ -444,7 +453,10 @@ export class Git {
     ]);
     if (r.codigo !== 0) {
       if (/not a git repository/i.test(r.stderr)) {
-        throw new Error(`La carpeta no es un repositorio de git: ${carpeta}`);
+        throw new ErrorWolf(
+          'git.no_repositorio',
+          `La carpeta no es un repositorio de git: ${carpeta}`,
+        );
       }
       throw new Error(`No se pudo leer el estado de git: ${resumen(r.stderr)}`);
     }
@@ -472,19 +484,22 @@ export class Git {
    */
   async traerCambios(carpeta: string, o: { token?: string } = {}): Promise<ResultadoTraer> {
     const antes = await this.status(carpeta, false);
-    if (antes.entradas > 0) throw new Error(MENSAJE_CAMBIOS_LOCALES);
+    if (antes.entradas > 0) throw new ErrorWolf('git.cambios_locales', MENSAJE_CAMBIOS_LOCALES);
     if (antes.rama === null) {
-      throw new Error('El repositorio está en un commit suelto (sin rama): no se tocó nada.');
+      throw new ErrorWolf(
+        'git.sin_rama',
+        'El repositorio está en un commit suelto (sin rama): no se tocó nada.',
+      );
     }
-    if (!antes.upstream) throw new Error(MENSAJE_SIN_UPSTREAM);
+    if (!antes.upstream) throw new ErrorWolf('git.sin_upstream', MENSAJE_SIN_UPSTREAM);
 
     const f = await this.git(carpeta, ['fetch', '--prune'], { token: o.token, timeoutMs: 300_000 });
     if (f.codigo !== 0) {
       throw new Error(`No se pudieron traer los cambios: ${resumen(f.stderr, o.token)}`);
     }
     const s = await this.status(carpeta, false);
-    if (s.entradas > 0) throw new Error(MENSAJE_CAMBIOS_LOCALES);
-    if (s.adelante > 0 && s.atras > 0) throw new Error(MENSAJE_DIVERGENCIA);
+    if (s.entradas > 0) throw new ErrorWolf('git.cambios_locales', MENSAJE_CAMBIOS_LOCALES);
+    if (s.adelante > 0 && s.atras > 0) throw new ErrorWolf('git.divergencia', MENSAJE_DIVERGENCIA);
     if (s.atras === 0) return { actualizado: false, cambios: vacio() };
 
     const h = await this.git(carpeta, ['rev-parse', 'HEAD']);

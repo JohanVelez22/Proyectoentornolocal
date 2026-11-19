@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { ErrorWolf } from '../errores';
 import { copyFile, mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Instalador } from '../catalogo/instalador';
@@ -9,7 +10,7 @@ import type { Supervisor } from '../procesos/supervisor';
 import type { Rutas } from '../rutas';
 import type { Config } from '../tipos';
 
-export class ErrorPuertoOcupado extends Error {
+export class ErrorPuertoOcupado extends ErrorWolf {
   constructor(
     readonly puerto: number,
     readonly pid: number,
@@ -18,9 +19,11 @@ export class ErrorPuertoOcupado extends Error {
     readonly alternativo?: number,
   ) {
     super(
+      'servicios.puerto_ocupado',
       alternativo === undefined
         ? `El puerto ${puerto} lo usa ${nombre} (PID ${pid}). Ciérrelo o cambie el puerto en Ajustes.`
         : `El puerto ${puerto} lo usa ${nombre} (PID ${pid}). Use el puerto ${alternativo}.`,
+      { puerto, pid, nombre, ...(alternativo === undefined ? {} : { alternativo }) },
     );
     this.name = 'ErrorPuertoOcupado';
   }
@@ -86,7 +89,12 @@ export class ServicioNginx {
     const elegida = cfg.servicios.nginx.version;
     if (elegida && instaladas.includes(elegida)) return elegida;
     const nueva = [...instaladas].sort(compararVersiones).at(-1);
-    if (!nueva) throw new Error('Nginx no está instalado. Instálelo desde Servicios.');
+    if (!nueva)
+      throw new ErrorWolf(
+        'servicios.no_instalado',
+        'Nginx no está instalado. Instálelo desde Servicios.',
+        { nombre: 'Nginx' },
+      );
     return nueva;
   }
 

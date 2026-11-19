@@ -13,14 +13,8 @@ import type {
 } from '../../shared/api';
 import { api, plano } from '../api';
 import { textos } from '../i18n';
+import { mensajeDeError } from '../utilidades/errores';
 import { esErrorTrasReemplazo, recortarLineas, respaldoEnMensaje } from '../utilidades/bd';
-
-/** Mensaje claro del núcleo (sin depender de naive-ui, para poder probar el store). */
-function mensajeDeError(e: unknown): string {
-  if (e instanceof Error && e.message) return e.message;
-  if (typeof e === 'string' && e) return e;
-  return textos.errores.desconocido;
-}
 
 /** Líneas que se conservan en cada registro de progreso (las más recientes). */
 export const LIMITE_LINEAS = 500;

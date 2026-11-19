@@ -2,6 +2,8 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import {
+  datosPermitidos,
+  ErrorWolf,
   PasoRecetaSchema,
   validarUrlGit,
   type CambiosPreferenciasUi,
@@ -114,6 +116,13 @@ async function sinClave<T>(clave: string, fn: () => Promise<T>): Promise<T> {
     const codigo = (e as { codigo?: unknown } | null)?.codigo;
     const limpiar = (t: string): string => (clave ? t.split(clave).join('***') : t);
     const previo = (e as { respaldoPrevio?: unknown } | null)?.respaldoPrevio;
+    if (e instanceof ErrorWolf) {
+      // Sus datos ya salen por la lista blanca; se limpian igual por si llevaran la clave.
+      const datos = Object.fromEntries(
+        Object.entries(e.datos ?? {}).map(([k, v]) => [k, typeof v === 'string' ? limpiar(v) : v]),
+      );
+      throw new ErrorWolf(e.codigo, limpiar(mensaje), datos);
+    }
     throw Object.assign(
       new Error(limpiar(mensaje)),
       typeof codigo === 'string' ? { codigo } : {},
@@ -366,8 +375,9 @@ async function conToken<T>(s: Contexto, fn: (token: string | null) => Promise<T>
   } catch (e) {
     if (!ilegible) throw e;
     const mensaje = e instanceof Error ? e.message : String(e);
+    // Con un código del núcleo se perdería el aviso al traducir: se deja solo el mensaje.
     throw Object.assign(new Error(`${mensaje} (${AVISO_TOKEN_ILEGIBLE})`), {
-      ...(typeof (e as { codigo?: unknown }).codigo === 'string'
+      ...(typeof (e as { codigo?: unknown }).codigo === 'string' && !(e instanceof ErrorWolf)
         ? { codigo: (e as { codigo: string }).codigo }
         : {}),
     });
@@ -789,21 +799,28 @@ const TABLA: Record<RutaIpc, Manejador> = {
 const MAX_DATO_ERROR = 1024;
 
 /**
- * Datos estructurados del error, por lista blanca: solo `respaldoPrevio` (texto acotado). Nunca
- * la traza, la causa ni otras propiedades del error.
+ * Datos estructurados del error, por lista blanca: `respaldoPrevio` (texto acotado) y los
+ * parámetros que el código de un `ErrorWolf` declara en el núcleo. Nunca la traza, la causa ni
+ * otras propiedades del error.
  */
-function datosError(e: unknown): DatosError | undefined {
+function datosError(e: unknown, codigo: unknown): DatosError | undefined {
   const previo = (e as { respaldoPrevio?: unknown } | null)?.respaldoPrevio;
-  if (typeof previo !== 'string' || previo === '' || previo.length > MAX_DATO_ERROR) {
-    return undefined;
-  }
-  return { respaldoPrevio: previo };
+  const propios =
+    typeof codigo === 'string' && e instanceof ErrorWolf
+      ? datosPermitidos(codigo, e.datos)
+      : undefined;
+  const conPrevio =
+    typeof previo === 'string' && previo !== '' && previo.length <= MAX_DATO_ERROR
+      ? { respaldoPrevio: previo }
+      : undefined;
+  if (!propios && !conPrevio) return undefined;
+  return { ...propios, ...conPrevio };
 }
 
 function aError(e: unknown): ResultadoIpc<never> {
   const mensaje = e instanceof Error ? e.message : String(e);
   const codigo = (e as { codigo?: unknown } | null)?.codigo;
-  const datos = datosError(e);
+  const datos = datosError(e, codigo);
   return {
     ok: false,
     error: {

@@ -1,4 +1,5 @@
 import { appendFile, mkdir } from 'node:fs/promises';
+import { ErrorWolf } from '../errores';
 import path from 'node:path';
 import {
   ErrorDetenidoAlIniciar,
@@ -169,7 +170,7 @@ export class ProcesosProyecto {
 
   async estados(sitioId: string): Promise<EstadoProcesoProyecto[]> {
     const sitio = (await this.d.leerSitios()).find((s) => s.id === sitioId);
-    if (!sitio) throw new Error(`No existe el proyecto ${sitioId}`);
+    if (!sitio) throw new ErrorWolf('proyectos.no_existe', `No existe el proyecto ${sitioId}`);
     return sitio.procesos.map((p) => this.estadoDe(sitio, p));
   }
 
@@ -269,7 +270,7 @@ export class ProcesosProyecto {
     procesoId: string,
   ): Promise<{ sitio: Sitio; proceso: ProcesoProyecto }> {
     const sitio = (await this.d.leerSitios()).find((s) => s.id === sitioId);
-    if (!sitio) throw new Error(`No existe el proyecto ${sitioId}`);
+    if (!sitio) throw new ErrorWolf('proyectos.no_existe', `No existe el proyecto ${sitioId}`);
     const proceso = sitio.procesos.find((p) => p.id === procesoId);
     if (!proceso) throw new Error(`El proyecto ${sitio.dominio} no tiene el proceso ${procesoId}`);
     return { sitio, proceso };

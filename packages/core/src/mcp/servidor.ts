@@ -1,4 +1,5 @@
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+import { ErrorWolf } from '../errores';
 import { realpath, stat } from 'node:fs/promises';
 import http from 'node:http';
 import type { AddressInfo, Socket } from 'node:net';
@@ -276,7 +277,8 @@ export class ServidorMcp {
 
   private async arrancar(): Promise<void> {
     const token = await this.d.token();
-    if (token.length < 32) throw new Error('El token del servidor MCP no es válido.');
+    if (token.length < 32)
+      throw new ErrorWolf('mcp.token_invalido', 'El token del servidor MCP no es válido.');
     const puerto = await this.d.puerto();
     const servidor = http.createServer((req, res) => void this.atender(req, res));
     servidor.on('connection', (s: Socket) => {
@@ -315,7 +317,8 @@ export class ServidorMcp {
     // Un arranque en curso leyó el token anterior: se espera a que termine para pisarlo.
     await this.arrancando?.catch(() => undefined);
     const token = await this.d.token();
-    if (token.length < 32) throw new Error('El token del servidor MCP no es válido.');
+    if (token.length < 32)
+      throw new ErrorWolf('mcp.token_invalido', 'El token del servidor MCP no es válido.');
     if (this.http) this.huellaToken = huella(token);
   }
 
@@ -453,7 +456,10 @@ export class ServidorMcp {
   ): Promise<unknown> {
     await this.pedirConfirmacion(herramienta, limpiar(resumen, 2000), datos, signal);
     if (signal.aborted) {
-      throw new Error('El cliente MCP canceló la solicitud: no se ejecutó la acción.');
+      throw new ErrorWolf(
+        'mcp.solicitud_cancelada',
+        'El cliente MCP canceló la solicitud: no se ejecutó la acción.',
+      );
     }
     return accion();
   }

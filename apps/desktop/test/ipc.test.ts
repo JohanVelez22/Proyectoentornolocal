@@ -11,7 +11,7 @@ import {
   type NucleoIpc,
   type VentanaLike,
 } from '../src/main/ipc';
-import { PUERTO_ADMINER as PUERTO_ADMINER_NUCLEO } from '@pel/core';
+import { ErrorWolf, PUERTO_ADMINER as PUERTO_ADMINER_NUCLEO } from '@pel/core';
 import { CANAL_EVENTO, PUERTO_ADMINER, RUTAS_IPC } from '../src/shared/api';
 
 type Manejador = (evento: unknown, ...args: unknown[]) => unknown;
@@ -690,6 +690,66 @@ describe('registrarIpc', () => {
       'd',
     );
     expect(JSON.stringify(x)).not.toContain('clave-secreta');
+  });
+
+  it('un ErrorWolf lleva su código y solo los datos que el código declara', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    crudo.sitios.listar.mockRejectedValueOnce(
+      new ErrorWolf('servicios.puerto_asignado', 'El puerto 80 ya está asignado a PHP.', {
+        puerto: 80,
+        otro: 'PHP',
+        clave: 'CENTINELA-SECRETO',
+        ruta: 'C:/Users/x/secreto',
+      }),
+    );
+    crudo.sitios.listar.mockRejectedValueOnce(
+      Object.assign(new Error('x'), {
+        codigo: 'codigo.inventado',
+        datos: { clave: 'CENTINELA-SECRETO' },
+      }),
+    );
+    crudo.sitios.listar.mockRejectedValueOnce(
+      new ErrorWolf('git.cambios_locales', 'Hay cambios.', { clave: 'CENTINELA-SECRETO' }),
+    );
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const llamar = (): Promise<unknown> =>
+      Promise.resolve(canales.get('entorno:sitios.listar')!({}));
+    const a = await llamar();
+    expect(a).toEqual({
+      ok: false,
+      error: {
+        mensaje: 'El puerto 80 ya está asignado a PHP.',
+        codigo: 'servicios.puerto_asignado',
+        datos: { puerto: 80, otro: 'PHP' },
+      },
+    });
+    const b = await llamar();
+    const c = await llamar();
+    expect(JSON.stringify([a, b, c])).not.toContain('CENTINELA');
+    expect((c as { error: object }).error).not.toHaveProperty('datos');
+  });
+
+  it('un ErrorWolf conserva código y datos al pasar por el enmascarado de la clave', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    const f = crudo as unknown as Record<string, Mock>;
+    f['importarBase']!.mockRejectedValueOnce(
+      new ErrorWolf('bd.encender_servicio', 'Encienda clave-x para administrar sus bases', {
+        nombre: 'clave-x',
+      }),
+    );
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const origen = { host: 'h', puerto: 3306, usuario: 'root', clave: 'clave-x', base: 'd' };
+    const r = await canales.get('entorno:bd.importar')!({}, 'mysql', origen, 'd');
+    expect(r).toEqual({
+      ok: false,
+      error: {
+        mensaje: 'Encienda *** para administrar sus bases',
+        codigo: 'bd.encender_servicio',
+        datos: { nombre: '***' },
+      },
+    });
   });
 
   it('un error solo lleva datos estructurados de la lista blanca (respaldoPrevio)', async () => {

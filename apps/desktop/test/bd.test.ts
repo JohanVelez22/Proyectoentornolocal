@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiEntorno, EstadoServicio, EventosNucleo } from '../src/shared/api';
+import { cambiarIdioma } from '../src/renderer/i18n';
 import { LIMITE_LINEAS, useBd } from '../src/renderer/stores/bd';
 import {
   carpetaDe,
@@ -334,5 +335,24 @@ describe('store de Bases de datos', () => {
     await bd.cargarBases('mysql');
     expect(bd.bases.mysql).toBeUndefined();
     expect(bd.errorCarga.mysql).toBe('Encienda MySQL para administrar sus bases');
+  });
+
+  it('el error con código de una lista se muestra traducido al idioma activo', async () => {
+    const bd = useBd();
+    const error = Object.assign(new Error('Encienda MySQL para administrar sus bases'), {
+      codigo: 'bd.encender_servicio',
+      datos: { nombre: 'MySQL' },
+    });
+    falsa.api.bd.listar.mockRejectedValueOnce(error);
+    cambiarIdioma('en');
+    try {
+      await bd.cargarBases('mysql');
+      expect(bd.errorCarga.mysql).toBe('Start MySQL to manage its databases.');
+    } finally {
+      cambiarIdioma('es');
+    }
+    falsa.api.bd.listar.mockRejectedValueOnce(error);
+    await bd.cargarBases('mysql');
+    expect(bd.errorCarga.mysql).toBe('Encienda MySQL para administrar sus bases.');
   });
 });

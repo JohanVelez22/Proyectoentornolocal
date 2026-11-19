@@ -1,4 +1,5 @@
 import type { ServidorFtp } from '../ftp/servidorFtp';
+import { ErrorWolf } from '../errores';
 import { puertosPhp } from '../nginx/principal';
 import type { Ejecutor, Plataforma } from '../plataforma/tipos';
 import { puertoResponde } from '../procesos/sonda';
@@ -184,7 +185,8 @@ export class Servicios {
   }
 
   private ftpObligatorio(): NonNullable<DepsServicios['ftp']> {
-    if (!this.d.ftp) throw new Error('El servidor FTP no está disponible.');
+    if (!this.d.ftp)
+      throw new ErrorWolf('servicios.ftp_no_disponible', 'El servidor FTP no está disponible.');
     return this.d.ftp;
   }
 

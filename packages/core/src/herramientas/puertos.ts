@@ -1,4 +1,5 @@
 import { interpretarNetstatTodos, type ProtocoloPuerto } from '../plataforma/netstat';
+import { ErrorWolf } from '../errores';
 export { interpretarTablaProcesos, type ProcesoTabla } from '../plataforma/procesosWin';
 import { hijosPorPadre, ProcesosWindows, type ProcesoTabla } from '../plataforma/procesosWin';
 import type { Ejecutor } from '../plataforma/tipos';
@@ -170,13 +171,26 @@ export class HerramientasPuertos {
     confirmacion: string,
     o: OpcionesFinalizar = {},
   ): Promise<{ pid: number; nombre: string }> {
-    if (!Number.isSafeInteger(pid) || pid < 0) throw new Error('El PID no es válido.');
-    if (pid < PID_MINIMO) throw new Error(`El PID ${pid} es del sistema y no se puede finalizar.`);
+    if (!Number.isSafeInteger(pid) || pid < 0)
+      throw new ErrorWolf('herramientas.pid_invalido', 'El PID no es válido.');
+    if (pid < PID_MINIMO)
+      throw new ErrorWolf(
+        'herramientas.pid_sistema',
+        `El PID ${pid} es del sistema y no se puede finalizar.`,
+        { pid },
+      );
     if (pid === this.pidApp || pid === this.pidPadre) {
-      throw new Error('No se puede finalizar WolfCore Dev ni el proceso que lo inició.');
+      throw new ErrorWolf(
+        'herramientas.proceso_propio',
+        'No se puede finalizar WolfCore Dev ni el proceso que lo inició.',
+      );
     }
     const nombre = await this.nombreDe(pid);
-    if (nombre === null) throw new Error(`El proceso ${pid} ya no existe.`);
+    if (nombre === null) {
+      throw new ErrorWolf('herramientas.proceso_inexistente', `El proceso ${pid} ya no existe.`, {
+        pid,
+      });
+    }
     if (LISTA_NEGRA.has(normalizar(nombre))) {
       throw new Error(`${nombre} es un proceso del sistema y no se puede finalizar.`);
     }
@@ -201,7 +215,11 @@ export class HerramientasPuertos {
     }
     // Justo antes de matar: el PID pudo quedar libre y reutilizarse por otro proceso.
     const ahora = await this.nombreDe(pid);
-    if (ahora === null) throw new Error(`El proceso ${pid} ya no existe.`);
+    if (ahora === null) {
+      throw new ErrorWolf('herramientas.proceso_inexistente', `El proceso ${pid} ya no existe.`, {
+        pid,
+      });
+    }
     if (normalizar(ahora) !== normalizar(nombre)) {
       throw new Error(`El PID ${pid} ahora pertenece a otro proceso (${ahora}); no se finalizó.`);
     }

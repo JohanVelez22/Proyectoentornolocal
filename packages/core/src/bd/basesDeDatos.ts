@@ -1,4 +1,5 @@
 import { existsSync, readdirSync } from 'node:fs';
+import { ErrorWolf } from '../errores';
 import path from 'node:path';
 import type { Ejecutor } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
@@ -80,7 +81,9 @@ export class BasesDeDatos {
     const nombre = NOMBRE_SERVICIO[motor];
     const e = (await this.d.servicios.estados()).find((x) => x.id === motor);
     if (!e || e.estado !== 'encendido' || e.puertos[0] === undefined) {
-      throw new Error(`Encienda ${nombre} para administrar sus bases`);
+      throw new ErrorWolf('bd.encender_servicio', `Encienda ${nombre} para administrar sus bases`, {
+        nombre,
+      });
     }
     return e;
   }
@@ -92,7 +95,11 @@ export class BasesDeDatos {
     if (motor === 'mongodb') return { host: '127.0.0.1', puerto, usuario: '', clave: null };
     const cred = await this.d.credenciales.leer(motor);
     if (!cred) {
-      throw new Error(`No hay credenciales guardadas de ${NOMBRE_SERVICIO[motor]}.`);
+      throw new ErrorWolf(
+        'bd.sin_credenciales',
+        `No hay credenciales guardadas de ${NOMBRE_SERVICIO[motor]}.`,
+        { nombre: NOMBRE_SERVICIO[motor] },
+      );
     }
     return { host: '127.0.0.1', puerto, usuario: USUARIO[motor], clave: cred.clave };
   }
@@ -131,7 +138,11 @@ export class BasesDeDatos {
   private async mongosh(js: string): Promise<unknown> {
     const x = await this.conexion('mongodb');
     const sh = buscarMongosh(this.d.rutas);
-    if (!sh) throw new Error('Falta mongosh: instálelo desde Servicios para administrar MongoDB.');
+    if (!sh)
+      throw new ErrorWolf(
+        'bd.mongosh_faltante',
+        'Falta mongosh: instálelo desde Servicios para administrar MongoDB.',
+      );
     const r = await this.d.exec(
       sh,
       ['--quiet', '--host', x.host, '--port', String(x.puerto), '--eval', js],
@@ -207,7 +218,11 @@ export class BasesDeDatos {
   async borrar(motor: MotorBd, nombre: string, confirmacion: string): Promise<void> {
     await this.estado(motor);
     if (confirmacion !== nombre) {
-      throw new Error(`Para borrar la base ${nombre} escriba su nombre exacto.`);
+      throw new ErrorWolf(
+        'bd.confirmacion_borrado',
+        `Para borrar la base ${nombre} escriba su nombre exacto.`,
+        { nombre },
+      );
     }
     if (motor === 'mongodb') {
       validarMongo(nombre);

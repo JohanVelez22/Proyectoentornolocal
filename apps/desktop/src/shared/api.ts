@@ -478,11 +478,10 @@ export interface ApiEntorno {
 
 /**
  * Datos estructurados que pueden acompañar un error (lista blanca en el proceso principal):
- * `respaldoPrevio` es la copia de seguridad hecha antes de reemplazar una base.
+ * `respaldoPrevio` es la copia de seguridad hecha antes de reemplazar una base; el resto son los
+ * parámetros que declara el código del error (`PARAMETROS_ERROR` del núcleo).
  */
-export interface DatosError {
-  respaldoPrevio?: string;
-}
+export type DatosError = Record<string, string | number>;
 
 export type ResultadoIpc<T = unknown> =
   | { ok: true; valor: T }

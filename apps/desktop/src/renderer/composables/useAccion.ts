@@ -1,12 +1,9 @@
 import { useMessage, useNotification } from 'naive-ui';
 import { reactive } from 'vue';
 import { textos } from '../i18n';
+import { mensajeDeError } from '../utilidades/errores';
 
-export function mensajeDeError(e: unknown): string {
-  if (e instanceof Error && e.message) return e.message;
-  if (typeof e === 'string' && e) return e;
-  return textos.errores.desconocido;
-}
+export { mensajeDeError };
 
 interface OpcionesAccion {
   /** Mensaje breve si sale bien. */

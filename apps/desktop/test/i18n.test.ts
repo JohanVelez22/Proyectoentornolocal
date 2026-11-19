@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { CODIGOS_ERROR } from '@pel/core';
 import { describe, expect, it } from 'vitest';
 import { en } from '../src/renderer/i18n/en';
 import { es } from '../src/renderer/i18n/es';
@@ -113,5 +114,19 @@ describe('i18n', () => {
       for (const t of literalesEnEspanol(codigo)) fallos.push(`${relative(RAIZ, f)}: ${t}`);
     }
     expect(fallos).toEqual([]);
+  });
+
+  it('cada código de error del núcleo tiene texto en es y en en, con los mismos parámetros', () => {
+    const marcas = (t: string): string[] => [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort();
+    const codigos = [...CODIGOS_ERROR].sort();
+    expect(Object.keys(es.errores.codigos).sort()).toEqual(codigos);
+    expect(Object.keys(en.errores.codigos).sort()).toEqual(codigos);
+    for (const c of CODIGOS_ERROR) {
+      const e = es.errores.codigos[c];
+      const i = en.errores.codigos[c];
+      expect(e, c).not.toBe('');
+      expect(i, c).not.toBe('');
+      expect(marcas(i), c).toEqual(marcas(e));
+    }
   });
 });

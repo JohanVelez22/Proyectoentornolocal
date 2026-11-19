@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { ErrorWolf } from '../errores';
 import { existsSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -181,7 +182,7 @@ export class ServiciosDatos {
 
   private requerir(id: string): DefServicio {
     const def = this.def(id);
-    if (!def) throw new Error(`Servicio desconocido: ${id}`);
+    if (!def) throw new ErrorWolf('servicios.desconocido', `Servicio desconocido: ${id}`, { id });
     return def;
   }
 
@@ -202,7 +203,12 @@ export class ServiciosDatos {
     const elegida = c.servicios.datos[def.id].version;
     if (elegida && instaladas.includes(elegida)) return elegida;
     const nueva = [...instaladas].sort(compararVersiones).at(-1);
-    if (!nueva) throw new Error(`${def.nombre} no está instalado. Instálelo desde Servicios.`);
+    if (!nueva)
+      throw new ErrorWolf(
+        'servicios.no_instalado',
+        `${def.nombre} no está instalado. Instálelo desde Servicios.`,
+        { nombre: def.nombre },
+      );
     return nueva;
   }
 
@@ -358,12 +364,21 @@ export class ServiciosDatos {
     return this.enCola(id, async () => {
       this.requerir(id);
       if (!Number.isInteger(puerto) || puerto < 1024 || puerto > 65535) {
-        throw new Error('El puerto debe ser un número entre 1024 y 65535.');
+        throw new ErrorWolf(
+          'servicios.puerto_invalido',
+          'El puerto debe ser un número entre 1024 y 65535.',
+        );
       }
       const cfg = await this.d.leerConfig();
       if (cfg.servicios.datos[id].puerto === puerto) return;
       const otro = this.asignadoA(id, puerto, cfg);
-      if (otro !== null) throw new Error(`El puerto ${puerto} ya está asignado a ${otro}.`);
+      if (otro !== null) {
+        throw new ErrorWolf(
+          'servicios.puerto_asignado',
+          `El puerto ${puerto} ya está asignado a ${otro}.`,
+          { puerto, otro },
+        );
+      }
       const uso = await this.d.plataforma.quienUsaPuerto(puerto);
       if (uso && uso.pid !== this.d.supervisor.pid(id)) {
         throw new ErrorPuertoOcupado(puerto, uso.pid, uso.nombre);
@@ -386,7 +401,11 @@ export class ServiciosDatos {
     return this.enCola(id, async () => {
       const nombre = this.def(id)?.nombre ?? NOMBRE_SERVICIO[id];
       if (confirmacion !== id) {
-        throw new Error(`Para borrar los datos de ${nombre} escriba "${id}".`);
+        throw new ErrorWolf(
+          'servicios.confirmacion_borrado',
+          `Para borrar los datos de ${nombre} escriba "${id}".`,
+          { nombre, id },
+        );
       }
       if (this.d.supervisor.estado(id) !== 'apagado') {
         if (this.def(id)) await this.detenerSinCola(id);

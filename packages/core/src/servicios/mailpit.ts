@@ -1,4 +1,5 @@
 import { mkdir } from 'node:fs/promises';
+import { ErrorWolf } from '../errores';
 import path from 'node:path';
 import type { DefProceso } from '../procesos/supervisor';
 import { registrarDefinicion } from './datos';
@@ -56,7 +57,10 @@ export class Mailpit {
     try {
       r = await this.peticion(`http://127.0.0.1:${this.puertoWeb}/api/v1/messages?limit=1`);
     } catch {
-      throw new Error('Mailpit no responde. Inícielo desde Servicios.');
+      throw new ErrorWolf(
+        'servicios.mailpit_no_responde',
+        'Mailpit no responde. Inícielo desde Servicios.',
+      );
     }
     if (!r.ok) throw new Error(`Mailpit respondió con un error (${r.status ?? 'desconocido'}).`);
     const datos = (await r.json()) as { unread?: unknown };

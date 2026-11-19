@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { ErrorWolf } from '../errores';
 import { readFileSync } from 'node:fs';
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -419,13 +420,15 @@ export class EjecutorRecetas {
     if (op.guardada && (parcial || op.receta)) {
       throw new Error('"guardada" no se combina con otras opciones');
     }
-    if (this.activas.has(sitioId)) throw new Error(MENSAJE_EN_CURSO);
+    if (this.activas.has(sitioId))
+      throw new ErrorWolf('proyectos.receta_en_curso', MENSAJE_EN_CURSO);
     const control = new AbortController();
     this.activas.set(sitioId, control);
     try {
       const sitio = await this.d.sitio(sitioId);
-      if (!sitio) throw new Error(`No existe el proyecto "${sitioId}"`);
-      if (sitio.confiado !== true) throw new Error(MENSAJE_NO_CONFIADO);
+      if (!sitio) throw new ErrorWolf('proyectos.no_existe', `No existe el proyecto "${sitioId}"`);
+      if (sitio.confiado !== true)
+        throw new ErrorWolf('proyectos.no_confiado', MENSAJE_NO_CONFIADO);
 
       const previo = this.estado(sitioId);
       const continua = parcial;
@@ -453,7 +456,7 @@ export class EjecutorRecetas {
         aCorrer = [indice(op.soloPaso)];
       } else if (op.desde !== undefined || omitirId !== null) {
         if (omitirId !== null && PASOS_NO_OMITIBLES.includes(receta[indice(omitirId)]!.tipo)) {
-          throw new Error(MENSAJE_NO_OMITIBLE);
+          throw new ErrorWolf('proyectos.paso_no_omitible', MENSAJE_NO_OMITIBLE);
         }
         const inicio = op.desde !== undefined ? indice(op.desde) : indice(omitirId!) + 1;
         pasos.slice(0, inicio).forEach((p, i) => {

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 import type { MuestraSistema, PuertoEnUso } from '../../shared/api';
+import { mensajeDeError } from '../utilidades/errores';
 import { api } from '../api';
 import {
   agregarMuestra,
@@ -68,7 +69,7 @@ export const useMetricas = defineStore('metricas', () => {
       pausar: () => api().metricas.pausar(),
       documento: doc,
       alError: (e) => {
-        errorMuestreo.value = e instanceof Error && e.message ? e.message : String(e);
+        errorMuestreo.value = mensajeDeError(e);
       },
     });
     alVisibilidad = () => {

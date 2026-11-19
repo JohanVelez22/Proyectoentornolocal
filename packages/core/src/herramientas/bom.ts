@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { ErrorWolf } from '../errores';
 import { constants } from 'node:fs';
 import { copyFile, lstat, open, readdir, readFile, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -141,10 +142,13 @@ const mensaje = (e: unknown): string => (e instanceof Error ? e.message : String
  */
 export async function limpiarBom(rutas: string[], o: OpcionesBom): Promise<ResultadoBom[]> {
   if (!Array.isArray(rutas) || rutas.length === 0)
-    throw new Error('Elija al menos un archivo o carpeta.');
+    throw new ErrorWolf('herramientas.sin_seleccion', 'Elija al menos un archivo o carpeta.');
   for (const r of rutas) {
     if (typeof r !== 'string' || !path.isAbsolute(r)) {
-      throw new Error(`La ruta debe ser absoluta: ${String(r)}`);
+      throw new ErrorWolf(
+        'herramientas.ruta_no_absoluta',
+        `La ruta debe ser absoluta: ${String(r)}`,
+      );
     }
     try {
       await lstat(r);

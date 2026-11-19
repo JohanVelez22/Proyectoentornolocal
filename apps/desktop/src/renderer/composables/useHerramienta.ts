@@ -1,6 +1,7 @@
 import { useMessage } from 'naive-ui';
 import type { TrabajadorHerramienta } from '../utilidades/herramientas';
 import { api } from '../api';
+import { mensajeDeError } from '../utilidades/errores';
 import { textos } from '../i18n';
 
 /** Worker nuevo por operación: si se cuelga, se termina sin afectar a las siguientes. */
@@ -18,7 +19,7 @@ export function useCopiar() {
       await api().sistema.copiar(texto);
       message.success(textos.herramientas.copiado);
     } catch (e) {
-      message.error((e as Error).message || textos.errores.desconocido);
+      message.error(mensajeDeError(e));
     }
   };
 }

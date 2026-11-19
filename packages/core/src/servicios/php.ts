@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { ErrorWolf } from '../errores';
 import path from 'node:path';
 import { puertosPhp } from '../nginx/principal';
 import type { Plataforma } from '../plataforma/tipos';
@@ -111,7 +112,11 @@ export class ServicioPhp {
 
   async iniciar(version: string): Promise<void> {
     if (!(await this.instalador.instalado('php', version))) {
-      throw new Error(`PHP ${version} no está instalado. Instálelo desde Servicios.`);
+      throw new ErrorWolf(
+        'servicios.no_instalado',
+        `PHP ${version} no está instalado. Instálelo desde Servicios.`,
+        { nombre: `PHP ${version}` },
+      );
     }
     const cfg = await this.leerConfig();
     const puertos = puertosPhp(version, cfg.servicios.php.trabajadores);

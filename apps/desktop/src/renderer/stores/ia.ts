@@ -2,14 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { ModeloOllama, ProgresoIa } from '../../shared/api';
 import { api } from '../api';
-import { textos } from '../i18n';
-
-/** Mensaje claro del núcleo (sin depender de naive-ui, para poder probar el store). */
-function mensajeDeError(e: unknown): string {
-  if (e instanceof Error && e.message) return e.message;
-  if (typeof e === 'string' && e) return e;
-  return textos.errores.desconocido;
-}
+import { mensajeDeError } from '../utilidades/errores';
 
 const esCancelacion = (e: unknown): boolean =>
   (e as { codigo?: unknown } | null)?.codigo === 'cancelado';

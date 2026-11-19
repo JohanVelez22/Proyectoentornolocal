@@ -1,4 +1,5 @@
 import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { ErrorWolf } from '../errores';
 import path from 'node:path';
 import type { Almacen } from '../almacen';
 import type { Instalador } from '../catalogo/instalador';
@@ -199,12 +200,16 @@ export class Tuneles {
   private async abrirInterno(sitioId: string): Promise<EstadoTunel> {
     const gen = this.generacion.get(sitioId) ?? 0;
     const sitio = await this.buscar(sitioId);
-    if (!sitio) throw new Error('Sitio no encontrado');
+    if (!sitio) throw new ErrorWolf('tuneles.sitio_no_encontrado', 'Sitio no encontrado');
     const versiones = await this.d.instalador.instalados('cloudflared');
     const version = [...versiones].sort((a, b) =>
       b.localeCompare(a, undefined, { numeric: true }),
     )[0];
-    if (!version) throw new Error('cloudflared no está instalado. Instálelo desde Servicios.');
+    if (!version)
+      throw new ErrorWolf(
+        'tuneles.cloudflared_no_instalado',
+        'cloudflared no está instalado. Instálelo desde Servicios.',
+      );
     const puerto = (await this.d.almacen.leer()).servicios.nginx.puerto;
 
     const id = PREFIJO + sitioId;
