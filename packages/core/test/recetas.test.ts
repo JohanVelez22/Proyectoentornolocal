@@ -515,7 +515,7 @@ describe('EjecutorRecetas', () => {
         titulo: '',
         args: { archivo: 'C:/r/x.sql', confirmarSobrescribir: true },
       },
-      { id: 'tres', tipo: 'comando', titulo: '', args: { n: 3 } },
+      { id: 'tres', tipo: 'comando', titulo: '', args: { n: 3, semilla: true } },
     ];
     const m = await montar({ receta: RECETA });
     const restaurados: unknown[] = [];
@@ -531,6 +531,8 @@ describe('EjecutorRecetas', () => {
     expect(m.orden).toEqual(['uno', 'tres']);
     expect(restaurados).toHaveLength(1);
     expect(m.contextos.at(-2)!.paso.args).toEqual({ n: 1 });
+    // Los datos de prueba (--seed) no se vuelven a cargar al reinstalar.
+    expect(m.contextos.at(-1)!.paso.args).toEqual({ n: 3 });
     expect(estadosDe(m.ejecutor.estado(m.s.id))).toEqual({
       uno: 'listo',
       'bd-restaurar': 'omitido',

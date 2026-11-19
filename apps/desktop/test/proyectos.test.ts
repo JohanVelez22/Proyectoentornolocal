@@ -32,6 +32,7 @@ import {
   marcarClonados,
   moverPaso,
   necesitaPuertoProxy,
+  resumenReinstalar,
   nombreDeUrl,
   partirComando,
   pasoConError,
@@ -486,11 +487,29 @@ describe('pasos sugeridos tras traer cambios', () => {
       guardada,
     );
     expect(r.map((p) => p.id)).toEqual(['composer-install', 'npm-ci', 'migrar']);
-    expect(r[2]!.args).toEqual({ semilla: true });
+    // Migrar tras traer cambios no repite --seed (duplicaría los datos de prueba).
+    expect(r[2]!.args).toBeUndefined();
   });
 });
 
 /* ───────────── Procesos ───────────── */
+
+describe('diálogo de reinstalar', () => {
+  it('lista la receta guardada y avisa si la del proyecto cambió desde "Confío…"', () => {
+    const pasos = estadoReceta().pasos;
+    const sin = resumenReinstalar(pasos, false);
+    expect(sin.aviso).toBeNull();
+    expect(sin.pasos).toEqual([
+      'Instalar dependencias de PHP (composer install)',
+      'Migrar la base de datos',
+      'Crear el sitio wolfcore.test',
+    ]);
+    const restaurar = { id: 'bd-restaurar', tipo: 'bd-restaurar' as const, titulo: '' };
+    const con = resumenReinstalar([...pasos, restaurar], true);
+    expect(con.aviso).toMatch(/cambió/);
+    expect(con.pasos.at(-1)).toMatch(/no se vuelve a restaurar/);
+  });
+});
 
 describe('procesos del proyecto', () => {
   it('parte y une comandos con comillas', () => {
@@ -711,6 +730,32 @@ describe('store de proyectos', () => {
     falsa.terminar({ estado: 'lista' });
     await corrida;
     expect(p.suelta('wolf')?.estado).toBe('lista');
+  });
+
+  it('los pasos sugeridos tras traer cambios no repiten --seed en la corrida suelta', async () => {
+    const p = useProyectos();
+    const guardada = [
+      { id: 'migrar', tipo: 'migrar' as const, titulo: '', args: { semilla: true } },
+    ];
+    const receta = pasosSugeridos(
+      {
+        actualizado: true,
+        cambios: {
+          composerLock: false,
+          packageLock: false,
+          migraciones: ['m'],
+          requirements: false,
+        },
+      },
+      guardada,
+    );
+    const corrida = p.ejecutarSuelta('wolf', receta);
+    expect(falsa.api.proyectos.ejecutarReceta).toHaveBeenCalledWith('wolf', {
+      receta: [{ id: 'migrar', tipo: 'migrar', titulo: '' }],
+      suelta: true,
+    });
+    falsa.terminar({ estado: 'lista' });
+    await corrida;
   });
 
   it('progreso del clon por destino (sin distinguir mayúsculas)', () => {

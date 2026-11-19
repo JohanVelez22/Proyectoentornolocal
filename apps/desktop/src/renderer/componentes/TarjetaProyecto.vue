@@ -43,7 +43,7 @@ import {
   usaPhp,
   usaProxy,
 } from '../utilidades/sitios';
-import { avanceReceta, etiquetaPaso } from '../utilidades/proyectos';
+import { avanceReceta, resumenReinstalar } from '../utilidades/proyectos';
 import EstadoPunto from './EstadoPunto.vue';
 import GitProyecto from './GitProyecto.vue';
 import ProcesosProyecto from './ProcesosProyecto.vue';
@@ -161,28 +161,28 @@ onMounted(() => {
  * "Reinstalar dependencias": repite la receta guardada de la última preparación (lo que el
  * usuario revisó en el asistente). Sin receta guardada, se abre el asistente para revisarla.
  */
-function reinstalar(): void {
+async function reinstalar(): Promise<void> {
   const pasos = receta.value.pasos;
   if (!pasos.length) {
     emit('revisarReceta', props.sitio);
     return;
   }
+  // Si la receta del proyecto (wolfcore.yml) cambió desde "Confío…", se avisa: reinstalar repite
+  // la guardada y "Revisar la receta" permite tomar la nueva.
+  const cambio =
+    (await ejecutar('resumen', () => api().proyectos.resumenReceta(props.sitio.id)))?.cambio ===
+    true;
+  const r = resumenReinstalar(pasos, cambio);
   dialog.info({
     title: tp.tarjeta.reinstalarTitulo(nombre.value),
     content: () =>
       h('div', [
+        r.aviso ? h('p', { class: 'resumen-aviso', role: 'alert' }, r.aviso) : null,
         h('p', { class: 'resumen-texto' }, tp.tarjeta.reinstalarTexto),
         h(
           'ol',
           { class: 'resumen-pasos' },
-          pasos.map((p) =>
-            h(
-              'li',
-              p.tipo === 'bd-restaurar'
-                ? `${etiquetaPaso(p)} (${tp.tarjeta.noRestaura})`
-                : etiquetaPaso(p),
-            ),
-          ),
+          r.pasos.map((p) => h('li', p)),
         ),
       ]),
     positiveText: tp.tarjeta.ejecutar,
@@ -475,6 +475,7 @@ function abrirCarpeta(): void {
           size="tiny"
           secondary
           :disabled="receta.estado === 'corriendo'"
+          :loading="ocupado('resumen')"
           @click="reinstalar"
         >
           <template #icon

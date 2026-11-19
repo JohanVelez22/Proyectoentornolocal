@@ -277,6 +277,24 @@ export function aplicarProgreso(
   };
 }
 
+/**
+ * Lo que muestra el diálogo "Reinstalar dependencias": los pasos de la receta guardada (los
+ * respaldos no se vuelven a restaurar) y un aviso si la receta del proyecto cambió desde que se
+ * marcó "Confío…" (`resumenReceta().cambio`).
+ */
+export function resumenReinstalar(
+  pasos: readonly Pick<PasoReceta, 'tipo' | 'args'>[],
+  cambio: boolean,
+): { aviso: string | null; pasos: string[] } {
+  const t = es.proyectos;
+  return {
+    aviso: cambio ? t.tarjeta.recetaCambio : null,
+    pasos: pasos.map((p) =>
+      p.tipo === 'bd-restaurar' ? `${etiquetaPaso(p)} (${t.tarjeta.noRestaura})` : etiquetaPaso(p),
+    ),
+  };
+}
+
 /** Primer paso con error (el que se ofrece reintentar u omitir). */
 export function pasoConError(e: EstadoReceta): PasoConEstado | undefined {
   return e.pasos.find((p) => p.estado === 'error');
@@ -516,8 +534,12 @@ export function pasosSugeridos(
       return;
     }
     // Solo la definición del paso (la receta guardada trae también estado y registro).
+    // Sin --seed (semilla): repetirlo duplicaría los datos de prueba.
     const { id, titulo, args, opcional } = copia(previo);
-    res.push({ id, tipo, titulo, ...(args ? { args } : {}), ...(opcional ? { opcional } : {}) });
+    const resto = { ...args };
+    delete resto['semilla'];
+    const conArgs = Object.keys(resto).length ? { args: resto } : {};
+    res.push({ id, tipo, titulo, ...conArgs, ...(opcional ? { opcional } : {}) });
   };
   if (r.cambios.composerLock) agregar('composer-install');
   if (r.cambios.packageLock) {

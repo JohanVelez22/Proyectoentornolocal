@@ -166,6 +166,18 @@ function sinArgsDeInterfaz(p: PasoReceta): PasoReceta {
   return { ...p, args };
 }
 
+/** Argumentos que no se repiten al reinstalar: `semilla` (--seed) duplicaría los datos de prueba. */
+export const ARGS_SIN_REPETIR = ['semilla'] as const;
+
+/** Un paso guardado listo para repetirse: sin argumentos de interfaz ni de una sola vez. */
+function paraRepetir(p: PasoReceta): PasoReceta {
+  const limpio = sinArgsDeInterfaz(p);
+  if (!limpio.args) return limpio;
+  const args = { ...limpio.args };
+  for (const k of ARGS_SIN_REPETIR) delete args[k];
+  return { ...limpio, args };
+}
+
 /**
  * Receta que se ejecuta para una carpeta: la de `wolfcore.yml` si trae pasos (sin los argumentos
  * de `ARGS_SOLO_INTERFAZ`); si no (o no hay archivo), la receta por defecto. Un wolfcore.yml no
@@ -418,7 +430,7 @@ export class EjecutorRecetas {
       const continua = parcial;
       const guardada = op.guardada === true && previo.pasos.length > 0;
       const receta = guardada
-        ? previo.pasos.map((p) => sinArgsDeInterfaz(sinEstado(p)))
+        ? previo.pasos.map((p) => paraRepetir(sinEstado(p)))
         : await this.receta(sitio, op, continua ? previo : null);
       const indice = (id: string): number => {
         const i = receta.findIndex((p) => p.id === id);

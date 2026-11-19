@@ -1113,6 +1113,8 @@ export const es = {
       reinstalarTexto:
         'Se repiten los pasos de la última preparación (los que revisó en el asistente):',
       noRestaura: 'no se vuelve a restaurar',
+      recetaCambio:
+        'La receta del proyecto (wolfcore.yml) cambió desde que confió en él. Reinstalar repite la guardada; use "Revisar la receta" para revisar la nueva.',
       revisarReceta: 'Revisar la receta',
       preparar: 'Preparar…',
       ejecutar: 'Ejecutar',
