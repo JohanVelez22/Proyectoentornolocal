@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import logo from '../assets/logo.png';
 import {
   Albums as IconoProyectos,
   Construct as IconoHerramientas,
@@ -164,22 +165,7 @@ onBeforeUnmount(() => {
       @expand="contraido = false"
     >
       <div class="marca" :class="{ contraida: contraido }">
-        <div class="logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="18" height="18">
-            <path
-              d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linejoin="round"
-            />
-            <path
-              d="M12 12 4.5 7.8M12 12l7.5-4.2M12 12v8.5"
-              stroke="currentColor"
-              stroke-width="1.8"
-            />
-          </svg>
-        </div>
+        <img class="logo" :src="logo" alt="" aria-hidden="true" width="32" height="32" />
         <div v-if="!contraido" class="marca-texto">
           <strong>{{ textos.app.nombre }}</strong>
           <span>{{ textos.app.lema }}</span>
@@ -262,10 +248,7 @@ onBeforeUnmount(() => {
   place-items: center;
   width: 32px;
   height: 32px;
-  border-radius: 9px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--acento-claro), var(--acento-oscuro));
-  box-shadow: 0 2px 8px rgba(var(--acento-rgb), 0.35);
+  object-fit: contain;
   flex: none;
 }
 .marca-texto {

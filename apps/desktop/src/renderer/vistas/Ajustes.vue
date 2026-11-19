@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import logo from '../assets/logo.png';
 import { FolderOpen, InformationCircle, LockClosed, Terminal } from '@vicons/ionicons5';
 import {
   NButton,
@@ -466,17 +467,25 @@ async function aplicarPath(activar: boolean): Promise<void> {
     <SeccionMcp />
 
     <NCard :title="t.acerca" size="small" class="tarjeta">
-      <dl class="acerca">
-        <dt>{{ textos.app.nombre }}</dt>
-        <dd>
-          {{ t.versionPrograma }} <code>{{ version || '…' }}</code>
-        </dd>
-      </dl>
+      <div class="acerca-marca">
+        <img :src="logo" alt="" aria-hidden="true" width="96" height="96" />
+        <dl class="acerca">
+          <dt>{{ textos.app.nombre }}</dt>
+          <dd>
+            {{ t.versionPrograma }} <code>{{ version || '…' }}</code>
+          </dd>
+        </dl>
+      </div>
     </NCard>
   </div>
 </template>
 
 <style scoped>
+.acerca-marca {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
 .descripcion {
   margin: 0 0 18px;
   opacity: 0.65;

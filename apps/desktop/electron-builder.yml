@@ -13,10 +13,16 @@ npmRebuild: false
 extraResources:
   - from: resources/icono.png
     to: icono.png
+  - from: resources/icono.ico
+    to: icono.ico
+  - from: resources/icono-bandeja.png
+    to: icono-bandeja.png
 win:
   target: nsis
-  icon: resources/icono.png
+  icon: resources/icono.ico
 nsis:
+  installerIcon: resources/icono.ico
+  uninstallerIcon: resources/icono.ico
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true

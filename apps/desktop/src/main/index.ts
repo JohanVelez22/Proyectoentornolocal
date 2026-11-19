@@ -29,9 +29,13 @@ let idioma: IdiomaUi | null = null;
 let accionesBandeja: AccionesBandeja | null = null;
 
 // Empaquetado, el icono va en resources/ (extraResources); en desarrollo, junto al código.
-const rutaIcono = app.isPackaged
-  ? join(process.resourcesPath, 'icono.png')
-  : join(__dirname, '../../resources/icono.png');
+const carpetaRecursos = app.isPackaged ? process.resourcesPath : join(__dirname, '../../resources');
+// En Windows el .ico multitamaño da la ventana y la bandeja nítidas en cualquier escala.
+const rutaIcono = join(carpetaRecursos, process.platform === 'win32' ? 'icono.ico' : 'icono.png');
+const rutaIconoBandeja = join(
+  carpetaRecursos,
+  process.platform === 'win32' ? 'icono.ico' : 'icono-bandeja.png',
+);
 
 const sistema: ApiSistema = {
   async elegirCarpeta() {
@@ -272,7 +276,7 @@ if (!app.requestSingleInstanceLock()) {
       detenerTodo: () => void n.detenerTodo().catch((e) => console.error(e)),
       salir: () => void salir(),
     };
-    bandeja = crearBandeja(rutaIcono, accionesBandeja, textosMain(idioma));
+    bandeja = crearBandeja(rutaIconoBandeja, accionesBandeja, textosMain(idioma));
   });
   // La app vive en la bandeja: no se cierra al ocultar la ventana.
   app.on('window-all-closed', () => undefined);
