@@ -10,7 +10,7 @@ import {
 import { NButton, NIcon, NSpin } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
 import { es } from '../i18n/es';
-import { etiquetaPaso, type PasoConEstado } from '../utilidades/proyectos';
+import { etiquetaPaso, sePuedeDesactivar, type PasoConEstado } from '../utilidades/proyectos';
 import PanelProgreso from './PanelProgreso.vue';
 
 /** Un paso de la receta con su estado, su mensaje de error y su registro desplegable. */
@@ -62,7 +62,13 @@ watch(
           >
             {{ t.asistente.reintentar }}
           </NButton>
-          <NButton size="tiny" secondary :disabled="ocupado" @click="emit('omitir', paso.id)">
+          <NButton
+            v-if="sePuedeDesactivar(paso)"
+            size="tiny"
+            secondary
+            :disabled="ocupado"
+            @click="emit('omitir', paso.id)"
+          >
             {{ t.asistente.omitir }}
           </NButton>
         </template>

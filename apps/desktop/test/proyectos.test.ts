@@ -14,6 +14,7 @@ import type {
 import { useProyectos } from '../src/renderer/stores/proyectos';
 import { useSitios } from '../src/renderer/stores/sitios';
 import {
+  alternarPaso,
   aplicarDeteccion,
   aplicarProgreso,
   avanceReceta,
@@ -30,6 +31,7 @@ import {
   idProceso,
   marcarClonados,
   moverPaso,
+  necesitaPuertoProxy,
   nombreDeUrl,
   partirComando,
   pasoConError,
@@ -359,10 +361,30 @@ describe('asistente de receta', () => {
   });
 
   it('solo se mueven los opcionales; sitio-crear no se puede desactivar', () => {
-    let pasos = conRestaurar(pasosAsistente(receta), 'C:\\r\\x.sql');
-    pasos = moverPaso(pasos, 2, 1);
-    expect(pasos.map((p) => p.paso.id).slice(2, 4)).toEqual(['migrar', 'bd-restaurar']);
-    expect(moverPaso(pasos, 0, 1).map((p) => p.paso.id)).toEqual(pasos.map((p) => p.paso.id));
+    const ids = (x: { paso: { id: string } }[]) => x.map((p) => p.paso.id);
+    const conCmd = [
+      ...pasosAsistente(receta.slice(0, 3)),
+      { activo: true, paso: { id: 'extra', tipo: 'comando' as const, titulo: '', opcional: true } },
+      ...pasosAsistente(receta.slice(3)),
+    ];
+    let pasos = conRestaurar(conCmd, 'C:\\r\\x.sql');
+    expect(ids(pasos)).toEqual([
+      'composer-install',
+      'bd-crear',
+      'bd-restaurar',
+      'migrar',
+      'extra',
+      'sitio-crear',
+    ]);
+    // bd-restaurar queda entre bd-crear y migrar: no sube ni baja más allá.
+    expect(ids(moverPaso(pasos, 2, -1))).toEqual(ids(pasos));
+    expect(ids(moverPaso(pasos, 2, 1))).toEqual(ids(pasos));
+    // Un opcional se mueve, pero nunca después de sitio-crear.
+    expect(ids(moverPaso(pasos, 4, 1))).toEqual(ids(pasos));
+    pasos = moverPaso(pasos, 4, -1);
+    expect(ids(pasos).slice(3, 5)).toEqual(['extra', 'migrar']);
+    // Los obligatorios no se mueven.
+    expect(ids(moverPaso(pasos, 0, 1))).toEqual(ids(pasos));
     const apagados = pasos.map((p) => ({ ...p, activo: false }));
     expect(recetaElegida(apagados).map((p) => p.id)).toEqual(['sitio-crear']);
   });
@@ -387,7 +409,36 @@ describe('asistente de receta', () => {
     ]);
   });
 
-  it('el sitio se crea confiado; FastAPI sin puerto se crea como estático', () => {
+  it('desactivar bd-crear desactiva bd-restaurar (y este no se activa sin aquel)', () => {
+    let pasos = conRestaurar(pasosAsistente(receta), 'C:\\r\\x.sql');
+    pasos = alternarPaso(pasos, 1, false);
+    expect(pasos.map((p) => [p.paso.id, p.activo]).slice(1, 3)).toEqual([
+      ['bd-crear', false],
+      ['bd-restaurar', false],
+    ]);
+    expect(alternarPaso(pasos, 2, true)[2]!.activo).toBe(false);
+    pasos = alternarPaso(pasos, 1, true);
+    expect(alternarPaso(pasos, 2, true)[2]!.activo).toBe(true);
+    // sitio-crear no se desactiva.
+    expect(alternarPaso(pasos, 4, false)[4]!.activo).toBe(true);
+  });
+
+  it('pide puerto solo si un tipo proxy no trae un proceso con puerto en sitio-crear', () => {
+    const conUvicorn = pasosAsistente([
+      {
+        id: 'sitio-crear',
+        tipo: 'sitio-crear',
+        titulo: '',
+        args: { procesos: [{ id: 'uvicorn', comando: ['uvicorn', '--port', '{puerto}'] }] },
+      },
+    ]);
+    expect(necesitaPuertoProxy('fastapi', conUvicorn)).toBe(false);
+    expect(necesitaPuertoProxy('node', pasosAsistente(receta))).toBe(true);
+    expect(necesitaPuertoProxy('proxy', conUvicorn)).toBe(true);
+    expect(necesitaPuertoProxy('laravel', pasosAsistente(receta))).toBe(false);
+  });
+
+  it('el sitio se crea confiado con su tipo real (también FastAPI y Node)', () => {
     const d = deteccionEditable(deteccion());
     const datos = datosSitioInicial('C:\\Proyectos\\Rents', d, 'https://github.com/johan/rents');
     expect(datos).toMatchObject({
@@ -404,7 +455,13 @@ describe('asistente de receta', () => {
       { ...deteccionEditable(deteccion({ tipo: 'fastapi' })), python: '3.12.10' },
       null,
     );
-    expect(api).toMatchObject({ tipo: 'estatico', php: null, runtimes: { python: '3.12.10' } });
+    expect(api).toMatchObject({ tipo: 'fastapi', php: null, runtimes: { python: '3.12.10' } });
+    const vite = datosSitioInicial(
+      'C:\\Proyectos\\Web',
+      { ...deteccionEditable(deteccion({ tipo: 'node' })), puertoProxy: 5173 },
+      null,
+    );
+    expect(vite).toMatchObject({ tipo: 'node', puertoProxy: 5173 });
   });
 });
 
@@ -516,6 +573,8 @@ function apiFalsa() {
           }),
       ),
       omitirPaso: vi.fn(async (): Promise<ResultadoReceta> => ({ estado: 'lista' })),
+      crearSitio: vi.fn(),
+      confiar: vi.fn(),
       cancelarReceta: vi.fn(async () => true),
     },
     git: {
@@ -614,6 +673,44 @@ describe('store de proyectos', () => {
 
     await p.cancelar('wolf');
     expect(falsa.api.proyectos.cancelarReceta).toHaveBeenCalledWith('wolf');
+  });
+
+  it('Reinstalar repite la receta guardada ("guardada")', async () => {
+    const p = useProyectos();
+    const r = p.reinstalar('wolf');
+    expect(falsa.api.proyectos.ejecutarReceta).toHaveBeenCalledWith('wolf', { guardada: true });
+    falsa.terminar({ estado: 'lista' });
+    await r;
+  });
+
+  it('una corrida suelta lleva su propio estado y no toca la receta guardada', async () => {
+    const p = useProyectos();
+    p.iniciar();
+    await p.cargarReceta('wolf');
+    const antes = JSON.stringify(p.receta('wolf'));
+    const receta = [{ id: 'npm-ci', tipo: 'npm-ci' as const, titulo: '' }];
+    const corrida = p.ejecutarSuelta('wolf', receta);
+    expect(falsa.api.proyectos.ejecutarReceta).toHaveBeenCalledWith('wolf', {
+      receta,
+      suelta: true,
+    });
+    expect(p.suelta('wolf')?.pasos.map((x) => [x.id, x.estado])).toEqual([['npm-ci', 'pendiente']]);
+    falsa.emitir('receta:progreso', {
+      sitioId: 'wolf',
+      pasoId: 'npm-ci',
+      estado: 'corriendo',
+      linea: 'added 12 packages',
+      suelta: true,
+    });
+    expect(p.suelta('wolf')?.pasos[0]).toMatchObject({
+      estado: 'corriendo',
+      log: ['added 12 packages'],
+    });
+    expect(JSON.stringify(p.receta('wolf'))).toBe(antes);
+    expect(falsa.api.proyectos.estadoReceta).toHaveBeenCalledTimes(1);
+    falsa.terminar({ estado: 'lista' });
+    await corrida;
+    expect(p.suelta('wolf')?.estado).toBe('lista');
   });
 
   it('progreso del clon por destino (sin distinguir mayúsculas)', () => {

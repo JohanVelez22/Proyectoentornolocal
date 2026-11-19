@@ -308,13 +308,72 @@ export function pasosAsistente(receta: readonly PasoReceta[]): PasoAsistente[] {
   return receta.map((paso) => ({ paso: copia(paso), activo: true }));
 }
 
-/** Mueve un paso opcional una posición (−1 arriba, +1 abajo). */
+/**
+ * El orden respeta a los pasos obligatorios: nada va después de `sitio-crear` y `bd-restaurar`
+ * queda después de `bd-crear` y antes de `migrar`.
+ */
+function ordenValido(pasos: readonly PasoAsistente[]): boolean {
+  const pos = (tipo: TipoPaso): number => pasos.findIndex((p) => p.paso.tipo === tipo);
+  const sitio = pos('sitio-crear');
+  if (sitio >= 0 && pasos.slice(sitio + 1).some((p) => sePuedeMover(p.paso))) return false;
+  const restaurar = pos('bd-restaurar');
+  if (restaurar >= 0) {
+    const crear = pos('bd-crear');
+    const migrar = pos('migrar');
+    if (crear >= 0 && restaurar < crear) return false;
+    if (migrar >= 0 && restaurar > migrar) return false;
+  }
+  return true;
+}
+
+/** Mueve un paso opcional una posición (−1 arriba, +1 abajo) si el orden sigue siendo válido. */
 export function moverPaso(pasos: readonly PasoAsistente[], i: number, delta: -1 | 1) {
   const j = i + delta;
   const copia = [...pasos];
   if (!copia[i] || !copia[j] || !sePuedeMover(copia[i]!.paso)) return copia;
   [copia[i], copia[j]] = [copia[j]!, copia[i]!];
+  return ordenValido(copia) ? copia : [...pasos];
+}
+
+/**
+ * Activa o desactiva un paso. `sitio-crear` no se desactiva; sin `bd-crear` tampoco corre
+ * `bd-restaurar` (no hay base donde restaurar).
+ */
+export function alternarPaso(
+  pasos: readonly PasoAsistente[],
+  i: number,
+  activo: boolean,
+): PasoAsistente[] {
+  const copia = pasos.map((p) => ({ ...p }));
+  const p = copia[i];
+  if (!p || !sePuedeDesactivar(p.paso)) return copia;
+  const crear = copia.find((x) => x.paso.tipo === 'bd-crear');
+  if (activo && p.paso.tipo === 'bd-restaurar' && crear && !crear.activo) return copia;
+  p.activo = activo;
+  if (!activo && p.paso.tipo === 'bd-crear') {
+    for (const x of copia) if (x.paso.tipo === 'bd-restaurar') x.activo = false;
+  }
   return copia;
+}
+
+/**
+ * Un tipo proxy (FastAPI, Node, proxy) necesita el puerto a mano si `sitio-crear` no trae un
+ * proceso con puerto (`{puerto}` o fijo); el tipo proxy puro siempre lo necesita.
+ */
+export function necesitaPuertoProxy(tipo: Sitio['tipo'], pasos: readonly PasoAsistente[]): boolean {
+  if (!usaProxy(tipo)) return false;
+  if (tipo === 'proxy') return true;
+  const procesos = pasos.find((p) => p.paso.tipo === 'sitio-crear')?.paso.args?.['procesos'];
+  const conPuerto =
+    Array.isArray(procesos) &&
+    procesos.some((x: unknown) => {
+      const p = x as { comando?: unknown; puerto?: unknown } | null;
+      return (
+        typeof p?.puerto === 'number' ||
+        (Array.isArray(p?.comando) && p.comando.some((c) => String(c).includes('{puerto}')))
+      );
+    });
+  return !conPuerto;
 }
 
 /** La receta que se envía al núcleo: solo los pasos activos, en su orden. */
@@ -414,8 +473,9 @@ export function aplicarDeteccion(
 }
 
 /**
- * Datos del sitio que se crea antes de la receta (con "Confío…" marcado). Un tipo proxy (FastAPI
- * o Node) sin puerto todavía se crea como estático: el paso `sitio-crear` pone su tipo y puerto.
+ * Datos del sitio que se crea antes de la receta (con "Confío…" marcado). El núcleo completa
+ * tipo, dominio, PHP, HTTPS y procesos con puerto desde el paso `sitio-crear`
+ * (`proyectos.crearSitio`).
  */
 export function datosSitioInicial(
   carpeta: string,
@@ -423,8 +483,7 @@ export function datosSitioInicial(
   remoto: string | null,
 ): DatosSitio {
   const base = sitioVacio();
-  const sinPuerto = usaProxy(d.tipo) && d.tipo !== 'proxy' && d.puertoProxy === null;
-  const tipo = sinPuerto ? 'estatico' : d.tipo;
+  const tipo = d.tipo;
   const runtimes: DatosSitio['runtimes'] = {};
   if (d.node?.trim()) runtimes.node = d.node.trim();
   if (d.python?.trim()) runtimes.python = d.python.trim();
@@ -435,7 +494,7 @@ export function datosSitioInicial(
     carpeta,
     tipo,
     php: usaPhp(tipo) ? d.php : null,
-    puertoProxy: tipo === 'proxy' ? d.puertoProxy : null,
+    puertoProxy: usaProxy(tipo) ? d.puertoProxy : null,
     confiado: true,
     git: remoto ? { remoto, rama: null } : null,
     runtimes,

@@ -9,6 +9,7 @@ import {
   LockClosed,
   Open,
   ShieldCheckmark,
+  CodeSlash,
   Terminal,
   TrashOutline,
   Warning,
@@ -26,7 +27,7 @@ import {
   type DropdownOption,
 } from 'naive-ui';
 import { computed, h, onMounted, ref, type Component } from 'vue';
-import type { ResultadoAplicar, ResumenReceta, Sitio } from '../../shared/api';
+import type { ResultadoAplicar, Sitio } from '../../shared/api';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
@@ -42,7 +43,7 @@ import {
   usaPhp,
   usaProxy,
 } from '../utilidades/sitios';
-import { avanceReceta } from '../utilidades/proyectos';
+import { avanceReceta, etiquetaPaso } from '../utilidades/proyectos';
 import EstadoPunto from './EstadoPunto.vue';
 import GitProyecto from './GitProyecto.vue';
 import ProcesosProyecto from './ProcesosProyecto.vue';
@@ -156,32 +157,39 @@ onMounted(() => {
     .catch(() => undefined);
 });
 
-/** "Reinstalar dependencias": muestra el comando real de cada paso antes de ejecutar. */
-async function reinstalar(): Promise<void> {
-  const resumen = await ejecutar('resumen', () => api().proyectos.resumenReceta(props.sitio.id));
-  if (resumen) confirmarReceta(resumen);
-}
-
-function confirmarReceta(resumen: ResumenReceta): void {
-  // Con cambio, el núcleo antepone su aviso: aquí se muestra el texto propio.
-  const pasos = resumen.cambio ? resumen.pasos.slice(1) : resumen.pasos;
+/**
+ * "Reinstalar dependencias": repite la receta guardada de la última preparación (lo que el
+ * usuario revisó en el asistente). Sin receta guardada, se abre el asistente para revisarla.
+ */
+function reinstalar(): void {
+  const pasos = receta.value.pasos;
+  if (!pasos.length) {
+    emit('revisarReceta', props.sitio);
+    return;
+  }
   dialog.info({
     title: tp.tarjeta.reinstalarTitulo(nombre.value),
     content: () =>
       h('div', [
-        resumen.cambio ? h('p', { class: 'resumen-aviso' }, tp.asistente.recetaCambio) : null,
         h('p', { class: 'resumen-texto' }, tp.tarjeta.reinstalarTexto),
         h(
           'ol',
           { class: 'resumen-pasos' },
-          pasos.map((p) => h('li', p)),
+          pasos.map((p) =>
+            h(
+              'li',
+              p.tipo === 'bd-restaurar'
+                ? `${etiquetaPaso(p)} (${tp.tarjeta.noRestaura})`
+                : etiquetaPaso(p),
+            ),
+          ),
         ),
       ]),
     positiveText: tp.tarjeta.ejecutar,
-    negativeText: resumen.cambio ? tp.asistente.recargar : es.acciones.cancelar,
+    negativeText: tp.tarjeta.revisarReceta,
     autoFocus: false,
     onPositiveClick: () => {
-      proyectos.ejecutar(props.sitio.id).catch((e: unknown) => {
+      proyectos.reinstalar(props.sitio.id).catch((e: unknown) => {
         notification.error({
           title: es.errores.titulo,
           content: mensajeDeError(e),
@@ -192,8 +200,14 @@ function confirmarReceta(resumen: ResumenReceta): void {
       emit('verPreparacion', props.sitio);
     },
     onNegativeClick: () => {
-      if (resumen.cambio) emit('revisarReceta', props.sitio);
+      emit('revisarReceta', props.sitio);
     },
+  });
+}
+
+function abrirEditor(): void {
+  void ejecutar('editor', () => api().sistema.abrirEditor(props.sitio.id), {
+    tituloError: tp.tarjeta.vscodeError,
   });
 }
 
@@ -378,6 +392,23 @@ function abrirCarpeta(): void {
           </template>
           {{ es.terminalSitio.ayuda }}
         </NTooltip>
+        <NTooltip>
+          <template #trigger>
+            <NButton
+              size="small"
+              secondary
+              :loading="ocupado('editor')"
+              :aria-label="tp.tarjeta.vscodeAyuda"
+              @click="abrirEditor"
+            >
+              <template #icon
+                ><NIcon><CodeSlash /></NIcon
+              ></template>
+              {{ tp.tarjeta.vscode }}
+            </NButton>
+          </template>
+          {{ tp.tarjeta.vscodeAyuda }}
+        </NTooltip>
         <NDropdown trigger="click" :options="opciones" placement="bottom-end" @select="elegir">
           <NButton
             size="small"
@@ -394,7 +425,7 @@ function abrirCarpeta(): void {
     </div>
 
     <div class="pie">
-      <GitProyecto :sitio="sitio" @ver-preparacion="emit('verPreparacion', sitio)" />
+      <GitProyecto :sitio="sitio" />
       <div class="receta">
         <span class="receta-titulo">{{ tp.tarjeta.receta }}</span>
         <NTag
@@ -428,23 +459,29 @@ function abrirCarpeta(): void {
         >
           {{ tp.tarjeta.verPreparacion }}
         </NButton>
-        <NTooltip :disabled="sitio.confiado">
+        <NTooltip v-if="!sitio.confiado">
           <template #trigger>
-            <NButton
-              size="tiny"
-              secondary
-              :disabled="!sitio.confiado || receta.estado === 'corriendo'"
-              :loading="ocupado('resumen')"
-              @click="reinstalar"
-            >
+            <NButton size="tiny" type="primary" secondary @click="emit('revisarReceta', sitio)">
               <template #icon
                 ><NIcon><Construct /></NIcon
               ></template>
-              {{ tp.tarjeta.reinstalar }}
+              {{ tp.tarjeta.preparar }}
             </NButton>
           </template>
           {{ tp.tarjeta.sinConfianza }}
         </NTooltip>
+        <NButton
+          v-else
+          size="tiny"
+          secondary
+          :disabled="receta.estado === 'corriendo'"
+          @click="reinstalar"
+        >
+          <template #icon
+            ><NIcon><Construct /></NIcon
+          ></template>
+          {{ tp.tarjeta.reinstalar }}
+        </NButton>
       </div>
       <ProcesosProyecto :sitio="sitio" @aplicado="(r) => emit('aplicado', r)" />
       <InterruptorTunel :sitio="sitio" />

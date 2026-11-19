@@ -28,6 +28,7 @@ import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
 import {
   SERVICIOS_PROYECTO,
+  alternarPaso,
   aplicarDeteccion,
   avanceReceta,
   conRestaurar,
@@ -35,6 +36,7 @@ import {
   deteccionEditable,
   etiquetaPaso,
   moverPaso,
+  necesitaPuertoProxy,
   pasoConError,
   pasosAsistente,
   recetaElegida,
@@ -224,9 +226,16 @@ const restaurar = computed(() => pasos.value.find((p) => p.paso.tipo === 'bd-res
 const hayMotor = computed(() =>
   det.value?.servicios.some((s) => ['mysql', 'mariadb', 'postgresql', 'mongodb'].includes(s)),
 );
+/** El tipo y la receta piden el puerto a mano (Node/Vite o proxy sin proceso con puerto). */
+const pidePuerto = computed(() => !!det.value && necesitaPuertoProxy(det.value.tipo, pasos.value));
 const sinPuertoProxy = computed(
-  () => det.value?.tipo === 'proxy' && (det.value.puertoProxy ?? null) === null,
+  () => pidePuerto.value && (det.value?.puertoProxy ?? null) === null,
 );
+/**
+ * Al revisar un proyecto que ya existe, tipo, PHP, dominio, versiones y puerto son los del sitio
+ * (se cambian en Editar): la receta no los pisa.
+ */
+const soloLectura = computed(() => actual.value?.modo === 'revisar');
 const faltaPhp = computed(() => !!det.value && usaPhp(det.value.tipo) && !det.value.php);
 const puedeMontar = computed(
   () =>
@@ -239,8 +248,7 @@ const puedeMontar = computed(
 );
 
 function alternar(i: number, activo: boolean): void {
-  const p = pasos.value[i];
-  if (p && sePuedeDesactivar(p.paso)) pasos.value[i] = { ...p, activo };
+  pasos.value = alternarPaso(pasos.value, i, activo);
 }
 function mover(i: number, delta: -1 | 1): void {
   pasos.value = moverPaso(pasos.value, i, delta);
@@ -273,28 +281,35 @@ async function montar(): Promise<void> {
   montando.value = true;
   errorTexto.value = null;
   const receta = recetaElegida(aplicarDeteccion(pasos.value, d));
+  let id: string;
   try {
     if (o.modo === 'nuevo') {
-      const r = await api().sitios.guardar(plano(datosSitioInicial(o.carpeta, d, o.remoto)));
-      sitioId.value = r.sitio.id;
+      // El núcleo crea el sitio con los datos de sitio-crear (FastAPI/Node con proceso y puerto).
+      const r = await api().proyectos.crearSitio(
+        plano(datosSitioInicial(o.carpeta, d, o.remoto)),
+        plano(receta),
+      );
+      id = r.sitio.id;
       emit('aplicado', r.aplicar);
     } else if (o.modo === 'revisar') {
-      const s = sitios.porId(o.sitioId);
-      if (!s) throw new Error(es.errores.desconocido);
-      const { id, ...resto } = s;
-      // Desmarcar y volver a marcar "Confío…" toma la huella de la receta actual.
-      await api().sitios.guardar(plano({ ...resto, confiado: false }), id);
-      const r = await api().sitios.guardar(plano({ ...resto, confiado: true }), id);
+      // Un solo guardado, con los datos frescos del sitio: marca "Confío…" y toma la huella.
+      const r = await api().proyectos.confiar(o.sitioId);
+      id = r.sitio.id;
       emit('aplicado', r.aplicar);
-      actual.value = { modo: 'ver', sitioId: id };
-    }
+    } else return;
   } catch (e) {
     errorTexto.value = `${t.errorCrear}: ${mensajeDeError(e)}`;
     montando.value = false;
     return;
   }
+  sitioId.value = id;
+  actual.value = { modo: 'ver', sitioId: id };
   montando.value = false;
-  if (sitioId.value) correr(proyectos.ejecutar(sitioId.value, { receta }));
+  proyectos.ejecutar(id, { receta }).catch((e: unknown) => {
+    // El proyecto ya existe: se vuelve a la configuración (para revisarla) con el error.
+    errorTexto.value = mensajeDeError(e);
+    actual.value = { modo: 'revisar', sitioId: id };
+  });
 }
 
 /* ───── Ejecución ───── */
@@ -398,7 +413,12 @@ function alCambiarVisible(v: boolean): void {
           <div class="rejilla">
             <label class="campo">
               <span>{{ t.tipo }}</span>
-              <NSelect v-model:value="det.tipo" size="small" :options="opcionesTipo" />
+              <NSelect
+                v-model:value="det.tipo"
+                size="small"
+                :options="opcionesTipo"
+                :disabled="soloLectura"
+              />
             </label>
             <label v-if="usaPhp(det.tipo)" class="campo">
               <span>{{ t.php }}</span>
@@ -407,10 +427,11 @@ function alCambiarVisible(v: boolean): void {
                 size="small"
                 :options="opcionesPhp"
                 :placeholder="t.phpNinguno"
+                :disabled="soloLectura"
                 :status="faltaPhp ? 'error' : undefined"
               />
             </label>
-            <label v-if="det.tipo === 'proxy'" class="campo">
+            <label v-if="pidePuerto" class="campo">
               <span>{{ t.puertoProxy }}</span>
               <NInputNumber
                 v-model:value="det.puertoProxy"
@@ -419,6 +440,7 @@ function alCambiarVisible(v: boolean): void {
                 :max="65535"
                 :show-button="false"
                 :placeholder="t.puertoPlaceholder"
+                :disabled="soloLectura"
                 :status="sinPuertoProxy ? 'error' : undefined"
               />
             </label>
@@ -428,6 +450,7 @@ function alCambiarVisible(v: boolean): void {
                 :value="det.node ?? ''"
                 size="small"
                 :options="opcionesNode"
+                :disabled="soloLectura"
                 @update:value="(v: string) => det && (det.node = v || null)"
               />
             </label>
@@ -437,6 +460,7 @@ function alCambiarVisible(v: boolean): void {
                 :value="det.python ?? ''"
                 size="small"
                 :options="opcionesPython"
+                :disabled="soloLectura"
                 @update:value="(v: string) => det && (det.python = v || null)"
               />
             </label>
@@ -456,6 +480,7 @@ function alCambiarVisible(v: boolean): void {
                 v-model:value="dominioBase"
                 size="small"
                 class="mono"
+                :disabled="soloLectura"
                 :placeholder="es.formSitio.dominioPlaceholder"
               >
                 <template #suffix><span class="sufijo">.test</span></template>
@@ -465,12 +490,7 @@ function alCambiarVisible(v: boolean): void {
           <p v-if="avisoPhp" class="aviso">{{ avisoPhp }}</p>
           <p v-if="usaNode && !nodes.length" class="aviso">{{ t.nodeInstalar }}</p>
           <p v-if="usaPython && !pythons.length" class="aviso">{{ t.pythonInstalar }}</p>
-          <p
-            v-if="(det.tipo === 'fastapi' || det.tipo === 'node') && actual?.modo === 'nuevo'"
-            class="ayuda"
-          >
-            {{ t.avisoEstatico }}
-          </p>
+          <p v-if="soloLectura" class="ayuda">{{ t.soloLectura }}</p>
         </section>
 
         <section class="bloque">

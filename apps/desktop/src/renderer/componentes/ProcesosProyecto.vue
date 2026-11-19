@@ -86,7 +86,12 @@ async function dejarDeSeguir(): Promise<void> {
       .catch(() => undefined);
 }
 
+/** Generación del log abierto: una respuesta de un log anterior (clics rápidos) se descarta. */
+let generacion = 0;
+let desmontado = false;
+
 async function alternarLog(procesoId: string): Promise<void> {
+  const gen = ++generacion;
   await dejarDeSeguir();
   if (abierto.value === procesoId) {
     abierto.value = null;
@@ -96,8 +101,17 @@ async function alternarLog(procesoId: string): Promise<void> {
   lineas.value = [];
   const fuente = fuenteProceso(props.sitio.id, procesoId);
   try {
-    lineas.value = await api().registros.leerFinal(fuente, 200);
+    const leidas = await api().registros.leerFinal(fuente, 200);
+    if (gen !== generacion || desmontado) return;
+    lineas.value = leidas;
     await api().registros.seguir(fuente);
+    if (gen !== generacion || desmontado) {
+      // Mientras tanto se abrió otro log o se cerró la tarjeta: se deja de seguir este.
+      await api()
+        .registros.dejar(fuente)
+        .catch(() => undefined);
+      return;
+    }
     siguiendo = fuente;
   } catch {
     // Sin log todavía (el proceso nunca arrancó): queda vacío.
@@ -124,6 +138,8 @@ onMounted(() => {
   ];
 });
 onBeforeUnmount(() => {
+  desmontado = true;
+  generacion++;
   clearTimeout(reloj);
   bajas.forEach((b) => b());
   void dejarDeSeguir();

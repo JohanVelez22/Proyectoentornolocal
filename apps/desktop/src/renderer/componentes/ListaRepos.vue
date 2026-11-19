@@ -105,6 +105,7 @@ const fecha = (iso: string): string => {
       quaternary
       block
       :loading="cargando"
+      :disabled="cargando"
       @click="cargar(true)"
     >
       {{ t.cargarMas }}

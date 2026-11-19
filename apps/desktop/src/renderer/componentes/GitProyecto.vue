@@ -2,16 +2,16 @@
 import { CloudDownload, GitBranch, LogoGithub } from '@vicons/ionicons5';
 import { NButton, NCheckbox, NIcon, NModal, NTag, NTooltip, useMessage } from 'naive-ui';
 import { computed, onMounted, ref, watch } from 'vue';
-import type { EstadoGit, PasoReceta, ResultadoTraer, Sitio } from '../../shared/api';
+import type { EstadoGit, PasoReceta as DefPaso, ResultadoTraer, Sitio } from '../../shared/api';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { es } from '../i18n/es';
 import { useProyectos } from '../stores/proyectos';
 import { etiquetaPaso, pasosSugeridos, urlWebRemoto } from '../utilidades/proyectos';
+import PasoReceta from './PasoReceta.vue';
 
 /** Rama, cambios locales, "Traer cambios" (con los pasos sugeridos) y el enlace al remoto. */
 const props = defineProps<{ sitio: Sitio }>();
-const emit = defineEmits<{ verPreparacion: [] }>();
 
 const t = es.proyectos.git;
 const tt = es.proyectos.tarjeta;
@@ -20,7 +20,10 @@ const message = useMessage();
 const { ejecutar, ocupado } = useAccion();
 
 const estado = ref<EstadoGit | null>(null);
-const sugeridos = ref<{ paso: PasoReceta; activo: boolean }[] | null>(null);
+const sugeridos = ref<{ paso: DefPaso; activo: boolean }[] | null>(null);
+/** Muestra el avance de la corrida suelta de los pasos sugeridos. */
+const verCorrida = ref(false);
+const corrida = computed(() => proyectos.suelta(props.sitio.id));
 const traido = ref<ResultadoTraer | null>(null);
 
 async function cargar(): Promise<void> {
@@ -49,8 +52,8 @@ async function traer(): Promise<void> {
   }
   const guardada = await proyectos
     .cargarReceta(props.sitio.id)
-    .then((e) => e.pasos as PasoReceta[])
-    .catch(() => [] as PasoReceta[]);
+    .then((e) => e.pasos as DefPaso[])
+    .catch(() => [] as DefPaso[]);
   traido.value = r;
   sugeridos.value = pasosSugeridos(r, guardada).map((paso) => ({ paso, activo: true }));
 }
@@ -59,10 +62,11 @@ function ejecutarSugeridos(): void {
   const receta = (sugeridos.value ?? []).filter((p) => p.activo).map((p) => p.paso);
   sugeridos.value = null;
   if (!receta.length) return;
-  proyectos.ejecutar(props.sitio.id, { receta }).catch((e: unknown) => {
+  // Corrida suelta: no reemplaza la receta guardada (Reintentar y Reinstalar siguen igual).
+  verCorrida.value = true;
+  proyectos.ejecutarSuelta(props.sitio.id, receta).catch((e: unknown) => {
     message.error(mensajeDeError(e));
   });
-  emit('verPreparacion');
 }
 
 function abrirRemoto(): void {
@@ -144,6 +148,27 @@ function abrirRemoto(): void {
       </template>
       <p v-else class="nota">{{ t.sugeridosNinguno }}</p>
     </NModal>
+
+    <NModal
+      :show="verCorrida && !!corrida"
+      preset="card"
+      :title="t.corridaTitulo"
+      :style="{ width: '640px', maxWidth: 'calc(100vw - 32px)' }"
+      :auto-focus="false"
+      @update:show="(v: boolean) => !v && (verCorrida = false)"
+    >
+      <p class="nota">
+        {{ es.proyectos.estadoReceta[corrida?.estado ?? 'corriendo'] }} · {{ t.corridaAyuda }}
+      </p>
+      <ol class="corrida">
+        <PasoReceta v-for="p in corrida?.pasos ?? []" :key="p.id" :paso="p" />
+      </ol>
+      <template #footer>
+        <div class="pie">
+          <NButton @click="verCorrida = false">{{ es.acciones.cerrar }}</NButton>
+        </div>
+      </template>
+    </NModal>
   </div>
 </template>
 
@@ -175,6 +200,17 @@ function abrirRemoto(): void {
 }
 .nota.aviso {
   color: #b45309;
+}
+.corrida {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pie {
+  display: flex;
+  justify-content: flex-end;
 }
 .sugeridos {
   display: flex;

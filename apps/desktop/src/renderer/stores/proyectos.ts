@@ -4,6 +4,7 @@ import type {
   DisponibilidadGit,
   EstadoReceta,
   OpcionesRecetaIpc,
+  PasoReceta,
   ProgresoReceta,
   RepoGithub,
   ResultadoReceta,
@@ -60,6 +61,13 @@ export const useProyectos = defineStore('proyectos', () => {
   }
 
   function alProgreso(p: ProgresoReceta): void {
+    if (p.suelta) {
+      const previa = sueltas.value[p.sitioId];
+      if (!previa) return;
+      const r = aplicarProgreso(previa, p);
+      if (!r.desconocido) sueltas.value = { ...sueltas.value, [p.sitioId]: r.estado };
+      return;
+    }
     const r = aplicarProgreso(receta(p.sitioId), p);
     if (r.desconocido) {
       refrescar(p.sitioId);
@@ -86,6 +94,42 @@ export const useProyectos = defineStore('proyectos', () => {
     marcarCorriendo(sitioId);
     const o = opciones ? plano(opciones) : undefined;
     return terminar(sitioId, api().proyectos.ejecutarReceta(sitioId, o));
+  }
+
+  /** "Reinstalar dependencias": repite la receta guardada (sin restaurar respaldos). */
+  function reinstalar(sitioId: string): Promise<ResultadoReceta> {
+    return ejecutar(sitioId, { guardada: true });
+  }
+
+  /* ───── Corridas sueltas (pasos sugeridos tras traer cambios) ───── */
+
+  const sueltas = ref<Record<string, EstadoReceta>>({});
+  const suelta = (sitioId: string): EstadoReceta | undefined => sueltas.value[sitioId];
+
+  /** Corre pasos sin reemplazar la receta guardada; su progreso queda aparte. */
+  async function ejecutarSuelta(sitioId: string, pasos: PasoReceta[]): Promise<ResultadoReceta> {
+    const receta = plano(pasos);
+    sueltas.value = {
+      ...sueltas.value,
+      [sitioId]: {
+        sitioId,
+        estado: 'corriendo',
+        actualizado: null,
+        pasos: receta.map((p) => ({ ...p, estado: 'pendiente' as const, log: [] })),
+      },
+    };
+    const fijar = (estado: EstadoReceta['estado']): void => {
+      const e = sueltas.value[sitioId];
+      if (e) sueltas.value = { ...sueltas.value, [sitioId]: { ...e, estado } };
+    };
+    try {
+      const r = await api().proyectos.ejecutarReceta(sitioId, { receta, suelta: true });
+      fijar(r.estado);
+      return r;
+    } catch (e) {
+      fijar('error');
+      throw e;
+    }
   }
 
   /** Reintentar: sigue desde el paso que falló con la receta guardada de la última corrida. */
@@ -224,6 +268,9 @@ export const useProyectos = defineStore('proyectos', () => {
     cargarReceta,
     alProgreso,
     ejecutar,
+    reinstalar,
+    suelta,
+    ejecutarSuelta,
     reintentar,
     correrPaso,
     omitir,

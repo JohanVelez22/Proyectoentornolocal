@@ -290,6 +290,9 @@ function alCambiarVisible(v: boolean): void {
       :native-scrollbar="false"
       body-content-class="cuerpo-form"
     >
+      <NAlert v-if="modo === 'duplicar' && usaProxy(datos.tipo)" type="warning" class="alerta">
+        {{ t.duplicarProxy }}
+      </NAlert>
       <NAlert v-if="errorServidor" type="error" :title="t.errorGuardar" class="alerta" closable>
         {{ errorServidor }}
       </NAlert>
