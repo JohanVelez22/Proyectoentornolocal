@@ -9,6 +9,7 @@ import { ErrorDetenidoAlIniciar, type DefProceso } from '../procesos/supervisor'
 import type { Rutas } from '../rutas';
 import {
   IDS_SERVICIO_DATOS,
+  PASIVOS_FTP_POR_DEFECTO,
   type Config,
   type Credenciales,
   type EstadoServicio,
@@ -96,7 +97,7 @@ export const USUARIO_POR_DEFECTO: Record<IdServicioDatos, string> = {
 function puertosFijos(cfg: Config): { desde: number; hasta: number; nombre: string }[] {
   const https = cfg.https?.puerto ?? 443;
   const ftp = cfg.ftp?.puerto ?? 2121;
-  const [pasivoMin, pasivoMax] = cfg.ftp?.pasivos ?? [50000, 50100];
+  const [pasivoMin, pasivoMax] = cfg.ftp?.pasivos ?? PASIVOS_FTP_POR_DEFECTO;
   return [
     { desde: https, hasta: https, nombre: 'HTTPS' },
     { desde: 8090, hasta: 8090, nombre: 'Adminer' },

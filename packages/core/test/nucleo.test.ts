@@ -1292,7 +1292,7 @@ describe('Nucleo (Etapa B)', () => {
       ],
     });
     const r = puertosReservados(cfg, 'demo');
-    for (const p of [80, 443, 2121, 3306, 5432, 7790, 8090, 8025, 50000, 50100, 5173, 8001]) {
+    for (const p of [80, 443, 2121, 3306, 5432, 7790, 8090, 8025, 30000, 30100, 5173, 8001]) {
       expect(r, String(p)).toContain(p);
     }
     // Solo se excluyen los puertos del propio sitio, no los de otro con el mismo número.

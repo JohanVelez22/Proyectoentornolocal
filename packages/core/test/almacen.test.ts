@@ -49,6 +49,28 @@ describe('Almacen', () => {
     expect(await a.leer()).toEqual(c);
     expect((await readdir(join(rutas.config(), '..'))).some((f) => f.endsWith('.tmp'))).toBe(false);
   });
+  it('el rango pasivo de FTP por defecto es 30000-30100 y el viejo guardado se migra', async () => {
+    const a = new Almacen(rutas);
+    expect((await a.leer()).ftp.pasivos).toEqual([30000, 30100]);
+    // Config guardado con el rango viejo por defecto: se migra al leer y queda así al guardar.
+    await writeFile(
+      rutas.config(),
+      JSON.stringify({ version: 1, ftp: { pasivos: [50000, 50100] } }),
+    );
+    const migrado = await a.leer();
+    expect(migrado.ftp.pasivos).toEqual([30000, 30100]);
+    await a.guardar(migrado);
+    expect(JSON.parse(await readFile(rutas.config(), 'utf8')).ftp.pasivos).toEqual([30000, 30100]);
+    // Un rango elegido por el usuario (aunque esté cerca del viejo) se respeta.
+    for (const propio of [
+      [50000, 50200],
+      [50001, 50100],
+      [40000, 40100],
+    ]) {
+      await writeFile(rutas.config(), JSON.stringify({ version: 1, ftp: { pasivos: propio } }));
+      expect((await a.leer()).ftp.pasivos).toEqual(propio);
+    }
+  });
   it('un config.json viejo sin `ui` carga con las preferencias por defecto y no es corrupto', async () => {
     const viejo = {
       version: 1,

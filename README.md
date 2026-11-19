@@ -76,7 +76,7 @@ PostgreSQL usa pgvector compilado una vez en su equipo:
 
 ### FTP por sitio
 
-- Servidor FTP integrado (puerto 2121, pasivos 50000–50100). Cada sitio tiene su interruptor **FTP**: crea el usuario `<id del sitio>` con clave aleatoria, encerrado en la carpeta del sitio, con opción de solo lectura y de regenerar la clave.
+- Servidor FTP integrado (puerto 2121, pasivos 30000–30100, fuera de los puertos efímeros de Windows). Cada sitio tiene su interruptor **FTP**: crea el usuario `<id del sitio>` con clave aleatoria, encerrado en la carpeta del sitio, con opción de solo lectura y de regenerar la clave.
 - Solo modo pasivo (PORT/EPRT rechazados). Por defecto solo escucha en 127.0.0.1.
 - **Aviso:** "Permitir conexiones de la red local" abre el FTP a su red y **el FTP no cifra nada** (usuarios, claves y archivos viajan en claro). Úselo solo en una red de confianza. No hay FTPS ni SFTP en esta etapa.
 

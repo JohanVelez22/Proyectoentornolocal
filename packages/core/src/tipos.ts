@@ -225,6 +225,14 @@ export const CambiosPreferenciasUiSchema = z.strictObject({
 });
 export type CambiosPreferenciasUi = z.infer<typeof CambiosPreferenciasUiSchema>;
 
+/**
+ * Rango pasivo de FTP por defecto: fuera de los puertos efímeros de Windows (49152-65535), donde
+ * el sistema puede estar usando cualquiera de ellos para conexiones salientes.
+ */
+export const PASIVOS_FTP_POR_DEFECTO: readonly [number, number] = [30000, 30100];
+/** Rango por defecto anterior (hasta la Etapa B): se migra al leer el config. */
+export const PASIVOS_FTP_VIEJOS: readonly [number, number] = [50000, 50100];
+
 export const ConfigSchema = z.object({
   version: z.literal(1).default(1),
   sitios: z.array(SitioSchema).default([]),
@@ -240,10 +248,19 @@ export const ConfigSchema = z.object({
       puerto: z.number().int().min(1).max(65535).default(2121),
       /** false: solo 127.0.0.1. true: escucha en todas las interfaces (red local). */
       redLocal: z.boolean().default(false),
-      /** Rango de puertos del modo pasivo [mínimo, máximo]. */
+      /**
+       * Rango de puertos del modo pasivo [mínimo, máximo]. Un config guardado con el rango viejo
+       * por defecto (50000-50100, dentro de los puertos efímeros de Windows) pasa al nuevo; un
+       * rango elegido por el usuario se respeta.
+       */
       pasivos: z
         .tuple([z.number().int().min(1024).max(65535), z.number().int().min(1024).max(65535)])
-        .default([50000, 50100]),
+        .default([...PASIVOS_FTP_POR_DEFECTO])
+        .transform((r): [number, number] =>
+          r[0] === PASIVOS_FTP_VIEJOS[0] && r[1] === PASIVOS_FTP_VIEJOS[1]
+            ? [...PASIVOS_FTP_POR_DEFECTO]
+            : r,
+        ),
     })
     .prefault({}),
   /** Servidor MCP local (127.0.0.1); el token vive en etc/credenciales.json, nunca aquí. */

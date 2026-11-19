@@ -691,8 +691,8 @@ describe('ronda de correcciones 1', () => {
     const casos: [number, string][] = [
       [8090, 'Adminer'],
       [2121, 'FTP'],
-      [50000, 'FTP (puertos pasivos)'],
-      [50100, 'FTP (puertos pasivos)'],
+      [30000, 'FTP (puertos pasivos)'],
+      [30100, 'FTP (puertos pasivos)'],
       [9000, 'PHP'],
       [9841, 'PHP'],
       [9999, 'PHP'],
