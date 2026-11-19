@@ -28,6 +28,11 @@ export const SALIDA_SERVICIO = {
   plazo: 31,
   /** No existe, no se puede detener o falló al detenerse. */
   fallo: 32,
+  /**
+   * Hay servicios en marcha que dependen de él: `ServiceController.Stop()` los detendría también,
+   * así que no se detiene nada y el usuario decide.
+   */
+  dependientes: 33,
 } as const;
 
 export const MOTIVO_SALIDA_SERVICIO: Record<number, ResultadoEscritura> = {
@@ -40,6 +45,11 @@ export const MOTIVO_SALIDA_SERVICIO: Record<number, ResultadoEscritura> = {
     ok: false,
     motivo: 'error',
     detalle: 'no se pudo detener el servicio',
+  },
+  [SALIDA_SERVICIO.dependientes]: {
+    ok: false,
+    motivo: 'error',
+    detalle: 'hay otros servicios en marcha que dependen de este; no se detuvo nada',
   },
 };
 

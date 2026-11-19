@@ -175,6 +175,8 @@ export const es = {
       'doctor.ca_vieja_sin_quitar':
         'La autoridad de certificados nueva ya está en uso, pero no se pudo quitar la anterior del almacén de Windows. Puede quitarla desde la sección HTTPS.',
       'doctor.sin_puerto_libre': 'No se encontró un puerto libre para mover el servicio.',
+      'doctor.ca_vuelta_atras_incompleta':
+        'No se pudo aplicar la autoridad nueva y la vuelta atrás quedó incompleta. Revise la sección HTTPS; hay una copia con fecha en etc/respaldos.',
     },
   },
   avisoInicio: {

@@ -631,7 +631,9 @@ export class Nucleo {
                 codigo:
                   r.motivo === 'cancelado'
                     ? 'doctor.reparacion_cancelada'
-                    : 'doctor.reparacion_fallida',
+                    : r.vueltaAtrasIncompleta
+                      ? 'doctor.ca_vuelta_atras_incompleta'
+                      : 'doctor.reparacion_fallida',
               };
             }
             return r.avisoCaVieja

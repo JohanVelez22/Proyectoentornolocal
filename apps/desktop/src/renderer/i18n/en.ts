@@ -172,6 +172,8 @@ export const en: Textos = {
       'doctor.ca_vieja_sin_quitar':
         'The new certificate authority is in use, but the old one could not be removed from the Windows store. You can remove it from the HTTPS section.',
       'doctor.sin_puerto_libre': 'No free port was found to move the service.',
+      'doctor.ca_vuelta_atras_incompleta':
+        'The new authority could not be applied and the rollback was incomplete. Check the HTTPS section; there is a dated copy in etc/respaldos.',
     },
   },
   avisoInicio: {

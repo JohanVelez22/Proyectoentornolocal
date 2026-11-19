@@ -416,10 +416,16 @@ export class PlataformaWindows implements PlataformaCompleta {
    * Corre `fn` cuando terminó la elevación anterior. Si mientras esperaba se cerró la app
    * (`cancelarEscriturasAdmin`), no abre ningún UAC.
    */
-  private enCola(fn: () => Promise<ResultadoEscritura>): Promise<ResultadoEscritura> {
+  private enCola(
+    fn: () => Promise<ResultadoEscritura>,
+    vencimientoUnixMs?: number,
+  ): Promise<ResultadoEscritura> {
     const generacion = this.generacion;
     const correr = (): Promise<ResultadoEscritura> =>
-      generacion === this.generacion ? fn() : Promise.resolve({ ok: false, motivo: 'tiempo' });
+      generacion === this.generacion &&
+      (vencimientoUnixMs === undefined || Date.now() < vencimientoUnixMs)
+        ? fn()
+        : Promise.resolve({ ok: false, motivo: 'tiempo' });
     const p = this.colaElevacion.then(correr, correr);
     this.colaElevacion = p.catch(() => undefined);
     return p;
@@ -463,6 +469,9 @@ export class PlataformaWindows implements PlataformaCompleta {
         "$null = [Reflection.Assembly]::LoadWithPartialName('System.ServiceProcess')",
         'try {',
         `  $s = [ServiceProcess.ServiceController]::new(${literal(nombre)})`,
+        // Stop() también detiene los dependientes en marcha: si los hay, no se toca nada (igual
+        // que `Stop-Service` sin -Force, el comando manual que se muestra).
+        `  if (@($s.DependentServices | Where-Object { $_.Status -ne ${estado} }).Count -gt 0) { exit ${SALIDA_SERVICIO.dependientes} }`,
         `  if ($s.Status -ne ${estado}) { $s.Stop() }`,
         `  $s.WaitForStatus(${estado}, [TimeSpan]::FromSeconds(60))`,
         `} catch [System.ServiceProcess.TimeoutException] { exit ${SALIDA_SERVICIO.plazo} } catch { exit ${SALIDA_SERVICIO.fallo} }`,
@@ -573,7 +582,19 @@ export class PlataformaWindows implements PlataformaCompleta {
     contenido: string,
     o: OpcionesEscrituraAdmin = {},
   ): Promise<ResultadoEscritura> {
-    return this.enCola(() => this.escribirComoAdminAhora(destino, contenido, o));
+    return this.enCola(() => {
+      // El plazo cuenta desde que la escritura sale de la cola, sin pasar el vencimiento.
+      const restante =
+        o.vencimientoUnixMs !== undefined ? o.vencimientoUnixMs - Date.now() : undefined;
+      const plazo =
+        restante === undefined
+          ? o.tiempoLimiteMs
+          : Math.max(1, Math.min(o.tiempoLimiteMs ?? restante, restante));
+      return this.escribirComoAdminAhora(destino, contenido, {
+        ...o,
+        ...(plazo !== undefined ? { tiempoLimiteMs: plazo } : {}),
+      });
+    }, o.vencimientoUnixMs);
   }
 
   private async escribirComoAdminAhora(
@@ -597,7 +618,9 @@ export class PlataformaWindows implements PlataformaCompleta {
       const interno = scriptCopiaHosts({
         temporal: tmp,
         destino: esHostsSistema ? null : destino,
-        limiteUnixMs: o.tiempoLimiteMs ? Date.now() + o.tiempoLimiteMs : null,
+        limiteUnixMs: o.tiempoLimiteMs
+          ? Math.min(Date.now() + o.tiempoLimiteMs, o.vencimientoUnixMs ?? Infinity)
+          : (o.vencimientoUnixMs ?? null),
         hashTemporal: sha256(datos),
         hashPrevio: o.hashPrevio ?? null,
       });

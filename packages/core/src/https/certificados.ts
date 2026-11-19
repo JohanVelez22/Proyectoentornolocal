@@ -8,7 +8,14 @@ import type { Rutas } from '../rutas';
 import { emitirCertificado, generarCA, huellaSha1, type ParCertificado } from './ca';
 
 export type ResultadoCA =
-  { ok: true; avisoCaVieja?: true } | { ok: false; motivo: 'cancelado' | 'error'; mensaje: string };
+  | { ok: true; avisoCaVieja?: true }
+  | {
+      ok: false;
+      motivo: 'cancelado' | 'error';
+      mensaje: string;
+      /** Al volver atrás algo no se pudo deshacer (el mensaje dice qué). */
+      vueltaAtrasIncompleta?: true;
+    };
 
 /** Estado completo de HTTPS para la interfaz: autoridad, puerto y quién lo ocupa. */
 export interface EstadoHttps {
@@ -134,7 +141,8 @@ export class GestorHttps {
    * 3. reemplaza los archivos de la CA (guardando los viejos y una copia de los certificados) y
    *    llama a `aplicar`, que vuelve a emitir los certificados de los sitios y recarga Nginx;
    * 4. si `aplicar` falla, vuelve atrás (CA y certificados viejos, `aplicar` otra vez) y quita
-   *    la nueva del almacén;
+   *    la nueva del almacén. Si algo de eso falla, se dice qué (`vueltaAtrasIncompleta`) y la
+   *    copia `.certs-<id>` se conserva si los certificados no se pudieron restaurar;
    * 5. si salió bien, quita la vieja del almacén; si eso falla, solo se avisa (`avisoCaVieja`).
    */
   async regenerarCA(
@@ -159,6 +167,7 @@ export class GestorHttps {
     const id = randomUUID().slice(0, 8);
     const tmp = path.join(carpetaCa, `.nueva-${id}`);
     const certsViejos = path.join(carpetaCa, `.certs-${id}`);
+    let certsConservados = false;
     try {
       const nueva = generarCA(this.ahora);
       await mkdir(tmp, { recursive: true });
@@ -174,17 +183,53 @@ export class GestorHttps {
       );
       if (!confiada.ok) return confiada;
 
+      const huellaNueva = huellaSha1(nueva.certPem);
+      /** Quita la nueva del almacén; false si no se pudo. */
+      const quitarNueva = async (): Promise<boolean> =>
+        (
+          await this.d.plataforma
+            .quitarCertificadoUsuario(huellaNueva)
+            .catch((): ResultadoEscritura => ({ ok: false, motivo: 'error' }))
+        ).ok;
+
       const tieneCerts = existsSync(carpetaCerts);
-      if (tieneCerts) await cp(carpetaCerts, certsViejos, sinPisar);
-      const volverAtras = async (): Promise<void> => {
-        await writeFile(this.d.rutas.caKey(), vieja.keyPem, { encoding: 'utf8', mode: 0o600 });
-        await writeFile(this.d.rutas.caCrt(), vieja.certPem, 'utf8');
-        await rm(carpetaCerts, { recursive: true, force: true });
-        if (tieneCerts) await cp(certsViejos, carpetaCerts, { recursive: true });
-        await aplicar().catch(() => false);
-        await this.d.plataforma
-          .quitarCertificadoUsuario(huellaSha1(nueva.certPem))
-          .catch(() => undefined);
+      if (tieneCerts) {
+        try {
+          await cp(carpetaCerts, certsViejos, sinPisar);
+        } catch (e) {
+          // Aún no se tocó ningún archivo: solo hay que sacar la nueva del almacén.
+          const quitada = await quitarNueva();
+          return {
+            ok: false,
+            motivo: 'error',
+            mensaje: `No se pudo guardar una copia de los certificados (${e instanceof Error ? e.message : String(e)}); no se cambió nada.${quitada ? '' : ' La autoridad nueva quedó en el almacén de confianza: quítela desde certmgr.msc.'}`,
+            ...(quitada ? {} : { vueltaAtrasIncompleta: true as const }),
+          };
+        }
+      }
+      /** Vuelve atrás; devuelve lo que no se pudo deshacer. */
+      const volverAtras = async (): Promise<string[]> => {
+        const faltas: string[] = [];
+        try {
+          await writeFile(this.d.rutas.caKey(), vieja.keyPem, { encoding: 'utf8', mode: 0o600 });
+          await writeFile(this.d.rutas.caCrt(), vieja.certPem, 'utf8');
+        } catch {
+          faltas.push(`no se pudo restaurar la autoridad (hay una copia en ${destino})`);
+        }
+        try {
+          await rm(carpetaCerts, { recursive: true, force: true });
+          if (tieneCerts) await cp(certsViejos, carpetaCerts, { recursive: true });
+        } catch {
+          certsConservados = true;
+          faltas.push(`no se pudieron restaurar los certificados (están en ${certsViejos})`);
+        }
+        if (!(await aplicar().catch(() => false))) {
+          faltas.push('no se pudo volver a aplicar la configuración de los sitios');
+        }
+        if (!(await quitarNueva())) {
+          faltas.push('la autoridad nueva quedó en el almacén de confianza');
+        }
+        return faltas;
       };
       let ok = false;
       try {
@@ -195,7 +240,15 @@ export class GestorHttps {
         ok = false;
       }
       if (!ok) {
-        await volverAtras();
+        const faltas = await volverAtras();
+        if (faltas.length > 0) {
+          return {
+            ok: false,
+            motivo: 'error',
+            mensaje: `No se pudo aplicar la autoridad de certificados nueva y la vuelta atrás quedó incompleta: ${faltas.join('; ')}.`,
+            vueltaAtrasIncompleta: true,
+          };
+        }
         return {
           ok: false,
           motivo: 'error',
@@ -209,7 +262,10 @@ export class GestorHttps {
       return quitada.ok ? { ok: true } : { ok: true, avisoCaVieja: true };
     } finally {
       await rm(tmp, { recursive: true, force: true }).catch(() => undefined);
-      await rm(certsViejos, { recursive: true, force: true }).catch(() => undefined);
+      // La copia de los certificados solo se borra si ya no hace falta para recuperarlos.
+      if (!certsConservados) {
+        await rm(certsViejos, { recursive: true, force: true }).catch(() => undefined);
+      }
     }
   }
 

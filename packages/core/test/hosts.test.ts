@@ -371,6 +371,26 @@ describe('GestorHosts: UAC sin respuesta y agrupación (QA 1)', () => {
     expect(plazos).toEqual([1234]);
   });
 
+  it('N1: pasa el vencimiento de su respaldo, para que una escritura en cola no abra UAC tarde', async () => {
+    const vencimientos: (number | undefined)[] = [];
+    const p = {
+      ...falsa(),
+      escribirComoAdmin: async (
+        d: string,
+        c: string,
+        o?: { tiempoLimiteMs?: number; vencimientoUnixMs?: number },
+      ) => {
+        vencimientos.push(o?.vencimientoUnixMs);
+        await writeFile(d, c, 'utf8');
+        return { ok: true as const };
+      },
+    };
+    const antes = Date.now();
+    await new GestorHosts(p, eventos, { tiempoLimiteMs: 20_000 }).sincronizar(['a.test']);
+    expect(vencimientos[0]).toBeGreaterThanOrEqual(antes + 20_000);
+    expect(vencimientos[0]).toBeLessThanOrEqual(Date.now() + 30_000);
+  });
+
   it('pedidos seguidos mientras hay un UAC abierto se agrupan en una sola elevación más', async () => {
     let soltar: () => void = () => undefined;
     const p = {

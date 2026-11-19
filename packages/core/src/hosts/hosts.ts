@@ -304,9 +304,12 @@ export class GestorHosts {
         respaldo,
       );
     });
+    // Con el vencimiento del respaldo, una escritura que sigue en la cola de elevaciones (otro UAC
+    // abierto) cuando aquí ya se dio por vencida no abre su UAC más tarde.
     const escritura = this.p.escribirComoAdmin(destino, nuevo, {
       tiempoLimiteMs: this.tiempoLimiteMs,
       hashPrevio,
+      vencimientoUnixMs: Date.now() + respaldo,
     });
     this.viva = escritura;
     const soltar = (): void => {

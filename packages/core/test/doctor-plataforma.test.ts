@@ -1,4 +1,6 @@
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { carpetaTemporal } from './temporales';
 import { comandoManualPara } from '../src/hosts/hosts';
 import { interpretarAntivirus } from '../src/plataforma/diagnosticoWin';
 import { SALIDA_COPIA, SALIDA_SERVICIO } from '../src/plataforma/hostsAdmin';
@@ -111,6 +113,64 @@ describe('Plataforma: capacidades del Doctor', () => {
     }
     await Promise.all([a, b]);
     expect(maximo).toBe(1);
+  });
+
+  it('N1: una escritura en cola cuyo vencimiento ya pasó no abre UAC y da "tiempo"', async () => {
+    const dir = await carpetaTemporal('pel-n1-');
+    let soltar: () => void = () => undefined;
+    const llamadas: string[][] = [];
+    const ejecutor: Ejecutor = async (_c, args) => {
+      llamadas.push(args);
+      if (llamadas.length === 1) await new Promise<void>((r) => (soltar = r));
+      return { codigo: 0, stdout: '', stderr: '' };
+    };
+    const p = new PlataformaWindows(ejecutor, undefined, { carpetaTemporal: dir });
+    const a = p.detenerServicioSistema('W3SVC');
+    const b = p.escribirComoAdmin(join(dir, 'hosts'), 'nuevo', {
+      tiempoLimiteMs: 60_000,
+      vencimientoUnixMs: Date.now() + 30,
+    });
+    await new Promise((r) => setTimeout(r, 80));
+    soltar();
+    await a;
+    expect(await b).toEqual({ ok: false, motivo: 'tiempo' });
+    expect(llamadas).toHaveLength(1);
+  });
+
+  it('N1: el plazo del UAC en cola no pasa del vencimiento pedido (se calcula al empezar)', async () => {
+    const dir = await carpetaTemporal('pel-n1-');
+    const plazos: (number | undefined)[] = [];
+    let script = '';
+    const ejecutor: Ejecutor = async (_c, args, o) => {
+      plazos.push(o?.timeoutMs);
+      script = elevado(args);
+      return { codigo: SALIDA_COPIA.vencido, stdout: '', stderr: '' };
+    };
+    const p = new PlataformaWindows(ejecutor, undefined, { carpetaTemporal: dir });
+    const antes = Date.now();
+    await p.escribirComoAdmin(join(dir, 'hosts'), 'nuevo', {
+      tiempoLimiteMs: 60_000,
+      vencimientoUnixMs: antes + 5_000,
+    });
+    expect(plazos[0]).toBeLessThanOrEqual(5_000);
+    expect(plazos[0]).toBeGreaterThan(0);
+    const limite = Number(/ToUnixTimeMilliseconds\(\) -gt (\d+)/.exec(script)?.[1]);
+    expect(limite).toBeLessThanOrEqual(antes + 5_000);
+  });
+
+  it('N3: detener un servicio con dependientes en marcha sale con 32 y un motivo claro (no los detiene)', async () => {
+    const { llamadas, ejecutor } = grabar(0);
+    await new PlataformaWindows(ejecutor).detenerServicioSistema('W3SVC');
+    const s = elevado(llamadas[0]!.args);
+    expect(s).toContain('DependentServices');
+    const iDep = s.indexOf('DependentServices');
+    expect(iDep).toBeGreaterThan(-1);
+    expect(iDep).toBeLessThan(s.indexOf('.Stop()'));
+    expect(s).toContain(`exit ${SALIDA_SERVICIO.dependientes}`);
+    const r = await new PlataformaWindows(
+      grabar(SALIDA_SERVICIO.dependientes).ejecutor,
+    ).detenerServicioSistema('W3SVC');
+    expect(r).toMatchObject({ ok: false, motivo: 'error', detalle: /dependen/ });
   });
 
   it('instalarVcRedist: prefiere el winget de WindowsApps, con --source winget; sin winget, error claro', async () => {

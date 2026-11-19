@@ -14,6 +14,12 @@ export interface OpcionesEscrituraAdmin {
    * si cambió mientras se esperaba el permiso, no se copia.
    */
   hashPrevio?: string;
+  /**
+   * Hora (Unix, ms) en que quien pide la escritura deja de esperarla. Si la escritura sigue en la
+   * cola de elevaciones a esa hora, da `tiempo` sin abrir ningún UAC; si empieza antes, el plazo
+   * del UAC se recorta para no pasarla.
+   */
+  vencimientoUnixMs?: number;
 }
 
 /** Sistema y arquitectura de los binarios del catálogo. */
@@ -101,7 +107,10 @@ export interface CapacidadesPlataforma {
   vcRedistInstalado(): Promise<boolean>;
   /** Carpetas de los perfiles de Firefox del usuario ([] si no hay Firefox). */
   perfilesFirefox(): Promise<string[]>;
-  /** Detiene un servicio del sistema (p. ej. W3SVC de IIS) con elevación; nunca lo deshabilita. */
+  /**
+   * Detiene un servicio del sistema (p. ej. W3SVC de IIS) con elevación; nunca lo deshabilita. Si
+   * otros servicios en marcha dependen de él, no detiene nada (error con el motivo).
+   */
   detenerServicioSistema(nombre: string): Promise<ResultadoEscritura>;
   /** Quita el atributo de solo lectura del hosts del sistema, con elevación. */
   quitarSoloLecturaHosts(): Promise<ResultadoEscritura>;
