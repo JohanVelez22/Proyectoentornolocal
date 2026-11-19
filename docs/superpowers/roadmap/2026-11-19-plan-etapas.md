@@ -193,3 +193,27 @@ DNS propio y comodín `*.proyecto.test` (45); Apache/Caddy y `.htaccess` real (1
 - **Hermes:** se asume Nous Research (modelos Hermes y Hermes Agent). Hay que confirmarlo con el usuario antes de la tarea.
 - **Fuera por ahora:** Forge y despliegue a servidores, sincronizar en la nube de terceros, tienda de plugins.
 - **Fiabilidad de la matriz:** las celdas con \* vienen del conocimiento sin verificar y los "?" solo dicen que el doc de referentes no lo menciona. Antes de usarla como argumento comercial, hay que verificarlas.
+
+## 4. Pedidos del 2026-11-19 (pendientes de ubicar en las tareas al retomar)
+
+Ubicación propuesta; se confirma y se convierte en tareas al retomar la Etapa C.
+
+| Pedido | Etapa |
+|---|---|
+| "Terminal aquí" no abre en la app instalada (fallo real) | QA, primero al retomar |
+| Revisión de diseño de la interfaz (alineación, espaciados, coherencia) con un agente especializado al cierre de cada etapa; auditoría grande | Cierre de cada etapa; grande en D |
+| Presets de IA: OpenRouter, Groq, Kilo, "omirouter" (por confirmar), LM Studio y modelos gratuitos de FreeLLMAPI | C |
+| Agente Opencode junto a Claude Code, Codex y Hermes | C |
+| Avisar cuando un proceso de proyecto termina (éxito o fallo), no solo cuando cae | C |
+| Idiomas: portugués y francés, sistema listo para más | C |
+| Java, .NET, Go y Rust en el catálogo, instalables por versión | C (con el catálogo en vivo) o D si no cabe |
+| Apache y Caddy: evaluar adelantarlos de F | Evaluar en C/D |
+| Optimizador de RAM en la barra superior (Liviano / Moderado / Profunda): lista antes de actuar, nunca procesos del sistema ni de WolfCore sin confirmar | D |
+| Limpieza de disco (%TEMP%, cachés de navegadores; Prefetch opcional, apagado por defecto y con aviso): vista previa, tamaño y confirmación, solo rutas seguras conocidas | D |
+| Elegir editor (VS Code, Cursor, PhpStorm, Sublime, Windsurf…) y fijar uno predeterminado | D |
+| Botón por proyecto a Adminer y phpMyAdmin (u otra) con la base del proyecto ya autenticada | D |
+| Tareas programadas por sitio; túneles ngrok/Expose/Tailscale (ya estaban) | D |
+| Herramientas: QR de WiFi; imagen → .ico/.png; buscar texto en carpeta/archivo; comprimir PDF/imágenes/zip con peso antes y después | D |
+| Auditoría de contraseñas de BD: solo detectar contraseñas débiles contra una lista corta de las más comunes, con el límite explicado en la interfaz; sin fuerza bruta (alcance a confirmar con el usuario) | D |
+| Visor de esquema/diagrama de la base (tablas, relaciones, PK/FK) | F |
+| Repaso analítico de ServBay, FlyEnv, Flock, EnvKit, Laragon, Herd, Lerd, DBngin, Local y MAMP; actualizar la matriz | Tarea de bajo costo al retomar |
