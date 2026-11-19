@@ -8,6 +8,8 @@ import {
   puertoAlternativo,
   puertosDeServicios,
   segunEscritura,
+  sigueOcupado,
+  YA_RESUELTO,
   type PuertoServicio,
 } from './comun';
 
@@ -41,7 +43,13 @@ async function conCambioDePuerto(
   d: DepsDoctor,
   base: Omit<HallazgoInterno, 'reparacion' | 'aplicar'>,
   ps: PuertoServicio,
-  o: { rangos: RangoPuertos[]; evitar: number[]; comandoManual?: string },
+  o: {
+    rangos: RangoPuertos[];
+    evitar: number[];
+    comandoManual?: string;
+    /** ¿Ya no hace falta? (se consulta justo antes de actuar). */
+    resuelto: () => Promise<boolean>;
+  },
 ): Promise<HallazgoInterno> {
   const comando = o.comandoManual === undefined ? {} : { comandoManual: o.comandoManual };
   if (!d.puertoCambiable(ps.servicio)) {
@@ -71,6 +79,7 @@ async function conCambioDePuerto(
   if (alternativo === null) return h;
   h.aplicar = async (): Promise<ResultadoReparacion> => {
     try {
+      if (await o.resuelto()) return YA_RESUELTO;
       // Si el elegido se ocupó mientras tanto, se busca otro.
       const p = (await d.probarPuerto(alternativo))
         ? alternativo
@@ -122,7 +131,10 @@ export async function revisarPuertos(d: DepsDoctor): Promise<HallazgoInterno[]> 
       },
       evidencia: `Puerto ${ps.puerto}: ${dueno.nombre} (PID ${dueno.pid})${ejecutable ? ` — ${ejecutable}` : ''}`,
     };
+    const resuelto = async (): Promise<boolean> => !(await sigueOcupado(d, ps.puerto));
     if (quien === 'iis') {
+      // Detener IIS o, como alternativa, mover el puerto propio.
+      const mover = await conCambioDePuerto(d, base, ps, { rangos, evitar: ocupados, resuelto });
       const reparacion: Reparacion = {
         id: 'detener-w3svc',
         codigo: 'doctor.reparaciones.detener_iis',
@@ -135,9 +147,14 @@ export async function revisarPuertos(d: DepsDoctor): Promise<HallazgoInterno[]> 
       };
       res.push({
         ...base,
+        datos: mover.datos,
         reparacion,
+        ...(mover.aplicar && mover.reparacion
+          ? { alternativa: mover.reparacion, aplicarAlternativa: mover.aplicar }
+          : {}),
         aplicar: async () => {
           try {
+            if (await resuelto()) return YA_RESUELTO;
             return segunEscritura(await d.plataforma.detenerServicioSistema(SERVICIO_IIS));
           } catch (e) {
             return fallo(e);
@@ -147,7 +164,7 @@ export async function revisarPuertos(d: DepsDoctor): Promise<HallazgoInterno[]> 
       continue;
     }
     // FlyEnv, XAMPP, Skype y los demás nunca se tocan: se mueve el puerto propio.
-    res.push(await conCambioDePuerto(d, base, ps, { rangos, evitar: ocupados }));
+    res.push(await conCambioDePuerto(d, base, ps, { rangos, evitar: ocupados, resuelto }));
   }
   return res;
 }
@@ -174,7 +191,13 @@ export async function revisarRangosReservados(d: DepsDoctor): Promise<HallazgoIn
           evidencia: `Rango reservado ${r.desde}-${r.hasta} (incluye ${ps.puerto})`,
         },
         ps,
-        { rangos, evitar: propios.map((p) => p.puerto), comandoManual },
+        {
+          rangos,
+          evitar: propios.map((p) => p.puerto),
+          comandoManual,
+          resuelto: async () =>
+            !enRango(ps.puerto, await d.plataforma.rangosReservados('tcp').catch(() => rangos)),
+        },
       ),
     );
   }

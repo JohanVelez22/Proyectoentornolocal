@@ -168,6 +168,9 @@ export const en: Textos = {
       'doctor.reparacion_cancelada':
         'The administrator permission was cancelled: nothing was changed.',
       'doctor.reparacion_denegada': 'Windows or an antivirus denied access: nothing was changed.',
+      'doctor.ya_resuelto': 'The problem was already gone: nothing needed to change.',
+      'doctor.ca_vieja_sin_quitar':
+        'The new certificate authority is in use, but the old one could not be removed from the Windows store. You can remove it from the HTTPS section.',
       'doctor.sin_puerto_libre': 'No free port was found to move the service.',
     },
   },

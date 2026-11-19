@@ -20,8 +20,11 @@ import {
 import {
   codificarComando,
   MOTIVO_SALIDA_COPIA,
+  literal,
+  MOTIVO_SALIDA_SERVICIO,
   PREFIJO_TEMPORAL_HOSTS,
   SALIDA_COPIA,
+  SALIDA_SERVICIO,
   scriptCopiaHosts,
   scriptElevar,
   sha256,
@@ -286,6 +289,9 @@ export class PlataformaWindows implements PlataformaCompleta {
   private contador = 0;
   /** PowerShell exteriores que esperan un UAC (se cortan al cerrar la app). */
   private readonly elevaciones = new Set<AbortController>();
+  /** Un solo UAC a la vez (hosts, servicios…): cada elevación espera a la anterior. */
+  private colaElevacion: Promise<unknown> = Promise.resolve();
+  private generacion = 0;
   private readonly carpetaTemporal: string;
   private readonly entorno: NodeJS.ProcessEnv;
   private readonly existeRuta: (ruta: string) => boolean;
@@ -406,7 +412,24 @@ export class PlataformaWindows implements PlataformaCompleta {
    * Corre `interno` en una PowerShell elevada (UAC) y espera su código. Se corta al cerrar la app
    * (`cancelarEscriturasAdmin`) o al vencer `tiempoLimiteMs`.
    */
-  private async elevar(interno: string, tiempoLimiteMs = 120_000): Promise<ResultadoEscritura> {
+  /**
+   * Corre `fn` cuando terminó la elevación anterior. Si mientras esperaba se cerró la app
+   * (`cancelarEscriturasAdmin`), no abre ningún UAC.
+   */
+  private enCola(fn: () => Promise<ResultadoEscritura>): Promise<ResultadoEscritura> {
+    const generacion = this.generacion;
+    const correr = (): Promise<ResultadoEscritura> =>
+      generacion === this.generacion ? fn() : Promise.resolve({ ok: false, motivo: 'tiempo' });
+    const p = this.colaElevacion.then(correr, correr);
+    this.colaElevacion = p.catch(() => undefined);
+    return p;
+  }
+
+  private elevar(interno: string, tiempoLimiteMs = 120_000): Promise<ResultadoEscritura> {
+    return this.enCola(() => this.elevarAhora(interno, tiempoLimiteMs));
+  }
+
+  private async elevarAhora(interno: string, tiempoLimiteMs: number): Promise<ResultadoEscritura> {
     const ctl = new AbortController();
     this.elevaciones.add(ctl);
     try {
@@ -420,6 +443,8 @@ export class PlataformaWindows implements PlataformaCompleta {
         return { ok: false, motivo: 'cancelado' };
       }
       if (ctl.signal.aborted) return { ok: false, motivo: 'tiempo' };
+      const propio = MOTIVO_SALIDA_SERVICIO[r.codigo];
+      if (propio) return propio;
       return { ok: false, motivo: 'error', detalle: `código ${r.codigo}` };
     } catch (e) {
       return { ok: false, motivo: 'error', detalle: e instanceof Error ? e.message : String(e) };
@@ -430,12 +455,20 @@ export class PlataformaWindows implements PlataformaCompleta {
 
   async detenerServicioSistema(nombre: string): Promise<ResultadoEscritura> {
     if (!NOMBRE_SERVICIO.test(nombre)) throw new Error(`Nombre de servicio no válido: ${nombre}`);
+    // Solo .NET (sin Stop-Service, que vive en un módulo); espera STOPPED con plazo.
+    const estado = '[ServiceProcess.ServiceControllerStatus]::Stopped';
     return this.elevar(
       [
         "$ErrorActionPreference = 'Stop'",
-        `& ([IO.Path]::Combine([Environment]::SystemDirectory, 'sc.exe')) stop '${nombre}' | Out-Null`,
-        'exit $LASTEXITCODE',
+        "$null = [Reflection.Assembly]::LoadWithPartialName('System.ServiceProcess')",
+        'try {',
+        `  $s = [ServiceProcess.ServiceController]::new(${literal(nombre)})`,
+        `  if ($s.Status -ne ${estado}) { $s.Stop() }`,
+        `  $s.WaitForStatus(${estado}, [TimeSpan]::FromSeconds(60))`,
+        `} catch [System.ServiceProcess.TimeoutException] { exit ${SALIDA_SERVICIO.plazo} } catch { exit ${SALIDA_SERVICIO.fallo} }`,
+        'exit 0',
       ].join('\n'),
+      180_000,
     );
   }
 
@@ -452,10 +485,12 @@ export class PlataformaWindows implements PlataformaCompleta {
 
   async instalarVcRedist(): Promise<ResultadoEscritura> {
     const local = this.entorno.LOCALAPPDATA;
-    const winget = await this.buscarEjecutable(
-      'winget',
-      local ? [path.win32.join(local, 'Microsoft', 'WindowsApps')] : [],
-    );
+    // Primero el de WindowsApps (el de App Installer); si no, el del PATH.
+    const deApps = local
+      ? path.win32.join(local, 'Microsoft', 'WindowsApps', nombreEjecutable('winget'))
+      : null;
+    const winget =
+      deApps && this.existeRuta(deApps) ? deApps : await this.buscarEjecutable('winget');
     if (!winget) {
       return { ok: false, motivo: 'error', detalle: 'winget no está disponible en este equipo' };
     }
@@ -468,6 +503,8 @@ export class PlataformaWindows implements PlataformaCompleta {
           '--id',
           'Microsoft.VCRedist.2015+.x64',
           '--exact',
+          '--source',
+          'winget',
           '--silent',
           '--disable-interactivity',
           '--accept-package-agreements',
@@ -495,19 +532,21 @@ export class PlataformaWindows implements PlataformaCompleta {
   }
 
   comandoManual(c: ComandoManual): string {
-    const comillas = (t: string): string => `'${t.replace(/'/g, "''")}'`;
     switch (c.tipo) {
       case 'liberar-rangos':
         // Reiniciar WinNAT reparte de nuevo los rangos reservados de Hyper-V/WSL/Docker.
         return 'net stop winnat; net start winnat';
       case 'exclusion-antivirus':
-        return `Add-MpPreference -ExclusionPath ${comillas(c.carpeta)}`;
+        return `Add-MpPreference -ExclusionPath ${literal(c.carpeta)}`;
       case 'quitar-solo-lectura-hosts':
-        return `attrib -R "${this.rutaHosts()}"`;
+        return "attrib -R ([IO.Path]::Combine([Environment]::SystemDirectory, 'drivers', 'etc', 'hosts'))";
       case 'detener-servicio':
-        return `Stop-Service -Name ${c.nombre}; Set-Service -Name ${c.nombre} -StartupType Manual`;
+        if (!NOMBRE_SERVICIO.test(c.nombre)) {
+          throw new Error(`Nombre de servicio no válido: ${c.nombre}`);
+        }
+        return `Stop-Service -Name ${literal(c.nombre)}`;
       case 'instalar-vcredist':
-        return 'winget install --id Microsoft.VCRedist.2015+.x64 --exact';
+        return 'winget install --id Microsoft.VCRedist.2015+.x64 --exact --source winget';
     }
   }
 
@@ -529,10 +568,18 @@ export class PlataformaWindows implements PlataformaCompleta {
     return path.win32.join(raiz, 'System32', 'drivers', 'etc', 'hosts');
   }
 
-  async escribirComoAdmin(
+  escribirComoAdmin(
     destino: string,
     contenido: string,
     o: OpcionesEscrituraAdmin = {},
+  ): Promise<ResultadoEscritura> {
+    return this.enCola(() => this.escribirComoAdminAhora(destino, contenido, o));
+  }
+
+  private async escribirComoAdminAhora(
+    destino: string,
+    contenido: string,
+    o: OpcionesEscrituraAdmin,
   ): Promise<ResultadoEscritura> {
     const tmp = path.join(
       this.carpetaTemporal,
@@ -590,6 +637,7 @@ export class PlataformaWindows implements PlataformaCompleta {
 
   /** Corta las PowerShell que esperan un UAC (al cerrar la app o terminar la sesión). */
   cancelarEscriturasAdmin(): void {
+    this.generacion++;
     for (const c of this.elevaciones) c.abort();
     this.elevaciones.clear();
   }

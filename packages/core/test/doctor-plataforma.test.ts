@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { comandoManualPara } from '../src/hosts/hosts';
 import { interpretarAntivirus } from '../src/plataforma/diagnosticoWin';
-import { SALIDA_COPIA } from '../src/plataforma/hostsAdmin';
+import { SALIDA_COPIA, SALIDA_SERVICIO } from '../src/plataforma/hostsAdmin';
 import type { Ejecutor } from '../src/plataforma/tipos';
 import { PlataformaWindows } from '../src/plataforma/win';
 
@@ -27,10 +28,7 @@ describe('Plataforma: capacidades del Doctor', () => {
     const carpeta = 'C:\\Users\\Ana\\AppData\\Local\\WolfCoreDev';
     expect(
       interpretarAntivirus('activo=1\r\nexcl=C:\\Users\\Ana\\AppData\\Local\\\r\n', carpeta),
-    ).toEqual({
-      activo: true,
-      excluida: true,
-    });
+    ).toEqual({ activo: true, excluida: true });
     expect(interpretarAntivirus('activo=1\nexcl=D:\\otra\n', carpeta)).toEqual({
       activo: true,
       excluida: false,
@@ -50,23 +48,36 @@ describe('Plataforma: capacidades del Doctor', () => {
     ).toEqual({ activo: true, excluida: false });
   });
 
-  it('detenerServicioSistema: sc.exe stop por la API, elevado; nombres raros se rechazan', async () => {
+  it('detenerServicioSistema: ServiceController elevado, espera STOPPED con plazo; nombres raros no', async () => {
     const { llamadas, ejecutor } = grabar(0);
     const p = new PlataformaWindows(ejecutor);
     expect(await p.detenerServicioSistema('W3SVC')).toEqual({ ok: true });
     const s = elevado(llamadas[0]!.args);
-    expect(s).toContain("[IO.Path]::Combine([Environment]::SystemDirectory, 'sc.exe')");
-    expect(s).toMatch(/\) stop 'W3SVC'/);
+    expect(s).toContain("[ServiceProcess.ServiceController]::new('W3SVC')");
+    expect(s).toMatch(
+      /WaitForStatus\(\[ServiceProcess\.ServiceControllerStatus\]::Stopped, \[TimeSpan\]::FromSeconds\(\d+\)\)/,
+    );
+    expect(s).toContain(`exit ${SALIDA_SERVICIO.plazo}`);
     expect(llamadas[0]!.args.join(' ')).toContain("$i.Verb = 'runas'");
     await expect(p.detenerServicioSistema("W3SVC'; rm x")).rejects.toThrow(/no válido/);
     expect(llamadas).toHaveLength(1);
   });
 
-  it('una elevación rechazada (salida 10) es "cancelado"; otro código es error', async () => {
-    const p = new PlataformaWindows(grabar(SALIDA_COPIA.cancelado).ejecutor);
-    expect(await p.detenerServicioSistema('W3SVC')).toEqual({ ok: false, motivo: 'cancelado' });
-    const q = new PlataformaWindows(grabar(1062).ejecutor);
-    expect(await q.detenerServicioSistema('W3SVC')).toMatchObject({ ok: false, motivo: 'error' });
+  it('códigos propios: UAC rechazado = cancelado; plazo y fallo del servicio = error con detalle', async () => {
+    const con = (c: number) =>
+      new PlataformaWindows(grabar(c).ejecutor).detenerServicioSistema('W3SVC');
+    expect(await con(SALIDA_COPIA.cancelado)).toEqual({ ok: false, motivo: 'cancelado' });
+    expect(await con(SALIDA_SERVICIO.plazo)).toMatchObject({
+      ok: false,
+      motivo: 'error',
+      detalle: /a tiempo/,
+    });
+    expect(await con(SALIDA_SERVICIO.fallo)).toMatchObject({
+      ok: false,
+      motivo: 'error',
+      detalle: /no se pudo detener/,
+    });
+    expect(await con(1)).toMatchObject({ ok: false, motivo: 'error' });
   });
 
   it('quitarSoloLecturaHosts: el script elevado ubica hosts con la API y quita solo ese atributo', async () => {
@@ -80,17 +91,41 @@ describe('Plataforma: capacidades del Doctor', () => {
     expect(s).not.toMatch(/SystemRoot/i);
   });
 
-  it('instalarVcRedist: winget con el id exacto; sin winget, error claro', async () => {
+  it('las elevaciones van de a una (un solo UAC a la vez entre hosts y servicios)', async () => {
+    let soltar: () => void = () => undefined;
+    let abiertas = 0;
+    let maximo = 0;
+    const ejecutor: Ejecutor = async () => {
+      abiertas++;
+      maximo = Math.max(maximo, abiertas);
+      await new Promise<void>((r) => (soltar = r));
+      abiertas--;
+      return { codigo: 0, stdout: '', stderr: '' };
+    };
+    const p = new PlataformaWindows(ejecutor);
+    const a = p.detenerServicioSistema('W3SVC');
+    const b = p.quitarSoloLecturaHosts();
+    for (let i = 0; i < 2; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      soltar();
+    }
+    await Promise.all([a, b]);
+    expect(maximo).toBe(1);
+  });
+
+  it('instalarVcRedist: prefiere el winget de WindowsApps, con --source winget; sin winget, error claro', async () => {
     const { llamadas, ejecutor } = grabar(0);
+    const apps = 'C:\\Users\\Ana\\AppData\\Local\\Microsoft\\WindowsApps\\winget.exe';
     const p = new PlataformaWindows(ejecutor, undefined, {
-      entorno: { PATH: 'C:\\winget' },
-      existeRuta: (r) => r.toLowerCase() === 'c:\\winget\\winget.exe',
+      entorno: { PATH: 'C:\\falso', LOCALAPPDATA: 'C:\\Users\\Ana\\AppData\\Local' },
+      existeRuta: (r) => [apps, 'C:\\falso\\winget.exe'].includes(r),
     });
     expect(await p.instalarVcRedist()).toEqual({ ok: true });
-    expect(llamadas[0]!.cmd.toLowerCase()).toBe('c:\\winget\\winget.exe');
+    expect(llamadas[0]!.cmd).toBe(apps);
     expect(llamadas[0]!.args).toEqual(
       expect.arrayContaining(['install', '--id', 'Microsoft.VCRedist.2015+.x64', '--exact']),
     );
+    expect(llamadas[0]!.args.join(' ')).toContain('--source winget');
     const sin = new PlataformaWindows(grabar(0).ejecutor, undefined, {
       entorno: { PATH: '' },
       existeRuta: () => false,
@@ -106,18 +141,27 @@ describe('Plataforma: capacidades del Doctor', () => {
     expect(await new PlataformaWindows(grabar(1).ejecutor).antivirus('C:\\x')).toBeNull();
   });
 
-  it('comandoManual: textos para la consola de administrador', () => {
+  it('comandoManual: textos para la consola de administrador, con comillas seguras', () => {
     const p = new PlataformaWindows(grabar().ejecutor);
     expect(p.comandoManual({ tipo: 'liberar-rangos' })).toMatch(/net stop winnat/);
-    expect(p.comandoManual({ tipo: 'exclusion-antivirus', carpeta: "C:\\a'b" })).toBe(
-      "Add-MpPreference -ExclusionPath 'C:\\a''b'",
+    expect(p.comandoManual({ tipo: 'exclusion-antivirus', carpeta: "C:\\a'b‘c’d" })).toBe(
+      "Add-MpPreference -ExclusionPath 'C:\\a''b‘‘c’’d'",
     );
-    expect(p.comandoManual({ tipo: 'quitar-solo-lectura-hosts' })).toMatch(/attrib -R/);
-    expect(p.comandoManual({ tipo: 'detener-servicio', nombre: 'W3SVC' })).toMatch(
-      /Stop-Service -Name W3SVC/,
+    const sl = p.comandoManual({ tipo: 'quitar-solo-lectura-hosts' });
+    expect(sl).toMatch(/attrib -R/);
+    expect(sl).toContain('[Environment]::SystemDirectory');
+    const iis = p.comandoManual({ tipo: 'detener-servicio', nombre: 'W3SVC' });
+    expect(iis).toBe("Stop-Service -Name 'W3SVC'");
+    expect(() => p.comandoManual({ tipo: 'detener-servicio', nombre: "x'; rm" })).toThrow(
+      /no válido/,
     );
     expect(p.comandoManual({ tipo: 'instalar-vcredist' })).toMatch(
-      /winget install --id Microsoft\.VCRedist\.2015\+\.x64/,
+      /winget install --id Microsoft\.VCRedist\.2015\+\.x64 --exact --source winget/,
     );
+  });
+
+  it('comando manual de hosts: la ruta va con comillas seguras (también las tipográficas)', () => {
+    const c = comandoManualPara('C:\\x‘y\\hosts', 'a');
+    expect(c).toContain("$r = 'C:\\x‘‘y\\hosts'");
   });
 });

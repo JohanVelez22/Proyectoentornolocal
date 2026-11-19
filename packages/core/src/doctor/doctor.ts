@@ -31,8 +31,9 @@ const REVISIONES: Record<IdRevision, Revision> = {
 
 /** Copia pública del hallazgo: sin la función de reparación (viaja por IPC tal cual). */
 function publico(h: HallazgoInterno): Hallazgo {
-  const { aplicar, ...resto } = h;
+  const { aplicar, aplicarAlternativa, ...resto } = h;
   void aplicar;
+  void aplicarAlternativa;
   return resto;
 }
 
@@ -46,6 +47,8 @@ export class Doctor {
   private hallazgos: HallazgoInterno[] = [];
   /** Revisiones en curso: una a la vez por área. */
   private readonly enCurso = new Map<IdRevision, Promise<HallazgoInterno[]>>();
+  /** Reparaciones en curso por hallazgo: un segundo pedido espera a la primera. */
+  private readonly reparando = new Map<string, Promise<ResultadoReparacion>>();
 
   constructor(private readonly d: DepsDoctor) {}
 
@@ -105,17 +108,36 @@ export class Doctor {
 
   /**
    * Aplica la reparación del hallazgo. Exige `confirmacion === true` (el usuario vio qué se
-   * hará). Tras una reparación correcta se vuelve a revisar esa área.
+   * hará). `reparacionId` elige la alternativa (`hallazgo.alternativa.id`); por defecto, la
+   * principal. Un segundo pedido mientras la primera corre no la aplica otra vez. Tras una
+   * reparación correcta se vuelve a revisar esa área.
    */
-  async reparar(hallazgoId: string, confirmacion: true): Promise<ResultadoReparacion> {
+  async reparar(
+    hallazgoId: string,
+    confirmacion: true,
+    reparacionId?: string,
+  ): Promise<ResultadoReparacion> {
     if (confirmacion !== true) return { ok: false, codigo: 'doctor.confirmacion_requerida' };
+    const previa = this.reparando.get(hallazgoId);
+    if (previa) return previa;
     const h = this.hallazgos.find((x) => x.id === hallazgoId);
     if (!h) return { ok: false, codigo: 'doctor.hallazgo_desconocido' };
-    if (!h.reparacion || h.reparacion.soloInforma || !h.aplicar) {
+    const principal = reparacionId === undefined || reparacionId === h.reparacion?.id;
+    const rep = principal ? h.reparacion : h.alternativa;
+    const aplicar = principal ? h.aplicar : h.aplicarAlternativa;
+    if (!rep || rep.soloInforma || !aplicar || (!principal && rep.id !== reparacionId)) {
       return { ok: false, codigo: 'doctor.solo_informa' };
     }
-    const r = await h.aplicar();
-    if (r.ok) this.guardar([h.revision], await this.correr(h.revision));
-    return r;
+    const p = (async (): Promise<ResultadoReparacion> => {
+      const r = await aplicar();
+      if (r.ok) this.guardar([h.revision], await this.correr(h.revision));
+      return r;
+    })();
+    this.reparando.set(hallazgoId, p);
+    try {
+      return await p;
+    } finally {
+      this.reparando.delete(hallazgoId);
+    }
   }
 }

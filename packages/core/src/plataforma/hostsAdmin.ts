@@ -22,6 +22,27 @@ export const SALIDA_COPIA = {
   enUso: 16,
 } as const;
 
+/** Salidas propias del script que detiene un servicio del sistema (fuera del rango de hosts). */
+export const SALIDA_SERVICIO = {
+  /** El servicio no llegó a STOPPED dentro del plazo. */
+  plazo: 31,
+  /** No existe, no se puede detener o falló al detenerse. */
+  fallo: 32,
+} as const;
+
+export const MOTIVO_SALIDA_SERVICIO: Record<number, ResultadoEscritura> = {
+  [SALIDA_SERVICIO.plazo]: {
+    ok: false,
+    motivo: 'error',
+    detalle: 'el servicio no se detuvo a tiempo',
+  },
+  [SALIDA_SERVICIO.fallo]: {
+    ok: false,
+    motivo: 'error',
+    detalle: 'no se pudo detener el servicio',
+  },
+};
+
 /** Cómo se informa cada salida del script (0 se confirma leyendo el archivo). */
 export const MOTIVO_SALIDA_COPIA: Record<number, ResultadoEscritura> = {
   [SALIDA_COPIA.cancelado]: { ok: false, motivo: 'cancelado' },
@@ -58,7 +79,8 @@ export const MOTIVO_SALIDA_COPIA: Record<number, ResultadoEscritura> = {
 const DESTINO_SISTEMA =
   "[IO.Path]::Combine([Environment]::SystemDirectory, 'drivers', 'etc', 'hosts')";
 
-const literal = (t: string): string => `'${t.replace(/['‘’‚‛]/g, '$&$&')}'`;
+/** Texto entre comillas simples de PowerShell (también duplica las comillas tipográficas). */
+export const literal = (t: string): string => `'${t.replace(/['‘’‚‛]/g, '$&$&')}'`;
 
 /**
  * Script que corre ELEVADO: antes de escribir comprueba que no venció el plazo (hora UTC

@@ -620,7 +620,11 @@ export class Nucleo {
           },
           regenerarCertificados: async () => resultadoAplicarDoctor(await sitios.aplicar()),
           regenerarCA: async () => {
-            const r = await https.regenerarCA(carpetaRespaldosDoctor(rutas));
+            // Confía la nueva antes de tocar nada; aplicar vuelve a emitir los certificados.
+            const r = await https.regenerarCA(
+              carpetaRespaldosDoctor(rutas),
+              async () => (await sitios.aplicar()).nginx.ok,
+            );
             if (!r.ok) {
               return {
                 ok: false,
@@ -630,7 +634,9 @@ export class Nucleo {
                     : 'doctor.reparacion_fallida',
               };
             }
-            return resultadoAplicarDoctor(await sitios.aplicar());
+            return r.avisoCaVieja
+              ? { ok: true, aviso: 'doctor.ca_vieja_sin_quitar' }
+              : { ok: true };
           },
         },
         reintentarServicio: (id) => servicios.iniciar(id as IdServicio),

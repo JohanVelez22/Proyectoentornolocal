@@ -94,6 +94,8 @@ export const PARAMETROS_ERROR = {
   'doctor.reparacion_cancelada': [],
   'doctor.reparacion_denegada': [],
   'doctor.sin_puerto_libre': [],
+  'doctor.ya_resuelto': [],
+  'doctor.ca_vieja_sin_quitar': [],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

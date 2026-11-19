@@ -44,16 +44,22 @@ export interface Hallazgo {
   /** Lo que se vio (proceso, línea del archivo, final del log…), tal cual para mostrar. */
   evidencia: string;
   reparacion?: Reparacion;
+  /** Otra reparación posible (p. ej. con IIS: mover el puerto propio en vez de detenerlo). */
+  alternativa?: Reparacion;
 }
 
 export interface ResultadoReparacion {
   ok: boolean;
+  /** Error, o `doctor.ya_resuelto` con `ok: true` si al reparar el problema ya no estaba. */
   codigo?: CodigoError;
+  /** Salió bien, pero con algo que el usuario debe saber. */
+  aviso?: CodigoError;
 }
 
 /** Hallazgo con su reparación ejecutable (solo dentro del Doctor; nunca sale por IPC). */
 export interface HallazgoInterno extends Hallazgo {
   aplicar?: () => Promise<ResultadoReparacion>;
+  aplicarAlternativa?: () => Promise<ResultadoReparacion>;
 }
 
 export interface VencimientoCertificado {

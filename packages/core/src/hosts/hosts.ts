@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import path from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { copiaConFecha } from '../herramientas/copiaConFecha';
 import type { Eventos, EventosNucleo } from '../eventos';
 import { ErrorWolf } from '../errores';
+import { literal } from '../plataforma/hostsAdmin';
 import type { Plataforma, ResultadoEscritura } from '../plataforma/tipos';
 import type { EstadoHosts } from '../tipos';
 import {
@@ -26,10 +27,9 @@ export type ResultadoSync =
 /** Una línea para pegar en una PowerShell de administrador (contenido en base64, sin problemas de comillas). */
 export function comandoManualPara(destino: string, contenido: string): string {
   const b64 = Buffer.from(contenido, 'utf8').toString('base64');
-  const ruta = destino.replace(/'/g, "''");
   // Un hosts de solo lectura (antivirus "proteger hosts") se desbloquea y vuelve a quedar igual.
   return (
-    `$r = '${ruta}'; $a = [IO.File]::GetAttributes($r); ` +
+    `$r = ${literal(destino)}; $a = [IO.File]::GetAttributes($r); ` +
     `[IO.File]::SetAttributes($r, ($a -band (-bnot [IO.FileAttributes]::ReadOnly))); ` +
     `[IO.File]::WriteAllText($r, [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64}')), (New-Object Text.UTF8Encoding($false))); ` +
     '[IO.File]::SetAttributes($r, $a); ipconfig /flushdns'
@@ -254,7 +254,9 @@ export class GestorHosts {
       (!reintentar && this.ultimoFallo?.nuevo === nuevo ? this.ultimoFallo.motivo : null) ??
       // Un UAC anterior sigue abierto (la plataforma no lo cortó aún): no se abre otro.
       (this.viva ? 'tiempo' : null);
-    if (!motivoPrevio && reparar) await this.copiaConFecha(bytes, reparar);
+    if (!motivoPrevio && reparar) {
+      await copiaConFecha(reparar.carpetaRespaldo, 'hosts', bytes, reparar.ahora?.());
+    }
     const r: ResultadoEscritura = motivoPrevio
       ? { ok: false, motivo: motivoPrevio as 'cancelado' | 'denegado' | 'tiempo' }
       : await this.escribirConPlazo(destino, nuevo, huella);
@@ -320,21 +322,6 @@ export class GestorHosts {
       throw e;
     } finally {
       clearTimeout(temporizador);
-    }
-  }
-
-  /** Copia de los bytes del hosts anterior: `hosts-<fecha>.txt` (nunca pisa otra). */
-  private async copiaConFecha(bytes: Buffer, o: OpcionesReparar): Promise<void> {
-    await mkdir(o.carpetaRespaldo, { recursive: true });
-    const fecha = (o.ahora?.() ?? new Date()).toISOString().replace(/[:.]/g, '-');
-    for (let n = 0; ; n++) {
-      const nombre = `hosts-${fecha}${n ? `-${n}` : ''}.txt`;
-      try {
-        await writeFile(path.join(o.carpetaRespaldo, nombre), bytes, { flag: 'wx' });
-        return;
-      } catch (e) {
-        if ((e as { code?: string }).code !== 'EEXIST' || n > 100) throw e;
-      }
     }
   }
 

@@ -327,31 +327,90 @@ describe('PlataformaWindows: certutil', () => {
 });
 
 describe('GestorHttps.regenerarCA (Doctor)', () => {
-  it('copia con fecha la CA y los certificados, quita la CA vieja y confía una nueva', async () => {
+  /** Estado de los archivos: CA y certificados tal cual. */
+  const foto = (): Record<string, string> => {
+    const r: Record<string, string> = {
+      crt: readFileSync(rutas.caCrt(), 'utf8'),
+      key: readFileSync(rutas.caKey(), 'utf8'),
+    };
+    for (const n of readdirSync(path.dirname(rutas.certCrt('x')))) {
+      r[n] = readFileSync(path.join(path.dirname(rutas.certCrt('x')), n), 'utf8');
+    }
+    return r;
+  };
+  const preparar = async () => {
     const g = gestorHttps();
     await g.instalarCA();
     await g.asegurarCertificado({ id: 's1', dominio: 'a.test', alias: [] });
-    const viejaCrt = readFileSync(rutas.caCrt(), 'utf8');
-    const viejaKey = readFileSync(rutas.caKey(), 'utf8');
-    const respaldo = path.join(base, 'respaldos');
-    expect(await g.regenerarCA(respaldo)).toEqual({ ok: true });
-    expect(quitados).toEqual([huellaSha1(viejaCrt)]);
-    expect(instalados).toHaveLength(2);
-    expect(readFileSync(rutas.caCrt(), 'utf8')).not.toBe(viejaCrt);
-    expect(existsSync(rutas.certCrt('s1'))).toBe(false);
-    const [copia] = readdirSync(respaldo);
-    expect(copia).toMatch(/^ca-/);
-    expect(readFileSync(path.join(respaldo, copia!, 'ca', 'wolfcore-dev-ca.key'), 'utf8')).toBe(
-      viejaKey,
+    instalados = [];
+    return { g, antes: foto(), huellaVieja: huellaSha1(readFileSync(rutas.caCrt(), 'utf8')) };
+  };
+  const respaldo = () => path.join(base, 'respaldos');
+  const sinTemporales = () =>
+    expect(readdirSync(path.dirname(rutas.caCrt())).filter((n) => n.startsWith('.'))).toEqual([]);
+
+  it('confía primero la nueva; luego reemplaza, aplica (certs nuevos) y quita la vieja', async () => {
+    const { g, antes, huellaVieja } = await preparar();
+    let vistaAlAplicar = '';
+    const r = await g.regenerarCA(respaldo(), async () => {
+      // nginx: los certificados se vuelven a emitir con la CA nueva
+      vistaAlAplicar = readFileSync(rutas.caCrt(), 'utf8');
+      await g.asegurarCertificado({ id: 's1', dominio: 'a.test', alias: [] });
+      return true;
+    });
+    expect(r).toEqual({ ok: true });
+    expect(instalados).toHaveLength(1);
+    expect(quitados).toEqual([huellaVieja]);
+    const nueva = readFileSync(rutas.caCrt(), 'utf8');
+    expect(nueva).not.toBe(antes['crt']);
+    expect(vistaAlAplicar).toBe(nueva);
+    const cert = forge.pki.certificateFromPem(readFileSync(rutas.certCrt('s1'), 'utf8'));
+    expect(forge.pki.certificateFromPem(nueva).verify(cert)).toBe(true);
+    const [copia] = readdirSync(respaldo());
+    expect(readFileSync(path.join(respaldo(), copia!, 'ca', 'wolfcore-dev-ca.key'), 'utf8')).toBe(
+      antes['key'],
     );
-    expect(existsSync(path.join(respaldo, copia!, 'certs', 's1.crt'))).toBe(true);
+    expect(existsSync(path.join(respaldo(), copia!, 'certs', 's1.crt'))).toBe(true);
+    sinTemporales();
   });
 
-  it('si no se puede quitar la CA vieja, no se toca nada', async () => {
-    const g = gestorHttps();
-    await g.instalarCA();
-    const vieja = readFileSync(rutas.caCrt(), 'utf8');
-    const conFallo = new GestorHttps({
+  it('confiar la nueva cancelado: CA vieja confiada, archivos y certificados intactos', async () => {
+    const { g, antes } = await preparar();
+    resultadoInstalar = { ok: false, motivo: 'cancelado' };
+    let aplicado = false;
+    const r = await g.regenerarCA(respaldo(), async () => {
+      aplicado = true;
+      return true;
+    });
+    expect(r).toMatchObject({ ok: false, motivo: 'cancelado' });
+    expect(quitados).toEqual([]);
+    expect(aplicado).toBe(false);
+    expect(foto()).toEqual(antes);
+    sinTemporales();
+  });
+
+  it('fallo al aplicar (nginx): vuelve atrás archivos y certificados y quita la nueva del almacén', async () => {
+    const { g, antes, huellaVieja } = await preparar();
+    let intentos = 0;
+    const r = await g.regenerarCA(respaldo(), async () => {
+      intentos++;
+      if (intentos === 1) {
+        await g.asegurarCertificado({ id: 's1', dominio: 'a.test', alias: [] });
+        return false;
+      }
+      return true;
+    });
+    expect(r).toMatchObject({ ok: false, motivo: 'error' });
+    expect(foto()).toEqual(antes);
+    expect(quitados).toHaveLength(1);
+    expect(quitados[0]).not.toBe(huellaVieja);
+    expect(intentos).toBe(2);
+    sinTemporales();
+  });
+
+  it('si no se puede quitar la vieja del almacén, queda la nueva y solo se avisa', async () => {
+    const { antes } = await preparar();
+    const g = new GestorHttps({
       rutas,
       plataforma: {
         instalarCertificadoUsuario: async () => ({ ok: true }),
@@ -361,11 +420,9 @@ describe('GestorHttps.regenerarCA (Doctor)', () => {
         descendientes: async () => new Map(),
       },
     });
-    expect(await conFallo.regenerarCA(path.join(base, 'respaldos'))).toMatchObject({
-      ok: false,
-      motivo: 'cancelado',
-    });
-    expect(readFileSync(rutas.caCrt(), 'utf8')).toBe(vieja);
+    const r = await g.regenerarCA(respaldo(), async () => true);
+    expect(r).toEqual({ ok: true, avisoCaVieja: true });
+    expect(readFileSync(rutas.caCrt(), 'utf8')).not.toBe(antes['crt']);
   });
 });
 

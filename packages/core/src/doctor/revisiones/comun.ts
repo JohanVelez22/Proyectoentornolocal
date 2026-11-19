@@ -1,6 +1,5 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import { esErrorWolf } from '../../errores';
+import { copiaConFecha as copiar } from '../../herramientas/copiaConFecha';
 import type { RangoPuertos } from '../../plataforma/tipos';
 import type { DepsDoctor, ResultadoReparacion } from '../tipos';
 
@@ -86,15 +85,17 @@ export async function copiaConFecha(
   prefijo: string,
   contenido: string | Buffer,
 ): Promise<string> {
-  await mkdir(d.carpetaRespaldos, { recursive: true });
-  const fecha = (d.ahora?.() ?? new Date()).toISOString().replace(/[:.]/g, '-');
-  for (let n = 0; ; n++) {
-    const ruta = path.join(d.carpetaRespaldos, `${prefijo}-${fecha}${n ? `-${n}` : ''}.txt`);
-    try {
-      await writeFile(ruta, contenido, { flag: 'wx' });
-      return ruta;
-    } catch (e) {
-      if ((e as { code?: string }).code !== 'EEXIST' || n > 100) throw e;
-    }
-  }
+  return copiar(d.carpetaRespaldos, prefijo, contenido, d.ahora?.());
 }
+
+/**
+ * ¿Sigue ocupado el puerto por un programa ajeno? Se consulta justo antes de actuar: si quedó
+ * libre o ahora es de WolfCore Dev, la reparación ya no hace falta.
+ */
+export async function sigueOcupado(d: DepsDoctor, puerto: number): Promise<boolean> {
+  const dueno = (await d.plataforma.duenosDePuertos([puerto])).get(puerto);
+  if (!dueno) return false;
+  return !(await pidsPropios(d)).has(dueno.pid);
+}
+
+export const YA_RESUELTO: ResultadoReparacion = { ok: true, codigo: 'doctor.ya_resuelto' };

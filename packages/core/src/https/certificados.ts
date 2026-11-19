@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -7,7 +8,7 @@ import type { Rutas } from '../rutas';
 import { emitirCertificado, generarCA, huellaSha1, type ParCertificado } from './ca';
 
 export type ResultadoCA =
-  { ok: true } | { ok: false; motivo: 'cancelado' | 'error'; mensaje: string };
+  { ok: true; avisoCaVieja?: true } | { ok: false; motivo: 'cancelado' | 'error'; mensaje: string };
 
 /** Estado completo de HTTPS para la interfaz: autoridad, puerto y quién lo ocupa. */
 export interface EstadoHttps {
@@ -125,30 +126,91 @@ export class GestorHttps {
   }
 
   /**
-   * Regenera la CA (Doctor, CA vencida o por vencer). Primero copia la CA y los certificados a
-   * `carpetaRespaldo/ca-<fecha>`; luego quita la CA vieja del almacén del usuario (si eso falla
-   * o se cancela, no se toca nada), borra los archivos y crea y confía una nueva. Los
-   * certificados de los sitios se vuelven a emitir al aplicar.
+   * Regenera la CA (Doctor, CA vencida o por vencer) sin dejar nunca al usuario sin una CA de
+   * confianza:
+   * 1. copia con fecha de la CA y los certificados en `carpetaRespaldo/ca-<fecha>`;
+   * 2. crea la CA nueva en una carpeta temporal y la CONFÍA primero (las dos conviven en el
+   *    almacén). Si se cancela o falla, no se toca nada más;
+   * 3. reemplaza los archivos de la CA (guardando los viejos y una copia de los certificados) y
+   *    llama a `aplicar`, que vuelve a emitir los certificados de los sitios y recarga Nginx;
+   * 4. si `aplicar` falla, vuelve atrás (CA y certificados viejos, `aplicar` otra vez) y quita
+   *    la nueva del almacén;
+   * 5. si salió bien, quita la vieja del almacén; si eso falla, solo se avisa (`avisoCaVieja`).
    */
-  async regenerarCA(carpetaRespaldo: string): Promise<ResultadoCA> {
+  async regenerarCA(
+    carpetaRespaldo: string,
+    aplicar: () => Promise<boolean>,
+  ): Promise<ResultadoCA> {
     if (!this.caCreada()) return this.instalarCA();
     const carpetaCa = path.dirname(this.d.rutas.caCrt());
     const carpetaCerts = path.dirname(this.d.rutas.certCrt('x'));
-    const destino = path.join(
-      carpetaRespaldo,
-      `ca-${this.ahora.toISOString().replace(/[:.]/g, '-')}`,
-    );
+    const fecha = this.ahora.toISOString().replace(/[:.]/g, '-');
+    const destino = path.join(carpetaRespaldo, `ca-${fecha}`);
     await mkdir(destino, { recursive: true });
-    await cp(carpetaCa, path.join(destino, 'ca'), { recursive: true, errorOnExist: true });
-    if (existsSync(carpetaCerts)) {
-      await cp(carpetaCerts, path.join(destino, 'certs'), { recursive: true, errorOnExist: true });
+    const sinPisar = { recursive: true, force: false, errorOnExist: true } as const;
+    await cp(carpetaCa, path.join(destino, 'ca'), {
+      ...sinPisar,
+      filter: (o) => !path.basename(o).startsWith('.'),
+    });
+    if (existsSync(carpetaCerts)) await cp(carpetaCerts, path.join(destino, 'certs'), sinPisar);
+
+    const vieja = await this.leerCA();
+    const huellaVieja = huellaSha1(vieja.certPem);
+    const id = randomUUID().slice(0, 8);
+    const tmp = path.join(carpetaCa, `.nueva-${id}`);
+    const certsViejos = path.join(carpetaCa, `.certs-${id}`);
+    try {
+      const nueva = generarCA(this.ahora);
+      await mkdir(tmp, { recursive: true });
+      const tmpCrt = path.join(tmp, path.basename(this.d.rutas.caCrt()));
+      await writeFile(path.join(tmp, path.basename(this.d.rutas.caKey())), nueva.keyPem, {
+        encoding: 'utf8',
+        mode: 0o600,
+      });
+      await writeFile(tmpCrt, nueva.certPem, 'utf8');
+      const confiada = this.resultado(
+        await this.d.plataforma.instalarCertificadoUsuario(tmpCrt),
+        'instalar',
+      );
+      if (!confiada.ok) return confiada;
+
+      const tieneCerts = existsSync(carpetaCerts);
+      if (tieneCerts) await cp(carpetaCerts, certsViejos, sinPisar);
+      const volverAtras = async (): Promise<void> => {
+        await writeFile(this.d.rutas.caKey(), vieja.keyPem, { encoding: 'utf8', mode: 0o600 });
+        await writeFile(this.d.rutas.caCrt(), vieja.certPem, 'utf8');
+        await rm(carpetaCerts, { recursive: true, force: true });
+        if (tieneCerts) await cp(certsViejos, carpetaCerts, { recursive: true });
+        await aplicar().catch(() => false);
+        await this.d.plataforma
+          .quitarCertificadoUsuario(huellaSha1(nueva.certPem))
+          .catch(() => undefined);
+      };
+      let ok = false;
+      try {
+        await writeFile(this.d.rutas.caKey(), nueva.keyPem, { encoding: 'utf8', mode: 0o600 });
+        await writeFile(this.d.rutas.caCrt(), nueva.certPem, 'utf8');
+        ok = await aplicar();
+      } catch {
+        ok = false;
+      }
+      if (!ok) {
+        await volverAtras();
+        return {
+          ok: false,
+          motivo: 'error',
+          mensaje:
+            'No se pudo aplicar la autoridad de certificados nueva; se dejó todo como estaba.',
+        };
+      }
+      const quitada = await this.d.plataforma
+        .quitarCertificadoUsuario(huellaVieja)
+        .catch((): ResultadoEscritura => ({ ok: false, motivo: 'error' }));
+      return quitada.ok ? { ok: true } : { ok: true, avisoCaVieja: true };
+    } finally {
+      await rm(tmp, { recursive: true, force: true }).catch(() => undefined);
+      await rm(certsViejos, { recursive: true, force: true }).catch(() => undefined);
     }
-    const quitada = await this.quitarCA();
-    if (!quitada.ok) return quitada;
-    await rm(this.d.rutas.caCrt(), { force: true });
-    await rm(this.d.rutas.caKey(), { force: true });
-    await rm(carpetaCerts, { recursive: true, force: true });
-    return this.instalarCA();
   }
 
   /** Programa ajeno que ocupa el puerto HTTPS, o null si está libre o lo usa nuestro nginx. */

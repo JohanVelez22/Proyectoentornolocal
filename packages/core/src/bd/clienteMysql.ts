@@ -54,10 +54,6 @@ function traducir(e: unknown, accion: string): Error {
 }
 
 /**
- * El usuario ya existe y la clave pedida no es la suya: no se cambia (otro proyecto puede usarla).
- * Para cambiarla hay que pedirlo a propósito (`cambiarClave`).
- */
-/**
  * ¿Es una línea de `SHOW GRANTS` con privilegios globales? `GRANT USAGE ON *.*` (sin permisos) no
  * cuenta; cualquier otro permiso `ON *.*` (estático o dinámico, como SYSTEM_USER) o un PROXY sí.
  */
@@ -86,6 +82,10 @@ export const errorRolSinLogin = (usuario: string): ErrorWolf =>
     { usuario },
   );
 
+/**
+ * El usuario ya existe y la clave pedida no es la suya: no se cambia (otro proyecto puede usarla).
+ * Para cambiarla hay que pedirlo a propósito (`cambiarClave`).
+ */
 export const errorClaveDistinta = (usuario: string): ErrorWolf =>
   new ErrorWolf(
     'bd.usuario_clave_distinta',

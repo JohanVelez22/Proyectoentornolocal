@@ -191,6 +191,90 @@ describe('Doctor: puertos', () => {
   });
 });
 
+describe('Doctor: ronda de arreglos (IIS, ya resuelto, sin repetir)', () => {
+  it('IIS ofrece también cambiar el puerto propio como alternativa', async () => {
+    plat.puertos.set(80, { pid: 4, nombre: 'System' });
+    plat.servicios.set('W3SVC', 'corriendo');
+    const d = new Doctor(deps());
+    const [h] = await solo(d, ['puertos']);
+    expect(h!.alternativa).toMatchObject({ id: 'cambiar-puerto', requiereAdmin: false });
+    expect(h!.datos['alternativo']).toBe(8080);
+    expect(await d.reparar(h!.id, true, 'cambiar-puerto')).toEqual({ ok: true });
+    expect(cambios).toEqual([['nginx', 8080]]);
+    expect(plat.serviciosDetenidos).toEqual([]);
+    expect(await d.reparar(h!.id, true, 'otra-cosa')).toEqual({
+      ok: false,
+      codigo: 'doctor.solo_informa',
+    });
+  });
+
+  it('si el puerto ya quedó libre antes de reparar: "ya resuelto" y no se actúa', async () => {
+    plat.puertos.set(80, { pid: 4, nombre: 'System' });
+    plat.servicios.set('W3SVC', 'corriendo');
+    plat.puertos.set(3306, { pid: 7100, nombre: 'mysqld.exe' });
+    const d = new Doctor(deps());
+    const otro = new Doctor(deps());
+    const [iis] = await solo(d, ['puertos']);
+    const mysql = (await solo(otro, ['puertos'])).find((h) => h.datos['puerto'] === 3306)!;
+    plat.puertos.clear();
+    expect(await d.reparar(iis!.id, true)).toEqual({ ok: true, codigo: 'doctor.ya_resuelto' });
+    expect(await otro.reparar(mysql.id, true)).toEqual({
+      ok: true,
+      codigo: 'doctor.ya_resuelto',
+    });
+    // Al volver a revisar, el área queda limpia.
+    expect(d.ultimo()).toEqual([]);
+    expect(plat.serviciosDetenidos).toEqual([]);
+    expect(cambios).toEqual([]);
+  });
+
+  it('si ahora el puerto es del propio WolfCore Dev, también está resuelto', async () => {
+    plat.puertos.set(3306, { pid: 7100, nombre: 'mysqld.exe' });
+    const d = new Doctor(deps());
+    const [h] = await solo(d, ['puertos']);
+    plat.puertos.set(3306, { pid: 100, nombre: 'nginx.exe' });
+    expect(await d.reparar(h!.id, true)).toEqual({ ok: true, codigo: 'doctor.ya_resuelto' });
+    expect(cambios).toEqual([]);
+  });
+
+  it('dos reparar seguidos del mismo hallazgo aplican una sola vez', async () => {
+    plat.vcRedist = false;
+    let soltar: () => void = () => undefined;
+    const original = plat.instalarVcRedist.bind(plat);
+    plat.instalarVcRedist = async () => {
+      await new Promise<void>((r) => (soltar = r));
+      return original();
+    };
+    const d = new Doctor(deps());
+    const [h] = await solo(d, ['vcredist']);
+    const a = d.reparar(h!.id, true);
+    const b = d.reparar(h!.id, true);
+    await new Promise((r) => setTimeout(r, 10));
+    soltar();
+    expect(await a).toEqual({ ok: true });
+    expect(await b).toEqual({ ok: true });
+    expect(plat.vcRedistInstalaciones).toBe(1);
+  });
+
+  it('regenerar la CA con la vieja sin quitar del almacén: ok con aviso', async () => {
+    vencimientos = [{ id: 'ca', dias: 3 }];
+    const d = new Doctor(
+      deps({
+        https: {
+          vencimientos: async () => vencimientos,
+          regenerarCertificados: async () => ({ ok: true }),
+          regenerarCA: async () => ({ ok: true, aviso: 'doctor.ca_vieja_sin_quitar' }),
+        },
+      }),
+    );
+    const [h] = await solo(d, ['ca']);
+    expect(await d.reparar(h!.id, true)).toEqual({
+      ok: true,
+      aviso: 'doctor.ca_vieja_sin_quitar',
+    });
+  });
+});
+
 describe('Doctor: rangos reservados', () => {
   it('sano y dañado: puerto propio dentro de un rango de Hyper-V/WSL', async () => {
     expect(await solo(new Doctor(deps()), ['rangos-reservados'])).toEqual([]);

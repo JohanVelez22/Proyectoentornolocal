@@ -171,6 +171,9 @@ export const es = {
       'doctor.reparacion_fallida': 'No se pudo aplicar la reparación.',
       'doctor.reparacion_cancelada': 'Se canceló el permiso de administrador: no se cambió nada.',
       'doctor.reparacion_denegada': 'Windows o un antivirus negó el acceso: no se cambió nada.',
+      'doctor.ya_resuelto': 'El problema ya no estaba: no hizo falta cambiar nada.',
+      'doctor.ca_vieja_sin_quitar':
+        'La autoridad de certificados nueva ya está en uso, pero no se pudo quitar la anterior del almacén de Windows. Puede quitarla desde la sección HTTPS.',
       'doctor.sin_puerto_libre': 'No se encontró un puerto libre para mover el servicio.',
     },
   },
