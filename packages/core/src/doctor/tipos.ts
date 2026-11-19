@@ -99,10 +99,15 @@ export interface DepsDoctor {
   /** Confianza de la CA fuera del almacén de Windows (Firefox). Sin ella, no se revisa. */
   confianza?: {
     caCreada(): boolean;
-    firefox(): Promise<{ perfil: string; activo: boolean; abierto: boolean }[]>;
-    firefoxActivar(
-      activar: boolean,
-    ): Promise<{ perfil: string; ok: boolean; codigo?: 'firefox.abierto' | 'firefox.error' }[]>;
+    firefox(): Promise<{ perfil: string; activo: boolean; abierto: boolean; fuera: boolean }[]>;
+    /** El Doctor nunca pasa `incluirFuera`: esos perfiles piden una confirmación aparte. */
+    firefoxActivar(activar: boolean): Promise<
+      {
+        perfil: string;
+        ok: boolean;
+        codigo?: 'firefox.abierto' | 'firefox.error' | 'firefox.fuera';
+      }[]
+    >;
   };
   avisos?: { publicar(a: EntradaAviso): unknown };
   /** Archivo con el PATH original (por defecto, `etc/path-usuario.respaldo.txt`). */

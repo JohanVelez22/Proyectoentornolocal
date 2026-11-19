@@ -3,6 +3,7 @@ import { Pulse, ShieldCheckmark } from '@vicons/ionicons5';
 import {
   NAlert,
   NButton,
+  NCheckbox,
   NEmpty,
   NIcon,
   NModal,
@@ -77,21 +78,39 @@ const textoConfirmacion = computed(() => {
   return c.activar ? tc.firefox.confirmarActivar : tc.firefox.confirmarQuitar;
 });
 
+/** Casilla aparte para los perfiles fuera de la carpeta de Firefox (siempre empieza apagada). */
+const incluirFuera = ref(false);
+const perfilesFuera = computed(
+  () => conf.value?.firefox.filter((p) => p.fuera).map((p) => p.perfil) ?? [],
+);
+
+function pedirConfianza(c: Confirmacion): void {
+  incluirFuera.value = false;
+  confirmacion.value = c;
+}
+
 function confirmarConfianza(): void {
   const c = confirmacion.value;
   if (!c) return;
   confirmacion.value = null;
   if (c.tipo === 'node') {
-    void ejecutar('node', () => doctor.cambiarNode(c.activar, true));
+    void ejecutar('node', async () => {
+      await doctor.cambiarNode(c.activar, true);
+      const aviso = doctor.confianza?.aviso;
+      if (aviso) message.warning(traducirError({ codigo: aviso }), { duration: 10000 });
+    });
     return;
   }
+  const fuera = incluirFuera.value ? (true as const) : undefined;
   void ejecutar('firefox', async () => {
-    const r = await doctor.cambiarFirefox(c.activar, true);
+    const r = await doctor.cambiarFirefox(c.activar, true, fuera);
     const ok = r.filter((x) => x.ok).length;
     const abiertos = r.filter((x) => x.codigo === 'firefox.abierto').length;
-    const errores = r.length - ok - abiertos;
+    const saltados = r.filter((x) => x.codigo === 'firefox.fuera').length;
+    const errores = r.length - ok - abiertos - saltados;
     if (ok) message.success(tc.firefox.resultadoOk(ok));
     if (abiertos) message.warning(tc.firefox.resultadoAbiertos(abiertos), { duration: 8000 });
+    if (saltados) message.info(tc.firefox.resultadoFuera(saltados), { duration: 8000 });
     if (errores) message.error(tc.firefox.resultadoError(errores));
   });
 }
@@ -151,7 +170,7 @@ const firefoxActivos = computed(() => conf.value?.firefox.some((p) => p.activo) 
               :value="conf.node.global"
               :loading="ocupado('node')"
               :disabled="conf.node.ajena"
-              @update:value="(v: boolean) => (confirmacion = { tipo: 'node', activar: v })"
+              @update:value="(v: boolean) => pedirConfianza({ tipo: 'node', activar: v })"
             />
             {{ tc.node.global }}
           </label>
@@ -172,6 +191,9 @@ const firefoxActivos = computed(() => conf.value?.firefox.some((p) => p.activo) 
               <NTag v-if="p.abierto" size="small" type="warning" :bordered="false">
                 {{ tc.firefox.abierto }}
               </NTag>
+              <NTag v-if="p.fuera" size="small" type="info" :bordered="false">
+                {{ tc.firefox.fuera }}
+              </NTag>
             </li>
           </ul>
           <NSpace v-if="conf.firefox.length" size="small">
@@ -180,7 +202,7 @@ const firefoxActivos = computed(() => conf.value?.firefox.some((p) => p.activo) 
               size="small"
               type="primary"
               :loading="ocupado('firefox')"
-              @click="confirmacion = { tipo: 'firefox', activar: true }"
+              @click="pedirConfianza({ tipo: 'firefox', activar: true })"
             >
               {{ tc.firefox.activar }}
             </NButton>
@@ -189,7 +211,7 @@ const firefoxActivos = computed(() => conf.value?.firefox.some((p) => p.activo) 
               size="small"
               secondary
               :loading="ocupado('firefox')"
-              @click="confirmacion = { tipo: 'firefox', activar: false }"
+              @click="pedirConfianza({ tipo: 'firefox', activar: false })"
             >
               {{ tc.firefox.quitar }}
             </NButton>
@@ -232,6 +254,10 @@ const firefoxActivos = computed(() => conf.value?.firefox.some((p) => p.activo) 
       @update:show="(v: boolean) => !v && (confirmacion = null)"
     >
       <p>{{ textoConfirmacion }}</p>
+      <div v-if="confirmacion?.tipo === 'firefox' && perfilesFuera.length" class="fuera">
+        <p>{{ tc.firefox.avisoFuera(perfilesFuera.join(', ')) }}</p>
+        <NCheckbox v-model:checked="incluirFuera">{{ tc.firefox.incluirFuera }}</NCheckbox>
+      </div>
       <template #footer>
         <NSpace justify="end">
           <NButton @click="confirmacion = null">{{ tc.cancelar }}</NButton>
@@ -301,6 +327,15 @@ h3 {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.fuera {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(128, 128, 128, 0.1);
+}
+.fuera p {
+  margin: 0 0 6px;
 }
 .hallazgo-dialogo {
   font-weight: 600;

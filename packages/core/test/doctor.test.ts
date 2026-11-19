@@ -587,19 +587,24 @@ describe('Doctor: revisar y reparar', () => {
 });
 
 describe('Doctor: confianza de la CA en Firefox', () => {
-  const perfiles = (lista: { perfil: string; activo: boolean; abierto: boolean }[]) => {
-    const activados: boolean[] = [];
+  const perfiles = (
+    entrada: { perfil: string; activo: boolean; abierto: boolean; fuera?: boolean }[],
+  ) => {
+    const lista = entrada.map((p) => ({ fuera: false, ...p }));
+    const activados: { activar: boolean; incluirFuera?: boolean }[] = [];
     return {
       activados,
       confianza: {
         caCreada: () => true,
         firefox: async () => lista,
-        firefoxActivar: async (a: boolean) => {
-          activados.push(a);
+        firefoxActivar: async (a: boolean, o?: { incluirFuera?: boolean }) => {
+          activados.push({ activar: a, ...(o?.incluirFuera ? { incluirFuera: true } : {}) });
           return lista.map((p) =>
             p.abierto
               ? { perfil: p.perfil, ok: false, codigo: 'firefox.abierto' as const }
-              : { perfil: p.perfil, ok: true },
+              : p.fuera && !o?.incluirFuera
+                ? { perfil: p.perfil, ok: false, codigo: 'firefox.fuera' as const }
+                : { perfil: p.perfil, ok: true },
           );
         },
       },
@@ -635,7 +640,7 @@ describe('Doctor: confianza de la CA en Firefox', () => {
     });
     expect(h!.evidencia).toContain('a.default');
     expect(await d.reparar(h!.id, true)).toEqual({ ok: true });
-    expect(p.activados).toEqual([true]);
+    expect(p.activados).toEqual([{ activar: true }]);
   });
 
   it('con Firefox abierto la reparación falla con firefox.abierto', async () => {
@@ -643,5 +648,17 @@ describe('Doctor: confianza de la CA en Firefox', () => {
     const d = new Doctor(deps({ confianza: p.confianza }));
     const [h] = await solo(d, ['confianza']);
     expect(await d.reparar(h!.id, true)).toEqual({ ok: false, codigo: 'firefox.abierto' });
+  });
+
+  it('un perfil fuera de la carpeta de Firefox se marca y la reparación no lo toca', async () => {
+    const p = perfiles([
+      { perfil: 'a', activo: false, abierto: false },
+      { perfil: 'lejos', activo: false, abierto: false, fuera: true },
+    ]);
+    const d = new Doctor(deps({ confianza: p.confianza }));
+    const [h] = await solo(d, ['confianza']);
+    expect(h!.evidencia).toMatch(/lejos \(fuera/);
+    expect(await d.reparar(h!.id, true)).toEqual({ ok: false, codigo: 'firefox.fuera' });
+    expect(p.activados).toEqual([{ activar: true }]);
   });
 });

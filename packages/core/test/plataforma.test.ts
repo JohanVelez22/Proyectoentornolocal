@@ -162,9 +162,55 @@ describe('fixtures de consultas de Windows', () => {
       'StartWithLastProfile=1',
     ].join('\r\n');
     expect(interpretarProfilesIni(ini, 'C:\\R\\Mozilla\\Firefox')).toEqual([
-      'C:\\R\\Mozilla\\Firefox\\Profiles\\xyz.default',
-      'D:\\Perfiles\\ff',
+      { ruta: 'C:\\R\\Mozilla\\Firefox\\Profiles\\xyz.default', fuera: false },
+      { ruta: 'D:\\Perfiles\\ff', fuera: true },
     ]);
+  });
+
+  it('interpretarProfilesIni: rechaza "..", rutas de red y absolutas que no son de una unidad local', () => {
+    const perfil = (relativa: boolean, ruta: string): string =>
+      `[Profile0]\r\nIsRelative=${relativa ? 1 : 0}\r\nPath=${ruta}\r\n`;
+    const base = 'C:\\R\\Mozilla\\Firefox';
+    for (const malo of [
+      perfil(true, 'Profiles/../../../Windows'),
+      perfil(true, '..\\otro'),
+      perfil(false, 'C:\\Perfiles\\..\\Windows'),
+      perfil(false, '\\\\servidor\\compartido\\ff'),
+      perfil(false, '\\\\?\\UNC\\servidor\\ff'),
+      perfil(false, '\\\\.\\C:\\ff'),
+      perfil(false, '\\\\?\\C:\\ff'),
+      perfil(false, '/home/ana/ff'),
+      perfil(false, 'Perfiles\\ff'),
+      perfil(true, 'C:\\absoluta'),
+    ]) {
+      expect(interpretarProfilesIni(malo, base), malo).toEqual([]);
+    }
+    // Una absoluta dentro de la carpeta de Firefox no cuenta como fuera.
+    expect(
+      interpretarProfilesIni(perfil(false, 'C:\\R\\Mozilla\\Firefox\\Profiles\\x'), base),
+    ).toEqual([{ ruta: 'C:\\R\\Mozilla\\Firefox\\Profiles\\x', fuera: false }]);
+  });
+
+  it('leerVariableUsuario lee HKCU\\Environment (sin expandir) y decodifica Base64', async () => {
+    const scripts: string[] = [];
+    let salida = Buffer.from('C:\\José\\ca.crt', 'utf16le').toString('base64');
+    const p = new PlataformaWindows(async (_c, args) => {
+      scripts.push(script(args));
+      return { codigo: 0, stdout: `${salida}\r\n`, stderr: '' };
+    });
+    expect(await p.leerVariableUsuario('NODE_EXTRA_CA_CERTS')).toBe('C:\\José\\ca.crt');
+    expect(scripts[0]).toContain("OpenSubKey('Environment')");
+    expect(scripts[0]).toContain('DoNotExpandEnvironmentNames');
+    salida = '';
+    expect(await p.leerVariableUsuario('NODE_EXTRA_CA_CERTS')).toBeNull();
+    await expect(p.leerVariableUsuario('A B')).rejects.toThrow(/no válido/);
+    await expect(
+      new PlataformaWindows(async () => ({
+        codigo: 1,
+        stdout: '',
+        stderr: 'x',
+      })).leerVariableUsuario('X'),
+    ).rejects.toThrow();
   });
 });
 
@@ -239,7 +285,9 @@ describe('PlataformaWindows con un ejecutor falso', () => {
         path.join(dir, 'profiles.ini'),
         '[Profile0]\r\nIsRelative=1\r\nPath=Profiles/a.default\r\n',
       );
-      expect(await p.perfilesFirefox()).toEqual([path.win32.join(dir, 'Profiles', 'a.default')]);
+      expect(await p.perfilesFirefox()).toEqual([
+        { ruta: path.win32.join(dir, 'Profiles', 'a.default'), fuera: false },
+      ]);
     },
   );
 

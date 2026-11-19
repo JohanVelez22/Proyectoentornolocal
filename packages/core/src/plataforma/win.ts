@@ -15,6 +15,7 @@ import {
   NOMBRE_VARIABLE,
   SCRIPT_ANTIVIRUS,
   SCRIPT_RAICES,
+  scriptLeerVariableUsuario,
   SCRIPT_VCREDIST,
   scriptServicios,
   scriptVariableUsuario,
@@ -48,6 +49,7 @@ import type {
   MuestraPlataforma,
   OpcionesEscrituraAdmin,
   OpcionesAbrirTerminal,
+  PerfilFirefoxSistema,
   PlataformaCompleta,
   RangoPuertos,
   ResultadoEscritura,
@@ -340,6 +342,24 @@ export class PlataformaWindows implements PlataformaCompleta {
     return new PathUsuarioWindows({ exec: this.ejecutar, ...o });
   }
 
+  async leerVariableUsuario(nombre: string): Promise<string | null> {
+    if (!NOMBRE_VARIABLE.test(nombre)) throw new Error(`Nombre de variable no válido: ${nombre}`);
+    const r = await this.ejecutar(
+      'powershell',
+      codificarPowerShell(scriptLeerVariableUsuario(nombre)),
+      {
+        timeoutMs: 15_000,
+      },
+    );
+    if (r.codigo !== 0) {
+      throw new Error(`No se pudo leer la variable del usuario: ${r.stderr.trim() || r.codigo}`);
+    }
+    const b64 = r.stdout.trim();
+    if (!b64) return null;
+    const valor = Buffer.from(b64, 'base64').toString('utf16le');
+    return valor === '' ? null : valor;
+  }
+
   async variableUsuario(nombre: string, valor: string | null): Promise<ResultadoEscritura> {
     if (!NOMBRE_VARIABLE.test(nombre) || nombre.toLowerCase() === 'path') {
       return { ok: false, motivo: 'error', detalle: `Nombre de variable no válido: ${nombre}` };
@@ -561,7 +581,7 @@ export class PlataformaWindows implements PlataformaCompleta {
     }
   }
 
-  async perfilesFirefox(): Promise<string[]> {
+  async perfilesFirefox(): Promise<PerfilFirefoxSistema[]> {
     const appdata =
       this.entorno.APPDATA ?? path.win32.join(this.carpetaInicio(), 'AppData', 'Roaming');
     const base = path.win32.join(appdata, 'Mozilla', 'Firefox');

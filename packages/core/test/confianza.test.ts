@@ -110,6 +110,54 @@ describe('ConfianzaCa: bundle de Python', () => {
     });
   });
 
+  it('nuestra CA se reconoce por la huella del DER, no por el texto PEM', async () => {
+    ca = await crearCa();
+    // Mismo certificado con otro corte de líneas (76 columnas) y CRLF.
+    const cuerpo = n(ca)
+      .replace(/-----(BEGIN|END) CERTIFICATE-----/g, '')
+      .replace(/\s+/g, '');
+    const recortada = `-----BEGIN CERTIFICATE-----\r\n${cuerpo.match(/.{1,76}/g)!.join('\r\n')}\r\n-----END CERTIFICATE-----\r\n`;
+    const solo = await proyecto({ venv: true, certifi: recortada });
+    await expect(confianza().bundlePython(path.join(solo, '.venv'))).rejects.toMatchObject({
+      codigo: 'confianza.sin_raices',
+    });
+    await writeFile(
+      path.join(solo, '.venv', 'Lib', 'site-packages', 'certifi', 'cacert.pem'),
+      recortada + raizAjena,
+    );
+    const texto = await readFile(await confianza().bundlePython(path.join(solo, '.venv')), 'utf8');
+    expect(bloques(texto)).toHaveLength(2);
+  });
+
+  it('el bundle del sistema se renueva a los 7 días aunque la CA no cambie', async () => {
+    ca = await crearCa();
+    let ahora = new Date('2026-11-01T00:00:00Z');
+    const c = new ConfianzaCa({
+      rutas,
+      plataforma: plat,
+      carpetaRespaldos: path.join(base, 'etc', 'respaldos'),
+      entorno: {},
+      ahora: () => ahora,
+    });
+    await c.bundlePython(null);
+    ahora = new Date('2026-11-07T00:00:00Z');
+    await c.bundlePython(null);
+    expect(plat.raicesLeidas).toBe(1);
+    ahora = new Date('2026-11-08T12:00:00Z');
+    await c.bundlePython(null);
+    expect(plat.raicesLeidas).toBe(2);
+  });
+
+  it('dos escrituras simultáneas del mismo bundle no chocan (temporal con sufijo aleatorio)', async () => {
+    ca = await crearCa();
+    const [a, b] = await Promise.all([
+      confianza().bundlePython(null),
+      confianza().bundlePython(null),
+    ]);
+    expect(a).toBe(b);
+    expect((await readdir(path.dirname(a))).filter((x) => x.endsWith('.tmp'))).toEqual([]);
+  });
+
   it('se regenera si cambia la CA (certifi)', async () => {
     ca = await crearCa();
     const dir = await proyecto({ venv: true, certifi: generarCA().certPem });
@@ -182,21 +230,50 @@ describe('ConfianzaCa: Node como variable del usuario', () => {
     expect(plat.variables.has('NODE_EXTRA_CA_CERTS')).toBe(false);
   });
 
-  it('sin CA, o con una variable ajena ya fijada, no toca nada', async () => {
+  it('sin CA, o con una variable ajena en el registro del usuario, no toca nada', async () => {
     await expect(confianza().nodeGlobal(true)).rejects.toMatchObject({
       codigo: 'confianza.sin_ca',
     });
     ca = await crearCa();
-    await expect(
-      confianza({ NODE_EXTRA_CA_CERTS: 'C:\\corp\\ca.pem' }).nodeGlobal(true),
-    ).rejects.toMatchObject({ codigo: 'confianza.node_variable_ajena' });
-    expect(plat.variables.size).toBe(0);
+    // La variable ajena está en el registro aunque este proceso no la heredó.
+    plat.variables.set('NODE_EXTRA_CA_CERTS', 'C:\\corp\\ca.pem');
+    await expect(confianza({}).nodeGlobal(true)).rejects.toMatchObject({
+      codigo: 'confianza.node_variable_ajena',
+    });
+    expect(plat.variables.get('NODE_EXTRA_CA_CERTS')).toBe('C:\\corp\\ca.pem');
+    const e = await confianza({}).estado();
+    expect(e.node).toMatchObject({ global: false, ajena: true });
+  });
+
+  it('activar con la variable ya igual a la CA vale (no es ajena)', async () => {
+    ca = await crearCa();
+    plat.variables.set('NODE_EXTRA_CA_CERTS', rutas.caCrt());
+    expect((await confianza().nodeGlobal(true)).node.global).toBe(true);
   });
 
   it('desactivar sin haberla fijado nosotros no borra la del usuario', async () => {
     plat.variables.set('NODE_EXTRA_CA_CERTS', 'C:\\corp\\ca.pem');
     await confianza().nodeGlobal(false);
     expect(plat.variables.get('NODE_EXTRA_CA_CERTS')).toBe('C:\\corp\\ca.pem');
+  });
+
+  it('si el usuario la cambió después de activar, desactivar no la borra y avisa', async () => {
+    ca = await crearCa();
+    await confianza().nodeGlobal(true);
+    plat.variables.set('NODE_EXTRA_CA_CERTS', 'C:\\corp\\otra.pem');
+    const r = await confianza().nodeGlobal(false);
+    expect(plat.variables.get('NODE_EXTRA_CA_CERTS')).toBe('C:\\corp\\otra.pem');
+    expect(r.aviso).toBe('confianza.node_variable_cambiada');
+    expect(r.node.global).toBe(false);
+    // Tampoco cuenta como "nuestra" para el estado (se decide por el registro, no por la marca).
+    expect((await confianza().estado()).node).toMatchObject({ global: false, ajena: true });
+  });
+
+  it('el estado se lee del registro: borrada a mano, deja de figurar como activa', async () => {
+    ca = await crearCa();
+    await confianza().nodeGlobal(true);
+    plat.variables.delete('NODE_EXTRA_CA_CERTS');
+    expect((await confianza().estado()).node.global).toBe(false);
   });
 });
 
@@ -274,10 +351,58 @@ describe('Firefox: user.js', () => {
     expect(await readFile(path.join(a!, 'user.js'), 'utf8')).toBe(AJENO);
     const lista = await confianza().firefox();
     expect(lista).toEqual([
-      { perfil: 'a.default', activo: false, abierto: true },
-      { perfil: 'b.trabajo', activo: true, abierto: false },
+      { perfil: 'a.default', activo: false, abierto: true, fuera: false },
+      { perfil: 'b.trabajo', activo: true, abierto: false, fuera: false },
     ]);
     void b;
+  });
+
+  it('Firefox abierto justo antes de reemplazar user.js: no se reemplaza', async () => {
+    const [a] = await perfiles();
+    let consultas = 0;
+    plat.firefoxEnUso = async (p: string) => p === a && ++consultas > 1;
+    const r = await confianza().firefoxActivar(true);
+    expect(r[0]).toEqual({ perfil: 'a.default', ok: false, codigo: 'firefox.abierto' });
+    expect(await readFile(path.join(a!, 'user.js'), 'utf8')).toBe(AJENO);
+    expect((await readdir(a!)).filter((x) => x.endsWith('.tmp'))).toEqual([]);
+  });
+
+  it('Firefox 120+ ya confía por defecto, o por prefs.js (solo lectura): sin falso negativo', async () => {
+    const [a, b] = await perfiles();
+    await writeFile(
+      path.join(a!, 'compatibility.ini'),
+      '[Compatibility]\r\nLastVersion=128.0.3_20240801000000/20240801000000\r\n',
+    );
+    await writeFile(
+      path.join(b!, 'prefs.js'),
+      'user_pref("security.enterprise_roots.enabled", true);\n',
+    );
+    const lista = await confianza().firefox();
+    expect(lista.map((p) => p.activo)).toEqual([true, true]);
+    expect(await readFile(path.join(b!, 'prefs.js'), 'utf8')).toBe(
+      'user_pref("security.enterprise_roots.enabled", true);\n',
+    );
+    // Versión vieja sin nada explícito: no confía. Un false explícito en user.js gana.
+    await writeFile(path.join(a!, 'compatibility.ini'), 'LastVersion=115.9.0_2024/2024\n');
+    expect((await confianza().firefox())[0]!.activo).toBe(false);
+    await writeFile(
+      path.join(b!, 'user.js'),
+      'user_pref("security.enterprise_roots.enabled", false);\n',
+    );
+    expect((await confianza().firefox())[1]!.activo).toBe(false);
+  });
+
+  it('un perfil fuera de la carpeta de Firefox se muestra como tal y no se toca sin confirmación aparte', async () => {
+    const [a, b] = await perfiles();
+    plat.firefoxFuera.add(b!);
+    expect((await confianza().firefox()).map((p) => p.fuera)).toEqual([false, true]);
+    const r = await confianza().firefoxActivar(true);
+    expect(r[1]).toEqual({ perfil: 'b.trabajo', ok: false, codigo: 'firefox.fuera' });
+    expect((await readdir(b!)).includes('user.js')).toBe(false);
+    const r2 = await confianza().firefoxActivar(true, { incluirFuera: true });
+    expect(r2[1]).toEqual({ perfil: 'b.trabajo', ok: true });
+    expect(await readFile(path.join(b!, 'user.js'), 'utf8')).toContain(PREF_FIREFOX);
+    void a;
   });
 
   it('estado: CA, Node, Python y perfiles (solo el nombre de la carpeta, nunca la ruta)', async () => {

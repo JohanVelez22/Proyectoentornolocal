@@ -835,9 +835,11 @@ const TABLA: Record<RutaIpc, Manejador> = {
     confirmado(confirmacion);
     return n.cambiarNodeGlobal(booleano(activar, 'activar'));
   },
-  'confianza.firefox': (n, _s, activar, confirmacion) => {
+  // Los perfiles fuera de la carpeta de Firefox piden una segunda confirmación, también === true.
+  'confianza.firefox': (n, _s, activar, confirmacion, confirmacionFuera) => {
     confirmado(confirmacion);
-    return n.cambiarFirefoxConfianza(booleano(activar, 'activar'));
+    const fuera = confirmacionFuera === undefined ? false : confirmado(confirmacionFuera);
+    return n.cambiarFirefoxConfianza(booleano(activar, 'activar'), fuera);
   },
 };
 

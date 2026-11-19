@@ -185,6 +185,10 @@ export const en: Textos = {
       'confianza.variable_fallida': 'The user variable could not be changed.',
       'firefox.abierto': 'Firefox is open: close it and try again.',
       'firefox.error': 'The user.js of that profile could not be changed; it was left as it was.',
+      'firefox.fuera':
+        'Some profiles are outside the Firefox folder: turn them on from CA trust, with their own confirmation.',
+      'confianza.node_variable_cambiada':
+        'NODE_EXTRA_CA_CERTS no longer points to the WolfCore Dev authority (it was changed by hand): it was not deleted.',
     },
   },
   avisoInicio: {
@@ -1906,6 +1910,12 @@ export const en: Textos = {
         activo: 'Trusts',
         inactivo: 'Does not trust',
         abierto: 'Open',
+        fuera: 'Outside the Firefox folder',
+        avisoFuera: (lista: string) =>
+          `These profiles are outside the Firefox folder and are not touched unless you check this: ${lista}.`,
+        incluirFuera: 'Also change the profiles outside the Firefox folder',
+        resultadoFuera: (n: number) =>
+          `${plural(n, 'profile outside the Firefox folder was', 'profiles outside the Firefox folder were')} not touched.`,
         activar: 'Turn on in Firefox',
         quitar: 'Remove from Firefox',
         confirmarActivar:

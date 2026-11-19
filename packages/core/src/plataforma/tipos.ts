@@ -56,6 +56,13 @@ export interface ServicioSistema {
   estado: EstadoServicioSistema;
 }
 
+/** Perfil de Firefox de `profiles.ini`. */
+export interface PerfilFirefoxSistema {
+  ruta: string;
+  /** Ruta absoluta fuera de la carpeta de Firefox: no se toca sin una confirmación aparte. */
+  fuera: boolean;
+}
+
 /** Estado del antivirus del sistema respecto de una carpeta (solo se lee; nunca se cambia). */
 export interface EstadoAntivirus {
   /** ¿Está activa la protección en tiempo real? */
@@ -92,6 +99,11 @@ export interface CapacidadesPlataforma {
   buscarEjecutable(nombre: string, extras?: string[]): Promise<string | null>;
   /** PATH del usuario; `respaldo` es el archivo donde se guarda el valor original. */
   pathUsuario(o?: { respaldo?: string }): AccesoPathUsuario;
+  /**
+   * Valor guardado de una variable persistente del usuario (en Windows, HKCU\Environment, sin
+   * expandir), o null si no existe. Lanza si no se pudo leer.
+   */
+  leerVariableUsuario(nombre: string): Promise<string | null>;
   /** Fija (o borra con null) una variable de entorno persistente del usuario. */
   variableUsuario(nombre: string, valor: string | null): Promise<ResultadoEscritura>;
   /** Abre una terminal VISIBLE en `cwd` (la única ventana que se abre a pedido del usuario). */
@@ -105,8 +117,8 @@ export interface CapacidadesPlataforma {
   serviciosSistema(nombres: string[]): Promise<ServicioSistema[]>;
   /** ¿Está el redistribuible de Visual C++ 2015+ x64? (siempre true donde no aplica). */
   vcRedistInstalado(): Promise<boolean>;
-  /** Carpetas de los perfiles de Firefox del usuario ([] si no hay Firefox). */
-  perfilesFirefox(): Promise<string[]>;
+  /** Perfiles de Firefox del usuario ([] si no hay Firefox); sin rutas de red ni con `..`. */
+  perfilesFirefox(): Promise<PerfilFirefoxSistema[]>;
   /** ¿Firefox tiene abierto ese perfil? (su archivo de bloqueo está tomado). */
   firefoxEnUso(perfil: string): Promise<boolean>;
   /**

@@ -80,7 +80,13 @@ export async function revisarConfianza(d: DepsDoctor): Promise<HallazgoInterno[]
       codigo: 'doctor.firefox_sin_confianza',
       datos: { cantidad: faltan.length },
       evidencia: `Perfiles de Firefox sin la confianza: ${faltan
-        .map((p) => (p.abierto ? `${p.perfil} (abierto)` : p.perfil))
+        .map((p) =>
+          p.fuera
+            ? `${p.perfil} (fuera de la carpeta de Firefox)`
+            : p.abierto
+              ? `${p.perfil} (abierto)`
+              : p.perfil,
+        )
         .join(', ')}`,
       reparacion: {
         id: 'firefox-confianza',
@@ -92,6 +98,9 @@ export async function revisarConfianza(d: DepsDoctor): Promise<HallazgoInterno[]
         const r = await c.firefoxActivar(true);
         if (r.some((x) => x.codigo === 'firefox.abierto')) {
           return { ok: false, codigo: 'firefox.abierto' };
+        }
+        if (r.some((x) => x.codigo === 'firefox.fuera')) {
+          return { ok: false, codigo: 'firefox.fuera' };
         }
         return r.every((x) => x.ok)
           ? { ok: true }

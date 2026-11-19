@@ -515,8 +515,15 @@ export interface ApiEntorno {
     estado(): Promise<EstadoConfianza>;
     /** NODE_EXTRA_CA_CERTS como variable del usuario (confirmado en un diálogo). */
     nodeGlobal(activar: boolean, confirmacion: true): Promise<EstadoConfianza>;
-    /** Bloque de WolfCore Dev en user.js de cada perfil (confirmado en un diálogo). */
-    firefox(activar: boolean, confirmacion: true): Promise<ResultadoFirefox[]>;
+    /**
+     * Bloque de WolfCore Dev en user.js de cada perfil (confirmado en un diálogo). Los perfiles
+     * fuera de la carpeta de Firefox solo con `confirmacionFuera` (una casilla aparte).
+     */
+    firefox(
+      activar: boolean,
+      confirmacion: true,
+      confirmacionFuera?: true,
+    ): Promise<ResultadoFirefox[]>;
   };
   sistema: ApiSistema & ApiSistemaNucleo;
   /** Suscribe a un evento del núcleo; devuelve la función para cancelar. */

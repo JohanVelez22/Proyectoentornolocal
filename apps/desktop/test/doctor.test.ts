@@ -116,7 +116,17 @@ describe('IPC del Doctor y de la confianza', () => {
     expect(await llamar('confianza.nodeGlobal', true, true)).toMatchObject({ ok: true });
     expect(await llamar('confianza.firefox', false, true)).toMatchObject({ ok: true });
     expect(nucleo.cambiarNodeGlobal).toHaveBeenCalledWith(true);
-    expect(nucleo.cambiarFirefoxConfianza).toHaveBeenCalledWith(false);
+    expect(nucleo.cambiarFirefoxConfianza).toHaveBeenCalledWith(false, false);
+  });
+
+  it('perfiles fuera de la carpeta de Firefox: solo con una segunda confirmación === true', async () => {
+    const { nucleo, llamar } = montarIpc();
+    for (const malo of [false, 'true', 1]) {
+      expect(await llamar('confianza.firefox', true, true, malo)).toMatchObject({ ok: false });
+    }
+    expect(nucleo.cambiarFirefoxConfianza).not.toHaveBeenCalled();
+    expect(await llamar('confianza.firefox', true, true, true)).toMatchObject({ ok: true });
+    expect(nucleo.cambiarFirefoxConfianza).toHaveBeenLastCalledWith(true, true);
   });
 });
 
@@ -241,7 +251,10 @@ describe('store del Doctor', () => {
     expect(api.confianza!.nodeGlobal).toHaveBeenCalledWith(true, true);
     const r = await d.cambiarFirefox(true, true);
     expect(r).toEqual([{ perfil: 'a', ok: false, codigo: 'firefox.abierto' }]);
-    expect(api.confianza!.estado).toHaveBeenCalledTimes(2);
+    expect(api.confianza!.firefox).toHaveBeenLastCalledWith(true, true, undefined);
+    await d.cambiarFirefox(true, true, true);
+    expect(api.confianza!.firefox).toHaveBeenLastCalledWith(true, true, true);
+    expect(api.confianza!.estado).toHaveBeenCalledTimes(3);
   });
 });
 

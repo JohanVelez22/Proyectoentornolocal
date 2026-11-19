@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { RangoPuertos, ServicioSistema } from './tipos';
+import type { PerfilFirefoxSistema, RangoPuertos, ServicioSistema } from './tipos';
 
 /**
  * Rangos de `netsh interface ipv4 show excludedportrange protocol=tcp`. No depende del idioma:
@@ -68,6 +68,22 @@ export const NOMBRE_VARIABLE = /^[A-Za-z_][A-Za-z0-9_]{0,99}$/;
 
 const comillas = (t: string): string => `'${t.replace(/'/g, "''")}'`;
 
+/**
+ * Lee el valor de la variable en HKCU\Environment tal como está guardado (sin expandir `%VAR%`),
+ * en Base64 de UTF-16LE; nada si no existe.
+ */
+export function scriptLeerVariableUsuario(nombre: string): string {
+  return [
+    "$ErrorActionPreference = 'Stop'",
+    "$k = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment')",
+    'if ($null -eq $k) { exit 0 }',
+    'try {',
+    `  $v = $k.GetValue(${comillas(nombre)}, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)`,
+    '  if ($null -ne $v) { [Console]::Out.Write([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes([string]$v))) }',
+    '} finally { $k.Close() }',
+  ].join('\n');
+}
+
 /** Fija la variable con el valor que llega por la entrada (Base64 de UTF-16LE), o la borra. */
 export function scriptVariableUsuario(nombre: string, borrar: boolean): string {
   return [
@@ -85,18 +101,33 @@ export function scriptVariableUsuario(nombre: string, borrar: boolean): string {
   ].join('\n');
 }
 
-/** Carpetas de los perfiles de `profiles.ini` de Firefox (`base` es la carpeta del .ini). */
-export function interpretarProfilesIni(texto: string, base: string): string[] {
-  const res: string[] = [];
+/**
+ * Carpetas de los perfiles de `profiles.ini` de Firefox (`base` es la carpeta del .ini). Se
+ * descartan las rutas con `..`, las de red (`\\servidor`, `\\?\UNC`, `\\.\`…) y las absolutas
+ * que no son de una unidad local. `fuera` marca un perfil absoluto fuera de `base`: no se toca
+ * sin una confirmación aparte.
+ */
+export function interpretarProfilesIni(texto: string, base: string): PerfilFirefoxSistema[] {
+  const res: PerfilFirefoxSistema[] = [];
   let actual: { esPerfil: boolean; ruta?: string; relativa?: boolean } = { esPerfil: false };
+  const raiz = path.win32
+    .normalize(base)
+    .replace(/[\\/]+$/, '')
+    .toLowerCase();
   const cerrar = (): void => {
     if (!actual.esPerfil || !actual.ruta) return;
-    const partes = actual.ruta.split(/[\\/]/).filter(Boolean);
-    res.push(
-      actual.relativa === false
-        ? path.win32.normalize(actual.ruta)
-        : path.win32.join(base, ...partes),
-    );
+    const ruta = actual.ruta;
+    const partes = ruta.split(/[\\/]/).filter(Boolean);
+    if (partes.some((p) => p === '..')) return;
+    if (actual.relativa === false) {
+      // Solo una unidad local (C:\…); nada que empiece por \ o / (red, dispositivos, raíz).
+      if (!/^[A-Za-z]:[\\/]/.test(ruta)) return;
+      const normal = path.win32.normalize(ruta);
+      res.push({ ruta: normal, fuera: !normal.toLowerCase().startsWith(`${raiz}\\`) });
+      return;
+    }
+    if (/^[A-Za-z]:/.test(ruta) || /^[\\/]/.test(ruta)) return;
+    res.push({ ruta: path.win32.join(base, ...partes), fuera: false });
   };
   for (const cruda of texto.split(/\r?\n/)) {
     const linea = cruda.trim();

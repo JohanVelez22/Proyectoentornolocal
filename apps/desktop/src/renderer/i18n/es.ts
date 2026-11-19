@@ -188,6 +188,10 @@ export const es = {
       'confianza.variable_fallida': 'No se pudo cambiar la variable del usuario.',
       'firefox.abierto': 'Firefox está abierto: ciérrelo y vuelva a intentarlo.',
       'firefox.error': 'No se pudo cambiar el user.js de ese perfil; quedó como estaba.',
+      'firefox.fuera':
+        'Hay perfiles fuera de la carpeta de Firefox: actívelos desde Confianza de la CA, con su confirmación aparte.',
+      'confianza.node_variable_cambiada':
+        'NODE_EXTRA_CA_CERTS ya no apunta a la autoridad de WolfCore Dev (se cambió a mano): no se borró.',
     },
   },
   avisoInicio: {
@@ -1921,6 +1925,12 @@ export const es = {
         activo: 'Confía',
         inactivo: 'No confía',
         abierto: 'Abierto',
+        fuera: 'Fuera de la carpeta de Firefox',
+        avisoFuera: (lista: string) =>
+          `Estos perfiles están fuera de la carpeta de Firefox y no se tocan salvo que lo marque: ${lista}.`,
+        incluirFuera: 'Cambiar también los perfiles fuera de la carpeta de Firefox',
+        resultadoFuera: (n: number) =>
+          `${plural(n, 'perfil fuera de la carpeta de Firefox no se tocó', 'perfiles fuera de la carpeta de Firefox no se tocaron')}.`,
         activar: 'Activar en Firefox',
         quitar: 'Quitar de Firefox',
         confirmarActivar:

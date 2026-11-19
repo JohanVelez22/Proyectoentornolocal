@@ -1058,9 +1058,12 @@ export class Nucleo {
     return this.confianza.nodeGlobal(activar);
   }
 
-  /** Activa o quita la confianza en `user.js` de los perfiles de Firefox (ya confirmado). */
-  cambiarFirefoxConfianza(activar: boolean): Promise<ResultadoFirefox[]> {
-    return this.confianza.firefoxActivar(activar);
+  /**
+   * Activa o quita la confianza en `user.js` de los perfiles de Firefox (ya confirmado). Los
+   * perfiles fuera de la carpeta de Firefox solo con `incluirFuera` (segunda confirmación).
+   */
+  cambiarFirefoxConfianza(activar: boolean, incluirFuera = false): Promise<ResultadoFirefox[]> {
+    return this.confianza.firefoxActivar(activar, { incluirFuera });
   }
 
   estadoPathUsuario(): Promise<boolean> {

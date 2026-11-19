@@ -141,7 +141,8 @@ const api: ApiEntorno = {
   confianza: {
     estado: () => invocar('confianza.estado'),
     nodeGlobal: (activar, confirmacion) => invocar('confianza.nodeGlobal', activar, confirmacion),
-    firefox: (activar, confirmacion) => invocar('confianza.firefox', activar, confirmacion),
+    firefox: (activar, confirmacion, confirmacionFuera) =>
+      invocar('confianza.firefox', activar, confirmacion, confirmacionFuera),
   },
   sistema: {
     elegirCarpeta: () => invocar('sistema.elegirCarpeta'),

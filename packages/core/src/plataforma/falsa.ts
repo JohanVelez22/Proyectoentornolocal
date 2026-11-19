@@ -8,6 +8,7 @@ import type {
   EstadoAntivirus,
   IdCatalogo,
   OpcionesAbrirTerminal,
+  PerfilFirefoxSistema,
   PlataformaCompleta,
   RangoPuertos,
   ResultadoEscritura,
@@ -65,6 +66,8 @@ export class PlataformaFalsa implements PlataformaCompleta {
   /** Lo que devuelve `antivirus` (null: sin antivirus o ilegible). */
   antivirusEstado: EstadoAntivirus | null = null;
   firefox: string[] = [];
+  /** Perfiles (rutas de `firefox`) fuera de la carpeta de Firefox. */
+  readonly firefoxFuera = new Set<string>();
   /** Perfiles de Firefox abiertos (`firefoxEnUso`). */
   readonly firefoxAbiertos = new Set<string>();
   /** Raíces del sistema en PEM ('' = no hay; `raicesSistema` lanza). */
@@ -171,6 +174,10 @@ export class PlataformaFalsa implements PlataformaCompleta {
     };
   }
 
+  async leerVariableUsuario(nombre: string): Promise<string | null> {
+    return this.variables.get(nombre) ?? null;
+  }
+
   async variableUsuario(nombre: string, valor: string | null): Promise<ResultadoEscritura> {
     if (valor === null) this.variables.delete(nombre);
     else this.variables.set(nombre, valor);
@@ -203,8 +210,8 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return this.vcRedist;
   }
 
-  async perfilesFirefox(): Promise<string[]> {
-    return [...this.firefox];
+  async perfilesFirefox(): Promise<PerfilFirefoxSistema[]> {
+    return this.firefox.map((ruta) => ({ ruta, fuera: this.firefoxFuera.has(ruta) }));
   }
 
   async firefoxEnUso(perfil: string): Promise<boolean> {

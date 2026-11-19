@@ -105,6 +105,8 @@ export const PARAMETROS_ERROR = {
   'confianza.variable_fallida': [],
   'firefox.abierto': [],
   'firefox.error': [],
+  'firefox.fuera': [],
+  'confianza.node_variable_cambiada': [],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

@@ -110,9 +110,16 @@ export const useDoctor = defineStore('doctor', () => {
     confianza.value = await api().confianza.nodeGlobal(activar, confirmacion);
   }
 
-  /** user.js de los perfiles de Firefox (confirmado en el diálogo); resultado por perfil. */
-  async function cambiarFirefox(activar: boolean, confirmacion: true): Promise<ResultadoFirefox[]> {
-    const r = await api().confianza.firefox(activar, confirmacion);
+  /**
+   * user.js de los perfiles de Firefox (confirmado en el diálogo); resultado por perfil. Los
+   * perfiles fuera de la carpeta de Firefox solo con `confirmacionFuera` (casilla aparte).
+   */
+  async function cambiarFirefox(
+    activar: boolean,
+    confirmacion: true,
+    confirmacionFuera?: true,
+  ): Promise<ResultadoFirefox[]> {
+    const r = await api().confianza.firefox(activar, confirmacion, confirmacionFuera);
     await cargarConfianza().catch(() => undefined);
     return r;
   }
