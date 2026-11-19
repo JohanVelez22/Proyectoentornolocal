@@ -31,6 +31,7 @@ import { useRouter } from 'vue-router';
 import type { ModeloOllama } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
+import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import { formatearFecha, textos } from '../i18n';
 import { porcentaje, useIa, type DescargaIa } from '../stores/ia';
 import { useServicios } from '../stores/servicios';
@@ -226,9 +227,7 @@ const filasConexion = computed(() => [
     <!-- Sin instalar -->
     <div v-else-if="sinInstalar" class="vacio">
       <NEmpty size="large">
-        <template #icon
-          ><NIcon><Sparkles /></NIcon
-        ></template>
+        <template #icon><IlustracionVacia :icono="Sparkles" /></template>
         <template #default>
           <strong class="vacio-titulo">{{ t.sinInstalarTitulo }}</strong>
           <span class="vacio-texto">{{ t.sinInstalar }}</span>

@@ -31,6 +31,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import type { DisponibilidadAdminer, MotorBd, MotorSql } from '../../shared/api';
 import { api } from '../api';
+import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import DialogoConexion from '../componentes/DialogoConexion.vue';
 import DialogoImportar from '../componentes/DialogoImportar.vue';
 import DialogoNuevaBase from '../componentes/DialogoNuevaBase.vue';
@@ -210,9 +211,7 @@ function irAServicios(): void {
     <!-- Sin ningún motor propio instalado -->
     <div v-if="instaladosListos && servicios.cargado && !motores.length" class="vacio">
       <NEmpty :description="t.vacio" size="large">
-        <template #icon>
-          <NIcon><Layers /></NIcon>
-        </template>
+        <template #icon><IlustracionVacia :icono="Layers" /></template>
         <template #extra>
           <NButton size="small" type="primary" @click="irAServicios">{{ t.irAServicios }}</NButton>
         </template>

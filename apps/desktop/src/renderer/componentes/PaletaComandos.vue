@@ -262,7 +262,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', atajo));
 <style scoped>
 .paleta {
   width: min(640px, 92vw);
-  margin-top: -18vh;
+  /* Arriba, como en los editores: no salta al cambiar la cantidad de resultados. */
+  align-self: flex-start;
+  margin: 12vh auto 0;
   padding: 10px;
   border-radius: 14px;
   background: var(--paleta-fondo, #fff);
@@ -277,7 +279,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', atajo));
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
-  max-height: min(420px, 55vh);
+  max-height: min(400px, 52vh);
   overflow-y: auto;
 }
 .item {

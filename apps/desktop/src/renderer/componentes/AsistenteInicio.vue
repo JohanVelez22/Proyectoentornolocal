@@ -207,12 +207,18 @@ async function vigilar(): Promise<void> {
     preset="card"
     :title="t.titulo"
     :mask-closable="false"
-    :style="{ width: 'min(680px, 94vw)' }"
+    :style="{ width: 'min(760px, 94vw)' }"
     class="asistente-inicio"
   >
     <p class="subtitulo">{{ t.subtitulo }}</p>
     <NSteps :current="actual + 1" size="small" class="pasos">
-      <NStep v-for="p in PASOS" :key="p" :title="tp[p].titulo" />
+      <!-- Solo el paso actual lleva título: cinco títulos no entran en el ancho del diálogo. -->
+      <NStep
+        v-for="(p, i) in PASOS"
+        :key="p"
+        :title="i === actual ? tp[p].titulo : ''"
+        :aria-label="tp[p].titulo"
+      />
     </NSteps>
 
     <Transition name="paso" mode="out-in">
@@ -399,6 +405,7 @@ async function vigilar(): Promise<void> {
 .pasos {
   margin-bottom: 18px;
 }
+
 .cuerpo {
   min-height: 190px;
 }

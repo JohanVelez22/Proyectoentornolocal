@@ -12,6 +12,7 @@ import SugerenciasProyectos from '../componentes/SugerenciasProyectos.vue';
 import TarjetaProyecto from '../componentes/TarjetaProyecto.vue';
 import { useAccion } from '../composables/useAccion';
 import { solicitudes } from '../composables/solicitudes';
+import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import { textos } from '../i18n';
 import { useHttps } from '../stores/https';
 import { useProyectos } from '../stores/proyectos';
@@ -130,9 +131,7 @@ onMounted(() => {
 
     <div v-if="!sitios.lista.length" class="vacio">
       <NEmpty size="large">
-        <template #icon>
-          <NIcon><Albums /></NIcon>
-        </template>
+        <template #icon><IlustracionVacia :icono="Albums" /></template>
         <template #default>
           <strong class="vacio-titulo">{{ tp.vacioTitulo }}</strong>
           <span class="vacio-texto">{{ tp.vacio }}</span>

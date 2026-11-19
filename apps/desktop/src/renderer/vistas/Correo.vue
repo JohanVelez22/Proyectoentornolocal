@@ -4,6 +4,7 @@ import { NButton, NEmpty, NIcon, NSkeleton, NTooltip } from 'naive-ui';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '../api';
+import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import { useAccion } from '../composables/useAccion';
 import { useNoLeidos } from '../composables/useNoLeidos';
@@ -65,9 +66,7 @@ function irAServicios(): void {
     <!-- Sin instalar -->
     <div v-else-if="sinInstalar" class="vacio">
       <NEmpty size="large">
-        <template #icon
-          ><NIcon><Mail /></NIcon
-        ></template>
+        <template #icon><IlustracionVacia :icono="Mail" /></template>
         <template #default>
           <strong class="vacio-titulo">{{ t.sinInstalarTitulo }}</strong>
           <span class="vacio-texto">{{ t.sinInstalar }}</span>

@@ -7,6 +7,7 @@ import FilaInstalar from '../componentes/FilaInstalar.vue';
 import TarjetaHerramienta from '../componentes/TarjetaHerramienta.vue';
 import TarjetaServicio from '../componentes/TarjetaServicio.vue';
 import { useAccion } from '../composables/useAccion';
+import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import { textos } from '../i18n';
 import { useServicios, type GrupoServicios, type InstalableCatalogo } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
@@ -92,9 +93,7 @@ onMounted(() => {
 
     <div v-if="servicios.cargado && servicios.nadaInstalado" class="vacio">
       <NEmpty :description="t.vacio" size="large">
-        <template #icon>
-          <NIcon><Server /></NIcon>
-        </template>
+        <template #icon><IlustracionVacia :icono="Server" /></template>
         <template #extra>
           <NButton size="small" type="primary" @click="irAInstalar">{{ t.irAInstalar }}</NButton>
         </template>

@@ -55,3 +55,10 @@ body {
   font-size: 12px;
   word-break: break-word;
 }
+
+/* Estados vacíos con ilustración: el hueco del icono de NEmpty toma el tamaño del dibujo. */
+.n-empty .n-empty__icon:has(.ilustracion) {
+  width: auto;
+  height: auto;
+  margin-bottom: 4px;
+}

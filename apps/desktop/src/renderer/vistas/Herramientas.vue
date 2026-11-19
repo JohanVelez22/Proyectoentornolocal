@@ -17,6 +17,7 @@ import {
 } from '@vicons/ionicons5';
 import { NDrawer, NDrawerContent, NEmpty, NIcon, NInput } from 'naive-ui';
 import { computed, defineAsyncComponent, ref, watch, type Component } from 'vue';
+import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import { solicitudes } from '../composables/solicitudes';
 import { textos } from '../i18n';
 
@@ -118,7 +119,9 @@ const visible = computed({
         </span>
       </button>
     </div>
-    <NEmpty v-else :description="t.sinResultados" class="vacio" />
+    <NEmpty v-else :description="t.sinResultados" class="vacio">
+      <template #icon><IlustracionVacia :icono="Search" pequena /></template>
+    </NEmpty>
 
     <NDrawer
       v-model:show="visible"

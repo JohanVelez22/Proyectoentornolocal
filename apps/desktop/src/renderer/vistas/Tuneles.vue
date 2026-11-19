@@ -14,6 +14,7 @@ import { useRouter } from 'vue-router';
 import type { EstadoTunel } from '../../shared/api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import { useTunel } from '../composables/useTunel';
+import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import { textos } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
@@ -192,9 +193,7 @@ const columnas: DataTableColumns<Fila> = [
 
     <div v-if="!filas.length" class="vacio">
       <NEmpty size="large">
-        <template #icon>
-          <NIcon><SwapHorizontal /></NIcon>
-        </template>
+        <template #icon><IlustracionVacia :icono="SwapHorizontal" /></template>
         <template #default>
           <strong class="vacio-titulo">{{ t.vacioTitulo }}</strong>
           <span class="vacio-texto">{{ t.vacio }}</span>
