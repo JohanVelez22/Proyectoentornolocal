@@ -40,6 +40,7 @@ import { abrirEnVsCode } from './herramientas/editor';
 import { Terminal } from './herramientas/terminal';
 import { ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
 import { bloqueEnvIa } from './ia/envIa';
+import { GestorIa } from './ia/gestorIa';
 import { completarPlataforma, crearPlataforma } from './plataforma/index';
 import { nombreEjecutable } from './plataforma/sistema';
 import type { Ejecutor, Plataforma } from './plataforma/tipos';
@@ -200,6 +201,8 @@ export interface ResultadoAjustes {
 }
 
 interface ModulosNucleo {
+  /** Proveedores de IA en la nube (config, pruebas y bloque .env por proyecto). */
+  ia: GestorIa;
   avisos: CentroAvisos;
   bd: BasesDeDatos;
   respaldos: Respaldos;
@@ -320,6 +323,8 @@ export class Nucleo {
   readonly doctor: Doctor;
   /** Confianza de la CA en Node, Python y Firefox. */
   readonly confianza: ConfianzaCa;
+  /** Proveedores de IA en la nube; la clave la pasa el proceso principal en cada llamada. */
+  readonly ia: GestorIa;
   /**
    * Token de GitHub para lo que no pasa por la ventana (MCP). Lo fija el proceso principal
    * (safeStorage); el núcleo nunca lo guarda, lo registra ni lo emite.
@@ -369,6 +374,7 @@ export class Nucleo {
     this.puertos = m.puertos;
     this.doctor = m.doctor;
     this.confianza = m.confianza;
+    this.ia = m.ia;
     this.depsPasos = m.depsPasos;
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
@@ -535,7 +541,15 @@ export class Nucleo {
       return e === 'encendido' || e === 'iniciando';
     };
     const puertoOllama = { valor: (await leerConfig()).servicios.datos.ollama.puerto };
+    const git = o.git ?? new Git({ exec, lanzar });
     const modulos: ModulosNucleo = {
+      ia: new GestorIa({
+        leerConfig,
+        modificarConfig: (fn) => sitios.modificarConfig(fn),
+        versionado: (carpeta) => git.versionado(carpeta),
+        carpetaRespaldos: () => rutas.respaldosEnv(),
+        ...(o.fetch ? { fetch: (u, i) => o.fetch!(u, i) } : {}),
+      }),
       avisos,
       bd,
       respaldos: new Respaldos({ bd, servicios, rutas, exec, eventos, plataforma }),
@@ -594,7 +608,7 @@ export class Nucleo {
       runtimes,
       // Se crea abajo: necesita los pasos reales, que usan módulos de esta misma lista.
       recetas: null as unknown as EjecutorRecetas,
-      git: o.git ?? new Git({ exec, lanzar }),
+      git,
       github: o.github ?? new GitHub({ exec }),
       vigilante: new VigilanteProyectos({ leerConfig, eventos }),
       metricas: new Metricas({

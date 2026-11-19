@@ -125,6 +125,12 @@ export const PARAMETROS_ERROR = {
   'ia.env_conflicto': ['claves'],
   'ia.env_sin_confirmar': [],
   'ia.env_versionado': [],
+  'ia.env_versionado_desconocido': [],
+  'ia.proveedor_no_existe': [],
+  'ia.url_cambia_con_clave': [],
+  'ia.mensaje_sin_confirmar': [],
+  'ia.clave_ilegible': [],
+  'ia.argumento_invalido': ['campo'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;
