@@ -268,6 +268,34 @@ describe('PlataformaWindows con ejecutor falso', () => {
     expect(await p.inicioProceso(-1)).toBeNull();
   });
 
+  it('rutaProceso lee ExecutablePath en Base64 UTF-8 (con tildes); null si no hay, falla o no es absoluta', async () => {
+    const ruta = 'C:\\Users\\Andrés\\AppData\\Local\\WolfCoreDev\\bin\\php\\8.4.13\\php-cgi.exe';
+    const vistos: string[][] = [];
+    const p = new PlataformaWindows(async (cmd, args) => {
+      vistos.push([cmd, ...args]);
+      return {
+        codigo: 0,
+        stdout: `${Buffer.from(ruta, 'utf8').toString('base64')}\r\n`,
+        stderr: '',
+      };
+    });
+    expect(await p.rutaProceso(77)).toBe(ruta);
+    expect(vistos[0]!.join(' ')).toContain('ProcessId=77');
+    const vacio = new PlataformaWindows(async () => ({ codigo: 0, stdout: '', stderr: '' }));
+    expect(await vacio.rutaProceso(8)).toBeNull();
+    const relativa = new PlataformaWindows(async () => ({
+      codigo: 0,
+      stdout: Buffer.from('php-cgi.exe').toString('base64'),
+      stderr: '',
+    }));
+    expect(await relativa.rutaProceso(8)).toBeNull();
+    const falla = new PlataformaWindows(async () => {
+      throw new Error('sin powershell');
+    });
+    expect(await falla.rutaProceso(8)).toBeNull();
+    expect(await p.rutaProceso(0)).toBeNull();
+  });
+
   it('procesoVivo no da por muerto un proceso vivo si tasklist falla', async () => {
     const consultados: number[] = [];
     const p = new PlataformaWindows(

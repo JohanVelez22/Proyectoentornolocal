@@ -57,6 +57,8 @@ export class PlataformaFalsa implements PlataformaCompleta {
   readonly hijos = new Map<number, number[]>();
   /** Procesos vivos (PID → ejecutable). */
   readonly procesos = new Map<number, string>();
+  /** Ruta completa del ejecutable de cada PID (`rutaProceso`). */
+  readonly rutasProceso = new Map<number, string>();
   /** Dueños de puertos. */
   readonly puertos = new Map<number, { pid: number; nombre: string }>();
   /** Huellas de certificados instalados. */
@@ -128,6 +130,10 @@ export class PlataformaFalsa implements PlataformaCompleta {
   async procesoVivo(pid: number): Promise<{ vivo: boolean; ejecutable?: string }> {
     const e = this.procesos.get(pid);
     return e === undefined ? { vivo: false } : { vivo: true, ejecutable: e };
+  }
+
+  async rutaProceso(pid: number): Promise<string | null> {
+    return this.procesos.has(pid) ? (this.rutasProceso.get(pid) ?? null) : null;
   }
 
   async matarArbol(pid: number): Promise<void> {

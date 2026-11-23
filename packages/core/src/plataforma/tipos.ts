@@ -206,6 +206,11 @@ export interface Plataforma extends Partial<CapacidadesPlataforma> {
    * se pudo leer. Distingue un PID reutilizado por otro proceso con el mismo ejecutable.
    */
   inicioProceso?(pid: number): Promise<string | null>;
+  /**
+   * Ruta absoluta del ejecutable del proceso, o null si no existe o no se pudo leer. Sirve para
+   * reconocer un proceso propio (dentro de la carpeta de datos) sin fiarse solo del nombre.
+   */
+  rutaProceso?(pid: number): Promise<string | null>;
   matarArbol(pid: number): Promise<void>;
   abrirUrl(url: string): Promise<void>;
   ejecutable(nombre: 'nginx' | 'php-cgi' | 'php' | 'cloudflared'): string;

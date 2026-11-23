@@ -20,3 +20,17 @@ export const nombreArchivoDeRuta = (ruta: string): string => path.win32.basename
 /** Forma comparable de una ruta: en Windows las mayúsculas no cuentan. */
 export const rutaComparable = (ruta: string): string =>
   process.platform === 'win32' ? ruta.toLowerCase() : ruta;
+
+/**
+ * ¿`ruta` está dentro de `carpeta` (o es ella)? Ambas se vuelven absolutas y normalizadas (`..`
+ * no escapa) y se comparan sin mayúsculas en Windows. Una carpeta hermana con el mismo prefijo
+ * (`bin-otro`) no cuenta.
+ */
+export function rutaDentroDe(carpeta: string, ruta: string): boolean {
+  if (!carpeta || !ruta) return false;
+  const padre = rutaComparable(path.resolve(carpeta));
+  const hijo = rutaComparable(path.resolve(ruta));
+  const rel = path.relative(padre, hijo);
+  if (rel === '') return true;
+  return rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+}

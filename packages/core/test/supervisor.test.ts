@@ -477,6 +477,145 @@ describe('Supervisor', () => {
       await s.cerrar();
     });
 
+    describe('huérfanos de una versión anterior (sin hora guardada)', () => {
+      /** Ruta completa del ejecutable de cada PID vivo (la que da la plataforma). */
+      let rutasProceso: Map<number, string>;
+      let avisos: string[];
+      const conRutas = (): Supervisor =>
+        new Supervisor(
+          rutas,
+          {
+            ...plataforma(),
+            rutaProceso: async (pid: number) => rutasProceso.get(pid) ?? null,
+          } as unknown as Plataforma,
+          eventos,
+          { intervaloMs: 3000, spawn: fakeSpawn, sonda: async () => sondaOk },
+        );
+      const reg = (id: string, pid: number, ejecutable: string, creado?: string) => ({
+        id,
+        pid,
+        ejecutable,
+        args: [],
+        puerto: 9840,
+        log: def().log,
+        reiniciar: true,
+        ...(creado ? { creado } : {}),
+      });
+      beforeEach(() => {
+        rutasProceso = new Map();
+        avisos = [];
+        vi.spyOn(console, 'warn').mockImplementation((...a: unknown[]) => {
+          avisos.push(a.map(String).join(' '));
+        });
+      });
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      it('un php-cgi propio (dentro de bin/ de la carpeta de datos) se cierra y se avisa', async () => {
+        const exe = path.join(base, 'bin', 'php', '8.4.13', 'php-cgi.exe');
+        vivos.set(901, 'php-cgi.exe');
+        creaciones.set(901, 't901');
+        rutasProceso.set(901, exe);
+        writeFileSync(rutas.estado(), JSON.stringify([reg('php-8.4-0', 901, exe)]));
+        const s = conRutas();
+        await s.readoptar();
+        expect(s.ids()).toEqual([]);
+        expect(matados).toEqual([901]);
+        expect(avisos.join('\n')).toContain('php-8.4-0');
+        expect(avisos.join('\n')).toContain('901');
+        await s.cerrar();
+      });
+
+      it.skipIf(process.platform !== 'win32')(
+        'mayúsculas distintas en Windows cuentan como la misma carpeta',
+        async () => {
+          const exe = path.join(base, 'BIN', 'php', '8.4.13', 'PHP-CGI.EXE').toUpperCase();
+          vivos.set(902, 'php-cgi.exe');
+          rutasProceso.set(902, exe);
+          writeFileSync(rutas.estado(), JSON.stringify([reg('php-sitio-a-0', 902, exe)]));
+          const s = conRutas();
+          await s.readoptar();
+          expect(matados).toEqual([902]);
+          await s.cerrar();
+        },
+      );
+
+      it('un php-cgi fuera de bin/ (Laragon, XAMPP, carpetas parecidas) nunca se toca', async () => {
+        const fuera = [
+          'C:/laragon/bin/php/php-8.3/php-cgi.exe',
+          path.join(base, 'bin-otro', 'php-cgi.exe'),
+          path.join(base, 'tools', 'php-cgi.exe'),
+          `${path.join(base, 'bin')}${path.sep}..${path.sep}x${path.sep}php-cgi.exe`,
+          `${base}x${path.sep}bin${path.sep}php-cgi.exe`,
+        ];
+        const registros = fuera.map((exe, i) => {
+          vivos.set(910 + i, 'php-cgi.exe');
+          rutasProceso.set(910 + i, exe);
+          return reg(`php-8.${i}-0`, 910 + i, exe);
+        });
+        writeFileSync(rutas.estado(), JSON.stringify(registros));
+        const s = conRutas();
+        await s.readoptar();
+        expect(matados).toEqual([]);
+        await s.cerrar();
+      });
+
+      it('sin ruta legible, con otro ejecutable o con un id ajeno no se toca', async () => {
+        const exe = path.join(base, 'bin', 'php', '8.4.13', 'php-cgi.exe');
+        vivos.set(920, 'php-cgi.exe'); // sin ruta legible
+        vivos.set(921, 'notepad.exe'); // el PID es de otro programa
+        rutasProceso.set(921, path.join(base, 'bin', 'notepad.exe'));
+        vivos.set(922, 'nginx.exe'); // no es pool de PHP ni proceso de proyecto
+        rutasProceso.set(922, path.join(base, 'bin', 'nginx', '1.27', 'nginx.exe'));
+        writeFileSync(
+          rutas.estado(),
+          JSON.stringify([
+            reg('php-8.4-0', 920, exe),
+            reg('php-8.4-1', 921, exe),
+            { ...reg('tunel-x', 922, path.join(base, 'bin', 'nginx', '1.27', 'nginx.exe')) },
+          ]),
+        );
+        const s = conRutas();
+        await s.readoptar();
+        expect(matados).toEqual([]);
+        await s.cerrar();
+      });
+
+      it('un PID adoptado por otro registro no se cierra', async () => {
+        const exe = path.join(base, 'bin', 'php', '8.4.13', 'php-cgi.exe');
+        vivos.set(930, 'php-cgi.exe');
+        creaciones.set(930, 't930');
+        rutasProceso.set(930, exe);
+        writeFileSync(
+          rutas.estado(),
+          JSON.stringify([reg('php-8.4-0', 930, exe), reg('php-sitio-b-0', 930, exe, 't930')]),
+        );
+        const s = conRutas();
+        await s.readoptar();
+        expect(s.ids()).toEqual(['php-sitio-b-0']);
+        expect(matados).toEqual([]);
+        await s.cerrar();
+      });
+
+      it('proy-: solo si el ejecutable está dentro de la carpeta de datos (runtimes)', async () => {
+        const propio = path.join(base, 'bin', 'node', '22.11.0', 'node.exe');
+        const ajeno = 'C:/Program Files/nodejs/node.exe';
+        vivos.set(940, 'node.exe');
+        rutasProceso.set(940, propio);
+        vivos.set(941, 'node.exe');
+        rutasProceso.set(941, ajeno);
+        writeFileSync(
+          rutas.estado(),
+          JSON.stringify([reg('proy-a-vite', 940, propio), reg('proy-b-vite', 941, ajeno)]),
+        );
+        const s = conRutas();
+        await s.readoptar();
+        expect(matados).toEqual([940]);
+        await s.cerrar();
+      });
+    });
+
     it('una entrada proy- de una versión previa: exige la hora y su puerto no es sonda', async () => {
       sondaOk = false;
       vivos.set(777, 'node.exe');

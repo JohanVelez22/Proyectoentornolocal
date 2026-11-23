@@ -870,6 +870,29 @@ export class PlataformaWindows implements PlataformaCompleta {
     }
   }
 
+  async rutaProceso(pid: number): Promise<string | null> {
+    if (!Number.isInteger(pid) || pid <= 0) return null;
+    try {
+      // En Base64 UTF-8: la carpeta de datos puede tener tildes y la consola usa la página OEM.
+      const r = await this.ejecutar(
+        'powershell',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `$p = Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}'; if ($p -and $p.ExecutablePath) { [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($p.ExecutablePath)) }`,
+        ],
+        { timeoutMs: 15000 },
+      );
+      const texto = r.stdout.trim();
+      if (r.codigo !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(texto)) return null;
+      const ruta = Buffer.from(texto, 'base64').toString('utf8');
+      return path.win32.isAbsolute(ruta) && !ruta.includes('\0') ? ruta : null;
+    } catch {
+      return null;
+    }
+  }
+
   async matarArbol(pid: number): Promise<void> {
     await this.ejecutar('taskkill', ['/PID', String(pid), '/T', '/F'], { timeoutMs: 15000 });
   }

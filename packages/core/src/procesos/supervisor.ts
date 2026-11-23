@@ -19,7 +19,7 @@ import {
   LanzadorNoDisponible,
   type LanzadorOculto,
 } from '../plataforma/lanzarOculto';
-import { nombreArchivoDeRuta } from '../plataforma/sistema';
+import { nombreArchivoDeRuta, rutaDentroDe } from '../plataforma/sistema';
 import { puertoResponde } from './sonda';
 import { decodificarLinea } from '../monitor/decodificar';
 
@@ -259,6 +259,8 @@ export class Supervisor {
     } catch {
       registros = [];
     }
+    /** Registros de pools de PHP o de proyecto que no se pudieron adoptar por la hora. */
+    const sinAdoptar: RegistroEstado[] = [];
     for (const r of registros) {
       if (!r || typeof r.id !== 'string' || typeof r.pid !== 'number') continue;
       if (this.entradas.has(r.id)) continue;
@@ -278,7 +280,10 @@ export class Supervisor {
       const esperado = path.basename(String(r.ejecutable)).toLowerCase();
       if (!info.vivo || info.ejecutable?.toLowerCase() !== esperado) continue;
       // PID reutilizado por otro proceso del mismo ejecutable: se olvida, sin matarlo.
-      if (r.exigirInicio && (!r.creado || (await this.horaCreacion(r.pid)) !== r.creado)) continue;
+      if (r.exigirInicio && (!r.creado || (await this.horaCreacion(r.pid)) !== r.creado)) {
+        sinAdoptar.push(r);
+        continue;
+      }
       const entrada: Entrada = {
         def: {
           id: r.id,
@@ -305,8 +310,51 @@ export class Supervisor {
       this.entradas.set(r.id, entrada);
       this.emitir(entrada);
     }
+    await this.cerrarHuerfanosPropios(sinAdoptar);
     this.guardarEstado();
     if (this.entradas.size > 0) this.arrancarBucle();
+  }
+
+  /**
+   * Procesos que dejó una versión anterior de la app sin hora de creación (o con otra): no se
+   * readoptan, pero seguirían ocupando sus puertos. Se cierran solo si son con certeza nuestros:
+   * la ruta completa de su ejecutable está dentro de `bin/` de la carpeta de datos (pools de PHP)
+   * o de la carpeta de datos (procesos de proyecto con nuestros runtimes), y su PID no quedó
+   * adoptado. Nunca por el nombre: un php-cgi o node de otro programa no se toca.
+   */
+  private async cerrarHuerfanosPropios(registros: RegistroEstado[]): Promise<void> {
+    if (!this.plataforma.rutaProceso || registros.length === 0) return;
+    const adoptados = new Set<number>();
+    for (const e of this.entradas.values()) if (e.pid !== null) adoptados.add(e.pid);
+    const cerrados = new Set<number>();
+    for (const r of registros) {
+      const raiz = r.id.startsWith('php-')
+        ? path.join(this.rutas.base, 'bin')
+        : r.id.startsWith('proy-')
+          ? this.rutas.base
+          : null;
+      if (raiz === null || !Number.isInteger(r.pid) || r.pid <= 0) continue;
+      if (adoptados.has(r.pid) || cerrados.has(r.pid)) continue;
+      try {
+        const ruta = await this.plataforma.rutaProceso(r.pid);
+        if (ruta === null || !rutaDentroDe(raiz, ruta)) continue;
+        // Se vuelve a mirar que el PID siga siendo el mismo ejecutable justo antes de cerrarlo.
+        const info = await this.plataforma.procesoVivo(r.pid);
+        if (
+          !info.vivo ||
+          info.ejecutable?.toLowerCase() !== nombreArchivoDeRuta(ruta).toLowerCase()
+        ) {
+          continue;
+        }
+        await this.plataforma.matarArbol(r.pid);
+        cerrados.add(r.pid);
+        console.warn(
+          `Se cerró ${r.id} (PID ${r.pid}, ${ruta}): lo dejó una versión anterior sin datos para readoptarlo y ocupaba su puerto.`,
+        );
+      } catch (e) {
+        console.error(`No se pudo cerrar el proceso huérfano ${r.id} (PID ${r.pid}):`, e);
+      }
+    }
   }
 
   async cerrar(): Promise<void> {
