@@ -87,9 +87,21 @@ import type {
   IdAgente,
   OrigenAgente,
   ResultadoRegistroMcp,
+  AvisoVhost,
+  CambioVhost,
+  ResultadoEditorVhost,
+  SnippetNginx,
+  VersionVhost,
+  VistaVhost,
 } from '@pel/core';
 
 export type {
+  AvisoVhost,
+  CambioVhost,
+  ResultadoEditorVhost,
+  SnippetNginx,
+  VersionVhost,
+  VistaVhost,
   EstadoPhpSitio,
   ResultadoPhpSitio,
   XdebugSitio,
@@ -553,6 +565,19 @@ export interface ApiEntorno {
     /** Solo del catálogo (variante de la compilación, host permitido y SHA-256). */
     extensionInstalar(rama: string, nombre: string): Promise<void>;
   };
+  /** Editor del vhost de Nginx de un sitio (el renderer manda el id y el texto, nunca rutas). */
+  nginx: {
+    /** Vhost generado (solo lectura), reglas propias y vhost manual (null = el generado). */
+    vista(id: string): Promise<VistaVhost>;
+    /**
+     * Revisa, prueba con `nginx -t` sobre una copia, guarda copia con fecha, escribe y recarga;
+     * si Nginx no acepta o deja de responder, vuelve solo a lo anterior (`ok: false` + salida).
+     */
+    aplicar(id: string, cambio: CambioVhost): Promise<ResultadoEditorVhost>;
+    historial(id: string): Promise<VersionVhost[]>;
+    restaurar(id: string, version: string): Promise<ResultadoEditorVhost>;
+    snippets(): Promise<SnippetNginx[]>;
+  };
   github: {
     repos(opciones?: { buscar?: string; pagina?: number }): Promise<RepoGithub[]>;
     /** Se guarda cifrado en el proceso principal; nunca vuelve a la interfaz. */
@@ -714,6 +739,11 @@ export const RUTAS_IPC = [
   'sitios.xdebug',
   'sitios.launchJsonVista',
   'sitios.launchJson',
+  'nginx.vista',
+  'nginx.aplicar',
+  'nginx.historial',
+  'nginx.restaurar',
+  'nginx.snippets',
   'servicios.estados',
   'servicios.iniciar',
   'servicios.detener',

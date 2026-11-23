@@ -7,6 +7,7 @@ import type { Eventos, EventosNucleo } from '../eventos';
 import { DOMINIO_VALIDO } from '../hosts/bloque';
 import type { GestorHttps } from '../https/certificados';
 import type { GestorHosts } from '../hosts/hosts';
+import { revisarVhost, type ContextoVhost, type ModoVhost } from '../nginx/editor';
 import { generarVhost } from '../nginx/plantillas';
 import { puertosPhp } from '../nginx/principal';
 import type { Rutas } from '../rutas';
@@ -33,7 +34,11 @@ export interface DepsSitios {
   eventos: Pick<Eventos<EventosNucleo>, 'emit'>;
   /** Sin esto, ningún sitio sale con HTTPS. */
   https?: Pick<GestorHttps, 'caCreada' | 'puertoUsable' | 'asegurarCertificado'>;
+  /** Reglas propias o vhost manual guardados que ya no pasan la revisión (se descartan). */
+  avisarVhost?: (a: { sitio: string; modo: ModoVhost; motivo: string }) => void;
 }
+
+const mensaje = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 export interface AjustesServicios {
   puerto: number;
@@ -312,6 +317,86 @@ export class GestorSitios {
     return { nginx, hosts, httpsPendiente };
   }
 
+  private async httpsUsable(cfg: Config): Promise<boolean> {
+    return (
+      !!this.d.https &&
+      this.d.https.caCreada() &&
+      (await this.d.https.puertoUsable(cfg.https.puerto))
+    );
+  }
+
+  /**
+   * Vhost generado del sitio (con sus reglas propias, sin el manual) y lo que el sitio puede
+   * tocar desde el editor (carpeta, dominios, puertos, registros y certificado).
+   */
+  async vhostDe(
+    s: Sitio,
+    cfg: Config,
+    httpsUsable?: boolean,
+  ): Promise<{ generado: string; contexto: ContextoVhost; httpsPendiente: boolean }> {
+    const usable = httpsUsable ?? (await this.httpsUsable(cfg));
+    let https: { puerto: number; crt: string; key: string } | undefined;
+    let httpsPendiente = false;
+    if (s.https) {
+      if (usable && this.d.https) {
+        https = { puerto: cfg.https.puerto, ...(await this.d.https.asegurarCertificado(s)) };
+      } else {
+        httpsPendiente = true;
+      }
+    }
+    const logs = {
+      acceso: this.d.rutas.logs('sitios', `${s.id}.access.log`),
+      error: this.d.rutas.logs('sitios', `${s.id}.error.log`),
+    };
+    const generado = generarVhost(s, {
+      ...(https ? { https } : {}),
+      puertoNginx: cfg.servicios.nginx.puerto,
+      rutasLogs: logs,
+    });
+    const contexto: ContextoVhost = {
+      carpeta: s.carpeta,
+      dominios: [s.dominio, ...s.alias],
+      puertos: [cfg.servicios.nginx.puerto, cfg.https.puerto],
+      logs: [logs.acceso, logs.error],
+      certificados: [
+        this.d.rutas.certCrt(s.id),
+        this.d.rutas.certKey(s.id),
+        ...(https ? [https.crt, https.key] : []),
+      ],
+    };
+    return { generado, contexto, httpsPendiente };
+  }
+
+  /**
+   * Lo que se escribe para el sitio: su vhost manual o el generado con sus reglas. Las reglas o
+   * el manual guardados se revisan otra vez (la carpeta, los dominios o los puertos pudieron
+   * cambiar): lo que ya no pasa se descarta y se avisa, sin tumbar a los demás sitios.
+   */
+  private async vhostCon(
+    s: Sitio,
+    cfg: Config,
+    httpsUsable: boolean,
+  ): Promise<{ contenido: string; httpsPendiente: boolean }> {
+    let v = await this.vhostDe(s, cfg, httpsUsable);
+    if (s.reglasExtra.trim()) {
+      try {
+        revisarVhost(s.reglasExtra, 'reglas', v.contexto);
+      } catch (e) {
+        this.d.avisarVhost?.({ sitio: s.id, modo: 'reglas', motivo: mensaje(e) });
+        v = await this.vhostDe({ ...s, reglasExtra: '' }, cfg, httpsUsable);
+      }
+    }
+    if (s.vhostManual) {
+      try {
+        revisarVhost(s.vhostManual, 'manual', v.contexto);
+        return { contenido: s.vhostManual, httpsPendiente: v.httpsPendiente };
+      } catch (e) {
+        this.d.avisarVhost?.({ sitio: s.id, modo: 'manual', motivo: mensaje(e) });
+      }
+    }
+    return { contenido: v.generado, httpsPendiente: v.httpsPendiente };
+  }
+
   private async aplicarSinCola(): Promise<{
     nginx: ResultadoAplicar['nginx'];
     httpsPendiente: string[];
@@ -326,31 +411,15 @@ export class GestorSitios {
     let nginx: { ok: boolean; salida: string };
     const httpsPendiente: string[] = [];
     try {
-      const puertoHttps = cfg.https.puerto;
-      const httpsUsable =
-        !!this.d.https && this.d.https.caCreada() && (await this.d.https.puertoUsable(puertoHttps));
+      const httpsUsable = await this.httpsUsable(cfg);
       const vigentes = new Set(cfg.sitios.map((s) => `${s.id}.conf`));
       for (const n of previo.keys()) {
         if (!vigentes.has(n)) await rm(path.join(dir, n), { force: true });
       }
       for (const s of cfg.sitios) {
-        let https: { puerto: number; crt: string; key: string } | undefined;
-        if (s.https) {
-          if (httpsUsable && this.d.https) {
-            https = { puerto: puertoHttps, ...(await this.d.https.asegurarCertificado(s)) };
-          } else {
-            httpsPendiente.push(s.id);
-          }
-        }
-        const contenido = generarVhost(s, {
-          ...(https ? { https } : {}),
-          puertoNginx: cfg.servicios.nginx.puerto,
-          rutasLogs: {
-            acceso: this.d.rutas.logs('sitios', `${s.id}.access.log`),
-            error: this.d.rutas.logs('sitios', `${s.id}.error.log`),
-          },
-        });
-        await writeFile(this.d.rutas.vhost(s.id), contenido, 'utf8');
+        const v = await this.vhostCon(s, cfg, httpsUsable);
+        if (v.httpsPendiente) httpsPendiente.push(s.id);
+        await writeFile(this.d.rutas.vhost(s.id), v.contenido, 'utf8');
       }
 
       if ((await this.d.instalador.instalados('nginx')).length === 0) {

@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -299,6 +307,56 @@ describe('ServicioNginx', () => {
     codigoExec = 1;
     await expect(crear().iniciar()).rejects.toThrow(/\[emerg\] fallo/);
     expect(iniciados).toHaveLength(0);
+  });
+
+  it('probarConVhost: nginx -t sobre una copia temporal con el vhost nuevo; no toca la real', async () => {
+    const bin = sembrarNginx('1.28.0');
+    const sites = path.dirname(rutas.vhost('x'));
+    mkdirSync(sites, { recursive: true });
+    writeFileSync(rutas.vhost('blog'), 'server { # anterior }\n');
+    writeFileSync(rutas.vhost('otro'), 'server { # otro }\n');
+    writeFileSync(rutas.nginxConf(), 'conf real');
+    let visto: { conf: string; sitios: Record<string, string> } | null = null;
+    const execVhost: Ejecutor = async (cmd, args) => {
+      llamadas.push({ cmd, args });
+      const conf = args[args.indexOf('-c') + 1]!;
+      const dir = path.join(path.dirname(conf), 'sites');
+      visto = {
+        conf: readFileSync(conf, 'utf8'),
+        sitios: Object.fromEntries(
+          ['blog.conf', 'otro.conf'].map((n) => [n, readFileSync(path.join(dir, n), 'utf8')]),
+        ),
+      };
+      return {
+        codigo: 1,
+        stdout: '',
+        stderr: `nginx: [emerg] unknown directive "gzipp" in ${dir.replace(/\\/g, '/')}/blog.conf:3`,
+      };
+    };
+    const n = new ServicioNginx(
+      rutas,
+      plataforma(),
+      supervisor(),
+      instalador(['1.28.0'], []),
+      async () => cfg,
+      async () => [],
+      execVhost,
+    );
+    const r = await n.probarConVhost('blog', 'server { gzipp on; }\n');
+    expect(r.ok).toBe(false);
+    expect(llamadas[0]!.args.slice(0, 3)).toEqual(['-t', '-p', bin]);
+    expect(visto!.sitios).toEqual({
+      'blog.conf': 'server { gzipp on; }\n',
+      'otro.conf': 'server { # otro }\n',
+    });
+    expect(visto!.conf).toContain('/sites/*.conf";');
+    expect(visto!.conf).not.toContain(`${sites.replace(/\\/g, '/')}/*.conf`);
+    // La salida nombra el archivo real del sitio, no la copia temporal.
+    expect(r.salida).toContain(`${sites.replace(/\\/g, '/')}/blog.conf:3`);
+    // Lo real queda igual y la copia temporal se borró.
+    expect(readFileSync(rutas.vhost('blog'), 'utf8')).toBe('server { # anterior }\n');
+    expect(readFileSync(rutas.nginxConf(), 'utf8')).toBe('conf real');
+    expect(readdirSync(rutas.tmp()).filter((x) => x.startsWith('nginx-prueba-'))).toEqual([]);
   });
 
   it('crea logs y temp bajo el prefijo antes de probar', async () => {

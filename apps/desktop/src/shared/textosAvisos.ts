@@ -67,6 +67,14 @@ const ES: Diccionario = {
       titulo: 'Ajustes de PHP descartados',
       cuerpo: `Algunos ajustes de PHP de ${limpio(d['fuente'], 'un sitio')} no son válidos y no se aplicaron: ${limpio(d['claves'], 'revise la sección PHP')}.`,
     }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Reglas de Nginx descartadas',
+      cuerpo: `Las reglas propias de ${limpio(d['fuente'], 'un sitio')} ya no pasan la revisión (cambió su carpeta, sus dominios o los puertos) y quedaron fuera de su vhost. Revíselas en su sección Nginx.`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: 'Vhost escrito a mano sin usar',
+      cuerpo: `El vhost escrito a mano de ${limpio(d['fuente'], 'un sitio')} ya no pasa la revisión (cambió su carpeta, sus dominios o los puertos): se usa el generado. Revíselo en su sección Nginx.`,
+    }),
     'doctor.hallazgos': (d) => ({
       titulo: 'El Doctor encontró errores en el entorno',
       cuerpo: `Hay ${limpio(d['errores'], 'varios')} problemas que pueden impedir que el entorno funcione. Abra el Doctor para ver cómo repararlos.`,
@@ -146,6 +154,14 @@ const EN: Diccionario = {
     'avisos.php_sitio_descartados': (d) => ({
       titulo: 'PHP settings discarded',
       cuerpo: `Some PHP settings of ${limpio(d['fuente'], 'a site')} are not valid and were not applied: ${limpio(d['claves'], 'check the PHP section')}.`,
+    }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Custom Nginx rules discarded',
+      cuerpo: `The custom rules of ${limpio(d['fuente'], 'a site')} no longer pass the check (its folder, domains or ports changed) and were left out of its vhost. Review them in its Nginx section.`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: 'Hand-written vhost not used',
+      cuerpo: `The hand-written vhost of ${limpio(d['fuente'], 'a site')} no longer passes the check (its folder, domains or ports changed): the generated one is used. Review it in its Nginx section.`,
     }),
     'doctor.hallazgos': (d) => ({
       titulo: 'The Doctor found errors in the environment',

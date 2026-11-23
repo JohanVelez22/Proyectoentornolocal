@@ -21,6 +21,10 @@ export const nombreArchivoDeRuta = (ruta: string): string => path.win32.basename
 export const rutaComparable = (ruta: string): string =>
   process.platform === 'win32' ? ruta.toLowerCase() : ruta;
 
+/** ¿Es una ruta absoluta de Windows (`C:/x`, `\\srv\x`) o de Unix (`/x`)? */
+export const esRutaAbsoluta = (ruta: string): boolean =>
+  path.win32.isAbsolute(ruta) || path.posix.isAbsolute(ruta);
+
 /**
  * ¿`ruta` está dentro de `carpeta` (o es ella)? Ambas se vuelven absolutas y normalizadas (`..`
  * no escapa) y se comparan sin mayúsculas en Windows. Una carpeta hermana con el mismo prefijo

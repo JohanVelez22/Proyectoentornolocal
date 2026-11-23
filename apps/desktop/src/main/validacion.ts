@@ -2,6 +2,10 @@ import { stat } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 import {
   CLAVES_RAPIDAS,
+  LIMITE_MANUAL,
+  LIMITE_REGLAS,
+  textoVhostValido,
+  type CambioVhost,
   type ClaveRapida,
   MAX_BYTES_INI,
   NOMBRE_EXTENSION_PHP,
@@ -640,4 +644,54 @@ export function xdebugSitio(v: unknown): Record<string, unknown> | null {
   } catch {
     throw argumentoPhp('xdebug');
   }
+}
+
+// ---- Editor de vhost de Nginx: id del sitio, texto acotado y nombre de versión (nunca rutas) ----
+
+function argumentoNginx(campo: string): ErrorWolf {
+  return new ErrorWolf('nginx.argumento_invalido', `Argumento no válido: ${campo}`, { campo });
+}
+
+/** Id de un sitio (nunca una ruta). */
+export function idSitioNginx(v: unknown): string {
+  if (typeof v !== 'string' || v.length > 128 || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(v)) {
+    throw argumentoNginx('sitio');
+  }
+  return v;
+}
+
+/**
+ * Cambio del editor: `{reglas?: texto}` y/o `{manual?: texto | null}`, nada más. Texto acotado y
+ * sin NUL ni controles; las directivas las revisa el núcleo.
+ */
+export function cambioVhost(v: unknown): CambioVhost {
+  let o: Record<string, unknown>;
+  try {
+    o = objetoPlano<Record<string, unknown>>(v, 'cambio');
+  } catch {
+    throw argumentoNginx('cambio');
+  }
+  const claves = Object.keys(o);
+  if (claves.length === 0 || claves.some((k) => k !== 'reglas' && k !== 'manual')) {
+    throw argumentoNginx('cambio');
+  }
+  const res: CambioVhost = {};
+  if ('reglas' in o) {
+    if (!textoVhostValido(o['reglas'], LIMITE_REGLAS)) throw argumentoNginx('reglas');
+    res.reglas = o['reglas'];
+  }
+  if ('manual' in o) {
+    const m = o['manual'];
+    if (m !== null && !textoVhostValido(m, LIMITE_MANUAL)) throw argumentoNginx('manual');
+    res.manual = m;
+  }
+  return res;
+}
+
+/** Nombre de una versión del historial (`vhost-<fecha>.txt`). */
+export function versionVhost(v: unknown): string {
+  if (typeof v !== 'string' || !/^vhost-[0-9TZ-]{10,40}\.txt$/.test(v)) {
+    throw argumentoNginx('version');
+  }
+  return v;
 }

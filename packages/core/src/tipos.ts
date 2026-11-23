@@ -130,6 +130,12 @@ export const SitioSchema = z.object({
   phpIni: z.record(z.string(), z.string()).optional(),
   /** Xdebug del sitio (ausente = null); solo cambia con `Nucleo.xdebugSitio`. */
   xdebug: XdebugSitioSchema.nullable().optional(),
+  /**
+   * Vhost completo escrito por el usuario (modo avanzado del editor): se usa tal cual en vez del
+   * generado, que ya no se regenera. Ausente o null = el generado. Solo cambia con el editor de
+   * vhost (`EditorVhost`), igual que `reglasExtra`.
+   */
+  vhostManual: z.string().nullable().optional(),
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 

@@ -67,6 +67,7 @@ import {
 } from './sitios/sitios';
 import { migrarCarpetaDatos } from './migracion';
 import { catalogo } from './catalogo/catalogo';
+import { EditorVhost } from './nginx/editor';
 import { puertosPhp } from './nginx/principal';
 import { ARGS_PRUEBA_INI_SITIO, codificarIni, decodificarIni } from './php/ini';
 import {
@@ -243,6 +244,8 @@ export interface ResultadoAjustes {
 }
 
 interface ModulosNucleo {
+  /** Editor del vhost de cada sitio (reglas propias o vhost completo, con nginx -t y vuelta atrás). */
+  editorVhost: EditorVhost;
   /** php.ini de cada rama (editor con prueba, copia y vuelta atrás). */
   iniPhp: IniPhp;
   /** Pools propios de los sitios con ajustes de php.ini o Xdebug. */
@@ -430,6 +433,8 @@ export class Nucleo {
   readonly ia: GestorIa;
   /** Agentes: detección, instalación, MCP y apertura en un proyecto (nunca se lanzan solos). */
   readonly agentes: Agentes;
+  /** Editor del vhost de Nginx por sitio: reglas propias, modo avanzado, historial. */
+  readonly editorVhost: EditorVhost;
   /** php.ini de cada rama: leer, diff, guardar con prueba y vuelta atrás, copias. */
   readonly iniPhp: IniPhp;
   /** Extensiones de PHP: activar, desactivar e instalar del catálogo. */
@@ -489,6 +494,7 @@ export class Nucleo {
     this.ia = m.ia;
     this.agentes = m.agentes;
     this.iniPhp = m.iniPhp;
+    this.editorVhost = m.editorVhost;
     this.extensionesPhp = m.extensionesPhp;
     this.poolsSitio = m.poolsSitio;
     this.ajustesPhpSitio = m.ajustesPhpSitio;
@@ -614,6 +620,16 @@ export class Nucleo {
       instalador,
       eventos,
       https,
+      avisarVhost: (a) =>
+        avisos.publicar({
+          nivel: 'aviso',
+          tipo: 'proceso-error',
+          codigo:
+            a.modo === 'manual'
+              ? 'avisos.vhost_manual_descartado'
+              : 'avisos.vhost_reglas_descartadas',
+          datos: { fuente: a.sitio },
+        }),
     });
     await migrarCredenciales(rutas, almacen, credenciales);
     const urlBase = new UrlBase({
@@ -787,7 +803,29 @@ export class Nucleo {
       carpetaRespaldos: () => rutas.respaldosEnv(),
       ...(o.fetch ? { fetch: (u, i) => o.fetch!(u, i) } : {}),
     });
+    const sondaNginx = o.sonda ?? ((p: number) => puertoResponde(p));
+    const editorVhost = new EditorVhost({
+      rutas,
+      almacen,
+      enCola: (fn) => sitios.enCola(fn),
+      vhostDe: (s, cfg) => sitios.vhostDe(s, cfg),
+      probar: (id, contenido) => servicios.nginx.probarConVhost(id, contenido),
+      estadoNginx: () => supervisor.estado('nginx'),
+      recargar: () => servicios.nginx.recargar(),
+      sano: async () => {
+        const puerto = (await leerConfig()).servicios.nginx.puerto;
+        const limite = Date.now() + 5000;
+        for (;;) {
+          if (supervisor.estado('nginx') === 'error') return false;
+          if (await sondaNginx(puerto)) return true;
+          if (Date.now() >= limite) return false;
+          await new Promise((r) => setTimeout(r, 250));
+        }
+      },
+      emitir: (lista) => eventos.emit('sitio:cambio', lista),
+    });
     const modulos: ModulosNucleo = {
+      editorVhost,
       iniPhp,
       poolsSitio: pools,
       ajustesPhpSitio,
@@ -1966,6 +2004,11 @@ export class Nucleo {
     delete resto.xdebug;
     if (id) await this.cerrarTunelSiCambia(id, datos);
     const previo = id ? (await this.sitios.listar()).find((s) => s.id === id) : undefined;
+    // Las reglas propias y el vhost manual solo cambian con el editor de vhost (revisión,
+    // nginx -t y vuelta atrás): guardar el sitio conserva los que tenía y nunca los regenera.
+    delete resto.vhostManual;
+    resto.reglasExtra = previo?.reglasExtra ?? '';
+    if (previo?.vhostManual) resto.vhostManual = previo.vhostManual;
     // FastAPI/Node con el proceso del proxy sin puerto: se le asigna uno libre (no se rechaza).
     if (this.depsPasos) resto = await asignarPuertoProxy(this.depsPasos, resto, id);
     resto.recetaConfiada = renovarHuella

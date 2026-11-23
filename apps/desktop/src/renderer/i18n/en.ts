@@ -271,6 +271,21 @@ export const en: Textos = {
       'xdebug.launch_no_seguro':
         'The .vscode folder or its launch.json is a link or something else: nothing is written there.',
       'xdebug.sin_configurar': 'Set up Xdebug on the site before generating launch.json.',
+      'nginx.sitio_no_existe': 'That site no longer exists.',
+      'nginx.texto_invalido': 'The vhost text is too long, empty or has control characters.',
+      'nginx.sintaxis': 'Line {linea}: {detalle}. Nothing was changed.',
+      'nginx.directiva_prohibida':
+        'Line {linea}: “{directiva}” is not allowed in a site vhost (it could affect other sites or files outside the project). Nothing was changed.',
+      'nginx.ruta_fuera':
+        'Line {linea}: “{directiva}” points outside the project folder or its logs and certificates. Nothing was changed.',
+      'nginx.fuera_de_server':
+        'Line {linea}: the full vhost can only have “server” blocks; “{directiva}” is outside them. Nothing was changed.',
+      'nginx.dominio_ajeno':
+        'Line {linea}: “{nombre}” is not a domain of this site. Add it as a site alias first.',
+      'nginx.puerto_ajeno':
+        'Line {linea}: the site can only listen on the Nginx ports set in Settings.',
+      'nginx.version_no_existe': 'That vhost version is no longer in the history.',
+      'nginx.argumento_invalido': 'Invalid argument: {campo}',
     },
   },
   avisoInicio: {
@@ -1066,6 +1081,67 @@ export const en: Textos = {
     copiarPhpStorm: 'Copy PhpStorm settings',
     errorNginx: (salida: string) =>
       `Nginx did not accept the change; the previous settings were restored. ${salida}`,
+  },
+  nginxEditor: {
+    etiqueta: 'Nginx',
+    generadoResumen: 'Generated vhost',
+    conReglas: 'with custom rules',
+    manualResumen: 'Hand-written vhost (not regenerated)',
+    mostrar: 'Edit vhost',
+    ocultar: 'Hide vhost',
+    cargando: 'Reading the vhost…',
+    reglasTitulo: 'Custom rules',
+    reglasAyuda:
+      'They go inside this site’s server block. Before applying, they are tested with nginx -t on a copy of the whole configuration; if anything fails, everything stays as it was.',
+    reglasEtiqueta: 'Custom Nginx rules',
+    reglasPlaceholder: '# For example: client_max_body_size 256m;',
+    snippetsTitulo: 'Snippets',
+    insertar: (titulo: string) => `Insert: ${titulo}`,
+    snippets: {
+      cors: 'CORS',
+      'cache-estaticos': 'Static file caching',
+      'limite-subida': 'Upload limit',
+      spa: 'SPA (index.html)',
+      'cabeceras-seguridad': 'Security headers',
+      websocket: 'WebSocket proxy',
+      gzip: 'Gzip compression',
+      ocultos: 'Deny hidden files',
+    },
+    aplicar: 'Test and apply',
+    descartar: 'Discard changes',
+    aplicado: 'Vhost applied and Nginx reloaded',
+    aplicadoApagado: 'Vhost saved; it will be used when Nginx starts',
+    fallo: 'Nginx did not accept the change; the vhost is unchanged',
+    salidaTitulo: 'nginx -t output',
+    avisoDestino: (destino: string, linea: number) =>
+      `Line ${linea}: traffic is sent to another machine (${destino}). Make sure that is what you want.`,
+    generadoTitulo: 'Generated vhost (read-only)',
+    avanzadoTitulo: 'Advanced mode',
+    avanzadoInterruptor: 'Write the whole vhost by hand',
+    avanzadoAyuda:
+      'Replaces the generated vhost. WolfCore Dev no longer regenerates it: if the domain, HTTPS, ports or folder change, you will have to adjust it yourself. Only this site’s domains and ports can be used.',
+    avanzadoActivarTitulo: 'Write the vhost by hand?',
+    avanzadoActivarTexto:
+      'It starts from the current generated vhost. While it is on, site changes (domain, HTTPS, PHP…) are not reflected in the vhost: you will have to make them yourself.',
+    avanzadoActivar: 'Write by hand',
+    manualEtiqueta: 'Full site vhost',
+    aplicarManual: 'Test and apply the vhost',
+    volverGenerado: 'Back to the generated vhost',
+    volverGeneradoTitulo: 'Go back to the generated vhost?',
+    volverGeneradoTexto:
+      'The hand-written vhost is kept in the history and WolfCore Dev generates the site’s vhost again (with its custom rules).',
+    historial: 'History',
+    historialTitulo: 'Previous vhost versions',
+    historialVacio: 'There are no previous versions yet.',
+    historialAyuda:
+      'The last 10 versions are kept, before each change. Restoring goes through the same nginx -t test.',
+    modoReglas: 'Generated with rules',
+    modoManual: 'Hand-written',
+    restaurar: 'Restore',
+    restaurarTitulo: 'Restore this version?',
+    restaurarTexto: (fecha: string) =>
+      `The vhost goes back to how it was on ${fecha}. The current version stays in the history.`,
+    restaurado: 'Version restored',
   },
   ftpSitio: {
     etiqueta: 'FTP',

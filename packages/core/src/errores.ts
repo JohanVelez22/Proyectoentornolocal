@@ -173,6 +173,17 @@ export const PARAMETROS_ERROR = {
   'xdebug.launch_invalido': [],
   'xdebug.launch_no_seguro': [],
   'xdebug.sin_configurar': [],
+  // Editor de vhost de Nginx (Task 12)
+  'nginx.sitio_no_existe': [],
+  'nginx.texto_invalido': [],
+  'nginx.sintaxis': ['linea', 'detalle'],
+  'nginx.directiva_prohibida': ['directiva', 'linea'],
+  'nginx.ruta_fuera': ['directiva', 'linea'],
+  'nginx.fuera_de_server': ['directiva', 'linea'],
+  'nginx.dominio_ajeno': ['nombre', 'linea'],
+  'nginx.puerto_ajeno': ['linea'],
+  'nginx.version_no_existe': [],
+  'nginx.argumento_invalido': ['campo'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

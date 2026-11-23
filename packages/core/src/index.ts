@@ -12,6 +12,8 @@ export * from './https/certificados';
 export * from './https/confianza';
 export * from './nginx/plantillas';
 export * from './nginx/principal';
+export * from './nginx/editor';
+export * from './nginx/snippets';
 export * from './hosts/bloque';
 export * from './hosts/hosts';
 export * from './plataforma/index';

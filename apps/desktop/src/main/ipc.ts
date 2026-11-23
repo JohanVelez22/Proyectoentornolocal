@@ -12,6 +12,7 @@ import {
   type TipoAviso,
   PasoRecetaSchema,
   quitarClave,
+  SNIPPETS_NGINX,
   validarUrlGit,
   type CambiosPreferenciasUi,
   type IdiomaUi,
@@ -47,6 +48,9 @@ import {
   ajustesPhpSitio,
   idSitioPhp,
   xdebugSitio,
+  cambioVhost,
+  idSitioNginx,
+  versionVhost,
   ramaPhpIni,
   respaldoIni,
   textoIni,
@@ -806,6 +810,18 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'sitios.launchJsonVista': (n, _s, id) => n.vistaLaunchJsonSitio(idSitioPhp(id)),
   // La confirmación la da el diálogo de la tarjeta (con la vista previa y el diff).
   'sitios.launchJson': (n, _s, id) => n.escribirLaunchJsonSitio(idSitioPhp(id)),
+  // ---- Editor de vhost: id del sitio y texto; el núcleo revisa, prueba con nginx -t y arma rutas ----
+  'nginx.vista': (n, _s, id) => n.editorVhost.vista(idSitioNginx(id)),
+  'nginx.aplicar': (n, _s, id, cambio) => {
+    const sitio = idSitioNginx(id);
+    return n.editorVhost.aplicar(sitio, cambioVhost(cambio));
+  },
+  'nginx.historial': (n, _s, id) => n.editorVhost.historial(idSitioNginx(id)),
+  'nginx.restaurar': (n, _s, id, version) => {
+    const sitio = idSitioNginx(id);
+    return n.editorVhost.restaurar(sitio, versionVhost(version));
+  },
+  'nginx.snippets': () => SNIPPETS_NGINX,
   'mailpit.noLeidos': (n) => n.noLeidosCorreo(),
   // Se entrega una sola vez: una recarga del renderer no lo vuelve a mostrar.
   avisoInicio: (n) => n.tomarAvisoInicio(),

@@ -37,6 +37,13 @@ const api: ApiEntorno = {
     launchJsonVista: (id) => invocar('sitios.launchJsonVista', id),
     launchJson: (id) => invocar('sitios.launchJson', id),
   },
+  nginx: {
+    vista: (id) => invocar('nginx.vista', id),
+    aplicar: (id, cambio) => invocar('nginx.aplicar', id, cambio),
+    historial: (id) => invocar('nginx.historial', id),
+    restaurar: (id, version) => invocar('nginx.restaurar', id, version),
+    snippets: () => invocar('nginx.snippets'),
+  },
   servicios: {
     estados: () => invocar('servicios.estados'),
     iniciar: (id) => invocar('servicios.iniciar', id),

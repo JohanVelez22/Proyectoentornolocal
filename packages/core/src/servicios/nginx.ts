@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { ErrorWolf } from '../errores';
-import { copyFile, mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Instalador } from '../catalogo/instalador';
 import { generarNginxPrincipal } from '../nginx/principal';
@@ -108,8 +108,10 @@ export class ServicioNginx {
   }
 
   /** nginx resuelve los include relativos contra la carpeta del conf principal. */
-  private async copiarIncluidos(bin: string): Promise<void> {
-    const etc = path.dirname(this.rutas.nginxConf());
+  private async copiarIncluidos(
+    bin: string,
+    etc = path.dirname(this.rutas.nginxConf()),
+  ): Promise<void> {
     await mkdir(etc, { recursive: true });
     for (const f of ['mime.types', 'fastcgi_params']) {
       const origen = path.join(bin, 'conf', f);
@@ -117,12 +119,16 @@ export class ServicioNginx {
     }
   }
 
-  private async generarConf(bin: string, destino: string): Promise<void> {
+  private async generarConf(
+    bin: string,
+    destino: string,
+    sitesDir = path.dirname(this.rutas.vhost('x')),
+  ): Promise<void> {
     const https = await this.httpsPrincipal();
     const adminer = await this.adminer();
     const contenido = generarNginxPrincipal({
       prefijo: bin,
-      sitesDir: path.dirname(this.rutas.vhost('x')),
+      sitesDir,
       phpUpstreams: await this.obtenerUpstreams(),
       logsDir: this.rutas.logs(),
       puerto: (await this.leerConfig()).servicios.nginx.puerto,
@@ -147,6 +153,48 @@ export class ServicioNginx {
       },
     );
     return { ok: r.codigo === 0, salida: `${r.stderr}${r.stdout}`.trim() };
+  }
+
+  /**
+   * `nginx -t` de toda la configuración con el vhost `contenido` en lugar del del sitio `id`, sobre
+   * una copia temporal (nginx.conf, los vhosts de los demás sitios y los include estándar): nada de
+   * lo que usa el Nginx en marcha se toca. Las rutas temporales de la salida se cambian por las
+   * reales para que el usuario reconozca el archivo.
+   */
+  async probarConVhost(id: string, contenido: string): Promise<{ ok: boolean; salida: string }> {
+    const { bin } = await this.argsBase();
+    await mkdir(this.rutas.tmp(), { recursive: true });
+    const dir = await mkdtemp(path.join(this.rutas.tmp(), 'nginx-prueba-'));
+    const sitesReal = path.dirname(this.rutas.vhost('x'));
+    const sites = path.join(dir, 'sites');
+    try {
+      await mkdir(sites, { recursive: true });
+      const nombre = path.basename(this.rutas.vhost(id));
+      for (const n of await readdir(sitesReal).catch(() => [] as string[])) {
+        if (n.endsWith('.conf') && n !== nombre) {
+          await copyFile(path.join(sitesReal, n), path.join(sites, n));
+        }
+      }
+      await writeFile(path.join(sites, nombre), contenido, 'utf8');
+      const conf = path.join(dir, 'nginx.conf');
+      await this.generarConf(bin, conf, sites);
+      await this.copiarIncluidos(bin, dir);
+      const r = await this.probarConfig(conf);
+      let salida = r.salida;
+      for (const [tmp, real] of [
+        [sites, sitesReal],
+        [dir, path.dirname(this.rutas.nginxConf())],
+      ] as const) {
+        salida = salida
+          .split(tmp)
+          .join(real)
+          .split(tmp.replace(/\\/g, '/'))
+          .join(real.replace(/\\/g, '/'));
+      }
+      return { ok: r.ok, salida };
+    } finally {
+      await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+    }
   }
 
   /** Genera un candidato, lo valida y solo entonces reemplaza nginx.conf. */

@@ -276,6 +276,22 @@ export const es = {
       'xdebug.launch_no_seguro':
         'La carpeta .vscode o su launch.json son un enlace u otra cosa: no se escribe ahí.',
       'xdebug.sin_configurar': 'Configure Xdebug en el sitio antes de generar el launch.json.',
+      'nginx.sitio_no_existe': 'Ese sitio ya no existe.',
+      'nginx.texto_invalido':
+        'El texto del vhost es demasiado largo, está vacío o tiene caracteres de control.',
+      'nginx.sintaxis': 'Línea {linea}: {detalle}. No se cambió nada.',
+      'nginx.directiva_prohibida':
+        'Línea {linea}: «{directiva}» no se permite en el vhost de un sitio (podría afectar a otros sitios o a archivos fuera del proyecto). No se cambió nada.',
+      'nginx.ruta_fuera':
+        'Línea {linea}: «{directiva}» apunta fuera de la carpeta del proyecto o de sus registros y certificados. No se cambió nada.',
+      'nginx.fuera_de_server':
+        'Línea {linea}: el vhost completo solo puede tener bloques «server»; «{directiva}» queda fuera. No se cambió nada.',
+      'nginx.dominio_ajeno':
+        'Línea {linea}: «{nombre}» no es un dominio de este sitio. Agréguelo como alias del sitio primero.',
+      'nginx.puerto_ajeno':
+        'Línea {linea}: el sitio solo puede escuchar en los puertos de Nginx configurados en Ajustes.',
+      'nginx.version_no_existe': 'Esa versión del vhost ya no está en el historial.',
+      'nginx.argumento_invalido': 'Argumento no válido: {campo}',
     },
   },
   avisoInicio: {
@@ -1076,6 +1092,67 @@ export const es = {
     phpStorm: 'Configuración para PhpStorm',
     copiarPhpStorm: 'Copiar configuración de PhpStorm',
     errorNginx: (salida: string) => `Nginx no aceptó el cambio; se volvió a lo anterior. ${salida}`,
+  },
+  nginxEditor: {
+    etiqueta: 'Nginx',
+    generadoResumen: 'Vhost generado',
+    conReglas: 'con reglas propias',
+    manualResumen: 'Vhost escrito a mano (no se regenera)',
+    mostrar: 'Editar vhost',
+    ocultar: 'Ocultar vhost',
+    cargando: 'Leyendo el vhost…',
+    reglasTitulo: 'Reglas propias',
+    reglasAyuda:
+      'Van dentro del bloque server de este sitio. Antes de aplicar se prueban con nginx -t sobre una copia de toda la configuración; si algo falla, todo queda como estaba.',
+    reglasEtiqueta: 'Reglas propias de Nginx',
+    reglasPlaceholder: '# Por ejemplo: client_max_body_size 256m;',
+    snippetsTitulo: 'Fragmentos',
+    insertar: (titulo: string) => `Insertar: ${titulo}`,
+    snippets: {
+      cors: 'CORS',
+      'cache-estaticos': 'Caché de estáticos',
+      'limite-subida': 'Límite de subida',
+      spa: 'SPA (index.html)',
+      'cabeceras-seguridad': 'Cabeceras de seguridad',
+      websocket: 'Proxy WebSocket',
+      gzip: 'Compresión gzip',
+      ocultos: 'Negar archivos ocultos',
+    },
+    aplicar: 'Probar y aplicar',
+    descartar: 'Descartar cambios',
+    aplicado: 'Vhost aplicado y Nginx recargado',
+    aplicadoApagado: 'Vhost guardado; se usará al encender Nginx',
+    fallo: 'Nginx no aceptó el cambio; el vhost sigue como estaba',
+    salidaTitulo: 'Salida de nginx -t',
+    avisoDestino: (destino: string, linea: number) =>
+      `Línea ${linea}: el tráfico se envía a otro equipo (${destino}). Revise que sea lo que quiere.`,
+    generadoTitulo: 'Vhost generado (solo lectura)',
+    avanzadoTitulo: 'Modo avanzado',
+    avanzadoInterruptor: 'Escribir el vhost completo a mano',
+    avanzadoAyuda:
+      'Reemplaza el vhost generado. WolfCore Dev ya no lo regenera: si cambia el dominio, el HTTPS, los puertos o la carpeta, tendrá que ajustarlo usted. Solo puede usar los dominios y puertos de este sitio.',
+    avanzadoActivarTitulo: '¿Escribir el vhost a mano?',
+    avanzadoActivarTexto:
+      'Se parte del vhost generado actual. Mientras esté activo, los cambios del sitio (dominio, HTTPS, PHP…) no se reflejan en el vhost: los tendrá que hacer usted.',
+    avanzadoActivar: 'Escribir a mano',
+    manualEtiqueta: 'Vhost completo del sitio',
+    aplicarManual: 'Probar y aplicar el vhost',
+    volverGenerado: 'Volver al vhost generado',
+    volverGeneradoTitulo: '¿Volver al vhost generado?',
+    volverGeneradoTexto:
+      'El vhost escrito a mano se guarda en el historial y WolfCore Dev vuelve a generar el del sitio (con sus reglas propias).',
+    historial: 'Historial',
+    historialTitulo: 'Versiones anteriores del vhost',
+    historialVacio: 'Todavía no hay versiones anteriores.',
+    historialAyuda:
+      'Se guardan las 10 últimas versiones, antes de cada cambio. Restaurar pasa por la misma prueba con nginx -t.',
+    modoReglas: 'Generado con reglas',
+    modoManual: 'Escrito a mano',
+    restaurar: 'Restaurar',
+    restaurarTitulo: '¿Restaurar esta versión?',
+    restaurarTexto: (fecha: string) =>
+      `El vhost vuelve a como estaba el ${fecha}. La versión actual queda en el historial.`,
+    restaurado: 'Versión restaurada',
   },
   ftpSitio: {
     etiqueta: 'FTP',

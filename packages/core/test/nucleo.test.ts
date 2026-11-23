@@ -1413,6 +1413,25 @@ describe('Nucleo (Etapa B)', () => {
     });
   });
 
+  it('guardarSitio no cambia las reglas propias ni el vhost manual (solo el editor de vhost)', async () => {
+    const n = await crear();
+    const { sitio } = await n.guardarSitio({
+      ...datos(),
+      reglasExtra: 'include C:/Windows/win.ini;',
+      vhostManual: 'server { listen 80; server_name otro.test; }',
+    });
+    expect(sitio.reglasExtra).toBe('');
+    expect(sitio.vhostManual ?? null).toBeNull();
+    // Lo que puso el editor se conserva al volver a guardar el sitio.
+    await n.sitios.modificarConfig((c) => {
+      c.sitios[0]!.reglasExtra = 'gzip on;';
+    });
+    const { id, ...resto } = (await n.sitios.listar())[0]!;
+    const editado = await n.guardarSitio({ ...resto, reglasExtra: '', nota: 'otra' }, id);
+    expect(editado.sitio).toMatchObject({ reglasExtra: 'gzip on;', nota: 'otra' });
+    expect(n.editorVhost).toBeDefined();
+  });
+
   it('buscarPuertoLibre respeta el preferido y salta los reservados y los ocupados', async () => {
     const ocupados = new Set([8001]);
     const probar = async (p: number): Promise<boolean> => !ocupados.has(p);
