@@ -271,6 +271,9 @@ export class Supervisor {
           delete r.puerto;
         }
       }
+      // Pools de PHP (de rama y de sitio): php-cgi.exe es común (Laragon, XAMPP, Herd) y su PID
+      // se reutiliza; sin la misma hora de creación no se adoptan (ni se matan después).
+      if (r.id.startsWith('php-')) r.exigirInicio = true;
       const info = await this.plataforma.procesoVivo(r.pid);
       const esperado = path.basename(String(r.ejecutable)).toLowerCase();
       if (!info.vivo || info.ejecutable?.toLowerCase() !== esperado) continue;

@@ -445,6 +445,38 @@ describe('Supervisor', () => {
       await s.cerrar();
     });
 
+    it('pools de PHP (php-<rama>, php-sitio-*): sin hora guardada o con PID reutilizado no se adoptan ni se matan', async () => {
+      vivos.set(801, 'php-cgi.exe');
+      creaciones.set(801, 't801');
+      vivos.set(802, 'php-cgi.exe');
+      creaciones.set(802, 'otra-hora'); // el PID pasó a un php-cgi de Laragon/XAMPP
+      vivos.set(803, 'php-cgi.exe');
+      creaciones.set(803, 't803');
+      const reg = (id: string, pid: number, creado?: string) => ({
+        id,
+        pid,
+        ejecutable: 'C:/p/php-cgi.exe',
+        args: [],
+        puerto: 9840,
+        log: def().log,
+        reiniciar: true,
+        ...(creado ? { creado } : {}),
+      });
+      writeFileSync(
+        rutas.estado(),
+        JSON.stringify([
+          reg('php-8.4-0', 801), // registro viejo sin hora
+          reg('php-sitio-tienda-0', 802, 't802'),
+          reg('php-sitio-blog-0', 803, 't803'),
+        ]),
+      );
+      const s = crear();
+      await s.readoptar();
+      expect(s.ids()).toEqual(['php-sitio-blog-0']);
+      expect(matados).toEqual([]);
+      await s.cerrar();
+    });
+
     it('una entrada proy- de una versión previa: exige la hora y su puerto no es sonda', async () => {
       sondaOk = false;
       vivos.set(777, 'node.exe');

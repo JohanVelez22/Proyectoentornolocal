@@ -259,6 +259,8 @@ export class ServicioPhp {
         puerto,
         log: this.rutas.logs(`php-${version}.log`),
         reiniciar: true,
+        // php-cgi.exe es común: al readoptar se exige la hora de creación (PID reutilizado).
+        exigirInicio: true,
       });
     }
   }
