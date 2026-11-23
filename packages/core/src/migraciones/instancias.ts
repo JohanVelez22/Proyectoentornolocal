@@ -111,7 +111,6 @@ export async function migrarInstancias(
   // 1. Plan (sin escribir nada).
   const planes: Plan[] = [];
   const asignados = new Set<number>();
-  const reservados = (await d.rangosReservados?.().catch(() => [])) ?? [];
   for (const def of d.definiciones()) {
     if (!multiInstancia(def)) continue;
     const previo = esObjeto(datosCrudos) ? datosCrudos[def.id] : undefined;
@@ -178,6 +177,9 @@ export async function migrarInstancias(
   for (const x of puertosConfigurados(simulado)) asignados.add(x.puerto);
   asignados.add(cfg.servicios.nginx.puerto);
   const fijos = puertosFijos(cfg);
+  // Solo se consultan (netsh en Windows) si alguna carpeta suelta necesita puerto.
+  const hacenFalta = planes.some((p) => Object.values(p.instancias).some((i) => i.puerto === 0));
+  const reservados = hacenFalta ? ((await d.rangosReservados?.().catch(() => [])) ?? []) : [];
   const libre = (desde: number): number => {
     for (let p = desde; p <= 65535; p++) {
       if (asignados.has(p)) continue;
