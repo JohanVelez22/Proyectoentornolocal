@@ -76,6 +76,8 @@ export class PlataformaFalsa implements PlataformaCompleta {
   soloLecturaQuitado = 0;
   /** Lo que devuelve `antivirus` (null: sin antivirus o ilegible). */
   antivirusEstado: EstadoAntivirus | null = null;
+  /** Archivos que se pidió restringir al usuario. */
+  readonly restringidos: string[] = [];
   firefox: string[] = [];
   /** Perfiles (rutas de `firefox`) fuera de la carpeta de Firefox. */
   readonly firefoxFuera = new Set<string>();
@@ -272,6 +274,11 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async antivirus(): Promise<EstadoAntivirus | null> {
     return this.antivirusEstado;
+  }
+
+  async restringirAlUsuario(ruta: string): Promise<boolean> {
+    this.restringidos.push(ruta);
+    return true;
   }
 
   comandoManual(c: ComandoManual): string {

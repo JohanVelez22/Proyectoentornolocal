@@ -25,6 +25,27 @@ describe.skipIf(process.platform !== 'win32')('PlataformaWindows real (solo Wind
     expect(d.get(process.pid)).toContain(hijo.pid);
   }, 30_000);
 
+  it('restringirAlUsuario deja un archivo temporal sin herencia y legible por este usuario', async () => {
+    const { mkdtemp, readFile, rm, writeFile } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const path = await import('node:path');
+    const carpeta = await mkdtemp(path.join(tmpdir(), 'pel-acl-'));
+    try {
+      const archivo = path.join(carpeta, 'token.tmp');
+      await writeFile(archivo, '');
+      expect(await new PlataformaWindows().restringirAlUsuario(archivo)).toBe(true);
+      await writeFile(archivo, 'secreto');
+      expect(await readFile(archivo, 'utf8')).toBe('secreto');
+      const { execFileSync } = await import('node:child_process');
+      const acl = execFileSync('icacls', [archivo], { encoding: 'utf8', windowsHide: true });
+      // Sin entradas heredadas "(I)": solo la del usuario.
+      expect(acl).not.toContain('(I)');
+      expect(acl).toContain(process.env.USERNAME ?? '');
+    } finally {
+      await rm(carpeta, { recursive: true, force: true });
+    }
+  }, 30_000);
+
   it('rangosReservados devuelve rangos válidos (o ninguno)', async () => {
     const r = await new PlataformaWindows().rangosReservados('tcp');
     for (const x of r) {

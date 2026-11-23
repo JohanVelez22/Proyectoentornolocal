@@ -42,7 +42,7 @@ import { ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
 import { bloqueEnvIa } from './ia/envIa';
 import { GestorIa } from './ia/gestorIa';
 import { completarPlataforma, crearPlataforma } from './plataforma/index';
-import type { IdTerminal, TerminalDisponible } from './plataforma/tipos';
+import type { IdTerminal, PlataformaCompleta, TerminalDisponible } from './plataforma/tipos';
 import { baseDelProyecto, leerEnvAcotado, type BaseProyecto } from './bd/baseProyecto';
 
 export { LIMITE_ENV_BYTES } from './bd/baseProyecto';
@@ -254,6 +254,8 @@ export interface ResultadoAjustes {
 }
 
 interface ModulosNucleo {
+  /** Plataforma completa (lo que una parcial de prueba no tenga lo pone la de Windows). */
+  plataforma: PlataformaCompleta;
   /** Editor del vhost de cada sitio (reglas propias o vhost completo, con nginx -t y vuelta atrás). */
   editorVhost: EditorVhost;
   /** php.ini de cada rama (editor con prueba, copia y vuelta atrás). */
@@ -422,6 +424,7 @@ export class Nucleo {
   /** Procesos supervisados de los proyectos (npm run dev, uvicorn…). */
   readonly procesos: ProcesosProyecto;
   private readonly almacenCredenciales: AlmacenCredenciales;
+  private readonly plataforma: PlataformaCompleta;
   /** Puerto de Ollama según la configuración (ClienteOllama lo lee de forma síncrona). */
   private readonly puertoOllama: { valor: number };
   /** Servidor MCP local; se maneja con iniciarMcp/detenerMcp (que guardan `mcp.activo`). */
@@ -479,6 +482,7 @@ export class Nucleo {
       leer: () => almacen.leer(),
     };
     this.avisos = m.avisos;
+    this.plataforma = m.plataforma;
     this.bd = m.bd;
     this.respaldos = m.respaldos;
     this.pgvector = m.pgvector;
@@ -523,6 +527,7 @@ export class Nucleo {
       rutas: this.rutas,
       puerto: async () => (await this.config.leer()).depuracion.puerto,
       emitir: (d) => this.eventos.emit('dump:nuevo', d),
+      restringir: (ruta) => this.plataforma.restringirAlUsuario(ruta),
     });
   }
 
@@ -958,6 +963,7 @@ export class Nucleo {
         rutaLogProceso: (sitioId, procesoId) => procesos.rutaLog(sitioId, procesoId),
       }),
       confianza,
+      plataforma: plat,
       doctor: new Doctor({
         plataforma: plat,
         carpetaDatos: rutas.base,

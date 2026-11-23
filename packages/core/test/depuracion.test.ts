@@ -215,6 +215,40 @@ describe('ReceptorDumps', () => {
     expect(Date.now() - (await stat(archivo)).mtimeMs).toBeLessThan(5000);
   });
 
+  it('el archivo del token se restringe al usuario antes de escribir el token', async () => {
+    const base = await carpetaTemporal('pel-dumps-');
+    const vistos: { ruta: string; contenido: string }[] = [];
+    const r = new ReceptorDumps({
+      rutas: new Rutas(base),
+      puerto: async () => 0,
+      emitir: () => undefined,
+      restringir: async (ruta) => {
+        vistos.push({ ruta, contenido: await readFile(ruta, 'utf8') });
+        return true;
+      },
+    });
+    receptores.push(r);
+    await r.iniciar();
+    const archivo = rutasDepuracion(new Rutas(base)).receptor;
+    expect(vistos).toHaveLength(1);
+    expect(path.dirname(vistos[0]!.ruta)).toBe(path.dirname(archivo));
+    expect(vistos[0]!.contenido).toBe('');
+    expect((await tokenDe(base)).token).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('si no se puede restringir el archivo, el receptor arranca igual', async () => {
+    const base = await carpetaTemporal('pel-dumps-');
+    const r = new ReceptorDumps({
+      rutas: new Rutas(base),
+      puerto: async () => 0,
+      emitir: () => undefined,
+      restringir: async () => false,
+    });
+    receptores.push(r);
+    await r.iniciar();
+    expect(r.estado().activo).toBe(true);
+  });
+
   it('cada sesión tiene un token nuevo; detener borra el archivo y deja de aceptar', async () => {
     const { r, base } = await nuevoReceptor();
     const primero = await tokenDe(base);

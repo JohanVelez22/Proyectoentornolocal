@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { open, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { arch, homedir, tmpdir } from 'node:os';
+import { arch, homedir, tmpdir, userInfo } from 'node:os';
 import path from 'node:path';
 import { rutaBasePorDefecto } from './carpetas';
 import {
@@ -601,6 +601,26 @@ export class PlataformaWindows implements PlataformaCompleta {
       return interpretarAntivirus(r.stdout, carpeta);
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * `icacls` de System32 (nunca uno del PATH): quita los permisos heredados y deja solo al
+   * usuario actual con control total. Lo usa el archivo del token de la captura de dumps.
+   */
+  async restringirAlUsuario(ruta: string): Promise<boolean> {
+    const usuario = this.entorno.USERNAME ?? userInfo().username;
+    const dominio = this.entorno.USERDOMAIN;
+    const cuenta = dominio ? `${dominio}\\${usuario}` : usuario;
+    try {
+      const r = await this.ejecutar(
+        rutaSistema32(this.entorno, 'icacls.exe'),
+        [ruta, '/inheritance:r', '/grant:r', `${cuenta}:(F)`],
+        { timeoutMs: 15_000 },
+      );
+      return r.codigo === 0;
+    } catch {
+      return false;
     }
   }
 

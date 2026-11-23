@@ -174,6 +174,12 @@ export interface CapacidadesPlataforma {
   antivirus(carpeta: string): Promise<EstadoAntivirus | null>;
   /** Texto del comando para la consola de administrador (no se ejecuta). */
   comandoManual(c: ComandoManual): string;
+  /**
+   * Deja el archivo legible solo por el usuario actual (en Windows, `icacls` sin herencia y con
+   * control total para el usuario; en Unix basta el modo 600 al crearlo). false si no se pudo:
+   * quien llama decide si sigue (la carpeta de datos ya es del usuario).
+   */
+  restringirAlUsuario(ruta: string): Promise<boolean>;
 }
 
 /**

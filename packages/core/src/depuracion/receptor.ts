@@ -90,6 +90,11 @@ export interface DepsReceptor {
   ahora?: () => number;
   /** Cada cuánto se renueva la fecha del archivo del receptor (latido; 15 s por defecto). */
   latidoMs?: number;
+  /**
+   * Deja el archivo del token legible solo por el usuario (`Plataforma.restringirAlUsuario`;
+   * icacls en Windows). Se aplica al temporal vacío, antes de escribir el token.
+   */
+  restringir?: (ruta: string) => Promise<boolean>;
 }
 
 /**
@@ -197,6 +202,11 @@ export class ReceptorDumps {
     try {
       await mkdir(path.dirname(archivo), { recursive: true });
       const tmp = `${archivo}.${process.pid}.tmp`;
+      // Vacío y restringido primero; el token se escribe después (el rename conserva la ACL).
+      await writeFile(tmp, '', { mode: 0o600 });
+      if (this.d.restringir && !(await this.d.restringir(tmp).catch(() => false))) {
+        console.warn('No se pudo restringir el archivo del token de dumps al usuario actual.');
+      }
       await writeFile(tmp, JSON.stringify({ puerto: real, token, pid: process.pid }), {
         mode: 0o600,
       });

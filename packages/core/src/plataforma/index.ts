@@ -81,6 +81,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'instalarVcRedist',
   'antivirus',
   'comandoManual',
+  'restringirAlUsuario',
 ];
 
 /**

@@ -633,3 +633,51 @@ describe('Metricas: suma de los descendientes', () => {
     expect((await m.muestrear()).procesos[0]).toMatchObject({ cpu: 5, ramBytes: 9 });
   });
 });
+
+describe('restringirAlUsuario (ACL del archivo del token)', () => {
+  it('Windows: icacls de System32 quita la herencia y deja solo al usuario actual', async () => {
+    const llamadas: { cmd: string; args: string[] }[] = [];
+    const ejecutar: Ejecutor = async (cmd, args) => {
+      llamadas.push({ cmd, args });
+      return { codigo: 0, stdout: '', stderr: '' };
+    };
+    const p = new PlataformaWindows(ejecutar, undefined, {
+      entorno: { SystemRoot: 'C:\\Windows', USERNAME: 'ana', USERDOMAIN: 'EQUIPO' },
+    });
+    expect(await p.restringirAlUsuario('C:\\Datos\\run\\depuracion.json.1.tmp')).toBe(true);
+    expect(llamadas).toEqual([
+      {
+        cmd: 'C:\\Windows\\System32\\icacls.exe',
+        args: [
+          'C:\\Datos\\run\\depuracion.json.1.tmp',
+          '/inheritance:r',
+          '/grant:r',
+          'EQUIPO\\ana:(F)',
+        ],
+      },
+    ]);
+  });
+
+  it('Windows: si icacls falla o no está, devuelve false sin lanzar', async () => {
+    const falla = new PlataformaWindows(
+      async () => ({ codigo: 5, stdout: '', stderr: 'x' }),
+      undefined,
+      { entorno: { SystemRoot: 'C:\\Windows', USERNAME: 'ana' } },
+    );
+    expect(await falla.restringirAlUsuario('C:\\x')).toBe(false);
+    const noEsta = new PlataformaWindows(
+      async () => {
+        throw Object.assign(new Error('no'), { code: 'ENOENT' });
+      },
+      undefined,
+      { entorno: { USERNAME: 'ana' } },
+    );
+    expect(await noEsta.restringirAlUsuario('C:\\x')).toBe(false);
+  });
+
+  it('falsa: registra la ruta', async () => {
+    const p = new PlataformaFalsa();
+    expect(await p.restringirAlUsuario('/d/run/x.tmp')).toBe(true);
+    expect(p.restringidos).toEqual(['/d/run/x.tmp']);
+  });
+});
