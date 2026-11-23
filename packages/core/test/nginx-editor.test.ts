@@ -40,7 +40,7 @@ const ctx = (): ContextoVhost => ({
   logs: [rutas.logs('sitios', 'blog.access.log'), rutas.logs('sitios', 'blog.error.log')],
   certificados: [rutas.certCrt('blog'), rutas.certKey('blog')],
   // Adminer, Mailpit web, MySQL, MCP, PHP 8.4 de la rama y un pool de otro sitio.
-  puertosInternos: [8090, 8025, 3306, 7790, 9840, 9841, 19000],
+  puertosInternos: [8090, 8025, 3306, 7790, 9840, 9841, 11434, 19000],
   upstreamsPropios: ['php84', 'phpsitio_blog'],
 });
 
@@ -207,6 +207,33 @@ describe('revisarVhost: reglas propias', () => {
     ['grpc_ssl_*', 'grpc_ssl_certificate C:/x;', 'nginx.directiva_prohibida'],
     ['uwsgi_ssl_*', 'uwsgi_ssl_trusted_certificate C:/x;', 'nginx.directiva_prohibida'],
     ['ssl_conf_command', 'ssl_conf_command Options KTLS;', 'nginx.directiva_prohibida'],
+    // Nombres que resuelven a este equipo: el puerto interno basta para prohibirlo.
+    [
+      'otro .test (apunta a 127.0.0.1)',
+      'location /a { proxy_pass http://otro.test:8090; }',
+      'nginx.destino_interno',
+    ],
+    ['127.1', 'location /a { proxy_pass http://127.1:8090; }', 'nginx.destino_interno'],
+    [
+      'IP en decimal',
+      'location /a { proxy_pass http://2130706433:11434; }',
+      'nginx.destino_interno',
+    ],
+    ['lvh.me', 'location /a { proxy_pass http://lvh.me:3306; }', 'nginx.destino_interno'],
+    [
+      'IP en hexadecimal',
+      'location /a { proxy_pass http://0x7f000001:8025/; }',
+      'nginx.destino_interno',
+    ],
+    // Rutas internas con ".." o con variables de la petición (salen de la raíz).
+    ['rewrite a /../', 'rewrite ^/x$ /../secreto.txt last;', 'nginx.ruta_fuera'],
+    ['rewrite con $arg_', 'rewrite ^/x$ /$arg_f last;', 'nginx.ruta_fuera'],
+    ['rewrite con $request_uri interno', 'rewrite ^ /p$request_uri last;', 'nginx.ruta_fuera'],
+    ['try_files con ..', 'location /x { try_files /../secreto.txt =404; }', 'nginx.ruta_fuera'],
+    ['try_files con $http_', 'location /x { try_files /$http_x_f =404; }', 'nginx.ruta_fuera'],
+    ['return con ..', 'return 302 /../x;', 'nginx.ruta_fuera'],
+    ['error_page con ..', 'error_page 404 /../x.html;', 'nginx.ruta_fuera'],
+    ['index con ..', 'index ../../secreto.txt;', 'nginx.ruta_fuera'],
   ])('prohíbe %s', (_n, texto, codigo) => {
     const t = texto.replace('CARPETA', barras(carpeta));
     expect(() => revisarVhost(t, 'reglas', ctx())).toThrowError(
@@ -223,6 +250,13 @@ describe('revisarVhost: reglas propias', () => {
       'fastcgi_param APP_ENV local;',
       'location ~ ^/api/ { fastcgi_pass phpsitio_blog; fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; fastcgi_param PATH_TRANSLATED $document_root$fastcgi_path_info; }',
       'location /ws/ { proxy_pass http://127.0.0.1:6001; }',
+      'location /l { try_files $uri $uri/ /index.php?$query_string; }',
+      'rewrite ^/viejo/(.*)$ /index.php?/$1 last;',
+      'rewrite ^/fuera$ https://$host$request_uri? permanent;',
+      'return 301 https://$host$request_uri;',
+      'error_page 404 /404.html;',
+      'error_page 500 @error;',
+      'index index.php index.html;',
       'access_log off;',
       `error_log "${barras(rutas.logs('sitios', 'blog.error.log'))}";`,
     ].join('\n');
@@ -439,6 +473,51 @@ describe('GestorSitios con reglas o vhost manual guardados', () => {
     expect(readFileSync(rutas.vhost('blog'), 'utf8')).not.toContain('rota_global');
     expect(readFileSync(rutas.vhost('tienda'), 'utf8')).toContain('gzip on;');
     expect(avisos).toEqual([{ sitio: 'blog', modo: 'reglas' }]);
+    // Queda desactivado hasta que el usuario lo edite: el siguiente aplicar no vuelve a probar
+    // ni a avisar, y las reglas siguen guardadas.
+    const guardado = (await almacen.leer()).sitios[0]!;
+    expect(guardado).toMatchObject({ reglasExtra: 'rota_global on;', vhostDesactivado: 'reglas' });
+    expect((await g.aplicar()).nginx.ok).toBe(true);
+    expect(avisos).toHaveLength(1);
+    expect(readFileSync(rutas.vhost('blog'), 'utf8')).not.toContain('rota_global');
+  });
+
+  it('si el fallo no es de lo guardado y hubo una recarga buena en la prueba, recarga otra vez lo anterior', async () => {
+    const almacen = new Almacen(rutas);
+    let recargas = 0;
+    let fallar = false;
+    const g = new GestorSitios({
+      almacen,
+      rutas,
+      nginx: {
+        validar: async () => ({ ok: true, salida: '' }),
+        recargar: async () => {
+          recargas++;
+          // Falla con todo; sin lo del usuario pasa la recarga, pero junto con ello no.
+          if (fallar && [1, 3, 4].includes(recargas)) throw new Error('[emerg] fallo');
+        },
+        probarConVhost: async () => ({ ok: true, salida: 'ok' }),
+      },
+      estadoNginx: () => 'encendido',
+      hosts: { sincronizar: async () => ({ ok: true }) },
+      instalador: { instalado: async () => true, instalados: async () => ['1.30.6'] },
+      eventos: new Eventos<EventosNucleo>(),
+    });
+    await g.crear(datosSitio('blog.test', carpeta));
+    await g.aplicar();
+    const antes = readFileSync(rutas.vhost('blog'), 'utf8');
+    await g.modificarConfig((c) => {
+      c.sitios[0]!.reglasExtra = 'gzip on;';
+    });
+    recargas = 0;
+    fallar = true;
+    const r = await g.aplicar();
+    expect(r.nginx.ok).toBe(false);
+    expect(readFileSync(rutas.vhost('blog'), 'utf8')).toBe(antes);
+    // 1: con todo (falla), 2: sin lo del usuario (pasa), 3: con lo del usuario (falla),
+    // 4: sin nada otra vez (falla) → se restaura y se recarga lo anterior (5).
+    expect(recargas).toBe(5);
+    expect(r.nginx.salida).toContain('Se recargó Nginx con la configuración anterior');
   });
 });
 
@@ -674,6 +753,24 @@ describe('EditorVhost', () => {
     await expect(editor.restaurar('blog', '../../config.json')).rejects.toMatchObject({
       codigo: 'nginx.version_no_existe',
     });
+  });
+
+  it('lo desactivado por nginx -t se ve en la vista y vuelve al aplicarlo de nuevo', async () => {
+    await gestor.modificarConfig((c) => {
+      c.sitios[0]!.reglasExtra = 'gzip on;';
+      c.sitios[0]!.vhostDesactivado = 'reglas';
+    });
+    await gestor.aplicar();
+    expect(conf()).not.toContain('gzip on;');
+    expect(await crearEditor().vista('blog')).toMatchObject({
+      reglas: 'gzip on;',
+      desactivado: 'reglas',
+    });
+    // Aplicar lo mismo cuenta como editarlo: se prueba y se reactiva.
+    expect((await crearEditor().aplicar('blog', { reglas: 'gzip on;' })).ok).toBe(true);
+    expect(llamadas).toContain('probar');
+    expect(conf()).toContain('gzip on;');
+    expect((await sitioGuardado()).vhostDesactivado ?? null).toBeNull();
   });
 
   it('sin cambios no prueba, no recarga ni guarda copia', async () => {

@@ -413,8 +413,77 @@ const esEsteEquipo = (host: string): boolean =>
   host === '0.0.0.0' ||
   /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host);
 
-const esIpLiteral = (host: string): boolean =>
-  host.startsWith('[') || /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+/**
+ * Variables que pueden ir en la ruta de un URI interno: las que salen de la URI ya normalizada
+ * por Nginx (o del host validado). Las de la petición en crudo (`$arg_*`, `$args`, `$http_*`,
+ * `$request_uri`, `$cookie_*`…) pueden traer `..`: con ellas `$uri` sale de la raíz.
+ */
+const VARIABLES_RUTA = new Set([
+  'uri',
+  'document_uri',
+  'fastcgi_script_name',
+  'fastcgi_path_info',
+  'host',
+  'server_name',
+]);
+
+/** Parte de ruta de un URI interno (hasta `?` o `$is_args`, donde empieza la consulta). */
+const rutaDeUri = (u: string): string => u.split(/\?|\$is_args(?![A-Za-z0-9_])|\$\{is_args\}/)[0]!;
+
+/** ¿El URI interno puede salir de la raíz? (`..` o variables de la petición en la ruta). */
+function uriInternaInsegura(u: string): boolean {
+  if (u.includes('..')) return true;
+  for (const m of rutaDeUri(u).matchAll(/\$\{?([A-Za-z_][A-Za-z0-9_]*|\d)\}?/g)) {
+    const nombre = m[1]!;
+    if (!/^\d$/.test(nombre) && !VARIABLES_RUTA.has(nombre)) return true;
+  }
+  return false;
+}
+
+/** Redirección al navegador (no es un URI interno): `http(s)://…` o `$scheme://…`. */
+const esRedireccion = (u: string): boolean =>
+  /^(https?:\/\/|\$scheme:\/\/|\$\{scheme\}:\/\/)/i.test(u);
+
+/**
+ * `rewrite`, `try_files`, `error_page`, `index`, `return`, `auth_request` y `mirror` llevan URIs
+ * internos: comprobado con Nginx 1.30 en Windows, `try_files /../x` sirve un archivo fuera de la
+ * raíz y tras `rewrite ^ /../x.php` (o `/$arg_f`) `$uri` queda con `..` (llegaría así a
+ * `$fastcgi_script_name`). Se rechaza `..` en todos y, en los internos, variables de la petición.
+ */
+function revisarUris(d: Directiva, n: string): void {
+  let internas: string[] = [];
+  let todas: string[] = [];
+  if (n === 'rewrite') {
+    const destino = d.args[1] ?? '';
+    const flag = d.args[2] ?? '';
+    todas = [destino];
+    if (!esRedireccion(destino) && flag !== 'redirect' && flag !== 'permanent')
+      internas = [destino];
+  } else if (n === 'try_files') {
+    todas = internas = d.args.filter((a) => !a.startsWith('@') && !/^=\d+$/.test(a));
+  } else if (n === 'error_page') {
+    const destino = d.args.at(-1) ?? '';
+    todas = [destino];
+    if (!destino.startsWith('@') && !esRedireccion(destino)) internas = [destino];
+  } else if (n === 'index' || n === 'auth_request' || n === 'mirror') {
+    todas = internas = d.args.filter((a) => a !== 'off');
+  } else if (n === 'return') {
+    todas = d.args.slice(1);
+  }
+  if (todas.some((u) => u.includes('..')) || internas.some(uriInternaInsegura)) {
+    throw rutaFuera(d);
+  }
+}
+
+const DIRECTIVAS_URI = new Set([
+  'rewrite',
+  'try_files',
+  'error_page',
+  'index',
+  'return',
+  'auth_request',
+  'mirror',
+]);
 
 /** Nombres de upstream que declara nginx.conf (ramas de PHP, pools de sitio y Adminer). */
 const UPSTREAM_PROPIO = /^(php\d+|phpsitio_[a-z0-9._-]+|adminer_php)$/i;
@@ -437,13 +506,9 @@ function revisarDestino(d: Directiva, ctx: ContextoVhost, avisos: AvisoVhost[]):
     return;
   }
   const numero = puerto !== null && /^\d{1,5}$/.test(puerto) ? Number(puerto) : null;
-  if (
-    numero !== null &&
-    ctx.puertosInternos.includes(numero) &&
-    (esEsteEquipo(host) || esIpLiteral(host))
-  ) {
-    throw destinoInterno(d);
-  }
+  // Sea cual sea el host: muchos nombres resuelven a este equipo (los .test de la app, lvh.me,
+  // 127.1, 2130706433, 0x7f000001…) y no se pueden enumerar.
+  if (numero !== null && ctx.puertosInternos.includes(numero)) throw destinoInterno(d);
   if (!esEsteEquipo(host)) {
     avisos.push({
       codigo: 'nginx.aviso_destino_externo',
@@ -554,6 +619,8 @@ function revisarDirectiva(
     }
   } else if (DIRECTIVAS_DESTINO.has(n)) {
     revisarDestino(d, ctx, avisos);
+  } else if (DIRECTIVAS_URI.has(n)) {
+    revisarUris(d, n);
   }
   for (const h of d.hijos ?? []) revisarDirectiva(h, modo, ctx, nivel + 1, avisos);
 }
@@ -599,6 +666,8 @@ export interface VistaVhost {
   reglas: string;
   /** Vhost completo del modo avanzado; null si se usa el generado. */
   manual: string | null;
+  /** Lo que Nginx rechazó al aplicar los sitios y quedó fuera hasta aplicarlo otra vez. */
+  desactivado: ModoVhost | null;
 }
 
 export interface VersionVhost {
@@ -675,7 +744,12 @@ export class EditorVhost {
     const cfg = await this.d.almacen.leer();
     const { s } = await this.sitio(cfg, sitioId);
     const { generado } = await this.d.vhostDe(s, cfg);
-    return { generado, reglas: s.reglasExtra, manual: s.vhostManual ?? null };
+    return {
+      generado,
+      reglas: s.reglasExtra,
+      manual: s.vhostManual ?? null,
+      desactivado: s.vhostDesactivado ?? null,
+    };
   }
 
   /**
@@ -703,7 +777,13 @@ export class EditorVhost {
     const reglas = (cambio.reglas ?? previo.reglasExtra).replace(/\r\n/g, '\n');
     const manualPedido = cambio.manual === undefined ? (previo.vhostManual ?? null) : cambio.manual;
     const manual = manualPedido === null ? null : conSalto(manualPedido.replace(/\r\n/g, '\n'));
-    const nuevo: Sitio = { ...previo, reglasExtra: reglas, vhostManual: manual };
+    // Aplicarlo desde el editor lo reactiva si nginx -t lo había desactivado.
+    const nuevo: Sitio = {
+      ...previo,
+      reglasExtra: reglas,
+      vhostManual: manual,
+      vhostDesactivado: null,
+    };
     const { generado, contexto } = await this.d.vhostDe(nuevo, cfg);
     const avisos = [...revisarVhost(reglas, 'reglas', contexto).avisos];
     if (manual !== null) avisos.push(...revisarVhost(manual, 'manual', contexto).avisos);
@@ -712,6 +792,7 @@ export class EditorVhost {
     const ruta = this.d.rutas.vhost(previo.id);
     const anterior = await readFile(ruta, 'utf8').catch(() => null);
     const sinCambios =
+      !previo.vhostDesactivado &&
       reglas === previo.reglasExtra &&
       manual === (previo.vhostManual ?? null) &&
       anterior === contenido;

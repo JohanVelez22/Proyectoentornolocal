@@ -630,7 +630,8 @@ export class Nucleo {
               : 'avisos.vhost_reglas_descartadas',
           datos: { fuente: a.sitio },
         }),
-      puertosInternos: puertosInternosVhost,
+      puertosInternos: async (cfg, id) =>
+        puertosInternosVhost(cfg, id, await instalador.instalados('php')),
     });
     await migrarCredenciales(rutas, almacen, credenciales);
     const urlBase = new UrlBase({
@@ -1159,8 +1160,21 @@ export class Nucleo {
   }
 
   /** Cambia el puerto de un servicio propio (1024–65535, libre); lo reinicia si estaba encendido. */
-  cambiarPuertoServicio(id: IdServicioDatos, puerto: number): Promise<void> {
-    return this.servicios.cambiarPuerto(id, puerto);
+  async cambiarPuertoServicio(id: IdServicioDatos, puerto: number): Promise<void> {
+    await this.servicios.cambiarPuerto(id, puerto);
+    await this.revisarVhostsTrasPuertos();
+  }
+
+  /**
+   * Los puertos internos cambiaron: los vhosts (reglas y manuales con proxy_pass) se vuelven a
+   * revisar y aplicar. Un fallo se registra; el cambio de puerto ya está hecho.
+   */
+  private async revisarVhostsTrasPuertos(): Promise<void> {
+    try {
+      await this.sitios.aplicar();
+    } catch (e) {
+      console.error('No se pudieron revisar los vhosts tras cambiar un puerto:', mensajeDe(e));
+    }
   }
 
   /** Marca si el servicio se enciende al iniciar WolfCore Dev (no lo enciende ni lo apaga ahora). */
@@ -1935,6 +1949,7 @@ export class Nucleo {
       await this.mcp.detener();
       await this.mcp.iniciar();
     }
+    await this.revisarVhostsTrasPuertos();
     return this.mcp.estado();
   }
 
@@ -2008,6 +2023,7 @@ export class Nucleo {
     // Las reglas propias y el vhost manual solo cambian con el editor de vhost (revisión,
     // nginx -t y vuelta atrás): guardar el sitio conserva los que tenía y nunca los regenera.
     delete resto.vhostManual;
+    delete resto.vhostDesactivado;
     resto.reglasExtra = previo?.reglasExtra ?? '';
     if (previo?.vhostManual) resto.vhostManual = previo.vhostManual;
     // FastAPI/Node con el proceso del proxy sin puerto: se le asigna uno libre (no se rechaza).
@@ -2333,14 +2349,19 @@ export function puertosReservados(cfg: Config, sitioId: string | null = null): n
 /**
  * Puertos que el vhost de un sitio no puede usar de destino (`proxy_pass`, `fastcgi_pass`…):
  * los servicios de WolfCore Dev (Adminer, Mailpit, MCP, FTP, bases de datos, Ollama), los PHP de
- * las ramas en uso y los pools de los sitios. Quedan fuera los de Nginx y los procesos del propio
+ * las ramas en uso o instaladas (la de Adminer incluida) y los pools de los sitios. Quedan fuera los de Nginx y los procesos del propio
  * sitio (su servidor de desarrollo).
  */
-export function puertosInternosVhost(cfg: Config, sitioId: string): number[] {
+export function puertosInternosVhost(
+  cfg: Config,
+  sitioId: string,
+  ramasInstaladas: readonly string[] = [],
+): number[] {
   const nginx = new Set([cfg.servicios.nginx.puerto, cfg.https.puerto]);
   const r = new Set(puertosReservados(cfg, sitioId).filter((p) => !nginx.has(p)));
   const trabajadores = Math.max(cfg.servicios.php.trabajadores, 8);
-  for (const rama of ramasEnUso(cfg.sitios)) {
+  // Las de los sitios y todas las instaladas: Adminer usa la más nueva encendida.
+  for (const rama of new Set([...ramasEnUso(cfg.sitios), ...ramasInstaladas])) {
     for (const p of puertosPhp(rama, trabajadores)) r.add(p);
   }
   return [...r];

@@ -136,6 +136,11 @@ export const SitioSchema = z.object({
    * vhost (`EditorVhost`), igual que `reglasExtra`.
    */
   vhostManual: z.string().nullable().optional(),
+  /**
+   * Lo del usuario (reglas o manual) que Nginx rechazó al aplicar los sitios: queda guardado pero
+   * fuera del vhost, sin volver a probarlo ni avisar, hasta que se aplique otra vez desde el editor.
+   */
+  vhostDesactivado: z.enum(['reglas', 'manual']).nullable().optional(),
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 

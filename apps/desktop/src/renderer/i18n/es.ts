@@ -1138,6 +1138,8 @@ export const es = {
     aplicadoApagado: 'Vhost guardado; se usará al encender Nginx',
     fallo: 'Nginx no aceptó el cambio; el vhost sigue como estaba',
     salidaTitulo: 'Salida de nginx -t',
+    desactivado:
+      'Nginx no aceptó lo que escribió para este sitio al aplicar la configuración y quedó fuera del vhost (sigue guardado). Corríjalo y aplíquelo de nuevo para volver a usarlo.',
     avisoDestino: (destino: string, linea: number) =>
       `Línea ${linea}: el tráfico se envía a otro equipo (${destino}). Revise que sea lo que quiere.`,
     generadoTitulo: 'Vhost generado (solo lectura)',

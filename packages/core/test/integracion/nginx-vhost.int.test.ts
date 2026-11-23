@@ -49,10 +49,11 @@ const puertoLibre = (): Promise<number> =>
 const pedir = (
   puerto: number,
   host: string,
+  ruta = '/',
 ): Promise<{ estado: number; cuerpo: string; cabeceras: Record<string, unknown> }> =>
   new Promise((ok, mal) => {
     const r = request(
-      { host: '127.0.0.1', port: puerto, path: '/', headers: { Host: host }, timeout: 5000 },
+      { host: '127.0.0.1', port: puerto, path: ruta, headers: { Host: host }, timeout: 5000 },
       (res) => {
         let cuerpo = '';
         res.on('data', (c: Buffer) => (cuerpo += c.toString('utf8')));
@@ -200,5 +201,60 @@ describe.skipIf(!hayNginx)('Editor de vhost con un Nginx real (Windows)', () => 
     const sigue = await pedir(puerto, 'real.test');
     expect(sigue).toMatchObject({ estado: 200, cuerpo: 'hola desde el sitio' });
     expect(sigue.cabeceras['x-wolf']).toBe('1');
+  });
+
+  it('un rewrite o try_files con ".." sale de la raíz en Nginx: el editor los rechaza', async () => {
+    // Fuera de la raíz del sitio (que es `carpeta`): no debe servirse nunca.
+    writeFileSync(path.join(base, 'secreto.txt'), 'SECRETO');
+    const vhost = readFileSync(rutas.vhost('real'), 'utf8').replace(
+      'charset utf-8;',
+      [
+        'charset utf-8;',
+        '    rewrite ^/escapa$ /../secreto.txt last;',
+        '    rewrite ^/escapa2$ /$arg_f last;',
+        '    location = /escapa3 { try_files /../secreto.txt =404; }',
+        // ¿Qué URI queda tras el rewrite? (lo que llegaría a $fastcgi_script_name)
+        '    location = /hola { return 200 "hola"; }',
+        '    location = /ver { rewrite ^ /../x.php break; add_header X-Uri $uri always; }',
+        '    location = /ver2 { rewrite ^ /$arg_f break; add_header X-Uri $uri always; }',
+      ].join('\n'),
+    );
+    // Directo al archivo (sin el editor, que ya lo rechaza) para ver qué hace Nginx 1.30.
+    writeFileSync(rutas.vhost('real'), vhost);
+    await nginx.recargar();
+    // Los trabajadores nuevos tardan un momento en tomar la configuración recargada.
+    const control = await esperar(
+      'la configuración recargada',
+      async () => {
+        const r = await pedir(puerto, 'real.test', '/hola');
+        return r.estado === 200 ? r : null;
+      },
+      10_000,
+      200,
+    );
+    log('control /hola →', control.estado, control.cuerpo);
+    const r1 = await pedir(puerto, 'real.test', '/escapa');
+    const r2 = await pedir(puerto, 'real.test', '/escapa2?f=../secreto.txt');
+    const r3 = await pedir(puerto, 'real.test', '/escapa3');
+    log('rewrite /../secreto.txt →', r1.estado, r1.cuerpo.slice(0, 40));
+    log('rewrite /$arg_f (f=../secreto.txt) →', r2.estado, r2.cuerpo.slice(0, 40));
+    log('try_files /../secreto.txt →', r3.estado, r3.cuerpo.slice(0, 40));
+    const v1 = await pedir(puerto, 'real.test', '/ver');
+    const v2 = await pedir(puerto, 'real.test', '/ver2?f=../x.php');
+    log('$uri tras rewrite /../x.php →', v1.estado, v1.cabeceras['x-uri']);
+    log('$uri tras rewrite /$arg_f (f=../x.php) →', v2.estado, v2.cabeceras['x-uri']);
+    // Observado con Nginx 1.30.6 en Windows: los rewrite dan 403 solo porque el location de ocultos
+    // (/\.) los atrapa, pero $uri queda '/../x.php' (llegaría así a $fastcgi_script_name) y
+    // try_files /../secreto.txt SÍ sirve el archivo de fuera de la raíz. Por eso el editor rechaza
+    // '..' y las variables de la petición en esas rutas internas:
+    for (const linea of [
+      'rewrite ^/escapa$ /../secreto.txt last;',
+      'rewrite ^/escapa2$ /$arg_f last;',
+      'location = /escapa3 { try_files /../secreto.txt =404; }',
+    ]) {
+      await expect(editor.aplicar('real', { reglas: linea })).rejects.toMatchObject({
+        codigo: 'nginx.ruta_fuera',
+      });
+    }
   });
 });

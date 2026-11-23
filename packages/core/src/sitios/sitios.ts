@@ -39,7 +39,7 @@ export interface DepsSitios {
   /** Reglas propias o vhost manual guardados que ya no pasan la revisión (se descartan). */
   avisarVhost?: (a: { sitio: string; modo: ModoVhost; motivo: string }) => void;
   /** Puertos de los servicios internos que un vhost no puede usar de destino (sin los del sitio). */
-  puertosInternos?: (cfg: Config, sitioId: string) => number[];
+  puertosInternos?: (cfg: Config, sitioId: string) => number[] | Promise<number[]>;
 }
 
 const mensaje = (e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -105,6 +105,8 @@ const limpiarDominios = <T extends { dominio: string; alias: string[] }>(s: T): 
 
 export class GestorSitios {
   private cola: Promise<unknown> = Promise.resolve();
+  /** Recargas de Nginx que salieron bien en el aplicar en curso. */
+  private recargasOk = 0;
 
   constructor(private readonly d: DepsSitios) {}
 
@@ -362,7 +364,7 @@ export class GestorSitios {
       dominios: [s.dominio, ...s.alias],
       puertoHttp: cfg.servicios.nginx.puerto,
       puertoHttps: cfg.https.puerto,
-      puertosInternos: this.d.puertosInternos?.(cfg, s.id) ?? [],
+      puertosInternos: (await this.d.puertosInternos?.(cfg, s.id)) ?? [],
       upstreamsPropios: [...(s.php ? [nombreUpstream(s.php)] : []), nombreUpstreamSitio(s.id)],
       logs: [logs.acceso, logs.error],
       certificados: [
@@ -392,6 +394,15 @@ export class GestorSitios {
     httpsPendiente: boolean;
   }> {
     const plano = await this.vhostDe({ ...s, reglasExtra: '' }, cfg, httpsUsable);
+    // Desactivado por nginx -t: fuera del vhost, sin volver a probar ni avisar.
+    if (s.vhostDesactivado) {
+      return {
+        contenido: plano.generado,
+        plano: plano.generado,
+        modo: null,
+        httpsPendiente: plano.httpsPendiente,
+      };
+    }
     let v = s.reglasExtra.trim() ? await this.vhostDe(s, cfg, httpsUsable) : plano;
     let modo: ModoVhost | null = s.reglasExtra.trim() ? 'reglas' : null;
     if (modo) {
@@ -426,6 +437,7 @@ export class GestorSitios {
     if (this.d.estadoNginx() === 'encendido') {
       try {
         await this.d.nginx.recargar();
+        this.recargasOk++;
         return { ok: true, salida: 'Nginx recargado.' };
       } catch (e) {
         return { ok: false, salida: mensaje(e) };
@@ -471,6 +483,8 @@ export class GestorSitios {
       }
     }
     for (const p of fuera) {
+      // Se marca en la configuración (la guarda aplicarSinCola) para no repetirlo en cada aplicar.
+      p.s.vhostDesactivado = p.modo;
       this.d.avisarVhost?.({
         sitio: p.s.id,
         modo: p.modo,
@@ -490,6 +504,7 @@ export class GestorSitios {
     await mkdir(dir, { recursive: true });
     await mkdir(this.d.rutas.logs('sitios'), { recursive: true });
     const previo = await this.instantanea(dir);
+    this.recargasOk = 0;
 
     let nginx: { ok: boolean; salida: string };
     const httpsPendiente: string[] = [];
@@ -510,7 +525,14 @@ export class GestorSitios {
 
       nginx = await this.probarNginx();
       if (!nginx.ok && personalizados.length > 0) {
-        nginx = (await this.sinLoDelUsuario(personalizados)) ?? nginx;
+        const sinEllos = await this.sinLoDelUsuario(personalizados);
+        if (sinEllos) {
+          nginx = sinEllos;
+          await this.d.almacen.guardar(cfg);
+        } else {
+          // No era por ellos: nada queda marcado.
+          for (const p of personalizados) delete p.s.vhostDesactivado;
+        }
       }
     } catch (e) {
       nginx = {
@@ -528,6 +550,21 @@ export class GestorSitios {
           salida: `${nginx.salida}
 No se pudo restaurar la configuración anterior: ${e instanceof Error ? e.message : String(e)}`,
         };
+      }
+      // Durante la prueba Nginx llegó a recargar algo que ya no está: vuelve a lo anterior.
+      if (this.recargasOk > 0 && this.d.estadoNginx() === 'encendido') {
+        try {
+          await this.d.nginx.recargar();
+          nginx = {
+            ok: false,
+            salida: `${nginx.salida}\nSe recargó Nginx con la configuración anterior.`,
+          };
+        } catch (e) {
+          nginx = {
+            ok: false,
+            salida: `${nginx.salida}\nNo se pudo recargar la configuración anterior: ${mensaje(e)}`,
+          };
+        }
       }
     }
 

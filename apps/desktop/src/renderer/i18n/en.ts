@@ -1127,6 +1127,8 @@ export const en: Textos = {
     aplicadoApagado: 'Vhost saved; it will be used when Nginx starts',
     fallo: 'Nginx did not accept the change; the vhost is unchanged',
     salidaTitulo: 'nginx -t output',
+    desactivado:
+      'Nginx did not accept what you wrote for this site when applying the configuration, so it was left out of the vhost (it is still saved). Fix it and apply it again to use it.',
     avisoDestino: (destino: string, linea: number) =>
       `Line ${linea}: traffic is sent to another machine (${destino}). Make sure that is what you want.`,
     generadoTitulo: 'Generated vhost (read-only)',

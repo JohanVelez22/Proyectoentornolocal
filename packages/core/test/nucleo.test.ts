@@ -3,7 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
-import { LIMITE_ENV_BYTES, Nucleo, puertosReservados } from '../src/nucleo';
+import { LIMITE_ENV_BYTES, Nucleo, puertosInternosVhost, puertosReservados } from '../src/nucleo';
+import { puertosPhp } from '../src/nginx/principal';
 import { RANGO_POOLS_SITIO } from '../src/php/poolSitio';
 import type { OperacionesMcp } from '../src/mcp/servidor';
 import { ConfigSchema } from '../src/tipos';
@@ -969,6 +970,36 @@ describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
     await n.borrarDatosServicio('mysql', 'mysql');
     expect(cambiar).toHaveBeenCalledWith('mysql', 3308);
     expect(borrar).toHaveBeenCalledWith('mysql', 'mysql');
+  });
+
+  it('al cambiar el puerto de un servicio o del MCP se vuelven a revisar y aplicar los vhosts', async () => {
+    const n = await crear();
+    vi.spyOn(n.servicios, 'cambiarPuerto').mockResolvedValue(undefined);
+    const aplicar = vi.spyOn(n.sitios, 'aplicar');
+    await n.cambiarPuertoServicio('mysql', 3308);
+    expect(aplicar).toHaveBeenCalledTimes(1);
+    await n.cambiarPuertoMcp(7795);
+    expect(aplicar).toHaveBeenCalledTimes(2);
+  });
+
+  it('puertosInternosVhost: servicios y PHP de las ramas instaladas (Adminer usa cualquiera), sin Nginx ni los del sitio', () => {
+    const cfg = ConfigSchema.parse({
+      sitios: [
+        {
+          id: 'demo',
+          nombre: 'demo',
+          dominio: 'demo.test',
+          carpeta: 'C:/x',
+          tipo: 'node',
+          procesos: [{ id: 'vite', comando: ['x'], puerto: 5173 }],
+        },
+      ],
+    });
+    const r = puertosInternosVhost(cfg, 'demo', ['8.3']);
+    for (const p of [8090, 8025, cfg.mcp.puerto, 3306, ...puertosPhp('8.3', 8)]) {
+      expect(r, String(p)).toContain(p);
+    }
+    for (const p of [80, 443, 5173]) expect(r, String(p)).not.toContain(p);
   });
 
   it('confianza de la CA: sin CA no hay nada; con CA los proyectos reciben NODE_EXTRA_CA_CERTS', async () => {

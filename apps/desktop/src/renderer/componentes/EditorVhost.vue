@@ -224,6 +224,10 @@ function confirmarRestaurar(v: VersionVhost): void {
           <pre class="salida">{{ salida }}</pre>
         </NAlert>
 
+        <NAlert v-if="vista.desactivado" type="warning" :show-icon="true">
+          {{ t.desactivado }}
+        </NAlert>
+
         <section v-if="!avanzado" class="bloque" :aria-label="t.reglasTitulo">
           <h4>{{ t.reglasTitulo }}</h4>
           <small class="tenue">{{ t.reglasAyuda }}</small>
@@ -247,7 +251,7 @@ function confirmarRestaurar(v: VersionVhost): void {
               size="small"
               type="primary"
               :loading="ocupado('aplicar')"
-              :disabled="!reglasCambiadas || ocupado('aplicar')"
+              :disabled="(!reglasCambiadas && !vista.desactivado) || ocupado('aplicar')"
               @click="aplicarReglas"
             >
               <template #icon
@@ -293,7 +297,10 @@ function confirmarRestaurar(v: VersionVhost): void {
                 size="small"
                 type="primary"
                 :loading="ocupado('aplicar')"
-                :disabled="(!manualCambiado && vista.manual !== null) || ocupado('aplicar')"
+                :disabled="
+                  (!manualCambiado && vista.manual !== null && !vista.desactivado) ||
+                  ocupado('aplicar')
+                "
                 @click="aplicarManual"
               >
                 <template #icon
