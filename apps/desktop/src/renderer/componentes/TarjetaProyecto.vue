@@ -11,6 +11,8 @@ import {
   ShieldCheckmark,
   CodeSlash,
   Chatbubbles,
+  ChevronDown,
+  Server,
   Terminal,
   TrashOutline,
   Warning,
@@ -29,7 +31,7 @@ import {
 } from 'naive-ui';
 import { computed, h, onMounted, ref, type Component } from 'vue';
 import { useRouter } from 'vue-router';
-import type { ResultadoAplicar, Sitio } from '../../shared/api';
+import type { IdTerminal, ResultadoAplicar, Sitio, TerminalDisponible } from '../../shared/api';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -46,6 +48,7 @@ import {
   usaProxy,
 } from '../utilidades/sitios';
 import { avanceReceta, resumenReinstalar } from '../utilidades/proyectos';
+import BotonIcono from './BotonIcono.vue';
 import EstadoPunto from './EstadoPunto.vue';
 import GitProyecto from './GitProyecto.vue';
 import ProcesosProyecto from './ProcesosProyecto.vue';
@@ -224,9 +227,63 @@ function abrirSitio(): void {
 function abrirSitioHttps(): void {
   void ejecutar('abrirHttps', () => api().sistema.abrirUrl(urlSegura.value));
 }
-function abrirTerminal(): void {
+function abrirTerminal(terminal: IdTerminal | null = null): void {
   if (ocupado('terminal')) return;
-  void ejecutar('terminal', () => api().terminal.abrir(props.sitio.id));
+  void ejecutar('terminal', () => api().terminal.abrir(props.sitio.id, terminal));
+}
+
+/* ───── Elegir terminal (lista de las instaladas, se lee al abrir el menú) ───── */
+const terminales = ref<TerminalDisponible[] | null>(null);
+const terminalPorDefecto = ref<IdTerminal | null>(null);
+const opcionesTerminal = computed<DropdownOption[]>(() =>
+  (terminales.value ?? []).map((x) => ({
+    key: x.id,
+    label:
+      x.id === terminalPorDefecto.value
+        ? `${x.nombre} (${textos.terminalSitio.predeterminada})`
+        : x.nombre,
+  })),
+);
+async function cargarTerminales(mostrar: boolean): Promise<void> {
+  if (!mostrar || terminales.value) return;
+  const r = await ejecutar('terminales', () => api().terminal.disponibles());
+  if (r) {
+    terminales.value = r.disponibles;
+    terminalPorDefecto.value = r.porDefecto;
+  }
+}
+
+/* ───── Base de datos del proyecto en Adminer (phpMyAdmin: Etapa D) ───── */
+const baseDetectada = ref<string | null>(null);
+const ayudaAbrir = computed(() => `${tp.tarjeta.abrirSitio}\n${url.value}`);
+const ayudaCarpeta = computed(() => `${t.abrirCarpeta}\n${props.sitio.carpeta}`);
+const ayudaBd = computed(
+  () =>
+    `${baseDetectada.value ? tp.tarjeta.baseDatosAyuda(baseDetectada.value) : tp.tarjeta.baseDatosSinDetectar}\n${tp.tarjeta.phpMyAdminPendiente}`,
+);
+function abrirBaseDatos(): void {
+  if (ocupado('bd')) return;
+  void ejecutar('bd', async () => {
+    const [r, d] = await Promise.all([
+      api().adminer.proyecto(props.sitio.id),
+      api().adminer.disponibilidad(),
+    ]);
+    baseDetectada.value = r.base?.base ?? null;
+    if (!r.url) {
+      message.warning(tp.tarjeta.sinBase);
+      return;
+    }
+    if (!d.disponible) {
+      notification.warning({
+        title: tp.tarjeta.adminerNoListo,
+        content: d.motivo,
+        duration: 8000,
+      });
+      return;
+    }
+    // La URL lleva servidor, usuario y base; la clave la pide Adminer (nunca va en la URL).
+    await api().sistema.abrirUrl(r.url);
+  });
 }
 function abrirCarpeta(): void {
   void ejecutar('carpeta', () => api().sistema.abrirCarpeta(props.sitio.carpeta));
@@ -359,63 +416,64 @@ function abrirCarpeta(): void {
       </div>
 
       <div class="acciones">
-        <NButton size="small" secondary :loading="ocupado('abrir')" @click="abrirSitio">
-          <template #icon
-            ><NIcon><Open /></NIcon
-          ></template>
-          {{ textos.acciones.abrir }}
-        </NButton>
-        <NTooltip>
-          <template #trigger>
+        <BotonIcono
+          :icono="Open"
+          :etiqueta="tp.tarjeta.abrirSitio"
+          :ayuda="ayudaAbrir"
+          :cargando="ocupado('abrir')"
+          @click="abrirSitio"
+        />
+        <BotonIcono
+          :icono="FolderOpen"
+          :etiqueta="t.abrirCarpeta"
+          :ayuda="ayudaCarpeta"
+          :cargando="ocupado('carpeta')"
+          @click="abrirCarpeta"
+        />
+        <div class="grupo">
+          <BotonIcono
+            :icono="Terminal"
+            :etiqueta="textos.terminalSitio.boton"
+            :ayuda="textos.terminalSitio.ayuda"
+            :cargando="ocupado('terminal')"
+            pegado
+            @click="abrirTerminal()"
+          />
+          <NDropdown
+            trigger="click"
+            :options="opcionesTerminal"
+            placement="bottom-end"
+            @update:show="cargarTerminales"
+            @select="(k: string | number) => abrirTerminal(k as IdTerminal)"
+          >
             <NButton
               size="small"
               secondary
-              :loading="ocupado('carpeta')"
-              :aria-label="t.abrirCarpeta"
-              @click="abrirCarpeta"
+              class="grupo-der"
+              :loading="ocupado('terminales')"
+              :aria-label="textos.terminalSitio.elegir"
+              :title="textos.terminalSitio.elegir"
             >
               <template #icon
-                ><NIcon><FolderOpen /></NIcon
+                ><NIcon aria-hidden="true"><ChevronDown /></NIcon
               ></template>
-              {{ t.carpeta }}
             </NButton>
-          </template>
-          <span class="ruta">{{ sitio.carpeta }}</span>
-        </NTooltip>
-        <NTooltip>
-          <template #trigger>
-            <NButton
-              size="small"
-              secondary
-              :loading="ocupado('terminal')"
-              :aria-label="textos.terminalSitio.ayuda"
-              @click="abrirTerminal"
-            >
-              <template #icon
-                ><NIcon><Terminal /></NIcon
-              ></template>
-              {{ textos.terminalSitio.boton }}
-            </NButton>
-          </template>
-          {{ textos.terminalSitio.ayuda }}
-        </NTooltip>
-        <NTooltip>
-          <template #trigger>
-            <NButton
-              size="small"
-              secondary
-              :loading="ocupado('editor')"
-              :aria-label="tp.tarjeta.vscodeAyuda"
-              @click="abrirEditor"
-            >
-              <template #icon
-                ><NIcon><CodeSlash /></NIcon
-              ></template>
-              {{ tp.tarjeta.vscode }}
-            </NButton>
-          </template>
-          {{ tp.tarjeta.vscodeAyuda }}
-        </NTooltip>
+          </NDropdown>
+        </div>
+        <BotonIcono
+          :icono="Server"
+          :etiqueta="tp.tarjeta.baseDatos"
+          :ayuda="ayudaBd"
+          :cargando="ocupado('bd')"
+          @click="abrirBaseDatos"
+        />
+        <BotonIcono
+          :icono="CodeSlash"
+          :etiqueta="tp.tarjeta.vscode"
+          :ayuda="tp.tarjeta.vscodeAyuda"
+          :cargando="ocupado('editor')"
+          @click="abrirEditor"
+        />
         <NDropdown trigger="click" :options="opciones" placement="bottom-end" @select="elegir">
           <NButton
             size="small"
@@ -607,6 +665,21 @@ function abrirCarpeta(): void {
   align-items: center;
   gap: 6px;
   flex: none;
+}
+/* Terminal + elegir terminal: un solo control partido. */
+.grupo {
+  display: inline-flex;
+}
+.grupo-der {
+  width: 20px;
+  padding: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: 1px;
+}
+.grupo-der:focus-visible {
+  outline: 2px solid rgba(var(--acento-rgb), 0.6);
+  outline-offset: 2px;
 }
 .ruta {
   font-family: var(--fuente-mono);

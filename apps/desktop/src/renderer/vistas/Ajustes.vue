@@ -18,7 +18,13 @@ import {
   type SelectOption,
 } from 'naive-ui';
 import { computed, onMounted, ref } from 'vue';
-import { PUERTO_ADMINER, type Config, type ResultadoCA } from '../../shared/api';
+import {
+  PUERTO_ADMINER,
+  type Config,
+  type IdTerminal,
+  type ResultadoCA,
+  type TerminalDisponible,
+} from '../../shared/api';
 import { api } from '../api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import SeccionApariencia from '../componentes/SeccionApariencia.vue';
@@ -79,7 +85,16 @@ const opcionesPhp = computed<SelectOption[]>(() => [
 ]);
 const enPath = ref<boolean | null>(null);
 /** Error al leer cada sección: uno no deja en blanco a los demás. */
-const errores = ref<{ ca?: string; php?: string; path?: string }>({});
+const errores = ref<{ ca?: string; php?: string; path?: string; terminal?: string }>({});
+
+// ---- Terminal predeterminada ----
+const terminales = ref<TerminalDisponible[] | null>(null);
+/** '' representa "la del sistema" (null en la configuración). */
+const terminal = ref<IdTerminal | ''>('');
+const opcionesTerminal = computed<SelectOption[]>(() => [
+  { value: '', label: tt.terminalSistema },
+  ...(terminales.value ?? []).map((x) => ({ value: x.id, label: x.nombre })),
+]);
 
 onMounted(() => {
   void ejecutar('cargar', async () => {
@@ -100,17 +115,23 @@ onMounted(() => {
 });
 
 async function cargarExtra(): Promise<void> {
-  const [estadoCa, ramas, path] = await Promise.allSettled([
+  const [estadoCa, ramas, path, term] = await Promise.allSettled([
     api().https.estado(),
     api().instalador.instalados('php'),
     api().path.estado(),
+    api().terminal.disponibles(),
   ]);
   const error = (r: PromiseRejectedResult): string => t.errorSeccion(mensajeDeError(r.reason));
   errores.value = {
     ...(estadoCa.status === 'rejected' ? { ca: error(estadoCa) } : {}),
     ...(ramas.status === 'rejected' ? { php: error(ramas) } : {}),
     ...(path.status === 'rejected' ? { path: error(path) } : {}),
+    ...(term.status === 'rejected' ? { terminal: error(term) } : {}),
   };
+  if (term.status === 'fulfilled') {
+    terminales.value = term.value.disponibles;
+    terminal.value = term.value.porDefecto ?? '';
+  } else terminales.value = [];
   if (estadoCa.status === 'fulfilled') ca.value = estadoCa.value;
   if (ramas.status === 'fulfilled') ramasPhp.value = ramas.value;
   else ramasPhp.value = [];
@@ -222,6 +243,20 @@ async function cambiarPhp(valor: string): Promise<void> {
     { exito: tt.phpGuardado },
   );
   if (!ok) phpPorDefecto.value = antes;
+}
+
+async function cambiarTerminal(valor: IdTerminal | ''): Promise<void> {
+  const antes = terminal.value;
+  terminal.value = valor;
+  const ok = await ejecutar(
+    'terminal',
+    async () => {
+      await api().terminal.cambiarPorDefecto(valor === '' ? null : valor);
+      return true;
+    },
+    { exito: tt.terminalGuardada },
+  );
+  if (!ok) terminal.value = antes;
 }
 
 function cambiarPath(): void {
@@ -440,6 +475,20 @@ async function aplicarPath(activar: boolean): Promise<void> {
             </div>
           </NFormItem>
         </div>
+        <NFormItem :label="tt.terminal" class="separado">
+          <div class="campo">
+            <NSelect
+              :value="terminal"
+              :options="opcionesTerminal"
+              :loading="terminales === null || ocupado('terminal')"
+              :disabled="!terminales"
+              class="selector-terminal"
+              @update:value="cambiarTerminal"
+            />
+            <small v-if="errores.terminal" class="ayuda error">{{ errores.terminal }}</small>
+            <small v-else class="ayuda">{{ tt.terminalAyuda }}</small>
+          </div>
+        </NFormItem>
         <NFormItem :label="tt.path" class="separado">
           <div class="campo">
             <div class="fila-estado">
@@ -557,6 +606,9 @@ async function aplicarPath(activar: boolean): Promise<void> {
 .botones {
   display: flex;
   gap: 8px;
+}
+.selector-terminal {
+  max-width: 360px;
 }
 .separado {
   margin-top: 16px;
