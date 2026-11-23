@@ -24,7 +24,9 @@ const motorDe = (v: string | undefined): MotorAdminer | null => {
 };
 
 /** Nombres de base y usuario razonables (sin controles ni rarezas que rompan la URL). */
-const VALIDO = /^[^\s\0-\x1f/\\?#&]{1,128}$/;
+const VALIDO = /^[^\s/\\?#&]{1,128}$/;
+const valido = (v: string): boolean =>
+  VALIDO.test(v) && [...v].every((c) => c.charCodeAt(0) >= 0x20);
 
 /** URL de conexión (`postgresql://usuario:clave@host:puerto/base`): solo motor, usuario y base. */
 function desdeUrl(url: string | undefined): BaseProyecto | null {
@@ -64,7 +66,7 @@ export function baseDeVariables(vars: Map<string, string>): BaseProyecto | null 
   } else {
     r = desdeUrl(vars.get('DATABASE_URL'));
   }
-  return r && VALIDO.test(r.base) && VALIDO.test(r.usuario) ? r : null;
+  return r && valido(r.base) && valido(r.usuario) ? r : null;
 }
 
 /** Lee el `.env` de la carpeta del proyecto; null si no existe o no declara una base SQL. */

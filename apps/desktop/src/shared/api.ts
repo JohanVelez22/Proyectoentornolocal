@@ -1,5 +1,8 @@
 import type {
   Aviso,
+  BaseProyecto,
+  IdTerminal,
+  TerminalDisponible,
   CambiosPreferenciasUi,
   PreferenciasUi,
   CierreConfirmacion,
@@ -131,6 +134,9 @@ export type {
   Credenciales,
   DatosConexion,
   DisponibilidadAdminer,
+  BaseProyecto,
+  IdTerminal,
+  TerminalDisponible,
   EstadoGeneral,
   EstadoHosts,
   EstadoHttps,
@@ -324,7 +330,11 @@ export interface ApiEntorno {
     cambiarPhpPorDefecto(rama: string | null): Promise<void>;
   };
   terminal: {
-    abrir(sitioId: string): Promise<void>;
+    /** Abre la terminal del sitio: la elegida o, sin ella, la predeterminada de Ajustes. */
+    abrir(sitioId: string, terminal?: IdTerminal | null): Promise<void>;
+    /** Terminales instaladas y la predeterminada (null = la del sistema). */
+    disponibles(): Promise<{ disponibles: TerminalDisponible[]; porDefecto: IdTerminal | null }>;
+    cambiarPorDefecto(terminal: IdTerminal | null): Promise<void>;
   };
   path: {
     estado(): Promise<boolean>;
@@ -335,6 +345,8 @@ export interface ApiEntorno {
     disponibilidad(): Promise<DisponibilidadAdminer>;
     /** URL sin clave; null si Adminer no soporta el motor. */
     url(motor: MotorBd, usuario: string): Promise<string | null>;
+    /** Base del proyecto (según su .env) y su URL de Adminer, sin clave; url null si no hay. */
+    proyecto(sitioId: string): Promise<{ base: BaseProyecto | null; url: string | null }>;
   };
   ftp: {
     activar(sitioId: string): Promise<Credenciales>;
@@ -680,11 +692,14 @@ export const RUTAS_IPC = [
   'composer.actualizar',
   'composer.cambiarPhpPorDefecto',
   'terminal.abrir',
+  'terminal.disponibles',
+  'terminal.cambiarPorDefecto',
   'path.estado',
   'path.cambiar',
   'adminer.instalar',
   'adminer.disponibilidad',
   'adminer.url',
+  'adminer.proyecto',
   'ftp.activar',
   'ftp.desactivar',
   'ftp.regenerarClave',

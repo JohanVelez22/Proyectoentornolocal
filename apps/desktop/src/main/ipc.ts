@@ -48,6 +48,7 @@ import {
   enteroEn,
   idCorto,
   idNoVacio,
+  idTerminal,
   listaTextos,
   MAX_BYTES_RECETA,
   MAX_PASOS_RECETA,
@@ -623,11 +624,15 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'composer.instalar': (n) => n.instalarComposer(),
   'composer.actualizar': (n) => n.actualizarComposer(),
   'composer.cambiarPhpPorDefecto': (n, _s, rama) => n.cambiarPhpPorDefecto(ramaPhp(rama)),
-  'terminal.abrir': (n, _s, id) => n.abrirTerminal(idNoVacio(id)),
+  'terminal.abrir': (n, _s, id, terminal) => n.abrirTerminal(idNoVacio(id), idTerminal(terminal)),
+  'terminal.disponibles': (n) => n.terminales(),
+  'terminal.cambiarPorDefecto': (n, _s, terminal) =>
+    n.cambiarTerminalPorDefecto(idTerminal(terminal)),
   'path.estado': (n) => n.estadoPathUsuario(),
   'path.cambiar': (n, _s, activar) => n.cambiarPathUsuario(booleano(activar, 'activar')),
   'adminer.instalar': (n) => n.instalarAdminer(),
   'adminer.disponibilidad': (n) => n.disponibilidadAdminer(),
+  'adminer.proyecto': (n, _s, id) => n.adminerProyecto(idNoVacio(id)),
   'adminer.url': (n, _s, motor, usuario) => {
     const m = motorBd(motor);
     return n.urlAdminer(m, nombreBase(m === 'mongodb' ? 'mysql' : m, usuario, 'usuario'));

@@ -77,7 +77,11 @@ const api: ApiEntorno = {
     actualizar: () => invocar('composer.actualizar'),
     cambiarPhpPorDefecto: (rama) => invocar('composer.cambiarPhpPorDefecto', rama),
   },
-  terminal: { abrir: (id) => invocar('terminal.abrir', id) },
+  terminal: {
+    abrir: (id, terminal) => invocar('terminal.abrir', id, terminal ?? null),
+    disponibles: () => invocar('terminal.disponibles'),
+    cambiarPorDefecto: (terminal) => invocar('terminal.cambiarPorDefecto', terminal),
+  },
   path: {
     estado: () => invocar('path.estado'),
     cambiar: (activar) => invocar('path.cambiar', activar),
@@ -86,6 +90,7 @@ const api: ApiEntorno = {
     instalar: () => invocar('adminer.instalar'),
     disponibilidad: () => invocar('adminer.disponibilidad'),
     url: (motor, usuario) => invocar('adminer.url', motor, usuario),
+    proyecto: (id) => invocar('adminer.proyecto', id),
   },
   ftp: {
     activar: (id) => invocar('ftp.activar', id),

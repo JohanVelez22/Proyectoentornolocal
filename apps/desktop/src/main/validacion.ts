@@ -3,7 +3,9 @@ import { isAbsolute, resolve } from 'node:path';
 import {
   ErrorWolf,
   IDS_AGENTE,
+  IDS_TERMINAL,
   MAX_MENSAJE_COMMIT,
+  type IdTerminal,
   type IdAgente,
   ID_PROVEEDOR_IA,
   IDS_SERVICIO_DATOS,
@@ -22,6 +24,15 @@ import {
   type ServicioInstalable,
   type TipoSitio,
 } from '@pel/core';
+
+/** Terminal elegida: un id conocido; `undefined` o null = la predeterminada. */
+export function idTerminal(v: unknown): IdTerminal | null {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== 'string' || !(IDS_TERMINAL as readonly string[]).includes(v)) {
+    throw new ErrorWolf('terminal.invalida', 'Terminal no válida.');
+  }
+  return v as IdTerminal;
+}
 
 export function texto(v: unknown, nombre = 'valor'): string {
   if (typeof v !== 'string') throw new Error(`Argumento no válido: ${nombre}`);
