@@ -55,6 +55,7 @@ import { Mailpit } from './servicios/mailpit';
 import { Servicios, type IdServicio } from './servicios/servicios';
 import { Agentes } from './agentes/agentes';
 import { ErrorWolf } from './errores';
+import { Contenedores } from './contenedores/contenedores';
 import { ServidorMcp, type EstadoMcp, type OperacionesMcp } from './mcp/servidor';
 import { asegurarArchivosDepuracion, rutasDepuracion } from './depuracion/prepend';
 import {
@@ -301,6 +302,8 @@ interface ModulosNucleo {
   puertos: HerramientasPuertos;
   doctor: Doctor;
   confianza: ConfianzaCa;
+  /** Contenedores Docker/Podman: listar, iniciar, detener, reiniciar y registros. */
+  contenedores: Contenedores;
   /** Dependencias de los pasos de receta (puerto libre…), también para crear proyectos. */
   depsPasos?: DepsPasos;
 }
@@ -452,6 +455,8 @@ export class Nucleo {
   readonly doctor: Doctor;
   /** Confianza de la CA en Node, Python y Firefox. */
   readonly confianza: ConfianzaCa;
+  /** Contenedores Docker/Podman (mínimo: nunca crea ni borra contenedores, imágenes ni volúmenes). */
+  readonly contenedores: Contenedores;
   /** Proveedores de IA en la nube; la clave la pasa el proceso principal en cada llamada. */
   readonly ia: GestorIa;
   /** Agentes: detección, instalación, MCP y apertura en un proyecto (nunca se lanzan solos). */
@@ -520,6 +525,7 @@ export class Nucleo {
     this.puertos = m.puertos;
     this.doctor = m.doctor;
     this.confianza = m.confianza;
+    this.contenedores = m.contenedores;
     this.ia = m.ia;
     this.agentes = m.agentes;
     this.iniPhp = m.iniPhp;
@@ -1035,6 +1041,25 @@ export class Nucleo {
         ...(o.pidApp !== undefined ? { pidApp: o.pidApp } : {}),
         ...(o.pidPadre !== undefined ? { pidPadre: o.pidPadre } : {}),
       }),
+      contenedores: new Contenedores({
+        exec,
+        lanzar,
+        plataforma: plat,
+        emitir: (d) => eventos.emit('contenedor:lineas', d),
+        alDetenido: (d) =>
+          avisos.publicar({
+            nivel: 'aviso',
+            tipo: 'contenedor-detenido',
+            codigo: 'avisos.contenedor_detenido',
+            datos: {
+              fuente: `${d.motor}:${d.id}`,
+              motor: d.motor,
+              nombre: d.nombre,
+              ...(d.codigoSalida !== null ? { codigoSalida: d.codigoSalida } : {}),
+            },
+            accion: { ruta: 'contenedores' },
+          }),
+      }),
     };
     const depsPasos: DepsPasos = {
       rutas,
@@ -1084,6 +1109,8 @@ export class Nucleo {
     nucleoRef = nucleo;
     nucleo.avisoInicio = avisoInicio;
     nucleo.bajaFuentesAvisos = conectarFuentesAvisos(eventos, avisos);
+    // Solo consulta motores que ya mostraron contenedores en marcha (nada si nunca se abrió la pantalla).
+    nucleo.contenedores.iniciarVigilancia();
     o.alIniciar?.(eventos);
     try {
       await supervisor.readoptar();
@@ -2481,6 +2508,7 @@ export class Nucleo {
     this.metricas.pausar();
     this.errores.cerrar();
     this.registros.cerrar();
+    this.contenedores.cerrar();
     for (const s of await this.sitios.listar().catch(() => [] as Sitio[])) {
       this.recetas.cancelar(s.id);
     }

@@ -128,6 +128,11 @@ export interface CapacidadesPlataforma {
    * `%APPDATA%`): donde buscar agentes instalados con su propio npm. Solo se leen.
    */
   carpetasNpmGlobal(): string[];
+  /**
+   * Carpetas donde el instalador oficial deja la CLI de Docker o Podman en este sistema (se
+   * prueban antes que el PATH). Solo rutas; nada se ejecuta.
+   */
+  carpetasContenedores(motor: 'docker' | 'podman'): string[];
   /** Ruta de un ejecutable: primero el PATH, luego las carpetas `extras`; null si no está. */
   buscarEjecutable(nombre: string, extras?: string[]): Promise<string | null>;
   /** PATH del usuario; `respaldo` es el archivo donde se guarda el valor original. */

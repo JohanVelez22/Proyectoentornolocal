@@ -63,6 +63,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'nombreEjecutable',
   'buscarEjecutable',
   'carpetasNpmGlobal',
+  'carpetasContenedores',
   'pathUsuario',
   'leerVariableUsuario',
   'variableUsuario',

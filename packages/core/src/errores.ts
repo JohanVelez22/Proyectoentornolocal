@@ -193,6 +193,17 @@ export const PARAMETROS_ERROR = {
   'depuracion.confirmacion': [],
   'depuracion.argumento_invalido': ['campo'],
   'depuracion.archivo_fuera_del_sitio': [],
+  // Contenedores Docker/Podman (Task 15)
+  'contenedores.motor_invalido': [],
+  'contenedores.id_invalido': [],
+  'contenedores.argumento_invalido': ['campo'],
+  'contenedores.sin_motor': ['motor'],
+  'contenedores.no_responde': ['motor'],
+  'contenedores.remoto': ['motor'],
+  'contenedores.no_existe': [],
+  'contenedores.accion_fallo': ['detalle'],
+  'contenedores.demasiados_registros': ['maximo'],
+  'contenedores.sin_confirmar': [],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

@@ -90,6 +90,8 @@ export class PlataformaFalsa implements PlataformaCompleta {
   documentos = '/documentos';
   /** Prefijos de `npm install -g` del usuario. */
   npmGlobal: string[] = [];
+  /** Carpetas conocidas de Docker y Podman (`carpetasContenedores`). */
+  contenedores: Record<'docker' | 'podman', string[]> = { docker: [], podman: [] };
 
   constructor(private readonly o: OpcionesPlataformaFalsa = {}) {}
 
@@ -174,6 +176,10 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   carpetasNpmGlobal(): string[] {
     return [...this.npmGlobal];
+  }
+
+  carpetasContenedores(motor: 'docker' | 'podman'): string[] {
+    return [...this.contenedores[motor]];
   }
 
   async buscarEjecutable(nombre: string): Promise<string | null> {

@@ -95,3 +95,4 @@ export * from './mcp/servidor';
 export * from './depuracion/receptor';
 export { rutasDepuracion } from './depuracion/prepend';
 export * from './depuracion/errores';
+export * from './contenedores/contenedores';

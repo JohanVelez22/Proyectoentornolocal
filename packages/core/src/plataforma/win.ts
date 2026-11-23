@@ -369,6 +369,21 @@ export class PlataformaWindows implements PlataformaCompleta {
     return appData ? [path.win32.join(appData, 'npm')] : [];
   }
 
+  carpetasContenedores(motor: 'docker' | 'podman'): string[] {
+    const pf = this.entorno.ProgramW6432 ?? this.entorno.ProgramFiles ?? 'C:\\Program Files';
+    if (motor === 'docker') return [path.win32.join(pf, 'Docker', 'Docker', 'resources', 'bin')];
+    const local = this.entorno.LOCALAPPDATA;
+    return [
+      path.win32.join(pf, 'RedHat', 'Podman'),
+      ...(local
+        ? [
+            path.win32.join(local, 'Programs', 'Podman'),
+            path.win32.join(local, 'Programs', 'RedHat', 'Podman'),
+          ]
+        : []),
+    ];
+  }
+
   async buscarEjecutable(nombre: string, extras: string[] = []): Promise<string | null> {
     return buscarEjecutableWindows(nombre, {
       entorno: this.entorno,
