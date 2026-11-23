@@ -224,6 +224,51 @@ export function rutaMarcaEditado(rutas: Rutas, rama: string): string {
   return path.join(path.dirname(rutas.phpIni(rama)), 'editado-por-usuario');
 }
 
+/**
+ * Huella (SHA-256) del último php.ini que generó WolfCore Dev: si el archivo ya no coincide,
+ * alguien lo editó por fuera y se trata como editado (no se regenera).
+ */
+export function rutaHuellaGenerado(rutas: Rutas, rama: string): string {
+  return path.join(path.dirname(rutas.phpIni(rama)), 'generado.sha256');
+}
+
+/** Copias con fecha que se conservan por rama (las más viejas se borran al hacer una nueva). */
+export const MAX_COPIAS_INI = 20;
+
+const RESPALDO_VALIDO = /^php\.ini-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z(-\d{1,3})?\.txt$/;
+
+/**
+ * Copia con fecha del php.ini de la rama (bytes tal cual) y rotación: quedan las
+ * `MAX_COPIAS_INI` más nuevas. Solo se borran copias propias (`php.ini-<fecha>.txt`).
+ */
+export async function copiaIni(
+  rutas: Rutas,
+  rama: string,
+  contenido: string | Buffer,
+  ahora: Date = new Date(),
+): Promise<string> {
+  const carpeta = rutaRespaldosIni(rutas, rama);
+  const ruta = await copiaConFecha(carpeta, 'php.ini', contenido, ahora);
+  const copias = (await readdir(carpeta).catch(() => [] as string[]))
+    .filter((n) => RESPALDO_VALIDO.test(n))
+    .sort((a, b) => b.localeCompare(a));
+  for (const vieja of copias.slice(MAX_COPIAS_INI)) {
+    if (path.join(carpeta, vieja) === ruta) continue;
+    await rm(path.join(carpeta, vieja), { force: true }).catch(() => undefined);
+  }
+  return ruta;
+}
+
+/**
+ * `extension_dir` comparable: sin comentario final ni comillas, barras `/`, sin barra final y en
+ * minúsculas (las rutas de Windows no distinguen mayúsculas).
+ */
+export function normalizarDirExt(valor: string | null | undefined): string | null {
+  if (valor === null || valor === undefined) return null;
+  const v = valorDeLinea(valor).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  return v === '' ? null : v;
+}
+
 /** ¿La salida de `php -v` muestra fallos de arranque (extensiones, sintaxis, avisos)? */
 export function salidaConFallos(salida: string): boolean {
   return /(^|\n)\s*(PHP\s+)?(Warning|Fatal error|Parse error|Notice|Deprecated|Core Warning)\b|syntax error|Unable to (load|start)|already loaded/i.test(
@@ -255,7 +300,20 @@ export interface DepsIniPhp {
   ahora?: () => Date;
 }
 
-const RESPALDO_VALIDO = /^php\.ini-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z(-\d{1,3})?\.txt$/;
+/**
+ * Ajustes que se fuerzan al probar un ini (van después de `-c`, así pisan lo del archivo): los
+ * fallos de arranque salen por stderr aunque el ini apague display_errors o los mande a un log.
+ */
+export const ARGS_PRUEBA_INI = [
+  '-d',
+  'display_errors=stderr',
+  '-d',
+  'display_startup_errors=1',
+  '-d',
+  'log_errors=0',
+  '-d',
+  'error_log=',
+] as const;
 
 /**
  * php.ini de cada rama: lectura, diff, guardado con copia con fecha, prueba con `php -c <ini>
@@ -318,21 +376,21 @@ export class IniPhp {
 
   /**
    * Prueba `texto` con el php CLI de la rama sin tocar el php.ini: lo escribe en un temporal al
-   * lado (mismas rutas relativas) y corre `php -c <temporal> -v`. Lanza `php.ini_invalido`.
+   * lado (mismas rutas relativas) y corre `php -c <temporal> -d … -v` con los fallos de arranque
+   * forzados a stderr (`ARGS_PRUEBA_INI`). Lanza `php.ini_invalido`.
    */
-  async probar(rama: string, texto: string): Promise<void> {
+  async probar(rama: string, texto: string | Buffer): Promise<void> {
     const r = await this.rama(rama);
     validarTexto(texto);
     const carpeta = path.dirname(this.d.rutas.phpIni(r));
     await mkdir(carpeta, { recursive: true });
     const tmp = path.join(carpeta, `php.ini.prueba-${randomBytes(4).toString('hex')}`);
-    await writeFile(tmp, texto, 'utf8');
+    await writeFile(tmp, texto);
     try {
-      const res = await this.d.exec(
-        this.d.phpCli(r),
-        ['-c', tmp, '-d', 'display_startup_errors=1', '-v'],
-        { timeoutMs: 20000, cwd: this.d.rutas.bin('php', r) },
-      );
+      const res = await this.d.exec(this.d.phpCli(r), ['-c', tmp, ...ARGS_PRUEBA_INI, '-v'], {
+        timeoutMs: 20000,
+        cwd: this.d.rutas.bin('php', r),
+      });
       const salida = `${res.stderr}\n${res.stdout}`.split(tmp).join('php.ini').trim();
       if (res.codigo !== 0 || salidaConFallos(salida) || !/^PHP \d+\.\d+/m.test(res.stdout)) {
         // Primero las líneas con el fallo: son las que caben en los 200 caracteres del error.
@@ -351,9 +409,10 @@ export class IniPhp {
   }
 
   /**
-   * Guarda el php.ini de la rama: prueba el texto nuevo, hace la copia con fecha del actual,
-   * escribe y, si la rama está encendida, reinicia su pool y comprueba que responde. Si no
-   * responde, vuelve a escribir el anterior, reinicia otra vez y lanza `php.no_arranco`.
+   * Guarda el php.ini de la rama: prueba el texto nuevo, hace la copia con fecha del actual (bytes
+   * tal cual), escribe y, si la rama está encendida, reinicia su pool y comprueba que responde.
+   * Si no responde, vuelve a escribir los bytes anteriores (y quita la marca si no estaba),
+   * reinicia otra vez y lanza `php.no_arranco` (o `php.caido_tras_restaurar` si tampoco vuelve).
    */
   async guardar(rama: string, nuevo: string): Promise<{ respaldo: string }> {
     const r = await this.rama(rama);
@@ -361,38 +420,61 @@ export class IniPhp {
     return this.enCola(r, () => this.guardarEnCola(r, nuevo));
   }
 
-  private async guardarEnCola(r: string, nuevo: string): Promise<{ respaldo: string }> {
+  private async guardarEnCola(r: string, nuevo: string | Buffer): Promise<{ respaldo: string }> {
     const ini = await this.d.asegurarIni(r);
-    const actual = await readFile(ini, 'utf8');
+    const actual = await readFile(ini);
     await this.limpiarPruebas(r);
     await this.probar(r, nuevo);
-    const respaldo = await copiaConFecha(
-      rutaRespaldosIni(this.d.rutas, r),
-      'php.ini',
-      actual,
-      this.d.ahora?.() ?? new Date(),
-    );
-    await escribirIniAtomico(ini, nuevo);
-    await writeFile(rutaMarcaEditado(this.d.rutas, r), '', 'utf8');
-    if (this.d.encendida(r)) {
-      let sano = false;
-      try {
-        await this.d.reiniciar(r);
-        sano = await this.d.sano(r);
-      } catch {
-        sano = false;
-      }
-      if (!sano) {
-        await escribirIniAtomico(ini, actual);
-        await this.d.reiniciar(r).catch(() => undefined);
-        throw new ErrorWolf(
-          'php.no_arranco',
-          `PHP ${r} no volvió a arrancar con el php.ini nuevo; se restauró el anterior.`,
-          { rama: r },
-        );
-      }
+    const respaldo = await copiaIni(this.d.rutas, r, actual, this.d.ahora?.() ?? new Date());
+    const marca = rutaMarcaEditado(this.d.rutas, r);
+    const habiaMarca = existsSync(marca);
+    // La marca va antes que el archivo: un arranque en medio nunca regenera el ini nuevo.
+    await writeFile(marca, '', 'utf8');
+    const deshacer = async (): Promise<void> => {
+      await escribirIniAtomico(ini, actual);
+      if (!habiaMarca) await rm(marca, { force: true }).catch(() => undefined);
+    };
+    try {
+      await escribirIniAtomico(ini, nuevo);
+    } catch (e) {
+      await deshacer().catch(() => undefined);
+      throw e;
     }
+    await this.aplicarEnPool(r, deshacer);
     return { respaldo: path.basename(respaldo) };
+  }
+
+  /**
+   * Si la rama está encendida, reinicia su pool y comprueba que responde. Si no, corre `deshacer`
+   * (devolver lo anterior), reinicia otra vez, vuelve a comprobar y lanza `php.no_arranco` (el
+   * pool quedó sirviendo como antes) o `php.caido_tras_restaurar` (sigue sin responder). Debe
+   * llamarse dentro de la fila de la rama (`enCola`).
+   */
+  async aplicarEnPool(r: string, deshacer: () => Promise<void>): Promise<void> {
+    if (!this.d.encendida(r)) return;
+    if (await this.reiniciarYComprobar(r)) return;
+    await deshacer();
+    if (await this.reiniciarYComprobar(r)) {
+      throw new ErrorWolf(
+        'php.no_arranco',
+        `PHP ${r} no volvió a arrancar con el cambio; se restauró lo anterior y responde.`,
+        { rama: r },
+      );
+    }
+    throw new ErrorWolf(
+      'php.caido_tras_restaurar',
+      `PHP ${r} no volvió a arrancar; se restauró lo anterior, pero sigue sin responder.`,
+      { rama: r },
+    );
+  }
+
+  private async reiniciarYComprobar(r: string): Promise<boolean> {
+    try {
+      await this.d.reiniciar(r);
+      return await this.d.sano(r);
+    } catch {
+      return false;
+    }
   }
 
   /** Copias con fecha del php.ini de la rama, de la más nueva a la más vieja. */
@@ -420,8 +502,10 @@ export class IniPhp {
     if (typeof respaldo !== 'string' || !lista.some((x) => x.nombre === respaldo)) {
       throw new ErrorWolf('php.respaldo_no_existe', 'Esa copia del php.ini no existe.');
     }
-    const texto = await readFile(path.join(rutaRespaldosIni(this.d.rutas, r), respaldo), 'utf8');
-    return this.guardar(r, texto);
+    // Bytes tal cual: una copia en cp1252 vuelve idéntica.
+    const bytes = await readFile(path.join(rutaRespaldosIni(this.d.rutas, r), respaldo));
+    validarTexto(bytes);
+    return this.enCola(r, () => this.guardarEnCola(r, bytes));
   }
 
   /** Borra temporales de prueba que haya dejado un cierre brusco. */
@@ -436,12 +520,13 @@ export class IniPhp {
   }
 }
 
-function validarTexto(texto: unknown): asserts texto is string {
-  if (
-    typeof texto !== 'string' ||
-    texto.includes('\0') ||
-    Buffer.byteLength(texto, 'utf8') > MAX_BYTES_INI
-  ) {
+function validarTexto(texto: unknown): asserts texto is string | Buffer {
+  const valido = Buffer.isBuffer(texto)
+    ? texto.length <= MAX_BYTES_INI && !texto.includes(0)
+    : typeof texto === 'string' &&
+      !texto.includes('\0') &&
+      Buffer.byteLength(texto, 'utf8') <= MAX_BYTES_INI;
+  if (!valido) {
     throw new ErrorWolf('php.argumento_invalido', 'El php.ini no es un texto válido.', {
       campo: 'php.ini',
     });
@@ -454,9 +539,12 @@ function recortarSalida(s: string): string {
 }
 
 /** Escribe en un temporal al lado y lo renombra: nunca queda un php.ini a medias. */
-export async function escribirIniAtomico(destino: string, contenido: string): Promise<void> {
+export async function escribirIniAtomico(
+  destino: string,
+  contenido: string | Buffer,
+): Promise<void> {
   const tmp = `${path.dirname(destino)}${path.sep}php.ini.nuevo-${randomBytes(4).toString('hex')}`;
-  await writeFile(tmp, contenido, 'utf8');
+  await writeFile(tmp, contenido);
   try {
     await rename(tmp, destino);
   } catch (e) {

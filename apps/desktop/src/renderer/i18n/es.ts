@@ -250,7 +250,9 @@ export const es = {
       'php.valor_invalido': 'El valor de {clave} no es válido.',
       'php.ini_invalido': 'PHP no arranca con ese php.ini; no se guardó nada. Salida: {salida}',
       'php.no_arranco':
-        'PHP {rama} no volvió a arrancar con el php.ini nuevo; se restauró el anterior y sigue sirviendo como antes.',
+        'PHP {rama} no volvió a arrancar con el cambio; se restauró lo anterior y responde como antes.',
+      'php.caido_tras_restaurar':
+        'PHP {rama} no volvió a arrancar; se restauró lo anterior, pero sigue sin responder. Revise Servicios y los registros de PHP.',
       'php.respaldo_no_existe': 'Esa copia del php.ini no existe.',
       'php.extension_no_existe': 'La extensión {nombre} no está en la carpeta ext de esta versión.',
       'php.extension_no_catalogo':

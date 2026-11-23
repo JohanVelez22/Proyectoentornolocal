@@ -252,13 +252,29 @@ describe('IniPhp', () => {
 
   it('con el pool encendido reinicia y, si no queda sano, restaura el anterior y reinicia otra vez', async () => {
     encendida = true;
-    sano = false;
-    const p = crear();
+    const respuestas = [false, true];
+    const p = crear({ sano: async () => respuestas.shift() ?? true });
     await expect(p.guardar('8.4', conValores(INI, { memory_limit: '1G' }))).rejects.toMatchObject({
       codigo: 'php.no_arranco',
     });
     expect(readFileSync(ini, 'utf8')).toBe(INI);
     expect(reinicios).toBe(2);
+    // La marca no existía antes: la vuelta atrás la quita.
+    expect(existsSync(rutaMarcaEditado(rutas, '8.4'))).toBe(false);
+
+    // Si tras restaurar sigue sin responder, se dice tal cual (no "sigue como antes").
+    reinicios = 0;
+    sano = false;
+    await expect(
+      crear().guardar('8.4', conValores(INI, { memory_limit: '1G' })),
+    ).rejects.toMatchObject({ codigo: 'php.caido_tras_restaurar', datos: { rama: '8.4' } });
+    expect(readFileSync(ini, 'utf8')).toBe(INI);
+    expect(reinicios).toBe(2);
+
+    // Con la marca de antes, la vuelta atrás la conserva.
+    writeFileSync(rutaMarcaEditado(rutas, '8.4'), '');
+    await expect(crear().guardar('8.4', 'memory_limit = 1G')).rejects.toBeInstanceOf(ErrorWolf);
+    expect(existsSync(rutaMarcaEditado(rutas, '8.4'))).toBe(true);
 
     sano = true;
     reinicios = 0;
@@ -280,6 +296,76 @@ describe('IniPhp', () => {
     });
     expect(readFileSync(ini, 'utf8')).toBe(INI);
     expect(n).toBe(2);
+  });
+
+  it('la prueba fuerza mostrar los fallos de arranque aunque el ini los apague y los mande a un log', async () => {
+    // PHP falso: con display_errors=Off y error_log, el aviso solo sale si se fuerzan los -d.
+    const php: Ejecutor = async (_cmd, args) => {
+      llamadas.push(args);
+      const d = (k: string) => args.includes(k);
+      const visible =
+        d('display_errors=stderr') &&
+        d('display_startup_errors=1') &&
+        d('log_errors=0') &&
+        args.some((a) => /^error_log=(NUL|\/dev\/null)?$/.test(a));
+      return {
+        codigo: 0,
+        stdout: SALIDA_OK,
+        stderr: visible ? "PHP Warning:  PHP Startup: Unable to load dynamic library 'nada'" : '',
+      };
+    };
+    const p = crear({ exec: php });
+    const roto = [
+      'display_errors = Off',
+      'display_startup_errors = Off',
+      'log_errors = On',
+      'error_log = "C:/logs/php.log"',
+      'extension=nada',
+    ].join('\n');
+    await expect(p.guardar('8.4', roto)).rejects.toMatchObject({ codigo: 'php.ini_invalido' });
+    expect(readFileSync(ini, 'utf8')).toBe(INI);
+    // Los -d van después de -c: pisan lo que diga el archivo.
+    const a = llamadas[0]!;
+    expect(a.indexOf('-c')).toBeLessThan(a.indexOf('display_errors=stderr'));
+  });
+
+  it('copia y vuelta atrás byte a byte (php.ini en cp1252, no UTF-8)', async () => {
+    // "; Configuración" en Windows-1252: 0xF3 no es UTF-8 válido.
+    const bytes = Buffer.concat([
+      Buffer.from('; Configuraci', 'latin1'),
+      Buffer.from([0xf3]),
+      Buffer.from('n\r\nmemory_limit = 128M\r\n', 'latin1'),
+    ]);
+    writeFileSync(ini, bytes);
+    encendida = true;
+    const respuestas = [false, true];
+    const p = crear({ sano: async () => respuestas.shift() ?? true, ahora: () => new Date() });
+    await expect(p.guardar('8.4', 'memory_limit = 1G')).rejects.toMatchObject({
+      codigo: 'php.no_arranco',
+    });
+    expect(readFileSync(ini).equals(bytes)).toBe(true);
+    const [copia] = await p.respaldos('8.4');
+    const rutaCopia = path.join(rutaRespaldosIni(rutas, '8.4'), copia!.nombre);
+    expect(readFileSync(rutaCopia).equals(bytes)).toBe(true);
+    // Restaurar esa copia también deja los bytes tal cual.
+    await p.guardar('8.4', 'memory_limit = 1G');
+    await p.restaurar('8.4', copia!.nombre);
+    expect(readFileSync(ini).equals(bytes)).toBe(true);
+  });
+
+  it('las copias con fecha rotan: quedan las 20 más nuevas', async () => {
+    const carpeta = rutaRespaldosIni(rutas, '8.4');
+    mkdirSync(carpeta, { recursive: true });
+    for (let i = 0; i < 25; i++) {
+      const n = String(i).padStart(2, '0');
+      writeFileSync(path.join(carpeta, `php.ini-2026-01-01T00-00-${n}-000Z.txt`), `v${i}`);
+    }
+    writeFileSync(path.join(carpeta, 'nota-del-usuario.txt'), 'no se toca');
+    await crear().guardar('8.4', 'memory_limit = 1G');
+    const copias = await crear().respaldos('8.4');
+    expect(copias).toHaveLength(20);
+    expect(copias[0]!.nombre).toMatch(/^php\.ini-2026-11-23/);
+    expect(existsSync(path.join(carpeta, 'nota-del-usuario.txt'))).toBe(true);
   });
 
   it('restaurar una copia la vuelve a aplicar (con su propia copia previa)', async () => {
@@ -322,8 +408,8 @@ describe('IniPhp', () => {
   });
 });
 
-describe('ServicioPhp con un php.ini editado por el usuario', () => {
-  it('iniciar no lo regenera; solo corrige extension_dir (con copia previa)', async () => {
+describe('ServicioPhp y el php.ini de la rama', () => {
+  async function montar() {
     const rutas = new Rutas(await carpetaTemporal('pel-ini-srv-'));
     const bin = rutas.bin('php', '8.4');
     mkdirSync(path.join(bin, 'ext'), { recursive: true });
@@ -344,6 +430,13 @@ describe('ServicioPhp con un php.ini editado por el usuario', () => {
     );
     const ini = rutas.phpIni('8.4');
     mkdirSync(path.dirname(ini), { recursive: true });
+    const copias = () =>
+      existsSync(rutaRespaldosIni(rutas, '8.4')) ? readdirSync(rutaRespaldosIni(rutas, '8.4')) : [];
+    return { rutas, bin, srv, ini, supervisor, copias };
+  }
+
+  it('iniciar no regenera un ini editado; solo corrige extension_dir (con copia previa)', async () => {
+    const { rutas, bin, srv, ini, supervisor, copias } = await montar();
     const propio = '; mío\nextension_dir="C:/viejo/ext"\nmemory_limit = 3G\n';
     writeFileSync(ini, propio);
     writeFileSync(rutaMarcaEditado(rutas, '8.4'), '');
@@ -353,10 +446,46 @@ describe('ServicioPhp con un php.ini editado por el usuario', () => {
     expect(despues).toContain('memory_limit = 3G');
     expect(despues).not.toContain('C:/viejo/ext');
     expect(despues).toContain(`${bin.replace(/\\/g, '/')}/ext`);
-    expect(readdirSync(rutaRespaldosIni(rutas, '8.4'))).toHaveLength(1);
+    expect(copias()).toHaveLength(1);
     expect(supervisor.iniciar).toHaveBeenCalled();
     // Sin cambios que hacer, no hay otra copia.
     await srv.asegurarPhpIni('8.4');
-    expect(readdirSync(rutaRespaldosIni(rutas, '8.4'))).toHaveLength(1);
+    expect(copias()).toHaveLength(1);
+  });
+
+  it('extension_dir equivalente (barras, mayúsculas, comillas, comentario) no se reescribe', async () => {
+    const { rutas, bin, srv, ini, copias } = await montar();
+    const dir = `${bin.replace(/\//g, '\\')}\\ext\\`.toUpperCase();
+    const propio = `; mío\nextension_dir = ${dir} ; carpeta de extensiones\nmemory_limit = 3G\n`;
+    writeFileSync(ini, propio);
+    writeFileSync(rutaMarcaEditado(rutas, '8.4'), '');
+    await srv.iniciar('8.4');
+    expect(readFileSync(ini, 'utf8')).toBe(propio);
+    expect(copias()).toEqual([]);
+  });
+
+  it('un ini sin marca editado por fuera (huella distinta de la generada) se trata como editado', async () => {
+    const { rutas, srv, ini, copias } = await montar();
+    await srv.iniciar('8.4');
+    const generado = readFileSync(ini, 'utf8');
+    writeFileSync(ini, generado + '\nmemory_limit = 3G\n');
+    await srv.iniciar('8.4');
+    expect(readFileSync(ini, 'utf8')).toContain('memory_limit = 3G');
+    expect(existsSync(rutaMarcaEditado(rutas, '8.4'))).toBe(true);
+    expect(copias()).toEqual([]);
+  });
+
+  it('un ini viejo sin huella que difiere del regenerado se copia antes de regenerarlo', async () => {
+    const { srv, ini, copias, rutas } = await montar();
+    writeFileSync(ini, '; de una versión anterior\nmemory_limit = 3G\n');
+    await srv.iniciar('8.4');
+    expect(readFileSync(ini, 'utf8')).not.toContain('memory_limit = 3G');
+    expect(copias()).toHaveLength(1);
+    expect(readFileSync(path.join(rutaRespaldosIni(rutas, '8.4'), copias()[0]!), 'utf8')).toContain(
+      'memory_limit = 3G',
+    );
+    // Arrancar otra vez con el regenerado intacto: ni copia ni cambio.
+    await srv.iniciar('8.4');
+    expect(copias()).toHaveLength(1);
   });
 });

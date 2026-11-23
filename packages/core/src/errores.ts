@@ -155,6 +155,7 @@ export const PARAMETROS_ERROR = {
   'php.valor_invalido': ['clave'],
   'php.ini_invalido': ['salida'],
   'php.no_arranco': ['rama'],
+  'php.caido_tras_restaurar': ['rama'],
   'php.respaldo_no_existe': [],
   'php.extension_no_existe': ['nombre'],
   'php.extension_no_catalogo': ['nombre'],

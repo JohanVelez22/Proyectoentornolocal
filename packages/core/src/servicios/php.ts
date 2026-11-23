@@ -1,9 +1,16 @@
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ErrorWolf } from '../errores';
 import path from 'node:path';
-import { copiaConFecha } from '../herramientas/copiaConFecha';
-import { escribirIniAtomico, iniEditado, rutaRespaldosIni } from '../php/ini';
+import {
+  copiaIni,
+  escribirIniAtomico,
+  iniEditado,
+  normalizarDirExt,
+  rutaHuellaGenerado,
+  rutaMarcaEditado,
+} from '../php/ini';
 import { puertosPhp } from '../nginx/principal';
 import type { Plataforma } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
@@ -63,6 +70,28 @@ function activarOpcache(lineas: string[]): void {
   else lineas.push('zend_extension=opcache');
 }
 
+const sha256 = (b: Buffer): string => createHash('sha256').update(b).digest('hex');
+
+/** Texto de un ini: UTF-8 si lo es; si no (cp1252 de un editor viejo), byte a byte. */
+function decodificarIni(b: Buffer): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(b).replace(/^\uFEFF/, '');
+  } catch {
+    return b.toString('latin1');
+  }
+}
+
+/** Vuelve a bytes con la misma codificación que se usó al leer `original`. */
+function codificarIni(texto: string, original: Buffer): Buffer {
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(original);
+    const bom = original[0] === 0xef && original[1] === 0xbb && original[2] === 0xbf;
+    return Buffer.from((bom ? '\uFEFF' : '') + texto, 'utf8');
+  } catch {
+    return Buffer.from(texto, 'latin1');
+  }
+}
+
 const escapar = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** Máximo de trabajadores que se intenta detener (cubre cambios de configuración en caliente). */
 const MAX_TRABAJADORES = 16;
@@ -108,6 +137,10 @@ export class ServicioPhp {
     return `"${this.rutas.bin('php', version).replace(/\\/g, '/')}/ext"`;
   }
 
+  /**
+   * Genera el php.ini de la rama desde php.ini-development. Si ya había uno distinto, primero lo
+   * copia con fecha; guarda la huella de lo generado para detectar ediciones por fuera.
+   */
   async generarIni(version: string): Promise<void> {
     const bin = this.rutas.bin('php', version);
     let base: string;
@@ -122,29 +155,51 @@ export class ServicioPhp {
     for (const [k, v] of DIRECTIVAS) fijar(lineas, k, v);
     if (existsSync(path.join(bin, 'ext', 'php_opcache.dll'))) activarOpcache(lineas);
     for (const [k, v] of DIRECTIVAS_OPCACHE) fijar(lineas, k, v);
+    const nuevo = Buffer.from(lineas.join('\r\n'), 'utf8');
     const destino = this.rutas.phpIni(version);
     await mkdir(path.dirname(destino), { recursive: true });
-    await writeFile(destino, lineas.join('\r\n'), 'utf8');
+    const previo = await readFile(destino).catch(() => null);
+    if (previo && !previo.equals(nuevo)) await copiaIni(this.rutas, version, previo);
+    await escribirIniAtomico(destino, nuevo);
+    await writeFile(rutaHuellaGenerado(this.rutas, version), sha256(nuevo), 'utf8');
+  }
+
+  /**
+   * ¿El php.ini cambió desde la última vez que se generó (editado a mano por fuera)? Sin huella
+   * guardada (ini de una versión anterior) no se puede saber: false.
+   */
+  private async editadoPorFuera(version: string): Promise<boolean> {
+    const huella = await readFile(rutaHuellaGenerado(this.rutas, version), 'utf8').catch(
+      () => null,
+    );
+    if (huella === null) return false;
+    const actual = await readFile(this.rutas.phpIni(version)).catch(() => null);
+    return actual !== null && sha256(actual) !== huella.trim();
+  }
+
+  /** ¿Se respeta el ini tal cual (editado en la pantalla PHP o por fuera)? Marca el de fuera. */
+  private async respetarIni(version: string): Promise<boolean> {
+    if (!existsSync(this.rutas.phpIni(version))) return false;
+    if (iniEditado(this.rutas, version)) return true;
+    if (!(await this.editadoPorFuera(version))) return false;
+    await writeFile(rutaMarcaEditado(this.rutas, version), '', 'utf8');
+    return true;
   }
 
   /**
    * Ruta del php.ini de la rama; lo genera si todavía no existe o si su extension_dir no apunta al
    * bin actual (la carpeta de datos se movió o se renombró): si no, PHP no cargaría ninguna extensión.
-   * Si el usuario lo editó (pantalla PHP), nunca se regenera: solo se corrige `extension_dir`, con
-   * copia previa.
+   * Si el usuario lo editó (pantalla PHP o a mano), nunca se regenera: solo se corrige
+   * `extension_dir`, con copia previa.
    */
   async asegurarPhpIni(version: string): Promise<string> {
     const ini = this.rutas.phpIni(version);
-    let texto: string | null = null;
-    try {
-      texto = await readFile(ini, 'utf8');
-    } catch {
-      texto = null;
-    }
-    const actual = texto === null ? null : /^\s*extension_dir\s*=\s*(.*?)\s*$/m.exec(texto)?.[1];
-    if (actual === this.extensionDir(version)) return ini;
-    if (texto !== null && iniEditado(this.rutas, version)) {
-      await this.corregirExtensionDir(version, texto);
+    const bytes = await readFile(ini).catch(() => null);
+    const texto = bytes === null ? null : decodificarIni(bytes);
+    const actual = texto === null ? null : /^\s*extension_dir\s*=(.*)$/m.exec(texto)?.[1];
+    if (normalizarDirExt(actual) === normalizarDirExt(this.extensionDir(version))) return ini;
+    if (bytes !== null && texto !== null && (await this.respetarIni(version))) {
+      await this.corregirExtensionDir(version, bytes, texto);
     } else {
       await this.generarIni(version);
     }
@@ -152,21 +207,18 @@ export class ServicioPhp {
   }
 
   /** Cambia solo `extension_dir` de un php.ini editado por el usuario (con copia con fecha). */
-  private async corregirExtensionDir(version: string, texto: string): Promise<void> {
+  private async corregirExtensionDir(version: string, bytes: Buffer, texto: string): Promise<void> {
     const salto = texto.includes('\r\n') ? '\r\n' : '\n';
     const lineas = texto.split(/\r?\n/);
     fijar(lineas, 'extension_dir', this.extensionDir(version));
-    await copiaConFecha(rutaRespaldosIni(this.rutas, version), 'php.ini', texto);
-    await escribirIniAtomico(this.rutas.phpIni(version), lineas.join(salto));
+    await copiaIni(this.rutas, version, bytes);
+    await escribirIniAtomico(this.rutas.phpIni(version), codificarIni(lineas.join(salto), bytes));
   }
 
   /** Antes de arrancar: un ini sin editar se regenera (toma ajustes nuevos, p. ej. OPcache). */
   private async prepararIni(version: string): Promise<void> {
-    if (iniEditado(this.rutas, version) && existsSync(this.rutas.phpIni(version))) {
-      await this.asegurarPhpIni(version);
-    } else {
-      await this.generarIni(version);
-    }
+    if (await this.respetarIni(version)) await this.asegurarPhpIni(version);
+    else await this.generarIni(version);
   }
 
   async iniciar(version: string): Promise<void> {

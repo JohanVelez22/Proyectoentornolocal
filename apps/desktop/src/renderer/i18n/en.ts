@@ -246,7 +246,9 @@ export const en: Textos = {
       'php.ini_invalido':
         'PHP does not start with that php.ini; nothing was saved. Output: {salida}',
       'php.no_arranco':
-        'PHP {rama} did not start again with the new php.ini; the previous one was restored and keeps serving as before.',
+        'PHP {rama} did not start again with the change; the previous state was restored and responds as before.',
+      'php.caido_tras_restaurar':
+        'PHP {rama} did not start again; the previous state was restored but it still does not respond. Check Services and the PHP logs.',
       'php.respaldo_no_existe': 'That php.ini copy does not exist.',
       'php.extension_no_existe': 'The {nombre} extension is not in this version ext folder.',
       'php.extension_no_catalogo': 'The {nombre} extension is not in the catalog for this version.',
