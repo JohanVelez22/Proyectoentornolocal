@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rename, rm, utimes, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import type { AddressInfo, Socket } from 'node:net';
 import path from 'node:path';
@@ -88,7 +88,17 @@ export interface DepsReceptor {
   maxBytes?: number;
   porSegundo?: number;
   ahora?: () => number;
+  /** Cada cuánto se renueva la fecha del archivo del receptor (latido; 15 s por defecto). */
+  latidoMs?: number;
 }
+
+/**
+ * Latido del archivo del receptor. El prepend y wolfdump no envían si su fecha tiene más de 60 s
+ * (`VIGENCIA`): si la app se cortó sin borrarlo, a lo sumo en un minuto deja de usarse aunque
+ * otro proceso ocupe el puerto. Además llevan el PID: donde se puede preguntar barato (PHP con
+ * posix o /proc, Python en todos los sistemas) no se envía a un receptor muerto.
+ */
+export const LATIDO_RECEPTOR_MS = 15_000;
 
 class ErrorHttp extends Error {
   constructor(
@@ -122,6 +132,7 @@ export class ReceptorDumps {
   private totalBytes = 0;
   private contador = 0;
   private ventana = { inicio: 0, cuenta: 0 };
+  private latido: ReturnType<typeof setInterval> | null = null;
 
   constructor(private readonly d: DepsReceptor) {}
 
@@ -186,7 +197,9 @@ export class ReceptorDumps {
     try {
       await mkdir(path.dirname(archivo), { recursive: true });
       const tmp = `${archivo}.${process.pid}.tmp`;
-      await writeFile(tmp, JSON.stringify({ puerto: real, token }), { mode: 0o600 });
+      await writeFile(tmp, JSON.stringify({ puerto: real, token, pid: process.pid }), {
+        mode: 0o600,
+      });
       await rename(tmp, archivo);
     } catch (e) {
       servidor.close();
@@ -195,6 +208,11 @@ export class ReceptorDumps {
     this.huellaToken = huella(token);
     this.puertoActual = real;
     this.http = servidor;
+    this.latido = setInterval(() => {
+      const t = new Date();
+      utimes(archivo, t, t).catch(() => undefined);
+    }, this.d.latidoMs ?? LATIDO_RECEPTOR_MS);
+    this.latido.unref?.();
   }
 
   /** Deja de escuchar y borra el archivo del token. Los volcados quedan en memoria. */
@@ -204,6 +222,8 @@ export class ReceptorDumps {
     this.http = null;
     this.puertoActual = null;
     this.huellaToken = null;
+    if (this.latido) clearInterval(this.latido);
+    this.latido = null;
     await rm(rutasDepuracion(this.d.rutas).receptor, { force: true }).catch(() => undefined);
     if (!servidor) return;
     const cerrado = new Promise<void>((r) => servidor.close(() => r()));

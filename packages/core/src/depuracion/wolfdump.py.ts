@@ -23,17 +23,53 @@ import os
 import pprint
 import re
 import sys
+import time
 
 _RECEPTOR = __RECEPTOR__
 _MAX_TEXTO = 262144
 _MAX_CUERPO = 1000000
 _PLAZO = 0.2
+# Segundos sin latido del receptor tras los que su archivo se da por viejo (la app se cortó).
+_VIGENCIA = 60
 
 __all__ = ["dump"]
 
 
+def _vivo(pid):
+    """¿Sigue vivo el proceso del receptor? (mejor esfuerzo: ante la duda, sí)"""
+    if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
+        return False
+    if os.name == "nt":
+        # En Windows os.kill(pid, 0) TERMINA el proceso: se pregunta con OpenProcess.
+        try:
+            import ctypes
+
+            k = ctypes.windll.kernel32
+            h = k.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+            if not h:
+                return False
+            try:
+                codigo = ctypes.c_ulong(0)
+                if not k.GetExitCodeProcess(h, ctypes.byref(codigo)):
+                    return True
+                return codigo.value == 259  # STILL_ACTIVE
+            finally:
+                k.CloseHandle(h)
+        except Exception:
+            return True
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except Exception:
+        return True
+    return True
+
+
 def _config():
     try:
+        if abs(time.time() - os.path.getmtime(_RECEPTOR)) > _VIGENCIA:
+            return None
         with open(_RECEPTOR, "r", encoding="utf-8") as f:
             c = json.loads(f.read(4096))
     except Exception:
@@ -44,6 +80,8 @@ def _config():
     if not isinstance(puerto, int) or not isinstance(token, str):
         return None
     if not re.fullmatch(r"[0-9a-f]{64}", token):
+        return None
+    if not _vivo(c.get("pid")):
         return None
     return puerto, token
 

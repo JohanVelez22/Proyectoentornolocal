@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, utimes, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
@@ -23,7 +23,7 @@ afterEach(async () => {
 });
 
 async function nuevoReceptor(
-  o: { porSegundo?: number; maximo?: number; maxBytes?: number } = {},
+  o: { porSegundo?: number; maximo?: number; maxBytes?: number; latidoMs?: number } = {},
 ): Promise<{ r: ReceptorDumps; base: string; nuevos: ResumenDump[] }> {
   const base = await carpetaTemporal('pel-dumps-');
   const nuevos: ResumenDump[] = [];
@@ -34,6 +34,7 @@ async function nuevoReceptor(
     ...(o.porSegundo !== undefined ? { porSegundo: o.porSegundo } : {}),
     ...(o.maximo !== undefined ? { maximo: o.maximo } : {}),
     ...(o.maxBytes !== undefined ? { maxBytes: o.maxBytes } : {}),
+    ...(o.latidoMs !== undefined ? { latidoMs: o.latidoMs } : {}),
   });
   receptores.push(r);
   await r.iniciar();
@@ -203,6 +204,17 @@ describe('ReceptorDumps', () => {
     expect(r.estado().total).toBe(0);
   });
 
+  it('el archivo lleva el PID del receptor y un latido que mantiene su fecha al día', async () => {
+    const { base } = await nuevoReceptor({ latidoMs: 40 });
+    const archivo = rutasDepuracion(new Rutas(base)).receptor;
+    const c = JSON.parse(await readFile(archivo, 'utf8')) as { pid: number };
+    expect(c.pid).toBe(process.pid);
+    const viejo = new Date(Date.now() - 10 * 60_000);
+    await utimes(archivo, viejo, viejo);
+    await new Promise((ok) => setTimeout(ok, 200));
+    expect(Date.now() - (await stat(archivo)).mtimeMs).toBeLessThan(5000);
+  });
+
   it('cada sesión tiene un token nuevo; detener borra el archivo y deja de aceptar', async () => {
     const { r, base } = await nuevoReceptor();
     const primero = await tokenDe(base);
@@ -279,6 +291,19 @@ describe('prepend y wolfdump', () => {
     for (const l of php.split('\n').filter((x) => x.includes('#[\\SensitiveParameter]'))) {
       expect(l.trim()).toBe('#[\\SensitiveParameter]');
     }
+  });
+
+  it('prepend y wolfdump no envían si el receptor no está vivo (PID o latido viejo)', () => {
+    const php = prependPhp({ rutaReceptor: 'C:/Datos/run/depuracion.json' });
+    expect(php).toContain('filemtime(self::RECEPTOR)');
+    expect(php).toContain('clearstatcache');
+    expect(php).toContain("isset($c['pid'])");
+    expect(php).toContain('posix_kill');
+    const py = wolfdumpPy({ rutaReceptor: 'C:/Datos/run/depuracion.json' });
+    expect(py).toContain('os.path.getmtime(_RECEPTOR)');
+    expect(py).toContain('def _vivo(pid)');
+    // En Windows, os.kill(pid, 0) TERMINA el proceso: nunca se usa ahí.
+    expect(py).toMatch(/if os\.name == "nt":[\s\S]*OpenProcess[\s\S]*os\.kill\(pid, 0\)/);
   });
 
   it('wolfdump.py lee el mismo archivo y define dump()', () => {

@@ -53,6 +53,8 @@ if (!class_exists('WolfCoreDump', false)) {
         const MAX_TEXTO = 262144;
         const MAX_CUERPO = 1000000;
         const PLAZO = 0.2;
+        /** Segundos sin latido del receptor tras los que su archivo se da por viejo. */
+        const VIGENCIA = 60;
 
         /** Envía los valores al receptor; nunca lanza ni muestra nada. */
         public static function capturar(
@@ -132,8 +134,17 @@ if (!class_exists('WolfCoreDump', false)) {
             return $a !== $b;
         }
 
+        /**
+         * Puerto y token del receptor, o null si no está escuchando: sin archivo, con un archivo
+         * sin latido reciente (la app se cortó) o con el PID de un proceso que ya no existe.
+         */
         private static function receptor()
         {
+            clearstatcache(true, self::RECEPTOR);
+            $m = @filemtime(self::RECEPTOR);
+            if (!is_int($m) || abs(time() - $m) > self::VIGENCIA) {
+                return null;
+            }
             $j = @file_get_contents(self::RECEPTOR);
             if (!is_string($j) || strlen($j) > 4096) {
                 return null;
@@ -144,7 +155,28 @@ if (!class_exists('WolfCoreDump', false)) {
                 || !preg_match('/^[0-9a-f]{64}$/', $c['token'])) {
                 return null;
             }
+            if (!isset($c['pid']) || !is_int($c['pid']) || !self::vivo($c['pid'])) {
+                return null;
+            }
             return $c;
+        }
+
+        /** ¿Sigue vivo el proceso del receptor? Mejor esfuerzo: ante la duda, sí. */
+        private static function vivo($pid)
+        {
+            if ($pid <= 0) {
+                return false;
+            }
+            if (function_exists('posix_kill')) {
+                // La señal 0 solo pregunta; EPERM (1) = existe, pero es de otro usuario.
+                return posix_kill($pid, 0)
+                    || (function_exists('posix_get_last_error') && posix_get_last_error() === 1);
+            }
+            if (DIRECTORY_SEPARATOR === '/' && @is_dir('/proc/self')) {
+                return @is_dir('/proc/' . $pid);
+            }
+            // Windows: PHP no tiene una forma barata de preguntarlo; queda el latido.
+            return true;
         }
 
         private static function origen()

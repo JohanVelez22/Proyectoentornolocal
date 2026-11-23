@@ -249,12 +249,30 @@ describe.skipIf(!hayPhp)('prepend de dumps con un PHP real', () => {
     }
   });
 
+  it('un archivo del receptor sin latido reciente (la app se cortó) no se usa', async () => {
+    const { r, llegados } = await receptorReal(base);
+    try {
+      const viejo = new Date(Date.now() - 10 * 60_000);
+      const { utimes } = await import('node:fs/promises');
+      await utimes(receptor, viejo, viejo);
+      const c = await correr('<?php\nwd(1);\necho "OK";\n');
+      expect(c.salida).toBe('OK');
+      await new Promise((ok) => setTimeout(ok, 300));
+      expect(llegados).toHaveLength(0);
+    } finally {
+      await r.detener();
+    }
+  });
+
   it('un receptor colgado (acepta y no responde) solo demora el plazo', async () => {
     const colgado = net.createServer(() => undefined);
     await new Promise<void>((ok) => colgado.listen(0, '127.0.0.1', () => ok()));
     const puerto = (colgado.address() as net.AddressInfo).port;
     const fs = await import('node:fs/promises');
-    await fs.writeFile(receptor, JSON.stringify({ puerto, token: 'f'.repeat(64) }));
+    await fs.writeFile(
+      receptor,
+      JSON.stringify({ puerto, token: 'f'.repeat(64), pid: process.pid }),
+    );
     try {
       const c = await correr(
         '<?php\n$t = microtime(true);\ndump(1);\necho "\\nT=", microtime(true) - $t;\n',
@@ -392,6 +410,25 @@ describe.skipIf(!python)('wolfdump con un Python real', () => {
       expect(d.texto).toBe("{'a': [1, 2]}");
     } finally {
       await r.detener();
+    }
+    // Con el archivo de un receptor cuyo proceso ya no existe: no envía.
+    const { r: r2, llegados: l2 } = await receptorReal(base);
+    try {
+      const { spawn } = await import('node:child_process');
+      const muerto = await new Promise<number>((ok) => {
+        const p = spawn(process.execPath, ['-e', ''], { windowsHide: true });
+        p.on('exit', () => ok(p.pid!));
+      });
+      const fs = await import('node:fs/promises');
+      const ruta = rutasDepuracion(new Rutas(base)).receptor;
+      const c = JSON.parse(await fs.readFile(ruta, 'utf8')) as Record<string, unknown>;
+      await fs.writeFile(ruta, JSON.stringify({ ...c, pid: muerto }));
+      const m = await correrPy(carpetaPython, codigo, base);
+      expect(m.error).toBe('');
+      await new Promise((ok) => setTimeout(ok, 300));
+      expect(l2).toHaveLength(0);
+    } finally {
+      await r2.detener();
     }
     const sin = await correrPy(carpetaPython, codigo, base);
     expect(sin.codigo).toBe(0);
