@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { baseDelProyecto, baseDeVariables } from '../src/bd/baseProyecto';
+import { baseDelProyecto, baseDeVariables, LIMITE_ENV_BYTES } from '../src/bd/baseProyecto';
 import { urlAdminerProyecto } from '../src/herramientas/adminer';
 import { leerVariablesEnv } from '../src/proyectos/detectar';
 import { carpetaTemporal } from './temporales';
@@ -71,5 +71,23 @@ describe('baseDelProyecto y urlAdminerProyecto', () => {
     expect(urlAdminerProyecto({ motor: 'postgresql', base: 'b', usuario: 'u' }, 5433)).toBe(
       'http://127.0.0.1:8090/?pgsql=127.0.0.1:5433&username=u&db=b',
     );
+  });
+});
+
+describe('entradas raras del .env', () => {
+  it('DATABASE_URL con un % suelto no lanza: null', () => {
+    expect(baseDeVariables(vars('DATABASE_URL=mysql://u%zz@h/base\n'))).toBeNull();
+    expect(baseDeVariables(vars('DATABASE_URL=mysql://u@h/ba%E0se\n'))).toBeNull();
+  });
+
+  it('un .env enorme solo se lee hasta el tope (lo que sigue no cuenta)', async () => {
+    const dir = await carpetaTemporal('pel-basepro-grande-');
+    writeFileSync(
+      path.join(dir, '.env'),
+      `DB_CONNECTION=mysql\n${'#'.repeat(LIMITE_ENV_BYTES)}\nDB_DATABASE=b\nDB_USERNAME=u\n`,
+    );
+    expect(await baseDelProyecto(dir)).toBeNull();
+    writeFileSync(path.join(dir, '.env'), 'DB_CONNECTION=mysql\nDB_DATABASE=b\nDB_USERNAME=u\n');
+    expect(await baseDelProyecto(dir)).toEqual({ motor: 'mysql', base: 'b', usuario: 'u' });
   });
 });

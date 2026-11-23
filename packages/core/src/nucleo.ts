@@ -1,6 +1,5 @@
 import type * as childProcess from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { open } from 'node:fs/promises';
 import path from 'node:path';
 import { Almacen, AlmacenCredenciales, migrarCredenciales } from './almacen';
 import {
@@ -43,7 +42,9 @@ import { bloqueEnvIa } from './ia/envIa';
 import { GestorIa } from './ia/gestorIa';
 import { completarPlataforma, crearPlataforma } from './plataforma/index';
 import type { IdTerminal, TerminalDisponible } from './plataforma/tipos';
-import { baseDelProyecto, type BaseProyecto } from './bd/baseProyecto';
+import { baseDelProyecto, leerEnvAcotado, type BaseProyecto } from './bd/baseProyecto';
+
+export { LIMITE_ENV_BYTES } from './bd/baseProyecto';
 import { nombreEjecutable } from './plataforma/sistema';
 import type { Ejecutor, Plataforma } from './plataforma/tipos';
 import { ejecutorPorDefecto, PlataformaWindows } from './plataforma/win';
@@ -1011,7 +1012,7 @@ export class Nucleo {
   async bloqueEnvSitio(sitioId: string, motor: MotorBd, base: string): Promise<string> {
     const sitio = (await this.config.leer()).sitios.find((s) => s.id === sitioId);
     if (!sitio) throw new Error('El sitio ya no existe.');
-    const envActual = await leerEnvAcotado(path.join(sitio.carpeta, '.env'));
+    const envActual = (await leerEnvAcotado(path.join(sitio.carpeta, '.env'))) ?? '';
     return this.bd.bloqueEnv(motor, base, sitio.tipo, envActual);
   }
 
@@ -2045,24 +2046,6 @@ export class Nucleo {
       }
     }
     if (fallo) throw primero;
-  }
-}
-
-/** Máximo que se lee del `.env` de un proyecto para detectar sus variables. */
-export const LIMITE_ENV_BYTES = 256 * 1024;
-
-/** Primeros 256 KB del archivo como texto; '' si no existe o no se puede leer. */
-async function leerEnvAcotado(ruta: string): Promise<string> {
-  let f: Awaited<ReturnType<typeof open>> | null = null;
-  try {
-    f = await open(ruta, 'r');
-    const buf = Buffer.alloc(LIMITE_ENV_BYTES);
-    const { bytesRead } = await f.read(buf, 0, LIMITE_ENV_BYTES, 0);
-    return buf.subarray(0, bytesRead).toString('utf8');
-  } catch {
-    return '';
-  } finally {
-    await f?.close().catch(() => undefined);
   }
 }
 

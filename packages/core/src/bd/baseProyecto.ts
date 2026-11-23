@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { open } from 'node:fs/promises';
 import path from 'node:path';
 import { leerVariablesEnv } from '../proyectos/detectar';
 
@@ -38,8 +38,15 @@ function desdeUrl(url: string | undefined): BaseProyecto | null {
     return null;
   }
   const motor = motorDe(u.protocol.replace(/:$/, '').split('+')[0]);
-  const base = decodeURIComponent(u.pathname.replace(/^\//, ''));
-  const usuario = decodeURIComponent(u.username);
+  let base: string;
+  let usuario: string;
+  try {
+    base = decodeURIComponent(u.pathname.replace(/^\//, ''));
+    usuario = decodeURIComponent(u.username);
+  } catch {
+    // Un % suelto o una secuencia que no es UTF-8: la URL no sirve.
+    return null;
+  }
   return motor && base && usuario ? { motor, base, usuario } : null;
 }
 
@@ -69,13 +76,26 @@ export function baseDeVariables(vars: Map<string, string>): BaseProyecto | null 
   return r && valido(r.base) && valido(r.usuario) ? r : null;
 }
 
-/** Lee el `.env` de la carpeta del proyecto; null si no existe o no declara una base SQL. */
-export async function baseDelProyecto(carpeta: string): Promise<BaseProyecto | null> {
-  let texto: string;
+/** Máximo que se lee del `.env` de un proyecto para detectar sus variables. */
+export const LIMITE_ENV_BYTES = 256 * 1024;
+
+/** Primeros `LIMITE_ENV_BYTES` del archivo como texto; null si no existe o no se puede leer. */
+export async function leerEnvAcotado(ruta: string): Promise<string | null> {
+  let f: Awaited<ReturnType<typeof open>> | null = null;
   try {
-    texto = await readFile(path.join(carpeta, '.env'), 'utf8');
+    f = await open(ruta, 'r');
+    const buf = Buffer.alloc(LIMITE_ENV_BYTES);
+    const { bytesRead } = await f.read(buf, 0, LIMITE_ENV_BYTES, 0);
+    return buf.subarray(0, bytesRead).toString('utf8');
   } catch {
     return null;
+  } finally {
+    await f?.close().catch(() => undefined);
   }
-  return baseDeVariables(leerVariablesEnv(texto));
+}
+
+/** Lee el `.env` de la carpeta del proyecto; null si no existe o no declara una base SQL. */
+export async function baseDelProyecto(carpeta: string): Promise<BaseProyecto | null> {
+  const texto = await leerEnvAcotado(path.join(carpeta, '.env'));
+  return texto === null ? null : baseDeVariables(leerVariablesEnv(texto));
 }
