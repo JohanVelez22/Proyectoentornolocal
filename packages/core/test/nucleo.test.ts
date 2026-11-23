@@ -163,6 +163,22 @@ describe('Nucleo', () => {
     expect(abiertas.every((a) => a.cwd === carpeta)).toBe(true);
   });
 
+  it('adminerProyecto: la base del .env con el puerto configurado y sin la clave', async () => {
+    const n = await crear();
+    await n.guardarSitio(datos());
+    expect(await n.adminerProyecto('demo')).toEqual({ base: null, url: null });
+    writeFileSync(
+      path.join(carpeta, '.env'),
+      'DB_CONNECTION=mysql\nDB_DATABASE=demo_db\nDB_USERNAME=app\nDB_PASSWORD=clave-de-prueba\n',
+    );
+    const r = await n.adminerProyecto('demo');
+    expect(r.base).toEqual({ motor: 'mysql', base: 'demo_db', usuario: 'app' });
+    expect(r.url).toMatch(
+      /^http:\/\/127\.0\.0\.1:8090\/\?server=127\.0\.0\.1:\d+&username=app&db=demo_db$/,
+    );
+    expect(JSON.stringify(r)).not.toContain('clave-de-prueba');
+  });
+
   it('guardarSitio con id edita el sitio y aplica', async () => {
     const n = await crear();
     await n.guardarSitio(datos());

@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { copyFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { catalogo } from '../catalogo/catalogo';
+import type { BaseProyecto } from '../bd/baseProyecto';
 import type { Instalador } from '../catalogo/instalador';
 import { PUERTO_ADMINER, puertosPhp } from '../nginx/principal';
 import type { Rutas } from '../rutas';
@@ -23,6 +24,14 @@ export function urlAdminer(motor: string, usuario: string, puerto: number): stri
   }
   if (motor === 'postgresql') return `${base}?pgsql=127.0.0.1:${puerto}&username=${u}`;
   return null;
+}
+
+/**
+ * URL de Adminer con la base del proyecto elegida (servidor, usuario y base). Sin clave: Adminer
+ * la pide al entrar, así nunca viaja en la URL, el historial ni los registros.
+ */
+export function urlAdminerProyecto(b: BaseProyecto, puerto: number): string {
+  return `${urlAdminer(b.motor, b.usuario, puerto)!}&db=${encodeURIComponent(b.base)}`;
 }
 
 export interface DepsAdminer {
@@ -93,6 +102,13 @@ export class Adminer {
     if (!rama) return null;
     const cfg = await this.d.leerConfig();
     return { raiz: this.raiz(), puertos: puertosPhp(rama, cfg.servicios.php.trabajadores) };
+  }
+
+  /** URL de la base del proyecto con el puerto configurado de su motor. */
+  async urlProyecto(b: BaseProyecto): Promise<string> {
+    const cfg = await this.d.leerConfig();
+    const datos = (cfg.servicios.datos as Record<string, { puerto: number } | undefined>)[b.motor];
+    return urlAdminerProyecto(b, datos?.puerto ?? (b.motor === 'postgresql' ? 5432 : 3306));
   }
 
   /** URL lista para abrir según el puerto configurado del motor; null si Adminer no lo soporta. */

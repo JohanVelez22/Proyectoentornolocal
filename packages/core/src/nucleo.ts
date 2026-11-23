@@ -43,6 +43,7 @@ import { bloqueEnvIa } from './ia/envIa';
 import { GestorIa } from './ia/gestorIa';
 import { completarPlataforma, crearPlataforma } from './plataforma/index';
 import type { IdTerminal, TerminalDisponible } from './plataforma/tipos';
+import { baseDelProyecto, type BaseProyecto } from './bd/baseProyecto';
 import { nombreEjecutable } from './plataforma/sistema';
 import type { Ejecutor, Plataforma } from './plataforma/tipos';
 import { ejecutorPorDefecto, PlataformaWindows } from './plataforma/win';
@@ -1166,6 +1167,18 @@ export class Nucleo {
   /** URL de Adminer para un motor, sin clave; null si Adminer no lo soporta. */
   urlAdminer(motor: string, usuario: string): Promise<string | null> {
     return this.adminer.urlPara(motor, usuario);
+  }
+
+  /**
+   * Base de datos del proyecto (según su `.env`) y la URL de Adminer que la abre; `url` null si
+   * el proyecto no declara una base SQL. Nunca incluye la clave: Adminer la pide.
+   */
+  async adminerProyecto(
+    sitioId: string,
+  ): Promise<{ base: BaseProyecto | null; url: string | null }> {
+    const sitio = await this.sitioPorId(sitioId);
+    const base = await baseDelProyecto(sitio.carpeta);
+    return { base, url: base ? await this.adminer.urlProyecto(base) : null };
   }
 
   /** Activa el acceso FTP del sitio (usuario = id del sitio, clave aleatoria) y la devuelve. */
