@@ -1,4 +1,4 @@
-import { cp, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -24,6 +24,11 @@ let eventos: string[];
 let fallan: Set<string>;
 let libre: number;
 let respaldarFalla: boolean;
+/** Versión viva con la que la consulta de salud (listarBases) falla. */
+let listarFallaCon: string | null;
+let restaurarFalla: Set<string>;
+let contenidoVolcado: (base: string) => string;
+let copiar: (de: string, a: string) => Promise<void>;
 
 const SELLO = '20261123-100000';
 const datosDe = (clave: string): string => path.join(base, 'data', 'mysql', clave);
@@ -53,6 +58,9 @@ const mysql: DefServicio = {
 const respaldo = (): OperacionesRespaldo => ({
   listarBases: async (id) => {
     eventos.push(`listar:${id}`);
+    if (listarFallaCon !== null && versionViva(id) === listarFallaCon) {
+      throw new Error('Access denied');
+    }
     return ['tienda', 'blog'];
   },
   respaldar: async (id, b, carpeta) => {
@@ -60,11 +68,13 @@ const respaldo = (): OperacionesRespaldo => ({
     const version = estados.get(id) === 'encendido' ? versionViva(id) : 'apagada';
     eventos.push(`volcado:${id}:${b}:${version}`);
     const archivo = path.join(carpeta, `${b}.sql`);
-    await writeFile(archivo, `-- ${b}`);
+    await writeFile(archivo, contenidoVolcado(b));
     return archivo;
   },
   restaurar: async (id, archivo, b) => {
     eventos.push(`restaurar:${id}:${b}:${path.basename(archivo)}`);
+    if (restaurarFalla.has(b)) throw new Error(`no se pudo restaurar ${b}`);
+    return [];
   },
 });
 
@@ -142,7 +152,7 @@ function crear(): Servicios {
     respaldo: respaldo(),
     fsCopia: {
       espacioLibre: async () => libre,
-      copiar: (de, a) => cp(de, a, { recursive: true, errorOnExist: true, force: false }),
+      copiar: (de, a) => copiar(de, a),
     },
     reloj: () => new Date('2026-11-23T10:00:00'),
     plazoSaludMs: 200,
@@ -161,6 +171,10 @@ beforeEach(async () => {
   fallan = new Set();
   libre = 10 * 1024 ** 3;
   respaldarFalla = false;
+  listarFallaCon = null;
+  restaurarFalla = new Set();
+  contenidoVolcado = (b) => `-- ${b}`;
+  copiar = (de, a) => cp(de, a, { recursive: true, errorOnExist: true, force: false });
 });
 
 /** Instancia mysql@8.4 encendida con datos de un cliente. */
@@ -187,6 +201,8 @@ describe('actualizar (parche dentro de la rama)', () => {
       'detener:mysql@8.4',
       'version:8.4.14:copia=true',
       'iniciar:mysql@8.4:8.4.14',
+      // Salud: además del puerto, una consulta mínima.
+      'listar:mysql@8.4',
     ]);
     expect(await readFile(path.join(r.respaldo.carpeta, 'tienda', 'clientes.ibd'), 'utf8')).toBe(
       'datos del cliente',
@@ -269,12 +285,115 @@ describe('actualizar (parche dentro de la rama)', () => {
   });
 });
 
+describe('actualizar: vuelta atrás segura y salud', () => {
+  it('la versión nueva responde al puerto pero no a una consulta: se revierte', async () => {
+    listarFallaCon = '8.4.14';
+    const s = crear();
+    await preparar(s);
+    await expect(s.datos.actualizar('mysql@8.4', '8.4.14')).rejects.toMatchObject({
+      codigo: 'servicios.actualizacion_revertida',
+    });
+    expect(cfg.servicios.datos.mysql.instancias?.['8.4']?.version).toBe('8.4.13');
+    expect(versionViva('mysql@8.4')).toBe('8.4.13');
+  });
+
+  it('la copia se devuelve verificada y con rename: la carpeta tocada queda aparte', async () => {
+    fallan.add('8.4.14');
+    const destinos: string[] = [];
+    const real = copiar;
+    copiar = async (de, a) => {
+      destinos.push(path.basename(a));
+      await real(de, a);
+    };
+    const s = crear();
+    await preparar(s);
+    await s.datos.actualizar('mysql@8.4', '8.4.14').catch(() => undefined);
+    // La devolución copia primero a <clave>.restaurando-<sello> (nunca encima de la carpeta).
+    expect(destinos).toEqual([`8.4.respaldo-${SELLO}`, `8.4.restaurando-${SELLO}`]);
+    expect(existsSync(`${datosDe('8.4')}.restaurando-${SELLO}`)).toBe(false);
+    expect(await readFile(path.join(datosDe('8.4'), 'ibdata1'), 'utf8')).toBe('creado con 8.4.13');
+  });
+
+  it('si la devolución falla, no arranca y avisa con las rutas de la carpeta tocada y del respaldo', async () => {
+    fallan.add('8.4.14');
+    const real = copiar;
+    copiar = async (de, a) => {
+      if (a.includes('.restaurando-')) throw new Error('disco lleno');
+      await real(de, a);
+    };
+    const s = crear();
+    await preparar(s);
+    const e = await s.datos.actualizar('mysql@8.4', '8.4.14').catch((x: unknown) => x);
+    expect(e).toMatchObject({
+      codigo: 'servicios.restauracion_fallo',
+      datos: {
+        nombre: 'mysql@8.4',
+        fallida: datosDe('8.4'),
+        respaldo: `${datosDe('8.4')}.respaldo-${SELLO}`,
+      },
+    });
+    // No se arrancó nada encima de datos dudosos.
+    expect(eventos.at(-1)).not.toBe('iniciar:mysql@8.4:8.4.13');
+    expect(estados.get('mysql@8.4')).not.toBe('encendido');
+    // Los datos tocados siguen en su sitio (nada se borró) y el respaldo está entero.
+    expect(await readFile(path.join(datosDe('8.4'), 'ibdata1'), 'utf8')).toBe('tocado por 8.4.14');
+    expect(
+      await readFile(path.join(`${datosDe('8.4')}.respaldo-${SELLO}`, 'ibdata1'), 'utf8'),
+    ).toBe('creado con 8.4.13');
+  });
+
+  it('una devolución incompleta no aparta la carpeta ni arranca', async () => {
+    fallan.add('8.4.14');
+    const real = copiar;
+    copiar = async (de, a) => {
+      await real(de, a);
+      if (a.includes('.restaurando-')) await rm(path.join(a, 'tienda'), { recursive: true });
+    };
+    const s = crear();
+    await preparar(s);
+    await expect(s.datos.actualizar('mysql@8.4', '8.4.14')).rejects.toMatchObject({
+      codigo: 'servicios.restauracion_fallo',
+    });
+    expect(existsSync(`${datosDe('8.4')}.fallida-${SELLO}`)).toBe(false);
+    expect(await readFile(path.join(datosDe('8.4'), 'ibdata1'), 'utf8')).toBe('tocado por 8.4.14');
+    expect(estados.get('mysql@8.4')).not.toBe('encendido');
+  });
+
+  it('respaldosDeDatos lista respaldos, volcados y carpetas fallidas con su tamaño', async () => {
+    fallan.add('8.4.14');
+    const s = crear();
+    await preparar(s);
+    await s.datos.actualizar('mysql@8.4', '8.4.14').catch(() => undefined);
+    const lista = await s.datos.respaldosDeDatos();
+    expect(lista.map((r) => [r.servicio, r.clave, r.tipo, r.sello])).toEqual([
+      ['mysql', '8.4', 'fallida', SELLO],
+      ['mysql', '8.4', 'respaldo', SELLO],
+      ['mysql', '8.4', 'volcados', SELLO],
+    ]);
+    const respaldo = lista.find((r) => r.tipo === 'respaldo')!;
+    expect(respaldo.carpeta).toBe(`${datosDe('8.4')}.respaldo-${SELLO}`);
+    // ibdata1, tienda/clientes.ibd y la marca .pel-inicializado (fecha ISO de 24 caracteres).
+    expect(respaldo).toMatchObject({
+      archivos: 3,
+      bytes: 'creado con 8.4.13'.length + 'datos del cliente'.length + 24,
+    });
+    expect(lista.find((r) => r.tipo === 'volcados')!.bytes).toBe(
+      '-- tienda'.length + '-- blog'.length,
+    );
+  });
+});
+
 describe('rama nueva', () => {
   it('crea una instancia nueva, copia las bases y no toca la vieja', async () => {
     const s = crear();
     await preparar(s);
-    const id = await s.datos.nuevaRama('mysql', '8.0.44', { copiarDesde: 'mysql@8.4' });
-    expect(id).toBe('mysql@8.0');
+    const r = await s.datos.nuevaRama('mysql', '8.0.44', { copiarDesde: 'mysql@8.4' });
+    expect(r).toEqual({
+      id: 'mysql@8.0',
+      restauradas: ['tienda', 'blog'],
+      fallidas: [],
+      advertencias: [],
+    });
     expect(cfg.servicios.datos.mysql.instancias?.['8.4']).toEqual({
       version: '8.4.13',
       puerto: 3306,
@@ -292,6 +411,23 @@ describe('rama nueva', () => {
       'datos del cliente',
     );
     expect(existsSync(path.join(datosDe('8.0'), 'ibdata1'))).toBe(true);
+  });
+
+  it('informa qué bases se restauraron y cuáles no (sin cortar) y avisa de DEFINER en MySQL', async () => {
+    restaurarFalla.add('blog');
+    contenidoVolcado = (b) =>
+      b === 'tienda'
+        ? '-- tienda\nCREATE DEFINER=`app`@`localhost` VIEW v AS SELECT 1;\n'
+        : `-- ${b}`;
+    const s = crear();
+    await preparar(s);
+    const r = await s.datos.nuevaRama('mysql', '8.0.44', { copiarDesde: 'mysql@8.4' });
+    expect(r.restauradas).toEqual(['tienda']);
+    expect(r.fallidas).toEqual([{ base: 'blog', motivo: 'no se pudo restaurar blog' }]);
+    expect(r.advertencias).toEqual([expect.stringContaining('tienda')]);
+    expect(r.advertencias[0]).toContain('DEFINER');
+    // Se intentaron las dos.
+    expect(eventos.filter((x) => x.startsWith('restaurar:'))).toHaveLength(2);
   });
 });
 

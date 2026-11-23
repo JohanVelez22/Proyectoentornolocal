@@ -360,6 +360,44 @@ describe('migrarInstancias (Review Focus 7: los datos nunca se pierden)', () => 
     expect((await migrarInstancias(deps())).migradas).toHaveLength(3);
   });
 
+  it('un corte entre escribir config.json y renombrar el registro se repara en el siguiente arranque', async () => {
+    // Primer arranque: config.json migrado, pero el proceso se corta antes de renombrar.
+    await migrarInstancias(deps({ supervisor: { renombrarRegistro: () => undefined } }));
+    let registros = (await leerJson(rutas.estado())) as { id: string }[];
+    expect(registros.map((r) => r.id)).toContain('postgresql');
+    // Siguiente arranque: no hay nada que migrar, pero el registro se renombra igual.
+    const d = deps();
+    expect((await migrarInstancias(d)).migradas).toEqual([]);
+    registros = (await leerJson(rutas.estado())) as { id: string }[];
+    expect(registros.map((r) => r.id).sort()).toEqual(['nginx', 'postgresql@17']);
+    // Y es idempotente.
+    await migrarInstancias(deps());
+    registros = (await leerJson(rutas.estado())) as { id: string }[];
+    expect(registros.map((r) => r.id).sort()).toEqual(['nginx', 'postgresql@17']);
+  });
+
+  it('tras volver a una versión vieja de la app, las ramas sueltas recuperan su puerto', async () => {
+    // Al migrar, 3308 estaba reservado por el sistema: mysql@8.0 quedó en 3309.
+    await migrarInstancias(deps({ rangosReservados: async () => [{ desde: 3308, hasta: 3308 }] }));
+    expect(
+      (await new Almacen(rutas).leer()).servicios.datos.mysql.instancias?.['8.0']?.puerto,
+    ).toBe(3309);
+    // Una versión anterior de la app reescribe config.json sin `instancias`.
+    const crudo = (await leerJson(rutas.config())) as {
+      servicios: { datos: Record<string, Record<string, unknown>> };
+    };
+    for (const s of Object.values(crudo.servicios.datos)) {
+      delete s['instancias'];
+      delete s['predeterminada'];
+    }
+    await writeFile(rutas.config(), JSON.stringify(crudo));
+    // Al volver a la nueva, la rama suelta conserva el puerto que tenía (y no el primero libre).
+    await migrarInstancias(deps({ ahora: () => new Date('2026-11-25T10:00:00') }));
+    const cfg = await new Almacen(rutas).leer();
+    expect(cfg.servicios.datos.mysql.instancias?.['8.0']?.puerto).toBe(3309);
+    expect(cfg.servicios.datos.mysql.instancias?.['8.4']?.puerto).toBe(3306);
+  });
+
   it('un config ilegible o inexistente no se toca', async () => {
     await writeFile(rutas.config(), '{ roto');
     expect(await migrarInstancias(deps())).toEqual({ migradas: [] });

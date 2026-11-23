@@ -25,6 +25,10 @@ import {
   CON_VOLCADO,
   copiaEnFrio,
   devolverCopia,
+  conDefiner,
+  ErrorDevolucion,
+  listarRespaldosDatos,
+  type RespaldoDatos,
   selloFecha,
   type FsCopia,
   type OperacionesRespaldo,
@@ -175,6 +179,14 @@ export const CACHE_CONFLICTOS_MS = 15_000;
 const OPCIONES_BORRADO = { recursive: true, force: true, maxRetries: 10, retryDelay: 200 };
 
 type Duenos = Map<number, { pid: number; nombre: string }>;
+
+/** Resultado de `nuevaRama`: qué bases se copiaron y cuáles no. */
+export interface ResultadoNuevaRama {
+  id: IdInstancia;
+  restauradas: string[];
+  fallidas: { base: string; motivo: string }[];
+  advertencias: string[];
+}
 
 /** Una instancia resuelta (configurada o, sin instancias en la configuración, la implícita). */
 export interface InstanciaResuelta {
@@ -1136,22 +1148,50 @@ export class ServiciosDatos {
 
   // ---- Actualización y ramas nuevas ----
 
-  private async esperarSalud(inst: InstanciaResuelta): Promise<void> {
+  /**
+   * Espera a que la instancia quede encendida y responda al puerto; con `consulta`, además a
+   * que conteste una consulta mínima (listar sus bases) en MySQL, MariaDB y PostgreSQL.
+   */
+  private async esperarSalud(inst: InstanciaResuelta, consulta = false): Promise<void> {
     const limite = Date.now() + (this.d.plazoSaludMs ?? 60_000);
+    let ultimo = 'El servicio no respondió a tiempo.';
     for (;;) {
       const e = this.d.supervisor.estado(inst.proceso);
-      if (e === 'encendido' && (await this.d.sonda(inst.puerto))) return;
       if (e === 'error' || e === 'apagado') {
         throw new Error(this.d.supervisor.mensaje?.(inst.proceso) ?? 'El servicio no arrancó.');
       }
-      if (Date.now() >= limite) throw new Error('El servicio no respondió a tiempo.');
+      if (e === 'encendido' && (await this.d.sonda(inst.puerto))) {
+        const r = this.d.respaldo;
+        if (!consulta || !r || !(CON_VOLCADO as readonly string[]).includes(inst.servicio)) return;
+        try {
+          await r.listarBases(inst.id);
+          return;
+        } catch (x) {
+          ultimo = `No responde a las consultas: ${mensajeDe(x).slice(0, 200)}`;
+        }
+      }
+      if (Date.now() >= limite) throw new Error(ultimo);
       await pausa(250);
     }
   }
 
-  private async arrancarYEsperar(def: DefServicio, inst: InstanciaResuelta): Promise<void> {
+  private async arrancarYEsperar(
+    def: DefServicio,
+    inst: InstanciaResuelta,
+    consulta = false,
+  ): Promise<void> {
     await this.iniciarSinCola(def, inst, await this.d.leerConfig());
-    await this.esperarSalud(inst);
+    await this.esperarSalud(inst, consulta);
+  }
+
+  /**
+   * Respaldos, volcados y carpetas apartadas que dejaron las actualizaciones y las ramas nuevas
+   * (`data/<servicio>/<clave>.respaldo-…`, `.fallida-…`, …), con su tamaño. Solo se listan:
+   * borrarlos es otra operación, con su propia confirmación.
+   */
+  respaldosDeDatos(servicio?: IdServicioDatos): Promise<RespaldoDatos[]> {
+    const servicios = servicio === undefined ? IDS_SERVICIO_DATOS : [servicio];
+    return listarRespaldosDatos(this.d.rutas.base, servicios);
   }
 
   private async volcados(
@@ -1270,15 +1310,23 @@ export class ServiciosDatos {
       cfg = await this.d.leerConfig();
       const nueva = { ...inst, version };
       try {
-        await this.arrancarYEsperar(def, nueva);
+        await this.arrancarYEsperar(def, nueva, true);
       } catch (e) {
         const motivo = mensajeDe(e).slice(0, 300);
         await this.detenerSinCola(def, nueva).catch(() => undefined);
         await fijar(anterior);
         if (hayDatos) {
-          await devolverCopia(carpeta, copia, sello, this.d.fsCopia).catch((x: unknown) => {
-            console.error(`No se pudo devolver la copia de ${id}:`, mensajeDe(x));
-          });
+          try {
+            await devolverCopia(carpeta, copia, sello, this.d.fsCopia);
+          } catch (x) {
+            // Sin la copia devuelta y verificada no se arranca nada encima de datos dudosos.
+            const fallida = x instanceof ErrorDevolucion ? x.fallida : carpeta;
+            throw new ErrorWolf(
+              'servicios.restauracion_fallo',
+              `${def.nombre} ${version} no arrancó y no se pudieron devolver los datos de ${id} (${mensajeDe(x).slice(0, 200)}). No se encendió nada: los datos que tocó la versión nueva están en ${fallida} y el respaldo en ${copia}.`,
+              { nombre: id, fallida, respaldo: copia },
+            );
+          }
         }
         const vieja = { ...inst, version: anterior };
         if (estaba) await this.arrancarYEsperar(def, vieja).catch(() => undefined);
@@ -1298,12 +1346,15 @@ export class ServiciosDatos {
    * sus credenciales. Con `copiarDesde`, vuelca las bases de esa instancia y las restaura en la
    * nueva; la de origen no se borra ni se detiene más de lo necesario (si estaba apagada, se
    * enciende para el volcado y se vuelve a apagar).
+   * Cada base se restaura aparte: una que falla no corta las demás y queda en `fallidas`. Los
+   * usuarios no se copian: PostgreSQL se restaura sin dueños ni privilegios (`pg_restore
+   * --no-owner --no-privileges`) y en MySQL/MariaDB se avisa si hay objetos con DEFINER.
    */
   nuevaRama(
     servicio: IdServicioDatos,
     version: string,
     o: { copiarDesde?: IdInstancia; confirmarSinHuella?: true } = {},
-  ): Promise<IdInstancia> {
+  ): Promise<ResultadoNuevaRama> {
     return this.enCola(servicio, async () => {
       const def = this.requerir(servicio);
       if (o.copiarDesde !== undefined && parsearInstancia(o.copiarDesde).servicio !== servicio) {
@@ -1317,7 +1368,8 @@ export class ServiciosDatos {
         o.confirmarSinHuella ? { confirmarSinHuella: true } : {},
       );
       const id = await this.crearSinCola(servicio, version);
-      if (o.copiarDesde === undefined) return id;
+      const res: ResultadoNuevaRama = { id, restauradas: [], fallidas: [], advertencias: [] };
+      if (o.copiarDesde === undefined) return res;
       const cfg = await this.d.leerConfig();
       const insts = await this.resolver(def, cfg);
       const origen = insts.find((i) => i.id === o.copiarDesde);
@@ -1327,7 +1379,8 @@ export class ServiciosDatos {
           id: o.copiarDesde,
         });
       }
-      if (!(CON_VOLCADO as readonly string[]).includes(servicio) || !this.d.respaldo) return id;
+      const r = this.d.respaldo;
+      if (!(CON_VOLCADO as readonly string[]).includes(servicio) || !r) return res;
       const estaba = this.vivo(origen.proceso);
       const carpeta = path.join(
         this.carpetaInstancia(servicio, nueva.clave) + `.copia-${selloFecha(this.ahora)}`,
@@ -1340,8 +1393,22 @@ export class ServiciosDatos {
         if (!estaba && this.vivo(origen.proceso)) await this.detenerSinCola(def, origen);
       }
       await this.arrancarYEsperar(def, nueva);
-      for (const v of volcados) await this.d.respaldo.restaurar(id, v.archivo, v.base);
-      return id;
+      for (const v of volcados) {
+        try {
+          const avisos = await r.restaurar(id, v.archivo, v.base);
+          res.restauradas.push(v.base);
+          for (const a of avisos ?? []) res.advertencias.push(`${v.base}: ${a}`);
+        } catch (e) {
+          res.fallidas.push({ base: v.base, motivo: mensajeDe(e).slice(0, 300) });
+          continue;
+        }
+        if (servicio !== 'postgresql' && (await conDefiner(v.archivo).catch(() => false))) {
+          res.advertencias.push(
+            `${v.base}: tiene vistas, rutinas o triggers con DEFINER; los usuarios no se copian a ${id}: créelos o cambie el DEFINER.`,
+          );
+        }
+      }
+      return res;
     });
   }
 }

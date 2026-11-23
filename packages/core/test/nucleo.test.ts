@@ -1523,6 +1523,9 @@ describe('Nucleo: puerto automático al guardar FastAPI/Node (QA 3)', () => {
       probarPuerto: async () => true,
     });
     nucleos.push(n);
+    // Sin esperar el arranque automático, éste podría ver el sitio recién guardado y lanzar su
+    // proceso (con la carpeta del proyecto como cwd, que Windows no deja borrar después).
+    await n.arranqueAutomatico;
     return n;
   };
   const uvicorn = (comando: string[]) => ({

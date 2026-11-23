@@ -112,6 +112,8 @@ export const es = {
         'No hay espacio para copiar los datos: hacen falta {necesarios} MB y quedan {libres} MB libres.',
       'servicios.actualizacion_revertida':
         'La versión {version} no arrancó; {nombre} volvió a {anterior}. El respaldo se conserva.',
+      'servicios.restauracion_fallo':
+        'La versión nueva no arrancó y no se pudieron devolver los datos de {nombre}. No se encendió nada: los datos tocados están en {fallida} y el respaldo en {respaldo}.',
       'servicios.otra_rama': '{nombre} {version} es de otra rama: créela como instancia nueva.',
       'servicios.misma_version': '{id} ya usa la versión {version}.',
       'instancias.id_invalido': 'El identificador de la instancia no es válido.',

@@ -32,6 +32,7 @@ export const PARAMETROS_ERROR = {
   'servicios.respaldo_fallo': ['nombre'],
   'servicios.espacio_insuficiente': ['necesarios', 'libres'],
   'servicios.actualizacion_revertida': ['nombre', 'version', 'anterior'],
+  'servicios.restauracion_fallo': ['nombre', 'fallida', 'respaldo'],
   'servicios.otra_rama': ['nombre', 'version'],
   'servicios.misma_version': ['id', 'version'],
   // instancias de los servicios de datos

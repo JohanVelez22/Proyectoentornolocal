@@ -34,8 +34,6 @@ type Plan = {
   servicio: DefServicio['id'];
   instancias: Record<string, InstanciaConfig>;
   predeterminada: string | null;
-  /** Proceso vivo que pasa a llamarse como la instancia predeterminada. */
-  renombrar: { viejo: string; nuevo: string } | null;
 };
 
 const esObjeto = (x: unknown): x is Record<string, unknown> =>
@@ -90,6 +88,81 @@ async function escribirAtomico(destino: string, texto: string): Promise<void> {
 export async function migrarInstancias(
   d: DepsMigracionInstancias,
 ): Promise<{ migradas: IdInstancia[] }> {
+  try {
+    return await migrarConfig(d);
+  } finally {
+    // Aparte y en cada arranque: si un corte dejó config.json migrado sin renombrar el registro
+    // del proceso vivo, se renombra ahora (antes de readoptar).
+    await renombrarRegistrosPendientes(d);
+  }
+}
+
+/**
+ * Para cada servicio con instancias, un registro del supervisor con el id del servicio solo
+ * (`mysql`) pasa a su predeterminada (`mysql@8.4`). Idempotente: sin ese registro, o con el de la
+ * instancia ya presente, no hace nada.
+ */
+export async function renombrarRegistrosPendientes(
+  d: Pick<DepsMigracionInstancias, 'rutas' | 'supervisor' | 'definiciones'>,
+): Promise<void> {
+  let cfg: Config;
+  try {
+    const texto = await readFile(d.rutas.config(), 'utf8');
+    const r = ConfigSchema.safeParse(JSON.parse(texto.replace(/^\uFEFF/, '')));
+    if (!r.success) return;
+    cfg = r.data;
+  } catch {
+    return;
+  }
+  for (const def of d.definiciones()) {
+    if (!multiInstancia(def)) continue;
+    const s = cfg.servicios.datos[def.id];
+    const claves = Object.keys(s.instancias ?? {}).sort(compararVersiones);
+    if (claves.length === 0) continue;
+    const pred =
+      s.predeterminada && claves.includes(s.predeterminada) ? s.predeterminada : claves[0]!;
+    try {
+      d.supervisor.renombrarRegistro(def.id, idInstancia(def.id, pred));
+    } catch (e) {
+      console.error(`No se pudo renombrar el registro de ${def.id}:`, e);
+    }
+  }
+}
+
+/** Puertos de las instancias guardados junto a la copia previa (`instancias.json`). */
+type PuertosGuardados = Record<string, Record<string, { puerto: number; carpeta: string }>>;
+
+/**
+ * Puertos que tuvieron las instancias en migraciones anteriores (la más reciente primero). Sirve
+ * si una versión anterior de la app reescribió config.json sin `instancias`: al volver, las
+ * ramas sueltas recuperan su puerto si la clave y la carpeta coinciden.
+ */
+async function puertosAnteriores(rutas: Rutas): Promise<PuertosGuardados[]> {
+  const dir = path.join(rutas.base, 'etc', 'respaldos');
+  let nombres: string[];
+  try {
+    nombres = (await readdir(dir))
+      .filter((n) => n.startsWith('pre-instancias-'))
+      .sort()
+      .reverse();
+  } catch {
+    return [];
+  }
+  const res: PuertosGuardados[] = [];
+  for (const n of nombres) {
+    try {
+      const x: unknown = JSON.parse(await readFile(path.join(dir, n, 'instancias.json'), 'utf8'));
+      if (esObjeto(x)) res.push(x as PuertosGuardados);
+    } catch {
+      // copia sin puertos guardados (o ilegible): se ignora
+    }
+  }
+  return res;
+}
+
+const carpetaRelativa = (servicio: string, clave: string): string => `data/${servicio}/${clave}`;
+
+async function migrarConfig(d: DepsMigracionInstancias): Promise<{ migradas: IdInstancia[] }> {
   const archivoConfig = d.rutas.config();
   let texto: string;
   try {
@@ -131,13 +204,11 @@ export async function migrarInstancias(
         : ([...instaladas].sort(compararVersiones).at(-1) ?? null);
     const instancias: Record<string, InstanciaConfig> = {};
     let predeterminada: string | null = null;
-    let renombrar: Plan['renombrar'] = null;
     if (activa) {
       const clave = claveDe(def, activa);
       if (claveInstanciaValida(clave)) {
         instancias[clave] = { version: activa, puerto: c.puerto, autoIniciar: c.autoIniciar };
         predeterminada = clave;
-        renombrar = { viejo: def.id, nuevo: idInstancia(def.id, clave) };
       }
     }
     const carpetas = await carpetasInicializadas(d.rutas, def.id);
@@ -147,7 +218,6 @@ export async function migrarInstancias(
       if (carpetas.includes(clave)) {
         instancias[clave] = { version: c.version, puerto: c.puerto, autoIniciar: c.autoIniciar };
         predeterminada = clave;
-        renombrar = { viejo: def.id, nuevo: idInstancia(def.id, clave) };
       }
     }
     for (const clave of carpetas) {
@@ -160,7 +230,7 @@ export async function migrarInstancias(
       instancias[clave] = { version, puerto: 0, autoIniciar: false };
     }
     if (yaMigrado && Object.keys(instancias).length === 0) continue;
-    planes.push({ servicio: def.id, instancias, predeterminada, renombrar });
+    planes.push({ servicio: def.id, instancias, predeterminada });
   }
   if (planes.length === 0) return { migradas: [] };
 
@@ -189,11 +259,22 @@ export async function migrarInstancias(
     }
     throw new Error('No se encontró un puerto libre para una instancia.');
   };
+  const anteriores = hacenFalta ? await puertosAnteriores(d.rutas) : [];
+  const sirve = (p: number): boolean =>
+    Number.isInteger(p) &&
+    p >= 1024 &&
+    p <= 65535 &&
+    !asignados.has(p) &&
+    !fijos.some((f) => p >= f.desde && p <= f.hasta) &&
+    !reservados.some((r) => p >= r.desde && p <= r.hasta);
   for (const p of planes) {
     const def = d.definiciones().find((x) => x.id === p.servicio)!;
-    for (const i of Object.values(p.instancias)) {
+    for (const [clave, i] of Object.entries(p.instancias)) {
       if (i.puerto !== 0) continue;
-      i.puerto = libre(def.puertoPorDefecto);
+      const previo = anteriores
+        .map((a) => (esObjeto(a[p.servicio]) ? a[p.servicio]![clave] : undefined))
+        .find((x) => esObjeto(x) && x.carpeta === carpetaRelativa(p.servicio, clave));
+      i.puerto = previo && sirve(previo.puerto) ? previo.puerto : libre(def.puertoPorDefecto);
       asignados.add(i.puerto);
     }
   }
@@ -223,6 +304,17 @@ export async function migrarInstancias(
     await copyFile(original, copia);
     copias.push({ original, copia });
   }
+  // Los puertos que reciben las instancias (por si una versión anterior de la app los pierde).
+  const puertos: PuertosGuardados = {};
+  for (const p of planes) {
+    puertos[p.servicio] = Object.fromEntries(
+      Object.entries(p.instancias).map(([clave, i]) => [
+        clave,
+        { puerto: i.puerto, carpeta: carpetaRelativa(p.servicio, clave) },
+      ]),
+    );
+  }
+  await writeFile(path.join(carpeta, 'instancias.json'), JSON.stringify(puertos, null, 2) + '\n');
 
   // 3. Escritura (credenciales primero: solo agrega claves; luego config.json en crudo).
   const servicios = esObjeto(crudo['servicios']) ? crudo['servicios'] : {};
@@ -266,9 +358,6 @@ export async function migrarInstancias(
       `No se pudo pasar los servicios de datos a instancias; se dejó todo como estaba (${e instanceof Error ? e.message : String(e)}).`,
       { cause: e },
     );
-  }
-  for (const p of planes) {
-    if (p.renombrar) d.supervisor.renombrarRegistro(p.renombrar.viejo, p.renombrar.nuevo);
   }
   return {
     migradas: planes.flatMap((p) =>

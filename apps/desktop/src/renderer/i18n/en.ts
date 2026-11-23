@@ -113,6 +113,8 @@ export const en: Textos = {
         'Not enough space to copy the data: {necesarios} MB needed, {libres} MB free.',
       'servicios.actualizacion_revertida':
         'Version {version} did not start; {nombre} went back to {anterior}. The backup is kept.',
+      'servicios.restauracion_fallo':
+        'The new version did not start and the data of {nombre} could not be restored. Nothing was started: the touched data is in {fallida} and the backup in {respaldo}.',
       'servicios.otra_rama':
         '{nombre} {version} belongs to another branch: create it as a new instance.',
       'servicios.misma_version': '{id} already uses version {version}.',

@@ -14,6 +14,7 @@ import {
 } from './bd/basesDeDatos';
 import { migrarInstancias } from './migraciones/instancias';
 import { puertosConfigurados } from './servicios/instancias';
+import type { RespaldoDatos } from './servicios/actualizar';
 import { detectarFormato, type FormatoRespaldo } from './bd/formato';
 import { InstaladorPgvector, type ResultadoBuildTools } from './bd/pgvector';
 import {
@@ -670,9 +671,8 @@ export class Nucleo {
           (await bd.listar(id as ObjetivoBd)).map((b: BaseListada) => b.nombre),
         respaldar: async (id, base, carpeta) =>
           (await respaldosRef.respaldar(id as ObjetivoBd, base, carpeta)).archivo,
-        restaurar: async (id, archivo, base) => {
-          await respaldosRef.restaurar(id as ObjetivoBd, archivo, base);
-        },
+        restaurar: async (id, archivo, base) =>
+          (await respaldosRef.restaurar(id as ObjetivoBd, archivo, base)).advertencias,
       },
       avisar: (a) => avisos.publicar(a),
       ftp,
@@ -1404,6 +1404,14 @@ export class Nucleo {
     if (!sitio) throw new Error('El sitio ya no existe.');
     const envActual = (await leerEnvAcotado(path.join(sitio.carpeta, '.env'))) ?? '';
     return this.bd.bloqueEnv(motor, base, sitio.tipo, envActual);
+  }
+
+  /**
+   * Respaldos, volcados y carpetas apartadas de las actualizaciones de los servicios de datos
+   * (con su tamaño), para mostrarlos. Borrarlos es otra operación, con su propia confirmación.
+   */
+  respaldosDeDatos(servicio?: IdServicioDatos): Promise<RespaldoDatos[]> {
+    return this.servicios.datos.respaldosDeDatos(servicio);
   }
 
   /** Carpeta real donde se guardan los respaldos y las copias de seguridad automáticas. */

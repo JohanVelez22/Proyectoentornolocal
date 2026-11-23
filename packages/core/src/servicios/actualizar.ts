@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 import { cp, lstat, readdir, rename, statfs } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
@@ -13,8 +13,8 @@ export interface OperacionesRespaldo {
   listarBases(id: IdInstancia): Promise<string[]>;
   /** Vuelca `base` en `carpeta`; devuelve el archivo. */
   respaldar(id: IdInstancia, base: string, carpeta: string): Promise<string>;
-  /** Restaura `archivo` en la base `base` (vacía) de la instancia. */
-  restaurar(id: IdInstancia, archivo: string, base: string): Promise<void>;
+  /** Restaura `archivo` en la base `base` (vacía) de la instancia; devuelve sus advertencias. */
+  restaurar(id: IdInstancia, archivo: string, base: string): Promise<string[] | void>;
 }
 
 /** Motores con volcado lógico (`Respaldos`); el resto solo tiene la copia en frío. */
@@ -105,10 +105,24 @@ export async function copiaEnFrio(
   return medida;
 }
 
+/** La devolución de la copia no se pudo completar: no se debe arrancar nada encima. */
+export class ErrorDevolucion extends Error {
+  constructor(
+    mensaje: string,
+    /** Dónde quedaron los datos que tocó la versión nueva (apartados o aún en su sitio). */
+    readonly fallida: string,
+  ) {
+    super(mensaje);
+  }
+}
+
 /**
- * Vuelta atrás de los datos tras un arranque fallido: la carpeta que tocó la versión nueva se
- * aparta (`<clave>.fallida-<fecha>`, nunca se borra) y la copia en frío se copia de nuevo en
- * su sitio (la copia queda intacta).
+ * Vuelta atrás de los datos tras un arranque fallido, sin dejar nunca la carpeta a medias:
+ * 1. copia el respaldo en `<clave>.restaurando-<fecha>` y lo verifica (tamaño y archivos);
+ * 2. solo entonces aparta la carpeta que tocó la versión nueva (`<clave>.fallida-<fecha>`,
+ *    nunca se borra) y pone la copia en su sitio con un `rename`.
+ * Si algo falla lanza `ErrorDevolucion` con la ruta de los datos tocados. El respaldo queda
+ * intacto. Devuelve la carpeta apartada (null si no había).
  */
 export async function devolverCopia(
   carpeta: string,
@@ -116,11 +130,94 @@ export async function devolverCopia(
   sello: string,
   fs: FsCopia = fsCopiaReal,
 ): Promise<string | null> {
-  let apartada: string | null = null;
-  if (existsSync(carpeta)) {
-    apartada = `${carpeta}.fallida-${sello}`;
-    await rename(carpeta, apartada);
+  const temporal = `${carpeta}.restaurando-${sello}`;
+  const apartada = `${carpeta}.fallida-${sello}`;
+  try {
+    const esperado = await medirCarpeta(copia);
+    await fs.copiar(copia, temporal);
+    const copiado = await medirCarpeta(temporal);
+    if (copiado.bytes !== esperado.bytes || copiado.archivos !== esperado.archivos) {
+      throw new Error(
+        `la copia quedó incompleta (${copiado.archivos}/${esperado.archivos} archivos)`,
+      );
+    }
+  } catch (e) {
+    throw new ErrorDevolucion(e instanceof Error ? e.message : String(e), carpeta);
   }
-  await fs.copiar(copia, carpeta);
-  return apartada;
+  let movida = false;
+  try {
+    if (existsSync(carpeta)) {
+      await rename(carpeta, apartada);
+      movida = true;
+    }
+    await rename(temporal, carpeta);
+  } catch (e) {
+    throw new ErrorDevolucion(
+      e instanceof Error ? e.message : String(e),
+      movida ? apartada : carpeta,
+    );
+  }
+  return movida ? apartada : null;
+}
+
+/** ¿El volcado de MySQL/MariaDB trae objetos con DEFINER? (se lee en flujo, sin cargarlo). */
+export async function conDefiner(archivo: string): Promise<boolean> {
+  let cola = '';
+  for await (const trozo of createReadStream(archivo, { encoding: 'utf8' })) {
+    const texto = cola + (trozo as string);
+    if (/DEFINER\s*=/i.test(texto)) return true;
+    cola = texto.slice(-32);
+  }
+  return false;
+}
+
+/** Copias que deja la actualización junto a las carpetas de datos. */
+export type TipoRespaldoDatos = 'respaldo' | 'volcados' | 'fallida' | 'restaurando' | 'copia';
+
+export interface RespaldoDatos {
+  servicio: string;
+  clave: string;
+  tipo: TipoRespaldoDatos;
+  /** Sello de fecha de la carpeta (AAAAMMDD-HHmmss). */
+  sello: string;
+  carpeta: string;
+  bytes: number;
+  archivos: number;
+}
+
+const RE_RESPALDO_DATOS =
+  /^([0-9a-z][0-9a-z.]{0,15}?)\.(respaldo|fallida|restaurando|copia)-(\d{8}-\d{6})(\.volcados)?$/;
+
+/** Respaldos, volcados y carpetas fallidas de `data/<servicio>/` (con su tamaño). */
+export async function listarRespaldosDatos(
+  base: string,
+  servicios: readonly string[],
+): Promise<RespaldoDatos[]> {
+  const res: RespaldoDatos[] = [];
+  for (const servicio of servicios) {
+    const dir = path.join(base, 'data', servicio);
+    let nombres: string[];
+    try {
+      nombres = (await readdir(dir, { withFileTypes: true }))
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name);
+    } catch {
+      continue;
+    }
+    for (const nombre of nombres) {
+      const m = RE_RESPALDO_DATOS.exec(nombre);
+      if (!m || m[1]!.includes('..')) continue;
+      const tipo: TipoRespaldoDatos = m[4] ? 'volcados' : (m[2] as TipoRespaldoDatos);
+      const carpeta = path.join(dir, nombre);
+      const medida = await medirCarpeta(carpeta);
+      res.push({ servicio, clave: m[1]!, tipo, sello: m[3]!, carpeta, ...medida });
+    }
+  }
+  return res.sort(
+    (a, b) =>
+      a.servicio.localeCompare(b.servicio) ||
+      a.clave.localeCompare(b.clave) ||
+      a.tipo.localeCompare(b.tipo) ||
+      a.sello.localeCompare(b.sello),
+  );
 }
