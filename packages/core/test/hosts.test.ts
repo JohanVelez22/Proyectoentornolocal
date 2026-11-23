@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { carpetaTemporal } from './temporales';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { GestorHosts } from '../src/hosts/hosts';
@@ -432,7 +432,8 @@ describe('GestorHosts: UAC sin respuesta y agrupación (QA 1)', () => {
     };
     const g = new GestorHosts(p, eventos);
     const a = g.sincronizar(['a.test']);
-    await new Promise((r) => setTimeout(r, 5));
+    // El primer pedido ya tiene el UAC abierto (sin plazos: bajo carga 5 ms no bastaban).
+    await vi.waitFor(() => expect(llamadas).toBe(1));
     const b = g.sincronizar(['a.test', 'b.test']);
     const c = g.sincronizar(['a.test', 'b.test', 'c.test']);
     soltar();
@@ -454,7 +455,8 @@ describe('GestorHosts: UAC sin respuesta y agrupación (QA 1)', () => {
     };
     const g = new GestorHosts(p, eventos);
     const a = g.sincronizar(['a.test']);
-    await new Promise((r) => setTimeout(r, 5));
+    // El primer pedido ya tiene el UAC abierto (sin plazos: bajo carga 5 ms no bastaban).
+    await vi.waitFor(() => expect(llamadas).toBe(1));
     const b = g.sincronizar(['a.test', 'b.test']);
     soltar({ ok: false, motivo: 'cancelado' });
     expect(await a).toMatchObject({ ok: false, motivo: 'cancelado' });
