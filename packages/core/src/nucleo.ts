@@ -2087,7 +2087,12 @@ export class Nucleo {
     await this.procesos.detenerSitio(id);
     await this.ftp.desactivarSitio(id).catch(() => undefined);
     await this.sitios.borrar(id);
-    return this.sitios.aplicar();
+    const aplicar = await this.sitios.aplicar();
+    // Nginx ya no lo sirve: se apaga su PHP propio (si tenía) y se borra su ini.
+    await this.poolsSitio.sincronizar().catch((e) => {
+      console.error('No se pudo apagar el PHP propio del sitio borrado:', mensajeDe(e));
+    });
+    return aplicar;
   }
 
   /** Revisa al iniciar (en segundo plano) y cada 24 h el vencimiento de la CA y los certificados. */
