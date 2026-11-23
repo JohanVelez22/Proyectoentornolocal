@@ -285,6 +285,29 @@ describe.skipIf(!hayPhp)('prepend de dumps con un PHP real', () => {
     }
   });
 
+  it('un receptor que no lee un cuerpo grande: el plazo es total, no por escritura', async () => {
+    const colgado = net.createServer((s) => s.pause());
+    await new Promise<void>((ok) => colgado.listen(0, '127.0.0.1', () => ok()));
+    const puerto = (colgado.address() as net.AddressInfo).port;
+    const fs = await import('node:fs/promises');
+    await fs.mkdir(path.dirname(receptor), { recursive: true });
+    await fs.writeFile(
+      receptor,
+      JSON.stringify({ puerto, token: 'f'.repeat(64), pid: process.pid }),
+    );
+    try {
+      const c = await correr(
+        '<?php\n$t = microtime(true);\nfor ($i = 0; $i < 3; $i++) { wd(str_repeat("x", 250000)); }\necho "T=", (microtime(true) - $t) / 3;\n',
+      );
+      expect(c.codigo).toBe(0);
+      // Cada envío espera como mucho el plazo (0,2 s) más un margen.
+      expect(Number(/T=([\d.E-]+)/.exec(c.salida)![1])).toBeLessThan(0.3);
+    } finally {
+      await fs.rm(receptor, { force: true });
+      colgado.close();
+    }
+  });
+
   it('el auto_prepend_file anterior del sitio sigue cargándose en el ámbito global', async () => {
     const previo = path.join(base, 'previo.php');
     await writeFile(previo, '<?php $DEL_PREVIO = "si";\n');

@@ -340,6 +340,14 @@ describe('prepend y wolfdump', () => {
     expect(py).toMatch(/if os\.name == "nt":[\s\S]*OpenProcess[\s\S]*os\.kill\(pid, 0\)/);
   });
 
+  it('el envío de PHP tiene un plazo total (socket no bloqueante y stream_select)', () => {
+    const php = prependPhp({ rutaReceptor: 'C:/Datos/run/depuracion.json' });
+    expect(php).toContain('stream_set_blocking($s, false)');
+    expect(php).toContain('stream_select(');
+    expect(php).toContain('$fin = microtime(true) + self::PLAZO;');
+    expect(php).not.toContain('stream_set_timeout');
+  });
+
   it('wolfdump.py lee el mismo archivo y define dump()', () => {
     const py = wolfdumpPy({ rutaReceptor: 'C:\\Datos\\run\\depuracion.json' });
     expect(py).toContain('"C:\\\\Datos\\\\run\\\\depuracion.json"');

@@ -272,6 +272,10 @@ if (!class_exists('WolfCoreDump', false)) {
             if (!is_string($json) || strlen($json) > self::MAX_CUERPO) {
                 return;
             }
+            // Plazo TOTAL (conexión, escritura y respuesta): con un socket bloqueante el plazo de
+            // stream_set_timeout vale por cada trozo de 8 KiB y un receptor que no lee podría
+            // demorar la página segundos.
+            $fin = microtime(true) + self::PLAZO;
             $c = self::receptor();
             if ($c === null) {
                 return;
@@ -282,14 +286,36 @@ if (!class_exists('WolfCoreDump', false)) {
                 . "\r\nContent-Type: application/json\r\nContent-Length: " . strlen($json)
                 . "\r\nConnection: close\r\n\r\n" . $json;
             $c = null;
-            $s = @stream_socket_client('tcp://127.0.0.1:' . $puerto, $en, $es, self::PLAZO);
+            $s = @stream_socket_client('tcp://127.0.0.1:' . $puerto, $en, $es, max(0.01, $fin - microtime(true)));
             if (!$s) {
                 return;
             }
-            stream_set_timeout($s, 0, (int) (self::PLAZO * 1000000));
-            @fwrite($s, $peticion);
+            stream_set_blocking($s, false);
+            while ($peticion !== '') {
+                $resta = $fin - microtime(true);
+                $l = null;
+                $w = array($s);
+                $x = null;
+                if ($resta <= 0 || @stream_select($l, $w, $x, 0, (int) ($resta * 1000000)) !== 1) {
+                    break;
+                }
+                $n = @fwrite($s, $peticion);
+                if ($n === false) {
+                    break;
+                }
+                $peticion = (string) substr($peticion, $n);
+            }
+            if ($peticion === '') {
+                // La línea de estado de la respuesta, sin pasar del plazo.
+                $resta = $fin - microtime(true);
+                $l = array($s);
+                $w = null;
+                $x = null;
+                if ($resta > 0 && @stream_select($l, $w, $x, 0, (int) ($resta * 1000000)) === 1) {
+                    @fread($s, 128);
+                }
+            }
             $peticion = null;
-            @fgets($s, 128);
             @fclose($s);
         }
     }
