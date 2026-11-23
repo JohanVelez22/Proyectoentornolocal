@@ -18,6 +18,7 @@ export const es = {
     php: 'PHP',
     ia: 'IA',
     tuneles: 'Túneles',
+    contenedores: 'Contenedores',
     herramientas: 'Herramientas',
     doctor: 'Doctor',
     depuracion: 'Depuración',
@@ -315,6 +316,19 @@ export const es = {
       'depuracion.argumento_invalido': 'Argumento no válido: {campo}',
       'depuracion.archivo_fuera_del_sitio':
         'Ese archivo no está dentro de la carpeta del sitio: no se abre en el editor.',
+      'contenedores.motor_invalido': 'Motor de contenedores desconocido.',
+      'contenedores.id_invalido': 'El id del contenedor no es válido.',
+      'contenedores.argumento_invalido': 'Argumento no válido: {campo}',
+      'contenedores.sin_motor': '{motor} no está instalado en este equipo.',
+      'contenedores.no_responde':
+        '{motor} no responde. Abra Docker Desktop o inicie la máquina de Podman y vuelva a intentarlo.',
+      'contenedores.remoto':
+        'La conexión predeterminada de {motor} apunta a otro equipo: WolfCore Dev solo usa motores locales.',
+      'contenedores.no_existe': 'El contenedor ya no existe. Refresque la lista.',
+      'contenedores.accion_fallo': 'El motor no pudo hacerlo: {detalle}',
+      'contenedores.demasiados_registros':
+        'Se pueden seguir como mucho {maximo} registros de contenedores a la vez.',
+      'contenedores.sin_confirmar': 'Confirme la acción en el diálogo.',
     },
   },
   avisoInicio: {
@@ -2558,6 +2572,62 @@ export const es = {
     fuente: 'Registro',
     traza: 'Traza (última vez)',
     sinTraza: 'Sin traza.',
+  },
+  contenedores: {
+    descripcion:
+      'Vea y controle los contenedores de Docker o Podman de este equipo. WolfCore Dev no crea, borra ni descarga contenedores, imágenes ni volúmenes.',
+    motor: 'Motor',
+    refrescar: 'Refrescar',
+    detectando: 'Buscando Docker y Podman…',
+    sinMotorTitulo: 'No hay Docker ni Podman',
+    sinMotor:
+      'No se encontró Docker ni Podman en este equipo. WolfCore Dev no los instala: si los necesita, instale uno desde su página oficial y pulse Refrescar.',
+    instalarDocker: 'Instalar Docker',
+    instalarPodman: 'Instalar Podman',
+    apagadoTitulo: (m: string) => `${m} no responde`,
+    apagado: (m: string) =>
+      `${m} está instalado, pero su motor no responde. Abra Docker Desktop (o inicie la máquina de Podman con «podman machine start») y pulse Refrescar.`,
+    remoto:
+      'Se ignoró una conexión remota (DOCKER_HOST, CONTAINER_HOST, un contexto o una conexión predeterminada): WolfCore Dev solo usa el motor de este equipo.',
+    desdePath: 'Encontrado en el PATH, no en la carpeta de instalación habitual.',
+    version: (v: string) => `Versión ${v}`,
+    vacio: 'No hay contenedores.',
+    columnas: {
+      nombre: 'Nombre',
+      imagen: 'Imagen',
+      estado: 'Estado',
+      puertos: 'Puertos',
+      compose: 'Compose',
+      acciones: 'Acciones',
+    },
+    estados: {
+      corriendo: 'En marcha',
+      detenido: 'Detenido',
+      pausado: 'En pausa',
+      otro: 'Otro',
+    },
+    codigoSalida: (n: number) => `código ${n}`,
+    iniciar: 'Iniciar',
+    detener: 'Detener',
+    reiniciar: 'Reiniciar',
+    registros: 'Registros',
+    confirmarDetenerTitulo: '¿Detener el contenedor?',
+    confirmarDetener: (n: string) =>
+      `Se detendrá «${n}». Lo que corre dentro se corta (el motor espera unos segundos a que termine). No se borra nada.`,
+    confirmarReiniciarTitulo: '¿Reiniciar el contenedor?',
+    confirmarReiniciar: (n: string) =>
+      `Se reiniciará «${n}». Lo que corre dentro se corta y vuelve a arrancar. No se borra nada.`,
+    confirmar: 'Confirmar',
+    cancelar: 'Cancelar',
+    hecho: {
+      iniciar: (n: string) => `«${n}» iniciado.`,
+      detener: (n: string) => `«${n}» detenido.`,
+      reiniciar: (n: string) => `«${n}» reiniciado.`,
+    },
+    registroTitulo: (n: string) => `Registros de «${n}»`,
+    registroEsperando: 'Esperando líneas…',
+    registroFin: 'El registro terminó (el contenedor se detuvo o el motor cortó).',
+    cerrar: 'Cerrar',
   },
   navGrupos: {
     trabajo: 'Trabajo',

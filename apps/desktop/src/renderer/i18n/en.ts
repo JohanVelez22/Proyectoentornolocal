@@ -19,6 +19,7 @@ export const en: Textos = {
     php: 'PHP',
     ia: 'AI',
     tuneles: 'Tunnels',
+    contenedores: 'Containers',
     herramientas: 'Tools',
     doctor: 'Doctor',
     depuracion: 'Debugging',
@@ -309,6 +310,19 @@ export const en: Textos = {
       'depuracion.argumento_invalido': 'Invalid argument: {campo}',
       'depuracion.archivo_fuera_del_sitio':
         'That file is not inside the site folder: it will not be opened in the editor.',
+      'contenedores.motor_invalido': 'Unknown container engine.',
+      'contenedores.id_invalido': 'The container id is not valid.',
+      'contenedores.argumento_invalido': 'Invalid argument: {campo}',
+      'contenedores.sin_motor': '{motor} is not installed on this computer.',
+      'contenedores.no_responde':
+        '{motor} is not responding. Open Docker Desktop or start the Podman machine and try again.',
+      'contenedores.remoto':
+        'The default {motor} connection points to another computer: WolfCore Dev only uses local engines.',
+      'contenedores.no_existe': 'The container no longer exists. Refresh the list.',
+      'contenedores.accion_fallo': 'The engine could not do it: {detalle}',
+      'contenedores.demasiados_registros':
+        'At most {maximo} container logs can be followed at once.',
+      'contenedores.sin_confirmar': 'Confirm the action in the dialog.',
     },
   },
   avisoInicio: {
@@ -2540,6 +2554,62 @@ export const en: Textos = {
     fuente: 'Log',
     traza: 'Trace (last time)',
     sinTraza: 'No trace.',
+  },
+  contenedores: {
+    descripcion:
+      'View and control the Docker or Podman containers on this computer. WolfCore Dev never creates, removes or pulls containers, images or volumes.',
+    motor: 'Engine',
+    refrescar: 'Refresh',
+    detectando: 'Looking for Docker and Podman…',
+    sinMotorTitulo: 'No Docker or Podman',
+    sinMotor:
+      'Neither Docker nor Podman was found on this computer. WolfCore Dev does not install them: if you need one, install it from its official page and press Refresh.',
+    instalarDocker: 'Install Docker',
+    instalarPodman: 'Install Podman',
+    apagadoTitulo: (m: string) => `${m} is not responding`,
+    apagado: (m: string) =>
+      `${m} is installed, but its engine is not responding. Open Docker Desktop (or start the Podman machine with "podman machine start") and press Refresh.`,
+    remoto:
+      'A remote connection was ignored (DOCKER_HOST, CONTAINER_HOST, a context or a default connection): WolfCore Dev only uses the engine on this computer.',
+    desdePath: 'Found on the PATH, not in the usual install folder.',
+    version: (v: string) => `Version ${v}`,
+    vacio: 'There are no containers.',
+    columnas: {
+      nombre: 'Name',
+      imagen: 'Image',
+      estado: 'State',
+      puertos: 'Ports',
+      compose: 'Compose',
+      acciones: 'Actions',
+    },
+    estados: {
+      corriendo: 'Running',
+      detenido: 'Stopped',
+      pausado: 'Paused',
+      otro: 'Other',
+    },
+    codigoSalida: (n: number) => `code ${n}`,
+    iniciar: 'Start',
+    detener: 'Stop',
+    reiniciar: 'Restart',
+    registros: 'Logs',
+    confirmarDetenerTitulo: 'Stop the container?',
+    confirmarDetener: (n: string) =>
+      `"${n}" will be stopped. Whatever runs inside is cut off (the engine waits a few seconds for it to finish). Nothing is removed.`,
+    confirmarReiniciarTitulo: 'Restart the container?',
+    confirmarReiniciar: (n: string) =>
+      `"${n}" will be restarted. Whatever runs inside is cut off and starts again. Nothing is removed.`,
+    confirmar: 'Confirm',
+    cancelar: 'Cancel',
+    hecho: {
+      iniciar: (n: string) => `"${n}" started.`,
+      detener: (n: string) => `"${n}" stopped.`,
+      reiniciar: (n: string) => `"${n}" restarted.`,
+    },
+    registroTitulo: (n: string) => `Logs of "${n}"`,
+    registroEsperando: 'Waiting for lines…',
+    registroFin: 'The log ended (the container stopped or the engine closed it).',
+    cerrar: 'Close',
   },
   navGrupos: {
     trabajo: 'Work',

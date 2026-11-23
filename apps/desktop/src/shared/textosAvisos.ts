@@ -43,6 +43,10 @@ const ES: Diccionario = {
       titulo: 'Un túnel se cayó',
       cuerpo: `El túnel de ${limpio(d['fuente'], 'un proyecto')} dejó de funcionar.`,
     }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: 'Un contenedor se detuvo',
+      cuerpo: `${limpio(d['nombre'], 'Un contenedor')} (${limpio(d['motor'], 'Docker')}) se detuvo sin que se lo pidiera${d['codigoSalida'] !== undefined ? ` (código ${limpio(d['codigoSalida'], '?')})` : ''}.`,
+    }),
     'avisos.ca_por_vencer': (d) => ({
       titulo: 'La autoridad de certificados vence pronto',
       cuerpo: `Vence en ${limpio(d['dias'], '?')} días. Regenérela y vuelva a confiar en ella.`,
@@ -130,6 +134,10 @@ const EN: Diccionario = {
     'avisos.tunel_caido': (d) => ({
       titulo: 'A tunnel went down',
       cuerpo: `The tunnel for ${limpio(d['fuente'], 'a project')} stopped working.`,
+    }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: 'A container stopped',
+      cuerpo: `${limpio(d['nombre'], 'A container')} (${limpio(d['motor'], 'Docker')}) stopped without being asked to${d['codigoSalida'] !== undefined ? ` (code ${limpio(d['codigoSalida'], '?')})` : ''}.`,
     }),
     'avisos.ca_por_vencer': (d) => ({
       titulo: 'The certificate authority expires soon',

@@ -175,6 +175,14 @@ const api: ApiEntorno = {
   editor: {
     abrirEn: (sitioId, archivo, linea) => invocar('editor.abrirEn', sitioId, archivo, linea),
   },
+  contenedores: {
+    motores: () => invocar('contenedores.motores'),
+    lista: (motor) => invocar('contenedores.lista', motor),
+    accion: (motor, id, accion, confirmacion) =>
+      invocar('contenedores.accion', motor, id, accion, confirmacion),
+    seguir: (motor, id) => invocar('contenedores.seguir', motor, id),
+    dejar: (motor, id) => invocar('contenedores.dejar', motor, id),
+  },
   avisos: {
     lista: () => invocar('avisos.lista'),
     marcarLeidos: (ids) => invocar('avisos.marcarLeidos', ids),

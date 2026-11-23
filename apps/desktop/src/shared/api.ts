@@ -1,4 +1,9 @@
 import type {
+  AccionContenedor,
+  Contenedor,
+  EstadoMotor,
+  LineasContenedor,
+  MotorContenedores,
   Dump,
   EstadoReceptor,
   ErrorAgrupado,
@@ -103,6 +108,11 @@ import type {
 } from '@pel/core';
 
 export type {
+  AccionContenedor,
+  Contenedor,
+  EstadoMotor,
+  LineasContenedor,
+  MotorContenedores,
   Dump,
   EstadoReceptor,
   ErrorAgrupado,
@@ -715,6 +725,25 @@ export interface ApiEntorno {
      */
     abrirEn(sitioId: string, archivo: string, linea: number): Promise<void>;
   };
+  contenedores: {
+    /** Docker y Podman: ruta, si responden, versión y si se ignoró un host remoto. */
+    motores(): Promise<EstadoMotor[]>;
+    /** `ps -a` del motor (ids validados; textos saneados). */
+    lista(motor: MotorContenedores): Promise<Contenedor[]>;
+    /**
+     * Inicia, detiene o reinicia. Detener y reiniciar exigen `confirmacion: true`, que solo pasa
+     * el diálogo que lo preguntó. Nunca borra contenedores, imágenes ni volúmenes.
+     */
+    accion(
+      motor: MotorContenedores,
+      id: string,
+      accion: AccionContenedor,
+      confirmacion?: true,
+    ): Promise<void>;
+    /** Empieza a recibir `contenedor:lineas` (logs -f --tail 500) hasta `dejar`. */
+    seguir(motor: MotorContenedores, id: string): Promise<void>;
+    dejar(motor: MotorContenedores, id: string): Promise<void>;
+  };
   avisos: {
     /** Historial (hasta 200, los más nuevos primero). */
     lista(): Promise<Aviso[]>;
@@ -948,6 +977,11 @@ export const RUTAS_IPC = [
   'errores.lista',
   'errores.leer',
   'editor.abrirEn',
+  'contenedores.motores',
+  'contenedores.lista',
+  'contenedores.accion',
+  'contenedores.seguir',
+  'contenedores.dejar',
   'avisos.lista',
   'avisos.marcarLeidos',
   'avisos.limpiar',
@@ -990,4 +1024,5 @@ export const EVENTOS_IPC = [
   'mcp:confirmar',
   'mcp:confirmacion-cerrada',
   'dump:nuevo',
+  'contenedor:lineas',
 ] as const satisfies readonly (keyof EventosNucleo)[];

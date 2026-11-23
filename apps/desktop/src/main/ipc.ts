@@ -3,6 +3,11 @@ import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import {
   CLAVES_RAPIDAS,
+  ACCIONES_CONTENEDOR,
+  esMotorContenedores,
+  validarIdContenedor,
+  type AccionContenedor,
+  type MotorContenedores,
   datosPermitidos,
   esClaveCorta,
   ErrorWolf,
@@ -337,10 +342,100 @@ export class Seguimientos {
   }
 }
 
+/**
+ * Registros de contenedores seguidos por cada webContents (`motor:id`). Se sueltan con `dejar`,
+ * al destruirse el webContents y al cerrar el IPC. El núcleo pone además un tope global.
+ */
+export class SeguimientosContenedores {
+  private readonly porEmisor = new Map<object, Map<string, Promise<() => void>>>();
+  private readonly anonimo = {};
+
+  private clave(emisor: unknown): object {
+    return typeof emisor === 'object' && emisor !== null ? emisor : this.anonimo;
+  }
+
+  async seguir(n: NucleoIpc, emisor: unknown, motor: MotorContenedores, id: string): Promise<void> {
+    const clave = this.clave(emisor);
+    const k = `${motor}:${id}`;
+    let mapa = this.porEmisor.get(clave);
+    if (mapa?.has(k)) return;
+    if (!mapa) {
+      mapa = new Map();
+      this.porEmisor.set(clave, mapa);
+      const once = (emisor as EmisorLike | null)?.once;
+      if (typeof once === 'function') {
+        once.call(emisor, 'destroyed', () => this.dejarEmisor(clave));
+      }
+    }
+    const dejar = n.contenedores.seguirLogs(motor, id);
+    mapa.set(k, dejar);
+    try {
+      await dejar;
+    } catch (e) {
+      if (mapa.get(k) === dejar) mapa.delete(k);
+      throw e;
+    }
+  }
+
+  private soltar(p: Promise<() => void>): void {
+    void p.then((f) => f()).catch(() => undefined);
+  }
+
+  dejar(emisor: unknown, motor: MotorContenedores, id: string): void {
+    const mapa = this.porEmisor.get(this.clave(emisor));
+    const k = `${motor}:${id}`;
+    const p = mapa?.get(k);
+    if (!mapa || !p) return;
+    mapa.delete(k);
+    this.soltar(p);
+  }
+
+  dejarEmisor(clave: object): void {
+    const mapa = this.porEmisor.get(clave);
+    if (!mapa) return;
+    this.porEmisor.delete(clave);
+    for (const p of mapa.values()) this.soltar(p);
+  }
+
+  dejarTodo(): void {
+    for (const clave of [...this.porEmisor.keys()]) this.dejarEmisor(clave);
+  }
+
+  /** Cuántos registros sigue un emisor (para pruebas). */
+  cuantos(emisor?: unknown): number {
+    return this.porEmisor.get(this.clave(emisor))?.size ?? 0;
+  }
+}
+
+/** Motor de contenedores de la lista blanca. */
+function motorContenedores(v: unknown): MotorContenedores {
+  if (!esMotorContenedores(v)) throw new Error('Argumento no válido: motor');
+  return v;
+}
+
+function accionContenedor(v: unknown): AccionContenedor {
+  if (typeof v !== 'string' || !(ACCIONES_CONTENEDOR as readonly string[]).includes(v)) {
+    throw new Error('Argumento no válido: accion');
+  }
+  return v as AccionContenedor;
+}
+
+/**
+ * Detener y reiniciar cortan lo que corre en el contenedor: exigen `confirmacion === true` (solo
+ * la pasa el diálogo). Iniciar no la necesita, pero no acepta otro valor que true o nada.
+ */
+function confirmacionContenedor(a: AccionContenedor, v: unknown): void {
+  if (v !== undefined && v !== true) throw new Error('Argumento no válido: confirmacion');
+  if (a !== 'iniciar' && v !== true) {
+    throw new ErrorWolf('contenedores.sin_confirmar', 'Falta confirmar la acción.');
+  }
+}
+
 export interface OpcionesIpc {
   secretos?: SecretosIpc;
   metricas?: ControlMetricas;
   seguimientos?: Seguimientos;
+  contenedores?: SeguimientosContenedores;
   /** Carpeta de proyectos sin carpeta vigilada (`C:\\Proyectos`); se puede cambiar en pruebas. */
   carpetaProyectosPorDefecto?: string;
   /** Idioma del sistema (`app.getLocale()`), para elegir el de la interfaz la primera vez. */
@@ -360,6 +455,7 @@ type Contexto = ApiSistema & {
   secretos: SecretosIpc;
   metricas: ControlMetricas;
   seguimientos: Seguimientos;
+  contenedores: SeguimientosContenedores;
   /** webContents que hizo la llamada (para atar los seguimientos de registros). */
   emisor: unknown;
   carpetaProyectosPorDefecto: string;
@@ -1093,6 +1189,21 @@ const TABLA: Record<RutaIpc, Manejador> = {
     n.abrirEnEditor(idSitioDepuracion(sitioId), archivoEditor(archivo), lineaEditor(linea)),
 
   // ---- Centro de avisos ----
+  // ---- Contenedores (motor de la lista blanca, id validado; nunca texto libre a la CLI) ----
+  'contenedores.motores': (n) => n.contenedores.motores(),
+  'contenedores.lista': (n, _s, motor) => n.contenedores.lista(motorContenedores(motor)),
+  'contenedores.accion': async (n, _s, motor, id, accion, confirmacion) => {
+    const m = motorContenedores(motor);
+    const i = validarIdContenedor(id);
+    const a = accionContenedor(accion);
+    confirmacionContenedor(a, confirmacion);
+    await n.contenedores.accion(m, i, a);
+  },
+  'contenedores.seguir': (n, s, motor, id) =>
+    s.contenedores.seguir(n, s.emisor, motorContenedores(motor), validarIdContenedor(id)),
+  'contenedores.dejar': (_n, s, motor, id) =>
+    s.contenedores.dejar(s.emisor, motorContenedores(motor), validarIdContenedor(id)),
+
   'avisos.lista': (n) => n.avisos.lista(),
   // Sin ids marca todos; con ids, solo esos (lista acotada de ids cortos).
   'avisos.marcarLeidos': (n, _s, ids) => {
@@ -1225,12 +1336,14 @@ export function registrarIpc(
   opciones: OpcionesIpc = {},
 ): () => void {
   const seguimientos = opciones.seguimientos ?? new Seguimientos();
+  const contenedores = opciones.contenedores ?? new SeguimientosContenedores();
   const contexto: Omit<Contexto, 'emisor'> = {
     ...sistema,
     elegidas,
     secretos: opciones.secretos ?? SECRETOS_NO_DISPONIBLES,
     metricas: opciones.metricas ?? new ControlMetricas(nucleo),
     seguimientos,
+    contenedores,
     carpetaProyectosPorDefecto:
       opciones.carpetaProyectosPorDefecto ?? CARPETA_PROYECTOS_POR_DEFECTO,
     idiomaSistema: opciones.idiomaSistema ?? (() => 'es'),
@@ -1261,5 +1374,6 @@ export function registrarIpc(
   return () => {
     bajas.forEach((b) => b());
     seguimientos.dejarTodo();
+    contenedores.dejarTodo();
   };
 }
