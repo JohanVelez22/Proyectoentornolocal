@@ -244,13 +244,21 @@ const opcionesTerminal = computed<DropdownOption[]>(() =>
         : x.nombre,
   })),
 );
-async function cargarTerminales(mostrar: boolean): Promise<void> {
-  if (!mostrar || terminales.value) return;
-  const r = await ejecutar('terminales', () => api().terminal.disponibles());
-  if (r) {
-    terminales.value = r.disponibles;
-    terminalPorDefecto.value = r.porDefecto;
+/** Menú de terminales: se abre cuando la lista ya está cargada (no vacío y luego lleno). */
+const menuTerminal = ref(false);
+async function cambiarMenuTerminal(mostrar: boolean): Promise<void> {
+  if (mostrar && !terminales.value) {
+    const r = await ejecutar('terminales', () => api().terminal.disponibles());
+    if (r) {
+      terminales.value = r.disponibles;
+      terminalPorDefecto.value = r.porDefecto;
+    }
   }
+  menuTerminal.value = mostrar && (terminales.value?.length ?? 0) > 0;
+}
+function elegirTerminal(k: string | number): void {
+  menuTerminal.value = false;
+  abrirTerminal(k as IdTerminal);
 }
 
 /* ───── Base de datos del proyecto en Adminer (phpMyAdmin: Etapa D) ───── */
@@ -443,8 +451,9 @@ function abrirCarpeta(): void {
             trigger="click"
             :options="opcionesTerminal"
             placement="bottom-end"
-            @update:show="cargarTerminales"
-            @select="(k: string | number) => abrirTerminal(k as IdTerminal)"
+            :show="menuTerminal"
+            @update:show="cambiarMenuTerminal"
+            @select="elegirTerminal"
           >
             <NButton
               size="small"
