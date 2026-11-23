@@ -195,16 +195,42 @@ describe('CatalogoVivo', () => {
 
   it('buscar: completa una huella diferida al instalar; una versión desconocida es null', async () => {
     const { c, ff } = catalogoCon(rutasOficiales());
-    const v = await c.buscar('node', '24.22.2');
-    expect(v).not.toBeNull();
-    // 24.22.2 no tiene SHASUMS en los fixtures: queda sin huella (el instalador pedirá confirmar).
-    expect(v?.huella).toBeNull();
+    // 24.22.2 no tiene SHASUMS en los fixtures (404): no se cae a "confirmar sin huella", es un
+    // error que se puede reintentar.
+    await expect(c.buscar('node', '24.22.2')).rejects.toMatchObject({
+      codigo: 'catalogo.huella_no_disponible',
+    });
     const w = await c.buscar('node', '20.20.2');
     expect(w?.huella?.algoritmo).toBe('sha256');
     expect(w?.huellaDiferida).toBeUndefined();
     expect(ff.pedidas).toContain('https://nodejs.org/dist/v20.20.2/SHASUMS256.txt');
     expect(await c.buscar('node', '99.0.0')).toBeNull();
     expect(await c.buscar('xyz' as 'node', '1.0.0')).toBeNull();
+  });
+
+  it('buscar: si la fuente responde pero no publica la huella de esa versión, queda sin huella', async () => {
+    const rutasHttp = rutasOficiales();
+    rutasHttp['https://nodejs.org/dist/v24.22.2/SHASUMS256.txt'] = `${'e'.repeat(64)}  otro.zip
+`;
+    const v = await catalogoCon(rutasHttp).c.buscar('node', '24.22.2');
+    expect(v?.huella).toBeNull();
+    expect(v?.huellaDiferida).toBeUndefined();
+  });
+
+  it('buscar: sin red al pedir la huella diferida (Node o NuGet) es un error, nunca "sin huella"', async () => {
+    const { c } = catalogoCon(rutasOficiales());
+    await c.listar('python', { todas: true });
+    const fuentes = { ...rutasOficiales() };
+    for (const k of Object.keys(fuentes)) if (k.includes('registration5')) delete fuentes[k];
+    const { c: c2 } = catalogoCon(fuentes);
+    // Se usa el índice en caché (el mismo directorio) y la hoja de NuGet no responde.
+    const diferida = (await c2.listar('python', { todas: true })).versiones.find(
+      (v) => v.huellaDiferida,
+    );
+    expect(diferida).toBeDefined();
+    await expect(c2.buscar('python', diferida!.version)).rejects.toMatchObject({
+      codigo: 'catalogo.huella_no_disponible',
+    });
   });
 
   it('una versión en vivo sin huella que está en la lista fija con la misma URL toma su SHA-256', async () => {

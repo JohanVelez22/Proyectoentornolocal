@@ -213,6 +213,7 @@ export const PARAMETROS_ERROR = {
   'catalogo.demasiadas_redirecciones': ['maximo'],
   'catalogo.respuesta_grande': ['maximo'],
   'catalogo.version_no_encontrada': ['servicio', 'version'],
+  'catalogo.huella_no_disponible': ['servicio', 'version'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

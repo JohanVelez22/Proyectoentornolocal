@@ -336,6 +336,8 @@ export const en: Textos = {
         'The download made too many redirects (more than {maximo}).',
       'catalogo.respuesta_grande': 'The server response is too large.',
       'catalogo.version_no_encontrada': 'Version {version} of {servicio} is not in the catalog.',
+      'catalogo.huella_no_disponible':
+        'Could not get the checksum for {servicio} {version} (offline or the source did not respond). Try again.',
     },
   },
   avisoInicio: {

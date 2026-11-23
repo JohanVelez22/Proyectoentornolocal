@@ -292,8 +292,11 @@ export class CatalogoVivo {
 
   /**
    * Una versión concreta para instalar (lo único que manda el renderer es servicio y versión).
-   * Si se listó sin huella (`huellaDiferida`), se pide ahora a la fuente; si no llega, queda sin
-   * huella y el instalador exigirá la confirmación.
+   * Si se listó sin huella (`huellaDiferida`), se pide ahora a la fuente:
+   * - si la fuente no responde (red, HTTP, formato), `catalogo.huella_no_disponible`: se puede
+   *   reintentar, pero nunca se cae a "confirmar sin huella";
+   * - solo si la fuente responde y no publica huella para esa versión queda sin huella y el
+   *   instalador exigirá la confirmación.
    */
   async buscar(servicio: ServicioInstalable, version: string): Promise<VersionDisponible | null> {
     if (ejecutableDe(servicio) === undefined || typeof version !== 'string') return null;
@@ -304,17 +307,29 @@ export class CatalogoVivo {
     if (!v) return null;
     const fuente = this.fuente(servicio);
     if (!v.huellaDiferida || huellaFuerte(v.huella) || !fuente?.completar) return v;
-    let huella: Huella | null = null;
+    let h: Huella | null;
     try {
-      const h = await fuente.completar(v, this.contexto());
-      const r = HuellaSchema.safeParse(h);
-      huella = r.success ? r.data : null;
-    } catch {
-      huella = null;
+      h = await fuente.completar(v, this.contexto());
+    } catch (e) {
+      throw new ErrorWolf(
+        'catalogo.huella_no_disponible',
+        `No se pudo obtener la huella de ${servicio} ${version}; vuelva a intentarlo (${e instanceof Error ? e.message.slice(0, 120) : 'sin detalle'})`,
+        { servicio, version },
+      );
     }
-    if (!huella) return v;
     const resto = { ...v };
     delete resto.huellaDiferida;
+    if (h === null) return { ...resto, huella: null, sha256: null };
+    const r = HuellaSchema.safeParse(h);
+    if (!r.success) {
+      // Una huella publicada pero mal formada delata una fuente alterada: tampoco se ofrece instalar sin ella.
+      throw new ErrorWolf(
+        'catalogo.huella_no_disponible',
+        `La huella publicada de ${servicio} ${version} no es válida`,
+        { servicio, version },
+      );
+    }
+    const huella = r.data;
     return { ...resto, huella, sha256: huella.algoritmo === 'sha256' ? huella.valor : null };
   }
 }

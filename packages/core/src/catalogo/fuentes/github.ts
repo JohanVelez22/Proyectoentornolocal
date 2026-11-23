@@ -55,8 +55,10 @@ async function sumaPublicada(
   const senales = [AbortSignal.timeout(PLAZO_INDICE_MS), ...(ctx.senal ? [ctx.senal] : [])];
   const res = await pedirConSaltos(ctx.f, url, { signal: AbortSignal.any(senales) }, urlOficial);
   if (!res.ok) {
+    // La release publica sumas y no se pudieron leer: el índice falla (caché o lista fija) en vez
+    // de ofrecer la versión "sin huella".
     await res.body?.cancel().catch(() => undefined);
-    return null;
+    throw new Error(`HTTP ${res.status} al leer las sumas de ${archivo}`);
   }
   const valor = sumaDe(await leerAcotado(res, 1024 * 1024), archivo);
   return valor ? { algoritmo: 'sha256', valor } : null;

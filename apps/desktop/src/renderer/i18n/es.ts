@@ -342,6 +342,8 @@ export const es = {
       'catalogo.respuesta_grande': 'La respuesta del servidor es demasiado grande.',
       'catalogo.version_no_encontrada':
         'La versión {version} de {servicio} no está en el catálogo.',
+      'catalogo.huella_no_disponible':
+        'No se pudo obtener la huella de {servicio} {version} (sin conexión o la fuente no respondió). Vuelva a intentarlo.',
     },
   },
   avisoInicio: {

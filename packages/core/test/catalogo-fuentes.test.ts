@@ -276,6 +276,33 @@ describe('fuentes oficiales', () => {
     expect(v[0]?.huella).toEqual({ algoritmo: 'sha256', valor: hex });
   });
 
+  it('GitHub sin digest: si el archivo de sumas publicado no responde, el índice falla (no "sin huella")', async () => {
+    const fuente = fuenteGithub({
+      servicio: 'cloudflared',
+      dueno: 'cloudflare',
+      repo: 'cloudflared',
+      asset: () => 'cloudflared-windows-amd64.exe',
+      formato: 'exe',
+      ejecutable: 'cloudflared.exe',
+    });
+    const base = 'https://github.com/cloudflare/cloudflared/releases/download/2026.11.2/';
+    const c = ctx({
+      'https://api.github.com/repos/cloudflare/cloudflared/releases?per_page=30': JSON.stringify([
+        {
+          tag_name: '2026.11.2',
+          draft: false,
+          prerelease: false,
+          assets: [
+            { name: 'cloudflared-windows-amd64.exe', browser_download_url: `${base}x.exe` },
+            { name: 'checksums.txt', browser_download_url: `${base}checksums.txt` },
+          ],
+        },
+      ]),
+      [`${base}checksums.txt`]: { estado: 503 },
+    });
+    await expect(fuente.listar(c)).rejects.toThrow();
+  });
+
   it('otro sistema (Etapa E): sin versiones en vivo y sin consultas', async () => {
     const ff = fetchFalso(rutasOficiales());
     for (const f of [fuentePhp, fuenteNode, fuentePython, fuenteMailpit]) {
