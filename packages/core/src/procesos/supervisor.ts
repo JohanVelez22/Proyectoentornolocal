@@ -346,10 +346,17 @@ export class Supervisor {
         ) {
           continue;
         }
+        // Y tiene que ser él quien escucha su puerto: sin puerto conocido o con otro dueño, se deja.
+        const puerto = r.puerto ?? r.puertoInformativo;
+        if (puerto === undefined || !this.plataforma.quienUsaPuerto) continue;
+        const dueno = await this.plataforma.quienUsaPuerto(puerto);
+        if (dueno?.pid !== r.pid) continue;
+        // Con su árbol: los hijos de un proceso de proyecto (esbuild de Vite…) son suyos y si no
+        // quedarían huérfanos; el PID ya está verificado por ruta, ejecutable y puerto.
         await this.plataforma.matarArbol(r.pid);
         cerrados.add(r.pid);
         console.warn(
-          `Se cerró ${r.id} (PID ${r.pid}, ${ruta}): lo dejó una versión anterior sin datos para readoptarlo y ocupaba su puerto.`,
+          `Se cerró ${r.id} (PID ${r.pid}, ${ruta}): lo dejó una versión anterior sin datos para readoptarlo y seguía escuchando el puerto ${puerto} (verificado: ejecutable dentro de la carpeta de datos y dueño del puerto).`,
         );
       } catch (e) {
         console.error(`No se pudo cerrar el proceso huérfano ${r.id} (PID ${r.pid}):`, e);

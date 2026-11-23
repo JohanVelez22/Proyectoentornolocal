@@ -480,6 +480,8 @@ describe('Supervisor', () => {
     describe('huérfanos de una versión anterior (sin hora guardada)', () => {
       /** Ruta completa del ejecutable de cada PID vivo (la que da la plataforma). */
       let rutasProceso: Map<number, string>;
+      /** Puerto → PID que lo escucha. */
+      let duenos: Map<number, number>;
       let avisos: string[];
       const conRutas = (): Supervisor =>
         new Supervisor(
@@ -487,22 +489,31 @@ describe('Supervisor', () => {
           {
             ...plataforma(),
             rutaProceso: async (pid: number) => rutasProceso.get(pid) ?? null,
+            quienUsaPuerto: async (p: number) =>
+              duenos.has(p) ? { pid: duenos.get(p)!, nombre: 'x.exe' } : null,
           } as unknown as Plataforma,
           eventos,
           { intervaloMs: 3000, spawn: fakeSpawn, sonda: async () => sondaOk },
         );
-      const reg = (id: string, pid: number, ejecutable: string, creado?: string) => ({
+      const reg = (
+        id: string,
+        pid: number,
+        ejecutable: string,
+        creado?: string,
+        puerto: number | undefined = 9840,
+      ) => ({
         id,
         pid,
         ejecutable,
         args: [],
-        puerto: 9840,
+        puerto,
         log: def().log,
         reiniciar: true,
         ...(creado ? { creado } : {}),
       });
       beforeEach(() => {
         rutasProceso = new Map();
+        duenos = new Map();
         avisos = [];
         vi.spyOn(console, 'warn').mockImplementation((...a: unknown[]) => {
           avisos.push(a.map(String).join(' '));
@@ -517,6 +528,7 @@ describe('Supervisor', () => {
         vivos.set(901, 'php-cgi.exe');
         creaciones.set(901, 't901');
         rutasProceso.set(901, exe);
+        duenos.set(9840, 901);
         writeFileSync(rutas.estado(), JSON.stringify([reg('php-8.4-0', 901, exe)]));
         const s = conRutas();
         await s.readoptar();
@@ -524,6 +536,7 @@ describe('Supervisor', () => {
         expect(matados).toEqual([901]);
         expect(avisos.join('\n')).toContain('php-8.4-0');
         expect(avisos.join('\n')).toContain('901');
+        expect(avisos.join('\n')).toContain('9840');
         await s.cerrar();
       });
 
@@ -533,6 +546,7 @@ describe('Supervisor', () => {
           const exe = path.join(base, 'BIN', 'php', '8.4.13', 'PHP-CGI.EXE').toUpperCase();
           vivos.set(902, 'php-cgi.exe');
           rutasProceso.set(902, exe);
+          duenos.set(9840, 902);
           writeFileSync(rutas.estado(), JSON.stringify([reg('php-sitio-a-0', 902, exe)]));
           const s = conRutas();
           await s.readoptar();
@@ -603,6 +617,7 @@ describe('Supervisor', () => {
         const ajeno = 'C:/Program Files/nodejs/node.exe';
         vivos.set(940, 'node.exe');
         rutasProceso.set(940, propio);
+        duenos.set(9840, 940);
         vivos.set(941, 'node.exe');
         rutasProceso.set(941, ajeno);
         writeFileSync(
@@ -612,6 +627,28 @@ describe('Supervisor', () => {
         const s = conRutas();
         await s.readoptar();
         expect(matados).toEqual([940]);
+        await s.cerrar();
+      });
+
+      it('solo si su puerto lo escucha ese mismo PID (sin puerto o con otro dueño no se toca)', async () => {
+        const exe = path.join(base, 'bin', 'php', '8.4.13', 'php-cgi.exe');
+        for (const pid of [950, 951, 952]) {
+          vivos.set(pid, 'php-cgi.exe');
+          rutasProceso.set(pid, exe);
+        }
+        duenos.set(9850, 777); // el puerto lo tiene otro proceso
+        // 952 no escucha nada (puerto libre)
+        writeFileSync(
+          rutas.estado(),
+          JSON.stringify([
+            reg('php-8.4-0', 950, exe, undefined, undefined),
+            reg('php-8.4-1', 951, exe, undefined, 9850),
+            reg('php-8.4-2', 952, exe, undefined, 9852),
+          ]),
+        );
+        const s = conRutas();
+        await s.readoptar();
+        expect(matados).toEqual([]);
         await s.cerrar();
       });
     });
