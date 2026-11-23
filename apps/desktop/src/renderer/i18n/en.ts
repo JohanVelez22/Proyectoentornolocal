@@ -107,6 +107,23 @@ export const en: Textos = {
       'servicios.confirmacion_borrado': 'To delete the data of {nombre}, type "{id}".',
       'servicios.ftp_no_disponible': 'The FTP server is not available.',
       'servicios.mailpit_no_responde': 'Mailpit is not responding. Start it from Services.',
+      'servicios.respaldo_fallo':
+        '{nombre} was not updated: the backup beforehand failed and nothing was changed.',
+      'servicios.espacio_insuficiente':
+        'Not enough space to copy the data: {necesarios} MB needed, {libres} MB free.',
+      'servicios.actualizacion_revertida':
+        'Version {version} did not start; {nombre} went back to {anterior}. The backup is kept.',
+      'servicios.otra_rama':
+        '{nombre} {version} belongs to another branch: create it as a new instance.',
+      'servicios.misma_version': '{id} already uses version {version}.',
+      'instancias.id_invalido': 'The instance identifier is not valid.',
+      'instancias.no_existe': 'Instance {id} does not exist.',
+      'instancias.existe': 'Instance {id} already exists.',
+      'instancias.una_sola': '{nombre} supports a single instance.',
+      'instancias.ultima': '{id} is the only instance: it cannot be removed.',
+      'instancias.sin_puerto_libre': 'No free port was found for the instance.',
+      'instalador.version_en_uso':
+        'Cannot uninstall {servicio} {version}: instance {instancia} uses it.',
       'bd.encender_servicio': 'Start {nombre} to manage its databases.',
       'bd.sin_credenciales': 'There are no saved credentials for {nombre}.',
       'bd.confirmacion_borrado': 'To delete the database {nombre}, type its exact name.',

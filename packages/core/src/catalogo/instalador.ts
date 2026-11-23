@@ -118,7 +118,35 @@ export class Instalador {
     return claveValida(v) ? v : clave;
   }
 
+  private enUso: ((servicio: string, version: string) => Promise<string | null>) | null = null;
+
+  /**
+   * Quién usa una versión de un servicio de datos (la instancia, o null). Lo conecta el núcleo
+   * con `ServiciosDatos.versionEnUso`.
+   */
+  fijarVerificadorEnUso(fn: (servicio: string, version: string) => Promise<string | null>): void {
+    this.enUso = fn;
+  }
+
+  /**
+   * Quita solo los binarios de bin/<servicio>/<version>: nunca toca `data/`. Una versión que usa
+   * alguna instancia se rechaza (`instalador.version_en_uso`).
+   */
   async desinstalar(servicio: string, version: string): Promise<void> {
+    if (!/^[\w.-]{1,64}$/.test(version) || version.includes('..')) {
+      throw new ErrorWolf('catalogo.version_no_encontrada', `Versión no válida: ${version}`, {
+        servicio,
+        version,
+      });
+    }
+    const instancia = this.enUso ? await this.enUso(servicio, version) : null;
+    if (instancia) {
+      throw new ErrorWolf(
+        'instalador.version_en_uso',
+        `No se puede desinstalar ${servicio} ${version}: la usa la instancia ${instancia}.`,
+        { servicio, version, instancia },
+      );
+    }
     await rm(this.rutas.bin(servicio, version), { recursive: true, force: true });
   }
 

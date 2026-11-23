@@ -1252,6 +1252,52 @@ describe('respaldar', () => {
     sinClaves(l);
   });
 
+  it('una instancia (mysql@8.0) se respalda con su conexión y con sus propios binarios', async () => {
+    for (const n of ['mysql.exe', 'mysqldump.exe']) {
+      const p = path.join(rutas.base, 'bin', 'mysql', '8.0.44', 'bin', n);
+      mkdirSync(path.dirname(p), { recursive: true });
+      writeFileSync(p, '');
+    }
+    const pedidas: string[] = [];
+    const r = armar({
+      bd: {
+        conexion: async (o: string) => {
+          pedidas.push(o);
+          return {
+            host: '127.0.0.1' as const,
+            puerto: o === 'mysql@8.0' ? 3308 : 3306,
+            usuario: 'root',
+            clave: CLAVE,
+          };
+        },
+        crear: async () => ({ usuarioActualizado: false }),
+        tieneTablas: async () => false,
+      },
+      servicios: {
+        estados: async () => [estado('mysql', '8.4.3', 3306)],
+        instancias: async () => [
+          {
+            id: 'mysql@8.0',
+            servicio: 'mysql',
+            clave: '8.0',
+            version: '8.0.44',
+            puerto: 3308,
+            estado: 'encendido',
+            pid: 2,
+            predeterminada: false,
+            autoIniciar: false,
+            tieneDatos: true,
+          },
+        ],
+      },
+    });
+    await r.respaldar('mysql@8.0', 'tienda', path.join(dir, 'inst'));
+    expect(pedidas).toEqual(['mysql@8.0']);
+    const l = lanzados[0]!;
+    expect(l.cmd).toBe(path.join(rutas.base, 'bin', 'mysql', '8.0.44', 'bin', 'mysqldump.exe'));
+    expect(l.args).toContain('--port=3308');
+  });
+
   it('no pisa un respaldo del mismo minuto', async () => {
     const r = armar();
     const a = await r.respaldar('mysql', 'tienda', dir);

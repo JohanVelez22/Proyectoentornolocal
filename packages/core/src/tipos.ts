@@ -173,12 +173,55 @@ export const PUERTOS_POR_DEFECTO: Record<IdServicioDatos, number> = {
   ollama: 11434,
 };
 
+/**
+ * Clave de una instancia (`<servicio>@<clave>`): la de la carpeta de datos de su rama ("8.4",
+ * "17", "actual"). Minúsculas, dígitos y puntos, hasta 16 caracteres y sin `..`.
+ */
+export const CLAVE_INSTANCIA = /^[0-9a-z][0-9a-z.]{0,15}$/;
+export function claveInstanciaValida(clave: unknown): clave is string {
+  return typeof clave === 'string' && CLAVE_INSTANCIA.test(clave) && !clave.includes('..');
+}
+
+/** `<servicio>@<clave>`: una instancia de un servicio de datos (p. ej. `mysql@8.4`). */
+export type IdInstancia = `${IdServicioDatos}@${string}`;
+
+export const InstanciaConfigSchema = z.object({
+  /** Versión instalada que usa (los binarios); su rama es la de la clave. */
+  version: z.string().min(1).max(40),
+  puerto: z.number().int().min(1).max(65535),
+  autoIniciar: z.boolean().default(false),
+});
+export type InstanciaConfig = z.infer<typeof InstanciaConfigSchema>;
+
+/**
+ * Instancias por clave. Una entrada mal formada (clave rara, puerto fuera de rango) se descarta
+ * sola, sin mandar el config entero a `corrupto`: su carpeta de datos sigue en disco.
+ */
+const InstanciasSchema = z.record(z.string(), z.unknown()).transform((r) => {
+  const res: Record<string, InstanciaConfig> = {};
+  for (const [clave, valor] of Object.entries(r)) {
+    if (!claveInstanciaValida(clave)) continue;
+    const i = InstanciaConfigSchema.safeParse(valor);
+    if (i.success) res[clave] = i.data;
+  }
+  return res;
+});
+
+/**
+ * Configuración de un servicio de datos. `version`/`puerto`/`autoIniciar` son la forma de una
+ * sola instancia (hasta la Task 18): sin `instancias` describen la única (implícita). Con
+ * `instancias` (tras la migración) mandan las instancias y esos tres campos reflejan la
+ * predeterminada (compatibilidad con lo que aún los lee y con versiones anteriores de la app).
+ */
 const servicioDatos = (puerto: number) =>
   z
     .object({
       version: z.string().nullable().default(null),
       puerto: z.number().int().min(1).max(65535).default(puerto),
       autoIniciar: z.boolean().default(false),
+      /** Clave de la instancia predeterminada (la de `iniciar('mysql')`, `.env`, recetas). */
+      predeterminada: z.string().nullable().optional().catch(undefined),
+      instancias: InstanciasSchema.optional().catch(undefined),
     })
     .prefault({});
 
@@ -192,10 +235,21 @@ export type Credenciales = z.infer<typeof CredencialesSchema>;
  * Clave de una credencial: un servicio propio, el acceso FTP de un sitio (`ftp:<id>`) o el token
  * del servidor MCP (`mcp`, en `clave`).
  */
-export type ClaveCredencial = IdServicioDatos | `ftp:${string}` | 'mcp';
+export type ClaveCredencial = IdServicioDatos | IdInstancia | `ftp:${string}` | 'mcp';
+
+/** `<servicio>@<clave>` con una clave válida (la misma regla que `parsearInstancia`). */
+const ClaveInstanciaCredencialSchema = z.string().refine((x) => {
+  const i = x.indexOf('@');
+  if (i < 0) return false;
+  return (
+    (IDS_SERVICIO_DATOS as readonly string[]).includes(x.slice(0, i)) &&
+    claveInstanciaValida(x.slice(i + 1))
+  );
+});
 
 const ClaveCredencialSchema = z.union([
   z.enum(IDS_SERVICIO_DATOS),
+  ClaveInstanciaCredencialSchema,
   z.templateLiteral(['ftp:', z.string()]),
   z.literal('mcp'),
 ]);
@@ -406,6 +460,21 @@ export function raizDeSitio(s: Sitio): string {
 
 export type CategoriaServicio = 'web' | 'php' | 'bd' | 'herramienta' | 'ia' | 'proyecto';
 
+/** Estado de una instancia de un servicio de datos. */
+export interface EstadoInstancia {
+  id: IdInstancia;
+  servicio: IdServicioDatos;
+  clave: string;
+  version: string;
+  puerto: number;
+  estado: 'apagado' | 'iniciando' | 'encendido' | 'error';
+  pid: number | null;
+  predeterminada: boolean;
+  autoIniciar: boolean;
+  /** Su carpeta de datos existe y está inicializada. */
+  tieneDatos: boolean;
+}
+
 export interface EstadoServicio {
   id: string;
   nombre: string;
@@ -416,6 +485,11 @@ export interface EstadoServicio {
   puertos: number[];
   pid: number | null;
   mensaje?: string;
+  /**
+   * Instancias del servicio de datos (la del propio estado es la predeterminada). Solo cuando el
+   * servicio tiene instancias configuradas (siempre tras la migración de la Task 18).
+   */
+  instancias?: EstadoInstancia[];
 }
 
 export interface EstadoTunel {

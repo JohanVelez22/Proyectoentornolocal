@@ -106,6 +106,22 @@ export const es = {
       'servicios.confirmacion_borrado': 'Para borrar los datos de {nombre} escriba "{id}".',
       'servicios.ftp_no_disponible': 'El servidor FTP no está disponible.',
       'servicios.mailpit_no_responde': 'Mailpit no responde. Inícielo desde Servicios.',
+      'servicios.respaldo_fallo':
+        'No se actualizó {nombre}: falló el respaldo previo y no se cambió nada.',
+      'servicios.espacio_insuficiente':
+        'No hay espacio para copiar los datos: hacen falta {necesarios} MB y quedan {libres} MB libres.',
+      'servicios.actualizacion_revertida':
+        'La versión {version} no arrancó; {nombre} volvió a {anterior}. El respaldo se conserva.',
+      'servicios.otra_rama': '{nombre} {version} es de otra rama: créela como instancia nueva.',
+      'servicios.misma_version': '{id} ya usa la versión {version}.',
+      'instancias.id_invalido': 'El identificador de la instancia no es válido.',
+      'instancias.no_existe': 'No existe la instancia {id}.',
+      'instancias.existe': 'Ya existe la instancia {id}.',
+      'instancias.una_sola': '{nombre} admite una sola instancia.',
+      'instancias.ultima': '{id} es la única instancia: no se puede quitar.',
+      'instancias.sin_puerto_libre': 'No se encontró un puerto libre para la instancia.',
+      'instalador.version_en_uso':
+        'No se puede desinstalar {servicio} {version}: la usa la instancia {instancia}.',
       'bd.encender_servicio': 'Encienda {nombre} para administrar sus bases.',
       'bd.sin_credenciales': 'No hay credenciales guardadas de {nombre}.',
       'bd.confirmacion_borrado': 'Para borrar la base {nombre} escriba su nombre exacto.',

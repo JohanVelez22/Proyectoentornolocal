@@ -709,6 +709,41 @@ describe('ServidorMcp: acciones destructivas', () => {
     expect(m.cierres).toEqual([{ id: sol.id, motivo: 'aprobada' }]);
   });
 
+  it('borrar_base con instancia: confirma con la instancia y borra solo en ella', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    const llamada = c.callTool({
+      name: 'borrar_base',
+      arguments: { motor: 'mysql', nombre: 'tienda', instancia: 'mysql@8.0' },
+    });
+    const sol = await esperarConfirmacion(m);
+    expect(sol.resumen).toContain('mysql@8.0');
+    expect(sol.datos).toEqual({ motor: 'mysql', base: 'tienda', instancia: 'mysql@8.0' });
+    expect(m.ops.borrarBase).not.toHaveBeenCalled();
+    m.servidor.responderConfirmacion(sol.id, true);
+    expect((await llamada).isError).toBeFalsy();
+    expect(m.ops.borrarBase).toHaveBeenCalledWith('mysql@8.0', 'tienda', 'tienda');
+  });
+
+  it('una instancia de otro motor o mal escrita se rechaza sin tocar nada', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    for (const instancia of ['postgresql@17', 'mysql@../x', 'mysql']) {
+      const r = await c.callTool({
+        name: 'listar_bases',
+        arguments: { motor: 'mysql', instancia },
+      });
+      expect(r.isError, instancia).toBe(true);
+    }
+    expect(m.ops.listarBases).not.toHaveBeenCalled();
+    const ok = await c.callTool({
+      name: 'listar_bases',
+      arguments: { motor: 'mysql', instancia: 'mysql@8.0' },
+    });
+    expect(ok.isError).toBeFalsy();
+    expect(m.ops.listarBases).toHaveBeenCalledWith('mysql@8.0');
+  });
+
   it('rechazada, no borra y devuelve un error', async () => {
     const m = await montar();
     const c = await conectar(m.url);

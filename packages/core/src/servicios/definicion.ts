@@ -9,13 +9,37 @@ import { pidExiste } from '../plataforma/win';
 import { ErrorDetenidoAlIniciar, type DefProceso } from '../procesos/supervisor';
 import type { Rutas } from '../rutas';
 import {
+  claveInstanciaValida,
   IDS_SERVICIO_DATOS,
   PASIVOS_FTP_POR_DEFECTO,
+  type ClaveCredencial,
   type Config,
   type Credenciales,
+  type EstadoInstancia,
   type EstadoServicio,
+  type IdInstancia,
   type IdServicioDatos,
+  type InstanciaConfig,
 } from '../tipos';
+import {
+  CON_VOLCADO,
+  copiaEnFrio,
+  devolverCopia,
+  selloFecha,
+  type FsCopia,
+  type OperacionesRespaldo,
+} from './actualizar';
+import {
+  claveDe,
+  conInstancias,
+  esIdInstancia,
+  idInstancia,
+  multiInstancia,
+  parsearInstancia,
+  puertosConfigurados,
+  reflejarPredeterminada,
+  type Instancias,
+} from './instancias';
 import {
   compararVersiones,
   ErrorPuertoOcupado,
@@ -57,6 +81,8 @@ export interface DefServicio {
    * (MySQL/MariaDB/MongoDB); PostgreSQL y Redis usan `claveMayor`, Mailpit y Ollama 'actual'.
    */
   claveDatos?(version: string): string;
+  /** false: una sola instancia (Mailpit, Ollama). Por defecto, una por rama. */
+  multiInstancia?: boolean;
   // Prepara datos y configuración la primera vez; debe ser idempotente.
   inicializar(ctx: CtxServicio): Promise<void>;
   // El supervisor lo lanza con este DefProceso.
@@ -95,7 +121,7 @@ export const USUARIO_POR_DEFECTO: Record<IdServicioDatos, string> = {
 };
 
 /** Puertos de la aplicación (HTTPS, Adminer, FTP, PHP) que ningún servicio de datos puede tomar. */
-function puertosFijos(cfg: Config): { desde: number; hasta: number; nombre: string }[] {
+export function puertosFijos(cfg: Config): { desde: number; hasta: number; nombre: string }[] {
   const https = cfg.https?.puerto ?? 443;
   const ftp = cfg.ftp?.puerto ?? 2121;
   const [pasivoMin, pasivoMax] = cfg.ftp?.pasivos ?? PASIVOS_FTP_POR_DEFECTO;
@@ -150,6 +176,27 @@ const OPCIONES_BORRADO = { recursive: true, force: true, maxRetries: 10, retryDe
 
 type Duenos = Map<number, { pid: number; nombre: string }>;
 
+/** Una instancia resuelta (configurada o, sin instancias en la configuración, la implícita). */
+export interface InstanciaResuelta {
+  id: IdInstancia;
+  servicio: IdServicioDatos;
+  clave: string;
+  /** Versión configurada (la de sus binarios). */
+  version: string;
+  puerto: number;
+  autoIniciar: boolean;
+  predeterminada: boolean;
+  /**
+   * Sin instancias en la configuración (forma de una sola instancia): la única, con el id de
+   * proceso, la credencial y el puerto de siempre (`mysql`).
+   */
+  implicita: boolean;
+  /** Id en el supervisor: el del servicio si es implícita; si no, el de la instancia. */
+  proceso: string;
+  /** Clave en etc/credenciales.json. */
+  credencial: ClaveCredencial;
+}
+
 export interface DepsServiciosDatos {
   rutas: Rutas;
   plataforma: Plataforma;
@@ -158,7 +205,8 @@ export interface DepsServiciosDatos {
   leerConfig: () => Promise<Config>;
   /** Lee, modifica y guarda la configuración en la cola común (para no pisar otras escrituras). */
   modificarConfig: (fn: (c: Config) => void) => Promise<void>;
-  credenciales: Pick<AlmacenCredenciales, 'leer' | 'obtenerOCrear'>;
+  credenciales: Pick<AlmacenCredenciales, 'leer' | 'obtenerOCrear'> &
+    Partial<Pick<AlmacenCredenciales, 'guardar'>>;
   sonda: (puerto: number) => Promise<boolean>;
   exec: Ejecutor;
   /** Se consulta en cada llamada: las definiciones pueden registrarse después. */
@@ -167,14 +215,57 @@ export interface DepsServiciosDatos {
   borrar?: (ruta: string, opciones: typeof OPCIONES_BORRADO) => Promise<void>;
   /** ¿Sigue vivo el PID? (por defecto `pidExiste`, sin lanzar procesos). */
   existePid?: (pid: number) => boolean;
+  /** Instala una versión del catálogo junto a las otras (actualizar y rama nueva). */
+  instalarVersion?: (
+    servicio: IdServicioDatos,
+    version: string,
+    o: { confirmarSinHuella?: true },
+  ) => Promise<void>;
+  /** Volcados lógicos para actualizar y para copiar a una rama nueva. */
+  respaldo?: OperacionesRespaldo;
+  /** Copia en frío (para pruebas). */
+  fsCopia?: FsCopia;
+  reloj?: () => Date;
+  /** Cuánto se espera a que la instancia quede encendida tras arrancarla (por defecto 60 s). */
+  plazoSaludMs?: number;
 }
 
-/** Ciclo de vida de los servicios declarados con `DefServicio`. */
+/** Ciclo de vida de los servicios declarados con `DefServicio`, por instancia. */
 export class ServiciosDatos {
   private readonly colas = new Map<string, Promise<unknown>>();
   private cacheDuenos: { clave: string; hasta: number; duenos: Duenos } | null = null;
+  /** Instancias de los servicios de datos (fachada sobre esta clase). */
+  readonly instancias: Instancias;
 
-  constructor(private readonly d: DepsServiciosDatos) {}
+  constructor(private readonly d: DepsServiciosDatos) {
+    this.instancias = {
+      lista: (s) => this.listaInstancias(s),
+      crear: (s, v) => this.crearInstancia(s, v),
+      iniciar: (id) => this.iniciar(id),
+      detener: (id) => this.detener(id),
+      cambiarPuerto: (id, p) => this.cambiarPuerto(id, p),
+      predeterminar: (id) => this.predeterminar(id),
+      autoIniciar: (id, v) => this.autoIniciar(id, v),
+      quitar: (id) => this.quitar(id),
+      borrarDatos: (id, c) => this.borrarDatos(id, c),
+    };
+  }
+
+  /** Definiciones registradas (se consultan en cada llamada). */
+  definiciones(): readonly DefServicio[] {
+    return this.d.definiciones();
+  }
+
+  /** Clave en etc/credenciales.json de un servicio (su predeterminada) o de una instancia. */
+  async claveCredencial(ref: IdServicioDatos | IdInstancia): Promise<ClaveCredencial> {
+    if (!esIdServicioDatos(ref)) return ref;
+    const def = this.def(ref);
+    if (!def) return ref;
+    const pred = (await this.resolver(def, await this.d.leerConfig())).find(
+      (i) => i.predeterminada,
+    );
+    return pred?.credencial ?? ref;
+  }
 
   def(id: string): DefServicio | undefined {
     return this.d.definiciones().find((x) => x.id === id);
@@ -186,7 +277,11 @@ export class ServiciosDatos {
     return def;
   }
 
-  /** Operaciones de un mismo servicio, una a la vez. */
+  private get ahora(): Date {
+    return this.d.reloj?.() ?? new Date();
+  }
+
+  /** Operaciones de un mismo servicio (todas sus instancias), una a la vez. */
   private enCola<T>(id: string, fn: () => Promise<T>): Promise<T> {
     const r = (this.colas.get(id) ?? Promise.resolve()).then(fn, fn);
     this.colas.set(
@@ -200,16 +295,149 @@ export class ServiciosDatos {
   async versionActiva(def: DefServicio, cfg?: Config): Promise<string> {
     const c = cfg ?? (await this.d.leerConfig());
     const instaladas = await this.d.instalador.instalados(def.id);
+    const pred = this.predeterminadaConfigurada(def, c);
+    if (pred) {
+      const v = this.versionDeInstancia(def, pred.clave, pred.version, instaladas);
+      if (v) return v;
+    }
     const elegida = c.servicios.datos[def.id].version;
     if (elegida && instaladas.includes(elegida)) return elegida;
     const nueva = [...instaladas].sort(compararVersiones).at(-1);
-    if (!nueva)
-      throw new ErrorWolf(
-        'servicios.no_instalado',
-        `${def.nombre} no está instalado. Instálelo desde Servicios.`,
-        { nombre: def.nombre },
-      );
+    if (!nueva) throw this.noInstalado(def);
     return nueva;
+  }
+
+  private noInstalado(def: DefServicio): ErrorWolf {
+    return new ErrorWolf(
+      'servicios.no_instalado',
+      `${def.nombre} no está instalado. Instálelo desde Servicios.`,
+      { nombre: def.nombre },
+    );
+  }
+
+  /** Instancias configuradas (solo si el servicio admite varias y ya las tiene). */
+  private configuradas(def: DefServicio, cfg: Config): Record<string, InstanciaConfig> | null {
+    if (!multiInstancia(def) || !conInstancias(cfg, def.id)) return null;
+    return cfg.servicios.datos[def.id].instancias!;
+  }
+
+  private claveDePredeterminada(def: DefServicio, cfg: Config): string | null {
+    const inst = this.configuradas(def, cfg);
+    if (!inst) return null;
+    const p = cfg.servicios.datos[def.id].predeterminada;
+    if (p && Object.hasOwn(inst, p)) return p;
+    return Object.keys(inst).sort(compararVersiones)[0] ?? null;
+  }
+
+  private predeterminadaConfigurada(
+    def: DefServicio,
+    cfg: Config,
+  ): { clave: string; version: string } | null {
+    const clave = this.claveDePredeterminada(def, cfg);
+    if (clave === null) return null;
+    return { clave, version: this.configuradas(def, cfg)![clave]!.version };
+  }
+
+  /** Binarios de una instancia: su versión si está instalada; si no, la más nueva de su rama. */
+  private versionDeInstancia(
+    def: DefServicio,
+    clave: string,
+    version: string,
+    instaladas: string[],
+  ): string | null {
+    if (instaladas.includes(version)) return version;
+    return (
+      instaladas
+        .filter((v) => claveDe(def, v) === clave)
+        .sort(compararVersiones)
+        .at(-1) ?? null
+    );
+  }
+
+  private async binariosDe(def: DefServicio, inst: InstanciaResuelta): Promise<string> {
+    if (inst.implicita) return inst.version;
+    const v = this.versionDeInstancia(
+      def,
+      inst.clave,
+      inst.version,
+      await this.d.instalador.instalados(def.id),
+    );
+    if (!v) throw this.noInstalado(def);
+    return v;
+  }
+
+  /**
+   * Instancias de un servicio: las de la configuración o, si aún no tiene (forma de una sola
+   * instancia), la implícita con la versión activa. Vacío si no hay nada instalado.
+   */
+  async resolver(def: DefServicio, cfg: Config): Promise<InstanciaResuelta[]> {
+    const conf = this.configuradas(def, cfg);
+    if (conf) {
+      const pred = this.claveDePredeterminada(def, cfg);
+      return Object.entries(conf)
+        .sort(([a], [b]) => compararVersiones(a, b))
+        .map(([clave, i]) => {
+          const id = idInstancia(def.id, clave);
+          return {
+            id,
+            servicio: def.id,
+            clave,
+            version: i.version,
+            puerto: i.puerto,
+            autoIniciar: i.autoIniciar,
+            predeterminada: clave === pred,
+            implicita: false,
+            proceso: id,
+            credencial: id,
+          };
+        });
+    }
+    let version: string;
+    try {
+      version = await this.versionActiva(def, cfg);
+    } catch {
+      return [];
+    }
+    const c = cfg.servicios.datos[def.id];
+    return [
+      {
+        id: idInstancia(def.id, claveDe(def, version)),
+        servicio: def.id,
+        clave: claveDe(def, version),
+        version,
+        puerto: c.puerto,
+        autoIniciar: c.autoIniciar,
+        predeterminada: true,
+        implicita: true,
+        proceso: def.id,
+        credencial: def.id,
+      },
+    ];
+  }
+
+  /** Instancia de `ref` (un servicio = su predeterminada). */
+  private async objetivo(
+    ref: string,
+    cfg: Config,
+  ): Promise<{ def: DefServicio; inst: InstanciaResuelta }> {
+    if (esIdServicioDatos(ref)) {
+      const def = this.requerir(ref);
+      const pred = (await this.resolver(def, cfg)).find((i) => i.predeterminada);
+      if (!pred) throw this.noInstalado(def);
+      return { def, inst: pred };
+    }
+    const { servicio } = parsearInstancia(ref);
+    const def = this.requerir(servicio);
+    const inst = (await this.resolver(def, cfg)).find((i) => i.id === ref);
+    if (!inst) {
+      throw new ErrorWolf('instancias.no_existe', `No existe la instancia ${ref}.`, { id: ref });
+    }
+    return { def, inst };
+  }
+
+  private servicioDe(ref: string): IdServicioDatos {
+    if (esIdServicioDatos(ref)) return ref;
+    return parsearInstancia(ref).servicio;
   }
 
   /** Carpeta de datos de `def` para `version` (usa su `claveDatos`). */
@@ -218,54 +446,104 @@ export class ServiciosDatos {
     return this.d.rutas.datos(def.id, version, clave ? (v) => clave.call(def, v) : undefined);
   }
 
-  /** Credenciales guardadas o, la primera vez, generadas y guardadas. */
-  credenciales(id: IdServicioDatos): Promise<Credenciales> {
-    return this.d.credenciales.obtenerOCrear(id, () => ({
-      usuario: USUARIO_POR_DEFECTO[id],
+  /** data/<servicio>/<clave> de una instancia. */
+  carpetaInstancia(servicio: IdServicioDatos, clave: string): string {
+    return this.d.rutas.datos(servicio, clave, () => clave);
+  }
+
+  /**
+   * Credenciales guardadas o, la primera vez, generadas y guardadas. Un servicio = las de su
+   * instancia predeterminada.
+   */
+  async credenciales(ref: IdServicioDatos | IdInstancia): Promise<Credenciales> {
+    let clave: ClaveCredencial = ref;
+    const servicio = this.servicioDe(ref);
+    if (esIdServicioDatos(ref) && this.def(ref)) {
+      const cfg = await this.d.leerConfig();
+      const pred = (await this.resolver(this.requerir(ref), cfg)).find((i) => i.predeterminada);
+      if (pred) clave = pred.credencial;
+    }
+    return this.credencialesDe(clave, servicio);
+  }
+
+  private credencialesDe(clave: ClaveCredencial, servicio: IdServicioDatos): Promise<Credenciales> {
+    return this.d.credenciales.obtenerOCrear(clave, () => ({
+      usuario: USUARIO_POR_DEFECTO[servicio],
       clave: generarClave(),
     }));
   }
 
-  private async contexto(def: DefServicio, version: string, cfg: Config): Promise<CtxServicio> {
+  private async contexto(
+    def: DefServicio,
+    inst: InstanciaResuelta,
+    version: string,
+  ): Promise<CtxServicio> {
     return {
       rutas: this.d.rutas,
       bin: this.d.rutas.bin(def.id, version),
-      datos: this.carpetaDatos(def, version),
-      puerto: cfg.servicios.datos[def.id].puerto,
+      datos: this.carpetaInstancia(def.id, inst.clave),
+      puerto: inst.puerto,
       version,
-      credenciales: await this.credenciales(def.id),
+      credenciales: await this.credencialesDe(inst.credencial, def.id),
       exec: this.d.exec,
     };
   }
 
-  /** Quién tiene ya asignado `puerto`: Nginx, un puerto fijo de la app u otro servicio propio. */
-  private asignadoA(id: IdServicioDatos, puerto: number, cfg: Config): string | null {
+  /**
+   * Quién tiene ya asignado `puerto`: Nginx, un puerto fijo de la app u otra instancia propia
+   * (`excepto` = la instancia que lo pide; sin ella, cuenta también la propia).
+   */
+  private asignadoA(puerto: number, cfg: Config, excepto: InstanciaResuelta | null): string | null {
     if (cfg.servicios.nginx.puerto === puerto) return 'Nginx';
     const fijo = puertosFijos(cfg).find((f) => puerto >= f.desde && puerto <= f.hasta);
     if (fijo) return fijo.nombre;
+    for (const p of puertosConfigurados(cfg)) {
+      if (p.puerto !== puerto) continue;
+      const propia =
+        excepto !== null &&
+        p.servicio === excepto.servicio &&
+        (p.clave === null ? excepto.implicita : p.clave === excepto.clave);
+      if (propia) continue;
+      const def = this.def(p.servicio);
+      const nombre = def?.nombre ?? NOMBRE_SERVICIO[p.servicio];
+      return p.clave === null || !conInstancias(cfg, p.servicio) ? nombre : `${nombre} ${p.clave}`;
+    }
     for (const otro of IDS_SERVICIO_DATOS) {
       const def = this.def(otro);
-      const extras = def?.puertosExtra ?? [];
-      const puertos = otro === id ? extras : [cfg.servicios.datos[otro].puerto, ...extras];
-      if (puertos.includes(puerto)) return def?.nombre ?? NOMBRE_SERVICIO[otro];
+      if ((def?.puertosExtra ?? []).includes(puerto)) return def?.nombre ?? NOMBRE_SERVICIO[otro];
     }
     return null;
   }
 
   /** Candidato a sugerir en lugar de `puerto` (falta comprobar que esté libre). */
-  private candidatoAlternativo(def: DefServicio, puerto: number, cfg: Config): number | undefined {
+  private candidatoAlternativo(
+    def: DefServicio,
+    inst: InstanciaResuelta,
+    puerto: number,
+    cfg: Config,
+  ): number | undefined {
     const c = puerto === def.puertoAlternativo ? def.puertoPorDefecto : def.puertoAlternativo;
     if (c === undefined || c === puerto) return undefined;
-    return this.asignadoA(def.id, c, cfg) === null ? c : undefined;
+    return this.asignadoA(c, cfg, inst) === null ? c : undefined;
   }
 
-  private puertos(def: DefServicio, cfg: Config): number[] {
-    return [cfg.servicios.datos[def.id].puerto, ...(def.puertosExtra ?? [])];
+  private puertos(def: DefServicio, inst: InstanciaResuelta): number[] {
+    return [inst.puerto, ...(def.puertosExtra ?? [])];
   }
 
-  private vivo(id: string): boolean {
-    const e = this.d.supervisor.estado(id);
+  private vivo(proceso: string): boolean {
+    const e = this.d.supervisor.estado(proceso);
     return e === 'encendido' || e === 'iniciando';
+  }
+
+  /** ¿Está encendida (o arrancando) la instancia predeterminada de `servicio`? */
+  async encendido(ref: IdServicioDatos | IdInstancia): Promise<boolean> {
+    try {
+      const { inst } = await this.objetivo(ref, await this.d.leerConfig());
+      return this.vivo(inst.proceso);
+    } catch {
+      return false;
+    }
   }
 
   /** Una sola consulta (netstat + tasklist) para todos los puertos. */
@@ -280,13 +558,17 @@ export class ServiciosDatos {
     return duenos;
   }
 
-  private async verificarPuertos(def: DefServicio, cfg: Config): Promise<void> {
-    const puertos = this.puertos(def, cfg);
-    const alt = this.candidatoAlternativo(def, puertos[0]!, cfg);
+  private async verificarPuertos(
+    def: DefServicio,
+    inst: InstanciaResuelta,
+    cfg: Config,
+  ): Promise<void> {
+    const puertos = this.puertos(def, inst);
+    const alt = this.candidatoAlternativo(def, inst, puertos[0]!, cfg);
     const duenos = await this.duenos(alt === undefined ? puertos : [...puertos, alt], false);
     for (const [i, puerto] of puertos.entries()) {
       const uso = duenos.get(puerto);
-      if (!uso || this.d.supervisor.pid(def.id) === uso.pid) continue;
+      if (!uso || this.d.supervisor.pid(inst.proceso) === uso.pid) continue;
       const libre = i === 0 && alt !== undefined && !duenos.has(alt) ? alt : undefined;
       throw new ErrorPuertoOcupado(puerto, uso.pid, uso.nombre, libre);
     }
@@ -316,38 +598,69 @@ export class ServiciosDatos {
     }
   }
 
-  iniciar(id: IdServicioDatos): Promise<void> {
-    return this.enCola(id, () => this.iniciarSinCola(id));
+  private nombreDe(def: DefServicio, inst: InstanciaResuelta): string {
+    return inst.implicita ? def.nombre : `${def.nombre} ${inst.clave}`;
   }
 
-  private async iniciarSinCola(id: IdServicioDatos): Promise<void> {
-    const def = this.requerir(id);
-    if (this.vivo(id)) return;
-    const cfg = await this.d.leerConfig();
-    const version = await this.versionActiva(def, cfg);
+  /** Enciende un servicio (su predeterminada) o una instancia. */
+  iniciar(ref: IdServicioDatos | IdInstancia): Promise<void> {
+    return this.enCola(this.servicioDe(ref), async () => {
+      const cfg = await this.d.leerConfig();
+      const { def, inst } = await this.objetivo(ref, cfg);
+      await this.iniciarSinCola(def, inst, cfg);
+    });
+  }
+
+  private async iniciarSinCola(
+    def: DefServicio,
+    inst: InstanciaResuelta,
+    cfg: Config,
+  ): Promise<void> {
+    if (this.vivo(inst.proceso)) return;
+    const version = await this.binariosDe(def, inst);
     this.cacheDuenos = null;
-    await this.verificarPuertos(def, cfg);
-    const ctx = await this.contexto(def, version, cfg);
+    await this.verificarPuertos(def, inst, cfg);
+    const ctx = await this.contexto(def, inst, version);
     await this.prepararDatos(def, ctx);
     const proceso = await def.proceso(ctx);
-    await this.d.supervisor.iniciar({ ...proceso, id: def.id, nombre: def.nombre });
+    await this.d.supervisor.iniciar({
+      ...proceso,
+      id: inst.proceso,
+      nombre: this.nombreDe(def, inst),
+      // Con varias instancias cada una escribe su propio registro.
+      ...(inst.implicita ? {} : { log: this.d.rutas.logs(`${def.id}-${inst.clave}.log`) }),
+    });
   }
 
-  detener(id: IdServicioDatos): Promise<void> {
-    return this.enCola(id, () => this.detenerSinCola(id));
+  /** Apaga un servicio (su predeterminada) o una instancia. */
+  detener(ref: IdServicioDatos | IdInstancia): Promise<void> {
+    return this.enCola(this.servicioDe(ref), async () => {
+      if (esIdServicioDatos(ref)) this.requerir(ref);
+      const cfg = await this.d.leerConfig();
+      let objetivo: { def: DefServicio; inst: InstanciaResuelta };
+      try {
+        objetivo = await this.objetivo(ref, cfg);
+      } catch (e) {
+        // Sin instalar (o sin la instancia) puede quedar un proceso con ese id en el supervisor.
+        if (!(e instanceof ErrorWolf && e.codigo === 'servicios.desconocido')) {
+          await this.d.supervisor.detener(ref);
+          return;
+        }
+        throw e;
+      }
+      await this.detenerSinCola(objetivo.def, objetivo.inst);
+    });
   }
 
-  private async detenerSinCola(id: IdServicioDatos): Promise<void> {
-    const def = this.requerir(id);
-    const pid = this.d.supervisor.pid(id);
+  private async detenerSinCola(def: DefServicio, inst: InstanciaResuelta): Promise<void> {
+    const pid = this.d.supervisor.pid(inst.proceso);
     this.cacheDuenos = null;
     if (pid !== null && def.detenerLimpio) {
       // Sin esto, la salida limpia contaría como caída y el supervisor lo relanzaría.
-      this.d.supervisor.marcarDeteniendo?.(id);
+      this.d.supervisor.marcarDeteniendo?.(inst.proceso);
       try {
-        const cfg = await this.d.leerConfig();
-        const version = await this.versionActiva(def, cfg);
-        await def.detenerLimpio(await this.contexto(def, version, cfg));
+        const version = await this.binariosDe(def, inst);
+        await def.detenerLimpio(await this.contexto(def, inst, version));
         // Consulta directa al sistema (sin lanzar tasklist cada 200 ms).
         const existe = this.d.existePid ?? pidExiste;
         const limite = Date.now() + ESPERA_APAGADO_MS;
@@ -356,13 +669,13 @@ export class ServiciosDatos {
         // si el apagado limpio falla, el supervisor lo detiene a la fuerza
       }
     }
-    await this.d.supervisor.detener(id);
+    await this.d.supervisor.detener(inst.proceso);
   }
 
   /** Valida (1024–65535, libre y no asignado a otro servicio propio), guarda y reinicia si corría. */
-  cambiarPuerto(id: IdServicioDatos, puerto: number): Promise<void> {
-    return this.enCola(id, async () => {
-      this.requerir(id);
+  cambiarPuerto(ref: IdServicioDatos | IdInstancia, puerto: number): Promise<void> {
+    return this.enCola(this.servicioDe(ref), async () => {
+      if (esIdServicioDatos(ref)) this.requerir(ref);
       if (!Number.isInteger(puerto) || puerto < 1024 || puerto > 65535) {
         throw new ErrorWolf(
           'servicios.puerto_invalido',
@@ -370,8 +683,10 @@ export class ServiciosDatos {
         );
       }
       const cfg = await this.d.leerConfig();
-      if (cfg.servicios.datos[id].puerto === puerto) return;
-      const otro = this.asignadoA(id, puerto, cfg);
+      const objetivo = await this.objetivoOImplicito(ref, cfg);
+      const { inst } = objetivo;
+      if (inst.puerto === puerto) return;
+      const otro = this.asignadoA(puerto, cfg, inst);
       if (otro !== null) {
         throw new ErrorWolf(
           'servicios.puerto_asignado',
@@ -380,89 +695,189 @@ export class ServiciosDatos {
         );
       }
       const uso = await this.d.plataforma.quienUsaPuerto(puerto);
-      if (uso && uso.pid !== this.d.supervisor.pid(id)) {
+      if (uso && uso.pid !== this.d.supervisor.pid(inst.proceso)) {
         throw new ErrorPuertoOcupado(puerto, uso.pid, uso.nombre);
       }
-      const estaba = this.vivo(id);
+      const estaba = this.vivo(inst.proceso);
       await this.d.modificarConfig((c) => {
-        c.servicios.datos[id].puerto = puerto;
+        if (inst.implicita) c.servicios.datos[inst.servicio].puerto = puerto;
+        else {
+          const i = c.servicios.datos[inst.servicio].instancias?.[inst.clave];
+          if (i) i.puerto = puerto;
+          reflejarPredeterminada(c, inst.servicio);
+        }
       });
       this.cacheDuenos = null;
-      if (estaba) {
-        await this.detenerSinCola(id);
-        await this.iniciarSinCola(id);
+      if (estaba && objetivo.def) {
+        const nueva = { ...inst, puerto };
+        await this.detenerSinCola(objetivo.def, nueva);
+        await this.iniciarSinCola(objetivo.def, nueva, await this.d.leerConfig());
       }
     });
   }
 
-  /** Borra data/<id> (todas sus versiones) si `confirmacion === id`; antes detiene el servicio. */
-  borrarDatos(id: IdServicioDatos, confirmacion: string): Promise<void> {
-    if (!esIdServicioDatos(id)) return Promise.reject(new Error(`Servicio desconocido: ${id}`));
-    return this.enCola(id, async () => {
-      const nombre = this.def(id)?.nombre ?? NOMBRE_SERVICIO[id];
+  /**
+   * Como `objetivo`, pero un servicio sin instalar también vale (su puerto se puede elegir antes
+   * de instalarlo, como hasta ahora).
+   */
+  private async objetivoOImplicito(
+    ref: string,
+    cfg: Config,
+  ): Promise<{ def: DefServicio | undefined; inst: InstanciaResuelta }> {
+    if (esIdServicioDatos(ref)) {
+      const def = this.requerir(ref);
+      const pred = (await this.resolver(def, cfg)).find((i) => i.predeterminada);
+      if (pred) return { def, inst: pred };
+      const c = cfg.servicios.datos[ref];
+      return {
+        def,
+        inst: {
+          id: idInstancia(ref, 'actual'),
+          servicio: ref,
+          clave: 'actual',
+          version: '',
+          puerto: c.puerto,
+          autoIniciar: c.autoIniciar,
+          predeterminada: true,
+          implicita: true,
+          proceso: ref,
+          credencial: ref,
+        },
+      };
+    }
+    return this.objetivo(ref, cfg);
+  }
+
+  /**
+   * Borra datos con confirmación escrita:
+   * - un servicio (`confirmacion === id`): data/<id> entero, todas sus ramas (como hasta ahora);
+   * - una instancia (`confirmacion === id` de la instancia): solo data/<servicio>/<clave>.
+   * Antes detiene lo que use esos datos.
+   */
+  borrarDatos(id: IdServicioDatos | IdInstancia, confirmacion: string): Promise<void> {
+    if (!esIdServicioDatos(id) && !esIdInstancia(id)) {
+      return Promise.reject(new Error(`Servicio desconocido: ${String(id)}`));
+    }
+    const servicio = this.servicioDe(id);
+    return this.enCola(servicio, async () => {
+      const nombre = this.def(servicio)?.nombre ?? NOMBRE_SERVICIO[servicio];
+      const nombreObjetivo = esIdServicioDatos(id) ? nombre : id;
       if (confirmacion !== id) {
         throw new ErrorWolf(
           'servicios.confirmacion_borrado',
-          `Para borrar los datos de ${nombre} escriba "${id}".`,
-          { nombre, id },
+          `Para borrar los datos de ${nombreObjetivo} escriba "${id}".`,
+          { nombre: nombreObjetivo, id },
         );
       }
-      if (this.d.supervisor.estado(id) !== 'apagado') {
-        if (this.def(id)) await this.detenerSinCola(id);
-        else await this.d.supervisor.detener(id);
+      const def = this.def(servicio);
+      const cfg = await this.d.leerConfig();
+      const insts = def ? await this.resolver(def, cfg) : [];
+      let carpeta: string;
+      if (esIdServicioDatos(id)) {
+        for (const inst of insts) {
+          if (this.d.supervisor.estado(inst.proceso) !== 'apagado' && def) {
+            await this.detenerSinCola(def, inst);
+          }
+        }
+        if (this.d.supervisor.estado(id) !== 'apagado') await this.d.supervisor.detener(id);
+        carpeta = path.join(this.d.rutas.base, 'data', id);
+      } else {
+        const { clave } = parsearInstancia(id);
+        const inst = insts.find((i) => i.id === id);
+        if (inst && def && this.d.supervisor.estado(inst.proceso) !== 'apagado') {
+          await this.detenerSinCola(def, inst);
+        }
+        if (this.d.supervisor.estado(id) !== 'apagado') await this.d.supervisor.detener(id);
+        carpeta = this.carpetaInstancia(servicio, clave);
       }
       const borrar = this.d.borrar ?? rm;
       try {
-        await borrar(path.join(this.d.rutas.base, 'data', id), OPCIONES_BORRADO);
+        await borrar(carpeta, OPCIONES_BORRADO);
       } catch (e) {
         throw new Error(
-          `No se pudieron borrar los datos de ${nombre}: cierre los programas que usen la carpeta e intente de nuevo.`,
+          `No se pudieron borrar los datos de ${nombreObjetivo}: cierre los programas que usen la carpeta e intente de nuevo.`,
           { cause: e },
         );
       }
     });
   }
 
+  private async estadoInstancia(inst: InstanciaResuelta): Promise<EstadoInstancia> {
+    return {
+      id: inst.id,
+      servicio: inst.servicio,
+      clave: inst.clave,
+      version: inst.version,
+      puerto: inst.puerto,
+      estado: this.d.supervisor.estado(inst.proceso),
+      pid: this.d.supervisor.pid(inst.proceso),
+      predeterminada: inst.predeterminada,
+      autoIniciar: inst.autoIniciar,
+      tieneDatos: existsSync(
+        path.join(this.carpetaInstancia(inst.servicio, inst.clave), MARCA_INICIALIZADO),
+      ),
+    };
+  }
+
+  /** Instancias de un servicio (o de todos), con su estado. */
+  async listaInstancias(servicio?: IdServicioDatos): Promise<EstadoInstancia[]> {
+    const cfg = await this.d.leerConfig();
+    const res: EstadoInstancia[] = [];
+    for (const def of this.d.definiciones()) {
+      if (servicio !== undefined && def.id !== servicio) continue;
+      for (const inst of await this.resolver(def, cfg)) res.push(await this.estadoInstancia(inst));
+    }
+    return res;
+  }
+
   /**
-   * Estados de los servicios definidos e instalados. Si un puerto propio lo ocupa otro proceso,
-   * el conflicto va en `mensaje`; si el proceso quedó en error, la cola de su log.
+   * Estados de los servicios definidos e instalados (el de su instancia predeterminada; con
+   * instancias configuradas, además la lista en `instancias`). Si un puerto propio lo ocupa otro
+   * proceso, el conflicto va en `mensaje`; si el proceso quedó en error, la cola de su log.
    */
   async estados(cfg?: Config): Promise<EstadoServicio[]> {
     const c = cfg ?? (await this.d.leerConfig());
     const sup = this.d.supervisor;
-    const res: { estado: EstadoServicio; def: DefServicio; ocupados: number[] }[] = [];
+    const res: {
+      estado: EstadoServicio;
+      def: DefServicio;
+      inst: InstanciaResuelta;
+      ocupados: number[];
+    }[] = [];
     for (const def of this.d.definiciones()) {
-      let version: string;
-      try {
-        version = await this.versionActiva(def, c);
-      } catch {
-        continue; // no instalado: no se muestra
-      }
-      const pid = sup.pid(def.id);
+      const insts = await this.resolver(def, c);
+      const inst = insts.find((i) => i.predeterminada);
+      if (!inst) continue; // no instalado: no se muestra
+      const pid = sup.pid(inst.proceso);
       const estado: EstadoServicio = {
         id: def.id,
         nombre: def.nombre,
         categoria: def.categoria,
-        version,
-        estado: sup.estado(def.id),
-        puertos: this.puertos(def, c),
+        version: inst.implicita
+          ? inst.version
+          : await this.binariosDe(def, inst).catch(() => inst.version),
+        estado: sup.estado(inst.proceso),
+        puertos: this.puertos(def, inst),
         pid,
       };
-      const error = estado.estado === 'error' ? sup.mensaje?.(def.id) : undefined;
+      const error = estado.estado === 'error' ? sup.mensaje?.(inst.proceso) : undefined;
       if (error) estado.mensaje = error;
+      if (!inst.implicita) {
+        estado.instancias = await Promise.all(insts.map((i) => this.estadoInstancia(i)));
+      }
       // Solo se buscan conflictos en puertos que responden y que no son de nuestro proceso.
       const ocupados: number[] = [];
       if (pid === null && !error) {
         for (const p of estado.puertos) if (await this.d.sonda(p)) ocupados.push(p);
       }
-      res.push({ estado, def, ocupados });
+      res.push({ estado, def, inst, ocupados });
     }
 
     const consulta: number[] = [];
     for (const r of res) {
       if (r.ocupados.length === 0) continue;
       consulta.push(...r.ocupados);
-      const alt = this.candidatoAlternativo(r.def, r.estado.puertos[0]!, c);
+      const alt = this.candidatoAlternativo(r.def, r.inst, r.estado.puertos[0]!, c);
       if (alt !== undefined) consulta.push(alt);
     }
     if (consulta.length > 0) {
@@ -473,7 +888,7 @@ export class ServiciosDatos {
           if (!uso) continue;
           const alt =
             puerto === r.estado.puertos[0]
-              ? this.candidatoAlternativo(r.def, puerto, c)
+              ? this.candidatoAlternativo(r.def, r.inst, puerto, c)
               : undefined;
           r.estado.mensaje = mensajeConflicto(
             puerto,
@@ -487,31 +902,446 @@ export class ServiciosDatos {
     return res.map((r) => r.estado);
   }
 
-  /** Inicia los instalados con `autoIniciar`; devuelve los errores sin cortar en el primero. */
+  /** Inicia las instancias con `autoIniciar`; devuelve los errores sin cortar en el primero. */
   async iniciarAutomaticos(): Promise<unknown[]> {
     const cfg = await this.d.leerConfig();
     const errores: unknown[] = [];
     for (const def of this.d.definiciones()) {
-      if (!cfg.servicios.datos[def.id].autoIniciar) continue;
-      if ((await this.d.instalador.instalados(def.id)).length === 0) continue;
-      try {
-        await this.iniciar(def.id);
-      } catch (e) {
-        if (!(e instanceof ErrorDetenidoAlIniciar)) errores.push(e);
+      for (const inst of await this.resolver(def, cfg)) {
+        if (!inst.autoIniciar) continue;
+        try {
+          await this.iniciar(inst.implicita ? def.id : inst.id);
+        } catch (e) {
+          if (!(e instanceof ErrorDetenidoAlIniciar)) errores.push(e);
+        }
       }
     }
     return errores;
   }
 
   /**
-   * Detiene en paralelo los que el supervisor conoce (cada apagado limpio puede tardar segundos:
-   * en serie no cabían en el margen de cierre); devuelve los errores sin cortar en el primero.
+   * Detiene en paralelo las instancias que el supervisor conoce (cada apagado limpio puede tardar
+   * segundos: en serie no cabían en el margen de cierre); devuelve los errores sin cortar.
    */
   async detenerTodos(): Promise<unknown[]> {
-    const activos = this.d
-      .definiciones()
-      .filter((def) => this.d.supervisor.estado(def.id) !== 'apagado');
-    const r = await Promise.allSettled(activos.map((def) => this.detener(def.id)));
+    const cfg = await this.d.leerConfig();
+    const activas: { def: DefServicio; inst: InstanciaResuelta }[] = [];
+    for (const def of this.d.definiciones()) {
+      for (const inst of await this.resolver(def, cfg)) {
+        if (this.d.supervisor.estado(inst.proceso) !== 'apagado') activas.push({ def, inst });
+      }
+    }
+    const r = await Promise.allSettled(
+      activas.map(({ def, inst }) => this.enCola(def.id, () => this.detenerSinCola(def, inst))),
+    );
     return r.flatMap((x) => (x.status === 'rejected' ? [x.reason as unknown] : []));
+  }
+
+  // ---- Instancias ----
+
+  /**
+   * Pasa un servicio de la forma de una sola instancia a instancias (lo mismo que la migración
+   * del arranque): la implícita queda como `<servicio>@<clave>` con el mismo puerto, la misma
+   * carpeta y las mismas credenciales, y el proceso vivo se renombra en el supervisor.
+   */
+  private async materializar(def: DefServicio, cfg: Config): Promise<Config> {
+    if (!multiInstancia(def) || conInstancias(cfg, def.id)) return cfg;
+    const implicita = (await this.resolver(def, cfg))[0];
+    if (!implicita) return cfg;
+    const vieja = await this.d.credenciales.leer(def.id);
+    if (vieja && !(await this.d.credenciales.leer(implicita.id))) {
+      await this.d.credenciales.guardar?.(implicita.id, vieja);
+    }
+    await this.d.modificarConfig((c) => {
+      const s = c.servicios.datos[def.id];
+      if (s.instancias && Object.keys(s.instancias).length > 0) return;
+      s.instancias = {
+        [implicita.clave]: {
+          version: implicita.version,
+          puerto: implicita.puerto,
+          autoIniciar: implicita.autoIniciar,
+        },
+      };
+      s.predeterminada = implicita.clave;
+      reflejarPredeterminada(c, def.id);
+    });
+    this.d.supervisor.renombrarRegistro?.(def.id, implicita.id);
+    return this.d.leerConfig();
+  }
+
+  /** Puertos reservados por el sistema (Hyper-V, WinNAT); sin poder leerlos, ninguno. */
+  private async reservados(): Promise<{ desde: number; hasta: number }[]> {
+    try {
+      const leer = (this.d.plataforma as Partial<Plataforma>).rangosReservados;
+      return leer ? await leer.call(this.d.plataforma, 'tcp') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Primer puerto desde el por defecto del servicio que no esté asignado (instancias propias,
+   * Nginx, puertos fijos de la app), ni en un rango reservado, ni en uso por otro proceso.
+   */
+  private async puertoLibre(def: DefServicio, cfg: Config): Promise<number> {
+    const reservados = await this.reservados();
+    for (let p = def.puertoPorDefecto, n = 0; p <= 65535 && n < 500; p++, n++) {
+      if (this.asignadoA(p, cfg, null) !== null) continue;
+      if (reservados.some((r) => p >= r.desde && p <= r.hasta)) continue;
+      if (await this.d.plataforma.quienUsaPuerto(p)) continue;
+      return p;
+    }
+    throw new ErrorWolf('instancias.sin_puerto_libre', 'No se encontró un puerto libre.');
+  }
+
+  /**
+   * Instancia nueva de `servicio` con `version` (ya instalada): su rama es la clave de datos de
+   * la versión. Puerto libre y credenciales propias (generadas al iniciarla). Si la rama ya tiene
+   * instancia, `instancias.existe`.
+   */
+  crearInstancia(servicio: IdServicioDatos, version: string): Promise<IdInstancia> {
+    return this.enCola(servicio, () => this.crearSinCola(servicio, version));
+  }
+
+  private async crearSinCola(servicio: IdServicioDatos, version: string): Promise<IdInstancia> {
+    const def = this.requerir(servicio);
+    if (!multiInstancia(def)) {
+      throw new ErrorWolf('instancias.una_sola', `${def.nombre} admite una sola instancia.`, {
+        nombre: def.nombre,
+      });
+    }
+    if (!(await this.d.instalador.instalados(servicio)).includes(version)) {
+      throw this.noInstalado(def);
+    }
+    const clave = claveDe(def, version);
+    if (!claveInstanciaValida(clave)) {
+      throw new ErrorWolf(
+        'instancias.id_invalido',
+        'El identificador de la instancia no es válido.',
+      );
+    }
+    const id = idInstancia(servicio, clave);
+    let cfg = await this.materializar(def, await this.d.leerConfig());
+    if ((await this.resolver(def, cfg)).some((i) => i.clave === clave)) {
+      throw new ErrorWolf('instancias.existe', `Ya existe la instancia ${id}.`, { id });
+    }
+    const puerto = await this.puertoLibre(def, cfg);
+    // Una carpeta de esa rama ya inicializada (de antes de las instancias) usa las credenciales
+    // de siempre del servicio: se copian para que siga abriendo.
+    const carpeta = this.carpetaInstancia(servicio, clave);
+    if (
+      existsSync(path.join(carpeta, MARCA_INICIALIZADO)) &&
+      !(await this.d.credenciales.leer(id))
+    ) {
+      const vieja = await this.d.credenciales.leer(servicio);
+      if (vieja) await this.d.credenciales.guardar?.(id, vieja);
+    }
+    await this.d.modificarConfig((c) => {
+      const s = c.servicios.datos[servicio];
+      s.instancias = { ...(s.instancias ?? {}), [clave]: { version, puerto, autoIniciar: false } };
+      if (!s.predeterminada || !Object.hasOwn(s.instancias, s.predeterminada)) {
+        s.predeterminada = clave;
+      }
+      reflejarPredeterminada(c, servicio);
+    });
+    cfg = await this.d.leerConfig();
+    this.cacheDuenos = null;
+    return id;
+  }
+
+  /** Marca la instancia como predeterminada del servicio. */
+  predeterminar(id: IdInstancia): Promise<void> {
+    const { servicio } = parsearInstancia(id);
+    return this.enCola(servicio, async () => {
+      const def = this.requerir(servicio);
+      const cfg = await this.materializar(def, await this.d.leerConfig());
+      const inst = (await this.resolver(def, cfg)).find((i) => i.id === id);
+      if (!inst)
+        throw new ErrorWolf('instancias.no_existe', `No existe la instancia ${id}.`, { id });
+      if (inst.implicita) return;
+      await this.d.modificarConfig((c) => {
+        c.servicios.datos[servicio].predeterminada = inst.clave;
+        reflejarPredeterminada(c, servicio);
+      });
+    });
+  }
+
+  /** Marca si la instancia (o la predeterminada del servicio) arranca con WolfCore Dev. */
+  autoIniciar(ref: IdServicioDatos | IdInstancia, valor: boolean): Promise<void> {
+    return this.enCola(this.servicioDe(ref), async () => {
+      const cfg = await this.d.leerConfig();
+      const { inst } = await this.objetivoOImplicito(ref, cfg);
+      await this.d.modificarConfig((c) => {
+        const s = c.servicios.datos[inst.servicio];
+        if (inst.implicita) s.autoIniciar = valor;
+        else {
+          const i = s.instancias?.[inst.clave];
+          if (i) i.autoIniciar = valor;
+          reflejarPredeterminada(c, inst.servicio);
+        }
+      });
+    });
+  }
+
+  /**
+   * Saca la instancia de la configuración (antes la detiene). Sus datos y sus credenciales
+   * quedan: se puede volver a crear y abre lo mismo. La última instancia no se quita.
+   */
+  quitar(id: IdInstancia): Promise<void> {
+    const { servicio } = parsearInstancia(id);
+    return this.enCola(servicio, async () => {
+      const def = this.requerir(servicio);
+      const cfg = await this.materializar(def, await this.d.leerConfig());
+      const insts = await this.resolver(def, cfg);
+      const inst = insts.find((i) => i.id === id);
+      if (!inst)
+        throw new ErrorWolf('instancias.no_existe', `No existe la instancia ${id}.`, { id });
+      if (insts.length <= 1 || inst.implicita) {
+        throw new ErrorWolf('instancias.ultima', `${id} es la única instancia de ${def.nombre}.`, {
+          id,
+        });
+      }
+      if (this.d.supervisor.estado(inst.proceso) !== 'apagado')
+        await this.detenerSinCola(def, inst);
+      await this.d.modificarConfig((c) => {
+        const s = c.servicios.datos[servicio];
+        if (!s.instancias) return;
+        delete s.instancias[inst.clave];
+        if (s.predeterminada === inst.clave) {
+          s.predeterminada = Object.keys(s.instancias).sort(compararVersiones)[0] ?? null;
+        }
+        reflejarPredeterminada(c, servicio);
+      });
+      this.cacheDuenos = null;
+    });
+  }
+
+  /**
+   * Instancia que usa `version` (los binarios de bin/<servicio>/<version>), o null. Con la forma
+   * de una sola instancia, la versión activa.
+   */
+  async versionEnUso(servicio: string, version: string): Promise<IdInstancia | null> {
+    const def = this.def(servicio);
+    if (!def) return null;
+    const cfg = await this.d.leerConfig();
+    const instaladas = await this.d.instalador.instalados(def.id);
+    for (const inst of await this.resolver(def, cfg)) {
+      const usa = inst.implicita
+        ? inst.version
+        : this.versionDeInstancia(def, inst.clave, inst.version, instaladas);
+      if (usa === version || inst.version === version) return inst.id;
+    }
+    return null;
+  }
+
+  // ---- Actualización y ramas nuevas ----
+
+  private async esperarSalud(inst: InstanciaResuelta): Promise<void> {
+    const limite = Date.now() + (this.d.plazoSaludMs ?? 60_000);
+    for (;;) {
+      const e = this.d.supervisor.estado(inst.proceso);
+      if (e === 'encendido' && (await this.d.sonda(inst.puerto))) return;
+      if (e === 'error' || e === 'apagado') {
+        throw new Error(this.d.supervisor.mensaje?.(inst.proceso) ?? 'El servicio no arrancó.');
+      }
+      if (Date.now() >= limite) throw new Error('El servicio no respondió a tiempo.');
+      await pausa(250);
+    }
+  }
+
+  private async arrancarYEsperar(def: DefServicio, inst: InstanciaResuelta): Promise<void> {
+    await this.iniciarSinCola(def, inst, await this.d.leerConfig());
+    await this.esperarSalud(inst);
+  }
+
+  private async volcados(
+    inst: InstanciaResuelta,
+    carpeta: string,
+  ): Promise<{ base: string; archivo: string }[]> {
+    if (!(CON_VOLCADO as readonly string[]).includes(inst.servicio) || !this.d.respaldo) return [];
+    const r = this.d.respaldo;
+    const res: { base: string; archivo: string }[] = [];
+    await mkdir(carpeta, { recursive: true });
+    for (const base of await r.listarBases(inst.id)) {
+      res.push({ base, archivo: await r.respaldar(inst.id, base, carpeta) });
+    }
+    return res;
+  }
+
+  private async instalarVersion(
+    def: DefServicio,
+    version: string,
+    o: { confirmarSinHuella?: true },
+  ): Promise<void> {
+    if ((await this.d.instalador.instalados(def.id)).includes(version)) return;
+    if (!this.d.instalarVersion) throw this.noInstalado(def);
+    await this.d.instalarVersion(def.id, version, o);
+  }
+
+  /**
+   * Actualiza una instancia a otra versión de su misma rama (un parche), con respaldo previo:
+   * 1. instala la versión nueva junto a la anterior (la anterior no se toca);
+   * 2. con la instancia encendida (con los binarios actuales), vuelca cada base (MySQL, MariaDB,
+   *    PostgreSQL) en `data/<servicio>/<clave>.respaldo-<fecha>.volcados`;
+   * 3. la detiene y copia en frío `data/<servicio>/<clave>` en `<clave>.respaldo-<fecha>`
+   *    (antes mide y comprueba el espacio libre; después compara tamaño y archivos);
+   * 4. cambia la versión, la inicia y espera a que responda.
+   * Si el respaldo falla, no cambia nada (`servicios.respaldo_fallo`). Si la versión nueva no
+   * arranca, aparta la carpeta tocada, devuelve la copia, vuelve a la versión anterior, la
+   * inicia y lanza `servicios.actualizacion_revertida`. El respaldo siempre queda.
+   */
+  actualizar(
+    id: IdInstancia,
+    version: string,
+    o: { confirmarSinHuella?: true } = {},
+  ): Promise<{ anterior: string; respaldo: { carpeta: string; volcados: string[] } }> {
+    const { servicio } = parsearInstancia(id);
+    return this.enCola(servicio, async () => {
+      const def = this.requerir(servicio);
+      let cfg = await this.materializar(def, await this.d.leerConfig());
+      const inst = (await this.resolver(def, cfg)).find((i) => i.id === id);
+      if (!inst)
+        throw new ErrorWolf('instancias.no_existe', `No existe la instancia ${id}.`, { id });
+      if (typeof version !== 'string' || claveDe(def, version) !== inst.clave) {
+        throw new ErrorWolf(
+          'servicios.otra_rama',
+          `${def.nombre} ${version} es de otra rama: créela como instancia nueva.`,
+          { nombre: def.nombre, version },
+        );
+      }
+      const anterior = await this.binariosDe(def, inst);
+      if (anterior === version) {
+        throw new ErrorWolf('servicios.misma_version', `${id} ya usa ${def.nombre} ${version}.`, {
+          id,
+          version,
+        });
+      }
+      await this.instalarVersion(def, version, o);
+
+      const carpeta = this.carpetaInstancia(servicio, inst.clave);
+      const sello = selloFecha(this.ahora);
+      const copia = `${carpeta}.respaldo-${sello}`;
+      const carpetaVolcados = `${copia}.volcados`;
+      const estaba = this.vivo(inst.proceso);
+      const fallaRespaldo = (e: unknown): ErrorWolf =>
+        e instanceof ErrorWolf && e.codigo === 'servicios.espacio_insuficiente'
+          ? e
+          : new ErrorWolf(
+              'servicios.respaldo_fallo',
+              `No se actualizó ${id}: falló el respaldo previo y no se cambió nada (${mensajeDe(e).slice(0, 300)}).`,
+              { nombre: id },
+            );
+
+      // 2. Volcados con los binarios actuales (hay que tenerla encendida).
+      let volcados: { base: string; archivo: string }[] = [];
+      const hayDatos = existsSync(path.join(carpeta, MARCA_INICIALIZADO));
+      try {
+        if (hayDatos && (CON_VOLCADO as readonly string[]).includes(servicio) && this.d.respaldo) {
+          if (!this.vivo(inst.proceso)) await this.arrancarYEsperar(def, inst);
+          volcados = await this.volcados(inst, carpetaVolcados);
+        }
+      } catch (e) {
+        if (!estaba && this.vivo(inst.proceso)) await this.detenerSinCola(def, inst);
+        throw fallaRespaldo(e);
+      }
+      // 3. Detenida, copia en frío.
+      await this.detenerSinCola(def, inst);
+      if (hayDatos) {
+        try {
+          await copiaEnFrio(carpeta, copia, this.d.fsCopia);
+        } catch (e) {
+          if (estaba) await this.arrancarYEsperar(def, inst).catch(() => undefined);
+          throw fallaRespaldo(e);
+        }
+      }
+      const respaldo = {
+        carpeta: hayDatos ? copia : '',
+        volcados: volcados.map((v) => v.archivo),
+      };
+
+      // 4. Versión nueva.
+      const fijar = (v: string): Promise<void> =>
+        this.d.modificarConfig((c) => {
+          const i = c.servicios.datos[servicio].instancias?.[inst.clave];
+          if (i) i.version = v;
+          reflejarPredeterminada(c, servicio);
+        });
+      await fijar(version);
+      cfg = await this.d.leerConfig();
+      const nueva = { ...inst, version };
+      try {
+        await this.arrancarYEsperar(def, nueva);
+      } catch (e) {
+        const motivo = mensajeDe(e).slice(0, 300);
+        await this.detenerSinCola(def, nueva).catch(() => undefined);
+        await fijar(anterior);
+        if (hayDatos) {
+          await devolverCopia(carpeta, copia, sello, this.d.fsCopia).catch((x: unknown) => {
+            console.error(`No se pudo devolver la copia de ${id}:`, mensajeDe(x));
+          });
+        }
+        const vieja = { ...inst, version: anterior };
+        if (estaba) await this.arrancarYEsperar(def, vieja).catch(() => undefined);
+        throw new ErrorWolf(
+          'servicios.actualizacion_revertida',
+          `${def.nombre} ${version} no arrancó (${motivo}); ${id} volvió a ${anterior}. El respaldo quedó en ${respaldo.carpeta || 'los volcados'}.`,
+          { nombre: id, version, anterior },
+        );
+      }
+      if (!estaba) await this.detenerSinCola(def, nueva);
+      return { anterior, respaldo };
+    });
+  }
+
+  /**
+   * Rama nueva = instancia nueva (`<servicio>@<clave de la rama>`), con su carpeta, su puerto y
+   * sus credenciales. Con `copiarDesde`, vuelca las bases de esa instancia y las restaura en la
+   * nueva; la de origen no se borra ni se detiene más de lo necesario (si estaba apagada, se
+   * enciende para el volcado y se vuelve a apagar).
+   */
+  nuevaRama(
+    servicio: IdServicioDatos,
+    version: string,
+    o: { copiarDesde?: IdInstancia; confirmarSinHuella?: true } = {},
+  ): Promise<IdInstancia> {
+    return this.enCola(servicio, async () => {
+      const def = this.requerir(servicio);
+      if (o.copiarDesde !== undefined && parsearInstancia(o.copiarDesde).servicio !== servicio) {
+        throw new ErrorWolf('instancias.no_existe', `No existe la instancia ${o.copiarDesde}.`, {
+          id: o.copiarDesde,
+        });
+      }
+      await this.instalarVersion(
+        def,
+        version,
+        o.confirmarSinHuella ? { confirmarSinHuella: true } : {},
+      );
+      const id = await this.crearSinCola(servicio, version);
+      if (o.copiarDesde === undefined) return id;
+      const cfg = await this.d.leerConfig();
+      const insts = await this.resolver(def, cfg);
+      const origen = insts.find((i) => i.id === o.copiarDesde);
+      const nueva = insts.find((i) => i.id === id)!;
+      if (!origen) {
+        throw new ErrorWolf('instancias.no_existe', `No existe la instancia ${o.copiarDesde}.`, {
+          id: o.copiarDesde,
+        });
+      }
+      if (!(CON_VOLCADO as readonly string[]).includes(servicio) || !this.d.respaldo) return id;
+      const estaba = this.vivo(origen.proceso);
+      const carpeta = path.join(
+        this.carpetaInstancia(servicio, nueva.clave) + `.copia-${selloFecha(this.ahora)}`,
+      );
+      let volcados: { base: string; archivo: string }[];
+      try {
+        if (!estaba) await this.arrancarYEsperar(def, origen);
+        volcados = await this.volcados(origen, carpeta);
+      } finally {
+        if (!estaba && this.vivo(origen.proceso)) await this.detenerSinCola(def, origen);
+      }
+      await this.arrancarYEsperar(def, nueva);
+      for (const v of volcados) await this.d.respaldo.restaurar(id, v.archivo, v.base);
+      return id;
+    });
   }
 }

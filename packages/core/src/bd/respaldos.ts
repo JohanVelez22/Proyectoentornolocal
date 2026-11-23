@@ -11,8 +11,9 @@ import { lanzadorPorDefecto } from '../plataforma/lanzar';
 import type { Ejecutor, Lanzador, Plataforma } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import { NOMBRE_SERVICIO } from '../servicios/definicion';
-import type { EstadoServicio } from '../tipos';
-import type { BasesDeDatos } from './basesDeDatos';
+import { esIdInstancia } from '../servicios/instancias';
+import type { EstadoInstancia, EstadoServicio } from '../tipos';
+import { motorDe, type BasesDeDatos, type ObjetivoBd } from './basesDeDatos';
 import { ClienteMysql, validarNombreBd, type FabricaConexion } from './clienteMysql';
 import { ClientePostgres, validarNombrePg, type FabricaConexionPg } from './clientePostgres';
 import type { DatosConexion, MotorBd } from './env';
@@ -51,7 +52,11 @@ export interface OrigenImportar {
 
 export interface DepsRespaldos {
   bd: Pick<BasesDeDatos, 'conexion' | 'crear' | 'tieneTablas'>;
-  servicios: { estados(): Promise<EstadoServicio[]> };
+  servicios: {
+    estados(): Promise<EstadoServicio[]>;
+    /** Instancias de un motor (para respaldar o restaurar una instancia concreta). */
+    instancias?(servicio: MotorBd): Promise<EstadoInstancia[]>;
+  };
   rutas: Rutas;
   exec: Ejecutor;
   /** Procesos largos en streaming (por defecto `spawn`). */
@@ -941,6 +946,33 @@ export class Respaldos {
   constructor(private readonly d: DepsRespaldos) {}
 
   /**
+   * Para una instancia concreta (`mysql@8.0`), unos `Respaldos` cuyas conexiones y binarios son
+   * los de esa instancia; para un motor, este mismo (su predeterminada).
+   */
+  private async para(objetivo: ObjetivoBd): Promise<{ r: Respaldos; motor: MotorBd }> {
+    const motor = motorDe(objetivo);
+    if (!esIdInstancia(objetivo)) return { r: this, motor };
+    const version = (await this.d.servicios.instancias?.(motor))?.find(
+      (i) => i.id === objetivo,
+    )?.version;
+    const r = new Respaldos({
+      ...this.d,
+      bd: {
+        conexion: () => this.d.bd.conexion(objetivo),
+        crear: (_m, nombre, o) => this.d.bd.crear(objetivo, nombre, o),
+        tieneTablas: (_m, base) => this.d.bd.tieneTablas(objetivo, base),
+      },
+      servicios: {
+        estados: async () =>
+          (await this.d.servicios.estados()).map((e) =>
+            e.id === motor && version ? { ...e, version } : e,
+          ),
+      },
+    });
+    return { r, motor };
+  }
+
+  /**
    * Carpeta por defecto de los respaldos (también la de las copias de seguridad automáticas):
    * `<Documentos>\WolfCore Dev\Respaldos`, con la carpeta Documentos real (OneDrive, redirigida).
    */
@@ -1107,12 +1139,13 @@ export class Respaldos {
   }
 
   async restaurar(
-    motor: MotorBd,
+    objetivo: ObjetivoBd,
     archivo: string,
     base: string,
     opts: OpcionesRestaurar = {},
   ): Promise<ResultadoRestaurar> {
-    return this.restaurarInterno('restaurar', motor, archivo, base, opts, []);
+    const { r, motor } = await this.para(objetivo);
+    return r.restaurarInterno('restaurar', motor, archivo, base, opts, []);
   }
 
   private async restaurarInterno(
@@ -1495,14 +1528,15 @@ export class Respaldos {
   }
 
   async respaldar(
-    motor: MotorBd,
+    objetivo: ObjetivoBd,
     base: string,
     carpetaDestino?: string,
   ): Promise<{ archivo: string }> {
+    const { r, motor } = await this.para(objetivo);
     const m = motorSql(motor, 'Respaldar');
     if (m === 'postgresql') validarNombrePg(base);
     else validarNombreBd(base);
-    return this.respaldarComo(m, base, carpetaDestino, base);
+    return r.respaldarComo(m, base, carpetaDestino, base);
   }
 
   /** Respalda `base` en `<carpeta>\<prefijo>-<AAAAMMDD-HHmm>.dump|.sql`. */
@@ -1641,11 +1675,13 @@ export class Respaldos {
    * --single-transaction): nunca se escribe en él.
    */
   async importar(
-    motor: MotorBd,
+    objetivo: ObjetivoBd,
     origen: OrigenImportar,
     destinoBase: string,
     opts: OpcionesRestaurar = {},
   ): Promise<ResultadoRestaurar> {
+    const { r, motor } = await this.para(objetivo);
+    if (r !== this) return r.importar(motor, origen, destinoBase, opts);
     const m = motorSql(motor, 'Importar');
     validarBase(m, destinoBase);
     validarOrigen(origen);

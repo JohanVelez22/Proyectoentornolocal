@@ -185,6 +185,51 @@ export class Supervisor {
     entrada.temporizador = null;
   }
 
+  /**
+   * Cambia el id de un proceso (p. ej. `mysql` → `mysql@8.4` al pasar a instancias) sin tocar el
+   * proceso: si está en memoria se re-registra con el id nuevo; si no (antes de `readoptar`),
+   * se renombra su registro en run/estado.json para que se readopte con el id nuevo. No hace
+   * nada si el id nuevo ya existe.
+   */
+  renombrarRegistro(viejo: string, nuevo: string): void {
+    if (viejo === nuevo) return;
+    const entrada = this.entradas.get(viejo);
+    if (entrada) {
+      if (this.entradas.has(nuevo)) return;
+      this.entradas.delete(viejo);
+      entrada.def = { ...entrada.def, id: nuevo };
+      this.entradas.set(nuevo, entrada);
+      const hijo = this.hijos.get(viejo);
+      if (hijo) {
+        this.hijos.delete(viejo);
+        this.hijos.set(nuevo, hijo);
+      }
+      this.guardarEstado();
+      this.emitir(entrada);
+      return;
+    }
+    let registros: unknown;
+    try {
+      registros = JSON.parse(readFileSync(this.rutas.estado(), 'utf8'));
+    } catch {
+      return;
+    }
+    if (!Array.isArray(registros)) return;
+    const lista = registros as { id?: unknown }[];
+    if (lista.some((r) => r?.id === nuevo)) return;
+    const r = lista.find((x) => x?.id === viejo);
+    if (!r) return;
+    r.id = nuevo;
+    const destino = this.rutas.estado();
+    const tmp = `${destino}.tmp`;
+    try {
+      writeFileSync(tmp, JSON.stringify(lista, null, 2));
+      renameSync(tmp, destino);
+    } catch (e) {
+      console.error('No se pudo renombrar el registro en estado.json:', e);
+    }
+  }
+
   alSalir(fn: (id: string, codigo: number | null) => void): void {
     this.oyentesSalida.push(fn);
   }

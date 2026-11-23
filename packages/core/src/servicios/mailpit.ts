@@ -16,6 +16,7 @@ export function defMailpit(): DefServicio {
     puertoPorDefecto: 1025,
     puertosExtra: [PUERTO_WEB],
     claveDatos: () => 'actual',
+    multiInstancia: false,
 
     async inicializar(c) {
       await mkdir(c.datos, { recursive: true });

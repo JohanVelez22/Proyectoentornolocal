@@ -7,7 +7,8 @@ import { puertoResponde } from '../procesos/sonda';
 import { ErrorDetenidoAlIniciar, type EstadoProceso } from '../procesos/supervisor';
 import { AlmacenCredenciales } from '../almacen';
 import type { Rutas } from '../rutas';
-import type { Config, EstadoServicio, IdServicioDatos } from '../tipos';
+import type { Config, EstadoServicio, IdInstancia, IdServicioDatos } from '../tipos';
+import { esIdInstancia } from './instancias';
 import { ejecutorPorDefecto } from '../plataforma/win';
 import { DEFINICIONES } from './datos';
 import {
@@ -42,6 +43,13 @@ export interface DepsServicios {
   borrar?: DepsServiciosDatos['borrar'];
   /** Para pruebas: ¿sigue vivo el PID? */
   existePid?: DepsServiciosDatos['existePid'];
+  /** Instalar una versión del catálogo (actualizar una instancia o crear una rama nueva). */
+  instalarVersion?: DepsServiciosDatos['instalarVersion'];
+  /** Volcados lógicos de las bases (respaldo previo a actualizar, copia a una rama nueva). */
+  respaldo?: DepsServiciosDatos['respaldo'];
+  fsCopia?: DepsServiciosDatos['fsCopia'];
+  reloj?: DepsServiciosDatos['reloj'];
+  plazoSaludMs?: DepsServiciosDatos['plazoSaludMs'];
   /** Ramas de PHP usadas por al menos un sitio (las aporta la tarea 8). */
   ramasEnUso?: () => Promise<string[]>;
   /** Upstreams para nginx.conf; por defecto, ramas en uso que estén instaladas. */
@@ -65,7 +73,7 @@ export interface DepsServicios {
   };
 }
 
-export type IdServicio = 'nginx' | 'ftp' | `php-${string}` | IdServicioDatos;
+export type IdServicio = 'nginx' | 'ftp' | `php-${string}` | IdServicioDatos | IdInstancia;
 
 /** Se muestran solo mientras el servicio propio del mismo id no esté instalado. */
 const EXTERNOS = [
@@ -129,6 +137,11 @@ export class Servicios {
       credenciales: d.credenciales ?? new AlmacenCredenciales(d.rutas),
       ...(d.borrar ? { borrar: d.borrar } : {}),
       ...(d.existePid ? { existePid: d.existePid } : {}),
+      ...(d.instalarVersion ? { instalarVersion: d.instalarVersion } : {}),
+      ...(d.respaldo ? { respaldo: d.respaldo } : {}),
+      ...(d.fsCopia ? { fsCopia: d.fsCopia } : {}),
+      ...(d.reloj ? { reloj: d.reloj } : {}),
+      ...(d.plazoSaludMs !== undefined ? { plazoSaludMs: d.plazoSaludMs } : {}),
       sonda: this.sonda,
       exec: d.exec ?? ejecutorPorDefecto,
       definiciones: () => definiciones ?? DEFINICIONES,
@@ -220,7 +233,7 @@ export class Servicios {
   private iniciarSinTolerancia(id: IdServicio): Promise<void> {
     if (id === 'nginx') return this.nginx.iniciar();
     if (id === 'ftp') return this.ftpObligatorio().iniciar();
-    if (esIdServicioDatos(id)) return this.datos.iniciar(id);
+    if (esIdServicioDatos(id) || esIdInstancia(id)) return this.datos.iniciar(id);
     return this.iniciarRama(id.slice('php-'.length));
   }
 
@@ -246,7 +259,7 @@ export class Servicios {
   async detener(id: IdServicio): Promise<void> {
     if (id === 'nginx') return this.nginx.detener();
     if (id === 'ftp') return this.ftpObligatorio().detener();
-    if (esIdServicioDatos(id)) return this.datos.detener(id);
+    if (esIdServicioDatos(id) || esIdInstancia(id)) return this.datos.detener(id);
     return this.detenerRama(id.slice('php-'.length));
   }
 

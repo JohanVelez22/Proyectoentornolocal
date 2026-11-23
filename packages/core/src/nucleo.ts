@@ -8,9 +8,12 @@ import {
   type BaseListada,
   type DatosConexion,
   type MotorBd,
+  type ObjetivoBd,
   type OpcionesCrearBase,
   type ResultadoCrear,
 } from './bd/basesDeDatos';
+import { migrarInstancias } from './migraciones/instancias';
+import { puertosConfigurados } from './servicios/instancias';
 import { detectarFormato, type FormatoRespaldo } from './bd/formato';
 import { InstaladorPgvector, type ResultadoBuildTools } from './bd/pgvector';
 import {
@@ -114,6 +117,7 @@ import type {
   EstadoHosts,
   EstadoServicio,
   EstadoTunel,
+  IdInstancia,
   IdServicioDatos,
   Sitio,
   TipoSitio,
@@ -646,7 +650,30 @@ export class Nucleo {
       modificarConfig: (fn) => sitios.modificarConfig(fn),
       credenciales,
     });
-    const servicios = new Servicios({
+    // eslint-disable-next-line prefer-const
+    let respaldosRef!: Respaldos;
+    let catalogoRef!: CatalogoVivo;
+    const servicios: Servicios = new Servicios({
+      instalarVersion: async (servicio, version, opciones) => {
+        const v = await catalogoRef.buscar(servicio, version);
+        if (!v) {
+          throw new ErrorWolf(
+            'catalogo.version_no_encontrada',
+            `No se encontró ${servicio} ${version} en el catálogo.`,
+            { servicio, version },
+          );
+        }
+        await instalador.instalar(v, opciones);
+      },
+      respaldo: {
+        listarBases: async (id): Promise<string[]> =>
+          (await bd.listar(id as ObjetivoBd)).map((b: BaseListada) => b.nombre),
+        respaldar: async (id, base, carpeta) =>
+          (await respaldosRef.respaldar(id as ObjetivoBd, base, carpeta)).archivo,
+        restaurar: async (id, archivo, base) => {
+          await respaldosRef.restaurar(id as ObjetivoBd, archivo, base);
+        },
+      },
       avisar: (a) => avisos.publicar(a),
       ftp,
       rutas,
@@ -707,6 +734,22 @@ export class Nucleo {
         puertosInternosVhost(cfg, id, await instalador.instalados('php')),
     });
     await migrarCredenciales(rutas, almacen, credenciales);
+    // Servicios de datos a instancias (`mysql` → `mysql@8.4`) antes de readoptar los procesos.
+    let avisoInstancias: string | null = null;
+    try {
+      await migrarInstancias({
+        rutas,
+        credenciales,
+        supervisor,
+        definiciones: () => servicios.datos.definiciones(),
+        instalados: (s) => instalador.instalados(s),
+        rangosReservados: () => plat.rangosReservados('tcp'),
+      });
+    } catch (e) {
+      avisoInstancias = mensajeDe(e);
+      console.error(avisoInstancias);
+    }
+    instalador.fijarVerificadorEnUso((s, v) => servicios.datos.versionEnUso(s, v));
     const urlBase = new UrlBase({
       rutas,
       ejecutor: o.ejecutor ?? ejecutorPorDefecto,
@@ -757,7 +800,17 @@ export class Nucleo {
       leerSitios: () => sitios.listar(),
       php: phpDe,
     });
-    const bd = new BasesDeDatos({ servicios, credenciales, rutas, exec });
+    const serviciosBd = {
+      estados: (): Promise<EstadoServicio[]> => servicios.estados(),
+      instancias: (m: MotorBd) => servicios.datos.listaInstancias(m),
+    };
+    const bd: BasesDeDatos = new BasesDeDatos({
+      servicios: serviciosBd,
+      credenciales,
+      rutas,
+      exec,
+    });
+    respaldosRef = new Respaldos({ bd, servicios: serviciosBd, rutas, exec, eventos, plataforma });
     const lanzar = o.lanzar ?? lanzadorPorDefecto;
     // Los pasos de receta llaman a Nucleo.guardarSitio: se resuelve tras construir el núcleo.
     // eslint-disable-next-line prefer-const
@@ -940,7 +993,7 @@ export class Nucleo {
       ia: gestorIa,
       avisos,
       bd,
-      respaldos: new Respaldos({ bd, servicios, rutas, exec, eventos, plataforma }),
+      respaldos: respaldosRef,
       pgvector: new InstaladorPgvector({
         rutas,
         eventos,
@@ -957,7 +1010,7 @@ export class Nucleo {
         },
         // Detención limpia de nuestro PostgreSQL (libera vector.dll); dice si estaba en marcha.
         detenerPostgres: async () => {
-          if (!vivo('postgresql')) return false;
+          if (!(await servicios.datos.encendido('postgresql'))) return false;
           await servicios.detener('postgresql');
           return true;
         },
@@ -1073,7 +1126,7 @@ export class Nucleo {
         ...(o.pidApp !== undefined ? { pidApp: o.pidApp } : {}),
         ...(o.pidPadre !== undefined ? { pidPadre: o.pidPadre } : {}),
       }),
-      catalogoVivo: new CatalogoVivo(rutas, plat, o.fetch ?? fetch),
+      catalogoVivo: (catalogoRef = new CatalogoVivo(rutas, plat, o.fetch ?? fetch)),
       contenedores: new Contenedores({
         exec,
         lanzar,
@@ -1155,6 +1208,7 @@ export class Nucleo {
       throw e;
     }
     if (avisoInicio) nucleo.avisosPendientes.push(avisoInicio);
+    if (avisoInstancias) nucleo.avisosPendientes.push(avisoInstancias);
     // Nunca lanza: una carpeta vigilada que ya no existe solo deja de dar sugerencias.
     await nucleo.vigilante.vigilar((await leerConfig()).proyectos.carpetaVigilada);
     // El prepend y wolfdump al día siempre: un sitio con la captura de otra sesión los carga.
@@ -1198,19 +1252,19 @@ export class Nucleo {
    * `autoIniciar`; se detiene si el núcleo se cierra.
    */
   private async iniciarAutomaticos(): Promise<string[]> {
-    const cfg = await this.config.leer();
     const errores: string[] = [];
-    for (const id of IDS_SERVICIO_DATOS) {
+    const instancias = await this.servicios.datos.listaInstancias();
+    for (const inst of instancias) {
       if (this.cerrado) break;
-      if (!cfg.servicios.datos[id].autoIniciar) continue;
-      const def = this.servicios.datos.def(id);
+      if (!inst.autoIniciar) continue;
+      const def = this.servicios.datos.def(inst.servicio);
       if (!def) continue;
-      if ((await this.instalador.instalados(id)).length === 0) continue;
-      if (this.cerrado) break;
+      const varias = instancias.filter((i) => i.servicio === inst.servicio).length > 1;
       try {
-        await this.servicios.iniciar(id);
+        // La única instancia de un servicio se enciende por el servicio (como siempre).
+        await this.servicios.iniciar(varias ? inst.id : inst.servicio);
       } catch (e) {
-        errores.push(`${def.nombre}: ${mensajeDe(e)}`);
+        errores.push(`${def.nombre}${varias ? ` ${inst.clave}` : ''}: ${mensajeDe(e)}`);
       }
     }
     // Después de los servicios (los procesos suelen usar la base de datos).
@@ -1303,9 +1357,7 @@ export class Nucleo {
     if (!(IDS_SERVICIO_DATOS as readonly string[]).includes(id)) {
       throw new Error('El servicio no admite el arranque automático.');
     }
-    await this.sitios.modificarConfig((c) => {
-      c.servicios.datos[id].autoIniciar = valor;
-    });
+    await this.servicios.datos.autoIniciar(id, valor);
   }
 
   /** Borra los datos de un servicio; `confirmacion` debe ser su id. */
@@ -1315,26 +1367,26 @@ export class Nucleo {
 
   // ---- Bases de datos ----
 
-  listarBases(motor: MotorBd): Promise<BaseListada[]> {
+  listarBases(motor: ObjetivoBd): Promise<BaseListada[]> {
     return this.bd.listar(motor);
   }
 
-  crearBase(motor: MotorBd, nombre: string, opts?: OpcionesCrearBase): Promise<ResultadoCrear> {
+  crearBase(motor: ObjetivoBd, nombre: string, opts?: OpcionesCrearBase): Promise<ResultadoCrear> {
     return this.bd.crear(motor, nombre, opts);
   }
 
   /** Borra una base; `confirmacion` debe ser su nombre exacto. */
-  borrarBase(motor: MotorBd, nombre: string, confirmacion: string): Promise<void> {
+  borrarBase(motor: ObjetivoBd, nombre: string, confirmacion: string): Promise<void> {
     return this.bd.borrar(motor, nombre, confirmacion);
   }
 
   /** Datos de conexión del motor, con su clave (solo para "Datos de conexión"). */
-  conexionBd(motor: MotorBd): Promise<DatosConexion> {
+  conexionBd(motor: ObjetivoBd): Promise<DatosConexion> {
     return this.bd.conexion(motor);
   }
 
   bloqueEnvBd(
-    motor: MotorBd,
+    motor: ObjetivoBd,
     base: string,
     tipoProyecto: TipoSitio | 'generico',
     envActual?: string,
@@ -1347,7 +1399,7 @@ export class Nucleo {
    * del renderer), se lee su `.env` (máx. 256 KB; si no hay, vacío) para respetar las variables
    * que ya usa, y se usa el tipo del sitio. Devuelve solo el bloque generado, nunca el `.env`.
    */
-  async bloqueEnvSitio(sitioId: string, motor: MotorBd, base: string): Promise<string> {
+  async bloqueEnvSitio(sitioId: string, motor: ObjetivoBd, base: string): Promise<string> {
     const sitio = (await this.config.leer()).sitios.find((s) => s.id === sitioId);
     if (!sitio) throw new Error('El sitio ya no existe.');
     const envActual = (await leerEnvAcotado(path.join(sitio.carpeta, '.env'))) ?? '';
@@ -1360,7 +1412,7 @@ export class Nucleo {
   }
 
   /** true si la base existe y tiene tablas (para pedir confirmación antes de sobrescribir). */
-  tieneTablas(motor: MotorBd, base: string): Promise<boolean> {
+  tieneTablas(motor: ObjetivoBd, base: string): Promise<boolean> {
     return this.bd.tieneTablas(motor, base);
   }
 
@@ -1370,7 +1422,7 @@ export class Nucleo {
   }
 
   restaurarBase(
-    motor: MotorBd,
+    motor: ObjetivoBd,
     archivo: string,
     base: string,
     opts?: OpcionesRestaurar,
@@ -1379,7 +1431,7 @@ export class Nucleo {
   }
 
   respaldarBase(
-    motor: MotorBd,
+    motor: ObjetivoBd,
     base: string,
     carpetaDestino?: string,
   ): Promise<{ archivo: string }> {
@@ -1388,7 +1440,7 @@ export class Nucleo {
 
   /** Copia una base de otro servidor (solo se lee el origen) a una base local. */
   importarBase(
-    motor: MotorBd,
+    motor: ObjetivoBd,
     origen: OrigenImportar,
     destinoBase: string,
     opts?: OpcionesRestaurar,
@@ -1645,8 +1697,8 @@ export class Nucleo {
   }
 
   /** Usuario y clave de un servicio propio para "Datos de conexión" (null si aún no se generaron). */
-  credenciales(id: IdServicioDatos): Promise<Credenciales | null> {
-    return this.almacenCredenciales.leer(id);
+  async credenciales(id: IdServicioDatos | IdInstancia): Promise<Credenciales | null> {
+    return this.almacenCredenciales.leer(await this.servicios.datos.claveCredencial(id));
   }
 
   // ---- Servidor MCP ----
@@ -2687,6 +2739,7 @@ function puertosServicios(cfg: Config, sitioId: string | null = null): number[] 
     PUERTO_ADMINER,
     PUERTO_WEB_MAILPIT,
     ...Object.values(cfg.servicios.datos).map((d) => d.puerto),
+    ...puertosConfigurados(cfg).map((p) => p.puerto),
   ]);
   const [desde, hasta] = cfg.ftp.pasivos;
   for (let p = Math.min(desde, hasta); p <= Math.max(desde, hasta); p++) r.add(p);

@@ -14,6 +14,7 @@ export function defOllama(): DefServicio {
     categoria: 'ia',
     puertoPorDefecto: 11434,
     claveDatos: () => 'actual',
+    multiInstancia: false,
 
     async inicializar(c) {
       await mkdir(modelos(c.datos), { recursive: true });

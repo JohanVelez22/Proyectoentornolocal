@@ -1,4 +1,4 @@
-import type { TipoSitio } from '../tipos';
+import type { IdInstancia, TipoSitio } from '../tipos';
 
 export type MotorBd = 'mysql' | 'mariadb' | 'postgresql' | 'mongodb';
 
@@ -8,6 +8,8 @@ export interface DatosConexion {
   usuario: string;
   /** null si el motor no tiene autenticación (MongoDB). */
   clave: string | null;
+  /** Instancia a la que apunta (solo con instancias configuradas). */
+  instancia?: IdInstancia;
 }
 
 const CI4 = /^\s*#?\s*database\.default\.\w+\s*=/m;

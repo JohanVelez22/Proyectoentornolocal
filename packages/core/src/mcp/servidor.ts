@@ -12,6 +12,8 @@ import { NOMBRE_BD_MONGO } from '../bd/basesDeDatos';
 import { NOMBRE_BD_MYSQL } from '../bd/clienteMysql';
 import { NOMBRE_BD_PG } from '../bd/clientePostgres';
 import type { MotorBd } from '../bd/env';
+import { esIdInstancia, parsearInstancia } from '../servicios/instancias';
+import type { IdInstancia } from '../tipos';
 import type { Dump, FiltroDumps, ResumenDump } from '../depuracion/receptor';
 import type { ErrorAgrupado, FiltroErrores, ResumenError } from '../depuracion/errores';
 import { enmascararSecretos } from '../patronesSecretos';
@@ -28,17 +30,18 @@ export interface OperacionesMcp {
   estadoServicios(): Promise<unknown>;
   iniciarServicio(id: string): Promise<unknown>;
   detenerServicio(id: string): Promise<unknown>;
-  listarBases(motor: MotorBd): Promise<unknown>;
-  crearBase(motor: MotorBd, nombre: string): Promise<unknown>;
-  respaldarBase(motor: MotorBd, base: string): Promise<unknown>;
+  /** `motor` es el motor (su instancia predeterminada) o una instancia (`mysql@8.0`). */
+  listarBases(motor: MotorBd | IdInstancia): Promise<unknown>;
+  crearBase(motor: MotorBd | IdInstancia, nombre: string): Promise<unknown>;
+  respaldarBase(motor: MotorBd | IdInstancia, base: string): Promise<unknown>;
   restaurarBase(
-    motor: MotorBd,
+    motor: MotorBd | IdInstancia,
     archivo: string,
     base: string,
     opts: { confirmarSobrescribir: boolean },
   ): Promise<unknown>;
   /** `confirmacion` es el nombre exacto de la base (como en la interfaz). */
-  borrarBase(motor: MotorBd, nombre: string, confirmacion: string): Promise<unknown>;
+  borrarBase(motor: MotorBd | IdInstancia, nombre: string, confirmacion: string): Promise<unknown>;
   /** Carpeta de respaldos: lo único que `restaurar_base` puede leer. */
   carpetaRespaldos(): Promise<string>;
   abrirTunel(sitioId: string): Promise<unknown>;
@@ -76,6 +79,8 @@ export interface RecetaPreparada {
 /** Datos estructurados de una confirmación (ya validados y sin saltos de línea ni bidi). */
 export interface DatosConfirmacion {
   motor?: MotorBd;
+  /** Instancia del motor (`mysql@8.0`), si no es la predeterminada. */
+  instancia?: string;
   base?: string;
   /** Nombre del archivo de respaldo (sin carpeta). */
   archivo?: string;
@@ -166,6 +171,22 @@ const nombreBase = z
   .min(1, 'Falta el nombre de la base.')
   .max(64, 'El nombre de la base es demasiado largo.');
 const sitioId = z.string().min(1, 'Falta el id del proyecto.').max(200);
+/** Instancia opcional del motor (`mysql@8.0`); sin ella, la predeterminada. */
+const instancia = z
+  .string()
+  .max(40)
+  .refine((x) => esIdInstancia(x), 'La instancia no es válida (p. ej. mysql@8.0).')
+  .optional()
+  .describe('Instancia del motor (p. ej. mysql@8.0); sin ella, la predeterminada.');
+
+/** Motor o instancia de ese motor; una instancia de otro motor se rechaza. */
+function objetivoBd(m: MotorBd, i: string | undefined): MotorBd | IdInstancia {
+  if (i === undefined) return m;
+  if (!esIdInstancia(i) || parsearInstancia(i).servicio !== m) {
+    throw new Error(`La instancia "${limpiar(i)}" no es de ${m}.`);
+  }
+  return i;
+}
 const idServicio = z
   .string()
   .regex(
@@ -729,28 +750,30 @@ export class ServidorMcp {
       'listar_bases',
       {
         description: 'Bases de datos de un motor local.',
-        inputSchema: { motor },
+        inputSchema: { motor, instancia },
         annotations: lectura,
       },
-      ({ motor: m }) => ejecutar(() => ops.listarBases(m)),
+      ({ motor: m, instancia: i }) => ejecutar(() => ops.listarBases(objetivoBd(m, i))),
     );
     mcp.registerTool(
       'crear_base',
       {
         description: 'Crea una base de datos vacía (con su usuario, si el motor lo usa).',
-        inputSchema: { motor, nombre: nombreBase },
+        inputSchema: { motor, nombre: nombreBase, instancia },
         annotations: cambio,
       },
-      ({ motor: m, nombre }) => ejecutar(() => ops.crearBase(m, nombre)),
+      ({ motor: m, nombre, instancia: i }) =>
+        ejecutar(() => ops.crearBase(objetivoBd(m, i), nombre)),
     );
     mcp.registerTool(
       'respaldar_base',
       {
         description: 'Respalda una base en la carpeta de respaldos de WolfCore Dev.',
-        inputSchema: { motor, base: nombreBase },
+        inputSchema: { motor, base: nombreBase, instancia },
         annotations: cambio,
       },
-      ({ motor: m, base }) => ejecutar(() => ops.respaldarBase(m, base)),
+      ({ motor: m, base, instancia: i }) =>
+        ejecutar(() => ops.respaldarBase(objetivoBd(m, i), base)),
     );
     mcp.registerTool(
       'restaurar_base',
@@ -768,20 +791,22 @@ export class ServidorMcp {
             ),
           base: nombreBase,
           sobrescribir: z.boolean().default(false),
+          instancia,
         },
         annotations: destructiva,
       },
-      ({ motor: m, archivo, base, sobrescribir }, extra) =>
+      ({ motor: m, archivo, base, sobrescribir, instancia: i }, extra) =>
         ejecutar(async () => {
           validarNombreBase(m, base);
+          const objetivo = objetivoBd(m, i);
           const ruta = await this.rutaRespaldo(archivo);
           const nombre = path.basename(ruta);
           return this.confirmarYEjecutar(
             'restaurar_base',
-            `Restaurar ${nombre} en la base "${base}" (${m})${sobrescribir ? ', reemplazando sus tablas' : ''}.`,
-            { motor: m, base, archivo: nombre, sobrescribir },
+            `Restaurar ${nombre} en la base "${base}" (${objetivo})${sobrescribir ? ', reemplazando sus tablas' : ''}.`,
+            { motor: m, base, archivo: nombre, sobrescribir, ...(i ? { instancia: i } : {}) },
             senal(extra),
-            () => ops.restaurarBase(m, ruta, base, { confirmarSobrescribir: sobrescribir }),
+            () => ops.restaurarBase(objetivo, ruta, base, { confirmarSobrescribir: sobrescribir }),
           );
         }),
     );
@@ -790,18 +815,19 @@ export class ServidorMcp {
       {
         description:
           'Borra una base de datos. Pide confirmación en la ventana de WolfCore Dev; no se puede deshacer.',
-        inputSchema: { motor, nombre: nombreBase },
+        inputSchema: { motor, nombre: nombreBase, instancia },
         annotations: destructiva,
       },
-      ({ motor: m, nombre }, extra) =>
+      ({ motor: m, nombre, instancia: i }, extra) =>
         ejecutar(async () => {
           validarNombreBase(m, nombre);
+          const objetivo = objetivoBd(m, i);
           return this.confirmarYEjecutar(
             'borrar_base',
-            `Borrar la base "${nombre}" (${m}). No se puede deshacer.`,
-            { motor: m, base: nombre },
+            `Borrar la base "${nombre}" (${objetivo}). No se puede deshacer.`,
+            { motor: m, base: nombre, ...(i ? { instancia: i } : {}) },
             senal(extra),
-            () => ops.borrarBase(m, nombre, nombre),
+            () => ops.borrarBase(objetivo, nombre, nombre),
           );
         }),
     );
