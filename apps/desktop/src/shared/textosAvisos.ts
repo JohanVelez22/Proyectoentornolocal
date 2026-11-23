@@ -22,7 +22,7 @@ function limpio(v: string | number | undefined, respaldo: string): string {
 
 interface Diccionario {
   porCodigo: Record<string, Plantilla>;
-  porTipo: Record<Aviso['tipo'] | 'version-nueva', TextoAviso>;
+  porTipo: Record<Aviso['tipo'], TextoAviso>;
 }
 
 const ES: Diccionario = {
@@ -78,6 +78,14 @@ const ES: Diccionario = {
     'avisos.vhost_manual_descartado': (d) => ({
       titulo: 'Vhost escrito a mano sin usar',
       cuerpo: `El vhost escrito a mano de ${limpio(d['fuente'], 'un sitio')} ya no pasa la revisión (cambió su carpeta, sus dominios o los puertos): se usa el generado. Revíselo en su sección Nginx.`,
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `Hay una versión nueva de ${limpio(d['servicio'], 'un servicio')}`,
+      cuerpo: `${limpio(d['nueva'], 'Una versión nueva')} ya está publicada (tiene ${limpio(d['actual'], 'otra')}). Ábrala en Servicios → Versiones para actualizar; nada se instala solo.`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `Nueva rama de ${limpio(d['servicio'], 'un servicio')}`,
+      cuerpo: `${limpio(d['nueva'], 'Una rama nueva')} es más nueva que la que usa (${limpio(d['actual'], '?')}). Se instala aparte, sin tocar sus datos.`,
     }),
     'doctor.hallazgos': (d) => ({
       titulo: 'El Doctor encontró errores en el entorno',
@@ -170,6 +178,14 @@ const EN: Diccionario = {
     'avisos.vhost_manual_descartado': (d) => ({
       titulo: 'Hand-written vhost not used',
       cuerpo: `The hand-written vhost of ${limpio(d['fuente'], 'a site')} no longer passes the check (its folder, domains or ports changed): the generated one is used. Review it in its Nginx section.`,
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `A new version of ${limpio(d['servicio'], 'a service')} is available`,
+      cuerpo: `${limpio(d['nueva'], 'A new version')} has been published (you have ${limpio(d['actual'], 'another one')}). Open Services → Versions to update; nothing is installed automatically.`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `New ${limpio(d['servicio'], 'service')} branch`,
+      cuerpo: `${limpio(d['nueva'], 'A new branch')} is newer than the one you use (${limpio(d['actual'], '?')}). It installs side by side, without touching your data.`,
     }),
     'doctor.hallazgos': (d) => ({
       titulo: 'The Doctor found errors in the environment',

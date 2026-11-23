@@ -136,6 +136,16 @@ describe('textoAviso', () => {
     ).toBe('A container stopped');
   });
 
+  it('versión nueva y rama nueva: servicio y versiones en el texto, sin prometer instalar solo', () => {
+    const datos = { servicio: 'mysql', actual: '8.4.13', nueva: '8.4.15' };
+    const es = textoAviso('es', { tipo: 'version-nueva', codigo: 'avisos.version_nueva', datos });
+    expect(es.titulo).toContain('mysql');
+    expect(es.cuerpo).toContain('8.4.15');
+    expect(es.cuerpo).toContain('8.4.13');
+    const en = textoAviso('en', { tipo: 'version-nueva', codigo: 'avisos.rama_nueva', datos });
+    expect(`${en.titulo} ${en.cuerpo}`).toContain('8.4.15');
+  });
+
   it('no deja pasar rutas ni textos largos de los datos', () => {
     const t = textoAviso('es', {
       tipo: 'servicio-caido',

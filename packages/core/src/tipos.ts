@@ -373,6 +373,16 @@ export const ConfigSchema = z.object({
         .prefault({}),
     })
     .prefault({}),
+  /** Catálogo en vivo: servicios de los que no se avisa de versiones nuevas. */
+  catalogo: z
+    .object({
+      silenciados: z
+        .array(z.string().regex(/^[a-z][a-z0-9-]{0,30}$/))
+        .max(32)
+        .default([])
+        .catch([]),
+    })
+    .prefault({}),
   /**
    * Proveedores de IA en la nube (id, tipo, nombre, URL base, modelo). Las claves NUNCA van
    * aquí: viven cifradas en etc/secretos/ y solo las lee el proceso principal.

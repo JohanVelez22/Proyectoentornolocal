@@ -21,6 +21,7 @@ import {
 } from './bd/respaldos';
 import { Instalador } from './catalogo/instalador';
 import type { ServicioInstalable, VersionDisponible } from './catalogo/catalogo';
+import { Novedades, SERVICIOS_NOVEDADES } from './catalogo/novedades';
 import { CatalogoVivo, type FiltroVersiones, type ListadoVersiones } from './catalogo/vivo';
 import {
   CentroAvisos,
@@ -209,6 +210,11 @@ export interface OpcionesNucleo {
   /** Para pruebas: git y GitHub con dependencias falsas. */
   git?: Git;
   github?: GitHub;
+  /**
+   * Espera antes de la primera revisión de versiones nuevas (por defecto 60 s: no compite con el
+   * arranque). Después, cada 24 h.
+   */
+  retrasoNovedadesMs?: number;
 }
 
 /** Fuente de registro tal como la ve la interfaz: sin la ruta del archivo. */
@@ -369,6 +375,9 @@ function avisarPoolSitio(avisos: CentroAvisos, a: AvisoPoolSitio): void {
 
 /** Revisión de vencimiento de la CA y de los certificados (cada 24 h y al iniciar). */
 const INTERVALO_VENCIMIENTOS_MS = 24 * 60 * 60 * 1000;
+/** Versiones nuevas: la primera revisión espera a que termine el arranque; luego, cada 24 h. */
+const RETRASO_NOVEDADES_MS = 60_000;
+const INTERVALO_NOVEDADES_MS = 24 * 60 * 60 * 1000;
 
 const mensajeDe = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
@@ -461,6 +470,10 @@ export class Nucleo {
   readonly contenedores: Contenedores;
   /** Catálogo en vivo de versiones (lo que el renderer lista e instala). */
   readonly catalogoVivo: CatalogoVivo;
+  /** Avisos de versiones nuevas (nunca instala: solo publica `version-nueva`). */
+  readonly novedades: Novedades;
+  private temporizadorNovedades: ReturnType<typeof setInterval> | null = null;
+  private esperaNovedades: ReturnType<typeof setTimeout> | null = null;
   /** Proveedores de IA en la nube; la clave la pasa el proceso principal en cada llamada. */
   readonly ia: GestorIa;
   /** Agentes: detección, instalación, MCP y apertura en un proyecto (nunca se lanzan solos). */
@@ -531,6 +544,20 @@ export class Nucleo {
     this.confianza = m.confianza;
     this.contenedores = m.contenedores;
     this.catalogoVivo = m.catalogoVivo;
+    this.novedades = new Novedades({
+      catalogo: this.catalogoVivo,
+      instalados: async (servicio) =>
+        Promise.all(
+          (await this.instalador.instalados(servicio)).map(async (clave) => ({
+            version: await this.instalador.versionInstalada(servicio, clave),
+          })),
+        ),
+      centro: this.avisos,
+      config: async () => {
+        const c = await this.config.leer();
+        return { activo: c.avisos.tipos['version-nueva'], silenciados: c.catalogo.silenciados };
+      },
+    });
     this.ia = m.ia;
     this.agentes = m.agentes;
     this.iniPhp = m.iniPhp;
@@ -1149,6 +1176,7 @@ export class Nucleo {
       });
     }
     nucleo.iniciarRevisionVencimientos();
+    nucleo.iniciarRevisionNovedades(o.retrasoNovedadesMs ?? RETRASO_NOVEDADES_MS);
     // Sin bloquear el arranque: un fallo queda en el estado del servicio y en un aviso.
     nucleo.arranqueAutomatico = nucleo
       .iniciarAutomaticos()
@@ -2459,6 +2487,36 @@ export class Nucleo {
     this.temporizadorVencimientos.unref?.();
   }
 
+  /**
+   * Revisa en segundo plano si hay versiones nuevas de lo instalado (tras `retraso` y cada 24 h).
+   * Sin red no publica nada; nunca instala ni lanza.
+   */
+  private iniciarRevisionNovedades(retraso: number): void {
+    const revisar = (): void => {
+      if (this.cerrado) return;
+      void this.novedades.revisarYPublicar();
+    };
+    this.esperaNovedades = setTimeout(revisar, retraso);
+    this.esperaNovedades.unref?.();
+    this.temporizadorNovedades = setInterval(revisar, INTERVALO_NOVEDADES_MS);
+    this.temporizadorNovedades.unref?.();
+  }
+
+  /** Silencia (o vuelve a activar) los avisos de versiones nuevas de un servicio. */
+  async silenciarVersiones(servicio: string, silenciar: boolean): Promise<string[]> {
+    if (!(SERVICIOS_NOVEDADES as readonly string[]).includes(servicio)) {
+      throw new ErrorWolf('catalogo.version_no_encontrada', `Servicio desconocido: ${servicio}`, {
+        servicio: servicio.slice(0, 40),
+        version: '',
+      });
+    }
+    await this.sitios.modificarConfig((c) => {
+      const resto = c.catalogo.silenciados.filter((s) => s !== servicio);
+      c.catalogo.silenciados = silenciar ? [...resto, servicio] : resto;
+    });
+    return (await this.config.leer()).catalogo.silenciados;
+  }
+
   /** Cambia las preferencias de avisos (notificaciones nativas y tipos) y las guarda. */
   async configurarAvisos(cambios: {
     nativas?: boolean;
@@ -2528,6 +2586,10 @@ export class Nucleo {
     this.temporizador = null;
     if (this.temporizadorVencimientos) clearInterval(this.temporizadorVencimientos);
     this.temporizadorVencimientos = null;
+    if (this.esperaNovedades) clearTimeout(this.esperaNovedades);
+    this.esperaNovedades = null;
+    if (this.temporizadorNovedades) clearInterval(this.temporizadorNovedades);
+    this.temporizadorNovedades = null;
     this.bajaFuentesAvisos?.();
     this.bajaFuentesAvisos = null;
     await this.avisos.guardado();

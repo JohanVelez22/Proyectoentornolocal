@@ -9,5 +9,6 @@ export const TIPOS_AVISO = [
   'proceso-error',
   'doctor',
   'contenedor-detenido',
+  'version-nueva',
 ] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number];

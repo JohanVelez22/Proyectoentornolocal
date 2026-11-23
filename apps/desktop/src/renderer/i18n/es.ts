@@ -981,6 +981,7 @@ export const es = {
         'proceso-error': 'Un proceso de proyecto falló',
         doctor: 'Diagnóstico (Doctor)',
         'contenedor-detenido': 'Un contenedor se detuvo',
+        'version-nueva': 'Hay una versión nueva de un servicio instalado',
       } as Record<string, string>,
       errorGuardar: 'No se pudieron guardar los avisos',
     },

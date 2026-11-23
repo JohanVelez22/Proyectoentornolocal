@@ -105,6 +105,19 @@ export class Instalador {
     return res.sort();
   }
 
+  /**
+   * Versión instalada en `bin/<servicio>/<clave>`: la de la marca que deja la instalación (en PHP
+   * la carpeta es la rama y la marca, el parche); sin marca, la clave.
+   */
+  async versionInstalada(servicio: string, clave: string): Promise<string> {
+    if (!ejecutableDe(servicio) || !claveValida(clave)) return clave;
+    const marca = await readFile(path.join(this.rutas.bin(servicio, clave), MARCA), 'utf8').catch(
+      () => null,
+    );
+    const v = marca?.trim() ?? '';
+    return claveValida(v) ? v : clave;
+  }
+
   async desinstalar(servicio: string, version: string): Promise<void> {
     await rm(this.rutas.bin(servicio, version), { recursive: true, force: true });
   }

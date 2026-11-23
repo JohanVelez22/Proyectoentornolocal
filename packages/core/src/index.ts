@@ -20,6 +20,7 @@ export * from './plataforma/index';
 export * from './catalogo/catalogo';
 export * from './catalogo/instalador';
 export * from './catalogo/vivo';
+export * from './catalogo/novedades';
 export { huellaFuerte, normalizarHuella, HuellaSchema } from './catalogo/huellas';
 export type { FuenteVersiones, ContextoFuente } from './catalogo/fuentes/tipos';
 export * from './procesos/sonda';

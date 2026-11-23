@@ -971,6 +971,7 @@ export const en: Textos = {
         'proceso-error': 'A project process failed',
         doctor: 'Diagnostics (Doctor)',
         'contenedor-detenido': 'A container stopped',
+        'version-nueva': 'A new version of an installed service',
       } as Record<string, string>,
       errorGuardar: 'The notice settings could not be saved',
     },
