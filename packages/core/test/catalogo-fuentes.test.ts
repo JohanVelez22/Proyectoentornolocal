@@ -219,7 +219,7 @@ describe('fuentes oficiales', () => {
     releases[1]!.assets[0]!.browser_download_url =
       'https://github.com/otro/mailpit/releases/download/v1.33.1/mailpit-windows-amd64.zip';
     const c = ctx({
-      'https://api.github.com/repos/axllent/mailpit/releases?per_page=30': JSON.stringify(releases),
+      'https://api.github.com/repos/axllent/mailpit/releases?per_page=10': JSON.stringify(releases),
     });
     await expect(fuenteMailpit.listar(c)).rejects.toBeInstanceOf(IndiceMalformado);
   });
@@ -239,7 +239,7 @@ describe('fuentes oficiales', () => {
       }[];
       releases[1]!.assets[0]!.browser_download_url = url;
       const c = ctx({
-        'https://api.github.com/repos/axllent/mailpit/releases?per_page=30':
+        'https://api.github.com/repos/axllent/mailpit/releases?per_page=10':
           JSON.stringify(releases),
       });
       await expect(fuenteMailpit.listar(c), url).rejects.toBeInstanceOf(IndiceMalformado);
@@ -258,7 +258,7 @@ describe('fuentes oficiales', () => {
     });
     const base = 'https://github.com/cloudflare/cloudflared/releases/download/2026.11.2/';
     const c = ctx({
-      'https://api.github.com/repos/cloudflare/cloudflared/releases?per_page=30': JSON.stringify([
+      'https://api.github.com/repos/cloudflare/cloudflared/releases?per_page=10': JSON.stringify([
         {
           tag_name: '2026.11.2',
           draft: false,
@@ -287,7 +287,7 @@ describe('fuentes oficiales', () => {
     });
     const base = 'https://github.com/cloudflare/cloudflared/releases/download/2026.11.2/';
     const c = ctx({
-      'https://api.github.com/repos/cloudflare/cloudflared/releases?per_page=30': JSON.stringify([
+      'https://api.github.com/repos/cloudflare/cloudflared/releases?per_page=10': JSON.stringify([
         {
           tag_name: '2026.11.2',
           draft: false,

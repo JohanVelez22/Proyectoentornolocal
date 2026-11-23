@@ -245,8 +245,12 @@ export class CatalogoVivo {
       const fecha = this.ahora.toISOString();
       await this.cache.guardar(servicio, fecha, versiones).catch(() => undefined);
       return { versiones: this.conHuellaFija(servicio, versiones), origen: 'vivo', fecha };
-    } catch {
+    } catch (e) {
       // Sin red, índice malformado o manipulado: caché (aunque esté vencida) o lista fija.
+      const motivo = (e instanceof Error ? e.message : String(e)).slice(0, 200);
+      console.warn(
+        `Catálogo de ${servicio}: se usa ${cache ? 'la caché' : 'la lista fija'} (${motivo})`,
+      );
       return cache ? conCache(cache) : fija();
     }
   }

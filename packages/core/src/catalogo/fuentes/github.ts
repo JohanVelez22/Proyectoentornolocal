@@ -32,6 +32,12 @@ const Release = z.object({
 });
 const Releases = z.array(Release);
 
+/**
+ * Releases por consulta: las 10 más nuevas bastan para ofrecer la última y las de antes, y cada
+ * release sin `digest` puede costar una lectura de su archivo de sumas.
+ */
+export const POR_PAGINA = 10;
+
 export interface OpcionesGithub {
   servicio: ServicioInstalable;
   dueno: string;
@@ -103,7 +109,7 @@ export function fuenteGithub(o: OpcionesGithub): FuenteVersiones {
       const crudo = Releases.safeParse(
         await leerIndiceJson(
           ctx,
-          `https://api.github.com/repos/${o.dueno}/${o.repo}/releases?per_page=30`,
+          `https://api.github.com/repos/${o.dueno}/${o.repo}/releases?per_page=${POR_PAGINA}`,
           {
             encabezados: {
               accept: 'application/vnd.github+json',

@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { catalogo, type VersionDisponible } from '../src/catalogo/catalogo';
 import type { FuenteVersiones } from '../src/catalogo/fuentes/tipos';
 import { CatalogoVivo, listaFija, TTL_CATALOGO_MS, validarIndice } from '../src/catalogo/vivo';
@@ -119,11 +119,25 @@ describe('CatalogoVivo', () => {
     });
   });
 
+  it('al caer a la caché o a la lista fija se registra el motivo (sin datos del usuario)', async () => {
+    const avisos: string[] = [];
+    const espia = vi.spyOn(console, 'warn').mockImplementation((...a: unknown[]) => {
+      avisos.push(a.map(String).join(' '));
+    });
+    try {
+      await catalogoCon({}, true).c.listar('redis');
+      expect(avisos.some((t) => t.includes('redis') && t.includes('lista fija'))).toBe(true);
+      expect(avisos.some((t) => t.includes('fetch failed'))).toBe(true);
+    } finally {
+      espia.mockRestore();
+    }
+  });
+
   it('un índice manipulado (URL ajena, huella de 63, asset de otro repo) cae a la caché o a la lista fija', async () => {
     const releases = (): {
       assets: { browser_download_url: string; digest: string | null }[];
     }[] => JSON.parse(fixture('github-mailpit.json')) as never;
-    const urlMailpit = 'https://api.github.com/repos/axllent/mailpit/releases?per_page=30';
+    const urlMailpit = 'https://api.github.com/repos/axllent/mailpit/releases?per_page=10';
     const manipulados: string[] = [];
     {
       const r = releases();

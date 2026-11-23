@@ -61,9 +61,9 @@ export function rutasOficiales(): Record<string, Ruta> {
     'https://nodejs.org/dist/index.json': fixture('node-index.json'),
     'https://api.nuget.org/v3-flatcontainer/python/index.json': fixture('nuget-index.json'),
     'https://getcomposer.org/versions': fixture('composer-versions.json'),
-    'https://api.github.com/repos/axllent/mailpit/releases?per_page=30':
+    'https://api.github.com/repos/axllent/mailpit/releases?per_page=10':
       fixture('github-mailpit.json'),
-    'https://api.github.com/repos/redis-windows/redis-windows/releases?per_page=30':
+    'https://api.github.com/repos/redis-windows/redis-windows/releases?per_page=10':
       fixture('github-redis.json'),
   };
   for (const v of ['26.13.1', '24.22.3', '22.23.5', '20.20.2']) {
