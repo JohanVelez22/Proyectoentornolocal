@@ -19,7 +19,7 @@ const masNueva = (a: VersionDisponible, b: VersionDisponible): number =>
 
 /**
  * Versión que se propone instalar: la más nueva del catálogo (en PHP, la más nueva de la rama).
- * El catálogo de Node solo trae las ramas LTS, así que la más nueva es la LTS actual.
+ * En Node, la más nueva de una rama LTS (el catálogo en vivo también trae la rama actual).
  */
 export function versionBasica(
   b: Basico,
@@ -27,6 +27,7 @@ export function versionBasica(
 ): VersionDisponible | undefined {
   return versiones
     .filter((v) => v.servicio === b.servicio && (!b.rama || v.rama === b.rama))
+    .filter((v) => b.servicio !== 'node' || v.soporte === undefined || v.soporte === 'lts')
     .sort(masNueva)[0];
 }
 

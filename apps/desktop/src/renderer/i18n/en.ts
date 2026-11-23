@@ -323,6 +323,19 @@ export const en: Textos = {
       'contenedores.demasiados_registros':
         'At most {maximo} container logs can be followed at once.',
       'contenedores.sin_confirmar': 'Confirm the action in the dialog.',
+      'catalogo.indice_invalido':
+        'The {servicio} version index failed validation; the saved list is used instead.',
+      'catalogo.sin_huella':
+        '{servicio} {version} has no published checksum: confirm the installation in the dialog.',
+      'catalogo.huella_debil':
+        '{servicio} {version} only has an MD5 checksum (weak): confirm the installation in the dialog.',
+      'catalogo.huella_no_coincide': 'The download does not match the published checksum.',
+      'catalogo.redireccion_ajena':
+        'The download tried to go to a site that is not allowed ({host}).',
+      'catalogo.demasiadas_redirecciones':
+        'The download made too many redirects (more than {maximo}).',
+      'catalogo.respuesta_grande': 'The server response is too large.',
+      'catalogo.version_no_encontrada': 'Version {version} of {servicio} is not in the catalog.',
     },
   },
   avisoInicio: {

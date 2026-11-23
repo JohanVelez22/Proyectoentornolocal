@@ -96,7 +96,7 @@ async function cargarBasicos(): Promise<void> {
     void ejecutar(`versiones-${b.servicio}`, () =>
       api().instalador.listarVersiones(b.servicio),
     ).then((v) => {
-      if (v) versiones.value = { ...versiones.value, [b.servicio]: v };
+      if (v) versiones.value = { ...versiones.value, [b.servicio]: v.versiones };
     });
   }
 }

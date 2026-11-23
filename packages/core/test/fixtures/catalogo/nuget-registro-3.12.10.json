@@ -1,0 +1,8 @@
+{
+  "@id": "https://api.nuget.org/v3/registration5-gz-semver2/python/3.12.10.json",
+  "catalogEntry": "https://api.nuget.org/v3/catalog0/data/2025.04.08.14.01.15/python.3.12.10.json",
+  "listed": true,
+  "packageContent": "https://api.nuget.org/v3-flatcontainer/python/3.12.10/python.3.12.10.nupkg",
+  "published": "2025-04-08T13:56:44.53+00:00",
+  "registration": "https://api.nuget.org/v3/registration5-gz-semver2/python/index.json"
+}

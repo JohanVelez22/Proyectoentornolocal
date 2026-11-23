@@ -1,0 +1,8 @@
+{
+  "@id": "https://api.nuget.org/v3/registration5-gz-semver2/python/3.13.1.json",
+  "catalogEntry": "https://api.nuget.org/v3/catalog0/data/2024.12.03.21.42.43/python.3.13.1.json",
+  "listed": true,
+  "packageContent": "https://api.nuget.org/v3-flatcontainer/python/3.13.1/python.3.13.1.nupkg",
+  "published": "2024-12-03T21:39:11.627+00:00",
+  "registration": "https://api.nuget.org/v3/registration5-gz-semver2/python/index.json"
+}

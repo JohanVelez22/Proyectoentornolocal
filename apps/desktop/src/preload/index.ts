@@ -140,7 +140,7 @@ const api: ApiEntorno = {
   mailpit: { noLeidos: () => invocar('mailpit.noLeidos') },
   avisoInicio: () => invocar('avisoInicio'),
   instalador: {
-    listarVersiones: (s) => invocar('instalador.listarVersiones', s),
+    listarVersiones: (s, filtro) => invocar('instalador.listarVersiones', s, filtro),
     instalar: (v) => invocar('instalador.instalar', v),
     instalados: (s) => invocar('instalador.instalados', s),
   },

@@ -163,17 +163,26 @@ function nucleoFalso() {
       { id: 'sitio:s1:error', nombre: 'Errores', grupo: 'sitio', sitioId: 's1' },
     ]),
     seguirRegistro: vi.fn(async () => vi.fn()),
-    listarVersiones: vi.fn(async (servicio: string) => [
-      {
-        servicio,
-        version: '1.28.0',
-        url: 'https://nginx.org/download/nginx-1.28.0.zip',
-        sha256: 'a'.repeat(64),
-        formato: 'zip',
-      },
-    ]),
+    listarCatalogo: vi.fn(async (servicio: string) => ({
+      versiones: [versionFalsa(servicio)],
+      origen: 'vivo',
+      fecha: '2026-11-23T00:00:00.000Z',
+    })),
+    buscarVersion: vi.fn(async (servicio: string, version: string) =>
+      version === '1.28.0' ? versionFalsa(servicio) : null,
+    ),
   };
   return { nucleo: crudo as unknown as NucleoIpc, crudo, oyentes };
+}
+
+function versionFalsa(servicio: string) {
+  return {
+    servicio,
+    version: '1.28.0',
+    url: 'https://nginx.org/download/nginx-1.28.0.zip',
+    sha256: 'a'.repeat(64),
+    formato: 'zip',
+  };
 }
 
 const sistema = {
@@ -366,7 +375,7 @@ describe('registrarIpc', () => {
       { servicio: 'nginx', version: '1.28.0', url: 'https://malo.example/x.zip', sha256: 'b' },
     )) as { ok: boolean };
     expect(r.ok).toBe(true);
-    expect(crudo.listarVersiones).toHaveBeenCalledWith('nginx');
+    expect(crudo.buscarVersion).toHaveBeenCalledWith('nginx', '1.28.0');
     expect(crudo.instalador.instalar).toHaveBeenCalledWith(
       expect.objectContaining({
         url: 'https://nginx.org/download/nginx-1.28.0.zip',
@@ -377,12 +386,48 @@ describe('registrarIpc', () => {
       { servicio: 'nginx', version: '9.9.9' },
       { servicio: 'composer', version: '1.28.0' },
       { servicio: 'nginx' },
+      { servicio: 'nginx', version: '1.28.0', confirmarSinHuella: 'si' },
+      { servicio: 'nginx', version: '1.28.0', confirmarSinHuella: false },
       'nginx',
     ]) {
       const x = (await canales.get('entorno:instalador.instalar')!({}, malo)) as { ok: boolean };
       expect(x.ok, JSON.stringify(malo)).toBe(false);
     }
     expect(crudo.instalador.instalar).toHaveBeenCalledTimes(1);
+    // La confirmación de instalar sin huella fuerte solo pasa como `true` literal.
+    await canales.get('entorno:instalador.instalar')!(
+      {},
+      { servicio: 'nginx', version: '1.28.0', confirmarSinHuella: true },
+    );
+    expect(crudo.instalador.instalar).toHaveBeenLastCalledWith(
+      expect.objectContaining({ version: '1.28.0' }),
+      { confirmarSinHuella: true },
+    );
+  });
+
+  it('instalador.listarVersiones valida servicio y filtro y devuelve el origen', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const llamar = (...a: unknown[]) =>
+      canales.get('entorno:instalador.listarVersiones')!({}, ...a) as Promise<{
+        ok: boolean;
+        valor?: { origen: string };
+      }>;
+    const r = await llamar('node', { rama: '22', todas: true });
+    expect(r).toMatchObject({ ok: true, valor: { origen: 'vivo' } });
+    expect(crudo.listarCatalogo).toHaveBeenLastCalledWith('node', { rama: '22', todas: true });
+    expect((await llamar('composer')).ok).toBe(true);
+    expect(crudo.listarCatalogo).toHaveBeenLastCalledWith('composer', {});
+    for (const malo of [
+      ['__proto__'],
+      ['node', { rama: '../x' }],
+      ['node', { todas: 'si' }],
+      ['node', { url: 'https://evil.example' }],
+      ['node', []],
+    ]) {
+      expect((await llamar(...malo)).ok, JSON.stringify(malo)).toBe(false);
+    }
   });
 
   it('instalador.instalados solo acepta servicios y herramientas del catálogo', async () => {

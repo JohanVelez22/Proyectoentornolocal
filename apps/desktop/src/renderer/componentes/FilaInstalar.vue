@@ -49,7 +49,7 @@ const estadoBarra = computed(() =>
 async function cargarVersiones(mostrar: boolean): Promise<void> {
   if (!mostrar || versiones.value || ocupado('versiones')) return;
   const r = await ejecutar('versiones', () => api().instalador.listarVersiones(props.servicio));
-  if (r) versiones.value = r;
+  if (r) versiones.value = r.versiones;
 }
 
 async function instalar(): Promise<void> {

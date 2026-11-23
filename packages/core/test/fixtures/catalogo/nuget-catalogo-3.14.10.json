@@ -1,0 +1,9 @@
+{
+  "@id": "https://api.nuget.org/v3/catalog0/data/2026.10.26.04.37.43/python.3.14.10.json",
+  "id": "python",
+  "version": "3.14.10",
+  "packageHash": "fZln2RPYmfZLoVEYVNaczQCatkuZyLHSuhhMhjzmgtHSFP+mlChqyVpVmjr5Wi2o6ZQ3WwK+B0vefqz9kCpTcQ==",
+  "packageHashAlgorithm": "SHA512",
+  "packageSize": 15589216,
+  "published": "2026-10-26T04:16:52.693Z"
+}

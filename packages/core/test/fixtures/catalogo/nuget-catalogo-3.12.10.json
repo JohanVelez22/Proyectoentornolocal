@@ -1,0 +1,9 @@
+{
+  "@id": "https://api.nuget.org/v3/catalog0/data/2025.04.08.14.01.15/python.3.12.10.json",
+  "id": "python",
+  "version": "3.12.10",
+  "packageHash": "u9pNz2iKlCEbYtUJaKkbOPMF0LjR7NkCafdKhvigpPzrt8oWKgdTpHaR6z3wyWQAm9PYGUxv0Zr66NX9AeHMDw==",
+  "packageHashAlgorithm": "SHA512",
+  "packageSize": 14515433,
+  "published": "2025-04-08T13:56:44.53Z"
+}

@@ -94,6 +94,7 @@ import {
   ramaPhp,
   RutasElegidas,
   servicioDelCatalogo,
+  filtroVersiones,
   servicioInstalable,
   texto,
   textoAcotado,
@@ -930,16 +931,29 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'mailpit.noLeidos': (n) => n.noLeidosCorreo(),
   // Se entrega una sola vez: una recarga del renderer no lo vuelve a mostrar.
   avisoInicio: (n) => n.tomarAvisoInicio(),
-  'instalador.listarVersiones': (n, _s, servicio) =>
-    n.listarVersiones(idNoVacio(servicio, 'servicio') as Parameters<Nucleo['listarVersiones']>[0]),
-  // El renderer solo elige servicio y versión: URL, huella y carpeta salen del catálogo oficial.
+  'instalador.listarVersiones': (n, _s, servicio, filtro) =>
+    n.listarCatalogo(servicioDelCatalogo(servicio), filtroVersiones(filtro)),
+  // El renderer solo elige servicio y versión (y, desde un diálogo, que acepta instalar sin
+  // huella fuerte): URL, huella y carpeta salen del catálogo oficial.
   'instalador.instalar': async (n, _s, sel) => {
     const o = objetoPlano<Record<string, unknown>>(sel, 'versión');
     const servicio = servicioInstalable(o['servicio']);
     const version = idNoVacio(o['version'], 'versión');
-    const v = (await n.listarVersiones(servicio)).find((x) => x.version === version);
-    if (!v) throw new Error(`La versión ${version} de ${servicio} no está en el catálogo`);
-    return n.instalador.instalar(v);
+    const confirmar = o['confirmarSinHuella'];
+    if (confirmar !== undefined && confirmar !== true) {
+      throw new Error('Argumento no válido: confirmarSinHuella');
+    }
+    const v = await n.buscarVersion(servicio, version);
+    if (!v) {
+      throw new ErrorWolf(
+        'catalogo.version_no_encontrada',
+        `La versión ${version} de ${servicio} no está en el catálogo`,
+        { servicio, version: version.slice(0, 40) },
+      );
+    }
+    return confirmar === true
+      ? n.instalador.instalar(v, { confirmarSinHuella: true })
+      : n.instalador.instalar(v);
   },
   'instalador.instalados': (n, _s, servicio) =>
     n.instalador.instalados(servicioDelCatalogo(servicio)),

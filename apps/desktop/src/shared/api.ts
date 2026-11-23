@@ -105,6 +105,12 @@ import type {
   SnippetNginx,
   VersionVhost,
   VistaVhost,
+  FiltroVersiones,
+  ListadoVersiones,
+  RamaCatalogo,
+  OrigenCatalogo,
+  SoporteVersion,
+  Huella,
 } from '@pel/core';
 
 export type {
@@ -236,8 +242,22 @@ export interface EstadoPgvector {
   version: string | null;
 }
 
-/** Lo único que el renderer elige al instalar: el proceso principal re-resuelve la URL y la huella. */
-export type SeleccionVersion = Pick<VersionDisponible, 'servicio' | 'version'>;
+/**
+ * Lo único que el renderer elige al instalar: el proceso principal re-resuelve la URL y la huella.
+ * `confirmarSinHuella` solo sale de un diálogo que explica el riesgo (versión sin huella fuerte).
+ */
+export type SeleccionVersion = Pick<VersionDisponible, 'servicio' | 'version'> & {
+  confirmarSinHuella?: true;
+};
+
+export type {
+  FiltroVersiones,
+  Huella,
+  ListadoVersiones,
+  OrigenCatalogo,
+  RamaCatalogo,
+  SoporteVersion,
+};
 
 export type DatosSitio = Omit<Sitio, 'id'>;
 
@@ -473,7 +493,11 @@ export interface ApiEntorno {
    */
   avisoInicio(): Promise<string | null>;
   instalador: {
-    listarVersiones(servicio: VersionDisponible['servicio']): Promise<VersionDisponible[]>;
+    /** Vivo → caché → lista fija; `origen` y `fecha` dicen de dónde salió. */
+    listarVersiones(
+      servicio: VersionDisponible['servicio'],
+      filtro?: FiltroVersiones,
+    ): Promise<ListadoVersiones>;
     instalar(seleccion: SeleccionVersion): Promise<void>;
     instalados(servicio: string): Promise<string[]>;
   };

@@ -17,7 +17,11 @@ import { extraerZip } from './zip';
 import type { Eventos, EventosNucleo } from '../eventos';
 import type { Rutas } from '../rutas';
 import type { ProgresoInstalacion } from '../tipos';
-import { ejecutableDe, urlOficial, type VersionDisponible } from './catalogo';
+import { ErrorWolf } from '../errores';
+import { catalogo, ejecutableDe, type VersionDisponible } from './catalogo';
+import { claveValida, rutaRelativaSegura, urlOficial } from './comun';
+import { huellaDe, huellaFuerte, type AlgoritmoHuella, type Huella } from './huellas';
+import { pedirConSaltos } from './red';
 
 export interface OpcionesInstalador {
   /** Corta la descarga si no llegan bytes durante este tiempo. Por defecto 60000. */
@@ -28,16 +32,15 @@ export interface OpcionesInstalador {
   renombrar?: (de: string, a: string) => Promise<void>;
 }
 
-const MARCA = '.pel-version';
-/** Clave de carpeta: "8.4", "1.28.0", "2026.10.1"… nunca separadores ni "..". */
-const CLAVE_VALIDA = /^\d+\.\d+(\.[\w.-]+)?$/;
-
-/** Ruta relativa sin unidad, raíz ni "..". */
-function rutaRelativaSegura(r: unknown): boolean {
-  if (typeof r !== 'string' || r === '' || r.includes('\0')) return false;
-  if (/^([a-zA-Z]:|[\\/])/.test(r)) return false;
-  return !r.split(/[\\/]/).some((p) => p === '..' || p === '');
+export interface OpcionesInstalar {
+  /**
+   * El usuario confirmó en un diálogo instalar sin huella fuerte (sin huella o solo MD5). Nunca
+   * lo pasa un camino automático.
+   */
+  confirmarSinHuella?: true;
 }
+
+const MARCA = '.pel-version';
 
 /** Rechaza versiones que no vienen del catálogo oficial o que escaparían de bin/<servicio>. */
 export function validarVersion(v: VersionDisponible, clave: string): void {
@@ -50,11 +53,25 @@ export function validarVersion(v: VersionDisponible, clave: string): void {
   if (typeof v.url !== 'string' || !urlOficial(v.url)) {
     throw new Error('La descarga debe ser https y de un sitio oficial');
   }
-  if (typeof clave !== 'string' || !CLAVE_VALIDA.test(clave) || clave.includes('..')) {
+  if (!claveValida(clave)) {
     throw new Error(`Versión no válida: ${String(clave)}`);
   }
 }
 const MSG_HASH = 'La descarga no coincide con la huella publicada';
+
+/**
+ * Huella con la que se verifica la descarga: la publicada; si no es fuerte y la lista fija tiene
+ * esa misma versión con la misma URL, su SHA-256.
+ */
+function huellaParaInstalar(v: VersionDisponible): Huella | null {
+  const propia = huellaDe(v);
+  if (huellaFuerte(propia)) return propia;
+  const tabla = catalogo as unknown as Record<string, typeof catalogo.nginx | undefined>;
+  const fija = (Object.hasOwn(tabla, v.servicio) ? tabla[v.servicio] : undefined)?.find(
+    (e) => e.version === v.version && e.url === v.url,
+  );
+  return fija ? { algoritmo: 'sha256', valor: fija.sha256 } : propia;
+}
 
 export class Instalador {
   constructor(
@@ -107,7 +124,7 @@ export class Instalador {
     });
   }
 
-  async instalar(v: VersionDisponible): Promise<void> {
+  async instalar(v: VersionDisponible, o: OpcionesInstalar = {}): Promise<void> {
     const clave = this.clave(v);
     validarVersion(v, clave);
     const destino = this.rutas.bin(v.servicio, clave);
@@ -119,10 +136,22 @@ export class Instalador {
         return;
       }
     }
-    if (!v.sha256) {
-      const msg = 'No hay huella publicada para verificar la descarga';
-      this.emitir(v, 'error', 0, msg);
-      throw new Error(msg);
+    // Antes de descargar nada: sin huella fuerte, solo con la confirmación del usuario.
+    const huella = huellaParaInstalar(v);
+    if (!huellaFuerte(huella) && o.confirmarSinHuella !== true) {
+      const e = huella
+        ? new ErrorWolf(
+            'catalogo.huella_debil',
+            `${v.servicio} ${v.version} solo tiene una huella ${huella.algoritmo.toUpperCase()} (débil): hay que confirmar la instalación`,
+            { servicio: v.servicio, version: v.version },
+          )
+        : new ErrorWolf(
+            'catalogo.sin_huella',
+            'No hay huella publicada para verificar la descarga',
+            { servicio: v.servicio, version: v.version },
+          );
+      this.emitir(v, 'error', 0, e.message);
+      throw e;
     }
 
     const exe = v.ejecutable ?? (ejecutableDe(v.servicio) as string);
@@ -136,9 +165,12 @@ export class Instalador {
     const renombrar = this.opciones.renombrar ?? rename;
     try {
       await mkdir(tmp, { recursive: true });
-      const hash = await this.descargar(v, archivo);
+      const hash = await this.descargar(v, archivo, huella?.algoritmo ?? 'sha256');
       this.emitir(v, 'verificando', 100);
-      if (hash !== v.sha256.toLowerCase()) throw new Error(MSG_HASH);
+      // Sin huella (confirmado por el usuario) no hay con qué comparar; con MD5 se compara igual.
+      if (huella && hash !== huella.valor.toLowerCase()) {
+        throw new ErrorWolf('catalogo.huella_no_coincide', MSG_HASH);
+      }
 
       this.emitir(v, 'extrayendo', 100);
       await mkdir(stage, { recursive: true });
@@ -201,16 +233,21 @@ export class Instalador {
   }
 
   /**
-   * Descarga en streaming a `archivo` y devuelve el sha256 calculado. Los fallos pasajeros (red
+   * Descarga en streaming a `archivo` y devuelve la huella calculada con `algoritmo`. Los fallos pasajeros (red
    * cortada, sin datos, HTTP 408/429/5xx) se reintentan con espera creciente: si ya llegaron
    * bytes se pide el resto con `Range` y, si el servidor responde 206 desde ese byte, se sigue
    * (el hash continúa); si responde 200 se empieza de nuevo. La huella se verifica siempre al
    * final sobre el archivo completo.
    */
-  private async descargar(v: VersionDisponible, archivo: string): Promise<string> {
+  private async descargar(
+    v: VersionDisponible,
+    archivo: string,
+    algoritmo: AlgoritmoHuella,
+  ): Promise<string> {
     const esperas = this.opciones.esperasReintentoMs ?? ESPERAS_REINTENTO_MS;
     const estado: EstadoDescarga = {
-      hash: createHash('sha256'),
+      algoritmo,
+      hash: createHash(algoritmo),
       recibido: 0,
       total: 0,
       ultimo: 0,
@@ -254,11 +291,17 @@ export class Instalador {
       });
 
     const desde = estado.recibido;
+    // Redirecciones a mano: cada salto https y en HOSTS_PERMITIDOS, o se corta antes de pedirlo.
     const res = await conLimite(
-      this.f(v.url, {
-        signal: ctl.signal,
-        ...(desde > 0 ? { headers: { Range: `bytes=${desde}-` } } : {}),
-      }),
+      pedirConSaltos(
+        this.f,
+        v.url,
+        {
+          signal: ctl.signal,
+          ...(desde > 0 ? { headers: { Range: `bytes=${desde}-` } } : {}),
+        },
+        urlOficial,
+      ),
     );
     if (!res.ok || !res.body) {
       const msg = `No se pudo descargar ${v.servicio} ${v.version} (HTTP ${res.status})`;
@@ -268,7 +311,7 @@ export class Instalador {
     const inicioRango = /^bytes\s+(\d+)-/i.exec(res.headers.get('content-range') ?? '')?.[1];
     if (desde > 0 && !(res.status === 206 && Number(inicioRango) === desde)) {
       // El servidor no reanuda (o reanuda desde otro byte): se empieza de nuevo.
-      estado.hash = createHash('sha256');
+      estado.hash = createHash(estado.algoritmo);
       estado.recibido = 0;
       estado.ultimo = 0;
       await fh.truncate(0);
@@ -322,6 +365,7 @@ const ESTADOS_PASAJEROS = new Set([408, 425, 429, 500, 502, 503, 504]);
 class ErrorPasajero extends Error {}
 
 interface EstadoDescarga {
+  algoritmo: AlgoritmoHuella;
   hash: Hash;
   recibido: number;
   total: number;

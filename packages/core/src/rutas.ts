@@ -75,6 +75,13 @@ export class Rutas {
   estado(): string {
     return path.join(this.base, 'run', 'estado.json');
   }
+  /** Índice ya interpretado del catálogo en vivo de un servicio: run/catalogo/<servicio>.json. */
+  cacheCatalogo(servicio: string): string {
+    if (!/^[a-z][a-z0-9-]{0,39}$/.test(servicio)) {
+      throw new Error(`Servicio no válido: ${servicio}`);
+    }
+    return path.join(this.base, 'run', 'catalogo', `${servicio}.json`);
+  }
   /** Estado persistido de la receta de un sitio: run/receta-<id>.json. */
   receta(sitioId: string): string {
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(sitioId) || sitioId.includes('..')) {

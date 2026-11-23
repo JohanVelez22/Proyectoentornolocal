@@ -204,6 +204,15 @@ export const PARAMETROS_ERROR = {
   'contenedores.accion_fallo': ['detalle'],
   'contenedores.demasiados_registros': ['maximo'],
   'contenedores.sin_confirmar': [],
+  // Catálogo en vivo e instalador (Task 16)
+  'catalogo.indice_invalido': ['servicio'],
+  'catalogo.sin_huella': ['servicio', 'version'],
+  'catalogo.huella_debil': ['servicio', 'version'],
+  'catalogo.huella_no_coincide': [],
+  'catalogo.redireccion_ajena': ['host'],
+  'catalogo.demasiadas_redirecciones': ['maximo'],
+  'catalogo.respuesta_grande': ['maximo'],
+  'catalogo.version_no_encontrada': ['servicio', 'version'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

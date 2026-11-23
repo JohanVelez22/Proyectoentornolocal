@@ -20,7 +20,8 @@ import {
   type ResultadoRestaurar,
 } from './bd/respaldos';
 import { Instalador } from './catalogo/instalador';
-import { listarVersiones } from './catalogo/catalogo';
+import type { ServicioInstalable, VersionDisponible } from './catalogo/catalogo';
+import { CatalogoVivo, type FiltroVersiones, type ListadoVersiones } from './catalogo/vivo';
 import {
   CentroAvisos,
   TIPOS_AVISO,
@@ -304,6 +305,8 @@ interface ModulosNucleo {
   confianza: ConfianzaCa;
   /** Contenedores Docker/Podman: listar, iniciar, detener, reiniciar y registros. */
   contenedores: Contenedores;
+  /** Catálogo en vivo (fuentes oficiales, caché de 6 h y lista fija de respaldo). */
+  catalogoVivo: CatalogoVivo;
   /** Dependencias de los pasos de receta (puerto libre…), también para crear proyectos. */
   depsPasos?: DepsPasos;
 }
@@ -407,7 +410,6 @@ export class Nucleo {
   private pendiente = false;
   private cerrado = false;
 
-  readonly listarVersiones = listarVersiones;
   /** Solo lectura: los cambios pasan por guardarSitio/guardarAjustes, que además aplican. */
   readonly config: { leer(): Promise<Config> };
   /** Aviso de la migración de la carpeta de datos (si hubo algo que informar). */
@@ -457,6 +459,8 @@ export class Nucleo {
   readonly confianza: ConfianzaCa;
   /** Contenedores Docker/Podman (mínimo: nunca crea ni borra contenedores, imágenes ni volúmenes). */
   readonly contenedores: Contenedores;
+  /** Catálogo en vivo de versiones (lo que el renderer lista e instala). */
+  readonly catalogoVivo: CatalogoVivo;
   /** Proveedores de IA en la nube; la clave la pasa el proceso principal en cada llamada. */
   readonly ia: GestorIa;
   /** Agentes: detección, instalación, MCP y apertura en un proyecto (nunca se lanzan solos). */
@@ -526,6 +530,7 @@ export class Nucleo {
     this.doctor = m.doctor;
     this.confianza = m.confianza;
     this.contenedores = m.contenedores;
+    this.catalogoVivo = m.catalogoVivo;
     this.ia = m.ia;
     this.agentes = m.agentes;
     this.iniPhp = m.iniPhp;
@@ -1041,6 +1046,7 @@ export class Nucleo {
         ...(o.pidApp !== undefined ? { pidApp: o.pidApp } : {}),
         ...(o.pidPadre !== undefined ? { pidPadre: o.pidPadre } : {}),
       }),
+      catalogoVivo: new CatalogoVivo(rutas, plat, o.fetch ?? fetch),
       contenedores: new Contenedores({
         exec,
         lanzar,
@@ -1360,6 +1366,29 @@ export class Nucleo {
     opts?: OpcionesRestaurar,
   ): Promise<ResultadoRestaurar> {
     return this.respaldos.importar(motor, origen, destinoBase, opts);
+  }
+
+  // ---- catálogo ----
+
+  /** Versiones publicadas de un servicio (vivo → caché → lista fija), con su origen y fecha. */
+  listarCatalogo(
+    servicio: ServicioInstalable,
+    filtro: FiltroVersiones = {},
+  ): Promise<ListadoVersiones> {
+    return this.catalogoVivo.listar(servicio, filtro);
+  }
+
+  /** Solo las versiones de `listarCatalogo` (forma de siempre). */
+  async listarVersiones(
+    servicio: ServicioInstalable,
+    filtro: FiltroVersiones = {},
+  ): Promise<VersionDisponible[]> {
+    return (await this.catalogoVivo.listar(servicio, filtro)).versiones;
+  }
+
+  /** La versión a instalar, resuelta en el catálogo (nunca con datos del renderer). */
+  buscarVersion(servicio: ServicioInstalable, version: string): Promise<VersionDisponible | null> {
+    return this.catalogoVivo.buscar(servicio, version);
   }
 
   // ---- pgvector ----

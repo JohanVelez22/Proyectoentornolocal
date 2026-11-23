@@ -103,6 +103,36 @@ export function servicioDelCatalogo(v: unknown): ServicioInstalable {
   return v as ServicioInstalable;
 }
 
+/**
+ * Filtro del listado de versiones: rama ("8.4", "22"), mostrar todas y refrescar. Nada más pasa.
+ */
+export function filtroVersiones(v: unknown): {
+  rama?: string;
+  todas?: boolean;
+  refrescar?: boolean;
+} {
+  if (v === undefined || v === null) return {};
+  const o = objetoPlano<Record<string, unknown>>(v, 'filtro');
+  const salida: { rama?: string; todas?: boolean; refrescar?: boolean } = {};
+  for (const k of Object.keys(o)) {
+    if (k !== 'rama' && k !== 'todas' && k !== 'refrescar') {
+      throw new Error('Argumento no válido: filtro');
+    }
+  }
+  if (o['rama'] !== undefined) {
+    if (typeof o['rama'] !== 'string' || !/^\d{1,4}(\.\d{1,4})?$/.test(o['rama'])) {
+      throw new Error('Argumento no válido: rama');
+    }
+    salida.rama = o['rama'];
+  }
+  for (const k of ['todas', 'refrescar'] as const) {
+    if (o[k] === undefined) continue;
+    if (typeof o[k] !== 'boolean') throw new Error(`Argumento no válido: ${k}`);
+    salida[k] = o[k];
+  }
+  return salida;
+}
+
 export function servicioInstalable(v: unknown): (typeof INSTALABLES)[number] {
   if (typeof v !== 'string' || !(INSTALABLES as readonly string[]).includes(v)) {
     throw new Error('Argumento no válido: servicio');

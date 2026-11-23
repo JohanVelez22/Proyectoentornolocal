@@ -329,6 +329,19 @@ export const es = {
       'contenedores.demasiados_registros':
         'Se pueden seguir como mucho {maximo} registros de contenedores a la vez.',
       'contenedores.sin_confirmar': 'Confirme la acción en el diálogo.',
+      'catalogo.indice_invalido':
+        'El índice de versiones de {servicio} no pasó la validación; se usa la lista guardada.',
+      'catalogo.sin_huella':
+        '{servicio} {version} no tiene huella publicada: confirme la instalación en el diálogo.',
+      'catalogo.huella_debil':
+        '{servicio} {version} solo tiene una huella MD5 (débil): confirme la instalación en el diálogo.',
+      'catalogo.huella_no_coincide': 'La descarga no coincide con la huella publicada.',
+      'catalogo.redireccion_ajena': 'La descarga intentó ir a un sitio no permitido ({host}).',
+      'catalogo.demasiadas_redirecciones':
+        'La descarga hizo demasiadas redirecciones (más de {maximo}).',
+      'catalogo.respuesta_grande': 'La respuesta del servidor es demasiado grande.',
+      'catalogo.version_no_encontrada':
+        'La versión {version} de {servicio} no está en el catálogo.',
     },
   },
   avisoInicio: {

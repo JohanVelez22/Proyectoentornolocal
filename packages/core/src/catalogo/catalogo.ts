@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import { nombreEjecutable } from '../plataforma/sistema';
 import catalogoCrudo from './catalogo.json' with { type: 'json' };
+import { urlOficial } from './comun';
+import { PHP_RELEASES_URL, versionesDeReleasesPhp } from './fuentes/php';
+import type { Huella } from './huellas';
+
+export { HOSTS_INDICE, HOSTS_PERMITIDOS, urlIndice, urlOficial } from './comun';
+export type { AlgoritmoHuella, Huella } from './huellas';
+export { PHP_RELEASES_URL } from './fuentes/php';
 
 export type ServicioInstalable =
   | 'nginx'
@@ -49,37 +56,36 @@ export function ejecutableDe(servicio: string): string | undefined {
     : undefined;
 }
 
+/** Soporte de la rama según su fuente: las previews y las ramas sin soporte se ocultan por defecto. */
+export type SoporteVersion = 'lts' | 'actual' | 'fin' | 'preview';
+/** De dónde salió la versión: índice consultado ahora, caché de un índice o lista fija. */
+export type OrigenCatalogo = 'vivo' | 'cache' | 'fija';
+
 export interface VersionDisponible {
   servicio: ServicioInstalable;
   /** Versión completa (en PHP, el parche, p. ej. "8.4.27-1"). */
   version: string;
-  /** Solo PHP: rama "mayor.menor" usada como clave de servicio y carpeta. */
+  /**
+   * Rama ("8.4", "22", "3.13"). En PHP además es la clave de servicio y la carpeta; el catálogo
+   * en vivo la da en todos los servicios.
+   */
   rama?: string;
   url: string;
+  /** Igual a `huella.valor` cuando la huella es SHA-256 (compatibilidad). */
   sha256: string | null;
   formato: FormatoPaquete;
   subcarpeta?: string;
   /** Binario principal relativo al paquete; si falta se usa el del servicio. */
   ejecutable?: string;
+  /** Huella publicada por la fuente (si falta, cuenta `sha256`). */
+  huella?: Huella | null;
+  soporte?: SoporteVersion;
+  /** Fin de soporte de la rama (AAAA-MM-DD) si la fuente lo publica. */
+  finSoporte?: string | null;
+  origen?: OrigenCatalogo;
+  /** La huella no vino en el listado: se pide a la fuente al instalar (`CatalogoVivo.buscar`). */
+  huellaDiferida?: boolean;
 }
-
-const HOSTS_PERMITIDOS = [
-  'nginx.org',
-  'github.com',
-  'windows.php.net',
-  'downloads.php.net',
-  'dev.mysql.com',
-  'cdn.mysql.com',
-  'archive.mariadb.org',
-  'get.enterprisedb.com',
-  'fastdl.mongodb.org',
-  'downloads.mongodb.com',
-  'getcomposer.org',
-  'nodejs.org',
-  'api.nuget.org',
-  // Xdebug: DLL oficiales por rama y variante (catálogo de extensiones de PHP).
-  'xdebug.org',
-];
 
 /**
  * Registro de npm para instalar agentes (`npm install -g` de su paquete oficial). Va aparte de
@@ -87,15 +93,6 @@ const HOSTS_PERMITIDOS = [
  */
 export const HOST_REGISTRO_NPM = 'registry.npmjs.org';
 export const REGISTRO_NPM_AGENTES = `https://${HOST_REGISTRO_NPM}/`;
-
-export function urlOficial(texto: string): boolean {
-  try {
-    const u = new URL(texto);
-    return u.protocol === 'https:' && HOSTS_PERMITIDOS.includes(u.hostname);
-  } catch {
-    return false;
-  }
-}
 
 const EntradaSchema = z.object({
   version: z.string().min(1),
@@ -169,54 +166,24 @@ export const CatalogoSchema = z.object({
 
 export const catalogo = CatalogoSchema.parse(catalogoCrudo);
 
-export const PHP_RELEASES_URL = 'https://windows.php.net/downloads/releases/releases.json';
-const PHP_BASE = 'https://windows.php.net/downloads/releases/';
-const VARIANTES_PHP = ['nts-vs17-x64', 'nts-vs16-x64'] as const;
-
-const ZipPhpSchema = z.object({ zip: z.object({ path: z.string(), sha256: z.string() }) });
-
-function ramaValida(rama: string): boolean {
-  const m = /^(\d+)\.(\d+)$/.exec(rama);
-  if (!m) return false;
-  const mayor = Number(m[1]);
-  const menor = Number(m[2]);
-  return mayor > 8 || (mayor === 8 && menor >= 1);
-}
-
-function comparar(a: string, b: string): number {
-  const [am = 0, an = 0] = a.split('.').map(Number);
-  const [bm = 0, bn = 0] = b.split('.').map(Number);
-  return bm - am || bn - an;
-}
-
 async function versionesPhp(f: typeof fetch): Promise<VersionDisponible[]> {
   const res = await f(PHP_RELEASES_URL);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json: unknown = await res.json();
-  const datos = z.record(z.string(), z.record(z.string(), z.unknown())).parse(json);
-  const salida: VersionDisponible[] = [];
-  for (const rama of Object.keys(datos).filter(ramaValida).sort(comparar)) {
-    const entrada = datos[rama];
-    if (!entrada || typeof entrada.version !== 'string') continue;
-    for (const variante of VARIANTES_PHP) {
-      const zip = ZipPhpSchema.safeParse(entrada[variante]);
-      if (!zip.success) continue;
-      const url = PHP_BASE + zip.data.zip.path;
-      if (!urlOficial(url)) continue;
-      salida.push({
-        servicio: 'php',
-        version: entrada.version,
-        rama,
-        url,
-        sha256: zip.data.zip.sha256,
-        formato: 'zip',
-      });
-      break;
-    }
-  }
-  return salida;
+  return versionesDeReleasesPhp(json).map((v) => ({
+    servicio: 'php',
+    version: v.version,
+    rama: v.rama,
+    url: v.url,
+    sha256: v.sha256,
+    formato: 'zip',
+  }));
 }
 
+/**
+ * Versiones de un servicio como en la Etapa B: PHP en línea (sin caché) y el resto de la lista
+ * fija. El núcleo usa `CatalogoVivo`; esta función queda por compatibilidad.
+ */
 export async function listarVersiones(
   servicio: ServicioInstalable,
   f: typeof fetch = fetch,
