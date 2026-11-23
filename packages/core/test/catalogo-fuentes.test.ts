@@ -224,6 +224,28 @@ describe('fuentes oficiales', () => {
     await expect(fuenteMailpit.listar(c)).rejects.toBeInstanceOf(IndiceMalformado);
   });
 
+  it('GitHub: un asset que sale del repositorio con .. o %2e descarta el índice', async () => {
+    const urls = [
+      'https://github.com/axllent/mailpit/releases/download/../../../otro/mailpit/releases/download/v1/a.zip',
+      'https://github.com/axllent/mailpit/releases/download/%2e%2e/%2E%2E/%2e%2e/otro/a.zip',
+      'https://github.com/axllent/mailpit/releases/download/v1.33.1/..%2fa.zip',
+      'http://github.com/axllent/mailpit/releases/download/v1.33.1/mailpit-windows-amd64.zip',
+      'https://github.com.evil.example/axllent/mailpit/releases/download/v1/a.zip',
+      'https://github.com:444/axllent/mailpit/releases/download/v1/a.zip',
+    ];
+    for (const url of urls) {
+      const releases = JSON.parse(fixture('github-mailpit.json')) as {
+        assets: { browser_download_url: string }[];
+      }[];
+      releases[1]!.assets[0]!.browser_download_url = url;
+      const c = ctx({
+        'https://api.github.com/repos/axllent/mailpit/releases?per_page=30':
+          JSON.stringify(releases),
+      });
+      await expect(fuenteMailpit.listar(c), url).rejects.toBeInstanceOf(IndiceMalformado);
+    }
+  });
+
   it('GitHub sin digest: usa el archivo de sumas de la release (redirección a release-assets)', async () => {
     const hex = 'c'.repeat(64);
     const fuente = fuenteGithub({

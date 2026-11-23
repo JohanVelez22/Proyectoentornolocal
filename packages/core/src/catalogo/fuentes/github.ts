@@ -63,12 +63,36 @@ async function sumaPublicada(
 }
 
 /**
+ * ¿La URL es un asset de `https://github.com/<dueño>/<repo>/releases/download/`? Se interpreta con
+ * `URL` (protocolo, host, sin usuario ni puerto) y se compara la ruta ya normalizada; además se
+ * rechaza todo texto con `..` o `%2e`, que podría salir del repositorio tras normalizar.
+ */
+export function assetDelRepo(texto: string, dueno: string, repo: string): boolean {
+  if (texto.includes('..') || /%2e/i.test(texto) || texto.includes('\\')) return false;
+  let u: URL;
+  try {
+    u = new URL(texto);
+  } catch {
+    return false;
+  }
+  const prefijo = `/${dueno}/${repo}/releases/download/`.toLowerCase();
+  return (
+    u.protocol === 'https:' &&
+    u.hostname === 'github.com' &&
+    u.port === '' &&
+    u.username === '' &&
+    u.password === '' &&
+    u.pathname.toLowerCase().startsWith(prefijo) &&
+    u.pathname.length > prefijo.length
+  );
+}
+
+/**
  * Fuente de GitHub Releases (`api.github.com/repos/<dueño>/<repo>/releases`): huella del campo
  * `digest` del asset (`sha256:…`) o, si falta, del archivo de sumas de la misma release. El
  * `browser_download_url` debe ser del repositorio esperado; si no, el índice se descarta entero.
  */
 export function fuenteGithub(o: OpcionesGithub): FuenteVersiones {
-  const prefijo = `https://github.com/${o.dueno}/${o.repo}/releases/download/`.toLowerCase();
   return {
     servicio: o.servicio,
     hostsIndice: ['api.github.com'],
@@ -95,7 +119,7 @@ export function fuenteGithub(o: OpcionesGithub): FuenteVersiones {
         if (!claveValida(version)) continue;
         // Todo asset que apunte fuera del repositorio esperado delata un índice manipulado.
         for (const a of r.assets) {
-          if (!a.browser_download_url.toLowerCase().startsWith(prefijo)) {
+          if (!assetDelRepo(a.browser_download_url, o.dueno, o.repo)) {
             throw new IndiceMalformado(`Asset de ${o.repo} fuera del repositorio esperado`);
           }
         }
