@@ -64,7 +64,10 @@ const codificar = (script: string): string => Buffer.from(script, 'utf16le').toS
  */
 export function raizSistema(entorno: NodeJS.ProcessEnv): string {
   const r = entorno.SystemRoot ?? entorno.SYSTEMROOT ?? entorno.windir;
-  return r && /^[A-Za-z]:\\[^"<>|?*\0]*$/.test(r) ? r : 'C:\\Windows';
+  // Con unidad y sin tramos `..` (no se sale de la carpeta que dice ser).
+  return r && /^[A-Za-z]:\\[^"<>|?*\0]*$/.test(r) && !/(^|[\\/])\.\.([\\/]|$)/.test(r)
+    ? r
+    : 'C:\\Windows';
 }
 
 /** PowerShell 5 del sistema (siempre con ruta completa; ver `raizSistema`). */

@@ -635,27 +635,67 @@ describe('Metricas: suma de los descendientes', () => {
 });
 
 describe('restringirAlUsuario (ACL del archivo del token)', () => {
-  it('Windows: icacls de System32 quita la herencia y deja solo al usuario actual', async () => {
-    const llamadas: { cmd: string; args: string[] }[] = [];
-    const ejecutar: Ejecutor = async (cmd, args) => {
+  const SID = 'S-1-5-21-111-222-333-1001';
+  const ejecutorSid =
+    (llamadas: { cmd: string; args: string[] }[]): Ejecutor =>
+    async (cmd, args) => {
       llamadas.push({ cmd, args });
-      return { codigo: 0, stdout: '', stderr: '' };
+      return cmd.toLowerCase().endsWith('whoami.exe')
+        ? { codigo: 0, stdout: `"equipo\\ana","${SID}"\r\n`, stderr: '' }
+        : { codigo: 0, stdout: '', stderr: '' };
     };
-    const p = new PlataformaWindows(ejecutar, undefined, {
-      entorno: { SystemRoot: 'C:\\Windows', USERNAME: 'ana', USERDOMAIN: 'EQUIPO' },
+
+  it('Windows: icacls de System32 quita la herencia y deja solo el SID del usuario actual', async () => {
+    const llamadas: { cmd: string; args: string[] }[] = [];
+    const p = new PlataformaWindows(ejecutorSid(llamadas), undefined, {
+      entorno: { SystemRoot: 'C:\\Windows', USERNAME: 'otro', USERDOMAIN: 'FALSO' },
     });
     expect(await p.restringirAlUsuario('C:\\Datos\\run\\depuracion.json.1.tmp')).toBe(true);
     expect(llamadas).toEqual([
+      { cmd: 'C:\\Windows\\System32\\whoami.exe', args: ['/user', '/fo', 'csv', '/nh'] },
       {
         cmd: 'C:\\Windows\\System32\\icacls.exe',
         args: [
           'C:\\Datos\\run\\depuracion.json.1.tmp',
           '/inheritance:r',
           '/grant:r',
-          'EQUIPO\\ana:(F)',
+          `*${SID}:(F)`,
         ],
       },
     ]);
+    // El SID se pide una sola vez.
+    await p.restringirAlUsuario('C:\\Datos\\run\\otro.tmp');
+    expect(llamadas.filter((l) => l.cmd.endsWith('whoami.exe'))).toHaveLength(1);
+  });
+
+  it('Windows: una raíz del sistema rara (red, relativa, con ..) no decide qué icacls corre', async () => {
+    for (const SystemRoot of ['\\\\srv\\c\\Windows', 'Windows', 'C:\\Windows\\..\\Temp']) {
+      const llamadas: { cmd: string; args: string[] }[] = [];
+      const p = new PlataformaWindows(ejecutorSid(llamadas), undefined, {
+        entorno: { SystemRoot },
+      });
+      await p.restringirAlUsuario('C:\\x');
+      expect(llamadas.map((l) => l.cmd)).toEqual([
+        'C:\\Windows\\System32\\whoami.exe',
+        'C:\\Windows\\System32\\icacls.exe',
+      ]);
+    }
+  });
+
+  it('Windows: sin SID (whoami falla o responde otra cosa) no se llama a icacls', async () => {
+    for (const stdout of ['', 'basura']) {
+      const llamadas: { cmd: string; args: string[] }[] = [];
+      const p = new PlataformaWindows(
+        async (cmd, args) => {
+          llamadas.push({ cmd, args });
+          return { codigo: stdout ? 0 : 1, stdout, stderr: '' };
+        },
+        undefined,
+        { entorno: { SystemRoot: 'C:\\Windows' } },
+      );
+      expect(await p.restringirAlUsuario('C:\\x')).toBe(false);
+      expect(llamadas.some((l) => l.cmd.endsWith('icacls.exe'))).toBe(false);
+    }
   });
 
   it('Windows: si icacls falla o no está, devuelve false sin lanzar', async () => {

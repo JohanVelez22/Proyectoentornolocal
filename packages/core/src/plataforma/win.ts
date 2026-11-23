@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { open, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { arch, homedir, tmpdir, userInfo } from 'node:os';
+import { arch, homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { rutaBasePorDefecto } from './carpetas';
 import {
@@ -42,6 +42,7 @@ import {
   existeEntrada,
   lanzarEnConsolaNueva,
   lanzarSeparado,
+  raizSistema,
   terminalesWindows,
   type LanzadorSeparado,
 } from './terminalWin';
@@ -323,6 +324,8 @@ export class PlataformaWindows implements PlataformaCompleta {
   private readonly arquitectura: string;
   private readonly gitRegistro: boolean;
   private rutaGitLeida: Promise<string | null> | null = null;
+  /** SID del usuario actual (whoami), leído una vez. */
+  private sidLeido: Promise<string | null> | null = null;
 
   constructor(
     private readonly ejecutar: Ejecutor = ejecutorPorDefecto,
@@ -364,6 +367,21 @@ export class PlataformaWindows implements PlataformaCompleta {
   carpetasNpmGlobal(): string[] {
     const appData = this.entorno.APPDATA;
     return appData ? [path.win32.join(appData, 'npm')] : [];
+  }
+
+  carpetasContenedores(motor: 'docker' | 'podman'): string[] {
+    const pf = this.entorno.ProgramW6432 ?? this.entorno.ProgramFiles ?? 'C:\\Program Files';
+    if (motor === 'docker') return [path.win32.join(pf, 'Docker', 'Docker', 'resources', 'bin')];
+    const local = this.entorno.LOCALAPPDATA;
+    return [
+      path.win32.join(pf, 'RedHat', 'Podman'),
+      ...(local
+        ? [
+            path.win32.join(local, 'Programs', 'Podman'),
+            path.win32.join(local, 'Programs', 'RedHat', 'Podman'),
+          ]
+        : []),
+    ];
   }
 
   async buscarEjecutable(nombre: string, extras: string[] = []): Promise<string | null> {
@@ -609,17 +627,28 @@ export class PlataformaWindows implements PlataformaCompleta {
    * usuario actual con control total. Lo usa el archivo del token de la captura de dumps.
    */
   async restringirAlUsuario(ruta: string): Promise<boolean> {
-    const usuario = this.entorno.USERNAME ?? userInfo().username;
-    const dominio = this.entorno.USERDOMAIN;
-    const cuenta = dominio ? `${dominio}\\${usuario}` : usuario;
+    // Por SID (no por USERNAME/USERDOMAIN, que vienen del entorno) y con whoami e icacls de la
+    // carpeta del sistema validada (una SystemRoot rara no elige qué ejecutable corre).
+    const sistema32 = path.win32.join(raizSistema(this.entorno), 'System32');
     try {
+      this.sidLeido ??= this.ejecutar(
+        path.win32.join(sistema32, 'whoami.exe'),
+        ['/user', '/fo', 'csv', '/nh'],
+        { timeoutMs: 15_000 },
+      ).then((r) => (r.codigo === 0 ? (/"(S-1-\d+(?:-\d+)+)"/.exec(r.stdout)?.[1] ?? null) : null));
+      const sid = await this.sidLeido;
+      if (!sid) {
+        this.sidLeido = null;
+        return false;
+      }
       const r = await this.ejecutar(
-        rutaSistema32(this.entorno, 'icacls.exe'),
-        [ruta, '/inheritance:r', '/grant:r', `${cuenta}:(F)`],
+        path.win32.join(sistema32, 'icacls.exe'),
+        [ruta, '/inheritance:r', '/grant:r', `*${sid}:(F)`],
         { timeoutMs: 15_000 },
       );
       return r.codigo === 0;
     } catch {
+      this.sidLeido = null;
       return false;
     }
   }
