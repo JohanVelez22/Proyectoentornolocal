@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { LIMITE_ENV_BYTES, Nucleo, puertosReservados } from '../src/nucleo';
+import { RANGO_POOLS_SITIO } from '../src/php/poolSitio';
 import type { OperacionesMcp } from '../src/mcp/servidor';
 import { ConfigSchema } from '../src/tipos';
 import type { PasoReceta } from '../src/proyectos/config';
@@ -1378,6 +1379,38 @@ describe('Nucleo (Etapa B)', () => {
     expect(puertosReservados(cfg, 'otro')).not.toContain(8001);
     expect(puertosReservados(cfg, 'otro')).not.toContain(5173);
     expect(puertosReservados(cfg, 'otro')).toContain(3306);
+  });
+
+  it('puertosReservados incluye el rango de los PHP propios de los sitios', () => {
+    const r = puertosReservados(ConfigSchema.parse({}));
+    expect(r).toContain(RANGO_POOLS_SITIO.desde);
+    expect(r).toContain(RANGO_POOLS_SITIO.hasta);
+  });
+
+  it('guardarSitio no cambia phpIni ni Xdebug (solo sus rutas, con prueba y vuelta atrás)', async () => {
+    const n = await crear();
+    await n.guardarSitio({
+      ...datos(),
+      phpIni: { extension: 'evil' },
+      xdebug: { activo: true, modo: ['debug'], puerto: 9003, inicio: 'yes' },
+    });
+    const [s] = await n.sitios.listar();
+    expect(s!.phpIni ?? {}).toEqual({});
+    expect(s!.xdebug ?? null).toBeNull();
+    expect(await n.phpSitio('demo')).toMatchObject({
+      phpIni: {},
+      xdebug: null,
+      poolPropio: false,
+      enMarcha: false,
+      phpStorm: null,
+    });
+    // Un sitio sin PHP no tiene ajustes de PHP.
+    await expect(n.guardarPhpIniSitio('demo', { memory_limit: '1G' })).rejects.toMatchObject({
+      codigo: 'php.sitio_sin_php',
+    });
+    await expect(n.guardarPhpIniSitio('demo', { extension: 'x' })).rejects.toMatchObject({
+      codigo: 'php.valor_invalido',
+    });
   });
 
   it('buscarPuertoLibre respeta el preferido y salta los reservados y los ocupados', async () => {

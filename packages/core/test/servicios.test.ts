@@ -414,4 +414,34 @@ describe('Servicios', () => {
     expect(detenidos[0]).toBe('nginx');
     expect(detenidos.slice(1)).toContain('php-8.4-0');
   });
+
+  it('los PHP propios de los sitios arrancan tras su rama y se apagan antes que ella', async () => {
+    sembrarPhp('8.4');
+    const orden: string[] = [];
+    const s = new Servicios({
+      rutas,
+      plataforma: plataforma(),
+      supervisor: supervisor(),
+      instalador: instalador(['1.28.0'], ['8.4']),
+      leerConfig: async () => cfg,
+      modificarConfig: async (fn) => fn(cfg),
+      ramasEnUso: async () => ['8.4'],
+      sonda: async (p) => respuestas.has(p),
+      exec,
+      poolsSitio: {
+        iniciarRama: async (r) => {
+          orden.push(`pools+${r}:${iniciados.map((d) => d.id).join(',')}`);
+          throw new Error('puerto ocupado');
+        },
+        detenerRama: async (r) => {
+          orden.push(`pools-${r}:${detenidos.join(',')}`);
+        },
+      },
+    });
+    // Un pool de sitio que falla no tumba la rama.
+    await s.iniciar('php-8.4');
+    await s.detener('php-8.4');
+    expect(orden).toEqual(['pools+8.4:php-8.4-0,php-8.4-1', 'pools-8.4:']);
+    expect(detenidos).toContain('php-8.4-0');
+  });
 });

@@ -262,6 +262,15 @@ export const en: Textos = {
       'php.extension_en_uso': 'The {nombre} DLL is in use. Stop PHP {rama} and try again.',
       'php.extension_sin_dll':
         'The {nombre} DLL could not be replaced and the ext folder of PHP {rama} was left without it. Stop PHP {rama} and try again: the previous one is put back when it starts.',
+      'php.sitio_sin_php': 'That site does not use PHP.',
+      'php.sitio_no_arranco':
+        'The own PHP of {sitio} did not respond with the change; the previous settings were restored.',
+      'php.sin_puertos_sitio': "There are no free ports left for the sites' own PHP.",
+      'xdebug.launch_invalido':
+        'The project .vscode/launch.json cannot be parsed; nothing was changed.',
+      'xdebug.launch_no_seguro':
+        'The .vscode folder or its launch.json is a link or something else: nothing is written there.',
+      'xdebug.sin_configurar': 'Set up Xdebug on the site before generating launch.json.',
     },
   },
   avisoInicio: {

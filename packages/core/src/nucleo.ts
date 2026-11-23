@@ -1,5 +1,6 @@
 import type * as childProcess from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Almacen, AlmacenCredenciales, migrarCredenciales } from './almacen';
 import {
@@ -67,6 +68,20 @@ import {
 import { migrarCarpetaDatos } from './migracion';
 import { catalogo } from './catalogo/catalogo';
 import { puertosPhp } from './nginx/principal';
+import { codificarIni, decodificarIni } from './php/ini';
+import {
+  AjustesPhpSitio,
+  iniSitio,
+  necesitaPoolPropio,
+  PoolsSitio,
+  RANGO_POOLS_SITIO,
+} from './php/poolSitio';
+import {
+  configPhpStorm,
+  escribirLaunchJson,
+  vistaLaunchJson,
+  type XdebugSitio,
+} from './php/xdebug';
 import { ExtensionesPhp } from './php/extensiones';
 import { IniPhp } from './php/ini';
 import { puertoResponde } from './procesos/sonda';
@@ -202,6 +217,20 @@ export interface EstadoGeneral {
   hosts: EstadoHosts;
 }
 
+/** PHP de un sitio en su tarjeta (ajustes propios, Xdebug y su pool). */
+export interface EstadoPhpSitio {
+  phpIni: Record<string, string>;
+  xdebug: XdebugSitio | null;
+  /** ¿Usa su propio pool de php-cgi? */
+  poolPropio: boolean;
+  /** ¿Está en marcha ese pool? (vive con el PHP de su rama) */
+  enMarcha: boolean;
+  /** ¿Está php_xdebug.dll en ext/ de su rama? */
+  xdebugInstalado: boolean;
+  /** Qué configurar en PhpStorm (si hay Xdebug). */
+  phpStorm: string | null;
+}
+
 export interface ResultadoAjustes {
   aplicar: ResultadoAplicar;
   /** Servicios reiniciados para tomar los ajustes nuevos (p. ej. "Nginx", "PHP 8.4"). */
@@ -213,6 +242,10 @@ export interface ResultadoAjustes {
 interface ModulosNucleo {
   /** php.ini de cada rama (editor con prueba, copia y vuelta atrás). */
   iniPhp: IniPhp;
+  /** Pools propios de los sitios con ajustes de php.ini o Xdebug. */
+  poolsSitio: PoolsSitio;
+  /** Cambios de php.ini y Xdebug por sitio (prueba, salud y vuelta atrás). */
+  ajustesPhpSitio: AjustesPhpSitio;
   /** Extensiones de PHP de cada rama (ext/ y catálogo de terceros). */
   extensionesPhp: ExtensionesPhp;
   /** Agentes de programación (Claude Code, Codex CLI, Hermes Agent). */
@@ -368,6 +401,9 @@ export class Nucleo {
   readonly iniPhp: IniPhp;
   /** Extensiones de PHP: activar, desactivar e instalar del catálogo. */
   readonly extensionesPhp: ExtensionesPhp;
+  /** Pools de php-cgi propios de los sitios (ini por sitio y Xdebug). */
+  readonly poolsSitio: PoolsSitio;
+  private readonly ajustesPhpSitio: AjustesPhpSitio;
   /**
    * Token de GitHub para lo que no pasa por la ventana (MCP). Lo fija el proceso principal
    * (safeStorage); el núcleo nunca lo guarda, lo registra ni lo emite.
@@ -421,6 +457,8 @@ export class Nucleo {
     this.agentes = m.agentes;
     this.iniPhp = m.iniPhp;
     this.extensionesPhp = m.extensionesPhp;
+    this.poolsSitio = m.poolsSitio;
+    this.ajustesPhpSitio = m.ajustesPhpSitio;
     this.depsPasos = m.depsPasos;
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
@@ -475,6 +513,9 @@ export class Nucleo {
     // Los procesos de proyecto necesitan servicios (PHP) y composer: también perezosos.
     // eslint-disable-next-line prefer-const
     let procesos!: ProcesosProyecto;
+    // Pools propios de los sitios: nginx (upstreams) y servicios (ramas) los usan.
+    // eslint-disable-next-line prefer-const
+    let pools!: PoolsSitio;
     const https = new GestorHttps({ rutas, plataforma, pidNginx: () => supervisor.pid('nginx') });
     const credenciales = new AlmacenCredenciales(rutas, (fn) => sitios.enCola(fn));
     const adminer = new Adminer({
@@ -504,12 +545,21 @@ export class Nucleo {
       modificarConfig: (fn) => sitios.modificarConfig(fn),
       credenciales,
       ramasEnUso: async () => ramasEnUso(await sitios.listar()),
-      obtenerUpstreams: async () =>
-        upstreamsPara(
-          await sitios.listar(),
-          (await leerConfig()).servicios.php.trabajadores,
-          await instalador.instalados('php'),
-        ),
+      obtenerUpstreams: async () => {
+        const lista = await sitios.listar();
+        return [
+          ...upstreamsPara(
+            lista,
+            (await leerConfig()).servicios.php.trabajadores,
+            await instalador.instalados('php'),
+          ),
+          ...(await pools.upstreams(lista)),
+        ];
+      },
+      poolsSitio: {
+        iniciarRama: (r) => pools.sincronizar({ rama: r }),
+        detenerRama: (r) => pools.detenerRama(r),
+      },
       ...(o.sonda ? { sonda: o.sonda } : {}),
       ...(o.ejecutor ? { exec: o.ejecutor } : {}),
       httpsPrincipal: async () => https.datosPrincipal((await leerConfig()).https.puerto),
@@ -596,17 +646,19 @@ export class Nucleo {
       ramasInstaladas: () => instalador.instalados('php'),
       asegurarIni: (r) => servicios.php.asegurarPhpIni(r),
       encendida: (r) => vivo(servicios.php.idTrabajador(r, 0)),
-      // Los pools por sitio (Task 11) leen el ini de la rama: también se reinician aquí.
+      // Los pools de sitio parten del ini de la rama: se reinician con ella (y cuentan en la salud).
       reiniciar: async (r) => {
         await servicios.detener(`php-${r}`);
-        await servicios.iniciar(`php-${r}`);
+        await servicios.php.iniciar(r);
+        await pools.reiniciarRama(r);
       },
       sano: async (r) => {
         const n = (await leerConfig()).servicios.php.trabajadores;
         const ids = Array.from({ length: n }, (_, i) => servicios.php.idTrabajador(r, i));
-        return phpResponde(puertosPhp(r, n), sondaPhp, () =>
+        const compartido = await phpResponde(puertosPhp(r, n), sondaPhp, () =>
           ids.some((id) => supervisor.estado(id) === 'error'),
         );
+        return compartido && (await pools.sanaRama(r));
       },
     });
     const extensionesPhp = new ExtensionesPhp({
@@ -616,6 +668,67 @@ export class Nucleo {
       phpCli,
       catalogo: catalogo.extensionesPhp,
       ...(o.fetch ? { fetch: (u, i) => o.fetch!(u, i) } : {}),
+    });
+    /** Puertos del rango de los pools de sitio que Windows reserva (Hyper-V…), leídos una vez. */
+    let reservadosSistema: Promise<number[]> | null = null;
+    const puertosSistema = (): Promise<number[]> => {
+      reservadosSistema ??= plat
+        .rangosReservados('tcp')
+        .then((rangos) => {
+          const res: number[] = [];
+          for (const r of rangos) {
+            const desde = Math.max(r.desde, RANGO_POOLS_SITIO.desde);
+            const hasta = Math.min(r.hasta, RANGO_POOLS_SITIO.hasta);
+            for (let p = desde; p <= hasta; p++) res.push(p);
+          }
+          return res;
+        })
+        .catch(() => []);
+      return reservadosSistema;
+    };
+    const leerIniRama = async (r: string): Promise<Buffer> =>
+      readFile(await servicios.php.asegurarPhpIni(r));
+    pools = new PoolsSitio({
+      rutas,
+      plataforma: plat,
+      supervisor,
+      leerSitios: () => sitios.listar(),
+      ramasInstaladas: () => instalador.instalados('php'),
+      ramaEncendida: (r) => vivo(servicios.php.idTrabajador(r, 0)),
+      leerIniRama,
+      rutaDllXdebug: (r) => extensionesPhp.rutaDll(r, 'xdebug'),
+      ocupados: async () => {
+        const cfg = await leerConfig();
+        const ramas = (await instalador.instalados('php')).flatMap((r) =>
+          puertosPhp(r, Math.max(cfg.servicios.php.trabajadores, 8)),
+        );
+        return [...puertosServicios(cfg), ...ramas, ...(await puertosSistema())];
+      },
+      sonda: sondaPhp,
+    });
+    const ajustesPhpSitio = new AjustesPhpSitio({
+      leerSitio: async (id) => (await sitios.listar()).find((x) => x.id === id),
+      guardar: (id, campos) =>
+        sitios.modificarConfig((c) => {
+          const s = c.sitios.find((x) => x.id === id);
+          if (!s) throw new ErrorWolf('proyectos.no_existe', `No existe el proyecto ${id}`);
+          s.phpIni = campos.phpIni;
+          s.xdebug = campos.xdebug;
+        }),
+      iniPrueba: async (s) => {
+        const bytes = await leerIniRama(s.php!);
+        const texto = iniSitio(s, decodificarIni(bytes), extensionesPhp.rutaDll(s.php!, 'xdebug'));
+        return codificarIni(texto, bytes);
+      },
+      probarIni: (r, t) => iniPhp.probar(r, t),
+      dllXdebug: (r) => extensionesPhp.tieneDll(r, 'xdebug'),
+      // Solo la DLL: Xdebug nunca se activa en el ini de la rama por esta vía.
+      instalarXdebug: async (r) => {
+        await extensionesPhp.instalarArchivo(r, 'xdebug');
+      },
+      sincronizar: () => pools.sincronizar(),
+      sanoSitio: (id) => pools.sanoSitio(id),
+      aplicar: () => sitios.aplicar(),
     });
     const git = o.git ?? new Git({ exec, lanzar });
     const gestorIa = new GestorIa({
@@ -627,6 +740,8 @@ export class Nucleo {
     });
     const modulos: ModulosNucleo = {
       iniPhp,
+      poolsSitio: pools,
+      ajustesPhpSitio,
       extensionesPhp,
       agentes: new Agentes({
         plataforma: plat,
@@ -1794,9 +1909,12 @@ export class Nucleo {
     id: string | undefined,
     renovarHuella: boolean,
   ): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }> {
-    // El acceso FTP solo cambia con activarFtp/desactivarFtp/ftpSoloLectura.
+    // El acceso FTP solo cambia con activarFtp/desactivarFtp/ftpSoloLectura; los ajustes de PHP
+    // y Xdebug, con guardarPhpIniSitio/xdebugSitio (prueba, salud y vuelta atrás).
     let resto: Omit<Sitio, 'id'> = { ...datos };
     delete resto.ftp;
+    delete resto.phpIni;
+    delete resto.xdebug;
     if (id) await this.cerrarTunelSiCambia(id, datos);
     const previo = id ? (await this.sitios.listar()).find((s) => s.id === id) : undefined;
     // FastAPI/Node con el proceso del proxy sin puerto: se le asigna uno libre (no se rechaza).
@@ -1824,7 +1942,56 @@ export class Nucleo {
         console.error('No se pudo detener un proceso quitado del proyecto:', mensajeDe(e));
       }
     }
+    // Cambió la rama, el tipo o la carpeta: su pool propio (si tiene) se rehace antes de Nginx.
+    await this.poolsSitio.sincronizar().catch((e) => {
+      console.error('No se pudo poner al día el PHP propio del sitio:', mensajeDe(e));
+    });
     return { sitio, aplicar: await this.sitios.aplicar() };
+  }
+
+  /** Ajustes de php.ini propios del sitio (prueba con php -v, pool propio y vuelta atrás). */
+  guardarPhpIniSitio(sitioId: string, valores: unknown): Promise<{ aplicar: ResultadoAplicar }> {
+    return this.ajustesPhpSitio.guardarPhpIni(sitioId, valores);
+  }
+
+  /**
+   * Xdebug del sitio (null = quitarlo). Activarlo instala la DLL del catálogo si falta, SIN
+   * activarla en la rama: solo la carga el pool propio del sitio.
+   */
+  xdebugSitio(sitioId: string, x: unknown): Promise<{ aplicar: ResultadoAplicar }> {
+    return this.ajustesPhpSitio.xdebug(sitioId, x);
+  }
+
+  /** Estado de PHP del sitio para su tarjeta: ajustes, Xdebug, pool y configuración de IDE. */
+  async phpSitio(sitioId: string): Promise<EstadoPhpSitio> {
+    const s = await this.sitioPorId(sitioId);
+    const rama = s.php;
+    return {
+      phpIni: s.phpIni ?? {},
+      xdebug: s.xdebug ?? null,
+      poolPropio: necesitaPoolPropio(s),
+      enMarcha: this.poolsSitio.enMarchaIds().includes(s.id),
+      xdebugInstalado: rama ? this.extensionesPhp.tieneDll(rama, 'xdebug') : false,
+      phpStorm: s.xdebug ? configPhpStorm(s) : null,
+    };
+  }
+
+  /** Lo que se escribiría en .vscode/launch.json del proyecto (para confirmarlo). */
+  async vistaLaunchJsonSitio(
+    sitioId: string,
+  ): Promise<{ existe: boolean; contenido: string; diff: string }> {
+    return vistaLaunchJson(await this.sitioPorId(sitioId));
+  }
+
+  /** Escribe .vscode/launch.json del proyecto (fusiona, con copia previa fuera del proyecto). */
+  async escribirLaunchJsonSitio(
+    sitioId: string,
+  ): Promise<{ creado: boolean; respaldo: string | null }> {
+    const s = await this.sitioPorId(sitioId);
+    return escribirLaunchJson(
+      s,
+      path.join(this.rutas.base, 'etc', 'respaldos', 'launch-json', s.id),
+    );
   }
 
   /**
@@ -2059,6 +2226,14 @@ const PUERTO_WEB_MAILPIT = 8025;
  * reserva los suyos que no cambian, y así un proceso conserva su puerto si sigue libre.
  */
 export function puertosReservados(cfg: Config, sitioId: string | null = null): number[] {
+  const r = new Set(puertosServicios(cfg, sitioId));
+  // Los pools de php-cgi propios de los sitios (ini por sitio, Xdebug).
+  for (let p = RANGO_POOLS_SITIO.desde; p <= RANGO_POOLS_SITIO.hasta; p++) r.add(p);
+  return [...r];
+}
+
+/** Puertos de servicios, de su FTP pasivo y de los procesos y proxies de los proyectos. */
+function puertosServicios(cfg: Config, sitioId: string | null = null): number[] {
   const r = new Set<number>([
     cfg.servicios.nginx.puerto,
     cfg.https.puerto,

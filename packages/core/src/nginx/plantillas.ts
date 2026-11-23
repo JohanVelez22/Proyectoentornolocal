@@ -1,3 +1,4 @@
+import { necesitaPoolPropio, nombreUpstreamSitio } from '../php/poolSitio';
 import { puertoDelProxy, raizDeSitio, TIPOS_CON_PHP, type Sitio } from '../tipos';
 
 export interface OpcionesVhost {
@@ -126,7 +127,12 @@ function bloqueProxy(puerto: number): string[] {
 export function generarVhost(s: Sitio, o: OpcionesVhost): string {
   const necesitaPhp = TIPOS_CON_PHP.includes(s.tipo) && s.tipo !== 'personalizado';
   if (necesitaPhp && !s.php) throw new Error(`El sitio ${s.dominio} necesita una versión de PHP`);
-  const up = s.php ? nombreUpstream(s.php) : '';
+  // Con ajustes propios o Xdebug, el sitio va a su propio pool; si no, al de la rama.
+  const up = !s.php
+    ? ''
+    : necesitaPoolPropio(s)
+      ? nombreUpstreamSitio(s.id)
+      : nombreUpstream(s.php);
 
   let cuerpo: string[];
   switch (s.tipo) {

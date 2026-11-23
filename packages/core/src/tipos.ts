@@ -66,6 +66,18 @@ export function procesoDelProxy(procesos: readonly ProcesoProyecto[]): ProcesoPr
   );
 }
 
+/** Modos de Xdebug que se pueden elegir por sitio. */
+export const MODOS_XDEBUG = ['debug', 'develop', 'coverage', 'profile', 'trace'] as const;
+
+/** Xdebug de un sitio (solo en su pool propio; nunca en el ini de la rama). */
+export const XdebugSitioSchema = z.object({
+  activo: z.boolean().default(false),
+  modo: z.array(z.enum(MODOS_XDEBUG)).min(1).default(['debug']),
+  puerto: z.number().int().min(1024).max(65535).default(9003),
+  inicio: z.enum(['trigger', 'yes']).default('trigger'),
+});
+export type XdebugSitio = z.infer<typeof XdebugSitioSchema>;
+
 export const SitioSchema = z.object({
   id: z.string(),
   nombre: z.string(),
@@ -110,6 +122,14 @@ export const SitioSchema = z.object({
   runtimes: z
     .object({ node: z.string().min(1).optional(), python: z.string().min(1).optional() })
     .default({}),
+  /**
+   * Ajustes de php.ini propios del sitio (clave → valor). Con alguno (o con Xdebug activo) el
+   * sitio usa su propio pool de php-cgi. Solo cambian con `Nucleo.guardarPhpIniSitio`.
+   * Opcional en el tipo (los sitios de versiones anteriores no lo traen): ausente = `{}`.
+   */
+  phpIni: z.record(z.string(), z.string()).optional(),
+  /** Xdebug del sitio (ausente = null); solo cambia con `Nucleo.xdebugSitio`. */
+  xdebug: XdebugSitioSchema.nullable().optional(),
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 

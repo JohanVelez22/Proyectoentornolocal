@@ -267,6 +267,15 @@ export const es = {
         'La DLL de {nombre} está en uso. Detenga PHP {rama} y vuelva a intentarlo.',
       'php.extension_sin_dll':
         'No se pudo cambiar la DLL de {nombre} y la carpeta ext de PHP {rama} quedó sin ella. Detenga PHP {rama} y vuelva a intentarlo: la anterior vuelve a su lugar al arrancar.',
+      'php.sitio_sin_php': 'Ese sitio no usa PHP.',
+      'php.sitio_no_arranco':
+        'El PHP propio de {sitio} no respondió con el cambio; se volvió a lo anterior.',
+      'php.sin_puertos_sitio': 'No quedan puertos libres para los PHP propios de los sitios.',
+      'xdebug.launch_invalido':
+        'El .vscode/launch.json del proyecto no se puede interpretar; no se cambió nada.',
+      'xdebug.launch_no_seguro':
+        'La carpeta .vscode o su launch.json son un enlace u otra cosa: no se escribe ahí.',
+      'xdebug.sin_configurar': 'Configure Xdebug en el sitio antes de generar el launch.json.',
     },
   },
   avisoInicio: {

@@ -261,6 +261,20 @@ describe('ExtensionesPhp', () => {
     });
   });
 
+  it('instalarArchivo pone la DLL del catálogo sin activarla en el ini de la rama (Xdebug por sitio)', async () => {
+    const e = entrada({});
+    respuestas.set(e.url, new Response(DLL));
+    const antes = readFileSync(ini);
+    const r = await crear([e]).instalarArchivo('8.4', 'xdebug');
+    expect(r).toEqual({ cambiada: true });
+    expect(readFileSync(path.join(ext, 'php_xdebug.dll'))).toEqual(DLL);
+    expect(readFileSync(ini).equals(antes)).toBe(true);
+    expect(llamadas.filter((a) => a.includes('-v'))).toEqual([]);
+    // Igual que la que hay: nada que cambiar.
+    respuestas.set(e.url, new Response(DLL));
+    expect(await crear([e]).instalarArchivo('8.4', 'xdebug')).toEqual({ cambiada: false });
+  });
+
   it('una huella distinta no deja nada instalado', async () => {
     const e = entrada({ sha256: 'f'.repeat(64) });
     respuestas.set(e.url, new Response(DLL));

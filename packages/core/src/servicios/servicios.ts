@@ -58,6 +58,11 @@ export interface DepsServicios {
   procesosProyecto?: Pick<ProcesosProyecto, 'estadosServicio' | 'detenerTodos'>;
   /** Publica un aviso (centro de avisos); aquí, el puerto ocupado al iniciar un servicio. */
   avisar?: (a: EntradaAviso) => unknown;
+  /** Pools propios de los sitios (ini por sitio, Xdebug): viven con el pool de su rama. */
+  poolsSitio?: {
+    iniciarRama(rama: string): Promise<void>;
+    detenerRama(rama: string): Promise<void>;
+  };
 }
 
 export type IdServicio = 'nginx' | 'ftp' | `php-${string}` | IdServicioDatos;
@@ -216,14 +221,33 @@ export class Servicios {
     if (id === 'nginx') return this.nginx.iniciar();
     if (id === 'ftp') return this.ftpObligatorio().iniciar();
     if (esIdServicioDatos(id)) return this.datos.iniciar(id);
-    return this.php.iniciar(id.slice('php-'.length));
+    return this.iniciarRama(id.slice('php-'.length));
+  }
+
+  /** Pool compartido de la rama y, detrás, los pools propios de sus sitios. */
+  private async iniciarRama(rama: string): Promise<void> {
+    await this.php.iniciar(rama);
+    try {
+      await this.d.poolsSitio?.iniciarRama(rama);
+    } catch (e) {
+      // El PHP de la rama ya responde: un pool de sitio que no arranca no la tumba.
+      console.error(
+        `PHP ${rama}: un PHP propio de un sitio no arrancó:`,
+        e instanceof Error ? e.message : e,
+      );
+    }
+  }
+
+  private async detenerRama(rama: string): Promise<void> {
+    await this.d.poolsSitio?.detenerRama(rama);
+    await this.php.detener(rama);
   }
 
   async detener(id: IdServicio): Promise<void> {
     if (id === 'nginx') return this.nginx.detener();
     if (id === 'ftp') return this.ftpObligatorio().detener();
     if (esIdServicioDatos(id)) return this.datos.detener(id);
-    return this.php.detener(id.slice('php-'.length));
+    return this.detenerRama(id.slice('php-'.length));
   }
 
   /** Valida 1024–65535 y que esté libre, guarda y reinicia el servicio si estaba encendido. */
@@ -242,7 +266,7 @@ export class Servicios {
     try {
       const instaladas = await this.d.instalador.instalados('php');
       for (const v of await this.ramasEnUso()) {
-        if (instaladas.includes(v)) await this.php.iniciar(v);
+        if (instaladas.includes(v)) await this.iniciarRama(v);
       }
       await this.nginx.iniciar();
     } catch (e) {
@@ -262,7 +286,7 @@ export class Servicios {
     }
     try {
       await this.nginx.detener();
-      for (const v of await this.d.instalador.instalados('php')) await this.php.detener(v);
+      for (const v of await this.d.instalador.instalados('php')) await this.detenerRama(v);
     } catch (e) {
       errores.push(e);
     }

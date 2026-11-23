@@ -166,6 +166,13 @@ export const PARAMETROS_ERROR = {
   'php.descarga_fallida': ['detalle'],
   'php.extension_en_uso': ['nombre', 'rama'],
   'php.extension_sin_dll': ['nombre', 'rama'],
+  // Ini por sitio y Xdebug (Task 11)
+  'php.sitio_sin_php': [],
+  'php.sitio_no_arranco': ['sitio'],
+  'php.sin_puertos_sitio': [],
+  'xdebug.launch_invalido': [],
+  'xdebug.launch_no_seguro': [],
+  'xdebug.sin_configurar': [],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

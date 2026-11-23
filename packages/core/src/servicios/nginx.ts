@@ -32,7 +32,8 @@ export class ErrorPuertoOcupado extends ErrorWolf {
 export type SupervisorServicios = Pick<Supervisor, 'iniciar' | 'detener' | 'estado' | 'pid'> &
   Partial<Pick<Supervisor, 'marcarDeteniendo' | 'mensaje'>>;
 export type InstaladorServicios = Pick<Instalador, 'instalados' | 'instalado'>;
-export type UpstreamPhp = { version: string; puertos: number[] };
+/** Upstream de PHP para nginx.conf: el de la rama (`php84`) o, con `nombre`, el pool de un sitio. */
+export type UpstreamPhp = { version: string; puertos: number[]; nombre?: string };
 
 /** Lanza ErrorPuertoOcupado si otro proceso (no el nuestro con ese id) usa el puerto. */
 export async function verificarPuerto(

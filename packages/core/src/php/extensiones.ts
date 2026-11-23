@@ -218,6 +218,77 @@ export class ExtensionesPhp {
    * un host permitido y con su SHA-256) y la activa.
    */
   async instalar(rama: string, nombre: string): Promise<void> {
+    const { n, dll, destino, actual } = await this.descargarParaRama(rama, nombre);
+    if (actual?.equals(dll)) {
+      await this.activar(rama, n, true);
+      return;
+    }
+    if (await this.cambiarSiActiva(rama, n, destino, dll)) return;
+    const deshacer = await this.cambiarDll(destino, dll, n, rama);
+    try {
+      await this.activar(rama, n, true);
+    } catch (err) {
+      await deshacer();
+      throw err;
+    }
+    await this.limpiarAnteriores(destino);
+  }
+
+  /**
+   * Pone la DLL del catálogo en ext/ SIN activarla en el ini de la rama (Xdebug por sitio: la
+   * carga solo el pool propio del sitio). Si la rama ya la tenía activa, es una actualización
+   * como en `instalar` (prueba, reinicio y vuelta atrás). `cambiada`: si la DLL es otra.
+   */
+  async instalarArchivo(rama: string, nombre: string): Promise<{ cambiada: boolean }> {
+    const { n, dll, destino, actual } = await this.descargarParaRama(rama, nombre);
+    if (actual?.equals(dll)) return { cambiada: false };
+    if (await this.cambiarSiActiva(rama, n, destino, dll)) return { cambiada: true };
+    await this.cambiarDll(destino, dll, n, rama);
+    await this.limpiarAnteriores(destino);
+    return { cambiada: true };
+  }
+
+  /** ¿Está php_<nombre>.dll en ext/ de la rama? */
+  tieneDll(rama: string, nombre: string): boolean {
+    return existsSync(path.join(this.carpetaExt(rama), `php_${validarNombre(nombre)}.dll`));
+  }
+
+  /** Ruta de php_<nombre>.dll en ext/ de la rama (exista o no). */
+  rutaDll(rama: string, nombre: string): string {
+    return path.join(this.carpetaExt(rama), `php_${validarNombre(nombre)}.dll`);
+  }
+
+  /**
+   * Si la extensión ya está activa en la rama (cargada por el pool), cambia la DLL en la fila del
+   * ini, la prueba con php -v, reinicia y vuelve a la anterior si no queda sano. false si no
+   * estaba activa (no hace nada).
+   */
+  private async cambiarSiActiva(
+    rama: string,
+    n: string,
+    destino: string,
+    dll: Buffer,
+  ): Promise<boolean> {
+    if (!extensionesActivas(await this.d.ini.leer(rama)).has(n)) return false;
+    await this.d.ini.enCola(rama, async () => {
+      const deshacer = await this.cambiarDll(destino, dll, n, rama);
+      try {
+        await this.d.ini.probar(rama, await this.d.ini.leer(rama));
+      } catch (err) {
+        await deshacer();
+        throw err;
+      }
+      await this.d.ini.aplicarEnPool(rama, deshacer);
+    });
+    await this.limpiarAnteriores(destino);
+    return true;
+  }
+
+  /** Descarga la variante de la compilación instalada (del catálogo de la rama) y la verifica. */
+  private async descargarParaRama(
+    rama: string,
+    nombre: string,
+  ): Promise<{ n: string; dll: Buffer; destino: string; actual: Buffer | null }> {
     const n = validarNombre(nombre);
     await this.d.ini.leer(rama); // valida la rama
     const candidatas = this.delCatalogo(rama, n);
@@ -241,35 +312,7 @@ export class ExtensionesPhp {
     const dll = e.formato === 'archivo' ? datos : await this.dllDelZip(e, datos);
     const destino = path.join(this.carpetaExt(rama), `php_${n}.dll`);
     const actual = existsSync(destino) ? await readFile(destino).catch(() => null) : null;
-    if (actual?.equals(dll)) {
-      await this.activar(rama, n, true);
-      return;
-    }
-    const activa = extensionesActivas(await this.d.ini.leer(rama)).has(n);
-    if (activa) {
-      // Ya cargada por el pool: se cambia la DLL en la fila del ini, se prueba con php -v y se
-      // reinicia; si no queda sano, vuelve la anterior.
-      await this.d.ini.enCola(rama, async () => {
-        const deshacer = await this.cambiarDll(destino, dll, n, rama);
-        try {
-          await this.d.ini.probar(rama, await this.d.ini.leer(rama));
-        } catch (err) {
-          await deshacer();
-          throw err;
-        }
-        await this.d.ini.aplicarEnPool(rama, deshacer);
-      });
-      await this.limpiarAnteriores(destino);
-      return;
-    }
-    const deshacer = await this.cambiarDll(destino, dll, n, rama);
-    try {
-      await this.activar(rama, n, true);
-    } catch (err) {
-      await deshacer();
-      throw err;
-    }
-    await this.limpiarAnteriores(destino);
+    return { n, dll, destino, actual };
   }
 
   /**

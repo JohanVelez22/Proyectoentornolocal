@@ -53,7 +53,7 @@ function bloqueAdminer(a: { raiz: string; puertos: number[] }): string[] {
 export function generarNginxPrincipal(o: {
   prefijo: string;
   sitesDir: string;
-  phpUpstreams: { version: string; puertos: number[] }[];
+  phpUpstreams: { version: string; puertos: number[]; nombre?: string }[];
   logsDir: string;
   /** Puerto de escucha: el servidor por defecto atiende los Host desconocidos. */
   puerto: number;
@@ -65,7 +65,7 @@ export function generarNginxPrincipal(o: {
   const prefijo = limpiar(o.prefijo);
   const logs = limpiar(o.logsDir);
   const upstreams = o.phpUpstreams.flatMap((u) => [
-    `    upstream ${nombreUpstream(u.version)} {`,
+    `    upstream ${u.nombre ?? nombreUpstream(u.version)} {`,
     ...u.puertos.map((p) => `        server 127.0.0.1:${p};`),
     '    }',
   ]);
