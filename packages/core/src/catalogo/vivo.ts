@@ -34,7 +34,12 @@ import { fuenteNode } from './fuentes/node';
 import { fuentePhp } from './fuentes/php';
 import { fuentePostgresql } from './fuentes/postgresql';
 import { fuentePython } from './fuentes/python';
-import type { ContextoFuente, FuenteVersiones } from './fuentes/tipos';
+import {
+  SinCambios,
+  type ContextoFuente,
+  type FuenteVersiones,
+  type Validadores,
+} from './fuentes/tipos';
 import { HuellaSchema, huellaFuerte, type Huella } from './huellas';
 
 /** Fuentes oficiales en vivo. Los servicios sin fuente salen siempre de la lista fija. */
@@ -56,6 +61,13 @@ export const FUENTES_VERSIONES: Partial<Record<ServicioInstalable, FuenteVersion
 };
 
 export const TTL_CATALOGO_MS = 6 * 60 * 60 * 1000;
+/**
+ * Vigencia propia de algunos servicios: el índice de MongoDB pesa ~50 MB (además se pide
+ * condicional con ETag/Last-Modified).
+ */
+export const TTL_POR_SERVICIO: Partial<Record<ServicioInstalable, number>> = {
+  mongodb: 48 * 60 * 60 * 1000,
+};
 /** Desfase de reloj que se tolera en la fecha de una caché. */
 export const MARGEN_RELOJ_MS = 5 * 60 * 1000;
 
@@ -207,9 +219,12 @@ export class CatalogoVivo {
   }
 
   /** Caché del servicio ya validada; null si falta o no pasa la validación. */
-  private async leerCache(
-    servicio: ServicioInstalable,
-  ): Promise<{ fecha: string; versiones: VersionDisponible[] } | null> {
+  private async leerCache(servicio: ServicioInstalable): Promise<{
+    fecha: string;
+    versiones: VersionDisponible[];
+    validadores?: Validadores;
+    notas?: Record<string, string>;
+  } | null> {
     const g = await this.cache.leer(servicio);
     if (!g) return null;
     // Una fecha adelantada (reloj tocado o archivo alterado) la dejaría vigente para siempre.
@@ -219,7 +234,13 @@ export class CatalogoVivo {
         ...v,
         origen: 'cache' as const,
       }));
-      return versiones.length > 0 ? { fecha: g.fecha, versiones } : null;
+      if (versiones.length === 0) return null;
+      return {
+        fecha: g.fecha,
+        versiones,
+        ...(g.validadores ? { validadores: g.validadores } : {}),
+        ...(g.notas ? { notas: g.notas } : {}),
+      };
     } catch {
       return null;
     }
@@ -253,17 +274,37 @@ export class CatalogoVivo {
       origen: 'cache',
       fecha: c.fecha,
     });
-    if (cache && !refrescar && this.ahora.getTime() - Date.parse(cache.fecha) < this.ttl) {
+    const ttl = this.ttl(servicio);
+    if (cache && !refrescar && this.ahora.getTime() - Date.parse(cache.fecha) < ttl) {
       return conCache(cache);
     }
+    const guardar: NonNullable<ContextoFuente['guardar']> = {};
     try {
       const previas = [...(cache?.versiones ?? []), ...listaFija(servicio)];
-      const versiones = validarIndice(servicio, await fuente.listar(this.contexto(previas)));
+      const ctx: ContextoFuente = {
+        ...this.contexto(previas),
+        ttlMs: ttl,
+        guardar,
+        ...(cache?.validadores ? { validadores: cache.validadores } : {}),
+        ...(cache?.notas ? { notas: cache.notas } : {}),
+      };
+      const versiones = validarIndice(servicio, await fuente.listar(ctx));
       if (versiones.length === 0) throw new Error('El índice no trae versiones');
       const fecha = this.ahora.toISOString();
-      await this.cache.guardar(servicio, fecha, versiones).catch(() => undefined);
+      await this.cache.guardar(servicio, fecha, versiones, guardar).catch(() => undefined);
       return { versiones: this.conHuellaFija(servicio, versiones), origen: 'vivo', fecha };
     } catch (e) {
+      if (e instanceof SinCambios && cache) {
+        // 304: la fuente confirma que la caché sigue al día; se renueva su fecha.
+        const fecha = this.ahora.toISOString();
+        const versiones = cache.versiones.map((v) => ({ ...v, origen: 'vivo' as const }));
+        const extra = {
+          ...(cache.validadores ? { validadores: cache.validadores } : {}),
+          ...(cache.notas ? { notas: cache.notas } : {}),
+        };
+        await this.cache.guardar(servicio, fecha, versiones, extra).catch(() => undefined);
+        return { versiones: this.conHuellaFija(servicio, versiones), origen: 'vivo', fecha };
+      }
       // Sin red, índice malformado o manipulado: caché (aunque esté vencida) o lista fija.
       const motivo = (e instanceof Error ? e.message : String(e)).slice(0, 200);
       console.warn(
@@ -273,8 +314,8 @@ export class CatalogoVivo {
     }
   }
 
-  private get ttl(): number {
-    return this.o.ttlMs ?? TTL_CATALOGO_MS;
+  private ttl(servicio: ServicioInstalable): number {
+    return this.o.ttlMs ?? TTL_POR_SERVICIO[servicio] ?? TTL_CATALOGO_MS;
   }
 
   /**

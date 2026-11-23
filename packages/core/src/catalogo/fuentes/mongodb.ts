@@ -4,7 +4,15 @@ import { nombreEjecutable } from '../../plataforma/sistema';
 import type { VersionDisponible } from '../catalogo';
 import { claveValida, compararVersionesDesc, urlIndice } from '../comun';
 import { pedirConSaltos } from '../red';
-import { IndiceMalformado, PLAZO_INDICE_MS, ramaMayorMenor, type FuenteVersiones } from './tipos';
+import {
+  encabezadosCondicionales,
+  IndiceMalformado,
+  PLAZO_INDICE_MS,
+  ramaMayorMenor,
+  SinCambios,
+  validadoresDe,
+  type FuenteVersiones,
+} from './tipos';
 
 export const FULL_JSON_MONGODB = 'https://downloads.mongodb.org/full.json';
 /** `full.json` pesa unos 50 MB: se lee en flujo y se corta si pasa de 80 MB. */
@@ -188,13 +196,22 @@ export const fuenteMongodb: FuenteVersiones = {
     const res = await pedirConSaltos(
       ctx.f,
       FULL_JSON_MONGODB,
-      { signal: AbortSignal.any(senales), headers: { 'user-agent': 'WolfCoreDev' } },
+      {
+        signal: AbortSignal.any(senales),
+        // Con la caché a mano se pide condicional: un 304 ahorra los ~50 MB.
+        headers: { 'user-agent': 'WolfCoreDev', ...encabezadosCondicionales(ctx.validadores) },
+      },
       urlIndice,
     );
+    if (res.status === 304) {
+      await res.body?.cancel().catch(() => undefined);
+      throw new SinCambios();
+    }
     if (!res.ok) {
       await res.body?.cancel().catch(() => undefined);
       throw new Error(`HTTP ${res.status} en downloads.mongodb.org`);
     }
+    if (ctx.guardar) ctx.guardar.validadores = validadoresDe(res);
     const vistas = new Map<string, VersionDisponible>();
     for (const w of await versionesDeFullJson(res)) {
       if (vistas.has(w.version)) continue;

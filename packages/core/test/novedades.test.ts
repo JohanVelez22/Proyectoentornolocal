@@ -295,3 +295,37 @@ describe('Nucleo: revisión de versiones nuevas', () => {
     }
   });
 });
+
+describe('Novedades: edad de la caché (menores de la Task 17)', () => {
+  const horas = (h: number): string => new Date(ahora.getTime() - h * 3600_000).toISOString();
+
+  it('no avisa desde una caché de más de 7 días', async () => {
+    instalados.mysql = ['8.4.13'];
+    indices.mysql = {
+      versiones: [v('mysql', '8.4.15', '8.4', { origen: 'cache' })],
+      origen: 'cache',
+      fecha: horas(8 * 24),
+    };
+    expect(await novedades().revisar()).toEqual([]);
+    indices.mysql = { ...indices.mysql, fecha: horas(6 * 24) };
+    expect(await novedades().revisar()).toHaveLength(1);
+  });
+
+  it('MongoDB se salta si su caché tiene menos de 24 h; otro servicio no', async () => {
+    instalados.mongodb = ['8.0.10'];
+    instalados.redis = ['8.2.1'];
+    const versiones = [v('mongodb', '8.0.38', '8.0', { origen: 'cache' })];
+    indices.mongodb = { versiones, origen: 'cache', fecha: horas(2) };
+    indices.redis = {
+      versiones: [v('redis', '8.2.3', '8.2', { origen: 'cache' })],
+      origen: 'cache',
+      fecha: horas(2),
+    };
+    expect((await novedades().revisar()).map((n) => n.servicio)).toEqual(['redis']);
+    indices.mongodb = { versiones, origen: 'cache', fecha: horas(30) };
+    expect((await novedades().revisar()).map((n) => n.servicio)).toEqual(['redis', 'mongodb']);
+    // Recién consultado en vivo (o renovado con 304) sí se revisa.
+    indices.mongodb = { versiones, origen: 'vivo', fecha: horas(0) };
+    expect((await novedades().revisar()).map((n) => n.servicio)).toContain('mongodb');
+  });
+});

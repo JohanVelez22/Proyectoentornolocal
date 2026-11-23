@@ -390,3 +390,78 @@ describe('CatalogoVivo con las fuentes de bases de datos y Nginx', () => {
     expect(mongo.every((v) => v.huella?.algoritmo === 'sha256')).toBe(true);
   });
 });
+
+describe('Costo de las consultas (menores de la Task 17)', () => {
+  const nuevo = async (f: typeof fetch, reloj: () => Date) => {
+    const rutas = new Rutas(await carpetaTemporal('pel-costo-'));
+    await rutas.asegurar();
+    return {
+      rutas,
+      c: new CatalogoVivo(rutas, { idCatalogo: () => 'win-x64' }, f, { ahora: reloj }),
+    };
+  };
+
+  it('MongoDB: guarda ETag y Last-Modified, los manda al volver y un 304 renueva la fecha de la caché', async () => {
+    let ahora = HOY;
+    const cuerpos: (string | null)[] = [];
+    const encabezados: Headers[] = [];
+    const ff = fetchFalso({
+      ...rutasBd(),
+      [FULL_JSON_MONGODB]: () => {
+        const h = new Headers(ff.inits.at(-1)?.headers);
+        encabezados.push(h);
+        if (h.get('if-none-match') === '"v1"') {
+          cuerpos.push(null);
+          return new Response(null, { status: 304 });
+        }
+        cuerpos.push('full');
+        return new Response(fixture('mongodb-full.json'), {
+          headers: { etag: '"v1"', 'last-modified': 'Mon, 23 Nov 2026 10:00:00 GMT' },
+        });
+      },
+    });
+    const { c } = await nuevo(ff.f, () => ahora);
+    const a = await c.listar('mongodb');
+    expect(a.origen).toBe('vivo');
+    expect(encabezados[0]?.get('if-none-match')).toBeNull();
+    // La caché de MongoDB dura 48 h: a las 30 h no se consulta.
+    ahora = new Date(HOY.getTime() + 30 * 3600_000);
+    expect((await c.listar('mongodb')).origen).toBe('cache');
+    expect(cuerpos).toHaveLength(1);
+    // Vencida: pide con los validadores; 304 → mismas versiones con la fecha renovada.
+    ahora = new Date(HOY.getTime() + 49 * 3600_000);
+    const b = await c.listar('mongodb');
+    expect(encabezados[1]?.get('if-none-match')).toBe('"v1"');
+    expect(encabezados[1]?.get('if-modified-since')).toBe('Mon, 23 Nov 2026 10:00:00 GMT');
+    expect(cuerpos).toEqual(['full', null]);
+    expect(b.origen).toBe('vivo');
+    expect(b.fecha).toBe(ahora.toISOString());
+    expect(b.versiones.map((v) => v.version)).toEqual(a.versiones.map((v) => v.version));
+    // La fecha renovada vale: dentro de las 48 h siguientes, otra vez de la caché.
+    ahora = new Date(ahora.getTime() + 47 * 3600_000);
+    expect((await c.listar('mongodb')).origen).toBe('cache');
+    expect(cuerpos).toHaveLength(2);
+  });
+
+  it('un 304 sin caché válida no deja el catálogo vacío (cae a la lista fija)', async () => {
+    const ff = fetchFalso({ [FULL_JSON_MONGODB]: () => new Response(null, { status: 304 }) });
+    const { c } = await nuevo(ff.f, () => HOY);
+    const r = await c.listar('mongodb');
+    expect(r.origen).toBe('fija');
+  });
+
+  it('MySQL: la página de descargas que no responde no se vuelve a pedir dentro del TTL', async () => {
+    let ahora = HOY;
+    const ff = fetchFalso(rutasBd());
+    const { c } = await nuevo(ff.f, () => ahora);
+    await c.listar('mysql', { refrescar: true });
+    expect(ff.pedidas.filter((u) => u === PAGINA_MYSQL)).toHaveLength(1);
+    ahora = new Date(HOY.getTime() + 3600_000);
+    await c.listar('mysql', { refrescar: true });
+    expect(ff.pedidas.filter((u) => u === PAGINA_MYSQL)).toHaveLength(1);
+    // Pasado el TTL se vuelve a probar.
+    ahora = new Date(HOY.getTime() + 7 * 3600_000);
+    await c.listar('mysql', { refrescar: true });
+    expect(ff.pedidas.filter((u) => u === PAGINA_MYSQL)).toHaveLength(2);
+  });
+});

@@ -34,6 +34,17 @@ const CLAVE_INSTANCIA: Partial<Record<ServicioInstalable, (v: string) => string>
 /** Un día: como mucho un aviso de versiones por servicio en este plazo. */
 export const PLAZO_AVISO_NOVEDAD_MS = 24 * 60 * 60 * 1000;
 
+/** Una caché más vieja que esto no sirve para avisar (sin red hace días: no es "lo de hoy"). */
+export const EDAD_MAXIMA_CACHE_NOVEDADES_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Servicios caros de consultar (MongoDB: ~50 MB por índice): si su caché tiene menos de esto,
+ * ya se revisó hace poco y se salta.
+ */
+export const REVISION_ESPACIADA_MS: Partial<Record<ServicioInstalable, number>> = {
+  mongodb: 24 * 60 * 60 * 1000,
+};
+
 export interface Novedad {
   servicio: ServicioInstalable;
   /** Instancia (`<servicio>@<clave>`) a la que afecta un parche; null en una rama nueva. */
@@ -105,6 +116,12 @@ export class Novedades {
     const listado = await this.d.catalogo.listar(servicio, { todas: true });
     // La lista fija no es "lo publicado hoy": sin red no se avisa de nada.
     if (listado.origen === 'fija') return [];
+    if (listado.origen === 'cache' && listado.fecha !== null) {
+      const edad = this.ahora.getTime() - Date.parse(listado.fecha);
+      if (Number.isNaN(edad) || edad > EDAD_MAXIMA_CACHE_NOVEDADES_MS) return [];
+      const espaciada = REVISION_ESPACIADA_MS[servicio];
+      if (espaciada !== undefined && edad < espaciada) return [];
+    }
     const estables = listado.versiones.filter(
       (v) => v.soporte !== 'preview' && !v.version.includes('-'),
     );

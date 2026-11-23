@@ -89,6 +89,37 @@ async function paginaMysql(ctx: ContextoFuente): Promise<string | null> {
   }
 }
 
+/** Nota con la fecha en que la página de descargas no respondió. */
+export const NOTA_PAGINA_MYSQL = 'paginaSinHuella';
+
+/**
+ * La página de descargas casi siempre responde "Technical Difficulties": un resultado negativo
+ * se recuerda con la caché durante el TTL y no se vuelve a pedir en ese plazo.
+ */
+async function paginaRecordada(ctx: ContextoFuente): Promise<string | null> {
+  const nota = ctx.notas?.[NOTA_PAGINA_MYSQL];
+  const ahora = (ctx.ahora ?? new Date()).getTime();
+  const fecha = nota ? Date.parse(nota) : NaN;
+  if (
+    nota &&
+    ctx.ttlMs !== undefined &&
+    !Number.isNaN(fecha) &&
+    fecha <= ahora &&
+    ahora - fecha < ctx.ttlMs
+  ) {
+    if (ctx.guardar) ctx.guardar.notas = { ...ctx.guardar.notas, [NOTA_PAGINA_MYSQL]: nota };
+    return null;
+  }
+  const pagina = await paginaMysql(ctx);
+  if (pagina === null && ctx.guardar) {
+    ctx.guardar.notas = {
+      ...ctx.guardar.notas,
+      [NOTA_PAGINA_MYSQL]: new Date(ahora).toISOString(),
+    };
+  }
+  return pagina;
+}
+
 function soporteDe(r: RamaMysql, hoy: string): SoporteVersion {
   if (r.fin !== null && r.fin < hoy) return 'fin';
   return r.lts ? 'lts' : 'actual';
@@ -148,7 +179,7 @@ export const fuenteMysql: FuenteVersiones = {
         version = siguiente(version);
       }
     }
-    const pagina = encontradas.length > 0 ? await paginaMysql(ctx) : null;
+    const pagina = encontradas.length > 0 ? await paginaRecordada(ctx) : null;
     return encontradas
       .map(({ r, version }): VersionDisponible => {
         const md5 = pagina ? md5DePaginaMysql(pagina, version) : null;

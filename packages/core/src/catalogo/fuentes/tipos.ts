@@ -15,6 +15,48 @@ export interface ContextoFuente {
    * (MySQL) sondean desde la última de cada rama.
    */
   previas?: readonly VersionDisponible[];
+  /** Validadores HTTP guardados con la caché (para pedir con `If-None-Match`/`If-Modified-Since`). */
+  validadores?: Validadores;
+  /** Notas que la fuente dejó en la consulta anterior (p. ej. una página que no respondió). */
+  notas?: Readonly<Record<string, string>>;
+  /** Vigencia de la caché del servicio. */
+  ttlMs?: number;
+  /** Lo que la fuente pide guardar con la caché si la consulta sale bien. */
+  guardar?: { validadores?: Validadores; notas?: Record<string, string> };
+}
+
+/** ETag y Last-Modified de la respuesta de un índice. */
+export interface Validadores {
+  etag?: string;
+  ultimaModificacion?: string;
+}
+
+/**
+ * El servidor respondió 304: el índice no cambió desde la caché. `CatalogoVivo` renueva la fecha
+ * de la caché con las mismas versiones (si no hay caché válida, cae a la lista fija).
+ */
+export class SinCambios extends Error {
+  constructor() {
+    super('El índice no cambió (304)');
+  }
+}
+
+/** Encabezados condicionales a partir de los validadores guardados. */
+export function encabezadosCondicionales(v: Validadores | undefined): Record<string, string> {
+  const h: Record<string, string> = {};
+  if (v?.etag) h['if-none-match'] = v.etag;
+  if (v?.ultimaModificacion) h['if-modified-since'] = v.ultimaModificacion;
+  return h;
+}
+
+/** Validadores de una respuesta (acotados: vienen de fuera). */
+export function validadoresDe(res: Response): Validadores {
+  const v: Validadores = {};
+  const etag = res.headers.get('etag');
+  const lm = res.headers.get('last-modified');
+  if (etag && etag.length <= 200) v.etag = etag;
+  if (lm && lm.length <= 100) v.ultimaModificacion = lm;
+  return v;
 }
 
 /**
