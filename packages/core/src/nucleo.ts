@@ -36,7 +36,7 @@ import { ConfianzaCa, type EstadoConfianza, type ResultadoFirefox } from './http
 import { Adminer } from './herramientas/adminer';
 import { Composer } from './herramientas/composer';
 import { PathUsuario, respaldoPathUsuario } from './herramientas/pathUsuario';
-import { abrirEnVsCode } from './herramientas/editor';
+import { abrirArchivoDelSitio, abrirEnVsCode } from './herramientas/editor';
 import { Terminal } from './herramientas/terminal';
 import { ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
 import { bloqueEnvIa } from './ia/envIa';
@@ -57,6 +57,12 @@ import { Agentes } from './agentes/agentes';
 import { ErrorWolf } from './errores';
 import { ServidorMcp, type EstadoMcp, type OperacionesMcp } from './mcp/servidor';
 import { asegurarArchivosDepuracion, rutasDepuracion } from './depuracion/prepend';
+import {
+  VisorErrores,
+  type ErrorAgrupado,
+  type FiltroErrores,
+  type ResumenError,
+} from './depuracion/errores';
 import {
   ReceptorDumps,
   textoParaCopiar,
@@ -439,6 +445,8 @@ export class Nucleo {
   readonly vigilante: VigilanteProyectos;
   readonly metricas: Metricas;
   readonly registros: Registros;
+  /** Errores agrupados de los registros (sigue las fuentes la primera vez que se pide). */
+  readonly errores: VisorErrores;
   readonly puertos: HerramientasPuertos;
   /** Revisiones del entorno y reparaciones guiadas (pantalla Doctor). */
   readonly doctor: Doctor;
@@ -504,6 +512,11 @@ export class Nucleo {
     this.vigilante = m.vigilante;
     this.metricas = m.metricas;
     this.registros = m.registros;
+    this.errores = new VisorErrores({
+      registros: this.registros,
+      eventos: this.eventos,
+      leerSitios: () => this.sitios.listar(),
+    });
     this.puertos = m.puertos;
     this.doctor = m.doctor;
     this.confianza = m.confianza;
@@ -1611,6 +1624,11 @@ export class Nucleo {
       traerCambios: async (sitioId) =>
         this.traerCambios(sitioId, await this.proveedorTokenGithub()),
       leerRegistro: (id, lineas) => this.registros.leerFinal(id, lineas),
+      listarDumps: (filtro) => this.listaDumps(filtro),
+      leerDump: (id) => this.leerDump(id),
+      limpiarDumps: () => this.limpiarDumps(),
+      listarErrores: (filtro) => this.listaErrores(filtro),
+      leerError: (huella) => this.leerError(huella),
       finalizarProceso: (pid, confirmacion) => this.puertos.finalizarProceso(pid, confirmacion),
       estadoGeneral: () => this.estadoGeneral(),
       listarProyectos: () => this.sitios.listar(),
@@ -2106,6 +2124,24 @@ export class Nucleo {
     return textoParaCopiar(d);
   }
 
+  /** Errores agrupados (sin traza), del más reciente al más viejo. */
+  listaErrores(filtro?: FiltroErrores): Promise<ResumenError[]> {
+    return this.errores.lista(filtro);
+  }
+
+  /** Un error agrupado con la traza de la última vez, o null. */
+  leerError(huella: string): Promise<ErrorAgrupado | null> {
+    return this.errores.leer(huella);
+  }
+
+  /**
+   * Abre un archivo del sitio en VS Code en una línea (desde el visor de errores). Solo archivos
+   * reales dentro de la carpeta del sitio: el sitio sale de la configuración por su id.
+   */
+  async abrirEnEditor(sitioId: string, archivo: string, linea: number): Promise<void> {
+    await abrirArchivoDelSitio((await this.sitioPorId(sitioId)).carpeta, archivo, linea);
+  }
+
   /** Respuesta de la ventana a `'mcp:confirmar'`; un id desconocido o vencido se ignora. */
   responderConfirmacionMcp(id: string, aprobado: boolean): boolean {
     return this.mcp.responderConfirmacion(id, aprobado);
@@ -2443,6 +2479,7 @@ export class Nucleo {
     // túneles, procesos y servicios.
     this.vigilante.dispose();
     this.metricas.pausar();
+    this.errores.cerrar();
     this.registros.cerrar();
     for (const s of await this.sitios.listar().catch(() => [] as Sitio[])) {
       this.recetas.cancelar(s.id);

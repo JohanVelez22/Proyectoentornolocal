@@ -192,6 +192,7 @@ export const PARAMETROS_ERROR = {
   'depuracion.tipo_no_soportado': [],
   'depuracion.confirmacion': [],
   'depuracion.argumento_invalido': ['campo'],
+  'depuracion.archivo_fuera_del_sitio': [],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

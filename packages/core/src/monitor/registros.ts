@@ -11,13 +11,14 @@ import type { Rutas } from '../rutas';
 import type { Sitio } from '../tipos';
 
 export type GrupoRegistro =
-  'nginx' | 'php' | 'servicio' | 'sitio' | 'proyecto' | 'tunel' | 'laravel';
+  'nginx' | 'php' | 'servicio' | 'sitio' | 'proyecto' | 'tunel' | 'laravel' | 'ci3';
 
 /** Un archivo de registro que se puede ver. El renderer solo conoce el `id`, nunca pide rutas. */
 export interface FuenteRegistro {
   /**
    * Estable: 'nginx', 'nginx:error', 'php:<versión>', 'servicio:<nombre>', 'sitio:<id>:acceso',
-   * 'sitio:<id>:error', 'tunel:<sitio>', 'tunel:<sitio>:salida', 'laravel:<sitio>' y, para los
+   * 'sitio:<id>:error', 'tunel:<sitio>', 'tunel:<sitio>:salida', 'laravel:<sitio>', 'ci3:<sitio>' y,
+   * para los
    * procesos de proyecto, el mismo id del supervisor ('proy-<sitio>-<proceso>').
    */
   id: string;
@@ -373,6 +374,20 @@ export class Registros {
           sitioId: s.id,
         });
       }
+      // CodeIgniter 3: application/logs/log-AAAA-MM-DD.php (el más nuevo; si no hay, el de hoy).
+      if (s.tipo === 'codeigniter3') {
+        const carpetaLogs = path.join(s.carpeta, 'application', 'logs');
+        const ruta = path.join(carpetaLogs, (await ultimoLogCi3(carpetaLogs)) ?? nombreLogCi3());
+        if (await quedaDentro(s.carpeta, ruta)) {
+          agregar({
+            id: `ci3:${s.id}`,
+            nombre: `${s.nombre}: CodeIgniter`,
+            ruta,
+            grupo: 'ci3',
+            sitioId: s.id,
+          });
+        }
+      }
     }
     return lista;
   }
@@ -501,6 +516,25 @@ async function quedaDentro(carpeta: string, ruta: string): Promise<boolean> {
     const padre = path.dirname(actual);
     if (padre === actual) return true;
     actual = padre;
+  }
+}
+
+/** Nombre del log de CodeIgniter 3 de un día (hora local). */
+export function nombreLogCi3(d = new Date()): string {
+  const dos = (n: number): string => String(n).padStart(2, '0');
+  return `log-${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}.php`;
+}
+
+/** El log de CodeIgniter 3 más nuevo de la carpeta (por el nombre con la fecha), o null. */
+async function ultimoLogCi3(carpeta: string): Promise<string | null> {
+  try {
+    const nombres = (await readdir(carpeta, { withFileTypes: true }))
+      .filter((e) => e.isFile() && /^log-\d{4}-\d{2}-\d{2}\.php$/.test(e.name))
+      .map((e) => e.name)
+      .sort();
+    return nombres.at(-1) ?? null;
+  } catch {
+    return null;
   }
 }
 

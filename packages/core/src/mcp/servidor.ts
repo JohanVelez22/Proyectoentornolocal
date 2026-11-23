@@ -12,6 +12,9 @@ import { NOMBRE_BD_MONGO } from '../bd/basesDeDatos';
 import { NOMBRE_BD_MYSQL } from '../bd/clienteMysql';
 import { NOMBRE_BD_PG } from '../bd/clientePostgres';
 import type { MotorBd } from '../bd/env';
+import type { Dump, FiltroDumps, ResumenDump } from '../depuracion/receptor';
+import type { ErrorAgrupado, FiltroErrores, ResumenError } from '../depuracion/errores';
+import { enmascararSecretos } from '../patronesSecretos';
 import { rutaComparable } from '../plataforma/sistema';
 
 /**
@@ -51,6 +54,13 @@ export interface OperacionesMcp {
   leerRegistro?(id: string, lineas: number): Promise<string[]>;
   /** `confirmacion` es el nombre del proceso. */
   finalizarProceso?(pid: number, confirmacion: string): Promise<unknown>;
+  /** Resúmenes de los volcados en memoria (los más nuevos primero). */
+  listarDumps?(filtro: FiltroDumps): ResumenDump[] | Promise<ResumenDump[]>;
+  leerDump?(id: string): Dump | null | Promise<Dump | null>;
+  limpiarDumps?(): unknown;
+  /** Errores agrupados de los registros (sin traza). */
+  listarErrores?(filtro: FiltroErrores): Promise<ResumenError[]>;
+  leerError?(huella: string): Promise<ErrorAgrupado | null>;
 }
 
 /** Receta lista para confirmar y ejecutar, atada a una sola solicitud. */
@@ -74,6 +84,8 @@ export interface DatosConfirmacion {
   nombre?: string;
   proyecto?: string;
   pasos?: string[];
+  /** limpiar_dumps: cuántos volcados se borran. */
+  cantidad?: number;
 }
 
 /** Lo que el núcleo emite como `'mcp:confirmar'` para que la ventana pregunte. */
@@ -130,6 +142,11 @@ export const HERRAMIENTAS_MCP = [
   'traer_cambios',
   'leer_registro',
   'finalizar_proceso',
+  'listar_dumps',
+  'leer_dump',
+  'limpiar_dumps',
+  'listar_errores',
+  'leer_error',
 ] as const;
 
 const DIRECCION = '127.0.0.1';
@@ -157,6 +174,57 @@ const idServicio = z
   );
 
 const mensajeDe = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+/* ───────────── Depuración (dumps y errores): entradas y salidas acotadas ───────────── */
+
+/** Texto de un volcado que devuelve leer_dump (el resto se corta y se avisa con `truncado`). */
+export const MAX_TEXTO_DUMP_MCP = 64 * 1024;
+const MAX_MENSAJE_LISTA_MCP = 300;
+const MAX_MENSAJE_MCP = 2000;
+const MAX_LINEAS_TRAZA_MCP = 60;
+const MAX_LINEA_TRAZA_MCP = 500;
+const LIMITE_LISTA_MCP = 50;
+const MAX_LISTA_MCP = 200;
+
+const idSitioFiltro = z
+  .string()
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/, 'El id del proyecto no es válido.');
+const limiteLista = z
+  .number()
+  .int()
+  .min(1)
+  .max(MAX_LISTA_MCP, `Como mucho ${MAX_LISTA_MCP}.`)
+  .default(LIMITE_LISTA_MCP);
+/** Texto corto de búsqueda: una línea, sin controles. */
+const textoBusqueda = z
+  .string()
+  .max(200)
+  .refine((t) => !PROHIBIDOS.test(t), 'El texto no puede llevar saltos de línea ni controles.');
+
+/** Texto que sale por MCP: secretos enmascarados y largo acotado. */
+function saneado(t: string | null, max: number): string | null {
+  if (t === null) return null;
+  const e = enmascararSecretos(t);
+  return e.length > max ? `${e.slice(0, max)}…` : e;
+}
+
+function resumenDumpMcp(d: ResumenDump): ResumenDump {
+  return {
+    ...d,
+    archivo: saneado(d.archivo, 1024),
+    url: saneado(d.url, 2048),
+    vista: saneado(d.vista, 200) ?? '',
+  };
+}
+
+function resumenErrorMcp(e: ResumenError, maxMensaje: number): ResumenError {
+  return {
+    ...e,
+    tipo: saneado(e.tipo, 200) ?? '',
+    mensaje: saneado(e.mensaje, maxMensaje) ?? '',
+    archivo: saneado(e.archivo, 1024),
+  };
+}
 
 /**
  * Controles, saltos de línea (también U+2028/U+2029), marcas de dirección (bidi) y caracteres
@@ -809,6 +877,130 @@ export class ServidorMcp {
             senal(extra),
             () => finalizar.call(ops, pid, nombre),
           );
+        }),
+    );
+
+    /* ───────────── Depuración: dumps y errores ───────────── */
+
+    mcp.registerTool(
+      'listar_dumps',
+      {
+        description: `Volcados de dump()/dd()/wd() y wolfdump recibidos por WolfCore Dev (solo en memoria), del más nuevo al más viejo, con un resumen de una línea y los secretos enmascarados. Hasta ${MAX_LISTA_MCP}.`,
+        inputSchema: {
+          sitioId: idSitioFiltro.optional(),
+          origen: z.enum(['php', 'python']).optional(),
+          texto: textoBusqueda.optional().describe('Busca en el texto, el archivo y la URL.'),
+          limite: limiteLista,
+        },
+        annotations: lectura,
+      },
+      ({ sitioId: s, origen, texto, limite }) =>
+        ejecutar(async () => {
+          const listar = disponible(ops.listarDumps, 'listar_dumps');
+          const filtro: FiltroDumps = {};
+          if (s !== undefined) filtro.sitioId = s;
+          if (origen !== undefined) filtro.origen = origen;
+          if (texto !== undefined) filtro.texto = texto;
+          const todos = await listar.call(ops, filtro);
+          return { total: todos.length, dumps: todos.slice(0, limite).map(resumenDumpMcp) };
+        }),
+    );
+    mcp.registerTool(
+      'leer_dump',
+      {
+        description: `Un volcado completo (texto plano, secretos enmascarados, hasta ${MAX_TEXTO_DUMP_MCP / 1024} KiB) con archivo, línea, URL y sitio.`,
+        inputSchema: {
+          id: z.string().regex(/^d[0-9a-z]{1,20}-\d{1,12}$/, 'El id del volcado no es válido.'),
+        },
+        annotations: lectura,
+      },
+      ({ id }) =>
+        ejecutar(async () => {
+          const d = await disponible(ops.leerDump, 'leer_dump').call(ops, id);
+          if (!d) throw new Error('Ese volcado ya no está en memoria.');
+          const texto = enmascararSecretos(d.texto);
+          return {
+            id: d.id,
+            fecha: d.fecha,
+            origen: d.origen,
+            sitioId: d.sitioId,
+            archivo: saneado(d.archivo, 1024),
+            linea: d.linea,
+            url: saneado(d.url, 2048),
+            texto: texto.slice(0, MAX_TEXTO_DUMP_MCP),
+            truncado: texto.length > MAX_TEXTO_DUMP_MCP,
+          };
+        }),
+    );
+    mcp.registerTool(
+      'limpiar_dumps',
+      {
+        description:
+          'Borra todos los volcados de la memoria de WolfCore Dev. Pide confirmación en la ventana; no se puede deshacer.',
+        annotations: destructiva,
+      },
+      (extra) =>
+        ejecutar(async () => {
+          const limpiarTodo = disponible(ops.limpiarDumps, 'limpiar_dumps');
+          const cantidad = ops.listarDumps ? (await ops.listarDumps({})).length : 0;
+          return this.confirmarYEjecutar(
+            'limpiar_dumps',
+            `Borrar ${cantidad === 1 ? 'el volcado' : `los ${cantidad} volcados`} de la memoria de WolfCore Dev. No se puede deshacer.`,
+            { cantidad },
+            senal(extra),
+            async () => {
+              await limpiarTodo.call(ops);
+              return { ok: true };
+            },
+          );
+        }),
+    );
+    mcp.registerTool(
+      'listar_errores',
+      {
+        description: `Errores agrupados de los registros (log de PHP, Nginx, laravel.log, CodeIgniter 3 y tracebacks de Python): tipo, mensaje, archivo:línea, sitio, cuántas veces y primera/última vez. Del más reciente al más viejo; hasta ${MAX_LISTA_MCP}.`,
+        inputSchema: {
+          sitioId: idSitioFiltro.optional(),
+          desde: z.iso
+            .datetime({ offset: true })
+            .optional()
+            .describe('Solo los que aparecieron desde esta fecha (ISO 8601).'),
+          limite: limiteLista,
+        },
+        annotations: lectura,
+      },
+      ({ sitioId: s, desde, limite }) =>
+        ejecutar(async () => {
+          const listar = disponible(ops.listarErrores, 'listar_errores');
+          const filtro: FiltroErrores = {};
+          if (s !== undefined) filtro.sitioId = s;
+          if (desde !== undefined) filtro.desde = new Date(desde).toISOString();
+          const todos = await listar.call(ops, filtro);
+          return {
+            total: todos.length,
+            errores: todos.slice(0, limite).map((e) => resumenErrorMcp(e, MAX_MENSAJE_LISTA_MCP)),
+          };
+        }),
+    );
+    mcp.registerTool(
+      'leer_error',
+      {
+        description: `Un error agrupado con la traza de la última vez (hasta ${MAX_LINEAS_TRAZA_MCP} líneas, secretos enmascarados).`,
+        inputSchema: {
+          huella: z.string().regex(/^[0-9a-f]{16}$/, 'La huella no es válida (16 hexadecimales).'),
+        },
+        annotations: lectura,
+      },
+      ({ huella: h }) =>
+        ejecutar(async () => {
+          const e = await disponible(ops.leerError, 'leer_error').call(ops, h);
+          if (!e) throw new Error('No hay un error con esa huella.');
+          return {
+            ...resumenErrorMcp(e, MAX_MENSAJE_MCP),
+            traza: e.traza
+              .slice(0, MAX_LINEAS_TRAZA_MCP)
+              .map((l) => saneado(l, MAX_LINEA_TRAZA_MCP) ?? ''),
+          };
         }),
     );
     return mcp;

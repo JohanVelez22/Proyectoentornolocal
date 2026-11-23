@@ -62,8 +62,55 @@ function operacionesFalsas(carpeta = 'C:/no-existe'): OpsFalsas {
       Array.from({ length: n }, (_, i) => `l${i}`),
     ),
     finalizarProceso: vi.fn(async (pid: number) => ({ pid, nombre: 'node.exe' })),
+    listarDumps: vi.fn(() => [RESUMEN_DUMP]),
+    leerDump: vi.fn((id: string) => (id === RESUMEN_DUMP.id ? DUMP : null)),
+    limpiarDumps: vi.fn(() => undefined),
+    listarErrores: vi.fn(async () => [RESUMEN_ERROR]),
+    leerError: vi.fn(async (h: string) => (h === ERROR.huella ? ERROR : null)),
   };
 }
+
+/** Datos de depuración con secretos: las herramientas MCP los deben enmascarar. */
+const DUMP = {
+  id: 'dabc123-1',
+  fecha: '2026-11-23T10:00:00.000Z',
+  origen: 'php' as const,
+  sitioId: 'demo',
+  archivo: 'C:/p/demo/index.php',
+  linea: 3,
+  url: 'http://demo.test/?token=abc123secreto',
+  html: null,
+  texto: `DB_PASSWORD=supersecreta\nsk-abcdefghijklmnopqrst\n${'x'.repeat(200_000)}`,
+};
+const RESUMEN_DUMP = {
+  id: DUMP.id,
+  fecha: DUMP.fecha,
+  origen: DUMP.origen,
+  sitioId: DUMP.sitioId,
+  archivo: DUMP.archivo,
+  linea: DUMP.linea,
+  url: DUMP.url,
+  vista: 'DB_PASSWORD=supersecreta',
+  bytes: DUMP.texto.length,
+};
+const ERROR = {
+  huella: '0123456789abcdef',
+  tipo: 'RuntimeException',
+  mensaje: 'Falló con password=hunter2',
+  archivo: 'C:/p/demo/app.php',
+  linea: 12,
+  sitioId: 'demo',
+  veces: 4,
+  primera: '2026-11-23T09:00:00.000Z',
+  ultima: '2026-11-23T10:00:00.000Z',
+  fuenteId: 'laravel:demo',
+  traza: [
+    '#0 mysql://root:clave@localhost/db',
+    ...Array.from({ length: 200 }, (_, i) => `#${i + 1}`),
+  ],
+};
+const RESUMEN_ERROR: Omit<typeof ERROR, 'traza'> & { traza?: string[] } = { ...ERROR };
+delete RESUMEN_ERROR.traza;
 
 interface Montaje {
   servidor: ServidorMcp;
@@ -497,6 +544,111 @@ describe('ServidorMcp: herramientas', () => {
     const r = await c.callTool({ name: 'traer_cambios', arguments: { sitioId: 'demo' } });
     expect(r.isError).toBe(true);
     expect(textoDe(r)).toMatch(/no está disponible/);
+  });
+});
+
+describe('ServidorMcp: herramientas de depuración (dumps y errores)', () => {
+  it('están listadas: las de lectura como solo lectura y limpiar_dumps como destructiva', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    const { tools } = await c.listTools();
+    const por = (n: string) => tools.find((t) => t.name === n);
+    for (const n of ['listar_dumps', 'leer_dump', 'listar_errores', 'leer_error']) {
+      expect(por(n)?.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
+    }
+    expect(por('limpiar_dumps')?.annotations).toMatchObject({ destructiveHint: true });
+  });
+
+  it('listar_dumps y leer_dump devuelven todo enmascarado y acotado', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    const lista = await c.callTool({
+      name: 'listar_dumps',
+      arguments: { sitioId: 'demo', origen: 'php', texto: 'x' },
+    });
+    expect(lista.isError).toBeFalsy();
+    expect(m.ops.listarDumps).toHaveBeenCalledWith({ sitioId: 'demo', origen: 'php', texto: 'x' });
+    const t = textoDe(lista);
+    expect(t).not.toContain('supersecreta');
+    expect(t).not.toContain('abc123secreto');
+    expect(JSON.parse(t).dumps[0].id).toBe(DUMP.id);
+
+    const leido = await c.callTool({ name: 'leer_dump', arguments: { id: DUMP.id } });
+    const d = JSON.parse(textoDe(leido)) as { texto: string; truncado: boolean };
+    expect(d.texto).not.toContain('supersecreta');
+    expect(d.texto).not.toContain('sk-abcdefghijklmnopqrst');
+    expect(d.truncado).toBe(true);
+    expect(d.texto.length).toBeLessThanOrEqual(64 * 1024 + 1);
+
+    const otro = await c.callTool({ name: 'leer_dump', arguments: { id: 'd1-99' } });
+    expect(otro.isError).toBe(true);
+  });
+
+  it('valida los argumentos antes de llamar al núcleo', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    for (const [name, args] of [
+      ['leer_dump', { id: '../etc/passwd' }],
+      ['listar_dumps', { origen: 'ruby' }],
+      ['listar_dumps', { texto: 'a\nb' }],
+      ['listar_dumps', { sitioId: 'C:/x' }],
+      ['leer_error', { huella: 'nohex' }],
+      ['listar_errores', { desde: 'ayer' }],
+      ['listar_errores', { limite: 100000 }],
+    ] as const) {
+      const r = await c.callTool({ name, arguments: args });
+      expect(r.isError, `${name} ${JSON.stringify(args)}`).toBe(true);
+    }
+    expect(m.ops.leerDump).not.toHaveBeenCalled();
+    expect(m.ops.listarDumps).not.toHaveBeenCalled();
+    expect(m.ops.leerError).not.toHaveBeenCalled();
+    expect(m.ops.listarErrores).not.toHaveBeenCalled();
+  });
+
+  it('listar_errores y leer_error: enmascarados, con la traza acotada', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    const lista = await c.callTool({
+      name: 'listar_errores',
+      arguments: { sitioId: 'demo', desde: '2026-11-23T00:00:00Z', limite: 10 },
+    });
+    expect(m.ops.listarErrores).toHaveBeenCalledWith({
+      sitioId: 'demo',
+      desde: '2026-11-23T00:00:00.000Z',
+    });
+    const l = JSON.parse(textoDe(lista)) as { total: number; errores: { mensaje: string }[] };
+    expect(l.total).toBe(1);
+    expect(l.errores[0]!.mensaje).not.toContain('hunter2');
+    const e = await c.callTool({ name: 'leer_error', arguments: { huella: ERROR.huella } });
+    const x = JSON.parse(textoDe(e)) as { traza: string[]; veces: number };
+    expect(x.veces).toBe(4);
+    expect(x.traza.length).toBeLessThanOrEqual(60);
+    expect(x.traza.join('\n')).not.toContain('clave@');
+    const nada = await c.callTool({ name: 'leer_error', arguments: { huella: 'f'.repeat(16) } });
+    expect(nada.isError).toBe(true);
+  });
+
+  it('limpiar_dumps espera la confirmación en la ventana', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    const llamada = c.callTool({ name: 'limpiar_dumps', arguments: {} });
+    const sol = await esperarConfirmacion(m);
+    expect(sol.herramienta).toBe('limpiar_dumps');
+    expect(sol.datos).toEqual({ cantidad: 1 });
+    expect(m.ops.limpiarDumps).not.toHaveBeenCalled();
+    m.servidor.responderConfirmacion(sol.id, true);
+    expect((await llamada).isError).toBeFalsy();
+    expect(m.ops.limpiarDumps).toHaveBeenCalledTimes(1);
+  });
+
+  it('limpiar_dumps rechazado no borra nada', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    const llamada = c.callTool({ name: 'limpiar_dumps', arguments: {} });
+    const sol = await esperarConfirmacion(m);
+    m.servidor.responderConfirmacion(sol.id, false);
+    expect((await llamada).isError).toBe(true);
+    expect(m.ops.limpiarDumps).not.toHaveBeenCalled();
   });
 });
 

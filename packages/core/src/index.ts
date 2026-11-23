@@ -94,3 +94,4 @@ export * from './herramientas/entorno';
 export * from './mcp/servidor';
 export * from './depuracion/receptor';
 export { rutasDepuracion } from './depuracion/prepend';
+export * from './depuracion/errores';
