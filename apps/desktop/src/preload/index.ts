@@ -31,6 +31,11 @@ const api: ApiEntorno = {
     guardar: (datos, id) => invocar('sitios.guardar', datos, id),
     borrar: (id) => invocar('sitios.borrar', id),
     aplicar: () => invocar('sitios.aplicar'),
+    phpSitio: (id) => invocar('sitios.phpSitio', id),
+    guardarPhpIni: (id, valores) => invocar('sitios.guardarPhpIni', id, valores),
+    xdebug: (id, x) => invocar('sitios.xdebug', id, x),
+    launchJsonVista: (id) => invocar('sitios.launchJsonVista', id),
+    launchJson: (id) => invocar('sitios.launchJson', id),
   },
   servicios: {
     estados: () => invocar('servicios.estados'),

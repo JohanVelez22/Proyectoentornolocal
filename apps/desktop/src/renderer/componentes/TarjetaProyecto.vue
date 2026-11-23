@@ -54,6 +54,7 @@ import GitProyecto from './GitProyecto.vue';
 import ProcesosProyecto from './ProcesosProyecto.vue';
 import InterruptorTunel from './InterruptorTunel.vue';
 import SeccionFtpSitio from './SeccionFtpSitio.vue';
+import SeccionPhpSitio from './SeccionPhpSitio.vue';
 
 const props = defineProps<{ sitio: Sitio }>();
 const emit = defineEmits<{
@@ -560,6 +561,7 @@ function abrirCarpeta(): void {
       </div>
       <ProcesosProyecto :sitio="sitio" @aplicado="(r) => emit('aplicado', r)" />
       <InterruptorTunel :sitio="sitio" />
+      <SeccionPhpSitio :sitio="sitio" @aplicado="(r) => emit('aplicado', r)" />
       <SeccionFtpSitio :sitio="sitio" />
     </div>
   </article>

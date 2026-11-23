@@ -59,6 +59,8 @@ export { CODEX } from './agentes/codex';
 export { HERMES } from './agentes/hermes';
 export * from './php/ini';
 export * from './php/extensiones';
+export * from './php/poolSitio';
+export * from './php/xdebug';
 export * from './patronesSecretos';
 export {
   clasificarErrorIa,

@@ -44,6 +44,9 @@ import {
   idSitioIa,
   activaExtension,
   nombreExtensionPhp,
+  ajustesPhpSitio,
+  idSitioPhp,
+  xdebugSitio,
   ramaPhpIni,
   respaldoIni,
   textoIni,
@@ -790,6 +793,19 @@ const TABLA: Record<RutaIpc, Manejador> = {
     const r = ramaPhpIni(rama);
     return n.extensionesPhp.instalar(r, nombreExtensionPhp(nombre));
   },
+  // ---- PHP por sitio: el renderer manda el id del sitio; carpetas y rutas las arma el núcleo ----
+  'sitios.phpSitio': (n, _s, id) => n.phpSitio(idSitioPhp(id)),
+  'sitios.guardarPhpIni': (n, _s, id, valores) => {
+    const sitio = idSitioPhp(id);
+    return n.guardarPhpIniSitio(sitio, ajustesPhpSitio(valores));
+  },
+  'sitios.xdebug': (n, _s, id, x) => {
+    const sitio = idSitioPhp(id);
+    return n.xdebugSitio(sitio, xdebugSitio(x));
+  },
+  'sitios.launchJsonVista': (n, _s, id) => n.vistaLaunchJsonSitio(idSitioPhp(id)),
+  // La confirmación la da el diálogo de la tarjeta (con la vista previa y el diff).
+  'sitios.launchJson': (n, _s, id) => n.escribirLaunchJsonSitio(idSitioPhp(id)),
   'mailpit.noLeidos': (n) => n.noLeidosCorreo(),
   // Se entrega una sola vez: una recarga del renderer no lo vuelve a mostrar.
   avisoInicio: (n) => n.tomarAvisoInicio(),

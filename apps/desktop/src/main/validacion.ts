@@ -601,3 +601,43 @@ export function activaExtension(v: unknown): boolean {
   if (typeof v !== 'boolean') throw argumentoPhp('activa');
   return v;
 }
+
+// ---- PHP por sitio: ajustes propios y Xdebug (el núcleo valida claves, valores y modos) ----
+
+/** Id de un sitio (nunca una ruta). */
+export function idSitioPhp(v: unknown): string {
+  if (typeof v !== 'string' || v.length > 128 || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(v)) {
+    throw argumentoPhp('sitio');
+  }
+  return v;
+}
+
+/** Ajustes propios: objeto plano de hasta 40 pares texto → texto corto. */
+export function ajustesPhpSitio(v: unknown): Record<string, string> {
+  let o: Record<string, unknown>;
+  try {
+    o = objetoPlano<Record<string, unknown>>(v, 'phpIni');
+  } catch {
+    throw argumentoPhp('phpIni');
+  }
+  const entradas = Object.entries(o);
+  if (entradas.length > 40) throw argumentoPhp('phpIni');
+  const res: Record<string, string> = {};
+  for (const [k, valor] of entradas) {
+    if (k.length > 128 || typeof valor !== 'string' || valor.length > 256) {
+      throw argumentoPhp('phpIni');
+    }
+    res[k] = valor;
+  }
+  return res;
+}
+
+/** Xdebug del sitio: null (quitarlo) o un objeto plano (el núcleo valida cada campo). */
+export function xdebugSitio(v: unknown): Record<string, unknown> | null {
+  if (v === null) return null;
+  try {
+    return objetoPlano<Record<string, unknown>>(v, 'xdebug');
+  } catch {
+    throw argumentoPhp('xdebug');
+  }
+}

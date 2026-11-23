@@ -1,4 +1,6 @@
 import type {
+  EstadoPhpSitio,
+  XdebugSitio,
   Aviso,
   ClaveRapida,
   ExtensionPhp,
@@ -87,6 +89,8 @@ import type {
 } from '@pel/core';
 
 export type {
+  EstadoPhpSitio,
+  XdebugSitio,
   ClaveRapida,
   ExtensionPhp,
   RespaldoIni,
@@ -263,6 +267,19 @@ export interface ApiEntorno {
     guardar(datos: DatosSitio, id?: string): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }>;
     borrar(id: string): Promise<ResultadoAplicar>;
     aplicar(): Promise<ResultadoAplicar>;
+    /** PHP del sitio: ajustes propios, Xdebug, su pool y la configuración de PhpStorm. */
+    phpSitio(id: string): Promise<EstadoPhpSitio>;
+    /** Ajustes de php.ini propios (pool propio; prueba con php -v y vuelta atrás). */
+    guardarPhpIni(
+      id: string,
+      valores: Record<string, string>,
+    ): Promise<{ aplicar: ResultadoAplicar }>;
+    /** Xdebug del sitio (null = quitarlo); nunca se activa en el ini de la rama. */
+    xdebug(id: string, x: XdebugSitio | null): Promise<{ aplicar: ResultadoAplicar }>;
+    /** Lo que se escribiría en .vscode/launch.json (para confirmarlo). */
+    launchJsonVista(id: string): Promise<{ existe: boolean; contenido: string; diff: string }>;
+    /** Escribe .vscode/launch.json (fusiona; copia previa fuera del proyecto). */
+    launchJson(id: string): Promise<{ creado: boolean; respaldo: string | null }>;
   };
   servicios: {
     estados(): Promise<EstadoServicio[]>;
@@ -690,6 +707,11 @@ export const RUTAS_IPC = [
   'sitios.guardar',
   'sitios.borrar',
   'sitios.aplicar',
+  'sitios.phpSitio',
+  'sitios.guardarPhpIni',
+  'sitios.xdebug',
+  'sitios.launchJsonVista',
+  'sitios.launchJson',
   'servicios.estados',
   'servicios.iniciar',
   'servicios.detener',
