@@ -149,6 +149,19 @@ export const PARAMETROS_ERROR = {
   'agentes.argumento_invalido': ['campo'],
   'git.commit_fallo': ['detalle'],
   'git.mensaje_invalido': [],
+  // PHP: php.ini por rama y extensiones (`salida` va recortada a 200 caracteres)
+  'php.rama_no_instalada': ['rama'],
+  'php.argumento_invalido': ['campo'],
+  'php.valor_invalido': ['clave'],
+  'php.ini_invalido': ['salida'],
+  'php.no_arranco': ['rama'],
+  'php.respaldo_no_existe': [],
+  'php.extension_no_existe': ['nombre'],
+  'php.extension_no_catalogo': ['nombre'],
+  'php.variante_desconocida': [],
+  'php.sin_variante': ['nombre', 'variante'],
+  'php.huella_distinta': [],
+  'php.descarga_fallida': ['detalle'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

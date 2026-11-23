@@ -57,6 +57,8 @@ export * from './agentes/configArchivo';
 export { CLAUDE_CODE } from './agentes/claudeCode';
 export { CODEX } from './agentes/codex';
 export { HERMES } from './agentes/hermes';
+export * from './php/ini';
+export * from './php/extensiones';
 export * from './patronesSecretos';
 export {
   clasificarErrorIa,

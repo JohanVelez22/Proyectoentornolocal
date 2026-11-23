@@ -2,6 +2,8 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ErrorWolf } from '../errores';
 import path from 'node:path';
+import { copiaConFecha } from '../herramientas/copiaConFecha';
+import { escribirIniAtomico, iniEditado, rutaRespaldosIni } from '../php/ini';
 import { puertosPhp } from '../nginx/principal';
 import type { Plataforma } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
@@ -128,6 +130,8 @@ export class ServicioPhp {
   /**
    * Ruta del php.ini de la rama; lo genera si todavía no existe o si su extension_dir no apunta al
    * bin actual (la carpeta de datos se movió o se renombró): si no, PHP no cargaría ninguna extensión.
+   * Si el usuario lo editó (pantalla PHP), nunca se regenera: solo se corrige `extension_dir`, con
+   * copia previa.
    */
   async asegurarPhpIni(version: string): Promise<string> {
     const ini = this.rutas.phpIni(version);
@@ -138,8 +142,31 @@ export class ServicioPhp {
       texto = null;
     }
     const actual = texto === null ? null : /^\s*extension_dir\s*=\s*(.*?)\s*$/m.exec(texto)?.[1];
-    if (actual !== this.extensionDir(version)) await this.generarIni(version);
+    if (actual === this.extensionDir(version)) return ini;
+    if (texto !== null && iniEditado(this.rutas, version)) {
+      await this.corregirExtensionDir(version, texto);
+    } else {
+      await this.generarIni(version);
+    }
     return ini;
+  }
+
+  /** Cambia solo `extension_dir` de un php.ini editado por el usuario (con copia con fecha). */
+  private async corregirExtensionDir(version: string, texto: string): Promise<void> {
+    const salto = texto.includes('\r\n') ? '\r\n' : '\n';
+    const lineas = texto.split(/\r?\n/);
+    fijar(lineas, 'extension_dir', this.extensionDir(version));
+    await copiaConFecha(rutaRespaldosIni(this.rutas, version), 'php.ini', texto);
+    await escribirIniAtomico(this.rutas.phpIni(version), lineas.join(salto));
+  }
+
+  /** Antes de arrancar: un ini sin editar se regenera (toma ajustes nuevos, p. ej. OPcache). */
+  private async prepararIni(version: string): Promise<void> {
+    if (iniEditado(this.rutas, version) && existsSync(this.rutas.phpIni(version))) {
+      await this.asegurarPhpIni(version);
+    } else {
+      await this.generarIni(version);
+    }
   }
 
   async iniciar(version: string): Promise<void> {
@@ -160,7 +187,7 @@ export class ServicioPhp {
         puerto,
       );
     }
-    await this.generarIni(version);
+    await this.prepararIni(version);
     const bin = this.rutas.bin('php', version);
     for (const [i, puerto] of puertos.entries()) {
       await this.supervisor.iniciar({
