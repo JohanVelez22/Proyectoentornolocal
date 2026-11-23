@@ -38,6 +38,7 @@ import { aBase64, codificarPowerShell, PathUsuarioWindows } from './pathUsuarioW
 import { ProcesosWindows, descendientesEnTabla, rutaSistema32 } from './procesosWin';
 import {
   abrirTerminalWindows,
+  leerRutaDockerRegistro,
   leerRutaGitRegistro,
   existeEntrada,
   lanzarEnConsolaNueva,
@@ -238,8 +239,8 @@ export function pidExiste(pid: number): boolean {
 }
 
 /**
- * Ruta de un ejecutable en Windows: primero las carpetas del PATH (sin comillas ni vacías), luego
- * `extras`. Se prueba `<nombre>.exe` en cada una; null si no está.
+ * Ruta de un ejecutable en Windows: primero las carpetas del PATH (sin comillas, vacías ni
+ * relativas), luego `extras`. Se prueba `<nombre>.exe` en cada una; null si no está.
  */
 export function buscarEjecutableWindows(
   nombre: string,
@@ -250,7 +251,9 @@ export function buscarEjecutableWindows(
     .split(';')
     .map((d) => d.trim().replace(/^"|"$/g, ''))
     .filter(Boolean);
-  for (const dir of [...dirs, ...(o.extras ?? [])]) {
+  // Solo carpetas absolutas con unidad (`C:\…`): una entrada relativa (`.`, `bin`) o sin unidad
+  // (`\x`) depende de la carpeta actual del proceso y podría ejecutar un programa del proyecto.
+  for (const dir of [...dirs, ...(o.extras ?? [])].filter((d) => /^[A-Za-z]:[\\/]/.test(d))) {
     const r = path.win32.join(dir, nombreEjecutable(nombre));
     if (o.existe(r)) return r;
   }
@@ -324,6 +327,7 @@ export class PlataformaWindows implements PlataformaCompleta {
   private readonly arquitectura: string;
   private readonly gitRegistro: boolean;
   private rutaGitLeida: Promise<string | null> | null = null;
+  private rutaDockerLeida: Promise<string | null> | null = null;
   /** SID del usuario actual (whoami), leído una vez. */
   private sidLeido: Promise<string | null> | null = null;
 
@@ -369,9 +373,18 @@ export class PlataformaWindows implements PlataformaCompleta {
     return appData ? [path.win32.join(appData, 'npm')] : [];
   }
 
-  carpetasContenedores(motor: 'docker' | 'podman'): string[] {
+  async carpetasContenedores(motor: 'docker' | 'podman'): Promise<string[]> {
+    // Se lee del registro solo donde también se lee el de Git (sin `entorno` inyectado en pruebas).
+    const deRegistro = async (): Promise<string[]> => {
+      if (!this.gitRegistro) return [];
+      this.rutaDockerLeida ??= leerRutaDockerRegistro(this.ejecutar);
+      const app = await this.rutaDockerLeida;
+      return app ? [path.win32.join(app, 'resources', 'bin')] : [];
+    };
     const pf = this.entorno.ProgramW6432 ?? this.entorno.ProgramFiles ?? 'C:\\Program Files';
-    if (motor === 'docker') return [path.win32.join(pf, 'Docker', 'Docker', 'resources', 'bin')];
+    if (motor === 'docker') {
+      return [...(await deRegistro()), path.win32.join(pf, 'Docker', 'Docker', 'resources', 'bin')];
+    }
     const local = this.entorno.LOCALAPPDATA;
     return [
       path.win32.join(pf, 'RedHat', 'Podman'),

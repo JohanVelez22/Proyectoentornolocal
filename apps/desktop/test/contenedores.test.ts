@@ -138,6 +138,29 @@ describe('IPC de contenedores', () => {
     expect(dejar).toHaveBeenCalledTimes(3);
   });
 
+  it('dos ventanas con el mismo registro: cada una suelta solo su referencia', async () => {
+    const s = new SeguimientosContenedores();
+    const sueltas: ReturnType<typeof vi.fn>[] = [];
+    const n = {
+      contenedores: {
+        seguirLogs: vi.fn(async () => {
+          const f = vi.fn();
+          sueltas.push(f);
+          return f;
+        }),
+      },
+    } as unknown as NucleoIpc;
+    const a = {};
+    const b = {};
+    await s.seguir(n, a, 'docker', ID);
+    await s.seguir(n, b, 'docker', ID);
+    s.dejar(a, 'docker', ID);
+    await Promise.resolve();
+    expect(sueltas[0]).toHaveBeenCalledTimes(1);
+    expect(sueltas[1]).not.toHaveBeenCalled();
+    expect(s.cuantos(b)).toBe(1);
+  });
+
   it('un seguimiento que falla no queda registrado', async () => {
     const s = new SeguimientosContenedores();
     const n = {

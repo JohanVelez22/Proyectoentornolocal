@@ -130,9 +130,10 @@ export interface CapacidadesPlataforma {
   carpetasNpmGlobal(): string[];
   /**
    * Carpetas donde el instalador oficial deja la CLI de Docker o Podman en este sistema (se
-   * prueban antes que el PATH). Solo rutas; nada se ejecuta.
+   * prueban antes que el PATH). En Windows, para Docker Desktop, primero la de
+   * `HKLM\SOFTWARE\Docker Inc.\Docker\1.0` (AppPath). Solo lee; no ejecuta la CLI.
    */
-  carpetasContenedores(motor: 'docker' | 'podman'): string[];
+  carpetasContenedores(motor: 'docker' | 'podman'): Promise<string[]>;
   /** Ruta de un ejecutable: primero el PATH, luego las carpetas `extras`; null si no está. */
   buscarEjecutable(nombre: string, extras?: string[]): Promise<string | null>;
   /** PATH del usuario; `respaldo` es el archivo donde se guarda el valor original. */

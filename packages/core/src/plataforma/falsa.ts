@@ -178,7 +178,7 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return [...this.npmGlobal];
   }
 
-  carpetasContenedores(motor: 'docker' | 'podman'): string[] {
+  async carpetasContenedores(motor: 'docker' | 'podman'): Promise<string[]> {
     return [...this.contenedores[motor]];
   }
 

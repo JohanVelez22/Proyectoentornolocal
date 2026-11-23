@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  conexionPodman,
   Contenedores,
   esUriLocal,
   interpretarPs,
@@ -11,7 +12,7 @@ import {
 } from '../src/contenedores/contenedores';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
 import type { Ejecutor, Lanzador, OpcionesLanzar } from '../src/plataforma/tipos';
-import { PlataformaWindows } from '../src/plataforma/win';
+import { buscarEjecutableWindows, PlataformaWindows } from '../src/plataforma/win';
 
 /* ───────────── Salidas reales (recortadas) de cada CLI ───────────── */
 
@@ -91,14 +92,20 @@ interface Llamada {
 type Respuesta = { codigo: number; stdout?: string; stderr?: string };
 
 /** Ejecutor falso: responde según el subcomando (lo que sigue a las opciones globales). */
-function cliFalsa(respuestas: Record<string, Respuesta | (() => Respuesta)>) {
+type Respuestas = Record<string, Respuesta | ((args: string[]) => Respuesta)>;
+
+/** Quita el destino fijado (`-H <endpoint>` o `--connection <nombre>`). */
+const sinDestino = (args: string[]): string[] =>
+  args[0] === '-H' || args[0] === '--connection' ? args.slice(2) : args;
+
+function cliFalsa(respuestas: Respuestas) {
   const llamadas: Llamada[] = [];
   const exec: Ejecutor = async (cmd, args, opts) => {
     llamadas.push({ cmd, args, timeoutMs: opts?.timeoutMs, env: opts?.env });
-    const sinGlobales = args[0] === '--context' ? args.slice(2) : args;
+    const sinGlobales = sinDestino(args);
     const clave = sinGlobales.slice(0, 2).join(' ');
     const r = respuestas[clave] ?? respuestas[sinGlobales[0] ?? ''];
-    const v = typeof r === 'function' ? r() : r;
+    const v = typeof r === 'function' ? r(sinGlobales) : r;
     return { codigo: v?.codigo ?? 127, stdout: v?.stdout ?? '', stderr: v?.stderr ?? 'no' };
   };
   return { exec, llamadas };
@@ -117,6 +124,7 @@ const PODMAN_OK = {
       {
         Name: 'podman-machine-default',
         URI: 'ssh://user@127.0.0.1:53210/run/user/1000/podman/podman.sock',
+        IsMachine: true,
         Default: true,
       },
     ]),
@@ -127,11 +135,14 @@ const PODMAN_OK = {
 
 const RUTA_DOCKER = path.join('/conocida/docker', 'docker.bin');
 const RUTA_PODMAN = path.join('/conocida/podman', 'podman.bin');
+const PIPE = 'npipe:////./pipe/docker_engine';
+const H = ['-H', PIPE];
+const MAQUINA = ['--connection', 'podman-machine-default'];
 
 function montar(
   o: {
-    docker?: Record<string, Respuesta | (() => Respuesta)>;
-    podman?: Record<string, Respuesta | (() => Respuesta)>;
+    docker?: Respuestas;
+    podman?: Respuestas;
     enPath?: Partial<Record<MotorContenedores, string>>;
     conocidas?: Partial<Record<MotorContenedores, string>>;
     entorno?: Record<string, string>;
@@ -151,7 +162,7 @@ function montar(
     lanzar: o.lanzar ?? (async () => ({ codigo: 0 })),
     plataforma: {
       nombreEjecutable: (b) => `${b}.bin`,
-      carpetasContenedores: (m) => [`/conocida/${m}`],
+      carpetasContenedores: async (m) => [`/conocida/${m}`],
       buscarEjecutable: async (n) => {
         buscados.push(n);
         return o.enPath?.[n as MotorContenedores] ?? null;
@@ -272,30 +283,85 @@ describe('interpretarPs', () => {
 });
 
 describe('carpetasContenedores', () => {
-  it('Windows: carpetas de los instaladores oficiales (sin ejecutar nada)', () => {
+  it('Windows: carpetas de los instaladores oficiales (sin ejecutar nada)', async () => {
     const p = new PlataformaWindows(undefined, undefined, {
       entorno: { ProgramFiles: 'D:\\PF', LOCALAPPDATA: 'C:\\U\\L' },
     });
-    expect(p.carpetasContenedores('docker')).toEqual(['D:\\PF\\Docker\\Docker\\resources\\bin']);
-    expect(p.carpetasContenedores('podman')).toEqual([
+    expect(await p.carpetasContenedores('docker')).toEqual([
+      'D:\\PF\\Docker\\Docker\\resources\\bin',
+    ]);
+    expect(await p.carpetasContenedores('podman')).toEqual([
       'D:\\PF\\RedHat\\Podman',
       'C:\\U\\L\\Programs\\Podman',
       'C:\\U\\L\\Programs\\RedHat\\Podman',
     ]);
   });
 
-  it('la plataforma falsa devuelve las que le pone la prueba', () => {
+  it('Windows: Docker Desktop del registro (AppPath) va primero, leído una vez', async () => {
+    const llamadas: string[][] = [];
+    const b64 = Buffer.from('E:\\Docker\\App', 'utf16le').toString('base64');
+    const p = new PlataformaWindows(
+      async (_cmd, args) => {
+        llamadas.push(args);
+        return { codigo: 0, stdout: `OK ${b64}\r\n`, stderr: '' };
+      },
+      undefined,
+      { entorno: { ProgramFiles: 'D:\\PF' }, gitRegistro: true },
+    );
+    expect(await p.carpetasContenedores('docker')).toEqual([
+      'E:\\Docker\\App\\resources\\bin',
+      'D:\\PF\\Docker\\Docker\\resources\\bin',
+    ]);
+    await p.carpetasContenedores('docker');
+    expect(llamadas).toHaveLength(1);
+    const script = Buffer.from(llamadas[0]!.at(-1)!, 'base64').toString('utf16le');
+    expect(script).toContain("OpenSubKey('SOFTWARE\\Docker Inc.\\Docker\\1.0')");
+    expect(script).toContain("GetValue('AppPath')");
+  });
+
+  it('Windows: un AppPath que no es una ruta absoluta limpia se ignora', async () => {
+    const b64 = Buffer.from('\\\\srv\\docker', 'utf16le').toString('base64');
+    const p = new PlataformaWindows(
+      async () => ({ codigo: 0, stdout: `OK ${b64}`, stderr: '' }),
+      undefined,
+      { entorno: { ProgramFiles: 'D:\\PF' }, gitRegistro: true },
+    );
+    expect(await p.carpetasContenedores('docker')).toEqual([
+      'D:\\PF\\Docker\\Docker\\resources\\bin',
+    ]);
+  });
+
+  it('buscarEjecutableWindows ignora las entradas relativas o sin unidad del PATH', () => {
+    const probadas: string[] = [];
+    const r = buscarEjecutableWindows('docker', {
+      entorno: { Path: '.;bin;..\\x;\\sin-unidad;"";C:\\B' },
+      existe: (ruta) => {
+        probadas.push(ruta);
+        return false;
+      },
+    });
+    expect(r).toBeNull();
+    expect(probadas).toEqual(['C:\\B\\docker.exe']);
+  });
+
+  it('la plataforma falsa devuelve las que le pone la prueba', async () => {
     const p = new PlataformaFalsa();
     p.contenedores.docker = ['/x'];
-    expect(p.carpetasContenedores('docker')).toEqual(['/x']);
-    expect(p.carpetasContenedores('podman')).toEqual([]);
+    expect(await p.carpetasContenedores('docker')).toEqual(['/x']);
+    expect(await p.carpetasContenedores('podman')).toEqual([]);
   });
 });
 
 describe('esUriLocal', () => {
-  it('Docker: solo tubería con nombre o socket Unix', () => {
+  it('Docker: solo tubería con nombre de este equipo o socket Unix', () => {
     expect(esUriLocal('npipe:////./pipe/docker_engine', 'docker')).toBe(true);
+    expect(esUriLocal('npipe://./pipe/dockerDesktopLinuxEngine', 'docker')).toBe(true);
     expect(esUriLocal('unix:///var/run/docker.sock', 'docker')).toBe(true);
+    expect(esUriLocal('npipe:////servidor/pipe/docker_engine', 'docker')).toBe(false);
+    expect(esUriLocal('npipe://servidor/pipe/docker_engine', 'docker')).toBe(false);
+    expect(esUriLocal('npipe:////./pipe/../x', 'docker')).toBe(false);
+    expect(esUriLocal('unix://host/var/run/docker.sock', 'docker')).toBe(false);
+    expect(esUriLocal('', 'docker')).toBe(false);
     expect(esUriLocal('tcp://127.0.0.1:2375', 'docker')).toBe(false);
     expect(esUriLocal('tcp://10.0.0.5:2376', 'docker')).toBe(false);
     expect(esUriLocal('ssh://root@servidor', 'docker')).toBe(false);
@@ -308,6 +374,40 @@ describe('esUriLocal', () => {
     expect(esUriLocal('ssh://core@servidor.remoto:22/x', 'podman')).toBe(false);
     expect(esUriLocal('ssh://user@127.0.0.1.evil.com/x', 'podman')).toBe(false);
     expect(esUriLocal('tcp://127.0.0.1:8888', 'podman')).toBe(false);
+  });
+});
+
+describe('conexionPodman', () => {
+  const lista = (x: unknown[]) => JSON.stringify(x);
+  it('sin conexiones: local (Linux nativo)', () => {
+    expect(conexionPodman('[]')).toEqual({ tipo: 'ninguna' });
+    expect(conexionPodman('')).toEqual({ tipo: 'ninguna' });
+    expect(conexionPodman('null')).toEqual({ tipo: 'ninguna' });
+  });
+
+  it('la máquina local se fija por nombre', () => {
+    expect(
+      conexionPodman(
+        lista([
+          { Name: 'otra', URI: 'ssh://core@lejos/x', IsMachine: false, Default: false },
+          { Name: 'm1', URI: 'ssh://u@127.0.0.1:1/x', IsMachine: true, Default: true },
+        ]),
+      ),
+    ).toEqual({ tipo: 'maquina', nombre: 'm1' });
+  });
+
+  it('ssh a loopback sin IsMachine, otro equipo, nombre raro o salida rara: remota', () => {
+    for (const salida of [
+      lista([{ Name: 'tunel', URI: 'ssh://u@127.0.0.1:2222/x', Default: true }]),
+      lista([{ Name: 'tunel', URI: 'ssh://u@127.0.0.1:2222/x', IsMachine: false, Default: true }]),
+      lista([{ Name: 'srv', URI: 'ssh://core@lejos/x', IsMachine: true, Default: true }]),
+      lista([{ Name: '-x', URI: 'ssh://u@127.0.0.1:1/x', IsMachine: true, Default: true }]),
+      lista([{ Name: 'm1', URI: 'ssh://u@127.0.0.1:1/x', IsMachine: true, Default: false }]),
+      'no es json',
+      '{}',
+    ]) {
+      expect(conexionPodman(salida)).toEqual({ tipo: 'remota' });
+    }
   });
 });
 
@@ -374,28 +474,97 @@ describe('Contenedores: motores', () => {
     }
   });
 
-  it('DOCKER_HOST local (tubería) se respeta', async () => {
+  it('DOCKER_HOST local (tubería) se fija con -H y no se pasa por el entorno', async () => {
     const { c, docker } = montar({
       docker: DOCKER_OK,
       entorno: { DOCKER_HOST: 'npipe:////./pipe/podman-machine-default' },
     });
     const [d] = await c.motores();
     expect(d!.hostRemotoIgnorado).toBe(false);
-    expect(docker.llamadas[0]!.env?.['DOCKER_HOST']).toBe(
-      'npipe:////./pipe/podman-machine-default',
-    );
+    expect(docker.llamadas.some((l) => l.args.includes('context'))).toBe(false);
+    const version = docker.llamadas.find((l) => l.args.includes('version'))!;
+    expect(version.args.slice(0, 2)).toEqual(['-H', 'npipe:////./pipe/podman-machine-default']);
+    expect(version.env?.['DOCKER_HOST']).toBe('');
   });
 
-  it('un contexto de Docker remoto se ignora: se usa --context default y se avisa', async () => {
+  it('un contexto de Docker remoto se ignora: se fija el endpoint del contexto default', async () => {
     const { c, docker } = montar({
-      docker: { ...DOCKER_OK, 'context inspect': { codigo: 0, stdout: 'ssh://root@lejos\n' } },
+      docker: {
+        ...DOCKER_OK,
+        'context inspect': (args) => ({
+          codigo: 0,
+          stdout: args.includes('default') ? `${PIPE}\n` : 'ssh://root@lejos\n',
+        }),
+      },
     });
     const [d] = await c.motores();
     expect(d!.hostRemotoIgnorado).toBe(true);
     const version = docker.llamadas.find((l) => l.args.includes('version'))!;
-    expect(version.args.slice(0, 2)).toEqual(['--context', 'default']);
+    expect(version.args.slice(0, 2)).toEqual(H);
     await c.lista('docker');
-    expect(docker.llamadas.at(-1)!.args.slice(0, 2)).toEqual(['--context', 'default']);
+    expect(docker.llamadas.at(-1)!.args.slice(0, 2)).toEqual(H);
+  });
+
+  it('sin ningún endpoint local de Docker (contexto actual y default remotos): no se usa', async () => {
+    const { c, docker } = montar({
+      docker: { ...DOCKER_OK, 'context inspect': { codigo: 0, stdout: 'tcp://10.0.0.9:2376\n' } },
+    });
+    const [d] = await c.motores();
+    expect(d).toMatchObject({ responde: false, hostRemotoIgnorado: true });
+    expect(docker.llamadas.some((l) => l.args.includes('version'))).toBe(false);
+    await expect(c.lista('docker')).rejects.toMatchObject({ codigo: 'contenedores.remoto' });
+  });
+
+  it('un cambio de contexto tras detectar no cambia el destino de stop', async () => {
+    let remoto = false;
+    const { c, docker } = montar({
+      docker: {
+        ...DOCKER_OK,
+        'context inspect': () => ({ codigo: 0, stdout: remoto ? 'ssh://root@lejos\n' : PIPE }),
+        stop: { codigo: 0 },
+      },
+    });
+    await c.lista('docker');
+    remoto = true;
+    await c.accion('docker', ID_DOCKER_1, 'detener');
+    const stop = docker.llamadas.find((l) => l.args.includes('stop'))!;
+    expect(stop.args).toEqual([...H, 'stop', ID_DOCKER_1]);
+    expect(stop.env?.['DOCKER_CONTEXT']).toBe('');
+    expect(stop.env?.['DOCKER_HOST']).toBe('');
+  });
+
+  it('Podman: se fija la máquina con --connection en cada llamada', async () => {
+    const { c, podman } = montar({ podman: PODMAN_OK });
+    await c.lista('podman');
+    for (const l of podman.llamadas.filter((x) => !x.args.includes('connection'))) {
+      expect(l.args.slice(0, 2)).toEqual(MAQUINA);
+    }
+  });
+
+  it('Podman sin conexiones (Linux nativo): local, sin --connection', async () => {
+    const { c, podman } = montar({
+      podman: { ...PODMAN_OK, 'system connection': { codigo: 0, stdout: '[]' } },
+    });
+    const [, p] = await c.motores();
+    expect(p!.responde).toBe(true);
+    await c.lista('podman');
+    expect(podman.llamadas.at(-1)!.args).toEqual(['ps', '-a', '--format', 'json']);
+  });
+
+  it('Podman con conexión ssh a loopback que no es máquina: no se usa', async () => {
+    const { c } = montar({
+      podman: {
+        ...PODMAN_OK,
+        'system connection': {
+          codigo: 0,
+          stdout: JSON.stringify([
+            { Name: 'tunel', URI: 'ssh://u@127.0.0.1:2222/x', IsMachine: false, Default: true },
+          ]),
+        },
+      },
+    });
+    const [, p] = await c.motores();
+    expect(p).toMatchObject({ responde: false, hostRemotoIgnorado: true });
   });
 
   it('Podman con conexión predeterminada remota: no se usa', async () => {
@@ -404,7 +573,9 @@ describe('Contenedores: motores', () => {
         ...PODMAN_OK,
         'system connection': {
           codigo: 0,
-          stdout: JSON.stringify([{ Name: 'srv', URI: 'ssh://core@lejos:22/x', Default: true }]),
+          stdout: JSON.stringify([
+            { Name: 'srv', URI: 'ssh://core@lejos:22/x', IsMachine: true, Default: true },
+          ]),
         },
       },
     });
@@ -422,13 +593,28 @@ describe('Contenedores: lista y acciones', () => {
     expect(l).toHaveLength(2);
     const ps = docker.llamadas.at(-1)!;
     expect(ps.cmd).toBe(RUTA_DOCKER);
-    expect(ps.args).toEqual(['ps', '-a', '--format', '{{json .}}']);
+    expect(ps.args).toEqual([...H, 'ps', '-a', '--no-trunc', '--format', '{{json .}}']);
   });
 
   it('lista de Podman con ps -a --format json', async () => {
     const { c, podman } = montar({ podman: PODMAN_OK });
     expect(await c.lista('podman')).toHaveLength(3);
-    expect(podman.llamadas.at(-1)!.args).toEqual(['ps', '-a', '--format', 'json']);
+    expect(podman.llamadas.at(-1)!.args).toEqual([...MAQUINA, 'ps', '-a', '--format', 'json']);
+  });
+
+  it('Docker con --no-trunc: se actúa con el id completo de 64 hex', async () => {
+    const largo = 'e'.repeat(64);
+    const { c, docker } = montar({
+      docker: {
+        ...DOCKER_OK,
+        'ps -a': { codigo: 0, stdout: JSON.stringify({ ID: largo, Names: 'x', State: 'running' }) },
+        stop: { codigo: 0 },
+      },
+    });
+    const [x] = await c.lista('docker');
+    expect(x!.id).toBe(largo);
+    await c.accion('docker', largo, 'detener');
+    expect(docker.llamadas.at(-1)!.args).toEqual([...H, 'stop', largo]);
   });
 
   it('sin motor: error claro (sin ejecutar nada)', async () => {
@@ -465,12 +651,12 @@ describe('Contenedores: lista y acciones', () => {
     await c.accion('docker', ID_DOCKER_1, 'detener');
     await c.accion('docker', ID_DOCKER_1, 'reiniciar');
     const acciones = docker.llamadas.filter((l) =>
-      ['start', 'stop', 'restart'].includes(l.args[0]!),
+      ['start', 'stop', 'restart'].includes(l.args[2]!),
     );
     expect(acciones.map((l) => l.args)).toEqual([
-      ['start', ID_DOCKER_2],
-      ['stop', ID_DOCKER_1],
-      ['restart', ID_DOCKER_1],
+      [...H, 'start', ID_DOCKER_2],
+      [...H, 'stop', ID_DOCKER_1],
+      [...H, 'restart', ID_DOCKER_1],
     ]);
     for (const l of acciones) expect(l.timeoutMs).toBeGreaterThan(0);
   });
@@ -551,10 +737,10 @@ describe('Contenedores: contenedor detenido', () => {
   it('la vigilancia en segundo plano solo consulta motores con contenedores en marcha', async () => {
     const { c, docker } = montar({ docker: DOCKER_OK, podman: PODMAN_OK });
     await c.revisarEnSegundoPlano();
-    expect(docker.llamadas.filter((l) => l.args[0] === 'ps')).toHaveLength(0);
+    expect(docker.llamadas.filter((l) => l.args[2] === 'ps')).toHaveLength(0);
     await c.lista('docker');
     await c.revisarEnSegundoPlano();
-    expect(docker.llamadas.filter((l) => l.args[0] === 'ps')).toHaveLength(2);
+    expect(docker.llamadas.filter((l) => l.args[2] === 'ps')).toHaveLength(2);
   });
 });
 
@@ -605,7 +791,7 @@ describe('Contenedores: registros', () => {
     expect(lz.corridas).toHaveLength(1);
     const r = lz.corridas[0]!;
     expect(r.cmd).toBe(RUTA_DOCKER);
-    expect(r.args).toEqual(['logs', '-f', '--tail', '500', ID_DOCKER_1]);
+    expect(r.args).toEqual([...H, 'logs', '-f', '--tail', '500', ID_DOCKER_1]);
     expect(r.opts.env?.['DOCKER_HOST']).toBe('');
     r.linea('hola');
     r.linea('\u001b[32mDB_PASSWORD=secreta\u001b[0m', 'stderr');
@@ -616,6 +802,22 @@ describe('Contenedores: registros', () => {
     dejar();
     expect(r.abortado()).toBe(true);
     dejar();
+    await esperar(10);
+    expect(c.siguiendo()).toBe(0);
+  });
+
+  it('dos ventanas siguiendo el mismo contenedor: soltar una no corta la otra', async () => {
+    const lz = lanzadorFalso();
+    const { c } = montar({ docker: DOCKER_OK, lanzar: lz.lanzar });
+    const a = await c.seguirLogs('docker', ID_DOCKER_1);
+    const b = await c.seguirLogs('docker', ID_DOCKER_1);
+    expect(lz.corridas).toHaveLength(1);
+    a();
+    a();
+    expect(lz.corridas[0]!.abortado()).toBe(false);
+    expect(c.siguiendo()).toBe(1);
+    b();
+    expect(lz.corridas[0]!.abortado()).toBe(true);
     await esperar(10);
     expect(c.siguiendo()).toBe(0);
   });

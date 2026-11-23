@@ -355,29 +355,52 @@ export function comandoConsolaVisible(
 export const decodificarComando = (b64: string): string =>
   Buffer.from(b64, 'base64').toString('utf16le');
 
-/** Lee InstallPath de Git for Windows (vistas de 64 y 32 bits) en Base64 de UTF-16LE. */
-const SCRIPT_GIT_INSTALADO = [
-  '# HKLM:\\SOFTWARE\\GitForWindows\\InstallPath',
-  '$v = $null',
-  "foreach ($vista in 'Registry64', 'Registry32') {",
-  '  try {',
-  "    $k = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', $vista).OpenSubKey('SOFTWARE\\GitForWindows')",
-  "    if ($k) { $v = $k.GetValue('InstallPath'); $k.Close(); if ($v) { break } }",
-  '  } catch {}',
-  '}',
-  "if ($v) { 'OK ' + [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes([string]$v)) } else { 'SIN' }",
-].join('\n');
+/**
+ * Script que lee el valor `valor` de `HKLM\<subclave>` (vistas de 64 y 32 bits) y lo devuelve en
+ * Base64 de UTF-16LE. `subclave` y `valor` son constantes del código, nunca del usuario.
+ */
+function scriptRutaRegistro(subclave: string, valor: string): string {
+  return [
+    `# HKLM:\\${subclave}\\${valor}`,
+    '$v = $null',
+    "foreach ($vista in 'Registry64', 'Registry32') {",
+    '  try {',
+    `    $k = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', $vista).OpenSubKey('${subclave}')`,
+    `    if ($k) { $v = $k.GetValue('${valor}'); $k.Close(); if ($v) { break } }`,
+    '  } catch {}',
+    '}',
+    "if ($v) { 'OK ' + [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes([string]$v)) } else { 'SIN' }",
+  ].join('\n');
+}
 
 /**
  * Carpeta de Git for Windows según `HKLM\SOFTWARE\GitForWindows\InstallPath` (nunca el PATH,
  * que cualquiera puede anteponer). null si no está, no se puede leer o no es una ruta absoluta
  * limpia.
  */
-export async function leerRutaGitRegistro(ejecutar: Ejecutor): Promise<string | null> {
+export function leerRutaGitRegistro(ejecutar: Ejecutor): Promise<string | null> {
+  return leerRutaRegistroHklm(ejecutar, 'SOFTWARE\\GitForWindows', 'InstallPath');
+}
+
+/** Carpeta de Docker Desktop según `HKLM\SOFTWARE\Docker Inc.\Docker\1.0` (AppPath), o null. */
+export function leerRutaDockerRegistro(ejecutar: Ejecutor): Promise<string | null> {
+  return leerRutaRegistroHklm(ejecutar, 'SOFTWARE\\Docker Inc.\\Docker\\1.0', 'AppPath');
+}
+
+/** Ruta absoluta limpia (`X:\…`) guardada en un valor de HKLM, o null. */
+async function leerRutaRegistroHklm(
+  ejecutar: Ejecutor,
+  subclave: string,
+  valor: string,
+): Promise<string | null> {
   try {
-    const r = await ejecutar('powershell', codificarPowerShell(SCRIPT_GIT_INSTALADO), {
-      timeoutMs: 15_000,
-    });
+    const r = await ejecutar(
+      'powershell',
+      codificarPowerShell(scriptRutaRegistro(subclave, valor)),
+      {
+        timeoutMs: 15_000,
+      },
+    );
     const m = /^OK ([A-Za-z0-9+/=]+)$/.exec(r.stdout.trim());
     if (r.codigo !== 0 || !m) return null;
     const ruta = Buffer.from(m[1]!, 'base64')

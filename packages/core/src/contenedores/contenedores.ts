@@ -15,10 +15,12 @@ import type { CapacidadesPlataforma, Ejecutor, Lanzador } from '../plataforma/ti
  * igual que si lo corriera en una terminal). Cada llamada lleva plazo. Los ids se validan con una
  * expresión estricta (nunca empiezan con `-`, así que no pueden leerse como opciones).
  *
- * Solo motores locales: un `DOCKER_HOST`/`CONTAINER_HOST` remoto (tcp://, ssh:// a otro equipo) se
- * ignora (se vacía en el entorno del proceso hijo) y se avisa; un contexto de Docker remoto se
- * cambia por `--context default`; una conexión predeterminada de Podman remota deja el motor sin
- * usar.
+ * Solo motores locales, con el destino fijado en la detección y pasado en CADA llamada (un cambio
+ * de contexto entre la detección y un `stop` no lo manda a otro equipo): Docker con
+ * `-H <endpoint local>` (DOCKER_HOST local del usuario, contexto actual si es local o el `default`;
+ * solo tuberías `npipe:////./pipe/…` o sockets `unix:///…`); Podman con `--connection <máquina>`
+ * (solo si la predeterminada es `IsMachine` y apunta a este equipo; sin conexiones, local). Las
+ * variables DOCKER_HOST/CONTAINER_HOST/contexto/conexión se vacían en el hijo; una remota se avisa.
  */
 
 export const MOTORES_CONTENEDORES = ['docker', 'podman'] as const;
@@ -268,14 +270,19 @@ export function interpretarPs(salida: string): Contenedor[] {
 
 const LOOPBACK = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
 
+/** Tubería con nombre de ESTE equipo (`npipe:////./pipe/x` o `npipe://./pipe/x`; nunca `//otro/`). */
+const RE_NPIPE_LOCAL = /^npipe:\/\/(?:\/\/)?\.\/pipe\/[A-Za-z0-9_.-]{1,200}$/i;
+/** Socket Unix con ruta absoluta y sin host. */
+const RE_UNIX_LOCAL = /^unix:\/\/\/[^\s?#]{1,500}$/i;
+
 /**
- * ¿Apunta la URI a este equipo? Docker: solo tubería con nombre o socket Unix. Podman: también
- * ssh a la propia máquina (así habla con su máquina virtual en Windows y macOS).
+ * ¿Apunta la URI a este equipo? Docker: solo una tubería con nombre local o un socket Unix.
+ * Podman: también ssh a 127.0.0.1/localhost/::1 (así habla con su máquina virtual en Windows y
+ * macOS; quien llama exige además que la conexión sea de una máquina, `IsMachine`).
  */
 export function esUriLocal(uri: string, motor: MotorContenedores): boolean {
   const u = uri.trim();
-  if (u === '') return true;
-  if (/^(npipe|unix):\/\//i.test(u)) return true;
+  if (RE_NPIPE_LOCAL.test(u) || RE_UNIX_LOCAL.test(u)) return true;
   if (motor !== 'podman' || !/^ssh:\/\//i.test(u)) return false;
   try {
     return LOOPBACK.has(new URL(u).hostname.toLowerCase());
@@ -286,7 +293,7 @@ export function esUriLocal(uri: string, motor: MotorContenedores): boolean {
 
 interface Invocacion {
   cmd: string;
-  /** Opciones globales (`--context default`). */
+  /** Destino fijado en la detección (`-H <endpoint local>` o `--connection <máquina>`). */
   previos: string[];
   env: Record<string, string>;
 }
@@ -326,7 +333,8 @@ export class Contenedores {
   private readonly ultimo = new Map<MotorContenedores, Map<string, Contenedor>>();
   /** Detenciones y reinicios pedidos desde aquí (motor:id → hora). */
   private readonly propias = new Map<string, number>();
-  private readonly registros = new Map<string, () => void>();
+  /** Seguimientos de registros por `motor:id`, con cuántas ventanas los usan. */
+  private readonly registros = new Map<string, { refs: number; cortar: () => void }>();
   private temporizador: ReturnType<typeof setInterval> | null = null;
 
   constructor(private readonly d: DepsContenedores) {}
@@ -341,7 +349,7 @@ export class Contenedores {
   ): Promise<{ ruta: string; origen: 'conocida' | 'path' } | null> {
     const existe = this.d.existe ?? existsSync;
     const nombre = this.d.plataforma.nombreEjecutable(motor);
-    for (const dir of this.d.plataforma.carpetasContenedores(motor)) {
+    for (const dir of await this.d.plataforma.carpetasContenedores(motor)) {
       const r = path.join(dir, nombre);
       if (existe(r)) return { ruta: r, origen: 'conocida' };
     }
@@ -350,25 +358,57 @@ export class Contenedores {
   }
 
   /**
-   * Entorno del hijo: sin contexto ni conexión por variable, y sin un host remoto (se vacía; una
-   * variable vacía es lo mismo que no tenerla para las dos CLI).
+   * Entorno del hijo: sin host, contexto ni conexión por variable (una variable vacía es lo mismo
+   * que no tenerla para las dos CLI). El destino se fija con `-H`/`--connection` en cada llamada.
+   * `hostLocal` es el DOCKER_HOST del usuario si apunta a este equipo; `remoto`, si había una
+   * variable de este motor apuntando a otro.
    */
-  private entornoLocal(motor: MotorContenedores): { env: Record<string, string>; remoto: boolean } {
+  private entornoLocal(motor: MotorContenedores): {
+    env: Record<string, string>;
+    remoto: boolean;
+    hostLocal: string | null;
+  } {
     const e = this.d.entorno ?? process.env;
-    const env: Record<string, string> = { DOCKER_CONTEXT: '', CONTAINER_CONNECTION: '' };
-    let remoto = false;
-    for (const k of ['DOCKER_HOST', 'CONTAINER_HOST'] as const) {
-      const v = e[k] ?? '';
-      if (v && esUriLocal(v, k === 'DOCKER_HOST' ? 'docker' : 'podman')) {
-        env[k] = v;
-      } else {
-        env[k] = '';
-        // Solo cuenta como aviso la variable que usa este motor.
-        const propia = (motor === 'docker') === (k === 'DOCKER_HOST');
-        if (v && propia) remoto = true;
-      }
-    }
-    return { env, remoto };
+    const env: Record<string, string> = {
+      DOCKER_HOST: '',
+      DOCKER_CONTEXT: '',
+      CONTAINER_HOST: '',
+      CONTAINER_CONNECTION: '',
+    };
+    const variable = (motor === 'docker' ? e['DOCKER_HOST'] : e['CONTAINER_HOST']) ?? '';
+    const local = variable !== '' && motor === 'docker' && esUriLocal(variable, 'docker');
+    return {
+      env,
+      remoto: variable !== '' && !local && !(motor === 'podman' && esUriLocal(variable, 'podman')),
+      hostLocal: local ? variable.trim() : null,
+    };
+  }
+
+  /**
+   * Endpoint local de Docker para fijarlo con `-H`: el DOCKER_HOST local del usuario, o el del
+   * contexto actual si es local, o el del contexto `default`. Así un cambio de contexto entre la
+   * detección y una acción nunca manda `stop` a otro equipo. null si no hay ninguno local.
+   */
+  private async endpointDocker(
+    correr: (args: string[]) => Promise<{ codigo: number; stdout: string }>,
+    hostLocal: string | null,
+  ): Promise<{ endpoint: string | null; remoto: boolean }> {
+    if (hostLocal) return { endpoint: hostLocal, remoto: false };
+    const host = async (ctx: string[]): Promise<string | null> => {
+      const r = await correr([
+        'context',
+        'inspect',
+        ...ctx,
+        '--format',
+        '{{.Endpoints.docker.Host}}',
+      ]);
+      return r.codigo === 0 ? (r.stdout.trim().split(/\r?\n/)[0] ?? '').trim() : null;
+    };
+    const actual = await host([]);
+    if (actual !== null && esUriLocal(actual, 'docker')) return { endpoint: actual, remoto: false };
+    const pred = await host(['default']);
+    const endpoint = pred !== null && esUriLocal(pred, 'docker') ? pred : null;
+    return { endpoint, remoto: actual !== null && actual !== '' };
   }
 
   private async detectar(motor: MotorContenedores): Promise<Deteccion> {
@@ -387,7 +427,7 @@ export class Contenedores {
       this.deteccion.set(motor, r);
       return r;
     }
-    const { env, remoto } = this.entornoLocal(motor);
+    const { env, remoto, hostLocal } = this.entornoLocal(motor);
     const estado: EstadoMotor = {
       ...base,
       ruta: u.ruta,
@@ -398,22 +438,27 @@ export class Contenedores {
     const correr = (args: string[]) =>
       this.d.exec(u.ruta, [...inv.previos, ...args], { timeoutMs: PLAZO_DETECTAR_MS, env });
 
+    const sinInvocacion = (motivo: 'remoto' | 'no_responde'): Deteccion => {
+      const r: Deteccion = { estado, invocacion: null, motivo, hora };
+      this.deteccion.set(motor, r);
+      return r;
+    };
     let versionArgs: string[];
     if (motor === 'docker') {
-      const ctx = await correr(['context', 'inspect', '--format', '{{.Endpoints.docker.Host}}']);
-      if (ctx.codigo === 0 && !esUriLocal(ctx.stdout.trim().split(/\r?\n/)[0] ?? '', 'docker')) {
-        inv.previos = ['--context', 'default'];
-        estado.hostRemotoIgnorado = true;
-      }
+      const { endpoint, remoto: ctxRemoto } = await this.endpointDocker(correr, hostLocal);
+      if (ctxRemoto) estado.hostRemotoIgnorado = true;
+      if (!endpoint) return sinInvocacion(ctxRemoto ? 'remoto' : 'no_responde');
+      inv.previos = ['-H', endpoint];
       versionArgs = ['version', '--format', '{{.Server.Version}}'];
     } else {
       const con = await correr(['system', 'connection', 'list', '--format', 'json']);
-      if (con.codigo === 0 && conexionPredeterminadaRemota(con.stdout)) {
+      const c = con.codigo === 0 ? conexionPodman(con.stdout) : { tipo: 'ninguna' as const };
+      if (c.tipo === 'remota') {
         estado.hostRemotoIgnorado = true;
-        const r: Deteccion = { estado, invocacion: null, motivo: 'remoto', hora };
-        this.deteccion.set(motor, r);
-        return r;
+        return sinInvocacion('remoto');
       }
+      // Con una máquina local se fija por nombre; sin conexiones (Linux nativo) es local.
+      if (c.tipo === 'maquina') inv.previos = ['--connection', c.nombre];
       versionArgs = ['info', '--format', '{{.Version.Version}}'];
     }
     const v = await correr(versionArgs);
@@ -461,8 +506,10 @@ export class Contenedores {
   async lista(motorCrudo: MotorContenedores): Promise<Contenedor[]> {
     const motor = exigirMotor(motorCrudo);
     const inv = await this.invocacion(motor);
-    const formato = motor === 'docker' ? '{{json .}}' : 'json';
-    const r = await this.d.exec(inv.cmd, [...inv.previos, 'ps', '-a', '--format', formato], {
+    // Docker con --no-trunc: ids completos (64 hex), los mismos con los que se actúa después.
+    const formato =
+      motor === 'docker' ? ['--no-trunc', '--format', '{{json .}}'] : ['--format', 'json'];
+    const r = await this.d.exec(inv.cmd, [...inv.previos, 'ps', '-a', ...formato], {
       timeoutMs: PLAZO_LISTA_MS,
       env: inv.env,
     });
@@ -541,8 +588,7 @@ export class Contenedores {
     const motor = exigirMotor(motorCrudo);
     const id = validarIdContenedor(idCrudo);
     const clave = `${motor}:${id}`;
-    const ya = this.registros.get(clave);
-    if (ya) return ya;
+    if (this.registros.has(clave)) return this.tomar(clave);
     if (this.registros.size >= MAX_REGISTROS_CONTENEDORES) {
       throw new ErrorWolf(
         'contenedores.demasiados_registros',
@@ -553,8 +599,7 @@ export class Contenedores {
     const inv = await this.invocacion(motor);
     await this.exigirExistente(motor, id);
     // Otra llamada pudo empezar mientras se esperaba.
-    const otra = this.registros.get(clave);
-    if (otra) return otra;
+    if (this.registros.has(clave)) return this.tomar(clave);
     if (this.registros.size >= MAX_REGISTROS_CONTENEDORES) {
       throw new ErrorWolf(
         'contenedores.demasiados_registros',
@@ -580,15 +625,17 @@ export class Contenedores {
     const tope = setTimeout(() => control.abort(), MAX_DURACION_REGISTRO_MS);
     lote.unref?.();
     tope.unref?.();
+    const entrada = { refs: 0, cortar: (): void => undefined };
     const dejar = (): void => {
       if (terminado) return;
       terminado = true;
       clearInterval(lote);
       clearTimeout(tope);
-      if (this.registros.get(clave) === dejar) this.registros.delete(clave);
+      if (this.registros.get(clave) === entrada) this.registros.delete(clave);
       control.abort();
     };
-    this.registros.set(clave, dejar);
+    entrada.cortar = dejar;
+    this.registros.set(clave, entrada);
     this.d
       .lanzar(inv.cmd, [...inv.previos, 'logs', '-f', '--tail', '500', id], {
         env: inv.env,
@@ -609,7 +656,24 @@ export class Contenedores {
         if (!cortado) emitir(true);
       })
       .catch(() => undefined);
-    return dejar;
+    return this.tomar(clave);
+  }
+
+  /**
+   * Una referencia más al seguimiento de `clave` (cada ventana tiene la suya): la función
+   * devuelta suelta solo esa referencia (una vez) y el proceso se corta con la última.
+   */
+  private tomar(clave: string): () => void {
+    const e = this.registros.get(clave);
+    if (!e) return () => undefined;
+    e.refs++;
+    let suelta = false;
+    return () => {
+      if (suelta) return;
+      suelta = true;
+      e.refs--;
+      if (e.refs <= 0) e.cortar();
+    };
   }
 
   /**
@@ -634,7 +698,7 @@ export class Contenedores {
   cerrar(): void {
     if (this.temporizador) clearInterval(this.temporizador);
     this.temporizador = null;
-    for (const dejar of [...this.registros.values()]) dejar();
+    for (const e of [...this.registros.values()]) e.cortar();
     this.registros.clear();
   }
 }
@@ -646,19 +710,39 @@ function versionValida(salida: string): string | null {
   return RE_VERSION.test(v) ? v : null;
 }
 
-/** ¿La conexión predeterminada de Podman apunta a otro equipo? (salida de `connection list`). */
-function conexionPredeterminadaRemota(salida: string): boolean {
+/**
+ * Conexión predeterminada de Podman (salida de `system connection list --format json`):
+ * - `ninguna`: no hay conexiones (Podman nativo de Linux, local);
+ * - `maquina`: la máquina virtual local (`IsMachine: true` y URI de este equipo), que se fija
+ *   con `--connection <nombre>`;
+ * - `remota`: cualquier otra cosa (otro equipo, ssh sin ser máquina, salida rara): no se usa.
+ */
+export function conexionPodman(
+  salida: string,
+): { tipo: 'ninguna' } | { tipo: 'maquina'; nombre: string } | { tipo: 'remota' } {
   let v: unknown;
   try {
     v = JSON.parse(salida.trim() || '[]');
   } catch {
-    return false;
+    return { tipo: 'remota' };
   }
-  if (!Array.isArray(v)) return false;
+  if (v === null) return { tipo: 'ninguna' };
+  if (!Array.isArray(v)) return { tipo: 'remota' };
+  if (v.length === 0) return { tipo: 'ninguna' };
   const pred = v.find(
     (c): c is Record<string, unknown> =>
       typeof c === 'object' && c !== null && (c as Record<string, unknown>)['Default'] === true,
   );
+  const nombre = pred?.['Name'];
   const uri = pred?.['URI'];
-  return typeof uri === 'string' && !esUriLocal(uri, 'podman');
+  if (
+    pred?.['IsMachine'] === true &&
+    typeof nombre === 'string' &&
+    RE_ID.test(nombre) &&
+    typeof uri === 'string' &&
+    esUriLocal(uri, 'podman')
+  ) {
+    return { tipo: 'maquina', nombre };
+  }
+  return { tipo: 'remota' };
 }
