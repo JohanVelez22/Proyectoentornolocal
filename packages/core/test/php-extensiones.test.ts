@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -152,6 +152,10 @@ describe('ExtensionesPhp', () => {
     ...o,
   });
 
+  let encendida: boolean;
+  let sanos: boolean[];
+  let reinicios: number;
+
   const crear = (cat: ExtensionPhpCatalogo[] = []) => {
     const iniPhp = new IniPhp({
       rutas,
@@ -159,9 +163,11 @@ describe('ExtensionesPhp', () => {
       phpCli: (r) => path.join(rutas.bin('php', r), 'php'),
       ramasInstaladas: async () => ['8.4'],
       asegurarIni: async (r) => rutas.phpIni(r),
-      encendida: () => false,
-      reiniciar: async () => undefined,
-      sano: async () => true,
+      encendida: () => encendida,
+      reiniciar: async () => {
+        reinicios++;
+      },
+      sano: async () => sanos.shift() ?? true,
     });
     return new ExtensionesPhp({
       rutas,
@@ -190,6 +196,9 @@ describe('ExtensionesPhp', () => {
       'extension=curl\n;extension=gd\nextension=mbstring\nzend_extension=opcache\n',
     );
     llamadas = [];
+    encendida = false;
+    sanos = [];
+    reinicios = 0;
     info = INFO_NTS;
     fetches = [];
     respuestas = new Map();
@@ -268,6 +277,84 @@ describe('ExtensionesPhp', () => {
       codigo: 'php.descarga_fallida',
     });
     expect(fetches).toEqual([e.url]);
+    expect(existsSync(path.join(ext, 'php_xdebug.dll'))).toBe(false);
+  });
+
+  it('las redirecciones solo siguen dentro del host de la entrada', async () => {
+    const e = entrada({});
+    // github.com está en HOSTS_PERMITIDOS, pero no es el host de esta entrada.
+    respuestas.set(
+      e.url,
+      new Response(null, { status: 302, headers: { location: 'https://github.com/x/x.dll' } }),
+    );
+    await expect(crear([e]).instalar('8.4', 'xdebug')).rejects.toMatchObject({
+      codigo: 'php.descarga_fallida',
+    });
+    expect(fetches).toEqual([e.url]);
+
+    fetches = [];
+    respuestas.set(
+      e.url,
+      new Response(null, { status: 301, headers: { location: '/files/espejo/php_xdebug.dll' } }),
+    );
+    respuestas.set('https://xdebug.org/files/espejo/php_xdebug.dll', new Response(DLL));
+    await crear([e]).instalar('8.4', 'xdebug');
+    expect(fetches).toEqual([e.url, 'https://xdebug.org/files/espejo/php_xdebug.dll']);
+    expect(readFileSync(path.join(ext, 'php_xdebug.dll'))).toEqual(DLL);
+  });
+
+  it('actualizar una DLL ya cargada: reinicia el pool y, si no queda sano, vuelve a la anterior', async () => {
+    const vieja = Buffer.from('MZ xdebug vieja');
+    const dll = path.join(ext, 'php_xdebug.dll');
+    writeFileSync(dll, vieja);
+    writeFileSync(ini, 'zend_extension=xdebug\n');
+    encendida = true;
+    sanos = [false, true];
+    const e = entrada({});
+    respuestas.set(e.url, new Response(DLL));
+    await expect(crear([e]).instalar('8.4', 'xdebug')).rejects.toMatchObject({
+      codigo: 'php.no_arranco',
+    });
+    expect(readFileSync(dll)).toEqual(vieja);
+    expect(reinicios).toBe(2);
+    // La DLL nueva se probó con php -v antes de reiniciar el pool.
+    expect(llamadas.some((a) => a.includes('-v'))).toBe(true);
+    expect(readdirSync(ext).filter((n) => n.startsWith('php_xdebug.dll.'))).toEqual([]);
+
+    // Sana: queda la nueva y no hay restos.
+    reinicios = 0;
+    respuestas.set(e.url, new Response(DLL));
+    await crear([e]).instalar('8.4', 'xdebug');
+    expect(readFileSync(dll)).toEqual(DLL);
+    expect(reinicios).toBe(1);
+  });
+
+  it('una DLL nueva que no pasa la prueba al activarla no queda en ext/', async () => {
+    const e = entrada({});
+    respuestas.set(e.url, new Response(DLL));
+    const x = crear([e]);
+    const exec2: Ejecutor = async (_c, args) =>
+      args.includes('-i')
+        ? { codigo: 0, stdout: info, stderr: '' }
+        : { codigo: 0, stdout: SALIDA_OK, stderr: "PHP Warning:  Failed loading 'xdebug'" };
+    // Mismo gestor con un php que rechaza la DLL.
+    const conFallo = new ExtensionesPhp({
+      ...(x as unknown as { d: ConstructorParameters<typeof ExtensionesPhp>[0] }).d,
+      exec: exec2,
+      ini: new IniPhp({
+        rutas,
+        exec: exec2,
+        phpCli: (r) => path.join(rutas.bin('php', r), 'php'),
+        ramasInstaladas: async () => ['8.4'],
+        asegurarIni: async (r) => rutas.phpIni(r),
+        encendida: () => false,
+        reiniciar: async () => undefined,
+        sano: async () => true,
+      }),
+    });
+    await expect(conFallo.instalar('8.4', 'xdebug')).rejects.toMatchObject({
+      codigo: 'php.ini_invalido',
+    });
     expect(existsSync(path.join(ext, 'php_xdebug.dll'))).toBe(false);
   });
 

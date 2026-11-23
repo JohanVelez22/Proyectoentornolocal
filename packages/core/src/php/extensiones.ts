@@ -239,27 +239,91 @@ export class ExtensionesPhp {
     const dll = e.formato === 'archivo' ? datos : await this.dllDelZip(e, datos);
     const destino = path.join(this.carpetaExt(rama), `php_${n}.dll`);
     const actual = existsSync(destino) ? await readFile(destino).catch(() => null) : null;
-    if (!actual || !actual.equals(dll)) {
-      await mkdir(this.carpetaExt(rama), { recursive: true });
-      const tmp = `${destino}.nuevo-${randomBytes(4).toString('hex')}`;
-      await writeFile(tmp, dll);
-      try {
-        await rename(tmp, destino);
-      } catch (err) {
-        await rm(tmp, { force: true }).catch(() => undefined);
-        throw err;
+    if (actual?.equals(dll)) {
+      await this.activar(rama, n, true);
+      return;
+    }
+    const activa = extensionesActivas(await this.d.ini.leer(rama)).has(n);
+    if (activa) {
+      // Ya cargada por el pool: se cambia la DLL en la fila del ini, se prueba con php -v y se
+      // reinicia; si no queda sano, vuelve la anterior.
+      await this.d.ini.enCola(rama, async () => {
+        const deshacer = await this.cambiarDll(destino, dll);
+        try {
+          await this.d.ini.probar(rama, await this.d.ini.leer(rama));
+        } catch (err) {
+          await deshacer();
+          throw err;
+        }
+        await this.d.ini.aplicarEnPool(rama, deshacer);
+      });
+      await this.limpiarAnteriores(destino);
+      return;
+    }
+    const deshacer = await this.cambiarDll(destino, dll);
+    try {
+      await this.activar(rama, n, true);
+    } catch (err) {
+      await deshacer();
+      throw err;
+    }
+    await this.limpiarAnteriores(destino);
+  }
+
+  /**
+   * Pone `dll` en `destino` sin borrar la anterior: la renombra (en Windows se puede renombrar
+   * una DLL cargada, no borrarla) y la nueva entra con un rename. Devuelve cómo deshacerlo.
+   */
+  private async cambiarDll(destino: string, dll: Buffer): Promise<() => Promise<void>> {
+    await mkdir(path.dirname(destino), { recursive: true });
+    const sufijo = randomBytes(4).toString('hex');
+    const tmp = `${destino}.nuevo-${sufijo}`;
+    const anterior = `${destino}.anterior-${sufijo}`;
+    await writeFile(tmp, dll);
+    const habia = existsSync(destino);
+    try {
+      if (habia) await rename(destino, anterior);
+      await rename(tmp, destino);
+    } catch (err) {
+      if (habia && !existsSync(destino)) await rename(anterior, destino).catch(() => undefined);
+      await rm(tmp, { force: true }).catch(() => undefined);
+      throw err;
+    }
+    return async () => {
+      if (habia) {
+        // La nueva puede estar cargada: se aparta con otro nombre antes de devolver la anterior.
+        const descartada = `${destino}.descartada-${sufijo}`;
+        await rename(destino, descartada).catch(() => undefined);
+        await rename(anterior, destino);
+        await rm(descartada, { force: true }).catch(() => undefined);
+      } else {
+        await rm(destino, { force: true }).catch(() => undefined);
+      }
+    };
+  }
+
+  /** Borra las DLL apartadas (`.anterior-`, `.descartada-`); las que siguen cargadas quedan. */
+  private async limpiarAnteriores(destino: string): Promise<void> {
+    const carpeta = path.dirname(destino);
+    const base = path.basename(destino);
+    for (const n of await readdir(carpeta).catch(() => [] as string[])) {
+      if (n.startsWith(`${base}.anterior-`) || n.startsWith(`${base}.descartada-`)) {
+        await rm(path.join(carpeta, n), { force: true }).catch(() => undefined);
       }
     }
-    await this.activar(rama, n, true);
   }
 
   /** Descarga con redirecciones manuales (cada salto, a un host permitido) y verifica el hash. */
   private async descargar(e: ExtensionPhpCatalogo): Promise<Buffer> {
     const f = this.d.fetch ?? fetch;
     let url = e.url;
+    // Las redirecciones solo siguen dentro del host de la entrada (no a otro host permitido).
+    const host = new URL(e.url).hostname;
     let res: Response | null = null;
     for (let salto = 0; salto <= MAX_REDIRECCIONES; salto++) {
-      if (!urlOficial(url)) throw fallo('redirección a un host no permitido');
+      if (!urlOficial(url) || new URL(url).hostname !== host) {
+        throw fallo('redirección a un host no permitido');
+      }
       try {
         res = await f(url, { redirect: 'manual', signal: AbortSignal.timeout(120_000) });
       } catch (err) {
