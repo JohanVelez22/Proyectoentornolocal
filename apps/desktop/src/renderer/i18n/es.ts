@@ -125,6 +125,9 @@ export const es = {
       'herramientas.dominio_invalido': 'Hay un dominio o IP no válido.',
       'herramientas.demasiados_dominios':
         'Un certificado admite como máximo {maximo} dominios o IP.',
+      'terminal.no_abrio': 'No se pudo abrir la terminal.',
+      'terminal.no_instalada': '{nombre} no está instalada. Elija otra terminal en Ajustes.',
+      'terminal.invalida': 'Esa terminal no es válida.',
       'proyectos.no_existe': 'No existe el proyecto.',
       'proyectos.no_confiado': 'Marque "Confío en este repositorio" para ejecutar la receta.',
       'proyectos.receta_en_curso': 'Ya hay una receta en curso para este proyecto.',
@@ -370,7 +373,7 @@ export const es = {
       sinVersion: 'sin instalar',
       uso: 'Uso',
       usoTexto: 'composer',
-      ayuda: 'Use «Terminal aquí» en un sitio, o agregue WolfCore Dev al PATH en Ajustes.',
+      ayuda: 'Use «Terminal» en un proyecto, o agregue WolfCore Dev al PATH en Ajustes.',
       instaladoOk: 'Composer instalado',
       sinPhp: 'Instale PHP primero',
       actualizado: (v: string) => `Composer actualizado: ${v}`,
@@ -912,7 +915,7 @@ export const es = {
       titulo: 'Terminal y herramientas',
       phpPorDefecto: 'PHP por defecto',
       phpPorDefectoAyuda:
-        'La versión de php y composer en la terminal y en los atajos de WolfCore Dev. «Terminal aquí» usa el PHP de cada sitio.',
+        'La versión de php y composer en la terminal y en los atajos de WolfCore Dev. «Terminal» usa el PHP de cada proyecto.',
       phpMasReciente: 'La más reciente instalada',
       phpSinInstalar: 'Instale PHP en Servicios para elegir una versión',
       phpGuardado: 'PHP por defecto actualizado',
@@ -929,6 +932,11 @@ export const es = {
         'php y composer de WolfCore Dev dejarán de estar disponibles en las terminales nuevas. Las terminales abiertas no cambian.',
       adminer: 'Puerto de Adminer',
       adminerAyuda: 'Adminer se sirve solo en este equipo, en esta dirección fija.',
+      terminal: 'Terminal predeterminada',
+      terminalSistema: 'La del sistema (PowerShell)',
+      terminalAyuda:
+        'La que abre «Terminal» en los proyectos. Con las variables del proyecto, Windows Terminal se abre como consola predeterminada del sistema.',
+      terminalGuardada: 'Terminal predeterminada actualizada',
     },
   },
   /* ───────────── HTTPS, terminal y FTP en sitios; Correo; IA local ───────────── */
@@ -966,8 +974,10 @@ export const es = {
     fallo: 'No se pudo instalar la autoridad HTTPS',
   },
   terminalSitio: {
-    boton: 'Terminal aquí',
-    ayuda: 'Abre una terminal en la carpeta del sitio, con su PHP y Composer en el PATH.',
+    boton: 'Terminal',
+    ayuda: 'Abre una terminal en la carpeta del proyecto, con su PHP y Composer en el PATH.',
+    elegir: 'Elegir terminal',
+    predeterminada: 'predeterminada',
   },
   ftpSitio: {
     etiqueta: 'FTP',
@@ -1474,6 +1484,14 @@ export const es = {
       vscode: 'VS Code',
       vscodeAyuda: 'Abrir la carpeta del proyecto en Visual Studio Code',
       vscodeError: 'No se pudo abrir VS Code',
+      baseDatos: 'Base de datos',
+      baseDatosAyuda: (base: string) =>
+        `Abrir la base «${base}» en Adminer (pide la clave al entrar)`,
+      baseDatosSinDetectar: 'Abrir la base de datos del proyecto en Adminer',
+      sinBase: 'El .env del proyecto no declara una base MySQL, MariaDB o PostgreSQL.',
+      adminerNoListo: 'Adminer no está listo',
+      phpMyAdminPendiente: 'phpMyAdmin llegará en la Etapa D; por ahora se usa Adminer.',
+      abrirSitio: 'Abrir el sitio en el navegador',
       github: 'Repositorio',
       abrirRemoto: (url: string) => `Abrir ${url}`,
       confiado: 'Confiado',
