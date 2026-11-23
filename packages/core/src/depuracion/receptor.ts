@@ -56,7 +56,11 @@ export const RUTA_DUMP = '/dump';
 export const MAX_CUERPO_DUMP = 1024 * 1024;
 /** Volcados que se guardan (los más nuevos). */
 export const MAX_DUMPS = 500;
-/** Tope de bytes de texto en memoria: el anillo descarta los más viejos hasta caber. */
+/**
+ * Tope de memoria del texto: el anillo descarta los más viejos hasta caber. Se cuenta como lo
+ * guarda JS (UTF-16: 2 bytes por unidad), no los bytes UTF-8 que llegaron: 32 MiB de memoria son
+ * como mucho unos 16 millones de caracteres.
+ */
 export const MAX_BYTES_DUMPS = 32 * 1024 * 1024;
 /** Peticiones aceptadas por segundo; el resto recibe 429. */
 export const DUMPS_POR_SEGUNDO = 50;
@@ -273,13 +277,13 @@ export class ReceptorDumps {
     this.totalBytes = 0;
   }
 
-  /** Bytes de texto en memoria. */
+  /** Memoria del texto guardado (UTF-16, 2 bytes por unidad). */
   bytes(): number {
     return this.totalBytes;
   }
 
   private guardar(d: Dump): boolean {
-    const tam = Buffer.byteLength(d.texto, 'utf8');
+    const tam = memoriaTexto(d.texto);
     if (tam > this.maxBytes) return false;
     this.dumps.push(d);
     this.totalBytes += tam;
@@ -288,7 +292,7 @@ export class ReceptorDumps {
       (this.totalBytes > this.maxBytes && this.dumps.length > 1)
     ) {
       const viejo = this.dumps.shift()!;
-      this.totalBytes -= Buffer.byteLength(viejo.texto, 'utf8');
+      this.totalBytes -= memoriaTexto(viejo.texto);
     }
     return true;
   }
@@ -400,6 +404,9 @@ export class ReceptorDumps {
     };
   }
 }
+
+/** Memoria que ocupa un texto en JS: 2 bytes por unidad UTF-16 (cota superior). */
+const memoriaTexto = (t: string): number => t.length * 2;
 
 function resumen(d: Dump): ResumenDump {
   const primera = d.texto.split('\n', 1)[0] ?? '';

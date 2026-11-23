@@ -167,14 +167,16 @@ describe('ReceptorDumps', () => {
     const bien = { Authorization: `Bearer ${token}` };
     for (let i = 0; i < 5; i++) await enviar(puerto, dump({ texto: `n${i}` }), bien);
     expect(r.lista().map((d) => d.vista)).toEqual(['n4', 'n3', 'n2']);
-    await enviar(puerto, dump({ texto: 'y'.repeat(600) }), bien);
-    await enviar(puerto, dump({ texto: 'w'.repeat(600) }), bien);
+    // El tope cuenta la memoria de JS: 2 bytes por unidad UTF-16 (300 caracteres = 600 bytes).
+    await enviar(puerto, dump({ texto: 'y'.repeat(300) }), bien);
+    await enviar(puerto, dump({ texto: 'w'.repeat(300) }), bien);
     // El último entra y desplaza a los viejos hasta caber.
     expect(r.lista().map((d) => d.vista[0])).toEqual(['w']);
-    expect(r.bytes()).toBeLessThanOrEqual(1000);
-    // Uno más grande que el tope no entra.
-    await enviar(puerto, dump({ texto: 'z'.repeat(1200) }), bien);
+    expect(r.bytes()).toBe(600);
+    // Uno más grande que el tope no entra: 600 bytes en UTF-8, pero 1200 en memoria.
+    await enviar(puerto, dump({ texto: 'z'.repeat(600) }), bien);
     expect(r.lista().every((d) => !d.vista.startsWith('z'))).toBe(true);
+    expect(r.bytes()).toBeLessThanOrEqual(1000);
   });
 
   it('limita la cantidad por segundo (429)', async () => {
