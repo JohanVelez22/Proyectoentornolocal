@@ -488,7 +488,14 @@ interface Seguida {
   interprete: InterpreteErrores;
   dejar: (() => void) | null;
   temporizador: ReturnType<typeof setTimeout> | null;
+  /** Lotes en orden: uno no empieza hasta que termina el anterior. */
+  cola: Promise<void>;
 }
+
+/** Líneas por tramo y tiempo de proceso tras el que se cede el bucle de eventos. */
+const LINEAS_POR_TRAMO = 200;
+export const PRESUPUESTO_LOTE_MS = 8;
+const ceder = (): Promise<void> => new Promise((r) => setImmediate(r));
 
 /**
  * Errores agrupados de todas las fuentes con intérprete. Empieza a seguirlas la primera vez que
@@ -546,6 +553,7 @@ export class VisorErrores {
         interprete: new InterpreteErrores(formatoDeFuente(f)!),
         dejar: null,
         temporizador: null,
+        cola: Promise.resolve(),
       };
       this.seguidas.set(f.id, s);
       try {
@@ -553,8 +561,7 @@ export class VisorErrores {
           f.id,
           this.d.lineasIniciales ?? LINEAS_INICIALES_ERRORES,
         );
-        this.registrar(s, s.interprete.agregar(final));
-        this.registrar(s, s.interprete.cerrar());
+        await this.procesar(s, final, true);
         const dejar = await this.d.registros.seguir(f.id);
         if (this.seguidas.get(f.id) === s && !this.cerrado) s.dejar = dejar;
         else dejar();
@@ -572,18 +579,41 @@ export class VisorErrores {
     this.seguidas.delete(s.fuente.id);
   }
 
+  /**
+   * Interpreta un lote por tramos y, pasado `PRESUPUESTO_LOTE_MS`, cede el bucle de eventos: un
+   * lote grande (el final de varios registros al empezar) no congela el proceso principal.
+   */
+  private procesar(s: Seguida, lineas: readonly string[], cerrar = false): Promise<void> {
+    s.cola = s.cola
+      .then(async () => {
+        let inicio = performance.now();
+        for (let i = 0; i < lineas.length && !this.cerrado; i += LINEAS_POR_TRAMO) {
+          this.registrar(s, s.interprete.agregar(lineas.slice(i, i + LINEAS_POR_TRAMO)));
+          if (performance.now() - inicio > PRESUPUESTO_LOTE_MS) {
+            await ceder();
+            inicio = performance.now();
+          }
+        }
+        if (cerrar) this.registrar(s, s.interprete.cerrar());
+      })
+      .catch((e: unknown) => console.error(`Error al interpretar ${s.fuente.id}:`, e));
+    return s.cola;
+  }
+
   private recibir(s: Seguida, lineas: string[]): void {
-    this.registrar(s, s.interprete.agregar(lineas));
     if (s.temporizador) clearTimeout(s.temporizador);
     s.temporizador = null;
-    // Una entrada abierta se cierra si no llega más traza en un rato.
-    if (s.interprete.pendiente) {
+    void this.procesar(s, lineas).then(() => {
+      // Una entrada abierta se cierra si no llega más traza en un rato.
+      if (s.temporizador) clearTimeout(s.temporizador);
+      s.temporizador = null;
+      if (!s.interprete.pendiente || this.cerrado) return;
       s.temporizador = setTimeout(() => {
         s.temporizador = null;
-        this.registrar(s, s.interprete.cerrar());
+        s.cola = s.cola.then(() => this.registrar(s, s.interprete.cerrar()));
       }, this.d.esperaCierreMs ?? 1500);
       s.temporizador.unref?.();
-    }
+    });
   }
 
   private sitioDe(s: Seguida, archivo: string | null): string | null {

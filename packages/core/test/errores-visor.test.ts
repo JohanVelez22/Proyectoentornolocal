@@ -432,6 +432,32 @@ describe('VisorErrores', () => {
     }
   });
 
+  it('procesa los lotes grandes cediendo el bucle de eventos', async () => {
+    const lineas = Array.from(
+      { length: 60_000 },
+      (_, i) => `PHP Warning:  Aviso ${i} in /p/x${i % 50}.php on line ${i % 7}`,
+    );
+    const visor = new VisorErrores({
+      registros: {
+        fuentes: async () => [{ id: 'php:8.4', nombre: 'PHP', ruta: '/x', grupo: 'php' }],
+        seguir: async () => () => undefined,
+        leerFinal: async () => lineas,
+      },
+      eventos: new Eventos<EventosNucleo>(),
+      leerSitios: async () => [],
+    });
+    let cedio = false;
+    let terminado = false;
+    setImmediate(() => {
+      if (!terminado) cedio = true;
+    });
+    const lista = await visor.lista();
+    terminado = true;
+    visor.cerrar();
+    expect(cedio).toBe(true);
+    expect(lista.reduce((n, e) => n + e.veces, 0)).toBe(60_000);
+  });
+
   it('leer con una huella desconocida da null', async () => {
     const { visor, registros } = await montar();
     try {
