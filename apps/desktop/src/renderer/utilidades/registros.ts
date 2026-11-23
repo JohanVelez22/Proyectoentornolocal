@@ -137,6 +137,8 @@ export function etiquetaFuente(
         : tr.fuentes.tunel(nombreSitio);
     case 'laravel':
       return tr.fuentes.laravel(nombreSitio);
+    case 'ci3':
+      return tr.fuentes.ci3(nombreSitio);
     case 'proyecto': {
       // id del supervisor: proy-<sitio>-<proceso>.
       const procesoId = f.sitioId ? f.id.slice(`proy-${f.sitioId}-`.length) : f.id;
@@ -155,7 +157,16 @@ export type GrupoOpciones = {
   children: { value: string; label: string }[];
 };
 
-const ORDEN_GRUPOS = ['nginx', 'php', 'servicio', 'sitio', 'laravel', 'proyecto', 'tunel'] as const;
+const ORDEN_GRUPOS = [
+  'nginx',
+  'php',
+  'servicio',
+  'sitio',
+  'laravel',
+  'ci3',
+  'proyecto',
+  'tunel',
+] as const;
 
 /** Opciones agrupadas para el selector de fuentes (grupos vacíos fuera). */
 export function agruparFuentes(

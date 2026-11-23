@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Trash } from '@vicons/ionicons5';
+import { Refresh, Trash } from '@vicons/ionicons5';
 import {
   NAlert,
   NButton,
@@ -11,13 +11,17 @@ import {
   NSelect,
   NSpace,
   NSwitch,
+  NTabPane,
+  NTabs,
   NTag,
   useMessage,
 } from 'naive-ui';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { Sitio } from '../../shared/api';
 import { api } from '../api';
+import DetalleError from '../componentes/DetalleError.vue';
 import ListaDumps from '../componentes/ListaDumps.vue';
+import ListaErrores from '../componentes/ListaErrores.vue';
 import VistaDump from '../componentes/VistaDump.vue';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -48,7 +52,49 @@ onMounted(() => {
     await dep.refrescar();
   });
 });
-onBeforeUnmount(() => dep.detener());
+onBeforeUnmount(() => {
+  dep.detener();
+  pararErrores();
+});
+
+/* ───────────── Pestañas: volcados y errores ───────────── */
+
+/** Refresco de los errores cada 5 s, solo con la pestaña a la vista. */
+const REFRESCO_ERRORES_MS = 5000;
+const pestana = ref<'volcados' | 'errores'>('volcados');
+let temporizadorErrores: ReturnType<typeof setInterval> | null = null;
+
+function pararErrores(): void {
+  if (temporizadorErrores) clearInterval(temporizadorErrores);
+  temporizadorErrores = null;
+}
+
+watch(pestana, (p) => {
+  pararErrores();
+  if (p !== 'errores') return;
+  void ejecutar('errores', () => dep.refrescarErrores());
+  temporizadorErrores = setInterval(
+    () => void dep.refrescarErrores().catch(() => undefined),
+    REFRESCO_ERRORES_MS,
+  );
+});
+
+const opcionesSitioErrores = computed(() => [
+  { label: t.filtroSitio, value: '' },
+  ...sitios.lista.map((s) => ({ label: s.dominio, value: s.id })),
+]);
+
+function elegirError(huella: string): void {
+  void ejecutar('leerError', () => dep.elegirError(huella));
+}
+
+/** "Abrir en el editor": el núcleo comprueba que el archivo esté dentro de la carpeta del sitio. */
+function abrirEnEditor(): void {
+  const e = dep.errorElegido;
+  if (!e || !e.sitioId || !e.archivo || e.linea === null) return;
+  const { sitioId, archivo, linea } = e;
+  void ejecutar('editor', () => api().editor.abrirEn(sitioId, archivo, linea));
+}
 
 /* ───────────── Receptor y captura por sitio ───────────── */
 
@@ -138,97 +184,151 @@ function limpiar(): void {
   <div class="depuracion">
     <p class="descripcion">{{ t.descripcion }}</p>
 
-    <section class="receptor">
-      <label class="interruptor">
-        <NSwitch
-          :value="dep.activo"
-          :loading="ocupado('receptor')"
-          @update:value="activarReceptor"
-        />
-        <strong>{{ t.receptor }}</strong>
-      </label>
-      <NTag size="small" :bordered="false" :type="dep.activo ? 'success' : 'default'">
-        {{
-          dep.activo && dep.estado?.puerto
-            ? t.escuchando(dep.estado.direccion, dep.estado.puerto)
-            : t.apagado
-        }}
-      </NTag>
-      <span v-if="dep.estado" class="total">{{ t.total(dep.estado.total) }}</span>
-    </section>
-    <NAlert type="info" :show-icon="false" class="memoria">{{ t.memoria }}</NAlert>
-
-    <section class="sitios">
-      <h3>{{ t.sitios }}</h3>
-      <p v-if="candidatos.length === 0" class="descripcion">{{ t.sinSitios }}</p>
-      <ul v-else>
-        <li v-for="s in candidatos" :key="s.id">
-          <NSwitch
-            size="small"
-            :value="s.capturaDumps === true"
-            :loading="ocupado(`sitio-${s.id}`)"
-            :disabled="esPhp(s) && !s.php"
-            @update:value="(v: boolean) => cambiarCaptura(s, v)"
-          />
-          <span class="dominio">{{ s.dominio }}</span>
-          <NTag size="small" :bordered="false" :type="esPhp(s) ? 'info' : 'success'">
-            {{ esPhp(s) ? t.php : t.python }}
+    <NTabs v-model:value="pestana" type="line" class="pestanas" pane-class="pestana">
+      <NTabPane name="volcados" :tab="t.pestanaVolcados">
+        <section class="receptor">
+          <label class="interruptor">
+            <NSwitch
+              :value="dep.activo"
+              :loading="ocupado('receptor')"
+              @update:value="activarReceptor"
+            />
+            <strong>{{ t.receptor }}</strong>
+          </label>
+          <NTag size="small" :bordered="false" :type="dep.activo ? 'success' : 'default'">
+            {{
+              dep.activo && dep.estado?.puerto
+                ? t.escuchando(dep.estado.direccion, dep.estado.puerto)
+                : t.apagado
+            }}
           </NTag>
-          <span v-if="esPhp(s) && !s.php" class="nota">{{ t.sinPhp }}</span>
-        </li>
-      </ul>
-    </section>
+          <span v-if="dep.estado" class="total">{{ t.total(dep.estado.total) }}</span>
+        </section>
+        <NAlert type="info" :show-icon="false" class="memoria">{{ t.memoria }}</NAlert>
 
-    <section class="filtros">
-      <NSelect v-model:value="filtroSitio" :options="opcionesSitio" size="small" class="sel" />
-      <NSelect v-model:value="filtroOrigen" :options="opcionesOrigen" size="small" class="sel" />
-      <NInput
-        v-model:value="filtroTexto"
-        size="small"
-        clearable
-        :maxlength="200"
-        :placeholder="t.buscar"
-        class="buscar"
-      />
-      <NPopconfirm @positive-click="limpiar">
-        <template #trigger>
-          <NButton size="small" secondary :loading="ocupado('limpiar')">
+        <section class="sitios">
+          <h3>{{ t.sitios }}</h3>
+          <p v-if="candidatos.length === 0" class="descripcion">{{ t.sinSitios }}</p>
+          <ul v-else>
+            <li v-for="s in candidatos" :key="s.id">
+              <NSwitch
+                size="small"
+                :value="s.capturaDumps === true"
+                :loading="ocupado(`sitio-${s.id}`)"
+                :disabled="esPhp(s) && !s.php"
+                @update:value="(v: boolean) => cambiarCaptura(s, v)"
+              />
+              <span class="dominio">{{ s.dominio }}</span>
+              <NTag size="small" :bordered="false" :type="esPhp(s) ? 'info' : 'success'">
+                {{ esPhp(s) ? t.php : t.python }}
+              </NTag>
+              <span v-if="esPhp(s) && !s.php" class="nota">{{ t.sinPhp }}</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="filtros">
+          <NSelect v-model:value="filtroSitio" :options="opcionesSitio" size="small" class="sel" />
+          <NSelect
+            v-model:value="filtroOrigen"
+            :options="opcionesOrigen"
+            size="small"
+            class="sel"
+          />
+          <NInput
+            v-model:value="filtroTexto"
+            size="small"
+            clearable
+            :maxlength="200"
+            :placeholder="t.buscar"
+            class="buscar"
+          />
+          <NPopconfirm @positive-click="limpiar">
+            <template #trigger>
+              <NButton size="small" secondary :loading="ocupado('limpiar')">
+                <template #icon
+                  ><NIcon><Trash /></NIcon
+                ></template>
+                {{ t.limpiar }}
+              </NButton>
+            </template>
+            {{ t.confirmarLimpiar }}
+          </NPopconfirm>
+        </section>
+
+        <div class="panel">
+          <div class="columna-lista">
+            <NEmpty
+              v-if="dep.lista.length === 0"
+              :description="dep.activo ? t.vacio : t.vacioApagado"
+              class="vacio"
+            />
+            <ListaDumps
+              v-else
+              :lista="dep.lista"
+              :elegido-id="dep.elegido?.id ?? null"
+              :nombre-sitio="nombreSitio"
+              @elegir="elegir"
+            />
+          </div>
+          <div class="columna-vista">
+            <VistaDump
+              v-if="dep.elegido"
+              :dump="dep.elegido"
+              :nombre-sitio="nombreSitio"
+              :copiando="ocupado('copiar')"
+              @copiar="copiar"
+            />
+            <NEmpty v-else :description="t.elegir" class="vacio" />
+          </div>
+        </div>
+      </NTabPane>
+
+      <NTabPane name="errores" :tab="t.pestanaErrores">
+        <p class="descripcion">{{ t.erroresDescripcion }}</p>
+        <section class="filtros">
+          <NSelect
+            v-model:value="dep.sitioErrores"
+            :options="opcionesSitioErrores"
+            size="small"
+            class="sel"
+          />
+          <NButton
+            size="small"
+            secondary
+            :loading="ocupado('errores')"
+            @click="ejecutar('errores', () => dep.refrescarErrores())"
+          >
             <template #icon
-              ><NIcon><Trash /></NIcon
+              ><NIcon><Refresh /></NIcon
             ></template>
-            {{ t.limpiar }}
+            {{ t.actualizar }}
           </NButton>
-        </template>
-        {{ t.confirmarLimpiar }}
-      </NPopconfirm>
-    </section>
-
-    <div class="panel">
-      <div class="columna-lista">
-        <NEmpty
-          v-if="dep.lista.length === 0"
-          :description="dep.activo ? t.vacio : t.vacioApagado"
-          class="vacio"
-        />
-        <ListaDumps
-          v-else
-          :lista="dep.lista"
-          :elegido-id="dep.elegido?.id ?? null"
-          :nombre-sitio="nombreSitio"
-          @elegir="elegir"
-        />
-      </div>
-      <div class="columna-vista">
-        <VistaDump
-          v-if="dep.elegido"
-          :dump="dep.elegido"
-          :nombre-sitio="nombreSitio"
-          :copiando="ocupado('copiar')"
-          @copiar="copiar"
-        />
-        <NEmpty v-else :description="t.elegir" class="vacio" />
-      </div>
-    </div>
+        </section>
+        <div class="panel">
+          <div class="columna-lista">
+            <NEmpty v-if="dep.errores.length === 0" :description="t.erroresVacio" class="vacio" />
+            <ListaErrores
+              v-else
+              :lista="dep.errores"
+              :elegida="dep.errorElegido?.huella ?? null"
+              :nombre-sitio="nombreSitio"
+              @elegir="elegirError"
+            />
+          </div>
+          <div class="columna-vista">
+            <DetalleError
+              v-if="dep.errorElegido"
+              :error="dep.errorElegido"
+              :nombre-sitio="nombreSitio"
+              :abriendo="ocupado('editor')"
+              @abrir="abrirEnEditor"
+            />
+            <NEmpty v-else :description="t.erroresElegir" class="vacio" />
+          </div>
+        </div>
+      </NTabPane>
+    </NTabs>
 
     <NModal
       :show="pedido !== null"
@@ -262,6 +362,15 @@ function limpiar(): void {
 .descripcion {
   margin: 0;
   opacity: 0.8;
+}
+.pestanas {
+  flex: 1;
+  min-height: 0;
+}
+.pestanas :deep(.pestana) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 .receptor {
   display: flex;

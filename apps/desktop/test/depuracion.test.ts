@@ -27,6 +27,9 @@ function montarIpc() {
     leerDump: vi.fn(() => null),
     limpiarDumps: vi.fn(),
     textoDumpParaCopiar: vi.fn(() => 'texto enmascarado sk-***'),
+    listaErrores: vi.fn(async () => []),
+    leerError: vi.fn(async () => null),
+    abrirEnEditor: vi.fn(async () => undefined),
   };
   const copiar = vi.fn();
   registrarIpc(
@@ -58,6 +61,9 @@ const RUTAS = [
   'depuracion.leer',
   'depuracion.limpiar',
   'depuracion.copiar',
+  'errores.lista',
+  'errores.leer',
+  'editor.abrirEn',
 ] as const;
 
 describe('IPC de la captura de dumps', () => {
@@ -128,6 +134,51 @@ describe('IPC de la captura de dumps', () => {
     expect(r.valor).toBeUndefined();
     expect(copiar).toHaveBeenCalledWith('API_KEY=*** enmascarado');
     expect(JSON.stringify(r)).not.toContain(SECRETO);
+  });
+
+  it('errores y editor: argumentos inválidos no llegan al núcleo', async () => {
+    const { nucleo, llamar } = montarIpc();
+    const casos: [string, unknown[]][] = [
+      ['errores.lista', [{ sitioId: '../x' }]],
+      ['errores.lista', [{ desde: 'ayer' }]],
+      ['errores.lista', [{ otro: 1 }]],
+      ['errores.lista', ['tienda']],
+      ['errores.leer', ['../../etc']],
+      ['errores.leer', ['0123456789ABCDEF']],
+      ['errores.leer', [123]],
+      ['editor.abrirEn', ['C:/x', 'C:/x/a.php', 1]],
+      ['editor.abrirEn', ['tienda', 42, 1]],
+      ['editor.abrirEn', ['tienda', 'C:/x/a.php\n', 1]],
+      ['editor.abrirEn', ['tienda', 'x'.repeat(2000), 1]],
+      ['editor.abrirEn', ['tienda', 'C:/x/a.php', 0]],
+      ['editor.abrirEn', ['tienda', 'C:/x/a.php', 1.5]],
+      ['editor.abrirEn', ['tienda', 'C:/x/a.php', '3']],
+    ];
+    for (const [ruta, args] of casos) {
+      const r = await llamar(ruta, ...args);
+      expect(r.ok, `${ruta} ${JSON.stringify(args)}`).toBe(false);
+      expect(r.error?.codigo).toBe('depuracion.argumento_invalido');
+    }
+    expect(nucleo.listaErrores).not.toHaveBeenCalled();
+    expect(nucleo.leerError).not.toHaveBeenCalled();
+    expect(nucleo.abrirEnEditor).not.toHaveBeenCalled();
+  });
+
+  it('errores y editor: lo válido llega al núcleo', async () => {
+    const { nucleo, llamar } = montarIpc();
+    expect(
+      (await llamar('errores.lista', { sitioId: 'tienda', desde: '2026-11-23T00:00:00.000Z' })).ok,
+    ).toBe(true);
+    expect(nucleo.listaErrores).toHaveBeenLastCalledWith({
+      sitioId: 'tienda',
+      desde: '2026-11-23T00:00:00.000Z',
+    });
+    expect((await llamar('errores.lista')).ok).toBe(true);
+    expect((await llamar('errores.leer', '0123456789abcdef')).ok).toBe(true);
+    expect(nucleo.leerError).toHaveBeenCalledWith('0123456789abcdef');
+    expect((await llamar('editor.abrirEn', 'tienda', 'C:/p/tienda/app/X.php', 12)).ok).toBe(true);
+    // La validación de que el archivo está dentro del sitio la hace el núcleo (rutas reales).
+    expect(nucleo.abrirEnEditor).toHaveBeenCalledWith('tienda', 'C:/p/tienda/app/X.php', 12);
   });
 
   it('pantalla en la barra lateral y textos en es y en', () => {

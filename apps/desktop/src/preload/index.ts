@@ -168,6 +168,13 @@ const api: ApiEntorno = {
     limpiar: () => invocar('depuracion.limpiar'),
     copiar: (id) => invocar('depuracion.copiar', id),
   },
+  errores: {
+    lista: (filtro) => invocar('errores.lista', filtro),
+    leer: (huella) => invocar('errores.leer', huella),
+  },
+  editor: {
+    abrirEn: (sitioId, archivo, linea) => invocar('editor.abrirEn', sitioId, archivo, linea),
+  },
   avisos: {
     lista: () => invocar('avisos.lista'),
     marcarLeidos: (ids) => invocar('avisos.marcarLeidos', ids),

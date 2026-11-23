@@ -1,8 +1,11 @@
 import type {
   Dump,
   EstadoReceptor,
+  ErrorAgrupado,
   FiltroDumps,
+  FiltroErrores,
   ResumenDump,
+  ResumenError,
   EstadoPhpSitio,
   ResultadoPhpSitio,
   XdebugSitio,
@@ -102,8 +105,11 @@ import type {
 export type {
   Dump,
   EstadoReceptor,
+  ErrorAgrupado,
   FiltroDumps,
+  FiltroErrores,
   ResumenDump,
+  ResumenError,
   AvisoVhost,
   CambioVhost,
   ResultadoEditorVhost,
@@ -696,6 +702,19 @@ export interface ApiEntorno {
     /** Copia al portapapeles el volcado con los secretos enmascarados (no se devuelve). */
     copiar(id: string): Promise<void>;
   };
+  errores: {
+    /** Errores agrupados de los registros (sin traza), del más reciente al más viejo. */
+    lista(filtro?: FiltroErrores): Promise<ResumenError[]>;
+    /** Un error con la traza de la última vez (por su huella), o null. */
+    leer(huella: string): Promise<ErrorAgrupado | null>;
+  };
+  editor: {
+    /**
+     * Abre un archivo del sitio en VS Code en una línea. El núcleo exige que sea un archivo real
+     * dentro de la carpeta del sitio (`depuracion.archivo_fuera_del_sitio` si no).
+     */
+    abrirEn(sitioId: string, archivo: string, linea: number): Promise<void>;
+  };
   avisos: {
     /** Historial (hasta 200, los más nuevos primero). */
     lista(): Promise<Aviso[]>;
@@ -926,6 +945,9 @@ export const RUTAS_IPC = [
   'depuracion.leer',
   'depuracion.limpiar',
   'depuracion.copiar',
+  'errores.lista',
+  'errores.leer',
+  'editor.abrirEn',
   'avisos.lista',
   'avisos.marcarLeidos',
   'avisos.limpiar',

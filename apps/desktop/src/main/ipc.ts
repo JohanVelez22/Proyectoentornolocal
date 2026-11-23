@@ -52,6 +52,10 @@ import {
   filtroDumps,
   idDump,
   idSitioDepuracion,
+  filtroErrores,
+  huellaErrorIpc,
+  archivoEditor,
+  lineaEditor,
   xdebugSitio,
   cambioVhost,
   idSitioNginx,
@@ -1081,6 +1085,12 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'depuracion.copiar': async (n, s, id) => {
     await s.copiar(n.textoDumpParaCopiar(idDump(id)));
   },
+
+  // ---- Visor de errores: ids, huellas y fechas; el archivo solo se abre si está en el sitio ----
+  'errores.lista': (n, _s, filtro) => n.listaErrores(filtroErrores(filtro)),
+  'errores.leer': (n, _s, huella) => n.leerError(huellaErrorIpc(huella)),
+  'editor.abrirEn': (n, _s, sitioId, archivo, linea) =>
+    n.abrirEnEditor(idSitioDepuracion(sitioId), archivoEditor(archivo), lineaEditor(linea)),
 
   // ---- Centro de avisos ----
   'avisos.lista': (n) => n.avisos.lista(),

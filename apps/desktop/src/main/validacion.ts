@@ -734,6 +734,58 @@ export function confirmacionDepuracion(v: unknown): true | undefined {
   return true;
 }
 
+/** Filtro del visor de errores: sitio y fecha ISO; nada más. */
+export function filtroErrores(v: unknown): { sitioId?: string; desde?: string } | undefined {
+  if (v === undefined) return undefined;
+  let o: Record<string, unknown>;
+  try {
+    o = objetoPlano<Record<string, unknown>>(v, 'filtro');
+  } catch {
+    throw argumentoDepuracion('filtro');
+  }
+  const res: { sitioId?: string; desde?: string } = {};
+  for (const [k, x] of Object.entries(o)) {
+    if (x === undefined) continue;
+    if (k === 'sitioId') res.sitioId = idSitioDepuracion(x);
+    else if (k === 'desde') {
+      if (
+        typeof x !== 'string' ||
+        x.length > 40 ||
+        !/^\d{4}-\d{2}-\d{2}T[\d:.]+(?:Z|[+-]\d{2}:\d{2})$/.test(x) ||
+        Number.isNaN(Date.parse(x))
+      ) {
+        throw argumentoDepuracion('desde');
+      }
+      res.desde = new Date(x).toISOString();
+    } else throw argumentoDepuracion('filtro');
+  }
+  return res;
+}
+
+/** Huella de un error agrupado: 16 hexadecimales en minúsculas. */
+export function huellaErrorIpc(v: unknown): string {
+  if (typeof v !== 'string' || !/^[0-9a-f]{16}$/.test(v)) throw argumentoDepuracion('huella');
+  return v;
+}
+
+/**
+ * Archivo de una entrada de error para abrir en el editor: texto corto de una línea. El núcleo
+ * comprueba (con rutas reales) que sea un archivo dentro de la carpeta del sitio.
+ */
+export function archivoEditor(v: unknown): string {
+  if (typeof v !== 'string' || v === '' || v.length > 1024 || tieneControl(v)) {
+    throw argumentoDepuracion('archivo');
+  }
+  return v;
+}
+
+export function lineaEditor(v: unknown): number {
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 1 || v > 10_000_000) {
+    throw argumentoDepuracion('linea');
+  }
+  return v;
+}
+
 /** Filtro de la lista: sitio, origen y texto (corto, sin controles); nada más. */
 export function filtroDumps(
   v: unknown,

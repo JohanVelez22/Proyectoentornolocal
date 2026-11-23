@@ -1,6 +1,13 @@
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
-import type { Dump, EstadoReceptor, FiltroDumps, ResumenDump } from '../../shared/api';
+import type {
+  Dump,
+  ErrorAgrupado,
+  EstadoReceptor,
+  FiltroDumps,
+  ResumenDump,
+  ResumenError,
+} from '../../shared/api';
 import { api } from '../api';
 
 /** Espera tras un `dump:nuevo` antes de volver a pedir la lista (agrupa ráfagas). */
@@ -18,6 +25,11 @@ export const useDepuracion = defineStore('depuracion', () => {
   let baja: (() => void) | null = null;
   let temporizador: ReturnType<typeof setTimeout> | null = null;
   let pedido = 0;
+  /** Visor de errores: grupos (sin traza), el elegido (con traza) y el filtro por sitio. */
+  const errores = ref<ResumenError[]>([]);
+  const errorElegido = ref<ErrorAgrupado | null>(null);
+  const sitioErrores = ref<string>('');
+  let pedidoErrores = 0;
 
   const activo = computed(() => estado.value?.activo === true);
 
@@ -63,6 +75,22 @@ export const useDepuracion = defineStore('depuracion', () => {
     await cargarEstado();
   }
 
+  /** Pide los errores agrupados; una respuesta vieja no pisa a una nueva. */
+  async function refrescarErrores(): Promise<void> {
+    const n = ++pedidoErrores;
+    const r = await api().errores.lista(sitioErrores.value ? { sitioId: sitioErrores.value } : {});
+    if (n !== pedidoErrores) return;
+    errores.value = r;
+    const h = errorElegido.value?.huella;
+    if (h && r.some((e) => e.huella === h)) errorElegido.value = await api().errores.leer(h);
+  }
+
+  async function elegirError(huella: string | null): Promise<void> {
+    errorElegido.value = huella ? await api().errores.leer(huella) : null;
+  }
+
+  watch(sitioErrores, () => void refrescarErrores().catch(() => undefined));
+
   function iniciar(): void {
     if (baja) return;
     baja = api().on('dump:nuevo', programarRefresco);
@@ -88,5 +116,10 @@ export const useDepuracion = defineStore('depuracion', () => {
     limpiar,
     iniciar,
     detener,
+    errores,
+    errorElegido,
+    sitioErrores,
+    refrescarErrores,
+    elegirError,
   };
 });
