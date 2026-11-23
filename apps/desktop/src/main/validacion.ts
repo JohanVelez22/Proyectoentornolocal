@@ -1,6 +1,10 @@
 import { stat } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 import {
+  CLAVES_RAPIDAS,
+  type ClaveRapida,
+  MAX_BYTES_INI,
+  NOMBRE_EXTENSION_PHP,
   ErrorWolf,
   IDS_AGENTE,
   IDS_TERMINAL,
@@ -540,5 +544,60 @@ export function mensajeCommit(v: unknown): string {
   ) {
     throw new ErrorWolf('git.mensaje_invalido', 'El mensaje de commit está vacío o no es válido.');
   }
+  return v;
+}
+
+// ---- PHP: php.ini por rama y extensiones ----
+
+function argumentoPhp(campo: string): ErrorWolf {
+  return new ErrorWolf('php.argumento_invalido', `Argumento no válido: ${campo}`, { campo });
+}
+
+/** Rama de PHP ("8.4"); que esté instalada lo comprueba el núcleo. */
+export function ramaPhpIni(v: unknown): string {
+  if (typeof v !== 'string' || !/^\d{1,2}\.\d{1,2}$/.test(v)) throw argumentoPhp('rama');
+  return v;
+}
+
+/** Texto completo de un php.ini: sin NUL y de hasta `MAX_BYTES_INI`. */
+export function textoIni(v: unknown): string {
+  if (typeof v !== 'string' || v.includes('\0') || Buffer.byteLength(v, 'utf8') > MAX_BYTES_INI) {
+    throw argumentoPhp('php.ini');
+  }
+  return v;
+}
+
+/** Valores rápidos: solo claves de `CLAVES_RAPIDAS` con texto corto (el núcleo los valida). */
+export function valoresRapidos(v: unknown): Partial<Record<ClaveRapida, string>> {
+  let o: Record<string, unknown>;
+  try {
+    o = objetoPlano<Record<string, unknown>>(v, 'valores');
+  } catch {
+    throw argumentoPhp('valores');
+  }
+  const res: Partial<Record<ClaveRapida, string>> = {};
+  for (const [k, valor] of Object.entries(o)) {
+    if (!(CLAVES_RAPIDAS as readonly string[]).includes(k)) throw argumentoPhp('valores');
+    if (typeof valor !== 'string' || valor.length > 200) throw argumentoPhp(k);
+    res[k as ClaveRapida] = valor;
+  }
+  return res;
+}
+
+/** Nombre de una copia del php.ini (`php.ini-<fecha>.txt`): nunca una ruta. */
+export function respaldoIni(v: unknown): string {
+  if (typeof v !== 'string' || !/^php\.ini-[0-9TZ-]{10,40}\.txt$/.test(v)) {
+    throw argumentoPhp('respaldo');
+  }
+  return v;
+}
+
+export function nombreExtensionPhp(v: unknown): string {
+  if (typeof v !== 'string' || !NOMBRE_EXTENSION_PHP.test(v)) throw argumentoPhp('extensión');
+  return v;
+}
+
+export function activaExtension(v: unknown): boolean {
+  if (typeof v !== 'boolean') throw argumentoPhp('activa');
   return v;
 }

@@ -1,5 +1,8 @@
 import type {
   Aviso,
+  ClaveRapida,
+  ExtensionPhp,
+  RespaldoIni,
   BaseProyecto,
   IdTerminal,
   TerminalDisponible,
@@ -84,6 +87,9 @@ import type {
 } from '@pel/core';
 
 export type {
+  ClaveRapida,
+  ExtensionPhp,
+  RespaldoIni,
   EstadoAgente,
   IdAgente,
   OrigenAgente,
@@ -503,6 +509,31 @@ export interface ApiEntorno {
      */
     abrir(id: IdAgente, sitioId: string, proveedorId?: string): Promise<void>;
   };
+  /**
+   * PHP de cada rama instalada: php.ini (valores rápidos, diff, guardar con prueba y vuelta
+   * atrás, copias) y extensiones. El renderer manda rama, texto o nombres; nunca rutas.
+   */
+  php: {
+    iniLeer(rama: string): Promise<string>;
+    /** Valor actual de cada valor rápido (null si no está en el archivo). */
+    iniValores(rama: string): Promise<Record<ClaveRapida, string | null>>;
+    /** Texto del ini (o del borrador `base`) con los valores aplicados; no escribe nada. */
+    iniConValores(
+      rama: string,
+      valores: Partial<Record<ClaveRapida, string>>,
+      base?: string,
+    ): Promise<string>;
+    /** Diff unificado contra lo guardado ('' si no hay cambios). */
+    iniDiff(rama: string, nuevo: string): Promise<string>;
+    /** Copia con fecha, prueba con php -v, escribe y reinicia el pool (vuelta atrás si falla). */
+    iniGuardar(rama: string, nuevo: string): Promise<{ respaldo: string }>;
+    iniRespaldos(rama: string): Promise<RespaldoIni[]>;
+    iniRestaurar(rama: string, respaldo: string): Promise<{ respaldo: string }>;
+    extensiones(rama: string): Promise<ExtensionPhp[]>;
+    extensionActivar(rama: string, nombre: string, activa: boolean): Promise<void>;
+    /** Solo del catálogo (variante de la compilación, host permitido y SHA-256). */
+    extensionInstalar(rama: string, nombre: string): Promise<void>;
+  };
   github: {
     repos(opciones?: { buscar?: string; pagina?: number }): Promise<RepoGithub[]>;
     /** Se guarda cifrado en el proceso principal; nunca vuelve a la interfaz. */
@@ -815,6 +846,16 @@ export const RUTAS_IPC = [
   'confianza.estado',
   'confianza.nodeGlobal',
   'confianza.firefox',
+  'php.iniLeer',
+  'php.iniValores',
+  'php.iniConValores',
+  'php.iniDiff',
+  'php.iniGuardar',
+  'php.iniRespaldos',
+  'php.iniRestaurar',
+  'php.extensiones',
+  'php.extensionActivar',
+  'php.extensionInstalar',
 ] as const;
 export type RutaIpc = (typeof RUTAS_IPC)[number];
 

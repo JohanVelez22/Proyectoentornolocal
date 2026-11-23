@@ -196,6 +196,19 @@ const api: ApiEntorno = {
     quitarMcp: (id, confirmado) => invocar('agentes.quitarMcp', id, confirmado),
     abrir: (id, sitioId, proveedorId) => invocar('agentes.abrir', id, sitioId, proveedorId),
   },
+  php: {
+    iniLeer: (rama) => invocar('php.iniLeer', rama),
+    iniValores: (rama) => invocar('php.iniValores', rama),
+    iniConValores: (rama, valores, base) => invocar('php.iniConValores', rama, valores, base),
+    iniDiff: (rama, nuevo) => invocar('php.iniDiff', rama, nuevo),
+    iniGuardar: (rama, nuevo) => invocar('php.iniGuardar', rama, nuevo),
+    iniRespaldos: (rama) => invocar('php.iniRespaldos', rama),
+    iniRestaurar: (rama, respaldo) => invocar('php.iniRestaurar', rama, respaldo),
+    extensiones: (rama) => invocar('php.extensiones', rama),
+    extensionActivar: (rama, nombre, activa) =>
+      invocar('php.extensionActivar', rama, nombre, activa),
+    extensionInstalar: (rama, nombre) => invocar('php.extensionInstalar', rama, nombre),
+  },
   git: {
     disponible: () => invocar('git.disponible'),
     clonar: (url, destino) => invocar('git.clonar', url, destino),

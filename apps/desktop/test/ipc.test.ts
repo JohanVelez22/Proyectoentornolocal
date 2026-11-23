@@ -573,6 +573,16 @@ describe('registrarIpc', () => {
         'agentes.abrir',
         'git.sugerirCommit',
         'git.commitPreparado',
+        'php.iniLeer',
+        'php.iniValores',
+        'php.iniConValores',
+        'php.iniDiff',
+        'php.iniGuardar',
+        'php.iniRespaldos',
+        'php.iniRestaurar',
+        'php.extensiones',
+        'php.extensionActivar',
+        'php.extensionInstalar',
       ].sort(),
     );
   });

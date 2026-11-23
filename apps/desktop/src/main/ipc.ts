@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import {
+  CLAVES_RAPIDAS,
   datosPermitidos,
   esClaveCorta,
   ErrorWolf,
@@ -41,6 +42,12 @@ import {
   mensajeCommit,
   idProveedorIa,
   idSitioIa,
+  activaExtension,
+  nombreExtensionPhp,
+  ramaPhpIni,
+  respaldoIni,
+  textoIni,
+  valoresRapidos,
   modeloIa,
   opcionesBorrarClaveIa,
   opcionesEnvIa,
@@ -758,6 +765,31 @@ const TABLA: Record<RutaIpc, Manejador> = {
   // Solo lo preparado: el núcleo hace `git commit -F -` (nunca add ni push).
   'git.commitPreparado': (n, _s, sitioId, mensaje) =>
     n.agentes.commitPreparado(idSitioAgente(sitioId), mensajeCommit(mensaje)),
+  // ---- PHP: el renderer manda rama, texto o nombres; las rutas las arma el núcleo ----
+  'php.iniLeer': (n, _s, rama) => n.iniPhp.leer(ramaPhpIni(rama)),
+  'php.iniValores': (n, _s, rama) => n.iniPhp.valores(ramaPhpIni(rama), CLAVES_RAPIDAS),
+  'php.iniConValores': (n, _s, rama, valores, base) => {
+    const r = ramaPhpIni(rama);
+    const v = valoresRapidos(valores);
+    return base === undefined || base === null
+      ? n.iniPhp.conValores(r, v)
+      : n.iniPhp.conValores(r, v, textoIni(base));
+  },
+  'php.iniDiff': (n, _s, rama, nuevo) => n.iniPhp.diff(ramaPhpIni(rama), textoIni(nuevo)),
+  'php.iniGuardar': (n, _s, rama, nuevo) => n.iniPhp.guardar(ramaPhpIni(rama), textoIni(nuevo)),
+  'php.iniRespaldos': (n, _s, rama) => n.iniPhp.respaldos(ramaPhpIni(rama)),
+  'php.iniRestaurar': (n, _s, rama, respaldo) =>
+    n.iniPhp.restaurar(ramaPhpIni(rama), respaldoIni(respaldo)),
+  'php.extensiones': (n, _s, rama) => n.extensionesPhp.listar(ramaPhpIni(rama)),
+  'php.extensionActivar': (n, _s, rama, nombre, activa) => {
+    const r = ramaPhpIni(rama);
+    const e = nombreExtensionPhp(nombre);
+    return n.extensionesPhp.activar(r, e, activaExtension(activa));
+  },
+  'php.extensionInstalar': (n, _s, rama, nombre) => {
+    const r = ramaPhpIni(rama);
+    return n.extensionesPhp.instalar(r, nombreExtensionPhp(nombre));
+  },
   'mailpit.noLeidos': (n) => n.noLeidosCorreo(),
   // Se entrega una sola vez: una recarga del renderer no lo vuelve a mostrar.
   avisoInicio: (n) => n.tomarAvisoInicio(),
