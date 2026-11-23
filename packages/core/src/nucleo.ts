@@ -42,6 +42,7 @@ import { ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
 import { bloqueEnvIa } from './ia/envIa';
 import { GestorIa } from './ia/gestorIa';
 import { completarPlataforma, crearPlataforma } from './plataforma/index';
+import type { IdTerminal, TerminalDisponible } from './plataforma/tipos';
 import { nombreEjecutable } from './plataforma/sistema';
 import type { Ejecutor, Plataforma } from './plataforma/tipos';
 import { ejecutorPorDefecto, PlataformaWindows } from './plataforma/win';
@@ -1088,12 +1089,42 @@ export class Nucleo {
     await abrirEnVsCode((await this.sitioPorId(sitioId)).carpeta);
   }
 
-  /** Abre una terminal en la carpeta del sitio con su PHP y Composer en el PATH. */
-  async abrirTerminal(sitioId: string): Promise<void> {
+  /**
+   * Abre una terminal en la carpeta del sitio con su PHP y Composer en el PATH: la `terminal`
+   * pedida o, sin ella, la predeterminada de Ajustes (o la del sistema).
+   */
+  async abrirTerminal(sitioId: string, terminal?: IdTerminal | null): Promise<void> {
     const sitio = (await this.sitios.listar()).find((s) => s.id === sitioId);
     if (!sitio) throw new Error('El sitio no existe.');
+    const elegida = terminal ?? (await this.config.leer()).herramientas.terminal;
     await this.composer.sincronizarShims();
-    await this.terminal.abrir(sitio);
+    await this.terminal.abrir(sitio, elegida);
+  }
+
+  /** Terminales instaladas y la predeterminada guardada (null = la del sistema). */
+  async terminales(): Promise<{
+    disponibles: TerminalDisponible[];
+    porDefecto: IdTerminal | null;
+  }> {
+    return {
+      disponibles: await this.terminal.disponibles(),
+      porDefecto: (await this.config.leer()).herramientas.terminal,
+    };
+  }
+
+  /** Fija la terminal predeterminada (null = la del sistema); debe estar instalada. */
+  async cambiarTerminalPorDefecto(id: IdTerminal | null): Promise<void> {
+    if (id !== null) {
+      const t = (await this.terminal.disponibles()).find((x) => x.id === id);
+      if (!t) {
+        throw new ErrorWolf('terminal.no_instalada', `La terminal no está instalada: ${id}`, {
+          nombre: id,
+        });
+      }
+    }
+    await this.sitios.modificarConfig((c) => {
+      c.herramientas.terminal = id;
+    });
   }
 
   estadoConfianza(): Promise<EstadoConfianza> {

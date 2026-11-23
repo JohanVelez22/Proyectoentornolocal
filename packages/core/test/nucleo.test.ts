@@ -133,6 +133,36 @@ describe('Nucleo', () => {
     expect((await n.config.leer()).sitios).toHaveLength(1);
   });
 
+  it('Terminal: usa la pedida o la predeterminada; la predeterminada debe estar instalada', async () => {
+    const abiertas: { cwd: string; terminal?: string | null }[] = [];
+    plataforma = {
+      ...falsa(),
+      abrirTerminal: async (cwd, o = {}) => {
+        abiertas.push({ cwd, terminal: o.terminal });
+      },
+      terminalesInstaladas: async () => [
+        { id: 'powershell', nombre: 'Windows PowerShell', ruta: 'C:/W/powershell.exe' },
+        { id: 'git-bash', nombre: 'Git Bash', ruta: 'C:/G/git-bash.exe' },
+      ],
+    };
+    const n = await crear();
+    await n.guardarSitio(datos());
+    expect(await n.terminales()).toMatchObject({ porDefecto: null });
+    expect((await n.terminales()).disponibles.map((t) => t.id)).toEqual(['powershell', 'git-bash']);
+    await n.abrirTerminal('demo');
+    await expect(n.cambiarTerminalPorDefecto('pwsh')).rejects.toMatchObject({
+      codigo: 'terminal.no_instalada',
+    });
+    await n.cambiarTerminalPorDefecto('git-bash');
+    expect((await n.terminales()).porDefecto).toBe('git-bash');
+    await n.abrirTerminal('demo');
+    await n.abrirTerminal('demo', 'powershell');
+    await n.cambiarTerminalPorDefecto(null);
+    await n.abrirTerminal('demo');
+    expect(abiertas.map((a) => a.terminal)).toEqual([null, 'git-bash', 'powershell', null]);
+    expect(abiertas.every((a) => a.cwd === carpeta)).toBe(true);
+  });
+
   it('guardarSitio con id edita el sitio y aplica', async () => {
     const n = await crear();
     await n.guardarSitio(datos());

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { TIPOS_AVISO, type TipoAviso } from './avisos/tipos';
 import { ConfigIaSchema } from './ia/proveedores';
+import { IDS_TERMINAL } from './plataforma/tipos';
 
 export const TIPOS_SITIO = [
   'laravel',
@@ -279,6 +280,8 @@ export const ConfigSchema = z.object({
     .object({
       /** Rama de PHP de los shims de tools/bin; null = la más reciente instalada. */
       phpPorDefecto: z.string().nullable().default(null),
+      /** Terminal de "Terminal" en los proyectos; null = la del sistema (PowerShell en Windows). */
+      terminal: z.enum(IDS_TERMINAL).nullable().default(null).catch(null),
     })
     .prefault({}),
   servicios: z
