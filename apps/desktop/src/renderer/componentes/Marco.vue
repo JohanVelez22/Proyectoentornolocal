@@ -3,6 +3,7 @@ import logo from '../assets/logo.png';
 import {
   Albums as IconoProyectos,
   Chatbubbles as IconoAgentes,
+  CodeSlash as IconoPhp,
   Construct as IconoHerramientas,
   DocumentText as IconoRegistros,
   Home as IconoInicio,
@@ -71,6 +72,7 @@ const ICONOS: Record<SeccionNav, Component> = {
   proyectos: IconoProyectos,
   agentes: IconoAgentes,
   servicios: IconoServicios,
+  php: IconoPhp,
   basesDeDatos: IconoBases,
   correo: IconoCorreo,
   ia: IconoIa,

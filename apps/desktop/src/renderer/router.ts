@@ -45,6 +45,12 @@ const rutas: RouteRecordRaw[] = [
     meta: { seccion: 'correo' },
   },
   {
+    path: '/php',
+    name: 'php',
+    component: () => import('./vistas/Php.vue'),
+    meta: { seccion: 'php' },
+  },
+  {
     path: '/ia',
     name: 'ia',
     component: () => import('./vistas/Ia.vue'),
