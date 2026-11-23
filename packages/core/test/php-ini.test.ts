@@ -208,6 +208,11 @@ describe('IniPhp', () => {
     expect(readdirSync(path.dirname(ini)).filter((n) => n.includes('prueba'))).toEqual([]);
     expect(reinicios).toBe(0);
     expect(await p.valores('8.4', ['memory_limit'])).toEqual({ memory_limit: '1G' });
+    // Sobre el borrador del editor (sin escribir nada).
+    expect(await p.conValores('8.4', { memory_limit: '2G' }, '; borrador\nmemory_limit=1M')).toBe(
+      '; borrador\nmemory_limit = 2G',
+    );
+    expect(readFileSync(ini, 'utf8')).toBe(nuevo);
     expect((await p.respaldos('8.4')).map((x) => x.nombre)).toEqual([r.respaldo]);
   });
 

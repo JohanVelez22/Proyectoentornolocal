@@ -300,9 +300,15 @@ export class IniPhp {
     return valoresDe(await this.leer(rama), claves);
   }
 
-  /** Texto del ini con los valores rápidos aplicados (no escribe nada). */
-  async conValores(rama: string, cambios: Record<string, string>): Promise<string> {
-    return conValores(await this.leer(rama), cambios);
+  /**
+   * Texto del ini con los valores rápidos aplicados (no escribe nada). `base` es el borrador del
+   * editor; sin él, lo guardado.
+   */
+  async conValores(rama: string, cambios: Record<string, string>, base?: string): Promise<string> {
+    if (base === undefined) return conValores(await this.leer(rama), cambios);
+    await this.rama(rama);
+    validarTexto(base);
+    return conValores(base, cambios);
   }
 
   async diff(rama: string, nuevo: string): Promise<string> {
