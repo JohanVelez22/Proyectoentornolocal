@@ -69,6 +69,11 @@ export async function abrirArchivoDelSitio(
   }
   if (real === raiz || !rutaDentroDe(raiz, real)) throw fuera();
   if (!(await stat(real)).isFile()) throw fuera();
+  // Ventana conocida (TOCTOU): entre este realpath y que VS Code abra el archivo, alguien con
+  // permiso de escritura en el proyecto podría cambiar un tramo por un enlace. Se pasa la ruta
+  // real ya resuelta, así que haría falta reemplazar una carpeta del camino en ese instante; y
+  // lo único que pasa es que el editor (del mismo usuario) abre otro archivo para leerlo. No se
+  // ejecuta ni se escribe nada.
   const exe = buscarVsCode(d);
   if (!exe) throw new ErrorWolf('herramientas.sin_vscode', MENSAJE_SIN_VSCODE);
   const env: NodeJS.ProcessEnv = { ...(d.entorno ?? process.env) };
