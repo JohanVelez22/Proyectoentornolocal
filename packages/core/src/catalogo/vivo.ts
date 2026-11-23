@@ -46,6 +46,8 @@ export const FUENTES_VERSIONES: Partial<Record<ServicioInstalable, FuenteVersion
 };
 
 export const TTL_CATALOGO_MS = 6 * 60 * 60 * 1000;
+/** Desfase de reloj que se tolera en la fecha de una caché. */
+export const MARGEN_RELOJ_MS = 5 * 60 * 1000;
 
 const SOPORTES = ['lts', 'actual', 'fin', 'preview'] as const;
 
@@ -193,6 +195,8 @@ export class CatalogoVivo {
   ): Promise<{ fecha: string; versiones: VersionDisponible[] } | null> {
     const g = await this.cache.leer(servicio);
     if (!g) return null;
+    // Una fecha adelantada (reloj tocado o archivo alterado) la dejaría vigente para siempre.
+    if (Date.parse(g.fecha) - this.ahora.getTime() > MARGEN_RELOJ_MS) return null;
     try {
       const versiones = validarIndice(servicio, g.versiones).map((v) => ({
         ...v,

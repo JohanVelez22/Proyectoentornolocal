@@ -171,6 +171,25 @@ describe('CatalogoVivo', () => {
     expect(r.origen).toBe('fija');
   });
 
+  it('una caché con fecha en el futuro (más allá de un margen) no se usa', async () => {
+    await catalogoCon(rutasOficiales()).c.listar('mailpit');
+    const archivo = rutas.cacheCatalogo('mailpit');
+    const g = JSON.parse(await readFile(archivo, 'utf8')) as { fecha: string };
+    // Un par de minutos de reloj desfasado se toleran.
+    g.fecha = new Date(HOY.getTime() + 2 * 60_000).toISOString();
+    await writeFile(archivo, JSON.stringify(g));
+    expect((await catalogoCon({}, true).c.listar('mailpit')).origen).toBe('cache');
+    // Una fecha muy adelantada haría la caché "vigente" para siempre: se descarta.
+    g.fecha = new Date(HOY.getTime() + 24 * 60 * 60_000).toISOString();
+    await writeFile(archivo, JSON.stringify(g));
+    const { c, ff } = catalogoCon(rutasOficiales());
+    const r = await c.listar('mailpit');
+    expect(r.origen).toBe('vivo');
+    expect(ff.pedidas.length).toBeGreaterThan(0);
+    await writeFile(archivo, JSON.stringify(g));
+    expect((await catalogoCon({}, true).c.listar('mailpit')).origen).toBe('fija');
+  });
+
   it('filtra por rama y oculta previews y ramas sin soporte salvo con `todas`', async () => {
     const { c } = catalogoCon(rutasOficiales());
     const def = await c.listar('node');
