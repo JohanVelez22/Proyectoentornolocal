@@ -68,6 +68,16 @@ export const es = {
     titulo: 'No se pudo completar la acción',
     arranque: 'No se pudo leer el estado del entorno',
     desconocido: 'Ocurrió un error inesperado.',
+    /** Detalles que el núcleo manda como código dentro de un error. */
+    detalles: {
+      'sintaxis.comillas_sin_cerrar': 'comillas sin cerrar',
+      'sintaxis.tras_comillas': 'falta un espacio o «;» después de las comillas',
+      'sintaxis.punto_y_coma_inesperado': '«;» sin directiva',
+      'sintaxis.llave_inesperada': '«{» sin directiva',
+      'sintaxis.falta_punto_y_coma': 'falta «;» al final de la directiva',
+      'sintaxis.sobra_llave': 'sobra una «}»',
+      'sintaxis.falta_llave': 'falta una «}»',
+    },
     codigos: {
       'git.cambios_locales':
         'Hay cambios sin guardar en la carpeta: guárdelos (commit) o descártelos antes de traer cambios. No se tocó nada.',
@@ -292,6 +302,10 @@ export const es = {
         'Línea {linea}: el sitio solo puede escuchar en los puertos de Nginx configurados en Ajustes.',
       'nginx.version_no_existe': 'Esa versión del vhost ya no está en el historial.',
       'nginx.argumento_invalido': 'Argumento no válido: {campo}',
+      'nginx.destino_interno':
+        'Línea {linea}: «{directiva}» apunta a un servicio interno de WolfCore Dev (Adminer, Mailpit, bases de datos, PHP de otros sitios…) y lo expondría en la red y en los túneles. No se cambió nada.',
+      'nginx.caido_tras_restaurar':
+        'Nginx no volvió a responder: se restauró el vhost anterior, pero sigue sin responder. Revise Servicios y el registro de Nginx. {salida}',
     },
   },
   avisoInicio: {

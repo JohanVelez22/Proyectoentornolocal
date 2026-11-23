@@ -35,9 +35,13 @@ afterEach(() => {
 const ctx = (): ContextoVhost => ({
   carpeta,
   dominios: ['blog.test', 'www.blog.test'],
-  puertos: [80, 443],
+  puertoHttp: 80,
+  puertoHttps: 443,
   logs: [rutas.logs('sitios', 'blog.access.log'), rutas.logs('sitios', 'blog.error.log')],
   certificados: [rutas.certCrt('blog'), rutas.certKey('blog')],
+  // Adminer, Mailpit web, MySQL, MCP, PHP 8.4 de la rama y un pool de otro sitio.
+  puertosInternos: [8090, 8025, 3306, 7790, 9840, 9841, 19000],
+  upstreamsPropios: ['php84', 'phpsitio_blog'],
 });
 
 const barras = (r: string): string => r.replace(/\\/g, '/');
@@ -58,6 +62,20 @@ describe('analizarNginx', () => {
     expect(arbol[0]!.hijos![0]!.args).toEqual(['200', 'x } y']);
     expect(arbol[2]!.args).toEqual(['$b', '${host}x']);
     expect(arbol[4]!.linea).toBe(6);
+  });
+
+  it('traduce \\t \\n \\r también fuera de comillas, como Nginx', () => {
+    const [d] = analizarNginx('add_header X a\\tb\\nc\\rd\\"e;');
+    expect(d!.args).toEqual(['X', 'a\tb\nc\rd"e']);
+  });
+
+  it('el detalle de la sintaxis rota es un código (se traduce en la interfaz)', () => {
+    expect(() => analizarNginx('add_header X "abc;')).toThrowError(
+      expect.objectContaining({ datos: { linea: 1, detalle: 'sintaxis.comillas_sin_cerrar' } }),
+    );
+    expect(() => analizarNginx('gzip on;\n}')).toThrowError(
+      expect.objectContaining({ datos: { linea: 2, detalle: 'sintaxis.sobra_llave' } }),
+    );
   });
 
   it.each([
@@ -129,6 +147,66 @@ describe('revisarVhost: reglas propias', () => {
     ],
     ['PHP_VALUE', 'fastcgi_param PHP_VALUE "auto_prepend_file=x";', 'nginx.directiva_prohibida'],
     ['socket unix', 'location /s { proxy_pass http://unix:/tmp/x.sock:; }', 'nginx.ruta_fuera'],
+    [
+      'SCRIPT_FILENAME que sale de la raíz con ..',
+      'fastcgi_param SCRIPT_FILENAME $document_root/../../datos/adminer/index.php;',
+      'nginx.ruta_fuera',
+    ],
+    [
+      'SCRIPT_FILENAME con otra variable tras la raíz',
+      'fastcgi_param SCRIPT_FILENAME $realpath_root$arg_f;',
+      'nginx.ruta_fuera',
+    ],
+    [
+      'SCRIPT_FILENAME literal (aunque esté en el proyecto)',
+      'fastcgi_param SCRIPT_FILENAME CARPETA/public/index.php;',
+      'nginx.ruta_fuera',
+    ],
+    [
+      'Adminer por su puerto',
+      'location /a { proxy_pass http://127.0.0.1:8090; }',
+      'nginx.destino_interno',
+    ],
+    ['Mailpit web', 'location /m { proxy_pass http://localhost:8025/; }', 'nginx.destino_interno'],
+    ['MySQL', 'location /d { proxy_pass http://[::1]:3306; }', 'nginx.destino_interno'],
+    ['el MCP', 'location /mcp { proxy_pass http://127.0.0.1:7790/mcp; }', 'nginx.destino_interno'],
+    [
+      'el PHP de la rama por puerto',
+      'location /p { fastcgi_pass 127.0.0.1:9840; }',
+      'nginx.destino_interno',
+    ],
+    [
+      'el pool de otro sitio',
+      'location /p { fastcgi_pass phpsitio_tienda; }',
+      'nginx.destino_interno',
+    ],
+    ['el PHP de otra rama', 'location /p { fastcgi_pass php83; }', 'nginx.destino_interno'],
+    ['el PHP de Adminer', 'location /p { fastcgi_pass adminer_php; }', 'nginx.destino_interno'],
+    [
+      'un puerto interno en 0.0.0.0',
+      'location /p { proxy_pass http://0.0.0.0:3306; }',
+      'nginx.destino_interno',
+    ],
+    [
+      'un puerto con variable',
+      'location /p { proxy_pass http://127.0.0.1:$arg_p; }',
+      'nginx.destino_interno',
+    ],
+    [
+      'proxy_ssl_certificate_key',
+      'proxy_ssl_certificate_key C:/x.key;',
+      'nginx.directiva_prohibida',
+    ],
+    [
+      'proxy_ssl_trusted_certificate',
+      'proxy_ssl_trusted_certificate C:/x;',
+      'nginx.directiva_prohibida',
+    ],
+    ['proxy_ssl_password_file', 'proxy_ssl_password_file C:/x;', 'nginx.directiva_prohibida'],
+    ['proxy_ssl_crl', 'proxy_ssl_crl C:/x;', 'nginx.directiva_prohibida'],
+    ['grpc_ssl_*', 'grpc_ssl_certificate C:/x;', 'nginx.directiva_prohibida'],
+    ['uwsgi_ssl_*', 'uwsgi_ssl_trusted_certificate C:/x;', 'nginx.directiva_prohibida'],
+    ['ssl_conf_command', 'ssl_conf_command Options KTLS;', 'nginx.directiva_prohibida'],
   ])('prohíbe %s', (_n, texto, codigo) => {
     const t = texto.replace('CARPETA', barras(carpeta));
     expect(() => revisarVhost(t, 'reglas', ctx())).toThrowError(
@@ -143,11 +221,23 @@ describe('revisarVhost: reglas propias', () => {
       'location ~ \\.php$ { include fastcgi_params; fastcgi_pass php84; fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name; }',
       `fastcgi_param DOCUMENT_ROOT "${barras(path.join(carpeta, 'public'))}";`,
       'fastcgi_param APP_ENV local;',
+      'location ~ ^/api/ { fastcgi_pass phpsitio_blog; fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; fastcgi_param PATH_TRANSLATED $document_root$fastcgi_path_info; }',
+      'location /ws/ { proxy_pass http://127.0.0.1:6001; }',
       'access_log off;',
       `error_log "${barras(rutas.logs('sitios', 'blog.error.log'))}";`,
     ].join('\n');
     expect(revisarVhost(texto, 'reglas', ctx()).avisos).toEqual([]);
   });
+
+  it.skipIf(process.platform !== 'win32')(
+    'en Windows root/alias llevan unidad (una ruta /x depende de la unidad de Nginx)',
+    () => {
+      const sinUnidad = barras(carpeta).replace(/^[A-Za-z]:/, '');
+      expect(() =>
+        revisarVhost(`location /x { root ${sinUnidad}; }`, 'reglas', ctx()),
+      ).toThrowError(expect.objectContaining({ codigo: 'nginx.ruta_fuera' }));
+    },
+  );
 
   it('un proxy_pass a otro equipo solo se avisa (local y upstreams propios no)', () => {
     const r = revisarVhost(
@@ -156,7 +246,7 @@ describe('revisarVhost: reglas propias', () => {
         'location /b { proxy_pass http://localhost:5173/; }',
         'location /c { fastcgi_pass phpsitio_blog; }',
         'location /d { proxy_pass https://api.ejemplo.com/v1; }',
-        'location /e { proxy_pass http://$destino; }',
+        'location /e { proxy_pass http://api.ejemplo.com$request_uri; }',
       ].join('\n'),
       'reglas',
       ctx(),
@@ -167,7 +257,7 @@ describe('revisarVhost: reglas propias', () => {
         destino: 'https://api.ejemplo.com/v1',
         linea: 4,
       }),
-      expect.objectContaining({ destino: 'http://$destino', linea: 5 }),
+      expect.objectContaining({ destino: 'http://api.ejemplo.com$request_uri', linea: 5 }),
     ]);
   });
 });
@@ -203,7 +293,14 @@ describe('revisarVhost: vhost completo (modo avanzado)', () => {
     });
 
   it('el vhost generado (con HTTPS y redirección) es un buen punto de partida', () => {
-    expect(revisarVhost(generado(), 'manual', ctx()).avisos).toEqual([]);
+    const g = generado();
+    expect(revisarVhost(g, 'manual', ctx()).avisos).toEqual([]);
+    expect(revisarVhost(g.replace('listen 80;', 'listen *:80;'), 'manual', ctx()).avisos).toEqual(
+      [],
+    );
+    expect(
+      revisarVhost(g.replace('listen 443 ssl;', 'listen 443 ssl http2;'), 'manual', ctx()).avisos,
+    ).toEqual([]);
   });
 
   it.each([
@@ -224,10 +321,124 @@ describe('revisarVhost: vhost completo (modo avanzado)', () => {
       'nginx.fuera_de_server',
     ],
     ['sin server', () => 'gzip on;', 'nginx.fuera_de_server'],
+    [
+      'una dirección (sería el servidor por defecto de 127.0.0.1:80)',
+      (g: string) => g.replace('listen 80;', 'listen 127.0.0.1:80;'),
+      'nginx.puerto_ajeno',
+    ],
+    [
+      'IPv6 (sería el servidor por defecto de [::]:80)',
+      (g: string) => g.replace('listen 80;', 'listen [::]:80;'),
+      'nginx.puerto_ajeno',
+    ],
+    [
+      'ssl en el puerto HTTP (pasaría el 80 a TLS para todos)',
+      (g: string) => g.replace('listen 80;', 'listen 80 ssl;'),
+      'nginx.directiva_prohibida',
+    ],
+    [
+      'http2 en el puerto HTTP',
+      (g: string) => g.replace('listen 80;', 'listen 80 http2;'),
+      'nginx.directiva_prohibida',
+    ],
+    [
+      'el puerto HTTPS sin ssl (lo pasaría a texto plano)',
+      (g: string) => g.replace('listen 443 ssl;', 'listen 443;'),
+      'nginx.directiva_prohibida',
+    ],
   ])('rechaza %s', (_n, cambiar, codigo) => {
     expect(() => revisarVhost(cambiar(generado()), 'manual', ctx())).toThrowError(
       expect.objectContaining({ codigo }),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// GestorSitios: contexto del sitio y reglas guardadas que tumban el nginx -t global
+// ---------------------------------------------------------------------------------------------
+
+describe('GestorSitios con reglas o vhost manual guardados', () => {
+  const datosSitio = (dominio: string, c: string): Omit<Sitio, 'id'> => ({
+    nombre: dominio,
+    dominio,
+    alias: [],
+    carpeta: c,
+    tipo: 'estatico',
+    php: null,
+    puertoProxy: null,
+    reglasExtra: '',
+    urlBaseVar: null,
+    datosReales: false,
+    https: false,
+    redirigirHttps: false,
+    confiado: false,
+    git: null,
+    procesos: [],
+    runtimes: {},
+    nota: '',
+  });
+
+  it('el contexto lleva los puertos internos y solo los upstreams del propio sitio', async () => {
+    const g = new GestorSitios({
+      almacen: new Almacen(rutas),
+      rutas,
+      nginx: { validar: async () => ({ ok: true, salida: '' }), recargar: async () => undefined },
+      estadoNginx: () => 'apagado',
+      hosts: { sincronizar: async () => ({ ok: true }) },
+      instalador: { instalado: async () => true, instalados: async () => ['8.4'] },
+      eventos: new Eventos<EventosNucleo>(),
+      puertosInternos: (_cfg, id) => (id === 'blog' ? [8090, 3306] : []),
+    });
+    const s = await g.crear({ ...datosSitio('blog.test', carpeta), tipo: 'laravel', php: '8.4' });
+    const { contexto } = await g.vhostDe(s, await new Almacen(rutas).leer());
+    expect(contexto).toMatchObject({
+      puertoHttp: 80,
+      puertoHttps: 443,
+      puertosInternos: [8090, 3306],
+      upstreamsPropios: ['php84', 'phpsitio_blog'],
+    });
+  });
+
+  it('si el nginx -t global falla por las reglas guardadas de un sitio, se aplican los demás sin ellas', async () => {
+    const otra = path.join(base, 'proyectos', 'tienda');
+    mkdirSync(otra, { recursive: true });
+    const avisos: { sitio: string; modo: string }[] = [];
+    const sitesDir = path.dirname(rutas.vhost('x'));
+    const algunaRota = (): boolean =>
+      readdirSync(sitesDir).some((n) =>
+        readFileSync(path.join(sitesDir, n), 'utf8').includes('rota_global'),
+      );
+    const almacen = new Almacen(rutas);
+    const g = new GestorSitios({
+      almacen,
+      rutas,
+      nginx: {
+        validar: async () =>
+          algunaRota() ? { ok: false, salida: '[emerg] rota_global' } : { ok: true, salida: 'ok' },
+        recargar: async () => undefined,
+        probarConVhost: async (_id: string, contenido: string) =>
+          contenido.includes('rota_global')
+            ? { ok: false, salida: '[emerg] rota_global' }
+            : { ok: true, salida: 'ok' },
+      },
+      estadoNginx: () => 'apagado',
+      hosts: { sincronizar: async () => ({ ok: true }) },
+      instalador: { instalado: async () => true, instalados: async () => ['1.30.6'] },
+      eventos: new Eventos<EventosNucleo>(),
+      avisarVhost: (a) => avisos.push({ sitio: a.sitio, modo: a.modo }),
+    });
+    await g.crear(datosSitio('blog.test', carpeta));
+    await g.crear(datosSitio('tienda.test', otra));
+    // Lo guardado pasa la revisión (directiva desconocida) pero Nginx la rechaza.
+    await g.modificarConfig((c) => {
+      c.sitios[0]!.reglasExtra = 'rota_global on;';
+      c.sitios[1]!.reglasExtra = 'gzip on;';
+    });
+    const r = await g.aplicar();
+    expect(r.nginx.ok).toBe(true);
+    expect(readFileSync(rutas.vhost('blog'), 'utf8')).not.toContain('rota_global');
+    expect(readFileSync(rutas.vhost('tienda'), 'utf8')).toContain('gzip on;');
+    expect(avisos).toEqual([{ sitio: 'blog', modo: 'reglas' }]);
   });
 });
 
@@ -239,7 +450,8 @@ describe('EditorVhost', () => {
   let estado: 'apagado' | 'iniciando' | 'encendido' | 'error';
   let pruebaOk: boolean;
   let recargaOk: boolean[];
-  let sano: boolean;
+  /** Respuestas de sano() en orden; vacía = sano. */
+  let sano: boolean[];
   let llamadas: string[];
   let probados: string[];
   let avisos: { sitio: string; modo: string }[];
@@ -267,7 +479,7 @@ describe('EditorVhost', () => {
       },
       sano: async () => {
         llamadas.push('sano');
-        return sano;
+        return sano.shift() ?? true;
       },
       // Copias con fecha distinta y creciente aunque se apliquen en el mismo milisegundo.
       ahora: () => new Date(Date.UTC(2026, 10, 23, 12, 0, n++)),
@@ -277,7 +489,7 @@ describe('EditorVhost', () => {
     estado = 'encendido';
     pruebaOk = true;
     recargaOk = [];
-    sano = true;
+    sano = [];
     llamadas = [];
     probados = [];
     avisos = [];
@@ -368,7 +580,7 @@ describe('EditorVhost', () => {
 
   it.each([
     ['la recarga falla', () => (recargaOk = [false, true])],
-    ['Nginx deja de responder', () => (sano = false)],
+    ['Nginx deja de responder', () => (sano = [false])],
   ])('si %s, vuelve todo atrás solo y lo explica', async (_n, preparar) => {
     const antes = conf();
     preparar();
@@ -377,6 +589,18 @@ describe('EditorVhost', () => {
     expect(conf()).toBe(antes);
     expect((await sitioGuardado()).reglasExtra).toBe('');
     expect(llamadas.filter((l) => l === 'recargar')).toHaveLength(2);
+    // Tras volver atrás se comprueba otra vez que Nginx responda.
+    expect(llamadas.at(-1)).toBe('sano');
+  });
+
+  it('si Nginx sigue caído después de volver atrás, lo dice con su propio código', async () => {
+    const antes = conf();
+    sano = [false, false];
+    await expect(crearEditor().aplicar('blog', { reglas: 'gzip on;' })).rejects.toMatchObject({
+      codigo: 'nginx.caido_tras_restaurar',
+    });
+    expect(conf()).toBe(antes);
+    expect((await sitioGuardado()).reglasExtra).toBe('');
   });
 
   it('lo prohibido no llega a nginx -t ni toca nada', async () => {

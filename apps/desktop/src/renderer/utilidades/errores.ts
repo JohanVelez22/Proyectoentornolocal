@@ -19,9 +19,13 @@ export function traducirError(e: ErrorIpc, t: Textos = textos): string {
   const plantilla =
     e.codigo !== undefined && Object.hasOwn(codigos, e.codigo) ? codigos[e.codigo] : undefined;
   if (plantilla) {
+    const detalles = t.errores.detalles as Record<string, string | undefined>;
     return plantilla.replace(/\{(\w+)\}/g, (marca, k: string) => {
       const v = e.datos?.[k];
-      return v === undefined ? marca : String(v);
+      if (v === undefined) return marca;
+      // Algunos detalles llegan como código (p. ej. `sintaxis.sobra_llave`): se traducen.
+      const texto = String(v);
+      return Object.hasOwn(detalles, texto) ? (detalles[texto] ?? texto) : texto;
     });
   }
   return e.message || e.mensaje || t.errores.desconocido;

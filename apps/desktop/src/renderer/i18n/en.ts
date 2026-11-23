@@ -69,6 +69,16 @@ export const en: Textos = {
     titulo: 'The action could not be completed',
     arranque: 'Could not read the environment status',
     desconocido: 'An unexpected error occurred.',
+    /** Details the core sends as a code inside an error. */
+    detalles: {
+      'sintaxis.comillas_sin_cerrar': 'unclosed quotes',
+      'sintaxis.tras_comillas': 'a space or “;” is missing after the quotes',
+      'sintaxis.punto_y_coma_inesperado': '“;” without a directive',
+      'sintaxis.llave_inesperada': '“{” without a directive',
+      'sintaxis.falta_punto_y_coma': 'missing “;” at the end of the directive',
+      'sintaxis.sobra_llave': 'extra “}”',
+      'sintaxis.falta_llave': 'missing “}”',
+    },
     codigos: {
       'git.cambios_locales':
         'There are unsaved changes in the folder: commit or discard them before pulling. Nothing was touched.',
@@ -286,6 +296,10 @@ export const en: Textos = {
         'Line {linea}: the site can only listen on the Nginx ports set in Settings.',
       'nginx.version_no_existe': 'That vhost version is no longer in the history.',
       'nginx.argumento_invalido': 'Invalid argument: {campo}',
+      'nginx.destino_interno':
+        'Line {linea}: “{directiva}” points to an internal WolfCore Dev service (Adminer, Mailpit, databases, other sites’ PHP…) and would expose it on the network and tunnels. Nothing was changed.',
+      'nginx.caido_tras_restaurar':
+        'Nginx did not respond again: the previous vhost was restored, but it still does not respond. Check Services and the Nginx log. {salida}',
     },
   },
   avisoInicio: {

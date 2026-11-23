@@ -26,6 +26,13 @@ export const esRutaAbsoluta = (ruta: string): boolean =>
   path.win32.isAbsolute(ruta) || path.posix.isAbsolute(ruta);
 
 /**
+ * ¿Es una ruta absoluta completa en este sistema? En Windows exige la unidad (`X:/…`): `/x` o
+ * `\x` dependen de la unidad actual del proceso que la lea (Nginx) y una ruta UNC sale del equipo.
+ */
+export const esRutaAbsolutaDelSistema = (ruta: string): boolean =>
+  process.platform === 'win32' ? /^[A-Za-z]:[\\/]/.test(ruta) : path.posix.isAbsolute(ruta);
+
+/**
  * ¿`ruta` está dentro de `carpeta` (o es ella)? Ambas se vuelven absolutas y normalizadas (`..`
  * no escapa) y se comparan sin mayúsculas en Windows. Una carpeta hermana con el mismo prefijo
  * (`bin-otro`) no cuenta.

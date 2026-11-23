@@ -630,6 +630,7 @@ export class Nucleo {
               : 'avisos.vhost_reglas_descartadas',
           datos: { fuente: a.sitio },
         }),
+      puertosInternos: puertosInternosVhost,
     });
     await migrarCredenciales(rutas, almacen, credenciales);
     const urlBase = new UrlBase({
@@ -2326,6 +2327,22 @@ export function puertosReservados(cfg: Config, sitioId: string | null = null): n
   const r = new Set(puertosServicios(cfg, sitioId));
   // Los pools de php-cgi propios de los sitios (ini por sitio, Xdebug).
   for (let p = RANGO_POOLS_SITIO.desde; p <= RANGO_POOLS_SITIO.hasta; p++) r.add(p);
+  return [...r];
+}
+
+/**
+ * Puertos que el vhost de un sitio no puede usar de destino (`proxy_pass`, `fastcgi_pass`…):
+ * los servicios de WolfCore Dev (Adminer, Mailpit, MCP, FTP, bases de datos, Ollama), los PHP de
+ * las ramas en uso y los pools de los sitios. Quedan fuera los de Nginx y los procesos del propio
+ * sitio (su servidor de desarrollo).
+ */
+export function puertosInternosVhost(cfg: Config, sitioId: string): number[] {
+  const nginx = new Set([cfg.servicios.nginx.puerto, cfg.https.puerto]);
+  const r = new Set(puertosReservados(cfg, sitioId).filter((p) => !nginx.has(p)));
+  const trabajadores = Math.max(cfg.servicios.php.trabajadores, 8);
+  for (const rama of ramasEnUso(cfg.sitios)) {
+    for (const p of puertosPhp(rama, trabajadores)) r.add(p);
+  }
   return [...r];
 }
 

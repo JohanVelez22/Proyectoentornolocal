@@ -8,7 +8,8 @@ import { DOMINIO_VALIDO } from '../hosts/bloque';
 import type { GestorHttps } from '../https/certificados';
 import type { GestorHosts } from '../hosts/hosts';
 import { revisarVhost, type ContextoVhost, type ModoVhost } from '../nginx/editor';
-import { generarVhost } from '../nginx/plantillas';
+import { generarVhost, nombreUpstream } from '../nginx/plantillas';
+import { nombreUpstreamSitio } from '../php/poolSitio';
 import { puertosPhp } from '../nginx/principal';
 import type { Rutas } from '../rutas';
 import type { ServicioNginx, UpstreamPhp } from '../servicios/nginx';
@@ -27,7 +28,8 @@ export type ResultadoAplicar = {
 export interface DepsSitios {
   almacen: Pick<Almacen, 'leer' | 'guardar'>;
   rutas: Rutas;
-  nginx: Pick<ServicioNginx, 'validar' | 'recargar'>;
+  nginx: Pick<ServicioNginx, 'validar' | 'recargar'> &
+    Partial<Pick<ServicioNginx, 'probarConVhost'>>;
   estadoNginx: () => 'apagado' | 'iniciando' | 'encendido' | 'error';
   hosts: Pick<GestorHosts, 'sincronizar'>;
   instalador: Pick<Instalador, 'instalado' | 'instalados'>;
@@ -36,6 +38,8 @@ export interface DepsSitios {
   https?: Pick<GestorHttps, 'caCreada' | 'puertoUsable' | 'asegurarCertificado'>;
   /** Reglas propias o vhost manual guardados que ya no pasan la revisión (se descartan). */
   avisarVhost?: (a: { sitio: string; modo: ModoVhost; motivo: string }) => void;
+  /** Puertos de los servicios internos que un vhost no puede usar de destino (sin los del sitio). */
+  puertosInternos?: (cfg: Config, sitioId: string) => number[];
 }
 
 const mensaje = (e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -356,7 +360,10 @@ export class GestorSitios {
     const contexto: ContextoVhost = {
       carpeta: s.carpeta,
       dominios: [s.dominio, ...s.alias],
-      puertos: [cfg.servicios.nginx.puerto, cfg.https.puerto],
+      puertoHttp: cfg.servicios.nginx.puerto,
+      puertoHttps: cfg.https.puerto,
+      puertosInternos: this.d.puertosInternos?.(cfg, s.id) ?? [],
+      upstreamsPropios: [...(s.php ? [nombreUpstream(s.php)] : []), nombreUpstreamSitio(s.id)],
       logs: [logs.acceso, logs.error],
       certificados: [
         this.d.rutas.certCrt(s.id),
@@ -376,25 +383,101 @@ export class GestorSitios {
     s: Sitio,
     cfg: Config,
     httpsUsable: boolean,
-  ): Promise<{ contenido: string; httpsPendiente: boolean }> {
-    let v = await this.vhostDe(s, cfg, httpsUsable);
-    if (s.reglasExtra.trim()) {
+  ): Promise<{
+    contenido: string;
+    /** El generado sin reglas propias ni manual (para probar sin lo del usuario). */
+    plano: string;
+    /** Qué del usuario lleva `contenido` (null: nada). */
+    modo: ModoVhost | null;
+    httpsPendiente: boolean;
+  }> {
+    const plano = await this.vhostDe({ ...s, reglasExtra: '' }, cfg, httpsUsable);
+    let v = s.reglasExtra.trim() ? await this.vhostDe(s, cfg, httpsUsable) : plano;
+    let modo: ModoVhost | null = s.reglasExtra.trim() ? 'reglas' : null;
+    if (modo) {
       try {
         revisarVhost(s.reglasExtra, 'reglas', v.contexto);
       } catch (e) {
         this.d.avisarVhost?.({ sitio: s.id, modo: 'reglas', motivo: mensaje(e) });
-        v = await this.vhostDe({ ...s, reglasExtra: '' }, cfg, httpsUsable);
+        v = plano;
+        modo = null;
       }
     }
+    const base = { plano: plano.generado, httpsPendiente: v.httpsPendiente };
     if (s.vhostManual) {
       try {
         revisarVhost(s.vhostManual, 'manual', v.contexto);
-        return { contenido: s.vhostManual, httpsPendiente: v.httpsPendiente };
+        return { ...base, contenido: s.vhostManual, modo: 'manual' };
       } catch (e) {
         this.d.avisarVhost?.({ sitio: s.id, modo: 'manual', motivo: mensaje(e) });
       }
     }
-    return { contenido: v.generado, httpsPendiente: v.httpsPendiente };
+    return { ...base, contenido: v.generado, modo };
+  }
+
+  /** Recarga (si está encendido) o valida Nginx con lo que hay escrito. */
+  private async probarNginx(): Promise<ResultadoAplicar['nginx']> {
+    if ((await this.d.instalador.instalados('nginx')).length === 0) {
+      return {
+        ok: true,
+        salida: 'Nginx no está instalado; la configuración se validará al iniciarlo.',
+      };
+    }
+    if (this.d.estadoNginx() === 'encendido') {
+      try {
+        await this.d.nginx.recargar();
+        return { ok: true, salida: 'Nginx recargado.' };
+      } catch (e) {
+        return { ok: false, salida: mensaje(e) };
+      }
+    }
+    return this.d.nginx.validar();
+  }
+
+  /**
+   * Nginx rechazó la configuración y hay sitios con reglas propias o vhost manual: se prueba sin
+   * ellos. Si así pasa, cada uno vuelve si su `nginx -t` (con los demás sin lo suyo) pasa; los que
+   * no, quedan fuera con aviso y los demás sitios se aplican. Si sin ellos tampoco pasa, el fallo
+   * es otro: devuelve null (y no avisa nada).
+   */
+  private async sinLoDelUsuario(
+    personalizados: { s: Sitio; contenido: string; plano: string; modo: ModoVhost }[],
+  ): Promise<ResultadoAplicar['nginx'] | null> {
+    const escribir = async (s: Sitio, t: string): Promise<void> =>
+      writeFile(this.d.rutas.vhost(s.id), t, 'utf8');
+    for (const p of personalizados) await escribir(p.s, p.plano);
+    if (!(await this.probarNginx()).ok) return null;
+    const vuelven: typeof personalizados = [];
+    const fuera: typeof personalizados = [];
+    for (const p of personalizados) {
+      const prueba = this.d.nginx.probarConVhost
+        ? await this.d.nginx.probarConVhost(p.s.id, p.contenido).catch((e: unknown) => ({
+            ok: false,
+            salida: mensaje(e),
+          }))
+        : { ok: false, salida: '' };
+      (prueba.ok ? vuelven : fuera).push(p);
+    }
+    let r: ResultadoAplicar['nginx'] = { ok: true, salida: 'Nginx recargado.' };
+    if (vuelven.length > 0) {
+      for (const p of vuelven) await escribir(p.s, p.contenido);
+      r = await this.probarNginx();
+      if (!r.ok) {
+        // Juntos no pasan: quedan todos fuera.
+        for (const p of vuelven) await escribir(p.s, p.plano);
+        fuera.push(...vuelven.splice(0));
+        r = await this.probarNginx();
+        if (!r.ok) return null;
+      }
+    }
+    for (const p of fuera) {
+      this.d.avisarVhost?.({
+        sitio: p.s.id,
+        modo: p.modo,
+        motivo: 'Nginx no acepta lo que escribió el usuario para este sitio.',
+      });
+    }
+    return r;
   }
 
   private async aplicarSinCola(): Promise<{
@@ -416,26 +499,18 @@ export class GestorSitios {
       for (const n of previo.keys()) {
         if (!vigentes.has(n)) await rm(path.join(dir, n), { force: true });
       }
+      const personalizados: { s: Sitio; contenido: string; plano: string; modo: ModoVhost }[] = [];
       for (const s of cfg.sitios) {
         const v = await this.vhostCon(s, cfg, httpsUsable);
         if (v.httpsPendiente) httpsPendiente.push(s.id);
+        if (v.modo)
+          personalizados.push({ s, contenido: v.contenido, plano: v.plano, modo: v.modo });
         await writeFile(this.d.rutas.vhost(s.id), v.contenido, 'utf8');
       }
 
-      if ((await this.d.instalador.instalados('nginx')).length === 0) {
-        nginx = {
-          ok: true,
-          salida: 'Nginx no está instalado; la configuración se validará al iniciarlo.',
-        };
-      } else if (this.d.estadoNginx() === 'encendido') {
-        try {
-          await this.d.nginx.recargar();
-          nginx = { ok: true, salida: 'Nginx recargado.' };
-        } catch (e) {
-          nginx = { ok: false, salida: e instanceof Error ? e.message : String(e) };
-        }
-      } else {
-        nginx = await this.d.nginx.validar();
+      nginx = await this.probarNginx();
+      if (!nginx.ok && personalizados.length > 0) {
+        nginx = (await this.sinLoDelUsuario(personalizados)) ?? nginx;
       }
     } catch (e) {
       nginx = {

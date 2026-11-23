@@ -1,9 +1,10 @@
-import { SNIPPETS_NGINX } from '@pel/core';
+import { DETALLES_SINTAXIS, SNIPPETS_NGINX } from '@pel/core';
 import { describe, expect, it, vi } from 'vitest';
 import { registrarIpc, type IpcMainLike, type NucleoIpc } from '../src/main/ipc';
 import { RUTAS_IPC } from '../src/shared/api';
 import { en } from '../src/renderer/i18n/en';
 import { es } from '../src/renderer/i18n/es';
+import { traducirError } from '../src/renderer/utilidades/errores';
 
 type Manejador = (evento: unknown, ...args: unknown[]) => unknown;
 type Resultado = { ok: boolean; valor?: unknown; error?: { codigo?: string } };
@@ -95,6 +96,20 @@ describe('IPC del editor de vhost de Nginx', () => {
     expect(editorVhost.restaurar).toHaveBeenCalledWith('blog', v);
     const s = await llamar('nginx.snippets');
     expect(s.valor).toEqual(SNIPPETS_NGINX);
+  });
+
+  it('el detalle de nginx.sintaxis llega como código y se traduce en cada idioma', () => {
+    const e = {
+      codigo: 'nginx.sintaxis',
+      message: 'Línea 3: sobra una "}"',
+      datos: { linea: 3, detalle: 'sintaxis.sobra_llave' },
+    };
+    expect(traducirError(e, en as never)).toBe('Line 3: extra “}”. Nothing was changed.');
+    expect(traducirError(e, es as never)).toBe('Línea 3: sobra una «}». No se cambió nada.');
+    expect(Object.keys(es.errores.detalles).sort()).toEqual(
+      Object.keys(en.errores.detalles).sort(),
+    );
+    expect(Object.keys(es.errores.detalles).sort()).toEqual(Object.keys(DETALLES_SINTAXIS).sort());
   });
 
   it('textos del editor en es y en, con un título por snippet', () => {

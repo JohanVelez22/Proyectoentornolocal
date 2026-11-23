@@ -15,8 +15,10 @@
  *    PHP ejecute otro archivo del disco, como Adminer), `PHP_VALUE`, registros, temporales, cachés y `*_store`/WebDAV que escribirían en otras
  *    carpetas, certificados ajenos, directivas globales, otros bloques `server` en las reglas y,
  *    en el modo avanzado, dominios o puertos que no son del sitio (así no le quita el tráfico a
- *    otro). Un `proxy_pass` (o `fastcgi_pass`…) a un equipo que no es este solo se avisa: es un uso
- *    legítimo y no expone archivos del equipo;
+ *    otro; `listen` sin dirección y con `ssl`/`http2` solo en el puerto HTTPS, porque las opciones
+ *    son del socket). Un `proxy_pass` (o `fastcgi_pass`…) a un servicio interno de WolfCore Dev
+ *    (Adminer, Mailpit, MCP, bases de datos, PHP de otras ramas o sitios) se prohíbe: lo expondría
+ *    en la red y el túnel. A un equipo que no es este solo se avisa: es un uso legítimo;
  *  - prueba el vhost con `nginx -t` sobre una copia temporal de toda la configuración antes de
  *    tocar nada, guarda una copia con fecha (historial de 10 por sitio), escribe de forma atómica,
  *    recarga, comprueba que Nginx siga respondiendo y, si no, vuelve a lo anterior solo.
@@ -29,7 +31,11 @@ import path from 'node:path';
 import type { Almacen } from '../almacen';
 import { ErrorWolf } from '../errores';
 import { copiaConFecha } from '../herramientas/copiaConFecha';
-import { esRutaAbsoluta as esAbsoluta, rutaComparable, rutaDentroDe } from '../plataforma/sistema';
+import {
+  esRutaAbsolutaDelSistema as esAbsoluta,
+  rutaComparable,
+  rutaDentroDe,
+} from '../plataforma/sistema';
 import type { Rutas } from '../rutas';
 import type { Config, Sitio } from '../tipos';
 
@@ -56,10 +62,36 @@ export interface Directiva {
 type Token =
   { tipo: 'palabra'; valor: string; linea: number } | { tipo: ';' | '{' | '}'; linea: number };
 
-const errorSintaxis = (linea: number, detalle: string): ErrorWolf =>
-  new ErrorWolf('nginx.sintaxis', `Línea ${linea}: ${detalle}`, { linea, detalle });
+/** Detalle de `nginx.sintaxis`: va como código (la interfaz lo traduce) y aquí en español. */
+export const DETALLES_SINTAXIS = {
+  'sintaxis.comillas_sin_cerrar': 'comillas sin cerrar',
+  'sintaxis.tras_comillas': 'falta un espacio o ";" después de las comillas',
+  'sintaxis.punto_y_coma_inesperado': '";" sin directiva',
+  'sintaxis.llave_inesperada': '"{" sin directiva',
+  'sintaxis.falta_punto_y_coma': 'falta ";" al final de la directiva',
+  'sintaxis.sobra_llave': 'sobra una "}"',
+  'sintaxis.falta_llave': 'falta una "}"',
+} as const;
+
+const errorSintaxis = (linea: number, detalle: keyof typeof DETALLES_SINTAXIS): ErrorWolf =>
+  new ErrorWolf('nginx.sintaxis', `Línea ${linea}: ${DETALLES_SINTAXIS[detalle]}`, {
+    linea,
+    detalle,
+  });
 
 const esEspacio = (c: string): boolean => c === ' ' || c === '\t' || c === '\r' || c === '\n';
+
+/** `\x` como lo copia Nginx (dentro y fuera de comillas): \" \' \\ \t \n \r; el resto, tal cual. */
+const escape = (sig: string): string =>
+  sig === '"' || sig === "'" || sig === '\\'
+    ? sig
+    : sig === 't'
+      ? '\t'
+      : sig === 'n'
+        ? '\n'
+        : sig === 'r'
+          ? '\r'
+          : `\\${sig}`;
 
 function tokens(texto: string): Token[] {
   const res: Token[] = [];
@@ -91,21 +123,12 @@ function tokens(texto: string): Token[] {
     if (c === '"' || c === "'") {
       i++;
       for (;;) {
-        if (i >= n) throw errorSintaxis(inicio, 'comillas sin cerrar');
+        if (i >= n) throw errorSintaxis(inicio, 'sintaxis.comillas_sin_cerrar');
         const d = texto[i]!;
         if (d === '\\' && i + 1 < n) {
           const sig = texto[i + 1]!;
           if (sig === '\n') linea++;
-          valor +=
-            sig === '"' || sig === "'" || sig === '\\'
-              ? sig
-              : sig === 't'
-                ? '\t'
-                : sig === 'n'
-                  ? '\n'
-                  : sig === 'r'
-                    ? '\r'
-                    : `\\${sig}`;
+          valor += escape(sig);
           i += 2;
           continue;
         }
@@ -120,7 +143,7 @@ function tokens(texto: string): Token[] {
       // Nginx exige un separador tras las comillas.
       const sig = texto[i];
       if (sig !== undefined && !esEspacio(sig) && sig !== ';' && sig !== '{' && sig !== ')') {
-        throw errorSintaxis(linea, `carácter inesperado tras las comillas: ${sig}`);
+        throw errorSintaxis(linea, 'sintaxis.tras_comillas');
       }
     } else {
       let variable = false;
@@ -137,7 +160,7 @@ function tokens(texto: string): Token[] {
         if (d === '\\' && i + 1 < n) {
           const sig = texto[i + 1]!;
           if (sig === '\n') linea++;
-          valor += sig === '"' || sig === "'" || sig === '\\' ? sig : `\\${sig}`;
+          valor += escape(sig);
           i += 2;
           continue;
         }
@@ -172,25 +195,25 @@ export function analizarNginx(texto: string): Directiva[] {
       continue;
     }
     if (t.tipo === ';') {
-      if (!actual) throw errorSintaxis(t.linea, '";" inesperado');
+      if (!actual) throw errorSintaxis(t.linea, 'sintaxis.punto_y_coma_inesperado');
       lista.push(actual);
       actual = null;
       continue;
     }
     if (t.tipo === '{') {
-      if (!actual) throw errorSintaxis(t.linea, '"{" inesperado');
+      if (!actual) throw errorSintaxis(t.linea, 'sintaxis.llave_inesperada');
       actual.hijos = [];
       lista.push(actual);
       pila.push(actual.hijos);
       actual = null;
       continue;
     }
-    if (actual) throw errorSintaxis(actual.linea, `falta ";" después de ${actual.nombre}`);
-    if (pila.length === 1) throw errorSintaxis(t.linea, 'sobra una "}"');
+    if (actual) throw errorSintaxis(actual.linea, 'sintaxis.falta_punto_y_coma');
+    if (pila.length === 1) throw errorSintaxis(t.linea, 'sintaxis.sobra_llave');
     pila.pop();
   }
-  if (actual) throw errorSintaxis(actual.linea, `falta ";" después de ${actual.nombre}`);
-  if (pila.length > 1) throw errorSintaxis(ultimaLinea, 'falta una "}"');
+  if (actual) throw errorSintaxis(actual.linea, 'sintaxis.falta_punto_y_coma');
+  if (pila.length > 1) throw errorSintaxis(ultimaLinea, 'sintaxis.falta_llave');
   return raiz;
 }
 
@@ -204,8 +227,16 @@ export interface ContextoVhost {
   carpeta: string;
   /** Dominio y alias del sitio (únicos `server_name` del modo avanzado). */
   dominios: string[];
-  /** Puertos de Nginx (HTTP y HTTPS): únicos `listen` del modo avanzado. */
-  puertos: number[];
+  /** Puertos de Nginx: únicos `listen` del modo avanzado (`ssl`/`http2` solo en el HTTPS). */
+  puertoHttp: number;
+  puertoHttps: number;
+  /**
+   * Puertos de los servicios propios de WolfCore Dev (Adminer, Mailpit, MCP, bases de datos, PHP
+   * de las ramas y pools de los sitios…): un proxy a ellos los expondría en la red y el túnel.
+   */
+  puertosInternos: number[];
+  /** Upstreams de nginx.conf que son de este sitio (`php84` de su rama, `phpsitio_<id>`). */
+  upstreamsPropios: string[];
   /** Registros del sitio (únicos `access_log`/`error_log` además de `off`). */
   logs: string[];
   /** Certificado y clave del sitio. */
@@ -287,8 +318,25 @@ const PROHIBIDAS = new Set([
   'perl_set',
 ]);
 
+/** Directivas `proxy_ssl_*` que leen archivos o pasan órdenes a OpenSSL. */
+const PROXY_SSL_PROHIBIDAS = new Set([
+  'proxy_ssl_certificate',
+  'proxy_ssl_certificate_key',
+  'proxy_ssl_trusted_certificate',
+  'proxy_ssl_password_file',
+  'proxy_ssl_crl',
+  'proxy_ssl_conf_command',
+  'ssl_conf_command',
+]);
+
 const prohibidaPorNombre = (n: string): boolean =>
-  PROHIBIDAS.has(n) || n.startsWith('js_') || n.startsWith('perl_') || n.includes('lua');
+  PROHIBIDAS.has(n) ||
+  PROXY_SSL_PROHIBIDAS.has(n) ||
+  n.startsWith('grpc_ssl_') ||
+  n.startsWith('uwsgi_ssl_') ||
+  n.startsWith('js_') ||
+  n.startsWith('perl_') ||
+  n.includes('lua');
 
 /** `include` solo de los archivos estándar que WolfCore Dev copia junto a nginx.conf. */
 export const INCLUDES_PERMITIDOS = [
@@ -311,8 +359,15 @@ const DIRECTIVAS_DESTINO = new Set([
   'memcached_pass',
 ]);
 const OPCIONES_LISTEN = new Set(['ssl', 'http2']);
-/** Parámetros de FastCGI que dicen qué archivo ejecuta PHP. */
-const PARAMS_RUTA = new Set(['SCRIPT_FILENAME', 'DOCUMENT_ROOT', 'PATH_TRANSLATED']);
+/**
+ * Parámetros de FastCGI que dicen qué archivo ejecuta PHP: solo la raíz del sitio más el script
+ * de la petición (que Nginx ya normalizó); nada de `..` ni otras variables detrás.
+ */
+const PARAMS_RUTA: Record<string, RegExp> = {
+  SCRIPT_FILENAME: /^\$(document_root|realpath_root)\$fastcgi_script_name(\$fastcgi_path_info)?$/,
+  PATH_TRANSLATED: /^\$(document_root|realpath_root)\$fastcgi_path_info$/,
+  DOCUMENT_ROOT: /^\$(document_root|realpath_root)$/,
+};
 
 const mismaRuta = (a: string, b: string): boolean =>
   rutaComparable(path.resolve(a)) === rutaComparable(path.resolve(b));
@@ -331,36 +386,98 @@ const rutaFuera = (d: Directiva): ErrorWolf =>
     { directiva: d.nombre, linea: d.linea },
   );
 
-/** Host de un destino (`http://h:p/x`, `h:p`, `[::1]:p`); null si es dinámico o un socket. */
-function hostDestino(destino: string): string | null {
-  if (destino.includes('$')) return null;
+/** Host y puerto de un destino (`http://h:p/x`, `h:p`, `[::1]:p`); puerto null si no lo lleva. */
+function partesDestino(destino: string): { host: string; puerto: string | null } {
   const sinEsquema = destino.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
-  const autoridad = sinEsquema.split('/')[0]!.replace(/^[^@]*@/, '');
-  if (autoridad.startsWith('[')) return autoridad.slice(0, autoridad.indexOf(']') + 1);
-  return autoridad.split(':')[0]!.toLowerCase();
+  // `$request_uri` y `$uri` empiezan por "/": pertenecen a la ruta, no al host ni al puerto.
+  const autoridad = sinEsquema
+    .split(/\/|\$(?:request_uri|uri)(?![A-Za-z0-9_])/)[0]!
+    .replace(/^[^@]*@/, '');
+  if (autoridad.startsWith('[')) {
+    const fin = autoridad.indexOf(']');
+    const resto = autoridad.slice(fin + 1);
+    return {
+      host: autoridad.slice(0, fin + 1).toLowerCase(),
+      puerto: resto.startsWith(':') ? resto.slice(1) : null,
+    };
+  }
+  const [host, puerto] = autoridad.split(':');
+  return { host: (host ?? '').toLowerCase(), puerto: puerto ?? null };
 }
 
-const esLocal = (host: string): boolean =>
+/** Direcciones de este equipo (y las literales que no son un nombre de dominio). */
+const esEsteEquipo = (host: string): boolean =>
   host === 'localhost' ||
   host === '[::1]' ||
-  /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
-  // Upstreams que declara nginx.conf (php84, phpsitio_<id>, adminer_php).
-  /^(php\d+|phpsitio_[a-z0-9._-]+|adminer_php)$/i.test(host);
+  host === '[::]' ||
+  host === '0.0.0.0' ||
+  /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host);
 
+const esIpLiteral = (host: string): boolean =>
+  host.startsWith('[') || /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+
+/** Nombres de upstream que declara nginx.conf (ramas de PHP, pools de sitio y Adminer). */
+const UPSTREAM_PROPIO = /^(php\d+|phpsitio_[a-z0-9._-]+|adminer_php)$/i;
+
+const destinoInterno = (d: Directiva): ErrorWolf =>
+  new ErrorWolf(
+    'nginx.destino_interno',
+    `Línea ${d.linea}: "${d.nombre}" apunta a un servicio interno de WolfCore Dev; lo expondría en la red.`,
+    { directiva: d.nombre, linea: d.linea },
+  );
+
+function revisarDestino(d: Directiva, ctx: ContextoVhost, avisos: AvisoVhost[]): void {
+  const destino = d.args[0] ?? '';
+  if (/^([a-z][a-z0-9+.-]*:\/\/)?unix:/i.test(destino)) throw rutaFuera(d);
+  const { host, puerto } = partesDestino(destino);
+  // Host o puerto con variables: podrían llevar a cualquier servicio interno.
+  if (host.includes('$') || (puerto !== null && puerto.includes('$'))) throw destinoInterno(d);
+  if (UPSTREAM_PROPIO.test(host)) {
+    if (!ctx.upstreamsPropios.map((u) => u.toLowerCase()).includes(host)) throw destinoInterno(d);
+    return;
+  }
+  const numero = puerto !== null && /^\d{1,5}$/.test(puerto) ? Number(puerto) : null;
+  if (
+    numero !== null &&
+    ctx.puertosInternos.includes(numero) &&
+    (esEsteEquipo(host) || esIpLiteral(host))
+  ) {
+    throw destinoInterno(d);
+  }
+  if (!esEsteEquipo(host)) {
+    avisos.push({
+      codigo: 'nginx.aviso_destino_externo',
+      directiva: d.nombre,
+      destino: destino.slice(0, 120),
+      linea: d.linea,
+    });
+  }
+}
+
+/**
+ * Modo avanzado: `listen <puerto>` o `*:<puerto>` y nada más. Una dirección concreta
+ * (`127.0.0.1:80`, `[::]:80`) haría del sitio el servidor por defecto de esa dirección, y las
+ * opciones son del socket (las de un sitio cambiarían a todos): `ssl` es obligatoria en el
+ * puerto HTTPS y `http2` solo va ahí; en el HTTP, ninguna.
+ */
 function revisarListen(d: Directiva, ctx: ContextoVhost): void {
-  const direccion = d.args[0] ?? '';
-  if (direccion.startsWith('unix:')) throw prohibida(d, 'listen unix:');
-  const m = /(?:^|:)(\d{1,5})$/.exec(direccion);
+  const m = /^(?:\*:)?(\d{1,5})$/.exec(d.args[0] ?? '');
   const puerto = m ? Number(m[1]) : NaN;
-  if (!ctx.puertos.includes(puerto)) {
+  if (puerto !== ctx.puertoHttp && puerto !== ctx.puertoHttps) {
     throw new ErrorWolf(
       'nginx.puerto_ajeno',
-      `Línea ${d.linea}: el sitio solo puede escuchar en los puertos de Nginx (${ctx.puertos.join(', ')}).`,
+      `Línea ${d.linea}: el sitio solo puede escuchar en los puertos de Nginx (${ctx.puertoHttp} y ${ctx.puertoHttps}), sin dirección.`,
       { linea: d.linea },
     );
   }
-  for (const op of d.args.slice(1)) {
-    if (!OPCIONES_LISTEN.has(op)) throw prohibida(d, `listen ${op}`);
+  const opciones = d.args.slice(1);
+  if (puerto === ctx.puertoHttps) {
+    for (const op of opciones) {
+      if (!OPCIONES_LISTEN.has(op)) throw prohibida(d, `listen ${op}`);
+    }
+    if (!opciones.includes('ssl')) throw prohibida(d, `listen ${puerto} sin ssl`);
+  } else if (opciones.length > 0) {
+    throw prohibida(d, `listen ${puerto} ${opciones.join(' ')}`);
   }
 }
 
@@ -425,23 +542,18 @@ function revisarDirectiva(
     const valor = d.args[1] ?? '';
     if (nombre === 'PHP_VALUE' || nombre === 'PHP_ADMIN_VALUE')
       throw prohibida(d, `${n} ${nombre}`);
-    if (PARAMS_RUTA.has(nombre)) {
-      const desdeRaiz = /^\$(document_root|realpath_root)(?![A-Za-z0-9_])/.test(valor);
-      const dentro = !valor.includes('$') && esAbsoluta(valor) && rutaDentroDe(ctx.carpeta, valor);
-      if (!desdeRaiz && !dentro) throw rutaFuera(d);
+    const patron = PARAMS_RUTA[nombre];
+    if (patron && !patron.test(valor)) {
+      // DOCUMENT_ROOT también puede ser una carpeta fija del proyecto.
+      const carpetaFija =
+        nombre === 'DOCUMENT_ROOT' &&
+        !valor.includes('$') &&
+        esAbsoluta(valor) &&
+        rutaDentroDe(ctx.carpeta, valor);
+      if (!carpetaFija) throw rutaFuera(d);
     }
   } else if (DIRECTIVAS_DESTINO.has(n)) {
-    const destino = d.args[0] ?? '';
-    if (/^([a-z][a-z0-9+.-]*:\/\/)?unix:/i.test(destino)) throw rutaFuera(d);
-    const host = hostDestino(destino);
-    if (host === null || !esLocal(host)) {
-      avisos.push({
-        codigo: 'nginx.aviso_destino_externo',
-        directiva: d.nombre,
-        destino: destino.slice(0, 120),
-        linea: d.linea,
-      });
-    }
+    revisarDestino(d, ctx, avisos);
   }
   for (const h of d.hijos ?? []) revisarDirectiva(h, modo, ctx, nivel + 1, avisos);
 }
@@ -646,9 +758,18 @@ export class EditorVhost {
       }
       if (anterior === null) await rm(ruta, { force: true });
       else await escribirAtomico(ruta, anterior);
-      if (this.d.estadoNginx() === 'encendido') await this.d.recargar();
+      // Nginx estaba encendido: se recarga con lo anterior (no hace nada si quedó apagado).
+      await this.d.recargar();
     } catch (e) {
       salida += `\nNo se pudo dejar todo como estaba: ${mensajeDe(e)}`;
+    }
+    // Lo anterior tiene que volver a responder; si no, no es un fallo más del cambio.
+    if (!(await this.d.sano().catch(() => false))) {
+      throw new ErrorWolf(
+        'nginx.caido_tras_restaurar',
+        `Nginx no volvió a responder; se restauró el vhost anterior, pero sigue sin responder. Revise Servicios y el registro de Nginx.\n${salida}`,
+        { salida: salida.slice(0, 200) },
+      );
     }
     return salida;
   }

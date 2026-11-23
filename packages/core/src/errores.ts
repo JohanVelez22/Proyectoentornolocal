@@ -183,6 +183,8 @@ export const PARAMETROS_ERROR = {
   'nginx.dominio_ajeno': ['nombre', 'linea'],
   'nginx.puerto_ajeno': ['linea'],
   'nginx.version_no_existe': [],
+  'nginx.destino_interno': ['directiva', 'linea'],
+  'nginx.caido_tras_restaurar': ['salida'],
   'nginx.argumento_invalido': ['campo'],
 } as const satisfies Record<string, readonly string[]>;
 
