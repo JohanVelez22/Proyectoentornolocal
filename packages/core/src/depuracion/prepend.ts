@@ -92,7 +92,7 @@ if (!class_exists('WolfCoreDump', false)) {
                 \Symfony\Component\VarDumper\VarDumper::dump($v);
                 return;
             }
-            $t = is_array($v) || is_object($v) ? print_r($v, true) : var_export($v, true);
+            $t = is_array($v) || is_object($v) ? self::estructura($v) : var_export($v, true);
             if (PHP_SAPI === 'cli' || PHP_SAPI === 'phpdbg') {
                 echo $t, "\n";
             } else {
@@ -237,17 +237,83 @@ if (!class_exists('WolfCoreDump', false)) {
             if (!is_array($v) && !is_object($v)) {
                 return var_export($v, true);
             }
-            // print_r por partes: nunca más de MAX_TEXTO en memoria.
-            $texto = '';
-            ob_start(function ($b) use (&$texto) {
-                if (strlen($texto) < WolfCoreDump::MAX_TEXTO) {
-                    $texto .= substr($b, 0, WolfCoreDump::MAX_TEXTO - strlen($texto));
+            return self::estructura($v);
+        }
+
+        /**
+         * Texto como el de print_r, pero sin búferes de salida (print_r con retorno usa uno, y
+         * eso es un error fatal dentro de un manejador de ob_start) y acotado a MAX_TEXTO: nunca
+         * más que eso en memoria. Un objeto que se repite en la misma rama: *RECURSION*.
+         */
+        private static function estructura($v)
+        {
+            $buf = '';
+            $pila = array();
+            self::volcar($v, '', $buf, 0, $pila);
+            return rtrim($buf, "\n");
+        }
+
+        private static function volcar($v, $sangria, &$buf, $nivel, array &$pila)
+        {
+            $resta = self::MAX_TEXTO - strlen($buf);
+            if ($resta <= 0) {
+                return;
+            }
+            if (!is_array($v) && !is_object($v)) {
+                if (is_bool($v)) {
+                    $buf .= $v ? '1' : '';
+                } elseif ($v !== null) {
+                    $buf .= substr(is_scalar($v) ? (string) $v : 'Resource', 0, $resta);
                 }
-                return '';
-            }, 8192);
-            print_r($v);
-            ob_end_clean();
-            return $texto;
+                return;
+            }
+            $id = null;
+            if (is_object($v)) {
+                $id = spl_object_hash($v);
+                $buf .= get_class($v) . ' Object';
+                if (isset($pila[$id])) {
+                    $buf .= "\n" . $sangria . ' *RECURSION*';
+                    return;
+                }
+                $elementos = (array) $v;
+            } else {
+                $buf .= 'Array';
+                $elementos = $v;
+            }
+            if ($nivel >= 16) {
+                $buf .= ' …';
+                return;
+            }
+            if ($id !== null) {
+                $pila[$id] = true;
+            }
+            $buf .= "\n" . $sangria . "(\n";
+            foreach ($elementos as $k => $x) {
+                if (strlen($buf) >= self::MAX_TEXTO) {
+                    break;
+                }
+                $buf .= $sangria . '    [' . self::clave($k) . '] => ';
+                self::volcar($x, $sangria . '        ', $buf, $nivel + 1, $pila);
+                $buf .= "\n";
+            }
+            $buf .= $sangria . ")\n";
+            if ($id !== null) {
+                unset($pila[$id]);
+            }
+        }
+
+        /** Nombre de una propiedad como en print_r (el cast a array marca privadas y protegidas). */
+        private static function clave($k)
+        {
+            $k = (string) $k;
+            if ($k === '' || $k[0] !== "\0") {
+                return $k;
+            }
+            $p = explode("\0", $k);
+            if (count($p) < 3) {
+                return $k;
+            }
+            return $p[1] === '*' ? $p[2] . ':protected' : $p[2] . ':' . $p[1] . ':private';
         }
 
         private static function recortar($t)

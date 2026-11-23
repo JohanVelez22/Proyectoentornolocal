@@ -348,6 +348,12 @@ describe('prepend y wolfdump', () => {
     expect(php).not.toContain('stream_set_timeout(');
   });
 
+  it('el texto de PHP nunca usa búferes de salida (sirve dentro de un manejador de ob_start)', () => {
+    const php = prependPhp({ rutaReceptor: 'C:/Datos/run/depuracion.json' });
+    expect(php).not.toContain('ob_start(');
+    expect(php).not.toContain('print_r(');
+  });
+
   it('wolfdump.py lee el mismo archivo y define dump()', () => {
     const py = wolfdumpPy({ rutaReceptor: 'C:\\Datos\\run\\depuracion.json' });
     expect(py).toContain('"C:\\\\Datos\\\\run\\\\depuracion.json"');

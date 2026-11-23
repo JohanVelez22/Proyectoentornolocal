@@ -317,6 +317,36 @@ describe.skipIf(!hayPhp)('prepend de dumps con un PHP real', () => {
     expect(c.salida).toBe('P:si');
   });
 
+  it('dump() dentro de un manejador de ob_start no rompe la página y llega igual', async () => {
+    const { r, llegados } = await receptorReal(base);
+    try {
+      const c = await correr(
+        [
+          '<?php',
+          'class Nodo { public $hijo; protected $p = "pp"; private $q = "qq"; }',
+          '$n = new Nodo(); $n->hijo = $n;',
+          'ob_start(function ($b) use ($n) { wd(["en" => "manejador", "n" => $n]); dump([1]); return strtoupper($b); });',
+          'echo "hola";',
+          'ob_end_flush();',
+          'echo "\\nFIN";',
+        ].join('\n'),
+      );
+      expect(c.error).toBe('');
+      expect(c.salida).not.toMatch(/Fatal|Cannot use output buffering/);
+      expect(c.salida).toContain('HOLA');
+      expect(c.salida).toContain('FIN');
+      await esperarDump(llegados, 2);
+      const textos = llegados.map((x) => r.leer(x.id)!.texto).join('\n');
+      expect(textos).toContain('[en] => manejador');
+      expect(textos).toContain('Nodo Object');
+      expect(textos).toContain('*RECURSION*');
+      expect(textos).toContain('[p:protected] => pp');
+      expect(textos).toContain('[q:Nodo:private] => qq');
+    } finally {
+      await r.detener();
+    }
+  });
+
   it('un prepend anterior que apunta al nuestro no entra en recursión', async () => {
     const otraForma = prepend.replace(/\\/g, '/');
     const c = await correr('<?php\necho "OK:", function_exists("wd") ? "si" : "no";\n', [
