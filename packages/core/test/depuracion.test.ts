@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
@@ -380,6 +380,10 @@ describe('Nucleo: captura de dumps por sitio', () => {
 
   it('al iniciar deja el prepend y wolfdump escritos aunque la captura esté apagada', async () => {
     const base = await carpetaTemporal('pel-dumps-nucleo-');
+    // Token de una sesión que se cortó: se borra al arrancar con la captura apagada.
+    const viejo = rutasDepuracion(new Rutas(base)).receptor;
+    await mkdir(path.dirname(viejo), { recursive: true });
+    await writeFile(viejo, JSON.stringify({ puerto: 9912, token: 'a'.repeat(64) }));
     const n = await crearNucleo(base);
     try {
       const r = rutasDepuracion(new Rutas(base));

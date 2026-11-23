@@ -1,6 +1,6 @@
 import type * as childProcess from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { Almacen, AlmacenCredenciales, migrarCredenciales } from './almacen';
 import {
@@ -1086,6 +1086,9 @@ export class Nucleo {
       await nucleo.depuracion.iniciar().catch((e: unknown) => {
         nucleo.avisosPendientes.push(`No se pudo iniciar la captura de dumps: ${mensajeDe(e)}`);
       });
+    } else {
+      // El token de una sesión que se cortó no debe quedar: otro programa podría usar ese puerto.
+      await rm(rutasDepuracion(rutas).receptor, { force: true }).catch(() => undefined);
     }
     if ((await leerConfig()).mcp.activo) {
       // Un puerto ocupado no impide el arranque: queda como aviso.
