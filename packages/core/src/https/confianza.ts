@@ -126,6 +126,52 @@ export interface DepsConfianza {
   ahora?: () => Date;
 }
 
+/** Trabajos en curso por archivo destino (en este proceso): uno detrás de otro. */
+const turnos = new Map<string, Promise<unknown>>();
+
+/**
+ * Corre `fn` cuando terminen las anteriores con el mismo destino. Dos `rename` a la vez sobre el
+ * mismo archivo, o uno mientras otro lo lee, fallan en Windows (EPERM), aunque cada uno use su
+ * temporal.
+ */
+async function conTurno<T>(destino: string, fn: () => Promise<T>): Promise<T> {
+  const clave = path.resolve(destino).toLowerCase();
+  const previo = turnos.get(clave) ?? Promise.resolve();
+  const actual = previo.catch(() => undefined).then(fn);
+  const cola = actual.catch(() => undefined);
+  turnos.set(clave, cola);
+  try {
+    return await actual;
+  } finally {
+    if (turnos.get(clave) === cola) turnos.delete(clave);
+  }
+}
+
+const TRANSITORIOS = new Set(['EPERM', 'EACCES', 'EBUSY']);
+
+/**
+ * `rename` que reintenta unas veces los fallos pasajeros de Windows: otro proceso (Python, un
+ * antivirus, un lector nuestro) tiene el destino abierto un instante. Otro error, o el último
+ * intento, se lanza tal cual.
+ */
+export async function renombrarConReintentos(
+  origen: string,
+  destino: string,
+  renombrar: (a: string, b: string) => Promise<void> = rename,
+  intentos = 8,
+): Promise<void> {
+  for (let i = 1; ; i++) {
+    try {
+      await renombrar(origen, destino);
+      return;
+    } catch (e) {
+      const codigo = (e as NodeJS.ErrnoException).code ?? '';
+      if (i >= intentos || !TRANSITORIOS.has(codigo)) throw e;
+      await new Promise((r) => setTimeout(r, 15 * i));
+    }
+  }
+}
+
 const VARIABLE_NODE = 'NODE_EXTRA_CA_CERTS';
 
 /**
@@ -185,7 +231,7 @@ export class ConfianzaCa {
     try {
       await writeFile(tmp, contenido, 'utf8');
       await antes?.();
-      await rename(tmp, destino);
+      await renombrarConReintentos(tmp, destino);
     } catch (e) {
       await rm(tmp, { force: true }).catch(() => undefined);
       throw e;
@@ -234,6 +280,17 @@ export class ConfianzaCa {
       ? `python-bundle-${createHash('sha256').update(path.resolve(venv!).toLowerCase()).digest('hex').slice(0, 12)}.pem`
       : 'python-bundle.pem';
     const destino = path.join(this.carpeta, nombre);
+    // Una generación por bundle a la vez en este proceso: la lectura del bundle vigente de una
+    // llamada no se cruza con el reemplazo de otra (en Windows, EPERM).
+    return conTurno(destino, () => this.generarBundle(destino, huella, caPem, certifi));
+  }
+
+  private async generarBundle(
+    destino: string,
+    huella: string,
+    caPem: string,
+    certifi: string | null,
+  ): Promise<string> {
     const cabecera = `# ca-sha256: ${huella}`;
 
     let raices: string[];

@@ -7,6 +7,7 @@ import {
   conBloqueFirefox,
   firefoxConfiaEnRaices,
   PREF_FIREFOX,
+  renombrarConReintentos,
 } from '../src/https/confianza';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
 import { Rutas } from '../src/rutas';
@@ -156,6 +157,69 @@ describe('ConfianzaCa: bundle de Python', () => {
     ]);
     expect(a).toBe(b);
     expect((await readdir(path.dirname(a))).filter((x) => x.endsWith('.tmp'))).toEqual([]);
+  });
+
+  it('muchas escrituras simultáneas con lectores a la vez: ninguna falla ni deja temporales', async () => {
+    ca = await crearCa();
+    const destino = await confianza().bundlePython(null);
+    // Bajo carga, en Windows un `rename` sobre un destino que otro está leyendo o reemplazando
+    // falla con EPERM/EACCES/EBUSY: aquí se fuerza ese cruce con escritores y lectores a la vez
+    // (los lectores son como Python u otro proceso: abren el bundle cada pocos milisegundos).
+    // Con la fecha 8 días adelante el bundle del sistema está vencido: cada llamada lo reescribe.
+    const futuro = (): Date => new Date(Date.now() + 8 * 24 * 3600 * 1000);
+    let leyendo = true;
+    const lectores = Array.from({ length: 4 }, async () => {
+      while (leyendo) {
+        await readFile(destino, 'utf8').catch(() => '');
+        await new Promise((r) => setTimeout(r, 2));
+      }
+    });
+    const escritores = Array.from({ length: 24 }, () =>
+      new ConfianzaCa({
+        rutas,
+        plataforma: plat,
+        carpetaRespaldos: path.join(base, 'etc', 'respaldos'),
+        entorno: {},
+        ahora: futuro,
+      }).bundlePython(null),
+    );
+    const r = await Promise.allSettled(escritores);
+    leyendo = false;
+    await Promise.all(lectores);
+    expect(r.filter((x) => x.status === 'rejected')).toEqual([]);
+    expect((await readdir(path.dirname(destino))).filter((x) => x.endsWith('.tmp'))).toEqual([]);
+    expect(bloques(await readFile(destino, 'utf8'))).toHaveLength(2);
+  });
+
+  it('renombrarConReintentos: reintenta EPERM/EACCES/EBUSY; otro error o el último, tal cual', async () => {
+    const err = (code: string): NodeJS.ErrnoException => Object.assign(new Error(code), { code });
+    let n = 0;
+    await renombrarConReintentos('a', 'b', async () => {
+      n++;
+      if (n < 3) throw err(n === 1 ? 'EPERM' : 'EBUSY');
+    });
+    expect(n).toBe(3);
+    n = 0;
+    await expect(
+      renombrarConReintentos('a', 'b', async () => {
+        n++;
+        throw err('ENOENT');
+      }),
+    ).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(n).toBe(1);
+    n = 0;
+    await expect(
+      renombrarConReintentos(
+        'a',
+        'b',
+        async () => {
+          n++;
+          throw err('EACCES');
+        },
+        3,
+      ),
+    ).rejects.toMatchObject({ code: 'EACCES' });
+    expect(n).toBe(3);
   });
 
   it('se regenera si cambia la CA (certifi)', async () => {
