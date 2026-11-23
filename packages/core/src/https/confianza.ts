@@ -150,15 +150,18 @@ async function conTurno<T>(destino: string, fn: () => Promise<T>): Promise<T> {
 const TRANSITORIOS = new Set(['EPERM', 'EACCES', 'EBUSY']);
 
 /**
- * `rename` que reintenta unas veces los fallos pasajeros de Windows: otro proceso (Python, un
- * antivirus, un lector nuestro) tiene el destino abierto un instante. Otro error, o el último
- * intento, se lanza tal cual.
+ * `rename` que reintenta los fallos pasajeros de Windows: otro proceso (Python, un antivirus, un
+ * lector nuestro) tiene el destino abierto un instante. Bajo carga ese instante llega a durar
+ * segundos, así que la espera crece (5, 10, 20… ms) hasta un tope de 200 ms y por defecto cubre
+ * unos 11 s en total (60 intentos: con lectores que abren el destino a cada rato, hay muchas
+ * ventanas libres y cada intento es otra oportunidad). Otro error, o el último intento, se lanza tal cual.
  */
 export async function renombrarConReintentos(
   origen: string,
   destino: string,
   renombrar: (a: string, b: string) => Promise<void> = rename,
-  intentos = 8,
+  intentos = 60,
+  esperar: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
 ): Promise<void> {
   for (let i = 1; ; i++) {
     try {
@@ -167,7 +170,7 @@ export async function renombrarConReintentos(
     } catch (e) {
       const codigo = (e as NodeJS.ErrnoException).code ?? '';
       if (i >= intentos || !TRANSITORIOS.has(codigo)) throw e;
-      await new Promise((r) => setTimeout(r, 15 * i));
+      await esperar(Math.min(200, 5 * 2 ** (i - 1)));
     }
   }
 }

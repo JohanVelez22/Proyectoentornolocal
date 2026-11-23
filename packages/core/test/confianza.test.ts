@@ -189,7 +189,8 @@ describe('ConfianzaCa: bundle de Python', () => {
     expect(r.filter((x) => x.status === 'rejected')).toEqual([]);
     expect((await readdir(path.dirname(destino))).filter((x) => x.endsWith('.tmp'))).toEqual([]);
     expect(bloques(await readFile(destino, 'utf8'))).toHaveLength(2);
-  });
+    // Plazo amplio: en Windows, con lectores a la vez, cada escritor puede esperar a que se libere.
+  }, 60_000);
 
   it('renombrarConReintentos: reintenta EPERM/EACCES/EBUSY; otro error o el último, tal cual', async () => {
     const err = (code: string): NodeJS.ErrnoException => Object.assign(new Error(code), { code });
@@ -220,6 +221,28 @@ describe('ConfianzaCa: bundle de Python', () => {
       ),
     ).rejects.toMatchObject({ code: 'EACCES' });
     expect(n).toBe(3);
+  });
+
+  it('renombrarConReintentos: aguanta un bloqueo largo (≈ segundos) con espera creciente y tope', async () => {
+    const err = (code: string): NodeJS.ErrnoException => Object.assign(new Error(code), { code });
+    let n = 0;
+    const esperas: number[] = [];
+    await renombrarConReintentos(
+      'a',
+      'b',
+      async () => {
+        n++;
+        if (n <= 20) throw err('EPERM');
+      },
+      undefined,
+      async (ms) => {
+        esperas.push(ms);
+      },
+    );
+    expect(n).toBe(21);
+    // Espera creciente con tope: ninguna pasa de 250 ms y en total cubre varios segundos.
+    expect(Math.max(...esperas)).toBeLessThanOrEqual(250);
+    expect(esperas.reduce((a, b) => a + b, 0)).toBeGreaterThan(2000);
   });
 
   it('se regenera si cambia la CA (certifi)', async () => {
