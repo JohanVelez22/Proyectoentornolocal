@@ -10,6 +10,11 @@ export interface ContextoFuente {
   senal?: AbortSignal;
   /** Para decidir el soporte de una rama por su fecha de fin. */
   ahora?: Date;
+  /**
+   * Versiones ya conocidas del servicio (caché válida y lista fija). Las fuentes sin índice
+   * (MySQL) sondean desde la última de cada rama.
+   */
+  previas?: readonly VersionDisponible[];
 }
 
 /**
@@ -71,6 +76,32 @@ export async function leerIndiceJson(
   } catch {
     throw new IndiceMalformado(`El índice de ${new URL(url).hostname} no es JSON`);
   }
+}
+
+/** Respuestas de "no existe" de un sondeo (S3 responde 403 a una clave que no existe). */
+const AUSENTE = new Set([403, 404, 410]);
+
+/**
+ * `HEAD` a una URL de un host de `HOSTS_INDICE` (cada redirección también): true si existe, false
+ * si el servidor dice que no (403/404/410). Otro estado (5xx, 429…) o un fallo de red lanzan: un
+ * sondeo que no se pudo hacer no se toma como "no existe".
+ */
+export async function sondear(ctx: ContextoFuente, url: string): Promise<boolean> {
+  const senales = [AbortSignal.timeout(PLAZO_INDICE_MS), ...(ctx.senal ? [ctx.senal] : [])];
+  const res = await pedirConSaltos(
+    ctx.f,
+    url,
+    {
+      method: 'HEAD',
+      signal: AbortSignal.any(senales),
+      headers: { 'user-agent': 'WolfCoreDev' },
+    },
+    urlIndice,
+  );
+  await res.body?.cancel().catch(() => undefined);
+  if (res.ok) return true;
+  if (AUSENTE.has(res.status)) return false;
+  throw new Error(`HTTP ${res.status} al sondear ${new URL(url).hostname}`);
 }
 
 /** Rama "mayor.menor" de una versión ("8.10.3" → "8.10"). */

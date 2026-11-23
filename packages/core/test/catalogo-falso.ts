@@ -86,3 +86,46 @@ export function rutasOficiales(): Record<string, Ruta> {
 
 /** Fecha fija de las pruebas (las ramas con fin de soporte se deciden con ella). */
 export const HOY = new Date('2026-11-23T12:00:00Z');
+
+/** Rutas de las fuentes de bases de datos y Nginx (Task 17) con sus fixtures. */
+export function rutasBd(): Record<string, Ruta> {
+  const rutas: Record<string, Ruta> = {};
+  const existe = { estado: 200, cuerpo: '' };
+  // MySQL: el CDN tiene hasta 8.4.15 y 8.0.46; la página de descargas no responde a clientes.
+  for (const v of ['8.4.13', '8.4.14', '8.4.15', '8.0.44', '8.0.45', '8.0.46']) {
+    const rama = v.split('.').slice(0, 2).join('.');
+    rutas[`https://cdn.mysql.com/Downloads/MySQL-${rama}/mysql-${v}-winx64.zip`] = existe;
+  }
+  rutas['https://dev.mysql.com/downloads/mysql/'] = {
+    estado: 403,
+    cuerpo: fixture('mysql-dificultades.html'),
+  };
+  // MariaDB: ramas recortadas a 13.2 (Preview), 13.1 (RC), 12.3 y 11.4 (LTS).
+  rutas['https://downloads.mariadb.org/rest-api/mariadb/'] = fixture('mariadb-ramas.json');
+  for (const r of ['11.4', '12.3', '13.1', '13.2']) {
+    rutas[`https://downloads.mariadb.org/rest-api/mariadb/${r}/`] = fixture(`mariadb-${r}.json`);
+  }
+  for (const v of ['11.4.14', '12.3.4', '13.1.1']) {
+    rutas[`https://archive.mariadb.org/mariadb-${v}/winx64-packages/sha256sums.txt`] = fixture(
+      `mariadb-sumas-${v}.txt`,
+    );
+  }
+  // PostgreSQL: versions.json real y los sufijos de EDB que existen.
+  rutas['https://www.postgresql.org/versions.json'] = fixture('postgresql-versions.json');
+  for (const v of [
+    '19.0-1',
+    '18.7-1',
+    '18.7-2',
+    '17.12-1',
+    '17.12-2',
+    '16.16-1',
+    '15.20-1',
+    '14.25-1',
+  ]) {
+    rutas[`https://get.enterprisedb.com/postgresql/postgresql-${v}-windows-x64-binaries.zip`] =
+      existe;
+  }
+  rutas['https://downloads.mongodb.org/full.json'] = fixture('mongodb-full.json');
+  rutas['https://nginx.org/en/download.html'] = fixture('nginx-download.html');
+  return rutas;
+}

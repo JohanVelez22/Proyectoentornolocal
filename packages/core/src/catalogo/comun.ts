@@ -28,7 +28,8 @@ export const HOSTS_PERMITIDOS: readonly string[] = [
 
 /**
  * Índices de versiones (catálogo en vivo). `downloads.php.net` está porque `windows.php.net`
- * redirige ahí su `releases.json`.
+ * redirige ahí su `releases.json`. Los sondeos `HEAD` (MySQL, PostgreSQL) también van contra esta
+ * lista.
  */
 export const HOSTS_INDICE: readonly string[] = [
   'windows.php.net',
@@ -37,6 +38,17 @@ export const HOSTS_INDICE: readonly string[] = [
   'api.nuget.org',
   'getcomposer.org',
   'api.github.com',
+  // MySQL: sin índice; sondeo `HEAD` en el CDN y la página de descargas (MD5) si responde.
+  'dev.mysql.com',
+  'cdn.mysql.com',
+  // MariaDB: REST de versiones y sumas del archivo.
+  'downloads.mariadb.org',
+  'archive.mariadb.org',
+  // PostgreSQL: versions.json y sondeo `HEAD` de los binarios de EDB.
+  'www.postgresql.org',
+  'get.enterprisedb.com',
+  'downloads.mongodb.org',
+  'nginx.org',
 ];
 
 function urlEn(texto: string, hosts: readonly string[]): boolean {

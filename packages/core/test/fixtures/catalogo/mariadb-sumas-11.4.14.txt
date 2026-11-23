@@ -1,0 +1,3 @@
+2d2a95199414caa8d4f376c849cf5da309974f49ff9db02491676ae6240e0bac  ./mariadb-11.4.14-winx64-debugsymbols.zip
+a5ce9558d2af6fd960185719a2b0659a2dd9dc91ef0ef772d22b7ce241a72c3c  ./mariadb-11.4.14-winx64.msi
+9d9b410eb7b65f6616f29d933d76ee90cf7af4ba179a2d437e0f09f5bf6650df  ./mariadb-11.4.14-winx64.zip

@@ -26,8 +26,13 @@ import {
   fuenteOllama,
   fuenteRedis,
 } from './fuentes/github';
+import { fuenteMariadb } from './fuentes/mariadb';
+import { fuenteMongodb } from './fuentes/mongodb';
+import { fuenteMysql } from './fuentes/mysql';
+import { fuenteNginx } from './fuentes/nginx';
 import { fuenteNode } from './fuentes/node';
 import { fuentePhp } from './fuentes/php';
+import { fuentePostgresql } from './fuentes/postgresql';
 import { fuentePython } from './fuentes/python';
 import type { ContextoFuente, FuenteVersiones } from './fuentes/tipos';
 import { HuellaSchema, huellaFuerte, type Huella } from './huellas';
@@ -43,6 +48,11 @@ export const FUENTES_VERSIONES: Partial<Record<ServicioInstalable, FuenteVersion
   cloudflared: fuenteCloudflared,
   redis: fuenteRedis,
   mongosh: fuenteMongosh,
+  mysql: fuenteMysql,
+  mariadb: fuenteMariadb,
+  postgresql: fuentePostgresql,
+  mongodb: fuenteMongodb,
+  nginx: fuenteNginx,
 };
 
 export const TTL_CATALOGO_MS = 6 * 60 * 60 * 1000;
@@ -111,10 +121,12 @@ export function validarIndice(
   return r.data as VersionDisponible[];
 }
 
-/** Rama de una versión de la lista fija ("22" en Node; "mayor.menor" en el resto). */
+/** Rama de una versión de la lista fija ("22" en Node, "17" en PostgreSQL; "mayor.menor" en el resto). */
 function ramaFija(servicio: ServicioInstalable, version: string): string {
   const [mayor = '0', menor = '0'] = version.split('.');
-  return servicio === 'node' ? String(Number(mayor)) : `${Number(mayor)}.${Number(menor)}`;
+  return servicio === 'node' || servicio === 'postgresql'
+    ? String(Number(mayor))
+    : `${Number(mayor)}.${Number(menor)}`;
 }
 
 /** Lista fija (`catalogo.json`): respaldo sin conexión, con su SHA-256 calculado al armarla. */
@@ -185,8 +197,13 @@ export class CatalogoVivo {
     return Object.hasOwn(propias, servicio) ? propias[servicio] : undefined;
   }
 
-  private contexto(): ContextoFuente {
-    return { f: this.f, idCatalogo: this.plataforma.idCatalogo(), ahora: this.ahora };
+  private contexto(previas?: readonly VersionDisponible[]): ContextoFuente {
+    return {
+      f: this.f,
+      idCatalogo: this.plataforma.idCatalogo(),
+      ahora: this.ahora,
+      ...(previas ? { previas } : {}),
+    };
   }
 
   /** Caché del servicio ya validada; null si falta o no pasa la validación. */
@@ -240,7 +257,8 @@ export class CatalogoVivo {
       return conCache(cache);
     }
     try {
-      const versiones = validarIndice(servicio, await fuente.listar(this.contexto()));
+      const previas = [...(cache?.versiones ?? []), ...listaFija(servicio)];
+      const versiones = validarIndice(servicio, await fuente.listar(this.contexto(previas)));
       if (versiones.length === 0) throw new Error('El índice no trae versiones');
       const fecha = this.ahora.toISOString();
       await this.cache.guardar(servicio, fecha, versiones).catch(() => undefined);
@@ -261,14 +279,16 @@ export class CatalogoVivo {
 
   /**
    * Una versión del índice sin huella fuerte que está en la lista fija con la misma URL toma
-   * el SHA-256 de la lista (calculado al armar el catálogo): no hace falta confirmar.
+   * el SHA-256 de la lista (calculado al armar el catálogo): no hace falta confirmar. Las
+   * versiones de la lista fija que el índice ya no trae (Nginx y PostgreSQL solo publican el
+   * último parche) se suman con su SHA-256 y origen "fija", con el soporte de su rama.
    */
   private conHuellaFija(
     servicio: ServicioInstalable,
     versiones: VersionDisponible[],
   ): VersionDisponible[] {
     const fija = listaFija(servicio);
-    return versiones.map((v) => {
+    const conHuella = versiones.map((v) => {
       if (huellaFuerte(v.huella)) return v;
       const f = fija.find((x) => x.version === v.version && x.url === v.url);
       if (!f) return v;
@@ -276,6 +296,15 @@ export class CatalogoVivo {
       delete resto.huellaDiferida;
       return { ...resto, huella: f.huella ?? null, sha256: f.sha256 };
     });
+    const extra = fija
+      .filter((f) => !versiones.some((v) => v.version === f.version))
+      .map((f) => {
+        const misma = versiones.find((v) => v.rama === f.rama);
+        return misma
+          ? { ...f, soporte: misma.soporte ?? 'actual', finSoporte: misma.finSoporte ?? null }
+          : f;
+      });
+    return [...conHuella, ...extra];
   }
 
   async listar(servicio: ServicioInstalable, o: FiltroVersiones = {}): Promise<ListadoVersiones> {

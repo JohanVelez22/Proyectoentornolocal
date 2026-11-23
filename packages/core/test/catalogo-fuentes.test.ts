@@ -29,6 +29,14 @@ describe('hosts y huellas', () => {
         'getcomposer.org',
         'nodejs.org',
         'windows.php.net',
+        'dev.mysql.com',
+        'cdn.mysql.com',
+        'downloads.mariadb.org',
+        'archive.mariadb.org',
+        'www.postgresql.org',
+        'get.enterprisedb.com',
+        'downloads.mongodb.org',
+        'nginx.org',
       ].sort(),
     );
     expect(HOSTS_PERMITIDOS).toContain('release-assets.githubusercontent.com');

@@ -300,9 +300,9 @@ describe('CatalogoVivo', () => {
 
   it('servicios sin fuente en vivo salen de la lista fija; buscar también la usa', async () => {
     const { c, ff } = catalogoCon({});
-    expect((await c.listar('nginx')).origen).toBe('fija');
-    expect(await c.buscar('nginx', catalogo.nginx[0]!.version)).toMatchObject(
-      listaFija('nginx')[0]!,
+    expect((await c.listar('adminer')).origen).toBe('fija');
+    expect(await c.buscar('adminer', catalogo.adminer[0]!.version)).toMatchObject(
+      listaFija('adminer')[0]!,
     );
     expect(ff.pedidas).toEqual([]);
   });
