@@ -331,6 +331,27 @@ describe('auto_prepend_file solo con la captura activa del sitio', () => {
     expect(ini).toContain('wolfcore.prepend_previo = "C:/sitio/pre.php"');
   });
 
+  it('si el prepend anterior es el nuestro, no se encadena (sin recursión)', () => {
+    const s = sitio({ capturaDumps: true });
+    for (const previo of [
+      'C:/Datos/etc/php/wolfcore-prepend.php',
+      '"c:\\datos\\etc\\php\\WOLFCORE-prepend.php"',
+    ]) {
+      const ini = iniSitio(s, `[PHP]\nauto_prepend_file = ${previo}\n`, null, [], PREPEND);
+      expect(ini).not.toContain('wolfcore.prepend_previo');
+      expect(ini).toContain('auto_prepend_file = "C:/Datos/etc/php/wolfcore-prepend.php"');
+    }
+    const propio = sitio({ capturaDumps: true, phpIni: { auto_prepend_file: PREPEND } });
+    expect(iniSitio(propio, '[PHP]\n', null, [], PREPEND)).not.toContain('prepend_previo');
+  });
+
+  it('el script carga el prepend anterior con require_once y nunca a sí mismo', () => {
+    const php = prependPhp({ rutaReceptor: 'C:/Datos/run/depuracion.json' });
+    expect(php).toContain('require_once');
+    expect(php).not.toMatch(/\brequire get_cfg_var/);
+    expect(php).toContain('__FILE__');
+  });
+
   it('un sitio sin PHP nunca lleva prepend', () => {
     const s = sitio({ tipo: 'fastapi', php: null, capturaDumps: true });
     expect(necesitaPoolPropio(s)).toBe(false);

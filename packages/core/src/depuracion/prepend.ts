@@ -118,6 +118,20 @@ if (!class_exists('WolfCoreDump', false)) {
             return false;
         }
 
+        /** ¿$previo es otro archivo que $propio? (rutas reales; en Windows sin mayúsculas) */
+        public static function esOtroArchivo($previo, $propio)
+        {
+            $a = @realpath($previo);
+            $b = @realpath($propio);
+            $a = str_replace('\\', '/', $a === false ? $previo : $a);
+            $b = str_replace('\\', '/', $b === false ? $propio : $b);
+            if (DIRECTORY_SEPARATOR === '\\') {
+                $a = strtolower($a);
+                $b = strtolower($b);
+            }
+            return $a !== $b;
+        }
+
         private static function receptor()
         {
             $j = @file_get_contents(self::RECEPTOR);
@@ -283,8 +297,11 @@ if (!function_exists('dd')) {
     }
 }
 
-if (is_string(get_cfg_var('wolfcore.prepend_previo')) && get_cfg_var('wolfcore.prepend_previo') !== '') {
-    require get_cfg_var('wolfcore.prepend_previo');
+// El prepend anterior (del sitio o de la rama), en el ámbito global. Nunca este mismo archivo
+// (sería una recursión sin fin); require_once además evita cargarlo dos veces.
+if (is_string(get_cfg_var('wolfcore.prepend_previo')) && get_cfg_var('wolfcore.prepend_previo') !== ''
+    && WolfCoreDump::esOtroArchivo(get_cfg_var('wolfcore.prepend_previo'), __FILE__)) {
+    require_once get_cfg_var('wolfcore.prepend_previo');
 }
 `;
 

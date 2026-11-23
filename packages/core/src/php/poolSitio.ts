@@ -48,6 +48,18 @@ export function capturaPhp(s: Sitio): boolean {
 /** Ruta para el ini: barras normales (como zend_extension) y entre comillas. */
 const rutaEnIni = (r: string): string => `"${r.replace(/\\/g, '/')}"`;
 
+/**
+ * Ruta de un valor de ini para compararla: sin comillas, con `/` y en minúsculas (en todos los
+ * sistemas: confundir dos prepends que solo difieren en mayúsculas en Linux es inofensivo).
+ */
+const rutaIniNormalizada = (r: string): string =>
+  r
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/\\/g, '/')
+    .replace(/\/{2,}/g, '/')
+    .toLowerCase();
+
 /** Trabajadores del pool del sitio: 2 con Xdebug (uno detenido en un punto no frena el resto). */
 export function trabajadoresPool(s: Sitio): number {
   return s.xdebug?.activo ? 2 : 1;
@@ -155,7 +167,12 @@ export function iniSitio(
       valoresDe(iniRama, ['auto_prepend_file'])['auto_prepend_file'] ??
       '';
     lineas.push('; ---- WolfCore Dev: captura de dump() ----', `wolfcore.sitio = "${s.id}"`);
-    if (previo.trim() !== '' && !/^none$/i.test(previo.trim())) {
+    if (
+      previo.trim() !== '' &&
+      !/^none$/i.test(previo.trim()) &&
+      // Si ya era el nuestro, encadenarlo lo cargaría dentro de sí mismo sin fin.
+      rutaIniNormalizada(previo) !== rutaIniNormalizada(rutaPrepend)
+    ) {
       lineas.push(`wolfcore.prepend_previo = ${rutaEnIni(previo.trim())}`);
     }
     lineas.push(`auto_prepend_file = ${rutaEnIni(rutaPrepend)}`);

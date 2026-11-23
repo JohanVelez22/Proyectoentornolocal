@@ -276,6 +276,16 @@ describe.skipIf(!hayPhp)('prepend de dumps con un PHP real', () => {
     expect(c.salida).toBe('P:si');
   });
 
+  it('un prepend anterior que apunta al nuestro no entra en recursión', async () => {
+    const otraForma = prepend.replace(/\\/g, '/');
+    const c = await correr('<?php\necho "OK:", function_exists("wd") ? "si" : "no";\n', [
+      `wolfcore.prepend_previo = "${process.platform === 'win32' ? otraForma.toUpperCase() : otraForma}"`,
+    ]);
+    expect(c.error).toBe('');
+    expect(c.codigo).toBe(0);
+    expect(c.salida).toBe('OK:si');
+  });
+
   it('un autoloader propio que hace require de cualquier clase no se dispara', async () => {
     const { r, llegados } = await receptorReal(base);
     try {
