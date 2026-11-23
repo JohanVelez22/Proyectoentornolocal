@@ -269,6 +269,18 @@ describe('prepend y wolfdump', () => {
     expect(php).not.toMatch(/\beval\s*\(/);
   });
 
+  it('el token nunca viaja como argumento de una función del prepend', () => {
+    const php = prependPhp({ rutaReceptor: 'C:/Datos/run/depuracion.json' });
+    // enviar() lee el receptor por dentro: solo recibe los datos, marcados como sensibles.
+    expect(php).toMatch(/function enviar\(\s*#\[\\SensitiveParameter\]\s*array \$datos\s*\)/);
+    expect(php).not.toMatch(/self::enviar\(\s*\$c\b/);
+    expect(php).toMatch(/function capturar\(\s*#\[\\SensitiveParameter\]\s*array \$valores\s*\)/);
+    // El atributo va en su propia línea: en PHP 7, `#[` es un comentario hasta el final de la línea.
+    for (const l of php.split('\n').filter((x) => x.includes('#[\\SensitiveParameter]'))) {
+      expect(l.trim()).toBe('#[\\SensitiveParameter]');
+    }
+  });
+
   it('wolfdump.py lee el mismo archivo y define dump()', () => {
     const py = wolfdumpPy({ rutaReceptor: 'C:\\Datos\\run\\depuracion.json' });
     expect(py).toContain('"C:\\\\Datos\\\\run\\\\depuracion.json"');

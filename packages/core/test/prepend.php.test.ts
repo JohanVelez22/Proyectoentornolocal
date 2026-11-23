@@ -176,6 +176,37 @@ describe.skipIf(!hayPhp)('prepend de dumps con un PHP real', () => {
     }
   });
 
+  it('el token no aparece en trazas con argumentos (exception_ignore_args=Off) ni con un manejador que lanza', async () => {
+    // Un receptor que acepta y corta: fwrite/fread fallan dentro de enviar().
+    const cortador = net.createServer((s) => s.destroy());
+    await new Promise<void>((ok) => cortador.listen(0, '127.0.0.1', () => ok()));
+    const puerto = (cortador.address() as net.AddressInfo).port;
+    const token = 'c'.repeat(64);
+    const fs = await import('node:fs/promises');
+    await fs.writeFile(receptor, JSON.stringify({ puerto, token, pid: process.pid }));
+    try {
+      const c = await correr(
+        [
+          '<?php',
+          // Como Laravel: todo aviso se vuelve excepción, y las excepciones se muestran con traza.
+          'set_error_handler(function ($n, $m, $f, $l) { throw new ErrorException($m, 0, $n, $f, $l); });',
+          'set_exception_handler(function ($e) { echo "TRAZA:", $e->getTraceAsString(), print_r($e->getTrace(), true); });',
+          'register_shutdown_function(function () { echo "\\nERR:", print_r(error_get_last(), true); });',
+          'for ($i = 0; $i < 3; $i++) { dump(["i" => $i]); wd($i); }',
+          'echo "\\nFIN";',
+          'throw new RuntimeException("adrede");',
+        ].join('\n'),
+        ['zend.exception_ignore_args = Off', 'display_errors = On', 'html_errors = Off'],
+      );
+      expect(c.salida).toContain('FIN');
+      expect(c.salida).toContain('TRAZA:');
+      expect(c.salida + c.error).not.toContain(token);
+    } finally {
+      await fs.rm(receptor, { force: true });
+      cortador.close();
+    }
+  });
+
   it('wd() solo envía; dd() envía, muestra y detiene con código 1', async () => {
     const { r, llegados } = await receptorReal(base);
     try {

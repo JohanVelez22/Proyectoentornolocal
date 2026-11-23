@@ -55,12 +55,13 @@ if (!class_exists('WolfCoreDump', false)) {
         const PLAZO = 0.2;
 
         /** Envía los valores al receptor; nunca lanza ni muestra nada. */
-        public static function capturar(array $valores)
-        {
+        public static function capturar(
+            #[\SensitiveParameter]
+            array $valores
+        ) {
             set_error_handler(function () { return true; });
             try {
-                $c = self::receptor();
-                if ($c === null) {
+                if (self::receptor() === null) {
                     return;
                 }
                 $origen = self::origen();
@@ -68,7 +69,7 @@ if (!class_exists('WolfCoreDump', false)) {
                 foreach ($valores as $k => $v) {
                     $partes[] = (is_string($k) ? $k . ': ' : '') . self::texto($v);
                 }
-                self::enviar($c, array(
+                self::enviar(array(
                     'origen' => 'php',
                     'sitio' => self::sitio(),
                     'archivo' => $origen[0],
@@ -208,8 +209,16 @@ if (!class_exists('WolfCoreDump', false)) {
             return strlen($t) > self::MAX_TEXTO ? substr($t, 0, self::MAX_TEXTO) . "\n…" : $t;
         }
 
-        private static function enviar(array $c, array $datos)
-        {
+        /**
+         * El token se lee aquí dentro y nunca pasa como argumento de una función del script: una
+         * traza con argumentos (Xdebug develop, zend.exception_ignore_args=Off) no lo puede
+         * mostrar. Los parámetros llevan el atributo SensitiveParameter (PHP 8.2+; en PHP 7 la línea del
+         * atributo es un comentario). Todo aviso lo traga el manejador de capturar().
+         */
+        private static function enviar(
+            #[\SensitiveParameter]
+            array $datos
+        ) {
             $json = json_encode(
                 $datos,
                 JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR
@@ -217,18 +226,23 @@ if (!class_exists('WolfCoreDump', false)) {
             if (!is_string($json) || strlen($json) > self::MAX_CUERPO) {
                 return;
             }
-            $s = @stream_socket_client('tcp://127.0.0.1:' . $c['puerto'], $en, $es, self::PLAZO);
+            $c = self::receptor();
+            if ($c === null) {
+                return;
+            }
+            $puerto = $c['puerto'];
+            $peticion = "POST /dump HTTP/1.1\r\nHost: 127.0.0.1:" . $puerto
+                . "\r\nAuthorization: Bearer " . $c['token']
+                . "\r\nContent-Type: application/json\r\nContent-Length: " . strlen($json)
+                . "\r\nConnection: close\r\n\r\n" . $json;
+            $c = null;
+            $s = @stream_socket_client('tcp://127.0.0.1:' . $puerto, $en, $es, self::PLAZO);
             if (!$s) {
                 return;
             }
             stream_set_timeout($s, 0, (int) (self::PLAZO * 1000000));
-            @fwrite(
-                $s,
-                "POST /dump HTTP/1.1\r\nHost: 127.0.0.1:" . $c['puerto']
-                . "\r\nAuthorization: Bearer " . $c['token']
-                . "\r\nContent-Type: application/json\r\nContent-Length: " . strlen($json)
-                . "\r\nConnection: close\r\n\r\n" . $json
-            );
+            @fwrite($s, $peticion);
+            $peticion = null;
             @fgets($s, 128);
             @fclose($s);
         }
