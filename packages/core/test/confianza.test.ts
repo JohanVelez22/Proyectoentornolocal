@@ -245,6 +245,35 @@ describe('ConfianzaCa: bundle de Python', () => {
     expect(esperas.reduce((a, b) => a + b, 0)).toBeGreaterThan(2000);
   });
 
+  it('solo el bundle de Python aguanta el bloqueo largo; confianza.json y user.js reintentan poco', async () => {
+    ca = await crearCa();
+    const err = (): NodeJS.ErrnoException => Object.assign(new Error('EPERM'), { code: 'EPERM' });
+    let n = 0;
+    const c = new ConfianzaCa({
+      rutas,
+      plataforma: plat,
+      carpetaRespaldos: path.join(base, 'etc', 'respaldos'),
+      entorno: {},
+      renombrar: async () => {
+        n++;
+        throw err();
+      },
+      esperar: async () => undefined,
+    });
+    await expect(c.nodeGlobal(false)).rejects.toMatchObject({ code: 'EPERM' });
+    const corto = n;
+    n = 0;
+    await expect(c.bundlePython(null)).rejects.toMatchObject({ code: 'EPERM' });
+    const largo = n;
+    expect(corto).toBeGreaterThan(1);
+    expect(corto).toBeLessThanOrEqual(10);
+    expect(largo).toBe(60);
+    // Sin temporales sueltos.
+    expect((await readdir(path.join(base, 'etc', 'ca'))).filter((x) => x.endsWith('.tmp'))).toEqual(
+      [],
+    );
+  });
+
   it('se regenera si cambia la CA (certifi)', async () => {
     ca = await crearCa();
     const dir = await proyecto({ venv: true, certifi: generarCA().certPem });

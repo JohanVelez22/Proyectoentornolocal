@@ -124,7 +124,18 @@ export interface DepsConfianza {
   /** Entorno base de los procesos (por defecto, el de este proceso). */
   entorno?: Record<string, string | undefined>;
   ahora?: () => Date;
+  /** Para pruebas: `rename` y la espera entre reintentos. */
+  renombrar?: (de: string, a: string) => Promise<void>;
+  esperar?: (ms: number) => Promise<void>;
 }
+
+/**
+ * Reintentos de `rename` fuera del bundle de Python (`confianza.json`, `user.js`): nadie los lee
+ * a cada rato, así que un bloqueo largo es raro y no vale la pena esperar segundos.
+ */
+export const INTENTOS_RENOMBRAR_CORTOS = 8;
+/** El bundle de Python sí lo leen los procesos a cada rato: se aguanta un bloqueo largo. */
+export const INTENTOS_RENOMBRAR_BUNDLE = 60;
 
 /** Trabajos en curso por archivo destino (en este proceso): uno detrás de otro. */
 const turnos = new Map<string, Promise<unknown>>();
@@ -228,13 +239,14 @@ export class ConfianzaCa {
     destino: string,
     contenido: string,
     antes?: () => Promise<void>,
+    intentos = INTENTOS_RENOMBRAR_CORTOS,
   ): Promise<void> {
     await mkdir(path.dirname(destino), { recursive: true });
     const tmp = `${destino}.${randomUUID().slice(0, 12)}.tmp`;
     try {
       await writeFile(tmp, contenido, 'utf8');
       await antes?.();
-      await renombrarConReintentos(tmp, destino);
+      await renombrarConReintentos(tmp, destino, this.d.renombrar, intentos, this.d.esperar);
     } catch (e) {
       await rm(tmp, { force: true }).catch(() => undefined);
       throw e;
@@ -353,9 +365,16 @@ export class ConfianzaCa {
       } catch {
         actual = null;
       }
-      if (actual !== fijo) await this.escribirAtomico(destino, fijo);
+      if (actual !== fijo) {
+        await this.escribirAtomico(destino, fijo, undefined, INTENTOS_RENOMBRAR_BUNDLE);
+      }
     } else {
-      await this.escribirAtomico(destino, contenido(this.ahora.toISOString()));
+      await this.escribirAtomico(
+        destino,
+        contenido(this.ahora.toISOString()),
+        undefined,
+        INTENTOS_RENOMBRAR_BUNDLE,
+      );
     }
     return destino;
   }
