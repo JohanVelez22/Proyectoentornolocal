@@ -1,7 +1,7 @@
 import os from 'node:os';
 import {
   comandoConsolaVisible,
-  lanzarSeparado,
+  lanzarEnConsolaNueva,
   type LanzadorSeparado,
 } from '../plataforma/terminalWin';
 import type { Ejecutor } from '../plataforma/tipos';
@@ -100,7 +100,7 @@ export class GitHub {
     this.exec = d.exec ?? ejecutorPorDefecto;
     this.entorno = d.entorno ?? process.env;
     this.fetch = d.fetch ?? globalThis.fetch;
-    this.lanzar = d.lanzarSeparado ?? lanzarSeparado;
+    this.lanzar = d.lanzarSeparado ?? lanzarEnConsolaNueva;
     this.git = new Git({ exec: this.exec, entorno: this.entorno, existe: d.existe });
   }
 

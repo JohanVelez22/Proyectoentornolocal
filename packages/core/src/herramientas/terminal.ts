@@ -4,16 +4,22 @@ import path from 'node:path';
 import { nombreEjecutable } from '../plataforma/sistema';
 import {
   abrirTerminalWindows,
-  lanzarSeparado,
+  existeEntrada,
+  lanzarEnConsolaNueva,
+  terminalesWindows,
   type LanzadorSeparado,
 } from '../plataforma/terminalWin';
 import type { ConfianzaCa } from '../https/confianza';
-import type { CapacidadesPlataforma } from '../plataforma/tipos';
+import type { CapacidadesPlataforma, IdTerminal, TerminalDisponible } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import type { ResolutorRuntimes, SitioConRuntimes } from '../runtimes/runtimes';
 import type { Sitio } from '../tipos';
 
-export { lanzarSeparado, type LanzadorSeparado } from '../plataforma/terminalWin';
+export {
+  lanzarEnConsolaNueva,
+  lanzarSeparado,
+  type LanzadorSeparado,
+} from '../plataforma/terminalWin';
 
 export interface DepsTerminal {
   rutas: Rutas;
@@ -24,7 +30,8 @@ export interface DepsTerminal {
    * Quien abre la terminal (`Plataforma.abrirTerminal`). Sin ella, la de Windows con `entorno`,
    * `existe` y `lanzar` (compatibilidad con las pruebas anteriores).
    */
-  plataforma?: Pick<CapacidadesPlataforma, 'abrirTerminal'>;
+  plataforma?: Pick<CapacidadesPlataforma, 'abrirTerminal'> &
+    Partial<Pick<CapacidadesPlataforma, 'terminalesInstaladas'>>;
   /** php.ini de la rama (lo genera si falta). */
   asegurarPhpIni?: (rama: string) => Promise<string>;
   /** Rama de PHP por defecto cuando el sitio no tiene una instalada. */
@@ -40,16 +47,24 @@ const RAMA = /^\d+\.\d+$/;
 export class Terminal {
   private readonly entorno: NodeJS.ProcessEnv;
   private readonly existe: (ruta: string) => boolean;
-  private readonly plataforma: Pick<CapacidadesPlataforma, 'abrirTerminal'>;
+  private readonly plataforma: Pick<CapacidadesPlataforma, 'abrirTerminal'> &
+    Partial<Pick<CapacidadesPlataforma, 'terminalesInstaladas'>>;
 
   constructor(private readonly d: DepsTerminal) {
     this.entorno = d.entorno ?? process.env;
     this.existe = d.existe ?? existsSync;
-    const lanzar = d.lanzar ?? lanzarSeparado;
+    const lanzar = d.lanzar ?? lanzarEnConsolaNueva;
+    const existeTerminal = d.existe ?? ((r: string) => existsSync(r) || existeEntrada(r));
     this.plataforma = d.plataforma ?? {
       abrirTerminal: (cwd, o = {}) =>
-        abrirTerminalWindows(cwd, o, { entorno: this.entorno, existe: this.existe, lanzar }),
+        abrirTerminalWindows(cwd, o, { entorno: this.entorno, existe: existeTerminal, lanzar }),
+      terminalesInstaladas: async () => terminalesWindows(this.entorno, existeTerminal),
     };
+  }
+
+  /** Terminales instaladas que se pueden elegir (solo mira archivos). */
+  async disponibles(): Promise<TerminalDisponible[]> {
+    return (await this.plataforma.terminalesInstaladas?.()) ?? [];
   }
 
   /**
@@ -82,8 +97,14 @@ export class Terminal {
     return env;
   }
 
-  /** Abre una terminal en la carpeta del sitio con su PHP, Composer y herramientas en el PATH. */
-  async abrir(sitio: Pick<Sitio, 'carpeta' | 'php'> & SitioConRuntimes): Promise<void> {
+  /**
+   * Abre una terminal en la carpeta del sitio con su PHP, Composer y herramientas en el PATH.
+   * `terminal`: la elegida (o la predeterminada de Ajustes); sin ella, la del sistema.
+   */
+  async abrir(
+    sitio: Pick<Sitio, 'carpeta' | 'php'> & SitioConRuntimes,
+    terminal: IdTerminal | null = null,
+  ): Promise<void> {
     if (!this.existe(sitio.carpeta)) {
       throw new ErrorWolf(
         'herramientas.carpeta_sitio_inexistente',
@@ -94,6 +115,6 @@ export class Terminal {
       ...(await this.entornoConPath(sitio.php, sitio)),
       ...(this.d.confianza ? await this.d.confianza.envProyecto(sitio).catch(() => ({})) : {}),
     };
-    await this.plataforma.abrirTerminal(sitio.carpeta, { env });
+    await this.plataforma.abrirTerminal(sitio.carpeta, { env, terminal });
   }
 }

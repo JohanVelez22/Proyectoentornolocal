@@ -16,6 +16,7 @@ import { Adminer, urlAdminer } from '../src/herramientas/adminer';
 import { Composer } from '../src/herramientas/composer';
 import { PathUsuario } from '../src/herramientas/pathUsuario';
 import { Terminal } from '../src/herramientas/terminal';
+import { decodificarComando } from '../src/plataforma/terminalWin';
 import { generarNginxPrincipal } from '../src/nginx/principal';
 import type { Ejecutor } from '../src/plataforma/tipos';
 import { ejecutorPorDefecto } from '../src/plataforma/win';
@@ -194,7 +195,7 @@ describe('Terminal', () => {
     return { t, llamadas, carpeta, wt };
   };
 
-  it('con wt.exe: el entorno propio va por PowerShell (wt podría no heredarlo); PATH con php, tools/bin y el actual', async () => {
+  it('con wt.exe y sin terminal elegida: PowerShell; PATH con php, tools/bin y el actual', async () => {
     const { t, llamadas, carpeta, wt } = armar(true);
     await t.abrir({ carpeta, php: '8.4' });
     expect(llamadas).toHaveLength(1);
@@ -216,11 +217,10 @@ describe('Terminal', () => {
     mkdirSync(rara);
     await t.abrir({ carpeta: rara, php: null });
     expect(llamadas[0]!.cmd).toBe('powershell.exe');
-    expect(llamadas[0]!.args).toEqual([
-      '-NoExit',
-      '-Command',
+    expect(llamadas[0]!.args.slice(0, 2)).toEqual(['-NoExit', '-EncodedCommand']);
+    expect(decodificarComando(llamadas[0]!.args[2]!)).toBe(
       `Set-Location -LiteralPath '${rara.replace(/'/g, "''")}'`,
-    ]);
+    );
     expect(llamadas[0]!.env.Path!.startsWith(path.join(base, 'tools', 'bin'))).toBe(true);
     // sin PHP propio: el php.ini y el PHP por defecto
     expect(llamadas[0]!.env.WOLFCORE_PHP).toBe(path.join(rutas.bin('php', '8.2'), 'php.exe'));
@@ -233,7 +233,7 @@ describe('Terminal', () => {
     mkdirSync(rara);
     await t.abrir({ carpeta: rara, php: null });
     expect(llamadas[0]!.cmd).toBe('powershell.exe');
-    expect(llamadas[0]!.args[2]).toBe(`Set-Location -LiteralPath '${rara}'`);
+    expect(decodificarComando(llamadas[0]!.args[2]!)).toBe(`Set-Location -LiteralPath '${rara}'`);
     expect(llamadas[0]!.cwd).toBe(rara);
   });
 
@@ -242,7 +242,9 @@ describe('Terminal', () => {
     const rara = path.join(base, 'O’Brien');
     mkdirSync(rara);
     await t.abrir({ carpeta: rara, php: null });
-    expect(llamadas[0]!.args[2]).toBe(`Set-Location -LiteralPath '${rara.replace('’', '’’')}'`);
+    expect(decodificarComando(llamadas[0]!.args[2]!)).toBe(
+      `Set-Location -LiteralPath '${rara.replace('’', '’’')}'`,
+    );
   });
 
   it('carpeta inexistente: error claro y no lanza nada', async () => {

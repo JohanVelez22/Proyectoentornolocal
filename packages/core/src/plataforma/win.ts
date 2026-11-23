@@ -36,7 +36,14 @@ import { crearLanzadorOculto, type LanzadorOculto } from './lanzarOculto';
 import { interpretarNetstatTodos, interpretarTasklist, interpretarTasklistTodos } from './netstat';
 import { aBase64, codificarPowerShell, PathUsuarioWindows } from './pathUsuarioWin';
 import { ProcesosWindows, descendientesEnTabla, rutaSistema32 } from './procesosWin';
-import { abrirTerminalWindows, lanzarSeparado, type LanzadorSeparado } from './terminalWin';
+import {
+  abrirTerminalWindows,
+  existeEntrada,
+  lanzarEnConsolaNueva,
+  lanzarSeparado,
+  terminalesWindows,
+  type LanzadorSeparado,
+} from './terminalWin';
 import { nombreEjecutable, sistemaActual } from './sistema';
 
 export { interpretarTasklist, interpretarTasklistTodos } from './netstat';
@@ -50,6 +57,7 @@ import type {
   OpcionesEscrituraAdmin,
   OpcionesAbrirTerminal,
   PerfilFirefoxSistema,
+  TerminalDisponible,
   PlataformaCompleta,
   RangoPuertos,
   ResultadoEscritura,
@@ -280,10 +288,15 @@ export const rutaTarSistema = (): string =>
 export interface OpcionesPlataformaWindows {
   /** Variables de entorno (por defecto, las del proceso). */
   entorno?: NodeJS.ProcessEnv;
-  /** ¿Existe el archivo? (por defecto, `existsSync`). */
+  /**
+   * ¿Existe el archivo? Por defecto, `existsSync` o, si dice que no, `lstat` (así se ven los
+   * alias de la Tienda como `wt.exe`, cuyo `stat` da EACCES).
+   */
   existeRuta?: (ruta: string) => boolean;
-  /** Lanzador de las ventanas visibles (terminal). */
+  /** Lanzador de las terminales visibles (programas de consola en una consola nueva). */
   lanzarSeparado?: LanzadorSeparado;
+  /** Lanzador de programas con ventana propia (Windows Terminal). */
+  lanzarGui?: LanzadorSeparado;
   arquitectura?: string;
   /** Carpeta de los temporales de hosts (por defecto, %TEMP%). */
   carpetaTemporal?: string;
@@ -300,6 +313,7 @@ export class PlataformaWindows implements PlataformaCompleta {
   private readonly entorno: NodeJS.ProcessEnv;
   private readonly existeRuta: (ruta: string) => boolean;
   private readonly lanzarSeparado: LanzadorSeparado;
+  private readonly lanzarGui: LanzadorSeparado;
   private readonly arquitectura: string;
 
   constructor(
@@ -308,8 +322,9 @@ export class PlataformaWindows implements PlataformaCompleta {
     o: OpcionesPlataformaWindows = {},
   ) {
     this.entorno = o.entorno ?? process.env;
-    this.existeRuta = o.existeRuta ?? existsSync;
-    this.lanzarSeparado = o.lanzarSeparado ?? lanzarSeparado;
+    this.existeRuta = o.existeRuta ?? ((r) => existsSync(r) || existeEntrada(r));
+    this.lanzarSeparado = o.lanzarSeparado ?? lanzarEnConsolaNueva;
+    this.lanzarGui = o.lanzarGui ?? lanzarSeparado;
     this.arquitectura = o.arquitectura ?? arch();
     this.carpetaTemporal = o.carpetaTemporal ?? tmpdir();
   }
@@ -388,7 +403,12 @@ export class PlataformaWindows implements PlataformaCompleta {
       entorno: this.entorno,
       existe: this.existeRuta,
       lanzar: this.lanzarSeparado,
+      lanzarGui: this.lanzarGui,
     });
+  }
+
+  async terminalesInstaladas(): Promise<TerminalDisponible[]> {
+    return terminalesWindows(this.entorno, this.existeRuta);
   }
 
   /** Fuera de Windows (solo en pruebas) no hay PowerShell: ninguno. */

@@ -7,12 +7,14 @@ import type {
   ComandoManual,
   EstadoAntivirus,
   IdCatalogo,
+  IdTerminal,
   OpcionesAbrirTerminal,
   PerfilFirefoxSistema,
   PlataformaCompleta,
   RangoPuertos,
   ResultadoEscritura,
   ServicioSistema,
+  TerminalDisponible,
 } from './tipos';
 
 export interface OpcionesPlataformaFalsa {
@@ -24,6 +26,12 @@ export interface OpcionesPlataformaFalsa {
   /** Sufijo de los ejecutables (por defecto `.exe`, como en Windows). */
   sufijoEjecutable?: string;
 }
+
+/** Terminales que la plataforma falsa dice tener (las pruebas pueden cambiarlas). */
+export const TERMINALES_FALSAS: TerminalDisponible[] = [
+  { id: 'powershell', nombre: 'Windows PowerShell', ruta: 'C:/Windows/powershell.exe' },
+  { id: 'cmd', nombre: 'Símbolo del sistema (cmd)', ruta: 'C:/Windows/cmd.exe' },
+];
 
 /**
  * Plataforma para pruebas: todo en memoria y registrado en campos públicos. Nunca toca el
@@ -41,6 +49,7 @@ export class PlataformaFalsa implements PlataformaCompleta {
     cwd: string;
     env?: Record<string, string | undefined>;
     comando?: string[];
+    terminal?: IdTerminal | null;
   }[] = [];
   /** Ejecutables que `buscarEjecutable` encuentra (nombre → ruta). */
   readonly ejecutables = new Map<string, string>();
@@ -192,6 +201,13 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async abrirTerminal(cwd: string, o: OpcionesAbrirTerminal = {}): Promise<void> {
     this.terminales.push({ cwd, ...o });
+  }
+
+  /** Terminales instaladas (cambiables en la prueba). */
+  instaladas: TerminalDisponible[] = [...TERMINALES_FALSAS];
+
+  async terminalesInstaladas(): Promise<TerminalDisponible[]> {
+    return [...this.instaladas];
   }
 
   /** Sin lanzador oculto: los procesos se lanzan con el `spawn` (falso) de la prueba. */

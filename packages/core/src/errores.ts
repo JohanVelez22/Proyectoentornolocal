@@ -55,6 +55,10 @@ export const PARAMETROS_ERROR = {
   'herramientas.sin_seleccion': [],
   'herramientas.dominio_invalido': [],
   'herramientas.demasiados_dominios': ['maximo'],
+  // terminal
+  'terminal.no_abrio': [],
+  'terminal.no_instalada': ['nombre'],
+  'terminal.invalida': [],
   // proyectos
   'proyectos.no_existe': [],
   'proyectos.no_confiado': [],

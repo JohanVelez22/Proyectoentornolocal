@@ -37,11 +37,39 @@ export interface AccesoPathUsuario {
   valorCrudo?(): Promise<{ valor: string; tipo: string }>;
 }
 
+/**
+ * Terminales que WolfCore Dev sabe abrir. Windows: Windows Terminal, PowerShell 5, PowerShell 7
+ * (pwsh), Símbolo del sistema y Git Bash. Linux y macOS: la terminal del sistema y algunas
+ * conocidas (las usa la plataforma de esos sistemas desde la Etapa E).
+ */
+export const IDS_TERMINAL = [
+  'windows-terminal',
+  'powershell',
+  'pwsh',
+  'cmd',
+  'git-bash',
+  'sistema',
+  'gnome-terminal',
+  'konsole',
+  'iterm',
+] as const;
+export type IdTerminal = (typeof IDS_TERMINAL)[number];
+
+/** Una terminal instalada en este equipo. */
+export interface TerminalDisponible {
+  id: IdTerminal;
+  /** Nombre para mostrar (marca del programa; no se traduce). */
+  nombre: string;
+  ruta: string;
+}
+
 export interface OpcionesAbrirTerminal {
   /** Variables que se agregan (o reemplazan) al entorno de la terminal; solo en ese proceso. */
   env?: Record<string, string | undefined>;
   /** Programa y argumentos a ejecutar en la terminal (sin shell intermedio cuando se puede). */
   comando?: string[];
+  /** Terminal elegida; sin ella, la predeterminada del sistema (PowerShell en Windows). */
+  terminal?: IdTerminal | null;
 }
 
 export interface RangoPuertos {
@@ -113,6 +141,8 @@ export interface CapacidadesPlataforma {
   variableUsuario(nombre: string, valor: string | null): Promise<ResultadoEscritura>;
   /** Abre una terminal VISIBLE en `cwd` (la única ventana que se abre a pedido del usuario). */
   abrirTerminal(cwd: string, o?: OpcionesAbrirTerminal): Promise<void>;
+  /** Terminales instaladas que `abrirTerminal` sabe abrir (sin ejecutar nada). */
+  terminalesInstaladas(): Promise<TerminalDisponible[]>;
   /** Lanzador de servidores sin ventanas; null si este sistema no lo necesita o no lo tiene. */
   lanzadorOculto(carpetaTmp: string): LanzadorOculto | null;
   /** Descendientes (hijos, nietos…) de cada PID, en una sola consulta. */

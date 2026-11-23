@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { GitHub, interpretarGhApiRepos } from '../src/git/github';
+import { decodificarComando } from '../src/plataforma/terminalWin';
 import type { Ejecutor } from '../src/plataforma/tipos';
 
 const TOKEN = 'ghp_TokenDePruebaMuySecreto1234567890';
@@ -230,8 +231,8 @@ describe('GitHub.instalarGh e iniciarSesionGh', () => {
     await gh.iniciarSesionGh();
     expect(lanzadas).toHaveLength(1);
     expect(lanzadas[0]!.cmd).toBe('powershell.exe');
-    const comando = lanzadas[0]!.args.join(' ');
-    expect(comando).toContain('-NoExit');
+    const comando = decodificarComando(lanzadas[0]!.args[2]!);
+    expect(lanzadas[0]!.args.slice(0, 2)).toEqual(['-NoExit', '-EncodedCommand']);
     expect(comando).toContain("'C:\\Program Files\\GitHub CLI\\gh.exe'");
     expect(comando).toContain('auth login --web');
   });

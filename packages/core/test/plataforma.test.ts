@@ -291,45 +291,137 @@ describe('PlataformaWindows con un ejecutor falso', () => {
     },
   );
 
-  it('abrirTerminal con comando: Windows Terminal si existe; si no, PowerShell visible', async () => {
-    const llamadas: { cmd: string; args: string[]; env: NodeJS.ProcessEnv }[] = [];
+  it('abrirTerminal: PowerShell en una consola nueva; wt solo elegido y sin variables', async () => {
+    const llamadas: { cmd: string; args: string[]; env: NodeJS.ProcessEnv; gui: boolean }[] = [];
     const wt = 'C:\\L\\Microsoft\\WindowsApps\\wt.exe';
+    const ps = 'C:\\W\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
     let hayWt = true;
     const p = new PlataformaWindows(undefined, undefined, {
-      entorno: { LOCALAPPDATA: 'C:\\L', Path: 'C:\\W' },
-      existeRuta: (r) => r === wt && hayWt,
+      entorno: { LOCALAPPDATA: 'C:\\L', SystemRoot: 'C:\\W', Path: 'C:\\W' },
+      existeRuta: (r) => (r === wt ? hayWt : r === ps),
       lanzarSeparado: async (cmd, args, o) => {
-        llamadas.push({ cmd, args, env: o.env });
+        llamadas.push({ cmd, args, env: o.env, gui: false });
+      },
+      lanzarGui: async (cmd, args, o) => {
+        llamadas.push({ cmd, args, env: o.env, gui: true });
       },
     });
-    // Sin variables propias: Windows Terminal (ventana nueva).
+    const base = { LOCALAPPDATA: 'C:\\L', SystemRoot: 'C:\\W', Path: 'C:\\W' };
+    // Sin terminal elegida: PowerShell (consola nueva), aunque esté Windows Terminal.
     await p.abrirTerminal('C:\\P', { comando: ['claude', '--help'] });
-    expect(llamadas[0]).toEqual({
+    expect(llamadas[0]).toMatchObject({ cmd: ps, gui: false, env: base });
+    expect(llamadas[0]!.args.slice(0, 2)).toEqual(['-NoExit', '-EncodedCommand']);
+    expect(script(llamadas[0]!.args)).toBe("Set-Location -LiteralPath 'C:\\P'; & 'claude' --help");
+    // Windows Terminal elegido y sin variables propias: wt (programa con ventana propia).
+    await p.abrirTerminal('C:\\P', { comando: ['claude', '--help'], terminal: 'windows-terminal' });
+    expect(llamadas[1]).toEqual({
       cmd: wt,
       args: ['-w', 'new', '-d', '.', 'claude', '--help'],
-      env: { LOCALAPPDATA: 'C:\\L', Path: 'C:\\W' },
+      env: base,
+      gui: true,
     });
     // Con variables (clave, token, PATH del proyecto): nunca por wt, porque puede atenderlo un
     // proceso de Windows Terminal ya abierto que no hereda este entorno. PowerShell sí.
-    await p.abrirTerminal('C:\\P', { env: { CLAVE: 'x' }, comando: ['claude', '--help'] });
-    expect(llamadas[1]).toEqual({
-      cmd: 'powershell.exe',
-      args: ['-NoExit', '-Command', "Set-Location -LiteralPath 'C:\\P'; & 'claude' --help"],
-      env: { LOCALAPPDATA: 'C:\\L', Path: 'C:\\W', CLAVE: 'x' },
+    await p.abrirTerminal('C:\\P', {
+      env: { CLAVE: 'x' },
+      comando: ['claude', '--help'],
+      terminal: 'windows-terminal',
     });
+    expect(llamadas[2]).toMatchObject({ cmd: ps, gui: false, env: { ...base, CLAVE: 'x' } });
     expect(llamadas.filter((l) => l.cmd === wt && l.env.CLAVE !== undefined)).toEqual([]);
     // Un env vacío (o solo con undefined) no cuenta como variables propias.
-    await p.abrirTerminal('C:\\P', { env: { NADA: undefined } });
-    expect(llamadas[2]!.cmd).toBe(wt);
+    await p.abrirTerminal('C:\\P', { env: { NADA: undefined }, terminal: 'windows-terminal' });
+    expect(llamadas[3]!.cmd).toBe(wt);
     llamadas.length = 0;
-    hayWt = false;
     await p.abrirTerminal('C:\\P’s', { comando: ['C:\\A B\\claude.cmd', 'x;y'] });
-    expect(llamadas[0]!.cmd).toBe('powershell.exe');
-    expect(llamadas[0]!.args).toEqual([
-      '-NoExit',
-      '-Command',
+    expect(llamadas[0]!.cmd).toBe(ps);
+    expect(script(llamadas[0]!.args)).toBe(
       "Set-Location -LiteralPath 'C:\\P’’s'; & 'C:\\A B\\claude.cmd' 'x;y'",
+    );
+    // Una terminal elegida que no está instalada: error claro, nada lanzado.
+    hayWt = false;
+    llamadas.length = 0;
+    await expect(p.abrirTerminal('C:\\P', { terminal: 'windows-terminal' })).rejects.toMatchObject({
+      codigo: 'terminal.no_instalada',
+      datos: { nombre: 'Windows Terminal' },
+    });
+    expect(llamadas).toEqual([]);
+  });
+
+  it('abrirTerminal: cmd, Git Bash y pwsh elegidos', async () => {
+    const llamadas: { cmd: string; args: string[]; cwd: string }[] = [];
+    const e = {
+      SystemRoot: 'C:\\W',
+      ProgramFiles: 'C:\\PF',
+      LOCALAPPDATA: 'C:\\L',
+    };
+    const instaladas = new Set([
+      'C:\\W\\System32\\cmd.exe',
+      'C:\\PF\\Git\\git-bash.exe',
+      'C:\\PF\\PowerShell\\7\\pwsh.exe',
+      'C:\\W\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
     ]);
+    const p = new PlataformaWindows(undefined, undefined, {
+      entorno: e,
+      existeRuta: (r) => instaladas.has(r),
+      lanzarSeparado: async (cmd, args, o) => {
+        llamadas.push({ cmd, args, cwd: o.cwd });
+      },
+    });
+    const dir = 'C:\\Proyectos\\WolfCore System';
+    await p.abrirTerminal(dir, { terminal: 'cmd', env: { A: '1' } });
+    await p.abrirTerminal(dir, { terminal: 'git-bash', env: { A: '1' } });
+    await p.abrirTerminal(dir, { terminal: 'pwsh', env: { A: '1' } });
+    // cmd y Git Bash no ejecutan comandos: con comando, PowerShell.
+    await p.abrirTerminal(dir, { terminal: 'cmd', comando: ['claude'] });
+    expect(llamadas.map((l) => [l.cmd, l.args.slice(0, 2), l.cwd])).toEqual([
+      ['C:\\W\\System32\\cmd.exe', ['/K'], dir],
+      ['C:\\PF\\Git\\git-bash.exe', [`--cd=${dir}`], dir],
+      ['C:\\PF\\PowerShell\\7\\pwsh.exe', ['-NoExit', '-EncodedCommand'], dir],
+      [
+        'C:\\W\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+        ['-NoExit', '-EncodedCommand'],
+        dir,
+      ],
+    ]);
+    expect(script(llamadas[2]!.args)).toBe(`Set-Location -LiteralPath '${dir}'`);
+  });
+
+  it('terminalesInstaladas: detecta por archivo (también el alias wt.exe de la Tienda)', async () => {
+    const e = {
+      SystemRoot: 'C:\\W',
+      ProgramFiles: 'C:\\PF',
+      'ProgramFiles(x86)': 'C:\\PF86',
+      LOCALAPPDATA: 'C:\\L',
+    };
+    const instaladas = new Set([
+      'C:\\L\\Microsoft\\WindowsApps\\wt.exe',
+      'C:\\W\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      'C:\\L\\Microsoft\\WindowsApps\\pwsh.exe',
+      'C:\\W\\System32\\cmd.exe',
+      'C:\\PF86\\Git\\git-bash.exe',
+    ]);
+    const p = new PlataformaWindows(undefined, undefined, {
+      entorno: e,
+      existeRuta: (r) => instaladas.has(r),
+    });
+    expect(await p.terminalesInstaladas()).toEqual([
+      {
+        id: 'windows-terminal',
+        nombre: 'Windows Terminal',
+        ruta: 'C:\\L\\Microsoft\\WindowsApps\\wt.exe',
+      },
+      {
+        id: 'powershell',
+        nombre: 'Windows PowerShell',
+        ruta: 'C:\\W\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      },
+      { id: 'pwsh', nombre: 'PowerShell 7', ruta: 'C:\\L\\Microsoft\\WindowsApps\\pwsh.exe' },
+      { id: 'cmd', nombre: 'Símbolo del sistema (cmd)', ruta: 'C:\\W\\System32\\cmd.exe' },
+      { id: 'git-bash', nombre: 'Git Bash', ruta: 'C:\\PF86\\Git\\git-bash.exe' },
+    ]);
+    instaladas.clear();
+    expect(await p.terminalesInstaladas()).toEqual([]);
   });
 });
 

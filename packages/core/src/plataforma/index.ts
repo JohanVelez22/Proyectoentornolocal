@@ -12,6 +12,7 @@ export type {
   EstadoServicioSistema,
   IdCatalogo,
   Lanzador,
+  IdTerminal,
   OpcionesAbrirTerminal,
   OpcionesEscrituraAdmin,
   OpcionesLanzar,
@@ -22,8 +23,10 @@ export type {
   ResultadoEscritura,
   MuestraPlataforma,
   ServicioSistema,
+  TerminalDisponible,
   UsoProceso,
 } from './tipos';
+export { IDS_TERMINAL } from './tipos';
 export { lanzadorPorDefecto } from './lanzar';
 export {
   PlataformaWindows,
@@ -38,6 +41,7 @@ export {
   type OpcionesPlataformaWindows,
 } from './win';
 export { PlataformaFalsa, type OpcionesPlataformaFalsa } from './falsa';
+export { ordenTerminalUnix, terminalesUnix } from './terminalUnix';
 export {
   interpretarAntivirus,
   interpretarProfilesIni,
@@ -63,6 +67,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'leerVariableUsuario',
   'variableUsuario',
   'abrirTerminal',
+  'terminalesInstaladas',
   'lanzadorOculto',
   'descendientes',
   'rangosReservados',
