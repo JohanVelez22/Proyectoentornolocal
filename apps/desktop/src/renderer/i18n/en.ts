@@ -257,6 +257,9 @@ export const en: Textos = {
       'php.huella_distinta':
         'The download does not match the published hash; nothing was installed.',
       'php.descarga_fallida': 'Could not download the extension: {detalle}',
+      'php.extension_en_uso': 'The {nombre} DLL is in use. Stop PHP {rama} and try again.',
+      'php.extension_sin_dll':
+        'The {nombre} DLL could not be replaced and the ext folder of PHP {rama} was left without it. Stop PHP {rama} and try again: the previous one is put back when it starts.',
     },
   },
   avisoInicio: {

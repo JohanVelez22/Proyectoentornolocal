@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { rename } from 'node:fs/promises';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -12,7 +13,9 @@ import {
   cambiarExtension,
   ExtensionesPhp,
   extensionesActivas,
+  limpiarDllApartadas,
   varianteDeInfo,
+  type DepsExtensionesPhp,
 } from '../src/php/extensiones';
 import { IniPhp } from '../src/php/ini';
 import type { Ejecutor } from '../src/plataforma/tipos';
@@ -156,7 +159,7 @@ describe('ExtensionesPhp', () => {
   let sanos: boolean[];
   let reinicios: number;
 
-  const crear = (cat: ExtensionPhpCatalogo[] = []) => {
+  const crear = (cat: ExtensionPhpCatalogo[] = [], extra: Partial<DepsExtensionesPhp> = {}) => {
     const iniPhp = new IniPhp({
       rutas,
       exec,
@@ -179,6 +182,7 @@ describe('ExtensionesPhp', () => {
         fetches.push(String(u));
         return respuestas.get(String(u)) ?? new Response('no', { status: 404 });
       },
+      ...extra,
     });
   };
 
@@ -327,6 +331,62 @@ describe('ExtensionesPhp', () => {
     await crear([e]).instalar('8.4', 'xdebug');
     expect(readFileSync(dll)).toEqual(DLL);
     expect(reinicios).toBe(1);
+  });
+
+  it('activar una extensión en un ini cp1252 no corrompe el resto del archivo', async () => {
+    const bytes = Buffer.concat([
+      Buffer.from('; Configuraci', 'latin1'),
+      Buffer.from([0xf3]),
+      Buffer.from('n\n;extension=gd\n', 'latin1'),
+    ]);
+    writeFileSync(ini, bytes);
+    await crear().activar('8.4', 'gd', true);
+    expect(
+      readFileSync(ini).equals(
+        Buffer.from(bytes.toString('latin1').replace(';extension=gd', 'extension=gd'), 'latin1'),
+      ),
+    ).toBe(true);
+  });
+
+  it('una DLL en uso que no se puede apartar → php.extension_en_uso y la anterior intacta', async () => {
+    const vieja = Buffer.from('MZ xdebug vieja');
+    const dll = path.join(ext, 'php_xdebug.dll');
+    writeFileSync(dll, vieja);
+    writeFileSync(ini, 'zend_extension=xdebug\n');
+    const e = entrada({});
+    respuestas.set(e.url, new Response(DLL));
+    const renombrar = async (de: string, a: string) => {
+      if (de === dll)
+        throw Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' });
+      await rename(de, a);
+    };
+    await expect(crear([e], { renombrar }).instalar('8.4', 'xdebug')).rejects.toMatchObject({
+      codigo: 'php.extension_en_uso',
+      datos: { nombre: 'xdebug', rama: '8.4' },
+    });
+    expect(readFileSync(dll)).toEqual(vieja);
+    expect(readdirSync(ext).filter((n) => n.startsWith('php_xdebug.dll.'))).toEqual([]);
+  });
+
+  it('si la DLL no se puede poner ni devolver, el error dice que ext/ quedó sin ella', async () => {
+    const vieja = Buffer.from('MZ xdebug vieja');
+    const dll = path.join(ext, 'php_xdebug.dll');
+    writeFileSync(dll, vieja);
+    writeFileSync(ini, 'zend_extension=xdebug\n');
+    const e = entrada({});
+    respuestas.set(e.url, new Response(DLL));
+    const renombrar = async (de: string, a: string) => {
+      if (a === dll) throw Object.assign(new Error('EBUSY: resource busy'), { code: 'EBUSY' });
+      await rename(de, a);
+    };
+    await expect(crear([e], { renombrar }).instalar('8.4', 'xdebug')).rejects.toMatchObject({
+      codigo: 'php.extension_sin_dll',
+      datos: { nombre: 'xdebug', rama: '8.4' },
+    });
+    // La anterior sigue apartada (no se borró) y al arrancar la rama vuelve a su lugar.
+    expect(existsSync(dll)).toBe(false);
+    await limpiarDllApartadas(ext);
+    expect(readFileSync(dll)).toEqual(vieja);
   });
 
   it('una DLL nueva que no pasa la prueba al activarla no queda en ext/', async () => {

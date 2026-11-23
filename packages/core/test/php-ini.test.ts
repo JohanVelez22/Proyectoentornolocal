@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,6 +7,7 @@ import {
   conValores,
   diffLineas,
   IniPhp,
+  rutaHuellaGenerado,
   rutaMarcaEditado,
   rutaRespaldosIni,
   VALORES_RAPIDOS,
@@ -353,6 +355,44 @@ describe('IniPhp', () => {
     expect(readFileSync(ini).equals(bytes)).toBe(true);
   });
 
+  it('leer y guardar un ini en cp1252 no lo corrompe: lo no tocado queda byte a byte (N1)', async () => {
+    const bytes = Buffer.concat([
+      Buffer.from('; Configuraci', 'latin1'),
+      Buffer.from([0xf3]),
+      Buffer.from('n\r\nmemory_limit = 128M\r\n', 'latin1'),
+    ]);
+    writeFileSync(ini, bytes);
+    const p = crear();
+    const texto = await p.leer('8.4');
+    expect(texto).toContain('; Configuración');
+    await p.guardar('8.4', conValores(texto, { memory_limit: '1G' }));
+    const esperado = Buffer.concat([
+      Buffer.from('; Configuraci', 'latin1'),
+      Buffer.from([0xf3]),
+      Buffer.from('n\r\nmemory_limit = 1G\r\n', 'latin1'),
+    ]);
+    expect(readFileSync(ini).equals(esperado)).toBe(true);
+    // El diff tampoco ve cambios fantasma en la línea con tilde.
+    expect(await p.diff('8.4', await p.leer('8.4'))).toBe('');
+    // Un carácter que cp1252 no tiene: el archivo pasa entero a UTF-8 (la copia guarda el original).
+    await p.guardar('8.4', `${await p.leer('8.4')}; ✓\r\n`);
+    const utf8 = readFileSync(ini, 'utf8');
+    expect(utf8).toContain('; Configuración');
+    expect(utf8).toContain('; ✓');
+  });
+
+  it('un ini con BOM UTF-8 conserva el BOM al guardar', async () => {
+    writeFileSync(ini, Buffer.from('\uFEFFmemory_limit = 128M\n', 'utf8'));
+    const p = crear();
+    expect(await p.leer('8.4')).toBe('memory_limit = 128M\n');
+    await p.guardar('8.4', 'memory_limit = 1G\n');
+    expect(
+      readFileSync(ini)
+        .subarray(0, 3)
+        .equals(Buffer.from([0xef, 0xbb, 0xbf])),
+    ).toBe(true);
+  });
+
   it('las copias con fecha rotan: quedan las 20 más nuevas', async () => {
     const carpeta = rutaRespaldosIni(rutas, '8.4');
     mkdirSync(carpeta, { recursive: true });
@@ -407,6 +447,16 @@ describe('IniPhp', () => {
     expect(readFileSync(ini, 'utf8')).toBe('a=2');
   });
 });
+
+function servicioSimple(rutas: Rutas): ServicioPhp {
+  return new ServicioPhp(
+    rutas,
+    { quienUsaPuerto: async () => null, ejecutable: (n: string) => `${n}.exe` } as never,
+    { iniciar: vi.fn(), detener: vi.fn(), estado: () => 'apagado', pid: () => null } as never,
+    { instalado: async () => true } as never,
+    async () => ({ servicios: { php: { trabajadores: 1 } } }) as never,
+  );
+}
 
 describe('ServicioPhp y el php.ini de la rama', () => {
   async function montar() {
@@ -473,6 +523,79 @@ describe('ServicioPhp y el php.ini de la rama', () => {
     expect(readFileSync(ini, 'utf8')).toContain('memory_limit = 3G');
     expect(existsSync(rutaMarcaEditado(rutas, '8.4'))).toBe(true);
     expect(copias()).toEqual([]);
+  });
+
+  it('carpeta de datos con tildes y un ini editado en cp1252: extension_dir sale en UTF-8 (N2)', async () => {
+    const rutas = new Rutas(await carpetaTemporal('pel-ini-áé-'));
+    const bin = rutas.bin('php', '8.4');
+    mkdirSync(path.join(bin, 'ext'), { recursive: true });
+    const srv = servicioSimple(rutas);
+    const ini = rutas.phpIni('8.4');
+    mkdirSync(path.dirname(ini), { recursive: true });
+    const original = Buffer.concat([
+      Buffer.from('; Configuraci', 'latin1'),
+      Buffer.from([0xf3]),
+      Buffer.from('n\r\nextension_dir="C:/viejo/ext"\r\nmemory_limit = 3G\r\n', 'latin1'),
+    ]);
+    writeFileSync(ini, original);
+    writeFileSync(rutaMarcaEditado(rutas, '8.4'), '');
+    await srv.asegurarPhpIni('8.4');
+    const despues = readFileSync(ini);
+    // UTF-8 válido de punta a punta: PHP lee las rutas en UTF-8.
+    const texto = new TextDecoder('utf-8', { fatal: true }).decode(despues);
+    expect(texto).toContain(`${bin.replace(/\\/g, '/')}/ext`);
+    expect(texto).toContain('; Configuración');
+    expect(texto).toContain('memory_limit = 3G');
+    const carpeta = rutaRespaldosIni(rutas, '8.4');
+    expect(readdirSync(carpeta)).toHaveLength(1);
+    expect(readFileSync(path.join(carpeta, readdirSync(carpeta)[0]!)).equals(original)).toBe(true);
+    // Estable: otra vuelta no cambia nada ni hace otra copia.
+    await srv.asegurarPhpIni('8.4');
+    expect(readFileSync(ini).equals(despues)).toBe(true);
+    expect(readdirSync(carpeta)).toHaveLength(1);
+  });
+
+  it('un ini en cp1252 con extension_dir con tildes en cp1252 pasa a UTF-8', async () => {
+    const rutas = new Rutas(await carpetaTemporal('pel-ini-ñ-'));
+    const bin = rutas.bin('php', '8.4');
+    mkdirSync(path.join(bin, 'ext'), { recursive: true });
+    const srv = servicioSimple(rutas);
+    const ini = rutas.phpIni('8.4');
+    mkdirSync(path.dirname(ini), { recursive: true });
+    writeFileSync(ini, Buffer.from(`extension_dir="${bin.replace(/\\/g, '/')}/ext"\n`, 'latin1'));
+    writeFileSync(rutaMarcaEditado(rutas, '8.4'), '');
+    await srv.asegurarPhpIni('8.4');
+    const texto = new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(ini));
+    expect(texto).toContain(`${bin.replace(/\\/g, '/')}/ext`);
+  });
+
+  it('la huella del ini generado se anota antes de escribirlo: un corte en medio no lo vuelve editado (N4)', async () => {
+    const { rutas, srv, ini } = await montar();
+    await srv.iniciar('8.4');
+    const generado = readFileSync(ini);
+    const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
+    // Estado tras un corte entre la huella y el ini: la huella trae la anterior y la pendiente.
+    writeFileSync(
+      rutaHuellaGenerado(rutas, '8.4'),
+      `${sha(Buffer.from('otro'))}\n${sha(generado)}\n`,
+    );
+    await srv.iniciar('8.4');
+    expect(existsSync(rutaMarcaEditado(rutas, '8.4'))).toBe(false);
+    // Tras escribir, la huella queda solo con lo generado.
+    expect(readFileSync(rutaHuellaGenerado(rutas, '8.4'), 'utf8').trim()).toBe(
+      sha(readFileSync(ini)),
+    );
+  });
+
+  it('al arrancar la rama se borran las DLL apartadas de una actualización (N5)', async () => {
+    const { bin, srv } = await montar();
+    const ext = path.join(bin, 'ext');
+    writeFileSync(path.join(ext, 'php_xdebug.dll'), 'nueva');
+    writeFileSync(path.join(ext, 'php_xdebug.dll.anterior-0a1b2c3d'), 'vieja');
+    writeFileSync(path.join(ext, 'php_xdebug.dll.descartada-0a1b2c3d'), 'mala');
+    writeFileSync(path.join(ext, 'notas.anterior-x.txt'), 'del usuario');
+    await srv.iniciar('8.4');
+    expect(readdirSync(ext).sort()).toEqual(['notas.anterior-x.txt', 'php_xdebug.dll']);
   });
 
   it('un ini viejo sin huella que difiere del regenerado se copia antes de regenerarlo', async () => {

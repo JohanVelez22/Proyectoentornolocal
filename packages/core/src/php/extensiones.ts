@@ -119,6 +119,8 @@ export interface DepsExtensionesPhp {
   /** Extensiones de terceros del catálogo (`catalogo.extensionesPhp`). */
   catalogo: readonly ExtensionPhpCatalogo[];
   fetch?: typeof fetch;
+  /** Para pruebas: renombrar (por defecto `fs.rename`). */
+  renombrar?: (de: string, a: string) => Promise<void>;
 }
 
 function validarNombre(nombre: unknown): string {
@@ -248,7 +250,7 @@ export class ExtensionesPhp {
       // Ya cargada por el pool: se cambia la DLL en la fila del ini, se prueba con php -v y se
       // reinicia; si no queda sano, vuelve la anterior.
       await this.d.ini.enCola(rama, async () => {
-        const deshacer = await this.cambiarDll(destino, dll);
+        const deshacer = await this.cambiarDll(destino, dll, n, rama);
         try {
           await this.d.ini.probar(rama, await this.d.ini.leer(rama));
         } catch (err) {
@@ -260,7 +262,7 @@ export class ExtensionesPhp {
       await this.limpiarAnteriores(destino);
       return;
     }
-    const deshacer = await this.cambiarDll(destino, dll);
+    const deshacer = await this.cambiarDll(destino, dll, n, rama);
     try {
       await this.activar(rama, n, true);
     } catch (err) {
@@ -272,9 +274,17 @@ export class ExtensionesPhp {
 
   /**
    * Pone `dll` en `destino` sin borrar la anterior: la renombra (en Windows se puede renombrar
-   * una DLL cargada, no borrarla) y la nueva entra con un rename. Devuelve cómo deshacerlo.
+   * una DLL cargada, no borrarla) y la nueva entra con un rename. Devuelve cómo deshacerlo. Si un
+   * rename falla (la DLL bloqueada por otro proceso), lanza `php.extension_en_uso` o, si `ext/`
+   * quedó sin la DLL, `php.extension_sin_dll` (la anterior queda apartada y vuelve al arrancar).
    */
-  private async cambiarDll(destino: string, dll: Buffer): Promise<() => Promise<void>> {
+  private async cambiarDll(
+    destino: string,
+    dll: Buffer,
+    nombre: string,
+    rama: string,
+  ): Promise<() => Promise<void>> {
+    const renombrar = this.d.renombrar ?? rename;
     await mkdir(path.dirname(destino), { recursive: true });
     const sufijo = randomBytes(4).toString('hex');
     const tmp = `${destino}.nuevo-${sufijo}`;
@@ -282,19 +292,23 @@ export class ExtensionesPhp {
     await writeFile(tmp, dll);
     const habia = existsSync(destino);
     try {
-      if (habia) await rename(destino, anterior);
-      await rename(tmp, destino);
+      if (habia) await renombrar(destino, anterior);
+      await renombrar(tmp, destino);
     } catch (err) {
-      if (habia && !existsSync(destino)) await rename(anterior, destino).catch(() => undefined);
+      if (habia && !existsSync(destino)) await renombrar(anterior, destino).catch(() => undefined);
       await rm(tmp, { force: true }).catch(() => undefined);
-      throw err;
+      throw dllBloqueada(nombre, rama, habia && !existsSync(destino), err);
     }
     return async () => {
       if (habia) {
         // La nueva puede estar cargada: se aparta con otro nombre antes de devolver la anterior.
         const descartada = `${destino}.descartada-${sufijo}`;
-        await rename(destino, descartada).catch(() => undefined);
-        await rename(anterior, destino);
+        await renombrar(destino, descartada).catch(() => undefined);
+        try {
+          await renombrar(anterior, destino);
+        } catch (err) {
+          throw dllBloqueada(nombre, rama, !existsSync(destino), err);
+        }
         await rm(descartada, { force: true }).catch(() => undefined);
       } else {
         await rm(destino, { force: true }).catch(() => undefined);
@@ -304,13 +318,7 @@ export class ExtensionesPhp {
 
   /** Borra las DLL apartadas (`.anterior-`, `.descartada-`); las que siguen cargadas quedan. */
   private async limpiarAnteriores(destino: string): Promise<void> {
-    const carpeta = path.dirname(destino);
-    const base = path.basename(destino);
-    for (const n of await readdir(carpeta).catch(() => [] as string[])) {
-      if (n.startsWith(`${base}.anterior-`) || n.startsWith(`${base}.descartada-`)) {
-        await rm(path.join(carpeta, n), { force: true }).catch(() => undefined);
-      }
-    }
+    await limpiarDllApartadas(path.dirname(destino), path.basename(destino));
   }
 
   /** Descarga con redirecciones manuales (cada salto, a un host permitido) y verifica el hash. */
@@ -385,6 +393,44 @@ export class ExtensionesPhp {
       await rm(tmp, { recursive: true, force: true }).catch(() => undefined);
     }
   }
+}
+
+const APARTADA = /^(php_[a-z0-9_]+\.dll)\.(anterior|descartada)-[0-9a-f]{8}$/i;
+
+/**
+ * Borra de `carpeta` (ext/ de una rama) las DLL que se apartaron al instalar o actualizar una
+ * extensión (`php_x.dll.anterior-…`, `.descartada-…`); solo las de `base` si se indica. Las que
+ * sigan cargadas por algún proceso no se pueden borrar y quedan para la próxima vez.
+ */
+export async function limpiarDllApartadas(carpeta: string, base?: string): Promise<void> {
+  for (const n of await readdir(carpeta).catch(() => [] as string[])) {
+    const m = APARTADA.exec(n);
+    if (!m || (base !== undefined && m[1]!.toLowerCase() !== base.toLowerCase())) continue;
+    const dll = path.join(carpeta, m[1]!);
+    // Un cambio cortado a medias dejó ext/ sin la DLL: vuelve la anterior en vez de borrarla.
+    if (m[2] === 'anterior' && !existsSync(dll)) {
+      await rename(path.join(carpeta, n), dll).catch(() => undefined);
+      continue;
+    }
+    await rm(path.join(carpeta, n), { force: true }).catch(() => undefined);
+  }
+}
+
+/** Error de una DLL que no se pudo renombrar (cargada por PHP u otro programa). */
+function dllBloqueada(nombre: string, rama: string, sinDll: boolean, causa: unknown): ErrorWolf {
+  return sinDll
+    ? new ErrorWolf(
+        'php.extension_sin_dll',
+        `No se pudo cambiar la DLL de ${nombre} y la carpeta ext de PHP ${rama} quedó sin ella. Detenga PHP ${rama} y vuelva a intentarlo: la anterior vuelve a su lugar al arrancar.`,
+        { nombre, rama },
+        { cause: causa },
+      )
+    : new ErrorWolf(
+        'php.extension_en_uso',
+        `La DLL de ${nombre} está en uso. Detenga PHP ${rama} y vuelva a intentarlo.`,
+        { nombre, rama },
+        { cause: causa },
+      );
 }
 
 function fallo(detalle: string): ErrorWolf {

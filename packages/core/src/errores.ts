@@ -163,6 +163,8 @@ export const PARAMETROS_ERROR = {
   'php.sin_variante': ['nombre', 'variante'],
   'php.huella_distinta': [],
   'php.descarga_fallida': ['detalle'],
+  'php.extension_en_uso': ['nombre', 'rama'],
+  'php.extension_sin_dll': ['nombre', 'rama'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

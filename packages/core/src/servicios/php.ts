@@ -3,9 +3,14 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ErrorWolf } from '../errores';
 import path from 'node:path';
+import { limpiarDllApartadas } from '../php/extensiones';
 import {
+  codificarIni,
   copiaIni,
+  decodificarIni,
   escribirIniAtomico,
+  esUtf8,
+  soloAscii,
   iniEditado,
   normalizarDirExt,
   rutaHuellaGenerado,
@@ -71,26 +76,6 @@ function activarOpcache(lineas: string[]): void {
 }
 
 const sha256 = (b: Buffer): string => createHash('sha256').update(b).digest('hex');
-
-/** Texto de un ini: UTF-8 si lo es; si no (cp1252 de un editor viejo), byte a byte. */
-function decodificarIni(b: Buffer): string {
-  try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(b).replace(/^\uFEFF/, '');
-  } catch {
-    return b.toString('latin1');
-  }
-}
-
-/** Vuelve a bytes con la misma codificación que se usó al leer `original`. */
-function codificarIni(texto: string, original: Buffer): Buffer {
-  try {
-    new TextDecoder('utf-8', { fatal: true }).decode(original);
-    const bom = original[0] === 0xef && original[1] === 0xbb && original[2] === 0xbf;
-    return Buffer.from((bom ? '\uFEFF' : '') + texto, 'utf8');
-  } catch {
-    return Buffer.from(texto, 'latin1');
-  }
-}
 
 const escapar = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** Máximo de trabajadores que se intenta detener (cubre cambios de configuración en caliente). */
@@ -160,8 +145,22 @@ export class ServicioPhp {
     await mkdir(path.dirname(destino), { recursive: true });
     const previo = await readFile(destino).catch(() => null);
     if (previo && !previo.equals(nuevo)) await copiaIni(this.rutas, version, previo);
+    // La huella nueva se anota ANTES que el ini (junto a las anteriores): un corte entre las dos
+    // escrituras deja un ini que coincide con alguna y no se toma por editado a mano.
+    const huella = rutaHuellaGenerado(this.rutas, version);
+    const previas = await this.huellas(version);
+    await writeFile(huella, [...new Set([...previas, sha256(nuevo)])].join('\n'), 'utf8');
     await escribirIniAtomico(destino, nuevo);
-    await writeFile(rutaHuellaGenerado(this.rutas, version), sha256(nuevo), 'utf8');
+    await writeFile(huella, sha256(nuevo), 'utf8');
+  }
+
+  /** Huellas aceptadas del ini generado (la última y, tras un corte, la pendiente). */
+  private async huellas(version: string): Promise<string[]> {
+    const t = await readFile(rutaHuellaGenerado(this.rutas, version), 'utf8').catch(() => null);
+    return (t ?? '')
+      .split(/\r?\n/)
+      .map((l) => l.trim().toLowerCase())
+      .filter((l) => /^[0-9a-f]{64}$/.test(l));
   }
 
   /**
@@ -169,12 +168,10 @@ export class ServicioPhp {
    * guardada (ini de una versión anterior) no se puede saber: false.
    */
   private async editadoPorFuera(version: string): Promise<boolean> {
-    const huella = await readFile(rutaHuellaGenerado(this.rutas, version), 'utf8').catch(
-      () => null,
-    );
-    if (huella === null) return false;
+    const huellas = await this.huellas(version);
+    if (huellas.length === 0) return false;
     const actual = await readFile(this.rutas.phpIni(version)).catch(() => null);
-    return actual !== null && sha256(actual) !== huella.trim();
+    return actual !== null && !huellas.includes(sha256(actual));
   }
 
   /** ¿Se respeta el ini tal cual (editado en la pantalla PHP o por fuera)? Marca el de fuera. */
@@ -197,7 +194,10 @@ export class ServicioPhp {
     const bytes = await readFile(ini).catch(() => null);
     const texto = bytes === null ? null : decodificarIni(bytes);
     const actual = texto === null ? null : /^\s*extension_dir\s*=(.*)$/m.exec(texto)?.[1];
-    if (normalizarDirExt(actual) === normalizarDirExt(this.extensionDir(version))) return ini;
+    const esperado = this.extensionDir(version);
+    // Un ini en cp1252 con la ruta con tildes tampoco sirve: PHP lee las rutas en UTF-8.
+    const rutaSinUtf8 = bytes !== null && !esUtf8(bytes) && !soloAscii(esperado);
+    if (normalizarDirExt(actual) === normalizarDirExt(esperado) && !rutaSinUtf8) return ini;
     if (bytes !== null && texto !== null && (await this.respetarIni(version))) {
       await this.corregirExtensionDir(version, bytes, texto);
     } else {
@@ -210,9 +210,14 @@ export class ServicioPhp {
   private async corregirExtensionDir(version: string, bytes: Buffer, texto: string): Promise<void> {
     const salto = texto.includes('\r\n') ? '\r\n' : '\n';
     const lineas = texto.split(/\r?\n/);
-    fijar(lineas, 'extension_dir', this.extensionDir(version));
+    const dir = this.extensionDir(version);
+    fijar(lineas, 'extension_dir', dir);
     await copiaIni(this.rutas, version, bytes);
-    await escribirIniAtomico(this.rutas.phpIni(version), codificarIni(lineas.join(salto), bytes));
+    // Ruta con tildes: el archivo pasa a UTF-8 (la copia de arriba guarda los bytes originales).
+    await escribirIniAtomico(
+      this.rutas.phpIni(version),
+      codificarIni(lineas.join(salto), bytes, { utf8: !soloAscii(dir) }),
+    );
   }
 
   /** Antes de arrancar: un ini sin editar se regenera (toma ajustes nuevos, p. ej. OPcache). */
@@ -241,6 +246,8 @@ export class ServicioPhp {
     }
     await this.prepararIni(version);
     const bin = this.rutas.bin('php', version);
+    // DLL apartadas al actualizar una extensión: con la rama apagada ya no están cargadas.
+    await limpiarDllApartadas(path.join(bin, 'ext'));
     for (const [i, puerto] of puertos.entries()) {
       await this.supervisor.iniciar({
         id: this.idTrabajador(version, i),

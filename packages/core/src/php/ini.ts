@@ -14,6 +14,43 @@ const MAX_SALIDA = 200;
 
 const escapar = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// ---------------------------------------------------------------- codificación
+
+/** ¿Los bytes son UTF-8 válido? */
+export function esUtf8(b: Buffer): boolean {
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(b);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Texto de un ini: UTF-8 (sin BOM) si lo es; si no (cp1252 de un editor viejo), byte a byte. */
+export function decodificarIni(b: Buffer): string {
+  return esUtf8(b) ? b.toString('utf8').replace(/^\uFEFF/, '') : b.toString('latin1');
+}
+
+/**
+ * Vuelve a bytes con la codificación de `original`: UTF-8 (con su BOM si lo tenía) o byte a byte
+ * (así lo que no se tocó queda idéntico). Un ini que no era UTF-8 pasa entero a UTF-8 si el texto
+ * trae caracteres que cp1252 no tiene o si `utf8` lo pide (p. ej. una ruta con tildes: PHP lee
+ * las rutas en UTF-8). Quien llama ya guardó la copia con fecha de los bytes originales.
+ */
+export function codificarIni(texto: string, original: Buffer, o: { utf8?: boolean } = {}): Buffer {
+  if (esUtf8(original)) {
+    const bom = original[0] === 0xef && original[1] === 0xbb && original[2] === 0xbf;
+    return Buffer.from((bom ? '\uFEFF' : '') + texto, 'utf8');
+  }
+  if (o.utf8 || [...texto].some((c) => c.codePointAt(0)! > 0xff)) {
+    return Buffer.from(texto, 'utf8');
+  }
+  return Buffer.from(texto, 'latin1');
+}
+
+/** ¿Solo ASCII imprimible? (una ruta que se escribe igual en cualquier codificación) */
+export const soloAscii = (t: string): boolean => /^[\x20-\x7e]*$/.test(t);
+
 // ---------------------------------------------------------------- valores rápidos
 
 const TAMANO = /^\d{1,7}[KMG]?$/i;
@@ -349,9 +386,10 @@ export class IniPhp {
     return p;
   }
 
+  /** Texto del php.ini de la rama (UTF-8 o cp1252, como esté el archivo). */
   async leer(rama: string): Promise<string> {
     const r = await this.rama(rama);
-    return (await readFile(await this.d.asegurarIni(r), 'utf8')).replace(/^\uFEFF/, '');
+    return decodificarIni(await readFile(await this.d.asegurarIni(r)));
   }
 
   async valores(rama: string, claves: readonly string[]): Promise<Record<string, string | null>> {
@@ -420,9 +458,12 @@ export class IniPhp {
     return this.enCola(r, () => this.guardarEnCola(r, nuevo));
   }
 
-  private async guardarEnCola(r: string, nuevo: string | Buffer): Promise<{ respaldo: string }> {
+  private async guardarEnCola(r: string, texto: string | Buffer): Promise<{ respaldo: string }> {
     const ini = await this.d.asegurarIni(r);
     const actual = await readFile(ini);
+    // Con la misma codificación que el archivo: un ini en cp1252 no se corrompe al guardarlo.
+    const nuevo = Buffer.isBuffer(texto) ? texto : codificarIni(texto, actual);
+    validarTexto(nuevo);
     await this.limpiarPruebas(r);
     await this.probar(r, nuevo);
     const respaldo = await copiaIni(this.d.rutas, r, actual, this.d.ahora?.() ?? new Date());

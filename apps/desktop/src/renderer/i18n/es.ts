@@ -261,6 +261,10 @@ export const es = {
       'php.sin_variante': 'El catálogo no tiene {nombre} para la compilación {variante}.',
       'php.huella_distinta': 'La descarga no coincide con la huella publicada; no se instaló nada.',
       'php.descarga_fallida': 'No se pudo descargar la extensión: {detalle}',
+      'php.extension_en_uso':
+        'La DLL de {nombre} está en uso. Detenga PHP {rama} y vuelva a intentarlo.',
+      'php.extension_sin_dll':
+        'No se pudo cambiar la DLL de {nombre} y la carpeta ext de PHP {rama} quedó sin ella. Detenga PHP {rama} y vuelva a intentarlo: la anterior vuelve a su lugar al arrancar.',
     },
   },
   avisoInicio: {
