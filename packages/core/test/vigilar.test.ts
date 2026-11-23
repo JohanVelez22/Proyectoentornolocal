@@ -6,6 +6,22 @@ import { ConfigSchema, SitioSchema, type Config } from '../src/tipos';
 import { VigilanteProyectos } from '../src/proyectos/vigilar';
 import { carpetaTemporal } from './temporales';
 
+/** Detecciones de proyecto que ya terminaron (para saber cuándo acabó un cálculo). */
+const deteccionesResueltas = vi.hoisted(() => ({ n: 0 }));
+vi.mock('../src/proyectos/detectar', async (original) => {
+  const m = await original<typeof import('../src/proyectos/detectar')>();
+  return {
+    ...m,
+    detectarProyecto: async (...a: Parameters<typeof m.detectarProyecto>) => {
+      try {
+        return await m.detectarProyecto(...a);
+      } finally {
+        deteccionesResueltas.n++;
+      }
+    },
+  };
+});
+
 async function laravel(base: string, nombre: string): Promise<string> {
   const d = join(base, nombre);
   await mkdir(d, { recursive: true });
@@ -176,33 +192,62 @@ describe('vigilar', () => {
     expect(await vigilante.sugerencias()).toEqual([]);
   });
 
-  it('descarta un refresco lento si hubo otro después', async () => {
+  it('descarta un refresco lento si hubo otro después (sin tiempos reales)', async () => {
     const a = await laravel(base, 'uno');
     config.proyectos.carpetaVigilada = base;
+    // Vigilancia inyectada: los cambios los dispara la prueba, no fs.watch (FSEvents en macOS
+    // puede repetir eventos viejos o demorarlos y cambiaba qué lectura era la lenta).
+    let avisar: () => void = () => undefined;
+    const crearVigia = (_c: string, alCambiar: () => void) => {
+      avisar = alCambiar;
+      return { close: () => undefined, on: () => undefined };
+    };
+    // Cada lectura de la configuración es una copia; la 2.ª (primer refresco) queda retenida
+    // hasta que la prueba la suelte.
     let llamada = 0;
+    let soltarLento: () => void = () => undefined;
     const lento = new VigilanteProyectos({
       leerConfig: async () => {
         const n = ++llamada;
-        // la 2.ª lectura (primer refresco) tarda más que la 3.ª (segundo refresco)
-        if (n === 2) await new Promise((r) => setTimeout(r, 300));
-        return config;
+        const copia = structuredClone(config);
+        if (n === 2) await new Promise<void>((r) => (soltarLento = r));
+        return copia;
       },
       eventos,
-      esperaMs: 20,
+      esperaMs: 1,
+      crearVigia,
     });
     const oyente = vi.fn();
     eventos.on('proyectos:sugerencias', oyente);
+    const carpetas = (i: number): string[] =>
+      (oyente.mock.calls[i]![0] as { carpeta: string }[]).map((x) => x.carpeta);
     try {
-      await lento.vigilar(base); // lectura 1: línea base
+      await lento.vigilar(base); // lectura 1: línea base [uno]
       const b = await laravel(base, 'dos');
-      await new Promise((r) => setTimeout(r, 100)); // dispara el refresco lento (lectura 2)
-      await rm(b, { recursive: true, force: true });
-      await new Promise((r) => setTimeout(r, 100)); // refresco rápido (lectura 3): lista == base
-      await new Promise((r) => setTimeout(r, 500));
-      // el resultado viejo (con "dos") nunca debe emitirse
-      for (const c of oyente.mock.calls) {
-        expect(c[0].map((x: { carpeta: string }) => x.carpeta)).toEqual([a]);
-      }
+      avisar(); // refresco 1 (lectura 2): vería [uno, dos], pero queda retenido
+      await vi.waitFor(() => expect(llamada).toBe(2));
+      // Mientras tanto "uno" pasa a ser un sitio: el refresco 2 (lectura 3) ve solo [dos].
+      config.sitios.push(
+        SitioSchema.parse({
+          id: 'uno',
+          nombre: 'uno',
+          dominio: 'uno.test',
+          carpeta: a,
+          tipo: 'laravel',
+          php: '8.4',
+        }),
+      );
+      avisar();
+      await vi.waitFor(() => expect(oyente).toHaveBeenCalledTimes(1));
+      expect(carpetas(0)).toEqual([b]);
+      // Se suelta el viejo: termina de calcular (vería [uno, dos]) y se descarta. Se espera a que
+      // resuelvan sus dos detecciones y a que se vacíe la cola de microtareas.
+      const antes = deteccionesResueltas.n;
+      soltarLento();
+      await vi.waitFor(() => expect(deteccionesResueltas.n).toBe(antes + 2));
+      await new Promise((r) => setImmediate(r));
+      await new Promise((r) => setImmediate(r)); // El resultado viejo ([uno, dos]) nunca se emitió.
+      expect(oyente).toHaveBeenCalledTimes(1);
     } finally {
       lento.dispose();
     }
