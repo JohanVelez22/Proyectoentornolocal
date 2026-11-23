@@ -1,4 +1,8 @@
 import type {
+  Dump,
+  EstadoReceptor,
+  FiltroDumps,
+  ResumenDump,
   EstadoPhpSitio,
   ResultadoPhpSitio,
   XdebugSitio,
@@ -96,6 +100,10 @@ import type {
 } from '@pel/core';
 
 export type {
+  Dump,
+  EstadoReceptor,
+  FiltroDumps,
+  ResumenDump,
   AvisoVhost,
   CambioVhost,
   ResultadoEditorVhost,
@@ -667,6 +675,27 @@ export interface ApiEntorno {
      */
     responderConfirmacion(id: string, aprobado: boolean): Promise<boolean>;
   };
+  depuracion: {
+    /** Receptor de dumps: activo, puerto y cuántos hay en memoria. */
+    estado(): Promise<EstadoReceptor>;
+    /** Enciende o apaga el receptor; apagarlo quita la captura de todos los sitios. */
+    activar(activa: boolean): Promise<EstadoReceptor>;
+    /**
+     * Captura de un sitio PHP o FastAPI. Encenderla exige `confirmacion: true`, que solo pasa el
+     * diálogo que explicó qué se define (dump/dd/wd o wolfdump).
+     */
+    captura(
+      sitioId: string,
+      activa: boolean,
+      confirmacion?: true,
+    ): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar | null }>;
+    /** Resúmenes (los más nuevos primero), con filtro por sitio, origen y texto. */
+    lista(filtro?: FiltroDumps): Promise<ResumenDump[]>;
+    leer(id: string): Promise<Dump | null>;
+    limpiar(): Promise<void>;
+    /** Copia al portapapeles el volcado con los secretos enmascarados (no se devuelve). */
+    copiar(id: string): Promise<void>;
+  };
   avisos: {
     /** Historial (hasta 200, los más nuevos primero). */
     lista(): Promise<Aviso[]>;
@@ -890,6 +919,13 @@ export const RUTAS_IPC = [
   'sistema.guardarArchivo',
   'sistema.elegirArchivos',
   'sistema.abrirEditor',
+  'depuracion.estado',
+  'depuracion.activar',
+  'depuracion.captura',
+  'depuracion.lista',
+  'depuracion.leer',
+  'depuracion.limpiar',
+  'depuracion.copiar',
   'avisos.lista',
   'avisos.marcarLeidos',
   'avisos.limpiar',
@@ -931,4 +967,5 @@ export const EVENTOS_IPC = [
   'registro:lineas',
   'mcp:confirmar',
   'mcp:confirmacion-cerrada',
+  'dump:nuevo',
 ] as const satisfies readonly (keyof EventosNucleo)[];

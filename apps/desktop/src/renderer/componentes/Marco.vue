@@ -2,6 +2,7 @@
 import logo from '../assets/logo.png';
 import {
   Albums as IconoProyectos,
+  Bug as IconoDepuracion,
   Chatbubbles as IconoAgentes,
   CodeSlash as IconoPhp,
   Construct as IconoHerramientas,
@@ -78,6 +79,7 @@ const ICONOS: Record<SeccionNav, Component> = {
   ia: IconoIa,
   tuneles: IconoTuneles,
   herramientas: IconoHerramientas,
+  depuracion: IconoDepuracion,
   doctor: IconoDoctor,
   registros: IconoRegistros,
   ajustes: IconoAjustes,

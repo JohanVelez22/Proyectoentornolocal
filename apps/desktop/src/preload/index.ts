@@ -158,6 +158,16 @@ const api: ApiEntorno = {
   ajustes: {
     guardar: (a) => invocar('ajustes.guardar', a),
   },
+  depuracion: {
+    estado: () => invocar('depuracion.estado'),
+    activar: (activa) => invocar('depuracion.activar', activa),
+    captura: (sitioId, activa, confirmacion) =>
+      invocar('depuracion.captura', sitioId, activa, confirmacion),
+    lista: (filtro) => invocar('depuracion.lista', filtro),
+    leer: (id) => invocar('depuracion.leer', id),
+    limpiar: () => invocar('depuracion.limpiar'),
+    copiar: (id) => invocar('depuracion.copiar', id),
+  },
   avisos: {
     lista: () => invocar('avisos.lista'),
     marcarLeidos: (ids) => invocar('avisos.marcarLeidos', ids),

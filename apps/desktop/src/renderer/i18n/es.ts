@@ -20,6 +20,7 @@ export const es = {
     tuneles: 'Túneles',
     herramientas: 'Herramientas',
     doctor: 'Doctor',
+    depuracion: 'Depuración',
     registros: 'Registros',
     ajustes: 'Ajustes',
     contraer: 'Contraer menú',
@@ -306,6 +307,12 @@ export const es = {
         'Línea {linea}: «{directiva}» apunta a un servicio interno de WolfCore Dev (Adminer, Mailpit, bases de datos, PHP de otros sitios…) y lo expondría en la red y en los túneles. No se cambió nada.',
       'nginx.caido_tras_restaurar':
         'Nginx no volvió a responder: se restauró el vhost anterior, pero sigue sin responder. Revise Servicios y el registro de Nginx. {salida}',
+      'depuracion.puerto_ocupado':
+        'El puerto {puerto} ya está en uso: la captura de dumps no puede escuchar. Cierre el programa que lo usa (p. ej. un server:dump de Symfony).',
+      'depuracion.no_iniciado': 'La captura de dumps está apagada.',
+      'depuracion.tipo_no_soportado': 'La captura de dumps es para sitios PHP y FastAPI.',
+      'depuracion.confirmacion': 'Confirme la captura de dumps en el diálogo.',
+      'depuracion.argumento_invalido': 'Argumento no válido: {campo}',
     },
   },
   avisoInicio: {
@@ -2492,6 +2499,45 @@ export const es = {
         'WolfCore Dev nunca abre un agente por su cuenta: siempre lo pide usted. Este aviso se muestra una sola vez.',
       aceptar: 'Entendido, abrir',
     },
+  },
+  depuracion: {
+    descripcion:
+      'Vea aquí los dump(), dd() y wd() de sus sitios PHP y los wolfdump de sus procesos Python, con archivo y línea. La página sigue respondiendo igual.',
+    receptor: 'Captura de dumps',
+    escuchando: (direccion: string, puerto: number) => `Escuchando en ${direccion}:${puerto}`,
+    apagado: 'Apagada',
+    memoria:
+      'Los volcados quedan solo en memoria (los últimos 500) y se pierden al cerrar. Pueden llevar datos sensibles: al copiar se enmascaran las claves conocidas.',
+    sitios: 'Sitios',
+    sinSitios: 'No hay sitios PHP ni FastAPI.',
+    sinPhp: 'Elija una versión de PHP en el sitio primero.',
+    php: 'PHP',
+    python: 'Python',
+    reiniciarProcesos: 'Reinicie los procesos del sitio para que tomen wolfdump.',
+    confirmarTitulo: (sitio: string) => `Activar la captura en ${sitio}`,
+    confirmarPhp:
+      'El PHP de este sitio cargará antes de cada petición un archivo de WolfCore Dev (auto_prepend_file, solo en este sitio) que define dump(), dd() y wd() si el proyecto no los define. Si sus archivos declaran su propia función dump() o dd() sin comprobar function_exists, PHP mostrará un error: desactive la captura en ese caso. El sitio pasa a usar su propio PHP.',
+    usoPhp:
+      'Laravel y Symfony: dump($x) y dd($x) como siempre. CodeIgniter 3 y otros: wd($x) envía sin mostrar nada en la página.',
+    confirmarPython:
+      'Los procesos de este sitio tendrán el módulo wolfdump en su PYTHONPATH (no se escribe nada en el proyecto). Vale desde el próximo arranque de sus procesos.',
+    usoPython: 'from wolfdump import dump  →  dump(valor)',
+    activar: 'Activar captura',
+    cancelar: 'Cancelar',
+    filtroSitio: 'Todos los sitios',
+    filtroOrigen: 'Todo origen',
+    buscar: 'Buscar en el texto, archivo o URL',
+    limpiar: 'Limpiar',
+    confirmarLimpiar: '¿Borrar todos los volcados de la memoria?',
+    vacio: 'Todavía no llegó ningún volcado.',
+    vacioApagado: 'Active la captura y encienda un sitio para empezar.',
+    elegir: 'Elija un volcado de la lista.',
+    copiar: 'Copiar',
+    copiado: 'Copiado (con las claves enmascaradas)',
+    sinSitio: 'sin sitio',
+    total: (n: number) => `${n} en memoria`,
+    archivo: 'Archivo',
+    url: 'URL',
   },
   navGrupos: {
     trabajo: 'Trabajo',

@@ -47,6 +47,11 @@ import {
   nombreExtensionPhp,
   ajustesPhpSitio,
   idSitioPhp,
+  activaDepuracion,
+  confirmacionDepuracion,
+  filtroDumps,
+  idDump,
+  idSitioDepuracion,
   xdebugSitio,
   cambioVhost,
   idSitioNginx,
@@ -1056,6 +1061,26 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'mcp.regenerarToken': (n) => n.regenerarTokenMcp(),
   'mcp.responderConfirmacion': (n, _s, id, aprobado) =>
     n.responderConfirmacionMcp(idCorto(id, 'confirmación', 64), booleano(aprobado, 'aprobado')),
+
+  // ---- Captura de dumps: ids de sitio y de volcado; el núcleo arma rutas y archivos ----
+  'depuracion.estado': (n) => n.estadoDepuracion(),
+  'depuracion.activar': (n, _s, activa) => n.activarDepuracion(activaDepuracion(activa)),
+  // La confirmación sale solo del diálogo que explica qué se define en el sitio.
+  'depuracion.captura': (n, _s, id, activa, confirmacion) => {
+    const sitio = idSitioDepuracion(id);
+    const a = activaDepuracion(activa);
+    const c = confirmacionDepuracion(confirmacion);
+    return c ? n.capturaDumpsSitio(sitio, a, c) : n.capturaDumpsSitio(sitio, a);
+  },
+  'depuracion.lista': (n, _s, filtro) => n.listaDumps(filtroDumps(filtro)),
+  'depuracion.leer': (n, _s, id) => n.leerDump(idDump(id)),
+  'depuracion.limpiar': (n) => {
+    n.limpiarDumps();
+  },
+  // Puede llevar secretos: va enmascarado y directo al portapapeles.
+  'depuracion.copiar': async (n, s, id) => {
+    await s.copiar(n.textoDumpParaCopiar(idDump(id)));
+  },
 
   // ---- Centro de avisos ----
   'avisos.lista': (n) => n.avisos.lista(),

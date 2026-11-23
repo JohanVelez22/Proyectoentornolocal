@@ -21,6 +21,7 @@ export const en: Textos = {
     tuneles: 'Tunnels',
     herramientas: 'Tools',
     doctor: 'Doctor',
+    depuracion: 'Debugging',
     registros: 'Logs',
     ajustes: 'Settings',
     contraer: 'Collapse menu',
@@ -300,6 +301,12 @@ export const en: Textos = {
         'Line {linea}: “{directiva}” points to an internal WolfCore Dev service (Adminer, Mailpit, databases, other sites’ PHP…) and would expose it on the network and tunnels. Nothing was changed.',
       'nginx.caido_tras_restaurar':
         'Nginx did not respond again: the previous vhost was restored, but it still does not respond. Check Services and the Nginx log. {salida}',
+      'depuracion.puerto_ocupado':
+        'Port {puerto} is already in use: dump capture cannot listen. Close the program using it (e.g. a Symfony server:dump).',
+      'depuracion.no_iniciado': 'Dump capture is off.',
+      'depuracion.tipo_no_soportado': 'Dump capture is for PHP and FastAPI sites.',
+      'depuracion.confirmacion': 'Confirm dump capture in the dialog.',
+      'depuracion.argumento_invalido': 'Invalid argument: {campo}',
     },
   },
   avisoInicio: {
@@ -2474,6 +2481,45 @@ export const en: Textos = {
         'WolfCore Dev never opens an agent on its own: you always ask for it. This notice is shown only once.',
       aceptar: 'Got it, open',
     },
+  },
+  depuracion: {
+    descripcion:
+      'See the dump(), dd() and wd() calls of your PHP sites and the wolfdump calls of your Python processes, with file and line. The page keeps responding the same.',
+    receptor: 'Dump capture',
+    escuchando: (direccion: string, puerto: number) => `Listening on ${direccion}:${puerto}`,
+    apagado: 'Off',
+    memoria:
+      'Dumps are kept in memory only (the last 500) and are lost when closing. They may contain sensitive data: known keys are masked when copying.',
+    sitios: 'Sites',
+    sinSitios: 'There are no PHP or FastAPI sites.',
+    sinPhp: 'Choose a PHP version for the site first.',
+    php: 'PHP',
+    python: 'Python',
+    reiniciarProcesos: 'Restart the site processes so they pick up wolfdump.',
+    confirmarTitulo: (sitio: string) => `Enable capture on ${sitio}`,
+    confirmarPhp:
+      'Before each request, the PHP of this site will load a WolfCore Dev file (auto_prepend_file, only on this site) that defines dump(), dd() and wd() if the project does not define them. If your files declare their own dump() or dd() function without checking function_exists, PHP will show an error: disable capture in that case. The site switches to its own PHP.',
+    usoPhp:
+      'Laravel and Symfony: dump($x) and dd($x) as usual. CodeIgniter 3 and others: wd($x) sends without showing anything on the page.',
+    confirmarPython:
+      'The processes of this site will have the wolfdump module on their PYTHONPATH (nothing is written to the project). It applies from the next start of its processes.',
+    usoPython: 'from wolfdump import dump  →  dump(value)',
+    activar: 'Enable capture',
+    cancelar: 'Cancel',
+    filtroSitio: 'All sites',
+    filtroOrigen: 'Any origin',
+    buscar: 'Search text, file or URL',
+    limpiar: 'Clear',
+    confirmarLimpiar: 'Delete all dumps from memory?',
+    vacio: 'No dump has arrived yet.',
+    vacioApagado: 'Turn capture on and enable a site to start.',
+    elegir: 'Pick a dump from the list.',
+    copiar: 'Copy',
+    copiado: 'Copied (with keys masked)',
+    sinSitio: 'no site',
+    total: (n: number) => `${n} in memory`,
+    archivo: 'File',
+    url: 'URL',
   },
   navGrupos: {
     trabajo: 'Work',

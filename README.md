@@ -101,6 +101,13 @@ PostgreSQL usa pgvector compilado una vez en su equipo:
 - **Registros:** sigue en vivo los logs de Nginx, PHP, los servicios, los sitios (también `storage/logs/laravel.log`), los procesos de proyecto y los túneles, con filtro por texto y nivel, pausa y **Abrir carpeta**.
 - **Herramientas** (sin conexión): QR, JSON, expresiones regulares, comparar textos, tiempo, puertos y procesos (finalizar con confirmación), limpieza del BOM de UTF-8, certificados con la CA local, cripto (hash, base64, URL, UUID, contraseñas, JWT), Markdown, entorno del sistema (PATH, versiones y variables con secretos ocultos), información de archivo y cliente WebSocket.
 
+### Depuración: `dump()`/`dd()` (Etapa C)
+
+- **Depuración** enciende un receptor local (`127.0.0.1:9912`, con un token aleatorio en cada sesión que solo leen los sitios con la captura) y muestra en vivo los volcados con sitio, archivo, línea y URL, con filtro por sitio, origen y texto. Quedan **solo en memoria** (los últimos 500) y **Copiar** enmascara las claves conocidas.
+- La captura se enciende **por sitio** y pide confirmación; apagar el receptor la apaga en todos. Nunca toca el `php.ini` de la rama ni escribe en el proyecto.
+- **PHP** (Laravel, CodeIgniter 3 y 4, WordPress, personalizado): el PHP propio del sitio carga `etc/php/wolfcore-prepend.php` (`auto_prepend_file`), que define `wd()` y, si el proyecto no los define, `dump()` y `dd()`. Laravel y Symfony siguen mostrando el volcado en la página como siempre; en CodeIgniter 3 u otros sin VarDumper, `dump($x)` muestra un `print_r` y `wd($x)` solo lo envía a WolfCore Dev. Si el receptor no responde, no pasa nada visible y la petición no tarda más de 200 ms extra; `dd()` sigue deteniendo. Un `auto_prepend_file` anterior se sigue cargando. Si el proyecto declara su propia función `dump()` o `dd()` sin `function_exists`, PHP dará error: desactive la captura en ese sitio.
+- **Python** (FastAPI): los procesos del sitio reciben `etc/python` en el `PYTHONPATH` (desde su próximo arranque): `from wolfdump import dump` y `dump(valor)` (devuelve el valor y no imprime nada).
+
 ### MCP para Claude Code (Etapa B)
 
 - **Ajustes → Servidor MCP** lo activa en `http://127.0.0.1:7790/mcp` (puerto configurable) con un token Bearer aleatorio. **Copiar configuración para Claude Code** deja en el portapapeles el comando `claude mcp add --transport http wolfcore …` y el bloque para `.mcp.json`; **Regenerar token** invalida el anterior.

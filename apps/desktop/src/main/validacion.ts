@@ -695,3 +695,69 @@ export function versionVhost(v: unknown): string {
   }
   return v;
 }
+
+// ---- Captura de dumps: ids de sitio y de volcado, filtro y confirmación; nunca rutas ----
+
+function argumentoDepuracion(campo: string): ErrorWolf {
+  return new ErrorWolf('depuracion.argumento_invalido', `Argumento no válido: ${campo}`, {
+    campo,
+  });
+}
+
+const ID_SITIO = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+/** Id de un sitio (nunca una ruta). */
+export function idSitioDepuracion(v: unknown): string {
+  if (typeof v !== 'string' || v.length > 128 || !ID_SITIO.test(v)) {
+    throw argumentoDepuracion('sitio');
+  }
+  return v;
+}
+
+/** Id de un volcado del receptor (`d<base36>-<n>`). */
+export function idDump(v: unknown): string {
+  if (typeof v !== 'string' || v.length > 64 || !/^d[0-9a-z]+-\d+$/.test(v)) {
+    throw argumentoDepuracion('id');
+  }
+  return v;
+}
+
+export function activaDepuracion(v: unknown): boolean {
+  if (typeof v !== 'boolean') throw argumentoDepuracion('activa');
+  return v;
+}
+
+/** Confirmación del diálogo al encender la captura de un sitio: exactamente `true` o nada. */
+export function confirmacionDepuracion(v: unknown): true | undefined {
+  if (v === undefined) return undefined;
+  if (v !== true) throw argumentoDepuracion('confirmacion');
+  return true;
+}
+
+/** Filtro de la lista: sitio, origen y texto (corto, sin controles); nada más. */
+export function filtroDumps(
+  v: unknown,
+): { sitioId?: string; origen?: 'php' | 'python'; texto?: string } | undefined {
+  if (v === undefined) return undefined;
+  let o: Record<string, unknown>;
+  try {
+    o = objetoPlano<Record<string, unknown>>(v, 'filtro');
+  } catch {
+    throw argumentoDepuracion('filtro');
+  }
+  const res: { sitioId?: string; origen?: 'php' | 'python'; texto?: string } = {};
+  for (const [k, x] of Object.entries(o)) {
+    if (x === undefined) continue;
+    if (k === 'sitioId') res.sitioId = idSitioDepuracion(x);
+    else if (k === 'origen') {
+      if (x !== 'php' && x !== 'python') throw argumentoDepuracion('origen');
+      res.origen = x;
+    } else if (k === 'texto') {
+      if (typeof x !== 'string' || x.length > 200 || tieneControl(x)) {
+        throw argumentoDepuracion('texto');
+      }
+      res.texto = x;
+    } else throw argumentoDepuracion('filtro');
+  }
+  return res;
+}
