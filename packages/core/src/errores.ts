@@ -186,6 +186,12 @@ export const PARAMETROS_ERROR = {
   'nginx.destino_interno': ['directiva', 'linea'],
   'nginx.caido_tras_restaurar': ['salida'],
   'nginx.argumento_invalido': ['campo'],
+  // Captura de dump() (Task 13)
+  'depuracion.puerto_ocupado': ['puerto'],
+  'depuracion.no_iniciado': [],
+  'depuracion.tipo_no_soportado': [],
+  'depuracion.confirmacion': [],
+  'depuracion.argumento_invalido': ['campo'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

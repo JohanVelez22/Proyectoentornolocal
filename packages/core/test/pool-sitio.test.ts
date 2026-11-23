@@ -443,7 +443,10 @@ describe('PoolsSitio', () => {
 });
 
 describe('AjustesPhpSitio (guardar con prueba, salud y vuelta atrás)', () => {
-  let guardado: Map<string, { phpIni: Record<string, string>; xdebug: Sitio['xdebug'] }>;
+  let guardado: Map<
+    string,
+    { phpIni: Record<string, string>; xdebug: Sitio['xdebug']; capturaDumps: boolean }
+  >;
   let pruebas: string[];
   let sincronizaciones: number;
   let sano: boolean[];
@@ -517,6 +520,35 @@ describe('AjustesPhpSitio (guardar con prueba, salud y vuelta atrás)', () => {
     expect(r.aplicar.nginx.ok).toBe(true);
   });
 
+  it('captura de dumps: guarda, conserva ajustes y Xdebug y prueba el ini con el prepend', async () => {
+    const a = crear({
+      iniPrueba: async (s) =>
+        Buffer.from(iniSitio(s, 'memory_limit = 128M\n', 'C:/x.dll', [], 'C:/d/prepend.php')),
+    });
+    await a.captura('tienda', true);
+    expect(guardado.get('tienda')).toEqual({
+      phpIni: { memory_limit: '256M' },
+      xdebug: null,
+      capturaDumps: true,
+    });
+    expect(pruebas[0]).toContain('auto_prepend_file = "C:/d/prepend.php"');
+    expect(aplicados).toBe(1);
+    // Los ajustes y Xdebug guardados después conservan la captura.
+    await a.guardarPhpIni('tienda', { memory_limit: '1G' });
+    expect(guardado.get('tienda')?.capturaDumps).toBe(true);
+    await a.captura('tienda', false);
+    expect(guardado.get('tienda')?.capturaDumps).toBe(false);
+  });
+
+  it('captura con un pool que no responde → vuelve a sin captura', async () => {
+    sano = [false];
+    await expect(crear().captura('tienda', true)).rejects.toMatchObject({
+      codigo: 'php.sitio_no_arranco',
+    });
+    expect(guardado.get('tienda')?.capturaDumps).toBe(false);
+    expect(aplicados).toBe(0);
+  });
+
   it('un ini que PHP rechaza no se guarda ni toca el pool', async () => {
     probarFalla = true;
     await expect(crear().guardarPhpIni('tienda', { memory_limit: '1G' })).rejects.toMatchObject({
@@ -533,7 +565,11 @@ describe('AjustesPhpSitio (guardar con prueba, salud y vuelta atrás)', () => {
       codigo: 'php.sitio_no_arranco',
       datos: { sitio: 'tienda.test' },
     });
-    expect(guardado.get('tienda')).toEqual({ phpIni: { memory_limit: '256M' }, xdebug: null });
+    expect(guardado.get('tienda')).toEqual({
+      phpIni: { memory_limit: '256M' },
+      xdebug: null,
+      capturaDumps: false,
+    });
     expect(sincronizaciones).toBe(2);
     // Nginx todavía no había cambiado: no hay nada que volver a aplicar.
     expect(aplicados).toBe(0);
@@ -543,7 +579,11 @@ describe('AjustesPhpSitio (guardar con prueba, salud y vuelta atrás)', () => {
     aplicarOk = false;
     const r = await crear().xdebug('tienda', X);
     expect(r.aplicar.nginx.ok).toBe(false);
-    expect(guardado.get('tienda')).toEqual({ phpIni: { memory_limit: '256M' }, xdebug: null });
+    expect(guardado.get('tienda')).toEqual({
+      phpIni: { memory_limit: '256M' },
+      xdebug: null,
+      capturaDumps: false,
+    });
     expect(aplicados).toBe(2);
   });
 

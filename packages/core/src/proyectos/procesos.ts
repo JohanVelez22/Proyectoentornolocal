@@ -69,6 +69,11 @@ export interface DepsProcesosProyecto extends DepsEntorno {
   leerSitios: () => Promise<Sitio[]>;
   /** Confianza en la CA local (NODE_EXTRA_CA_CERTS, bundle de Python). */
   confianza?: Pick<ConfianzaCa, 'envProyecto'>;
+  /**
+   * Captura de dumps: carpeta de `wolfdump.py` (la deja al día). Solo los procesos de los sitios
+   * con `capturaDumps` la reciben en su PYTHONPATH.
+   */
+  depuracion?: { carpetaPython(): Promise<string> };
 }
 
 export interface EstadoProcesoProyecto {
@@ -345,7 +350,18 @@ export class ProcesosProyecto {
     const ca: Record<string, string> = this.d.confianza
       ? await this.d.confianza.envProyecto(sitio, { carpetaVenv: cwd }).catch(() => ({}))
       : {};
-    const cambios = { ...entorno.cambios, ...ca };
+    const cambios: Record<string, string> = { ...entorno.cambios, ...ca };
+    if (sitio.capturaDumps === true && this.d.depuracion) {
+      // Primero wolfdump; el PYTHONPATH del usuario sigue después. Si falla, arranca sin él.
+      const carpetaDumps = await this.d.depuracion.carpetaPython().catch(() => null);
+      if (carpetaDumps) {
+        const previo = cambios['PYTHONPATH'] ?? (this.d.entorno ?? process.env)['PYTHONPATH'];
+        cambios['PYTHONPATH'] = [carpetaDumps, previo]
+          .filter((x): x is string => !!x)
+          .join(path.delimiter);
+        cambios['WOLFCORE_SITIO'] = sitio.id;
+      }
+    }
     const avisos = entorno.avisos.map((a) => sanear(a));
     this.avisos.set(id, avisos);
     const { cmd, args } = await resolverPrograma(p.comando, carpeta, this.d, entorno);

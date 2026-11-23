@@ -92,3 +92,5 @@ export * from './herramientas/bom';
 export * from './herramientas/certificadosLibres';
 export * from './herramientas/entorno';
 export * from './mcp/servidor';
+export * from './depuracion/receptor';
+export { rutasDepuracion } from './depuracion/prepend';

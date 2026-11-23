@@ -141,6 +141,12 @@ export const SitioSchema = z.object({
    * fuera del vhost, sin volver a probarlo ni avisar, hasta que se aplique otra vez desde el editor.
    */
   vhostDesactivado: z.enum(['reglas', 'manual']).nullable().optional(),
+  /**
+   * Captura de `dump()`/`dd()`/`wd()` (PHP: `auto_prepend_file` en el pool propio del sitio) y de
+   * `wolfdump` (Python: PYTHONPATH de sus procesos). Ausente = apagada. Solo cambia con
+   * `Nucleo.capturaDumpsSitio` (con la confirmación de la ventana); nunca es global.
+   */
+  capturaDumps: z.boolean().optional(),
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 
@@ -341,6 +347,16 @@ export const ConfigSchema = z.object({
           ollama: servicioDatos(PUERTOS_POR_DEFECTO.ollama),
         })
         .prefault({}),
+    })
+    .prefault({}),
+  /**
+   * Receptor de dumps (127.0.0.1). `activa` = escucha al iniciar. La captura en sí se enciende por
+   * sitio (`Sitio.capturaDumps`); apagar el receptor la apaga en todos los sitios.
+   */
+  depuracion: z
+    .object({
+      activa: z.boolean().default(false),
+      puerto: z.number().int().min(1024).max(65535).default(9912),
     })
     .prefault({}),
   /** Avisos: notificaciones nativas y qué tipos se muestran. */

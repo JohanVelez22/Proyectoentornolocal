@@ -56,6 +56,15 @@ import { Servicios, type IdServicio } from './servicios/servicios';
 import { Agentes } from './agentes/agentes';
 import { ErrorWolf } from './errores';
 import { ServidorMcp, type EstadoMcp, type OperacionesMcp } from './mcp/servidor';
+import { asegurarArchivosDepuracion, rutasDepuracion } from './depuracion/prepend';
+import {
+  ReceptorDumps,
+  textoParaCopiar,
+  type Dump,
+  type EstadoReceptor,
+  type FiltroDumps,
+  type ResumenDump,
+} from './depuracion/receptor';
 import { detectarSitio, type ProyectoDetectado } from './sitios/detectar';
 import {
   GestorSitios,
@@ -103,6 +112,7 @@ import type {
 import {
   CambiosPreferenciasUiSchema,
   IDS_SERVICIO_DATOS,
+  TIPOS_CON_PHP,
   type CambiosPreferenciasUi,
   type PreferenciasUi,
 } from './tipos';
@@ -416,6 +426,8 @@ export class Nucleo {
   private readonly puertoOllama: { valor: number };
   /** Servidor MCP local; se maneja con iniciarMcp/detenerMcp (que guardan `mcp.activo`). */
   readonly mcp: ServidorMcp;
+  /** Receptor de dumps (127.0.0.1); se maneja con activarDepuracion (que guarda `depuracion.activa`). */
+  readonly depuracion: ReceptorDumps;
   readonly runtimes: Runtimes;
   /** Motor de recetas con los pasos reales registrados. */
   readonly recetas: EjecutorRecetas;
@@ -506,6 +518,11 @@ export class Nucleo {
       puerto: async () => (await this.config.leer()).mcp.puerto,
       emitirConfirmacion: (s) => this.eventos.emit('mcp:confirmar', s),
       emitirCierre: (c) => this.eventos.emit('mcp:confirmacion-cerrada', c),
+    });
+    this.depuracion = new ReceptorDumps({
+      rutas: this.rutas,
+      puerto: async () => (await this.config.leer()).depuracion.puerto,
+      emitir: (d) => this.eventos.emit('dump:nuevo', d),
     });
   }
 
@@ -675,6 +692,9 @@ export class Nucleo {
     });
     procesos = new ProcesosProyecto({
       confianza,
+      depuracion: {
+        carpetaPython: async () => (await asegurarArchivosDepuracion(rutas)).carpetaPython,
+      },
       rutas,
       supervisor,
       runtimes,
@@ -765,6 +785,7 @@ export class Nucleo {
         return [...puertosServicios(cfg), ...ramas, ...(await puertosSistema())];
       },
       sonda: sondaPhp,
+      rutaPrepend: async () => (await asegurarArchivosDepuracion(rutas)).prepend,
     });
     const ajustesPhpSitio = new AjustesPhpSitio({
       leerSitio: async (id) => (await sitios.listar()).find((x) => x.id === id),
@@ -774,10 +795,18 @@ export class Nucleo {
           if (!s) throw new ErrorWolf('proyectos.no_existe', `No existe el proyecto ${id}`);
           s.phpIni = campos.phpIni;
           s.xdebug = campos.xdebug;
+          if (campos.capturaDumps) s.capturaDumps = true;
+          else delete s.capturaDumps;
         }),
       iniPrueba: async (s) => {
         const bytes = await leerIniRama(s.php!);
-        const texto = iniSitio(s, decodificarIni(bytes), extensionesPhp.rutaDll(s.php!, 'xdebug'));
+        const texto = iniSitio(
+          s,
+          decodificarIni(bytes),
+          extensionesPhp.rutaDll(s.php!, 'xdebug'),
+          [],
+          rutasDepuracion(rutas).prepend,
+        );
         return codificarIni(texto, bytes);
       },
       probarIni: (r, t) => iniPhp.probar(r, t, ARGS_PRUEBA_INI_SITIO),
@@ -1049,6 +1078,15 @@ export class Nucleo {
     if (avisoInicio) nucleo.avisosPendientes.push(avisoInicio);
     // Nunca lanza: una carpeta vigilada que ya no existe solo deja de dar sugerencias.
     await nucleo.vigilante.vigilar((await leerConfig()).proyectos.carpetaVigilada);
+    // El prepend y wolfdump al día siempre: un sitio con la captura de otra sesión los carga.
+    await asegurarArchivosDepuracion(rutas).catch((e: unknown) => {
+      console.error('No se pudieron escribir los archivos de la captura de dumps:', mensajeDe(e));
+    });
+    if ((await leerConfig()).depuracion.activa) {
+      await nucleo.depuracion.iniciar().catch((e: unknown) => {
+        nucleo.avisosPendientes.push(`No se pudo iniciar la captura de dumps: ${mensajeDe(e)}`);
+      });
+    }
     if ((await leerConfig()).mcp.activo) {
       // Un puerto ocupado no impide el arranque: queda como aviso.
       await nucleo.mcp.iniciar().catch((e: unknown) => {
@@ -1958,6 +1996,107 @@ export class Nucleo {
     return this.mcp.configuracionClaude();
   }
 
+  /* ───────────── Captura de dumps ───────────── */
+
+  estadoDepuracion(): EstadoReceptor {
+    return this.depuracion.estado();
+  }
+
+  /**
+   * Enciende o apaga el receptor y lo guarda en `depuracion.activa`. Apagarlo apaga también la
+   * captura de todos los sitios (sin receptor no tiene sentido dejar el prepend en sus pools):
+   * primero Nginx vuelve al pool compartido y después se apagan los pools propios que sobran.
+   */
+  async activarDepuracion(activa: boolean): Promise<EstadoReceptor> {
+    if (activa) {
+      await this.depuracion.iniciar();
+      await this.sitios.modificarConfig((c) => {
+        c.depuracion.activa = true;
+      });
+      return this.depuracion.estado();
+    }
+    await this.depuracion.detener();
+    let habia = false;
+    await this.sitios.modificarConfig((c) => {
+      c.depuracion.activa = false;
+      for (const s of c.sitios) {
+        if (s.capturaDumps) {
+          habia = true;
+          delete s.capturaDumps;
+        }
+      }
+    });
+    if (habia) {
+      await this.sitios.aplicar();
+      await this.poolsSitio.sincronizar().catch((e: unknown) => {
+        console.error('No se pudieron poner al día los PHP de los sitios:', mensajeDe(e));
+      });
+      this.eventos.emit('sitio:cambio', await this.sitios.listar());
+    }
+    return this.depuracion.estado();
+  }
+
+  /**
+   * Captura de dumps de un sitio. Encenderla exige la confirmación de la ventana (define
+   * `dump()`/`dd()`/`wd()` en su PHP o pone `wolfdump` en el PYTHONPATH de sus procesos) y
+   * enciende el receptor si hacía falta. En PHP pasa por el pool propio con prueba, salud y vuelta
+   * atrás; en Python vale desde el próximo arranque de sus procesos.
+   */
+  async capturaDumpsSitio(
+    sitioId: string,
+    activa: boolean,
+    confirmacion?: true,
+  ): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar | null }> {
+    const s = await this.sitioPorId(sitioId);
+    const esPhp = TIPOS_CON_PHP.includes(s.tipo) && !!s.php;
+    if (!esPhp && s.tipo !== 'fastapi') {
+      throw new ErrorWolf(
+        'depuracion.tipo_no_soportado',
+        'La captura de dumps es para sitios PHP y FastAPI.',
+      );
+    }
+    if (activa && confirmacion !== true) {
+      throw new ErrorWolf('depuracion.confirmacion', 'Falta confirmar la captura de dumps.');
+    }
+    if (activa && !this.depuracion.estado().activo) await this.activarDepuracion(true);
+    let aplicar: ResultadoAplicar | null = null;
+    if (esPhp) {
+      aplicar = (await this.ajustesPhpSitio.captura(s.id, activa)).aplicar;
+    } else {
+      await this.sitios.modificarConfig((c) => {
+        const x = c.sitios.find((y) => y.id === s.id);
+        if (!x) throw new ErrorWolf('proyectos.no_existe', `No existe el proyecto ${s.id}`);
+        if (activa) x.capturaDumps = true;
+        else delete x.capturaDumps;
+      });
+    }
+    const lista = await this.sitios.listar();
+    this.eventos.emit('sitio:cambio', lista);
+    return { sitio: lista.find((x) => x.id === s.id) ?? s, aplicar };
+  }
+
+  listaDumps(filtro?: FiltroDumps): ResumenDump[] {
+    return this.depuracion.lista(filtro);
+  }
+
+  leerDump(id: string): Dump | null {
+    return this.depuracion.leer(id);
+  }
+
+  limpiarDumps(): void {
+    this.depuracion.limpiar();
+  }
+
+  /** Texto de un volcado para el portapapeles, con los secretos enmascarados. */
+  textoDumpParaCopiar(id: string): string {
+    const d = this.depuracion.leer(id);
+    if (!d)
+      throw new ErrorWolf('depuracion.argumento_invalido', 'Ese volcado ya no está.', {
+        campo: 'id',
+      });
+    return textoParaCopiar(d);
+  }
+
   /** Respuesta de la ventana a `'mcp:confirmar'`; un id desconocido o vencido se ignora. */
   responderConfirmacionMcp(id: string, aprobado: boolean): boolean {
     return this.mcp.responderConfirmacion(id, aprobado);
@@ -2018,6 +2157,8 @@ export class Nucleo {
     delete resto.ftp;
     delete resto.phpIni;
     delete resto.xdebug;
+    // La captura de dumps solo cambia con capturaDumpsSitio (confirmación de la ventana).
+    delete resto.capturaDumps;
     if (id) await this.cerrarTunelSiCambia(id, datos);
     const previo = id ? (await this.sitios.listar()).find((s) => s.id === id) : undefined;
     // Las reglas propias y el vhost manual solo cambian con el editor de vhost (revisión,
@@ -2300,6 +2441,9 @@ export class Nucleo {
     await this.mcp.detener().catch((e: unknown) => {
       console.error('No se pudo detener el servidor MCP:', mensajeDe(e));
     });
+    await this.depuracion.detener().catch((e: unknown) => {
+      console.error('No se pudo detener el receptor de dumps:', mensajeDe(e));
+    });
     let primero: unknown;
     let fallo = false;
     const anotar = (e: unknown): void => {
@@ -2374,6 +2518,7 @@ function puertosServicios(cfg: Config, sitioId: string | null = null): number[] 
     cfg.https.puerto,
     cfg.ftp.puerto,
     cfg.mcp.puerto,
+    cfg.depuracion.puerto,
     PUERTO_ADMINER,
     PUERTO_WEB_MAILPIT,
     ...Object.values(cfg.servicios.datos).map((d) => d.puerto),

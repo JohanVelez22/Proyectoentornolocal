@@ -1,5 +1,6 @@
 import type { Aviso } from './avisos/avisos';
 import type { MotorBd } from './bd/env';
+import type { ResumenDump } from './depuracion/receptor';
 import type { CierreConfirmacion, SolicitudConfirmacion } from './mcp/servidor';
 import type { MuestraSistema } from './monitor/metricas';
 import type { SugerenciaProyecto } from './proyectos/vigilar';
@@ -60,6 +61,8 @@ export type EventosNucleo = {
   'mcp:confirmar': SolicitudConfirmacion;
   /** Esa confirmación ya no está pendiente (aprobada, rechazada, vencida, cancelada o detenido). */
   'mcp:confirmacion-cerrada': CierreConfirmacion;
+  /** Llegó un volcado de dump()/wd()/wolfdump (solo el resumen; el texto se pide con leer). */
+  'dump:nuevo': ResumenDump;
 };
 
 export class Eventos<M extends Record<string, unknown>> {

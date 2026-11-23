@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { carpetaTemporal } from './temporales';
 import { Eventos, type EventosNucleo } from '../src/eventos';
@@ -85,6 +85,8 @@ interface OpcionesArmado {
   sinNode?: boolean;
   supervisor?: SupervisorProcesos;
   confianza?: DepsProcesosProyecto['confianza'];
+  depuracion?: DepsProcesosProyecto['depuracion'];
+  entorno?: NodeJS.ProcessEnv;
 }
 
 async function armar(o: OpcionesArmado = {}): Promise<Armado> {
@@ -111,7 +113,7 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
     rutas,
     supervisor: o.supervisor ?? sup,
     leerSitios: async () => sitios,
-    entorno: { Path: 'C:\\Windows\\system32', OTRA: 'secreto-del-usuario' },
+    entorno: o.entorno ?? { Path: 'C:\\Windows\\system32', OTRA: 'secreto-del-usuario' },
     runtimes: {
       paraProyecto: async () => ({
         ...(o.sinNode ? {} : { node: '22.1.0' }),
@@ -130,6 +132,7 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
     },
     php: async () => ({ exe: phpExe, ini: phpIni }),
     ...(o.confianza ? { confianza: o.confianza } : {}),
+    ...(o.depuracion ? { depuracion: o.depuracion } : {}),
   });
   return { base, carpeta, rutas, sitios, sup, procesos, nodeDir, pythonDir, phpExe, phpIni };
 }
@@ -212,6 +215,36 @@ describe('iniciar', () => {
     expect(def.env?.NODE_EXTRA_CA_CERTS).toBe('ca.crt');
     expect(def.env?.SSL_CERT_FILE).toBe('bundle.pem');
     expect(pedidos).toEqual([{ carpeta: a.carpeta, venv: a.carpeta }]);
+  });
+
+  it('captura de dumps: PYTHONPATH con wolfdump primero y el del usuario después, solo si está activa', async () => {
+    const depuracion = { carpetaPython: async () => join('D', 'etc', 'python') };
+    const sin = await armar({ depuracion });
+    await sin.procesos.iniciar('demo', 'vite');
+    expect(sin.sup.iniciados[0]!.env?.PYTHONPATH).toBeUndefined();
+    expect(sin.sup.iniciados[0]!.env?.WOLFCORE_SITIO).toBeUndefined();
+
+    const con = await armar({
+      depuracion,
+      sitio: { capturaDumps: true },
+      entorno: { Path: 'C:\\Windows', PYTHONPATH: join('U', 'libs') },
+    });
+    await con.procesos.iniciar('demo', 'vite');
+    const env = con.sup.iniciados[0]!.env!;
+    expect(env.PYTHONPATH).toBe([join('D', 'etc', 'python'), join('U', 'libs')].join(delimiter));
+    expect(env.WOLFCORE_SITIO).toBe('demo');
+
+    // Si no se pudo preparar wolfdump, el proceso arranca igual.
+    const roto = await armar({
+      depuracion: {
+        carpetaPython: async () => {
+          throw new Error('sin disco');
+        },
+      },
+      sitio: { capturaDumps: true },
+    });
+    await roto.procesos.iniciar('demo', 'vite');
+    expect(roto.sup.iniciados[0]!.env?.PYTHONPATH).toBeUndefined();
   });
 
   it('si la confianza falla, el proceso arranca igual (sin esas variables)', async () => {

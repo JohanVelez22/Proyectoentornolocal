@@ -9,7 +9,13 @@ import type { ResultadoAplicar } from '../sitios/sitios';
 import { TIPOS_CON_PHP, type Sitio } from '../tipos';
 import type { UpstreamPhp } from '../servicios/nginx';
 import { extensionesActivas } from './extensiones';
-import { codificarIni, decodificarIni, escribirIniAtomico, VALORES_RAPIDOS } from './ini';
+import {
+  codificarIni,
+  decodificarIni,
+  escribirIniAtomico,
+  valoresDe,
+  VALORES_RAPIDOS,
+} from './ini';
 import { validarXdebug, xdebugIni, type XdebugSitio } from './xdebug';
 
 /**
@@ -25,11 +31,22 @@ const CLAVE_INI = /^[a-z][a-z0-9_]{0,40}(\.[a-z0-9_]{1,40}){0,3}$/i;
 const CLAVES_PROHIBIDAS = /^(extension|zend_extension|extension_dir|xdebug\..*)$/i;
 const CLAVES_PELIGROSAS = new Set(['__proto__', 'constructor', 'prototype']);
 
-/** ¿El sitio corre en su propio pool de php-cgi? (tiene PHP y ajustes propios o Xdebug activo) */
+/**
+ * ¿El sitio corre en su propio pool de php-cgi? (tiene PHP y ajustes propios, Xdebug activo o la
+ * captura de dumps: el `auto_prepend_file` va solo en su ini, nunca en el de la rama)
+ */
 export function necesitaPoolPropio(s: Sitio): boolean {
   if (!TIPOS_CON_PHP.includes(s.tipo) || !s.php) return false;
-  return Object.keys(s.phpIni ?? {}).length > 0 || s.xdebug?.activo === true;
+  return Object.keys(s.phpIni ?? {}).length > 0 || s.xdebug?.activo === true || capturaPhp(s);
 }
+
+/** ¿Lleva el pool del sitio el prepend de la captura de dumps? */
+export function capturaPhp(s: Sitio): boolean {
+  return s.capturaDumps === true && TIPOS_CON_PHP.includes(s.tipo) && !!s.php;
+}
+
+/** Ruta para el ini: barras normales (como zend_extension) y entre comillas. */
+const rutaEnIni = (r: string): string => `"${r.replace(/\\/g, '/')}"`;
 
 /** Trabajadores del pool del sitio: 2 con Xdebug (uno detenido en un punto no frena el resto). */
 export function trabajadoresPool(s: Sitio): number {
@@ -119,15 +136,29 @@ export function iniSitio(
   iniRama: string,
   rutaDllXdebug: string | null = null,
   descartados: string[] = [],
+  rutaPrepend: string | null = null,
 ): string {
   const salto = saltoDe(iniRama);
   const lineas = ['[PHP]', `; ---- WolfCore Dev: ajustes propios del sitio ${s.dominio} ----`];
-  for (const [k, v] of Object.entries(ajustesValidos(s.phpIni, descartados))) {
+  const ajustes = ajustesValidos(s.phpIni, descartados);
+  for (const [k, v] of Object.entries(ajustes)) {
     lineas.push(`${k} = ${v}`);
   }
   if (s.xdebug?.activo) {
     const cargada = extensionesActivas(iniRama).has('xdebug');
     lineas.push(...xdebugIni(s.xdebug, cargada ? null : rutaDllXdebug).split('\n'));
+  }
+  if (rutaPrepend && capturaPhp(s)) {
+    // El prepend propio (del sitio o de la rama) no se pierde: el nuestro lo carga al final.
+    const previo =
+      ajustes['auto_prepend_file'] ??
+      valoresDe(iniRama, ['auto_prepend_file'])['auto_prepend_file'] ??
+      '';
+    lineas.push('; ---- WolfCore Dev: captura de dump() ----', `wolfcore.sitio = "${s.id}"`);
+    if (previo.trim() !== '' && !/^none$/i.test(previo.trim())) {
+      lineas.push(`wolfcore.prepend_previo = ${rutaEnIni(previo.trim())}`);
+    }
+    lineas.push(`auto_prepend_file = ${rutaEnIni(rutaPrepend)}`);
   }
   const base = iniRama.endsWith('\n') || iniRama === '' ? iniRama : `${iniRama}${salto}`;
   return `${base}${lineas.join(salto)}${salto}`;
@@ -233,6 +264,8 @@ export interface DepsPoolsSitio {
   puertosRama(rama: string): Promise<number[]>;
   avisar?(a: AvisoPoolSitio): void;
   sonda(puerto: number): Promise<boolean>;
+  /** Deja al día el prepend de la captura de dumps y devuelve su ruta. */
+  rutaPrepend?(): Promise<string>;
   /** Espera máxima a que un pool responda. */
   plazoSanoMs?: number;
 }
@@ -368,7 +401,15 @@ export class PoolsSitio {
     const rama = s.php!;
     const bytesRama = await this.d.leerIniRama(rama);
     const descartados: string[] = [];
-    const texto = iniSitio(s, decodificarIni(bytesRama), this.d.rutaDllXdebug(rama), descartados);
+    // El prepend se escribe antes que el ini: un auto_prepend_file que falta tumba el sitio.
+    const prepend = capturaPhp(s) && this.d.rutaPrepend ? await this.d.rutaPrepend() : null;
+    const texto = iniSitio(
+      s,
+      decodificarIni(bytesRama),
+      this.d.rutaDllXdebug(rama),
+      descartados,
+      prepend,
+    );
     if (descartados.length > 0) {
       this.d.avisar?.({ tipo: 'descartados', sitio: s.dominio, claves: descartados });
     }
@@ -474,6 +515,8 @@ export class PoolsSitio {
 export interface CamposPhpSitio {
   phpIni: Record<string, string>;
   xdebug: XdebugSitio | null;
+  /** Captura de dumps (prepend en el pool propio). */
+  capturaDumps: boolean;
 }
 
 export interface DepsAjustesPhpSitio {
@@ -514,12 +557,32 @@ export class AjustesPhpSitio {
 
   async guardarPhpIni(id: string, valores: unknown): Promise<ResultadoPhpSitio> {
     const phpIni = validarPhpIni(valores);
-    return this.cambiar(id, (s) => ({ phpIni, xdebug: s.xdebug ?? null }));
+    return this.cambiar(id, (s) => ({
+      phpIni,
+      xdebug: s.xdebug ?? null,
+      capturaDumps: s.capturaDumps === true,
+    }));
   }
 
   async xdebug(id: string, x: unknown): Promise<ResultadoPhpSitio> {
     const xdebug = validarXdebug(x);
-    return this.cambiar(id, (s) => ({ phpIni: s.phpIni ?? {}, xdebug }));
+    return this.cambiar(id, (s) => ({
+      phpIni: s.phpIni ?? {},
+      xdebug,
+      capturaDumps: s.capturaDumps === true,
+    }));
+  }
+
+  /**
+   * Captura de dumps del sitio: con ella su pool propio carga el prepend (`auto_prepend_file`);
+   * sin ella el ini del sitio no lo lleva. Misma prueba, salud y vuelta atrás que los ajustes.
+   */
+  captura(id: string, activa: boolean): Promise<ResultadoPhpSitio> {
+    return this.cambiar(id, (s) => ({
+      phpIni: s.phpIni ?? {},
+      xdebug: s.xdebug ?? null,
+      capturaDumps: activa,
+    }));
   }
 
   private cambiar(id: string, nuevos: (s: Sitio) => CamposPhpSitio): Promise<ResultadoPhpSitio> {
@@ -544,6 +607,7 @@ export class AjustesPhpSitio {
     const anteriores: CamposPhpSitio = {
       phpIni: previo.phpIni ?? {},
       xdebug: previo.xdebug ?? null,
+      capturaDumps: previo.capturaDumps === true,
     };
     const nuevo: Sitio = { ...previo, ...campos };
     const propio = necesitaPoolPropio(nuevo);
