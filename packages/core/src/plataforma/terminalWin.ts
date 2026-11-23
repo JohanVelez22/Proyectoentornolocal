@@ -66,20 +66,28 @@ export function powershellDelSistema(entorno: NodeJS.ProcessEnv): string {
 }
 
 /**
- * Invocación de un PowerShell OCULTO que abre `cmd` en una consola nueva con `Start-Process`:
- * la consola es del sistema (en Windows 11, la terminal predeterminada, p. ej. Windows Terminal),
- * el programa hereda el entorno del PowerShell oculto (el nuestro, con las variables del
- * proyecto) y arranca en su carpeta de trabajo (`cwd`, sin pasarla como argumento).
+ * Invocación de un PowerShell OCULTO que abre `cmd` en una consola nueva con
+ * `Process.Start` (UseShellExecute): la consola es del sistema (en Windows 11, la terminal
+ * predeterminada, p. ej. Windows Terminal), el programa hereda el entorno del PowerShell oculto
+ * (el nuestro, con las variables del proyecto) y arranca en `cwd`, asignada como texto literal.
+ * No se usa `Start-Process`: su `-WorkingDirectory` trata `[ ]` como comodines y, sin él, la
+ * consola arranca en la carpeta de PowerShell.
  */
 export function invocacionConsolaNueva(
   cmd: string,
   args: string[],
+  cwd: string,
   entorno: NodeJS.ProcessEnv,
 ): { cmd: string; args: string[] } {
   const linea = args.map(citarArgWindows).join(' ');
   const script = [
     "$ErrorActionPreference = 'Stop'",
-    `Start-Process -FilePath ${literalPowerShell(cmd)}${linea ? ` -ArgumentList ${literalPowerShell(linea)}` : ''}`,
+    '$i = New-Object System.Diagnostics.ProcessStartInfo',
+    `$i.FileName = ${literalPowerShell(cmd)}`,
+    `$i.Arguments = ${literalPowerShell(linea)}`,
+    `$i.WorkingDirectory = ${literalPowerShell(cwd)}`,
+    '$i.UseShellExecute = $true',
+    '[void][System.Diagnostics.Process]::Start($i)',
   ].join('\n');
   return {
     cmd: powershellDelSistema(entorno),
@@ -99,12 +107,12 @@ const PLAZO_CONSOLA_MS = 30_000;
 
 /**
  * Abre un programa de consola en una ventana nueva y visible (ver `invocacionConsolaNueva`).
- * Espera al PowerShell oculto: si `Start-Process` falla, lanza `terminal.no_abrio` en vez de
+ * Espera al PowerShell oculto: si `Process.Start` falla, lanza `terminal.no_abrio` en vez de
  * no mostrar nada.
  */
 export const lanzarEnConsolaNueva: LanzadorSeparado = (cmd, args, opts) =>
   new Promise((resolve, reject) => {
-    const inv = invocacionConsolaNueva(cmd, args, opts.env);
+    const inv = invocacionConsolaNueva(cmd, args, opts.cwd, opts.env);
     execFile(
       inv.cmd,
       inv.args,

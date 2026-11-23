@@ -26,11 +26,12 @@ describe('citarArgWindows (reglas de CommandLineToArgvW)', () => {
 });
 
 describe('invocacionConsolaNueva', () => {
-  it('PowerShell oculto con Start-Process: sin carpeta en la línea (va como cwd) ni variables', () => {
+  it('PowerShell oculto con Process.Start: carpeta literal (con [ ]) y sin variables en la línea', () => {
     const env = { SystemRoot: 'C:\\Windows', CLAVE: 'secreta-de-prueba' };
     const inv = invocacionConsolaNueva(
       'C:\\Program Files\\Git\\git-bash.exe',
       ["--cd=C:\\Proyectos\\O'Brien System"],
+      'C:\\Proyectos\\WolfCore System [x]',
       env,
     );
     expect(inv.cmd).toBe('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe');
@@ -45,7 +46,14 @@ describe('invocacionConsolaNueva', () => {
     expect(script).toBe(
       [
         "$ErrorActionPreference = 'Stop'",
-        "Start-Process -FilePath 'C:\\Program Files\\Git\\git-bash.exe' -ArgumentList '\"--cd=C:\\Proyectos\\O''Brien System\"'",
+        '$i = New-Object System.Diagnostics.ProcessStartInfo',
+        "$i.FileName = 'C:\\Program Files\\Git\\git-bash.exe'",
+        "$i.Arguments = '\"--cd=C:\\Proyectos\\O''Brien System\"'",
+        // Literal: Start-Process -WorkingDirectory trataría los [ ] como comodines y, sin él,
+        // arrancaría en la carpeta de PowerShell.
+        "$i.WorkingDirectory = 'C:\\Proyectos\\WolfCore System [x]'",
+        '$i.UseShellExecute = $true',
+        '[void][System.Diagnostics.Process]::Start($i)',
       ].join('\n'),
     );
     // Las variables viajan en el entorno del proceso, nunca en la línea de órdenes.
@@ -53,10 +61,10 @@ describe('invocacionConsolaNueva', () => {
     expect(script).not.toContain('secreta-de-prueba');
   });
 
-  it('sin argumentos no pasa -ArgumentList (Start-Process lo rechaza vacío)', () => {
-    const inv = invocacionConsolaNueva('C:\\Windows\\System32\\cmd.exe', [], {});
+  it('sin argumentos deja Arguments vacío; sin SystemRoot, PowerShell por el PATH', () => {
+    const inv = invocacionConsolaNueva('C:\\Windows\\System32\\cmd.exe', [], 'C:\\P', {});
     expect(inv.cmd).toBe('powershell.exe');
-    expect(decodificarComando(inv.args.at(-1)!)).not.toContain('-ArgumentList');
+    expect(decodificarComando(inv.args.at(-1)!)).toContain("$i.Arguments = ''");
   });
 
   it('powershellDelSistema: SystemRoot, SYSTEMROOT o windir; si no, por el PATH', () => {
