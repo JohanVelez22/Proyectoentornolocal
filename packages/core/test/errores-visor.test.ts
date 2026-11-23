@@ -171,6 +171,34 @@ describe('interpretarLinea: cada formato', () => {
     expect(e!.mensaje.length).toBeLessThanOrEqual(2001);
   });
 
+  it('una línea de 1 MiB se procesa en menos de 50 ms en cada formato (sin regex cuadráticas)', () => {
+    // Muchas coincidencias parciales (' in ', ' at ', espacios, ' C:/', '--> '): el peor caso.
+    const enorme = ' in x:1 at y:2 C:/ 3 --> Severity: E --> '.repeat(24 * 1024);
+    const casos: [Parameters<typeof interpretarLinea>[0], string[]][] = [
+      ['php', [`PHP Warning:  ${enorme} in x`, `PHP Fatal error:  Uncaught E: ${enorme}`]],
+      [
+        'laravel',
+        [
+          `[2026-11-23 10:00:00] local.ERROR: ${enorme} {"exception":"[object] (E(code: 0): ${enorme}`,
+        ],
+      ],
+      ['ci3', [`ERROR - 2026-11-23 09:00:00 --> Severity: Warning --> ${enorme} C:/ x`]],
+      ['python', ['Traceback (most recent call last):', `  File "${enorme}`, `${enorme}`]],
+      [
+        'nginx',
+        [
+          `2026/11/23 11:00:00 [error] 1#1: *1 FastCGI sent in stderr: "PHP message: PHP Warning:  ${enorme}`,
+        ],
+      ],
+    ];
+    for (const [formato, lineas] of casos) {
+      const t = performance.now();
+      const e = interpretarLinea(formato, lineas);
+      expect(performance.now() - t, formato).toBeLessThan(50);
+      for (const x of e) expect(x.mensaje.length).toBeLessThanOrEqual(2001);
+    }
+  });
+
   it('el intérprete en vivo junta la traza que llega en otro lote', () => {
     const i = new InterpreteErrores('laravel');
     expect(i.agregar(LARAVEL_LOG.slice(0, 3))).toEqual([]);

@@ -67,7 +67,9 @@ export const LINEAS_INICIALES_ERRORES = 1000;
 
 const recortar = (t: string, max: number): string => (t.length > max ? `${t.slice(0, max)}…` : t);
 
-const limpio = (t: string, max: number): string => recortar(enmascararSecretos(t), max);
+/** Recorta primero (las regex de secretos nunca ven un texto enorme), enmascara y recorta otra vez. */
+const limpio = (t: string, max: number): string =>
+  recortar(enmascararSecretos(t.length > max * 2 ? t.slice(0, max * 2) : t), max);
 
 /* ───────────── Fechas ───────────── */
 
@@ -118,6 +120,53 @@ const CABECERA_PHP = /^(?:\[([^\]]+)\]\s+)?PHP ([A-Z][A-Za-z ]*?):\s+(.*)$/;
 /** Líneas que siguen a un error de PHP (traza de la excepción o de Xdebug). */
 const CONTINUA_PHP = /^(?:PHP )?(?:Stack trace:|#\d+ |\s+thrown in |\s+\d+\. )/;
 
+/**
+ * `<mensaje><separador><archivo><cola con la línea>` buscado desde el final: la cola es una regex
+ * anclada al final y el separador se busca con lastIndexOf (lineal, sin retroceso).
+ */
+function lugarAlFinal(
+  t: string,
+  separador: string,
+  cola: RegExp,
+): { inicio: number; archivo: string; linea: number } | null {
+  const c = cola.exec(t);
+  if (!c) return null;
+  const i = t.lastIndexOf(separador, c.index - 1);
+  if (i < 0 || c.index <= i + separador.length) return null;
+  return { inicio: i, archivo: t.slice(i + separador.length, c.index), linea: Number(c[1]) };
+}
+
+/** `[object] (Clase(code: n): mensaje at archivo:línea)` de laravel.log, o null. */
+function excepcionLaravel(msg: string): [string, string, string, string, string] | null {
+  const i = msg.indexOf('[object] (');
+  if (i < 0) return null;
+  const cab = /^\[object\] \(([A-Za-z_\\][\w\\]*)\(code: [^)]*\): /.exec(msg.slice(i));
+  if (!cab) return null;
+  const resto = msg.slice(i + cab[0].length);
+  const l = lugarAlFinal(resto, ' at ', /:(\d+)\)\s*$/);
+  if (!l) return null;
+  return [cab[0], cab[1]!, resto.slice(0, l.inicio), l.archivo, String(l.linea)];
+}
+
+/**
+ * `Severity: X --> mensaje ruta línea` de CodeIgniter 3, o null. La ruta empieza en el primer
+ * ` C:\` o ` /` (búsqueda lineal); el mensaje es lo de antes.
+ */
+function severidadCi3(msg: string): [string, string, string, string, string] | null {
+  const cab = /^Severity: ([\w ]+?) --> /.exec(msg);
+  if (!cab) return null;
+  const resto = msg.slice(cab[0].length);
+  const num = / (\d+)$/.exec(resto);
+  if (!num) return null;
+  const antes = resto.slice(0, num.index);
+  const ruta = / (?:[A-Za-z]:[\\/]|\/)/.exec(antes);
+  if (!ruta) return null;
+  return [msg, cab[1]!, antes.slice(0, ruta.index), antes.slice(ruta.index + 1), num[1]!];
+}
+
+/** Largo con el que una línea entra al intérprete (las regex nunca ven más). */
+export const MAX_LINEA_INTERPRETE = 8 * 1024;
+
 /** Mensaje de PHP → tipo, mensaje, archivo y línea. */
 function partesPhp(
   nivel: string,
@@ -127,13 +176,14 @@ function partesPhp(
   let mensaje = resto.trim();
   let archivo: string | null = null;
   let linea: number | null = null;
-  const enLinea = / in (.+?) on line (\d+)\s*$/.exec(mensaje);
-  const enDos = enLinea ? null : / in (.+?):(\d+)\s*$/.exec(mensaje);
-  const lugar = enLinea ?? enDos;
+  // Sin regex con dos tramos libres (cuadráticas en líneas largas): se busca desde el final.
+  const lugar =
+    lugarAlFinal(mensaje, ' in ', / on line (\d+)\s*$/) ??
+    lugarAlFinal(mensaje, ' in ', /:(\d+)\s*$/);
   if (lugar) {
-    archivo = lugar[1]!;
-    linea = Number(lugar[2]);
-    mensaje = mensaje.slice(0, lugar.index);
+    archivo = lugar.archivo;
+    linea = lugar.linea;
+    mensaje = mensaje.slice(0, lugar.inicio);
   }
   const sinCapturar = /^Uncaught ([A-Za-z_\\][\w\\]*)(?:: (.*))?$/s.exec(mensaje);
   if (sinCapturar) {
@@ -200,7 +250,10 @@ export class InterpreteErrores {
     if (t && t.length < MAX_LINEAS_TRAZA) t.push(limpio(l, MAX_LINEA_TRAZA));
   }
 
-  private linea(l: string, salida: EntradaError[]): void {
+  private linea(entrada: string, salida: EntradaError[]): void {
+    // Antes de cualquier regex: una línea enorme (un volcado de 1 MiB en el log) no congela nada.
+    const l =
+      entrada.length > MAX_LINEA_INTERPRETE ? entrada.slice(0, MAX_LINEA_INTERPRETE) : entrada;
     switch (this.formato) {
       case 'php':
         return this.lineaPhp(l, salida, null);
@@ -244,9 +297,7 @@ export class InterpreteErrores {
       return;
     }
     const msg = m[3]!;
-    const ex = /\[object\] \(([A-Za-z_\\][\w\\]*)\(code: [^)]*\): (.*) at (.+?):(\d+)\)\s*$/.exec(
-      msg,
-    );
+    const ex = excepcionLaravel(msg);
     this.abrir(
       ex
         ? {
@@ -277,7 +328,7 @@ export class InterpreteErrores {
     if (!m || (m[1] !== 'ERROR' && m[1] !== 'CRITICAL')) return;
     const fecha = fechaNumerica(m[2]!);
     const msg = m[3]!;
-    const sev = /^Severity: ([\w ]+?) --> (.*?) ((?:[A-Za-z]:[\\/]|\/).*?) (\d+)$/.exec(msg);
+    const sev = severidadCi3(msg);
     if (sev) {
       const ex = /^((?:[A-Za-z_\\][\w\\]*)?(?:Exception|Error)): (.*)$/.exec(sev[2]!);
       this.abrir(
