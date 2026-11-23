@@ -158,5 +158,107 @@
       "subcarpeta": "tools",
       "ejecutable": "python.exe"
     }
+  ],
+  "extensionesPhp": [
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.1",
+      "variante": "nts-vs16-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.1-nts-vs16-x86_64.dll",
+      "sha256": "15bb3abcd0755af8378550793bcf7603636add31dc4a04d24bfd2a1f764399b4",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.1",
+      "variante": "ts-vs16-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.1-ts-vs16-x86_64.dll",
+      "sha256": "8a90f1fd3e199a07e3039fc857330ca098a71bf9622e88a878efaa1b1b6fe358",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.2",
+      "variante": "nts-vs16-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.2-nts-vs16-x86_64.dll",
+      "sha256": "b449eda7eeefc80c651fac334582c5f0877cd72cfe55fc1c5f0f98bf6a4edb94",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.2",
+      "variante": "ts-vs16-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.2-ts-vs16-x86_64.dll",
+      "sha256": "56a62ebd342a143ced245f30de375f5b907ba50efaacf42801a5dd280006e127",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.3",
+      "variante": "nts-vs16-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.3-nts-vs16-x86_64.dll",
+      "sha256": "4c80487592484c36d21a7006a53738dfc07884fc6867720ddc5c11559371cdce",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.3",
+      "variante": "ts-vs16-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.3-ts-vs16-x86_64.dll",
+      "sha256": "c178f05068a6f0cef4a37eaca6003a56120004bf4ac20db6ff20f6f1ce0b439e",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.4",
+      "variante": "nts-vs17-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.4-nts-vs17-x86_64.dll",
+      "sha256": "a94d4fcfe4086a300b2decaf7c04e59f4981aa5e56992d48b55c5e49dfd9b9ee",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.4",
+      "variante": "ts-vs17-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.4-ts-vs17-x86_64.dll",
+      "sha256": "b9c79caec87f2b289df4b7bfa64b64f01c97956c9ac7ddb936302b79aec65cda",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.5",
+      "variante": "nts-vs17-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.5-nts-vs17-x86_64.dll",
+      "sha256": "0a0d52bf276dad7e5f90ac30a5110b3119d291b20c118be0cb7f5752064f1811",
+      "formato": "archivo",
+      "zend": true
+    },
+    {
+      "nombre": "xdebug",
+      "version": "3.5.3",
+      "rama": "8.5",
+      "variante": "ts-vs17-x64",
+      "url": "https://xdebug.org/files/php_xdebug-3.5.3-8.5-ts-vs17-x86_64.dll",
+      "sha256": "c75623ba050ddef734ba28a957e92df9ce5b8dfdb1a0569e5071bd6b68a12292",
+      "formato": "archivo",
+      "zend": true
+    }
   ]
 }

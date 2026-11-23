@@ -64,6 +64,11 @@ import {
   type ResultadoAplicar,
 } from './sitios/sitios';
 import { migrarCarpetaDatos } from './migracion';
+import { catalogo } from './catalogo/catalogo';
+import { puertosPhp } from './nginx/principal';
+import { ExtensionesPhp } from './php/extensiones';
+import { IniPhp } from './php/ini';
+import { puertoResponde } from './procesos/sonda';
 import { UrlBase } from './sitios/urlbase';
 import type {
   Config,
@@ -205,6 +210,10 @@ export interface ResultadoAjustes {
 }
 
 interface ModulosNucleo {
+  /** php.ini de cada rama (editor con prueba, copia y vuelta atrás). */
+  iniPhp: IniPhp;
+  /** Extensiones de PHP de cada rama (ext/ y catálogo de terceros). */
+  extensionesPhp: ExtensionesPhp;
   /** Agentes de programación (Claude Code, Codex CLI, Hermes Agent). */
   agentes: Agentes;
   /** Proveedores de IA en la nube (config, pruebas y bloque .env por proyecto). */
@@ -243,6 +252,27 @@ const puertoHttpsValido = (p: number): boolean =>
   Number.isInteger(p) && (p === 443 || (p >= 1024 && p <= 65535));
 
 const INTERVALO_SONDEO_MS = 3000;
+
+/** Plazo para que un pool de PHP reiniciado responda en todos sus puertos. */
+const PLAZO_PHP_SANO_MS = 15000;
+
+/**
+ * ¿Responden todos los puertos del pool antes del plazo? Corta antes si algún trabajador quedó
+ * en error (php-cgi que murió al arrancar).
+ */
+async function phpResponde(
+  puertos: number[],
+  sonda: (p: number) => Promise<boolean>,
+  enError: () => boolean,
+  plazoMs = PLAZO_PHP_SANO_MS,
+): Promise<boolean> {
+  const limite = Date.now() + plazoMs;
+  for (;;) {
+    if ((await Promise.all(puertos.map((p) => sonda(p)))).every(Boolean)) return true;
+    if (enError() || Date.now() >= limite) return false;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+}
 /** Revisión de vencimiento de la CA y de los certificados (cada 24 h y al iniciar). */
 const INTERVALO_VENCIMIENTOS_MS = 24 * 60 * 60 * 1000;
 
@@ -333,6 +363,10 @@ export class Nucleo {
   readonly ia: GestorIa;
   /** Agentes: detección, instalación, MCP y apertura en un proyecto (nunca se lanzan solos). */
   readonly agentes: Agentes;
+  /** php.ini de cada rama: leer, diff, guardar con prueba y vuelta atrás, copias. */
+  readonly iniPhp: IniPhp;
+  /** Extensiones de PHP: activar, desactivar e instalar del catálogo. */
+  readonly extensionesPhp: ExtensionesPhp;
   /**
    * Token de GitHub para lo que no pasa por la ventana (MCP). Lo fija el proceso principal
    * (safeStorage); el núcleo nunca lo guarda, lo registra ni lo emite.
@@ -384,6 +418,8 @@ export class Nucleo {
     this.confianza = m.confianza;
     this.ia = m.ia;
     this.agentes = m.agentes;
+    this.iniPhp = m.iniPhp;
+    this.extensionesPhp = m.extensionesPhp;
     this.depsPasos = m.depsPasos;
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
@@ -550,6 +586,36 @@ export class Nucleo {
       return e === 'encendido' || e === 'iniciando';
     };
     const puertoOllama = { valor: (await leerConfig()).servicios.datos.ollama.puerto };
+    const sondaPhp = o.sonda ?? ((p: number) => puertoResponde(p));
+    const phpCli = (r: string): string => path.join(rutas.bin('php', r), nombreEjecutable('php'));
+    const iniPhp = new IniPhp({
+      rutas,
+      exec,
+      phpCli,
+      ramasInstaladas: () => instalador.instalados('php'),
+      asegurarIni: (r) => servicios.php.asegurarPhpIni(r),
+      encendida: (r) => vivo(servicios.php.idTrabajador(r, 0)),
+      // Los pools por sitio (Task 11) leen el ini de la rama: también se reinician aquí.
+      reiniciar: async (r) => {
+        await servicios.detener(`php-${r}`);
+        await servicios.iniciar(`php-${r}`);
+      },
+      sano: async (r) => {
+        const n = (await leerConfig()).servicios.php.trabajadores;
+        const ids = Array.from({ length: n }, (_, i) => servicios.php.idTrabajador(r, i));
+        return phpResponde(puertosPhp(r, n), sondaPhp, () =>
+          ids.some((id) => supervisor.estado(id) === 'error'),
+        );
+      },
+    });
+    const extensionesPhp = new ExtensionesPhp({
+      rutas,
+      ini: iniPhp,
+      exec,
+      phpCli,
+      catalogo: catalogo.extensionesPhp,
+      ...(o.fetch ? { fetch: (u, i) => o.fetch!(u, i) } : {}),
+    });
     const git = o.git ?? new Git({ exec, lanzar });
     const gestorIa = new GestorIa({
       leerConfig,
@@ -559,6 +625,8 @@ export class Nucleo {
       ...(o.fetch ? { fetch: (u, i) => o.fetch!(u, i) } : {}),
     });
     const modulos: ModulosNucleo = {
+      iniPhp,
+      extensionesPhp,
       agentes: new Agentes({
         plataforma: plat,
         exec,

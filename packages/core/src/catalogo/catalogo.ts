@@ -77,6 +77,8 @@ const HOSTS_PERMITIDOS = [
   'getcomposer.org',
   'nodejs.org',
   'api.nuget.org',
+  // Xdebug: DLL oficiales por rama y variante (catálogo de extensiones de PHP).
+  'xdebug.org',
 ];
 
 /**
@@ -106,6 +108,46 @@ const EntradaSchema = z.object({
 
 const Lista = z.array(EntradaSchema).default([]);
 
+/** Compilaciones de PHP para Windows: hilos (NTS/TS), Visual Studio (VS16/VS17) y arquitectura. */
+export const VARIANTES_EXTENSION_PHP = [
+  'nts-vs16-x64',
+  'nts-vs17-x64',
+  'ts-vs16-x64',
+  'ts-vs17-x64',
+] as const;
+export type VarianteExtensionPhp = (typeof VARIANTES_EXTENSION_PHP)[number];
+
+/** Nombre de una extensión de PHP (`xdebug`, `redis`…): minúsculas, dígitos y `_`. */
+export const NOMBRE_EXTENSION_PHP = /^[a-z][a-z0-9_]{0,39}$/;
+
+/**
+ * Extensión de terceros para una rama y variante concretas: solo se instala desde aquí, de un
+ * host permitido y con su SHA-256 fijado. `formato: 'archivo'` es la DLL tal cual; con `zip`,
+ * `archivo` es la DLL dentro del paquete.
+ */
+export const ExtensionPhpSchema = z
+  .object({
+    nombre: z.string().regex(NOMBRE_EXTENSION_PHP),
+    version: z.string().min(1),
+    rama: z.string().regex(/^\d+\.\d+$/),
+    variante: z.enum(VARIANTES_EXTENSION_PHP),
+    url: z.string().refine(urlOficial, 'La URL debe ser https y de un host oficial'),
+    sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    formato: z.enum(['zip', 'archivo']),
+    archivo: z
+      .string()
+      .regex(/^[A-Za-z0-9_.-]+(\/[A-Za-z0-9_.-]+)*$/)
+      .refine((a) => !a.split('/').includes('..'), 'Ruta no válida')
+      .optional(),
+    /** Se carga con `zend_extension` (Xdebug, OPcache). */
+    zend: z.boolean().default(false),
+  })
+  .refine((e) => e.formato === 'archivo' || e.archivo !== undefined, {
+    message: 'Un zip necesita la ruta de la DLL',
+  });
+
+export type ExtensionPhpCatalogo = z.infer<typeof ExtensionPhpSchema>;
+
 export const CatalogoSchema = z.object({
   nginx: z.array(EntradaSchema),
   cloudflared: z.array(EntradaSchema),
@@ -122,6 +164,7 @@ export const CatalogoSchema = z.object({
   'pgvector-src': Lista,
   node: Lista,
   python: Lista,
+  extensionesPhp: z.array(ExtensionPhpSchema).default([]),
 });
 
 export const catalogo = CatalogoSchema.parse(catalogoCrudo);
