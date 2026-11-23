@@ -215,7 +215,7 @@ Pantalla "Doctor" con "Revisar ahora" (también al iniciar, en segundo plano y s
 ## 5. Fuera de alcance (→ Etapas D, E y F)
 
 - **Etapa D:** nuevo proyecto con un clic, plantillas, importar de Laragon/XAMPP/Herd, gestor `.env` completo con secretos enmascarados, CLI `wolf`, túneles con nombre y alternativos, LAN con QR, respaldo y perfiles del entorno, snapshots de BD, workspaces, cron editable, limpieza de versiones.
-- **Etapa E:** implementaciones Linux y macOS de `Plataforma`, catálogo por SO (las fuentes en vivo de C ya reciben el `idCatalogo`; E agrega los archivos de cada SO), instaladores AppImage/`.deb`/`.dmg`, autoactualización, desinstalación limpia, `safeStorage` sin llavero en Linux.
+- **Etapa E:** implementaciones Linux y macOS de `Plataforma`, catálogo por SO (las fuentes en vivo de C ya reciben el `idCatalogo`; E agrega los archivos de cada SO), instaladores AppImage/`.deb`/`.dmg`, autoactualización, desinstalación limpia, `safeStorage` sin llavero en Linux. Terminales en macOS: `open -a`/`osascript` nunca llevan secretos (claves de agentes, token MCP) en la línea de órdenes ni en el texto del AppleScript, que otros procesos del usuario pueden leer con `ps`; van en el entorno del proceso hijo (como en Windows) o en un archivo temporal con permisos 0600 que se borra al leerlo.
 - **Etapa F:** compose, imágenes y volúmenes de contenedores; DNS propio; Apache/Caddy; FrankenPHP; inspector de SQL/jobs/HTTP; perfilado (más allá de `xdebug.mode=profile`, el visor de cachegrind queda en F); webhooks; RAG local; el resto de la lista.
 - **No se hace:** chat de IA, historial de conversaciones, intermediar llamadas de IA, lanzar agentes de forma automática o programada.
 
