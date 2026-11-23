@@ -230,7 +230,8 @@ describe('GitHub.instalarGh e iniciarSesionGh', () => {
     });
     await gh.iniciarSesionGh();
     expect(lanzadas).toHaveLength(1);
-    expect(lanzadas[0]!.cmd).toBe('powershell.exe');
+    // Ruta completa del PowerShell del sistema (sin SystemRoot, C:\Windows): nunca por el PATH.
+    expect(lanzadas[0]!.cmd).toBe('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe');
     const comando = decodificarComando(lanzadas[0]!.args[2]!);
     expect(lanzadas[0]!.args.slice(0, 2)).toEqual(['-NoExit', '-EncodedCommand']);
     expect(comando).toContain("'C:\\Program Files\\GitHub CLI\\gh.exe'");

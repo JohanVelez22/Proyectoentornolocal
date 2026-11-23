@@ -200,15 +200,11 @@ export class GitHub {
     const gh = this.git.buscar('gh');
     if (!gh) throw new Error('GitHub CLI (gh) no está instalado: instálelo primero');
     const cwd = this.entorno.USERPROFILE || os.homedir();
-    const c = comandoConsolaVisible(gh, [
-      'auth',
-      'login',
-      '--web',
-      '--hostname',
-      'github.com',
-      '--git-protocol',
-      'https',
-    ]);
+    const c = comandoConsolaVisible(
+      gh,
+      ['auth', 'login', '--web', '--hostname', 'github.com', '--git-protocol', 'https'],
+      this.entorno,
+    );
     await this.lanzar(c.cmd, c.args, { cwd, env: { ...this.entorno } });
   }
 }

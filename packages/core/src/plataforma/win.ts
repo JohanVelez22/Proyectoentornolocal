@@ -38,6 +38,7 @@ import { aBase64, codificarPowerShell, PathUsuarioWindows } from './pathUsuarioW
 import { ProcesosWindows, descendientesEnTabla, rutaSistema32 } from './procesosWin';
 import {
   abrirTerminalWindows,
+  leerRutaGitRegistro,
   existeEntrada,
   lanzarEnConsolaNueva,
   lanzarSeparado,
@@ -300,6 +301,11 @@ export interface OpcionesPlataformaWindows {
   arquitectura?: string;
   /** Carpeta de los temporales de hosts (por defecto, %TEMP%). */
   carpetaTemporal?: string;
+  /**
+   * ¿Leer del registro dónde está Git for Windows? Por defecto sí, salvo con `entorno` inyectado
+   * (pruebas), para no ejecutar PowerShell real.
+   */
+  gitRegistro?: boolean;
 }
 
 export class PlataformaWindows implements PlataformaCompleta {
@@ -315,6 +321,8 @@ export class PlataformaWindows implements PlataformaCompleta {
   private readonly lanzarSeparado: LanzadorSeparado;
   private readonly lanzarGui: LanzadorSeparado;
   private readonly arquitectura: string;
+  private readonly gitRegistro: boolean;
+  private rutaGitLeida: Promise<string | null> | null = null;
 
   constructor(
     private readonly ejecutar: Ejecutor = ejecutorPorDefecto,
@@ -327,6 +335,14 @@ export class PlataformaWindows implements PlataformaCompleta {
     this.lanzarGui = o.lanzarGui ?? lanzarSeparado;
     this.arquitectura = o.arquitectura ?? arch();
     this.carpetaTemporal = o.carpetaTemporal ?? tmpdir();
+    this.gitRegistro = o.gitRegistro ?? o.entorno === undefined;
+  }
+
+  /** Carpeta de Git for Windows del registro (una lectura por sesión). */
+  private rutaGit(): Promise<string | null> {
+    if (!this.gitRegistro) return Promise.resolve(null);
+    this.rutaGitLeida ??= leerRutaGitRegistro(this.ejecutar);
+    return this.rutaGitLeida;
   }
 
   carpetaDatos(): string {
@@ -398,9 +414,10 @@ export class PlataformaWindows implements PlataformaCompleta {
     }
   }
 
-  abrirTerminal(cwd: string, o: OpcionesAbrirTerminal = {}): Promise<void> {
+  async abrirTerminal(cwd: string, o: OpcionesAbrirTerminal = {}): Promise<void> {
     return abrirTerminalWindows(cwd, o, {
       entorno: this.entorno,
+      rutaGit: await this.rutaGit(),
       existe: this.existeRuta,
       lanzar: this.lanzarSeparado,
       lanzarGui: this.lanzarGui,
@@ -408,7 +425,7 @@ export class PlataformaWindows implements PlataformaCompleta {
   }
 
   async terminalesInstaladas(): Promise<TerminalDisponible[]> {
-    return terminalesWindows(this.entorno, this.existeRuta);
+    return terminalesWindows(this.entorno, this.existeRuta, await this.rutaGit());
   }
 
   /** Fuera de Windows (solo en pruebas) no hay PowerShell: ninguno. */

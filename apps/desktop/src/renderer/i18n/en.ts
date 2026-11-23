@@ -127,6 +127,8 @@ export const en: Textos = {
       'terminal.no_abrio': 'The terminal could not be opened.',
       'terminal.no_instalada': '{nombre} is not installed. Choose another terminal in Settings.',
       'terminal.invalida': 'That terminal is not valid.',
+      'terminal.powershell_restringido':
+        'PowerShell is in Constrained Language Mode on this computer (organization policy or AppLocker): WolfCore Dev cannot open the terminal. Open it yourself in the project folder.',
       'proyectos.no_existe': 'The project does not exist.',
       'proyectos.no_confiado': 'Check "I trust this repository" to run the recipe.',
       'proyectos.receta_en_curso': 'A recipe is already running for this project.',
@@ -946,7 +948,7 @@ export const en: Textos = {
       terminal: 'Default terminal',
       terminalSistema: "The system's (PowerShell)",
       terminalAyuda:
-        'The one "Terminal" opens on projects. With the project variables, Windows Terminal opens as the system default console.',
+        'The one "Terminal" opens on projects. If the project needs its own variables (its PHP on the PATH, an agent key), choosing "Windows Terminal" opens PowerShell inside the Windows default terminal: an already open Windows Terminal would not receive those variables.',
       terminalGuardada: 'Default terminal updated',
     },
   },

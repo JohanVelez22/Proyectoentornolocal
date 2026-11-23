@@ -129,6 +129,8 @@ export const es = {
       'terminal.no_abrio': 'No se pudo abrir la terminal.',
       'terminal.no_instalada': '{nombre} no está instalada. Elija otra terminal en Ajustes.',
       'terminal.invalida': 'Esa terminal no es válida.',
+      'terminal.powershell_restringido':
+        'PowerShell está en modo de lenguaje restringido en este equipo (directiva de la organización o AppLocker): WolfCore Dev no puede abrir la terminal. Ábrala usted en la carpeta del proyecto.',
       'proyectos.no_existe': 'No existe el proyecto.',
       'proyectos.no_confiado': 'Marque "Confío en este repositorio" para ejecutar la receta.',
       'proyectos.receta_en_curso': 'Ya hay una receta en curso para este proyecto.',
@@ -956,7 +958,7 @@ export const es = {
       terminal: 'Terminal predeterminada',
       terminalSistema: 'La del sistema (PowerShell)',
       terminalAyuda:
-        'La que abre «Terminal» en los proyectos. Con las variables del proyecto, Windows Terminal se abre como consola predeterminada del sistema.',
+        'La que abre «Terminal» en los proyectos. Si el proyecto necesita variables propias (su PHP en el PATH, la clave de un agente), con «Windows Terminal» se abre PowerShell dentro de la terminal predeterminada de Windows: Windows Terminal ya abierto no recibiría esas variables.',
       terminalGuardada: 'Terminal predeterminada actualizada',
     },
   },

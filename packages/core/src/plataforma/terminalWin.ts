@@ -2,8 +2,9 @@ import { execFile, spawn } from 'node:child_process';
 import { lstatSync } from 'node:fs';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
-import { literalPowerShell } from './lanzarOculto';
-import type { IdTerminal, OpcionesAbrirTerminal, TerminalDisponible } from './tipos';
+import { CODIGO_RESTRINGIDO, literalPowerShell } from './lanzarOculto';
+import { codificarPowerShell } from './pathUsuarioWin';
+import type { Ejecutor, IdTerminal, OpcionesAbrirTerminal, TerminalDisponible } from './tipos';
 
 /** Lanza un proceso separado de nosotros y con ventana propia (sin shell). */
 export type LanzadorSeparado = (
@@ -57,12 +58,49 @@ export function citarArgWindows(a: string): string {
 /** Script de PowerShell en UTF-16LE y base64 para `-EncodedCommand`. */
 const codificar = (script: string): string => Buffer.from(script, 'utf16le').toString('base64');
 
-/** PowerShell 5 del sistema (ruta completa si se conoce SystemRoot; si no, por el PATH). */
+/**
+ * Carpeta de Windows: SystemRoot, SYSTEMROOT o windir si es una ruta absoluta con unidad; si no,
+ * `C:\Windows`. Nunca se deja que el PATH decida qué PowerShell o cmd se ejecuta.
+ */
+export function raizSistema(entorno: NodeJS.ProcessEnv): string {
+  const r = entorno.SystemRoot ?? entorno.SYSTEMROOT ?? entorno.windir;
+  return r && /^[A-Za-z]:\\[^"<>|?*\0]*$/.test(r) ? r : 'C:\\Windows';
+}
+
+/** PowerShell 5 del sistema (siempre con ruta completa; ver `raizSistema`). */
 export function powershellDelSistema(entorno: NodeJS.ProcessEnv): string {
-  const raiz = entorno.SystemRoot ?? entorno.SYSTEMROOT ?? entorno.windir;
-  return raiz
-    ? path.win32.join(raiz, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
-    : 'powershell.exe';
+  return path.win32.join(
+    raizSistema(entorno),
+    'System32',
+    'WindowsPowerShell',
+    'v1.0',
+    'powershell.exe',
+  );
+}
+
+/** Código con el que sale el PowerShell oculto si está en modo de lenguaje restringido. */
+export const CODIGO_CONSOLA_RESTRINGIDA = CODIGO_RESTRINGIDO;
+
+/**
+ * Error de `lanzarEnConsolaNueva` sin la línea de órdenes (el script codificado no se muestra): el
+ * detalle viene del propio script en Base64 de UTF-8 (`PEL_ERROR …`), así las tildes no dependen
+ * de la página de códigos OEM de la consola. Modo restringido → `terminal.powershell_restringido`.
+ */
+export function errorDelLanzador(
+  err: Error & { code?: unknown; killed?: boolean },
+  stderr: string,
+): ErrorWolf {
+  if (err.code === CODIGO_CONSOLA_RESTRINGIDA) {
+    return new ErrorWolf(
+      'terminal.powershell_restringido',
+      'PowerShell está en modo de lenguaje restringido en este equipo (directiva de la organización o AppLocker): no se puede abrir la terminal desde WolfCore Dev.',
+    );
+  }
+  const b64 = /PEL_ERROR ([A-Za-z0-9+/=]+)/.exec(stderr)?.[1];
+  let detalle = b64 ? Buffer.from(b64, 'base64').toString('utf8').trim() : '';
+  if (!detalle) detalle = err.killed ? 'sin respuesta' : `código ${String(err.code ?? '?')}`;
+  if (detalle.length > 300) detalle = `${detalle.slice(0, 299)}…`;
+  return new ErrorWolf('terminal.no_abrio', `No se pudo abrir la terminal: ${detalle}`);
 }
 
 /**
@@ -81,13 +119,21 @@ export function invocacionConsolaNueva(
 ): { cmd: string; args: string[] } {
   const linea = args.map(citarArgWindows).join(' ');
   const script = [
+    // En modo restringido New-Object falla con un mensaje confuso: se avisa con un código propio.
+    `if ($ExecutionContext.SessionState.LanguageMode -ne 'FullLanguage') { exit ${CODIGO_CONSOLA_RESTRINGIDA} }`,
     "$ErrorActionPreference = 'Stop'",
+    'try {',
     '$i = New-Object System.Diagnostics.ProcessStartInfo',
     `$i.FileName = ${literalPowerShell(cmd)}`,
     `$i.Arguments = ${literalPowerShell(linea)}`,
     `$i.WorkingDirectory = ${literalPowerShell(cwd)}`,
     '$i.UseShellExecute = $true',
     '[void][System.Diagnostics.Process]::Start($i)',
+    '} catch {',
+    // El mensaje en Base64 de UTF-8: no depende de la página de códigos de la consola.
+    "[Console]::Error.WriteLine('PEL_ERROR ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($_.Exception.Message)))",
+    'exit 1',
+    '}',
   ].join('\n');
   return {
     cmd: powershellDelSistema(entorno),
@@ -128,17 +174,7 @@ export const lanzarEnConsolaNueva: LanzadorSeparado = (cmd, args, opts) =>
           resolve();
           return;
         }
-        const detalle = String(stderr ?? '')
-          .trim()
-          .split(/\r?\n/)
-          .slice(0, 3)
-          .join(' ');
-        reject(
-          new ErrorWolf(
-            'terminal.no_abrio',
-            `No se pudo abrir la terminal: ${detalle || err.message}`,
-          ),
-        );
+        reject(errorDelLanzador(err, String(stderr ?? '')));
       },
     );
   });
@@ -159,6 +195,8 @@ export function existeEntrada(ruta: string): boolean {
 
 export interface DepsTerminalWindows {
   entorno: NodeJS.ProcessEnv;
+  /** Carpeta de Git for Windows según el registro (instalaciones fuera de Program Files). */
+  rutaGit?: string | null;
   existe: (ruta: string) => boolean;
   /** Programas de consola (PowerShell, pwsh, cmd, Git Bash): siempre en una consola nueva. */
   lanzar: LanzadorSeparado;
@@ -169,9 +207,10 @@ export interface DepsTerminalWindows {
 /** Rutas candidatas de cada terminal de Windows, en orden de preferencia. */
 function candidatosWindows(
   e: NodeJS.ProcessEnv,
+  rutaGit: string | null = null,
 ): Record<Exclude<IdTerminal, 'sistema' | 'gnome-terminal' | 'konsole' | 'iterm'>, string[]> {
   const j = path.win32.join;
-  const raiz = e.SystemRoot ?? e.SYSTEMROOT ?? e.windir;
+  const raiz = raizSistema(e);
   const local = e.LOCALAPPDATA;
   const apps = local ? j(local, 'Microsoft', 'WindowsApps') : null;
   const programas = [e.ProgramFiles, e.ProgramW6432, e['ProgramFiles(x86)']].filter(
@@ -179,13 +218,14 @@ function candidatosWindows(
   );
   return {
     'windows-terminal': apps ? [j(apps, 'wt.exe')] : [],
-    powershell: raiz ? [j(raiz, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')] : [],
+    powershell: [j(raiz, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')],
     pwsh: [
       ...programas.map((p) => j(p, 'PowerShell', '7', 'pwsh.exe')),
       ...(apps ? [j(apps, 'pwsh.exe')] : []),
     ],
-    cmd: raiz ? [j(raiz, 'System32', 'cmd.exe')] : [],
+    cmd: [j(raiz, 'System32', 'cmd.exe')],
     'git-bash': [
+      ...(rutaGit ? [j(rutaGit, 'git-bash.exe')] : []),
       ...programas.map((p) => j(p, 'Git', 'git-bash.exe')),
       ...(local ? [j(local, 'Programs', 'Git', 'git-bash.exe')] : []),
     ],
@@ -204,9 +244,10 @@ const NOMBRES_WINDOWS: Record<string, string> = {
 export function terminalesWindows(
   entorno: NodeJS.ProcessEnv,
   existe: (ruta: string) => boolean,
+  rutaGit: string | null = null,
 ): TerminalDisponible[] {
   const res: TerminalDisponible[] = [];
-  for (const [id, rutas] of Object.entries(candidatosWindows(entorno))) {
+  for (const [id, rutas] of Object.entries(candidatosWindows(entorno, rutaGit))) {
     const ruta = rutas.find((r) => existe(r));
     if (ruta) res.push({ id: id as IdTerminal, nombre: NOMBRES_WINDOWS[id]!, ruta });
   }
@@ -249,7 +290,7 @@ export async function abrirTerminalWindows(
 ): Promise<void> {
   const env: NodeJS.ProcessEnv = { ...d.entorno, ...o.env };
   const comando = o.comando ?? [];
-  const disponibles = terminalesWindows(d.entorno, d.existe);
+  const disponibles = terminalesWindows(d.entorno, d.existe, d.rutaGit ?? null);
   const ruta = (id: IdTerminal): string | null =>
     disponibles.find((t) => t.id === id)?.ruta ?? null;
   const elegida = o.terminal ?? null;
@@ -293,9 +334,10 @@ export async function abrirTerminalWindows(
 export function comandoConsolaVisible(
   ejecutable: string,
   args: string[],
+  entorno: NodeJS.ProcessEnv = process.env,
 ): { cmd: string; args: string[] } {
   return {
-    cmd: 'powershell.exe',
+    cmd: powershellDelSistema(entorno),
     args: [
       '-NoExit',
       '-EncodedCommand',
@@ -309,3 +351,37 @@ export function comandoConsolaVisible(
 /** Script de un `-EncodedCommand` (pruebas y registros de diagnóstico). */
 export const decodificarComando = (b64: string): string =>
   Buffer.from(b64, 'base64').toString('utf16le');
+
+/** Lee InstallPath de Git for Windows (vistas de 64 y 32 bits) en Base64 de UTF-16LE. */
+const SCRIPT_GIT_INSTALADO = [
+  '# HKLM:\\SOFTWARE\\GitForWindows\\InstallPath',
+  '$v = $null',
+  "foreach ($vista in 'Registry64', 'Registry32') {",
+  '  try {',
+  "    $k = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', $vista).OpenSubKey('SOFTWARE\\GitForWindows')",
+  "    if ($k) { $v = $k.GetValue('InstallPath'); $k.Close(); if ($v) { break } }",
+  '  } catch {}',
+  '}',
+  "if ($v) { 'OK ' + [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes([string]$v)) } else { 'SIN' }",
+].join('\n');
+
+/**
+ * Carpeta de Git for Windows según `HKLM\SOFTWARE\GitForWindows\InstallPath` (nunca el PATH,
+ * que cualquiera puede anteponer). null si no está, no se puede leer o no es una ruta absoluta
+ * limpia.
+ */
+export async function leerRutaGitRegistro(ejecutar: Ejecutor): Promise<string | null> {
+  try {
+    const r = await ejecutar('powershell', codificarPowerShell(SCRIPT_GIT_INSTALADO), {
+      timeoutMs: 15_000,
+    });
+    const m = /^OK ([A-Za-z0-9+/=]+)$/.exec(r.stdout.trim());
+    if (r.codigo !== 0 || !m) return null;
+    const ruta = Buffer.from(m[1]!, 'base64')
+      .toString('utf16le')
+      .replace(/[\\/]+$/, '');
+    return /^[A-Za-z]:\\[^"<>|?*\0\uFFFD]{1,240}$/.test(ruta) ? ruta : null;
+  } catch {
+    return null;
+  }
+}

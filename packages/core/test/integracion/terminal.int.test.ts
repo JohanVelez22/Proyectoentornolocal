@@ -3,11 +3,16 @@
  * carpeta (con espacios y comilla). Abre una ventana un instante: el PowerShell de la prueba
  * escribe lo que ve y se cierra solo (sin -NoExit).
  */
-import { mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { lanzarEnConsolaNueva, powershellDelSistema } from '../../src/plataforma/terminalWin';
+import {
+  leerRutaGitRegistro,
+  lanzarEnConsolaNueva,
+  powershellDelSistema,
+} from '../../src/plataforma/terminalWin';
+import { ejecutorPorDefecto } from '../../src/plataforma/win';
 import { dormir, esWindows } from './comun';
 
 describe.skipIf(!esWindows)('Terminal en una consola nueva (Windows real)', () => {
@@ -57,6 +62,30 @@ describe.skipIf(!esWindows)('Terminal en una consola nueva (Windows real)', () =
       }
     }
     expect(visto).toBe(carpeta);
+  });
+
+  it('Git Bash (ruta del registro) arranca en una carpeta con espacios y [ ]', async (ctx) => {
+    const git = await leerRutaGitRegistro(ejecutorPorDefecto);
+    const bash = git ? path.join(git, 'git-bash.exe') : null;
+    if (!bash || !existsSync(bash)) ctx.skip();
+    const base = path.join(os.tmpdir(), `pel-terminal-git ${Date.now()}`);
+    const carpeta = path.join(base, 'WolfCore System [x]');
+    mkdirSync(carpeta, { recursive: true });
+    // Como abrirTerminalWindows (--cd=<carpeta>); -c para que bash anote dónde arrancó y salga.
+    await lanzarEnConsolaNueva(bash!, [`--cd=${carpeta}`, '-c', 'pwd -W > visto.txt'], {
+      cwd: carpeta,
+      env: process.env,
+    });
+    let visto = '';
+    for (let i = 0; i < 150 && !visto; i++) {
+      await dormir(100);
+      try {
+        visto = readFileSync(path.join(carpeta, 'visto.txt'), 'utf8').trim();
+      } catch {
+        visto = '';
+      }
+    }
+    expect(visto.replace(/\//g, '\\').toLowerCase()).toBe(carpeta.toLowerCase());
   });
 
   it('un programa que no existe da terminal.no_abrio (no falla en silencio)', async () => {

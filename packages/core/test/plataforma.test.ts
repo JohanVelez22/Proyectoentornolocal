@@ -425,6 +425,64 @@ describe('PlataformaWindows con un ejecutor falso', () => {
   });
 });
 
+describe('Git Bash en una instalación no estándar', () => {
+  it('la ruta sale de HKLM\\SOFTWARE\\GitForWindows\\InstallPath (nunca del PATH)', async () => {
+    const e = {
+      SystemRoot: 'C:\\W',
+      ProgramFiles: 'C:\\PF',
+      PATH: 'C:\\Atacante\\Git;C:\\W\\System32',
+    };
+    const instaladas = new Set([
+      'D:\\Herramientas\\Git de Johan\\git-bash.exe',
+      'C:\\Atacante\\Git\\git-bash.exe',
+    ]);
+    const llamadas: string[][] = [];
+    const ejecutar: Ejecutor = async (cmd, args) => {
+      llamadas.push([cmd, ...args]);
+      const valor = Buffer.from('D:\\Herramientas\\Git de Johan', 'utf16le').toString('base64');
+      return { codigo: 0, stdout: `OK ${valor}\r\n`, stderr: '' };
+    };
+    const lanzadas: string[] = [];
+    const p = new PlataformaWindows(ejecutar, undefined, {
+      entorno: e,
+      existeRuta: (r) => instaladas.has(r),
+      gitRegistro: true,
+      lanzarSeparado: async (cmd) => {
+        lanzadas.push(cmd);
+      },
+    });
+    expect((await p.terminalesInstaladas()).find((t) => t.id === 'git-bash')?.ruta).toBe(
+      'D:\\Herramientas\\Git de Johan\\git-bash.exe',
+    );
+    await p.abrirTerminal('C:\\P', { terminal: 'git-bash' });
+    expect(lanzadas).toEqual(['D:\\Herramientas\\Git de Johan\\git-bash.exe']);
+    // Una sola lectura del registro (se recuerda).
+    expect(llamadas).toHaveLength(1);
+    expect(script(llamadas[0]!.slice(1))).toContain('HKLM:\\SOFTWARE\\GitForWindows');
+  });
+
+  it('sin la clave, una ruta relativa o con comillas: solo las rutas conocidas', async () => {
+    for (const salida of [
+      'SIN',
+      `OK ${Buffer.from('Git', 'utf16le').toString('base64')}`,
+      `OK ${Buffer.from('C:\\a"b', 'utf16le').toString('base64')}`,
+    ]) {
+      const p = new PlataformaWindows(
+        async () => ({ codigo: 0, stdout: salida, stderr: '' }),
+        undefined,
+        {
+          entorno: { ProgramFiles: 'C:\\PF' },
+          existeRuta: (r) => r === 'C:\\PF\\Git\\git-bash.exe' || r.endsWith('git-bash.exe'),
+          gitRegistro: true,
+        },
+      );
+      expect((await p.terminalesInstaladas()).find((t) => t.id === 'git-bash')?.ruta).toBe(
+        'C:\\PF\\Git\\git-bash.exe',
+      );
+    }
+  });
+});
+
 describe('PlataformaFalsa', () => {
   it('cumple la interfaz completa y registra lo que se le pide', async () => {
     const f = new PlataformaFalsa({ carpetaDatos: '/datos', carpetaInicio: '/casa' });

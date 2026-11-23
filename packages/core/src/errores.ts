@@ -59,6 +59,7 @@ export const PARAMETROS_ERROR = {
   'terminal.no_abrio': [],
   'terminal.no_instalada': ['nombre'],
   'terminal.invalida': [],
+  'terminal.powershell_restringido': [],
   // proyectos
   'proyectos.no_existe': [],
   'proyectos.no_confiado': [],
