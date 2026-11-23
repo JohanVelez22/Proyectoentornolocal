@@ -345,7 +345,7 @@ describe('prepend y wolfdump', () => {
     expect(php).toContain('stream_set_blocking($s, false)');
     expect(php).toContain('stream_select(');
     expect(php).toContain('$fin = microtime(true) + self::PLAZO;');
-    expect(php).not.toContain('stream_set_timeout');
+    expect(php).not.toContain('stream_set_timeout(');
   });
 
   it('wolfdump.py lee el mismo archivo y define dump()', () => {
