@@ -16,7 +16,10 @@ import { Adminer, urlAdminer } from '../src/herramientas/adminer';
 import { Composer } from '../src/herramientas/composer';
 import { PathUsuario } from '../src/herramientas/pathUsuario';
 import { Terminal } from '../src/herramientas/terminal';
-import { decodificarComando } from '../src/plataforma/terminalWin';
+import { decodificarComando, powershellDelSistema } from '../src/plataforma/terminalWin';
+
+/** Sin SystemRoot en el entorno de la prueba: el PowerShell de C:\Windows, nunca por el PATH. */
+const PS_SISTEMA = powershellDelSistema({});
 import { generarNginxPrincipal } from '../src/nginx/principal';
 import type { Ejecutor } from '../src/plataforma/tipos';
 import { ejecutorPorDefecto } from '../src/plataforma/win';
@@ -200,7 +203,7 @@ describe('Terminal', () => {
     await t.abrir({ carpeta, php: '8.4' });
     expect(llamadas).toHaveLength(1);
     expect(llamadas[0]!.cmd).not.toBe(wt);
-    expect(llamadas[0]!.cmd).toBe('powershell.exe');
+    expect(llamadas[0]!.cmd).toBe(PS_SISTEMA);
     expect(llamadas[0]!.cwd).toBe(carpeta);
     expect(llamadas[0]!.env.Path).toBe(
       [rutas.bin('php', '8.4'), path.join(base, 'tools', 'bin'), 'C:\\Windows'].join(';'),
@@ -216,7 +219,7 @@ describe('Terminal', () => {
     const rara = path.join(base, "O'Brien");
     mkdirSync(rara);
     await t.abrir({ carpeta: rara, php: null });
-    expect(llamadas[0]!.cmd).toBe('powershell.exe');
+    expect(llamadas[0]!.cmd).toBe(PS_SISTEMA);
     expect(llamadas[0]!.args.slice(0, 2)).toEqual(['-NoExit', '-EncodedCommand']);
     expect(decodificarComando(llamadas[0]!.args[2]!)).toBe(
       `Set-Location -LiteralPath '${rara.replace(/'/g, "''")}'`,
@@ -232,7 +235,7 @@ describe('Terminal', () => {
     const rara = path.join(base, 'a;b ñ');
     mkdirSync(rara);
     await t.abrir({ carpeta: rara, php: null });
-    expect(llamadas[0]!.cmd).toBe('powershell.exe');
+    expect(llamadas[0]!.cmd).toBe(PS_SISTEMA);
     expect(decodificarComando(llamadas[0]!.args[2]!)).toBe(`Set-Location -LiteralPath '${rara}'`);
     expect(llamadas[0]!.cwd).toBe(rara);
   });
