@@ -1,5 +1,6 @@
 import type {
   EstadoPhpSitio,
+  ResultadoPhpSitio,
   XdebugSitio,
   Aviso,
   ClaveRapida,
@@ -90,6 +91,7 @@ import type {
 
 export type {
   EstadoPhpSitio,
+  ResultadoPhpSitio,
   XdebugSitio,
   ClaveRapida,
   ExtensionPhp,
@@ -270,12 +272,12 @@ export interface ApiEntorno {
     /** PHP del sitio: ajustes propios, Xdebug, su pool y la configuración de PhpStorm. */
     phpSitio(id: string): Promise<EstadoPhpSitio>;
     /** Ajustes de php.ini propios (pool propio; prueba con php -v y vuelta atrás). */
-    guardarPhpIni(
-      id: string,
-      valores: Record<string, string>,
-    ): Promise<{ aplicar: ResultadoAplicar }>;
-    /** Xdebug del sitio (null = quitarlo); nunca se activa en el ini de la rama. */
-    xdebug(id: string, x: XdebugSitio | null): Promise<{ aplicar: ResultadoAplicar }>;
+    guardarPhpIni(id: string, valores: Record<string, string>): Promise<ResultadoPhpSitio>;
+    /**
+     * Xdebug del sitio (null = quitarlo); nunca se activa en el ini de la rama. `avisoPuerto`:
+     * el puerto elegido ya lo usa un PHP u otro servicio.
+     */
+    xdebug(id: string, x: XdebugSitio | null): Promise<ResultadoPhpSitio>;
     /** Lo que se escribiría en .vscode/launch.json (para confirmarlo). */
     launchJsonVista(id: string): Promise<{ existe: boolean; contenido: string; diff: string }>;
     /** Escribe .vscode/launch.json (fusiona; copia previa fuera del proyecto). */

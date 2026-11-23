@@ -1054,6 +1054,8 @@ export const es = {
     inicioAyuda:
       'Con «Solo con XDEBUG_TRIGGER», la depuración empieza cuando la petición trae la cookie, el parámetro GET/POST o la extensión del navegador (Xdebug Helper).',
     guardarXdebug: 'Guardar Xdebug',
+    xdebugPuertoEnUso: (puerto: number) =>
+      `El puerto ${puerto} ya lo usa un PHP u otro servicio de WolfCore Dev: su editor no podrá escucharlo. Elija otro (9003 es el habitual).`,
     xdebugGuardado: 'Xdebug del sitio aplicado',
     quitarXdebug: 'Quitar Xdebug',
     quitarXdebugTitulo: '¿Quitar Xdebug de este sitio?',

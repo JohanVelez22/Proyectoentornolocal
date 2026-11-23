@@ -68,10 +68,13 @@ import {
 import { migrarCarpetaDatos } from './migracion';
 import { catalogo } from './catalogo/catalogo';
 import { puertosPhp } from './nginx/principal';
-import { codificarIni, decodificarIni } from './php/ini';
+import { ARGS_PRUEBA_INI_SITIO, codificarIni, decodificarIni } from './php/ini';
 import {
   AjustesPhpSitio,
+  esFalloAjenoAlIni,
   iniSitio,
+  type AvisoPoolSitio,
+  type ResultadoPhpSitio,
   necesitaPoolPropio,
   PoolsSitio,
   RANGO_POOLS_SITIO,
@@ -307,6 +310,36 @@ async function phpResponde(
     await new Promise((r) => setTimeout(r, 300));
   }
 }
+/** Publica en el centro de avisos lo que pasa con el PHP propio de un sitio. */
+function avisarPoolSitio(avisos: CentroAvisos, a: AvisoPoolSitio): void {
+  const datos = {
+    fuente: a.sitio,
+    ...(a.claves ? { claves: a.claves.join(', ').slice(0, 60) } : {}),
+  };
+  if (a.tipo === 'sin_puertos') {
+    avisos.publicar({
+      nivel: 'error',
+      tipo: 'puerto-ocupado',
+      codigo: 'avisos.php_sitio_sin_puertos',
+      datos,
+    });
+  } else if (a.tipo === 'descartados') {
+    avisos.publicar({
+      nivel: 'aviso',
+      tipo: 'proceso-error',
+      codigo: 'avisos.php_sitio_descartados',
+      datos,
+    });
+  } else {
+    avisos.publicar({
+      nivel: 'error',
+      tipo: 'proceso-error',
+      codigo: 'avisos.php_sitio_fallo',
+      datos,
+    });
+  }
+}
+
 /** Revisión de vencimiento de la CA y de los certificados (cada 24 h y al iniciar). */
 const INTERVALO_VENCIMIENTOS_MS = 24 * 60 * 60 * 1000;
 
@@ -557,7 +590,10 @@ export class Nucleo {
         ];
       },
       poolsSitio: {
-        iniciarRama: (r) => pools.sincronizar({ rama: r }),
+        // Los fallos de cada sitio ya se avisan en el centro de avisos.
+        iniciarRama: async (r) => {
+          await pools.sincronizar({ rama: r });
+        },
         detenerRama: (r) => pools.detenerRama(r),
       },
       ...(o.sonda ? { sonda: o.sonda } : {}),
@@ -650,7 +686,11 @@ export class Nucleo {
       reiniciar: async (r) => {
         await servicios.detener(`php-${r}`);
         await servicios.php.iniciar(r);
-        await pools.reiniciarRama(r);
+        // Un pool de sitio que falla por algo ajeno al ini (su puerto ocupado) se avisa y no hace
+        // volver atrás el ini de la rama; cualquier otro fallo, sí.
+        for (const e of (await pools.reiniciarRama(r)).values()) {
+          if (!esFalloAjenoAlIni(e)) throw e;
+        }
       },
       sano: async (r) => {
         const n = (await leerConfig()).servicios.php.trabajadores;
@@ -697,6 +737,8 @@ export class Nucleo {
       ramaEncendida: (r) => vivo(servicios.php.idTrabajador(r, 0)),
       leerIniRama,
       rutaDllXdebug: (r) => extensionesPhp.rutaDll(r, 'xdebug'),
+      puertosRama: async (r) => puertosPhp(r, (await leerConfig()).servicios.php.trabajadores),
+      avisar: (a) => avisarPoolSitio(avisos, a),
       ocupados: async () => {
         const cfg = await leerConfig();
         const ramas = (await instalador.instalados('php')).flatMap((r) =>
@@ -720,7 +762,14 @@ export class Nucleo {
         const texto = iniSitio(s, decodificarIni(bytes), extensionesPhp.rutaDll(s.php!, 'xdebug'));
         return codificarIni(texto, bytes);
       },
-      probarIni: (r, t) => iniPhp.probar(r, t),
+      probarIni: (r, t) => iniPhp.probar(r, t, ARGS_PRUEBA_INI_SITIO),
+      puertosOcupados: async () => {
+        const cfg = await leerConfig();
+        const ramas = (await instalador.instalados('php')).flatMap((r) =>
+          puertosPhp(r, cfg.servicios.php.trabajadores),
+        );
+        return [...puertosReservados(cfg), ...ramas];
+      },
       dllXdebug: (r) => extensionesPhp.tieneDll(r, 'xdebug'),
       // Solo la DLL: Xdebug nunca se activa en el ini de la rama por esta vía.
       instalarXdebug: async (r) => {
@@ -1950,7 +1999,7 @@ export class Nucleo {
   }
 
   /** Ajustes de php.ini propios del sitio (prueba con php -v, pool propio y vuelta atrás). */
-  guardarPhpIniSitio(sitioId: string, valores: unknown): Promise<{ aplicar: ResultadoAplicar }> {
+  guardarPhpIniSitio(sitioId: string, valores: unknown): Promise<ResultadoPhpSitio> {
     return this.ajustesPhpSitio.guardarPhpIni(sitioId, valores);
   }
 
@@ -1958,7 +2007,7 @@ export class Nucleo {
    * Xdebug del sitio (null = quitarlo). Activarlo instala la DLL del catálogo si falta, SIN
    * activarla en la rama: solo la carga el pool propio del sitio.
    */
-  xdebugSitio(sitioId: string, x: unknown): Promise<{ aplicar: ResultadoAplicar }> {
+  xdebugSitio(sitioId: string, x: unknown): Promise<ResultadoPhpSitio> {
     return this.ajustesPhpSitio.xdebug(sitioId, x);
   }
 

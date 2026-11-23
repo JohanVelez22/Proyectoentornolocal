@@ -352,6 +352,9 @@ export const ARGS_PRUEBA_INI = [
   'error_log=',
 ] as const;
 
+/** Extra al probar el ini de un sitio: con Xdebug cargado, `php -v` no intenta depurar. */
+export const ARGS_PRUEBA_INI_SITIO = ['-d', 'xdebug.start_with_request=no'] as const;
+
 /**
  * php.ini de cada rama: lectura, diff, guardado con copia con fecha, prueba con `php -c <ini>
  * -v` antes de tocar el archivo y vuelta atrás si el pool no vuelve a arrancar.
@@ -417,7 +420,7 @@ export class IniPhp {
    * lado (mismas rutas relativas) y corre `php -c <temporal> -d … -v` con los fallos de arranque
    * forzados a stderr (`ARGS_PRUEBA_INI`). Lanza `php.ini_invalido`.
    */
-  async probar(rama: string, texto: string | Buffer): Promise<void> {
+  async probar(rama: string, texto: string | Buffer, extra: readonly string[] = []): Promise<void> {
     const r = await this.rama(rama);
     validarTexto(texto);
     const carpeta = path.dirname(this.d.rutas.phpIni(r));
@@ -425,10 +428,14 @@ export class IniPhp {
     const tmp = path.join(carpeta, `php.ini.prueba-${randomBytes(4).toString('hex')}`);
     await writeFile(tmp, texto);
     try {
-      const res = await this.d.exec(this.d.phpCli(r), ['-c', tmp, ...ARGS_PRUEBA_INI, '-v'], {
-        timeoutMs: 20000,
-        cwd: this.d.rutas.bin('php', r),
-      });
+      const res = await this.d.exec(
+        this.d.phpCli(r),
+        ['-c', tmp, ...ARGS_PRUEBA_INI, ...extra, '-v'],
+        {
+          timeoutMs: 20000,
+          cwd: this.d.rutas.bin('php', r),
+        },
+      );
       const salida = `${res.stderr}\n${res.stdout}`.split(tmp).join('php.ini').trim();
       if (res.codigo !== 0 || salidaConFallos(salida) || !/^PHP \d+\.\d+/m.test(res.stdout)) {
         // Primero las líneas con el fallo: son las que caben en los 200 caracteres del error.

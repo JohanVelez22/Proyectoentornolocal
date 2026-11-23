@@ -6,6 +6,7 @@ import { ErrorWolf } from '../src/errores';
 import {
   conValores,
   diffLineas,
+  ARGS_PRUEBA_INI_SITIO,
   IniPhp,
   rutaHuellaGenerado,
   rutaMarcaEditado,
@@ -331,6 +332,12 @@ describe('IniPhp', () => {
     expect(a.indexOf('-c')).toBeLessThan(a.indexOf('display_errors=stderr'));
   });
 
+  it('probar acepta -d extra después de los forzados (el ini de un sitio: sin depurar al probar)', async () => {
+    await crear().probar('8.4', 'memory_limit = 1G', ARGS_PRUEBA_INI_SITIO);
+    const a = llamadas[0]!;
+    expect(a.slice(-3)).toEqual(['-d', 'xdebug.start_with_request=no', '-v']);
+  });
+
   it('copia y vuelta atrás byte a byte (php.ini en cp1252, no UTF-8)', async () => {
     // "; Configuración" en Windows-1252: 0xF3 no es UTF-8 válido.
     const bytes = Buffer.concat([
@@ -596,6 +603,14 @@ describe('ServicioPhp y el php.ini de la rama', () => {
     writeFileSync(path.join(ext, 'notas.anterior-x.txt'), 'del usuario');
     await srv.iniciar('8.4');
     expect(readdirSync(ext).sort()).toEqual(['notas.anterior-x.txt', 'php_xdebug.dll']);
+  });
+
+  it('los trabajadores de la rama exigen hora de creación al readoptar', async () => {
+    const { srv, supervisor } = await montar();
+    await srv.iniciar('8.4');
+    expect(supervisor.iniciar).toHaveBeenCalledWith(
+      expect.objectContaining({ exigirInicio: true }),
+    );
   });
 
   it('un ini viejo sin huella que difiere del regenerado se copia antes de regenerarlo', async () => {

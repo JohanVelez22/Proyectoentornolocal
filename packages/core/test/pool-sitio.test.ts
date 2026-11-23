@@ -6,12 +6,14 @@ import { generarNginxPrincipal, puertosPhp } from '../src/nginx/principal';
 import {
   AjustesPhpSitio,
   asignarPuertosPools,
+  esFalloAjenoAlIni,
   iniSitio,
   necesitaPoolPropio,
   nombreUpstreamSitio,
   PoolsSitio,
   RANGO_POOLS_SITIO,
   validarPhpIni,
+  type AvisoPoolSitio,
   type DepsAjustesPhpSitio,
 } from '../src/php/poolSitio';
 import type { DefProceso, EstadoProceso } from '../src/procesos/supervisor';
@@ -149,17 +151,56 @@ describe('pool propio por sitio', () => {
     expect(ocupado.get('b')).not.toContain(antes.get('b')![0]);
   });
 
-  it('sin puertos libres en el rango → php.sin_puertos_sitio', () => {
+  it('sin puertos libres: el sitio que no cabe queda fuera (sin romper a los demás)', () => {
     const todos: number[] = [];
-    for (let p = RANGO_POOLS_SITIO.desde; p <= RANGO_POOLS_SITIO.hasta; p++) todos.push(p);
-    expect(() => asignarPuertosPools([sitio({ xdebug: X })], todos)).toThrow(
-      expect.objectContaining({ codigo: 'php.sin_puertos_sitio' }),
+    for (let p = RANGO_POOLS_SITIO.desde + 1; p <= RANGO_POOLS_SITIO.hasta; p++) todos.push(p);
+    const sinLugar: string[] = [];
+    const m = asignarPuertosPools(
+      [sitio({ id: 'a', phpIni: { a: '1' } }), sitio({ id: 'b', xdebug: X })],
+      todos,
+      new Map(),
+      sinLugar,
     );
+    expect([...m.keys()]).toEqual(['a']);
+    expect(sinLugar).toEqual(['b']);
+  });
+
+  it('fallos ajenos al ini (puerto ocupado, sin puertos) no son culpa del ini de la rama', () => {
+    const ajeno = Object.assign(new Error('x'), { codigo: 'servicios.puerto_ocupado' });
+    const sinPuertos = Object.assign(new Error('x'), { codigo: 'php.sin_puertos_sitio' });
+    const otro = new Error('php-cgi terminó');
+    expect(esFalloAjenoAlIni(ajeno)).toBe(true);
+    expect(esFalloAjenoAlIni(sinPuertos)).toBe(true);
+    expect(esFalloAjenoAlIni(otro)).toBe(false);
   });
 });
 
 describe('iniSitio', () => {
   const RAMA = '[PHP]\r\nmemory_limit = 128M\r\nextension_dir = "C:/php/ext"\r\n';
+
+  it('el bloque del sitio abre con [PHP] (el ini de la rama puede terminar en [PATH=…])', () => {
+    const conSeccion = '[PHP]\nmemory_limit = 128M\n[PATH=C:/otro]\ndisplay_errors = On\n';
+    const t = iniSitio(sitio({ phpIni: { memory_limit: '1G' } }), conSeccion);
+    const resto = t.slice(conSeccion.length).split('\n');
+    expect(resto[0]).toBe('[PHP]');
+    expect(resto).toContain('memory_limit = 1G');
+  });
+
+  it('ajustes guardados que ya no son válidos (config.json editado) se descartan y se informan', () => {
+    const descartados: string[] = [];
+    const t = iniSitio(
+      sitio({
+        phpIni: { extension: 'evil', memory_limit: '1G; extension=x', post_max_size: '64M' },
+      }),
+      RAMA,
+      null,
+      descartados,
+    );
+    expect(t).toContain('post_max_size = 64M');
+    expect(t).not.toContain('evil');
+    expect(t).not.toContain('extension=x');
+    expect(descartados.sort()).toEqual(['extension', 'memory_limit']);
+  });
 
   it('ini de la rama + ajustes del sitio al final (la última línea vale) con sus saltos', () => {
     const t = iniSitio(sitio({ phpIni: { memory_limit: '1G', 'date.timezone': 'UTC' } }), RAMA);
@@ -264,11 +305,23 @@ describe('PoolsSitio', () => {
       ramaEncendida: (r) => encendidas.has(r),
       leerIniRama: async () => Buffer.from(iniRama, 'utf8'),
       rutaDllXdebug: (r) => path.join(rutas.bin('php', r), 'ext', 'php_xdebug.dll'),
-      ocupados: async () => [],
+      ocupados: async () => ocupados,
+      puertosRama: async (r) => (r === '8.4' ? [9840, 9841] : [9830]),
+      avisar: (a) => avisos.push(a),
       sonda: async () => true,
+      ...(usoPuerto
+        ? { plataforma: { ejecutable: (n: string) => `${n}.exe`, quienUsaPuerto: usoPuerto } }
+        : {}),
     });
 
+  let ocupados: number[];
+  let avisos: AvisoPoolSitio[];
+  let usoPuerto: ((p: number) => Promise<{ pid: number; nombre: string } | null>) | null;
+
   beforeEach(async () => {
+    ocupados = [];
+    avisos = [];
+    usoPuerto = null;
     rutas = new Rutas(await carpetaTemporal('pel-pool-'));
     sitios = [
       sitio({ id: 'tienda', xdebug: X }),
@@ -290,6 +343,8 @@ describe('PoolsSitio', () => {
     expect(d.comando).toBe(path.join(rutas.bin('php', '8.4'), 'php-cgi.exe'));
     expect(d.args).toEqual(['-c', p.rutaIni('tienda'), '-b', `127.0.0.1:${d.puerto}`]);
     expect(d.reiniciar).toBe(true);
+    // Al readoptar se exige la hora de creación: un PID reutilizado por otro php-cgi no se toca.
+    expect(d.exigirInicio).toBe(true);
     const ini = readFileSync(p.rutaIni('tienda'), 'utf8');
     expect(ini).toContain('memory_limit = 128M');
     expect(ini).toContain('xdebug.mode=debug');
@@ -335,6 +390,40 @@ describe('PoolsSitio', () => {
     detenidos = [];
     await p.sincronizar();
     expect(detenidos).toContain('php-sitio-borrado-0');
+  });
+
+  it('un puerto ocupado por otro programa: error de ese sitio, los demás arrancan', async () => {
+    sitios = [sitio({ id: 'a', phpIni: { a: '1' } }), sitio({ id: 'b', phpIni: { b: '1' } })];
+    const pa = RANGO_POOLS_SITIO.desde;
+    usoPuerto = async (p) => (p === pa ? { pid: 4242, nombre: 'httpd.exe' } : null);
+    const errores = await crear().sincronizar();
+    expect([...errores.keys()]).toEqual(['a']);
+    expect(errores.get('a')).toMatchObject({ codigo: 'servicios.puerto_ocupado' });
+    expect(iniciados.map((d) => d.id)).toEqual(['php-sitio-b-0']);
+    expect(avisos).toContainEqual(expect.objectContaining({ sitio: 'tienda.test', tipo: 'fallo' }));
+  });
+
+  it('sin puertos libres: el sitio va al upstream de su rama y se avisa; nginx sigue siendo válido', async () => {
+    for (let p = RANGO_POOLS_SITIO.desde; p <= RANGO_POOLS_SITIO.hasta; p++) ocupados.push(p);
+    const p = crear();
+    const errores = await p.sincronizar();
+    expect(errores.get('tienda')).toMatchObject({ codigo: 'php.sin_puertos_sitio' });
+    expect(iniciados).toEqual([]);
+    const ups = await p.upstreams();
+    expect(ups.find((u) => u.nombre === 'phpsitio_tienda')?.puertos).toEqual([9840, 9841]);
+    expect(avisos).toContainEqual(expect.objectContaining({ tipo: 'sin_puertos' }));
+  });
+
+  it('ajustes guardados inválidos se descartan del ini y se avisa', async () => {
+    sitios = [sitio({ id: 'tienda', phpIni: { extension: 'evil', memory_limit: '1G' } })];
+    const p = crear();
+    await p.sincronizar();
+    const ini = readFileSync(p.rutaIni('tienda'), 'utf8');
+    expect(ini).not.toContain('evil');
+    expect(ini).toContain('memory_limit = 1G');
+    expect(avisos).toContainEqual(
+      expect.objectContaining({ tipo: 'descartados', claves: ['extension'] }),
+    );
   });
 
   it('un ini de la rama en cp1252 se copia al del sitio con la misma codificación', async () => {
@@ -389,7 +478,9 @@ describe('AjustesPhpSitio (guardar con prueba, salud y vuelta atrás)', () => {
       },
       sincronizar: async () => {
         sincronizaciones++;
+        return erroresSync.shift() ?? new Map();
       },
+      puertosOcupados: async () => [9840, 3306],
       sanoSitio: async () => sano.shift() ?? true,
       aplicar: async () => {
         aplicados++;
@@ -402,7 +493,10 @@ describe('AjustesPhpSitio (guardar con prueba, salud y vuelta atrás)', () => {
       ...extra,
     });
 
+  let erroresSync: Map<string, unknown>[];
+
   beforeEach(() => {
+    erroresSync = [];
     guardado = new Map();
     pruebas = [];
     sincronizaciones = 0;
@@ -463,6 +557,22 @@ describe('AjustesPhpSitio (guardar con prueba, salud y vuelta atrás)', () => {
     hayDll = false;
     await crear().xdebug('tienda', { ...X, activo: false });
     expect(instalados).toEqual([]);
+  });
+
+  it('solo cuenta el error del propio sitio: el de otro no frena; el suyo vuelve atrás', async () => {
+    erroresSync = [new Map([['otro', new Error('ajeno')]])];
+    await crear().guardarPhpIni('tienda', { memory_limit: '1G' });
+    expect(guardado.get('tienda')?.phpIni).toEqual({ memory_limit: '1G' });
+    const propio = Object.assign(new Error('puerto'), { codigo: 'servicios.puerto_ocupado' });
+    erroresSync = [new Map([['tienda', propio]])];
+    await expect(crear().guardarPhpIni('tienda', { memory_limit: '2G' })).rejects.toBe(propio);
+    expect(guardado.get('tienda')?.phpIni).toEqual({ memory_limit: '1G' });
+  });
+
+  it('avisa si el puerto de Xdebug choca con un PHP u otro servicio', async () => {
+    const r = await crear().xdebug('tienda', { ...X, puerto: 9840 });
+    expect(r.avisoPuerto).toBe(9840);
+    expect((await crear().xdebug('tienda', X)).avisoPuerto).toBeNull();
   });
 
   it('sitio sin PHP o inexistente → error claro, nada guardado', async () => {

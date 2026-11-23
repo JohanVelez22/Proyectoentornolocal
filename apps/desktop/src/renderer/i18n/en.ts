@@ -1043,6 +1043,8 @@ export const en: Textos = {
     inicioAyuda:
       'With "Only with XDEBUG_TRIGGER", debugging starts when the request carries the cookie, the GET/POST parameter or the browser extension (Xdebug Helper).',
     guardarXdebug: 'Save Xdebug',
+    xdebugPuertoEnUso: (puerto: number) =>
+      `Port ${puerto} is already used by a PHP or another WolfCore Dev service: your editor cannot listen on it. Choose another one (9003 is the usual one).`,
     xdebugGuardado: 'Site Xdebug applied',
     quitarXdebug: 'Remove Xdebug',
     quitarXdebugTitulo: 'Remove Xdebug from this site?',

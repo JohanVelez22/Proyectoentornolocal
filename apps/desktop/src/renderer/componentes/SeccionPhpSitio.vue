@@ -16,7 +16,13 @@ import {
   useMessage,
 } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
-import type { EstadoPhpSitio, ResultadoAplicar, Sitio, XdebugSitio } from '../../shared/api';
+import type {
+  EstadoPhpSitio,
+  ResultadoAplicar,
+  ResultadoPhpSitio,
+  Sitio,
+  XdebugSitio,
+} from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -96,9 +102,10 @@ const sinDll = computed(
   () => xdebug.value.activo && estado.value !== null && !estado.value.xdebugInstalado,
 );
 
-function avisarNginx(r: { aplicar: ResultadoAplicar } | undefined): boolean {
+function avisarNginx(r: ResultadoPhpSitio | undefined): boolean {
   if (!r) return false;
   emit('aplicado', r.aplicar);
+  if (r.avisoPuerto !== null) message.warning(t.xdebugPuertoEnUso(r.avisoPuerto));
   return r.aplicar.nginx.ok;
 }
 

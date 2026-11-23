@@ -5,7 +5,7 @@ import { applyEdits, modify, parse, type ParseError } from 'jsonc-parser';
 import { ErrorWolf } from '../errores';
 import { copiaConFecha } from '../herramientas/copiaConFecha';
 import { MODOS_XDEBUG, type Sitio, type XdebugSitio } from '../tipos';
-import { diffLineas } from './ini';
+import { codificarIni, decodificarIni, diffLineas } from './ini';
 
 export type { XdebugSitio } from '../tipos';
 
@@ -137,7 +137,11 @@ async function rutaLaunch(s: Sitio): Promise<{ carpeta: string; archivo: string 
   return { carpeta, archivo };
 }
 
-async function leerExistente(archivo: string): Promise<string | null> {
+/**
+ * Bytes y texto del launch.json: UTF-8 sin el BOM (se vuelve a poner al escribir) o, si no es
+ * UTF-8, byte a byte (un comentario en cp1252 no se pierde). null si no existe.
+ */
+async function leerExistente(archivo: string): Promise<{ bytes: Buffer; texto: string } | null> {
   let b: Buffer;
   try {
     b = await readFile(archivo);
@@ -146,7 +150,7 @@ async function leerExistente(archivo: string): Promise<string | null> {
     throw e;
   }
   if (b.length > MAX_BYTES_LAUNCH) throw invalido();
-  return b.toString('utf8');
+  return { bytes: b, texto: decodificarIni(b) };
 }
 
 function exigirXdebug(s: Sitio): void {
@@ -165,11 +169,11 @@ export async function vistaLaunchJson(
   exigirXdebug(s);
   const { archivo } = await rutaLaunch(s);
   const existente = await leerExistente(archivo);
-  const contenido = launchJson(s, existente);
+  const contenido = launchJson(s, existente?.texto ?? null);
   return {
     existe: existente !== null,
     contenido,
-    diff: diffLineas(existente ?? '', contenido),
+    diff: diffLineas(existente?.texto ?? '', contenido),
   };
 }
 
@@ -186,15 +190,19 @@ export async function escribirLaunchJson(
   exigirXdebug(s);
   const { carpeta, archivo } = await rutaLaunch(s);
   const existente = await leerExistente(archivo);
-  const contenido = launchJson(s, existente);
-  if (contenido === existente) return { creado: false, respaldo: null };
+  const contenido = launchJson(s, existente?.texto ?? null);
+  if (existente && contenido === existente.texto) return { creado: false, respaldo: null };
+  // Copia de los bytes originales (BOM y codificación incluidos).
   const respaldo =
     existente === null
       ? null
-      : path.basename(await copiaConFecha(carpetaRespaldos, 'launch.json', existente, ahora));
+      : path.basename(await copiaConFecha(carpetaRespaldos, 'launch.json', existente.bytes, ahora));
+  const bytes = existente
+    ? codificarIni(contenido, existente.bytes)
+    : Buffer.from(contenido, 'utf8');
   await mkdir(carpeta, { recursive: true });
   const tmp = path.join(carpeta, `.launch.json.wolfcore-${randomBytes(4).toString('hex')}`);
-  await writeFile(tmp, contenido, 'utf8');
+  await writeFile(tmp, bytes);
   try {
     await rename(tmp, archivo);
   } catch (e) {

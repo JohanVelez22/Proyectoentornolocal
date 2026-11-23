@@ -181,6 +181,36 @@ describe('escribirLaunchJson', () => {
     expect(t).toContain(NOMBRE_LAUNCH('tienda.test'));
   });
 
+  it('BOM y comentarios en cp1252: se conservan, y la copia es byte a byte', async () => {
+    const { carpeta, respaldos, s } = await montar();
+    mkdirSync(path.join(carpeta, '.vscode'));
+    const original = Buffer.concat([
+      Buffer.from([0xef, 0xbb, 0xbf]),
+      Buffer.from('{\n  // Configuraci', 'latin1'),
+      Buffer.from([0xf3]),
+      Buffer.from('n\n  "configurations": []\n}\n', 'latin1'),
+    ]);
+    // Con BOM y un byte que no es UTF-8: se lee byte a byte (sin el BOM) y se reescribe igual.
+    writeFileSync(path.join(carpeta, '.vscode', 'launch.json'), original.subarray(3));
+    const r1 = await escribirLaunchJson(s, respaldos);
+    const tras = readFileSync(path.join(carpeta, '.vscode', 'launch.json'));
+    expect(
+      tras.includes(
+        Buffer.from([0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75, 0x72, 0x61, 0x63, 0x69, 0xf3, 0x6e]),
+      ),
+    ).toBe(true);
+    expect(readFileSync(path.join(respaldos, r1.respaldo!)).equals(original.subarray(3))).toBe(
+      true,
+    );
+    // UTF-8 con BOM: el BOM se quita para interpretar y vuelve al escribir.
+    const conBom = Buffer.from('\uFEFF{ "configurations": [] }\n', 'utf8');
+    writeFileSync(path.join(carpeta, '.vscode', 'launch.json'), conBom);
+    await escribirLaunchJson(s, respaldos);
+    const t = readFileSync(path.join(carpeta, '.vscode', 'launch.json'));
+    expect(t.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf]))).toBe(true);
+    expect(t.toString('utf8')).toContain(NOMBRE_LAUNCH('tienda.test'));
+  });
+
   it('un launch.json ilegible queda intacto y sin copia', async () => {
     const { carpeta, respaldos, s } = await montar();
     mkdirSync(path.join(carpeta, '.vscode'));

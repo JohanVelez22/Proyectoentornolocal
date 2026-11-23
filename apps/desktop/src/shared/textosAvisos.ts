@@ -55,6 +55,18 @@ const ES: Diccionario = {
       titulo: 'Un certificado venció',
       cuerpo: `El certificado de ${limpio(d['fuente'], 'un sitio')} ya no es válido. Regenérelo.`,
     }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: 'El PHP propio de un sitio no arrancó',
+      cuerpo: `El PHP de ${limpio(d['fuente'], 'un sitio')} no arrancó (puede que su puerto lo use otro programa). Revise la sección PHP de su tarjeta.`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: 'Sin puertos para el PHP de un sitio',
+      cuerpo: `${limpio(d['fuente'], 'Un sitio')} usa el PHP compartido de su versión, sin sus ajustes: no quedan puertos libres para su PHP propio.`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'Ajustes de PHP descartados',
+      cuerpo: `Algunos ajustes de PHP de ${limpio(d['fuente'], 'un sitio')} no son válidos y no se aplicaron: ${limpio(d['claves'], 'revise la sección PHP')}.`,
+    }),
     'doctor.hallazgos': (d) => ({
       titulo: 'El Doctor encontró errores en el entorno',
       cuerpo: `Hay ${limpio(d['errores'], 'varios')} problemas que pueden impedir que el entorno funcione. Abra el Doctor para ver cómo repararlos.`,
@@ -122,6 +134,18 @@ const EN: Diccionario = {
     'avisos.certificado_vencido': (d) => ({
       titulo: 'A certificate expired',
       cuerpo: `The certificate for ${limpio(d['fuente'], 'a site')} is no longer valid. Regenerate it.`,
+    }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: "A site's own PHP did not start",
+      cuerpo: `The PHP of ${limpio(d['fuente'], 'a site')} did not start (another program may be using its port). Check the PHP section of its card.`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: "No ports for a site's PHP",
+      cuerpo: `${limpio(d['fuente'], 'A site')} uses the shared PHP of its version, without its settings: there are no free ports left for its own PHP.`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'PHP settings discarded',
+      cuerpo: `Some PHP settings of ${limpio(d['fuente'], 'a site')} are not valid and were not applied: ${limpio(d['claves'], 'check the PHP section')}.`,
     }),
     'doctor.hallazgos': (d) => ({
       titulo: 'The Doctor found errors in the environment',

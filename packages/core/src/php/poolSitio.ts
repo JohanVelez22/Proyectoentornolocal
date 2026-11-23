@@ -48,12 +48,14 @@ const ID_POOL = /^php-sitio-(.+)-(\d+)$/;
 /**
  * Puertos de cada pool propio. Los que ya tenía un sitio (`previos`) se conservan si siguen
  * libres y alcanzan; los demás sitios, en orden de id, toman los siguientes libres del rango.
- * Igual entrada → igual salida (nginx y los pools ven lo mismo). Sin lugar: `php.sin_puertos_sitio`.
+ * Igual entrada → igual salida (nginx y los pools ven lo mismo). Los que no caben quedan fuera
+ * del resultado y se anotan en `sinLugar` (van al upstream de su rama): nunca se lanza.
  */
 export function asignarPuertosPools(
   sitios: readonly Sitio[],
   ocupados: Iterable<number>,
   previos: ReadonlyMap<string, number[]> = new Map(),
+  sinLugar: string[] = [],
 ): Map<string, number[]> {
   const usados = new Set(ocupados);
   const con = [...sitios].filter(necesitaPoolPropio).sort((a, b) => a.id.localeCompare(b.id));
@@ -71,16 +73,12 @@ export function asignarPuertosPools(
     const puertos: number[] = [];
     while (puertos.length < trabajadoresPool(s)) {
       while (siguiente <= RANGO_POOLS_SITIO.hasta && usados.has(siguiente)) siguiente++;
-      if (siguiente > RANGO_POOLS_SITIO.hasta) {
-        throw new ErrorWolf(
-          'php.sin_puertos_sitio',
-          'No quedan puertos libres para los PHP propios de los sitios.',
-        );
-      }
+      if (siguiente > RANGO_POOLS_SITIO.hasta) break;
       puertos.push(siguiente);
       usados.add(siguiente);
     }
-    res.set(s.id, puertos);
+    if (puertos.length === trabajadoresPool(s)) res.set(s.id, puertos);
+    else sinLugar.push(s.id);
   }
   // Orden de los sitios para que la salida no dependa de qué puertos venían de antes.
   return new Map([...res].sort(([a], [b]) => a.localeCompare(b)));
@@ -89,13 +87,44 @@ export function asignarPuertosPools(
 const saltoDe = (t: string): string => (t.includes('\r\n') ? '\r\n' : '\n');
 
 /**
- * php.ini del pool de un sitio: el de la rama tal cual y, al final (la última línea vale), los
- * ajustes del sitio y Xdebug. La DLL de Xdebug no se repite si la rama ya la carga.
+ * Ajustes guardados del sitio que siguen siendo válidos (un config.json editado a mano no cuela
+ * nada en el ini): los que no pasan `validarPhpIni` se anotan en `descartados`.
  */
-export function iniSitio(s: Sitio, iniRama: string, rutaDllXdebug: string | null = null): string {
+export function ajustesValidos(
+  phpIni: Record<string, string> | undefined,
+  descartados: string[] = [],
+): Record<string, string> {
+  const res: Record<string, string> = {};
+  for (const [k, v] of Object.entries(phpIni ?? {})) {
+    if (Object.keys(res).length >= MAX_AJUSTES) {
+      descartados.push(k);
+      continue;
+    }
+    try {
+      Object.assign(res, validarPhpIni({ [k]: v }));
+    } catch {
+      descartados.push(k);
+    }
+  }
+  return res;
+}
+
+/**
+ * php.ini del pool de un sitio: el de la rama tal cual y, al final (la última línea vale), una
+ * sección `[PHP]` (el ini de la rama puede terminar en `[PATH=…]`) con los ajustes válidos del
+ * sitio y Xdebug. La DLL de Xdebug no se repite si la rama ya la carga.
+ */
+export function iniSitio(
+  s: Sitio,
+  iniRama: string,
+  rutaDllXdebug: string | null = null,
+  descartados: string[] = [],
+): string {
   const salto = saltoDe(iniRama);
-  const lineas = [`; ---- WolfCore Dev: ajustes propios del sitio ${s.dominio} ----`];
-  for (const [k, v] of Object.entries(s.phpIni ?? {})) lineas.push(`${k} = ${v}`);
+  const lineas = ['[PHP]', `; ---- WolfCore Dev: ajustes propios del sitio ${s.dominio} ----`];
+  for (const [k, v] of Object.entries(ajustesValidos(s.phpIni, descartados))) {
+    lineas.push(`${k} = ${v}`);
+  }
   if (s.xdebug?.activo) {
     const cargada = extensionesActivas(iniRama).has('xdebug');
     lineas.push(...xdebugIni(s.xdebug, cargada ? null : rutaDllXdebug).split('\n'));
@@ -157,6 +186,27 @@ export function validarPhpIni(v: unknown): Record<string, string> {
 
 // ---------------------------------------------------------------- pools
 
+/**
+ * ¿El fallo de un pool de sitio es ajeno al ini (puerto ocupado por otro programa, sin puertos
+ * libres)? Esos no deben hacer volver atrás el php.ini de la rama.
+ */
+export function esFalloAjenoAlIni(e: unknown): boolean {
+  const codigo = (e as { codigo?: unknown } | null)?.codigo;
+  return codigo === 'servicios.puerto_ocupado' || codigo === 'php.sin_puertos_sitio';
+}
+
+/** Aviso sobre el PHP propio de un sitio (lo publica el núcleo en el centro de avisos). */
+export interface AvisoPoolSitio {
+  tipo: 'fallo' | 'sin_puertos' | 'descartados';
+  /** Dominio del sitio. */
+  sitio: string;
+  /** Directivas descartadas (`descartados`). */
+  claves?: string[];
+}
+
+/** Errores de una sincronización, por id de sitio. */
+export type ErroresPools = Map<string, unknown>;
+
 type SupervisorPools = {
   iniciar(def: DefProceso): Promise<void>;
   detener(id: string): Promise<void>;
@@ -179,6 +229,9 @@ export interface DepsPoolsSitio {
   rutaDllXdebug(rama: string): string;
   /** Puertos que los pools no pueden tomar (servicios, pools de rama, rangos del sistema). */
   ocupados(): Promise<number[]>;
+  /** Puertos del pool compartido de la rama (destino de los sitios sin puertos propios). */
+  puertosRama(rama: string): Promise<number[]>;
+  avisar?(a: AvisoPoolSitio): void;
   sonda(puerto: number): Promise<boolean>;
   /** Espera máxima a que un pool responda. */
   plazoSanoMs?: number;
@@ -197,6 +250,7 @@ interface PoolEnMarcha {
  */
 export class PoolsSitio {
   private asignados = new Map<string, number[]>();
+  private sinLugar: string[] = [];
   private readonly enMarcha = new Map<string, PoolEnMarcha>();
   private cola: Promise<unknown> = Promise.resolve();
 
@@ -221,7 +275,9 @@ export class PoolsSitio {
 
   /** Puertos de cada pool propio (pegados a los que ya tenían). */
   private async asignacion(sitios: Sitio[]): Promise<Map<string, number[]>> {
-    this.asignados = asignarPuertosPools(sitios, await this.d.ocupados(), this.asignados);
+    const sinLugar: string[] = [];
+    this.asignados = asignarPuertosPools(sitios, await this.d.ocupados(), this.asignados, sinLugar);
+    this.sinLugar = sinLugar;
     return this.asignados;
   }
 
@@ -230,24 +286,26 @@ export class PoolsSitio {
     const lista = sitios ?? (await this.d.leerSitios());
     const instaladas = await this.d.ramasInstaladas();
     const asignacion = await this.asignacion(lista);
-    return lista
-      .filter((s) => asignacion.has(s.id) && instaladas.includes(s.php!))
-      .map((s) => ({
-        version: s.php!,
-        nombre: nombreUpstreamSitio(s.id),
-        puertos: asignacion.get(s.id)!,
-      }))
-      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    const res: UpstreamPhp[] = [];
+    for (const s of lista) {
+      if (!necesitaPoolPropio(s) || !instaladas.includes(s.php!)) continue;
+      // Sin puertos propios: su upstream apunta al pool de la rama (el vhost sigue siendo válido).
+      const puertos = asignacion.get(s.id) ?? (await this.d.puertosRama(s.php!));
+      res.push({ version: s.php!, nombre: nombreUpstreamSitio(s.id), puertos });
+    }
+    return res.sort((a, b) => a.nombre!.localeCompare(b.nombre!));
   }
 
   /**
    * Deja los pools como piden los sitios: arranca (o reinicia si cambió su ini o sus puertos)
    * los de sitios con ajustes cuya rama está encendida y apaga los demás (también los que quedaron
    * de una sesión anterior). `rama` limita a esa rama; `forzar` reinicia aunque nada cambie (la
-   * DLL o el ini de la rama cambiaron). Un pool que no arranca no frena a los demás: se lanza el
-   * primer error al final.
+   * DLL o el ini de la rama cambiaron). Un pool que no arranca no frena a los demás: devuelve los
+   * errores por id de sitio (y los avisa); nunca lanza por un sitio.
    */
-  sincronizar(o: { rama?: string; forzar?: boolean; sitios?: Sitio[] } = {}): Promise<void> {
+  sincronizar(
+    o: { rama?: string; forzar?: boolean; sitios?: Sitio[] } = {},
+  ): Promise<ErroresPools> {
     return this.enCola(() => this.sincronizarEnCola(o));
   }
 
@@ -255,11 +313,23 @@ export class PoolsSitio {
     rama?: string;
     forzar?: boolean;
     sitios?: Sitio[];
-  }): Promise<void> {
+  }): Promise<ErroresPools> {
     const sitios = o.sitios ?? (await this.d.leerSitios());
     const instaladas = await this.d.ramasInstaladas();
     const asignacion = await this.asignacion(sitios);
-    const errores: unknown[] = [];
+    const errores: ErroresPools = new Map();
+    for (const id of this.sinLugar) {
+      const s = sitios.find((x) => x.id === id);
+      if (!s || (o.rama !== undefined && s.php !== o.rama)) continue;
+      errores.set(
+        id,
+        new ErrorWolf(
+          'php.sin_puertos_sitio',
+          'No quedan puertos libres para los PHP propios de los sitios.',
+        ),
+      );
+      this.d.avisar?.({ tipo: 'sin_puertos', sitio: s.dominio });
+    }
     const deseados = new Set<string>();
     for (const s of sitios) {
       const puertos = asignacion.get(s.id);
@@ -269,7 +339,8 @@ export class PoolsSitio {
       try {
         await this.asegurar(s, puertos, o.forzar === true);
       } catch (e) {
-        errores.push(e);
+        errores.set(s.id, e);
+        this.d.avisar?.({ tipo: 'fallo', sitio: s.dominio });
       }
     }
     // Apagar lo que sobra: sitios sin ajustes, borrados, ramas apagadas o restos readoptados.
@@ -286,17 +357,21 @@ export class PoolsSitio {
           await rm(path.dirname(this.rutaIni(id)), { recursive: true, force: true });
         }
       } catch (e) {
-        errores.push(e);
+        errores.set(id, e);
       }
     }
-    if (errores.length > 0) throw errores[0];
+    return errores;
   }
 
   /** Escribe el ini del sitio y arranca su pool si no está, o si cambió algo (o `forzar`). */
   private async asegurar(s: Sitio, puertos: number[], forzar: boolean): Promise<void> {
     const rama = s.php!;
     const bytesRama = await this.d.leerIniRama(rama);
-    const texto = iniSitio(s, decodificarIni(bytesRama), this.d.rutaDllXdebug(rama));
+    const descartados: string[] = [];
+    const texto = iniSitio(s, decodificarIni(bytesRama), this.d.rutaDllXdebug(rama), descartados);
+    if (descartados.length > 0) {
+      this.d.avisar?.({ tipo: 'descartados', sitio: s.dominio, claves: descartados });
+    }
     const bytes = codificarIni(texto, bytesRama);
     const huella = createHash('sha256')
       .update(bytes)
@@ -333,6 +408,8 @@ export class PoolsSitio {
         puerto,
         log: this.d.rutas.logs(`php-sitio-${s.id}.log`),
         reiniciar: true,
+        // Al readoptar, PID + ejecutable no bastan: otro php-cgi (Laragon, XAMPP) puede tener el PID.
+        exigirInicio: true,
       });
     }
     this.enMarcha.set(s.id, { rama, puertos, huella });
@@ -349,7 +426,7 @@ export class PoolsSitio {
   }
 
   /** Reinicia los pools de los sitios de la rama (su ini o su DLL de Xdebug cambiaron). */
-  reiniciarRama(rama: string): Promise<void> {
+  reiniciarRama(rama: string): Promise<ErroresPools> {
     return this.sincronizar({ rama, forzar: true });
   }
 
@@ -411,9 +488,18 @@ export interface DepsAjustesPhpSitio {
   dllXdebug(rama: string): boolean;
   /** Instala php_xdebug.dll del catálogo SIN activarla en el ini de la rama. */
   instalarXdebug(rama: string): Promise<void>;
-  sincronizar(): Promise<void>;
+  /** Sincroniza los pools; errores por id de sitio. */
+  sincronizar(): Promise<ErroresPools>;
   sanoSitio(id: string): Promise<boolean>;
   aplicar(): Promise<ResultadoAplicar>;
+  /** Puertos de PHP y de servicios (para avisar si el de Xdebug choca con alguno). */
+  puertosOcupados(): Promise<number[]>;
+}
+
+export interface ResultadoPhpSitio {
+  aplicar: ResultadoAplicar;
+  /** Puerto de Xdebug que ya usa un PHP u otro servicio (el editor no podrá escucharlo). */
+  avisoPuerto: number | null;
 }
 
 /**
@@ -426,20 +512,17 @@ export class AjustesPhpSitio {
 
   constructor(private readonly d: DepsAjustesPhpSitio) {}
 
-  async guardarPhpIni(id: string, valores: unknown): Promise<{ aplicar: ResultadoAplicar }> {
+  async guardarPhpIni(id: string, valores: unknown): Promise<ResultadoPhpSitio> {
     const phpIni = validarPhpIni(valores);
     return this.cambiar(id, (s) => ({ phpIni, xdebug: s.xdebug ?? null }));
   }
 
-  async xdebug(id: string, x: unknown): Promise<{ aplicar: ResultadoAplicar }> {
+  async xdebug(id: string, x: unknown): Promise<ResultadoPhpSitio> {
     const xdebug = validarXdebug(x);
     return this.cambiar(id, (s) => ({ phpIni: s.phpIni ?? {}, xdebug }));
   }
 
-  private cambiar(
-    id: string,
-    nuevos: (s: Sitio) => CamposPhpSitio,
-  ): Promise<{ aplicar: ResultadoAplicar }> {
+  private cambiar(id: string, nuevos: (s: Sitio) => CamposPhpSitio): Promise<ResultadoPhpSitio> {
     const p = this.cola.then(
       () => this.cambiarEnCola(id, nuevos),
       () => this.cambiarEnCola(id, nuevos),
@@ -451,7 +534,7 @@ export class AjustesPhpSitio {
   private async cambiarEnCola(
     id: string,
     nuevos: (s: Sitio) => CamposPhpSitio,
-  ): Promise<{ aplicar: ResultadoAplicar }> {
+  ): Promise<ResultadoPhpSitio> {
     const previo = await this.d.leerSitio(id);
     if (!previo || !TIPOS_CON_PHP.includes(previo.tipo) || !previo.php) {
       throw new ErrorWolf('php.sitio_sin_php', 'Ese sitio no usa PHP.');
@@ -476,7 +559,9 @@ export class AjustesPhpSitio {
       // El pool nuevo primero; Nginx cambia de upstream solo si responde.
       let sano = false;
       try {
-        await this.d.sincronizar();
+        // Solo cuenta el error de este sitio: el de otro (su puerto ocupado) no lo frena.
+        const errores = await this.d.sincronizar();
+        if (errores.has(id)) throw errores.get(id);
         sano = await this.d.sanoSitio(id);
       } catch (e) {
         await volver();
@@ -495,10 +580,12 @@ export class AjustesPhpSitio {
     if (!aplicar.nginx.ok) {
       await volver();
       await this.d.aplicar().catch(() => undefined);
-      return { aplicar };
+      return { aplicar, avisoPuerto: null };
     }
     // Sin pool propio: Nginx ya apunta al compartido; ahora se apaga el del sitio.
     if (!propio) await this.d.sincronizar();
-    return { aplicar };
+    const puerto = nuevo.xdebug?.activo ? nuevo.xdebug.puerto : null;
+    const choca = puerto !== null && (await this.d.puertosOcupados()).includes(puerto);
+    return { aplicar, avisoPuerto: choca ? puerto : null };
   }
 }
