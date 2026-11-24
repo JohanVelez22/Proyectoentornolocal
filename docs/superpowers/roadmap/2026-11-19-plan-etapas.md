@@ -229,4 +229,20 @@ Ubicación propuesta; se confirma y se convierte en tareas al retomar la Etapa C
 | Búsqueda por palabra clave en archivo o carpeta, en nombres y en contenido (amplía la herramienta de búsqueda ya anotada) | D |
 | Pulido general: robustez, aspecto y funcionalidad en todo el programa | Todas las etapas; auditoría grande en D |
 | Visor de esquema/diagrama de la base (tablas, relaciones, PK/FK) | F |
+
+### 4.1 Arrastre de la Etapa C a la D (revisado el 2026-11-24)
+
+Al cerrar C quedaron sin hacer: los presets Kilo, OmniRouter y FreeLLMAPI (OpenRouter, Groq y LM Studio ya están), el agente Opencode, los idiomas portugués y francés, Java/.NET/Go/Rust en el catálogo y el aviso al terminar un proceso de proyecto. Pasan a la Etapa D junto con los pedidos nuevos.
+
+| Tarea de D (provisional) | Contenido |
+|---|---|
+| D1 · Pulido temprano y auditoría de diseño | Solo versiones (sin "rama"), desplegables hacia abajo, revisión general de aspecto; comprobar a mano el diálogo de Salir con otra ventana encima (el arreglo está en C) |
+| D2 · Proveedores de IA | Presets Kilo, OmniRouter y FreeLLMAPI |
+| D3 · Agentes | Opencode, Antigravity CLI y otros CLIs comunes viables |
+| D4 · Idiomas | Portugués y francés; sistema listo para más |
+| D5 · Lenguajes y runtimes | Java, .NET, Go, Rust y más, con el catálogo en vivo |
+| D6 · Avisos de procesos | Avisar cuando un proceso de proyecto termina (éxito o fallo) |
+| D7 · FTP | URL `ftp://usuario@host:puerto/` con copiar, abrir y QR |
+| D8 · Búsqueda | Por palabra clave en archivo o carpeta, en nombres y en contenido |
+| Resto de D | Lo ya planeado (nuevo proyecto, plantillas, importar, `.env`, CLI `wolf`, túneles, LAN, respaldo y perfiles) y los pedidos D de la tabla anterior; el orden final sale del plan de la etapa |
 | Repaso analítico de ServBay, FlyEnv, Flock, EnvKit, Laragon, Herd, Lerd, DBngin, Local y MAMP; actualizar la matriz | Tarea de bajo costo al retomar |
