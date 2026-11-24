@@ -10,7 +10,7 @@ WolfCore Dev es un reemplazo propio de FlyEnv y ServBay, para uso personal. Es u
 2. Desinstálela en **Configuración → Aplicaciones → Aplicaciones instaladas → Entorno Local → Desinstalar**. El desinstalador quita el programa, no la carpeta de datos: bases, sitios y certificados siguen en `%LOCALAPPDATA%\WolfCoreDev` (o en la vieja hasta que se renombre).
 3. Si había agregado las herramientas al PATH con la versión vieja, esa entrada apunta a `%LOCALAPPDATA%\Proyectoentornolocal\tools\bin`, que tras el renombrado ya no existe: quítela a mano de las variables de entorno del usuario y use **Ajustes → PATH del usuario → Agregar al PATH del usuario** en WolfCore Dev.
 
-Diseños: MVP en `docs/superpowers/specs/2026-11-17-proyectoentornolocal-design.md`, Etapa A en `docs/superpowers/specs/2026-11-18-etapa-a-design.md`, Etapa B en `docs/superpowers/specs/2026-11-19-etapa-b-design.md`.
+Diseños: MVP en `docs/superpowers/specs/2026-11-17-proyectoentornolocal-design.md`, Etapa A en `docs/superpowers/specs/2026-11-18-etapa-a-design.md`, Etapa B en `docs/superpowers/specs/2026-11-19-etapa-b-design.md`, Etapa C en `docs/superpowers/specs/2026-11-19-etapa-c-design.md`.
 
 ## Qué trae
 
@@ -101,6 +101,92 @@ PostgreSQL usa pgvector compilado una vez en su equipo:
 - **Registros:** sigue en vivo los logs de Nginx, PHP, los servicios, los sitios (también `storage/logs/laravel.log`), los procesos de proyecto y los túneles, con filtro por texto y nivel, pausa y **Abrir carpeta**.
 - **Herramientas** (sin conexión): QR, JSON, expresiones regulares, comparar textos, tiempo, puertos y procesos (finalizar con confirmación), limpieza del BOM de UTF-8, certificados con la CA local, cripto (hash, base64, URL, UUID, contraseñas, JWT), Markdown, entorno del sistema (PATH, versiones y variables con secretos ocultos), información de archivo y cliente WebSocket.
 
+### IA en la nube (Etapa C)
+
+- La pantalla **IA** reúne Ollama (como antes) y los proveedores en la nube: **OpenAI**, **Anthropic**, **Gemini**, **Hermes** (Nous Research) y cualquier servicio **compatible con OpenAI** (OpenRouter, Groq, LM Studio…), varios con nombre propio.
+- La configuración que no es secreta (tipo, nombre, URL base, modelo por defecto) va en `config.json`. **La clave nunca:** se guarda cifrada con `safeStorage` en `etc/secretos/` y la interfaz solo ve si está puesta y sus 4 últimos caracteres. Tampoco sale en registros, errores ni URLs (Gemini usa la cabecera `x-goog-api-key`, nunca `?key=`).
+- **Probar conexión** es gratis: solo lista los modelos y mide la latencia. **Probar un mensaje** gasta tokens, así que pide confirmación y manda un texto fijo y corto.
+- La URL base solo acepta `https://`, o `http://` hacia `127.0.0.1`/`localhost`, sin usuario ni clave en la URL. Cambiar la URL de un proveedor que ya tiene clave pide confirmación aparte, porque la clave iría a otro servidor.
+- **Usar en un proyecto** escribe el bloque `.env` del proveedor (`OPENAI_API_KEY`/`OPENAI_BASE_URL`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OLLAMA_HOST`, `AI_MODEL`):
+  - antes lo muestra con la clave enmascarada y pide confirmar, porque en el `.env` la clave queda en texto plano;
+  - deja una copia previa fuera del proyecto y ofrece agregar `.env` al `.gitignore`;
+  - si git ya sigue el `.env`, se niega hasta que confirme aparte o lo saque del índice con `git rm --cached .env`.
+
+### Agentes (Etapa C)
+
+- La pantalla **Agentes** muestra **Claude Code**, **Codex CLI** y **Hermes Agent**: si están instalados (lo de WolfCore Dev, el npm global del usuario o el PATH), su versión y si ya tienen el MCP de WolfCore Dev.
+- **Instalar** (con confirmación) usa `npm install -g` desde `registry.npmjs.org` con el Node de WolfCore Dev, dentro de su carpeta de datos, sin tocar el npm global del usuario.
+- **Registrar el MCP:** primero con la CLI del propio agente y, si no la tiene, editando su archivo (`~/.claude.json`, `~/.codex/config.toml` o la configuración de Hermes):
+  - solo agrega o reemplaza la entrada `wolfcore` y siempre deja antes una copia con fecha;
+  - si el archivo no se puede interpretar, no lo toca;
+  - el token del MCP no se escribe: el agente lo lee de `WOLFCORE_MCP_TOKEN`.
+- **Abrir en un proyecto:** abre una terminal visible en la carpeta del proyecto con el agente. La clave del proveedor elegido y `WOLFCORE_MCP_TOKEN` van solo en el entorno de ese proceso.
+- **Mensaje de commit sugerido** (panel Git del proyecto): manda al proveedor elegido lo preparado con `git diff --cached`, sin archivos `.env*`, claves ni binarios, y hasta 20 000 caracteres. Muestra la propuesta para editarla. **Hacer commit** solo confirma lo preparado; nunca hace `add` ni `push`.
+
+### PHP: `php.ini`, extensiones y Xdebug (Etapa C)
+
+- **Editor de `php.ini` por rama:** texto con diff contra lo guardado y valores rápidos (`memory_limit`, `upload_max_filesize`, `post_max_size`, `max_execution_time`, `display_errors`, `error_reporting`, `date.timezone`, `opcache.enable`).
+  - Antes de escribir, prueba el texto con `php -c <ini> -v`, con los errores de arranque forzados a la salida aunque el ini los oculte. Un valor inválido (por ejemplo `memory_limit = abc`) se rechaza y el archivo no cambia.
+  - Al guardar deja una copia con fecha (byte a byte) y reinicia el pool. Si el pool no vuelve a responder, se restaura el archivo anterior.
+- **Extensiones:** lista los `.dll` de `ext/` y las activa o desactiva con la misma prueba y vuelta atrás. Las de terceros (Xdebug…) salen **solo del catálogo**, con la variante NTS-VS16/VS17-x64 de la rama y SHA-256 fijado.
+- **Ajustes por sitio:** un sitio puede tener su propio `php.ini` (valores sobre el de la rama). Con ajustes propios o con Xdebug, ese sitio corre en un **pool propio** de `php-cgi`; los demás siguen en el compartido.
+- **Xdebug por sitio:** modo (`debug`, `develop`, `coverage`, `profile`, `trace`), puerto (9003 por defecto) e inicio `trigger` o `yes`, siempre con `client_host=127.0.0.1`.
+  - Activarlo instala la DLL del catálogo si falta, pero **no** la activa en la rama: solo la carga el pool del sitio.
+  - Ofrece escribir `.vscode/launch.json`: lo fusiona por nombre con el que haya y deja una copia fuera del proyecto. Para PhpStorm muestra la configuración a copiar.
+
+### Nginx: editor de vhost por sitio (Etapa C)
+
+- Muestra el vhost generado y un área de **reglas propias** con snippets (CORS, caché de estáticos, límite de subida, SPA, cabeceras de seguridad, WebSocket). En modo avanzado se puede reemplazar el vhost completo, que entonces deja de regenerarse.
+- **Aplicar** prueba primero con `nginx -t` sobre una copia temporal de toda la configuración. Solo si pasa deja una copia con fecha (historial de 10 versiones), escribe, recarga y comprueba que Nginx responde. Si la recarga falla, todo vuelve a lo anterior. Una regla rota nunca tumba el Nginx en marcha.
+- El editor rechaza lo que saldría del sitio: módulos, `include` ajenos, `root`/`alias` fuera de la carpeta, rutas con `..`, otro `SCRIPT_FILENAME`, `proxy_pass` a los servicios internos de WolfCore Dev, puertos o dominios de otros sitios y similares.
+
+### Doctor (Etapa C)
+
+- **Doctor** revisa el entorno al iniciar (en segundo plano) y con **Revisar ahora**:
+  - puertos ocupados (reconoce IIS, FlyEnv, Skype, XAMPP) y rangos reservados por Hyper-V/WSL/Docker;
+  - la CA y los certificados (vencidos o por vencer), y la confianza en Node, Python y Firefox;
+  - el archivo `hosts`: bloque duplicado o sin cierre, UTF-16, solo lectura o dominios faltantes;
+  - PATH duplicado o roto, VC++ ausente, antivirus sin exclusión y servicios en error.
+- Cada hallazgo trae evidencia y una **reparación guiada**. La reparación dice qué hará y **solo corre con su confirmación**; las que tocan el sistema piden administrador y dejan copia (por ejemplo, reescribir el bloque del hosts conserva las líneas ajenas).
+- Nunca actúa sobre programas ajenos: con FlyEnv en un puerto, ofrece mover el de WolfCore Dev. Lo del antivirus y los rangos reservados solo se informa, con el comando para hacerlo a mano.
+- **Confianza de la CA fuera de Windows:**
+  - **Node:** los procesos y la terminal reciben `NODE_EXTRA_CA_CERTS`; también se puede fijar como variable del usuario, con confirmación.
+  - **Python:** reciben un paquete propio con las raíces de `certifi` más la CA (nunca solo la CA).
+  - **Firefox:** se activa `security.enterprise_roots.enabled` en `user.js` de cada perfil, con copia y con Firefox cerrado.
+
+### Avisos (Etapa C)
+
+- La campana de la barra reúne los avisos: servicios caídos, hallazgos del Doctor, contenedores que se detienen solos y **versiones nuevas** (como mucho uno por servicio y día). También pueden salir como notificación nativa de Windows.
+- Cada aviso lleva a su pantalla; el de una versión nueva abre el diálogo de actualizar, nunca actualiza solo. En **Ajustes → Avisos** se apagan las notificaciones nativas o tipos de aviso, y los de versiones nuevas se silencian por servicio.
+
+### Catálogo en vivo, versiones e instancias (Etapa C)
+
+- **Servicios → Versiones** muestra, para los 13 servicios (PHP, MySQL, MariaDB, PostgreSQL, Redis, MongoDB, Node, Python, Nginx, Composer, Mailpit, Ollama y cloudflared), las versiones publicadas **agrupadas por rama**. Cada rama trae su soporte y su fin de soporte; cada fila, sus marcas instalada, encendida y con actualización, y los botones Instalar, Desinstalar, Encender y Predeterminada. **Mostrar todas** suma las previews y las ramas sin soporte.
+- **Fuentes oficiales, sin comodines:** `releases.json` de windows.php.net, `index.json` y `SHASUMS256.txt` de nodejs.org, NuGet (Python), la REST de MariaDB, `versions.json` de postgresql.org con los binarios de EnterpriseDB, `full.json` de MongoDB, `getcomposer.org/versions`, nginx.org, sondeos `HEAD` en `cdn.mysql.com` y la API de GitHub (Redis, mongosh, Mailpit, Ollama, cloudflared).
+  - Cada redirección se revisa salto a salto contra la lista de hosts permitidos.
+  - Los índices se guardan 6 h en `run/catalogo/`.
+  - Un índice con **una sola** entrada rara se descarta entero. Entonces se usa la caché válida o, sin ella, la **lista fija** de `catalogo.json`, que también es la lista sin conexión. La pantalla dice de dónde salió la lista: en línea, caché o sin conexión.
+- **Huellas:** se verifica la huella **oficial** de cada descarga: SHA-256 o SHA-512 (fuertes) y MD5 (se comprueba, pero cuenta como débil). Las firmas PGP quedan para la Etapa D.
+- **Quién no publica huella y por qué se pide confirmar:**
+  - **PostgreSQL:** EnterpriseDB no publica sumas de sus zip de Windows.
+  - **Nginx:** nginx.org solo publica firmas PGP, que todavía no se verifican.
+  - **MySQL:** Oracle solo muestra un MD5 en su página de descargas, que además suele rechazar a clientes automáticos.
+
+  Sin una huella fuerte no se puede comprobar que el archivo es el oficial. Por eso esas versiones muestran una advertencia y solo se instalan si confirma en un diálogo que explica el riesgo. Ningún camino automático las instala, ni siquiera "Actualizar" desde un aviso. La excepción son las versiones de la lista fija: traen el SHA-256 calculado al armar el catálogo y no piden confirmación.
+
+- **Instancias paralelas** de MySQL, MariaDB, PostgreSQL, Redis y MongoDB: varias ramas encendidas a la vez (`postgresql@16` y `postgresql@17`, `mysql@8.0` y `mysql@8.4`).
+  - Cada instancia tiene su puerto, su carpeta `data/<servicio>/<rama>` y sus propias credenciales.
+  - La **predeterminada** (estrella) es la que usan las recetas, los proyectos nuevos y el MCP cuando no se indica otra.
+  - **Bases de datos** tiene un selector de instancia: crear, respaldar, restaurar, importar y el bloque `.env` actúan sobre la elegida.
+- **Migración automática:** al abrir esta versión, cada servicio con la forma vieja de `config.json` pasa a una instancia con **el mismo puerto, la misma carpeta de datos y las mismas credenciales**, así que los `.env` de los proyectos siguen funcionando.
+  - Antes se copian `config.json`, `credenciales.json` y `run/estado.json` a `etc/respaldos/pre-instancias-<fecha>/`.
+  - No se mueve ni se borra ninguna carpeta de datos.
+- **Actualizar un parche** (MySQL 8.4.13 → 8.4.14) instala la versión nueva junto a la anterior y **respalda primero**: vuelca cada base (MySQL, MariaDB, PostgreSQL) y hace una copia en frío de la carpeta de datos (`<rama>.respaldo-<fecha>`). Antes mide la carpeta y comprueba que hay espacio libre.
+  - Si la versión nueva no arranca, se vuelve a la anterior con la copia: la carpeta tocada queda apartada (`.fallida-<fecha>`) y el respaldo siempre se conserva.
+  - Si los datos no se pudieran devolver, la instancia queda **bloqueada** hasta que usted decida, y nada arranca encima de datos dudosos.
+- **Una rama nueva** (PostgreSQL 17 → 18) nunca actualiza en el sitio: es una instancia nueva, con la opción de **copiar las bases** de la vieja, que queda intacta.
+- **Desinstalar** una versión quita solo `bin/`. Borrar la carpeta de datos de una instancia es otra acción, que pide escribir su id. Las copias de las actualizaciones se ven y se borran aparte.
+
 ### Depuración: `dump()`/`dd()` (Etapa C)
 
 - **Depuración** enciende un receptor local (`127.0.0.1:9912`, con un token aleatorio en cada sesión que solo leen los sitios con la captura) y muestra en vivo los volcados con sitio, archivo, línea y URL, con filtro por sitio, origen y texto. Quedan **solo en memoria** (los últimos 500) y **Copiar** enmascara las claves conocidas.
@@ -134,11 +220,11 @@ PostgreSQL usa pgvector compilado una vez en su equipo:
 `%LOCALAPPDATA%\WolfCoreDev`:
 
 - `bin/<servicio>/<versión>/`: binarios descargados.
-- `data/<servicio>/<versión>/`: datos de las bases, Mailpit y modelos de Ollama.
-- `etc/`: `nginx.conf`, vhosts, `php.ini`, `my.ini`, `redis.conf` y `credenciales.json`.
+- `data/<servicio>/<rama>/`: datos de cada instancia (bases, Mailpit y modelos de Ollama); al lado, las copias de las actualizaciones (`<rama>.respaldo-<fecha>`, `.volcados`, `.fallida-<fecha>`).
+- `etc/`: `nginx.conf`, vhosts, `php.ini`, `my.ini`, `redis.conf`, `credenciales.json`, `secretos/` (claves de IA y token de GitHub, cifrados) y `respaldos/` (copias con fecha de vhosts, `.env`, `.gitignore`, `launch.json` y de la migración a instancias; las de `php.ini` van en `etc/php/<rama>/respaldos/` y las de la configuración de un agente, junto a su archivo).
 - `ca/` y `certs/`: autoridad y certificados HTTPS.
 - `tools/`: `bin` (atajos `php.cmd` y `composer.cmd`) y `adminer`.
-- `logs/`, `run/`, `tmp/` y `config.json`.
+- `logs/`, `run/` (estado, avisos y la caché del catálogo en `run/catalogo/`), `tmp/` y `config.json`.
 
 Los proyectos nunca se mueven ni se borran.
 
@@ -166,7 +252,7 @@ npm run typecheck   # TypeScript estricto
 
 ```bash
 npm test                    # pruebas unitarias (sin red ni procesos reales)
-npm run test:win            # integración real en Windows (MVP, Etapa A y Etapa B)
+npm run test:win            # integración real en Windows (MVP y Etapas A, B y C)
 npm run test:win:pgvector   # pgvector real: instala Build Tools (UAC, ~6 GB)
 ```
 
@@ -176,7 +262,23 @@ npm run test:win:pgvector   # pgvector real: instala Build Tools (UAC, ~6 GB)
 - Etapa A: instala todos los servicios; en MySQL, MariaDB y PostgreSQL crea una base con datos (incluido `O'Brien` y una rutina), la respalda, la restaura en otra base, comprueba que una base con tablas se rechaza sin confirmar y se reemplaza (con copia previa) al confirmar, e importa desde el servidor; restaura un `pg_dump -Fc` guardado como `.sql` y un volcado plano; Redis `PING`, MongoDB con mongosh, un correo SMTP leído por la API de Mailpit, un sitio HTTPS verificado contra la CA temporal (y sin redirección cuando llega `Cf-Connecting-Ip`), FTP (subir, bajar y PORT rechazado), Composer por el atajo, el bloque `.env` leído con PHP real por phpdotenv, CodeIgniter 4 y el lector de CodeIgniter 3 de los proyectos WolfCore, Adminer, Ollama (`/api/tags`, **sin descargar modelos**), que ningún servicio abra ventanas de consola (ni con varias conexiones a PostgreSQL abiertas) y el apagado sin procesos huérfanos.
 - Etapa B (Nginx 18189, HTTPS 18543, MySQL 13406, MCP 17790): instala Node LTS y Python 3.12 desde el catálogo; clona `laravel/laravel` con git y corre su receta completa (Composer, `.env`, clave, MySQL, migrate, `storage:link`, `npm ci` y `build`, sitio HTTPS) hasta un 200 por HTTPS; un FastAPI mínimo con `venv`, `pip`, `uvicorn` supervisado y sitio proxy que responde 200; **Traer cambios** sobre un repositorio local que recibe un `composer.lock`; el MCP (lista de herramientas, rechazo sin token y `estado_general`); una muestra de métricas con los PID de los servicios y del proceso; y, al final, sin ventanas visibles ni procesos de la carpeta temporal. Las cachés de Composer, npm y pip van a la carpeta de caché de las pruebas.
 
-Nunca instala la CA en el almacén real, no toca el archivo hosts ni el PATH del usuario y al final borra la carpeta temporal. Los paquetes descargados quedan en `%TEMP%\pel-etapa-a-cache` para no volver a bajarlos (otra carpeta con `PEL_INT_CACHE`; `PEL_INT_CONSERVAR=1` conserva la carpeta temporal para revisarla). La primera vez descarga unos 3,5 GB.
+- Etapa C (Nginx 18289, MCP 17890, receptor de dumps 19912, Xdebug 19003, PostgreSQL 15516/15517/15518, MariaDB 13507), en `etapa-c.int.test.ts`:
+  - PHP 8.4 y Xdebug del catálogo; un cliente DBGp mínimo recibe el `init` al pedir la página con `XDEBUG_TRIGGER`.
+  - `memory_limit = abc` se rechaza con el archivo intacto y el sitio respondiendo 200.
+  - Una regla rota en el vhost (`nginx -t` falla) deja el archivo y Nginx como estaban.
+  - `dump()` llega al receptor; con el receptor detenido la página responde 200 sin demora apreciable.
+  - Un proveedor `compatible` contra un servidor OpenAI falso: modelos y latencia, y el `.env` solo con confirmación.
+  - El MCP se registra en un `config.toml` de Codex de prueba (en una carpeta de inicio temporal), con copia y sin perder lo que había.
+  - El Doctor encuentra y repara un hosts de prueba dañado, con confirmación y conservando las líneas ajenas.
+  - En las métricas, un proceso de proyecto suma la RAM de su hijo.
+  - Catálogo en vivo (solo con red): Node, Composer y Mailpit con huella fuerte, y un Node de una rama que no está en la lista fija verificado contra `SHASUMS256.txt`. Con un servidor falso, un índice manipulado cae a la lista fija y una huella cambiada no instala nada.
+  - PostgreSQL 16 y 17 encendidos a la vez, cada uno con sus credenciales y sus bases.
+  - La migración de una carpeta de datos con la forma vieja: mismo puerto, credenciales y fila.
+  - Actualizar MariaDB 11.4.13 → 11.4.14 con copia y volcado, y con un arranque forzado a fallar volver a la anterior con los datos intactos.
+  - Desinstalar la versión de una instancia apagada sin tocar su carpeta de datos.
+  - Al final, sin ventanas ni procesos.
+
+Nunca instala la CA en el almacén real, no toca el archivo hosts, el PATH, las variables ni la carpeta de inicio del usuario (las configuraciones de agentes son de prueba) y al final borra la carpeta temporal. Ninguna prueba gasta tokens: los proveedores de IA son servidores locales falsos. Los paquetes descargados quedan en `%TEMP%\pel-etapa-a-cache` para no volver a bajarlos (otra carpeta con `PEL_INT_CACHE`; `PEL_INT_CONSERVAR=1` conserva la carpeta temporal para revisarla). La primera vez descarga unos 3,5 GB.
 
 `npm run test:win:pgvector` instala las Build Tools con winget si faltan (acepte el aviso de Windows), compila pgvector contra un PostgreSQL 17 temporal y prueba `CREATE EXTENSION vector` y una distancia. Córrala solo cuando quiera instalar las Build Tools en el equipo.
 
@@ -199,17 +301,35 @@ Genera el instalador NSIS en `apps/desktop/release/` (`WolfCore Dev Setup <versi
 5. **Archivo hosts:** si FlyEnv ya escribió los mismos dominios, se conservan y la aplicación lo avisa. Quítelos de FlyEnv cuando ya no lo use.
 6. **Sitios:** se crean de nuevo en **Sitios → Nuevo**, eligiendo la carpeta del proyecto (el tipo se detecta solo); active HTTPS donde lo necesite.
 
+## Probado con claves y cuentas reales
+
+Las pruebas automáticas nunca usan claves reales ni gastan tokens (los proveedores y los agentes son falsos). Lo que sigue lo prueba **el usuario** con sus propias cuentas; la columna se completa al hacerlo.
+
+| Qué                                       | Cómo se prueba                                                | Resultado           |
+| ----------------------------------------- | ------------------------------------------------------------- | ------------------- |
+| OpenAI                                    | IA → proveedor OpenAI → Probar conexión y Probar un mensaje   | Pendiente (usuario) |
+| Anthropic                                 | Igual, con un proveedor Anthropic                             | Pendiente (usuario) |
+| Gemini                                    | Igual (la clave va en `x-goog-api-key`)                       | Pendiente (usuario) |
+| Hermes (Nous Research)                    | Igual, con la URL base por defecto                            | Pendiente (usuario) |
+| Compatible (OpenRouter, Groq, LM Studio…) | Igual, con su URL base                                        | Pendiente (usuario) |
+| Bloque `.env` de IA en un proyecto real   | IA → Usar en un proyecto (revisar el `.gitignore` y la copia) | Pendiente (usuario) |
+| Claude Code                               | Agentes → Registrar MCP y Abrir en un proyecto                | Pendiente (usuario) |
+| Codex CLI (`--bearer-token-env-var`)      | Agentes → Registrar MCP y Abrir en un proyecto                | Pendiente (usuario) |
+| Hermes Agent                              | Agentes → detección y guía oficial                            | Pendiente (usuario) |
+| Mensaje de commit sugerido                | Panel Git de un proyecto con cambios preparados               | Pendiente (usuario) |
+| GitHub con token (repositorio privado)    | Proyectos → Nuevo → GitHub                                    | Pendiente (usuario) |
+
 ## Hoja de ruta
 
-| Etapa | Contenido                                                                                                                       | Estado                                                              |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| MVP   | Windows: Nginx, PHP, sitios, hosts, túneles rápidos e interfaz                                                                  | Hecha                                                               |
-| A     | HTTPS, MySQL, MariaDB, PostgreSQL + pgvector, Redis, MongoDB, módulo de bases de datos, Adminer, Composer, Mailpit, FTP, Ollama | Hecha                                                               |
-| B     | Proyectos desde GitHub, recetas y `wolfcore.yml`, Node y Python, procesos, panel, registros, herramientas, MCP, temas e idiomas | Terminada (el montaje de los 6 proyectos reales lo hace el usuario) |
-| C     | IA en la nube y Hermes, agentes, depuración de PHP; Podman/Docker mínimo (detectar, listar, encender y apagar)                  | Pendiente                                                           |
-| D     | Proyectos, compartir y respaldo del entorno                                                                                     | Pendiente                                                           |
-| E     | Multiplataforma (macOS y Linux), instaladores y CI                                                                              | Pendiente                                                           |
-| F     | Resto de paridad con los referentes y mejoras propias                                                                           | Pendiente                                                           |
+| Etapa | Contenido                                                                                                                        | Estado                                                                         |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| MVP   | Windows: Nginx, PHP, sitios, hosts, túneles rápidos e interfaz                                                                   | Hecha                                                                          |
+| A     | HTTPS, MySQL, MariaDB, PostgreSQL + pgvector, Redis, MongoDB, módulo de bases de datos, Adminer, Composer, Mailpit, FTP, Ollama  | Hecha                                                                          |
+| B     | Proyectos desde GitHub, recetas y `wolfcore.yml`, Node y Python, procesos, panel, registros, herramientas, MCP, temas e idiomas  | Terminada (el montaje de los 6 proyectos reales lo hace el usuario)            |
+| C     | IA en la nube y Hermes, agentes, depuración de PHP, Doctor, avisos, catálogo en vivo, instancias paralelas; Podman/Docker mínimo | En cierre (falta instalarla sobre los datos reales y probar las claves reales) |
+| D     | Proyectos, compartir y respaldo del entorno                                                                                      | Pendiente                                                                      |
+| E     | Multiplataforma (macOS y Linux), instaladores y CI                                                                               | Pendiente                                                                      |
+| F     | Resto de paridad con los referentes y mejoras propias                                                                            | Pendiente                                                                      |
 
 Plan aprobado de las etapas C a F: `docs/superpowers/roadmap/2026-11-19-plan-etapas.md`.
 
