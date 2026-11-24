@@ -88,6 +88,7 @@ function confirmarPedido(): void {
       p.tipo === 'registrar' ? t.confirmarRegistrar.hecho(nombre) : t.confirmarQuitar.hecho(nombre),
     );
     if (r.respaldo) message.info(t.copiaHecha(r.respaldo), { duration: 8000 });
+    if (r.tokenEscrito) message.warning(t.tokenEscrito, { duration: 10000 });
   });
 }
 

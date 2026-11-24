@@ -134,7 +134,13 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
         ></template>
         {{ t.registrar }}
       </NButton>
-      <NButton v-if="a.mcpRegistrado" size="small" quaternary type="error" @click="emit('quitar')">
+      <NButton
+        v-if="a.mcpSoportado && a.mcpRegistrado"
+        size="small"
+        quaternary
+        type="error"
+        @click="emit('quitar')"
+      >
         <template #icon
           ><NIcon><RemoveCircleOutline /></NIcon
         ></template>

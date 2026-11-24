@@ -2524,7 +2524,7 @@ export const es = {
   },
   agentes: {
     descripcion:
-      'Claude Code, Codex CLI, Hermes Agent, Opencode, Gemini CLI, Qwen Code, GitHub Copilot CLI y Antigravity CLI: detéctelos o instálelos, conéctelos al MCP de WolfCore Dev y ábralos en un proyecto. Ninguno se abre solo.',
+      'Claude Code, Codex CLI, Hermes Agent, Opencode, Gemini CLI, Qwen Code, GitHub Copilot CLI y Antigravity CLI: detéctelos o instálelos y ábralos en un proyecto. Los que lo permiten se conectan al MCP de WolfCore Dev. Ninguno se abre solo.',
     recargar: 'Volver a detectar',
     notaMcp:
       'El MCP registrado solo autentica cuando el agente se abre desde WolfCore Dev ("Abrir en un proyecto"): el token va en la variable WOLFCORE_MCP_TOKEN de esa terminal y nunca queda escrito en la configuración del agente. Abierto por fuera, el agente ve la entrada «wolfcore» pero no puede conectarse.',
@@ -2542,6 +2542,8 @@ export const es = {
     },
     mcpRegistrado: 'MCP registrado',
     mcpSinRegistrar: 'MCP sin registrar',
+    tokenEscrito:
+      'El archivo del agente traía el token del MCP escrito: ya no lo tiene y la copia previa lo guarda enmascarado (***). Considere regenerar el token del servidor MCP.',
     mcpNoSoportado:
       'Su documentación no permite tomar el token de una variable de entorno: WolfCore Dev no le registra el MCP (el token nunca se escribe en archivos).',
     instalar: 'Instalar',

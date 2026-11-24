@@ -34,6 +34,7 @@ export const ANTIGRAVITY: DefAgente = {
     throw new ErrorWolf(
       'agentes.mcp_no_soportado',
       'Antigravity CLI no documenta el token por variable de entorno: no se registra el MCP.',
+      { agente: 'Antigravity CLI' },
     );
   },
   variablesClave: () => null,

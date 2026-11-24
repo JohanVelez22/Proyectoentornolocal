@@ -1,4 +1,14 @@
-import { copyFile, lstat, mkdir, readdir, readFile, realpath, rename, rm } from 'node:fs/promises';
+import {
+  copyFile,
+  lstat,
+  mkdir,
+  readdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import path from 'node:path';
 import { applyEdits, modify, parse, type ParseError } from 'jsonc-parser';
 import { parse as parseToml } from 'smol-toml';
@@ -16,10 +26,16 @@ export const VARIABLE_TOKEN_MCP = 'WOLFCORE_MCP_TOKEN';
 
 export type FormatoConfig = 'json' | 'toml' | 'yaml';
 
-/** Valor de la entrada: solo textos (y un nivel de objetos de textos, p. ej. `headers`). */
-export type ValorEntradaMcp = Record<string, string | Record<string, string>>;
+/**
+ * Valor de la entrada: textos, booleanos, listas de textos (p. ej. `tools`) y un nivel de objetos
+ * de textos (p. ej. `headers`).
+ */
+export type ValorEntradaMcp = Record<string, string | boolean | string[] | Record<string, string>>;
 
 const BOM = String.fromCharCode(0xfeff);
+
+/** Tope del archivo de un agente: uno más grande no es una configuración (y no se lee entero). */
+const MAX_BYTES_CONFIG = 5 * 1024 * 1024;
 
 function ilegible(ruta: string, detalle?: string): ErrorWolf {
   return new ErrorWolf(
@@ -41,11 +57,13 @@ async function rutaReal(ruta: string): Promise<{ ruta: string; existe: boolean }
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') return { ruta, existe: false };
     throw e;
   }
+  if (info.isFile() && info.size > MAX_BYTES_CONFIG) throw ilegible(ruta, 'demasiado grande');
   if (info.isSymbolicLink()) {
     const real = await realpath(ruta).catch(() => null);
     if (!real) throw ilegible(ruta, 'enlace roto');
     const r = await lstat(real);
     if (!r.isFile()) throw ilegible(ruta, 'no es un archivo');
+    if (r.size > MAX_BYTES_CONFIG) throw ilegible(ruta, 'demasiado grande');
     return { ruta: real, existe: true };
   }
   if (!info.isFile()) throw ilegible(ruta, 'no es un archivo');
@@ -187,6 +205,8 @@ function editarToml(texto: string, seccion: string, valor: ValorEntradaMcp | und
     const tablas: string[] = [];
     for (const [k, v] of Object.entries(valor)) {
       if (typeof v === 'string') simples.push(`${k} = ${cadenaToml(v)}`);
+      else if (typeof v === 'boolean') simples.push(`${k} = ${String(v)}`);
+      else if (Array.isArray(v)) simples.push(`${k} = [${v.map(cadenaToml).join(', ')}]`);
       else {
         const pares = Object.entries(v).map(([a, b]) => `${cadenaToml(a)} = ${cadenaToml(b)}`);
         tablas.push(`${k} = { ${pares.join(', ')} }`);
@@ -299,6 +319,7 @@ async function podarCopias(ruta: string): Promise<void> {
 export async function respaldarConfigAgente(
   ruta: string,
   ahora: Date = new Date(),
+  enmascarar?: string,
 ): Promise<string | null> {
   const r = await rutaReal(ruta);
   if (!r.existe) return null;
@@ -306,7 +327,13 @@ export async function respaldarConfigAgente(
   for (let i = 0; ; i++) {
     const destino = `${base}${i ? `-${i}` : ''}.bak`;
     try {
-      await copyFile(r.ruta, destino, 1 /* COPYFILE_EXCL */);
+      if (enmascarar) {
+        // Un token escrito a mano no se copia: la copia lo lleva como `***`.
+        const t = (await readFile(r.ruta, 'utf8')).split(enmascarar).join('***');
+        await writeFile(destino, t, { flag: 'wx' });
+      } else {
+        await copyFile(r.ruta, destino, 1 /* COPYFILE_EXCL */);
+      }
       await podarCopias(ruta);
       return destino;
     } catch (e) {
@@ -348,10 +375,11 @@ export async function editarConfigAgente(
   valor: ValorEntradaMcp | undefined,
   ahora?: Date,
   ganchos: GanchosEdicionConfig = {},
+  enmascarar?: string,
 ): Promise<ResultadoEdicionConfig> {
   for (let intento = 0; ; intento++) {
     try {
-      return await editarConfigUnaVez(ruta, formato, seccion, valor, ahora, ganchos);
+      return await editarConfigUnaVez(ruta, formato, seccion, valor, ahora, ganchos, enmascarar);
     } catch (e) {
       if (!(e instanceof CambioConcurrente)) throw e;
       if (intento >= REINTENTOS_CAMBIO) {
@@ -372,6 +400,7 @@ async function editarConfigUnaVez(
   valor: ValorEntradaMcp | undefined,
   ahora: Date | undefined,
   ganchos: GanchosEdicionConfig,
+  enmascarar?: string,
 ): Promise<ResultadoEdicionConfig> {
   const real = await rutaReal(ruta);
   const crudo = real.existe ? await readFile(real.ruta, 'utf8') : null;
@@ -380,7 +409,7 @@ async function editarConfigUnaVez(
   if (valor === undefined && texto === null) return { respaldo: null, cambiado: false };
   const nuevo = editarEntradaMcp(formato, texto, seccion, valor, ruta);
   if (texto !== null && nuevo === texto) return { respaldo: null, cambiado: false };
-  const respaldo = await respaldarConfigAgente(ruta, ahora);
+  const respaldo = await respaldarConfigAgente(ruta, ahora, enmascarar);
   await mkdir(path.dirname(real.ruta), { recursive: true });
   await escribirAtomico(real.ruta, Buffer.from(bom + nuevo, 'utf8'), {
     renombrar: async (tmp, destino) => {

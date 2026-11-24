@@ -366,11 +366,18 @@ describe('agentes D3: Opencode, Gemini CLI, Qwen Code, Copilot CLI y Antigravity
       'utf8',
     );
     expect(tarjeta).toContain('mcpSoportado');
+    // Quitar solo se ofrece donde el registro es posible.
+    expect(tarjeta).toMatch(/v-if="a\.mcpSoportado && a\.mcpRegistrado"/);
   });
 
   it('es y en traen el texto del agente sin registro y el error nuevo', () => {
     expect(es.agentes.mcpNoSoportado).toBeTruthy();
     expect(en.agentes.mcpNoSoportado).toBeTruthy();
+    expect(es.agentes.tokenEscrito).toBeTruthy();
+    expect(en.agentes.tokenEscrito).toBeTruthy();
+    // La descripción no promete el MCP para todos.
+    expect(es.agentes.descripcion).toContain('Los que lo permiten');
+    expect(en.agentes.descripcion).toContain('Those that allow it');
     const errEs = JSON.stringify(es);
     const errEn = JSON.stringify(en);
     expect(errEs).toContain('agentes.mcp_no_soportado');

@@ -879,6 +879,7 @@ const NUEVOS = [
     entrada: {
       type: 'remote',
       url: URL_MCP,
+      oauth: false,
       headers: { Authorization: 'Bearer {env:WOLFCORE_MCP_TOKEN}' },
     },
     scripts: true,
@@ -914,6 +915,7 @@ const NUEVOS = [
       type: 'http',
       url: URL_MCP,
       headers: { Authorization: 'Bearer ${WOLFCORE_MCP_TOKEN}' },
+      tools: ['*'],
     },
     scripts: false,
   },
@@ -1052,6 +1054,20 @@ describe('Agentes D3: claves de proveedor por agente', () => {
     });
     expect(AGENTES['opencode'].variablesClave(OPENAI, CLAVE)).toEqual({ OPENAI_API_KEY: CLAVE });
     expect(AGENTES['gemini-cli'].variablesClave(GEMINI, CLAVE)).toEqual({ GEMINI_API_KEY: CLAVE });
+    // Con URL base propia la clave iría a otro servidor: solo con GOOGLE_GEMINI_BASE_URL (documentada).
+    expect(
+      AGENTES['gemini-cli'].variablesClave(
+        { ...GEMINI, urlBase: 'https://proxy.ejemplo.test' },
+        CLAVE,
+      ),
+    ).toEqual({ GEMINI_API_KEY: CLAVE, GOOGLE_GEMINI_BASE_URL: 'https://proxy.ejemplo.test' });
+    // Opencode: ANTHROPIC_BASE_URL lleva /v1 (se agrega si falta, una sola vez).
+    for (const u of ['https://proxy.ejemplo.test', 'https://proxy.ejemplo.test/v1/']) {
+      expect(AGENTES['opencode'].variablesClave({ ...ANTHROPIC, urlBase: u }, CLAVE)).toEqual({
+        ANTHROPIC_API_KEY: CLAVE,
+        ANTHROPIC_BASE_URL: 'https://proxy.ejemplo.test/v1',
+      });
+    }
     expect(AGENTES['gemini-cli'].variablesClave(ANTHROPIC, CLAVE)).toBeNull();
     expect(AGENTES['qwen-code'].variablesClave(OPENAI, CLAVE)).toEqual({ OPENAI_API_KEY: CLAVE });
     expect(AGENTES['copilot-cli'].variablesClave(OPENAI, CLAVE)).toBeNull();
@@ -1093,6 +1109,85 @@ describe('Agentes D3: Antigravity solo con detección y guía', () => {
     expect(e).toMatchObject({ instalado: true, origen: 'ejecutable', mcpSoportado: false });
     await m.agentes.abrir('antigravity', 'tienda');
     expect(m.plat.terminales[0]!.comando).toEqual([exe]);
-    expect(m.plat.terminales[0]!.env).toEqual({ WOLFCORE_MCP_TOKEN: TOKEN_MCP });
+    // No admite el MCP por variable: el token no se le da ni en el entorno.
+    expect(m.plat.terminales[0]!.env).toEqual({});
+    expect(JSON.stringify(m.plat.terminales[0]!)).not.toContain(TOKEN_MCP);
+  });
+});
+
+describe('Agentes D3: revisión', () => {
+  it('Antigravity: la entrada MCP falla con el nombre del agente', () => {
+    let e: unknown;
+    try {
+      AGENTES['antigravity'].entradaMcp(URL_MCP);
+    } catch (x) {
+      e = x;
+    }
+    expect(e).toMatchObject({
+      codigo: 'agentes.mcp_no_soportado',
+      datos: { agente: 'Antigravity CLI' },
+    });
+  });
+
+  it('un token literal en el archivo se enmascara en la copia, se avisa y no se imprime', async () => {
+    const m = await montar();
+    const r = path.join(m.inicio, '.gemini', 'settings.json');
+    mkdirSync(path.dirname(r), { recursive: true });
+    writeFileSync(
+      r,
+      JSON.stringify({
+        theme: 'Default',
+        mcpServers: {
+          wolfcore: { httpUrl: URL_MCP, headers: { Authorization: `Bearer ${TOKEN_MCP}` } },
+        },
+      }),
+    );
+    const res = await m.agentes.registrarMcp('gemini-cli', true);
+    expect(res.tokenEscrito).toBe(true);
+    const copia = readFileSync(res.respaldo!, 'utf8');
+    expect(copia).not.toContain(TOKEN_MCP);
+    expect(copia).toContain('Bearer ***');
+    // El archivo vivo ya no lo tiene y el resultado no lo imprime.
+    expect(readFileSync(r, 'utf8')).not.toContain(TOKEN_MCP);
+    expect(JSON.stringify(res)).not.toContain(TOKEN_MCP);
+    expect(copias(path.dirname(r), 'settings.json').length).toBe(1);
+    // Sin token literal no hay aviso.
+    const m2 = await montar();
+    const r2 = await m2.agentes.registrarMcp('gemini-cli', true);
+    expect(r2.tokenEscrito).toBeFalsy();
+  });
+
+  it('un archivo de más de 5 MB se trata como ilegible y no se toca', async () => {
+    const m = await montar();
+    const r = path.join(m.inicio, '.qwen', 'settings.json');
+    mkdirSync(path.dirname(r), { recursive: true });
+    const grande = JSON.stringify({ relleno: 'x'.repeat(5 * 1024 * 1024 + 10) });
+    writeFileSync(r, grande);
+    await expect(m.agentes.registrarMcp('qwen-code', true)).rejects.toMatchObject({
+      codigo: 'agentes.config_ilegible',
+    });
+    expect(readFileSync(r, 'utf8')).toBe(grande);
+    expect(readdirSync(path.dirname(r))).toEqual(['settings.json']);
+  });
+
+  it('el registro de Opencode también se detecta en opencode.jsonc', async () => {
+    const m = await montar();
+    const dir = path.join(m.inicio, '.config', 'opencode');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      path.join(dir, 'opencode.jsonc'),
+      `// comentario\n{\n  "mcp": { "wolfcore": { "type": "remote", "url": "${URL_MCP}" }, },\n}\n`,
+    );
+    const e = (await m.agentes.estado()).find((x) => x.id === 'opencode')!;
+    expect(e.mcpRegistrado).toBe(true);
+  });
+
+  it('un valor con lista de textos (tools) se escribe también en TOML y YAML', () => {
+    const v = { url: URL_MCP, tools: ['*'] };
+    const toml = editarEntradaMcp('toml', '', 'mcp_servers', v, 'x.toml');
+    expect(toml).toContain('tools = ["*"]');
+    const yaml = editarEntradaMcp('yaml', '', 'mcp_servers', v, 'x.yaml');
+    expect(yaml).toContain('tools:');
+    expect(yaml).toContain('"*"');
   });
 });

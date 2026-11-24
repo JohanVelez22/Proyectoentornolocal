@@ -2504,7 +2504,7 @@ export const en: Textos = {
   },
   agentes: {
     descripcion:
-      'Claude Code, Codex CLI, Hermes Agent, Opencode, Gemini CLI, Qwen Code, GitHub Copilot CLI and Antigravity CLI: detect or install them, connect them to the WolfCore Dev MCP and open them in a project. None of them opens on its own.',
+      'Claude Code, Codex CLI, Hermes Agent, Opencode, Gemini CLI, Qwen Code, GitHub Copilot CLI and Antigravity CLI: detect or install them and open them in a project. Those that allow it connect to the WolfCore Dev MCP. None of them opens on its own.',
     recargar: 'Detect again',
     notaMcp:
       'The registered MCP only authenticates when the agent is opened from WolfCore Dev ("Open in a project"): the token travels in the WOLFCORE_MCP_TOKEN variable of that terminal and is never written to the agent configuration. Opened elsewhere, the agent sees the «wolfcore» entry but cannot connect.',
@@ -2522,6 +2522,8 @@ export const en: Textos = {
     },
     mcpRegistrado: 'MCP registered',
     mcpSinRegistrar: 'MCP not registered',
+    tokenEscrito:
+      'The agent file had the MCP token written in it: it no longer does, and the earlier copy keeps it masked (***). Consider regenerating the token of the MCP server.',
     mcpNoSoportado:
       'Its documentation does not allow reading the token from an environment variable: WolfCore Dev does not register the MCP in it (the token is never written to files).',
     instalar: 'Install',

@@ -30,6 +30,8 @@ export const COPILOT_CLI: DefAgente = {
     type: 'http',
     url,
     headers: { Authorization: `Bearer \${${VARIABLE_TOKEN_MCP}}` },
+    // Todas las herramientas del servidor (lo que pone `copilot mcp add` por defecto).
+    tools: ['*'],
   }),
   variablesClave: () => null,
 };

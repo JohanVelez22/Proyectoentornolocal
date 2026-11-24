@@ -25,17 +25,21 @@ export const OPENCODE: DefAgente = {
   seccion: 'mcp',
   soportaMcp: true,
   archivoConfig: (inicio) => path.join(inicio, '.config', 'opencode', 'opencode.json'),
+  archivosConfigExtra: (inicio) => [path.join(inicio, '.config', 'opencode', 'opencode.jsonc')],
   carpetasConocidas: (inicio) => [path.join(inicio, '.opencode', 'bin')],
   entradaMcp: (url) => ({
     type: 'remote',
     url,
+    // Sin OAuth: la autenticación es la cabecera con el token (si no, probaría un inicio de sesión).
+    oauth: false,
     headers: { Authorization: `Bearer {env:${VARIABLE_TOKEN_MCP}}` },
   }),
   variablesClave: (p, clave) => {
     // Sus proveedores propios leen las variables estándar de cada fabricante.
     if (p.tipo === 'anthropic') {
       const env: Record<string, string> = { ANTHROPIC_API_KEY: clave };
-      if (p.urlBase !== null) env.ANTHROPIC_BASE_URL = urlBaseDe(p);
+      // Su ANTHROPIC_BASE_URL lleva la versión (`/v1`): se agrega si falta.
+      if (p.urlBase !== null) env.ANTHROPIC_BASE_URL = urlBaseDe(p).replace(/(?<!\/v1)$/, '/v1');
       return env;
     }
     if (p.tipo === 'openai') {

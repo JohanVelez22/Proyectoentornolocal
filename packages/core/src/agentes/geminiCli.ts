@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { urlBaseDe } from '../ia/proveedores';
 import type { DefAgente } from './agentes';
 import { VARIABLE_TOKEN_MCP } from './configArchivo';
 
@@ -29,5 +30,12 @@ export const GEMINI_CLI: DefAgente = {
     httpUrl: url,
     headers: { Authorization: `Bearer \${${VARIABLE_TOKEN_MCP}}` },
   }),
-  variablesClave: (p, clave) => (p.tipo === 'gemini' ? { GEMINI_API_KEY: clave } : null),
+  variablesClave: (p, clave) => {
+    if (p.tipo !== 'gemini') return null;
+    const env: Record<string, string> = { GEMINI_API_KEY: clave };
+    // Con URL propia la clave no puede ir a Google: se usa la variable documentada para ello
+    // (docs/reference/configuration.md: GOOGLE_GEMINI_BASE_URL, HTTPS o localhost).
+    if (p.urlBase !== null) env.GOOGLE_GEMINI_BASE_URL = urlBaseDe(p);
+    return env;
+  },
 };
