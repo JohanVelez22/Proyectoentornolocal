@@ -589,6 +589,42 @@ describe('EjecutorRecetas', () => {
     expect(m.ejecutor.estado(m.s.id).pasos[0]!.marcas).toEqual(['base-creada']);
   });
 
+  it('un paso reintentado recibe sus marcas anteriores en ctx.marcas', async () => {
+    const receta: PasoReceta[] = [{ id: 'bd-crear', tipo: 'bd-crear', titulo: '' }];
+    const m = await montar({ receta });
+    const vistas: (readonly string[] | undefined)[] = [];
+    let falla = true;
+    m.registro.registrar('bd-crear', (ctx) => {
+      vistas.push([...(ctx.marcas ?? [])]);
+      ctx.marcar?.('base-creada');
+      if (falla) return Promise.reject(new Error('corte'));
+      return Promise.resolve();
+    });
+    await m.ejecutor.ejecutar(m.s.id, {});
+    falla = false;
+    await m.ejecutor.ejecutar(m.s.id, { soloPaso: 'bd-crear' });
+    expect(vistas).toEqual([[], ['base-creada']]);
+    expect(m.ejecutor.estado(m.s.id).pasos[0]!.marcas).toEqual(['base-creada']);
+  });
+
+  it('la base de un proyecto nuevo (nueva: true) no se puede omitir', async () => {
+    const receta: PasoReceta[] = [
+      { id: 'bd-crear', tipo: 'bd-crear', titulo: '', args: { nueva: true } },
+      { id: 'dos', tipo: 'comando', titulo: '' },
+    ];
+    const m = await montar({ receta });
+    m.registro.registrar('bd-crear', () => Promise.reject(new Error('sin motor')));
+    await m.ejecutor.ejecutar(m.s.id, {});
+    await expect(m.ejecutor.omitir(m.s.id, 'bd-crear')).rejects.toMatchObject({
+      codigo: 'proyectos.paso_base_no_omitible',
+    });
+    // Un bd-crear normal (sin nueva) sí se omite.
+    const n = await montar({ receta: [{ id: 'bd-crear', tipo: 'bd-crear', titulo: '' }] });
+    n.registro.registrar('bd-crear', () => Promise.reject(new Error('sin motor')));
+    await n.ejecutor.ejecutar(n.s.id, {});
+    await expect(n.ejecutor.omitir(n.s.id, 'bd-crear')).resolves.toBeDefined();
+  });
+
   it('"guardada" (Reinstalar) no repite los pasos que crean el proyecto', async () => {
     const receta: PasoReceta[] = [
       { id: 'crear-desde-composer', tipo: 'crear-desde-composer', titulo: '' },

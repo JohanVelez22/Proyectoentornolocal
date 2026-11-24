@@ -178,6 +178,8 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
 /** Corre un paso y devuelve sus líneas. */
 /** Marcas que dejó el último paso corrido con `correr`. */
 let marcasPaso: string[] = [];
+/** Marcas de corridas anteriores que recibe el paso (se fijan antes de `correr`). */
+let marcasPrevias: string[] = [];
 
 async function correr(
   a: Armado,
@@ -187,6 +189,8 @@ async function correr(
 ): Promise<string[]> {
   const lineas: string[] = [];
   marcasPaso = [];
+  const previas = marcasPrevias;
+  marcasPrevias = [];
   const paso: PasoReceta = { id: tipo, tipo, titulo: tipo, ...(args ? { args } : {}) };
   const ctx: ContextoPaso = {
     sitio: a.sitio,
@@ -194,6 +198,7 @@ async function correr(
     carpeta: a.sitio.carpeta,
     linea: (t) => lineas.push(t),
     marcar: (m) => marcasPaso.push(m),
+    marcas: previas,
     senal,
   };
   await a.registro.obtener(tipo)!(ctx);
@@ -1103,20 +1108,33 @@ describe('crear-desde-composer', () => {
     expect(l.opts.env?.COMPOSER_NO_INTERACTION).toBe('1');
   });
 
-  it('con versión y paquetes por requerir (Symfony webapp)', async () => {
+  it('con versión pedida la pasa a create-project y deja la marca composer-iniciado', async () => {
     const a = await armar();
-    await correr(a, 'crear-desde-composer', {
-      paquete: 'symfony/skeleton',
-      version: '^7.2',
-      requerir: ['symfony/webapp-pack'],
-    });
-    expect(a.llamadas).toHaveLength(2);
+    await correr(a, 'crear-desde-composer', { paquete: 'symfony/skeleton', version: '^7.2' });
+    expect(a.llamadas).toHaveLength(1);
     expect(a.llamadas[0]!.args.slice(-3)).toEqual(['symfony/skeleton', '.', '^7.2']);
-    expect(a.llamadas[1]!.args.slice(3)).toEqual([
+    expect(marcasPaso).toEqual(['composer-iniciado']);
+  });
+
+  it('composer-requerir es un paso propio: require de cada paquete, solo con composer.json', async () => {
+    const a = await armar();
+    await expect(
+      correr(a, 'composer-requerir', { paquetes: ['symfony/webapp-pack'] }),
+    ).rejects.toThrow('Falta composer.json');
+    expect(a.llamadas).toHaveLength(0);
+    await escribir(a.carpeta, 'composer.json', '{}');
+    await correr(a, 'composer-requerir', { paquetes: ['symfony/webapp-pack'] });
+    expect(a.llamadas).toHaveLength(1);
+    expect(a.llamadas[0]!.args.slice(3)).toEqual([
       'require',
       '--no-interaction',
       'symfony/webapp-pack',
     ]);
+    expect(a.llamadas[0]!.opts.cwd).toBe(a.carpeta);
+    for (const paquetes of [['--dev'], 'x/y', [], ['a/b; calc'], ['a/b', 1]]) {
+      await expect(correr(a, 'composer-requerir', { paquetes })).rejects.toThrow();
+    }
+    expect(a.llamadas).toHaveLength(1);
   });
 
   it('no pisa: con la carpeta con archivos falla con proyectos.carpeta_no_vacia y no lanza nada', async () => {
@@ -1138,9 +1156,16 @@ describe('crear-desde-composer', () => {
     expect(a.llamadas).toHaveLength(0);
   });
 
-  it('reintento tras un fallo a medias: composer.json del mismo paquete sin vendor → composer install', async () => {
+  it('reanuda solo con la marca composer-iniciado y un composer.json: composer install', async () => {
     const a = await armar();
     await escribir(a.carpeta, 'composer.json', JSON.stringify({ name: 'laravel/laravel' }));
+    // Sin la marca (otro paso u otra mano dejó el composer.json) no se reanuda, aunque el
+    // nombre del paquete coincida.
+    await expect(
+      correr(a, 'crear-desde-composer', { paquete: 'laravel/laravel' }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.carpeta_no_vacia' });
+    expect(a.llamadas).toHaveLength(0);
+    marcasPrevias = ['composer-iniciado'];
     await correr(a, 'crear-desde-composer', { paquete: 'laravel/laravel' });
     expect(a.llamadas).toHaveLength(1);
     expect(a.llamadas[0]!.args.slice(3)).toEqual([
@@ -1149,13 +1174,27 @@ describe('crear-desde-composer', () => {
       '--prefer-dist',
       '--no-scripts',
     ]);
-    // Con vendor/autoload.php el proyecto ya está completo: no se toca.
-    await escribir(a.carpeta, 'vendor/autoload.php', '<?php');
-    a.llamadas.length = 0;
+  });
+
+  it('con la marca pero sin composer.json no hay nada que reanudar: pide vaciar la carpeta', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, 'basura.tmp', 'x');
+    marcasPrevias = ['composer-iniciado'];
     await expect(
       correr(a, 'crear-desde-composer', { paquete: 'laravel/laravel' }),
     ).rejects.toMatchObject({ codigo: 'proyectos.carpeta_no_vacia' });
     expect(a.llamadas).toHaveLength(0);
+  });
+
+  it('Symfony reanudado con el lock y sin vendor: composer update (Flex aplica las recetas)', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, 'composer.json', JSON.stringify({ name: 'symfony/skeleton' }));
+    await escribir(a.carpeta, 'composer.lock', '{}');
+    marcasPrevias = ['composer-iniciado'];
+    await correr(a, 'crear-desde-composer', { paquete: 'symfony/skeleton', scripts: true });
+    expect(a.llamadas.map((l) => l.args.slice(3))).toEqual([
+      ['update', '--no-interaction', '--prefer-dist'],
+    ]);
   });
 
   it('con args.scripts (Symfony) no pasa --no-scripts', async () => {
@@ -1190,8 +1229,6 @@ describe('crear-desde-composer', () => {
     [{ paquete: 'sin-barra' }],
     [{ paquete: 'a/b', version: '-d' }],
     [{ paquete: 'a/b', version: '^1 && calc' }],
-    [{ paquete: 'a/b', requerir: ['--dev'] }],
-    [{ paquete: 'a/b', requerir: 'x/y' }],
     [{}],
   ])('rechaza argumentos peligrosos %j sin lanzar nada', async (args) => {
     const a = await armar();
@@ -1602,6 +1639,19 @@ describe('bd-crear de un proyecto nuevo (nueva: true)', () => {
     expect(marcasPaso).toEqual(['base-creada']);
   });
 
+  it('si la creó este mismo proyecto antes (marca previa) sigue con ella sin base_existe', async () => {
+    const a = await armar({ basesExistentes: ['tienda'] });
+    marcasPrevias = ['base-creada'];
+    await correr(a, 'bd-crear', { motor: 'mysql', base: 'tienda', nueva: true });
+    expect(a.creadas).toEqual([]);
+    expect(marcasPaso).toEqual(['base-creada']);
+    // Sin la marca, una base con ese nombre es de otro: se rechaza.
+    const b = await armar({ basesExistentes: ['tienda'] });
+    await expect(
+      correr(b, 'bd-crear', { motor: 'mysql', base: 'tienda', nueva: true }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.base_existe' });
+  });
+
   it('sin nueva, una base que ya existe no se toca ni deja marca', async () => {
     const a = await armar({ basesExistentes: ['tienda'] });
     await correr(a, 'bd-crear', { motor: 'mysql', base: 'tienda' });
@@ -1776,5 +1826,33 @@ describe('env-crear con args.valores (Laravel sin base)', () => {
       await expect(correr(b, 'env-crear', { valores })).rejects.toThrow();
     }
     await expect(readdir(b.carpeta)).resolves.toEqual([]);
+  });
+});
+
+describe('CodeIgniter 3 sin base y ajustes del sitio', () => {
+  const CONFIG = "<?php\n$config['base_url'] = '';\n$config['log_threshold'] = 0;\n";
+  const INDEX =
+    "<?php\ndefine('ENVIRONMENT', isset($_SERVER['CI_ENV']) ? $_SERVER['CI_ENV'] : 'development');\n";
+
+  it('sinBd: no necesita database.php y aun así pone base_url, log_threshold y production', async () => {
+    const a = await armar({ sitio: { tipo: 'codeigniter3', dominio: 'dollar.test' } });
+    await escribir(a.carpeta, 'application/config/config.php', CONFIG);
+    await escribir(a.carpeta, 'index.php', INDEX);
+    await correr(a, 'config-bd-crear', { marco: 'codeigniter3', sinBd: true });
+    const c = await leer(a.carpeta, 'application/config/config.php');
+    expect(c).toContain("$config['base_url'] = 'https://dollar.test/';");
+    expect(c).toContain("$config['log_threshold'] = 1;");
+    expect(await leer(a.carpeta, 'index.php')).toContain(": 'production');");
+    expect(a.llamadas).toEqual([]);
+  });
+
+  it('el esquema sale del sitio guardado, no de un argumento', async () => {
+    const a = await armar({ sitio: { tipo: 'codeigniter3', dominio: 'dollar.test' } });
+    a.deps.leerSitio = async () => ({ ...a.sitio, https: false });
+    await escribir(a.carpeta, 'application/config/config.php', CONFIG);
+    await correr(a, 'config-bd-crear', { marco: 'codeigniter3', sinBd: true, https: true });
+    expect(await leer(a.carpeta, 'application/config/config.php')).toContain(
+      "'http://dollar.test/'",
+    );
   });
 });

@@ -218,6 +218,33 @@ describe('ClienteMysql', () => {
     );
   });
 
+  it('crearBase nueva: sin IF NOT EXISTS y un 1007 se vuelve proyectos.base_existe', async () => {
+    const consultas: string[] = [];
+    const cliente = new ClienteMysql(async () => ({
+      query: async (sql: string) => {
+        consultas.push(sql);
+        if (sql.startsWith('CREATE DATABASE')) {
+          throw Object.assign(new Error("Can't create database 'x'; database exists"), {
+            code: 'ER_DB_CREATE_EXISTS',
+            errno: 1007,
+          });
+        }
+        return [[]] as never;
+      },
+      end: async () => undefined,
+    }));
+    await cliente.conectar(cx);
+    await expect(cliente.crearBase('mi_bd', { nueva: true })).rejects.toMatchObject({
+      codigo: 'proyectos.base_existe',
+    });
+    expect(consultas).toContain('CREATE DATABASE `mi_bd` CHARACTER SET utf8mb4');
+    // Sin nueva sigue siendo IF NOT EXISTS.
+    const { cliente: otro, consultas: q2 } = montar();
+    await otro.conectar(cx);
+    await otro.crearBase('mi_bd');
+    expect(q2.some((q) => q.sql.includes('IF NOT EXISTS'))).toBe(true);
+  });
+
   it('rechaza nombres peligrosos sin consultar', async () => {
     const { cliente, consultas } = montar();
     await cliente.conectar(cx);

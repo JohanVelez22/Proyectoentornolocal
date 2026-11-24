@@ -34,8 +34,8 @@ export const generadorFastapi: Generador = {
       paso('pip-install', 'Instalar dependencias de Python (pip)'),
       ...(p.base
         ? [
-            paso('env-crear', 'Crear el archivo .env', base),
             paso('bd-crear', 'Crear la base de datos', { ...base, nueva: true }),
+            paso('env-crear', 'Crear el archivo .env', base),
           ]
         : []),
       ...(pgvector ? [paso('pgvector-activar', 'Activar pgvector en la base', base)] : []),

@@ -292,6 +292,14 @@ export class ClientePostgres {
         );
         await this.filas(String(orden?.s ?? ''));
       };
+      const hay = await this.filas('SELECT COUNT(*) AS n FROM pg_database WHERE datname = $1', [
+        nombre,
+      ]);
+      // Una base que debe ser nueva se comprueba antes de crear el rol: si ya existe, no queda
+      // un rol suelto.
+      if (opts.nueva && Number(hay[0]?.n ?? 0) > 0) {
+        throw new ErrorWolf('proyectos.base_existe', `La base ${nombre} ya existe.`, { nombre });
+      }
       if (usuario !== undefined) {
         const r = await this.filas(
           'SELECT COUNT(*) AS n, bool_and(rolcanlogin) AS login, bool_or(rolsuper) AS super ' +
@@ -307,12 +315,6 @@ export class ClientePostgres {
         // comprueba que la indicada sea la suya.
         if (existia && !opts.cambiarClave) await this.comprobarClave(usuario, clave!);
         if (!existia) await rolConClave('CREATE ROLE');
-      }
-      const hay = await this.filas('SELECT COUNT(*) AS n FROM pg_database WHERE datname = $1', [
-        nombre,
-      ]);
-      if (opts.nueva && Number(hay[0]?.n ?? 0) > 0) {
-        throw new ErrorWolf('proyectos.base_existe', `La base ${nombre} ya existe.`, { nombre });
       }
       if (Number(hay[0]?.n ?? 0) === 0) {
         // El dueño de la base lo es también del esquema public (PG15+): puede crear tablas.

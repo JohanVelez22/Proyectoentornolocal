@@ -207,6 +207,11 @@ export const es = {
       'proyectos.argumento_invalido': 'Un dato del proyecto no es válido (campo: {campo}).',
       'proyectos.base_existe': 'La base {nombre} ya existe: elija otro nombre.',
       'proyectos.dominio_existe': 'Ya existe un sitio con el dominio {dominio}.',
+      'proyectos.carpeta_de_otro_sitio':
+        'Esa carpeta es la del proyecto {dominio} o está dentro de ella: elija otra.',
+      'proyectos.sin_python': 'No hay Python instalado: instálelo desde Servicios.',
+      'proyectos.paso_base_no_omitible':
+        'El paso "Crear la base de datos" de un proyecto nuevo no se puede omitir.',
       'proyectos.sin_php': 'No hay PHP instalado: instálelo desde Servicios.',
       'proyectos.php_no_instalado': 'PHP {version} no está instalado: instálelo desde Servicios.',
       'proyectos.python_no_instalado':

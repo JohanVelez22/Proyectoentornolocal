@@ -26,15 +26,22 @@ export const generadorSymfony: Generador = {
         paquete: 'symfony/skeleton',
         // Flex aplica las recetas (public/index.php, config/, bin/console) con los scripts.
         scripts: true,
-        ...(p.opciones.symfonyWebapp ? { requerir: ['symfony/webapp-pack'] } : {}),
       }),
+      // Paso propio: si falla (red, Packagist) se reintenta sin repetir la creación.
+      ...(p.opciones.symfonyWebapp
+        ? [
+            paso('composer-requerir', 'Instalar webapp (composer require)', {
+              paquetes: ['symfony/webapp-pack'],
+            }),
+          ]
+        : []),
       ...(p.base
         ? [
+            paso('bd-crear', 'Crear la base de datos', { ...base, nueva: true }),
             paso('env-crear', 'Crear .env.local con la conexión', {
               ...base,
               destino: '.env.local',
             }),
-            paso('bd-crear', 'Crear la base de datos', { ...base, nueva: true }),
           ]
         : []),
       pasoSitio(p, generadorSymfony),

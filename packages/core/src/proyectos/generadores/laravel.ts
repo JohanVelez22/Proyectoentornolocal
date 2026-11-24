@@ -27,6 +27,8 @@ export const generadorLaravel: Generador = {
     const base = argsBase(p, motor);
     return [
       paso('crear-desde-composer', 'Crear el proyecto Laravel (composer)', { paquete }),
+      // La base va antes que el .env: así el .env nunca apunta a una base que no se pudo crear.
+      ...(p.base ? [paso('bd-crear', 'Crear la base de datos', { ...base, nueva: true })] : []),
       // Sin base, la sesión y la caché van en archivos: el .env.example de Laravel las pone en
       // `database` y fallarían sin tablas ni migraciones. Es más robusto que fabricar un SQLite
       // (`--no-scripts` no lo crea y habría que migrarlo solo para que la página abra).
@@ -38,7 +40,6 @@ export const generadorLaravel: Generador = {
           : { valores: { SESSION_DRIVER: 'file', CACHE_STORE: 'file', QUEUE_CONNECTION: 'sync' } },
       ),
       paso('key-generate', 'Generar la clave de la aplicación'),
-      ...(p.base ? [paso('bd-crear', 'Crear la base de datos', { ...base, nueva: true })] : []),
       ...(p.base ? [paso('migrar', 'Migrar la base de datos')] : []),
       // Los starter kits traen la interfaz (Inertia o Livewire) y hay que compilarla.
       ...(paquete !== 'laravel/laravel'

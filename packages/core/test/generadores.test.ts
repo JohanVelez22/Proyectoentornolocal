@@ -45,11 +45,12 @@ describe('generadores: lista de pasos', () => {
 
   it('Laravel: composer, .env, clave, base, migraciones y sitio, en ese orden', () => {
     const p = generador('laravel').pasos(pedido('laravel'));
+    // La base va antes que el .env: el .env nunca apunta a una base que no se pudo crear.
     expect(tipos(p)).toEqual([
       'crear-desde-composer',
+      'bd-crear',
       'env-crear',
       'key-generate',
-      'bd-crear',
       'migrar',
       'sitio-crear',
     ]);
@@ -69,9 +70,9 @@ describe('generadores: lista de pasos', () => {
     expect(paso(p, 'crear-desde-composer').args).toEqual({ paquete: 'laravel/vue-starter-kit' });
     expect(tipos(p)).toEqual([
       'crear-desde-composer',
+      'bd-crear',
       'env-crear',
       'key-generate',
-      'bd-crear',
       'migrar',
       'npm-ci',
       'npm-build',
@@ -107,7 +108,7 @@ describe('generadores: lista de pasos', () => {
   it('CodeIgniter 4 usa appstarter y su .env; CodeIgniter 3 escribe database.php', () => {
     const ci4 = generador('codeigniter4').pasos(pedido('codeigniter4'));
     expect(paso(ci4, 'crear-desde-composer').args).toEqual({ paquete: 'codeigniter4/appstarter' });
-    expect(tipos(ci4)).toEqual(['crear-desde-composer', 'env-crear', 'bd-crear', 'sitio-crear']);
+    expect(tipos(ci4)).toEqual(['crear-desde-composer', 'bd-crear', 'env-crear', 'sitio-crear']);
     const ci3 = generador('codeigniter3').pasos(pedido('codeigniter3'));
     expect(paso(ci3, 'crear-desde-composer').args).toEqual({ paquete: 'codeigniter/framework' });
     expect(tipos(ci3)).toEqual([
@@ -118,6 +119,10 @@ describe('generadores: lista de pasos', () => {
     ]);
     expect(paso(ci3, 'config-bd-crear').args).toMatchObject({ marco: 'codeigniter3' });
     expect(paso(ci3, 'sitio-crear').args).toMatchObject({ tipo: 'codeigniter3' });
+    // Sin base el paso corre igual (base_url y entorno), sin tocar database.php.
+    const sin = generador('codeigniter3').pasos(pedido('codeigniter3', { base: null }));
+    expect(tipos(sin)).toEqual(['crear-desde-composer', 'config-bd-crear', 'sitio-crear']);
+    expect(paso(sin, 'config-bd-crear').args).toEqual({ marco: 'codeigniter3', sinBd: true });
   });
 
   it('Symfony: la conexión va en .env.local y el webapp se pide aparte', () => {
@@ -126,8 +131,16 @@ describe('generadores: lista de pasos', () => {
     expect(paso(p, 'crear-desde-composer').args).toEqual({
       paquete: 'symfony/skeleton',
       scripts: true,
-      requerir: ['symfony/webapp-pack'],
     });
+    // `require` es un paso propio: si falla se reintenta sin repetir la creación.
+    expect(tipos(p)).toEqual([
+      'crear-desde-composer',
+      'composer-requerir',
+      'bd-crear',
+      'env-crear',
+      'sitio-crear',
+    ]);
+    expect(paso(p, 'composer-requerir').args).toEqual({ paquetes: ['symfony/webapp-pack'] });
     expect(paso(p, 'env-crear').args).toMatchObject({ destino: '.env.local' });
     // Vhost de raíz public/ y solo index.php: el de tipo laravel.
     expect(paso(p, 'sitio-crear').args).toMatchObject({ tipo: 'laravel' });
@@ -150,8 +163,8 @@ describe('generadores: lista de pasos', () => {
       'copiar-plantilla-interna',
       'python-venv',
       'pip-install',
-      'env-crear',
       'bd-crear',
+      'env-crear',
       'pgvector-activar',
       'sitio-crear',
     ]);
@@ -603,6 +616,17 @@ describe('crearProyecto (sobre fakes: sin red, sin Composer, sin bases reales)',
     expect(creados[0]!.datos.runtimes).toEqual({});
   });
 
+  it('FastAPI sin versión de Python pedida exige al menos un Python instalado', async () => {
+    const sinPython = deps({ pythonInstaladas: async () => [] });
+    await expect(
+      crearProyecto(
+        sinPython,
+        pedido('fastapi', { carpeta: path.join(base, 'mi-tienda'), php: undefined }),
+      ),
+    ).rejects.toMatchObject({ codigo: 'proyectos.sin_python' });
+    await expect(readdir(base)).resolves.toEqual([]);
+  });
+
   it('un PHP sin instalar da proyectos.php_no_instalado con código', async () => {
     await expect(crearProyecto(deps(), nuevo({ php: '8.1' }))).rejects.toMatchObject({
       codigo: 'proyectos.php_no_instalado',
@@ -646,7 +670,10 @@ describe('crearProyecto (sobre fakes: sin red, sin Composer, sin bases reales)',
         }),
         nuevo({ carpeta: path.join(existente, 'mi-tienda') }),
       ),
-    ).rejects.toMatchObject({ codigo: 'proyectos.carpeta_invalida' });
+    ).rejects.toMatchObject({
+      codigo: 'proyectos.carpeta_de_otro_sitio',
+      datos: { dominio: 'x.test' },
+    });
     expect(await readdir(existente)).toEqual([]);
   });
 
@@ -779,7 +806,7 @@ describe('Nucleo.crearProyecto (estático, de punta a punta)', () => {
     await pedirlo();
     await writeFile(path.join(carpeta, 'index.html'), 'MI TRABAJO');
     // La carpeta ya es la de un sitio registrado: ni siquiera se mira su contenido.
-    await expect(pedirlo()).rejects.toMatchObject({ codigo: 'proyectos.carpeta_invalida' });
+    await expect(pedirlo()).rejects.toMatchObject({ codigo: 'proyectos.carpeta_de_otro_sitio' });
     expect(await readFile(path.join(carpeta, 'index.html'), 'utf8')).toBe('MI TRABAJO');
   });
 

@@ -121,14 +121,12 @@ async function wordpress(ctx: ContextoPaso, d: DepsPasos): Promise<void> {
 }
 
 /**
- * CodeIgniter 3: pone la conexión en el grupo `default` de `application/config/database.php`
- * (CI3 no lee `.env`: su configuración es PHP), el `base_url` con el dominio https del sitio y
- * el entorno por defecto en `production` (en `development` CI3 muestra los avisos de
- * deprecación de PHP 8 en cada página; los errores quedan en `application/logs`). Si
- * `database.php` ya no es la plantilla original (tiene usuario, clave o base) exige
- * `args.sobrescribir` y antes guarda una copia en la carpeta de datos.
+ * CodeIgniter 3, parte de la conexión: la pone en el grupo `default` de
+ * `application/config/database.php` (CI3 no lee `.env`: su configuración es PHP). Si el archivo
+ * ya no es la plantilla original (tiene usuario, clave o base) exige `args.sobrescribir` y antes
+ * guarda una copia en la carpeta de datos.
  */
-async function codeigniter3(ctx: ContextoPaso, d: DepsPasos): Promise<void> {
+async function conexionCodeigniter3(ctx: ContextoPaso, d: DepsPasos): Promise<void> {
   const ruta = path.join(ctx.carpeta, 'application', 'config', 'database.php');
   const plantilla = await leerTexto(ruta);
   if (plantilla === null) {
@@ -171,20 +169,31 @@ async function codeigniter3(ctx: ContextoPaso, d: DepsPasos): Promise<void> {
   comprobarSenal(ctx);
   await writeFile(ruta, t, 'utf8');
   ctx.linea(`Se configuró database.php con la conexión a la base ${base}.`);
+}
 
-  // base_url y entorno: solo si los archivos son los originales (si no, no se tocan).
-  const https = argsDe(ctx).https !== false;
+/**
+ * CodeIgniter 3, parte del sitio (corre con o sin base): `base_url` con el dominio del sitio (el
+ * `https` sale del sitio guardado) y el entorno por defecto en `production`, con
+ * `log_threshold = 1`: en `development` CI3 muestra en cada página los avisos de deprecación de
+ * PHP 8; en `production` los oculta y los errores quedan en `application/logs`. Solo se cambian
+ * los valores originales; si ya los tocó el usuario, no se modifican.
+ */
+async function sitioCodeigniter3(ctx: ContextoPaso, d: DepsPasos): Promise<void> {
+  const guardado = await d.leerSitio?.(ctx.sitio.id);
+  const https = guardado ? guardado.https : argsDe(ctx).https !== false;
   const url = `${https ? 'https' : 'http'}://${ctx.sitio.dominio}/`;
   const rutaConfig = path.join(ctx.carpeta, 'application', 'config', 'config.php');
-  const config = await leerTexto(rutaConfig);
-  const baseUrl = /^(\s*\$config\['base_url'\]\s*=\s*)'';/m;
-  if (config !== null && baseUrl.test(config)) {
-    await writeFile(
-      rutaConfig,
-      config.replace(baseUrl, (_m, a: string) => `${a}'${url}';`),
-      'utf8',
-    );
-    ctx.linea(`base_url quedó en ${url}`);
+  let config = await leerTexto(rutaConfig);
+  if (config !== null) {
+    const original = config;
+    const baseUrl = /^(\s*\$config\['base_url'\]\s*=\s*)'';/m;
+    if (baseUrl.test(config)) {
+      config = config.replace(baseUrl, (_m, a: string) => `${a}'${url}';`);
+      ctx.linea(`base_url quedó en ${url}`);
+    }
+    const umbral = /^(\s*\$config\['log_threshold'\]\s*=\s*)0;/m;
+    if (umbral.test(config)) config = config.replace(umbral, (_m, a: string) => `${a}1;`);
+    if (config !== original) await writeFile(rutaConfig, config, 'utf8');
   }
   const rutaIndex = path.join(ctx.carpeta, 'index.php');
   const index = await leerTexto(rutaIndex);
@@ -197,6 +206,11 @@ async function codeigniter3(ctx: ContextoPaso, d: DepsPasos): Promise<void> {
     );
     ctx.linea('El entorno por defecto quedó en production (los errores van a application/logs).');
   }
+}
+
+async function codeigniter3(ctx: ContextoPaso, d: DepsPasos): Promise<void> {
+  if (argsDe(ctx).sinBd !== true) await conexionCodeigniter3(ctx, d);
+  await sitioCodeigniter3(ctx, d);
 }
 
 /** Escribe el archivo de configuración con la conexión a la base (`args.marco`). */

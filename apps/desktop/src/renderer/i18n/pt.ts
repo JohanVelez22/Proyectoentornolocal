@@ -212,6 +212,11 @@ export const pt: Textos = {
       'proyectos.argumento_invalido': 'Um dado do projeto não é válido (campo: {campo}).',
       'proyectos.base_existe': 'O banco {nombre} já existe: escolha outro nome.',
       'proyectos.dominio_existe': 'Já existe um site com o domínio {dominio}.',
+      'proyectos.carpeta_de_otro_sitio':
+        'Essa pasta é a do projeto {dominio} ou está dentro dela: escolha outra.',
+      'proyectos.sin_python': 'Não há Python instalado: instale-o em Serviços.',
+      'proyectos.paso_base_no_omitible':
+        'A etapa "Criar o banco de dados" de um projeto novo não pode ser pulada.',
       'proyectos.sin_php': 'Não há PHP instalado: instale-o em Serviços.',
       'proyectos.php_no_instalado': 'O PHP {version} não está instalado: instale-o em Serviços.',
       'proyectos.python_no_instalado':

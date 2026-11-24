@@ -32,6 +32,7 @@ export const TIPOS_PASO = [
   'descargar-plantilla',
   'copiar-plantilla-interna',
   'config-bd-crear',
+  'composer-requerir',
 ] as const;
 export type TipoPaso = (typeof TIPOS_PASO)[number];
 
@@ -46,6 +47,7 @@ export const PASOS_SOLO_GENERADOR: readonly TipoPaso[] = [
   'descargar-plantilla',
   'copiar-plantilla-interna',
   'config-bd-crear',
+  'composer-requerir',
 ];
 
 export const PasoRecetaSchema = z.object({

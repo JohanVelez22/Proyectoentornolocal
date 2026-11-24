@@ -210,6 +210,20 @@ describe('ClientePostgres', () => {
     expect(consultas.some((q) => q.sql.includes('format(') && q.params?.includes('x'))).toBe(true);
   });
 
+  it('nueva: si la base ya existe falla antes de crear el rol', async () => {
+    const { cliente, consultas } = montar((sql) =>
+      sql.includes('FROM pg_database') ? [{ n: 1 }] : [],
+    );
+    await cliente.conectar(cx);
+    await expect(
+      cliente.crearBase('mi_bd', { usuario: 'app', clave: 'x', nueva: true }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.base_existe' });
+    expect(consultas.some((q) => q.sql.includes('CREATE ROLE') || q.sql.includes('format('))).toBe(
+      false,
+    );
+    expect(consultas.some((q) => q.sql.startsWith('CREATE DATABASE'))).toBe(false);
+  });
+
   it('base existente con usuario: cambia el dueño', async () => {
     const { cliente, consultas } = montar((sql) =>
       sql.includes('FROM pg_database') ? [{ n: 1 }] : [],

@@ -6,7 +6,7 @@ import type { DepsPasos } from './comun';
 import { pasoComposerInstall } from './composer';
 import { pasoConfigBdCrear } from './configBd';
 import { pasoCopiarPlantillaInterna } from './copiarPlantillaInterna';
-import { pasoCrearDesdeComposer } from './crearDesdeComposer';
+import { pasoComposerRequerir, pasoCrearDesdeComposer } from './crearDesdeComposer';
 import { pasoDescargarPlantilla } from './descargarPlantilla';
 import { pasoEnvCrear } from './env';
 import { pasoKeyGenerate, pasoMigrar, pasoStorageLink } from './laravel';
@@ -34,6 +34,7 @@ const FABRICAS: Record<TipoPaso, (d: DepsPasos) => ImplementacionPaso> = {
   'sitio-crear': pasoSitioCrear,
   comando: pasoComando,
   'crear-desde-composer': pasoCrearDesdeComposer,
+  'composer-requerir': pasoComposerRequerir,
   'descargar-plantilla': pasoDescargarPlantilla,
   'copiar-plantilla-interna': pasoCopiarPlantillaInterna,
   'config-bd-crear': pasoConfigBdCrear,

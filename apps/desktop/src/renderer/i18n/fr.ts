@@ -214,6 +214,11 @@ export const fr: Textos = {
       'proyectos.argumento_invalido': 'Une donnée du projet n’est pas valide (champ : {campo}).',
       'proyectos.base_existe': 'La base {nombre} existe déjà : choisissez un autre nom.',
       'proyectos.dominio_existe': 'Un site avec le domaine {dominio} existe déjà.',
+      'proyectos.carpeta_de_otro_sitio':
+        'Ce dossier est celui du projet {dominio} ou se trouve dedans : choisissez-en un autre.',
+      'proyectos.sin_python': 'Aucun Python n’est installé : installez-le depuis Services.',
+      'proyectos.paso_base_no_omitible':
+        'L’étape "Créer la base de données" d’un nouveau projet ne peut pas être ignorée.',
       'proyectos.sin_php': 'Aucun PHP n’est installé : installez-le depuis Services.',
       'proyectos.php_no_instalado':
         'PHP {version} n’est pas installé : installez-le depuis Services.',

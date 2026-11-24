@@ -133,7 +133,7 @@ export async function validarCarpetaNueva(
   carpeta: unknown,
   nombre: string,
   datos: string,
-  sitios: readonly string[] = [],
+  sitios: readonly { carpeta: string; dominio: string }[] = [],
 ): Promise<{ crear: boolean }> {
   const malo = (): ErrorWolf =>
     new ErrorWolf('proyectos.carpeta_invalida', 'La carpeta del proyecto no es válida.');
@@ -162,7 +162,15 @@ export async function validarCarpetaNueva(
   for (const candidato of [limpia, real]) {
     if (dentro(await reales(datos), candidato)) throw malo();
     // Ni dentro de la carpeta de un sitio que ya existe: mezclaría dos proyectos.
-    for (const s of sitios) if (dentro(await reales(s), candidato)) throw malo();
+    for (const s of sitios) {
+      if (dentro(await reales(s.carpeta), candidato)) {
+        throw new ErrorWolf(
+          'proyectos.carpeta_de_otro_sitio',
+          `La carpeta es la de otro proyecto (${s.dominio}) o está dentro de ella.`,
+          { dominio: s.dominio },
+        );
+      }
+    }
   }
   let info;
   try {
@@ -212,7 +220,7 @@ export async function crearProyecto(
     p.carpeta,
     nombre,
     d.rutas.base,
-    existentes.map((s) => s.carpeta),
+    existentes.map((s) => ({ carpeta: s.carpeta, dominio: s.dominio })),
   );
   const carpeta = p.carpeta.replace(/[\\/]+$/, '');
 
@@ -244,17 +252,29 @@ export async function crearProyecto(
   }
   // Python solo cuenta en FastAPI y debe estar instalado (el venv lo necesita).
   let python: string | undefined;
-  if (p.tipo === 'fastapi' && p.python !== undefined) {
-    if (!RAMA.test(p.python)) throw invalido('python', 'La versión de Python no es válida.');
-    const instaladas = await d.pythonInstaladas();
-    if (!instaladas.some((v) => v === p.python || v.startsWith(`${p.python}.`))) {
-      throw new ErrorWolf(
-        'proyectos.python_no_instalado',
-        `Python ${p.python} no está instalado. Instálelo desde Servicios.`,
-        { version: p.python },
-      );
+  if (p.tipo === 'fastapi') {
+    if (p.python !== undefined && !RAMA.test(p.python)) {
+      throw invalido('python', 'La versión de Python no es válida.');
     }
-    python = p.python;
+    const instaladas = await d.pythonInstaladas();
+    if (p.python === undefined) {
+      // Sin versión pedida el venv usa el Python por defecto: tiene que haber alguno.
+      if (instaladas.length === 0) {
+        throw new ErrorWolf(
+          'proyectos.sin_python',
+          'No hay Python instalado. Instálelo desde Servicios.',
+        );
+      }
+    } else {
+      if (!instaladas.some((v) => v === p.python || v.startsWith(`${p.python}.`))) {
+        throw new ErrorWolf(
+          'proyectos.python_no_instalado',
+          `Python ${p.python} no está instalado. Instálelo desde Servicios.`,
+          { version: p.python },
+        );
+      }
+      python = p.python;
+    }
   }
 
   // Base: nombre válido, motor coherente y que no exista ya (nunca se reutiliza una con datos).

@@ -203,6 +203,11 @@ export const en: Textos = {
       'proyectos.argumento_invalido': 'A project value is not valid (field: {campo}).',
       'proyectos.base_existe': 'The database {nombre} already exists: choose another name.',
       'proyectos.dominio_existe': 'A site with the domain {dominio} already exists.',
+      'proyectos.carpeta_de_otro_sitio':
+        'That folder is the one of project {dominio} or is inside it: choose another one.',
+      'proyectos.sin_python': 'No Python is installed: install it from Services.',
+      'proyectos.paso_base_no_omitible':
+        'The "Create the database" step of a new project cannot be skipped.',
       'proyectos.sin_php': 'No PHP is installed: install it from Services.',
       'proyectos.php_no_instalado': 'PHP {version} is not installed: install it from Services.',
       'proyectos.python_no_instalado':

@@ -298,6 +298,7 @@ export class ClienteMysql {
         aviso: `El usuario ${usuario} ya existía: su clave se cambió a la nueva.`,
       };
     } catch (e) {
+      if (e instanceof ErrorWolf) throw e;
       const err = traducir(e, `crear la base ${nombre}`);
       if (claveCambiada) err.message += ` La clave del usuario ${usuario} ya se cambió a la nueva.`;
       throw err;

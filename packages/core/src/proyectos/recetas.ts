@@ -493,8 +493,16 @@ export class EjecutorRecetas {
       if (op.soloPaso !== undefined) {
         aCorrer = [indice(op.soloPaso)];
       } else if (op.desde !== undefined || omitirId !== null) {
-        if (omitirId !== null && PASOS_NO_OMITIBLES.includes(receta[indice(omitirId)]!.tipo)) {
+        const aOmitir = omitirId !== null ? receta[indice(omitirId)]! : null;
+        if (aOmitir && PASOS_NO_OMITIBLES.includes(aOmitir.tipo)) {
           throw new ErrorWolf('proyectos.paso_no_omitible', MENSAJE_NO_OMITIBLE);
+        }
+        // La base de un proyecto nuevo no se omite: sin ella la receta sigue con una conexión rota.
+        if (aOmitir?.tipo === 'bd-crear' && aOmitir.args?.nueva === true) {
+          throw new ErrorWolf(
+            'proyectos.paso_base_no_omitible',
+            'El paso "Crear la base de datos" de un proyecto nuevo no se puede omitir.',
+          );
         }
         const inicio = op.desde !== undefined ? indice(op.desde) : indice(omitirId!) + 1;
         pasos.slice(0, inicio).forEach((p, i) => {
@@ -510,7 +518,7 @@ export class EjecutorRecetas {
         aCorrer = [];
         pasos.forEach((p, i) => {
           if (p.tipo === 'bd-restaurar' || PASOS_SOLO_CREACION.includes(p.tipo)) {
-            Object.assign(p, { estado: 'omitido', mensaje: undefined, log: [], marcas: [] });
+            Object.assign(p, { estado: 'omitido', mensaje: undefined, log: [] });
             omitidos.push(i);
           } else aCorrer.push(i);
         });
@@ -518,7 +526,8 @@ export class EjecutorRecetas {
         aCorrer = pasos.map((_, i) => i);
       }
       for (const i of aCorrer) {
-        Object.assign(pasos[i]!, { estado: 'pendiente', mensaje: undefined, log: [], marcas: [] });
+        // Las marcas se conservan al repetir un paso: dicen lo que ya hizo (p. ej. la base que creó).
+        Object.assign(pasos[i]!, { estado: 'pendiente', mensaje: undefined, log: [] });
       }
 
       const e: EstadoReceta = { sitioId, estado: 'corriendo', pasos, actualizado: null };
@@ -601,6 +610,7 @@ export class EjecutorRecetas {
           paso: sinEstado(paso),
           carpeta,
           senal,
+          marcas: [...(paso.marcas ?? [])],
           marcar: (marca) => {
             if (!vivo) return;
             const marcas = (paso.marcas ??= []);

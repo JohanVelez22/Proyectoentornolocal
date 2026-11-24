@@ -14,7 +14,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Nucleo } from '../../src/nucleo';
-import { CARPETA_CACHE, esWindows, fetchConCache, limpiarBase, plataformaSegura } from './comun';
+import {
+  CARPETA_CACHE,
+  esperar,
+  esWindows,
+  fetchConCache,
+  limpiarBase,
+  plataformaSegura,
+} from './comun';
 
 const MIN = 60_000;
 const RAMA_PHP = '8.4';
@@ -103,6 +110,49 @@ describe.skipIf(!esWindows || !hayRed)('Nuevo proyecto con Composer real', () =>
       // `symfony/webapp-pack` es un pack: Flex lo desempaqueta en sus paquetes (Twig, Doctrine…).
       const compuesto = readFileSync(path.join(carpeta, 'composer.json'), 'utf8');
       expect(/webapp-pack|twig-bundle|doctrine-bundle/.test(compuesto)).toBe(true);
+    },
+    30 * MIN,
+  );
+
+  it(
+    'Symfony cortado con el lock escrito y sin vendor se reanuda y queda con aplicación',
+    async () => {
+      const x = nucleo!;
+      const carpeta = path.join(proyectos, 'sf-corte');
+      const creacion = x.crearProyecto({
+        tipo: 'symfony',
+        nombre: 'sf-corte',
+        carpeta,
+        php: RAMA_PHP,
+        base: null,
+        opciones: {},
+      });
+      // Se corta Composer en cuanto escribe el lock: `install` solo no aplicaría las recetas de Flex.
+      await esperar(
+        'composer.lock',
+        async () => (existsSync(path.join(carpeta, 'composer.lock')) ? true : null),
+        10 * MIN,
+        100,
+      );
+      expect(x.cancelarReceta('sf-corte')).toBe(true);
+      const cortada = await creacion;
+      log('receta cortada:', JSON.stringify(cortada.receta));
+      expect(cortada.receta.estado).not.toBe('lista');
+
+      const r = await x.ejecutarReceta('sf-corte', { desde: 'crear-desde-composer' });
+      log('receta reanudada:', JSON.stringify(r));
+      for (const p of x.estadoReceta('sf-corte').pasos) {
+        log(p.id, p.estado, p.mensaje ?? '', p.log.slice(-25).join(String.fromCharCode(10)));
+      }
+      expect(r.estado).toBe('lista');
+      for (const f of [
+        'public/index.php',
+        'src/Kernel.php',
+        'bin/console',
+        'vendor/autoload.php',
+      ]) {
+        expect(existsSync(path.join(carpeta, f)), f).toBe(true);
+      }
     },
     30 * MIN,
   );

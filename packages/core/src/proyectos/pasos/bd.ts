@@ -34,6 +34,12 @@ export function pasoBdCrear(d: DepsPasos): ImplementacionPaso {
     const existentes = await d.bd.listar(objetivo);
     const nueva = args.nueva === true;
     if (existentes.some((b) => mismaBase(motor, b.nombre, base))) {
+      if (nueva && ctx.marcas?.includes('base-creada')) {
+        // La creó este mismo proyecto en un intento anterior: se sigue con ella.
+        ctx.linea(`La base ${base} la creó este proyecto antes; se sigue con ella.`);
+        ctx.marcar?.('base-creada');
+        return;
+      }
       if (nueva) {
         throw new ErrorWolf('proyectos.base_existe', `La base ${base} ya existe.`, {
           nombre: base,
