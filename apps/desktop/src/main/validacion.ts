@@ -1,5 +1,5 @@
 import { stat } from 'node:fs/promises';
-import { isAbsolute, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import {
   CLAVES_RAPIDAS,
   LIMITE_MANUAL,
@@ -27,6 +27,8 @@ import {
   NOMBRE_BD_PG,
   NOMBRE_MODELO_OLLAMA,
   TIPOS_SITIO,
+  TIPOS_GENERADOR,
+  type PedidoProyecto,
   type IdServicioDatos,
   type MotorBd,
   type ServicioInstalable,
@@ -1043,4 +1045,68 @@ export function refRespaldoDatos(v: unknown): {
 export function confirmadoBorrar(v: unknown): true {
   if (v !== true) throw new Error('Argumento no válido: confirmar');
   return true;
+}
+
+const MOTORES_PEDIDO = ['mysql', 'mariadb', 'postgresql', 'mongodb'];
+const CLAVES_PEDIDO = ['tipo', 'nombre', 'carpetaPadre', 'php', 'python', 'base', 'opciones'];
+
+/**
+ * Pedido de "Nuevo proyecto" que manda el renderer. La carpeta padre solo vale si salió de un
+ * diálogo (`RutasElegidas`); la carpeta del proyecto la arma este proceso con el nombre, así el
+ * renderer nunca manda una ruta libre. El detalle (nombre, versiones, opciones, base) lo vuelve
+ * a validar el núcleo con códigos de error traducibles.
+ */
+export function validarPedidoProyecto(v: unknown, elegidas: RutasElegidas): PedidoProyecto {
+  const o = objetoPlano<Record<string, unknown>>(v, 'proyecto');
+  for (const k of Object.keys(o)) {
+    if (!CLAVES_PEDIDO.includes(k)) throw new Error('Argumento no válido: proyecto');
+  }
+  if (
+    typeof o['tipo'] !== 'string' ||
+    !(TIPOS_GENERADOR as readonly string[]).includes(o['tipo'])
+  ) {
+    throw new Error('Argumento no válido: tipo');
+  }
+  const nombre = textoAcotado(o['nombre'], 1, 64, 'nombre');
+  // Nada de separadores ni de `:`: el nombre es un solo componente de ruta.
+  if (/[\\/:]/.test(nombre) || nombre.includes('..'))
+    throw new Error('Argumento no válido: nombre');
+  const padre = elegidas.exigir(o['carpetaPadre'], 'carpeta');
+  const pedido: Record<string, unknown> = {
+    tipo: o['tipo'],
+    nombre,
+    carpeta: join(padre, nombre),
+    base: null,
+    opciones: {},
+  };
+  for (const k of ['php', 'python'] as const) {
+    if (o[k] !== undefined) pedido[k] = textoAcotado(o[k], 1, 16, k);
+  }
+  if (o['base'] !== undefined && o['base'] !== null) {
+    const b = objetoPlano<Record<string, unknown>>(o['base'], 'base');
+    for (const k of Object.keys(b)) {
+      if (!['instancia', 'nombre', 'motor'].includes(k))
+        throw new Error('Argumento no válido: base');
+    }
+    const motor = b['motor'];
+    if (motor !== undefined && (typeof motor !== 'string' || !MOTORES_PEDIDO.includes(motor))) {
+      throw new Error('Argumento no válido: motor');
+    }
+    pedido['base'] = {
+      instancia: b['instancia'] === null ? null : textoAcotado(b['instancia'], 1, 32, 'instancia'),
+      nombre: textoAcotado(b['nombre'], 1, 64, 'base'),
+      ...(motor !== undefined ? { motor } : {}),
+    };
+  }
+  if (o['opciones'] !== undefined) {
+    pedido['opciones'] = acotadoJson(objetoPlano(o['opciones'], 'opciones'), 2048, 'opciones');
+  }
+  return pedido as unknown as PedidoProyecto;
+}
+
+/** Versión de WordPress para pedir su huella: `7.1.5` (nada más). */
+export function versionWordpress(v: unknown): string {
+  const t = textoAcotado(v, 3, 12, 'versión');
+  if (!/^\d{1,2}\.\d{1,2}(\.\d{1,2})?$/.test(t)) throw new Error('Argumento no válido: versión');
+  return t;
 }

@@ -47,6 +47,9 @@ import type {
   LoteBusqueda,
   FinBusqueda,
   ResultadoReceta,
+  PedidoProyecto,
+  ResultadoCrearProyecto,
+  TipoGenerador,
   ResultadoTraer,
   ResumenReceta,
   RuntimesProyecto,
@@ -194,6 +197,9 @@ export type {
   LoteBusqueda,
   FinBusqueda,
   ResultadoReceta,
+  PedidoProyecto,
+  ResultadoCrearProyecto,
+  TipoGenerador,
   ResultadoTraer,
   ResumenReceta,
   RuntimesProyecto,
@@ -641,6 +647,14 @@ export interface ApiEntorno {
       datos: DatosSitio,
       receta: PasoReceta[],
     ): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }>;
+    /**
+     * Proyecto nuevo desde un generador. La carpeta padre debe haber salido de `elegirCarpeta`;
+     * el progreso llega por `receta:progreso`. Un paso que falla no borra nada: el resultado
+     * dice qué quedó creado.
+     */
+    crear(pedido: PedidoProyectoIpc): Promise<ResultadoCrearProyecto>;
+    /** SHA-1 que wordpress.org publica para la versión (por defecto la del generador). */
+    huellaWordpress(version?: string): Promise<string>;
     /** Vuelve a marcar "Confío…" y toma la huella de la receta actual (un solo guardado). */
     confiar(sitioId: string): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }>;
   };
@@ -1072,6 +1086,8 @@ export const RUTAS_IPC = [
   'proyectos.cancelarReceta',
   'proyectos.resumenReceta',
   'proyectos.crearSitio',
+  'proyectos.crear',
+  'proyectos.huellaWordpress',
   'proyectos.confiar',
   'git.disponible',
   'git.clonar',
@@ -1155,6 +1171,9 @@ export const RUTAS_IPC = [
   'php.extensionActivar',
   'php.extensionInstalar',
 ] as const;
+/** Lo que manda el asistente de nuevo proyecto: la carpeta es la padre (de un diálogo). */
+export type PedidoProyectoIpc = Omit<PedidoProyecto, 'carpeta'> & { carpetaPadre: string };
+
 export type RutaIpc = (typeof RUTAS_IPC)[number];
 
 /** Lo que manda la interfaz: la raíz va aparte (proyecto o diálogo). */

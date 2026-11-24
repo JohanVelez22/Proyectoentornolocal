@@ -84,6 +84,8 @@ import {
   pid,
   rutaAbsoluta,
   tipoRuntime,
+  validarPedidoProyecto,
+  versionWordpress,
   idServicioDatos,
   motorBd,
   nombreBase,
@@ -1127,6 +1129,10 @@ const TABLA: Record<RutaIpc, Manejador> = {
     const d = objetoPlano<Parameters<Nucleo['crearSitioProyecto']>[0]>(datos, 'datos');
     return n.crearSitioProyecto(d, await recetaObligatoria(receta, s.elegidas));
   },
+  'proyectos.crear': async (n, s, pedido) =>
+    n.crearProyecto(validarPedidoProyecto(pedido, s.elegidas)),
+  'proyectos.huellaWordpress': (n, _s, version) =>
+    n.huellaWordpress(version === undefined ? undefined : versionWordpress(version)),
   'proyectos.confiar': (n, _s, sitioId) => n.confiarReceta(idCorto(sitioId, 'sitio')),
 
   // ---- Git y GitHub: el token lo agrega este proceso; nunca vuelve al renderer ----

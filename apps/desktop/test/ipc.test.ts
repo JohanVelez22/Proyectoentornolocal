@@ -156,6 +156,8 @@ function nucleoFalso() {
         'regenerarTokenMcp',
         'responderConfirmacionMcp',
         'crearSitioProyecto',
+        'crearProyecto',
+        'huellaWordpress',
         'confiarReceta',
         'abrirEditor',
         // Task 19
@@ -640,6 +642,8 @@ describe('registrarIpc', () => {
         'proyectos.cancelarReceta',
         'proyectos.resumenReceta',
         'proyectos.crearSitio',
+        'proyectos.crear',
+        'proyectos.huellaWordpress',
         'proyectos.confiar',
         'git.disponible',
         'git.clonar',
@@ -1605,6 +1609,81 @@ describe('IPC de la Etapa B', () => {
     const r = await llamar('git.clonar', 'owner/a', path.join(otra, 'a'));
     expect(r.ok).toBe(false);
     expect(existsSync(otra)).toBe(false);
+  });
+
+  it('proyectos.crear: la carpeta padre sale de un diálogo y la ruta final la arma el main', async () => {
+    const { f, llamar } = montar();
+    const padre = temporal();
+    const pedido = {
+      tipo: 'laravel',
+      nombre: 'tienda',
+      carpetaPadre: padre,
+      php: '8.4',
+      base: { instancia: 'mysql@8.4', nombre: 'tienda' },
+      opciones: { starterKit: 'vue' },
+    };
+    // Sin diálogo previo: rechazada y el núcleo no se entera.
+    const sin = await llamar('proyectos.crear', pedido);
+    expect(sin.ok).toBe(false);
+    expect(sin.error?.mensaje).toMatch(/diálogo/);
+    expect(f['crearProyecto']).not.toHaveBeenCalled();
+    // Un campo `carpeta` suelto tampoco vale, aunque venga con la padre elegida.
+    sistema.elegirCarpeta.mockResolvedValueOnce(padre);
+    await llamar('sistema.elegirCarpeta');
+    expect((await llamar('proyectos.crear', { ...pedido, carpeta: 'C:\\Windows' })).ok).toBe(false);
+    expect(f['crearProyecto']).not.toHaveBeenCalled();
+    // Elegida: el núcleo recibe la carpeta padre + nombre y no el campo carpetaPadre.
+    expect((await llamar('proyectos.crear', pedido)).ok).toBe(true);
+    const { carpetaPadre: _p, ...resto } = pedido;
+    void _p;
+    expect(f['crearProyecto']).toHaveBeenCalledWith({
+      ...resto,
+      carpeta: path.join(padre, 'tienda'),
+    });
+  });
+
+  it('proyectos.crear rechaza pedidos mal formados sin llamar al núcleo', async () => {
+    const { f, llamar } = montar();
+    const padre = temporal();
+    sistema.elegirCarpeta.mockResolvedValueOnce(padre);
+    await llamar('sistema.elegirCarpeta');
+    const ok = { tipo: 'estatico', nombre: 'web', carpetaPadre: padre, base: null, opciones: {} };
+    for (const malo of [
+      'x',
+      null,
+      { ...ok, tipo: 'rm-rf' },
+      { ...ok, tipo: 7 },
+      { ...ok, nombre: 7 },
+      { ...ok, nombre: '..\\..\\x' },
+      { ...ok, nombre: 'a/b' },
+      { ...ok, nombre: 'a\\b' },
+      { ...ok, nombre: 'c:x' },
+      { ...ok, nombre: '' },
+      { ...ok, carpetaPadre: 7 },
+      { ...ok, base: 'x' },
+      { ...ok, base: { instancia: 7, nombre: 'a' } },
+      { ...ok, base: { instancia: null, nombre: 'a', motor: 'oracle' } },
+      { ...ok, opciones: [] },
+      { ...ok, opciones: 'x' },
+      { ...ok, php: 84 },
+      { ...ok, extra: true },
+    ]) {
+      expect((await llamar('proyectos.crear', malo)).ok, JSON.stringify(malo)).toBe(false);
+    }
+    expect(f['crearProyecto']).not.toHaveBeenCalled();
+    expect((await llamar('proyectos.crear', ok)).ok).toBe(true);
+  });
+
+  it('proyectos.huellaWordpress valida la versión y llega al núcleo', async () => {
+    const { f, llamar } = montar();
+    expect((await llamar('proyectos.huellaWordpress')).ok).toBe(true);
+    expect(f['huellaWordpress']).toHaveBeenLastCalledWith(undefined);
+    expect((await llamar('proyectos.huellaWordpress', '7.1.5')).ok).toBe(true);
+    expect(f['huellaWordpress']).toHaveBeenLastCalledWith('7.1.5');
+    for (const mala of ['../x', '7', 7, '7.1.5 && calc']) {
+      expect((await llamar('proyectos.huellaWordpress', mala)).ok, String(mala)).toBe(false);
+    }
+    expect(f['huellaWordpress']).toHaveBeenCalledTimes(2);
   });
 
   it('proyectos.crearSitio, proyectos.confiar y opciones guardada/suelta llegan al núcleo', async () => {

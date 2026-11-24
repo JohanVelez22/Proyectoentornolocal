@@ -246,6 +246,8 @@ const api: ApiEntorno = {
     cancelarReceta: (sitioId) => invocar('proyectos.cancelarReceta', sitioId),
     resumenReceta: (sitioId) => invocar('proyectos.resumenReceta', sitioId),
     crearSitio: (datos, receta) => invocar('proyectos.crearSitio', datos, receta),
+    crear: (pedido) => invocar('proyectos.crear', pedido),
+    huellaWordpress: (version) => invocar('proyectos.huellaWordpress', version),
     confiar: (sitioId) => invocar('proyectos.confiar', sitioId),
   },
   agentes: {
