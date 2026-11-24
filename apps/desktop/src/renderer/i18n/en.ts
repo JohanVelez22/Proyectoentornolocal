@@ -402,6 +402,14 @@ export const en: Textos = {
       'catalogo.version_no_encontrada': 'Version {version} of {servicio} is not in the catalog.',
       'catalogo.huella_no_disponible':
         'Could not get the checksum for {servicio} {version} (offline or the source did not respond). Try again.',
+      'catalogo.firma_invalida':
+        'The PGP signature of {servicio} {version} is invalid or not published: nothing was installed.',
+      'catalogo.firma_no_soportada':
+        'The PGP signature of {servicio} {version} uses a format WolfCore Dev does not verify: nothing was installed.',
+      'catalogo.clave_desconocida':
+        'The signature of {servicio} {version} is from a key that is not among the keys pinned in the app: nothing was installed.',
+      'catalogo.firma_vencida':
+        'The signature of {servicio} {version} or its key has expired: nothing was installed. Update WolfCore Dev to get current keys.',
     },
   },
   avisoInicio: {
@@ -2822,7 +2830,10 @@ export const en: Textos = {
       bloqueada: 'Blocked',
       sinHuella: 'No published checksum',
       huellaDebil: 'MD5 checksum only',
+      firmada: 'Signature verified',
     },
+    ayudaFirmada:
+      'The official source signs this download with PGP: WolfCore Dev checks the signature against the keys pinned in the app before installing.',
     ayudaSinHuella:
       'The official source does not publish a strong checksum (SHA-256 or SHA-512): the download cannot be verified.',
     instalar: 'Install',

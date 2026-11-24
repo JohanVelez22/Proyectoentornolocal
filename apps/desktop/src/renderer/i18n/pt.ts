@@ -414,6 +414,14 @@ export const pt: Textos = {
       'catalogo.version_no_encontrada': 'A versão {version} de {servicio} não está no catálogo.',
       'catalogo.huella_no_disponible':
         'Não foi possível obter o checksum de {servicio} {version} (sem conexão ou a fonte não respondeu). Tente de novo.',
+      'catalogo.firma_invalida':
+        'A assinatura PGP de {servicio} {version} não é válida ou não foi publicada: nada foi instalado.',
+      'catalogo.firma_no_soportada':
+        'A assinatura PGP de {servicio} {version} usa um formato que o WolfCore Dev não verifica: nada foi instalado.',
+      'catalogo.clave_desconocida':
+        'A assinatura de {servicio} {version} é de uma chave que não está entre as chaves fixadas no app: nada foi instalado.',
+      'catalogo.firma_vencida':
+        'A assinatura de {servicio} {version} ou sua chave expirou: nada foi instalado. Atualize o WolfCore Dev para ter as chaves em dia.',
     },
   },
   avisoInicio: {
@@ -2854,7 +2862,10 @@ export const pt: Textos = {
       bloqueada: 'Bloqueada',
       sinHuella: 'Sem checksum publicado',
       huellaDebil: 'Somente checksum MD5',
+      firmada: 'Assinatura verificada',
     },
+    ayudaFirmada:
+      'A fonte oficial assina este download com PGP: o WolfCore Dev verifica a assinatura com as chaves fixadas no app antes de instalar.',
     ayudaSinHuella:
       'A fonte oficial não publica um checksum forte (SHA-256 ou SHA-512): o download não pode ser verificado.',
     instalar: 'Instalar',

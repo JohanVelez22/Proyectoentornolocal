@@ -428,6 +428,14 @@ export const fr: Textos = {
         'La version {version} de {servicio} n’est pas dans le catalogue.',
       'catalogo.huella_no_disponible':
         'Impossible d’obtenir l’empreinte de {servicio} {version} (pas de connexion ou la source n’a pas répondu). Réessayez.',
+      'catalogo.firma_invalida':
+        'La signature PGP de {servicio} {version} n’est pas valide ou n’est pas publiée : rien n’a été installé.',
+      'catalogo.firma_no_soportada':
+        'La signature PGP de {servicio} {version} utilise un format que WolfCore Dev ne vérifie pas : rien n’a été installé.',
+      'catalogo.clave_desconocida':
+        'La signature de {servicio} {version} provient d’une clé absente des clés épinglées de l’application : rien n’a été installé.',
+      'catalogo.firma_vencida':
+        'La signature de {servicio} {version} ou sa clé a expiré : rien n’a été installé. Mettez WolfCore Dev à jour pour avoir des clés à jour.',
     },
   },
   avisoInicio: {
@@ -2907,7 +2915,10 @@ export const fr: Textos = {
       bloqueada: 'Bloquée',
       sinHuella: 'Sans empreinte publiée',
       huellaDebil: 'Empreinte MD5 uniquement',
+      firmada: 'Signature vérifiée',
     },
+    ayudaFirmada:
+      'La source officielle signe ce téléchargement avec PGP : WolfCore Dev vérifie la signature avec les clés épinglées dans l’application avant d’installer.',
     ayudaSinHuella:
       'La source officielle ne publie pas d’empreinte forte (SHA-256 ou SHA-512) : le téléchargement ne peut pas être vérifié.',
     instalar: 'Installer',

@@ -410,6 +410,14 @@ export const es = {
         'La versión {version} de {servicio} no está en el catálogo.',
       'catalogo.huella_no_disponible':
         'No se pudo obtener la huella de {servicio} {version} (sin conexión o la fuente no respondió). Vuelva a intentarlo.',
+      'catalogo.firma_invalida':
+        'La firma PGP de {servicio} {version} no es válida o no está publicada: no se instaló nada.',
+      'catalogo.firma_no_soportada':
+        'La firma PGP de {servicio} {version} usa un formato que WolfCore Dev no verifica: no se instaló nada.',
+      'catalogo.clave_desconocida':
+        'La firma de {servicio} {version} es de una clave que no está en las claves fijadas de la app: no se instaló nada.',
+      'catalogo.firma_vencida':
+        'La firma de {servicio} {version} o su clave están vencidas: no se instaló nada. Actualice WolfCore Dev para tener las claves al día.',
     },
   },
   avisoInicio: {
@@ -2842,7 +2850,10 @@ export const es = {
       bloqueada: 'Bloqueada',
       sinHuella: 'Sin huella publicada',
       huellaDebil: 'Solo huella MD5',
+      firmada: 'Firma verificada',
     },
+    ayudaFirmada:
+      'La fuente oficial firma esta descarga con PGP: WolfCore Dev comprueba la firma con las claves fijadas en la app antes de instalar.',
     ayudaSinHuella:
       'La fuente oficial no publica una huella fuerte (SHA-256 o SHA-512): la descarga no se puede verificar.',
     instalar: 'Instalar',
