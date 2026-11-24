@@ -11,7 +11,12 @@ import { SECCIONES_NAV } from '../navegacion';
 import { usePreferencias, type TemaUi } from '../stores/preferencias';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
-import { filtrarComandos, moverSeleccion, type Comando } from '../utilidades/paleta';
+import {
+  comandoNuevoProyecto,
+  filtrarComandos,
+  moverSeleccion,
+  type Comando,
+} from '../utilidades/paleta';
 import { ordenarSitios, urlLocal } from '../utilidades/sitios';
 
 /**
@@ -126,6 +131,10 @@ const comandos = computed<Comando[]>(() => {
   r.push(
     { id: 'clonar', grupo: 'github', titulo: t.clonar, claves: 'git clone', ejecutar: agregar },
     { id: 'agregar', grupo: 'proyectos', titulo: t.agregarProyecto, ejecutar: agregar },
+    comandoNuevoProyecto(t.nuevoProyecto, () => {
+      solicitudes.nuevoProyecto = true;
+      ir('proyectos');
+    }),
   );
   for (const k of ['sistema', 'claro', 'oscuro'] as TemaUi[]) {
     r.push({

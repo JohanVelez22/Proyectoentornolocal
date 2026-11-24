@@ -79,3 +79,18 @@ export function moverSeleccion(actual: number, total: number, paso: 1 | -1): num
   if (total <= 0) return 0;
   return (actual + paso + total) % total;
 }
+
+/** "Nuevo proyecto": abre el asistente (la paleta solo pide; Proyectos lo atiende). */
+export function comandoNuevoProyecto(
+  titulo: string,
+  ejecutar: () => void | Promise<void>,
+): Comando {
+  return {
+    id: 'nuevo-proyecto',
+    grupo: 'proyectos',
+    titulo,
+    claves:
+      'new project crear create nuevo novo nouveau laravel codeigniter symfony fastapi wordpress static',
+    ejecutar,
+  };
+}

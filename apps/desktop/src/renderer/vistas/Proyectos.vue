@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Add, Albums, Search } from '@vicons/ionicons5';
+import { Add, Albums, Search, Sparkles } from '@vicons/ionicons5';
 import { NButton, NEmpty, NIcon, NInput } from 'naive-ui';
 import { computed, onMounted, ref, watch } from 'vue';
 import type { ResultadoAplicar, Sitio } from '../../shared/api';
 import AgregarProyecto from '../componentes/AgregarProyecto.vue';
+import AsistenteNuevoProyecto from '../componentes/AsistenteNuevoProyecto.vue';
 import AsistenteReceta from '../componentes/AsistenteReceta.vue';
 import AvisoHosts from '../componentes/AvisoHosts.vue';
 import FormSitio from '../componentes/FormSitio.vue';
@@ -45,6 +46,7 @@ const busqueda = ref('');
 const objetivo = ref<ObjetivoForm | null>(null);
 const falloHosts = ref<FalloHosts | null>(null);
 const agregando = ref(false);
+const creandoProyecto = ref(false);
 const asistente = ref<ObjetivoAsistente | null>(null);
 const registros = ref<Sitio | null>(null);
 
@@ -98,6 +100,17 @@ watch(
   { immediate: true },
 );
 
+// "Nuevo proyecto" desde la paleta de comandos o Inicio.
+watch(
+  () => solicitudes.nuevoProyecto,
+  (v) => {
+    if (!v) return;
+    solicitudes.nuevoProyecto = false;
+    creandoProyecto.value = true;
+  },
+  { immediate: true },
+);
+
 // Si Nginx cambia de estado, el puerto HTTPS puede haber quedado libre u ocupado.
 watch(
   () => servicios.porId['nginx']?.estado,
@@ -120,12 +133,20 @@ onMounted(() => {
   <div class="proyectos">
     <div class="barra">
       <p class="descripcion">{{ tp.descripcion }}</p>
-      <NButton v-if="sitios.lista.length" type="primary" size="small" @click="nuevo">
-        <template #icon
-          ><NIcon><Add /></NIcon
-        ></template>
-        {{ tp.agregar }}
-      </NButton>
+      <div class="acciones-barra">
+        <NButton size="small" secondary @click="creandoProyecto = true">
+          <template #icon
+            ><NIcon><Sparkles /></NIcon
+          ></template>
+          {{ textos.nuevoProyecto.boton }}
+        </NButton>
+        <NButton v-if="sitios.lista.length" type="primary" size="small" @click="nuevo">
+          <template #icon
+            ><NIcon><Add /></NIcon
+          ></template>
+          {{ tp.agregar }}
+        </NButton>
+      </div>
     </div>
 
     <AvisoHosts v-model:fallo="falloHosts" />
@@ -139,7 +160,13 @@ onMounted(() => {
           <span class="vacio-texto">{{ tp.vacio }}</span>
         </template>
         <template #extra>
-          <NButton type="primary" size="large" @click="nuevo">
+          <NButton type="primary" size="large" @click="creandoProyecto = true">
+            <template #icon
+              ><NIcon><Sparkles /></NIcon
+            ></template>
+            {{ textos.nuevoProyecto.boton }}
+          </NButton>
+          <NButton size="large" @click="nuevo">
             <template #icon
               ><NIcon><Add /></NIcon
             ></template>
@@ -184,6 +211,7 @@ onMounted(() => {
       @preparar="preparar"
       @manual="manual"
     />
+    <AsistenteNuevoProyecto :show="creandoProyecto" @cerrar="creandoProyecto = false" />
     <AsistenteReceta :objetivo="asistente" @cerrar="asistente = null" @aplicado="alAplicar" />
     <RegistrosProyecto :sitio="registros" @cerrar="registros = null" />
   </div>
@@ -197,6 +225,10 @@ onMounted(() => {
   gap: 16px;
   margin-bottom: 18px;
   min-height: 28px;
+}
+.acciones-barra {
+  display: flex;
+  gap: 8px;
 }
 .descripcion {
   margin: 0;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  comandoNuevoProyecto,
   filtrarComandos,
   moverSeleccion,
   normalizar,
@@ -106,5 +107,18 @@ describe('asistente de primer uso: lo básico', () => {
     expect(yaInstalado(php, ['8.4.12'])).toBe(true);
     expect(yaInstalado(BASICOS[0]!, [])).toBe(false);
     expect(yaInstalado(BASICOS[0]!, ['1.28.0'])).toBe(true);
+  });
+
+  it('el comando "Nuevo proyecto" va en proyectos y lo encuentran nuevo, crear y los tipos', () => {
+    let llamado = 0;
+    const nuevo = comandoNuevoProyecto('Crear un proyecto nuevo', () => void llamado++);
+    expect(nuevo).toMatchObject({ id: 'nuevo-proyecto', grupo: 'proyectos' });
+    const todos = [...COMANDOS, nuevo];
+    for (const q of ['nuevo proyecto', 'crear proyecto', 'new project', 'laravel', 'wordpress']) {
+      expect(ids(filtrarComandos(todos, q)), q).toContain('nuevo-proyecto');
+    }
+    expect(ids(filtrarComandos(todos, 'nuevo proyecto'))[0]).toBe('nuevo-proyecto');
+    void nuevo.ejecutar();
+    expect(llamado).toBe(1);
   });
 });

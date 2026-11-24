@@ -10,6 +10,8 @@ export const solicitudes = reactive({
   herramienta: null as string | null,
   /** Abrir "Agregar proyecto" (en la pestaña de GitHub) en Proyectos. */
   agregarProyecto: false,
+  /** Abrir el asistente "Nuevo proyecto" en Proyectos. */
+  nuevoProyecto: false,
   /** Proyecto en el que "Traer cambios" debe correr (con sus pasos sugeridos). */
   traerCambios: null as string | null,
   /** Mostrar el asistente de primer uso. */

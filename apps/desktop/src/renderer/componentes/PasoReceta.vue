@@ -19,6 +19,8 @@ const props = defineProps<{
   /** Muestra Reintentar y Omitir si el paso falló (y no hay otra corrida en curso). */
   acciones?: boolean;
   ocupado?: boolean;
+  /** false: no se ofrece Omitir (p. ej. la base de un proyecto nuevo). */
+  omitible?: boolean;
 }>();
 const emit = defineEmits<{ reintentar: [pasoId: string]; omitir: [pasoId: string] }>();
 
@@ -63,7 +65,7 @@ watch(
             {{ t.asistente.reintentar }}
           </NButton>
           <NButton
-            v-if="sePuedeDesactivar(paso)"
+            v-if="omitible !== false && sePuedeDesactivar(paso)"
             size="tiny"
             secondary
             :disabled="ocupado"

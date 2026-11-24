@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  Add,
   Copy,
   Globe,
   MailUnread,
@@ -19,6 +20,7 @@ import EstadoPunto from '../componentes/EstadoPunto.vue';
 import PanelRendimiento from '../componentes/PanelRendimiento.vue';
 import { useAccion } from '../composables/useAccion';
 import { useFoco } from '../composables/useFoco';
+import { solicitudes } from '../composables/solicitudes';
 import { useNoLeidos } from '../composables/useNoLeidos';
 import { textos } from '../i18n';
 import { useHosts } from '../stores/hosts';
@@ -75,6 +77,12 @@ interface Tile {
   icono: Component;
   tono: 'neutro' | 'ok' | 'aviso';
   destino?: string;
+}
+
+/** Abre el asistente en Proyectos. */
+function nuevoProyecto(): void {
+  solicitudes.nuevoProyecto = true;
+  void router.push({ name: 'proyectos' });
 }
 
 const tiles = computed<Tile[]>(() => [
@@ -155,6 +163,12 @@ function abrir(url: string): void {
 <template>
   <div class="inicio">
     <p class="bienvenida">{{ t.bienvenida }}</p>
+    <NButton size="small" type="primary" class="nuevo-proyecto" @click="nuevoProyecto">
+      <template #icon
+        ><NIcon><Add /></NIcon
+      ></template>
+      {{ textos.nuevoProyecto.boton }}
+    </NButton>
 
     <section class="tiles">
       <component
@@ -237,6 +251,9 @@ function abrir(url: string): void {
 </template>
 
 <style scoped>
+.nuevo-proyecto {
+  margin-bottom: 14px;
+}
 .bienvenida {
   margin: 0 0 18px;
   opacity: 0.65;
