@@ -31,6 +31,14 @@ import {
   type Huella,
 } from './huellas';
 import { sumaDe } from './fuentes/tipos';
+import {
+  claveMinisignDe,
+  hashMinisign,
+  leerMinisig,
+  MAX_MINISIG_BYTES,
+  verificarMinisign,
+  type FirmaMinisign,
+} from './minisign';
 import { anillo as anilloFijado } from './pgp/anillos';
 import { cotaFirma, VIGENCIA_FIJADA, type VigenciaAnillo } from './pgp/cotas';
 import type { ClavePublica } from './pgp/paquetes';
@@ -66,6 +74,8 @@ export interface OpcionesInstalador {
   ahora?: () => Date;
   /** FECHA_ANILLO y versiones conocidas (solo pruebas). Por defecto, `claves/vigencia.json`. */
   vigencia?: VigenciaAnillo;
+  /** Clave minisign de un servicio (solo pruebas). Por defecto, la fijada (Zig). */
+  claveMinisign?: (servicio: string) => string | null;
 }
 
 /** Tamaño máximo de una firma separada (una real pesa menos de 1 KB). */
@@ -90,6 +100,14 @@ function errorFirma(v: VersionDisponible, r: FalloFirma): ErrorWolf {
   return new ErrorWolf(
     r.codigo,
     `${MENSAJE_FIRMA[r.codigo]} (${v.servicio} ${v.version}): ${r.detalle.slice(0, 160)}`,
+    { servicio: v.servicio, version: v.version },
+  );
+}
+
+function errorMinisign(v: VersionDisponible, detalle: string): ErrorWolf {
+  return new ErrorWolf(
+    'catalogo.firma_invalida',
+    `La firma minisign no es válida (${v.servicio} ${v.version}): ${detalle.slice(0, 160)}`,
     { servicio: v.servicio, version: v.version },
   );
 }
@@ -320,8 +338,29 @@ export class Instalador {
         throw e;
       }
     }
+    // Firma minisign (Zig): también se baja y se interpreta antes de descargar el zip; falla cerrado.
+    const claveMini = this.opciones.claveMinisign
+      ? this.opciones.claveMinisign(v.servicio)
+      : claveMinisignDe(v);
+    let minisig: FirmaMinisign | null = null;
+    if (claveMini) {
+      try {
+        const bytes = await this.bajarPequeno(
+          v,
+          `${v.url}.minisig`,
+          MAX_MINISIG_BYTES,
+          'la firma minisign',
+        );
+        const f = leerMinisig(bytes);
+        if ('ok' in f) throw errorMinisign(v, f.detalle);
+        minisig = f;
+      } catch (e) {
+        this.emitir(v, 'error', 0, e instanceof Error ? e.message : String(e));
+        throw e;
+      }
+    }
     // Antes de descargar nada: sin huella fuerte ni firma, solo con la confirmación del usuario.
-    const verificable = huellaFuerte(huella) || firma !== null;
+    const verificable = huellaFuerte(huella) || firma !== null || minisig !== null;
     if (verificable || o.confirmarSinHuella === true) {
       await this.antesDeInstalar?.(v.servicio);
     }
@@ -365,6 +404,7 @@ export class Instalador {
       if (firma && fuenteFirma) {
         await this.verificarArchivo(v, fuenteFirma, firma, archivo, noAntesDe);
       }
+      if (minisig && claveMini) await this.verificarArchivoMinisign(v, claveMini, minisig, archivo);
 
       this.emitir(v, 'extrayendo', 100);
       await mkdir(stage, { recursive: true });
@@ -533,6 +573,20 @@ export class Instalador {
     const r = ver.terminar();
     if (!r.ok) throw errorFirma(v, r);
     if (fuente === 'composer') await this.comprobarVersionPhar(v, archivo);
+  }
+
+  /** Verifica la firma minisign sobre el archivo descargado (BLAKE2b-512 leído en trozos). */
+  private async verificarArchivoMinisign(
+    v: VersionDisponible,
+    clave: string,
+    firma: FirmaMinisign,
+    archivo: string,
+  ): Promise<void> {
+    const hash = hashMinisign();
+    for await (const trozo of createReadStream(archivo)) hash.update(trozo as Buffer);
+    const nombre = decodeURIComponent(new URL(v.url).pathname.split('/').pop() ?? '');
+    const r = verificarMinisign({ clave, firma, digest: hash.digest(), nombreArchivo: nombre });
+    if (!r.ok) throw errorMinisign(v, r.detalle);
   }
 
   /**

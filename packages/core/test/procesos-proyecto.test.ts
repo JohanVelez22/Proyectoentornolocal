@@ -760,3 +760,41 @@ describe('D5: proceso de un proyecto Go con su runtime', () => {
     expect(def.args).toEqual(['run', '.']);
   });
 });
+
+describe('D11: proceso de un proyecto Deno con su runtime', () => {
+  it('deno.json + Deno instalado: DENO_DIR en la carpeta de datos y deno.exe al principio del PATH', async () => {
+    const a = await armar({
+      procesos: [proceso({ id: 'web', comando: ['deno', 'task', 'dev'] })],
+    });
+    const deno = a.rutas.bin('deno', '2.9.8');
+    await mkdir(deno, { recursive: true });
+    await writeFile(join(deno, 'deno.exe'), 'x');
+    await writeFile(join(a.carpeta, 'deno.json'), '{"tasks":{"dev":"deno run main.ts"}}');
+    (a.procesos as unknown as { d: { runtimes: unknown } }).d.runtimes = new Runtimes(a.rutas);
+    await a.procesos.iniciar('demo', 'web');
+    const def = a.sup.iniciados[0]!;
+    expect(def.env?.DENO_DIR).toBe(join(a.base, 'cache', 'deno'));
+    expect(pathDe(def)[0]).toBe(deno);
+    expect(def.comando).toBe('deno');
+    expect(def.args).toEqual(['task', 'dev']);
+  });
+
+  it('un proyecto de Kotlin con Java y Kotlin instalados lleva KOTLIN_HOME y JAVA_HOME', async () => {
+    const a = await armar({
+      procesos: [proceso({ id: 'app', comando: ['kotlinc', 'Main.kt'] })],
+    });
+    const kotlin = a.rutas.bin('kotlin', '2.4.21');
+    const java = a.rutas.bin('java', '21.0.13.1');
+    await mkdir(join(kotlin, 'bin'), { recursive: true });
+    await mkdir(join(java, 'bin'), { recursive: true });
+    await writeFile(join(kotlin, 'bin', 'kotlinc.bat'), 'x');
+    await writeFile(join(java, 'bin', 'java.exe'), 'x');
+    await writeFile(join(a.carpeta, 'Main.kt'), 'fun main() {}');
+    (a.procesos as unknown as { d: { runtimes: unknown } }).d.runtimes = new Runtimes(a.rutas);
+    await a.procesos.iniciar('demo', 'app');
+    const def = a.sup.iniciados[0]!;
+    expect(def.env?.KOTLIN_HOME).toBe(kotlin);
+    expect(def.env?.JAVA_HOME).toBe(java);
+    expect(pathDe(def).slice(0, 2)).toEqual([join(java, 'bin'), join(kotlin, 'bin')]);
+  });
+});

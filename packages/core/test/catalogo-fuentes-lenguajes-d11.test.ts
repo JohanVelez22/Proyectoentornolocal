@@ -56,6 +56,9 @@ const de = (v: VersionDisponible[], version: string): VersionDisponible =>
   v.find((x) => x.version === version)!;
 const sha = (b: Buffer | string): string => createHash('sha256').update(b).digest('hex');
 
+/** La firma minisign de Zig se prueba en minisign.test.ts; aquí se deja fuera. */
+const SIN_MINISIGN = { claveMinisign: () => null };
+
 const temporales: string[] = [];
 afterEach(async () => {
   for (const t of temporales.splice(0)) await rm(t, { recursive: true, force: true });
@@ -433,7 +436,12 @@ describe.each(CASOS)('D11: instalar $servicio con servidor falso', (c) => {
   it('extrae en bin/<servicio>/<versión> con el ejecutable en su sitio', async () => {
     const { v, zip } = await preparar();
     const r = await rutasTemp();
-    const inst = new Instalador(r, new Eventos<EventosNucleo>(), fetchFalso({ [v.url]: zip }).f);
+    const inst = new Instalador(
+      r,
+      new Eventos<EventosNucleo>(),
+      fetchFalso({ [v.url]: zip }).f,
+      SIN_MINISIGN,
+    );
     await inst.instalar(v);
     expect(existsSync(path.join(r.bin(c.servicio, c.version), ...c.exe))).toBe(true);
     expect(await inst.instalados(c.servicio)).toEqual([c.version]);
@@ -446,6 +454,7 @@ describe.each(CASOS)('D11: instalar $servicio con servidor falso', (c) => {
       r,
       new Eventos<EventosNucleo>(),
       fetchFalso({ [v.url]: zipDe({ ...c.zip, 'otro.txt': 'cambiado' }) }).f,
+      SIN_MINISIGN,
     );
     await expect(inst.instalar(v)).rejects.toMatchObject({ codigo: 'catalogo.huella_no_coincide' });
     expect(existsSync(r.bin(c.servicio, c.version))).toBe(false);
@@ -458,7 +467,7 @@ describe.each(CASOS)('D11: instalar $servicio con servidor falso', (c) => {
     ).toThrow();
     const r = await rutasTemp();
     const ff = fetchFalso({});
-    const inst = new Instalador(r, new Eventos<EventosNucleo>(), ff.f);
+    const inst = new Instalador(r, new Eventos<EventosNucleo>(), ff.f, SIN_MINISIGN);
     await expect(inst.instalar({ ...v, url: 'https://evil.example/x.zip' })).rejects.toBeDefined();
     expect(ff.pedidas.some((u) => u.includes('evil.example'))).toBe(false);
   });
@@ -467,7 +476,7 @@ describe.each(CASOS)('D11: instalar $servicio con servidor falso', (c) => {
     const { v } = await preparar();
     const r = await rutasTemp();
     const ff = fetchFalso({ [v.url]: { ir: 'https://evil.example/x.zip' } });
-    const inst = new Instalador(r, new Eventos<EventosNucleo>(), ff.f);
+    const inst = new Instalador(r, new Eventos<EventosNucleo>(), ff.f, SIN_MINISIGN);
     await expect(inst.instalar(v)).rejects.toMatchObject({ codigo: 'catalogo.redireccion_ajena' });
     expect(ff.pedidas.some((u) => u.includes('evil.example'))).toBe(false);
   });
