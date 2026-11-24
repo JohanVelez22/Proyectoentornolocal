@@ -169,9 +169,10 @@ import {
   type Deteccion,
 } from './proyectos/detectar';
 import { crearProyecto, type ResultadoCrearProyecto } from './proyectos/crear';
-import type { PedidoProyecto } from './proyectos/generadores';
+import { VERSION_WORDPRESS, type PedidoProyecto } from './proyectos/generadores';
 import { RegistroPasos } from './proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
+import { leerHuellaWordpress } from './proyectos/pasos/descargarPlantilla';
 import { asignarPuertoProxy, datosAlCrear } from './proyectos/pasos/sitio';
 import {
   EjecutorRecetas,
@@ -2714,6 +2715,14 @@ export class Nucleo {
     if (!this.depsPasos) throw new Error('Los pasos de receta no están disponibles.');
     const args = receta.find((p) => p.tipo === 'sitio-crear')?.args ?? {};
     return this.guardarSitio(await datosAlCrear(this.depsPasos, datos, args));
+  }
+
+  /**
+   * SHA-1 que wordpress.org publica para esa versión (por defecto la del generador): la interfaz
+   * la muestra antes de pedir la confirmación de la huella débil. No baja el zip.
+   */
+  huellaWordpress(version: string = VERSION_WORDPRESS): Promise<string> {
+    return leerHuellaWordpress(this.depsPasos?.fetch ?? fetch, version);
   }
 
   /**

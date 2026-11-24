@@ -32,6 +32,36 @@ export function urlWordpress(texto: string): boolean {
   }
 }
 
+/**
+ * SHA-1 que wordpress.org publica para `wordpress-<version>.zip` (solo lee el `.sha1`, no baja
+ * el zip). La interfaz la muestra en la confirmación de la huella débil; el paso usa la misma.
+ */
+export async function leerHuellaWordpress(
+  f: typeof fetch,
+  version: string,
+  senal?: AbortSignal,
+): Promise<string> {
+  if (!VERSION_WP.test(version)) {
+    throw new Error(`La versión de WordPress no es válida: ${String(version).slice(0, 20)}`);
+  }
+  const url = `https://wordpress.org/wordpress-${version}.zip.sha1`;
+  const res = await pedirConSaltos(f, url, senal ? { signal: senal } : {}, urlWordpress);
+  if (!res.ok) {
+    throw new Error(`No se pudo leer la huella de WordPress ${version} (HTTP ${res.status})`);
+  }
+  const publicada = normalizarHuella(
+    'sha1',
+    (await leerAcotado(res, 1024)).trim().split(/\s+/)[0] ?? '',
+  );
+  if (!publicada) {
+    throw new ErrorWolf('catalogo.huella_no_disponible', 'La huella publicada no es válida', {
+      servicio: 'wordpress',
+      version,
+    });
+  }
+  return publicada.valor;
+}
+
 /** Plantillas oficiales que se descargan (solo WordPress en D12). */
 const SERVICIOS = ['wordpress'] as const;
 
@@ -71,20 +101,7 @@ export function pasoDescargarPlantilla(d: DepsPasos): ImplementacionPaso {
     const init = { signal: ctx.senal };
 
     ctx.linea(`> descargar wordpress-${version}.zip.sha1`);
-    const resSuma = await pedirConSaltos(f, `${url}.sha1`, init, urlWordpress);
-    if (!resSuma.ok) {
-      throw new Error(`No se pudo leer la huella de WordPress ${version} (HTTP ${resSuma.status})`);
-    }
-    const publicada = normalizarHuella(
-      'sha1',
-      (await leerAcotado(resSuma, 1024)).trim().split(/\s+/)[0] ?? '',
-    );
-    if (!publicada) {
-      throw new ErrorWolf('catalogo.huella_no_disponible', 'La huella publicada no es válida', {
-        servicio: 'wordpress',
-        version,
-      });
-    }
+    const publicada = { valor: await leerHuellaWordpress(f, version, ctx.senal) };
 
     const tmp = d.rutas.tmp();
     const id = `wordpress-${version}-${randomBytes(4).toString('hex')}`;

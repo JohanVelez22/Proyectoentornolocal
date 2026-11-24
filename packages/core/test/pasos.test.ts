@@ -11,6 +11,7 @@ import type { Lanzador, OpcionesLanzar } from '../src/plataforma/tipos';
 import { TIPOS_PASO, type PasoReceta, type TipoPaso } from '../src/proyectos/config';
 import { RegistroPasos, type ContextoPaso } from '../src/proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from '../src/proyectos/pasos/index';
+import { leerHuellaWordpress } from '../src/proyectos/pasos/descargarPlantilla';
 import { nombreBase } from '../src/proyectos/pasos/comun';
 import { recetaEfectiva, recetaPorDefecto } from '../src/proyectos/recetas';
 import { detectarProyecto } from '../src/proyectos/detectar';
@@ -1854,5 +1855,31 @@ describe('CodeIgniter 3 sin base y ajustes del sitio', () => {
     expect(await leer(a.carpeta, 'application/config/config.php')).toContain(
       "'http://dollar.test/'",
     );
+  });
+});
+
+describe('huella publicada de WordPress (para la confirmación de la interfaz)', () => {
+  const URL = 'https://wordpress.org/wordpress-7.1.5.zip';
+  it('lee solo el .sha1 (no baja el zip) y devuelve el valor normalizado', async () => {
+    const huella = 'AB'.repeat(20);
+    const red = fetchFalso({
+      [`${URL}.sha1`]: `${huella}  wordpress-7.1.5.zip
+`,
+    });
+    expect(await leerHuellaWordpress(red.f, '7.1.5')).toBe(huella.toLowerCase());
+    expect(red.pedidas).toEqual([`${URL}.sha1`]);
+  });
+  it('una versión rara no pide nada y una respuesta inválida da catalogo.huella_no_disponible', async () => {
+    const red = fetchFalso({ [`${URL}.sha1`]: '<html>error</html>' });
+    await expect(leerHuellaWordpress(red.f, '../x')).rejects.toThrow();
+    expect(red.pedidas).toEqual([]);
+    await expect(leerHuellaWordpress(red.f, '7.1.5')).rejects.toMatchObject({
+      codigo: 'catalogo.huella_no_disponible',
+    });
+  });
+  it('no sigue una redirección fuera de wordpress.org', async () => {
+    const red = fetchFalso({ [`${URL}.sha1`]: { ir: 'https://evil.example/wp.sha1' } });
+    await expect(leerHuellaWordpress(red.f, '7.1.5')).rejects.toThrow();
+    expect(red.pedidas).toEqual([`${URL}.sha1`]);
   });
 });
