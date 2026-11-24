@@ -4,7 +4,6 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import {
   ControlMetricas,
-  idiomaDeLocale,
   registrarIpc,
   Seguimientos,
   type IpcMainLike,
@@ -1621,16 +1620,6 @@ describe('IPC de la Etapa B', () => {
 });
 
 describe('preferencias de la interfaz', () => {
-  it('idiomaDeLocale: español para es, es-419, es_AR; inglés para lo demás', () => {
-    expect(idiomaDeLocale('es')).toBe('es');
-    expect(idiomaDeLocale('es-419')).toBe('es');
-    expect(idiomaDeLocale('ES_ar')).toBe('es');
-    expect(idiomaDeLocale('en-US')).toBe('en');
-    expect(idiomaDeLocale('pt-BR')).toBe('en');
-    expect(idiomaDeLocale('estonian')).toBe('en');
-    expect(idiomaDeLocale('')).toBe('en');
-  });
-
   it('leer detecta el idioma la primera vez, lo guarda y aplica el tema', async () => {
     const { ipcMain, canales } = ipcFalso();
     const { nucleo } = nucleoFalso();

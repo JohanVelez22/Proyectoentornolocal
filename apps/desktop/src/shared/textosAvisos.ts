@@ -246,9 +246,251 @@ const EN: Diccionario = {
   },
 };
 
-const DICCIONARIOS = { es: ES, en: EN } satisfies Record<IdiomaUi, Diccionario>;
+const PT: Diccionario = {
+  porCodigo: {
+    'avisos.servicio_caido': (d) => ({
+      titulo: 'Um serviço parou com um erro',
+      cuerpo: `${limpio(d['nombre'], 'Um serviço')} parou de funcionar. Abra o WolfCore Dev para ver os detalhes.`,
+    }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: 'Iniciar tudo não conseguiu ligar tudo',
+      cuerpo: `Não iniciou: ${limpio(d['nombres'], 'algum serviço')}. Abra Serviços para ver os detalhes.`,
+    }),
+    'avisos.puerto_ocupado': (d) => ({
+      titulo: 'Porta ocupada',
+      cuerpo: `A porta ${limpio(d['puerto'], '?')} está sendo usada por ${limpio(d['nombre'], 'outro programa')}: não foi possível iniciar o serviço.`,
+    }),
+    'avisos.proceso_error': (d) => ({
+      titulo: 'Um processo de projeto terminou com um erro',
+      cuerpo: `${limpio(d['nombre'], 'Um processo')} parou de funcionar. Confira os registros dele.`,
+    }),
+    'avisos.tunel_caido': (d) => ({
+      titulo: 'Um túnel caiu',
+      cuerpo: `O túnel de ${limpio(d['fuente'], 'um projeto')} parou de funcionar.`,
+    }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: 'Um contêiner parou',
+      cuerpo: `${limpio(d['nombre'], 'Um contêiner')} (${limpio(d['motor'], 'Docker')}) parou sem que você pedisse${d['codigoSalida'] !== undefined ? ` (código ${limpio(d['codigoSalida'], '?')})` : ''}.`,
+    }),
+    'avisos.ca_por_vencer': (d) => ({
+      titulo: 'A autoridade certificadora vence em breve',
+      cuerpo: `Ela vence em ${limpio(d['dias'], '?')} dias. Gere-a de novo e volte a confiar nela.`,
+    }),
+    'avisos.certificado_por_vencer': (d) => ({
+      titulo: 'Um certificado vence em breve',
+      cuerpo: `O certificado de ${limpio(d['fuente'], 'um site')} vence em ${limpio(d['dias'], '?')} dias.`,
+    }),
+    'avisos.certificado_vencido': (d) => ({
+      titulo: 'Um certificado venceu',
+      cuerpo: `O certificado de ${limpio(d['fuente'], 'um site')} não é mais válido. Gere-o de novo.`,
+    }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: 'O PHP próprio de um site não iniciou',
+      cuerpo: `O PHP de ${limpio(d['fuente'], 'um site')} não iniciou (talvez outro programa esteja usando a porta dele). Confira a seção PHP do cartão dele.`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: 'Sem portas para o PHP de um site',
+      cuerpo: `${limpio(d['fuente'], 'Um site')} usa o PHP compartilhado da sua versão, sem as configurações próprias: não há mais portas livres para o PHP dele.`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'Configurações do PHP descartadas',
+      cuerpo: `Algumas configurações do PHP de ${limpio(d['fuente'], 'um site')} não são válidas e não foram aplicadas: ${limpio(d['claves'], 'confira a seção PHP')}.`,
+    }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Regras do Nginx descartadas',
+      cuerpo: `As regras próprias de ${limpio(d['fuente'], 'um site')} não passam mais na verificação (a pasta, os domínios ou as portas mudaram) e ficaram fora do vhost dele. Revise-as na seção Nginx.`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: 'Vhost escrito à mão não usado',
+      cuerpo: `O vhost escrito à mão de ${limpio(d['fuente'], 'um site')} não passa mais na verificação (a pasta, os domínios ou as portas mudaram): o gerado automaticamente é usado. Revise-o na seção Nginx.`,
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `Há uma nova versão de ${limpio(d['servicio'], 'um serviço')}`,
+      cuerpo: `${limpio(d['nueva'], 'Uma nova versão')} já foi publicada (você tem ${limpio(d['actual'], 'outra')}). Abra Serviços → Versões para atualizar; nada é instalado sozinho.`,
+      accion: 'Atualizar',
+    }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `Há uma nova versão de ${limpio(d['servicio'], 'um serviço')}`,
+      cuerpo: `${limpio(d['nueva'], 'Uma nova versão')} já foi publicada (você tem ${limpio(d['actual'], 'outra')}), sem checksum publicado: não é possível verificar o download. Confira em Serviços → Versões; instalar pede a sua confirmação.`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `Nova linha de ${limpio(d['servicio'], 'um serviço')}`,
+      cuerpo: `${limpio(d['nueva'], 'Uma nova linha')} é mais recente que a que você usa (${limpio(d['actual'], '?')}), sem checksum publicado: não é possível verificar o download. Confira em Serviços → Versões; instalar pede a sua confirmação.`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `Nova linha de ${limpio(d['servicio'], 'um serviço')}`,
+      cuerpo: `${limpio(d['nueva'], 'Uma nova linha')} é mais recente que a que você usa (${limpio(d['actual'], '?')}). Ela é instalada em paralelo, sem tocar nos seus dados.`,
+      accion: 'Atualizar',
+    }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'O Doctor encontrou erros no ambiente',
+      cuerpo: `Há ${limpio(d['errores'], 'vários')} problemas que podem impedir o ambiente de funcionar. Abra o Doctor para ver como corrigi-los.`,
+    }),
+  },
+  porTipo: {
+    'servicio-caido': {
+      titulo: 'Um serviço parou',
+      cuerpo: 'Abra o WolfCore Dev para ver os detalhes.',
+    },
+    'puerto-ocupado': {
+      titulo: 'Porta ocupada',
+      cuerpo: 'Abra o WolfCore Dev para ver os detalhes.',
+    },
+    'certificado-por-vencer': {
+      titulo: 'Um certificado vence em breve',
+      cuerpo: 'Abra o WolfCore Dev para ver os detalhes.',
+    },
+    'tunel-caido': {
+      titulo: 'Um túnel caiu',
+      cuerpo: 'Abra o WolfCore Dev para ver os detalhes.',
+    },
+    'proceso-error': {
+      titulo: 'Um processo terminou com um erro',
+      cuerpo: 'Abra o WolfCore Dev para ver os detalhes.',
+    },
+    doctor: {
+      titulo: 'O Doctor encontrou problemas',
+      cuerpo: 'Abra o WolfCore Dev para revisá-los.',
+    },
+    'contenedor-detenido': {
+      titulo: 'Um contêiner parou',
+      cuerpo: 'Abra o WolfCore Dev para ver os detalhes.',
+    },
+    'version-nueva': {
+      titulo: 'Há uma nova versão',
+      cuerpo: 'Abra o WolfCore Dev para atualizar.',
+    },
+  },
+};
+
+const FR: Diccionario = {
+  porCodigo: {
+    'avisos.servicio_caido': (d) => ({
+      titulo: 'Un service s’est arrêté sur une erreur',
+      cuerpo: `${limpio(d['nombre'], 'Un service')} a cessé de fonctionner. Ouvrez WolfCore Dev pour voir le détail.`,
+    }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: 'Tout démarrer n’a pas pu tout allumer',
+      cuerpo: `N’a pas démarré : ${limpio(d['nombres'], 'un service')}. Ouvrez Services pour voir le détail.`,
+    }),
+    'avisos.puerto_ocupado': (d) => ({
+      titulo: 'Port occupé',
+      cuerpo: `Le port ${limpio(d['puerto'], '?')} est utilisé par ${limpio(d['nombre'], 'un autre programme')} : le service n’a pas pu démarrer.`,
+    }),
+    'avisos.proceso_error': (d) => ({
+      titulo: 'Un processus de projet s’est terminé sur une erreur',
+      cuerpo: `${limpio(d['nombre'], 'Un processus')} a cessé de fonctionner. Consultez ses journaux.`,
+    }),
+    'avisos.tunel_caido': (d) => ({
+      titulo: 'Un tunnel est tombé',
+      cuerpo: `Le tunnel de ${limpio(d['fuente'], 'un projet')} a cessé de fonctionner.`,
+    }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: 'Un conteneur s’est arrêté',
+      cuerpo: `${limpio(d['nombre'], 'Un conteneur')} (${limpio(d['motor'], 'Docker')}) s’est arrêté sans que vous l’ayez demandé${d['codigoSalida'] !== undefined ? ` (code ${limpio(d['codigoSalida'], '?')})` : ''}.`,
+    }),
+    'avisos.ca_por_vencer': (d) => ({
+      titulo: 'L’autorité de certification expire bientôt',
+      cuerpo: `Elle expire dans ${limpio(d['dias'], '?')} jours. Régénérez-la et accordez-lui de nouveau votre confiance.`,
+    }),
+    'avisos.certificado_por_vencer': (d) => ({
+      titulo: 'Un certificat expire bientôt',
+      cuerpo: `Le certificat de ${limpio(d['fuente'], 'un site')} expire dans ${limpio(d['dias'], '?')} jours.`,
+    }),
+    'avisos.certificado_vencido': (d) => ({
+      titulo: 'Un certificat a expiré',
+      cuerpo: `Le certificat de ${limpio(d['fuente'], 'un site')} n’est plus valide. Régénérez-le.`,
+    }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: 'Le PHP propre d’un site n’a pas démarré',
+      cuerpo: `Le PHP de ${limpio(d['fuente'], 'un site')} n’a pas démarré (un autre programme utilise peut-être son port). Consultez la section PHP de sa carte.`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: 'Plus de ports pour le PHP d’un site',
+      cuerpo: `${limpio(d['fuente'], 'Un site')} utilise le PHP partagé de sa version, sans ses réglages : il ne reste aucun port libre pour son PHP propre.`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'Réglages PHP ignorés',
+      cuerpo: `Certains réglages PHP de ${limpio(d['fuente'], 'un site')} ne sont pas valides et n’ont pas été appliqués : ${limpio(d['claves'], 'consultez la section PHP')}.`,
+    }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Règles Nginx ignorées',
+      cuerpo: `Les règles personnalisées de ${limpio(d['fuente'], 'un site')} ne passent plus la vérification (son dossier, ses domaines ou ses ports ont changé) et ont été exclues de son vhost. Revoyez-les dans sa section Nginx.`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: 'Vhost écrit à la main non utilisé',
+      cuerpo: `Le vhost écrit à la main de ${limpio(d['fuente'], 'un site')} ne passe plus la vérification (son dossier, ses domaines ou ses ports ont changé) : le vhost généré est utilisé. Revoyez-le dans sa section Nginx.`,
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `Une nouvelle version de ${limpio(d['servicio'], 'un service')} est disponible`,
+      cuerpo: `${limpio(d['nueva'], 'Une nouvelle version')} est publiée (vous avez ${limpio(d['actual'], 'une autre')}). Ouvrez Services → Versions pour mettre à jour ; rien ne s’installe tout seul.`,
+      accion: 'Mettre à jour',
+    }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `Une nouvelle version de ${limpio(d['servicio'], 'un service')} est disponible`,
+      cuerpo: `${limpio(d['nueva'], 'Une nouvelle version')} est publiée (vous avez ${limpio(d['actual'], 'une autre')}), sans empreinte publiée : le téléchargement ne peut pas être vérifié. Consultez-la dans Services → Versions ; l’installer demande votre confirmation.`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `Nouvelle branche de ${limpio(d['servicio'], 'un service')}`,
+      cuerpo: `${limpio(d['nueva'], 'Une nouvelle branche')} est plus récente que celle que vous utilisez (${limpio(d['actual'], '?')}), sans empreinte publiée : le téléchargement ne peut pas être vérifié. Consultez-la dans Services → Versions ; l’installer demande votre confirmation.`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `Nouvelle branche de ${limpio(d['servicio'], 'un service')}`,
+      cuerpo: `${limpio(d['nueva'], 'Une nouvelle branche')} est plus récente que celle que vous utilisez (${limpio(d['actual'], '?')}). Elle s’installe à côté, sans toucher à vos données.`,
+      accion: 'Mettre à jour',
+    }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'Le Doctor a trouvé des erreurs dans l’environnement',
+      cuerpo: `${limpio(d['errores'], 'Plusieurs')} problèmes peuvent empêcher l’environnement de fonctionner. Ouvrez le Doctor pour voir comment les réparer.`,
+    }),
+  },
+  porTipo: {
+    'servicio-caido': {
+      titulo: 'Un service s’est arrêté',
+      cuerpo: 'Ouvrez WolfCore Dev pour voir le détail.',
+    },
+    'puerto-ocupado': {
+      titulo: 'Port occupé',
+      cuerpo: 'Ouvrez WolfCore Dev pour voir le détail.',
+    },
+    'certificado-por-vencer': {
+      titulo: 'Un certificat expire bientôt',
+      cuerpo: 'Ouvrez WolfCore Dev pour voir le détail.',
+    },
+    'tunel-caido': {
+      titulo: 'Un tunnel est tombé',
+      cuerpo: 'Ouvrez WolfCore Dev pour voir le détail.',
+    },
+    'proceso-error': {
+      titulo: 'Un processus s’est terminé sur une erreur',
+      cuerpo: 'Ouvrez WolfCore Dev pour voir le détail.',
+    },
+    doctor: {
+      titulo: 'Le Doctor a trouvé des problèmes',
+      cuerpo: 'Ouvrez WolfCore Dev pour les examiner.',
+    },
+    'contenedor-detenido': {
+      titulo: 'Un conteneur s’est arrêté',
+      cuerpo: 'Ouvrez WolfCore Dev pour voir le détail.',
+    },
+    'version-nueva': {
+      titulo: 'Une nouvelle version est disponible',
+      cuerpo: 'Ouvrez WolfCore Dev pour mettre à jour.',
+    },
+  },
+};
+
+const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR } satisfies Record<IdiomaUi, Diccionario>;
 
 export const CODIGOS_AVISO = Object.keys(ES.porCodigo);
+
+/** Códigos con texto propio en cada idioma (una prueba exige que sean los mismos). */
+export const CODIGOS_AVISO_POR_IDIOMA: Record<IdiomaUi, string[]> = {
+  es: Object.keys(ES.porCodigo),
+  en: Object.keys(EN.porCodigo),
+  pt: Object.keys(PT.porCodigo),
+  fr: Object.keys(FR.porCodigo),
+};
 
 export function textoAviso(
   idioma: IdiomaUi | null,

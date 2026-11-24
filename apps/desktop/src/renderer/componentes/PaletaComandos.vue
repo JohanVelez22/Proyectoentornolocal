@@ -136,12 +136,12 @@ const comandos = computed<Comando[]>(() => {
       ejecutar: () => void preferencias.cambiarTema(k).catch(() => undefined),
     });
   }
-  for (const k of IDIOMAS) {
+  for (const { id: k, nombreNativo } of IDIOMAS) {
     r.push({
       id: `idioma-${k}`,
       grupo: 'general',
-      titulo: t.idioma(textos.preferencias.idiomas[k]),
-      claves: 'language idioma',
+      titulo: t.idioma(nombreNativo),
+      claves: 'language idioma langue português français',
       ejecutar: () => void preferencias.cambiarIdioma(k).catch(() => undefined),
     });
   }

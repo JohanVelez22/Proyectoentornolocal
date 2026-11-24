@@ -7,14 +7,14 @@ import { mensajeDeError } from '../composables/useAccion';
 import { IDIOMAS, idioma, textos, type Idioma } from '../i18n';
 import { usePreferencias } from '../stores/preferencias';
 
-/** Español / English: botón con menú (barra superior) o botones (Ajustes). */
+/** Idioma de la interfaz (registro IDIOMAS): botón con menú (barra superior) o botones (Ajustes). */
 defineProps<{ compacto?: boolean }>();
 
 const t = textos.preferencias;
 const preferencias = usePreferencias();
 const notification = useNotification();
 
-const opciones = computed(() => IDIOMAS.map((k) => ({ key: k, label: t.idiomas[k] })));
+const opciones = computed(() => IDIOMAS.map((i) => ({ key: i.id, label: i.nombreNativo })));
 
 async function elegir(i: Idioma): Promise<void> {
   if (i === idioma.value) return;
@@ -48,7 +48,7 @@ async function elegir(i: Idioma): Promise<void> {
     :aria-label="t.idioma"
     @update:value="(k: Idioma) => elegir(k)"
   >
-    <NRadioButton v-for="k in IDIOMAS" :key="k" :value="k">{{ t.idiomas[k] }}</NRadioButton>
+    <NRadioButton v-for="i in IDIOMAS" :key="i.id" :value="i.id">{{ i.nombreNativo }}</NRadioButton>
   </NRadioGroup>
 </template>
 

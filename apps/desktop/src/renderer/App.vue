@@ -8,8 +8,12 @@ import {
   darkTheme,
   dateEnUS,
   dateEsAR,
+  dateFrFR,
+  datePtBR,
   enUS,
   esAR,
+  frFR,
+  ptBR,
   useOsTheme,
 } from 'naive-ui';
 import { computed, watchEffect } from 'vue';
@@ -22,8 +26,14 @@ const preferencias = usePreferencias();
 const osTheme = useOsTheme();
 const oscuro = computed(() => esOscuro(preferencias.tema, osTheme.value === 'dark'));
 const ajustesTema = computed(() => temaDe(oscuro.value, preferencias.acento));
-const locale = computed(() => (idioma.value === 'es' ? esAR : enUS));
-const dateLocale = computed(() => (idioma.value === 'es' ? dateEsAR : dateEnUS));
+const LOCALES_NAIVE = {
+  es: [esAR, dateEsAR],
+  en: [enUS, dateEnUS],
+  pt: [ptBR, datePtBR],
+  fr: [frFR, dateFrFR],
+} as const;
+const locale = computed(() => LOCALES_NAIVE[idioma.value][0]);
+const dateLocale = computed(() => LOCALES_NAIVE[idioma.value][1]);
 
 // El acento también llega a los estilos propios (bordes, fondos suaves, el logo).
 watchEffect(() => {

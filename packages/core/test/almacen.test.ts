@@ -97,7 +97,7 @@ describe('Almacen', () => {
       rutas.config(),
       JSON.stringify({
         servicios: { nginx: { puerto: 8081 } },
-        ui: { tema: 'rosa', idioma: 'fr', acento: 'rojo', asistenteVisto: 'si' },
+        ui: { tema: 'rosa', idioma: 'xx', acento: 'rojo', asistenteVisto: 'si' },
       }),
     );
     const c = await new Almacen(rutas).leer();

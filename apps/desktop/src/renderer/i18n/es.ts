@@ -2923,7 +2923,7 @@ export const es = {
     tema: 'Tema',
     temas: { sistema: 'Sistema', claro: 'Claro', oscuro: 'Oscuro' },
     idioma: 'Idioma',
-    idiomas: { es: 'Español', en: 'English' },
+    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français' },
     acento: 'Color de acento',
     acentos: {
       indigo: 'Índigo',

@@ -1,9 +1,14 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { CODIGOS_ERROR } from '@pel/core';
+import { CODIGOS_ERROR, IDIOMAS_UI } from '@pel/core';
 import { describe, expect, it } from 'vitest';
+import { textosMain } from '../src/main/textos';
+import { IDIOMAS, diccionarios } from '../src/renderer/i18n';
 import { en } from '../src/renderer/i18n/en';
 import { es } from '../src/renderer/i18n/es';
+import { fr } from '../src/renderer/i18n/fr';
+import { pt } from '../src/renderer/i18n/pt';
+import { CODIGOS_AVISO, CODIGOS_AVISO_POR_IDIOMA, textoAviso } from '../src/shared/textosAvisos';
 
 const RAIZ = join(__dirname, '../src/renderer');
 
@@ -73,9 +78,202 @@ function literalesEnEspanol(codigo: string): string[] {
   return res;
 }
 
+/** Hojas de texto (cadenas) de un diccionario: ruta → texto. */
+function hojasTexto(o: unknown, pre = ''): Record<string, string> {
+  const r: Record<string, string> = {};
+  for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+    const ruta = pre ? `${pre}.${k}` : k;
+    if (typeof v === 'string') r[ruta] = v;
+    else if (v !== null && typeof v === 'object') Object.assign(r, hojasTexto(v, ruta));
+  }
+  return r;
+}
+
+const marcas = (t: string): string[] => [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort();
+const OTROS = { en, pt, fr } as const;
+/** Marcas, siglas y nombres de productos o comandos que se escriben igual en todos los idiomas. */
+const MARCAS = new Set(
+  (
+    'WolfCore Dev PHP Nginx Apache MySQL MariaDB PostgreSQL Redis MongoDB Node Composer npm pnpm yarn Git ' +
+    'GitHub GitLab Docker Podman Cloudflare ngrok Expose Tailscale Mailpit MailHog Adminer HTTPS HTTP SSL ' +
+    'TLS DNS MCP API URL CLI JSON YAML ZIP PDF SQL FTP SMTP QR Doctor Claude Codex Gemini Qwen Copilot ' +
+    'Cursor Opencode Antigravity Kilo OmniRouter FreeLLMAPI OpenAI Anthropic Ollama Windows macOS Linux ' +
+    'Laravel Symfony WordPress Vite Xdebug OpenSSL IP ID PID RAM CPU PATH hosts vhost localhost'
+  ).split(' '),
+);
+
+/** Palabras de un texto sin marcas ni siglas (los nombres de productos y comandos no se traducen). */
+const palabrasTraducibles = (texto: string): string[] =>
+  (texto.match(/\p{L}{2,}/gu) ?? []).filter((p) => !MARCAS.has(p) && !/^[A-Z0-9]+$/.test(p));
+
+/**
+ * Textos largos (3 palabras o más): ahí una coincidencia con es o en es relleno sin traducir. Las
+ * etiquetas de una o dos palabras ("Abrir", "Services") coinciden a menudo por ser cognados y se
+ * revisan aparte con un tope más holgado.
+ */
+const esLargo = (ruta: string, base: Record<string, string>): boolean =>
+  palabrasTraducibles(base[ruta] ?? '').length >= 3;
+const esCorto = (ruta: string, base: Record<string, string>): boolean =>
+  !esLargo(ruta, base) && palabrasTraducibles(base[ruta] ?? '').length > 0;
+
 describe('i18n', () => {
-  it('es y en tienen exactamente las mismas claves, tipos y aridad de funciones', () => {
+  it('todos los diccionarios tienen la misma forma (claves, tipos y aridad de funciones)', () => {
+    for (const id of IDIOMAS_UI) expect(forma(diccionarios[id]), id).toEqual(forma(es));
     expect(forma(en)).toEqual(forma(es));
+    expect(forma(pt)).toEqual(forma(es));
+    expect(forma(fr)).toEqual(forma(es));
+  });
+
+  it('el registro IDIOMAS cubre IDIOMAS_UI con su nombre nativo y su locale de Intl', () => {
+    expect(IDIOMAS.map((i) => i.id)).toEqual([...IDIOMAS_UI]);
+    expect(IDIOMAS.map((i) => i.localeIntl)).toEqual(['es-AR', 'en-US', 'pt-BR', 'fr-FR']);
+    for (const i of IDIOMAS) {
+      expect(i.nombreNativo).not.toBe('');
+      for (const d of [es, en, pt, fr]) expect(d.preferencias.idiomas[i.id]).toBe(i.nombreNativo);
+    }
+  });
+
+  it('los marcadores {x} de cada texto coinciden con los de es', () => {
+    const base = hojasTexto(es);
+    for (const [id, d] of Object.entries(OTROS)) {
+      const h = hojasTexto(d);
+      for (const [ruta, t] of Object.entries(base)) {
+        expect(marcas(h[ruta] ?? ''), `${id}:${ruta}`).toEqual(marcas(t));
+      }
+    }
+  });
+
+  it('las funciones con interpolación usan todos sus argumentos en cada idioma', () => {
+    const args = ['ARG1', 'ARG2', 'ARG3', 'ARG4'];
+    const llamar = (o: unknown, ruta: string): string => {
+      const f = ruta.split('.').reduce<unknown>((v, k) => (v as Record<string, unknown>)[k], o);
+      return String((f as (...a: string[]) => unknown)(...args));
+    };
+    const rutas: string[] = [];
+    const buscar = (o: unknown, pre: string): void => {
+      for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+        const r = pre ? `${pre}.${k}` : k;
+        if (typeof v === 'function') rutas.push(r);
+        else if (v && typeof v === 'object' && !Array.isArray(v)) buscar(v, r);
+      }
+    };
+    buscar(es, '');
+    expect(rutas.length).toBeGreaterThan(50);
+    for (const r of rutas) {
+      let esperados: string[];
+      try {
+        const salidaEs = llamar(es, r);
+        esperados = args.filter((a) => salidaEs.includes(a));
+      } catch {
+        continue;
+      }
+      for (const [id, d] of Object.entries(OTROS)) {
+        const salida = llamar(d, r);
+        for (const a of esperados) expect(salida, `${id}:${r}`).toContain(a);
+      }
+    }
+  });
+
+  /** Rutas de los textos de `base` que `d` deja idénticos, separadas en largos y cortos. */
+  function copiados(
+    base: Record<string, string>,
+    d: unknown,
+  ): { largos: number; cortos: number; lista: string[] } {
+    const h = hojasTexto(d);
+    const largos = Object.keys(base).filter((r) => esLargo(r, base));
+    const cortos = Object.keys(base).filter((r) => esCorto(r, base));
+    const igualesLargos = largos.filter((r) => h[r] === base[r]);
+    const igualesCortos = cortos.filter((r) => h[r] === base[r]);
+    return {
+      largos: igualesLargos.length / largos.length,
+      cortos: igualesCortos.length / cortos.length,
+      lista: [...igualesLargos, ...igualesCortos].slice(0, 30),
+    };
+  }
+
+  it('ningún texto de pt o fr es igual al de es en más del 5 % de las hojas', () => {
+    const base = hojasTexto(es);
+    expect(Object.keys(base).filter((r) => esLargo(r, base)).length).toBeGreaterThan(500);
+    for (const [id, d] of Object.entries({ pt, fr })) {
+      const c = copiados(base, d);
+      // Largos: relleno sin traducir. Cortos: en es↔pt los cognados (Abrir, Cancelar…) coinciden mucho.
+      expect(c.largos, `${id} largos: ${c.lista.join(', ')}`).toBeLessThanOrEqual(0.05);
+      expect(c.cortos, `${id} cortos: ${c.lista.join(', ')}`).toBeLessThanOrEqual(0.35);
+    }
+  });
+
+  it('pt y fr no copian los textos de en como relleno', () => {
+    const base = hojasTexto(en);
+    for (const [id, d] of Object.entries({ pt, fr })) {
+      const c = copiados(base, d);
+      expect(c.largos, `${id} largos: ${c.lista.join(', ')}`).toBeLessThanOrEqual(0.05);
+      expect(c.cortos, `${id} cortos: ${c.lista.join(', ')}`).toBeLessThanOrEqual(0.35);
+    }
+  });
+
+  it('textos del proceso principal en los cuatro idiomas', () => {
+    const base = textosMain('es') as Record<string, string>;
+    for (const id of IDIOMAS_UI) {
+      const t = textosMain(id) as Record<string, string>;
+      expect(Object.keys(t).sort(), id).toEqual(Object.keys(base).sort());
+      for (const v of Object.values(t)) expect(v).not.toBe('');
+    }
+    for (const id of ['pt', 'fr'] as const) {
+      const t = textosMain(id) as Record<string, string>;
+      // Cognados como "Abrir" o "Cancelar" pueden coincidir; más de dos sería relleno.
+      expect(Object.keys(base).filter((k) => t[k] === base[k]).length, id).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it('textos de avisos en los cuatro idiomas: mismos códigos y texto propio', () => {
+    for (const id of IDIOMAS_UI) {
+      expect([...CODIGOS_AVISO_POR_IDIOMA[id]].sort(), id).toEqual([...CODIGOS_AVISO].sort());
+    }
+    const datos = {
+      nombre: 'N',
+      fuente: 'F',
+      puerto: 80,
+      dias: 3,
+      servicio: 'S',
+      nueva: 'V2',
+      actual: 'V1',
+    };
+    for (const codigo of CODIGOS_AVISO) {
+      const e = textoAviso('es', { tipo: 'doctor', codigo, datos });
+      for (const id of ['pt', 'fr'] as const) {
+        const t = textoAviso(id, { tipo: 'doctor', codigo, datos });
+        expect(t.titulo, `${id}:${codigo}`).not.toBe('');
+        expect(t.cuerpo, `${id}:${codigo}`).not.toBe('');
+        expect(t.titulo, `${id}:${codigo}`).not.toBe(e.titulo);
+        expect(t.accion === undefined, `${id}:${codigo}`).toBe(e.accion === undefined);
+      }
+    }
+    for (const tipo of [
+      'servicio-caido',
+      'puerto-ocupado',
+      'certificado-por-vencer',
+      'tunel-caido',
+      'proceso-error',
+      'doctor',
+      'contenedor-detenido',
+      'version-nueva',
+    ] as const) {
+      const e = textoAviso('es', { tipo, codigo: 'x.desconocido', datos: {} });
+      for (const id of ['pt', 'fr'] as const) {
+        const t = textoAviso(id, { tipo, codigo: 'x.desconocido', datos: {} });
+        expect(t.titulo, `${id}:${tipo}`).not.toBe(e.titulo);
+      }
+    }
+  });
+
+  it('pt y fr no tienen rastros de español (ñ, ¿ o ¡)', () => {
+    for (const [id, d] of Object.entries({ pt, fr })) {
+      // Los nombres de los idiomas van en su propio idioma ("Español" en todos los diccionarios).
+      const malos = Object.entries(hojasTexto(d)).filter(
+        ([ruta, t]) => !ruta.startsWith('preferencias.idiomas.') && /[ñ¿¡]/.test(t),
+      );
+      expect(malos, id).toEqual([]);
+    }
   });
 
   it('en no tiene textos en español (tildes, ¿ o ¡)', () => {
@@ -141,17 +339,18 @@ describe('i18n', () => {
     expect(fallos).toEqual([]);
   });
 
-  it('cada código de error del núcleo tiene texto en es y en en, con los mismos parámetros', () => {
-    const marcas = (t: string): string[] => [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort();
+  it('cada CodigoError tiene texto en los cuatro idiomas, con los mismos parámetros', () => {
     const codigos = [...CODIGOS_ERROR].sort();
-    expect(Object.keys(es.errores.codigos).sort()).toEqual(codigos);
-    expect(Object.keys(en.errores.codigos).sort()).toEqual(codigos);
+    for (const d of [es, en, pt, fr])
+      expect(Object.keys(d.errores.codigos).sort()).toEqual(codigos);
     for (const c of CODIGOS_ERROR) {
       const e = es.errores.codigos[c];
-      const i = en.errores.codigos[c];
       expect(e, c).not.toBe('');
-      expect(i, c).not.toBe('');
-      expect(marcas(i), c).toEqual(marcas(e));
+      for (const [id, d] of Object.entries(OTROS)) {
+        const i = d.errores.codigos[c];
+        expect(i, `${id}:${c}`).not.toBe('');
+        expect(marcas(i), `${id}:${c}`).toEqual(marcas(e));
+      }
     }
   });
 });

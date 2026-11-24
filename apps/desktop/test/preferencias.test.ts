@@ -1,12 +1,13 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cambiarIdioma, idioma, textos } from '../src/renderer/i18n';
+import { cambiarIdioma, idioma, localeIntl, textos } from '../src/renderer/i18n';
+import { idiomaDeLocale } from '../src/shared/idiomas';
 import { esOscuro, usePreferencias } from '../src/renderer/stores/preferencias';
 import { acentoDe, mezclar, primarioDe, temaDe } from '../src/renderer/tema';
 
 type Prefs = {
   tema: 'sistema' | 'claro' | 'oscuro';
-  idioma: 'es' | 'en' | null;
+  idioma: 'es' | 'en' | 'pt' | 'fr' | null;
   acento: string | null;
   asistenteVisto: boolean;
 };
@@ -104,5 +105,38 @@ describe('tema y acento', () => {
     expect(primarioDe('#000000', true)).toBe(mezclar('#000000', 0.35));
     expect(mezclar('#000000', 1)).toBe('#ffffff');
     expect(mezclar('#ffffff', -1)).toBe('#000000');
+  });
+});
+
+describe('idiomaDeLocale', () => {
+  it('pt-* es portugués, fr-* francés, en-* inglés y es-* español', () => {
+    expect(idiomaDeLocale('pt-PT')).toBe('pt');
+    expect(idiomaDeLocale('pt-BR')).toBe('pt');
+    expect(idiomaDeLocale('fr-CA')).toBe('fr');
+    expect(idiomaDeLocale('fr')).toBe('fr');
+    expect(idiomaDeLocale('en-GB')).toBe('en');
+    expect(idiomaDeLocale('EN_us')).toBe('en');
+    expect(idiomaDeLocale('es-419')).toBe('es');
+    expect(idiomaDeLocale('ES_ar')).toBe('es');
+  });
+  it('cualquier otro locale cae al español', () => {
+    expect(idiomaDeLocale('de-DE')).toBe('es');
+    expect(idiomaDeLocale('estonian')).toBe('es');
+    expect(idiomaDeLocale('')).toBe('es');
+  });
+});
+
+describe('localeIntl por idioma', () => {
+  it('sale del registro IDIOMAS', () => {
+    for (const [id, loc] of [
+      ['es', 'es-AR'],
+      ['en', 'en-US'],
+      ['pt', 'pt-BR'],
+      ['fr', 'fr-FR'],
+    ] as const) {
+      cambiarIdioma(id);
+      expect(localeIntl.value).toBe(loc);
+    }
+    cambiarIdioma('es');
   });
 });

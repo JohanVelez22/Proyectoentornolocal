@@ -5,22 +5,28 @@
  * proxy, no una copia). Lo único que no se actualiza es un texto ya copiado a una variable; por
  * eso las vistas se vuelven a montar al cambiar de idioma (ver Marco.vue).
  */
+import type { IdiomaUi } from '@pel/core';
 import { computed, ref } from 'vue';
+import { IDIOMAS } from '../../shared/idiomas';
 import { en } from './en';
 import { es, type Textos } from './es';
+import { fr } from './fr';
+import { pt } from './pt';
 
 export type { Textos } from './es';
 
-export const IDIOMAS = ['es', 'en'] as const;
-export type Idioma = (typeof IDIOMAS)[number];
+export { IDIOMAS, idiomaDeLocale, type InfoIdioma } from '../../shared/idiomas';
+export type Idioma = IdiomaUi;
 
-export const diccionarios: Record<Idioma, Textos> = { es, en };
+export const diccionarios: Record<IdiomaUi, Textos> = { es, en, pt, fr };
 
 /** Idioma activo (lo fija la tienda de preferencias). */
 export const idioma = ref<Idioma>('es');
 
 /** Locale de `Intl` para fechas y números del idioma activo. */
-export const localeIntl = computed(() => (idioma.value === 'es' ? 'es-AR' : 'en-US'));
+export const localeIntl = computed(
+  () => IDIOMAS.find((i) => i.id === idioma.value)?.localeIntl ?? 'es-AR',
+);
 
 export function cambiarIdioma(i: Idioma): void {
   idioma.value = i;

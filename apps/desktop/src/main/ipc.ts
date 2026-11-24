@@ -20,11 +20,11 @@ import {
   SNIPPETS_NGINX,
   validarUrlGit,
   type CambiosPreferenciasUi,
-  type IdiomaUi,
   type Nucleo,
   type OpcionesReceta,
   type PreferenciasUi,
 } from '@pel/core';
+import { idiomaDeLocale } from '../shared/idiomas';
 import { SECRETOS_NO_DISPONIBLES, type AlmacenSecretos } from './secretos';
 import {
   CANAL_EVENTO,
@@ -452,11 +452,6 @@ export interface OpcionesIpc {
   idiomaSistema?: () => string;
   /** Aplica tema e idioma al proceso principal (`nativeTheme.themeSource`, bandeja, diálogos). */
   aplicarPreferencias?: (p: PreferenciasUi) => void;
-}
-
-/** 'es' si el sistema está en español (es, es-419, es-AR…); si no, 'en'. */
-export function idiomaDeLocale(locale: string): IdiomaUi {
-  return /^es(?:[-_]|$)/i.test(locale.trim()) ? 'es' : 'en';
 }
 
 /** Lo que ve cada manejador además del núcleo: el sistema, las rutas elegidas y el emisor. */

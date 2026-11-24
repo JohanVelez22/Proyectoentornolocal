@@ -288,7 +288,7 @@ export type ArchivoCredenciales = Partial<Record<ClaveCredencial, Credenciales>>
 export const TEMAS_UI = ['sistema', 'claro', 'oscuro'] as const;
 export type TemaUi = (typeof TEMAS_UI)[number];
 /** Idiomas de la interfaz. */
-export const IDIOMAS_UI = ['es', 'en'] as const;
+export const IDIOMAS_UI = ['es', 'en', 'pt', 'fr'] as const;
 export type IdiomaUi = (typeof IDIOMAS_UI)[number];
 /** Acento de la interfaz: un color #rrggbb. */
 export const ACENTO_UI = /^#[0-9a-f]{6}$/i;
