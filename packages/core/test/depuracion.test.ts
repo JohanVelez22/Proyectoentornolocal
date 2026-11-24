@@ -1,7 +1,7 @@
 import http from 'node:http';
 import { mkdir, readFile, stat, utimes, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   MAX_CUERPO_DUMP,
   ReceptorDumps,
@@ -16,6 +16,10 @@ import type { Plataforma } from '../src/plataforma/tipos';
 import { Rutas } from '../src/rutas';
 import { SitioSchema, type Sitio } from '../src/tipos';
 import { carpetaTemporal } from './temporales';
+
+// En el CI de Windows y con la suite en paralelo, crear carpetas y receptores tarda mucho más que
+// el plazo de 5 s; las esperas son por condición, no por tiempo fijo.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
 const receptores: ReceptorDumps[] = [];
 afterEach(async () => {
@@ -213,7 +217,9 @@ describe('ReceptorDumps', () => {
     expect(c.pid).toBe(process.pid);
     const viejo = new Date(Date.now() - 10 * 60_000);
     await utimes(archivo, viejo, viejo);
-    await new Promise((ok) => setTimeout(ok, 200));
+    const limite = Date.now() + 15_000;
+    while (Date.now() - (await stat(archivo)).mtimeMs > 5000 && Date.now() < limite)
+      await new Promise((ok) => setTimeout(ok, 20));
     expect(Date.now() - (await stat(archivo)).mtimeMs).toBeLessThan(5000);
   });
 

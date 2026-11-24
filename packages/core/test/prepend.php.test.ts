@@ -13,12 +13,17 @@ import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { extraerZip } from '../src/catalogo/zip';
 import { asegurarArchivosDepuracion, rutasDepuracion } from '../src/depuracion/prepend';
 import { ReceptorDumps, type ResumenDump } from '../src/depuracion/receptor';
 import { Rutas } from '../src/rutas';
 import { carpetaTemporal } from './temporales';
+
+// Estas pruebas lanzan un PHP y un Python reales; con la suite completa en paralelo el arranque de
+// cada proceso se multiplica y el plazo de 5 s se queda corto. No se oculta ningún fallo: las
+// esperas son por condición (con tope), no por tiempo fijo.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
 const CACHE = process.env.PEL_INT_CACHE ?? path.join(os.tmpdir(), 'pel-etapa-a-cache');
 const ejecutablePhp = process.platform === 'win32' ? 'php.exe' : 'php';
@@ -77,7 +82,8 @@ async function receptorReal(base: string): Promise<{
 }
 
 const esperarDump = async (llegados: ResumenDump[], n = 1): Promise<void> => {
-  for (let i = 0; i < 50 && llegados.length < n; i++) await new Promise((r) => setTimeout(r, 20));
+  const limite = Date.now() + 15_000;
+  while (llegados.length < n && Date.now() < limite) await new Promise((r) => setTimeout(r, 20));
 };
 
 describe.skipIf(!hayPhp)('prepend de dumps con un PHP real', () => {
