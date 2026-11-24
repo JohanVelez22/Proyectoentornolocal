@@ -10,6 +10,7 @@ import {
   type MotorContenedores,
   datosPermitidos,
   esClaveCorta,
+  type OpcionesBusqueda,
   ErrorWolf,
   IDS_REVISION,
   type IdRevision,
@@ -514,6 +515,47 @@ async function sitioExistente(n: NucleoIpc, v: unknown): Promise<string> {
     throw new Error('El proyecto ya no existe.');
   }
   return id;
+}
+
+/** Lista de patrones opcional: ausente o vacía = ninguno. */
+const patrones = (v: unknown, nombre: string): string[] =>
+  v === undefined || (Array.isArray(v) && v.length === 0) ? [] : listaTextos(v, 50, 200, nombre);
+
+/** Opciones de `buscar.iniciar`: la raíz solo sale de un proyecto (id) o de un diálogo. */
+async function opcionesBusqueda(
+  n: NucleoIpc,
+  elegidas: RutasElegidas,
+  v: unknown,
+): Promise<OpcionesBusqueda> {
+  const o = objetoPlano<Record<string, unknown>>(v, 'búsqueda');
+  const conSitio = o['sitioId'] !== undefined && o['sitioId'] !== null;
+  const conRuta = o['rutaElegida'] !== undefined && o['rutaElegida'] !== null;
+  if (conSitio === conRuta) throw new Error('Argumento no válido: raíz de la búsqueda');
+  let raiz: string;
+  if (conSitio) {
+    const id = idCorto(o['sitioId'], 'sitio');
+    const sitio = (await n.sitios.listar()).find((x) => x.id === id);
+    if (!sitio) throw new Error('El proyecto ya no existe.');
+    raiz = sitio.carpeta;
+  } else {
+    const ruta = texto(o['rutaElegida'], 'ruta');
+    // Vale una carpeta o un archivo, pero siempre uno que el usuario eligió en un diálogo.
+    if (!elegidas.tiene(ruta)) throw new Error('Elija el archivo o la carpeta desde el diálogo');
+    raiz = ruta;
+  }
+  const modo = o['modo'];
+  if (modo !== 'nombre' && modo !== 'contenido' && modo !== 'ambos') {
+    throw new Error('Argumento no válido: modo');
+  }
+  return {
+    raiz,
+    consulta: textoLibre(o['consulta'], 1, 500, 'consulta'),
+    modo,
+    regex: booleano(o['regex'], 'regex'),
+    mayusculas: booleano(o['mayusculas'], 'mayúsculas'),
+    incluir: patrones(o['incluir'], 'incluir'),
+    excluir: patrones(o['excluir'], 'excluir'),
+  };
 }
 
 /** Ruta del .key junto al .crt elegido. */
@@ -1216,6 +1258,12 @@ const TABLA: Record<RutaIpc, Manejador> = {
   },
   // Sin argumentos; el núcleo ya enmascara los valores con nombre de secreto.
   'herramientas.entorno': (n) => n.entornoSistema(),
+
+  // La raíz es la carpeta de un proyecto (por id) o una ruta elegida en un diálogo; el resto son
+  // textos y banderas acotados. Vuelve enseguida con el id: los resultados llegan por eventos.
+  'buscar.iniciar': async (n, s, opciones) =>
+    n.iniciarBusqueda(await opcionesBusqueda(n, s.elegidas, opciones)),
+  'buscar.cancelar': (n, _s, id) => n.cancelarBusqueda(idCorto(id, 'búsqueda', 64)),
 
   // ---- Servidor MCP ----
   'mcp.estado': (n) => n.estadoMcp(),

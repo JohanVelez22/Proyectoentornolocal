@@ -101,6 +101,7 @@ export * from './monitor/metricas';
 export * from './monitor/registros';
 export * from './herramientas/puertos';
 export * from './herramientas/bom';
+export * from './herramientas/buscar';
 export * from './herramientas/certificadosLibres';
 export * from './herramientas/entorno';
 export * from './mcp/servidor';

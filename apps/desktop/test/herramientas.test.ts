@@ -1,5 +1,9 @@
 import { Worker } from 'node:worker_threads';
 import { describe, expect, it } from 'vitest';
+import { en } from '../src/renderer/i18n/en';
+import { es } from '../src/renderer/i18n/es';
+import { fr } from '../src/renderer/i18n/fr';
+import { pt } from '../src/renderer/i18n/pt';
 import {
   aBase64,
   agregarAcotado,
@@ -369,5 +373,19 @@ describe('varios', () => {
     expect(
       validarDominios(Array.from({ length: 21 }, (_, i) => `d${i}.test`).join(' ')).error,
     ).toMatch(/20/);
+  });
+});
+
+describe('herramienta Buscar', () => {
+  it('tiene su tarjeta, su panel y los códigos de error en es, en, pt y fr', () => {
+    for (const t of [es, en, pt, fr]) {
+      expect(t.herramientas.lista.buscar.nombre).not.toBe('');
+      expect(t.herramientas.busqueda.buscar).not.toBe('');
+      expect(t.herramientas.busqueda.coincidencias(2)).toMatch(/2/);
+      for (const c of ['consulta_invalida', 'raiz_invalida', 'regex_invalida', 'regex_lenta']) {
+        expect(t.errores.codigos[`buscar.${c}` as keyof typeof t.errores.codigos]).toBeTruthy();
+      }
+      expect(t.errores.codigos['buscar.demasiadas']).toContain('{maximo}');
+    }
   });
 });

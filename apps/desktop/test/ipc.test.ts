@@ -144,6 +144,8 @@ function nucleoFalso() {
         'puertosEnUso',
         'finalizarProceso',
         'limpiarBom',
+        'iniciarBusqueda',
+        'cancelarBusqueda',
         'emitirCertificadoLibre',
         'entornoSistema',
         'estadoMcp',
@@ -299,6 +301,8 @@ describe('registrarIpc', () => {
       'aviso:inicio',
       'aviso:nuevo',
       'bd:progreso',
+      'busqueda:fin',
+      'busqueda:resultado',
       'contenedor:lineas',
       'dump:nuevo',
       'git:progreso',
@@ -667,6 +671,8 @@ describe('registrarIpc', () => {
         'herramientas.puertos',
         'herramientas.finalizarProceso',
         'herramientas.limpiarBom',
+        'buscar.iniciar',
+        'buscar.cancelar',
         'herramientas.emitirCertificado',
         'herramientas.entorno',
         'mcp.estado',
@@ -1475,6 +1481,74 @@ describe('IPC de la Etapa B', () => {
     } finally {
       rmSync(carpeta, { recursive: true, force: true });
     }
+  });
+
+  describe('buscar', () => {
+    const comunes = {
+      consulta: 'aguja',
+      modo: 'ambos',
+      regex: false,
+      mayusculas: false,
+      incluir: [],
+      excluir: ['node_modules'],
+    };
+
+    it('la raíz solo sale de un proyecto por id o de un diálogo', async () => {
+      const { f, llamar } = montar();
+      f['iniciarBusqueda']!.mockReturnValue('b1');
+      // Una ruta libre del renderer no sirve.
+      const libre = await llamar('buscar.iniciar', { ...comunes, rutaElegida: 'C://Windows' });
+      expect(libre.ok).toBe(false);
+      expect(f['iniciarBusqueda']).not.toHaveBeenCalled();
+      // Tampoco un proyecto que no existe, ni las dos raíces a la vez, ni ninguna.
+      expect((await llamar('buscar.iniciar', { ...comunes, sitioId: 'no-existe' })).ok).toBe(false);
+      expect(
+        (await llamar('buscar.iniciar', { ...comunes, sitioId: 's1', rutaElegida: 'C://x' })).ok,
+      ).toBe(false);
+      expect((await llamar('buscar.iniciar', comunes)).ok).toBe(false);
+      expect(f['iniciarBusqueda']).not.toHaveBeenCalled();
+      // Un proyecto por id: la carpeta sale de la configuración.
+      (f['sitios'] as unknown as { listar: Mock }).listar.mockResolvedValueOnce([
+        { id: 's1', carpeta: 'C://proyectos/uno' },
+      ]);
+      const ok = await llamar('buscar.iniciar', { ...comunes, sitioId: 's1' });
+      expect(ok).toMatchObject({ ok: true, valor: 'b1' });
+      expect(f['iniciarBusqueda']).toHaveBeenCalledWith(
+        expect.objectContaining({ raiz: 'C://proyectos/uno', consulta: 'aguja' }),
+      );
+    });
+
+    it('acepta una carpeta elegida en un diálogo y valida el resto', async () => {
+      const { f, llamar } = montar();
+      f['iniciarBusqueda']!.mockReturnValue('b2');
+      const carpeta = path.join(os.tmpdir(), 'pel-buscar-elegida');
+      sistema.elegirCarpeta.mockResolvedValueOnce(carpeta);
+      await llamar('sistema.elegirCarpeta');
+      expect((await llamar('buscar.iniciar', { ...comunes, rutaElegida: carpeta })).ok).toBe(true);
+      expect(f['iniciarBusqueda']).toHaveBeenCalledWith(
+        expect.objectContaining({ raiz: carpeta, excluir: ['node_modules'], incluir: [] }),
+      );
+      for (const malo of [
+        { ...comunes, modo: 'todo' },
+        { ...comunes, consulta: '' },
+        { ...comunes, consulta: 'x'.repeat(501) },
+        { ...comunes, regex: 'si' },
+        { ...comunes, incluir: [1] },
+        { ...comunes, excluir: Array.from({ length: 51 }, () => 'a') },
+      ]) {
+        expect((await llamar('buscar.iniciar', { ...malo, rutaElegida: carpeta })).ok).toBe(false);
+      }
+      expect(f['iniciarBusqueda']).toHaveBeenCalledTimes(1);
+    });
+
+    it('cancelar exige un id corto', async () => {
+      const { f, llamar } = montar();
+      f['cancelarBusqueda']!.mockReturnValue(true);
+      expect((await llamar('buscar.cancelar', 'b1')).ok).toBe(true);
+      expect(f['cancelarBusqueda']).toHaveBeenCalledWith('b1');
+      expect((await llamar('buscar.cancelar', 7)).ok).toBe(false);
+      expect((await llamar('buscar.cancelar', 'x'.repeat(65))).ok).toBe(false);
+    });
   });
 
   it('herramientas.entorno devuelve lo del núcleo', async () => {

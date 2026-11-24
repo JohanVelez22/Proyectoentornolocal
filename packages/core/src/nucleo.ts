@@ -199,6 +199,7 @@ import {
   type PuertoEnUso,
 } from './herramientas/puertos';
 import { limpiarBom, type ResultadoBom } from './herramientas/bom';
+import { Busquedas, type OpcionesBusqueda } from './herramientas/buscar';
 import { emitirCertificadoLibre } from './herramientas/certificadosLibres';
 import { entornoSistema, PLAZO_VERSION_MS, type EntornoSistema } from './herramientas/entorno';
 import { muestraSistemaWindows } from './plataforma/win';
@@ -2453,6 +2454,28 @@ export class Nucleo {
   /** Quita el BOM de UTF-8 (con copia .bak-bom); `rutas` vienen de un diálogo. */
   limpiarBom(rutas: string[], simular: boolean): Promise<ResultadoBom[]> {
     return limpiarBom(rutas, { simular });
+  }
+
+  private busquedasEnCurso?: Busquedas;
+
+  private get busquedas(): Busquedas {
+    return (this.busquedasEnCurso ??= new Busquedas({
+      resultado: (lote) => this.eventos.emit('busqueda:resultado', lote),
+      fin: (fin) => this.eventos.emit('busqueda:fin', fin),
+    }));
+  }
+
+  /**
+   * Empieza una búsqueda en segundo plano y devuelve su id; los resultados llegan por
+   * `busqueda:resultado` y el cierre por `busqueda:fin`. `o.raiz` ya viene de un diálogo o de la
+   * carpeta de un proyecto por id.
+   */
+  iniciarBusqueda(o: OpcionesBusqueda): string {
+    return this.busquedas.iniciar(o);
+  }
+
+  cancelarBusqueda(id: string): boolean {
+    return this.busquedas.cancelar(id);
   }
 
   /** Certificado firmado por la CA local; devuelve los PEM (no escribe nada). */

@@ -190,6 +190,12 @@ export const fr: Textos = {
       'herramientas.sin_seleccion': 'Choisissez au moins un élément.',
       'herramientas.dominio_invalido': 'Un domaine ou une IP n’est pas valide.',
       'herramientas.demasiados_dominios': 'Un certificat admet au maximum {maximo} domaines ou IP.',
+      'buscar.consulta_invalida': 'Saisissez ce que vous cherchez (500 caractères au maximum).',
+      'buscar.raiz_invalida': 'Le dossier ou le fichier n’existe pas ou n’est pas valide.',
+      'buscar.regex_invalida': 'L’expression régulière n’est pas valide.',
+      'buscar.regex_lenta':
+        'L’expression régulière est trop lente : simplifiez-la ou utilisez du texte littéral.',
+      'buscar.demasiadas': '{maximo} recherches sont déjà en cours : annulez-en une ou patientez.',
       'terminal.no_abrio': 'Impossible d’ouvrir le terminal.',
       'terminal.no_instalada':
         '{nombre} n’est pas installé. Choisissez un autre terminal dans Réglages.',
@@ -2202,6 +2208,10 @@ export const fr: Textos = {
       },
       markdown: { nombre: 'Aperçu Markdown', descripcion: 'Écrivez et voyez le résultat.' },
       entorno: { nombre: 'Environnement du système', descripcion: 'PATH, versions et variables.' },
+      buscar: {
+        nombre: 'Recherche',
+        descripcion: 'Texte dans les noms et le contenu d’un projet, dossier ou fichier.',
+      },
       infoArchivo: {
         nombre: 'Informations sur un fichier',
         descripcion: 'Taille, type et hashes d’un fichier.',
@@ -2420,6 +2430,33 @@ export const fr: Textos = {
       variables: 'Variables d’environnement',
       filtro: 'Filtrer les variables',
       enmascarada: 'Valeur masquée : le nom ressemble à celui d’un secret.',
+    },
+    busqueda: {
+      explicacion:
+        'Cherche dans les noms et le contenu, sans suivre les liens ni lire les binaires. node_modules, vendor et .git sont ignorés par défaut.',
+      origen: 'Où chercher',
+      proyecto: 'Projet',
+      elegirCarpeta: 'Choisir un dossier',
+      elegirArchivo: 'Choisir un fichier',
+      sinOrigen: 'Choisissez un projet, un dossier ou un fichier.',
+      consulta: 'Texte à chercher',
+      modoNombre: 'Noms',
+      modoContenido: 'Contenu',
+      modoAmbos: 'Les deux',
+      regex: 'Expression régulière',
+      mayusculas: 'Respecter la casse',
+      incluir: 'Fichiers seulement (séparés par des virgules, ex. *.php)',
+      excluir: 'Ignorer (séparés par des virgules)',
+      buscar: 'Chercher',
+      cancelar: 'Annuler',
+      buscando: 'Recherche…',
+      sinResultados: 'Aucune correspondance.',
+      truncado: 'Il y a plus de résultats que ceux affichés : affinez la recherche.',
+      cancelada: 'Recherche annulée.',
+      abrir: 'Ouvrir dans l’éditeur',
+      coincidencias: (n: number) => `${n} ${n === 1 ? 'correspondance' : 'correspondances'}`,
+      resumen: (archivos: number, examinados: number) =>
+        `dans ${archivos} ${archivos === 1 ? 'fichier' : 'fichiers'} (${examinados} examinés)`,
     },
     infoArchivo: {
       elegir: 'Choisir un fichier',

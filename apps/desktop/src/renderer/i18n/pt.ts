@@ -188,6 +188,12 @@ export const pt: Textos = {
       'herramientas.dominio_invalido': 'Há um domínio ou IP inválido.',
       'herramientas.demasiados_dominios':
         'Um certificado admite no máximo {maximo} domínios ou IPs.',
+      'buscar.consulta_invalida': 'Digite o que buscar (até 500 caracteres).',
+      'buscar.raiz_invalida': 'A pasta ou o arquivo não existe ou não é válido.',
+      'buscar.regex_invalida': 'A expressão regular não é válida.',
+      'buscar.regex_lenta':
+        'A expressão regular demora demais: simplifique-a ou use texto literal.',
+      'buscar.demasiadas': 'Já há {maximo} buscas em andamento: cancele uma ou aguarde.',
       'terminal.no_abrio': 'Não foi possível abrir o terminal.',
       'terminal.no_instalada':
         '{nombre} não está instalado. Escolha outro terminal em Configurações.',
@@ -2160,6 +2166,10 @@ export const pt: Textos = {
         descripcion: 'Escreva e veja o resultado.',
       },
       entorno: { nombre: 'Ambiente do sistema', descripcion: 'PATH, versões e variáveis.' },
+      buscar: {
+        nombre: 'Buscar',
+        descripcion: 'Texto em nomes e conteúdo de um projeto, pasta ou arquivo.',
+      },
       infoArchivo: {
         nombre: 'Informações do arquivo',
         descripcion: 'Tamanho, tipo e hashes de um arquivo.',
@@ -2373,6 +2383,33 @@ export const pt: Textos = {
       variables: 'Variáveis de ambiente',
       filtro: 'Filtrar variáveis',
       enmascarada: 'Valor oculto: o nome parece o de um segredo.',
+    },
+    busqueda: {
+      explicacion:
+        'Busca em nomes e em conteúdo, sem seguir links e sem ler binários. Por padrão ignora node_modules, vendor e .git.',
+      origen: 'Onde buscar',
+      proyecto: 'Projeto',
+      elegirCarpeta: 'Escolher pasta',
+      elegirArchivo: 'Escolher arquivo',
+      sinOrigen: 'Escolha um projeto, uma pasta ou um arquivo.',
+      consulta: 'Texto a buscar',
+      modoNombre: 'Nomes',
+      modoContenido: 'Conteúdo',
+      modoAmbos: 'Ambos',
+      regex: 'Expressão regular',
+      mayusculas: 'Diferenciar maiúsculas',
+      incluir: 'Só arquivos (separe com vírgulas, ex.: *.php)',
+      excluir: 'Ignorar (separe com vírgulas)',
+      buscar: 'Buscar',
+      cancelar: 'Cancelar',
+      buscando: 'Buscando…',
+      sinResultados: 'Sem correspondências.',
+      truncado: 'Há mais resultados do que os exibidos: refine a busca.',
+      cancelada: 'Busca cancelada.',
+      abrir: 'Abrir no editor',
+      coincidencias: (n: number) => `${n} ${n === 1 ? 'correspondência' : 'correspondências'}`,
+      resumen: (archivos: number, examinados: number) =>
+        `em ${archivos} ${archivos === 1 ? 'arquivo' : 'arquivos'} (${examinados} verificados)`,
     },
     infoArchivo: {
       elegir: 'Escolher arquivo',

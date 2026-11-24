@@ -41,6 +41,11 @@ import type {
   RecetaPropuesta,
   RepoGithub,
   ResultadoBom,
+  ResultadoBusqueda,
+  ResumenBusqueda,
+  OpcionesBusqueda,
+  LoteBusqueda,
+  FinBusqueda,
   ResultadoReceta,
   ResultadoTraer,
   ResumenReceta,
@@ -183,6 +188,11 @@ export type {
   RecetaPropuesta,
   RepoGithub,
   ResultadoBom,
+  ResultadoBusqueda,
+  ResumenBusqueda,
+  OpcionesBusqueda,
+  LoteBusqueda,
+  FinBusqueda,
   ResultadoReceta,
   ResultadoTraer,
   ResumenReceta,
@@ -786,6 +796,17 @@ export interface ApiEntorno {
     /** PATH, versiones de las herramientas y variables (los valores secretos llegan enmascarados). */
     entorno(): Promise<EntornoSistema>;
   };
+  buscar: {
+    /**
+     * Empieza una búsqueda en segundo plano y devuelve su id. La raíz es la carpeta de un
+     * proyecto (`sitioId`) o una ruta elegida en un diálogo (`rutaElegida`, archivo o carpeta);
+     * nunca una ruta libre. Los resultados llegan por `busqueda:resultado` y el cierre, con el
+     * resumen o el error, por `busqueda:fin`.
+     */
+    iniciar(opciones: OpcionesBusquedaIpc): Promise<string>;
+    /** Cancela la búsqueda; false si ya había terminado. */
+    cancelar(id: string): Promise<boolean>;
+  };
   mcp: {
     estado(): Promise<EstadoMcp>;
     iniciar(): Promise<EstadoMcp>;
@@ -1086,6 +1107,8 @@ export const RUTAS_IPC = [
   'herramientas.limpiarBom',
   'herramientas.emitirCertificado',
   'herramientas.entorno',
+  'buscar.iniciar',
+  'buscar.cancelar',
   'mcp.estado',
   'mcp.iniciar',
   'mcp.detener',
@@ -1134,6 +1157,10 @@ export const RUTAS_IPC = [
 ] as const;
 export type RutaIpc = (typeof RUTAS_IPC)[number];
 
+/** Lo que manda la interfaz: la raíz va aparte (proyecto o diálogo). */
+export type OpcionesBusquedaIpc = Omit<OpcionesBusqueda, 'raiz'> &
+  ({ sitioId: string; rutaElegida?: undefined } | { rutaElegida: string; sitioId?: undefined });
+
 export const EVENTOS_IPC = [
   'servicio:estado',
   'sitio:cambio',
@@ -1154,4 +1181,6 @@ export const EVENTOS_IPC = [
   'mcp:confirmacion-cerrada',
   'dump:nuevo',
   'contenedor:lineas',
+  'busqueda:resultado',
+  'busqueda:fin',
 ] as const satisfies readonly (keyof EventosNucleo)[];

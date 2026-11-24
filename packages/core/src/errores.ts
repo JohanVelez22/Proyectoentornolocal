@@ -84,6 +84,12 @@ export const PARAMETROS_ERROR = {
   'herramientas.sin_seleccion': [],
   'herramientas.dominio_invalido': [],
   'herramientas.demasiados_dominios': ['maximo'],
+  // búsqueda
+  'buscar.consulta_invalida': [],
+  'buscar.raiz_invalida': [],
+  'buscar.regex_invalida': [],
+  'buscar.regex_lenta': [],
+  'buscar.demasiadas': ['maximo'],
   // terminal
   'terminal.no_abrio': [],
   'terminal.no_instalada': ['nombre'],

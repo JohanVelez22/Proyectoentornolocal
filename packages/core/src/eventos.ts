@@ -1,6 +1,7 @@
 import type { Aviso } from './avisos/avisos';
 import type { LineasContenedor } from './contenedores/contenedores';
 import type { MotorBd } from './bd/env';
+import type { FinBusqueda, LoteBusqueda } from './herramientas/buscar';
 import type { ResumenDump } from './depuracion/receptor';
 import type { CierreConfirmacion, SolicitudConfirmacion } from './mcp/servidor';
 import type { MuestraSistema } from './monitor/metricas';
@@ -70,6 +71,10 @@ export type EventosNucleo = {
   'dump:nuevo': ResumenDump;
   /** Líneas nuevas (saneadas) del registro de un contenedor que se está siguiendo. */
   'contenedor:lineas': LineasContenedor;
+  /** Un lote de resultados de una búsqueda en curso (herramienta Buscar). */
+  'busqueda:resultado': LoteBusqueda;
+  /** La búsqueda terminó (con su resumen) o falló (con su error). Siempre llega una vez. */
+  'busqueda:fin': FinBusqueda;
 };
 
 export class Eventos<M extends Record<string, unknown>> {

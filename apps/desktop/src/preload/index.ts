@@ -324,6 +324,10 @@ const api: ApiEntorno = {
       invocar('herramientas.emitirCertificado', dominios, destino),
     entorno: () => invocar('herramientas.entorno'),
   },
+  buscar: {
+    iniciar: (opciones) => invocar('buscar.iniciar', opciones),
+    cancelar: (id) => invocar('buscar.cancelar', id),
+  },
   mcp: {
     estado: () => invocar('mcp.estado'),
     iniciar: () => invocar('mcp.iniciar'),

@@ -38,6 +38,7 @@ const componentes: Record<Clave, Component> = {
   entorno: defineAsyncComponent(() => import('../componentes/herramientas/Entorno.vue')),
   infoArchivo: defineAsyncComponent(() => import('../componentes/herramientas/InfoArchivo.vue')),
   websocket: defineAsyncComponent(() => import('../componentes/herramientas/WebSocket.vue')),
+  buscar: defineAsyncComponent(() => import('../componentes/herramientas/Buscar.vue')),
 };
 
 const iconos: Record<Clave, Component> = {
@@ -54,10 +55,11 @@ const iconos: Record<Clave, Component> = {
   entorno: Desktop,
   infoArchivo: InformationCircle,
   websocket: Pulse,
+  buscar: Search,
 };
 
 /** Paneles que necesitan más ancho (dos columnas o tablas). */
-const ANCHAS: Clave[] = ['diff', 'puertos', 'regex', 'json', 'markdown'];
+const ANCHAS: Clave[] = ['diff', 'puertos', 'regex', 'json', 'markdown', 'buscar'];
 
 const busqueda = ref('');
 const abierta = ref<Clave | null>(null);
