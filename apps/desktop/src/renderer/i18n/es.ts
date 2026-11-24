@@ -1387,6 +1387,7 @@ export const es = {
       preset: 'Proveedor compatible',
       presetAyuda: 'Rellena el nombre y la URL; puede cambiarlos.',
       presetOtro: 'Otro',
+      documentacion: 'Ver documentación',
       nombre: 'Nombre',
       urlBase: 'URL base',
       urlAyuda: 'Vacía = la oficial. Solo https://, o http:// hacia 127.0.0.1 o [::1] (LM Studio).',

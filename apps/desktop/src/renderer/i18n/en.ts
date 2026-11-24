@@ -1374,6 +1374,7 @@ export const en: Textos = {
       preset: 'Compatible provider',
       presetAyuda: 'Fills in the name and URL; you can change them.',
       presetOtro: 'Other',
+      documentacion: 'View documentation',
       nombre: 'Name',
       urlBase: 'Base URL',
       urlAyuda:

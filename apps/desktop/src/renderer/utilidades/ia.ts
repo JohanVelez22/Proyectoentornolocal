@@ -81,6 +81,11 @@ export const PRESETS_COMPATIBLES: readonly PresetCompatible[] = [
   },
 ];
 
+/** Enlace a la documentación oficial del preset elegido (null si no hay preset). */
+export function documentacionDePreset(nombre: string | null): string | null {
+  return PRESETS_COMPATIBLES.find((p) => p.nombre === nombre)?.documentacion ?? null;
+}
+
 /** Con el filtro "Solo gratuitos" activo, deja solo los modelos que la prueba marcó como gratis. */
 export function soloGratuitos(
   modelos: readonly string[],

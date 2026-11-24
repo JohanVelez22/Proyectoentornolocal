@@ -12,11 +12,14 @@ import {
   TIPOS_CON_CLAVE as CON_CLAVE_NUCLEO,
   URL_BASE_POR_DEFECTO,
 } from '@pel/core';
+import { en } from '../src/renderer/i18n/en';
+import { es } from '../src/renderer/i18n/es';
 import { faseDe, porcentaje, useIa } from '../src/renderer/stores/ia';
 import {
   claveEnmascarada,
   idDeNombre,
   soloGratuitos,
+  documentacionDePreset,
   PRESETS_COMPATIBLES,
   TIPOS_CON_CLAVE,
   URL_POR_DEFECTO,
@@ -344,6 +347,21 @@ describe('utilidades de IA en la nube', () => {
     expect(URL_POR_DEFECTO).toEqual(URL_BASE_POR_DEFECTO);
     expect(PRESETS_COMPATIBLES).toEqual(PRESETS_NUCLEO);
     expect([...TIPOS_CON_CLAVE].sort()).toEqual([...CON_CLAVE_NUCLEO].sort());
+  });
+
+  it('documentacionDePreset da el enlace https del preset y null si no hay', () => {
+    for (const p of PRESETS_COMPATIBLES) {
+      expect(documentacionDePreset(p.nombre)).toBe(p.documentacion);
+      expect(documentacionDePreset(p.nombre)).toMatch(/^https:\/\//);
+    }
+    expect(documentacionDePreset('')).toBeNull();
+    expect(documentacionDePreset(null)).toBeNull();
+    expect(documentacionDePreset('Inexistente')).toBeNull();
+  });
+
+  it('el diálogo del proveedor tiene su texto del enlace en es y en', () => {
+    expect(es.ia.dialogo.documentacion).toBeTruthy();
+    expect(en.ia.dialogo.documentacion).toBeTruthy();
   });
 
   it('filtro Solo gratuitos', () => {

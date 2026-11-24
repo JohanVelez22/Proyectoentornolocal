@@ -14,11 +14,13 @@ import {
 import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
 import type { ConfigProveedorIa, ProveedorIaPublico } from '../../shared/api';
+import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { useIa } from '../stores/ia';
 import {
   claveEnmascarada,
+  documentacionDePreset,
   idDeNombre,
   PRESETS_COMPATIBLES,
   TIPOS_CON_CLAVE,
@@ -65,6 +67,7 @@ const errorUrl = computed(() =>
 );
 const errorNombre = computed(() => (nombre.value.trim() ? null : t.nombre));
 const placeholderUrl = computed(() => URL_POR_DEFECTO[tipo.value] ?? 'https://');
+const documentacion = computed(() => documentacionDePreset(preset.value));
 const valido = computed(() => !errorUrl.value && !errorNombre.value);
 
 watch(mostrar, (v) => {
@@ -160,6 +163,12 @@ async function guardar(): Promise<void> {
   }
 }
 
+/** Abre la documentación del preset en el navegador externo (el mismo camino que otros enlaces). */
+function abrirDocumentacion(): void {
+  const u = documentacion.value;
+  if (u) void ejecutar('documentacion', () => api().sistema.abrirUrl(u));
+}
+
 function borrarClave(): void {
   if (props.proveedor) emit('borrarClave', props.proveedor);
 }
@@ -185,6 +194,13 @@ function borrarClave(): void {
         :feedback="t.presetAyuda"
       >
         <Desplegable v-model:value="preset" :options="opcionesPreset" clearable />
+        <a
+          v-if="documentacion"
+          class="doc"
+          :href="documentacion"
+          @click.prevent="abrirDocumentacion"
+          >{{ t.documentacion }}</a
+        >
       </NFormItem>
       <NFormItem
         :label="t.nombre"
@@ -262,6 +278,11 @@ function borrarClave(): void {
 <style scoped>
 .mono :deep(input) {
   font-family: var(--fuente-mono);
+}
+.doc {
+  margin-left: 12px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 .ayuda {
   margin: -6px 0 0;
