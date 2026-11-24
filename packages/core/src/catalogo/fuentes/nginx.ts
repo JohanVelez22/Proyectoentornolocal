@@ -49,8 +49,9 @@ export function versionesDeNginx(html: string): { version: string; soporte: Sopo
 
 /**
  * Nginx: `nginx.org/en/download.html` (mainline, stable y legacy) → `nginx.org/download/
- * nginx-<v>.zip`. nginx.org solo publica firmas PGP, no sumas: sin la lista fija, la versión
- * queda sin huella y el instalador pide confirmar.
+ * nginx-<v>.zip`. nginx.org solo publica firmas PGP, no sumas: la versión se lista sin huella y
+ * el instalador verifica `nginx-<v>.zip.asc` con el anillo fijado (D10) antes de extraer; sin
+ * firma válida no se instala.
  */
 export const fuenteNginx: FuenteVersiones = {
   servicio: 'nginx',

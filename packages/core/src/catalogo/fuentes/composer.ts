@@ -22,7 +22,8 @@ const IndiceComposer = z.record(z.string(), z.array(Entrada));
 
 /**
  * Composer: `getcomposer.org/versions` (estable, preview, 2.2 LTS, 1.x) y la huella de
- * `composer.phar.sha256sum` de cada versión listada (son pocas). Se ignoran los snapshots.
+ * `composer.phar.sha256sum` de cada versión listada (son pocas). Se ignoran los snapshots. Desde
+ * 2.1, el instalador además verifica `composer.phar.asc` con el anillo fijado (D10).
  */
 export const fuenteComposer: FuenteVersiones = {
   servicio: 'composer',

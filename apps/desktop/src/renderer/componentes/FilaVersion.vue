@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LockClosed, Star, StarOutline, Warning } from '@vicons/ionicons5';
+import { LockClosed, ShieldCheckmark, Star, StarOutline, Warning } from '@vicons/ionicons5';
 import { NButton, NIcon, NInputNumber, NSwitch, NTag, NTooltip } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
 import type { TablaVersiones } from '../../shared/api';
@@ -8,7 +8,7 @@ import type { FilaVersion } from '../stores/versiones';
 
 /**
  * Una versión en la pestaña "Versiones": marcas (instalada, encendida, con actualización, sin
- * huella), Instalar/Desinstalar, interruptor (si el servicio lo tiene), puerto de la instancia
+ * huella o con firma verificada), Instalar/Desinstalar, interruptor (si el servicio lo tiene), puerto de la instancia
  * y estrella de predeterminada.
  */
 const props = defineProps<{
@@ -72,6 +72,17 @@ const huellaTexto = computed(() =>
         ></template>
         {{ t.marcas.bloqueada }}
       </NTag>
+      <NTooltip v-if="f.huella === 'firmada'">
+        <template #trigger>
+          <NTag size="small" :bordered="false" type="success" class="huella">
+            <template #icon
+              ><NIcon><ShieldCheckmark /></NIcon
+            ></template>
+            {{ t.marcas.firmada }}
+          </NTag>
+        </template>
+        {{ t.ayudaFirmada }}
+      </NTooltip>
       <NTooltip v-if="huellaTexto && !f.instalada">
         <template #trigger>
           <NTag size="small" :bordered="false" type="warning" class="huella">

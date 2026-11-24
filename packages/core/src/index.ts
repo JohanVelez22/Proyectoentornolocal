@@ -22,7 +22,13 @@ export * from './catalogo/instalador';
 export * from './catalogo/vivo';
 export * from './catalogo/novedades';
 export * from './catalogo/tablaVersiones';
-export { huellaFuerte, normalizarHuella, HuellaSchema } from './catalogo/huellas';
+export {
+  fuenteFirmaDe,
+  huellaFuerte,
+  normalizarHuella,
+  HuellaSchema,
+  type FuenteFirma,
+} from './catalogo/huellas';
 export type { FuenteVersiones, ContextoFuente } from './catalogo/fuentes/tipos';
 export * from './procesos/sonda';
 export * from './procesos/supervisor';

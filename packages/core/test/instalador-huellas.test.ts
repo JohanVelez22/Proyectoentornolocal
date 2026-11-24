@@ -7,8 +7,11 @@ import { catalogo, type VersionDisponible } from '../src/catalogo/catalogo';
 import { Instalador } from '../src/catalogo/instalador';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { Rutas } from '../src/rutas';
+import { leerAnillo } from '../src/catalogo/pgp/anillos';
 import { fetchFalso, type Ruta } from './catalogo-falso';
+import { armar, clavePublica, firmar, nuevaClave } from './pgp-firmante';
 import { carpetaTemporal } from './temporales';
+import { zip } from './zip-prueba';
 
 let rutas: Rutas;
 const eventos = new Eventos<EventosNucleo>();
@@ -138,5 +141,204 @@ describe('Instalador: huellas', () => {
       inst.instalar({ ...vCf(), version: fija.version, url: fija.url }),
     ).rejects.toMatchObject({ codigo: 'catalogo.huella_no_coincide' });
     expect(ff.pedidas).toEqual([fija.url]);
+  });
+});
+
+describe('Instalador: firmas PGP (D10)', () => {
+  const T0 = 1_700_000_000;
+  const clave = nuevaClave('ed25519', T0);
+  const ajena = nuevaClave('ed25519', T0);
+  const ANILLO = leerAnillo(clavePublica(clave));
+  const ahora = () => new Date((T0 + 3600) * 1000);
+  const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
+
+  function firmado(rutasHttp: Record<string, Ruta>) {
+    const ff = fetchFalso(rutasHttp);
+    const inst = new Instalador(rutas, eventos, ff.f, {
+      esperasReintentoMs: [],
+      anillos: () => ANILLO,
+      ahora,
+    });
+    return { inst, ff };
+  }
+
+  const sinRastros = async (servicio: string, version: string) => {
+    expect(existsSync(rutas.bin(servicio, version))).toBe(false);
+    expect(await readdir(rutas.tmp()).catch(() => [])).toEqual([]);
+  };
+
+  // ---- Node: SHASUMS256.txt firmado
+  const BASE_NODE = 'https://nodejs.org/dist/v24.0.0/';
+  const ZIP_NODE = zip({ 'node-v24.0.0-win-x64/node.exe': 'NODE' });
+  const URL_ZIP_NODE = `${BASE_NODE}node-v24.0.0-win-x64.zip`;
+  const SUMAS = Buffer.from(
+    `${'0'.repeat(64)}  node-v24.0.0-linux-x64.tar.xz\n${sha(ZIP_NODE)}  node-v24.0.0-win-x64.zip\n`,
+  );
+  const vNode = (o: Partial<VersionDisponible> = {}): VersionDisponible => ({
+    servicio: 'node',
+    version: '24.0.0',
+    rama: '24',
+    url: URL_ZIP_NODE,
+    sha256: sha(ZIP_NODE),
+    huella: { algoritmo: 'sha256', valor: sha(ZIP_NODE) },
+    formato: 'zip',
+    subcarpeta: 'node-v24.0.0-win-x64',
+    ejecutable: 'node.exe',
+    origen: 'vivo',
+    ...o,
+  });
+  const rutasNode = (o: { sumas?: Buffer; firma?: Buffer | string | null } = {}) => {
+    const r: Record<string, Ruta> = {
+      [`${BASE_NODE}SHASUMS256.txt`]: o.sumas ?? SUMAS,
+      [URL_ZIP_NODE]: ZIP_NODE,
+    };
+    if (o.firma !== null) r[`${BASE_NODE}SHASUMS256.txt.sig`] = o.firma ?? firmar(clave, SUMAS);
+    return r;
+  };
+
+  it('Node: verifica SHASUMS256.txt.sig antes de bajar el zip e instala', async () => {
+    const { inst, ff } = firmado(rutasNode());
+    await inst.instalar(vNode());
+    expect(ff.pedidas).toEqual([
+      `${BASE_NODE}SHASUMS256.txt`,
+      `${BASE_NODE}SHASUMS256.txt.sig`,
+      URL_ZIP_NODE,
+    ]);
+    expect(await readFile(path.join(rutas.bin('node', '24.0.0'), 'node.exe'), 'utf8')).toBe('NODE');
+  });
+
+  it('Node sin huella listada usa la suma firmada (sin pedir confirmación)', async () => {
+    const { inst } = firmado(rutasNode());
+    await inst.instalar(vNode({ huella: null, sha256: null }));
+    expect(existsSync(path.join(rutas.bin('node', '24.0.0'), 'node.exe'))).toBe(true);
+  });
+
+  it('Node con .sig ausente → falla sin bajar el zip ni dejar nada', async () => {
+    const { inst, ff } = firmado(rutasNode({ firma: null }));
+    await expect(inst.instalar(vNode())).rejects.toMatchObject({
+      codigo: 'catalogo.firma_invalida',
+      datos: { servicio: 'node', version: '24.0.0' },
+    });
+    expect(ff.pedidas).not.toContain(URL_ZIP_NODE);
+    await sinRastros('node', '24.0.0');
+  });
+
+  it('Node con SHASUMS256.txt alterado, firma de otra clave o armadura rota → falla', async () => {
+    const alterado = Buffer.from(SUMAS.toString().replace('linux', 'linuz'));
+    const casos: [Record<string, Ruta>, string][] = [
+      [rutasNode({ sumas: alterado }), 'catalogo.firma_invalida'],
+      [rutasNode({ firma: firmar(ajena, SUMAS) }), 'catalogo.clave_desconocida'],
+      [
+        rutasNode({ firma: armar(firmar(clave, SUMAS), 'SIGNATURE', 'mal') }),
+        'catalogo.firma_invalida',
+      ],
+    ];
+    for (const [r, codigo] of casos) {
+      const { inst, ff } = firmado(r);
+      await expect(inst.instalar(vNode())).rejects.toMatchObject({ codigo });
+      expect(ff.pedidas).not.toContain(URL_ZIP_NODE);
+      await sinRastros('node', '24.0.0');
+    }
+  });
+
+  it('Node: la huella listada distinta de la firmada → huella_no_coincide sin bajar el zip', async () => {
+    const { inst, ff } = firmado(rutasNode());
+    const otra = 'a'.repeat(64);
+    await expect(
+      inst.instalar(vNode({ huella: { algoritmo: 'sha256', valor: otra }, sha256: otra })),
+    ).rejects.toMatchObject({ codigo: 'catalogo.huella_no_coincide' });
+    expect(ff.pedidas).not.toContain(URL_ZIP_NODE);
+  });
+
+  it('Node: lista firmada sin el zip → firma_invalida', async () => {
+    const otras = Buffer.from(`${'1'.repeat(64)}  node-v24.0.0-x86.zip\n`);
+    const { inst } = firmado(rutasNode({ sumas: otras, firma: firmar(clave, otras) }));
+    await expect(inst.instalar(vNode())).rejects.toMatchObject({
+      codigo: 'catalogo.firma_invalida',
+    });
+  });
+
+  // ---- Nginx: .zip.asc sobre el zip (sin suma publicada)
+  const ZIP_NGINX = zip({ 'nginx-1.29.9/nginx.exe': 'NGINX' });
+  const URL_NGINX = 'https://nginx.org/download/nginx-1.29.9.zip';
+  const vNginx: VersionDisponible = {
+    servicio: 'nginx',
+    version: '1.29.9',
+    rama: '1.29',
+    url: URL_NGINX,
+    sha256: null,
+    huella: null,
+    formato: 'zip',
+    subcarpeta: 'nginx-1.29.9',
+    ejecutable: 'nginx.exe',
+    origen: 'vivo',
+  };
+
+  it('Nginx con .asc válido no pide confirmación e instala', async () => {
+    const { inst, ff } = firmado({
+      [`${URL_NGINX}.asc`]: armar(firmar(clave, ZIP_NGINX)),
+      [URL_NGINX]: ZIP_NGINX,
+    });
+    await inst.instalar(vNginx);
+    expect(ff.pedidas).toEqual([`${URL_NGINX}.asc`, URL_NGINX]);
+    expect(await readFile(path.join(rutas.bin('nginx', '1.29.9'), 'nginx.exe'), 'utf8')).toBe(
+      'NGINX',
+    );
+  });
+
+  it('Nginx con .asc inválido falla sin instalar y sin dejar archivos (aunque se confirme)', async () => {
+    for (const o of [{}, { confirmarSinHuella: true as const }]) {
+      const { inst } = firmado({
+        [`${URL_NGINX}.asc`]: armar(firmar(clave, Buffer.from('otro zip'))),
+        [URL_NGINX]: ZIP_NGINX,
+      });
+      await expect(inst.instalar(vNginx, o)).rejects.toMatchObject({
+        codigo: 'catalogo.firma_invalida',
+      });
+      await sinRastros('nginx', '1.29.9');
+    }
+  });
+
+  it('Nginx con .asc ausente → falla antes de bajar el zip', async () => {
+    const { inst, ff } = firmado({ [URL_NGINX]: ZIP_NGINX });
+    await expect(inst.instalar(vNginx, { confirmarSinHuella: true })).rejects.toMatchObject({
+      codigo: 'catalogo.firma_invalida',
+    });
+    expect(ff.pedidas).toEqual([`${URL_NGINX}.asc`]);
+    await sinRastros('nginx', '1.29.9');
+  });
+
+  // ---- Composer: composer.phar.asc desde 2.1
+  const PHAR = Buffer.from('#!/usr/bin/env php composer de prueba');
+  const vComposer = (version: string): VersionDisponible => ({
+    servicio: 'composer',
+    version,
+    rama: version.split('.').slice(0, 2).join('.'),
+    url: `https://getcomposer.org/download/${version}/composer.phar`,
+    sha256: sha(PHAR),
+    huella: { algoritmo: 'sha256', valor: sha(PHAR) },
+    formato: 'archivo',
+    ejecutable: 'composer.phar',
+    origen: 'vivo',
+  });
+
+  it('Composer 2.11 verifica composer.phar.asc (binaria); 2.0 no tiene firma y usa su suma', async () => {
+    const v = vComposer('2.11.2');
+    const bien = firmado({ [`${v.url}.asc`]: firmar(clave, PHAR), [v.url]: PHAR });
+    await bien.inst.instalar(v);
+    expect(bien.ff.pedidas).toEqual([`${v.url}.asc`, v.url]);
+    expect(existsSync(path.join(rutas.bin('composer', '2.11.2'), 'composer.phar'))).toBe(true);
+
+    const malo = vComposer('2.11.3');
+    const mal = firmado({ [`${malo.url}.asc`]: firmar(clave, Buffer.from('x')), [malo.url]: PHAR });
+    await expect(mal.inst.instalar(malo)).rejects.toMatchObject({
+      codigo: 'catalogo.firma_invalida',
+    });
+    await sinRastros('composer', '2.11.3');
+
+    const viejo = vComposer('2.0.14');
+    const sinFirma = firmado({ [viejo.url]: PHAR });
+    await sinFirma.inst.instalar(viejo);
+    expect(sinFirma.ff.pedidas).toEqual([viejo.url]);
   });
 });

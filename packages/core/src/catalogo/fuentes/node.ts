@@ -59,7 +59,8 @@ export async function huellasDeUltimas(
 }
 
 /**
- * Node: `nodejs.org/dist/index.json` (rama = mayor; `lts` marca las LTS) y la huella de
+ * Node: `nodejs.org/dist/index.json` (rama = mayor; `lts` marca las LTS) y la huella (sin firmar,
+ * solo para mostrar; al instalar se vuelve a leer de `SHASUMS256.txt` con su firma, D10) de
  * `SHASUMS256.txt` de cada versión. Al listar se pide solo la de la última versión de cada rama
  * con soporte; el resto queda con `huellaDiferida` y se pide al instalar.
  */

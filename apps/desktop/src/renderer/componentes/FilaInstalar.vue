@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { CloudDownload } from '@vicons/ionicons5';
+import { fuenteFirmaDe } from '@pel/core';
 import { NButton, NIcon, NProgress, NTag, type SelectOption } from 'naive-ui';
 import Desplegable from './Desplegable.vue';
 import { computed, onMounted, ref } from 'vue';
@@ -22,8 +23,9 @@ const router = useRouter();
 const pestanaVersiones = useVersiones();
 const versiones = ref<VersionDisponible[] | null>(null);
 
-/** Huella fuerte (SHA-256/512, o se pide a la fuente al instalar). */
+/** Huella fuerte (SHA-256/512, o se pide a la fuente al instalar) o firma PGP de la fuente. */
 const conHuella = (v: VersionDisponible): boolean =>
+  fuenteFirmaDe(v) !== null ||
   v.huellaDiferida === true ||
   v.huella?.algoritmo === 'sha256' ||
   v.huella?.algoritmo === 'sha512' ||

@@ -111,6 +111,15 @@ describe('armarTabla (pestaña Versiones)', () => {
     expect(node.ramas.flatMap((r) => r.versiones).some((f) => f.encendida)).toBe(false);
   });
 
+  it('huella: Node, Nginx y Composer ≥ 2.1 publican firma PGP = firmada', () => {
+    const con = (servicio: VersionDisponible['servicio'], version: string) =>
+      huellaDeFila({ ...v(version, '1'), servicio });
+    expect(con('nginx', '1.30.6')).toBe('firmada');
+    expect(con('node', '24.22.3')).toBe('firmada');
+    expect(con('composer', '2.11.2')).toBe('firmada');
+    expect(con('composer', '2.0.14')).toBe('ninguna');
+  });
+
   it('huella: SHA-256/512 o diferida = fuerte, MD5 = débil, sin nada = ninguna', () => {
     expect(
       huellaDeFila(v('1', '1', { huella: { algoritmo: 'sha512', valor: 'a'.repeat(128) } })),

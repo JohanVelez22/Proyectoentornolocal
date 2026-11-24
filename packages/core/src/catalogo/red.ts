@@ -55,6 +55,14 @@ export async function pedirConSaltos(
  * manda más, se corta con `catalogo.respuesta_grande` sin guardar el resto.
  */
 export async function leerAcotado(res: Response, maxBytes = 5 * 1024 * 1024): Promise<string> {
+  return Buffer.from(await leerAcotadoBytes(res, maxBytes)).toString('utf8');
+}
+
+/** Como `leerAcotado`, pero devuelve los bytes tal cual (firmas binarias, sumas firmadas). */
+export async function leerAcotadoBytes(
+  res: Response,
+  maxBytes = 5 * 1024 * 1024,
+): Promise<Uint8Array> {
   const grande = (): ErrorWolf =>
     new ErrorWolf(
       'catalogo.respuesta_grande',
@@ -66,7 +74,7 @@ export async function leerAcotado(res: Response, maxBytes = 5 * 1024 * 1024): Pr
     await res.body?.cancel().catch(() => undefined);
     throw grande();
   }
-  if (!res.body) return '';
+  if (!res.body) return new Uint8Array();
   const lector = res.body.getReader();
   const trozos: Uint8Array[] = [];
   let total = 0;
@@ -81,5 +89,5 @@ export async function leerAcotado(res: Response, maxBytes = 5 * 1024 * 1024): Pr
   } finally {
     await lector.cancel().catch(() => undefined);
   }
-  return Buffer.concat(trozos).toString('utf8');
+  return Uint8Array.from(Buffer.concat(trozos));
 }

@@ -3,53 +3,13 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readdir, readFile, rm, mkdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { crc32 } from 'node:zlib';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Instalador } from '../src/catalogo/instalador';
 import type { VersionDisponible } from '../src/catalogo/catalogo';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { Rutas } from '../src/rutas';
 import type { ProgresoInstalacion } from '../src/tipos';
-
-/** Zip mínimo sin compresión (método 0). */
-function zip(archivos: Record<string, string>): Buffer {
-  const locales: Buffer[] = [];
-  const centrales: Buffer[] = [];
-  let offset = 0;
-  for (const [nombre, contenido] of Object.entries(archivos)) {
-    const n = Buffer.from(nombre);
-    const d = Buffer.from(contenido);
-    const crc = crc32(d);
-    const l = Buffer.alloc(30);
-    l.writeUInt32LE(0x04034b50, 0);
-    l.writeUInt16LE(20, 4);
-    l.writeUInt32LE(crc, 14);
-    l.writeUInt32LE(d.length, 18);
-    l.writeUInt32LE(d.length, 22);
-    l.writeUInt16LE(n.length, 26);
-    const c = Buffer.alloc(46);
-    c.writeUInt32LE(0x02014b50, 0);
-    c.writeUInt16LE(20, 4);
-    c.writeUInt16LE(20, 6);
-    c.writeUInt32LE(crc, 16);
-    c.writeUInt32LE(d.length, 20);
-    c.writeUInt32LE(d.length, 24);
-    c.writeUInt16LE(n.length, 28);
-    c.writeUInt32LE(offset, 42);
-    locales.push(l, n, d);
-    centrales.push(c, n);
-    offset += 30 + n.length + d.length;
-  }
-  const cd = Buffer.concat(centrales);
-  const fin = Buffer.alloc(22);
-  fin.writeUInt32LE(0x06054b50, 0);
-  const total = Object.keys(archivos).length;
-  fin.writeUInt16LE(total, 8);
-  fin.writeUInt16LE(total, 10);
-  fin.writeUInt32LE(cd.length, 12);
-  fin.writeUInt32LE(offset, 16);
-  return Buffer.concat([...locales, cd, fin]);
-}
+import { zip } from './zip-prueba';
 
 const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
 
@@ -84,29 +44,29 @@ beforeEach(async () => {
 });
 afterEach(() => rm(base, { recursive: true, force: true }));
 
-const nginxZip = zip({
-  'nginx-x/nginx.exe': 'EXE',
-  'nginx-x/conf/nginx.conf': 'conf',
+const zipGenerico = zip({
+  'mailpit-x/mailpit.exe': 'EXE',
+  'mailpit-x/LICENSE': 'conf',
 });
 
-const vNginx = (zipBuf: Buffer, sha256 = sha(zipBuf)): VersionDisponible => ({
-  servicio: 'nginx',
+const vGenerico = (zipBuf: Buffer, sha256 = sha(zipBuf)): VersionDisponible => ({
+  servicio: 'mailpit',
   version: '1.28.0',
-  url: 'https://nginx.org/download/nginx-1.28.0.zip',
+  url: 'https://github.com/axllent/mailpit/releases/download/v1.28.0/mailpit-windows-amd64.zip',
   sha256,
   formato: 'zip',
-  subcarpeta: 'nginx-x',
+  subcarpeta: 'mailpit-x',
 });
 
 describe('Instalador', () => {
-  it('instala nginx en bin/nginx/x y emite las fases en orden', async () => {
-    const inst = new Instalador(rutas, eventos, fetchDe(nginxZip));
-    await inst.instalar(vNginx(nginxZip));
-    expect(await readFile(path.join(rutas.bin('nginx', '1.28.0'), 'nginx.exe'), 'utf8')).toBe(
+  it('instala mailpit en bin/mailpit/<v> y emite las fases en orden', async () => {
+    const inst = new Instalador(rutas, eventos, fetchDe(zipGenerico));
+    await inst.instalar(vGenerico(zipGenerico));
+    expect(await readFile(path.join(rutas.bin('mailpit', '1.28.0'), 'mailpit.exe'), 'utf8')).toBe(
       'EXE',
     );
-    expect(await inst.instalado('nginx', '1.28.0')).toBe(true);
-    expect(await inst.instalados('nginx')).toEqual(['1.28.0']);
+    expect(await inst.instalado('mailpit', '1.28.0')).toBe(true);
+    expect(await inst.instalados('mailpit')).toEqual(['1.28.0']);
     const fases = [...new Set(progreso.map((p) => p.fase))];
     expect(fases).toEqual(['descargando', 'verificando', 'extrayendo', 'listo']);
     expect(progreso.at(-1)?.porcentaje).toBe(100);
@@ -116,9 +76,9 @@ describe('Instalador', () => {
   });
 
   it('rechaza servicio desconocido, URL no oficial y claves de carpeta peligrosas sin descargar', async () => {
-    const f = vi.fn(fetchDe(nginxZip));
+    const f = vi.fn(fetchDe(zipGenerico));
     const inst = new Instalador(rutas, eventos, f as unknown as typeof fetch);
-    const base = vNginx(nginxZip);
+    const base = vGenerico(zipGenerico);
     await expect(
       inst.instalar({ ...base, servicio: 'xyz' as VersionDisponible['servicio'] }),
     ).rejects.toThrow('Servicio no instalable');
@@ -139,12 +99,12 @@ describe('Instalador', () => {
   });
 
   it('con hash incorrecto no deja nada en bin/ y lanza', async () => {
-    const inst = new Instalador(rutas, eventos, fetchDe(nginxZip));
-    await expect(inst.instalar(vNginx(nginxZip, 'f'.repeat(64)))).rejects.toThrow(
+    const inst = new Instalador(rutas, eventos, fetchDe(zipGenerico));
+    await expect(inst.instalar(vGenerico(zipGenerico, 'f'.repeat(64)))).rejects.toThrow(
       'La descarga no coincide con la huella publicada',
     );
-    expect(existsSync(rutas.bin('nginx', '1.28.0'))).toBe(false);
-    expect(await inst.instalados('nginx')).toEqual([]);
+    expect(existsSync(rutas.bin('mailpit', '1.28.0'))).toBe(false);
+    expect(await inst.instalados('mailpit')).toEqual([]);
     expect(progreso.at(-1)).toMatchObject({
       fase: 'error',
       mensaje: 'La descarga no coincide con la huella publicada',
@@ -153,8 +113,8 @@ describe('Instalador', () => {
   });
 
   it('sin content-length no falla y llega a 100', async () => {
-    const inst = new Instalador(rutas, eventos, fetchDe(nginxZip, false));
-    await inst.instalar(vNginx(nginxZip));
+    const inst = new Instalador(rutas, eventos, fetchDe(zipGenerico, false));
+    await inst.instalar(vGenerico(zipGenerico));
     expect(progreso.filter((p) => p.fase === 'descargando').every((p) => p.porcentaje === 0)).toBe(
       true,
     );
@@ -162,19 +122,19 @@ describe('Instalador', () => {
   });
 
   it('es idempotente: si ya está instalado no descarga', async () => {
-    const inst = new Instalador(rutas, eventos, fetchDe(nginxZip));
-    await inst.instalar(vNginx(nginxZip));
+    const inst = new Instalador(rutas, eventos, fetchDe(zipGenerico));
+    await inst.instalar(vGenerico(zipGenerico));
     const f = (() => {
       throw new Error('no debía descargar');
     }) as unknown as typeof fetch;
-    await new Instalador(rutas, eventos, f).instalar(vNginx(nginxZip));
+    await new Instalador(rutas, eventos, f).instalar(vGenerico(zipGenerico));
   });
 
   it('instalado exige el ejecutable, no solo la carpeta', async () => {
-    await mkdir(rutas.bin('nginx', 'y'), { recursive: true });
-    const inst = new Instalador(rutas, eventos, fetchDe(nginxZip));
-    expect(await inst.instalado('nginx', 'y')).toBe(false);
-    expect(await inst.instalados('nginx')).toEqual([]);
+    await mkdir(rutas.bin('mailpit', 'y'), { recursive: true });
+    const inst = new Instalador(rutas, eventos, fetchDe(zipGenerico));
+    expect(await inst.instalado('mailpit', 'y')).toBe(false);
+    expect(await inst.instalados('mailpit')).toEqual([]);
   });
 
   it('cloudflared (exe) se copia a bin/cloudflared/<v>/cloudflared.exe', async () => {
@@ -198,21 +158,21 @@ describe('Instalador', () => {
     const inst = new Instalador(rutas, eventos, fetchDe(phar));
     await inst.instalar({
       servicio: 'composer',
-      version: '2.11.2',
-      url: 'https://getcomposer.org/download/2.11.2/composer.phar',
+      version: '2.0.14',
+      url: 'https://getcomposer.org/download/2.0.14/composer.phar',
       sha256: sha(phar),
       formato: 'archivo',
       ejecutable: 'composer.phar',
     });
     expect(
-      await readFile(path.join(rutas.bin('composer', '2.11.2'), 'composer.phar'), 'utf8'),
+      await readFile(path.join(rutas.bin('composer', '2.0.14'), 'composer.phar'), 'utf8'),
     ).toBe('#!/usr/bin/env php composer');
-    expect(await inst.instalado('composer', '2.11.2')).toBe(true);
-    expect(await inst.instalados('composer')).toEqual(['2.11.2']);
+    expect(await inst.instalado('composer', '2.0.14')).toBe(true);
+    expect(await inst.instalados('composer')).toEqual(['2.0.14']);
   });
 
   it('instalado(postgresql) comprueba pgsql/bin/postgres.exe', async () => {
-    const inst = new Instalador(rutas, eventos, fetchDe(nginxZip));
+    const inst = new Instalador(rutas, eventos, fetchDe(zipGenerico));
     const dir = rutas.bin('postgresql', '17.12');
     await mkdir(path.join(dir, 'pgsql', 'bin'), { recursive: true });
     expect(await inst.instalado('postgresql', '17.12')).toBe(false);
@@ -239,9 +199,9 @@ describe('Instalador', () => {
   });
 
   it('rechaza un ejecutable que escapa de la carpeta', async () => {
-    const inst = new Instalador(rutas, eventos, fetchDe(nginxZip));
+    const inst = new Instalador(rutas, eventos, fetchDe(zipGenerico));
     for (const ejecutable of ['../x.exe', '/abs.exe', 'C:/x.exe', 'a\\..\\b.exe']) {
-      await expect(inst.instalar({ ...vNginx(nginxZip), ejecutable })).rejects.toThrow(
+      await expect(inst.instalar({ ...vGenerico(zipGenerico), ejecutable })).rejects.toThrow(
         'Ejecutable no válido',
       );
     }
@@ -268,11 +228,11 @@ describe('Instalador', () => {
   });
 
   it('desinstalar borra la carpeta y tolera inexistentes', async () => {
-    const inst = new Instalador(rutas, eventos, fetchDe(nginxZip));
-    await inst.instalar(vNginx(nginxZip));
-    await inst.desinstalar('nginx', '1.28.0');
-    expect(await inst.instalado('nginx', '1.28.0')).toBe(false);
-    await inst.desinstalar('nginx', 'no-existe');
+    const inst = new Instalador(rutas, eventos, fetchDe(zipGenerico));
+    await inst.instalar(vGenerico(zipGenerico));
+    await inst.desinstalar('mailpit', '1.28.0');
+    expect(await inst.instalado('mailpit', '1.28.0')).toBe(false);
+    await inst.desinstalar('mailpit', 'no-existe');
   });
 
   it('si el cambio de PHP falla restaura lo anterior y reporta error', async () => {
@@ -309,7 +269,7 @@ describe('Instalador', () => {
   it('si un antivirus bloquea un momento la carpeta extraída (EPERM), reintenta y la instala', async () => {
     const { rename } = await import('node:fs/promises');
     let fallos = 0;
-    const inst = new Instalador(rutas, eventos, fetchDe(nginxZip), {
+    const inst = new Instalador(rutas, eventos, fetchDe(zipGenerico), {
       renombrar: async (de, a) => {
         if (fallos < 3) {
           fallos++;
@@ -320,9 +280,9 @@ describe('Instalador', () => {
         await rename(de, a);
       },
     });
-    await inst.instalar(vNginx(nginxZip));
+    await inst.instalar(vGenerico(zipGenerico));
     expect(fallos).toBe(3);
-    expect(await inst.instalado('nginx', '1.28.0')).toBe(true);
+    expect(await inst.instalado('mailpit', '1.28.0')).toBe(true);
     expect(progreso.at(-1)?.fase).toBe('listo');
     expect(await readdir(rutas.tmp())).toEqual([]);
   });
@@ -338,7 +298,7 @@ describe('Instalador', () => {
       tiempoSinDatosMs: 50,
       esperasReintentoMs: [],
     });
-    await expect(inst.instalar(vNginx(nginxZip))).rejects.toThrow(
+    await expect(inst.instalar(vGenerico(zipGenerico))).rejects.toThrow(
       'La descarga se detuvo: sin datos durante 0 s',
     );
     expect(progreso.at(-1)).toMatchObject({ fase: 'error' });
@@ -348,8 +308,8 @@ describe('Instalador', () => {
 
 describe('Instalador: reintentos de descarga (QA 7)', () => {
   const grande = zip({
-    'nginx-x/nginx.exe': 'EXE'.repeat(5000),
-    'nginx-x/conf/nginx.conf': 'conf',
+    'mailpit-x/mailpit.exe': 'EXE'.repeat(5000),
+    'mailpit-x/LICENSE': 'conf',
   });
   const mitad = Math.floor(grande.length / 2);
   /** Respuesta que entrega `datos` y después se corta (como "terminated" de undici). */
@@ -381,9 +341,9 @@ describe('Instalador: reintentos de descarga (QA 7)', () => {
       });
     }) as unknown as typeof fetch;
     const inst = new Instalador(rutas, eventos, f, opciones);
-    await inst.instalar(vNginx(grande));
+    await inst.instalar(vGenerico(grande));
     expect(pedidos).toEqual([null, `bytes=${mitad}-`]);
-    expect(await inst.instalado('nginx', '1.28.0')).toBe(true);
+    expect(await inst.instalado('mailpit', '1.28.0')).toBe(true);
     expect(progreso.at(-1)?.fase).toBe('listo');
   });
 
@@ -395,9 +355,9 @@ describe('Instalador: reintentos de descarga (QA 7)', () => {
       return new Response(grande, { headers: { 'content-length': String(grande.length) } });
     }) as unknown as typeof fetch;
     const inst = new Instalador(rutas, eventos, f, opciones);
-    await inst.instalar(vNginx(grande));
+    await inst.instalar(vGenerico(grande));
     expect(n).toBe(2);
-    expect(await inst.instalado('nginx', '1.28.0')).toBe(true);
+    expect(await inst.instalado('mailpit', '1.28.0')).toBe(true);
   });
 
   it('HTTP 503 y error de red se reintentan; 404 no', async () => {
@@ -408,7 +368,7 @@ describe('Instalador: reintentos de descarga (QA 7)', () => {
       if (n === 2) throw new TypeError('fetch failed');
       return new Response(grande, { headers: { 'content-length': String(grande.length) } });
     }) as unknown as typeof fetch;
-    await new Instalador(rutas, eventos, f, opciones).instalar(vNginx(grande));
+    await new Instalador(rutas, eventos, f, opciones).instalar(vGenerico(grande));
     expect(n).toBe(3);
 
     let m = 0;
@@ -418,7 +378,7 @@ describe('Instalador: reintentos de descarga (QA 7)', () => {
     }) as unknown as typeof fetch;
     await expect(
       new Instalador(rutas, eventos, no, opciones).instalar({
-        ...vNginx(grande),
+        ...vGenerico(grande),
         version: '1.28.1',
       }),
     ).rejects.toThrow(/HTTP 404/);
@@ -432,7 +392,7 @@ describe('Instalador: reintentos de descarga (QA 7)', () => {
       return cortada(grande.subarray(0, 10), grande.length);
     }) as unknown as typeof fetch;
     await expect(
-      new Instalador(rutas, eventos, f, opciones).instalar(vNginx(grande)),
+      new Instalador(rutas, eventos, f, opciones).instalar(vGenerico(grande)),
     ).rejects.toThrow(/terminated/);
     expect(n).toBe(4);
     expect(await readdir(rutas.tmp())).toEqual([]);
@@ -452,7 +412,7 @@ describe('Instalador: reintentos de descarga (QA 7)', () => {
       });
     }) as unknown as typeof fetch;
     await expect(
-      new Instalador(rutas, eventos, f, opciones).instalar(vNginx(grande)),
+      new Instalador(rutas, eventos, f, opciones).instalar(vGenerico(grande)),
     ).rejects.toThrow('La descarga no coincide con la huella publicada');
   });
 });

@@ -1,5 +1,5 @@
 import { createHash, randomBytes, type Hash } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 import {
   copyFile,
   mkdir,
@@ -22,8 +22,24 @@ import { ejecutorPorDefecto } from '../plataforma/win';
 import { renombrarConReintentos } from '../https/confianza';
 import { catalogo, ejecutableDe, huellaDeEntrada, type VersionDisponible } from './catalogo';
 import { claveValida, rutaRelativaSegura, urlOficial } from './comun';
-import { huellaDe, huellaFuerte, type AlgoritmoHuella, type Huella } from './huellas';
-import { pedirConSaltos } from './red';
+import {
+  fuenteFirmaDe,
+  huellaDe,
+  huellaFuerte,
+  type AlgoritmoHuella,
+  type FuenteFirma,
+  type Huella,
+} from './huellas';
+import { sumaDe } from './fuentes/tipos';
+import { anillo as anilloFijado } from './pgp/anillos';
+import type { ClavePublica } from './pgp/paquetes';
+import {
+  esResultado,
+  iniciarVerificacion,
+  verificarFirmaSeparada,
+  type FalloFirma,
+} from './pgp/verificar';
+import { leerAcotadoBytes, pedirConSaltos } from './red';
 import { InstaladorRust } from '../runtimes/rust';
 import type { Ejecutor, PlataformaCompleta } from '../plataforma/tipos';
 
@@ -43,6 +59,35 @@ export interface OpcionesInstalador {
   plataforma?: Pick<PlataformaCompleta, 'limpiarEntradaRustup'>;
   /** Aviso al usuario (código de `avisos.*`) por algo que el instalador no tocó. */
   alAvisar?: (codigo: 'avisos.rustup_entrada_ajena') => void;
+  /** Anillos PGP (solo pruebas). Por defecto, los fijados en la app (`catalogo/claves`). */
+  anillos?: (fuente: FuenteFirma) => readonly ClavePublica[];
+  /** Reloj para el vencimiento de firmas y claves (solo pruebas). */
+  ahora?: () => Date;
+}
+
+/** Tamaño máximo de una firma separada (una real pesa menos de 1 KB). */
+const MAX_FIRMA_BYTES = 64 * 1024;
+/** Tamaño máximo de `SHASUMS256.txt` (el de Node pesa unos 4 KB). */
+const MAX_SUMAS_BYTES = 512 * 1024;
+/** Plazo para bajar una firma o una lista de sumas. */
+const PLAZO_FIRMA_MS = 30_000;
+/** Respuestas de "no existe": la fuente no publicó la firma. */
+const NO_PUBLICADO = new Set([403, 404, 410]);
+
+const MENSAJE_FIRMA: Record<FalloFirma['codigo'], string> = {
+  'catalogo.firma_invalida': 'La firma PGP de la descarga no es válida',
+  'catalogo.firma_no_soportada': 'La firma PGP de la descarga usa un formato no soportado',
+  'catalogo.clave_desconocida': 'La firma PGP es de una clave que no está en el anillo fijado',
+  'catalogo.firma_vencida': 'La firma PGP o su clave están vencidas',
+};
+
+/** Error con código de una firma que no pasó (con servicio y versión para el texto). */
+function errorFirma(v: VersionDisponible, r: FalloFirma): ErrorWolf {
+  return new ErrorWolf(
+    r.codigo,
+    `${MENSAJE_FIRMA[r.codigo]} (${v.servicio} ${v.version}): ${r.detalle.slice(0, 160)}`,
+    { servicio: v.servicio, version: v.version },
+  );
 }
 
 export interface OpcionesInstalar {
@@ -234,12 +279,36 @@ export class Instalador {
         return;
       }
     }
-    // Antes de descargar nada: sin huella fuerte, solo con la confirmación del usuario.
-    const huella = huellaParaInstalar(v);
-    if (huellaFuerte(huella) || o.confirmarSinHuella === true) {
+    // Firma PGP (D10): si la fuente la publica, se baja y se comprueba lo que se pueda **antes**
+    // de descargar el paquete. Falla cerrado: sin firma, o con una que no valida, no se instala
+    // (la confirmación "sin huella" no lo salta).
+    let huella = huellaParaInstalar(v);
+    const fuenteFirma = fuenteFirmaDe(v);
+    let firma: Uint8Array | null = null;
+    if (fuenteFirma) {
+      try {
+        if (fuenteFirma === 'node') {
+          huella = await this.huellaFirmadaNode(v, huella);
+        } else {
+          firma = await this.bajarPequeno(v, `${v.url}.asc`, MAX_FIRMA_BYTES, 'la firma');
+          const previa = iniciarVerificacion({
+            firma,
+            anillo: this.anilloDe(fuenteFirma),
+            ahora: this.ahora(),
+          });
+          if (esResultado(previa)) throw errorFirma(v, previa);
+        }
+      } catch (e) {
+        this.emitir(v, 'error', 0, e instanceof Error ? e.message : String(e));
+        throw e;
+      }
+    }
+    // Antes de descargar nada: sin huella fuerte ni firma, solo con la confirmación del usuario.
+    const verificable = huellaFuerte(huella) || firma !== null;
+    if (verificable || o.confirmarSinHuella === true) {
       await this.antesDeInstalar?.(v.servicio);
     }
-    if (!huellaFuerte(huella) && o.confirmarSinHuella !== true) {
+    if (!verificable && o.confirmarSinHuella !== true) {
       const e = huella
         ? new ErrorWolf(
             'catalogo.huella_debil',
@@ -276,6 +345,7 @@ export class Instalador {
       if (huella && hash !== huella.valor.toLowerCase()) {
         throw new ErrorWolf('catalogo.huella_no_coincide', MSG_HASH);
       }
+      if (firma && fuenteFirma) await this.verificarArchivo(v, fuenteFirma, firma, archivo);
 
       this.emitir(v, 'extrayendo', 100);
       await mkdir(stage, { recursive: true });
@@ -335,6 +405,99 @@ export class Instalador {
       if (reemplazado && !conservarPrevio)
         await rm(previo, { recursive: true, force: true }).catch(() => undefined);
     }
+  }
+
+  private anilloDe(fuente: FuenteFirma): readonly ClavePublica[] {
+    return this.opciones.anillos ? this.opciones.anillos(fuente) : anilloFijado(fuente);
+  }
+
+  private ahora(): Date {
+    return this.opciones.ahora ? this.opciones.ahora() : new Date();
+  }
+
+  /**
+   * Baja un archivo pequeño de la fuente (firma o lista de sumas), con plazo, tamaño acotado y
+   * cada redirección dentro de `HOSTS_PERMITIDOS`. Si la fuente responde que no existe, la firma
+   * no está publicada: `catalogo.firma_invalida`.
+   */
+  private async bajarPequeno(
+    v: VersionDisponible,
+    url: string,
+    maxBytes: number,
+    que: string,
+  ): Promise<Uint8Array> {
+    const res = await pedirConSaltos(
+      this.f,
+      url,
+      { signal: AbortSignal.timeout(PLAZO_FIRMA_MS) },
+      urlOficial,
+    );
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
+      if (NO_PUBLICADO.has(res.status)) {
+        throw new ErrorWolf(
+          'catalogo.firma_invalida',
+          `La fuente no publicó ${que} de ${v.servicio} ${v.version}: no se instala sin verificarla`,
+          { servicio: v.servicio, version: v.version },
+        );
+      }
+      throw new Error(`No se pudo bajar ${que} de ${v.servicio} ${v.version} (HTTP ${res.status})`);
+    }
+    return leerAcotadoBytes(res, maxBytes);
+  }
+
+  /**
+   * Node: `SHASUMS256.txt` firmado con `SHASUMS256.txt.sig`. La suma del zip sale de la lista
+   * **después** de verificar la firma; si el catálogo traía otra, la descarga se rechaza.
+   */
+  private async huellaFirmadaNode(v: VersionDisponible, listada: Huella | null): Promise<Huella> {
+    const base = new URL('.', v.url).toString();
+    const sumas = await this.bajarPequeno(
+      v,
+      `${base}SHASUMS256.txt`,
+      MAX_SUMAS_BYTES,
+      'SHASUMS256.txt',
+    );
+    const firma = await this.bajarPequeno(
+      v,
+      `${base}SHASUMS256.txt.sig`,
+      MAX_FIRMA_BYTES,
+      'la firma',
+    );
+    const r = verificarFirmaSeparada({
+      datos: sumas,
+      firma,
+      anillo: this.anilloDe('node'),
+      ahora: this.ahora(),
+    });
+    if (!r.ok) throw errorFirma(v, r);
+    const archivo = decodeURIComponent(new URL(v.url).pathname.split('/').pop() ?? '');
+    const valor = sumaDe(Buffer.from(sumas).toString('utf8'), archivo);
+    if (!valor) {
+      throw new ErrorWolf(
+        'catalogo.firma_invalida',
+        `La lista firmada de ${v.servicio} ${v.version} no incluye ${archivo}`,
+        { servicio: v.servicio, version: v.version },
+      );
+    }
+    if (listada?.algoritmo === 'sha256' && listada.valor.toLowerCase() !== valor) {
+      throw new ErrorWolf('catalogo.huella_no_coincide', MSG_HASH);
+    }
+    return { algoritmo: 'sha256', valor };
+  }
+
+  /** Verifica la firma separada sobre el archivo descargado, leyéndolo en trozos. */
+  private async verificarArchivo(
+    v: VersionDisponible,
+    fuente: FuenteFirma,
+    firma: Uint8Array,
+    archivo: string,
+  ): Promise<void> {
+    const ver = iniciarVerificacion({ firma, anillo: this.anilloDe(fuente), ahora: this.ahora() });
+    if (esResultado(ver)) throw errorFirma(v, ver);
+    for await (const trozo of createReadStream(archivo)) ver.actualizar(trozo as Buffer);
+    const r = ver.terminar();
+    if (!r.ok) throw errorFirma(v, r);
   }
 
   /**

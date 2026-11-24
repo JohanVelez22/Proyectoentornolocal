@@ -6,7 +6,7 @@ import type {
   VersionDisponible,
 } from './catalogo';
 import { compararVersionesDesc } from './comun';
-import { huellaFuerte } from './huellas';
+import { fuenteFirmaDe, huellaFuerte } from './huellas';
 import type { ListadoVersiones } from './vivo';
 
 /** Servicios con pestaña "Versiones" (spec §3.11). */
@@ -64,8 +64,11 @@ export const INTERRUPTOR: Record<ServicioVersiones, TipoInterruptor> = {
   rust: 'ninguno',
 };
 
-/** Huella de una fila: fuerte (SHA-256/512, o se pide al instalar), débil (MD5) o ninguna. */
-export type HuellaFila = 'fuerte' | 'debil' | 'ninguna';
+/**
+ * Huella de una fila: firmada (la fuente publica una firma PGP que se verifica al instalar, D10),
+ * fuerte (SHA-256/512, o se pide al instalar), débil (MD5) o ninguna.
+ */
+export type HuellaFila = 'fuerte' | 'debil' | 'ninguna' | 'firmada';
 
 export interface FilaVersion {
   version: string;
@@ -115,6 +118,7 @@ export interface EntradaTabla {
 }
 
 export function huellaDeFila(v: VersionDisponible): HuellaFila {
+  if (fuenteFirmaDe(v)) return 'firmada';
   if (huellaFuerte(v.huella) || v.huellaDiferida === true) return 'fuerte';
   if (v.huella?.algoritmo === 'md5') return 'debil';
   if (!v.huella && v.sha256) return 'fuerte';

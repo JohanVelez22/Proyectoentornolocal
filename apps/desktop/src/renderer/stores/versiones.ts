@@ -109,14 +109,19 @@ export function origenCatalogo(
   return { tipo: t.origen === 'cache' ? 'cache' : 'vivo', horas };
 }
 
+/** La descarga se verifica: huella fuerte o firma PGP de la fuente (D10). */
+export function verificada(h: FilaVersion['huella']): boolean {
+  return h === 'fuerte' || h === 'firmada';
+}
+
 /**
- * Versión verificada (huella fuerte) que se puede ofrecer en lugar de una sin huella: la más
+ * Versión verificada (huella fuerte o firmada) que se puede ofrecer en lugar de una sin huella: la más
  * nueva de la misma rama (la lista fija trae SHA-256), o null.
  */
 export function alternativaVerificada(t: TablaVersiones, version: string): string | null {
   const rama = ramaDe(t, version);
   const r = t.ramas.find((x) => x.rama === rama);
-  return r?.versiones.find((f) => f.version !== version && f.huella === 'fuerte')?.version ?? null;
+  return r?.versiones.find((f) => f.version !== version && verificada(f.huella))?.version ?? null;
 }
 
 /** Acción que trae un aviso `version-nueva` (Task 17). */
@@ -237,10 +242,10 @@ export const useVersiones = defineStore('versiones', () => {
   const fila = (version: string): FilaVersion | undefined =>
     filas.value.find((f) => f.version === version);
 
-  /** Instalar: sin huella fuerte primero pasa por `DialogoSinHuella`. */
+  /** Instalar: sin huella fuerte ni firma, primero pasa por `DialogoSinHuella`. */
   async function pedirInstalar(version: string): Promise<void> {
     const f = fila(version);
-    if (f && f.huella !== 'fuerte') {
+    if (f && !verificada(f.huella)) {
       dialogo.value = {
         tipo: 'sinHuella',
         servicio: servicio.value,
@@ -354,7 +359,7 @@ export const useVersiones = defineStore('versiones', () => {
       instancia,
       actual,
       nueva,
-      sinHuella: !!destino && destino.huella !== 'fuerte',
+      sinHuella: !!destino && !verificada(destino.huella),
       plan,
     };
   }
@@ -368,7 +373,7 @@ export const useVersiones = defineStore('versiones', () => {
       tipo: 'nuevaRama',
       servicio: s as IdServicioDatos,
       nueva,
-      sinHuella: !!destino && destino.huella !== 'fuerte',
+      sinHuella: !!destino && !verificada(destino.huella),
       origenes: (tabla.value?.instancias ?? []).map((i) => i.id),
     };
   }

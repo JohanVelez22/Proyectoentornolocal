@@ -199,6 +199,12 @@ describe('tabla de versiones (funciones puras)', () => {
     expect(alternativaVerificada(tablaMysql(), '8.4.15')).toBe('8.4.14');
   });
 
+  it('una versión con firma verificada cuenta como verificada (D10)', () => {
+    const t = tablaMysql();
+    t.ramas[0]!.versiones[1]!.huella = 'firmada';
+    expect(alternativaVerificada(t, '8.4.15')).toBe('8.4.14');
+  });
+
   it('acción de un aviso: solo servicio, versión e instancia bien formados', () => {
     expect(
       argsDeAviso([
@@ -278,6 +284,20 @@ describe('store de versiones', () => {
       servicio: 'mysql',
       version: '8.4.14',
     });
+  });
+
+  it('instalar una versión firmada no abre el diálogo de "sin huella"', async () => {
+    const api = apiFalsa(() => {
+      const t = tablaMysql();
+      t.ramas[0]!.versiones[0]!.huella = 'firmada';
+      return t;
+    });
+    const v = useVersiones();
+    v.elegirServicio('mysql');
+    await v.cargar();
+    await v.pedirInstalar('8.4.15');
+    expect(v.dialogo).toBeNull();
+    expect(api.instalador.instalar).toHaveBeenCalledWith({ servicio: 'mysql', version: '8.4.15' });
   });
 
   it('desinstalar nunca llama a borrarDatos', async () => {
