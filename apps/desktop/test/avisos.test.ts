@@ -146,6 +146,17 @@ describe('textoAviso', () => {
     expect(`${en.titulo} ${en.cuerpo}`).toContain('8.4.15');
   });
 
+  it('sin huella publicada: el texto lo dice (es/en), en parche y en rama (T17-M1)', () => {
+    const datos = { servicio: 'mysql', actual: '8.4.13', nueva: '8.4.15', huella: 'sin' };
+    for (const codigo of ['avisos.version_nueva_sin_huella', 'avisos.rama_nueva_sin_huella']) {
+      const es = textoAviso('es', { tipo: 'version-nueva', codigo, datos });
+      expect(es.cuerpo).toContain('sin huella publicada');
+      expect(es.cuerpo).toContain('8.4.15');
+      const en = textoAviso('en', { tipo: 'version-nueva', codigo, datos });
+      expect(en.cuerpo).toContain('no published checksum');
+    }
+  });
+
   it('no deja pasar rutas ni textos largos de los datos', () => {
     const t = textoAviso('es', {
       tipo: 'servicio-caido',

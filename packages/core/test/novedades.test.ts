@@ -174,7 +174,7 @@ describe('Novedades.publicar', () => {
     actual: '8.4.13',
     nueva: '8.4.15',
     tipo: 'parche' as const,
-    huellaFuerte: false,
+    huellaFuerte: true,
   };
 
   it('publica un aviso version-nueva con la acción de actualizar (nunca instala)', async () => {
@@ -187,11 +187,27 @@ describe('Novedades.publicar', () => {
       datos: { servicio: 'mysql', actual: '8.4.13', nueva: '8.4.15' },
       accion: {
         ruta: 'servicios.versiones',
-        args: [{ servicio: 'mysql', version: '8.4.15', instancia: 'mysql@8.4' }],
+        args: [{ servicio: 'mysql', version: '8.4.15', instancia: 'mysql@8.4', actualizar: true }],
       },
     });
     await novedades().publicar([{ ...parche, servicio: 'postgresql', tipo: 'rama' }]);
     expect(deVersiones()[0]?.codigo).toBe('avisos.rama_nueva');
+  });
+
+  it('sin huella fuerte: dice "sin huella publicada" y no ofrece el atajo de actualizar (T17-M1)', async () => {
+    await novedades().publicar([{ ...parche, huellaFuerte: false }]);
+    expect(deVersiones()[0]).toMatchObject({
+      codigo: 'avisos.version_nueva_sin_huella',
+      datos: { servicio: 'mysql', nueva: '8.4.15', huella: 'sin' },
+      accion: {
+        ruta: 'servicios.versiones',
+        args: [{ servicio: 'mysql', version: '8.4.15', instancia: 'mysql@8.4', actualizar: false }],
+      },
+    });
+    await novedades().publicar([
+      { ...parche, servicio: 'postgresql', tipo: 'rama', huellaFuerte: false },
+    ]);
+    expect(deVersiones()[0]?.codigo).toBe('avisos.rama_nueva_sin_huella');
   });
 
   it('como mucho un aviso por servicio y día; otro servicio sí avisa', async () => {
@@ -248,9 +264,10 @@ describe('Nucleo: revisión de versiones nuevas', () => {
     try {
       await esperarA(() => n.avisos.lista().some((a) => a.tipo === 'version-nueva'));
       const a = n.avisos.lista().find((x) => x.tipo === 'version-nueva');
+      // MySQL no publica huella fuerte (la página de descargas no responde): el aviso lo dice.
       expect(a).toMatchObject({
-        codigo: 'avisos.version_nueva',
-        datos: { servicio: 'mysql', actual: '8.4.13', nueva: '8.4.15' },
+        codigo: 'avisos.version_nueva_sin_huella',
+        datos: { servicio: 'mysql', actual: '8.4.13', nueva: '8.4.15', huella: 'sin' },
       });
       // Solo sondeos HEAD e índices: ninguna descarga de un binario.
       const descargas = ff.pedidas.filter((u, i) => {

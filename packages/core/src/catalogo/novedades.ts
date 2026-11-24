@@ -189,15 +189,31 @@ export class Novedades {
         continue;
       }
       if (delServicio.some((a) => a.datos['nueva'] === n.nueva)) continue;
+      // Sin huella fuerte el aviso lo dice y no lleva el atajo "Actualizar": solo abre la
+      // pestaña de versiones, donde instalar pide la confirmación que explica el riesgo.
+      const codigo = n.tipo === 'rama' ? 'avisos.rama_nueva' : 'avisos.version_nueva';
       const aviso = this.d.centro.publicar({
         tipo: 'version-nueva',
         nivel: 'info',
-        codigo: n.tipo === 'rama' ? 'avisos.rama_nueva' : 'avisos.version_nueva',
+        codigo: n.huellaFuerte ? codigo : `${codigo}_sin_huella`,
         // `fuente` separa los servicios en la agrupación del centro (mismo tipo y fuente).
-        datos: { fuente: n.servicio, servicio: n.servicio, actual: n.actual, nueva: n.nueva },
+        datos: {
+          fuente: n.servicio,
+          servicio: n.servicio,
+          actual: n.actual,
+          nueva: n.nueva,
+          ...(n.huellaFuerte ? {} : { huella: 'sin' }),
+        },
         accion: {
           ruta: 'servicios.versiones',
-          args: [{ servicio: n.servicio, version: n.nueva, instancia: n.instancia }],
+          args: [
+            {
+              servicio: n.servicio,
+              version: n.nueva,
+              instancia: n.instancia,
+              actualizar: n.huellaFuerte,
+            },
+          ],
         },
       });
       hechos.add(n.servicio);

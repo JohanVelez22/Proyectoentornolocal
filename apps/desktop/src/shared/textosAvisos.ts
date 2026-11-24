@@ -83,6 +83,14 @@ const ES: Diccionario = {
       titulo: `Hay una versión nueva de ${limpio(d['servicio'], 'un servicio')}`,
       cuerpo: `${limpio(d['nueva'], 'Una versión nueva')} ya está publicada (tiene ${limpio(d['actual'], 'otra')}). Ábrala en Servicios → Versiones para actualizar; nada se instala solo.`,
     }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `Hay una versión nueva de ${limpio(d['servicio'], 'un servicio')}`,
+      cuerpo: `${limpio(d['nueva'], 'Una versión nueva')} ya está publicada (tiene ${limpio(d['actual'], 'otra')}), sin huella publicada: no se puede verificar la descarga. Revísela en Servicios → Versiones; instalarla pide su confirmación.`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `Nueva rama de ${limpio(d['servicio'], 'un servicio')}`,
+      cuerpo: `${limpio(d['nueva'], 'Una rama nueva')} es más nueva que la que usa (${limpio(d['actual'], '?')}), sin huella publicada: no se puede verificar la descarga. Revísela en Servicios → Versiones; instalarla pide su confirmación.`,
+    }),
     'avisos.rama_nueva': (d) => ({
       titulo: `Nueva rama de ${limpio(d['servicio'], 'un servicio')}`,
       cuerpo: `${limpio(d['nueva'], 'Una rama nueva')} es más nueva que la que usa (${limpio(d['actual'], '?')}). Se instala aparte, sin tocar sus datos.`,
@@ -182,6 +190,14 @@ const EN: Diccionario = {
     'avisos.version_nueva': (d) => ({
       titulo: `A new version of ${limpio(d['servicio'], 'a service')} is available`,
       cuerpo: `${limpio(d['nueva'], 'A new version')} has been published (you have ${limpio(d['actual'], 'another one')}). Open Services → Versions to update; nothing is installed automatically.`,
+    }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `A new version of ${limpio(d['servicio'], 'a service')} is available`,
+      cuerpo: `${limpio(d['nueva'], 'A new version')} has been published (you have ${limpio(d['actual'], 'another one')}), with no published checksum: the download cannot be verified. Review it in Services → Versions; installing it asks for your confirmation.`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `New ${limpio(d['servicio'], 'service')} branch`,
+      cuerpo: `${limpio(d['nueva'], 'A new branch')} is newer than the one you use (${limpio(d['actual'], '?')}), with no published checksum: the download cannot be verified. Review it in Services → Versions; installing it asks for your confirmation.`,
     }),
     'avisos.rama_nueva': (d) => ({
       titulo: `New ${limpio(d['servicio'], 'service')} branch`,
