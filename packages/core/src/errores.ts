@@ -35,6 +35,7 @@ export const PARAMETROS_ERROR = {
   'servicios.restauracion_fallo': ['nombre', 'fallida', 'respaldo'],
   'servicios.otra_rama': ['nombre', 'version'],
   'servicios.misma_version': ['id', 'version'],
+  'servicios.instancia_bloqueada': ['nombre', 'fallida', 'respaldo'],
   // instancias de los servicios de datos
   'instancias.id_invalido': [],
   'instancias.no_existe': ['id'],
@@ -42,6 +43,9 @@ export const PARAMETROS_ERROR = {
   'instancias.una_sola': ['nombre'],
   'instancias.ultima': ['id'],
   'instancias.sin_puerto_libre': [],
+  'instancias.confirmacion': ['id'],
+  'instancias.sin_datos': ['id'],
+  'instancias.respaldo_no_existe': ['id'],
   'instalador.version_en_uso': ['servicio', 'version', 'instancia'],
   // bases de datos
   'bd.encender_servicio': ['nombre'],

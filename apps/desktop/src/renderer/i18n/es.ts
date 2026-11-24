@@ -116,12 +116,17 @@ export const es = {
         'La versión nueva no arrancó y no se pudieron devolver los datos de {nombre}. No se encendió nada: los datos tocados están en {fallida} y el respaldo en {respaldo}.',
       'servicios.otra_rama': '{nombre} {version} es de otra rama: créela como instancia nueva.',
       'servicios.misma_version': '{id} ya usa la versión {version}.',
+      'servicios.instancia_bloqueada':
+        '{nombre} está bloqueada: una actualización no pudo devolver sus datos. Los datos tocados están en {fallida} y el respaldo en {respaldo}. Resuélvalo en Servicios → Versiones antes de encenderla.',
       'instancias.id_invalido': 'El identificador de la instancia no es válido.',
       'instancias.no_existe': 'No existe la instancia {id}.',
       'instancias.existe': 'Ya existe la instancia {id}.',
       'instancias.una_sola': '{nombre} admite una sola instancia.',
       'instancias.ultima': '{id} es la única instancia: no se puede quitar.',
       'instancias.sin_puerto_libre': 'No se encontró un puerto libre para la instancia.',
+      'instancias.confirmacion': 'Para continuar escriba "{id}".',
+      'instancias.sin_datos': '{id} no tiene datos en su carpeta: elija un respaldo para devolver.',
+      'instancias.respaldo_no_existe': 'No existe ese respaldo de {id}.',
       'instalador.version_en_uso':
         'No se puede desinstalar {servicio} {version}: la usa la instancia {instancia}.',
       'bd.encender_servicio': 'Encienda {nombre} para administrar sus bases.',

@@ -104,4 +104,9 @@ export interface Instancias {
   quitar(id: IdInstancia): Promise<void>;
   /** Borra solo `data/<servicio>/<clave>`; exige `confirmacion === id`. */
   borrarDatos(id: IdInstancia, confirmacion: string): Promise<void>;
+  /**
+   * Resuelve el bloqueo tras una devolución fallida (`confirmacion === id`): con `respaldo` (su
+   * sello) devuelve esa copia; sin él acepta la carpeta actual si está inicializada.
+   */
+  desbloquear(id: IdInstancia, o: { confirmacion: string; respaldo?: string }): Promise<void>;
 }

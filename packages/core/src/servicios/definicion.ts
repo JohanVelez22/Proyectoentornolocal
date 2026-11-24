@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { ErrorWolf } from '../errores';
 import { existsSync } from 'node:fs';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AlmacenCredenciales } from '../almacen';
 import type { Ejecutor, Plataforma } from '../plataforma/tipos';
@@ -15,6 +15,7 @@ import {
   type ClaveCredencial,
   type Config,
   type Credenciales,
+  type BloqueoInstancia,
   type EstadoInstancia,
   type EstadoServicio,
   type IdInstancia,
@@ -103,6 +104,13 @@ export const MARCA_INICIALIZADO = '.pel-inicializado';
  * vacía. Si sigue ahí sin `.pel-inicializado`, un intento anterior quedó a medias.
  */
 export const SUFIJO_CREANDO = '.pel-creando';
+
+/**
+ * Marca junto a la carpeta de datos de una instancia bloqueada (`data/<servicio>/<clave>.bloqueada`):
+ * una actualización no pudo devolver sus datos y no se debe arrancar hasta que el usuario lo
+ * resuelva (`desbloquear`).
+ */
+export const SUFIJO_BLOQUEO = '.bloqueada';
 
 export const NOMBRE_SERVICIO: Record<IdServicioDatos, string> = {
   mysql: 'MySQL',
@@ -258,6 +266,7 @@ export class ServiciosDatos {
       cambiarPuerto: (id, p) => this.cambiarPuerto(id, p),
       predeterminar: (id) => this.predeterminar(id),
       autoIniciar: (id, v) => this.autoIniciar(id, v),
+      desbloquear: (id, o) => this.desbloquear(id, o),
       quitar: (id) => this.quitar(id),
       borrarDatos: (id, c) => this.borrarDatos(id, c),
     };
@@ -463,6 +472,40 @@ export class ServiciosDatos {
     return this.d.rutas.datos(servicio, clave, () => clave);
   }
 
+  /** Marca de instancia bloqueada: data/<servicio>/<clave>.bloqueada (fuera de la carpeta). */
+  private rutaBloqueo(servicio: IdServicioDatos, clave: string): string {
+    return `${this.carpetaInstancia(servicio, clave)}${SUFIJO_BLOQUEO}`;
+  }
+
+  /**
+   * Bloqueo de una instancia (tras `servicios.restauracion_fallo`), o null. Una marca ilegible
+   * sigue bloqueando (con las rutas vacías): ante la duda no se arranca nada.
+   */
+  async bloqueo(servicio: IdServicioDatos, clave: string): Promise<BloqueoInstancia | null> {
+    const ruta = this.rutaBloqueo(servicio, clave);
+    if (!existsSync(ruta)) return null;
+    try {
+      const x = JSON.parse(await readFile(ruta, 'utf8')) as Partial<BloqueoInstancia>;
+      return {
+        fecha: typeof x.fecha === 'string' ? x.fecha : '',
+        fallida: typeof x.fallida === 'string' ? x.fallida : '',
+        respaldo: typeof x.respaldo === 'string' ? x.respaldo : '',
+      };
+    } catch {
+      return { fecha: '', fallida: '', respaldo: '' };
+    }
+  }
+
+  private async exigirNoBloqueada(inst: InstanciaResuelta): Promise<void> {
+    const b = await this.bloqueo(inst.servicio, inst.clave);
+    if (!b) return;
+    throw new ErrorWolf(
+      'servicios.instancia_bloqueada',
+      `${inst.id} está bloqueada: una actualización no pudo devolver sus datos. Los datos tocados están en ${b.fallida || '?'} y el respaldo en ${b.respaldo || '?'}. Resuélvalo en Servicios → Versiones antes de encenderla.`,
+      { nombre: inst.id, fallida: b.fallida, respaldo: b.respaldo },
+    );
+  }
+
   /**
    * Credenciales guardadas o, la primera vez, generadas y guardadas. Un servicio = las de su
    * instancia predeterminada.
@@ -629,6 +672,8 @@ export class ServiciosDatos {
     cfg: Config,
   ): Promise<void> {
     if (this.vivo(inst.proceso)) return;
+    // Nunca se arranca (ni se inicializa una carpeta vacía) una instancia bloqueada.
+    await this.exigirNoBloqueada(inst);
     const version = await this.binariosDe(def, inst);
     this.cacheDuenos = null;
     await this.verificarPuertos(def, inst, cfg);
@@ -811,6 +856,10 @@ export class ServiciosDatos {
           { cause: e },
         );
       }
+      // Borrar los datos (confirmado) también resuelve el bloqueo: la instancia empieza de cero.
+      if (esIdInstancia(id)) {
+        await rm(this.rutaBloqueo(servicio, parsearInstancia(id).clave), { force: true });
+      }
     });
   }
 
@@ -828,6 +877,7 @@ export class ServiciosDatos {
       tieneDatos: existsSync(
         path.join(this.carpetaInstancia(inst.servicio, inst.clave), MARCA_INICIALIZADO),
       ),
+      bloqueo: await this.bloqueo(inst.servicio, inst.clave),
     };
   }
 
@@ -1083,6 +1133,7 @@ export class ServiciosDatos {
     return this.enCola(this.servicioDe(ref), async () => {
       const cfg = await this.d.leerConfig();
       const { inst } = await this.objetivoOImplicito(ref, cfg);
+      if (valor) await this.exigirNoBloqueada(inst);
       await this.d.modificarConfig((c) => {
         const s = c.servicios.datos[inst.servicio];
         if (inst.implicita) s.autoIniciar = valor;
@@ -1182,6 +1233,89 @@ export class ServiciosDatos {
   ): Promise<void> {
     await this.iniciarSinCola(def, inst, await this.d.leerConfig());
     await this.esperarSalud(inst, consulta);
+  }
+
+  /**
+   * Bloquea la instancia: escribe la marca y le quita el arranque automático. Si la marca no se
+   * puede escribir se registra (el error de la actualización sale igual).
+   */
+  private async bloquear(inst: InstanciaResuelta, b: BloqueoInstancia): Promise<void> {
+    try {
+      await writeFile(this.rutaBloqueo(inst.servicio, inst.clave), JSON.stringify(b), 'utf8');
+    } catch (e) {
+      console.error(`No se pudo marcar ${inst.id} como bloqueada:`, e);
+    }
+    await this.d
+      .modificarConfig((c) => {
+        const s = c.servicios.datos[inst.servicio];
+        if (inst.implicita) s.autoIniciar = false;
+        else {
+          const i = s.instancias?.[inst.clave];
+          if (i) i.autoIniciar = false;
+          reflejarPredeterminada(c, inst.servicio);
+        }
+      })
+      .catch((e: unknown) => console.error(`No se pudo quitar el arranque de ${inst.id}:`, e));
+  }
+
+  /**
+   * Resuelve el bloqueo de una instancia, con confirmación escrita (`confirmacion === id`):
+   * - con `respaldo` (sello de `<clave>.respaldo-<sello>`): copia ese respaldo a su sitio,
+   *   verificado, y aparta la carpeta actual a `<clave>.fallida-<fecha>` (nunca la borra);
+   * - sin `respaldo`: acepta la carpeta actual tal como está, que debe existir e inicializada
+   *   (nunca se desbloquea para inicializar una carpeta vacía).
+   * No enciende nada.
+   */
+  desbloquear(id: IdInstancia, o: { confirmacion: string; respaldo?: string }): Promise<void> {
+    const { servicio, clave } = parsearInstancia(id);
+    return this.enCola(servicio, async () => {
+      if (o.confirmacion !== id) {
+        throw new ErrorWolf('instancias.confirmacion', `Para continuar escriba "${id}".`, { id });
+      }
+      const carpeta = this.carpetaInstancia(servicio, clave);
+      let copia: string | null = null;
+      if (o.respaldo !== undefined) {
+        copia = `${carpeta}.respaldo-${o.respaldo}`;
+        const valido =
+          typeof o.respaldo === 'string' &&
+          /^\d{8}-\d{6}$/.test(o.respaldo) &&
+          (await stat(copia)
+            .then((x) => x.isDirectory())
+            .catch(() => false));
+        if (!valido) {
+          throw new ErrorWolf('instancias.respaldo_no_existe', `No existe ese respaldo de ${id}.`, {
+            id,
+          });
+        }
+      }
+      const def = this.requerir(servicio);
+      const inst = (await this.resolver(def, await this.d.leerConfig())).find((i) => i.id === id);
+      if (!inst)
+        throw new ErrorWolf('instancias.no_existe', `No existe la instancia ${id}.`, { id });
+      if (this.vivo(inst.proceso)) await this.detenerSinCola(def, inst);
+      if (copia) {
+        try {
+          await devolverCopia(carpeta, copia, selloFecha(this.ahora), this.d.fsCopia);
+        } catch (x) {
+          throw new ErrorWolf(
+            'servicios.restauracion_fallo',
+            `No se pudo devolver el respaldo de ${id} (${mensajeDe(x).slice(0, 200)}). Sigue bloqueada.`,
+            {
+              nombre: id,
+              fallida: x instanceof ErrorDevolucion ? x.fallida : carpeta,
+              respaldo: copia,
+            },
+          );
+        }
+      } else if (!existsSync(path.join(carpeta, MARCA_INICIALIZADO))) {
+        throw new ErrorWolf(
+          'instancias.sin_datos',
+          `${id} no tiene datos en su carpeta: elija un respaldo para devolver.`,
+          { id },
+        );
+      }
+      await rm(this.rutaBloqueo(servicio, clave), { force: true });
+    });
   }
 
   /**
@@ -1321,6 +1455,11 @@ export class ServiciosDatos {
           } catch (x) {
             // Sin la copia devuelta y verificada no se arranca nada encima de datos dudosos.
             const fallida = x instanceof ErrorDevolucion ? x.fallida : carpeta;
+            await this.bloquear(inst, {
+              fecha: this.ahora.toISOString(),
+              fallida,
+              respaldo: copia,
+            });
             throw new ErrorWolf(
               'servicios.restauracion_fallo',
               `${def.nombre} ${version} no arrancó y no se pudieron devolver los datos de ${id} (${mensajeDe(x).slice(0, 200)}). No se encendió nada: los datos que tocó la versión nueva están en ${fallida} y el respaldo en ${copia}.`,

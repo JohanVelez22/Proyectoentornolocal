@@ -473,6 +473,19 @@ export interface EstadoInstancia {
   autoIniciar: boolean;
   /** Su carpeta de datos existe y está inicializada. */
   tieneDatos: boolean;
+  /**
+   * Bloqueada tras una actualización que no pudo devolver sus datos: no arranca hasta que el
+   * usuario lo resuelva. null si no lo está.
+   */
+  bloqueo?: BloqueoInstancia | null;
+}
+
+export interface BloqueoInstancia {
+  fecha: string;
+  /** Dónde quedaron los datos que tocó la versión nueva. */
+  fallida: string;
+  /** Copia en frío de antes de actualizar. */
+  respaldo: string;
 }
 
 export interface EstadoServicio {

@@ -118,12 +118,17 @@ export const en: Textos = {
       'servicios.otra_rama':
         '{nombre} {version} belongs to another branch: create it as a new instance.',
       'servicios.misma_version': '{id} already uses version {version}.',
+      'servicios.instancia_bloqueada':
+        '{nombre} is blocked: an update could not restore its data. The touched data is in {fallida} and the backup in {respaldo}. Resolve it in Services → Versions before starting it.',
       'instancias.id_invalido': 'The instance identifier is not valid.',
       'instancias.no_existe': 'Instance {id} does not exist.',
       'instancias.existe': 'Instance {id} already exists.',
       'instancias.una_sola': '{nombre} supports a single instance.',
       'instancias.ultima': '{id} is the only instance: it cannot be removed.',
       'instancias.sin_puerto_libre': 'No free port was found for the instance.',
+      'instancias.confirmacion': 'To continue, type "{id}".',
+      'instancias.sin_datos': '{id} has no data in its folder: choose a backup to restore.',
+      'instancias.respaldo_no_existe': 'That backup of {id} does not exist.',
       'instalador.version_en_uso':
         'Cannot uninstall {servicio} {version}: instance {instancia} uses it.',
       'bd.encender_servicio': 'Start {nombre} to manage its databases.',

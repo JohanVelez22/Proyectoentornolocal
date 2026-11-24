@@ -29,6 +29,7 @@ let listarFallaCon: string | null;
 let restaurarFalla: Set<string>;
 let contenidoVolcado: (base: string) => string;
 let copiar: (de: string, a: string) => Promise<void>;
+let reloj: Date;
 
 const SELLO = '20261123-100000';
 const datosDe = (clave: string): string => path.join(base, 'data', 'mysql', clave);
@@ -154,7 +155,7 @@ function crear(): Servicios {
       espacioLibre: async () => libre,
       copiar: (de, a) => copiar(de, a),
     },
-    reloj: () => new Date('2026-11-23T10:00:00'),
+    reloj: () => reloj,
     plazoSaludMs: 200,
   });
 }
@@ -175,6 +176,7 @@ beforeEach(async () => {
   restaurarFalla = new Set();
   contenidoVolcado = (b) => `-- ${b}`;
   copiar = (de, a) => cp(de, a, { recursive: true, errorOnExist: true, force: false });
+  reloj = new Date('2026-11-23T10:00:00');
 });
 
 /** Instancia mysql@8.4 encendida con datos de un cliente. */
@@ -460,5 +462,112 @@ describe('desinstalar', () => {
     await inst.desinstalar('mysql', '8.0.44');
     expect(existsSync(rutas.bin('mysql', '8.0.44'))).toBe(false);
     expect(await snapshot(path.join(base, 'data'))).toEqual(antes);
+  });
+});
+
+describe('instancia bloqueada tras una devolución fallida (T18-N1)', () => {
+  /** Devolución que falla después de apartar la carpeta: data/mysql/8.4 queda sin datos. */
+  async function bloquear(s: Servicios): Promise<void> {
+    fallan.add('8.4.14');
+    const real = copiar;
+    copiar = async (de, a) => {
+      if (a.includes('.restaurando-')) throw new Error('disco lleno');
+      await real(de, a);
+    };
+    await preparar(s);
+    cfg.servicios.datos.mysql.autoIniciar = true;
+    await s.datos.autoIniciar('mysql@8.4' as IdInstancia, true);
+    await expect(s.datos.actualizar('mysql@8.4', '8.4.14')).rejects.toMatchObject({
+      codigo: 'servicios.restauracion_fallo',
+    });
+    copiar = real;
+    eventos.length = 0;
+  }
+
+  it('queda bloqueada, sin arranque automático, y no se puede iniciar', async () => {
+    const s = crear();
+    await bloquear(s);
+    expect(existsSync(`${datosDe('8.4')}.bloqueada`)).toBe(true);
+    expect(cfg.servicios.datos.mysql.instancias?.['8.4']?.autoIniciar).toBe(false);
+    const e = await s.datos.iniciar('mysql@8.4' as IdInstancia).catch((x: unknown) => x);
+    expect(e).toMatchObject({
+      codigo: 'servicios.instancia_bloqueada',
+      datos: {
+        nombre: 'mysql@8.4',
+        fallida: datosDe('8.4'),
+        respaldo: `${datosDe('8.4')}.respaldo-${SELLO}`,
+      },
+    });
+    // Ni por el servicio (predeterminada) ni por el arranque automático.
+    await expect(s.datos.iniciar('mysql')).rejects.toMatchObject({
+      codigo: 'servicios.instancia_bloqueada',
+    });
+    expect(await s.datos.iniciarAutomaticos()).toEqual([]);
+    expect(eventos.filter((x) => x.startsWith('iniciar:'))).toEqual([]);
+    await expect(s.datos.autoIniciar('mysql@8.4' as IdInstancia, true)).rejects.toMatchObject({
+      codigo: 'servicios.instancia_bloqueada',
+    });
+    const [inst] = await s.datos.listaInstancias('mysql');
+    expect(inst!.bloqueo).toMatchObject({ respaldo: `${datosDe('8.4')}.respaldo-${SELLO}` });
+  });
+
+  it('nunca inicializa una carpeta vacía de una instancia bloqueada', async () => {
+    const s = crear();
+    await bloquear(s);
+    // Simula el peor caso: la carpeta de datos no está (quedó apartada).
+    await rm(datosDe('8.4'), { recursive: true, force: true });
+    await expect(s.datos.iniciar('mysql@8.4' as IdInstancia)).rejects.toMatchObject({
+      codigo: 'servicios.instancia_bloqueada',
+    });
+    expect(existsSync(datosDe('8.4'))).toBe(false);
+  });
+
+  it('resolver sin respaldo exige confirmación y datos inicializados en su sitio', async () => {
+    const s = crear();
+    await bloquear(s);
+    await expect(
+      s.datos.instancias.desbloquear('mysql@8.4' as IdInstancia, { confirmacion: 'mysql' }),
+    ).rejects.toMatchObject({ codigo: 'instancias.confirmacion' });
+    await rm(datosDe('8.4'), { recursive: true, force: true });
+    await expect(
+      s.datos.instancias.desbloquear('mysql@8.4' as IdInstancia, { confirmacion: 'mysql@8.4' }),
+    ).rejects.toMatchObject({ codigo: 'instancias.sin_datos' });
+    expect(existsSync(`${datosDe('8.4')}.bloqueada`)).toBe(true);
+  });
+
+  it('resolver con la carpeta actual la desbloquea (sin encenderla)', async () => {
+    const s = crear();
+    await bloquear(s);
+    await s.datos.instancias.desbloquear('mysql@8.4' as IdInstancia, {
+      confirmacion: 'mysql@8.4',
+    });
+    expect(existsSync(`${datosDe('8.4')}.bloqueada`)).toBe(false);
+    expect(eventos.filter((x) => x.startsWith('iniciar:'))).toEqual([]);
+    await s.datos.iniciar('mysql@8.4' as IdInstancia);
+    expect(estados.get('mysql@8.4')).toBe('encendido');
+  });
+
+  it('resolver restaurando un respaldo elegido: verifica la copia y aparta la carpeta tocada', async () => {
+    const s = crear();
+    await bloquear(s);
+    reloj = new Date('2026-11-24T08:00:00');
+    await s.datos.instancias.desbloquear('mysql@8.4' as IdInstancia, {
+      confirmacion: 'mysql@8.4',
+      respaldo: SELLO,
+    });
+    expect(await readFile(path.join(datosDe('8.4'), 'ibdata1'), 'utf8')).toBe('creado con 8.4.13');
+    expect(
+      await readFile(path.join(`${datosDe('8.4')}.fallida-20261124-080000`, 'ibdata1'), 'utf8'),
+    ).toBe('tocado por 8.4.14');
+    // El respaldo sigue entero y la marca desapareció.
+    expect(existsSync(`${datosDe('8.4')}.respaldo-${SELLO}`)).toBe(true);
+    expect(existsSync(`${datosDe('8.4')}.bloqueada`)).toBe(false);
+    // Un sello que no existe o mal formado no se usa.
+    await expect(
+      s.datos.instancias.desbloquear('mysql@8.4' as IdInstancia, {
+        confirmacion: 'mysql@8.4',
+        respaldo: '../x',
+      }),
+    ).rejects.toMatchObject({ codigo: 'instancias.respaldo_no_existe' });
   });
 });
