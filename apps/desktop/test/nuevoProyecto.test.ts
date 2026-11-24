@@ -1,10 +1,13 @@
 import { TIPOS_GENERADOR } from '@pel/core';
 import { describe, expect, it } from 'vitest';
+import type { Plantilla } from '../src/shared/api';
 import { textos } from '../src/renderer/i18n';
 import {
   accionDeError,
   aPedido,
+  formularioDePlantilla,
   formularioInicial,
+  infoDe,
   nombreBaseDe,
   opcionesBase,
   ordenarRamas,
@@ -13,6 +16,7 @@ import {
   sePuedeOmitirPaso,
   sitioNuevo,
   TIPOS_PROYECTO,
+  tipoGeneradorDe,
   validarPedido,
   type FormProyecto,
 } from '../src/renderer/utilidades/nuevoProyecto';
@@ -290,5 +294,105 @@ describe('versiones', () => {
   });
   it('Python: de versiones completas a ramas sin repetir', () => {
     expect(ramasPython(['3.12.7', '3.13.1', '3.13.0', 'raro'])).toEqual(['3.13', '3.12']);
+  });
+});
+
+describe('proyecto desde una plantilla propia', () => {
+  const pl = (extra: Partial<Plantilla> = {}): Plantilla => ({
+    id: 'tienda-a1b2c3',
+    nombre: 'Tienda',
+    creada: '2026-11-24T00:00:00.000Z',
+    tipo: 'laravel',
+    receta: [],
+    php: '8.3',
+    phpIni: {},
+    extensiones: [],
+    runtimes: {},
+    reglasNginx: null,
+    motorBase: 'mysql',
+    moduloAsgi: null,
+    conArchivos: true,
+    archivoEsquema: 'esquema.sql',
+    sha256: { archivos: 'a'.repeat(64), esquema: 'b'.repeat(64) },
+    ...extra,
+  });
+  const dePlantilla = (p: Plantilla, extra: Partial<FormProyecto> = {}): FormProyecto => ({
+    ...formularioDePlantilla(p),
+    nombre: 'nueva',
+    carpetaPadre: 'C:\\Proyectos',
+    objetivoBd: 'mysql@8.4',
+    nombreBase: 'nueva',
+    ...extra,
+  });
+
+  it('el formulario parte de la plantilla: su PHP y su base', () => {
+    const f = formularioDePlantilla(pl());
+    expect(f.plantilla?.id).toBe('tienda-a1b2c3');
+    expect(f.php).toBe('8.3');
+    expect(f.conBase).toBe(true);
+    expect(infoDe(f)).toMatchObject({ usaPhp: true, usaBase: true, usaPython: false });
+    // Una plantilla sin base no pide base.
+    expect(infoDe(formularioDePlantilla(pl({ motorBase: null }))).usaBase).toBe(false);
+  });
+
+  it('un pedido completo es válido y manda solo el id de la plantilla', () => {
+    const f = dePlantilla(pl());
+    expect(validarPedido(f, t)).toBeNull();
+    const p = aPedido(f);
+    expect(p.plantilla).toBe('tienda-a1b2c3');
+    expect(p.base).toEqual({ instancia: 'mysql@8.4', nombre: 'nueva' });
+    expect(p.opciones).toEqual({});
+    expect(JSON.stringify(p)).not.toContain('esquema');
+  });
+
+  it('un generador no manda plantilla', () => {
+    expect(aPedido(form()).plantilla).toBeUndefined();
+  });
+
+  it('una plantilla de WordPress no pide la huella débil (no descarga nada)', () => {
+    const f = dePlantilla(pl({ tipo: 'wordpress' }));
+    expect(validarPedido(f, t)).toBeNull();
+    expect(aPedido(f).opciones).toEqual({});
+  });
+
+  it('el esquema solo va a un motor de su familia', () => {
+    expect(validarPedido(dePlantilla(pl(), { objetivoBd: 'mariadb@11.4' }), t)).toBeNull();
+    expect(validarPedido(dePlantilla(pl(), { objetivoBd: 'postgresql@17' }), t)).toBe(
+      t.motorNoVale,
+    );
+    const pg = pl({ motorBase: 'postgresql', archivoEsquema: 'esquema.dump' });
+    expect(validarPedido(dePlantilla(pg, { objetivoBd: 'mysql@8.4' }), t)).toBe(t.motorNoVale);
+    expect(validarPedido(dePlantilla(pg, { objetivoBd: 'postgresql@17' }), t)).toBeNull();
+  });
+
+  it('las opciones de base se limitan a la familia del esquema', () => {
+    const servicios = [
+      { id: 'mysql', nombre: 'MySQL', instancias: [] },
+      { id: 'mariadb', nombre: 'MariaDB', instancias: [] },
+      { id: 'postgresql', nombre: 'PostgreSQL', instancias: [] },
+    ] as never[];
+    expect(opcionesBase('laravel', false, servicios, pl()).map((o) => o.motor)).toEqual([
+      'mysql',
+      'mariadb',
+    ]);
+    expect(
+      opcionesBase('laravel', false, servicios, pl({ motorBase: 'postgresql' })).map(
+        (o) => o.motor,
+      ),
+    ).toEqual(['postgresql']);
+    expect(opcionesBase('laravel', false, servicios, pl({ motorBase: null }))).toEqual([]);
+  });
+
+  it('el resumen conserva el nombre del proyecto y su carpeta', () => {
+    const r = resumen(dePlantilla(pl()));
+    expect(r.find((l) => l.clave === 'sitio')?.valor).toBe('nueva');
+    expect(r.find((l) => l.clave === 'carpeta')?.valor).toBe('C:\\Proyectos\\nueva');
+    expect(r.find((l) => l.clave === 'base')?.valor).toBe('nueva (mysql@8.4)');
+  });
+
+  it('el tipo de generador de una plantilla es el suyo o, si no hay, el estático', () => {
+    expect(tipoGeneradorDe('laravel')).toBe('laravel');
+    expect(tipoGeneradorDe('proxy')).toBe('estatico');
+    expect(tipoGeneradorDe('node')).toBe('estatico');
   });
 });

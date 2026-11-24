@@ -7,6 +7,7 @@ import type {
   IdInstancia,
   MotorBd,
   PedidoProyectoIpc,
+  Plantilla,
   TipoGenerador,
 } from '../../shared/api';
 import type { Textos } from '../i18n';
@@ -92,6 +93,25 @@ export const TIPOS_PROYECTO: readonly InfoTipo[] = [
 export const infoTipo = (tipo: TipoGenerador): InfoTipo =>
   TIPOS_PROYECTO.find((x) => x.id === tipo) ?? TIPOS_PROYECTO[0]!;
 
+/** Tipo de generador que corresponde al tipo de sitio de una plantilla (el núcleo lo ignora). */
+export const tipoGeneradorDe = (tipoSitio: string): TipoGenerador =>
+  TIPOS_PROYECTO.find((x) => x.id === tipoSitio)?.id ?? 'estatico';
+
+/**
+ * Lo que una plantilla permite elegir: PHP si lo traía, Python si es FastAPI y una base solo si
+ * guardó el esquema de una (en un motor de su misma familia).
+ */
+export function infoDePlantilla(pl: Plantilla): InfoTipo {
+  return {
+    id: tipoGeneradorDe(pl.tipo),
+    usaPhp: pl.php !== null,
+    usaPython: pl.tipo === 'fastapi',
+    usaBase: pl.motorBase !== null,
+    motor: pl.motorBase,
+    archivoEnv: pl.tipo === 'wordpress' ? null : '.env',
+  };
+}
+
 /** Lo que el asistente va llenando. `objetivoBd` es una instancia (`mysql@8.4`) o un motor suelto. */
 export interface FormProyecto {
   tipo: TipoGenerador;
@@ -108,7 +128,17 @@ export interface FormProyecto {
   pgvector: boolean;
   /** Casilla de WordPress: el usuario acepta la huella SHA-1 (débil). */
   confirmarHuellaDebil: boolean;
+  /** Plantilla propia de la que se crea (null: un generador). */
+  plantilla: Plantilla | null;
 }
+
+/** Info del tipo del formulario: la de la plantilla si se parte de una. */
+export const infoDe = (f: Pick<FormProyecto, 'tipo' | 'plantilla'>): InfoTipo =>
+  f.plantilla ? infoDePlantilla(f.plantilla) : infoTipo(f.tipo);
+
+/** Generador del formulario (null si se parte de una plantilla: no hay huella ni starter kit). */
+const generadorDe = (f: Pick<FormProyecto, 'tipo' | 'plantilla'>): TipoGenerador | null =>
+  f.plantilla ? null : f.tipo;
 
 export function formularioInicial(tipo: TipoGenerador): FormProyecto {
   return {
@@ -124,6 +154,17 @@ export function formularioInicial(tipo: TipoGenerador): FormProyecto {
     symfonyWebapp: false,
     pgvector: false,
     confirmarHuellaDebil: false,
+    plantilla: null,
+  };
+}
+
+/** Formulario de un proyecto que parte de una plantilla propia. */
+export function formularioDePlantilla(pl: Plantilla): FormProyecto {
+  return {
+    ...formularioInicial(tipoGeneradorDe(pl.tipo)),
+    plantilla: pl,
+    php: pl.php,
+    conBase: pl.motorBase !== null,
   };
 }
 
@@ -141,7 +182,7 @@ export const nombreBaseDe = (nombre: string): string => nombre.replace(/-/g, '_'
 export const motorDeObjetivo = (o: string): MotorBd => o.split('@')[0] as MotorBd;
 
 /** El tipo crea de verdad una base con este formulario. */
-export const usaBase = (f: FormProyecto): boolean => infoTipo(f.tipo).usaBase && f.conBase;
+export const usaBase = (f: FormProyecto): boolean => infoDe(f).usaBase && f.conBase;
 
 /** Primer error del formulario (texto ya traducido) o null si se puede pedir. */
 export function validarPedido(
@@ -152,28 +193,37 @@ export function validarPedido(
   if (!nombre) return t.nombreVacio;
   if (!nombreValido(nombre)) return t.nombreInvalido;
   if (!f.carpetaPadre) return t.sinCarpeta;
-  const info = infoTipo(f.tipo);
+  const info = infoDe(f);
   if (info.usaPhp && !f.php) return t.sinPhp;
   if (info.usaPython && !f.python) return t.sinPython;
   if (usaBase(f)) {
     if (!f.objetivoBd) return t.sinInstancia;
     const motor = motorDeObjetivo(f.objetivoBd);
-    if (f.tipo === 'wordpress' && motor !== 'mysql' && motor !== 'mariadb') return t.motorNoVale;
+    if (generadorDe(f) === 'wordpress' && motor !== 'mysql' && motor !== 'mariadb') {
+      return t.motorNoVale;
+    }
+    // El esquema de una plantilla solo entra en un motor de su familia.
+    if (f.plantilla && (f.plantilla.motorBase === 'postgresql') !== (motor === 'postgresql')) {
+      return t.motorNoVale;
+    }
     if (f.pgvector && motor !== 'postgresql') return t.pgvectorMotor;
     if (!REGLA_NOMBRE[motor]?.test(f.nombreBase)) return t.baseInvalida;
   }
-  if (f.tipo === 'wordpress' && !f.confirmarHuellaDebil) return t.huellaDebil;
+  if (generadorDe(f) === 'wordpress' && !f.confirmarHuellaDebil) return t.huellaDebil;
   return null;
 }
 
 /** Pedido para `proyectos.crear`: la carpeta es la padre; el main arma la final. */
 export function aPedido(f: FormProyecto): PedidoProyectoIpc {
-  const info = infoTipo(f.tipo);
+  const info = infoDe(f);
+  const gen = generadorDe(f);
   const opciones: PedidoProyectoIpc['opciones'] = {};
-  if (f.tipo === 'laravel' && f.starterKit !== 'ninguno') opciones.starterKit = f.starterKit;
-  if (f.tipo === 'symfony' && f.symfonyWebapp) opciones.symfonyWebapp = true;
-  if (f.tipo === 'fastapi' && f.pgvector && usaBase(f)) opciones.pgvector = true;
-  if (f.tipo === 'wordpress' && f.confirmarHuellaDebil) opciones.confirmarHuellaDebil = true;
+  if (gen === 'laravel' && f.starterKit !== 'ninguno') opciones.starterKit = f.starterKit;
+  if (gen === 'symfony' && f.symfonyWebapp) opciones.symfonyWebapp = true;
+  if ((gen === 'fastapi' || f.plantilla?.tipo === 'fastapi') && f.pgvector && usaBase(f)) {
+    opciones.pgvector = true;
+  }
+  if (gen === 'wordpress' && f.confirmarHuellaDebil) opciones.confirmarHuellaDebil = true;
   let base: PedidoProyectoIpc['base'] = null;
   if (usaBase(f) && f.objetivoBd) {
     const motor = motorDeObjetivo(f.objetivoBd);
@@ -185,6 +235,7 @@ export function aPedido(f: FormProyecto): PedidoProyectoIpc {
     tipo: f.tipo,
     nombre: f.nombre.trim(),
     carpetaPadre: f.carpetaPadre ?? '',
+    ...(f.plantilla ? { plantilla: f.plantilla.id } : {}),
     ...(info.usaPhp && f.php ? { php: f.php } : {}),
     ...(info.usaPython && f.python ? { python: f.python } : {}),
     base,
@@ -203,7 +254,7 @@ export const carpetaFinal = (f: Pick<FormProyecto, 'carpetaPadre' | 'nombre'>): 
 
 /** Lo que se va a crear, en el orden en que se muestra. */
 export function resumen(f: FormProyecto): LineaResumen[] {
-  const info = infoTipo(f.tipo);
+  const info = infoDe(f);
   const n = f.nombre.trim();
   const r: LineaResumen[] = [
     { clave: 'tipo', valor: f.tipo },
@@ -279,13 +330,19 @@ export function opcionesBase(
   tipo: TipoGenerador,
   pgvector: boolean,
   servicios: readonly Pick<EstadoServicio, 'id' | 'nombre' | 'instancias'>[],
+  plantilla: Pick<Plantilla, 'motorBase'> | null = null,
 ): OpcionBase[] {
-  if (!infoTipo(tipo).usaBase) return [];
-  const validos = pgvector
-    ? (['postgresql'] as MotorBd[])
-    : tipo === 'wordpress'
-      ? (['mysql', 'mariadb'] as MotorBd[])
-      : [...MOTORES_SQL];
+  if (plantilla ? plantilla.motorBase === null : !infoTipo(tipo).usaBase) return [];
+  // Una plantilla solo admite motores de la familia de su esquema (MySQL y MariaDB se entienden).
+  const validos = plantilla
+    ? plantilla.motorBase === 'postgresql'
+      ? (['postgresql'] as MotorBd[])
+      : (['mysql', 'mariadb'] as MotorBd[])
+    : pgvector
+      ? (['postgresql'] as MotorBd[])
+      : tipo === 'wordpress'
+        ? (['mysql', 'mariadb'] as MotorBd[])
+        : [...MOTORES_SQL];
   const r: OpcionBase[] = [];
   for (const motor of validos) {
     const s = servicios.find((x) => x.id === motor);

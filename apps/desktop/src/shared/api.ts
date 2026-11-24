@@ -48,6 +48,9 @@ import type {
   FinBusqueda,
   ResultadoReceta,
   PedidoProyecto,
+  Plantilla,
+  OpcionesPlantilla,
+  VistaPreviaPlantilla,
   ResultadoCrearProyecto,
   TipoGenerador,
   ResultadoTraer,
@@ -198,6 +201,9 @@ export type {
   FinBusqueda,
   ResultadoReceta,
   PedidoProyecto,
+  Plantilla,
+  OpcionesPlantilla,
+  VistaPreviaPlantilla,
   ResultadoCrearProyecto,
   TipoGenerador,
   ResultadoTraer,
@@ -658,6 +664,18 @@ export interface ApiEntorno {
     /** Vuelve a marcar "Confío…" y toma la huella de la receta actual (un solo guardado). */
     confiar(sitioId: string): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }>;
   };
+  /** Plantillas de proyecto: receta, ajustes y esquema sin datos; nunca secretos ni filas. */
+  plantillas: {
+    lista(): Promise<Plantilla[]>;
+    /** Qué archivos entrarían y cuáles se dejan fuera, sin guardar nada. */
+    vistaPrevia(
+      sitioId: string,
+      opciones: Partial<OpcionesPlantilla>,
+    ): Promise<VistaPreviaPlantilla>;
+    guardar(sitioId: string, opciones: OpcionesPlantilla): Promise<Plantilla>;
+    /** Borra solo la plantilla (nunca un proyecto). */
+    borrar(id: string): Promise<void>;
+  };
   git: {
     disponible(): Promise<DisponibilidadGit>;
     /**
@@ -1089,6 +1107,10 @@ export const RUTAS_IPC = [
   'proyectos.crear',
   'proyectos.huellaWordpress',
   'proyectos.confiar',
+  'plantillas.lista',
+  'plantillas.vistaPrevia',
+  'plantillas.guardar',
+  'plantillas.borrar',
   'git.disponible',
   'git.clonar',
   'git.estado',

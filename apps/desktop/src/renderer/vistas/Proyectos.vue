@@ -10,6 +10,7 @@ import AvisoHosts from '../componentes/AvisoHosts.vue';
 import FormSitio from '../componentes/FormSitio.vue';
 import RegistrosProyecto from '../componentes/RegistrosProyecto.vue';
 import SugerenciasProyectos from '../componentes/SugerenciasProyectos.vue';
+import DialogoGuardarPlantilla from '../componentes/DialogoGuardarPlantilla.vue';
 import TarjetaProyecto from '../componentes/TarjetaProyecto.vue';
 import { useAccion } from '../composables/useAccion';
 import { useFoco } from '../composables/useFoco';
@@ -49,6 +50,8 @@ const agregando = ref(false);
 const creandoProyecto = ref(false);
 const asistente = ref<ObjetivoAsistente | null>(null);
 const registros = ref<Sitio | null>(null);
+/** Proyecto que se guarda como plantilla (null: el diálogo está cerrado). */
+const plantillaDe = ref<Sitio | null>(null);
 
 const ordenados = computed(() => ordenarSitios(sitios.lista));
 const conBuscador = computed(() => sitios.lista.length > UMBRAL_BUSCADOR);
@@ -198,6 +201,7 @@ onMounted(() => {
             @ver-preparacion="verPreparacion"
             @revisar-receta="revisarReceta"
             @ver-registros="(x: Sitio) => (registros = x)"
+            @guardar-plantilla="(x: Sitio) => (plantillaDe = x)"
           />
         </TransitionGroup>
         <p v-if="!visibles.length" class="sin-resultados">{{ t.sinResultados(busqueda.trim()) }}</p>
@@ -212,6 +216,7 @@ onMounted(() => {
       @manual="manual"
     />
     <AsistenteNuevoProyecto :show="creandoProyecto" @cerrar="creandoProyecto = false" />
+    <DialogoGuardarPlantilla :sitio="plantillaDe" @cerrar="plantillaDe = null" />
     <AsistenteReceta :objetivo="asistente" @cerrar="asistente = null" @aplicado="alAplicar" />
     <RegistrosProyecto :sitio="registros" @cerrar="registros = null" />
   </div>

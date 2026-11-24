@@ -3229,6 +3229,53 @@ export const es = {
       editorFallo: 'No se pudo abrir el editor.',
     },
   },
+  plantillas: {
+    guardarComo: 'Guardar como plantilla…',
+    dialogo: {
+      titulo: (nombre: string) => `Guardar «${nombre}» como plantilla`,
+      intro:
+        'La plantilla guarda la receta, los ajustes de PHP y Nginx, las extensiones y el esquema de la base (solo la estructura, sin ninguna fila). Nunca guarda contraseñas, claves ni datos de la base.',
+      nombre: 'Nombre de la plantilla',
+      nombrePlaceholder: 'Mi proyecto base',
+      conArchivos: 'Incluir también los archivos del proyecto',
+      conArchivosAyuda: 'Sin esto solo se guardan la receta, los ajustes y el esquema.',
+      siempre: 'Siempre se dejan fuera',
+      siempreLista:
+        '.env y .env.*, vendor, node_modules, .git, .venv, registros, volcados y bases de archivo (*.sql, *.dump, *.sqlite), claves y certificados (*.pem, *.key, *.crt…), wp-config.php y wolfcore.yml. Un archivo que contenga una clave o una contraseña también se deja fuera.',
+      extra: 'Excluir además (una por línea)',
+      extraAyuda: 'Nombres o rutas relativas al proyecto, por ejemplo uploads o public/build.',
+      vista: 'Qué se guardará',
+      calculando: 'Calculando…',
+      resumen: (archivos: number, tamano: string) => `${archivos} archivos · ${tamano}`,
+      fuera: (n: number) => `${n} dejados fuera`,
+      sinArchivos: 'Solo se guardarán la receta, los ajustes y el esquema; ningún archivo.',
+      guardar: 'Guardar plantilla',
+      guardada: (nombre: string) => `Plantilla «${nombre}» guardada.`,
+      errorGuardar: 'No se pudo guardar la plantilla',
+      errorVista: 'No se pudo calcular la vista previa',
+      cancelar: 'Cancelar',
+    },
+    lista: {
+      titulo: 'Mis plantillas',
+      ayuda:
+        'Empiece un proyecto nuevo con la receta, los ajustes y el esquema (sin datos) de uno que ya tiene.',
+      vacia:
+        'Aún no hay plantillas. Guarde un proyecto como plantilla desde el menú de su tarjeta.',
+      conArchivosEtiqueta: 'con archivos',
+      soloEsquema: 'receta y esquema',
+      conBase: (motor: string) => `base ${motor} sin datos`,
+      borrarEtiqueta: (nombre: string) => `Borrar la plantilla ${nombre}`,
+      borrarTitulo: (nombre: string) => `¿Borrar la plantilla ${nombre}?`,
+      borrarTexto:
+        'Solo se borra la plantilla. Los proyectos creados con ella y el proyecto original no se tocan.',
+      borrada: 'Plantilla borrada.',
+      errorBorrar: 'No se pudo borrar la plantilla',
+      errorLista: 'No se pudieron leer las plantillas',
+      desde: (nombre: string) => `Plantilla: ${nombre}`,
+      avisoSinBase: 'Esta plantilla no trae base de datos.',
+      generadoresTitulo: 'Proyectos desde cero',
+    },
+  },
   asistenteInicio: {
     titulo: 'Bienvenido a WolfCore Dev',
     subtitulo:

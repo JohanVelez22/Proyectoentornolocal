@@ -10,11 +10,17 @@ import {
   NProgress,
   NSteps,
   NStep,
+  useDialog,
   useMessage,
 } from 'naive-ui';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import type { ResultadoCrearProyecto, ResultadoReceta, TipoGenerador } from '../../shared/api';
+import type {
+  Plantilla,
+  ResultadoCrearProyecto,
+  ResultadoReceta,
+  TipoGenerador,
+} from '../../shared/api';
 import { api, plano } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -26,8 +32,9 @@ import {
   accionDeError,
   aPedido,
   baseSugerida,
+  formularioDePlantilla,
   formularioInicial,
-  infoTipo,
+  infoDe,
   nombreBaseDe,
   opcionesBase,
   ordenarRamas,
@@ -41,6 +48,7 @@ import {
 import { avanceReceta, etiquetaPaso, pasoConError } from '../utilidades/proyectos';
 import { urlLocal } from '../utilidades/sitios';
 import Desplegable from './Desplegable.vue';
+import ListaPlantillas from './ListaPlantillas.vue';
 import PasoReceta from './PasoReceta.vue';
 import PasoTipoProyecto from './PasoTipoProyecto.vue';
 import ResumenNuevoProyecto from './ResumenNuevoProyecto.vue';
@@ -56,6 +64,7 @@ const emit = defineEmits<{ cerrar: [] }>();
 const t = textos.nuevoProyecto;
 const router = useRouter();
 const message = useMessage();
+const dialog = useDialog();
 const proyectos = useProyectos();
 const servicios = useServicios();
 const sitios = useSitios();
@@ -76,7 +85,12 @@ const ramasPy = computed(() => ramasPython(servicios.instalados['python'] ?? [])
 const opcionesPhp = computed(() => ramasPhp.value.map((v) => ({ value: v, label: `PHP ${v}` })));
 const opcionesPy = computed(() => ramasPy.value.map((v) => ({ value: v, label: `Python ${v}` })));
 const bases = computed(() =>
-  opcionesBase(form.tipo, form.pgvector && form.tipo === 'fastapi', servicios.lista),
+  opcionesBase(
+    form.tipo,
+    form.pgvector && form.tipo === 'fastapi',
+    servicios.lista,
+    form.plantilla,
+  ),
 );
 const opcionesBd = computed(() =>
   bases.value.map((b) => ({
@@ -85,7 +99,7 @@ const opcionesBd = computed(() =>
   })),
 );
 const baseElegida = computed(() => bases.value.find((b) => b.value === form.objetivoBd) ?? null);
-const info = computed(() => infoTipo(form.tipo));
+const info = computed(() => infoDe(form));
 
 /** Valores por defecto que dependen de lo instalado: solo se llenan si falta el dato. */
 function completarPorDefecto(): void {
@@ -118,6 +132,7 @@ watch(
     void ejecutar('versiones', () =>
       Promise.all([servicios.cargarInstalados('php'), servicios.cargarInstalados('python')]),
     ).then(completarPorDefecto);
+    void cargarPlantillas();
   },
   { immediate: true },
 );
@@ -127,6 +142,54 @@ function elegirTipo(tipo: TipoGenerador): void {
   Object.assign(form, formularioInicial(tipo), { nombre, carpetaPadre });
   baseEditada.value = false;
   completarPorDefecto();
+}
+
+/* ───── Plantillas propias ───── */
+
+const plantillas = ref<Plantilla[]>([]);
+
+async function cargarPlantillas(): Promise<void> {
+  plantillas.value =
+    (await ejecutar('plantillas', () => api().plantillas.lista(), {
+      tituloError: textos.plantillas.lista.errorLista,
+    })) ?? [];
+}
+
+function elegirPlantilla(pl: Plantilla): void {
+  const { nombre, carpetaPadre } = form;
+  Object.assign(form, formularioDePlantilla(pl), { nombre, carpetaPadre });
+  baseEditada.value = false;
+  completarPorDefecto();
+}
+
+function borrarPlantilla(pl: Plantilla): void {
+  const tl = textos.plantillas.lista;
+  const d = dialog.warning({
+    title: tl.borrarTitulo(pl.nombre),
+    content: tl.borrarTexto,
+    positiveText: textos.acciones.borrar,
+    negativeText: textos.acciones.cancelar,
+    autoFocus: false,
+    positiveButtonProps: { type: 'error' },
+    onPositiveClick: async () => {
+      d.loading = true;
+      const ok = await ejecutar(
+        'borrar-plantilla',
+        () =>
+          api()
+            .plantillas.borrar(pl.id)
+            .then(() => true),
+        { tituloError: tl.errorBorrar },
+      );
+      d.loading = false;
+      // Si falló ya se avisó; en los dos casos se vuelve a leer la lista.
+      if (ok) {
+        message.success(tl.borrada);
+        if (form.plantilla?.id === pl.id) elegirTipo('laravel');
+      }
+      await cargarPlantillas();
+    },
+  });
 }
 
 async function elegirCarpeta(): Promise<void> {
@@ -150,7 +213,7 @@ const leyendoHuella = ref(false);
 const confirmada = ref(false);
 
 async function leerHuella(): Promise<void> {
-  if (form.tipo !== 'wordpress' || huella.value || leyendoHuella.value) return;
+  if (form.tipo !== 'wordpress' || form.plantilla || huella.value || leyendoHuella.value) return;
   leyendoHuella.value = true;
   try {
     huella.value = await api().proyectos.huellaWordpress();
@@ -355,7 +418,13 @@ const titulosPaso = computed(() => [t.pasos.tipo, t.pasos.datos, t.pasos.resumen
       </NSteps>
 
       <section v-if="paso === 0" class="seccion">
-        <PasoTipoProyecto :tipo="form.tipo" @elegir="elegirTipo" />
+        <PasoTipoProyecto :tipo="form.plantilla ? null : form.tipo" @elegir="elegirTipo" />
+        <ListaPlantillas
+          :plantillas="plantillas"
+          :elegida="form.plantilla?.id ?? null"
+          @elegir="elegirPlantilla"
+          @borrar="borrarPlantilla"
+        />
       </section>
 
       <section v-else-if="paso === 1" class="seccion datos">
@@ -412,7 +481,7 @@ const titulosPaso = computed(() => [t.pasos.tipo, t.pasos.datos, t.pasos.resumen
           <small v-else class="nota error">{{ t.campos.sinInstalada }}</small>
         </div>
 
-        <template v-if="form.tipo === 'laravel'">
+        <template v-if="form.tipo === 'laravel' && !form.plantilla">
           <div class="campo">
             <span>{{ t.campos.starterKit }}</span>
             <Desplegable
@@ -428,9 +497,11 @@ const titulosPaso = computed(() => [t.pasos.tipo, t.pasos.datos, t.pasos.resumen
             />
           </div>
         </template>
-        <NCheckbox v-if="form.tipo === 'symfony'" v-model:checked="form.symfonyWebapp">{{
-          t.campos.symfonyWebapp
-        }}</NCheckbox>
+        <NCheckbox
+          v-if="form.tipo === 'symfony' && !form.plantilla"
+          v-model:checked="form.symfonyWebapp"
+          >{{ t.campos.symfonyWebapp }}</NCheckbox
+        >
 
         <template v-if="info.usaBase">
           <NCheckbox v-model:checked="form.conBase">{{ t.campos.conBase }}</NCheckbox>

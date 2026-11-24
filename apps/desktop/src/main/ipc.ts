@@ -85,6 +85,8 @@ import {
   rutaAbsoluta,
   tipoRuntime,
   validarPedidoProyecto,
+  opcionesPlantilla,
+  idPlantilla,
   versionWordpress,
   idServicioDatos,
   motorBd,
@@ -1134,6 +1136,14 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'proyectos.huellaWordpress': (n, _s, version) =>
     n.huellaWordpress(version === undefined ? undefined : versionWordpress(version)),
   'proyectos.confiar': (n, _s, sitioId) => n.confiarReceta(idCorto(sitioId, 'sitio')),
+
+  // ---- Plantillas de proyecto: el id sale de la lista y nunca es una ruta ----
+  'plantillas.lista': (n) => n.plantillas.lista(),
+  'plantillas.vistaPrevia': async (n, _s, sitioId, opciones) =>
+    n.plantillas.vistaPrevia(await sitioExistente(n, sitioId), opcionesPlantilla(opciones, false)),
+  'plantillas.guardar': async (n, _s, sitioId, opciones) =>
+    n.plantillas.guardar(await sitioExistente(n, sitioId), opcionesPlantilla(opciones, true)),
+  'plantillas.borrar': (n, _s, id) => n.plantillas.borrar(idPlantilla(id)),
 
   // ---- Git y GitHub: el token lo agrega este proceso; nunca vuelve al renderer ----
   'git.disponible': (n) => n.disponibilidadGit(),

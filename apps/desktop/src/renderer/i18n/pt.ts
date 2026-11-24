@@ -3236,6 +3236,52 @@ export const pt: Textos = {
       editorFallo: 'Não foi possível abrir o editor.',
     },
   },
+  plantillas: {
+    guardarComo: 'Salvar como modelo…',
+    dialogo: {
+      titulo: (nombre: string) => `Salvar “${nombre}” como modelo`,
+      intro:
+        'O modelo guarda a receita, os ajustes de PHP e Nginx, as extensões e o esquema do banco (só a estrutura, sem nenhuma linha). Nunca guarda senhas, chaves nem dados do banco.',
+      nombre: 'Nome do modelo',
+      nombrePlaceholder: 'Meu projeto base',
+      conArchivos: 'Incluir também os arquivos do projeto',
+      conArchivosAyuda: 'Sem isso, só a receita, os ajustes e o esquema são salvos.',
+      siempre: 'Sempre ficam de fora',
+      siempreLista:
+        '.env e .env.*, vendor, node_modules, .git, .venv, logs, dumps e bancos em arquivo (*.sql, *.dump, *.sqlite), chaves e certificados (*.pem, *.key, *.crt…), wp-config.php e wolfcore.yml. Um arquivo que contenha uma chave ou uma senha também fica de fora.',
+      extra: 'Excluir também (uma por linha)',
+      extraAyuda: 'Nomes ou caminhos relativos ao projeto, por exemplo uploads ou public/build.',
+      vista: 'O que será salvo',
+      calculando: 'Calculando…',
+      resumen: (archivos: number, tamano: string) => `${archivos} arquivos · ${tamano}`,
+      fuera: (n: number) => `${n} deixados de fora`,
+      sinArchivos: 'Só a receita, os ajustes e o esquema serão salvos; nenhum arquivo.',
+      guardar: 'Salvar modelo',
+      guardada: (nombre: string) => `Modelo “${nombre}” salvo.`,
+      errorGuardar: 'Não foi possível salvar o modelo',
+      errorVista: 'Não foi possível calcular a visualização',
+      cancelar: 'Cancelar',
+    },
+    lista: {
+      titulo: 'Meus modelos',
+      ayuda:
+        'Comece um projeto novo com a receita, os ajustes e o esquema (sem dados) de um que você já tem.',
+      vacia: 'Ainda não há modelos. Salve um projeto como modelo pelo menu do cartão dele.',
+      conArchivosEtiqueta: 'com arquivos',
+      soloEsquema: 'receita e esquema',
+      conBase: (motor: string) => `banco ${motor} sem dados`,
+      borrarEtiqueta: (nombre: string) => `Apagar o modelo ${nombre}`,
+      borrarTitulo: (nombre: string) => `Apagar o modelo ${nombre}?`,
+      borrarTexto:
+        'Só o modelo é apagado. Os projetos criados com ele e o projeto original não são tocados.',
+      borrada: 'Modelo apagado.',
+      errorBorrar: 'Não foi possível apagar o modelo',
+      errorLista: 'Não foi possível ler os modelos',
+      desde: (nombre: string) => `Modelo: ${nombre}`,
+      avisoSinBase: 'Este modelo não tem banco de dados.',
+      generadoresTitulo: 'Projetos do zero',
+    },
+  },
   asistenteInicio: {
     titulo: 'Bem-vindo ao WolfCore Dev',
     subtitulo:

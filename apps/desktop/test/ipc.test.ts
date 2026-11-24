@@ -53,6 +53,12 @@ function nucleoFalso() {
       sitiosConRespaldosDeClave: vi.fn(async () => []),
       limpiarRespaldosDeClave: vi.fn(async () => ({ sitios: 0 })),
     },
+    plantillas: {
+      lista: vi.fn(async () => []),
+      vistaPrevia: vi.fn(async () => ({ archivos: 0, bytes: 0, excluidos: [], totalExcluidos: 0 })),
+      guardar: vi.fn(async () => ({ id: 'tienda-a1b2c3' })),
+      borrar: vi.fn(async () => undefined),
+    },
     config: { leer: vi.fn() },
     estadoGeneral: vi.fn(),
     guardarAjustes: vi.fn(async () => ({ aplicar: {}, reiniciados: [], errores: [] })),
@@ -645,6 +651,10 @@ describe('registrarIpc', () => {
         'proyectos.crear',
         'proyectos.huellaWordpress',
         'proyectos.confiar',
+        'plantillas.lista',
+        'plantillas.vistaPrevia',
+        'plantillas.guardar',
+        'plantillas.borrar',
         'git.disponible',
         'git.clonar',
         'git.estado',
@@ -1672,6 +1682,70 @@ describe('IPC de la Etapa B', () => {
     }
     expect(f['crearProyecto']).not.toHaveBeenCalled();
     expect((await llamar('proyectos.crear', ok)).ok).toBe(true);
+  });
+
+  it('proyectos.crear con plantilla: solo su id (nunca una ruta) y el resto del pedido igual', async () => {
+    const { f, llamar } = montar();
+    const padre = temporal();
+    sistema.elegirCarpeta.mockResolvedValueOnce(padre);
+    await llamar('sistema.elegirCarpeta');
+    const ok = {
+      tipo: 'laravel',
+      nombre: 'tienda',
+      carpetaPadre: padre,
+      base: null,
+      opciones: {},
+      plantilla: 'tienda-a1b2c3',
+    };
+    for (const malo of ['../../x', 'C:\\Windows', 'A', '', 7, 'a/b', 'a\\b']) {
+      expect((await llamar('proyectos.crear', { ...ok, plantilla: malo })).ok, String(malo)).toBe(
+        false,
+      );
+    }
+    expect(f['crearProyecto']).not.toHaveBeenCalled();
+    expect((await llamar('proyectos.crear', ok)).ok).toBe(true);
+    expect(f['crearProyecto']).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plantilla: 'tienda-a1b2c3',
+        carpeta: path.join(padre, 'tienda'),
+      }),
+    );
+  });
+
+  it('plantillas.*: el sitio debe existir, las opciones se validan y el id nunca es una ruta', async () => {
+    const { crudo, llamar } = montar();
+    const pl = (crudo as unknown as { plantillas: Record<string, Mock> }).plantillas;
+    expect((await llamar('plantillas.lista')).ok).toBe(true);
+    const opciones = { nombre: 'Mi base', conArchivos: true, excluirExtra: ['uploads'] };
+    expect((await llamar('plantillas.guardar', 's1', opciones)).ok).toBe(true);
+    expect(pl['guardar']).toHaveBeenCalledWith('s1', opciones);
+    expect((await llamar('plantillas.vistaPrevia', 's1', { excluirExtra: ['x'] })).ok).toBe(true);
+    expect(pl['vistaPrevia']).toHaveBeenCalledWith('s1', {
+      nombre: '',
+      conArchivos: false,
+      excluirExtra: ['x'],
+    });
+    pl['guardar']!.mockClear();
+    for (const malo of [
+      ['otro', opciones],
+      ['s1', 'x'],
+      ['s1', { ...opciones, nombre: '' }],
+      ['s1', { ...opciones, nombre: 'x'.repeat(61) }],
+      ['s1', { ...opciones, conArchivos: 'si' }],
+      ['s1', { ...opciones, excluirExtra: 'uploads' }],
+      ['s1', { ...opciones, excluirExtra: [7] }],
+      ['s1', { ...opciones, excluirExtra: Array(51).fill('a') }],
+      ['s1', { ...opciones, ruta: 'C:\\' }],
+    ] as [string, unknown][]) {
+      expect((await llamar('plantillas.guardar', ...malo)).ok, JSON.stringify(malo)).toBe(false);
+    }
+    expect(pl['guardar']).not.toHaveBeenCalled();
+    for (const id of ['../x', 'a/b', 'A', '', 7, 'C:\\x']) {
+      expect((await llamar('plantillas.borrar', id)).ok, String(id)).toBe(false);
+    }
+    expect(pl['borrar']).not.toHaveBeenCalled();
+    expect((await llamar('plantillas.borrar', 'tienda-a1b2c3')).ok).toBe(true);
+    expect(pl['borrar']).toHaveBeenCalledWith('tienda-a1b2c3');
   });
 
   it('proyectos.huellaWordpress valida la versión y llega al núcleo', async () => {

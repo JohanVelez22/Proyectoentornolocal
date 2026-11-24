@@ -250,6 +250,12 @@ const api: ApiEntorno = {
     huellaWordpress: (version) => invocar('proyectos.huellaWordpress', version),
     confiar: (sitioId) => invocar('proyectos.confiar', sitioId),
   },
+  plantillas: {
+    lista: () => invocar('plantillas.lista'),
+    vistaPrevia: (sitioId, opciones) => invocar('plantillas.vistaPrevia', sitioId, opciones),
+    guardar: (sitioId, opciones) => invocar('plantillas.guardar', sitioId, opciones),
+    borrar: (id) => invocar('plantillas.borrar', id),
+  },
   agentes: {
     estado: () => invocar('agentes.estado'),
     version: (id) => invocar('agentes.version', id),

@@ -4,7 +4,7 @@ import { TIPOS_PROYECTO } from '../utilidades/nuevoProyecto';
 import type { TipoGenerador } from '../../shared/api';
 
 /** Paso 1 del asistente: el tipo de proyecto, como una lista de opciones únicas. */
-defineProps<{ tipo: TipoGenerador }>();
+defineProps<{ tipo: TipoGenerador | null }>();
 const emit = defineEmits<{ elegir: [tipo: TipoGenerador] }>();
 
 const t = textos.nuevoProyecto;

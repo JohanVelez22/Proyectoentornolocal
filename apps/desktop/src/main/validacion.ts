@@ -1048,7 +1048,16 @@ export function confirmadoBorrar(v: unknown): true {
 }
 
 const MOTORES_PEDIDO = ['mysql', 'mariadb', 'postgresql', 'mongodb'];
-const CLAVES_PEDIDO = ['tipo', 'nombre', 'carpetaPadre', 'php', 'python', 'base', 'opciones'];
+const CLAVES_PEDIDO = [
+  'tipo',
+  'nombre',
+  'carpetaPadre',
+  'php',
+  'python',
+  'base',
+  'opciones',
+  'plantilla',
+];
 
 /**
  * Pedido de "Nuevo proyecto" que manda el renderer. La carpeta padre solo vale si salió de un
@@ -1082,6 +1091,8 @@ export function validarPedidoProyecto(v: unknown, elegidas: RutasElegidas): Pedi
   for (const k of ['php', 'python'] as const) {
     if (o[k] !== undefined) pedido[k] = textoAcotado(o[k], 1, 16, k);
   }
+  // Desde una plantilla propia: solo su id (el núcleo la lee y la valida entera).
+  if (o['plantilla'] !== undefined) pedido['plantilla'] = idPlantilla(o['plantilla']);
   if (o['base'] !== undefined && o['base'] !== null) {
     const b = objetoPlano<Record<string, unknown>>(o['base'], 'base');
     for (const k of Object.keys(b)) {
@@ -1102,6 +1113,44 @@ export function validarPedidoProyecto(v: unknown, elegidas: RutasElegidas): Pedi
     pedido['opciones'] = acotadoJson(objetoPlano(o['opciones'], 'opciones'), 2048, 'opciones');
   }
   return pedido as unknown as PedidoProyecto;
+}
+
+/** Id de una plantilla de proyecto: minúsculas, números y guiones (nunca una ruta). */
+export function idPlantilla(v: unknown): string {
+  const t = textoAcotado(v, 1, 80, 'plantilla');
+  if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(t)) throw new Error('Argumento no válido: plantilla');
+  return t;
+}
+
+/**
+ * Opciones para guardar (o previsualizar) una plantilla. Con `conNombre` el nombre es obligatorio.
+ * Las exclusiones extra son texto corto; el núcleo las vuelve a validar y nunca puede quitar las
+ * obligatorias (.env, vendor, node_modules, .git, claves…).
+ */
+export function opcionesPlantilla(
+  v: unknown,
+  conNombre: boolean,
+): { nombre: string; conArchivos: boolean; excluirExtra: string[] } {
+  const o = objetoPlano<Record<string, unknown>>(v, 'plantilla');
+  for (const k of Object.keys(o)) {
+    if (!['nombre', 'conArchivos', 'excluirExtra'].includes(k)) {
+      throw new Error('Argumento no válido: plantilla');
+    }
+  }
+  if (o['conArchivos'] !== undefined && typeof o['conArchivos'] !== 'boolean') {
+    throw new Error('Argumento no válido: conArchivos');
+  }
+  const extra = o['excluirExtra'];
+  if (extra !== undefined && (!Array.isArray(extra) || extra.length > 50)) {
+    throw new Error('Argumento no válido: excluirExtra');
+  }
+  return {
+    nombre: conNombre ? textoAcotado(o['nombre'], 1, 60, 'nombre') : '',
+    conArchivos: o['conArchivos'] === true,
+    excluirExtra: ((extra as unknown[] | undefined) ?? []).map((x) =>
+      textoAcotado(x, 1, 120, 'excluirExtra'),
+    ),
+  };
 }
 
 /** Versión de WordPress para pedir su huella: `7.1.5` (nada más). */

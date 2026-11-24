@@ -23,7 +23,12 @@ const lineas = computed(() =>
   resumen(props.form).map((l) => ({
     ...l,
     etiqueta: t.resumen[l.clave],
-    valor: l.clave === 'tipo' ? t.tipos[props.form.tipo].nombre : l.valor,
+    valor:
+      l.clave === 'tipo'
+        ? props.form.plantilla
+          ? textos.plantillas.lista.desde(props.form.plantilla.nombre)
+          : t.tipos[props.form.tipo].nombre
+        : l.valor,
   })),
 );
 </script>
@@ -39,7 +44,12 @@ const lineas = computed(() =>
       </template>
     </dl>
 
-    <NAlert v-if="form.tipo === 'wordpress'" type="warning" :bordered="false" class="huella">
+    <NAlert
+      v-if="form.tipo === 'wordpress' && !form.plantilla"
+      type="warning"
+      :bordered="false"
+      class="huella"
+    >
       <template #icon
         ><NIcon><Warning /></NIcon
       ></template>

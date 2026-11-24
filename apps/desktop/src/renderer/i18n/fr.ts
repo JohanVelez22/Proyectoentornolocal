@@ -3300,6 +3300,54 @@ export const fr: Textos = {
       editorFallo: 'L’éditeur n’a pas pu être ouvert.',
     },
   },
+  plantillas: {
+    guardarComo: 'Enregistrer comme modèle…',
+    dialogo: {
+      titulo: (nombre: string) => `Enregistrer « ${nombre} » comme modèle`,
+      intro:
+        'Le modèle conserve la recette, les réglages PHP et Nginx, les extensions et le schéma de la base (la structure seulement, aucune ligne). Il ne conserve jamais de mots de passe, de clés ni de données de la base.',
+      nombre: 'Nom du modèle',
+      nombrePlaceholder: 'Mon projet de base',
+      conArchivos: 'Inclure aussi les fichiers du projet',
+      conArchivosAyuda: 'Sans cela, seuls la recette, les réglages et le schéma sont enregistrés.',
+      siempre: 'Toujours exclus',
+      siempreLista:
+        '.env et .env.*, vendor, node_modules, .git, .venv, journaux, sauvegardes et bases en fichier (*.sql, *.dump, *.sqlite), clés et certificats (*.pem, *.key, *.crt…), wp-config.php et wolfcore.yml. Un fichier qui contient une clé ou un mot de passe est aussi exclu.',
+      extra: 'Exclure aussi (un par ligne)',
+      extraAyuda: 'Noms ou chemins relatifs au projet, par exemple uploads ou public/build.',
+      vista: 'Ce qui sera enregistré',
+      calculando: 'Calcul en cours…',
+      resumen: (archivos: number, tamano: string) => `${archivos} fichiers · ${tamano}`,
+      fuera: (n: number) => `${n} exclus`,
+      sinArchivos:
+        'Seuls la recette, les réglages et le schéma seront enregistrés ; aucun fichier.',
+      guardar: 'Enregistrer le modèle',
+      guardada: (nombre: string) => `Modèle « ${nombre} » enregistré.`,
+      errorGuardar: "Impossible d'enregistrer le modèle",
+      errorVista: "Impossible de calculer l'aperçu",
+      cancelar: 'Annuler',
+    },
+    lista: {
+      titulo: 'Mes modèles',
+      ayuda:
+        "Démarrez un nouveau projet avec la recette, les réglages et le schéma (sans données) d'un projet existant.",
+      vacia:
+        "Il n'y a pas encore de modèle. Enregistrez un projet comme modèle depuis le menu de sa carte.",
+      conArchivosEtiqueta: 'avec fichiers',
+      soloEsquema: 'recette et schéma',
+      conBase: (motor: string) => `base ${motor} sans données`,
+      borrarEtiqueta: (nombre: string) => `Supprimer le modèle ${nombre}`,
+      borrarTitulo: (nombre: string) => `Supprimer le modèle ${nombre} ?`,
+      borrarTexto:
+        "Seul le modèle est supprimé. Les projets créés avec lui et le projet d'origine ne sont pas touchés.",
+      borrada: 'Modèle supprimé.',
+      errorBorrar: 'Impossible de supprimer le modèle',
+      errorLista: 'Impossible de lire les modèles',
+      desde: (nombre: string) => `Modèle : ${nombre}`,
+      avisoSinBase: "Ce modèle n'a pas de base de données.",
+      generadoresTitulo: 'Projets à partir de zéro',
+    },
+  },
   asistenteInicio: {
     titulo: 'Bienvenue dans WolfCore Dev',
     subtitulo:

@@ -3210,6 +3210,52 @@ export const en: Textos = {
       editorFallo: 'The editor could not be opened.',
     },
   },
+  plantillas: {
+    guardarComo: 'Save as template…',
+    dialogo: {
+      titulo: (nombre: string) => `Save “${nombre}” as a template`,
+      intro:
+        'The template stores the recipe, the PHP and Nginx settings, the extensions and the database schema (structure only, no rows). It never stores passwords, keys or database data.',
+      nombre: 'Template name',
+      nombrePlaceholder: 'My base project',
+      conArchivos: 'Also include the project files',
+      conArchivosAyuda: 'Without this only the recipe, the settings and the schema are saved.',
+      siempre: 'Always left out',
+      siempreLista:
+        '.env and .env.*, vendor, node_modules, .git, .venv, logs, dumps and file databases (*.sql, *.dump, *.sqlite), keys and certificates (*.pem, *.key, *.crt…), wp-config.php and wolfcore.yml. A file that contains a key or a password is also left out.',
+      extra: 'Also exclude (one per line)',
+      extraAyuda: 'Names or paths relative to the project, for example uploads or public/build.',
+      vista: 'What will be saved',
+      calculando: 'Calculating…',
+      resumen: (archivos: number, tamano: string) => `${archivos} files · ${tamano}`,
+      fuera: (n: number) => `${n} left out`,
+      sinArchivos: 'Only the recipe, the settings and the schema will be saved; no files.',
+      guardar: 'Save template',
+      guardada: (nombre: string) => `Template “${nombre}” saved.`,
+      errorGuardar: 'The template could not be saved',
+      errorVista: 'The preview could not be calculated',
+      cancelar: 'Cancel',
+    },
+    lista: {
+      titulo: 'My templates',
+      ayuda:
+        'Start a new project with the recipe, the settings and the schema (no data) of one you already have.',
+      vacia: 'There are no templates yet. Save a project as a template from the menu on its card.',
+      conArchivosEtiqueta: 'with files',
+      soloEsquema: 'recipe and schema',
+      conBase: (motor: string) => `${motor} database, no data`,
+      borrarEtiqueta: (nombre: string) => `Delete template ${nombre}`,
+      borrarTitulo: (nombre: string) => `Delete template ${nombre}?`,
+      borrarTexto:
+        'Only the template is deleted. Projects created from it and the original project are not touched.',
+      borrada: 'Template deleted.',
+      errorBorrar: 'The template could not be deleted',
+      errorLista: 'The templates could not be read',
+      desde: (nombre: string) => `Template: ${nombre}`,
+      avisoSinBase: 'This template has no database.',
+      generadoresTitulo: 'Projects from scratch',
+    },
+  },
   asistenteInicio: {
     titulo: 'Welcome to WolfCore Dev',
     subtitulo:
