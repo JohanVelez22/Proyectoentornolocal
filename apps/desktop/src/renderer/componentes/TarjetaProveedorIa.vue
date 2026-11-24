@@ -7,13 +7,13 @@ import {
   Pulse,
   TrashOutline,
 } from '@vicons/ionicons5';
-import { NButton, NIcon, NSpin, NTag, NTooltip, type SelectOption } from 'naive-ui';
+import { NButton, NIcon, NSpin, NSwitch, NTag, NTooltip, type SelectOption } from 'naive-ui';
 import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
 import type { ProveedorIaPublico } from '../../shared/api';
 import { textos } from '../i18n';
 import type { EstadoMensajeIa, EstadoPruebaIa } from '../stores/ia';
-import { claveEnmascarada, TIPOS_CON_CLAVE, urlEfectiva } from '../utilidades/ia';
+import { claveEnmascarada, soloGratuitos, TIPOS_CON_CLAVE, urlEfectiva } from '../utilidades/ia';
 
 /** Tarjeta de un proveedor en la nube: estado de la clave, pruebas y acciones. */
 const props = defineProps<{
@@ -22,6 +22,8 @@ const props = defineProps<{
   mensaje?: EstadoMensajeIa | undefined;
   /** Modelos que listó la última prueba correcta. */
   modelos: string[];
+  /** De esos, los que el proveedor publica como gratuitos. */
+  modelosGratis?: string[];
 }>();
 const emit = defineEmits<{
   probar: [];
@@ -40,8 +42,13 @@ const necesitaClave = computed(
 const url = computed(() => urlEfectiva(props.proveedor));
 
 const modelo = ref<string | null>(props.proveedor.modelo);
+const verSoloGratis = ref(false);
+const hayGratis = computed(() => (props.modelosGratis?.length ?? 0) > 0);
+const modelosVisibles = computed(() =>
+  soloGratuitos(props.modelos, props.modelosGratis ?? [], verSoloGratis.value && hayGratis.value),
+);
 const opcionesModelo = computed<SelectOption[]>(() => {
-  const lista = new Set(props.modelos);
+  const lista = new Set(modelosVisibles.value);
   if (props.proveedor.modelo) lista.add(props.proveedor.modelo);
   return [...lista].sort().map((m) => ({ label: m, value: m }));
 });
@@ -105,8 +112,12 @@ function pedirMensaje(): void {
         >
           {{ t.verModelos(prueba.modelos.length) }}
         </NButton>
+        <label v-if="hayGratis" class="gratis">
+          <NSwitch v-model:value="verSoloGratis" size="small" :aria-label="t.soloGratuitos" />
+          <span>{{ t.soloGratuitos }} ({{ modelosGratis?.length }})</span>
+        </label>
         <ul v-if="verModelos" class="modelos">
-          <li v-for="m in prueba.modelos" :key="m.id" class="mono">{{ m.id }}</li>
+          <li v-for="id in modelosVisibles" :key="id" class="mono">{{ id }}</li>
         </ul>
       </template>
       <span v-else class="error"
@@ -277,6 +288,11 @@ function pedirMensaje(): void {
 .error {
   color: var(--texto-error);
   white-space: pre-wrap;
+}
+.gratis {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .modelos {
   flex-basis: 100%;

@@ -341,6 +341,7 @@ const filasConexion = computed(() => [
           :prueba="ia.pruebas[p.id]"
           :mensaje="ia.mensajes[p.id]"
           :modelos="ia.modelosDe(p.id)"
+          :modelos-gratis="ia.modelosGratisDe(p.id)"
           @probar="ia.probarConexion(p.id)"
           @probar-mensaje="(m: string) => pedirMensaje(p, m)"
           @usar="usarEnProyecto(p)"

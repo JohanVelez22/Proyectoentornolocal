@@ -9,6 +9,7 @@ import { PATRONES_SECRETOS } from '../src/patronesSecretos';
 import {
   ConfigIaSchema,
   crearClienteIa,
+  esModeloGratis,
   PRESETS_COMPATIBLES,
   probarConexion,
   URL_BASE_POR_DEFECTO,
@@ -153,6 +154,31 @@ describe('configuración de proveedores', () => {
       'http://127.0.0.1:1234/v1',
     );
     for (const p of PRESETS_COMPATIBLES) expect(() => validarUrlBase(p.urlBase)).not.toThrow();
+  });
+
+  it('cada preset tiene URL válida y documentación https', () => {
+    for (const p of PRESETS_COMPATIBLES) {
+      expect(() => validarUrlBase(p.urlBase), p.nombre).not.toThrow();
+      expect(p.documentacion, p.nombre).toMatch(/^https:\/\/[^\s]+$/);
+    }
+  });
+
+  it('los presets nuevos están', () => {
+    const nombres = PRESETS_COMPATIBLES.map((p) => p.nombre);
+    expect(nombres).toEqual(expect.arrayContaining(['Kilo', 'OmniRouter', 'FreeLLMAPI']));
+    expect(new Set(nombres).size).toBe(nombres.length);
+    expect(PRESETS_COMPATIBLES.find((p) => p.nombre === 'Kilo')?.urlBase).toBe(
+      'https://ai-gateway.kilo.ai/api/v1',
+    );
+  });
+
+  it('esModeloGratis: sufijo :free o precio cero en prompt y completion', () => {
+    expect(esModeloGratis({ id: 'a:free' })).toBe(true);
+    expect(esModeloGratis({ id: 'b', pricing: { prompt: '0', completion: '0' } })).toBe(true);
+    expect(esModeloGratis({ id: 'c', pricing: { prompt: '0', completion: '0.5' } })).toBe(false);
+    expect(esModeloGratis({ id: 'd', pricing: { prompt: '0' } })).toBe(false);
+    expect(esModeloGratis({ id: 'e' })).toBe(false);
+    expect(esModeloGratis({ id: 'f', pricing: { prompt: '', completion: '' } })).toBe(false);
   });
 
   it('el esquema descarta claves pegadas por error y proveedores inválidos sin perder los demás', () => {
@@ -521,6 +547,21 @@ describe('probarConexion', () => {
     expect(r.modelos).toEqual([{ id: 'm', nombre: 'm' }]);
     expect(r.error).toBeUndefined();
     expect(peticiones.map((p) => p.metodo)).toEqual(['GET']);
+  });
+
+  it('modelosGratis con servidor OpenAI falso', async () => {
+    const { base } = await servidorFalso(() => ({
+      json: {
+        data: [
+          { id: 'a:free' },
+          { id: 'b', pricing: { prompt: '0', completion: '0' } },
+          { id: 'c', pricing: { prompt: '0.001', completion: '0.002' } },
+        ],
+      },
+    }));
+    const r = await probarConexion(config('compatible', `${base}/v1`), CLAVE);
+    expect(r.modelosGratis).toEqual(['a:free', 'b']);
+    expect(r.modelos.map((m) => m.id)).toEqual(['a:free', 'b', 'c']);
   });
 
   it('error con código y sin la clave en ninguna parte del resultado', async () => {

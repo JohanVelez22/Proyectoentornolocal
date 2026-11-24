@@ -1,5 +1,6 @@
 import { forma, numero, objeto, pedirJsonIa } from './http';
 import {
+  esModeloGratis,
   ordenarModelos,
   validarModeloIa,
   type ClienteIa,
@@ -32,8 +33,18 @@ export function clienteOpenAi(ctx: ContextoCliente): ClienteIa {
       if (!d || !Array.isArray(d.data)) throw forma();
       const lista: ModeloIa[] = [];
       for (const m of d.data) {
-        const id = objeto(m)?.id;
-        if (typeof id === 'string' && id) lista.push({ id, nombre: id });
+        const o = objeto(m);
+        const id = o?.id;
+        if (typeof id !== 'string' || !id) continue;
+        const precio = objeto(o?.pricing);
+        const gratis = esModeloGratis({
+          id,
+          pricing: {
+            ...(typeof precio?.prompt === 'string' ? { prompt: precio.prompt } : {}),
+            ...(typeof precio?.completion === 'string' ? { completion: precio.completion } : {}),
+          },
+        });
+        lista.push({ id, nombre: id, ...(gratis ? { gratis } : {}) });
       }
       return ordenarModelos(lista);
     },

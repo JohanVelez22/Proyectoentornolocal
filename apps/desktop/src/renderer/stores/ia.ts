@@ -47,7 +47,7 @@ export interface DescargaIa {
 /** Resultado de "Probar conexión" de un proveedor en la nube. */
 export type EstadoPruebaIa =
   | { estado: 'probando' }
-  | { estado: 'ok'; latenciaMs: number; modelos: ModeloIa[] }
+  | { estado: 'ok'; latenciaMs: number; modelos: ModeloIa[]; modelosGratis: string[] }
   | { estado: 'error'; error: string; codigo?: string; latenciaMs?: number };
 
 /** Resultado de "Probar un mensaje" (16 tokens como mucho). */
@@ -295,7 +295,12 @@ export const useIa = defineStore('ia', () => {
     try {
       const x = await api().ia.probarConexion(id);
       r = x.ok
-        ? { estado: 'ok', latenciaMs: x.latenciaMs, modelos: x.modelos }
+        ? {
+            estado: 'ok',
+            latenciaMs: x.latenciaMs,
+            modelos: x.modelos,
+            modelosGratis: x.modelosGratis ?? [],
+          }
         : {
             estado: 'error',
             latenciaMs: x.latenciaMs,
@@ -341,6 +346,12 @@ export const useIa = defineStore('ia', () => {
     return p?.estado === 'ok' ? p.modelos.map((m) => m.id) : [];
   }
 
+  /** Ids de los modelos gratuitos de la última prueba correcta. */
+  function modelosGratisDe(id: string): string[] {
+    const p = pruebas.value[id];
+    return p?.estado === 'ok' ? p.modelosGratis : [];
+  }
+
   /** Se suscribe una sola vez: el progreso sigue llegando aunque se cambie de pantalla. */
   function iniciar(): void {
     if (baja) return;
@@ -384,5 +395,6 @@ export const useIa = defineStore('ia', () => {
     probarConexion,
     probarMensaje,
     modelosDe,
+    modelosGratisDe,
   };
 });

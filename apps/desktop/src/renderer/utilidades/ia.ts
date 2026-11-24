@@ -19,14 +19,78 @@ export const URL_POR_DEFECTO: Record<TipoProveedorIa, string | null> = {
   compatible: null,
 };
 
-/** Compatibles con OpenAI que se ofrecen ya rellenos. */
-export const PRESETS_COMPATIBLES: readonly { nombre: string; urlBase: string }[] = [
-  { nombre: 'OpenRouter', urlBase: 'https://openrouter.ai/api/v1' },
-  { nombre: 'Groq', urlBase: 'https://api.groq.com/openai/v1' },
-  { nombre: 'Mistral', urlBase: 'https://api.mistral.ai/v1' },
-  { nombre: 'DeepSeek', urlBase: 'https://api.deepseek.com/v1' },
-  { nombre: 'LM Studio', urlBase: 'http://127.0.0.1:1234/v1' },
+/** Proveedor compatible con OpenAI que se ofrece ya relleno (copia del núcleo). */
+export interface PresetCompatible {
+  nombre: string;
+  urlBase: string;
+  /** Documentación oficial donde se confirmó la URL base. */
+  documentacion: string;
+  /** Ofrece modelos gratuitos (se muestra el filtro "Solo gratuitos"). */
+  gratis?: boolean;
+}
+
+/**
+ * Proveedores compatibles con OpenAI. Kilo, OmniRouter y FreeLLMAPI se verificaron en su
+ * documentación oficial (D2); los dos últimos corren en el equipo del usuario, así que se usa
+ * 127.0.0.1 (equivale al `localhost` de su documentación) y el puerto por defecto.
+ */
+export const PRESETS_COMPATIBLES: readonly PresetCompatible[] = [
+  {
+    nombre: 'OpenRouter',
+    urlBase: 'https://openrouter.ai/api/v1',
+    documentacion: 'https://openrouter.ai/docs/api-reference/overview',
+    gratis: true,
+  },
+  {
+    nombre: 'Groq',
+    urlBase: 'https://api.groq.com/openai/v1',
+    documentacion: 'https://console.groq.com/docs/openai',
+  },
+  {
+    nombre: 'Mistral',
+    urlBase: 'https://api.mistral.ai/v1',
+    documentacion: 'https://docs.mistral.ai/api/',
+  },
+  {
+    nombre: 'DeepSeek',
+    urlBase: 'https://api.deepseek.com/v1',
+    documentacion: 'https://api-docs.deepseek.com/',
+  },
+  {
+    nombre: 'LM Studio',
+    urlBase: 'http://127.0.0.1:1234/v1',
+    documentacion: 'https://lmstudio.ai/docs/app/api/endpoints/openai',
+  },
+  {
+    nombre: 'Kilo',
+    urlBase: 'https://ai-gateway.kilo.ai/api/v1',
+    documentacion: 'https://kilo.ai/docs/gateway/api-reference',
+    gratis: true,
+  },
+  {
+    nombre: 'OmniRouter',
+    urlBase: 'http://127.0.0.1:20128/v1',
+    documentacion: 'https://github.com/diegosouzapw/OmniRoute',
+    gratis: true,
+  },
+  {
+    nombre: 'FreeLLMAPI',
+    urlBase: 'http://127.0.0.1:3001/v1',
+    documentacion: 'https://github.com/tashfeenahmed/freellmapi',
+    gratis: true,
+  },
 ];
+
+/** Con el filtro "Solo gratuitos" activo, deja solo los modelos que la prueba marcó como gratis. */
+export function soloGratuitos(
+  modelos: readonly string[],
+  gratis: readonly string[],
+  activo: boolean,
+): string[] {
+  if (!activo) return [...modelos];
+  const g = new Set(gratis);
+  return modelos.filter((m) => g.has(m));
+}
 
 /** Tipos que no funcionan sin clave. */
 export const TIPOS_CON_CLAVE: ReadonlySet<TipoProveedorIa> = new Set([

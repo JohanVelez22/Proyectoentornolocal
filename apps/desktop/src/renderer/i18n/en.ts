@@ -1346,6 +1346,7 @@ export const en: Textos = {
       probando: 'Testing…',
       conectado: (ms: number, n: number) => `Connected · ${ms} ms · ${n} models`,
       verModelos: (n: number) => `Show the ${n} models`,
+      soloGratuitos: 'Free only',
       fallo: 'Could not connect',
       probarMensaje: 'Test a message',
       probarMensajeAyuda:

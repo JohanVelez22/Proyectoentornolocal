@@ -1358,6 +1358,7 @@ export const es = {
       probando: 'Probando…',
       conectado: (ms: number, n: number) => `Conectado · ${ms} ms · ${n} modelos`,
       verModelos: (n: number) => `Ver los ${n} modelos`,
+      soloGratuitos: 'Solo gratuitos',
       fallo: 'No se pudo conectar',
       probarMensaje: 'Probar un mensaje',
       probarMensajeAyuda:

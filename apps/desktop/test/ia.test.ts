@@ -16,6 +16,7 @@ import { faseDe, porcentaje, useIa } from '../src/renderer/stores/ia';
 import {
   claveEnmascarada,
   idDeNombre,
+  soloGratuitos,
   PRESETS_COMPATIBLES,
   TIPOS_CON_CLAVE,
   URL_POR_DEFECTO,
@@ -83,6 +84,7 @@ function apiFalsa() {
         ok: true,
         latenciaMs: 120,
         modelos: [{ id: 'gpt-a', nombre: 'gpt-a' }],
+        modelosGratis: [],
       })),
       probarMensaje: vi.fn(async () => ({ texto: 'ok', latenciaMs: 300 })),
       previsualizarEnv: vi.fn(),
@@ -230,12 +232,18 @@ describe('store de IA en la nube', () => {
     falsa.api.ia.probarConexion.mockReturnValueOnce(d.promesa);
     const p = ia.probarConexion('openai');
     expect(ia.pruebas['openai']).toEqual({ estado: 'probando' });
-    d.resolver({ ok: true, latenciaMs: 120, modelos: [{ id: 'gpt-a', nombre: 'gpt-a' }] });
+    d.resolver({
+      ok: true,
+      latenciaMs: 120,
+      modelos: [{ id: 'gpt-a', nombre: 'gpt-a' }],
+      modelosGratis: [],
+    });
     await p;
     expect(ia.pruebas['openai']).toEqual({
       estado: 'ok',
       latenciaMs: 120,
       modelos: [{ id: 'gpt-a', nombre: 'gpt-a' }],
+      modelosGratis: [],
     });
     expect(ia.modelosDe('openai')).toEqual(['gpt-a']);
   });
@@ -246,6 +254,7 @@ describe('store de IA en la nube', () => {
       ok: false,
       latenciaMs: 80,
       modelos: [],
+      modelosGratis: [],
       error: { codigo: 'ia.clave_invalida' },
     });
     await ia.probarConexion('openai');
@@ -268,7 +277,13 @@ describe('store de IA en la nube', () => {
     const p1 = ia.probarConexion('openai');
     const p2 = ia.probarConexion('openai');
     await p2;
-    vieja.resolver({ ok: false, latenciaMs: 1, modelos: [], error: { codigo: 'ia.sin_red' } });
+    vieja.resolver({
+      ok: false,
+      latenciaMs: 1,
+      modelos: [],
+      modelosGratis: [],
+      error: { codigo: 'ia.sin_red' },
+    });
     await p1;
     expect(ia.pruebas['openai']).toMatchObject({ estado: 'ok' });
   });
@@ -329,6 +344,13 @@ describe('utilidades de IA en la nube', () => {
     expect(URL_POR_DEFECTO).toEqual(URL_BASE_POR_DEFECTO);
     expect(PRESETS_COMPATIBLES).toEqual(PRESETS_NUCLEO);
     expect([...TIPOS_CON_CLAVE].sort()).toEqual([...CON_CLAVE_NUCLEO].sort());
+  });
+
+  it('filtro Solo gratuitos', () => {
+    const todos = ['a:free', 'b', 'c'];
+    expect(soloGratuitos(todos, ['a:free', 'b'], true)).toEqual(['a:free', 'b']);
+    expect(soloGratuitos(todos, ['a:free', 'b'], false)).toEqual(todos);
+    expect(soloGratuitos(todos, [], true)).toEqual([]);
   });
 
   it('id a partir del nombre, sin repetir', () => {
