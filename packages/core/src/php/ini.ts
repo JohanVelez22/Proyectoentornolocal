@@ -1,9 +1,10 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import { copiaConFecha } from '../herramientas/copiaConFecha';
+import { renombrarConReintentos } from '../https/confianza';
 import type { Ejecutor } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 
@@ -594,7 +595,8 @@ export async function escribirIniAtomico(
   const tmp = `${path.dirname(destino)}${path.sep}php.ini.nuevo-${randomBytes(4).toString('hex')}`;
   await writeFile(tmp, contenido);
   try {
-    await rename(tmp, destino);
+    // Un antivirus o un lector pueden tener php.ini abierto un instante (EPERM/EBUSY).
+    await renombrarConReintentos(tmp, destino);
   } catch (e) {
     await rm(tmp, { force: true }).catch(() => undefined);
     throw e;

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorWolf } from '../src/errores';
@@ -560,6 +560,21 @@ describe('ServicioPhp y el php.ini de la rama', () => {
     await srv.asegurarPhpIni('8.4');
     expect(readFileSync(ini).equals(despues)).toBe(true);
     expect(readdirSync(carpeta)).toHaveLength(1);
+  });
+
+  it('varios asegurarPhpIni a la vez (pantalla PHP recién instalada la rama) generan el ini una sola vez', async () => {
+    const { bin, srv, ini } = await montar();
+    const rutasDevueltas = await Promise.all(
+      Array.from({ length: 6 }, () => srv.asegurarPhpIni('8.4')),
+    );
+    expect(new Set(rutasDevueltas)).toEqual(new Set([ini]));
+    expect(readFileSync(ini, 'utf8')).toContain(`${bin.replace(/\\/g, '/')}/ext`);
+    // Ningún temporal a medias junto al ini.
+    expect(readdirSync(path.dirname(ini)).filter((n) => n.includes('.nuevo-'))).toEqual([]);
+    // Terminada la primera, una llamada nueva vuelve a revisar (no queda colgada de la anterior).
+    rmSync(ini);
+    expect(await srv.asegurarPhpIni('8.4')).toBe(ini);
+    expect(existsSync(ini)).toBe(true);
   });
 
   it('un ini en cp1252 con extension_dir con tildes en cp1252 pasa a UTF-8', async () => {

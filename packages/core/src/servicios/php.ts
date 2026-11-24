@@ -189,7 +189,21 @@ export class ServicioPhp {
    * Si el usuario lo editó (pantalla PHP o a mano), nunca se regenera: solo se corrige
    * `extension_dir`, con copia previa.
    */
-  async asegurarPhpIni(version: string): Promise<string> {
+  asegurarPhpIni(version: string): Promise<string> {
+    // Una a la vez por rama: la pantalla PHP pide el ini y sus valores a la vez y, recién
+    // instalada la rama, dos generaciones renombraban a la vez sobre php.ini (EPERM en Windows).
+    const previo = this.asegurando.get(version);
+    if (previo) return previo;
+    const p = this.asegurarPhpIniSinCola(version).finally(() => {
+      if (this.asegurando.get(version) === p) this.asegurando.delete(version);
+    });
+    this.asegurando.set(version, p);
+    return p;
+  }
+
+  private readonly asegurando = new Map<string, Promise<string>>();
+
+  private async asegurarPhpIniSinCola(version: string): Promise<string> {
     const ini = this.rutas.phpIni(version);
     const bytes = await readFile(ini).catch(() => null);
     const texto = bytes === null ? null : decodificarIni(bytes);
