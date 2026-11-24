@@ -17,6 +17,8 @@ export const QWEN_CODE: DefAgente = {
   binario: 'qwen',
   paquete: '@qwen-code/qwen-code',
   scriptsInstalacion: false,
+  // Exige Node 22 o superior (engines del paquete).
+  nodeMinimo: 22,
   guia: 'https://github.com/QwenLM/qwen-code#installation',
   formato: 'json',
   seccion: 'mcpServers',

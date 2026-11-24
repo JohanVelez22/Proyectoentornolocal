@@ -292,6 +292,8 @@ export const es = {
       'agentes.no_instalable':
         'Este agente no se instala desde WolfCore Dev: siga la guía oficial ({guia}).',
       'agentes.sin_node': 'Instale Node desde Servicios para poder instalar el agente.',
+      'agentes.node_antiguo':
+        '{agente} necesita Node {requerida} o superior y el que se usaría es el {actual}. Instale un Node más nuevo desde Servicios.',
       'agentes.instalacion_fallo': 'No se pudo instalar el agente: {detalle}',
       'agentes.no_instalado': '{agente} no está instalado.',
       'agentes.mcp_no_soportado':

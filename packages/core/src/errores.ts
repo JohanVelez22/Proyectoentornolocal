@@ -169,6 +169,7 @@ export const PARAMETROS_ERROR = {
   'agentes.sin_confirmar': [],
   'agentes.no_instalable': ['guia'],
   'agentes.sin_node': [],
+  'agentes.node_antiguo': ['agente', 'requerida', 'actual'],
   'agentes.instalacion_fallo': ['detalle'],
   'agentes.no_instalado': ['agente'],
   'agentes.mcp_no_soportado': ['agente'],

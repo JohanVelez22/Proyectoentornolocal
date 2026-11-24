@@ -20,6 +20,8 @@ export const COPILOT_CLI: DefAgente = {
   binario: 'copilot',
   paquete: '@github/copilot',
   scriptsInstalacion: false,
+  // Exige Node 22 o superior (engines del paquete).
+  nodeMinimo: 22,
   guia: 'https://docs.github.com/en/copilot/how-tos/copilot-cli',
   formato: 'json',
   seccion: 'mcpServers',

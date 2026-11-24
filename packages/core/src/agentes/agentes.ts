@@ -65,6 +65,8 @@ export interface DefAgente {
    * `--ignore-scripts`: ningún paquete de la cadena ejecuta código al instalarse.
    */
   scriptsInstalacion: boolean;
+  /** Versión mayor mínima de Node que exige el agente (ausente: no exige ninguna). */
+  nodeMinimo?: number;
   /** Guía oficial de instalación. */
   guia: string;
   /**
@@ -308,6 +310,22 @@ export class Agentes {
     return null;
   }
 
+  /**
+   * Falla con `agentes.node_antiguo` si el Node `node` es de una versión mayor menor que la que
+   * exige el agente. Si la versión no se puede leer no se bloquea (no se sabe).
+   */
+  private async exigirNode(def: DefAgente, node: string): Promise<void> {
+    if (def.nodeMinimo === undefined) return;
+    const v = await this.versionDe(node, []);
+    const mayor = v === null ? null : Number(v.split('.')[0]);
+    if (mayor === null || !Number.isInteger(mayor) || mayor >= def.nodeMinimo) return;
+    throw new ErrorWolf(
+      'agentes.node_antiguo',
+      `${def.nombre} necesita Node ${def.nodeMinimo} o superior y el que se usaría es el ${v}. Instale un Node más nuevo desde Servicios.`,
+      { agente: def.nombre, requerida: def.nodeMinimo, actual: v ?? '' },
+    );
+  }
+
   private async versionDe(cmd: string, previos: string[]): Promise<string | null> {
     try {
       const r = await this.d.exec(cmd, [...previos, '--version'], {
@@ -415,6 +433,7 @@ export class Agentes {
         'Instale Node desde Servicios para poder instalar el agente.',
       );
     }
+    await this.exigirNode(def, nn.node);
     const prefijo = this.d.carpetaAgentes();
     const npmrc = path.join(prefijo, NPMRC_AGENTES);
     await mkdir(prefijo, { recursive: true });
@@ -620,6 +639,8 @@ export class Agentes {
         agente: def.nombre,
       });
     }
+    // Si lo corre Node (un script), ese Node debe cumplir lo que exige el agente.
+    if (l.previos.length > 0) await this.exigirNode(def, l.cmd);
     // Solo a los agentes que lo leen por variable (la entrada registrada la nombra).
     if (def.soportaMcp) env[VARIABLE_TOKEN_MCP] = await this.d.mcp.token();
     await this.d.plataforma.abrirTerminal(carpeta, { env, comando: [l.cmd, ...l.previos] });

@@ -1019,7 +1019,7 @@ describe.each(NUEVOS)('Agentes D3: $id', (n) => {
   it('instalar usa el paquete oficial con el Node propio', async () => {
     const m = await montar();
     await m.agentes.instalar(n.id, true);
-    const a = m.llamadas[0]!.args;
+    const a = m.llamadas.at(-1)!.args;
     expect(a[a.length - 1]).toBe(n.paquete);
     expect(a).toContain(REGISTRO_NPM_AGENTES);
     expect(a.includes('--ignore-scripts')).toBe(!n.scripts);
@@ -1189,5 +1189,65 @@ describe('Agentes D3: revisión', () => {
     const yaml = editarEntradaMcp('yaml', '', 'mcp_servers', v, 'x.yaml');
     expect(yaml).toContain('tools:');
     expect(yaml).toContain('"*"');
+  });
+});
+
+describe('Agentes D5: Node mínimo de Copilot CLI y Qwen Code', () => {
+  const NODE_VIEJO = (cmd: string, args: string[]) =>
+    args[0] === '--version' && /node/i.test(cmd)
+      ? { codigo: 0, stdout: 'v20.18.1\n' }
+      : { codigo: 0 };
+  const NODE_NUEVO = (cmd: string, args: string[]) =>
+    args[0] === '--version' && /node/i.test(cmd)
+      ? { codigo: 0, stdout: 'v22.12.0\n' }
+      : { codigo: 0 };
+
+  it('declaran Node 22 y los demás no exigen versión', () => {
+    expect(AGENTES['copilot-cli'].nodeMinimo).toBe(22);
+    expect(AGENTES['qwen-code'].nodeMinimo).toBe(22);
+    expect(AGENTES['claude-code'].nodeMinimo).toBeUndefined();
+  });
+
+  it.each(['copilot-cli', 'qwen-code'] as const)(
+    '%s: instalar con Node 20 falla con agentes.node_antiguo y no corre npm install',
+    async (id) => {
+      const m = await montar({ responder: NODE_VIEJO });
+      await expect(m.agentes.instalar(id, true)).rejects.toMatchObject({
+        codigo: 'agentes.node_antiguo',
+        datos: { requerida: 22, actual: '20.18.1' },
+      });
+      expect(m.llamadas.some((l) => l.args.includes('install'))).toBe(false);
+    },
+  );
+
+  it('con Node 22 instala; sin versión legible tampoco bloquea', async () => {
+    const m = await montar({ responder: NODE_NUEVO });
+    await m.agentes.instalar('copilot-cli', true);
+    expect(m.llamadas.some((l) => l.args.includes('install'))).toBe(true);
+    const n = await montar();
+    await n.agentes.instalar('qwen-code', true);
+    expect(n.llamadas.some((l) => l.args.includes('install'))).toBe(true);
+  });
+
+  it('un agente sin requisito se instala aunque el Node sea viejo', async () => {
+    const m = await montar({ responder: NODE_VIEJO });
+    await m.agentes.instalar('claude-code', true);
+    expect(m.llamadas.some((l) => l.args.includes('install'))).toBe(true);
+  });
+
+  it('abrir con Node 20 falla con el mismo código y no abre la terminal', async () => {
+    const m = await montar({ responder: NODE_VIEJO });
+    paquete(m.prefijo, '@github/copilot', 'copilot', '1.0.0');
+    await expect(m.agentes.abrir('copilot-cli', 'tienda')).rejects.toMatchObject({
+      codigo: 'agentes.node_antiguo',
+    });
+    expect(m.plat.terminales).toHaveLength(0);
+  });
+
+  it('abrir con Node 22 abre la terminal', async () => {
+    const m = await montar({ responder: NODE_NUEVO });
+    paquete(m.prefijo, '@qwen-code/qwen-code', 'qwen', '1.0.0');
+    await m.agentes.abrir('qwen-code', 'tienda');
+    expect(m.plat.terminales).toHaveLength(1);
   });
 });
