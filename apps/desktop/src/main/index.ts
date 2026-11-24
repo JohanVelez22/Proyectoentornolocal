@@ -1,3 +1,4 @@
+import { setDefaultAutoSelectFamilyAttemptTimeout } from 'node:net';
 import { join } from 'node:path';
 import {
   BrowserWindow,
@@ -22,6 +23,11 @@ import { ControlMetricas, registrarIpc } from './ipc';
 import { AlmacenSecretos } from './secretos';
 import { registrarFinDeSesion, topeCierre } from './sesion';
 import { carpetaExistente, urlHttp } from './validacion';
+
+// El Node de Electron prueba cada dirección (IPv6 e IPv4) solo 250 ms antes de pasar a la
+// siguiente: con conexiones lentas ninguna llega a tiempo y `fetch` falla con
+// UND_ERR_CONNECT_TIMEOUT (el catálogo caía a la lista fija). Con 1 s por intento conecta.
+setDefaultAutoSelectFamilyAttemptTimeout(1000);
 
 let ventana: BrowserWindow | null = null;
 let bandeja: Tray | null = null;
