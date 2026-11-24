@@ -281,6 +281,36 @@ describe('Nucleo: revisión de versiones nuevas', () => {
     }
   });
 
+  it('versionesServicio: tabla por rama con lo instalado, la actualización y la instancia (T19)', async () => {
+    const base = await carpetaTemporal('pel-nov-tabla-');
+    await instalarMysql(base, '8.4.13');
+    const ff = fetchFalso(rutasBd());
+    const n = await crearNucleo(base, ff.f);
+    try {
+      const t = await n.versionesServicio('mysql');
+      expect(t.interruptor).toBe('instancias');
+      const filas = t.ramas.flatMap((r) => r.versiones);
+      expect(filas.find((f) => f.version === '8.4.13')).toMatchObject({
+        instalada: true,
+        actualizacion: '8.4.15',
+        predeterminada: true,
+        instancia: 'mysql@8.4',
+        puerto: 3306,
+        encendida: false,
+      });
+      expect(filas.find((f) => f.version === '8.4.15')).toMatchObject({
+        instalada: false,
+        huella: 'ninguna',
+      });
+      // Predeterminar una versión no instalada se rechaza; Node sin instalar tampoco.
+      await expect(n.predeterminarVersion('node', '22.1.0')).rejects.toMatchObject({
+        codigo: 'servicios.no_instalado',
+      });
+    } finally {
+      await n.cerrar({ detenerServicios: false });
+    }
+  }, 20_000);
+
   it('sin red no publica nada y el arranque no falla', async () => {
     const base = await carpetaTemporal('pel-nov-sinred-');
     await instalarMysql(base, '8.4.13');

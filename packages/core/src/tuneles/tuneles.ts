@@ -8,7 +8,7 @@ import { ErrorDetenidoAlIniciar, type Supervisor } from '../procesos/supervisor'
 import type { Rutas } from '../rutas';
 import type { GestorSitios } from '../sitios/sitios';
 import type { UrlBase } from '../sitios/urlbase';
-import type { EstadoTunel, Sitio } from '../tipos';
+import type { Config, EstadoTunel, Sitio } from '../tipos';
 import { extraerUrlTunel } from './url';
 import { nombreEjecutable } from '../plataforma/sistema';
 
@@ -202,9 +202,13 @@ export class Tuneles {
     const sitio = await this.buscar(sitioId);
     if (!sitio) throw new ErrorWolf('tuneles.sitio_no_encontrado', 'Sitio no encontrado');
     const versiones = await this.d.instalador.instalados('cloudflared');
-    const version = [...versiones].sort((a, b) =>
-      b.localeCompare(a, undefined, { numeric: true }),
-    )[0];
+    // Configuración de una versión anterior (o parcial): sin predeterminada, la más nueva.
+    const cfg: Partial<Config> = await this.d.almacen.leer();
+    const elegida = cfg.catalogo?.predeterminadas.cloudflared;
+    const version =
+      elegida && versiones.includes(elegida)
+        ? elegida
+        : [...versiones].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))[0];
     if (!version)
       throw new ErrorWolf(
         'tuneles.cloudflared_no_instalado',

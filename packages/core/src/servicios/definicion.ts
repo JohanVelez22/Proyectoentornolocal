@@ -29,7 +29,11 @@ import {
   conDefiner,
   ErrorDevolucion,
   listarRespaldosDatos,
+  MARGEN_LIBRE_BYTES,
+  medirCarpeta,
+  fsCopiaReal,
   type RespaldoDatos,
+  type TipoRespaldoDatos,
   selloFecha,
   type FsCopia,
   type OperacionesRespaldo,
@@ -187,6 +191,25 @@ export const CACHE_CONFLICTOS_MS = 15_000;
 const OPCIONES_BORRADO = { recursive: true, force: true, maxRetries: 10, retryDelay: 200 };
 
 type Duenos = Map<number, { pid: number; nombre: string }>;
+
+/** Plan de una actualización (para el diálogo de confirmación). */
+export interface PlanActualizar {
+  id: IdInstancia;
+  /** Versión actual de la instancia. */
+  version: string;
+  carpeta: string;
+  /** Dónde quedará la copia en frío. */
+  respaldo: string;
+  hayDatos: boolean;
+  bytes: number;
+  archivos: number;
+  /** Bytes libres en el disco de la carpeta de datos. */
+  libres: number;
+  /** Bytes que hacen falta (la copia más el margen). */
+  necesarios: number;
+  /** Además se vuelca cada base (MySQL, MariaDB, PostgreSQL). */
+  volcados: boolean;
+}
 
 /** Resultado de `nuevaRama`: qué bases se copiaron y cuáles no. */
 export interface ResultadoNuevaRama {
@@ -1326,6 +1349,71 @@ export class ServiciosDatos {
   respaldosDeDatos(servicio?: IdServicioDatos): Promise<RespaldoDatos[]> {
     const servicios = servicio === undefined ? IDS_SERVICIO_DATOS : [servicio];
     return listarRespaldosDatos(this.d.rutas.base, servicios);
+  }
+
+  /**
+   * Lo que hará `actualizar` con la instancia, para el diálogo de confirmación: carpeta de datos,
+   * su tamaño, el espacio libre y si además se vuelcan las bases. No cambia nada.
+   */
+  async planActualizar(id: IdInstancia): Promise<PlanActualizar> {
+    const { servicio, clave } = parsearInstancia(id);
+    const def = this.requerir(servicio);
+    const inst = (await this.resolver(def, await this.d.leerConfig())).find(
+      (i) => i.id === id || (i.implicita && i.clave === clave),
+    );
+    if (!inst) throw new ErrorWolf('instancias.no_existe', `No existe la instancia ${id}.`, { id });
+    const carpeta = this.carpetaInstancia(servicio, clave);
+    const hayDatos = existsSync(path.join(carpeta, MARCA_INICIALIZADO));
+    const medida = hayDatos ? await medirCarpeta(carpeta) : { bytes: 0, archivos: 0 };
+    const donde = existsSync(path.dirname(carpeta)) ? path.dirname(carpeta) : this.d.rutas.base;
+    const libres = await (this.d.fsCopia ?? fsCopiaReal).espacioLibre(donde);
+    return {
+      id,
+      version: inst.version,
+      carpeta,
+      respaldo: `${carpeta}.respaldo-${selloFecha(this.ahora)}`,
+      hayDatos,
+      ...medida,
+      libres,
+      necesarios: medida.bytes + MARGEN_LIBRE_BYTES,
+      volcados: hayDatos && (CON_VOLCADO as readonly string[]).includes(servicio),
+    };
+  }
+
+  /**
+   * Borra una copia de `data/<servicio>/` que dejaron las actualizaciones (respaldo, volcados,
+   * carpeta fallida…), con `confirmar === true`. Solo se borra lo que lista `respaldosDeDatos`
+   * (nunca la carpeta de datos actual) y nunca lo que apunta el bloqueo de una instancia.
+   */
+  borrarRespaldoDatos(
+    r: { servicio: IdServicioDatos; clave: string; tipo: TipoRespaldoDatos; sello: string },
+    confirmar: true,
+  ): Promise<void> {
+    if (confirmar !== true) {
+      return Promise.reject(new Error('Falta la confirmación para borrar la copia.'));
+    }
+    const noExiste = (): ErrorWolf =>
+      new ErrorWolf('instancias.respaldo_no_existe', 'No existe esa copia de los datos.', {
+        id: `${String(r.servicio)}@${String(r.clave)}`.slice(0, 40),
+      });
+    if (!esIdServicioDatos(r.servicio)) return Promise.reject(noExiste());
+    return this.enCola(r.servicio, async () => {
+      const lista = await listarRespaldosDatos(this.d.rutas.base, [r.servicio]);
+      const x = lista.find((l) => l.clave === r.clave && l.tipo === r.tipo && l.sello === r.sello);
+      if (!x) throw noExiste();
+      const b = await this.bloqueo(r.servicio, r.clave);
+      const mismo = (a: string): boolean =>
+        a !== '' && path.resolve(a).toLowerCase() === path.resolve(x.carpeta).toLowerCase();
+      if (b && (mismo(b.respaldo) || mismo(b.fallida))) {
+        throw new ErrorWolf(
+          'instancias.respaldo_en_uso',
+          `Esa copia la necesita ${r.servicio}@${r.clave}, que está bloqueada: resuélvalo antes.`,
+          { id: `${r.servicio}@${r.clave}` },
+        );
+      }
+      const borrar = this.d.borrar ?? rm;
+      await borrar(x.carpeta, OPCIONES_BORRADO);
+    });
   }
 
   private async volcados(

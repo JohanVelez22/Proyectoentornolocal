@@ -14,6 +14,7 @@ import { NOMBRE_BD_PG } from '../bd/clientePostgres';
 import type { MotorBd } from '../bd/env';
 import { esIdInstancia, parsearInstancia } from '../servicios/instancias';
 import type { IdInstancia } from '../tipos';
+import { SERVICIOS_VERSIONES, type ServicioVersiones } from '../catalogo/tablaVersiones';
 import type { Dump, FiltroDumps, ResumenDump } from '../depuracion/receptor';
 import type { ErrorAgrupado, FiltroErrores, ResumenError } from '../depuracion/errores';
 import { enmascararSecretos } from '../patronesSecretos';
@@ -64,6 +65,8 @@ export interface OperacionesMcp {
   /** Errores agrupados de los registros (sin traza). */
   listarErrores?(filtro: FiltroErrores): Promise<ResumenError[]>;
   leerError?(huella: string): Promise<ErrorAgrupado | null>;
+  /** Versiones publicadas e instaladas de un servicio, por rama (solo lectura). */
+  listarVersiones?(servicio: ServicioVersiones, rama?: string): Promise<unknown>;
 }
 
 /** Receta lista para confirmar y ejecutar, atada a una sola solicitud. */
@@ -152,6 +155,7 @@ export const HERRAMIENTAS_MCP = [
   'limpiar_dumps',
   'listar_errores',
   'leer_error',
+  'listar_versiones',
 ] as const;
 
 const DIRECCION = '127.0.0.1';
@@ -1070,6 +1074,25 @@ export class ServidorMcp {
               .map((l) => saneado(l, MAX_LINEA_TRAZA_MCP) ?? ''),
           };
         }),
+    );
+    mcp.registerTool(
+      'listar_versiones',
+      {
+        description:
+          'Versiones publicadas de un servicio (PHP, MySQL, MariaDB, PostgreSQL, Redis, MongoDB, Node, Python, Nginx, Composer, Mailpit, Ollama o cloudflared), agrupadas por rama, con lo instalado, lo encendido y las actualizaciones. Solo lectura: no instala ni actualiza nada.',
+        inputSchema: {
+          servicio: z.enum(SERVICIOS_VERSIONES, { error: 'Servicio no válido.' }),
+          rama: z
+            .string()
+            .regex(/^\d{1,4}(\.\d{1,4})?$/, 'La rama no es válida (p. ej. 8.4 o 17).')
+            .optional(),
+        },
+        annotations: lectura,
+      },
+      ({ servicio, rama }) =>
+        ejecutar(() =>
+          disponible(ops.listarVersiones, 'listar_versiones').call(ops, servicio, rama),
+        ),
     );
     return mcp;
   }

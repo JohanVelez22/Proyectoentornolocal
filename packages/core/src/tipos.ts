@@ -435,6 +435,17 @@ export const ConfigSchema = z.object({
         .max(32)
         .default([])
         .catch([]),
+      /**
+       * Versión predeterminada (para proyectos nuevos y herramientas) de Node, Python, Composer y
+       * cloudflared; si no está instalada se usa la más nueva instalada.
+       */
+      predeterminadas: z
+        .partialRecord(
+          z.enum(['node', 'python', 'composer', 'cloudflared']),
+          z.string().regex(/^[0-9a-z][0-9a-z.+-]{0,39}$/),
+        )
+        .default({})
+        .catch({}),
     })
     .prefault({}),
   /**

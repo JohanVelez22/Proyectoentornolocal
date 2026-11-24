@@ -68,6 +68,19 @@ function operacionesFalsas(carpeta = 'C:/no-existe'): OpsFalsas {
     limpiarDumps: vi.fn(() => undefined),
     listarErrores: vi.fn(async () => [RESUMEN_ERROR]),
     leerError: vi.fn(async (h: string) => (h === ERROR.huella ? ERROR : null)),
+    listarVersiones: vi.fn(async (servicio: string, rama?: string) => ({
+      servicio,
+      origen: 'vivo',
+      fecha: null,
+      ramas: [
+        {
+          rama: rama ?? '8.4',
+          soporte: 'lts',
+          finSoporte: null,
+          versiones: [{ version: '8.4.15', instalada: false }],
+        },
+      ],
+    })),
   };
 }
 
@@ -1177,5 +1190,35 @@ describe('Nucleo: servidor MCP', () => {
     } finally {
       await new Promise((r) => ocupante.close(r));
     }
+  });
+});
+
+describe('ServidorMcp: listar_versiones (T19)', () => {
+  it('está listada como solo lectura y devuelve las versiones de un servicio (con rama opcional)', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    const { tools } = await c.listTools();
+    expect(tools.find((t) => t.name === 'listar_versiones')?.annotations).toMatchObject({
+      readOnlyHint: true,
+      destructiveHint: false,
+    });
+    const r = await c.callTool({
+      name: 'listar_versiones',
+      arguments: { servicio: 'mysql', rama: '8.0' },
+    });
+    expect(r.isError).toBeFalsy();
+    expect(m.ops.listarVersiones).toHaveBeenCalledWith('mysql', '8.0');
+    expect(JSON.parse(textoDe(r)).ramas[0].rama).toBe('8.0');
+    expect(m.confirmaciones).toEqual([]);
+  });
+
+  it('rechaza un servicio fuera de la lista o una rama mal formada', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    for (const args of [{ servicio: 'mongosh' }, { servicio: 'mysql', rama: '../x' }]) {
+      const r = await c.callTool({ name: 'listar_versiones', arguments: args });
+      expect(r.isError).toBe(true);
+    }
+    expect(m.ops.listarVersiones).not.toHaveBeenCalled();
   });
 });

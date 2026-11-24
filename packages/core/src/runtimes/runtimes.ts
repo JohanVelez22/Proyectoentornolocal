@@ -220,7 +220,12 @@ export async function pistasArchivos(
 const NOMBRE: Record<TipoRuntime, string> = { node: 'Node', python: 'Python' };
 
 export class Runtimes implements ResolutorRuntimes {
-  constructor(private readonly rutas: Rutas) {}
+  constructor(
+    private readonly rutas: Rutas,
+    /** Versión predeterminada elegida en Servicios → Versiones (si está instalada, manda sobre la más nueva). */
+    private readonly predeterminada: (tipo: TipoRuntime) => Promise<string | null> = async () =>
+      null,
+  ) {}
 
   rutaBin(tipo: TipoRuntime, version: string): string {
     return this.rutas.bin(tipo, version);
@@ -260,7 +265,8 @@ export class Runtimes implements ResolutorRuntimes {
       const instaladas = await this.instalados(tipo);
       const pista = pistas.find((p) => predicado(p.valor) !== null);
       if (!pista) {
-        const v = elegirVersion(instaladas, undefined);
+        const pred = await this.predeterminada(tipo).catch(() => null);
+        const v = pred && instaladas.includes(pred) ? pred : elegirVersion(instaladas, undefined);
         if (v) res[tipo] = v;
         continue;
       }

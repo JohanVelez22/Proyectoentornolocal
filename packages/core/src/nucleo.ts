@@ -14,7 +14,9 @@ import {
 } from './bd/basesDeDatos';
 import { migrarInstancias } from './migraciones/instancias';
 import { puertosConfigurados } from './servicios/instancias';
-import type { RespaldoDatos } from './servicios/actualizar';
+import type { RespaldoDatos, TipoRespaldoDatos } from './servicios/actualizar';
+import type { PlanActualizar, ResultadoNuevaRama } from './servicios/definicion';
+import { armarTabla, type ServicioVersiones, type TablaVersiones } from './catalogo/tablaVersiones';
 import { detectarFormato, type FormatoRespaldo } from './bd/formato';
 import { InstaladorPgvector, type ResultadoBuildTools } from './bd/pgvector';
 import {
@@ -26,7 +28,12 @@ import {
 import { Instalador } from './catalogo/instalador';
 import type { ServicioInstalable, VersionDisponible } from './catalogo/catalogo';
 import { Novedades, SERVICIOS_NOVEDADES } from './catalogo/novedades';
-import { CatalogoVivo, type FiltroVersiones, type ListadoVersiones } from './catalogo/vivo';
+import {
+  CatalogoVivo,
+  ramaFija,
+  type FiltroVersiones,
+  type ListadoVersiones,
+} from './catalogo/vivo';
 import {
   CentroAvisos,
   TIPOS_AVISO,
@@ -56,9 +63,10 @@ import { nombreEjecutable } from './plataforma/sistema';
 import type { Ejecutor, Plataforma } from './plataforma/tipos';
 import { ejecutorPorDefecto, PlataformaWindows } from './plataforma/win';
 import { Supervisor } from './procesos/supervisor';
-import { Rutas } from './rutas';
+import { claveMayorMenor, Rutas } from './rutas';
 import { Mailpit } from './servicios/mailpit';
 import { Servicios, type IdServicio } from './servicios/servicios';
+import { compararVersiones } from './servicios/nginx';
 import { Agentes } from './agentes/agentes';
 import { ErrorWolf } from './errores';
 import { Contenedores } from './contenedores/contenedores';
@@ -116,6 +124,7 @@ import type {
   Config,
   Credenciales,
   EstadoHosts,
+  EstadoInstancia,
   EstadoServicio,
   EstadoTunel,
   IdInstancia,
@@ -773,7 +782,10 @@ export class Nucleo {
       leerConfig,
       asegurarPhpIni: (r) => servicios.php.asegurarPhpIni(r),
     });
-    const runtimes = new Runtimes(rutas);
+    const runtimes = new Runtimes(
+      rutas,
+      async (tipo) => (await leerConfig()).catalogo.predeterminadas[tipo] ?? null,
+    );
     /** php.exe y php.ini de la rama pedida o, si no está instalada, del PHP por defecto. */
     const phpDe = async (rama: string | null): Promise<{ exe: string; ini: string }> => {
       const instaladas = await instalador.instalados('php');
@@ -1479,6 +1491,224 @@ export class Nucleo {
     return this.catalogoVivo.buscar(servicio, version);
   }
 
+  // ---- versiones e instancias (pestaña Versiones) ----
+
+  /**
+   * Tabla de la pestaña "Versiones" de un servicio: el catálogo (vivo → caché → lista fija) más lo
+   * instalado, agrupado por rama, con lo encendido, la predeterminada y las instancias.
+   */
+  async versionesServicio(
+    servicio: ServicioVersiones,
+    filtro: FiltroVersiones = {},
+  ): Promise<TablaVersiones> {
+    const listado = await this.catalogoVivo.listar(servicio, filtro);
+    const carpetas = await this.instalador.instalados(servicio);
+    const real = new Map<string, string>();
+    for (const c of carpetas) real.set(c, await this.instalador.versionInstalada(servicio, c));
+    const instaladas = [...real.values()];
+    const def = this.servicios.datos.def(servicio);
+    const instancias = def ? await this.servicios.datos.listaInstancias(def.id) : [];
+    const estados = await this.servicios.estados();
+    const vivo = (e: EstadoServicio | undefined): boolean =>
+      e?.estado === 'encendido' || e?.estado === 'iniciando';
+    const encendidas: string[] = [];
+    let predeterminada: string | null = null;
+    if (servicio === 'php') {
+      for (const [rama, v] of real)
+        if (vivo(estados.find((e) => e.id === `php-${rama}`))) {
+          encendidas.push(v);
+        }
+      const rama = await this.composer.phpPorDefecto();
+      predeterminada = rama ? (real.get(rama) ?? null) : null;
+    } else if (servicio === 'nginx') {
+      const activa = await this.servicios.nginx.versionActiva().catch(() => null);
+      predeterminada = activa;
+      if (activa && vivo(estados.find((e) => e.id === 'nginx'))) encendidas.push(activa);
+    } else if (def) {
+      for (const i of instancias) if (i.estado === 'encendido') encendidas.push(i.version);
+      predeterminada = instancias.find((i) => i.predeterminada)?.version ?? null;
+    } else {
+      predeterminada = await this.versionPreferida(servicio, instaladas);
+    }
+    return armarTabla({
+      servicio,
+      listado,
+      instaladas,
+      encendidas,
+      instancias,
+      predeterminada,
+      ramaDe: (v) => ramaFija(servicio, v),
+    });
+  }
+
+  /** Predeterminada de Node, Python, Composer o cloudflared (o la más nueva instalada). */
+  private async versionPreferida(servicio: string, instaladas: string[]): Promise<string | null> {
+    const elegida = (await this.config.leer()).catalogo.predeterminadas[
+      servicio as 'node' | 'python' | 'composer' | 'cloudflared'
+    ];
+    if (elegida && instaladas.includes(elegida)) return elegida;
+    return [...instaladas].sort(compararVersiones).at(-1) ?? null;
+  }
+
+  /**
+   * Marca la versión que usan los proyectos nuevos y las herramientas: en PHP la rama por
+   * defecto, en Nginx la versión activa (si está encendida se reinicia con ella), en Node,
+   * Python, Composer y cloudflared la predeterminada. Los servicios de datos usan
+   * `predeterminarInstancia`. Solo versiones instaladas.
+   */
+  async predeterminarVersion(servicio: ServicioVersiones, version: string): Promise<void> {
+    const carpetas = await this.instalador.instalados(servicio);
+    const noInstalada = (): ErrorWolf =>
+      new ErrorWolf('servicios.no_instalado', `${servicio} ${version} no está instalado.`, {
+        nombre: `${servicio} ${version}`.slice(0, 60),
+      });
+    if (servicio === 'php') {
+      const rama = claveMayorMenor(version);
+      if (!carpetas.includes(rama)) throw noInstalada();
+      await this.cambiarPhpPorDefecto(rama);
+      return;
+    }
+    if (!carpetas.includes(version)) throw noInstalada();
+    if (servicio === 'nginx') {
+      const antes = await this.servicios.nginx.versionActiva().catch(() => null);
+      await this.sitios.modificarConfig((c) => {
+        c.servicios.nginx.version = version;
+      });
+      const estado = (await this.servicios.estados()).find((e) => e.id === 'nginx')?.estado;
+      if (antes !== version && (estado === 'encendido' || estado === 'iniciando')) {
+        await this.servicios.detener('nginx');
+        await this.servicios.iniciar('nginx');
+      }
+      return;
+    }
+    if (servicio === 'mailpit' || servicio === 'ollama') {
+      const estado = (await this.servicios.estados()).find((e) => e.id === servicio)?.estado;
+      await this.sitios.modificarConfig((c) => {
+        c.servicios.datos[servicio].version = version;
+      });
+      if (estado === 'encendido' || estado === 'iniciando') {
+        await this.servicios.detener(servicio);
+        await this.servicios.iniciar(servicio);
+      }
+      return;
+    }
+    if (
+      servicio === 'node' ||
+      servicio === 'python' ||
+      servicio === 'composer' ||
+      servicio === 'cloudflared'
+    ) {
+      await this.sitios.modificarConfig((c) => {
+        c.catalogo.predeterminadas[servicio] = version;
+      });
+      return;
+    }
+    throw new ErrorWolf('servicios.desconocido', `Servicio desconocido: ${servicio}`, {
+      id: servicio,
+    });
+  }
+
+  /**
+   * Desinstala solo los binarios de una versión (en PHP, la rama). Nunca borra datos: en los
+   * servicios de datos, una versión en uso por una instancia se rechaza; en PHP y Nginx, una
+   * versión encendida también.
+   */
+  async desinstalarVersion(servicio: ServicioVersiones, version: string): Promise<void> {
+    const carpeta = servicio === 'php' ? claveMayorMenor(version) : version;
+    const estados = await this.servicios.estados();
+    const vivo = (id: string): boolean => {
+      const e = estados.find((x) => x.id === id)?.estado;
+      return e === 'encendido' || e === 'iniciando';
+    };
+    const enUso =
+      servicio === 'php'
+        ? vivo(`php-${carpeta}`)
+          ? `php-${carpeta}`
+          : null
+        : servicio === 'nginx' &&
+            vivo('nginx') &&
+            (await this.servicios.nginx.versionActiva().catch(() => null)) === version
+          ? 'nginx'
+          : null;
+    if (enUso) {
+      throw new ErrorWolf(
+        'instalador.version_en_uso',
+        `No se puede desinstalar ${servicio} ${version}: está encendida (${enUso}).`,
+        { servicio, version, instancia: enUso },
+      );
+    }
+    await this.instalador.desinstalar(servicio, carpeta);
+  }
+
+  /** Instancias de un servicio de datos (o de todos) con su estado. */
+  listaInstancias(servicio?: IdServicioDatos): Promise<EstadoInstancia[]> {
+    return this.servicios.datos.listaInstancias(servicio);
+  }
+
+  crearInstancia(servicio: IdServicioDatos, version: string): Promise<IdInstancia> {
+    return this.servicios.datos.instancias.crear(servicio, version);
+  }
+
+  iniciarInstancia(id: IdInstancia): Promise<void> {
+    return this.servicios.iniciar(id);
+  }
+
+  detenerInstancia(id: IdInstancia): Promise<void> {
+    return this.servicios.detener(id);
+  }
+
+  puertoInstancia(id: IdInstancia, puerto: number): Promise<void> {
+    return this.servicios.datos.instancias.cambiarPuerto(id, puerto);
+  }
+
+  predeterminarInstancia(id: IdInstancia): Promise<void> {
+    return this.servicios.datos.instancias.predeterminar(id);
+  }
+
+  /** Borra solo data/<servicio>/<clave>; exige escribir el id de la instancia. */
+  borrarDatosInstancia(id: IdInstancia, confirmacion: string): Promise<void> {
+    return this.servicios.datos.instancias.borrarDatos(id, confirmacion);
+  }
+
+  /** Resuelve el bloqueo de una instancia (confirmación escrita; ver `ServiciosDatos.desbloquear`). */
+  desbloquearInstancia(
+    id: IdInstancia,
+    o: { confirmacion: string; respaldo?: string },
+  ): Promise<void> {
+    return this.servicios.datos.instancias.desbloquear(id, o);
+  }
+
+  /** Lo que hará la actualización (para el diálogo): tamaño de los datos y espacio libre. */
+  planActualizar(id: IdInstancia): Promise<PlanActualizar> {
+    return this.servicios.datos.planActualizar(id);
+  }
+
+  /** Parche de la misma rama con respaldo previo (ver `ServiciosDatos.actualizar`). */
+  actualizarServicio(
+    id: IdInstancia,
+    version: string,
+    o: { confirmarSinHuella?: true } = {},
+  ): Promise<{ anterior: string; respaldo: { carpeta: string; volcados: string[] } }> {
+    return this.servicios.datos.actualizar(id, version, o);
+  }
+
+  /** Rama nueva = instancia nueva, con copia opcional de las bases de otra instancia. */
+  nuevaRamaServicio(
+    servicio: IdServicioDatos,
+    version: string,
+    o: { copiarDesde?: IdInstancia; confirmarSinHuella?: true } = {},
+  ): Promise<ResultadoNuevaRama> {
+    return this.servicios.datos.nuevaRama(servicio, version, o);
+  }
+
+  /** Borra una copia que dejaron las actualizaciones (nunca la carpeta de datos actual). */
+  borrarRespaldoDatos(
+    r: { servicio: IdServicioDatos; clave: string; tipo: TipoRespaldoDatos; sello: string },
+    confirmar: true,
+  ): Promise<void> {
+    return this.servicios.datos.borrarRespaldoDatos(r, confirmar);
+  }
+
   // ---- pgvector ----
 
   estadoPgvector(): ReturnType<InstaladorPgvector['estado']> {
@@ -1773,6 +2003,21 @@ export class Nucleo {
       limpiarDumps: () => this.limpiarDumps(),
       listarErrores: (filtro) => this.listaErrores(filtro),
       leerError: (huella) => this.leerError(huella),
+      // Sin rutas de la carpeta de datos (el bloqueo trae las de .fallida y del respaldo).
+      listarVersiones: async (servicio, rama) => {
+        const t = await this.versionesServicio(servicio, rama ? { rama } : {});
+        return {
+          ...t,
+          instancias: t.instancias.map((i) => ({
+            id: i.id,
+            version: i.version,
+            puerto: i.puerto,
+            estado: i.estado,
+            predeterminada: i.predeterminada,
+            bloqueada: !!i.bloqueo,
+          })),
+        };
+      },
       finalizarProceso: (pid, confirmacion) => this.puertos.finalizarProceso(pid, confirmacion),
       estadoGeneral: () => this.estadoGeneral(),
       listarProyectos: () => this.sitios.listar(),

@@ -571,3 +571,66 @@ describe('instancia bloqueada tras una devolución fallida (T18-N1)', () => {
     ).rejects.toMatchObject({ codigo: 'instancias.respaldo_no_existe' });
   });
 });
+
+describe('respaldos de datos: plan y borrado confirmado', () => {
+  it('planActualizar mide la carpeta y el espacio libre, y dice si habrá volcados', async () => {
+    const s = crear();
+    await preparar(s);
+    const p = await s.datos.planActualizar('mysql@8.4' as IdInstancia);
+    expect(p).toMatchObject({
+      id: 'mysql@8.4',
+      carpeta: datosDe('8.4'),
+      archivos: 3,
+      libres: libre,
+      volcados: true,
+      hayDatos: true,
+    });
+    expect(p.necesarios).toBe(p.bytes + 256 * 1024 * 1024);
+  });
+
+  it('borra solo una copia listada; nunca la carpeta actual ni la que apunta un bloqueo', async () => {
+    fallan.add('8.4.14');
+    const s = crear();
+    await preparar(s);
+    await s.datos.actualizar('mysql@8.4', '8.4.14').catch(() => undefined);
+    const ref = { servicio: 'mysql' as const, clave: '8.4', sello: SELLO };
+    await expect(
+      s.datos.borrarRespaldoDatos({ ...ref, tipo: 'respaldo' }, false as never),
+    ).rejects.toThrow();
+    await s.datos.borrarRespaldoDatos({ ...ref, tipo: 'volcados' }, true);
+    expect(existsSync(`${datosDe('8.4')}.respaldo-${SELLO}.volcados`)).toBe(false);
+    await s.datos.borrarRespaldoDatos({ ...ref, tipo: 'fallida' }, true);
+    expect(existsSync(`${datosDe('8.4')}.fallida-${SELLO}`)).toBe(false);
+    // Lo que no está listado (otra clave, sello inventado, la carpeta actual) no existe para esto.
+    for (const malo of [
+      { ...ref, tipo: 'respaldo', sello: '20990101-000000' },
+      { ...ref, clave: '../8.4', tipo: 'respaldo' },
+      { ...ref, tipo: 'actual' },
+    ]) {
+      await expect(s.datos.borrarRespaldoDatos(malo as never, true)).rejects.toMatchObject({
+        codigo: 'instancias.respaldo_no_existe',
+      });
+    }
+    expect(existsSync(path.join(datosDe('8.4'), 'ibdata1'))).toBe(true);
+    expect(existsSync(`${datosDe('8.4')}.respaldo-${SELLO}`)).toBe(true);
+  });
+
+  it('el respaldo de una instancia bloqueada no se puede borrar', async () => {
+    fallan.add('8.4.14');
+    const real = copiar;
+    copiar = async (de, a) => {
+      if (a.includes('.restaurando-')) throw new Error('disco lleno');
+      await real(de, a);
+    };
+    const s = crear();
+    await preparar(s);
+    await s.datos.actualizar('mysql@8.4', '8.4.14').catch(() => undefined);
+    await expect(
+      s.datos.borrarRespaldoDatos(
+        { servicio: 'mysql', clave: '8.4', tipo: 'respaldo', sello: SELLO },
+        true,
+      ),
+    ).rejects.toMatchObject({ codigo: 'instancias.respaldo_en_uso' });
+    expect(existsSync(`${datosDe('8.4')}.respaldo-${SELLO}`)).toBe(true);
+  });
+});

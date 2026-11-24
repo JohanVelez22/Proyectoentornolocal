@@ -134,7 +134,7 @@ export function validarIndice(
 }
 
 /** Rama de una versión de la lista fija ("22" en Node, "17" en PostgreSQL; "mayor.menor" en el resto). */
-function ramaFija(servicio: ServicioInstalable, version: string): string {
+export function ramaFija(servicio: ServicioInstalable, version: string): string {
   const [mayor = '0', menor = '0'] = version.split('.');
   return servicio === 'node' || servicio === 'postgresql'
     ? String(Number(mayor))

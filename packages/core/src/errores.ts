@@ -46,6 +46,7 @@ export const PARAMETROS_ERROR = {
   'instancias.confirmacion': ['id'],
   'instancias.sin_datos': ['id'],
   'instancias.respaldo_no_existe': ['id'],
+  'instancias.respaldo_en_uso': ['id'],
   'instalador.version_en_uso': ['servicio', 'version', 'instancia'],
   // bases de datos
   'bd.encender_servicio': ['nombre'],

@@ -129,6 +129,7 @@ export const en: Textos = {
       'instancias.confirmacion': 'To continue, type "{id}".',
       'instancias.sin_datos': '{id} has no data in its folder: choose a backup to restore.',
       'instancias.respaldo_no_existe': 'That backup of {id} does not exist.',
+      'instancias.respaldo_en_uso': '{id} is blocked and needs that copy: resolve it first.',
       'instalador.version_en_uso':
         'Cannot uninstall {servicio} {version}: instance {instancia} uses it.',
       'bd.encender_servicio': 'Start {nombre} to manage its databases.',

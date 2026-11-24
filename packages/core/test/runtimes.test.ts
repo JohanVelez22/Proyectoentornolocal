@@ -116,6 +116,19 @@ describe('Runtimes.paraProyecto', () => {
       avisos: [],
     });
   });
+  it('sin pista y con predeterminada instalada (Servicios → Versiones): esa; si no está, la más nueva', async () => {
+    const c = await proyecto({});
+    armar();
+    const pred = new Runtimes(rutas, async (t) => (t === 'node' ? '22.11.0' : '3.9.0'));
+    expect(await pred.paraProyecto({ carpeta: c })).toEqual({
+      node: '22.11.0',
+      python: '3.13.17',
+      avisos: [],
+    });
+    // Una pista del proyecto manda sobre la predeterminada.
+    const c2 = await proyecto({ '.nvmrc': '20' });
+    expect((await pred.paraProyecto({ carpeta: c2 })).node).toBe('20.20.2');
+  });
   it('wolfcore.yml manda sobre .nvmrc y package.json', async () => {
     const c = await proyecto({
       'wolfcore.yml': 'version: 1\nnode: "20"\npython: 3.12 # comentario\n',

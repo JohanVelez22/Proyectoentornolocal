@@ -127,6 +127,8 @@ export const es = {
       'instancias.confirmacion': 'Para continuar escriba "{id}".',
       'instancias.sin_datos': '{id} no tiene datos en su carpeta: elija un respaldo para devolver.',
       'instancias.respaldo_no_existe': 'No existe ese respaldo de {id}.',
+      'instancias.respaldo_en_uso':
+        'Esa copia la necesita {id}, que está bloqueada: resuélvalo antes.',
       'instalador.version_en_uso':
         'No se puede desinstalar {servicio} {version}: la usa la instancia {instancia}.',
       'bd.encender_servicio': 'Encienda {nombre} para administrar sus bases.',
