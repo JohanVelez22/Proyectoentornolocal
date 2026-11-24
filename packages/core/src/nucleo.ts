@@ -1661,6 +1661,11 @@ export class Nucleo {
     return this.servicios.datos.instancias.cambiarPuerto(id, puerto);
   }
 
+  /** Saca la instancia de la lista (la detiene antes); sus datos quedan en disco. */
+  quitarInstancia(id: IdInstancia): Promise<void> {
+    return this.servicios.datos.instancias.quitar(id);
+  }
+
   predeterminarInstancia(id: IdInstancia): Promise<void> {
     return this.servicios.datos.instancias.predeterminar(id);
   }

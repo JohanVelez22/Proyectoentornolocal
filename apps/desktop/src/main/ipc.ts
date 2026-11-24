@@ -85,7 +85,6 @@ import {
   tipoRuntime,
   idServicioDatos,
   motorBd,
-  motorSql,
   nombreBase,
   nombreModelo,
   objetoPlano,
@@ -101,6 +100,16 @@ import {
   textoLibre,
   tipoProyecto,
   urlHttp,
+  servicioVersiones,
+  versionCatalogo,
+  idInstanciaIpc,
+  objetivoBd,
+  objetivoSql,
+  opcionesActualizar,
+  opcionesNuevaRama,
+  opcionesDesbloquear,
+  refRespaldoDatos,
+  confirmadoBorrar,
 } from './validacion';
 
 type MotorBdIpc = ReturnType<typeof motorBd>;
@@ -670,16 +679,17 @@ const TABLA: Record<RutaIpc, Manejador> = {
     n.borrarDatosServicio(idServicioDatos(id), textoAcotado(confirmacion, 0, 64, 'confirmación')),
   'servicios.autoIniciar': (n, _s, id, valor) =>
     n.autoIniciarServicio(idServicioDatos(id), booleano(valor, 'autoIniciar')),
-  'bd.listar': (n, _s, motor) => n.listarBases(motorBd(motor)),
+  // Las rutas bd.* aceptan el motor (su instancia predeterminada) o una instancia (`mysql@8.0`).
+  'bd.listar': (n, _s, motor) => n.listarBases(objetivoBd(motor).objetivo),
   'bd.crear': (n, _s, motor, nombre, opciones) => {
-    const m = motorBd(motor);
+    const { objetivo, motor: m } = objetivoBd(motor);
     const o = opcionesCrear(m, opciones);
-    return sinClave(o?.clave ?? '', () => n.crearBase(m, nombreBase(m, nombre), o));
+    return sinClave(o?.clave ?? '', () => n.crearBase(objetivo, nombreBase(m, nombre), o));
   },
   'bd.borrar': (n, _s, motor, nombre, confirmacion) => {
-    const m = motorBd(motor);
+    const { objetivo, motor: m } = objetivoBd(motor);
     return n.borrarBase(
-      m,
+      objetivo,
       nombreBase(m, nombre),
       textoAcotado(confirmacion, 0, 64, 'confirmación'),
     );
@@ -687,38 +697,43 @@ const TABLA: Record<RutaIpc, Manejador> = {
   // Rutas que devuelven secretos (nunca se registran): bd.conexion (clave del motor),
   // bd.crear (clave generada del usuario nuevo), ftp.activar, ftp.regenerarClave y
   // ftp.credenciales (clave FTP del sitio).
-  'bd.conexion': (n, _s, motor) => n.conexionBd(motorBd(motor)),
+  'bd.conexion': (n, _s, motor) => n.conexionBd(objetivoBd(motor).objetivo),
   'bd.bloqueEnv': (n, _s, motor, base, tipo, envActual) => {
-    const m = motorBd(motor);
+    const { objetivo, motor: m } = objetivoBd(motor);
     return n.bloqueEnvBd(
-      m,
+      objetivo,
       nombreBase(m, base),
       tipoProyecto(tipo),
       envActual === undefined ? undefined : textoAcotadoEnv(envActual),
     );
   },
   'bd.bloqueEnvSitio': (n, _s, sitioId, motor, base) => {
-    const m = motorBd(motor);
-    return n.bloqueEnvSitio(textoAcotado(sitioId, 1, 128, 'sitio'), m, nombreBase(m, base));
+    const { objetivo, motor: m } = objetivoBd(motor);
+    return n.bloqueEnvSitio(textoAcotado(sitioId, 1, 128, 'sitio'), objetivo, nombreBase(m, base));
   },
   'bd.carpetaRespaldos': (n) => n.carpetaRespaldos(),
   'bd.tieneTablas': (n, _s, motor, base) => {
-    const m = motorSql(motor);
-    return n.tieneTablas(m, nombreBase(m, base));
+    const { objetivo, motor: m } = objetivoSql(motor);
+    return n.tieneTablas(objetivo, nombreBase(m, base));
   },
   'bd.formato': async (n, s, archivo) =>
     n.formatoRespaldo(await archivoExistente(s.elegidas.exigir(archivo, 'archivo'))),
   'bd.restaurar': async (n, s, motor, archivo, base, opciones) => {
-    const m = motorSql(motor);
+    const { objetivo, motor: m } = objetivoSql(motor);
     const b = nombreBase(m, base);
     const o = opcionesRestaurar(opciones);
-    return n.restaurarBase(m, await archivoExistente(s.elegidas.exigir(archivo, 'archivo')), b, o);
+    return n.restaurarBase(
+      objetivo,
+      await archivoExistente(s.elegidas.exigir(archivo, 'archivo')),
+      b,
+      o,
+    );
   },
   'bd.respaldar': async (n, s, motor, base, carpeta) => {
-    const m = motorSql(motor);
+    const { objetivo, motor: m } = objetivoSql(motor);
     const b = nombreBase(m, base);
     return n.respaldarBase(
-      m,
+      objetivo,
       b,
       carpeta === undefined
         ? undefined
@@ -726,11 +741,11 @@ const TABLA: Record<RutaIpc, Manejador> = {
     );
   },
   'bd.importar': (n, _s, motor, origen, destino, opciones) => {
-    const m = motorSql(motor);
+    const { objetivo, motor: m } = objetivoSql(motor);
     const o = origenImportar(origen);
     const d = nombreBase(m, destino, 'base destino');
     const op = opcionesRestaurar(opciones);
-    return sinClave(o.clave, () => n.importarBase(m, o, d, op));
+    return sinClave(o.clave, () => n.importarBase(objetivo, o, d, op));
   },
   'pgvector.estado': (n) => n.estadoPgvector(),
   'pgvector.instalarBuildTools': (n) => n.instalarBuildTools(),
@@ -957,6 +972,46 @@ const TABLA: Record<RutaIpc, Manejador> = {
   },
   'instalador.instalados': (n, _s, servicio) =>
     n.instalador.instalados(servicioDelCatalogo(servicio)),
+  // Solo los binarios: nunca llama a borrar datos (es otra ruta, con su confirmación escrita).
+  'instalador.desinstalar': (n, _s, servicio, version) =>
+    n.desinstalarVersion(servicioVersiones(servicio), versionCatalogo(version)),
+  // ---- Pestaña "Versiones" e instancias (Task 19) ----
+  'catalogo.versiones': (n, _s, servicio, filtro) =>
+    n.versionesServicio(servicioVersiones(servicio), filtroVersiones(filtro)),
+  'catalogo.silenciar': (n, _s, servicio, silenciar) =>
+    n.silenciarVersiones(servicioVersiones(servicio), booleano(silenciar, 'silenciar')),
+  'instancias.lista': (n, _s, servicio) =>
+    n.listaInstancias(servicio === undefined ? undefined : idServicioDatos(servicio)),
+  'instancias.crear': (n, _s, servicio, version) =>
+    n.crearInstancia(idServicioDatos(servicio), versionCatalogo(version)),
+  'instancias.iniciar': (n, _s, id) => n.iniciarInstancia(idInstanciaIpc(id)),
+  'instancias.detener': (n, _s, id) => n.detenerInstancia(idInstanciaIpc(id)),
+  'instancias.puerto': (n, _s, id, puerto) =>
+    n.puertoInstancia(idInstanciaIpc(id), puertoUsuario(puerto)),
+  'instancias.predeterminar': (n, _s, id) => n.predeterminarInstancia(idInstanciaIpc(id)),
+  // Solo la saca de la lista: sus datos quedan (borrarlos es instancias.borrarDatos).
+  'instancias.quitar': (n, _s, id) => n.quitarInstancia(idInstanciaIpc(id)),
+  'instancias.borrarDatos': (n, _s, id, confirmacion) =>
+    n.borrarDatosInstancia(idInstanciaIpc(id), textoAcotado(confirmacion, 0, 64, 'confirmación')),
+  'instancias.desbloquear': (n, _s, id, opciones) =>
+    n.desbloquearInstancia(idInstanciaIpc(id), opcionesDesbloquear(opciones)),
+  'servicios.planActualizar': (n, _s, id) => n.planActualizar(idInstanciaIpc(id)),
+  'servicios.actualizar': (n, _s, id, version, opciones) =>
+    n.actualizarServicio(
+      idInstanciaIpc(id),
+      versionCatalogo(version),
+      opcionesActualizar(opciones),
+    ),
+  'servicios.nuevaRama': (n, _s, servicio, version, opciones) => {
+    const s = idServicioDatos(servicio);
+    return n.nuevaRamaServicio(s, versionCatalogo(version), opcionesNuevaRama(s, opciones));
+  },
+  'servicios.predeterminada': (n, _s, servicio, version) =>
+    n.predeterminarVersion(servicioVersiones(servicio), versionCatalogo(version)),
+  'servicios.respaldosDatos': (n, _s, servicio) =>
+    n.respaldosDeDatos(servicio === undefined ? undefined : idServicioDatos(servicio)),
+  'servicios.borrarRespaldoDatos': (n, _s, ref, confirmar) =>
+    n.borrarRespaldoDatos(refRespaldoDatos(ref), confirmadoBorrar(confirmar)),
   'tuneles.abrir': (n, _s, id) => n.tuneles.abrir(idNoVacio(id)),
   'tuneles.cerrar': (n, _s, id) => n.tuneles.cerrar(idNoVacio(id)),
   'tuneles.renovar': (n, _s, id) => n.tuneles.renovar(idNoVacio(id)),

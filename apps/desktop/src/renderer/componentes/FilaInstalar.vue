@@ -7,6 +7,8 @@ import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos as tx } from '../i18n';
 import { useServicios, type InstalableCatalogo } from '../stores/servicios';
+import { useRouter } from 'vue-router';
+import { esServicioConVersiones, useVersiones } from '../stores/versiones';
 
 const props = defineProps<{ servicio: InstalableCatalogo }>();
 
@@ -15,7 +17,16 @@ const textos = computed(() => t.servicios[props.servicio]);
 const servicios = useServicios();
 const { ejecutar, ocupado } = useAccion();
 
+const router = useRouter();
+const pestanaVersiones = useVersiones();
 const versiones = ref<VersionDisponible[] | null>(null);
+
+/** Huella fuerte (SHA-256/512, o se pide a la fuente al instalar). */
+const conHuella = (v: VersionDisponible): boolean =>
+  v.huellaDiferida === true ||
+  v.huella?.algoritmo === 'sha256' ||
+  v.huella?.algoritmo === 'sha512' ||
+  (!v.huella && !!v.sha256);
 const elegida = ref<string | null>(null);
 
 const instalados = computed(() => servicios.instalados[props.servicio] ?? []);
@@ -25,7 +36,12 @@ const yaInstalada = (v: VersionDisponible): boolean =>
 const opciones = computed<SelectOption[]>(() =>
   (versiones.value ?? []).map((v) => ({
     value: v.version,
-    label: [v.version, v.rama ? t.rama(v.rama) : '', yaInstalada(v) ? t.yaInstalada : '']
+    label: [
+      v.version,
+      v.rama ? t.rama(v.rama) : '',
+      yaInstalada(v) ? t.yaInstalada : '',
+      conHuella(v) ? '' : tx.versiones.marcas.sinHuella,
+    ]
       .filter(Boolean)
       .join(' · '),
   })),
@@ -55,6 +71,18 @@ async function cargarVersiones(mostrar: boolean): Promise<void> {
 async function instalar(): Promise<void> {
   const v = versiones.value?.find((x) => x.version === elegida.value);
   if (!v) return;
+  // Sin huella fuerte solo se instala desde el diálogo que explica el riesgo (pestaña Versiones).
+  if (!conHuella(v) && esServicioConVersiones(props.servicio)) {
+    const s = props.servicio;
+    pestanaVersiones.elegirServicio(s);
+    pestanaVersiones.resaltada = v.version;
+    await router.push({ name: 'servicios.versiones', params: { servicio: s } });
+    await ejecutar('versiones', async () => {
+      await pestanaVersiones.cargar();
+      await pestanaVersiones.pedirInstalar(v.version);
+    });
+    return;
+  }
   for (const p of servicios.progresoDe(props.servicio)) servicios.olvidarProgreso(p);
   const ok = await ejecutar(
     `instalar-${props.servicio}`,

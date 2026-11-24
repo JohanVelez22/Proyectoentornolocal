@@ -5,6 +5,7 @@ import { computed } from 'vue';
 import { formatearFecha, idioma, textos } from '../i18n';
 import { textoAviso } from '../../shared/textosAvisos';
 import { useAvisos } from '../stores/avisos';
+import { argsDeAviso } from '../stores/versiones';
 
 /** Historial de avisos en un panel lateral; cada aviso con acción lleva a su pantalla. */
 const visible = defineModel<boolean>('visible', { required: true });
@@ -19,6 +20,15 @@ const TONO = { info: 'info', aviso: 'warning', error: 'error' } as const;
 const filas = computed(() =>
   avisos.lista.map((a) => ({ aviso: a, texto: textoAviso(idioma.value, a) })),
 );
+
+/**
+ * Texto del botón: "Actualizar" en un aviso de versión nueva con huella fuerte (abre el diálogo
+ * de actualización, nunca actualiza solo); "Ver versiones" si no hay atajo; "Ver" en el resto.
+ */
+function textoBoton(a: Aviso): string {
+  if (a.tipo !== 'version-nueva') return t.ver;
+  return argsDeAviso(a.accion?.args)?.actualizar ? t.actualizar : t.verVersiones;
+}
 
 function ver(a: Aviso): void {
   void avisos.marcarLeidos([a.id]).catch(() => undefined);
@@ -67,7 +77,7 @@ function ver(a: Aviso): void {
             type="primary"
             @click="ver(f.aviso)"
           >
-            {{ t.ver }}
+            {{ textoBoton(f.aviso) }}
           </NButton>
         </li>
       </ul>

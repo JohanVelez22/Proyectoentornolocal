@@ -34,6 +34,8 @@ import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { categoriaDe, esServicioDatos, puertoAlternativo, useServicios } from '../stores/servicios';
 import EstadoPunto from './EstadoPunto.vue';
+import { useRouter } from 'vue-router';
+import { esServicioConVersiones } from '../stores/versiones';
 
 const props = defineProps<{ servicio: EstadoServicio }>();
 
@@ -41,6 +43,27 @@ const t = textos.servicios;
 const servicios = useServicios();
 const dialog = useDialog();
 const { ejecutar, ocupado } = useAccion();
+const router = useRouter();
+
+/** Servicio de la pestaña "Versiones" de esta tarjeta (las ramas de PHP van todas a PHP). */
+const servicioVersiones = computed(() => {
+  const id = props.servicio.id.startsWith('php-') ? 'php' : props.servicio.id;
+  return esServicioConVersiones(id) ? id : null;
+});
+function abrirVersiones(): void {
+  if (servicioVersiones.value) {
+    void router.push({
+      name: 'servicios.versiones',
+      params: { servicio: servicioVersiones.value },
+    });
+  }
+}
+/** Con varias instancias, cuántas y cuántas encendidas. */
+const resumenInstancias = computed(() => {
+  const l = props.servicio.instancias ?? [];
+  if (l.length < 2) return null;
+  return t.instancias(l.length, l.filter((i) => i.estado === 'encendido').length);
+});
 
 const ICONOS: Record<ReturnType<typeof categoriaDe>, Component> = {
   web: Server,
@@ -221,6 +244,16 @@ function cambiarRedLocal(valor: boolean): void {
         <span class="version">{{ servicio.version ?? t.sinVersion }}</span>
       </div>
       <EstadoPunto :estado="servicio.estado" />
+      <NButton
+        v-if="servicioVersiones"
+        text
+        size="tiny"
+        type="primary"
+        :aria-label="t.versionesDe(servicio.nombre)"
+        @click="abrirVersiones"
+      >
+        {{ textos.versiones.pestana }}
+      </NButton>
       <NDropdown
         v-if="deDatos"
         trigger="click"
@@ -243,6 +276,7 @@ function cambiarRedLocal(valor: boolean): void {
       </NDropdown>
     </header>
 
+    <p v-if="resumenInstancias" class="instancias">{{ resumenInstancias }}</p>
     <dl class="datos">
       <div>
         <dt>{{ servicio.puertos.length > 1 ? t.puertos : t.puerto }}</dt>
@@ -440,6 +474,11 @@ function cambiarRedLocal(valor: boolean): void {
 </template>
 
 <style scoped>
+.instancias {
+  margin: 0 0 6px;
+  font-size: 12px;
+  opacity: 0.7;
+}
 .tarjeta {
   display: flex;
   flex-direction: column;

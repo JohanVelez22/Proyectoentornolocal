@@ -2,7 +2,7 @@
 import { DocumentAttach, ShieldCheckmark, Warning } from '@vicons/ionicons5';
 import { NButton, NForm, NFormItem, NIcon, NInput, NModal, NSpin, NTag } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
-import type { FormatoRespaldo, MotorSql } from '../../shared/api';
+import type { FormatoRespaldo, IdInstancia, MotorSql } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -83,7 +83,9 @@ async function elegirArchivo(): Promise<void> {
 
 async function continuar(): Promise<void> {
   if (!puedeRestaurar.value) return;
-  const tablas = await ejecutar('revisar', () => api().bd.tieneTablas(props.motor, base.value));
+  const tablas = await ejecutar('revisar', () =>
+    api().bd.tieneTablas(bd.objetivo(props.motor) as MotorSql | IdInstancia, base.value),
+  );
   if (tablas === undefined) return;
   const opciones = opcionesRestaurar(tablas, false);
   if (opciones === null) {

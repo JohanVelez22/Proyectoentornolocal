@@ -89,6 +89,46 @@ describe('Notificador (main)', () => {
     expect(clics).toEqual([a]);
   });
 
+  it('versión nueva: botón "Actualizar" en el toast (si el sistema lo admite) que abre igual que el clic', () => {
+    const { n, creadas, oyentes, clics } = montar();
+    const a = aviso({
+      tipo: 'version-nueva',
+      nivel: 'info',
+      codigo: 'avisos.version_nueva',
+      datos: { fuente: 'mysql', servicio: 'mysql', actual: '8.4.13', nueva: '8.4.15' },
+      accion: {
+        ruta: 'servicios.versiones',
+        args: [{ servicio: 'mysql', version: '8.4.15', instancia: 'mysql@8.4', actualizar: true }],
+      },
+    });
+    n.mostrar(a, { ...texto, accion: 'Actualizar' });
+    expect(creadas[0]).toMatchObject({ actions: [{ type: 'button', text: 'Actualizar' }] });
+    oyentes[0]!['action']!();
+    expect(clics).toEqual([a]);
+    // Sin huella fuerte (sin atajo) no lleva el botón: solo el clic, que abre la pestaña.
+    const sin = aviso({
+      ...a,
+      id: 'a9',
+      datos: { ...a.datos, fuente: 'redis' },
+      accion: {
+        ruta: 'servicios.versiones',
+        args: [{ servicio: 'redis', version: '8', actualizar: false }],
+      },
+    });
+    n.mostrar(sin, { ...texto, accion: 'Actualizar' });
+    expect(creadas[1]).not.toHaveProperty('actions');
+  });
+
+  it('el texto de un aviso de versión nueva trae la acción "Actualizar" (es/en)', () => {
+    const datos = { servicio: 'mysql', actual: '8.4.13', nueva: '8.4.15' };
+    expect(
+      textoAviso('es', { tipo: 'version-nueva', codigo: 'avisos.version_nueva', datos }).accion,
+    ).toBe('Actualizar');
+    expect(
+      textoAviso('en', { tipo: 'version-nueva', codigo: 'avisos.rama_nueva', datos }).accion,
+    ).toBe('Update');
+  });
+
   it('si Notification falla al crearse no rompe', () => {
     const n = new Notificador({
       soportada: () => true,

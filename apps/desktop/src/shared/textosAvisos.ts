@@ -8,6 +8,8 @@ import type { Aviso, IdiomaUi } from '@pel/core';
 export interface TextoAviso {
   titulo: string;
   cuerpo: string;
+  /** Texto del botón de acción del toast (solo los avisos que lo ofrecen). */
+  accion?: string;
 }
 
 type Datos = Record<string, string | number>;
@@ -82,6 +84,7 @@ const ES: Diccionario = {
     'avisos.version_nueva': (d) => ({
       titulo: `Hay una versión nueva de ${limpio(d['servicio'], 'un servicio')}`,
       cuerpo: `${limpio(d['nueva'], 'Una versión nueva')} ya está publicada (tiene ${limpio(d['actual'], 'otra')}). Ábrala en Servicios → Versiones para actualizar; nada se instala solo.`,
+      accion: 'Actualizar',
     }),
     'avisos.version_nueva_sin_huella': (d) => ({
       titulo: `Hay una versión nueva de ${limpio(d['servicio'], 'un servicio')}`,
@@ -94,6 +97,7 @@ const ES: Diccionario = {
     'avisos.rama_nueva': (d) => ({
       titulo: `Nueva rama de ${limpio(d['servicio'], 'un servicio')}`,
       cuerpo: `${limpio(d['nueva'], 'Una rama nueva')} es más nueva que la que usa (${limpio(d['actual'], '?')}). Se instala aparte, sin tocar sus datos.`,
+      accion: 'Actualizar',
     }),
     'doctor.hallazgos': (d) => ({
       titulo: 'El Doctor encontró errores en el entorno',
@@ -190,6 +194,7 @@ const EN: Diccionario = {
     'avisos.version_nueva': (d) => ({
       titulo: `A new version of ${limpio(d['servicio'], 'a service')} is available`,
       cuerpo: `${limpio(d['nueva'], 'A new version')} has been published (you have ${limpio(d['actual'], 'another one')}). Open Services → Versions to update; nothing is installed automatically.`,
+      accion: 'Update',
     }),
     'avisos.version_nueva_sin_huella': (d) => ({
       titulo: `A new version of ${limpio(d['servicio'], 'a service')} is available`,
@@ -202,6 +207,7 @@ const EN: Diccionario = {
     'avisos.rama_nueva': (d) => ({
       titulo: `New ${limpio(d['servicio'], 'service')} branch`,
       cuerpo: `${limpio(d['nueva'], 'A new branch')} is newer than the one you use (${limpio(d['actual'], '?')}). It installs side by side, without touching your data.`,
+      accion: 'Update',
     }),
     'doctor.hallazgos': (d) => ({
       titulo: 'The Doctor found errors in the environment',

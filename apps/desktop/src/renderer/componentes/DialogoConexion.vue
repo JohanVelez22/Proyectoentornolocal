@@ -13,6 +13,7 @@ import {
 import { computed, ref, watch } from 'vue';
 import type { DatosConexion, MotorBd } from '../../shared/api';
 import { api } from '../api';
+import { useBd } from '../stores/bd';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { useSitios } from '../stores/sitios';
@@ -20,6 +21,7 @@ import { useSitios } from '../stores/sitios';
 /** Datos de conexión de una base y su bloque .env. La clave solo vive mientras está abierto. */
 const props = defineProps<{ motor: MotorBd; base: string }>();
 const mostrar = defineModel<boolean>('show', { required: true });
+const bd = useBd();
 
 /** Valor del selector cuando no se elige un sitio. */
 const GENERICO = '';
@@ -71,8 +73,8 @@ async function cargarBloque(): Promise<void> {
   const id = sitioId.value;
   const b = await ejecutar('bloque', () =>
     id === GENERICO
-      ? api().bd.bloqueEnv(props.motor, props.base, 'generico')
-      : api().bd.bloqueEnvSitio(id, props.motor, props.base),
+      ? api().bd.bloqueEnv(bd.objetivo(props.motor), props.base, 'generico')
+      : api().bd.bloqueEnvSitio(id, bd.objetivo(props.motor), props.base),
   );
   // Si se cambió de sitio mientras tanto, este bloque ya no vale.
   if (id !== sitioId.value) return;
@@ -83,7 +85,7 @@ watch(mostrar, async (v) => {
   olvidar();
   if (!v) return;
   sitioId.value = GENERICO;
-  const d = await ejecutar('datos', () => api().bd.conexion(props.motor));
+  const d = await ejecutar('datos', () => api().bd.conexion(bd.objetivo(props.motor)));
   if (!mostrar.value) return;
   datos.value = d ?? null;
   if (d) await cargarBloque();

@@ -442,6 +442,8 @@ export const es = {
     puerto: 'Puerto',
     cambiarPuerto: 'Cambiar puerto',
     cambiarPuertoDe: (nombre: string) => `Cambiar el puerto de ${nombre}`,
+    versionesDe: (nombre: string) => `Versiones de ${nombre}`,
+    instancias: (n: number, encendidas: number) => `${n} instancias, ${encendidas} encendidas`,
     usarPuerto: (p: number) => `Usar puerto ${p}`,
     puertoCambiado: (nombre: string, p: number) => `${nombre} ahora usa el puerto ${p}`,
     conflicto: 'Puerto ocupado',
@@ -998,6 +1000,10 @@ export const es = {
       nativasAyuda:
         'Solo cuando WolfCore Dev no está en primer plano; como mucho una por tipo cada 5 min.',
       tiposTitulo: 'Tipos de aviso',
+      versionesTitulo: 'Versiones nuevas por servicio',
+      versionesAyuda:
+        'Desactive un servicio para no recibir avisos de sus versiones nuevas (la pestaña Versiones sigue marcando las actualizaciones).',
+      versionesDe: (s: string) => `Avisar de versiones nuevas de ${s}`,
       tipos: {
         'servicio-caido': 'Un servicio se detuvo con un error',
         'puerto-ocupado': 'Puerto ocupado al iniciar un servicio',
@@ -2670,6 +2676,178 @@ export const es = {
     registroFin: 'El registro terminó (el contenedor se detuvo o el motor cortó).',
     cerrar: 'Cerrar',
   },
+  versiones: {
+    pestana: 'Versiones',
+    pestanaServicios: 'Servicios',
+    elegirServicio: 'Servicio',
+    servicios: {
+      php: 'PHP',
+      nginx: 'Nginx',
+      mysql: 'MySQL',
+      mariadb: 'MariaDB',
+      postgresql: 'PostgreSQL',
+      redis: 'Redis',
+      mongodb: 'MongoDB',
+      node: 'Node.js',
+      python: 'Python',
+      composer: 'Composer',
+      mailpit: 'Mailpit',
+      ollama: 'Ollama',
+      cloudflared: 'cloudflared',
+    },
+    ayuda: {
+      instancias:
+        'Cada rama tiene su instancia, con su carpeta de datos y su puerto: puede encender varias a la vez. La estrella marca la que usan los proyectos nuevos.',
+      pool: 'Cada rama de PHP encendida tiene su propio PHP; la estrella marca la de los proyectos nuevos.',
+      unica:
+        'Puede instalar varias versiones, pero solo una queda encendida: encender otra cambia la activa.',
+      ninguno:
+        'No hay nada que encender: los proyectos usan la versión que piden o la predeterminada (estrella).',
+    },
+    filtroRama: 'Rama',
+    todasRamas: 'Todas las ramas',
+    rama: (r: string) => `Rama ${r}`,
+    mostrarTodas: 'Mostrar todas',
+    origen: {
+      vivo: 'En línea',
+      cache: (h: number) => (h < 1 ? 'Caché de hace menos de 1 h' : `Caché de hace ${h} h`),
+      fija: 'Lista sin conexión',
+    },
+    actualizarLista: 'Actualizar lista',
+    errorCarga: 'No se pudo leer la lista de versiones',
+    vacio: 'No hay versiones para mostrar.',
+    soporte: { lts: 'LTS', actual: 'Actual', fin: 'Sin soporte', preview: 'Preview' },
+    finSoporte: (f: string) => `Soporte hasta ${f}`,
+    finSoportePasado: (f: string) => `Sin soporte desde ${f}`,
+    marcas: {
+      instalada: 'Instalada',
+      encendida: 'Encendida',
+      actualizacion: (v: string) => `Actualización: ${v}`,
+      bloqueada: 'Bloqueada',
+      sinHuella: 'Sin huella publicada',
+      huellaDebil: 'Solo huella MD5',
+    },
+    ayudaSinHuella:
+      'La fuente oficial no publica una huella fuerte (SHA-256 o SHA-512): la descarga no se puede verificar.',
+    instalar: 'Instalar',
+    desinstalar: 'Desinstalar',
+    encender: 'Encender',
+    apagar: 'Apagar',
+    actualizar: 'Actualizar',
+    usarEsta: 'Usar esta versión',
+    usarEstaAyuda: (id: string) =>
+      `${id} usa otra versión de esta rama: se cambia con respaldo previo de sus datos.`,
+    predeterminada: 'Predeterminada para proyectos nuevos',
+    hacerPredeterminada: 'Usar para proyectos nuevos',
+    predeterminadaHecha: (v: string) => `${v} queda como predeterminada.`,
+    puerto: 'Puerto',
+    puertoDe: (id: string) => `Puerto de ${id}`,
+    cambiarPuerto: 'Cambiar',
+    puertoCambiado: (p: number) => `Puerto cambiado a ${p}.`,
+    resolver: 'Resolver',
+    instalada: (v: string) => `${v} instalado.`,
+    selector: { etiqueta: 'Instancia', predeterminada: 'predeterminada', apagada: 'apagada' },
+    dialogoSinHuella: {
+      titulo: (v: string) => `Instalar ${v} sin huella`,
+      riesgo:
+        'Esta versión no tiene huella publicada por su fuente oficial: WolfCore Dev no puede comprobar que el archivo descargado sea el original.',
+      explicacion:
+        'La descarga sigue siendo por HTTPS desde el sitio oficial, pero si ese sitio o la conexión estuvieran comprometidos, no se notaría. Instálela solo si la necesita.',
+      alternativa: (v: string) => `Hay una versión verificada de la misma rama: ${v}.`,
+      casilla: 'Entiendo el riesgo y quiero instalarla sin verificar',
+      instalarVerificada: (v: string) => `Instalar ${v} (verificada)`,
+      instalarIgual: 'Instalar sin verificar',
+    },
+    dialogoActualizar: {
+      titulo: (n: string) => `Actualizar ${n}`,
+      tituloRama: (v: string) => `Nueva rama: ${v}`,
+      ninguna: 'ninguna',
+      instancia: (id: string) => `Se actualiza la instancia ${id}. Antes de cambiar nada:`,
+      pasoInstalar: (v: string) => `se instala ${v} junto a la versión actual (que no se borra);`,
+      pasoVolcados: 'se vuelca cada base de datos con la versión actual;',
+      pasoCopia: 'se detiene y se copia la carpeta de datos completa (copia en frío);',
+      pasoArrancar: 'se arranca con la versión nueva y se comprueba que responda;',
+      pasoVuelta:
+        'si no arranca, vuelve a la versión anterior con sus datos y la copia queda guardada.',
+      datos: 'Datos:',
+      respaldo: 'Copia en:',
+      espacio: 'Espacio:',
+      espacioLibre: (libres: string, necesarios: string) =>
+        `${libres} libres; hacen falta ${necesarios}`,
+      datosQuedan:
+        'Los datos anteriores nunca se borran: la copia y los volcados quedan en Respaldos de las actualizaciones hasta que los borre.',
+      sinEspacio: 'No hay espacio suficiente para la copia: libere espacio y vuelva a intentarlo.',
+      alLado: (v: string) =>
+        `Se instala ${v}. Las demás versiones instaladas no se tocan; los proyectos que fijan otra versión la siguen usando.`,
+      ramaExplicacion:
+        'Una rama nueva no reemplaza a la anterior: se crea una instancia nueva con su propia carpeta de datos y su puerto. La instancia actual sigue igual.',
+      copiarDesdeTitulo: 'Datos de la instancia nueva',
+      copiarDesde: (id: string) =>
+        `Copiar datos desde ${id} (se vuelcan y se restauran; el original no se toca)`,
+      vacia: 'Empezar vacía',
+      ramaNota:
+        'Los usuarios de la base de datos no se copian; los proyectos deben apuntar al puerto de la instancia nueva.',
+      crearInstancia: 'Crear instancia nueva',
+      confirmar: 'Actualizar con respaldo',
+      hecho: (v: string) => `${v} actualizado.`,
+      fallo: 'No se pudo actualizar',
+      ramaCreada: (id: string) => `Instancia ${id} creada.`,
+      copiadas: (l: string) => `Copiadas: ${l}.`,
+      noCopiada: (b: string, m: string) => `No se copió ${b}: ${m}`,
+    },
+    dialogoDesinstalar: {
+      titulo: (v: string) => `Desinstalar ${v}`,
+      binario: 'Se quitan solo los programas de esta versión.',
+      instancia: (id: string) =>
+        `La usa la instancia ${id}: se detiene y se quita de la lista de instancias.`,
+      datosQuedan:
+        'Sus datos quedan en disco: si vuelve a instalar esta rama, la instancia los vuelve a abrir.',
+      borrarDatos: 'Borrar también los datos',
+      borrarAviso: (id: string) =>
+        `Se borrará la carpeta de datos de ${id} con todas sus bases. No se puede deshacer. Escriba "${id}" para confirmar.`,
+      escriba: (id: string) => `Escriba ${id} para confirmar`,
+      desinstalar: 'Desinstalar',
+      desinstalarYBorrar: 'Desinstalar y borrar datos',
+      hecho: (v: string) => `${v} desinstalado.`,
+    },
+    dialogoDesbloquear: {
+      titulo: (id: string) => `Resolver ${id}`,
+      explicacion:
+        'Una actualización falló y no se pudieron devolver los datos de esta instancia, así que no se enciende hasta que usted elija qué hacer. Nada se borra.',
+      fallida: 'Datos tocados:',
+      respaldo: 'Respaldo:',
+      opciones: 'Qué hacer',
+      devolver: (sello: string, tam: string) =>
+        `Devolver el respaldo ${sello} (${tam}); la carpeta actual se aparta, no se borra`,
+      usarActual: 'Usar la carpeta de datos actual tal como está',
+      notaActual:
+        'Solo si la carpeta actual tiene datos completos; si no los tiene, elija un respaldo.',
+      notaDevolver: 'Se copia el respaldo, se comprueba y solo entonces se pone en su sitio.',
+      escriba: (id: string) => `Escriba ${id} para confirmar`,
+      confirmar: 'Resolver',
+      hecho: (id: string) => `${id} desbloqueada. Ya puede encenderla.`,
+    },
+    respaldos: {
+      titulo: 'Respaldos de las actualizaciones',
+      descripcion:
+        'Copias que dejaron las actualizaciones y las ramas nuevas. La carpeta de datos que usa cada instancia nunca aparece aquí.',
+      vacio: 'No hay copias.',
+      tipos: {
+        respaldo: 'Copia en frío',
+        volcados: 'Volcados de las bases',
+        fallida: 'Datos de una versión que falló',
+        restaurando: 'Devolución a medias',
+        copia: 'Volcados para una rama nueva',
+      },
+      archivos: (n: number) => (n === 1 ? '1 archivo' : `${n} archivos`),
+      borrar: 'Borrar',
+      borrarDe: (n: string) => `Borrar ${n}`,
+      confirmarTitulo: 'Borrar copia',
+      confirmar: (n: string, tam: string) =>
+        `Se borrará ${n} (${tam}). No se puede deshacer. Los datos que usan las instancias no se tocan.`,
+      borrado: 'Copia borrada.',
+    },
+  },
   navGrupos: {
     trabajo: 'Trabajo',
     entorno: 'Entorno',
@@ -2684,6 +2862,8 @@ export const es = {
     marcarTodos: 'Marcar todo como leído',
     limpiar: 'Limpiar historial',
     ver: 'Ver',
+    actualizar: 'Actualizar',
+    verVersiones: 'Ver versiones',
     cerrar: 'Cerrar',
     niveles: { info: 'Información', aviso: 'Aviso', error: 'Error' },
     sinLeer: 'Sin leer',

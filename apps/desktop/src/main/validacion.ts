@@ -31,6 +31,12 @@ import {
   type MotorBd,
   type ServicioInstalable,
   type TipoSitio,
+  esIdInstancia,
+  esServicioVersiones,
+  parsearInstancia,
+  type IdInstancia,
+  type ServicioVersiones,
+  type TipoRespaldoDatos,
 } from '@pel/core';
 
 /** Terminal elegida: un id conocido; `undefined` o null = la predeterminada. */
@@ -842,4 +848,145 @@ export function filtroDumps(
     } else throw argumentoDepuracion('filtro');
   }
   return res;
+}
+
+// ---- Versiones e instancias (Task 19) ----
+
+/** Uno de los 13 servicios con pestaña "Versiones". */
+export function servicioVersiones(v: unknown): ServicioVersiones {
+  if (!esServicioVersiones(v)) throw new Error('Argumento no válido: servicio');
+  return v;
+}
+
+/** Versión tal como la publica el catálogo ("8.4.15", "8.4.27-1", "22.11.0"); nunca una ruta. */
+export function versionCatalogo(v: unknown, nombre = 'versión'): string {
+  if (typeof v !== 'string' || !/^[0-9a-z][0-9a-z.+-]{0,39}$/.test(v) || v.includes('..')) {
+    throw new Error(`Argumento no válido: ${nombre}`);
+  }
+  return v;
+}
+
+/** Instancia de un servicio de datos (`mysql@8.4`). */
+export function idInstanciaIpc(v: unknown, nombre = 'instancia'): IdInstancia {
+  if (!esIdInstancia(v)) throw new Error(`Argumento no válido: ${nombre}`);
+  return v;
+}
+
+/** Motor o instancia de un motor (`mysql` o `mysql@8.0`): lo que reciben las rutas `bd.*`. */
+export function objetivoBd(v: unknown): { objetivo: MotorBd | IdInstancia; motor: MotorBd } {
+  if (esIdInstancia(v)) {
+    const { servicio } = parsearInstancia(v);
+    return { objetivo: v, motor: motorBd(servicio) };
+  }
+  const m = motorBd(v);
+  return { objetivo: m, motor: m };
+}
+
+/** Como `objetivoBd`, sin MongoDB (respaldar, restaurar, importar). */
+export function objetivoSql(v: unknown): {
+  objetivo: Exclude<MotorBd, 'mongodb'> | IdInstancia;
+  motor: Exclude<MotorBd, 'mongodb'>;
+} {
+  const o = objetivoBd(v);
+  if (o.motor === 'mongodb') throw new Error('Argumento no válido: motor');
+  return o as {
+    objetivo: Exclude<MotorBd, 'mongodb'> | IdInstancia;
+    motor: Exclude<MotorBd, 'mongodb'>;
+  };
+}
+
+/** Solo claves conocidas; cualquier otra hace fallar la llamada. */
+function soloClaves(
+  o: Record<string, unknown>,
+  permitidas: readonly string[],
+  nombre: string,
+): void {
+  for (const k of Object.keys(o)) {
+    if (!permitidas.includes(k)) throw new Error(`Argumento no válido: ${nombre}`);
+  }
+}
+
+/**
+ * `confirmarSinHuella` solo pasa si es exactamente `true` (lo marca el usuario en el diálogo que
+ * explica el riesgo); cualquier otro valor hace fallar la llamada.
+ */
+function sinHuella(o: Record<string, unknown>): { confirmarSinHuella?: true } {
+  const c = o['confirmarSinHuella'];
+  if (c === undefined) return {};
+  if (c !== true) throw new Error('Argumento no válido: confirmarSinHuella');
+  return { confirmarSinHuella: true };
+}
+
+export function opcionesActualizar(v: unknown): { confirmarSinHuella?: true } {
+  if (v === undefined) return {};
+  const o = objetoPlano<Record<string, unknown>>(v, 'opciones');
+  soloClaves(o, ['confirmarSinHuella'], 'opciones');
+  return sinHuella(o);
+}
+
+export function opcionesNuevaRama(
+  servicio: IdServicioDatos,
+  v: unknown,
+): { copiarDesde?: IdInstancia; confirmarSinHuella?: true } {
+  if (v === undefined) return {};
+  const o = objetoPlano<Record<string, unknown>>(v, 'opciones');
+  soloClaves(o, ['copiarDesde', 'confirmarSinHuella'], 'opciones');
+  const res: { copiarDesde?: IdInstancia; confirmarSinHuella?: true } = sinHuella(o);
+  if (o['copiarDesde'] !== undefined) {
+    const id = idInstanciaIpc(o['copiarDesde'], 'copiarDesde');
+    if (parsearInstancia(id).servicio !== servicio) {
+      throw new Error('Argumento no válido: copiarDesde');
+    }
+    res.copiarDesde = id;
+  }
+  return res;
+}
+
+/** Resolver el bloqueo: confirmación escrita y, opcionalmente, el sello del respaldo a devolver. */
+export function opcionesDesbloquear(v: unknown): { confirmacion: string; respaldo?: string } {
+  const o = objetoPlano<Record<string, unknown>>(v, 'opciones');
+  soloClaves(o, ['confirmacion', 'respaldo'], 'opciones');
+  const confirmacion = textoAcotado(o['confirmacion'], 0, 64, 'confirmación');
+  if (o['respaldo'] === undefined) return { confirmacion };
+  if (typeof o['respaldo'] !== 'string' || !/^\d{8}-\d{6}$/.test(o['respaldo'])) {
+    throw new Error('Argumento no válido: respaldo');
+  }
+  return { confirmacion, respaldo: o['respaldo'] };
+}
+
+const TIPOS_RESPALDO_DATOS = ['respaldo', 'volcados', 'fallida', 'restaurando', 'copia'] as const;
+
+/** Copia de `data/<servicio>/` por sus ids (servicio, clave, tipo y sello); nunca una ruta. */
+export function refRespaldoDatos(v: unknown): {
+  servicio: IdServicioDatos;
+  clave: string;
+  tipo: TipoRespaldoDatos;
+  sello: string;
+} {
+  const o = objetoPlano<Record<string, unknown>>(v, 'copia');
+  soloClaves(o, ['servicio', 'clave', 'tipo', 'sello'], 'copia');
+  const servicio = idServicioDatos(o['servicio']);
+  const clave = o['clave'];
+  if (
+    typeof clave !== 'string' ||
+    !/^[0-9a-z][0-9a-z.]{0,15}$/.test(clave) ||
+    clave.includes('..')
+  ) {
+    throw new Error('Argumento no válido: clave');
+  }
+  const tipo = o['tipo'];
+  if (typeof tipo !== 'string' || !(TIPOS_RESPALDO_DATOS as readonly string[]).includes(tipo)) {
+    throw new Error('Argumento no válido: tipo');
+  }
+  const sello = o['sello'];
+  if (typeof sello !== 'string' || !/^\d{8}-\d{6}$/.test(sello)) {
+    throw new Error('Argumento no válido: sello');
+  }
+  return { servicio, clave, tipo: tipo as TipoRespaldoDatos, sello };
+}
+
+/** Confirmación de un borrado desde un diálogo: solo `true` exacto. */
+export function confirmadoBorrar(v: unknown): true {
+  if (v !== true) throw new Error('Argumento no válido: confirmar');
+  return true;
 }

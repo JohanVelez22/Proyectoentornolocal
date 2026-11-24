@@ -32,6 +32,13 @@ const rutas: RouteRecordRaw[] = [
     component: () => import('./vistas/Servicios.vue'),
     meta: { seccion: 'servicios' },
   },
+  // Pestaña "Versiones" de un servicio (el nombre coincide con la acción de los avisos).
+  {
+    path: '/servicios/versiones/:servicio?',
+    name: 'servicios.versiones',
+    component: () => import('./vistas/Servicios.vue'),
+    meta: { seccion: 'servicios' },
+  },
   {
     path: '/bases-de-datos',
     name: 'basesDeDatos',

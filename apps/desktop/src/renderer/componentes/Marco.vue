@@ -34,6 +34,7 @@ import { computed, h, onBeforeUnmount, onMounted, ref, watch, type Component } f
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
+import { argsDeAviso, useVersiones } from '../stores/versiones';
 import { solicitudes } from '../composables/solicitudes';
 import AsistenteInicio from './AsistenteInicio.vue';
 import CampanaAvisos from './CampanaAvisos.vue';
@@ -55,6 +56,7 @@ import { useTuneles } from '../stores/tuneles';
 
 const route = useRoute();
 const router = useRouter();
+const versiones = useVersiones();
 const servicios = useServicios();
 const tuneles = useTuneles();
 const { ejecutar } = useAccion();
@@ -124,6 +126,20 @@ function navegar(clave: string): void {
 function abrirAviso(a: Aviso): void {
   panelAvisos.value = false;
   const ruta = a.accion?.ruta;
+  // Versión nueva: Servicios → Versiones del servicio y, si el aviso lo ofrece, el diálogo de
+  // actualización (que es el único que actualiza).
+  if (ruta === 'servicios.versiones') {
+    const args = argsDeAviso(a.accion?.args);
+    if (!args) {
+      void router.push({ name: ruta });
+      return;
+    }
+    void router
+      .push({ name: ruta, params: { servicio: args.servicio } })
+      .then(() => versiones.abrirDesdeAviso(args))
+      .catch(() => undefined);
+    return;
+  }
   if (ruta && router.hasRoute(ruta)) void router.push({ name: ruta });
 }
 

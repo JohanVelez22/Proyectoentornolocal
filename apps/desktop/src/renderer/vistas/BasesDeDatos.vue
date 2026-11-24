@@ -41,6 +41,7 @@ import EstadoPunto from '../componentes/EstadoPunto.vue';
 import PanelProgreso from '../componentes/PanelProgreso.vue';
 import ResultadoOperacion from '../componentes/ResultadoOperacion.vue';
 import SeccionPgvector from '../componentes/SeccionPgvector.vue';
+import SelectorInstancia from '../componentes/SelectorInstancia.vue';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { LIMITE_LINEAS, useBd } from '../stores/bd';
@@ -82,7 +83,19 @@ watch(
 const nombre = (m: MotorBd): string => t.motores[m] ?? m;
 const estadoDe = (m: MotorBd) => servicios.porId[m];
 const servicio = computed(() => (activo.value ? estadoDe(activo.value) : undefined));
-const encendido = computed(() => servicio.value?.estado === 'encendido');
+/** Instancia elegida en el selector (null sin instancias configuradas: la única). */
+const instanciaActiva = computed(() => {
+  const m = activo.value;
+  if (!m) return null;
+  const objetivo = bd.objetivo(m);
+  const lista = servicio.value?.instancias ?? [];
+  return lista.find((i) => i.id === objetivo) ?? lista.find((i) => i.predeterminada) ?? null;
+});
+const encendido = computed(() =>
+  instanciaActiva.value
+    ? instanciaActiva.value.estado === 'encendido'
+    : servicio.value?.estado === 'encendido',
+);
 const motorSql = computed<MotorSql | null>(() =>
   activo.value && esMotorSql(activo.value) ? activo.value : null,
 );
@@ -99,7 +112,9 @@ function cargarBases(): void {
 }
 
 // Se vuelve a leer la lista al cambiar de pestaña o cuando el motor termina de encender.
-watch([activo, encendido], cargarBases, { immediate: true });
+watch([activo, encendido, () => (activo.value ? bd.instancias[activo.value] : null)], cargarBases, {
+  immediate: true,
+});
 
 onMounted(() => {
   void Promise.all(MOTORES.map((m) => servicios.cargarInstalados(m).catch(() => undefined))).then(
@@ -113,7 +128,9 @@ onMounted(() => {
 
 function encender(): void {
   const m = activo.value;
-  if (m) void ejecutar('encender', () => api().servicios.iniciar(m));
+  if (!m) return;
+  const id = instanciaActiva.value?.id ?? m;
+  void ejecutar('encender', () => api().servicios.iniciar(id));
 }
 
 // ---- Diálogos ----
@@ -187,7 +204,7 @@ async function borrar(): Promise<void> {
   const ok = await ejecutar(
     'borrar',
     async () => {
-      await api().bd.borrar(m, b, escritoBorrar.value);
+      await api().bd.borrar(bd.objetivo(m), b, escritoBorrar.value);
       return true;
     },
     { exito: t.dialogoBorrar.hecho(b) },
@@ -240,6 +257,12 @@ function irAServicios(): void {
           </NTab>
         </NTabs>
 
+        <SelectorInstancia
+          v-if="servicio?.instancias?.length"
+          :motor="activo"
+          :nombre="nombre(activo)"
+          :instancias="servicio.instancias"
+        />
         <div class="principales">
           <NButton
             size="small"

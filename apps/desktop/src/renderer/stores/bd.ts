@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type {
   BaseListada,
   EstadoPgvector,
+  IdInstancia,
   MotorBd,
   MotorSql,
   OrigenImportar,
@@ -15,6 +16,40 @@ import { api, plano } from '../api';
 import { textos } from '../i18n';
 import { mensajeDeError } from '../utilidades/errores';
 import { esErrorTrasReemplazo, recortarLineas, respaldoEnMensaje } from '../utilidades/bd';
+import { useServicios } from './servicios';
+
+/** Clave (en este equipo) de la última instancia elegida por motor. */
+export const CLAVE_INSTANCIAS_BD = 'wolfcore.bd.instancias';
+
+/**
+ * A qué apuntan las rutas `bd.*`: la instancia elegida si sigue existiendo; si no (o sin
+ * instancias configuradas), el motor, que es su instancia predeterminada.
+ */
+export function objetivoDe(
+  motor: MotorBd,
+  elegida: IdInstancia | undefined,
+  instancias: readonly { id: string }[] | undefined,
+): MotorBd | IdInstancia {
+  if (elegida && elegida.startsWith(`${motor}@`) && instancias?.some((i) => i.id === elegida)) {
+    return elegida;
+  }
+  return motor;
+}
+
+function leerRecordadas(): Partial<Record<MotorBd, IdInstancia>> {
+  try {
+    const t = globalThis.localStorage?.getItem(CLAVE_INSTANCIAS_BD);
+    const o = t ? (JSON.parse(t) as unknown) : null;
+    if (!o || typeof o !== 'object') return {};
+    const res: Partial<Record<MotorBd, IdInstancia>> = {};
+    for (const [m, id] of Object.entries(o as Record<string, unknown>)) {
+      if (typeof id === 'string' && id.startsWith(`${m}@`)) res[m as MotorBd] = id as IdInstancia;
+    }
+    return res;
+  } catch {
+    return {};
+  }
+}
 
 /** Líneas que se conservan en cada registro de progreso (las más recientes). */
 export const LIMITE_LINEAS = 500;
@@ -58,7 +93,34 @@ export const useBd = defineStore('bd', () => {
   const lineasPgvector = ref<LineaRegistro[]>([]);
   const tareaPgvector = ref<TareaPgvector | null>(null);
   const carpetaRespaldos = ref<string | null>(null);
+  /** Instancia elegida por motor (se recuerda en este equipo). */
+  const instancias = ref<Partial<Record<MotorBd, IdInstancia>>>(leerRecordadas());
   let contador = 0;
+
+  /** Instancias configuradas del motor (vacío = la única, implícita). */
+  function instanciasDe(motor: MotorBd) {
+    return useServicios().porId[motor]?.instancias ?? [];
+  }
+
+  /** Lo que se manda a `bd.*` para el motor: su instancia elegida o el motor. */
+  function objetivo(motor: MotorBd): MotorBd | IdInstancia {
+    return objetivoDe(motor, instancias.value[motor], instanciasDe(motor));
+  }
+
+  function elegirInstancia(motor: MotorBd, id: IdInstancia | null): void {
+    const copia = { ...instancias.value };
+    if (id) copia[motor] = id;
+    else delete copia[motor];
+    instancias.value = copia;
+    try {
+      globalThis.localStorage?.setItem(CLAVE_INSTANCIAS_BD, JSON.stringify(copia));
+    } catch {
+      // sin almacenamiento local: se recuerda solo mientras la app está abierta
+    }
+    const b = { ...bases.value };
+    delete b[motor];
+    bases.value = b;
+  }
   let bajas: (() => void)[] = [];
 
   const enCurso = computed(() => operacion.value?.estado === 'corriendo');
@@ -92,7 +154,7 @@ export const useBd = defineStore('bd', () => {
   async function cargarBases(motor: MotorBd): Promise<void> {
     cargando.value = { ...cargando.value, [motor]: true };
     try {
-      const lista = await api().bd.listar(motor);
+      const lista = await api().bd.listar(objetivo(motor));
       bases.value = { ...bases.value, [motor]: lista };
       const errores = { ...errorCarga.value };
       delete errores[motor];
@@ -156,7 +218,12 @@ export const useBd = defineStore('bd', () => {
     confirmarSobrescribir: boolean,
   ): Promise<OperacionBd> {
     const o = await correr('restaurar', motor, base, async () => ({
-      resultado: await api().bd.restaurar(motor, archivo, base, opciones(confirmarSobrescribir)),
+      resultado: await api().bd.restaurar(
+        objetivo(motor) as MotorSql | IdInstancia,
+        archivo,
+        base,
+        opciones(confirmarSobrescribir),
+      ),
     }));
     if (o === operacion.value) void cargarBases(motor);
     return o;
@@ -174,7 +241,7 @@ export const useBd = defineStore('bd', () => {
   ): Promise<OperacionBd> {
     const o = await correr('importar', motor, destino, async () => ({
       resultado: await api().bd.importar(
-        motor,
+        objetivo(motor) as MotorSql | IdInstancia,
         plano(origen),
         destino,
         opciones(confirmarSobrescribir),
@@ -186,7 +253,13 @@ export const useBd = defineStore('bd', () => {
 
   function respaldar(motor: MotorSql, base: string, carpeta: string | null): Promise<OperacionBd> {
     return correr('respaldar', motor, base, async () => ({
-      archivo: (await api().bd.respaldar(motor, base, carpeta ?? undefined)).archivo,
+      archivo: (
+        await api().bd.respaldar(
+          objetivo(motor) as MotorSql | IdInstancia,
+          base,
+          carpeta ?? undefined,
+        )
+      ).archivo,
     }));
   }
 
@@ -254,6 +327,9 @@ export const useBd = defineStore('bd', () => {
     lineasPgvector,
     tareaPgvector,
     carpetaRespaldos,
+    instancias,
+    objetivo,
+    elegirInstancia,
     enCurso,
     agregarLinea,
     limpiarLineas,

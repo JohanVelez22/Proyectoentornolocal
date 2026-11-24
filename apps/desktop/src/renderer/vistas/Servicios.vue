@@ -1,21 +1,47 @@
 <script setup lang="ts">
 import { Play, Server, Stop } from '@vicons/ionicons5';
-import { NButton, NCard, NEmpty, NIcon, NSkeleton, NSpace } from 'naive-ui';
+import { NButton, NCard, NEmpty, NIcon, NSkeleton, NSpace, NTab, NTabs } from 'naive-ui';
 import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import type { ServicioVersiones } from '../../shared/api';
 import { api } from '../api';
 import FilaInstalar from '../componentes/FilaInstalar.vue';
 import TarjetaHerramienta from '../componentes/TarjetaHerramienta.vue';
 import TarjetaServicio from '../componentes/TarjetaServicio.vue';
+import VersionesServicio from '../componentes/VersionesServicio.vue';
 import { useAccion } from '../composables/useAccion';
 import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import { textos } from '../i18n';
 import { useServicios, type GrupoServicios, type InstalableCatalogo } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
+import { esServicioConVersiones, useVersiones } from '../stores/versiones';
 
 const t = textos.servicios;
 const servicios = useServicios();
 const tuneles = useTuneles();
 const { ejecutar, ocupado } = useAccion();
+const route = useRoute();
+const router = useRouter();
+const versiones = useVersiones();
+
+/** Pestaña activa: "Servicios" o "Versiones" (ruta `servicios.versiones`). */
+const pestana = computed(() => (route.name === 'servicios.versiones' ? 'versiones' : 'servicios'));
+/** Servicio de la pestaña Versiones: el de la ruta o el último elegido. */
+const servicioVersiones = computed<ServicioVersiones>(() => {
+  const p = route.params['servicio'];
+  return esServicioConVersiones(p) ? p : versiones.servicio;
+});
+function cambiarPestana(p: string): void {
+  if (p === 'versiones') {
+    void router.push({
+      name: 'servicios.versiones',
+      params: { servicio: servicioVersiones.value },
+    });
+  } else void router.push({ name: 'servicios' });
+}
+function elegirServicioVersiones(s: ServicioVersiones): void {
+  void router.push({ name: 'servicios.versiones', params: { servicio: s } });
+}
 
 /** Filas de "Instalar", agrupadas para que la lista larga se lea de un vistazo. */
 const gruposInstalar: { titulo: string; servicios: InstalableCatalogo[] }[] = [
@@ -60,7 +86,23 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="servicios">
+  <NTabs
+    :value="pestana"
+    type="line"
+    size="small"
+    class="pestanas"
+    :aria-label="t.titulo"
+    @update:value="cambiarPestana"
+  >
+    <NTab name="servicios">{{ textos.versiones.pestanaServicios }}</NTab>
+    <NTab name="versiones">{{ textos.versiones.pestana }}</NTab>
+  </NTabs>
+  <VersionesServicio
+    v-if="pestana === 'versiones'"
+    :servicio="servicioVersiones"
+    @elegir="elegirServicioVersiones"
+  />
+  <div v-else class="servicios">
     <div class="barra">
       <p class="descripcion">{{ t.descripcion }}</p>
       <NSpace size="small" :wrap="false">
@@ -147,6 +189,9 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.pestanas {
+  margin-bottom: 14px;
+}
 .barra {
   display: flex;
   align-items: center;

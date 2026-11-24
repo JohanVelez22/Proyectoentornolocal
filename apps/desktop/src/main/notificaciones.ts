@@ -4,13 +4,24 @@ import type { TextoAviso } from '../shared/textosAvisos';
 /** Lo que se usa de `Notification` de Electron (se sustituye en las pruebas). */
 export interface NotificacionNativa {
   show(): void;
-  on(evento: 'click' | 'close', fn: () => void): unknown;
+  on(evento: 'click' | 'close' | 'action', fn: () => void): unknown;
+}
+
+/** Botón de acción del toast (Electron lo muestra donde el sistema lo admite; si no, se ignora). */
+export interface AccionNotificacion {
+  type: 'button';
+  text: string;
 }
 
 export interface DepsNotificador {
   /** `Notification.isSupported()`. */
   soportada: () => boolean;
-  crear: (opciones: { title: string; body: string; silent: boolean }) => NotificacionNativa;
+  crear: (opciones: {
+    title: string;
+    body: string;
+    silent: boolean;
+    actions?: AccionNotificacion[];
+  }) => NotificacionNativa;
   /** ¿La ventana está visible y con el foco? Con foco no se notifica: el aviso ya se ve en la app. */
   ventanaConFoco: () => boolean;
   /** Preferencias del usuario: notificaciones nativas activadas y tipo activado. */
@@ -18,6 +29,13 @@ export interface DepsNotificador {
   /** Clic en la notificación: enfoca la ventana y navega a la acción del aviso. */
   alClic: (a: Aviso) => void;
   ahora?: () => number;
+}
+
+/** ¿El aviso ofrece el atajo "Actualizar"? (versión nueva con huella fuerte, Task 17). */
+function conAtajoActualizar(a: Aviso): boolean {
+  if (a.tipo !== 'version-nueva') return false;
+  const x = Array.isArray(a.accion?.args) ? (a.accion.args[0] as { actualizar?: unknown }) : null;
+  return x?.actualizar === true;
 }
 
 /** Máximo una notificación por tipo y fuente en esta ventana. */
@@ -50,17 +68,27 @@ export class Notificador {
       if (primera !== undefined) this.ultima.delete(primera);
     }
     let n: NotificacionNativa;
+    // "Actualizar" solo en un aviso de versión nueva que lo ofrece (con huella fuerte); abre el
+    // diálogo igual que el clic: nunca actualiza por sí mismo.
+    const boton = texto.accion && conAtajoActualizar(a) ? texto.accion : null;
     try {
-      n = this.d.crear({ title: texto.titulo, body: texto.cuerpo, silent: a.nivel !== 'error' });
+      n = this.d.crear({
+        title: texto.titulo,
+        body: texto.cuerpo,
+        silent: a.nivel !== 'error',
+        ...(boton ? { actions: [{ type: 'button' as const, text: boton }] } : {}),
+      });
     } catch (e) {
       console.error('No se pudo crear la notificación:', e);
       return false;
     }
     this.vivas.add(n);
-    n.on('click', () => {
+    const abrir = (): void => {
       this.vivas.delete(n);
       this.d.alClic(a);
-    });
+    };
+    n.on('click', abrir);
+    if (boton) n.on('action', abrir);
     n.on('close', () => void this.vivas.delete(n));
     n.show();
     return true;

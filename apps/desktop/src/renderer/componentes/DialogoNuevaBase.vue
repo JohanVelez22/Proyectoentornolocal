@@ -12,6 +12,7 @@ import {
 import { computed, ref, watch } from 'vue';
 import type { MotorBd, OpcionesCrearBase } from '../../shared/api';
 import { api } from '../api';
+import { useBd } from '../stores/bd';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { problemaNombre } from '../utilidades/bd';
@@ -19,6 +20,7 @@ import { problemaNombre } from '../utilidades/bd';
 /** Crear una base vacía, opcionalmente con un usuario propio. */
 const props = defineProps<{ motor: MotorBd }>();
 const mostrar = defineModel<boolean>('show', { required: true });
+const bd = useBd();
 const emit = defineEmits<{ creada: [nombre: string] }>();
 
 const t = textos.bd.dialogoNueva;
@@ -81,13 +83,13 @@ async function crear(): Promise<void> {
     'crear',
     async () => {
       try {
-        return await api().bd.crear(props.motor, n, opciones);
+        return await api().bd.crear(bd.objetivo(props.motor), n, opciones);
       } catch (e) {
         // Usuario existente con otra clave: solo se cambia si el usuario lo confirma.
         const codigo = (e as { codigo?: unknown } | null)?.codigo;
         if (codigo !== 'bd.usuario_clave_distinta' || !opciones) throw e;
         if (!(await confirmarCambioClave(opciones.usuario ?? ''))) throw e;
-        return api().bd.crear(props.motor, n, { ...opciones, cambiarClave: true });
+        return api().bd.crear(bd.objetivo(props.motor), n, { ...opciones, cambiarClave: true });
       }
     },
     { exito: t.creada(n) },

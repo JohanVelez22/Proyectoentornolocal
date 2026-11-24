@@ -2,7 +2,7 @@
 import { EyeOutline, InformationCircle } from '@vicons/ionicons5';
 import { NButton, NForm, NFormItem, NIcon, NInput, NInputNumber, NModal, NSpin } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
-import type { MotorSql, OrigenImportar } from '../../shared/api';
+import type { IdInstancia, MotorSql, OrigenImportar } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -92,7 +92,9 @@ watch(baseOrigen, (b) => {
 
 async function continuar(): Promise<void> {
   if (!completo.value || bd.enCurso || ocupado('revisar')) return;
-  const tablas = await ejecutar('revisar', () => api().bd.tieneTablas(props.motor, destino.value));
+  const tablas = await ejecutar('revisar', () =>
+    api().bd.tieneTablas(bd.objetivo(props.motor) as MotorSql | IdInstancia, destino.value),
+  );
   if (tablas === undefined) return;
   if (opcionesRestaurar(tablas, false) === null) {
     escrito.value = '';

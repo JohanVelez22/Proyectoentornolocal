@@ -156,6 +156,25 @@ function nucleoFalso() {
         'crearSitioProyecto',
         'confiarReceta',
         'abrirEditor',
+        // Task 19
+        'versionesServicio',
+        'silenciarVersiones',
+        'desinstalarVersion',
+        'listaInstancias',
+        'crearInstancia',
+        'iniciarInstancia',
+        'detenerInstancia',
+        'puertoInstancia',
+        'predeterminarInstancia',
+        'quitarInstancia',
+        'borrarDatosInstancia',
+        'desbloquearInstancia',
+        'planActualizar',
+        'actualizarServicio',
+        'nuevaRamaServicio',
+        'predeterminarVersion',
+        'respaldosDeDatos',
+        'borrarRespaldoDatos',
       ].map((m) => [m, vi.fn(async () => undefined)]),
     ),
     fuentesRegistro: vi.fn(async () => [
@@ -544,6 +563,24 @@ describe('registrarIpc', () => {
         'instalador.listarVersiones',
         'instalador.instalar',
         'instalador.instalados',
+        'instalador.desinstalar',
+        'catalogo.versiones',
+        'catalogo.silenciar',
+        'instancias.lista',
+        'instancias.crear',
+        'instancias.iniciar',
+        'instancias.detener',
+        'instancias.puerto',
+        'instancias.predeterminar',
+        'instancias.quitar',
+        'instancias.borrarDatos',
+        'instancias.desbloquear',
+        'servicios.planActualizar',
+        'servicios.actualizar',
+        'servicios.nuevaRama',
+        'servicios.predeterminada',
+        'servicios.respaldosDatos',
+        'servicios.borrarRespaldoDatos',
         'tuneles.abrir',
         'tuneles.cerrar',
         'tuneles.renovar',
@@ -1928,5 +1965,175 @@ describe('IPC de IA en la nube', () => {
     const r = await llamar('ia.probarConexion', 'openai');
     expect(r.error?.codigo).toBe('ia.clave_ilegible');
     expect(ia['probarConexion']).not.toHaveBeenCalled();
+  });
+});
+
+describe('IPC de versiones e instancias (Task 19)', () => {
+  function montar() {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const llamar = async (ruta: string, ...args: unknown[]) =>
+      (await canales.get(`entorno:${ruta}`)!({}, ...args)) as {
+        ok: boolean;
+        valor?: unknown;
+        error?: { mensaje: string; codigo?: string };
+      };
+    return { llamar, n: crudo as unknown as Record<string, Mock> };
+  }
+
+  it('las rutas nuevas están en la lista blanca', () => {
+    for (const r of [
+      'catalogo.versiones',
+      'catalogo.silenciar',
+      'instalador.desinstalar',
+      'instancias.lista',
+      'instancias.crear',
+      'instancias.iniciar',
+      'instancias.detener',
+      'instancias.puerto',
+      'instancias.predeterminar',
+      'instancias.quitar',
+      'instancias.borrarDatos',
+      'instancias.desbloquear',
+      'servicios.planActualizar',
+      'servicios.actualizar',
+      'servicios.nuevaRama',
+      'servicios.predeterminada',
+      'servicios.respaldosDatos',
+      'servicios.borrarRespaldoDatos',
+    ]) {
+      expect(RUTAS_IPC).toContain(r);
+    }
+  });
+
+  it('catalogo.versiones valida servicio y filtro (solo rama/todas/refrescar)', async () => {
+    const { llamar, n } = montar();
+    expect((await llamar('catalogo.versiones', 'mysql', { rama: '8.4', todas: true })).ok).toBe(
+      true,
+    );
+    expect(n['versionesServicio']).toHaveBeenCalledWith('mysql', { rama: '8.4', todas: true });
+    for (const malo of [
+      ['mongosh'],
+      ['../php'],
+      ['mysql', { url: 'https://x' }],
+      ['mysql', { rama: '../8' }],
+    ]) {
+      expect((await llamar('catalogo.versiones', ...malo)).ok).toBe(false);
+    }
+    expect(n['versionesServicio']).toHaveBeenCalledTimes(1);
+  });
+
+  it('instalador.instalar: fuera del catálogo falla; sin confirmar sin huella no se confirma', async () => {
+    const { llamar, n } = montar();
+    const inst = (n as unknown as { instalador: { instalar: Mock } }).instalador.instalar;
+    const fuera = await llamar('instalador.instalar', { servicio: 'mysql', version: '9.9.9' });
+    expect(fuera.error?.codigo).toBe('catalogo.version_no_encontrada');
+    expect(inst).not.toHaveBeenCalled();
+    // Sin confirmar: el núcleo exige la huella fuerte (rechaza con `catalogo.sin_huella`).
+    inst.mockRejectedValueOnce(new ErrorWolf('catalogo.sin_huella', 'sin huella'));
+    const sin = await llamar('instalador.instalar', { servicio: 'mysql', version: '1.28.0' });
+    expect(sin.error?.codigo).toBe('catalogo.sin_huella');
+    expect(inst.mock.lastCall).toHaveLength(1);
+    // Solo `true` exacto confirma.
+    for (const c of ['true', 1, {}]) {
+      const r = await llamar('instalador.instalar', {
+        servicio: 'mysql',
+        version: '1.28.0',
+        confirmarSinHuella: c,
+      });
+      expect(r.ok).toBe(false);
+    }
+    expect(inst).toHaveBeenCalledTimes(1);
+  });
+
+  it('desinstalar solo quita binarios: nunca llama a borrar datos', async () => {
+    const { llamar, n } = montar();
+    expect((await llamar('instalador.desinstalar', 'mysql', '8.0.44')).ok).toBe(true);
+    expect(n['desinstalarVersion']).toHaveBeenCalledWith('mysql', '8.0.44');
+    expect(n['borrarDatosInstancia']).not.toHaveBeenCalled();
+    expect(n['borrarDatosServicio']).not.toHaveBeenCalled();
+    expect((await llamar('instalador.desinstalar', 'mysql', '../data')).ok).toBe(false);
+  });
+
+  it('instancias.borrarDatos pasa la confirmación tal cual (el núcleo la compara con el id)', async () => {
+    const { llamar, n } = montar();
+    n['borrarDatosInstancia']!.mockRejectedValueOnce(
+      new ErrorWolf('servicios.confirmacion_borrado', 'escriba mysql@8.0', {
+        nombre: 'mysql@8.0',
+        id: 'mysql@8.0',
+      }),
+    );
+    const r = await llamar('instancias.borrarDatos', 'mysql@8.0', 'mysql');
+    expect(r.error?.codigo).toBe('servicios.confirmacion_borrado');
+    expect(n['borrarDatosInstancia']).toHaveBeenCalledWith('mysql@8.0', 'mysql');
+    expect((await llamar('instancias.borrarDatos', 'mysql@../x', 'mysql@../x')).ok).toBe(false);
+    expect((await llamar('instancias.borrarDatos', 'nginx@1', 'nginx@1')).ok).toBe(false);
+  });
+
+  it('actualizar y nueva rama: solo ids, versiones y `confirmarSinHuella: true`', async () => {
+    const { llamar, n } = montar();
+    expect((await llamar('servicios.actualizar', 'mysql@8.4', '8.4.15')).ok).toBe(true);
+    expect(n['actualizarServicio']).toHaveBeenLastCalledWith('mysql@8.4', '8.4.15', {});
+    await llamar('servicios.actualizar', 'mysql@8.4', '8.4.15', { confirmarSinHuella: true });
+    expect(n['actualizarServicio']).toHaveBeenLastCalledWith('mysql@8.4', '8.4.15', {
+      confirmarSinHuella: true,
+    });
+    for (const o of [{ confirmarSinHuella: 'si' }, { url: 'https://x' }]) {
+      expect((await llamar('servicios.actualizar', 'mysql@8.4', '8.4.15', o)).ok).toBe(false);
+    }
+    await llamar('servicios.nuevaRama', 'postgresql', '18.1', { copiarDesde: 'postgresql@17' });
+    expect(n['nuevaRamaServicio']).toHaveBeenLastCalledWith('postgresql', '18.1', {
+      copiarDesde: 'postgresql@17',
+    });
+    // Copiar desde otro motor no se acepta.
+    const otro = await llamar('servicios.nuevaRama', 'postgresql', '18.1', {
+      copiarDesde: 'mysql@8.4',
+    });
+    expect(otro.ok).toBe(false);
+  });
+
+  it('borrar una copia de datos exige `true` exacto y ids (nunca una ruta)', async () => {
+    const { llamar, n } = montar();
+    const ref = { servicio: 'mysql', clave: '8.4', tipo: 'respaldo', sello: '20261123-100000' };
+    expect((await llamar('servicios.borrarRespaldoDatos', ref, true)).ok).toBe(true);
+    expect(n['borrarRespaldoDatos']).toHaveBeenCalledWith(ref, true);
+    const malos: [unknown, unknown][] = [
+      [ref, 'true'],
+      [{ ...ref, clave: '..' }, true],
+      [{ ...ref, tipo: 'actual' }, true],
+      [{ ...ref, carpeta: 'C:/x' }, true],
+    ];
+    for (const [r, c] of malos) {
+      expect((await llamar('servicios.borrarRespaldoDatos', r, c)).ok).toBe(false);
+    }
+    expect(n['borrarRespaldoDatos']).toHaveBeenCalledTimes(1);
+  });
+
+  it('desbloquear: confirmación y sello opcional bien formado', async () => {
+    const { llamar, n } = montar();
+    await llamar('instancias.desbloquear', 'mysql@8.4', {
+      confirmacion: 'mysql@8.4',
+      respaldo: '20261123-100000',
+    });
+    expect(n['desbloquearInstancia']).toHaveBeenCalledWith('mysql@8.4', {
+      confirmacion: 'mysql@8.4',
+      respaldo: '20261123-100000',
+    });
+    const malo = await llamar('instancias.desbloquear', 'mysql@8.4', {
+      confirmacion: 'mysql@8.4',
+      respaldo: '../../x',
+    });
+    expect(malo.ok).toBe(false);
+  });
+
+  it('bd.* aceptan una instancia del mismo motor', async () => {
+    const { llamar, n } = montar();
+    expect((await llamar('bd.listar', 'mysql@8.0')).ok).toBe(true);
+    expect(n['listarBases']).toHaveBeenCalledWith('mysql@8.0');
+    expect((await llamar('bd.tieneTablas', 'postgresql@17', 'tienda')).ok).toBe(true);
+    expect(n['tieneTablas']).toHaveBeenCalledWith('postgresql@17', 'tienda');
+    expect((await llamar('bd.listar', 'redis@7')).ok).toBe(false);
+    expect((await llamar('bd.tieneTablas', 'mongodb@8.0', 'x')).ok).toBe(false);
   });
 });

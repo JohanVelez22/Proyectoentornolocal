@@ -2,7 +2,8 @@ import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiEntorno, EstadoServicio, EventosNucleo } from '../src/shared/api';
 import { cambiarIdioma } from '../src/renderer/i18n';
-import { LIMITE_LINEAS, useBd } from '../src/renderer/stores/bd';
+import { CLAVE_INSTANCIAS_BD, LIMITE_LINEAS, objetivoDe, useBd } from '../src/renderer/stores/bd';
+import { useServicios } from '../src/renderer/stores/servicios';
 import {
   carpetaDe,
   confirmacionValida,
@@ -170,6 +171,45 @@ describe('store de Bases de datos', () => {
   });
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('selector de instancia: se usa la elegida, se recuerda por motor y cae al motor si ya no existe', async () => {
+    const guardado = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => guardado.get(k) ?? null,
+      setItem: (k: string, v: string) => void guardado.set(k, v),
+    });
+    const servicios = useServicios();
+    servicios.porId['mysql'] = {
+      id: 'mysql',
+      nombre: 'MySQL',
+      version: '8.4.13',
+      estado: 'encendido',
+      puertos: [3306],
+      pid: 1,
+      instancias: [
+        { id: 'mysql@8.4', puerto: 3306 },
+        { id: 'mysql@8.0', puerto: 3308 },
+      ],
+    } as unknown as EstadoServicio;
+    const bd = useBd();
+    expect(bd.objetivo('mysql')).toBe('mysql');
+    bd.elegirInstancia('mysql', 'mysql@8.0');
+    expect(bd.objetivo('mysql')).toBe('mysql@8.0');
+    await bd.cargarBases('mysql');
+    expect(falsa.api.bd.listar).toHaveBeenLastCalledWith('mysql@8.0');
+    await bd.restaurar('mysql', 'C:/a.sql', 'd', false);
+    expect(falsa.api.bd.restaurar).toHaveBeenLastCalledWith('mysql@8.0', 'C:/a.sql', 'd', {});
+    // Otro motor no se ve afectado y la elección queda guardada en este equipo.
+    expect(bd.objetivo('postgresql')).toBe('postgresql');
+    expect(JSON.parse(guardado.get(CLAVE_INSTANCIAS_BD)!)).toEqual({ mysql: 'mysql@8.0' });
+    // Una pinia nueva (otro arranque) la recupera.
+    setActivePinia(createPinia());
+    useServicios().porId['mysql'] = servicios.porId['mysql']!;
+    expect(useBd().objetivo('mysql')).toBe('mysql@8.0');
+    // Si la instancia ya no existe, se usa el motor (su predeterminada).
+    expect(objetivoDe('mysql', 'mysql@5.7', [{ id: 'mysql@8.4' }])).toBe('mysql');
+    expect(objetivoDe('mysql', 'mariadb@11.4' as never, [{ id: 'mariadb@11.4' }])).toBe('mysql');
   });
 
   it('el registro de bd:progreso conserva solo las últimas líneas', async () => {

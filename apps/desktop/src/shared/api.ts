@@ -111,6 +111,14 @@ import type {
   OrigenCatalogo,
   SoporteVersion,
   Huella,
+  EstadoInstancia,
+  IdInstancia,
+  PlanActualizar,
+  RespaldoDatos,
+  ResultadoNuevaRama,
+  ServicioVersiones,
+  TablaVersiones,
+  TipoRespaldoDatos,
 } from '@pel/core';
 
 export type {
@@ -221,6 +229,26 @@ export type {
 };
 
 export type MotorSql = Exclude<MotorBd, 'mongodb'>;
+/** Motor (su instancia predeterminada) o una instancia del motor (`mysql@8.0`). */
+export type ObjetivoBdIpc = MotorBd | IdInstancia;
+export type ObjetivoSqlIpc = MotorSql | IdInstancia;
+export type {
+  EstadoInstancia,
+  IdInstancia,
+  PlanActualizar,
+  RespaldoDatos,
+  ResultadoNuevaRama,
+  ServicioVersiones,
+  TablaVersiones,
+  TipoRespaldoDatos,
+};
+/** Una copia de `data/<servicio>/` por sus ids (nunca por su ruta). */
+export interface RefRespaldoDatos {
+  servicio: IdServicioDatos;
+  clave: string;
+  tipo: TipoRespaldoDatos;
+  sello: string;
+}
 
 /** Lo único que la interfaz ve de una clave de IA: si hay una y sus 4 últimos caracteres. */
 export interface EstadoClaveIa {
@@ -352,16 +380,63 @@ export interface ApiEntorno {
     borrarDatos(id: IdServicioDatos, confirmacion: string): Promise<void>;
     /** Encender (o no) el servicio al iniciar WolfCore Dev; no lo enciende ahora. */
     autoIniciar(id: IdServicioDatos, valor: boolean): Promise<void>;
+    /** Lo que hará la actualización (tamaño de los datos, espacio libre, volcados). */
+    planActualizar(id: IdInstancia): Promise<PlanActualizar>;
+    /** Parche de la misma rama con respaldo previo; solo desde `DialogoActualizar`. */
+    actualizar(
+      id: IdInstancia,
+      version: string,
+      opciones?: { confirmarSinHuella?: true },
+    ): Promise<{ anterior: string; respaldo: { carpeta: string; volcados: string[] } }>;
+    /** Rama nueva = instancia nueva (con copia opcional de las bases de otra). */
+    nuevaRama(
+      servicio: IdServicioDatos,
+      version: string,
+      opciones?: { copiarDesde?: IdInstancia; confirmarSinHuella?: true },
+    ): Promise<ResultadoNuevaRama>;
+    /** Versión para proyectos nuevos (PHP, Nginx, Node, Python, Composer, cloudflared…). */
+    predeterminada(servicio: ServicioVersiones, version: string): Promise<void>;
+    /** Respaldos, volcados y carpetas apartadas de las actualizaciones (con su tamaño). */
+    respaldosDatos(servicio?: IdServicioDatos): Promise<RespaldoDatos[]>;
+    /** Borra una de esas copias (nunca la carpeta de datos actual); `confirmar` exacto. */
+    borrarRespaldoDatos(ref: RefRespaldoDatos, confirmar: true): Promise<void>;
+  };
+  catalogo: {
+    /** Pestaña "Versiones": catálogo + instalado, por rama, con sus marcas. */
+    versiones(servicio: ServicioVersiones, filtro?: FiltroVersiones): Promise<TablaVersiones>;
+    /** Silencia (o no) los avisos de versiones nuevas de un servicio; devuelve los silenciados. */
+    silenciar(servicio: ServicioVersiones, silenciar: boolean): Promise<string[]>;
+  };
+  instancias: {
+    lista(servicio?: IdServicioDatos): Promise<EstadoInstancia[]>;
+    crear(servicio: IdServicioDatos, version: string): Promise<IdInstancia>;
+    iniciar(id: IdInstancia): Promise<void>;
+    detener(id: IdInstancia): Promise<void>;
+    puerto(id: IdInstancia, puerto: number): Promise<void>;
+    predeterminar(id: IdInstancia): Promise<void>;
+    /** La saca de la lista (detenida); sus datos quedan en disco. */
+    quitar(id: IdInstancia): Promise<void>;
+    /** Borra solo data/<servicio>/<clave>; `confirmacion` debe ser el id de la instancia. */
+    borrarDatos(id: IdInstancia, confirmacion: string): Promise<void>;
+    /** Resuelve el bloqueo tras una devolución fallida (confirmación escrita). */
+    desbloquear(
+      id: IdInstancia,
+      opciones: { confirmacion: string; respaldo?: string },
+    ): Promise<void>;
   };
   bd: {
-    listar(motor: MotorBd): Promise<BaseListada[]>;
-    crear(motor: MotorBd, nombre: string, opciones?: OpcionesCrearBase): Promise<ResultadoCrear>;
+    listar(motor: ObjetivoBdIpc): Promise<BaseListada[]>;
+    crear(
+      motor: ObjetivoBdIpc,
+      nombre: string,
+      opciones?: OpcionesCrearBase,
+    ): Promise<ResultadoCrear>;
     /** `confirmacion` debe ser el nombre exacto de la base. */
-    borrar(motor: MotorBd, nombre: string, confirmacion: string): Promise<void>;
+    borrar(motor: ObjetivoBdIpc, nombre: string, confirmacion: string): Promise<void>;
     /** Datos de conexión con la clave: solo para el diálogo "Datos de conexión". */
-    conexion(motor: MotorBd): Promise<DatosConexion>;
+    conexion(motor: ObjetivoBdIpc): Promise<DatosConexion>;
     bloqueEnv(
-      motor: MotorBd,
+      motor: ObjetivoBdIpc,
       base: string,
       tipoProyecto: TipoSitio | 'generico',
       envActual?: string,
@@ -370,21 +445,25 @@ export interface ApiEntorno {
      * Bloque .env para el proyecto de un sitio: el núcleo lee el .env del sitio (para respetar
      * sus variables) y devuelve solo el bloque generado.
      */
-    bloqueEnvSitio(sitioId: string, motor: MotorBd, base: string): Promise<string>;
+    bloqueEnvSitio(sitioId: string, motor: ObjetivoBdIpc, base: string): Promise<string>;
     /** Carpeta real de respaldos y copias de seguridad automáticas (Documentos\WolfCore Dev\Respaldos). */
     carpetaRespaldos(): Promise<string>;
-    tieneTablas(motor: MotorSql, base: string): Promise<boolean>;
+    tieneTablas(motor: ObjetivoSqlIpc, base: string): Promise<boolean>;
     formato(archivo: string): Promise<FormatoRespaldo>;
     restaurar(
-      motor: MotorSql,
+      motor: ObjetivoSqlIpc,
       archivo: string,
       base: string,
       opciones?: OpcionesRestaurar,
     ): Promise<ResultadoRestaurar>;
-    respaldar(motor: MotorSql, base: string, carpetaDestino?: string): Promise<{ archivo: string }>;
+    respaldar(
+      motor: ObjetivoSqlIpc,
+      base: string,
+      carpetaDestino?: string,
+    ): Promise<{ archivo: string }>;
     /** Solo se lee el servidor de origen. */
     importar(
-      motor: MotorSql,
+      motor: ObjetivoSqlIpc,
       origen: OrigenImportar,
       destinoBase: string,
       opciones?: OpcionesRestaurar,
@@ -500,6 +579,8 @@ export interface ApiEntorno {
     ): Promise<ListadoVersiones>;
     instalar(seleccion: SeleccionVersion): Promise<void>;
     instalados(servicio: string): Promise<string[]>;
+    /** Solo los binarios (en servicios de datos, los datos quedan). */
+    desinstalar(servicio: ServicioVersiones, version: string): Promise<void>;
   };
   tuneles: {
     abrir(sitioId: string): Promise<EstadoTunel>;
@@ -922,6 +1003,24 @@ export const RUTAS_IPC = [
   'instalador.listarVersiones',
   'instalador.instalar',
   'instalador.instalados',
+  'instalador.desinstalar',
+  'catalogo.versiones',
+  'catalogo.silenciar',
+  'instancias.lista',
+  'instancias.crear',
+  'instancias.iniciar',
+  'instancias.detener',
+  'instancias.puerto',
+  'instancias.predeterminar',
+  'instancias.quitar',
+  'instancias.borrarDatos',
+  'instancias.desbloquear',
+  'servicios.planActualizar',
+  'servicios.actualizar',
+  'servicios.nuevaRama',
+  'servicios.predeterminada',
+  'servicios.respaldosDatos',
+  'servicios.borrarRespaldoDatos',
   'tuneles.abrir',
   'tuneles.cerrar',
   'tuneles.renovar',
