@@ -337,6 +337,38 @@ describe('Nucleo', () => {
     });
   });
 
+  it('iniciarTodo nunca abre túneles (ni con túneles de una sesión anterior en run/tuneles.json)', async () => {
+    // Registros de la Etapa A de dos sitios: sus cloudflared ya no existen.
+    mkdirSync(path.join(base, 'run'), { recursive: true });
+    writeFileSync(
+      path.join(base, 'run', 'tuneles.json'),
+      JSON.stringify([
+        { sitioId: 'a', url: 'https://a.trycloudflare.com', pid: 999991 },
+        { sitioId: 'b', url: 'https://b.trycloudflare.com', pid: 999992 },
+      ]),
+    );
+    const iniciar = vi.spyOn(Supervisor.prototype, 'iniciar');
+    const n = await crear();
+    const abrir = vi.spyOn(n.tuneles, 'abrir');
+    const renovar = vi.spyOn(n.tuneles, 'renovar');
+    await n.iniciarTodo().catch(() => undefined);
+    expect(abrir).not.toHaveBeenCalled();
+    expect(renovar).not.toHaveBeenCalled();
+    expect(iniciar.mock.calls.some(([d]) => d.id.startsWith('tunel-'))).toBe(false);
+    expect(n.tuneles.estados()).toEqual([]);
+    expect(JSON.parse(readFileSync(path.join(base, 'run', 'tuneles.json'), 'utf8'))).toEqual([]);
+  });
+
+  it('iniciarTodo con fallos publica un aviso con los nombres y relanza el error', async () => {
+    const n = await crear();
+    const avisos: string[] = [];
+    n.eventos.on('aviso:nuevo', (a) => avisos.push(`${a.codigo}:${String(a.datos['nombres'])}`));
+    await expect(n.iniciarTodo()).rejects.toMatchObject({
+      codigo: 'servicios.iniciar_todo_fallos',
+    });
+    expect(avisos).toEqual(['avisos.iniciar_todo_fallos:Nginx']);
+  });
+
   it('cerrar con detenerServicios cierra túneles y detiene todo', async () => {
     const n = await crear();
     vi.spyOn(n.tuneles, 'estados').mockReturnValue([

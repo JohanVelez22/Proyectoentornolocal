@@ -671,7 +671,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
     n.servicios.iniciar(idNoVacio(id) as Parameters<Nucleo['servicios']['iniciar']>[0]),
   'servicios.detener': (n, _s, id) =>
     n.servicios.detener(idNoVacio(id) as Parameters<Nucleo['servicios']['detener']>[0]),
-  'servicios.iniciarTodo': (n) => n.servicios.iniciarTodo(),
+  'servicios.iniciarTodo': (n) => n.iniciarTodo(),
   'servicios.detenerTodo': (n) => n.detenerTodo(),
   'servicios.cambiarPuerto': (n, _s, id, puerto) =>
     n.cambiarPuertoServicio(idServicioDatos(id), puertoUsuario(puerto)),

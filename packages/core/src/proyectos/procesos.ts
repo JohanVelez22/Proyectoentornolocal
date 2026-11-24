@@ -208,7 +208,10 @@ export class ProcesosProyecto {
    * Arranca, al iniciar el programa, los procesos marcados con `autoIniciar` que no estén ya en
    * marcha (readoptados). Antes detiene los que quedaron sin proyecto. Devuelve los errores.
    */
-  async autoIniciar(seguir: () => boolean = () => true): Promise<string[]> {
+  async autoIniciar(
+    seguir: () => boolean = () => true,
+    bloqueo?: (sitioId: string) => Promise<string | null>,
+  ): Promise<string[]> {
     const errores = await this.detenerHuerfanos();
     const mensajes = errores.map((e) => mensajeDe(e));
     for (const sitio of await this.d.leerSitios()) {
@@ -218,6 +221,12 @@ export class ProcesosProyecto {
         try {
           const estado = this.d.supervisor.estado(idSupervisor(sitio.id, p.id));
           if (estado === 'encendido' || estado === 'iniciando') continue;
+          // Con su base caída el proceso se caería al instante: se informa y no se arranca.
+          const motivo = (await bloqueo?.(sitio.id)) ?? null;
+          if (motivo !== null) {
+            mensajes.push(`${sitio.dominio}: ${nombreProceso(p)} ${motivo}`);
+            continue;
+          }
           await this.iniciar(sitio.id, p.id);
         } catch (e) {
           mensajes.push(`${sitio.dominio}: ${mensajeDe(e)}`);

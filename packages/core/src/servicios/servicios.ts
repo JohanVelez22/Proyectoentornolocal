@@ -26,6 +26,7 @@ import {
 } from './nginx';
 import { ServicioPhp } from './php';
 import type { ProcesosProyecto } from '../proyectos/procesos';
+import type { UsoBase, UsoSitio } from './usoBases';
 
 export interface DepsServicios {
   rutas: Rutas;
@@ -63,7 +64,10 @@ export interface DepsServicios {
   /** Servidor FTP del proceso: aparece como servicio "ftp" (herramienta). */
   ftp?: Pick<ServidorFtp, 'estado' | 'iniciar' | 'detener'>;
   /** Procesos de los proyectos: aparecen en los estados y se detienen primero en detenerTodo. */
-  procesosProyecto?: Pick<ProcesosProyecto, 'estadosServicio' | 'detenerTodos'>;
+  procesosProyecto?: Pick<ProcesosProyecto, 'estadosServicio' | 'detenerTodos'> &
+    Partial<Pick<ProcesosProyecto, 'autoIniciar'>>;
+  /** Bases que usa cada sitio según su `.env` ("Iniciar todo" las enciende antes que sus procesos). */
+  usosDeSitios?: () => Promise<UsoSitio[]>;
   /** Publica un aviso (centro de avisos); aquí, el puerto ocupado al iniciar un servicio. */
   avisar?: (a: EntradaAviso) => unknown;
   /** Pools propios de los sitios (ini por sitio, Xdebug): viven con el pool de su rama. */
@@ -80,6 +84,38 @@ const EXTERNOS = [
   { id: 'mysql', nombre: 'MySQL (externo)', puerto: 3306 },
   { id: 'postgresql', nombre: 'PostgreSQL (externo)', puerto: 5432 },
 ];
+
+interface FalloInicio {
+  nombre: string;
+  error: unknown;
+}
+
+const NOMBRES_BD: Record<UsoBase['servicio'], string> = {
+  mysql: 'MySQL',
+  mariadb: 'MariaDB',
+  postgresql: 'PostgreSQL',
+  mongodb: 'MongoDB',
+  redis: 'Redis',
+};
+
+const mensajeDe = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+/** Un solo error con cada fallo de "Iniciar todo" (nombre: motivo), uno por línea. */
+function errorIniciarTodo(fallos: FalloInicio[]): ErrorWolf {
+  const nombres = [...new Set(fallos.map((f) => f.nombre))];
+  const detalle = fallos
+    .map((f) => {
+      const m = mensajeDe(f.error);
+      return m.startsWith(`${f.nombre}:`) ? `- ${m}` : `- ${f.nombre}: ${m}`;
+    })
+    .join('\n');
+  return new ErrorWolf(
+    'servicios.iniciar_todo_fallos',
+    `No se pudo iniciar todo. Falló:\n${detalle}`,
+    { nombres: nombres.join(', ').slice(0, 200) },
+    { cause: fallos[0]?.error },
+  );
+}
 
 const primero = (errores: unknown[]): void => {
   if (errores.length > 0) throw errores[0];
@@ -273,20 +309,73 @@ export class Servicios {
     return this.datos.borrarDatos(id, confirmacion);
   }
 
-  /** PHP y nginx, y luego los servicios con autoIniciar; un fallo no impide arrancar el resto. */
+  /**
+   * "Iniciar todo" (botón, bandeja y `--iniciar-todo`), en orden de dependencias:
+   * 1. PHP de las ramas en uso y Nginx;
+   * 2. las bases: las de `autoIniciar`, la predeterminada de cada base instalada y las que usan
+   *    los proyectos según su `.env`; se espera a que cada una responda en su puerto;
+   * 3. los procesos de proyecto con `autoIniciar`, solo si responde la base que usan.
+   * Nunca abre túneles. Un fallo no impide arrancar el resto; al final, si algo falló, lanza
+   * `servicios.iniciar_todo_fallos` con el detalle de cada uno.
+   */
   async iniciarTodo(): Promise<void> {
-    const errores: unknown[] = [];
-    try {
-      const instaladas = await this.d.instalador.instalados('php');
-      for (const v of await this.ramasEnUso()) {
-        if (instaladas.includes(v)) await this.iniciarRama(v);
+    const fallos: FalloInicio[] = [];
+    const anotar = (nombre: string, e: unknown): void => {
+      if (!(e instanceof ErrorDetenidoAlIniciar)) fallos.push({ nombre, error: e });
+    };
+    const instaladas = await this.d.instalador.instalados('php');
+    for (const v of await this.ramasEnUso()) {
+      if (!instaladas.includes(v)) continue;
+      try {
+        await this.iniciarRama(v);
+      } catch (e) {
+        anotar(`PHP ${v}`, e);
       }
+    }
+    try {
       await this.nginx.iniciar();
     } catch (e) {
-      if (!(e instanceof ErrorDetenidoAlIniciar)) errores.push(e);
+      anotar('Nginx', e);
     }
-    errores.push(...(await this.datos.iniciarAutomaticos()));
-    primero(errores);
+
+    const sitios = await this.usosDeSitios();
+    const objetivos = await this.datos.objetivosIniciarTodo(sitios.flatMap((s) => s.usos));
+    for (const r of await this.datos.iniciarYEsperar(objetivos)) {
+      if (r.error !== undefined) anotar(r.nombre, r.error);
+    }
+
+    if (this.d.procesosProyecto?.autoIniciar) {
+      const mensajes = await this.d.procesosProyecto.autoIniciar(
+        () => true,
+        (sitioId) => this.baseSinResponder(sitios, sitioId),
+      );
+      for (const m of mensajes) fallos.push({ nombre: m.split(':')[0] ?? m, error: new Error(m) });
+    }
+    if (fallos.length > 0) throw errorIniciarTodo(fallos);
+  }
+
+  /** Bases que usa cada sitio según su `.env` (sin el proveedor, ninguna). */
+  private async usosDeSitios(): Promise<UsoSitio[]> {
+    try {
+      return (await this.d.usosDeSitios?.()) ?? [];
+    } catch (e) {
+      console.error('No se pudieron leer las bases de los proyectos:', mensajeDe(e));
+      return [];
+    }
+  }
+
+  /**
+   * Motivo para no arrancar los procesos de un sitio: la base local que usa no responde (null si
+   * responden todas). Así un proceso no arranca para caerse al instante sin su base.
+   */
+  async baseSinResponder(sitios: readonly UsoSitio[], sitioId: string): Promise<string | null> {
+    const usos = sitios.find((s) => s.sitioId === sitioId)?.usos ?? [];
+    for (const u of usos) {
+      if (await this.sonda(u.puerto)) continue;
+      const nombre = NOMBRES_BD[u.servicio];
+      return `no se inició porque ${nombre} (puerto ${u.puerto}) no responde`;
+    }
+    return null;
   }
 
   /** Primero los procesos de proyecto (usan las bases y PHP), luego Nginx, PHP y el resto. */

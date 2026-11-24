@@ -164,7 +164,8 @@ const columnas: DataTableColumns<Fila> = [
           icono: Refresh,
           cargando: ocupado(`renovar-${f.sitioId}`),
           deshabilitado: ocupadoFila || f.estado === 'iniciando' || !!bloqueo(f),
-          alPulsar: () => void renovar({ id: f.sitioId, datosReales: f.datosReales }),
+          alPulsar: () =>
+            void renovar({ id: f.sitioId, datosReales: f.datosReales, dominio: f.dominio }),
         }),
         botonIcono({
           etiqueta: tt.cerrar,

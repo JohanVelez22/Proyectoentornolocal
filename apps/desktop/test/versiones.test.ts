@@ -9,6 +9,7 @@ import {
   marcarEncendida,
   marcarPredeterminada,
   origenCatalogo,
+  servicioDelDialogo,
   useVersiones,
   type FilaVersion,
 } from '../src/renderer/stores/versiones';
@@ -322,5 +323,21 @@ describe('store de versiones', () => {
     await v.predeterminar('1.30.8');
     expect(api.servicios.predeterminada).toHaveBeenCalledWith('nginx', '1.30.8');
     expect(v.filas.filter((f) => f.predeterminada)).toHaveLength(1);
+  });
+});
+
+describe('servicioDelDialogo', () => {
+  it('el título del diálogo es el del servicio que se actualiza, no el de la pestaña', () => {
+    const d = {
+      tipo: 'actualizar' as const,
+      servicio: 'mariadb' as const,
+      instancia: 'mariadb@11.8' as const,
+      actual: '11.8.5',
+      nueva: '11.8.6',
+      sinHuella: false,
+      plan: null,
+    };
+    expect(servicioDelDialogo(d, 'node')).toBe('mariadb');
+    expect(servicioDelDialogo(null, 'node')).toBe('node');
   });
 });

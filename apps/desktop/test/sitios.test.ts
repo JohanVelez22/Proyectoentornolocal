@@ -15,7 +15,7 @@ import {
   normalizarAlias,
   ordenarSitios,
   redirigirHabilitado,
-  requiereConfirmacion,
+  confirmacionTunel,
   sitioVacio,
   urlHttps,
   urlLocal,
@@ -127,11 +127,11 @@ describe('motivoTunelBloqueado', () => {
   });
 });
 
-describe('requiereConfirmacion (abrir y renovar)', () => {
-  it('solo los sitios con datos reales piden confirmación antes de publicar', () => {
-    expect(requiereConfirmacion(sitio({ datosReales: true }))).toBe(true);
-    expect(requiereConfirmacion(sitio({ datosReales: false }))).toBe(false);
-    expect(requiereConfirmacion(undefined)).toBe(false);
+describe('confirmacionTunel (abrir y renovar)', () => {
+  it('todo túnel pide confirmación; con datos reales, el aviso fuerte', () => {
+    expect(confirmacionTunel(sitio({ datosReales: true }))).toBe('reales');
+    expect(confirmacionTunel(sitio({ datosReales: false }))).toBe('publico');
+    expect(confirmacionTunel(undefined)).toBe('publico');
   });
 });
 

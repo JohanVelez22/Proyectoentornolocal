@@ -374,15 +374,17 @@ describe('Servicios con definiciones', () => {
     expect(detenidos).toEqual(['mysql']);
   });
 
-  it('iniciarTodo arranca los servicios con autoIniciar', async () => {
+  it('iniciarTodo arranca las bases (predeterminadas y con autoIniciar) y espera su salud', async () => {
     instalados = { mysql: ['8.4.13'], redis: ['8.10.3'] };
     cfg.servicios.datos.redis.autoIniciar = true;
+    respuestas.add(3306).add(6379);
     const my = defFalsa();
     const redis = defFalsa({ id: 'redis', nombre: 'Redis', puertoPorDefecto: 6379 });
-    const s = crear([my, redis]);
-    // nginx no está instalado: su error se informa, pero no impide arrancar Redis
+    const s = crear([my, redis], { plazoSaludMs: 2000 });
+    // nginx no está instalado: su error se informa, pero no impide arrancar las bases
     await expect(s.iniciarTodo()).rejects.toThrow(/Nginx no está instalado/);
-    expect(iniciados.map((x) => x.id)).toEqual(['redis']);
+    // MySQL es una base instalada: se enciende aunque no tenga autoIniciar.
+    expect(iniciados.map((x) => x.id)).toEqual(['mysql', 'redis']);
     await s.detenerTodo();
     expect(detenidos).toContain('redis');
   });

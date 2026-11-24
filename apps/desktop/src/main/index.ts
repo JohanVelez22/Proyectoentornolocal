@@ -21,6 +21,7 @@ import { textosMain } from './textos';
 import { programarDoctorAlIniciar } from './doctorInicio';
 import { ControlMetricas, registrarIpc } from './ipc';
 import { AlmacenSecretos } from './secretos';
+import { crearSalida } from './salida';
 import { registrarFinDeSesion, topeCierre } from './sesion';
 import { carpetaExistente, urlHttp } from './validacion';
 
@@ -33,7 +34,6 @@ let ventana: BrowserWindow | null = null;
 let bandeja: Tray | null = null;
 let nucleo: Nucleo | null = null;
 let saliendo = false;
-let preguntandoSalida = false;
 let cierreSistema: Promise<void> | null = null;
 let idioma: IdiomaUi | null = null;
 let accionesBandeja: AccionesBandeja | null = null;
@@ -191,40 +191,38 @@ function cerrarPorSistema(topeMs: number): Promise<void> {
   return cierreSistema;
 }
 
-async function salir(): Promise<void> {
-  if (preguntandoSalida || saliendo) return;
-  preguntandoSalida = true;
-  try {
-    const opciones = {
-      type: 'question' as const,
+const salida = crearSalida({
+  ventana: () => ventana,
+  saliendo: () => saliendo,
+  preguntar: async (padre) => {
+    const t = textosMain(idioma);
+    // Modal de la ventana (traída al frente y encima de todo por `crearSalida`): no puede quedar
+    // escondido detrás de otra ventana.
+    const r = await dialog.showMessageBox(padre as BrowserWindow, {
+      type: 'question',
       title: 'WolfCore Dev',
-      message: textosMain(idioma).preguntaApagar,
-      buttons: [
-        textosMain(idioma).siApagar,
-        textosMain(idioma).noApagar,
-        textosMain(idioma).cancelar,
-      ],
+      message: t.preguntaApagar,
+      buttons: [t.siApagar, t.noApagar, t.cancelar],
       defaultId: 0,
       cancelId: 2,
-    };
-    // Con la ventana oculta (salir desde la bandeja) el diálogo va sin padre: si no, quedaría
-    // pegado a una ventana invisible.
-    const padre = ventana && !ventana.isDestroyed() && ventana.isVisible() ? ventana : null;
-    const r = padre
-      ? await dialog.showMessageBox(padre, opciones)
-      : await dialog.showMessageBox(opciones);
-    if (r.response === 2) return;
+      noLink: true,
+    });
+    return r.response;
+  },
+  terminar: async (detenerServicios) => {
     saliendo = true;
     try {
-      await nucleo?.cerrar({ detenerServicios: r.response === 0 });
+      await nucleo?.cerrar({ detenerServicios });
     } catch (e) {
       console.error('Error al cerrar el núcleo:', e);
     }
     bandeja?.destroy();
     app.exit();
-  } finally {
-    preguntandoSalida = false;
-  }
+  },
+});
+
+function salir(): Promise<void> {
+  return salida.salir();
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -302,7 +300,7 @@ if (!app.requestSingleInstanceLock()) {
     });
     accionesBandeja = {
       abrir: mostrarVentana,
-      iniciarTodo: () => void n.servicios.iniciarTodo().catch((e) => console.error(e)),
+      iniciarTodo: () => void n.iniciarTodo().catch((e) => console.error(e)),
       detenerTodo: () => void n.detenerTodo().catch((e) => console.error(e)),
       salir: () => void salir(),
     };

@@ -106,6 +106,8 @@ export const es = {
       'servicios.confirmacion_borrado': 'Para borrar los datos de {nombre} escriba "{id}".',
       'servicios.ftp_no_disponible': 'El servidor FTP no está disponible.',
       'servicios.mailpit_no_responde': 'Mailpit no responde. Inícielo desde Servicios.',
+      'servicios.iniciar_todo_fallos':
+        'Iniciar todo no pudo encender: {nombres}. Revise Servicios y sus registros.',
       'servicios.respaldo_fallo':
         'No se actualizó {nombre}: falló el respaldo previo y no se cambió nada.',
       'servicios.espacio_insuficiente':
@@ -974,6 +976,9 @@ export const es = {
     confirmarTexto:
       'Este sitio tiene datos reales de clientes. Cualquiera con el enlace podrá verlo. ¿Publicar?',
     confirmar: 'Publicar',
+    confirmarPublicoTitulo: 'Publicar el sitio en internet',
+    confirmarPublicoTexto: (dominio: string) =>
+      `Se abrirá un túnel público de Cloudflare para ${dominio}: cualquiera con el enlace podrá entrar mientras siga abierto. ¿Publicar?`,
     tituloError: 'No se pudo abrir el túnel',
   },
   tuneles: {

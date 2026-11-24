@@ -33,6 +33,10 @@ const ES: Diccionario = {
       titulo: 'Un servicio se detuvo con un error',
       cuerpo: `${limpio(d['nombre'], 'Un servicio')} dejó de funcionar. Abra WolfCore Dev para ver el detalle.`,
     }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: 'Iniciar todo no pudo encender todo',
+      cuerpo: `No arrancó: ${limpio(d['nombres'], 'algún servicio')}. Abra Servicios para ver el detalle.`,
+    }),
     'avisos.puerto_ocupado': (d) => ({
       titulo: 'Puerto ocupado',
       cuerpo: `El puerto ${limpio(d['puerto'], '?')} lo usa ${limpio(d['nombre'], 'otro programa')}: no se pudo iniciar el servicio.`,
@@ -142,6 +146,10 @@ const EN: Diccionario = {
     'avisos.servicio_caido': (d) => ({
       titulo: 'A service stopped with an error',
       cuerpo: `${limpio(d['nombre'], 'A service')} stopped working. Open WolfCore Dev for details.`,
+    }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: 'Start all could not start everything',
+      cuerpo: `Did not start: ${limpio(d['nombres'], 'some service')}. Open Services for details.`,
     }),
     'avisos.puerto_ocupado': (d) => ({
       titulo: 'Port in use',

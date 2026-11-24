@@ -107,6 +107,8 @@ export const en: Textos = {
       'servicios.confirmacion_borrado': 'To delete the data of {nombre}, type "{id}".',
       'servicios.ftp_no_disponible': 'The FTP server is not available.',
       'servicios.mailpit_no_responde': 'Mailpit is not responding. Start it from Services.',
+      'servicios.iniciar_todo_fallos':
+        'Start all could not start: {nombres}. Check Services and their logs.',
       'servicios.respaldo_fallo':
         '{nombre} was not updated: the backup beforehand failed and nothing was changed.',
       'servicios.espacio_insuficiente':
@@ -964,6 +966,9 @@ export const en: Textos = {
     confirmarTexto:
       'This site has real customer data. Anyone with the link will be able to see it. Publish?',
     confirmar: 'Publish',
+    confirmarPublicoTitulo: 'Publish the site on the internet',
+    confirmarPublicoTexto: (dominio: string) =>
+      `A public Cloudflare tunnel will be opened for ${dominio}: anyone with the link can access it while it stays open. Publish?`,
     tituloError: 'Could not open the tunnel',
   },
   tuneles: {

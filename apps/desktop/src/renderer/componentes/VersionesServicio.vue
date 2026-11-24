@@ -20,6 +20,7 @@ import { formatearTamano } from '../utilidades/bd';
 import {
   origenCatalogo,
   SERVICIOS_CON_VERSIONES,
+  servicioDelDialogo,
   useVersiones,
   type FilaVersion,
 } from '../stores/versiones';
@@ -44,6 +45,8 @@ const notification = useNotification();
 const { ejecutar, ocupado } = useAccion();
 
 const nombre = computed(() => t.servicios[props.servicio]);
+/** Nombre del servicio del diálogo abierto (no el de la pestaña, que puede cambiar). */
+const nombreDialogo = computed(() => t.servicios[servicioDelDialogo(v.dialogo, props.servicio)]);
 const opcionesServicio = computed(() =>
   SERVICIOS_CON_VERSIONES.map((s) => ({ value: s, label: t.servicios[s] })),
 );
@@ -276,19 +279,19 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
       v-if="dlgActualizar"
       v-model:show="abierto"
       :dialogo="dlgActualizar"
-      :nombre="nombre"
+      :nombre="nombreDialogo"
     />
     <DialogoSinHuella
       v-if="dlgSinHuella"
       v-model:show="abierto"
-      :nombre="nombre"
+      :nombre="nombreDialogo"
       :version="dlgSinHuella.version"
       :alternativa="dlgSinHuella.alternativa"
     />
     <DialogoDesinstalar
       v-if="dlgDesinstalar"
       v-model:show="abierto"
-      :nombre="nombre"
+      :nombre="nombreDialogo"
       :fila="dlgDesinstalar.fila"
       :datos="v.conInstancias"
       :unica="v.tabla?.interruptor === 'unica' && dlgDesinstalar.fila.predeterminada"

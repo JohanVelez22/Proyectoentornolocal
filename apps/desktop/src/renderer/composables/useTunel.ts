@@ -2,7 +2,7 @@ import { useDialog } from 'naive-ui';
 import type { Sitio } from '../../shared/api';
 import { api } from '../api';
 import { textos } from '../i18n';
-import { requiereConfirmacion } from '../utilidades/sitios';
+import { confirmacionTunel } from '../utilidades/sitios';
 import { useAccion } from './useAccion';
 
 /**
@@ -14,9 +14,12 @@ export function useTunel() {
   const { ejecutar, ocupado } = useAccion();
   const t = textos.tunel;
 
-  /** Con datos reales se pide confirmación antes de publicar. Devuelve false si se cancela. */
-  function confirmarPublicar(sitio: Pick<Sitio, 'datosReales'>): Promise<boolean> {
-    if (!requiereConfirmacion(sitio)) return Promise.resolve(true);
+  /**
+   * Siempre se confirma antes de publicar (el sitio queda en internet); con datos reales, con el
+   * aviso fuerte. Devuelve false si se cancela.
+   */
+  function confirmarPublicar(sitio: Pick<Sitio, 'datosReales' | 'dominio'>): Promise<boolean> {
+    const reales = confirmacionTunel(sitio) === 'reales';
     return new Promise((resolve) => {
       let respondido = false;
       const responder = (v: boolean): void => {
@@ -25,8 +28,8 @@ export function useTunel() {
         resolve(v);
       };
       dialog.warning({
-        title: t.confirmarTitulo,
-        content: t.confirmarTexto,
+        title: reales ? t.confirmarTitulo : t.confirmarPublicoTitulo,
+        content: reales ? t.confirmarTexto : t.confirmarPublicoTexto(sitio.dominio),
         positiveText: t.confirmar,
         negativeText: textos.acciones.cancelar,
         autoFocus: false,
@@ -39,7 +42,7 @@ export function useTunel() {
     });
   }
 
-  async function abrir(sitio: Pick<Sitio, 'id' | 'datosReales'>): Promise<void> {
+  async function abrir(sitio: Pick<Sitio, 'id' | 'datosReales' | 'dominio'>): Promise<void> {
     if (!(await confirmarPublicar(sitio))) return;
     await ejecutar(`abrir-${sitio.id}`, () => api().tuneles.abrir(sitio.id), {
       tituloError: t.tituloError,
@@ -51,7 +54,7 @@ export function useTunel() {
   }
 
   /** Renovar publica un enlace nuevo: con datos reales se confirma igual que al abrir. */
-  async function renovar(sitio: Pick<Sitio, 'id' | 'datosReales'>): Promise<void> {
+  async function renovar(sitio: Pick<Sitio, 'id' | 'datosReales' | 'dominio'>): Promise<void> {
     if (!(await confirmarPublicar(sitio))) return;
     const sitioId = sitio.id;
     await ejecutar(`renovar-${sitioId}`, () => api().tuneles.renovar(sitioId), {

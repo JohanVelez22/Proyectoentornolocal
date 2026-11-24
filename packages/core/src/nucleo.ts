@@ -66,6 +66,7 @@ import { Supervisor } from './procesos/supervisor';
 import { claveMayorMenor, Rutas } from './rutas';
 import { Mailpit } from './servicios/mailpit';
 import { Servicios, type IdServicio } from './servicios/servicios';
+import { usosDeCarpeta, type UsoSitio } from './servicios/usoBases';
 import { compararVersiones } from './servicios/nginx';
 import { parsearInstancia } from './servicios/instancias';
 import { Agentes } from './agentes/agentes';
@@ -433,6 +434,16 @@ export function envUsaPuerto(env: string, puerto: number): boolean {
   return variable.test(env) || enUrl.test(env);
 }
 
+/** Bases locales que usa cada sitio según el `.env` de su carpeta (sin claves). */
+async function usosDeSitios(sitios: Pick<GestorSitios, 'listar'>): Promise<UsoSitio[]> {
+  const res: UsoSitio[] = [];
+  for (const s of await sitios.listar()) {
+    const usos = await usosDeCarpeta(s.carpeta).catch(() => []);
+    if (usos.length > 0) res.push({ sitioId: s.id, usos });
+  }
+  return res;
+}
+
 export class Nucleo {
   private temporizador: ReturnType<typeof setInterval> | null = null;
   private sondeando = false;
@@ -726,7 +737,9 @@ export class Nucleo {
       procesosProyecto: {
         estadosServicio: () => procesos.estadosServicio(),
         detenerTodos: () => procesos.detenerTodos(),
+        autoIniciar: (seguir, bloqueo) => procesos.autoIniciar(seguir, bloqueo),
       },
+      usosDeSitios: () => usosDeSitios(sitios),
     });
     sitios = new GestorSitios({
       almacen,
@@ -767,6 +780,7 @@ export class Nucleo {
       console.error(avisoInstancias);
     }
     instalador.fijarVerificadorEnUso((s, v) => servicios.datos.versionEnUso(s, v));
+    instalador.fijarAntesDeInstalar((s) => servicios.datos.prepararInstalacion(s));
     const urlBase = new UrlBase({
       rutas,
       ejecutor: o.ejecutor ?? ejecutorPorDefecto,
@@ -1287,9 +1301,43 @@ export class Nucleo {
         errores.push(`${def.nombre}${varias ? ` ${inst.clave}` : ''}: ${mensajeDe(e)}`);
       }
     }
-    // Después de los servicios (los procesos suelen usar la base de datos).
-    if (!this.cerrado) errores.push(...(await this.procesos.autoIniciar(() => !this.cerrado)));
+    // Después de los servicios (los procesos suelen usar la base de datos), y solo si su base
+    // responde: sin ella se caerían al instante (y se relanzarían una y otra vez).
+    if (!this.cerrado) {
+      const usos = await usosDeSitios(this.sitios).catch((): UsoSitio[] => []);
+      errores.push(
+        ...(await this.procesos.autoIniciar(
+          () => !this.cerrado,
+          (id) => this.servicios.baseSinResponder(usos, id),
+        )),
+      );
+    }
     return errores;
+  }
+
+  /**
+   * "Iniciar todo" de la interfaz, la bandeja y `--iniciar-todo`: el mismo flujo para los tres
+   * (`Servicios.iniciarTodo`: PHP y Nginx, bases con su salud, procesos de proyecto). Nunca abre
+   * túneles: un túnel solo se abre con la acción del usuario en su sitio. Si algo falla, además
+   * del error publica un aviso (desde la bandeja no hay otra forma de verlo).
+   */
+  async iniciarTodo(): Promise<void> {
+    try {
+      await this.servicios.iniciarTodo();
+    } catch (e) {
+      const nombres =
+        e instanceof ErrorWolf && typeof e.datos?.['nombres'] === 'string'
+          ? e.datos['nombres']
+          : '';
+      this.avisos.publicar({
+        nivel: 'error',
+        tipo: 'servicio-caido',
+        codigo: 'avisos.iniciar_todo_fallos',
+        datos: { fuente: 'iniciar-todo', nombres },
+        accion: { ruta: 'servicios' },
+      });
+      throw e;
+    }
   }
 
   /**

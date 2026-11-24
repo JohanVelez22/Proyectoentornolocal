@@ -56,6 +56,7 @@ import {
   type InstaladorServicios,
   type SupervisorServicios,
 } from './nginx';
+import { usoCompatible, type UsoBase } from './usoBases';
 
 export interface CtxServicio {
   rutas: Rutas;
@@ -227,6 +228,20 @@ export interface ResultadoNuevaRama {
   advertencias: string[];
 }
 
+/** Una instancia que "Iniciar todo" enciende. */
+export interface ObjetivoInicio {
+  /** Lo que se pasa a `iniciar` (el servicio si su instancia es implícita). */
+  ref: IdServicioDatos | IdInstancia;
+  nombre: string;
+  servicio: IdServicioDatos;
+  puerto: number;
+}
+
+/** Resultado de encender un objetivo: sin `error`, quedó encendido y responde. */
+export interface ResultadoInicio extends ObjetivoInicio {
+  error?: unknown;
+}
+
 /** Una instancia resuelta (configurada o, sin instancias en la configuración, la implícita). */
 export interface InstanciaResuelta {
   id: IdInstancia;
@@ -354,7 +369,15 @@ export class ServiciosDatos {
     }
     const elegida = c.servicios.datos[def.id].version;
     if (elegida && instaladas.includes(elegida)) return elegida;
-    const nueva = [...instaladas].sort(compararVersiones).at(-1);
+    const ordenadas = [...instaladas].sort(compararVersiones);
+    // Sin versión elegida, la más nueva que ya tiene datos (la que se venía usando): instalar otra
+    // rama al lado no debe cambiar a cuál responde el puerto.
+    const conDatos = elegida
+      ? []
+      : ordenadas.filter((v) =>
+          existsSync(path.join(this.carpetaDatos(def, v), MARCA_INICIALIZADO)),
+        );
+    const nueva = conDatos.at(-1) ?? ordenadas.at(-1);
     if (!nueva) throw this.noInstalado(def);
     return nueva;
   }
@@ -1085,6 +1108,72 @@ export class ServiciosDatos {
   }
 
   /**
+   * Instancias que enciende "Iniciar todo": las de `autoIniciar`, la predeterminada de cada base
+   * de datos instalada (categoría `bd`) y las que usan los proyectos (por motor y puerto de su
+   * `.env`). Sin repetir y en el orden de las definiciones.
+   */
+  async objetivosIniciarTodo(usos: readonly UsoBase[]): Promise<ObjetivoInicio[]> {
+    const cfg = await this.d.leerConfig();
+    const res: ObjetivoInicio[] = [];
+    for (const def of this.d.definiciones()) {
+      for (const inst of await this.resolver(def, cfg)) {
+        const usada = usos.some((u) => usoCompatible(u, def.id) && u.puerto === inst.puerto);
+        const base = def.categoria === 'bd' && inst.predeterminada;
+        if (!inst.autoIniciar && !base && !usada) continue;
+        res.push({
+          ref: inst.implicita ? def.id : inst.id,
+          nombre: this.nombreDe(def, inst),
+          servicio: def.id,
+          puerto: inst.puerto,
+        });
+      }
+    }
+    return res;
+  }
+
+  /**
+   * Enciende cada objetivo y espera a que quede encendido y responda en su puerto (en paralelo,
+   * con el plazo de salud). Nunca lanza: devuelve el resultado de cada uno.
+   */
+  async iniciarYEsperar(objetivos: readonly ObjetivoInicio[]): Promise<ResultadoInicio[]> {
+    const arrancados: { o: ObjetivoInicio; error?: unknown }[] = [];
+    for (const o of objetivos) {
+      try {
+        await this.iniciar(o.ref);
+        arrancados.push({ o });
+      } catch (e) {
+        arrancados.push({ o, error: e });
+      }
+    }
+    return Promise.all(
+      arrancados.map(async ({ o, error }): Promise<ResultadoInicio> => {
+        if (error !== undefined) return { ...o, error };
+        try {
+          const cfg = await this.d.leerConfig();
+          const { inst } = await this.objetivo(o.ref, cfg);
+          await this.esperarSalud(inst);
+          return { ...o };
+        } catch (e) {
+          return { ...o, error: e };
+        }
+      }),
+    );
+  }
+
+  /**
+   * Antes de instalar otra versión de un servicio de datos: si su instancia aún es implícita (sin
+   * `instancias` en config.json, instalación nueva), la fija con la versión que usa ahora. Si no,
+   * la versión nueva pasaría a ser "la activa" y la rama nueva chocaría con ella ("Ya existe la
+   * instancia…"). Sin cola: también se llama desde dentro de `nuevaRama` y `actualizar`.
+   */
+  async prepararInstalacion(servicio: string): Promise<void> {
+    if (!esIdServicioDatos(servicio)) return;
+    const def = this.def(servicio);
+    if (!def) return;
+    await this.materializar(def, await this.d.leerConfig());
+  }
+
+  /**
    * Detiene en paralelo las instancias que el supervisor conoce (cada apagado limpio puede tardar
    * segundos: en serie no cabían en el margen de cierre); devuelve los errores sin cortar.
    */
@@ -1602,6 +1691,8 @@ export class ServiciosDatos {
   ): Promise<void> {
     if ((await this.d.instalador.instalados(def.id)).includes(version)) return;
     if (!this.d.instalarVersion) throw this.noInstalado(def);
+    // La implícita queda fija antes de que la versión nueva cambie cuál es la activa.
+    await this.materializar(def, await this.d.leerConfig());
     await this.d.instalarVersion(def.id, version, o);
   }
 

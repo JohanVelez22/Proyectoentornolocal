@@ -140,6 +140,17 @@ export function argsDeAviso(args: unknown): ArgsAvisoVersion | null {
   return { servicio, version, instancia: inst, actualizar: a['actualizar'] === true };
 }
 
+/**
+ * Servicio del que trata un diálogo abierto: el suyo, no el de la pestaña (un diálogo abierto
+ * desde un aviso de MariaDB sigue siendo de MariaDB aunque luego se elija Node.js en la pestaña).
+ */
+export function servicioDelDialogo(
+  d: DialogoVersiones | null,
+  pestana: ServicioVersiones,
+): ServicioVersiones {
+  return d && 'servicio' in d ? d.servicio : pestana;
+}
+
 /** Diálogos de la pestaña: nada se actualiza ni se instala sin pasar por uno de ellos. */
 export type DialogoVersiones =
   | {

@@ -132,6 +132,17 @@ export class Instalador {
     this.enUso = fn;
   }
 
+  private antesDeInstalar: ((servicio: string) => Promise<void>) | null = null;
+
+  /**
+   * Se llama antes de instalar una versión nueva (no si ya estaba instalada). El núcleo lo
+   * conecta con `ServiciosDatos.prepararInstalacion`: un servicio de datos con su instancia
+   * implícita la fija en config.json antes de que la versión nueva cambie cuál es "la activa".
+   */
+  fijarAntesDeInstalar(fn: (servicio: string) => Promise<void>): void {
+    this.antesDeInstalar = fn;
+  }
+
   /**
    * Quita solo los binarios de bin/<servicio>/<version>: nunca toca `data/`. Una versión que usa
    * alguna instancia se rechaza (`instalador.version_en_uso`).
@@ -183,6 +194,9 @@ export class Instalador {
     }
     // Antes de descargar nada: sin huella fuerte, solo con la confirmación del usuario.
     const huella = huellaParaInstalar(v);
+    if (huellaFuerte(huella) || o.confirmarSinHuella === true) {
+      await this.antesDeInstalar?.(v.servicio);
+    }
     if (!huellaFuerte(huella) && o.confirmarSinHuella !== true) {
       const e = huella
         ? new ErrorWolf(

@@ -165,10 +165,14 @@ export function derivarEstadoSitio(
 /* ───────────── Túnel ───────────── */
 
 /**
- * Publicar (abrir o renovar) un túnel de un sitio con datos reales exige confirmación.
+ * Publicar (abrir o renovar) un túnel SIEMPRE se confirma: deja el sitio en internet. Con datos
+ * reales el aviso es más fuerte. Nada abre un túnel sin esta acción del usuario (ni "Iniciar
+ * todo" ni el arranque de la app).
  */
-export function requiereConfirmacion(sitio: Pick<Sitio, 'datosReales'> | undefined): boolean {
-  return sitio?.datosReales === true;
+export function confirmacionTunel(
+  sitio: Pick<Sitio, 'datosReales'> | undefined,
+): 'reales' | 'publico' {
+  return sitio?.datosReales === true ? 'reales' : 'publico';
 }
 
 /**
