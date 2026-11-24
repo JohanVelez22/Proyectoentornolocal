@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { ErrorWolf } from '../errores';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AlmacenCredenciales } from '../almacen';
 import type { Ejecutor, Plataforma } from '../plataforma/tipos';
@@ -656,6 +656,21 @@ export class ServiciosDatos {
   private async prepararDatos(def: DefServicio, ctx: CtxServicio): Promise<void> {
     const marca = path.join(ctx.datos, MARCA_INICIALIZADO);
     if (existsSync(marca)) return;
+    // Datos apartados por una actualización (`<clave>.fallida-…`, `.restaurando-…`): una
+    // carpeta vacía o ausente aquí no es "nueva", así que no se inicializa encima.
+    const clave = path.basename(ctx.datos);
+    const hermanas = await readdir(path.dirname(ctx.datos)).catch(() => [] as string[]);
+    if (
+      hermanas.some(
+        (n) => n.startsWith(`${clave}.fallida-`) || n.startsWith(`${clave}.restaurando-`),
+      )
+    ) {
+      throw new ErrorWolf(
+        'servicios.datos_apartados',
+        `${def.nombre} ${clave} no tiene datos en su carpeta pero hay datos apartados de una actualización al lado: no se crea una carpeta vacía. Revise Servicios → Versiones (Respaldos de las actualizaciones).`,
+        { nombre: `${def.nombre} ${clave}` },
+      );
+    }
     const creando = `${ctx.datos}${SUFIJO_CREANDO}`;
     // Un intento anterior nuestro quedó a medias (p. ej. se cerró la app): se empieza de cero.
     if (existsSync(creando)) await rm(ctx.datos, OPCIONES_BORRADO);
@@ -774,24 +789,44 @@ export class ServiciosDatos {
           { puerto, otro },
         );
       }
+      const rango = (await this.reservados()).find((r) => puerto >= r.desde && puerto <= r.hasta);
+      if (rango) {
+        throw new ErrorWolf(
+          'servicios.puerto_reservado',
+          `El puerto ${puerto} está reservado por el sistema (${rango.desde}–${rango.hasta}): elija otro.`,
+          { puerto, desde: rango.desde, hasta: rango.hasta },
+        );
+      }
       const uso = await this.d.plataforma.quienUsaPuerto(puerto);
       if (uso && uso.pid !== this.d.supervisor.pid(inst.proceso)) {
         throw new ErrorPuertoOcupado(puerto, uso.pid, uso.nombre);
       }
       const estaba = this.vivo(inst.proceso);
-      await this.d.modificarConfig((c) => {
-        if (inst.implicita) c.servicios.datos[inst.servicio].puerto = puerto;
-        else {
-          const i = c.servicios.datos[inst.servicio].instancias?.[inst.clave];
-          if (i) i.puerto = puerto;
-          reflejarPredeterminada(c, inst.servicio);
-        }
-      });
+      const fijarPuerto = (p: number): Promise<void> =>
+        this.d.modificarConfig((c) => {
+          if (inst.implicita) c.servicios.datos[inst.servicio].puerto = p;
+          else {
+            const i = c.servicios.datos[inst.servicio].instancias?.[inst.clave];
+            if (i) i.puerto = p;
+            reflejarPredeterminada(c, inst.servicio);
+          }
+        });
+      await fijarPuerto(puerto);
       this.cacheDuenos = null;
       if (estaba && objetivo.def) {
+        const def = objetivo.def;
         const nueva = { ...inst, puerto };
-        await this.detenerSinCola(objetivo.def, nueva);
-        await this.iniciarSinCola(objetivo.def, nueva, await this.d.leerConfig());
+        await this.detenerSinCola(def, nueva);
+        try {
+          await this.iniciarSinCola(def, nueva, await this.d.leerConfig());
+        } catch (e) {
+          // No arrancó en el puerto nuevo: vuelve al anterior (y se enciende como estaba).
+          await fijarPuerto(inst.puerto);
+          this.cacheDuenos = null;
+          await this.detenerSinCola(def, nueva).catch(() => undefined);
+          await this.iniciarSinCola(def, inst, await this.d.leerConfig()).catch(() => undefined);
+          throw e;
+        }
       }
     });
   }
@@ -854,6 +889,16 @@ export class ServiciosDatos {
       const insts = def ? await this.resolver(def, cfg) : [];
       let carpeta: string;
       if (esIdServicioDatos(id)) {
+        const marcas = await readdir(path.join(this.d.rutas.base, 'data', id)).catch(
+          () => [] as string[],
+        );
+        if (marcas.some((n) => n.endsWith(SUFIJO_BLOQUEO))) {
+          throw new ErrorWolf(
+            'servicios.borrado_con_bloqueo',
+            `${nombre} tiene una instancia bloqueada tras una actualización: resuélvala antes de borrar sus datos (sus copias se perderían).`,
+            { nombre },
+          );
+        }
         for (const inst of insts) {
           if (this.d.supervisor.estado(inst.proceso) !== 'apagado' && def) {
             await this.detenerSinCola(def, inst);
@@ -1263,10 +1308,11 @@ export class ServiciosDatos {
    * puede escribir se registra (el error de la actualización sale igual).
    */
   private async bloquear(inst: InstanciaResuelta, b: BloqueoInstancia): Promise<void> {
+    let error: unknown = null;
     try {
-      await writeFile(this.rutaBloqueo(inst.servicio, inst.clave), JSON.stringify(b), 'utf8');
+      await this.escribirBloqueo(inst.servicio, inst.clave, b);
     } catch (e) {
-      console.error(`No se pudo marcar ${inst.id} como bloqueada:`, e);
+      error = e;
     }
     await this.d
       .modificarConfig((c) => {
@@ -1279,6 +1325,49 @@ export class ServiciosDatos {
         }
       })
       .catch((e: unknown) => console.error(`No se pudo quitar el arranque de ${inst.id}:`, e));
+    if (error) throw error;
+  }
+
+  /** Escribe la marca de bloqueo (con reintentos cortos); si no se puede, lanza. */
+  private async escribirBloqueo(
+    servicio: IdServicioDatos,
+    clave: string,
+    b: BloqueoInstancia,
+  ): Promise<void> {
+    let ultimo: unknown = null;
+    for (let i = 0; i < 5; i++) {
+      try {
+        await writeFile(this.rutaBloqueo(servicio, clave), JSON.stringify(b), 'utf8');
+        return;
+      } catch (e) {
+        ultimo = e;
+        await pausa(50 * (i + 1));
+      }
+    }
+    throw ultimo instanceof Error ? ultimo : new Error(String(ultimo));
+  }
+
+  /**
+   * Bloquea tras una devolución fallida y arma el error `servicios.restauracion_fallo`. Si la
+   * marca no se pudo escribir, el mensaje lo dice (no hay que encender la instancia a mano).
+   */
+  private async falloDevolucion(
+    inst: InstanciaResuelta,
+    mensaje: string,
+    fallida: string,
+    respaldo: string,
+  ): Promise<ErrorWolf> {
+    let extra = '';
+    try {
+      await this.bloquear(inst, { fecha: this.ahora.toISOString(), fallida, respaldo });
+    } catch (e) {
+      extra = ` No se pudo marcar ${inst.id} como bloqueada (${mensajeDe(e).slice(0, 120)}): no la encienda hasta revisar los datos.`;
+    }
+    return new ErrorWolf('servicios.restauracion_fallo', `${mensaje}${extra}`, {
+      nombre: inst.id,
+      fallida,
+      respaldo,
+    });
   }
 
   /**
@@ -1320,14 +1409,13 @@ export class ServiciosDatos {
         try {
           await devolverCopia(carpeta, copia, selloFecha(this.ahora), this.d.fsCopia);
         } catch (x) {
-          throw new ErrorWolf(
-            'servicios.restauracion_fallo',
+          const fallida = x instanceof ErrorDevolucion ? x.fallida : carpeta;
+          // Sigue bloqueada, y la marca dice dónde quedaron ahora los datos tocados.
+          throw await this.falloDevolucion(
+            inst,
             `No se pudo devolver el respaldo de ${id} (${mensajeDe(x).slice(0, 200)}). Sigue bloqueada.`,
-            {
-              nombre: id,
-              fallida: x instanceof ErrorDevolucion ? x.fallida : carpeta,
-              respaldo: copia,
-            },
+            fallida,
+            copia,
           );
         }
       } else if (!existsSync(path.join(carpeta, MARCA_INICIALIZADO))) {
@@ -1401,10 +1489,9 @@ export class ServiciosDatos {
       const lista = await listarRespaldosDatos(this.d.rutas.base, [r.servicio]);
       const x = lista.find((l) => l.clave === r.clave && l.tipo === r.tipo && l.sello === r.sello);
       if (!x) throw noExiste();
-      const b = await this.bloqueo(r.servicio, r.clave);
-      const mismo = (a: string): boolean =>
-        a !== '' && path.resolve(a).toLowerCase() === path.resolve(x.carpeta).toLowerCase();
-      if (b && (mismo(b.respaldo) || mismo(b.fallida))) {
+      // Con la marca de bloqueo (legible o no) ninguna copia de esa clave se borra: cualquiera
+      // puede ser la que hace falta para devolver los datos.
+      if (existsSync(this.rutaBloqueo(r.servicio, r.clave))) {
         throw new ErrorWolf(
           'instancias.respaldo_en_uso',
           `Esa copia la necesita ${r.servicio}@${r.clave}, que está bloqueada: resuélvalo antes.`,
@@ -1464,6 +1551,7 @@ export class ServiciosDatos {
       const inst = (await this.resolver(def, cfg)).find((i) => i.id === id);
       if (!inst)
         throw new ErrorWolf('instancias.no_existe', `No existe la instancia ${id}.`, { id });
+      await this.exigirNoBloqueada(inst);
       if (typeof version !== 'string' || claveDe(def, version) !== inst.clave) {
         throw new ErrorWolf(
           'servicios.otra_rama',
@@ -1536,24 +1624,35 @@ export class ServiciosDatos {
       } catch (e) {
         const motivo = mensajeDe(e).slice(0, 300);
         await this.detenerSinCola(def, nueva).catch(() => undefined);
-        await fijar(anterior);
+        let sinConfig: unknown = null;
+        try {
+          await fijar(anterior);
+        } catch (x) {
+          sinConfig = x;
+        }
         if (hayDatos) {
           try {
             await devolverCopia(carpeta, copia, sello, this.d.fsCopia);
           } catch (x) {
             // Sin la copia devuelta y verificada no se arranca nada encima de datos dudosos.
             const fallida = x instanceof ErrorDevolucion ? x.fallida : carpeta;
-            await this.bloquear(inst, {
-              fecha: this.ahora.toISOString(),
-              fallida,
-              respaldo: copia,
-            });
-            throw new ErrorWolf(
-              'servicios.restauracion_fallo',
+            throw await this.falloDevolucion(
+              inst,
               `${def.nombre} ${version} no arrancó y no se pudieron devolver los datos de ${id} (${mensajeDe(x).slice(0, 200)}). No se encendió nada: los datos que tocó la versión nueva están en ${fallida} y el respaldo en ${copia}.`,
-              { nombre: id, fallida, respaldo: copia },
+              fallida,
+              copia,
             );
           }
+        }
+        if (sinConfig) {
+          // La configuración sigue con la versión nueva (que no arranca): bloqueada hasta que se
+          // resuelva a mano; los datos ya están devueltos.
+          throw await this.falloDevolucion(
+            inst,
+            `${def.nombre} ${version} no arrancó y no se pudo volver a ${anterior} en la configuración (${mensajeDe(sinConfig).slice(0, 200)}). Los datos se devolvieron; no se encendió nada.`,
+            carpeta,
+            hayDatos ? copia : '',
+          );
         }
         const vieja = { ...inst, version: anterior };
         if (estaba) await this.arrancarYEsperar(def, vieja).catch(() => undefined);

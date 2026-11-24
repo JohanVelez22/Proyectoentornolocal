@@ -302,6 +302,17 @@ describe('Nucleo: revisión de versiones nuevas', () => {
         instalada: false,
         huella: 'ninguna',
       });
+      // La versión activa de Nginx (encendida o no) no se desinstala; otra sí.
+      for (const v of ['1.30.6', '1.30.8']) {
+        const dir = path.join(base, 'bin', 'nginx', v);
+        await mkdir(dir, { recursive: true });
+        await writeFile(path.join(dir, nombreEjecutable('nginx')), '');
+      }
+      await expect(n.desinstalarVersion('nginx', '1.30.8')).rejects.toMatchObject({
+        codigo: 'instalador.version_en_uso',
+      });
+      await n.desinstalarVersion('nginx', '1.30.6');
+      expect(await n.instalador.instalados('nginx')).toEqual(['1.30.8']);
       // Predeterminar una versión no instalada se rechaza; Node sin instalar tampoco.
       await expect(n.predeterminarVersion('node', '22.1.0')).rejects.toMatchObject({
         codigo: 'servicios.no_instalado',

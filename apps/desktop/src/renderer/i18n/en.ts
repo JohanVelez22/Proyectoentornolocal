@@ -120,6 +120,12 @@ export const en: Textos = {
       'servicios.misma_version': '{id} already uses version {version}.',
       'servicios.instancia_bloqueada':
         '{nombre} is blocked: an update could not restore its data. The touched data is in {fallida} and the backup in {respaldo}. Resolve it in Services → Versions before starting it.',
+      'servicios.datos_apartados':
+        '{nombre} has no data in its folder, but there is data set aside by an update: an empty folder is not created. Check Services → Versions.',
+      'servicios.puerto_reservado':
+        'Port {puerto} is reserved by the system ({desde}–{hasta}): choose another one.',
+      'servicios.borrado_con_bloqueo':
+        '{nombre} has an instance blocked after an update: resolve it before deleting its data.',
       'instancias.id_invalido': 'The instance identifier is not valid.',
       'instancias.no_existe': 'Instance {id} does not exist.',
       'instancias.existe': 'Instance {id} already exists.',
@@ -457,6 +463,8 @@ export const en: Textos = {
     borrarDatos: {
       opcion: 'Delete data',
       titulo: (nombre: string) => `Delete ${nombre} data`,
+      copias: (n: number, tam: string) =>
+        `${n === 1 ? 'One update copy' : `${n} update copies`} (${tam}) will also be deleted. To keep them, copy them from the data folder first.`,
       /** What is lost, per service. */
       que: {
         mysql: 'all MySQL databases and users',
@@ -2726,6 +2734,9 @@ export const en: Textos = {
     puertoDe: (id: string) => `Port of ${id}`,
     cambiarPuerto: 'Change',
     puertoCambiado: (p: number) => `Port changed to ${p}.`,
+    puertoProyectosTitulo: 'Projects with the previous port',
+    puertoProyectos: (viejo: number, nuevo: number, lista: string) =>
+      `These projects still use port ${viejo} in their .env (they were not changed): ${lista}. Change it to ${nuevo}.`,
     resolver: 'Resolve',
     instalada: (v: string) => `${v} installed.`,
     selector: { etiqueta: 'Instance', predeterminada: 'default', apagada: 'stopped' },
@@ -2790,6 +2801,8 @@ export const en: Textos = {
       escriba: (id: string) => `Type ${id} to confirm`,
       desinstalar: 'Uninstall',
       desinstalarYBorrar: 'Uninstall and delete data',
+      predeterminada: (id: string) =>
+        `${id} is the default instance: Databases, the .env block and the tools that use the engine will switch to another instance (with another port).`,
       hecho: (v: string) => `${v} uninstalled.`,
     },
     dialogoDesbloquear: {

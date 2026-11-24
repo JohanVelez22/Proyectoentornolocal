@@ -1201,6 +1201,7 @@ describe('ServidorMcp: listar_versiones (T19)', () => {
     expect(tools.find((t) => t.name === 'listar_versiones')?.annotations).toMatchObject({
       readOnlyHint: true,
       destructiveHint: false,
+      openWorldHint: true,
     });
     const r = await c.callTool({
       name: 'listar_versiones',

@@ -1087,7 +1087,8 @@ export class ServidorMcp {
             .regex(/^\d{1,4}(\.\d{1,4})?$/, 'La rama no es válida (p. ej. 8.4 o 17).')
             .optional(),
         },
-        annotations: lectura,
+        // Consulta los índices oficiales en internet (con caché): mundo abierto.
+        annotations: { ...lectura, openWorldHint: true },
       },
       ({ servicio, rama }) =>
         ejecutar(() =>

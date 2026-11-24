@@ -123,3 +123,15 @@ describe('armarTabla (pestaña Versiones)', () => {
     expect(huellaDeFila(v('1', '1', { sha256: 'a'.repeat(64) }))).toBe('fuerte');
   });
 });
+
+describe('envUsaPuerto (aviso al cambiar el puerto de una instancia)', () => {
+  it('detecta *_PORT y localhost:puerto, sin confundir 3306 con 33060', async () => {
+    const { envUsaPuerto } = await import('../src/nucleo');
+    expect(envUsaPuerto('DB_HOST=127.0.0.1\nDB_PORT=3306\n', 3306)).toBe(true);
+    expect(envUsaPuerto('DB_PORT="3306"', 3306)).toBe(true);
+    expect(envUsaPuerto('DATABASE_URL=mysql://u:p@127.0.0.1:3306/db', 3306)).toBe(true);
+    expect(envUsaPuerto('DB_PORT=33060', 3306)).toBe(false);
+    expect(envUsaPuerto('REDIS_URL=redis://localhost:33060', 3306)).toBe(false);
+    expect(envUsaPuerto('APP_NAME=x', 3306)).toBe(false);
+  });
+});

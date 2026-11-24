@@ -118,6 +118,12 @@ export const es = {
       'servicios.misma_version': '{id} ya usa la versión {version}.',
       'servicios.instancia_bloqueada':
         '{nombre} está bloqueada: una actualización no pudo devolver sus datos. Los datos tocados están en {fallida} y el respaldo en {respaldo}. Resuélvalo en Servicios → Versiones antes de encenderla.',
+      'servicios.datos_apartados':
+        '{nombre} no tiene datos en su carpeta, pero hay datos apartados de una actualización: no se crea una carpeta vacía. Revise Servicios → Versiones.',
+      'servicios.puerto_reservado':
+        'El puerto {puerto} está reservado por el sistema ({desde}–{hasta}): elija otro.',
+      'servicios.borrado_con_bloqueo':
+        '{nombre} tiene una instancia bloqueada tras una actualización: resuélvala antes de borrar sus datos.',
       'instancias.id_invalido': 'El identificador de la instancia no es válido.',
       'instancias.no_existe': 'No existe la instancia {id}.',
       'instancias.existe': 'Ya existe la instancia {id}.',
@@ -463,6 +469,8 @@ export const es = {
     borrarDatos: {
       opcion: 'Borrar datos',
       titulo: (nombre: string) => `Borrar los datos de ${nombre}`,
+      copias: (n: number, tam: string) =>
+        `También se borrarán ${n === 1 ? 'una copia' : `${n} copias`} de las actualizaciones (${tam}). Si quiere conservarlas, cópielas antes desde la carpeta de datos.`,
       /** Qué se pierde, según el servicio. */
       que: {
         mysql: 'todas las bases y usuarios de MySQL',
@@ -2744,6 +2752,9 @@ export const es = {
     puertoDe: (id: string) => `Puerto de ${id}`,
     cambiarPuerto: 'Cambiar',
     puertoCambiado: (p: number) => `Puerto cambiado a ${p}.`,
+    puertoProyectosTitulo: 'Proyectos con el puerto anterior',
+    puertoProyectos: (viejo: number, nuevo: number, lista: string) =>
+      `Estos proyectos todavía usan el puerto ${viejo} en su .env (no se cambiaron): ${lista}. Cámbielo a ${nuevo}.`,
     resolver: 'Resolver',
     instalada: (v: string) => `${v} instalado.`,
     selector: { etiqueta: 'Instancia', predeterminada: 'predeterminada', apagada: 'apagada' },
@@ -2808,6 +2819,8 @@ export const es = {
       escriba: (id: string) => `Escriba ${id} para confirmar`,
       desinstalar: 'Desinstalar',
       desinstalarYBorrar: 'Desinstalar y borrar datos',
+      predeterminada: (id: string) =>
+        `${id} es la instancia predeterminada: Bases de datos, el bloque .env y las herramientas que usan el motor pasarán a otra instancia (con otro puerto).`,
       hecho: (v: string) => `${v} desinstalado.`,
     },
     dialogoDesbloquear: {

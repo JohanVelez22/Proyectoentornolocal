@@ -30,6 +30,9 @@ let restaurarFalla: Set<string>;
 let contenidoVolcado: (base: string) => string;
 let copiar: (de: string, a: string) => Promise<void>;
 let reloj: Date;
+let falloConfigCon: string | null;
+let reservadosTcp: { desde: number; hasta: number }[];
+let fallaIniciarEnPuerto: number | null;
 
 const SELLO = '20261123-100000';
 const datosDe = (clave: string): string => path.join(base, 'data', 'mysql', clave);
@@ -95,10 +98,13 @@ function crear(): Servicios {
     plataforma: {
       quienUsaPuerto: async () => null,
       duenosDePuertos: async () => new Map(),
-      rangosReservados: async () => [],
+      rangosReservados: async () => reservadosTcp,
     } as unknown as Plataforma,
     supervisor: {
       iniciar: async (d: DefProceso) => {
+        if (fallaIniciarEnPuerto !== null && d.puerto === fallaIniciarEnPuerto) {
+          throw new Error('el puerto no se pudo abrir');
+        }
         iniciados.push(d);
         const v = d.env?.['VERSION'] ?? '';
         eventos.push(`iniciar:${d.id}:${v}`);
@@ -134,6 +140,15 @@ function crear(): Servicios {
       const copia = structuredClone(cfg);
       fn(copia);
       const antes = cfg.servicios.datos.mysql.instancias?.['8.4']?.version;
+      const nueva = copia.servicios.datos.mysql.instancias?.['8.4']?.version;
+      if (
+        falloConfigCon !== null &&
+        antes !== undefined &&
+        antes !== nueva &&
+        nueva === falloConfigCon
+      ) {
+        throw new Error('config.json no se pudo escribir');
+      }
       cfg = ConfigSchema.parse(copia);
       const despues = cfg.servicios.datos.mysql.instancias?.['8.4']?.version;
       if (antes !== undefined && antes !== despues) {
@@ -177,6 +192,9 @@ beforeEach(async () => {
   contenidoVolcado = (b) => `-- ${b}`;
   copiar = (de, a) => cp(de, a, { recursive: true, errorOnExist: true, force: false });
   reloj = new Date('2026-11-23T10:00:00');
+  falloConfigCon = null;
+  reservadosTcp = [];
+  fallaIniciarEnPuerto = null;
 });
 
 /** Instancia mysql@8.4 encendida con datos de un cliente. */
@@ -631,6 +649,144 @@ describe('respaldos de datos: plan y borrado confirmado', () => {
         true,
       ),
     ).rejects.toMatchObject({ codigo: 'instancias.respaldo_en_uso' });
+    expect(existsSync(`${datosDe('8.4')}.respaldo-${SELLO}`)).toBe(true);
+  });
+});
+
+describe('ronda de revisión de la Task 19 (datos reales)', () => {
+  /** Devolución que falla al copiar el respaldo: la instancia queda bloqueada. */
+  async function bloqueada(s: Servicios): Promise<void> {
+    fallan.add('8.4.14');
+    const real = copiar;
+    copiar = async (de, a) => {
+      if (a.includes('.restaurando-')) throw new Error('disco lleno');
+      await real(de, a);
+    };
+    await preparar(s);
+    await s.datos.actualizar('mysql@8.4', '8.4.14').catch(() => undefined);
+    copiar = real;
+  }
+  const ref = (tipo: string) => ({ servicio: 'mysql', clave: '8.4', tipo, sello: SELLO }) as never;
+
+  it('con la marca de bloqueo (aunque sea ilegible) ninguna copia de esa clave se borra', async () => {
+    const s = crear();
+    await bloqueada(s);
+    await writeFile(`${datosDe('8.4')}.bloqueada`, '{ roto');
+    for (const tipo of ['respaldo', 'volcados']) {
+      await expect(s.datos.borrarRespaldoDatos(ref(tipo), true)).rejects.toMatchObject({
+        codigo: 'instancias.respaldo_en_uso',
+      });
+    }
+    expect(existsSync(`${datosDe('8.4')}.respaldo-${SELLO}.volcados`)).toBe(true);
+  });
+
+  it('si desbloquear no puede devolver el respaldo, la marca apunta a la carpeta apartada nueva', async () => {
+    const s = crear();
+    await bloqueada(s);
+    reloj = new Date('2026-11-24T08:00:00');
+    await writeFile(
+      `${datosDe('8.4')}.bloqueada`,
+      JSON.stringify({
+        fecha: 'x',
+        fallida: 'X:/vieja',
+        respaldo: `${datosDe('8.4')}.respaldo-${SELLO}`,
+      }),
+    );
+    const real = copiar;
+    // La copia sale bien, pero el rename final falla: la carpeta tocada ya quedó apartada.
+    copiar = async (de, a) => {
+      await real(de, a);
+      if (a.includes('.restaurando-')) {
+        await rm(path.join(a, 'ibdata1'));
+      }
+    };
+    await expect(
+      s.datos.instancias.desbloquear('mysql@8.4' as IdInstancia, {
+        confirmacion: 'mysql@8.4',
+        respaldo: SELLO,
+      }),
+    ).rejects.toMatchObject({ codigo: 'servicios.restauracion_fallo' });
+    const marca = JSON.parse(await readFile(`${datosDe('8.4')}.bloqueada`, 'utf8')) as {
+      fallida: string;
+      respaldo: string;
+    };
+    expect(marca.respaldo).toBe(`${datosDe('8.4')}.respaldo-${SELLO}`);
+    expect(marca.fallida).toBe(datosDe('8.4'));
+  });
+
+  it('no inicializa una carpeta sin marca si al lado hay datos apartados (.fallida/.restaurando)', async () => {
+    const s = crear();
+    await preparar(s);
+    await s.datos.detener('mysql@8.4' as IdInstancia);
+    await rm(datosDe('8.4'), { recursive: true, force: true });
+    await mkdir(`${datosDe('8.4')}.fallida-${SELLO}`, { recursive: true });
+    await expect(s.datos.iniciar('mysql@8.4' as IdInstancia)).rejects.toMatchObject({
+      codigo: 'servicios.datos_apartados',
+    });
+    expect(existsSync(datosDe('8.4'))).toBe(false);
+  });
+
+  it('si no se puede escribir la marca de bloqueo, el error lo dice y no se arranca', async () => {
+    const s = crear();
+    await preparar(s);
+    // La marca no se puede crear: en su lugar hay una carpeta con ese nombre.
+    fallan.add('8.4.14');
+    const real = copiar;
+    copiar = async (de, a) => {
+      if (a.includes('.restaurando-')) {
+        await mkdir(path.join(`${datosDe('8.4')}.bloqueada`, 'x'), { recursive: true });
+        throw new Error('disco lleno');
+      }
+      await real(de, a);
+    };
+    const e = await s.datos.actualizar('mysql@8.4', '8.4.14').catch((x: unknown) => x);
+    expect(e).toMatchObject({ codigo: 'servicios.restauracion_fallo' });
+    expect(String((e as Error).message)).toMatch(/no se pudo marcar/i);
+    expect(estados.get('mysql@8.4')).not.toBe('encendido');
+  });
+
+  it('actualizar una instancia bloqueada se rechaza antes de tocar nada', async () => {
+    const s = crear();
+    await bloqueada(s);
+    eventos.length = 0;
+    await expect(s.datos.actualizar('mysql@8.4', '8.4.15')).rejects.toMatchObject({
+      codigo: 'servicios.instancia_bloqueada',
+    });
+    expect(eventos).toEqual([]);
+  });
+
+  it('si no se puede volver a la versión anterior en la config, devuelve los datos y bloquea', async () => {
+    fallan.add('8.4.14');
+    const s = crear();
+    await preparar(s);
+    falloConfigCon = '8.4.13';
+    const e = await s.datos.actualizar('mysql@8.4', '8.4.14').catch((x: unknown) => x);
+    expect(e).toMatchObject({ codigo: 'servicios.restauracion_fallo' });
+    expect(existsSync(`${datosDe('8.4')}.bloqueada`)).toBe(true);
+    expect(await readFile(path.join(datosDe('8.4'), 'ibdata1'), 'utf8')).toBe('creado con 8.4.13');
+  });
+
+  it('cambiarPuerto: rechaza un puerto reservado y vuelve al anterior si el reinicio falla', async () => {
+    reservadosTcp = [{ desde: 50000, hasta: 50059 }];
+    const s = crear();
+    await preparar(s);
+    await expect(s.datos.cambiarPuerto('mysql@8.4' as IdInstancia, 50010)).rejects.toMatchObject({
+      codigo: 'servicios.puerto_reservado',
+    });
+    fallaIniciarEnPuerto = 3310;
+    await expect(s.datos.cambiarPuerto('mysql@8.4' as IdInstancia, 3310)).rejects.toThrow();
+    expect(cfg.servicios.datos.mysql.puerto).toBe(3306);
+    // Única instancia (implícita): su proceso es `mysql`, otra vez en el puerto de antes.
+    expect(estados.get('mysql')).toBe('encendido');
+    expect(iniciados.at(-1)?.puerto).toBe(3306);
+  });
+
+  it('borrar todos los datos del servicio se rechaza con una instancia bloqueada', async () => {
+    const s = crear();
+    await bloqueada(s);
+    await expect(s.datos.borrarDatos('mysql', 'mysql')).rejects.toMatchObject({
+      codigo: 'servicios.borrado_con_bloqueo',
+    });
     expect(existsSync(`${datosDe('8.4')}.respaldo-${SELLO}`)).toBe(true);
   });
 });

@@ -204,7 +204,7 @@ export class Tuneles {
     const versiones = await this.d.instalador.instalados('cloudflared');
     // Configuración de una versión anterior (o parcial): sin predeterminada, la más nueva.
     const cfg: Partial<Config> = await this.d.almacen.leer();
-    const elegida = cfg.catalogo?.predeterminadas.cloudflared;
+    const elegida = cfg.catalogo?.predeterminadas?.cloudflared;
     const version =
       elegida && versiones.includes(elegida)
         ? elegida

@@ -67,6 +67,7 @@ import { claveMayorMenor, Rutas } from './rutas';
 import { Mailpit } from './servicios/mailpit';
 import { Servicios, type IdServicio } from './servicios/servicios';
 import { compararVersiones } from './servicios/nginx';
+import { parsearInstancia } from './servicios/instancias';
 import { Agentes } from './agentes/agentes';
 import { ErrorWolf } from './errores';
 import { Contenedores } from './contenedores/contenedores';
@@ -424,6 +425,13 @@ const resultadoAplicarDoctor = (r: ResultadoAplicar): { ok: boolean; codigo?: Co
 const dominiosDe = (sitios: Sitio[]): string[] => [
   ...new Set(sitios.flatMap((s) => [s.dominio, ...s.alias])),
 ];
+
+/** ¿El `.env` nombra ese puerto? (`*_PORT=3306` o `localhost:3306` en una URL). */
+export function envUsaPuerto(env: string, puerto: number): boolean {
+  const variable = new RegExp(`^\\s*[A-Z0-9_]*PORT\\s*=\\s*["']?${puerto}["']?\\s*$`, 'm');
+  const enUrl = new RegExp(`(?:localhost|127\\.0\\.0\\.1|\\[::1\\]):${puerto}(?![0-9])`, 'i');
+  return variable.test(env) || enUrl.test(env);
+}
 
 export class Nucleo {
   private temporizador: ReturnType<typeof setInterval> | null = null;
@@ -1620,20 +1628,21 @@ export class Nucleo {
       const e = estados.find((x) => x.id === id)?.estado;
       return e === 'encendido' || e === 'iniciando';
     };
-    const enUso =
-      servicio === 'php'
-        ? vivo(`php-${carpeta}`)
-          ? `php-${carpeta}`
-          : null
-        : servicio === 'nginx' &&
-            vivo('nginx') &&
-            (await this.servicios.nginx.versionActiva().catch(() => null)) === version
-          ? 'nginx'
-          : null;
+    // La versión activa de Nginx, Mailpit u Ollama (encendida o no) no se quita: antes hay que
+    // elegir otra como activa (estrella). En PHP, una rama encendida.
+    let enUso: string | null = null;
+    if (servicio === 'php') enUso = vivo(`php-${carpeta}`) ? `php-${carpeta}` : null;
+    else if (servicio === 'nginx') {
+      const activa = await this.servicios.nginx.versionActiva().catch(() => null);
+      enUso = activa === version ? 'nginx' : null;
+    } else if (servicio === 'mailpit' || servicio === 'ollama') {
+      const [inst] = await this.servicios.datos.listaInstancias(servicio);
+      enUso = inst?.version === version ? servicio : null;
+    }
     if (enUso) {
       throw new ErrorWolf(
         'instalador.version_en_uso',
-        `No se puede desinstalar ${servicio} ${version}: está encendida (${enUso}).`,
+        `No se puede desinstalar ${servicio} ${version}: es la versión en uso (${enUso}); elija antes otra.`,
         { servicio, version, instancia: enUso },
       );
     }
@@ -1657,8 +1666,28 @@ export class Nucleo {
     return this.servicios.detener(id);
   }
 
-  puertoInstancia(id: IdInstancia, puerto: number): Promise<void> {
-    return this.servicios.datos.instancias.cambiarPuerto(id, puerto);
+  /**
+   * Cambia el puerto de una instancia; devuelve los proyectos cuyo `.env` todavía nombra el
+   * puerto anterior (para avisar: no se tocan).
+   */
+  async puertoInstancia(id: IdInstancia, puerto: number): Promise<{ proyectos: string[] }> {
+    const { servicio } = parsearInstancia(id);
+    const anterior =
+      (await this.servicios.datos.listaInstancias(servicio)).find((i) => i.id === id)?.puerto ??
+      null;
+    await this.servicios.datos.instancias.cambiarPuerto(id, puerto);
+    if (anterior === null || anterior === puerto) return { proyectos: [] };
+    return { proyectos: await this.proyectosConPuerto(anterior) };
+  }
+
+  /** Proyectos cuyo `.env` usa ese puerto (`*_PORT=3306` o `host:3306` en una URL). */
+  private async proyectosConPuerto(puerto: number): Promise<string[]> {
+    const res: string[] = [];
+    for (const s of (await this.config.leer()).sitios) {
+      const env = await leerEnvAcotado(path.join(s.carpeta, '.env')).catch(() => null);
+      if (env && envUsaPuerto(env, puerto)) res.push(s.nombre);
+    }
+    return res;
   }
 
   /** Saca la instancia de la lista (la detiene antes); sus datos quedan en disco. */

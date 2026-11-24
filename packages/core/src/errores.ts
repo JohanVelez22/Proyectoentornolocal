@@ -36,6 +36,9 @@ export const PARAMETROS_ERROR = {
   'servicios.otra_rama': ['nombre', 'version'],
   'servicios.misma_version': ['id', 'version'],
   'servicios.instancia_bloqueada': ['nombre', 'fallida', 'respaldo'],
+  'servicios.datos_apartados': ['nombre'],
+  'servicios.puerto_reservado': ['puerto', 'desde', 'hasta'],
+  'servicios.borrado_con_bloqueo': ['nombre'],
   // instancias de los servicios de datos
   'instancias.id_invalido': [],
   'instancias.no_existe': ['id'],
