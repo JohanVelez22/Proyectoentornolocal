@@ -106,6 +106,8 @@ export const en: Textos = {
         'Port {puerto} is used by {nombre} (PID {pid}). Close it or choose another port.',
       'servicios.confirmacion_borrado': 'To delete the data of {nombre}, type "{id}".',
       'servicios.ftp_no_disponible': 'The FTP server is not available.',
+      'sistema.sin_cliente_ftp':
+        'No FTP client is associated on this computer. Install one (for example FileZilla) or copy the address.',
       'servicios.mailpit_no_responde': 'Mailpit is not responding. Start it from Services.',
       'servicios.iniciar_todo_fallos':
         'Start all could not start: {nombres}. Check Services and their logs.',
@@ -977,6 +979,8 @@ export const en: Textos = {
     sinCloudflared: 'Install cloudflared in Services',
     abrirUrl: 'Open the public link',
     copiarUrl: 'Copy the public link',
+    verQr: 'Show the QR code of the link',
+    qrTitulo: 'Public link of this site',
     renovar: 'Renew (new link)',
     cerrar: 'Close tunnel',
     confirmarTitulo: 'Publish a site with real data',
@@ -1269,6 +1273,12 @@ export const en: Textos = {
       `The vhost goes back to how it was on ${fecha}. The current version stays in the history.`,
     restaurado: 'Version restored',
   },
+  dialogoQr: {
+    descargar: 'Download PNG',
+    descargado: 'QR saved',
+    largo: 'The text is too long for a QR code.',
+    generando: 'Generating the QR code…',
+  },
   ftpSitio: {
     etiqueta: 'FTP',
     interruptor: (dominio: string) => `FTP access for ${dominio}`,
@@ -1305,6 +1315,13 @@ export const en: Textos = {
     redLocalHost: "or this computer's IP on your network",
     servidorApagado: 'The FTP server is stopped: nobody can connect until you start it.',
     encender: 'Start FTP',
+    urlEtiqueta: 'Address',
+    urlAyuda: 'The address does not include the password: it is asked for when connecting.',
+    abrirUrl: 'Open in an FTP client',
+    copiarUrl: 'Copy the FTP address',
+    verQr: 'Show the QR code of the address',
+    qrTitulo: 'FTP address of this site',
+    qrAviso: 'The code only carries the address, not the password.',
   },
   correo: {
     descripcion:

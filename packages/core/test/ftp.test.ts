@@ -5,7 +5,7 @@ import path from 'node:path';
 import { Client } from 'basic-ftp';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Almacen, AlmacenCredenciales } from '../src/almacen';
-import { ServidorFtp } from '../src/ftp/servidorFtp';
+import { ServidorFtp, urlFtp } from '../src/ftp/servidorFtp';
 import { SistemaArchivosEncerrado } from '../src/ftp/sistemaArchivos';
 import { Rutas } from '../src/rutas';
 import type { Sitio } from '../src/tipos';
@@ -389,5 +389,44 @@ describe('ServidorFtp', () => {
     } finally {
       await new Promise((r) => ocupante.close(r));
     }
+  });
+});
+
+describe('D7: URL de FTP', () => {
+  const CENTINELA = 'centinela-secreta-d';
+
+  it('urlFtp codifica el usuario y nunca lleva contraseña', () => {
+    const u = urlFtp({ usuario: 'a@b:c', host: '127.0.0.1', puerto: 2121 });
+    expect(u).toBe('ftp://a%40b%3Ac@127.0.0.1:2121/');
+    expect(new URL(u).password).toBe('');
+  });
+
+  it('urlSitio usa 127.0.0.1 y el puerto de la configuración, sin la clave', async () => {
+    await servidor.regenerarClave('demo');
+    await credenciales.guardar('ftp:demo', { usuario: 'demo', clave: CENTINELA });
+    const u = await servidor.urlSitio('demo');
+    expect(u).toBe(`ftp://demo@127.0.0.1:${puerto}/`);
+    expect(u).not.toContain(CENTINELA);
+    expect(JSON.stringify(await almacen.leer())).not.toContain(CENTINELA);
+  });
+
+  it('con red local usa la IP local', async () => {
+    const otro = new ServidorFtp({
+      leerConfig: async () => {
+        const c = await almacen.leer();
+        c.ftp.redLocal = true;
+        return c;
+      },
+      modificarConfig: async () => undefined,
+      credenciales,
+      ipLocal: () => '192.168.1.50',
+    });
+    expect(await otro.urlSitio('demo')).toBe(`ftp://demo@192.168.1.50:${puerto}/`);
+  });
+
+  it('un sitio sin FTP activo no tiene URL', async () => {
+    await servidor.desactivarSitio('demo');
+    await expect(servidor.urlSitio('demo')).rejects.toThrow();
+    await expect(servidor.urlSitio('no-existe')).rejects.toThrow();
   });
 });

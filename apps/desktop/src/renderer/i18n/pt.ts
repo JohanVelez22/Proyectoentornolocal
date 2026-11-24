@@ -109,6 +109,8 @@ export const pt: Textos = {
         'A porta {puerto} está sendo usada por {nombre} (PID {pid}). Feche-o ou escolha outra porta.',
       'servicios.confirmacion_borrado': 'Para apagar os dados de {nombre}, digite "{id}".',
       'servicios.ftp_no_disponible': 'O servidor FTP não está disponível.',
+      'sistema.sin_cliente_ftp':
+        'Não há um cliente FTP associado neste computador. Instale um (por exemplo, o FileZilla) ou copie o endereço.',
       'servicios.mailpit_no_responde': 'O Mailpit não responde. Inicie-o em Serviços.',
       'servicios.iniciar_todo_fallos':
         'Iniciar tudo não conseguiu ligar: {nombres}. Confira Serviços e os registros deles.',
@@ -991,6 +993,8 @@ export const pt: Textos = {
     sinCloudflared: 'Instale o cloudflared em Serviços',
     abrirUrl: 'Abrir o link público',
     copiarUrl: 'Copiar o link público',
+    verQr: 'Mostrar o código QR do link',
+    qrTitulo: 'Link público deste site',
     renovar: 'Renovar (novo link)',
     cerrar: 'Fechar túnel',
     confirmarTitulo: 'Publicar um site com dados reais',
@@ -1286,6 +1290,12 @@ export const pt: Textos = {
       `O vhost volta a ser como era em ${fecha}. A versão atual fica no histórico.`,
     restaurado: 'Versão restaurada',
   },
+  dialogoQr: {
+    descargar: 'Baixar PNG',
+    descargado: 'QR guardado',
+    largo: 'O texto é longo demais para um QR.',
+    generando: 'Gerando o código QR…',
+  },
   ftpSitio: {
     etiqueta: 'FTP',
     interruptor: (dominio: string) => `Acesso FTP para ${dominio}`,
@@ -1322,6 +1332,13 @@ export const pt: Textos = {
     redLocalHost: 'ou o IP deste computador na sua rede',
     servidorApagado: 'O servidor FTP está desligado: ninguém poderá se conectar até você ligá-lo.',
     encender: 'Ligar o FTP',
+    urlEtiqueta: 'Endereço',
+    urlAyuda: 'O endereço não inclui a senha: ela é pedida ao conectar.',
+    abrirUrl: 'Abrir num cliente FTP',
+    copiarUrl: 'Copiar o endereço FTP',
+    verQr: 'Mostrar o código QR do endereço',
+    qrTitulo: 'Endereço FTP deste site',
+    qrAviso: 'O código leva só o endereço, não a senha.',
   },
   correo: {
     descripcion:

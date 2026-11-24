@@ -28,6 +28,7 @@ export const PARAMETROS_ERROR = {
   'servicios.puerto_ocupado': ['puerto', 'pid', 'nombre', 'alternativo'],
   'servicios.confirmacion_borrado': ['nombre', 'id'],
   'servicios.ftp_no_disponible': [],
+  'sistema.sin_cliente_ftp': [],
   'servicios.mailpit_no_responde': [],
   'servicios.respaldo_fallo': ['nombre'],
   'servicios.iniciar_todo_fallos': ['nombres'],

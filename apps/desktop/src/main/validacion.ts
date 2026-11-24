@@ -167,6 +167,40 @@ export function urlHttp(v: unknown): string {
   return u.toString();
 }
 
+const OCTETO = String.raw`(?:25[0-5]|2[0-4]\d|1?\d?\d)`;
+const FTP_SEGURA = new RegExp(
+  String.raw`^ftp://([A-Za-z0-9._~%!$&'()*+,;=-]{1,100})@(${OCTETO}(?:\.${OCTETO}){3}):(\d{1,5})/$`,
+);
+// Un usuario decodificado no puede llevar controles ni barras (@ y : sí, van codificados).
+// eslint-disable-next-line no-control-regex
+const USUARIO_PROHIBIDO = /[\u0000-\u001f\u007f/\\]/;
+
+/**
+ * Solo la forma exacta `ftp://usuario@ip:puerto/`: sin contraseña, sin ruta, consulta ni
+ * fragmento, y con el host como IPv4 (127.0.0.1 o la IP local).
+ */
+export function urlFtpSegura(v: unknown): string {
+  const t = texto(v, 'url');
+  const m = FTP_SEGURA.exec(t);
+  const puerto = m ? Number(m[3]) : 0;
+  let usuario = '';
+  try {
+    usuario = m ? decodeURIComponent(m[1] ?? '') : '';
+  } catch {
+    usuario = '';
+  }
+  if (!m || puerto < 1 || puerto > 65535 || !usuario || USUARIO_PROHIBIDO.test(usuario)) {
+    throw new Error('La dirección FTP no es válida');
+  }
+  return t;
+}
+
+/** Direcciones que la app puede abrir con el sistema: http, https o la URL FTP segura. */
+export function urlAbrible(v: unknown): string {
+  if (typeof v === 'string' && v.startsWith('ftp:')) return urlFtpSegura(v);
+  return urlHttp(v);
+}
+
 /** Devuelve la ruta absoluta si existe y es una carpeta. */
 export async function carpetaExistente(v: unknown): Promise<string> {
   const ruta = resolve(texto(v, 'ruta'));

@@ -111,6 +111,8 @@ export const fr: Textos = {
         'Le port {puerto} est utilisé par {nombre} (PID {pid}). Fermez-le ou choisissez un autre port.',
       'servicios.confirmacion_borrado': 'Pour supprimer les données de {nombre}, tapez "{id}".',
       'servicios.ftp_no_disponible': 'Le serveur FTP n’est pas disponible.',
+      'sistema.sin_cliente_ftp':
+        'Aucun client FTP n’est associé sur cet ordinateur. Installez-en un (par exemple FileZilla) ou copiez l’adresse.',
       'servicios.mailpit_no_responde': 'Mailpit ne répond pas. Démarrez-le depuis Services.',
       'servicios.iniciar_todo_fallos':
         'Tout démarrer n’a pas pu allumer : {nombres}. Consultez Services et leurs journaux.',
@@ -1011,6 +1013,8 @@ export const fr: Textos = {
     sinCloudflared: 'Installez cloudflared dans Services',
     abrirUrl: 'Ouvrir le lien public',
     copiarUrl: 'Copier le lien public',
+    verQr: 'Afficher le code QR du lien',
+    qrTitulo: 'Lien public de ce site',
     renovar: 'Renouveler (nouveau lien)',
     cerrar: 'Fermer le tunnel',
     confirmarTitulo: 'Publier un site contenant des données réelles',
@@ -1308,6 +1312,12 @@ export const fr: Textos = {
       `Le vhost revient à son état du ${fecha}. La version actuelle reste dans l’historique.`,
     restaurado: 'Version restaurée',
   },
+  dialogoQr: {
+    descargar: 'Télécharger le PNG',
+    descargado: 'QR enregistré',
+    largo: 'Le texte est trop long pour un QR.',
+    generando: 'Génération du code QR…',
+  },
   ftpSitio: {
     etiqueta: 'FTP',
     interruptor: (dominio: string) => `Accès FTP pour ${dominio}`,
@@ -1345,6 +1355,13 @@ export const fr: Textos = {
     servidorApagado:
       'Le serveur FTP est éteint : personne ne pourra se connecter tant que vous ne l’aurez pas allumé.',
     encender: 'Allumer le FTP',
+    urlEtiqueta: 'Adresse',
+    urlAyuda: 'L’adresse n’inclut pas le mot de passe : il est demandé à la connexion.',
+    abrirUrl: 'Ouvrir dans un client FTP',
+    copiarUrl: 'Copier l’adresse FTP',
+    verQr: 'Afficher le code QR de l’adresse',
+    qrTitulo: 'Adresse FTP de ce site',
+    qrAviso: 'Le code ne contient que l’adresse, pas le mot de passe.',
   },
   correo: {
     descripcion:

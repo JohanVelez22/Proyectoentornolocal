@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { ChevronDown, Copy, Eye, EyeOff, Key, Power, Warning } from '@vicons/ionicons5';
+import {
+  ChevronDown,
+  Copy,
+  Eye,
+  EyeOff,
+  Key,
+  Open,
+  Power,
+  QrCode,
+  Warning,
+} from '@vicons/ionicons5';
 import { NButton, NIcon, NSkeleton, NSwitch, NTooltip, useDialog } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
 import type { Credenciales, Sitio } from '../../shared/api';
@@ -8,6 +18,7 @@ import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
+import DialogoQr from './DialogoQr.vue';
 
 const props = defineProps<{ sitio: Sitio }>();
 
@@ -134,6 +145,30 @@ function encenderServidor(): void {
   void ejecutar('encender', () => api().servicios.iniciar('ftp'));
 }
 
+/** Dirección `ftp://usuario@host:puerto/` del sitio; nunca lleva la clave. */
+const urlFtp = ref<string | null>(null);
+const verQr = ref(false);
+
+watch(
+  [abierto, redLocal, puerto, () => props.sitio.ftp?.usuario],
+  async ([v]) => {
+    if (!v) {
+      urlFtp.value = null;
+      verQr.value = false;
+      return;
+    }
+    const u = await ejecutar('url', () => api().ftp.url(props.sitio.id));
+    if (abierto.value) urlFtp.value = u ?? null;
+  },
+  { immediate: true },
+);
+
+function abrirCliente(): void {
+  const u = urlFtp.value;
+  if (!u) return;
+  void ejecutar('abrirUrl', () => api().sistema.abrirUrl(u), { tituloError: t.abrirUrl });
+}
+
 function copiar(texto: string): void {
   void ejecutar('copiar', () => api().sistema.copiar(texto), { exito: textos.acciones.copiado });
 }
@@ -249,6 +284,55 @@ const filas = computed(() => {
           <small v-if="f.clave === 'host' && redLocal" class="tenue">{{ t.redLocalHost }}</small>
         </div>
       </dl>
+
+      <div v-if="urlFtp" class="url-fila">
+        <span class="url-etiqueta">{{ t.urlEtiqueta }}</span>
+        <code class="url">{{ urlFtp }}</code>
+        <NTooltip>
+          <template #trigger>
+            <NButton size="tiny" quaternary circle :aria-label="t.abrirUrl" @click="abrirCliente">
+              <template #icon
+                ><NIcon><Open /></NIcon
+              ></template>
+            </NButton>
+          </template>
+          {{ t.abrirUrl }}
+        </NTooltip>
+        <NTooltip>
+          <template #trigger>
+            <NButton
+              size="tiny"
+              quaternary
+              circle
+              :aria-label="t.copiarUrl"
+              @click="copiar(urlFtp)"
+            >
+              <template #icon
+                ><NIcon><Copy /></NIcon
+              ></template>
+            </NButton>
+          </template>
+          {{ t.copiarUrl }}
+        </NTooltip>
+        <NTooltip>
+          <template #trigger>
+            <NButton size="tiny" quaternary circle :aria-label="t.verQr" @click="verQr = true">
+              <template #icon
+                ><NIcon><QrCode /></NIcon
+              ></template>
+            </NButton>
+          </template>
+          {{ t.verQr }}
+        </NTooltip>
+        <small class="tenue url-ayuda">{{ t.urlAyuda }}</small>
+      </div>
+      <DialogoQr
+        v-if="urlFtp"
+        v-model:show="verQr"
+        :texto="urlFtp"
+        :titulo="t.qrTitulo"
+        :aviso="t.qrAviso"
+      />
 
       <div v-if="redLocal" class="aviso alerta" role="note">
         <NIcon class="aviso-icono" aria-hidden="true"><Warning /></NIcon>
@@ -378,6 +462,30 @@ const filas = computed(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   margin-right: 4px;
+}
+.url-fila {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.url-etiqueta {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.55;
+  margin-right: 4px;
+}
+.url {
+  font-family: var(--fuente-mono);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.url-ayuda {
+  flex-basis: 100%;
 }
 .acciones {
   display: flex;

@@ -116,6 +116,7 @@ const api: ApiEntorno = {
     regenerarClave: (id) => invocar('ftp.regenerarClave', id),
     soloLectura: (id, valor) => invocar('ftp.soloLectura', id, valor),
     credenciales: (id) => invocar('ftp.credenciales', id),
+    url: (id) => invocar('ftp.url', id),
     redLocal: (valor) => invocar('ftp.redLocal', valor),
   },
   ia: {

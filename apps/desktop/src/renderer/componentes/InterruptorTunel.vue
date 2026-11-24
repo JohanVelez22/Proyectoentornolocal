@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { Copy, Open, Refresh } from '@vicons/ionicons5';
+import { Copy, Open, QrCode, Refresh } from '@vicons/ionicons5';
 import { NButton, NIcon, NSpin, NSwitch, NTooltip } from 'naive-ui';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { EstadoTunel, Sitio } from '../../shared/api';
 import { useTunel } from '../composables/useTunel';
 import { textos } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
 import { motivoTunelBloqueado } from '../utilidades/sitios';
+import DialogoQr from './DialogoQr.vue';
 
 const props = defineProps<{ sitio: Sitio }>();
 
@@ -46,6 +47,8 @@ const bloqueo = computed(() =>
     tunel: fase.value === 'apagado' ? 'apagado' : tunel.value.estado,
   }),
 );
+
+const verQr = ref(false);
 
 const encendido = computed(() => fase.value === 'activo' || fase.value === 'abriendo');
 
@@ -118,6 +121,16 @@ function cambiar(valor: boolean): void {
           </NTooltip>
           <NTooltip>
             <template #trigger>
+              <NButton quaternary circle size="tiny" :aria-label="t.verQr" @click="verQr = true">
+                <template #icon
+                  ><NIcon><QrCode /></NIcon
+                ></template>
+              </NButton>
+            </template>
+            {{ t.verQr }}
+          </NTooltip>
+          <NTooltip>
+            <template #trigger>
               <NButton
                 quaternary
                 circle
@@ -133,6 +146,7 @@ function cambiar(valor: boolean): void {
             {{ t.renovar }}
           </NTooltip>
         </span>
+        <DialogoQr v-model:show="verQr" :texto="tunel.url" :titulo="t.qrTitulo" />
       </template>
 
       <template v-else-if="fase === 'error'">

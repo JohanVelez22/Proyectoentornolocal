@@ -516,6 +516,8 @@ export interface ApiEntorno {
     regenerarClave(sitioId: string): Promise<string>;
     soloLectura(sitioId: string, valor: boolean): Promise<void>;
     credenciales(sitioId: string): Promise<Credenciales | null>;
+    /** `ftp://usuario@host:puerto/`, sin la clave. */
+    url(sitioId: string): Promise<string>;
     redLocal(valor: boolean): Promise<void>;
   };
   ia: {
@@ -975,6 +977,7 @@ export const RUTAS_IPC = [
   'ftp.regenerarClave',
   'ftp.soloLectura',
   'ftp.credenciales',
+  'ftp.url',
   'ftp.redLocal',
   'ia.modelos',
   'ia.descargar',

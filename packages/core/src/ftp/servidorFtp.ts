@@ -12,6 +12,16 @@ export interface DepsFtp {
   modificarConfig: (fn: (c: Config) => void) => Promise<void>;
   /** Las claves viven aquí (`ftp:<sitio>`), nunca en config.json. */
   credenciales: Pick<AlmacenCredenciales, 'leer' | 'guardar' | 'borrar'>;
+  /** IP de la red local (se inyecta en las pruebas). */
+  ipLocal?: () => string | null;
+}
+
+/**
+ * URL de conexión de un sitio: `ftp://<usuario codificado>@<host>:<puerto>/`. Nunca lleva
+ * contraseña: la clave se copia aparte desde las credenciales.
+ */
+export function urlFtp(o: { usuario: string; host: string; puerto: number }): string {
+  return `ftp://${encodeURIComponent(o.usuario)}@${o.host}:${o.puerto}/`;
 }
 
 /** Mensaje único para usuario desconocido, clave mala o sitio sin FTP: no revela cuál falló. */
@@ -93,7 +103,7 @@ export class ServidorFtp {
     const cfg = await this.d.leerConfig();
     const { puerto, redLocal, pasivos } = cfg.ftp;
     const host = redLocal ? '0.0.0.0' : '127.0.0.1';
-    const anunciada = redLocal ? (ipLocal() ?? '127.0.0.1') : '127.0.0.1';
+    const anunciada = redLocal ? ((this.d.ipLocal ?? ipLocal)() ?? '127.0.0.1') : '127.0.0.1';
     this.estadoActual = 'iniciando';
     this.mensaje = undefined;
 
@@ -234,6 +244,15 @@ export class ServidorFtp {
     const sitio = (await this.d.leerConfig()).sitios.find((s) => s.id === id);
     if (!sitio?.ftp?.activo) return null;
     return this.d.credenciales.leer(claveDe(id));
+  }
+
+  /** URL del sitio (sin clave): 127.0.0.1, o la IP local si "red local" está activa. */
+  async urlSitio(id: string): Promise<string> {
+    const cfg = await this.d.leerConfig();
+    const sitio = cfg.sitios.find((s) => s.id === id);
+    if (!sitio?.ftp?.activo) throw new Error('El FTP de este sitio no está activo.');
+    const host = cfg.ftp.redLocal ? ((this.d.ipLocal ?? ipLocal)() ?? '127.0.0.1') : '127.0.0.1';
+    return urlFtp({ usuario: sitio.ftp.usuario, host, puerto: cfg.ftp.puerto });
   }
 
   private modificarSitio(id: string, fn: (s: Config['sitios'][number]) => void): Promise<void> {

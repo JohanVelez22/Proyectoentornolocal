@@ -13,7 +13,14 @@ import {
   shell,
   type Tray,
 } from 'electron';
-import { Nucleo, type IdiomaUi, type PreferenciasUi, type Rutas, type TemaUi } from '@pel/core';
+import {
+  ErrorWolf,
+  Nucleo,
+  type IdiomaUi,
+  type PreferenciasUi,
+  type Rutas,
+  type TemaUi,
+} from '@pel/core';
 import type { ApiSistema } from '../shared/api';
 import { Notificador } from './notificaciones';
 import { textoAviso } from '../shared/textosAvisos';
@@ -25,7 +32,7 @@ import { AlmacenSecretos } from './secretos';
 import { crearOrdenes, ordenDeArgs } from './ordenes';
 import { crearSalida } from './salida';
 import { registrarFinDeSesion, topeCierre } from './sesion';
-import { carpetaExistente, urlHttp } from './validacion';
+import { carpetaExistente, urlAbrible, urlHttp } from './validacion';
 
 // El Node de Electron prueba cada dirección (IPv6 e IPv4) solo 250 ms antes de pasar a la
 // siguiente: con conexiones lentas ninguna llega a tiempo y `fetch` falla con
@@ -63,7 +70,21 @@ const sistema: ApiSistema = {
     return r.canceled || !r.filePaths[0] ? null : r.filePaths[0];
   },
   async abrirUrl(url) {
-    await shell.openExternal(urlHttp(url));
+    const segura = urlAbrible(url);
+    try {
+      await shell.openExternal(segura);
+    } catch (e) {
+      // Sin cliente asociado al esquema ftp:// el sistema rechaza la apertura.
+      if (segura.startsWith('ftp:')) {
+        throw new ErrorWolf(
+          'sistema.sin_cliente_ftp',
+          'No hay un cliente FTP asociado en este equipo. Instale uno (por ejemplo FileZilla) o copie la dirección.',
+          undefined,
+          { cause: e },
+        );
+      }
+      throw e;
+    }
   },
   async abrirCarpeta(ruta) {
     const error = await shell.openPath(await carpetaExistente(ruta));

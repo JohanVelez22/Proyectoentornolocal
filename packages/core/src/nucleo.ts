@@ -2032,6 +2032,11 @@ export class Nucleo {
     return this.ftp.soloLectura(sitioId, valor);
   }
 
+  /** URL `ftp://usuario@host:puerto/` del sitio, sin la clave. */
+  urlFtp(sitioId: string): Promise<string> {
+    return this.ftp.urlSitio(sitioId);
+  }
+
   /** Usuario y clave FTP del sitio (null si no tiene FTP activo). */
   credencialesFtp(sitioId: string): Promise<Credenciales | null> {
     return this.ftp.credencialesFtp(sitioId);

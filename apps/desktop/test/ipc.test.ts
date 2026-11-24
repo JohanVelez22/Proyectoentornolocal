@@ -101,6 +101,7 @@ function nucleoFalso() {
         'regenerarClaveFtp',
         'ftpSoloLectura',
         'credencialesFtp',
+        'urlFtp',
         'ftpRedLocal',
         'modelosIa',
         'descargarModelo',
@@ -336,6 +337,7 @@ describe('registrarIpc', () => {
       ['tuneles.abrir', [{}]],
       ['detectarProyecto', [null]],
       ['sistema.abrirUrl', ['file:///c:/a.exe']],
+      ['sistema.abrirUrl', ['ftp://u:clave@127.0.0.1:2121/']],
       ['sistema.abrirCarpeta', [123]],
     ] as [string, unknown[]][]) {
       const r = (await canales.get(`entorno:${ruta}`)!({}, ...args)) as { ok: boolean };
@@ -538,6 +540,7 @@ describe('registrarIpc', () => {
         'ftp.regenerarClave',
         'ftp.soloLectura',
         'ftp.credenciales',
+        'ftp.url',
         'ftp.redLocal',
         'ia.modelos',
         'ia.descargar',
@@ -820,6 +823,9 @@ describe('registrarIpc', () => {
       expect((await llamar('bd.formato', archivo)).ok).toBe(true);
       expect((await llamar('https.cambiarPuerto', 443)).ok).toBe(true);
       expect((await llamar('composer.cambiarPhpPorDefecto', null)).ok).toBe(true);
+      expect((await llamar('ftp.url', 'demo')).ok).toBe(true);
+      expect(f['urlFtp']).toHaveBeenCalledWith('demo');
+      expect((await llamar('ftp.url', 5)).ok).toBe(false);
       expect((await llamar('ia.descargar', 'qwen2.5-coder:7b')).ok).toBe(true);
       expect(f['descargarModelo']).toHaveBeenCalledWith('qwen2.5-coder:7b');
       expect(await llamar('avisoInicio')).toEqual({ ok: true, valor: 'aviso' });

@@ -9,6 +9,8 @@ import {
   servicioDelCatalogo,
   texto,
   tipoRuntime,
+  urlAbrible,
+  urlFtpSegura,
   urlHttp,
 } from '../src/main/validacion';
 
@@ -64,5 +66,41 @@ describe('D5: runtimes de Java, .NET, Go y Rust', () => {
       expect(() => tipoRuntime(mal)).toThrow('runtime');
     }
     expect(() => servicioDelCatalogo('ruby')).toThrow('servicio');
+  });
+});
+
+describe('D7: urlFtpSegura', () => {
+  it('acepta la forma exacta ftp://usuario@ip:puerto/', () => {
+    expect(urlFtpSegura('ftp://u@127.0.0.1:2121/')).toBe('ftp://u@127.0.0.1:2121/');
+    expect(urlFtpSegura('ftp://a%40b@192.168.1.5:21/')).toBe('ftp://a%40b@192.168.1.5:21/');
+  });
+  it.each([
+    'ftp://u:p@127.0.0.1:2121/',
+    'ftp://u:@127.0.0.1:2121/',
+    'file:///c:/a.exe',
+    'ftp://127.0.0.1:2121/../x',
+    'ftp://u@127.0.0.1:2121/../x',
+    'ftp://u@127.0.0.1:2121/carpeta',
+    'ftp://u@127.0.0.1:2121/?a=1',
+    'ftp://u@127.0.0.1:2121/#x',
+    'ftp://u@evil.example.com:2121/',
+    'ftp://u@127.0.0.1/',
+    'ftp://u@999.0.0.1:2121/',
+    'ftp://u@127.0.0.1:99999/',
+    'ftp://@127.0.0.1:2121/',
+    'http://u@127.0.0.1:2121/',
+    5,
+    null,
+  ])('rechaza %s', (v) => {
+    expect(() => urlFtpSegura(v)).toThrow();
+  });
+});
+
+describe('D7: urlAbrible', () => {
+  it('admite http, https y ftp seguro; nada más', () => {
+    expect(urlAbrible('https://a.test/x')).toBe('https://a.test/x');
+    expect(urlAbrible('ftp://u@127.0.0.1:2121/')).toBe('ftp://u@127.0.0.1:2121/');
+    expect(() => urlAbrible('ftp://u:p@127.0.0.1:2121/')).toThrow();
+    expect(() => urlAbrible('file:///c:/a.exe')).toThrow();
   });
 });
