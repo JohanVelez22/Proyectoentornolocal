@@ -7,6 +7,8 @@ export const TIPOS_AVISO = [
   'certificado-por-vencer',
   'tunel-caido',
   'proceso-error',
+  'proceso-terminado',
+  'receta-terminada',
   'doctor',
   'contenedor-detenido',
   'version-nueva',

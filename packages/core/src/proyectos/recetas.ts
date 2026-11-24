@@ -514,6 +514,10 @@ export class EjecutorRecetas {
       e.estado = control.signal.aborted ? 'cancelada' : (fallo?.estado ?? general(pasos));
       this.guardar(e);
       await this.escrituras.get(sitioId);
+      // Solo si llegó al final (lista o con un paso en error): cancelar o dejar pasos pendientes no avisa.
+      if (e.estado === 'lista' || e.estado === 'error') {
+        this.d.eventos.emit('receta:terminada', { sitioId, estado: e.estado });
+      }
       if (e.estado === 'error') {
         // El paso que acaba de fallar o, si no (p. ej. soloPaso), el primero que sigue en error.
         if (fallo) return fallo;

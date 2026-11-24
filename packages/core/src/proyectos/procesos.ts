@@ -1,6 +1,7 @@
 import type { ConfianzaCa } from '../https/confianza';
 import { appendFile, mkdir } from 'node:fs/promises';
 import { ErrorWolf } from '../errores';
+import type { Eventos, EventosNucleo } from '../eventos';
 import path from 'node:path';
 import {
   ErrorDetenidoAlIniciar,
@@ -60,11 +61,13 @@ export function separarIdSupervisor(id: string): { sitioId: string; procesoId: s
 /** Lo que se usa del supervisor (en las pruebas, uno falso). */
 export type SupervisorProcesos = Pick<
   Supervisor,
-  'iniciar' | 'detener' | 'estado' | 'pid' | 'mensaje' | 'ids' | 'reinicios'
+  'iniciar' | 'detener' | 'estado' | 'pid' | 'mensaje' | 'ids' | 'reinicios' | 'alTerminar'
 >;
 
 export interface DepsProcesosProyecto extends DepsEntorno {
   supervisor: SupervisorProcesos;
+  /** Para emitir `proceso:terminado` (sin él no se avisa de las salidas). */
+  eventos?: Eventos<EventosNucleo>;
   /** Sitios tal como están guardados. */
   leerSitios: () => Promise<Sitio[]>;
   /** Confianza en la CA local (NODE_EXTRA_CA_CERTS, bundle de Python). */
@@ -119,7 +122,13 @@ export class ProcesosProyecto {
   /** Ids con un `iniciar` en preparación (aún no llegaron al supervisor). */
   private readonly preparando = new Set<string>();
 
-  constructor(private readonly d: DepsProcesosProyecto) {}
+  constructor(private readonly d: DepsProcesosProyecto) {
+    // Salida definitiva (sin reinicio pendiente): el aviso sale con el código, sea 0 o no.
+    d.supervisor.alTerminar((id, codigo) => {
+      const s = separarIdSupervisor(id);
+      if (s) d.eventos?.emit('proceso:terminado', { id, sitioId: s.sitioId, codigo });
+    });
+  }
 
   /** Log del proceso. */
   rutaLog(sitioId: string, procesoId: string): string {

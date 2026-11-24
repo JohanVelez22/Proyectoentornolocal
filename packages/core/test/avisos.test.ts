@@ -132,6 +132,32 @@ describe('CentroAvisos', () => {
     expect(centro.publicar({ ...base, tipo: 'tunel-caido' })).not.toBeNull();
   });
 
+  it('los tipos nuevos vienen activos y una configuracion vieja sin su clave los deja activos', async () => {
+    expect(TIPOS_AVISO).toContain('proceso-terminado');
+    expect(TIPOS_AVISO).toContain('receta-terminada');
+    const vieja = ConfigSchema.parse({ avisos: { tipos: { 'servicio-caido': false } } });
+    expect(vieja.avisos.tipos['proceso-terminado']).toBe(true);
+    expect(vieja.avisos.tipos['receta-terminada']).toBe(true);
+    expect(vieja.avisos.tipos['servicio-caido']).toBe(false);
+    const { centro } = await crear();
+    centro.fijarConfig({ nativas: true, tipos: { 'servicio-caido': true } as never });
+    expect(centro.publicar({ ...base, tipo: 'proceso-terminado' })).not.toBeNull();
+    expect(centro.nativaPermitida('receta-terminada')).toBe(true);
+  });
+
+  it('un tipo nuevo desactivado no publica', async () => {
+    const { centro } = await crear();
+    centro.fijarConfig({
+      nativas: true,
+      tipos: {
+        ...Object.fromEntries(TIPOS_AVISO.map((t) => [t, true])),
+        'proceso-terminado': false,
+      } as never,
+    });
+    expect(centro.publicar({ ...base, tipo: 'proceso-terminado' })).toBeNull();
+    expect(centro.publicar({ ...base, tipo: 'receta-terminada' })).not.toBeNull();
+  });
+
   it('acota el texto de los datos y descarta lo que no sea texto o número', async () => {
     const { centro } = await crear();
     const a = centro.publicar({
@@ -217,7 +243,97 @@ describe('fuentes de avisos', () => {
     });
   });
 
-  it('túnel caído: de activo a error', () => {
+  describe('procesos y recetas que terminan', () => {
+    const e = (estado: string, extra = {}) =>
+      ({
+        id: 'proy-mi-sitio-web',
+        nombre: 'web (mi.test)',
+        categoria: 'proyecto',
+        version: null,
+        estado,
+        puertos: [],
+        pid: null,
+        ...extra,
+      }) as never;
+    const terminado = (codigo: number | null) =>
+      ({ id: 'proy-mi-sitio-web', sitioId: 'mi-sitio', codigo }) as const;
+
+    it('codigo 0: proceso-terminado info con el nombre del proceso', () => {
+      const { eventos, publicados } = montar();
+      eventos.emit('servicio:estado', e('encendido'));
+      eventos.emit('proceso:terminado', terminado(0));
+      eventos.emit('servicio:estado', e('apagado', { mensaje: 'terminado' }));
+      expect(publicados).toHaveLength(1);
+      expect(publicados[0]).toMatchObject({
+        nivel: 'info',
+        tipo: 'proceso-terminado',
+        codigo: 'avisos.proceso_terminado',
+        datos: { fuente: 'proy-mi-sitio-web', nombre: 'web (mi.test)' },
+        accion: { ruta: 'proyectos' },
+      });
+    });
+
+    it('otro codigo: proceso-error con el codigo de salida, y el estado error no repite', () => {
+      const { eventos, publicados } = montar();
+      eventos.emit('servicio:estado', e('encendido'));
+      eventos.emit('proceso:terminado', terminado(3));
+      eventos.emit('servicio:estado', e('error', { mensaje: 'C:/secreto token=abc' }));
+      expect(publicados).toHaveLength(1);
+      expect(publicados[0]).toMatchObject({
+        nivel: 'error',
+        tipo: 'proceso-error',
+        codigo: 'avisos.proceso_fallo',
+        datos: { fuente: 'proy-mi-sitio-web', nombre: 'web (mi.test)', codigoSalida: 3 },
+      });
+      expect(JSON.stringify(publicados[0])).not.toMatch(/secreto|token/);
+    });
+
+    it('sin codigo (senal): proceso_fallo sin codigoSalida', () => {
+      const { eventos, publicados } = montar();
+      eventos.emit('proceso:terminado', terminado(null));
+      expect(publicados[0]).toMatchObject({ codigo: 'avisos.proceso_fallo' });
+      expect(publicados[0]!.datos).not.toHaveProperty('codigoSalida');
+    });
+
+    it('un error de arranque (sin salida) sigue avisando por el estado, tambien tras terminar bien', () => {
+      const { eventos, publicados } = montar();
+      eventos.emit('servicio:estado', e('iniciando'));
+      eventos.emit('servicio:estado', e('error'));
+      eventos.emit('proceso:terminado', terminado(0));
+      eventos.emit('servicio:estado', e('apagado', { mensaje: 'terminado' }));
+      eventos.emit('servicio:estado', e('iniciando'));
+      eventos.emit('servicio:estado', e('error'));
+      expect(publicados.map((p) => p.codigo)).toEqual([
+        'avisos.proceso_error',
+        'avisos.proceso_terminado',
+        'avisos.proceso_error',
+      ]);
+    });
+
+    it('receta: lista da receta_terminada (info) y error da receta_fallo (error)', () => {
+      const { eventos, publicados } = montar();
+      eventos.emit('receta:terminada', { sitioId: 'mi-sitio', estado: 'error' });
+      eventos.emit('receta:terminada', { sitioId: 'mi-sitio', estado: 'lista' });
+      expect(publicados).toHaveLength(2);
+      expect(publicados[0]).toMatchObject({
+        nivel: 'error',
+        tipo: 'receta-terminada',
+        codigo: 'avisos.receta_fallo',
+        datos: { sitio: 'mi-sitio' },
+        accion: { ruta: 'proyectos' },
+      });
+      expect(publicados[1]).toMatchObject({
+        nivel: 'info',
+        tipo: 'receta-terminada',
+        codigo: 'avisos.receta_terminada',
+        datos: { sitio: 'mi-sitio' },
+      });
+      // Las fuentes difieren: en el centro real no se agrupan entre si.
+      expect(publicados[0]!.datos['fuente']).not.toBe(publicados[1]!.datos['fuente']);
+    });
+  });
+
+  it('tunel caido: de activo a error', () => {
     const { eventos, publicados } = montar();
     eventos.emit('tunel:estado', {
       sitioId: 'blog',

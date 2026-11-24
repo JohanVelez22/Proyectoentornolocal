@@ -547,6 +547,7 @@ export const en: Textos = {
     pid: 'PID',
     sinVersion: 'no version',
     sinPuertos: '—',
+    terminado: 'Finished without errors',
     externo: 'Managed outside WolfCore Dev',
     verDetalle: 'View error details',
     vacioTitulo: 'No services yet',
@@ -1037,6 +1038,8 @@ export const en: Textos = {
         'certificado-por-vencer': 'Certificates about to expire',
         'tunel-caido': 'A tunnel went down',
         'proceso-error': 'A project process failed',
+        'proceso-terminado': 'A project process finished',
+        'receta-terminada': 'A project recipe finished',
         doctor: 'Diagnostics (Doctor)',
         'contenedor-detenido': 'A container stopped',
         'version-nueva': 'A new version of an installed service',
@@ -1828,6 +1831,8 @@ export const en: Textos = {
     },
     procesos: {
       titulo: 'Processes',
+      /** Mensaje del supervisor de un proceso sin reinicio que salió con código 0. */
+      terminado: 'Finished without errors',
       ninguno: 'No processes. Add npm run dev, queue:work, uvicorn…',
       agregar: 'Add process',
       editar: 'Edit process',

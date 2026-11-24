@@ -7,7 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import type { Plataforma } from '../src/plataforma/tipos';
 import { puertoResponde } from '../src/procesos/sonda';
-import { ErrorDetenidoAlIniciar, Supervisor, type DefProceso } from '../src/procesos/supervisor';
+import {
+  ErrorDetenidoAlIniciar,
+  MENSAJE_TERMINADO,
+  Supervisor,
+  type DefProceso,
+} from '../src/procesos/supervisor';
 import { Rutas } from '../src/rutas';
 import type { EstadoServicio } from '../src/tipos';
 
@@ -75,9 +80,9 @@ function registro(pid: number): string {
   ]);
 }
 
-function morir(h: HijoFalso): void {
+function morir(h: HijoFalso, codigo: number | null = 1): void {
   vivos.delete(h.pid);
-  h.emit('exit', 1, null);
+  h.emit('exit', codigo, null);
 }
 
 function crear(): Supervisor {
@@ -263,6 +268,58 @@ describe('Supervisor', () => {
     expect(fn).toHaveBeenCalledWith('nginx', 1);
     expect(s.estado('nginx')).toBe('error');
     await s.cerrar();
+  });
+
+  it('salida 0 sin reinicio queda apagado con el mensaje "terminado"', async () => {
+    const s = crear();
+    await s.iniciar(def({ reiniciar: false }));
+    morir(hijos[0]!, 0);
+    expect(s.estado('nginx')).toBe('apagado');
+    expect(s.mensaje('nginx')).toBe(MENSAJE_TERMINADO);
+    expect(emitidos.at(-1)).toMatchObject({ estado: 'apagado', mensaje: MENSAJE_TERMINADO });
+    await s.cerrar();
+  });
+
+  it('salida 1 sin reinicio queda en error', async () => {
+    const s = crear();
+    await s.iniciar(def({ reiniciar: false }));
+    morir(hijos[0]!, 1);
+    expect(s.estado('nginx')).toBe('error');
+    expect(s.mensaje('nginx')).not.toBe(MENSAJE_TERMINADO);
+    await s.cerrar();
+  });
+
+  it('salida sin código (señal) sin reinicio queda en error', async () => {
+    const s = crear();
+    await s.iniciar(def({ reiniciar: false }));
+    morir(hijos[0]!, null);
+    expect(s.estado('nginx')).toBe('error');
+    await s.cerrar();
+  });
+
+  it('con reiniciar: true una salida 0 no cambia: se reinicia como siempre', async () => {
+    const s = crear();
+    await s.iniciar(def({ reiniciar: true }));
+    morir(hijos[0]!, 0);
+    expect(s.estado('nginx')).toBe('iniciando');
+    expect(s.mensaje('nginx')).toMatch(/Reiniciando/);
+    await s.cerrar();
+  });
+
+  it('alTerminar avisa solo de las salidas definitivas, con su código', async () => {
+    const s = crear();
+    const fn = vi.fn();
+    s.alTerminar(fn);
+    await s.iniciar(def({ reiniciar: true }));
+    morir(hijos[0]!, 0); // se reinicia: no es definitiva
+    expect(fn).not.toHaveBeenCalled();
+    await s.cerrar();
+    const s2 = crear();
+    s2.alTerminar(fn);
+    await s2.iniciar(def({ id: 'otro', reiniciar: false }));
+    morir(hijos.at(-1)!, 0);
+    expect(fn).toHaveBeenCalledWith('otro', 0);
+    await s2.cerrar();
   });
 
   it('spawn fallido (pid undefined + error asíncrono) rechaza iniciar sin tumbar el proceso', async () => {

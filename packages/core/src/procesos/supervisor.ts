@@ -46,6 +46,9 @@ export interface DefProceso {
   puertoInformativo?: number;
 }
 
+/** Mensaje de un proceso sin reinicio que terminó bien (código 0); la interfaz lo traduce. */
+export const MENSAJE_TERMINADO = 'terminado';
+
 export type EstadoProceso = 'apagado' | 'iniciando' | 'encendido' | 'error';
 
 /** iniciar() no terminó: el proceso se detuvo (o se cerró la app) mientras arrancaba. */
@@ -122,6 +125,7 @@ export class Supervisor {
   private readonly entradas = new Map<string, Entrada>();
   private readonly hijos = new Map<string, childProcess.ChildProcess>();
   private readonly oyentesSalida: Array<(id: string, codigo: number | null) => void> = [];
+  private readonly oyentesTermino: Array<(id: string, codigo: number | null) => void> = [];
   private readonly spawnFn: typeof childProcess.spawn;
   /** Se pasa a null si el lanzador no está disponible en este equipo (se usa el spawn clásico). */
   private lanzarOculto: LanzadorOculto | null;
@@ -277,6 +281,15 @@ export class Supervisor {
 
   alSalir(fn: (id: string, codigo: number | null) => void): void {
     this.oyentesSalida.push(fn);
+  }
+
+  /**
+   * Salida definitiva: el proceso terminó y no se reinicia (sin `reiniciar` o con los intentos
+   * agotados). Se llama con el estado ya fijado (`apagado` con código 0, `error` si no) y antes de
+   * emitirlo.
+   */
+  alTerminar(fn: (id: string, codigo: number | null) => void): void {
+    this.oyentesTermino.push(fn);
   }
 
   async iniciar(def: DefProceso): Promise<void> {
@@ -588,8 +601,21 @@ export class Supervisor {
       }, espera);
       return;
     }
-    entrada.estado = 'error';
-    entrada.mensaje = this.colaLog(def.log) || motivo || 'El proceso terminó de forma inesperada';
+    if (codigo === 0 && !def.reiniciar) {
+      // Terminó bien por sí mismo (un script, una migración, un build): no es una caída.
+      entrada.estado = 'apagado';
+      entrada.mensaje = MENSAJE_TERMINADO;
+    } else {
+      entrada.estado = 'error';
+      entrada.mensaje = this.colaLog(def.log) || motivo || 'El proceso terminó de forma inesperada';
+    }
+    for (const fn of this.oyentesTermino) {
+      try {
+        fn(def.id, codigo);
+      } catch (e) {
+        console.error('Error en oyente de término:', e);
+      }
+    }
     this.emitir(entrada);
     this.guardarEstado();
   }

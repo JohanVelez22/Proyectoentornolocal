@@ -254,6 +254,8 @@ describe('i18n', () => {
       'certificado-por-vencer',
       'tunel-caido',
       'proceso-error',
+      'proceso-terminado',
+      'receta-terminada',
       'doctor',
       'contenedor-detenido',
       'version-nueva',

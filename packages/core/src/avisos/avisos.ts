@@ -219,19 +219,61 @@ export function conectarFuentesAvisos(
 ): () => void {
   const servicios = new Map<string, string>();
   const tuneles = new Map<string, string>();
+  /** Nombre legible de cada proceso de proyecto, tal como llegó en su último estado. */
+  const nombres = new Map<string, string>();
+  /** Procesos cuya salida ya se avisó: el estado `error` que sigue no se repite. */
+  const avisados = new Set<string>();
   const bajas = [
     eventos.on('servicio:estado', (e) => {
       const previo = servicios.get(e.id);
       servicios.set(e.id, e.estado);
+      const proyecto = e.categoria === 'proyecto' || e.id.startsWith('proy-');
+      if (proyecto) nombres.set(e.id, e.nombre);
+      if (e.estado !== 'error') avisados.delete(e.id);
       // Sin estado previo es lo que ya había al abrir la aplicación: no es una caída nueva.
       if (e.estado !== 'error' || previo === undefined || previo === 'error') return;
-      const proyecto = e.categoria === 'proyecto' || e.id.startsWith('proy-');
+      if (proyecto && avisados.delete(e.id)) return;
       centro.publicar({
         nivel: 'error',
         tipo: proyecto ? 'proceso-error' : 'servicio-caido',
         codigo: proyecto ? 'avisos.proceso_error' : 'avisos.servicio_caido',
         datos: { fuente: e.id, nombre: e.nombre },
         accion: { ruta: proyecto ? 'proyectos' : 'servicios' },
+      });
+    }),
+    // Un proceso de proyecto que termina sin reinicio: código 0 = terminó bien, otro = falló.
+    eventos.on('proceso:terminado', (e) => {
+      const nombre = nombres.get(e.id);
+      const base = { fuente: e.id, ...(nombre === undefined ? {} : { nombre }) };
+      avisados.add(e.id);
+      if (e.codigo === 0) {
+        centro.publicar({
+          nivel: 'info',
+          tipo: 'proceso-terminado',
+          codigo: 'avisos.proceso_terminado',
+          datos: base,
+          accion: { ruta: 'proyectos' },
+        });
+        return;
+      }
+      centro.publicar({
+        nivel: 'error',
+        tipo: 'proceso-error',
+        codigo: 'avisos.proceso_fallo',
+        datos: { ...base, ...(e.codigo === null ? {} : { codigoSalida: e.codigo }) },
+        accion: { ruta: 'proyectos' },
+      });
+    }),
+    // Una receta que llegó al final: lista o con un paso en error (cancelar no avisa).
+    eventos.on('receta:terminada', (e) => {
+      const bien = e.estado === 'lista';
+      centro.publicar({
+        nivel: bien ? 'info' : 'error',
+        tipo: 'receta-terminada',
+        codigo: bien ? 'avisos.receta_terminada' : 'avisos.receta_fallo',
+        // Éxito y fallo no se agrupan entre sí: reintentar y que salga bien debe avisar.
+        datos: { fuente: `${e.sitioId}#${e.estado}`, sitio: e.sitioId },
+        accion: { ruta: 'proyectos' },
       });
     }),
     eventos.on('tunel:estado', (e) => {

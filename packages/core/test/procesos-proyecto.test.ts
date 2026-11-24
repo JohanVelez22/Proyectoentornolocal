@@ -35,6 +35,16 @@ class SupervisorFalso implements SupervisorProcesos {
   readonly estados = new Map<string, EstadoSup>();
   readonly mensajes = new Map<string, string>();
   alIniciar?: (def: DefProceso) => Promise<void>;
+  private readonly oyentesTermino: Array<(id: string, codigo: number | null) => void> = [];
+
+  alTerminar(fn: (id: string, codigo: number | null) => void): void {
+    this.oyentesTermino.push(fn);
+  }
+  /** Simula la salida definitiva de un proceso. */
+  terminar(id: string, codigo: number | null): void {
+    this.estados.delete(id);
+    for (const fn of this.oyentesTermino) fn(id, codigo);
+  }
 
   async iniciar(def: DefProceso): Promise<void> {
     this.iniciados.push(def);
@@ -88,6 +98,7 @@ interface OpcionesArmado {
   confianza?: DepsProcesosProyecto['confianza'];
   depuracion?: DepsProcesosProyecto['depuracion'];
   entorno?: NodeJS.ProcessEnv;
+  eventos?: Eventos<EventosNucleo>;
 }
 
 async function armar(o: OpcionesArmado = {}): Promise<Armado> {
@@ -132,6 +143,7 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
       rutaBin: (tipo, version) => rutas.bin(tipo, version),
     },
     php: async () => ({ exe: phpExe, ini: phpIni }),
+    ...(o.eventos ? { eventos: o.eventos } : {}),
     ...(o.confianza ? { confianza: o.confianza } : {}),
     ...(o.depuracion ? { depuracion: o.depuracion } : {}),
   });
@@ -650,6 +662,35 @@ async function supervisorReal(): Promise<{
   });
   return { supervisor, hijos, vivos, matados, emitidos };
 }
+
+describe('proceso:terminado', () => {
+  const montar = async () => {
+    const eventos = new Eventos<EventosNucleo>();
+    const emitidos: EventosNucleo['proceso:terminado'][] = [];
+    eventos.on('proceso:terminado', (e) => emitidos.push(e));
+    const a = await armar({ eventos, procesos: [proceso({ id: 'vite' })] });
+    return { a, emitidos };
+  };
+
+  it('emite sitio, id de supervisor y código cuando un proceso termina', async () => {
+    const { a, emitidos } = await montar();
+    a.sup.terminar('proy-demo-vite', 0);
+    a.sup.terminar('proy-demo-vite', 2);
+    a.sup.terminar('proy-demo-vite', null);
+    expect(emitidos).toEqual([
+      { id: 'proy-demo-vite', sitioId: 'demo', codigo: 0 },
+      { id: 'proy-demo-vite', sitioId: 'demo', codigo: 2 },
+      { id: 'proy-demo-vite', sitioId: 'demo', codigo: null },
+    ]);
+  });
+
+  it('ignora lo que no es un proceso de proyecto (servicios, túneles)', async () => {
+    const { a, emitidos } = await montar();
+    a.sup.terminar('nginx', 0);
+    a.sup.terminar('tunel-demo', 1);
+    expect(emitidos).toEqual([]);
+  });
+});
 
 describe('supervisor real', () => {
   it('un puerto que no responde no mata el proceso (el puerto es informativo)', async () => {

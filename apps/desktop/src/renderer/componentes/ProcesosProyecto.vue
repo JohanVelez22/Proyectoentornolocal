@@ -44,6 +44,9 @@ const props = defineProps<{ sitio: Sitio }>();
 const emit = defineEmits<{ aplicado: [resultado: ResultadoAplicar] }>();
 
 const t = textos.proyectos.procesos;
+/** El supervisor marca con este mensaje al proceso sin reinicio que salió con código 0. */
+const MENSAJE_TERMINADO = 'terminado';
+const textoMensaje = (m: string): string => (m === MENSAJE_TERMINADO ? t.terminado : m);
 const dialog = useDialog();
 const message = useMessage();
 const { ejecutar, ocupado } = useAccion();
@@ -345,7 +348,7 @@ function quitar(p: ProcesoProyectoPublico): void {
           class="mensaje"
           :class="{ error: estadoDe(p.id)!.estado === 'error' }"
         >
-          {{ estadoDe(p.id)!.mensaje }}
+          {{ textoMensaje(estadoDe(p.id)!.mensaje!) }}
         </p>
         <ul v-if="estadoDe(p.id)?.avisos.length" class="avisos">
           <li v-for="(a, i) in estadoDe(p.id)!.avisos" :key="i">

@@ -96,6 +96,8 @@ async function montar(
   const eventos = new Eventos<EventosNucleo>();
   const progreso: ProgresoReceta[] = [];
   eventos.on('receta:progreso', (p) => progreso.push(p));
+  const terminadas: EventosNucleo['receta:terminada'][] = [];
+  eventos.on('receta:terminada', (t) => terminadas.push(t));
   const falsos = pasosFalsos();
   const s = o.sitio ?? sitio();
   const ejecutor = new EjecutorRecetas({
@@ -106,7 +108,7 @@ async function montar(
     receta: () => Promise.resolve(o.receta ?? RECETA),
     graciaCancelacionMs: o.gracia,
   });
-  return { base, rutas, eventos, progreso, ejecutor, ...falsos, s };
+  return { base, rutas, eventos, progreso, terminadas, ejecutor, ...falsos, s };
 }
 
 const estadosDe = (e: { pasos: { id: string; estado: string }[] }) =>
@@ -299,6 +301,31 @@ describe('EjecutorRecetas', () => {
     espera.resolver();
     expect((await a).estado).toBe('lista');
     expect((await b).estado).toBe('lista');
+  });
+
+  it('avisa al terminar con exito y con fallo; cancelar y un reintento parcial no avisan', async () => {
+    const m = await montar();
+    m.fallos.set('dos', 1);
+    await m.ejecutor.ejecutar(m.s.id, {});
+    expect(m.terminadas).toEqual([{ sitioId: m.s.id, estado: 'error' }]);
+    // Reintentar solo el paso que fallo deja pasos pendientes: no esta terminada.
+    await m.ejecutor.ejecutar(m.s.id, { soloPaso: 'dos' });
+    expect(m.terminadas).toHaveLength(1);
+    expect((await m.ejecutor.ejecutar(m.s.id, { desde: 'tres' })).estado).toBe('lista');
+    expect(m.terminadas.at(-1)).toEqual({ sitioId: m.s.id, estado: 'lista' });
+    const antes = m.terminadas.length;
+    m.esperas.set('dos', new Promise<void>(() => undefined));
+    const corriendo = m.ejecutor.ejecutar(m.s.id, {});
+    await new Promise((r) => setTimeout(r, 10));
+    m.ejecutor.cancelar(m.s.id);
+    expect((await corriendo).estado).toBe('cancelada');
+    expect(m.terminadas).toHaveLength(antes);
+  });
+
+  it('una receta que no se puede ejecutar (sin confianza) no avisa', async () => {
+    const m = await montar({ sitio: sitio({ confiado: false }) });
+    await expect(m.ejecutor.ejecutar(m.s.id, {})).rejects.toThrow();
+    expect(m.terminadas).toEqual([]);
   });
 
   it('cancelar aborta el paso en curso y no ejecuta los siguientes', async () => {

@@ -45,6 +45,22 @@ const ES: Diccionario = {
       titulo: 'Un proceso de proyecto terminó con un error',
       cuerpo: `${limpio(d['nombre'], 'Un proceso')} dejó de funcionar. Revise sus registros.`,
     }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: 'Un proceso terminó',
+      cuerpo: `${limpio(d['nombre'], 'Un proceso')} terminó sin errores.`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: 'Un proceso falló',
+      cuerpo: `${limpio(d['nombre'], 'Un proceso')} terminó con un error${d['codigoSalida'] !== undefined ? ` (código ${limpio(d['codigoSalida'], '?')})` : ''}. Revise sus registros.`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: 'Una receta terminó',
+      cuerpo: `La receta de ${limpio(d['sitio'], 'un proyecto')} terminó sin errores.`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: 'Una receta falló',
+      cuerpo: `La receta de ${limpio(d['sitio'], 'un proyecto')} se detuvo con un error. Abra el proyecto para ver el paso.`,
+    }),
     'avisos.tunel_caido': (d) => ({
       titulo: 'Un túnel se cayó',
       cuerpo: `El túnel de ${limpio(d['fuente'], 'un proyecto')} dejó de funcionar.`,
@@ -131,6 +147,14 @@ const ES: Diccionario = {
       titulo: 'Un proceso terminó con un error',
       cuerpo: 'Abra WolfCore Dev para ver el detalle.',
     },
+    'proceso-terminado': {
+      titulo: 'Un proceso terminó',
+      cuerpo: 'Abra WolfCore Dev para ver el detalle.',
+    },
+    'receta-terminada': {
+      titulo: 'Una receta terminó',
+      cuerpo: 'Abra WolfCore Dev para ver el detalle.',
+    },
     doctor: {
       titulo: 'El Doctor encontró problemas',
       cuerpo: 'Abra WolfCore Dev para revisarlos.',
@@ -163,6 +187,22 @@ const EN: Diccionario = {
     'avisos.proceso_error': (d) => ({
       titulo: 'A project process ended with an error',
       cuerpo: `${limpio(d['nombre'], 'A process')} stopped working. Check its logs.`,
+    }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: 'A process finished',
+      cuerpo: `${limpio(d['nombre'], 'A process')} finished without errors.`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: 'A process failed',
+      cuerpo: `${limpio(d['nombre'], 'A process')} ended with an error${d['codigoSalida'] !== undefined ? ` (code ${limpio(d['codigoSalida'], '?')})` : ''}. Check its logs.`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: 'A recipe finished',
+      cuerpo: `The recipe of ${limpio(d['sitio'], 'a project')} finished without errors.`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: 'A recipe failed',
+      cuerpo: `The recipe of ${limpio(d['sitio'], 'a project')} stopped with an error. Open the project to see the step.`,
     }),
     'avisos.tunel_caido': (d) => ({
       titulo: 'A tunnel went down',
@@ -244,6 +284,14 @@ const EN: Diccionario = {
       titulo: 'A process ended with an error',
       cuerpo: 'Open WolfCore Dev for details.',
     },
+    'proceso-terminado': {
+      titulo: 'A process finished',
+      cuerpo: 'Open WolfCore Dev for details.',
+    },
+    'receta-terminada': {
+      titulo: 'A recipe finished',
+      cuerpo: 'Open WolfCore Dev for details.',
+    },
     doctor: { titulo: 'The Doctor found problems', cuerpo: 'Open WolfCore Dev to review them.' },
     'contenedor-detenido': {
       titulo: 'A container stopped',
@@ -273,6 +321,22 @@ const PT: Diccionario = {
     'avisos.proceso_error': (d) => ({
       titulo: 'Um processo de projeto terminou com um erro',
       cuerpo: `${limpio(d['nombre'], 'Um processo')} parou de funcionar. Confira os registros dele.`,
+    }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: 'Um processo terminou',
+      cuerpo: `${limpio(d['nombre'], 'Um processo')} terminou sem erros.`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: 'Um processo falhou',
+      cuerpo: `${limpio(d['nombre'], 'Um processo')} terminou com um erro${d['codigoSalida'] !== undefined ? ` (código ${limpio(d['codigoSalida'], '?')})` : ''}. Confira os registros dele.`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: 'Uma receita terminou',
+      cuerpo: `A receita de ${limpio(d['sitio'], 'um projeto')} terminou sem erros.`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: 'Uma receita falhou',
+      cuerpo: `A receita de ${limpio(d['sitio'], 'um projeto')} parou com um erro. Abra o projeto para ver a etapa.`,
     }),
     'avisos.tunel_caido': (d) => ({
       titulo: 'Um túnel caiu',
@@ -363,6 +427,14 @@ const PT: Diccionario = {
       titulo: 'Um processo terminou com um erro',
       cuerpo: 'Abra o WolfCore Dev para ver os detalhes.',
     },
+    'proceso-terminado': {
+      titulo: 'Um processo terminou',
+      cuerpo: 'Abra o WolfCore Dev para ver os detalhes.',
+    },
+    'receta-terminada': {
+      titulo: 'Uma receita terminou',
+      cuerpo: 'Abra o WolfCore Dev para ver os detalhes.',
+    },
     doctor: {
       titulo: 'O Doctor encontrou problemas',
       cuerpo: 'Abra o WolfCore Dev para revisá-los.',
@@ -395,6 +467,22 @@ const FR: Diccionario = {
     'avisos.proceso_error': (d) => ({
       titulo: 'Un processus de projet s’est terminé sur une erreur',
       cuerpo: `${limpio(d['nombre'], 'Un processus')} a cessé de fonctionner. Consultez ses journaux.`,
+    }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: 'Un processus s’est terminé',
+      cuerpo: `${limpio(d['nombre'], 'Un processus')} s’est terminé sans erreur.`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: 'Un processus a échoué',
+      cuerpo: `${limpio(d['nombre'], 'Un processus')} s’est terminé sur une erreur${d['codigoSalida'] !== undefined ? ` (code ${limpio(d['codigoSalida'], '?')})` : ''}. Consultez ses journaux.`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: 'Une recette est terminée',
+      cuerpo: `La recette de ${limpio(d['sitio'], 'un projet')} s’est terminée sans erreur.`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: 'Une recette a échoué',
+      cuerpo: `La recette de ${limpio(d['sitio'], 'un projet')} s’est arrêtée sur une erreur. Ouvrez le projet pour voir l’étape.`,
     }),
     'avisos.tunel_caido': (d) => ({
       titulo: 'Un tunnel est tombé',
@@ -483,6 +571,14 @@ const FR: Diccionario = {
     },
     'proceso-error': {
       titulo: 'Un processus s’est terminé sur une erreur',
+      cuerpo: 'Ouvrez WolfCore Dev pour voir le détail.',
+    },
+    'proceso-terminado': {
+      titulo: 'Un processus s’est terminé',
+      cuerpo: 'Ouvrez WolfCore Dev pour voir le détail.',
+    },
+    'receta-terminada': {
+      titulo: 'Une recette est terminée',
       cuerpo: 'Ouvrez WolfCore Dev pour voir le détail.',
     },
     doctor: {

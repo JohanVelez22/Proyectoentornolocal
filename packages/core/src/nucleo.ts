@@ -845,6 +845,7 @@ export class Nucleo {
       },
       rutas,
       supervisor,
+      eventos,
       runtimes,
       leerSitios: () => sitios.listar(),
       php: phpDe,

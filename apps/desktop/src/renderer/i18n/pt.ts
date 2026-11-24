@@ -558,6 +558,7 @@ export const pt: Textos = {
     pid: 'PID',
     sinVersion: 'sem versão',
     sinPuertos: '—',
+    terminado: 'Terminou sem erros',
     externo: 'Administrado fora do WolfCore Dev',
     verDetalle: 'Ver detalhes do erro',
     vacioTitulo: 'Ainda não há serviços',
@@ -1051,6 +1052,8 @@ export const pt: Textos = {
         'certificado-por-vencer': 'Certificados prestes a vencer',
         'tunel-caido': 'Um túnel caiu',
         'proceso-error': 'Um processo de projeto falhou',
+        'proceso-terminado': 'Um processo de projeto terminou',
+        'receta-terminada': 'Uma receita de projeto terminou',
         doctor: 'Diagnóstico (Doctor)',
         'contenedor-detenido': 'Um contêiner parou',
         'version-nueva': 'Há uma nova versão de um serviço instalado',
@@ -1850,6 +1853,8 @@ export const pt: Textos = {
     },
     procesos: {
       titulo: 'Processos',
+      /** Mensaje del supervisor de un proceso sin reinicio que salió con código 0. */
+      terminado: 'Terminou sem erros',
       ninguno: 'Sem processos. Adicione npm run dev, queue:work, uvicorn…',
       agregar: 'Adicionar processo',
       editar: 'Editar processo',

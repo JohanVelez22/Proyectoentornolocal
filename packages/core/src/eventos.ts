@@ -44,6 +44,10 @@ export type EventosNucleo = {
   'bd:progreso': ProgresoBd;
   'ia:progreso': ProgresoIa;
   'receta:progreso': ProgresoReceta;
+  /** Un proceso de proyecto terminó y no se reinicia: `codigo` 0 = terminó bien. */
+  'proceso:terminado': { id: string; sitioId: string; codigo: number | null };
+  /** Una receta terminó del todo (`lista` o `error`); cancelar no la emite. */
+  'receta:terminada': { sitioId: string; estado: 'lista' | 'error' };
   /** Una línea de progreso (saneada, sin tokens) del clon de `destino`. */
   'git:progreso': { destino: string; linea: string };
   /** Cambió la lista de carpetas nuevas que parecen un proyecto (carpeta vigilada). */

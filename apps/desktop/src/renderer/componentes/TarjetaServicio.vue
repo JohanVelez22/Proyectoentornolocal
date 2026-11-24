@@ -42,6 +42,8 @@ import { esServicioConVersiones } from '../stores/versiones';
 const props = defineProps<{ servicio: EstadoServicio }>();
 
 const t = textos.servicios;
+/** El supervisor marca con este mensaje al proceso sin reinicio que salió con código 0. */
+const MENSAJE_TERMINADO = 'terminado';
 const servicios = useServicios();
 const dialog = useDialog();
 const notification = useNotification();
@@ -346,7 +348,9 @@ function cambiarRedLocal(valor: boolean): void {
         <pre>{{ servicio.mensaje }}</pre>
       </NCollapseItem>
     </NCollapse>
-    <p v-else-if="servicio.mensaje" class="mensaje">{{ servicio.mensaje }}</p>
+    <p v-else-if="servicio.mensaje" class="mensaje">
+      {{ servicio.mensaje === MENSAJE_TERMINADO ? t.terminado : servicio.mensaje }}
+    </p>
 
     <label v-if="deDatos" class="opcion">
       <NSwitch
