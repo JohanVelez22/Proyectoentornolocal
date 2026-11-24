@@ -3,6 +3,7 @@ import { copyFile, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:
 import path from 'node:path';
 import type { AlmacenCredenciales } from '../almacen';
 import type { RangoPuertos } from '../plataforma/tipos';
+import type { OpcionesRenombrar } from '../procesos/supervisor';
 import type { Rutas } from '../rutas';
 import { selloFecha } from '../servicios/actualizar';
 import { MARCA_INICIALIZADO, puertosFijos, type DefServicio } from '../servicios/definicion';
@@ -21,7 +22,7 @@ export interface DepsMigracionInstancias {
   rutas: Rutas;
   credenciales: Pick<AlmacenCredenciales, 'todas' | 'importar'>;
   /** Renombra el registro del proceso vivo (`mysql` → `mysql@8.4`) para readoptarlo. */
-  supervisor: { renombrarRegistro(viejo: string, nuevo: string): void };
+  supervisor: { renombrarRegistro(viejo: string, nuevo: string, o?: OpcionesRenombrar): void };
   definiciones: () => readonly DefServicio[];
   /** Versiones instaladas de un servicio (bin/<servicio>/<versión>). */
   instalados: (servicio: string) => Promise<string[]>;
@@ -98,9 +99,42 @@ export async function migrarInstancias(
 }
 
 /**
+ * ¿El registro es de la instancia `<servicio>@<clave>`? Por el ejecutable
+ * (`bin/<servicio>/<versión>/…` con la clave de esa versión) o por la carpeta de datos
+ * (`data/<servicio>/<clave>` en sus argumentos o su cwd, sin confundir `8.4` con `8.40`).
+ */
+export function registroDeInstancia(
+  def: DefServicio,
+  clave: string,
+): NonNullable<OpcionesRenombrar['coincide']> {
+  const norm = (t: string): string => t.replace(/\\/g, '/').toLowerCase();
+  const enBin = `/bin/${def.id}/`;
+  const enDatos = `/data/${def.id}/${clave}`.toLowerCase();
+  const nombraDatos = (t: string): boolean => {
+    const x = norm(t);
+    for (let i = x.indexOf(enDatos); i >= 0; i = x.indexOf(enDatos, i + 1)) {
+      const sig = x[i + enDatos.length];
+      if (sig === undefined || !/[0-9a-z.]/.test(sig)) return true;
+    }
+    return false;
+  };
+  return (r) => {
+    const exe = norm(r.ejecutable);
+    const i = exe.indexOf(enBin);
+    if (i >= 0) {
+      const version = exe.slice(i + enBin.length).split('/')[0] ?? '';
+      if (version !== '' && claveDe(def, version) === clave) return true;
+    }
+    return [...r.args, r.cwd ?? ''].some(nombraDatos);
+  };
+}
+
+/**
  * Para cada servicio con instancias, un registro del supervisor con el id del servicio solo
- * (`mysql`) pasa a su predeterminada (`mysql@8.4`). Idempotente: sin ese registro, o con el de la
- * instancia ya presente, no hace nada.
+ * (`mysql`) pasa a su predeterminada (`mysql@8.4`), pero solo si su ejecutable o su carpeta de
+ * datos son los de esa instancia (un `mysql` suelto de otra rama no se le atribuye). Si la
+ * instancia ya tiene registro con un PID muerto, se reemplaza. Idempotente: sin ese registro, o
+ * con el de la instancia vivo, no hace nada.
  */
 export async function renombrarRegistrosPendientes(
   d: Pick<DepsMigracionInstancias, 'rutas' | 'supervisor' | 'definiciones'>,
@@ -122,7 +156,10 @@ export async function renombrarRegistrosPendientes(
     const pred =
       s.predeterminada && claves.includes(s.predeterminada) ? s.predeterminada : claves[0]!;
     try {
-      d.supervisor.renombrarRegistro(def.id, idInstancia(def.id, pred));
+      d.supervisor.renombrarRegistro(def.id, idInstancia(def.id, pred), {
+        coincide: registroDeInstancia(def, pred),
+        reemplazarMuerto: true,
+      });
     } catch (e) {
       console.error(`No se pudo renombrar el registro de ${def.id}:`, e);
     }

@@ -151,6 +151,7 @@ beforeEach(async () => {
     'x',
   );
   instalados = { mysql: ['8.0.44', '8.4.13'], postgresql: ['17.12'], mailpit: ['1.29.0'] };
+  pidsVivos = new Set();
 });
 
 const plataforma = (vivos: Record<number, string>): Plataforma =>
@@ -158,6 +159,9 @@ const plataforma = (vivos: Record<number, string>): Plataforma =>
     procesoVivo: async (pid: number) =>
       vivos[pid] ? { vivo: true, ejecutable: vivos[pid] } : { vivo: false },
   }) as unknown as Plataforma;
+
+/** PIDs vivos para el supervisor de la migración (ninguno por defecto). */
+let pidsVivos: Set<number>;
 
 function deps(o: Partial<DepsMigracionInstancias> = {}): DepsMigracionInstancias & {
   renombrados: string[];
@@ -168,14 +172,15 @@ function deps(o: Partial<DepsMigracionInstancias> = {}): DepsMigracionInstancias
       throw new Error('no se lanza nada');
     }) as never,
     lanzarOculto: null,
+    existePid: (pid) => pidsVivos.has(pid),
   });
   return {
     rutas,
     credenciales: new AlmacenCredenciales(rutas),
     supervisor: {
-      renombrarRegistro: (a, b) => {
+      renombrarRegistro: (a, b, opciones) => {
         renombrados.push(`${a}->${b}`);
-        supervisor.renombrarRegistro(a, b);
+        supervisor.renombrarRegistro(a, b, opciones);
       },
     },
     definiciones: () => defs,
@@ -438,5 +443,63 @@ describe('migrarInstancias (Review Focus 7: los datos nunca se pierden)', () => 
       predeterminada: '8',
       instancias: { '8': { version: '8.2.1', puerto: 6379 } },
     });
+  });
+});
+
+describe('renombrar el registro pendiente solo si es de esa instancia (T18-N2)', () => {
+  const registro = (
+    id: string,
+    pid: number,
+    version: string,
+    clave: string,
+    servicio = 'mysql',
+  ) => ({
+    id,
+    pid,
+    ejecutable: `C:/WolfCoreDev/bin/${servicio}/${version}/bin/${servicio === 'mysql' ? 'mysqld' : 'postgres'}.exe`,
+    args: [
+      servicio === 'mysql' ? `--datadir=C:/WolfCoreDev/data/${servicio}/${clave}` : '-D',
+      ...(servicio === 'mysql' ? [] : [`C:/WolfCoreDev/data/${servicio}/${clave}`]),
+    ],
+    log: 'x',
+    reiniciar: false,
+  });
+  const ids = async (): Promise<string[]> =>
+    ((await leerJson(rutas.estado())) as { id: string }[]).map((r) => r.id).sort();
+
+  it('un `mysql` suelto con los binarios y datos de otra rama no pasa a la predeterminada', async () => {
+    await writeFile(rutas.estado(), JSON.stringify([registro('mysql', 5151, '8.0.44', '8.0')]));
+    await migrarInstancias(deps());
+    expect(await ids()).toEqual(['mysql']);
+  });
+
+  it('coincide por la carpeta de datos aunque el ejecutable no diga la versión', async () => {
+    const r = { ...registro('mysql', 5151, '8.4.13', '8.4'), ejecutable: 'mysqld.exe' };
+    await writeFile(rutas.estado(), JSON.stringify([r]));
+    await migrarInstancias(deps());
+    expect(await ids()).toEqual(['mysql@8.4']);
+    // `8.40` no es `8.4`.
+    const otro = { ...registro('mysql', 5151, '8.4.13', '8.40'), ejecutable: 'mysqld.exe' };
+    await writeFile(rutas.estado(), JSON.stringify([otro]));
+    await migrarInstancias(deps());
+    expect(await ids()).toEqual(['mysql']);
+  });
+
+  it('si el id nuevo ya existe con un PID muerto, se reemplaza; con uno vivo, no', async () => {
+    const viejo = registro('postgresql', 4242, '17.12', '17', 'postgresql');
+    const muerto = registro('postgresql@17', 999, '17.12', '17', 'postgresql');
+    await writeFile(rutas.estado(), JSON.stringify([viejo, muerto]));
+    await migrarInstancias(deps());
+    let lista = (await leerJson(rutas.estado())) as { id: string; pid: number }[];
+    expect(lista).toEqual([expect.objectContaining({ id: 'postgresql@17', pid: 4242 })]);
+
+    pidsVivos = new Set([999]);
+    await writeFile(rutas.estado(), JSON.stringify([viejo, muerto]));
+    await migrarInstancias(deps());
+    lista = (await leerJson(rutas.estado())) as { id: string; pid: number }[];
+    expect(lista.map((r) => `${r.id}:${r.pid}`).sort()).toEqual([
+      'postgresql:4242',
+      'postgresql@17:999',
+    ]);
   });
 });

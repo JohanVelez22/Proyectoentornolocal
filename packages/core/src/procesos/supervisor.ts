@@ -14,6 +14,7 @@ import type { Plataforma } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import type { EstadoServicio } from '../tipos';
 import { lanzadorOcultoPara } from '../plataforma/index';
+import { pidExiste } from '../plataforma/win';
 import {
   avisoSinLanzadorOculto,
   LanzadorNoDisponible,
@@ -67,6 +68,16 @@ export interface OpcionesSupervisor {
    * el de la plataforma (`lanzadorOcultoPara`); null fuerza el `spawn` desacoplado clásico.
    */
   lanzarOculto?: LanzadorOculto | null;
+  /** ¿Sigue vivo el PID? (por defecto `pidExiste`, sin lanzar procesos). */
+  existePid?: (pid: number) => boolean;
+}
+
+/** Opciones de `renombrarRegistro`. */
+export interface OpcionesRenombrar {
+  /** Solo se renombra si el registro viejo cumple esto (su ejecutable, argumentos y cwd). */
+  coincide?: (r: { ejecutable: string; args: readonly string[]; cwd?: string }) => boolean;
+  /** Si el id nuevo ya existe pero su PID no está vivo, se reemplaza por el viejo. */
+  reemplazarMuerto?: boolean;
 }
 
 /** Registro persistido en run/estado.json (los campos extra permiten reiniciar tras readoptar). */
@@ -115,6 +126,7 @@ export class Supervisor {
   /** Se pasa a null si el lanzador no está disponible en este equipo (se usa el spawn clásico). */
   private lanzarOculto: LanzadorOculto | null;
   private readonly sonda: (puerto: number) => Promise<boolean>;
+  private readonly existePid: (pid: number) => boolean;
   private readonly intervaloMs: number;
   private bucle: ReturnType<typeof setInterval> | null = null;
   private evaluando = false;
@@ -135,6 +147,7 @@ export class Supervisor {
           ? lanzadorOcultoPara(plataforma, rutas.tmp())
           : null;
     this.sonda = opts.sonda ?? ((p) => puertoResponde(p));
+    this.existePid = opts.existePid ?? pidExiste;
   }
 
   /** ¿El proceso con ese PID es el ejecutable de `comando`? (sin nombre conocido, se acepta). */
@@ -189,13 +202,32 @@ export class Supervisor {
    * Cambia el id de un proceso (p. ej. `mysql` → `mysql@8.4` al pasar a instancias) sin tocar el
    * proceso: si está en memoria se re-registra con el id nuevo; si no (antes de `readoptar`),
    * se renombra su registro en run/estado.json para que se readopte con el id nuevo. No hace
-   * nada si el id nuevo ya existe.
+   * nada si el id nuevo ya existe (salvo `reemplazarMuerto` con su PID muerto) ni si el registro
+   * viejo no cumple `coincide`.
    */
-  renombrarRegistro(viejo: string, nuevo: string): void {
+  renombrarRegistro(viejo: string, nuevo: string, o: OpcionesRenombrar = {}): void {
     if (viejo === nuevo) return;
+    const ocupado = (pid: unknown): boolean =>
+      !o.reemplazarMuerto || (typeof pid === 'number' && this.existePid(pid));
     const entrada = this.entradas.get(viejo);
     if (entrada) {
-      if (this.entradas.has(nuevo)) return;
+      if (
+        o.coincide &&
+        !o.coincide({
+          ejecutable: entrada.def.comando,
+          args: entrada.def.args,
+          cwd: entrada.def.cwd,
+        })
+      ) {
+        return;
+      }
+      const otra = this.entradas.get(nuevo);
+      if (otra) {
+        if (ocupado(otra.pid)) return;
+        if (otra.temporizador) clearTimeout(otra.temporizador);
+        this.entradas.delete(nuevo);
+        this.hijos.delete(nuevo);
+      }
       this.entradas.delete(viejo);
       entrada.def = { ...entrada.def, id: nuevo };
       this.entradas.set(nuevo, entrada);
@@ -215,10 +247,23 @@ export class Supervisor {
       return;
     }
     if (!Array.isArray(registros)) return;
-    const lista = registros as { id?: unknown }[];
-    if (lista.some((r) => r?.id === nuevo)) return;
+    let lista = registros as Partial<Record<keyof RegistroEstado, unknown>>[];
     const r = lista.find((x) => x?.id === viejo);
     if (!r) return;
+    if (o.coincide) {
+      const args = Array.isArray(r.args) ? r.args.filter((a) => typeof a === 'string') : [];
+      const ok = o.coincide({
+        ejecutable: typeof r.ejecutable === 'string' ? r.ejecutable : '',
+        args,
+        ...(typeof r.cwd === 'string' ? { cwd: r.cwd } : {}),
+      });
+      if (!ok) return;
+    }
+    const otra = lista.find((x) => x?.id === nuevo);
+    if (otra) {
+      if (ocupado(otra.pid)) return;
+      lista = lista.filter((x) => x !== otra);
+    }
     r.id = nuevo;
     const destino = this.rutas.estado();
     const tmp = `${destino}.tmp`;
