@@ -1732,6 +1732,11 @@ export const en: Textos = {
       dotnet: '.NET',
       go: 'Go',
       rust: 'Rust',
+      bun: 'Bun',
+      deno: 'Deno',
+      zig: 'Zig',
+      kotlin: 'Kotlin',
+      dart: 'Dart',
       versionAuto: 'Whichever is detected',
       servicios: 'Services',
       serviciosNinguno: 'None',
@@ -2799,6 +2804,11 @@ export const en: Textos = {
       dotnet: '.NET',
       go: 'Go',
       rust: 'Rust',
+      bun: 'Bun',
+      deno: 'Deno',
+      zig: 'Zig',
+      kotlin: 'Kotlin',
+      dart: 'Dart',
     },
     ayuda: {
       instancias:

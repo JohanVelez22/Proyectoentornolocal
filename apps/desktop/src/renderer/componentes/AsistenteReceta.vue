@@ -92,6 +92,11 @@ const lenguajes = ref<Record<(typeof LENGUAJES_RUNTIME)[number], string[]>>({
   dotnet: [],
   go: [],
   rust: [],
+  bun: [],
+  deno: [],
+  zig: [],
+  kotlin: [],
+  dart: [],
 });
 
 const visible = computed(() => actual.value !== null);

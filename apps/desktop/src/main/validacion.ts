@@ -97,6 +97,11 @@ const INSTALABLES = [
   'dotnet',
   'go',
   'rust',
+  'bun',
+  'deno',
+  'zig',
+  'kotlin',
+  'dart',
 ] as const;
 
 /** Todo lo que el catálogo puede dejar en bin/ (también herramientas): para `instalados`. */

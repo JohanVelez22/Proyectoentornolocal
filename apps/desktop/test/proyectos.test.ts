@@ -810,7 +810,28 @@ describe('D5: Java, .NET, Go y Rust en el asistente', () => {
     expect(datos.runtimes).toEqual({ go: '1.27.4', java: '21.0.13.1' });
   });
 
-  it('LENGUAJES_RUNTIME son los cuatro del núcleo', () => {
-    expect([...LENGUAJES_RUNTIME]).toEqual(['java', 'dotnet', 'go', 'rust']);
+  it('LENGUAJES_RUNTIME son los nueve del núcleo (D5 y D11)', () => {
+    expect([...LENGUAJES_RUNTIME]).toEqual([
+      'java',
+      'dotnet',
+      'go',
+      'rust',
+      'bun',
+      'deno',
+      'zig',
+      'kotlin',
+      'dart',
+    ]);
+  });
+
+  it('D11: Bun, Deno, Zig, Kotlin y Dart parten sin versión y se guardan al elegirlos', () => {
+    const e = deteccionEditable(deteccion());
+    expect(e).toMatchObject({ bun: null, deno: null, zig: null, kotlin: null, dart: null });
+    const datos = datosSitioInicial(
+      'C:\\Proyectos\\Api',
+      { ...e, deno: '2.9.8', dart: ' 3.14.1 ', zig: '' },
+      null,
+    );
+    expect(datos.runtimes).toEqual({ deno: '2.9.8', dart: '3.14.1' });
   });
 });

@@ -432,7 +432,17 @@ export const sinRestaurar = (pasos: readonly PasoAsistente[]): PasoAsistente[] =
   pasos.filter((p) => p.paso.tipo !== 'bd-restaurar');
 
 /** Lenguajes cuyo runtime se fija por sitio además de Node y Python (D5). */
-export const LENGUAJES_RUNTIME = ['java', 'dotnet', 'go', 'rust'] as const;
+export const LENGUAJES_RUNTIME = [
+  'java',
+  'dotnet',
+  'go',
+  'rust',
+  'bun',
+  'deno',
+  'zig',
+  'kotlin',
+  'dart',
+] as const;
 
 /** Detección editada en el asistente. */
 export interface DeteccionEditable {
@@ -445,6 +455,11 @@ export interface DeteccionEditable {
   dotnet: string | null;
   go: string | null;
   rust: string | null;
+  bun: string | null;
+  deno: string | null;
+  zig: string | null;
+  kotlin: string | null;
+  dart: string | null;
   servicios: Deteccion['servicios'];
   dominio: string;
   /** Solo para el tipo proxy. */
@@ -463,6 +478,11 @@ export function deteccionEditable(d: Deteccion): DeteccionEditable {
     dotnet: null,
     go: null,
     rust: null,
+    bun: null,
+    deno: null,
+    zig: null,
+    kotlin: null,
+    dart: null,
     servicios: [...d.servicios],
     dominio: d.dominioSugerido,
     puertoProxy: null,

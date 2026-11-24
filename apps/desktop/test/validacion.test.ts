@@ -58,7 +58,19 @@ describe('tipos básicos', () => {
 
 describe('D5: runtimes de Java, .NET, Go y Rust', () => {
   it('tipoRuntime acepta los seis y servicioDelCatalogo los cuatro instalables nuevos', () => {
-    for (const t of ['node', 'python', 'java', 'dotnet', 'go', 'rust']) {
+    for (const t of [
+      'node',
+      'python',
+      'java',
+      'dotnet',
+      'go',
+      'rust',
+      'bun',
+      'deno',
+      'zig',
+      'kotlin',
+      'dart',
+    ]) {
       expect(tipoRuntime(t)).toBe(t);
       expect(servicioDelCatalogo(t)).toBe(t);
     }

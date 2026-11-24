@@ -1747,6 +1747,11 @@ export const es = {
       dotnet: '.NET',
       go: 'Go',
       rust: 'Rust',
+      bun: 'Bun',
+      deno: 'Deno',
+      zig: 'Zig',
+      kotlin: 'Kotlin',
+      dart: 'Dart',
       versionAuto: 'La que detecte',
       servicios: 'Servicios',
       serviciosNinguno: 'Ninguno',
@@ -2819,6 +2824,11 @@ export const es = {
       dotnet: '.NET',
       go: 'Go',
       rust: 'Rust',
+      bun: 'Bun',
+      deno: 'Deno',
+      zig: 'Zig',
+      kotlin: 'Kotlin',
+      dart: 'Dart',
     },
     ayuda: {
       instancias:

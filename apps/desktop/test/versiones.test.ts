@@ -366,10 +366,20 @@ describe('servicioDelDialogo', () => {
 
 describe('D5: pestañas de Java, .NET, Go y Rust', () => {
   it('están entre los servicios con versiones y todas tienen nombre en los cuatro idiomas', () => {
-    for (const s of ['java', 'dotnet', 'go', 'rust'] as const) {
+    for (const s of [
+      'java',
+      'dotnet',
+      'go',
+      'rust',
+      'bun',
+      'deno',
+      'zig',
+      'kotlin',
+      'dart',
+    ] as const) {
       expect(SERVICIOS_CON_VERSIONES).toContain(s);
       expect(esServicioConVersiones(s)).toBe(true);
     }
-    expect(SERVICIOS_CON_VERSIONES).toHaveLength(17);
+    expect(SERVICIOS_CON_VERSIONES).toHaveLength(22);
   });
 });
