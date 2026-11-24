@@ -40,6 +40,8 @@ export const POR_PAGINA = 10;
 
 export interface OpcionesGithub {
   servicio: ServicioInstalable;
+  /** Prefijo de la etiqueta antes de la versión (`bun-v` en `bun-v1.4.5`); por defecto, `v` opcional. */
+  prefijoTag?: string;
   dueno: string;
   repo: string;
   /** Nombre del asset de Windows x64 para esa versión. */
@@ -50,7 +52,7 @@ export interface OpcionesGithub {
 }
 
 /** Archivos de sumas que publican algunas releases junto a los binarios. */
-const SUMAS = /^(sha256sums?|checksums?|sha256)(\.txt)?$|\.sha256(sum)?$/i;
+const SUMAS = /^(sha256sums?|shasums256|checksums?|sha256)(\.txt)?$|\.sha256(sum)?$/i;
 
 async function sumaPublicada(
   ctx: ContextoFuente,
@@ -122,7 +124,11 @@ export function fuenteGithub(o: OpcionesGithub): FuenteVersiones {
       const salida: VersionDisponible[] = [];
       for (const r of crudo.data) {
         if (r.draft) continue;
-        const version = r.tag_name.replace(/^v/, '');
+        let version = r.tag_name.replace(/^v/, '');
+        if (o.prefijoTag !== undefined) {
+          if (!r.tag_name.startsWith(o.prefijoTag)) continue;
+          version = r.tag_name.slice(o.prefijoTag.length);
+        }
         // Etiquetas que no son versiones ("nightly", "latest") no se ofrecen.
         if (!claveValida(version)) continue;
         // Todo asset que apunte fuera del repositorio esperado delata un índice manipulado.

@@ -29,7 +29,12 @@ export type ServicioInstalable =
   | 'java'
   | 'dotnet'
   | 'go'
-  | 'rust';
+  | 'rust'
+  | 'bun'
+  | 'deno'
+  | 'zig'
+  | 'kotlin'
+  | 'dart';
 
 /** Con 'archivo' la descarga se copia tal cual con el nombre de `ejecutable`. */
 export type FormatoPaquete = 'zip' | 'exe' | 'archivo';
@@ -57,6 +62,12 @@ export const EJECUTABLE_POR_SERVICIO: Record<ServicioInstalable, string> = {
   go: `bin/${nombreEjecutable('go')}`,
   // rustup-init: lo que se descarga; el resultado (toolchains) lo instala `InstaladorRust`.
   rust: nombreEjecutable('rustup-init'),
+  bun: nombreEjecutable('bun'),
+  deno: nombreEjecutable('deno'),
+  zig: nombreEjecutable('zig'),
+  // El compilador de Kotlin es un script `.bat` dentro de `kotlinc/bin`.
+  kotlin: 'bin/kotlinc.bat',
+  dart: `bin/${nombreEjecutable('dart')}`,
 };
 
 export function ejecutableDe(servicio: string): string | undefined {
@@ -206,6 +217,11 @@ export const CatalogoSchema = z.object({
   dotnet: ListaFuerte,
   go: ListaFuerte,
   rust: Lista,
+  bun: ListaFuerte,
+  deno: ListaFuerte,
+  zig: ListaFuerte,
+  kotlin: ListaFuerte,
+  dart: ListaFuerte,
   extensionesPhp: z.array(ExtensionPhpSchema).default([]),
 });
 

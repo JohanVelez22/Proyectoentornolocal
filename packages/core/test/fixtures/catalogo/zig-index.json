@@ -1,0 +1,74 @@
+{
+  "master": {
+    "date": "2026-11-23",
+    "x86_64-windows": {
+      "tarball": "https://ziglang.org/builds/zig-x86_64-windows-0.18.0-dev.1279+81de6a1c6.zip",
+      "shasum": "08ae17da79c203b2d9698e784c603cd52bf5fc90396a9ef85fa67d461daaa406",
+      "size": "103265537"
+    }
+  },
+  "0.17.1": {
+    "date": "2026-11-02",
+    "x86_64-windows": {
+      "tarball": "https://ziglang.org/download/0.17.1/zig-x86_64-windows-0.17.1.zip",
+      "shasum": "b03f477a1943673e02aca0f570e8030dffd536ce1f45cbc4d3326ec31159562e",
+      "size": "100343666"
+    }
+  },
+  "0.17.0": {
+    "date": "2026-10-01",
+    "x86_64-windows": {
+      "tarball": "https://ziglang.org/download/0.17.0/zig-x86_64-windows-0.17.0.zip",
+      "shasum": "b5663f69581dcf391293fbf16c06cb80d81d806545ce618b4d0bab7f0eb8c428",
+      "size": "100268137"
+    }
+  },
+  "0.16.0": {
+    "date": "2026-04-13",
+    "x86_64-windows": {
+      "tarball": "https://ziglang.org/download/0.16.0/zig-x86_64-windows-0.16.0.zip",
+      "shasum": "68659eb5f1e4eb1437a722f1dd889c5a322c9954607f5edcf337bc3684a75a7e",
+      "size": "97217739"
+    }
+  },
+  "0.15.2": {
+    "date": "2025-10-11",
+    "x86_64-windows": {
+      "tarball": "https://ziglang.org/download/0.15.2/zig-x86_64-windows-0.15.2.zip",
+      "shasum": "3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c",
+      "size": "92614574"
+    }
+  },
+  "0.15.1": {
+    "date": "2025-08-19",
+    "x86_64-windows": {
+      "tarball": "https://ziglang.org/download/0.15.1/zig-x86_64-windows-0.15.1.zip",
+      "shasum": "91e69e887ca8c943ce9a515df3af013d95a66a190a3df3f89221277ebad29e34",
+      "size": "92612958"
+    }
+  },
+  "0.14.1": {
+    "date": "2025-05-21",
+    "x86_64-windows": {
+      "tarball": "https://ziglang.org/download/0.14.1/zig-x86_64-windows-0.14.1.zip",
+      "shasum": "554f5378228923ffd558eac35e21af020c73789d87afeabf4bfd16f2e6feed2c",
+      "size": "82229343"
+    }
+  },
+  "0.14.0": {
+    "date": "2025-03-05",
+    "x86_64-windows": {
+      "tarball": "https://ziglang.org/download/0.14.0/zig-windows-x86_64-0.14.0.zip",
+      "shasum": "f53e5f9011ba20bbc3e0e6d0a9441b31eb227a97bac0e7d24172f1b8b27b4371",
+      "size": "82219809"
+    }
+  },
+  "0.13.0": {
+    "date": "2024-06-07",
+    "x86_64-windows": {
+      "tarball": "https://ziglang.org/download/0.13.0/zig-windows-x86_64-0.13.0.zip",
+      "shasum": "d859994725ef9402381e557c60bb57497215682e355204d754ee3df75ee3c158",
+      "size": "79163968"
+    }
+  }
+}

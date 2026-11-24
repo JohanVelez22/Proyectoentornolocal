@@ -19,11 +19,16 @@ import {
   rutaRelativaSegura,
   urlOficial,
 } from './comun';
+import { fuenteBun } from './fuentes/bun';
 import { fuenteComposer } from './fuentes/composer';
+import { fuenteDart } from './fuentes/dart';
+import { fuenteDeno } from './fuentes/deno';
 import { fuenteDotnet } from './fuentes/dotnet';
 import { fuenteGo } from './fuentes/go';
 import { fuenteJava } from './fuentes/java';
+import { fuenteKotlin } from './fuentes/kotlin';
 import { fuenteRust } from './fuentes/rust';
+import { fuenteZig } from './fuentes/zig';
 import {
   fuenteCloudflared,
   fuenteMailpit,
@@ -56,6 +61,11 @@ export const FUENTES_VERSIONES: Partial<Record<ServicioInstalable, FuenteVersion
   dotnet: fuenteDotnet,
   go: fuenteGo,
   rust: fuenteRust,
+  bun: fuenteBun,
+  deno: fuenteDeno,
+  zig: fuenteZig,
+  kotlin: fuenteKotlin,
+  dart: fuenteDart,
   composer: fuenteComposer,
   mailpit: fuenteMailpit,
   ollama: fuenteOllama,

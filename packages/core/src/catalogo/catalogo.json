@@ -205,6 +205,55 @@
       "ejecutable": "rustup-init.exe"
     }
   ],
+  "bun": [
+    {
+      "version": "1.4.5",
+      "url": "https://github.com/oven-sh/bun/releases/download/bun-v1.4.5/bun-windows-x64.zip",
+      "sha256": "815ab45ec7f549abf87e6869584b506eab088e24225683957b7e150b47d6de30",
+      "formato": "zip",
+      "subcarpeta": "bun-windows-x64",
+      "ejecutable": "bun.exe"
+    }
+  ],
+  "deno": [
+    {
+      "version": "2.9.8",
+      "url": "https://github.com/denoland/deno/releases/download/v2.9.8/deno-x86_64-pc-windows-msvc.zip",
+      "sha256": "cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf",
+      "formato": "zip",
+      "ejecutable": "deno.exe"
+    }
+  ],
+  "zig": [
+    {
+      "version": "0.17.1",
+      "url": "https://ziglang.org/download/0.17.1/zig-x86_64-windows-0.17.1.zip",
+      "sha256": "b03f477a1943673e02aca0f570e8030dffd536ce1f45cbc4d3326ec31159562e",
+      "formato": "zip",
+      "subcarpeta": "zig-x86_64-windows-0.17.1",
+      "ejecutable": "zig.exe"
+    }
+  ],
+  "kotlin": [
+    {
+      "version": "2.4.21",
+      "url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.21/kotlin-compiler-2.4.21.zip",
+      "sha256": "7cc140e76daf416a0424a5557f99afd7ca89ebd463ea1101261e3e01c33e75cd",
+      "formato": "zip",
+      "subcarpeta": "kotlinc",
+      "ejecutable": "bin/kotlinc.bat"
+    }
+  ],
+  "dart": [
+    {
+      "version": "3.14.1",
+      "url": "https://storage.googleapis.com/dart-archive/channels/stable/release/3.14.1/sdk/dartsdk-windows-x64-release.zip",
+      "sha256": "fb2550f71e3408f2a69ff6ee29573f341991a927f8bc9ad0601dd3c9b19945c8",
+      "formato": "zip",
+      "subcarpeta": "dart-sdk",
+      "ejecutable": "bin/dart.exe"
+    }
+  ],
   "extensionesPhp": [
     {
       "nombre": "xdebug",

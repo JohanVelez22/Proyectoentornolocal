@@ -1,0 +1,222 @@
+[
+  {
+    "tag_name": "v2.9.8",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "deno-aarch64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.8/deno-aarch64-pc-windows-msvc.zip",
+        "digest": "sha256:b413b92b735b50c198e8fe3b85af1aa50e29d5f72e229aab701d132286e14cef"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.8/deno-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.8/deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "digest": "sha256:0fdedd625087373992be0dff62a3c3a3a9b254a0cf01d46d54c559c451c86413"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.9.7",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "deno-aarch64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.7/deno-aarch64-pc-windows-msvc.zip",
+        "digest": "sha256:c4c4ac8bfdaa37814bda5c05fc9cdf2154904e2ef8277673a30bdceaaa649807"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.7/deno-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:a0c3101b4158d1dfb7d6a78a7bf0f3de80c96bb423c152beec8beb22786f2238"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.7/deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "digest": "sha256:05f3e85ba3c6fdd78c15444fa0611c4957c2333693a71624bd33e226495e3f61"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.9.6",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "deno-aarch64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.6/deno-aarch64-pc-windows-msvc.zip",
+        "digest": "sha256:acb014afe2299847764e232b4993e162e3946cdeec36603e3f1a0b548cd1ea55"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.6/deno-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:15e5300b0ba3c3695a7621d90160a746ec9e710228cee639afa9d580f6e3cd11"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.6/deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "digest": "sha256:da4c827802a5a17f24fddce4e2a124ae86353c435687eb49ef448307b79e9ce3"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.9.5",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "deno-aarch64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.5/deno-aarch64-pc-windows-msvc.zip",
+        "digest": "sha256:73f20b3566a0a6e3f6912fd7bf5b3a7ccd04d68414baedea3b397437bdec6472"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.5/deno-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:171efab55ac6b9881fd53ee4c20f8bf3bb1340ffc618483746909014db12216a"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.5/deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "digest": "sha256:8616cbda331796828c738f61635a8cb988c9f4fe8b30cd619a64ce47b2e8e993"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.9.4",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "deno-aarch64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.4/deno-aarch64-pc-windows-msvc.zip",
+        "digest": "sha256:7c8c94a603c7de90a4c41fa9b87d31bc9d3c91fb84af65dadacc8cdd97d365d4"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.4/deno-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:68ed08b05c56cf887e9aa509947dc3f468f7e12f47a13e5c1abd51d46d1453ef"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.4/deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "digest": "sha256:5ee7c0cc6b9e4bd16cfad50ca5e3228acfc27c967c56aaac799cd2a2131e65ae"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.9.3",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "deno-aarch64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.3/deno-aarch64-pc-windows-msvc.zip",
+        "digest": "sha256:bc668f199e4892f4447661f253178af007a4d715b0ff67493573b0e0216389ae"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.3/deno-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:60343461ac5fe3a31f4ef12667f2946bb852e20655c8610aeb7e751e87f7df3a"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.3/deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "digest": "sha256:6113245d27815c2223f69a8bbea96aa3a6a55d4cb8b5467cc4f8b98c81b26346"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.9.2",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "deno-aarch64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.2/deno-aarch64-pc-windows-msvc.zip",
+        "digest": "sha256:28b57dc03be79ec312ee7baf30678865d84c7cb3764ac7da36e242abea6b3b1d"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.2/deno-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:5fe194d26ac5ef77fcc5288c2c438c7a0465f3b6180440ebf04092714bf2dcdf"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.2/deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "digest": "sha256:6f604510ce8ff7579a8ec51aa30376c04a2aa37dcaa7446fbd37d7a452a5e150"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.9.1",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "deno-aarch64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.1/deno-aarch64-pc-windows-msvc.zip",
+        "digest": "sha256:57e282c6f8e92a8b79f570b37b5962bcd347ab49471e1dbc97ffbd4af3d36632"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.1/deno-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:ab310b4232cca207d40ffa41867e93aaf9f893802bc76756e74f486a6b21b371"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.1/deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "digest": "sha256:ad32c513b4c7622d5b614538888ff9aa9564e267378e73a78b332675a5a96b5a"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.9.0",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "deno-aarch64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.0/deno-aarch64-pc-windows-msvc.zip",
+        "digest": "sha256:de3d31811dd583d6b15746db1463bebc204118aa0e8b3fe2b5ecc488ed198cbf"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.0/deno-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:37e3a8e5f4ee360d08bbeec9ee07fdcaa9dcd1a39d4aeaac5807354aec557451"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.9.0/deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "digest": "sha256:e758f013eb07aac3b217a6e1524c63c18ed1a2db27a8460438ba800c2eed2271"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.8.3",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "deno-aarch64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.8.3/deno-aarch64-pc-windows-msvc.zip",
+        "digest": "sha256:243f478ac577ade1bbd980ecf510607a10ed8cc977b462083ada48e5f6580de1"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.8.3/deno-x86_64-pc-windows-msvc.zip",
+        "digest": "sha256:7fdd1f42e6b0855421ecf27bb406e2492ade1087c85e30ebf0deab6280ea743c"
+      },
+      {
+        "name": "deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "browser_download_url": "https://github.com/denoland/deno/releases/download/v2.8.3/deno-x86_64-pc-windows-msvc.zip.sha256sum",
+        "digest": "sha256:9a0c7ddd8662ebb3a7ca67ea5ecccf4f0558a5bd0daadd73690b275bd055310a"
+      }
+    ]
+  }
+]

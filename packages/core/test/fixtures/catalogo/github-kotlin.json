@@ -1,0 +1,192 @@
+[
+  {
+    "tag_name": "v2.5.0-RC",
+    "draft": false,
+    "prerelease": true,
+    "assets": [
+      {
+        "name": "kotlin-compiler-2.5.0-RC.zip",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.5.0-RC/kotlin-compiler-2.5.0-RC.zip",
+        "digest": "sha256:687132a8ecf08bfd042c69fbe89fe120984abecb59e117dc20ec874eb4e2d644"
+      },
+      {
+        "name": "kotlin-compiler-2.5.0-RC.zip.sha256",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.5.0-RC/kotlin-compiler-2.5.0-RC.zip.sha256",
+        "digest": "sha256:5306f9b51b2682f0ed525b29dcb776094fbabf8152f6c3b8a8de692995e98181"
+      },
+      {
+        "name": "kotlin-compiler-graalvm-native-image-windows-x86_64-2.5.0-RC.zip",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.5.0-RC/kotlin-compiler-graalvm-native-image-windows-x86_64-2.5.0-RC.zip",
+        "digest": "sha256:a21fc9b4be014380395dd311fbf21bfef4b802d923874a4767fcd078118c129f"
+      },
+      {
+        "name": "kotlin-compiler-graalvm-native-image-windows-x86_64-2.5.0-RC.zip.sha256",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.5.0-RC/kotlin-compiler-graalvm-native-image-windows-x86_64-2.5.0-RC.zip.sha256",
+        "digest": "sha256:e52ed3fb2a864c222718fc5cf7b4fe2f86190ecb3e032f07cf6f3425f3aa342a"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.5.0-Beta2",
+    "draft": false,
+    "prerelease": true,
+    "assets": [
+      {
+        "name": "kotlin-compiler-2.5.0-Beta2.zip",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.5.0-Beta2/kotlin-compiler-2.5.0-Beta2.zip",
+        "digest": "sha256:715265cd7af26520e78188b1c71c409d4ad7bb1272d41509f57271aae3e46716"
+      },
+      {
+        "name": "kotlin-compiler-2.5.0-Beta2.zip.sha256",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.5.0-Beta2/kotlin-compiler-2.5.0-Beta2.zip.sha256",
+        "digest": "sha256:077a1288efdffddab9e963ec2eccb2e1fc4ec3df4f2dae6b05b5bba764047ebf"
+      },
+      {
+        "name": "kotlin-compiler-graalvm-native-image-windows-x86_64-2.5.0-Beta2.zip",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.5.0-Beta2/kotlin-compiler-graalvm-native-image-windows-x86_64-2.5.0-Beta2.zip",
+        "digest": "sha256:1f2b31d912d2610442b1259d59b7dd9bc21a14e2c891739de34d88c4fb17f6e9"
+      },
+      {
+        "name": "kotlin-compiler-graalvm-native-image-windows-x86_64-2.5.0-Beta2.zip.sha256",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.5.0-Beta2/kotlin-compiler-graalvm-native-image-windows-x86_64-2.5.0-Beta2.zip.sha256",
+        "digest": "sha256:476dc5a021fd9afd1eae888514bca6d353588ed65ed0efad8e69355786b88f2a"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.4.21",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "kotlin-compiler-2.4.21.zip",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.21/kotlin-compiler-2.4.21.zip",
+        "digest": "sha256:7cc140e76daf416a0424a5557f99afd7ca89ebd463ea1101261e3e01c33e75cd"
+      },
+      {
+        "name": "kotlin-compiler-2.4.21.zip.sha256",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.21/kotlin-compiler-2.4.21.zip.sha256",
+        "digest": "sha256:69012ce92719f8fa0524ca69954e2c36800edd76c8cd7f74965550e53650ac05"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.4.21-RC",
+    "draft": false,
+    "prerelease": true,
+    "assets": [
+      {
+        "name": "kotlin-compiler-2.4.21-RC.zip",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.21-RC/kotlin-compiler-2.4.21-RC.zip",
+        "digest": "sha256:2b9a00af1162c3a7d6e005c10633bf363da050f1779ca79cc06558764c8dcb3f"
+      },
+      {
+        "name": "kotlin-compiler-2.4.21-RC.zip.sha256",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.21-RC/kotlin-compiler-2.4.21-RC.zip.sha256",
+        "digest": "sha256:86115c832f02c8ea6042a6a0dde0547c2de7aeefb5c0b7a88d8a1af0bb8ab7b0"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.5.0-Beta1",
+    "draft": false,
+    "prerelease": true,
+    "assets": [
+      {
+        "name": "kotlin-compiler-2.5.0-Beta1.zip",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.5.0-Beta1/kotlin-compiler-2.5.0-Beta1.zip",
+        "digest": "sha256:7b3321fa33ba3173b9e3bb88e5222fb805cf1f15af56904ad85d84b187a66e46"
+      },
+      {
+        "name": "kotlin-compiler-2.5.0-Beta1.zip.sha256",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.5.0-Beta1/kotlin-compiler-2.5.0-Beta1.zip.sha256",
+        "digest": "sha256:72124a4bc9d0e3c4e53d6b62924e13ebaaf2333412641260adafaaeb12e2419e"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.4.20",
+    "draft": false,
+    "prerelease": false,
+    "assets": [
+      {
+        "name": "kotlin-compiler-2.4.20.zip",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.20/kotlin-compiler-2.4.20.zip",
+        "digest": "sha256:59e9ca74c7904ef2c122b12114937673ccce68de820a663f0ed66ccf8799e0b7"
+      },
+      {
+        "name": "kotlin-compiler-2.4.20.zip.sha256",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.20/kotlin-compiler-2.4.20.zip.sha256",
+        "digest": "sha256:723bf22c9ebb35506e79ee55d3abd198d27df06d75ba02e2cb1b47a861f6ea7f"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.4.20-RC3",
+    "draft": false,
+    "prerelease": true,
+    "assets": [
+      {
+        "name": "kotlin-compiler-2.4.20-RC3.zip",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.20-RC3/kotlin-compiler-2.4.20-RC3.zip",
+        "digest": "sha256:36226f4d126e057d2432811b587b98b0c711b9fd97058dc4bd05e1a1c301f451"
+      },
+      {
+        "name": "kotlin-compiler-2.4.20-RC3.zip.sha256",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.20-RC3/kotlin-compiler-2.4.20-RC3.zip.sha256",
+        "digest": "sha256:05af1fc81a9788d0683f55bfe58517140d8c70f835b0f01d0795984ef4a2f330"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.4.20-RC2",
+    "draft": false,
+    "prerelease": true,
+    "assets": [
+      {
+        "name": "kotlin-compiler-2.4.20-RC2.zip",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.20-RC2/kotlin-compiler-2.4.20-RC2.zip",
+        "digest": "sha256:66b1729329f533e377349d86227ac8f0190975c5a724fdf9385e777dc59710c8"
+      },
+      {
+        "name": "kotlin-compiler-2.4.20-RC2.zip.sha256",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.20-RC2/kotlin-compiler-2.4.20-RC2.zip.sha256",
+        "digest": "sha256:b9a0a9f76917d67d05d3415c06c4ea4cca9af68d82ef5a0313d040c85a24499d"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.4.20-RC",
+    "draft": false,
+    "prerelease": true,
+    "assets": [
+      {
+        "name": "kotlin-compiler-2.4.20-RC.zip",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.20-RC/kotlin-compiler-2.4.20-RC.zip",
+        "digest": "sha256:6af0b9416ceca23049171a7480f17683ba0dcae3ca9688414c01eb3185976c78"
+      },
+      {
+        "name": "kotlin-compiler-2.4.20-RC.zip.sha256",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.20-RC/kotlin-compiler-2.4.20-RC.zip.sha256",
+        "digest": "sha256:103e40240aef86ced24ccc7e9682a8d1af3ee6f595484fe75017b5fa7da549f0"
+      }
+    ]
+  },
+  {
+    "tag_name": "v2.4.20-Beta2",
+    "draft": false,
+    "prerelease": true,
+    "assets": [
+      {
+        "name": "kotlin-compiler-2.4.20-Beta2.zip",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.20-Beta2/kotlin-compiler-2.4.20-Beta2.zip",
+        "digest": "sha256:5dd3a724b59ce9d62234187d27d936cd7cb64025ff914cb764a9a35901531989"
+      },
+      {
+        "name": "kotlin-compiler-2.4.20-Beta2.zip.sha256",
+        "browser_download_url": "https://github.com/JetBrains/kotlin/releases/download/v2.4.20-Beta2/kotlin-compiler-2.4.20-Beta2.zip.sha256",
+        "digest": "sha256:2f5b0e9fbc2b97e716ee9e078c4b27c33fe654ba30b7ca6624dc360e225c21b2"
+      }
+    ]
+  }
+]

@@ -41,6 +41,8 @@ describe('hosts y huellas', () => {
         'builds.dotnet.microsoft.com',
         'go.dev',
         'static.rust-lang.org',
+        'ziglang.org',
+        'storage.googleapis.com',
       ].sort(),
     );
     expect(HOSTS_PERMITIDOS).toContain('release-assets.githubusercontent.com');

@@ -28,6 +28,9 @@ export const HOSTS_PERMITIDOS: readonly string[] = [
   // go.dev/dl/… redirige aquí.
   'dl.google.com',
   'static.rust-lang.org',
+  // Zig (zip y firma) y Dart (bucket `dart-archive` de Google Cloud Storage; solo esa ruta).
+  'ziglang.org',
+  'storage.googleapis.com',
   // Xdebug: DLL oficiales por rama y variante (catálogo de extensiones de PHP).
   'xdebug.org',
 ];
@@ -60,17 +63,36 @@ export const HOSTS_INDICE: readonly string[] = [
   'builds.dotnet.microsoft.com',
   'go.dev',
   'static.rust-lang.org',
+  // Zig: index.json; Dart: listado JSON del bucket y sumas (solo las rutas de `RUTAS_ACOTADAS`).
+  'ziglang.org',
+  'storage.googleapis.com',
 ];
+
+/**
+ * Hosts compartidos por muchos dueños (un bucket cualquiera de Google Cloud Storage cuelga del
+ * mismo host): además del host se exige que la ruta empiece por uno de estos prefijos. Se aplica
+ * a cada salto de una redirección.
+ */
+export const RUTAS_ACOTADAS: Readonly<Record<string, readonly string[]>> = {
+  'storage.googleapis.com': [
+    '/dart-archive/channels/stable/release/',
+    '/storage/v1/b/dart-archive/o',
+  ],
+};
 
 function urlEn(texto: string, hosts: readonly string[]): boolean {
   try {
     const u = new URL(texto);
+    const prefijos = Object.hasOwn(RUTAS_ACOTADAS, u.hostname)
+      ? RUTAS_ACOTADAS[u.hostname]
+      : undefined;
     return (
       u.protocol === 'https:' &&
       hosts.includes(u.hostname) &&
       u.username === '' &&
       u.password === '' &&
-      u.port === ''
+      u.port === '' &&
+      (prefijos === undefined || prefijos.some((p) => u.pathname.startsWith(p)))
     );
   } catch {
     return false;
