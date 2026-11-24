@@ -44,7 +44,7 @@ const resultado = computed(() => {
 </script>
 
 <template>
-  <article class="hallazgo" :class="hallazgo.gravedad">
+  <article class="hallazgo" :class="hallazgo.gravedad" :data-foco="`hallazgo:${hallazgo.id}`">
     <header class="cabeza">
       <NTag size="small" :type="TONO[hallazgo.gravedad]" :bordered="false">
         {{ t.revisiones[hallazgo.revision] }}

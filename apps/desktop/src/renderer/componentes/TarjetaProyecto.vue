@@ -301,7 +301,7 @@ function abrirCarpeta(): void {
 </script>
 
 <template>
-  <article class="fila" :class="{ reales: sitio.datosReales }">
+  <article class="fila" :class="{ reales: sitio.datosReales }" :data-foco="`sitio:${sitio.id}`">
     <div class="principal">
       <EstadoPunto :estado="estado.punto" :etiqueta="estado.etiqueta" solo-punto class="punto" />
       <div class="cuerpo">

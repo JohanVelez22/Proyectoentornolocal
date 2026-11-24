@@ -17,6 +17,7 @@ import type { Hallazgo, Reparacion } from '../../shared/api';
 import { api } from '../api';
 import TarjetaHallazgo from '../componentes/TarjetaHallazgo.vue';
 import { useAccion } from '../composables/useAccion';
+import { useFoco } from '../composables/useFoco';
 import { textos } from '../i18n';
 import { useDoctor } from '../stores/doctor';
 import { textoReparacion } from '../utilidades/doctor';
@@ -27,6 +28,7 @@ const tc = textos.doctor.confianza;
 const doctor = useDoctor();
 const message = useMessage();
 const { ejecutar, ocupado } = useAccion();
+useFoco();
 
 onMounted(() => {
   void ejecutar('cargar', () => doctor.cargar());

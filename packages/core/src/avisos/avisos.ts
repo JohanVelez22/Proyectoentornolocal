@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Eventos, EventosNucleo } from '../eventos';
+import { separarIdSupervisor } from '../proyectos/procesos';
 import { sanear } from '../proyectos/recetas';
 
 import { TIPOS_AVISO, type TipoAviso } from './tipos';
@@ -18,6 +19,8 @@ export interface AccionAviso {
   /** Nombre de la pantalla (o acción dotada, p. ej. `servicios.versiones`) a la que lleva el aviso. */
   ruta: string;
   args?: unknown[];
+  /** Elemento al que la pantalla hace scroll y resalta (`servicio:<id>`, `sitio:<id>`…). */
+  foco?: string;
 }
 
 export interface Aviso {
@@ -70,6 +73,18 @@ function datosSeguros(d: unknown): DatosAviso {
   return res;
 }
 
+/** Foco de un proceso de proyecto (`proceso:<sitio>:<proceso>`); sin proceso reconocible, el sitio. */
+function focoProceso(idSupervisor: string, sitioId: string): string {
+  const p = separarIdSupervisor(idSupervisor);
+  return p ? `proceso:${p.sitioId}:${p.procesoId}` : `sitio:${sitioId}`;
+}
+
+/** Foco de un servicio que cae: el servicio del sistema o el proceso del proyecto. */
+function focoDe(id: string, proyecto: boolean): string {
+  const p = proyecto ? separarIdSupervisor(id) : null;
+  return p ? `proceso:${p.sitioId}:${p.procesoId}` : `servicio:${id}`;
+}
+
 /** Entrada válida del archivo, o null (un archivo editado a mano no debe romper el arranque). */
 function leerAviso(x: unknown): Aviso | null {
   if (typeof x !== 'object' || x === null) return null;
@@ -78,7 +93,7 @@ function leerAviso(x: unknown): Aviso | null {
   if (typeof o['codigo'] !== 'string' || typeof o['leido'] !== 'boolean') return null;
   if (!NIVELES.includes(o['nivel'] as NivelAviso)) return null;
   if (!TIPOS_AVISO.includes(o['tipo'] as TipoAviso)) return null;
-  const a = o['accion'] as { ruta?: unknown; args?: unknown } | undefined;
+  const a = o['accion'] as { ruta?: unknown; args?: unknown; foco?: unknown } | undefined;
   return {
     id: o['id'],
     nivel: o['nivel'] as NivelAviso,
@@ -88,7 +103,13 @@ function leerAviso(x: unknown): Aviso | null {
     fecha: o['fecha'],
     leido: o['leido'],
     ...(a && typeof a.ruta === 'string'
-      ? { accion: { ruta: a.ruta, ...(Array.isArray(a.args) ? { args: a.args } : {}) } }
+      ? {
+          accion: {
+            ruta: a.ruta,
+            ...(Array.isArray(a.args) ? { args: a.args } : {}),
+            ...(typeof a.foco === 'string' && a.foco.length <= MAX_TEXTO ? { foco: a.foco } : {}),
+          },
+        }
       : {}),
   };
 }
@@ -238,7 +259,7 @@ export function conectarFuentesAvisos(
         tipo: proyecto ? 'proceso-error' : 'servicio-caido',
         codigo: proyecto ? 'avisos.proceso_error' : 'avisos.servicio_caido',
         datos: { fuente: e.id, nombre: e.nombre },
-        accion: { ruta: proyecto ? 'proyectos' : 'servicios' },
+        accion: { ruta: proyecto ? 'proyectos' : 'servicios', foco: focoDe(e.id, proyecto) },
       });
     }),
     // Un proceso de proyecto que termina sin reinicio: código 0 = terminó bien, otro = falló.
@@ -252,7 +273,7 @@ export function conectarFuentesAvisos(
           tipo: 'proceso-terminado',
           codigo: 'avisos.proceso_terminado',
           datos: base,
-          accion: { ruta: 'proyectos' },
+          accion: { ruta: 'proyectos', foco: focoProceso(e.id, e.sitioId) },
         });
         return;
       }
@@ -261,7 +282,7 @@ export function conectarFuentesAvisos(
         tipo: 'proceso-error',
         codigo: 'avisos.proceso_fallo',
         datos: { ...base, ...(e.codigo === null ? {} : { codigoSalida: e.codigo }) },
-        accion: { ruta: 'proyectos' },
+        accion: { ruta: 'proyectos', foco: focoProceso(e.id, e.sitioId) },
       });
     }),
     // Una receta que llegó al final: lista o con un paso en error (cancelar no avisa).
@@ -273,7 +294,7 @@ export function conectarFuentesAvisos(
         codigo: bien ? 'avisos.receta_terminada' : 'avisos.receta_fallo',
         // Éxito y fallo no se agrupan entre sí: reintentar y que salga bien debe avisar.
         datos: { fuente: `${e.sitioId}#${e.estado}`, sitio: e.sitioId },
-        accion: { ruta: 'proyectos' },
+        accion: { ruta: 'proyectos', foco: `sitio:${e.sitioId}` },
       });
     }),
     eventos.on('tunel:estado', (e) => {
@@ -285,7 +306,7 @@ export function conectarFuentesAvisos(
         tipo: 'tunel-caido',
         codigo: 'avisos.tunel_caido',
         datos: { fuente: e.sitioId },
-        accion: { ruta: 'tuneles' },
+        accion: { ruta: 'tuneles', foco: `sitio:${e.sitioId}` },
       });
     }),
   ];

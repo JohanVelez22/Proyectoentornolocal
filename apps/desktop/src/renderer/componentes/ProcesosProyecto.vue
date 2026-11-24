@@ -277,7 +277,12 @@ function quitar(p: ProcesoProyectoPublico): void {
     </div>
     <p v-if="!sitio.procesos.length" class="vacio">{{ t.ninguno }}</p>
     <ul v-else class="lista">
-      <li v-for="p in sitio.procesos" :key="p.id" class="proceso">
+      <li
+        v-for="p in sitio.procesos"
+        :key="p.id"
+        class="proceso"
+        :data-foco="`proceso:${sitio.id}:${p.id}`"
+      >
         <div class="fila">
           <NSwitch
             size="small"

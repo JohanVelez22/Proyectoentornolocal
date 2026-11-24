@@ -11,6 +11,7 @@ import RegistrosProyecto from '../componentes/RegistrosProyecto.vue';
 import SugerenciasProyectos from '../componentes/SugerenciasProyectos.vue';
 import TarjetaProyecto from '../componentes/TarjetaProyecto.vue';
 import { useAccion } from '../composables/useAccion';
+import { useFoco } from '../composables/useFoco';
 import { solicitudes } from '../composables/solicitudes';
 import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import { textos } from '../i18n';
@@ -35,6 +36,7 @@ const proyectos = useProyectos();
 const servicios = useServicios();
 const https = useHttps();
 const { ejecutar } = useAccion();
+useFoco();
 
 /** El buscador solo aparece cuando la lista ya no se abarca de un vistazo. */
 const UMBRAL_BUSCADOR = 5;

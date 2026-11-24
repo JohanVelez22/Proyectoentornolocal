@@ -35,6 +35,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { argsDeAviso, useVersiones } from '../stores/versiones';
+import { rutaConFoco } from '../utilidades/foco';
 import { solicitudes } from '../composables/solicitudes';
 import AsistenteInicio from './AsistenteInicio.vue';
 import CampanaAvisos from './CampanaAvisos.vue';
@@ -131,7 +132,8 @@ function abrirAviso(a: Aviso): void {
   if (ruta === 'servicios.versiones') {
     const args = argsDeAviso(a.accion?.args);
     if (!args) {
-      void router.push({ name: ruta });
+      const foco = a.accion?.foco;
+      void router.push(foco ? rutaConFoco(ruta, foco) : { name: ruta });
       return;
     }
     void router
@@ -140,7 +142,9 @@ function abrirAviso(a: Aviso): void {
       .catch(() => undefined);
     return;
   }
-  if (ruta && router.hasRoute(ruta)) void router.push({ name: ruta });
+  if (!ruta || !router.hasRoute(ruta)) return;
+  const foco = a.accion?.foco;
+  void router.push(foco ? rutaConFoco(ruta, foco) : { name: ruta });
 }
 
 // Primer uso: el asistente se abre solo una vez, con el entorno ya leído y sin proyectos.

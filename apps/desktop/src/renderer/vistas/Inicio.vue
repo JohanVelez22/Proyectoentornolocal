@@ -18,6 +18,7 @@ import AvisoHosts from '../componentes/AvisoHosts.vue';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import PanelRendimiento from '../componentes/PanelRendimiento.vue';
 import { useAccion } from '../composables/useAccion';
+import { useFoco } from '../composables/useFoco';
 import { useNoLeidos } from '../composables/useNoLeidos';
 import { textos } from '../i18n';
 import { useHosts } from '../stores/hosts';
@@ -28,6 +29,7 @@ import { useTuneles } from '../stores/tuneles';
 
 const t = textos.inicio;
 const router = useRouter();
+useFoco();
 const servicios = useServicios();
 const sitios = useSitios();
 const tuneles = useTuneles();
@@ -196,7 +198,7 @@ function abrir(url: string): void {
           </NButton>
         </template>
         <ul v-if="servicios.lista.length" class="lista">
-          <li v-for="s in servicios.lista" :key="s.id">
+          <li v-for="s in servicios.lista" :key="s.id" :data-foco="`servicio:${s.id}`">
             <span class="nombre">{{ s.nombre }}</span>
             <span class="meta">{{ s.puertos.join(' · ') }}</span>
             <EstadoPunto :estado="s.estado" />
@@ -207,7 +209,7 @@ function abrir(url: string): void {
 
       <NCard :title="t.tuneles.titulo" size="small" class="tarjeta">
         <ul v-if="listaTuneles.length" class="lista">
-          <li v-for="tun in listaTuneles" :key="tun.sitioId">
+          <li v-for="tun in listaTuneles" :key="tun.sitioId" :data-foco="`sitio:${tun.sitioId}`">
             <span class="nombre">
               {{ tun.nombre }}
               <a class="url" href="#" @click.prevent="abrir(tun.url)">{{ tun.url }}</a>

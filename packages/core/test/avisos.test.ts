@@ -94,6 +94,21 @@ describe('CentroAvisos', () => {
     expect(otro.lista()).toEqual([a]);
   });
 
+  it('conserva el foco de la acción al recargar y descarta un foco que no es texto', async () => {
+    const { centro, archivo } = await crear();
+    const a = centro.publicar({
+      ...base,
+      accion: { ruta: 'servicios', foco: 'servicio:mysql' },
+    })!;
+    await centro.guardado();
+    expect(new CentroAvisos({ archivo, emitir: () => undefined }).lista()).toEqual([a]);
+    const crudo = JSON.parse(readFileSync(archivo, 'utf8')) as { accion: { foco?: unknown } }[];
+    crudo[0]!.accion.foco = 42;
+    writeFileSync(archivo, JSON.stringify(crudo));
+    const recargado = new CentroAvisos({ archivo, emitir: () => undefined }).lista();
+    expect(recargado[0]!.accion).toEqual({ ruta: 'servicios' });
+  });
+
   it('el historial se queda en 200 (los más nuevos primero)', async () => {
     let t = Date.parse('2026-11-19T10:00:00Z');
     const { centro, archivo } = await crear({ ahora: () => t });
@@ -204,7 +219,7 @@ describe('fuentes de avisos', () => {
       nivel: 'error',
       codigo: 'avisos.servicio_caido',
       datos: { fuente: 'mysql', nombre: 'MySQL' },
-      accion: { ruta: 'servicios' },
+      accion: { ruta: 'servicios', foco: 'servicio:mysql' },
     });
     expect(JSON.stringify(publicados[0])).not.toMatch(/secreto|token/);
   });
@@ -239,7 +254,7 @@ describe('fuentes de avisos', () => {
     expect(publicados[0]).toMatchObject({
       tipo: 'proceso-error',
       codigo: 'avisos.proceso_error',
-      accion: { ruta: 'proyectos' },
+      accion: { ruta: 'proyectos', foco: 'proceso:mi-sitio:web' },
     });
   });
 
@@ -269,7 +284,7 @@ describe('fuentes de avisos', () => {
         tipo: 'proceso-terminado',
         codigo: 'avisos.proceso_terminado',
         datos: { fuente: 'proy-mi-sitio-web', nombre: 'web (mi.test)' },
-        accion: { ruta: 'proyectos' },
+        accion: { ruta: 'proyectos', foco: 'proceso:mi-sitio:web' },
       });
     });
 
@@ -284,6 +299,7 @@ describe('fuentes de avisos', () => {
         tipo: 'proceso-error',
         codigo: 'avisos.proceso_fallo',
         datos: { fuente: 'proy-mi-sitio-web', nombre: 'web (mi.test)', codigoSalida: 3 },
+        accion: { ruta: 'proyectos', foco: 'proceso:mi-sitio:web' },
       });
       expect(JSON.stringify(publicados[0])).not.toMatch(/secreto|token/);
     });
@@ -320,7 +336,7 @@ describe('fuentes de avisos', () => {
         tipo: 'receta-terminada',
         codigo: 'avisos.receta_fallo',
         datos: { sitio: 'mi-sitio' },
-        accion: { ruta: 'proyectos' },
+        accion: { ruta: 'proyectos', foco: 'sitio:mi-sitio' },
       });
       expect(publicados[1]).toMatchObject({
         nivel: 'info',

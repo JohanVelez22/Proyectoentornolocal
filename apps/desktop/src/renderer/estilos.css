@@ -79,3 +79,37 @@ body {
   height: auto;
   margin-bottom: 4px;
 }
+
+/*
+ * Navegación con foco visual (useFoco): halo con el acento del tema que se desvanece en 2,5 s.
+ * Con `prefers-reduced-motion` se usa un borde estático de 1,5 s, sin animación ni scroll suave.
+ */
+@keyframes foco-halo {
+  0%,
+  60% {
+    box-shadow:
+      0 0 0 3px rgba(var(--acento-rgb), 0.85),
+      0 0 18px 4px rgba(var(--acento-rgb), 0.4);
+  }
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(var(--acento-rgb), 0),
+      0 0 18px 4px rgba(var(--acento-rgb), 0);
+  }
+}
+.foco-halo {
+  border-radius: 8px;
+  animation: foco-halo 2.5s ease-out;
+}
+.foco-estatico {
+  border-radius: 8px;
+  outline: 3px solid var(--acento);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .foco-halo {
+    animation: none;
+    outline: 3px solid var(--acento);
+    outline-offset: 2px;
+  }
+}

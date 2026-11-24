@@ -257,7 +257,11 @@ function cambiarRedLocal(valor: boolean): void {
 </script>
 
 <template>
-  <article class="tarjeta" :class="`estado-${servicio.estado}`">
+  <article
+    class="tarjeta"
+    :class="`estado-${servicio.estado}`"
+    :data-foco="`servicio:${servicio.id}`"
+  >
     <header class="cabeza">
       <span class="icono"
         ><NIcon :size="18"><component :is="icono" /></NIcon
