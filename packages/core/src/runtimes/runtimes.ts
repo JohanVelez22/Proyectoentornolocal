@@ -5,7 +5,7 @@ import { ejecutableDe } from '../catalogo/catalogo';
 import { leerTexto } from '../proyectos/archivos';
 import { leerConfigProyecto } from '../proyectos/config';
 import type { Rutas } from '../rutas';
-import { pedidosLenguajes, type LenguajeProyecto } from './lenguajes';
+import { esProyectoFlutter, pedidosLenguajes, type LenguajeProyecto } from './lenguajes';
 import { carpetaRust, carpetasRustup, versionesRust } from './rust';
 
 export const TIPOS_RUNTIME = [
@@ -75,7 +75,13 @@ export function variablesRuntime(
     case 'bun':
       return o.datos ? { BUN_INSTALL: path.join(o.datos, 'cache', 'bun') } : {};
     case 'deno':
-      return o.datos ? { DENO_DIR: path.join(o.datos, 'cache', 'deno') } : {};
+      // Las cachés y los scripts de `deno install` quedan en la carpeta de datos, no en el perfil.
+      return o.datos
+        ? {
+            DENO_DIR: path.join(o.datos, 'cache', 'deno'),
+            DENO_INSTALL_ROOT: path.join(o.datos, 'cache', 'deno'),
+          }
+        : {};
     case 'zig':
       return o.datos ? { ZIG_GLOBAL_CACHE_DIR: path.join(o.datos, 'cache', 'zig') } : {};
     case 'kotlin':
@@ -336,9 +342,13 @@ async function pistasLenguaje(carpeta: string): Promise<{
   const res: Partial<Record<LenguajeProyecto, PistaRuntime[]>> = {};
   const pedidos = await pedidosLenguajes(carpeta);
   for (const [tipo, p] of Object.entries(pedidos)) {
-    res[tipo as LenguajeProyecto] = p.version
-      ? [{ valor: p.minimo ? `>=${p.version}` : p.version, origen: p.origen, fija: !p.minimo }]
-      : [];
+    // Una restricción con su tope (`>=3.0.0 <4.0.0`, `^3.5.0`) se respeta tal cual: el SDK fuera
+    // de ella no sirve (`pub get` falla), así que no se cae a "la más nueva".
+    res[tipo as LenguajeProyecto] = p.restriccion
+      ? [{ valor: p.restriccion, origen: p.origen, fija: true }]
+      : p.version
+        ? [{ valor: p.minimo ? `>=${p.version}` : p.version, origen: p.origen, fija: !p.minimo }]
+        : [];
   }
   return { pistas: res, canalRust: pedidos.rust?.canal ?? null };
 }
@@ -389,6 +399,11 @@ export class Runtimes implements ResolutorRuntimes {
     if (canalRust !== null) {
       res.avisos.push(
         `El proyecto pide el canal "${canalRust}" de Rust, que no es una versión fija: se usa la versión de Rust instalada.`,
+      );
+    }
+    if (sitio.runtimes?.dart === undefined && (await esProyectoFlutter(sitio.carpeta))) {
+      res.avisos.push(
+        'El proyecto es de Flutter, que trae su propio Dart: no se añade el Dart de WolfCore Dev.',
       );
     }
     // Kotlin compila con un Java: si el proyecto usa Kotlin, Java entra aunque no lo pida ningún
@@ -488,7 +503,9 @@ export class Runtimes implements ResolutorRuntimes {
     if (v.bun) {
       salida.push(this.rutaBin('bun', v.bun), path.join(this.rutas.base, 'cache', 'bun', 'bin'));
     }
-    if (v.deno) salida.push(this.rutaBin('deno', v.deno));
+    if (v.deno) {
+      salida.push(this.rutaBin('deno', v.deno), path.join(this.rutas.base, 'cache', 'deno', 'bin'));
+    }
     if (v.zig) salida.push(this.rutaBin('zig', v.zig));
     if (v.kotlin) salida.push(path.join(this.rutaBin('kotlin', v.kotlin), 'bin'));
     if (v.dart) salida.push(path.join(this.rutaBin('dart', v.dart), 'bin'));

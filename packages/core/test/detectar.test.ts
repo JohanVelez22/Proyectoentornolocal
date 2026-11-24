@@ -280,13 +280,13 @@ describe('D11: Bun, Deno, Zig, Kotlin y Dart en la detección ampliada', () => {
     expect(await det({ 'pubspec.yaml': 'name: x\nenvironment:\n  sdk: ^3.5.0\n' })).toEqual({
       dart: '3.5.0',
     });
-    expect(
-      await det({ 'pubspec.yaml': 'environment:\n  sdk: ">=3.0.0 <4.0.0"\n  flutter: ">=3.0"\n' }),
-    ).toEqual({ dart: '3.0.0' });
+    expect(await det({ 'pubspec.yaml': 'environment:\n  sdk: ">=3.0.0 <4.0.0"\n' })).toEqual({
+      dart: '3.0.0',
+    });
     expect(await det({ 'pubspec.yaml': 'name: x\n' })).toEqual({ dart: null });
-    // Un `sdk:` fuera de `environment` (en una dependencia) no cuenta.
+    // Un `sdk:` fuera de `environment` (en una dependencia que no es Flutter) no cuenta.
     expect(
-      await det({ 'pubspec.yaml': 'name: x\ndependencies:\n  flutter:\n    sdk: ^9.9.9\n' }),
+      await det({ 'pubspec.yaml': 'name: x\ndependencies:\n  otra:\n    sdk: ^9.9.9\n' }),
     ).toEqual({ dart: null });
   });
 

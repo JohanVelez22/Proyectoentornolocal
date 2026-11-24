@@ -80,19 +80,28 @@ export const RUTAS_ACOTADAS: Readonly<Record<string, readonly string[]>> = {
   ],
 };
 
+/** Con `/` final, prefijo; sin él, la ruta exacta o una subruta (`/o` y `/o/…`, nunca `/otro`). */
+function rutaDentro(ruta: string, prefijo: string): boolean {
+  return prefijo.endsWith('/')
+    ? ruta.startsWith(prefijo)
+    : ruta === prefijo || ruta.startsWith(`${prefijo}/`);
+}
+
 function urlEn(texto: string, hosts: readonly string[]): boolean {
   try {
     const u = new URL(texto);
     const prefijos = Object.hasOwn(RUTAS_ACOTADAS, u.hostname)
       ? RUTAS_ACOTADAS[u.hostname]
       : undefined;
+    // En un host compartido, nada de barras codificadas ni parámetros de ruta (`;`).
+    if (prefijos !== undefined && /%2f|%5c|;/i.test(u.pathname)) return false;
     return (
       u.protocol === 'https:' &&
       hosts.includes(u.hostname) &&
       u.username === '' &&
       u.password === '' &&
       u.port === '' &&
-      (prefijos === undefined || prefijos.some((p) => u.pathname.startsWith(p)))
+      (prefijos === undefined || prefijos.some((p) => rutaDentro(u.pathname, p)))
     );
   } catch {
     return false;

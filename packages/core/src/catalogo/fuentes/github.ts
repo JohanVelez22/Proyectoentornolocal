@@ -52,12 +52,13 @@ export interface OpcionesGithub {
 }
 
 /** Archivos de sumas que publican algunas releases junto a los binarios. */
-const SUMAS = /^(sha256sums?|shasums256|checksums?|sha256)(\.txt)?$|\.sha256(sum)?$/i;
+const LISTA_SUMAS = /^(sha256sums?|shasums256|checksums?)(\.txt)?$/i;
 
 async function sumaPublicada(
   ctx: ContextoFuente,
   url: string,
   archivo: string,
+  propia: boolean,
 ): Promise<Huella | null> {
   // Es una descarga de GitHub (redirige a release-assets): cada salto contra HOSTS_PERMITIDOS.
   const senales = [AbortSignal.timeout(PLAZO_INDICE_MS), ...(ctx.senal ? [ctx.senal] : [])];
@@ -68,8 +69,33 @@ async function sumaPublicada(
     await res.body?.cancel().catch(() => undefined);
     throw new Error(`HTTP ${res.status} al leer las sumas de ${archivo}`);
   }
-  const valor = sumaDe(await leerAcotado(res, 1024 * 1024), archivo);
+  const texto = await leerAcotado(res, 1024 * 1024);
+  let valor = sumaDe(texto, archivo);
+  // `<asset>.sha256` suele traer solo el hex.
+  if (valor === null && propia && /^[0-9a-fA-F]{64}\s*$/.test(texto.slice(0, 200))) {
+    valor = texto.trim().toLowerCase();
+  }
   return valor ? { algoritmo: 'sha256', valor } : null;
+}
+
+/**
+ * ¿`texto` es exactamente la URL de descarga de `nombre` en la release `tag` de `<dueño>/<repo>`?
+ * La ruta ya normalizada debe ser `/<dueño>/<repo>/releases/download/<tag>/<nombre>` (dueño y repo
+ * sin distinguir mayúsculas; etiqueta y nombre, exactos): otro tag u otro asset del mismo
+ * repositorio no vale.
+ */
+export function urlExactaDeAsset(
+  texto: string,
+  dueno: string,
+  repo: string,
+  tag: string,
+  nombre: string,
+): boolean {
+  if (!assetDelRepo(texto, dueno, repo)) return false;
+  const u = new URL(texto);
+  const base = `/${dueno}/${repo}/releases/download/`.toLowerCase();
+  const resto = `${encodeURIComponent(tag)}/${encodeURIComponent(nombre)}`;
+  return u.pathname.toLowerCase().startsWith(base) && u.pathname.slice(base.length) === resto;
 }
 
 /**
@@ -139,6 +165,11 @@ export function fuenteGithub(o: OpcionesGithub): FuenteVersiones {
         }
         const asset = r.assets.find((a) => a.name === o.asset(version));
         if (!asset) continue;
+        if (
+          !urlExactaDeAsset(asset.browser_download_url, o.dueno, o.repo, r.tag_name, asset.name)
+        ) {
+          throw new IndiceMalformado(`El asset ${asset.name.slice(0, 60)} no es el de su release`);
+        }
         let huella: Huella | null = null;
         if (asset.digest) {
           const m = /^(sha256|sha512):(.*)$/i.exec(asset.digest);
@@ -146,8 +177,27 @@ export function fuenteGithub(o: OpcionesGithub): FuenteVersiones {
           // Se deja tal cual: la validación rechaza una huella mal formada.
           huella = { algoritmo: m[1]!.toLowerCase() as 'sha256' | 'sha512', valor: m[2]! };
         } else {
-          const sumas = r.assets.find((a) => SUMAS.test(a.name));
-          if (sumas) huella = await sumaPublicada(ctx, sumas.browser_download_url, asset.name);
+          // Primero el archivo de ese asset (`<asset>.sha256sum` o `.sha256`) y, si no hay, la lista
+          // de la release; nunca el de otra plataforma.
+          const propio = r.assets.find(
+            (a) => a.name === `${asset.name}.sha256sum` || a.name === `${asset.name}.sha256`,
+          );
+          const lista = propio ?? r.assets.find((a) => LISTA_SUMAS.test(a.name));
+          if (lista) {
+            if (
+              !urlExactaDeAsset(lista.browser_download_url, o.dueno, o.repo, r.tag_name, lista.name)
+            ) {
+              throw new IndiceMalformado(
+                `El archivo de sumas ${lista.name.slice(0, 60)} no es de su release`,
+              );
+            }
+            huella = await sumaPublicada(
+              ctx,
+              lista.browser_download_url,
+              asset.name,
+              propio !== undefined,
+            );
+          }
         }
         salida.push({
           servicio: o.servicio,

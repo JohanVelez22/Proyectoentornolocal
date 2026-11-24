@@ -28,6 +28,8 @@ export interface PedidoLenguaje {
   minimo: boolean;
   /** Rust: canal que pidió el archivo y no es un número (nightly, beta, stable). */
   canal?: string;
+  /** Restricción completa que pidió el archivo (Dart: "^3.5.0", ">=3.0.0 <4.0.0"), con su tope. */
+  restriccion?: string;
 }
 
 /** Tope de lectura de estos archivos: uno más grande no se interpreta. */
@@ -268,10 +270,22 @@ async function pedidoZig(carpeta: string, nombres: Set<string>): Promise<PedidoL
 }
 
 /** "2.0.21" de `kotlin("jvm") version "2.0.21"` o `id 'org.jetbrains.kotlin.jvm' version '2.0.21'`. */
+/**
+ * ¿Esta línea de un build de Gradle usa el plugin de Kotlin? Solo `kotlin("…")` u
+ * `org.jetbrains.kotlin…`; el Kotlin DSL de Gradle (`kotlin-dsl`, `org.gradle.kotlin.dsl`) lo
+ * usan también los proyectos de Java y no cuenta.
+ */
+function lineaConKotlin(l: string): boolean {
+  if (l.startsWith('//') || l.includes('kotlin-dsl') || l.includes('gradle.kotlin.dsl')) {
+    return false;
+  }
+  return /kotlin\(["']/.test(l) || l.includes('org.jetbrains.kotlin');
+}
+
 function kotlinDeGradle(texto: string): { usa: boolean; version: string | null } {
   let usa = false;
   for (const l of lineas(texto)) {
-    if (l.startsWith('//') || !l.includes('kotlin')) continue;
+    if (!lineaConKotlin(l)) continue;
     usa = true;
     const i = l.indexOf('version');
     const m = i >= 0 ? /^version[ \t]*["'](\d{1,2}\.\d{1,2})/.exec(l.slice(i, i + 40)) : null;
@@ -295,22 +309,64 @@ async function pedidoKotlin(carpeta: string, nombres: Set<string>): Promise<Pedi
   return kt ? { version: null, origen: kt, minimo: true } : null;
 }
 
-async function pedidoDart(carpeta: string): Promise<PedidoLenguaje | null> {
-  const yaml = await leer(path.join(carpeta, 'pubspec.yaml'));
-  if (yaml === null) return null;
-  // `environment:` en la raíz y, debajo, `sdk: ^3.5.0` o `sdk: ">=3.0.0 <4.0.0"` (línea a línea).
+/** Lo que dice un `pubspec.yaml` (línea a línea, sin retroceso). */
+interface Pubspec {
+  /** El proyecto usa Flutter (que trae su propio Dart). */
+  flutter: boolean;
+  /** Restricción de `environment.sdk` tal cual ("^3.5.0", ">=3.0.0 <4.0.0"). */
+  restriccion: string | null;
+  /** Versión mínima que dice la restricción. */
+  minima: string | null;
+}
+
+/** Caracteres que puede tener una restricción de versión de Dart. */
+const RESTRICCION_DART = /^[\^<>=!0-9.\s,|x*+-]{1,60}$/;
+
+function leerPubspec(yaml: string): Pubspec {
+  const p: Pubspec = { flutter: false, restriccion: null, minima: null };
   let dentro = false;
   for (const l of yaml.split(/\r?\n/).filter((x) => x.length <= MAX_LINEA)) {
+    // `flutter:` (clave propia o dependencia) y `sdk: flutter`: proyecto de Flutter.
+    if (/^[ \t]*flutter[ \t]*:/.test(l) || /sdk[ \t]*:[ \t]*["']?flutter\b/.test(l)) {
+      p.flutter = true;
+    }
     if (/^environment[ \t]*:/.test(l)) {
       dentro = true;
       continue;
     }
     if (dentro && /^\S/.test(l) && !l.startsWith('#')) dentro = false;
     if (!dentro) continue;
-    const m = /^[ \t]+sdk[ \t]*:[ \t]*["']?(?:\^|>=)[ \t]*(\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)/.exec(l);
-    if (m) return { version: m[1]!, origen: 'pubspec.yaml', minimo: true };
+    const m = /^[ \t]+sdk[ \t]*:[ \t]*(\S[^#]{0,80})/.exec(l);
+    if (!m || p.restriccion !== null) continue;
+    const valor = m[1]!.trim().replace(/^["']/, '').replace(/["']$/, '').trim();
+    if (!RESTRICCION_DART.test(valor)) continue;
+    p.restriccion = valor;
+    p.minima = /(?:\^|>=)[ \t]*(\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)/.exec(valor)?.[1] ?? null;
   }
-  return { version: null, origen: 'pubspec.yaml', minimo: true };
+  return p;
+}
+
+/**
+ * `environment.sdk` del pubspec: la restricción completa (con su tope `<X` y el mayor del `^`) y
+ * su mínimo. Un proyecto de Flutter no usa el Dart suelto (Flutter trae el suyo): no se añade.
+ */
+async function pedidoDart(carpeta: string): Promise<PedidoLenguaje | null> {
+  const yaml = await leer(path.join(carpeta, 'pubspec.yaml'));
+  if (yaml === null) return null;
+  const p = leerPubspec(yaml);
+  if (p.flutter) return null;
+  return {
+    version: p.minima,
+    origen: 'pubspec.yaml',
+    minimo: true,
+    ...(p.restriccion ? { restriccion: p.restriccion } : {}),
+  };
+}
+
+/** ¿La carpeta es un proyecto de Flutter (pubspec con `flutter`)? */
+export async function esProyectoFlutter(carpeta: string): Promise<boolean> {
+  const yaml = await leer(path.join(carpeta, 'pubspec.yaml'));
+  return yaml !== null && leerPubspec(yaml).flutter;
 }
 
 /**

@@ -39,7 +39,9 @@ const urlZip = (version: string): string => `${BASE_DART}${version}/sdk/${ARCHIV
 async function huellaDart(version: string, ctx: ContextoFuente): Promise<Huella | null> {
   const texto = await leerIndice(ctx, `${urlZip(version)}.sha256sum`, { maxBytes: 4096 });
   const valor = sumaDe(texto, ARCHIVO);
-  return valor ? { algoritmo: 'sha256', valor } : null;
+  // Un .sha256sum que no nombra el zip es una fuente rara: no se cae a "sin huella".
+  if (!valor) throw new IndiceMalformado(`El .sha256sum de Dart ${version} no nombra ${ARCHIVO}`);
+  return { algoritmo: 'sha256', valor };
 }
 
 async function listarVersiones(ctx: ContextoFuente): Promise<string[]> {
@@ -102,7 +104,15 @@ export const fuenteDart: FuenteVersiones = {
     await huellasDeUltimas(
       versiones,
       () => true,
-      (v) => huellaDart(v.version, ctx),
+      async (v) => {
+        try {
+          return await huellaDart(v.version, ctx);
+        } catch (e) {
+          // Queda diferida: al instalar, `completar` vuelve a fallar con huella_no_disponible.
+          if (e instanceof IndiceMalformado) return null;
+          throw e;
+        }
+      },
     );
     return versiones;
   },

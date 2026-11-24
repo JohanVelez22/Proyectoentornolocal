@@ -283,7 +283,10 @@ describe('fuentes oficiales', () => {
           draft: false,
           prerelease: false,
           assets: [
-            { name: 'cloudflared-windows-amd64.exe', browser_download_url: `${base}x.exe` },
+            {
+              name: 'cloudflared-windows-amd64.exe',
+              browser_download_url: `${base}cloudflared-windows-amd64.exe`,
+            },
             { name: 'checksums.txt', browser_download_url: `${base}checksums.txt` },
           ],
         },
@@ -312,7 +315,10 @@ describe('fuentes oficiales', () => {
           draft: false,
           prerelease: false,
           assets: [
-            { name: 'cloudflared-windows-amd64.exe', browser_download_url: `${base}x.exe` },
+            {
+              name: 'cloudflared-windows-amd64.exe',
+              browser_download_url: `${base}cloudflared-windows-amd64.exe`,
+            },
             { name: 'checksums.txt', browser_download_url: `${base}checksums.txt` },
           ],
         },

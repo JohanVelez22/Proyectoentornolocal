@@ -161,19 +161,21 @@ export function sumaDe(texto: string, archivo: string | null): string | null {
       return m[1]!.toLowerCase();
     }
   }
-  // Formato de PowerShell (`Get-FileHash`) que usa Deno en sus `.sha256sum`: líneas `Hash : <hex>`
-  // y `Path : <ruta>`, leídas línea a línea.
+  // Formato de PowerShell (`Get-FileHash`) que usa Deno en sus `.sha256sum`: bloques con `Hash : <hex>`
+  // y `Path : <ruta>`. Cada `Hash` se empareja con el `Path` que le sigue (también con varios
+  // bloques); un `Hash` sin su `Path` se descarta al llegar otro `Hash`. Línea a línea.
   let hash: string | null = null;
-  let ruta: string | null = null;
-  for (const linea of texto.split(/\r?\n/).slice(0, 20)) {
+  for (const linea of texto.split(/\r?\n/).slice(0, 200)) {
     if (linea.length > 400) continue;
     const i = linea.indexOf(':');
     if (i < 0) continue;
     const clave = linea.slice(0, i).trim();
     const valor = linea.slice(i + 1).trim();
-    if (clave === 'Hash' && /^[0-9a-fA-F]{64}$/.test(valor)) hash = valor.toLowerCase();
-    if (clave === 'Path') ruta = valor;
+    if (clave === 'Hash') hash = /^[0-9a-fA-F]{64}$/.test(valor) ? valor.toLowerCase() : null;
+    if (clave === 'Path') {
+      if (hash && archivo !== null && valor.split(/[\\/]/).pop() === archivo) return hash;
+      hash = null;
+    }
   }
-  if (hash && ruta && archivo !== null && ruta.split(/[\\/]/).pop() === archivo) return hash;
   return null;
 }

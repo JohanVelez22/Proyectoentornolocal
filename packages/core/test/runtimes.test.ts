@@ -505,6 +505,7 @@ describe('D11: Bun, Deno, Zig, Kotlin y Dart como runtimes', () => {
     });
     expect(variablesRuntime('deno', 'C:\\deno', { datos })).toEqual({
       DENO_DIR: path.join(datos, 'cache', 'deno'),
+      DENO_INSTALL_ROOT: path.join(datos, 'cache', 'deno'),
     });
     expect(variablesRuntime('zig', 'C:\\zig', { datos })).toEqual({
       ZIG_GLOBAL_CACHE_DIR: path.join(datos, 'cache', 'zig'),
@@ -539,6 +540,7 @@ describe('D11: Bun, Deno, Zig, Kotlin y Dart como runtimes', () => {
       rutas.bin('bun', '1.4.5'),
       path.join(base, 'cache', 'bun', 'bin'),
       rutas.bin('deno', '2.9.8'),
+      path.join(base, 'cache', 'deno', 'bin'),
       rutas.bin('zig', '0.17.1'),
       path.join(rutas.bin('kotlin', '2.4.21'), 'bin'),
       path.join(rutas.bin('dart', '3.14.1'), 'bin'),
@@ -551,7 +553,10 @@ describe('D11: Bun, Deno, Zig, Kotlin y Dart como runtimes', () => {
     expect(await r.paraProyecto({ carpeta: await proyecto({}) })).toEqual({ avisos: [] });
     const rt = await r.paraProyecto({ carpeta: await proyecto({ 'deno.json': '{}' }) });
     expect(rt).toEqual({ deno: '2.9.8', avisos: [] });
-    expect(r.variables(rt)).toEqual({ DENO_DIR: path.join(base, 'cache', 'deno') });
+    expect(r.variables(rt)).toEqual({
+      DENO_DIR: path.join(base, 'cache', 'deno'),
+      DENO_INSTALL_ROOT: path.join(base, 'cache', 'deno'),
+    });
   });
 
   it('Bun: .bun-version fija la versión; si no está instalada solo hay aviso', async () => {
@@ -581,9 +586,9 @@ describe('D11: Bun, Deno, Zig, Kotlin y Dart como runtimes', () => {
     expect((await r.paraProyecto({ carpeta: c })).dart).toBe('3.14.1');
     const c2 = await proyecto({ 'pubspec.yaml': 'name: x\nenvironment:\n  sdk: ^3.20.0\n' });
     const rt = await r.paraProyecto({ carpeta: c2 });
-    // Un mínimo no cumplido cae a la más nueva con aviso.
-    expect(rt.dart).toBe('3.14.1');
-    expect(rt.avisos[0]).toMatch(/Dart >=3\.20\.0.*no está instalado/);
+    // Una restricción que ningún SDK instalado cumple no cae a la más nueva: solo aviso.
+    expect(rt.dart).toBeUndefined();
+    expect(rt.avisos[0]).toMatch(/Dart .3.20.0.*no está instalado/);
   });
 
   it('Kotlin con Java: ambos entran al entorno aunque el proyecto no pida Java', async () => {
