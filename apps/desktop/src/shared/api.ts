@@ -585,9 +585,10 @@ export interface ApiEntorno {
     desinstalar(servicio: ServicioVersiones, version: string): Promise<void>;
   };
   tuneles: {
-    abrir(sitioId: string): Promise<EstadoTunel>;
+    /** `confirmado`: el usuario confirmó publicar (exigido con datos reales). */
+    abrir(sitioId: string, confirmado?: boolean): Promise<EstadoTunel>;
     cerrar(sitioId: string): Promise<void>;
-    renovar(sitioId: string): Promise<EstadoTunel>;
+    renovar(sitioId: string, confirmado?: boolean): Promise<EstadoTunel>;
     estados(): Promise<EstadoTunel[]>;
   };
   hosts: {

@@ -661,6 +661,20 @@ export class ServidorMcp {
     return espera;
   }
 
+  /** Dominio y datos reales del sitio (para la confirmación de `abrir_tunel`). */
+  private async sitioParaTunel(id: string): Promise<{ dominio: string; datosReales: boolean }> {
+    const lista = await this.d.operaciones.listarProyectos();
+    const s = Array.isArray(lista)
+      ? (lista as unknown[]).find(
+          (x): x is Record<string, unknown> =>
+            typeof x === 'object' && x !== null && (x as Record<string, unknown>)['id'] === id,
+        )
+      : undefined;
+    if (!s) throw new ErrorWolf('tuneles.sitio_no_encontrado', 'Sitio no encontrado');
+    const dominio = typeof s['dominio'] === 'string' && s['dominio'] ? s['dominio'] : id;
+    return { dominio: limpiar(dominio, 200), datosReales: s['datosReales'] === true };
+  }
+
   /** Ruta real del respaldo, solo si es un archivo dentro de la carpeta de respaldos. */
   private async rutaRespaldo(archivo: string): Promise<string> {
     const carpeta = await realpath(await this.d.operaciones.carpetaRespaldos()).catch(() => {
@@ -838,11 +852,23 @@ export class ServidorMcp {
     mcp.registerTool(
       'abrir_tunel',
       {
-        description: 'Abre un túnel público (Cloudflare) hacia un proyecto.',
+        description:
+          'Abre un túnel público (Cloudflare) hacia un proyecto: cualquiera con el enlace podrá entrar. Pide confirmación en la ventana de WolfCore Dev.',
         inputSchema: { sitioId },
         annotations: { ...cambio, openWorldHint: true },
       },
-      ({ sitioId: id }) => ejecutar(() => ops.abrirTunel(id)),
+      ({ sitioId: id }, extra) =>
+        ejecutar(async () => {
+          const sitio = await this.sitioParaTunel(id);
+          const reales = sitio.datosReales ? ' Tiene DATOS REALES de clientes.' : '';
+          return this.confirmarYEjecutar(
+            'abrir_tunel',
+            `Publicar ${sitio.dominio} en internet con un túnel público de Cloudflare: cualquiera con el enlace podrá entrar mientras siga abierto.${reales}`,
+            { proyecto: sitio.dominio },
+            senal(extra),
+            () => ops.abrirTunel(id),
+          );
+        }),
     );
     mcp.registerTool(
       'cerrar_tunel',

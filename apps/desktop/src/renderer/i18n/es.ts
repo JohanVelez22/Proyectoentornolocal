@@ -158,6 +158,8 @@ export const es = {
         'El usuario {usuario} ya existe con otra clave. Use su clave actual: no se cambia para no dejar sin conexión a otros proyectos.',
       'bd.mongosh_faltante': 'Falta mongosh: instálelo desde Servicios para administrar MongoDB.',
       'tuneles.sitio_no_encontrado': 'No se encontró el proyecto.',
+      'tuneles.confirmacion_requerida':
+        '{dominio} tiene datos reales: confirme la publicación en WolfCore Dev.',
       'tuneles.cloudflared_no_instalado':
         'cloudflared no está instalado. Instálelo desde Servicios.',
       'hosts.dominio_invalido': 'Hay un dominio no válido.',

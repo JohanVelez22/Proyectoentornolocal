@@ -1315,6 +1315,11 @@ export class Nucleo {
     return errores;
   }
 
+  /** Espera al arranque automático (nunca lanza: sus fallos ya quedaron en avisos). */
+  private async esperarArranque(): Promise<void> {
+    await this.arranqueAutomatico.catch(() => undefined);
+  }
+
   /**
    * "Iniciar todo" de la interfaz, la bandeja y `--iniciar-todo`: el mismo flujo para los tres
    * (`Servicios.iniciarTodo`: PHP y Nginx, bases con su salud, procesos de proyecto). Nunca abre
@@ -1322,6 +1327,9 @@ export class Nucleo {
    * del error publica un aviso (desde la bandeja no hay otra forma de verlo).
    */
   async iniciarTodo(): Promise<void> {
+    // Recién arrancada la app (p. ej. con --iniciar-todo), primero termina el arranque automático:
+    // así no se arrancan los mismos servicios y procesos dos veces a la vez.
+    await this.esperarArranque();
     try {
       await this.servicios.iniciarTodo();
     } catch (e) {
@@ -2124,7 +2132,8 @@ export class Nucleo {
       restaurarBase: (motor, archivo, base, opts) => this.restaurarBase(motor, archivo, base, opts),
       borrarBase: (motor, nombre, confirmacion) => this.borrarBase(motor, nombre, confirmacion),
       carpetaRespaldos: () => this.carpetaRespaldos(),
-      abrirTunel: (sitioId) => this.tuneles.abrir(sitioId),
+      // Solo se llama tras la confirmación en la ventana (abrir_tunel la pide siempre).
+      abrirTunel: (sitioId) => this.tuneles.abrir(sitioId, { confirmado: true }),
       cerrarTunel: (sitioId) => this.tuneles.cerrar(sitioId),
     };
   }
@@ -2847,6 +2856,8 @@ export class Nucleo {
    * proyecto y los servicios.
    */
   async detenerTodo(): Promise<void> {
+    // Si no, el arranque automático aún en curso podría encender algo después de apagarlo todo.
+    await this.esperarArranque();
     const errores = await this.tuneles.cerrarTodos();
     await this.servicios.detenerTodo();
     if (errores.length) throw errores[0];

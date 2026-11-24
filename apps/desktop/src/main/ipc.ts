@@ -1012,9 +1012,12 @@ const TABLA: Record<RutaIpc, Manejador> = {
     n.respaldosDeDatos(servicio === undefined ? undefined : idServicioDatos(servicio)),
   'servicios.borrarRespaldoDatos': (n, _s, ref, confirmar) =>
     n.borrarRespaldoDatos(refRespaldoDatos(ref), confirmadoBorrar(confirmar)),
-  'tuneles.abrir': (n, _s, id) => n.tuneles.abrir(idNoVacio(id)),
+  // `confirmado`: el usuario confirmó publicar en el diálogo de la interfaz (siempre se pide).
+  'tuneles.abrir': (n, _s, id, confirmado) =>
+    n.tuneles.abrir(idNoVacio(id), { confirmado: confirmado === true }),
   'tuneles.cerrar': (n, _s, id) => n.tuneles.cerrar(idNoVacio(id)),
-  'tuneles.renovar': (n, _s, id) => n.tuneles.renovar(idNoVacio(id)),
+  'tuneles.renovar': (n, _s, id, confirmado) =>
+    n.tuneles.renovar(idNoVacio(id), { confirmado: confirmado === true }),
   'tuneles.estados': (n) => n.tuneles.estados(),
   'hosts.sincronizar': async (n) => {
     const sitios = await n.sitios.listar();

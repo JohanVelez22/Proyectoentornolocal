@@ -1,3 +1,5 @@
+import { enmascararSecretos } from '@pel/core';
+
 /**
  * Órdenes por línea de órdenes (base del futuro CLI `wolf`):
  *   "WolfCore Dev.exe" --iniciar-todo
@@ -44,7 +46,19 @@ export interface DepsOrdenes {
   ahora?: () => Date;
 }
 
-/** Ejecuta las órdenes de una en una, en el orden en que llegan. */
+/** Tope del error que se guarda en run/ultima-orden.json. */
+export const MAX_ERROR_ORDEN = 2048;
+
+/** Mensaje del error con los secretos enmascarados y acotado a 2 KB. */
+export function errorParaRegistro(e: unknown): string {
+  const t = enmascararSecretos(e instanceof Error ? e.message : String(e));
+  return t.length > MAX_ERROR_ORDEN ? `${t.slice(0, MAX_ERROR_ORDEN - 1)}…` : t;
+}
+
+/**
+ * Ejecuta las órdenes de una en una, en el orden en que llegan. Mientras el núcleo carga, una
+ * orden igual a la última pendiente no se repite.
+ */
 export function crearOrdenes(d: DepsOrdenes): {
   ejecutar(o: Orden): Promise<void>;
   /** Llamar cuando el núcleo esté listo: ejecuta las que esperaban. */
@@ -61,7 +75,7 @@ export function crearOrdenes(d: DepsOrdenes): {
         await (o === 'iniciar-todo' ? n.iniciarTodo() : n.detenerTodo());
         d.registrar({ orden: o, inicio, fin: ahora().toISOString(), ok: true });
       } catch (e) {
-        const error = e instanceof Error ? e.message : String(e);
+        const error = errorParaRegistro(e);
         console.error(`--${o} falló:`, error);
         d.registrar({ orden: o, inicio, fin: ahora().toISOString(), ok: false, error });
       }
@@ -73,7 +87,7 @@ export function crearOrdenes(d: DepsOrdenes): {
     ejecutar(o) {
       const n = d.nucleo();
       if (!n) {
-        pendientes.push(o);
+        if (pendientes.at(-1) !== o) pendientes.push(o);
         return Promise.resolve();
       }
       return correr(o, n);

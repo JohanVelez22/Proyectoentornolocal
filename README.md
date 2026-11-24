@@ -211,7 +211,7 @@ PostgreSQL usa pgvector compilado una vez en su equipo:
 
 ### Iniciar todo y línea de órdenes
 
-- **Iniciar todo** (botón de Servicios, bandeja y paleta) enciende, en orden: el PHP de las ramas en uso y Nginx; luego la **instancia predeterminada de cada base instalada**, las que tienen _Iniciar con WolfCore Dev_ y las que usan los proyectos según su `.env` (motor y puerto), y espera a que respondan; por último los procesos de proyecto con _autoiniciar_, solo si responde la base que usan. Si algo falla, el error y un aviso dicen qué no arrancó. **Nunca abre túneles**: un túnel solo se abre con el interruptor de su sitio, y siempre pide confirmar que el sitio queda público.
+- **Iniciar todo** (botón de Servicios, bandeja y paleta) enciende, en orden: el PHP de las ramas en uso y Nginx; luego la **instancia predeterminada de cada base instalada**, las que tienen _Iniciar con WolfCore Dev_ y las que usan los proyectos según su `.env` (motor y puerto), y espera a que respondan; por último los procesos de proyecto con _autoiniciar_, solo si responde la base que usan. Ojo: una base instalada que nunca se usó también se enciende, y la primera vez se inicializa (crea su carpeta en `data\` y sus credenciales); si no la quiere, desinstálela. Si algo falla, el error y un aviso dicen qué no arrancó. **Nunca abre túneles**: un túnel solo se abre con el interruptor de su sitio, y siempre pide confirmar que el sitio queda público.
 - Desde la línea de órdenes (base del futuro CLI `wolf`):
 
   ```powershell
@@ -219,7 +219,9 @@ PostgreSQL usa pgvector compilado una vez en su equipo:
   & "$env:LOCALAPPDATA\Programs\WolfCore Dev\WolfCore Dev.exe" --detener-todo
   ```
 
-  Si WolfCore Dev ya está abierto, la orden se le pasa a esa instancia; si no, la app arranca y la ejecuta en cuanto carga. Hacen exactamente lo mismo que los botones. El resultado queda en `run\ultima-orden.json` de la carpeta de datos (`orden`, `inicio`, `fin`, `ok` y, si falló, `error`). No hay más órdenes: cualquier otro argumento se ignora.
+  Si WolfCore Dev ya está abierto, la orden se le pasa a esa instancia (si acaba de abrirse, espera a que termine su arranque automático); si no, la app arranca y la ejecuta en cuanto carga. Hacen exactamente lo mismo que los botones. El resultado queda en `run\ultima-orden.json` de la carpeta de datos (`orden`, `inicio`, `fin`, `ok` y, si falló, `error`). No hay más órdenes: cualquier otro argumento se ignora.
+
+- **Salir** (bandeja) pregunta si se apagan los servicios con un diálogo de la ventana, que se trae al frente y queda encima de todo. Si la ventana ya no existe (caso raro), sale **apagando todo sin preguntar**.
 
 ### Interfaz (Etapa B)
 

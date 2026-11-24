@@ -159,6 +159,8 @@ export const en: Textos = {
         'User {usuario} already exists with another password. Use its current password: it is not changed so other projects keep connecting.',
       'bd.mongosh_faltante': 'mongosh is missing: install it from Services to manage MongoDB.',
       'tuneles.sitio_no_encontrado': 'The project was not found.',
+      'tuneles.confirmacion_requerida':
+        '{dominio} has real data: confirm publishing it in WolfCore Dev.',
       'tuneles.cloudflared_no_instalado': 'cloudflared is not installed. Install it from Services.',
       'hosts.dominio_invalido': 'A domain is not valid.',
       'hosts.tiempo_agotado':

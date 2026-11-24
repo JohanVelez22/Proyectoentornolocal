@@ -67,6 +67,7 @@ export const PARAMETROS_ERROR = {
   // túneles, hosts y HTTPS
   'tuneles.sitio_no_encontrado': [],
   'tuneles.cloudflared_no_instalado': [],
+  'tuneles.confirmacion_requerida': ['dominio'],
   'hosts.dominio_invalido': [],
   'hosts.tiempo_agotado': ['segundos'],
   'https.sin_dominio': [],

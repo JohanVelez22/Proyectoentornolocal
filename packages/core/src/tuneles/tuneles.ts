@@ -30,6 +30,11 @@ interface RegistroTunel {
 }
 
 const PREFIJO = 'tunel-';
+
+/** Cómo se pidió abrir: `confirmado` solo si el usuario confirmó publicar (interfaz o MCP). */
+export interface OpcionesAbrirTunel {
+  confirmado?: boolean;
+}
 const MSG_CERRADO = 'El túnel se cerró. Use Renovar.';
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -67,14 +72,18 @@ export class Tuneles {
     return [...this.mapa.values()].map((e) => ({ ...e }));
   }
 
-  abrir(sitioId: string): Promise<EstadoTunel> {
+  /**
+   * Abre el túnel de un sitio. Un sitio con datos reales solo se publica con `confirmado` (el
+   * usuario lo confirmó en la ventana): si no, `tuneles.confirmacion_requerida`.
+   */
+  abrir(sitioId: string, o: OpcionesAbrirTunel = {}): Promise<EstadoTunel> {
     const cierre = this.cierres.get(sitioId);
-    if (cierre) return cierre.then(() => this.abrir(sitioId));
+    if (cierre) return cierre.then(() => this.abrir(sitioId, o));
     const actual = this.mapa.get(sitioId);
     if (actual && actual.estado === 'activo') return Promise.resolve({ ...actual });
     const enCurso = this.abriendo.get(sitioId);
     if (enCurso) return enCurso;
-    const p: Promise<EstadoTunel> = this.abrirInterno(sitioId).finally(() => {
+    const p: Promise<EstadoTunel> = this.abrirInterno(sitioId, o).finally(() => {
       if (this.abriendo.get(sitioId) === p) this.abriendo.delete(sitioId);
     });
     this.abriendo.set(sitioId, p);
@@ -114,9 +123,12 @@ export class Tuneles {
     }
   }
 
-  async renovar(sitioId: string): Promise<EstadoTunel> {
+  async renovar(sitioId: string, o: OpcionesAbrirTunel = {}): Promise<EstadoTunel> {
+    // Se comprueba antes de cerrar: sin confirmación no se toca el túnel que hay.
+    const sitio = await this.buscar(sitioId);
+    if (sitio) this.exigirConfirmacion(sitio, o);
     await this.cerrar(sitioId);
-    return this.abrir(sitioId);
+    return this.abrir(sitioId, o);
   }
 
   /** Recupera los túneles que siguen vivos tras reiniciar la app (llamar tras supervisor.readoptar). */
@@ -197,10 +209,21 @@ export class Tuneles {
     }
   }
 
-  private async abrirInterno(sitioId: string): Promise<EstadoTunel> {
+  private exigirConfirmacion(sitio: Sitio, o: OpcionesAbrirTunel): void {
+    if (sitio.datosReales && o.confirmado !== true) {
+      throw new ErrorWolf(
+        'tuneles.confirmacion_requerida',
+        `${sitio.dominio} tiene datos reales: publicarlo exige confirmarlo en la ventana de WolfCore Dev.`,
+        { dominio: sitio.dominio },
+      );
+    }
+  }
+
+  private async abrirInterno(sitioId: string, o: OpcionesAbrirTunel): Promise<EstadoTunel> {
     const gen = this.generacion.get(sitioId) ?? 0;
     const sitio = await this.buscar(sitioId);
     if (!sitio) throw new ErrorWolf('tuneles.sitio_no_encontrado', 'Sitio no encontrado');
+    this.exigirConfirmacion(sitio, o);
     const versiones = await this.d.instalador.instalados('cloudflared');
     // Configuración de una versión anterior (o parcial): sin predeterminada, la más nueva.
     const cfg: Partial<Config> = await this.d.almacen.leer();

@@ -703,6 +703,40 @@ describe('ServidorMcp: herramientas de depuración (dumps y errores)', () => {
 });
 
 describe('ServidorMcp: acciones destructivas', () => {
+  it('abrir_tunel pide confirmación en la ventana y solo abre si se aprueba', async () => {
+    const m = await montar();
+    vi.mocked(m.ops.listarProyectos).mockResolvedValue([
+      { id: 'demo', dominio: 'demo.test', datosReales: true },
+    ]);
+    const c = await conectar(m.url);
+    const llamada = c.callTool({ name: 'abrir_tunel', arguments: { sitioId: 'demo' } });
+    const sol = await esperarConfirmacion(m);
+    expect(sol.herramienta).toBe('abrir_tunel');
+    expect(sol.resumen).toContain('demo.test');
+    expect(sol.resumen).toContain('DATOS REALES');
+    expect(sol.datos).toEqual({ proyecto: 'demo.test' });
+    expect(m.ops.abrirTunel).not.toHaveBeenCalled();
+    m.servidor.responderConfirmacion(sol.id, true);
+    expect((await llamada).isError).toBeFalsy();
+    expect(m.ops.abrirTunel).toHaveBeenCalledWith('demo');
+  });
+
+  it('abrir_tunel rechazado no abre nada; un sitio que no existe ni pregunta', async () => {
+    const m = await montar();
+    vi.mocked(m.ops.listarProyectos).mockResolvedValue([{ id: 'demo', dominio: 'demo.test' }]);
+    const c = await conectar(m.url);
+    const llamada = c.callTool({ name: 'abrir_tunel', arguments: { sitioId: 'demo' } });
+    const sol = await esperarConfirmacion(m);
+    m.servidor.responderConfirmacion(sol.id, false);
+    const r = await llamada;
+    expect(r.isError).toBe(true);
+    expect(m.ops.abrirTunel).not.toHaveBeenCalled();
+    const otro = await c.callTool({ name: 'abrir_tunel', arguments: { sitioId: 'nada' } });
+    expect(otro.isError).toBe(true);
+    expect(m.confirmaciones).toHaveLength(1);
+    expect(m.ops.abrirTunel).not.toHaveBeenCalled();
+  });
+
   it('borrar_base espera la confirmación y, aprobada, borra', async () => {
     const m = await montar();
     const c = await conectar(m.url);

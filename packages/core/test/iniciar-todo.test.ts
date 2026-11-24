@@ -279,12 +279,41 @@ describe('rama nueva o instalación en un servicio con instancia implícita', ()
     instalados = { mariadb: ['11.4.14'] };
   });
 
-  const conInstalador = () =>
-    crear({
-      instalarVersion: async (s, v) => {
-        instalados[s] = [...(instalados[s] ?? []), v];
+  /** Como el Instalador real: llama a prepararInstalacion antes de instalar (sin bloquearse). */
+  const conInstalador = (): Servicios => {
+    const s: Servicios = crear({
+      instalarVersion: async (srv, v) => {
+        await s.datos.prepararInstalacion(srv);
+        instalados[srv] = [...(instalados[srv] ?? []), v];
       },
     });
+    return s;
+  };
+
+  it('prepararInstalacion va en la cola del servicio (espera a la operación en curso)', async () => {
+    const s = conInstalador();
+    const orden: string[] = [];
+    let soltar!: () => void;
+    const puerta = new Promise<void>((r) => (soltar = r));
+    const enCola = (
+      s.datos as unknown as {
+        enCola: (id: string, fn: () => Promise<void>) => Promise<void>;
+      }
+    ).enCola.bind(s.datos);
+    const ocupada = enCola('mariadb', async () => {
+      await puerta;
+      orden.push('operación');
+    });
+    const preparar = s.datos.prepararInstalacion('mariadb').then(() => orden.push('preparar'));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(orden).toEqual([]);
+    soltar();
+    await Promise.all([ocupada, preparar]);
+    expect(orden).toEqual(['operación', 'preparar']);
+    expect(cfg.servicios.datos.mariadb.instancias).toMatchObject({
+      '11.4': { version: '11.4.14' },
+    });
+  });
 
   it('nuevaRama fija la implícita antes de instalar: no choca y la anterior sigue', async () => {
     const s = conInstalador();

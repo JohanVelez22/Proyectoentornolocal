@@ -44,7 +44,7 @@ export function useTunel() {
 
   async function abrir(sitio: Pick<Sitio, 'id' | 'datosReales' | 'dominio'>): Promise<void> {
     if (!(await confirmarPublicar(sitio))) return;
-    await ejecutar(`abrir-${sitio.id}`, () => api().tuneles.abrir(sitio.id), {
+    await ejecutar(`abrir-${sitio.id}`, () => api().tuneles.abrir(sitio.id, true), {
       tituloError: t.tituloError,
     });
   }
@@ -57,7 +57,7 @@ export function useTunel() {
   async function renovar(sitio: Pick<Sitio, 'id' | 'datosReales' | 'dominio'>): Promise<void> {
     if (!(await confirmarPublicar(sitio))) return;
     const sitioId = sitio.id;
-    await ejecutar(`renovar-${sitioId}`, () => api().tuneles.renovar(sitioId), {
+    await ejecutar(`renovar-${sitioId}`, () => api().tuneles.renovar(sitioId, true), {
       tituloError: t.tituloError,
     });
   }

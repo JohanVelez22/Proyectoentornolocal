@@ -143,6 +143,26 @@ beforeEach(() => {
 afterEach(() => rmSync(base, { recursive: true, force: true }));
 
 describe('Tuneles.abrir', () => {
+  it('un sitio con datos reales no se publica sin confirmación (abrir ni renovar)', async () => {
+    sitios = [sitio({ datosReales: true })];
+    const t = crear();
+    await expect(t.abrir('wolf')).rejects.toMatchObject({
+      codigo: 'tuneles.confirmacion_requerida',
+    });
+    await expect(t.renovar('wolf')).rejects.toMatchObject({
+      codigo: 'tuneles.confirmacion_requerida',
+    });
+    expect(iniciados).toEqual([]);
+    await expect(t.abrir('wolf', { confirmado: true })).resolves.toMatchObject({
+      estado: 'activo',
+    });
+    // Renovar sin confirmar tampoco cierra el que ya está abierto.
+    await expect(t.renovar('wolf')).rejects.toMatchObject({
+      codigo: 'tuneles.confirmacion_requerida',
+    });
+    expect(detenidos).toEqual([]);
+  });
+
   it('lanza cloudflared con los argumentos exactos y devuelve la URL', async () => {
     const t = crear();
     const e = await t.abrir('wolf');

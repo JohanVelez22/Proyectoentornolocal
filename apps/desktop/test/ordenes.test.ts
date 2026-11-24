@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   crearOrdenes,
+  errorParaRegistro,
+  MAX_ERROR_ORDEN,
   ordenDeArgs,
   type NucleoOrdenes,
   type ResultadoOrden,
@@ -64,5 +66,32 @@ describe('crearOrdenes', () => {
     await expect(o.ejecutar('iniciar-todo')).resolves.toBeUndefined();
     expect(res[0]).toMatchObject({ orden: 'iniciar-todo', ok: false });
     expect(res[0]!.error).toContain('MySQL 8.4');
+  });
+});
+
+describe('ordenes: menores', () => {
+  it('el error guardado enmascara secretos y no pasa de 2 KB', () => {
+    const t = errorParaRegistro(
+      new Error('falló con DB_PASSWORD=supersecreta123 ' + 'x'.repeat(5000)),
+    );
+    expect(t).not.toContain('supersecreta123');
+    expect(t.length).toBeLessThanOrEqual(MAX_ERROR_ORDEN);
+  });
+
+  it('órdenes repetidas pendientes se juntan', async () => {
+    const orden: string[] = [];
+    let n: NucleoOrdenes | null = null;
+    const o = crearOrdenes({ nucleo: () => n, registrar: () => undefined });
+    await o.ejecutar('iniciar-todo');
+    await o.ejecutar('iniciar-todo');
+    await o.ejecutar('detener-todo');
+    await o.ejecutar('detener-todo');
+    await o.ejecutar('iniciar-todo');
+    n = {
+      iniciarTodo: async () => void orden.push('iniciar'),
+      detenerTodo: async () => void orden.push('detener'),
+    };
+    await o.listo();
+    expect(orden).toEqual(['iniciar', 'detener', 'iniciar']);
   });
 });

@@ -359,6 +359,33 @@ describe('Nucleo', () => {
     expect(JSON.parse(readFileSync(path.join(base, 'run', 'tuneles.json'), 'utf8'))).toEqual([]);
   });
 
+  it('en frío, iniciarTodo y detenerTodo esperan a que termine el arranque automático', async () => {
+    let soltar!: () => void;
+    const puerta = new Promise<void>((r) => (soltar = r));
+    const orden: string[] = [];
+    vi.spyOn(ProcesosProyecto.prototype, 'autoIniciar').mockImplementation(async () => {
+      orden.push('arranque:inicio');
+      await puerta;
+      orden.push('arranque:fin');
+      return [];
+    });
+    const n = await crear();
+    vi.spyOn(n.servicios, 'iniciarTodo').mockImplementation(async () => {
+      orden.push('iniciarTodo');
+    });
+    vi.spyOn(n.servicios, 'detenerTodo').mockImplementation(async () => {
+      orden.push('detenerTodo');
+    });
+    const iniciar = n.iniciarTodo();
+    const detener = n.detenerTodo();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(orden).toEqual(['arranque:inicio']);
+    soltar();
+    await iniciar;
+    await detener;
+    expect(orden).toEqual(['arranque:inicio', 'arranque:fin', 'iniciarTodo', 'detenerTodo']);
+  });
+
   it('iniciarTodo con fallos publica un aviso con los nombres y relanza el error', async () => {
     const n = await crear();
     const avisos: string[] = [];

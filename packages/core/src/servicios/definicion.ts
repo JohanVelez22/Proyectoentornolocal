@@ -1164,13 +1164,23 @@ export class ServiciosDatos {
    * Antes de instalar otra versión de un servicio de datos: si su instancia aún es implícita (sin
    * `instancias` en config.json, instalación nueva), la fija con la versión que usa ahora. Si no,
    * la versión nueva pasaría a ser "la activa" y la rama nueva chocaría con ella ("Ya existe la
-   * instancia…"). Sin cola: también se llama desde dentro de `nuevaRama` y `actualizar`.
+   * instancia…"). Va en la cola del servicio, salvo cuando no hay nada que fijar: así, desde
+   * dentro de `nuevaRama` y `actualizar` (que ya fijaron la implícita en su cola) no se bloquea.
    */
   async prepararInstalacion(servicio: string): Promise<void> {
     if (!esIdServicioDatos(servicio)) return;
     const def = this.def(servicio);
-    if (!def) return;
-    await this.materializar(def, await this.d.leerConfig());
+    if (!def || !(await this.porMaterializar(def))) return;
+    await this.enCola(servicio, async () => {
+      await this.materializar(def, await this.d.leerConfig());
+    });
+  }
+
+  /** ¿Tiene una instancia implícita que fijar en config.json? */
+  private async porMaterializar(def: DefServicio): Promise<boolean> {
+    const cfg = await this.d.leerConfig();
+    if (!multiInstancia(def) || conInstancias(cfg, def.id)) return false;
+    return (await this.resolver(def, cfg)).length > 0;
   }
 
   /**

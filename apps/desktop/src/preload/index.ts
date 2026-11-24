@@ -167,9 +167,9 @@ const api: ApiEntorno = {
     desbloquear: (id, o) => invocar('instancias.desbloquear', id, o),
   },
   tuneles: {
-    abrir: (id) => invocar('tuneles.abrir', id),
+    abrir: (id, confirmado) => invocar('tuneles.abrir', id, confirmado === true),
     cerrar: (id) => invocar('tuneles.cerrar', id),
-    renovar: (id) => invocar('tuneles.renovar', id),
+    renovar: (id, confirmado) => invocar('tuneles.renovar', id, confirmado === true),
     estados: () => invocar('tuneles.estados'),
   },
   hosts: { sincronizar: () => invocar('hosts.sincronizar') },
