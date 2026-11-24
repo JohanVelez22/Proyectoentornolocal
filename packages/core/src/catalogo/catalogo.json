@@ -199,7 +199,7 @@
   "rust": [
     {
       "version": "1.100.0",
-      "url": "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe",
+      "url": "https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-pc-windows-msvc/rustup-init.exe",
       "sha256": "38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",
       "formato": "exe",
       "ejecutable": "rustup-init.exe"

@@ -47,6 +47,7 @@ import {
   terminalesWindows,
   type LanzadorSeparado,
 } from './terminalWin';
+import { CLAVE_DESINSTALAR_RUSTUP, desinstalarEnCarpeta } from './rustupRegistro';
 import { nombreEjecutable, sistemaActual } from './sistema';
 
 export { interpretarTasklist, interpretarTasklistTodos } from './netstat';
@@ -496,6 +497,36 @@ export class PlataformaWindows implements PlataformaCompleta {
     return interpretarServiciosSistema(r.stdout, nombres);
   }
 
+  async limpiarEntradaRustup(carpetaDatos: string): Promise<'ausente' | 'quitada' | 'ajena'> {
+    const clave = `HKCU:\\${CLAVE_DESINSTALAR_RUSTUP}`;
+    const leer = await this.ejecutar(
+      'powershell',
+      codificarPowerShell(
+        [
+          "$ErrorActionPreference = 'SilentlyContinue'",
+          `$k = ${literal(clave)}`,
+          "if (-not (Test-Path -LiteralPath $k)) { [Console]::Out.Write('AUSENTE'); exit 0 }",
+          "[Console]::Out.Write('U:' + [string](Get-ItemProperty -LiteralPath $k).UninstallString)",
+        ].join('\n'),
+      ),
+      { timeoutMs: 15000 },
+    );
+    const salida = leer.stdout.trim();
+    if (leer.codigo !== 0 || salida === 'AUSENTE') return 'ausente';
+    if (!salida.startsWith('U:') || !desinstalarEnCarpeta(salida.slice(2), carpetaDatos)) {
+      return 'ajena';
+    }
+    // Solo se borra la clave de Rustup cuyo desinstalador está en nuestra carpeta de datos.
+    await this.ejecutar(
+      'powershell',
+      codificarPowerShell(
+        `Remove-Item -LiteralPath ${literal(clave)} -Recurse -Force -ErrorAction SilentlyContinue`,
+      ),
+      { timeoutMs: 15000 },
+    );
+    return 'quitada';
+  }
+
   async enlazadorMsvc(): Promise<boolean> {
     const exe = rutaVswhere(this.entorno['ProgramFiles(x86)']);
     if (!this.existeRuta(exe)) return false;
@@ -706,7 +737,7 @@ export class PlataformaWindows implements PlataformaCompleta {
       case 'instalar-vcredist':
         return 'winget install --id Microsoft.VCRedist.2015+.x64 --exact --source winget';
       case 'instalar-build-tools':
-        return 'winget install Microsoft.VisualStudio.2022.BuildTools';
+        return 'winget install --id Microsoft.VisualStudio.2022.BuildTools --exact --source winget --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"';
     }
   }
 

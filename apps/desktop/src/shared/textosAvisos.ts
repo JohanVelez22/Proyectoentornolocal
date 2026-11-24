@@ -85,6 +85,11 @@ const ES: Diccionario = {
       titulo: 'Vhost escrito a mano sin usar',
       cuerpo: `El vhost escrito a mano de ${limpio(d['fuente'], 'un sitio')} ya no pasa la revisión (cambió su carpeta, sus dominios o los puertos): se usa el generado. Revíselo en su sección Nginx.`,
     }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'Rustup ya estaba instalado en otro lugar',
+      cuerpo:
+        'Se instaló el Rust de WolfCore Dev en su propia carpeta. Windows ya tenía una entrada de desinstalación de rustup que apunta a otra instalación: no se tocó.',
+    }),
     'avisos.version_nueva': (d) => ({
       titulo: `Hay una versión nueva de ${limpio(d['servicio'], 'un servicio')}`,
       cuerpo: `${limpio(d['nueva'], 'Una versión nueva')} ya está publicada (tiene ${limpio(d['actual'], 'otra')}). Ábrala en Servicios → Versiones para actualizar; nada se instala solo.`,
@@ -199,6 +204,11 @@ const EN: Diccionario = {
       titulo: 'Hand-written vhost not used',
       cuerpo: `The hand-written vhost of ${limpio(d['fuente'], 'a site')} no longer passes the check (its folder, domains or ports changed): the generated one is used. Review it in its Nginx section.`,
     }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'Rustup was already installed elsewhere',
+      cuerpo:
+        'The WolfCore Dev Rust was installed in its own folder. Windows already had a rustup uninstall entry that points to another installation: it was left untouched.',
+    }),
     'avisos.version_nueva': (d) => ({
       titulo: `A new version of ${limpio(d['servicio'], 'a service')} is available`,
       cuerpo: `${limpio(d['nueva'], 'A new version')} has been published (you have ${limpio(d['actual'], 'another one')}). Open Services → Versions to update; nothing is installed automatically.`,
@@ -303,6 +313,11 @@ const PT: Diccionario = {
     'avisos.vhost_manual_descartado': (d) => ({
       titulo: 'Vhost escrito à mão não usado',
       cuerpo: `O vhost escrito à mão de ${limpio(d['fuente'], 'um site')} não passa mais na verificação (a pasta, os domínios ou as portas mudaram): o gerado automaticamente é usado. Revise-o na seção Nginx.`,
+    }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'O rustup já estava instalado em outro lugar',
+      cuerpo:
+        'O Rust do WolfCore Dev foi instalado na sua própria pasta. O Windows já tinha uma entrada de desinstalação do rustup que aponta para outra instalação: ela não foi alterada.',
     }),
     'avisos.version_nueva': (d) => ({
       titulo: `Há uma nova versão de ${limpio(d['servicio'], 'um serviço')}`,
@@ -420,6 +435,11 @@ const FR: Diccionario = {
     'avisos.vhost_manual_descartado': (d) => ({
       titulo: 'Vhost écrit à la main non utilisé',
       cuerpo: `Le vhost écrit à la main de ${limpio(d['fuente'], 'un site')} ne passe plus la vérification (son dossier, ses domaines ou ses ports ont changé) : le vhost généré est utilisé. Revoyez-le dans sa section Nginx.`,
+    }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'Rustup était déjà installé ailleurs',
+      cuerpo:
+        'Le Rust de WolfCore Dev a été installé dans son propre dossier. Windows avait déjà une entrée de désinstallation de rustup pointant vers une autre installation : elle n’a pas été modifiée.',
     }),
     'avisos.version_nueva': (d) => ({
       titulo: `Une nouvelle version de ${limpio(d['servicio'], 'un service')} est disponible`,

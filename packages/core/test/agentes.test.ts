@@ -91,7 +91,11 @@ async function montar(
   const llamadas: { cmd: string; args: string[] }[] = [];
   const exec = vi.fn(async (cmd: string, args: string[]) => {
     llamadas.push({ cmd, args });
-    const r = (await o.responder?.(cmd, args)) ?? { codigo: 0 };
+    const r =
+      (await o.responder?.(cmd, args)) ??
+      (args[0] === '--version' && /node/i.test(cmd)
+        ? { codigo: 0, stdout: 'v22.12.0\n' }
+        : { codigo: 0 });
     return { codigo: r.codigo, stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
   });
   const deps: DepsAgentes = {
@@ -1220,13 +1224,28 @@ describe('Agentes D5: Node mínimo de Copilot CLI y Qwen Code', () => {
     },
   );
 
-  it('con Node 22 instala; sin versión legible tampoco bloquea', async () => {
+  it('con Node 22 instala', async () => {
     const m = await montar({ responder: NODE_NUEVO });
     await m.agentes.instalar('copilot-cli', true);
     expect(m.llamadas.some((l) => l.args.includes('install'))).toBe(true);
-    const n = await montar();
-    await n.agentes.instalar('qwen-code', true);
-    expect(n.llamadas.some((l) => l.args.includes('install'))).toBe(true);
+  });
+
+  it('si no se puede leer la versión del Node, falla con agentes.node_version_desconocida', async () => {
+    const sinVersion = (_c: string, a: string[]) =>
+      a[0] === '--version' ? { codigo: 1 } : { codigo: 0 };
+    const m = await montar({ responder: sinVersion });
+    await expect(m.agentes.instalar('qwen-code', true)).rejects.toMatchObject({
+      codigo: 'agentes.node_version_desconocida',
+      datos: { requerida: 22 },
+    });
+    expect(m.llamadas.some((l) => l.args.includes('install'))).toBe(false);
+    paquete(m.prefijo, '@github/copilot', 'copilot', '1.0.0');
+    await expect(m.agentes.abrir('copilot-cli', 'tienda')).rejects.toMatchObject({
+      codigo: 'agentes.node_version_desconocida',
+    });
+    expect(m.plat.terminales).toHaveLength(0);
+    // Un agente sin requisito de versión no necesita saberla.
+    await m.agentes.instalar('claude-code', true);
   });
 
   it('un agente sin requisito se instala aunque el Node sea viejo', async () => {

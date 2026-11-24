@@ -270,18 +270,19 @@ describe('D5: Java, .NET, Go y Rust como runtimes', () => {
     writeFileSync(exe, 'x');
   };
   const instalarRust = (version: string): void => {
-    const rustc = path.join(
+    const tc = path.join(
       base,
       'bin',
       'rust',
       'rustup',
       'toolchains',
       `${version}-x86_64-pc-windows-msvc`,
-      'bin',
-      'rustc.exe',
     );
-    mkdirSync(path.dirname(rustc), { recursive: true });
-    writeFileSync(rustc, 'x');
+    mkdirSync(path.join(tc, 'bin'), { recursive: true });
+    mkdirSync(path.join(tc, 'lib', 'rustlib'), { recursive: true });
+    writeFileSync(path.join(tc, 'bin', 'rustc.exe'), 'x');
+    writeFileSync(path.join(tc, 'bin', 'cargo.exe'), 'x');
+    writeFileSync(path.join(tc, 'lib', 'rustlib', 'multirust-channel-manifest.toml'), '');
   };
 
   it('TIPOS_RUNTIME tiene los seis y esTipoRuntime solo acepta esos', () => {

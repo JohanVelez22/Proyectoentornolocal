@@ -25,7 +25,7 @@ import { claveValida, rutaRelativaSegura, urlOficial } from './comun';
 import { huellaDe, huellaFuerte, type AlgoritmoHuella, type Huella } from './huellas';
 import { pedirConSaltos } from './red';
 import { InstaladorRust } from '../runtimes/rust';
-import type { Ejecutor } from '../plataforma/tipos';
+import type { Ejecutor, PlataformaCompleta } from '../plataforma/tipos';
 
 /** Intentos al mover la carpeta extraída a `bin/` (≈ 30 s con la espera creciente). */
 const INTENTOS_RENOMBRAR = 150;
@@ -39,6 +39,10 @@ export interface OpcionesInstalador {
   renombrar?: (de: string, a: string) => Promise<void>;
   /** Ejecuta rustup (Rust se instala con él, no con un zip). Por defecto, el de Windows. */
   exec?: Ejecutor;
+  /** Para limpiar la entrada de desinstalación que deja rustup-init (solo Rust). */
+  plataforma?: Pick<PlataformaCompleta, 'limpiarEntradaRustup'>;
+  /** Aviso al usuario (código de `avisos.*`) por algo que el instalador no tocó. */
+  alAvisar?: (codigo: 'avisos.rustup_entrada_ajena') => void;
 }
 
 export interface OpcionesInstalar {
@@ -47,6 +51,8 @@ export interface OpcionesInstalar {
    * lo pasa un camino automático.
    */
   confirmarSinHuella?: true;
+  /** Cancela la instalación (hoy solo la de Rust la usa para cortar rustup). */
+  senal?: AbortSignal;
 }
 
 const MARCA = '.pel-version';
@@ -106,7 +112,11 @@ export class Instalador {
       this.rutas,
       this.eventos,
       this.opciones.exec ?? ejecutorPorDefecto,
-      { f: this.f },
+      {
+        f: this.f,
+        ...(this.opciones.plataforma ? { plataforma: this.opciones.plataforma } : {}),
+        ...(this.opciones.alAvisar ? { alAvisar: this.opciones.alAvisar } : {}),
+      },
     );
     return this.instaladorRust;
   }
@@ -210,7 +220,11 @@ export class Instalador {
   async instalar(v: VersionDisponible, o: OpcionesInstalar = {}): Promise<void> {
     const clave = this.clave(v);
     validarVersion(v, clave);
-    if (v.servicio === 'rust') return this.rust.instalar(v.version, o);
+    if (v.servicio === 'rust')
+      return this.rust.instalar(v.version, {
+        ...(o.confirmarSinHuella ? { confirmarSinHuella: true as const } : {}),
+        ...(o.senal ? { senal: o.senal } : {}),
+      });
     const destino = this.rutas.bin(v.servicio, clave);
     if (await this.instalado(v.servicio, clave)) {
       // Idempotente, salvo que PHP traiga un parche distinto al instalado.

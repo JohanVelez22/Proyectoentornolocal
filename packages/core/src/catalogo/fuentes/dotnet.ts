@@ -32,6 +32,7 @@ const Canal = z.object({
 });
 
 const ZIP = 'dotnet-sdk-win-x64.zip';
+const PREFIJO_SDK = 'https://builds.dotnet.microsoft.com/dotnet/Sdk/';
 
 const mayorDe = (canal: string): number => Number(canal.split('.')[0]);
 
@@ -73,6 +74,13 @@ export const fuenteDotnet: FuenteVersiones = {
       const fichero = sdk?.files.find((f) => f.name === ZIP);
       if (!sdk || !fichero) continue;
       if (!claveValida(sdk.version)) throw new IndiceMalformado('Versión de .NET no válida');
+      // La URL debe ser del SDK de esa versión: …/dotnet/Sdk/<versión>/dotnet-sdk-<versión>-win-x64.zip.
+      if (
+        !fichero.url.startsWith(`${PREFIJO_SDK}${sdk.version}/`) ||
+        !fichero.url.endsWith(`/dotnet-sdk-${sdk.version}-win-x64.zip`)
+      ) {
+        throw new IndiceMalformado('URL del SDK de .NET fuera de su carpeta de versión');
+      }
       // Una huella mal formada no se descarta: llega cruda y la validación del índice la rechaza.
       const huella = normalizarHuella('sha512', fichero.hash ?? '') ?? {
         algoritmo: 'sha512' as const,

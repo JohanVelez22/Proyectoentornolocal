@@ -18,8 +18,11 @@ import { fuenteJava } from '../src/catalogo/fuentes/java';
 import { fuenteRust } from '../src/catalogo/fuentes/rust';
 import { IndiceMalformado, type ContextoFuente } from '../src/catalogo/fuentes/tipos';
 import { Instalador } from '../src/catalogo/instalador';
+import { extraerZip, MAX_BYTES_ZIP, MAX_ENTRADAS_ZIP } from '../src/catalogo/zip';
 import { listaFija, validarIndice } from '../src/catalogo/vivo';
 import { Eventos, type EventosNucleo } from '../src/eventos';
+import { PlataformaFalsa } from '../src/plataforma/falsa';
+import { desinstalarEnCarpeta } from '../src/plataforma/rustupRegistro';
 import type { Ejecutor } from '../src/plataforma/tipos';
 import { Rutas } from '../src/rutas';
 import type { ProgresoInstalacion } from '../src/tipos';
@@ -31,7 +34,8 @@ const ACTIVOS = (n: number) =>
   `${API}/assets/latest/${n}/hotspot?architecture=x64&image_type=jdk&os=windows`;
 const DOTNET = 'https://builds.dotnet.microsoft.com/dotnet/release-metadata/';
 const GO_INDICE = 'https://go.dev/dl/?mode=json&include=all';
-const RUSTUP = 'https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init';
+const RUSTUP =
+  'https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-pc-windows-msvc/rustup-init';
 const RUST_RELEASES = 'https://api.github.com/repos/rust-lang/rust/releases?per_page=30';
 
 const rutasJava = (): Record<string, Ruta> => ({
@@ -173,18 +177,35 @@ describe('D5: .NET SDK', () => {
     expect(() => validarIndice('dotnet', v)).not.toThrow();
   });
 
-  it('una URL ajena en una entrada descarta el índice entero', async () => {
-    const malo = JSON.parse(fixture('dotnet-9.0.json')) as {
-      releases: { sdk: { files: { url: string }[] } }[];
-    };
-    for (const f of malo.releases[0]!.sdk.files) f.url = 'https://evil.example/sdk.zip';
-    const v = await fuenteDotnet.listar(
-      ctx({ ...rutasDotnet(), [`${DOTNET}9.0/releases.json`]: JSON.stringify(malo) }),
-    );
-    expect(() => validarIndice('dotnet', v)).toThrowError(
-      expect.objectContaining({ codigo: 'catalogo.indice_invalido' }),
-    );
-  });
+  it.each([
+    ['otro host', () => 'https://evil.example/sdk.zip'],
+    [
+      'otra carpeta del mismo host',
+      () =>
+        'https://builds.dotnet.microsoft.com/dotnet/otra/9.0.321/dotnet-sdk-9.0.321-win-x64.zip',
+    ],
+    [
+      'otra versión en la ruta',
+      () => 'https://builds.dotnet.microsoft.com/dotnet/Sdk/9.0.1/dotnet-sdk-9.0.1-win-x64.zip',
+    ],
+    [
+      'otro archivo',
+      () => 'https://builds.dotnet.microsoft.com/dotnet/Sdk/9.0.321/malo-win-x64.zip',
+    ],
+  ])(
+    'una URL del SDK fuera de su carpeta de versión (%s) descarta el índice entero',
+    async (_n, url) => {
+      const malo = JSON.parse(fixture('dotnet-9.0.json')) as {
+        releases: { sdk: { files: { url: string }[] } }[];
+      };
+      for (const f of malo.releases[0]!.sdk.files) f.url = url();
+      await expect(
+        fuenteDotnet.listar(
+          ctx({ ...rutasDotnet(), [`${DOTNET}9.0/releases.json`]: JSON.stringify(malo) }),
+        ),
+      ).rejects.toBeInstanceOf(IndiceMalformado);
+    },
+  );
 
   it('un releases.json fuera del host oficial descarta el índice', async () => {
     const idx = JSON.parse(fixture('dotnet-indice.json')) as {
@@ -296,7 +317,7 @@ describe('D5: Rust', () => {
     expect(de(v, '1.100.0')).toMatchObject({
       servicio: 'rust',
       rama: '1.100',
-      url: 'https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe',
+      url: 'https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-pc-windows-msvc/rustup-init.exe',
       formato: 'exe',
       soporte: 'actual',
       huella: null,
@@ -465,6 +486,10 @@ describe('D5: InstaladorRust', () => {
       );
       await mkdir(bin, { recursive: true });
       await writeFile(path.join(bin, 'rustc.exe'), 'rustc');
+      await writeFile(path.join(bin, 'cargo.exe'), 'cargo');
+      const rustlib = path.join(bin, '..', 'lib', 'rustlib');
+      await mkdir(rustlib, { recursive: true });
+      await writeFile(path.join(rustlib, 'multirust-channel-manifest.toml'), '');
     } else if (args[0] === 'toolchain' && args[1] === 'uninstall') {
       borrar.push(args[2]!);
       await rm(path.join(env['RUSTUP_HOME']!, 'toolchains', `${args[2]}-x86_64-pc-windows-msvc`), {
@@ -510,6 +535,9 @@ describe('D5: InstaladorRust', () => {
       expect(l.env).toEqual({
         RUSTUP_HOME: path.join(raiz, 'rustup'),
         CARGO_HOME: path.join(raiz, 'cargo'),
+        RUSTUP_DIST_SERVER: '',
+        RUSTUP_UPDATE_ROOT: '',
+        RUSTUP_TOOLCHAIN: '',
       });
     }
     expect(tc!.cmd).toBe(path.join(raiz, 'cargo', 'bin', 'rustup.exe'));
@@ -574,10 +602,13 @@ describe('D5: InstaladorRust', () => {
     await inst.instalar({ ...v, version: '1.99.1', rama: '1.99' });
     expect(ff.pedidas.filter((u) => u.endsWith('rustup-init.exe'))).toHaveLength(1);
     expect(await inst.instalados('rust')).toEqual(['1.100.0', '1.99.1']);
-    // Instalar uno ya instalado no hace nada.
+    // Instalar uno ya instalado repite solo `toolchain install` (idempotente): sin bajar nada.
     const antes = llamadas.length;
     await inst.instalar(v);
-    expect(llamadas.length).toBe(antes);
+    expect(llamadas.slice(antes).map((l) => l.args.slice(0, 2))).toEqual([
+      ['toolchain', 'install'],
+    ]);
+    expect(ff.pedidas.filter((u) => u.endsWith('.sha256'))).toHaveLength(1);
   });
 
   it('desinstalar quita solo el toolchain y nunca borra la carpeta de datos', async () => {
@@ -604,12 +635,189 @@ describe('D5: InstaladorRust', () => {
     });
     await inst.instalar(await fuente());
     for (const l of llamadas) {
-      for (const val of [l.cmd, ...Object.values(l.env ?? {})]) {
+      for (const val of [l.cmd, ...Object.values(l.env ?? {})].filter((x) => x !== '')) {
         expect(val.startsWith(rutas.base)).toBe(true);
       }
       // Nunca se toca el PATH.
       expect(Object.keys(l.env ?? {}).some((k) => k.toLowerCase() === 'path')).toBe(false);
       expect(l.args).toContain(l.args[0] === '-y' ? '--no-modify-path' : l.args[0]);
     }
+  });
+
+  const servidor = (): Record<string, Ruta> => ({
+    [`${RUSTUP}.exe.sha256`]: `${sha(INIT)}\n`,
+    [`${RUSTUP}.exe`]: INIT,
+  });
+
+  it('un toolchain a medias (solo rustc) no cuenta como instalado y se repara al instalar', async () => {
+    const tc = path.join(
+      rutas.base,
+      'bin',
+      'rust',
+      'rustup',
+      'toolchains',
+      '1.100.0-x86_64-pc-windows-msvc',
+      'bin',
+    );
+    await mkdir(tc, { recursive: true });
+    await writeFile(path.join(tc, 'rustc.exe'), 'rustc');
+    const inst = instalador(servidor());
+    expect(await inst.instalados('rust')).toEqual([]);
+    expect(await inst.instalado('rust', '1.100.0')).toBe(false);
+    await inst.instalar(await fuente());
+    expect(await inst.instalados('rust')).toEqual(['1.100.0']);
+  });
+
+  it('el .sha256 solo se pide si rustup todavía no está', async () => {
+    const ff = fetchFalso(servidor());
+    const inst = new Instalador(rutas, eventos, ff.f, { exec: ejecutor() });
+    await inst.instalar(await fuente());
+    expect(ff.pedidas.filter((u) => u.endsWith('.sha256'))).toHaveLength(1);
+    await inst.instalar({ ...(await fuente()), version: '1.99.1', rama: '1.99' });
+    expect(ff.pedidas.filter((u) => u.endsWith('.sha256'))).toHaveLength(1);
+  });
+
+  it('dos instalaciones a la vez se ejecutan una detrás de otra', async () => {
+    let activas = 0;
+    let maximo = 0;
+    const base = ejecutor();
+    const lento: Ejecutor = async (c, a, o) => {
+      activas++;
+      maximo = Math.max(maximo, activas);
+      await new Promise((r) => setTimeout(r, 15));
+      const res = await base(c, a, o);
+      activas--;
+      return res;
+    };
+    const inst = instalador(servidor(), lento);
+    const v = await fuente();
+    await Promise.all([
+      inst.instalar(v),
+      inst.instalar({ ...v, version: '1.99.1', rama: '1.99' }),
+      inst.instalar({ ...v, version: '1.98.0', rama: '1.98' }),
+    ]);
+    expect(maximo).toBe(1);
+    expect(await inst.instalados('rust')).toEqual(['1.100.0', '1.98.0', '1.99.1']);
+  });
+
+  it('los fallos de rustup salen con código, datos y el final del stderr', async () => {
+    const base = ejecutor();
+    const falla: Ejecutor = async (c, a, o) => {
+      if (a[0] === 'toolchain') {
+        return {
+          codigo: 3,
+          stdout: '',
+          stderr: 'linea 1\nerror: no se pudo bajar el componente\n',
+        };
+      }
+      return base(c, a, o);
+    };
+    await expect(instalador(servidor(), falla).instalar(await fuente())).rejects.toMatchObject({
+      codigo: 'rust.toolchain_fallo',
+      datos: { version: '1.100.0', codigo: 3 },
+    });
+    rutas = await rutasTemp().rutas();
+    const init: Ejecutor = async () => ({ codigo: 9, stdout: '', stderr: 'boom' });
+    await expect(instalador(servidor(), init).instalar(await fuente())).rejects.toMatchObject({
+      codigo: 'rust.rustup_init_fallo',
+      datos: { codigo: 9, detalle: 'boom' },
+    });
+    rutas = await rutasTemp().rutas();
+    const sinExe = fetchFalso({ [`${RUSTUP}.exe.sha256`]: `${sha(INIT)}\n` });
+    await expect(
+      new Instalador(rutas, eventos, sinExe.f, { exec: ejecutor() }).instalar(await fuente()),
+    ).rejects.toMatchObject({ codigo: 'rust.descarga_fallo', datos: { estado: 404 } });
+  });
+
+  it('la señal llega a los procesos de rustup y el entorno vacía lo heredado que los desvíe', async () => {
+    const ctl = new AbortController();
+    const vistas: (AbortSignal | undefined)[] = [];
+    const base = ejecutor();
+    const espia: Ejecutor = async (c, a, o) => {
+      vistas.push(o?.senal);
+      return base(c, a, o);
+    };
+    await new Instalador(rutas, eventos, fetchFalso(servidor()).f, { exec: espia }).instalar(
+      await fuente(),
+      { senal: ctl.signal },
+    );
+    expect(vistas).toHaveLength(2);
+    expect(vistas.every((x) => x === ctl.signal)).toBe(true);
+    for (const l of llamadas) {
+      expect(l.env).toMatchObject({
+        RUSTUP_DIST_SERVER: '',
+        RUSTUP_UPDATE_ROOT: '',
+        RUSTUP_TOOLCHAIN: '',
+      });
+    }
+  });
+
+  it('entrada de desinstalación de rustup: la nuestra se borra, la ajena se respeta y se avisa', async () => {
+    const plat = new PlataformaFalsa();
+    const avisos: string[] = [];
+    const instalarCon = async (uninstall: (base: string) => string | null): Promise<void> => {
+      rutas = await rutasTemp().rutas();
+      plat.entradaRustup = uninstall(rutas.base);
+      await new Instalador(rutas, eventos, fetchFalso(servidor()).f, {
+        exec: ejecutor(),
+        plataforma: plat,
+        alAvisar: (c) => avisos.push(c),
+      }).instalar(await fuente());
+    };
+    // Nuestra: apunta dentro de la carpeta de datos.
+    await instalarCon(
+      (b) => `"${path.join(b, 'bin', 'rust', 'cargo', 'bin', 'rustup.exe')}" self uninstall`,
+    );
+    expect(plat.entradaRustup).toBeNull();
+    expect(avisos).toEqual([]);
+    // Ajena: otra instalación del usuario.
+    const ajena = '"C:\\Users\\ana\\.cargo\\bin\\rustup.exe" self uninstall';
+    await instalarCon(() => ajena);
+    expect(plat.entradaRustup).toBe(ajena);
+    expect(avisos).toEqual(['avisos.rustup_entrada_ajena']);
+    // Sin entrada: nada.
+    await instalarCon(() => null);
+    expect(avisos).toHaveLength(1);
+  });
+
+  it('desinstalarEnCarpeta: solo si el desinstalador está dentro de la carpeta de datos', () => {
+    const datos = 'C:\\Users\\ana\\AppData\\Local\\WolfCoreDev';
+    const dentro = `${datos}\\bin\\rust\\cargo\\bin\\rustup.exe`;
+    expect(desinstalarEnCarpeta(`"${dentro}" self uninstall`, datos)).toBe(true);
+    expect(desinstalarEnCarpeta(`${dentro} self uninstall`, datos)).toBe(true);
+    expect(desinstalarEnCarpeta(`"${datos.toLowerCase()}\\x\\rustup.exe"`, datos)).toBe(true);
+    for (const mal of [
+      '"C:\\Users\\ana\\.cargo\\bin\\rustup.exe" self uninstall',
+      `"${datos}\\..\\..\\rustup.exe"`,
+      `"${datos}-otra\\rustup.exe"`,
+      '"rustup.exe"',
+      '',
+      `"${datos}"`,
+    ]) {
+      expect(desinstalarEnCarpeta(mal, datos), mal).toBe(false);
+    }
+  });
+});
+
+describe('D5 revisión: topes del zip', () => {
+  it('rechaza más entradas o más bytes que los topes y deja pasar un paquete normal', async () => {
+    const dir = await carpetaTemporal('pel-zip-');
+    const archivos: Record<string, string> = {};
+    for (let i = 0; i < 6; i++) archivos[`d/f${i}.txt`] = 'x'.repeat(100);
+    const z = path.join(dir, 'a.zip');
+    await writeFile(z, zipDe(archivos));
+    await extraerZip(z, path.join(dir, 'ok'));
+    expect(existsSync(path.join(dir, 'ok', 'd', 'f5.txt'))).toBe(true);
+    await expect(extraerZip(z, path.join(dir, 'e'), { maxEntradas: 5 })).rejects.toMatchObject({
+      codigo: 'instalador.zip_demasiado_grande',
+    });
+    await expect(extraerZip(z, path.join(dir, 'b'), { maxBytes: 500 })).rejects.toMatchObject({
+      codigo: 'instalador.zip_demasiado_grande',
+    });
+  });
+
+  it('los topes por defecto dejan sitio al SDK de .NET y al JDK', () => {
+    expect(MAX_ENTRADAS_ZIP).toBeGreaterThanOrEqual(100_000);
+    expect(MAX_BYTES_ZIP).toBeGreaterThanOrEqual(4 * 1024 ** 3);
   });
 });

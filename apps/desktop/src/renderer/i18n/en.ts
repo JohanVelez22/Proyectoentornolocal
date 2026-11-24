@@ -290,6 +290,14 @@ export const en: Textos = {
       'agentes.sin_node': 'Install Node from Services to be able to install the agent.',
       'agentes.node_antiguo':
         '{agente} needs Node {requerida} or newer and the one that would be used is {actual}. Install a newer Node from Services.',
+      'agentes.node_version_desconocida':
+        'The Node version could not be determined and {agente} needs Node {requerida} or newer. Check the Node in Services.',
+      'instalador.zip_demasiado_grande':
+        'The downloaded package is too large or has too many files: it is not installed.',
+      'rust.rustup_init_fallo': 'rustup-init did not finish correctly (code {codigo}): {detalle}',
+      'rust.toolchain_fallo': 'Rust {version} could not be installed (code {codigo}): {detalle}',
+      'rust.desinstalar_fallo': 'Rust {version} could not be uninstalled: {detalle}',
+      'rust.descarga_fallo': 'rustup could not be downloaded (HTTP {estado}).',
       'agentes.instalacion_fallo': 'The agent could not be installed: {detalle}',
       'agentes.no_instalado': '{agente} is not installed.',
       'agentes.mcp_no_soportado':

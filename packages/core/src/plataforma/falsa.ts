@@ -1,3 +1,4 @@
+import { desinstalarEnCarpeta } from './rustupRegistro';
 import { chmod, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { LanzadorOculto } from './lanzarOculto';
@@ -70,6 +71,8 @@ export class PlataformaFalsa implements PlataformaCompleta {
   vcRedist = true;
   /** Lo que devuelve `enlazadorMsvc`. */
   enlazador = true;
+  /** `UninstallString` de la entrada de rustup en el registro falso (null: no hay). */
+  entradaRustup: string | null = null;
   /** Veces que se pidió instalar el VC++. */
   vcRedistInstalaciones = 0;
   /** Servicios del sistema detenidos con elevación. */
@@ -242,6 +245,13 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async serviciosSistema(nombres: string[]): Promise<ServicioSistema[]> {
     return nombres.map((nombre) => ({ nombre, estado: this.servicios.get(nombre) ?? 'no-existe' }));
+  }
+
+  async limpiarEntradaRustup(carpetaDatos: string): Promise<'ausente' | 'quitada' | 'ajena'> {
+    if (this.entradaRustup === null) return 'ausente';
+    if (!desinstalarEnCarpeta(this.entradaRustup, carpetaDatos)) return 'ajena';
+    this.entradaRustup = null;
+    return 'quitada';
   }
 
   async enlazadorMsvc(): Promise<boolean> {

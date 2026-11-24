@@ -318,7 +318,15 @@ export class Agentes {
     if (def.nodeMinimo === undefined) return;
     const v = await this.versionDe(node, []);
     const mayor = v === null ? null : Number(v.split('.')[0]);
-    if (mayor === null || !Number.isInteger(mayor) || mayor >= def.nodeMinimo) return;
+    if (mayor === null || !Number.isInteger(mayor)) {
+      // No se puede comprobar: con un requisito de versión, no se sigue a ciegas.
+      throw new ErrorWolf(
+        'agentes.node_version_desconocida',
+        `No se pudo saber la versión de Node y ${def.nombre} necesita Node ${def.nodeMinimo} o superior.`,
+        { agente: def.nombre, requerida: def.nodeMinimo },
+      );
+    }
+    if (mayor >= def.nodeMinimo) return;
     throw new ErrorWolf(
       'agentes.node_antiguo',
       `${def.nombre} necesita Node ${def.nodeMinimo} o superior y el que se usaría es el ${v}. Instale un Node más nuevo desde Servicios.`,

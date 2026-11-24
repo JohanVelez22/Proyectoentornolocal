@@ -220,7 +220,7 @@ describe('Plataforma: capacidades del Doctor', () => {
       /winget install --id Microsoft\.VCRedist\.2015\+\.x64 --exact --source winget/,
     );
     expect(p.comandoManual({ tipo: 'instalar-build-tools' })).toBe(
-      'winget install Microsoft.VisualStudio.2022.BuildTools',
+      'winget install --id Microsoft.VisualStudio.2022.BuildTools --exact --source winget --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"',
     );
   });
 
@@ -295,5 +295,39 @@ describe('Plataforma D5: enlazador MSVC', () => {
         existeRuta: () => true,
       }).enlazadorMsvc(),
     ).toBe(false);
+  });
+});
+
+describe('Plataforma D5: entrada de desinstalación de rustup', () => {
+  const datos = 'C:\\Users\\ana\\AppData\\Local\\WolfCoreDev';
+
+  it('ausente: lee y no borra nada', async () => {
+    const { llamadas, ejecutor } = grabar(0, 'AUSENTE');
+    expect(await new PlataformaWindows(ejecutor).limpiarEntradaRustup(datos)).toBe('ausente');
+    expect(llamadas).toHaveLength(1);
+  });
+
+  it('ajena: no ejecuta el borrado', async () => {
+    const { llamadas, ejecutor } = grabar(
+      0,
+      'U:"C:\\Users\\ana\\.cargo\\bin\\rustup.exe" self uninstall',
+    );
+    expect(await new PlataformaWindows(ejecutor).limpiarEntradaRustup(datos)).toBe('ajena');
+    expect(llamadas).toHaveLength(1);
+  });
+
+  it('nuestra: borra solo la clave de Rustup del usuario', async () => {
+    const { llamadas, ejecutor } = grabar(
+      0,
+      `U:"${datos}\\bin\\rust\\cargo\\bin\\rustup.exe" self uninstall`,
+    );
+    expect(await new PlataformaWindows(ejecutor).limpiarEntradaRustup(datos)).toBe('quitada');
+    expect(llamadas).toHaveLength(2);
+    expect(directo(llamadas[0]!.args)).toContain(
+      'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Rustup',
+    );
+    const borrar = directo(llamadas[1]!.args);
+    expect(borrar).toContain('Remove-Item');
+    expect(borrar).toContain('\\Uninstall\\Rustup');
   });
 });

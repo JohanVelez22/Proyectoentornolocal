@@ -164,6 +164,12 @@ export interface CapacidadesPlataforma {
    * Rust con el toolchain MSVC lo necesita para enlazar (siempre true donde no aplica).
    */
   enlazadorMsvc(): Promise<boolean>;
+  /**
+   * rustup-init puede dejar una entrada de desinstalación en el registro del usuario. Si su
+   * `UninstallString` apunta dentro de `carpetaDatos` se borra (`quitada`); si apunta a otro lado
+   * (una instalación propia del usuario) no se toca (`ajena`); sin entrada, `ausente`.
+   */
+  limpiarEntradaRustup(carpetaDatos: string): Promise<'ausente' | 'quitada' | 'ajena'>;
   /** Perfiles de Firefox del usuario ([] si no hay Firefox); sin rutas de red ni con `..`. */
   perfilesFirefox(): Promise<PerfilFirefoxSistema[]>;
   /** ¿Firefox tiene abierto ese perfil? (su archivo de bloqueo está tomado). */

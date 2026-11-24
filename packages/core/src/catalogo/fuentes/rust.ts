@@ -17,9 +17,14 @@ const RELEASES = 'https://api.github.com/repos/rust-lang/rust/releases?per_page=
 /** Versiones menores "1.N" que se ofrecen (la última versión de cada una). */
 const MAX_RAMAS = 6;
 
-/** Instalador de rustup para Windows x64 (MSVC) y su suma SHA-256. */
+/**
+ * Instalador de rustup para Windows x64 (MSVC) y su suma SHA-256. Fijado a una versión de rustup
+ * (URL de `rustup/archive/<versión>/`): la huella de `catalogo.json` es la de esa versión y no
+ * cambia sola cuando rustup publica una nueva.
+ */
 export const HOST_RUSTUP = 'static.rust-lang.org';
-export const URL_RUSTUP_INIT = `https://${HOST_RUSTUP}/rustup/dist/x86_64-pc-windows-msvc/${nombreEjecutable('rustup-init')}`;
+export const VERSION_RUSTUP = '1.29.3';
+export const URL_RUSTUP_INIT = `https://${HOST_RUSTUP}/rustup/archive/${VERSION_RUSTUP}/x86_64-pc-windows-msvc/${nombreEjecutable('rustup-init')}`;
 export const URL_RUSTUP_INIT_SHA256 = `${URL_RUSTUP_INIT}.sha256`;
 
 const Releases = z.array(

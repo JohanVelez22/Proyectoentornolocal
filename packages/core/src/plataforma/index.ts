@@ -75,6 +75,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'serviciosSistema',
   'vcRedistInstalado',
   'enlazadorMsvc',
+  'limpiarEntradaRustup',
   'perfilesFirefox',
   'firefoxEnUso',
   'raicesSistema',

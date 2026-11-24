@@ -302,6 +302,15 @@ export const pt: Textos = {
       'agentes.sin_node': 'Instale o Node em Serviços para poder instalar o agente.',
       'agentes.node_antiguo':
         '{agente} precisa do Node {requerida} ou superior e o que seria usado é o {actual}. Instale um Node mais novo em Serviços.',
+      'agentes.node_version_desconocida':
+        'Não foi possível saber a versão do Node e {agente} precisa do Node {requerida} ou superior. Confira o Node em Serviços.',
+      'instalador.zip_demasiado_grande':
+        'O pacote baixado é grande demais ou tem arquivos demais: não será instalado.',
+      'rust.rustup_init_fallo': 'O rustup-init não terminou bem (código {codigo}): {detalle}',
+      'rust.toolchain_fallo':
+        'Não foi possível instalar o Rust {version} (código {codigo}): {detalle}',
+      'rust.desinstalar_fallo': 'Não foi possível desinstalar o Rust {version}: {detalle}',
+      'rust.descarga_fallo': 'Não foi possível baixar o rustup (HTTP {estado}).',
       'agentes.instalacion_fallo': 'Não foi possível instalar o agente: {detalle}',
       'agentes.no_instalado': '{agente} não está instalado.',
       'agentes.mcp_no_soportado':

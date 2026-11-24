@@ -649,6 +649,14 @@ export class Nucleo {
     });
     const instalador = new Instalador(rutas, eventos, o.fetch ?? fetch, {
       exec: o.ejecutor ?? ejecutorPorDefecto,
+      plataforma: plat,
+      alAvisar: (codigo) =>
+        avisos.publicar({
+          nivel: 'aviso',
+          tipo: 'doctor',
+          codigo,
+          datos: { fuente: 'rustup' },
+        }),
     });
     const hosts = new GestorHosts(plataforma, eventos);
     // Temporales de hosts que dejó una ejecución anterior (cierre brusco con un UAC abierto).
