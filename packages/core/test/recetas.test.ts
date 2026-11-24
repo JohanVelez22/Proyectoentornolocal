@@ -567,6 +567,53 @@ describe('EjecutorRecetas', () => {
     });
   });
 
+  it('las marcas que deja un paso quedan en su estado, también tras recargar', async () => {
+    const receta: PasoReceta[] = [
+      { id: 'bd-crear', tipo: 'bd-crear', titulo: '' },
+      { id: 'dos', tipo: 'comando', titulo: '' },
+    ];
+    const m = await montar({ receta });
+    m.registro.registrar('bd-crear', (ctx) => {
+      ctx.marcar?.('base-creada');
+      ctx.marcar?.('base-creada');
+      return Promise.resolve();
+    });
+    await m.ejecutor.ejecutar(m.s.id, {});
+    const e = m.ejecutor.estado(m.s.id);
+    expect(e.pasos[0]!.marcas).toEqual(['base-creada']);
+    expect(e.pasos[1]!.marcas).toEqual([]);
+    const otro = await montar({ base: m.base, receta });
+    expect(otro.ejecutor.estado(m.s.id).pasos[0]!.marcas).toEqual(['base-creada']);
+    // Un paso que se repite empieza sin marcas viejas.
+    await m.ejecutor.ejecutar(m.s.id, { soloPaso: 'dos' });
+    expect(m.ejecutor.estado(m.s.id).pasos[0]!.marcas).toEqual(['base-creada']);
+  });
+
+  it('"guardada" (Reinstalar) no repite los pasos que crean el proyecto', async () => {
+    const receta: PasoReceta[] = [
+      { id: 'crear-desde-composer', tipo: 'crear-desde-composer', titulo: '' },
+      { id: 'config-bd-crear', tipo: 'config-bd-crear', titulo: '' },
+      { id: 'dos', tipo: 'comando', titulo: '' },
+    ];
+    const m = await montar({ receta });
+    const corridos: string[] = [];
+    for (const t of ['crear-desde-composer', 'config-bd-crear'] as const) {
+      m.registro.registrar(t, () => {
+        corridos.push(t);
+        return Promise.resolve();
+      });
+    }
+    await m.ejecutor.ejecutar(m.s.id, { receta });
+    expect(corridos).toHaveLength(2);
+    await m.ejecutor.ejecutar(m.s.id, { guardada: true });
+    expect(corridos).toHaveLength(2);
+    expect(estadosDe(m.ejecutor.estado(m.s.id))).toEqual({
+      'crear-desde-composer': 'omitido',
+      'config-bd-crear': 'omitido',
+      dos: 'listo',
+    });
+  });
+
   it('"guardada" sin receta guardada usa la del proyecto', async () => {
     const m = await montar();
     await m.ejecutor.ejecutar(m.s.id, { guardada: true });

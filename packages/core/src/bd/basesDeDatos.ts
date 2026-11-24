@@ -38,6 +38,8 @@ export interface OpcionesCrearBase {
    * sin esto, un usuario existente conserva su clave y una distinta da `bd.usuario_clave_distinta`.
    */
   cambiarClave?: boolean;
+  /** La base debe ser nueva: si ya existe falla con `proyectos.base_existe`. */
+  nueva?: boolean;
 }
 
 export type ResultadoCrear = ResultadoCrearBase | ResultadoCrearBasePg;
@@ -258,6 +260,9 @@ export class BasesDeDatos {
       await this.estado(objetivo);
       validarMongo(nombre);
       noSistemaMongo(nombre, 'crear');
+      if (opts.nueva && (await this.listar(objetivo)).some((x) => x.nombre === nombre)) {
+        throw new ErrorWolf('proyectos.base_existe', `La base ${nombre} ya existe.`, { nombre });
+      }
       // En MongoDB una base existe solo si tiene una colección.
       await this.mongosh(
         `EJSON.stringify(db.getSiblingDB('${nombre}').createCollection('_pel_init'))`,

@@ -209,8 +209,13 @@ export const pt: Textos = {
       'proyectos.carpeta_invalida': 'A pasta do projeto não é válida.',
       'proyectos.nombre_invalido':
         'O nome do projeto só pode ter letras minúsculas, números e hifens (até 40).',
-      'proyectos.argumento_invalido': 'Um dado do projeto não é válido: {campo}.',
+      'proyectos.argumento_invalido': 'Um dado do projeto não é válido (campo: {campo}).',
       'proyectos.base_existe': 'O banco {nombre} já existe: escolha outro nome.',
+      'proyectos.dominio_existe': 'Já existe um site com o domínio {dominio}.',
+      'proyectos.sin_php': 'Não há PHP instalado: instale-o em Serviços.',
+      'proyectos.php_no_instalado': 'O PHP {version} não está instalado: instale-o em Serviços.',
+      'proyectos.python_no_instalado':
+        'O Python {version} não está instalado: instale-o em Serviços.',
       'mcp.token_invalido': 'O token do servidor MCP não é válido.',
       'mcp.solicitud_cancelada': 'O cliente MCP cancelou a solicitação: a ação não foi executada.',
       'doctor.puerto_ocupado':

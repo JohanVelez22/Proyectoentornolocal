@@ -1,4 +1,4 @@
-import { lstat, mkdir, readdir, rmdir, stat } from 'node:fs/promises';
+import { lstat, mkdir, readdir, realpath, rmdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { motorDe, type ObjetivoBd } from '../bd/basesDeDatos';
 import { validarNombreBd } from '../bd/clienteMysql';
@@ -8,7 +8,8 @@ import { TIPOS_CON_PHP, type Sitio } from '../tipos';
 import type { PasoReceta } from './config';
 import { phpPorDefecto } from './detectar';
 import { generador, TIPOS_GENERADOR, type PedidoProyecto, type TipoGenerador } from './generadores';
-import { motorDelPedido } from './generadores/comun';
+import { motorDelPedido, VERSION_WORDPRESS } from './generadores/comun';
+import { mismaBase } from './pasos/bd';
 import type { ResultadoReceta } from './recetas';
 
 /** Nombre del proyecto: minúsculas, dígitos y guiones; da el dominio `<nombre>.test`. */
@@ -32,6 +33,8 @@ export interface ResultadoCrearProyecto {
   sitio: Sitio;
   receta: ResultadoReceta;
   creado: CreadoProyecto;
+  /** Avisos que no impiden el proyecto (p. ej. el proceso no arrancó). */
+  avisos: string[];
 }
 
 export interface DepsCrearProyecto {
@@ -42,18 +45,66 @@ export interface DepsCrearProyecto {
     receta: readonly PasoReceta[],
   ) => Promise<{ sitio: Sitio }>;
   ejecutarReceta: (sitioId: string, receta: PasoReceta[]) => Promise<ResultadoReceta>;
-  /** Pasos de la receta con su estado (para saber qué quedó hecho). */
-  estadoReceta: (sitioId: string) => { pasos: { tipo: string; estado: string }[] };
+  /** Pasos de la receta con su estado y marcas (para saber qué quedó hecho de verdad). */
+  estadoReceta: (sitioId: string) => {
+    pasos: { tipo: string; estado: string; marcas?: string[] }[];
+  };
   sitios: () => Promise<Sitio[]>;
   /** Nombres de las bases que ya existen en el motor o la instancia. */
   basesDe: (objetivo: ObjetivoBd) => Promise<string[]>;
   phpInstaladas: () => Promise<string[]>;
+  pythonInstaladas: () => Promise<string[]>;
+  /** Arranca los procesos supervisados del sitio (uvicorn). Un fallo se informa, no se lanza. */
+  iniciarProcesos?: (sitioId: string) => Promise<void>;
   /** Vuelve a tomar la huella de la receta con lo que dejó la creación (no es fatal si falla). */
   confiar: (sitioId: string) => Promise<unknown>;
 }
 
+/** `campo` es un nombre corto y legible en cualquier idioma: tipo, php, python, base, opciones. */
 const invalido = (campo: string, texto: string): ErrorWolf =>
   new ErrorWolf('proyectos.argumento_invalido', texto, { campo });
+
+const STARTER_KITS = ['ninguno', 'react', 'vue', 'livewire'];
+const VERSION_WP = /^\d{1,2}\.\d{1,2}(\.\d{1,2})?$/;
+
+/** Opciones contra listas cerradas: lo que no se reconoce se rechaza, no se ignora. */
+function validarOpciones(p: PedidoProyecto): void {
+  const o: unknown = p.opciones ?? {};
+  if (typeof o !== 'object' || o === null || Array.isArray(o)) {
+    throw invalido('opciones', 'Las opciones del proyecto no son válidas.');
+  }
+  const x = o as Record<string, unknown>;
+  const conocidas = [
+    'starterKit',
+    'symfonyWebapp',
+    'pgvector',
+    'confirmarHuellaDebil',
+    'versionWordpress',
+  ];
+  for (const k of Object.keys(x)) {
+    if (!conocidas.includes(k)) throw invalido('opciones', `Opción desconocida: ${k.slice(0, 30)}`);
+  }
+  if (x.starterKit !== undefined && !STARTER_KITS.includes(String(x.starterKit))) {
+    throw invalido('opciones', 'El starter kit no es válido.');
+  }
+  for (const k of ['symfonyWebapp', 'pgvector']) {
+    if (x[k] !== undefined && typeof x[k] !== 'boolean') {
+      throw invalido('opciones', `La opción ${k} debe ser verdadera o falsa.`);
+    }
+  }
+  if (x.confirmarHuellaDebil !== undefined && x.confirmarHuellaDebil !== true) {
+    throw invalido('opciones', 'La confirmación de la huella débil no es válida.');
+  }
+  if (
+    x.versionWordpress !== undefined &&
+    (typeof x.versionWordpress !== 'string' || !VERSION_WP.test(x.versionWordpress))
+  ) {
+    throw invalido('opciones', 'La versión de WordPress no es válida.');
+  }
+  if (p.tipo !== 'laravel' && x.starterKit !== undefined && x.starterKit !== 'ninguno') {
+    throw invalido('opciones', 'Los starter kits son solo de Laravel.');
+  }
+}
 
 /** Valida el nombre del proyecto; lanza `proyectos.nombre_invalido`. */
 export function validarNombreProyecto(nombre: unknown): string {
@@ -82,6 +133,7 @@ export async function validarCarpetaNueva(
   carpeta: unknown,
   nombre: string,
   datos: string,
+  sitios: readonly string[] = [],
 ): Promise<{ crear: boolean }> {
   const malo = (): ErrorWolf =>
     new ErrorWolf('proyectos.carpeta_invalida', 'La carpeta del proyecto no es válida.');
@@ -97,12 +149,20 @@ export async function validarCarpetaNueva(
     const rel = path.relative(path.resolve(a), path.resolve(b));
     return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
   };
-  if (dentro(datos, limpia)) throw malo();
+  // Se compara con la ruta real del padre: un enlace o una unión no esconde otra carpeta.
+  let real: string;
   try {
     if (!(await stat(padre)).isDirectory()) throw malo();
+    real = path.join(await realpath(padre), nombre);
   } catch (e) {
     if (e instanceof ErrorWolf) throw e;
     throw malo();
+  }
+  const reales = async (r: string): Promise<string> => realpath(r).catch(() => path.resolve(r));
+  for (const candidato of [limpia, real]) {
+    if (dentro(await reales(datos), candidato)) throw malo();
+    // Ni dentro de la carpeta de un sitio que ya existe: mezclaría dos proyectos.
+    for (const s of sitios) if (dentro(await reales(s), candidato)) throw malo();
   }
   let info;
   try {
@@ -136,13 +196,32 @@ export async function crearProyecto(
     throw invalido('tipo', 'El tipo de proyecto no existe.');
   }
   const nombre = validarNombreProyecto(p.nombre);
+  validarOpciones(p);
   const gen = generador(p.tipo as TipoGenerador);
   const dominio = gen.dominio(nombre);
-  const { crear } = await validarCarpetaNueva(p.carpeta, nombre, d.rutas.base);
+  // WordPress solo publica SHA-1 (débil): sin la confirmación no se crea nada.
+  if (p.tipo === 'wordpress' && p.opciones?.confirmarHuellaDebil !== true) {
+    throw new ErrorWolf(
+      'catalogo.huella_debil',
+      'WordPress solo publica una huella SHA-1 (débil): hay que confirmar la descarga',
+      { servicio: 'wordpress', version: p.opciones?.versionWordpress ?? VERSION_WORDPRESS },
+    );
+  }
+  const existentes = await d.sitios();
+  const { crear } = await validarCarpetaNueva(
+    p.carpeta,
+    nombre,
+    d.rutas.base,
+    existentes.map((s) => s.carpeta),
+  );
   const carpeta = p.carpeta.replace(/[\\/]+$/, '');
 
-  if ((await d.sitios()).some((s) => s.dominio === dominio || s.alias.includes(dominio))) {
-    throw new Error(`Ya existe un sitio con el dominio ${dominio}`);
+  if (existentes.some((s) => s.dominio === dominio || s.alias.includes(dominio))) {
+    throw new ErrorWolf(
+      'proyectos.dominio_existe',
+      `Ya existe un sitio con el dominio ${dominio}`,
+      { dominio },
+    );
   }
 
   // PHP: el pedido o la rama 8.x más nueva instalada; debe estar instalado.
@@ -152,20 +231,44 @@ export async function crearProyecto(
     if (p.php !== undefined && !RAMA.test(p.php))
       throw invalido('php', 'La versión de PHP no es válida.');
     php = p.php ?? phpPorDefecto(gen.tipoSitio, null, instaladas) ?? undefined;
-    if (!php || !instaladas.includes(php)) {
-      throw new Error(
-        php
-          ? `PHP ${php} no está instalado. Instálelo desde Servicios.`
-          : 'No hay PHP instalado. Instálelo desde Servicios.',
+    if (!php) {
+      throw new ErrorWolf('proyectos.sin_php', 'No hay PHP instalado. Instálelo desde Servicios.');
+    }
+    if (!instaladas.includes(php)) {
+      throw new ErrorWolf(
+        'proyectos.php_no_instalado',
+        `PHP ${php} no está instalado. Instálelo desde Servicios.`,
+        { version: php },
       );
     }
   }
-  if (p.python !== undefined && !RAMA.test(p.python)) {
-    throw invalido('python', 'La versión de Python no es válida.');
+  // Python solo cuenta en FastAPI y debe estar instalado (el venv lo necesita).
+  let python: string | undefined;
+  if (p.tipo === 'fastapi' && p.python !== undefined) {
+    if (!RAMA.test(p.python)) throw invalido('python', 'La versión de Python no es válida.');
+    const instaladas = await d.pythonInstaladas();
+    if (!instaladas.some((v) => v === p.python || v.startsWith(`${p.python}.`))) {
+      throw new ErrorWolf(
+        'proyectos.python_no_instalado',
+        `Python ${p.python} no está instalado. Instálelo desde Servicios.`,
+        { version: p.python },
+      );
+    }
+    python = p.python;
   }
 
   // Base: nombre válido, motor coherente y que no exista ya (nunca se reutiliza una con datos).
-  let pedido = { ...p, nombre, carpeta, ...(php ? { php } : {}) };
+  // PHP y Python solo viajan si el tipo los usa.
+  const { php: _php, python: _py, ...sinVersiones } = p;
+  void _php;
+  void _py;
+  let pedido: PedidoProyecto = {
+    ...sinVersiones,
+    nombre,
+    carpeta,
+    ...(php ? { php } : {}),
+    ...(python ? { python } : {}),
+  };
   if (p.base) {
     if (p.base.instancia !== null && !INSTANCIA.test(p.base.instancia)) {
       throw invalido('base', 'La instancia de la base de datos no es válida.');
@@ -195,8 +298,8 @@ export async function crearProyecto(
     const objetivo: ObjetivoBd = p.base.instancia ?? motor;
     motorDe(objetivo);
     // Si el motor está apagado, esto falla aquí, antes de crear nada.
-    const existentes = await d.basesDe(objetivo);
-    if (existentes.includes(p.base.nombre)) {
+    const bases = await d.basesDe(objetivo);
+    if (bases.some((b) => mismaBase(motor, b, p.base!.nombre))) {
       throw new ErrorWolf(
         'proyectos.base_existe',
         `La base ${p.base.nombre} ya existe: elija otro nombre.`,
@@ -235,7 +338,7 @@ export async function crearProyecto(
       confiado: true,
       git: null,
       procesos: [],
-      runtimes: p.python ? { python: p.python } : {},
+      runtimes: python ? { python } : {},
     };
     sitio = (await d.crearSitio(datos, receta)).sitio;
   } catch (e) {
@@ -255,14 +358,28 @@ export async function crearProyecto(
   }
   if (resultado.estado === 'lista') await d.confiar(sitio.id).catch(() => undefined);
 
+  const avisos: string[] = [];
+  if (resultado.estado === 'lista' && p.tipo === 'fastapi' && d.iniciarProcesos) {
+    try {
+      await d.iniciarProcesos(sitio.id);
+    } catch (e) {
+      avisos.push(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  // La base solo cuenta si el paso la creó de verdad (marca), no si ya existía.
   const pasos = d.estadoReceta(sitio.id).pasos;
   const baseCreada =
-    pedido.base && pasos.some((x) => x.tipo === 'bd-crear' && x.estado === 'listo')
+    pedido.base &&
+    pasos.some(
+      (x) => x.tipo === 'bd-crear' && x.estado === 'listo' && x.marcas?.includes('base-creada'),
+    )
       ? pedido.base.nombre
       : null;
   return {
     sitio,
     receta: resultado,
     creado: { carpeta: true, base: baseCreada, sitio: sitio.id },
+    avisos,
   };
 }

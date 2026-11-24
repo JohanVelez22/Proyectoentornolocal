@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { carpetaTemporal } from './temporales';
+import { ErrorWolf } from '../src/errores';
 import { fetchFalso } from './catalogo-falso';
 import { zip } from './zip-prueba';
 import { lanzadorPorDefecto, matarArbol, rutaTaskkill } from '../src/plataforma/lanzar';
@@ -175,6 +176,9 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
 }
 
 /** Corre un paso y devuelve sus líneas. */
+/** Marcas que dejó el último paso corrido con `correr`. */
+let marcasPaso: string[] = [];
+
 async function correr(
   a: Armado,
   tipo: TipoPaso,
@@ -182,12 +186,14 @@ async function correr(
   senal: AbortSignal = new AbortController().signal,
 ): Promise<string[]> {
   const lineas: string[] = [];
+  marcasPaso = [];
   const paso: PasoReceta = { id: tipo, tipo, titulo: tipo, ...(args ? { args } : {}) };
   const ctx: ContextoPaso = {
     sitio: a.sitio,
     paso,
     carpeta: a.sitio.carpeta,
     linea: (t) => lineas.push(t),
+    marcar: (m) => marcasPaso.push(m),
     senal,
   };
   await a.registro.obtener(tipo)!(ctx);
@@ -1113,13 +1119,68 @@ describe('crear-desde-composer', () => {
     ]);
   });
 
-  it('no pisa: con la carpeta con archivos no lanza nada', async () => {
+  it('no pisa: con la carpeta con archivos falla con proyectos.carpeta_no_vacia y no lanza nada', async () => {
     const a = await armar();
     await escribir(a.carpeta, 'mio.txt', 'mío');
-    const lineas = await correr(a, 'crear-desde-composer', { paquete: 'laravel/laravel' });
+    await expect(
+      correr(a, 'crear-desde-composer', { paquete: 'laravel/laravel' }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.carpeta_no_vacia' });
     expect(a.llamadas).toHaveLength(0);
-    expect(lineas.join('\n')).toContain('ya tiene archivos');
     expect(await leer(a.carpeta, 'mio.txt')).toBe('mío');
+  });
+
+  it('un composer.json de otro paquete tampoco se reanuda', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, 'composer.json', JSON.stringify({ name: 'otro/proyecto' }));
+    await expect(
+      correr(a, 'crear-desde-composer', { paquete: 'laravel/laravel' }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.carpeta_no_vacia' });
+    expect(a.llamadas).toHaveLength(0);
+  });
+
+  it('reintento tras un fallo a medias: composer.json del mismo paquete sin vendor → composer install', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, 'composer.json', JSON.stringify({ name: 'laravel/laravel' }));
+    await correr(a, 'crear-desde-composer', { paquete: 'laravel/laravel' });
+    expect(a.llamadas).toHaveLength(1);
+    expect(a.llamadas[0]!.args.slice(3)).toEqual([
+      'install',
+      '--no-interaction',
+      '--prefer-dist',
+      '--no-scripts',
+    ]);
+    // Con vendor/autoload.php el proyecto ya está completo: no se toca.
+    await escribir(a.carpeta, 'vendor/autoload.php', '<?php');
+    a.llamadas.length = 0;
+    await expect(
+      correr(a, 'crear-desde-composer', { paquete: 'laravel/laravel' }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.carpeta_no_vacia' });
+    expect(a.llamadas).toHaveLength(0);
+  });
+
+  it('con args.scripts (Symfony) no pasa --no-scripts', async () => {
+    const a = await armar();
+    await correr(a, 'crear-desde-composer', { paquete: 'symfony/skeleton', scripts: true });
+    expect(a.llamadas[0]!.args).not.toContain('--no-scripts');
+    expect(a.llamadas[0]!.args).toContain('symfony/skeleton');
+    const b = await armar();
+    await correr(b, 'crear-desde-composer', { paquete: 'symfony/skeleton' });
+    expect(b.llamadas[0]!.args).toContain('--no-scripts');
+  });
+
+  it('wolfcore.yml no puede traer pasos de generador ni args.scripts', async () => {
+    const { ConfigProyectoSchema } = await import('../src/proyectos/config');
+    const { PASOS_SOLO_GENERADOR } = await import('../src/proyectos/config');
+    for (const tipo of PASOS_SOLO_GENERADOR) {
+      const r = ConfigProyectoSchema.safeParse({ receta: [{ id: 'x', tipo, titulo: 't' }] });
+      expect(r.success, tipo).toBe(false);
+    }
+    expect(
+      ConfigProyectoSchema.safeParse({ receta: [{ id: 'x', tipo: 'migrar', titulo: 't' }] })
+        .success,
+    ).toBe(true);
+    const { ARGS_SOLO_INTERFAZ } = await import('../src/proyectos/recetas');
+    expect(ARGS_SOLO_INTERFAZ).toContain('scripts');
   });
 
   it.each([
@@ -1241,15 +1302,45 @@ describe('descargar-plantilla (WordPress)', () => {
     await expect(stat(join(a.base, 'escape.txt'))).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it('no pisa: con archivos en la carpeta no pide nada', async () => {
+  it('no pisa: con archivos en la carpeta falla con proyectos.carpeta_no_vacia y no pide nada', async () => {
     const a = await armar({ sitio: { tipo: 'wordpress' } });
     await escribir(a.carpeta, 'index.php', 'MÍO');
     const red = fetchFalso({});
     a.deps.fetch = red.f;
-    const lineas = await correr(a, 'descargar-plantilla', args());
+    await expect(correr(a, 'descargar-plantilla', args())).rejects.toMatchObject({
+      codigo: 'proyectos.carpeta_no_vacia',
+    });
     expect(red.pedidas).toEqual([]);
-    expect(lineas.join('\n')).toContain('ya tiene archivos');
     expect(await leer(a.carpeta, 'index.php')).toBe('MÍO');
+  });
+
+  it('solo wordpress.org vale como destino, en cada salto', async () => {
+    const { urlWordpress } = await import('../src/proyectos/pasos/descargarPlantilla');
+    expect(urlWordpress('https://wordpress.org/wordpress-7.1.5.zip')).toBe(true);
+    for (const mala of [
+      'http://wordpress.org/x.zip',
+      'https://downloads.wordpress.org/x.zip',
+      'https://wordpress.org.evil.example/x.zip',
+      'https://u:p@wordpress.org/x.zip',
+      'https://wordpress.org:8443/x.zip',
+      'https://github.com/x.zip',
+      'no es url',
+    ]) {
+      expect(urlWordpress(mala), mala).toBe(false);
+    }
+    const { HOSTS_PERMITIDOS } = await import('../src/catalogo/comun');
+    expect(HOSTS_PERMITIDOS).not.toContain('wordpress.org');
+  });
+
+  it('una redirección a downloads.wordpress.org también se corta', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    const red = fetchFalso({
+      [`${URL}.sha1`]: { ir: 'https://downloads.wordpress.org/release/x.sha1' },
+    });
+    a.deps.fetch = red.f;
+    await expect(correr(a, 'descargar-plantilla', args())).rejects.toMatchObject({
+      codigo: 'catalogo.redireccion_ajena',
+    });
   });
 
   it.each([
@@ -1500,5 +1591,190 @@ describe('pasos de base con instancia y .env.local', () => {
     await correr(a, 'env-crear', { instancia: 'postgresql@16', base: 'api' });
     expect(pedidas).toEqual(['postgresql@16']);
     expect(await leer(a.carpeta, '.env')).toContain('127.0.0.1:5433/api');
+  });
+});
+
+describe('bd-crear de un proyecto nuevo (nueva: true)', () => {
+  it('crea la base, la pide sin IF NOT EXISTS y deja la marca base-creada', async () => {
+    const a = await armar();
+    await correr(a, 'bd-crear', { motor: 'mysql', base: 'tienda', nueva: true });
+    expect(a.creadas[0]).toMatchObject({ nombre: 'tienda', opts: { nueva: true } });
+    expect(marcasPaso).toEqual(['base-creada']);
+  });
+
+  it('sin nueva, una base que ya existe no se toca ni deja marca', async () => {
+    const a = await armar({ basesExistentes: ['tienda'] });
+    await correr(a, 'bd-crear', { motor: 'mysql', base: 'tienda' });
+    expect(a.creadas).toEqual([]);
+    expect(marcasPaso).toEqual([]);
+  });
+
+  it('con nueva, MiApp existente frente a miapp falla en MySQL y MariaDB (sin distinguir mayúsculas)', async () => {
+    for (const motor of ['mysql', 'mariadb']) {
+      const a = await armar({ basesExistentes: ['MiApp'] });
+      await expect(
+        correr(a, 'bd-crear', { motor, base: 'miapp', nueva: true }),
+      ).rejects.toMatchObject({ codigo: 'proyectos.base_existe' });
+      expect(a.creadas).toEqual([]);
+      expect(marcasPaso).toEqual([]);
+    }
+  });
+
+  it('en PostgreSQL los nombres distinguen mayúsculas', async () => {
+    const a = await armar({ basesExistentes: ['MiApp'] });
+    await correr(a, 'bd-crear', { motor: 'postgresql', base: 'miapp', nueva: true });
+    expect(a.creadas).toHaveLength(1);
+  });
+
+  it('dos creaciones simultáneas: la segunda falla y solo la primera deja marca', async () => {
+    const a = await armar();
+    let hay = false;
+    // El motor la crea sin IF NOT EXISTS: la segunda orden da base_existe aunque ambas la
+    // vieran libre en la lista.
+    a.deps.bd.crear = async () => {
+      await new Promise((r) => setTimeout(r, 5));
+      if (hay) throw new ErrorWolf('proyectos.base_existe', 'ya existe', { nombre: 'x' });
+      hay = true;
+      return { usuarioActualizado: false };
+    };
+    const marcas: string[][] = [];
+    const uno = async (): Promise<void> => {
+      await correr(a, 'bd-crear', { motor: 'mysql', base: 'tienda', nueva: true });
+      marcas.push(marcasPaso);
+    };
+    const r = await Promise.allSettled([uno(), uno()]);
+    expect(r.map((x) => x.status).sort()).toEqual(['fulfilled', 'rejected']);
+    expect((r.find((x) => x.status === 'rejected') as PromiseRejectedResult).reason).toMatchObject({
+      codigo: 'proyectos.base_existe',
+    });
+  });
+
+  it('Reinstalar no repite nueva ni los pasos de generador', async () => {
+    const { ARGS_SIN_REPETIR, PASOS_SOLO_CREACION } = await import('../src/proyectos/recetas');
+    expect(ARGS_SIN_REPETIR).toContain('nueva');
+    expect(PASOS_SOLO_CREACION).toContain('crear-desde-composer');
+  });
+});
+
+describe('config-bd-crear: reemplazo en una pasada y CodeIgniter 3', () => {
+  const DB = [
+    '<?php',
+    "$db['default'] = array(",
+    "\t'dsn'\t=> '',",
+    "\t'hostname' => 'localhost',",
+    "\t'username' => '',",
+    "\t'password' => '',",
+    "\t'database' => '',",
+    "\t'dbdriver' => 'mysqli',",
+    ');',
+    '',
+  ].join('\n');
+
+  it("una clave que contiene 'database' => 1 no desvía ningún reemplazo", async () => {
+    const a = await armar({ sitio: { tipo: 'codeigniter3' } });
+    a.deps.bd.conexion = async () => ({
+      host: '127.0.0.1',
+      puerto: 3306,
+      usuario: 'root',
+      clave: `x" , "database" => 1, 'database' => 'robada`,
+    });
+    await escribir(a.carpeta, 'application/config/database.php', DB);
+    await correr(a, 'config-bd-crear', {
+      marco: 'codeigniter3',
+      motor: 'mysql',
+      base: 'diamantes',
+    });
+    const t = await leer(a.carpeta, 'application/config/database.php');
+    const lineas = t.split('\n').filter((l) => /^\s*'database'/.test(l));
+    expect(lineas).toEqual(["\t'database' => 'diamantes',"]);
+    expect(t).toContain("'dbdriver' => 'mysqli'");
+    expect(t).toContain("\\'robada");
+  });
+
+  it('con comillas dobles y números en la plantilla también la reconoce', async () => {
+    const { reemplazarClavesPhp } = await import('../src/proyectos/pasos/configBd');
+    const t = reemplazarClavesPhp(
+      '<?php\n  "database" => "x",\n  \'port\' => 1,\n',
+      { database: "'d'", port: '3307' },
+      (k) => new RegExp(`^(\\s*['"]${k}['"]\\s*=>\\s*)(?:'[^']*'|"[^"]*"|\\d+)`),
+    );
+    expect(t).toBe("<?php\n  \"database\" => 'd',\n  'port' => 3307,\n");
+    expect(() =>
+      reemplazarClavesPhp('<?php\n', { falta: "'x'" }, (k) => new RegExp(`^(${k})`)),
+    ).toThrow('no trae');
+  });
+
+  it('con una conexión ya configurada exige sobrescribir y guarda una copia', async () => {
+    const a = await armar({ sitio: { tipo: 'codeigniter3' } });
+    const propia = DB.replace("'username' => ''", "'username' => 'mio'");
+    await escribir(a.carpeta, 'application/config/database.php', propia);
+    await expect(
+      correr(a, 'config-bd-crear', { marco: 'codeigniter3', motor: 'mysql', base: 'x' }),
+    ).rejects.toThrow('sobrescribirla');
+    expect(await leer(a.carpeta, 'application/config/database.php')).toBe(propia);
+    await correr(a, 'config-bd-crear', {
+      marco: 'codeigniter3',
+      motor: 'mysql',
+      base: 'x',
+      sobrescribir: true,
+    });
+    expect(await leer(a.carpeta, 'application/config/database.php')).toContain("'database' => 'x'");
+    const copias = (await readdir(join(a.base, 'run'))).filter((n) => n.endsWith('.respaldo'));
+    expect(copias).toHaveLength(1);
+    expect(await readFile(join(a.base, 'run', copias[0]!), 'utf8')).toBe(propia);
+  });
+
+  it('pone base_url con el dominio https y el entorno en production, solo si son los originales', async () => {
+    const a = await armar({ sitio: { tipo: 'codeigniter3', dominio: 'diamantes.test' } });
+    await escribir(a.carpeta, 'application/config/database.php', DB);
+    await escribir(
+      a.carpeta,
+      'application/config/config.php',
+      "<?php\n$config['base_url'] = '';\n",
+    );
+    await escribir(
+      a.carpeta,
+      'index.php',
+      "<?php\ndefine('ENVIRONMENT', isset($_SERVER['CI_ENV']) ? $_SERVER['CI_ENV'] : 'development');\n",
+    );
+    await correr(a, 'config-bd-crear', { marco: 'codeigniter3', motor: 'mysql', base: 'x' });
+    expect(await leer(a.carpeta, 'application/config/config.php')).toContain(
+      "$config['base_url'] = 'https://diamantes.test/';",
+    );
+    expect(await leer(a.carpeta, 'index.php')).toContain(": 'production');");
+    // Un base_url que ya tiene valor no se toca.
+    const b = await armar({ sitio: { tipo: 'codeigniter3' } });
+    await escribir(b.carpeta, 'application/config/database.php', DB);
+    await escribir(
+      b.carpeta,
+      'application/config/config.php',
+      "<?php\n$config['base_url'] = 'http://mio/';\n",
+    );
+    await correr(b, 'config-bd-crear', { marco: 'codeigniter3', motor: 'mysql', base: 'x' });
+    expect(await leer(b.carpeta, 'application/config/config.php')).toContain("'http://mio/'");
+  });
+});
+
+describe('env-crear con args.valores (Laravel sin base)', () => {
+  it('pone la sesión y la caché en archivos y rechaza variables peligrosas', async () => {
+    const a = await armar({ sitio: { tipo: 'laravel' } });
+    await escribir(
+      a.carpeta,
+      '.env.example',
+      'APP_NAME=Laravel\nSESSION_DRIVER=database\nCACHE_STORE=database\nDB_CONNECTION=sqlite\n',
+    );
+    await correr(a, 'env-crear', {
+      valores: { SESSION_DRIVER: 'file', CACHE_STORE: 'file', QUEUE_CONNECTION: 'sync' },
+    });
+    const t = await leer(a.carpeta, '.env');
+    expect(t).toContain('SESSION_DRIVER=file');
+    expect(t).toContain('CACHE_STORE=file');
+    expect(t).toContain('QUEUE_CONNECTION=sync');
+    expect(t).toContain('DB_CONNECTION=sqlite');
+    const b = await armar({ sitio: { tipo: 'laravel' } });
+    for (const valores of [{ DB_PASSWORD: 'x' }, { 'A B': 'x' }, { A: 'x\ny' }, ['x'], { A: 1 }]) {
+      await expect(correr(b, 'env-crear', { valores })).rejects.toThrow();
+    }
+    await expect(readdir(b.carpeta)).resolves.toEqual([]);
   });
 });

@@ -5,6 +5,11 @@ import type { ImplementacionPaso } from '../pasos';
 import { sanear } from '../recetas';
 import { argsDe, comprobarSenal, nombreBase, objetivoDe, texto, type DepsPasos } from './comun';
 import { motorDe } from '../../bd/basesDeDatos';
+import { ErrorWolf } from '../../errores';
+
+/** MySQL y MariaDB distinguen mayúsculas según el sistema: se comparan sin distinguirlas. */
+export const mismaBase = (motor: string, a: string, b: string): boolean =>
+  motor === 'mysql' || motor === 'mariadb' ? a.toLowerCase() === b.toLowerCase() : a === b;
 
 async function objetivoObligatorio(...a: Parameters<typeof objetivoDe>) {
   const objetivo = await objetivoDe(...a);
@@ -14,7 +19,12 @@ async function objetivoObligatorio(...a: Parameters<typeof objetivoDe>) {
   return { objetivo, motor: motorDe(objetivo) };
 }
 
-/** Crea la base del proyecto (y su usuario si hay `args.usuario`); si ya existe, nada. */
+/**
+ * Crea la base del proyecto (y su usuario si hay `args.usuario`); si ya existe, nada. Con
+ * `args.nueva` (generadores) la base debe ser nueva: si ya existe falla con `proyectos.base_existe`
+ * (el motor la crea sin `IF NOT EXISTS`, así que ni una creación simultánea la comparte) y
+ * solo entonces deja la marca `base-creada`.
+ */
 export function pasoBdCrear(d: DepsPasos): ImplementacionPaso {
   return async (ctx) => {
     comprobarSenal(ctx);
@@ -22,15 +32,25 @@ export function pasoBdCrear(d: DepsPasos): ImplementacionPaso {
     const { objetivo, motor } = await objetivoObligatorio(ctx, d);
     const base = nombreBase(ctx.sitio, args);
     const existentes = await d.bd.listar(objetivo);
-    if (existentes.some((b) => b.nombre === base)) {
+    const nueva = args.nueva === true;
+    if (existentes.some((b) => mismaBase(motor, b.nombre, base))) {
+      if (nueva) {
+        throw new ErrorWolf('proyectos.base_existe', `La base ${base} ya existe.`, {
+          nombre: base,
+        });
+      }
       ctx.linea(`La base ${base} ya existe en ${NOMBRE_SERVICIO[motor]}; no se modificó.`);
       return;
     }
     comprobarSenal(ctx);
     const usuario = texto(args.usuario);
     const clave = texto(args.clave);
-    const opts = usuario ? { usuario, ...(clave ? { clave } : {}) } : {};
+    const opts = {
+      ...(usuario ? { usuario, ...(clave ? { clave } : {}) } : {}),
+      ...(nueva ? { nueva } : {}),
+    };
     await d.bd.crear(objetivo, base, opts);
+    if (nueva) ctx.marcar?.('base-creada');
     ctx.linea(
       `Se creó la base ${base} en ${NOMBRE_SERVICIO[motor]}` +
         (usuario ? ` con el usuario ${usuario}.` : '.'),

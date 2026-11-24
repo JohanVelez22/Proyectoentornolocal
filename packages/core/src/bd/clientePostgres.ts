@@ -311,6 +311,9 @@ export class ClientePostgres {
       const hay = await this.filas('SELECT COUNT(*) AS n FROM pg_database WHERE datname = $1', [
         nombre,
       ]);
+      if (opts.nueva && Number(hay[0]?.n ?? 0) > 0) {
+        throw new ErrorWolf('proyectos.base_existe', `La base ${nombre} ya existe.`, { nombre });
+      }
       if (Number(hay[0]?.n ?? 0) === 0) {
         // El dueño de la base lo es también del esquema public (PG15+): puede crear tablas.
         const dueno = usuario === undefined ? '' : ` OWNER ${rol}`;

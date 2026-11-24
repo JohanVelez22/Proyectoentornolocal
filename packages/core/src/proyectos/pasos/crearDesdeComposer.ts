@@ -1,4 +1,7 @@
 import { readdir } from 'node:fs/promises';
+import path from 'node:path';
+import { ErrorWolf } from '../../errores';
+import { existe, leerTexto } from '../archivos';
 import type { ImplementacionPaso } from '../pasos';
 import { argsDe, comprobarSenal, herramientas, lanzar, type DepsPasos } from './comun';
 
@@ -24,13 +27,28 @@ function paquete(v: unknown, campo: string): string {
   return v;
 }
 
+/** ¿El composer.json de la carpeta es del paquete `nombre`? (un intento anterior a medias) */
+async function esDelPaquete(carpeta: string, nombre: string): Promise<boolean> {
+  const t = await leerTexto(path.join(carpeta, 'composer.json'));
+  if (t === null) return false;
+  try {
+    return (JSON.parse(t) as { name?: unknown }).name === nombre;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * `composer create-project --no-interaction --prefer-dist --no-scripts <paquete> . [versión]` en
- * la carpeta del proyecto, con el PHP del sitio y sin shell (`windowsHide` en el lanzador). Solo
- * si la carpeta está vacía: nunca pisa un proyecto. Sin `--no-scripts` los paquetes corren
- * código propio (Laravel migra una base SQLite y genera la clave) antes de que WolfCore Dev
- * ponga la conexión; esos pasos ya están en la receta. `args.requerir` (lista de paquetes) corre
- * después `composer require` (Symfony `webapp`).
+ * la carpeta del proyecto, con el PHP del sitio y sin shell (`windowsHide` en el lanzador).
+ * Solo en una carpeta vacía: con archivos falla con `proyectos.carpeta_no_vacia` (nunca pisa un
+ * proyecto). Única excepción, el reintento tras un fallo a medias: hay un composer.json de ese
+ * mismo paquete y falta `vendor/autoload.php`; entonces solo corre `composer install`.
+ *
+ * Sin `--no-scripts` los paquetes corren código propio (Laravel migra una base SQLite y genera
+ * la clave) antes de que WolfCore Dev ponga la conexión; esos pasos ya están en la receta.
+ * Symfony sí los necesita (Flex aplica sus recetas con ellos): su generador pone
+ * `args.scripts: true`. `args.requerir` corre después `composer require` (Symfony `webapp`).
  */
 export function pasoCrearDesdeComposer(d: DepsPasos): ImplementacionPaso {
   return async (ctx) => {
@@ -46,41 +64,62 @@ export function pasoCrearDesdeComposer(d: DepsPasos): ImplementacionPaso {
       throw new Error('args.requerir debe ser una lista corta de paquetes.');
     }
     const extra = requerir.map((p) => paquete(p, 'requerir'));
+    let reanudar = false;
     if (!(await carpetaVacia(ctx.carpeta))) {
-      ctx.linea('La carpeta ya tiene archivos; no se creó el proyecto de nuevo.');
-      return;
+      if (
+        !(await esDelPaquete(ctx.carpeta, nombre)) ||
+        (await existe(path.join(ctx.carpeta, 'vendor', 'autoload.php')))
+      ) {
+        throw new ErrorWolf(
+          'proyectos.carpeta_no_vacia',
+          'La carpeta ya tiene archivos: no se crea el proyecto encima.',
+        );
+      }
+      reanudar = true;
     }
     const phar = await d.composerPhar();
     if (!phar) throw new Error('Composer no está instalado: instálelo desde Herramientas.');
     const h = await herramientas(ctx, d, { php: true });
     h.env.COMPOSER_NO_INTERACTION = '1';
     const php = h.php!;
-    await lanzar(
-      ctx,
-      d,
-      h,
-      php.exe,
-      [
-        '-c',
-        php.ini,
-        phar,
-        'create-project',
-        '--no-interaction',
-        '--prefer-dist',
-        '--no-scripts',
-        nombre,
-        '.',
-        ...(version ? [version] : []),
-      ],
-      `composer create-project ${nombre}${version ? ` ${version}` : ''}`,
-    );
+    const sinScripts = args.scripts === true ? [] : ['--no-scripts'];
+    const base = ['-c', php.ini, phar];
+    if (reanudar) {
+      ctx.linea('Faltan las dependencias de un intento anterior: se instalan.');
+      await lanzar(
+        ctx,
+        d,
+        h,
+        php.exe,
+        [...base, 'install', '--no-interaction', '--prefer-dist', ...sinScripts],
+        'composer install',
+      );
+    } else {
+      await lanzar(
+        ctx,
+        d,
+        h,
+        php.exe,
+        [
+          ...base,
+          'create-project',
+          '--no-interaction',
+          '--prefer-dist',
+          ...sinScripts,
+          nombre,
+          '.',
+          ...(version ? [version] : []),
+        ],
+        `composer create-project ${nombre}${version ? ` ${version}` : ''}`,
+      );
+    }
     for (const p of extra) {
       await lanzar(
         ctx,
         d,
         h,
         php.exe,
-        ['-c', php.ini, phar, 'require', '--no-interaction', p],
+        [...base, 'require', '--no-interaction', p],
         `composer require ${p}`,
       );
     }

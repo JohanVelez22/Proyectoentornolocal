@@ -200,8 +200,13 @@ export const en: Textos = {
       'proyectos.carpeta_invalida': 'The project folder is not valid.',
       'proyectos.nombre_invalido':
         'The project name can only have lowercase letters, numbers and hyphens (up to 40).',
-      'proyectos.argumento_invalido': 'A project value is not valid: {campo}.',
+      'proyectos.argumento_invalido': 'A project value is not valid (field: {campo}).',
       'proyectos.base_existe': 'The database {nombre} already exists: choose another name.',
+      'proyectos.dominio_existe': 'A site with the domain {dominio} already exists.',
+      'proyectos.sin_php': 'No PHP is installed: install it from Services.',
+      'proyectos.php_no_instalado': 'PHP {version} is not installed: install it from Services.',
+      'proyectos.python_no_instalado':
+        'Python {version} is not installed: install it from Services.',
       'mcp.token_invalido': 'The MCP server token is not valid.',
       'mcp.solicitud_cancelada': 'The MCP client cancelled the request: the action was not run.',
       'doctor.puerto_ocupado':

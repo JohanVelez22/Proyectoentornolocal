@@ -217,10 +217,19 @@ describe('ReceptorDumps', () => {
     expect(c.pid).toBe(process.pid);
     const viejo = new Date(Date.now() - 10 * 60_000);
     await utimes(archivo, viejo, viejo);
+    // El latido reemplaza el archivo: un stat justo en ese instante puede no encontrarlo.
+    const edad = async (): Promise<number> => {
+      try {
+        return Date.now() - (await stat(archivo)).mtimeMs;
+      } catch {
+        return Number.POSITIVE_INFINITY;
+      }
+    };
     const limite = Date.now() + 15_000;
-    while (Date.now() - (await stat(archivo)).mtimeMs > 5000 && Date.now() < limite)
+    while ((await edad()) > 5000 && Date.now() < limite) {
       await new Promise((ok) => setTimeout(ok, 20));
-    expect(Date.now() - (await stat(archivo)).mtimeMs).toBeLessThan(5000);
+    }
+    expect(await edad()).toBeLessThan(5000);
   });
 
   it('el archivo del token se restringe al usuario antes de escribir el token', async () => {

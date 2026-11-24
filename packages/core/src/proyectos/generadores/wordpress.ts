@@ -28,7 +28,7 @@ export const generadorWordpress: Generador = {
       }),
       ...(p.base
         ? [
-            paso('bd-crear', 'Crear la base de datos', base),
+            paso('bd-crear', 'Crear la base de datos', { ...base, nueva: true }),
             paso('config-bd-crear', 'Crear wp-config.php', { ...base, marco: 'wordpress' }),
           ]
         : []),

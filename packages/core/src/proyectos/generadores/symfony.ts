@@ -24,6 +24,8 @@ export const generadorSymfony: Generador = {
     return [
       paso('crear-desde-composer', 'Crear el proyecto Symfony (composer)', {
         paquete: 'symfony/skeleton',
+        // Flex aplica las recetas (public/index.php, config/, bin/console) con los scripts.
+        scripts: true,
         ...(p.opciones.symfonyWebapp ? { requerir: ['symfony/webapp-pack'] } : {}),
       }),
       ...(p.base
@@ -32,7 +34,7 @@ export const generadorSymfony: Generador = {
               ...base,
               destino: '.env.local',
             }),
-            paso('bd-crear', 'Crear la base de datos', base),
+            paso('bd-crear', 'Crear la base de datos', { ...base, nueva: true }),
           ]
         : []),
       pasoSitio(p, generadorSymfony),

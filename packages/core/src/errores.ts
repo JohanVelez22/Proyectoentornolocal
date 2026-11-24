@@ -106,6 +106,10 @@ export const PARAMETROS_ERROR = {
   'proyectos.nombre_invalido': ['campo'],
   'proyectos.argumento_invalido': ['campo'],
   'proyectos.base_existe': ['nombre'],
+  'proyectos.dominio_existe': ['dominio'],
+  'proyectos.sin_php': [],
+  'proyectos.php_no_instalado': ['version'],
+  'proyectos.python_no_instalado': ['version'],
   // servidor MCP
   'mcp.token_invalido': [],
   'mcp.solicitud_cancelada': [],

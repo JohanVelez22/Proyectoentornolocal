@@ -24,7 +24,7 @@ export const generadorCodeigniter4: Generador = {
         paquete: 'codeigniter4/appstarter',
       }),
       paso('env-crear', 'Crear el archivo .env', base),
-      ...(p.base ? [paso('bd-crear', 'Crear la base de datos', base)] : []),
+      ...(p.base ? [paso('bd-crear', 'Crear la base de datos', { ...base, nueva: true })] : []),
       pasoSitio(p, generadorCodeigniter4),
     ];
   },
@@ -45,7 +45,7 @@ export const generadorCodeigniter3: Generador = {
       paso('crear-desde-composer', 'Crear el proyecto CodeIgniter 3 (composer)', {
         paquete: 'codeigniter/framework',
       }),
-      ...(p.base ? [paso('bd-crear', 'Crear la base de datos', base)] : []),
+      ...(p.base ? [paso('bd-crear', 'Crear la base de datos', { ...base, nueva: true })] : []),
       ...(p.base
         ? [
             paso('config-bd-crear', 'Configurar database.php', {

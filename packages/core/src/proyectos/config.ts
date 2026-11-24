@@ -35,6 +35,19 @@ export const TIPOS_PASO = [
 ] as const;
 export type TipoPaso = (typeof TIPOS_PASO)[number];
 
+/**
+ * Pasos que arman un proyecto desde cero (generadores de "Nuevo proyecto"): descargan, crean
+ * archivos y escriben configuración con la conexión a la base. Los pone el generador; un
+ * `wolfcore.yml` de un repositorio no puede traerlos (lo leería un tercero con la clave del motor
+ * a mano), y "Reinstalar" tampoco los repite.
+ */
+export const PASOS_SOLO_GENERADOR: readonly TipoPaso[] = [
+  'crear-desde-composer',
+  'descargar-plantilla',
+  'copiar-plantilla-interna',
+  'config-bd-crear',
+];
+
 export const PasoRecetaSchema = z.object({
   id: z.string().min(1),
   tipo: z.enum(TIPOS_PASO),
@@ -94,6 +107,15 @@ export const ConfigProyectoSchema = z
     procesos: z.array(ProcesoProyectoSchema).default([]),
   })
   .superRefine((c, ctx) => {
+    c.receta.forEach((x, i) => {
+      if (PASOS_SOLO_GENERADOR.includes(x.tipo)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['receta', i, 'tipo'],
+          message: `El paso "${x.tipo}" solo lo usan los generadores de proyectos nuevos`,
+        });
+      }
+    });
     for (const campo of ['receta', 'procesos'] as const) {
       const vistos = new Set<string>();
       c[campo].forEach((x, i) => {

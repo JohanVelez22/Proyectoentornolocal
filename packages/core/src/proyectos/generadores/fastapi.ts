@@ -35,7 +35,7 @@ export const generadorFastapi: Generador = {
       ...(p.base
         ? [
             paso('env-crear', 'Crear el archivo .env', base),
-            paso('bd-crear', 'Crear la base de datos', base),
+            paso('bd-crear', 'Crear la base de datos', { ...base, nueva: true }),
           ]
         : []),
       ...(pgvector ? [paso('pgvector-activar', 'Activar pgvector en la base', base)] : []),

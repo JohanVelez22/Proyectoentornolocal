@@ -2732,6 +2732,13 @@ export class Nucleo {
         sitios: () => this.sitios.listar(),
         basesDe: async (objetivo) => (await this.bd.listar(objetivo)).map((b) => b.nombre),
         phpInstaladas: () => this.instalador.instalados('php'),
+        pythonInstaladas: () => this.instalador.instalados('python'),
+        iniciarProcesos: async (id) => {
+          const sitio = (await this.sitios.listar()).find((s) => s.id === id);
+          for (const proc of sitio?.procesos ?? []) {
+            if (proc.autoIniciar) await this.procesos.iniciar(id, proc.id);
+          }
+        },
         confiar: (id) => this.confiarReceta(id),
       },
       p,

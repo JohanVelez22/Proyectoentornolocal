@@ -99,6 +99,8 @@ export interface OpcionesCrearBaseMotor {
   clave?: string;
   /** Solo con confirmación explícita: si el usuario ya existe, su clave pasa a ser `clave`. */
   cambiarClave?: boolean;
+  /** Falla con `proyectos.base_existe` si la base ya existe (sin `IF NOT EXISTS`). */
+  nueva?: boolean;
 }
 
 export interface ResultadoCrearBase {
@@ -250,7 +252,20 @@ export class ClienteMysql {
       if (existia && !opts.cambiarClave) await this.comprobarClave(usuario, clave!);
     }
     try {
-      await this.filas(`CREATE DATABASE IF NOT EXISTS ${bd} CHARACTER SET utf8mb4`);
+      try {
+        await this.filas(
+          `CREATE DATABASE ${opts.nueva ? '' : 'IF NOT EXISTS '}${bd} CHARACTER SET utf8mb4`,
+        );
+      } catch (e) {
+        // 1007 ER_DB_CREATE_EXISTS: otra creación simultánea (o una base que difiere en mayúsculas).
+        if (
+          opts.nueva &&
+          /1007|database exists/i.test(`${(e as { code?: unknown }).code} ${String(e)}`)
+        ) {
+          throw new ErrorWolf('proyectos.base_existe', `La base ${nombre} ya existe.`, { nombre });
+        }
+        throw e;
+      }
       if (usuario === undefined) return { usuarioActualizado: false };
       if (!existia) {
         for (const host of ['localhost', '127.0.0.1']) {

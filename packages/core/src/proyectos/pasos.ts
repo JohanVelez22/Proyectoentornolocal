@@ -9,6 +9,8 @@ export interface ContextoPaso {
   carpeta: string;
   /** Agrega una línea al registro en vivo del paso (nunca claves ni tokens). */
   linea: (texto: string) => void;
+  /** Deja una marca en el estado del paso (qué hizo de verdad, p. ej. `base-creada`). */
+  marcar?: (marca: string) => void;
   /** Se aborta al cancelar la receta: la implementación debe detener lo que esté corriendo. */
   senal: AbortSignal;
 }

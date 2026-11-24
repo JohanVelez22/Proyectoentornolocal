@@ -31,8 +31,6 @@ export const HOSTS_PERMITIDOS: readonly string[] = [
   // Zig (zip y firma) y Dart (bucket `dart-archive` de Google Cloud Storage; solo esa ruta).
   'ziglang.org',
   'storage.googleapis.com',
-  // Plantilla de WordPress (zip y .sha1) del proyecto nuevo (D12); sin redirecciones.
-  'wordpress.org',
   // Xdebug: DLL oficiales por rama y variante (catálogo de extensiones de PHP).
   'xdebug.org',
 ];

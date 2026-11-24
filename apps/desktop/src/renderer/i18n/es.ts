@@ -204,8 +204,13 @@ export const es = {
       'proyectos.carpeta_invalida': 'La carpeta del proyecto no es válida.',
       'proyectos.nombre_invalido':
         'El nombre del proyecto solo puede llevar minúsculas, números y guiones (hasta 40).',
-      'proyectos.argumento_invalido': 'Un dato del proyecto no es válido: {campo}.',
+      'proyectos.argumento_invalido': 'Un dato del proyecto no es válido (campo: {campo}).',
       'proyectos.base_existe': 'La base {nombre} ya existe: elija otro nombre.',
+      'proyectos.dominio_existe': 'Ya existe un sitio con el dominio {dominio}.',
+      'proyectos.sin_php': 'No hay PHP instalado: instálelo desde Servicios.',
+      'proyectos.php_no_instalado': 'PHP {version} no está instalado: instálelo desde Servicios.',
+      'proyectos.python_no_instalado':
+        'Python {version} no está instalado: instálelo desde Servicios.',
       'mcp.token_invalido': 'El token del servidor MCP no es válido.',
       'mcp.solicitud_cancelada': 'El cliente MCP canceló la solicitud: no se ejecutó la acción.',
       'doctor.puerto_ocupado': 'El puerto {puerto} de {servicio} lo usa otro programa ({proceso}).',

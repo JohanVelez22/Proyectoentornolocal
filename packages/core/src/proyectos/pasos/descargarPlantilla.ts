@@ -1,7 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { cp, mkdir, open, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
-import { urlOficial } from '../../catalogo/comun';
 import { normalizarHuella } from '../../catalogo/huellas';
 import { leerAcotado, pedirConSaltos } from '../../catalogo/red';
 import { extraerZip } from '../../catalogo/zip';
@@ -14,6 +13,25 @@ import { carpetaVacia } from './crearDesdeComposer';
 export const MAX_BYTES_PLANTILLA = 200 * 1024 * 1024;
 const VERSION_WP = /^\d{1,2}\.\d{1,2}(\.\d{1,2})?$/;
 
+/**
+ * Único destino de esta descarga: https://wordpress.org, sin usuario, contraseña ni puerto. Se
+ * aplica a cada salto de una redirección; no depende de la lista global de descargas.
+ */
+export function urlWordpress(texto: string): boolean {
+  try {
+    const u = new URL(texto);
+    return (
+      u.protocol === 'https:' &&
+      u.hostname === 'wordpress.org' &&
+      u.username === '' &&
+      u.password === '' &&
+      u.port === ''
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Plantillas oficiales que se descargan (solo WordPress en D12). */
 const SERVICIOS = ['wordpress'] as const;
 
@@ -21,7 +39,7 @@ const SERVICIOS = ['wordpress'] as const;
  * Descarga la plantilla oficial (WordPress) en la carpeta del proyecto. La huella publicada es
  * SHA-1 (débil, y viene del mismo host): sin `args.confirmarHuellaDebil` falla con
  * `catalogo.huella_debil` **antes** de bajar nada. Host y redirecciones, solo `wordpress.org`.
- * Nunca pisa: si la carpeta ya tiene archivos, no hace nada.
+ * Nunca pisa: si la carpeta ya tiene archivos, falla con `proyectos.carpeta_no_vacia`.
  */
 export function pasoDescargarPlantilla(d: DepsPasos): ImplementacionPaso {
   return async (ctx) => {
@@ -36,8 +54,10 @@ export function pasoDescargarPlantilla(d: DepsPasos): ImplementacionPaso {
       throw new Error(`La versión de WordPress no es válida: ${String(version).slice(0, 20)}`);
     }
     if (!(await carpetaVacia(ctx.carpeta))) {
-      ctx.linea('La carpeta ya tiene archivos; no se descargó la plantilla.');
-      return;
+      throw new ErrorWolf(
+        'proyectos.carpeta_no_vacia',
+        'La carpeta ya tiene archivos: no se descarga la plantilla encima.',
+      );
     }
     if (args.confirmarHuellaDebil !== true) {
       throw new ErrorWolf(
@@ -51,7 +71,7 @@ export function pasoDescargarPlantilla(d: DepsPasos): ImplementacionPaso {
     const init = { signal: ctx.senal };
 
     ctx.linea(`> descargar wordpress-${version}.zip.sha1`);
-    const resSuma = await pedirConSaltos(f, `${url}.sha1`, init, urlOficial);
+    const resSuma = await pedirConSaltos(f, `${url}.sha1`, init, urlWordpress);
     if (!resSuma.ok) {
       throw new Error(`No se pudo leer la huella de WordPress ${version} (HTTP ${resSuma.status})`);
     }
@@ -73,7 +93,7 @@ export function pasoDescargarPlantilla(d: DepsPasos): ImplementacionPaso {
     try {
       await mkdir(tmp, { recursive: true });
       ctx.linea(`> descargar wordpress-${version}.zip`);
-      const res = await pedirConSaltos(f, url, init, urlOficial);
+      const res = await pedirConSaltos(f, url, init, urlWordpress);
       if (!res.ok || !res.body) {
         throw new Error(`No se pudo descargar WordPress ${version} (HTTP ${res.status})`);
       }

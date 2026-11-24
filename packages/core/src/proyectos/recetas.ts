@@ -10,6 +10,7 @@ import type { ProcesoProyecto, Sitio } from '../tipos';
 import {
   leerConfigProyecto,
   motorBdDe,
+  PASOS_SOLO_GENERADOR,
   PasoRecetaSchema,
   type PasoReceta,
   type TipoPaso,
@@ -180,6 +181,7 @@ export const ARGS_SOLO_INTERFAZ = [
   'confirmarSobrescribir',
   'archivo',
   'confirmarHuellaDebil',
+  'scripts',
 ] as const;
 
 function sinArgsDeInterfaz(p: PasoReceta): PasoReceta {
@@ -190,7 +192,7 @@ function sinArgsDeInterfaz(p: PasoReceta): PasoReceta {
 }
 
 /** Argumentos que no se repiten al reinstalar: `semilla` (--seed) duplicaría los datos de prueba. */
-export const ARGS_SIN_REPETIR = ['semilla'] as const;
+export const ARGS_SIN_REPETIR = ['semilla', 'nueva'] as const;
 
 /** Un paso guardado listo para repetirse: sin argumentos de interfaz ni de una sola vez. */
 function paraRepetir(p: PasoReceta): PasoReceta {
@@ -237,6 +239,8 @@ const PasoConEstadoSchema = PasoRecetaSchema.extend({
   mensaje: z.string().optional(),
   /** Últimas líneas del registro del paso. */
   log: z.array(z.string()).default([]),
+  /** Marcas que dejó el paso (p. ej. `base-creada`); las lee quien necesita saber qué hizo. */
+  marcas: z.array(z.string()).optional(),
 });
 export type PasoConEstado = z.infer<typeof PasoConEstadoSchema>;
 
@@ -279,6 +283,12 @@ export interface OpcionesReceta {
 /** Mensaje al intentar omitir un paso que no se puede omitir. */
 export const MENSAJE_NO_OMITIBLE = 'El paso "Crear el sitio" no se puede omitir.';
 
+/**
+ * Pasos que crean el proyecto desde cero (generadores): "Reinstalar" no los repite, porque
+ * fallarían o pisarían lo que el usuario ya tiene en la carpeta.
+ */
+export const PASOS_SOLO_CREACION: readonly TipoPaso[] = PASOS_SOLO_GENERADOR;
+
 /** Pasos sin los que no queda proyecto: no se omiten. */
 const PASOS_NO_OMITIBLES: readonly TipoPaso[] = ['sitio-crear'];
 
@@ -313,10 +323,11 @@ const inactiva = (sitioId: string): EstadoReceta => ({
 });
 
 function sinEstado(p: PasoConEstado): PasoReceta {
-  const { estado: _e, mensaje: _m, log: _l, ...def } = p;
+  const { estado: _e, mensaje: _m, log: _l, marcas: _k, ...def } = p;
   void _e;
   void _m;
   void _l;
+  void _k;
   return def;
 }
 
@@ -467,8 +478,14 @@ export class EjecutorRecetas {
       const pasos: PasoConEstado[] = receta.map((def) => {
         const a = continua ? anteriores.get(def.id) : undefined;
         return a
-          ? { ...def, estado: a.estado, mensaje: a.mensaje, log: [...a.log] }
-          : { ...def, estado: 'pendiente', log: [] };
+          ? {
+              ...def,
+              estado: a.estado,
+              mensaje: a.mensaje,
+              log: [...a.log],
+              marcas: [...(a.marcas ?? [])],
+            }
+          : { ...def, estado: 'pendiente', log: [], marcas: [] };
       });
 
       let aCorrer: number[];
@@ -492,8 +509,8 @@ export class EjecutorRecetas {
         // Reinstalar no vuelve a restaurar respaldos: pisaría la base con datos viejos.
         aCorrer = [];
         pasos.forEach((p, i) => {
-          if (p.tipo === 'bd-restaurar') {
-            Object.assign(p, { estado: 'omitido', mensaje: undefined, log: [] });
+          if (p.tipo === 'bd-restaurar' || PASOS_SOLO_CREACION.includes(p.tipo)) {
+            Object.assign(p, { estado: 'omitido', mensaje: undefined, log: [], marcas: [] });
             omitidos.push(i);
           } else aCorrer.push(i);
         });
@@ -501,7 +518,7 @@ export class EjecutorRecetas {
         aCorrer = pasos.map((_, i) => i);
       }
       for (const i of aCorrer) {
-        Object.assign(pasos[i]!, { estado: 'pendiente', mensaje: undefined, log: [] });
+        Object.assign(pasos[i]!, { estado: 'pendiente', mensaje: undefined, log: [], marcas: [] });
       }
 
       const e: EstadoReceta = { sitioId, estado: 'corriendo', pasos, actualizado: null };
@@ -584,6 +601,11 @@ export class EjecutorRecetas {
           paso: sinEstado(paso),
           carpeta,
           senal,
+          marcar: (marca) => {
+            if (!vivo) return;
+            const marcas = (paso.marcas ??= []);
+            if (!marcas.includes(marca)) marcas.push(marca);
+          },
           linea: (texto) => {
             if (!vivo) return;
             for (const bruta of String(texto)

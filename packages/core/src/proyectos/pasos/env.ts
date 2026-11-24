@@ -31,7 +31,7 @@ const CLAVE_VALIDA = /^[A-Za-z_][A-Za-z0-9_.]*$/;
 const CLAVES_BD = /^(DB_[A-Za-z0-9_]*|database\.default\..+|DATABASE_URL|MONGODB_URI)$/;
 
 /** AAAAMMDD-HHmmss-mmm en hora local (cada respaldo del .env tiene su propio archivo). */
-function sello(f: Date): string {
+export function sello(f: Date): string {
   const n = (v: number, l = 2): string => String(v).padStart(l, '0');
   return (
     `${f.getFullYear()}${n(f.getMonth() + 1)}${n(f.getDate())}-` +
@@ -310,6 +310,26 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
         throw new Error(`El valor de ${clave} en wolfcore.yml no puede llevar un salto de línea.`);
       }
       poner(clave, valor);
+    }
+
+    // Valores fijos que pide quien arma la receta (p. ej. sesión y caché en archivos cuando el
+    // proyecto no tiene base). Mismas reglas que los de wolfcore.yml.
+    const valores = args.valores;
+    if (valores !== undefined) {
+      if (typeof valores !== 'object' || valores === null || Array.isArray(valores)) {
+        throw new Error('args.valores debe ser un objeto de variables.');
+      }
+      for (const [clave, valor] of Object.entries(valores)) {
+        if (
+          !CLAVE_VALIDA.test(clave) ||
+          CLAVES_BD.test(clave) ||
+          typeof valor !== 'string' ||
+          /[\r\n]/.test(valor)
+        ) {
+          throw new Error(`La variable "${clave}" de args.valores no es válida.`);
+        }
+        poner(clave, valor);
+      }
     }
 
     comprobarSenal(ctx);

@@ -211,8 +211,14 @@ export const fr: Textos = {
       'proyectos.carpeta_invalida': 'Le dossier du projet n’est pas valide.',
       'proyectos.nombre_invalido':
         'Le nom du projet ne peut contenir que des minuscules, des chiffres et des tirets (40 au maximum).',
-      'proyectos.argumento_invalido': 'Une donnée du projet n’est pas valide : {campo}.',
+      'proyectos.argumento_invalido': 'Une donnée du projet n’est pas valide (champ : {campo}).',
       'proyectos.base_existe': 'La base {nombre} existe déjà : choisissez un autre nom.',
+      'proyectos.dominio_existe': 'Un site avec le domaine {dominio} existe déjà.',
+      'proyectos.sin_php': 'Aucun PHP n’est installé : installez-le depuis Services.',
+      'proyectos.php_no_instalado':
+        'PHP {version} n’est pas installé : installez-le depuis Services.',
+      'proyectos.python_no_instalado':
+        'Python {version} n’est pas installé : installez-le depuis Services.',
       'mcp.token_invalido': 'Le jeton du serveur MCP n’est pas valide.',
       'mcp.solicitud_cancelada':
         'Le client MCP a annulé la demande : l’action n’a pas été exécutée.',

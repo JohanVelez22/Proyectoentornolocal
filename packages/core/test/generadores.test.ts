@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, stat, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -87,13 +87,21 @@ describe('generadores: lista de pasos', () => {
     const p = generador('laravel').pasos(
       pedido('laravel', { base: { instancia: 'mariadb@11.4', nombre: 'tienda' } }),
     );
-    expect(paso(p, 'bd-crear').args).toEqual({ instancia: 'mariadb@11.4', base: 'tienda' });
+    expect(paso(p, 'bd-crear').args).toEqual({
+      instancia: 'mariadb@11.4',
+      base: 'tienda',
+      nueva: true,
+    });
     expect(paso(p, 'env-crear').args).toEqual({ instancia: 'mariadb@11.4', base: 'tienda' });
   });
 
   it('sin base no hay pasos de base ni migraciones', () => {
     const p = generador('laravel').pasos(pedido('laravel', { base: null }));
     expect(tipos(p)).toEqual(['crear-desde-composer', 'env-crear', 'key-generate', 'sitio-crear']);
+    // Sin base: sesión y caché en archivos (el .env.example las pone en `database`).
+    expect(paso(p, 'env-crear').args).toEqual({
+      valores: { SESSION_DRIVER: 'file', CACHE_STORE: 'file', QUEUE_CONNECTION: 'sync' },
+    });
   });
 
   it('CodeIgniter 4 usa appstarter y su .env; CodeIgniter 3 escribe database.php', () => {
@@ -114,15 +122,20 @@ describe('generadores: lista de pasos', () => {
 
   it('Symfony: la conexión va en .env.local y el webapp se pide aparte', () => {
     const p = generador('symfony').pasos(pedido('symfony', { opciones: { symfonyWebapp: true } }));
+    // Con los scripts: Flex aplica las recetas (public/index.php, config/, bin/console).
     expect(paso(p, 'crear-desde-composer').args).toEqual({
       paquete: 'symfony/skeleton',
+      scripts: true,
       requerir: ['symfony/webapp-pack'],
     });
     expect(paso(p, 'env-crear').args).toMatchObject({ destino: '.env.local' });
     // Vhost de raíz public/ y solo index.php: el de tipo laravel.
     expect(paso(p, 'sitio-crear').args).toMatchObject({ tipo: 'laravel' });
     const sin = generador('symfony').pasos(pedido('symfony'));
-    expect(paso(sin, 'crear-desde-composer').args).toEqual({ paquete: 'symfony/skeleton' });
+    expect(paso(sin, 'crear-desde-composer').args).toEqual({
+      paquete: 'symfony/skeleton',
+      scripts: true,
+    });
   });
 
   it('FastAPI: plantilla, venv, pip, base y proceso uvicorn; pgvector agrega su paso', () => {
@@ -283,6 +296,8 @@ describe('crearProyecto (sobre fakes: sin red, sin Composer, sin bases reales)',
   let creados: { datos: Omit<Sitio, 'id'>; receta: PasoReceta[] }[];
   let ejecutadas: { id: string; receta: PasoReceta[] }[];
   let pasosListos: string[];
+  let baseMarcada: boolean;
+  let iniciados: string[];
   let resultado: ResultadoReceta;
   let bases: string[];
   let php: string[];
@@ -298,10 +313,18 @@ describe('crearProyecto (sobre fakes: sin red, sin Composer, sin bases reales)',
       ejecutadas.push({ id, receta });
       return resultado;
     },
-    estadoReceta: () => ({ pasos: pasosListos.map((tipo) => ({ tipo, estado: 'listo' })) }),
+    estadoReceta: () => ({
+      pasos: pasosListos.map((tipo) => ({
+        tipo,
+        estado: 'listo',
+        marcas: tipo === 'bd-crear' && baseMarcada ? ['base-creada'] : [],
+      })),
+    }),
     sitios: async () => [],
     basesDe: async () => bases,
     phpInstaladas: async () => php,
+    pythonInstaladas: async () => ['3.12.10', '3.13.1'],
+    iniciarProcesos: async (id) => void iniciados.push(id),
     confiar: async (id) => void confiadas.push(id),
     ...extra,
   });
@@ -315,6 +338,8 @@ describe('crearProyecto (sobre fakes: sin red, sin Composer, sin bases reales)',
     creados = [];
     ejecutadas = [];
     pasosListos = ['crear-desde-composer', 'env-crear', 'key-generate', 'bd-crear'];
+    baseMarcada = true;
+    iniciados = [];
     resultado = { estado: 'lista' };
     bases = [];
     php = ['8.3', '8.4'];
@@ -468,11 +493,17 @@ describe('crearProyecto (sobre fakes: sin red, sin Composer, sin bases reales)',
     await expect(
       crearProyecto(
         deps({
-          sitios: async () => [{ dominio: 'mi-tienda.test', alias: [] } as unknown as Sitio],
+          sitios: async () => [
+            {
+              dominio: 'mi-tienda.test',
+              alias: [],
+              carpeta: path.join(base, 'otro'),
+            } as unknown as Sitio,
+          ],
         }),
         nuevo(),
       ),
-    ).rejects.toThrow(/Ya existe un sitio/);
+    ).rejects.toMatchObject({ codigo: 'proyectos.dominio_existe' });
     await expect(readdir(base)).resolves.toEqual([]);
   });
 
@@ -485,7 +516,6 @@ describe('crearProyecto (sobre fakes: sin red, sin Composer, sin bases reales)',
     ['instancia inventada', { base: { instancia: 'redis@7' as never, nombre: 'x' } }],
     ['pgvector sin PostgreSQL', { opciones: { pgvector: true } }],
     ['PHP con texto', { php: '8.4; calc' }],
-    ['Python con texto', { python: '3.12 && x' }],
   ] as [string, Partial<PedidoProyecto>][])('rechaza %s sin crear nada', async (_c, extra) => {
     await expect(crearProyecto(deps(), nuevo(extra))).rejects.toThrow();
     await expect(readdir(base)).resolves.toEqual([]);
@@ -499,6 +529,7 @@ describe('crearProyecto (sobre fakes: sin red, sin Composer, sin bases reales)',
         pedido('wordpress', {
           carpeta: path.join(base, 'mi-tienda'),
           base: { instancia: 'postgresql@17', nombre: 'wp' },
+          opciones: { confirmarHuellaDebil: true },
         }),
       ),
     ).rejects.toThrow(/MySQL o MariaDB/);
@@ -518,6 +549,145 @@ describe('crearProyecto (sobre fakes: sin red, sin Composer, sin bases reales)',
     expect(creados[0]!.datos.runtimes).toEqual({ python: '3.12' });
     expect(creados[0]!.datos.php).toBeNull();
     expect(paso(ejecutadas[0]!.receta, 'bd-crear').args).toMatchObject({ motor: 'postgresql' });
+  });
+
+  it('MiApp frente a una base miapp existente en MySQL se rechaza (sin distinguir mayúsculas)', async () => {
+    bases = ['MiApp'];
+    await expect(
+      crearProyecto(deps(), nuevo({ base: { instancia: null, nombre: 'miapp' } })),
+    ).rejects.toMatchObject({ codigo: 'proyectos.base_existe' });
+    await expect(readdir(base)).resolves.toEqual([]);
+    // En PostgreSQL los nombres sí distinguen mayúsculas.
+    bases = ['MiApp'];
+    const r = await crearProyecto(
+      deps(),
+      pedido('fastapi', {
+        carpeta: path.join(base, 'mi-tienda'),
+        php: undefined,
+        base: { instancia: null, nombre: 'miapp' },
+      }),
+    );
+    expect(r.sitio.id).toBe('mi-tienda');
+  });
+
+  it('creado.base solo se informa si el paso creó la base de verdad (marca)', async () => {
+    baseMarcada = false;
+    const r = await crearProyecto(deps(), nuevo());
+    expect(r.creado.base).toBeNull();
+  });
+
+  it('WordPress sin confirmar la huella débil falla con catalogo.huella_debil antes de crear nada', async () => {
+    const basesDe = vi.fn(async () => []);
+    await expect(
+      crearProyecto(
+        deps({ basesDe }),
+        pedido('wordpress', { carpeta: path.join(base, 'mi-tienda') }),
+      ),
+    ).rejects.toMatchObject({ codigo: 'catalogo.huella_debil' });
+    await expect(readdir(base)).resolves.toEqual([]);
+    expect(basesDe).not.toHaveBeenCalled();
+    expect(creados).toHaveLength(0);
+  });
+
+  it('Python con texto o que no está instalado se rechaza; en otros tipos se descarta', async () => {
+    const fastapi = (python: string): PedidoProyecto =>
+      pedido('fastapi', { carpeta: path.join(base, 'mi-tienda'), php: undefined, python });
+    await expect(crearProyecto(deps(), fastapi('3.12 && x'))).rejects.toMatchObject({
+      codigo: 'proyectos.argumento_invalido',
+    });
+    await expect(crearProyecto(deps(), fastapi('3.9'))).rejects.toMatchObject({
+      codigo: 'proyectos.python_no_instalado',
+    });
+    await expect(readdir(base)).resolves.toEqual([]);
+    await crearProyecto(deps(), nuevo({ python: '9.9' }));
+    expect(creados[0]!.datos.runtimes).toEqual({});
+  });
+
+  it('un PHP sin instalar da proyectos.php_no_instalado con código', async () => {
+    await expect(crearProyecto(deps(), nuevo({ php: '8.1' }))).rejects.toMatchObject({
+      codigo: 'proyectos.php_no_instalado',
+    });
+    php = [];
+    await expect(crearProyecto(deps(), nuevo({ php: undefined }))).rejects.toMatchObject({
+      codigo: 'proyectos.sin_php',
+    });
+  });
+
+  it.each([
+    ['starter kit inventado', { starterKit: 'angular' }],
+    ['starter kit en otro tipo', { starterKit: 'vue', tipo: 'symfony' }],
+    ['versión de WordPress con ruta', { versionWordpress: '../../x' }],
+    ['symfonyWebapp con texto', { symfonyWebapp: 'si' }],
+    ['opción desconocida', { cualquierCosa: true }],
+    ['confirmación que no es true', { confirmarHuellaDebil: 'si' }],
+  ])('rechaza la opción %s sin crear nada', async (_c, opciones) => {
+    const { tipo, ...resto } = opciones as Record<string, unknown>;
+    await expect(
+      crearProyecto(
+        deps(),
+        nuevo({
+          tipo: (tipo as TipoGenerador | undefined) ?? 'laravel',
+          opciones: resto as PedidoProyecto['opciones'],
+        }),
+      ),
+    ).rejects.toMatchObject({ codigo: 'proyectos.argumento_invalido' });
+    await expect(readdir(base)).resolves.toEqual([]);
+  });
+
+  it('una carpeta dentro de la carpeta de un sitio existente se rechaza', async () => {
+    const existente = path.join(base, 'otro');
+    await mkdir(existente);
+    await expect(
+      crearProyecto(
+        deps({
+          sitios: async () => [
+            { dominio: 'x.test', alias: [], carpeta: existente } as unknown as Sitio,
+          ],
+        }),
+        nuevo({ carpeta: path.join(existente, 'mi-tienda') }),
+      ),
+    ).rejects.toMatchObject({ codigo: 'proyectos.carpeta_invalida' });
+    expect(await readdir(existente)).toEqual([]);
+  });
+
+  it('un padre que es un enlace hacia la carpeta de datos no esconde la ruta real', async () => {
+    const enlace = path.join(base, 'enlace');
+    try {
+      await symlink(datos, enlace, 'junction');
+    } catch {
+      return; // sin permiso para crear enlaces en este equipo
+    }
+    await expect(
+      crearProyecto(deps(), nuevo({ carpeta: path.join(enlace, 'mi-tienda') })),
+    ).rejects.toMatchObject({ codigo: 'proyectos.carpeta_invalida' });
+    expect(await readdir(datos)).toEqual([]);
+  });
+
+  it('FastAPI arranca uvicorn al final; si no arranca lo avisa sin fallar', async () => {
+    const p = pedido('fastapi', { carpeta: path.join(base, 'mi-tienda'), php: undefined });
+    const r = await crearProyecto(deps(), p);
+    expect(iniciados).toEqual(['mi-tienda']);
+    expect(r.avisos).toEqual([]);
+    await rm(path.join(base, 'mi-tienda'), { recursive: true });
+    const mal = await crearProyecto(
+      deps({
+        iniciarProcesos: async () => {
+          throw new Error('puerto ocupado');
+        },
+      }),
+      p,
+    );
+    expect(mal.avisos).toEqual(['puerto ocupado']);
+    expect(mal.receta.estado).toBe('lista');
+  });
+
+  it('si la receta falla no se arrancan los procesos', async () => {
+    resultado = { estado: 'error', pasoId: 'pip-install', mensaje: 'x' };
+    await crearProyecto(
+      deps(),
+      pedido('fastapi', { carpeta: path.join(base, 'mi-tienda'), php: undefined }),
+    );
+    expect(iniciados).toEqual([]);
   });
 
   it('el estático no crea base ni consulta el motor', async () => {
@@ -608,7 +778,8 @@ describe('Nucleo.crearProyecto (estático, de punta a punta)', () => {
       n.crearProyecto({ tipo: 'estatico', nombre: 'mi-sitio', carpeta, base: null, opciones: {} });
     await pedirlo();
     await writeFile(path.join(carpeta, 'index.html'), 'MI TRABAJO');
-    await expect(pedirlo()).rejects.toMatchObject({ codigo: 'proyectos.carpeta_no_vacia' });
+    // La carpeta ya es la de un sitio registrado: ni siquiera se mira su contenido.
+    await expect(pedirlo()).rejects.toMatchObject({ codigo: 'proyectos.carpeta_invalida' });
     expect(await readFile(path.join(carpeta, 'index.html'), 'utf8')).toBe('MI TRABAJO');
   });
 
