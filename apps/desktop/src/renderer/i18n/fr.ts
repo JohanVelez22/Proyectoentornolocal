@@ -641,7 +641,7 @@ export const fr: Textos = {
       texto: (base: string) =>
         `Si vous continuez, la base ${base} actuelle sera entièrement REMPLACÉE. Une sauvegarde automatique est d’abord enregistrée ; ensuite la base est supprimée puis recréée avec le nouveau contenu.`,
       donde: 'La sauvegarde est enregistrée dans',
-      carpetaPorDefecto: 'Documents\\WolfCore Dev\\Sauvegardes',
+      carpetaPorDefecto: 'Documents\\WolfCore Dev\\Respaldos',
       otraBase:
         'Si vous ne voulez pas la remplacer, revenez en arrière et choisissez un autre nom : une nouvelle base sera créée.',
       pedir: (base: string) => `Pour confirmer, tapez ${base}`,
@@ -753,7 +753,7 @@ export const fr: Textos = {
     dialogoRespaldar: {
       titulo: (base: string) => `Sauvegarder ${base}`,
       destino: 'Elle sera enregistrée dans',
-      porDefecto: 'Documents\\WolfCore Dev\\Sauvegardes (dossier par défaut)',
+      porDefecto: 'Documents\\WolfCore Dev\\Respaldos (dossier par défaut)',
       porDefectoEn: (carpeta: string) => `${carpeta} (dossier par défaut)`,
       cambiar: 'Choisir un autre dossier…',
       porDefectoVolver: 'Utiliser le dossier par défaut',
@@ -2876,7 +2876,7 @@ export const fr: Textos = {
       espacioLibre: (libres: string, necesarios: string) =>
         `${libres} libres ; il en faut ${necesarios}`,
       datosQuedan:
-        'Les données précédentes ne sont jamais supprimées : la copie et les dumps restent dans Sauvegardes des mises à jour jusqu’à ce que vous les supprimiez.',
+        'Les données précédentes ne sont jamais supprimées : la copie et les dumps restent dans Respaldos des mises à jour jusqu’à ce que vous les supprimiez.',
       sinEspacio: 'Pas assez d’espace pour la copie : libérez de l’espace et réessayez.',
       alLado: (v: string) =>
         `${v} est installée. Les autres versions installées ne sont pas touchées ; les projets qui fixent une autre version continuent de l’utiliser.`,
@@ -2936,7 +2936,7 @@ export const fr: Textos = {
       hecho: (id: string) => `${id} débloquée. Vous pouvez maintenant l’allumer.`,
     },
     respaldos: {
-      titulo: 'Sauvegardes des mises à jour',
+      titulo: 'Respaldos des mises à jour',
       descripcion:
         'Copies laissées par les mises à jour et les nouvelles versions. Le dossier de données qu’utilise chaque instance n’apparaît jamais ici.',
       vacio: 'Aucune copie.',

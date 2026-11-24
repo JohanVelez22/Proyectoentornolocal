@@ -626,7 +626,7 @@ export const pt: Textos = {
       texto: (base: string) =>
         `Se continuar, o banco ${base} atual será SUBSTITUÍDO por completo. Primeiro é salvo um backup automático; depois o banco é apagado e recriado com o conteúdo novo.`,
       donde: 'O backup é salvo em',
-      carpetaPorDefecto: 'Documentos\\WolfCore Dev\\Backups',
+      carpetaPorDefecto: 'Documentos\\WolfCore Dev\\Respaldos',
       otraBase:
         'Se não quiser substituí-lo, volte e escolha outro nome: será criado um banco novo.',
       pedir: (base: string) => `Para confirmar, digite ${base}`,
@@ -737,7 +737,7 @@ export const pt: Textos = {
     dialogoRespaldar: {
       titulo: (base: string) => `Fazer backup de ${base}`,
       destino: 'Será salvo em',
-      porDefecto: 'Documentos\\WolfCore Dev\\Backups (pasta padrão)',
+      porDefecto: 'Documentos\\WolfCore Dev\\Respaldos (pasta padrão)',
       porDefectoEn: (carpeta: string) => `${carpeta} (pasta padrão)`,
       cambiar: 'Escolher outra pasta…',
       porDefectoVolver: 'Usar a pasta padrão',
@@ -2822,7 +2822,7 @@ export const pt: Textos = {
       espacioLibre: (libres: string, necesarios: string) =>
         `${libres} livres; são necessários ${necesarios}`,
       datosQuedan:
-        'Os dados anteriores nunca são apagados: a cópia e os dumps ficam em Backups das atualizações até você apagá-los.',
+        'Os dados anteriores nunca são apagados: a cópia e os dumps ficam em Respaldos das atualizações até você apagá-los.',
       sinEspacio: 'Não há espaço suficiente para a cópia: libere espaço e tente de novo.',
       alLado: (v: string) =>
         `${v} é instalada. As demais versões instaladas não são tocadas; os projetos que fixam outra versão continuam usando-a.`,
@@ -2882,7 +2882,7 @@ export const pt: Textos = {
       hecho: (id: string) => `${id} desbloqueada. Já pode ligá-la.`,
     },
     respaldos: {
-      titulo: 'Backups das atualizações',
+      titulo: 'Respaldos das atualizações',
       descripcion:
         'Cópias deixadas pelas atualizações e pelas novas versões. A pasta de dados que cada instância usa nunca aparece aqui.',
       vacio: 'Não há cópias.',
