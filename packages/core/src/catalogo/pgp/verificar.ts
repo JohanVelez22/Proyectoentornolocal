@@ -51,8 +51,6 @@ export interface OpcionesVerificacion {
 
 /** Margen para el reloj del equipo: una firma "del futuro" más allá de esto → reloj atrasado. */
 export const TOLERANCIA_RELOJ_S = 24 * 60 * 60;
-/** Margen entre la fecha de publicación de una versión y la de su firma. */
-export const MARGEN_PUBLICACION_MS = 48 * 60 * 60 * 1000;
 
 /** Hashes admitidos en una firma de datos: solo SHA-256 y SHA-512. */
 const HASHES_DATOS = new Set([HASH_SHA256, HASH_SHA512]);

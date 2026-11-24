@@ -3,9 +3,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { anillo, leerAnillo } from '../src/catalogo/pgp/anillos';
-import { crc24, desarmar, leerFirma, leerPaquetes } from '../src/catalogo/pgp/paquetes';
+import { crc24, desarmar, leerClave, leerFirma, leerPaquetes } from '../src/catalogo/pgp/paquetes';
 import { iniciarVerificacion, verificarFirmaSeparada } from '../src/catalogo/pgp/verificar';
 import { fuenteFirmaDe } from '../src/catalogo/huellas';
+import { catalogo } from '../src/catalogo/catalogo';
+import { cotaFirma, VIGENCIA_FIJADA, type VigenciaAnillo } from '../src/catalogo/pgp/cotas';
 import {
   armar,
   azar,
@@ -88,7 +90,10 @@ describe('anillos fijados', () => {
     // Autofirmas, vinculaciones y retrofirmas verificadas: ninguna clave fijada se pierde.
     for (const f of ['node', 'composer', 'nginx'] as const) {
       for (const c of anillo(f).filter((x) => x.huella === x.huellaPrimaria)) {
-        expect(c.firma, `${f} ${c.huella}`).toBe(true);
+        // Myles Borins marca desde 2018 su id principal solo para certificar (0x01): firma con
+        // sus subclaves, no con la primaria (segunda revisión de D10).
+        const certificaSolo = c.huella === 'C4F0DFFF4E8C1A8236409D08E73BC641CC11F4C8';
+        expect(c.firma, `${f} ${c.huella}`).toBe(!certificaSolo);
       }
     }
     const subclavesNode = anillo('node')
@@ -843,5 +848,156 @@ describe('fuenteFirmaDe', () => {
     expect(fuenteFirmaDe({ servicio: 'composer', version: '2.0.2' })).toBeNull();
     expect(fuenteFirmaDe({ servicio: 'composer', version: '1.10.28' })).toBeNull();
     expect(fuenteFirmaDe({ servicio: 'php', version: '8.4.1' })).toBeNull();
+  });
+});
+
+describe('segunda revisión: revocaciones, id principal y RSA', () => {
+  const T1 = 1_700_000_000;
+  const k = nuevaClave('ed25519', T1);
+  const r = nuevaClave('rsa', T1);
+  const sub = nuevaClave('ed25519', T1);
+
+  it('revocaciones con SHA-1 reciente sí cuentan (0x20, 0x28 y 0x30)', () => {
+    const sha1 = { opcionesRevocacion: { hash: 2 } };
+    expect(anilloDe(clavePublica(r, { ...sha1, revocada: true }))[0]?.revocada).toBe(true);
+    const conSub = anilloDe(
+      clavePublica(r, { ...sha1, subclaves: [{ clave: sub, revocada: true }] }),
+    );
+    expect(conSub.find((c) => c.huella === sub.huella)?.revocada).toBe(true);
+    expect(anilloDe(clavePublica(r, { ...sha1, usuarioRevocado: true }))[0]?.firma).toBe(false);
+  });
+
+  it('una revocación sin subpaquete de emisor se verifica con la primaria en curso', () => {
+    const sinEmisor = { opcionesRevocacion: { emisor: 'ninguno' as const } };
+    expect(anilloDe(clavePublica(k, { ...sinEmisor, revocada: 'al-final' }))[0]?.revocada).toBe(
+      true,
+    );
+    const conSub = anilloDe(
+      clavePublica(r, { ...sinEmisor, subclaves: [{ clave: sub, revocada: true }] }),
+    );
+    expect(conSub.find((c) => c.huella === sub.huella)?.revocada).toBe(true);
+    expect(anilloDe(clavePublica(k, { ...sinEmisor, usuarioRevocado: true }))[0]?.firma).toBe(
+      false,
+    );
+  });
+
+  it('los indicadores de la primaria salen del id principal (subpaquete 25)', () => {
+    // Principal con "firmar"; otro id más nuevo solo "certificar": firma.
+    const a = anilloDe(
+      clavePublica(k, {
+        principal: true,
+        indicadores: 0x03,
+        usuariosExtra: [
+          { nombre: 'Otro <o@example.invalid>', indicadores: 0x01, creacion: T1 + 900 },
+        ],
+      }),
+    );
+    expect(a[0]?.firma).toBe(true);
+    // Principal sin "firmar"; otro id más nuevo con "firmar": no firma.
+    const b = anilloDe(
+      clavePublica(k, {
+        principal: true,
+        indicadores: 0x01,
+        usuariosExtra: [
+          { nombre: 'Otro <o@example.invalid>', indicadores: 0x03, creacion: T1 + 900 },
+        ],
+      }),
+    );
+    expect(b[0]?.firma).toBe(false);
+  });
+
+  it('empate entre ids principales (o ninguno marcado): intersección de indicadores', () => {
+    const dos = anilloDe(
+      clavePublica(k, {
+        principal: true,
+        indicadores: 0x03,
+        usuariosExtra: [{ nombre: 'Otro <o@example.invalid>', indicadores: 0x01, principal: true }],
+      }),
+    );
+    expect(dos[0]?.firma).toBe(false);
+    const ninguno = anilloDe(
+      clavePublica(k, {
+        indicadores: 0x03,
+        usuariosExtra: [{ nombre: 'Otro <o@example.invalid>', indicadores: 0x01 }],
+      }),
+    );
+    expect(ninguno[0]?.firma).toBe(false);
+    const iguales = anilloDe(
+      clavePublica(k, {
+        indicadores: 0x03,
+        usuariosExtra: [{ nombre: 'Otro <o@example.invalid>', indicadores: 0x03 }],
+      }),
+    );
+    expect(iguales[0]?.firma).toBe(true);
+  });
+
+  it('RSA: e par, e < 3 o n par → la clave no se acepta', () => {
+    const jwk = r.privada.export({ format: 'jwk' });
+    const n = Buffer.from(jwk.n ?? '', 'base64url');
+    const cuerpoCon = (nn: Buffer, e: Buffer) =>
+      Buffer.concat([Buffer.from([4]), be32(T1), Buffer.from([1]), mpi(nn), mpi(e)]);
+    const nPar = Buffer.from(n);
+    nPar[nPar.length - 1] = nPar[nPar.length - 1]! & 0xfe;
+    for (const cuerpo of [
+      cuerpoCon(n, Buffer.from([0x01, 0x00, 0x00])),
+      cuerpoCon(n, Buffer.from([0x01])),
+      cuerpoCon(nPar, Buffer.from([0x01, 0x00, 0x01])),
+    ]) {
+      expect(() => leerClave(cuerpo)).toThrow(
+        expect.objectContaining({ codigo: expect.stringMatching(/^catalogo\.firma_/) }),
+      );
+    }
+    expect(() => leerClave(cuerpoCon(n, Buffer.from([0x01, 0x00, 0x01])))).not.toThrow();
+  });
+});
+
+describe('cota de fecha fijada (FECHA_ANILLO)', () => {
+  const vig: VigenciaAnillo = {
+    fecha: '2026-11-24',
+    node: { '24': '24.22.3' },
+    composer: { '2.11': '2.11.3' },
+    nginx: { '1.30': '1.30.8' },
+  };
+  const fecha48 = new Date(Date.parse('2026-11-24T00:00:00Z') - 48 * 3600 * 1000);
+
+  it('versión conocida: sin cota fija (solo la de su publicación, si la hay)', () => {
+    expect(cotaFirma('node', { version: '24.22.3' }, vig)).toEqual({ ok: true });
+    expect(cotaFirma('node', { version: '24.1.0', publicacion: '2025-05-01' }, vig)).toEqual({
+      ok: true,
+      noAntesDe: new Date(Date.parse('2025-05-01T00:00:00Z') - 48 * 3600 * 1000),
+    });
+    expect(cotaFirma('nginx', { version: '1.30.6' }, vig)).toEqual({ ok: true });
+  });
+
+  it('versión más nueva o de rama desconocida: firma posterior a FECHA_ANILLO − 48 h', () => {
+    expect(cotaFirma('node', { version: '24.22.4', publicacion: '2026-12-01' }, vig)).toEqual({
+      ok: true,
+      noAntesDe: new Date(Date.parse('2026-12-01T00:00:00Z') - 48 * 3600 * 1000),
+    });
+    expect(cotaFirma('node', { version: '28.0.0', publicacion: '2026-01-01' }, vig)).toEqual({
+      ok: true,
+      noAntesDe: fecha48,
+    });
+    expect(cotaFirma('composer', { version: '2.12.0' }, vig)).toEqual({
+      ok: true,
+      noAntesDe: fecha48,
+    });
+    expect(cotaFirma('nginx', { version: '1.31.1' }, vig)).toEqual({
+      ok: true,
+      noAntesDe: fecha48,
+    });
+  });
+
+  it('Node más nueva sin fecha de publicación → rechazo', () => {
+    expect(cotaFirma('node', { version: '24.22.4' }, vig)).toMatchObject({ ok: false });
+  });
+
+  it('las versiones de la lista fija del catálogo son conocidas en vigencia.json', () => {
+    for (const s of ['node', 'composer', 'nginx'] as const) {
+      for (const e of (catalogo as unknown as Record<string, { version: string }[]>)[s] ?? []) {
+        expect(cotaFirma(s, e), `${s} ${e.version}`).toEqual({ ok: true });
+      }
+    }
+    expect(VIGENCIA_FIJADA.fecha).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });

@@ -2,7 +2,7 @@ import claveComposer from '../claves/composer.asc?raw';
 import claveNginx from '../claves/nginx.asc?raw';
 import claveNode from '../claves/node.asc?raw';
 import type { FuenteFirma } from '../huellas';
-import { digestDe, firmaCuadra } from './cripto';
+import { digestDe, firmaCuadra, NOMBRE_HASH } from './cripto';
 import {
   leerClave,
   leerFirma,
@@ -34,7 +34,11 @@ const conLargo = (prefijo: number, cuerpo: Uint8Array, bytesLargo: 2 | 4): Uint8
 /** Clave (o subclave) tal como entra en el hash: 0x99, largo de 2 bytes y cuerpo. */
 const hashClave = (c: ClaveV4): Uint8Array => conLargo(0x99, c.cuerpo, 2);
 
+/** Revocaciones (0x20, 0x28, 0x30): restan confianza, así que valen con cualquier hash conocido. */
+const REVOCACIONES = new Set([0x20, 0x28, 0x30]);
+
 function hashAdmitido(f: FirmaV4): boolean {
+  if (REVOCACIONES.has(f.tipo)) return NOMBRE_HASH[f.algoritmoHash] !== undefined;
   return (
     HASHES_AUTOFIRMA.has(f.algoritmoHash) || (f.algoritmoHash === 2 && f.creacion < CORTE_SHA1)
   );
@@ -46,6 +50,13 @@ function autofirmaValida(f: FirmaV4, firmante: ClaveV4, partes: Uint8Array[]): b
   const d = digestDe(f, partes);
   return d !== null && firmaCuadra(f, firmante, d);
 }
+
+/** Indicadores de una certificación (null = sin subpaquete 27: la primaria firma). */
+const indicadoresDe = (f: FirmaV4): number => f.indicadores ?? 0xff;
+
+/** ¿La certificación marca su id como principal (subpaquete 25 con hash, distinto de 0)? */
+const esPrincipal = (f: FirmaV4): boolean =>
+  f.subpaquetes.some((s) => s.tipo === 25 && s.conHash && (s.datos[0] ?? 0) !== 0);
 
 /** ¿La firma dice venir de `clave`? (por huella si la trae, si no por id). */
 function deClave(f: FirmaV4, clave: ClaveV4): boolean {
@@ -123,18 +134,32 @@ export function leerAnillo(datos: Uint8Array | string): ClavePublica[] {
   const cerrar = (): void => {
     if (!primaria) return;
     const p = primaria;
-    const certs = usuarios.flatMap((u) =>
-      u.certificaciones.filter((c) => !u.revocaciones.some((r) => r.creacion >= c.creacion)),
-    );
-    const auto = vigente([...directas, ...certs]);
+    // Certificación vigente de cada id (la más reciente que no revoca una 0x30 posterior).
+    const porUsuario = usuarios.flatMap((u) => {
+      const v = vigente(
+        u.certificaciones.filter((c) => !u.revocaciones.some((r) => r.creacion >= c.creacion)),
+      );
+      return v ? [v] : [];
+    });
+    // Indicadores: los del id principal (subpaquete 25); si hay empate, o ninguno está marcado,
+    // la intersección de los de todos. Sin ids, los de la firma directa más reciente.
+    const principales = porUsuario.filter(esPrincipal);
+    const grupo = principales.length > 0 ? principales : porUsuario;
+    const directa = vigente(directas);
+    const auto = vigente([...directas, ...grupo]);
     const venceP = auto?.vigenciaClave ? p.creacion + auto.vigenciaClave : null;
-    const flagsP = auto?.indicadores ?? null;
+    const flagsP =
+      grupo.length > 0
+        ? grupo.reduce((acc, c) => acc & indicadoresDe(c), 0xff)
+        : directa
+          ? indicadoresDe(directa)
+          : 0;
     const nombres = usuarios.flatMap((u) => (u.nombre ? [u.nombre] : []));
     res.push({
       ...p,
       huellaPrimaria: p.huella,
       expiracion: venceP,
-      firma: auto !== null && (flagsP === null || (flagsP & PUEDE_FIRMAR) !== 0),
+      firma: auto !== null && (flagsP & PUEDE_FIRMAR) !== 0,
       revocada,
       usuarios: nombres,
     });
@@ -202,7 +227,9 @@ export function leerAnillo(datos: Uint8Array | string): ClavePublica[] {
       } catch {
         continue; // firma v3, de otro algoritmo o rara: no es una autofirma que se use
       }
-      if (!deClave(f, primaria)) continue;
+      // Una revocación sin emisor se intenta con la primaria en curso.
+      const sinEmisor = f.emisorId === null && REVOCACIONES.has(f.tipo);
+      if (!sinEmisor && !deClave(f, primaria)) continue;
       const kp = hashClave(primaria);
       if (f.tipo === 0x20) {
         if (autofirmaValida(f, primaria, [kp])) revocada = true;

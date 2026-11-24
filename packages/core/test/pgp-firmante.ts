@@ -218,6 +218,17 @@ export function clavePublica(
     creacionAutofirma?: number;
     /** La autofirma la hace otra clave que dice ser esta. */
     autofirmaFalsa?: boolean;
+    /** El id de usuario principal lleva el subpaquete 25 (id principal). */
+    principal?: boolean;
+    /** Más ids de usuario, cada uno con su certificación. */
+    usuariosExtra?: {
+      nombre: string;
+      indicadores?: number | null;
+      principal?: boolean;
+      creacion?: number;
+    }[];
+    /** Opciones de las firmas de revocación (0x20, 0x28, 0x30): hash, emisor… */
+    opcionesRevocacion?: OpcionesFirma;
     subclaves?: SubclavePrueba[];
   } = {},
 ): Buffer {
@@ -225,7 +236,9 @@ export function clavePublica(
   const extra = [
     ...(o.vigenciaClave !== undefined ? [subpaquete(9, be32(o.vigenciaClave))] : []),
     ...(o.indicadores === null ? [] : [subpaquete(27, Buffer.from([o.indicadores ?? 0x03]))]),
+    ...(o.principal ? [subpaquete(25, Buffer.from([1]))] : []),
   ];
+  const rev = o.opcionesRevocacion ?? {};
   const kp = conLargo(clave.cuerpo);
   const prefijoUid = Buffer.concat([kp, Buffer.from([0xb4]), be32(usuario.length), usuario]);
   const impostor = (): ClavePrueba => ({
@@ -238,6 +251,7 @@ export function clavePublica(
       tipoFirma: 0x20,
       prefijo: kp,
       creacion: clave.creacion + 500,
+      ...rev,
     });
   const partes = [paquete(6, clave.cuerpo)];
   if (o.revocada === true) partes.push(revocacion());
@@ -257,6 +271,22 @@ export function clavePublica(
         tipoFirma: 0x30,
         prefijo: prefijoUid,
         creacion: clave.creacion + 500,
+        ...rev,
+      }),
+    );
+  }
+  for (const u of o.usuariosExtra ?? []) {
+    const nombre = Buffer.from(u.nombre);
+    partes.push(
+      paquete(13, nombre),
+      firmar(clave, Buffer.alloc(0), {
+        tipoFirma: 0x13,
+        conHash: [
+          ...(u.indicadores === null ? [] : [subpaquete(27, Buffer.from([u.indicadores ?? 0x03]))]),
+          ...(u.principal ? [subpaquete(25, Buffer.from([1]))] : []),
+        ],
+        prefijo: Buffer.concat([kp, Buffer.from([0xb4]), be32(nombre.length), nombre]),
+        ...(u.creacion !== undefined ? { creacion: u.creacion } : {}),
       }),
     );
   }
@@ -303,6 +333,7 @@ export function clavePublica(
           tipoFirma: 0x28,
           prefijo: Buffer.concat([kp, ks]),
           creacion: clave.creacion + 500,
+          ...rev,
         }),
       );
     }

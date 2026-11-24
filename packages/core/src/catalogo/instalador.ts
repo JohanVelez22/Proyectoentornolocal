@@ -32,11 +32,11 @@ import {
 } from './huellas';
 import { sumaDe } from './fuentes/tipos';
 import { anillo as anilloFijado } from './pgp/anillos';
+import { cotaFirma, VIGENCIA_FIJADA, type VigenciaAnillo } from './pgp/cotas';
 import type { ClavePublica } from './pgp/paquetes';
 import {
   esResultado,
   iniciarVerificacion,
-  MARGEN_PUBLICACION_MS,
   verificarFirmaSeparada,
   type FalloFirma,
 } from './pgp/verificar';
@@ -64,6 +64,8 @@ export interface OpcionesInstalador {
   anillos?: (fuente: FuenteFirma) => readonly ClavePublica[];
   /** Reloj para el vencimiento de firmas y claves (solo pruebas). */
   ahora?: () => Date;
+  /** FECHA_ANILLO y versiones conocidas (solo pruebas). Por defecto, `claves/vigencia.json`. */
+  vigencia?: VigenciaAnillo;
 }
 
 /** Tamaño máximo de una firma separada (una real pesa menos de 1 KB). */
@@ -82,13 +84,6 @@ const MENSAJE_FIRMA: Record<FalloFirma['codigo'], string> = {
   'catalogo.firma_vencida': 'La firma PGP o su clave están vencidas',
   'catalogo.reloj_atrasado': 'La firma PGP tiene fecha futura: revise la fecha y hora del equipo',
 };
-
-/** Cota contra firmas con fecha atrasada: la publicación de la versión menos 48 h. */
-function noAntesDe(v: VersionDisponible): Date | undefined {
-  if (!v.publicacion || !/^\d{4}-\d{2}-\d{2}$/.test(v.publicacion)) return undefined;
-  const ms = Date.parse(`${v.publicacion}T00:00:00Z`);
-  return Number.isFinite(ms) ? new Date(ms - MARGEN_PUBLICACION_MS) : undefined;
-}
 
 /** Error con código de una firma que no pasó (con servicio y versión para el texto). */
 function errorFirma(v: VersionDisponible, r: FalloFirma): ErrorWolf {
@@ -294,16 +289,29 @@ export class Instalador {
     let huella = huellaParaInstalar(v);
     const fuenteFirma = fuenteFirmaDe(v);
     let firma: Uint8Array | null = null;
+    let noAntesDe: Date | undefined;
     if (fuenteFirma) {
       try {
+        // Cota de fecha de la firma (FECHA_ANILLO para versiones posteriores a las fijadas, y la
+        // publicación de la fuente): sin ella, una clave ya vencida podría firmar con fecha vieja.
+        const cota = cotaFirma(fuenteFirma, v, this.opciones.vigencia ?? VIGENCIA_FIJADA);
+        if (!cota.ok) {
+          throw new ErrorWolf(
+            'catalogo.firma_invalida',
+            `No se puede acotar la firma de ${v.servicio} ${v.version}: ${cota.detalle}`,
+            { servicio: v.servicio, version: v.version },
+          );
+        }
+        noAntesDe = cota.noAntesDe;
         if (fuenteFirma === 'node') {
-          huella = await this.huellaFirmadaNode(v, huella);
+          huella = await this.huellaFirmadaNode(v, huella, noAntesDe);
         } else {
           firma = await this.bajarPequeno(v, `${v.url}.asc`, MAX_FIRMA_BYTES, 'la firma');
           const previa = iniciarVerificacion({
             firma,
             anillo: this.anilloDe(fuenteFirma),
             ahora: this.ahora(),
+            tipos: [0x00],
           });
           if (esResultado(previa)) throw errorFirma(v, previa);
         }
@@ -354,7 +362,9 @@ export class Instalador {
       if (huella && hash !== huella.valor.toLowerCase()) {
         throw new ErrorWolf('catalogo.huella_no_coincide', MSG_HASH);
       }
-      if (firma && fuenteFirma) await this.verificarArchivo(v, fuenteFirma, firma, archivo);
+      if (firma && fuenteFirma) {
+        await this.verificarArchivo(v, fuenteFirma, firma, archivo, noAntesDe);
+      }
 
       this.emitir(v, 'extrayendo', 100);
       await mkdir(stage, { recursive: true });
@@ -459,7 +469,11 @@ export class Instalador {
    * Node: `SHASUMS256.txt` firmado con `SHASUMS256.txt.sig`. La suma del zip sale de la lista
    * **después** de verificar la firma; si el catálogo traía otra, la descarga se rechaza.
    */
-  private async huellaFirmadaNode(v: VersionDisponible, listada: Huella | null): Promise<Huella> {
+  private async huellaFirmadaNode(
+    v: VersionDisponible,
+    listada: Huella | null,
+    noAntesDe: Date | undefined,
+  ): Promise<Huella> {
     const base = new URL('.', v.url).toString();
     const sumas = await this.bajarPequeno(
       v,
@@ -480,7 +494,7 @@ export class Instalador {
       ahora: this.ahora(),
       // La lista de sumas es texto: se admite también la firma de texto canónico.
       tipos: [0x00, 0x01],
-      ...(noAntesDe(v) ? { noAntesDe: noAntesDe(v) } : {}),
+      ...(noAntesDe ? { noAntesDe } : {}),
     });
     if (!r.ok) throw errorFirma(v, r);
     const archivo = decodeURIComponent(new URL(v.url).pathname.split('/').pop() ?? '');
@@ -504,6 +518,7 @@ export class Instalador {
     fuente: FuenteFirma,
     firma: Uint8Array,
     archivo: string,
+    noAntesDe: Date | undefined,
   ): Promise<void> {
     // Un zip o un phar solo se firman en binario (0x00).
     const ver = iniciarVerificacion({
@@ -511,6 +526,7 @@ export class Instalador {
       anillo: this.anilloDe(fuente),
       ahora: this.ahora(),
       tipos: [0x00],
+      ...(noAntesDe ? { noAntesDe } : {}),
     });
     if (esResultado(ver)) throw errorFirma(v, ver);
     for await (const trozo of createReadStream(archivo)) ver.actualizar(trozo as Buffer);

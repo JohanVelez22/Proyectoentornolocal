@@ -33,6 +33,10 @@ const { module: anillos } = await runnerImport(
 const { module: paquetes } = await runnerImport(
   path.join(AQUI, '..', 'src', 'catalogo', 'pgp', 'paquetes.ts'),
 );
+const { module: comun } = await runnerImport(path.join(AQUI, '..', 'src', 'catalogo', 'comun.ts'));
+const { module: cotas } = await runnerImport(
+  path.join(AQUI, '..', 'src', 'catalogo', 'pgp', 'cotas.ts'),
+);
 
 const HUELLA = /^[0-9A-F]{40}$/;
 
@@ -121,7 +125,50 @@ const describir = (c) => {
   return `${c.huella}  ${sub}${tipo}  ${uso}  vence ${fecha(c.expiracion)}${estado}${quien}`;
 };
 
+/** La versión más nueva de cada rama entre `versiones` (rama según la fuente). */
+function masNuevas(fuente, versiones) {
+  const res = {};
+  for (const v of versiones) {
+    const rama = cotas.ramaDeFirma(fuente, v);
+    if (rama === null) continue;
+    if (!(rama in res) || comun.compararVersionesDesc(v, res[rama]) < 0) res[rama] = v;
+  }
+  return Object.fromEntries(
+    Object.entries(res).sort(([a], [b]) => comun.compararVersionesDesc(a, b)),
+  );
+}
+
+/**
+ * FECHA_ANILLO y la versión más nueva por rama de cada fuente (D10): Node de `index.json`,
+ * Nginx del listado `nginx.org/download/` (zip) y Composer de `getcomposer.org/download/`.
+ */
+async function vigencia() {
+  const indice = JSON.parse(await bajar('https://nodejs.org/dist/index.json'));
+  const node = masNuevas(
+    'node',
+    indice.map((e) => String(e.version).replace(/^v/, '')).filter((v) => /^\d+\.\d+\.\d+/.test(v)),
+  );
+  const listado = await bajar('https://nginx.org/download/');
+  const nginx = masNuevas('nginx', [
+    ...new Set([...listado.matchAll(/nginx-(\d+\.\d+\.\d+)\.zip"/g)].map((m) => m[1])),
+  ]);
+  const pagina = await bajar('https://getcomposer.org/download/');
+  const composer = masNuevas('composer', [
+    ...new Set(
+      [...pagina.matchAll(/\/download\/(\d+\.\d+\.\d+(?:-[\w.]+)?)\/composer\.phar"/g)].map(
+        (m) => m[1],
+      ),
+    ),
+  ]);
+  if (Object.keys(node).length === 0 || Object.keys(nginx).length === 0) {
+    throw new Error('No se pudieron leer las versiones publicadas');
+  }
+  if (Object.keys(composer).length === 0) throw new Error('getcomposer.org/download sin versiones');
+  return { node, composer, nginx };
+}
+
 let cambios = 0;
+const archivosNuevos = [];
 for (const [fuente, obtener] of [
   ['node', node],
   ['composer', composer],
@@ -155,8 +202,37 @@ for (const [fuente, obtener] of [
   }
   for (const [h, c] of antes) if (!despues.has(h)) console.log(`  - sale ${describir(c)}`);
   console.log('  (el contenido del archivo cambia)');
-  if (escribir) {
-    await writeFile(archivo, nuevo);
+  archivosNuevos.push([archivo, nuevo]);
+}
+
+// Cota de fecha de las firmas: FECHA_ANILLO y la versión más nueva por rama.
+const archivoVigencia = path.join(CLAVES, 'vigencia.json');
+const vigenciaActual = JSON.parse(await readFile(archivoVigencia, 'utf8').catch(() => '{}'));
+const versiones = await vigencia();
+const { fecha: fechaActual, ...restoActual } = vigenciaActual;
+console.log(`\nvigencia.json (FECHA_ANILLO ${fechaActual ?? 'sin fecha'}):`);
+for (const f of ['node', 'composer', 'nginx']) {
+  const antes = restoActual[f] ?? {};
+  for (const [rama, v] of Object.entries(versiones[f])) {
+    if (antes[rama] !== v) console.log(`  ~ ${f} ${rama}: ${antes[rama] ?? '(nueva)'} → ${v}`);
+  }
+}
+if (cambios === 0 && JSON.stringify(restoActual) === JSON.stringify(versiones) && fechaActual) {
+  console.log('  sin cambios');
+} else {
+  cambios++;
+  const hoy = new Date().toISOString().slice(0, 10);
+  archivosNuevos.push([
+    archivoVigencia,
+    `${JSON.stringify({ fecha: hoy, ...versiones }, null, 2)}\n`,
+  ]);
+  console.log(`  FECHA_ANILLO pasa a ${hoy}`);
+}
+if (escribir) {
+  for (const [archivo, contenido] of archivosNuevos) {
+    const previo = await readFile(archivo, 'utf8').catch(() => '');
+    if (previo === contenido) continue;
+    await writeFile(archivo, contenido);
     console.log(`  escrito ${path.relative(process.cwd(), archivo)}`);
   }
 }

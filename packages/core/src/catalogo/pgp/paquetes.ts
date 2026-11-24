@@ -404,6 +404,11 @@ export function leerClave(cuerpo: Uint8Array): ClaveV4 {
     const e = l.mpi();
     if (n.length * 8 < MIN_BITS_RSA) throw noSoportada('Clave RSA demasiado corta');
     if (e.length === 0 || e.length > 4) throw invalida('Exponente RSA fuera de rango');
+    // e impar y >= 3; n impar (un módulo par no es producto de dos primos impares).
+    if ((e[e.length - 1]! & 1) === 0 || (e.length === 1 && e[0]! < 3)) {
+      throw invalida('Exponente RSA no válido');
+    }
+    if ((n[n.length - 1]! & 1) === 0) throw invalida('Módulo RSA par');
     material = { tipo: 'rsa', n, e };
   } else if (algoritmo === ALG_EDDSA) {
     const largoOid = l.u8();

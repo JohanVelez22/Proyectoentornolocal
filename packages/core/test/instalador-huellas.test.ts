@@ -8,6 +8,7 @@ import { Instalador } from '../src/catalogo/instalador';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { Rutas } from '../src/rutas';
 import { leerAnillo } from '../src/catalogo/pgp/anillos';
+import type { VigenciaAnillo } from '../src/catalogo/pgp/cotas';
 import { fetchFalso, type Ruta } from './catalogo-falso';
 import { armar, clavePublica, firmar, nuevaClave } from './pgp-firmante';
 import { carpetaTemporal } from './temporales';
@@ -152,12 +153,24 @@ describe('Instalador: firmas PGP (D10)', () => {
   const ahora = () => new Date((T0 + 3600) * 1000);
   const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
 
-  function firmado(rutasHttp: Record<string, Ruta>) {
+  /** Anillos "fijados" el 2023-11-20 con las versiones de prueba como las más nuevas. */
+  const VIGENCIA: VigenciaAnillo = {
+    fecha: '2023-11-20',
+    node: { '24': '24.0.0' },
+    composer: { '2.11': '2.11.3', '2.0': '2.0.3' },
+    nginx: { '1.29': '1.29.9' },
+  };
+
+  function firmado(
+    rutasHttp: Record<string, Ruta>,
+    o: { anillo?: ReturnType<typeof leerAnillo>; ahora?: () => Date } = {},
+  ) {
     const ff = fetchFalso(rutasHttp);
     const inst = new Instalador(rutas, eventos, ff.f, {
       esperasReintentoMs: [],
-      anillos: () => ANILLO,
-      ahora,
+      anillos: () => o.anillo ?? ANILLO,
+      ahora: o.ahora ?? ahora,
+      vigencia: VIGENCIA,
     });
     return { inst, ff };
   }
@@ -404,5 +417,86 @@ describe('Instalador: firmas PGP (D10)', () => {
     const { inst, ff } = firmado({ [v.url]: phar('2.0.3') });
     await expect(inst.instalar(v)).rejects.toMatchObject({ codigo: 'catalogo.firma_invalida' });
     expect(ff.pedidas).toEqual([`${v.url}.asc`]);
+  });
+
+  // ---- Cota fijada en la app (FECHA_ANILLO y versión más nueva conocida por rama)
+  const BASE_NUEVA = 'https://nodejs.org/dist/v24.1.0/';
+  const ZIP_NUEVA = zip({ 'node-v24.1.0-win-x64/node.exe': 'NODE' });
+  const SUMAS_NUEVA = Buffer.from(`${sha(ZIP_NUEVA)}  node-v24.1.0-win-x64.zip\n`);
+  const vNueva = (o: Partial<VersionDisponible> = {}): VersionDisponible =>
+    vNode({
+      version: '24.1.0',
+      url: `${BASE_NUEVA}node-v24.1.0-win-x64.zip`,
+      subcarpeta: 'node-v24.1.0-win-x64',
+      sha256: sha(ZIP_NUEVA),
+      huella: { algoritmo: 'sha256', valor: sha(ZIP_NUEVA) },
+      ...o,
+    });
+  const rutasNueva = (firma: Buffer): Record<string, Ruta> => ({
+    [`${BASE_NUEVA}SHASUMS256.txt`]: SUMAS_NUEVA,
+    [`${BASE_NUEVA}SHASUMS256.txt.sig`]: firma,
+    [`${BASE_NUEVA}node-v24.1.0-win-x64.zip`]: ZIP_NUEVA,
+  });
+
+  it('clave vencida con firma retrofechada para una versión posterior a la fijada → rechazada', async () => {
+    // La clave vence en T0 + 1000 (2023-11-14), antes de FECHA_ANILLO (2023-11-20). La firma
+    // dice T0 + 60, cuando era vigente, y la publicación (que da la misma fuente) acompaña.
+    const vencida = nuevaClave('ed25519', T0);
+    const anillo = leerAnillo(clavePublica(vencida, { vigenciaClave: 1000 }));
+    const despues = () => new Date(Date.UTC(2023, 11, 1));
+    const firma = firmar(vencida, SUMAS_NUEVA);
+    const { inst, ff } = firmado(rutasNueva(firma), { anillo, ahora: despues });
+    await expect(inst.instalar(vNueva({ publicacion: '2023-11-14' }))).rejects.toMatchObject({
+      codigo: 'catalogo.firma_invalida',
+    });
+    expect(ff.pedidas).not.toContain(`${BASE_NUEVA}node-v24.1.0-win-x64.zip`);
+    await sinRastros('node', '24.1.0');
+  });
+
+  it('una versión fijada antigua firmada por esa clave (vigente al firmar) sigue valiendo', async () => {
+    const vencida = nuevaClave('ed25519', T0);
+    const anillo = leerAnillo(clavePublica(vencida, { vigenciaClave: 1000 }));
+    const despues = () => new Date(Date.UTC(2023, 11, 1));
+    const { inst } = firmado(rutasNode({ firma: firmar(vencida, SUMAS) }), {
+      anillo,
+      ahora: despues,
+    });
+    await inst.instalar(vNode());
+    expect(existsSync(path.join(rutas.bin('node', '24.0.0'), 'node.exe'))).toBe(true);
+  });
+
+  it('una versión de Node más nueva que la fijada sin fecha de publicación → rechazada', async () => {
+    const { inst, ff } = firmado(rutasNueva(firmar(clave, SUMAS_NUEVA)));
+    await expect(inst.instalar(vNueva())).rejects.toMatchObject({
+      codigo: 'catalogo.firma_invalida',
+    });
+    expect(ff.pedidas).toEqual([]);
+  });
+
+  it('una versión más nueva con publicación y firma posterior a FECHA_ANILLO − 48 h vale', async () => {
+    const reciente = firmar(clave, SUMAS_NUEVA, { creacion: Date.UTC(2023, 10, 19) / 1000 });
+    const { inst } = firmado(rutasNueva(reciente), {
+      ahora: () => new Date(Date.UTC(2023, 10, 25)),
+    });
+    await inst.instalar(vNueva({ publicacion: '2023-11-19' }));
+    expect(existsSync(path.join(rutas.bin('node', '24.1.0'), 'node.exe'))).toBe(true);
+  });
+
+  it('Nginx de una rama posterior a la fijada: la firma debe ser posterior a FECHA_ANILLO − 48 h', async () => {
+    const url = 'https://nginx.org/download/nginx-1.31.1.zip';
+    const z = zip({ 'nginx-1.31.1/nginx.exe': 'NGINX' });
+    const v = { ...vNginx, version: '1.31.1', rama: '1.31', url, subcarpeta: 'nginx-1.31.1' };
+    const vieja = firmado({ [`${url}.asc`]: armar(firmar(clave, z)), [url]: z });
+    await expect(vieja.inst.instalar(v)).rejects.toMatchObject({
+      codigo: 'catalogo.firma_invalida',
+    });
+    await sinRastros('nginx', '1.31.1');
+    const reciente = firmar(clave, z, { creacion: Date.UTC(2023, 10, 19) / 1000 });
+    const nueva = firmado(
+      { [`${url}.asc`]: armar(reciente), [url]: z },
+      { ahora: () => new Date(Date.UTC(2023, 10, 25)) },
+    );
+    await nueva.inst.instalar(v);
+    expect(existsSync(path.join(rutas.bin('nginx', '1.31.1'), 'nginx.exe'))).toBe(true);
   });
 });
