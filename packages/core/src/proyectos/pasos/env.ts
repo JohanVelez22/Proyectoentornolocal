@@ -2,17 +2,18 @@ import { copyFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { bloqueEnv, valorEnv, type EstiloEnv } from '../../bd/env';
 import { NOMBRE_SERVICIO } from '../../servicios/definicion';
-import type { TipoSitio } from '../../tipos';
+import { TIPOS_CON_PHP, type TipoSitio } from '../../tipos';
 import { existe, leerTexto } from '../archivos';
 import { leerConfigProyecto } from '../config';
 import type { ImplementacionPaso } from '../pasos';
 import { escribirAtomico } from '../../sitios/urlbase';
 import { sanear } from '../recetas';
+import { motorDe as motorDeObjetivo } from '../../bd/basesDeDatos';
 import {
   argsDe,
   comprobarSenal,
-  motorDe,
   nombreBase,
+  objetivoDe,
   texto,
   type DatosConexion,
   type DepsPasos,
@@ -136,14 +137,27 @@ const ESQUEMA_POR_DEFECTO: Record<MotorBd, string> = {
   mariadb: 'mysql+pymysql',
   mongodb: 'mongodb',
 };
+/** Doctrine (Symfony) no entiende `+pymysql`: en PHP el esquema es el del motor a secas. */
+const ESQUEMA_PHP: Record<MotorBd, string> = {
+  postgresql: 'postgresql',
+  mysql: 'mysql',
+  mariadb: 'mysql',
+  mongodb: 'mongodb',
+};
 
 /** Valor de DATABASE_URL; conserva el esquema del ejemplo (`postgresql+psycopg`) si es del motor. */
-function urlBd(motor: MotorBd, base: string, x: DatosConexion, previa: string | undefined): string {
+function urlBd(
+  motor: MotorBd,
+  base: string,
+  x: DatosConexion,
+  previa: string | undefined,
+  php = false,
+): string {
   const esquema = /^([a-z][a-z0-9+]*):\/\//i.exec(previa ?? '')?.[1];
   const propio =
     esquema && ESQUEMAS[motor].includes(esquema.split('+')[0]!.toLowerCase())
       ? esquema
-      : ESQUEMA_POR_DEFECTO[motor];
+      : (php ? ESQUEMA_PHP : ESQUEMA_POR_DEFECTO)[motor];
   if (motor === 'mongodb') return `${propio}://${x.host}:${x.puerto}/${base}`;
   const u = encodeURIComponent(x.usuario);
   const c = encodeURIComponent(x.clave ?? '');
@@ -180,17 +194,20 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
     comprobarSenal(ctx);
     const args = argsDe(ctx);
     const { sitio, carpeta } = ctx;
-    const destino = path.join(carpeta, '.env');
+    // `.env.local` (Symfony): solo la conexión a la base, en el archivo que su .gitignore excluye;
+    // el `.env` del proyecto se commitea y no debe llevar la clave del motor.
+    const local = args.destino === '.env.local';
+    const destino = path.join(carpeta, local ? '.env.local' : '.env');
     const sobrescribir = args.sobrescribir === true;
     const yaExiste = await existe(destino);
     if (yaExiste && !sobrescribir) {
-      ctx.linea(MENSAJE_ENV_EXISTE);
+      ctx.linea(local ? 'Ya existe .env.local; no se modificó' : MENSAJE_ENV_EXISTE);
       return;
     }
 
     let t = '';
     let origen: string | null = null;
-    for (const n of PLANTILLAS) {
+    for (const n of local ? [] : PLANTILLAS) {
       const leido = await leerTexto(path.join(carpeta, n));
       if (leido !== null) {
         t = leido;
@@ -198,7 +215,7 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
         break;
       }
     }
-    if (origen === null) t = minimo(sitio.tipo);
+    if (origen === null && !local) t = minimo(sitio.tipo);
     const estilo = estiloDe(sitio.tipo, t);
     const sep = estilo === 'ci4' ? ' = ' : '=';
     const poner = (clave: string, valor: string): void => {
@@ -209,20 +226,23 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
     // El https real del sitio guardado manda; si no se puede leer, el del paso (o https).
     const guardado = await d.leerSitio?.(sitio.id);
     const https = guardado ? guardado.https : typeof args.https === 'boolean' ? args.https : true;
-    const varUrl = variableUrl(sitio.tipo, sitio.urlBaseVar, t);
+    const varUrl = local ? null : variableUrl(sitio.tipo, sitio.urlBaseVar, t);
     if (varUrl) {
       const barra = sitio.tipo === 'codeigniter3' || sitio.tipo === 'codeigniter4' ? '/' : '';
       poner(varUrl, `${https ? 'https' : 'http'}://${sitio.dominio}${barra}`);
     }
-    if (sitio.tipo === 'laravel' || tieneClave(t, 'APP_NAME')) poner('APP_NAME', sitio.nombre);
-    if (sitio.tipo === 'codeigniter4') poner('CI_ENVIRONMENT', 'development');
+    if (!local && (sitio.tipo === 'laravel' || tieneClave(t, 'APP_NAME'))) {
+      poner('APP_NAME', sitio.nombre);
+    }
+    if (!local && sitio.tipo === 'codeigniter4') poner('CI_ENVIRONMENT', 'development');
 
     // Base de datos.
-    const motor = await motorDe(ctx, d);
+    const objetivo = await objetivoDe(ctx, d);
+    const motor = objetivo ? motorDeObjetivo(objetivo) : null;
     let lineaBd: string | null = null;
-    if (motor) {
+    if (objetivo && motor) {
       const base = nombreBase(sitio, args);
-      const x = { ...(await d.bd.conexion(motor)) };
+      const x = { ...(await d.bd.conexion(objetivo)) };
       const usuario = texto(args.usuario);
       if (usuario) {
         const clave = texto(args.clave);
@@ -236,13 +256,15 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
         x.clave = clave;
       }
       const conUrl =
-        tieneClave(t, 'DATABASE_URL') || (sitio.tipo === 'fastapi' && !tieneClave(t, 'DB_HOST'));
-      const conBloque = sitio.tipo !== 'fastapi' || tieneClave(t, 'DB_HOST');
+        local ||
+        tieneClave(t, 'DATABASE_URL') ||
+        (sitio.tipo === 'fastapi' && !tieneClave(t, 'DB_HOST'));
+      const conBloque = !local && (sitio.tipo !== 'fastapi' || tieneClave(t, 'DB_HOST'));
       if (conUrl) {
         t = fijarLinea(
           t,
           'DATABASE_URL',
-          `DATABASE_URL${sep}${valorEnv(urlBd(motor, base, x, valorDe(t, 'DATABASE_URL')), estilo)}`,
+          `DATABASE_URL${sep}${valorEnv(urlBd(motor, base, x, valorDe(t, 'DATABASE_URL'), TIPOS_CON_PHP.includes(sitio.tipo)), estilo)}`,
         );
       }
       if (conBloque) {
@@ -255,7 +277,7 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
     }
 
     // Correo: Mailpit, si está instalado.
-    const mailpit = await d.mailpit();
+    const mailpit = local ? null : await d.mailpit();
     let lineaCorreo: string | null = null;
     if (mailpit && (sitio.tipo === 'laravel' || /^[ \t]*#*[ \t]*MAIL_HOST[ \t]*=/m.test(t))) {
       if (sitio.tipo === 'laravel' || tieneClave(t, 'MAIL_MAILER')) poner('MAIL_MAILER', 'smtp');
@@ -267,7 +289,7 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
     // Valores extra de wolfcore.yml.
     let extra: Record<string, string> = {};
     try {
-      extra = (await leerConfigProyecto(carpeta))?.env ?? {};
+      extra = local ? {} : ((await leerConfigProyecto(carpeta))?.env ?? {});
     } catch (e) {
       ctx.linea(sanear(`Aviso: ${e instanceof Error ? e.message : String(e)}`));
     }
@@ -302,9 +324,11 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
     }
     await escribirAtomico(destino, Buffer.from(t, 'utf8'));
     ctx.linea(
-      origen
-        ? `Se creó .env a partir de ${origen}.`
-        : `No hay .env.example: se creó un .env mínimo para ${NOMBRE_TIPO[sitio.tipo] ?? 'el proyecto'}.`,
+      local
+        ? 'Se creó .env.local con la conexión a la base de datos.'
+        : origen
+          ? `Se creó .env a partir de ${origen}.`
+          : `No hay .env.example: se creó un .env mínimo para ${NOMBRE_TIPO[sitio.tipo] ?? 'el proyecto'}.`,
     );
     if (lineaBd) ctx.linea(lineaBd);
     if (lineaCorreo) ctx.linea(lineaCorreo);

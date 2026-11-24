@@ -195,6 +195,13 @@ export const en: Textos = {
       'proyectos.no_confiado': 'Check "I trust this repository" to run the recipe.',
       'proyectos.receta_en_curso': 'A recipe is already running for this project.',
       'proyectos.paso_no_omitible': 'The "Create the site" step cannot be skipped.',
+      'proyectos.carpeta_no_vacia':
+        'The project folder already has files: choose another one or empty it.',
+      'proyectos.carpeta_invalida': 'The project folder is not valid.',
+      'proyectos.nombre_invalido':
+        'The project name can only have lowercase letters, numbers and hyphens (up to 40).',
+      'proyectos.argumento_invalido': 'A project value is not valid: {campo}.',
+      'proyectos.base_existe': 'The database {nombre} already exists: choose another name.',
       'mcp.token_invalido': 'The MCP server token is not valid.',
       'mcp.solicitud_cancelada': 'The MCP client cancelled the request: the action was not run.',
       'doctor.puerto_ocupado':
@@ -392,7 +399,7 @@ export const en: Textos = {
       'catalogo.sin_huella':
         '{servicio} {version} has no published checksum: confirm the installation in the dialog.',
       'catalogo.huella_debil':
-        '{servicio} {version} only has an MD5 checksum (weak): confirm the installation in the dialog.',
+        '{servicio} {version} only has a weak checksum (MD5 or SHA-1): confirm the installation in the dialog.',
       'catalogo.huella_no_coincide': 'The download does not match the published checksum.',
       'catalogo.redireccion_ajena':
         'The download tried to go to a site that is not allowed ({host}).',

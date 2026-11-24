@@ -100,6 +100,12 @@ export const PARAMETROS_ERROR = {
   'proyectos.no_confiado': [],
   'proyectos.receta_en_curso': [],
   'proyectos.paso_no_omitible': [],
+  // proyectos nuevos (D12)
+  'proyectos.carpeta_no_vacia': [],
+  'proyectos.carpeta_invalida': [],
+  'proyectos.nombre_invalido': ['campo'],
+  'proyectos.argumento_invalido': ['campo'],
+  'proyectos.base_existe': ['nombre'],
   // servidor MCP
   'mcp.token_invalido': [],
   'mcp.solicitud_cancelada': [],

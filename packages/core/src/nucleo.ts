@@ -168,6 +168,8 @@ import {
   phpPorDefecto,
   type Deteccion,
 } from './proyectos/detectar';
+import { crearProyecto, type ResultadoCrearProyecto } from './proyectos/crear';
+import type { PedidoProyecto } from './proyectos/generadores';
 import { RegistroPasos } from './proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
 import { asignarPuertoProxy, datosAlCrear } from './proyectos/pasos/sitio';
@@ -2712,6 +2714,28 @@ export class Nucleo {
     if (!this.depsPasos) throw new Error('Los pasos de receta no están disponibles.');
     const args = receta.find((p) => p.tipo === 'sitio-crear')?.args ?? {};
     return this.guardarSitio(await datosAlCrear(this.depsPasos, datos, args));
+  }
+
+  /**
+   * Proyecto nuevo desde un generador (Laravel, CodeIgniter, Symfony, FastAPI, WordPress o
+   * estático): valida el pedido, crea la carpeta, el sitio y corre su receta (el avance llega por
+   * `receta:progreso`). Nunca pisa una carpeta con archivos; si un paso falla no borra nada y el
+   * resultado dice qué quedó creado.
+   */
+  crearProyecto(p: PedidoProyecto): Promise<ResultadoCrearProyecto> {
+    return crearProyecto(
+      {
+        rutas: this.rutas,
+        crearSitio: (datos, receta) => this.crearSitioProyecto(datos, receta),
+        ejecutarReceta: (id, receta) => this.recetas.ejecutar(id, { receta }),
+        estadoReceta: (id) => this.recetas.estado(id),
+        sitios: () => this.sitios.listar(),
+        basesDe: async (objetivo) => (await this.bd.listar(objetivo)).map((b) => b.nombre),
+        phpInstaladas: () => this.instalador.instalados('php'),
+        confiar: (id) => this.confiarReceta(id),
+      },
+      p,
+    );
   }
 
   /**

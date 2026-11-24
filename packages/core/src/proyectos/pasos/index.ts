@@ -4,6 +4,10 @@ import { pasoBdCrear, pasoBdRestaurar, pasoPgvectorActivar } from './bd';
 import { pasoComando } from './comando';
 import type { DepsPasos } from './comun';
 import { pasoComposerInstall } from './composer';
+import { pasoConfigBdCrear } from './configBd';
+import { pasoCopiarPlantillaInterna } from './copiarPlantillaInterna';
+import { pasoCrearDesdeComposer } from './crearDesdeComposer';
+import { pasoDescargarPlantilla } from './descargarPlantilla';
 import { pasoEnvCrear } from './env';
 import { pasoKeyGenerate, pasoMigrar, pasoStorageLink } from './laravel';
 import { pasoNpmBuild, pasoNpmCi } from './node';
@@ -29,6 +33,10 @@ const FABRICAS: Record<TipoPaso, (d: DepsPasos) => ImplementacionPaso> = {
   'pgvector-activar': pasoPgvectorActivar,
   'sitio-crear': pasoSitioCrear,
   comando: pasoComando,
+  'crear-desde-composer': pasoCrearDesdeComposer,
+  'descargar-plantilla': pasoDescargarPlantilla,
+  'copiar-plantilla-interna': pasoCopiarPlantillaInterna,
+  'config-bd-crear': pasoConfigBdCrear,
 };
 
 /** Registra las implementaciones reales de todos los tipos de paso y devuelve el registro. */

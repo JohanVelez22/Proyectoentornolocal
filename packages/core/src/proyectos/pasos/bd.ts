@@ -3,14 +3,15 @@ import path from 'node:path';
 import { NOMBRE_SERVICIO } from '../../servicios/definicion';
 import type { ImplementacionPaso } from '../pasos';
 import { sanear } from '../recetas';
-import { argsDe, comprobarSenal, motorDe, nombreBase, texto, type DepsPasos } from './comun';
+import { argsDe, comprobarSenal, nombreBase, objetivoDe, texto, type DepsPasos } from './comun';
+import { motorDe } from '../../bd/basesDeDatos';
 
-async function motorObligatorio(...a: Parameters<typeof motorDe>) {
-  const motor = await motorDe(...a);
-  if (!motor) {
+async function objetivoObligatorio(...a: Parameters<typeof objetivoDe>) {
+  const objetivo = await objetivoDe(...a);
+  if (!objetivo) {
     throw new Error('El proyecto no indica un motor de base de datos: elija uno en el paso.');
   }
-  return motor;
+  return { objetivo, motor: motorDe(objetivo) };
 }
 
 /** Crea la base del proyecto (y su usuario si hay `args.usuario`); si ya existe, nada. */
@@ -18,9 +19,9 @@ export function pasoBdCrear(d: DepsPasos): ImplementacionPaso {
   return async (ctx) => {
     comprobarSenal(ctx);
     const args = argsDe(ctx);
-    const motor = await motorObligatorio(ctx, d);
+    const { objetivo, motor } = await objetivoObligatorio(ctx, d);
     const base = nombreBase(ctx.sitio, args);
-    const existentes = await d.bd.listar(motor);
+    const existentes = await d.bd.listar(objetivo);
     if (existentes.some((b) => b.nombre === base)) {
       ctx.linea(`La base ${base} ya existe en ${NOMBRE_SERVICIO[motor]}; no se modificó.`);
       return;
@@ -29,7 +30,7 @@ export function pasoBdCrear(d: DepsPasos): ImplementacionPaso {
     const usuario = texto(args.usuario);
     const clave = texto(args.clave);
     const opts = usuario ? { usuario, ...(clave ? { clave } : {}) } : {};
-    await d.bd.crear(motor, base, opts);
+    await d.bd.crear(objetivo, base, opts);
     ctx.linea(
       `Se creó la base ${base} en ${NOMBRE_SERVICIO[motor]}` +
         (usuario ? ` con el usuario ${usuario}.` : '.'),
@@ -56,7 +57,7 @@ export function pasoBdRestaurar(d: DepsPasos): ImplementacionPaso {
       throw new Error(`No se encontró el archivo ${archivo}.`);
     }
     if (!info.isFile()) throw new Error('Elija un archivo de respaldo, no una carpeta.');
-    const motor = await motorObligatorio(ctx, d);
+    const { motor } = await objetivoObligatorio(ctx, d);
     const base = nombreBase(ctx.sitio, args);
     const confirmar = args.confirmarSobrescribir === true;
     if (!confirmar && motor !== 'mongodb' && (await d.bd.tieneTablas(motor, base))) {
@@ -79,7 +80,11 @@ export function pasoPgvectorActivar(d: DepsPasos): ImplementacionPaso {
   return async (ctx) => {
     comprobarSenal(ctx);
     const base = nombreBase(ctx.sitio, argsDe(ctx));
-    await d.bd.activarVector(base);
+    const objetivo = await objetivoDe(ctx, d);
+    await d.bd.activarVector(
+      base,
+      objetivo && motorDe(objetivo) === 'postgresql' ? objetivo : undefined,
+    );
     ctx.linea(`pgvector quedó activo en la base ${base}.`);
   };
 }

@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { BasesDeDatos, DatosConexion, MotorBd } from '../../bd/basesDeDatos';
+import type { BasesDeDatos, DatosConexion, MotorBd, ObjetivoBd } from '../../bd/basesDeDatos';
 import { validarNombreBd } from '../../bd/clienteMysql';
 import type { OpcionesRestaurar, ResultadoRestaurar } from '../../bd/respaldos';
 import { MENSAJE_CANCELADO } from '../../plataforma/lanzar';
@@ -53,6 +53,8 @@ export interface DepsPasos {
     /** Sitio que pide el puerto: sus propios puertos no cuentan como de otro proyecto. */
     sitioId?: string;
   }) => Promise<number>;
+  /** `fetch` de las descargas de plantillas (por defecto el global). Solo las pruebas lo cambian. */
+  fetch?: typeof fetch;
   /** Detección de la carpeta (por defecto `detectarProyecto`). */
   detectar?: (carpeta: string) => Promise<Deteccion>;
   /** Entorno base de los procesos (por defecto `process.env`). */
@@ -113,7 +115,34 @@ export async function motorDe(
   return motorBdDe(deteccion.servicios);
 }
 
-export type { DatosConexion, MotorBd };
+/** `mysql@8.4`, `postgresql@17`…: una instancia de un motor de base de datos. */
+const INSTANCIA_BD = /^(mysql|mariadb|postgresql|mongodb)@[0-9a-z][0-9a-z.]{0,15}$/;
+
+/**
+ * Destino de la base: `args.instancia` (una instancia concreta; manda sobre `args.motor`) o el
+ * motor (su instancia predeterminada). null si el paso no indica ninguno y el proyecto tampoco.
+ */
+export async function objetivoDe(
+  ctx: ContextoPaso,
+  d: DepsPasos,
+  det?: Deteccion,
+): Promise<ObjetivoBd | null> {
+  const instancia = argsDe(ctx).instancia;
+  if (instancia !== undefined) {
+    if (typeof instancia !== 'string' || !INSTANCIA_BD.test(instancia)) {
+      throw new Error(`Instancia de base de datos no válida: ${String(instancia)}`);
+    }
+    const motor = instancia.split('@')[0] as MotorBd;
+    const dado = argsDe(ctx).motor;
+    if (dado !== undefined && dado !== motor) {
+      throw new Error('El motor y la instancia de la base de datos no coinciden.');
+    }
+    return instancia as ObjetivoBd;
+  }
+  return motorDe(ctx, d, det);
+}
+
+export type { DatosConexion, MotorBd, ObjetivoBd };
 
 /* ───────────── Entorno y lanzamiento ───────────── */
 

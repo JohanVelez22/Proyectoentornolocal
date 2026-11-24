@@ -28,6 +28,10 @@ export const TIPOS_PASO = [
   'pgvector-activar',
   'sitio-crear',
   'comando',
+  'crear-desde-composer',
+  'descargar-plantilla',
+  'copiar-plantilla-interna',
+  'config-bd-crear',
 ] as const;
 export type TipoPaso = (typeof TIPOS_PASO)[number];
 

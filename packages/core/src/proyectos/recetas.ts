@@ -73,7 +73,9 @@ export function carpetaDelPaso(raiz: string, sub: unknown): string {
  * Proceso uvicorn de un proyecto FastAPI (con el Python del .venv del proyecto). Usa el módulo
  * ASGI detectado (`app.main:app`) y, si la app está en una subcarpeta, corre ahí.
  */
-function procesoUvicorn(det: Pick<Deteccion, 'moduloAsgi' | 'subcarpeta'> = {}): ProcesoProyecto {
+export function procesoUvicorn(
+  det: Pick<Deteccion, 'moduloAsgi' | 'subcarpeta'> = {},
+): ProcesoProyecto {
   return {
     id: 'uvicorn',
     nombre: 'uvicorn',
@@ -173,7 +175,12 @@ export function recetaPorDefecto(det: Deteccion): PasoReceta[] {
  * Argumentos que solo puede dar el usuario desde la interfaz (confirmaciones y rutas elegidas en
  * un diálogo): un wolfcore.yml del repositorio nunca los trae.
  */
-export const ARGS_SOLO_INTERFAZ = ['sobrescribir', 'confirmarSobrescribir', 'archivo'] as const;
+export const ARGS_SOLO_INTERFAZ = [
+  'sobrescribir',
+  'confirmarSobrescribir',
+  'archivo',
+  'confirmarHuellaDebil',
+] as const;
 
 function sinArgsDeInterfaz(p: PasoReceta): PasoReceta {
   if (!p.args) return p;

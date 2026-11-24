@@ -199,6 +199,13 @@ export const es = {
       'proyectos.no_confiado': 'Marque "Confío en este repositorio" para ejecutar la receta.',
       'proyectos.receta_en_curso': 'Ya hay una receta en curso para este proyecto.',
       'proyectos.paso_no_omitible': 'El paso "Crear el sitio" no se puede omitir.',
+      'proyectos.carpeta_no_vacia':
+        'La carpeta del proyecto ya tiene archivos: elija otra o vacíela.',
+      'proyectos.carpeta_invalida': 'La carpeta del proyecto no es válida.',
+      'proyectos.nombre_invalido':
+        'El nombre del proyecto solo puede llevar minúsculas, números y guiones (hasta 40).',
+      'proyectos.argumento_invalido': 'Un dato del proyecto no es válido: {campo}.',
+      'proyectos.base_existe': 'La base {nombre} ya existe: elija otro nombre.',
       'mcp.token_invalido': 'El token del servidor MCP no es válido.',
       'mcp.solicitud_cancelada': 'El cliente MCP canceló la solicitud: no se ejecutó la acción.',
       'doctor.puerto_ocupado': 'El puerto {puerto} de {servicio} lo usa otro programa ({proceso}).',
@@ -400,7 +407,7 @@ export const es = {
       'catalogo.sin_huella':
         '{servicio} {version} no tiene huella publicada: confirme la instalación en el diálogo.',
       'catalogo.huella_debil':
-        '{servicio} {version} solo tiene una huella MD5 (débil): confirme la instalación en el diálogo.',
+        '{servicio} {version} solo tiene una huella débil (MD5 o SHA-1): confirme la instalación en el diálogo.',
       'catalogo.huella_no_coincide': 'La descarga no coincide con la huella publicada.',
       'catalogo.redireccion_ajena': 'La descarga intentó ir a un sitio no permitido ({host}).',
       'catalogo.demasiadas_redirecciones':

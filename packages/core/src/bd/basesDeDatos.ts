@@ -286,8 +286,8 @@ export class BasesDeDatos {
   }
 
   /** Activa pgvector en una base de PostgreSQL (la extensión es por base). */
-  async activarVector(base: string): Promise<void> {
-    await this.conPostgres((c) => c.activarVector(base));
+  async activarVector(base: string, objetivo?: ObjetivoBd): Promise<void> {
+    await this.conPostgres((c) => c.activarVector(base), objetivo);
   }
 
   async borrar(objetivo: ObjetivoBd, nombre: string, confirmacion: string): Promise<void> {

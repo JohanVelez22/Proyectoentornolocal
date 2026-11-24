@@ -204,6 +204,13 @@ export const pt: Textos = {
       'proyectos.no_confiado': 'Marque "Confio neste repositório" para executar a receita.',
       'proyectos.receta_en_curso': 'Já há uma receita em andamento para este projeto.',
       'proyectos.paso_no_omitible': 'A etapa "Criar o site" não pode ser pulada.',
+      'proyectos.carpeta_no_vacia':
+        'A pasta do projeto já tem arquivos: escolha outra ou esvazie-a.',
+      'proyectos.carpeta_invalida': 'A pasta do projeto não é válida.',
+      'proyectos.nombre_invalido':
+        'O nome do projeto só pode ter letras minúsculas, números e hifens (até 40).',
+      'proyectos.argumento_invalido': 'Um dado do projeto não é válido: {campo}.',
+      'proyectos.base_existe': 'O banco {nombre} já existe: escolha outro nome.',
       'mcp.token_invalido': 'O token do servidor MCP não é válido.',
       'mcp.solicitud_cancelada': 'O cliente MCP cancelou a solicitação: a ação não foi executada.',
       'doctor.puerto_ocupado':
@@ -405,7 +412,7 @@ export const pt: Textos = {
       'catalogo.sin_huella':
         '{servicio} {version} não tem checksum publicado: confirme a instalação na janela.',
       'catalogo.huella_debil':
-        '{servicio} {version} só tem um checksum MD5 (fraco): confirme a instalação na janela.',
+        '{servicio} {version} só tem um checksum fraco (MD5 ou SHA-1): confirme a instalação na janela.',
       'catalogo.huella_no_coincide': 'O download não confere com o checksum publicado.',
       'catalogo.redireccion_ajena': 'O download tentou ir para um site não permitido ({host}).',
       'catalogo.demasiadas_redirecciones':

@@ -1,7 +1,10 @@
-import { mkdir, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, readdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { carpetaTemporal } from './temporales';
+import { fetchFalso } from './catalogo-falso';
+import { zip } from './zip-prueba';
 import { lanzadorPorDefecto, matarArbol, rutaTaskkill } from '../src/plataforma/lanzar';
 import type { Lanzador, OpcionesLanzar } from '../src/plataforma/tipos';
 import { TIPOS_PASO, type PasoReceta, type TipoPaso } from '../src/proyectos/config';
@@ -1065,5 +1068,437 @@ describe('sitio-crear con FastAPI en subcarpeta (QA 2)', () => {
     expect(proc.comando[3]).toBe('app.main:app');
     expect(proc.comando[0]!.startsWith(join(a.carpeta, 'admin', '.venv'))).toBe(true);
     expect(proc.cwd).toBe('admin');
+  });
+});
+
+/* ───────────── Proyectos nuevos (D12) ───────────── */
+
+describe('crear-desde-composer', () => {
+  it('create-project con el PHP del sitio, sin shell, en la carpeta vacía y sin scripts', async () => {
+    const a = await armar({ sitio: { tipo: 'laravel' } });
+    const ac = new AbortController();
+    await correr(a, 'crear-desde-composer', { paquete: 'laravel/laravel' }, ac.signal);
+    expect(a.llamadas).toHaveLength(1);
+    const l = a.llamadas[0]!;
+    expect(l.cmd).toBe(a.phpExe);
+    expect(l.args).toEqual([
+      '-c',
+      a.phpIni,
+      join(a.base, 'bin', 'composer', '2.8.1', 'composer.phar'),
+      'create-project',
+      '--no-interaction',
+      '--prefer-dist',
+      '--no-scripts',
+      'laravel/laravel',
+      '.',
+    ]);
+    expect(l.opts.cwd).toBe(a.carpeta);
+    expect(l.opts.senal).toBe(ac.signal);
+    expect(l.opts.env?.COMPOSER_NO_INTERACTION).toBe('1');
+  });
+
+  it('con versión y paquetes por requerir (Symfony webapp)', async () => {
+    const a = await armar();
+    await correr(a, 'crear-desde-composer', {
+      paquete: 'symfony/skeleton',
+      version: '^7.2',
+      requerir: ['symfony/webapp-pack'],
+    });
+    expect(a.llamadas).toHaveLength(2);
+    expect(a.llamadas[0]!.args.slice(-3)).toEqual(['symfony/skeleton', '.', '^7.2']);
+    expect(a.llamadas[1]!.args.slice(3)).toEqual([
+      'require',
+      '--no-interaction',
+      'symfony/webapp-pack',
+    ]);
+  });
+
+  it('no pisa: con la carpeta con archivos no lanza nada', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, 'mio.txt', 'mío');
+    const lineas = await correr(a, 'crear-desde-composer', { paquete: 'laravel/laravel' });
+    expect(a.llamadas).toHaveLength(0);
+    expect(lineas.join('\n')).toContain('ya tiene archivos');
+    expect(await leer(a.carpeta, 'mio.txt')).toBe('mío');
+  });
+
+  it.each([
+    [{ paquete: '--version' }],
+    [{ paquete: 'laravel/laravel; calc' }],
+    [{ paquete: '../a/b' }],
+    [{ paquete: 'sin-barra' }],
+    [{ paquete: 'a/b', version: '-d' }],
+    [{ paquete: 'a/b', version: '^1 && calc' }],
+    [{ paquete: 'a/b', requerir: ['--dev'] }],
+    [{ paquete: 'a/b', requerir: 'x/y' }],
+    [{}],
+  ])('rechaza argumentos peligrosos %j sin lanzar nada', async (args) => {
+    const a = await armar();
+    await expect(correr(a, 'crear-desde-composer', args)).rejects.toThrow();
+    expect(a.llamadas).toHaveLength(0);
+  });
+
+  it('sin Composer y con código de salida distinto de 0 falla con un mensaje claro', async () => {
+    const sin = await armar();
+    sin.deps.composerPhar = async () => null;
+    await expect(correr(sin, 'crear-desde-composer', { paquete: 'a/b' })).rejects.toThrow(
+      'Composer no está instalado',
+    );
+    const mal = await armar({ codigo: 2 });
+    await expect(correr(mal, 'crear-desde-composer', { paquete: 'a/b' })).rejects.toThrow(
+      'terminó con el código 2',
+    );
+  });
+});
+
+describe('descargar-plantilla (WordPress)', () => {
+  const URL = 'https://wordpress.org/wordpress-7.1.5.zip';
+  const sha1 = (b: Buffer | string): string => createHash('sha1').update(b).digest('hex');
+  const wp = zip({
+    'wordpress/index.php': '<?php // wp',
+    'wordpress/wp-config-sample.php': "define( 'DB_NAME', 'database_name_here' );",
+    'wordpress/wp-content/plugins/index.php': '<?php',
+  });
+  const args = (extra: Record<string, unknown> = {}) => ({
+    servicio: 'wordpress',
+    version: '7.1.5',
+    confirmarHuellaDebil: true,
+    ...extra,
+  });
+
+  it('sin confirmar la huella débil falla con catalogo.huella_debil y no pide nada', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    const red = fetchFalso({ [URL]: wp, [`${URL}.sha1`]: sha1(wp) });
+    a.deps.fetch = red.f;
+    await expect(
+      correr(a, 'descargar-plantilla', { servicio: 'wordpress', version: '7.1.5' }),
+    ).rejects.toMatchObject({ codigo: 'catalogo.huella_debil' });
+    expect(red.pedidas).toEqual([]);
+    expect(await readdir(a.carpeta)).toEqual([]);
+  });
+
+  it('confirmada: verifica el SHA-1 y deja el contenido de wordpress/ en la carpeta', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    const red = fetchFalso({ [URL]: wp, [`${URL}.sha1`]: `${sha1(wp)}  wordpress-7.1.5.zip\n` });
+    a.deps.fetch = red.f;
+    await correr(a, 'descargar-plantilla', args());
+    expect(red.pedidas).toEqual([`${URL}.sha1`, URL]);
+    expect(await leer(a.carpeta, 'index.php')).toBe('<?php // wp');
+    expect(await readdir(a.carpeta)).not.toContain('wordpress');
+    expect(await leer(a.carpeta, 'wp-content/plugins/index.php')).toBe('<?php');
+    // Sin restos en la carpeta temporal.
+    await expect(readdir(a.rutas.tmp())).resolves.toEqual([]);
+  });
+
+  it('una huella que no coincide no deja nada y limpia lo descargado', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    a.deps.fetch = fetchFalso({ [URL]: wp, [`${URL}.sha1`]: '0'.repeat(40) }).f;
+    await expect(correr(a, 'descargar-plantilla', args())).rejects.toMatchObject({
+      codigo: 'catalogo.huella_no_coincide',
+    });
+    expect(await readdir(a.carpeta)).toEqual([]);
+    await expect(readdir(a.rutas.tmp())).resolves.toEqual([]);
+  });
+
+  it('una huella publicada mal formada se rechaza', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    a.deps.fetch = fetchFalso({ [URL]: wp, [`${URL}.sha1`]: '<html>error</html>' }).f;
+    await expect(correr(a, 'descargar-plantilla', args())).rejects.toMatchObject({
+      codigo: 'catalogo.huella_no_disponible',
+    });
+  });
+
+  it('una redirección a otro host se corta antes de pedirlo', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    const red = fetchFalso({ [`${URL}.sha1`]: { ir: 'https://evil.example/wp.sha1' } });
+    a.deps.fetch = red.f;
+    await expect(correr(a, 'descargar-plantilla', args())).rejects.toMatchObject({
+      codigo: 'catalogo.redireccion_ajena',
+    });
+    expect(red.pedidas).toEqual([`${URL}.sha1`]);
+  });
+
+  it('una respuesta enorme se corta por el tamaño anunciado', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    a.deps.fetch = fetchFalso({
+      [`${URL}.sha1`]: sha1('x'),
+      [URL]: { encabezados: { 'content-length': String(500 * 1024 * 1024) }, cuerpo: 'x' },
+    }).f;
+    await expect(correr(a, 'descargar-plantilla', args())).rejects.toMatchObject({
+      codigo: 'catalogo.respuesta_grande',
+    });
+    expect(await readdir(a.carpeta)).toEqual([]);
+  });
+
+  it('un zip con una ruta fuera del destino (zip-slip) no escribe fuera', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    const malo = zip({ 'wordpress/index.php': 'x', 'wordpress/../../escape.txt': 'fuera' });
+    a.deps.fetch = fetchFalso({ [URL]: malo, [`${URL}.sha1`]: sha1(malo) }).f;
+    await expect(correr(a, 'descargar-plantilla', args())).rejects.toThrow(
+      /invalid relative path|fuera del destino/,
+    );
+    expect(await readdir(a.carpeta)).toEqual([]);
+    await expect(stat(join(a.base, 'escape.txt'))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('no pisa: con archivos en la carpeta no pide nada', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    await escribir(a.carpeta, 'index.php', 'MÍO');
+    const red = fetchFalso({});
+    a.deps.fetch = red.f;
+    const lineas = await correr(a, 'descargar-plantilla', args());
+    expect(red.pedidas).toEqual([]);
+    expect(lineas.join('\n')).toContain('ya tiene archivos');
+    expect(await leer(a.carpeta, 'index.php')).toBe('MÍO');
+  });
+
+  it.each([
+    [{ servicio: 'joomla', version: '5.0.0' }],
+    [{ servicio: 'wordpress', version: '../../x' }],
+    [{ servicio: 'wordpress', version: '7.1.5/../../x' }],
+    [{ servicio: 'wordpress' }],
+  ])('rechaza argumentos inválidos %j', async (a2) => {
+    const a = await armar();
+    const red = fetchFalso({});
+    a.deps.fetch = red.f;
+    await expect(
+      correr(a, 'descargar-plantilla', { ...a2, confirmarHuellaDebil: true }),
+    ).rejects.toThrow();
+    expect(red.pedidas).toEqual([]);
+  });
+
+  it('un wolfcore.yml de un repositorio no puede traer la confirmación', async () => {
+    const { ARGS_SOLO_INTERFAZ } = await import('../src/proyectos/recetas');
+    expect(ARGS_SOLO_INTERFAZ).toContain('confirmarHuellaDebil');
+  });
+});
+
+describe('copiar-plantilla-interna', () => {
+  it('estático: index.html y estilos.css con el nombre escapado', async () => {
+    const a = await armar({ sitio: { tipo: 'estatico' } });
+    await correr(a, 'copiar-plantilla-interna', { plantilla: 'estatico', nombre: 'mi-sitio' });
+    expect((await readdir(a.carpeta)).sort()).toEqual(['estilos.css', 'index.html']);
+    expect(await leer(a.carpeta, 'index.html')).toContain('<title>mi-sitio</title>');
+  });
+
+  it('nunca sobrescribe un archivo que ya existe', async () => {
+    const a = await armar({ sitio: { tipo: 'estatico' } });
+    await escribir(a.carpeta, 'index.html', 'MI PÁGINA');
+    const lineas = await correr(a, 'copiar-plantilla-interna', {
+      plantilla: 'estatico',
+      nombre: 'mi-sitio',
+    });
+    expect(await leer(a.carpeta, 'index.html')).toBe('MI PÁGINA');
+    expect(lineas.join('\n')).toContain('index.html ya existe');
+    expect(await readdir(a.carpeta)).toContain('estilos.css');
+  });
+
+  it('FastAPI: main.py, requirements según el motor y .gitignore sin el .env', async () => {
+    const a = await armar({ sitio: { tipo: 'fastapi', php: null } });
+    await correr(a, 'copiar-plantilla-interna', {
+      plantilla: 'fastapi',
+      nombre: 'mi-api',
+      motor: 'postgresql',
+      pgvector: true,
+    });
+    const req = await leer(a.carpeta, 'requirements.txt');
+    expect(req).toContain('fastapi');
+    expect(req).toContain('uvicorn');
+    expect(req).toContain('psycopg');
+    expect(req).toContain('pgvector');
+    expect(await leer(a.carpeta, 'main.py')).toContain('app = FastAPI(title="mi-api")');
+    expect(await leer(a.carpeta, '.gitignore')).toMatch(/^\.env$/m);
+    expect(await leer(a.carpeta, '.gitignore')).toMatch(/^\.venv\/$/m);
+  });
+
+  it('FastAPI sin base no pide SQLAlchemy', async () => {
+    const a = await armar({ sitio: { tipo: 'fastapi', php: null } });
+    await correr(a, 'copiar-plantilla-interna', { plantilla: 'fastapi', nombre: 'mi-api' });
+    expect(await leer(a.carpeta, 'requirements.txt')).not.toContain('sqlalchemy');
+  });
+
+  it.each([
+    [{ plantilla: 'django', nombre: 'x' }],
+    [{ plantilla: 'estatico', nombre: '../x' }],
+    [{ plantilla: 'estatico', nombre: 'a"><script>' }],
+    [{ plantilla: 'estatico' }],
+  ])('rechaza %j', async (args) => {
+    const a = await armar();
+    await expect(correr(a, 'copiar-plantilla-interna', args)).rejects.toThrow();
+    expect(await readdir(a.carpeta)).toEqual([]);
+  });
+});
+
+describe('config-bd-crear', () => {
+  const SAMPLE = [
+    '<?php',
+    "define( 'DB_NAME', 'database_name_here' );",
+    "define( 'DB_USER', 'username_here' );",
+    "define( 'DB_PASSWORD', 'password_here' );",
+    "define( 'DB_HOST', 'localhost' );",
+    "define( 'AUTH_KEY',         'put your unique phrase here' );",
+    "define( 'SECURE_AUTH_KEY',  'put your unique phrase here' );",
+    "define( 'LOGGED_IN_KEY',    'put your unique phrase here' );",
+    "define( 'NONCE_KEY',        'put your unique phrase here' );",
+    "define( 'AUTH_SALT',        'put your unique phrase here' );",
+    "define( 'SECURE_AUTH_SALT', 'put your unique phrase here' );",
+    "define( 'LOGGED_IN_SALT',   'put your unique phrase here' );",
+    "define( 'NONCE_SALT',       'put your unique phrase here' );",
+    "$table_prefix = 'wp_';",
+    '',
+  ].join('\n');
+
+  it('WordPress: wp-config.php con la conexión y sales nuevas; la clave no va al registro', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    await escribir(a.carpeta, 'wp-config-sample.php', SAMPLE);
+    const lineas = await correr(a, 'config-bd-crear', {
+      marco: 'wordpress',
+      motor: 'mysql',
+      base: 'mi_blog',
+    });
+    const t = await leer(a.carpeta, 'wp-config.php');
+    expect(t).toContain("define( 'DB_NAME', 'mi_blog' );");
+    expect(t).toContain("define( 'DB_USER', 'root' );");
+    expect(t).toContain("define( 'DB_PASSWORD', 's3cr3t pa$$' );");
+    expect(t).toContain("define( 'DB_HOST', '127.0.0.1:3306' );");
+    expect(t).not.toContain('put your unique phrase here');
+    expect(t).toContain("$table_prefix = 'wp_';");
+    const sales = [...t.matchAll(/define\( '\w+_(?:KEY|SALT)',\s+'([^']+)'/g)].map((m) => m[1]);
+    expect(sales).toHaveLength(8);
+    expect(new Set(sales).size).toBe(8);
+    expect(lineas.join('\n')).not.toContain('s3cr3t');
+    // La plantilla original queda como estaba.
+    expect(await leer(a.carpeta, 'wp-config-sample.php')).toBe(SAMPLE);
+  });
+
+  it('WordPress: una clave con comillas y barras se escapa para PHP', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    a.deps.bd.conexion = async () => ({
+      host: '127.0.0.1',
+      puerto: 3307,
+      usuario: 'root',
+      clave: "a'b\\c$d",
+    });
+    await escribir(a.carpeta, 'wp-config-sample.php', SAMPLE);
+    await correr(a, 'config-bd-crear', { marco: 'wordpress', motor: 'mariadb', base: 'blog' });
+    const t = await leer(a.carpeta, 'wp-config.php');
+    expect(t).toContain("define( 'DB_PASSWORD', 'a\\'b\\\\c$d' );");
+    expect(t).toContain("'127.0.0.1:3307'");
+  });
+
+  it('WordPress: no pisa un wp-config.php existente ni acepta PostgreSQL', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    await escribir(a.carpeta, 'wp-config-sample.php', SAMPLE);
+    await escribir(a.carpeta, 'wp-config.php', 'MÍO');
+    await correr(a, 'config-bd-crear', { marco: 'wordpress', motor: 'mysql', base: 'x' });
+    expect(await leer(a.carpeta, 'wp-config.php')).toBe('MÍO');
+    await rm(join(a.carpeta, 'wp-config.php'));
+    await expect(
+      correr(a, 'config-bd-crear', { marco: 'wordpress', motor: 'postgresql', base: 'x' }),
+    ).rejects.toThrow('MySQL o MariaDB');
+    await expect(readdir(a.carpeta)).resolves.not.toContain('wp-config.php');
+  });
+
+  it('WordPress sin la plantilla da un error claro', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    await expect(
+      correr(a, 'config-bd-crear', { marco: 'wordpress', motor: 'mysql', base: 'x' }),
+    ).rejects.toThrow('wp-config-sample.php');
+  });
+
+  it('CodeIgniter 3: database.php con cadenas PHP literales y el puerto', async () => {
+    const a = await armar({ sitio: { tipo: 'codeigniter3' } });
+    const db = [
+      '<?php',
+      "$db['default'] = array(",
+      "\t'dsn'\t=> '',",
+      "\t'hostname' => 'localhost',",
+      "\t'username' => '',",
+      "\t'password' => '',",
+      "\t'database' => '',",
+      "\t'dbdriver' => 'mysqli',",
+      ');',
+      '',
+    ].join('\n');
+    await escribir(a.carpeta, 'application/config/database.php', db);
+    await correr(a, 'config-bd-crear', {
+      marco: 'codeigniter3',
+      motor: 'mysql',
+      base: 'diamantes',
+    });
+    const t = await leer(a.carpeta, 'application/config/database.php');
+    expect(t).toContain("'hostname' => '127.0.0.1',");
+    expect(t).toContain("'port' => 3306,");
+    expect(t).toContain("'username' => 'root'");
+    expect(t).toContain("'password' => 's3cr3t pa$$'");
+    expect(t).toContain("'database' => 'diamantes'");
+    expect(t).toContain("'dbdriver' => 'mysqli'");
+  });
+
+  it('un marco desconocido se rechaza', async () => {
+    const a = await armar();
+    await expect(correr(a, 'config-bd-crear', { marco: 'joomla' })).rejects.toThrow('args.marco');
+  });
+});
+
+describe('pasos de base con instancia y .env.local', () => {
+  it('bd-crear y pgvector-activar apuntan a la instancia pedida', async () => {
+    const a = await armar();
+    const objetivos: string[] = [];
+    a.deps.bd.listar = async (o) => {
+      objetivos.push(`listar:${o}`);
+      return [];
+    };
+    await correr(a, 'bd-crear', { instancia: 'mariadb@11.4', base: 'tienda' });
+    expect(objetivos).toEqual(['listar:mariadb@11.4']);
+    expect(a.creadas[0]).toMatchObject({ motor: 'mariadb@11.4', nombre: 'tienda' });
+    let vector: unknown[] = [];
+    a.deps.bd.activarVector = async (...x) => void (vector = x);
+    await correr(a, 'pgvector-activar', { instancia: 'postgresql@17', base: 'api' });
+    expect(vector).toEqual(['api', 'postgresql@17']);
+  });
+
+  it('una instancia mal formada o que no es del motor se rechaza', async () => {
+    const a = await armar();
+    await expect(correr(a, 'bd-crear', { instancia: 'redis@7', base: 'x' })).rejects.toThrow(
+      'no válida',
+    );
+    await expect(correr(a, 'bd-crear', { instancia: 'mysql@8.4;', base: 'x' })).rejects.toThrow(
+      'no válida',
+    );
+    await expect(
+      correr(a, 'bd-crear', { instancia: 'mysql@8.4', motor: 'postgresql', base: 'x' }),
+    ).rejects.toThrow('no coinciden');
+    expect(a.creadas).toEqual([]);
+  });
+
+  it('env-crear con destino .env.local escribe solo DATABASE_URL (esquema PHP) y no toca .env', async () => {
+    const a = await armar({ sitio: { tipo: 'laravel' } });
+    await escribir(a.carpeta, '.env', 'APP_ENV=local\n');
+    const lineas = await correr(a, 'env-crear', {
+      destino: '.env.local',
+      motor: 'mysql',
+      base: 'sf_app',
+    });
+    expect(await leer(a.carpeta, '.env')).toBe('APP_ENV=local\n');
+    expect(await leer(a.carpeta, '.env.local')).toBe(
+      "DATABASE_URL='mysql://root:s3cr3t%20pa%24%24@127.0.0.1:3306/sf_app'\n",
+    );
+    expect(lineas.join('\n')).not.toContain('s3cr3t');
+    // Una segunda vez no la pisa.
+    await correr(a, 'env-crear', { destino: '.env.local', motor: 'mysql', base: 'otra' });
+    expect(await leer(a.carpeta, '.env.local')).toContain('sf_app');
+  });
+
+  it('env-crear con instancia pide la conexión de esa instancia', async () => {
+    const a = await armar({ sitio: { tipo: 'fastapi', php: null } });
+    const pedidas: string[] = [];
+    a.deps.bd.conexion = async (o) => {
+      pedidas.push(o);
+      return { host: '127.0.0.1', puerto: 5433, usuario: 'postgres', clave: 'x' };
+    };
+    await correr(a, 'env-crear', { instancia: 'postgresql@16', base: 'api' });
+    expect(pedidas).toEqual(['postgresql@16']);
+    expect(await leer(a.carpeta, '.env')).toContain('127.0.0.1:5433/api');
   });
 });

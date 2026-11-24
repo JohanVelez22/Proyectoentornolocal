@@ -1,21 +1,26 @@
 import { z } from 'zod';
 
 /**
- * Huella publicada de una descarga. SHA-256 y SHA-512 son fuertes; MD5 se verifica, pero cuenta
- * como débil (instalar con ella exige la confirmación del usuario).
+ * Huella publicada de una descarga. SHA-256 y SHA-512 son fuertes; SHA-1 (WordPress) y MD5 se
+ * verifican, pero cuentan como débiles (instalar con ella exige la confirmación del usuario).
  */
-export type AlgoritmoHuella = 'sha256' | 'sha512' | 'md5';
+export type AlgoritmoHuella = 'sha256' | 'sha512' | 'sha1' | 'md5';
 export interface Huella {
   algoritmo: AlgoritmoHuella;
   /** Hex en minúsculas. */
   valor: string;
 }
 
-const LARGO_HEX: Record<AlgoritmoHuella, number> = { sha256: 64, sha512: 128, md5: 32 };
+const LARGO_HEX: Record<AlgoritmoHuella, number> = {
+  sha256: 64,
+  sha512: 128,
+  sha1: 40,
+  md5: 32,
+};
 
 export const HuellaSchema = z
   .object({
-    algoritmo: z.enum(['sha256', 'sha512', 'md5']),
+    algoritmo: z.enum(['sha256', 'sha512', 'sha1', 'md5']),
     valor: z.string(),
   })
   .strict()

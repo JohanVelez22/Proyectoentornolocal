@@ -206,6 +206,13 @@ export const fr: Textos = {
       'proyectos.no_confiado': 'Cochez "Je fais confiance à ce dépôt" pour exécuter la recette.',
       'proyectos.receta_en_curso': 'Une recette est déjà en cours pour ce projet.',
       'proyectos.paso_no_omitible': 'L’étape "Créer le site" ne peut pas être ignorée.',
+      'proyectos.carpeta_no_vacia':
+        'Le dossier du projet contient déjà des fichiers : choisissez-en un autre ou videz-le.',
+      'proyectos.carpeta_invalida': 'Le dossier du projet n’est pas valide.',
+      'proyectos.nombre_invalido':
+        'Le nom du projet ne peut contenir que des minuscules, des chiffres et des tirets (40 au maximum).',
+      'proyectos.argumento_invalido': 'Une donnée du projet n’est pas valide : {campo}.',
+      'proyectos.base_existe': 'La base {nombre} existe déjà : choisissez un autre nom.',
       'mcp.token_invalido': 'Le jeton du serveur MCP n’est pas valide.',
       'mcp.solicitud_cancelada':
         'Le client MCP a annulé la demande : l’action n’a pas été exécutée.',
@@ -417,7 +424,7 @@ export const fr: Textos = {
       'catalogo.sin_huella':
         '{servicio} {version} n’a pas d’empreinte publiée : confirmez l’installation dans la boîte de dialogue.',
       'catalogo.huella_debil':
-        '{servicio} {version} n’a qu’une empreinte MD5 (faible) : confirmez l’installation dans la boîte de dialogue.',
+        '{servicio} {version} n’a qu’une empreinte faible (MD5 ou SHA-1) : confirmez l’installation dans la boîte de dialogue.',
       'catalogo.huella_no_coincide': 'Le téléchargement ne correspond pas à l’empreinte publiée.',
       'catalogo.redireccion_ajena':
         'Le téléchargement a tenté d’aller vers un site non autorisé ({host}).',
