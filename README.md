@@ -209,6 +209,18 @@ PostgreSQL usa pgvector compilado una vez en su equipo:
 - Herramientas: estado general, proyectos, servicios (iniciar y detener), bases (listar, crear, respaldar, restaurar, borrar), túneles, ejecutar la receta, traer cambios, leer registros y finalizar procesos. Las acciones destructivas y las recetas piden confirmación en la ventana de WolfCore Dev.
 - Depuración (Etapa C): `listar_dumps`, `leer_dump` (hasta 64 KiB de texto), `listar_errores` y `leer_error` son de solo lectura, con los secretos enmascarados y las salidas acotadas; `limpiar_dumps` pide confirmación en la ventana.
 
+### Iniciar todo y línea de órdenes
+
+- **Iniciar todo** (botón de Servicios, bandeja y paleta) enciende, en orden: el PHP de las ramas en uso y Nginx; luego la **instancia predeterminada de cada base instalada**, las que tienen _Iniciar con WolfCore Dev_ y las que usan los proyectos según su `.env` (motor y puerto), y espera a que respondan; por último los procesos de proyecto con _autoiniciar_, solo si responde la base que usan. Si algo falla, el error y un aviso dicen qué no arrancó. **Nunca abre túneles**: un túnel solo se abre con el interruptor de su sitio, y siempre pide confirmar que el sitio queda público.
+- Desde la línea de órdenes (base del futuro CLI `wolf`):
+
+  ```powershell
+  & "$env:LOCALAPPDATA\Programs\WolfCore Dev\WolfCore Dev.exe" --iniciar-todo
+  & "$env:LOCALAPPDATA\Programs\WolfCore Dev\WolfCore Dev.exe" --detener-todo
+  ```
+
+  Si WolfCore Dev ya está abierto, la orden se le pasa a esa instancia; si no, la app arranca y la ejecuta en cuanto carga. Hacen exactamente lo mismo que los botones. El resultado queda en `run\ultima-orden.json` de la carpeta de datos (`orden`, `inicio`, `fin`, `ok` y, si falló, `error`). No hay más órdenes: cualquier otro argumento se ignora.
+
 ### Interfaz (Etapa B)
 
 - Tema **claro, oscuro o del sistema** (también la barra de título), color de acento e idioma **español o inglés**, en caliente.

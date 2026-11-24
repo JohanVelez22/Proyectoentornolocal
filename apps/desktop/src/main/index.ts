@@ -1,4 +1,5 @@
 import { setDefaultAutoSelectFamilyAttemptTimeout } from 'node:net';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   BrowserWindow,
@@ -21,6 +22,7 @@ import { textosMain } from './textos';
 import { programarDoctorAlIniciar } from './doctorInicio';
 import { ControlMetricas, registrarIpc } from './ipc';
 import { AlmacenSecretos } from './secretos';
+import { crearOrdenes, ordenDeArgs } from './ordenes';
 import { crearSalida } from './salida';
 import { registrarFinDeSesion, topeCierre } from './sesion';
 import { carpetaExistente, urlHttp } from './validacion';
@@ -225,10 +227,31 @@ function salir(): Promise<void> {
   return salida.salir();
 }
 
+// --iniciar-todo / --detener-todo (ver ordenes.ts): el mismo flujo que la bandeja.
+const ordenes = crearOrdenes({
+  nucleo: () => (nucleo && accionesBandeja ? nucleo : null),
+  registrar: (r) => {
+    if (!nucleo) return;
+    try {
+      const run = join(nucleo.rutas.base, 'run');
+      mkdirSync(run, { recursive: true });
+      writeFileSync(join(run, 'ultima-orden.json'), JSON.stringify(r, null, 2));
+    } catch (e) {
+      console.error('No se pudo guardar el resultado de la orden:', e);
+    }
+  },
+});
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', mostrarVentana);
+  // Otra instancia: con --iniciar-todo/--detener-todo ejecuta la orden aquí; si no, muestra la
+  // ventana.
+  app.on('second-instance', (_e, argv) => {
+    const orden = ordenDeArgs(argv);
+    if (orden) void ordenes.ejecutar(orden);
+    else mostrarVentana();
+  });
   // Cierre iniciado por el sistema u otra vía (no por nuestro diálogo): se apaga todo.
   app.on('before-quit', (e) => {
     if (saliendo) return;
@@ -305,6 +328,10 @@ if (!app.requestSingleInstanceLock()) {
       salir: () => void salir(),
     };
     bandeja = crearBandeja(rutaIconoBandeja, accionesBandeja, textosMain(idioma));
+    // Arrancada con una orden (o recibida mientras cargaba): se ejecuta ahora.
+    const orden = ordenDeArgs(process.argv);
+    if (orden) void ordenes.ejecutar(orden);
+    void ordenes.listo();
   });
   // La app vive en la bandeja: no se cierra al ocultar la ventana.
   app.on('window-all-closed', () => undefined);
