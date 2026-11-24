@@ -58,6 +58,9 @@ async function desinstalar(): Promise<void> {
     <p class="texto">{{ t.binario }}</p>
     <template v-if="datos && id">
       <p class="texto">{{ t.instancia(id) }}</p>
+      <NAlert v-if="fila.predeterminada" type="warning" :bordered="false" class="alerta">
+        {{ t.predeterminada(id) }}
+      </NAlert>
       <p class="texto">{{ t.datosQuedan }}</p>
       <NCheckbox v-model:checked="borrarDatos" class="casilla">{{ t.borrarDatos }}</NCheckbox>
       <template v-if="borrarDatos">

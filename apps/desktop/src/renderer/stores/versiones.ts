@@ -251,10 +251,9 @@ export const useVersiones = defineStore('versiones', () => {
    * la saca de la lista (sus datos quedan). Nunca borra datos: eso es `borrarDatos`, aparte.
    */
   async function desinstalar(f: FilaVersion): Promise<void> {
-    if (f.instancia) {
-      await api().instancias.detener(f.instancia);
-      await api().instancias.quitar(f.instancia);
-    }
+    // `quitar` valida antes (la última instancia no se quita) y recién entonces la detiene:
+    // así nunca queda apagada una instancia que no se pudo quitar.
+    if (f.instancia) await api().instancias.quitar(f.instancia);
     await api().instalador.desinstalar(servicio.value, f.version);
   }
 
@@ -305,9 +304,11 @@ export const useVersiones = defineStore('versiones', () => {
     tabla.value = marcarPredeterminada(t, version);
   }
 
-  async function cambiarPuerto(id: IdInstancia, puerto: number): Promise<void> {
-    await api().instancias.puerto(id, puerto);
+  /** Devuelve los proyectos cuyo `.env` todavía usa el puerto anterior (para avisar). */
+  async function cambiarPuerto(id: IdInstancia, puerto: number): Promise<string[]> {
+    const r = await api().instancias.puerto(id, puerto);
     await cargar();
+    return r?.proyectos ?? [];
   }
 
   /**

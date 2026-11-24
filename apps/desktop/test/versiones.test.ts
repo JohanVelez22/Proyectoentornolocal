@@ -286,6 +286,8 @@ describe('store de versiones', () => {
     await v.desinstalar(v.filas.find((f) => f.version === '8.4.13')!);
     expect(api.instalador.desinstalar).toHaveBeenCalledTimes(2);
     expect(api.instancias.quitar).toHaveBeenCalledWith('mysql@8.4');
+    // No se apaga antes: `quitar` valida y detiene (la última instancia no se toca).
+    expect(api.instancias.detener).not.toHaveBeenCalled();
     expect(api.instancias.borrarDatos).not.toHaveBeenCalled();
   });
 

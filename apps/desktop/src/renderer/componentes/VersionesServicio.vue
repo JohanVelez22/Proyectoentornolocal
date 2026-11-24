@@ -10,6 +10,7 @@ import {
   NTag,
   NTooltip,
   useDialog,
+  useNotification,
 } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
 import type { IdServicioDatos, RespaldoDatos, ServicioVersiones } from '../../shared/api';
@@ -39,6 +40,7 @@ const emit = defineEmits<{ elegir: [servicio: ServicioVersiones] }>();
 const t = textos.versiones;
 const v = useVersiones();
 const dialog = useDialog();
+const notification = useNotification();
 const { ejecutar, ocupado } = useAccion();
 
 const nombre = computed(() => t.servicios[props.servicio]);
@@ -109,7 +111,20 @@ function usar(version: string): void {
   if (inst) accion(() => v.abrirActualizar(version, inst));
 }
 function puerto(f: FilaVersion, p: number): void {
-  if (f.instancia) accion(() => v.cambiarPuerto(f.instancia!, p), t.puertoCambiado(p));
+  const id = f.instancia;
+  if (!id) return;
+  void ejecutar('fila', () => v.cambiarPuerto(id, p), { exito: t.puertoCambiado(p) }).then(
+    (proyectos) => {
+      if (proyectos?.length) {
+        notification.warning({
+          title: t.puertoProyectosTitulo,
+          content: t.puertoProyectos(f.puerto ?? 0, p, proyectos.join(', ')),
+          duration: 15000,
+          keepAliveOnHover: true,
+        });
+      }
+    },
+  );
 }
 function resolver(f: FilaVersion): void {
   if (f.instancia) accion(() => v.abrirDesbloquear(f.instancia!));

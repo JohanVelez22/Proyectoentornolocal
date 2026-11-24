@@ -26,7 +26,14 @@ watch(
   mostrar,
   (v) => {
     if (!v) return;
-    eleccion.value = props.respaldos.at(-1)?.sello ?? 'actual';
+    // El respaldo que apunta el bloqueo (el de antes de esa actualización) va primero.
+    const delBloqueo = /\.respaldo-(\d{8}-\d{6})$/.exec(
+      props.instancia.bloqueo?.respaldo ?? '',
+    )?.[1];
+    eleccion.value =
+      delBloqueo && props.respaldos.some((r) => r.sello === delBloqueo)
+        ? delBloqueo
+        : (props.respaldos.at(-1)?.sello ?? 'actual');
     escrito.value = '';
   },
   { immediate: true },

@@ -412,7 +412,8 @@ export interface ApiEntorno {
     crear(servicio: IdServicioDatos, version: string): Promise<IdInstancia>;
     iniciar(id: IdInstancia): Promise<void>;
     detener(id: IdInstancia): Promise<void>;
-    puerto(id: IdInstancia, puerto: number): Promise<void>;
+    /** Devuelve los proyectos cuyo .env todavía usa el puerto anterior (no se tocan). */
+    puerto(id: IdInstancia, puerto: number): Promise<{ proyectos: string[] }>;
     predeterminar(id: IdInstancia): Promise<void>;
     /** La saca de la lista (detenida); sus datos quedan en disco. */
     quitar(id: IdInstancia): Promise<void>;

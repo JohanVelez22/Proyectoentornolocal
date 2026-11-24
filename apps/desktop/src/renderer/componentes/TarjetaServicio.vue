@@ -34,6 +34,7 @@ import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { categoriaDe, esServicioDatos, puertoAlternativo, useServicios } from '../stores/servicios';
 import EstadoPunto from './EstadoPunto.vue';
+import { formatearTamano } from '../utilidades/bd';
 import { useRouter } from 'vue-router';
 import { esServicioConVersiones } from '../stores/versiones';
 
@@ -190,9 +191,22 @@ function elegir(clave: string): void {
   if (clave === 'puerto') abrirDialogoPuerto();
   if (clave === 'borrar') {
     confirmacion.value = '';
+    copiasABorrar.value = null;
     dialogoBorrar.value = true;
+    const id = props.servicio.id;
+    if (esServicioDatos(id)) {
+      void api()
+        .servicios.respaldosDatos(id)
+        .then(
+          (l) => (copiasABorrar.value = { n: l.length, bytes: l.reduce((a, r) => a + r.bytes, 0) }),
+        )
+        .catch(() => undefined);
+    }
   }
 }
+
+/** Copias de las actualizaciones que también se borrarían con data/<servicio>. */
+const copiasABorrar = ref<{ n: number; bytes: number } | null>(null);
 
 // ---- Arranque automático ----
 const autoIniciar = computed(() =>
@@ -439,6 +453,12 @@ function cambiarRedLocal(valor: boolean): void {
       <p class="advertencia">
         <NIcon :size="18"><Warning /></NIcon>
         <span>{{ textoBorrar }}</span>
+      </p>
+      <p v-if="copiasABorrar && copiasABorrar.n > 0" class="advertencia">
+        <NIcon :size="18"><Warning /></NIcon>
+        <span>{{
+          t.borrarDatos.copias(copiasABorrar.n, formatearTamano(copiasABorrar.bytes))
+        }}</span>
       </p>
       <NForm :show-feedback="false" @submit.prevent="borrarDatos">
         <NFormItem :label="t.borrarDatos.pedir(servicio.id)">
