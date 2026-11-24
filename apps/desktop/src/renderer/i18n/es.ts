@@ -141,6 +141,8 @@ export const es = {
       'instancias.respaldo_no_existe': 'No existe ese respaldo de {id}.',
       'instancias.respaldo_en_uso':
         'Esa copia la necesita {id}, que está bloqueada: resuélvalo antes.',
+      'instancias.version_requerida':
+        'No se sabe a qué versión volver {id}: elija una versión instalada de su rama.',
       'instalador.version_en_uso':
         'No se puede desinstalar {servicio} {version}: la usa la instancia {instancia}.',
       'bd.encender_servicio': 'Encienda {nombre} para administrar sus bases.',
@@ -2845,6 +2847,9 @@ export const es = {
         'Solo si la carpeta actual tiene datos completos; si no los tiene, elija un respaldo.',
       notaDevolver: 'Se copia el respaldo, se comprueba y solo entonces se pone en su sitio.',
       escriba: (id: string) => `Escriba ${id} para confirmar`,
+      elegirVersion:
+        'La marca de bloqueo no se pudo leer: elija con qué versión de esta rama se abrirán los datos (la de antes de la actualización).',
+      version: 'Versión',
       confirmar: 'Resolver',
       hecho: (id: string) => `${id} desbloqueada. Ya puede encenderla.`,
     },

@@ -142,6 +142,8 @@ export const en: Textos = {
       'instancias.sin_datos': '{id} has no data in its folder: choose a backup to restore.',
       'instancias.respaldo_no_existe': 'That backup of {id} does not exist.',
       'instancias.respaldo_en_uso': '{id} is blocked and needs that copy: resolve it first.',
+      'instancias.version_requerida':
+        'It is unknown which version {id} should go back to: choose an installed version of its branch.',
       'instalador.version_en_uso':
         'Cannot uninstall {servicio} {version}: instance {instancia} uses it.',
       'bd.encender_servicio': 'Start {nombre} to manage its databases.',
@@ -2826,6 +2828,9 @@ export const en: Textos = {
       notaActual: 'Only if the current folder has complete data; if it does not, choose a backup.',
       notaDevolver: 'The backup is copied, checked and only then put in place.',
       escriba: (id: string) => `Type ${id} to confirm`,
+      elegirVersion:
+        'The block marker could not be read: choose which version of this branch will open the data (the one before the update).',
+      version: 'Version',
       confirmar: 'Resolve',
       hecho: (id: string) => `${id} unblocked. You can start it now.`,
     },

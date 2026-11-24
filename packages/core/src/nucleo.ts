@@ -1719,7 +1719,7 @@ export class Nucleo {
   /** Resuelve el bloqueo de una instancia (confirmación escrita; ver `ServiciosDatos.desbloquear`). */
   desbloquearInstancia(
     id: IdInstancia,
-    o: { confirmacion: string; respaldo?: string },
+    o: { confirmacion: string; respaldo?: string; version?: string },
   ): Promise<void> {
     return this.servicios.datos.instancias.desbloquear(id, o);
   }

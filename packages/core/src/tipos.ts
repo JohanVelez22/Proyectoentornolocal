@@ -499,6 +499,8 @@ export interface BloqueoInstancia {
   respaldo: string;
   /** Versión a la que vuelve la configuración al resolver (si quedó con la que no arrancó). */
   version?: string;
+  /** La marca existe pero no se pudo leer (sigue bloqueando; hay que elegir la versión). */
+  ilegible?: boolean;
 }
 
 export interface EstadoServicio {

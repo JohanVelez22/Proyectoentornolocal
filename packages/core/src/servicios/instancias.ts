@@ -108,5 +108,8 @@ export interface Instancias {
    * Resuelve el bloqueo tras una devolución fallida (`confirmacion === id`): con `respaldo` (su
    * sello) devuelve esa copia; sin él acepta la carpeta actual si está inicializada.
    */
-  desbloquear(id: IdInstancia, o: { confirmacion: string; respaldo?: string }): Promise<void>;
+  desbloquear(
+    id: IdInstancia,
+    o: { confirmacion: string; respaldo?: string; version?: string },
+  ): Promise<void>;
 }

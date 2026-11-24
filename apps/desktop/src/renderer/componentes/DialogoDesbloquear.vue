@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NAlert, NButton, NInput, NModal, NRadio, NRadioGroup, NSpace } from 'naive-ui';
+import { NAlert, NButton, NInput, NModal, NRadio, NRadioGroup, NSelect, NSpace } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
 import type { EstadoInstancia, RespaldoDatos } from '../../shared/api';
 import { useAccion } from '../composables/useAccion';
@@ -12,15 +12,22 @@ import { useVersiones } from '../stores/versiones';
  * respaldo elegido (la carpeta actual se aparta, no se borra) o aceptar la carpeta actual tal
  * como está. Exige escribir el id de la instancia. Nunca la enciende ni inicializa nada.
  */
-const props = defineProps<{ instancia: EstadoInstancia; respaldos: RespaldoDatos[] }>();
+const props = defineProps<{
+  instancia: EstadoInstancia;
+  respaldos: RespaldoDatos[];
+  /** Versiones instaladas de su rama (si la marca es ilegible hay que elegir a cuál volver). */
+  versiones: string[];
+}>();
 const mostrar = defineModel<boolean>('show', { required: true });
 
 const t = textos.versiones.dialogoDesbloquear;
-const versiones = useVersiones();
+const tienda = useVersiones();
 const { ejecutar, ocupado } = useAccion();
 
 const eleccion = ref<string>('actual');
 const escrito = ref('');
+const version = ref<string | null>(null);
+const ilegible = computed(() => props.instancia.bloqueo?.ilegible === true);
 
 watch(
   mostrar,
@@ -35,20 +42,24 @@ watch(
         ? delBloqueo
         : (props.respaldos.at(-1)?.sello ?? 'actual');
     escrito.value = '';
+    version.value = null;
   },
   { immediate: true },
 );
 
-const puede = computed(() => escrito.value === props.instancia.id);
+const puede = computed(
+  () => escrito.value === props.instancia.id && (!ilegible.value || !!version.value),
+);
 
 async function resolver(): Promise<void> {
   if (!puede.value) return;
   const ok = await ejecutar(
     'resolver',
     async () => {
-      await versiones.desbloquear(props.instancia.id, {
+      await tienda.desbloquear(props.instancia.id, {
         confirmacion: escrito.value,
         ...(eleccion.value === 'actual' ? {} : { respaldo: eleccion.value }),
+        ...(ilegible.value && version.value ? { version: version.value } : {}),
       });
       return true;
     },
@@ -86,6 +97,16 @@ async function resolver(): Promise<void> {
       </NSpace>
     </NRadioGroup>
     <p class="texto">{{ eleccion === 'actual' ? t.notaActual : t.notaDevolver }}</p>
+    <template v-if="ilegible">
+      <p class="texto">{{ t.elegirVersion }}</p>
+      <NSelect
+        v-model:value="version"
+        size="small"
+        class="version"
+        :options="versiones.map((v) => ({ value: v, label: v }))"
+        :aria-label="t.version"
+      />
+    </template>
     <NInput
       v-model:value="escrito"
       size="small"
@@ -133,6 +154,9 @@ async function resolver(): Promise<void> {
   line-height: 1.5;
   opacity: 0.8;
   font-size: 13px;
+}
+.version {
+  margin-bottom: 10px;
 }
 .pie {
   display: flex;

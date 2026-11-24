@@ -423,7 +423,7 @@ export interface ApiEntorno {
     /** Resuelve el bloqueo tras una devolución fallida (confirmación escrita). */
     desbloquear(
       id: IdInstancia,
-      opciones: { confirmacion: string; respaldo?: string },
+      opciones: { confirmacion: string; respaldo?: string; version?: string },
     ): Promise<void>;
   };
   bd: {

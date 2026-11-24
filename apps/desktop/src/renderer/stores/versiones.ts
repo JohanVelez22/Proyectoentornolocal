@@ -162,7 +162,13 @@ export type DialogoVersiones =
     }
   | { tipo: 'sinHuella'; servicio: ServicioVersiones; version: string; alternativa: string | null }
   | { tipo: 'desinstalar'; servicio: ServicioVersiones; fila: FilaVersion }
-  | { tipo: 'desbloquear'; instancia: EstadoInstancia; respaldos: RespaldoDatos[] };
+  | {
+      tipo: 'desbloquear';
+      instancia: EstadoInstancia;
+      respaldos: RespaldoDatos[];
+      /** Versiones instaladas de su rama (para elegir a cuál volver si la marca es ilegible). */
+      versiones: string[];
+    };
 
 export const useVersiones = defineStore('versiones', () => {
   const servicio = ref<ServicioVersiones>('php');
@@ -407,16 +413,18 @@ export const useVersiones = defineStore('versiones', () => {
     const lista = await api()
       .servicios.respaldosDatos(inst.servicio)
       .catch(() => [] as RespaldoDatos[]);
+    const rama = tabla.value?.ramas.find((r) => r.versiones.some((f) => f.instancia === id));
     dialogo.value = {
       tipo: 'desbloquear',
       instancia: inst,
       respaldos: lista.filter((r) => r.clave === inst.clave && r.tipo === 'respaldo'),
+      versiones: (rama?.versiones ?? []).filter((f) => f.instalada).map((f) => f.version),
     };
   }
 
   async function desbloquear(
     id: IdInstancia,
-    o: { confirmacion: string; respaldo?: string },
+    o: { confirmacion: string; respaldo?: string; version?: string },
   ): Promise<void> {
     await api().instancias.desbloquear(id, o);
     dialogo.value = null;

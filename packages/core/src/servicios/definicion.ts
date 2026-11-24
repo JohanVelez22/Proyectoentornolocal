@@ -524,7 +524,7 @@ export class ServiciosDatos {
         ...(typeof x.version === 'string' && claveValida(x.version) ? { version: x.version } : {}),
       };
     } catch {
-      return { fecha: '', fallida: '', respaldo: '' };
+      return { fecha: '', fallida: '', respaldo: '', ilegible: true };
     }
   }
 
@@ -664,7 +664,11 @@ export class ServiciosDatos {
   /** Ejecuta `inicializar` si la carpeta de datos no tiene la marca; si falla, deshace lo creado. */
   private async prepararDatos(def: DefServicio, ctx: CtxServicio): Promise<void> {
     const marca = path.join(ctx.datos, MARCA_INICIALIZADO);
-    if (existsSync(marca)) return;
+    if (existsSync(marca)) {
+      // Ya hay datos: un permiso de reinicio que quedó no debe valer para más adelante.
+      await rm(`${ctx.datos}${SUFIJO_REINICIO}`, { force: true });
+      return;
+    }
     // Datos apartados por una actualización (`<clave>.fallida-…`, `.restaurando-…`): una
     // carpeta vacía o ausente aquí no es "nueva", así que no se inicializa encima.
     const clave = path.basename(ctx.datos);
@@ -1292,6 +1296,8 @@ export class ServiciosDatos {
         ? inst.version
         : this.versionDeInstancia(def, inst.clave, inst.version, instaladas);
       if (usa === version || inst.version === version) return inst.id;
+      // La versión a la que debe volver una instancia bloqueada tampoco se puede quitar.
+      if ((await this.bloqueo(inst.servicio, inst.clave))?.version === version) return inst.id;
     }
     return null;
   }
@@ -1416,7 +1422,10 @@ export class ServiciosDatos {
    *   (nunca se desbloquea para inicializar una carpeta vacía).
    * No enciende nada.
    */
-  desbloquear(id: IdInstancia, o: { confirmacion: string; respaldo?: string }): Promise<void> {
+  desbloquear(
+    id: IdInstancia,
+    o: { confirmacion: string; respaldo?: string; version?: string },
+  ): Promise<void> {
     const { servicio, clave } = parsearInstancia(id);
     return this.enCola(servicio, async () => {
       if (o.confirmacion !== id) {
@@ -1442,18 +1451,39 @@ export class ServiciosDatos {
       const inst = (await this.resolver(def, await this.d.leerConfig())).find((i) => i.id === id);
       if (!inst)
         throw new ErrorWolf('instancias.no_existe', `No existe la instancia ${id}.`, { id });
+      // La marca se lee antes de tocar nada: una devolución fallida no debe perder la versión a
+      // la que volver. Con la marca ilegible esa versión no se sabe: hay que elegirla.
+      const b = await this.bloqueo(servicio, clave);
+      let version = b?.version;
+      if (o.version !== undefined || b?.ilegible) {
+        const instaladas = await this.d.instalador.instalados(servicio);
+        const ok =
+          typeof o.version === 'string' &&
+          instaladas.includes(o.version) &&
+          claveDe(def, o.version) === clave;
+        if (!ok) {
+          throw new ErrorWolf(
+            'instancias.version_requerida',
+            `No se sabe a qué versión volver ${id}: elija una versión instalada de su rama.`,
+            { id },
+          );
+        }
+        version = o.version;
+      }
       if (this.vivo(inst.proceso)) await this.detenerSinCola(def, inst);
       if (copia) {
         try {
           await devolverCopia(carpeta, copia, selloFecha(this.ahora), this.d.fsCopia);
         } catch (x) {
           const fallida = x instanceof ErrorDevolucion ? x.fallida : carpeta;
-          // Sigue bloqueada, y la marca dice dónde quedaron ahora los datos tocados.
+          // Sigue bloqueada, y la marca dice dónde quedaron ahora los datos tocados (y conserva
+          // la versión a la que volver).
           throw await this.falloDevolucion(
             inst,
             `No se pudo devolver el respaldo de ${id} (${mensajeDe(x).slice(0, 200)}). Sigue bloqueada.`,
             fallida,
             copia,
+            version,
           );
         }
       } else if (!existsSync(path.join(carpeta, MARCA_INICIALIZADO))) {
@@ -1465,9 +1495,8 @@ export class ServiciosDatos {
       }
       // Si la configuración quedó con la versión que no arrancó, vuelve antes a la de la marca
       // (si no se puede, sigue bloqueada).
-      const b = await this.bloqueo(servicio, clave);
-      if (b?.version && inst.version !== b.version) {
-        const v = b.version;
+      if (version && inst.version !== version) {
+        const v = version;
         await this.d.modificarConfig((c) => {
           const i = c.servicios.datos[servicio].instancias?.[clave];
           if (i) i.version = v;

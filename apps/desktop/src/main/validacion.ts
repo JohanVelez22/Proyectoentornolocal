@@ -943,15 +943,24 @@ export function opcionesNuevaRama(
 }
 
 /** Resolver el bloqueo: confirmación escrita y, opcionalmente, el sello del respaldo a devolver. */
-export function opcionesDesbloquear(v: unknown): { confirmacion: string; respaldo?: string } {
+export function opcionesDesbloquear(v: unknown): {
+  confirmacion: string;
+  respaldo?: string;
+  version?: string;
+} {
   const o = objetoPlano<Record<string, unknown>>(v, 'opciones');
-  soloClaves(o, ['confirmacion', 'respaldo'], 'opciones');
-  const confirmacion = textoAcotado(o['confirmacion'], 0, 64, 'confirmación');
-  if (o['respaldo'] === undefined) return { confirmacion };
-  if (typeof o['respaldo'] !== 'string' || !/^\d{8}-\d{6}$/.test(o['respaldo'])) {
-    throw new Error('Argumento no válido: respaldo');
+  soloClaves(o, ['confirmacion', 'respaldo', 'version'], 'opciones');
+  const res: { confirmacion: string; respaldo?: string; version?: string } = {
+    confirmacion: textoAcotado(o['confirmacion'], 0, 64, 'confirmación'),
+  };
+  if (o['respaldo'] !== undefined) {
+    if (typeof o['respaldo'] !== 'string' || !/^\d{8}-\d{6}$/.test(o['respaldo'])) {
+      throw new Error('Argumento no válido: respaldo');
+    }
+    res.respaldo = o['respaldo'];
   }
-  return { confirmacion, respaldo: o['respaldo'] };
+  if (o['version'] !== undefined) res.version = versionCatalogo(o['version']);
+  return res;
 }
 
 const TIPOS_RESPALDO_DATOS = ['respaldo', 'volcados', 'fallida', 'restaurando', 'copia'] as const;

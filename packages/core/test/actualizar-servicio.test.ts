@@ -843,3 +843,78 @@ describe('ronda de revisión de la Task 19 (datos reales)', () => {
     expect(existsSync(`${datosDe('8.4')}.respaldo-${SELLO}`)).toBe(true);
   });
 });
+
+describe('tercera ronda de la Task 19', () => {
+  /** Arranque fallido con datos y la config sin poder volver: bloqueada con version 8.4.13. */
+  async function bloqueadaSinConfig(s: Servicios): Promise<void> {
+    fallan.add('8.4.14');
+    await preparar(s);
+    falloConfigCon = '8.4.13';
+    await expect(s.datos.actualizar('mysql@8.4', '8.4.14')).rejects.toMatchObject({
+      codigo: 'servicios.restauracion_fallo',
+    });
+    falloConfigCon = null;
+  }
+
+  it('una devolución fallida al desbloquear conserva la versión a la que volver', async () => {
+    const s = crear();
+    await bloqueadaSinConfig(s);
+    const real = copiar;
+    copiar = async (de, a) => {
+      if (a.includes('.restaurando-')) throw new Error('disco lleno');
+      await real(de, a);
+    };
+    reloj = new Date('2026-11-24T08:00:00');
+    await expect(
+      s.datos.instancias.desbloquear('mysql@8.4' as IdInstancia, {
+        confirmacion: 'mysql@8.4',
+        respaldo: SELLO,
+      }),
+    ).rejects.toMatchObject({ codigo: 'servicios.restauracion_fallo' });
+    copiar = real;
+    const marca = JSON.parse(await readFile(`${datosDe('8.4')}.bloqueada`, 'utf8')) as {
+      version?: string;
+    };
+    expect(marca.version).toBe('8.4.13');
+    // "Usar la actual": la config acaba en la versión anterior.
+    await s.datos.instancias.desbloquear('mysql@8.4' as IdInstancia, { confirmacion: 'mysql@8.4' });
+    expect(cfg.servicios.datos.mysql.instancias?.['8.4']?.version).toBe('8.4.13');
+  });
+
+  it('con la marca ilegible hay que elegir la versión; sin ella no se desbloquea', async () => {
+    const s = crear();
+    await bloqueadaSinConfig(s);
+    await writeFile(`${datosDe('8.4')}.bloqueada`, '{ roto');
+    await expect(
+      s.datos.instancias.desbloquear('mysql@8.4' as IdInstancia, { confirmacion: 'mysql@8.4' }),
+    ).rejects.toMatchObject({ codigo: 'instancias.version_requerida' });
+    await expect(
+      s.datos.instancias.desbloquear('mysql@8.4' as IdInstancia, {
+        confirmacion: 'mysql@8.4',
+        version: '8.0.44',
+      }),
+    ).rejects.toMatchObject({ codigo: 'instancias.version_requerida' });
+    await s.datos.instancias.desbloquear('mysql@8.4' as IdInstancia, {
+      confirmacion: 'mysql@8.4',
+      version: '8.4.13',
+    });
+    expect(cfg.servicios.datos.mysql.instancias?.['8.4']?.version).toBe('8.4.13');
+    expect(existsSync(`${datosDe('8.4')}.bloqueada`)).toBe(false);
+  });
+
+  it('la versión a la que hay que volver (la de la marca) cuenta como en uso', async () => {
+    const s = crear();
+    await bloqueadaSinConfig(s);
+    expect(cfg.servicios.datos.mysql.instancias?.['8.4']?.version).toBe('8.4.14');
+    expect(await s.datos.versionEnUso('mysql', '8.4.13')).toBe('mysql@8.4');
+  });
+
+  it('el permiso de reinicio se consume también si la carpeta ya está inicializada', async () => {
+    const s = crear();
+    await preparar(s);
+    await s.datos.detener('mysql');
+    await writeFile(`${datosDe('8.4')}.pel-reinicio`, 'x');
+    await s.datos.iniciar('mysql');
+    expect(existsSync(`${datosDe('8.4')}.pel-reinicio`)).toBe(false);
+  });
+});

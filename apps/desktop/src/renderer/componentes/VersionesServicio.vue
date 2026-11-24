@@ -298,6 +298,7 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
       v-model:show="abierto"
       :instancia="dlgDesbloquear.instancia"
       :respaldos="dlgDesbloquear.respaldos"
+      :versiones="dlgDesbloquear.versiones"
     />
   </div>
 </template>
