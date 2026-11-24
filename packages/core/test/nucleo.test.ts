@@ -30,6 +30,10 @@ import type { UrlBase } from '../src/sitios/urlbase';
 import type { Plataforma } from '../src/plataforma/tipos';
 import type { EstadoHosts, EstadoServicio, Sitio } from '../src/tipos';
 
+// En el CI de Windows el disco y el antivirus multiplican por ~20 el costo de crear carpetas y
+// archivos temporales; ninguna prueba espera de verdad, así que el plazo de 5 s se queda corto.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 let base: string;
 let carpeta: string;
 let hostsArchivo: string;

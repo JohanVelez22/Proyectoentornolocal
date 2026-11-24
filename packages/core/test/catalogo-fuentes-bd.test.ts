@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fuenteMariadb } from '../src/catalogo/fuentes/mariadb';
 import {
   fuenteMongodb,
@@ -20,6 +20,10 @@ import { CatalogoVivo, validarIndice } from '../src/catalogo/vivo';
 import { Rutas } from '../src/rutas';
 import { carpetaTemporal } from './temporales';
 import { fetchFalso, fixture, HOY, rutasBd, type Ruta } from './catalogo-falso';
+
+// En el CI de Windows el disco y el antivirus multiplican por ~20 el costo de crear carpetas y
+// archivos temporales; ninguna prueba espera de verdad, así que el plazo de 5 s se queda corto.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
 const ctx = (
   rutas: Record<string, Ruta> = rutasBd(),
