@@ -473,6 +473,9 @@ describe('Plantillas: restaurar archivos y plantillas dañadas', () => {
     ['/abs/escape.txt'],
     ['C:/escape.txt'],
     ['a.txt:flujo'],
+    ['app/nul.txt'],
+    ['app/com1'],
+    ['app/x. '],
     ['app/ok.php\u0000.txt'],
   ])(
     'zip-slip (%s): aunque la huella coincida, error con código y nada fuera de la carpeta',

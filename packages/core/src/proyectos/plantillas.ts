@@ -94,6 +94,8 @@ const MAX_EXCLUIDOS_LISTA = 200;
 const MAX_EXCLUSIONES_EXTRA = 50;
 
 const ID = /^[a-z0-9][a-z0-9-]{0,79}$/;
+/** Nombres de dispositivo de Windows (CON, NUL, COM1…) y tramos que terminan en punto o espacio. */
+const NOMBRE_RESERVADO = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$|[. ]$/i;
 const HEX64 = /^[0-9a-f]{64}$/;
 
 /** Pasos de una plantilla que se vuelven a correr al crear un proyecto (lista cerrada). */
@@ -474,7 +476,7 @@ async function revisarZip(archivo: string, limites: LimitesPlantilla): Promise<v
           nombre.startsWith('/') ||
           /[:\0]/.test(nombre) ||
           [...nombre].some((c) => c.charCodeAt(0) < 0x20) ||
-          nombre.split('/').includes('..')
+          nombre.split('/').some((t) => t === '..' || NOMBRE_RESERVADO.test(t))
         ) {
           reject(danada('trae una ruta o un tamaño que no corresponde'));
           return;
