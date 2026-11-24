@@ -1,6 +1,7 @@
 import type { Dirent } from 'node:fs';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { pedidosLenguajes, type LenguajeProyecto } from '../runtimes/lenguajes';
 import { pistasArchivos } from '../runtimes/runtimes';
 import { TIPOS_CON_PHP, type TipoSitio } from '../tipos';
 import { existe, leerTexto } from './archivos';
@@ -15,6 +16,13 @@ export interface Deteccion {
   node: string | null;
   /** Pista de Python tal cual (.python-version o requires-python); null si no hay. */
   python: string | null;
+  /**
+   * Java, .NET, Go y Rust que usa el proyecto (por `pom.xml`, `build.gradle(.kts)`, `*.csproj`,
+   * `global.json`, `go.mod`, `rust-toolchain(.toml)` o `Cargo.toml`) con la versión que pide su
+   * archivo; null = hay proyecto pero el archivo no dice la versión. Solo están las claves de los
+   * lenguajes que el proyecto usa. Opcional para las detecciones guardadas.
+   */
+  runtimesPedidos?: Partial<Record<LenguajeProyecto, string | null>>;
   /** Bases de datos y servicios que pide `.env.example` (sin repetir, el motor primero). */
   servicios: ServicioProyecto[];
   /** El código usa pgvector (extensión `vector` de PostgreSQL). */
@@ -468,6 +476,9 @@ export async function detectarProyecto(
     php,
     node: pistas.node[0]?.valor ?? null,
     python: pistas.python[0]?.valor ?? null,
+    runtimesPedidos: Object.fromEntries(
+      Object.entries(await pedidosLenguajes(app)).map(([k, p]) => [k, p.version]),
+    ) as Partial<Record<LenguajeProyecto, string | null>>,
     servicios,
     pgvector,
     tieneComposer: await existe(join(carpeta, 'composer.json')),

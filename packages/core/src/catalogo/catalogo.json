@@ -159,6 +159,52 @@
       "ejecutable": "python.exe"
     }
   ],
+  "java": [
+    {
+      "version": "25.0.5.1",
+      "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5.1%2B2/OpenJDK25U-jdk_x64_windows_hotspot_25.0.5.1_2.zip",
+      "sha256": "849d380ab0a64d9098e7d3a2de28beb73841c3b255c8284f019ccd8748c5eb5b",
+      "formato": "zip",
+      "subcarpeta": "jdk-25.0.5.1+2",
+      "ejecutable": "bin/java.exe"
+    },
+    {
+      "version": "21.0.13.1",
+      "url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13.1%2B2/OpenJDK21U-jdk_x64_windows_hotspot_21.0.13.1_2.zip",
+      "sha256": "bbebea1469996b276683c9299c227b294f85c847039c82633218186a4ad4fbf2",
+      "formato": "zip",
+      "subcarpeta": "jdk-21.0.13.1+2",
+      "ejecutable": "bin/java.exe"
+    }
+  ],
+  "dotnet": [
+    {
+      "version": "10.0.404",
+      "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.404/dotnet-sdk-10.0.404-win-x64.zip",
+      "sha512": "330ddd2665b43cd2e428216a0d8ea1ac7bb19b5434fdc530e62010dc3b52823a620bf95489d628e1ed6f5122401793ee4887cca4a019122361a1231497f632ee",
+      "formato": "zip",
+      "ejecutable": "dotnet.exe"
+    }
+  ],
+  "go": [
+    {
+      "version": "1.27.4",
+      "url": "https://go.dev/dl/go1.27.4.windows-amd64.zip",
+      "sha256": "178ab98950ac69ab25069307dc6ade79f3816e414cce95b4da166a115cde1e7e",
+      "formato": "zip",
+      "subcarpeta": "go",
+      "ejecutable": "bin/go.exe"
+    }
+  ],
+  "rust": [
+    {
+      "version": "1.100.0",
+      "url": "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe",
+      "sha256": "38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",
+      "formato": "exe",
+      "ejecutable": "rustup-init.exe"
+    }
+  ],
   "extensionesPhp": [
     {
       "nombre": "xdebug",

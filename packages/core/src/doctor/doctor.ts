@@ -1,5 +1,6 @@
 import { revisarAntivirus } from './revisiones/antivirus';
 import { revisarCa, revisarCertificados, revisarConfianza } from './revisiones/ca';
+import { revisarEnlazadorMsvc } from './revisiones/enlazador';
 import { revisarHosts } from './revisiones/hosts';
 import { revisarPath } from './revisiones/path';
 import { revisarPuertos, revisarRangosReservados } from './revisiones/puertos';
@@ -26,6 +27,7 @@ const REVISIONES: Record<IdRevision, Revision> = {
   hosts: revisarHosts,
   path: revisarPath,
   vcredist: revisarVcRedist,
+  'enlazador-msvc': revisarEnlazadorMsvc,
   antivirus: revisarAntivirus,
   servicios: revisarServicios,
 };

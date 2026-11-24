@@ -662,3 +662,39 @@ describe('Doctor: confianza de la CA en Firefox', () => {
     expect(p.activados).toEqual([{ activar: true }]);
   });
 });
+
+describe('Doctor D5: enlazador MSVC para Rust', () => {
+  it('sin Rust instalado no revisa nada, aunque falte el enlazador', async () => {
+    plat.enlazador = false;
+    expect(await solo(new Doctor(deps()), ['enlazador-msvc'])).toEqual([]);
+    expect(
+      await solo(new Doctor(deps({ rustInstalado: async () => false })), ['enlazador-msvc']),
+    ).toEqual([]);
+  });
+
+  it('con Rust y el enlazador presente no hay hallazgo', async () => {
+    expect(
+      await solo(new Doctor(deps({ rustInstalado: async () => true })), ['enlazador-msvc']),
+    ).toEqual([]);
+  });
+
+  it('con Rust y sin enlazador: hallazgo info que solo informa, con el comando winget', async () => {
+    plat.enlazador = false;
+    const d = new Doctor(deps({ rustInstalado: async () => true }));
+    const [h] = await solo(d, ['enlazador-msvc']);
+    expect(h).toMatchObject({
+      id: 'enlazador-msvc:ausente',
+      codigo: 'doctor.enlazador_msvc_ausente',
+      gravedad: 'info',
+      reparacion: {
+        id: 'instalar-build-tools',
+        soloInforma: true,
+        comandoManual: plat.comandoManual({ tipo: 'instalar-build-tools' }),
+      },
+    });
+    // Solo informa: reparar no hace nada.
+    const r = await d.reparar(h!.id, true);
+    expect(r.ok).toBe(false);
+    expect(r.codigo).toBe('doctor.solo_informa');
+  });
+});

@@ -37,6 +37,10 @@ describe('hosts y huellas', () => {
         'get.enterprisedb.com',
         'downloads.mongodb.org',
         'nginx.org',
+        'api.adoptium.net',
+        'builds.dotnet.microsoft.com',
+        'go.dev',
+        'static.rust-lang.org',
       ].sort(),
     );
     expect(HOSTS_PERMITIDOS).toContain('release-assets.githubusercontent.com');

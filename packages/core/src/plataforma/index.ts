@@ -74,6 +74,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'rangosReservados',
   'serviciosSistema',
   'vcRedistInstalado',
+  'enlazadorMsvc',
   'perfilesFirefox',
   'firefoxEnUso',
   'raicesSistema',

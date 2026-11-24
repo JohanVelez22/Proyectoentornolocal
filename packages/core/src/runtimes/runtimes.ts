@@ -5,14 +5,55 @@ import { ejecutableDe } from '../catalogo/catalogo';
 import { leerTexto } from '../proyectos/archivos';
 import { leerConfigProyecto } from '../proyectos/config';
 import type { Rutas } from '../rutas';
+import { pedidosLenguajes, type LenguajeProyecto } from './lenguajes';
+import { carpetaRust, carpetasRustup, versionesRust } from './rust';
 
-export type TipoRuntime = 'node' | 'python';
-export type VersionesRuntime = { node?: string; python?: string };
+export const TIPOS_RUNTIME = ['node', 'python', 'java', 'dotnet', 'go', 'rust'] as const;
+export type TipoRuntime = (typeof TIPOS_RUNTIME)[number];
+export type VersionesRuntime = Partial<Record<TipoRuntime, string>>;
+
+export function esTipoRuntime(v: unknown): v is TipoRuntime {
+  return typeof v === 'string' && (TIPOS_RUNTIME as readonly string[]).includes(v);
+}
 
 /** Lo que `paraProyecto` necesita de un sitio. */
 export interface SitioConRuntimes {
   carpeta: string;
-  runtimes?: { node?: string | null; python?: string | null } | null;
+  runtimes?: Partial<Record<TipoRuntime, string | null>> | null;
+}
+
+/**
+ * Variables de entorno que necesita el runtime `tipo` instalado en `carpeta` (`Runtimes.rutaBin`):
+ * `JAVA_HOME`; `DOTNET_ROOT` (sin telemetría); `GOROOT` y `GOPATH` (en la carpeta de datos);
+ * `RUSTUP_HOME` y `CARGO_HOME` propios (con `RUSTUP_TOOLCHAIN` si se da la versión). Node y
+ * Python no necesitan ninguna.
+ */
+export function variablesRuntime(
+  tipo: TipoRuntime,
+  carpeta: string,
+  o: { datos?: string; version?: string } = {},
+): Record<string, string> {
+  switch (tipo) {
+    case 'java':
+      return { JAVA_HOME: carpeta };
+    case 'dotnet':
+      return { DOTNET_ROOT: carpeta, DOTNET_CLI_TELEMETRY_OPTOUT: '1' };
+    case 'go':
+      return {
+        GOROOT: carpeta,
+        ...(o.datos ? { GOPATH: path.join(o.datos, 'cache', 'go') } : {}),
+      };
+    case 'rust': {
+      const { rustupHome, cargoHome } = carpetasRustup(carpeta);
+      return {
+        RUSTUP_HOME: rustupHome,
+        CARGO_HOME: cargoHome,
+        ...(o.version ? { RUSTUP_TOOLCHAIN: o.version } : {}),
+      };
+    }
+    default:
+      return {};
+  }
 }
 
 /** Versiones elegidas para un proyecto y avisos en español para mostrar al usuario. */
@@ -23,6 +64,8 @@ export interface ResolutorRuntimes {
   paraProyecto(sitio: SitioConRuntimes): Promise<RuntimesProyecto>;
   /** Carpetas a anteponer al PATH, en orden, para las versiones dadas. */
   carpetasPath(versiones: VersionesRuntime): string[];
+  /** Variables de entorno (`JAVA_HOME`, `GOROOT`…) de las versiones dadas. */
+  variables?(versiones: VersionesRuntime): Record<string, string>;
 }
 
 type Triple = [number, number, number];
@@ -193,7 +236,7 @@ async function requiresPython(carpeta: string): Promise<string | undefined> {
 /** Pistas de los archivos de versión del proyecto, en orden de prioridad (sin wolfcore.yml). */
 export async function pistasArchivos(
   carpeta: string,
-): Promise<Record<TipoRuntime, PistaRuntime[]>> {
+): Promise<Record<'node' | 'python', PistaRuntime[]>> {
   const pista = (valor: string | undefined, origen: string, fija: boolean): PistaRuntime[] =>
     valor ? [{ valor, origen, fija }] : [];
   return {
@@ -217,7 +260,27 @@ export async function pistasArchivos(
   };
 }
 
-const NOMBRE: Record<TipoRuntime, string> = { node: 'Node', python: 'Python' };
+const NOMBRE: Record<TipoRuntime, string> = {
+  node: 'Node',
+  python: 'Python',
+  java: 'Java',
+  dotnet: '.NET',
+  go: 'Go',
+  rust: 'Rust',
+};
+
+/** Pistas de Java, .NET, Go y Rust a partir de lo que piden los archivos del proyecto. */
+async function pistasLenguaje(
+  carpeta: string,
+): Promise<Partial<Record<LenguajeProyecto, PistaRuntime[]>>> {
+  const res: Partial<Record<LenguajeProyecto, PistaRuntime[]>> = {};
+  for (const [tipo, p] of Object.entries(await pedidosLenguajes(carpeta))) {
+    res[tipo as LenguajeProyecto] = p.version
+      ? [{ valor: p.minimo ? `>=${p.version}` : p.version, origen: p.origen, fija: !p.minimo }]
+      : [];
+  }
+  return res;
+}
 
 export class Runtimes implements ResolutorRuntimes {
   constructor(
@@ -227,11 +290,16 @@ export class Runtimes implements ResolutorRuntimes {
       null,
   ) {}
 
+  /**
+   * Carpeta del runtime. Rust no tiene una por versión: rustup guarda los toolchains en una
+   * carpeta común (`bin/rust`), de donde salen `RUSTUP_HOME` y `CARGO_HOME`.
+   */
   rutaBin(tipo: TipoRuntime, version: string): string {
-    return this.rutas.bin(tipo, version);
+    return tipo === 'rust' ? carpetaRust(this.rutas) : this.rutas.bin(tipo, version);
   }
 
   async instalados(tipo: TipoRuntime): Promise<string[]> {
+    if (tipo === 'rust') return ordenar(await versionesRust(this.rutas));
     const dir = path.dirname(this.rutas.bin(tipo, '_'));
     const exe = ejecutableDe(tipo)!;
     let nombres: string[];
@@ -256,12 +324,21 @@ export class Runtimes implements ResolutorRuntimes {
       res.avisos.push(`${e instanceof Error ? e.message : String(e)}. Se ignora.`);
     }
     const archivos = await pistasArchivos(sitio.carpeta);
-    for (const tipo of ['node', 'python'] as const) {
+    const lenguajes = await pistasLenguaje(sitio.carpeta);
+    for (const tipo of TIPOS_RUNTIME) {
       const pistas: PistaRuntime[] = [];
       const delSitio = sitio.runtimes?.[tipo];
       if (delSitio) pistas.push({ valor: delSitio, origen: 'sitio', fija: true });
-      if (yml[tipo]) pistas.push({ valor: yml[tipo], origen: 'wolfcore.yml', fija: true });
-      pistas.push(...archivos[tipo]);
+      if (tipo === 'node' || tipo === 'python') {
+        if (yml[tipo]) pistas.push({ valor: yml[tipo], origen: 'wolfcore.yml', fija: true });
+        pistas.push(...archivos[tipo]);
+      } else {
+        // Java, .NET, Go y Rust solo entran al entorno si el proyecto los usa (lo dice un
+        // archivo suyo o lo fijó el sitio): no se suman al PATH de todos los proyectos.
+        const delArchivo = lenguajes[tipo];
+        if (!delSitio && delArchivo === undefined) continue;
+        pistas.push(...(delArchivo ?? []));
+      }
       const instaladas = await this.instalados(tipo);
       const pista = pistas.find((p) => predicado(p.valor) !== null);
       if (!pista) {
@@ -289,7 +366,27 @@ export class Runtimes implements ResolutorRuntimes {
     return res;
   }
 
-  /** Node: carpeta de node.exe (npm/npx) y su node_modules/.bin. Python: carpeta y Scripts. */
+  /**
+   * Variables de entorno de las versiones dadas (`JAVA_HOME`, `DOTNET_ROOT`, `GOROOT`/`GOPATH`,
+   * `RUSTUP_HOME`/`CARGO_HOME`). Las usan los procesos de proyecto, las recetas y la terminal.
+   */
+  variables(v: VersionesRuntime): Record<string, string> {
+    const salida: Record<string, string> = {};
+    for (const tipo of TIPOS_RUNTIME) {
+      const version = v[tipo];
+      if (!version) continue;
+      Object.assign(
+        salida,
+        variablesRuntime(tipo, this.rutaBin(tipo, version), { datos: this.rutas.base, version }),
+      );
+    }
+    return salida;
+  }
+
+  /**
+   * Node: carpeta de node.exe (npm/npx) y su node_modules/.bin. Python: carpeta y Scripts. Java:
+   * `bin`. .NET: la carpeta de dotnet. Go: `bin` y el `bin` de GOPATH. Rust: `cargo/bin`.
+   */
   carpetasPath(v: VersionesRuntime): string[] {
     const salida: string[] = [];
     if (v.node) {
@@ -299,6 +396,17 @@ export class Runtimes implements ResolutorRuntimes {
     if (v.python) {
       const p = this.rutaBin('python', v.python);
       salida.push(p, path.join(p, 'Scripts'));
+    }
+    if (v.java) salida.push(path.join(this.rutaBin('java', v.java), 'bin'));
+    if (v.dotnet) salida.push(this.rutaBin('dotnet', v.dotnet));
+    if (v.go) {
+      salida.push(
+        path.join(this.rutaBin('go', v.go), 'bin'),
+        path.join(this.rutas.base, 'cache', 'go', 'bin'),
+      );
+    }
+    if (v.rust) {
+      salida.push(path.join(carpetasRustup(this.rutaBin('rust', v.rust)).cargoHome, 'bin'));
     }
     return salida;
   }

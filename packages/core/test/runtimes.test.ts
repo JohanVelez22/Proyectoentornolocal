@@ -10,7 +10,13 @@ import {
   urlOficial,
 } from '../src/catalogo/catalogo';
 import { Terminal } from '../src/herramientas/terminal';
-import { Runtimes, elegirVersion } from '../src/runtimes/runtimes';
+import {
+  Runtimes,
+  TIPOS_RUNTIME,
+  elegirVersion,
+  esTipoRuntime,
+  variablesRuntime,
+} from '../src/runtimes/runtimes';
 import { Rutas } from '../src/rutas';
 
 let base: string;
@@ -247,5 +253,162 @@ describe('Terminal con runtimes', () => {
         'C:\\Windows',
       ].join(';'),
     );
+  });
+});
+
+describe('D5: Java, .NET, Go y Rust como runtimes', () => {
+  const EXE: Record<string, string> = {
+    java: path.join('bin', 'java.exe'),
+    dotnet: 'dotnet.exe',
+    go: path.join('bin', 'go.exe'),
+  };
+  const instalarLenguaje = (tipo: 'java' | 'dotnet' | 'go', version: string): void => {
+    const exe = path.join(rutas.bin(tipo, version), EXE[tipo]!);
+    mkdirSync(path.dirname(exe), { recursive: true });
+    writeFileSync(exe, 'x');
+  };
+  const instalarRust = (version: string): void => {
+    const rustc = path.join(
+      base,
+      'bin',
+      'rust',
+      'rustup',
+      'toolchains',
+      `${version}-x86_64-pc-windows-msvc`,
+      'bin',
+      'rustc.exe',
+    );
+    mkdirSync(path.dirname(rustc), { recursive: true });
+    writeFileSync(rustc, 'x');
+  };
+
+  it('TIPOS_RUNTIME tiene los seis y esTipoRuntime solo acepta esos', () => {
+    expect([...TIPOS_RUNTIME]).toEqual(['node', 'python', 'java', 'dotnet', 'go', 'rust']);
+    expect(esTipoRuntime('go')).toBe(true);
+    expect(esTipoRuntime('ruby')).toBe(false);
+    expect(esTipoRuntime(undefined)).toBe(false);
+  });
+
+  it('variablesRuntime por tipo', () => {
+    expect(variablesRuntime('node', 'C:\\n')).toEqual({});
+    expect(variablesRuntime('python', 'C:\\p')).toEqual({});
+    expect(variablesRuntime('java', 'C:\\jdk')).toEqual({ JAVA_HOME: 'C:\\jdk' });
+    expect(variablesRuntime('dotnet', 'C:\\dn')).toEqual({
+      DOTNET_ROOT: 'C:\\dn',
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1',
+    });
+    expect(variablesRuntime('go', 'C:\\go', { datos: 'C:\\datos' })).toEqual({
+      GOROOT: 'C:\\go',
+      GOPATH: path.join('C:\\datos', 'cache', 'go'),
+    });
+    expect(variablesRuntime('rust', 'C:\\rust', { version: '1.100.0' })).toEqual({
+      RUSTUP_HOME: path.join('C:\\rust', 'rustup'),
+      CARGO_HOME: path.join('C:\\rust', 'cargo'),
+      RUSTUP_TOOLCHAIN: '1.100.0',
+    });
+  });
+
+  it('instalados y rutaBin: Go, Java y .NET por carpeta; Rust por toolchain de rustup', async () => {
+    instalarLenguaje('go', '1.27.4');
+    instalarLenguaje('java', '21.0.13.1');
+    instalarLenguaje('dotnet', '10.0.404');
+    instalarRust('1.99.1');
+    instalarRust('1.100.0');
+    const r = new Runtimes(rutas);
+    expect(await r.instalados('go')).toEqual(['1.27.4']);
+    expect(await r.instalados('java')).toEqual(['21.0.13.1']);
+    expect(await r.instalados('dotnet')).toEqual(['10.0.404']);
+    expect(await r.instalados('rust')).toEqual(['1.100.0', '1.99.1']);
+    expect(r.rutaBin('go', '1.27.4')).toBe(rutas.bin('go', '1.27.4'));
+    expect(r.rutaBin('rust', '1.100.0')).toBe(path.join(base, 'bin', 'rust'));
+    // Una carpeta de rustup que no es un toolchain de una versión no cuenta.
+    mkdirSync(
+      path.join(
+        base,
+        'bin',
+        'rust',
+        'rustup',
+        'toolchains',
+        'nightly-x86_64-pc-windows-msvc',
+        'bin',
+      ),
+      { recursive: true },
+    );
+    expect(await r.instalados('rust')).toEqual(['1.100.0', '1.99.1']);
+  });
+
+  it('el entorno de un sitio con runtimes.go pone GOROOT y el bin al principio del PATH', async () => {
+    instalarLenguaje('go', '1.27.4');
+    const r = new Runtimes(rutas);
+    const c = await proyecto({});
+    const rt = await r.paraProyecto({ carpeta: c, runtimes: { go: '1.27' } });
+    expect(rt.go).toBe('1.27.4');
+    expect(r.variables(rt)).toEqual({
+      GOROOT: rutas.bin('go', '1.27.4'),
+      GOPATH: path.join(base, 'cache', 'go'),
+    });
+    expect(r.carpetasPath(rt)).toEqual([
+      path.join(rutas.bin('go', '1.27.4'), 'bin'),
+      path.join(base, 'cache', 'go', 'bin'),
+    ]);
+  });
+
+  it('go.mod pide Go: se usa el instalado; sin archivo ni sitio, Go y Java no entran al entorno', async () => {
+    instalarLenguaje('go', '1.27.4');
+    instalarLenguaje('java', '21.0.13.1');
+    const r = new Runtimes(rutas);
+    const sin = await proyecto({});
+    expect(await r.paraProyecto({ carpeta: sin })).toEqual({ avisos: [] });
+    const c = await proyecto({ 'go.mod': 'module x\n\ngo 1.22\n' });
+    expect(await r.paraProyecto({ carpeta: c })).toEqual({ go: '1.27.4', avisos: [] });
+  });
+
+  it('un mínimo no cumplido cae a la más nueva con aviso; un toolchain fijo no instalado, solo aviso', async () => {
+    instalarLenguaje('java', '17.0.9');
+    instalarRust('1.100.0');
+    const r = new Runtimes(rutas);
+    const j = await proyecto({
+      'pom.xml':
+        '<project><properties><maven.compiler.release>21</maven.compiler.release></properties></project>',
+    });
+    const rj = await r.paraProyecto({ carpeta: j });
+    expect(rj.java).toBe('17.0.9');
+    expect(rj.avisos[0]).toMatch(/Java >=21.*no está instalado/);
+    const ru = await proyecto({ 'rust-toolchain.toml': '[toolchain]\nchannel = "1.85.0"\n' });
+    const rr = await r.paraProyecto({ carpeta: ru });
+    expect(rr.rust).toBeUndefined();
+    expect(rr.avisos[0]).toMatch(/Rust 1\.85\.0.*no está instalado/);
+  });
+
+  it('Rust: RUSTUP_HOME, CARGO_HOME, RUSTUP_TOOLCHAIN y cargo/bin en el PATH', async () => {
+    instalarRust('1.100.0');
+    const r = new Runtimes(rutas);
+    const c = await proyecto({ 'rust-toolchain.toml': '[toolchain]\nchannel = "1.100.0"\n' });
+    const rt = await r.paraProyecto({ carpeta: c });
+    expect(rt.rust).toBe('1.100.0');
+    expect(r.variables(rt)).toEqual({
+      RUSTUP_HOME: path.join(base, 'bin', 'rust', 'rustup'),
+      CARGO_HOME: path.join(base, 'bin', 'rust', 'cargo'),
+      RUSTUP_TOOLCHAIN: '1.100.0',
+    });
+    expect(r.carpetasPath(rt)).toEqual([path.join(base, 'bin', 'rust', 'cargo', 'bin')]);
+  });
+
+  it('la terminal del sitio lleva las variables de su runtime', async () => {
+    instalarLenguaje('java', '21.0.13.1');
+    const carpeta = await proyecto({ 'pom.xml': '<project/>' });
+    const llamadas: { env: NodeJS.ProcessEnv }[] = [];
+    const t = new Terminal({
+      rutas,
+      entorno: { Path: 'C:\\Windows', LOCALAPPDATA: 'C:\\x' },
+      existe: (p) => !p.endsWith('wt.exe') && (p.startsWith(base) || p === carpeta),
+      lanzar: async (_c, _a, o) => {
+        llamadas.push(o);
+      },
+      runtimes: new Runtimes(rutas),
+    });
+    await t.abrir({ carpeta, php: null });
+    expect(llamadas[0]!.env.JAVA_HOME).toBe(rutas.bin('java', '21.0.13.1'));
+    expect(llamadas[0]!.env.Path).toContain(path.join(rutas.bin('java', '21.0.13.1'), 'bin'));
   });
 });

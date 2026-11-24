@@ -24,6 +24,10 @@ export const SERVICIOS_VERSIONES = [
   'mailpit',
   'ollama',
   'cloudflared',
+  'java',
+  'dotnet',
+  'go',
+  'rust',
 ] as const satisfies readonly ServicioInstalable[];
 export type ServicioVersiones = (typeof SERVICIOS_VERSIONES)[number];
 
@@ -36,7 +40,7 @@ export function esServicioVersiones(s: unknown): s is ServicioVersiones {
  * - `instancias`: servicios de datos con varias versiones encendidas a la vez (cada una su puerto);
  * - `pool`: PHP, un pool por rama;
  * - `unica`: Nginx, Mailpit y Ollama, una sola encendida (encender otra cambia la activa);
- * - `ninguno`: Node, Python, Composer y cloudflared (solo instalar, desinstalar y predeterminada).
+ * - `ninguno`: Node, Python, Java, .NET, Go, Rust, Composer y cloudflared (solo instalar, desinstalar y predeterminada).
  */
 export type TipoInterruptor = 'instancias' | 'pool' | 'unica' | 'ninguno';
 
@@ -54,6 +58,10 @@ export const INTERRUPTOR: Record<ServicioVersiones, TipoInterruptor> = {
   mailpit: 'unica',
   ollama: 'unica',
   cloudflared: 'ninguno',
+  java: 'ninguno',
+  dotnet: 'ninguno',
+  go: 'ninguno',
+  rust: 'ninguno',
 };
 
 /** Huella de una fila: fuerte (SHA-256/512, o se pide al instalar), débil (MD5) o ninguna. */

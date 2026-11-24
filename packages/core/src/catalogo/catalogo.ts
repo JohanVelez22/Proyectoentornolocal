@@ -25,7 +25,11 @@ export type ServicioInstalable =
   | 'adminer'
   | 'pgvector-src'
   | 'node'
-  | 'python';
+  | 'python'
+  | 'java'
+  | 'dotnet'
+  | 'go'
+  | 'rust';
 
 /** Con 'archivo' la descarga se copia tal cual con el nombre de `ejecutable`. */
 export type FormatoPaquete = 'zip' | 'exe' | 'archivo';
@@ -48,6 +52,11 @@ export const EJECUTABLE_POR_SERVICIO: Record<ServicioInstalable, string> = {
   'pgvector-src': 'Makefile.win',
   node: nombreEjecutable('node'),
   python: nombreEjecutable('python'),
+  java: `bin/${nombreEjecutable('java')}`,
+  dotnet: nombreEjecutable('dotnet'),
+  go: `bin/${nombreEjecutable('go')}`,
+  // rustup-init: lo que se descarga; el resultado (toolchains) lo instala `InstaladorRust`.
+  rust: nombreEjecutable('rustup-init'),
 };
 
 export function ejecutableDe(servicio: string): string | undefined {
@@ -105,6 +114,33 @@ const EntradaSchema = z.object({
 
 const Lista = z.array(EntradaSchema).default([]);
 
+/**
+ * Entrada con huella SHA-256 o SHA-512 (una sola): .NET solo publica SHA-512. Es la forma de la
+ * lista fija de Java, .NET y Go.
+ */
+const EntradaFuerteSchema = EntradaSchema.omit({ sha256: true })
+  .extend({
+    sha256: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/)
+      .optional(),
+    sha512: z
+      .string()
+      .regex(/^[0-9a-f]{128}$/)
+      .optional(),
+  })
+  .refine((e) => (e.sha256 === undefined) !== (e.sha512 === undefined), {
+    message: 'La entrada necesita una sola huella (sha256 o sha512)',
+  });
+const ListaFuerte = z.array(EntradaFuerteSchema).default([]);
+
+/** Huella fuerte de una entrada de la lista fija. */
+export function huellaDeEntrada(e: { sha256?: string; sha512?: string }): Huella {
+  return e.sha512 !== undefined
+    ? { algoritmo: 'sha512', valor: e.sha512 }
+    : { algoritmo: 'sha256', valor: e.sha256 ?? '' };
+}
+
 /** Compilaciones de PHP para Windows: hilos (NTS/TS), Visual Studio (VS16/VS17) y arquitectura. */
 export const VARIANTES_EXTENSION_PHP = [
   'nts-vs16-x64',
@@ -161,6 +197,10 @@ export const CatalogoSchema = z.object({
   'pgvector-src': Lista,
   node: Lista,
   python: Lista,
+  java: ListaFuerte,
+  dotnet: ListaFuerte,
+  go: ListaFuerte,
+  rust: Lista,
   extensionesPhp: z.array(ExtensionPhpSchema).default([]),
 });
 
@@ -196,5 +236,17 @@ export async function listarVersiones(
       throw new Error(`No se pudo consultar las versiones de ${servicio}: ${detalle}`);
     }
   }
-  return catalogo[servicio].map((e) => ({ servicio, ...e }));
+  const entradas = catalogo[servicio] as (Omit<VersionDisponible, 'servicio' | 'sha256'> & {
+    sha256?: string;
+    sha512?: string;
+  })[];
+  return entradas.map((e) => {
+    const { sha256, sha512, ...resto } = e;
+    return {
+      servicio,
+      ...resto,
+      sha256: sha256 ?? null,
+      ...(sha512 ? { huella: huellaDeEntrada(e) } : {}),
+    };
+  });
 }

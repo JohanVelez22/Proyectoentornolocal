@@ -219,6 +219,9 @@ describe('Plataforma: capacidades del Doctor', () => {
     expect(p.comandoManual({ tipo: 'instalar-vcredist' })).toMatch(
       /winget install --id Microsoft\.VCRedist\.2015\+\.x64 --exact --source winget/,
     );
+    expect(p.comandoManual({ tipo: 'instalar-build-tools' })).toBe(
+      'winget install Microsoft.VisualStudio.2022.BuildTools',
+    );
   });
 
   it('raicesSistema: exporta las raíces de confianza por .NET (sin módulos) y devuelve solo PEM', async () => {
@@ -246,5 +249,51 @@ describe('Plataforma: capacidades del Doctor', () => {
   it('comando manual de hosts: la ruta va con comillas seguras (también las tipográficas)', () => {
     const c = comandoManualPara('C:\\x‘y\\hosts', 'a');
     expect(c).toContain("$r = 'C:\\x‘‘y\\hosts'");
+  });
+});
+
+describe('Plataforma D5: enlazador MSVC', () => {
+  const entorno = { 'ProgramFiles(x86)': 'C:\\PF86' };
+
+  it('con vswhere y las herramientas de C++ para x64: true', async () => {
+    const { llamadas, ejecutor } = grabar(0, 'C:\\BuildTools\r\n');
+    const p = new PlataformaWindows(ejecutor, undefined, { entorno, existeRuta: () => true });
+    expect(await p.enlazadorMsvc()).toBe(true);
+    expect(llamadas[0]!.cmd).toBe('C:\\PF86\\Microsoft Visual Studio\\Installer\\vswhere.exe');
+    expect(llamadas[0]!.args).toContain('Microsoft.VisualStudio.Component.VC.Tools.x86.x64');
+  });
+
+  it('sin vswhere, sin salida o con error: false (y sin ejecutar nada si falta vswhere)', async () => {
+    const a = grabar(0, '');
+    expect(
+      await new PlataformaWindows(a.ejecutor, undefined, {
+        entorno,
+        existeRuta: () => true,
+      }).enlazadorMsvc(),
+    ).toBe(false);
+    const b = grabar(1, 'C:\\x');
+    expect(
+      await new PlataformaWindows(b.ejecutor, undefined, {
+        entorno,
+        existeRuta: () => true,
+      }).enlazadorMsvc(),
+    ).toBe(false);
+    const c = grabar(0, 'C:\\x');
+    expect(
+      await new PlataformaWindows(c.ejecutor, undefined, {
+        entorno,
+        existeRuta: () => false,
+      }).enlazadorMsvc(),
+    ).toBe(false);
+    expect(c.llamadas).toEqual([]);
+    const roto: Ejecutor = async () => {
+      throw new Error('no arranca');
+    };
+    expect(
+      await new PlataformaWindows(roto, undefined, {
+        entorno,
+        existeRuta: () => true,
+      }).enlazadorMsvc(),
+    ).toBe(false);
   });
 });

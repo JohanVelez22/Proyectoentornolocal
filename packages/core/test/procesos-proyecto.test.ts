@@ -13,6 +13,7 @@ import {
   type DepsProcesosProyecto,
   type SupervisorProcesos,
 } from '../src/proyectos/procesos';
+import { Runtimes } from '../src/runtimes/runtimes';
 import { Rutas } from '../src/rutas';
 import { Servicios } from '../src/servicios/servicios';
 import {
@@ -695,5 +696,26 @@ describe('supervisor real', () => {
     expect(e!.mensaje).toContain("Cannot find module 'vite'");
     expect(emitidos.at(-1)?.estado).toBe('error');
     await supervisor.cerrar();
+  });
+});
+
+describe('D5: proceso de un proyecto Go con su runtime', () => {
+  it('go.mod + Go instalado: GOROOT, GOPATH y el bin de Go al principio del PATH del proceso', async () => {
+    const a = await armar({
+      procesos: [proceso({ id: 'api', comando: ['go', 'run', '.'] })],
+    });
+    const go = a.rutas.bin('go', '1.27.4');
+    await mkdir(join(go, 'bin'), { recursive: true });
+    await writeFile(join(go, 'bin', 'go.exe'), 'x');
+    await writeFile(join(a.carpeta, 'go.mod'), 'module demo\n\ngo 1.22\n');
+    // El resolutor real (no el falso del armado) decide por los archivos del proyecto.
+    (a.procesos as unknown as { d: { runtimes: unknown } }).d.runtimes = new Runtimes(a.rutas);
+    await a.procesos.iniciar('demo', 'api');
+    const def = a.sup.iniciados[0]!;
+    expect(def.env?.GOROOT).toBe(go);
+    expect(def.env?.GOPATH).toBe(join(a.base, 'cache', 'go'));
+    expect(pathDe(def)[0]).toBe(join(go, 'bin'));
+    expect(def.comando).toBe('go');
+    expect(def.args).toEqual(['run', '.']);
   });
 });

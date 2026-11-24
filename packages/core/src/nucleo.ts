@@ -149,7 +149,12 @@ import './servicios/bd/redis';
 import './servicios/bd/mongodb';
 import './servicios/mailpit';
 import './servicios/ollama';
-import { Runtimes, type RuntimesProyecto, type TipoRuntime } from './runtimes/runtimes';
+import {
+  esTipoRuntime,
+  Runtimes,
+  type RuntimesProyecto,
+  type TipoRuntime,
+} from './runtimes/runtimes';
 import { ProcesosProyecto, type EstadoProcesoProyecto } from './proyectos/procesos';
 import {
   escribirConfigProyecto,
@@ -642,7 +647,9 @@ export class Nucleo {
       ...(o.spawn ? { spawn: o.spawn } : {}),
       ...(o.sonda ? { sonda: o.sonda } : {}),
     });
-    const instalador = new Instalador(rutas, eventos, o.fetch ?? fetch);
+    const instalador = new Instalador(rutas, eventos, o.fetch ?? fetch, {
+      exec: o.ejecutor ?? ejecutorPorDefecto,
+    });
     const hosts = new GestorHosts(plataforma, eventos);
     // Temporales de hosts que dejó una ejecución anterior (cierre brusco con un UAC abierto).
     void hosts.limpiarTemporales().catch(() => undefined);
@@ -1107,6 +1114,7 @@ export class Nucleo {
         carpetaDatos: rutas.base,
         carpetaRespaldos: carpetaRespaldosDoctor(rutas),
         servicios: () => servicios.estados(),
+        rustInstalado: async () => (await runtimes.instalados('rust')).length > 0,
         puertoHttps: async () => (await leerConfig()).https.puerto,
         puertosPropios: async () => puertosReservados(await leerConfig()),
         probarPuerto: o.probarPuerto ?? puertoLibreAhora,
@@ -1617,7 +1625,7 @@ export class Nucleo {
   /** Predeterminada de Node, Python, Composer o cloudflared (o la más nueva instalada). */
   private async versionPreferida(servicio: string, instaladas: string[]): Promise<string | null> {
     const elegida = (await this.config.leer()).catalogo.predeterminadas[
-      servicio as 'node' | 'python' | 'composer' | 'cloudflared'
+      servicio as TipoRuntime | 'composer' | 'cloudflared'
     ];
     if (elegida && instaladas.includes(elegida)) return elegida;
     return [...instaladas].sort(compararVersiones).at(-1) ?? null;
@@ -1665,12 +1673,7 @@ export class Nucleo {
       }
       return;
     }
-    if (
-      servicio === 'node' ||
-      servicio === 'python' ||
-      servicio === 'composer' ||
-      servicio === 'cloudflared'
-    ) {
+    if (esTipoRuntime(servicio) || servicio === 'composer' || servicio === 'cloudflared') {
       await this.sitios.modificarConfig((c) => {
         c.catalogo.predeterminadas[servicio] = version;
       });

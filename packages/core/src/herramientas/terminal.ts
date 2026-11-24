@@ -89,7 +89,9 @@ export class Terminal {
       env.PHPRC = path.dirname(ini);
     }
     if (sitio && this.d.runtimes) {
-      nuevo.push(...this.d.runtimes.carpetasPath(await this.d.runtimes.paraProyecto(sitio)));
+      const rt = await this.d.runtimes.paraProyecto(sitio);
+      nuevo.push(...this.d.runtimes.carpetasPath(rt));
+      Object.assign(env, this.d.runtimes.variables?.(rt) ?? {});
     }
     nuevo.push(this.d.rutas.herramientas('bin'));
     if (env[clave]) nuevo.push(env[clave]!);

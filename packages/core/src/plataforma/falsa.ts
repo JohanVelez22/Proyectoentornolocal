@@ -68,6 +68,8 @@ export class PlataformaFalsa implements PlataformaCompleta {
   rangos: RangoPuertos[] = [];
   servicios = new Map<string, ServicioSistema['estado']>();
   vcRedist = true;
+  /** Lo que devuelve `enlazadorMsvc`. */
+  enlazador = true;
   /** Veces que se pidió instalar el VC++. */
   vcRedistInstalaciones = 0;
   /** Servicios del sistema detenidos con elevación. */
@@ -240,6 +242,10 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async serviciosSistema(nombres: string[]): Promise<ServicioSistema[]> {
     return nombres.map((nombre) => ({ nombre, estado: this.servicios.get(nombre) ?? 'no-existe' }));
+  }
+
+  async enlazadorMsvc(): Promise<boolean> {
+    return this.enlazador;
   }
 
   async vcRedistInstalado(): Promise<boolean> {

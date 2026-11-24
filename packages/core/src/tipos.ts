@@ -120,7 +120,14 @@ export const SitioSchema = z.object({
   procesos: z.array(ProcesoProyectoSchema).default([]),
   /** Versiones fijadas para este sitio; mandan sobre wolfcore.yml y los archivos de versión. */
   runtimes: z
-    .object({ node: z.string().min(1).optional(), python: z.string().min(1).optional() })
+    .object({
+      node: z.string().min(1).optional(),
+      python: z.string().min(1).optional(),
+      java: z.string().min(1).optional(),
+      dotnet: z.string().min(1).optional(),
+      go: z.string().min(1).optional(),
+      rust: z.string().min(1).optional(),
+    })
     .default({}),
   /**
    * Ajustes de php.ini propios del sitio (clave → valor). Con alguno (o con Xdebug activo) el
@@ -436,12 +443,12 @@ export const ConfigSchema = z.object({
         .default([])
         .catch([]),
       /**
-       * Versión predeterminada (para proyectos nuevos y herramientas) de Node, Python, Composer y
-       * cloudflared; si no está instalada se usa la más nueva instalada.
+       * Versión predeterminada (para proyectos nuevos y herramientas) de Node, Python, Java, .NET,
+       * Go, Rust, Composer y cloudflared; si no está instalada se usa la más nueva instalada.
        */
       predeterminadas: z
         .partialRecord(
-          z.enum(['node', 'python', 'composer', 'cloudflared']),
+          z.enum(['node', 'python', 'java', 'dotnet', 'go', 'rust', 'composer', 'cloudflared']),
           z.string().regex(/^[0-9a-z][0-9a-z.+-]{0,39}$/),
         )
         .default({})

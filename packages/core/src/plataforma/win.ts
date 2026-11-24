@@ -496,6 +496,29 @@ export class PlataformaWindows implements PlataformaCompleta {
     return interpretarServiciosSistema(r.stdout, nombres);
   }
 
+  async enlazadorMsvc(): Promise<boolean> {
+    const exe = rutaVswhere(this.entorno['ProgramFiles(x86)']);
+    if (!this.existeRuta(exe)) return false;
+    try {
+      const r = await this.ejecutar(
+        exe,
+        [
+          '-latest',
+          '-products',
+          '*',
+          '-requires',
+          'Microsoft.VisualStudio.Component.VC.Tools.x86.x64',
+          '-property',
+          'installationPath',
+        ],
+        { timeoutMs: 15000 },
+      );
+      return r.codigo === 0 && r.stdout.trim() !== '';
+    } catch {
+      return false;
+    }
+  }
+
   async vcRedistInstalado(): Promise<boolean> {
     const r = await this.ejecutar('powershell', codificarPowerShell(SCRIPT_VCREDIST), {
       timeoutMs: 15000,
@@ -682,6 +705,8 @@ export class PlataformaWindows implements PlataformaCompleta {
         return `Stop-Service -Name ${literal(c.nombre)}`;
       case 'instalar-vcredist':
         return 'winget install --id Microsoft.VCRedist.2015+.x64 --exact --source winget';
+      case 'instalar-build-tools':
+        return 'winget install Microsoft.VisualStudio.2022.BuildTools';
     }
   }
 

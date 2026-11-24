@@ -1,0 +1,420 @@
+[
+  {
+    "version": "go1.27.4",
+    "stable": true,
+    "files": [
+      {
+        "filename": "go1.27.4.src.tar.gz",
+        "os": "",
+        "arch": "",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size": 1,
+        "kind": "source"
+      },
+      {
+        "filename": "go1.27.4.linux-amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 1,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.27.4.windows-amd64.zip",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "178ab98950ac69ab25069307dc6ade79f3816e414cce95b4da166a115cde1e7e",
+        "size": 79077744,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.27.4.windows-amd64.msi",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "size": 1,
+        "kind": "installer"
+      }
+    ]
+  },
+  {
+    "version": "go1.27.3",
+    "stable": true,
+    "files": [
+      {
+        "filename": "go1.27.3.src.tar.gz",
+        "os": "",
+        "arch": "",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size": 1,
+        "kind": "source"
+      },
+      {
+        "filename": "go1.27.3.linux-amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 1,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.27.3.windows-amd64.zip",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "f26081f438319757f8a1b46d7d0b2c5ec7583d4038e485e0aa725cfde7885fff",
+        "size": 79077744,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.27.3.windows-amd64.msi",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "size": 1,
+        "kind": "installer"
+      }
+    ]
+  },
+  {
+    "version": "go1.27rc3",
+    "stable": false,
+    "files": [
+      {
+        "filename": "go1.27rc3.src.tar.gz",
+        "os": "",
+        "arch": "",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size": 1,
+        "kind": "source"
+      },
+      {
+        "filename": "go1.27rc3.linux-amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 1,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.27rc3.windows-amd64.zip",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "bdfa4f54a767752bcaa721c43825e88db467509306d46753dd5a4ec97d738de9",
+        "size": 79077744,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.27rc3.windows-amd64.msi",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "size": 1,
+        "kind": "installer"
+      }
+    ]
+  },
+  {
+    "version": "go1.26.11",
+    "stable": true,
+    "files": [
+      {
+        "filename": "go1.26.11.src.tar.gz",
+        "os": "",
+        "arch": "",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size": 1,
+        "kind": "source"
+      },
+      {
+        "filename": "go1.26.11.linux-amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 1,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.26.11.windows-amd64.zip",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "size": 79077744,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.26.11.windows-amd64.msi",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "size": 1,
+        "kind": "installer"
+      }
+    ]
+  },
+  {
+    "version": "go1.26.10",
+    "stable": true,
+    "files": [
+      {
+        "filename": "go1.26.10.src.tar.gz",
+        "os": "",
+        "arch": "",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size": 1,
+        "kind": "source"
+      },
+      {
+        "filename": "go1.26.10.linux-amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 1,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.26.10.windows-amd64.zip",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+        "size": 79077744,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.26.10.windows-amd64.msi",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "size": 1,
+        "kind": "installer"
+      }
+    ]
+  },
+  {
+    "version": "go1.25.12",
+    "stable": true,
+    "files": [
+      {
+        "filename": "go1.25.12.src.tar.gz",
+        "os": "",
+        "arch": "",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size": 1,
+        "kind": "source"
+      },
+      {
+        "filename": "go1.25.12.linux-amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 1,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.25.12.windows-amd64.zip",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3",
+        "size": 79077744,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.25.12.windows-amd64.msi",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "size": 1,
+        "kind": "installer"
+      }
+    ]
+  },
+  {
+    "version": "go1.24.14",
+    "stable": true,
+    "files": [
+      {
+        "filename": "go1.24.14.src.tar.gz",
+        "os": "",
+        "arch": "",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size": 1,
+        "kind": "source"
+      },
+      {
+        "filename": "go1.24.14.linux-amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 1,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.24.14.windows-amd64.zip",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+        "size": 79077744,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.24.14.windows-amd64.msi",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "size": 1,
+        "kind": "installer"
+      }
+    ]
+  },
+  {
+    "version": "go1.23.12",
+    "stable": true,
+    "files": [
+      {
+        "filename": "go1.23.12.src.tar.gz",
+        "os": "",
+        "arch": "",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size": 1,
+        "kind": "source"
+      },
+      {
+        "filename": "go1.23.12.linux-amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 1,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.23.12.windows-amd64.zip",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+        "size": 79077744,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.23.12.windows-amd64.msi",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "size": 1,
+        "kind": "installer"
+      }
+    ]
+  },
+  {
+    "version": "go1.22.12",
+    "stable": true,
+    "files": [
+      {
+        "filename": "go1.22.12.src.tar.gz",
+        "os": "",
+        "arch": "",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size": 1,
+        "kind": "source"
+      },
+      {
+        "filename": "go1.22.12.linux-amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 1,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.22.12.windows-amd64.zip",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6",
+        "size": 79077744,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.22.12.windows-amd64.msi",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "size": 1,
+        "kind": "installer"
+      }
+    ]
+  },
+  {
+    "version": "go1.21.13",
+    "stable": true,
+    "files": [
+      {
+        "filename": "go1.21.13.src.tar.gz",
+        "os": "",
+        "arch": "",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size": 1,
+        "kind": "source"
+      },
+      {
+        "filename": "go1.21.13.linux-amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 1,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.21.13.windows-amd64.zip",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7",
+        "size": 79077744,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.21.13.windows-amd64.msi",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "size": 1,
+        "kind": "installer"
+      }
+    ]
+  },
+  {
+    "version": "go1.20",
+    "stable": true,
+    "files": [
+      {
+        "filename": "go1.20.src.tar.gz",
+        "os": "",
+        "arch": "",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size": 1,
+        "kind": "source"
+      },
+      {
+        "filename": "go1.20.linux-amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 1,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.20.windows-amd64.zip",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8",
+        "size": 79077744,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.20.windows-amd64.msi",
+        "os": "windows",
+        "arch": "amd64",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "size": 1,
+        "kind": "installer"
+      }
+    ]
+  }
+]

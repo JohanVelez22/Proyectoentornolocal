@@ -108,7 +108,8 @@ export type ComandoManual =
   | { tipo: 'exclusion-antivirus'; carpeta: string }
   | { tipo: 'quitar-solo-lectura-hosts' }
   | { tipo: 'detener-servicio'; nombre: string }
-  | { tipo: 'instalar-vcredist' };
+  | { tipo: 'instalar-vcredist' }
+  | { tipo: 'instalar-build-tools' };
 
 /**
  * Lo que la Etapa C agregó a la interfaz. Todo lo que depende del sistema operativo pasa por
@@ -158,6 +159,11 @@ export interface CapacidadesPlataforma {
   serviciosSistema(nombres: string[]): Promise<ServicioSistema[]>;
   /** ¿Está el redistribuible de Visual C++ 2015+ x64? (siempre true donde no aplica). */
   vcRedistInstalado(): Promise<boolean>;
+  /**
+   * ¿Está el enlazador de C++ para x64 (Visual Studio Build Tools con las herramientas de C++)?
+   * Rust con el toolchain MSVC lo necesita para enlazar (siempre true donde no aplica).
+   */
+  enlazadorMsvc(): Promise<boolean>;
   /** Perfiles de Firefox del usuario ([] si no hay Firefox); sin rutas de red ni con `..`. */
   perfilesFirefox(): Promise<PerfilFirefoxSistema[]>;
   /** ¿Firefox tiene abierto ese perfil? (su archivo de bloqueo está tomado). */

@@ -22,6 +22,12 @@ export const HOSTS_PERMITIDOS: readonly string[] = [
   'getcomposer.org',
   'nodejs.org',
   'api.nuget.org',
+  // Java (Temurin) baja de GitHub Releases (ya permitido); .NET, Go y Rust de sus sitios oficiales.
+  'builds.dotnet.microsoft.com',
+  'go.dev',
+  // go.dev/dl/… redirige aquí.
+  'dl.google.com',
+  'static.rust-lang.org',
   // Xdebug: DLL oficiales por rama y variante (catálogo de extensiones de PHP).
   'xdebug.org',
 ];
@@ -49,6 +55,11 @@ export const HOSTS_INDICE: readonly string[] = [
   'get.enterprisedb.com',
   'downloads.mongodb.org',
   'nginx.org',
+  // Java (Temurin), .NET, Go y Rust: índices y sumas.
+  'api.adoptium.net',
+  'builds.dotnet.microsoft.com',
+  'go.dev',
+  'static.rust-lang.org',
 ];
 
 function urlEn(texto: string, hosts: readonly string[]): boolean {

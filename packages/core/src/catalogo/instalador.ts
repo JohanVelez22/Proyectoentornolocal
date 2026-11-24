@@ -18,11 +18,14 @@ import type { Eventos, EventosNucleo } from '../eventos';
 import type { Rutas } from '../rutas';
 import type { ProgresoInstalacion } from '../tipos';
 import { ErrorWolf } from '../errores';
+import { ejecutorPorDefecto } from '../plataforma/win';
 import { renombrarConReintentos } from '../https/confianza';
-import { catalogo, ejecutableDe, type VersionDisponible } from './catalogo';
+import { catalogo, ejecutableDe, huellaDeEntrada, type VersionDisponible } from './catalogo';
 import { claveValida, rutaRelativaSegura, urlOficial } from './comun';
 import { huellaDe, huellaFuerte, type AlgoritmoHuella, type Huella } from './huellas';
 import { pedirConSaltos } from './red';
+import { InstaladorRust } from '../runtimes/rust';
+import type { Ejecutor } from '../plataforma/tipos';
 
 /** Intentos al mover la carpeta extraída a `bin/` (≈ 30 s con la espera creciente). */
 const INTENTOS_RENOMBRAR = 150;
@@ -34,6 +37,8 @@ export interface OpcionesInstalador {
   esperasReintentoMs?: number[];
   /** Inyectable para pruebas. */
   renombrar?: (de: string, a: string) => Promise<void>;
+  /** Ejecuta rustup (Rust se instala con él, no con un zip). Por defecto, el de Windows. */
+  exec?: Ejecutor;
 }
 
 export interface OpcionesInstalar {
@@ -70,11 +75,14 @@ const MSG_HASH = 'La descarga no coincide con la huella publicada';
 function huellaParaInstalar(v: VersionDisponible): Huella | null {
   const propia = huellaDe(v);
   if (huellaFuerte(propia)) return propia;
-  const tabla = catalogo as unknown as Record<string, typeof catalogo.nginx | undefined>;
+  const tabla = catalogo as unknown as Record<
+    string,
+    { version: string; url: string; sha256?: string; sha512?: string }[] | undefined
+  >;
   const fija = (Object.hasOwn(tabla, v.servicio) ? tabla[v.servicio] : undefined)?.find(
     (e) => e.version === v.version && e.url === v.url,
   );
-  return fija ? { algoritmo: 'sha256', valor: fija.sha256 } : propia;
+  return fija ? huellaDeEntrada(fija) : propia;
 }
 
 export class Instalador {
@@ -90,13 +98,28 @@ export class Instalador {
     return v.servicio === 'php' ? (v.rama ?? v.version) : v.version;
   }
 
+  private instaladorRust: InstaladorRust | null = null;
+
+  /** Rust no es un zip: lo instala rustup dentro de la carpeta de datos (ver `InstaladorRust`). */
+  private get rust(): InstaladorRust {
+    this.instaladorRust ??= new InstaladorRust(
+      this.rutas,
+      this.eventos,
+      this.opciones.exec ?? ejecutorPorDefecto,
+      { f: this.f },
+    );
+    return this.instaladorRust;
+  }
+
   async instalado(servicio: string, version: string): Promise<boolean> {
+    if (servicio === 'rust') return (await this.rust.instalados()).includes(version);
     const exe = ejecutableDe(servicio);
     if (!exe) return false;
     return existsSync(path.join(this.rutas.bin(servicio, version), exe));
   }
 
   async instalados(servicio: string): Promise<string[]> {
+    if (servicio === 'rust') return this.rust.instalados();
     const dir = path.dirname(this.rutas.bin(servicio, '_'));
     let nombres: string[];
     try {
@@ -154,6 +177,10 @@ export class Instalador {
         version,
       });
     }
+    if (servicio === 'rust') {
+      await this.rust.desinstalar(version);
+      return;
+    }
     const instancia = this.enUso ? await this.enUso(servicio, version) : null;
     if (instancia) {
       throw new ErrorWolf(
@@ -183,6 +210,7 @@ export class Instalador {
   async instalar(v: VersionDisponible, o: OpcionesInstalar = {}): Promise<void> {
     const clave = this.clave(v);
     validarVersion(v, clave);
+    if (v.servicio === 'rust') return this.rust.instalar(v.version, o);
     const destino = this.rutas.bin(v.servicio, clave);
     if (await this.instalado(v.servicio, clave)) {
       // Idempotente, salvo que PHP traiga un parche distinto al instalado.

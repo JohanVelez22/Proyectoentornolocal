@@ -6,6 +6,7 @@ import { CacheIndice } from './cacheIndice';
 import {
   catalogo,
   ejecutableDe,
+  huellaDeEntrada,
   type OrigenCatalogo,
   type ServicioInstalable,
   type SoporteVersion,
@@ -19,6 +20,10 @@ import {
   urlOficial,
 } from './comun';
 import { fuenteComposer } from './fuentes/composer';
+import { fuenteDotnet } from './fuentes/dotnet';
+import { fuenteGo } from './fuentes/go';
+import { fuenteJava } from './fuentes/java';
+import { fuenteRust } from './fuentes/rust';
 import {
   fuenteCloudflared,
   fuenteMailpit,
@@ -47,6 +52,10 @@ export const FUENTES_VERSIONES: Partial<Record<ServicioInstalable, FuenteVersion
   php: fuentePhp,
   node: fuenteNode,
   python: fuentePython,
+  java: fuenteJava,
+  dotnet: fuenteDotnet,
+  go: fuenteGo,
+  rust: fuenteRust,
   composer: fuenteComposer,
   mailpit: fuenteMailpit,
   ollama: fuenteOllama,
@@ -136,22 +145,33 @@ export function validarIndice(
 /** Rama de una versión de la lista fija ("22" en Node, "17" en PostgreSQL; "mayor.menor" en el resto). */
 export function ramaFija(servicio: ServicioInstalable, version: string): string {
   const [mayor = '0', menor = '0'] = version.split('.');
-  return servicio === 'node' || servicio === 'postgresql'
+  return servicio === 'node' || servicio === 'postgresql' || servicio === 'java'
     ? String(Number(mayor))
     : `${Number(mayor)}.${Number(menor)}`;
 }
 
+type EntradaFija = Omit<VersionDisponible, 'servicio' | 'sha256' | 'huella'> & {
+  sha256?: string;
+  sha512?: string;
+};
+
 /** Lista fija (`catalogo.json`): respaldo sin conexión, con su SHA-256 calculado al armarla. */
 export function listaFija(servicio: ServicioInstalable): VersionDisponible[] {
-  const tabla = catalogo as unknown as Record<string, typeof catalogo.nginx | undefined>;
+  const tabla = catalogo as unknown as Record<string, EntradaFija[] | undefined>;
   const entradas = Object.hasOwn(tabla, servicio) ? tabla[servicio] : undefined;
-  return (entradas ?? []).map((e) => ({
-    servicio,
-    ...e,
-    rama: ramaFija(servicio, e.version),
-    huella: { algoritmo: 'sha256', valor: e.sha256 },
-    origen: 'fija',
-  }));
+  return (entradas ?? []).map((e) => {
+    const { sha512, ...resto } = e;
+    void sha512;
+    const huella = huellaDeEntrada(e);
+    return {
+      servicio,
+      ...resto,
+      sha256: huella.algoritmo === 'sha256' ? huella.valor : null,
+      rama: ramaFija(servicio, e.version),
+      huella,
+      origen: 'fija',
+    };
+  });
 }
 
 export interface FiltroVersiones {

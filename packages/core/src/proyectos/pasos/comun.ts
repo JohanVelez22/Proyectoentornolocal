@@ -5,7 +5,7 @@ import type { OpcionesRestaurar, ResultadoRestaurar } from '../../bd/respaldos';
 import { MENSAJE_CANCELADO } from '../../plataforma/lanzar';
 import type { Lanzador } from '../../plataforma/tipos';
 import type { Rutas } from '../../rutas';
-import type { Runtimes, VersionesRuntime } from '../../runtimes/runtimes';
+import { TIPOS_RUNTIME, type Runtimes, type VersionesRuntime } from '../../runtimes/runtimes';
 import type { Sitio } from '../../tipos';
 import { existe } from '../archivos';
 import { motorBdDe, MOTORES_BD } from '../config';
@@ -20,7 +20,8 @@ export interface DepsPasos {
   /** Lanza los comandos de los pasos (sin shell, en streaming y con `senal`). */
   lanzar: Lanzador;
   /** Node y Python del proyecto. */
-  runtimes: Pick<Runtimes, 'paraProyecto' | 'carpetasPath' | 'rutaBin'>;
+  runtimes: Pick<Runtimes, 'paraProyecto' | 'carpetasPath' | 'rutaBin'> &
+    Partial<Pick<Runtimes, 'variables'>>;
   /**
    * php.exe y php.ini de la rama pedida (la del sitio). Con null, o si esa rama no está
    * instalada, los del PHP por defecto. Lanza un error en español si no hay PHP.
@@ -179,9 +180,13 @@ export async function entornoProyecto(
     cambios.PYTHONIOENCODING = 'utf-8';
   }
   const versiones: VersionesRuntime = {};
-  if (rt.node) versiones.node = rt.node;
-  if (rt.python) versiones.python = rt.python;
+  for (const tipo of TIPOS_RUNTIME) {
+    const v = rt[tipo];
+    if (v) versiones[tipo] = v;
+  }
   nuevo.push(...d.runtimes.carpetasPath(versiones));
+  // JAVA_HOME, DOTNET_ROOT, GOROOT/GOPATH, RUSTUP_HOME/CARGO_HOME de lo que usa el proyecto.
+  Object.assign(cambios, d.runtimes.variables?.(versiones) ?? {});
   nuevo.push(d.rutas.herramientas('bin'));
   if (env[clave]) nuevo.push(env[clave]);
   cambios[clave] = nuevo.join(';');

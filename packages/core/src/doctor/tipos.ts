@@ -13,6 +13,7 @@ export const IDS_REVISION = [
   'hosts',
   'path',
   'vcredist',
+  'enlazador-msvc',
   'antivirus',
   'servicios',
 ] as const;
@@ -95,6 +96,8 @@ export interface DepsDoctor {
     regenerarCertificados(): Promise<ResultadoReparacion>;
     regenerarCA(): Promise<ResultadoReparacion>;
   };
+  /** ¿Hay algún toolchain de Rust instalado? Sin él no se revisa el enlazador MSVC. */
+  rustInstalado?(): Promise<boolean>;
   reintentarServicio(id: string): Promise<void>;
   /** Confianza de la CA fuera del almacén de Windows (Firefox). Sin ella, no se revisa. */
   confianza?: {
