@@ -224,3 +224,106 @@ describe('D5 revisión: archivos hostiles no congelan la detección', () => {
     });
   });
 });
+
+describe('D11: Bun, Deno, Zig, Kotlin y Dart en la detección ampliada', () => {
+  const det = async (archivos: Record<string, string>) => {
+    const d = await carpeta('proy');
+    for (const [n, t] of Object.entries(archivos)) await writeFile(join(d, n), t);
+    return (await detectarAmpliada(d, { pgvector: false })).runtimesPedidos;
+  };
+
+  it('Bun: bun.lock(b), bunfig.toml, .bun-version y packageManager', async () => {
+    expect(await det({ 'bun.lockb': '' })).toEqual({ bun: null });
+    expect(await det({ 'bunfig.toml': '' })).toEqual({ bun: null });
+    expect(await det({ 'bun.lock': '', '.bun-version': 'v1.1.8\n' })).toEqual({ bun: '1.1.8' });
+    expect(await det({ 'package.json': '{"packageManager":"bun@1.2.3"}' })).toEqual({
+      bun: '1.2.3',
+    });
+    // Un proyecto de npm o pnpm no es un proyecto de Bun.
+    expect(await det({ 'package.json': '{"packageManager":"pnpm@9.0.0"}' })).toEqual({});
+    expect(await det({ 'package.json': '{"name":"x"}' })).toEqual({});
+  });
+
+  it('Deno: deno.json(c), deno.lock y .dvmrc', async () => {
+    expect(await det({ 'deno.json': '{}' })).toEqual({ deno: null });
+    expect(await det({ 'deno.jsonc': '{}' })).toEqual({ deno: null });
+    expect(await det({ 'deno.lock': '{}', '.dvmrc': '2.9.8' })).toEqual({ deno: '2.9.8' });
+  });
+
+  it('Zig: build.zig, .zigversion y minimum_zig_version (se fija la rama)', async () => {
+    expect(await det({ 'build.zig': '' })).toEqual({ zig: null });
+    expect(await det({ 'build.zig': '', '.zigversion': '0.14.1' })).toEqual({ zig: '0.14' });
+    expect(
+      await det({ 'build.zig.zon': '.{\n  .name = .x,\n  .minimum_zig_version = "0.15.1",\n}' }),
+    ).toEqual({ zig: '0.15' });
+  });
+
+  it('Kotlin: Gradle con Kotlin (con o sin versión), Maven y archivos .kt', async () => {
+    expect(
+      await det({ 'build.gradle.kts': 'plugins { kotlin("jvm") version "2.0.21" }' }),
+    ).toMatchObject({ kotlin: '2.0' });
+    expect(
+      await det({ 'build.gradle': "plugins { id 'org.jetbrains.kotlin.jvm' version '1.9.24' }" }),
+    ).toMatchObject({ kotlin: '1.9' });
+    expect(await det({ 'build.gradle.kts': 'plugins { kotlin("jvm") }' })).toMatchObject({
+      kotlin: null,
+    });
+    expect(
+      await det({ 'pom.xml': '<project><plugin>kotlin-maven-plugin</plugin></project>' }),
+    ).toMatchObject({ kotlin: null });
+    expect(await det({ 'Main.kt': 'fun main() {}' })).toEqual({ kotlin: null });
+    // Gradle sin Kotlin no marca Kotlin (solo Java).
+    expect(await det({ 'build.gradle': 'plugins { id "java" }' })).toEqual({ java: null });
+  });
+
+  it('Dart: environment.sdk del pubspec (^ y rangos); sin él, sin versión', async () => {
+    expect(await det({ 'pubspec.yaml': 'name: x\nenvironment:\n  sdk: ^3.5.0\n' })).toEqual({
+      dart: '3.5.0',
+    });
+    expect(
+      await det({ 'pubspec.yaml': 'environment:\n  sdk: ">=3.0.0 <4.0.0"\n  flutter: ">=3.0"\n' }),
+    ).toEqual({ dart: '3.0.0' });
+    expect(await det({ 'pubspec.yaml': 'name: x\n' })).toEqual({ dart: null });
+    // Un `sdk:` fuera de `environment` (en una dependencia) no cuenta.
+    expect(
+      await det({ 'pubspec.yaml': 'name: x\ndependencies:\n  flutter:\n    sdk: ^9.9.9\n' }),
+    ).toEqual({ dart: null });
+  });
+
+  it('sin archivos de esos lenguajes no hay ninguna clave', async () => {
+    expect(await det({ 'index.html': '', 'package.json': '{}' })).toEqual({});
+  });
+});
+
+describe('D11: archivos hostiles de Bun, Deno, Zig, Kotlin y Dart no congelan la detección', () => {
+  const MB = 1024 * 1024;
+  const hostiles: [string, string][] = [
+    ['1 MB de saltos de línea', '\n'.repeat(MB)],
+    ['60 KB de espacios', ' '.repeat(60 * 1024)],
+    ['60 KB de "sdk" repetido', 'sdk '.repeat(15 * 1024)],
+    ['60 KB de líneas de environment', 'environment:\n'.repeat(4000)],
+    ['60 KB de "kotlin version" repetido', 'kotlin version '.repeat(4000)],
+    ['60 KB de tabulaciones', '.minimum_zig_version\t'.repeat(3000)],
+  ];
+
+  it.each(hostiles)('%s en cada archivo termina en menos de 1 s', async (_n, texto) => {
+    const d = await carpeta('proy');
+    for (const n of [
+      'pubspec.yaml',
+      'build.zig.zon',
+      '.zigversion',
+      'build.gradle.kts',
+      'pom.xml',
+      'package.json',
+      '.bun-version',
+      '.dvmrc',
+      'deno.json',
+      'bun.lockb',
+    ]) {
+      await writeFile(join(d, n), texto);
+    }
+    const t0 = Date.now();
+    await detectarAmpliada(d, { pgvector: false });
+    expect(Date.now() - t0).toBeLessThan(1000);
+  });
+});

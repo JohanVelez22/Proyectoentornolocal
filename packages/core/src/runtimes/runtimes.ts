@@ -8,7 +8,19 @@ import type { Rutas } from '../rutas';
 import { pedidosLenguajes, type LenguajeProyecto } from './lenguajes';
 import { carpetaRust, carpetasRustup, versionesRust } from './rust';
 
-export const TIPOS_RUNTIME = ['node', 'python', 'java', 'dotnet', 'go', 'rust'] as const;
+export const TIPOS_RUNTIME = [
+  'node',
+  'python',
+  'java',
+  'dotnet',
+  'go',
+  'rust',
+  'bun',
+  'deno',
+  'zig',
+  'kotlin',
+  'dart',
+] as const;
 export type TipoRuntime = (typeof TIPOS_RUNTIME)[number];
 export type VersionesRuntime = Partial<Record<TipoRuntime, string>>;
 
@@ -25,8 +37,10 @@ export interface SitioConRuntimes {
 /**
  * Variables de entorno que necesita el runtime `tipo` instalado en `carpeta` (`Runtimes.rutaBin`):
  * `JAVA_HOME`; `DOTNET_ROOT` (sin telemetría); `GOROOT`, `GOTOOLCHAIN=local`, `GOPATH` y `GOCACHE` (en la carpeta de datos);
- * `RUSTUP_HOME` y `CARGO_HOME` propios (con `RUSTUP_TOOLCHAIN` si se da la versión). Node y
- * Python no necesitan ninguna.
+ * `RUSTUP_HOME` y `CARGO_HOME` propios (con `RUSTUP_TOOLCHAIN` si se da la versión);
+ * `BUN_INSTALL` y `DENO_DIR` (cachés en la carpeta de datos), `ZIG_GLOBAL_CACHE_DIR`,
+ * `KOTLIN_HOME` y `PUB_CACHE` (en la carpeta de datos, no en el perfil del usuario). Node y
+ * Python no necesitan ninguna. Kotlin además necesita `JAVA_HOME`: sale del Java del proyecto.
  */
 export function variablesRuntime(
   tipo: TipoRuntime,
@@ -58,6 +72,16 @@ export function variablesRuntime(
         ...(o.version ? { RUSTUP_TOOLCHAIN: o.version } : {}),
       };
     }
+    case 'bun':
+      return o.datos ? { BUN_INSTALL: path.join(o.datos, 'cache', 'bun') } : {};
+    case 'deno':
+      return o.datos ? { DENO_DIR: path.join(o.datos, 'cache', 'deno') } : {};
+    case 'zig':
+      return o.datos ? { ZIG_GLOBAL_CACHE_DIR: path.join(o.datos, 'cache', 'zig') } : {};
+    case 'kotlin':
+      return { KOTLIN_HOME: carpeta };
+    case 'dart':
+      return o.datos ? { PUB_CACHE: path.join(o.datos, 'cache', 'pub') } : {};
     default:
       return {};
   }
@@ -297,9 +321,14 @@ const NOMBRE: Record<TipoRuntime, string> = {
   dotnet: '.NET',
   go: 'Go',
   rust: 'Rust',
+  bun: 'Bun',
+  deno: 'Deno',
+  zig: 'Zig',
+  kotlin: 'Kotlin',
+  dart: 'Dart',
 };
 
-/** Pistas de Java, .NET, Go y Rust a partir de lo que piden los archivos del proyecto. */
+/** Pistas de Java, .NET, Go, Rust, Bun, Deno, Zig, Kotlin y Dart a partir de lo que piden los archivos del proyecto. */
 async function pistasLenguaje(carpeta: string): Promise<{
   pistas: Partial<Record<LenguajeProyecto, PistaRuntime[]>>;
   canalRust: string | null;
@@ -362,6 +391,9 @@ export class Runtimes implements ResolutorRuntimes {
         `El proyecto pide el canal "${canalRust}" de Rust, que no es una versión fija: se usa la versión de Rust instalada.`,
       );
     }
+    // Kotlin compila con un Java: si el proyecto usa Kotlin, Java entra aunque no lo pida ningún
+    // archivo suyo (con la versión que cumpla, o la LTS más nueva).
+    const usaKotlin = sitio.runtimes?.kotlin !== undefined || lenguajes.kotlin !== undefined;
     for (const tipo of TIPOS_RUNTIME) {
       const elegir = tipo === 'java' ? elegirJava : elegirVersion;
       const pistas: PistaRuntime[] = [];
@@ -374,7 +406,7 @@ export class Runtimes implements ResolutorRuntimes {
         // Java, .NET, Go y Rust solo entran al entorno si el proyecto los usa (lo dice un
         // archivo suyo o lo fijó el sitio): no se suman al PATH de todos los proyectos.
         const delArchivo = lenguajes[tipo];
-        if (!delSitio && delArchivo === undefined) continue;
+        if (!delSitio && delArchivo === undefined && !(tipo === 'java' && usaKotlin)) continue;
         pistas.push(...(delArchivo ?? []));
       }
       const instaladas = await this.instalados(tipo);
@@ -401,6 +433,11 @@ export class Runtimes implements ResolutorRuntimes {
         res.avisos.push(`${pide}. Instálelo desde Servicios.`);
       }
     }
+    if (res.kotlin && !res.java) {
+      res.avisos.push(
+        'Kotlin necesita un Java instalado y no hay ninguno. Instálelo desde Servicios.',
+      );
+    }
     return res;
   }
 
@@ -418,12 +455,14 @@ export class Runtimes implements ResolutorRuntimes {
         variablesRuntime(tipo, this.rutaBin(tipo, version), { datos: this.rutas.base, version }),
       );
     }
+    // Kotlin ya trae KOTLIN_HOME; el Java que lo ejecuta lo da su JAVA_HOME (de `java`).
     return salida;
   }
 
   /**
    * Node: carpeta de node.exe (npm/npx) y su node_modules/.bin. Python: carpeta y Scripts. Java:
-   * `bin`. .NET: la carpeta de dotnet. Go: `bin` y el `bin` de GOPATH. Rust: `cargo/bin`.
+   * `bin`. .NET: la carpeta de dotnet. Go: `bin` y el `bin` de GOPATH. Rust: `cargo/bin`. Bun, Deno y
+   * Zig: su carpeta (Bun también el `bin` de BUN_INSTALL). Kotlin y Dart: `bin`.
    */
   carpetasPath(v: VersionesRuntime): string[] {
     const salida: string[] = [];
@@ -446,6 +485,13 @@ export class Runtimes implements ResolutorRuntimes {
     if (v.rust) {
       salida.push(path.join(carpetasRustup(this.rutaBin('rust', v.rust)).cargoHome, 'bin'));
     }
+    if (v.bun) {
+      salida.push(this.rutaBin('bun', v.bun), path.join(this.rutas.base, 'cache', 'bun', 'bin'));
+    }
+    if (v.deno) salida.push(this.rutaBin('deno', v.deno));
+    if (v.zig) salida.push(this.rutaBin('zig', v.zig));
+    if (v.kotlin) salida.push(path.join(this.rutaBin('kotlin', v.kotlin), 'bin'));
+    if (v.dart) salida.push(path.join(this.rutaBin('dart', v.dart), 'bin'));
     return salida;
   }
 }

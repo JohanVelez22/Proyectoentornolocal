@@ -285,8 +285,20 @@ describe('D5: Java, .NET, Go y Rust como runtimes', () => {
     writeFileSync(path.join(tc, 'lib', 'rustlib', 'multirust-channel-manifest.toml'), '');
   };
 
-  it('TIPOS_RUNTIME tiene los seis y esTipoRuntime solo acepta esos', () => {
-    expect([...TIPOS_RUNTIME]).toEqual(['node', 'python', 'java', 'dotnet', 'go', 'rust']);
+  it('TIPOS_RUNTIME tiene los once (D5 y D11) y esTipoRuntime solo acepta esos', () => {
+    expect([...TIPOS_RUNTIME]).toEqual([
+      'node',
+      'python',
+      'java',
+      'dotnet',
+      'go',
+      'rust',
+      'bun',
+      'deno',
+      'zig',
+      'kotlin',
+      'dart',
+    ]);
     expect(esTipoRuntime('go')).toBe(true);
     expect(esTipoRuntime('ruby')).toBe(false);
     expect(esTipoRuntime(undefined)).toBe(false);
@@ -468,5 +480,158 @@ describe('D5 revisión: Java prefiere el mayor pedido o la LTS, y avisos de Rust
     expect(rt.avisos.some((a) => a.includes('nightly-2025-01-01') && a.includes('Rust'))).toBe(
       true,
     );
+  });
+});
+
+describe('D11: Bun, Deno, Zig, Kotlin y Dart como runtimes', () => {
+  const NOMBRE_EXE: Record<string, string[]> = {
+    bun: ['bun.exe'],
+    deno: ['deno.exe'],
+    zig: ['zig.exe'],
+    kotlin: ['bin', 'kotlinc.bat'],
+    dart: ['bin', 'dart.exe'],
+    java: ['bin', 'java.exe'],
+  };
+  const instalarD11 = (tipo: keyof typeof NOMBRE_EXE, version: string): void => {
+    const exe = path.join(rutas.bin(tipo as 'java', version), ...NOMBRE_EXE[tipo]!);
+    mkdirSync(path.dirname(exe), { recursive: true });
+    writeFileSync(exe, 'x');
+  };
+
+  it('variablesRuntime: cachés en la carpeta de datos, KOTLIN_HOME y nada sin carpeta de datos', () => {
+    const datos = 'C:\\datos';
+    expect(variablesRuntime('bun', 'C:\\bun', { datos })).toEqual({
+      BUN_INSTALL: path.join(datos, 'cache', 'bun'),
+    });
+    expect(variablesRuntime('deno', 'C:\\deno', { datos })).toEqual({
+      DENO_DIR: path.join(datos, 'cache', 'deno'),
+    });
+    expect(variablesRuntime('zig', 'C:\\zig', { datos })).toEqual({
+      ZIG_GLOBAL_CACHE_DIR: path.join(datos, 'cache', 'zig'),
+    });
+    expect(variablesRuntime('kotlin', 'C:\\kotlinc')).toEqual({ KOTLIN_HOME: 'C:\\kotlinc' });
+    expect(variablesRuntime('dart', 'C:\\dart', { datos })).toEqual({
+      PUB_CACHE: path.join(datos, 'cache', 'pub'),
+    });
+    for (const t of ['bun', 'deno', 'zig', 'dart'] as const) {
+      expect(variablesRuntime(t, 'C:\\x')).toEqual({});
+    }
+  });
+
+  it('instalados y carpetasPath por lenguaje', async () => {
+    instalarD11('bun', '1.4.5');
+    instalarD11('deno', '2.9.8');
+    instalarD11('zig', '0.17.1');
+    instalarD11('kotlin', '2.4.21');
+    instalarD11('dart', '3.14.1');
+    const r = new Runtimes(rutas);
+    expect(await r.instalados('bun')).toEqual(['1.4.5']);
+    expect(await r.instalados('kotlin')).toEqual(['2.4.21']);
+    expect(
+      r.carpetasPath({
+        bun: '1.4.5',
+        deno: '2.9.8',
+        zig: '0.17.1',
+        kotlin: '2.4.21',
+        dart: '3.14.1',
+      }),
+    ).toEqual([
+      rutas.bin('bun', '1.4.5'),
+      path.join(base, 'cache', 'bun', 'bin'),
+      rutas.bin('deno', '2.9.8'),
+      rutas.bin('zig', '0.17.1'),
+      path.join(rutas.bin('kotlin', '2.4.21'), 'bin'),
+      path.join(rutas.bin('dart', '3.14.1'), 'bin'),
+    ]);
+  });
+
+  it('un proyecto Deno usa el Deno instalado y su DENO_DIR; sin archivo no entra al entorno', async () => {
+    instalarD11('deno', '2.9.8');
+    const r = new Runtimes(rutas);
+    expect(await r.paraProyecto({ carpeta: await proyecto({}) })).toEqual({ avisos: [] });
+    const rt = await r.paraProyecto({ carpeta: await proyecto({ 'deno.json': '{}' }) });
+    expect(rt).toEqual({ deno: '2.9.8', avisos: [] });
+    expect(r.variables(rt)).toEqual({ DENO_DIR: path.join(base, 'cache', 'deno') });
+  });
+
+  it('Bun: .bun-version fija la versión; si no está instalada solo hay aviso', async () => {
+    instalarD11('bun', '1.4.5');
+    const r = new Runtimes(rutas);
+    const bien = await proyecto({ 'bun.lock': '', '.bun-version': '1.4.5\n' });
+    expect((await r.paraProyecto({ carpeta: bien })).bun).toBe('1.4.5');
+    const otra = await proyecto({ 'bun.lockb': '', '.bun-version': '1.1.8' });
+    const rt = await r.paraProyecto({ carpeta: otra });
+    expect(rt.bun).toBeUndefined();
+    expect(rt.avisos[0]).toMatch(/Bun 1\.1\.8.*no está instalado/);
+  });
+
+  it('Zig fija la rama 0.N (rompe compatibilidad entre ramas)', async () => {
+    instalarD11('zig', '0.17.1');
+    instalarD11('zig', '0.14.1');
+    const r = new Runtimes(rutas);
+    const c = await proyecto({ 'build.zig.zon': '.{\n    .minimum_zig_version = "0.14.0",\n}' });
+    expect((await r.paraProyecto({ carpeta: c })).zig).toBe('0.14.1');
+  });
+
+  it('Dart: el rango del pubspec se cumple con la más nueva instalada', async () => {
+    instalarD11('dart', '3.13.7');
+    instalarD11('dart', '3.14.1');
+    const r = new Runtimes(rutas);
+    const c = await proyecto({ 'pubspec.yaml': 'name: x\nenvironment:\n  sdk: ^3.5.0\n' });
+    expect((await r.paraProyecto({ carpeta: c })).dart).toBe('3.14.1');
+    const c2 = await proyecto({ 'pubspec.yaml': 'name: x\nenvironment:\n  sdk: ^3.20.0\n' });
+    const rt = await r.paraProyecto({ carpeta: c2 });
+    // Un mínimo no cumplido cae a la más nueva con aviso.
+    expect(rt.dart).toBe('3.14.1');
+    expect(rt.avisos[0]).toMatch(/Dart >=3\.20\.0.*no está instalado/);
+  });
+
+  it('Kotlin con Java: ambos entran al entorno aunque el proyecto no pida Java', async () => {
+    instalarD11('kotlin', '2.4.21');
+    instalarD11('java', '21.0.13.1');
+    const r = new Runtimes(rutas);
+    const c = await proyecto({ 'App.kt': 'fun main() {}' });
+    const rt = await r.paraProyecto({ carpeta: c });
+    expect(rt).toEqual({ kotlin: '2.4.21', java: '21.0.13.1', avisos: [] });
+    expect(r.variables(rt)).toEqual({
+      JAVA_HOME: rutas.bin('java', '21.0.13.1'),
+      KOTLIN_HOME: rutas.bin('kotlin', '2.4.21'),
+    });
+  });
+
+  it('Kotlin sin ningún Java instalado avisa', async () => {
+    instalarD11('kotlin', '2.4.21');
+    const r = new Runtimes(rutas);
+    const rt = await r.paraProyecto({ carpeta: await proyecto({ 'App.kt': 'fun main() {}' }) });
+    expect(rt.kotlin).toBe('2.4.21');
+    expect(rt.java).toBeUndefined();
+    expect(rt.avisos).toEqual([expect.stringMatching(/Kotlin necesita un Java instalado/)]);
+  });
+
+  it('un sitio que fija kotlin también trae Java, y un proyecto sin Kotlin no avisa de Java', async () => {
+    instalarD11('kotlin', '2.4.21');
+    instalarD11('java', '17.0.9');
+    const r = new Runtimes(rutas);
+    const rt = await r.paraProyecto({ carpeta: await proyecto({}), runtimes: { kotlin: '2.4' } });
+    expect(rt).toMatchObject({ kotlin: '2.4.21', java: '17.0.9' });
+    expect(await r.paraProyecto({ carpeta: await proyecto({}) })).toEqual({ avisos: [] });
+  });
+
+  it('la terminal de un proyecto Dart lleva su PATH y PUB_CACHE', async () => {
+    instalarD11('dart', '3.14.1');
+    const carpeta = await proyecto({ 'pubspec.yaml': 'name: x\n' });
+    const llamadas: { env: NodeJS.ProcessEnv }[] = [];
+    const t = new Terminal({
+      rutas,
+      entorno: { Path: 'C:\\Windows', LOCALAPPDATA: 'C:\\x' },
+      existe: (p) => !p.endsWith('wt.exe') && (p.startsWith(base) || p === carpeta),
+      lanzar: async (_c, _a, o) => {
+        llamadas.push(o);
+      },
+      runtimes: new Runtimes(rutas),
+    });
+    await t.abrir({ carpeta, php: null });
+    expect(llamadas[0]!.env.PUB_CACHE).toBe(path.join(base, 'cache', 'pub'));
+    expect(llamadas[0]!.env.Path).toContain(path.join(rutas.bin('dart', '3.14.1'), 'bin'));
   });
 });

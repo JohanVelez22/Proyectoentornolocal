@@ -1,8 +1,21 @@
 import { open, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
-/** Lenguajes cuyo runtime se pide a los archivos del proyecto (Java, .NET, Go y Rust). */
-export const LENGUAJES_PROYECTO = ['java', 'dotnet', 'go', 'rust'] as const;
+/**
+ * Lenguajes cuyo runtime se pide a los archivos del proyecto (Java, .NET, Go, Rust, Bun, Deno,
+ * Zig, Kotlin y Dart).
+ */
+export const LENGUAJES_PROYECTO = [
+  'java',
+  'dotnet',
+  'go',
+  'rust',
+  'bun',
+  'deno',
+  'zig',
+  'kotlin',
+  'dart',
+] as const;
 export type LenguajeProyecto = (typeof LENGUAJES_PROYECTO)[number];
 
 /** Lo que pide un archivo del proyecto. `version` null: hay proyecto pero no dice qué versión. */
@@ -191,9 +204,120 @@ async function pedidoRust(carpeta: string): Promise<PedidoLenguaje | null> {
   };
 }
 
+/** Versión exacta "1.1.8" de la primera línea útil de un archivo de versión (admite `v`). */
+function versionDeArchivo(texto: string | null): string | null {
+  if (texto === null) return null;
+  const l = lineas(texto).find((x) => x !== '' && !x.startsWith('#'));
+  return l?.match(/^v?(\d{1,3}\.\d{1,3}\.\d{1,3})$/)?.[1] ?? null;
+}
+
+async function pedidoBun(carpeta: string, nombres: Set<string>): Promise<PedidoLenguaje | null> {
+  // `packageManager: "bun@1.1.8"` de package.json (corepack) o `.bun-version`.
+  const pkg = await leer(path.join(carpeta, 'package.json'));
+  let desdePkg: string | null = null;
+  if (pkg !== null) {
+    try {
+      const j = JSON.parse(pkg) as { packageManager?: unknown } | null;
+      const pm = typeof j?.packageManager === 'string' ? j.packageManager : '';
+      desdePkg = /^bun@(\d{1,3}\.\d{1,3}\.\d{1,3})/.exec(pm.slice(0, 60))?.[1] ?? null;
+    } catch {
+      // un package.json roto no impide mirar el resto
+    }
+  }
+  const archivo = versionDeArchivo(await leer(path.join(carpeta, '.bun-version')));
+  const version = archivo ?? desdePkg;
+  const marca = ['bun.lockb', 'bun.lock', 'bunfig.toml', '.bun-version'].find((n) =>
+    nombres.has(n),
+  );
+  if (version !== null) {
+    return { version, origen: archivo !== null ? '.bun-version' : 'package.json', minimo: false };
+  }
+  return marca ? { version: null, origen: marca, minimo: false } : null;
+}
+
+async function pedidoDeno(carpeta: string, nombres: Set<string>): Promise<PedidoLenguaje | null> {
+  const marca = ['deno.json', 'deno.jsonc', 'deno.lock', '.dvmrc'].find((n) => nombres.has(n));
+  if (!marca) return null;
+  const version = versionDeArchivo(await leer(path.join(carpeta, '.dvmrc')));
+  return { version, origen: version !== null ? '.dvmrc' : marca, minimo: false };
+}
+
+async function pedidoZig(carpeta: string, nombres: Set<string>): Promise<PedidoLenguaje | null> {
+  if (!nombres.has('build.zig') && !nombres.has('build.zig.zon') && !nombres.has('.zigversion')) {
+    return null;
+  }
+  // Zig rompe la compatibilidad entre ramas "0.N": se fija la rama (`0.14.1` → `0.14`).
+  const fija = versionDeArchivo(await leer(path.join(carpeta, '.zigversion')));
+  if (fija) {
+    const rama = /^(\d+\.\d+)/.exec(fija)?.[1] ?? fija;
+    return { version: rama, origen: '.zigversion', minimo: false };
+  }
+  const zon = await leer(path.join(carpeta, 'build.zig.zon'));
+  if (zon !== null) {
+    for (const l of lineas(zon)) {
+      const m =
+        /^\.minimum_zig_version[ \t]*=[ \t]*"(\d{1,3}\.\d{1,3})(?:\.\d{1,3})?[^"]{0,20}"/.exec(l);
+      if (m) return { version: m[1]!, origen: 'build.zig.zon', minimo: false };
+    }
+  }
+  return {
+    version: null,
+    origen: nombres.has('build.zig') ? 'build.zig' : 'build.zig.zon',
+    minimo: false,
+  };
+}
+
+/** "2.0.21" de `kotlin("jvm") version "2.0.21"` o `id 'org.jetbrains.kotlin.jvm' version '2.0.21'`. */
+function kotlinDeGradle(texto: string): { usa: boolean; version: string | null } {
+  let usa = false;
+  for (const l of lineas(texto)) {
+    if (l.startsWith('//') || !l.includes('kotlin')) continue;
+    usa = true;
+    const i = l.indexOf('version');
+    const m = i >= 0 ? /^version[ \t]*["'](\d{1,2}\.\d{1,2})/.exec(l.slice(i, i + 40)) : null;
+    if (m) return { usa, version: m[1]! };
+  }
+  return { usa, version: null };
+}
+
+async function pedidoKotlin(carpeta: string, nombres: Set<string>): Promise<PedidoLenguaje | null> {
+  for (const nombre of ['build.gradle.kts', 'build.gradle']) {
+    const g = await leer(path.join(carpeta, nombre));
+    if (g === null) continue;
+    const k = kotlinDeGradle(g);
+    if (k.usa) return { version: k.version, origen: nombre, minimo: true };
+  }
+  const pom = await leer(path.join(carpeta, 'pom.xml'));
+  if (pom !== null && pom.includes('kotlin-maven-plugin')) {
+    return { version: null, origen: 'pom.xml', minimo: true };
+  }
+  const kt = [...nombres].find((n) => /\.kt$/i.test(n));
+  return kt ? { version: null, origen: kt, minimo: true } : null;
+}
+
+async function pedidoDart(carpeta: string): Promise<PedidoLenguaje | null> {
+  const yaml = await leer(path.join(carpeta, 'pubspec.yaml'));
+  if (yaml === null) return null;
+  // `environment:` en la raíz y, debajo, `sdk: ^3.5.0` o `sdk: ">=3.0.0 <4.0.0"` (línea a línea).
+  let dentro = false;
+  for (const l of yaml.split(/\r?\n/).filter((x) => x.length <= MAX_LINEA)) {
+    if (/^environment[ \t]*:/.test(l)) {
+      dentro = true;
+      continue;
+    }
+    if (dentro && /^\S/.test(l) && !l.startsWith('#')) dentro = false;
+    if (!dentro) continue;
+    const m = /^[ \t]+sdk[ \t]*:[ \t]*["']?(?:\^|>=)[ \t]*(\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)/.exec(l);
+    if (m) return { version: m[1]!, origen: 'pubspec.yaml', minimo: true };
+  }
+  return { version: null, origen: 'pubspec.yaml', minimo: true };
+}
+
 /**
  * Lo que piden los archivos de la carpeta para Java (`pom.xml`, `build.gradle(.kts)`), .NET
- * (`global.json`, `*.csproj`, `*.sln`), Go (`go.mod`) y Rust (`rust-toolchain(.toml)`, `Cargo.toml`).
+ * (`global.json`, `*.csproj`, `*.sln`), Go (`go.mod`), Rust (`rust-toolchain(.toml)`, `Cargo.toml`),
+ * Bun (`bun.lock(b)`, `bunfig.toml`, `.bun-version`), Deno (`deno.json(c)`, `.dvmrc`), Zig (`build.zig`,
+ * `.zigversion`), Kotlin (Gradle o Maven con Kotlin, `*.kt`) y Dart (`pubspec.yaml`).
  * Solo está la clave de los lenguajes que el proyecto usa; su `version` es null si el archivo no
  * dice cuál. Lee solo la raíz de la carpeta y archivos de hasta 64 KB (y 20 proyectos de .NET).
  */
@@ -209,5 +333,16 @@ export async function pedidosLenguajes(
   if (go) res.go = go;
   const rust = await pedidoRust(carpeta);
   if (rust) res.rust = rust;
+  const nombres = new Set(await nombresEn(carpeta));
+  const bun = await pedidoBun(carpeta, nombres);
+  if (bun) res.bun = bun;
+  const deno = await pedidoDeno(carpeta, nombres);
+  if (deno) res.deno = deno;
+  const zig = await pedidoZig(carpeta, nombres);
+  if (zig) res.zig = zig;
+  const kotlin = await pedidoKotlin(carpeta, nombres);
+  if (kotlin) res.kotlin = kotlin;
+  const dart = await pedidoDart(carpeta);
+  if (dart) res.dart = dart;
   return res;
 }

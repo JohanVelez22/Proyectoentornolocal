@@ -127,6 +127,11 @@ export const SitioSchema = z.object({
       dotnet: z.string().min(1).optional(),
       go: z.string().min(1).optional(),
       rust: z.string().min(1).optional(),
+      bun: z.string().min(1).optional(),
+      deno: z.string().min(1).optional(),
+      zig: z.string().min(1).optional(),
+      kotlin: z.string().min(1).optional(),
+      dart: z.string().min(1).optional(),
     })
     .default({}),
   /**
@@ -448,7 +453,21 @@ export const ConfigSchema = z.object({
        */
       predeterminadas: z
         .partialRecord(
-          z.enum(['node', 'python', 'java', 'dotnet', 'go', 'rust', 'composer', 'cloudflared']),
+          z.enum([
+            'node',
+            'python',
+            'java',
+            'dotnet',
+            'go',
+            'rust',
+            'bun',
+            'deno',
+            'zig',
+            'kotlin',
+            'dart',
+            'composer',
+            'cloudflared',
+          ]),
           z.string().regex(/^[0-9a-z][0-9a-z.+-]{0,39}$/),
         )
         .default({})
