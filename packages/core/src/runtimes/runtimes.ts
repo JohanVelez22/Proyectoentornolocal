@@ -24,7 +24,7 @@ export interface SitioConRuntimes {
 
 /**
  * Variables de entorno que necesita el runtime `tipo` instalado en `carpeta` (`Runtimes.rutaBin`):
- * `JAVA_HOME`; `DOTNET_ROOT` (sin telemetría); `GOROOT` y `GOPATH` (en la carpeta de datos);
+ * `JAVA_HOME`; `DOTNET_ROOT` (sin telemetría); `GOROOT`, `GOTOOLCHAIN=local`, `GOPATH` y `GOCACHE` (en la carpeta de datos);
  * `RUSTUP_HOME` y `CARGO_HOME` propios (con `RUSTUP_TOOLCHAIN` si se da la versión). Node y
  * Python no necesitan ninguna.
  */
@@ -41,7 +41,14 @@ export function variablesRuntime(
     case 'go':
       return {
         GOROOT: carpeta,
-        ...(o.datos ? { GOPATH: path.join(o.datos, 'cache', 'go') } : {}),
+        // Nunca baja otro toolchain por su cuenta: usa el instalado desde WolfCore Dev.
+        GOTOOLCHAIN: 'local',
+        ...(o.datos
+          ? {
+              GOPATH: path.join(o.datos, 'cache', 'go'),
+              GOCACHE: path.join(o.datos, 'cache', 'go-build'),
+            }
+          : {}),
       };
     case 'rust': {
       const { rustupHome, cargoHome } = carpetasRustup(carpeta);
@@ -197,6 +204,29 @@ export function elegirVersion(
   return lista.find((v) => pred(triple(v)));
 }
 
+/** LTS de Java: 8, 11, 17, 21 y, desde ahí, una cada cuatro versiones (25, 29, 33…). */
+export const esLtsJava = (mayor: number): boolean =>
+  mayor === 8 || mayor === 11 || mayor === 17 || (mayor >= 21 && (mayor - 21) % 4 === 0);
+
+/**
+ * Java: de las que cumplen la pista, el mismo mayor que pide el proyecto (`>=21` → 21 si está) o,
+ * si no, la LTS más nueva; sin LTS que cumpla, la más nueva. Sin pista: la LTS más nueva.
+ */
+export function elegirJava(
+  instaladas: string[],
+  pista: string | null | undefined,
+): string | undefined {
+  const pred = pista ? predicado(pista) : null;
+  const lista = ordenar(instaladas).filter((v) => !pred || pred(triple(v)));
+  if (lista.length === 0) return undefined;
+  const mayor = pista ? /^>=\s*(\d+)/.exec(pista)?.[1] : undefined;
+  if (mayor !== undefined) {
+    const igual = lista.find((v) => triple(v)[0] === Number(mayor));
+    if (igual) return igual;
+  }
+  return lista.find((v) => esLtsJava(triple(v)[0])) ?? lista[0];
+}
+
 const leer = leerTexto;
 
 const primeraLinea = (t: string | null): string | undefined =>
@@ -270,16 +300,18 @@ const NOMBRE: Record<TipoRuntime, string> = {
 };
 
 /** Pistas de Java, .NET, Go y Rust a partir de lo que piden los archivos del proyecto. */
-async function pistasLenguaje(
-  carpeta: string,
-): Promise<Partial<Record<LenguajeProyecto, PistaRuntime[]>>> {
+async function pistasLenguaje(carpeta: string): Promise<{
+  pistas: Partial<Record<LenguajeProyecto, PistaRuntime[]>>;
+  canalRust: string | null;
+}> {
   const res: Partial<Record<LenguajeProyecto, PistaRuntime[]>> = {};
-  for (const [tipo, p] of Object.entries(await pedidosLenguajes(carpeta))) {
+  const pedidos = await pedidosLenguajes(carpeta);
+  for (const [tipo, p] of Object.entries(pedidos)) {
     res[tipo as LenguajeProyecto] = p.version
       ? [{ valor: p.minimo ? `>=${p.version}` : p.version, origen: p.origen, fija: !p.minimo }]
       : [];
   }
-  return res;
+  return { pistas: res, canalRust: pedidos.rust?.canal ?? null };
 }
 
 export class Runtimes implements ResolutorRuntimes {
@@ -324,8 +356,14 @@ export class Runtimes implements ResolutorRuntimes {
       res.avisos.push(`${e instanceof Error ? e.message : String(e)}. Se ignora.`);
     }
     const archivos = await pistasArchivos(sitio.carpeta);
-    const lenguajes = await pistasLenguaje(sitio.carpeta);
+    const { pistas: lenguajes, canalRust } = await pistasLenguaje(sitio.carpeta);
+    if (canalRust !== null) {
+      res.avisos.push(
+        `El proyecto pide el canal "${canalRust}" de Rust, que no es una versión fija: se usa la versión de Rust instalada.`,
+      );
+    }
     for (const tipo of TIPOS_RUNTIME) {
+      const elegir = tipo === 'java' ? elegirJava : elegirVersion;
       const pistas: PistaRuntime[] = [];
       const delSitio = sitio.runtimes?.[tipo];
       if (delSitio) pistas.push({ valor: delSitio, origen: 'sitio', fija: true });
@@ -343,17 +381,17 @@ export class Runtimes implements ResolutorRuntimes {
       const pista = pistas.find((p) => predicado(p.valor) !== null);
       if (!pista) {
         const pred = await this.predeterminada(tipo).catch(() => null);
-        const v = pred && instaladas.includes(pred) ? pred : elegirVersion(instaladas, undefined);
+        const v = pred && instaladas.includes(pred) ? pred : elegir(instaladas, undefined);
         if (v) res[tipo] = v;
         continue;
       }
-      const v = elegirVersion(instaladas, pista.valor);
+      const v = elegir(instaladas, pista.valor);
       if (v) {
         res[tipo] = v;
         continue;
       }
       const pide = `El proyecto pide ${NOMBRE[tipo]} ${pista.valor}, que no está instalado`;
-      const masNueva = pista.fija ? undefined : elegirVersion(instaladas, undefined);
+      const masNueva = pista.fija ? undefined : elegir(instaladas, undefined);
       if (masNueva) {
         res[tipo] = masNueva;
         res.avisos.push(

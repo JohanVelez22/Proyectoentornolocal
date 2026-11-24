@@ -14,6 +14,8 @@ import {
   Runtimes,
   TIPOS_RUNTIME,
   elegirVersion,
+  elegirJava,
+  esLtsJava,
   esTipoRuntime,
   variablesRuntime,
 } from '../src/runtimes/runtimes';
@@ -299,7 +301,9 @@ describe('D5: Java, .NET, Go y Rust como runtimes', () => {
     });
     expect(variablesRuntime('go', 'C:\\go', { datos: 'C:\\datos' })).toEqual({
       GOROOT: 'C:\\go',
+      GOTOOLCHAIN: 'local',
       GOPATH: path.join('C:\\datos', 'cache', 'go'),
+      GOCACHE: path.join('C:\\datos', 'cache', 'go-build'),
     });
     expect(variablesRuntime('rust', 'C:\\rust', { version: '1.100.0' })).toEqual({
       RUSTUP_HOME: path.join('C:\\rust', 'rustup'),
@@ -345,7 +349,9 @@ describe('D5: Java, .NET, Go y Rust como runtimes', () => {
     expect(rt.go).toBe('1.27.4');
     expect(r.variables(rt)).toEqual({
       GOROOT: rutas.bin('go', '1.27.4'),
+      GOTOOLCHAIN: 'local',
       GOPATH: path.join(base, 'cache', 'go'),
+      GOCACHE: path.join(base, 'cache', 'go-build'),
     });
     expect(r.carpetasPath(rt)).toEqual([
       path.join(rutas.bin('go', '1.27.4'), 'bin'),
@@ -410,5 +416,56 @@ describe('D5: Java, .NET, Go y Rust como runtimes', () => {
     await t.abrir({ carpeta, php: null });
     expect(llamadas[0]!.env.JAVA_HOME).toBe(rutas.bin('java', '21.0.13.1'));
     expect(llamadas[0]!.env.Path).toContain(path.join(rutas.bin('java', '21.0.13.1'), 'bin'));
+  });
+});
+
+describe('D5 revisión: Java prefiere el mayor pedido o la LTS, y avisos de Rust', () => {
+  const instalarJava = (v: string): void => {
+    const exe = path.join(rutas.bin('java', v), 'bin', 'java.exe');
+    mkdirSync(path.dirname(exe), { recursive: true });
+    writeFileSync(exe, 'x');
+  };
+  const pom = (n: number): string =>
+    `<project><properties><maven.compiler.release>${n}</maven.compiler.release></properties></project>`;
+
+  it('esLtsJava', () => {
+    expect([8, 11, 17, 21, 25, 29].every(esLtsJava)).toBe(true);
+    expect([9, 18, 22, 23, 24, 26, 27].some(esLtsJava)).toBe(false);
+  });
+
+  it('elegirJava: mismo mayor, si no la LTS más nueva que cumpla, si no la más nueva', () => {
+    const i = ['27.0.1', '25.0.5.1', '21.0.13.1', '17.0.9'];
+    expect(elegirJava(i, '>=21')).toBe('21.0.13.1');
+    expect(elegirJava(i, '>=22')).toBe('25.0.5.1');
+    expect(elegirJava(i, '>=26')).toBe('27.0.1');
+    expect(elegirJava(i, undefined)).toBe('25.0.5.1');
+    expect(elegirJava(['27.0.1', '26.0.2'], undefined)).toBe('27.0.1');
+    expect(elegirJava(i, '21')).toBe('21.0.13.1');
+    expect(elegirJava(i, '>=30')).toBeUndefined();
+  });
+
+  it('el proyecto con pom de Java 21 usa el 21 aunque haya 27 y 25; sin archivo exacto, la LTS', async () => {
+    for (const v of ['27.0.1', '25.0.5.1', '21.0.13.1']) instalarJava(v);
+    const r = new Runtimes(rutas);
+    expect((await r.paraProyecto({ carpeta: await proyecto({ 'pom.xml': pom(21) }) })).java).toBe(
+      '21.0.13.1',
+    );
+    expect((await r.paraProyecto({ carpeta: await proyecto({ 'pom.xml': pom(22) }) })).java).toBe(
+      '25.0.5.1',
+    );
+    expect(
+      (await r.paraProyecto({ carpeta: await proyecto({ 'pom.xml': '<project/>' }) })).java,
+    ).toBe('25.0.5.1');
+  });
+
+  it('un canal de Rust no numérico se avisa', async () => {
+    const r = new Runtimes(rutas);
+    const c = await proyecto({
+      'rust-toolchain.toml': '[toolchain]\nchannel = "nightly-2025-01-01"\n',
+    });
+    const rt = await r.paraProyecto({ carpeta: c });
+    expect(rt.avisos.some((a) => a.includes('nightly-2025-01-01') && a.includes('Rust'))).toBe(
+      true,
+    );
   });
 });

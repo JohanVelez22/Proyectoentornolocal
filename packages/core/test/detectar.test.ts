@@ -164,3 +164,63 @@ describe('D5: Java, .NET, Go y Rust en la detección ampliada', () => {
     });
   });
 });
+
+describe('D5 revisión: archivos hostiles no congelan la detección', () => {
+  const det = async (archivos: Record<string, string>) => {
+    const d = await carpeta('proy');
+    for (const [n, t] of Object.entries(archivos)) await writeFile(join(d, n), t);
+    const t0 = Date.now();
+    const r = (await detectarAmpliada(d, { pgvector: false })).runtimesPedidos;
+    return { r, ms: Date.now() - t0 };
+  };
+  const MB = 1024 * 1024;
+  const hostiles: [string, string][] = [
+    ['1 MB de saltos de línea', '\n'.repeat(MB)],
+    ['1 MB de espacios', ' '.repeat(MB)],
+    ['60 KB de saltos de línea', '\n'.repeat(60 * 1024)],
+    ['60 KB de espacios', ' '.repeat(60 * 1024)],
+    ['60 KB de "go " repetido', 'go '.repeat(20 * 1024)],
+    ['60 KB de tabulaciones y canal', `channel${'\t'.repeat(60 * 1024)}`],
+  ];
+
+  it.each(hostiles)('%s en cada archivo de proyecto termina en menos de 1 s', async (_n, texto) => {
+    const { ms } = await det({
+      'go.mod': texto,
+      'pom.xml': texto,
+      'build.gradle': texto,
+      'rust-toolchain.toml': texto,
+      'global.json': texto,
+      'App.csproj': texto,
+    });
+    expect(ms).toBeLessThan(1000);
+  });
+
+  it('un go.mod de 1 MB no se interpreta; uno de 60 KB con la versión al final sí', async () => {
+    expect((await det({ 'go.mod': 'x\n'.repeat(MB / 2) })).r).toEqual({});
+    const justo = `${'// c\n'.repeat(10_000)}go 1.23\n`;
+    expect((await det({ 'go.mod': justo })).r).toEqual({ go: '1.23' });
+  });
+
+  it('solo se leen 20 proyectos de .NET', async () => {
+    const archivos: Record<string, string> = {};
+    for (let i = 0; i < 30; i++) {
+      archivos[`P${String(i).padStart(2, '0')}.csproj`] =
+        i === 25 ? '<Project><TargetFramework>net9.0</TargetFramework></Project>' : '<Project/>';
+    }
+    // El que pide net9.0 es el 26.º: queda fuera del tope, el proyecto sigue siendo .NET.
+    expect((await det(archivos)).r).toEqual({ dotnet: null });
+  });
+
+  it('rust-toolchain con un canal no numérico lo informa', async () => {
+    const d = await carpeta('rt');
+    await writeFile(
+      join(d, 'rust-toolchain.toml'),
+      '[toolchain]\nchannel = "nightly-2025-01-01"\n',
+    );
+    const { pedidosLenguajes } = await import('../src/runtimes/lenguajes');
+    expect((await pedidosLenguajes(d)).rust).toMatchObject({
+      version: null,
+      canal: 'nightly-2025-01-01',
+    });
+  });
+});

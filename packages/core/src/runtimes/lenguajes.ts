@@ -1,6 +1,5 @@
-import { readdir, stat } from 'node:fs/promises';
+import { open, readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { leerTexto } from '../proyectos/archivos';
 
 /** Lenguajes cuyo runtime se pide a los archivos del proyecto (Java, .NET, Go y Rust). */
 export const LENGUAJES_PROYECTO = ['java', 'dotnet', 'go', 'rust'] as const;
@@ -14,18 +13,40 @@ export interface PedidoLenguaje {
   origen: string;
   /** La versión es un mínimo (compilar para Java 17 también sirve con un JDK 21). */
   minimo: boolean;
+  /** Rust: canal que pidió el archivo y no es un número (nightly, beta, stable). */
+  canal?: string;
 }
 
-/** Tope de lectura de un archivo de proyecto: uno más grande no se interpreta. */
-const MAX_BYTES = 1024 * 1024;
+/** Tope de lectura de estos archivos: uno más grande no se interpreta. */
+const MAX_BYTES = 64 * 1024;
+/** Líneas más largas que esto no se miran (ningún archivo de proyecto real las trae). */
+const MAX_LINEA = 300;
+/** Proyectos de .NET que se leen (de los que hay en la raíz). */
+const MAX_CSPROJ = 20;
 
+/** Texto del archivo (hasta 64 KB leídos; si es más grande, null). Sin BOM. */
 async function leer(ruta: string): Promise<string | null> {
+  let fh;
   try {
-    if ((await stat(ruta)).size > MAX_BYTES) return null;
+    fh = await open(ruta, 'r');
+    const buf = Buffer.alloc(MAX_BYTES + 1);
+    const { bytesRead } = await fh.read(buf, 0, MAX_BYTES + 1, 0);
+    if (bytesRead > MAX_BYTES) return null;
+    const t = buf.subarray(0, bytesRead).toString('utf8');
+    return t.charCodeAt(0) === 0xfeff ? t.slice(1) : t;
   } catch {
     return null;
+  } finally {
+    await fh?.close().catch(() => undefined);
   }
-  return leerTexto(ruta);
+}
+
+/** Líneas recortadas y acotadas: todo el análisis va línea a línea (sin retroceso entre líneas). */
+function lineas(texto: string): string[] {
+  return texto
+    .split(/\r?\n/)
+    .filter((l) => l.length <= MAX_LINEA)
+    .map((l) => l.trim());
 }
 
 async function nombresEn(carpeta: string): Promise<string[]> {
@@ -38,27 +59,44 @@ async function nombresEn(carpeta: string): Promise<string[]> {
 
 /** "1.8" → "8" (Java 8 se escribe 1.8); "17" → "17"; "17.0.2" → "17". */
 function mayorJava(valor: string): string | null {
-  const m = /^\s*(?:1\.)?(\d{1,2})(?:[.\s]|$)/.exec(valor);
+  const m = /^(?:1\.)?(\d{1,2})(?:\.|$)/.exec(valor.trim().slice(0, 40));
   return m ? m[1]! : null;
+}
+
+/** Contenido de `<etiqueta>…</` (sin anidar), por búsqueda de texto (lineal). */
+function contenidoXml(xml: string, etiqueta: string): string | null {
+  const ini = xml.indexOf(`<${etiqueta}>`);
+  if (ini < 0) return null;
+  const desde = ini + etiqueta.length + 2;
+  const fin = xml.indexOf('</', desde);
+  return fin < 0 ? null : xml.slice(desde, Math.min(fin, desde + 40));
 }
 
 function javaDePom(xml: string): string | null {
   for (const etiqueta of ['maven.compiler.release', 'java.version', 'maven.compiler.source']) {
-    const m = new RegExp(`<${etiqueta.replace(/\./g, '\\.')}>\\s*([^<$]+?)\\s*</`).exec(xml);
-    const v = m ? mayorJava(m[1]!) : null;
+    const c = contenidoXml(xml, etiqueta);
+    const v = c ? mayorJava(c) : null;
     if (v) return v;
   }
   return null;
 }
 
 function javaDeGradle(texto: string): string | null {
-  const t = /JavaLanguageVersion\.of\(\s*["']?(\d{1,2})["']?\s*\)/.exec(texto);
-  if (t) return t[1]!;
-  const s =
-    /(?:sourceCompatibility|targetCompatibility)\s*=?\s*(?:JavaVersion\.VERSION_)?["']?(\d+(?:[._]\d+)?)/.exec(
-      texto,
-    );
-  return s ? mayorJava(s[1]!.replace('_', '.')) : null;
+  for (const l of lineas(texto)) {
+    const i = l.indexOf('JavaLanguageVersion.of(');
+    if (i >= 0) {
+      const m = /^(?:["'])?(\d{1,2})/.exec(l.slice(i + 23, i + 30));
+      if (m) return m[1]!;
+    }
+  }
+  for (const l of lineas(texto)) {
+    const m =
+      /^(?:source|target)Compatibility[ \t]*=?[ \t]*(?:JavaVersion\.VERSION_)?["']?(\d+(?:[._]\d+)?)/.exec(
+        l,
+      );
+    if (m) return mayorJava(m[1]!.replace('_', '.'));
+  }
+  return null;
 }
 
 async function pedidoJava(carpeta: string): Promise<PedidoLenguaje | null> {
@@ -67,6 +105,19 @@ async function pedidoJava(carpeta: string): Promise<PedidoLenguaje | null> {
   for (const nombre of ['build.gradle.kts', 'build.gradle']) {
     const g = await leer(path.join(carpeta, nombre));
     if (g !== null) return { version: javaDeGradle(g), origen: nombre, minimo: true };
+  }
+  return null;
+}
+
+/** `net8.0` de un `<TargetFramework(s)>` de un .csproj (solo .NET 5 o más nuevo). */
+function frameworkDe(xml: string): string | null {
+  let desde = 0;
+  for (let n = 0; n < 5; n++) {
+    const i = xml.indexOf('<TargetFramework', desde);
+    if (i < 0) return null;
+    const m = /\bnet(\d+)\.(\d+)\b/.exec(xml.slice(i, i + 200));
+    if (m && Number(m[1]) >= 5) return `${m[1]}.${m[2]}`;
+    desde = i + 1;
   }
   return null;
 }
@@ -85,10 +136,10 @@ async function pedidoDotnet(carpeta: string): Promise<PedidoLenguaje | null> {
   }
   const nombres = await nombresEn(carpeta);
   const proyectos = nombres.filter((n) => /\.(csproj|fsproj|vbproj)$/i.test(n));
-  for (const n of proyectos) {
+  for (const n of proyectos.slice(0, MAX_CSPROJ)) {
     const xml = await leer(path.join(carpeta, n));
-    const m = xml ? /<TargetFrameworks?>[^<]*?\bnet(\d+)\.(\d+)\b/.exec(xml) : null;
-    if (m && Number(m[1]) >= 5) return { version: `${m[1]}.${m[2]}`, origen: n, minimo: true };
+    const v = xml ? frameworkDe(xml) : null;
+    if (v) return { version: v, origen: n, minimo: true };
   }
   if (global !== null || proyectos.length > 0 || nombres.some((n) => /\.sln$/i.test(n))) {
     return { version: null, origen: proyectos[0] ?? 'global.json', minimo: true };
@@ -100,10 +151,14 @@ async function pedidoGo(carpeta: string): Promise<PedidoLenguaje | null> {
   const mod = await leer(path.join(carpeta, 'go.mod'));
   if (mod === null) return null;
   // `toolchain go1.22.5` fija la versión exacta; `go 1.22` es el mínimo.
-  const tc = /^\s*toolchain\s+go(\d+\.\d+(?:\.\d+)?)\s*$/m.exec(mod);
-  if (tc) return { version: tc[1]!, origen: 'go.mod', minimo: false };
-  const g = /^\s*go\s+(\d+\.\d+(?:\.\d+)?)\s*$/m.exec(mod);
-  return { version: g ? g[1]! : null, origen: 'go.mod', minimo: true };
+  let tc: string | null = null;
+  let g: string | null = null;
+  for (const l of lineas(mod)) {
+    tc ??= /^toolchain[ \t]+go(\d+\.\d+(?:\.\d+)?)$/.exec(l)?.[1] ?? null;
+    g ??= /^go[ \t]+(\d+\.\d+(?:\.\d+)?)$/.exec(l)?.[1] ?? null;
+  }
+  if (tc) return { version: tc, origen: 'go.mod', minimo: false };
+  return { version: g, origen: 'go.mod', minimo: true };
 }
 
 async function pedidoRust(carpeta: string): Promise<PedidoLenguaje | null> {
@@ -111,32 +166,36 @@ async function pedidoRust(carpeta: string): Promise<PedidoLenguaje | null> {
   const plano = toml === null ? await leer(path.join(carpeta, 'rust-toolchain')) : null;
   const origen = toml !== null ? 'rust-toolchain.toml' : 'rust-toolchain';
   let canal: string | null = null;
-  if (toml !== null) canal = /^\s*channel\s*=\s*["']([^"']+)["']/m.exec(toml)?.[1] ?? null;
-  else if (plano !== null) {
-    // Formato antiguo: el canal solo, o `channel = "..."` si ya es TOML.
+  const texto = toml ?? plano;
+  if (texto !== null) {
+    const ls = lineas(texto);
     canal =
-      /^\s*channel\s*=\s*["']([^"']+)["']/m.exec(plano)?.[1] ??
-      plano
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .find((l) => l !== '' && !l.startsWith('#')) ??
+      ls.map((l) => /^channel[ \t]*=[ \t]*["']([^"']{1,60})["']/.exec(l)?.[1]).find(Boolean) ??
       null;
-  }
-  if (toml === null && plano === null) {
+    // Formato antiguo: solo el canal en una línea.
+    if (canal === null && plano !== null) {
+      canal = ls.find((l) => l !== '' && !l.startsWith('#')) ?? null;
+    }
+  } else {
     return (await leer(path.join(carpeta, 'Cargo.toml'))) !== null
       ? { version: null, origen: 'Cargo.toml', minimo: false }
       : null;
   }
   // "stable", "beta" y "nightly" (con o sin fecha) no son una versión instalable por número.
-  const version = canal && /^\d+\.\d+(?:\.\d+)?$/.test(canal) ? canal : null;
-  return { version, origen, minimo: false };
+  const numerico = canal !== null && /^\d+\.\d+(?:\.\d+)?$/.test(canal);
+  return {
+    version: numerico ? canal : null,
+    origen,
+    minimo: false,
+    ...(canal !== null && !numerico ? { canal: canal.slice(0, 60) } : {}),
+  };
 }
 
 /**
  * Lo que piden los archivos de la carpeta para Java (`pom.xml`, `build.gradle(.kts)`), .NET
  * (`global.json`, `*.csproj`, `*.sln`), Go (`go.mod`) y Rust (`rust-toolchain(.toml)`, `Cargo.toml`).
  * Solo está la clave de los lenguajes que el proyecto usa; su `version` es null si el archivo no
- * dice cuál. Lee solo la raíz de la carpeta y archivos de hasta 1 MB.
+ * dice cuál. Lee solo la raíz de la carpeta y archivos de hasta 64 KB (y 20 proyectos de .NET).
  */
 export async function pedidosLenguajes(
   carpeta: string,
