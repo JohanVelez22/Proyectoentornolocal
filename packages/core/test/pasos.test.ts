@@ -1883,3 +1883,86 @@ describe('huella publicada de WordPress (para la confirmación de la interfaz)',
     expect(red.pedidas).toEqual([`${URL}.sha1`]);
   });
 });
+
+describe('pasos de plantilla de proyecto (D14)', () => {
+  const conPlantillas = async (
+    o: OpcionesArmado = {},
+    esquemaDe: 'mysql' | 'postgresql' = 'mysql',
+  ): Promise<{ a: Armado; copias: { id: string; destino: string }[] }> => {
+    const a = await armar(o);
+    const copias: { id: string; destino: string }[] = [];
+    a.deps.plantillas = {
+      restaurarArchivos: async (id, destino) => {
+        copias.push({ id, destino });
+        return { archivos: 3 };
+      },
+      rutaEsquema: async () => ({ ruta: join(a.base, 'esquema.sql'), motor: esquemaDe }),
+    };
+    a.registro = registrarPasosReales(new RegistroPasos(), a.deps);
+    return { a, copias };
+  };
+
+  it('restaurar-plantilla-archivos copia a la carpeta vacía del proyecto', async () => {
+    const { a, copias } = await conPlantillas();
+    const lineas = await correr(a, 'restaurar-plantilla-archivos', { plantilla: 'mi-base-a1b2c3' });
+    expect(copias).toEqual([{ id: 'mi-base-a1b2c3', destino: a.carpeta }]);
+    expect(lineas.join('\n')).toMatch(/3 archivos/);
+  });
+
+  it('no copia sobre una carpeta con archivos y rechaza un id con ..', async () => {
+    const { a, copias } = await conPlantillas();
+    await escribir(a.carpeta, 'mio.txt', 'MIO');
+    await expect(
+      correr(a, 'restaurar-plantilla-archivos', { plantilla: 'mi-base-a1b2c3' }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.carpeta_no_vacia' });
+    await rm(join(a.carpeta, 'mio.txt'));
+    await expect(
+      correr(a, 'restaurar-plantilla-archivos', { plantilla: '../../x' }),
+    ).rejects.toMatchObject({ codigo: 'plantillas.id_invalido' });
+    expect(copias).toEqual([]);
+  });
+
+  it('restaurar-esquema-plantilla restaura en la base nueva sin confirmar sobrescritura', async () => {
+    const { a } = await conPlantillas();
+    await correr(a, 'restaurar-esquema-plantilla', {
+      plantilla: 'mi-base-a1b2c3',
+      motor: 'mysql',
+      base: 'tienda',
+    });
+    expect(a.restauradas).toEqual([
+      {
+        motor: 'mysql',
+        archivo: join(a.base, 'esquema.sql'),
+        base: 'tienda',
+        opts: { confirmarSobrescribir: false },
+      },
+    ]);
+  });
+
+  it('nunca restaura el esquema sobre una base con tablas ni en otro motor', async () => {
+    const { a } = await conPlantillas({ tablas: true });
+    await expect(
+      correr(a, 'restaurar-esquema-plantilla', {
+        plantilla: 'mi-base-a1b2c3',
+        motor: 'mysql',
+        base: 'tienda',
+      }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.base_existe' });
+    const otro = await conPlantillas({}, 'postgresql');
+    await expect(
+      correr(otro.a, 'restaurar-esquema-plantilla', {
+        plantilla: 'mi-base-a1b2c3',
+        motor: 'mysql',
+        base: 'tienda',
+      }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.argumento_invalido' });
+    expect(a.restauradas).toEqual([]);
+    expect(otro.a.restauradas).toEqual([]);
+  });
+
+  it('un wolfcore.yml no puede traer estos pasos', async () => {
+    const { PASOS_SOLO_GENERADOR } = await import('../src/proyectos/config');
+    expect(PASOS_SOLO_GENERADOR).toContain('restaurar-plantilla-archivos');
+    expect(PASOS_SOLO_GENERADOR).toContain('restaurar-esquema-plantilla');
+  });
+});

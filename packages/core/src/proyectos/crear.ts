@@ -7,7 +7,16 @@ import type { Rutas } from '../rutas';
 import { TIPOS_CON_PHP, type Sitio } from '../tipos';
 import type { PasoReceta } from './config';
 import { phpPorDefecto } from './detectar';
-import { generador, TIPOS_GENERADOR, type PedidoProyecto, type TipoGenerador } from './generadores';
+import {
+  generador,
+  generadorDePlantilla,
+  pasosOmitidosDePlantilla,
+  TIPOS_GENERADOR,
+  type Generador,
+  type PedidoProyecto,
+  type TipoGenerador,
+} from './generadores';
+import { validarIdPlantilla, type Plantilla } from './plantillas';
 import { motorDelPedido, VERSION_WORDPRESS } from './generadores/comun';
 import { mismaBase } from './pasos/bd';
 import type { ResultadoReceta } from './recetas';
@@ -58,6 +67,15 @@ export interface DepsCrearProyecto {
   iniciarProcesos?: (sitioId: string) => Promise<void>;
   /** Vuelve a tomar la huella de la receta con lo que dejó la creación (no es fatal si falla). */
   confiar: (sitioId: string) => Promise<unknown>;
+  /** Plantillas propias (D14): `cargar` valida el id y la plantilla; lanza con código si falla. */
+  plantillas?: { cargar: (id: string) => Promise<Plantilla> };
+  /** Aplica a un sitio recién creado los ajustes de la plantilla (php.ini y reglas de Nginx). */
+  aplicarAjustes?: (
+    sitioId: string,
+    ajustes: { phpIni: Record<string, string>; reglasNginx: string | null },
+  ) => Promise<string[]>;
+  /** Extensiones de PHP activas en una rama (para avisar de las que pide la plantilla). */
+  extensionesActivas?: (rama: string) => Promise<string[]>;
 }
 
 /** `campo` es un nombre corto y legible en cualquier idioma: tipo, php, python, base, opciones. */
@@ -68,7 +86,7 @@ const STARTER_KITS = ['ninguno', 'react', 'vue', 'livewire'];
 const VERSION_WP = /^\d{1,2}\.\d{1,2}(\.\d{1,2})?$/;
 
 /** Opciones contra listas cerradas: lo que no se reconoce se rechaza, no se ignora. */
-function validarOpciones(p: PedidoProyecto): void {
+function validarOpciones(p: PedidoProyecto, conPlantilla = false): void {
   const o: unknown = p.opciones ?? {};
   if (typeof o !== 'object' || o === null || Array.isArray(o)) {
     throw invalido('opciones', 'Las opciones del proyecto no son válidas.');
@@ -101,7 +119,12 @@ function validarOpciones(p: PedidoProyecto): void {
   ) {
     throw invalido('opciones', 'La versión de WordPress no es válida.');
   }
-  if (p.tipo !== 'laravel' && x.starterKit !== undefined && x.starterKit !== 'ninguno') {
+  if (conPlantilla) {
+    // Desde una plantilla solo cuenta pgvector: lo demás ya lo decidió la plantilla.
+    for (const k of ['starterKit', 'symfonyWebapp', 'versionWordpress', 'confirmarHuellaDebil']) {
+      if (x[k] !== undefined) throw invalido('opciones', 'Esa opción no aplica a una plantilla.');
+    }
+  } else if (p.tipo !== 'laravel' && x.starterKit !== undefined && x.starterKit !== 'ninguno') {
     throw invalido('opciones', 'Los starter kits son solo de Laravel.');
   }
 }
@@ -200,15 +223,30 @@ export async function crearProyecto(
   d: DepsCrearProyecto,
   p: PedidoProyecto,
 ): Promise<ResultadoCrearProyecto> {
-  if (!(TIPOS_GENERADOR as readonly string[]).includes(p?.tipo)) {
+  let plantilla: Plantilla | null = null;
+  if (p?.plantilla !== undefined) {
+    // El id sale de una lista que el núcleo mismo armó; igual se valida y se lee la plantilla
+    // entera (con su esquema de datos) antes de crear nada.
+    const id = validarIdPlantilla(p.plantilla);
+    if (!d.plantillas) {
+      throw new ErrorWolf(
+        'plantillas.no_existe',
+        'Las plantillas de proyecto no están disponibles.',
+      );
+    }
+    plantilla = await d.plantillas.cargar(id);
+  } else if (!(TIPOS_GENERADOR as readonly string[]).includes(p?.tipo)) {
     throw invalido('tipo', 'El tipo de proyecto no existe.');
   }
   const nombre = validarNombreProyecto(p.nombre);
-  validarOpciones(p);
-  const gen = generador(p.tipo as TipoGenerador);
+  validarOpciones(p, plantilla !== null);
+  const gen: Generador = plantilla
+    ? generadorDePlantilla(plantilla)
+    : generador(p.tipo as TipoGenerador);
   const dominio = gen.dominio(nombre);
-  // WordPress solo publica SHA-1 (débil): sin la confirmación no se crea nada.
-  if (p.tipo === 'wordpress' && p.opciones?.confirmarHuellaDebil !== true) {
+  // WordPress solo publica SHA-1 (débil): sin la confirmación no se crea nada. (Desde una
+  // plantilla no se descarga nada: sus archivos ya están en el equipo.)
+  if (!plantilla && p.tipo === 'wordpress' && p.opciones?.confirmarHuellaDebil !== true) {
     throw new ErrorWolf(
       'catalogo.huella_debil',
       'WordPress solo publica una huella SHA-1 (débil): hay que confirmar la descarga',
@@ -238,7 +276,9 @@ export async function crearProyecto(
     const instaladas = await d.phpInstaladas();
     if (p.php !== undefined && !RAMA.test(p.php))
       throw invalido('php', 'La versión de PHP no es válida.');
-    php = p.php ?? phpPorDefecto(gen.tipoSitio, null, instaladas) ?? undefined;
+    // Sin versión pedida: la de la plantilla si sigue instalada, o la 8.x más nueva.
+    const dePlantilla = plantilla?.php && instaladas.includes(plantilla.php) ? plantilla.php : null;
+    php = p.php ?? dePlantilla ?? phpPorDefecto(gen.tipoSitio, null, instaladas) ?? undefined;
     if (!php) {
       throw new ErrorWolf('proyectos.sin_php', 'No hay PHP instalado. Instálelo desde Servicios.');
     }
@@ -252,7 +292,7 @@ export async function crearProyecto(
   }
   // Python solo cuenta en FastAPI y debe estar instalado (el venv lo necesita).
   let python: string | undefined;
-  if (p.tipo === 'fastapi') {
+  if (gen.tipoSitio === 'fastapi') {
     if (p.python !== undefined && !RAMA.test(p.python)) {
       throw invalido('python', 'La versión de Python no es válida.');
     }
@@ -309,11 +349,18 @@ export async function crearProyecto(
     } else if (!/^[A-Za-z0-9_-]{1,63}$/.test(p.base.nombre)) {
       throw invalido('base', 'El nombre de la base no es válido.');
     }
-    if (p.tipo === 'wordpress' && motor !== 'mysql' && motor !== 'mariadb') {
+    if (gen.tipoSitio === 'wordpress' && motor !== 'mysql' && motor !== 'mariadb') {
       throw invalido('base', 'WordPress necesita MySQL o MariaDB.');
     }
     if (p.opciones?.pgvector && motor !== 'postgresql') {
       throw invalido('base', 'pgvector necesita PostgreSQL.');
+    }
+    // El esquema de una plantilla solo entra en un motor de su familia.
+    if (
+      plantilla?.archivoEsquema &&
+      (plantilla.motorBase === 'postgresql') !== (motor === 'postgresql')
+    ) {
+      throw invalido('base', 'El esquema de la plantilla es de otro motor de base de datos.');
     }
     const objetivo: ObjetivoBd = p.base.instancia ?? motor;
     motorDe(objetivo);
@@ -358,7 +405,7 @@ export async function crearProyecto(
       confiado: true,
       git: null,
       procesos: [],
-      runtimes: python ? { python } : {},
+      runtimes: { ...(plantilla?.runtimes ?? {}), ...(python ? { python } : {}) },
     };
     sitio = (await d.crearSitio(datos, receta)).sitio;
   } catch (e) {
@@ -379,7 +426,46 @@ export async function crearProyecto(
   if (resultado.estado === 'lista') await d.confiar(sitio.id).catch(() => undefined);
 
   const avisos: string[] = [];
-  if (resultado.estado === 'lista' && p.tipo === 'fastapi' && d.iniciarProcesos) {
+  if (plantilla) {
+    // Una plantilla no vuelve a correr comandos propios: se dice cuáles se dejaron fuera.
+    const omitidos = pasosOmitidosDePlantilla(plantilla);
+    if (omitidos.length > 0) {
+      avisos.push(
+        `Se omitieron ${omitidos.length} pasos de la plantilla que no se repiten solos: ${omitidos
+          .map((x) => x.tipo)
+          .join(', ')}.`,
+      );
+    }
+    if (resultado.estado === 'lista') {
+      if (php && plantilla.extensiones.length > 0 && d.extensionesActivas) {
+        try {
+          const activas = new Set(await d.extensionesActivas(php));
+          const faltan = plantilla.extensiones.filter((x) => !activas.has(x));
+          if (faltan.length > 0) {
+            avisos.push(
+              `Extensiones de PHP de la plantilla que no están activas: ${faltan.join(', ')}.`,
+            );
+          }
+        } catch {
+          // Solo es un aviso.
+        }
+      }
+      const hayAjustes = Object.keys(plantilla.phpIni).length > 0 || plantilla.reglasNginx !== null;
+      if (hayAjustes && d.aplicarAjustes) {
+        try {
+          avisos.push(
+            ...(await d.aplicarAjustes(sitio.id, {
+              phpIni: plantilla.phpIni,
+              reglasNginx: plantilla.reglasNginx,
+            })),
+          );
+        } catch (e) {
+          avisos.push(e instanceof Error ? e.message : String(e));
+        }
+      }
+    }
+  }
+  if (resultado.estado === 'lista' && gen.tipoSitio === 'fastapi' && d.iniciarProcesos) {
     try {
       await d.iniciarProcesos(sitio.id);
     } catch (e) {

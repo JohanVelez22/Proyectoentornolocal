@@ -42,6 +42,11 @@ export interface ResultadoRestaurar {
   respaldoPrevio?: string;
 }
 
+export interface OpcionesRespaldar {
+  /** Solo la estructura (CREATE TABLE…), sin ninguna fila: lo que guarda una plantilla. */
+  soloEsquema?: boolean;
+}
+
 export interface OrigenImportar {
   host: string;
   puerto: number;
@@ -1471,6 +1476,7 @@ export class Respaldos {
     origen: { host: string; puerto: number; usuario: string; clave: string; base: string },
     destino: string,
     claves: string[],
+    soloEsquema = false,
   ): Promise<Salida> {
     const { exe } = await this.herramienta(motor, 'volcado');
     let args: string[];
@@ -1480,6 +1486,8 @@ export class Respaldos {
       args = [
         '-Fc',
         '--verbose',
+        // Solo estructura: ni una fila (plantillas de proyecto).
+        ...(soloEsquema ? ['--schema-only'] : []),
         '--no-password',
         '-h',
         origen.host,
@@ -1503,6 +1511,8 @@ export class Respaldos {
         '--triggers',
         '--no-tablespaces',
         '--default-character-set=utf8mb4',
+        // Solo estructura: ni una fila (plantillas de proyecto).
+        ...(soloEsquema ? ['--no-data'] : []),
         ...(motor === 'mysql' ? ['--set-gtid-purged=OFF'] : []),
         '--verbose',
         `--result-file=${destino}`,
@@ -1531,12 +1541,13 @@ export class Respaldos {
     objetivo: ObjetivoBd,
     base: string,
     carpetaDestino?: string,
+    opciones: OpcionesRespaldar = {},
   ): Promise<{ archivo: string }> {
     const { r, motor } = await this.para(objetivo);
     const m = motorSql(motor, 'Respaldar');
     if (m === 'postgresql') validarNombrePg(base);
     else validarNombreBd(base);
-    return r.respaldarComo(m, base, carpetaDestino, base);
+    return r.respaldarComo(m, base, carpetaDestino, base, opciones.soloEsquema === true);
   }
 
   /** Respalda `base` en `<carpeta>\<prefijo>-<AAAAMMDD-HHmm>.dump|.sql`. */
@@ -1545,6 +1556,7 @@ export class Respaldos {
     base: string,
     carpetaDestino: string | undefined,
     prefijo: string,
+    soloEsquema = false,
   ): Promise<{ archivo: string }> {
     const con = await this.d.bd.conexion(m);
     const carpeta = carpetaDestino ? path.resolve(carpetaDestino) : await this.carpetaRespaldos();
@@ -1565,6 +1577,7 @@ export class Respaldos {
         { host: con.host, puerto: con.puerto, usuario: con.usuario, clave, base },
         parcial,
         [clave],
+        soloEsquema,
       );
       await rename(parcial, final);
     } catch (e) {

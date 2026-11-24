@@ -197,6 +197,18 @@ export const en: Textos = {
       'proyectos.paso_no_omitible': 'The "Create the site" step cannot be skipped.',
       'proyectos.carpeta_no_vacia':
         'The project folder already has files: choose another one or empty it.',
+      'plantillas.id_invalido': 'The template identifier is not valid.',
+      'plantillas.no_existe': 'The template does not exist.',
+      'plantillas.danada':
+        'The template is damaged or was modified: it will not be used. Delete it and save it again.',
+      'plantillas.demasiado_grande':
+        'The project has too many files or is too large to save as a template (up to {maximo} files). Exclude large folders.',
+      'plantillas.exclusion_invalida':
+        'One of the exclusions is not valid (use relative names or paths, without "..").',
+      'plantillas.nombre_invalido': 'The template name is not valid (1 to 60 characters).',
+      'plantillas.esquema_fallo':
+        'The project database schema could not be read: check that its service is running.',
+      'plantillas.sin_esquema': 'The template has no database schema.',
       'proyectos.carpeta_invalida': 'The project folder is not valid.',
       'proyectos.nombre_invalido':
         'The project name can only have lowercase letters, numbers and hyphens (up to 40).',

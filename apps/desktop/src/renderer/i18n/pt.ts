@@ -206,6 +206,18 @@ export const pt: Textos = {
       'proyectos.paso_no_omitible': 'A etapa "Criar o site" não pode ser pulada.',
       'proyectos.carpeta_no_vacia':
         'A pasta do projeto já tem arquivos: escolha outra ou esvazie-a.',
+      'plantillas.id_invalido': 'O identificador do modelo não é válido.',
+      'plantillas.no_existe': 'O modelo não existe.',
+      'plantillas.danada':
+        'O modelo está danificado ou foi modificado: não será usado. Apague-o e salve-o de novo.',
+      'plantillas.demasiado_grande':
+        'O projeto tem arquivos demais ou é grande demais para salvar como modelo (até {maximo} arquivos). Exclua pastas grandes.',
+      'plantillas.exclusion_invalida':
+        'Uma das exclusões não é válida (use nomes ou caminhos relativos, sem "..").',
+      'plantillas.nombre_invalido': 'O nome do modelo não é válido (de 1 a 60 caracteres).',
+      'plantillas.esquema_fallo':
+        'Não foi possível ler o esquema do banco do projeto: verifique se o serviço está ligado.',
+      'plantillas.sin_esquema': 'O modelo não traz o esquema de um banco de dados.',
       'proyectos.carpeta_invalida': 'A pasta do projeto não é válida.',
       'proyectos.nombre_invalido':
         'O nome do projeto só pode ter letras minúsculas, números e hifens (até 40).',

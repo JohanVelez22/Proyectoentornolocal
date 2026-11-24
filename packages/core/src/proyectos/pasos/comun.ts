@@ -10,6 +10,7 @@ import type { Sitio } from '../../tipos';
 import { existe } from '../archivos';
 import { motorBdDe, MOTORES_BD } from '../config';
 import { detectarProyecto, type Deteccion } from '../detectar';
+import type { Plantillas } from '../plantillas';
 import type { ContextoPaso } from '../pasos';
 import { sanear } from '../recetas';
 import { nombreEjecutable } from '../../plataforma/sistema';
@@ -32,11 +33,13 @@ export interface DepsPasos {
   bd: Pick<BasesDeDatos, 'conexion' | 'listar' | 'crear' | 'tieneTablas' | 'activarVector'>;
   /** `Respaldos.restaurar`. */
   restaurar: (
-    motor: MotorBd,
+    motor: ObjetivoBd,
     archivo: string,
     base: string,
     opts?: OpcionesRestaurar,
   ) => Promise<ResultadoRestaurar>;
+  /** Plantillas de proyecto (D14): sus archivos y su esquema, ya comprobados contra su huella. */
+  plantillas?: Pick<Plantillas, 'restaurarArchivos' | 'rutaEsquema'>;
   /** Puerto SMTP de Mailpit si está instalado; null si no. */
   mailpit: () => Promise<{ puerto: number } | null>;
   /** `Nucleo.guardarSitio` (edita el sitio `id` y aplica). */

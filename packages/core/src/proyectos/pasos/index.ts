@@ -12,6 +12,7 @@ import { pasoEnvCrear } from './env';
 import { pasoKeyGenerate, pasoMigrar, pasoStorageLink } from './laravel';
 import { pasoNpmBuild, pasoNpmCi } from './node';
 import { pasoPipInstall, pasoPythonVenv } from './python';
+import { pasoRestaurarEsquemaPlantilla, pasoRestaurarPlantillaArchivos } from './plantillas';
 import { pasoSitioCrear } from './sitio';
 
 export type { DepsPasos } from './comun';
@@ -38,6 +39,8 @@ const FABRICAS: Record<TipoPaso, (d: DepsPasos) => ImplementacionPaso> = {
   'descargar-plantilla': pasoDescargarPlantilla,
   'copiar-plantilla-interna': pasoCopiarPlantillaInterna,
   'config-bd-crear': pasoConfigBdCrear,
+  'restaurar-plantilla-archivos': pasoRestaurarPlantillaArchivos,
+  'restaurar-esquema-plantilla': pasoRestaurarEsquemaPlantilla,
 };
 
 /** Registra las implementaciones reales de todos los tipos de paso y devuelve el registro. */

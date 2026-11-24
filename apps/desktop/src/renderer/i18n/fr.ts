@@ -208,6 +208,18 @@ export const fr: Textos = {
       'proyectos.paso_no_omitible': 'L’étape "Créer le site" ne peut pas être ignorée.',
       'proyectos.carpeta_no_vacia':
         'Le dossier du projet contient déjà des fichiers : choisissez-en un autre ou videz-le.',
+      'plantillas.id_invalido': "L'identifiant du modèle n'est pas valide.",
+      'plantillas.no_existe': "Le modèle n'existe pas.",
+      'plantillas.danada':
+        'Le modèle est endommagé ou a été modifié : il ne sera pas utilisé. Supprimez-le et enregistrez-le à nouveau.',
+      'plantillas.demasiado_grande':
+        "Le projet contient trop de fichiers ou est trop volumineux pour être enregistré comme modèle (jusqu'à {maximo} fichiers). Excluez les gros dossiers.",
+      'plantillas.exclusion_invalida':
+        "Une des exclusions n'est pas valide (utilisez des noms ou des chemins relatifs, sans « .. »).",
+      'plantillas.nombre_invalido': "Le nom du modèle n'est pas valide (de 1 à 60 caractères).",
+      'plantillas.esquema_fallo':
+        'Impossible de lire le schéma de la base du projet : vérifiez que son service est démarré.',
+      'plantillas.sin_esquema': "Le modèle ne contient pas le schéma d'une base de données.",
       'proyectos.carpeta_invalida': 'Le dossier du projet n’est pas valide.',
       'proyectos.nombre_invalido':
         'Le nom du projet ne peut contenir que des minuscules, des chiffres et des tirets (40 au maximum).',

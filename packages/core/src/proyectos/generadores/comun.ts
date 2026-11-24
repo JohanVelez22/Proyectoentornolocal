@@ -19,6 +19,11 @@ export interface PedidoProyecto {
   nombre: string;
   /** Carpeta del proyecto nuevo (la elige el usuario en un diálogo y termina en el nombre). */
   carpeta: string;
+  /**
+   * Id de una plantilla propia (D14): el proyecto se crea desde ella en vez de desde un generador
+   * (`tipo` se ignora: manda el de la plantilla).
+   */
+  plantilla?: string;
   php?: string;
   python?: string;
   /** Instancia (o, sin ella, el motor predeterminado) y nombre de la base; null = sin base. */

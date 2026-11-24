@@ -201,6 +201,19 @@ export const es = {
       'proyectos.paso_no_omitible': 'El paso "Crear el sitio" no se puede omitir.',
       'proyectos.carpeta_no_vacia':
         'La carpeta del proyecto ya tiene archivos: elija otra o vacíela.',
+      'plantillas.id_invalido': 'El identificador de la plantilla no es válido.',
+      'plantillas.no_existe': 'La plantilla no existe.',
+      'plantillas.danada':
+        'La plantilla está dañada o fue modificada: no se usa. Bórrela y guárdela de nuevo.',
+      'plantillas.demasiado_grande':
+        'El proyecto tiene demasiados archivos o pesa demasiado para guardarlo como plantilla (hasta {maximo} archivos). Excluya carpetas grandes.',
+      'plantillas.exclusion_invalida':
+        'Una de las exclusiones no es válida (use nombres o rutas relativas, sin "..").',
+      'plantillas.nombre_invalido':
+        'El nombre de la plantilla no es válido (de 1 a 60 caracteres).',
+      'plantillas.esquema_fallo':
+        'No se pudo leer el esquema de la base del proyecto: compruebe que su servicio esté encendido.',
+      'plantillas.sin_esquema': 'La plantilla no trae el esquema de una base de datos.',
       'proyectos.carpeta_invalida': 'La carpeta del proyecto no es válida.',
       'proyectos.nombre_invalido':
         'El nombre del proyecto solo puede llevar minúsculas, números y guiones (hasta 40).',

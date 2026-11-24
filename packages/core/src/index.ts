@@ -96,6 +96,7 @@ export * from './runtimes/runtimes';
 export * from './proyectos/config';
 export * from './proyectos/crear';
 export * from './proyectos/generadores';
+export * from './proyectos/plantillas';
 export * from './proyectos/detectar';
 export * from './proyectos/pasos';
 export * from './proyectos/pasos/index';

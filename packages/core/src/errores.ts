@@ -102,6 +102,15 @@ export const PARAMETROS_ERROR = {
   'proyectos.paso_no_omitible': [],
   // proyectos nuevos (D12)
   'proyectos.carpeta_no_vacia': [],
+  // plantillas de proyecto (D14)
+  'plantillas.id_invalido': [],
+  'plantillas.no_existe': [],
+  'plantillas.danada': [],
+  'plantillas.demasiado_grande': ['maximo'],
+  'plantillas.exclusion_invalida': [],
+  'plantillas.nombre_invalido': [],
+  'plantillas.esquema_fallo': [],
+  'plantillas.sin_esquema': [],
   'proyectos.carpeta_invalida': [],
   'proyectos.nombre_invalido': ['campo'],
   'proyectos.argumento_invalido': ['campo'],

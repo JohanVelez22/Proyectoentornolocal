@@ -173,6 +173,7 @@ import { VERSION_WORDPRESS, type PedidoProyecto } from './proyectos/generadores'
 import { RegistroPasos } from './proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
 import { leerHuellaWordpress } from './proyectos/pasos/descargarPlantilla';
+import { Plantillas } from './proyectos/plantillas';
 import { asignarPuertoProxy, datosAlCrear } from './proyectos/pasos/sitio';
 import {
   EjecutorRecetas,
@@ -340,6 +341,8 @@ interface ModulosNucleo {
   catalogoVivo: CatalogoVivo;
   /** Dependencias de los pasos de receta (puerto libre…), también para crear proyectos. */
   depsPasos?: DepsPasos;
+  /** Plantillas de proyecto: receta, ajustes y esquema sin datos (D14). */
+  plantillas: Plantillas;
 }
 
 /** Puerto HTTPS: el estándar 443 o uno de usuario (1024–65535). */
@@ -535,6 +538,8 @@ export class Nucleo {
    */
   private proveedorTokenGithub: () => string | null | Promise<string | null> = () => null;
   private readonly depsPasos: DepsPasos | undefined;
+  /** Plantillas de proyecto: guardar, listar, borrar y crear proyectos desde ellas. */
+  readonly plantillas: Plantillas;
 
   private constructor(
     readonly rutas: Rutas,
@@ -608,6 +613,7 @@ export class Nucleo {
     this.poolsSitio = m.poolsSitio;
     this.ajustesPhpSitio = m.ajustesPhpSitio;
     this.depsPasos = m.depsPasos;
+    this.plantillas = m.plantillas;
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
       operaciones: this.operacionesMcp(),
@@ -1018,7 +1024,21 @@ export class Nucleo {
       },
       emitir: (lista) => eventos.emit('sitio:cambio', lista),
     });
+    const plantillas = new Plantillas({
+      rutas,
+      sitio: async (id) => {
+        const s = (await sitios.listar()).find((x) => x.id === id);
+        if (!s) throw new ErrorWolf('proyectos.no_existe', 'El proyecto no existe.');
+        return s;
+      },
+      receta: async (s) => recetaEfectiva(s.carpeta, await detectarProyectoB(s.carpeta)),
+      respaldar: (motor, base, carpeta, opciones) =>
+        respaldosRef.respaldar(motor, base, carpeta, opciones),
+      extensionesActivas: async (rama) =>
+        (await extensionesPhp.listar(rama)).filter((e) => e.activa).map((e) => e.nombre),
+    });
     const modulos: ModulosNucleo = {
+      plantillas,
       editorVhost,
       iniPhp,
       poolsSitio: pools,
@@ -1211,6 +1231,7 @@ export class Nucleo {
       bd,
       restaurar: (motor, archivo, base, opts) =>
         modulos.respaldos.restaurar(motor, archivo, base, opts),
+      plantillas,
       mailpit: async () => {
         if ((await instalador.instalados('mailpit')).length === 0) return null;
         return { puerto: (await leerConfig()).servicios.datos.mailpit.puerto };
@@ -2749,6 +2770,21 @@ export class Nucleo {
           }
         },
         confiar: (id) => this.confiarReceta(id),
+        plantillas: this.plantillas,
+        extensionesActivas: async (rama) =>
+          (await this.extensionesPhp.listar(rama)).filter((e) => e.activa).map((e) => e.nombre),
+        aplicarAjustes: async (id, a) => {
+          const avisos: string[] = [];
+          if (Object.keys(a.phpIni).length > 0) {
+            // Si el ini no pasa la prueba lanza: crearProyecto lo informa como aviso.
+            await this.guardarPhpIniSitio(id, a.phpIni);
+          }
+          if (a.reglasNginx !== null) {
+            const r = await this.editorVhost.aplicar(id, { reglas: a.reglasNginx });
+            if (!r.ok) avisos.push('Nginx rechazó las reglas de la plantilla: no se aplicaron.');
+          }
+          return avisos;
+        },
       },
       p,
     );

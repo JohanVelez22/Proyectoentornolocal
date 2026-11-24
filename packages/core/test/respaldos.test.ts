@@ -1252,6 +1252,32 @@ describe('respaldar', () => {
     sinClaves(l);
   });
 
+  it('soloEsquema: mysqldump --no-data y pg_dump --schema-only; sin la opción nunca', async () => {
+    // El volcado falso solo trae filas (la centinela) si no se le pidió solo estructura.
+    respuestaLanzar = (l) => {
+      const soloEstructura = l.args.includes('--no-data') || l.args.includes('--schema-only');
+      const f = l.args.indexOf('-f');
+      const r = l.args.find((a) => a.startsWith('--result-file='));
+      const destino = f >= 0 ? l.args[f + 1]! : r!.slice('--result-file='.length);
+      writeFileSync(
+        destino,
+        'CREATE TABLE t (id int);' +
+          (soloEstructura ? '' : " INSERT INTO t VALUES ('centinela-fila-d');"),
+      );
+      return { codigo: 0 };
+    };
+    const carpeta = path.join(dir, 'esquemas');
+    const e1 = await armar().respaldar('mysql', 'tienda', carpeta, { soloEsquema: true });
+    expect(lanzados[0]!.args).toContain('--no-data');
+    expect(readFileSync(e1.archivo, 'utf8')).not.toContain('centinela-fila-d');
+    const e2 = await armar().respaldar('postgresql', 'diamantes', carpeta, { soloEsquema: true });
+    expect(lanzados[1]!.args).toContain('--schema-only');
+    expect(readFileSync(e2.archivo, 'utf8')).not.toContain('centinela-fila-d');
+    const completo = await armar().respaldar('mysql', 'tienda', path.join(dir, 'completo'));
+    expect(lanzados[2]!.args).not.toContain('--no-data');
+    expect(readFileSync(completo.archivo, 'utf8')).toContain('centinela-fila-d');
+  });
+
   it('una instancia (mysql@8.0) se respalda con su conexión y con sus propios binarios', async () => {
     for (const n of ['mysql.exe', 'mysqldump.exe']) {
       const p = path.join(rutas.base, 'bin', 'mysql', '8.0.44', 'bin', n);

@@ -99,6 +99,10 @@ export class Rutas {
   tmp(): string {
     return path.join(this.base, 'tmp');
   }
+  /** Plantillas de proyecto: plantillas/<id>/ (receta, esquema sin datos y archivos). */
+  plantillas(): string {
+    return path.join(this.base, 'plantillas');
+  }
 
   /**
    * Borra de tmp/ lo que dejó una ejecución anterior interrumpida (cierre forzado, apagón):
