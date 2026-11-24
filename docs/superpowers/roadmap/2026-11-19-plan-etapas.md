@@ -17,19 +17,19 @@ WolfCore Dev: **Tiene** = hecho (MVP, A o B) · **Etapa X** = planificado · **N
 
 | Función | ServBay | FlyEnv | Flock | EnvKit | Laragon | Herd | Lerd | DBngin | Local | MAMP | **WolfCore Dev** |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Varias versiones de PHP, por sitio (13) | Sí\* | Sí | Sí | Sí | Sí\* | Sí | Sí | n/a | Sí\* | Sí\* | **Tiene** (pool php-cgi por rama); ini por sitio: **Etapa C** |
+| Varias versiones de PHP, por sitio (13) | Sí\* | Sí | Sí | Sí | Sí\* | Sí | Sí | n/a | Sí\* | Sí\* | **Tiene** (pool php-cgi por rama); ini por sitio: **Tiene** (C) |
 | Nginx | ? | Sí | ? | Sí | Sí\* | Sí | Sí | n/a | Sí\* | Sí\* | **Tiene** |
 | Apache / Caddy alternativos (14) | ? | Sí | ? | Sí | Sí\* | ? | ? | n/a | Sí\* | Sí\* | **Etapa F** |
 | FrankenPHP / Octane (12) | ? | ? | ? | Sí | ? | ? | Sí | n/a | ? | ? | **Etapa F** |
 | `.test` con HTTPS de CA propia | Sí\* | Sí | Sí | Sí | Sí\* | Sí | Sí | n/a | Sí\* | Pro\* | **Tiene** |
 | DNS propio / comodín `*.proyecto.test` (45) | Sí\* | Sí | ? | Sí | ? | Sí | ? | n/a | ? | Pro\* | **Etapa F** |
-| CA confiable en Node/Python/Firefox (44) | ? | ? | ? | ? | ? | ? | ? | n/a | ? | ? | **Etapa C** (hoy Firefox es manual) |
-| Xdebug por sitio con interruptor (5) | ? | ? | ? | Sí | ? | Pro | ? | n/a | Sí\* | ? | **Etapa C** |
-| Editor de `php.ini` por versión (9) | Sí\* | Sí\* | ? | Sí | Sí\* | ? | ? | n/a | ? | Pro\* | **Etapa C** |
-| Gestor de extensiones PHP (10) | Sí\* | Sí\* | ? | Sí | Sí\* | ? | ? | n/a | ? | Sí\* | **Etapa C** |
-| Editor Nginx por sitio con `nginx -t` y vuelta atrás (11) | Sí\* | Sí\* | ? | ? | ? | ? | ? | n/a | ? | Pro\* | **Etapa C** (hoy `nginx -t` interno y tipo "personalizado") |
-| Captura de `dump()`/`dd()` (3) | ? | ? | Sí | Sí | ? | Pro | ? | n/a | ? | ? | **Etapa C** (+ Python y CI3) |
-| Visor de errores PHP (7) | ? | ? | Sí | Sí | ? | ? | ? | n/a | ? | ? | **Etapa C** |
+| CA confiable en Node/Python/Firefox (44) | ? | ? | ? | ? | ? | ? | ? | n/a | ? | ? | **Tiene** (C) |
+| Xdebug por sitio con interruptor (5) | ? | ? | ? | Sí | ? | Pro | ? | n/a | Sí\* | ? | **Tiene** (C) |
+| Editor de `php.ini` por versión (9) | Sí\* | Sí\* | ? | Sí | Sí\* | ? | ? | n/a | ? | Pro\* | **Tiene** (C) |
+| Gestor de extensiones PHP (10) | Sí\* | Sí\* | ? | Sí | Sí\* | ? | ? | n/a | ? | Sí\* | **Tiene** (C) |
+| Editor Nginx por sitio con `nginx -t` y vuelta atrás (11) | Sí\* | Sí\* | ? | ? | ? | ? | ? | n/a | ? | Pro\* | **Tiene** (C) |
+| Captura de `dump()`/`dd()` (3) | ? | ? | Sí | Sí | ? | Pro | ? | n/a | ? | ? | **Tiene** (C, con Python y CI3) |
+| Visor de errores PHP (7) | ? | ? | Sí | Sí | ? | ? | ? | n/a | ? | ? | **Tiene** (C) |
 | Visor de registros unificado (2) | Sí | ? | Sí | Sí | ? | Pro | ? | n/a | Sí\* | ? | **Tiene** (B) |
 | Panel de recursos por servicio (1) | Sí (global) | ? | ? | ? | ? | ? | ? | n/a | ? | ? | **Tiene** (B, por servicio y proceso) |
 | Inspector de SQL, jobs y HTTP (4) | ? | ? | ? | Sí | ? | Pro\* | ? | n/a | ? | ? | **Etapa F** |
@@ -64,7 +64,7 @@ WolfCore Dev: **Tiene** = hecho (MVP, A o B) · **Etapa X** = planificado · **N
 | Respaldo y perfiles del entorno completo (23) | Sí\* | ? | ? | ? | ? | ? | ? | Sí\* (instancias) | Sí\* (ZIP) | Pro\* | **Etapa D** |
 | Workspaces de arranque (24) | ? | ? | ? | ? | Sí\* | ? | ? | n/a | ? | ? | **Etapa D** |
 | Snapshots de BD con un clic (26) | ? | ? | ? | ? | ? | ? | ? | Sí\* | ? | ? | **Etapa D** |
-| Instancias paralelas de un servicio (25) | Sí\* | ? | ? | ? | ? | ? | ? | Sí\* | ? | ? | **Etapa C** (adelantado de F a pedido del usuario) |
+| Instancias paralelas de un servicio (25) | Sí\* | ? | ? | ? | ? | ? | ? | Sí\* | ? | ? | **Tiene** (C) |
 | Meilisearch, MinIO, RabbitMQ, Reverb… (28) | Sí\* | Sí | ? | Sí | ? | Pro | ? | n/a | ? | ? | **Etapa F** |
 | Contenedores Podman/Docker (46) | ? | No | No | ? | ? | ? | Sí | n/a | ? | ? | **Etapa F** |
 
@@ -84,20 +84,20 @@ WolfCore Dev: **Tiene** = hecho (MVP, A o B) · **Etapa X** = planificado · **N
 | Función | ServBay | FlyEnv | Flock | EnvKit | Laragon | Herd | Lerd | DBngin | Local | MAMP | **WolfCore Dev** |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | IA local (Ollama) integrada | ? | Sí\* ("AI") | ? | ? | ? | ? | ? | n/a | ? | ? | **Tiene** |
-| Proveedores en la nube (Gemini, OpenAI, Claude, compatibles) | ? | ? | ? | ? | ? | ? | ? | n/a | ? | ? | **Etapa C** |
-| Servidor MCP local (39) | ? | ? | Sí | Sí | ? | ? | Sí | n/a | ? | ? | **Tiene** (B); herramientas de dumps/errores: **Etapa C** |
-| Registrar clientes y lanzar agentes (Claude Code, Codex, Hermes) | ? | ? | ? | Sí (registra clientes MCP) | ? | ? | ? | n/a | ? | ? | **Etapa C** |
-| Mensaje de commit sugerido por IA | ? | ? | ? | Sí | ? | ? | ? | n/a | ? | ? | **Etapa C** |
+| Proveedores en la nube (Gemini, OpenAI, Claude, compatibles) | ? | ? | ? | ? | ? | ? | ? | n/a | ? | ? | **Tiene** (C) |
+| Servidor MCP local (39) | ? | ? | Sí | Sí | ? | ? | Sí | n/a | ? | ? | **Tiene** (B); herramientas de dumps/errores: **Tiene** (C) |
+| Registrar clientes y lanzar agentes (Claude Code, Codex, Hermes) | ? | ? | ? | Sí (registra clientes MCP) | ? | ? | ? | n/a | ? | ? | **Tiene** (C) |
+| Mensaje de commit sugerido por IA | ? | ? | ? | Sí | ? | ? | ? | n/a | ? | ? | **Tiene** (C) |
 
 ### 1.6 Experiencia, mantenimiento y plataformas
 
 | Función | ServBay | FlyEnv | Flock | EnvKit | Laragon | Herd | Lerd | DBngin | Local | MAMP | **WolfCore Dev** |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Tema, idiomas, Ctrl+K, asistente de primer uso (40) | ? | ? | ? | Sí (sin Ctrl+K) | ? | ? | ? | ? | ? | ? | **Etapa B** (tarea 15, en curso) |
+| Tema, idiomas, Ctrl+K, asistente de primer uso (40) | ? | ? | ? | Sí (sin Ctrl+K) | ? | ? | ? | ? | ? | ? | **Tiene** (B) |
 | App de bandeja | ? | ? | Sí | Sí | ? | ? | ? | ? | ? | ? | **Tiene** |
-| Notificaciones nativas (8) | Sí\* | ? | ? | Sí (toasts) | ? | Sí\* | ? | ? | ? | ? | **Etapa C** |
-| Doctor con reparaciones (36) | ? | ? | Sí (puertos) | Sí | Sí\* | Sí\* | ? | ? | ? | ? | **Etapa C** (hoy aviso de puerto con PID) |
-| Gestor de versiones con descarga y SHA (37) | Sí\* | Sí\* | ? | Sí | ? | Sí | ? | Sí\* | ? | ? | **Tiene** (catálogo con SHA-256); catálogo en vivo de todos los servicios con huella oficial y cualquier versión por rama: **Etapa C** (adelantado); limpieza de versiones: **Etapa D** |
+| Notificaciones nativas (8) | Sí\* | ? | ? | Sí (toasts) | ? | Sí\* | ? | ? | ? | ? | **Tiene** (C) |
+| Doctor con reparaciones (36) | ? | ? | Sí (puertos) | Sí | Sí\* | Sí\* | ? | ? | ? | ? | **Tiene** (C) |
+| Gestor de versiones con descarga y SHA (37) | Sí\* | Sí\* | ? | Sí | ? | Sí | ? | Sí\* | ? | ? | **Tiene** (catálogo con SHA-256); catálogo en vivo de todos los servicios con huella oficial y cualquier versión por rama: **Tiene** (C); limpieza de versiones: **Etapa D** |
 | CLI `wolf` (38) | ? | ? | ? | ? | ? | Sí\* | Sí | ? | ? | ? | **Etapa D** |
 | Autoactualización | ? | ? | ? | Sí | ? | ? | ? | ? | ? | ? | **Etapa E** |
 | Desinstalación limpia (hosts, CA, PATH) (41) | ? | ? | ? | Sí (transparencia) | ? | ? | ? | ? | ? | ? | **Etapa E**; modo portable: **Etapa F** |
