@@ -220,6 +220,8 @@ export const en: Textos = {
         'Another folder with {programa} ({origen}) comes before WolfCore Dev in the PATH: terminals will use that one.',
       'doctor.vcredist_ausente':
         'Microsoft Visual C++ 2015-2022 (x64) is missing: PHP and other services will not start without it.',
+      'doctor.enlazador_msvc_ausente':
+        'Rust is installed but the Visual Studio Build Tools C++ tools (MSVC linker) are missing: cargo will not be able to link programs.',
       'doctor.antivirus_sin_exclusion':
         'The antivirus scans the WolfCore Dev data folder: PHP and services may start slowly.',
       'doctor.servicio_en_error': '{servicio} is in an error state.',
@@ -1683,6 +1685,10 @@ export const en: Textos = {
       phpNinguno: 'None installed',
       node: 'Node',
       python: 'Python',
+      java: 'Java',
+      dotnet: '.NET',
+      go: 'Go',
+      rust: 'Rust',
       versionAuto: 'Whichever is detected',
       servicios: 'Services',
       serviciosNinguno: 'None',
@@ -1697,6 +1703,7 @@ export const en: Textos = {
       detectado: (v: string) => `Detected: ${v}`,
       nodeInstalar: 'Node is not installed: install it in Services.',
       pythonInstalar: 'Python is not installed: install it in Services.',
+      lenguajeInstalar: (nombre: string) => `${nombre} is not installed: install it in Services.`,
       dominio: 'Domain',
       puertoProxy: 'Local port',
       puertoPlaceholder: '8000',
@@ -2374,6 +2381,7 @@ export const en: Textos = {
       hosts: 'Hosts file',
       path: 'User PATH',
       vcredist: 'Visual C++',
+      'enlazador-msvc': 'C++ linker',
       antivirus: 'Antivirus',
       servicios: 'Services',
     },
@@ -2396,6 +2404,8 @@ export const en: Textos = {
         'Another tool comes first in PATH. WolfCore Dev does not remove it: move it if you need to.',
       instalar_vcredist:
         'Install Visual C++ 2015+ x64 with winget. The Microsoft installer asks for its own permission.',
+      instalar_build_tools:
+        'Install the Visual Studio Build Tools (with the C++ tools) using the command shown: they take several GB and ask for administrator permission, so it is up to you.',
       antivirus:
         'Adding the data folder to the antivirus exclusions is up to you, with the command shown.',
       reintentar_servicio: 'Start the service again.',
@@ -2709,6 +2719,10 @@ export const en: Textos = {
       mailpit: 'Mailpit',
       ollama: 'Ollama',
       cloudflared: 'cloudflared',
+      java: 'Java',
+      dotnet: '.NET',
+      go: 'Go',
+      rust: 'Rust',
     },
     ayuda: {
       instancias:

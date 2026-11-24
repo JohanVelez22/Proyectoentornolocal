@@ -35,6 +35,7 @@ import {
   datosSitioInicial,
   deteccionEditable,
   etiquetaPaso,
+  LENGUAJES_RUNTIME,
   moverPaso,
   necesitaPuertoProxy,
   pasoConError,
@@ -85,6 +86,13 @@ const errorTexto = ref<string | null>(null);
 const avisoPhp = ref<string | null>(null);
 const nodes = ref<string[]>([]);
 const pythons = ref<string[]>([]);
+/** Versiones instaladas de Java, .NET, Go y Rust (D5). */
+const lenguajes = ref<Record<(typeof LENGUAJES_RUNTIME)[number], string[]>>({
+  java: [],
+  dotnet: [],
+  go: [],
+  rust: [],
+});
 
 const visible = computed(() => actual.value !== null);
 const fase = computed<'configurar' | 'ejecutar'>(() =>
@@ -132,7 +140,7 @@ async function cargarPropuesta(): Promise<void> {
   const c = carpeta.value;
   if (!c) return;
   try {
-    const [p, phps, n, py] = await Promise.all([
+    const [p, phps, n, py, ...otros] = await Promise.all([
       api().proyectos.recetaPorDefecto(c),
       servicios.cargarInstalados('php').catch(() => [] as string[]),
       api()
@@ -141,9 +149,15 @@ async function cargarPropuesta(): Promise<void> {
       api()
         .runtimes.instalados('python')
         .catch(() => [] as string[]),
+      ...LENGUAJES_RUNTIME.map((l) =>
+        api()
+          .runtimes.instalados(l)
+          .catch(() => [] as string[]),
+      ),
     ]);
     nodes.value = n;
     pythons.value = py;
+    LENGUAJES_RUNTIME.forEach((l, i) => (lenguajes.value[l] = otros[i] ?? []));
     propuesta.value = p;
     const d = deteccionEditable(p.deteccion);
     const s = sitio.value;
@@ -154,6 +168,7 @@ async function cargarPropuesta(): Promise<void> {
       d.dominio = s.dominio;
       d.node = s.runtimes.node ?? null;
       d.python = s.runtimes.python ?? null;
+      for (const l of LENGUAJES_RUNTIME) d[l] = s.runtimes[l] ?? null;
       d.puertoProxy = s.puertoProxy;
     }
     if (usaPhp(d.tipo)) {
@@ -189,6 +204,14 @@ const opcionesNode = computed(() =>
 );
 const opcionesPython = computed(() =>
   opcionesRuntime(pythons.value, propuesta.value?.deteccion.python ?? null),
+);
+const opcionesLenguaje = (l: (typeof LENGUAJES_RUNTIME)[number]): SelectOption[] =>
+  opcionesRuntime(lenguajes.value[l], propuesta.value?.deteccion.runtimesPedidos?.[l] ?? null);
+/** Java, .NET, Go y Rust que usa el proyecto (lo dice un archivo suyo) o que ya fijó el sitio. */
+const lenguajesUsados = computed(() =>
+  LENGUAJES_RUNTIME.filter(
+    (l) => propuesta.value?.deteccion.runtimesPedidos?.[l] !== undefined || !!det.value?.[l],
+  ),
 );
 const opcionesServicios: SelectOption[] = SERVICIOS_PROYECTO.map((v) => ({
   value: v,
@@ -467,6 +490,16 @@ function alCambiarVisible(v: boolean): void {
                 @update:value="(v: string) => det && (det.python = v || null)"
               />
             </label>
+            <label v-for="l in lenguajesUsados" :key="l" class="campo">
+              <span>{{ t[l] }}</span>
+              <Desplegable
+                :value="det[l] ?? ''"
+                size="small"
+                :options="opcionesLenguaje(l)"
+                :disabled="soloLectura"
+                @update:value="(v: string) => det && (det[l] = v || null)"
+              />
+            </label>
             <label class="campo ancho">
               <span>{{ t.servicios }}</span>
               <Desplegable
@@ -493,6 +526,13 @@ function alCambiarVisible(v: boolean): void {
           <p v-if="avisoPhp" class="aviso">{{ avisoPhp }}</p>
           <p v-if="usaNode && !nodes.length" class="aviso">{{ t.nodeInstalar }}</p>
           <p v-if="usaPython && !pythons.length" class="aviso">{{ t.pythonInstalar }}</p>
+          <p
+            v-for="l in lenguajesUsados.filter((x) => !lenguajes[x].length)"
+            :key="l"
+            class="aviso"
+          >
+            {{ t.lenguajeInstalar(t[l]) }}
+          </p>
           <p v-if="soloLectura" class="ayuda">{{ t.soloLectura }}</p>
         </section>
 

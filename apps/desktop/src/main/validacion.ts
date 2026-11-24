@@ -30,8 +30,10 @@ import {
   type IdServicioDatos,
   type MotorBd,
   type ServicioInstalable,
+  type TipoRuntime,
   type TipoSitio,
   esIdInstancia,
+  esTipoRuntime,
   esServicioVersiones,
   parsearInstancia,
   type IdInstancia,
@@ -91,6 +93,10 @@ const INSTALABLES = [
   'ollama',
   'node',
   'python',
+  'java',
+  'dotnet',
+  'go',
+  'rust',
 ] as const;
 
 /** Todo lo que el catálogo puede dejar en bin/ (también herramientas): para `instalados`. */
@@ -348,8 +354,8 @@ export function rutaAbsoluta(v: unknown, nombre = 'ruta'): string {
   return resolve(t);
 }
 
-export function tipoRuntime(v: unknown): 'node' | 'python' {
-  if (v !== 'node' && v !== 'python') throw new Error('Argumento no válido: runtime');
+export function tipoRuntime(v: unknown): TipoRuntime {
+  if (!esTipoRuntime(v)) throw new Error('Argumento no válido: runtime');
   return v;
 }
 

@@ -230,6 +230,8 @@ export const pt: Textos = {
         'Outra pasta com {programa} ({origen}) está antes do WolfCore Dev no PATH: nos terminais, essa será a usada.',
       'doctor.vcredist_ausente':
         'Falta o Microsoft Visual C++ 2015-2022 (x64): o PHP e outros serviços não iniciam sem ele.',
+      'doctor.enlazador_msvc_ausente':
+        'O Rust está instalado, mas faltam as ferramentas C++ do Visual Studio Build Tools (vinculador MSVC): o cargo não conseguirá vincular os programas.',
       'doctor.antivirus_sin_exclusion':
         'O antivírus verifica a pasta de dados do WolfCore Dev: o PHP e os serviços podem iniciar devagar.',
       'doctor.servicio_en_error': '{servicio} está com erro.',
@@ -1702,6 +1704,10 @@ export const pt: Textos = {
       phpNinguno: 'Nenhum instalado',
       node: 'Node',
       python: 'Python',
+      java: 'Java',
+      dotnet: '.NET',
+      go: 'Go',
+      rust: 'Rust',
       versionAuto: 'A que for detectada',
       servicios: 'Serviços',
       serviciosNinguno: 'Nenhum',
@@ -1716,6 +1722,7 @@ export const pt: Textos = {
       detectado: (v: string) => `Detectado: ${v}`,
       nodeInstalar: 'Não há Node instalado: instale-o em Serviços.',
       pythonInstalar: 'Não há Python instalado: instale-o em Serviços.',
+      lenguajeInstalar: (nombre: string) => `Não há ${nombre} instalado: instale-o em Serviços.`,
       dominio: 'Domínio',
       puertoProxy: 'Porta local',
       puertoPlaceholder: '8000',
@@ -2405,6 +2412,7 @@ export const pt: Textos = {
       hosts: 'Arquivo hosts',
       path: 'PATH do usuário',
       vcredist: 'Visual C++',
+      'enlazador-msvc': 'Vinculador C++',
       antivirus: 'Antivírus',
       servicios: 'Serviços',
     },
@@ -2427,6 +2435,8 @@ export const pt: Textos = {
         'Outra ferramenta está antes no PATH. O WolfCore Dev não a remove: mude-a de lugar se precisar.',
       instalar_vcredist:
         'Instalar o Visual C++ 2015+ x64 com o winget. O instalador da Microsoft pede a própria permissão.',
+      instalar_build_tools:
+        'Instale o Visual Studio Build Tools (com as ferramentas C++) com o comando mostrado: ocupa vários GB e pede permissão de administrador, então a decisão é sua.',
       antivirus:
         'Adicionar a pasta de dados às exclusões do antivírus é decisão sua, com o comando mostrado.',
       reintentar_servicio: 'Iniciar o serviço de novo.',
@@ -2741,6 +2751,10 @@ export const pt: Textos = {
       mailpit: 'Mailpit',
       ollama: 'Ollama',
       cloudflared: 'cloudflared',
+      java: 'Java',
+      dotnet: '.NET',
+      go: 'Go',
+      rust: 'Rust',
     },
     ayuda: {
       instancias:

@@ -5,10 +5,12 @@ import {
   alternativaVerificada,
   argsDeAviso,
   conInterruptor,
+  esServicioConVersiones,
   filasDe,
   marcarEncendida,
   marcarPredeterminada,
   origenCatalogo,
+  SERVICIOS_CON_VERSIONES,
   servicioDelDialogo,
   useVersiones,
   type FilaVersion,
@@ -339,5 +341,15 @@ describe('servicioDelDialogo', () => {
     };
     expect(servicioDelDialogo(d, 'node')).toBe('mariadb');
     expect(servicioDelDialogo(null, 'node')).toBe('node');
+  });
+});
+
+describe('D5: pestañas de Java, .NET, Go y Rust', () => {
+  it('están entre los servicios con versiones y todas tienen nombre en los cuatro idiomas', () => {
+    for (const s of ['java', 'dotnet', 'go', 'rust'] as const) {
+      expect(SERVICIOS_CON_VERSIONES).toContain(s);
+      expect(esServicioConVersiones(s)).toBe(true);
+    }
+    expect(SERVICIOS_CON_VERSIONES).toHaveLength(17);
   });
 });

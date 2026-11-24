@@ -26,6 +26,7 @@ import {
   datosSitioInicial,
   destinoPorDefecto,
   deteccionEditable,
+  LENGUAJES_RUNTIME,
   errorProceso,
   etiquetaPaso,
   idProceso,
@@ -794,5 +795,22 @@ describe('store de proyectos', () => {
     await p.cambiarCarpetaVigilada(null);
     expect(falsa.api.vigilar.cambiarCarpeta).toHaveBeenCalledWith(null);
     expect(p.sugerenciasPendientes).toEqual([]);
+  });
+});
+
+describe('D5: Java, .NET, Go y Rust en el asistente', () => {
+  it('la detección editable parte sin versión fijada y el sitio guarda solo lo que se eligió', () => {
+    const e = deteccionEditable(deteccion());
+    expect(e).toMatchObject({ java: null, dotnet: null, go: null, rust: null });
+    const datos = datosSitioInicial(
+      'C:\\Proyectos\\Api',
+      { ...e, go: '1.27.4', java: ' 21.0.13.1 ', rust: '' },
+      null,
+    );
+    expect(datos.runtimes).toEqual({ go: '1.27.4', java: '21.0.13.1' });
+  });
+
+  it('LENGUAJES_RUNTIME son los cuatro del núcleo', () => {
+    expect([...LENGUAJES_RUNTIME]).toEqual(['java', 'dotnet', 'go', 'rust']);
   });
 });

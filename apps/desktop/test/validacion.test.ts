@@ -2,7 +2,15 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { carpetaExistente, idNoVacio, objetoPlano, texto, urlHttp } from '../src/main/validacion';
+import {
+  carpetaExistente,
+  idNoVacio,
+  objetoPlano,
+  servicioDelCatalogo,
+  texto,
+  tipoRuntime,
+  urlHttp,
+} from '../src/main/validacion';
 
 const dir = mkdtempSync(join(tmpdir(), 'pel-val-'));
 const archivo = join(dir, 'a.exe');
@@ -43,5 +51,18 @@ describe('tipos básicos', () => {
     for (const v of [null, [], 'x', new Date(), new Map()]) {
       expect(() => objetoPlano(v)).toThrow();
     }
+  });
+});
+
+describe('D5: runtimes de Java, .NET, Go y Rust', () => {
+  it('tipoRuntime acepta los seis y servicioDelCatalogo los cuatro instalables nuevos', () => {
+    for (const t of ['node', 'python', 'java', 'dotnet', 'go', 'rust']) {
+      expect(tipoRuntime(t)).toBe(t);
+      expect(servicioDelCatalogo(t)).toBe(t);
+    }
+    for (const mal of ['ruby', '', 'GO', 5, null, '../go']) {
+      expect(() => tipoRuntime(mal)).toThrow('runtime');
+    }
+    expect(() => servicioDelCatalogo('ruby')).toThrow('servicio');
   });
 });

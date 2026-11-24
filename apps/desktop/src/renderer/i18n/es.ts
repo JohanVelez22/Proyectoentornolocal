@@ -224,6 +224,8 @@ export const es = {
         'Otra carpeta con {programa} ({origen}) está antes que WolfCore Dev en el PATH: en las terminales se usará esa.',
       'doctor.vcredist_ausente':
         'Falta Microsoft Visual C++ 2015-2022 (x64): PHP y otros servicios no arrancan sin él.',
+      'doctor.enlazador_msvc_ausente':
+        'Rust está instalado pero faltan las herramientas de C++ de Visual Studio Build Tools (enlazador MSVC): cargo no podrá enlazar los programas.',
       'doctor.antivirus_sin_exclusion':
         'El antivirus revisa la carpeta de datos de WolfCore Dev: PHP y los servicios pueden arrancar lento.',
       'doctor.servicio_en_error': '{servicio} está en error.',
@@ -1697,6 +1699,10 @@ export const es = {
       phpNinguno: 'Ninguno instalado',
       node: 'Node',
       python: 'Python',
+      java: 'Java',
+      dotnet: '.NET',
+      go: 'Go',
+      rust: 'Rust',
       versionAuto: 'La que detecte',
       servicios: 'Servicios',
       serviciosNinguno: 'Ninguno',
@@ -1711,6 +1717,7 @@ export const es = {
       detectado: (v: string) => `Detectado: ${v}`,
       nodeInstalar: 'No hay Node instalado: instálelo en Servicios.',
       pythonInstalar: 'No hay Python instalado: instálelo en Servicios.',
+      lenguajeInstalar: (nombre: string) => `No hay ${nombre} instalado: instálelo en Servicios.`,
       dominio: 'Dominio',
       puertoProxy: 'Puerto local',
       puertoPlaceholder: '8000',
@@ -2395,6 +2402,7 @@ export const es = {
       hosts: 'Archivo hosts',
       path: 'PATH del usuario',
       vcredist: 'Visual C++',
+      'enlazador-msvc': 'Enlazador de C++',
       antivirus: 'Antivirus',
       servicios: 'Servicios',
     },
@@ -2416,6 +2424,8 @@ export const es = {
         'Otra herramienta está antes en el PATH. WolfCore Dev no la quita: cámbiela de lugar si lo necesita.',
       instalar_vcredist:
         'Instalar Visual C++ 2015+ x64 con winget. El instalador de Microsoft pide su propio permiso.',
+      instalar_build_tools:
+        'Instale las Build Tools de Visual Studio (con las herramientas de C++) con el comando que se muestra: pesan varios GB y piden permiso de administrador, así que lo decide usted.',
       antivirus:
         'Agregar la carpeta de datos a las exclusiones del antivirus lo decide usted, con el comando que se muestra.',
       reintentar_servicio: 'Volver a iniciar el servicio.',
@@ -2728,6 +2738,10 @@ export const es = {
       mailpit: 'Mailpit',
       ollama: 'Ollama',
       cloudflared: 'cloudflared',
+      java: 'Java',
+      dotnet: '.NET',
+      go: 'Go',
+      rust: 'Rust',
     },
     ayuda: {
       instancias:

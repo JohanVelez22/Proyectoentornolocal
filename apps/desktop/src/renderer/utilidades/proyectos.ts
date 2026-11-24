@@ -431,6 +431,9 @@ export function conRestaurar(
 export const sinRestaurar = (pasos: readonly PasoAsistente[]): PasoAsistente[] =>
   pasos.filter((p) => p.paso.tipo !== 'bd-restaurar');
 
+/** Lenguajes cuyo runtime se fija por sitio además de Node y Python (D5). */
+export const LENGUAJES_RUNTIME = ['java', 'dotnet', 'go', 'rust'] as const;
+
 /** Detección editada en el asistente. */
 export interface DeteccionEditable {
   tipo: Sitio['tipo'];
@@ -438,6 +441,10 @@ export interface DeteccionEditable {
   /** Versión fijada para el sitio; null = la detectada. */
   node: string | null;
   python: string | null;
+  java: string | null;
+  dotnet: string | null;
+  go: string | null;
+  rust: string | null;
   servicios: Deteccion['servicios'];
   dominio: string;
   /** Solo para el tipo proxy. */
@@ -452,6 +459,10 @@ export function deteccionEditable(d: Deteccion): DeteccionEditable {
     // usuario elige una instalada).
     node: null,
     python: null,
+    java: null,
+    dotnet: null,
+    go: null,
+    rust: null,
     servicios: [...d.servicios],
     dominio: d.dominioSugerido,
     puertoProxy: null,
@@ -505,6 +516,7 @@ export function datosSitioInicial(
   const runtimes: DatosSitio['runtimes'] = {};
   if (d.node?.trim()) runtimes.node = d.node.trim();
   if (d.python?.trim()) runtimes.python = d.python.trim();
+  for (const l of LENGUAJES_RUNTIME) if (d[l]?.trim()) runtimes[l] = d[l]!.trim();
   return {
     ...base,
     nombre: nombreDeCarpeta(carpeta),

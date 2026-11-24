@@ -234,6 +234,8 @@ export const fr: Textos = {
         'Un autre dossier contenant {programa} ({origen}) précède WolfCore Dev dans le PATH : les terminaux utiliseront celui-là.',
       'doctor.vcredist_ausente':
         'Microsoft Visual C++ 2015-2022 (x64) manque : PHP et d’autres services ne démarrent pas sans lui.',
+      'doctor.enlazador_msvc_ausente':
+        'Rust est installé mais les outils C++ de Visual Studio Build Tools (éditeur de liens MSVC) manquent : cargo ne pourra pas lier les programmes.',
       'doctor.antivirus_sin_exclusion':
         'L’antivirus analyse le dossier de données de WolfCore Dev : PHP et les services peuvent démarrer lentement.',
       'doctor.servicio_en_error': '{servicio} est en erreur.',
@@ -1730,6 +1732,10 @@ export const fr: Textos = {
       phpNinguno: 'Aucune version installée',
       node: 'Node',
       python: 'Python',
+      java: 'Java',
+      dotnet: '.NET',
+      go: 'Go',
+      rust: 'Rust',
       versionAuto: 'Celle détectée',
       servicios: 'Services',
       serviciosNinguno: 'Aucun',
@@ -1744,6 +1750,8 @@ export const fr: Textos = {
       detectado: (v: string) => `Détecté : ${v}`,
       nodeInstalar: 'Node n’est pas installé : installez-le dans Services.',
       pythonInstalar: 'Python n’est pas installé : installez-le dans Services.',
+      lenguajeInstalar: (nombre: string) =>
+        `${nombre} n’est pas installé : installez-le dans Services.`,
       dominio: 'Domaine',
       puertoProxy: 'Port local',
       puertoPlaceholder: '8000',
@@ -2451,6 +2459,7 @@ export const fr: Textos = {
       hosts: 'Fichier hosts',
       path: 'PATH de l’utilisateur',
       vcredist: 'Visual C++',
+      'enlazador-msvc': 'Éditeur de liens C++',
       antivirus: 'Antivirus',
       servicios: 'Services',
     },
@@ -2473,6 +2482,8 @@ export const fr: Textos = {
         'Un autre outil précède WolfCore Dev dans le PATH. WolfCore Dev ne le retire pas : déplacez-le si nécessaire.',
       instalar_vcredist:
         'Installer Visual C++ 2015+ x64 avec winget. L’installateur de Microsoft demande sa propre autorisation.',
+      instalar_build_tools:
+        'Installez Visual Studio Build Tools (avec les outils C++) avec la commande affichée : ils pèsent plusieurs Go et demandent l’autorisation d’administrateur, c’est donc à vous de décider.',
       antivirus:
         'Ajouter le dossier de données aux exclusions de l’antivirus est votre décision, avec la commande affichée.',
       reintentar_servicio: 'Redémarrer le service.',
@@ -2791,6 +2802,10 @@ export const fr: Textos = {
       mailpit: 'Mailpit',
       ollama: 'Ollama',
       cloudflared: 'cloudflared',
+      java: 'Java',
+      dotnet: '.NET',
+      go: 'Go',
+      rust: 'Rust',
     },
     ayuda: {
       instancias:
