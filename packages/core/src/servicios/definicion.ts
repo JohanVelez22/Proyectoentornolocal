@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { ErrorWolf } from '../errores';
+import { claveValida } from '../catalogo/comun';
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -115,6 +116,13 @@ export const SUFIJO_CREANDO = '.pel-creando';
  * resuelva (`desbloquear`).
  */
 export const SUFIJO_BLOQUEO = '.bloqueada';
+
+/**
+ * Permiso de empezar de cero (`data/<servicio>/<clave>.pel-reinicio`): lo deja un borrado de datos
+ * confirmado, para que la guarda de datos apartados no impida inicializar la carpeta nueva. Lo
+ * consume la primera inicialización correcta.
+ */
+export const SUFIJO_REINICIO = '.pel-reinicio';
 
 export const NOMBRE_SERVICIO: Record<IdServicioDatos, string> = {
   mysql: 'MySQL',
@@ -513,6 +521,7 @@ export class ServiciosDatos {
         fecha: typeof x.fecha === 'string' ? x.fecha : '',
         fallida: typeof x.fallida === 'string' ? x.fallida : '',
         respaldo: typeof x.respaldo === 'string' ? x.respaldo : '',
+        ...(typeof x.version === 'string' && claveValida(x.version) ? { version: x.version } : {}),
       };
     } catch {
       return { fecha: '', fallida: '', respaldo: '' };
@@ -660,7 +669,9 @@ export class ServiciosDatos {
     // carpeta vacía o ausente aquí no es "nueva", así que no se inicializa encima.
     const clave = path.basename(ctx.datos);
     const hermanas = await readdir(path.dirname(ctx.datos)).catch(() => [] as string[]);
+    const permiso = `${ctx.datos}${SUFIJO_REINICIO}`;
     if (
+      !existsSync(permiso) &&
       hermanas.some(
         (n) => n.startsWith(`${clave}.fallida-`) || n.startsWith(`${clave}.restaurando-`),
       )
@@ -682,6 +693,7 @@ export class ServiciosDatos {
       await mkdir(ctx.datos, { recursive: true });
       await writeFile(marca, new Date().toISOString(), 'utf8');
       await rm(creando, { force: true });
+      await rm(permiso, { force: true });
     } catch (e) {
       if (!existia) {
         await rm(ctx.datos, OPCIONES_BORRADO).catch(() => undefined);
@@ -821,10 +833,27 @@ export class ServiciosDatos {
           await this.iniciarSinCola(def, nueva, await this.d.leerConfig());
         } catch (e) {
           // No arrancó en el puerto nuevo: vuelve al anterior (y se enciende como estaba).
-          await fijarPuerto(inst.puerto);
-          this.cacheDuenos = null;
+          const motivo = mensajeDe(e).slice(0, 200);
           await this.detenerSinCola(def, nueva).catch(() => undefined);
-          await this.iniciarSinCola(def, inst, await this.d.leerConfig()).catch(() => undefined);
+          try {
+            await fijarPuerto(inst.puerto);
+          } catch (x) {
+            throw new ErrorWolf(
+              'servicios.puerto_no_revertido',
+              `${inst.id} no arrancó en el puerto ${puerto} (${motivo}) y no se pudo volver al ${inst.puerto} en la configuración (${mensajeDe(x).slice(0, 120)}): quedó apagada.`,
+              { nombre: inst.id, nuevo: puerto, anterior: inst.puerto },
+            );
+          }
+          this.cacheDuenos = null;
+          try {
+            await this.iniciarSinCola(def, inst, await this.d.leerConfig());
+          } catch {
+            throw new ErrorWolf(
+              'servicios.puerto_revertido_apagada',
+              `${inst.id} no arrancó en el puerto ${puerto} (${motivo}); se volvió al puerto ${inst.puerto}, pero tampoco arrancó ahí: quedó apagada en el puerto ${inst.puerto}.`,
+              { nombre: inst.id, anterior: inst.puerto },
+            );
+          }
           throw e;
         }
       }
@@ -924,8 +953,10 @@ export class ServiciosDatos {
           { cause: e },
         );
       }
-      // Borrar los datos (confirmado) también resuelve el bloqueo: la instancia empieza de cero.
+      // Borrar los datos (confirmado) también resuelve el bloqueo: la instancia empieza de cero
+      // (aunque haya copias apartadas de una actualización al lado).
       if (esIdInstancia(id)) {
+        await writeFile(`${carpeta}${SUFIJO_REINICIO}`, new Date().toISOString(), 'utf8');
         await rm(this.rutaBloqueo(servicio, parsearInstancia(id).clave), { force: true });
       }
     });
@@ -1356,10 +1387,17 @@ export class ServiciosDatos {
     mensaje: string,
     fallida: string,
     respaldo: string,
+    /** Versión a la que debe volver la configuración al resolver (si no se pudo escribir). */
+    version?: string,
   ): Promise<ErrorWolf> {
     let extra = '';
     try {
-      await this.bloquear(inst, { fecha: this.ahora.toISOString(), fallida, respaldo });
+      await this.bloquear(inst, {
+        fecha: this.ahora.toISOString(),
+        fallida,
+        respaldo,
+        ...(version ? { version } : {}),
+      });
     } catch (e) {
       extra = ` No se pudo marcar ${inst.id} como bloqueada (${mensajeDe(e).slice(0, 120)}): no la encienda hasta revisar los datos.`;
     }
@@ -1424,6 +1462,17 @@ export class ServiciosDatos {
           `${id} no tiene datos en su carpeta: elija un respaldo para devolver.`,
           { id },
         );
+      }
+      // Si la configuración quedó con la versión que no arrancó, vuelve antes a la de la marca
+      // (si no se puede, sigue bloqueada).
+      const b = await this.bloqueo(servicio, clave);
+      if (b?.version && inst.version !== b.version) {
+        const v = b.version;
+        await this.d.modificarConfig((c) => {
+          const i = c.servicios.datos[servicio].instancias?.[clave];
+          if (i) i.version = v;
+          reflejarPredeterminada(c, servicio);
+        });
       }
       await rm(this.rutaBloqueo(servicio, clave), { force: true });
     });
@@ -1630,9 +1679,10 @@ export class ServiciosDatos {
         } catch (x) {
           sinConfig = x;
         }
+        let apartada: string | null = null;
         if (hayDatos) {
           try {
-            await devolverCopia(carpeta, copia, sello, this.d.fsCopia);
+            apartada = await devolverCopia(carpeta, copia, sello, this.d.fsCopia);
           } catch (x) {
             // Sin la copia devuelta y verificada no se arranca nada encima de datos dudosos.
             const fallida = x instanceof ErrorDevolucion ? x.fallida : carpeta;
@@ -1644,14 +1694,23 @@ export class ServiciosDatos {
             );
           }
         }
-        if (sinConfig) {
+        if (sinConfig && hayDatos) {
           // La configuración sigue con la versión nueva (que no arranca): bloqueada hasta que se
-          // resuelva a mano; los datos ya están devueltos.
+          // resuelva; al resolver se vuelve a `anterior`. Los datos ya están devueltos.
           throw await this.falloDevolucion(
             inst,
             `${def.nombre} ${version} no arrancó y no se pudo volver a ${anterior} en la configuración (${mensajeDe(sinConfig).slice(0, 200)}). Los datos se devolvieron; no se encendió nada.`,
-            carpeta,
-            hayDatos ? copia : '',
+            apartada ?? carpeta,
+            copia,
+            anterior,
+          );
+        }
+        if (sinConfig) {
+          // Sin datos que proteger no se bloquea: solo se informa.
+          throw new ErrorWolf(
+            'servicios.config_no_revertida',
+            `${def.nombre} ${version} no arrancó y no se pudo volver a ${anterior} en la configuración (${mensajeDe(sinConfig).slice(0, 200)}). Vuelva a elegir ${anterior} en Servicios → Versiones.`,
+            { nombre: id, version, anterior },
           );
         }
         const vieja = { ...inst, version: anterior };

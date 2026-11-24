@@ -32,7 +32,7 @@ let copiar: (de: string, a: string) => Promise<void>;
 let reloj: Date;
 let falloConfigCon: string | null;
 let reservadosTcp: { desde: number; hasta: number }[];
-let fallaIniciarEnPuerto: number | null;
+let fallaIniciarEnPuerto: Set<number>;
 
 const SELLO = '20261123-100000';
 const datosDe = (clave: string): string => path.join(base, 'data', 'mysql', clave);
@@ -102,7 +102,7 @@ function crear(): Servicios {
     } as unknown as Plataforma,
     supervisor: {
       iniciar: async (d: DefProceso) => {
-        if (fallaIniciarEnPuerto !== null && d.puerto === fallaIniciarEnPuerto) {
+        if (d.puerto !== undefined && fallaIniciarEnPuerto.has(d.puerto)) {
           throw new Error('el puerto no se pudo abrir');
         }
         iniciados.push(d);
@@ -194,7 +194,7 @@ beforeEach(async () => {
   reloj = new Date('2026-11-23T10:00:00');
   falloConfigCon = null;
   reservadosTcp = [];
-  fallaIniciarEnPuerto = null;
+  fallaIniciarEnPuerto = new Set();
 });
 
 /** Instancia mysql@8.4 encendida con datos de un cliente. */
@@ -764,6 +764,59 @@ describe('ronda de revisión de la Task 19 (datos reales)', () => {
     expect(e).toMatchObject({ codigo: 'servicios.restauracion_fallo' });
     expect(existsSync(`${datosDe('8.4')}.bloqueada`)).toBe(true);
     expect(await readFile(path.join(datosDe('8.4'), 'ibdata1'), 'utf8')).toBe('creado con 8.4.13');
+    // La marca dice dónde quedó lo tocado (la carpeta apartada) y a qué versión hay que volver.
+    const marca = JSON.parse(await readFile(`${datosDe('8.4')}.bloqueada`, 'utf8')) as {
+      fallida: string;
+      version: string;
+    };
+    expect(marca.fallida).toBe(`${datosDe('8.4')}.fallida-${SELLO}`);
+    expect(marca.version).toBe('8.4.13');
+    // Al resolver, la config vuelve a esa versión antes de quitar la marca.
+    falloConfigCon = null;
+    expect(cfg.servicios.datos.mysql.instancias?.['8.4']?.version).toBe('8.4.14');
+    await s.datos.instancias.desbloquear('mysql@8.4' as IdInstancia, { confirmacion: 'mysql@8.4' });
+    expect(cfg.servicios.datos.mysql.instancias?.['8.4']?.version).toBe('8.4.13');
+    expect(existsSync(`${datosDe('8.4')}.bloqueada`)).toBe(false);
+  });
+
+  it('si la config no se puede revertir y no había datos, no bloquea: solo lo informa', async () => {
+    fallan.add('8.4.14');
+    const s = crear();
+    falloConfigCon = '8.4.13';
+    const e = await s.datos.actualizar('mysql@8.4', '8.4.14').catch((x: unknown) => x);
+    expect(e).toMatchObject({
+      codigo: 'servicios.config_no_revertida',
+      datos: { nombre: 'mysql@8.4', version: '8.4.14', anterior: '8.4.13' },
+    });
+    expect(existsSync(`${datosDe('8.4')}.bloqueada`)).toBe(false);
+  });
+
+  it('borrar datos (confirmado), iniciar, con una .fallida vieja al lado: inicializa de cero', async () => {
+    const s = crear();
+    await preparar(s);
+    await s.datos.detener('mysql');
+    await mkdir(`${datosDe('8.4')}.fallida-20250101-000000`, { recursive: true });
+    await s.datos.borrarDatos('mysql@8.4' as IdInstancia, 'mysql@8.4');
+    await s.datos.iniciar('mysql');
+    expect(await readFile(path.join(datosDe('8.4'), 'ibdata1'), 'utf8')).toBe('creado con 8.4.13');
+    // El permiso se consume: si la carpeta vuelve a faltar, la guarda vale otra vez.
+    expect(existsSync(`${datosDe('8.4')}.pel-reinicio`)).toBe(false);
+    await s.datos.detener('mysql');
+    await rm(datosDe('8.4'), { recursive: true, force: true });
+    await expect(s.datos.iniciar('mysql')).rejects.toMatchObject({
+      codigo: 'servicios.datos_apartados',
+    });
+  });
+
+  it('cambiarPuerto: si tampoco arranca en el puerto anterior, el error dice que quedó apagada', async () => {
+    const s = crear();
+    await preparar(s);
+    fallaIniciarEnPuerto = new Set([3310, 3306]);
+    await expect(s.datos.cambiarPuerto('mysql@8.4' as IdInstancia, 3310)).rejects.toMatchObject({
+      codigo: 'servicios.puerto_revertido_apagada',
+      datos: { nombre: 'mysql@8.4', anterior: 3306 },
+    });
+    expect(cfg.servicios.datos.mysql.puerto).toBe(3306);
   });
 
   it('cambiarPuerto: rechaza un puerto reservado y vuelve al anterior si el reinicio falla', async () => {
@@ -773,7 +826,7 @@ describe('ronda de revisión de la Task 19 (datos reales)', () => {
     await expect(s.datos.cambiarPuerto('mysql@8.4' as IdInstancia, 50010)).rejects.toMatchObject({
       codigo: 'servicios.puerto_reservado',
     });
-    fallaIniciarEnPuerto = 3310;
+    fallaIniciarEnPuerto = new Set([3310]);
     await expect(s.datos.cambiarPuerto('mysql@8.4' as IdInstancia, 3310)).rejects.toThrow();
     expect(cfg.servicios.datos.mysql.puerto).toBe(3306);
     // Única instancia (implícita): su proceso es `mysql`, otra vez en el puerto de antes.

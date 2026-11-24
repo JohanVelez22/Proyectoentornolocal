@@ -291,6 +291,7 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
       :nombre="nombre"
       :fila="dlgDesinstalar.fila"
       :datos="v.conInstancias"
+      :unica="v.tabla?.interruptor === 'unica' && dlgDesinstalar.fila.predeterminada"
     />
     <DialogoDesbloquear
       v-if="dlgDesbloquear"

@@ -39,6 +39,9 @@ export const PARAMETROS_ERROR = {
   'servicios.datos_apartados': ['nombre'],
   'servicios.puerto_reservado': ['puerto', 'desde', 'hasta'],
   'servicios.borrado_con_bloqueo': ['nombre'],
+  'servicios.config_no_revertida': ['nombre', 'version', 'anterior'],
+  'servicios.puerto_revertido_apagada': ['nombre', 'anterior'],
+  'servicios.puerto_no_revertido': ['nombre', 'nuevo', 'anterior'],
   // instancias de los servicios de datos
   'instancias.id_invalido': [],
   'instancias.no_existe': ['id'],

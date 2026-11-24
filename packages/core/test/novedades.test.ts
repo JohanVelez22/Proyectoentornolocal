@@ -313,6 +313,9 @@ describe('Nucleo: revisión de versiones nuevas', () => {
       });
       await n.desinstalarVersion('nginx', '1.30.6');
       expect(await n.instalador.instalados('nginx')).toEqual(['1.30.8']);
+      // La única versión, apagada, sí se puede quitar.
+      await n.desinstalarVersion('nginx', '1.30.8');
+      expect(await n.instalador.instalados('nginx')).toEqual([]);
       // Predeterminar una versión no instalada se rechaza; Node sin instalar tampoco.
       await expect(n.predeterminarVersion('node', '22.1.0')).rejects.toMatchObject({
         codigo: 'servicios.no_instalado',

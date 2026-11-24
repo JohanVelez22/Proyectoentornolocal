@@ -25,6 +25,7 @@ import {
   NModal,
   NSwitch,
   useDialog,
+  useNotification,
   type DropdownOption,
 } from 'naive-ui';
 import { computed, h, ref, type Component } from 'vue';
@@ -43,6 +44,7 @@ const props = defineProps<{ servicio: EstadoServicio }>();
 const t = textos.servicios;
 const servicios = useServicios();
 const dialog = useDialog();
+const notification = useNotification();
 const { ejecutar, ocupado } = useAccion();
 const router = useRouter();
 
@@ -122,15 +124,20 @@ function abrirDialogoPuerto(): void {
 async function aplicarPuerto(puerto: number): Promise<boolean> {
   const id = props.servicio.id;
   if (!esServicioDatos(id)) return false;
-  const ok = await ejecutar(
-    'puerto',
-    async () => {
-      await api().servicios.cambiarPuerto(id, puerto);
-      return true;
-    },
-    { exito: t.puertoCambiado(props.servicio.nombre, puerto) },
-  );
-  return !!ok;
+  const anterior = puertoPrincipal.value;
+  const r = await ejecutar('puerto', () => api().servicios.cambiarPuerto(id, puerto), {
+    exito: t.puertoCambiado(props.servicio.nombre, puerto),
+  });
+  // Proyectos cuyo .env todavía usa el puerto anterior (no se cambian solos).
+  if (r?.proyectos.length) {
+    notification.warning({
+      title: textos.versiones.puertoProyectosTitulo,
+      content: textos.versiones.puertoProyectos(anterior ?? 0, puerto, r.proyectos.join(', ')),
+      duration: 15000,
+      keepAliveOnHover: true,
+    });
+  }
+  return r !== undefined;
 }
 
 async function guardarPuerto(): Promise<void> {

@@ -126,6 +126,12 @@ export const en: Textos = {
         'Port {puerto} is reserved by the system ({desde}–{hasta}): choose another one.',
       'servicios.borrado_con_bloqueo':
         '{nombre} has an instance blocked after an update: resolve it before deleting its data.',
+      'servicios.config_no_revertida':
+        '{nombre} {version} did not start and the configuration could not go back to {anterior}. Choose {anterior} again in Services → Versions.',
+      'servicios.puerto_revertido_apagada':
+        '{nombre} did not start on the new port; it went back to {anterior}, but it did not start there either: it is stopped on port {anterior}.',
+      'servicios.puerto_no_revertido':
+        '{nombre} did not start on port {nuevo} and the configuration could not go back to {anterior}: it is stopped.',
       'instancias.id_invalido': 'The instance identifier is not valid.',
       'instancias.no_existe': 'Instance {id} does not exist.',
       'instancias.existe': 'Instance {id} already exists.',
@@ -2801,6 +2807,8 @@ export const en: Textos = {
       escriba: (id: string) => `Type ${id} to confirm`,
       desinstalar: 'Uninstall',
       desinstalarYBorrar: 'Uninstall and delete data',
+      unica:
+        'This is the active version: if it is the only one installed it can be removed with the service stopped (it ends up uninstalled); if there are others, make another one active first (star).',
       predeterminada: (id: string) =>
         `${id} is the default instance: Databases, the .env block and the tools that use the engine will switch to another instance (with another port).`,
       hecho: (v: string) => `${v} uninstalled.`,

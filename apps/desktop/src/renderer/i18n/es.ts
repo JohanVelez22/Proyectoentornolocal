@@ -124,6 +124,12 @@ export const es = {
         'El puerto {puerto} está reservado por el sistema ({desde}–{hasta}): elija otro.',
       'servicios.borrado_con_bloqueo':
         '{nombre} tiene una instancia bloqueada tras una actualización: resuélvala antes de borrar sus datos.',
+      'servicios.config_no_revertida':
+        '{nombre} {version} no arrancó y no se pudo volver a {anterior} en la configuración. Vuelva a elegir {anterior} en Servicios → Versiones.',
+      'servicios.puerto_revertido_apagada':
+        '{nombre} no arrancó en el puerto nuevo; se volvió al {anterior}, pero tampoco arrancó ahí: quedó apagada en el puerto {anterior}.',
+      'servicios.puerto_no_revertido':
+        '{nombre} no arrancó en el puerto {nuevo} y no se pudo volver al {anterior} en la configuración: quedó apagada.',
       'instancias.id_invalido': 'El identificador de la instancia no es válido.',
       'instancias.no_existe': 'No existe la instancia {id}.',
       'instancias.existe': 'Ya existe la instancia {id}.',
@@ -2819,6 +2825,8 @@ export const es = {
       escriba: (id: string) => `Escriba ${id} para confirmar`,
       desinstalar: 'Desinstalar',
       desinstalarYBorrar: 'Desinstalar y borrar datos',
+      unica:
+        'Es la versión activa: si es la única instalada se puede quitar con el servicio apagado (queda sin instalar); si hay otras, elija antes otra como activa (estrella).',
       predeterminada: (id: string) =>
         `${id} es la instancia predeterminada: Bases de datos, el bloque .env y las herramientas que usan el motor pasarán a otra instancia (con otro puerto).`,
       hecho: (v: string) => `${v} desinstalado.`,

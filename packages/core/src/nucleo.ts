@@ -1350,14 +1350,23 @@ export class Nucleo {
       await this.guardarAjustes({ puerto, trabajadores: cfg.servicios.php.trabajadores });
       return;
     }
-    if (esIdServicioDatos(servicio)) return this.cambiarPuertoServicio(servicio, puerto);
+    if (esIdServicioDatos(servicio)) {
+      await this.cambiarPuertoServicio(servicio, puerto);
+      return;
+    }
     throw new Error(`El puerto de ${servicio} no se puede cambiar desde WolfCore Dev.`);
   }
 
   /** Cambia el puerto de un servicio propio (1024–65535, libre); lo reinicia si estaba encendido. */
-  async cambiarPuertoServicio(id: IdServicioDatos, puerto: number): Promise<void> {
+  async cambiarPuertoServicio(
+    id: IdServicioDatos,
+    puerto: number,
+  ): Promise<{ proyectos: string[] }> {
+    const anterior = (await this.config.leer()).servicios.datos[id].puerto;
     await this.servicios.cambiarPuerto(id, puerto);
     await this.revisarVhostsTrasPuertos();
+    if (anterior === puerto) return { proyectos: [] };
+    return { proyectos: await this.proyectosConPuerto(anterior) };
   }
 
   /**
@@ -1630,19 +1639,22 @@ export class Nucleo {
     };
     // La versión activa de Nginx, Mailpit u Ollama (encendida o no) no se quita: antes hay que
     // elegir otra como activa (estrella). En PHP, una rama encendida.
+    // La única versión instalada sí se puede quitar si está apagada (el servicio queda sin
+    // instalar); con otras instaladas, antes hay que elegir otra como activa.
     let enUso: string | null = null;
     if (servicio === 'php') enUso = vivo(`php-${carpeta}`) ? `php-${carpeta}` : null;
-    else if (servicio === 'nginx') {
-      const activa = await this.servicios.nginx.versionActiva().catch(() => null);
-      enUso = activa === version ? 'nginx' : null;
-    } else if (servicio === 'mailpit' || servicio === 'ollama') {
-      const [inst] = await this.servicios.datos.listaInstancias(servicio);
-      enUso = inst?.version === version ? servicio : null;
+    else if (servicio === 'nginx' || servicio === 'mailpit' || servicio === 'ollama') {
+      const activa =
+        servicio === 'nginx'
+          ? await this.servicios.nginx.versionActiva().catch(() => null)
+          : ((await this.servicios.datos.listaInstancias(servicio))[0]?.version ?? null);
+      const unica = (await this.instalador.instalados(servicio)).length <= 1;
+      if (activa === version && (vivo(servicio) || !unica)) enUso = servicio;
     }
     if (enUso) {
       throw new ErrorWolf(
         'instalador.version_en_uso',
-        `No se puede desinstalar ${servicio} ${version}: es la versión en uso (${enUso}); elija antes otra.`,
+        `No se puede desinstalar ${servicio} ${version}: es la versión en uso (${enUso}). Elija antes otra como activa o, si es la única, apáguela.`,
         { servicio, version, instancia: enUso },
       );
     }

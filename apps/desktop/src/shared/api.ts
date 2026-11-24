@@ -375,7 +375,8 @@ export interface ApiEntorno {
     /** Cierra primero los túneles (devolviendo los .env) y luego detiene los servicios. */
     detenerTodo(): Promise<void>;
     /** 1024–65535 y libre; reinicia el servicio si estaba encendido. */
-    cambiarPuerto(id: IdServicioDatos, puerto: number): Promise<void>;
+    /** Devuelve los proyectos cuyo .env todavía usa el puerto anterior (no se tocan). */
+    cambiarPuerto(id: IdServicioDatos, puerto: number): Promise<{ proyectos: string[] }>;
     /** `confirmacion` debe ser el id del servicio. */
     borrarDatos(id: IdServicioDatos, confirmacion: string): Promise<void>;
     /** Encender (o no) el servicio al iniciar WolfCore Dev; no lo enciende ahora. */

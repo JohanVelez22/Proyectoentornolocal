@@ -497,6 +497,8 @@ export interface BloqueoInstancia {
   fallida: string;
   /** Copia en frío de antes de actualizar. */
   respaldo: string;
+  /** Versión a la que vuelve la configuración al resolver (si quedó con la que no arrancó). */
+  version?: string;
 }
 
 export interface EstadoServicio {

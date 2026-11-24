@@ -10,7 +10,13 @@ import { useVersiones, type FilaVersion } from '../stores/versiones';
  * defecto; "Borrar también los datos" es una casilla aparte que exige escribir el id de la
  * instancia (y es otra llamada, después).
  */
-const props = defineProps<{ nombre: string; fila: FilaVersion; datos: boolean }>();
+const props = defineProps<{
+  nombre: string;
+  fila: FilaVersion;
+  datos: boolean;
+  /** Es la versión activa de un servicio con una sola encendida (Nginx, Mailpit, Ollama). */
+  unica?: boolean;
+}>();
 const mostrar = defineModel<boolean>('show', { required: true });
 
 const t = textos.versiones.dialogoDesinstalar;
@@ -75,6 +81,7 @@ async function desinstalar(): Promise<void> {
       </template>
     </template>
     <p v-else-if="datos" class="texto">{{ t.datosQuedan }}</p>
+    <NAlert v-if="unica" type="warning" :bordered="false" class="alerta">{{ t.unica }}</NAlert>
     <template #footer>
       <div class="pie">
         <NButton size="small" :disabled="ocupado('desinstalar')" @click="mostrar = false">
