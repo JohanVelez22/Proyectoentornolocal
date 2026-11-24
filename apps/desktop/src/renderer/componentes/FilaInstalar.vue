@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CloudDownload } from '@vicons/ionicons5';
-import { NButton, NIcon, NProgress, NSelect, NTag, type SelectOption } from 'naive-ui';
+import { NButton, NIcon, NProgress, NTag, type SelectOption } from 'naive-ui';
+import Desplegable from './Desplegable.vue';
 import { computed, onMounted, ref } from 'vue';
 import type { ProgresoInstalacion, VersionDisponible } from '../../shared/api';
 import { api } from '../api';
@@ -129,7 +130,7 @@ onMounted(() => {
       </div>
     </div>
     <div class="acciones">
-      <NSelect
+      <Desplegable
         v-model:value="elegida"
         size="small"
         class="selector"
@@ -145,7 +146,7 @@ onMounted(() => {
         <template #empty>
           {{ ocupado('versiones') ? t.buscando : t.sinVersiones }}
         </template>
-      </NSelect>
+      </Desplegable>
       <NButton
         size="small"
         type="primary"
@@ -240,6 +241,6 @@ onMounted(() => {
 .error {
   margin: 6px 0 0;
   font-size: 12px;
-  color: #dc2626;
+  color: var(--texto-error);
 }
 </style>

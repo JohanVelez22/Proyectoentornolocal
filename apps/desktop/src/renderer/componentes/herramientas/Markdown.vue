@@ -82,7 +82,7 @@ function alPulsar(e: MouseEvent): void {
   opacity: 0.85;
 }
 .vista :deep(a) {
-  color: #6470e0;
+  color: var(--texto-enlace);
 }
 .vista :deep(table) {
   border-collapse: collapse;

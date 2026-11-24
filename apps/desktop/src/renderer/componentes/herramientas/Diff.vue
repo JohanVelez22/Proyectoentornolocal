@@ -123,7 +123,7 @@ function comparar(): void {
 }
 .archivo {
   font-size: 12px;
-  color: #6470e0;
+  color: var(--texto-enlace);
   cursor: pointer;
 }
 .archivo input {

@@ -188,7 +188,7 @@ function cambiar(valor: boolean): void {
 .url {
   font-family: var(--fuente-mono);
   font-size: 12px;
-  color: #16a34a;
+  color: var(--texto-ok);
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -204,7 +204,7 @@ function cambiar(valor: boolean): void {
   flex: none;
 }
 .error {
-  color: #dc2626;
+  color: var(--texto-error);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

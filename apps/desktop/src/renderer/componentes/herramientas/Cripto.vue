@@ -273,7 +273,7 @@ const json = (v: unknown): string => JSON.stringify(v, null, 2);
   padding: 8px 10px;
   border-radius: 8px;
   font-size: 12.5px;
-  color: #b45309;
+  color: var(--texto-aviso);
   background: rgba(234, 179, 8, 0.12);
 }
 </style>

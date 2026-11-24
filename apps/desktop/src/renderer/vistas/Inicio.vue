@@ -280,11 +280,11 @@ function abrir(url: string): void {
   background: rgba(128, 128, 128, 0.12);
 }
 .tono-ok .tile-icono {
-  color: #16a34a;
+  color: var(--texto-ok);
   background: rgba(22, 163, 74, 0.12);
 }
 .tono-aviso .tile-icono {
-  color: #d97706;
+  color: var(--texto-aviso);
   background: rgba(217, 119, 6, 0.14);
 }
 .tono-aviso {

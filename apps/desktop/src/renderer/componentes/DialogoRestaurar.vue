@@ -262,7 +262,7 @@ function cerrar(): void {
   line-height: 1.45;
 }
 .confianza .n-icon {
-  color: #d97706;
+  color: var(--texto-aviso);
   flex: none;
   margin-top: 1px;
 }
@@ -308,7 +308,7 @@ function cerrar(): void {
   gap: 6px;
   margin: 6px 0 0;
   font-size: 12.5px;
-  color: #d97706;
+  color: var(--texto-aviso);
 }
 .aviso-formato .n-icon {
   flex: none;

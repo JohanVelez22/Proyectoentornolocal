@@ -347,7 +347,7 @@ const filas = computed(() => {
   opacity: 0.7;
 }
 .aviso.alerta {
-  color: #b45309;
+  color: var(--texto-aviso);
 }
 .aviso.alerta .aviso-icono {
   opacity: 1;

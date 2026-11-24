@@ -175,13 +175,13 @@ onBeforeUnmount(() => {
   word-break: break-all;
 }
 .enviado .marca {
-  color: #6470e0;
+  color: var(--texto-enlace);
 }
 .recibido .marca {
-  color: #16a34a;
+  color: var(--texto-ok);
 }
 .error {
-  color: #dc2626;
+  color: var(--texto-error);
 }
 .sistema {
   opacity: 0.7;

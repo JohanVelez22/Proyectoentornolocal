@@ -7,7 +7,8 @@ import {
   Pulse,
   TrashOutline,
 } from '@vicons/ionicons5';
-import { NButton, NIcon, NSelect, NSpin, NTag, NTooltip, type SelectOption } from 'naive-ui';
+import { NButton, NIcon, NSpin, NTag, NTooltip, type SelectOption } from 'naive-ui';
+import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
 import type { ProveedorIaPublico } from '../../shared/api';
 import { textos } from '../i18n';
@@ -117,7 +118,7 @@ function pedirMensaje(): void {
 
     <!-- Mensaje de prueba (gasta tokens: siempre con el aviso de costo) -->
     <div class="mensaje">
-      <NSelect
+      <Desplegable
         v-model:value="modelo"
         :options="opcionesModelo"
         :placeholder="t.elegirModelo"
@@ -271,10 +272,10 @@ function pedirMensaje(): void {
   font-size: 12.5px;
 }
 .ok {
-  color: #16a34a;
+  color: var(--texto-ok);
 }
 .error {
-  color: #dc2626;
+  color: var(--texto-error);
   white-space: pre-wrap;
 }
 .modelos {

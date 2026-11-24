@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { NButton, NEmpty, NFormItem, NSelect, NSkeleton, NTabPane, NTabs } from 'naive-ui';
+import { NButton, NEmpty, NFormItem, NSkeleton, NTabPane, NTabs } from 'naive-ui';
+import Desplegable from '../componentes/Desplegable.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '../api';
@@ -43,7 +44,7 @@ onMounted(() => {
     </NEmpty>
     <template v-else-if="rama">
       <NFormItem :label="t.rama" label-placement="left" :show-feedback="false" class="rama">
-        <NSelect v-model:value="rama" :options="opciones" />
+        <Desplegable v-model:value="rama" :options="opciones" />
       </NFormItem>
       <NTabs v-model:value="pestana" type="line" animated>
         <NTabPane name="ini" :tab="t.pestanas.ini">

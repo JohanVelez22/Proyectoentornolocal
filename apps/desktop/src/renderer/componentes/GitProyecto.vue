@@ -215,7 +215,7 @@ function abrirRemoto(): void {
   opacity: 0.65;
 }
 .dato.aviso {
-  color: #b45309;
+  color: var(--texto-aviso);
   opacity: 1;
 }
 .espacio {
@@ -227,7 +227,7 @@ function abrirRemoto(): void {
   opacity: 0.8;
 }
 .nota.aviso {
-  color: #b45309;
+  color: var(--texto-aviso);
 }
 .corrida {
   margin: 0;

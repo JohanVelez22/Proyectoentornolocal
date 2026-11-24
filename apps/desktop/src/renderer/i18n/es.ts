@@ -116,7 +116,8 @@ export const es = {
         'La versión {version} no arrancó; {nombre} volvió a {anterior}. El respaldo se conserva.',
       'servicios.restauracion_fallo':
         'La versión nueva no arrancó y no se pudieron devolver los datos de {nombre}. No se encendió nada: los datos tocados están en {fallida} y el respaldo en {respaldo}.',
-      'servicios.otra_rama': '{nombre} {version} es de otra rama: créela como instancia nueva.',
+      'servicios.otra_rama':
+        '{nombre} {version} es de una versión principal distinta: créela como instancia nueva.',
       'servicios.misma_version': '{id} ya usa la versión {version}.',
       'servicios.instancia_bloqueada':
         '{nombre} está bloqueada: una actualización no pudo devolver sus datos. Los datos tocados están en {fallida} y el respaldo en {respaldo}. Resuélvalo en Servicios → Versiones antes de encenderla.',
@@ -144,7 +145,7 @@ export const es = {
       'instancias.respaldo_en_uso':
         'Esa copia la necesita {id}, que está bloqueada: resuélvalo antes.',
       'instancias.version_requerida':
-        'No se sabe a qué versión volver {id}: elija una versión instalada de su rama.',
+        'No se sabe a qué versión volver {id}: elija una versión instalada de la misma versión principal.',
       'instalador.version_en_uso':
         'No se puede desinstalar {servicio} {version}: la usa la instancia {instancia}.',
       'bd.encender_servicio': 'Encienda {nombre} para administrar sus bases.',
@@ -451,7 +452,7 @@ export const es = {
     },
     gruposAyuda: {
       web: 'Servidor que atiende los dominios .test.',
-      php: 'Una versión por rama; cada sitio usa la suya.',
+      php: 'Una instalación por versión (8.3, 8.4…); cada sitio usa la suya.',
       bd: 'Escuchan solo en 127.0.0.1.',
       correo: 'Atrapa los correos que envían sus proyectos, sin que salgan a internet.',
       ia: 'Modelos de lenguaje en su equipo.',
@@ -823,7 +824,7 @@ export const es = {
     elegir: 'Elija una versión',
     buscando: 'Buscando versiones…',
     sinVersiones: 'No se encontraron versiones',
-    rama: (rama: string) => `rama ${rama}`,
+    rama: (rama: string) => rama,
     yaInstalada: 'ya instalada',
     fases: {
       descargando: 'Descargando',
@@ -1155,11 +1156,11 @@ export const es = {
     agregar: 'Agregar ajuste',
     guardarAjustes: 'Probar y guardar',
     ajustesGuardados: 'Ajustes de PHP del sitio aplicados',
-    sinAjustes: 'Sin ajustes propios: usa el php.ini de la rama tal cual.',
+    sinAjustes: 'Sin ajustes propios: usa el php.ini compartido tal cual.',
     xdebugTitulo: 'Xdebug',
     xdebugInterruptor: (dominio: string) => `Xdebug para ${dominio}`,
     xdebugAyuda:
-      'Se carga solo en el PHP de este sitio, nunca en el de la rama: los demás sitios siguen igual de rápidos.',
+      'Se carga solo en el PHP de este sitio, nunca en el PHP compartido: los demás sitios siguen igual de rápidos.',
     xdebugDescarga:
       'Xdebug no está instalado en esta versión de PHP: se descargará del catálogo (xdebug.org, huella SHA-256 verificada).',
     modo: 'Modos',
@@ -2720,16 +2721,17 @@ export const es = {
     },
     ayuda: {
       instancias:
-        'Cada rama tiene su instancia, con su carpeta de datos y su puerto: puede encender varias a la vez. La estrella marca la que usan los proyectos nuevos.',
-      pool: 'Cada rama de PHP encendida tiene su propio PHP; la estrella marca la de los proyectos nuevos.',
+        'Cada versión principal (8.4, 17…) tiene su instancia, con su carpeta de datos y su puerto: puede encender varias a la vez. La estrella marca la que usan los proyectos nuevos.',
+      pool: 'Cada versión de PHP encendida tiene su propio PHP; la estrella marca la de los proyectos nuevos.',
       unica:
         'Puede instalar varias versiones, pero solo una queda encendida: encender otra cambia la activa.',
       ninguno:
         'No hay nada que encender: los proyectos usan la versión que piden o la predeterminada (estrella).',
     },
-    filtroRama: 'Rama',
-    todasRamas: 'Todas las ramas',
-    rama: (r: string) => `Rama ${r}`,
+    filtroRama: 'Versión',
+    todasRamas: 'Todas las versiones',
+    rama: (r: string) => r,
+    cabecera: (servicio: string, r: string) => `${servicio} ${r}`,
     mostrarTodas: 'Mostrar todas',
     origen: {
       vivo: 'En línea',
@@ -2759,7 +2761,7 @@ export const es = {
     actualizar: 'Actualizar',
     usarEsta: 'Usar esta versión',
     usarEstaAyuda: (id: string) =>
-      `${id} usa otra versión de esta rama: se cambia con respaldo previo de sus datos.`,
+      `${id} usa otra versión de este servicio: se cambia con respaldo previo de sus datos.`,
     predeterminada: 'Predeterminada para proyectos nuevos',
     hacerPredeterminada: 'Usar para proyectos nuevos',
     predeterminadaHecha: (v: string) => `${v} queda como predeterminada.`,
@@ -2779,14 +2781,14 @@ export const es = {
         'Esta versión no tiene huella publicada por su fuente oficial: WolfCore Dev no puede comprobar que el archivo descargado sea el original.',
       explicacion:
         'La descarga sigue siendo por HTTPS desde el sitio oficial, pero si ese sitio o la conexión estuvieran comprometidos, no se notaría. Instálela solo si la necesita.',
-      alternativa: (v: string) => `Hay una versión verificada de la misma rama: ${v}.`,
+      alternativa: (v: string) => `Hay una versión verificada del mismo servicio: ${v}.`,
       casilla: 'Entiendo el riesgo y quiero instalarla sin verificar',
       instalarVerificada: (v: string) => `Instalar ${v} (verificada)`,
       instalarIgual: 'Instalar sin verificar',
     },
     dialogoActualizar: {
       titulo: (n: string) => `Actualizar ${n}`,
-      tituloRama: (v: string) => `Nueva rama: ${v}`,
+      tituloRama: (v: string) => `Versión nueva: ${v}`,
       ninguna: 'ninguna',
       instancia: (id: string) => `Se actualiza la instancia ${id}. Antes de cambiar nada:`,
       pasoInstalar: (v: string) => `se instala ${v} junto a la versión actual (que no se borra);`,
@@ -2806,7 +2808,7 @@ export const es = {
       alLado: (v: string) =>
         `Se instala ${v}. Las demás versiones instaladas no se tocan; los proyectos que fijan otra versión la siguen usando.`,
       ramaExplicacion:
-        'Una rama nueva no reemplaza a la anterior: se crea una instancia nueva con su propia carpeta de datos y su puerto. La instancia actual sigue igual.',
+        'Una versión principal nueva no reemplaza a la anterior: se crea una instancia nueva con su propia carpeta de datos y su puerto. La instancia actual sigue igual.',
       copiarDesdeTitulo: 'Datos de la instancia nueva',
       copiarDesde: (id: string) =>
         `Copiar datos desde ${id} (se vuelcan y se restauran; el original no se toca)`,
@@ -2827,7 +2829,7 @@ export const es = {
       instancia: (id: string) =>
         `La usa la instancia ${id}: se detiene y se quita de la lista de instancias.`,
       datosQuedan:
-        'Sus datos quedan en disco: si vuelve a instalar esta rama, la instancia los vuelve a abrir.',
+        'Sus datos quedan en disco: si vuelve a instalar esta versión, la instancia los vuelve a abrir.',
       borrarDatos: 'Borrar también los datos',
       borrarAviso: (id: string) =>
         `Se borrará la carpeta de datos de ${id} con todas sus bases. No se puede deshacer. Escriba "${id}" para confirmar.`,
@@ -2855,7 +2857,7 @@ export const es = {
       notaDevolver: 'Se copia el respaldo, se comprueba y solo entonces se pone en su sitio.',
       escriba: (id: string) => `Escriba ${id} para confirmar`,
       elegirVersion:
-        'La marca de bloqueo no se pudo leer: elija con qué versión de esta rama se abrirán los datos (la de antes de la actualización).',
+        'La marca de bloqueo no se pudo leer: elija con qué versión se abrirán los datos (la de antes de la actualización).',
       version: 'Versión',
       confirmar: 'Resolver',
       hecho: (id: string) => `${id} desbloqueada. Ya puede encenderla.`,
@@ -2863,14 +2865,14 @@ export const es = {
     respaldos: {
       titulo: 'Respaldos de las actualizaciones',
       descripcion:
-        'Copias que dejaron las actualizaciones y las ramas nuevas. La carpeta de datos que usa cada instancia nunca aparece aquí.',
+        'Copias que dejaron las actualizaciones y las versiones nuevas. La carpeta de datos que usa cada instancia nunca aparece aquí.',
       vacio: 'No hay copias.',
       tipos: {
         respaldo: 'Copia en frío',
         volcados: 'Volcados de las bases',
         fallida: 'Datos de una versión que falló',
         restaurando: 'Devolución a medias',
-        copia: 'Volcados para una rama nueva',
+        copia: 'Volcados para una versión nueva',
       },
       archivos: (n: number) => (n === 1 ? '1 archivo' : `${n} archivos`),
       borrar: 'Borrar',

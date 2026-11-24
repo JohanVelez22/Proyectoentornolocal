@@ -7,11 +7,11 @@ import {
   NEmpty,
   NIcon,
   NInput,
-  NSelect,
   NSpace,
   NSpin,
   useThemeVars,
 } from 'naive-ui';
+import Desplegable from '../componentes/Desplegable.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { api } from '../api';
@@ -102,7 +102,7 @@ function cambiarNiveles(v: (string | number)[]): void {
     <p class="descripcion">{{ t.descripcion }}</p>
 
     <div class="barra">
-      <NSelect
+      <Desplegable
         class="selector"
         :value="registros.actual"
         :options="opciones"

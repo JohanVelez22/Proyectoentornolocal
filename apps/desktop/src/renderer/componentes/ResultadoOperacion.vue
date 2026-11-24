@@ -109,10 +109,10 @@ function abrirCarpeta(ruta: string): void {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #16a34a;
+  color: var(--texto-ok);
 }
 .error .cabeza {
-  color: #dc2626;
+  color: var(--texto-error);
 }
 .cabeza strong {
   font-size: 14px;
@@ -153,7 +153,7 @@ function abrirCarpeta(ruta: string): void {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #d97706;
+  color: var(--texto-aviso);
 }
 .advertencias ul {
   margin: 8px 0 0;

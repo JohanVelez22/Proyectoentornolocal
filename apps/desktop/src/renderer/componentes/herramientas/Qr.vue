@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Download } from '@vicons/ionicons5';
-import { NButton, NIcon, NInput, NSelect, useMessage } from 'naive-ui';
+import { NButton, NIcon, NInput, useMessage } from 'naive-ui';
+import Desplegable from '../Desplegable.vue';
 import QRCode from 'qrcode';
 import { computed, onMounted, ref, watch } from 'vue';
 import { api } from '../../api';
@@ -78,7 +79,7 @@ onMounted(async () => {
   <div class="herr">
     <div>
       <div class="herr-etiqueta">{{ t.tunel }}</div>
-      <NSelect
+      <Desplegable
         v-model:value="tunel"
         :options="opcionesTunel"
         :placeholder="t.sinTuneles"

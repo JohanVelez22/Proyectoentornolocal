@@ -511,7 +511,7 @@ function alCambiarVisible(v: boolean): void {
 }
 .conexion.gh .n-icon,
 .conexion.token .n-icon {
-  color: #16a34a;
+  color: var(--texto-ok);
 }
 .conexion-texto {
   flex: 1;
@@ -537,7 +537,7 @@ function alCambiarVisible(v: boolean): void {
   opacity: 0.65;
 }
 .nota.error {
-  color: #dc2626;
+  color: var(--texto-error);
   opacity: 1;
 }
 .token {

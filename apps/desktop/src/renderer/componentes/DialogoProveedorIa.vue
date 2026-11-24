@@ -7,11 +7,11 @@ import {
   NIcon,
   NInput,
   NModal,
-  NSelect,
   useDialog,
   useMessage,
   type SelectOption,
 } from 'naive-ui';
+import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
 import type { ConfigProveedorIa, ProveedorIaPublico } from '../../shared/api';
 import { useAccion } from '../composables/useAccion';
@@ -177,14 +177,14 @@ function borrarClave(): void {
   >
     <NForm label-placement="top" :show-require-mark="false" @submit.prevent="guardar">
       <NFormItem :label="t.tipo">
-        <NSelect v-model:value="tipo" :options="opcionesTipo" :disabled="editando" />
+        <Desplegable v-model:value="tipo" :options="opcionesTipo" :disabled="editando" />
       </NFormItem>
       <NFormItem
         v-if="tipo === 'compatible' && !editando"
         :label="t.preset"
         :feedback="t.presetAyuda"
       >
-        <NSelect v-model:value="preset" :options="opcionesPreset" clearable />
+        <Desplegable v-model:value="preset" :options="opcionesPreset" clearable />
       </NFormItem>
       <NFormItem
         :label="t.nombre"

@@ -252,7 +252,7 @@ function irAServicios(): void {
   opacity: 0.7;
 }
 .apagado-mensaje {
-  color: #dc2626;
+  color: var(--texto-error);
   opacity: 1 !important;
   white-space: pre-wrap;
 }
@@ -282,7 +282,7 @@ function irAServicios(): void {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  color: #6470e0;
+  color: var(--texto-enlace);
   background: rgba(var(--acento-rgb), 0.12);
   flex: none;
 }
@@ -305,7 +305,7 @@ function irAServicios(): void {
   font-variant-numeric: tabular-nums;
 }
 .error {
-  color: #dc2626;
+  color: var(--texto-error);
   font-size: 12.5px;
 }
 .datos {

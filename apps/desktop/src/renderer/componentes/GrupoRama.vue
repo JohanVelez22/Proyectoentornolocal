@@ -39,6 +39,8 @@ const tipoSoporte = computed(() => {
   }
 });
 
+const cabecera = computed(() => t.cabecera(t.servicios[props.tabla.servicio], props.rama.rama));
+
 const finTexto = computed(() => {
   const f = props.rama.finSoporte;
   if (!f) return null;
@@ -54,13 +56,13 @@ const instanciaDeRama = computed(
 <template>
   <section class="rama" :aria-labelledby="`rama-${rama.rama}`">
     <header class="cabeza">
-      <h3 :id="`rama-${rama.rama}`">{{ t.rama(rama.rama) }}</h3>
+      <h3 :id="`rama-${rama.rama}`">{{ cabecera }}</h3>
       <NTag v-if="rama.soporte" size="small" :bordered="false" :type="tipoSoporte">
         {{ t.soporte[rama.soporte] }}
       </NTag>
       <small v-if="finTexto">{{ finTexto }}</small>
     </header>
-    <div role="table" :aria-label="t.rama(rama.rama)">
+    <div role="table" :aria-label="cabecera">
       <FilaVersion
         v-for="f in rama.versiones"
         :key="f.version"

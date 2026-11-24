@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { FolderOpen, Refresh } from '@vicons/ionicons5';
-import { NButton, NEmpty, NIcon, NModal, NSelect, NSpin, type SelectOption } from 'naive-ui';
+import { NButton, NEmpty, NIcon, NModal, NSpin, type SelectOption } from 'naive-ui';
+import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
 import type { FuenteRegistroPublica, Sitio } from '../../shared/api';
 import { api } from '../api';
@@ -74,7 +75,7 @@ function abrirCarpeta(): void {
       <NEmpty v-if="!cargando && !fuentes.length" :description="t.ninguna" class="vacio" />
       <div v-else class="visor">
         <div class="barra">
-          <NSelect
+          <Desplegable
             v-model:value="fuente"
             size="small"
             :options="opciones"

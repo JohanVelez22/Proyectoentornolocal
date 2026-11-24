@@ -6,11 +6,11 @@ import {
   NFormItem,
   NIcon,
   NModal,
-  NSelect,
   NSkeleton,
   useMessage,
   type SelectOption,
 } from 'naive-ui';
+import Desplegable from '../componentes/Desplegable.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import type { EstadoAgente, IdAgente } from '../../shared/api';
@@ -239,7 +239,7 @@ function abrir(): void {
       @update:show="(v: boolean) => !v && (abrirDe = null)"
     >
       <NFormItem :label="t.dialogoAbrir.proyecto" :show-feedback="false">
-        <NSelect
+        <Desplegable
           v-model:value="sitioId"
           :options="opcionesSitio"
           :placeholder="t.dialogoAbrir.sinProyectos"
@@ -247,7 +247,7 @@ function abrir(): void {
         />
       </NFormItem>
       <NFormItem :label="t.dialogoAbrir.proveedor" :show-feedback="false" class="campo">
-        <NSelect
+        <Desplegable
           :value="proveedorId ?? ''"
           :options="opcionesProveedor"
           @update:value="(v: string) => (proveedorId = v || null)"

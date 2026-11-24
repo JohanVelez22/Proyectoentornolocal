@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ContrastOutline, MoonOutline, SunnyOutline } from '@vicons/ionicons5';
-import { NButton, NDropdown, NIcon, NRadioButton, NRadioGroup, useNotification } from 'naive-ui';
+import { NButton, NIcon, NRadioButton, NRadioGroup, useNotification } from 'naive-ui';
+import MenuDesplegable from './MenuDesplegable.vue';
 import { computed, h, type Component } from 'vue';
 import { mensajeDeError } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -38,7 +39,7 @@ async function elegir(tema: TemaUi): Promise<void> {
 </script>
 
 <template>
-  <NDropdown
+  <MenuDesplegable
     v-if="compacto"
     trigger="click"
     :options="opciones"
@@ -56,7 +57,7 @@ async function elegir(tema: TemaUi): Promise<void> {
         <NIcon><component :is="ICONOS[preferencias.tema]" /></NIcon>
       </template>
     </NButton>
-  </NDropdown>
+  </MenuDesplegable>
   <NRadioGroup
     v-else
     :value="preferencias.tema"

@@ -169,7 +169,10 @@ const visible = computed({
 .tarjeta:focus-visible {
   border-color: rgba(var(--acento-rgb), 0.55);
   background: rgba(var(--acento-rgb), 0.06);
-  outline: none;
+}
+.tarjeta:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
 }
 .icono {
   display: grid;
@@ -178,7 +181,7 @@ const visible = computed({
   height: 36px;
   border-radius: 9px;
   background: rgba(var(--acento-rgb), 0.12);
-  color: #6470e0;
+  color: var(--texto-enlace);
   flex: none;
 }
 .texto {
@@ -243,12 +246,12 @@ const visible = computed({
   overflow: auto;
 }
 .herr-error {
-  color: #dc2626;
+  color: var(--texto-error);
   font-size: 12.5px;
   margin: 0;
 }
 .herr-ok {
-  color: #16a34a;
+  color: var(--texto-ok);
   font-size: 12.5px;
   margin: 0;
 }

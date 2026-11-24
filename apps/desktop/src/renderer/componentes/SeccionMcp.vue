@@ -256,7 +256,7 @@ function regenerar(): void {
   opacity: 0.6;
 }
 .ayuda.error {
-  color: #dc2626;
+  color: var(--texto-error);
   opacity: 1;
 }
 .con-boton {

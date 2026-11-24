@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { NSelect } from 'naive-ui';
+import {} from 'naive-ui';
+import Desplegable from './Desplegable.vue';
 import { computed } from 'vue';
 import type { EstadoInstancia, IdInstancia, MotorBd } from '../../shared/api';
 import { textos } from '../i18n';
@@ -39,7 +40,7 @@ function elegir(id: IdInstancia | null): void {
 <template>
   <div v-if="instancias.length > 1" class="selector">
     <span class="etiqueta">{{ t.etiqueta }}</span>
-    <NSelect
+    <Desplegable
       size="small"
       class="lista"
       :value="valor"

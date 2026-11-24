@@ -91,6 +91,31 @@ describe('i18n', () => {
     expect(hojas.filter((h) => /[áéíóúñ¿¡]/.test(h))).toEqual([]);
   });
 
+  it('ningún texto fuera de Git dice rama', () => {
+    const hojas: string[] = [];
+    const recorrer = (o: unknown, ruta: string): void => {
+      for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+        const r = ruta ? `${ruta}.${k}` : k;
+        if (/(^|\.)git/i.test(r)) continue;
+        let texto: string | undefined;
+        if (typeof v === 'string') texto = v;
+        else if (typeof v === 'function') {
+          try {
+            texto = String((v as (...a: unknown[]) => unknown)('X', 'X', 'X'));
+          } catch {
+            texto = undefined;
+          }
+        } else if (v && typeof v === 'object') recorrer(v, r);
+        if (texto !== undefined) hojas.push(texto.replace(/\{\w+\}/g, ''));
+      }
+    };
+    recorrer(es, '');
+    recorrer(en, '');
+    const coincidencias = (re: RegExp): string[] => hojas.filter((h) => re.test(h));
+    expect(coincidencias(/\bramas?\b/i)).toEqual([]);
+    expect(coincidencias(/\bbranch(es)?\b/i)).toEqual([]);
+  });
+
   it('ninguna plantilla .vue tiene texto fijo fuera de i18n', () => {
     const fallos: string[] = [];
     for (const f of archivos(RAIZ, /\.vue$/)) {

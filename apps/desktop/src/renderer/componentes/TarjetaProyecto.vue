@@ -19,7 +19,6 @@ import {
 } from '@vicons/ionicons5';
 import {
   NButton,
-  NDropdown,
   NIcon,
   NProgress,
   NTag,
@@ -29,6 +28,7 @@ import {
   useNotification,
   type DropdownOption,
 } from 'naive-ui';
+import MenuDesplegable from './MenuDesplegable.vue';
 import { computed, h, onMounted, ref, type Component } from 'vue';
 import { useRouter } from 'vue-router';
 import type { IdTerminal, ResultadoAplicar, Sitio, TerminalDisponible } from '../../shared/api';
@@ -449,10 +449,10 @@ function abrirCarpeta(): void {
             pegado
             @click="abrirTerminal()"
           />
-          <NDropdown
+          <MenuDesplegable
             trigger="click"
             :options="opcionesTerminal"
-            placement="bottom-end"
+            alinear-fin
             :show="menuTerminal"
             @update:show="cambiarMenuTerminal"
             @select="elegirTerminal"
@@ -469,7 +469,7 @@ function abrirCarpeta(): void {
                 ><NIcon aria-hidden="true"><ChevronDown /></NIcon
               ></template>
             </NButton>
-          </NDropdown>
+          </MenuDesplegable>
         </div>
         <BotonIcono
           :icono="Server"
@@ -485,7 +485,7 @@ function abrirCarpeta(): void {
           :cargando="ocupado('editor')"
           @click="abrirEditor"
         />
-        <NDropdown trigger="click" :options="opciones" placement="bottom-end" @select="elegir">
+        <MenuDesplegable trigger="click" :options="opciones" alinear-fin @select="elegir">
           <NButton
             size="small"
             quaternary
@@ -496,7 +496,7 @@ function abrirCarpeta(): void {
               ><NIcon><EllipsisHorizontal /></NIcon
             ></template>
           </NButton>
-        </NDropdown>
+        </MenuDesplegable>
       </div>
     </div>
 
@@ -622,14 +622,14 @@ function abrirCarpeta(): void {
 }
 .dominio {
   font-family: var(--fuente-mono);
-  color: #6470e0;
+  color: var(--texto-enlace);
   text-decoration: none;
 }
 .dominio.seguro {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #16a34a;
+  color: var(--texto-ok);
 }
 .candado {
   font-size: 12px;
@@ -640,7 +640,7 @@ function abrirCarpeta(): void {
   gap: 6px;
   margin: 2px 0 0;
   font-size: 12px;
-  color: #b45309;
+  color: var(--texto-aviso);
 }
 .https-pendiente .n-icon {
   margin-top: 2px;
@@ -702,7 +702,7 @@ function abrirCarpeta(): void {
   margin: 2px 0 0;
   padding: 0;
   font-size: 12px;
-  color: #b45309;
+  color: var(--texto-aviso);
 }
 .avisos li {
   list-style: none;

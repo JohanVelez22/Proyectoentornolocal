@@ -16,7 +16,6 @@ import {
   NButton,
   NCollapse,
   NCollapseItem,
-  NDropdown,
   NForm,
   NFormItem,
   NIcon,
@@ -28,6 +27,7 @@ import {
   useNotification,
   type DropdownOption,
 } from 'naive-ui';
+import MenuDesplegable from './MenuDesplegable.vue';
 import { computed, h, ref, type Component } from 'vue';
 import type { EstadoServicio } from '../../shared/api';
 import { api } from '../api';
@@ -183,7 +183,7 @@ const opciones = computed<DropdownOption[]>(() => [
     label: t.borrarDatos.opcion,
     icon: iconoMenu(TrashOutline),
     disabled: tarjetaOcupada.value,
-    props: { style: 'color: #dc2626' },
+    props: { style: 'color: var(--texto-error)' },
   },
 ]);
 
@@ -275,11 +275,11 @@ function cambiarRedLocal(valor: boolean): void {
       >
         {{ textos.versiones.pestana }}
       </NButton>
-      <NDropdown
+      <MenuDesplegable
         v-if="deDatos"
         trigger="click"
         :options="opciones"
-        placement="bottom-end"
+        alinear-fin
         @select="elegir"
       >
         <NButton
@@ -294,7 +294,7 @@ function cambiarRedLocal(valor: boolean): void {
             ><NIcon><EllipsisHorizontal /></NIcon
           ></template>
         </NButton>
-      </NDropdown>
+      </MenuDesplegable>
     </header>
 
     <p v-if="resumenInstancias" class="instancias">{{ resumenInstancias }}</p>
@@ -534,7 +534,7 @@ function cambiarRedLocal(valor: boolean): void {
   height: 36px;
   border-radius: 9px;
   background: rgba(var(--acento-rgb), 0.12);
-  color: #6470e0;
+  color: var(--texto-enlace);
   flex: none;
 }
 .titulo {
@@ -588,7 +588,7 @@ function cambiarRedLocal(valor: boolean): void {
   font-size: 12px;
 }
 .conflicto-icono {
-  color: #d97706;
+  color: var(--texto-aviso);
   flex: none;
   margin-top: 1px;
 }
@@ -659,7 +659,7 @@ function cambiarRedLocal(valor: boolean): void {
   font-size: 13px;
 }
 .advertencia .n-icon {
-  color: #dc2626;
+  color: var(--texto-error);
   flex: none;
 }
 .acciones-dialogo {

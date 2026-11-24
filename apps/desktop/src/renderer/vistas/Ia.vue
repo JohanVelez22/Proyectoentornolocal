@@ -20,7 +20,6 @@ import {
   NIcon,
   NInput,
   NProgress,
-  NSelect,
   NSkeleton,
   NSpin,
   NTooltip,
@@ -28,6 +27,7 @@ import {
   useMessage,
   type SelectOption,
 } from 'naive-ui';
+import Desplegable from '../componentes/Desplegable.vue';
 import { computed, h, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import type { ModeloOllama, ProveedorIaPublico } from '../../shared/api';
@@ -602,7 +602,7 @@ const filasConexion = computed(() => [
       </header>
       <p v-if="ia.modelos && !ia.modelos.length" class="sin-modelos">{{ t.prueba.sinModelos }}</p>
       <form v-else class="probar" @submit.prevent="probar">
-        <NSelect
+        <Desplegable
           v-model:value="modeloPrueba"
           :options="opcionesModelo"
           :placeholder="t.prueba.elegir"
@@ -768,7 +768,7 @@ const filasConexion = computed(() => [
   opacity: 0.7;
 }
 .apagado-mensaje {
-  color: #dc2626;
+  color: var(--texto-error);
   opacity: 1 !important;
   white-space: pre-wrap;
 }
@@ -864,7 +864,7 @@ const filasConexion = computed(() => [
   max-width: 420px;
 }
 .error-campo {
-  color: #dc2626;
+  color: var(--texto-error);
   font-size: 12px;
 }
 .sugerencias {
@@ -891,10 +891,10 @@ const filasConexion = computed(() => [
   margin-left: auto;
 }
 .ok {
-  color: #16a34a;
+  color: var(--texto-ok);
 }
 .error {
-  color: #dc2626;
+  color: var(--texto-error);
 }
 .probar {
   display: flex;

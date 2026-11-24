@@ -266,14 +266,14 @@ const columnas: DataTableColumns<Fila> = [
 .tabla :deep(.url) {
   font-family: var(--fuente-mono);
   font-size: 12px;
-  color: #16a34a;
+  color: var(--texto-ok);
   text-decoration: none;
 }
 .tabla :deep(.url:hover) {
   text-decoration: underline;
 }
 .tabla :deep(.error) {
-  color: #dc2626;
+  color: var(--texto-error);
   font-size: 12.5px;
 }
 .tabla :deep(.tenue) {

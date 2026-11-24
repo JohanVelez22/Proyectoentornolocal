@@ -25,6 +25,23 @@ body {
   overflow: hidden;
 }
 
+/*
+ * Colores de texto con contraste AA (4.5:1) sobre el fondo de cada tema. Los tonos de los
+ * puntos e iconos (3:1) pueden seguir siendo más vivos; el texto usa estos.
+ */
+:root {
+  --texto-ok: #15803d;
+  --texto-aviso: #b45309;
+  --texto-error: #dc2626;
+  --texto-enlace: #4f5bd5;
+}
+:root[data-tema='oscuro'] {
+  --texto-ok: #4ade80;
+  --texto-aviso: #fbbf24;
+  --texto-error: #f87171;
+  --texto-enlace: #8b93ff;
+}
+
 /* Barra de desplazamiento discreta en ambos temas. */
 ::-webkit-scrollbar {
   width: 10px;

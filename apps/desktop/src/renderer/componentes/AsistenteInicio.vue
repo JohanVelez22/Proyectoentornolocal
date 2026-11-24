@@ -446,7 +446,7 @@ async function vigilar(): Promise<void> {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #16a34a;
+  color: var(--texto-ok);
   font-size: 13px;
 }
 .basicos {

@@ -54,7 +54,7 @@ const proyectos = useProyectos();
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #6470e0;
+  color: var(--texto-enlace);
 }
 .titulo strong {
   color: inherit;

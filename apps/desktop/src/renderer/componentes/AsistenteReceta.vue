@@ -9,7 +9,6 @@ import {
   NInputNumber,
   NModal,
   NProgress,
-  NSelect,
   NSpin,
   NSwitch,
   NTag,
@@ -17,6 +16,7 @@ import {
   useDialog,
   type SelectOption,
 } from 'naive-ui';
+import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
 import type { RecetaPropuesta, ResultadoAplicar, ResultadoReceta } from '../../shared/api';
 import { api, plano } from '../api';
@@ -416,7 +416,7 @@ function alCambiarVisible(v: boolean): void {
           <div class="rejilla">
             <label class="campo">
               <span>{{ t.tipo }}</span>
-              <NSelect
+              <Desplegable
                 v-model:value="det.tipo"
                 size="small"
                 :options="opcionesTipo"
@@ -425,7 +425,7 @@ function alCambiarVisible(v: boolean): void {
             </label>
             <label v-if="usaPhp(det.tipo)" class="campo">
               <span>{{ t.php }}</span>
-              <NSelect
+              <Desplegable
                 v-model:value="det.php"
                 size="small"
                 :options="opcionesPhp"
@@ -449,7 +449,7 @@ function alCambiarVisible(v: boolean): void {
             </label>
             <label v-if="usaNode" class="campo">
               <span>{{ t.node }}</span>
-              <NSelect
+              <Desplegable
                 :value="det.node ?? ''"
                 size="small"
                 :options="opcionesNode"
@@ -459,7 +459,7 @@ function alCambiarVisible(v: boolean): void {
             </label>
             <label v-if="usaPython" class="campo">
               <span>{{ t.python }}</span>
-              <NSelect
+              <Desplegable
                 :value="det.python ?? ''"
                 size="small"
                 :options="opcionesPython"
@@ -469,7 +469,7 @@ function alCambiarVisible(v: boolean): void {
             </label>
             <label class="campo ancho">
               <span>{{ t.servicios }}</span>
-              <NSelect
+              <Desplegable
                 v-model:value="det.servicios"
                 size="small"
                 multiple
@@ -735,7 +735,7 @@ function alCambiarVisible(v: boolean): void {
 .aviso {
   margin: 8px 0 0;
   font-size: 12px;
-  color: #b45309;
+  color: var(--texto-aviso);
 }
 .rejilla {
   display: grid;
@@ -835,10 +835,10 @@ function alCambiarVisible(v: boolean): void {
   font-size: 13px;
 }
 .final.ok {
-  color: #16a34a;
+  color: var(--texto-ok);
 }
 .final.mal {
-  color: #dc2626;
+  color: var(--texto-error);
 }
 .pie {
   display: flex;

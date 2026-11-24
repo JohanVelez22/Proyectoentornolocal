@@ -5,13 +5,13 @@ import {
   NCheckbox,
   NEmpty,
   NIcon,
-  NSelect,
   NSkeleton,
   NTag,
   NTooltip,
   useDialog,
   useNotification,
 } from 'naive-ui';
+import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
 import type { IdServicioDatos, RespaldoDatos, ServicioVersiones } from '../../shared/api';
 import { useAccion } from '../composables/useAccion';
@@ -181,7 +181,7 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
 <template>
   <div class="versiones">
     <div class="barra">
-      <NSelect
+      <Desplegable
         size="small"
         class="servicio"
         :value="servicio"
@@ -189,7 +189,7 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
         :aria-label="t.elegirServicio"
         @update:value="(s: ServicioVersiones) => emit('elegir', s)"
       />
-      <NSelect
+      <Desplegable
         size="small"
         class="rama"
         :value="v.rama ?? ''"

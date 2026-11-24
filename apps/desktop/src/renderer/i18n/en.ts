@@ -118,7 +118,7 @@ export const en: Textos = {
       'servicios.restauracion_fallo':
         'The new version did not start and the data of {nombre} could not be restored. Nothing was started: the touched data is in {fallida} and the backup in {respaldo}.',
       'servicios.otra_rama':
-        '{nombre} {version} belongs to another branch: create it as a new instance.',
+        '{nombre} {version} belongs to a different major version: create it as a new instance.',
       'servicios.misma_version': '{id} already uses version {version}.',
       'servicios.instancia_bloqueada':
         '{nombre} is blocked: an update could not restore its data. The touched data is in {fallida} and the backup in {respaldo}. Resolve it in Services → Versions before starting it.',
@@ -145,7 +145,7 @@ export const en: Textos = {
       'instancias.respaldo_no_existe': 'That backup of {id} does not exist.',
       'instancias.respaldo_en_uso': '{id} is blocked and needs that copy: resolve it first.',
       'instancias.version_requerida':
-        'It is unknown which version {id} should go back to: choose an installed version of its branch.',
+        'It is unknown which version {id} should go back to: choose an installed version of the same major version.',
       'instalador.version_en_uso':
         'Cannot uninstall {servicio} {version}: instance {instancia} uses it.',
       'bd.encender_servicio': 'Start {nombre} to manage its databases.',
@@ -445,7 +445,7 @@ export const en: Textos = {
     },
     gruposAyuda: {
       web: 'Server that handles the .test domains.',
-      php: 'One version per branch; each site uses its own.',
+      php: 'One install per version (8.3, 8.4…); each site uses its own.',
       bd: 'Listen on 127.0.0.1 only.',
       correo: 'Catches the emails your projects send, without them reaching the internet.',
       ia: 'Language models on your computer.',
@@ -813,7 +813,7 @@ export const en: Textos = {
     elegir: 'Choose a version',
     buscando: 'Looking for versions…',
     sinVersiones: 'No versions found',
-    rama: (rama: string) => `branch ${rama}`,
+    rama: (rama: string) => rama,
     yaInstalada: 'already installed',
     fases: {
       descargando: 'Downloading',
@@ -1143,11 +1143,11 @@ export const en: Textos = {
     agregar: 'Add setting',
     guardarAjustes: 'Test and save',
     ajustesGuardados: 'Site PHP settings applied',
-    sinAjustes: 'No settings of its own: it uses the branch php.ini as is.',
+    sinAjustes: 'No settings of its own: it uses the shared php.ini as is.',
     xdebugTitulo: 'Xdebug',
     xdebugInterruptor: (dominio: string) => `Xdebug for ${dominio}`,
     xdebugAyuda:
-      "Loaded only in this site's PHP, never in the branch one: other sites stay just as fast.",
+      "Loaded only in this site's PHP, never in the shared PHP: other sites stay just as fast.",
     xdebugDescarga:
       'Xdebug is not installed for this PHP version: it will be downloaded from the catalog (xdebug.org, SHA-256 checked).',
     modo: 'Modes',
@@ -2702,16 +2702,17 @@ export const en: Textos = {
     },
     ayuda: {
       instancias:
-        'Each branch has its own instance, with its data folder and port: you can run several at once. The star marks the one new projects use.',
-      pool: 'Each running PHP branch has its own PHP; the star marks the one for new projects.',
+        'Each major version (8.4, 17…) has its own instance, with its data folder and port: you can run several at once. The star marks the one new projects use.',
+      pool: 'Each running PHP version has its own PHP; the star marks the one for new projects.',
       unica:
         'You can install several versions, but only one runs: starting another one switches the active one.',
       ninguno:
         'There is nothing to start: projects use the version they ask for or the default one (star).',
     },
-    filtroRama: 'Branch',
-    todasRamas: 'All branches',
-    rama: (r: string) => `Branch ${r}`,
+    filtroRama: 'Version',
+    todasRamas: 'All versions',
+    rama: (r: string) => r,
+    cabecera: (servicio: string, r: string) => `${servicio} ${r}`,
     mostrarTodas: 'Show all',
     origen: {
       vivo: 'Online',
@@ -2741,7 +2742,7 @@ export const en: Textos = {
     actualizar: 'Update',
     usarEsta: 'Use this version',
     usarEstaAyuda: (id: string) =>
-      `${id} uses another version of this branch: it switches with a backup of its data first.`,
+      `${id} uses another version of this service: it switches with a backup of its data first.`,
     predeterminada: 'Default for new projects',
     hacerPredeterminada: 'Use for new projects',
     predeterminadaHecha: (v: string) => `${v} is now the default.`,
@@ -2761,14 +2762,14 @@ export const en: Textos = {
         'This version has no checksum published by its official source: WolfCore Dev cannot check that the downloaded file is the original one.',
       explicacion:
         'The download still uses HTTPS from the official site, but if that site or the connection were compromised, it would go unnoticed. Install it only if you need it.',
-      alternativa: (v: string) => `There is a verified version of the same branch: ${v}.`,
+      alternativa: (v: string) => `There is a verified version of the same service: ${v}.`,
       casilla: 'I understand the risk and want to install it unverified',
       instalarVerificada: (v: string) => `Install ${v} (verified)`,
       instalarIgual: 'Install unverified',
     },
     dialogoActualizar: {
       titulo: (n: string) => `Update ${n}`,
-      tituloRama: (v: string) => `New branch: ${v}`,
+      tituloRama: (v: string) => `New version: ${v}`,
       ninguna: 'none',
       instancia: (id: string) => `Instance ${id} is updated. Before anything changes:`,
       pasoInstalar: (v: string) =>
@@ -2788,7 +2789,7 @@ export const en: Textos = {
       alLado: (v: string) =>
         `${v} is installed. Other installed versions are untouched; projects that pin another version keep using it.`,
       ramaExplicacion:
-        'A new branch does not replace the old one: a new instance is created with its own data folder and port. The current instance stays as it is.',
+        'A new major version does not replace the old one: a new instance is created with its own data folder and port. The current instance stays as it is.',
       copiarDesdeTitulo: 'Data of the new instance',
       copiarDesde: (id: string) =>
         `Copy data from ${id} (dumped and restored; the original is untouched)`,
@@ -2809,7 +2810,7 @@ export const en: Textos = {
       instancia: (id: string) =>
         `Instance ${id} uses it: it is stopped and removed from the list of instances.`,
       datosQuedan:
-        'Its data stays on disk: if you install this branch again, the instance opens it again.',
+        'Its data stays on disk: if you install this version again, the instance opens it again.',
       borrarDatos: 'Also delete the data',
       borrarAviso: (id: string) =>
         `The data folder of ${id} will be deleted with all its databases. This cannot be undone. Type "${id}" to confirm.`,
@@ -2836,7 +2837,7 @@ export const en: Textos = {
       notaDevolver: 'The backup is copied, checked and only then put in place.',
       escriba: (id: string) => `Type ${id} to confirm`,
       elegirVersion:
-        'The block marker could not be read: choose which version of this branch will open the data (the one before the update).',
+        'The block marker could not be read: choose which version will open the data (the one before the update).',
       version: 'Version',
       confirmar: 'Resolve',
       hecho: (id: string) => `${id} unblocked. You can start it now.`,
@@ -2844,14 +2845,14 @@ export const en: Textos = {
     respaldos: {
       titulo: 'Update backups',
       descripcion:
-        'Copies left by updates and new branches. The data folder each instance uses never shows up here.',
+        'Copies left by updates and new versions. The data folder each instance uses never shows up here.',
       vacio: 'There are no copies.',
       tipos: {
         respaldo: 'Cold copy',
         volcados: 'Database dumps',
         fallida: 'Data of a failed version',
         restaurando: 'Half-done restore',
-        copia: 'Dumps for a new branch',
+        copia: 'Dumps for a new version',
       },
       archivos: (n: number) => (n === 1 ? '1 file' : `${n} files`),
       borrar: 'Delete',

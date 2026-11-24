@@ -59,7 +59,10 @@ li {
 li:hover,
 li:focus-visible {
   background: rgba(128, 128, 128, 0.08);
-  outline: none;
+}
+li:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: -2px;
 }
 li.elegido {
   background: rgba(128, 128, 128, 0.16);

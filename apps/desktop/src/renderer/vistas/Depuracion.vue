@@ -8,7 +8,6 @@ import {
   NInput,
   NModal,
   NPopconfirm,
-  NSelect,
   NSpace,
   NSwitch,
   NTabPane,
@@ -16,6 +15,7 @@ import {
   NTag,
   useMessage,
 } from 'naive-ui';
+import Desplegable from '../componentes/Desplegable.vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { Sitio } from '../../shared/api';
 import { api } from '../api';
@@ -228,8 +228,13 @@ function limpiar(): void {
         </section>
 
         <section class="filtros">
-          <NSelect v-model:value="filtroSitio" :options="opcionesSitio" size="small" class="sel" />
-          <NSelect
+          <Desplegable
+            v-model:value="filtroSitio"
+            :options="opcionesSitio"
+            size="small"
+            class="sel"
+          />
+          <Desplegable
             v-model:value="filtroOrigen"
             :options="opcionesOrigen"
             size="small"
@@ -287,7 +292,7 @@ function limpiar(): void {
       <NTabPane name="errores" :tab="t.pestanaErrores">
         <p class="descripcion">{{ t.erroresDescripcion }}</p>
         <section class="filtros">
-          <NSelect
+          <Desplegable
             v-model:value="dep.sitioErrores"
             :options="opcionesSitioErrores"
             size="small"

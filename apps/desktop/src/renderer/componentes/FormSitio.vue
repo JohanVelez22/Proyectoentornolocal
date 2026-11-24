@@ -14,7 +14,6 @@ import {
   NInput,
   NInputGroup,
   NInputNumber,
-  NSelect,
   NSpin,
   NSwitch,
   NTag,
@@ -22,6 +21,7 @@ import {
   useNotification,
   type SelectOption,
 } from 'naive-ui';
+import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import type { DatosSitio, ResultadoAplicar } from '../../shared/api';
@@ -382,7 +382,7 @@ function alCambiarVisible(v: boolean): void {
 
           <div class="dos">
             <NFormItem :label="t.tipo">
-              <NSelect v-model:value="datos.tipo" :options="opcionesTipo" />
+              <Desplegable v-model:value="datos.tipo" :options="opcionesTipo" />
             </NFormItem>
 
             <NFormItem
@@ -392,7 +392,7 @@ function alCambiarVisible(v: boolean): void {
               :validation-status="error('php') ? 'error' : undefined"
             >
               <div class="campo">
-                <NSelect
+                <Desplegable
                   v-model:value="datos.php"
                   :options="opcionesPhp"
                   :placeholder="t.phpElegir"
@@ -440,7 +440,7 @@ function alCambiarVisible(v: boolean): void {
             :validation-status="error('urlBaseVar') ? 'error' : undefined"
           >
             <div class="campo">
-              <NSelect
+              <Desplegable
                 v-model:value="datos.urlBaseVar"
                 :options="opcionesUrlBase"
                 :placeholder="t.urlBaseVarNinguna"
@@ -592,7 +592,7 @@ function alCambiarVisible(v: boolean): void {
   height: 56px;
   border-radius: 14px;
   background: rgba(var(--acento-rgb), 0.12);
-  color: #6470e0;
+  color: var(--texto-enlace);
   margin-bottom: 6px;
 }
 .paso h3 {
@@ -607,7 +607,7 @@ function alCambiarVisible(v: boolean): void {
   opacity: 0.7;
 }
 .error-campo {
-  color: #dc2626;
+  color: var(--texto-error);
   font-size: 12px;
 }
 .campo {
@@ -653,7 +653,7 @@ function alCambiarVisible(v: boolean): void {
   margin: -14px 0 18px;
 }
 .aviso-carpeta {
-  color: #d97706;
+  color: var(--texto-aviso);
   opacity: 1;
 }
 .ancho {
@@ -723,7 +723,7 @@ function alCambiarVisible(v: boolean): void {
   flex: none;
 }
 .https.activo .https-icono:not(.vacio) {
-  color: #16a34a;
+  color: var(--texto-ok);
   background: rgba(22, 163, 74, 0.14);
 }
 .https-icono.vacio {

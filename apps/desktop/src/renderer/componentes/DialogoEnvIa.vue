@@ -7,12 +7,12 @@ import {
   NFormItem,
   NIcon,
   NModal,
-  NSelect,
   NSkeleton,
   useDialog,
   useMessage,
   type SelectOption,
 } from 'naive-ui';
+import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
 import type { ProveedorIaPublico, VistaPreviaEnvIa } from '../../shared/api';
 import { api } from '../api';
@@ -251,10 +251,10 @@ async function escribir(): Promise<void> {
       <NAlert v-if="sinClave" type="warning" class="aviso">{{ t.sinClave }}</NAlert>
       <div class="campos">
         <NFormItem :label="t.proyecto" class="campo">
-          <NSelect v-model:value="sitioId" :options="opcionesSitio" filterable />
+          <Desplegable v-model:value="sitioId" :options="opcionesSitio" filterable />
         </NFormItem>
         <NFormItem :label="t.modelo" :feedback="t.modeloAyuda" class="campo">
-          <NSelect
+          <Desplegable
             v-model:value="modelo"
             :options="opcionesModelo"
             filterable

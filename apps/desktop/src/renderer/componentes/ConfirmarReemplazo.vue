@@ -50,7 +50,7 @@ onMounted(() => void bd.cargarCarpetaRespaldos());
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #dc2626;
+  color: var(--texto-error);
 }
 .cabeza strong {
   font-size: 14px;

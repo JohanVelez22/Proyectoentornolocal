@@ -10,13 +10,13 @@ import {
   NInput,
   NInputGroup,
   NInputNumber,
-  NSelect,
   NSkeleton,
   useDialog,
   useMessage,
   useNotification,
   type SelectOption,
 } from 'naive-ui';
+import Desplegable from '../componentes/Desplegable.vue';
 import { computed, onMounted, ref } from 'vue';
 import {
   PUERTO_ADMINER,
@@ -455,7 +455,7 @@ async function aplicarPath(activar: boolean): Promise<void> {
         <div class="dos">
           <NFormItem :label="tt.phpPorDefecto">
             <div class="campo">
-              <NSelect
+              <Desplegable
                 :value="phpPorDefecto"
                 :options="opcionesPhp"
                 :loading="ramasPhp === null || ocupado('php')"
@@ -477,7 +477,7 @@ async function aplicarPath(activar: boolean): Promise<void> {
         </div>
         <NFormItem :label="tt.terminal" class="separado">
           <div class="campo">
-            <NSelect
+            <Desplegable
               :value="terminal"
               :options="opcionesTerminal"
               :loading="terminales === null || ocupado('terminal')"
@@ -562,7 +562,7 @@ async function aplicarPath(activar: boolean): Promise<void> {
   opacity: 0.6;
 }
 .ayuda.error {
-  color: #dc2626;
+  color: var(--texto-error);
   opacity: 1;
 }
 .dos {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { LanguageOutline } from '@vicons/ionicons5';
-import { NButton, NDropdown, NIcon, NRadioButton, NRadioGroup, useNotification } from 'naive-ui';
+import { NButton, NIcon, NRadioButton, NRadioGroup, useNotification } from 'naive-ui';
+import MenuDesplegable from './MenuDesplegable.vue';
 import { computed } from 'vue';
 import { mensajeDeError } from '../composables/useAccion';
 import { IDIOMAS, idioma, textos, type Idioma } from '../i18n';
@@ -26,7 +27,7 @@ async function elegir(i: Idioma): Promise<void> {
 </script>
 
 <template>
-  <NDropdown
+  <MenuDesplegable
     v-if="compacto"
     trigger="click"
     :options="opciones"
@@ -39,7 +40,7 @@ async function elegir(i: Idioma): Promise<void> {
       </template>
       <span class="codigo">{{ idioma.toUpperCase() }}</span>
     </NButton>
-  </NDropdown>
+  </MenuDesplegable>
   <NRadioGroup
     v-else
     :value="idioma"

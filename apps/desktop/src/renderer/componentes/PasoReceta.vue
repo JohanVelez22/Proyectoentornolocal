@@ -125,10 +125,10 @@ watch(
   flex: none;
 }
 .ok {
-  color: #16a34a;
+  color: var(--texto-ok);
 }
 .mal {
-  color: #dc2626;
+  color: var(--texto-error);
 }
 .tenue {
   opacity: 0.45;
@@ -160,7 +160,7 @@ watch(
 .mensaje {
   margin: 6px 0 0 28px;
   font-size: 12px;
-  color: #dc2626;
+  color: var(--texto-error);
   white-space: pre-wrap;
   word-break: break-word;
 }

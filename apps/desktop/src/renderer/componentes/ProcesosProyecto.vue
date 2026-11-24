@@ -500,11 +500,11 @@ function quitar(p: ProcesoProyectoPublico): void {
   opacity: 0.7;
 }
 .estado.e-encendido {
-  color: #16a34a;
+  color: var(--texto-ok);
   opacity: 1;
 }
 .estado.e-error {
-  color: #dc2626;
+  color: var(--texto-error);
   opacity: 1;
 }
 .espacio {
@@ -518,14 +518,14 @@ function quitar(p: ProcesoProyectoPublico): void {
   word-break: break-word;
 }
 .mensaje.error {
-  color: #dc2626;
+  color: var(--texto-error);
   opacity: 1;
 }
 .avisos {
   margin: 2px 0 0 44px;
   padding: 0;
   font-size: 12px;
-  color: #b45309;
+  color: var(--texto-aviso);
 }
 .avisos li {
   list-style: none;
@@ -571,7 +571,7 @@ function quitar(p: ProcesoProyectoPublico): void {
 }
 .error {
   margin: 0;
-  color: #dc2626;
+  color: var(--texto-error);
   font-size: 12.5px;
 }
 .pie {

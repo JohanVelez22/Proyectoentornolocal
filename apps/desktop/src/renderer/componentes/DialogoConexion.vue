@@ -1,15 +1,7 @@
 <script setup lang="ts">
 import { Copy, Eye, EyeOff } from '@vicons/ionicons5';
-import {
-  NButton,
-  NFormItem,
-  NIcon,
-  NModal,
-  NSelect,
-  NSkeleton,
-  NTooltip,
-  useMessage,
-} from 'naive-ui';
+import { NButton, NFormItem, NIcon, NModal, NSkeleton, NTooltip, useMessage } from 'naive-ui';
+import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
 import type { DatosConexion, MotorBd } from '../../shared/api';
 import { api } from '../api';
@@ -162,7 +154,7 @@ function copiar(texto: string): void {
       </dl>
 
       <NFormItem v-if="conSitios" :label="t.sitio" :feedback="t.sitioAyuda" class="tipo">
-        <NSelect
+        <Desplegable
           v-model:value="sitioId"
           :options="opcionesSitio"
           size="small"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { NAlert, NButton, NInput, NModal, NRadio, NRadioGroup, NSelect, NSpace } from 'naive-ui';
+import { NAlert, NButton, NInput, NModal, NRadio, NRadioGroup, NSpace } from 'naive-ui';
+import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
 import type { EstadoInstancia, RespaldoDatos } from '../../shared/api';
 import { useAccion } from '../composables/useAccion';
@@ -99,7 +100,7 @@ async function resolver(): Promise<void> {
     <p class="texto">{{ eleccion === 'actual' ? t.notaActual : t.notaDevolver }}</p>
     <template v-if="ilegible">
       <p class="texto">{{ t.elegirVersion }}</p>
-      <NSelect
+      <Desplegable
         v-model:value="version"
         size="small"
         class="version"

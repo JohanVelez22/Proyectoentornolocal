@@ -1,15 +1,7 @@
 <script setup lang="ts">
 import { GitCommitOutline, Sparkles } from '@vicons/ionicons5';
-import {
-  NAlert,
-  NButton,
-  NFormItem,
-  NIcon,
-  NInput,
-  NModal,
-  NSelect,
-  type SelectOption,
-} from 'naive-ui';
+import { NAlert, NButton, NFormItem, NIcon, NInput, NModal, type SelectOption } from 'naive-ui';
+import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
 import type { Sitio } from '../../shared/api';
 import { api } from '../api';
@@ -113,10 +105,10 @@ async function hacerCommit(): Promise<void> {
     <template v-else>
       <div class="fila">
         <NFormItem :label="t.proveedor" :show-feedback="false" class="campo">
-          <NSelect v-model:value="proveedorId" :options="opcionesProveedor" />
+          <Desplegable v-model:value="proveedorId" :options="opcionesProveedor" />
         </NFormItem>
         <NFormItem :label="t.modelo" :show-feedback="false" class="campo">
-          <NSelect v-model:value="modelo" :options="opcionesModelo" filterable tag />
+          <Desplegable v-model:value="modelo" :options="opcionesModelo" filterable tag />
         </NFormItem>
       </div>
       <p class="tenue">{{ t.privacidad }}</p>

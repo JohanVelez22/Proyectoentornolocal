@@ -718,7 +718,7 @@ function irAServicios(): void {
   opacity: 0.7;
 }
 .apagado-mensaje {
-  color: #dc2626;
+  color: var(--texto-error);
   opacity: 1 !important;
   white-space: pre-wrap;
 }
@@ -792,7 +792,7 @@ function irAServicios(): void {
   gap: 2px;
 }
 .peligro:not(:disabled) :deep(.n-icon) {
-  color: #dc2626;
+  color: var(--texto-error);
 }
 .oculto {
   position: absolute;
@@ -815,7 +815,7 @@ function irAServicios(): void {
   font-size: 12.5px;
 }
 .error-lista .n-icon {
-  color: #dc2626;
+  color: var(--texto-error);
   flex: none;
   margin-top: 1px;
 }
@@ -831,7 +831,7 @@ function irAServicios(): void {
   font-size: 13px;
 }
 .advertencia .n-icon {
-  color: #dc2626;
+  color: var(--texto-error);
   flex: none;
 }
 .mono :deep(input) {

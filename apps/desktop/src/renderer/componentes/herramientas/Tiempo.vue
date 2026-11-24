@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { NButton, NInput, NSelect } from 'naive-ui';
+import { NButton, NInput } from 'naive-ui';
+import Desplegable from '../Desplegable.vue';
 import { computed, ref } from 'vue';
 import { localeIntl, textos } from '../../i18n';
 import {
@@ -94,7 +95,7 @@ const datos = computed(() => {
   <div class="herr">
     <div>
       <div class="herr-etiqueta">{{ t.zona }}</div>
-      <NSelect :value="zona" :options="zonas" filterable @update:value="cambiarZona" />
+      <Desplegable :value="zona" :options="zonas" filterable @update:value="cambiarZona" />
     </div>
     <div class="herr-columnas">
       <div>
