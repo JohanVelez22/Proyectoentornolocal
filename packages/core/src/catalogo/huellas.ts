@@ -59,16 +59,18 @@ export type FuenteFirma = 'node' | 'composer' | 'nginx';
 /**
  * Fuente de la firma de una versión, o null si su fuente no la publica:
  * - Node: `SHASUMS256.txt.sig` (firma la lista de sumas) en todas las versiones;
- * - Composer: `composer.phar.asc` desde 2.1 (1.x y 2.0 no la publican: solo su suma);
+ * - Composer: `composer.phar.asc` desde 2.0.3 (1.x y 2.0.0–2.0.2 no la publican: 404
+ *   comprobado; esas solo tienen su suma);
  * - Nginx: `nginx-<v>.zip.asc` (nginx.org no publica sumas, solo firmas).
  */
 export function fuenteFirmaDe(v: { servicio: string; version: string }): FuenteFirma | null {
   if (v.servicio === 'node' || v.servicio === 'nginx') return v.servicio;
   if (v.servicio === 'composer') {
-    const m = /^(\d+)\.(\d+)/.exec(v.version);
+    const m = /^(\d+)\.(\d+)\.(\d+)/.exec(v.version);
     if (!m) return null;
-    const mayor = Number(m[1]);
-    return mayor > 2 || (mayor === 2 && Number(m[2]) >= 1) ? 'composer' : null;
+    const [mayor, menor, parche] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    const firmada = mayor > 2 || (mayor === 2 && (menor > 0 || parche >= 3));
+    return firmada ? 'composer' : null;
   }
   return null;
 }

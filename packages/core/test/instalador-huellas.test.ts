@@ -308,21 +308,63 @@ describe('Instalador: firmas PGP (D10)', () => {
     await sinRastros('nginx', '1.29.9');
   });
 
-  // ---- Composer: composer.phar.asc desde 2.1
-  const PHAR = Buffer.from('#!/usr/bin/env php composer de prueba');
-  const vComposer = (version: string): VersionDisponible => ({
+  it('Nginx: una firma de texto canónico (0x01) sobre un zip no se admite', async () => {
+    const { inst } = firmado({
+      [`${URL_NGINX}.asc`]: armar(firmar(clave, ZIP_NGINX, { tipoFirma: 0x01 })),
+      [URL_NGINX]: ZIP_NGINX,
+    });
+    await expect(inst.instalar(vNginx)).rejects.toMatchObject({
+      codigo: 'catalogo.firma_no_soportada',
+    });
+    await sinRastros('nginx', '1.29.9');
+  });
+
+  it('Node: SHASUMS256.txt firmado como texto canónico (0x01) sí se admite', async () => {
+    const { inst } = firmado(rutasNode({ firma: firmar(clave, SUMAS, { tipoFirma: 0x01 }) }));
+    await inst.instalar(vNode());
+    expect(existsSync(path.join(rutas.bin('node', '24.0.0'), 'node.exe'))).toBe(true);
+  });
+
+  it('Node: firma anterior a la publicación (menos 48 h) → firma_invalida', async () => {
+    // La firma de prueba se crea en T0 + 60 (2023-11-14T22:14:20Z).
+    const { inst, ff } = firmado(rutasNode());
+    await expect(inst.instalar(vNode({ publicacion: '2023-11-17' }))).rejects.toMatchObject({
+      codigo: 'catalogo.firma_invalida',
+    });
+    expect(ff.pedidas).not.toContain(URL_ZIP_NODE);
+    const dentro = firmado(rutasNode());
+    await dentro.inst.instalar(vNode({ publicacion: '2023-11-16' }));
+    expect(existsSync(path.join(rutas.bin('node', '24.0.0'), 'node.exe'))).toBe(true);
+  });
+
+  it('Node: firma con fecha futura → reloj_atrasado (revise la fecha del equipo)', async () => {
+    const futura = firmar(clave, SUMAS, { creacion: T0 + 3600 + 2 * 86400 });
+    const { inst } = firmado(rutasNode({ firma: futura }));
+    await expect(inst.instalar(vNode())).rejects.toMatchObject({
+      codigo: 'catalogo.reloj_atrasado',
+      datos: { servicio: 'node', version: '24.0.0' },
+    });
+  });
+
+  // ---- Composer: composer.phar.asc desde 2.0.3
+  const phar = (version: string) =>
+    Buffer.from(
+      `<?php // composer de prueba\nclass Composer { public const VERSION = '${version}'; }\n`,
+    );
+  const vComposer = (version: string, contenido = phar(version)): VersionDisponible => ({
     servicio: 'composer',
     version,
     rama: version.split('.').slice(0, 2).join('.'),
     url: `https://getcomposer.org/download/${version}/composer.phar`,
-    sha256: sha(PHAR),
-    huella: { algoritmo: 'sha256', valor: sha(PHAR) },
+    sha256: sha(contenido),
+    huella: { algoritmo: 'sha256', valor: sha(contenido) },
     formato: 'archivo',
     ejecutable: 'composer.phar',
     origen: 'vivo',
   });
 
-  it('Composer 2.11 verifica composer.phar.asc (binaria); 2.0 no tiene firma y usa su suma', async () => {
+  it('Composer 2.11 verifica composer.phar.asc (binaria); 2.0.2 no tiene firma y usa su suma', async () => {
+    const PHAR = phar('2.11.2');
     const v = vComposer('2.11.2');
     const bien = firmado({ [`${v.url}.asc`]: firmar(clave, PHAR), [v.url]: PHAR });
     await bien.inst.instalar(v);
@@ -330,15 +372,37 @@ describe('Instalador: firmas PGP (D10)', () => {
     expect(existsSync(path.join(rutas.bin('composer', '2.11.2'), 'composer.phar'))).toBe(true);
 
     const malo = vComposer('2.11.3');
-    const mal = firmado({ [`${malo.url}.asc`]: firmar(clave, Buffer.from('x')), [malo.url]: PHAR });
+    const mal = firmado({
+      [`${malo.url}.asc`]: firmar(clave, Buffer.from('x')),
+      [malo.url]: phar('2.11.3'),
+    });
     await expect(mal.inst.instalar(malo)).rejects.toMatchObject({
       codigo: 'catalogo.firma_invalida',
     });
     await sinRastros('composer', '2.11.3');
 
-    const viejo = vComposer('2.0.14');
-    const sinFirma = firmado({ [viejo.url]: PHAR });
+    const viejo = vComposer('2.0.2');
+    const sinFirma = firmado({ [viejo.url]: phar('2.0.2') });
     await sinFirma.inst.instalar(viejo);
     expect(sinFirma.ff.pedidas).toEqual([viejo.url]);
+  });
+
+  it('Composer: un phar firmado de otra versión (repetición) → firma_invalida', async () => {
+    // Un phar real 2.2.33, bien firmado, servido como si fuera 2.11.2.
+    const viejo = phar('2.2.33');
+    const v = vComposer('2.11.2', viejo);
+    const { inst } = firmado({ [`${v.url}.asc`]: firmar(clave, viejo), [v.url]: viejo });
+    await expect(inst.instalar(v)).rejects.toMatchObject({
+      codigo: 'catalogo.firma_invalida',
+      datos: { servicio: 'composer', version: '2.11.2' },
+    });
+    await sinRastros('composer', '2.11.2');
+  });
+
+  it('Composer 2.0.3 ya publica firma: se exige', async () => {
+    const v = vComposer('2.0.3');
+    const { inst, ff } = firmado({ [v.url]: phar('2.0.3') });
+    await expect(inst.instalar(v)).rejects.toMatchObject({ codigo: 'catalogo.firma_invalida' });
+    expect(ff.pedidas).toEqual([`${v.url}.asc`]);
   });
 });

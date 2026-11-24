@@ -19,6 +19,7 @@ const IndiceNode = z.array(
     version: z.string(),
     files: z.array(z.string()),
     lts: z.union([z.string(), z.literal(false)]),
+    date: z.string().optional(),
   }),
 );
 
@@ -73,7 +74,11 @@ export const fuenteNode: FuenteVersiones = {
     if (!crudo.success) throw new IndiceMalformado('index.json de Node con forma rara');
     const entradas = crudo.data
       .filter((e) => e.files.includes('win-x64-zip'))
-      .map((e) => ({ version: e.version.replace(/^v/, ''), lts: e.lts }))
+      .map((e) => ({
+        version: e.version.replace(/^v/, ''),
+        lts: e.lts,
+        publicacion: e.date && /^\d{4}-\d{2}-\d{2}$/.test(e.date) ? e.date : null,
+      }))
       .filter((e) => claveValida(e.version));
     const estables = entradas.filter((e) => !e.version.includes('-'));
     const mayorActual = Math.max(0, ...estables.map((e) => Number(e.version.split('.')[0])));
@@ -108,6 +113,7 @@ export const fuenteNode: FuenteVersiones = {
         soporte,
         finSoporte: fin,
         origen: 'vivo',
+        ...(e.publicacion ? { publicacion: e.publicacion } : {}),
       };
     });
     await huellasDeUltimas(

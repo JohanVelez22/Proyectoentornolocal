@@ -30,6 +30,9 @@ const escribir = process.argv.includes('--escribir');
 const { module: anillos } = await runnerImport(
   path.join(AQUI, '..', 'src', 'catalogo', 'pgp', 'anillos.ts'),
 );
+const { module: paquetes } = await runnerImport(
+  path.join(AQUI, '..', 'src', 'catalogo', 'pgp', 'paquetes.ts'),
+);
 
 const HUELLA = /^[0-9A-F]{40}$/;
 
@@ -40,8 +43,11 @@ async function bajar(url) {
 }
 
 const ahoraS = Math.floor(Date.now() / 1000);
-const primarias = (texto) =>
-  anillos.leerAnillo(Buffer.from(texto, 'latin1')).filter((c) => c.huella === c.huellaPrimaria);
+const todas = (texto) => (texto ? anillos.leerAnillo(Buffer.from(texto, 'latin1')) : []);
+const primarias = (texto) => todas(texto).filter((c) => c.huella === c.huellaPrimaria);
+/** Paquetes de clave primaria (etiqueta 6) de un texto, soportados o no. */
+const paquetesPrimarios = (texto) =>
+  paquetes.leerPaquetes(Buffer.from(texto, 'latin1')).filter((p) => p.tag === 6).length;
 
 async function node() {
   const base = 'https://raw.githubusercontent.com/nodejs/release-keys/HEAD/';
@@ -53,13 +59,13 @@ async function node() {
   const partes = [];
   for (const h of [...lista].sort()) {
     const texto = await bajar(`${base}keys/${h}.asc`);
-    // Cada archivo debe traer la clave que su nombre dice.
+    // Cada archivo trae exactamente una clave primaria: la que su nombre dice.
+    if (!/BEGIN PGP PUBLIC KEY BLOCK/.test(texto) || paquetesPrimarios(texto) !== 1) {
+      throw new Error(`keys/${h}.asc no trae exactamente una clave primaria`);
+    }
     const p = primarias(texto);
-    if (
-      !/BEGIN PGP PUBLIC KEY BLOCK/.test(texto) ||
-      (p.length > 0 && !p.some((c) => c.huella === h))
-    ) {
-      throw new Error(`keys/${h}.asc no es una clave`);
+    if (p.length > 0 && p[0].huella !== h) {
+      throw new Error(`keys/${h}.asc trae otra clave (${p[0].huella})`);
     }
     partes.push(texto.endsWith('\n') ? texto : `${texto}\n`);
   }
@@ -106,8 +112,14 @@ async function nginx() {
 }
 
 const fecha = (s) => (s === null ? 'no vence' : new Date(s * 1000).toISOString().slice(0, 10));
-const describir = (c) =>
-  `${c.huella}  ${c.algoritmo === 22 ? 'Ed25519' : `RSA ${c.material.n.length * 8}`}  ${fecha(c.expiracion)}${c.revocada ? '  REVOCADA' : ''}  ${c.usuarios[0] ?? ''}`;
+const describir = (c) => {
+  const tipo = c.algoritmo === 22 ? 'Ed25519' : `RSA ${c.material.n.length * 8}`;
+  const sub = c.huella === c.huellaPrimaria ? '' : `subclave de ${c.huellaPrimaria.slice(-16)}  `;
+  const uso = c.firma ? 'firma' : 'no firma';
+  const estado = c.revocada ? '  REVOCADA' : '';
+  const quien = c.huella === c.huellaPrimaria ? `  ${c.usuarios[0] ?? ''}` : '';
+  return `${c.huella}  ${sub}${tipo}  ${uso}  vence ${fecha(c.expiracion)}${estado}${quien}`;
+};
 
 let cambios = 0;
 for (const [fuente, obtener] of [
@@ -118,9 +130,11 @@ for (const [fuente, obtener] of [
   const archivo = path.join(CLAVES, `${fuente}.asc`);
   const actual = await readFile(archivo, 'utf8').catch(() => '');
   const nuevo = await obtener();
-  const antes = new Map(primarias(actual).map((c) => [c.huella, c]));
-  const despues = new Map(primarias(nuevo).map((c) => [c.huella, c]));
-  console.log(`\n${fuente} (${despues.size} claves primarias soportadas):`);
+  // Primarias y subclaves (con su capacidad y vencimiento): todo lo que puede verificar firmas.
+  const antes = new Map(todas(actual).map((c) => [c.huella, c]));
+  const despues = new Map(todas(nuevo).map((c) => [c.huella, c]));
+  const nPrim = [...despues.values()].filter((c) => c.huella === c.huellaPrimaria).length;
+  console.log(`\n${fuente} (${nPrim} primarias y ${despues.size - nPrim} subclaves soportadas):`);
   for (const c of despues.values()) console.log(`  ${describir(c)}`);
   if (actual === nuevo) {
     console.log('  sin cambios');
@@ -129,10 +143,14 @@ for (const [fuente, obtener] of [
   cambios++;
   for (const [h, c] of despues) {
     if (!antes.has(h)) console.log(`  + entra ${describir(c)}`);
-    else if (antes.get(h).expiracion !== c.expiracion) {
-      console.log(
-        `  ~ vencimiento ${h}: ${fecha(antes.get(h).expiracion)} → ${fecha(c.expiracion)}`,
-      );
+    else {
+      const a = antes.get(h);
+      if (a.expiracion !== c.expiracion) {
+        console.log(`  ~ vencimiento ${h}: ${fecha(a.expiracion)} → ${fecha(c.expiracion)}`);
+      }
+      if (a.firma !== c.firma || a.revocada !== c.revocada) {
+        console.log(`  ~ cambia ${h}: antes ${describir(a)}`);
+      }
     }
   }
   for (const [h, c] of antes) if (!despues.has(h)) console.log(`  - sale ${describir(c)}`);

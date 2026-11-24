@@ -147,6 +147,11 @@ describe('fuentes oficiales', () => {
     expect(de('25.9.0').soporte).toBe('fin');
     expect(de('20.20.2').soporte).toBe('fin');
     expect(de('27.0.0-alpha.0.1.1').soporte).toBe('preview');
+    // La fecha de publicación acota la fecha de la firma PGP al instalar (D10).
+    expect(de('27.0.0-alpha.0.1.1').publicacion).toBe('2026-11-16');
+    expect(
+      v.every((x) => x.publicacion === undefined || /^\d{4}-\d{2}-\d{2}$/.test(x.publicacion)),
+    ).toBe(true);
     // Pidió las sumas de 26, 24 y 22 (no de 20, que terminó, ni de las viejas de cada rama).
     expect(c.pedidas.filter((u) => u.endsWith('SHASUMS256.txt')).sort()).toEqual([
       'https://nodejs.org/dist/v22.23.5/SHASUMS256.txt',

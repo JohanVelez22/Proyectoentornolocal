@@ -36,6 +36,7 @@ import type { ClavePublica } from './pgp/paquetes';
 import {
   esResultado,
   iniciarVerificacion,
+  MARGEN_PUBLICACION_MS,
   verificarFirmaSeparada,
   type FalloFirma,
 } from './pgp/verificar';
@@ -79,7 +80,15 @@ const MENSAJE_FIRMA: Record<FalloFirma['codigo'], string> = {
   'catalogo.firma_no_soportada': 'La firma PGP de la descarga usa un formato no soportado',
   'catalogo.clave_desconocida': 'La firma PGP es de una clave que no está en el anillo fijado',
   'catalogo.firma_vencida': 'La firma PGP o su clave están vencidas',
+  'catalogo.reloj_atrasado': 'La firma PGP tiene fecha futura: revise la fecha y hora del equipo',
 };
+
+/** Cota contra firmas con fecha atrasada: la publicación de la versión menos 48 h. */
+function noAntesDe(v: VersionDisponible): Date | undefined {
+  if (!v.publicacion || !/^\d{4}-\d{2}-\d{2}$/.test(v.publicacion)) return undefined;
+  const ms = Date.parse(`${v.publicacion}T00:00:00Z`);
+  return Number.isFinite(ms) ? new Date(ms - MARGEN_PUBLICACION_MS) : undefined;
+}
 
 /** Error con código de una firma que no pasó (con servicio y versión para el texto). */
 function errorFirma(v: VersionDisponible, r: FalloFirma): ErrorWolf {
@@ -469,6 +478,9 @@ export class Instalador {
       firma,
       anillo: this.anilloDe('node'),
       ahora: this.ahora(),
+      // La lista de sumas es texto: se admite también la firma de texto canónico.
+      tipos: [0x00, 0x01],
+      ...(noAntesDe(v) ? { noAntesDe: noAntesDe(v) } : {}),
     });
     if (!r.ok) throw errorFirma(v, r);
     const archivo = decodeURIComponent(new URL(v.url).pathname.split('/').pop() ?? '');
@@ -493,11 +505,39 @@ export class Instalador {
     firma: Uint8Array,
     archivo: string,
   ): Promise<void> {
-    const ver = iniciarVerificacion({ firma, anillo: this.anilloDe(fuente), ahora: this.ahora() });
+    // Un zip o un phar solo se firman en binario (0x00).
+    const ver = iniciarVerificacion({
+      firma,
+      anillo: this.anilloDe(fuente),
+      ahora: this.ahora(),
+      tipos: [0x00],
+    });
     if (esResultado(ver)) throw errorFirma(v, ver);
     for await (const trozo of createReadStream(archivo)) ver.actualizar(trozo as Buffer);
     const r = ver.terminar();
     if (!r.ok) throw errorFirma(v, r);
+    if (fuente === 'composer') await this.comprobarVersionPhar(v, archivo);
+  }
+
+  /**
+   * La firma de Composer cubre el phar, pero no dice qué versión es: un phar viejo bien firmado
+   * podría servirse en lugar del pedido. El phar compilado lleva `const VERSION = '<v>'` (clase
+   * `Composer\Composer`; comprobado en los phar reales de 2.0.3, 2.2.33 y 2.11.2): si no está
+   * la versión pedida, no se instala.
+   */
+  private async comprobarVersionPhar(v: VersionDisponible, archivo: string): Promise<void> {
+    const buscado = Buffer.from(`const VERSION = '${v.version}'`, 'latin1');
+    let cola = Buffer.alloc(0);
+    for await (const trozo of createReadStream(archivo)) {
+      const bloque = Buffer.concat([cola, trozo as Buffer]);
+      if (bloque.includes(buscado)) return;
+      cola = bloque.subarray(Math.max(0, bloque.length - buscado.length + 1));
+    }
+    throw new ErrorWolf(
+      'catalogo.firma_invalida',
+      `El phar firmado no es Composer ${v.version}: no se instala`,
+      { servicio: v.servicio, version: v.version },
+    );
   }
 
   /**

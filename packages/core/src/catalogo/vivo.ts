@@ -106,6 +106,10 @@ function esquemaVersion(servicio: ServicioInstalable) {
           .optional(),
         origen: z.enum(['vivo', 'cache', 'fija']),
         huellaDiferida: z.literal(true).optional(),
+        publicacion: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
       })
       .strict()
       .refine(

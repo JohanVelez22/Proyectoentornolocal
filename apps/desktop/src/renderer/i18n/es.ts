@@ -418,6 +418,8 @@ export const es = {
         'La firma de {servicio} {version} es de una clave que no está en las claves fijadas de la app: no se instaló nada.',
       'catalogo.firma_vencida':
         'La firma de {servicio} {version} o su clave están vencidas: no se instaló nada. Actualice WolfCore Dev para tener las claves al día.',
+      'catalogo.reloj_atrasado':
+        'La firma de {servicio} {version} tiene fecha futura: revise la fecha y hora del equipo y vuelva a intentarlo.',
     },
   },
   avisoInicio: {
@@ -2850,7 +2852,7 @@ export const es = {
       bloqueada: 'Bloqueada',
       sinHuella: 'Sin huella publicada',
       huellaDebil: 'Solo huella MD5',
-      firmada: 'Firma verificada',
+      firmada: 'Con firma PGP',
     },
     ayudaFirmada:
       'La fuente oficial firma esta descarga con PGP: WolfCore Dev comprueba la firma con las claves fijadas en la app antes de instalar.',

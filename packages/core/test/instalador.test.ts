@@ -158,17 +158,17 @@ describe('Instalador', () => {
     const inst = new Instalador(rutas, eventos, fetchDe(phar));
     await inst.instalar({
       servicio: 'composer',
-      version: '2.0.14',
-      url: 'https://getcomposer.org/download/2.0.14/composer.phar',
+      version: '2.0.2',
+      url: 'https://getcomposer.org/download/2.0.2/composer.phar',
       sha256: sha(phar),
       formato: 'archivo',
       ejecutable: 'composer.phar',
     });
-    expect(
-      await readFile(path.join(rutas.bin('composer', '2.0.14'), 'composer.phar'), 'utf8'),
-    ).toBe('#!/usr/bin/env php composer');
-    expect(await inst.instalado('composer', '2.0.14')).toBe(true);
-    expect(await inst.instalados('composer')).toEqual(['2.0.14']);
+    expect(await readFile(path.join(rutas.bin('composer', '2.0.2'), 'composer.phar'), 'utf8')).toBe(
+      '#!/usr/bin/env php composer',
+    );
+    expect(await inst.instalado('composer', '2.0.2')).toBe(true);
+    expect(await inst.instalados('composer')).toEqual(['2.0.2']);
   });
 
   it('instalado(postgresql) comprueba pgsql/bin/postgres.exe', async () => {

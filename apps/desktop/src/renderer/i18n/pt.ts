@@ -422,6 +422,8 @@ export const pt: Textos = {
         'A assinatura de {servicio} {version} é de uma chave que não está entre as chaves fixadas no app: nada foi instalado.',
       'catalogo.firma_vencida':
         'A assinatura de {servicio} {version} ou sua chave expirou: nada foi instalado. Atualize o WolfCore Dev para ter as chaves em dia.',
+      'catalogo.reloj_atrasado':
+        'A assinatura de {servicio} {version} tem data futura: verifique a data e a hora do computador e tente de novo.',
     },
   },
   avisoInicio: {
@@ -2862,7 +2864,7 @@ export const pt: Textos = {
       bloqueada: 'Bloqueada',
       sinHuella: 'Sem checksum publicado',
       huellaDebil: 'Somente checksum MD5',
-      firmada: 'Assinatura verificada',
+      firmada: 'Com assinatura PGP',
     },
     ayudaFirmada:
       'A fonte oficial assina este download com PGP: o WolfCore Dev verifica a assinatura com as chaves fixadas no app antes de instalar.',

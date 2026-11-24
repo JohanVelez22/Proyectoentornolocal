@@ -436,6 +436,8 @@ export const fr: Textos = {
         'La signature de {servicio} {version} provient d’une clé absente des clés épinglées de l’application : rien n’a été installé.',
       'catalogo.firma_vencida':
         'La signature de {servicio} {version} ou sa clé a expiré : rien n’a été installé. Mettez WolfCore Dev à jour pour avoir des clés à jour.',
+      'catalogo.reloj_atrasado':
+        'La signature de {servicio} {version} est datée dans le futur : vérifiez la date et l’heure de l’ordinateur et réessayez.',
     },
   },
   avisoInicio: {
@@ -2915,7 +2917,7 @@ export const fr: Textos = {
       bloqueada: 'Bloquée',
       sinHuella: 'Sans empreinte publiée',
       huellaDebil: 'Empreinte MD5 uniquement',
-      firmada: 'Signature vérifiée',
+      firmada: 'Avec signature PGP',
     },
     ayudaFirmada:
       'La source officielle signe ce téléchargement avec PGP : WolfCore Dev vérifie la signature avec les clés épinglées dans l’application avant d’installer.',

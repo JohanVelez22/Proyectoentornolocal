@@ -94,6 +94,11 @@ export interface VersionDisponible {
   origen?: OrigenCatalogo;
   /** La huella no vino en el listado: se pide a la fuente al instalar (`CatalogoVivo.buscar`). */
   huellaDiferida?: boolean;
+  /**
+   * Fecha de publicación (AAAA-MM-DD) si la fuente la da (Node). Acota la fecha de la firma PGP:
+   * una firma muy anterior a la publicación delata una fecha atrasada.
+   */
+  publicacion?: string;
 }
 
 /**

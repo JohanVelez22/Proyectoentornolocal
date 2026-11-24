@@ -117,7 +117,7 @@ describe('armarTabla (pestaña Versiones)', () => {
     expect(con('nginx', '1.30.6')).toBe('firmada');
     expect(con('node', '24.22.3')).toBe('firmada');
     expect(con('composer', '2.11.2')).toBe('firmada');
-    expect(con('composer', '2.0.14')).toBe('ninguna');
+    expect(con('composer', '2.0.2')).toBe('ninguna');
   });
 
   it('huella: SHA-256/512 o diferida = fuerte, MD5 = débil, sin nada = ninguna', () => {

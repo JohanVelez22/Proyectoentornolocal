@@ -381,6 +381,8 @@ export interface ClaveV4 {
   creacion: number;
   algoritmo: number;
   material: MaterialClave;
+  /** Cuerpo del paquete (para el hash de autofirmas y vinculaciones). */
+  cuerpo: Uint8Array;
 }
 
 /** Bits mínimos de una clave RSA que se acepta. */
@@ -421,7 +423,7 @@ export function leerClave(cuerpo: Uint8Array): ClaveV4 {
     .update(cuerpo)
     .digest('hex')
     .toUpperCase();
-  return { huella, idClave: huella.slice(-16), creacion, algoritmo, material };
+  return { huella, idClave: huella.slice(-16), creacion, algoritmo, material, cuerpo };
 }
 
 /**

@@ -410,6 +410,8 @@ export const en: Textos = {
         'The signature of {servicio} {version} is from a key that is not among the keys pinned in the app: nothing was installed.',
       'catalogo.firma_vencida':
         'The signature of {servicio} {version} or its key has expired: nothing was installed. Update WolfCore Dev to get current keys.',
+      'catalogo.reloj_atrasado':
+        "The signature of {servicio} {version} is dated in the future: check this computer's date and time and try again.",
     },
   },
   avisoInicio: {
@@ -2830,7 +2832,7 @@ export const en: Textos = {
       bloqueada: 'Blocked',
       sinHuella: 'No published checksum',
       huellaDebil: 'MD5 checksum only',
-      firmada: 'Signature verified',
+      firmada: 'PGP-signed',
     },
     ayudaFirmada:
       'The official source signs this download with PGP: WolfCore Dev checks the signature against the keys pinned in the app before installing.',

@@ -263,6 +263,7 @@ export const PARAMETROS_ERROR = {
   'catalogo.firma_no_soportada': ['servicio', 'version'],
   'catalogo.clave_desconocida': ['servicio', 'version'],
   'catalogo.firma_vencida': ['servicio', 'version'],
+  'catalogo.reloj_atrasado': ['servicio', 'version'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type CodigoError = keyof typeof PARAMETROS_ERROR;

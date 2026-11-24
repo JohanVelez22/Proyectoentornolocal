@@ -128,7 +128,7 @@ export interface OpcionesFirma {
 }
 
 function canonico(d: Buffer): Buffer {
-  return Buffer.from(d.toString('latin1').replace(/\r?\n/g, '\r\n'), 'latin1');
+  return Buffer.from(d.toString('latin1').replace(/\r\n|\r|\n/g, '\r\n'), 'latin1');
 }
 
 /** Cuerpo de un paquete de firma v4 de `clave` sobre `datos`. */
@@ -187,15 +187,38 @@ export function firmar(clave: ClavePrueba, datos: Buffer, o: OpcionesFirma = {})
 const conLargo = (cuerpo: Buffer): Buffer =>
   Buffer.concat([Buffer.from([0x99]), be16(cuerpo.length), cuerpo]);
 
-/** Paquetes de una clave pública: clave, usuario y autofirma (con vencimiento e indicadores). */
+export interface SubclavePrueba {
+  clave: ClavePrueba;
+  indicadores?: number | null;
+  vigencia?: number;
+  /** Retrofirma 0x19 de la subclave: por defecto, si firma; 'falsa' = hecha con otra clave. */
+  retrofirma?: boolean | 'falsa';
+  /** La vinculación 0x18 la firma otra clave que dice ser la primaria. */
+  vinculacionFalsa?: boolean;
+  /** Revocación 0x28 de la primaria después de la vinculación. */
+  revocada?: boolean;
+}
+
+/**
+ * Paquetes de una clave pública: clave, usuario y autofirma (con vencimiento e indicadores),
+ * subclaves con su vinculación (y retrofirma) y revocaciones donde se pidan.
+ */
 export function clavePublica(
   clave: ClavePrueba,
   o: {
     usuario?: string;
     vigenciaClave?: number;
     indicadores?: number | null;
-    revocada?: boolean;
-    subclaves?: { clave: ClavePrueba; indicadores?: number | null; vigencia?: number }[];
+    /** Revocación 0x20: tras la clave (lo normal), tras el usuario o al final. */
+    revocada?: boolean | 'tras-usuario' | 'al-final';
+    /** Revocación 0x30 del usuario, posterior a su certificación. */
+    usuarioRevocado?: boolean;
+    /** Hash y fecha de la autofirma. */
+    hashAutofirma?: number;
+    creacionAutofirma?: number;
+    /** La autofirma la hace otra clave que dice ser esta. */
+    autofirmaFalsa?: boolean;
+    subclaves?: SubclavePrueba[];
   } = {},
 ): Buffer {
   const usuario = Buffer.from(o.usuario ?? 'Prueba <prueba@example.invalid>');
@@ -203,36 +226,88 @@ export function clavePublica(
     ...(o.vigenciaClave !== undefined ? [subpaquete(9, be32(o.vigenciaClave))] : []),
     ...(o.indicadores === null ? [] : [subpaquete(27, Buffer.from([o.indicadores ?? 0x03]))]),
   ];
-  const prefijoUid = Buffer.concat([
-    conLargo(clave.cuerpo),
-    Buffer.from([0xb4]),
-    be32(usuario.length),
-    usuario,
-  ]);
+  const kp = conLargo(clave.cuerpo);
+  const prefijoUid = Buffer.concat([kp, Buffer.from([0xb4]), be32(usuario.length), usuario]);
+  const impostor = (): ClavePrueba => ({
+    ...nuevaClave(clave.tipo, clave.creacion),
+    huella: clave.huella,
+    id: clave.id,
+  });
+  const revocacion = () =>
+    firmar(clave, Buffer.alloc(0), {
+      tipoFirma: 0x20,
+      prefijo: kp,
+      creacion: clave.creacion + 500,
+    });
   const partes = [paquete(6, clave.cuerpo)];
-  if (o.revocada) {
-    partes.push(
-      firmar(clave, Buffer.alloc(0), { tipoFirma: 0x20, prefijo: conLargo(clave.cuerpo) }),
-    );
-  }
+  if (o.revocada === true) partes.push(revocacion());
   partes.push(
     paquete(13, usuario),
-    firmar(clave, Buffer.alloc(0), { tipoFirma: 0x13, conHash: extra, prefijo: prefijoUid }),
+    firmar(o.autofirmaFalsa ? impostor() : clave, Buffer.alloc(0), {
+      tipoFirma: 0x13,
+      conHash: extra,
+      prefijo: prefijoUid,
+      ...(o.hashAutofirma !== undefined ? { hash: o.hashAutofirma } : {}),
+      ...(o.creacionAutofirma !== undefined ? { creacion: o.creacionAutofirma } : {}),
+    }),
   );
-  for (const s of o.subclaves ?? []) {
-    const ex = [
-      ...(s.vigencia !== undefined ? [subpaquete(9, be32(s.vigencia))] : []),
-      ...(s.indicadores === null ? [] : [subpaquete(27, Buffer.from([s.indicadores ?? 0x02]))]),
-    ];
+  if (o.usuarioRevocado) {
     partes.push(
-      paquete(14, s.clave.cuerpo),
       firmar(clave, Buffer.alloc(0), {
-        tipoFirma: 0x18,
-        conHash: ex,
-        prefijo: Buffer.concat([conLargo(clave.cuerpo), conLargo(s.clave.cuerpo)]),
+        tipoFirma: 0x30,
+        prefijo: prefijoUid,
+        creacion: clave.creacion + 500,
       }),
     );
   }
+  if (o.revocada === 'tras-usuario') partes.push(revocacion());
+  for (const s of o.subclaves ?? []) {
+    const ks = conLargo(s.clave.cuerpo);
+    const indicadores = s.indicadores === undefined ? 0x02 : s.indicadores;
+    const firma = indicadores !== null && (indicadores & 0x02) !== 0;
+    const conRetro = s.retrofirma ?? firma;
+    const retro = conRetro
+      ? [
+          subpaquete(
+            32,
+            cuerpoFirma(
+              conRetro === 'falsa'
+                ? {
+                    ...nuevaClave(s.clave.tipo, s.clave.creacion),
+                    huella: s.clave.huella,
+                    id: s.clave.id,
+                  }
+                : s.clave,
+              Buffer.alloc(0),
+              { tipoFirma: 0x19, prefijo: Buffer.concat([kp, ks]) },
+            ),
+          ),
+        ]
+      : [];
+    const ex = [
+      ...(s.vigencia !== undefined ? [subpaquete(9, be32(s.vigencia))] : []),
+      ...(indicadores === null ? [] : [subpaquete(27, Buffer.from([indicadores]))]),
+      ...retro,
+    ];
+    partes.push(
+      paquete(14, s.clave.cuerpo),
+      firmar(s.vinculacionFalsa ? impostor() : clave, Buffer.alloc(0), {
+        tipoFirma: 0x18,
+        conHash: ex,
+        prefijo: Buffer.concat([kp, ks]),
+      }),
+    );
+    if (s.revocada) {
+      partes.push(
+        firmar(clave, Buffer.alloc(0), {
+          tipoFirma: 0x28,
+          prefijo: Buffer.concat([kp, ks]),
+          creacion: clave.creacion + 500,
+        }),
+      );
+    }
+  }
+  if (o.revocada === 'al-final') partes.push(revocacion());
   return Buffer.concat(partes);
 }
 

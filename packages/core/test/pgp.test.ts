@@ -84,6 +84,30 @@ describe('anillos fijados', () => {
     );
   });
 
+  it('todas las primarias y las subclaves de firma de los anillos siguen firmando', () => {
+    // Autofirmas, vinculaciones y retrofirmas verificadas: ninguna clave fijada se pierde.
+    for (const f of ['node', 'composer', 'nginx'] as const) {
+      for (const c of anillo(f).filter((x) => x.huella === x.huellaPrimaria)) {
+        expect(c.firma, `${f} ${c.huella}`).toBe(true);
+      }
+    }
+    const subclavesNode = anillo('node')
+      .filter((c) => c.huella !== c.huellaPrimaria && c.firma)
+      .map((c) => c.huella)
+      .sort();
+    expect(subclavesNode).toEqual(
+      [
+        '26FFD37528D0DE0E6D4D1C1A7341B15C070877AC',
+        '86C8D74642E67846F8E120284DAA80D1E737BC9F',
+        'C2B25D9B4272DB29565BA87F3C7824F39A895758',
+        'A6023530FC53461FEC91F99C04CD3F2FDE079578',
+        '2B2B9F0D620463DB3DE74C50DEA16371974031A5',
+        '0EFFE1BCEFD9C84E3D098152933B01F40B5CA946',
+        '50CBD045680704B1B723693545F5EEBD813DAE8E',
+      ].sort(),
+    );
+  });
+
   it('lee el vencimiento de la autofirma y si la clave firma', () => {
     const beth = anillo('node').find(
       (c) => c.huella === '4ED778F539E3634C779C87C6D7062848A1AB005C',
@@ -212,15 +236,25 @@ const ANILLO = anilloDe(clavePublica(rsa), clavePublica(ed));
 
 function verificar(
   firma: Buffer | string,
-  o: { datos?: Buffer; anillo?: ReturnType<typeof leerAnillo>; ahora?: Date } = {},
+  o: {
+    datos?: Buffer;
+    anillo?: ReturnType<typeof leerAnillo>;
+    ahora?: Date;
+    tipos?: readonly number[];
+    noAntesDe?: Date;
+  } = {},
 ) {
   return verificarFirmaSeparada({
     datos: o.datos ?? DATOS,
     firma: typeof firma === 'string' ? Buffer.from(firma, 'latin1') : firma,
     anillo: o.anillo ?? ANILLO,
     ahora: o.ahora ?? ahoraPrueba,
+    ...(o.tipos ? { tipos: o.tipos } : {}),
+    ...(o.noAntesDe ? { noAntesDe: o.noAntesDe } : {}),
   });
 }
+
+const TEXTO = [0x00, 0x01] as const;
 
 describe('verificador con claves de prueba', () => {
   it('RSA y Ed25519 con SHA-256 y SHA-512, binaria y con armadura', () => {
@@ -241,14 +275,24 @@ describe('verificador con claves de prueba', () => {
     }
   });
 
-  it('texto canónico (0x01): LF y CRLF valen lo mismo', () => {
+  it('texto canónico (0x01): LF, CRLF y CR suelto valen lo mismo, si se admite el tipo', () => {
     const f = firmar(ed, DATOS, { tipoFirma: 0x01 });
-    expect(verificar(f)).toMatchObject({ ok: true });
-    expect(
-      verificar(f, { datos: Buffer.from(DATOS.toString().replace(/\n/g, '\r\n')) }),
-    ).toMatchObject({ ok: true });
+    expect(verificar(f, { tipos: TEXTO })).toMatchObject({ ok: true });
+    for (const fin of ['\r\n', '\r']) {
+      expect(
+        verificar(f, { tipos: TEXTO, datos: Buffer.from(DATOS.toString().replace(/\n/g, fin)) }),
+      ).toMatchObject({ ok: true });
+    }
+    // Por defecto (zip, phar) solo se admite la firma binaria 0x00.
+    expect(verificar(f)).toMatchObject({ codigo: 'catalogo.firma_no_soportada' });
+    // Byte a byte, con CR sueltos: un solo fin de línea por cada uno.
+    const dos = iniciarVerificacion({ firma: f, anillo: ANILLO, ahora: ahoraPrueba, tipos: TEXTO });
+    if ('ok' in dos) throw new Error('debía iniciar');
+    const conCr = Buffer.from(DATOS.toString().replace(/\n/g, '\r'));
+    for (const b of conCr) dos.actualizar(Buffer.from([b]));
+    expect(dos.terminar()).toMatchObject({ ok: true });
     // En trozos con el CR y el LF separados también.
-    const v = iniciarVerificacion({ firma: f, anillo: ANILLO, ahora: ahoraPrueba });
+    const v = iniciarVerificacion({ firma: f, anillo: ANILLO, ahora: ahoraPrueba, tipos: TEXTO });
     if ('ok' in v) throw new Error('debía iniciar');
     const crlf = Buffer.from(DATOS.toString().replace(/\n/g, '\r\n'));
     const corte = crlf.indexOf(0x0d) + 1;
@@ -356,35 +400,132 @@ describe('verificador con claves de prueba', () => {
     });
   });
 
-  it('clave vencida (hoy o al firmar) → firma_vencida', () => {
+  it('clave vencida: vale si estaba vigente al firmar (como gpg); firmada ya vencida, no', () => {
     const a = anilloDe(clavePublica(ed, { vigenciaClave: 1000 }));
     const f = firmar(ed, DATOS);
     expect(verificar(f, { anillo: a, ahora: new Date((T0 + 999) * 1000) })).toMatchObject({
       ok: true,
     });
-    expect(verificar(f, { anillo: a, ahora: new Date((T0 + 1000) * 1000) })).toMatchObject({
-      codigo: 'catalogo.firma_vencida',
+    // Vencida hoy, vigente al firmar (T0 + 60): válida.
+    expect(verificar(f, { anillo: a, ahora: new Date((T0 + 90_000) * 1000) })).toMatchObject({
+      ok: true,
     });
-    const tarde = firmar(ed, DATOS, { creacion: T0 + 2000 });
-    expect(verificar(tarde, { anillo: a, ahora: new Date((T0 + 500) * 1000) })).toMatchObject({
-      ok: false,
+    const tarde = firmar(ed, DATOS, { creacion: T0 + 1000 });
+    expect(verificar(tarde, { anillo: a, ahora: new Date((T0 + 2000) * 1000) })).toMatchObject({
+      codigo: 'catalogo.firma_vencida',
     });
   });
 
-  it('firma anterior a la clave o del futuro → firma_invalida', () => {
+  it('firma con fecha anterior a la publicación (menos el margen) → firma_invalida', () => {
+    const f = firmar(ed, DATOS, { creacion: T0 + 60 });
+    const pub = (s: number) => new Date((T0 + 60 + s) * 1000);
+    expect(verificar(f, { noAntesDe: pub(0) })).toMatchObject({ ok: true });
+    expect(verificar(f, { noAntesDe: pub(1) })).toMatchObject({
+      codigo: 'catalogo.firma_invalida',
+    });
+  });
+
+  it('firma anterior a la clave → inválida; del futuro (más de 24 h) → reloj_atrasado', () => {
     expect(verificar(firmar(ed, DATOS, { creacion: T0 - 1 }))).toMatchObject({
       codigo: 'catalogo.firma_invalida',
     });
-    expect(verificar(firmar(ed, DATOS, { creacion: T0 + 3600 + 2 * 86400 }))).toMatchObject({
+    expect(verificar(firmar(ed, DATOS, { creacion: T0 + 3600 + 86400 }))).toMatchObject({
+      ok: true,
+    });
+    expect(verificar(firmar(ed, DATOS, { creacion: T0 + 3600 + 86401 }))).toMatchObject({
+      codigo: 'catalogo.reloj_atrasado',
+    });
+  });
+
+  it('clave revocada (la revocación esté donde esté) → firma_invalida', () => {
+    for (const revocada of [true, 'tras-usuario', 'al-final'] as const) {
+      const sub = nuevaClave('ed25519', T0);
+      const a = anilloDe(clavePublica(ed, { revocada, subclaves: [{ clave: sub }] }));
+      expect(a.every((c) => c.revocada)).toBe(true);
+      expect(verificar(firmar(ed, DATOS), { anillo: a })).toMatchObject({
+        codigo: 'catalogo.firma_invalida',
+      });
+    }
+  });
+
+  it('una revocación falsificada no cuenta', () => {
+    const otra = nuevaClave('ed25519', T0);
+    const falsa = firmar({ ...otra, huella: ed.huella, id: ed.id }, Buffer.alloc(0), {
+      tipoFirma: 0x20,
+      prefijo: Buffer.concat([Buffer.from([0x99]), be16(ed.cuerpo.length), ed.cuerpo]),
+    });
+    const a = anilloDe(clavePublica(ed), falsa);
+    expect(a[0]?.revocada).toBe(false);
+  });
+
+  it('subclave revocada (0x28 de la primaria) → firma_invalida', () => {
+    const sub = nuevaClave('ed25519', T0);
+    const a = anilloDe(clavePublica(rsa, { subclaves: [{ clave: sub, revocada: true }] }));
+    expect(a.find((c) => c.huella === sub.huella)?.revocada).toBe(true);
+    expect(a.find((c) => c.huella === rsa.huella)?.revocada).toBe(false);
+    expect(verificar(firmar(sub, DATOS), { anillo: a })).toMatchObject({
       codigo: 'catalogo.firma_invalida',
     });
   });
 
-  it('clave revocada → firma_invalida', () => {
-    const a = anilloDe(clavePublica(ed, { revocada: true }));
-    expect(a[0]?.revocada).toBe(true);
+  it('id de usuario revocado (0x30 posterior): su autofirma no cuenta', () => {
+    const a = anilloDe(clavePublica(ed, { usuarioRevocado: true }));
+    expect(a[0]?.firma).toBe(false);
     expect(verificar(firmar(ed, DATOS), { anillo: a })).toMatchObject({
-      codigo: 'catalogo.firma_invalida',
+      codigo: 'catalogo.clave_desconocida',
+    });
+  });
+
+  it('autofirmas: falsificada no cuenta; SHA-1 solo si es antigua (antes de 2019-01-19)', () => {
+    expect(anilloDe(clavePublica(ed, { autofirmaFalsa: true }))[0]?.firma).toBe(false);
+    expect(anilloDe(clavePublica(rsa, { hashAutofirma: 2 }))[0]?.firma).toBe(false);
+    const vieja = nuevaClave('rsa', 1_500_000_000);
+    expect(anilloDe(clavePublica(vieja, { hashAutofirma: 2 }))[0]?.firma).toBe(true);
+    expect(anilloDe(clavePublica(rsa, { hashAutofirma: 1 }))[0]?.firma).toBe(false);
+  });
+
+  it('subclave con vinculación 0x18 falsificada o sin retrofirma 0x19 válida: no firma', () => {
+    const sub = nuevaClave('ed25519', T0);
+    const casos: Parameters<typeof clavePublica>[1][] = [
+      { subclaves: [{ clave: sub, vinculacionFalsa: true }] },
+      { subclaves: [{ clave: sub, retrofirma: false }] },
+      { subclaves: [{ clave: sub, retrofirma: 'falsa' }] },
+    ];
+    for (const o of casos) {
+      const a = anilloDe(clavePublica(rsa, o));
+      expect(a.find((c) => c.huella === sub.huella)?.firma).toBe(false);
+      expect(verificar(firmar(sub, DATOS), { anillo: a })).toMatchObject({
+        codigo: 'catalogo.clave_desconocida',
+      });
+    }
+    // Una subclave agregada a una clave legítima con una vinculación falsificada.
+    const legitima = clavePublica(rsa);
+    const atacante = nuevaClave('rsa', T0);
+    const ks = Buffer.concat([Buffer.from([0x99]), be16(sub.cuerpo.length), sub.cuerpo]);
+    const kp = Buffer.concat([Buffer.from([0x99]), be16(rsa.cuerpo.length), rsa.cuerpo]);
+    const agregada = Buffer.concat([
+      legitima,
+      paquete(14, sub.cuerpo),
+      firmar({ ...atacante, huella: rsa.huella, id: rsa.id }, Buffer.alloc(0), {
+        tipoFirma: 0x18,
+        conHash: [
+          subpaquete(27, Buffer.from([0x02])),
+          subpaquete(
+            32,
+            cuerpoFirma(sub, Buffer.alloc(0), {
+              tipoFirma: 0x19,
+              prefijo: Buffer.concat([kp, ks]),
+            }),
+          ),
+        ],
+        prefijo: Buffer.concat([kp, ks]),
+      }),
+    ]);
+    const a = anilloDe(agregada);
+    expect(a.find((c) => c.huella === rsa.huella)?.firma).toBe(true);
+    expect(a.find((c) => c.huella === sub.huella)?.firma).toBe(false);
+    expect(verificar(firmar(sub, DATOS), { anillo: a })).toMatchObject({
+      codigo: 'catalogo.clave_desconocida',
     });
   });
 
@@ -640,13 +781,66 @@ describe('fuzz: bytes mutados nunca dan "válida"', () => {
   }
 });
 
+describe('fuzz: anillos mutados nunca lanzan sin control', () => {
+  const texto = readFileSync(
+    path.join(AQUI, '..', 'src', 'catalogo', 'claves', 'composer.asc'),
+    'latin1',
+  );
+  const binario = Buffer.from(desarmar(texto));
+  const controlado = (f: () => unknown): void => {
+    try {
+      const r = f();
+      expect(Array.isArray(r)).toBe(true);
+    } catch (e) {
+      expect(e).toMatchObject({
+        codigo: expect.stringMatching(/^catalogo\.firma_(invalida|no_soportada)$/),
+      });
+    }
+  };
+
+  it('composer.asc: 100 mutaciones de la armadura y 100 del binario', () => {
+    const rnd = azar(4242);
+    const alfabeto = 'ABCabc019+/=-\n \r:';
+    for (let i = 0; i < 100; i++) {
+      const c = texto.split('');
+      for (let k = 0; k < 1 + Math.floor(rnd() * 3); k++) {
+        c[Math.floor(rnd() * c.length)] = alfabeto[Math.floor(rnd() * alfabeto.length)]!;
+      }
+      controlado(() => leerAnillo(c.join('')));
+    }
+    for (let i = 0; i < 100; i++) {
+      const m = Buffer.from(binario);
+      const tipo = Math.floor(rnd() * 3);
+      let mutada: Buffer = m;
+      if (tipo === 0) {
+        for (let k = 0; k < 1 + Math.floor(rnd() * 4); k++) {
+          const p = Math.floor(rnd() * m.length);
+          m[p] = Math.floor(rnd() * 256);
+        }
+      } else if (tipo === 1) {
+        mutada = m.subarray(0, Math.floor(rnd() * m.length));
+      } else {
+        const p = Math.floor(rnd() * m.length);
+        mutada = Buffer.concat([
+          m.subarray(0, p),
+          Buffer.from([Math.floor(rnd() * 256)]),
+          m.subarray(p),
+        ]);
+      }
+      controlado(() => leerAnillo(mutada));
+    }
+  });
+});
+
 describe('fuenteFirmaDe', () => {
-  it('Node y Nginx siempre; Composer desde 2.1', () => {
+  it('Node y Nginx siempre; Composer desde 2.0.3', () => {
     expect(fuenteFirmaDe({ servicio: 'node', version: '24.22.3' })).toBe('node');
     expect(fuenteFirmaDe({ servicio: 'nginx', version: '1.30.6' })).toBe('nginx');
     expect(fuenteFirmaDe({ servicio: 'composer', version: '2.11.2' })).toBe('composer');
     expect(fuenteFirmaDe({ servicio: 'composer', version: '3.0.0' })).toBe('composer');
-    expect(fuenteFirmaDe({ servicio: 'composer', version: '2.0.14' })).toBeNull();
+    expect(fuenteFirmaDe({ servicio: 'composer', version: '2.0.14' })).toBe('composer');
+    expect(fuenteFirmaDe({ servicio: 'composer', version: '2.0.3' })).toBe('composer');
+    expect(fuenteFirmaDe({ servicio: 'composer', version: '2.0.2' })).toBeNull();
     expect(fuenteFirmaDe({ servicio: 'composer', version: '1.10.28' })).toBeNull();
     expect(fuenteFirmaDe({ servicio: 'php', version: '8.4.1' })).toBeNull();
   });
