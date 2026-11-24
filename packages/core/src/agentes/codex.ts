@@ -15,6 +15,7 @@ export const CODEX: DefAgente = {
   // Sin scripts de instalación (el binario llega como dependencia opcional por plataforma).
   scriptsInstalacion: false,
   guia: 'https://developers.openai.com/codex/cli',
+  soportaMcp: true,
   formato: 'toml',
   seccion: 'mcp_servers',
   archivoConfig: (inicio) => path.join(inicio, '.codex', 'config.toml'),

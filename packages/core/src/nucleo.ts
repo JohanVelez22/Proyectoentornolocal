@@ -296,7 +296,7 @@ interface ModulosNucleo {
   ajustesPhpSitio: AjustesPhpSitio;
   /** Extensiones de PHP de cada rama (ext/ y catálogo de terceros). */
   extensionesPhp: ExtensionesPhp;
-  /** Agentes de programación (Claude Code, Codex CLI, Hermes Agent). */
+  /** Agentes de programación (Claude Code, Codex CLI, Hermes, Opencode, Gemini CLI, Qwen Code, Copilot CLI, Antigravity). */
   agentes: Agentes;
   /** Proveedores de IA en la nube (config, pruebas y bloque .env por proyecto). */
   ia: GestorIa;

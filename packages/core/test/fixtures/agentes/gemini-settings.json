@@ -1,0 +1,6 @@
+{
+  "theme": "Default",
+  "mcpServers": {
+    "otro": { "httpUrl": "https://otro.ejemplo.test/mcp" }
+  }
+}

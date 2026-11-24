@@ -14,7 +14,12 @@ import { sanear } from '../proyectos/recetas';
 import type { Ejecutor, PlataformaCompleta } from '../plataforma/tipos';
 import type { DiffPreparado } from '../git/git';
 import { CLAUDE_CODE } from './claudeCode';
+import { ANTIGRAVITY } from './antigravity';
 import { CODEX } from './codex';
+import { COPILOT_CLI } from './copilotCli';
+import { GEMINI_CLI } from './geminiCli';
+import { OPENCODE } from './opencode';
+import { QWEN_CODE } from './qwenCode';
 import {
   editarConfigAgente,
   entradaMcp,
@@ -27,8 +32,25 @@ import {
 } from './configArchivo';
 import { HERMES } from './hermes';
 
-export type IdAgente = 'claude-code' | 'codex' | 'hermes';
-export const IDS_AGENTE: readonly IdAgente[] = ['claude-code', 'codex', 'hermes'];
+export type IdAgente =
+  | 'claude-code'
+  | 'codex'
+  | 'hermes'
+  | 'opencode'
+  | 'gemini-cli'
+  | 'qwen-code'
+  | 'copilot-cli'
+  | 'antigravity';
+export const IDS_AGENTE: readonly IdAgente[] = [
+  'claude-code',
+  'codex',
+  'hermes',
+  'opencode',
+  'gemini-cli',
+  'qwen-code',
+  'copilot-cli',
+  'antigravity',
+];
 
 /** Lo que define a cada agente (sus datos fijos: binario, paquete oficial, archivo, CLI). */
 export interface DefAgente {
@@ -45,6 +67,11 @@ export interface DefAgente {
   scriptsInstalacion: boolean;
   /** Guía oficial de instalación. */
   guia: string;
+  /**
+   * WolfCore Dev puede registrar su MCP en él. Falso si la documentación del agente no permite
+   * tomar el token de una variable de entorno (escribirlo en su archivo está prohibido).
+   */
+  soportaMcp: boolean;
   formato: FormatoConfig;
   /** Sección de servidores MCP en su archivo. */
   seccion: string;
@@ -64,6 +91,11 @@ export const AGENTES: Record<IdAgente, DefAgente> = {
   'claude-code': CLAUDE_CODE,
   codex: CODEX,
   hermes: HERMES,
+  opencode: OPENCODE,
+  'gemini-cli': GEMINI_CLI,
+  'qwen-code': QWEN_CODE,
+  'copilot-cli': COPILOT_CLI,
+  antigravity: ANTIGRAVITY,
 };
 
 /**
@@ -88,6 +120,8 @@ export interface EstadoAgente {
   version: string | null;
   origen: OrigenAgente | null;
   mcpRegistrado: boolean;
+  /** WolfCore Dev puede registrar su MCP en el agente (si no, solo detección y guía). */
+  mcpSoportado: boolean;
   /** WolfCore Dev puede instalarlo (paquete oficial de npm con el Node propio). */
   instalable: boolean;
   guia?: string;
@@ -162,6 +196,16 @@ export function defAgente(id: string): DefAgente {
   return AGENTES[id as IdAgente];
 }
 
+/** Registrar o quitar el MCP solo existe en los agentes que admiten el token por variable. */
+function exigirMcp(def: DefAgente): void {
+  if (def.soportaMcp) return;
+  throw new ErrorWolf(
+    'agentes.mcp_no_soportado',
+    `${def.nombre} no admite el token del MCP por variable de entorno: no se registra.`,
+    { agente: def.nombre },
+  );
+}
+
 async function existeArchivo(ruta: string): Promise<boolean> {
   return lstat(ruta).then(
     (i) => i.isFile(),
@@ -188,7 +232,7 @@ export function limpiarMensajeCommit(texto: string): string {
 }
 
 /**
- * Agentes de programación (Claude Code, Codex CLI, Hermes Agent): detección, instalación con el
+ * Agentes de programación (Claude Code, Codex CLI, Hermes, Opencode, Gemini CLI, Qwen Code, Copilot CLI, Antigravity): detección, instalación con el
  * paquete oficial, registro del MCP de WolfCore Dev en su configuración y apertura en un
  * proyecto. Nunca se lanzan solos: cada acción la pide el usuario (y las que escriben, con
  * `confirmado`). La clave de un proveedor va solo en el entorno del proceso que se abre.
@@ -326,6 +370,7 @@ export class Agentes {
           version: l?.version ?? null,
           origen: l?.origen ?? null,
           mcpRegistrado: await this.mcpRegistrado(def),
+          mcpSoportado: def.soportaMcp,
           instalable: def.paquete !== null,
           guia: def.guia,
         };
@@ -435,6 +480,7 @@ export class Agentes {
   async registrarMcp(id: IdAgente, confirmado: true): Promise<ResultadoRegistroMcp> {
     const def = defAgente(id);
     confirmar(confirmado, `Confirme el registro del MCP en ${def.nombre}.`);
+    exigirMcp(def);
     await this.comprobarArchivo(def);
     const url = await this.d.mcp.url();
     const ahora = this.d.ahora?.() ?? new Date();
@@ -474,6 +520,7 @@ export class Agentes {
   async quitarMcp(id: IdAgente, confirmado: true): Promise<ResultadoRegistroMcp> {
     const def = defAgente(id);
     confirmar(confirmado, `Confirme que quiere quitar el MCP de ${def.nombre}.`);
+    exigirMcp(def);
     await this.comprobarArchivo(def);
     const ahora = this.d.ahora?.() ?? new Date();
     if ((await this.entradaActual(def)) === undefined) return { respaldo: null, metodo: 'archivo' };

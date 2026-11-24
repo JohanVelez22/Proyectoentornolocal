@@ -294,6 +294,8 @@ export const es = {
       'agentes.sin_node': 'Instale Node desde Servicios para poder instalar el agente.',
       'agentes.instalacion_fallo': 'No se pudo instalar el agente: {detalle}',
       'agentes.no_instalado': '{agente} no está instalado.',
+      'agentes.mcp_no_soportado':
+        '{agente} no documenta cómo tomar el token de una variable de entorno: no se le registra el MCP.',
       'agentes.config_ilegible':
         'No se pudo interpretar {archivo}; no se modificó. Revíselo a mano.',
       'agentes.config_en_uso':
@@ -2522,7 +2524,7 @@ export const es = {
   },
   agentes: {
     descripcion:
-      'Claude Code, Codex CLI y Hermes Agent: detéctelos o instálelos, conéctelos al MCP de WolfCore Dev y ábralos en un proyecto. Ninguno se abre solo.',
+      'Claude Code, Codex CLI, Hermes Agent, Opencode, Gemini CLI, Qwen Code, GitHub Copilot CLI y Antigravity CLI: detéctelos o instálelos, conéctelos al MCP de WolfCore Dev y ábralos en un proyecto. Ninguno se abre solo.',
     recargar: 'Volver a detectar',
     notaMcp:
       'El MCP registrado solo autentica cuando el agente se abre desde WolfCore Dev ("Abrir en un proyecto"): el token va en la variable WOLFCORE_MCP_TOKEN de esa terminal y nunca queda escrito en la configuración del agente. Abierto por fuera, el agente ve la entrada «wolfcore» pero no puede conectarse.',
@@ -2540,6 +2542,8 @@ export const es = {
     },
     mcpRegistrado: 'MCP registrado',
     mcpSinRegistrar: 'MCP sin registrar',
+    mcpNoSoportado:
+      'Su documentación no permite tomar el token de una variable de entorno: WolfCore Dev no le registra el MCP (el token nunca se escribe en archivos).',
     instalar: 'Instalar',
     instalando: 'Instalando…',
     guia: 'Guía de instalación',

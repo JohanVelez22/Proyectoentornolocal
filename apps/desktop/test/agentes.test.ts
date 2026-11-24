@@ -2,7 +2,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ErrorWolf, type EstadoAgente } from '@pel/core';
+import { ErrorWolf, IDS_AGENTE, type EstadoAgente } from '@pel/core';
+import { idAgente } from '../src/main/validacion';
 import { registrarIpc, type IpcMainLike, type NucleoIpc } from '../src/main/ipc';
 import { RUTAS_IPC, type ApiEntorno } from '../src/shared/api';
 import { useAgentes } from '../src/renderer/stores/agentes';
@@ -30,6 +31,7 @@ const ESTADO: EstadoAgente[] = [
     version: '2.1.0',
     origen: 'propio',
     mcpRegistrado: false,
+    mcpSoportado: true,
     instalable: true,
     guia: 'https://docs.anthropic.com/en/docs/claude-code/setup',
   },
@@ -247,6 +249,7 @@ function apiFalsa() {
       version: null,
       origen: 'ejecutable',
       mcpRegistrado: true,
+      mcpSoportado: true,
       instalable: false,
       guia: 'https://hermes-agent.nousresearch.com/docs',
     },
@@ -338,5 +341,39 @@ describe('textos de agentes', () => {
     );
     expect(es.nav.agentes).toBeTruthy();
     expect(en.nav.agentes).toBeTruthy();
+  });
+});
+
+describe('agentes D3: Opencode, Gemini CLI, Qwen Code, Copilot CLI y Antigravity', () => {
+  const NUEVOS = ['opencode', 'gemini-cli', 'qwen-code', 'copilot-cli', 'antigravity'];
+
+  it('la lista de agentes de la pantalla sale de IDS_AGENTE', () => {
+    for (const id of NUEVOS) expect(IDS_AGENTE).toContain(id);
+    // La validación del IPC acepta exactamente los de IDS_AGENTE.
+    for (const id of IDS_AGENTE) expect(idAgente(id)).toBe(id);
+    expect(() => idAgente('otro')).toThrow();
+    // La pantalla no lleva una lista propia: pinta lo que devuelve el núcleo.
+    const pantalla = readFileSync(
+      path.join(__dirname, '..', 'src', 'renderer', 'vistas', 'Agentes.vue'),
+      'utf8',
+    );
+    for (const id of NUEVOS) expect(pantalla).not.toContain(`'${id}'`);
+  });
+
+  it('un agente sin registro de MCP (Antigravity) no ofrece registrar ni quitar', () => {
+    const tarjeta = readFileSync(
+      path.join(__dirname, '..', 'src', 'renderer', 'componentes', 'TarjetaAgente.vue'),
+      'utf8',
+    );
+    expect(tarjeta).toContain('mcpSoportado');
+  });
+
+  it('es y en traen el texto del agente sin registro y el error nuevo', () => {
+    expect(es.agentes.mcpNoSoportado).toBeTruthy();
+    expect(en.agentes.mcpNoSoportado).toBeTruthy();
+    const errEs = JSON.stringify(es);
+    const errEn = JSON.stringify(en);
+    expect(errEs).toContain('agentes.mcp_no_soportado');
+    expect(errEn).toContain('agentes.mcp_no_soportado');
   });
 });

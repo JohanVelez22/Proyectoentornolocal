@@ -288,6 +288,8 @@ export const en: Textos = {
       'agentes.sin_node': 'Install Node from Services to be able to install the agent.',
       'agentes.instalacion_fallo': 'The agent could not be installed: {detalle}',
       'agentes.no_instalado': '{agente} is not installed.',
+      'agentes.mcp_no_soportado':
+        '{agente} does not document how to read the token from an environment variable: the MCP is not registered in it.',
       'agentes.config_ilegible':
         '{archivo} could not be parsed; it was not changed. Check it by hand.',
       'agentes.config_en_uso':
@@ -2502,7 +2504,7 @@ export const en: Textos = {
   },
   agentes: {
     descripcion:
-      'Claude Code, Codex CLI and Hermes Agent: detect or install them, connect them to the WolfCore Dev MCP and open them in a project. None of them opens on its own.',
+      'Claude Code, Codex CLI, Hermes Agent, Opencode, Gemini CLI, Qwen Code, GitHub Copilot CLI and Antigravity CLI: detect or install them, connect them to the WolfCore Dev MCP and open them in a project. None of them opens on its own.',
     recargar: 'Detect again',
     notaMcp:
       'The registered MCP only authenticates when the agent is opened from WolfCore Dev ("Open in a project"): the token travels in the WOLFCORE_MCP_TOKEN variable of that terminal and is never written to the agent configuration. Opened elsewhere, the agent sees the «wolfcore» entry but cannot connect.',
@@ -2520,6 +2522,8 @@ export const en: Textos = {
     },
     mcpRegistrado: 'MCP registered',
     mcpSinRegistrar: 'MCP not registered',
+    mcpNoSoportado:
+      'Its documentation does not allow reading the token from an environment variable: WolfCore Dev does not register the MCP in it (the token is never written to files).',
     instalar: 'Install',
     instalando: 'Installing…',
     guia: 'Installation guide',

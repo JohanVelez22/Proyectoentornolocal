@@ -85,10 +85,16 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
         </div>
       </template>
       <p v-else-if="!a.instalable" class="nota">{{ t.soloGuia }}</p>
+      <p v-if="!a.mcpSoportado" class="nota">{{ t.mcpNoSoportado }}</p>
     </dl>
 
     <div class="mcp">
-      <NTag size="small" :bordered="false" :type="a.mcpRegistrado ? 'info' : 'default'">
+      <NTag
+        size="small"
+        :bordered="false"
+        :type="a.mcpRegistrado ? 'info' : 'default'"
+        :title="a.mcpSoportado ? undefined : t.mcpNoSoportado"
+      >
         {{ a.mcpRegistrado ? t.mcpRegistrado : t.mcpSinRegistrar }}
       </NTag>
       <span class="tenue mono ruta" :title="a.archivoConfig">{{ a.archivoConfig }}</span>
@@ -122,7 +128,7 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
       </NButton>
       <span class="separador" />
       <!-- Registrar con la entrada ya puesta la actualiza (p. ej. si cambió el puerto del MCP). -->
-      <NButton size="small" quaternary @click="emit('registrar')">
+      <NButton v-if="a.mcpSoportado" size="small" quaternary @click="emit('registrar')">
         <template #icon
           ><NIcon><LinkOutline /></NIcon
         ></template>

@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "otro": { "serverUrl": "https://otro.ejemplo.test/mcp" }
+  }
+}

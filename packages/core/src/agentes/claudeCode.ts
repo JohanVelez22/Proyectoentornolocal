@@ -19,6 +19,7 @@ export const CLAUDE_CODE: DefAgente = {
   // paquete no funciona, así que sus scripts de instalación quedan permitidos.
   scriptsInstalacion: true,
   guia: 'https://docs.anthropic.com/en/docs/claude-code/setup',
+  soportaMcp: true,
   formato: 'json',
   seccion: 'mcpServers',
   archivoConfig: (inicio) => path.join(inicio, '.claude.json'),

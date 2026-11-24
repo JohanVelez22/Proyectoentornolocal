@@ -171,6 +171,7 @@ export const PARAMETROS_ERROR = {
   'agentes.sin_node': [],
   'agentes.instalacion_fallo': ['detalle'],
   'agentes.no_instalado': ['agente'],
+  'agentes.mcp_no_soportado': ['agente'],
   'agentes.config_ilegible': ['archivo'],
   'agentes.config_en_uso': ['archivo'],
   'agentes.proveedor_incompatible': ['agente'],

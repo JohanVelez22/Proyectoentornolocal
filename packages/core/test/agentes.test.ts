@@ -1,10 +1,20 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import { parse } from 'jsonc-parser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  AGENTES,
   Agentes,
+  defAgente,
+  IDS_AGENTE,
   INSTRUCCION_COMMIT,
   MAX_TOKENS_COMMIT,
   NPMRC_AGENTES,
@@ -25,6 +35,7 @@ import { ejecutorPorDefecto } from '../src/plataforma/win';
 import { carpetaTemporal } from './temporales';
 
 // Valores claramente falsos: nunca deben aparecer en argumentos ni en archivos de los agentes.
+const FIXTURES = path.join(__dirname, 'fixtures', 'agentes');
 const TOKEN_MCP = 'token-mcp-FALSO-agentes-0000000000000000000000';
 const CLAVE = 'sk-ant-falsa-CENTINELA-agentes-000000000000wxyz';
 const URL_MCP = 'http://127.0.0.1:47123/mcp';
@@ -146,6 +157,11 @@ describe('Agentes: detección', () => {
       ['claude-code', false, true, false],
       ['codex', false, true, false],
       ['hermes', false, false, false],
+      ['opencode', false, true, false],
+      ['gemini-cli', false, true, false],
+      ['qwen-code', false, true, false],
+      ['copilot-cli', false, true, false],
+      ['antigravity', false, false, false],
     ]);
     expect(e[2]!.guia).toMatch(/^https:\/\/hermes-agent\.nousresearch\.com\//);
     // Lo que muestran los diálogos: paquete que se instalaría y archivo que se tocaría.
@@ -153,7 +169,14 @@ describe('Agentes: detección', () => {
       ['Claude Code', '@anthropic-ai/claude-code', '.claude.json'],
       ['Codex CLI', '@openai/codex', 'config.toml'],
       ['Hermes Agent', null, 'config.yaml'],
+      ['Opencode', 'opencode-ai', 'opencode.json'],
+      ['Gemini CLI', '@google/gemini-cli', 'settings.json'],
+      ['Qwen Code', '@qwen-code/qwen-code', 'settings.json'],
+      ['GitHub Copilot CLI', '@github/copilot', 'mcp-config.json'],
+      ['Antigravity CLI', null, 'mcp_config.json'],
     ]);
+    // Solo Antigravity no admite el registro: no documenta el token por variable de entorno.
+    expect(e.map((x) => x.mcpSoportado)).toEqual([true, true, true, true, true, true, true, false]);
   });
 
   it('detecta el paquete propio, el npm global del usuario y el ejecutable sin ejecutarlo', async () => {
@@ -224,7 +247,16 @@ describe('Agentes: detección', () => {
     mkdirSync(path.join(inicio, '.codex'));
     writeFileSync(path.join(inicio, '.codex', 'config.toml'), '[mcp_servers.otro]\nurl = "x"\n');
     const e = await agentes.estado();
-    expect(e.map((x) => x.mcpRegistrado)).toEqual([true, false, false]);
+    expect(e.map((x) => x.mcpRegistrado)).toEqual([
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
   });
 });
 
@@ -830,5 +862,237 @@ describe('Configuración de agentes: copias acotadas y cambios a la vez', () => 
     // Queda lo que escribió el agente, no la edición de WolfCore Dev.
     expect(readFileSync(ruta, 'utf8')).toBe(`{"a": ${n}}\n`);
     expect(readdirSync(dir).filter((x) => x.includes('pel-tmp'))).toEqual([]);
+  });
+});
+
+/* ───────────── D3: Opencode, Gemini CLI, Qwen Code, Copilot CLI y Antigravity ───────────── */
+
+/** Agentes nuevos que cumplen los 4 criterios: se instalan y se registran enteros. */
+const NUEVOS = [
+  {
+    id: 'opencode',
+    paquete: 'opencode-ai',
+    binario: 'opencode',
+    fixture: 'opencode.json',
+    archivo: ['.config', 'opencode', 'opencode.json'],
+    seccion: 'mcp',
+    entrada: {
+      type: 'remote',
+      url: URL_MCP,
+      headers: { Authorization: 'Bearer {env:WOLFCORE_MCP_TOKEN}' },
+    },
+    scripts: true,
+  },
+  {
+    id: 'gemini-cli',
+    paquete: '@google/gemini-cli',
+    binario: 'gemini',
+    fixture: 'gemini-settings.json',
+    archivo: ['.gemini', 'settings.json'],
+    seccion: 'mcpServers',
+    entrada: { httpUrl: URL_MCP, headers: { Authorization: 'Bearer ${WOLFCORE_MCP_TOKEN}' } },
+    scripts: false,
+  },
+  {
+    id: 'qwen-code',
+    paquete: '@qwen-code/qwen-code',
+    binario: 'qwen',
+    fixture: 'qwen-settings.json',
+    archivo: ['.qwen', 'settings.json'],
+    seccion: 'mcpServers',
+    entrada: { httpUrl: URL_MCP, headers: { Authorization: 'Bearer ${WOLFCORE_MCP_TOKEN}' } },
+    scripts: false,
+  },
+  {
+    id: 'copilot-cli',
+    paquete: '@github/copilot',
+    binario: 'copilot',
+    fixture: 'copilot-mcp-config.json',
+    archivo: ['.copilot', 'mcp-config.json'],
+    seccion: 'mcpServers',
+    entrada: {
+      type: 'http',
+      url: URL_MCP,
+      headers: { Authorization: 'Bearer ${WOLFCORE_MCP_TOKEN}' },
+    },
+    scripts: false,
+  },
+] as const;
+
+describe('Agentes D3: la lista sale de IDS_AGENTE', () => {
+  it('IDS_AGENTE, AGENTES y defAgente coinciden y no hay ids repetidos', () => {
+    expect([...IDS_AGENTE]).toEqual([
+      'claude-code',
+      'codex',
+      'hermes',
+      'opencode',
+      'gemini-cli',
+      'qwen-code',
+      'copilot-cli',
+      'antigravity',
+    ]);
+    expect(Object.keys(AGENTES).sort()).toEqual([...IDS_AGENTE].sort());
+    for (const id of IDS_AGENTE) expect(defAgente(id).id).toBe(id);
+  });
+});
+
+describe.each(NUEVOS)('Agentes D3: $id', (n) => {
+  const rutaConfig = (inicio: string): string => path.join(inicio, ...n.archivo);
+  const poner = (inicio: string): string => {
+    const r = rutaConfig(inicio);
+    mkdirSync(path.dirname(r), { recursive: true });
+    copyFileSync(path.join(FIXTURES, n.fixture), r);
+    return r;
+  };
+
+  it('registrar conserva entradas ajenas y deja copia', async () => {
+    const m = await montar();
+    const r = poner(m.inicio);
+    const antes = readFileSync(r, 'utf8');
+    const res = await m.agentes.registrarMcp(n.id, true);
+    expect(res.metodo).toBe('archivo');
+    expect(res.respaldo).toMatch(/\.wolfcore-20261119-103000\.bak$/);
+    expect(readFileSync(res.respaldo!, 'utf8')).toBe(antes);
+    const obj = parse(readFileSync(r, 'utf8')) as Record<string, Record<string, unknown>>;
+    expect(obj[n.seccion]!['otro']).toBeDefined();
+    expect(obj[n.seccion]!['wolfcore']).toEqual(n.entrada);
+    const original = parse(antes) as Record<string, unknown>;
+    for (const k of Object.keys(original)) {
+      if (k !== n.seccion) expect(obj[k]).toEqual(original[k]);
+    }
+    // El estado lo ve como registrado, y quitar deja solo lo ajeno.
+    expect((await m.agentes.estado()).find((x) => x.id === n.id)!.mcpRegistrado).toBe(true);
+    await m.agentes.quitarMcp(n.id, true);
+    const sin = parse(readFileSync(r, 'utf8')) as Record<string, Record<string, unknown>>;
+    expect(sin[n.seccion]!['wolfcore']).toBeUndefined();
+    expect(sin[n.seccion]!['otro']).toBeDefined();
+  });
+
+  it('el token nunca queda escrito: ni en el archivo, ni en la copia, ni en la línea de órdenes', async () => {
+    const m = await montar();
+    const r = poner(m.inicio);
+    await m.agentes.registrarMcp(n.id, true);
+    for (const f of readdirSync(path.dirname(r))) {
+      expect(readFileSync(path.join(path.dirname(r), f), 'utf8')).not.toContain(TOKEN_MCP);
+    }
+    expect(readFileSync(r, 'utf8')).toContain('WOLFCORE_MCP_TOKEN');
+    expect(JSON.stringify(m.llamadas)).not.toContain(TOKEN_MCP);
+  });
+
+  it('sin archivo previo lo crea con solo la entrada wolfcore', async () => {
+    const m = await montar();
+    const res = await m.agentes.registrarMcp(n.id, true);
+    expect(res.respaldo).toBeNull();
+    const obj = parse(readFileSync(rutaConfig(m.inicio), 'utf8')) as Record<
+      string,
+      Record<string, unknown>
+    >;
+    expect(Object.keys(obj[n.seccion]!)).toEqual(['wolfcore']);
+  });
+
+  it('archivo ilegible no se toca', async () => {
+    const m = await montar();
+    const r = rutaConfig(m.inicio);
+    mkdirSync(path.dirname(r), { recursive: true });
+    const roto = '{ "theme": "dark", ';
+    writeFileSync(r, roto);
+    await expect(m.agentes.registrarMcp(n.id, true)).rejects.toMatchObject({
+      codigo: 'agentes.config_ilegible',
+    });
+    expect(readFileSync(r, 'utf8')).toBe(roto);
+    expect(readdirSync(path.dirname(r))).toEqual([path.basename(r)]);
+    expect(m.exec).not.toHaveBeenCalled();
+  });
+
+  it('sin confirmación no toca nada', async () => {
+    const m = await montar();
+    const r = poner(m.inicio);
+    const antes = readFileSync(r, 'utf8');
+    await expect(m.agentes.registrarMcp(n.id, false as never)).rejects.toMatchObject({
+      codigo: 'agentes.sin_confirmar',
+    });
+    expect(readFileSync(r, 'utf8')).toBe(antes);
+  });
+
+  it('instalar usa el paquete oficial con el Node propio', async () => {
+    const m = await montar();
+    await m.agentes.instalar(n.id, true);
+    const a = m.llamadas[0]!.args;
+    expect(a[a.length - 1]).toBe(n.paquete);
+    expect(a).toContain(REGISTRO_NPM_AGENTES);
+    expect(a.includes('--ignore-scripts')).toBe(!n.scripts);
+  });
+
+  it('abrir inyecta el token solo en el env del proceso', async () => {
+    const m = await montar();
+    const cli = paquete(m.prefijo, n.paquete, n.binario, '1.0.0');
+    await m.agentes.abrir(n.id, 'tienda');
+    const t = m.plat.terminales[0]!;
+    expect(t.cwd).toBe(m.proyecto);
+    expect(t.env).toEqual({ WOLFCORE_MCP_TOKEN: TOKEN_MCP });
+    expect(t.comando).toContain(cli);
+    expect(JSON.stringify(t.comando)).not.toContain(TOKEN_MCP);
+    // Nada se escribió en la carpeta del usuario ni en el proyecto.
+    expect(readdirSync(m.inicio)).toEqual([]);
+    expect(readdirSync(m.proyecto)).toEqual([]);
+  });
+});
+
+describe('Agentes D3: claves de proveedor por agente', () => {
+  const OPENAI: ConfigProveedorIa = {
+    id: 'openai',
+    tipo: 'openai',
+    nombre: 'OpenAI',
+    urlBase: null,
+    modelo: null,
+  };
+  it('cada agente declara solo los proveedores que admite', () => {
+    expect(AGENTES['opencode'].variablesClave(ANTHROPIC, CLAVE)).toEqual({
+      ANTHROPIC_API_KEY: CLAVE,
+    });
+    expect(AGENTES['opencode'].variablesClave(OPENAI, CLAVE)).toEqual({ OPENAI_API_KEY: CLAVE });
+    expect(AGENTES['gemini-cli'].variablesClave(GEMINI, CLAVE)).toEqual({ GEMINI_API_KEY: CLAVE });
+    expect(AGENTES['gemini-cli'].variablesClave(ANTHROPIC, CLAVE)).toBeNull();
+    expect(AGENTES['qwen-code'].variablesClave(OPENAI, CLAVE)).toEqual({ OPENAI_API_KEY: CLAVE });
+    expect(AGENTES['copilot-cli'].variablesClave(OPENAI, CLAVE)).toBeNull();
+    expect(AGENTES['antigravity'].variablesClave(GEMINI, CLAVE)).toBeNull();
+  });
+});
+
+describe('Agentes D3: Antigravity solo con detección y guía', () => {
+  it('instalar falla con agentes.no_instalable y la guía oficial, sin ejecutar nada', async () => {
+    const m = await montar();
+    await expect(m.agentes.instalar('antigravity', true)).rejects.toMatchObject({
+      codigo: 'agentes.no_instalable',
+      datos: { guia: expect.stringContaining('antigravity.google') },
+    });
+    expect(m.exec).not.toHaveBeenCalled();
+  });
+
+  it('registrar y quitar fallan con agentes.mcp_no_soportado y no tocan el archivo', async () => {
+    const m = await montar();
+    const r = path.join(m.inicio, '.gemini', 'config', 'mcp_config.json');
+    mkdirSync(path.dirname(r), { recursive: true });
+    copyFileSync(path.join(FIXTURES, 'antigravity-mcp_config.json'), r);
+    const antes = readFileSync(r, 'utf8');
+    await expect(m.agentes.registrarMcp('antigravity', true)).rejects.toMatchObject({
+      codigo: 'agentes.mcp_no_soportado',
+    });
+    await expect(m.agentes.quitarMcp('antigravity', true)).rejects.toMatchObject({
+      codigo: 'agentes.mcp_no_soportado',
+    });
+    expect(readFileSync(r, 'utf8')).toBe(antes);
+    expect(readdirSync(path.dirname(r))).toEqual(['mcp_config.json']);
+  });
+
+  it('se detecta el ejecutable agy y se abre con solo el token', async () => {
+    const m = await montar();
+    const exe = path.join(m.inicio, 'AppData', 'Local', 'agy', 'bin', 'agy');
+    m.plat.ejecutables.set('agy', exe);
+    const e = (await m.agentes.estado()).find((x) => x.id === 'antigravity')!;
+    expect(e).toMatchObject({ instalado: true, origen: 'ejecutable', mcpSoportado: false });
+    await m.agentes.abrir('antigravity', 'tienda');
+    expect(m.plat.terminales[0]!.comando).toEqual([exe]);
+    expect(m.plat.terminales[0]!.env).toEqual({ WOLFCORE_MCP_TOKEN: TOKEN_MCP });
   });
 });

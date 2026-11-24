@@ -1,0 +1,8 @@
+{
+  // Configuración de ejemplo de Opencode (V1): un servidor MCP ajeno.
+  "$schema": "https://opencode.ai/config.json",
+  "theme": "tokyonight",
+  "mcp": {
+    "otro": { "type": "remote", "url": "https://otro.ejemplo.test/mcp", "enabled": true }
+  }
+}

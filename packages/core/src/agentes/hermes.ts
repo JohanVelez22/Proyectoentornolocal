@@ -17,6 +17,7 @@ export const HERMES: DefAgente = {
   paquete: null,
   scriptsInstalacion: false,
   guia: 'https://hermes-agent.nousresearch.com/docs/getting-started/installation',
+  soportaMcp: true,
   formato: 'yaml',
   seccion: 'mcp_servers',
   archivoConfig: (inicio) => path.join(inicio, '.hermes', 'config.yaml'),

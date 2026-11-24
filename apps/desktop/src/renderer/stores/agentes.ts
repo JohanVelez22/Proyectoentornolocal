@@ -4,7 +4,7 @@ import type { EstadoAgente, IdAgente, ResultadoRegistroMcp } from '../../shared/
 import { api } from '../api';
 
 /**
- * Agentes de programación (Claude Code, Codex CLI, Hermes Agent). Mirar el estado nunca ejecuta
+ * Agentes de programación (Claude Code, Codex, Hermes, Opencode, Gemini CLI, Qwen Code, Copilot CLI, Antigravity). Mirar el estado nunca ejecuta
  * nada del usuario; instalar, registrar y quitar el MCP llevan `confirmado: true`, que solo pasa
  * el diálogo de la pantalla, y abrir un agente es siempre un clic (no hay arranque automático).
  */
