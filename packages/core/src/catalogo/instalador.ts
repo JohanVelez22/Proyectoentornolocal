@@ -18,10 +18,14 @@ import type { Eventos, EventosNucleo } from '../eventos';
 import type { Rutas } from '../rutas';
 import type { ProgresoInstalacion } from '../tipos';
 import { ErrorWolf } from '../errores';
+import { renombrarConReintentos } from '../https/confianza';
 import { catalogo, ejecutableDe, type VersionDisponible } from './catalogo';
 import { claveValida, rutaRelativaSegura, urlOficial } from './comun';
 import { huellaDe, huellaFuerte, type AlgoritmoHuella, type Huella } from './huellas';
 import { pedirConSaltos } from './red';
+
+/** Intentos al mover la carpeta extraída a `bin/` (≈ 30 s con la espera creciente). */
+const INTENTOS_RENOMBRAR = 150;
 
 export interface OpcionesInstalador {
   /** Corta la descarga si no llegan bytes durante este tiempo. Por defecto 60000. */
@@ -203,7 +207,11 @@ export class Instalador {
     const previo = path.join(tmp, `${id}-previo`);
     let reemplazado = false;
     let conservarPrevio = false;
-    const renombrar = this.opciones.renombrar ?? rename;
+    // Un antivirus suele tener abiertos un rato los archivos recién extraídos (EPERM/EBUSY al
+    // mover la carpeta): se reintenta con espera creciente durante unos 30 s.
+    const renombrarUna = this.opciones.renombrar ?? rename;
+    const renombrar = (de: string, a: string): Promise<void> =>
+      renombrarConReintentos(de, a, renombrarUna, INTENTOS_RENOMBRAR);
     try {
       await mkdir(tmp, { recursive: true });
       const hash = await this.descargar(v, archivo, huella?.algoritmo ?? 'sha256');

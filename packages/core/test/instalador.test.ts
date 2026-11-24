@@ -306,6 +306,27 @@ describe('Instalador', () => {
     expect(await readdir(rutas.tmp())).toEqual([]);
   });
 
+  it('si un antivirus bloquea un momento la carpeta extraída (EPERM), reintenta y la instala', async () => {
+    const { rename } = await import('node:fs/promises');
+    let fallos = 0;
+    const inst = new Instalador(rutas, eventos, fetchDe(nginxZip), {
+      renombrar: async (de, a) => {
+        if (fallos < 3) {
+          fallos++;
+          throw Object.assign(new Error('EPERM: operation not permitted, rename'), {
+            code: 'EPERM',
+          });
+        }
+        await rename(de, a);
+      },
+    });
+    await inst.instalar(vNginx(nginxZip));
+    expect(fallos).toBe(3);
+    expect(await inst.instalado('nginx', '1.28.0')).toBe(true);
+    expect(progreso.at(-1)?.fase).toBe('listo');
+    expect(await readdir(rutas.tmp())).toEqual([]);
+  });
+
   it('corta la descarga si no llegan datos', async () => {
     const colgado = (() =>
       Promise.resolve(
