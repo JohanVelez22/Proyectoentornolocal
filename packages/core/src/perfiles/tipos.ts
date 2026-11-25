@@ -63,16 +63,34 @@ export interface DepsPerfiles {
     base: string,
     o: { existe: boolean },
   ): Promise<void>;
-  /** Crea (o rehace con la clave nueva) el usuario `wolf_u_<base>` limitado a su base. */
-  crearUsuarioBd(instancia: string, base: string, usuario: string, clave: string): Promise<void>;
+  /**
+   * Crea el usuario `wolf_u_<base>` limitado a su base; `cambiarClave` solo cuando la clave es
+   * nueva (una reutilizada de otro proyecto nunca se cambia).
+   */
+  crearUsuarioBd(
+    instancia: string,
+    base: string,
+    usuario: string,
+    clave: string,
+    o: { cambiarClave: boolean },
+  ): Promise<void>;
+  /**
+   * Clave guardada de otro proyecto del equipo (no de `excluir`) que ya usa ese usuario, o null.
+   * Si alguno lo usa sin clave guardada, lanza (no se puede compartir sin conocerla).
+   */
+  claveCompartida(usuario: string, excluir: string[]): Promise<string | null>;
   /** Guarda la clave en `AlmacenSecretos` como `bd:<sitio>` (el núcleo nunca la guarda). */
   guardarClaveBd(sitioId: string, clave: string): Promise<void>;
-  /** Pone usuario, clave (y el puerto nuevo, si cambió) en el `.env` con copia previa. */
+  /**
+   * Pone usuario, clave (y el puerto nuevo, si cambió) en el `.env` con copia previa, por el mismo
+   * camino que "Usar usuario propio" (D16): `antes` corre con el `.env` listo para escribirse.
+   */
   ponerUsuarioEnv(
     sitioId: string,
     usuario: string,
     clave: string,
     puerto: number | null,
+    antes: () => Promise<void>,
   ): Promise<{ copia: string | null }>;
   /** CA nueva si falta y certificados de los sitios con HTTPS. */
   regenerarCertificados(): Promise<void>;

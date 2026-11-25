@@ -3577,12 +3577,24 @@ export class Nucleo {
           baseNueva: !o.existe,
         });
       },
-      crearUsuarioBd: async (instancia, base, usuario, clave) => {
-        await this.bd.crear(instancia as IdInstancia, base, { usuario, clave, cambiarClave: true });
+      crearUsuarioBd: async (instancia, base, usuario, clave, o) => {
+        await this.bd.crear(instancia as IdInstancia, base, {
+          usuario,
+          clave,
+          ...(o.cambiarClave ? { cambiarClave: true } : {}),
+        });
+      },
+      claveCompartida: async (usuario, excluir) => {
+        for (const otro of await this.otrosConUsuarioBd(usuario, excluir)) {
+          const suya = await this.proveedorClaveBd(otro.id).catch(() => null);
+          if (suya) return suya;
+          throw errorUsuarioEnUso(usuario);
+        }
+        return null;
       },
       guardarClaveBd: guardarClave,
-      ponerUsuarioEnv: async (sitioId, usuario, clave, puerto) => {
-        const r = await this.env.ponerUsuarioBd(sitioId, usuario, clave);
+      ponerUsuarioEnv: async (sitioId, usuario, clave, puerto, antes) => {
+        const r = await this.env.ponerUsuarioBd(sitioId, usuario, clave, { antes });
         if (puerto !== null) {
           const s = await this.sitioPorId(sitioId);
           const texto = await readFile(path.join(s.carpeta, '.env'), 'utf8').catch(() => '');
@@ -3637,10 +3649,11 @@ export class Nucleo {
   }
 
   /** Otros proyectos (no `excluir`) cuyo `.env` usa este usuario de base. */
-  private async otrosConUsuarioBd(usuario: string, excluir: string): Promise<Sitio[]> {
+  private async otrosConUsuarioBd(usuario: string, excluir: string | string[]): Promise<Sitio[]> {
+    const fuera = new Set(Array.isArray(excluir) ? excluir : [excluir]);
     const salida: Sitio[] = [];
     for (const s of await this.sitios.listar()) {
-      if (s.id === excluir) continue;
+      if (fuera.has(s.id)) continue;
       const b = await leerBaseDelProyecto(s.carpeta).catch(() => null);
       if (b && b.usuario.toLowerCase() === usuario.toLowerCase()) salida.push(s);
     }

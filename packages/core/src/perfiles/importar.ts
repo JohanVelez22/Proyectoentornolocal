@@ -862,6 +862,8 @@ export class Perfiles {
     const env: ResultadoImportarPerfil['env'] = [];
     const marcados = new Set(o.envProyectos ?? []);
     const baseDe = d.baseDelProyecto ?? leerBaseDelProyecto;
+    const claves = new Map<string, string>();
+    const creados = new Set<string>();
     for (const s of importados) {
       if (s.pendiente) {
         if (marcados.has(s.id))
@@ -897,15 +899,34 @@ export class Perfiles {
       }
       try {
         const usuario = usuarioDeProyecto(b.base);
-        const clave = (d.generarClave ?? generarClaveBd)();
-        await d.guardarClaveBd(s.id, clave);
-        await d.crearUsuarioBd(inst.id, b.base, usuario, clave);
+        const clave_lote = `${inst.id}/${b.base.toLowerCase()}`;
+        // Una sola clave por base en toda la importación; si otro proyecto del equipo ya usa ese
+        // usuario, su clave (nunca se cambia: lo dejaría sin conexión). Como en D16.
+        let clave = claves.get(clave_lote) ?? null;
+        let reutilizada = clave !== null;
+        if (clave === null) {
+          clave = await d.claveCompartida(usuario, [...ids]);
+          reutilizada = clave !== null;
+        }
+        const final = clave ?? (d.generarClave ?? generarClaveBd)();
+        const crear = !creados.has(clave_lote);
         const r = await d.ponerUsuarioEnv(
           s.id,
           usuario,
-          clave,
+          final,
           b.puerto !== null && inst.puerto !== b.puerto ? inst.puerto : null,
+          // Con el .env listo para escribirse: primero la clave, luego el usuario.
+          async () => {
+            await d.guardarClaveBd(s.id, final);
+            if (crear) {
+              await d.crearUsuarioBd(inst.id, b.base, usuario, final, {
+                cambiarClave: !reutilizada,
+              });
+            }
+          },
         );
+        claves.set(clave_lote, final);
+        creados.add(clave_lote);
         env.push({ sitioId: s.id, estado: 'reescrito', motivo: null, copia: r.copia });
       } catch (e) {
         env.push({ sitioId: s.id, estado: 'error', motivo: motivoDe(e), copia: null });

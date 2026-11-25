@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import yauzl from 'yauzl';
 import yazl from 'yazl';
 import { Almacen } from '../src/almacen';
+import { errorUsuarioEnUso } from '../src/bd/clienteMysql';
 import { huellaSha256 } from '../src/https/ca';
 import type { VersionDisponible } from '../src/catalogo/catalogo';
 import { Plantillas } from '../src/proyectos/plantillas';
@@ -148,7 +149,13 @@ interface Registro {
   instaladas: string[];
   restauradas: { instancia: string; base: string; archivos: unknown; existe: boolean }[];
   instantaneas: string[];
-  usuarios: { instancia: string; base: string; usuario: string; clave: string }[];
+  usuarios: {
+    instancia: string;
+    base: string;
+    usuario: string;
+    clave: string;
+    cambiarClave: boolean;
+  }[];
   claves: { sitio: string; clave: string }[];
   orden: string[];
   certificados: number;
@@ -223,17 +230,18 @@ function deps(rutas: Rutas, extra: Partial<DepsPerfiles> = {}): DepsPerfiles & {
       reg.orden.push(`restaurar:${instancia}/${base}`);
       reg.restauradas.push({ instancia, base, archivos, existe: o.existe });
     },
-    crearUsuarioBd: async (instancia, base, usuario, clave) => {
+    crearUsuarioBd: async (instancia, base, usuario, clave, o) => {
       reg.orden.push(`usuario:${usuario}`);
-      reg.usuarios.push({ instancia, base, usuario, clave });
+      reg.usuarios.push({ instancia, base, usuario, clave, cambiarClave: o.cambiarClave });
     },
+    claveCompartida: async () => null,
     guardarClaveBd: async (sitio, clave) => {
       reg.orden.push(`clave:${sitio}`);
       reg.claves.push({ sitio, clave });
     },
-    ponerUsuarioEnv: async (sitioId, usuario, clave, puerto) => {
+    ponerUsuarioEnv: async (sitioId, usuario, clave, puerto, antes) => {
       reg.orden.push(`env:${sitioId}`);
-      const r = await env.ponerUsuarioBd(sitioId, usuario, clave);
+      const r = await env.ponerUsuarioBd(sitioId, usuario, clave, { antes });
       if (puerto !== null)
         await env.guardar(sitioId, { cambios: { DB_PORT: String(puerto) } }, true);
       return { copia: r.copia };
@@ -1145,11 +1153,13 @@ describe('usuarios propios (wolf_u_): clave nueva y .env con copia previa', () =
     expect(u!.clave.length).toBeGreaterThanOrEqual(20);
     expect(d.reg.claves).toEqual([{ sitio: 'tienda', clave: u!.clave }]);
     // La clave se guarda antes de crear el usuario y escribir el .env.
+    // Por el camino de D16: con el .env listo, primero la clave y luego el usuario.
     expect(d.reg.orden.filter((x) => /^(clave|usuario|env):/.test(x))).toEqual([
+      'env:tienda',
       'clave:tienda',
       'usuario:wolf_u_tienda',
-      'env:tienda',
     ]);
+    expect(u!.cambiarClave).toBe(true);
     const env = await readFile(path.join(proyectos, 'tienda', '.env'), 'utf8');
     expect(env).toContain(`DB_PASSWORD=${u!.clave}`);
     expect(env).not.toContain(CLAVE_ORIGEN);
@@ -1171,6 +1181,97 @@ describe('usuarios propios (wolf_u_): clave nueva y .env con copia previa', () =
     expect(await readFile(path.join(proyectos, 'tienda', '.env'), 'utf8')).toContain(
       'DB_PORT=3307',
     );
+  });
+
+  /** El blog también usa la base `tienda` (comparte usuario con la tienda). */
+  async function envBlog(): Promise<void> {
+    await mkdir(path.join(proyectos, 'blog'), { recursive: true });
+    await escribir(
+      path.join(proyectos, 'blog', '.env'),
+      [
+        'DB_CONNECTION=mysql',
+        'DB_PORT=3306',
+        'DB_DATABASE=tienda',
+        'DB_USERNAME=wolf_u_tienda',
+        `DB_PASSWORD=${CLAVE_ORIGEN}`,
+        '',
+      ].join('\n'),
+    );
+  }
+  const rutasAmbos = (): Record<string, string> => ({
+    tienda: path.join(proyectos, 'tienda'),
+    blog: path.join(proyectos, 'blog'),
+  });
+
+  it('una sola clave por base en la importación: el usuario se crea una vez y ambos .env la usan', async () => {
+    await envTienda();
+    await envBlog();
+    const archivo = await exportar();
+    const d = deps(destino);
+    const r = await importar(archivo, d, { rutas: rutasAmbos(), envProyectos: ['tienda', 'blog'] });
+    expect(r.env.map((e) => e.estado)).toEqual(['reescrito', 'reescrito']);
+    expect(d.reg.usuarios).toHaveLength(1);
+    const clave = d.reg.usuarios[0]!.clave;
+    expect(d.reg.claves).toEqual([
+      { sitio: 'tienda', clave },
+      { sitio: 'blog', clave },
+    ]);
+    for (const p of ['tienda', 'blog']) {
+      expect(await readFile(path.join(proyectos, p, '.env'), 'utf8')).toContain(
+        `DB_PASSWORD=${clave}`,
+      );
+    }
+  });
+
+  it('si otro proyecto del equipo ya usa ese usuario, se reutiliza su clave y no se cambia', async () => {
+    await envTienda();
+    const archivo = await exportar();
+    const pedidos: { usuario: string; excluir: string[] }[] = [];
+    const d = deps(destino, {
+      claveCompartida: async (usuario, excluir) => {
+        pedidos.push({ usuario, excluir });
+        return 'clave-del-proyecto-propio';
+      },
+    });
+    await importar(archivo, d, {
+      rutas: { tienda: path.join(proyectos, 'tienda') },
+      envProyectos: ['tienda'],
+    });
+    expect(pedidos).toEqual([{ usuario: 'wolf_u_tienda', excluir: ['tienda', 'blog'] }]);
+    expect(d.reg.usuarios).toEqual([
+      expect.objectContaining({ clave: 'clave-del-proyecto-propio', cambiarClave: false }),
+    ]);
+    expect(await readFile(path.join(proyectos, 'tienda', '.env'), 'utf8')).toContain(
+      'DB_PASSWORD=clave-del-proyecto-propio',
+    );
+  });
+
+  it('si crear el usuario falla (o el usuario está en uso sin clave), el .env no se toca', async () => {
+    await envTienda();
+    const archivo = await exportar();
+    const antes = await readFile(path.join(proyectos, 'tienda', '.env'), 'utf8');
+    const d = deps(destino, {
+      crearUsuarioBd: async () => {
+        throw new Error('servidor caído');
+      },
+    });
+    const r = await importar(archivo, d, {
+      rutas: { tienda: path.join(proyectos, 'tienda') },
+      envProyectos: ['tienda'],
+    });
+    expect(r.env[0]).toMatchObject({ estado: 'error', motivo: 'servidor caído' });
+    expect(await readFile(path.join(proyectos, 'tienda', '.env'), 'utf8')).toBe(antes);
+    const e = deps(new Rutas(path.join(dir, 'destino3')), {
+      claveCompartida: async (usuario) => {
+        throw errorUsuarioEnUso(usuario);
+      },
+    });
+    const r2 = await importar(archivo, e, {
+      rutas: { tienda: path.join(proyectos, 'tienda') },
+      envProyectos: ['tienda'],
+    });
+    expect(r2.env[0]).toMatchObject({ estado: 'error', motivo: 'bd.usuario_en_uso' });
+    expect(await readFile(path.join(proyectos, 'tienda', '.env'), 'utf8')).toBe(antes);
   });
 
   it('un proyecto no marcado no se toca y queda informado', async () => {
