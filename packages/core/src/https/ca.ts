@@ -54,7 +54,7 @@ function bytesIpv4(ip: string): string {
 }
 
 /** DER de `NameConstraints { permittedSubtrees }` con `RESTRICCIONES_CA`. */
-function derRestricciones(): string {
+export function derRestricciones(): string {
   const A = forge.asn1;
   const subarbol = (tag: number, valor: string): forge.asn1.Asn1 =>
     A.create(A.Class.UNIVERSAL, A.Type.SEQUENCE, true, [
@@ -81,14 +81,28 @@ function derRestricciones(): string {
   return A.toDer(A.create(A.Class.UNIVERSAL, A.Type.SEQUENCE, true, [permitidos])).getBytes();
 }
 
-/** ¿La CA lleva `nameConstraints` (las nuevas desde D26 sí; las anteriores, no)? */
-export function caConRestricciones(certPem: string): boolean {
+/**
+ * Restricciones de nombre de una CA: `nuestras` (la extensión es crítica y coincide byte a byte
+ * con `derRestricciones()`), `ninguna` (no la lleva: las CA anteriores a D26) o `ajenas` (la lleva
+ * con otro contenido o sin marcar como crítica). Un certificado que no se puede leer: `ilegible`.
+ */
+export function restriccionesDeCa(certPem: string): 'nuestras' | 'ninguna' | 'ajenas' | 'ilegible' {
+  let ext: { id?: string; critical?: boolean; value?: unknown }[];
   try {
-    const ext = forge.pki.certificateFromPem(certPem).extensions as { id?: string }[];
-    return ext.some((e) => e.id === OID_NAME_CONSTRAINTS);
+    ext = forge.pki.certificateFromPem(certPem).extensions as typeof ext;
   } catch {
-    return false;
+    return 'ilegible';
   }
+  const nc = ext.filter((e) => e.id === OID_NAME_CONSTRAINTS);
+  if (nc.length === 0) return 'ninguna';
+  if (nc.length > 1) return 'ajenas';
+  const e = nc[0]!;
+  return e.critical === true && e.value === derRestricciones() ? 'nuestras' : 'ajenas';
+}
+
+/** ¿La CA lleva exactamente nuestras restricciones de nombre (las nuevas desde D26)? */
+export function caConRestricciones(certPem: string): boolean {
+  return restriccionesDeCa(certPem) === 'nuestras';
 }
 
 /** ¿Un nombre o una IP cae dentro de `RESTRICCIONES_CA`? */

@@ -347,6 +347,10 @@ export const pt: Textos = {
         'Digite a frase do perfil para importar os seus bancos ou a sua CA (ou importe sem os bancos).',
       'perfiles.sin_espacio':
         'Não há espaço livre suficiente para importar o perfil: são necessários {necesarios} e há {libres}.',
+      'perfiles.ca_sin_restricciones':
+        'Esta CA pode assinar qualquer site: importe-a somente se for sua e compare a impressão digital. Confirme à parte para continuar.',
+      'perfiles.ca_restricciones_ajenas':
+        'A CA do perfil tem restrições de nome que não são as do WolfCore Dev: não é importada.',
       'importar.origen_apagado':
         'Não foi possível conectar ao servidor de banco de dados do outro programa: ligue-o a partir desse programa e tente de novo. Os sites foram importados mesmo assim.',
       'importar.origen_no_local': 'O servidor de origem deve estar neste computador (127.0.0.1).',
@@ -4367,6 +4371,9 @@ export const pt: Textos = {
   },
   /** Resultado de importar o exportar un perfil (D26). */
   perfiles: {
+    /** Aviso fuerte de la vista previa: la CA del perfil no tiene restricciones de nombre. */
+    caSinRestricciones:
+      'Esta CA pode assinar qualquer site; importe-a somente se for sua, compare a impressão digital.',
     motivos: {
       procesos_quitados: 'Os seus processos (comandos de outro computador) não foram importados.',
       tunel_con_nombre: 'O seu túnel com nome não viaja: volta ao túnel rápido.',

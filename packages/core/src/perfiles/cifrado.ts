@@ -189,6 +189,8 @@ const MAX_CABECERA = 4096;
 export class LlaveFrase {
   private readonly claves = new Map<string, Buffer>();
   private sal: Buffer | null = null;
+  /** Sal del primer archivo descifrado: los demás deben traer la misma. */
+  private salLeida: Buffer | null = null;
 
   constructor(private readonly frase: string) {}
 
@@ -250,6 +252,10 @@ export class LlaveFrase {
         throw danado();
       }
       ({ cabecera, sal, iv } = validarCabecera(bruta));
+      // Un perfil cifra todos sus volcados con la misma sal: otra sal delata un archivo de otro
+      // perfil (o una derivación más que alguien quiere forzar).
+      if (this.salLeida && !this.salLeida.equals(sal)) throw danado();
+      this.salLeida ??= Buffer.from(sal);
       inicio = fin2 + 1;
       if (tam - inicio < 16) throw danado();
       etiqueta = Buffer.alloc(16);

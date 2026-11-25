@@ -1,3 +1,4 @@
+import { aislarPlataforma } from '../src/plataforma/aislada';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -434,6 +435,20 @@ describe('Firefox: user.js', () => {
     plat.firefox = [a, b];
     return [a, b];
   };
+
+  it('con WOLFCORE_DATOS (plataforma aislada) no toca el user.js de ningún perfil real', async () => {
+    const [a] = await perfiles();
+    const vistos: string[] = [];
+    const c = new ConfianzaCa({
+      rutas,
+      plataforma: aislarPlataforma(plat, (q) => vistos.push(q)),
+      carpetaRespaldos: path.join(base, 'etc', 'respaldos'),
+      entorno: {},
+    });
+    expect(await c.firefoxActivar(true, { incluirFuera: true })).toEqual([]);
+    expect(await readFile(path.join(a!, 'user.js'), 'utf8')).toBe(AJENO);
+    expect(vistos).toContain('firefoxActivar');
+  });
 
   it('activar: copia previa del user.js, bloque en cada perfil y prefs.js intacto', async () => {
     const [a, b] = await perfiles();

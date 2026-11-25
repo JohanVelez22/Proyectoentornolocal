@@ -142,6 +142,7 @@ export async function exportarPerfil(
     // CA y certificados: solo cifrados con la frase del usuario.
     let conCa = false;
     let huellaCa: string | null = null;
+    let certCa: string | null = null;
     let conCertificados = false;
     if (frase && o.ca) {
       const crt = await leerNormal(d.rutas.caCrt());
@@ -174,6 +175,7 @@ export async function exportarPerfil(
         await rm(tmpCa, { force: true });
         conCa = true;
         huellaCa = huellaSha256(crt.toString('utf8'));
+        certCa = crt.toString('utf8');
       }
     }
 
@@ -200,7 +202,7 @@ export async function exportarPerfil(
       workspaces: [],
       tareas: [],
       incluye: { bases: bases.length > 0, certificados: conCertificados, ca: conCa },
-      ca: huellaCa ? { huella: huellaCa } : null,
+      ca: huellaCa && certCa ? { huella: huellaCa, certificado: certCa } : null,
       bases,
       archivos,
     };

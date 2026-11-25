@@ -338,6 +338,10 @@ export const en: Textos = {
         'Enter the profile passphrase to import its databases or its CA (or import without the databases).',
       'perfiles.sin_espacio':
         'There is not enough free space to import the profile: {necesarios} needed, {libres} available.',
+      'perfiles.ca_sin_restricciones':
+        'This CA can sign any website: import it only if it is yours and compare the fingerprint. Confirm separately to continue.',
+      'perfiles.ca_restricciones_ajenas':
+        "The profile's CA has name constraints that are not WolfCore Dev's: it is not imported.",
       'importar.origen_apagado':
         "Could not connect to the other program's database server: start it from that program and try again. The sites were imported anyway.",
       'importar.origen_no_local': 'The source server must be on this computer (127.0.0.1).',
@@ -4337,6 +4341,9 @@ export const en: Textos = {
   },
   /** Resultado de importar o exportar un perfil (D26). */
   perfiles: {
+    /** Aviso fuerte de la vista previa: la CA del perfil no tiene restricciones de nombre. */
+    caSinRestricciones:
+      'This CA can sign any website; import it only if it is yours, compare the fingerprint.',
     motivos: {
       procesos_quitados: 'Its processes (commands from another computer) were not imported.',
       tunel_con_nombre: 'Its named tunnel does not travel: it goes back to the quick tunnel.',

@@ -11,6 +11,7 @@ export const BLOQUEOS_AISLADO = [
   'detenerServicioSistema',
   'instalarVcRedist',
   'limpiarEntradaRustup',
+  'firefoxActivar',
 ] as const;
 
 /**
@@ -40,6 +41,12 @@ export function aislarPlataforma<T extends object>(
     variableUsuario: negado('variableUsuario'),
     detenerServicioSistema: negado('detenerServicioSistema'),
     instalarVcRedist: negado('instalarVcRedist'),
+    // Sin perfiles de Firefox a la vista, `ConfianzaCa.firefoxActivar` no toca ningún `user.js`
+    // real (son del usuario, no de la carpeta de datos de prueba).
+    perfilesFirefox: async (): Promise<[]> => {
+      avisar('firefoxActivar');
+      return [];
+    },
     limpiarEntradaRustup: async (): Promise<'ausente'> => {
       avisar('limpiarEntradaRustup');
       return 'ausente';

@@ -7,6 +7,7 @@ import {
   emitirCertificado,
   generarCA,
   huellaSha256,
+  restriccionesDeCa,
   type ParCertificado,
 } from '../src/https/ca';
 
@@ -41,8 +42,10 @@ async function conecta(ca: ParCertificado, hoja: ParCertificado): Promise<string
 describe('CA nueva con nameConstraints (D26)', () => {
   const ca = generarCA();
 
-  it('la CA nueva lleva las restricciones', () => {
+  it('la CA nueva lleva las restricciones (comparadas byte a byte)', () => {
     expect(caConRestricciones(ca.certPem)).toBe(true);
+    expect(restriccionesDeCa(ca.certPem)).toBe('nuestras');
+    expect(restriccionesDeCa('no es un certificado')).toBe('ilegible');
     expect(huellaSha256(ca.certPem)).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
   });
 

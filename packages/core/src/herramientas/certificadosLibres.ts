@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { ErrorWolf } from '../errores';
 import { readFile } from 'node:fs/promises';
 import { isIPv4, isIPv6 } from 'node:net';
-import { caConRestricciones, dentroDeRestriccionesCa, emitirCertificado } from '../https/ca';
+import { restriccionesDeCa, dentroDeRestriccionesCa, emitirCertificado } from '../https/ca';
 import type { Rutas } from '../rutas';
 
 export const MAX_DOMINIOS_LIBRES = 20;
@@ -101,9 +101,10 @@ export async function emitirCertificadoLibre(
   };
   // Una CA con restricciones de nombre (las nuevas desde D26) no firma fuera de ellas: el
   // certificado no valdría en ningún navegador.
-  const fuera = caConRestricciones(ca.certPem)
-    ? lista.find((n) => !dentroDeRestriccionesCa(n))
-    : undefined;
+  const fuera =
+    restriccionesDeCa(ca.certPem) !== 'ninguna'
+      ? lista.find((n) => !dentroDeRestriccionesCa(n))
+      : undefined;
   if (fuera !== undefined) {
     throw new ErrorWolf(
       'herramientas.fuera_de_la_ca',

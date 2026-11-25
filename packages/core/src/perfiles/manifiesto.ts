@@ -159,7 +159,11 @@ export const ManifiestoPerfilSchema = z
     incluye: z.object({ bases: z.boolean(), certificados: z.boolean(), ca: z.boolean() }),
     /** Huella SHA-256 del certificado de la CA que viaja cifrada (se comprueba al descifrarla). */
     ca: z
-      .object({ huella: z.string().regex(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/) })
+      .object({
+        huella: z.string().regex(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/),
+        /** El certificado (público) de la CA: la vista previa ve sus restricciones sin la frase. */
+        certificado: z.string().max(16 * 1024),
+      })
       .nullable()
       .default(null),
     bases: z

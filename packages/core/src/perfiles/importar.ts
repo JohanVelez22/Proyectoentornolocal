@@ -19,7 +19,7 @@ import yauzl from 'yauzl';
 import { leerBaseDelProyecto } from '../bd/baseProyecto';
 import { generarClaveBd, usuarioDeProyecto } from '../bd/usuarioProyecto';
 import { huellaDeFila } from '../catalogo/tablaVersiones';
-import { huellaSha256 } from '../https/ca';
+import { huellaSha256, restriccionesDeCa } from '../https/ca';
 import type { HuellaFila } from '../catalogo/tablaVersiones';
 import { ErrorWolf, esErrorWolf } from '../errores';
 import { esRutaLocalAbsoluta, esRutaProtegida } from '../importar/comun';
@@ -268,6 +268,9 @@ export async function abrirPerfil(
     throw danado('el manifiesto no es válido');
   }
   const manifiesto = leerManifiesto(bruto);
+  if (manifiesto.ca && huellaSha256(manifiesto.ca.certificado) !== manifiesto.ca.huella) {
+    throw danado('el certificado de la CA no coincide con su huella');
+  }
   const comprobar = (huellas: Map<string, string>): void => {
     for (const [rel, huella] of Object.entries(manifiesto.archivos)) {
       if (!huellas.has(rel)) throw danado('falta un archivo');
@@ -660,7 +663,12 @@ export class Perfiles {
         requiereFrase: m.bases.length > 0 || m.incluye.ca,
         ca:
           m.ca && m.incluye.ca
-            ? { huella: m.ca.huella, reemplazaLocal: existsSync(this.d.rutas.caCrt()) }
+            ? {
+                huella: m.ca.huella,
+                reemplazaLocal: existsSync(this.d.rutas.caCrt()),
+                restringida: restriccionesDeCa(m.ca.certificado) === 'nuestras',
+                restriccionesAjenas: restriccionesDeCa(m.ca.certificado) === 'ajenas',
+              }
             : null,
         configQuitada: plan.fusion.quitados,
         huella: huellaVista(p, plan, o),
@@ -714,6 +722,21 @@ export class Perfiles {
     }
     if (m.incluye.ca && 'ca.cifrada' in m.archivos) {
       if (o.importarCa === true && frase) {
+        // Una CA con restricciones de nombre que no son las nuestras: nunca. Una sin ninguna (las
+        // anteriores a D26) firma cualquier sitio: solo con una confirmación aparte.
+        const r = m.ca ? restriccionesDeCa(m.ca.certificado) : 'ilegible';
+        if (r === 'ajenas' || r === 'ilegible') {
+          throw new ErrorWolf(
+            'perfiles.ca_restricciones_ajenas',
+            'La CA del perfil tiene restricciones de nombre que no son las de WolfCore Dev: no se importa.',
+          );
+        }
+        if (r === 'ninguna' && o.aceptarCaSinRestricciones !== true) {
+          throw new ErrorWolf(
+            'perfiles.ca_sin_restricciones',
+            'Esta CA puede firmar cualquier sitio web: impórtela solo si es la suya (compare la huella) y confírmelo aparte.',
+          );
+        }
         if (existsSync(d.rutas.caCrt()) && o.reemplazarCa !== true) {
           throw new ErrorWolf(
             'perfiles.confirmar_reemplazar_ca',
@@ -733,7 +756,13 @@ export class Perfiles {
             throw new Error('forma');
           }
           // La que se descifró debe ser la que mostró la vista previa.
-          if (!m.ca || huellaSha256(j.ca.crt) !== m.ca.huella) throw new Error('huella');
+          if (
+            !m.ca ||
+            huellaSha256(j.ca.crt) !== m.ca.huella ||
+            huellaSha256(m.ca.certificado) !== m.ca.huella
+          ) {
+            throw new Error('huella');
+          }
           caDescifrada = { ca: j.ca, certificados: j.certificados ?? {} };
         } catch {
           throw danado('la CA no es válida');

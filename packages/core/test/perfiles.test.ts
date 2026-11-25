@@ -8,7 +8,9 @@ import yauzl from 'yauzl';
 import yazl from 'yazl';
 import { Almacen } from '../src/almacen';
 import { errorUsuarioEnUso } from '../src/bd/clienteMysql';
-import { huellaSha256 } from '../src/https/ca';
+import { derRestricciones, generarCA, huellaSha256, type ParCertificado } from '../src/https/ca';
+import { generateKeyPairSync } from 'node:crypto';
+import forge from 'node-forge';
 import type { VersionDisponible } from '../src/catalogo/catalogo';
 import { Plantillas } from '../src/proyectos/plantillas';
 import { GestorEnv } from '../src/proyectos/env/gestor';
@@ -38,8 +40,46 @@ vi.setConfig({ testTimeout: 60_000 });
 
 const CENTINELA = 'centinela-secreta-d';
 const FRASE = 'frase larga de prueba 123';
-const CA_CRT = '-----BEGIN CERTIFICATE-----\nMIIBcaFalsa\n-----END CERTIFICATE-----\n';
-const CA_KEY = `-----BEGIN RSA PRIVATE KEY-----\n${CENTINELA}-ca\n-----END RSA PRIVATE KEY-----\n`;
+/** CA de verdad (con las restricciones de WolfCore Dev): la vista previa lee su certificado. */
+const CA = generarCA();
+const CA_CRT = CA.certPem;
+const CA_KEY = CA.keyPem;
+
+/** CA de prueba armada a mano: sin restricciones de nombre (como las anteriores a D26) u otras. */
+function caPrueba(restricciones: 'ninguna' | 'ajenas' | 'nuestras-no-criticas'): ParCertificado {
+  const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const privada = forge.pki.privateKeyFromPem(
+    privateKey.export({ type: 'pkcs1', format: 'pem' }) as string,
+  ) as forge.pki.rsa.PrivateKey;
+  const cert = forge.pki.createCertificate();
+  cert.publicKey = forge.pki.setRsaPublicKey(privada.n, privada.e);
+  cert.serialNumber = '4a01';
+  cert.validity.notBefore = new Date(Date.now() - 86_400_000);
+  cert.validity.notAfter = new Date(Date.now() + 365 * 86_400_000);
+  const sujeto = [{ name: 'commonName', value: 'CA de otro equipo' }];
+  cert.setSubject(sujeto);
+  cert.setIssuer(sujeto);
+  const ext: object[] = [{ name: 'basicConstraints', cA: true, critical: true }];
+  if (restricciones === 'ajenas') {
+    const A = forge.asn1;
+    const solo = A.create(A.Class.UNIVERSAL, A.Type.SEQUENCE, true, [
+      A.create(A.Class.CONTEXT_SPECIFIC, 0, true, [
+        A.create(A.Class.UNIVERSAL, A.Type.SEQUENCE, true, [
+          A.create(A.Class.CONTEXT_SPECIFIC, 2, false, 'com'),
+        ]),
+      ]),
+    ]);
+    ext.push({ id: '2.5.29.30', critical: true, value: A.toDer(solo).getBytes() });
+  } else if (restricciones === 'nuestras-no-criticas') {
+    ext.push({ id: '2.5.29.30', critical: false, value: derRestricciones() });
+  }
+  cert.setExtensions(ext);
+  cert.sign(privada, forge.md.sha256.create());
+  return {
+    certPem: forge.pki.certificateToPem(cert),
+    keyPem: forge.pki.privateKeyToPem(privada),
+  };
+}
 
 let dir: string;
 let origen: Rutas;
@@ -689,6 +729,19 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
     expect(existsSync(mala)).toBe(false);
   });
 
+  it('una sola sal por perfil: un volcado con otra sal se rechaza', async () => {
+    const claro = path.join(dir, 'x.sql');
+    await writeFile(claro, 'INSERT INTO t VALUES (1);');
+    await new LlaveFrase(FRASE).cifrarArchivo(claro, path.join(dir, 'a.cifrado'));
+    await new LlaveFrase(FRASE).cifrarArchivo(claro, path.join(dir, 'b.cifrado'));
+    const llave = new LlaveFrase(FRASE);
+    await llave.descifrarArchivo(path.join(dir, 'a.cifrado'), path.join(dir, 'a.sql'), 1024);
+    await expect(
+      llave.descifrarArchivo(path.join(dir, 'b.cifrado'), path.join(dir, 'b.sql'), 1024),
+    ).rejects.toMatchObject({ codigo: 'perfiles.danado' });
+    expect(existsSync(path.join(dir, 'b.sql'))).toBe(false);
+  });
+
   it('al importar, la CA solo se escribe con la frase correcta; mala → nada escrito', async () => {
     const archivo = await exportar({ ca: true, certificados: true });
     const d = deps(destino);
@@ -724,7 +777,12 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
     const d = deps(destino);
     const p = new Perfiles(d);
     const vista = await p.vistaPrevia(archivo);
-    expect(vista.ca).toEqual({ huella: huellaSha256(CA_CRT), reemplazaLocal: true });
+    expect(vista.ca).toEqual({
+      huella: huellaSha256(CA_CRT),
+      reemplazaLocal: true,
+      restringida: true,
+      restriccionesAjenas: false,
+    });
     await expect(
       p.importar(archivo, {
         rutas: {},
@@ -755,7 +813,7 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
     const otra = await cifrarConFrase(
       Buffer.from(
         JSON.stringify({
-          ca: { crt: CA_CRT.replace('Falsa', 'Otraa'), key: CA_KEY },
+          ca: { crt: generarCA().certPem, key: CA_KEY },
           certificados: {},
         }),
       ),
@@ -765,7 +823,7 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
       { 'ca.cifrada': otra },
       {
         incluye: { bases: false, certificados: false, ca: true },
-        ca: { huella: huellaSha256(CA_CRT) },
+        ca: { huella: huellaSha256(CA_CRT), certificado: CA_CRT },
       },
       ['ca.cifrada'],
     );
@@ -775,6 +833,54 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
       codigo: 'perfiles.danado',
     });
     expect(existsSync(destino.caKey())).toBe(false);
+  });
+
+  /** Exporta un perfil cuya CA (la del origen) es `par`. */
+  async function conCa(par: ParCertificado): Promise<string> {
+    await escribir(origen.caCrt(), par.certPem);
+    await escribir(origen.caKey(), par.keyPem);
+    return exportar({ ca: true, bases: false });
+  }
+
+  it('CA sin restricciones (anterior a D26): solo con la confirmación aparte', async () => {
+    const vieja = caPrueba('ninguna');
+    const archivo = await conCa(vieja);
+    const d = deps(destino);
+    const vista = await new Perfiles(d).vistaPrevia(archivo);
+    expect(vista.ca).toMatchObject({ restringida: false, restriccionesAjenas: false });
+    await expect(importar(archivo, d, { importarCa: true })).rejects.toMatchObject({
+      codigo: 'perfiles.ca_sin_restricciones',
+    });
+    expect(existsSync(destino.config())).toBe(false);
+    expect(existsSync(destino.caKey())).toBe(false);
+    const r = await importar(archivo, d, { importarCa: true, aceptarCaSinRestricciones: true });
+    expect(r.ca).toBe('importada');
+    expect(await readFile(destino.caCrt(), 'utf8')).toBe(vieja.certPem);
+  });
+
+  it('CA con restricciones que no son las nuestras (o sin marcar críticas): nunca', async () => {
+    for (const tipo of ['ajenas', 'nuestras-no-criticas'] as const) {
+      const archivo = await conCa(caPrueba(tipo));
+      const d = deps(new Rutas(path.join(dir, `destino-${tipo}`)));
+      const vista = await new Perfiles(d).vistaPrevia(archivo);
+      expect(vista.ca).toMatchObject({ restringida: false, restriccionesAjenas: true });
+      await expect(
+        importar(archivo, d, { importarCa: true, aceptarCaSinRestricciones: true }),
+      ).rejects.toMatchObject({ codigo: 'perfiles.ca_restricciones_ajenas' });
+    }
+  });
+
+  it('el certificado de la CA del manifiesto debe ser el de su huella', async () => {
+    const archivo = await perfilManual(
+      {},
+      {
+        incluye: { bases: false, certificados: false, ca: true },
+        ca: { huella: huellaSha256(CA_CRT), certificado: caPrueba('ninguna').certPem },
+      },
+    );
+    await expect(new Perfiles(deps(destino)).vistaPrevia(archivo)).rejects.toMatchObject({
+      codigo: 'perfiles.danado',
+    });
   });
 
   it('la CA no se importa si no se pide (aunque se dé la frase): CA nueva y certificados regenerados', async () => {

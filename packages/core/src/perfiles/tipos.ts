@@ -191,6 +191,11 @@ export interface OpcionesImportarPerfil {
    * quiera y no se instala sola).
    */
   reemplazarCa?: true;
+  /**
+   * Confirmación aparte para importar una CA **sin** restricciones de nombre (las anteriores a
+   * D26): puede firmar cualquier sitio web.
+   */
+  aceptarCaSinRestricciones?: true;
   /** La huella de la vista previa que vio el usuario: si algo cambió desde entonces, no se importa. */
   huella: string;
   confirmado: true;
@@ -239,7 +244,14 @@ export interface VistaPreviaPerfil {
    * La CA que trae el perfil (cifrada): su huella SHA-256 para compararla con la propia. Solo se
    * importa si es la del usuario; `reemplazaLocal`: este equipo ya tiene una CA.
    */
-  ca: { huella: string; reemplazaLocal: boolean } | null;
+  ca: {
+    huella: string;
+    reemplazaLocal: boolean;
+    /** Lleva exactamente las restricciones de nombre de WolfCore Dev (`.test`, local…). */
+    restringida: boolean;
+    /** Lleva otras restricciones: no se puede importar. */
+    restriccionesAjenas: boolean;
+  } | null;
   /** Huella de esta vista previa: `importarPerfil` la exige igual. */
   huella: string;
 }
