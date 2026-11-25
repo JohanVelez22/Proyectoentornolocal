@@ -552,14 +552,15 @@ export interface ApiEntorno {
     ): Promise<{ instantanea: Instantanea; estadoActual: { tablas: number; bytes: number } }>;
     /**
      * `nombreEscrito` debe ser el nombre exacto de la base (lo comprueba el proceso principal).
-     * `sinGuardarEstado` solo tras la segunda confirmación, cuando no se pudo guardar el estado actual.
+     * `sinGuardarEstado` solo con el `vale` que da el error `instantaneas.respaldo_previo_fallo`
+     * (un uso, 10 minutos) y `confirmacion` (el nombre de la base escrito de nuevo).
      */
     volver(
       motor: ObjetivoSqlIpc,
       base: string,
       id: string,
       nombreEscrito: string,
-      opciones?: { sinGuardarEstado?: boolean },
+      opciones?: { sinGuardarEstado?: boolean; vale?: string; confirmacion?: string },
     ): Promise<{ respaldoPrevio: Instantanea | null; advertencias: string[] }>;
     /** A la papelera de WolfCore Dev: se puede recuperar 7 días. */
     borrar(motor: ObjetivoSqlIpc, base: string, id: string): Promise<void>;

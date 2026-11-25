@@ -843,7 +843,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
       b,
       idInstantanea(id),
       confirmadoVolver(escrito, b),
-      opcionesVolver(opciones),
+      opcionesVolver(opciones, b),
     );
   },
   'instantaneas.listaInstancia': (n, _s, motor) =>

@@ -100,6 +100,10 @@ export const MAX_AUTOMATICAS = 5;
 export const DIAS_PAPELERA = 7;
 
 const MB = 1024 * 1024;
+/** Un vale para volver sin guardar el estado actual vale 10 minutos y un solo uso. */
+export const VIDA_VALE_MS = 10 * 60 * 1000;
+/** Lo que lleva menos que esto en la carpeta no es huérfano: puede ser una instantánea en curso. */
+const EDAD_HUERFANO_MS = 10 * 60 * 1000;
 /** Espacio libre mínimo que debe quedar mientras se vuelca. */
 const MIN_LIBRE = 64 * MB;
 const MAX_NOTA = 200;
@@ -136,6 +140,16 @@ const publico = (r: Registro): Instantanea => ({
   origen: r.origen,
   extensionesNoPermitidas: r.extensionesNoPermitidas,
 });
+
+const errorEspacio = (necesario: number, libre: number): ErrorWolf =>
+  new ErrorWolf(
+    'instantaneas.sin_espacio',
+    'No hay espacio libre suficiente para la instantánea.',
+    {
+      necesarios: Math.ceil(necesario / MB),
+      libres: Math.floor(libre / MB),
+    },
+  );
 
 const sinControl = (t: string): string =>
   [...t].map((c) => (c.charCodeAt(0) < 0x20 || c.charCodeAt(0) === 0x7f ? ' ' : c)).join('');
@@ -245,6 +259,10 @@ export class Instantaneas {
   private readonly cerrojoBases: CerrojoBases;
   private raizRestringida = false;
   private colaHuellas: Promise<unknown> = Promise.resolve();
+  private readonly vales = new Map<
+    string,
+    { instancia: string; base: string; id: string; expira: number }
+  >();
 
   constructor(private readonly d: DepsInstantaneas) {
     this.cerrojoBases = d.cerrojo ?? new CerrojoBases();
@@ -298,29 +316,70 @@ export class Instantaneas {
 
   // ---- Registro de huellas (fuera de la carpeta de las instantáneas) ----
 
-  private async leerHuellas(): Promise<Record<string, EntradaHuella>> {
+  /** El registro de huellas: `danado` si existe pero no se puede leer (no se pisa). */
+  private async leerHuellas(): Promise<{
+    datos: Record<string, EntradaHuella>;
+    danado: boolean;
+  }> {
+    let texto: string;
     try {
-      const o: unknown = JSON.parse(await readFile(this.d.rutas.huellasInstantaneas(), 'utf8'));
-      return o !== null && typeof o === 'object' && !Array.isArray(o)
-        ? (o as Record<string, EntradaHuella>)
-        : {};
-    } catch {
-      return {};
+      texto = await readFile(this.d.rutas.huellasInstantaneas(), 'utf8');
+    } catch (e) {
+      // Solo un archivo que no existe es "vacío"; cualquier otro fallo no se da por ausente.
+      return { datos: {}, danado: (e as { code?: unknown } | null)?.code !== 'ENOENT' };
     }
+    try {
+      const o: unknown = JSON.parse(texto);
+      if (o !== null && typeof o === 'object' && !Array.isArray(o)) {
+        return { datos: o as Record<string, EntradaHuella>, danado: false };
+      }
+    } catch {
+      // dañado
+    }
+    return { datos: {}, danado: true };
   }
 
   private anotarHuella(id: string, e: EntradaHuella): Promise<void> {
     const ruta = this.d.rutas.huellasInstantaneas();
     const hacer = async (): Promise<void> => {
-      const todas = await this.leerHuellas();
-      todas[id] = e;
+      const { datos, danado } = await this.leerHuellas();
+      if (danado) {
+        // Se guarda aparte para poder revisarlo y se empieza uno nuevo: nunca se pisa.
+        await rename(ruta, `${ruta}.danado-${this.ahora().getTime()}`).catch(() => undefined);
+      }
+      datos[id] = e;
       await mkdir(path.dirname(ruta), { recursive: true });
-      await escribirAtomico(ruta, `${JSON.stringify(todas, null, 2)}\n`);
+      await escribirAtomico(ruta, `${JSON.stringify(datos, null, 2)}\n`);
       await this.restringir(ruta);
     };
     const esta = this.colaHuellas.then(hacer, hacer);
     this.colaHuellas = esta.catch(() => undefined);
     return esta;
+  }
+
+  // ---- Vales de "volver sin guardar el estado actual" ----
+
+  private emitirVale(instancia: string, base: string, id: string): string {
+    const ahora = this.ahora().getTime();
+    for (const [k, v] of this.vales) if (v.expira <= ahora) this.vales.delete(k);
+    if (this.vales.size >= 20) this.vales.delete(this.vales.keys().next().value!);
+    const vale = randomBytes(18).toString('base64url');
+    this.vales.set(vale, { instancia, base, id, expira: ahora + VIDA_VALE_MS });
+    return vale;
+  }
+
+  /** Un solo uso: se gasta aunque no coincida. */
+  private canjearVale(vale: unknown, instancia: string, base: string, id: string): boolean {
+    if (typeof vale !== 'string') return false;
+    const v = this.vales.get(vale);
+    if (!v) return false;
+    this.vales.delete(vale);
+    return (
+      v.expira > this.ahora().getTime() &&
+      v.instancia === instancia &&
+      v.base === base &&
+      v.id === id
+    );
   }
 
   /**
@@ -343,6 +402,9 @@ export class Instantaneas {
       const ruta = path.join(tmp, reg.archivo);
       const origen = path.join(dir, reg.archivo);
       if (!(await lstat(origen)).isFile()) throw new Error('no es un archivo');
+      const libre = await this.libre(this.d.rutas.tmp());
+      const necesario = Math.ceil(reg.bytes * 1.05) + 16 * MB;
+      if (libre !== null && libre < necesario) throw errorEspacio(necesario, libre);
       await copyFile(origen, ruta);
       await this.restringir(ruta);
       // Lo que se restaura es la copia: lo que se verifica es la copia.
@@ -353,7 +415,7 @@ export class Instantaneas {
           'El archivo de la instantánea cambió: no se restaura.',
         );
       }
-      const e = (await this.leerHuellas())[reg.id];
+      const e = (await this.leerHuellas()).datos[reg.id];
       const confiable =
         !!e &&
         e.sha256 === huella &&
@@ -364,6 +426,10 @@ export class Instantaneas {
     } catch (e) {
       await limpiar();
       if (e instanceof ErrorWolf) throw e;
+      // Sin espacio para la copia: se dice, no se confunde con "no se encontró".
+      if ((e as { code?: unknown } | null)?.code === 'ENOSPC') {
+        throw errorEspacio(reg.bytes, (await this.libre(this.d.rutas.tmp())) ?? 0);
+      }
       throw new ErrorWolf('instantaneas.no_encontrada', 'No se encontró la instantánea.');
     }
   }
@@ -693,7 +759,7 @@ export class Instantaneas {
     base: string,
     id: string,
     confirmado: true,
-    opciones: { sinGuardarEstado?: boolean } = {},
+    opciones: { sinGuardarEstado?: boolean; vale?: string } = {},
   ): Promise<{ respaldoPrevio: Instantanea | null; advertencias: string[] }> {
     if ((confirmado as unknown) !== true) {
       throw new ErrorWolf(
@@ -706,11 +772,14 @@ export class Instantaneas {
       const { reg, dir } = await this.cargar(instancia, base, id, true);
       // La copia privada se verifica y es la que se restaura: nada cambia entre revisar y usar.
       const copia = await this.copiaVerificada(dir, reg);
+      // `sinGuardarEstado` solo vale con el vale que emitió el núcleo al fallar el respaldo previo.
+      const sinGuardar =
+        opciones.sinGuardarEstado === true && this.canjearVale(opciones.vale, instancia, base, id);
       try {
         const estado = await this.d.estadoBase(instancia, base);
         let previa: Registro | null = null;
         // Sin tablas (la base no existe o está vacía) no hay nada que perder.
-        if (estado.tablas > 0 && opciones.sinGuardarEstado !== true) {
+        if (estado.tablas > 0 && !sinGuardar) {
           try {
             previa = await this.tomarInterno(instancia, base, '', reg.id);
           } catch (e) {
@@ -724,7 +793,7 @@ export class Instantaneas {
             throw new ErrorWolf(
               'instantaneas.respaldo_previo_fallo',
               'No se pudo guardar el estado actual de la base: no se restauró nada.',
-              undefined,
+              { vale: this.emitirVale(instancia, base, id) },
               { cause: e },
             );
           }
@@ -733,8 +802,15 @@ export class Instantaneas {
         try {
           r = await this.restaurar(instancia, base, copia);
         } catch (e) {
-          if (!(e instanceof ErrorBaseTocada)) throw e;
-          throw await this.revertir(instancia, base, dir, previa, estado.tablas > 0, e);
+          let error: unknown = e;
+          if (e instanceof ErrorBaseTocada) {
+            // Se libera el espacio de la copia que falló antes de copiar la de la vuelta atrás.
+            await copia.limpiar();
+            error = await this.revertir(instancia, base, dir, previa, estado.tablas > 0, e);
+          }
+          // La poda también va aquí, con la misma exclusión.
+          await this.podarAutomaticas(instancia, base, dir, reg.id).catch(() => undefined);
+          throw error;
         }
         // La poda va después de una restauración correcta y nunca toca a la que se aplicó.
         await this.podarAutomaticas(instancia, base, dir, reg.id);
@@ -994,8 +1070,9 @@ export class Instantaneas {
           if (!huerfano) continue;
           const ruta = path.join(dir, nombre);
           try {
-            // Nunca se sigue un enlace.
-            await lstat(ruta);
+            // Nunca se sigue un enlace; y lo reciente puede ser una instantánea en curso.
+            const info = await lstat(ruta);
+            if (Date.now() - info.mtimeMs < EDAD_HUERFANO_MS) continue;
             await rm(ruta, { recursive: true, force: true });
             n++;
           } catch {

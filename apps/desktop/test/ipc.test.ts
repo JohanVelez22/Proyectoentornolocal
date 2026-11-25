@@ -1965,11 +1965,14 @@ describe('IPC de la Etapa B', () => {
       (
         await llamar('instantaneas.volver', 'mysql', 'tienda', id, 'tienda', {
           sinGuardarEstado: true,
+          vale: 'vale-de-prueba-0123456789',
+          confirmacion: 'tienda',
         })
       ).ok,
     ).toBe(true);
     expect(inst['volver']).toHaveBeenLastCalledWith('mysql', 'tienda', id, true, {
       sinGuardarEstado: true,
+      vale: 'vale-de-prueba-0123456789',
     });
     expect((await llamar('instantaneas.listaInstancia', 'mysql@8.4')).ok).toBe(true);
     expect(inst['listaInstancia']).toHaveBeenCalledWith('mysql@8.4');
@@ -1992,6 +1995,32 @@ describe('IPC de la Etapa B', () => {
       ['instantaneas.volver', ['mysql', 'tienda', id, 'Tienda']],
       ['instantaneas.volver', ['mysql', 'tienda', id, '']],
       ['instantaneas.volver', ['mysql', 'tienda', id, 'tienda', { sinGuardarEstado: 'si' }]],
+      // Sin vale, con vale raro o sin la segunda confirmación no se acepta sinGuardarEstado.
+      ['instantaneas.volver', ['mysql', 'tienda', id, 'tienda', { sinGuardarEstado: true }]],
+      [
+        'instantaneas.volver',
+        ['mysql', 'tienda', id, 'tienda', { sinGuardarEstado: true, confirmacion: 'tienda' }],
+      ],
+      [
+        'instantaneas.volver',
+        [
+          'mysql',
+          'tienda',
+          id,
+          'tienda',
+          { sinGuardarEstado: true, vale: 'corto', confirmacion: 'tienda' },
+        ],
+      ],
+      [
+        'instantaneas.volver',
+        [
+          'mysql',
+          'tienda',
+          id,
+          'tienda',
+          { sinGuardarEstado: true, vale: 'vale-de-prueba-0123456789', confirmacion: 'otra' },
+        ],
+      ],
       ['instantaneas.volver', ['mysql', 'tienda', id, 'tienda', { otra: true }]],
       ['instantaneas.volver', ['mysql', 'tienda', 'C:\\x.sql', 'tienda']],
       ['instantaneas.volver', ['mysql', 'tienda', '20261125-103000-abcdef/../../x', 'tienda']],

@@ -84,16 +84,30 @@ export function confirmadoVolver(escrito: unknown, base: string): true {
   return true;
 }
 
-/** Opciones de volver: solo `sinGuardarEstado` (booleano); cualquier otra clave se rechaza. */
-export function opcionesVolver(v: unknown): { sinGuardarEstado?: boolean } {
+/**
+ * Opciones de volver. `sinGuardarEstado` (volver sin guardar el estado actual) solo se acepta con
+ * el vale que emitió el núcleo al fallar el respaldo previo y con una segunda confirmación
+ * (el nombre de la base escrito de nuevo); cualquier otra clave se rechaza.
+ */
+export function opcionesVolver(
+  v: unknown,
+  base: string,
+): { sinGuardarEstado?: boolean; vale?: string } {
   if (v === undefined || v === null) return {};
   const o = objetoPlano<Record<string, unknown>>(v, 'opciones');
   for (const k of Object.keys(o)) {
-    if (k !== 'sinGuardarEstado') throw new Error('Argumento no válido: opciones');
+    if (k !== 'sinGuardarEstado' && k !== 'vale' && k !== 'confirmacion') {
+      throw new Error('Argumento no válido: opciones');
+    }
   }
-  return o.sinGuardarEstado === undefined
-    ? {}
-    : { sinGuardarEstado: booleano(o.sinGuardarEstado, 'sinGuardarEstado') };
+  if (o.sinGuardarEstado === undefined || !booleano(o.sinGuardarEstado, 'sinGuardarEstado')) {
+    return {};
+  }
+  if (typeof o.vale !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(o.vale)) {
+    throw new Error('Argumento no válido: vale');
+  }
+  if (o.confirmacion !== base) throw new Error('Argumento no válido: confirmación');
+  return { sinGuardarEstado: true, vale: o.vale };
 }
 
 /** Editor elegido: un id conocido; `undefined` o null = el predeterminado. */

@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -373,20 +381,126 @@ describe('Instantaneas.volver', () => {
     expect(llamadas).toEqual(['respaldar:tienda']);
   });
 
-  it('si no se puede guardar el estado actual, con la segunda confirmación vuelve sin guardarlo', async () => {
+  /** Provoca el fallo del respaldo previo y devuelve el vale que emite el núcleo. */
+  async function valeDeFallo(i: Instantaneas, id: string): Promise<string> {
+    fallaRespaldar = true;
+    let error: unknown;
+    try {
+      await i.volver('mysql', 'tienda', id, true);
+    } catch (e) {
+      error = e;
+    }
+    fallaRespaldar = false;
+    const e = error as ErrorWolf;
+    expect(e.codigo).toBe('instantaneas.respaldo_previo_fallo');
+    const vale = String(e.datos?.vale);
+    expect(vale).toMatch(/^[A-Za-z0-9_-]{16,}$/);
+    return vale;
+  }
+
+  it('si no se puede guardar el estado actual, el núcleo da un vale y con él se vuelve sin guardarlo', async () => {
     const i = armar();
     const viva = await i.tomar('mysql', 'tienda', 'buena');
+    const vale = await valeDeFallo(i, viva.id);
     llamadas = [];
     fallaRespaldar = true;
-    const r = await i.volver('mysql', 'tienda', viva.id, true, { sinGuardarEstado: true });
+    const r = await i.volver('mysql', 'tienda', viva.id, true, { sinGuardarEstado: true, vale });
     expect(r.respaldoPrevio).toBeNull();
     expect(llamadas).toEqual(['estricta:tienda']);
     // Y si esa restauración toca la base y falla, el error dice que no hay copia a la que volver.
+    const otro = await valeDeFallo(i, viva.id);
     fallaEstricta = 'tocada';
     fallasEstrictas = 5;
     expect(
-      await codigoDe(i.volver('mysql', 'tienda', viva.id, true, { sinGuardarEstado: true })),
+      await codigoDe(
+        i.volver('mysql', 'tienda', viva.id, true, { sinGuardarEstado: true, vale: otro }),
+      ),
     ).toBe('instantaneas.restauracion_sin_copia');
+  });
+
+  it('sinGuardarEstado sin vale, con uno ajeno, gastado o vencido no se obedece: toma la automática o falla', async () => {
+    const i = armar();
+    const viva = await i.tomar('mysql', 'tienda', 'buena');
+    const otra = await i.tomar('mysql', 'tienda', 'otra');
+    // Sin vale: con el respaldo previo roto, falla y no restaura.
+    llamadas = [];
+    fallaRespaldar = true;
+    expect(
+      await codigoDe(i.volver('mysql', 'tienda', viva.id, true, { sinGuardarEstado: true })),
+    ).toBe('instantaneas.respaldo_previo_fallo');
+    expect(
+      await codigoDe(
+        i.volver('mysql', 'tienda', viva.id, true, {
+          sinGuardarEstado: true,
+          vale: 'inventado-0123456789',
+        }),
+      ),
+    ).toBe('instantaneas.respaldo_previo_fallo');
+    expect(llamadas.some((l) => l.startsWith('estricta') || l.startsWith('acotada'))).toBe(false);
+    // Sin vale y con el respaldo previo sano: toma la automática y restaura.
+    fallaRespaldar = false;
+    llamadas = [];
+    const r = await i.volver('mysql', 'tienda', viva.id, true, { sinGuardarEstado: true });
+    expect(r.respaldoPrevio).not.toBeNull();
+    expect(llamadas).toEqual(['respaldar:tienda', 'estricta:tienda']);
+    // Un vale es de una instantánea concreta.
+    const vale = await valeDeFallo(i, viva.id);
+    fallaRespaldar = true;
+    expect(
+      await codigoDe(i.volver('mysql', 'tienda', otra.id, true, { sinGuardarEstado: true, vale })),
+    ).toBe('instantaneas.respaldo_previo_fallo');
+    // Se gastó al probarlo con otra instantánea: ya no sirve ni con la suya.
+    expect(
+      await codigoDe(i.volver('mysql', 'tienda', viva.id, true, { sinGuardarEstado: true, vale })),
+    ).toBe('instantaneas.respaldo_previo_fallo');
+    // De un solo uso, y vence a los 10 minutos.
+    fallaRespaldar = false;
+    const v2 = await valeDeFallo(i, viva.id);
+    fallaRespaldar = true;
+    reloj += 11 * 60 * 1000;
+    expect(
+      await codigoDe(
+        i.volver('mysql', 'tienda', viva.id, true, { sinGuardarEstado: true, vale: v2 }),
+      ),
+    ).toBe('instantaneas.respaldo_previo_fallo');
+    const v3 = await valeDeFallo(i, viva.id);
+    fallaRespaldar = true;
+    await i.volver('mysql', 'tienda', viva.id, true, { sinGuardarEstado: true, vale: v3 });
+    expect(
+      await codigoDe(
+        i.volver('mysql', 'tienda', viva.id, true, { sinGuardarEstado: true, vale: v3 }),
+      ),
+    ).toBe('instantaneas.respaldo_previo_fallo');
+  });
+
+  it('sin espacio para la copia privada lo dice (no "no encontrada") y no toca la base', async () => {
+    const i = armar({
+      espacioLibre: async (r) => (r.startsWith(rutas.tmp()) ? 1024 : libre),
+    });
+    const viva = await i.tomar('mysql', 'tienda', 'buena');
+    llamadas = [];
+    expect(await codigoDe(i.volver('mysql', 'tienda', viva.id, true))).toBe(
+      'instantaneas.sin_espacio',
+    );
+    expect(llamadas).toEqual([]);
+  });
+
+  it('un registro de huellas dañado no se pisa: se guarda aparte y esa instantánea va por el camino acotado', async () => {
+    const i = armar();
+    const viva = await i.tomar('mysql', 'tienda', 'buena');
+    writeFileSync(rutas.huellasInstantaneas(), '{ dañado');
+    llamadas = [];
+    await i.volver('mysql', 'tienda', viva.id, true);
+    expect(llamadas).toEqual(['respaldar:tienda', 'acotada:tienda']);
+    // Al anotar la huella de la automática, el dañado se apartó (no se pisó) y se empezó otro.
+    const aparte = readdirSync(path.dirname(rutas.huellasInstantaneas())).filter((n) =>
+      n.includes('.danado-'),
+    );
+    expect(aparte).toHaveLength(1);
+    expect(
+      readFileSync(path.join(path.dirname(rutas.huellasInstantaneas()), aparte[0]!), 'utf8'),
+    ).toBe('{ dañado');
+    expect(Object.keys(huellas())).toHaveLength(1);
   });
 
   it('una base que no existe o está vacía se restaura sin instantánea automática', async () => {
@@ -591,17 +705,21 @@ describe('Instantaneas.volver', () => {
     expect(existsSync(path.join(carpeta(), `${masAntigua.id}.sql`))).toBe(true);
   });
 
-  it('no poda nada si la restauración falla', async () => {
+  it('también poda si la restauración falla, sin tocar la instantánea a la que se volvía', async () => {
     const i = armar();
     const viva = await i.tomar('mysql', 'tienda', 'buena');
     for (let n = 0; n < MAX_AUTOMATICAS; n++) {
       reloj += 60_000;
       await i.volver('mysql', 'tienda', viva.id, true);
     }
+    const masAntigua = (await i.lista('mysql', 'tienda')).filter((x) => x.automatica).at(-1)!;
     fallaEstricta = 'sin-tocar';
     reloj += 60_000;
-    await codigoDe(i.volver('mysql', 'tienda', viva.id, true));
-    expect(existsSync(rutas.papelera())).toBe(false);
+    await codigoDe(i.volver('mysql', 'tienda', masAntigua.id, true));
+    const despues = await i.lista('mysql', 'tienda');
+    expect(despues.filter((x) => x.automatica)).toHaveLength(MAX_AUTOMATICAS);
+    expect(despues.map((x) => x.id)).toContain(masAntigua.id);
+    expect(readdirSync(rutas.papelera()).filter((n) => n.endsWith('.sql'))).toHaveLength(1);
   });
 });
 
@@ -681,7 +799,7 @@ describe('papelera, recuperar y huérfanos', () => {
     expect(await i.listaInstancia('mongodb')).toEqual([]);
   });
 
-  it('al arrancar quita lo que dejó una instantánea interrumpida y nada más', async () => {
+  it('al arrancar quita lo que dejó una instantánea interrumpida (de más de 10 minutos) y nada más', async () => {
     const i = armar();
     const t = await i.tomar('mysql', 'tienda', 'buena');
     mkdirSync(path.join(carpeta(), '.tomando-abc'));
@@ -689,6 +807,16 @@ describe('papelera, recuperar y huérfanos', () => {
     writeFileSync(path.join(carpeta(), '20261125-000000-aaaaaa.sql'), 'sin registro');
     writeFileSync(path.join(carpeta(), '20261125-000000-aaaaaa.json.1a2b.tmp'), '{');
     writeFileSync(path.join(carpeta(), 'notas.txt'), 'mío');
+    // Recién creados pueden ser una instantánea en curso: no se tocan.
+    expect(await i.limpiarHuerfanos()).toBe(0);
+    const viejo = new Date(Date.now() - 20 * 60 * 1000);
+    for (const n of [
+      '.tomando-abc',
+      '20261125-000000-aaaaaa.sql',
+      '20261125-000000-aaaaaa.json.1a2b.tmp',
+    ]) {
+      utimesSync(path.join(carpeta(), n), viejo, viejo);
+    }
     expect(await i.limpiarHuerfanos()).toBe(3);
     expect(readdirSync(carpeta()).sort()).toEqual(
       [`${t.id}.json`, `${t.id}.sql`, 'notas.txt'].sort(),

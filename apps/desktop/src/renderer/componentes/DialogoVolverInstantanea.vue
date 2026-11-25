@@ -1,16 +1,6 @@
 <script setup lang="ts">
 import { Warning } from '@vicons/ionicons5';
-import {
-  NButton,
-  NCheckbox,
-  NForm,
-  NFormItem,
-  NIcon,
-  NInput,
-  NModal,
-  NSkeleton,
-  NSpin,
-} from 'naive-ui';
+import { NButton, NForm, NFormItem, NIcon, NInput, NModal, NSkeleton, NSpin } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
 import type { Instantanea } from '@pel/core';
 import type { ObjetivoSqlIpc } from '../../shared/api';
@@ -47,7 +37,9 @@ const trabajando = ref(false);
 const hecho = ref<Hecho | null>(null);
 /** No se pudo guardar el estado actual: se ofrece volver sin guardarlo. */
 const faltaGuardar = ref(false);
-const entiendo = ref(false);
+const confirmacion2 = ref('');
+/** Vale de un solo uso que da el núcleo cuando no pudo guardar el estado actual. */
+const vale = ref('');
 
 const valido = computed(() => confirmacionValida(props.base, escrito.value));
 const fecha = (iso: string): string =>
@@ -60,7 +52,8 @@ watch(mostrar, (v) => {
   escrito.value = '';
   trabajando.value = false;
   faltaGuardar.value = false;
-  entiendo.value = false;
+  confirmacion2.value = '';
+  vale.value = '';
   cargando.value = true;
   void ejecutar('vista-previa', () =>
     api().instantaneas.vistaPrevia(props.objetivo, props.base, props.id),
@@ -74,7 +67,8 @@ watch(mostrar, (v) => {
 
 async function volver(sinGuardarEstado: boolean): Promise<void> {
   if (!valido.value || trabajando.value) return;
-  if (sinGuardarEstado && !entiendo.value) return;
+  if (sinGuardarEstado && (!vale.value || !confirmacionValida(props.base, confirmacion2.value)))
+    return;
   trabajando.value = true;
   const r = await ejecutar('volver', async () => {
     try {
@@ -83,12 +77,20 @@ async function volver(sinGuardarEstado: boolean): Promise<void> {
         props.base,
         props.id,
         escrito.value,
-        sinGuardarEstado ? { sinGuardarEstado: true } : undefined,
+        sinGuardarEstado
+          ? { sinGuardarEstado: true, vale: vale.value, confirmacion: confirmacion2.value }
+          : undefined,
       );
     } catch (e) {
       // El estado actual no se pudo guardar: no se tocó nada. Se ofrece seguir sin guardarlo.
-      if ((e as { codigo?: unknown } | null)?.codigo === 'instantaneas.respaldo_previo_fallo') {
+      const err = e as { codigo?: unknown; datos?: { vale?: unknown } } | null;
+      if (
+        err?.codigo === 'instantaneas.respaldo_previo_fallo' &&
+        typeof err.datos?.vale === 'string'
+      ) {
         faltaGuardar.value = true;
+        vale.value = err.datos.vale;
+        confirmacion2.value = '';
       }
       throw e;
     }
@@ -172,9 +174,15 @@ function cerrar(): void {
       <section v-if="faltaGuardar" class="sin-guardar" role="alert">
         <strong>{{ t.sinGuardarTitulo }}</strong>
         <p>{{ t.sinGuardarTexto }}</p>
-        <NCheckbox v-model:checked="entiendo" :disabled="trabajando">
-          {{ t.sinGuardarConfirmar }}
-        </NCheckbox>
+        <NFormItem :label="t.pedir(base)">
+          <NInput
+            v-model:value="confirmacion2"
+            :placeholder="base"
+            :disabled="trabajando"
+            :input-props="{ spellcheck: false, autocomplete: 'off' }"
+            class="mono"
+          />
+        </NFormItem>
       </section>
 
       <NForm :show-feedback="false" @submit.prevent="volver(false)">
@@ -226,7 +234,7 @@ function cerrar(): void {
             v-if="faltaGuardar"
             size="small"
             type="error"
-            :disabled="!previa || !valido || !entiendo || trabajando"
+            :disabled="!previa || !valido || !confirmacionValida(base, confirmacion2) || trabajando"
             :loading="trabajando"
             @click="volver(true)"
           >

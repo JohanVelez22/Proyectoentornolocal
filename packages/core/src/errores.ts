@@ -104,7 +104,7 @@ export const PARAMETROS_ERROR = {
   'instantaneas.limite': ['maximo'],
   'instantaneas.tomar_fallo': [],
   'instantaneas.huella_no_coincide': [],
-  'instantaneas.respaldo_previo_fallo': [],
+  'instantaneas.respaldo_previo_fallo': ['vale'],
   'instantaneas.restauracion_fallo': ['detalle'],
   'instantaneas.restauracion_sin_copia': ['detalle'],
   'instantaneas.restauracion_sin_revertir': ['respaldo'],
