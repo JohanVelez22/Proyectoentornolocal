@@ -55,6 +55,7 @@ export * from './nucleo';
 export * from './doctor/doctor';
 export * from './bd/formato';
 export * from './bd/respaldos';
+export * from './bd/instantaneas';
 export * from './bd/pgvector';
 export * from './bd/baseProyecto';
 export * from './herramientas/composer';

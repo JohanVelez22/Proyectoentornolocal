@@ -202,6 +202,7 @@ import { RegistroPasos } from './proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
 import { leerHuellaWordpress } from './proyectos/pasos/descargarPlantilla';
 import { generadorPorTipo, Plantillas } from './proyectos/plantillas';
+import { Instantaneas } from './bd/instantaneas';
 import { asignarPuertoProxy, datosAlCrear } from './proyectos/pasos/sitio';
 import {
   EjecutorRecetas,
@@ -376,6 +377,8 @@ interface ModulosNucleo {
   depsPasos?: DepsPasos;
   /** Plantillas de proyecto: receta, ajustes y esquema sin datos (D14). */
   plantillas: Plantillas;
+  /** Instantáneas de base con un clic (D19). */
+  instantaneas: Instantaneas;
 }
 
 /** Puerto HTTPS: el estándar 443 o uno de usuario (1024–65535). */
@@ -576,6 +579,8 @@ export class Nucleo {
   private readonly depsPasos: DepsPasos | undefined;
   /** Plantillas de proyecto: guardar, listar, borrar y crear proyectos desde ellas. */
   readonly plantillas: Plantillas;
+  /** Instantáneas de base: tomar, volver con respaldo previo, borrar a la papelera (D19). */
+  readonly instantaneas: Instantaneas;
   /** Gestor de `.env` de los proyectos: secretos enmascarados, diff, copia y escritura atómica. */
   readonly env: GestorEnv;
   /**
@@ -661,6 +666,7 @@ export class Nucleo {
     this.ajustesPhpSitio = m.ajustesPhpSitio;
     this.depsPasos = m.depsPasos;
     this.plantillas = m.plantillas;
+    this.instantaneas = m.instantaneas;
     this.env = new GestorEnv({
       sitio: async (id) => (await this.sitios.listar()).find((x) => x.id === id),
       carpetaRespaldos: () => this.rutas.respaldosEnv(),
@@ -958,6 +964,12 @@ export class Nucleo {
       exec,
     });
     respaldosRef = new Respaldos({ bd, servicios: serviciosBd, rutas, exec, eventos, plataforma });
+    const instantaneas = new Instantaneas({
+      rutas,
+      respaldos: respaldosRef,
+      estadoBase: (objetivo, base) => bd.estadoBase(objetivo, base),
+      restringir: (ruta) => plat.restringirAlUsuario(ruta),
+    });
     const lanzar = o.lanzar ?? lanzadorPorDefecto;
     // Los pasos de receta llaman a Nucleo.guardarSitio: se resuelve tras construir el núcleo.
     // eslint-disable-next-line prefer-const
@@ -1164,6 +1176,7 @@ export class Nucleo {
     });
     const modulos: ModulosNucleo = {
       plantillas,
+      instantaneas,
       editorVhost,
       ...(o.lanzarEditor ? { lanzarEditor: o.lanzarEditor } : {}),
       iniPhp,
@@ -1409,6 +1422,7 @@ export class Nucleo {
     try {
       await supervisor.readoptar();
       void nucleo.limpiarUsuariosTemporales();
+      void nucleo.instantaneas.purgarPapelera().catch(() => 0);
       await tuneles.restaurar();
       await estadoHostsSeguro(hosts, eventos, dominiosDe(await sitios.listar()));
     } catch (e) {

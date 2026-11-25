@@ -52,6 +52,23 @@ export class Rutas {
   sesionesPma(): string {
     return path.join(this.base, 'tmp', 'phpmyadmin', 'sesiones');
   }
+  /**
+   * Instantáneas de una base (D19): instantaneas/<instancia>/<base>/. Propias de WolfCore Dev y
+   * fuera de data/<servicio>/ (ninguna operación borra los datos de los servicios).
+   */
+  instantaneas(instancia: string, base: string): string {
+    if (!/^[a-z][a-z0-9-]{0,39}(@[A-Za-z0-9._-]{1,40})?$/.test(instancia)) {
+      throw new Error(`Instancia no válida: ${instancia}`);
+    }
+    if (!/^[A-Za-z0-9_$.-]{1,64}$/.test(base) || /^\.+$/.test(base)) {
+      throw new Error(`Base no válida: ${base}`);
+    }
+    return path.join(this.base, 'instantaneas', instancia, base);
+  }
+  /** Lo que el usuario borró desde WolfCore Dev y aún se puede recuperar (7 días). */
+  papelera(): string {
+    return path.join(this.base, 'papelera');
+  }
   /** Copias con fecha de los .env y .gitignore de proyectos antes de escribirlos. */
   respaldosEnv(): string {
     return path.join(this.base, 'etc', 'respaldos', 'env');

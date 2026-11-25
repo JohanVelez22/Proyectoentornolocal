@@ -575,6 +575,71 @@ export const fr: Textos = {
       'acceso_bd.servidor_no_resuelto':
         'La base de ce projet n’est pas sur un serveur local de WolfCore Dev.',
       'acceso_bd.no_listo': 'L’outil n’est pas prêt : installez-le depuis Services et allumez PHP.',
+      'instantaneas.id_invalido': 'L’instantané n’est pas valide.',
+      'instantaneas.no_encontrada': 'Instantané introuvable ; il a peut-être déjà été supprimé.',
+      'instantaneas.otra_base':
+        'Cet instantané appartient à une autre base : il ne peut pas être appliqué à celle-ci.',
+      'instantaneas.sin_confirmar': 'Confirmez que vous voulez revenir à cet instantané.',
+      'instantaneas.motor_no_soportado': 'Les instantanés concernent MySQL, MariaDB et PostgreSQL.',
+      'instantaneas.demasiado_grande':
+        'La base pèse plus de {maximo} Mo, le maximum qu’un instantané conserve.',
+      'instantaneas.sin_espacio':
+        'Pas assez d’espace libre pour l’instantané : il faut {necesarios} Mo et il y en a {libres} Mo.',
+      'instantaneas.limite':
+        'Cette base a déjà {maximo} instantanés : supprimez-en un pour en prendre un autre.',
+      'instantaneas.tomar_fallo':
+        'Impossible de prendre l’instantané. La base n’a pas été touchée.',
+      'instantaneas.huella_no_coincide':
+        'Le fichier de l’instantané a changé ou est abîmé : rien n’a été restauré.',
+      'instantaneas.respaldo_previo_fallo':
+        'Impossible d’enregistrer l’état actuel de la base : rien n’a été restauré.',
+      'instantaneas.restauracion_fallo':
+        'Impossible de restaurer l’instantané. La base est revenue à son état d’avant.',
+      'instantaneas.restauracion_sin_revertir':
+        'Impossible de restaurer l’instantané ni de revenir à l’état précédent. Cet état est enregistré dans l’instantané automatique {respaldo} : revenez-y depuis Instantanés.',
+    },
+  },
+  instantaneas: {
+    abrir: 'Instantanés',
+    titulo: (base: string) => `Instantanés de ${base}`,
+    ayuda:
+      'Un instantané enregistre la base telle qu’elle est maintenant. Vous pouvez y revenir quand vous voulez : avant de revenir, un instantané de l’état actuel est enregistré automatiquement.',
+    ubicacion:
+      'Ils sont enregistrés dans le dossier de données de WolfCore Dev, lisibles uniquement par votre utilisateur. Les services et leurs données ne sont pas touchés.',
+    notaEtiqueta: 'Note (facultatif)',
+    notaMarcador: 'Par exemple : avant la migration',
+    tomar: 'Prendre un instantané',
+    tomada: 'Instantané enregistré',
+    cargando: 'Lecture des instantanés…',
+    vacio: 'Cette base n’a pas encore d’instantané.',
+    automatica: 'Automatique',
+    sinNota: 'Sans note',
+    detalle: (tablas: number, tamano: string) =>
+      `${tablas} ${tablas === 1 ? 'table' : 'tables'} · ${tamano}`,
+    volver: 'Revenir à cet instantané',
+    borrar: 'Supprimer',
+    borrada: 'Instantané déplacé dans la corbeille',
+    papelera:
+      'Les instantanés supprimés peuvent être récupérés pendant 7 jours dans la corbeille de WolfCore Dev.',
+    cerrar: 'Fermer',
+    dialogoVolver: {
+      titulo: (base: string) => `Revenir à un instantané de ${base}`,
+      cargando: 'Préparation de l’aperçu…',
+      base: 'Base',
+      instantanea: 'Instantané',
+      ahora: 'Maintenant',
+      tamano: 'Taille',
+      tablas: 'Tables',
+      nota: 'Note',
+      aviso: (base: string) =>
+        `La base ${base} sera entièrement remplacée par cet instantané : ce qui a changé depuis est perdu dans la base. Avant, un instantané automatique de l’état actuel est enregistré ; si quelque chose échoue, la base revient seule à cet état.`,
+      pedir: (base: string) => `Pour confirmer, saisissez ${base}`,
+      confirmar: 'Revenir à cet instantané',
+      trabajando: (base: string) =>
+        `Restauration de ${base}… Ne fermez pas le programme avant la fin.`,
+      hecho: (base: string) => `La base ${base} est revenue à l’instantané`,
+      respaldoPrevio: 'L’état précédent a été enregistré dans l’instantané automatique du',
+      advertencias: 'La restauration s’est terminée avec des avertissements :',
     },
   },
   avisoInicio: {

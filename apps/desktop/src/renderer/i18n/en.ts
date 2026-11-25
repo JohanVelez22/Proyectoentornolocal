@@ -542,6 +542,69 @@ export const en: Textos = {
       'acceso_bd.servidor_no_resuelto':
         "This project's database is not on a local WolfCore Dev server.",
       'acceso_bd.no_listo': 'The tool is not ready: install it from Services and turn PHP on.',
+      'instantaneas.id_invalido': 'The snapshot is not valid.',
+      'instantaneas.no_encontrada': 'The snapshot was not found; it may have been deleted already.',
+      'instantaneas.otra_base':
+        'This snapshot belongs to another database: it cannot be applied to this one.',
+      'instantaneas.sin_confirmar': 'Confirm that you want to go back to this snapshot.',
+      'instantaneas.motor_no_soportado': 'Snapshots are for MySQL, MariaDB and PostgreSQL.',
+      'instantaneas.demasiado_grande':
+        'The database is larger than {maximo} MB, the most a snapshot holds.',
+      'instantaneas.sin_espacio':
+        'There is not enough free space for the snapshot: {necesarios} MB are needed and {libres} MB are free.',
+      'instantaneas.limite':
+        'This database already has {maximo} snapshots: delete one to take another.',
+      'instantaneas.tomar_fallo': 'The snapshot could not be taken. The database was not touched.',
+      'instantaneas.huella_no_coincide':
+        'The snapshot file changed or is damaged: nothing was restored.',
+      'instantaneas.respaldo_previo_fallo':
+        'The current state of the database could not be saved: nothing was restored.',
+      'instantaneas.restauracion_fallo':
+        'The snapshot could not be restored. The database went back to how it was.',
+      'instantaneas.restauracion_sin_revertir':
+        'The snapshot could not be restored and the previous state could not be put back. That state is saved in the automatic snapshot {respaldo}: go back to it from Snapshots.',
+    },
+  },
+  instantaneas: {
+    abrir: 'Snapshots',
+    titulo: (base: string) => `Snapshots of ${base}`,
+    ayuda:
+      'A snapshot saves the database exactly as it is now. You can go back to it whenever you want: before going back, a snapshot of the current state is saved automatically.',
+    ubicacion:
+      'They are stored in the WolfCore Dev data folder, readable only by your user. Services and their data are not touched.',
+    notaEtiqueta: 'Note (optional)',
+    notaMarcador: 'For example: before migrating',
+    tomar: 'Take snapshot',
+    tomada: 'Snapshot saved',
+    cargando: 'Reading snapshots…',
+    vacio: 'This database has no snapshots yet.',
+    automatica: 'Automatic',
+    sinNota: 'No note',
+    detalle: (tablas: number, tamano: string) =>
+      `${tablas} ${tablas === 1 ? 'table' : 'tables'} · ${tamano}`,
+    volver: 'Go back to this snapshot',
+    borrar: 'Delete',
+    borrada: 'Snapshot moved to the trash',
+    papelera: 'Deleted snapshots can be recovered for 7 days from the WolfCore Dev trash.',
+    cerrar: 'Close',
+    dialogoVolver: {
+      titulo: (base: string) => `Go back to a snapshot of ${base}`,
+      cargando: 'Preparing the preview…',
+      base: 'Database',
+      instantanea: 'Snapshot',
+      ahora: 'Now',
+      tamano: 'Size',
+      tablas: 'Tables',
+      nota: 'Note',
+      aviso: (base: string) =>
+        `The database ${base} will be completely replaced by this snapshot: anything that changed since then is lost from the database. First, an automatic snapshot of the current state is saved; if anything fails, the database goes back to that state on its own.`,
+      pedir: (base: string) => `To confirm, type ${base}`,
+      confirmar: 'Go back to this snapshot',
+      trabajando: (base: string) =>
+        `Restoring ${base}… Do not close the program until it finishes.`,
+      hecho: (base: string) => `The database ${base} went back to the snapshot`,
+      respaldoPrevio: 'The previous state was saved in the automatic snapshot from',
+      advertencias: 'The restore finished with warnings:',
     },
   },
   avisoInicio: {

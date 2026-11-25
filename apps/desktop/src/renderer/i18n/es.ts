@@ -551,6 +551,68 @@ export const es = {
         'La base de este proyecto no es de un servidor local de WolfCore Dev.',
       'acceso_bd.no_listo':
         'La herramienta no está lista: instálela desde Servicios y encienda PHP.',
+      'instantaneas.id_invalido': 'La instantánea no es válida.',
+      'instantaneas.no_encontrada': 'No se encontró la instantánea; puede que ya se haya borrado.',
+      'instantaneas.otra_base': 'Esta instantánea es de otra base: no se puede aplicar a esta.',
+      'instantaneas.sin_confirmar': 'Confirme que quiere volver a esta instantánea.',
+      'instantaneas.motor_no_soportado': 'Las instantáneas son para MySQL, MariaDB y PostgreSQL.',
+      'instantaneas.demasiado_grande':
+        'La base pesa más de {maximo} MB, el máximo que guarda una instantánea.',
+      'instantaneas.sin_espacio':
+        'No hay espacio libre suficiente para la instantánea: hacen falta {necesarios} MB y hay {libres} MB.',
+      'instantaneas.limite':
+        'Ya hay {maximo} instantáneas de esta base: borre alguna para tomar otra.',
+      'instantaneas.tomar_fallo': 'No se pudo tomar la instantánea. La base no se tocó.',
+      'instantaneas.huella_no_coincide':
+        'El archivo de la instantánea cambió o está dañado: no se restauró nada.',
+      'instantaneas.respaldo_previo_fallo':
+        'No se pudo guardar el estado actual de la base: no se restauró nada.',
+      'instantaneas.restauracion_fallo':
+        'No se pudo restaurar la instantánea. La base volvió a como estaba antes.',
+      'instantaneas.restauracion_sin_revertir':
+        'No se pudo restaurar la instantánea ni volver al estado anterior. Ese estado está guardado en la instantánea automática {respaldo}: vuelva a ella desde Instantáneas.',
+    },
+  },
+  instantaneas: {
+    abrir: 'Instantáneas',
+    titulo: (base: string) => `Instantáneas de ${base}`,
+    ayuda:
+      'Una instantánea guarda la base tal como está ahora. Puede volver a ella cuando quiera: antes de volver se guarda sola una instantánea del estado actual.',
+    ubicacion:
+      'Se guardan en la carpeta de datos de WolfCore Dev, legibles solo por su usuario. Los servicios y sus datos no se tocan.',
+    notaEtiqueta: 'Nota (opcional)',
+    notaMarcador: 'Por ejemplo: antes de migrar',
+    tomar: 'Tomar instantánea',
+    tomada: 'Instantánea guardada',
+    cargando: 'Leyendo instantáneas…',
+    vacio: 'Todavía no hay instantáneas de esta base.',
+    automatica: 'Automática',
+    sinNota: 'Sin nota',
+    detalle: (tablas: number, tamano: string) =>
+      `${tablas} ${tablas === 1 ? 'tabla' : 'tablas'} · ${tamano}`,
+    volver: 'Volver a esta instantánea',
+    borrar: 'Borrar',
+    borrada: 'Instantánea movida a la papelera',
+    papelera:
+      'Las instantáneas borradas se pueden recuperar durante 7 días desde la papelera de WolfCore Dev.',
+    cerrar: 'Cerrar',
+    dialogoVolver: {
+      titulo: (base: string) => `Volver a una instantánea de ${base}`,
+      cargando: 'Preparando la vista previa…',
+      base: 'Base',
+      instantanea: 'Instantánea',
+      ahora: 'Ahora',
+      tamano: 'Tamaño',
+      tablas: 'Tablas',
+      nota: 'Nota',
+      aviso: (base: string) =>
+        `La base ${base} se reemplazará por completo por esta instantánea: lo que cambió desde entonces se pierde de la base. Antes se guarda una instantánea automática del estado actual; si algo falla, la base vuelve sola a ese estado.`,
+      pedir: (base: string) => `Para confirmar, escriba ${base}`,
+      confirmar: 'Volver a esta instantánea',
+      trabajando: (base: string) => `Restaurando ${base}… No cierre el programa hasta que termine.`,
+      hecho: (base: string) => `La base ${base} volvió a la instantánea`,
+      respaldoPrevio: 'El estado anterior quedó guardado en la instantánea automática del',
+      advertencias: 'La restauración terminó con avisos:',
     },
   },
   avisoInicio: {
