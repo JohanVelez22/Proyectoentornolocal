@@ -34,6 +34,8 @@ import {
   type MotivoInstantaneaEntorno,
 } from './perfiles/instantaneaEntorno';
 import { Perfiles } from './perfiles/importar';
+import { crearPuertoWorkspaces } from './workspaces/puerto';
+import { Workspaces } from './workspaces/workspaces';
 import type {
   DepsPerfiles,
   OpcionesExportarPerfil,
@@ -596,6 +598,8 @@ export class Nucleo {
   readonly mailpit: Mailpit;
   /** Procesos supervisados de los proyectos (npm run dev, uvicorn…). */
   readonly procesos: ProcesosProyecto;
+  /** Workspaces de arranque (D28): conjuntos de instancias, servicios y procesos con nombre. */
+  readonly workspaces: Workspaces;
   private readonly almacenCredenciales: AlmacenCredenciales;
   private readonly plataforma: PlataformaCompleta;
   private readonly lanzarEditor: LanzadorSeparado | undefined;
@@ -756,6 +760,19 @@ export class Nucleo {
         const cfg = await this.config.leer();
         return { correo: puertoSmtpElegido(cfg), redis: datos.redis.puerto };
       },
+    });
+    this.workspaces = new Workspaces({
+      leerConfig: () => this.config.leer(),
+      modificarConfig: (fn) => this.sitios.modificarConfig(fn),
+      avisar: (a) => this.avisos.publicar(a),
+      puerto: crearPuertoWorkspaces({
+        servicios: this.servicios,
+        supervisor: this.supervisor,
+        procesos: this.procesos,
+        leerSitios: () => this.sitios.listar(),
+        leerConfig: () => this.config.leer(),
+        nginxInstalado: async () => (await this.instalador.instalados('nginx')).length > 0,
+      }),
     });
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({

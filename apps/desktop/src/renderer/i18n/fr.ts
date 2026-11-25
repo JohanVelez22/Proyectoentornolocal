@@ -272,6 +272,14 @@ export const fr: Textos = {
       'proyectos.no_confiado': 'Cochez "Je fais confiance à ce dépôt" pour exécuter la recette.',
       'proyectos.receta_en_curso': 'Une recette est déjà en cours pour ce projet.',
       'proyectos.paso_no_omitible': 'L’étape "Créer le site" ne peut pas être ignorée.',
+      'workspaces.no_existe': 'Ce workspace n’existe pas.',
+      'workspaces.invalido': 'Le workspace n’est pas valide : vérifiez son nom et ses éléments.',
+      'workspaces.captadores_exclusivos':
+        'Deux capteurs de courrier ne peuvent pas tourner en même temps : un seul fonctionne.',
+      'workspaces.elemento_fallo':
+        'L’opération n’a pas pu aboutir pour {elemento}. Consultez Services et ses journaux.',
+      'workspaces.base_no_responde':
+        '{elemento} n’a pas démarré car la base de données de ce projet ne répond pas.',
       'proyectos.carpeta_no_vacia':
         'Le dossier du projet contient déjà des fichiers : choisissez-en un autre ou videz-le.',
       'secretos.sin_cifrado':

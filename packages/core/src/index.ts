@@ -162,3 +162,4 @@ export * from './perfiles/tipos';
 export { exportarPerfil } from './perfiles/exportar';
 export * from './perfiles/instantaneaEntorno';
 export { abrirPerfil, Perfiles, type PerfilAbierto } from './perfiles/importar';
+export * from './workspaces/workspaces';

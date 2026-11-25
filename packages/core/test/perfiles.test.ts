@@ -2164,3 +2164,166 @@ describe('secretos sin forma reconocible', () => {
     expect(enmascararNginx(t)).toBe(t);
   });
 });
+
+describe('workspaces en el perfil (D28): solo referencias, nada ejecutable', () => {
+  /** El origen con tres workspaces: uno con instancia y servicios, uno de solo procesos, uno vacío. */
+  async function conWorkspaces(): Promise<void> {
+    const cfg = JSON.parse(await readFile(origen.config(), 'utf8')) as Record<string, unknown>;
+    cfg['workspaces'] = [
+      {
+        id: 'bot-fastapi',
+        nombre: 'Bot FastAPI',
+        elementos: [
+          { tipo: 'instancia', id: 'mysql@8.4' },
+          { tipo: 'instancia', id: 'postgresql@17' },
+          { tipo: 'servicio', id: 'ollama' },
+          { tipo: 'servicio', id: 'nginx' },
+          { tipo: 'proceso', sitioId: 'tienda', procesoId: 'cola' },
+        ],
+      },
+      {
+        id: 'solo-procesos',
+        nombre: 'Solo procesos',
+        elementos: [{ tipo: 'proceso', sitioId: 'tienda', procesoId: 'cola' }],
+      },
+      { id: 'vacio', nombre: 'Vacío', elementos: [] },
+    ];
+    await escribir(origen.config(), JSON.stringify(cfg, null, 2));
+  }
+
+  const manifiestoDe = async (archivo: string) =>
+    JSON.parse((await entradasZip(archivo)).get('manifiesto.json')!.toString('utf8')) as {
+      config: Record<string, unknown>;
+      workspaces: { id: string; elementos: { tipo: string }[] }[];
+    };
+
+  it('viajan en el manifiesto (no en config) sin procesos, y el que solo llevaba procesos no viaja', async () => {
+    await conWorkspaces();
+    const m = await manifiestoDe(await exportar());
+    expect(m.config['workspaces']).toBeUndefined();
+    expect(m.workspaces.map((w) => w.id)).toEqual(['bot-fastapi', 'vacio']);
+    expect(m.workspaces[0]!.elementos.map((e) => e.tipo)).toEqual([
+      'instancia',
+      'instancia',
+      'servicio',
+      'servicio',
+    ]);
+    // Solo referencias: ningún comando, ruta ni variable del sitio llega al perfil.
+    const texto = JSON.stringify(m.workspaces);
+    expect(texto).not.toContain('queue:work');
+    expect(texto).not.toContain(CENTINELA);
+  });
+
+  it('se importan validados contra lo que existe: sin la instancia que no hay, y sin arrancar nada', async () => {
+    await conWorkspaces();
+    const archivo = await exportar();
+    const d = deps(destino);
+    const vista = await new Perfiles(d).vistaPrevia(archivo);
+    expect(vista.workspaces).toEqual([
+      { id: 'bot-fastapi', nombre: 'Bot FastAPI', elementos: 4, existe: false },
+      { id: 'vacio', nombre: 'Vacío', elementos: 0, existe: false },
+    ]);
+    const r = await importar(archivo, d, { rutas: { tienda: path.join(proyectos, 'tienda') } });
+    expect(r.workspacesInvalidos).toBe(0);
+    // mysql@8.4 viaja como instancia; postgresql@17 no está en el perfil: se descarta y se informa.
+    expect(r.workspaces).toEqual([
+      {
+        id: 'bot-fastapi',
+        nombre: 'Bot FastAPI',
+        estado: 'importado',
+        descartados: ['instancia:postgresql@17'],
+      },
+      { id: 'vacio', nombre: 'Vacío', estado: 'importado', descartados: [] },
+    ]);
+    const cfg = await d.leerConfig();
+    expect(cfg.workspaces.find((w) => w.id === 'bot-fastapi')!.elementos).toEqual([
+      { tipo: 'instancia', id: 'mysql@8.4' },
+      { tipo: 'servicio', id: 'ollama' },
+      { tipo: 'servicio', id: 'nginx' },
+    ]);
+  });
+
+  it('un workspace propio con el mismo id no se toca', async () => {
+    await conWorkspaces();
+    const archivo = await exportar();
+    const d = deps(destino);
+    const propio = ConfigSchema.parse({
+      workspaces: [
+        { id: 'bot-fastapi', nombre: 'Mío', elementos: [{ tipo: 'servicio', id: 'ollama' }] },
+      ],
+    });
+    await escribir(destino.config(), JSON.stringify(propio));
+    const r = await importar(archivo, d, { rutas: { tienda: path.join(proyectos, 'tienda') } });
+    expect(r.workspaces.find((w) => w.id === 'bot-fastapi')!.estado).toBe('existente');
+    expect((await d.leerConfig()).workspaces.find((w) => w.id === 'bot-fastapi')).toMatchObject({
+      nombre: 'Mío',
+    });
+  });
+
+  it('un perfil manipulado: campos ejecutables, procesos y ids raros no entran', async () => {
+    const archivo = await perfilManual(
+      {},
+      {
+        workspaces: [
+          {
+            id: 'malo',
+            nombre: 'Malo',
+            elementos: [{ tipo: 'servicio', id: 'nginx' }],
+            comando: ['calc.exe'],
+          },
+          { id: 'MAYUS raro', nombre: 'X', elementos: [] },
+          {
+            id: 'mixto',
+            nombre: 'Mixto',
+            elementos: [
+              { tipo: 'servicio', id: 'ollama' },
+              { tipo: 'servicio', id: 'ollama', comando: ['calc.exe'] },
+              { tipo: 'proceso', sitioId: 'tienda', procesoId: 'cola' },
+              { tipo: 'script', cuerpo: 'rm -rf /' },
+            ],
+          },
+          { id: 'solo-captadores', nombre: 'Correo', elementos: [] },
+        ],
+      },
+    );
+    const d = deps(destino);
+    const r = await importar(archivo, d);
+    expect(r.workspacesInvalidos).toBe(2);
+    expect(r.workspaces).toEqual([
+      {
+        id: 'mixto',
+        nombre: 'Mixto',
+        estado: 'importado',
+        descartados: ['elemento_invalido', 'elemento_invalido', 'proceso:tienda/cola'],
+      },
+      { id: 'solo-captadores', nombre: 'Correo', estado: 'importado', descartados: [] },
+    ]);
+    const lista = (await d.leerConfig()).workspaces;
+    expect(lista.map((w) => w.id)).toEqual(['mixto', 'solo-captadores']);
+    expect(JSON.stringify(lista)).not.toContain('calc.exe');
+  });
+
+  it('con dos captadores de correo se queda con el primero (grupo exclusivo)', async () => {
+    const archivo = await perfilManual(
+      {},
+      {
+        workspaces: [
+          {
+            id: 'correo',
+            nombre: 'Correo',
+            elementos: [
+              { tipo: 'servicio', id: 'mailpit' },
+              { tipo: 'servicio', id: 'smtp4dev' },
+            ],
+          },
+        ],
+      },
+    );
+    const d = deps(destino);
+    const r = await importar(archivo, d);
+    expect(r.workspaces[0]!.descartados).toEqual(['servicio:smtp4dev']);
+    expect((await d.leerConfig()).workspaces[0]!.elementos).toEqual([
+      { tipo: 'servicio', id: 'mailpit' },
+    ]);
+  });
+});

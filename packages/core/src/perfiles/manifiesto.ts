@@ -12,9 +12,14 @@ import {
   claveInstanciaValida,
   ConfigSchema,
   IDS_SERVICIO_DATOS,
+  ElementoWorkspaceSchema,
+  MAX_ELEMENTOS_WORKSPACE,
+  MAX_WORKSPACES,
   SitioSchema,
+  WorkspaceSchema,
   type Config,
   type Sitio,
+  type Workspace,
 } from '../tipos';
 
 /**
@@ -153,7 +158,7 @@ export const ManifiestoPerfilSchema = z
       )
       .max(200),
     plantillas: z.array(z.string().regex(new RegExp(`^${ID_PLANTILLA}$`))).max(500),
-    /** D28 y D29 los llenan; hasta entonces van vacíos. */
+    /** D28: workspaces (solo referencias); D29 llena las tareas. Cada uno se valida al importar. */
     workspaces: z.array(z.unknown()).max(200).default([]),
     tareas: z.array(z.unknown()).max(1000).default([]),
     incluye: z.object({ bases: z.boolean(), certificados: z.boolean(), ca: z.boolean() }),
@@ -321,12 +326,72 @@ export function sitioImportado(bruto: unknown): SitioImportado {
   return { sitio: SitioSchema.parse(s), motivos };
 }
 
+/* ───────────── Workspaces (D28) ───────────── */
+
+/**
+ * Workspaces para el perfil: solo `id`, `nombre` y referencias a instancias y servicios. Se
+ * reconstruyen campo por campo: nada ejecutable (comandos, rutas, variables) puede viajar. Los
+ * procesos de proyecto **no** viajan (como los comandos de los sitios, que el perfil quita): un
+ * workspace que solo llevaba procesos no viaja.
+ */
+export function workspacesParaPerfil(lista: readonly Workspace[]): Workspace[] {
+  const res: Workspace[] = [];
+  for (const w of lista) {
+    const elementos = w.elementos.filter((e) => e.tipo !== 'proceso').map((e) => ({ ...e }));
+    if (w.elementos.length > 0 && elementos.length === 0) continue;
+    res.push({ id: w.id, nombre: w.nombre, elementos });
+  }
+  return res;
+}
+
+/** Un workspace leído de un perfil y los elementos mal formados que se le quitaron. */
+export interface WorkspaceDePerfil {
+  workspace: Workspace;
+  /** Elementos con forma inválida (campos de más, ids raros): no viajan. */
+  descartados: number;
+}
+
+/**
+ * Los workspaces bien formados de un manifiesto. Uno con la cáscara mal (id raro, campos de más) se
+ * cuenta en `invalidos`; a uno bueno se le quitan solo los elementos mal formados.
+ */
+export function leerWorkspacesPerfil(brutos: readonly unknown[]): {
+  validos: WorkspaceDePerfil[];
+  invalidos: number;
+} {
+  const validos: WorkspaceDePerfil[] = [];
+  const vistos = new Set<string>();
+  let invalidos = 0;
+  for (const b of brutos.slice(0, MAX_WORKSPACES)) {
+    const crudo = typeof b === 'object' && b !== null ? (b as Record<string, unknown>) : null;
+    const lista = Array.isArray(crudo?.['elementos']) ? (crudo['elementos'] as unknown[]) : null;
+    const cascara = lista ? WorkspaceSchema.safeParse({ ...crudo, elementos: [] }) : null;
+    if (!lista || !cascara?.success || vistos.has(cascara.data.id)) {
+      invalidos++;
+      continue;
+    }
+    vistos.add(cascara.data.id);
+    const elementos: Workspace['elementos'] = [];
+    let descartados = 0;
+    for (const e of lista.slice(0, MAX_ELEMENTOS_WORKSPACE)) {
+      const r = ElementoWorkspaceSchema.safeParse(e);
+      if (r.success) elementos.push(r.data);
+      else descartados++;
+    }
+    descartados += Math.max(0, lista.length - MAX_ELEMENTOS_WORKSPACE);
+    validos.push({ workspace: { ...cascara.data, elementos }, descartados });
+  }
+  return { validos, invalidos };
+}
+
 /* ───────────── Configuración ───────────── */
 
 /** config.json para el perfil: sin sitios (van aparte) y sin nada con nombre o forma de secreto. */
 export function configParaPerfil(c: Config): Record<string, unknown> {
-  const { sitios, ...resto } = c;
+  // Los workspaces viajan aparte, en el manifiesto, como referencias (D28).
+  const { sitios, workspaces, ...resto } = c;
   void sitios;
+  void workspaces;
   const salida = sinSecretosPlantilla(resto) as Config;
   // El usuario de un proveedor SMTP no viaja (salvo el fijo de un proveedor conocido, que no dice
   // nada): sin él, el otro equipo no importa ese proveedor y lo lista en la vista previa.

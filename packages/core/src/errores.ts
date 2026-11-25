@@ -181,6 +181,12 @@ export const PARAMETROS_ERROR = {
   'proyectos.no_confiado': [],
   'proyectos.receta_en_curso': [],
   'proyectos.paso_no_omitible': [],
+  // workspaces de arranque (D28)
+  'workspaces.no_existe': [],
+  'workspaces.invalido': [],
+  'workspaces.captadores_exclusivos': [],
+  'workspaces.elemento_fallo': ['elemento'],
+  'workspaces.base_no_responde': ['elemento'],
   // proyectos nuevos (D12)
   'proyectos.carpeta_no_vacia': [],
   // usuario propio de la base de cada proyecto (D16)

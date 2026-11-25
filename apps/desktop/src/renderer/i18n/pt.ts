@@ -267,6 +267,14 @@ export const pt: Textos = {
       'proyectos.no_confiado': 'Marque "Confio neste repositório" para executar a receita.',
       'proyectos.receta_en_curso': 'Já há uma receita em andamento para este projeto.',
       'proyectos.paso_no_omitible': 'A etapa "Criar o site" não pode ser pulada.',
+      'workspaces.no_existe': 'Esse workspace não existe.',
+      'workspaces.invalido': 'O workspace não é válido: revise o nome e os itens.',
+      'workspaces.captadores_exclusivos':
+        'Dois captadores de e-mail não podem ficar ligados ao mesmo tempo: só um roda.',
+      'workspaces.elemento_fallo':
+        'Não foi possível concluir a operação com {elemento}. Veja Serviços e os registros.',
+      'workspaces.base_no_responde':
+        '{elemento} não foi iniciado porque o banco de dados desse projeto não responde.',
       'proyectos.carpeta_no_vacia':
         'A pasta do projeto já tem arquivos: escolha outra ou esvazie-a.',
       'secretos.sin_cifrado':

@@ -37,6 +37,14 @@ const ES: Diccionario = {
       titulo: 'Iniciar todo no pudo encender todo',
       cuerpo: `No arrancó: ${limpio(d['nombres'], 'algún servicio')}. Abra Servicios para ver el detalle.`,
     }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: 'Un workspace no pudo encender todo',
+      cuerpo: `${limpio(d['nombre'], 'El workspace')}: no arrancó ${limpio(d['nombres'], 'algún elemento')}. Abra Inicio para ver qué quedó encendido.`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: 'Un workspace no pudo apagar todo',
+      cuerpo: `${limpio(d['nombre'], 'El workspace')}: no se apagó ${limpio(d['nombres'], 'algún elemento')}. Abra Inicio para ver qué sigue encendido.`,
+    }),
     'avisos.puerto_ocupado': (d) => ({
       titulo: 'Puerto ocupado',
       cuerpo: `El puerto ${limpio(d['puerto'], '?')} lo usa ${limpio(d['nombre'], 'otro programa')}: no se pudo iniciar el servicio.`,
@@ -184,6 +192,14 @@ const EN: Diccionario = {
       titulo: 'Start all could not start everything',
       cuerpo: `Did not start: ${limpio(d['nombres'], 'some service')}. Open Services for details.`,
     }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: 'A workspace could not start everything',
+      cuerpo: `${limpio(d['nombre'], 'The workspace')}: ${limpio(d['nombres'], 'some item')} did not start. Open Home to see what is running.`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: 'A workspace could not stop everything',
+      cuerpo: `${limpio(d['nombre'], 'The workspace')}: ${limpio(d['nombres'], 'some item')} did not stop. Open Home to see what is still running.`,
+    }),
     'avisos.puerto_ocupado': (d) => ({
       titulo: 'Port in use',
       cuerpo: `Port ${limpio(d['puerto'], '?')} is used by ${limpio(d['nombre'], 'another program')}: the service could not start.`,
@@ -321,6 +337,14 @@ const PT: Diccionario = {
     'avisos.iniciar_todo_fallos': (d) => ({
       titulo: 'Iniciar tudo não conseguiu ligar tudo',
       cuerpo: `Não iniciou: ${limpio(d['nombres'], 'algum serviço')}. Abra Serviços para ver os detalhes.`,
+    }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: 'Um workspace não conseguiu ligar tudo',
+      cuerpo: `${limpio(d['nombre'], 'O workspace')}: não iniciou ${limpio(d['nombres'], 'algum item')}. Abra Início para ver o que ficou ligado.`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: 'Um workspace não conseguiu desligar tudo',
+      cuerpo: `${limpio(d['nombre'], 'O workspace')}: não desligou ${limpio(d['nombres'], 'algum item')}. Abra Início para ver o que continua ligado.`,
     }),
     'avisos.puerto_ocupado': (d) => ({
       titulo: 'Porta ocupada',
@@ -471,6 +495,14 @@ const FR: Diccionario = {
     'avisos.iniciar_todo_fallos': (d) => ({
       titulo: 'Tout démarrer n’a pas pu tout allumer',
       cuerpo: `N’a pas démarré : ${limpio(d['nombres'], 'un service')}. Ouvrez Services pour voir le détail.`,
+    }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: 'Un workspace n’a pas pu tout allumer',
+      cuerpo: `${limpio(d['nombre'], 'Le workspace')} : ${limpio(d['nombres'], 'un élément')} n’a pas démarré. Ouvrez Accueil pour voir ce qui tourne.`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: 'Un workspace n’a pas pu tout éteindre',
+      cuerpo: `${limpio(d['nombre'], 'Le workspace')} : ${limpio(d['nombres'], 'un élément')} ne s’est pas arrêté. Ouvrez Accueil pour voir ce qui tourne encore.`,
     }),
     'avisos.puerto_ocupado': (d) => ({
       titulo: 'Port occupé',

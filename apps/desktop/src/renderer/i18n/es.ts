@@ -262,6 +262,14 @@ export const es = {
       'proyectos.no_confiado': 'Marque "Confío en este repositorio" para ejecutar la receta.',
       'proyectos.receta_en_curso': 'Ya hay una receta en curso para este proyecto.',
       'proyectos.paso_no_omitible': 'El paso "Crear el sitio" no se puede omitir.',
+      'workspaces.no_existe': 'No existe ese workspace.',
+      'workspaces.invalido': 'El workspace no es válido: revise su nombre y sus elementos.',
+      'workspaces.captadores_exclusivos':
+        'Dos captadores de correo no pueden estar encendidos a la vez: solo corre uno.',
+      'workspaces.elemento_fallo':
+        'No se pudo completar la operación con {elemento}. Revise Servicios y sus registros.',
+      'workspaces.base_no_responde':
+        '{elemento} no se inició porque la base de datos de ese proyecto no responde.',
       'proyectos.carpeta_no_vacia':
         'La carpeta del proyecto ya tiene archivos: elija otra o vacíela.',
       'secretos.sin_cifrado':

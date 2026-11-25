@@ -363,6 +363,22 @@ export class Servicios {
     if (fallos.length > 0) throw errorIniciarTodo(fallos);
   }
 
+  /** Ramas de PHP que usa algún sitio y ya están instaladas (las que enciende un workspace). */
+  async ramasPhpEnUso(): Promise<string[]> {
+    const instaladas = await this.d.instalador.instalados('php');
+    return (await this.ramasEnUso()).filter((v) => instaladas.includes(v));
+  }
+
+  /** Motivo para no arrancar los procesos de un sitio (su base local no responde), o null. */
+  async baseSinResponderDe(sitioId: string): Promise<string | null> {
+    return this.baseSinResponder(await this.usosDeSitios(), sitioId);
+  }
+
+  /** Espera a que un servicio de datos o una instancia ya encendidos respondan en su puerto. */
+  esperarSaludDe(ref: IdServicioDatos | IdInstancia): Promise<void> {
+    return this.datos.esperarSaludDe(ref);
+  }
+
   /** Bases que usa cada sitio según su `.env` (sin el proveedor, ninguna). */
   private async usosDeSitios(): Promise<UsoSitio[]> {
     try {

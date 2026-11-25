@@ -15,6 +15,7 @@ import {
   rutaPermitidaEnPerfil,
   sitioParaPerfil,
   VERSION_PERFIL,
+  workspacesParaPerfil,
   type ManifiestoPerfil,
 } from './manifiesto';
 import type {
@@ -199,7 +200,7 @@ export async function exportarPerfil(
       })),
       instancias,
       plantillas,
-      workspaces: [],
+      workspaces: workspacesParaPerfil(cfg.workspaces),
       tareas: [],
       incluye: { bases: bases.length > 0, certificados: conCertificados, ca: conCa },
       ca: huellaCa && certCa ? { huella: huellaCa, certificado: certCa } : null,

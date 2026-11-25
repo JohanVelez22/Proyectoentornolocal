@@ -33,12 +33,14 @@ import {
   fusionarConfig,
   entradaPeligrosa,
   leerManifiesto,
+  leerWorkspacesPerfil,
   parsearInstanciaPerfil,
   rutaPermitidaEnPerfil,
   sitioImportado,
   type ManifiestoPerfil,
 } from './manifiesto';
 import { reasignarRutas, restoSeguro } from './reasignar';
+import { importarWorkspaces } from './workspaces';
 import {
   LIMITES_PERFIL,
   type DepsPerfiles,
@@ -630,6 +632,7 @@ export class Perfiles {
     return this.conPerfil(archivo, false, async (p) => {
       const plan = await planificar(this.d, p, o);
       const m = p.manifiesto;
+      const workspacesDe = leerWorkspacesPerfil(m.workspaces);
       return {
         creado: m.creado,
         origen: m.origen,
@@ -650,6 +653,13 @@ export class Perfiles {
         })),
         bases: m.bases.map((b) => ({ instancia: b.instancia, base: b.base })),
         plantillas: m.plantillas.map((id) => ({ id, existe: plan.plantillasExistentes.has(id) })),
+        workspaces: workspacesDe.validos.map(({ workspace: w }) => ({
+          id: w.id,
+          nombre: w.nombre,
+          elementos: w.elementos.length,
+          existe: plan.config?.workspaces.some((x) => x.id === w.id) === true,
+        })),
+        workspacesInvalidos: workspacesDe.invalidos,
         reemplaza: plan.reemplaza,
         puertosOcupados: plan.puertosOcupados,
         ignoradas: p.ignoradas,
@@ -1045,6 +1055,8 @@ export class Perfiles {
     }
     const ids = new Set(importados.map((s) => s.id));
     cfg.sitios = [...(actual?.sitios ?? []).filter((s) => !ids.has(s.id)), ...importados];
+    // Workspaces (solo referencias): se validan contra lo que quedó en este equipo; nada arranca.
+    const workspacesResultado = importarWorkspaces(cfg, m.workspaces);
     await d.guardarConfig(cfg);
 
     d.progreso?.({ fase: 'plantillas', paso: 4, de: 7 });
@@ -1270,6 +1282,7 @@ export class Perfiles {
       instancias,
       bases,
       plantillas,
+      ...workspacesResultado,
       env,
       ca,
       avisos,

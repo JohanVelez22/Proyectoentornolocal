@@ -1492,6 +1492,12 @@ export class ServiciosDatos {
     }
   }
 
+  /** Espera a que la instancia de `ref` (un servicio = su predeterminada) responda en su puerto. */
+  async esperarSaludDe(ref: IdServicioDatos | IdInstancia): Promise<void> {
+    const { inst } = await this.objetivo(ref, await this.d.leerConfig());
+    await this.esperarSalud(inst);
+  }
+
   private async arrancarYEsperar(
     def: DefServicio,
     inst: InstanciaResuelta,

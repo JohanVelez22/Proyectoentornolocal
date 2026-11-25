@@ -258,6 +258,14 @@ export const en: Textos = {
       'proyectos.no_confiado': 'Check "I trust this repository" to run the recipe.',
       'proyectos.receta_en_curso': 'A recipe is already running for this project.',
       'proyectos.paso_no_omitible': 'The "Create the site" step cannot be skipped.',
+      'workspaces.no_existe': 'That workspace does not exist.',
+      'workspaces.invalido': 'The workspace is not valid: check its name and its items.',
+      'workspaces.captadores_exclusivos':
+        'Two mail catchers cannot run at the same time: only one runs.',
+      'workspaces.elemento_fallo':
+        'The operation could not be completed for {elemento}. Check Services and its logs.',
+      'workspaces.base_no_responde':
+        '{elemento} was not started because that project’s database is not responding.',
       'proyectos.carpeta_no_vacia':
         'The project folder already has files: choose another one or empty it.',
       'secretos.sin_cifrado':

@@ -252,6 +252,10 @@ export interface VistaPreviaPerfil {
   instancias: { id: string; puerto: number; puertoNuevo: number | null; existente: boolean }[];
   bases: { instancia: string; base: string }[];
   plantillas: { id: string; existe: boolean }[];
+  /** Workspaces de arranque (solo referencias): `existe` = ya hay uno propio con ese id (se conserva el propio). */
+  workspaces: { id: string; nombre: string; elementos: number; existe: boolean }[];
+  /** Workspaces del perfil con forma inválida: no se importan. */
+  workspacesInvalidos: number;
   /** Lo que ya hay en la carpeta de datos y se reemplazaría (se copia antes). */
   reemplaza: string[];
   puertosOcupados: number[];
@@ -313,6 +317,18 @@ export interface ResultadoImportarPerfil {
     detalle?: string;
   }[];
   plantillas: { id: string; estado: EstadoItem; motivo: string | null; detalle?: string }[];
+  /**
+   * Workspaces de arranque: `existente` = ya había uno propio con ese id (no se toca); `omitido` =
+   * todo lo que llevaba ya no existe aquí. `descartados`: los elementos que no existen en este
+   * equipo (`instancia:<id>`, `proceso:<sitio>/<proceso>`…) o con forma inválida.
+   */
+  workspaces: {
+    id: string;
+    nombre: string;
+    estado: 'importado' | 'existente' | 'omitido';
+    descartados: string[];
+  }[];
+  workspacesInvalidos: number;
   env: {
     sitioId: string;
     estado: 'reescrito' | 'sin_marcar' | 'error';

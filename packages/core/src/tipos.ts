@@ -390,6 +390,91 @@ export const PASIVOS_FTP_POR_DEFECTO: readonly [number, number] = [30000, 30100]
 /** Rango por defecto anterior (hasta la Etapa B): se migra al leer el config. */
 export const PASIVOS_FTP_VIEJOS: readonly [number, number] = [50000, 50100];
 
+/* ───────────── Workspaces de arranque (D28) ───────────── */
+
+/** Servicios sueltos que un workspace puede encender (los de datos con una sola versión activa). */
+export const SERVICIOS_WORKSPACE = [
+  'nginx',
+  'php',
+  'mailpit',
+  'smtp4dev',
+  'inbucket',
+  'papercut',
+  'ollama',
+] as const;
+export type ServicioWorkspace = (typeof SERVICIOS_WORKSPACE)[number];
+
+export const ID_WORKSPACE = /^[a-z0-9][a-z0-9_-]{0,39}$/;
+const ID_SITIO_WS = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/;
+const ID_PROCESO_WS = /^[A-Za-z0-9][A-Za-z0-9_]{0,59}$/;
+const ID_INSTANCIA_WS = new RegExp(
+  `^(mysql|mariadb|postgresql|redis|mongodb|mailpit|ollama)@([0-9a-z][0-9a-z.]{0,15})$`,
+);
+/** Máximo de elementos por workspace y de workspaces en total. */
+export const MAX_ELEMENTOS_WORKSPACE = 40;
+export const MAX_WORKSPACES = 200;
+
+/**
+ * Un elemento de un workspace: solo **referencias** (a una instancia, a un servicio, a un proceso
+ * de un proyecto). Nunca lleva comandos, rutas ni variables: así un workspace puede viajar en un
+ * perfil sin traer nada ejecutable. Un campo de más lo invalida.
+ */
+export const ElementoWorkspaceSchema = z.discriminatedUnion('tipo', [
+  z
+    .object({
+      tipo: z.literal('instancia'),
+      id: z.string().refine((v) => {
+        const m = ID_INSTANCIA_WS.exec(v);
+        return m !== null && !m[2]!.includes('..');
+      }),
+    })
+    .strict(),
+  z.object({ tipo: z.literal('servicio'), id: z.enum(SERVICIOS_WORKSPACE) }).strict(),
+  z
+    .object({
+      tipo: z.literal('proceso'),
+      sitioId: z.string().regex(ID_SITIO_WS),
+      procesoId: z.string().regex(ID_PROCESO_WS),
+    })
+    .strict(),
+]);
+export type ElementoWorkspace = z.infer<typeof ElementoWorkspaceSchema>;
+
+export const WorkspaceSchema = z
+  .object({
+    id: z.string().regex(ID_WORKSPACE),
+    nombre: z
+      .string()
+      .trim()
+      .min(1)
+      .max(60)
+      // eslint-disable-next-line no-control-regex
+      .refine((n) => !/[\x00-\x1f\x7f]/.test(n)),
+    elementos: z.array(ElementoWorkspaceSchema).max(MAX_ELEMENTOS_WORKSPACE),
+  })
+  .strict();
+export type Workspace = z.infer<typeof WorkspaceSchema>;
+
+/**
+ * Lista de workspaces del config: uno mal formado o repetido se descarta solo, sin mandar el
+ * config entero a `corrupto`.
+ */
+export const ListaWorkspacesSchema = z
+  .array(z.unknown())
+  .transform((lista): Workspace[] => {
+    const vistos = new Set<string>();
+    const res: Workspace[] = [];
+    for (const x of lista.slice(0, MAX_WORKSPACES)) {
+      const w = WorkspaceSchema.safeParse(x);
+      if (!w.success || vistos.has(w.data.id)) continue;
+      vistos.add(w.data.id);
+      res.push(w.data);
+    }
+    return res;
+  })
+  .default([])
+  .catch([]);
+
 export const ConfigSchema = z.object({
   version: z.literal(1).default(1),
   sitios: z.array(SitioSchema).default([]),
@@ -553,6 +638,8 @@ export const ConfigSchema = z.object({
    * aquí: viven cifradas en etc/secretos/ y solo las lee el proceso principal.
    */
   ia: ConfigIaSchema,
+  /** Workspaces de arranque (D28): conjuntos con nombre de instancias, servicios y procesos. */
+  workspaces: ListaWorkspacesSchema,
   /** Preferencias de la interfaz (tema, idioma, acento, asistente de primer uso). */
   ui: PreferenciasUiSchema.catch(() => PreferenciasUiSchema.parse({})),
 });
