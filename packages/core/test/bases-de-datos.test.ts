@@ -187,7 +187,8 @@ describe('mysql, mariadb y postgresql', () => {
     await expect(b.borrar('mysql', 'tienda', 'otra')).rejects.toThrow(/escriba su nombre/);
     expect(sql).toEqual([]);
     await b.borrar('mysql', 'tienda', 'tienda');
-    expect(sql.at(-1)!.sql).toBe('DROP DATABASE `tienda`');
+    expect(sql.at(-2)!.sql).toBe('DROP DATABASE `tienda`');
+    expect(sql.at(-1)!.sql).toMatch(/^DROP USER IF EXISTS/);
     await b.borrar('postgresql', 'tienda', 'tienda');
     expect(sql.at(-1)!.sql).toBe('DROP DATABASE "tienda"');
   });

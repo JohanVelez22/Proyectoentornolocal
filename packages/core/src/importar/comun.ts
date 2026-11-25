@@ -131,6 +131,8 @@ export function esRutaProtegida(ruta: string): boolean {
 
 /** Ruta real (sin enlaces ni nombres cortos 8.3); si no existe, la ruta resuelta. */
 export async function realOResuelta(ruta: string): Promise<string> {
+  // Una ruta de red (UNC) ni se consulta: realpath tocaría el servidor remoto.
+  if (!esRutaLocalAbsoluta(ruta)) return path.resolve(ruta);
   try {
     return await realpath(path.resolve(ruta));
   } catch {

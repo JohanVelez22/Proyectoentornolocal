@@ -353,11 +353,18 @@ export class ClienteMysql {
     noSistema(base, 'crear');
     const usuario = nombreDuenoMysql(base);
     const escapado = '`' + base.replace(/_/g, '\\_') + '`';
+    // Si la cuenta ya existía (de otra importación, o creada a mano con ese nombre), también se
+    // bloquea: CREATE USER IF NOT EXISTS no cambia una cuenta existente.
     try {
       await this.filas("CREATE USER IF NOT EXISTS ?@'localhost' ACCOUNT LOCK", [usuario]);
+      await this.filas("ALTER USER ?@'localhost' ACCOUNT LOCK", [usuario]);
     } catch {
       // Servidores sin ACCOUNT LOCK: una clave al azar que nadie conoce.
       await this.filas("CREATE USER IF NOT EXISTS ?@'localhost' IDENTIFIED BY ?", [
+        usuario,
+        randomBytes(24).toString('hex'),
+      ]);
+      await this.filas("ALTER USER ?@'localhost' IDENTIFIED BY ?", [
         usuario,
         randomBytes(24).toString('hex'),
       ]);
@@ -432,6 +439,14 @@ export class ClienteMysql {
     } catch (e) {
       throw traducir(e, `borrar la base ${nombre}`);
     }
+  }
+
+  /** Borra la cuenta bloqueada `wolf_dueno_*` de una base que ya no existe (si la había). */
+  async borrarDuenoObjetos(base: string): Promise<void> {
+    id(base);
+    await this.filas("DROP USER IF EXISTS ?@'localhost'", [nombreDuenoMysql(base)]).catch(
+      () => undefined,
+    );
   }
 
   /** Versión del servidor (p. ej. "8.4.3" o "11.4.4-MariaDB"); es una consulta de solo lectura. */

@@ -369,6 +369,10 @@ export class BasesDeDatos {
       return;
     }
     if (motor === 'postgresql') return this.conPostgres((c) => c.borrarBase(nombre), objetivo);
-    return this.conMysql(objetivo, (c) => c.borrarBase(nombre));
+    return this.conMysql(objetivo, async (c) => {
+      await c.borrarBase(nombre);
+      // La cuenta bloqueada que figuraba como DEFINER de sus objetos (si la importó WolfCore Dev).
+      await c.borrarDuenoObjetos(nombre);
+    });
   }
 }

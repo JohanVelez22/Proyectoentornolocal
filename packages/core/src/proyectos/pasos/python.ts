@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../../errores';
 import { existe } from '../archivos';
@@ -14,8 +15,11 @@ import { herramientas, lanzar, pythonExe, pythonVenv, type DepsPasos } from './c
  */
 const rutaRegistro = (d: Pick<DepsPasos, 'rutas'>): string =>
   path.join(d.rutas.base, 'etc', 'venvs-propios.json');
-const claveVenv = (carpeta: string): string =>
-  path.resolve(carpeta).replace(/\\/g, '/').toLowerCase();
+/** Windows no distingue mayúsculas en las rutas; macOS y Linux sí (solo ahí se compara tal cual). */
+const claveVenv = (carpeta: string): string => {
+  const r = path.resolve(carpeta).replace(/\\/g, '/');
+  return path.sep === '\\' ? r.toLowerCase() : r;
+};
 
 async function leerRegistro(d: Pick<DepsPasos, 'rutas'>): Promise<string[]> {
   try {
@@ -30,14 +34,25 @@ export async function esVenvPropio(d: Pick<DepsPasos, 'rutas'>, carpeta: string)
   return (await leerRegistro(d)).includes(claveVenv(carpeta));
 }
 
-export async function registrarVenvPropio(
-  d: Pick<DepsPasos, 'rutas'>,
-  carpeta: string,
-): Promise<void> {
-  const lista = new Set(await leerRegistro(d));
-  lista.add(claveVenv(carpeta));
-  await mkdir(path.dirname(rutaRegistro(d)), { recursive: true });
-  await writeFile(rutaRegistro(d), JSON.stringify([...lista].sort(), null, 2), 'utf8');
+/** Escrituras del registro en cola (dos pasos a la vez no se pisan) y atómicas (tmp + rename). */
+const colas = new Map<string, Promise<unknown>>();
+
+export function registrarVenvPropio(d: Pick<DepsPasos, 'rutas'>, carpeta: string): Promise<void> {
+  const archivo = rutaRegistro(d);
+  const turno = (colas.get(archivo) ?? Promise.resolve()).then(async () => {
+    const lista = new Set(await leerRegistro(d));
+    lista.add(claveVenv(carpeta));
+    await mkdir(path.dirname(archivo), { recursive: true });
+    const tmp = `${archivo}.${process.pid}.${randomUUID()}.tmp`;
+    await writeFile(tmp, JSON.stringify([...lista].sort(), null, 2), 'utf8');
+    await rename(tmp, archivo);
+  });
+  // Un fallo no rompe la cola de los siguientes.
+  colas.set(
+    archivo,
+    turno.catch(() => undefined),
+  );
+  return turno;
 }
 
 const venvAjeno = (): ErrorWolf =>
