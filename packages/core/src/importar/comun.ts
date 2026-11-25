@@ -125,6 +125,15 @@ export function esRutaProtegida(ruta: string): boolean {
   return !n.slice(1).includes('/') && !/^[a-z]:\//.test(n);
 }
 
+/** Ruta real (sin enlaces ni nombres cortos 8.3); si no existe, la ruta resuelta. */
+export async function realOResuelta(ruta: string): Promise<string> {
+  try {
+    return await realpath(path.resolve(ruta));
+  } catch {
+    return path.resolve(ruta);
+  }
+}
+
 /**
  * Valida una carpeta que sale de una configuración ajena y devuelve su ruta real, o anota por qué
  * se descarta. Debe ser una ruta local absoluta, una carpeta que existe, y estar dentro de la
@@ -140,22 +149,22 @@ export async function validarCarpetaAjena(
     anotar(ctx, 'importar.ruta_fuera', origen);
     return null;
   }
-  // Antes de tocar el disco: una carpeta protegida fuera de la instalación ni se consulta.
-  if (esRutaProtegida(bruta) && !(path.isAbsolute(bruta) && estaDentro(ctx.raiz, bruta))) {
-    anotar(ctx, 'importar.ruta_fuera', origen);
-    return null;
-  }
   let real: string;
   try {
     real = await realpath(path.resolve(bruta));
     if (!(await stat(real)).isDirectory()) throw new Error('no es una carpeta');
   } catch {
-    anotar(ctx, 'importar.carpeta_invalida', origen);
+    // Una carpeta que no se puede abrir: si además es del sistema, se dice que sale de la
+    // instalación (no que "ya no existe").
+    const enLaInstalacion = path.isAbsolute(bruta) && estaDentro(ctx.raiz, bruta);
+    const sale = esRutaProtegida(bruta) && !enLaInstalacion;
+    anotar(ctx, sale ? 'importar.ruta_fuera' : 'importar.carpeta_invalida', origen);
     return null;
   }
   const raizReal = await realpath(ctx.raiz).catch(() => ctx.raiz);
   const dentro = estaDentro(raizReal, real);
-  const prohibida = ctx.prohibidas.some((p) => estaDentro(real, p) || estaDentro(p, real));
+  const prohibidasReales = await Promise.all(ctx.prohibidas.map(realOResuelta));
+  const prohibida = prohibidasReales.some((p) => estaDentro(real, p) || estaDentro(p, real));
   if (prohibida || (!dentro && esRutaProtegida(real))) {
     anotar(ctx, 'importar.ruta_fuera', origen);
     return null;
@@ -329,7 +338,10 @@ export async function raizDelProyecto(
 ): Promise<string> {
   if (!CARPETAS_PUBLICAS.has(path.basename(docroot).toLowerCase())) return docroot;
   const padre = path.dirname(docroot);
-  if (carpetasDeSitios.some((c) => path.resolve(c) === path.resolve(padre))) return docroot;
+  const padreReal = await realOResuelta(padre);
+  for (const c of carpetasDeSitios) {
+    if ((await realOResuelta(c)) === padreReal) return docroot;
+  }
   const pistas = ['artisan', 'spark', 'composer.json', 'package.json', 'application', 'app'];
   let hay = false;
   for (const p of pistas) if (await existe(path.join(padre, p))) hay = true;

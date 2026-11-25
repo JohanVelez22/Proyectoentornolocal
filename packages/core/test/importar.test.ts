@@ -1,4 +1,5 @@
 import { mkdir, open, readFile, rename, symlink, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ErrorWolf } from '../src/errores';
@@ -68,6 +69,33 @@ describe('detectarImportables: Laragon', () => {
     const antes = await hashArbol(raiz);
     await detectarConProblemas(raiz, 'laragon');
     expect(await hashArbol(raiz)).toBe(antes);
+  });
+});
+
+describe.skipIf(process.platform !== 'win32')('rutas con nombres cortos (8.3) de Windows', () => {
+  it('una raíz dada con nombre corto detecta lo mismo que con el largo (como el %TEMP% del CI)', async () => {
+    const largo = await copiarFixture(
+      'laragon',
+      path.join(await carpetaTemporal('pel-nombre-bastante-largo-'), 'laragon'),
+    );
+    let corto = largo;
+    try {
+      corto = execFileSync(
+        'powershell',
+        [
+          '-NoProfile',
+          '-Command',
+          `(New-Object -ComObject Scripting.FileSystemObject).GetFolder('${largo}').ShortPath`,
+        ],
+        { encoding: 'utf8', windowsHide: true },
+      ).trim();
+    } catch {
+      return;
+    }
+    if (corto.toLowerCase() === largo.toLowerCase()) return; // el volumen no crea nombres cortos
+    const l = await detectarImportables(corto, 'laragon');
+    expect(porNombre(l, 'tienda').dominio).toBe('tienda.test');
+    expect(l.map((c) => c.nombre).sort()).toEqual(['blog', 'solo', 'tienda']);
   });
 });
 

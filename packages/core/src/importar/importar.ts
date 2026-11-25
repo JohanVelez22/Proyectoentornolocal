@@ -15,7 +15,7 @@ import {
   type Deteccion,
 } from '../proyectos/detectar';
 import { SitioSchema, TIPOS_CON_PHP, type Sitio, type TipoSitio } from '../tipos';
-import { estaDentro, type ProblemaImportar } from './comun';
+import { estaDentro, realOResuelta, type ProblemaImportar } from './comun';
 import { detectarConProblemas, type CandidatoImportar, type ProgramaAjeno } from './detectar';
 
 /** Un sitio de la vista previa: lo que se detectó y lo que pasaría al importarlo. */
@@ -159,9 +159,9 @@ export class Importador {
     const vistos = new Set<string>();
     for (const inst of await this.d.instalaciones()) {
       // Una carpeta de la propia instalación de WolfCore Dev nunca se detecta como programa ajeno.
-      if (this.d.prohibidas.some((p) => estaDentro(p, inst.raiz) || estaDentro(inst.raiz, p))) {
-        continue;
-      }
+      const raizReal = await realOResuelta(inst.raiz);
+      const prohibidas = await Promise.all(this.d.prohibidas.map(realOResuelta));
+      if (prohibidas.some((p) => estaDentro(p, raizReal) || estaDentro(raizReal, p))) continue;
       const r = await detectarConProblemas(inst.raiz, inst.programa, this.d.prohibidas);
       programas.add(inst.programa);
       problemas.push(...r.problemas);
