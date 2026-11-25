@@ -182,6 +182,8 @@ export class Tuneles {
 
   /** Recupera los túneles que siguen vivos tras reiniciar la app (llamar tras supervisor.readoptar). */
   async restaurar(): Promise<void> {
+    // Lo que una caída dejó a medias (inicio temporal del login, `crear-*.json`).
+    await this.cloudflareNombre?.barrerTemporales();
     const registros = this.leerRegistros();
     const vivos: RegistroTunel[] = [];
     const muertos: RegistroTunel[] = [];
@@ -690,7 +692,9 @@ export class Tuneles {
         'Cloudflare con nombre no está disponible.',
         { proveedor: 'cloudflare-nombre' },
       );
-    for (const s of await this.sitiosDelTunel(nombre)) await this.cerrar(s.id);
-    await cf.recrearTunel(nombre);
+    const usan = await this.sitiosDelTunel(nombre);
+    for (const s of usan) await this.cerrar(s.id);
+    const dominios = usan.flatMap((s) => (s.tunel?.dominio ? [s.tunel.dominio] : []));
+    await cf.recrearTunel(nombre, dominios);
   }
 }

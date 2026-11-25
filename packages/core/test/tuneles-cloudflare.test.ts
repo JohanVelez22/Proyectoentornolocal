@@ -68,6 +68,7 @@ let lanzadas: Array<{
 }>;
 let esperarAbort: boolean;
 let salidaRoute: string;
+let falloDelete: string | null;
 let fallaGuardar: boolean;
 let autorizaciones: Array<string | null>;
 let guardados: Array<{ sitioId: string; tunel: unknown }>;
@@ -115,6 +116,9 @@ const ejecutor: Ejecutor = async (cmd, args, opts) => {
     ...(opts?.quitarEntorno ? { quitar: opts.quitarEntorno } : {}),
   });
   if (falloCloudflared !== null) return { codigo: 1, stdout: '', stderr: falloCloudflared };
+  if (falloDelete !== null && args.includes('delete')) {
+    return { codigo: 1, stdout: '', stderr: falloDelete };
+  }
   const cert = args[args.indexOf('--origincert') + 1]!;
   if (args.includes('login')) {
     mkdirSync(path.dirname(cert), { recursive: true });
@@ -232,6 +236,7 @@ beforeEach(() => {
   lanzadas = [];
   esperarAbort = false;
   salidaRoute = '';
+  falloDelete = null;
   fallaGuardar = false;
   autorizaciones = [];
   guardados = [];
@@ -478,7 +483,6 @@ describe('Cloudflare con nombre: cuenta, túnel y dominio', () => {
     expect(l.args).toEqual(['tunnel', 'login']);
     expect(l.env).toEqual({
       HOME: rutas.cloudflaredLogin(),
-      USERPROFILE: rutas.cloudflaredLogin(),
     });
     expect(rutas.cloudflaredLogin().startsWith(base)).toBe(true);
     expect(l.quitar).toEqual(['TUNNEL_']);
@@ -668,11 +672,73 @@ describe('Cloudflare con nombre: cuenta, túnel y dominio', () => {
     expect(guardados).toEqual([{ sitioId: 'wolf', tunel: null }]);
   });
 
+  it('recrear vuelve a enrutar con --overwrite-dns el dominio de cada sitio del túnel', async () => {
+    const t = crear();
+    await t.recrearTunelNombre('wolf-dev', { confirmado: true });
+    const verbos = llamadas.map((l) =>
+      l.args.find((a) => ['delete', 'create', 'route'].includes(a)),
+    );
+    expect(verbos).toEqual(['delete', 'create', 'route']);
+    expect(llamadas.at(-1)!.args.slice(-3)).toEqual([
+      '--overwrite-dns',
+      'wolf-dev',
+      'demo.midominio.com',
+    ]);
+  });
+
+  it('si el túnel ya no existe en Cloudflare, olvidar borra igualmente la credencial', async () => {
+    falloDelete = 'ERR Tunnel wolf-dev not found';
+    await crear().olvidarTunelNombre('wolf-dev', { confirmado: true, borrarEnCloudflare: true });
+    expect(almacenSecretos.size).toBe(0);
+    expect(guardados).toEqual([{ sitioId: 'wolf', tunel: null }]);
+  });
+
+  it('olvidar solo aquí no llama a cloudflared y borra la credencial', async () => {
+    await crear().olvidarTunelNombre('wolf-dev', { confirmado: true, borrarEnCloudflare: false });
+    expect(llamadas).toEqual([]);
+    expect(almacenSecretos.size).toBe(0);
+  });
+
+  it('con conexiones vivas (delete pide -f) lo dice con su código y no borra nada', async () => {
+    falloDelete = 'ERR cannot delete tunnel: it has active connections, use -f to force';
+    await expect(
+      crear().olvidarTunelNombre('wolf-dev', { confirmado: true, borrarEnCloudflare: true }),
+    ).rejects.toMatchObject({
+      codigo: 'tuneles.cloudflare_conexiones_activas',
+      datos: { nombre: 'wolf-dev' },
+    });
+    expect(almacenSecretos.size).toBe(1);
+    expect(guardados).toEqual([]);
+  });
+
+  it('otro fallo de delete se propaga y no borra la credencial', async () => {
+    falloDelete = 'ERR timeout';
+    await expect(
+      crear().olvidarTunelNombre('wolf-dev', { confirmado: true, borrarEnCloudflare: true }),
+    ).rejects.toMatchObject({ codigo: 'tuneles.cloudflare_fallo' });
+    expect(almacenSecretos.size).toBe(1);
+  });
+
+  it('al arrancar barre el inicio temporal del login y los crear-*.json sueltos', async () => {
+    mkdirSync(path.join(rutas.cloudflaredLogin(), '.cloudflared'), { recursive: true });
+    writeFileSync(path.join(rutas.cloudflaredLogin(), '.cloudflared', 'cert.pem'), 'x');
+    mkdirSync(rutas.cloudflaredRun(), { recursive: true });
+    writeFileSync(path.join(rutas.cloudflaredRun(), 'crear-abc123.json'), CREDENCIAL);
+    writeFileSync(path.join(rutas.cloudflaredRun(), 'otro.txt'), 'queda');
+    await crear().restaurar();
+    expect(existsSync(rutas.cloudflaredLogin())).toBe(false);
+    expect(readdirSync(rutas.cloudflaredRun())).toEqual(['otro.txt']);
+    // No toca el certificado de la cuenta.
+    expect(existsSync(path.join(rutas.cloudflaredEtc(), 'cert.pem'))).toBe(true);
+  });
+
   it('recrear borra el túnel en Cloudflare y crea uno nuevo con credencial nueva', async () => {
     const t = crear();
     await t.recrearTunelNombre('wolf-dev', { confirmado: true });
-    const verbos = llamadas.map((l) => l.args.find((a) => ['delete', 'create'].includes(a)));
-    expect(verbos).toEqual(['delete', 'create']);
+    const verbos = llamadas.map((l) =>
+      l.args.find((a) => ['delete', 'create', 'route'].includes(a)),
+    );
+    expect(verbos).toEqual(['delete', 'create', 'route']);
     expect(almacenSecretos.get('tunel:cloudflare-nombre:wolf-dev')).toContain(CENTINELA);
   });
 

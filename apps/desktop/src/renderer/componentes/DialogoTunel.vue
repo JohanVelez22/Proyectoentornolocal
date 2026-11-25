@@ -39,21 +39,32 @@ const dominioOk = computed(() => dominioPublicoValido(dominio.value));
 const dialog = useDialog();
 
 /** Olvidar o recrear: siempre se confirma antes (el núcleo lo exige también). */
-function confirmarTunel(accion: 'olvidar' | 'recrear'): void {
+function confirmarTunel(accion: 'olvidar' | 'recrear' | 'olvidar-aqui'): void {
   const n = props.sitio.tunel?.nombre;
   if (!n) return;
   dialog.warning({
-    title: accion === 'olvidar' ? t.olvidarTitulo : t.recrearTitulo,
-    content: accion === 'olvidar' ? t.olvidarTexto(n) : t.recrearTexto(n),
-    positiveText: accion === 'olvidar' ? t.olvidar : t.recrear,
+    title:
+      accion === 'recrear'
+        ? t.recrearTitulo
+        : accion === 'olvidar'
+          ? t.olvidarTitulo
+          : t.olvidarAquiTitulo,
+    content:
+      accion === 'recrear'
+        ? t.recrearTexto(n)
+        : accion === 'olvidar'
+          ? t.olvidarTexto(n)
+          : t.olvidarAquiTexto(n),
+    positiveText:
+      accion === 'recrear' ? t.recrear : accion === 'olvidar' ? t.olvidar : t.olvidarAqui,
     negativeText: textos.acciones.cancelar,
     autoFocus: false,
     onPositiveClick: () => {
       void ejecutar(
         `tunel-${accion}`,
         async () => {
-          if (accion === 'olvidar') await api().tuneles.olvidarCloudflare(n, true);
-          else await api().tuneles.recrearCloudflare(n, true);
+          if (accion === 'recrear') await api().tuneles.recrearCloudflare(n, true);
+          else await api().tuneles.olvidarCloudflare(n, true, accion === 'olvidar');
           return true;
         },
         { tituloError: t.opciones },
@@ -249,6 +260,13 @@ async function usarRapido(): Promise<void> {
               @click="confirmarTunel('olvidar')"
             >
               {{ t.olvidar }}
+            </NButton>
+            <NButton
+              secondary
+              :loading="ocupado('tunel-olvidar-aqui')"
+              @click="confirmarTunel('olvidar-aqui')"
+            >
+              {{ t.olvidarAqui }}
             </NButton>
           </template>
         </div>

@@ -78,6 +78,7 @@ export const PARAMETROS_ERROR = {
   'tuneles.cloudflare_fallo': ['detalle'],
   'tuneles.cloudflare_conexion_en_curso': [],
   'tuneles.cloudflare_dominio_distinto': ['registrado', 'dominio'],
+  'tuneles.cloudflare_conexiones_activas': ['nombre'],
   'tuneles.nombre_en_uso': ['nombre'],
   'tuneles.dominio_en_uso': ['dominio'],
   'tuneles.confirmacion_olvidar': ['nombre'],

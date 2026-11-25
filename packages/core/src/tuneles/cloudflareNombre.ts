@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import { enmascararSecretos } from '../patronesSecretos';
@@ -40,6 +40,10 @@ interface Credencial {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BASE64 = /^[A-Za-z0-9+/_=-]{8,200}$/;
 const CUENTA = /^[A-Za-z0-9]{8,64}$/;
+/** `tunnel delete` de un túnel que ya no existe en Cloudflare. */
+const NO_EXISTE = /not\s+found|could not be found|no such tunnel|unable to find|does not exist/i;
+/** `tunnel delete` rechazado por conexiones vivas (pide `-f`). */
+const CONEXIONES_ACTIVAS = /active connections?|still connected|\s-f(?![\w-])|--force/i;
 const LISTO = /Registered tunnel connection/i;
 
 export const idSecretoTunelNombre = (nombre: string): string => `tunel:cloudflare-nombre:${nombre}`;
@@ -164,8 +168,8 @@ ${r.stderr}`;
 
   /**
    * `cloudflared tunnel login`. El `login` real ignora `--origincert` y siempre escribe en
-   * `<inicio>/.cloudflared/cert.pem`, así que se lanza con un inicio temporal propio (`HOME` y
-   * `USERPROFILE` en `run/cloudflared-login`); el certificado se mueve a `etc/cloudflared/`, se
+   * `<inicio>/.cloudflared/cert.pem`, así que se lanza con un inicio temporal propio (`HOME`
+   * en `run/cloudflared-login`; `HOME` basta también en Windows, donde manda sobre `USERPROFILE`); el certificado se mueve a `etc/cloudflared/`, se
    * restringe al usuario y la carpeta temporal se borra. Nunca se lee ni se toca el `~/.cloudflared`
    * real. La URL de autorización se muestra en cuanto aparece y el usuario puede cancelar.
    */
@@ -194,7 +198,7 @@ ${r.stderr}`;
       let codigo: number;
       try {
         ({ codigo } = await lanzar(exe, ['tunnel', 'login'], {
-          env: { HOME: inicio, USERPROFILE: inicio },
+          env: { HOME: inicio },
           quitarEntorno: ['TUNNEL_'],
           senal: control.signal,
           alLinea: (l) => {
@@ -280,15 +284,58 @@ ${r.stderr}`;
     if (!nombreTunelValido(nombre)) throw this.datosInvalidos();
     if (borrarEnCloudflare) {
       if (!this.tieneCuenta()) throw this.sinCuenta();
-      await this.cloudflared(['delete', nombre], 60_000);
+      try {
+        await this.cloudflared(['delete', nombre], 60_000);
+      } catch (e) {
+        const detalle = String((e as { datos?: { detalle?: unknown } }).datos?.detalle ?? '');
+        if (NO_EXISTE.test(detalle)) {
+          // Ya no está en Cloudflare: lo único que queda es la credencial local.
+        } else if (CONEXIONES_ACTIVAS.test(detalle)) {
+          throw new ErrorWolf(
+            'tuneles.cloudflare_conexiones_activas',
+            `El túnel ${nombre} tiene conexiones activas (cloudflared pide -f para borrarlo).`,
+            { nombre },
+          );
+        } else {
+          throw e;
+        }
+      }
     }
     await this.d.secretos()?.borrar(idSecretoTunelNombre(nombre));
   }
 
-  /** Recrear: borra el túnel en Cloudflare y su credencial, y crea uno nuevo con el mismo nombre. */
-  async recrearTunel(nombre: string): Promise<void> {
+  /**
+   * Recrear: borra el túnel en Cloudflare y su credencial, crea uno nuevo con el mismo nombre y
+   * vuelve a apuntar a él los dominios públicos (los CNAME apuntaban al UUID anterior).
+   */
+  async recrearTunel(nombre: string, dominios: readonly string[] = []): Promise<void> {
     await this.olvidarTunel(nombre, true);
     await this.crearTunel(nombre);
+    for (const d of dominios) await this.enrutar(nombre, d, { sobrescribir: true });
+  }
+
+  /**
+   * Al arrancar: borra lo que una caída dejó a medias (el inicio temporal del `login` y los
+   * `crear-*.json` de `tunnel create`).
+   */
+  async barrerTemporales(): Promise<void> {
+    if (this.conexion) return;
+    await rm(this.d.rutas.cloudflaredLogin(), { recursive: true, force: true }).catch(
+      () => undefined,
+    );
+    let nombres: string[] = [];
+    try {
+      nombres = await readdir(this.d.rutas.cloudflaredRun());
+    } catch {
+      return;
+    }
+    for (const n of nombres) {
+      if (/^crear-[0-9a-f]+\.json$/.test(n)) {
+        await rm(path.join(this.d.rutas.cloudflaredRun(), n), { force: true }).catch(
+          () => undefined,
+        );
+      }
+    }
   }
 
   /** `run/cloudflared/`: temporal y restringida al usuario antes de escribir nada dentro. */
@@ -304,10 +351,17 @@ ${r.stderr}`;
    * (el dominio no pertenece a la zona autorizada, p. ej. `demo.midominio.com.otra.com`), falla
    * con el nombre registrado: el sitio no se deja apuntando a un dominio que no resuelve.
    */
-  async enrutar(nombre: string, dominio: string): Promise<void> {
+  async enrutar(
+    nombre: string,
+    dominio: string,
+    o: { sobrescribir?: boolean } = {},
+  ): Promise<void> {
     if (!nombreTunelValido(nombre) || !dominioPublicoValido(dominio)) throw this.datosInvalidos();
     if (!this.tieneCuenta()) throw this.sinCuenta();
-    const salida = await this.cloudflared(['route', 'dns', nombre, dominio], 60_000);
+    const salida = await this.cloudflared(
+      ['route', 'dns', ...(o.sobrescribir ? ['--overwrite-dns'] : []), nombre, dominio],
+      60_000,
+    );
     const registrado = /Added CNAME\s+(\S+)\s+which will route/i
       .exec(salida)?.[1]
       ?.replace(/\.$/, '');

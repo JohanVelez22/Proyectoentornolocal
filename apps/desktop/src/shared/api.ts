@@ -824,7 +824,12 @@ export interface ApiEntorno {
     cancelarConexionCloudflare(): Promise<void>;
     desconectarCloudflare(): Promise<void>;
     /** Borra la credencial guardada y el túnel en Cloudflare (exige `confirmado`). */
-    olvidarCloudflare(nombre: string, confirmado: boolean): Promise<void>;
+    olvidarCloudflare(
+      nombre: string,
+      confirmado: boolean,
+      /** false = olvidar solo aquí (la credencial), sin tocar Cloudflare. */
+      borrarEnCloudflare?: boolean,
+    ): Promise<void>;
     /** Borra y crea de nuevo el túnel con nombre (exige `confirmado`). */
     recrearCloudflare(nombre: string, confirmado: boolean): Promise<void>;
     /** Crea el túnel, enruta el dominio y lo deja elegido para el sitio (no lo abre). */

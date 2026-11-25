@@ -178,6 +178,8 @@ export const en: Textos = {
       'tuneles.cloudflare_conexion_en_curso': 'A Cloudflare connection is already in progress.',
       'tuneles.cloudflare_dominio_distinto':
         'Cloudflare registered {registrado} instead of {dominio}: the domain is not in the zone you authorized. Delete that record in the Cloudflare dashboard.',
+      'tuneles.cloudflare_conexiones_activas':
+        'The tunnel {nombre} has active connections (cloudflared requires -f to delete it). Close it on every computer where it is open and try again, or use “Forget only here”.',
       'tuneles.nombre_en_uso': 'The tunnel {nombre} is already used by another site.',
       'tuneles.dominio_en_uso': 'The domain {dominio} is already used by another site.',
       'tuneles.confirmacion_olvidar':
@@ -1347,6 +1349,10 @@ export const en: Textos = {
     olvidarTitulo: 'Forget the tunnel',
     olvidarTexto: (n: string) =>
       `Tunnel “${n}” will be deleted in Cloudflare along with its saved credential. Sites using it go back to the quick tunnel.`,
+    olvidarAqui: 'Forget only here',
+    olvidarAquiTitulo: 'Forget the tunnel on this computer only',
+    olvidarAquiTexto: (n: string) =>
+      `The saved credential of tunnel “${n}” will be deleted on this computer; the tunnel will keep existing in Cloudflare. Sites using it go back to the quick tunnel.`,
     desconectar: 'Disconnect',
     nombreTunel: 'Tunnel name',
     nombreTunelAyuda: 'Lowercase letters, numbers and hyphens.',

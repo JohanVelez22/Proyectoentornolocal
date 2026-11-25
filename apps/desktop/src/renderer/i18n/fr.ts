@@ -187,6 +187,8 @@ export const fr: Textos = {
       'tuneles.cloudflare_conexion_en_curso': 'Une connexion à Cloudflare est déjà en cours.',
       'tuneles.cloudflare_dominio_distinto':
         'Cloudflare a enregistré {registrado} au lieu de {dominio} : le domaine n’appartient pas à la zone autorisée. Supprimez cet enregistrement dans le tableau de bord Cloudflare.',
+      'tuneles.cloudflare_conexiones_activas':
+        'Le tunnel {nombre} a des connexions actives (cloudflared exige -f pour le supprimer). Fermez-le sur tous les ordinateurs où il est ouvert et réessayez, ou utilisez « Oublier seulement ici ».',
       'tuneles.nombre_en_uso': 'Le tunnel {nombre} est déjà utilisé par un autre site.',
       'tuneles.dominio_en_uso': 'Le domaine {dominio} est déjà utilisé par un autre site.',
       'tuneles.confirmacion_olvidar': 'Oublier ou recréer le tunnel {nombre} doit être confirmé.',
@@ -1399,6 +1401,10 @@ export const fr: Textos = {
     olvidarTitulo: 'Oublier le tunnel',
     olvidarTexto: (n: string) =>
       `Le tunnel « ${n} » sera supprimé chez Cloudflare avec son identifiant enregistré. Les sites qui l’utilisent reviennent au tunnel rapide.`,
+    olvidarAqui: 'Oublier seulement ici',
+    olvidarAquiTitulo: 'Oublier le tunnel sur cet ordinateur uniquement',
+    olvidarAquiTexto: (n: string) =>
+      `L’identifiant enregistré du tunnel « ${n} » sera supprimé sur cet ordinateur ; le tunnel continuera d’exister chez Cloudflare. Les sites qui l’utilisent reviennent au tunnel rapide.`,
     desconectar: 'Déconnecter',
     nombreTunel: 'Nom du tunnel',
     nombreTunelAyuda: 'Minuscules, chiffres et tirets.',

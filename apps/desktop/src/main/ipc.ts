@@ -1341,10 +1341,10 @@ const TABLA: Record<RutaIpc, Manejador> = {
   }),
   'tuneles.conectarCloudflare': (n) => cloudflareNombre(n).conectar(),
   // Olvidar y recrear exigen `confirmado` (el núcleo lo vuelve a comprobar).
-  'tuneles.olvidarCloudflare': (n, _s, nombre, confirmado) =>
+  'tuneles.olvidarCloudflare': (n, _s, nombre, confirmado, borrar) =>
     n.tuneles.olvidarTunelNombre(textoAcotado(nombre, 1, 63, 'nombre'), {
       confirmado: confirmado === true,
-      borrarEnCloudflare: true,
+      borrarEnCloudflare: borrar !== false,
     }),
   'tuneles.recrearCloudflare': (n, _s, nombre, confirmado) =>
     n.tuneles.recrearTunelNombre(textoAcotado(nombre, 1, 63, 'nombre'), {

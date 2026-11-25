@@ -3295,6 +3295,11 @@ describe('IPC de túneles (D23)', () => {
       confirmado: false,
       borrarEnCloudflare: true,
     });
+    await llamar('tuneles.olvidarCloudflare', 'wolf-dev', true, false);
+    expect(crudo.tuneles.olvidarTunelNombre).toHaveBeenLastCalledWith('wolf-dev', {
+      confirmado: true,
+      borrarEnCloudflare: false,
+    });
     await llamar('tuneles.recrearCloudflare', 'wolf-dev', true);
     expect(crudo.tuneles.recrearTunelNombre).toHaveBeenLastCalledWith('wolf-dev', {
       confirmado: true,

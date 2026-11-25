@@ -179,6 +179,8 @@ export const es = {
       'tuneles.cloudflare_conexion_en_curso': 'Ya hay una conexión con Cloudflare en curso.',
       'tuneles.cloudflare_dominio_distinto':
         'Cloudflare registró {registrado} en lugar de {dominio}: el dominio no pertenece a la zona que autorizó. Borre ese registro en el panel de Cloudflare.',
+      'tuneles.cloudflare_conexiones_activas':
+        'El túnel {nombre} tiene conexiones activas (cloudflared pide -f para borrarlo). Ciérrelo en todos los equipos donde esté abierto y vuelva a intentarlo, o use «Olvidar solo aquí».',
       'tuneles.nombre_en_uso': 'El túnel {nombre} ya lo usa otro sitio.',
       'tuneles.dominio_en_uso': 'El dominio {dominio} ya lo usa otro sitio.',
       'tuneles.confirmacion_olvidar': 'Olvidar o recrear el túnel {nombre} exige confirmarlo.',
@@ -1363,6 +1365,10 @@ export const es = {
     olvidarTitulo: 'Olvidar el túnel',
     olvidarTexto: (n: string) =>
       `Se borrará el túnel «${n}» en Cloudflare y su credencial guardada. Los sitios que lo usan vuelven al túnel rápido.`,
+    olvidarAqui: 'Olvidar solo aquí',
+    olvidarAquiTitulo: 'Olvidar el túnel solo en este equipo',
+    olvidarAquiTexto: (n: string) =>
+      `Se borrará la credencial guardada del túnel «${n}» en este equipo; el túnel seguirá existiendo en Cloudflare. Los sitios que lo usan vuelven al túnel rápido.`,
     desconectar: 'Desconectar',
     nombreTunel: 'Nombre del túnel',
     nombreTunelAyuda: 'Minúsculas, números y guiones.',
