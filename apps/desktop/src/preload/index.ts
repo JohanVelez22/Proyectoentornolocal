@@ -229,9 +229,9 @@ const api: ApiEntorno = {
     desbloquear: (id, o) => invocar('instancias.desbloquear', id, o),
   },
   tuneles: {
-    abrir: (id, confirmado) => invocar('tuneles.abrir', id, confirmado === true),
+    abrir: (id, confirmado, tunel) => invocar('tuneles.abrir', id, confirmado === true, tunel),
     cerrar: (id) => invocar('tuneles.cerrar', id),
-    renovar: (id, confirmado) => invocar('tuneles.renovar', id, confirmado === true),
+    renovar: (id, confirmado, tunel) => invocar('tuneles.renovar', id, confirmado === true, tunel),
     estados: () => invocar('tuneles.estados'),
     cuentaCloudflare: () => invocar('tuneles.cuentaCloudflare'),
     conectarCloudflare: () => invocar('tuneles.conectarCloudflare'),

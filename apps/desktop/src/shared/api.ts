@@ -325,6 +325,14 @@ export interface RefRespaldoDatos {
   sello: string;
 }
 
+/** Lo que se confirmó al publicar un túnel (el núcleo lo compara con el sitio al abrir). */
+export interface TunelConfirmado {
+  proveedor: 'cloudflare-rapido' | 'cloudflare-nombre' | 'ngrok' | 'expose' | 'tailscale';
+  nombre?: string;
+  dominio?: string;
+  modo?: 'serve' | 'funnel';
+}
+
 /** Lo único que la interfaz ve de una clave de IA: si hay una y sus 4 últimos caracteres. */
 export interface EstadoClaveIa {
   configurada: boolean;
@@ -811,10 +819,13 @@ export interface ApiEntorno {
     desinstalar(servicio: ServicioVersiones, version: string): Promise<void>;
   };
   tuneles: {
-    /** `confirmado`: el usuario confirmó publicar (exigido con datos reales). */
-    abrir(sitioId: string, confirmado?: boolean): Promise<EstadoTunel>;
+    /**
+     * `confirmado`: el usuario confirmó publicar. `tunel`: lo que se le mostró (proveedor, túnel,
+     * dominio y modo de Tailscale): si el sitio ya no lo usa, el núcleo no abre.
+     */
+    abrir(sitioId: string, confirmado?: boolean, tunel?: TunelConfirmado): Promise<EstadoTunel>;
     cerrar(sitioId: string): Promise<void>;
-    renovar(sitioId: string, confirmado?: boolean): Promise<EstadoTunel>;
+    renovar(sitioId: string, confirmado?: boolean, tunel?: TunelConfirmado): Promise<EstadoTunel>;
     estados(): Promise<EstadoTunel[]>;
     /** ¿Hay una cuenta de Cloudflare conectada para túneles con nombre? */
     cuentaCloudflare(): Promise<{ disponible: boolean; conectada: boolean }>;

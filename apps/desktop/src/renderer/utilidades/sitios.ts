@@ -6,6 +6,7 @@ import type {
   EstadoTunel,
   ResultadoAplicar,
   Sitio,
+  TunelConfirmado,
 } from '../../shared/api';
 import { textos } from '../i18n';
 
@@ -183,43 +184,72 @@ export function usaCloudflared(tunel: Sitio['tunel'] | undefined): boolean {
   );
 }
 
+/** Lo que el usuario ve al confirmar y lo que el núcleo compara al abrir (sin TOCTOU). */
+export function tunelConfirmadoDe(sitio: Pick<Sitio, 'tunel'>): TunelConfirmado {
+  const t = sitio.tunel;
+  const proveedor = t?.proveedor ?? 'cloudflare-rapido';
+  return {
+    proveedor,
+    ...(t?.nombre ? { nombre: t.nombre } : {}),
+    ...(t?.dominio ? { dominio: t.dominio } : {}),
+    ...(proveedor === 'tailscale' ? { modo: modoTailscaleDe(t) } : {}),
+  };
+}
+
 /**
  * Lo que se pregunta al publicar: siempre se dice el proveedor y hasta dónde llega el enlace
- * (Tailscale Serve solo a la tailnet; Funnel y los demás, a todo internet).
+ * (Tailscale Serve solo a la tailnet; Funnel y los demás, a todo internet). Con datos reales
+ * nombra el proveedor y el dominio público.
  */
 export function confirmacionDeTunel(sitio: Pick<Sitio, 'datosReales' | 'dominio' | 'tunel'>): {
   titulo: string;
   contenido: string;
+  boton: string;
 } {
   const t = textos.tunel;
   const reales = confirmacionTunel(sitio) === 'reales';
   const proveedor = sitio.tunel?.proveedor;
   if (alcanceDe(sitio.tunel) === 'tailnet') {
-    return reales
-      ? {
-          titulo: t.confirmarTailnetTitulo,
-          contenido: t.confirmarTailnetRealesTexto(sitio.dominio),
-        }
-      : { titulo: t.confirmarTailnetTitulo, contenido: t.confirmarTailnetTexto(sitio.dominio) };
-  }
-  const titulo = reales ? t.confirmarTitulo : t.confirmarPublicoTitulo;
-  if (reales) return { titulo, contenido: t.confirmarTexto };
-  if (proveedor === 'cloudflare-nombre' && sitio.tunel?.dominio) {
-    return { titulo, contenido: t.confirmarPublicoNombreTexto(sitio.dominio, sitio.tunel.dominio) };
-  }
-  if (proveedor === 'tailscale' && modoTailscaleDe(sitio.tunel) === 'funnel') {
-    return { titulo, contenido: t.confirmarFunnelTexto(sitio.dominio) };
-  }
-  if (proveedor === 'ngrok' || proveedor === 'expose') {
     return {
-      titulo,
-      contenido: t.confirmarProveedorTexto(
-        sitio.dominio,
-        proveedor === 'ngrok' ? 'ngrok' : 'Expose',
-      ),
+      titulo: t.confirmarTailnetTitulo,
+      contenido: reales
+        ? t.confirmarTailnetRealesTexto(sitio.dominio)
+        : t.confirmarTailnetTexto(sitio.dominio),
+      boton: t.compartir,
     };
   }
-  return { titulo, contenido: t.confirmarPublicoTexto(sitio.dominio) };
+  const titulo = reales ? t.confirmarTitulo : t.confirmarPublicoTitulo;
+  const boton = t.confirmar;
+  if (reales) {
+    const destino =
+      proveedor === 'cloudflare-nombre' && sitio.tunel?.dominio
+        ? `Cloudflare (https://${sitio.tunel.dominio})`
+        : proveedor === 'ngrok'
+          ? 'ngrok'
+          : proveedor === 'expose'
+            ? 'Expose'
+            : proveedor === 'tailscale'
+              ? 'Tailscale Funnel'
+              : 'Cloudflare';
+    return { titulo, contenido: t.confirmarRealesTexto(sitio.dominio, destino), boton };
+  }
+  if (proveedor === 'cloudflare-nombre' && sitio.tunel?.dominio) {
+    return {
+      titulo,
+      contenido: t.confirmarPublicoNombreTexto(sitio.dominio, sitio.tunel.dominio),
+      boton,
+    };
+  }
+  if (proveedor === 'tailscale') {
+    return { titulo, contenido: t.confirmarFunnelTexto(sitio.dominio), boton };
+  }
+  if (proveedor === 'expose') {
+    return { titulo, contenido: t.confirmarExposeTexto(sitio.dominio), boton };
+  }
+  if (proveedor === 'ngrok') {
+    return { titulo, contenido: t.confirmarProveedorTexto(sitio.dominio, 'ngrok'), boton };
+  }
+  return { titulo, contenido: t.confirmarPublicoTexto(sitio.dominio), boton };
 }
 
 /**

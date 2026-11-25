@@ -12,6 +12,7 @@ import {
   limpiarDatos,
   motivoTunelBloqueado,
   confirmacionDeTunel,
+  tunelConfirmadoDe,
   usaCloudflared,
   nombreDeCarpeta,
   normalizarAlias,
@@ -435,5 +436,72 @@ describe('confirmación de túnel por proveedor (D24)', () => {
     for (const proveedor of ['ngrok', 'expose', 'tailscale'] as const) {
       expect(usaCloudflared({ proveedor })).toBe(false);
     }
+  });
+});
+
+describe('confirmación de túnel: revisión de D24', () => {
+  const base = { dominio: 'wolf.test', datosReales: false };
+
+  it('con Serve el botón no dice Publicar (dice Compartir) y el texto no habla de internet como destino', () => {
+    const c = confirmacionDeTunel({ ...base, tunel: { proveedor: 'tailscale' } });
+    expect(c.boton).toBe('Compartir');
+    const otro = confirmacionDeTunel({ ...base, tunel: { proveedor: 'ngrok' } });
+    expect(otro.boton).toBe('Publicar');
+    const funnel = confirmacionDeTunel({
+      ...base,
+      tunel: { proveedor: 'tailscale', modo: 'funnel' },
+    });
+    expect(funnel.boton).toBe('Publicar');
+  });
+
+  it('con datos reales nombra el proveedor y el dominio público', () => {
+    const reales = { ...base, datosReales: true };
+    expect(confirmacionDeTunel({ ...reales, tunel: { proveedor: 'ngrok' } }).contenido).toContain(
+      'ngrok',
+    );
+    expect(confirmacionDeTunel({ ...reales, tunel: { proveedor: 'ngrok' } }).contenido).toContain(
+      'wolf.test',
+    );
+    const c = confirmacionDeTunel({
+      ...reales,
+      tunel: { proveedor: 'cloudflare-nombre', nombre: 'wolf-dev', dominio: 'demo.midominio.com' },
+    }).contenido;
+    expect(c).toContain('Cloudflare');
+    expect(c).toContain('https://demo.midominio.com');
+    expect(
+      confirmacionDeTunel({ ...reales, tunel: { proveedor: 'tailscale', modo: 'funnel' } })
+        .contenido,
+    ).toContain('Tailscale Funnel');
+  });
+
+  it('Expose avisa de que su inspector queda visible en la red local', () => {
+    expect(confirmacionDeTunel({ ...base, tunel: { proveedor: 'expose' } }).contenido).toContain(
+      'red local',
+    );
+  });
+
+  it('lo confirmado lleva proveedor, nombre, dominio y modo (Serve por defecto en Tailscale)', () => {
+    expect(tunelConfirmadoDe({ tunel: undefined })).toEqual({ proveedor: 'cloudflare-rapido' });
+    expect(tunelConfirmadoDe({ tunel: { proveedor: 'tailscale' } })).toEqual({
+      proveedor: 'tailscale',
+      modo: 'serve',
+    });
+    expect(tunelConfirmadoDe({ tunel: { proveedor: 'tailscale', modo: 'funnel' } })).toEqual({
+      proveedor: 'tailscale',
+      modo: 'funnel',
+    });
+    expect(
+      tunelConfirmadoDe({
+        tunel: {
+          proveedor: 'cloudflare-nombre',
+          nombre: 'wolf-dev',
+          dominio: 'demo.midominio.com',
+        },
+      }),
+    ).toEqual({
+      proveedor: 'cloudflare-nombre',
+      nombre: 'wolf-dev',
+      dominio: 'demo.midominio.com',
+    });
   });
 });

@@ -3414,3 +3414,55 @@ describe('IPC de túneles (D24): ngrok, Expose y Tailscale', () => {
     });
   });
 });
+
+describe('IPC de túneles: lo confirmado llega validado al núcleo (D24)', () => {
+  function montar() {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    return {
+      crudo,
+      llamar: (ruta: string, ...args: unknown[]) =>
+        canales.get(`entorno:${ruta}`)!({}, ...args) as Promise<{ ok: boolean }>,
+    };
+  }
+
+  it('abrir y renovar pasan tunelConfirmado {proveedor, nombre, dominio, modo}', async () => {
+    const { crudo, llamar } = montar();
+    await llamar('tuneles.abrir', 's1', true, { proveedor: 'tailscale', modo: 'funnel' });
+    expect(crudo.tuneles.abrir).toHaveBeenLastCalledWith('s1', {
+      confirmado: true,
+      tunelConfirmado: { proveedor: 'tailscale', modo: 'funnel' },
+    });
+    await llamar('tuneles.renovar', 's1', true, {
+      proveedor: 'cloudflare-nombre',
+      nombre: 'wolf-dev',
+      dominio: 'demo.midominio.com',
+    });
+    expect(crudo.tuneles.renovar).toHaveBeenLastCalledWith('s1', {
+      confirmado: true,
+      tunelConfirmado: {
+        proveedor: 'cloudflare-nombre',
+        nombre: 'wolf-dev',
+        dominio: 'demo.midominio.com',
+      },
+    });
+  });
+
+  it('lo que no encaja se rechaza y no llega al núcleo', async () => {
+    const { crudo, llamar } = montar();
+    for (const t of [
+      { proveedor: 'otro' },
+      { proveedor: 'ngrok', modo: 'funnel' },
+      { proveedor: 'tailscale', modo: 'raro' },
+      { proveedor: 'cloudflare-nombre', nombre: 'MAL NOMBRE' },
+      { proveedor: 'cloudflare-nombre', dominio: 'wolf.test' },
+      { proveedor: 'ngrok', extra: 1 },
+      'texto',
+      [],
+    ]) {
+      expect((await llamar('tuneles.abrir', 's1', true, t)).ok, JSON.stringify(t)).toBe(false);
+    }
+    expect(crudo.tuneles.abrir).not.toHaveBeenCalled();
+  });
+});

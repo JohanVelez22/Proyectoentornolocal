@@ -11,6 +11,10 @@ import {
   NOMBRE_EXTENSION_PHP,
   ErrorWolf,
   tokenTunelValido,
+  IDS_PROVEEDOR_TUNEL,
+  dominioPublicoValido,
+  nombreTunelValido,
+  type IdProveedorTunel,
   HERRAMIENTAS_BD,
   IDS_AGENTE,
   IDS_EDITOR,
@@ -1637,4 +1641,42 @@ export function eleccionTunel(
     throw new Error('Argumento no válido: modo');
   }
   return { proveedor, modo };
+}
+
+/**
+ * Lo que la ventana mostró al confirmar (o nada): solo esos campos y con las reglas del núcleo. Lo
+ * que no encaja se rechaza (nunca se ajusta), para que la confirmación sea exactamente lo mostrado.
+ */
+export function tunelConfirmado(
+  v: unknown,
+):
+  | { proveedor: IdProveedorTunel; nombre?: string; dominio?: string; modo?: 'serve' | 'funnel' }
+  | undefined {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v !== 'object' || Array.isArray(v)) throw new Error('Argumento no válido: túnel');
+  const o = v as Record<string, unknown>;
+  const permitidas = new Set(['proveedor', 'nombre', 'dominio', 'modo']);
+  if (Object.keys(o).some((k) => !permitidas.has(k))) throw new Error('Argumento no válido: túnel');
+  const proveedor = (IDS_PROVEEDOR_TUNEL as readonly unknown[]).includes(o['proveedor'])
+    ? (o['proveedor'] as IdProveedorTunel)
+    : null;
+  if (!proveedor) throw new Error('Argumento no válido: proveedor');
+  if (o['nombre'] !== undefined && !nombreTunelValido(o['nombre'])) {
+    throw new Error('Argumento no válido: nombre');
+  }
+  if (o['dominio'] !== undefined && !dominioPublicoValido(o['dominio'])) {
+    throw new Error('Argumento no válido: dominio');
+  }
+  if (o['modo'] !== undefined && o['modo'] !== 'serve' && o['modo'] !== 'funnel') {
+    throw new Error('Argumento no válido: modo');
+  }
+  if (o['modo'] !== undefined && proveedor !== 'tailscale') {
+    throw new Error('Argumento no válido: modo');
+  }
+  return {
+    proveedor,
+    ...(o['nombre'] !== undefined ? { nombre: o['nombre'] as string } : {}),
+    ...(o['dominio'] !== undefined ? { dominio: o['dominio'] as string } : {}),
+    ...(o['modo'] !== undefined ? { modo: o['modo'] as 'serve' | 'funnel' } : {}),
+  };
 }

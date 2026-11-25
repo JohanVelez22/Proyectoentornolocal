@@ -52,6 +52,7 @@ import {
   claveIa,
   claveSmtp,
   eleccionTunel,
+  tunelConfirmado,
   proveedorTunelConToken,
   tokenTunel,
   datosProveedorSmtp,
@@ -774,6 +775,18 @@ async function destinoClon(n: NucleoIpc, s: Contexto, v: unknown): Promise<strin
   return destino;
 }
 
+/** Lo que llega del diálogo: la confirmación y, si se manda, lo que se mostró (validado). */
+function opcionesTunel(
+  confirmado: unknown,
+  tunel: unknown,
+): {
+  confirmado: boolean;
+  tunelConfirmado?: { proveedor: string; nombre?: string; dominio?: string; modo?: string };
+} {
+  const t = tunelConfirmado(tunel);
+  return { confirmado: confirmado === true, ...(t ? { tunelConfirmado: t } : {}) };
+}
+
 /** El gestor de Cloudflare con nombre del núcleo (no existe en un núcleo sin plataforma). */
 function cloudflareNombre(n: NucleoIpc): NonNullable<NucleoIpc['tuneles']['cloudflareNombre']> {
   const c = n.tuneles.cloudflareNombre;
@@ -1330,11 +1343,11 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'servicios.borrarRespaldoDatos': (n, _s, ref, confirmar) =>
     n.borrarRespaldoDatos(refRespaldoDatos(ref), confirmadoBorrar(confirmar)),
   // `confirmado`: el usuario confirmó publicar en el diálogo de la interfaz (siempre se pide).
-  'tuneles.abrir': (n, _s, id, confirmado) =>
-    n.tuneles.abrir(idNoVacio(id), { confirmado: confirmado === true }),
+  'tuneles.abrir': (n, _s, id, confirmado, tunel) =>
+    n.tuneles.abrir(idNoVacio(id), opcionesTunel(confirmado, tunel)),
   'tuneles.cerrar': (n, _s, id) => n.tuneles.cerrar(idNoVacio(id)),
-  'tuneles.renovar': (n, _s, id, confirmado) =>
-    n.tuneles.renovar(idNoVacio(id), { confirmado: confirmado === true }),
+  'tuneles.renovar': (n, _s, id, confirmado, tunel) =>
+    n.tuneles.renovar(idNoVacio(id), opcionesTunel(confirmado, tunel)),
   'tuneles.estados': (n) => n.tuneles.estados(),
   // Cloudflare con nombre: la credencial del túnel la guarda el núcleo en el almacén de secretos
   // (nunca llega aquí ni al renderer); el renderer solo manda el nombre y el dominio.

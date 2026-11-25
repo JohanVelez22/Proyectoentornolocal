@@ -2,7 +2,7 @@ import { useDialog } from 'naive-ui';
 import type { Sitio } from '../../shared/api';
 import { api } from '../api';
 import { textos } from '../i18n';
-import { confirmacionDeTunel } from '../utilidades/sitios';
+import { confirmacionDeTunel, tunelConfirmadoDe } from '../utilidades/sitios';
 import { useAccion } from './useAccion';
 
 /**
@@ -21,7 +21,7 @@ export function useTunel() {
   function confirmarPublicar(
     sitio: Pick<Sitio, 'datosReales' | 'dominio' | 'tunel'>,
   ): Promise<boolean> {
-    const { titulo, contenido } = confirmacionDeTunel(sitio);
+    const { titulo, contenido, boton } = confirmacionDeTunel(sitio);
     return new Promise((resolve) => {
       let respondido = false;
       const responder = (v: boolean): void => {
@@ -32,7 +32,7 @@ export function useTunel() {
       dialog.warning({
         title: titulo,
         content: contenido,
-        positiveText: t.confirmar,
+        positiveText: boton,
         negativeText: textos.acciones.cancelar,
         autoFocus: false,
         onPositiveClick: () => responder(true),
@@ -48,9 +48,13 @@ export function useTunel() {
     sitio: Pick<Sitio, 'id' | 'datosReales' | 'dominio' | 'tunel'>,
   ): Promise<void> {
     if (!(await confirmarPublicar(sitio))) return;
-    await ejecutar(`abrir-${sitio.id}`, () => api().tuneles.abrir(sitio.id, true), {
-      tituloError: t.tituloError,
-    });
+    await ejecutar(
+      `abrir-${sitio.id}`,
+      () => api().tuneles.abrir(sitio.id, true, tunelConfirmadoDe(sitio)),
+      {
+        tituloError: t.tituloError,
+      },
+    );
   }
 
   async function cerrar(sitioId: string): Promise<void> {
@@ -63,9 +67,13 @@ export function useTunel() {
   ): Promise<void> {
     if (!(await confirmarPublicar(sitio))) return;
     const sitioId = sitio.id;
-    await ejecutar(`renovar-${sitioId}`, () => api().tuneles.renovar(sitioId, true), {
-      tituloError: t.tituloError,
-    });
+    await ejecutar(
+      `renovar-${sitioId}`,
+      () => api().tuneles.renovar(sitioId, true, tunelConfirmadoDe(sitio)),
+      {
+        tituloError: t.tituloError,
+      },
+    );
   }
 
   function abrirUrl(url: string): void {
