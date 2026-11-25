@@ -1,8 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createWriteStream, existsSync } from 'node:fs';
-import { cp, lstat, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdir, readFile, rename, rm, stat, statfs, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { Transform, type TransformCallback } from 'node:stream';
+import { Transform, Writable, type TransformCallback } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import yauzl from 'yauzl';
 import { leerBaseDelProyecto } from '../bd/baseProyecto';
@@ -58,37 +58,43 @@ class Tope extends Transform {
   }
 }
 
-/** Un perfil abierto: lo de la lista blanca ya extraído y verificado contra sus huellas. */
+/** Un perfil abierto: manifiesto validado y huellas comprobadas (y, si se extrajo, en `dir`). */
 export interface PerfilAbierto {
-  dir: string;
+  /** Carpeta con lo extraído, o null si solo se verificó (vista previa: nada en disco). */
+  dir: string | null;
   manifiesto: ManifiestoPerfil;
   ignoradas: number;
   /** SHA-256 del archivo `.wolfperfil` entero. */
   huellaArchivo: string;
+  /** Bytes (descomprimidos) de lo que se extrae. */
+  bytes: number;
 }
 
 /**
- * Abre un `.wolfperfil` en `dir` (temporal): recorre todas las entradas y **rechaza el perfil
- * entero** si alguna es peligrosa (zip-slip, ruta absoluta, unidad, `:`, controles, nombre
- * reservado) o si pasa los topes; extrae **solo** las de la lista blanca (lo demás —`etc/`,
- * `instantaneas/`, `run/`…— se cuenta y se ignora sin escribirlo), con un tope real de bytes por
- * archivo; y comprueba cada una contra la huella del manifiesto. Lo que el manifiesto no declara
- * no se usa.
+ * Proporción máxima entre lo descomprimido y lo comprimido de una entrada de más de 1 MiB: todo
+ * lo grande de un perfil va cifrado (no se comprime) o ya comprimido; una proporción alta delata
+ * una bomba de descompresión.
  */
-export async function abrirPerfil(
+export const MAX_PROPORCION_ZIP = 100;
+
+/**
+ * Recorre un `.wolfperfil`: **rechaza el perfil entero** si alguna entrada es peligrosa
+ * (zip-slip, ruta absoluta, unidad, `:`, controles, nombre reservado), pasa los topes o se infla
+ * demasiado; lo que no es de la lista blanca (`etc/`, `instantaneas/`, `run/`…) se cuenta y se
+ * ignora sin leerlo. Del resto calcula la huella **en flujo** (con un tope real de bytes). Con
+ * `dir` además lo escribe allí; sin `dir` no escribe nada. Devuelve el manifiesto (leído en
+ * memoria) y las huellas.
+ */
+async function recorrerPerfil(
   archivo: string,
-  dir: string,
-  limites: LimitesPerfil = LIMITES_PERFIL,
-): Promise<PerfilAbierto> {
-  const info = await lstat(archivo).catch(() => null);
-  if (!info?.isFile())
-    throw new ErrorWolf('perfiles.no_existe', 'El archivo del perfil no existe.');
-  if (info.size > limites.maxBytesPerfil) {
-    throw new ErrorWolf('perfiles.demasiado_grande', 'El perfil es demasiado grande.', {
-      maximo: Math.floor(limites.maxBytesPerfil / (1024 * 1024)),
-    });
-  }
-  await mkdir(dir, { recursive: true });
+  dir: string | null,
+  limites: LimitesPerfil,
+): Promise<{
+  manifiesto: Buffer | null;
+  huellas: Map<string, string>;
+  ignoradas: number;
+  bytes: number;
+}> {
   const zip = await new Promise<yauzl.ZipFile>((resolve, reject) => {
     yauzl.open(archivo, { lazyEntries: true, autoClose: false }, (e, z) =>
       e || !z ? reject(e ?? new Error('zip')) : resolve(z),
@@ -97,11 +103,12 @@ export async function abrirPerfil(
     throw danado('no es un archivo de perfil');
   });
   let ignoradas = 0;
-  const extraidas = new Set<string>();
+  let manifiesto: Buffer | null = null;
+  const huellas = new Map<string, string>();
+  let bytes = 0;
   try {
     await new Promise<void>((resolve, reject) => {
       let entradas = 0;
-      let bytes = 0;
       let fallo = false;
       const abortar = (e: unknown): void => {
         if (fallo) return;
@@ -127,7 +134,9 @@ export async function abrirPerfil(
             zip.readEntry();
             return;
           }
-          if (extraidas.has(nombre)) throw danado('trae un archivo repetido');
+          if (huellas.has(nombre) || (nombre === 'manifiesto.json' && manifiesto)) {
+            throw danado('trae un archivo repetido');
+          }
           const tope =
             nombre === 'manifiesto.json'
               ? limites.maxBytesManifiesto
@@ -137,19 +146,62 @@ export async function abrirPerfil(
           bytes += e.uncompressedSize;
           if (e.uncompressedSize > tope || bytes > limites.maxBytes) {
             throw new ErrorWolf('perfiles.demasiado_grande', 'El perfil es demasiado grande.', {
-              maximo: Math.floor(limites.maxBytes / (1024 * 1024)),
+              maximo: tamanoLegible(Math.min(tope, limites.maxBytes)),
             });
           }
-          const destino = path.join(dir, ...nombre.split('/'));
-          // Doble comprobación de zip-slip sobre la ruta ya resuelta.
-          const rel = path.relative(dir, destino);
-          if (rel.startsWith('..') || path.isAbsolute(rel)) throw danado('ruta fuera');
-          await mkdir(path.dirname(destino), { recursive: true });
+          if (
+            e.uncompressedSize > 1024 * 1024 &&
+            e.uncompressedSize > MAX_PROPORCION_ZIP * Math.max(1, e.compressedSize)
+          ) {
+            throw danado('un archivo se infla demasiado al descomprimirlo');
+          }
           const lectura = await new Promise<NodeJS.ReadableStream>((res, rej) => {
             zip.openReadStream(e, (err, s) => (err || !s ? rej(err ?? new Error('x')) : res(s)));
           });
-          await pipeline(lectura, new Tope(tope), createWriteStream(destino));
-          extraidas.add(nombre);
+          if (nombre === 'manifiesto.json') {
+            const partes: Buffer[] = [];
+            await pipeline(
+              lectura,
+              new Tope(tope),
+              new Writable({
+                write(trozo: Buffer, _c, cb) {
+                  partes.push(trozo);
+                  cb();
+                },
+              }),
+            );
+            manifiesto = Buffer.concat(partes);
+          } else {
+            const h = createHash('sha256');
+            const pasos: NodeJS.WritableStream[] = [];
+            const hash = new Transform({
+              transform(trozo: Buffer, _c, cb) {
+                h.update(trozo);
+                cb(null, trozo);
+              },
+            });
+            if (dir) {
+              const destino = path.join(dir, ...nombre.split('/'));
+              // Doble comprobación de zip-slip sobre la ruta ya resuelta.
+              const rel = path.relative(dir, destino);
+              if (rel.startsWith('..') || path.isAbsolute(rel)) throw danado('ruta fuera');
+              await mkdir(path.dirname(destino), { recursive: true });
+              pasos.push(createWriteStream(destino, { flags: 'wx' }));
+              await pipeline(lectura, new Tope(tope), hash, pasos[0]!);
+            } else {
+              await pipeline(
+                lectura,
+                new Tope(tope),
+                hash,
+                new Writable({
+                  write(_t: Buffer, _c, cb) {
+                    cb();
+                  },
+                }),
+              );
+            }
+            huellas.set(nombre, h.digest('hex'));
+          }
           if (!fallo) zip.readEntry();
         })().catch((err: unknown) =>
           abortar(esErrorWolf(err) ? err : danado('no se pudo leer un archivo')),
@@ -160,33 +212,97 @@ export async function abrirPerfil(
   } finally {
     zip.close();
   }
-  if (!extraidas.has('manifiesto.json')) throw danado('falta el manifiesto');
+  return { manifiesto, huellas, ignoradas, bytes };
+}
+
+/** "64 GB", "512 MB": para los mensajes de tamaño. */
+export function tamanoLegible(bytes: number): string {
+  const mb = bytes / (1024 * 1024);
+  return mb >= 1024 ? `${Math.floor(mb / 1024)} GB` : `${Math.max(1, Math.floor(mb))} MB`;
+}
+
+/**
+ * Abre un `.wolfperfil`. Sin `dir` (vista previa) solo lee el manifiesto y verifica las huellas en
+ * flujo, sin escribir nada; con `dir` (importar) antes comprueba el espacio libre y luego extrae
+ * lo de la lista blanca. Cada archivo debe coincidir con la huella del manifiesto; lo que el
+ * manifiesto no declara no se usa.
+ */
+export async function abrirPerfil(
+  archivo: string,
+  dir: string | null,
+  limites: LimitesPerfil = LIMITES_PERFIL,
+  espacioLibre?: (ruta: string) => Promise<number | null>,
+): Promise<PerfilAbierto> {
+  const info = await lstat(archivo).catch(() => null);
+  if (!info?.isFile())
+    throw new ErrorWolf('perfiles.no_existe', 'El archivo del perfil no existe.');
+  if (info.size > limites.maxBytesPerfil) {
+    throw new ErrorWolf('perfiles.demasiado_grande', 'El perfil es demasiado grande.', {
+      maximo: tamanoLegible(limites.maxBytesPerfil),
+    });
+  }
+  // Primero, solo verificar (nada en disco).
+  const v = await recorrerPerfil(archivo, null, limites);
+  if (!v.manifiesto) throw danado('falta el manifiesto');
   let bruto: unknown;
   try {
     bruto = JSON.parse(
-      (await readFile(path.join(dir, 'manifiesto.json'), 'utf8')).replace(
-        new RegExp(`^${String.fromCharCode(0xfeff)}`),
-        '',
-      ),
+      v.manifiesto.toString('utf8').replace(new RegExp(`^${String.fromCharCode(0xfeff)}`), ''),
     );
   } catch {
     throw danado('el manifiesto no es válido');
   }
   const manifiesto = leerManifiesto(bruto);
-  // Cada archivo declarado debe estar y coincidir; lo que no se declara se borra sin usarlo.
-  for (const [rel, huella] of Object.entries(manifiesto.archivos)) {
-    if (!extraidas.has(rel)) throw danado('falta un archivo');
-    if ((await sha256Archivo(path.join(dir, ...rel.split('/')))) !== huella) {
-      throw danado('un archivo no coincide con su huella');
+  const comprobar = (huellas: Map<string, string>): void => {
+    for (const [rel, huella] of Object.entries(manifiesto.archivos)) {
+      if (!huellas.has(rel)) throw danado('falta un archivo');
+      if (huellas.get(rel) !== huella) throw danado('un archivo no coincide con su huella');
     }
-  }
-  for (const rel of extraidas) {
-    if (rel !== 'manifiesto.json' && !(rel in manifiesto.archivos)) {
-      await rm(path.join(dir, ...rel.split('/')), { force: true });
-      ignoradas++;
+  };
+  comprobar(v.huellas);
+  let ignoradas =
+    v.ignoradas + [...v.huellas.keys()].filter((r) => !(r in manifiesto.archivos)).length;
+  if (dir) {
+    await mkdir(dir, { recursive: true });
+    // Lo extraído y, con bases, su versión descifrada: el doble más un margen.
+    const necesarios = v.bytes * 2 + 64 * 1024 * 1024;
+    const libres = await (espacioLibre ?? espacioLibreDe)(dir).catch(() => null);
+    if (libres !== null && libres < necesarios) {
+      throw new ErrorWolf(
+        'perfiles.sin_espacio',
+        'No hay espacio libre suficiente para importar el perfil.',
+        {
+          necesarios: tamanoLegible(necesarios),
+          libres: tamanoLegible(libres),
+        },
+      );
     }
+    const x = await recorrerPerfil(archivo, dir, limites);
+    // Lo escrito es lo verificado (el archivo pudo cambiar entre las dos lecturas).
+    comprobar(x.huellas);
+    for (const rel of x.huellas.keys()) {
+      if (!(rel in manifiesto.archivos))
+        await rm(path.join(dir, ...rel.split('/')), { force: true });
+    }
+    ignoradas =
+      x.ignoradas + [...x.huellas.keys()].filter((r) => !(r in manifiesto.archivos)).length;
   }
-  return { dir, manifiesto, ignoradas, huellaArchivo: await sha256Archivo(archivo) };
+  return {
+    dir,
+    manifiesto,
+    ignoradas,
+    huellaArchivo: await sha256Archivo(archivo),
+    bytes: v.bytes,
+  };
+}
+
+async function espacioLibreDe(ruta: string): Promise<number | null> {
+  try {
+    const s = await statfs(ruta);
+    return Number(s.bavail) * Number(s.bsize);
+  } catch {
+    return null;
+  }
 }
 
 /* ───────────── Planificación (lo que ve la vista previa y aplica la importación) ───────────── */
@@ -453,12 +569,18 @@ export class Perfiles {
     return { ...LIMITES_PERFIL, ...this.d.limites };
   }
 
-  private async conPerfil<T>(archivo: string, fn: (p: PerfilAbierto) => Promise<T>): Promise<T> {
+  /** Con `extraer`, en una carpeta temporal que se borra al final; sin él, nada en disco. */
+  private async conPerfil<T>(
+    archivo: string,
+    extraer: boolean,
+    fn: (p: PerfilAbierto) => Promise<T>,
+  ): Promise<T> {
+    if (!extraer) return fn(await abrirPerfil(archivo, null, this.limites));
     const tmp = this.d.rutas.tmp();
     await mkdir(tmp, { recursive: true });
     const dir = path.join(tmp, `perfil-abierto-${randomBytes(6).toString('hex')}`);
     try {
-      return await fn(await abrirPerfil(archivo, dir, this.limites));
+      return await fn(await abrirPerfil(archivo, dir, this.limites, this.d.espacioLibre));
     } finally {
       await rm(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }).catch(
         () => undefined,
@@ -468,7 +590,7 @@ export class Perfiles {
 
   /** Lo que haría `importar` en esta carpeta de datos, sin escribir nada. */
   vistaPrevia(archivo: string, o: OpcionesVista = { rutas: {} }): Promise<VistaPreviaPerfil> {
-    return this.conPerfil(archivo, async (p) => {
+    return this.conPerfil(archivo, false, async (p) => {
       const plan = await planificar(this.d, p, o);
       const m = p.manifiesto;
       return {
@@ -519,7 +641,7 @@ export class Perfiles {
     if (o?.confirmado !== true) {
       throw new ErrorWolf('perfiles.sin_confirmar', 'Confirme que quiere importar el perfil.');
     }
-    return this.conPerfil(archivo, (p) => this.aplicar(p, o));
+    return this.conPerfil(archivo, true, (p) => this.aplicar(p, o));
   }
 
   private async aplicar(
@@ -528,6 +650,8 @@ export class Perfiles {
   ): Promise<ResultadoImportarPerfil> {
     const d = this.d;
     const m = p.manifiesto;
+    const dir = p.dir;
+    if (!dir) throw new Error('El perfil no se extrajo.');
     const plan = await planificar(d, p, o);
     if (o.huella !== huellaVista(p, plan, o)) {
       throw new ErrorWolf(
@@ -556,10 +680,7 @@ export class Perfiles {
             'El perfil trae una CA y este equipo ya tiene la suya: confirme aparte que quiere reemplazarla.',
           );
         }
-        const plano = await descifrarConFrase(
-          await readFile(path.join(p.dir, 'ca.cifrada')),
-          frase,
-        );
+        const plano = await descifrarConFrase(await readFile(path.join(dir, 'ca.cifrada')), frase);
         try {
           const j = JSON.parse(plano.toString('utf8')) as Partial<CaPerfil> | null;
           if (
@@ -593,7 +714,7 @@ export class Perfiles {
       const llave = new LlaveFrase(frase);
       try {
         for (const b of m.bases) {
-          const v = volcadosDe(p.dir, m, b.instancia, b.base);
+          const v = volcadosDe(dir, m, b.instancia, b.base);
           if (!v) continue;
           const claro = async (cifrado: string): Promise<string> => {
             const destino = cifrado.replace(/\.cifrado$/, '');
@@ -787,7 +908,7 @@ export class Perfiles {
     // 5. Plantillas: copiadas como importadas (nunca entran al registro de propias).
     const plantillas: ResultadoImportarPerfil['plantillas'] = [];
     for (const id of m.plantillas) {
-      const origen = path.join(p.dir, 'plantillas', id);
+      const origen = path.join(dir, 'plantillas', id);
       if (!existsSync(path.join(origen, 'plantilla.json'))) {
         plantillas.push({ id, estado: 'error', motivo: 'danada' });
         continue;

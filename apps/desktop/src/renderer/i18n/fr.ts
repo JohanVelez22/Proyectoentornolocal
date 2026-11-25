@@ -308,7 +308,7 @@ export const fr: Textos = {
       'plantillas.demasiado_grande':
         "Le projet contient trop de fichiers ou est trop volumineux pour être enregistré comme modèle (jusqu'à {maximo} fichiers). Excluez les gros dossiers.",
       'plantillas.demasiado_pesada':
-        "Le projet est trop volumineux pour être enregistré comme modèle (jusqu'à {maximo} Mo). Excluez les gros dossiers.",
+        "Le projet est trop volumineux pour être enregistré comme modèle (jusqu'à {maximo}). Excluez les gros dossiers.",
       'plantillas.exclusion_invalida':
         "Une des exclusions n'est pas valide (utilisez des noms ou des chemins relatifs, sans « .. »).",
       'plantillas.nombre_invalido': "Le nom du modèle n'est pas valide (de 1 à 60 caractères).",
@@ -339,7 +339,7 @@ export const fr: Textos = {
         "Les certificats des sites ne voyagent qu'avec la CA chiffrée : incluez la CA avec une phrase.",
       'perfiles.no_existe': "Le fichier du profil n'existe pas.",
       'perfiles.danado': "Le profil est endommagé ou a été modifié : rien n'a été importé.",
-      'perfiles.demasiado_grande': "Le profil est trop volumineux (jusqu'à {maximo} Mo).",
+      'perfiles.demasiado_grande': "Le profil est trop volumineux (jusqu'à {maximo}).",
       'perfiles.version_no_soportada':
         "Le profil provient d'une version plus récente de WolfCore Dev (format {version}) : mettez l'application à jour pour l'importer.",
       'perfiles.sin_confirmar': 'Confirmez que vous voulez importer le profil.',
@@ -353,6 +353,8 @@ export const fr: Textos = {
         'La CA de WolfCore Dev ne signe que les domaines .test, localhost et les adresses locales : {dominio} ne peut pas être inclus.',
       'perfiles.frase_requerida':
         'Saisissez la phrase du profil pour importer ses bases ou sa CA (ou importez sans les bases).',
+      'perfiles.sin_espacio':
+        "Il n'y a pas assez d'espace libre pour importer le profil : {necesarios} nécessaires, {libres} disponibles.",
       'importar.origen_apagado':
         "Impossible de se connecter au serveur de base de données de l'autre programme : démarrez-le depuis ce programme et réessayez. Les sites ont tout de même été importés.",
       'importar.origen_no_local':

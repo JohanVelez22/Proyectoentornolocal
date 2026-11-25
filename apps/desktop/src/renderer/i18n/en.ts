@@ -292,7 +292,7 @@ export const en: Textos = {
       'plantillas.demasiado_grande':
         'The project has too many files or is too large to save as a template (up to {maximo} files). Exclude large folders.',
       'plantillas.demasiado_pesada':
-        'The project is too large to save as a template (up to {maximo} MB). Exclude large folders.',
+        'The project is too large to save as a template (up to {maximo}). Exclude large folders.',
       'plantillas.exclusion_invalida':
         'One of the exclusions is not valid (use relative names or paths, without "..").',
       'plantillas.nombre_invalido': 'The template name is not valid (1 to 60 characters).',
@@ -322,7 +322,7 @@ export const en: Textos = {
         'Site certificates only travel together with the encrypted CA: include the CA with a passphrase.',
       'perfiles.no_existe': 'The profile file does not exist.',
       'perfiles.danado': 'The profile is damaged or was modified: nothing was imported.',
-      'perfiles.demasiado_grande': 'The profile is too large (up to {maximo} MB).',
+      'perfiles.demasiado_grande': 'The profile is too large (up to {maximo}).',
       'perfiles.version_no_soportada':
         'The profile comes from a newer version of WolfCore Dev (format {version}): update the app to import it.',
       'perfiles.sin_confirmar': 'Confirm that you want to import the profile.',
@@ -336,6 +336,8 @@ export const en: Textos = {
         'The WolfCore Dev CA only signs .test domains, localhost and local addresses: {dominio} cannot be included.',
       'perfiles.frase_requerida':
         'Enter the profile passphrase to import its databases or its CA (or import without the databases).',
+      'perfiles.sin_espacio':
+        'There is not enough free space to import the profile: {necesarios} needed, {libres} available.',
       'importar.origen_apagado':
         "Could not connect to the other program's database server: start it from that program and try again. The sites were imported anyway.",
       'importar.origen_no_local': 'The source server must be on this computer (127.0.0.1).',

@@ -235,6 +235,7 @@ export const PARAMETROS_ERROR = {
   'perfiles.carpeta_datos_invalida': [],
   'perfiles.confirmar_reemplazar_ca': [],
   'perfiles.frase_requerida': [],
+  'perfiles.sin_espacio': ['necesarios', 'libres'],
   // importar desde Laragon, XAMPP y Herd (D15)
   'importar.origen_apagado': [],
   'importar.origen_no_local': [],

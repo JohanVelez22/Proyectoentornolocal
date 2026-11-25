@@ -296,7 +296,7 @@ export const es = {
       'plantillas.demasiado_grande':
         'El proyecto tiene demasiados archivos o pesa demasiado para guardarlo como plantilla (hasta {maximo} archivos). Excluya carpetas grandes.',
       'plantillas.demasiado_pesada':
-        'El proyecto pesa demasiado para guardarlo como plantilla (hasta {maximo} MB). Excluya carpetas grandes.',
+        'El proyecto pesa demasiado para guardarlo como plantilla (hasta {maximo}). Excluya carpetas grandes.',
       'plantillas.exclusion_invalida':
         'Una de las exclusiones no es válida (use nombres o rutas relativas, sin "..").',
       'plantillas.nombre_invalido':
@@ -327,7 +327,7 @@ export const es = {
         'Los certificados de los sitios solo viajan junto con la CA cifrada: incluya la CA con una frase.',
       'perfiles.no_existe': 'El archivo del perfil no existe.',
       'perfiles.danado': 'El perfil está dañado o fue modificado: no se importó nada.',
-      'perfiles.demasiado_grande': 'El perfil es demasiado grande (hasta {maximo} MB).',
+      'perfiles.demasiado_grande': 'El perfil es demasiado grande (hasta {maximo}).',
       'perfiles.version_no_soportada':
         'El perfil es de una versión más nueva de WolfCore Dev (formato {version}): actualice la app para importarlo.',
       'perfiles.sin_confirmar': 'Confirme que quiere importar el perfil.',
@@ -341,6 +341,8 @@ export const es = {
         'La CA de WolfCore Dev solo firma dominios .test, localhost y direcciones locales: {dominio} no se puede incluir.',
       'perfiles.frase_requerida':
         'Escriba la frase del perfil para importar sus bases o su CA (o importe sin las bases).',
+      'perfiles.sin_espacio':
+        'No hay espacio libre suficiente para importar el perfil: hacen falta {necesarios} y hay {libres}.',
       'importar.origen_apagado':
         'No se pudo conectar al servidor de base de datos del otro programa: enciéndalo desde ese programa e inténtelo de nuevo. Los sitios sí se importaron.',
       'importar.origen_no_local': 'El servidor de origen debe estar en este equipo (127.0.0.1).',

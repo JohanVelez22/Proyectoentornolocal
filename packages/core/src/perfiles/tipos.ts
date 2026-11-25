@@ -101,6 +101,8 @@ export interface DepsPerfiles {
   idCatalogo: string;
   reloj?: () => Date;
   limites?: Partial<LimitesPerfil>;
+  /** Bytes libres de la unidad de `ruta` (por omisión `statfs`; pruebas). */
+  espacioLibre?: (ruta: string) => Promise<number | null>;
 }
 
 export interface OpcionesExportarPerfil {

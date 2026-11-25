@@ -301,7 +301,7 @@ export const pt: Textos = {
       'plantillas.demasiado_grande':
         'O projeto tem arquivos demais ou é grande demais para salvar como modelo (até {maximo} arquivos). Exclua pastas grandes.',
       'plantillas.demasiado_pesada':
-        'O projeto é pesado demais para salvar como modelo (até {maximo} MB). Exclua pastas grandes.',
+        'O projeto é pesado demais para salvar como modelo (até {maximo}). Exclua pastas grandes.',
       'plantillas.exclusion_invalida':
         'Uma das exclusões não é válida (use nomes ou caminhos relativos, sem "..").',
       'plantillas.nombre_invalido': 'O nome do modelo não é válido (de 1 a 60 caracteres).',
@@ -331,7 +331,7 @@ export const pt: Textos = {
         'Os certificados dos sites só viajam junto com a CA cifrada: inclua a CA com uma frase.',
       'perfiles.no_existe': 'O arquivo do perfil não existe.',
       'perfiles.danado': 'O perfil está danificado ou foi modificado: nada foi importado.',
-      'perfiles.demasiado_grande': 'O perfil é grande demais (até {maximo} MB).',
+      'perfiles.demasiado_grande': 'O perfil é grande demais (até {maximo}).',
       'perfiles.version_no_soportada':
         'O perfil é de uma versão mais nova do WolfCore Dev (formato {version}): atualize o app para importá-lo.',
       'perfiles.sin_confirmar': 'Confirme que deseja importar o perfil.',
@@ -345,6 +345,8 @@ export const pt: Textos = {
         'A CA do WolfCore Dev só assina domínios .test, localhost e endereços locais: {dominio} não pode ser incluído.',
       'perfiles.frase_requerida':
         'Digite a frase do perfil para importar os seus bancos ou a sua CA (ou importe sem os bancos).',
+      'perfiles.sin_espacio':
+        'Não há espaço livre suficiente para importar o perfil: são necessários {necesarios} e há {libres}.',
       'importar.origen_apagado':
         'Não foi possível conectar ao servidor de banco de dados do outro programa: ligue-o a partir desse programa e tente de novo. Os sites foram importados mesmo assim.',
       'importar.origen_no_local': 'O servidor de origem deve estar neste computador (127.0.0.1).',

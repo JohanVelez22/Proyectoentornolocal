@@ -19,7 +19,7 @@ import {
   PARAMETROS_CIFRADO,
 } from '../src/perfiles/cifrado';
 import { exportarPerfil } from '../src/perfiles/exportar';
-import { Perfiles } from '../src/perfiles/importar';
+import { Perfiles, tamanoLegible } from '../src/perfiles/importar';
 import {
   EXCLUSIONES_PERFIL,
   rutaPermitidaEnPerfil,
@@ -823,6 +823,41 @@ describe('perfil manipulado: se rechaza entero y no se escribe nada', () => {
     await expect(new Perfiles(deps(destino)).vistaPrevia(archivo)).rejects.toMatchObject({
       codigo: 'perfiles.version_no_soportada',
     });
+  });
+
+  it('ZIP inflado: una entrada que se descomprime mucho más de lo que ocupa → dañado', async () => {
+    const rel = 'bases/mysql@8.4/tienda/datos.sql.cifrado';
+    const bomba = Buffer.alloc(8 * 1024 * 1024);
+    const archivo = await perfilManual({ [rel]: bomba }, {}, [rel]);
+    expect((await stat(archivo)).size).toBeLessThan(200 * 1024);
+    await expect(new Perfiles(deps(destino)).vistaPrevia(archivo)).rejects.toMatchObject({
+      codigo: 'perfiles.danado',
+    });
+  });
+
+  it('la vista previa no escribe nada en disco (lee el manifiesto y verifica en flujo)', async () => {
+    const archivo = await exportar({ ca: true, certificados: true });
+    await new Perfiles(deps(destino)).vistaPrevia(archivo);
+    expect(await arbol(destino.base)).toEqual([]);
+    expect(existsSync(destino.tmp())).toBe(false);
+  });
+
+  it('sin espacio libre para extraer, no se importa nada', async () => {
+    const archivo = await exportar();
+    const d = deps(destino, { espacioLibre: async () => 1024 });
+    await expect(importar(archivo, d)).rejects.toMatchObject({
+      codigo: 'perfiles.sin_espacio',
+      datos: { libres: '1 MB' },
+    });
+    expect(existsSync(destino.config())).toBe(false);
+  });
+
+  it('el tamaño máximo se dice en una unidad legible', async () => {
+    const archivo = await exportar();
+    await expect(
+      new Perfiles(deps(destino, { limites: { maxBytesPerfil: 10 } })).vistaPrevia(archivo),
+    ).rejects.toMatchObject({ codigo: 'perfiles.demasiado_grande', datos: { maximo: '1 MB' } });
+    expect(tamanoLegible(64 * 1024 * 1024 * 1024)).toBe('64 GB');
   });
 
   it('topes: demasiadas entradas y un archivo más grande que el tope', async () => {
