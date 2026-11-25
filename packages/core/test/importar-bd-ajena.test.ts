@@ -57,6 +57,10 @@ let origenApagado: boolean;
 let respaldosHechos: number;
 let fallaConsulta: RegExp | null;
 let alConsulta: ((sql: string) => void) | null;
+/** Consultas que nunca contestan (un servidor colgado). */
+let cuelgaOrigen: boolean;
+let cuelgaSql: RegExp | null;
+let destruidas: number;
 let tamanoOrigen: number;
 /** Cómo responde el volcado: por omisión escribe el archivo y termina. */
 let comportamientoVolcado: (
@@ -144,6 +148,8 @@ function armar(extra: Partial<DepsRespaldos> = {}): Respaldos {
       mysql: (async (c: { puerto: number; usuario: string; charset?: string }) => {
         if (c.puerto === PUERTO_ORIGEN && origenApagado) throw new Error('connect ECONNREFUSED');
         return {
+          threadId: 4242,
+          destroy: () => void destruidas++,
           query: async (sql: string) => {
             consultas.push({
               puerto: c.puerto,
@@ -153,6 +159,9 @@ function armar(extra: Partial<DepsRespaldos> = {}): Respaldos {
             });
             if (/^DROP DATABASE/.test(sql)) eventos.push('borrar-base');
             alConsulta?.(sql);
+            if ((cuelgaOrigen && c.puerto === PUERTO_ORIGEN) || cuelgaSql?.test(sql)) {
+              return new Promise<never>(() => undefined);
+            }
             if (fallaConsulta?.test(sql)) throw new Error(`ERROR 1064 con ${TEMPORAL}`);
             return [[{ v: versionOrigen, version: versionOrigen, b: tamanoOrigen }]];
           },
@@ -201,6 +210,9 @@ beforeEach(async () => {
   respaldosHechos = 0;
   fallaConsulta = null;
   alConsulta = null;
+  cuelgaOrigen = false;
+  cuelgaSql = null;
+  destruidas = 0;
   tamanoOrigen = 0;
   comportamientoVolcado = volcadoNormal;
 });
@@ -576,6 +588,59 @@ describe('Respaldos.importarAjeno', () => {
       await expect(
         armar().importarAjeno('mysql', origen, 'tienda', { senal: ac.signal }),
       ).rejects.toMatchObject({ codigo: 'importar.cancelado' });
+      expect(eventos).toContain('reiniciar:tienda');
+      sinUsuariosPendientes();
+    });
+  });
+
+  describe('consultas que no contestan', () => {
+    it('un origen que acepta la conexión y no responde se corta con el tiempo máximo', async () => {
+      cuelgaOrigen = true;
+      await expect(
+        armar({ limiteConsultaMs: 20 }).importarAjeno('mysql', origen, 'tienda'),
+      ).rejects.toMatchObject({ codigo: 'importar.origen_estancado' });
+      expect(destruidas).toBeGreaterThan(0);
+      expect(eventos).toEqual([]);
+    });
+
+    it('y también con Cancelar', async () => {
+      cuelgaOrigen = true;
+      const ac = new AbortController();
+      setTimeout(() => ac.abort(), 15);
+      await expect(
+        armar({ limiteConsultaMs: 60_000 }).importarAjeno('mysql', origen, 'tienda', {
+          senal: ac.signal,
+        }),
+      ).rejects.toMatchObject({ codigo: 'importar.cancelado' });
+      expect(eventos).toEqual([]);
+    });
+
+    it('una sentencia de datos que se cuelga vence, se le hace KILL QUERY y la base queda como estaba', async () => {
+      cuelgaSql = /^INSERT/;
+      const e = await armar({ limiteSentenciaMs: 20 })
+        .importarAjeno('mysql', origen, 'tienda')
+        .catch((x: unknown) => x);
+      expect(e).toMatchObject({ codigo: 'bd.datos_fallo' });
+      expect(String((e as Error).message)).toMatch(/Tiempo de espera/);
+      const kill = consultas.filter((c) => c.sql === 'KILL QUERY 4242');
+      expect(kill).toHaveLength(1);
+      expect(kill[0]!.usuario).toBe('root');
+      expect(eventos).toContain('reiniciar:tienda');
+      sinUsuariosPendientes();
+    });
+
+    it('cancelar con una sentencia colgada también la mata y reinicia la base', async () => {
+      cuelgaSql = /^INSERT/;
+      const ac = new AbortController();
+      alConsulta = (sql) => {
+        if (sql.startsWith('INSERT')) setTimeout(() => ac.abort(), 10);
+      };
+      await expect(
+        armar({ limiteSentenciaMs: 60_000 }).importarAjeno('mysql', origen, 'tienda', {
+          senal: ac.signal,
+        }),
+      ).rejects.toMatchObject({ codigo: 'importar.cancelado' });
+      expect(consultas.some((c) => c.sql === 'KILL QUERY 4242')).toBe(true);
       expect(eventos).toContain('reiniciar:tienda');
       sinUsuariosPendientes();
     });

@@ -138,6 +138,10 @@ export interface DepsRespaldos {
   vigilancia?: { intervaloMs: number; estancamientoMs: number };
   /** Bytes libres de la unidad de `ruta` (por omisión `statfs`; pruebas). */
   espacioLibre?: (ruta: string) => Promise<number>;
+  /** Tiempo máximo de cada consulta al origen (por omisión 20 s). */
+  limiteConsultaMs?: number;
+  /** Tiempo máximo de cada sentencia de datos (por omisión 5 min). */
+  limiteSentenciaMs?: number;
 }
 
 export const MENSAJE_DESCOMPRIMA = 'Descomprima el archivo y elija el .sql o .dump que contiene';
@@ -2057,7 +2061,11 @@ export class Respaldos {
   }
 
   /** `SELECT version()` en el origen (solo lectura) contra el cliente local. */
-  private async comprobarVersionOrigen(motor: MotorSql, o: OrigenImportar): Promise<string[]> {
+  private async comprobarVersionOrigen(
+    motor: MotorSql,
+    o: OrigenImportar,
+    senal?: AbortSignal,
+  ): Promise<string[]> {
     let texto: string;
     try {
       if (motor === 'postgresql') {
@@ -2075,7 +2083,12 @@ export class Respaldos {
           await c.cerrar();
         }
       } else {
-        const c = new ClienteMysql(this.d.fabricas?.mysql);
+        // Con tiempo máximo por consulta y con la cancelación: un origen que acepta la conexión y
+        // no contesta no cuelga la importación.
+        const c = new ClienteMysql(this.d.fabricas?.mysql, {
+          limiteMs: this.d.limiteConsultaMs ?? 20_000,
+          ...(senal ? { senal } : {}),
+        });
         await c.conectar({ host: o.host, puerto: o.puerto, usuario: o.usuario, clave: o.clave });
         try {
           texto = await c.version();
@@ -2181,10 +2194,21 @@ export class Respaldos {
   }
 
   /** Versión del servidor de origen; sus fallos llevan código (apagado, rechazado, más nuevo). */
-  private async versionOrigenAjeno(motor: MotorSql, o: OrigenImportar): Promise<string[]> {
+  private async versionOrigenAjeno(
+    motor: MotorSql,
+    o: OrigenImportar,
+    senal?: AbortSignal,
+  ): Promise<string[]> {
     try {
-      return await this.comprobarVersionOrigen(motor, o);
+      return await this.comprobarVersionOrigen(motor, o, senal);
     } catch (e) {
+      if (senal?.aborted) throw razonDe(senal);
+      if (e instanceof Error && /Tiempo de espera agotado/.test(e.message)) {
+        throw new ErrorWolf(
+          'importar.origen_estancado',
+          `El servidor de origen ${o.host}:${o.puerto} no respondió a tiempo.`,
+        );
+      }
       const mensaje = e instanceof Error ? e.message : String(e);
       if (!mensaje.startsWith('No se pudo consultar el servidor de origen')) {
         throw new ErrorWolf('importar.origen_version', mensaje.slice(0, 300));
@@ -2200,8 +2224,11 @@ export class Respaldos {
   }
 
   /** Tamaño aproximado de la base en el origen (datos más índices); 0 si no se pudo saber. */
-  private async tamanoOrigen(o: OrigenImportar): Promise<number> {
-    const c = new ClienteMysql(this.d.fabricas?.mysql);
+  private async tamanoOrigen(o: OrigenImportar, senal?: AbortSignal): Promise<number> {
+    const c = new ClienteMysql(this.d.fabricas?.mysql, {
+      limiteMs: this.d.limiteConsultaMs ?? 20_000,
+      ...(senal ? { senal } : {}),
+    });
     try {
       await c.conectar({ host: o.host, puerto: o.puerto, usuario: o.usuario, clave: o.clave });
       return await c.tamanoBase(o.base);
@@ -2385,9 +2412,10 @@ export class Respaldos {
     if (opts.baseExistente && opts.confirmarSobrescribir !== true)
       throw errorConTablas(destinoBase);
     const reemplaza = tablas || opts.baseExistente === true;
-    const avisos = await this.versionOrigenAjeno(m, origen);
+    const avisos = await this.versionOrigenAjeno(m, origen, opts.senal);
     const tope = this.d.maxBytesDatosAjenos ?? MAX_BYTES_DATOS_AJENOS;
-    const estimado = await this.tamanoOrigen(origen);
+    const estimado = await this.tamanoOrigen(origen, opts.senal);
+    if (opts.senal?.aborted) throw razonDe(opts.senal);
     if (estimado > tope) {
       throw new ErrorWolf(
         'importar.volcado_enorme',
@@ -2506,7 +2534,14 @@ export class Respaldos {
     const con = await bd.conexion(motor);
     const usuario = await bd.usuarioTemporal!(motor, base, 'datos');
     const claves = [...clavesBase, usuario.clave];
-    const cliente = new ClienteMysql(this.d.fabricas?.mysql);
+    // Cada sentencia con su tiempo máximo y la señal de cancelar: si vence o se cancela, la
+    // conexión se corta y se le hace KILL QUERY desde la del administrador (el servidor no sigue
+    // ejecutando una consulta que nadie espera).
+    const cliente = new ClienteMysql(this.d.fabricas?.mysql, {
+      limiteMs: this.d.limiteSentenciaMs ?? 5 * 60 * 1000,
+      ...(senal ? { senal } : {}),
+    });
+    let hilo: number | null = null;
     try {
       await cliente.conectar({
         host: con.host,
@@ -2515,6 +2550,7 @@ export class Respaldos {
         clave: usuario.clave,
         charset: 'utf8mb4',
       });
+      hilo = cliente.idHilo();
       await cliente.prepararDatos(base);
       return await this.recorrerDatos(fuente, claves, senal, (sentencia) =>
         cliente.ejecutarUna(sentencia),
@@ -2530,6 +2566,22 @@ export class Respaldos {
       );
     } finally {
       await cliente.cerrar();
+      if (cliente.colgada && hilo !== null) {
+        const admin = new ClienteMysql(this.d.fabricas?.mysql, { limiteMs: 10_000 });
+        try {
+          await admin.conectar({
+            host: con.host,
+            puerto: con.puerto,
+            usuario: con.usuario,
+            clave: con.clave ?? '',
+          });
+          await admin.matarConsulta(hilo);
+        } catch {
+          // si no se pudo, el servidor la termina al cerrarse la conexión
+        } finally {
+          await admin.cerrar();
+        }
+      }
       await usuario.retirar().catch(() => undefined);
     }
   }

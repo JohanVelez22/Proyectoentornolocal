@@ -22,6 +22,10 @@ export interface BaseMysql {
 export interface ConexionBaja {
   query(sql: string, params?: unknown[]): Promise<[unknown, ...unknown[]]>;
   end(): Promise<void>;
+  /** Corta la conexión sin esperar (una consulta colgada). */
+  destroy?(): void;
+  /** Id del hilo en el servidor (para `KILL QUERY`). */
+  threadId?: number | null;
 }
 
 export type FabricaConexion = (c: ConexionMysql) => Promise<ConexionBaja>;
@@ -144,14 +148,80 @@ export class ClienteMysql {
   private con: ConexionBaja | null = null;
   private datos: ConexionMysql | null = null;
 
-  constructor(private readonly fabrica: FabricaConexion = fabricaReal) {}
+  /** Una consulta se dio por perdida (tiempo agotado o cancelada): la conexión ya no sirve. */
+  colgada = false;
+
+  constructor(
+    private readonly fabrica: FabricaConexion = fabricaReal,
+    private readonly limites: { limiteMs?: number; senal?: AbortSignal } = {},
+  ) {}
+
+  /**
+   * Espera `p` con el tiempo máximo y la señal de cancelar de este cliente. Si vence o se cancela,
+   * la conexión se corta (no se espera a un servidor que no responde) y se lanza el error.
+   */
+  private async conLimite<T>(p: Promise<T>): Promise<T> {
+    const { limiteMs, senal } = this.limites;
+    if (limiteMs === undefined && !senal) return p;
+    p.catch(() => undefined);
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    let alCancelar: (() => void) | undefined;
+    const corte = new Promise<never>((_r, rechazar) => {
+      if (limiteMs !== undefined) {
+        temporizador = setTimeout(() => {
+          this.colgada = true;
+          this.con?.destroy?.();
+          rechazar(
+            Object.assign(new Error('Tiempo de espera agotado: el servidor no respondió.'), {
+              code: 'WOLF_TIMEOUT',
+            }),
+          );
+        }, limiteMs);
+      }
+      if (senal) {
+        const abortar = (): void => {
+          this.colgada = true;
+          this.con?.destroy?.();
+          rechazar(
+            senal.reason instanceof ErrorWolf
+              ? senal.reason
+              : new ErrorWolf('importar.cancelado', 'Importación cancelada.'),
+          );
+        };
+        if (senal.aborted) abortar();
+        else {
+          senal.addEventListener('abort', abortar, { once: true });
+          alCancelar = () => senal.removeEventListener('abort', abortar);
+        }
+      }
+    });
+    try {
+      return await Promise.race([p, corte]);
+    } finally {
+      if (temporizador) clearTimeout(temporizador);
+      alCancelar?.();
+    }
+  }
+
+  /** Id del hilo de esta conexión en el servidor (para cortarle la consulta desde otra). */
+  idHilo(): number | null {
+    const t = this.con?.threadId;
+    return typeof t === 'number' ? t : null;
+  }
+
+  /** `KILL QUERY` de otra conexión (la de datos, colgada): solo corta su consulta. */
+  async matarConsulta(hilo: number): Promise<void> {
+    if (!Number.isInteger(hilo) || hilo <= 0) return;
+    await this.filas(`KILL QUERY ${hilo}`);
+  }
 
   async conectar(c: ConexionMysql): Promise<void> {
     await this.cerrar();
     try {
-      this.con = await this.fabrica(c);
+      this.con = await this.conLimite(this.fabrica(c));
       this.datos = c;
     } catch (e) {
+      if (e instanceof ErrorWolf) throw e;
       // el mensaje de mysql2 no incluye la clave, pero se filtra por si acaso
       const m = e instanceof Error ? e.message : String(e);
       throw new Error(
@@ -164,7 +234,10 @@ export class ClienteMysql {
     const c = this.con;
     this.con = null;
     this.datos = null;
-    if (c) await c.end().catch(() => undefined);
+    if (c) {
+      if (this.colgada) c.destroy?.();
+      else await c.end().catch(() => undefined);
+    }
   }
 
   private conexion(): ConexionBaja {
@@ -173,7 +246,7 @@ export class ClienteMysql {
   }
 
   private async filas(sql: string, params?: unknown[]): Promise<Record<string, unknown>[]> {
-    const [r] = await this.conexion().query(sql, params);
+    const [r] = await this.conLimite(this.conexion().query(sql, params));
     return Array.isArray(r) ? (r as Record<string, unknown>[]) : [];
   }
 
@@ -385,7 +458,7 @@ export class ClienteMysql {
 
   /** Una sola sentencia (el driver no admite varias en la misma consulta). */
   async ejecutarUna(sentencia: string): Promise<void> {
-    await this.conexion().query(sentencia);
+    await this.conLimite(this.conexion().query(sentencia));
   }
 
   /** Borra un usuario creado por `crearUsuarioTemporal` (y solo esos). */
