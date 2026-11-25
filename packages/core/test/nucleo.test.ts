@@ -56,14 +56,24 @@ const falsa = (): Plataforma => ({
   abrirUrl: async () => undefined,
   ejecutable: (n) => `${n}.exe`,
   carpetaDocumentos: async () => hostsArchivo,
+  // Editores falsos: nunca se mira el disco real.
+  editoresInstalados: async () => [
+    { id: 'vscode', nombre: 'Visual Studio Code', ruta: 'C:/Falso/Code.exe' },
+    { id: 'sublime', nombre: 'Sublime Text', ruta: 'C:/Falso/sublime_text.exe' },
+  ],
 });
 
+const editoresLanzados: { cmd: string; args: string[]; cwd: string }[] = [];
 const crear = async (): Promise<Nucleo> => {
   const n = await Nucleo.crear({
     base,
     plataforma,
     sonda: async () => false,
     fetch: (async () => new Response('{}')) as typeof fetch,
+    // Nunca se lanza un editor real.
+    lanzarEditor: async (cmd, args, o) => {
+      editoresLanzados.push({ cmd, args, cwd: o.cwd });
+    },
   });
   nucleos.push(n);
   return n;
@@ -167,6 +177,30 @@ describe('Nucleo', () => {
     await n.abrirTerminal('demo');
     expect(abiertas.map((a) => a.terminal)).toEqual([null, 'git-bash', 'powershell', null]);
     expect(abiertas.every((a) => a.cwd === carpeta)).toBe(true);
+  });
+
+  it('Editor: el predeterminado debe estar instalado y "Abrir con…" usa el pedido', async () => {
+    editoresLanzados.length = 0;
+    const n = await crear();
+    await n.guardarSitio(datos());
+    expect(await n.editores()).toMatchObject({ porDefecto: null });
+    expect((await n.editores()).disponibles.map((e) => e.id)).toEqual(['vscode', 'sublime']);
+    await expect(n.cambiarEditorPredeterminado('zed')).rejects.toMatchObject({
+      codigo: 'herramientas.editor_no_instalado',
+    });
+    await n.cambiarEditorPredeterminado('sublime');
+    expect((await n.editores()).porDefecto).toBe('sublime');
+    expect((await n.config.leer()).editor.predeterminado).toBe('sublime');
+    await n.abrirEditor('demo');
+    await n.abrirEditor('demo', 'vscode');
+    expect(editoresLanzados.map((e) => e.cmd)).toEqual([
+      'C:/Falso/sublime_text.exe',
+      'C:/Falso/Code.exe',
+    ]);
+    // La carpeta sale del sitio por su id.
+    expect(editoresLanzados.every((e) => e.cwd === carpeta && e.args[0] === carpeta)).toBe(true);
+    await n.cambiarEditorPredeterminado(null);
+    expect((await n.editores()).porDefecto).toBeNull();
   });
 
   it('adminerProyecto: la base del .env con el puerto configurado y sin la clave', async () => {

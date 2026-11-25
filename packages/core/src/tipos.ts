@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { TIPOS_AVISO, type TipoAviso } from './avisos/tipos';
 import { ConfigIaSchema } from './ia/proveedores';
-import { IDS_TERMINAL } from './plataforma/tipos';
+import { IDS_EDITOR, IDS_TERMINAL } from './plataforma/tipos';
 
 export const TIPOS_SITIO = [
   'laravel',
@@ -377,6 +377,12 @@ export const ConfigSchema = z.object({
     .object({
       activo: z.boolean().default(false),
       puerto: z.number().int().min(1024).max(65535).default(7790),
+    })
+    .prefault({}),
+  /** Editor de código: null = el primero detectado. */
+  editor: z
+    .object({
+      predeterminado: z.enum(IDS_EDITOR).nullable().default(null).catch(null),
     })
     .prefault({}),
   herramientas: z

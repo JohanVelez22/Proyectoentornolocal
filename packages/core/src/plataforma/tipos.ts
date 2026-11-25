@@ -63,6 +63,26 @@ export interface TerminalDisponible {
   ruta: string;
 }
 
+/** Editores de código que WolfCore Dev sabe detectar y abrir. */
+export const IDS_EDITOR = [
+  'vscode',
+  'cursor',
+  'windsurf',
+  'phpstorm',
+  'sublime',
+  'zed',
+  'notepadpp',
+] as const;
+export type IdEditor = (typeof IDS_EDITOR)[number];
+
+/** Un editor instalado en este equipo. */
+export interface EditorDisponible {
+  id: IdEditor;
+  /** Nombre para mostrar (marca del programa; no se traduce). */
+  nombre: string;
+  ruta: string;
+}
+
 export interface OpcionesAbrirTerminal {
   /** Variables que se agregan (o reemplazan) al entorno de la terminal; solo en ese proceso. */
   env?: Record<string, string | undefined>;
@@ -150,6 +170,8 @@ export interface CapacidadesPlataforma {
   abrirTerminal(cwd: string, o?: OpcionesAbrirTerminal): Promise<void>;
   /** Terminales instaladas que `abrirTerminal` sabe abrir (sin ejecutar nada). */
   terminalesInstaladas(): Promise<TerminalDisponible[]>;
+  /** Editores instalados (por PATH y rutas conocidas; solo mira archivos, no ejecuta nada). */
+  editoresInstalados(): Promise<EditorDisponible[]>;
   /** Lanzador de servidores sin ventanas; null si este sistema no lo necesita o no lo tiene. */
   lanzadorOculto(carpetaTmp: string): LanzadorOculto | null;
   /** Descendientes (hijos, nietos…) de cada PID, en una sola consulta. */

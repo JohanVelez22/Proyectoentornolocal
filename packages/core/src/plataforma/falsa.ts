@@ -6,6 +6,7 @@ import { descendientesDeHijos } from './procesosWin';
 import type {
   AccesoPathUsuario,
   ComandoManual,
+  EditorDisponible,
   EstadoAntivirus,
   IdCatalogo,
   IdTerminal,
@@ -33,6 +34,12 @@ export interface OpcionesPlataformaFalsa {
 export const TERMINALES_FALSAS: TerminalDisponible[] = [
   { id: 'powershell', nombre: 'Windows PowerShell', ruta: 'C:/Windows/powershell.exe' },
   { id: 'cmd', nombre: 'Símbolo del sistema (cmd)', ruta: 'C:/Windows/cmd.exe' },
+];
+
+/** Editores que la plataforma falsa dice tener (las pruebas pueden cambiarlos). */
+export const EDITORES_FALSOS: EditorDisponible[] = [
+  { id: 'vscode', nombre: 'Visual Studio Code', ruta: 'C:/Falso/Code.exe' },
+  { id: 'sublime', nombre: 'Sublime Text', ruta: 'C:/Falso/sublime_text.exe' },
 ];
 
 /**
@@ -230,6 +237,13 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async terminalesInstaladas(): Promise<TerminalDisponible[]> {
     return [...this.instaladas];
+  }
+
+  /** Editores instalados (cambiables en la prueba). */
+  editores: EditorDisponible[] = [...EDITORES_FALSOS];
+
+  async editoresInstalados(): Promise<EditorDisponible[]> {
+    return [...this.editores];
   }
 
   /** Sin lanzador oculto: los procesos se lanzan con el `spawn` (falso) de la prueba. */

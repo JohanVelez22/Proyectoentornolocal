@@ -49,13 +49,24 @@ import { ConfianzaCa, type EstadoConfianza, type ResultadoFirefox } from './http
 import { Adminer } from './herramientas/adminer';
 import { Composer } from './herramientas/composer';
 import { PathUsuario, respaldoPathUsuario } from './herramientas/pathUsuario';
-import { abrirArchivoDelSitio, abrirEnVsCode } from './herramientas/editor';
+import {
+  abrirArchivoDelSitio,
+  abrirEnEditor,
+  type ResultadoAbrirEditor,
+} from './herramientas/editor';
+import type { LanzadorSeparado } from './plataforma/terminalWin';
 import { Terminal } from './herramientas/terminal';
 import { ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
 import { bloqueEnvIa, limpiarRespaldosEnv } from './ia/envIa';
 import { GestorIa } from './ia/gestorIa';
 import { completarPlataforma, crearPlataforma } from './plataforma/index';
-import type { IdTerminal, PlataformaCompleta, TerminalDisponible } from './plataforma/tipos';
+import type {
+  EditorDisponible,
+  IdEditor,
+  IdTerminal,
+  PlataformaCompleta,
+  TerminalDisponible,
+} from './plataforma/tipos';
 import {
   baseDelProyecto,
   leerBaseDelProyecto,
@@ -239,6 +250,8 @@ export interface OpcionesNucleo {
   alIniciar?: (eventos: Eventos<EventosNucleo>) => void;
   /** Para pruebas: reemplaza la migración de la carpeta de datos (solo sin `base`). */
   migracion?: typeof migrarCarpetaDatos;
+  /** Para pruebas: quien lanza el editor (por defecto, un proceso separado real). */
+  lanzarEditor?: LanzadorSeparado;
   /** Para pruebas: lanzador de los comandos con streaming (pasos de receta, git). */
   lanzar?: Lanzador;
   /** PID del proceso principal y de su padre (por defecto, los de este proceso). */
@@ -311,6 +324,7 @@ export interface ResultadoAjustes {
 interface ModulosNucleo {
   /** Plataforma completa (lo que una parcial de prueba no tenga lo pone la de Windows). */
   plataforma: PlataformaCompleta;
+  lanzarEditor?: LanzadorSeparado;
   /** Editor del vhost de cada sitio (reglas propias o vhost completo, con nginx -t y vuelta atrás). */
   editorVhost: EditorVhost;
   /** php.ini de cada rama (editor con prueba, copia y vuelta atrás). */
@@ -505,6 +519,7 @@ export class Nucleo {
   readonly procesos: ProcesosProyecto;
   private readonly almacenCredenciales: AlmacenCredenciales;
   private readonly plataforma: PlataformaCompleta;
+  private readonly lanzarEditor: LanzadorSeparado | undefined;
   /** Puerto de Ollama según la configuración (ClienteOllama lo lee de forma síncrona). */
   private readonly puertoOllama: { valor: number };
   /** Servidor MCP local; se maneja con iniciarMcp/detenerMcp (que guardan `mcp.activo`). */
@@ -583,6 +598,7 @@ export class Nucleo {
     };
     this.avisos = m.avisos;
     this.plataforma = m.plataforma;
+    this.lanzarEditor = m.lanzarEditor;
     this.bd = m.bd;
     this.respaldos = m.respaldos;
     this.pgvector = m.pgvector;
@@ -1110,6 +1126,7 @@ export class Nucleo {
     const modulos: ModulosNucleo = {
       plantillas,
       editorVhost,
+      ...(o.lanzarEditor ? { lanzarEditor: o.lanzarEditor } : {}),
       iniPhp,
       poolsSitio: pools,
       ajustesPhpSitio,
@@ -2019,9 +2036,54 @@ export class Nucleo {
     await this.composer.sincronizarShims();
   }
 
-  /** Abre la carpeta del sitio en VS Code (la ruta sale de la configuración, nunca de afuera). */
-  async abrirEditor(sitioId: string): Promise<void> {
-    await abrirEnVsCode((await this.sitioPorId(sitioId)).carpeta);
+  private async depsEditor(): Promise<{
+    deps: Parameters<typeof abrirEnEditor>[2];
+    predeterminado: IdEditor | null;
+  }> {
+    return {
+      deps: {
+        editores: () => this.plataforma.editoresInstalados(),
+        ...(this.lanzarEditor ? { lanzar: this.lanzarEditor } : {}),
+      },
+      predeterminado: (await this.config.leer()).editor.predeterminado,
+    };
+  }
+
+  /**
+   * Abre la carpeta del sitio en el editor elegido o, sin él, en el predeterminado de Ajustes (la
+   * ruta sale de la configuración por el id, nunca de afuera).
+   */
+  async abrirEditor(sitioId: string, editor?: IdEditor | null): Promise<ResultadoAbrirEditor> {
+    const carpeta = (await this.sitioPorId(sitioId)).carpeta;
+    const { deps, predeterminado } = await this.depsEditor();
+    return abrirEnEditor(carpeta, { ...(editor ? { editor } : {}), predeterminado }, deps);
+  }
+
+  /** Editores instalados y el predeterminado guardado (null = el primero detectado). */
+  async editores(): Promise<{ disponibles: EditorDisponible[]; porDefecto: IdEditor | null }> {
+    return {
+      disponibles: await this.plataforma.editoresInstalados(),
+      porDefecto: (await this.config.leer()).editor.predeterminado,
+    };
+  }
+
+  /** Fija el editor predeterminado (null = el primero detectado); debe estar instalado. */
+  async cambiarEditorPredeterminado(id: IdEditor | null): Promise<void> {
+    if (id !== null) {
+      const e = (await this.plataforma.editoresInstalados()).find((x) => x.id === id);
+      if (!e) {
+        throw new ErrorWolf(
+          'herramientas.editor_no_instalado',
+          `El editor no está instalado: ${id}`,
+          {
+            nombre: id,
+          },
+        );
+      }
+    }
+    await this.sitios.modificarConfig((c) => {
+      c.editor.predeterminado = id;
+    });
   }
 
   /**
@@ -2783,11 +2845,24 @@ export class Nucleo {
   }
 
   /**
-   * Abre un archivo del sitio en VS Code en una línea (desde el visor de errores). Solo archivos
+   * Abre un archivo del sitio en el editor elegido en una línea (desde el visor de errores). Solo archivos
    * reales dentro de la carpeta del sitio: el sitio sale de la configuración por su id.
    */
-  async abrirEnEditor(sitioId: string, archivo: string, linea: number): Promise<void> {
-    await abrirArchivoDelSitio((await this.sitioPorId(sitioId)).carpeta, archivo, linea);
+  async abrirEnEditor(
+    sitioId: string,
+    archivo: string,
+    linea: number,
+    editor?: IdEditor | null,
+  ): Promise<ResultadoAbrirEditor> {
+    const carpeta = (await this.sitioPorId(sitioId)).carpeta;
+    const { deps, predeterminado } = await this.depsEditor();
+    return abrirArchivoDelSitio(
+      carpeta,
+      archivo,
+      linea,
+      { ...(editor ? { editor } : {}), predeterminado },
+      deps,
+    );
   }
 
   /** Respuesta de la ventana a `'mcp:confirmar'`; un id desconocido o vencido se ignora. */

@@ -1,34 +1,76 @@
 import { realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { buscarVsCode } from '../plataforma/vscodeWin';
+import { argsAbrir } from './editores';
+import type { EditorDisponible, IdEditor } from '../plataforma/tipos';
 import { rutaDentroDe } from '../plataforma/sistema';
 import { ErrorWolf } from '../errores';
 import { lanzarSeparado, type LanzadorSeparado } from '../plataforma/terminalWin';
 
-export { buscarVsCode } from '../plataforma/vscodeWin';
-
-export const MENSAJE_SIN_VSCODE =
-  'No se encontró Visual Studio Code. Instálelo (code.visualstudio.com) o agregue "code" al PATH.';
+export const MENSAJE_SIN_EDITOR =
+  'No se encontró ningún editor de código (VS Code, Cursor, PhpStorm, Sublime Text…). Instale uno.';
 
 export interface DepsEditor {
+  /** Editores instalados (`Plataforma.editoresInstalados`). */
+  editores: () => Promise<EditorDisponible[]>;
   entorno?: NodeJS.ProcessEnv;
-  existe?: (ruta: string) => boolean;
   lanzar?: LanzadorSeparado;
 }
 
+export interface OpcionesAbrirEditor {
+  /** Editor pedido: si no está instalado es un error. */
+  editor?: IdEditor;
+  /** Predeterminado de Ajustes: si no está instalado se usa el primero detectado. */
+  predeterminado?: IdEditor | null;
+  archivo?: { ruta: string; linea: number };
+}
+
+export interface ResultadoAbrirEditor {
+  editor: { id: IdEditor; nombre: string };
+  /** El predeterminado que no estaba instalado y fue sustituido (para avisar), o null. */
+  sustituyo: IdEditor | null;
+}
+
 /**
- * Abre la carpeta en VS Code, con ventana propia (como "Terminal aquí") y la carpeta como un
- * argumento (sin shell). Quita ELECTRON_RUN_AS_NODE: con esa variable Code.exe correría como
- * Node en vez de abrir el editor.
+ * Abre la carpeta (o un archivo en una línea) en un editor, con ventana propia y los argumentos
+ * en lista (sin shell). El ejecutable sale siempre de la detección (`Plataforma`), nunca del
+ * renderer. Quita ELECTRON_RUN_AS_NODE: con esa variable Code.exe correría como Node.
  */
-export async function abrirEnVsCode(carpeta: string, d: DepsEditor = {}): Promise<void> {
-  const exe = buscarVsCode(d);
-  if (!exe) throw new ErrorWolf('herramientas.sin_vscode', MENSAJE_SIN_VSCODE);
+export async function abrirEnEditor(
+  carpeta: string,
+  o: OpcionesAbrirEditor,
+  d: DepsEditor,
+): Promise<ResultadoAbrirEditor> {
+  const instalados = await d.editores();
+  let elegido: EditorDisponible | undefined;
+  let sustituyo: IdEditor | null = null;
+  if (o.editor) {
+    elegido = instalados.find((e) => e.id === o.editor);
+    if (!elegido) {
+      throw new ErrorWolf(
+        'herramientas.editor_no_instalado',
+        `El editor no está instalado: ${o.editor}`,
+        {
+          nombre: o.editor,
+        },
+      );
+    }
+  } else {
+    elegido = o.predeterminado ? instalados.find((e) => e.id === o.predeterminado) : undefined;
+    if (!elegido) {
+      if (o.predeterminado) sustituyo = o.predeterminado;
+      elegido = instalados[0];
+    }
+  }
+  if (!elegido) throw new ErrorWolf('herramientas.sin_editor', MENSAJE_SIN_EDITOR);
   const env: NodeJS.ProcessEnv = { ...(d.entorno ?? process.env) };
   for (const k of Object.keys(env)) {
     if (k.toUpperCase() === 'ELECTRON_RUN_AS_NODE') delete env[k];
   }
-  await (d.lanzar ?? lanzarSeparado)(exe, [carpeta], { cwd: carpeta, env });
+  await (d.lanzar ?? lanzarSeparado)(elegido.ruta, argsAbrir(elegido.id, carpeta, o.archivo), {
+    cwd: carpeta,
+    env,
+  });
+  return { editor: { id: elegido.id, nombre: elegido.nombre }, sustituyo };
 }
 
 const argumentoInvalido = (campo: string): ErrorWolf =>
@@ -36,7 +78,7 @@ const argumentoInvalido = (campo: string): ErrorWolf =>
 
 /**
  * Abre `archivo` en la línea `linea` con la carpeta del sitio como espacio de trabajo
- * (`code <carpeta> -g <archivo>:<línea>`). El archivo sale de un registro de errores, así que
+ * (con los argumentos de cada editor). El archivo sale de un registro de errores, así que
  * se exige que sea un archivo real DENTRO de la carpeta del sitio (rutas reales: un enlace o
  * una unión que salga del sitio no vale); si no, `depuracion.archivo_fuera_del_sitio`.
  */
@@ -44,8 +86,9 @@ export async function abrirArchivoDelSitio(
   carpeta: string,
   archivo: string,
   linea: number,
-  d: DepsEditor = {},
-): Promise<void> {
+  o: Pick<OpcionesAbrirEditor, 'editor' | 'predeterminado'>,
+  d: DepsEditor,
+): Promise<ResultadoAbrirEditor> {
   if (!Number.isInteger(linea) || linea < 1 || linea > 10_000_000) {
     throw argumentoInvalido('linea');
   }
@@ -74,11 +117,5 @@ export async function abrirArchivoDelSitio(
   // real ya resuelta, así que haría falta reemplazar una carpeta del camino en ese instante; y
   // lo único que pasa es que el editor (del mismo usuario) abre otro archivo para leerlo. No se
   // ejecuta ni se escribe nada.
-  const exe = buscarVsCode(d);
-  if (!exe) throw new ErrorWolf('herramientas.sin_vscode', MENSAJE_SIN_VSCODE);
-  const env: NodeJS.ProcessEnv = { ...(d.entorno ?? process.env) };
-  for (const k of Object.keys(env)) {
-    if (k.toUpperCase() === 'ELECTRON_RUN_AS_NODE') delete env[k];
-  }
-  await (d.lanzar ?? lanzarSeparado)(exe, [raiz, '-g', `${real}:${linea}`], { cwd: raiz, env });
+  return abrirEnEditor(raiz, { ...o, archivo: { ruta: real, linea } }, d);
 }

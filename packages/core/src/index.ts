@@ -59,6 +59,7 @@ export * from './bd/pgvector';
 export * from './bd/baseProyecto';
 export * from './herramientas/composer';
 export * from './herramientas/terminal';
+export type { ResultadoAbrirEditor } from './herramientas/editor';
 export * from './herramientas/pathUsuario';
 export * from './herramientas/adminer';
 export * from './ftp/servidorFtp';

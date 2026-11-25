@@ -5,6 +5,7 @@ import { open, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { arch, homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { rutaBasePorDefecto } from './carpetas';
+import { editoresWindows } from './editoresWin';
 import {
   bloquesPem,
   interpretarAntivirus,
@@ -63,6 +64,7 @@ import type {
   OpcionesAbrirTerminal,
   PerfilFirefoxSistema,
   TerminalDisponible,
+  EditorDisponible,
   PlataformaCompleta,
   RangoPuertos,
   ResultadoEscritura,
@@ -484,6 +486,10 @@ export class PlataformaWindows implements PlataformaCompleta {
 
   async terminalesInstaladas(): Promise<TerminalDisponible[]> {
     return terminalesWindows(this.entorno, this.existeRuta, await this.rutaGit());
+  }
+
+  async editoresInstalados(): Promise<EditorDisponible[]> {
+    return editoresWindows(this.entorno, { existe: this.existeRuta });
   }
 
   /** Fuera de Windows (solo en pruebas) no hay PowerShell: ninguno. */

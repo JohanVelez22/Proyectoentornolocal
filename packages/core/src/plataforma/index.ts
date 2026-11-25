@@ -8,10 +8,12 @@ export type {
   CapacidadesPlataforma,
   ComandoManual,
   Ejecutor,
+  EditorDisponible,
   EstadoAntivirus,
   EstadoServicioSistema,
   IdCatalogo,
   Lanzador,
+  IdEditor,
   IdTerminal,
   InstalacionAjena,
   OpcionesAbrirTerminal,
@@ -27,7 +29,7 @@ export type {
   TerminalDisponible,
   UsoProceso,
 } from './tipos';
-export { IDS_TERMINAL } from './tipos';
+export { IDS_EDITOR, IDS_TERMINAL } from './tipos';
 export { lanzadorPorDefecto } from './lanzar';
 export {
   PlataformaWindows,
@@ -70,6 +72,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'variableUsuario',
   'abrirTerminal',
   'terminalesInstaladas',
+  'editoresInstalados',
   'lanzadorOculto',
   'descendientes',
   'rangosReservados',
