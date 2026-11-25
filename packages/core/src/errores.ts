@@ -114,6 +114,7 @@ export const PARAMETROS_ERROR = {
   'env.variable_invalida': ['clave'],
   'env.solo_lectura': ['clave'],
   'env.cambio_externo': [],
+  'env.usuario_compartido': ['base', 'proyecto'],
   'env.sin_confirmar': [],
   'env.versionado': [],
   'env.versionado_desconocido': [],

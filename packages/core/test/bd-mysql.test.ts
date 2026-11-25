@@ -701,6 +701,30 @@ describe('ClienteMysql: usuario de proyecto wolf_u_ (revisión de D16)', () => {
     expect(consultas.some((q) => q.sql.startsWith('ALTER USER'))).toBe(false);
   });
 
+  it('wolf_u_ con un host que no es local (%, una IP, un comodín): bd.usuario_privilegiado', async () => {
+    for (const host of ['%', '10.0.0.5', '192.168.%', 'equipo.lan']) {
+      const { cliente, consultas } = montar({
+        hosts: [host],
+        grants: ['GRANT USAGE ON *.* TO `wolf_u_tienda`@`' + host + '`'],
+      });
+      await cliente.conectar(cx);
+      const e = await cliente
+        .crearBase('tienda', { usuario: 'wolf_u_tienda', clave: 'buena' })
+        .catch((x: unknown) => x);
+      expect((e as { codigo?: string }).codigo, host).toBe('bd.usuario_privilegiado');
+      expect(consultas.some((q) => /^(CREATE|GRANT|ALTER)/.test(q.sql))).toBe(false);
+    }
+    // localhost, 127.0.0.1 y ::1 sí son suyos.
+    const { cliente } = montar({
+      hosts: ['localhost', '127.0.0.1', '::1'],
+      grants: ['GRANT USAGE ON *.* TO `wolf_u_tienda`@`localhost`'],
+    });
+    await cliente.conectar(cx);
+    await expect(
+      cliente.crearBase('tienda', { usuario: 'wolf_u_tienda', clave: 'buena' }),
+    ).resolves.toMatchObject({ usuarioActualizado: false });
+  });
+
   it('alCrearBase se llama justo después de CREATE DATABASE (nueva), antes del usuario', async () => {
     const { cliente, consultas } = montar({ fallaCreateUser: true });
     await cliente.conectar(cx);

@@ -731,7 +731,7 @@ export interface ApiEntorno {
      */
     usarUsuarioPropio(
       sitioId: string,
-      opciones: { confirmado: true; aceptarVersionado?: boolean },
+      opciones: { confirmado: true; aceptarVersionado?: boolean; compartirUsuario?: boolean },
     ): Promise<{ usuario: string; copia: string | null }>;
   };
   /**

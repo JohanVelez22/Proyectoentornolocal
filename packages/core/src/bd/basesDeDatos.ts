@@ -42,6 +42,8 @@ export interface OpcionesCrearBase {
   nueva?: boolean;
   /** Justo después de crear la base (no si ya existía); ver `OpcionesCrearBaseMotor`. */
   alCrearBase?: () => void;
+  /** PostgreSQL: cerrar a PUBLIC una base que ya existía porque la creó este proyecto. */
+  aislar?: boolean;
 }
 
 export type ResultadoCrear = ResultadoCrearBase | ResultadoCrearBasePg;

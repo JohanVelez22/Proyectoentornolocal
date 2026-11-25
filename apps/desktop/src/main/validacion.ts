@@ -1278,7 +1278,7 @@ export function pedidoEnv(v: unknown): PedidoEnv {
 export function opcionesEnv(
   v: unknown,
   permitidas: readonly string[],
-): { aceptarVersionado?: boolean; agregarGitignore?: boolean } {
+): { aceptarVersionado?: boolean; agregarGitignore?: boolean; compartirUsuario?: boolean } {
   const o = objetoPlano<Record<string, unknown>>(v, 'opciones del .env');
   for (const k of Object.keys(o)) {
     if (k !== 'confirmado' && !permitidas.includes(k)) {
@@ -1288,7 +1288,11 @@ export function opcionesEnv(
   if (o['confirmado'] !== true) {
     throw new ErrorWolf('env.sin_confirmar', 'Falta confirmar el cambio del .env.');
   }
-  const salida: { aceptarVersionado?: boolean; agregarGitignore?: boolean } = {};
+  const salida: {
+    aceptarVersionado?: boolean;
+    agregarGitignore?: boolean;
+    compartirUsuario?: boolean;
+  } = {};
   for (const k of permitidas) {
     if (k === 'huella') continue;
     if (o[k] !== undefined) {

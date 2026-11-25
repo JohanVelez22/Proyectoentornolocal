@@ -569,3 +569,39 @@ describe.skipIf(process.platform === 'win32')('copias del .env en POSIX (I5)', (
     expect((await stat(copia)).mode & 0o777).toBe(0o600);
   });
 });
+
+describe('revisión final de D16: estilo python y multilínea sin cierre', () => {
+  it('FastAPI (python-dotenv): $ sin escapar, entre comillas simples', async () => {
+    const proyecto = await carpetaTemporal('pel-env-py-');
+    const respaldos = await carpetaTemporal('pel-env-py-resp-');
+    const sitio = {
+      id: 'api-test',
+      nombre: 'API',
+      dominio: 'api.test',
+      carpeta: proyecto,
+      tipo: 'fastapi',
+    } as unknown as Sitio;
+    const gestor = new GestorEnv({
+      sitio: async (id) => (id === sitio.id ? sitio : undefined),
+      carpetaRespaldos: () => respaldos,
+      versionado: async () => false,
+      puertos: async () => ({ mailpit: null, redis: null }),
+    });
+    const env = path.join(proyecto, '.env');
+    await writeFile(env, 'A="vieja"\nB=x\n');
+    await gestor.guardar(sitio.id, { cambios: { A: 'a$b c', B: 'p$q', C: "it's $x" } }, true);
+    const t = await readFile(env, 'utf8');
+    expect(t).toBe("A='a$b c'\nB='p$q'\nC=\"it's $x\"\n");
+    expect(t).not.toContain('\\$');
+  });
+
+  it('una comilla que no se cierra en 200 líneas también queda en solo lectura', () => {
+    const texto = 'A=1\nROTA="sin cierre\nB=2\n';
+    const l = leerEnv(texto);
+    expect(escribirEnv(l)).toBe(texto);
+    expect(l.find((x) => x.clave === 'ROTA')).toMatchObject({ multilinea: true });
+    expect(() => aplicarCambios(l, { ROTA: 'otro' }, () => 'dotenv')).toThrow(
+      expect.objectContaining({ codigo: 'env.solo_lectura' }),
+    );
+  });
+});

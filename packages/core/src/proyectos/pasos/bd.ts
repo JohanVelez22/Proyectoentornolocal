@@ -88,7 +88,11 @@ export function pasoBdCrear(d: DepsPasos): ImplementacionPaso {
       // La base ya está (la creó un intento anterior o ya existía): el usuario que va a usar el
       // .env tiene que existir y tener sus permisos, o el proyecto quedaría sin conexión.
       comprobarSenal(ctx);
-      await d.bd.crear(objetivo, base, await opcionesUsuario(ctx, d, base, propio));
+      await d.bd.crear(objetivo, base, {
+        ...(await opcionesUsuario(ctx, d, base, propio)),
+        // La creó este proyecto: se cierra a PUBLIC como si naciera ahora (si ya existía, no).
+        ...(propia ? { aislar: true } : {}),
+      });
       ctx.linea(
         `La base ${base} ya existía en ${servidor}; se le dio acceso al usuario ${propio.usuario}.`,
       );

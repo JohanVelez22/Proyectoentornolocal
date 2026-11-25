@@ -221,6 +221,8 @@ export const fr: Textos = {
       'env.variable_invalida': 'La modification de la variable {clave} n’est pas valide.',
       'env.solo_lectura':
         'La variable {clave} occupe plusieurs lignes : modifiez-la à la main dans le fichier.',
+      'env.usuario_compartido':
+        'La base {base} est aussi utilisée par le projet {proyecto} : confirmez si vous voulez partager son utilisateur.',
       'env.cambio_externo':
         'Le .env a changé depuis l’aperçu : vérifiez-le de nouveau avant d’enregistrer.',
       'env.sin_confirmar': 'Confirmez que vous voulez enregistrer les modifications du .env.',
@@ -3618,6 +3620,10 @@ export const fr: Textos = {
         'Un nouvel utilisateur est créé avec un mot de passe aléatoire, avec des droits uniquement sur la base de ce projet, et l’utilisateur et le mot de passe de la connexion sont modifiés dans le .env. Une copie du .env actuel est d’abord enregistrée ; le nouveau mot de passe reste dans le .env du projet et chiffré dans WolfCore Dev.',
       confirmar: 'Créer et utiliser',
       hecho: (usuario: string) => `Le projet utilise maintenant l’utilisateur ${usuario}.`,
+      compartirTitulo: 'Partager l’utilisateur d’un autre projet ?',
+      compartirTexto: (base: string, proyecto: string) =>
+        `La base ${base} est aussi utilisée par ${proyecto}. Partager son utilisateur ? Ce projet utilisera le même utilisateur et le même mot de passe ; le mot de passe ne change pas, donc ${proyecto} reste connecté.`,
+      compartir: 'Partager l’utilisateur',
       error: 'Impossible de changer l’utilisateur de la base',
     },
     copias: {

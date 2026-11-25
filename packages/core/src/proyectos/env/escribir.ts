@@ -39,6 +39,8 @@ export function validarCambios(cambios: unknown): CambiosEnv {
 /** Valor listo para escribir respetando las comillas que la variable ya usaba. */
 function formatear(valor: string, previas: '"' | "'" | null, estilo: EstiloEnv): string {
   try {
+    // python-dotenv no decodifica \$: nunca se escapa; comillas simples siempre que se pueda.
+    if (estilo === 'python') return valorEnv(valor, estilo);
     if (previas === '"' && estilo === 'ci4' && /\$\{[A-Za-z0-9_.]+\}/.test(valor)) {
       // DotEnv de CodeIgniter 4 reemplaza ${NOMBRE} también entre comillas dobles.
       throw new Error('${…} en CodeIgniter 4');

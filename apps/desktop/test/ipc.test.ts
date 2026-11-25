@@ -2565,6 +2565,19 @@ describe('IPC del gestor de .env', () => {
     expect(secretos.guardar).not.toHaveBeenCalled();
   });
 
+  it('compartirUsuario (confirmación aparte) llega al núcleo solo si es true', async () => {
+    const { llamar, f } = montarEnv();
+    f['usarUsuarioPropio']!.mockResolvedValue({ usuario: 'wolf_u_x', copia: null });
+    await llamar('env.usarUsuarioPropio', 's1', { confirmado: true, compartirUsuario: true });
+    expect(f['usarUsuarioPropio']!.mock.calls[0]![1]).toMatchObject({ compartirUsuario: true });
+    await llamar('env.usarUsuarioPropio', 's1', { confirmado: true });
+    expect(f['usarUsuarioPropio']!.mock.calls[1]![1]).not.toHaveProperty('compartirUsuario');
+    expect(
+      (await llamar('env.usarUsuarioPropio', 's1', { confirmado: true, compartirUsuario: 'si' }))
+        .ok,
+    ).toBe(false);
+  });
+
   it('I2: usar usuario propio guarda la clave que el núcleo decide usar (la reutilizada)', async () => {
     const { llamar, f, secretos } = montarEnv();
     f['usarUsuarioPropio']!.mockImplementation(

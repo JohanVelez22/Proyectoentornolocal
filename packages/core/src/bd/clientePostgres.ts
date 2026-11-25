@@ -294,6 +294,7 @@ export class ClientePostgres {
       }
     }
     let claveCambiada = false;
+    let creada = false;
     try {
       let existia = false;
       // El propio servidor arma la sentencia con la clave entre comillas (%L).
@@ -345,11 +346,14 @@ export class ClientePostgres {
           `CREATE DATABASE ${bd}${dueno} ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'`,
         );
         // Desde aquí la base es de esta creación: un reintento tras un fallo posterior la retoma.
+        creada = true;
         opts.alCrearBase?.();
       } else if (usuario !== undefined) {
         await this.filas(`ALTER DATABASE ${bd} OWNER TO ${rol}`);
       }
-      if (usuario !== undefined) await this.aislarBase(nombre, usuario);
+      // Solo una base que nace aquí (o que el proyecto ya creó: `aislar`) se cierra a PUBLIC; una
+      // que ya existía puede tener otros usuarios.
+      if (usuario !== undefined && (creada || opts.aislar)) await this.aislarBase(nombre, usuario);
       if (usuario === undefined) return { usuarioActualizado: false };
       if (!existia) return { usuarioActualizado: false };
       if (!opts.cambiarClave) {
@@ -602,7 +606,9 @@ export class ClientePostgres {
     validarNombrePg(base);
     if (!/^[a-z][a-z0-9_-]{0,62}$/.test(nombre)) throw new Error('Nombre de extensión no válido.');
     try {
-      await this.enBase(base, (q) => q.query(`CREATE EXTENSION IF NOT EXISTS "${nombre}"`));
+      await this.enBase(base, (q) =>
+        q.query(`CREATE EXTENSION IF NOT EXISTS "${nombre}" SCHEMA public`),
+      );
     } catch (e) {
       throw traducir(e, `activar la extensión ${nombre} en ${base}`);
     }
@@ -643,7 +649,9 @@ export class ClientePostgres {
   async activarVector(base: string): Promise<void> {
     validarNombrePg(base);
     try {
-      await this.enBase(base, (q) => q.query('CREATE EXTENSION IF NOT EXISTS vector'));
+      await this.enBase(base, (q) =>
+        q.query('CREATE EXTENSION IF NOT EXISTS "vector" SCHEMA public'),
+      );
     } catch (e) {
       const c = (e as { code?: unknown } | null)?.code;
       const m = e instanceof Error ? e.message : '';

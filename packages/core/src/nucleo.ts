@@ -2903,6 +2903,11 @@ export class Nucleo {
       /** Guarda en `AlmacenSecretos` la clave que va a usar el proyecto (la nueva o la reutilizada). */
       guardarClave: (clave: string) => Promise<void>;
       aceptarVersionado?: boolean;
+      /**
+       * Confirma compartir el usuario de otro proyecto que usa la misma base (`env.usuario_compartido`
+       * nombra a ese proyecto). Sin esto, nunca se reutiliza su clave.
+       */
+      compartirUsuario?: boolean;
     },
     confirmado: true,
   ): Promise<{ usuario: string; copia: string | null }> {
@@ -2955,6 +2960,13 @@ export class Nucleo {
     for (const otro of await this.otrosConUsuarioBd(usuario, sitioId)) {
       const suya = await this.proveedorClaveBd(otro.id).catch(() => null);
       if (suya) {
+        if (o.compartirUsuario !== true) {
+          throw new ErrorWolf(
+            'env.usuario_compartido',
+            `La base ${b.base} también la usa el proyecto ${otro.nombre}: confirme que quiere compartir su usuario.`,
+            { base: b.base, proyecto: otro.nombre.slice(0, 80) },
+          );
+        }
         clave = suya;
         reutilizada = true;
         break;

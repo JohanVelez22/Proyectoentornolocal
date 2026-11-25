@@ -1204,7 +1204,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
   // de que el núcleo cree el usuario; nunca viaja al renderer.
   'env.usarUsuarioPropio': async (n, s, sitioId, opciones) => {
     const id = idCorto(sitioId, 'sitio');
-    const o = opcionesEnv(opciones, ['aceptarVersionado']);
+    const o = opcionesEnv(opciones, ['aceptarVersionado', 'compartirUsuario']);
     if (!s.secretos.disponible()) {
       throw new ErrorWolf(
         'secretos.sin_cifrado',
@@ -1220,6 +1220,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
           // La que el núcleo decida usar: la nueva o la de otro proyecto con el mismo usuario.
           guardarClave: (clave) => s.secretos.guardar(`bd:${id}`, clave),
           ...(o.aceptarVersionado ? { aceptarVersionado: true } : {}),
+          ...(o.compartirUsuario ? { compartirUsuario: true } : {}),
         },
         true,
       ),

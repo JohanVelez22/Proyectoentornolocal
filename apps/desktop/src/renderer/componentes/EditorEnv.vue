@@ -261,26 +261,61 @@ function pedirUsuarioPropio(): void {
     autoFocus: false,
     onPositiveClick: async () => {
       d.loading = true;
-      const r = await ejecutar(
-        'usuario-propio',
-        () =>
-          api().env.usarUsuarioPropio(
-            sitio.id,
-            plano({
-              confirmado: true as const,
-              ...(aceptarVersionado.value ? { aceptarVersionado: true } : {}),
-            }),
-          ),
-        { tituloError: t.usuarioPropio.error },
-      );
-      if (!r) return false;
-      message.success(t.usuarioPropio.hecho(r.usuario));
-      olvidarReveladas();
-      descartar();
-      await cargar();
-      return true;
+      return usarUsuarioPropio(sitio.id, false);
     },
   });
+}
+
+/**
+ * Llama a "Usar usuario propio". Si otro proyecto ya usa ese usuario con la misma base, el núcleo
+ * no comparte su clave sin una confirmación aparte que lo nombra: se pide y se vuelve a llamar.
+ */
+async function usarUsuarioPropio(sitioId: string, compartir: boolean): Promise<boolean> {
+  let compartido: { base: string; proyecto: string } | null = null;
+  const r = await ejecutar(
+    'usuario-propio',
+    async () => {
+      try {
+        return await api().env.usarUsuarioPropio(
+          sitioId,
+          plano({
+            confirmado: true as const,
+            ...(aceptarVersionado.value ? { aceptarVersionado: true } : {}),
+            ...(compartir ? { compartirUsuario: true } : {}),
+          }),
+        );
+      } catch (e) {
+        const x = e as { codigo?: unknown; datos?: Record<string, unknown> };
+        if (x.codigo === 'env.usuario_compartido' && !compartir) {
+          compartido = {
+            base: String(x.datos?.['base'] ?? ''),
+            proyecto: String(x.datos?.['proyecto'] ?? ''),
+          };
+          return null;
+        }
+        throw e;
+      }
+    },
+    { tituloError: t.usuarioPropio.error },
+  );
+  if (compartido) {
+    const { base, proyecto } = compartido;
+    dialog.warning({
+      title: t.usuarioPropio.compartirTitulo,
+      content: t.usuarioPropio.compartirTexto(base, proyecto),
+      positiveText: t.usuarioPropio.compartir,
+      negativeText: textos.acciones.cancelar,
+      autoFocus: false,
+      onPositiveClick: () => usarUsuarioPropio(sitioId, true),
+    });
+    return true;
+  }
+  if (!r) return false;
+  message.success(t.usuarioPropio.hecho(r.usuario));
+  olvidarReveladas();
+  descartar();
+  await cargar();
+  return true;
 }
 </script>
 

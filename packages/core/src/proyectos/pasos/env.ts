@@ -77,6 +77,8 @@ export function fijarLinea(texto: string, clave: string, linea: string): string 
 /** Lector del .env según el tipo (ver `EstiloEnv`). */
 export function estiloDe(tipo: TipoSitio, t: string): EstiloEnv {
   if (tipo === 'codeigniter4') return 'ci4';
+  // FastAPI (y Django) leen el .env con python-dotenv.
+  if (tipo === 'fastapi') return 'python';
   if (tipo === 'codeigniter3') return CI4_FORMATO.test(t) ? 'ci4' : 'literal';
   return 'dotenv';
 }

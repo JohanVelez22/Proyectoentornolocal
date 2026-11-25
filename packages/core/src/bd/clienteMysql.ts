@@ -94,6 +94,9 @@ export function esPermisoDeSuBase(linea: unknown, base: string): boolean {
   return m[1]!.replace(/``/g, '`').toLowerCase() === base.replace(/_/g, '\\_').toLowerCase();
 }
 
+/** Hosts de las cuentas de un usuario de proyecto (`wolf_u_…`). */
+const HOSTS_LOCALES = ['localhost', '127.0.0.1', '::1'];
+
 /** Un usuario que no se puede usar para un proyecto (el administrador, un rol del sistema…). */
 export const errorUsuarioPrivilegiado = (usuario: string): ErrorWolf =>
   new ErrorWolf(
@@ -145,6 +148,11 @@ export interface OpcionesCrearBaseMotor {
    * pidió la marca como suya antes de crear el usuario y sus permisos, que aún pueden fallar.
    */
   alCrearBase?: () => void;
+  /**
+   * PostgreSQL: cerrar la base a PUBLIC aunque ya existiera, porque la creó este mismo proyecto en
+   * un intento anterior (marca `base-creada`). Sin esto, solo se cierra la que nace en esta llamada.
+   */
+  aislar?: boolean;
 }
 
 export interface ResultadoCrearBase {
@@ -349,6 +357,15 @@ export class ClienteMysql {
           .map((x) => x.host ?? x.Host)
           .filter((h): h is string => typeof h === 'string' && h !== '');
         existia = hostsExistentes.length > 0;
+        // Un usuario de proyecto solo entra desde el propio equipo: otra cuenta (`%`, una IP, un
+        // nombre) no la creó WolfCore Dev y no se reutiliza.
+        if (
+          existia &&
+          esUsuarioDeProyecto(usuario) &&
+          hostsExistentes.some((h) => !HOSTS_LOCALES.includes(h.toLowerCase()))
+        ) {
+          throw errorUsuarioPrivilegiado(usuario);
+        }
         // Como con rolsuper en PostgreSQL: la clave de una cuenta con privilegios globales
         // nunca se cambia desde aquí (podría ser la de otro administrador).
         // Un usuario de proyecto que ya existe solo se reutiliza si tiene exactamente USAGE y su

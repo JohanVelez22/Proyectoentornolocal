@@ -209,6 +209,8 @@ export const en: Textos = {
       'env.cambio_invalido': 'A change to the .env is not valid.',
       'env.variable_invalida': 'The change to variable {clave} is not valid.',
       'env.solo_lectura': 'Variable {clave} spans several lines: edit it by hand in the file.',
+      'env.usuario_compartido':
+        'Database {base} is also used by project {proyecto}: confirm whether you want to share its user.',
       'env.cambio_externo':
         'The .env changed after the preview was shown: review it again before saving.',
       'env.sin_confirmar': 'Confirm that you want to save the .env changes.',
@@ -3515,6 +3517,10 @@ export const en: Textos = {
         'A new user is created with a random password, with permissions only on this project’s database, and the connection user and password in the .env are changed. A copy of the current .env is saved first; the new password stays in the project’s .env and encrypted in WolfCore Dev.',
       confirmar: 'Create and use',
       hecho: (usuario: string) => `The project now uses the user ${usuario}.`,
+      compartirTitulo: 'Share another project’s user?',
+      compartirTexto: (base: string, proyecto: string) =>
+        `Database ${base} is also used by ${proyecto}. Share its user? This project will use the same user and password; the password does not change, so ${proyecto} stays connected.`,
+      compartir: 'Share the user',
       error: 'Could not change the database user',
     },
     copias: {

@@ -231,6 +231,31 @@ describe('ClientePostgres', () => {
     await cliente.conectar(cx);
     await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'x' });
     expect(consultas.some((q) => q.sql === 'ALTER DATABASE "mi_bd" OWNER TO "app"')).toBe(true);
+    // Una base que ya existía no se cierra a PUBLIC (otros pueden usarla)…
+    expect(consultas.some((q) => q.sql.startsWith('REVOKE CONNECT'))).toBe(false);
+  });
+
+  it('base existente con aislar (la creó este proyecto en un intento anterior): sí se cierra', async () => {
+    const { cliente, consultas } = montar((sql) =>
+      sql.includes('FROM pg_database') ? [{ n: 1 }] : [],
+    );
+    await cliente.conectar(cx);
+    await cliente.crearBase('mi_bd', { usuario: 'app', clave: 'x', aislar: true });
+    expect(consultas.map((q) => q.sql)).toContain(
+      'REVOKE CONNECT, TEMPORARY ON DATABASE "mi_bd" FROM PUBLIC',
+    );
+  });
+
+  it('crearExtension la instala en public (no en pg_catalog del search_path seguro)', async () => {
+    const { cliente, consultas, conexiones } = montar();
+    await cliente.conectar(cx);
+    await cliente.crearExtension('mi_bd', 'pgcrypto');
+    const enLaBase = consultas.slice(-2).map((q) => q.sql);
+    expect(enLaBase).toEqual([
+      'SET search_path = pg_catalog, pg_temp',
+      'CREATE EXTENSION IF NOT EXISTS "pgcrypto" SCHEMA public',
+    ]);
+    expect(conexiones.at(-1)!.base).toBe('mi_bd');
   });
 
   it('no recrea una base existente', async () => {
@@ -387,7 +412,8 @@ describe('ClientePostgres', () => {
     const { cliente, consultas, conexiones } = montar();
     await cliente.conectar(cx);
     await cliente.activarVector('mi_bd');
-    expect(consultas.at(-1)!.sql).toBe('CREATE EXTENSION IF NOT EXISTS vector');
+    // Con search_path = pg_catalog, pg_temp la extensión iría a pg_catalog: el esquema va explícito.
+    expect(consultas.at(-1)!.sql).toBe('CREATE EXTENSION IF NOT EXISTS "vector" SCHEMA public');
     expect(conexiones.at(-1)!.base).toBe('mi_bd');
     expect(conexiones.at(-1)!.cerrada).toBe(true);
   });

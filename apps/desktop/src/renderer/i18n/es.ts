@@ -213,6 +213,8 @@ export const es = {
       'env.cambio_invalido': 'Un cambio del .env no es válido.',
       'env.variable_invalida': 'El cambio de la variable {clave} no es válido.',
       'env.solo_lectura': 'La variable {clave} ocupa varias líneas: edítela a mano en el archivo.',
+      'env.usuario_compartido':
+        'La base {base} también la usa el proyecto {proyecto}: confirme si quiere compartir su usuario.',
       'env.cambio_externo':
         'El .env cambió desde que se mostró la vista previa: revíselo de nuevo antes de guardar.',
       'env.sin_confirmar': 'Confirme que quiere guardar los cambios del .env.',
@@ -3532,6 +3534,10 @@ export const es = {
         'Se crea un usuario nuevo con una clave aleatoria, con permisos solo sobre la base de este proyecto, y se cambian el usuario y la clave de la conexión en el .env. Antes se guarda una copia del .env actual; la clave nueva queda en el .env del proyecto y cifrada en WolfCore Dev.',
       confirmar: 'Crear y usar',
       hecho: (usuario: string) => `El proyecto ahora usa el usuario ${usuario}.`,
+      compartirTitulo: '¿Compartir el usuario de otro proyecto?',
+      compartirTexto: (base: string, proyecto: string) =>
+        `La base ${base} también la usa ${proyecto}. ¿Compartir su usuario? Este proyecto usará el mismo usuario y la misma clave; la clave no cambia, así que ${proyecto} sigue conectado.`,
+      compartir: 'Compartir el usuario',
       error: 'No se pudo cambiar el usuario de la base',
     },
     copias: {

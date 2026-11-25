@@ -114,11 +114,13 @@ export function leerEnv(texto: string): LineaEnv[] {
         if (mj && !comillaAbierta(mj[4]!)) {
           crudo = junto;
           m = mj;
-          multilinea = true;
           i = j;
           break;
         }
       }
+      // Cerrada más abajo o sin cierre en MAX_LINEAS_VALOR líneas (no se sabe dónde termina): en
+      // los dos casos es de solo lectura.
+      multilinea = true;
     }
     let igual = m[3]!;
     let texto = m[4]!;

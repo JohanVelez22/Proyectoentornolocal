@@ -218,6 +218,8 @@ export const pt: Textos = {
       'env.cambio_invalido': 'Uma alteração do .env não é válida.',
       'env.variable_invalida': 'A alteração da variável {clave} não é válida.',
       'env.solo_lectura': 'A variável {clave} ocupa várias linhas: edite-a à mão no arquivo.',
+      'env.usuario_compartido':
+        'O banco {base} também é usado pelo projeto {proyecto}: confirme se quer compartilhar o usuário dele.',
       'env.cambio_externo':
         'O .env mudou depois que a pré-visualização foi mostrada: revise-o de novo antes de salvar.',
       'env.sin_confirmar': 'Confirme que quer salvar as alterações do .env.',
@@ -3542,6 +3544,10 @@ export const pt: Textos = {
         'É criado um usuário novo com uma senha aleatória, com permissões só sobre o banco deste projeto, e o usuário e a senha da conexão no .env são alterados. Antes é salva uma cópia do .env atual; a senha nova fica no .env do projeto e criptografada no WolfCore Dev.',
       confirmar: 'Criar e usar',
       hecho: (usuario: string) => `O projeto agora usa o usuário ${usuario}.`,
+      compartirTitulo: 'Compartilhar o usuário de outro projeto?',
+      compartirTexto: (base: string, proyecto: string) =>
+        `O banco ${base} também é usado por ${proyecto}. Compartilhar o usuário dele? Este projeto usará o mesmo usuário e a mesma senha; a senha não muda, então ${proyecto} continua conectado.`,
+      compartir: 'Compartilhar o usuário',
       error: 'Não foi possível alterar o usuário do banco',
     },
     copias: {

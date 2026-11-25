@@ -84,6 +84,7 @@ function urlEfectiva(c: ConfigProveedorIa): string | null {
 /** Estilo de los valores del .env según el lector del proyecto (como el bloque de BD). */
 function estiloDe(s: Sitio): EstiloEnv {
   if (s.tipo === 'codeigniter4') return 'ci4';
+  if (s.tipo === 'fastapi') return 'python';
   if (s.tipo === 'codeigniter3') return 'literal';
   return 'dotenv';
 }

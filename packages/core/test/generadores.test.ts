@@ -960,11 +960,20 @@ describe('Nucleo.crearProyecto (estático, de punta a punta)', () => {
       n.fijarProveedorClaveBd(async (id) => (id === a ? 'clave-de-a-prueba' : null));
       const pedidos = espiarCrear(n);
       const guardadas: string[] = [];
-      const r = await n.usarUsuarioPropio(
-        b,
-        { claveBd: 'centinela-secreta-d', guardarClave: async (c) => void guardadas.push(c) },
-        true,
-      );
+      const o = {
+        claveBd: 'centinela-secreta-d',
+        guardarClave: async (c: string) => void guardadas.push(c),
+      };
+      // Sin confirmar que se comparte: error que nombra al otro proyecto y la base; nada cambia.
+      const envB = await readFile(path.join(proyectos, 'sitio-b', '.env'), 'utf8');
+      await expect(n.usarUsuarioPropio(b, o, true)).rejects.toMatchObject({
+        codigo: 'env.usuario_compartido',
+        datos: { base: 'tienda', proyecto: 'sitio-a' },
+      });
+      expect(guardadas).toEqual([]);
+      expect(pedidos).toEqual([]);
+      expect(await readFile(path.join(proyectos, 'sitio-b', '.env'), 'utf8')).toBe(envB);
+      const r = await n.usarUsuarioPropio(b, { ...o, compartirUsuario: true }, true);
       expect(r.usuario).toBe('wolf_u_tienda');
       expect(guardadas).toEqual(['clave-de-a-prueba']);
       expect(pedidos).toEqual([

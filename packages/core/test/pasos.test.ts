@@ -2231,6 +2231,8 @@ describe('bd-crear con usuario propio: revisión de D16', () => {
       opts: { usuario: 'wolf_u_tienda', clave: CLAVE_PROPIA, cambiarClave: true },
     });
     expect(a.creadas[1]!.opts).not.toHaveProperty('nueva');
+    // La base es de este proyecto (marca): se cierra a PUBLIC como si se acabara de crear.
+    expect(a.creadas[1]!.opts).toMatchObject({ aislar: true });
     expect(marcasPaso).toEqual(['base-creada']);
   });
 
@@ -2244,6 +2246,8 @@ describe('bd-crear con usuario propio: revisión de D16', () => {
     });
     expect(a.creadas).toHaveLength(1);
     expect(a.creadas[0]!.opts).toMatchObject({ usuario: 'wolf_u_tienda', clave: CLAVE_PROPIA });
+    // Ya existía y no es de este proyecto: no se cierra a otros.
+    expect(a.creadas[0]!.opts).not.toHaveProperty('aislar');
     expect(lineas.join('\n')).toMatch(/wolf_u_tienda/);
   });
 

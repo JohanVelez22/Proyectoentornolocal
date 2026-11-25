@@ -25,8 +25,11 @@ const SIMPLE = /^[A-Za-z0-9_.:/@-]*$/;
  * - `ci4`: DotEnv de CodeIgniter 4. En ambas comillas decodifica `\\` y la comilla escapada.
  * - `literal`: lector propio de CodeIgniter 3 (index.php de los proyectos WolfCore): quita las
  *   comillas de los extremos con `trim($v, "\"'")` y no decodifica ningún escape.
+ * - `python`: python-dotenv (FastAPI, Django). No conoce `\$`: entre comillas dobles lo deja tal
+ *   cual. Se escribe entre comillas simples (literal, sin interpolar `${…}`) y, si el valor trae
+ *   `'`, entre dobles escapando solo `\\` y `"`.
  */
-export type EstiloEnv = 'dotenv' | 'ci4' | 'literal';
+export type EstiloEnv = 'dotenv' | 'ci4' | 'literal' | 'python';
 
 const COMILLA_EN_EXTREMO = /^["']|["']$/;
 
@@ -57,6 +60,7 @@ export function valorEnv(v: string, estilo: EstiloEnv = 'dotenv'): string {
   }
   if (!v.includes("'")) return `'${v}'`;
   if (estilo === 'literal') return `"${v}"`;
+  if (estilo === 'python') return `"${v.replace(/[\\"]/g, '\\$&')}"`;
   return `"${v.replace(/[\\"$]/g, '\\$&')}"`;
 }
 
