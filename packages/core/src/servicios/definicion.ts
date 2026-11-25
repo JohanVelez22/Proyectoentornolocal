@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { ErrorWolf } from '../errores';
+import { CerrojosServicio } from '../catalogo/cerrojo';
 import { claveValida } from '../catalogo/comun';
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -279,6 +280,8 @@ export interface InstanciaResuelta {
 
 export interface DepsServiciosDatos {
   rutas: Rutas;
+  /** Cerrojo por servicio compartido con el instalador y la limpieza de versiones. */
+  cerrojos?: CerrojosServicio;
   plataforma: Plataforma;
   supervisor: SupervisorServicios;
   instalador: InstaladorServicios;
@@ -312,12 +315,19 @@ export interface DepsServiciosDatos {
 
 /** Ciclo de vida de los servicios declarados con `DefServicio`, por instancia. */
 export class ServiciosDatos {
-  private readonly colas = new Map<string, Promise<unknown>>();
+  private readonly cerrojos: CerrojosServicio;
   private cacheDuenos: { clave: string; hasta: number; duenos: Duenos } | null = null;
   /** Instancias de los servicios de datos (fachada sobre esta clase). */
   readonly instancias: Instancias;
 
   constructor(private readonly d: DepsServiciosDatos) {
+    // El cerrojo es el de todo lo que toca bin/<servicio> (instalador y limpieza de versiones);
+    // los captadores de correo (grupo exclusivo) comparten uno solo.
+    this.cerrojos = d.cerrojos ?? new CerrojosServicio();
+    this.cerrojos.fijarNormalizador((id) => {
+      const grupo = this.def(id)?.grupoExclusivo;
+      return grupo === undefined ? id : `grupo:${grupo}`;
+    });
     this.instancias = {
       lista: (s) => this.listaInstancias(s),
       crear: (s, v) => this.crearInstancia(s, v),
@@ -364,16 +374,7 @@ export class ServiciosDatos {
 
   /** Operaciones de un mismo servicio (todas sus instancias), una a la vez. */
   private enCola<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    // Los servicios de un grupo exclusivo (captadores de correo) comparten cola: dos inicios
-    // simultáneos no pueden dejar dos encendidos.
-    const grupo = this.def(id)?.grupoExclusivo;
-    const clave = grupo === undefined ? id : `grupo:${grupo}`;
-    const r = (this.colas.get(clave) ?? Promise.resolve()).then(fn, fn);
-    this.colas.set(
-      clave,
-      r.catch(() => undefined),
-    );
-    return r;
+    return this.cerrojos.con(id, fn);
   }
 
   /** Versión configurada si está instalada; si no, la más reciente instalada. */

@@ -1,8 +1,14 @@
-import { realpath } from 'node:fs/promises';
+import { readdir, readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import type { Plantilla } from '../proyectos/plantillas';
 import type { Rutas } from '../rutas';
-import { TIPOS_RUNTIME, type TipoRuntime } from '../runtimes/runtimes';
+import {
+  elegirJava,
+  elegirVersion,
+  pistaEntendida,
+  TIPOS_RUNTIME,
+  type TipoRuntime,
+} from '../runtimes/runtimes';
 import {
   IDS_SERVICIO_DATOS,
   type Config,
@@ -18,6 +24,7 @@ import {
   type MotivoBloqueo,
   type UsosVersiones,
 } from './limpieza';
+import { compararVersionesDesc } from './comun';
 import type { ServicioVersiones } from './tablaVersiones';
 
 /**
@@ -34,8 +41,18 @@ export interface DepsUsoVersiones {
   plantillas: () => Promise<Plantilla[]>;
   estados: () => Promise<EstadoServicio[]>;
   instaladas: (servicio: ServicioVersiones) => Promise<string[]>;
-  /** Versiones de runtime con las que corre un proyecto (el mismo resolutor de Terminal). */
-  runtimesDe: (sitio: Sitio) => Promise<Partial<Record<TipoRuntime, string | undefined>>>;
+  /**
+   * Versiones de runtime con las que corre un proyecto (el mismo resolutor de Terminal).
+   * `lecturaFallida`: no se pudo leer su `wolfcore.yml` u otra pista, así que lo resuelto puede no
+   * ser lo que el proyecto pide.
+   */
+  runtimesDe: (
+    sitio: Sitio,
+  ) => Promise<Partial<Record<TipoRuntime, string | undefined>> & { lecturaFallida?: boolean }>;
+  /** Carpeta `data/<servicio>/<clave>` que abre esta versión (null si el servicio no guarda datos). */
+  carpetaDatos?: (servicio: string, version: string) => string | null;
+  /** Ramas de PHP que usan phpMyAdmin y Adminer. */
+  ramasHerramientas?: () => Promise<string[]>;
   /** Rama de PHP que usan los proyectos nuevos y las herramientas (null si no hay). */
   phpPorDefecto: () => Promise<string | null>;
   nginxActiva: () => Promise<string | null>;
@@ -59,7 +76,15 @@ export async function calcularUsos(d: DepsUsoVersiones): Promise<UsosVersiones> 
   const usos: UsosVersiones = new Map();
   const instaladasCache = new Map<string, string[]>();
   const instaladas = async (s: ServicioVersiones): Promise<string[]> => {
-    if (!instaladasCache.has(s)) instaladasCache.set(s, await d.instaladas(s).catch(() => []));
+    if (!instaladasCache.has(s)) {
+      try {
+        instaladasCache.set(s, await d.instaladas(s));
+      } catch {
+        // No se pudo ni listar lo instalado: ninguna versión de este servicio se toca.
+        usos.set(`${s}/*`, 'duda');
+        instaladasCache.set(s, []);
+      }
+    }
     return instaladasCache.get(s)!;
   };
   const prioridad = (m: MotivoBloqueo): number => MOTIVOS_BLOQUEO.indexOf(m);
@@ -112,6 +137,8 @@ export async function calcularUsos(d: DepsUsoVersiones): Promise<UsosVersiones> 
       }
       for (const rama of c.servicios.php.versiones) marcar('php', rama, 'sitio');
       for (const s of sitios) marcar('php', s.php, 'sitio');
+      // phpMyAdmin y Adminer corren con una rama de PHP aunque ningún sitio la use.
+      for (const rama of (await d.ramasHerramientas?.()) ?? []) marcar('php', rama, 'herramienta');
     });
 
     // Nginx: la activa (encendida o no) es la predeterminada.
@@ -150,6 +177,32 @@ export async function calcularUsos(d: DepsUsoVersiones): Promise<UsosVersiones> 
       });
     }
 
+    // Datos en data/: la versión más nueva de cada carpeta con datos es la única que sabe abrirlos
+    // (con otra rama no se podrían abrir), aunque ninguna instancia la use ahora.
+    if (d.carpetaDatos) {
+      for (const servicio of DATOS) {
+        if (!lim(servicio)) continue;
+        await paso([servicio], async () => {
+          const grupos = new Map<string, string[]>();
+          for (const v of await instaladas(servicio)) {
+            const dir = d.carpetaDatos!(servicio, v);
+            if (dir) grupos.set(dir, [...(grupos.get(dir) ?? []), v]);
+          }
+          for (const [dir, versiones] of grupos) {
+            let entradas: string[];
+            try {
+              entradas = await readdir(dir);
+            } catch (e) {
+              if ((e as { code?: string }).code === 'ENOENT') continue;
+              throw e;
+            }
+            if (entradas.length === 0) continue;
+            marcar(servicio, [...versiones].sort(compararVersionesDesc)[0], 'datos');
+          }
+        });
+      }
+    }
+
     // Runtimes (Node, Python, Java…), Composer y cloudflared: la predeterminada efectiva.
     for (const servicio of [...RUNTIMES_LIMPIABLES, 'composer', 'cloudflared'] as const) {
       await paso([servicio], async () => {
@@ -163,22 +216,79 @@ export async function calcularUsos(d: DepsUsoVersiones): Promise<UsosVersiones> 
     marcar('cloudflared', c.servicios.cloudflared.version, 'predeterminada');
 
     // Runtimes de cada proyecto (y de sus tareas programadas).
+    const binReal = await realpath(path.join(d.rutas.base, 'bin')).catch(() => null);
+    /** Marca la versión que cumple una pista; una pista que no se entiende deja el runtime en duda. */
+    const marcarPista = async (
+      tipo: (typeof RUNTIMES_LIMPIABLES)[number],
+      pista: string | null | undefined,
+      motivo: MotivoBloqueo,
+    ): Promise<void> => {
+      if (!pista) return;
+      if (!pistaEntendida(pista)) {
+        await dudar([tipo]);
+        return;
+      }
+      const inst = await instaladas(tipo);
+      marcar(tipo, (tipo === 'java' ? elegirJava : elegirVersion)(inst, pista), motivo);
+    };
     for (const s of sitios) {
       const motivo: MotivoBloqueo = (s.tareas ?? []).length > 0 ? 'tarea' : 'runtime';
       await paso(RUNTIMES_LIMPIABLES, async () => {
+        // Una carpeta que no está (disco sin montar) o que no se puede leer: no se sabe qué pide.
+        if (!(await stat(s.carpeta)).isDirectory()) throw new Error('no es una carpeta');
         const res = await d.runtimesDe(s);
+        if (res.lecturaFallida) throw new Error('no se pudo leer la configuración del proyecto');
         for (const tipo of RUNTIMES_LIMPIABLES) {
           marcar(tipo, res[tipo], motivo);
-          marcar(tipo, s.runtimes?.[tipo], motivo);
+          await marcarPista(tipo, s.runtimes?.[tipo], motivo);
+        }
+      });
+      // Entornos virtuales de Python del proyecto: su `pyvenv.cfg` dice con qué Python se crearon.
+      await paso(['python'], async () => {
+        const carpetas = new Set<string>([s.carpeta]);
+        for (const p of s.procesos) {
+          if (p.cwd !== 'raiz') {
+            carpetas.add(path.resolve(s.carpeta, p.cwd.replace(/[\\/]/g, path.sep)));
+          }
+        }
+        for (const carpeta of carpetas) {
+          for (const nombre of ['.venv', 'venv']) {
+            let texto: string;
+            try {
+              texto = await readFile(path.join(carpeta, nombre, 'pyvenv.cfg'), 'utf8');
+            } catch (e) {
+              const c = (e as { code?: string }).code;
+              if (c === 'ENOENT' || c === 'ENOTDIR') continue;
+              throw e;
+            }
+            const valores = [...texto.matchAll(/^\s*(home|executable)\s*=\s*(.+?)\s*$/gim)].map(
+              (m) => m[2]!,
+            );
+            if (valores.length === 0) throw new Error('pyvenv.cfg sin home');
+            for (const valor of valores) {
+              const real = await realpath(valor).catch(() => valor);
+              for (const ruta of [`${real}/x`, real]) {
+                const v = binReal ? versionDeEjecutable(ruta, binReal) : null;
+                if (v?.servicio === 'python') {
+                  const par = (await instaladas('python')).find(
+                    (x) => x.toLowerCase() === v.version,
+                  );
+                  marcar('python', par ?? v.version, motivo);
+                }
+              }
+            }
+          }
         }
       });
     }
 
-    // Plantillas: la rama de PHP y los runtimes que fijan.
+    // Plantillas: la rama de PHP y los runtimes que fijan (resueltos como un proyecto).
     await paso(['php', ...RUNTIMES_LIMPIABLES], async () => {
       for (const p of await d.plantillas()) {
         marcar('php', p.php, 'plantilla');
-        for (const tipo of RUNTIMES_LIMPIABLES) marcar(tipo, p.runtimes?.[tipo], 'plantilla');
+        for (const tipo of RUNTIMES_LIMPIABLES) {
+          await marcarPista(tipo, p.runtimes?.[tipo], 'plantilla');
+        }
       }
     });
 

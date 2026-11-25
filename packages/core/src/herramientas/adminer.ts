@@ -119,6 +119,13 @@ export class Adminer {
     return rama ? { disponible: true, rama } : { disponible: false, motivo: MOTIVO_SIN_PHP };
   }
 
+  /** Rama de PHP con la que correría Adminer ahora (null si no está instalado o no hay PHP). */
+  async ramaDeUso(): Promise<string | null> {
+    if (!this.instalado()) return null;
+    const ramas = await this.ramas();
+    return (await this.masNuevaEncendida(ramas)) ?? ramas[0] ?? null;
+  }
+
   /**
    * Datos para el vhost interno de nginx; null si Adminer no está instalado o no hay PHP.
    * Usa el PHP más reciente encendido y, si ninguno lo está, el más reciente instalado (así el

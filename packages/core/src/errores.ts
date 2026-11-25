@@ -65,6 +65,9 @@ export const PARAMETROS_ERROR = {
   'limpieza.en_uso': ['servicio', 'version'],
   'limpieza.ruta_insegura': ['servicio', 'version'],
   'limpieza.version_bloqueada': ['servicio', 'version'],
+  'limpieza.otro_volumen': ['servicio', 'version'],
+  'limpieza.contenido_ajeno': ['servicio', 'version'],
+  'limpieza.destino_ocupado': ['servicio', 'version'],
   // bases de datos
   'bd.encender_servicio': ['nombre'],
   'bd.sin_credenciales': ['nombre'],

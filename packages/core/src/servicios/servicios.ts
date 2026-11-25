@@ -1,3 +1,4 @@
+import type { CerrojosServicio } from '../catalogo/cerrojo';
 import type { EntradaAviso } from '../avisos/avisos';
 import type { ServidorFtp } from '../ftp/servidorFtp';
 import { ErrorWolf } from '../errores';
@@ -30,6 +31,8 @@ import type { UsoBase, UsoSitio } from './usoBases';
 
 export interface DepsServicios {
   rutas: Rutas;
+  /** Cerrojo por servicio compartido con el instalador y la limpieza de versiones. */
+  cerrojos?: CerrojosServicio;
   plataforma: Plataforma;
   supervisor: SupervisorServicios;
   instalador: InstaladorServicios;
@@ -174,6 +177,7 @@ export class Servicios {
     const definiciones = d.definiciones;
     this.datos = new ServiciosDatos({
       rutas: d.rutas,
+      ...(d.cerrojos ? { cerrojos: d.cerrojos } : {}),
       plataforma: d.plataforma,
       supervisor: d.supervisor,
       instalador: d.instalador,

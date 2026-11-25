@@ -21,6 +21,7 @@ import { ErrorWolf } from '../errores';
 import { ejecutorPorDefecto } from '../plataforma/win';
 import { renombrarConReintentos } from '../https/confianza';
 import { catalogo, ejecutableDe, huellaDeEntrada, type VersionDisponible } from './catalogo';
+import { CerrojosServicio } from './cerrojo';
 import { claveValida, rutaRelativaSegura, urlOficial } from './comun';
 import {
   fuenteFirmaDe,
@@ -76,6 +77,8 @@ export interface OpcionesInstalador {
   vigencia?: VigenciaAnillo;
   /** Clave minisign de un servicio (solo pruebas). Por defecto, la fijada (Zig). */
   claveMinisign?: (servicio: string) => string | null;
+  /** Cerrojo por servicio compartido con los servicios de datos y la limpieza de versiones. */
+  cerrojos?: CerrojosServicio;
 }
 
 /** Tamaño máximo de una firma separada (una real pesa menos de 1 KB). */
@@ -164,12 +167,17 @@ function huellaParaInstalar(v: VersionDisponible): Huella | null {
 }
 
 export class Instalador {
+  /** Cerrojo por servicio: mover una versión a `bin/` y desinstalar no se cruzan con la limpieza. */
+  readonly cerrojos: CerrojosServicio;
+
   constructor(
     private readonly rutas: Rutas,
     private readonly eventos: Eventos<EventosNucleo>,
     private readonly f: typeof fetch = fetch,
     private readonly opciones: OpcionesInstalador = {},
-  ) {}
+  ) {
+    this.cerrojos = opciones.cerrojos ?? new CerrojosServicio();
+  }
 
   /** Carpeta de instalación: PHP usa la rama, el resto la versión completa. */
   private clave(v: Pick<VersionDisponible, 'servicio' | 'version' | 'rama'>): string {
@@ -274,15 +282,17 @@ export class Instalador {
       await this.rust.desinstalar(version);
       return;
     }
-    const instancia = this.enUso ? await this.enUso(servicio, version) : null;
-    if (instancia) {
-      throw new ErrorWolf(
-        'instalador.version_en_uso',
-        `No se puede desinstalar ${servicio} ${version}: la usa la instancia ${instancia}.`,
-        { servicio, version, instancia },
-      );
-    }
-    await rm(this.rutas.bin(servicio, version), { recursive: true, force: true });
+    await this.cerrojos.con(servicio, async () => {
+      const instancia = this.enUso ? await this.enUso(servicio, version) : null;
+      if (instancia) {
+        throw new ErrorWolf(
+          'instalador.version_en_uso',
+          `No se puede desinstalar ${servicio} ${version}: la usa la instancia ${instancia}.`,
+          { servicio, version, instancia },
+        );
+      }
+      await rm(this.rutas.bin(servicio, version), { recursive: true, force: true });
+    });
   }
 
   private emitir(
@@ -455,34 +465,36 @@ export class Instalador {
       }
       await writeFile(path.join(origen, MARCA), v.version);
 
-      await mkdir(path.dirname(destino), { recursive: true });
-      if (existsSync(destino)) {
-        await renombrar(destino, previo);
-        reemplazado = true;
-      }
-      try {
-        await renombrar(origen, destino);
-      } catch (e) {
-        if (reemplazado) {
-          const restaurado = await renombrar(previo, destino).then(
-            () => true,
-            () => false,
-          );
-          if (restaurado) reemplazado = false;
-          else conservarPrevio = true;
-          const detalle = e instanceof Error ? e.message : String(e);
-          throw new Error(
-            restaurado
-              ? `No se pudo reemplazar ${v.servicio} ${clave}; se restauró la versión anterior: ${detalle}`
-              : `No se pudo reemplazar ${v.servicio} ${clave} y tampoco restaurar la anterior (copia en ${previo}): ${detalle}`,
-          );
+      // Mover la versión a su sitio es lo único que se cruza con la limpieza y el arranque de los
+      // servicios: va con el cerrojo del servicio (la descarga, no).
+      await this.cerrojos.con(v.servicio, async () => {
+        await mkdir(path.dirname(destino), { recursive: true });
+        if (existsSync(destino)) {
+          await renombrar(destino, previo);
+          reemplazado = true;
         }
-        if (await this.instalado(v.servicio, clave)) {
-          this.emitir(v, 'listo', 100);
-          return; // una instalación concurrente ganó
+        try {
+          await renombrar(origen, destino);
+        } catch (e) {
+          if (reemplazado) {
+            const restaurado = await renombrar(previo, destino).then(
+              () => true,
+              () => false,
+            );
+            if (restaurado) reemplazado = false;
+            else conservarPrevio = true;
+            const detalle = e instanceof Error ? e.message : String(e);
+            throw new Error(
+              restaurado
+                ? `No se pudo reemplazar ${v.servicio} ${clave}; se restauró la versión anterior: ${detalle}`
+                : `No se pudo reemplazar ${v.servicio} ${clave} y tampoco restaurar la anterior (copia en ${previo}): ${detalle}`,
+            );
+          }
+          // Una instalación concurrente ganó: se da por instalada.
+          if (await this.instalado(v.servicio, clave)) return;
+          throw e;
         }
-        throw e;
-      }
+      });
       this.emitir(v, 'listo', 100);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

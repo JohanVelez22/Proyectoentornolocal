@@ -38,10 +38,13 @@ import { crearPuertoWorkspaces } from './workspaces/puerto';
 import { Workspaces } from './workspaces/workspaces';
 import { GestorTareas } from './tareas/gestor';
 import { Programador } from './tareas/programador';
+import { CerrojosServicio } from './catalogo/cerrojo';
 import {
   Limpieza,
   type DestinoLimpieza,
   type ResultadoLimpieza,
+  type SeleccionLimpieza,
+  type VersionEnPapelera,
   type UsosVersiones,
   type VersionSinUso,
 } from './catalogo/limpieza';
@@ -810,6 +813,12 @@ export class Nucleo {
       instaladas: (s) => this.instalador.instalados(s),
       usos: () => this.usosDeVersiones(),
       instantanea: () => this.instantaneaEntorno('limpiar-versiones'),
+      cerrojos: this.instalador.cerrojos,
+      enCatalogo: async (servicio, carpeta) => {
+        // En PHP la carpeta es la rama: el catálogo la conoce por el parche instalado.
+        const version = await this.instalador.versionInstalada(servicio, carpeta);
+        return (await this.catalogoVivo.buscar(servicio, version)) !== null;
+      },
     });
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
@@ -861,7 +870,9 @@ export class Nucleo {
       ...(o.spawn ? { spawn: o.spawn } : {}),
       ...(o.sonda ? { sonda: o.sonda } : {}),
     });
+    const cerrojosServicio = new CerrojosServicio();
     const instalador = new Instalador(rutas, eventos, o.fetch ?? fetch, {
+      cerrojos: cerrojosServicio,
       exec: o.ejecutor ?? ejecutorPorDefecto,
       plataforma: plat,
       alAvisar: (codigo) =>
@@ -946,6 +957,7 @@ export class Nucleo {
     // eslint-disable-next-line prefer-const
     let lanRef!: GestorLan;
     const servicios: Servicios = new Servicios({
+      cerrojos: cerrojosServicio,
       instalarVersion: async (servicio, version, opciones) => {
         const v = await catalogoRef.buscar(servicio, version);
         if (!v) {
@@ -2170,7 +2182,20 @@ export class Nucleo {
       instaladas: (s) => this.instalador.instalados(s),
       runtimesDe: (sitio) => this.runtimes.paraProyecto(sitio),
       phpPorDefecto: () => this.composer.phpPorDefecto(),
-      nginxActiva: () => this.servicios.nginx.versionActiva().catch(() => null),
+      // Si no se puede leer cuál es la activa, el servicio queda en duda (lo decide `calcularUsos`).
+      nginxActiva: () => this.servicios.nginx.versionActiva(),
+      carpetaDatos: (servicio, version) => {
+        try {
+          const def = this.servicios.datos.def(servicio);
+          return def ? this.servicios.datos.carpetaDatos(def, version) : null;
+        } catch {
+          return null;
+        }
+      },
+      ramasHerramientas: async () =>
+        [await this.phpmyadmin.ramaDeUso(), await this.adminer.ramaDeUso()].filter(
+          (r): r is string => r !== null,
+        ),
       versionPreferida: (s, instaladas) => this.versionPreferida(s, instaladas),
       versionEnUso: (s, v) => this.servicios.datos.versionEnUso(s, v),
       pidsPropios: () =>
@@ -2201,15 +2226,25 @@ export class Nucleo {
 
   /**
    * Quita las versiones elegidas de `bin/` (nunca `data/`), a la papelera (se purga a los 7 días)
-   * o de forma definitiva. Toma antes la instantánea del entorno y vuelve a comprobar el uso de
-   * cada una justo antes de moverla.
+   * o de forma definitiva (con la instantánea del entorno antes) y vuelve a comprobar el uso de
+   * cada una, dentro del cerrojo de su servicio, justo antes de moverla.
    */
   limpiarVersiones(
-    seleccion: { servicio: string; version: string }[],
+    seleccion: SeleccionLimpieza[],
     confirmado: true,
     destino: DestinoLimpieza = 'papelera',
   ): Promise<ResultadoLimpieza> {
     return this.limpiezaVersiones.limpiar(seleccion, confirmado, { destino });
+  }
+
+  /** Las versiones que están en la papelera de limpieza (se purgan a los 7 días). */
+  versionesEnPapelera(): Promise<VersionEnPapelera[]> {
+    return this.limpiezaVersiones.listarPapelera();
+  }
+
+  /** Devuelve una versión de la papelera a `bin/` (falla si esa carpeta ya existe). */
+  recuperarVersion(id: string): Promise<void> {
+    return this.limpiezaVersiones.recuperar(id);
   }
 
   /** Instancias de un servicio de datos (o de todos) con su estado. */

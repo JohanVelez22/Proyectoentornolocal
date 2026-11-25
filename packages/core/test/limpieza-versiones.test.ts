@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, rename, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ejecutableDe } from '../src/catalogo/catalogo';
 import {
   claveVersion,
@@ -66,6 +66,8 @@ async function instalar(rutas: Rutas, servicio: string, version: string, bytes =
   return dir;
 }
 
+const base0 = { contenidoAjeno: [] as string[], sinCatalogo: false };
+
 describe('limpieza de versiones (D30)', () => {
   it('lista tamaño y motivo; las bloqueadas se listan pero no se limpian', async () => {
     const e = await entorno();
@@ -74,8 +76,14 @@ describe('limpieza de versiones (D30)', () => {
     e.usos.set(claveVersion('node', '22.1.0'), 'predeterminada' satisfies MotivoBloqueo);
     const lista = await e.l.versionesSinUso();
     expect(lista).toEqual([
-      { servicio: 'node', version: '20.5.0', bytes: 600, motivoBloqueo: null },
-      { servicio: 'node', version: '22.1.0', bytes: 200, motivoBloqueo: 'predeterminada' },
+      { ...base0, servicio: 'node', version: '20.5.0', bytes: 600, motivoBloqueo: null },
+      {
+        ...base0,
+        servicio: 'node',
+        version: '22.1.0',
+        bytes: 200,
+        motivoBloqueo: 'predeterminada',
+      },
     ]);
     const r = await e.l.limpiar(
       [
@@ -113,7 +121,9 @@ describe('limpieza de versiones (D30)', () => {
       e.usos.set(claveVersion('go', '1.24.1'), 'encendida');
       return '';
     };
-    const r = await e.l.limpiar([{ servicio: 'go', version: '1.24.1' }], true);
+    const r = await e.l.limpiar([{ servicio: 'go', version: '1.24.1' }], true, {
+      destino: 'definitivo',
+    });
     expect(r.fallidos[0]).toMatchObject({ codigo: 'limpieza.en_uso' });
     expect(existsSync(e.rutas.bin('go', '1.24.1'))).toBe(true);
   });
@@ -223,7 +233,7 @@ describe('limpieza de versiones (D30)', () => {
       e.llamadas.push('instantanea');
       return '';
     };
-    await e.l.limpiar([{ servicio: 'bun', version: '1.2.0' }], true);
+    await e.l.limpiar([{ servicio: 'bun', version: '1.2.0' }], true, { destino: 'definitivo' });
     expect(e.llamadas.indexOf('instantanea')).toBeGreaterThan(-1);
     expect(existsSync(dir)).toBe(false);
 
@@ -231,10 +241,16 @@ describe('limpieza de versiones (D30)', () => {
     e.opciones.instantanea = async () => {
       throw new Error('sin espacio');
     };
-    await expect(e.l.limpiar([{ servicio: 'bun', version: '1.3.0' }], true)).rejects.toThrow(
-      'sin espacio',
-    );
+    await expect(
+      e.l.limpiar([{ servicio: 'bun', version: '1.3.0' }], true, { destino: 'definitivo' }),
+    ).rejects.toThrow('sin espacio');
     expect(existsSync(dir2)).toBe(true);
+    // La papelera se recupera: no gasta una instantánea del entorno.
+    e.llamadas.length = 0;
+    const r = await e.l.limpiar([{ servicio: 'bun', version: '1.3.0' }], true);
+    expect(r.fallidos).toEqual([]);
+    expect(r.instantanea).toBe('');
+    expect(e.llamadas).not.toContain('instantanea');
   });
 
   it('un archivo bloqueado salta esa versión entera y sigue con las demás', async () => {
@@ -311,6 +327,10 @@ describe('limpieza de versiones (D30)', () => {
 
 describe('uso de versiones (D30): calcularUsos con dependencias falsas', () => {
   type Deps = Parameters<typeof calcularUsos>[0];
+  let carpetaSitio = '';
+  beforeEach(async () => {
+    carpetaSitio = await carpetaTemporal('pel-sitio-');
+  });
 
   async function montar(instaladas: Record<string, string[]>, extra: Partial<Deps> = {}) {
     const base = path.join(await carpetaTemporal('pel-usos-'), 'datos');
@@ -347,7 +367,7 @@ describe('uso de versiones (D30): calcularUsos con dependencias falsas', () => {
       id: 's1',
       nombre: 'S1',
       dominio: 's1.test',
-      carpeta: 'C:/p/s1',
+      carpeta: carpetaSitio,
       tipo: 'estatico',
       ...o,
     });

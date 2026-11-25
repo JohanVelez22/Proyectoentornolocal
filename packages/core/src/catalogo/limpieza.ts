@@ -3,6 +3,7 @@ import { mkdir, lstat, readdir, readFile, realpath, rename, rm, writeFile } from
 import path from 'node:path';
 import { ErrorWolf, type CodigoError } from '../errores';
 import type { Rutas } from '../rutas';
+import { CerrojosServicio } from './cerrojo';
 import { claveValida } from './comun';
 import { SERVICIOS_VERSIONES, type ServicioVersiones } from './tablaVersiones';
 
@@ -20,13 +21,16 @@ export const SERVICIOS_LIMPIABLES: readonly ServicioVersiones[] = SERVICIOS_VERS
 /**
  * Por qué una versión no se puede marcar. Orden de prioridad cuando hay varios. `duda` = no se
  * pudo comprobar algo (una lectura falló, una ruta resuelve fuera de `bin/`): ante la duda, no
- * se borra.
+ * se borra. `datos` = hay datos en `data/` que solo esta versión (la más nueva de su rama) puede
+ * abrir; `herramienta` = la usa phpMyAdmin o Adminer.
  */
 export const MOTIVOS_BLOQUEO = [
   'predeterminada',
   'encendida',
   'sitio',
   'instancia',
+  'datos',
+  'herramienta',
   'plantilla',
   'workspace',
   'runtime',
@@ -41,9 +45,23 @@ export interface VersionSinUso {
   version: string;
   bytes: number;
   motivoBloqueo: MotivoBloqueo | null;
+  /**
+   * Lo que el usuario instaló dentro de esta versión (paquetes globales de npm, de pip…), en una
+   * lista corta. Con algo aquí, quitarla pierde eso: hay que marcarlo aparte.
+   */
+  contenidoAjeno: string[];
+  /** La versión ya no está en el catálogo: si se quita, no se podrá volver a descargar. */
+  sinCatalogo: boolean;
 }
 
 export type DestinoLimpieza = 'papelera' | 'definitivo';
+
+export interface SeleccionLimpieza {
+  servicio: string;
+  version: string;
+  /** Acepta perder lo que el usuario instaló dentro de la versión (`contenidoAjeno`). */
+  incluirContenidoAjeno?: boolean;
+}
 
 export interface FallidoLimpieza {
   servicio: string;
@@ -59,14 +77,36 @@ export interface ResultadoLimpieza {
   fallidos: FallidoLimpieza[];
   /** Versiones ya fuera de `bin/` cuyos restos no se pudieron borrar aún (se reintenta al arrancar). */
   pendientes: number;
-  /** Carpeta de la instantánea del entorno tomada antes de borrar (`''` si no había nada). */
+  /** Carpeta de la instantánea del entorno (solo en el borrado definitivo; `''` si no hubo). */
   instantanea: string;
 }
 
-/** Quién usa qué: `servicio/versión` → motivo. Una clave ausente = sin uso. */
+/** Una versión en la papelera, lista para recuperar. */
+export interface VersionEnPapelera {
+  id: string;
+  servicio: string;
+  version: string;
+  /** ISO 8601. */
+  borrada: string;
+  bytes: number;
+}
+
+/**
+ * Quién usa qué: `servicio/versión` → motivo. Una clave ausente = sin uso; `servicio/*` aplica a
+ * todas las versiones del servicio (no se pudo ni listar lo instalado).
+ */
 export type UsosVersiones = Map<string, MotivoBloqueo>;
 
 export const claveVersion = (servicio: string, version: string): string => `${servicio}/${version}`;
+
+/** Motivo que bloquea `servicio/versión` (el suyo o el de todo el servicio), o undefined. */
+export function bloqueoDe(
+  usos: UsosVersiones,
+  servicio: string,
+  version: string,
+): MotivoBloqueo | undefined {
+  return usos.get(claveVersion(servicio, version)) ?? usos.get(`${servicio}/*`);
+}
 
 export interface DepsLimpieza {
   rutas: Rutas;
@@ -76,6 +116,13 @@ export interface DepsLimpieza {
   usos: () => Promise<UsosVersiones>;
   /** Instantánea del entorno (D27). Si lanza, no se borra nada. */
   instantanea: () => Promise<string>;
+  /** Cerrojo por servicio compartido con el instalador y los servicios de datos. */
+  cerrojos?: CerrojosServicio;
+  /**
+   * ¿Sigue la versión en el catálogo (se puede volver a descargar)? null = no se sabe. Solo para
+   * avisar en la vista previa.
+   */
+  enCatalogo?: (servicio: ServicioVersiones, carpeta: string) => Promise<boolean | null>;
   ahora?: () => Date;
   /** Para las pruebas (simular un archivo bloqueado). Por defecto `fs.rename`. */
   renombrar?: (origen: string, destino: string) => Promise<void>;
@@ -86,6 +133,7 @@ export const DIAS_PAPELERA_VERSIONES = 7;
 const MAX_SELECCION = 200;
 const VERSION_SEGURA = /^[\w.-]{1,64}$/;
 const DE_PAPELERA = /^[a-z0-9-]{1,40}__[\w.-]{1,64}__\d{8}-\d{6}-[0-9a-f]{6}$/;
+const MAX_CONTENIDO_AJENO = 10;
 
 const normal = (r: string): string => r.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
 const mismaRuta = (a: string, b: string): boolean => normal(a) === normal(b);
@@ -128,6 +176,64 @@ export async function tamanoSinEnlaces(raiz: string): Promise<number> {
   return total;
 }
 
+/** Lo que trae de fábrica `node_modules` (npm y corepack) y `site-packages` (pip y setuptools). */
+const DE_FABRICA_NODE = new Set(['npm', 'corepack']);
+const DE_FABRICA_PYTHON =
+  /^(?:(?:pip|setuptools|pkg_resources|_distutils_hack|wheel)(?:-[\w.+]+\.dist-info)?|__pycache__|readme\.txt|distutils-precedence\.pth)$/i;
+const PROFUNDIDAD_BUSQUEDA = 4;
+
+/**
+ * Lo que alguien (el usuario, `npm i -g`, `pip install`) añadió dentro de una versión: en
+ * `node_modules`, todo lo que no sea `npm` ni `corepack`; en `site-packages`, todo lo que no sea
+ * `pip` ni `setuptools` (y sus archivos propios). No sigue enlaces. Una carpeta que no se puede
+ * leer cuenta como contenido ajeno (ante la duda, se avisa). Solo Node y Python.
+ */
+export async function contenidoAjeno(raiz: string, servicio: string): Promise<string[]> {
+  if (servicio !== 'node' && servicio !== 'python') return [];
+  const buscada = servicio === 'node' ? 'node_modules' : 'site-packages';
+  const hallado: string[] = [];
+  const pendientes: { dir: string; rel: string; prof: number }[] = [
+    { dir: raiz, rel: '', prof: 0 },
+  ];
+  while (pendientes.length > 0 && hallado.length <= MAX_CONTENIDO_AJENO) {
+    const { dir, rel, prof } = pendientes.pop()!;
+    let entradas;
+    try {
+      entradas = await readdir(dir, { withFileTypes: true });
+    } catch {
+      hallado.push(`${rel || '.'} (?)`);
+      continue;
+    }
+    for (const e of entradas) {
+      if (e.isSymbolicLink() || !e.isDirectory()) continue;
+      const hija = path.join(dir, e.name);
+      const relHija = rel === '' ? e.name : `${rel}/${e.name}`;
+      if (e.name === buscada) {
+        let dentro;
+        try {
+          dentro = await readdir(hija, { withFileTypes: true });
+        } catch {
+          hallado.push(`${relHija} (?)`);
+          continue;
+        }
+        for (const x of dentro) {
+          if (
+            servicio === 'node'
+              ? x.name.startsWith('.') || DE_FABRICA_NODE.has(x.name)
+              : DE_FABRICA_PYTHON.test(x.name)
+          ) {
+            continue;
+          }
+          hallado.push(`${relHija}/${x.name}`);
+        }
+      } else if (prof + 1 < PROFUNDIDAD_BUSQUEDA) {
+        pendientes.push({ dir: hija, rel: relHija, prof: prof + 1 });
+      }
+    }
+  }
+  return hallado.sort().slice(0, MAX_CONTENIDO_AJENO);
+}
+
 /**
  * Versión de `bin/` a la que pertenece un ejecutable (su ruta real ya resuelta), o null si no
  * está en `bin/<servicio>/<versión>/`. `rutaRealBin` es la ruta real de `bin/`.
@@ -146,10 +252,22 @@ export function versionDeEjecutable(
   return { servicio, version };
 }
 
+/** Código de error de un `rename` fallido: otro volumen, ya no existe o bloqueado (el resto). */
+function codigoDeRename(e: unknown): CodigoError {
+  const c = (e as { code?: unknown } | null)?.code;
+  if (c === 'EXDEV') return 'limpieza.otro_volumen';
+  if (c === 'ENOENT') return 'limpieza.no_existe';
+  if (c === 'DESTINO_FUERA') return 'limpieza.ruta_insegura';
+  return 'limpieza.version_bloqueada';
+}
+
 export class Limpieza {
   private ocupado = false;
+  private readonly cerrojos: CerrojosServicio;
 
-  constructor(private readonly d: DepsLimpieza) {}
+  constructor(private readonly d: DepsLimpieza) {
+    this.cerrojos = d.cerrojos ?? new CerrojosServicio();
+  }
 
   private ahora(): Date {
     return this.d.ahora?.() ?? new Date();
@@ -204,18 +322,33 @@ export class Limpieza {
     const usos = await this.d.usos();
     const salida: VersionSinUso[] = [];
     for (const servicio of SERVICIOS_LIMPIABLES) {
-      const carpetas = [...new Set(await this.d.instaladas(servicio))].sort();
+      let carpetas: string[];
+      try {
+        carpetas = [...new Set(await this.d.instaladas(servicio))].sort();
+      } catch {
+        continue;
+      }
       for (const version of carpetas) {
         if (!claveValida(version)) continue;
-        let motivo: MotivoBloqueo | null = usos.get(claveVersion(servicio, version)) ?? null;
+        let motivo: MotivoBloqueo | null = bloqueoDe(usos, servicio, version) ?? null;
         let bytes = 0;
+        let ajeno: string[] = [];
         try {
           const ruta = await this.rutaSegura(servicio, version);
           bytes = await tamanoSinEnlaces(ruta);
+          ajeno = await contenidoAjeno(ruta, servicio);
         } catch {
           motivo ??= 'duda';
         }
-        salida.push({ servicio, version, bytes, motivoBloqueo: motivo });
+        const enCatalogo = await this.d.enCatalogo?.(servicio, version).catch(() => null);
+        salida.push({
+          servicio,
+          version,
+          bytes,
+          motivoBloqueo: motivo,
+          contenidoAjeno: ajeno,
+          sinCatalogo: enCatalogo === false,
+        });
       }
     }
     return salida;
@@ -223,11 +356,13 @@ export class Limpieza {
 
   /**
    * Quita las versiones elegidas. Sin `confirmado: true` falla. Cada una se vuelve a comprobar
-   * justo antes de moverla; una que pasó a usarse, no existe, no es segura o tiene un archivo
-   * bloqueado se salta y se informa (nunca queda a medias: o se mueve entera o no se toca).
+   * dentro del cerrojo de su servicio, justo antes de moverla; una que pasó a usarse, no existe,
+   * no es segura, trae contenido ajeno sin aceptarlo o tiene un archivo bloqueado se salta y se
+   * informa (nunca queda a medias: o se mueve entera o no se toca). La instantánea del entorno
+   * solo se toma en el borrado definitivo: la papelera se puede recuperar.
    */
   async limpiar(
-    seleccion: { servicio: string; version: string }[],
+    seleccion: SeleccionLimpieza[],
     confirmado: true,
     o: { destino?: DestinoLimpieza } = {},
   ): Promise<ResultadoLimpieza> {
@@ -244,7 +379,10 @@ export class Limpieza {
     if (!Array.isArray(seleccion) || seleccion.length === 0 || seleccion.length > MAX_SELECCION) {
       throw new ErrorWolf('limpieza.seleccion_invalida', 'Selección de versiones no válida.');
     }
-    const elegidas = new Map<string, { servicio: ServicioVersiones; version: string }>();
+    const elegidas = new Map<
+      string,
+      { servicio: ServicioVersiones; version: string; incluir: boolean }
+    >();
     for (const s of seleccion) {
       const servicio = (SERVICIOS_LIMPIABLES as readonly string[]).includes(s?.servicio)
         ? (s.servicio as ServicioVersiones)
@@ -257,7 +395,11 @@ export class Limpieza {
       ) {
         throw new ErrorWolf('limpieza.seleccion_invalida', 'Selección de versiones no válida.');
       }
-      elegidas.set(claveVersion(servicio, s.version), { servicio, version: s.version });
+      elegidas.set(claveVersion(servicio, s.version), {
+        servicio,
+        version: s.version,
+        incluir: s.incluirContenidoAjeno === true,
+      });
     }
     if (this.ocupado) {
       throw new ErrorWolf('limpieza.en_curso', 'Ya hay una limpieza en curso.');
@@ -271,7 +413,7 @@ export class Limpieza {
   }
 
   private async ejecutar(
-    elegidas: { servicio: ServicioVersiones; version: string }[],
+    elegidas: { servicio: ServicioVersiones; version: string; incluir: boolean }[],
     destino: DestinoLimpieza,
   ): Promise<ResultadoLimpieza> {
     const res: ResultadoLimpieza = {
@@ -287,48 +429,68 @@ export class Limpieza {
     // Primera pasada (barata): lo que ya se ve en uso o ausente no justifica ni la instantánea.
     const instaladas = new Map<string, Set<string>>();
     const existe = async (s: ServicioVersiones, v: string): Promise<boolean> => {
-      if (!instaladas.has(s)) instaladas.set(s, new Set(await this.d.instaladas(s)));
+      if (!instaladas.has(s)) {
+        instaladas.set(s, new Set(await this.d.instaladas(s).catch(() => [] as string[])));
+      }
       return instaladas.get(s)!.has(v);
     };
-    let usos = await this.d.usos();
-    let candidatas: typeof elegidas = [];
+    const usos = await this.d.usos();
+    const candidatas: typeof elegidas = [];
     for (const v of elegidas) {
       if (!(await existe(v.servicio, v.version))) fallar(v, 'limpieza.no_existe');
-      else if (usos.has(claveVersion(v.servicio, v.version))) fallar(v, 'limpieza.en_uso');
+      else if (bloqueoDe(usos, v.servicio, v.version)) fallar(v, 'limpieza.en_uso');
       else candidatas.push(v);
     }
     if (candidatas.length === 0) return res;
 
-    // La instantánea va antes de tocar nada: si falla, no se borra nada.
-    res.instantanea = await this.d.instantanea();
+    // El borrado definitivo no se puede deshacer: antes, la instantánea del entorno (si falla, no
+    // se borra nada). La papelera se recupera, así que no gasta una de las instantáneas.
+    if (destino === 'definitivo') res.instantanea = await this.d.instantanea();
 
-    // Segunda comprobación, justo antes de mover (la instantánea y el usuario tardan).
-    usos = await this.d.usos();
-    const aMover: typeof candidatas = [];
+    // Se mide antes de comprobar el uso: lo lento va fuera del cerrojo y de la comprobación.
+    const medidas: { v: (typeof candidatas)[number]; bytes: number }[] = [];
     for (const v of candidatas) {
-      if (usos.has(claveVersion(v.servicio, v.version))) fallar(v, 'limpieza.en_uso');
-      else aMover.push(v);
-    }
-    candidatas = aMover;
-
-    const movidas: { dir: string; bytes: number }[] = [];
-    for (const v of candidatas) {
-      let ruta: string;
-      let bytes: number;
       try {
-        ruta = await this.rutaSegura(v.servicio, v.version);
-        bytes = await tamanoSinEnlaces(ruta);
+        const ruta = await this.rutaSegura(v.servicio, v.version);
+        medidas.push({ v, bytes: await tamanoSinEnlaces(ruta) });
       } catch {
         fallar(v, 'limpieza.ruta_insegura');
-        continue;
       }
-      const aparte = await this.mover(ruta, v, destino).catch(() => null);
-      if (aparte === null) {
-        fallar(v, 'limpieza.version_bloqueada');
+    }
+
+    const movidas: { dir: string; bytes: number }[] = [];
+    for (const { v, bytes } of medidas) {
+      // Cada versión, con el cerrojo de su servicio: el uso se vuelve a mirar justo antes del
+      // rename (otra versión de esta misma limpieza, o un arranque, pudo cambiarlo).
+      const r = await this.cerrojos.con(v.servicio, async (): Promise<string | CodigoError> => {
+        const u = await this.d.usos();
+        if (bloqueoDe(u, v.servicio, v.version)) return 'limpieza.en_uso';
+        if (
+          !(await this.d.instaladas(v.servicio).catch(() => [] as string[])).includes(v.version)
+        ) {
+          return 'limpieza.no_existe';
+        }
+        let ruta: string;
+        try {
+          ruta = await this.rutaSegura(v.servicio, v.version);
+        } catch {
+          return 'limpieza.ruta_insegura';
+        }
+        if (!v.incluir && (await contenidoAjeno(ruta, v.servicio)).length > 0) {
+          return 'limpieza.contenido_ajeno';
+        }
+        try {
+          return await this.mover(ruta, v, destino);
+        } catch (e) {
+          return codigoDeRename(e);
+        }
+      });
+      if (r.includes('.') && r.startsWith('limpieza.')) {
+        fallar(v, r as CodigoError);
         continue;
       }
       if (destino === 'papelera') res.enPapelera += bytes;
-      else movidas.push({ dir: aparte, bytes });
+      else movidas.push({ dir: r, bytes });
     }
     // Borrado definitivo: ya está fuera de bin/, así que un fallo aquí no deja una versión a medias.
     for (const m of movidas) {
@@ -353,8 +515,11 @@ export class Limpieza {
     await mkdir(dir, { recursive: true });
     // Nunca sale de la carpeta de datos: si la de destino resuelve fuera, no se mueve nada.
     const base = await realpath(this.d.rutas.base);
-    if (!dentroDe(base, await realpath(dir)))
-      throw new Error('destino fuera de la carpeta de datos');
+    if (!dentroDe(base, await realpath(dir))) {
+      throw Object.assign(new Error('destino fuera de la carpeta de datos'), {
+        code: 'DESTINO_FUERA',
+      });
+    }
     const nombre = `${v.servicio}__${v.version}__${sello(this.ahora())}-${randomBytes(3).toString('hex')}`;
     const final = path.join(dir, nombre);
     const marca = `${final}.borrado`;
@@ -369,6 +534,89 @@ export class Limpieza {
       throw e;
     }
     return final;
+  }
+
+  /** Las versiones que hay en la papelera (de la más nueva a la más vieja). */
+  async listarPapelera(): Promise<VersionEnPapelera[]> {
+    const dir = this.dirPapelera();
+    let nombres: string[];
+    try {
+      nombres = await readdir(dir);
+    } catch {
+      return [];
+    }
+    const salida: VersionEnPapelera[] = [];
+    for (const n of nombres) {
+      if (!n.endsWith('.borrado')) continue;
+      const id = n.slice(0, -'.borrado'.length);
+      if (!DE_PAPELERA.test(id)) continue;
+      const [servicio, version] = id.split('__') as [string, string];
+      const info = await lstat(path.join(dir, id)).catch(() => null);
+      if (!info?.isDirectory() || info.isSymbolicLink()) continue;
+      const t = Date.parse((await readFile(path.join(dir, n), 'utf8').catch(() => '')).trim());
+      salida.push({
+        id,
+        servicio,
+        version,
+        borrada: Number.isNaN(t) ? '' : new Date(t).toISOString(),
+        bytes: await tamanoSinEnlaces(path.join(dir, id)),
+      });
+    }
+    return salida.sort((a, b) => b.borrada.localeCompare(a.borrada));
+  }
+
+  /**
+   * Devuelve una versión de la papelera a `bin/<servicio>/<versión>`. Falla si esa carpeta ya
+   * existe (se instaló otra vez) o si la papelera no la tiene; nunca sobrescribe nada.
+   */
+  async recuperar(id: string): Promise<void> {
+    if (typeof id !== 'string' || !DE_PAPELERA.test(id)) {
+      throw new ErrorWolf('limpieza.seleccion_invalida', 'Versión de la papelera no válida.');
+    }
+    const [servicio, version] = id.split('__') as [string, string];
+    if (
+      !(SERVICIOS_LIMPIABLES as readonly string[]).includes(servicio) ||
+      !VERSION_SEGURA.test(version) ||
+      version.includes('..')
+    ) {
+      throw new ErrorWolf('limpieza.seleccion_invalida', 'Versión de la papelera no válida.');
+    }
+    const datos = { servicio, version };
+    const carpeta = path.join(this.dirPapelera(), id);
+    await this.cerrojos.con(servicio, async () => {
+      const info = await lstat(carpeta).catch(() => null);
+      if (!info?.isDirectory() || info.isSymbolicLink()) {
+        throw new ErrorWolf('limpieza.no_existe', 'Esa versión ya no está en la papelera.', datos);
+      }
+      const base = await realpath(this.d.rutas.base);
+      if (!dentroDe(base, await realpath(carpeta))) {
+        throw new ErrorWolf('limpieza.ruta_insegura', 'La carpeta no es segura.', datos);
+      }
+      const destino = this.d.rutas.bin(servicio, version);
+      if ((await lstat(destino).catch(() => null)) !== null) {
+        throw new ErrorWolf(
+          'limpieza.destino_ocupado',
+          `Ya hay una carpeta de ${servicio} ${version} en bin.`,
+          datos,
+        );
+      }
+      await mkdir(path.dirname(destino), { recursive: true });
+      // El padre (bin/<servicio>) tiene que ser real y estar dentro de bin/.
+      const bin = await realpath(this.raizBin());
+      if (!mismaRuta(await realpath(path.dirname(destino)), path.join(bin, servicio))) {
+        throw new ErrorWolf('limpieza.ruta_insegura', 'La carpeta no es segura.', datos);
+      }
+      try {
+        await (this.d.renombrar ?? rename)(carpeta, destino);
+      } catch (e) {
+        throw new ErrorWolf(
+          codigoDeRename(e),
+          `No se pudo recuperar ${servicio} ${version}.`,
+          datos,
+        );
+      }
+      await rm(`${carpeta}.borrado`, { force: true }).catch(() => undefined);
+    });
   }
 
   /** Quita de la papelera lo que lleva más de 7 días. Devuelve cuántas versiones quitó. */

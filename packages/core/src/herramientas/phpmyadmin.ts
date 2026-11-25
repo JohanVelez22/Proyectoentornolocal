@@ -222,6 +222,12 @@ export class PhpMyAdmin {
     return EXTENSIONES_PMA.filter((e) => !extensionActiva(ini, e));
   }
 
+  /** Rama de PHP con la que correría phpMyAdmin ahora (null si no está instalado o no hay PHP). */
+  async ramaDeUso(): Promise<string | null> {
+    if (!(await this.instalado())) return null;
+    return (this.elegir(await this.encendidas()) ?? this.elegir(await this.ramas()))?.rama ?? null;
+  }
+
   async disponibilidad(): Promise<DisponibilidadPhpMyAdmin> {
     if (!(await this.instalado())) {
       return { disponible: false, motivo: MOTIVO_SIN_PHPMYADMIN, causa: 'sin_instalar' };

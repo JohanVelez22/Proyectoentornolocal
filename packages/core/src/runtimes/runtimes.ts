@@ -94,7 +94,11 @@ export function variablesRuntime(
 }
 
 /** Versiones elegidas para un proyecto y avisos en español para mostrar al usuario. */
-export type RuntimesProyecto = VersionesRuntime & { avisos: string[] };
+export type RuntimesProyecto = VersionesRuntime & {
+  avisos: string[];
+  /** No se pudo leer `wolfcore.yml` (u otra pista): lo que se resolvió puede no ser lo que pide el proyecto. */
+  lecturaFallida?: true;
+};
 
 /** Resolutor que usan Terminal y los procesos de proyecto. */
 export interface ResolutorRuntimes {
@@ -218,6 +222,11 @@ function predicado(pista: string): Pred | null {
   const alts = t.split('||').map(alternativa);
   if (alts.some((a) => a === null)) return null;
   return (v) => alts.some((a) => a!(v));
+}
+
+/** ¿Se entiende la pista de versión? (`elegirVersion` ante una que no se entiende usa la más nueva). */
+export function pistaEntendida(pista: string): boolean {
+  return predicado(pista) !== null;
 }
 
 /**
@@ -393,6 +402,7 @@ export class Runtimes implements ResolutorRuntimes {
       yml = (await leerConfigProyecto(sitio.carpeta)) ?? yml;
     } catch (e) {
       res.avisos.push(`${e instanceof Error ? e.message : String(e)}. Se ignora.`);
+      res.lecturaFallida = true;
     }
     const archivos = await pistasArchivos(sitio.carpeta);
     const { pistas: lenguajes, canalRust } = await pistasLenguaje(sitio.carpeta);
