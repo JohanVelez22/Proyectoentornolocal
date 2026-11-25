@@ -107,6 +107,7 @@ export const PARAMETROS_ERROR = {
   'plantillas.no_existe': [],
   'plantillas.danada': [],
   'plantillas.demasiado_grande': ['maximo'],
+  'plantillas.demasiado_pesada': ['maximo'],
   'plantillas.exclusion_invalida': [],
   'plantillas.nombre_invalido': [],
   'plantillas.esquema_fallo': [],

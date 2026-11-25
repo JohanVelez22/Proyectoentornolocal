@@ -54,6 +54,13 @@ const PELIGROSO = new RegExp(
 const DEFINER =
   /\bDEFINER\s*=\s*(?:CURRENT_USER(?:\s*\(\s*\))?|(?:`[^`]*`|'[^']*'|"[^"]*"|[\w$.-]+)(?:\s*@\s*(?:`[^`]*`|'[^']*'|"[^"]*"|[\w$.%-]+))?)\s*/gi;
 
+/** Quita los DEFINER de un volcado de MySQL o MariaDB (en un esquema que se guarda). */
+export const quitarDefiner = (texto: string): string => texto.replace(DEFINER, ' ');
+
+/** Quita los contadores `AUTO_INCREMENT=n` (insinúan cuántas filas hubo). */
+export const quitarAutoIncrement = (texto: string): string =>
+  texto.replace(/\s+AUTO_INCREMENT\s*=\s*\d+/gi, '');
+
 const erroneo = (sentencia: string, motivo: string): ErrorWolf =>
   new ErrorWolf(
     'bd.sql_no_permitido',

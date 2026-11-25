@@ -117,7 +117,8 @@ export class Rutas {
       return;
     }
     for (const n of nombres) {
-      if (!/^(importar|restaurar)-/.test(n) && !/^lanzar-.*\.pid$/.test(n)) continue;
+      if (!/^(importar|restaurar|esquema|plantilla)-/.test(n) && !/^lanzar-.*\.pid$/.test(n))
+        continue;
       await rm(path.join(this.tmp(), n), {
         recursive: true,
         force: true,

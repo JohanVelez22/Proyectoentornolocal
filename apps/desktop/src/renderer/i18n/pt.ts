@@ -212,6 +212,8 @@ export const pt: Textos = {
         'O modelo está danificado ou foi modificado: não será usado. Apague-o e salve-o de novo.',
       'plantillas.demasiado_grande':
         'O projeto tem arquivos demais ou é grande demais para salvar como modelo (até {maximo} arquivos). Exclua pastas grandes.',
+      'plantillas.demasiado_pesada':
+        'O projeto é pesado demais para salvar como modelo (até {maximo} MB). Exclua pastas grandes.',
       'plantillas.exclusion_invalida':
         'Uma das exclusões não é válida (use nomes ou caminhos relativos, sem "..").',
       'plantillas.nombre_invalido': 'O nome do modelo não é válido (de 1 a 60 caracteres).',

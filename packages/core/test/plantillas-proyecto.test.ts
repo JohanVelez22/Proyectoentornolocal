@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readdir, readFile, stat, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, stat, symlink, utimes, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { crc32, deflateRawSync } from 'node:zlib';
 import yauzl from 'yauzl';
@@ -320,7 +320,9 @@ describe('Plantillas.guardar: qué entra', () => {
     ).rejects.toMatchObject({ codigo: 'plantillas.demasiado_grande' });
     await expect(
       armar({ limites: { maxBytes: 10 } }).guardar('tienda', opciones),
-    ).rejects.toMatchObject({ codigo: 'plantillas.demasiado_grande' });
+    ).rejects.toMatchObject({
+      codigo: 'plantillas.demasiado_pesada',
+    });
     expect(await readdir(rutas.plantillas()).catch(() => [])).toEqual([]);
   });
 
@@ -1358,5 +1360,174 @@ describe('I7: argumentos de la receta', () => {
       { id: 'env-crear', tipo: 'env-crear', titulo: 'env', args: { valores: { A: '1' } } },
       { id: 'migrar', tipo: 'migrar', titulo: 'm' },
     ]);
+  });
+});
+
+describe('menores de la segunda revisión', () => {
+  it('9: demasiado_grande informa el máximo de archivos y demasiado_pesada el de MiB', async () => {
+    await expect(
+      armar({ limites: { maxArchivos: 2 } }).guardar('tienda', opciones),
+    ).rejects.toMatchObject({ codigo: 'plantillas.demasiado_grande', datos: { maximo: 2 } });
+    await expect(
+      armar({ limites: { maxBytes: 3 * 1024 * 1024 } }).guardar('tienda', {
+        ...opciones,
+        conArchivos: true,
+      }),
+    ).resolves.toBeDefined();
+    await escribir('public/a.bin', Buffer.alloc(900 * 1024, 1));
+    await escribir('public/b.bin', Buffer.alloc(900 * 1024, 2));
+    await escribir('public/c.bin', Buffer.alloc(900 * 1024, 3));
+    await expect(
+      armar({ limites: { maxBytes: 2 * 1024 * 1024 } }).guardar('tienda', opciones),
+    ).rejects.toMatchObject({ codigo: 'plantillas.demasiado_pesada', datos: { maximo: 2 } });
+  });
+
+  it('1: el esquema guardado no lleva DEFINER ni AUTO_INCREMENT', async () => {
+    const pl = armar({
+      respaldar: async (_o, base, carpeta) => {
+        await mkdir(carpeta, { recursive: true });
+        const archivo = path.join(carpeta, `${base}.sql`);
+        await writeFile(
+          archivo,
+          'CREATE DEFINER=`root`@`localhost` PROCEDURE p() BEGIN END;\nCREATE TABLE t (id int) ENGINE=InnoDB AUTO_INCREMENT=48213 DEFAULT CHARSET=utf8mb4;\n',
+        );
+        return { archivo };
+      },
+    });
+    const p = await pl.guardar('tienda', opciones);
+    const sql = await readFile(path.join(rutas.plantillas(), p.id, 'esquema.sql'), 'utf8');
+    expect(sql).not.toMatch(/DEFINER|AUTO_INCREMENT|48213/);
+    // La huella es la del esquema ya depurado.
+    expect(await pl.rutaEsquema(p.id)).toBeDefined();
+  });
+
+  it('1: un esquema con algo que parece una clave no se guarda (MySQL y PostgreSQL)', async () => {
+    const con = (texto: string, motor: 'mysql' | 'postgresql') =>
+      armar({
+        baseDe: async () => ({ motor, base: 'tienda', usuario: 'root' }),
+        respaldar: async (_o, base, carpeta) => {
+          await mkdir(carpeta, { recursive: true });
+          const archivo = path.join(carpeta, `${base}.dump`);
+          await writeFile(archivo, texto);
+          return { archivo };
+        },
+        leerEsquema: async () => `CREATE TABLE t (a text DEFAULT 'api_key: ${CENTINELA}');`,
+      });
+    await expect(
+      con(`CREATE TABLE t (a text DEFAULT 'DB_PASSWORD=${CENTINELA}');`, 'mysql').guardar(
+        'tienda',
+        opciones,
+      ),
+    ).rejects.toMatchObject({ codigo: 'plantillas.esquema_fallo' });
+    await expect(con('PGDMP', 'postgresql').guardar('tienda', opciones)).rejects.toMatchObject({
+      codigo: 'plantillas.esquema_fallo',
+    });
+    expect(await readdir(rutas.plantillas())).toEqual([]);
+  });
+
+  it('3: sinSecretosPlantilla usa la misma regla que el escaneo (_KEY, APP_KEY, _PWD, _PW, DSN, default_pw)', () => {
+    expect(
+      sinSecretosPlantilla({
+        STRIPE_KEY: 'a',
+        APP_KEY: 'b',
+        DB_PWD: 'c',
+        SMTP_PW: 'd',
+        SENTRY_DSN: 'e',
+        'mysqli.default_pw': 'f',
+        primary_key: 'id',
+        memory_limit: '1G',
+      }),
+    ).toEqual({ primary_key: 'id', memory_limit: '1G' });
+  });
+
+  it('5: un nombre no portable (CON, NUL, a:b) se deja fuera con su motivo', async () => {
+    if (process.platform === 'win32') return; // Windows no deja crearlos
+    await escribir('public/con.txt', 'x');
+    await escribir('public/a:b.txt', 'x');
+    const v = await armar().vistaPrevia('tienda', {});
+    expect(v.excluidos).toEqual(
+      expect.arrayContaining([
+        'public/con.txt (nombre no portable)',
+        'public/a:b.txt (nombre no portable)',
+      ]),
+    );
+  });
+
+  it('7: las carpetas .tmp-* viejas se limpian y las recientes no', async () => {
+    const raiz = rutas.plantillas();
+    await mkdir(path.join(raiz, '.tmp-viejo'), { recursive: true });
+    await mkdir(path.join(raiz, '.tmp-reciente'), { recursive: true });
+    await writeFile(path.join(raiz, '.tmp-viejo', 'x'), 'x');
+    const hace = new Date(Date.now() - 60 * 60 * 1000);
+    await utimes(path.join(raiz, '.tmp-viejo'), hace, hace);
+    await armar().lista();
+    expect((await readdir(raiz)).sort()).toEqual(['.tmp-reciente']);
+  });
+
+  it('4: preparar verifica las huellas sobre una copia y de ella se extrae (no del original)', async () => {
+    const pl = armar();
+    const p = await pl.guardar('tienda', opciones);
+    await pl.preparar(p.id);
+    // El original cambia DESPUÉS de verificar: lo que se usa es la copia verificada.
+    await writeFile(
+      path.join(rutas.plantillas(), p.id, 'archivos.zip'),
+      zipCrudo({ 'x.php': 'x' }),
+    );
+    await writeFile(path.join(rutas.plantillas(), p.id, 'esquema.sql'), 'DROP DATABASE mysql;');
+    const destino = path.join(dir, 'nuevo-uso');
+    await mkdir(destino);
+    expect((await pl.restaurarArchivos(p.id, destino)).archivos).toBe(3);
+    expect(await readFile(path.join(destino, 'app', 'Modelo.php'), 'utf8')).toBe('<?php // modelo');
+    expect(await readFile((await pl.rutaEsquema(p.id)).ruta, 'utf8')).toContain('CREATE TABLE');
+    await pl.liberar(p.id);
+    expect(await readdir(rutas.tmp()).catch(() => [])).toEqual([]);
+    // Sin copia preparada se vuelve a verificar el original: ahora está cambiado.
+    await expect(pl.rutaEsquema(p.id)).rejects.toMatchObject({ codigo: 'plantillas.danada' });
+  });
+
+  it('4: una plantilla alterada se rechaza en crearProyecto antes de crear el sitio', async () => {
+    const pl = armar();
+    const p = await pl.guardar('tienda', opciones);
+    await writeFile(
+      path.join(rutas.plantillas(), p.id, 'archivos.zip'),
+      zipCrudo({ 'x.php': 'x' }),
+    );
+    const creados: unknown[] = [];
+    const liberadas: string[] = [];
+    const deps: DepsCrearProyecto = {
+      rutas: { base: path.join(dir, 'datos') },
+      crearSitio: async (d) => {
+        creados.push(d);
+        return { sitio: { ...d, id: 'nueva' } as Sitio };
+      },
+      ejecutarReceta: async () => ({ estado: 'lista' }),
+      estadoReceta: () => ({ pasos: [] }),
+      sitios: async () => [],
+      basesDe: async () => [],
+      phpInstaladas: async () => ['8.4'],
+      pythonInstaladas: async () => [],
+      confiar: async () => undefined,
+      plantillas: {
+        cargar: (id) => pl.cargar(id),
+        preparar: (id) => pl.preparar(id),
+        liberar: async (id) => {
+          liberadas.push(id);
+          await pl.liberar(id);
+        },
+      },
+    };
+    await expect(
+      crearProyecto(deps, {
+        tipo: 'laravel',
+        plantilla: p.id,
+        nombre: 'nueva',
+        carpeta: path.join(dir, 'nueva'),
+        base: null,
+        opciones: {},
+      }),
+    ).rejects.toMatchObject({ codigo: 'plantillas.danada' });
+    expect(creados).toEqual([]);
+    await expect(stat(path.join(dir, 'nueva'))).rejects.toThrow();
+    expect(liberadas).toEqual([p.id]);
   });
 });

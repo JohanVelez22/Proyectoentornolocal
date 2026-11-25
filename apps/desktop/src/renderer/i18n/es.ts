@@ -207,6 +207,8 @@ export const es = {
         'La plantilla está dañada o fue modificada: no se usa. Bórrela y guárdela de nuevo.',
       'plantillas.demasiado_grande':
         'El proyecto tiene demasiados archivos o pesa demasiado para guardarlo como plantilla (hasta {maximo} archivos). Excluya carpetas grandes.',
+      'plantillas.demasiado_pesada':
+        'El proyecto pesa demasiado para guardarlo como plantilla (hasta {maximo} MB). Excluya carpetas grandes.',
       'plantillas.exclusion_invalida':
         'Una de las exclusiones no es válida (use nombres o rutas relativas, sin "..").',
       'plantillas.nombre_invalido':

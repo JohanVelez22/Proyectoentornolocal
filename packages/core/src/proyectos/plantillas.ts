@@ -1,6 +1,17 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { cp, lstat, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import {
+  copyFile,
+  cp,
+  lstat,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import yauzl from 'yauzl';
@@ -9,6 +20,7 @@ import { z } from 'zod';
 import { leerBaseDelProyecto, type BaseProyecto } from '../bd/baseProyecto';
 import type { ObjetivoBd } from '../bd/basesDeDatos';
 import type { MotorBd } from '../bd/env';
+import { quitarAutoIncrement, quitarDefiner } from '../bd/sqlPermitido';
 import { extraerZip } from '../catalogo/zip';
 import { ErrorWolf } from '../errores';
 import { enmascararSecretos } from '../patronesSecretos';
@@ -241,6 +253,8 @@ export interface DepsPlantillas {
    * función se usa el motor predeterminado.
    */
   resolverObjetivo?: (motor: MotorBd, puerto: number | null) => Promise<ObjetivoBd | null>;
+  /** El esquema guardado como texto SQL, para revisarlo (en PostgreSQL pasa por pg_restore -f -). */
+  leerEsquema?: (servidor: ObjetivoBd, archivo: string) => Promise<string>;
   /** El proyecto usa MongoDB (para avisar que su esquema no se guarda). */
   usaMongodb?: (sitio: Sitio) => Promise<boolean>;
   limites?: Partial<LimitesPlantilla>;
@@ -411,7 +425,11 @@ export function llevaSecreto(contenido: string | Buffer): boolean {
 
 /* ───────────── Datos sin secretos ───────────── */
 
-const CLAVE_SECRETA = /(pass|clave|secret|token|api[_-]?key|private|credential|salt)/i;
+/**
+ * Nombres de clave o de variable con secreto: la misma regla que el escaneo de archivos (`_KEY`,
+ * `APP_KEY`, `_PWD`, `_PW`, `DSN`, `mysqli.default_pw`…) más lo que en español llama "clave".
+ */
+const CLAVE_SECRETA = new RegExp(`${NOMBRE_SECRETO}|pass(?:phrase)?|clave|private|salt`, 'i');
 
 /** Copia un valor quitando las claves con nombre de secreto y enmascarando lo que lo parezca. */
 export function sinSecretosPlantilla<T>(valor: T): T {
@@ -544,11 +562,19 @@ async function recopilar(
     if (r.excluidos.length < MAX_EXCLUIDOS_LISTA)
       r.excluidos.push(motivo ? `${rel} (${motivo})` : rel);
   };
-  const demasiado = (): ErrorWolf =>
+  const demasiados = (): ErrorWolf =>
     new ErrorWolf(
       'plantillas.demasiado_grande',
-      'El proyecto tiene demasiados archivos o pesa demasiado para guardarlo como plantilla.',
+      'El proyecto tiene demasiados archivos para guardarlo como plantilla.',
       { maximo: limites.maxArchivos },
+    );
+  const pesa = (): ErrorWolf =>
+    new ErrorWolf(
+      'plantillas.demasiado_pesada',
+      'El proyecto pesa demasiado para guardarlo como plantilla.',
+      {
+        maximo: Math.floor(limites.maxBytes / (1024 * 1024)),
+      },
     );
   const raiz = await lstat(carpeta);
   if (!raiz.isDirectory() || raiz.isSymbolicLink()) {
@@ -565,6 +591,12 @@ async function recopilar(
       const minus = relH.toLowerCase();
       if (coincidencias.some((c) => c(minus, h.name))) {
         dejar(relH);
+        continue;
+      }
+      // Un nombre que no se puede crear en Windows (CON, NUL, "a:b", "x.") rompería la plantilla
+      // al abrirla en otro equipo.
+      if (NOMBRE_RESERVADO.test(h.name) || /[:<>"|?*\0]/.test(h.name)) {
+        dejar(relH, 'nombre no portable');
         continue;
       }
       // Ni enlaces simbólicos ni uniones: no se sale de la carpeta del proyecto.
@@ -599,9 +631,8 @@ async function recopilar(
         dejar(relH, 'secreto');
         continue;
       }
-      if (r.archivos.length + 1 > limites.maxArchivos || r.bytes + info.size > limites.maxBytes) {
-        throw demasiado();
-      }
+      if (r.archivos.length + 1 > limites.maxArchivos) throw demasiados();
+      if (r.bytes + info.size > limites.maxBytes) throw pesa();
       r.archivos.push({
         rel: relH,
         abs: absH,
@@ -696,8 +727,120 @@ export class Plantillas {
     return path.join(this.d.rutas.plantillas(), validarIdPlantilla(id));
   }
 
+  /**
+   * Quita las carpetas `.tmp-*` que dejó un guardado interrumpido (más de 10 minutos): no hay un
+   * guardado vivo que dure tanto y no se borra el de otra ventana que está en curso.
+   */
+  private async limpiarParciales(): Promise<void> {
+    const raiz = this.d.rutas.plantillas();
+    const limite = (this.d.reloj?.() ?? new Date()).getTime() - 10 * 60 * 1000;
+    let nombres: string[];
+    try {
+      nombres = await readdir(raiz);
+    } catch {
+      return;
+    }
+    for (const n of nombres) {
+      if (!n.startsWith('.tmp-')) continue;
+      const ruta = path.join(raiz, n);
+      try {
+        const info = await lstat(ruta);
+        if (info.isSymbolicLink() || info.mtimeMs > limite) continue;
+        await rm(ruta, { recursive: true, force: true });
+      } catch {
+        // Otro proceso la está usando o ya no está.
+      }
+    }
+  }
+
+  /**
+   * Revisa el esquema recién volcado antes de guardarlo: sin DEFINER ni contadores
+   * AUTO_INCREMENT (MySQL, MariaDB) y sin nada que parezca una clave o una contraseña.
+   */
+  private async depurarEsquema(
+    servidor: ObjetivoBd,
+    archivo: string,
+    nombre: 'esquema.sql' | 'esquema.dump',
+  ): Promise<void> {
+    const rechazar = (texto: string): ErrorWolf =>
+      new ErrorWolf('plantillas.esquema_fallo', `No se pudo leer el esquema de la base: ${texto}`);
+    const info = await stat(archivo);
+    if (info.size > this.limites.maxBytesEsquema) throw rechazar('es demasiado grande.');
+    let texto: string | null = null;
+    if (nombre === 'esquema.sql') {
+      const original = await readFile(archivo, 'utf8');
+      texto = quitarAutoIncrement(quitarDefiner(original));
+      if (texto !== original) await writeFile(archivo, texto, 'utf8');
+    } else if (this.d.leerEsquema) {
+      texto = await this.d.leerEsquema(servidor, archivo);
+    }
+    if (texto !== null && llevaSecreto(texto)) {
+      throw rechazar('trae algo que parece una clave o una contraseña, así que no se guarda.');
+    }
+  }
+
+  /**
+   * Copia a `tmp` los archivos y el esquema de la plantilla, calcula las huellas sobre esas copias
+   * y las revisa; de ahí salen luego la extracción y la restauración. Se llama antes de crear nada:
+   * lo que se verificó es lo mismo que se usa (no se puede cambiar entre una cosa y la otra).
+   */
+  async preparar(id: string): Promise<void> {
+    const p = await this.cargar(id);
+    await this.liberar(id);
+    const tmp = this.d.rutas.tmp();
+    await mkdir(tmp, { recursive: true });
+    const dir = path.join(tmp, `plantilla-uso-${randomBytes(6).toString('hex')}`);
+    await mkdir(dir);
+    try {
+      const copiar = async (origen: string, destino: string, huella: string, tope: number) => {
+        const info = await lstat(origen).catch(() => null);
+        if (!info?.isFile() || info.size > tope) throw danada('falta un archivo o no es válido');
+        await copyFile(origen, destino);
+        if ((await sha256De(destino)) !== huella) throw danada('un archivo cambió');
+      };
+      let zip: string | null = null;
+      let esquema: string | null = null;
+      if (p.conArchivos && p.sha256.archivos) {
+        zip = path.join(dir, 'archivos.zip');
+        await copiar(
+          path.join(this.carpeta(id), 'archivos.zip'),
+          zip,
+          p.sha256.archivos,
+          this.limites.maxBytes * 2,
+        );
+        await revisarZip(zip, this.limites);
+      }
+      if (p.archivoEsquema && p.sha256.esquema) {
+        esquema = path.join(dir, p.archivoEsquema);
+        await copiar(
+          path.join(this.carpeta(id), p.archivoEsquema),
+          esquema,
+          p.sha256.esquema,
+          this.limites.maxBytesEsquema,
+        );
+      }
+      this.preparadas.set(id, { dir, zip, esquema });
+    } catch (e) {
+      await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+      throw e;
+    }
+  }
+
+  /** Borra la copia de trabajo de `preparar`. */
+  async liberar(id: string): Promise<void> {
+    const x = this.preparadas.get(validarIdPlantilla(id));
+    this.preparadas.delete(id);
+    if (x) await rm(x.dir, { recursive: true, force: true }).catch(() => undefined);
+  }
+
+  private readonly preparadas = new Map<
+    string,
+    { dir: string; zip: string | null; esquema: string | null }
+  >();
+
   /** Plantillas válidas, de la más nueva a la más vieja. Las dañadas no salen en la lista. */
   async lista(): Promise<Plantilla[]> {
+    await this.limpiarParciales();
     let nombres: string[];
     try {
       nombres = await readdir(this.d.rutas.plantillas());
@@ -805,6 +948,7 @@ export class Plantillas {
    * queda entera o no queda.
    */
   async guardar(sitioId: string, o: OpcionesPlantilla): Promise<Plantilla> {
+    await this.limpiarParciales();
     const nombre = typeof o?.nombre === 'string' ? o.nombre.trim() : '';
     if (nombre === '' || nombre.length > 60 || [...nombre].some((c) => c.charCodeAt(0) < 0x20)) {
       throw new ErrorWolf('plantillas.nombre_invalido', 'El nombre de la plantilla no es válido.');
@@ -850,6 +994,11 @@ export class Plantillas {
         archivoEsquema = base.motor === 'postgresql' ? 'esquema.dump' : 'esquema.sql';
         await rename(archivo, path.join(parcial, archivoEsquema));
         await rm(tmp, { recursive: true, force: true });
+        await this.depurarEsquema(
+          base.servidor,
+          path.join(parcial, archivoEsquema),
+          archivoEsquema,
+        );
         shaEsquema = await sha256De(path.join(parcial, archivoEsquema));
       }
       let shaArchivos: string | null = null;
@@ -922,6 +1071,8 @@ export class Plantillas {
     if (!p.archivoEsquema || !p.motorBase || !p.sha256.esquema) {
       throw new ErrorWolf('plantillas.sin_esquema', 'La plantilla no trae el esquema de una base.');
     }
+    const preparada = this.preparadas.get(id)?.esquema;
+    if (preparada) return { ruta: preparada, motor: p.motorBase };
     const ruta = path.join(this.carpeta(id), p.archivoEsquema);
     let info;
     try {
@@ -944,17 +1095,21 @@ export class Plantillas {
   async restaurarArchivos(id: string, destino: string): Promise<{ archivos: number }> {
     const p = await this.cargar(id);
     if (!p.conArchivos || !p.sha256.archivos) return { archivos: 0 };
-    const zip = path.join(this.carpeta(id), 'archivos.zip');
-    let info;
-    try {
-      info = await lstat(zip);
-    } catch {
-      throw danada('faltan los archivos');
-    }
-    if (!info.isFile()) throw danada('los archivos no son válidos');
-    if ((await sha256De(zip)) !== p.sha256.archivos) throw danada('los archivos cambiaron');
     const limites = this.limites;
-    await revisarZip(zip, limites);
+    // Con `preparar` ya hecho se usa la copia verificada; si no, se verifica el original ahora.
+    let zip = this.preparadas.get(id)?.zip ?? null;
+    if (!zip) {
+      zip = path.join(this.carpeta(id), 'archivos.zip');
+      let info;
+      try {
+        info = await lstat(zip);
+      } catch {
+        throw danada('faltan los archivos');
+      }
+      if (!info.isFile()) throw danada('los archivos no son válidos');
+      if ((await sha256De(zip)) !== p.sha256.archivos) throw danada('los archivos cambiaron');
+      await revisarZip(zip, limites);
+    }
 
     const d = await lstat(destino).catch(() => null);
     if (!d || d.isSymbolicLink() || !d.isDirectory()) {

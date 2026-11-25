@@ -68,7 +68,13 @@ export interface DepsCrearProyecto {
   /** Vuelve a tomar la huella de la receta con lo que dejó la creación (no es fatal si falla). */
   confiar: (sitioId: string) => Promise<unknown>;
   /** Plantillas propias (D14): `cargar` valida el id y la plantilla; lanza con código si falla. */
-  plantillas?: { cargar: (id: string) => Promise<Plantilla> };
+  plantillas?: {
+    cargar: (id: string) => Promise<Plantilla>;
+    /** Copia, verifica y deja listos sus archivos y su esquema antes de crear nada. */
+    preparar?: (id: string) => Promise<void>;
+    /** Suelta la copia de trabajo hecha por `preparar`. */
+    liberar?: (id: string) => Promise<void>;
+  };
   /** Aplica a un sitio recién creado los ajustes de la plantilla (php.ini y reglas de Nginx). */
   aplicarAjustes?: (
     sitioId: string,
@@ -231,6 +237,20 @@ export async function crearProyecto(
   d: DepsCrearProyecto,
   p: PedidoProyecto,
 ): Promise<ResultadoCrearProyecto> {
+  try {
+    return await crearProyectoInterno(d, p);
+  } finally {
+    // La copia de trabajo de la plantilla no sobrevive a la creación.
+    if (typeof p?.plantilla === 'string') {
+      await d.plantillas?.liberar?.(p.plantilla).catch(() => undefined);
+    }
+  }
+}
+
+async function crearProyectoInterno(
+  d: DepsCrearProyecto,
+  p: PedidoProyecto,
+): Promise<ResultadoCrearProyecto> {
   let plantilla: Plantilla | null = null;
   if (p?.plantilla !== undefined) {
     // El id sale de una lista que el núcleo mismo armó; igual se valida y se lee la plantilla
@@ -243,6 +263,9 @@ export async function crearProyecto(
       );
     }
     plantilla = await d.plantillas.cargar(id);
+    // Las huellas se verifican ahora, sobre una copia en tmp: de ella se extraen los archivos y
+    // se restaura el esquema, así lo verificado es lo mismo que se usa (y antes de crear nada).
+    await d.plantillas.preparar?.(id);
   } else if (!(TIPOS_GENERADOR as readonly string[]).includes(p?.tipo)) {
     throw invalido('tipo', 'El tipo de proyecto no existe.');
   }

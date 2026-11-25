@@ -1534,7 +1534,7 @@ export class Respaldos {
         '-Fc',
         '--verbose',
         // Solo estructura: ni una fila (plantillas de proyecto).
-        ...(soloEsquema ? ['--schema-only'] : []),
+        ...(soloEsquema ? ['--schema-only', '--no-subscriptions', '--no-publications'] : []),
         '--no-password',
         '-h',
         origen.host,
@@ -1582,6 +1582,25 @@ export class Respaldos {
     s.fin();
     if (codigo !== 0) throw new ErrorVolcado(s.detalle());
     return s;
+  }
+
+  /**
+   * El esquema de un respaldo como texto SQL (para revisarlo): un .sql tal cual; un respaldo de
+   * pg_dump pasa por `pg_restore -f -` (no conecta a ninguna base).
+   */
+  async esquemaComoTexto(objetivo: ObjetivoBd, archivo: string): Promise<string> {
+    const { r, motor } = await this.para(objetivo);
+    const m = motorSql(motor, 'Leer el esquema');
+    const ruta = path.resolve(archivo);
+    if (m !== 'postgresql') return (await readFile(ruta)).toString('utf8');
+    const { exe } = await r.herramienta('postgresql', 'restaurar');
+    const sql = await this.d.exec(exe, ['--no-owner', '--no-privileges', '-f', '-', ruta], {
+      timeoutMs: 2 * 60 * 1000,
+    });
+    if (sql.codigo !== 0) {
+      throw new ErrorWolf('bd.esquema_fallo', 'No se pudo leer el esquema del respaldo.');
+    }
+    return sql.stdout;
   }
 
   /**

@@ -214,6 +214,8 @@ export const fr: Textos = {
         'Le modèle est endommagé ou a été modifié : il ne sera pas utilisé. Supprimez-le et enregistrez-le à nouveau.',
       'plantillas.demasiado_grande':
         "Le projet contient trop de fichiers ou est trop volumineux pour être enregistré comme modèle (jusqu'à {maximo} fichiers). Excluez les gros dossiers.",
+      'plantillas.demasiado_pesada':
+        "Le projet est trop volumineux pour être enregistré comme modèle (jusqu'à {maximo} Mo). Excluez les gros dossiers.",
       'plantillas.exclusion_invalida':
         "Une des exclusions n'est pas valide (utilisez des noms ou des chemins relatifs, sans « .. »).",
       'plantillas.nombre_invalido': "Le nom du modèle n'est pas valide (de 1 à 60 caractères).",

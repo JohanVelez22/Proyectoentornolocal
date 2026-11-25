@@ -1272,6 +1272,9 @@ describe('respaldar', () => {
     expect(readFileSync(e1.archivo, 'utf8')).not.toContain('centinela-fila-d');
     const e2 = await armar().respaldar('postgresql', 'diamantes', carpeta, { soloEsquema: true });
     expect(lanzados[1]!.args).toContain('--schema-only');
+    expect(lanzados[1]!.args).toEqual(
+      expect.arrayContaining(['--no-subscriptions', '--no-publications']),
+    );
     expect(readFileSync(e2.archivo, 'utf8')).not.toContain('centinela-fila-d');
     const completo = await armar().respaldar('mysql', 'tienda', path.join(dir, 'completo'));
     expect(lanzados[2]!.args).not.toContain('--no-data');

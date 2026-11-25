@@ -1042,6 +1042,7 @@ export class Nucleo {
         if (instancia) return instancia.id;
         return estado.puertos.includes(puerto) ? motor : null;
       },
+      leerEsquema: (servidor, archivo) => respaldosRef.esquemaComoTexto(servidor, archivo),
       usaMongodb: async (s) => (await detectarProyectoB(s.carpeta)).servicios.includes('mongodb'),
       extensionesActivas: async (rama) =>
         (await extensionesPhp.listar(rama)).filter((e) => e.activa).map((e) => e.nombre),

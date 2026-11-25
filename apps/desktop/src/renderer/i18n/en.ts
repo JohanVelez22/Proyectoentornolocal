@@ -203,6 +203,8 @@ export const en: Textos = {
         'The template is damaged or was modified: it will not be used. Delete it and save it again.',
       'plantillas.demasiado_grande':
         'The project has too many files or is too large to save as a template (up to {maximo} files). Exclude large folders.',
+      'plantillas.demasiado_pesada':
+        'The project is too large to save as a template (up to {maximo} MB). Exclude large folders.',
       'plantillas.exclusion_invalida':
         'One of the exclusions is not valid (use relative names or paths, without "..").',
       'plantillas.nombre_invalido': 'The template name is not valid (1 to 60 characters).',
