@@ -1661,7 +1661,7 @@ export const en: Textos = {
     notaDescartados:
       'MailHog and MailDev are not offered: MailHog publishes no checksum to verify the download and MailDev exists only on npm. Nothing is downloaded without a verifiable checksum.',
     notaHost:
-      'The web inboxes only answer on 127.0.0.1. smtp4dev and Papercut also reject foreign Host headers; Mailpit and Inbucket cannot, so do not leave your inbox open while browsing sites you do not know.',
+      'The web inboxes only answer on 127.0.0.1, but while a catcher is running a malicious web page could try to read your inbox (DNS rebinding). smtp4dev and Papercut reject foreign Host headers; Mailpit serves its inbox under a secret path unique to this computer (WolfCore Dev opens that address for you); Inbucket has no protection at all: stop it when you are not using it.',
   },
   ia: {
     descripcion:

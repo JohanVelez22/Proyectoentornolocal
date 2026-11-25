@@ -1678,7 +1678,7 @@ export const es = {
     notaDescartados:
       'MailHog y MailDev no se ofrecen: MailHog no publica una huella con la que comprobar la descarga y MailDev solo existe en npm. Sin huella verificable no se descarga nada.',
     notaHost:
-      'Los buzones web solo responden en 127.0.0.1. smtp4dev y Papercut rechazan además cabeceras Host ajenas; Mailpit e Inbucket no pueden, así que no deje su buzón abierto mientras navega por sitios que no conoce.',
+      'Los buzones web solo responden en 127.0.0.1, pero mientras un captador está encendido una página web maliciosa podría intentar leer su buzón (DNS rebinding). smtp4dev y Papercut rechazan cabeceras Host ajenas; Mailpit sirve su buzón bajo una ruta secreta propia de este equipo (WolfCore Dev abre esa dirección por usted); Inbucket no tiene ninguna protección: apáguelo cuando no lo use.',
   },
   ia: {
     descripcion:

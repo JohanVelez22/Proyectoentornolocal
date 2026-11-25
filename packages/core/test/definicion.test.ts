@@ -162,9 +162,9 @@ describe('Config de servicios de datos', () => {
       redis: { version: null, puerto: 6379, autoIniciar: false },
       mongodb: { version: null, puerto: 27017, autoIniciar: false },
       mailpit: { version: null, puerto: 1025, autoIniciar: false },
-      smtp4dev: { version: null, puerto: 1026, autoIniciar: false },
-      inbucket: { version: null, puerto: 2500, autoIniciar: false },
-      papercut: { version: null, puerto: 2525, autoIniciar: false },
+      smtp4dev: { version: null, puerto: 1025, autoIniciar: false },
+      inbucket: { version: null, puerto: 1025, autoIniciar: false },
+      papercut: { version: null, puerto: 1025, autoIniciar: false },
       ollama: { version: null, puerto: 11434, autoIniciar: false },
     });
     // Las credenciales viven en etc/credenciales.json, nunca en config.json.

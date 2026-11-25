@@ -27,6 +27,7 @@ const exec: Ejecutor = async () => ({ codigo: 0, stdout: '', stderr: '' });
 
 const ctx = (id: IdCaptador, puerto: number): CtxServicio => {
   const rutas = new Rutas(base);
+  mkdirSync(rutas.bin(id, '1.0.0'), { recursive: true });
   return {
     rutas,
     bin: rutas.bin(id, '1.0.0'),
@@ -78,7 +79,8 @@ describe('captadores de correo (D21)', () => {
         expect(e.sha256 ?? e.sha512).toMatch(/^[0-9a-f]{64,128}$/);
       }
     }
-    expect(smtp.size).toBe(IDS_CAPTADOR.length);
+    // Comparten el puerto SMTP (uno a la vez); las webs, no.
+    expect([...smtp]).toEqual([1025]);
     expect(web.size).toBe(IDS_CAPTADOR.length);
   });
 
@@ -105,7 +107,9 @@ describe('captadores de correo (D21)', () => {
       // `AllowedHosts` lista los Host permitidos (con localhost): no es una dirección de escucha.
       const escucha = todo.replace(/^AllowedHosts=.*$/m, '');
       expect(escucha, id).not.toMatch(/0\.0\.0\.0|\*:|\+:|\[::\]|:::|localhost|Any\b/i);
-      expect(c.args({ smtp, web, datos: path.join(base, 'd') }).join(' ')).not.toContain('0.0.0.0');
+      expect(
+        c.args({ smtp, web, datos: path.join(base, 'd'), ruta: 'abc' }).join(' '),
+      ).not.toContain('0.0.0.0');
       expect(todo.includes(String(web)), id).toBe(true);
       expect(p.puerto).toBe(web);
     }
@@ -122,6 +126,7 @@ describe('captadores de correo (D21)', () => {
         '--imapport=',
         '--pop3port=',
         '--nousersettings',
+        '--locksettings',
       ]),
     );
     expect(p.env?.AllowedHosts).toBe('127.0.0.1;localhost');
@@ -151,6 +156,13 @@ describe('captadores de correo (D21)', () => {
     // La ruta absoluta de Windows ("C:\…") rompe el formato clave:valor de la opción.
     expect(p.env?.INBUCKET_STORAGE_PARAMS).toBe('path:mail');
     expect(p.cwd).toBe(c.datos);
+    // Retención y tope fijos, sin script Lua heredado y sin ruta base (no oculta nada).
+    expect(p.env).toMatchObject({
+      INBUCKET_STORAGE_RETENTIONPERIOD: '72h',
+      INBUCKET_STORAGE_MAILBOXMSGCAP: '200',
+      INBUCKET_LUA_PATH: '',
+    });
+    expect(p.env).not.toHaveProperty('INBUCKET_WEB_BASEPATH');
   });
 
   it('Mailpit conserva su configuración de siempre', async () => {
@@ -179,8 +191,7 @@ describe('captadores de correo (D21)', () => {
 describe('bloque MAIL_* del proyecto', () => {
   it('apunta al puerto SMTP del captador elegido', () => {
     const cfg = ConfigSchema.parse({
-      correo: { captador: 'inbucket' },
-      servicios: { datos: { inbucket: { puerto: 2599 }, mailpit: { puerto: 1030 } } },
+      correo: { captador: 'inbucket', puertoSmtp: 2599 },
     });
     expect(puertoSmtpElegido(cfg)).toBe(2599);
     const bloque = PLANTILLAS_ENV.correo({
@@ -229,7 +240,7 @@ describe('uno encendido a la vez', () => {
       modificarConfig: async (fn) => fn(cfg),
       definiciones: [
         defMailpit(),
-        ...IDS_CAPTADOR.filter((i) => i !== 'mailpit').map(defServicioCaptador),
+        ...IDS_CAPTADOR.filter((i) => i !== 'mailpit').map((i) => defServicioCaptador(i)),
       ],
       sonda: async () => false,
     });

@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { nombreEjecutable } from '../../plataforma/sistema';
 import type { DefProceso } from '../../procesos/supervisor';
@@ -7,17 +7,23 @@ import type { DefServicio } from '../definicion';
 import { registrarDefinicion } from '../datos';
 import { DEF_INBUCKET } from './inbucket';
 import { DEF_PAPERCUT } from './papercut';
+import { rutaSecretaDe, type Restringir } from './rutaSecreta';
 import { DEF_SMTP4DEV } from './smtp4dev';
 import {
+  CONSERVAR_ENTORNO_CAPTADOR,
   DIRECCION_LOCAL,
   GRUPO_CORREO,
   IDS_CAPTADOR,
+  PUERTO_SMTP_POR_DEFECTO,
+  QUITAR_ENTORNO_CAPTADOR,
   type CaptadorDescartado,
   type DefCaptador,
+  type EstadoCaptador,
   type IdCaptador,
 } from './tipos';
 
 export * from './tipos';
+export * from './rutaSecreta';
 
 /** Mailpit, la base: SMTP y web con `127.0.0.1` explícito y base en la carpeta de datos. */
 export const DEF_MAILPIT: DefCaptador = {
@@ -25,8 +31,10 @@ export const DEF_MAILPIT: DefCaptador = {
   nombre: 'Mailpit',
   opcional: false,
   avisoMantenimiento: false,
-  puertoSmtp: 1025,
+  puertoSmtp: PUERTO_SMTP_POR_DEFECTO,
   puertoWeb: 8025,
+  // La raíz de Mailpit responde 404 con --webroot: nada delata la ruta (comprobado con la 1.34.0).
+  rutaSecreta: true,
   ejecutable: nombreEjecutable('mailpit'),
   args: (o) => [
     '--smtp',
@@ -35,6 +43,8 @@ export const DEF_MAILPIT: DefCaptador = {
     `${DIRECCION_LOCAL}:${o.web}`,
     '--database',
     path.join(o.datos, 'mailpit.db'),
+    '--webroot',
+    o.ruta,
   ],
 };
 
@@ -81,9 +91,44 @@ export function captadorElegido(cfg: Pick<Config, 'correo'>): IdCaptador {
   return esIdCaptador(cfg.correo?.captador) ? cfg.correo.captador : 'mailpit';
 }
 
+/**
+ * Deja `id` como el captador elegido y como el único que arranca con la aplicación: la elección
+ * sobrevive a un reinicio y dos captadores nunca se enciendan a la vez al arrancar.
+ */
+export function aplicarEleccionCaptador(cfg: Config, id: IdCaptador): void {
+  cfg.correo.captador = id;
+  for (const otro of IDS_CAPTADOR) cfg.servicios.datos[otro].autoIniciar = otro === id;
+}
+
+/** El estado de un captador para la pantalla Correo; `urlWeb` incluye la ruta secreta si la hay. */
+export function estadoCaptador(
+  c: DefCaptador,
+  o: {
+    instalado: boolean;
+    /** Estado del proceso en el supervisor. */
+    estado: string;
+    elegido: boolean;
+    puertoSmtp: number;
+    ruta: string | null;
+  },
+): EstadoCaptador {
+  return {
+    id: c.id,
+    nombre: c.nombre,
+    opcional: c.opcional,
+    avisoMantenimiento: c.avisoMantenimiento,
+    instalado: o.instalado,
+    encendido: o.estado === 'encendido' || o.estado === 'iniciando',
+    elegido: o.elegido,
+    puertoSmtp: o.puertoSmtp,
+    puertoWeb: c.puertoWeb,
+    urlWeb: `http://${DIRECCION_LOCAL}:${c.puertoWeb}/${o.ruta ? `${o.ruta}/` : ''}`,
+  };
+}
+
 /** Puerto SMTP del captador elegido: el que escribe el bloque `MAIL_*` de los proyectos. */
 export function puertoSmtpElegido(cfg: Pick<Config, 'correo' | 'servicios'>): number {
-  return cfg.servicios.datos[captadorElegido(cfg)].puerto;
+  return cfg.correo.puertoSmtp;
 }
 
 /** Todos los puertos propios de los captadores (web y extra), que ningún proyecto puede tomar. */
@@ -95,7 +140,11 @@ export function puertosFijosCaptadores(): number[] {
 }
 
 /** `DefServicio` de un captador: puerto SMTP configurable, web fija y solo local. */
-export function defServicioCaptador(id: IdCaptador): DefServicio {
+export interface DepsCaptador {
+  restringir?: Restringir;
+}
+
+export function defServicioCaptador(id: IdCaptador, deps: DepsCaptador = {}): DefServicio {
   const c = CAPTADORES[id];
   return {
     id,
@@ -114,14 +163,21 @@ export function defServicioCaptador(id: IdCaptador): DefServicio {
     },
 
     async proceso(ctx): Promise<DefProceso> {
-      const o = { smtp: ctx.puerto, web: c.puertoWeb, datos: ctx.datos };
+      const ruta = c.rutaSecreta ? await rutaSecretaDe(ctx.datos, deps.restringir) : '';
+      const o = { smtp: ctx.puerto, web: c.puertoWeb, datos: ctx.datos, ruta };
       const env = c.env?.({ ...o, bin: ctx.bin });
+      // Archivos que pesan más que el entorno: se reescriben en cada arranque.
+      for (const f of c.archivos?.({ ...o, bin: ctx.bin }) ?? []) {
+        await writeFile(path.join(ctx.bin, f.nombre), f.contenido, 'utf8');
+      }
       return {
         id,
         comando: path.join(ctx.bin, c.ejecutable),
         args: c.args(o),
         cwd: c.cwd ? c.cwd({ bin: ctx.bin, datos: ctx.datos }) : ctx.bin,
         ...(env ? { env } : {}),
+        quitarEntorno: QUITAR_ENTORNO_CAPTADOR,
+        conservarEntorno: CONSERVAR_ENTORNO_CAPTADOR,
         // La sonda usa la interfaz web.
         puerto: c.puertoWeb,
         log: ctx.rutas.logs(`${id}.log`),
@@ -129,6 +185,14 @@ export function defServicioCaptador(id: IdCaptador): DefServicio {
       };
     },
   };
+}
+
+/**
+ * Registra los cuatro captadores con la restricción de permisos de la plataforma (para el archivo
+ * de la ruta secreta). Sin ella, `defServicioCaptador(id)` usa los permisos de la carpeta.
+ */
+export function registrarCaptadores(deps: DepsCaptador = {}): void {
+  for (const id of IDS_CAPTADOR) registrarDefinicion(defServicioCaptador(id, deps));
 }
 
 for (const id of ['smtp4dev', 'inbucket', 'papercut'] as const) {

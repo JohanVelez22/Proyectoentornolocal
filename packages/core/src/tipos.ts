@@ -195,10 +195,11 @@ export const PUERTOS_POR_DEFECTO: Record<IdServicioDatos, number> = {
   redis: 6379,
   mongodb: 27017,
   mailpit: 1025,
-  // Captadores de correo (D21): uno encendido a la vez; cada uno con su puerto SMTP por defecto.
-  smtp4dev: 1026,
-  inbucket: 2500,
-  papercut: 2525,
+  // Captadores de correo (D21): comparten el puerto SMTP (`Config.correo.puertoSmtp`); estos
+  // valores solo son el de partida de su campo heredado.
+  smtp4dev: 1025,
+  inbucket: 1025,
+  papercut: 1025,
   ollama: 11434,
 };
 
@@ -458,6 +459,11 @@ export const ConfigSchema = z.object({
         .enum(['mailpit', 'smtp4dev', 'inbucket', 'papercut'])
         .default('mailpit')
         .catch('mailpit'),
+      /**
+       * Puerto SMTP común a todos los captadores (solo uno corre a la vez): los `.env` de los
+       * proyectos siguen valiendo al cambiar de captador. Cambia desde Servicios.
+       */
+      puertoSmtp: z.number().int().min(1024).max(65535).default(1025).catch(1025),
     })
     .prefault({}),
   /** Avisos: notificaciones nativas y qué tipos se muestran. */

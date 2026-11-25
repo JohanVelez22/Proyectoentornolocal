@@ -48,6 +48,7 @@ import {
   parsearInstancia,
   puertosConfigurados,
   reflejarPredeterminada,
+  puertoImplicito,
   type Instancias,
 } from './instancias';
 import {
@@ -363,9 +364,13 @@ export class ServiciosDatos {
 
   /** Operaciones de un mismo servicio (todas sus instancias), una a la vez. */
   private enCola<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    const r = (this.colas.get(id) ?? Promise.resolve()).then(fn, fn);
+    // Los servicios de un grupo exclusivo (captadores de correo) comparten cola: dos inicios
+    // simultáneos no pueden dejar dos encendidos.
+    const grupo = this.def(id)?.grupoExclusivo;
+    const clave = grupo === undefined ? id : `grupo:${grupo}`;
+    const r = (this.colas.get(clave) ?? Promise.resolve()).then(fn, fn);
     this.colas.set(
-      id,
+      clave,
       r.catch(() => undefined),
     );
     return r;
@@ -493,7 +498,7 @@ export class ServiciosDatos {
         servicio: def.id,
         clave: claveDe(def, version),
         version,
-        puerto: c.puerto,
+        puerto: puertoImplicito(cfg, def.id),
         autoIniciar: c.autoIniciar,
         predeterminada: true,
         implicita: true,
@@ -622,6 +627,8 @@ export class ServiciosDatos {
     if (fijo) return fijo.nombre;
     for (const p of puertosConfigurados(cfg)) {
       if (p.puerto !== puerto) continue;
+      // Los captadores de correo comparten el puerto SMTP: no se estorban entre sí.
+      if (excepto !== null && this.mismoGrupo(p.servicio, excepto.servicio)) continue;
       const propia =
         excepto !== null &&
         p.servicio === excepto.servicio &&
@@ -636,6 +643,12 @@ export class ServiciosDatos {
       if ((def?.puertosExtra ?? []).includes(puerto)) return def?.nombre ?? NOMBRE_SERVICIO[otro];
     }
     return null;
+  }
+
+  /** ¿Los dos servicios son del mismo grupo exclusivo (captadores de correo)? */
+  private mismoGrupo(a: string, b: string): boolean {
+    const ga = this.def(a)?.grupoExclusivo;
+    return ga !== undefined && ga === this.def(b)?.grupoExclusivo;
   }
 
   /** Candidato a sugerir en lugar de `puerto` (falta comprobar que esté libre). */
@@ -748,17 +761,25 @@ export class ServiciosDatos {
   }
 
   /** Enciende un servicio (su predeterminada) o una instancia. */
-  iniciar(ref: IdServicioDatos | IdInstancia): Promise<void> {
+  iniciar(
+    ref: IdServicioDatos | IdInstancia,
+    opciones: { automatico?: boolean } = {},
+  ): Promise<void> {
     return this.enCola(this.servicioDe(ref), async () => {
       const cfg = await this.d.leerConfig();
       const { def, inst } = await this.objetivo(ref, cfg);
       // Un captador de correo a la vez: antes de encender uno se apaga el otro que corra.
       if (def.grupoExclusivo !== undefined && !this.vivo(inst.proceso)) {
-        await this.detenerExclusivos(def);
+        await this.detenerExclusivos(def, cfg);
       }
       await this.iniciarSinCola(def, inst, cfg);
-      // El captador que se enciende pasa a ser el de los proyectos (bloque MAIL_* del .env).
-      if (def.grupoExclusivo === GRUPO_CORREO && cfg.correo.captador !== def.id) {
+      // El captador que el usuario enciende pasa a ser el de los proyectos (bloque MAIL_* del
+      // .env). Un arranque automático nunca cambia esa elección.
+      if (
+        !opciones.automatico &&
+        def.grupoExclusivo === GRUPO_CORREO &&
+        cfg.correo.captador !== def.id
+      ) {
         await this.d.modificarConfig((c) => {
           c.correo.captador = def.id as Config['correo']['captador'];
         });
@@ -766,11 +787,16 @@ export class ServiciosDatos {
     });
   }
 
-  /** Apaga los servicios encendidos del mismo grupo exclusivo que `def` (sin contarlo a él). */
-  private async detenerExclusivos(def: DefServicio): Promise<void> {
+  /**
+   * Apaga los servicios encendidos del mismo grupo exclusivo que `def` (sin contarlo a él). Va sin
+   * cola propia: el que llama ya tiene la del grupo.
+   */
+  private async detenerExclusivos(def: DefServicio, cfg: Config): Promise<void> {
     for (const otro of this.d.definiciones()) {
       if (otro.id === def.id || otro.grupoExclusivo !== def.grupoExclusivo) continue;
-      if (this.vivo(otro.id)) await this.detener(otro.id);
+      if (!this.vivo(otro.id)) continue;
+      const { inst } = await this.objetivo(otro.id, cfg);
+      await this.detenerSinCola(otro, inst);
     }
   }
 
@@ -874,8 +900,11 @@ export class ServiciosDatos {
       const estaba = this.vivo(inst.proceso);
       const fijarPuerto = (p: number): Promise<void> =>
         this.d.modificarConfig((c) => {
-          if (inst.implicita) c.servicios.datos[inst.servicio].puerto = p;
-          else {
+          if (inst.implicita) {
+            c.servicios.datos[inst.servicio].puerto = p;
+            // Los captadores de correo comparten un solo puerto SMTP.
+            if (objetivo.def?.grupoExclusivo === GRUPO_CORREO) c.correo.puertoSmtp = p;
+          } else {
             const i = c.servicios.datos[inst.servicio].instancias?.[inst.clave];
             if (i) i.puerto = p;
             reflejarPredeterminada(c, inst.servicio);
@@ -1147,6 +1176,8 @@ export class ServiciosDatos {
     const cfg = await this.d.leerConfig();
     const res: ObjetivoInicio[] = [];
     for (const def of this.d.definiciones()) {
+      // En un grupo exclusivo solo arranca el elegido: dos captadores no pueden correr a la vez.
+      if (def.grupoExclusivo === GRUPO_CORREO && def.id !== cfg.correo.captador) continue;
       for (const inst of await this.resolver(def, cfg)) {
         const usada = usos.some((u) => usoCompatible(u, def.id) && u.puerto === inst.puerto);
         const base = def.categoria === 'bd' && inst.predeterminada;
@@ -1170,7 +1201,7 @@ export class ServiciosDatos {
     const arrancados: { o: ObjetivoInicio; error?: unknown }[] = [];
     for (const o of objetivos) {
       try {
-        await this.iniciar(o.ref);
+        await this.iniciar(o.ref, { automatico: true });
         arrancados.push({ o });
       } catch (e) {
         arrancados.push({ o, error: e });

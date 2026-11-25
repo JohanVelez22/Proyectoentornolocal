@@ -1681,7 +1681,7 @@ export const pt: Textos = {
     notaDescartados:
       'MailHog e MailDev não são oferecidos: o MailHog não publica uma impressão digital para verificar o download e o MailDev só existe no npm. Sem impressão digital verificável, nada é baixado.',
     notaHost:
-      'As caixas web só respondem em 127.0.0.1. O smtp4dev e o Papercut também rejeitam cabeçalhos Host alheios; o Mailpit e o Inbucket não conseguem, então não deixe sua caixa aberta ao navegar em sites que você não conhece.',
+      'As caixas web só respondem em 127.0.0.1, mas enquanto um capturador está ligado uma página web maliciosa pode tentar ler a sua caixa (DNS rebinding). O smtp4dev e o Papercut rejeitam cabeçalhos Host alheios; o Mailpit serve a caixa sob um caminho secreto próprio deste computador (o WolfCore Dev abre esse endereço por você); o Inbucket não tem nenhuma proteção: desligue-o quando não o usar.',
   },
   ia: {
     descripcion:

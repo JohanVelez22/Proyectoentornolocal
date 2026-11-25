@@ -16,12 +16,16 @@ export class Mailpit {
   constructor(
     private readonly puertoWeb = PUERTO_WEB,
     private readonly peticion: Fetch = (u) => fetch(u),
+    /** Ruta base secreta de la web (`--webroot`); null si no hay y la API cuelga de la raíz. */
+    private readonly rutaBase: () => Promise<string | null> = async () => null,
   ) {}
 
   async noLeidos(): Promise<number> {
     let r;
     try {
-      r = await this.peticion(`http://127.0.0.1:${this.puertoWeb}/api/v1/messages?limit=1`);
+      const ruta = await this.rutaBase();
+      const base = `http://127.0.0.1:${this.puertoWeb}${ruta ? `/${ruta}` : ''}`;
+      r = await this.peticion(`${base}/api/v1/messages?limit=1`);
     } catch {
       throw new ErrorWolf(
         'servicios.mailpit_no_responde',

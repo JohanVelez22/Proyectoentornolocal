@@ -285,6 +285,16 @@ describe('GestorEnv', () => {
     expect(t).toContain('REDIS_PORT=6379');
   });
 
+  it('bloque de correo: apunta al captador elegido y no se aplica con proveedor SMTP (D21)', async () => {
+    await writeFile(env(), 'A=1\n');
+    await gestor.guardar(sitio.id, { bloques: ['correo'] }, true);
+    expect(await readFile(env(), 'utf8')).toContain('MAIL_PORT=1025');
+    await writeFile(env(), 'A=1\n');
+    sitio.correo = { modo: 'smtp', proveedor: 'brevo' };
+    await gestor.guardar(sitio.id, { bloques: ['correo'] }, true);
+    expect(await readFile(env(), 'utf8')).not.toContain('MAIL_');
+  });
+
   it('cambios inválidos (nombre raro, salto de línea) se rechazan sin repetir el valor', async () => {
     await writeFile(env(), 'A=1\n');
     const malos: Record<string, string | null>[] = [

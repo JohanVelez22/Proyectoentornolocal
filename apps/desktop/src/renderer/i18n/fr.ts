@@ -1717,7 +1717,7 @@ export const fr: Textos = {
     notaDescartados:
       "MailHog et MailDev ne sont pas proposés : MailHog ne publie aucune empreinte pour vérifier le téléchargement et MailDev n'existe que sur npm. Rien n'est téléchargé sans empreinte vérifiable.",
     notaHost:
-      'Les boîtes web ne répondent que sur 127.0.0.1. smtp4dev et Papercut rejettent en plus les en-têtes Host étrangers ; Mailpit et Inbucket ne le peuvent pas, ne laissez donc pas votre boîte ouverte en naviguant sur des sites inconnus.',
+      "Les boîtes web ne répondent que sur 127.0.0.1, mais tant qu'un capteur est actif une page web malveillante pourrait tenter de lire votre boîte (DNS rebinding). smtp4dev et Papercut rejettent les en-têtes Host étrangers ; Mailpit sert sa boîte sous un chemin secret propre à cet ordinateur (WolfCore Dev ouvre cette adresse pour vous) ; Inbucket n'a aucune protection : arrêtez-le quand vous ne l'utilisez pas.",
   },
   ia: {
     descripcion:

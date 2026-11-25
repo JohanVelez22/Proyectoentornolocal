@@ -16,6 +16,24 @@ export function configPorDefecto(): Config {
   return ConfigSchema.parse({});
 }
 
+/**
+ * Un config.json anterior a D21 no trae `correo.puertoSmtp`: el puerto SMTP que ya tenía Mailpit
+ * pasa a ser el común (los `.env` de los proyectos siguen apuntando al mismo).
+ */
+export function heredarPuertoSmtp(crudo: unknown): unknown {
+  if (!crudo || typeof crudo !== 'object') return crudo;
+  const c = crudo as Record<string, unknown>;
+  const correo = c['correo'];
+  if (correo && typeof correo === 'object' && 'puertoSmtp' in correo) return crudo;
+  const servicios = c['servicios'] as { datos?: { mailpit?: { puerto?: unknown } } } | undefined;
+  const puerto = servicios?.datos?.mailpit?.puerto;
+  if (typeof puerto !== 'number') return crudo;
+  return {
+    ...c,
+    correo: { ...(correo && typeof correo === 'object' ? correo : {}), puertoSmtp: puerto },
+  };
+}
+
 export class Almacen {
   constructor(private readonly rutas: Rutas) {}
 
@@ -29,7 +47,7 @@ export class Almacen {
       throw e;
     }
     try {
-      return ConfigSchema.parse(JSON.parse(texto.replace(/^\uFEFF/, '')));
+      return ConfigSchema.parse(heredarPuertoSmtp(JSON.parse(texto.replace(/^\uFEFF/, ''))));
     } catch {
       const fecha = new Date().toISOString().replace(/[:.]/g, '-');
       await rename(archivo, path.join(path.dirname(archivo), `config.corrupto-${fecha}.json`));

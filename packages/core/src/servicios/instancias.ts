@@ -52,6 +52,16 @@ export function conInstancias(cfg: Config, servicio: IdServicioDatos): boolean {
   return i !== undefined && Object.keys(i).length > 0;
 }
 
+/** Servicios cuyo puerto es el SMTP común de los captadores (`Config.correo.puertoSmtp`). */
+const CAPTADORES: readonly string[] = ['mailpit', 'smtp4dev', 'inbucket', 'papercut'];
+
+/** Puerto de la instancia implícita: el común si es un captador; si no, el propio. */
+export function puertoImplicito(cfg: Config, servicio: IdServicioDatos): number {
+  return CAPTADORES.includes(servicio)
+    ? cfg.correo.puertoSmtp
+    : cfg.servicios.datos[servicio].puerto;
+}
+
 /**
  * Puertos que la configuración asigna a los servicios de datos: los de todas sus instancias o,
  * sin instancias, el de la única implícita.
@@ -67,7 +77,7 @@ export function puertosConfigurados(
         res.push({ servicio, clave, puerto: i.puerto });
       }
     } else {
-      res.push({ servicio, clave: null, puerto: c.puerto });
+      res.push({ servicio, clave: null, puerto: puertoImplicito(cfg, servicio) });
     }
   }
   return res;

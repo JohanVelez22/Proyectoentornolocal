@@ -1,5 +1,5 @@
 import { nombreEjecutable } from '../../plataforma/sistema';
-import { DIRECCION_LOCAL, type DefCaptador } from './tipos';
+import { DIRECCION_LOCAL, PUERTO_SMTP_POR_DEFECTO, type DefCaptador } from './tipos';
 
 /**
  * smtp4dev (rnwood/smtp4dev): el binario `win-x64` trae su runtime. Opciones verificadas con la
@@ -13,7 +13,7 @@ export const DEF_SMTP4DEV: DefCaptador = {
   nombre: 'smtp4dev',
   opcional: false,
   avisoMantenimiento: false,
-  puertoSmtp: 1026,
+  puertoSmtp: PUERTO_SMTP_POR_DEFECTO,
   puertoWeb: 8026,
   ejecutable: nombreEjecutable('Rnwood.Smtp4dev'),
   args: (o) => [
@@ -27,6 +27,8 @@ export const DEF_SMTP4DEV: DefCaptador = {
     '--imapport=',
     '--pop3port=',
     '--nousersettings',
+    // La web no cambia las opciones (p. ej. la dirección de escucha) que fija esta lista.
+    '--locksettings',
   ],
   env: () => ({ AllowedHosts: `${DIRECCION_LOCAL};localhost` }),
 };

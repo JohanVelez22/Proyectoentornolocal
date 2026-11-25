@@ -161,6 +161,8 @@ describe('Mailpit', () => {
       '127.0.0.1:8025',
       '--database',
       path.join(c.datos, 'mailpit.db'),
+      '--webroot',
+      readFileSync(path.join(c.datos, 'ruta-web'), 'utf8').trim(),
     ]);
     expect(p.puerto).toBe(8025);
     expect(def.detenerLimpio).toBeUndefined();

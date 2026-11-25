@@ -86,10 +86,13 @@ import { Mailpit } from './servicios/mailpit';
 import {
   CAPTADORES,
   captadorElegido,
+  aplicarEleccionCaptador,
   esIdCaptador,
+  estadoCaptador,
+  leerRutaSecreta,
   puertoSmtpElegido,
+  registrarCaptadores,
   puertosFijosCaptadores,
-  DIRECCION_LOCAL,
   IDS_CAPTADOR,
   type EstadoCaptador,
   type IdCaptador,
@@ -794,6 +797,7 @@ export class Nucleo {
             : e.puertos.map((p) => ({ puerto: p, nombre: e.nombre })),
         );
     const restringir = (ruta: string): Promise<boolean> => plat.restringirAlUsuario(ruta);
+    registrarCaptadores({ restringir }); // la ruta secreta de la web de los captadores
     const adminer = new Adminer({
       rutas,
       instalador,
@@ -1295,7 +1299,9 @@ export class Nucleo {
         emitir: (p) => eventos.emit('ia:progreso', p),
         ...(o.fetch ? { fetch: o.fetch } : {}),
       }),
-      mailpit: o.fetch ? new Mailpit(undefined, o.fetch) : new Mailpit(),
+      mailpit: new Mailpit(undefined, o.fetch, () =>
+        leerRutaSecreta(rutas.datos('mailpit', 'actual', () => 'actual')),
+      ),
       credenciales,
       puertoOllama,
       procesos,
@@ -2119,36 +2125,42 @@ export class Nucleo {
   async captadoresCorreo(): Promise<EstadoCaptador[]> {
     const cfg = await this.config.leer();
     const elegido = captadorElegido(cfg);
-    const estados = await this.servicios.estados();
     const salida: EstadoCaptador[] = [];
     for (const id of IDS_CAPTADOR) {
       const c = CAPTADORES[id];
-      const e = estados.find((x) => x.id === id)?.estado;
-      salida.push({
-        id,
-        nombre: c.nombre,
-        opcional: c.opcional,
-        avisoMantenimiento: c.avisoMantenimiento,
-        instalado: (await this.instalador.instalados(id)).length > 0,
-        encendido: e === 'encendido' || e === 'iniciando',
-        elegido: id === elegido,
-        puertoSmtp: cfg.servicios.datos[id].puerto,
-        puertoWeb: c.puertoWeb,
-        urlWeb: `http://${DIRECCION_LOCAL}:${c.puertoWeb}`,
-      });
+      // Directo del supervisor: `servicios.estados()` volvería a leer la configuración y a sondear
+      // todos los servicios.
+      const e = this.supervisor.estado(id);
+      const ruta = c.rutaSecreta
+        ? await leerRutaSecreta(this.rutas.datos(id, 'actual', () => 'actual'))
+        : null;
+      salida.push(
+        estadoCaptador(c, {
+          instalado: (await this.instalador.instalados(id)).length > 0,
+          estado: e,
+          elegido: id === elegido,
+          puertoSmtp: cfg.correo.puertoSmtp,
+          ruta,
+        }),
+      );
     }
     return salida;
   }
 
   /**
-   * Enciende un captador (y apaga el que corriera) y lo deja como el de los proyectos nuevos.
-   * No cambia el `.env` de proyectos existentes: eso lo hace el bloque de correo del gestor.
+   * Enciende un captador (y apaga el que corriera), lo deja como el de los proyectos y como el
+   * único que arranca solo con la aplicación (los demás pierden el arranque automático, así la
+   * elección sobrevive a un reinicio). Todos comparten el puerto SMTP (`Config.correo.puertoSmtp`),
+   * por eso los `.env` que ya apuntan a él siguen valiendo sin tocarlos.
    */
   async elegirCaptador(id: IdCaptador): Promise<void> {
     if (!esIdCaptador(id)) {
       throw new ErrorWolf('servicios.desconocido', `Captador desconocido: ${String(id)}`, { id });
     }
     await this.servicios.iniciar(id);
+    await this.sitios.modificarConfig((c) => {
+      aplicarEleccionCaptador(c, id);
+    });
   }
 
   /** Instala Composer y regenera los shims de tools/bin. */

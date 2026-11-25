@@ -223,6 +223,8 @@ export class GestorEnv {
       if (!BLOQUES_ENV.includes(b)) {
         throw new ErrorWolf('env.cambio_invalido', 'El bloque de variables no existe.');
       }
+      // Un proyecto que envía por un proveedor SMTP remoto (D22) no recibe el bloque del captador.
+      if (b === 'correo' && s.correo?.modo === 'smtp') continue;
       const puertos = await this.d.puertos();
       const base = await leerBaseDelProyecto(s.carpeta).catch(() => null);
       const contexto: ContextoPlantillaEnv = {
