@@ -98,6 +98,7 @@ function validarOpciones(p: PedidoProyecto, conPlantilla = false): void {
     'pgvector',
     'confirmarHuellaDebil',
     'versionWordpress',
+    'confirmarMotorDistinto',
   ];
   for (const k of Object.keys(x)) {
     if (!conocidas.includes(k)) throw invalido('opciones', `Opción desconocida: ${k.slice(0, 30)}`);
@@ -354,6 +355,19 @@ export async function crearProyecto(
     }
     if (p.opciones?.pgvector && motor !== 'postgresql') {
       throw invalido('base', 'pgvector necesita PostgreSQL.');
+    }
+    // MySQL ↔ MariaDB se entienden casi siempre, pero no siempre: se pide confirmación antes de crear.
+    if (
+      plantilla?.archivoEsquema &&
+      plantilla.motorBase !== null &&
+      plantilla.motorBase !== 'postgresql' &&
+      motor !== plantilla.motorBase &&
+      p.opciones?.confirmarMotorDistinto !== true
+    ) {
+      throw new ErrorWolf(
+        'plantillas.motor_distinto',
+        'El esquema de la plantilla es de otro motor (MySQL o MariaDB): confirme para continuar.',
+      );
     }
     // El esquema de una plantilla solo entra en un motor de su familia.
     if (

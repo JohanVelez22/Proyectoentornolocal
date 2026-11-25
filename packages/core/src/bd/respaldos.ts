@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync } from 'node:fs';
-import { lstat, mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
+import { lstat, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { TextDecoder } from 'node:util';
 import { Transform, type Readable, type TransformCallback } from 'node:stream';
@@ -15,6 +15,8 @@ import { esIdInstancia } from '../servicios/instancias';
 import type { EstadoInstancia, EstadoServicio } from '../tipos';
 import { motorDe, type BasesDeDatos, type ObjetivoBd } from './basesDeDatos';
 import { ClienteMysql, validarNombreBd, type FabricaConexion } from './clienteMysql';
+import { revisarSql } from './sqlPermitido';
+import { ErrorWolf } from '../errores';
 import { ClientePostgres, validarNombrePg, type FabricaConexionPg } from './clientePostgres';
 import type { DatosConexion, MotorBd } from './env';
 import {
@@ -47,6 +49,31 @@ export interface OpcionesRespaldar {
   soloEsquema?: boolean;
 }
 
+export interface OpcionesRestaurarEsquema {
+  /** `importada`: la plantilla viene de un tercero (sin SECURITY DEFINER ni vistas con definer). */
+  origen?: 'propia' | 'importada';
+}
+
+/** Extensiones de PostgreSQL que el administrador crea antes si el esquema las pide. */
+export const EXTENSIONES_PERMITIDAS = [
+  'plpgsql',
+  'pgcrypto',
+  'uuid-ossp',
+  'citext',
+  'hstore',
+  'vector',
+  'pg_trgm',
+  'unaccent',
+  'btree_gin',
+  'btree_gist',
+  'ltree',
+  'fuzzystrmatch',
+  'tablefunc',
+];
+
+/** Un esquema (solo estructura) no pesa decenas de MB: más que esto no se acepta. */
+const MAX_BYTES_ESQUEMA = 64 * 1024 * 1024;
+
 export interface OrigenImportar {
   host: string;
   puerto: number;
@@ -56,7 +83,8 @@ export interface OrigenImportar {
 }
 
 export interface DepsRespaldos {
-  bd: Pick<BasesDeDatos, 'conexion' | 'crear' | 'tieneTablas'>;
+  bd: Pick<BasesDeDatos, 'conexion' | 'crear' | 'tieneTablas'> &
+    Partial<Pick<BasesDeDatos, 'usuarioTemporal' | 'reiniciarBase' | 'crearExtension'>>;
   servicios: {
     estados(): Promise<EstadoServicio[]>;
     /** Instancias de un motor (para respaldar o restaurar una instancia concreta). */
@@ -966,6 +994,25 @@ export class Respaldos {
         conexion: () => this.d.bd.conexion(objetivo),
         crear: (_m, nombre, o) => this.d.bd.crear(objetivo, nombre, o),
         tieneTablas: (_m, base) => this.d.bd.tieneTablas(objetivo, base),
+        // Lo de la restauración de esquemas siempre va a esta instancia.
+        ...(this.d.bd.usuarioTemporal
+          ? {
+              usuarioTemporal: (_o: ObjetivoBd, base: string) =>
+                this.d.bd.usuarioTemporal!(objetivo, base),
+            }
+          : {}),
+        ...(this.d.bd.reiniciarBase
+          ? {
+              reiniciarBase: (_o: ObjetivoBd, base: string) =>
+                this.d.bd.reiniciarBase!(objetivo, base),
+            }
+          : {}),
+        ...(this.d.bd.crearExtension
+          ? {
+              crearExtension: (base: string, nombre: string) =>
+                this.d.bd.crearExtension!(base, nombre, objetivo),
+            }
+          : {}),
       },
       servicios: {
         estados: async () =>
@@ -1535,6 +1582,254 @@ export class Respaldos {
     s.fin();
     if (codigo !== 0) throw new ErrorVolcado(s.detalle());
     return s;
+  }
+
+  /**
+   * Restaura un esquema (solo estructura) con los privilegios mínimos, todo o nada:
+   * - se revisa TODO el SQL contra una lista de sentencias permitidas antes de tocar nada;
+   * - se ejecuta como un usuario (MySQL, MariaDB) o rol (PostgreSQL) temporal que solo puede
+   *   trabajar en `base` (nunca FILE, SUPER ni CREATE USER) y que se borra al terminar;
+   * - PostgreSQL: `pg_restore --exit-on-error --single-transaction`, sin las entradas EXTENSION
+   *   (las crea antes el administrador desde `EXTENSIONES_PERMITIDAS`);
+   * - MySQL y MariaDB: sin DEFINER, una sentencia a la vez y, ante el primer error, la base queda
+   *   vacía como estaba.
+   * La base debe existir y no tener tablas.
+   */
+  async restaurarEsquema(
+    objetivo: ObjetivoBd,
+    archivo: string,
+    base: string,
+    opts: OpcionesRestaurarEsquema = {},
+  ): Promise<ResultadoRestaurar> {
+    const { r, motor } = await this.para(objetivo);
+    const m = motorSql(motor, 'Restaurar');
+    validarBase(m, base);
+    const bd = r.d.bd;
+    if (!bd.usuarioTemporal) throw new Error('Esta restauración no está disponible aquí.');
+    const ruta = path.resolve(archivo);
+    let info;
+    try {
+      info = await stat(ruta);
+    } catch {
+      throw new Error(`No se encontró el archivo ${ruta}.`);
+    }
+    if (!info.isFile()) throw new Error('Elija un archivo de respaldo, no una carpeta.');
+    if (info.size > MAX_BYTES_ESQUEMA) {
+      throw new ErrorWolf('bd.esquema_fallo', 'El esquema es demasiado grande para restaurarlo.');
+    }
+    if (await bd.tieneTablas(m, base)) throw errorConTablas(base);
+    await mkdir(this.d.rutas.tmp(), { recursive: true });
+    const tmp = path.join(this.d.rutas.tmp(), `esquema-${randomUUID()}`);
+    await mkdir(tmp, { recursive: true });
+    try {
+      const fuente = await r.preparar(ruta, tmp, 0);
+      r.revisarFamilia(m, fuente);
+      return m === 'postgresql'
+        ? await r.esquemaPostgres(fuente, base, tmp, opts)
+        : await r.esquemaMysql(m, fuente, base, opts);
+    } finally {
+      await rm(tmp, OPCIONES_BORRADO).catch(() => undefined);
+    }
+  }
+
+  private async esquemaMysql(
+    motor: MotorSql,
+    fuente: Fuente,
+    base: string,
+    opts: OpcionesRestaurarEsquema,
+  ): Promise<ResultadoRestaurar> {
+    if (fuente.tipo !== 'sql' || fuente.gz) throw new Error(NO_RECONOCIDO);
+    const bruto = await readFile(fuente.ruta);
+    const texto = fuente.utf16
+      ? new TextDecoder(fuente.utf16 === 'le' ? 'utf-16le' : 'utf-16be').decode(bruto)
+      : bruto.toString('utf8').replace(/^\uFEFF/, '');
+    // Antes de tocar nada: todo el SQL contra la lista de sentencias permitidas.
+    const sentencias = revisarSql(texto, 'mysql', { origen: opts.origen ?? 'propia' });
+    const bd = this.d.bd;
+    const con = await bd.conexion(motor);
+    const claves = [con.clave ?? ''];
+    const advertencias: string[] = [];
+    const usuario = await bd.usuarioTemporal!(motor, base);
+    claves.push(usuario.clave);
+    const limitado = new ClienteMysql(this.d.fabricas?.mysql);
+    let fallo: unknown = null;
+    try {
+      await limitado.conectar({
+        host: con.host,
+        puerto: con.puerto,
+        usuario: usuario.usuario,
+        clave: usuario.clave,
+      });
+      await limitado.ejecutarSentencias(
+        base,
+        sentencias.map((x) => x.texto),
+      );
+    } catch (e) {
+      fallo = e;
+    } finally {
+      await limitado.cerrar();
+    }
+    if (fallo) {
+      // Todo o nada: la base vuelve a quedar vacía.
+      await bd.reiniciarBase?.(motor, base).catch(() => undefined);
+      await usuario.retirar().catch(() => undefined);
+      const detalle = enmascarar(fallo instanceof Error ? fallo.message : String(fallo), claves);
+      throw new ErrorWolf(
+        'bd.esquema_fallo',
+        `No se pudo restaurar el esquema completo: ${detalle}`.slice(0, 400),
+      );
+    }
+    try {
+      await usuario.retirar();
+    } catch {
+      advertencias.push('No se pudo borrar el usuario temporal de la restauración.');
+    }
+    // Un esquema propio: los disparadores, rutinas y vistas quedaron con un definer que ya no
+    // existe; se vuelven a crear como administrador (lo que el usuario ya tenía en su servidor).
+    if ((opts.origen ?? 'propia') === 'propia') {
+      const tipos = {
+        disparador: 'TRIGGER',
+        funcion: 'FUNCTION',
+        procedimiento: 'PROCEDURE',
+        vista: 'VIEW',
+      } as const;
+      const rehacer = sentencias.filter((x) => x.objeto !== null && x.clase in tipos);
+      if (rehacer.length > 0) {
+        const admin = new ClienteMysql(this.d.fabricas?.mysql);
+        try {
+          await admin.conectar({
+            host: con.host,
+            puerto: con.puerto,
+            usuario: con.usuario,
+            clave: con.clave ?? '',
+          });
+          const orden: string[] = [];
+          for (const x of rehacer) {
+            const tipo = tipos[x.clase as keyof typeof tipos];
+            orden.push(`DROP ${tipo} IF EXISTS \`${x.objeto}\``, x.texto);
+          }
+          await admin.ejecutarSentencias(base, orden);
+        } catch (e) {
+          advertencias.push(
+            `No se pudo reasignar el definer de triggers, rutinas y vistas: ${enmascarar(e instanceof Error ? e.message : String(e), claves)}`,
+          );
+        } finally {
+          await admin.cerrar();
+        }
+      }
+    }
+    return { advertencias };
+  }
+
+  private async esquemaPostgres(
+    fuente: Fuente,
+    base: string,
+    tmp: string,
+    opts: OpcionesRestaurarEsquema,
+  ): Promise<ResultadoRestaurar> {
+    if (fuente.tipo !== 'pgdump') {
+      throw new ErrorWolf(
+        'bd.esquema_fallo',
+        'El esquema de PostgreSQL debe ser un respaldo de pg_dump (.dump).',
+      );
+    }
+    const bd = this.d.bd;
+    const con = await bd.conexion('postgresql');
+    const { exe } = await this.herramienta('postgresql', 'restaurar');
+    const falla = (detalle: string): ErrorWolf =>
+      new ErrorWolf(
+        'bd.esquema_fallo',
+        `No se pudo restaurar el esquema completo: ${detalle}`.slice(0, 400),
+      );
+    // Lista del contenido sin las entradas EXTENSION (las crea antes el administrador).
+    const lista = await this.d.exec(exe, ['-l', fuente.ruta], { timeoutMs: 2 * 60 * 1000 });
+    if (lista.codigo !== 0) throw falla('el respaldo no se puede leer');
+    const extensiones: string[] = [];
+    const filtradas = lista.stdout.split(/\r?\n/).filter((l) => {
+      const e = /^\d+; \d+ \d+ EXTENSION - (\S+)/.exec(l);
+      if (e) {
+        extensiones.push(e[1]!);
+        return false;
+      }
+      return !/^\d+; \d+ \d+ COMMENT - EXTENSION /.test(l);
+    });
+    for (const nombre of extensiones) {
+      if (!EXTENSIONES_PERMITIDAS.includes(nombre)) {
+        throw new ErrorWolf(
+          'bd.extension_no_permitida',
+          `El esquema pide la extensión ${nombre}, que no está permitida.`,
+          { nombre },
+        );
+      }
+    }
+    const archivoLista = path.join(tmp, 'lista.txt');
+    await writeFile(archivoLista, `${filtradas.join('\n')}\n`, 'utf8');
+    // Segunda capa: el SQL que produciría, contra la lista de sentencias permitidas.
+    const sql = await this.d.exec(
+      exe,
+      ['-L', archivoLista, '--no-owner', '--no-privileges', '-f', '-', fuente.ruta],
+      { timeoutMs: 2 * 60 * 1000 },
+    );
+    if (sql.codigo !== 0) throw falla('el respaldo no se puede leer');
+    revisarSql(sql.stdout, 'postgresql', { origen: opts.origen ?? 'propia' });
+    for (const nombre of extensiones) {
+      if (nombre !== 'plpgsql') await bd.crearExtension?.(base, nombre);
+    }
+    const usuario = await bd.usuarioTemporal!('postgresql', base);
+    const claves = [con.clave ?? '', usuario.clave];
+    let resultado: ResultadoRestaurar | null = null;
+    let fallo: Error | null = null;
+    try {
+      const s = this.salida('restaurar', 'postgresql', base, claves, (l) =>
+        /^pg_restore: (error|warning)/i.test(l),
+      );
+      let codigo: number;
+      try {
+        // Sin --role (el respaldo podría hacer RESET ROLE): se conecta ya como el rol limitado.
+        ({ codigo } = await this.lanzar(
+          exe,
+          [
+            '--exit-on-error',
+            '--single-transaction',
+            '--no-owner',
+            '--no-privileges',
+            '--no-password',
+            '--verbose',
+            '-L',
+            archivoLista,
+            '-h',
+            con.host,
+            '-p',
+            String(con.puerto),
+            '-U',
+            usuario.usuario,
+            '-d',
+            base,
+            fuente.ruta,
+          ],
+          { env: { ...ENV_PG, PGPASSWORD: usuario.clave }, alLinea: (l) => s.linea(l) },
+        ));
+      } catch (e) {
+        s.fin();
+        throw e;
+      }
+      s.fin();
+      if (codigo !== 0) throw falla(s.detalle() || `código ${codigo}`);
+      resultado = { advertencias: s.lista() };
+    } catch (e) {
+      fallo =
+        e instanceof ErrorWolf
+          ? e
+          : falla(enmascarar(e instanceof Error ? e.message : String(e), claves));
+    }
+    try {
+      await usuario.retirar();
+    } catch {
+      if (!fallo)
+        resultado!.advertencias.push('No se pudo borrar el rol temporal de la restauración.');
+    }
+    if (fallo) throw fallo;
+    return resultado!;
   }
 
   async respaldar(

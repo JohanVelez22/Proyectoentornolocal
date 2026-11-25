@@ -11,9 +11,18 @@ import {
   type PedidoProyecto,
 } from './comun';
 
+/** Pasos que ejecutan el código del proyecto (artisan, `npm run`): no se corren en una importada. */
+const PASOS_QUE_CORREN_CODIGO = ['key-generate', 'migrar', 'storage-link', 'npm-build'];
+
+/** ¿El paso de la plantilla se vuelve a correr? Lista cerrada; una importada, sin código ajeno. */
+export function pasoSeRepite(pl: Pick<Plantilla, 'origen'>, x: Pick<PasoReceta, 'tipo'>): boolean {
+  if (!PASOS_PERMITIDOS_PLANTILLA.includes(x.tipo)) return false;
+  return !(pl.origen === 'importada' && PASOS_QUE_CORREN_CODIGO.includes(x.tipo));
+}
+
 /** Pasos de la plantilla que NO se vuelven a correr (una plantilla manipulada no ejecuta comandos). */
-export function pasosOmitidosDePlantilla(pl: Pick<Plantilla, 'receta'>): PasoReceta[] {
-  return pl.receta.filter((x) => !PASOS_PERMITIDOS_PLANTILLA.includes(x.tipo));
+export function pasosOmitidosDePlantilla(pl: Pick<Plantilla, 'receta' | 'origen'>): PasoReceta[] {
+  return pl.receta.filter((x) => !pasoSeRepite(pl, x));
 }
 
 /**
@@ -40,12 +49,16 @@ export function generadorDePlantilla(pl: Plantilla): Generador {
         );
       }
       if (p.base) pasos.push(paso('bd-crear', 'Crear la base de datos', { ...base, nueva: true }));
+      const importada = pl.origen === 'importada';
       for (const x of pl.receta) {
-        if (!PASOS_PERMITIDOS_PLANTILLA.includes(x.tipo)) continue;
+        if (!pasoSeRepite(pl, x)) continue;
         // El esquema ya trae la tabla de migraciones; sin base no hay qué migrar.
         if (x.tipo === 'migrar' && (conEsquema || !p.base)) continue;
         if (x.tipo === 'pgvector-activar' && !p.base) continue;
         const args: Record<string, unknown> = { ...(x.args ?? {}) };
+        if (importada && (x.tipo === 'composer-install' || x.tipo === 'npm-ci')) {
+          args.sinScripts = true;
+        }
         if (x.tipo === 'env-crear' || x.tipo === 'pgvector-activar') Object.assign(args, base);
         // Sin base, la sesión y la caché de Laravel van en archivos (no hay tablas).
         if (x.tipo === 'env-crear' && !p.base && pl.tipo === 'laravel') {
@@ -69,6 +82,7 @@ export function generadorDePlantilla(pl: Plantilla): Generador {
           paso('restaurar-esquema-plantilla', 'Crear las tablas de la plantilla (sin datos)', {
             ...base,
             plantilla: pl.id,
+            origen: pl.origen,
           }),
         );
       }

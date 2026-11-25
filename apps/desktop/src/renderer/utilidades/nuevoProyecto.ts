@@ -184,6 +184,17 @@ export const motorDeObjetivo = (o: string): MotorBd => o.split('@')[0] as MotorB
 /** El tipo crea de verdad una base con este formulario. */
 export const usaBase = (f: FormProyecto): boolean => infoDe(f).usaBase && f.conBase;
 
+/**
+ * El esquema de la plantilla es de MySQL y el servidor elegido es MariaDB (o al revés): el resumen
+ * lo avisa y el pedido lleva la confirmación (el usuario la vio antes de pulsar "Crear").
+ */
+export function motorDistinto(f: FormProyecto): boolean {
+  const pl = f.plantilla;
+  if (!pl?.archivoEsquema || pl.motorBase === null || pl.motorBase === 'postgresql') return false;
+  if (!usaBase(f) || !f.objetivoBd) return false;
+  return motorDeObjetivo(f.objetivoBd) !== pl.motorBase;
+}
+
 /** Primer error del formulario (texto ya traducido) o null si se puede pedir. */
 export function validarPedido(
   f: FormProyecto,
@@ -224,6 +235,7 @@ export function aPedido(f: FormProyecto): PedidoProyectoIpc {
     opciones.pgvector = true;
   }
   if (gen === 'wordpress' && f.confirmarHuellaDebil) opciones.confirmarHuellaDebil = true;
+  if (motorDistinto(f)) opciones.confirmarMotorDistinto = true;
   let base: PedidoProyectoIpc['base'] = null;
   if (usaBase(f) && f.objetivoBd) {
     const motor = motorDeObjetivo(f.objetivoBd);

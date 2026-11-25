@@ -219,6 +219,13 @@ export const pt: Textos = {
         'Não foi possível ler o esquema do banco do projeto: verifique se o serviço está ligado.',
       'plantillas.base_no_resuelta':
         'Não é possível salvar o modelo: o servidor do banco é remoto ou nenhum serviço local usa essa porta.',
+      'plantillas.motor_distinto':
+        'O esquema do modelo é do MySQL e o servidor escolhido é o MariaDB (ou o contrário): pode haver diferenças. Confirme que quer continuar.',
+      'bd.sql_no_permitido':
+        'O esquema traz uma instrução que não é de estrutura e nada foi executado: {sentencia}',
+      'bd.extension_no_permitida':
+        'O esquema pede a extensão {nombre}, que não está na lista permitida: nada foi restaurado.',
+      'bd.esquema_fallo': 'Não foi possível restaurar o esquema completo: nada ficou pela metade.',
       'plantillas.sin_esquema': 'O modelo não traz o esquema de um banco de dados.',
       'proyectos.carpeta_invalida': 'A pasta do projeto não é válida.',
       'proyectos.nombre_invalido':

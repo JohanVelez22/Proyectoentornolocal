@@ -39,6 +39,7 @@ interface Armado {
   guardados: { datos: Omit<Sitio, 'id'>; id: string }[];
   creadas: { motor: string; nombre: string; opts: unknown }[];
   restauradas: { motor: string; archivo: string; base: string; opts: unknown }[];
+  esquemas: { objetivo: string; archivo: string; base: string; origen: string }[];
   vectores: string[];
   sitio: Sitio;
   phpExe: string;
@@ -68,6 +69,7 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
   const guardados: Armado['guardados'] = [];
   const creadas: Armado['creadas'] = [];
   const restauradas: Armado['restauradas'] = [];
+  const esquemas: Armado['esquemas'] = [];
   const vectores: string[] = [];
   const phpExe = join(base, 'bin', 'php', '8.4', 'php.exe');
   const phpIni = join(base, 'etc', 'php', '8.4', 'php.ini');
@@ -167,6 +169,7 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
     guardados,
     creadas,
     restauradas,
+    esquemas,
     vectores,
     sitio,
     phpExe,
@@ -1891,6 +1894,10 @@ describe('pasos de plantilla de proyecto (D14)', () => {
   ): Promise<{ a: Armado; copias: { id: string; destino: string }[] }> => {
     const a = await armar(o);
     const copias: { id: string; destino: string }[] = [];
+    a.deps.restaurarEsquema = async (objetivo, archivo, base, opts) => {
+      a.esquemas.push({ objetivo, archivo, base, origen: opts.origen });
+      return { advertencias: [] };
+    };
     a.deps.plantillas = {
       restaurarArchivos: async (id, destino) => {
         copias.push({ id, destino });
@@ -1929,14 +1936,10 @@ describe('pasos de plantilla de proyecto (D14)', () => {
       motor: 'mysql',
       base: 'tienda',
     });
-    expect(a.restauradas).toEqual([
-      {
-        motor: 'mysql',
-        archivo: join(a.base, 'esquema.sql'),
-        base: 'tienda',
-        opts: { confirmarSobrescribir: false },
-      },
+    expect(a.esquemas).toEqual([
+      { objetivo: 'mysql', archivo: join(a.base, 'esquema.sql'), base: 'tienda', origen: 'propia' },
     ]);
+    expect(a.restauradas).toEqual([]);
   });
 
   it('nunca restaura el esquema sobre una base con tablas ni en otro motor', async () => {
@@ -1956,8 +1959,8 @@ describe('pasos de plantilla de proyecto (D14)', () => {
         base: 'tienda',
       }),
     ).rejects.toMatchObject({ codigo: 'proyectos.argumento_invalido' });
-    expect(a.restauradas).toEqual([]);
-    expect(otro.a.restauradas).toEqual([]);
+    expect(a.esquemas).toEqual([]);
+    expect(otro.a.esquemas).toEqual([]);
   });
 
   it('un wolfcore.yml no puede traer estos pasos', async () => {

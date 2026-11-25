@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import pg from 'pg';
 import { ErrorWolf } from '../errores';
 import {
@@ -402,6 +403,57 @@ export class ClientePostgres {
   }
 
   /** `forzar` (PostgreSQL 13+) agrega WITH (FORCE): cierra las conexiones que queden abiertas. */
+  /**
+   * Rol temporal sin privilegios (LOGIN, NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION
+   * NOBYPASSRLS, sin ningún rol pg_*) que pasa a ser el dueño de `base`: puede crear sus objetos y
+   * nada más. Se retira con `retirarRolTemporal`, que devuelve todo al administrador.
+   */
+  async crearRolTemporal(base: string): Promise<{ usuario: string; clave: string }> {
+    const bd = id(base);
+    noSistema(base, 'crear');
+    const usuario = `wolf_tmp_${randomBytes(8).toString('hex')}`;
+    const clave = randomBytes(18).toString('hex');
+    try {
+      const [orden] = await this.filas(
+        "SELECT format('CREATE ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L', $1::text, $2::text) AS s",
+        [usuario, clave],
+      );
+      await this.filas(String(orden?.s ?? ''));
+      await this.filas(`ALTER DATABASE ${bd} OWNER TO ${id(usuario)}`);
+    } catch (e) {
+      await this.filas(`DROP ROLE IF EXISTS ${id(usuario)}`).catch(() => undefined);
+      throw traducir(e, `crear un rol temporal para ${base}`);
+    }
+    return { usuario, clave };
+  }
+
+  /** Devuelve al administrador la base y sus objetos y borra el rol temporal. */
+  async retirarRolTemporal(usuario: string, base: string): Promise<void> {
+    if (!/^wolf_tmp_[0-9a-f]{16}$/.test(usuario)) {
+      throw new Error('Solo se borran los roles temporales de WolfCore Dev.');
+    }
+    const rol = id(usuario);
+    const admin = this.datos?.usuario;
+    if (!admin) throw new Error('No hay conexión: conecte con el servidor primero.');
+    validarNombrePg(base);
+    await this.enBase(base, async (q) => {
+      await q.query(`REASSIGN OWNED BY ${rol} TO ${id(admin)}`);
+      await q.query(`DROP OWNED BY ${rol}`);
+    });
+    await this.filas(`DROP ROLE IF EXISTS ${rol}`);
+  }
+
+  /** Crea una extensión en la base (lo hace el administrador, desde una lista permitida). */
+  async crearExtension(base: string, nombre: string): Promise<void> {
+    validarNombrePg(base);
+    if (!/^[a-z][a-z0-9_-]{0,62}$/.test(nombre)) throw new Error('Nombre de extensión no válido.');
+    try {
+      await this.enBase(base, (q) => q.query(`CREATE EXTENSION IF NOT EXISTS "${nombre}"`));
+    } catch (e) {
+      throw traducir(e, `activar la extensión ${nombre} en ${base}`);
+    }
+  }
+
   async borrarBase(nombre: string, opts: { forzar?: boolean } = {}): Promise<void> {
     const bd = id(nombre);
     noSistema(nombre, 'borrar');

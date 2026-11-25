@@ -61,8 +61,12 @@ export function pasoRestaurarEsquemaPlantilla(d: DepsPasos): ImplementacionPaso 
       );
     }
     comprobarSenal(ctx);
+    if (!d.restaurarEsquema) throw new Error('La restauración de esquemas no está disponible.');
     ctx.linea(sanear(`Creando las tablas de la plantilla en ${base}…`));
-    const r = await d.restaurar(objetivo, esquema.ruta, base, { confirmarSobrescribir: false });
+    // Con los privilegios mínimos y todo o nada (usuario temporal limitado a la base).
+    const r = await d.restaurarEsquema(objetivo, esquema.ruta, base, {
+      origen: argsDe(ctx).origen === 'importada' ? 'importada' : 'propia',
+    });
     for (const a of r.advertencias) ctx.linea(sanear(a));
   };
 }

@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { createConnection } from 'mysql2/promise';
 import { ErrorWolf } from '../errores';
 
@@ -303,6 +304,54 @@ export class ClienteMysql {
       if (claveCambiada) err.message += ` La clave del usuario ${usuario} ya se cambió a la nueva.`;
       throw err;
     }
+  }
+
+  /**
+   * Usuario temporal con permisos solo sobre `base` (ALL PRIVILEGES en `base`.*, nunca FILE, SUPER
+   * ni SET_USER_ID, que son globales y no se otorgan). Lo usa la restauración de esquemas: el SQL
+   * de un tercero se ejecuta con él y se borra al terminar (`borrarUsuarioTemporal`).
+   */
+  async crearUsuarioTemporal(base: string): Promise<{ usuario: string; clave: string }> {
+    id(base);
+    const escapado = `\`${base.replace(/_/g, '\\_')}\``;
+    noSistema(base, 'crear');
+    const usuario = `wolf_tmp_${randomBytes(8).toString('hex')}`;
+    const clave = randomBytes(18).toString('hex');
+    try {
+      for (const host of ['localhost', '127.0.0.1']) {
+        await this.filas(`CREATE USER ?@'${host}' IDENTIFIED BY ?`, [usuario, clave]);
+        // `_` es un comodín en los permisos de base: se escapa para no alcanzar otras bases.
+        await this.filas(`GRANT ALL PRIVILEGES ON ${escapado}.* TO ?@'${host}'`, [usuario]);
+      }
+    } catch (e) {
+      await this.borrarUsuarioTemporal(usuario).catch(() => undefined);
+      throw traducir(e, `crear un usuario temporal para ${base}`);
+    }
+    return { usuario, clave };
+  }
+
+  /** Borra un usuario creado por `crearUsuarioTemporal` (y solo esos). */
+  async borrarUsuarioTemporal(usuario: string): Promise<void> {
+    if (!/^wolf_tmp_[0-9a-f]{16}$/.test(usuario)) {
+      throw new Error('Solo se borran los usuarios temporales de WolfCore Dev.');
+    }
+    for (const host of ['localhost', '127.0.0.1']) {
+      await this.filas(`DROP USER IF EXISTS ?@'${host}'`, [usuario]);
+    }
+  }
+
+  /** Ejecuta las sentencias en `base`, una a una, y se detiene en la primera que falle. */
+  async ejecutarSentencias(base: string, sentencias: readonly string[]): Promise<void> {
+    await this.filas(`USE ${id(base)}`);
+    for (const s of sentencias) await this.filas(s);
+  }
+
+  /** Deja la base vacía (la borra y la vuelve a crear): vuelta atrás de una restauración fallida. */
+  async reiniciarBase(nombre: string): Promise<void> {
+    const bd = id(nombre);
+    noSistema(nombre, 'borrar');
+    await this.filas(`DROP DATABASE IF EXISTS ${bd}`);
+    await this.filas(`CREATE DATABASE ${bd} CHARACTER SET utf8mb4`);
   }
 
   async borrarBase(nombre: string): Promise<void> {

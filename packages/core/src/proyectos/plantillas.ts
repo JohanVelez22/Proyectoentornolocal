@@ -155,6 +155,8 @@ const PlantillaSchema = z
       .nullable(),
     motorBase: z.enum(MOTORES_BD).nullable(),
     /** Módulo ASGI (`main:app`) del uvicorn de un FastAPI; los demás procesos no se guardan. */
+    /** `propia`: la guardó este usuario; `importada`: viene de un tercero (sin scripts ni confianza). */
+    origen: z.enum(['propia', 'importada']).default('propia'),
     moduloAsgi: z
       .string()
       .regex(/^[A-Za-z0-9_.]{1,80}:[A-Za-z0-9_]{1,80}$/)
@@ -183,6 +185,8 @@ export interface Plantilla {
   runtimes: Sitio['runtimes'];
   reglasNginx: string | null;
   motorBase: MotorBd | null;
+  /** `importada`: no corre scripts de Composer ni de npm y nunca queda confiada sola. */
+  origen: 'propia' | 'importada';
   moduloAsgi: string | null;
   conArchivos: boolean;
   /** `esquema.sql` (MySQL, MariaDB) o `esquema.dump` (PostgreSQL); null = sin base. */
@@ -785,6 +789,7 @@ export class Plantillas {
         reglasNginx:
           sitio.reglasExtra.trim() === '' ? null : sinSecretosPlantilla(sitio.reglasExtra),
         motorBase: base ? base.motor : null,
+        origen: 'propia',
         moduloAsgi: moduloAsgiDe(sitio),
         conArchivos: recopilado !== null,
         archivoEsquema,

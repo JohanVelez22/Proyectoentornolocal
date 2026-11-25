@@ -8,6 +8,7 @@ import {
   formularioDePlantilla,
   formularioInicial,
   infoDe,
+  motorDistinto,
   nombreBaseDe,
   opcionesBase,
   ordenarRamas,
@@ -310,6 +311,7 @@ describe('proyecto desde una plantilla propia', () => {
     runtimes: {},
     reglasNginx: null,
     motorBase: 'mysql',
+    origen: 'propia',
     moduloAsgi: null,
     conArchivos: true,
     archivoEsquema: 'esquema.sql',
@@ -381,6 +383,22 @@ describe('proyecto desde una plantilla propia', () => {
       ),
     ).toEqual(['postgresql']);
     expect(opcionesBase('laravel', false, servicios, pl({ motorBase: null }))).toEqual([]);
+  });
+
+  it('MySQL ↔ MariaDB pide la confirmación en el pedido; el mismo motor no', () => {
+    const mismo = dePlantilla(pl());
+    expect(motorDistinto(mismo)).toBe(false);
+    expect(aPedido(mismo).opciones).toEqual({});
+    const otro = dePlantilla(pl(), { objetivoBd: 'mariadb@11.4' });
+    expect(motorDistinto(otro)).toBe(true);
+    expect(aPedido(otro).opciones).toEqual({ confirmarMotorDistinto: true });
+    expect(
+      motorDistinto(
+        dePlantilla(pl({ archivoEsquema: null, sha256: { archivos: null, esquema: null } }), {
+          objetivoBd: 'mariadb@11.4',
+        }),
+      ),
+    ).toBe(false);
   });
 
   it('el resumen conserva el nombre del proyecto y su carpeta', () => {

@@ -1240,6 +1240,8 @@ export class Nucleo {
       bd,
       restaurar: (motor, archivo, base, opts) =>
         modulos.respaldos.restaurar(motor, archivo, base, opts),
+      restaurarEsquema: (objetivo, archivo, base, opts) =>
+        modulos.respaldos.restaurarEsquema(objetivo, archivo, base, opts),
       plantillas,
       mailpit: async () => {
         if ((await instalador.instalados('mailpit')).length === 0) return null;

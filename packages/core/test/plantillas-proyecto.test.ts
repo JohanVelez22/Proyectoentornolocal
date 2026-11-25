@@ -7,7 +7,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { carpetaTemporal } from './temporales';
 import { ErrorWolf } from '../src/errores';
 import { crearProyecto, type DepsCrearProyecto } from '../src/proyectos/crear';
-import type { PedidoProyecto } from '../src/proyectos/generadores';
+import {
+  generadorDePlantilla,
+  pasosOmitidosDePlantilla,
+  type PedidoProyecto,
+} from '../src/proyectos/generadores';
 import { leerBaseDelProyecto } from '../src/bd/baseProyecto';
 import { Rutas } from '../src/rutas';
 import {
@@ -585,6 +589,7 @@ describe('crearProyecto desde una plantilla (mismas validaciones que D12)', () =
     runtimes: { node: '22.1.0' },
     reglasNginx: 'client_max_body_size 50m;',
     motorBase: 'mysql',
+    origen: 'propia',
     moduloAsgi: null,
     conArchivos: true,
     archivoEsquema: 'esquema.sql',
@@ -969,5 +974,116 @@ describe('I2: la base y el servidor correctos', () => {
     expect((await armar().vistaPrevia('tienda', {})).avisoMongodb).toBe(false);
     const pl = armar({ usaMongodb: async () => true });
     expect((await pl.vistaPrevia('tienda', {})).avisoMongodb).toBe(true);
+  });
+});
+
+describe('I3 / I6: plantilla importada y motor distinto', () => {
+  const pl = (extra: Partial<Plantilla> = {}): Plantilla => ({
+    id: 'tienda-a1b2c3',
+    nombre: 'Tienda',
+    creada: '2026-11-24T00:00:00.000Z',
+    tipo: 'laravel',
+    receta: [
+      { id: 'composer-install', tipo: 'composer-install', titulo: 'Composer' },
+      { id: 'env-crear', tipo: 'env-crear', titulo: 'Crear .env' },
+      { id: 'key-generate', tipo: 'key-generate', titulo: 'Clave' },
+      { id: 'storage-link', tipo: 'storage-link', titulo: 'Storage' },
+      { id: 'npm-ci', tipo: 'npm-ci', titulo: 'npm ci' },
+      { id: 'npm-build', tipo: 'npm-build', titulo: 'npm build' },
+    ],
+    php: '8.3',
+    phpIni: {},
+    extensiones: [],
+    runtimes: {},
+    reglasNginx: null,
+    motorBase: 'mysql',
+    origen: 'importada',
+    moduloAsgi: null,
+    conArchivos: true,
+    archivoEsquema: 'esquema.sql',
+    sha256: { archivos: 'a'.repeat(64), esquema: 'b'.repeat(64) },
+    ...extra,
+  });
+
+  it('importada: sin scripts de Composer ni npm, sin pasos que corren su código y con origen en el esquema', () => {
+    const p = generadorDePlantilla(pl()).pasos({
+      tipo: 'laravel',
+      plantilla: 'tienda-a1b2c3',
+      nombre: 'nueva',
+      carpeta: 'C:\\x\\nueva',
+      base: { instancia: null, nombre: 'nueva', motor: 'mysql' },
+      opciones: {},
+    });
+    const t = p.map((x) => x.tipo);
+    expect(t).not.toContain('key-generate');
+    expect(t).not.toContain('storage-link');
+    expect(t).not.toContain('npm-build');
+    expect(p.find((x) => x.tipo === 'composer-install')!.args).toMatchObject({ sinScripts: true });
+    expect(p.find((x) => x.tipo === 'npm-ci')!.args).toMatchObject({ sinScripts: true });
+    expect(p.find((x) => x.tipo === 'restaurar-esquema-plantilla')!.args).toMatchObject({
+      origen: 'importada',
+    });
+    expect(pasosOmitidosDePlantilla(pl()).map((x) => x.tipo)).toEqual([
+      'key-generate',
+      'storage-link',
+      'npm-build',
+    ]);
+  });
+
+  it('propia: los pasos se repiten sin la marca de scripts', () => {
+    const p = generadorDePlantilla(pl({ origen: 'propia' })).pasos({
+      tipo: 'laravel',
+      plantilla: 'tienda-a1b2c3',
+      nombre: 'nueva',
+      carpeta: 'C:\\x\\nueva',
+      base: null,
+      opciones: {},
+    });
+    expect(p.find((x) => x.tipo === 'composer-install')!.args).toBeUndefined();
+    expect(p.map((x) => x.tipo)).toContain('key-generate');
+  });
+
+  it('MySQL → MariaDB pide confirmación antes de crear nada', async () => {
+    const plantilla = pl({ origen: 'propia' });
+    const carpeta = path.join(dir, 'nueva');
+    const creados: unknown[] = [];
+    const deps: DepsCrearProyecto = {
+      rutas: { base: path.join(dir, 'datos') },
+      crearSitio: async (d) => {
+        creados.push(d);
+        return { sitio: { ...d, id: 'nueva' } as Sitio };
+      },
+      ejecutarReceta: async () => ({ estado: 'lista' }),
+      estadoReceta: () => ({ pasos: [] }),
+      sitios: async () => [],
+      basesDe: async () => [],
+      phpInstaladas: async () => ['8.3'],
+      pythonInstaladas: async () => [],
+      confiar: async () => undefined,
+      plantillas: { cargar: async () => plantilla },
+    };
+    const pedido = (opciones: PedidoProyecto['opciones']): PedidoProyecto => ({
+      tipo: 'laravel',
+      plantilla: 'tienda-a1b2c3',
+      nombre: 'nueva',
+      carpeta,
+      base: { instancia: 'mariadb@11.4', nombre: 'nueva' },
+      opciones,
+    });
+    await expect(crearProyecto(deps, pedido({}))).rejects.toMatchObject({
+      codigo: 'plantillas.motor_distinto',
+    });
+    expect(creados).toEqual([]);
+    await crearProyecto(deps, pedido({ confirmarMotorDistinto: true }));
+    expect(creados).toHaveLength(1);
+    // Mismo motor: sin confirmación.
+    await expect(
+      crearProyecto(deps, {
+        ...pedido({}),
+        nombre: 'otra',
+        carpeta: path.join(dir, 'otra'),
+        base: { instancia: 'mysql@8.4', nombre: 'otra' },
+      }),
+    ).resolves.toBeDefined();
   });
 });

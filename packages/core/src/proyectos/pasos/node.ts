@@ -13,7 +13,16 @@ export function pasoNpmCi(d: DepsPasos): ImplementacionPaso {
     const h = await herramientas(ctx, d);
     const node = nodeExe(d, h);
     if (!hayLock) ctx.linea('No hay package-lock.json: se usa npm install.');
-    await lanzar(ctx, d, h, node, [cliNpm(d, h, 'npm'), sub], `npm ${sub}`);
+    // Código de un tercero (plantilla importada): sin los scripts de instalación.
+    const extra = ctx.paso.args?.sinScripts === true ? ['--ignore-scripts'] : [];
+    await lanzar(
+      ctx,
+      d,
+      h,
+      node,
+      [cliNpm(d, h, 'npm'), sub, ...extra],
+      `npm ${sub}${extra.length ? ` ${extra.join(' ')}` : ''}`,
+    );
   };
 }
 

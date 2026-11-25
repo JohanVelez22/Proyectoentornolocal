@@ -39,6 +39,8 @@ export interface PedidoProyecto {
     pgvector?: boolean;
     /** El usuario acepta que WordPress solo publica una huella SHA-1 (débil). */
     confirmarHuellaDebil?: true;
+    /** El usuario confirma restaurar un esquema de MySQL en MariaDB (o al revés). */
+    confirmarMotorDistinto?: true;
     /** Versión de WordPress; por defecto `VERSION_WORDPRESS`. */
     versionWordpress?: string;
   };

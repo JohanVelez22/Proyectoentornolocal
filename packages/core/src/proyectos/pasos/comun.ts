@@ -38,6 +38,16 @@ export interface DepsPasos {
     base: string,
     opts?: OpcionesRestaurar,
   ) => Promise<ResultadoRestaurar>;
+  /**
+   * Restaura un esquema (solo estructura) con usuario temporal limitado y todo o nada
+   * (`Respaldos.restaurarEsquema`). Lo usan las plantillas y la importación.
+   */
+  restaurarEsquema?: (
+    objetivo: ObjetivoBd,
+    archivo: string,
+    base: string,
+    opts: { origen: 'propia' | 'importada' },
+  ) => Promise<ResultadoRestaurar>;
   /** Plantillas de proyecto (D14): sus archivos y su esquema, ya comprobados contra su huella. */
   plantillas?: Pick<Plantillas, 'restaurarArchivos' | 'rutaEsquema'>;
   /** Puerto SMTP de Mailpit si está instalado; null si no. */

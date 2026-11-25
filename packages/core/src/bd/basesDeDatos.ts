@@ -290,6 +290,43 @@ export class BasesDeDatos {
     return this.conMysql(objetivo, (c) => c.tieneTablas(nombre));
   }
 
+  /**
+   * Usuario (MySQL, MariaDB) o rol (PostgreSQL) temporal, limitado a `base`, para ejecutar SQL de
+   * confianza dudosa. `retirar` lo borra (en PostgreSQL devuelve antes la base al administrador).
+   */
+  async usuarioTemporal(
+    objetivo: ObjetivoBd,
+    base: string,
+  ): Promise<{ usuario: string; clave: string; retirar: () => Promise<void> }> {
+    const motor = motorDe(objetivo);
+    if (motor === 'mongodb') throw new Error('MongoDB no usa usuarios temporales de SQL.');
+    if (motor === 'postgresql') {
+      const r = await this.conPostgres((c) => c.crearRolTemporal(base), objetivo);
+      return {
+        ...r,
+        retirar: () => this.conPostgres((c) => c.retirarRolTemporal(r.usuario, base), objetivo),
+      };
+    }
+    const r = await this.conMysql(objetivo, (c) => c.crearUsuarioTemporal(base));
+    return {
+      ...r,
+      retirar: () => this.conMysql(objetivo, (c) => c.borrarUsuarioTemporal(r.usuario)),
+    };
+  }
+
+  /** Deja la base vacía (MySQL y MariaDB): vuelta atrás de una restauración de esquema fallida. */
+  async reiniciarBase(objetivo: ObjetivoBd, base: string): Promise<void> {
+    if (motorDe(objetivo) === 'postgresql') {
+      throw new Error('PostgreSQL restaura en una sola transacción: no hay nada que reiniciar.');
+    }
+    await this.conMysql(objetivo, (c) => c.reiniciarBase(base));
+  }
+
+  /** Crea una extensión de PostgreSQL en la base (como administrador). */
+  async crearExtension(base: string, nombre: string, objetivo?: ObjetivoBd): Promise<void> {
+    await this.conPostgres((c) => c.crearExtension(base, nombre), objetivo);
+  }
+
   /** Activa pgvector en una base de PostgreSQL (la extensión es por base). */
   async activarVector(base: string, objetivo?: ObjetivoBd): Promise<void> {
     await this.conPostgres((c) => c.activarVector(base), objetivo);

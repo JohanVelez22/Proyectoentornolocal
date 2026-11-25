@@ -215,6 +215,13 @@ export const es = {
         'No se pudo leer el esquema de la base del proyecto: compruebe que su servicio esté encendido.',
       'plantillas.base_no_resuelta':
         'No se puede guardar la plantilla: el servidor de la base es remoto o ninguno de los servicios locales usa ese puerto.',
+      'plantillas.motor_distinto':
+        'El esquema de la plantilla es de MySQL y el servidor elegido es MariaDB (o al revés): puede haber diferencias. Confirme que quiere continuar.',
+      'bd.sql_no_permitido':
+        'El esquema trae una sentencia que no es de estructura y no se ejecutó nada: {sentencia}',
+      'bd.extension_no_permitida':
+        'El esquema pide la extensión {nombre}, que no está en la lista permitida: no se restauró nada.',
+      'bd.esquema_fallo': 'No se pudo restaurar el esquema completo: no se dejó nada a medias.',
       'plantillas.sin_esquema': 'La plantilla no trae el esquema de una base de datos.',
       'proyectos.carpeta_invalida': 'La carpeta del proyecto no es válida.',
       'proyectos.nombre_invalido':

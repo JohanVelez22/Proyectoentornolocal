@@ -221,6 +221,14 @@ export const fr: Textos = {
         'Impossible de lire le schéma de la base du projet : vérifiez que son service est démarré.',
       'plantillas.base_no_resuelta':
         "Impossible d'enregistrer le modèle : le serveur de la base est distant ou aucun service local n'utilise ce port.",
+      'plantillas.motor_distinto':
+        "Le schéma du modèle vient de MySQL et le serveur choisi est MariaDB (ou l'inverse) : il peut y avoir des différences. Confirmez que vous voulez continuer.",
+      'bd.sql_no_permitido':
+        "Le schéma contient une instruction qui n'est pas de structure et rien n'a été exécuté : {sentencia}",
+      'bd.extension_no_permitida':
+        "Le schéma demande l'extension {nombre}, qui n'est pas dans la liste autorisée : rien n'a été restauré.",
+      'bd.esquema_fallo':
+        "Impossible de restaurer le schéma complet : rien n'a été laissé à moitié.",
       'plantillas.sin_esquema': "Le modèle ne contient pas le schéma d'une base de données.",
       'proyectos.carpeta_invalida': 'Le dossier du projet n’est pas valide.',
       'proyectos.nombre_invalido':
