@@ -275,6 +275,21 @@ export const pt: Textos = {
         'Não foi possível concluir a operação com {elemento}. Veja Serviços e os registros.',
       'workspaces.base_no_responde':
         '{elemento} não foi iniciado porque o banco de dados desse projeto não responde.',
+      'tareas.cron_invalida':
+        'A expressão cron não é válida. Use 5 campos: minuto, hora, dia do mês, mês e dia da semana (por exemplo, 0 3 * * *).',
+      'tareas.comando_invalido':
+        'Esse comando não é permitido. Use php, node, npm run ou python com um arquivo do projeto, sem código na linha de comando (-r, -e, -c).',
+      'tareas.invalida': 'A tarefa não é válida: revise o nome, o horário e o comando.',
+      'tareas.no_existe': 'Essa tarefa já não existe.',
+      'tareas.sin_confirmar': 'Confirme o comando da tarefa para poder executá-la.',
+      'tareas.sitio_no_confiado':
+        'Marque «Confio neste repositório» no projeto para executar as suas tarefas.',
+      'tareas.receta_cambio':
+        'A receita do projeto mudou desde que você confiou nele: revise-a e marque «Confio neste repositório» de novo.',
+      'tareas.aislado':
+        'Esta é uma pasta de dados de teste (WOLFCORE_DATOS): permita as tarefas agendadas para executá-las.',
+      'tareas.en_curso': 'A tarefa já está em execução.',
+      'tareas.demasiadas': 'Há tarefas demais neste projeto (máximo {maximo}).',
       'proyectos.carpeta_no_vacia':
         'A pasta do projeto já tem arquivos: escolha outra ou esvazie-a.',
       'secretos.sin_cifrado':
@@ -4714,6 +4729,8 @@ export const pt: Textos = {
       'Esta CA pode assinar qualquer site; importe-a somente se for sua, compare a impressão digital.',
     motivos: {
       procesos_quitados: 'Os seus processos (comandos de outro computador) não foram importados.',
+      tareas_quitadas:
+        'As suas tarefas agendadas (comandos de outro computador) não foram importadas. Crie-as de novo ou adote-as a partir do wolfcore.yml.',
       tunel_con_nombre: 'O seu túnel com nome não viaja: volta ao túnel rápido.',
       php_ini: 'Alguns ajustes do php.ini não foram importados.',
       xdebug: 'O seu ajuste do Xdebug não era válido e foi removido.',

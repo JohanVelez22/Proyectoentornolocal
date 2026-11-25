@@ -266,6 +266,20 @@ export const en: Textos = {
         'The operation could not be completed for {elemento}. Check Services and its logs.',
       'workspaces.base_no_responde':
         '{elemento} was not started because that project’s database is not responding.',
+      'tareas.cron_invalida':
+        'The cron expression is not valid. Use 5 fields: minute, hour, day of month, month and day of week (for example, 0 3 * * *).',
+      'tareas.comando_invalido':
+        'That command is not allowed. Use php, node, npm run or python with a project file, with no code on the command line (-r, -e, -c).',
+      'tareas.invalida': 'The task is not valid: check its name, schedule and command.',
+      'tareas.no_existe': 'That task no longer exists.',
+      'tareas.sin_confirmar': 'Confirm the task’s command before it can run.',
+      'tareas.sitio_no_confiado': 'Tick “I trust this repository” on the project to run its tasks.',
+      'tareas.receta_cambio':
+        'The project recipe changed since you trusted it: review it and tick “I trust this repository” again.',
+      'tareas.aislado':
+        'This is a test data folder (WOLFCORE_DATOS): allow scheduled tasks to run them.',
+      'tareas.en_curso': 'The task is already running.',
+      'tareas.demasiadas': 'This project has too many tasks (maximum {maximo}).',
       'proyectos.carpeta_no_vacia':
         'The project folder already has files: choose another one or empty it.',
       'secretos.sin_cifrado':
@@ -4685,6 +4699,8 @@ export const en: Textos = {
       'This CA can sign any website; import it only if it is yours, compare the fingerprint.',
     motivos: {
       procesos_quitados: 'Its processes (commands from another computer) were not imported.',
+      tareas_quitadas:
+        'Its scheduled tasks (commands from another computer) were not imported. Create them again or adopt them from wolfcore.yml.',
       tunel_con_nombre: 'Its named tunnel does not travel: it goes back to the quick tunnel.',
       php_ini: 'Some php.ini settings were not imported.',
       xdebug: 'Its Xdebug setting was not valid and was removed.',

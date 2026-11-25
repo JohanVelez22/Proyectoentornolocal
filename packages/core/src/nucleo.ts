@@ -36,6 +36,8 @@ import {
 import { Perfiles } from './perfiles/importar';
 import { crearPuertoWorkspaces } from './workspaces/puerto';
 import { Workspaces } from './workspaces/workspaces';
+import { GestorTareas } from './tareas/gestor';
+import { Programador } from './tareas/programador';
 import type {
   DepsPerfiles,
   OpcionesExportarPerfil,
@@ -600,6 +602,10 @@ export class Nucleo {
   readonly procesos: ProcesosProyecto;
   /** Workspaces de arranque (D28): conjuntos de instancias, servicios y procesos con nombre. */
   readonly workspaces: Workspaces;
+  /** Planificador de las tareas programadas por sitio (D29): solo corre con la app abierta. */
+  readonly programador: Programador;
+  /** Altas, cambios y confirmaciones de las tareas programadas de los sitios. */
+  readonly tareas: GestorTareas;
   private readonly almacenCredenciales: AlmacenCredenciales;
   private readonly plataforma: PlataformaCompleta;
   private readonly lanzarEditor: LanzadorSeparado | undefined;
@@ -773,6 +779,21 @@ export class Nucleo {
         leerConfig: () => this.config.leer(),
         nginxInstalado: async () => (await this.instalador.instalados('nginx')).length > 0,
       }),
+    });
+    this.programador = new Programador({
+      rutas: this.rutas,
+      leerSitios: () => this.sitios.listar(),
+      huellaReceta: (carpeta) => this.huellaCarpeta(carpeta),
+      existeCarpeta: async (carpeta) => existsSync(carpeta),
+      ejecutar: (sitio, comando, o) => this.procesos.ejecutarUnaVez(sitio, comando, o),
+      avisar: (a) => this.avisos.publicar(a),
+      emitir: (e) => this.eventos.emit('tarea:terminada', e),
+      aislado: () => this.aislado,
+    });
+    this.tareas = new GestorTareas({
+      leerSitios: () => this.sitios.listar(),
+      modificarConfig: (fn) => this.sitios.modificarConfig(fn),
+      programador: this.programador,
     });
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
@@ -1116,6 +1137,7 @@ export class Nucleo {
       runtimes,
       leerSitios: () => sitios.listar(),
       php: phpDe,
+      lanzar: o.lanzar ?? lanzadorPorDefecto,
     });
     const serviciosBd = {
       estados: (): Promise<EstadoServicio[]> => servicios.estados(),
@@ -1650,6 +1672,9 @@ export class Nucleo {
         nucleo.avisosPendientes.push(`No se pudo iniciar el servidor MCP: ${mensajeDe(e)}`);
       });
     }
+    // Tareas programadas (D29): corren solo con la app abierta; en carpeta de datos de prueba
+    // (WOLFCORE_DATOS) no corre nada hasta que el usuario lo permita.
+    nucleo.programador.iniciar();
     nucleo.iniciarRevisionVencimientos();
     nucleo.iniciarRevisionNovedades(o.retrasoNovedadesMs ?? RETRASO_NOVEDADES_MS);
     // Sin bloquear el arranque: un fallo queda en el estado del servicio y en un aviso.
@@ -3911,6 +3936,9 @@ export class Nucleo {
     delete resto.tunel;
     // Compartir en la red local solo cambia con `lan.activar`/`lan.desactivar` (confirmación).
     delete resto.lan;
+    // Las tareas programadas (y su confirmación) solo cambian con `tareas.*`: guardar el sitio
+    // conserva las que tiene y nunca acepta otras (ni una confirmada de antemano).
+    delete resto.tareas;
     if (id) await this.cerrarTunelSiCambia(id, datos);
     if (id) await this.cerrarLanSiCambia(id, datos);
     const previo = id ? (await this.sitios.listar()).find((s) => s.id === id) : undefined;
@@ -4257,6 +4285,10 @@ export class Nucleo {
     for (const s of await this.sitios.listar().catch(() => [] as Sitio[])) {
       this.recetas.cancelar(s.id);
     }
+    // Las tareas en curso se cancelan (solo el árbol de cada una) antes de apagar nada más.
+    await this.programador.detener().catch((e: unknown) => {
+      console.error('No se pudo detener el planificador de tareas:', mensajeDe(e));
+    });
     await this.mcp.detener().catch((e: unknown) => {
       console.error('No se pudo detener el servidor MCP:', mensajeDe(e));
     });

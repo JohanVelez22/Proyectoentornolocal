@@ -163,3 +163,7 @@ export { exportarPerfil } from './perfiles/exportar';
 export * from './perfiles/instantaneaEntorno';
 export { abrirPerfil, Perfiles, type PerfilAbierto } from './perfiles/importar';
 export * from './workspaces/workspaces';
+export * from './tareas/cron';
+export * from './tareas/comando';
+export * from './tareas/gestor';
+export * from './tareas/programador';

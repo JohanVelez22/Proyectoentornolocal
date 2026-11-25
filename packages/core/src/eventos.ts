@@ -54,6 +54,12 @@ export type EventosNucleo = {
   'proceso:terminado': { id: string; sitioId: string; codigo: number | null };
   /** Una receta terminó del todo (`lista` o `error`); cancelar no la emite. */
   'receta:terminada': { sitioId: string; estado: 'lista' | 'error' };
+  /** Una tarea programada terminó (o no pudo correr): la interfaz recarga su estado. */
+  'tarea:terminada': {
+    sitioId: string;
+    tareaId: string;
+    estado: 'ok' | 'fallo' | 'tiempo' | 'cancelada' | 'omitida' | 'bloqueada';
+  };
   /** Una línea de progreso (saneada, sin tokens) del clon de `destino`. */
   'git:progreso': { destino: string; linea: string };
   /** Cambió la lista de carpetas nuevas que parecen un proyecto (carpeta vigilada). */

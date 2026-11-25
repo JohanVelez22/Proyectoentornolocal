@@ -16,6 +16,8 @@ import {
   type ProcesoProyecto,
   type Sitio,
 } from '../tipos';
+import type { Lanzador } from '../plataforma/tipos';
+import { validarComandoTarea } from '../tareas/comando';
 import { existe } from './archivos';
 import { entornoProyecto, resolverPrograma, usaPhp, type DepsEntorno } from './pasos/comun';
 import { MENSAJE_NO_CONFIADO, sanear } from './recetas';
@@ -70,6 +72,8 @@ export interface DepsProcesosProyecto extends DepsEntorno {
   eventos?: Eventos<EventosNucleo>;
   /** Sitios tal como están guardados. */
   leerSitios: () => Promise<Sitio[]>;
+  /** Lanzador de comandos con streaming (tareas programadas); sin él no hay ejecución única. */
+  lanzar?: Lanzador;
   /** Confianza en la CA local (NODE_EXTRA_CA_CERTS, bundle de Python). */
   confianza?: Pick<ConfianzaCa, 'envProyecto'>;
   /**
@@ -193,6 +197,39 @@ export class ProcesosProyecto {
     const sitio = (await this.d.leerSitios()).find((s) => s.id === sitioId);
     if (!sitio) throw new ErrorWolf('proyectos.no_existe', `No existe el proyecto ${sitioId}`);
     return sitio.procesos.map((p) => this.estadoDe(sitio, p));
+  }
+
+  /**
+   * Ejecución única de un comando del proyecto (tareas programadas, D29): sin shell, en la
+   * carpeta del sitio, con el PATH de sus runtimes y la ventana oculta. El programa sale de la
+   * lista cerrada de las tareas (`validarComandoTarea`) y se resuelve como en los procesos
+   * (`resolverPrograma`). `senal` mata el árbol del proceso lanzado, y solo ese. Quien llama ya
+   * comprobó la confianza del sitio y la confirmación del comando.
+   */
+  async ejecutarUnaVez(
+    sitio: Sitio,
+    comando: string[],
+    o: { senal: AbortSignal; alLinea: (linea: string) => void },
+  ): Promise<{ codigo: number }> {
+    validarComandoTarea(comando);
+    const lanzar = this.d.lanzar;
+    if (!lanzar) throw new Error('No se pueden lanzar comandos en este momento.');
+    const carpeta = path.resolve(sitio.carpeta);
+    if (!(await existe(carpeta))) throw new Error(`La carpeta del proyecto no existe: ${carpeta}`);
+    const entorno = await entornoProyecto(sitio, carpeta, this.d, {
+      php: usaPhp(comando[0]!),
+      carpetaVenv: carpeta,
+    });
+    const ca: Record<string, string> = this.d.confianza
+      ? await this.d.confianza.envProyecto(sitio, { carpetaVenv: carpeta }).catch(() => ({}))
+      : {};
+    const { cmd, args } = await resolverPrograma(comando, carpeta, this.d, entorno);
+    return lanzar(cmd, args, {
+      cwd: carpeta,
+      env: { ...entorno.cambios, ...ca },
+      senal: o.senal,
+      alLinea: (l) => o.alLinea(l),
+    });
   }
 
   /** Los procesos de todos los proyectos como estados de servicio (categoría `proyecto`). */

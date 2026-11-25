@@ -270,6 +270,21 @@ export const es = {
         'No se pudo completar la operación con {elemento}. Revise Servicios y sus registros.',
       'workspaces.base_no_responde':
         '{elemento} no se inició porque la base de datos de ese proyecto no responde.',
+      'tareas.cron_invalida':
+        'La expresión cron no es válida. Use 5 campos: minuto, hora, día del mes, mes y día de la semana (por ejemplo, 0 3 * * *).',
+      'tareas.comando_invalido':
+        'El comando no está permitido. Use php, node, npm run o python con un archivo del proyecto, sin código en la línea (-r, -e, -c).',
+      'tareas.invalida': 'La tarea no es válida: revise el nombre, el horario y el comando.',
+      'tareas.no_existe': 'Esa tarea ya no existe.',
+      'tareas.sin_confirmar': 'Confirme el comando de la tarea para poder ejecutarla.',
+      'tareas.sitio_no_confiado':
+        'Marque «Confío en este repositorio» en el proyecto para ejecutar sus tareas.',
+      'tareas.receta_cambio':
+        'La receta del proyecto cambió desde que confió en él: revísela y vuelva a marcar «Confío en este repositorio».',
+      'tareas.aislado':
+        'Esta es una carpeta de datos de prueba (WOLFCORE_DATOS): permita las tareas programadas para ejecutarlas.',
+      'tareas.en_curso': 'La tarea ya se está ejecutando.',
+      'tareas.demasiadas': 'Hay demasiadas tareas en este proyecto (máximo {maximo}).',
       'proyectos.carpeta_no_vacia':
         'La carpeta del proyecto ya tiene archivos: elija otra o vacíela.',
       'secretos.sin_cifrado':
@@ -4706,6 +4721,8 @@ export const es = {
       'Esta CA puede firmar cualquier sitio web; impórtela solo si es la suya, compare la huella.',
     motivos: {
       procesos_quitados: 'Sus procesos (comandos de otro equipo) no se importaron.',
+      tareas_quitadas:
+        'Sus tareas programadas (comandos de otro equipo) no se importaron. Vuelva a crearlas o adóptelas desde wolfcore.yml.',
       tunel_con_nombre: 'Su túnel con nombre no viaja: vuelve al túnel rápido.',
       php_ini: 'Algunos ajustes de php.ini no se importaron.',
       xdebug: 'Su ajuste de Xdebug no era válido y se quitó.',

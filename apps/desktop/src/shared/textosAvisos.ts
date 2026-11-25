@@ -45,6 +45,27 @@ const ES: Diccionario = {
       titulo: 'Un workspace no pudo apagar todo',
       cuerpo: `${limpio(d['nombre'], 'El workspace')}: no se apagó ${limpio(d['nombres'], 'algún elemento')}. Abra Inicio para ver qué sigue encendido.`,
     }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo:
+        d['motivo'] === 'tiempo'
+          ? 'Una tarea programada tardó demasiado'
+          : 'Una tarea programada falló',
+      cuerpo: `${limpio(d['nombre'], 'Una tarea')} (${limpio(d['sitio'], 'un proyecto')}) ${d['motivo'] === 'tiempo' ? 'superó su tiempo máximo y se detuvo' : 'terminó con un error'}. Abra el proyecto para ver su registro.`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: 'Una tarea programada no se ejecutó',
+      cuerpo: `${limpio(d['nombre'], 'Una tarea')} (${limpio(d['sitio'], 'un proyecto')}): ${
+        {
+          aislado: 'la carpeta de datos es de prueba y no se permitió ejecutar tareas',
+          no_confiado: 'el proyecto no está marcado como de confianza',
+          receta_cambio: 'la receta del proyecto cambió desde que confió en él',
+          sin_confirmar: 'falta confirmar su comando',
+          comando_invalido: 'su comando no está permitido',
+          cron_invalida: 'su horario no es válido',
+          carpeta: 'la carpeta del proyecto no existe',
+        }[String(d['motivo'])] ?? 'no se cumplen las condiciones'
+      }.`,
+    }),
     'avisos.puerto_ocupado': (d) => ({
       titulo: 'Puerto ocupado',
       cuerpo: `El puerto ${limpio(d['puerto'], '?')} lo usa ${limpio(d['nombre'], 'otro programa')}: no se pudo iniciar el servicio.`,
@@ -200,6 +221,25 @@ const EN: Diccionario = {
       titulo: 'A workspace could not stop everything',
       cuerpo: `${limpio(d['nombre'], 'The workspace')}: ${limpio(d['nombres'], 'some item')} did not stop. Open Home to see what is still running.`,
     }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo:
+        d['motivo'] === 'tiempo' ? 'A scheduled task took too long' : 'A scheduled task failed',
+      cuerpo: `${limpio(d['nombre'], 'A task')} (${limpio(d['sitio'], 'a project')}) ${d['motivo'] === 'tiempo' ? 'exceeded its time limit and was stopped' : 'ended with an error'}. Open the project to see its log.`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: 'A scheduled task did not run',
+      cuerpo: `${limpio(d['nombre'], 'A task')} (${limpio(d['sitio'], 'a project')}): ${
+        {
+          aislado: 'the data folder is a test one and tasks were not allowed to run',
+          no_confiado: 'the project is not marked as trusted',
+          receta_cambio: 'the project recipe changed since you trusted it',
+          sin_confirmar: 'its command needs to be confirmed',
+          comando_invalido: 'its command is not allowed',
+          cron_invalida: 'its schedule is not valid',
+          carpeta: 'the project folder does not exist',
+        }[String(d['motivo'])] ?? 'the conditions are not met'
+      }.`,
+    }),
     'avisos.puerto_ocupado': (d) => ({
       titulo: 'Port in use',
       cuerpo: `Port ${limpio(d['puerto'], '?')} is used by ${limpio(d['nombre'], 'another program')}: the service could not start.`,
@@ -345,6 +385,27 @@ const PT: Diccionario = {
     'avisos.workspace_fallos_detener': (d) => ({
       titulo: 'Um workspace não conseguiu desligar tudo',
       cuerpo: `${limpio(d['nombre'], 'O workspace')}: não desligou ${limpio(d['nombres'], 'algum item')}. Abra Início para ver o que continua ligado.`,
+    }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo:
+        d['motivo'] === 'tiempo'
+          ? 'Uma tarefa agendada demorou demais'
+          : 'Uma tarefa agendada falhou',
+      cuerpo: `${limpio(d['nombre'], 'Uma tarefa')} (${limpio(d['sitio'], 'um projeto')}) ${d['motivo'] === 'tiempo' ? 'excedeu o tempo máximo e foi interrompida' : 'terminou com um erro'}. Abra o projeto para ver o registro.`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: 'Uma tarefa agendada não foi executada',
+      cuerpo: `${limpio(d['nombre'], 'Uma tarefa')} (${limpio(d['sitio'], 'um projeto')}): ${
+        {
+          aislado: 'a pasta de dados é de teste e não foi permitido executar tarefas',
+          no_confiado: 'o projeto não está marcado como confiável',
+          receta_cambio: 'a receita do projeto mudou desde que você confiou nele',
+          sin_confirmar: 'falta confirmar o comando',
+          comando_invalido: 'o comando não é permitido',
+          cron_invalida: 'o horário não é válido',
+          carpeta: 'a pasta do projeto não existe',
+        }[String(d['motivo'])] ?? 'as condições não são cumpridas'
+      }.`,
     }),
     'avisos.puerto_ocupado': (d) => ({
       titulo: 'Porta ocupada',
@@ -503,6 +564,28 @@ const FR: Diccionario = {
     'avisos.workspace_fallos_detener': (d) => ({
       titulo: 'Un workspace n’a pas pu tout éteindre',
       cuerpo: `${limpio(d['nombre'], 'Le workspace')} : ${limpio(d['nombres'], 'un élément')} ne s’est pas arrêté. Ouvrez Accueil pour voir ce qui tourne encore.`,
+    }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo:
+        d['motivo'] === 'tiempo'
+          ? 'Une tâche planifiée a pris trop de temps'
+          : 'Une tâche planifiée a échoué',
+      cuerpo: `${limpio(d['nombre'], 'Une tâche')} (${limpio(d['sitio'], 'un projet')}) ${d['motivo'] === 'tiempo' ? 'a dépassé sa durée maximale et a été arrêtée' : 's’est terminée avec une erreur'}. Ouvrez le projet pour voir son journal.`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: 'Une tâche planifiée ne s’est pas exécutée',
+      cuerpo: `${limpio(d['nombre'], 'Une tâche')} (${limpio(d['sitio'], 'un projet')}) : ${
+        {
+          aislado:
+            'le dossier de données est un dossier de test et les tâches n’ont pas été autorisées',
+          no_confiado: 'le projet n’est pas marqué comme de confiance',
+          receta_cambio: 'la recette du projet a changé depuis que vous lui avez fait confiance',
+          sin_confirmar: 'sa commande doit être confirmée',
+          comando_invalido: 'sa commande n’est pas autorisée',
+          cron_invalida: 'son horaire n’est pas valide',
+          carpeta: 'le dossier du projet n’existe pas',
+        }[String(d['motivo'])] ?? 'les conditions ne sont pas remplies'
+      }.`,
     }),
     'avisos.puerto_ocupado': (d) => ({
       titulo: 'Port occupé',

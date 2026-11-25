@@ -168,6 +168,12 @@ import type {
   ElementoWorkspace,
   EstadoWorkspace,
   ResultadoWorkspace,
+  TareaSitio,
+  VistaTarea,
+  EjecucionTarea,
+  EstadoPlanificador,
+  PropuestaTarea,
+  EntradaTarea,
 } from '@pel/core';
 
 export type {
@@ -334,6 +340,12 @@ export type {
   ElementoWorkspace,
   EstadoWorkspace,
   ResultadoWorkspace,
+  TareaSitio,
+  VistaTarea,
+  EjecucionTarea,
+  EstadoPlanificador,
+  PropuestaTarea,
+  EntradaTarea,
   EstadoInstancia,
   IdInstancia,
   PlanActualizar,
@@ -559,6 +571,30 @@ export interface ApiEntorno {
     borrar(id: string): Promise<void>;
     iniciar(id: string): Promise<ResultadoWorkspace[]>;
     detener(id: string): Promise<ResultadoWorkspace[]>;
+  };
+  /**
+   * Tareas programadas por sitio (D29): un comando del proyecto (lista cerrada de programas, sin
+   * shell) con una expresión cron. Solo corren con la app abierta, en proyectos de confianza y
+   * con el comando confirmado por el usuario. Guardar o adoptar una tarea la confirma; una que
+   * llega de otra fuente no corre hasta `confirmar`.
+   */
+  tareas: {
+    lista(sitioId: string): Promise<VistaTarea[]>;
+    estado(): Promise<EstadoPlanificador>;
+    /** Las 3 próximas ejecuciones de una expresión cron (ISO); error `tareas.cron_invalida` si no vale. */
+    proximas(cron: string): Promise<string[]>;
+    /** En carpeta de datos de prueba (WOLFCORE_DATOS): permite las tareas en esta sesión. */
+    permitirAislado(): Promise<void>;
+    guardar(sitioId: string, tarea: EntradaTarea): Promise<TareaSitio>;
+    activar(sitioId: string, tareaId: string, activa: boolean): Promise<TareaSitio>;
+    confirmar(sitioId: string, tareaId: string, huella: string): Promise<TareaSitio>;
+    borrar(sitioId: string, tareaId: string): Promise<void>;
+    ejecutarAhora(sitioId: string, tareaId: string): Promise<EjecucionTarea>;
+    historial(sitioId: string, tareaId: string): Promise<EjecucionTarea[]>;
+    log(sitioId: string, tareaId: string): Promise<string[]>;
+    propuestas(sitioId: string): Promise<PropuestaTarea[]>;
+    adoptar(sitioId: string, id: string, huella: string, activar: boolean): Promise<TareaSitio>;
+    aWolfcoreYml(sitioId: string, tareaId: string): Promise<void>;
   };
   servicios: {
     estados(): Promise<EstadoServicio[]>;
@@ -1416,6 +1452,20 @@ export const RUTAS_IPC = [
   'nginx.historial',
   'nginx.restaurar',
   'nginx.snippets',
+  'tareas.lista',
+  'tareas.estado',
+  'tareas.proximas',
+  'tareas.permitirAislado',
+  'tareas.guardar',
+  'tareas.activar',
+  'tareas.confirmar',
+  'tareas.borrar',
+  'tareas.ejecutarAhora',
+  'tareas.historial',
+  'tareas.log',
+  'tareas.propuestas',
+  'tareas.adoptar',
+  'tareas.aWolfcoreYml',
   'workspaces.lista',
   'workspaces.estados',
   'workspaces.guardar',
@@ -1712,6 +1762,7 @@ export const EVENTOS_IPC = [
   'aviso:nuevo',
   'aviso:abrir',
   'receta:progreso',
+  'tarea:terminada',
   'git:progreso',
   'proyectos:sugerencias',
   'metricas:muestra',

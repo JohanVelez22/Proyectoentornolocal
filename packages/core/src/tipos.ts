@@ -68,6 +68,84 @@ export function procesoDelProxy(procesos: readonly ProcesoProyecto[]): ProcesoPr
   );
 }
 
+/* ───────────── Tareas programadas por sitio (D29) ───────────── */
+
+export const ID_TAREA = /^[A-Za-z0-9][A-Za-z0-9_]{0,39}$/;
+/** Máximo de tareas por sitio, de argumentos por comando y de caracteres por argumento. */
+export const MAX_TAREAS_SITIO = 50;
+export const MAX_ARGS_TAREA = 50;
+export const MAX_CARACTERES_ARG_TAREA = 500;
+/** Tiempo máximo por ejecución: por omisión 5 minutos, nunca más de 1 hora. */
+export const TIEMPO_TAREA_DEFECTO_S = 300;
+export const TIEMPO_TAREA_MAX_S = 3600;
+export const TIEMPO_TAREA_MIN_S = 5;
+
+/**
+ * Una tarea programada de un sitio: un comando del proyecto (lista de argumentos, sin shell) con
+ * una expresión cron de 5 campos. `confirmada` es la huella (SHA-256) del comando que el usuario
+ * aceptó en la interfaz: sin ella, o si no coincide con el comando actual, la tarea no se ejecuta
+ * (un comando que llegó de un `wolfcore.yml`, de un config.json editado a mano o de otra fuente
+ * nunca corre solo). Solo cambia con `Nucleo.guardarTarea` y `confirmarTarea`; `guardarSitio` la
+ * conserva tal cual. Estricto: un campo de más invalida la tarea.
+ */
+export const TareaSitioSchema = z
+  .object({
+    id: z.string().regex(ID_TAREA),
+    nombre: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      // eslint-disable-next-line no-control-regex
+      .refine((n) => !/[\x00-\x1f\x7f]/.test(n)),
+    /** Expresión cron de 5 campos; se valida con `interpretarCron` al guardar y al ejecutar. */
+    cron: z.string().max(100),
+    comando: z
+      .array(
+        z
+          .string()
+          .min(1)
+          .max(MAX_CARACTERES_ARG_TAREA)
+          // eslint-disable-next-line no-control-regex
+          .refine((a) => !/[\x00-\x1f\x7f]/.test(a)),
+      )
+      .min(1)
+      .max(MAX_ARGS_TAREA),
+    activa: z.boolean().default(false),
+    /** Huella del comando aceptado por el usuario; null = sin confirmar (no se ejecuta). */
+    confirmada: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/)
+      .nullable()
+      .default(null),
+    tiempoMaxS: z
+      .number()
+      .int()
+      .min(TIEMPO_TAREA_MIN_S)
+      .max(TIEMPO_TAREA_MAX_S)
+      .default(TIEMPO_TAREA_DEFECTO_S),
+    /** De dónde salió el comando (informativo): lo escribió el usuario o vino de wolfcore.yml. */
+    origen: z.enum(['usuario', 'wolfcore.yml']).default('usuario'),
+  })
+  .strict();
+export type TareaSitio = z.infer<typeof TareaSitioSchema>;
+
+/** Lista de tareas de un sitio: una mal formada o repetida se descarta sola (nunca corre). */
+export const ListaTareasSchema = z
+  .array(z.unknown())
+  .transform((lista): TareaSitio[] => {
+    const vistos = new Set<string>();
+    const res: TareaSitio[] = [];
+    for (const x of lista.slice(0, MAX_TAREAS_SITIO)) {
+      const t = TareaSitioSchema.safeParse(x);
+      if (!t.success || vistos.has(t.data.id)) continue;
+      vistos.add(t.data.id);
+      res.push(t.data);
+    }
+    return res;
+  })
+  .catch([]);
+
 /** Modos de Xdebug que se pueden elegir por sitio. */
 export const MODOS_XDEBUG = ['debug', 'develop', 'coverage', 'profile', 'trace'] as const;
 
@@ -131,6 +209,8 @@ export const SitioSchema = z.object({
     .nullable()
     .default(null),
   procesos: z.array(ProcesoProyectoSchema).default([]),
+  /** Tareas programadas (D29); ausente = ninguna. Solo cambian con `Nucleo.guardarTarea` y compañía. */
+  tareas: ListaTareasSchema.optional(),
   /** Versiones fijadas para este sitio; mandan sobre wolfcore.yml y los archivos de versión. */
   runtimes: z
     .object({

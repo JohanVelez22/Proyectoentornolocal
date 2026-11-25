@@ -255,6 +255,20 @@ export class Rutas {
     }
     return path.join(this.base, 'run', 'catalogo', `${servicio}.json`);
   }
+  /** Historial de las tareas programadas (50 ejecuciones por tarea): run/tareas-historial.json. */
+  historialTareas(): string {
+    return path.join(this.base, 'run', 'tareas-historial.json');
+  }
+  /** Registro de una tarea programada: logs/tareas/<sitio>-<tarea>.log (con ids validados). */
+  logTarea(sitioId: string, tareaId: string): string {
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/.test(sitioId)) {
+      throw new Error(`Id de sitio no válido: ${sitioId}`);
+    }
+    if (!/^[A-Za-z0-9][A-Za-z0-9_]{0,39}$/.test(tareaId)) {
+      throw new Error(`Id de tarea no válido: ${tareaId}`);
+    }
+    return path.join(this.base, 'logs', 'tareas', `${sitioId}-${tareaId}.log`);
+  }
   /** Estado persistido de la receta de un sitio: run/receta-<id>.json. */
   receta(sitioId: string): string {
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(sitioId) || sitioId.includes('..')) {

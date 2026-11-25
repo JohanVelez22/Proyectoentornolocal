@@ -187,6 +187,17 @@ export const PARAMETROS_ERROR = {
   'workspaces.captadores_exclusivos': [],
   'workspaces.elemento_fallo': ['elemento'],
   'workspaces.base_no_responde': ['elemento'],
+  // tareas programadas por sitio (D29)
+  'tareas.cron_invalida': [],
+  'tareas.comando_invalido': [],
+  'tareas.invalida': [],
+  'tareas.no_existe': [],
+  'tareas.sin_confirmar': [],
+  'tareas.sitio_no_confiado': [],
+  'tareas.receta_cambio': [],
+  'tareas.aislado': [],
+  'tareas.en_curso': [],
+  'tareas.demasiadas': ['maximo'],
   // proyectos nuevos (D12)
   'proyectos.carpeta_no_vacia': [],
   // usuario propio de la base de cada proyecto (D16)

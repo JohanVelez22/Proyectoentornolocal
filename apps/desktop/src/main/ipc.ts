@@ -116,6 +116,9 @@ import {
   versionWordpress,
   idServicioDatos,
   idWorkspace,
+  idSitioTarea,
+  idTarea,
+  huellaDeTarea,
   motorBd,
   nombreBase,
   nombreModelo,
@@ -875,6 +878,39 @@ const TABLA: Record<RutaIpc, Manejador> = {
     });
   },
   'sitios.aplicar': (n) => n.sitios.aplicar(),
+  // Tareas programadas (D29): el núcleo valida la forma (estricta) y rechaza todo campo de más;
+  // aquí solo ids y huellas. `permitirAislado` es la confirmación del usuario en modo aislado.
+  'tareas.lista': (n, _s, sitioId) => n.programador.vista(idSitioTarea(sitioId)),
+  'tareas.estado': (n) => n.programador.estado(),
+  'tareas.proximas': (n, _s, cron) => {
+    if (typeof cron !== 'string' || cron.length > 200) throw new Error('Argumento no válido: cron');
+    return n.tareas.proximas(cron, 3);
+  },
+  'tareas.permitirAislado': (n) => n.programador.permitirAislado(),
+  'tareas.guardar': (n, _s, sitioId, t) =>
+    n.tareas.guardar(idSitioTarea(sitioId), objetoPlano<object>(t, 'tarea')),
+  'tareas.activar': (n, _s, sitioId, tareaId, activa) => {
+    if (typeof activa !== 'boolean') throw new Error('Argumento no válido: activa');
+    return n.tareas.activar(idSitioTarea(sitioId), idTarea(tareaId), activa);
+  },
+  'tareas.confirmar': (n, _s, sitioId, tareaId, huella) =>
+    n.tareas.confirmar(idSitioTarea(sitioId), idTarea(tareaId), huellaDeTarea(huella)),
+  'tareas.borrar': (n, _s, sitioId, tareaId) =>
+    n.tareas.borrar(idSitioTarea(sitioId), idTarea(tareaId)),
+  'tareas.ejecutarAhora': (n, _s, sitioId, tareaId) =>
+    n.programador.ejecutarAhora(idSitioTarea(sitioId), idTarea(tareaId)),
+  'tareas.historial': (n, _s, sitioId, tareaId) =>
+    n.tareas.historial(idSitioTarea(sitioId), idTarea(tareaId)),
+  'tareas.log': (n, _s, sitioId, tareaId) =>
+    n.programador.leerLog(idSitioTarea(sitioId), idTarea(tareaId)),
+  'tareas.propuestas': (n, _s, sitioId) => n.tareas.propuestas(idSitioTarea(sitioId)),
+  'tareas.adoptar': (n, _s, sitioId, id, huella, activar) => {
+    if (typeof activar !== 'boolean') throw new Error('Argumento no válido: activar');
+    return n.tareas.adoptar(idSitioTarea(sitioId), idTarea(id), huellaDeTarea(huella), activar);
+  },
+  'tareas.aWolfcoreYml': (n, _s, sitioId, tareaId) =>
+    n.tareas.aWolfcoreYml(idSitioTarea(sitioId), idTarea(tareaId)),
+
   // Workspaces (D28): solo referencias; el núcleo valida la forma y rechaza cualquier campo de más.
   'workspaces.lista': (n) => n.workspaces.lista(),
   'workspaces.estados': (n) => n.workspaces.estados(),

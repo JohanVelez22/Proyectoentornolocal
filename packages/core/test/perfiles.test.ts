@@ -402,6 +402,19 @@ async function prepararOrigen(): Promise<void> {
             proxy: false,
           },
         ],
+        // D29: una tarea ya confirmada en el origen; no debe viajar (comando de otro equipo).
+        tareas: [
+          {
+            id: 'schedule',
+            nombre: 'Schedule',
+            cron: '* * * * *',
+            comando: ['php', 'artisan', 'schedule:run', `--token=${CENTINELA}-9`],
+            activa: true,
+            confirmada: 'c'.repeat(64),
+            tiempoMaxS: 300,
+            origen: 'usuario',
+          },
+        ],
         git: { remoto: `https://usuario:${CENTINELA}@github.com/x/tienda.git`, rama: 'main' },
         nota: `password: ${CENTINELA}-8`,
         lan: { activo: true, puerto: 8443, https: true },
@@ -1167,9 +1180,44 @@ describe('importarPerfil: todo lo que llega es importado', () => {
     expect(tienda.procesos).toEqual([]);
     expect(tienda.origen).toBe('perfil');
     expect(r.sitios.find((s) => s.id === 'tienda')!.motivos).toContain('procesos_quitados');
+    // D29: las tareas programadas tampoco llegan (ni activas ni desactivadas; ya no se exportan):
+    // el usuario las vuelve a crear, o las adopta desde el wolfcore.yml del proyecto.
+    expect(tienda.tareas ?? []).toEqual([]);
     expect(tienda.vhostDesactivado).toBe('reglas');
     expect(cfg.mcp.activo).toBe(false);
     expect(cfg.ftp.redLocal).toBe(false);
+  });
+
+  it('un perfil manipulado que trae tareas confirmadas y activas no las importa', () => {
+    const r = sitioImportado({
+      id: 'x',
+      nombre: 'X',
+      dominio: 'x.test',
+      carpeta: '/proyectos/x',
+      tipo: 'estatico',
+      tareas: [
+        {
+          id: 'mala',
+          nombre: 'Mala',
+          cron: '* * * * *',
+          comando: ['php', 'job.php'],
+          activa: true,
+          confirmada: 'd'.repeat(64),
+        },
+      ],
+    });
+    expect(r.sitio!.tareas ?? []).toEqual([]);
+    expect(r.motivos).toContain('tareas_quitadas');
+  });
+
+  it('el perfil exportado no lleva las tareas ni sus comandos', async () => {
+    const archivo = await exportar();
+    const bruto = (await readFile(archivo)).toString('latin1');
+    expect(bruto).not.toContain('schedule:run');
+    const { sitioParaPerfil } = await import('../src/perfiles/manifiesto');
+    const tienda = (await deps(origen).leerConfig()).sitios.find((x) => x.id === 'tienda')!;
+    expect(tienda.tareas).toHaveLength(1);
+    expect(sitioParaPerfil(tienda).tareas ?? []).toEqual([]);
   });
 
   it('un perfil que trae lan y túnel con nombre (manipulado) tampoco los importa', () => {

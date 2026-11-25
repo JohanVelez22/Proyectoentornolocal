@@ -53,6 +53,23 @@ const api: ApiEntorno = {
     restaurar: (id, version) => invocar('nginx.restaurar', id, version),
     snippets: () => invocar('nginx.snippets'),
   },
+  tareas: {
+    lista: (sitioId) => invocar('tareas.lista', sitioId),
+    estado: () => invocar('tareas.estado'),
+    proximas: (cron) => invocar('tareas.proximas', cron),
+    permitirAislado: () => invocar('tareas.permitirAislado'),
+    guardar: (sitioId, t) => invocar('tareas.guardar', sitioId, t),
+    activar: (sitioId, tareaId, activa) => invocar('tareas.activar', sitioId, tareaId, activa),
+    confirmar: (sitioId, tareaId, huella) => invocar('tareas.confirmar', sitioId, tareaId, huella),
+    borrar: (sitioId, tareaId) => invocar('tareas.borrar', sitioId, tareaId),
+    ejecutarAhora: (sitioId, tareaId) => invocar('tareas.ejecutarAhora', sitioId, tareaId),
+    historial: (sitioId, tareaId) => invocar('tareas.historial', sitioId, tareaId),
+    log: (sitioId, tareaId) => invocar('tareas.log', sitioId, tareaId),
+    propuestas: (sitioId) => invocar('tareas.propuestas', sitioId),
+    adoptar: (sitioId, id, huella, activar) =>
+      invocar('tareas.adoptar', sitioId, id, huella, activar),
+    aWolfcoreYml: (sitioId, tareaId) => invocar('tareas.aWolfcoreYml', sitioId, tareaId),
+  },
   workspaces: {
     lista: () => invocar('workspaces.lista'),
     estados: () => invocar('workspaces.estados'),

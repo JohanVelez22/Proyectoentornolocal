@@ -29,6 +29,7 @@ import {
   destinatarioValido,
   IDS_CAPTADOR,
   ID_WORKSPACE,
+  ID_TAREA,
   IDS_SERVICIO_DATOS,
   TIPOS_PROVEEDOR_IA,
   validarModeloIa,
@@ -141,6 +142,28 @@ export function texto(v: unknown, nombre = 'valor'): string {
 export function idWorkspace(v: unknown): string {
   if (typeof v !== 'string' || !ID_WORKSPACE.test(v)) {
     throw new Error('Argumento no válido: workspace');
+  }
+  return v;
+}
+
+/** Id de un proyecto en las rutas de tareas programadas (nunca una ruta). */
+export function idSitioTarea(v: unknown): string {
+  if (typeof v !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/.test(v)) {
+    throw new Error('Argumento no válido: proyecto');
+  }
+  return v;
+}
+
+/** Id de una tarea programada (el mismo patrón que el núcleo). */
+export function idTarea(v: unknown): string {
+  if (typeof v !== 'string' || !ID_TAREA.test(v)) throw new Error('Argumento no válido: tarea');
+  return v;
+}
+
+/** Huella (SHA-256 en hexadecimal) del comando que el usuario vio al confirmar una tarea. */
+export function huellaDeTarea(v: unknown): string {
+  if (typeof v !== 'string' || !/^[0-9a-f]{64}$/.test(v)) {
+    throw new Error('Argumento no válido: huella');
   }
   return v;
 }

@@ -34,6 +34,24 @@ function nucleoFalso() {
     },
     sitios: { listar: vi.fn(async () => [{ id: 's1' }]), aplicar: vi.fn() },
     servicios: { estados: vi.fn(), iniciar: vi.fn(), detener: vi.fn() },
+    programador: {
+      vista: vi.fn(async () => []),
+      estado: vi.fn(() => ({ corriendo: true, aislado: false, permitido: false })),
+      permitirAislado: vi.fn(),
+      ejecutarAhora: vi.fn(async () => ({ estado: 'ok' })),
+      leerLog: vi.fn(async () => []),
+    },
+    tareas: {
+      guardar: vi.fn(async (_s: string, t: unknown) => t),
+      activar: vi.fn(async () => ({})),
+      confirmar: vi.fn(async () => ({})),
+      borrar: vi.fn(async () => undefined),
+      historial: vi.fn(async () => []),
+      propuestas: vi.fn(async () => []),
+      adoptar: vi.fn(async () => ({})),
+      aWolfcoreYml: vi.fn(async () => undefined),
+      proximas: vi.fn(() => []),
+    },
     workspaces: {
       lista: vi.fn(async () => []),
       estados: vi.fn(async () => ({})),
@@ -416,6 +434,7 @@ describe('registrarIpc', () => {
       'registro:lineas',
       'servicio:estado',
       'sitio:cambio',
+      'tarea:terminada',
       'tunel:autorizacion',
       'tunel:estado',
     ]);
@@ -576,6 +595,56 @@ describe('registrarIpc', () => {
     await canales.get('entorno:servicios.detenerTodo')!({});
     expect(crudo.detenerTodo).toHaveBeenCalled();
   });
+  it('tareas programadas: ids, huellas y booleanos validados; el núcleo valida lo demás', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const llamar = (c: string, ...a: unknown[]) => canales.get(`entorno:tareas.${c}`)!({}, ...a);
+    const huella = 'a'.repeat(64);
+    const t = { nombre: 'x', cron: '* * * * *', comando: ['php', 'a'], activa: true };
+    expect(await llamar('guardar', 'tienda', t)).toEqual({ ok: true, valor: t });
+    for (const malo of [[], null, 'x', 5]) {
+      expect(await llamar('guardar', 'tienda', malo)).toMatchObject({ ok: false });
+    }
+    expect(crudo.tareas.guardar).toHaveBeenCalledTimes(1);
+    await llamar('lista', 'tienda');
+    await llamar('ejecutarAhora', 'tienda', 't_1');
+    await llamar('confirmar', 'tienda', 't_1', huella);
+    await llamar('adoptar', 'tienda', 'schedule', huella, true);
+    await llamar('activar', 'tienda', 't_1', false);
+    await llamar('borrar', 'tienda', 't_1');
+    expect(crudo.programador.vista).toHaveBeenCalledWith('tienda');
+    expect(crudo.programador.ejecutarAhora).toHaveBeenCalledWith('tienda', 't_1');
+    expect(crudo.tareas.confirmar).toHaveBeenCalledWith('tienda', 't_1', huella);
+    expect(crudo.tareas.adoptar).toHaveBeenCalledWith('tienda', 'schedule', huella, true);
+    expect(crudo.tareas.activar).toHaveBeenCalledWith('tienda', 't_1', false);
+    // Ids con ruta, huellas que no son SHA-256 y booleanos falsos: nunca llegan al núcleo.
+    for (const malo of ['../x', 'a/b', '', 5, undefined, 'x'.repeat(200)]) {
+      expect(await llamar('lista', malo)).toMatchObject({ ok: false });
+      expect(await llamar('ejecutarAhora', 'tienda', malo)).toMatchObject({ ok: false });
+      expect(await llamar('ejecutarAhora', malo, 't_1')).toMatchObject({ ok: false });
+    }
+    for (const mala of ['abc', 'A'.repeat(64), huella + 'a', 5, undefined, '']) {
+      expect(await llamar('confirmar', 'tienda', 't_1', mala)).toMatchObject({ ok: false });
+      expect(await llamar('adoptar', 'tienda', 'schedule', mala, true)).toMatchObject({
+        ok: false,
+      });
+    }
+    for (const malo of ['true', 1, undefined]) {
+      expect(await llamar('activar', 'tienda', 't_1', malo)).toMatchObject({ ok: false });
+      expect(await llamar('adoptar', 'tienda', 'schedule', huella, malo)).toMatchObject({
+        ok: false,
+      });
+    }
+    expect(await llamar('proximas', 'x'.repeat(300))).toMatchObject({ ok: false });
+    expect(crudo.programador.ejecutarAhora).toHaveBeenCalledTimes(1);
+    expect(crudo.tareas.confirmar).toHaveBeenCalledTimes(1);
+    expect(crudo.tareas.adoptar).toHaveBeenCalledTimes(1);
+    // La confirmación del modo aislado es una orden propia, sin argumentos.
+    await llamar('permitirAislado');
+    expect(crudo.programador.permitirAislado).toHaveBeenCalledTimes(1);
+  });
+
   it('workspaces: solo ids válidos y objetos planos; el resto lo valida el núcleo', async () => {
     const { ipcMain, canales } = ipcFalso();
     const { nucleo, crudo } = nucleoFalso();
@@ -633,6 +702,20 @@ describe('registrarIpc', () => {
         'nginx.restaurar',
         'nginx.snippets',
         'workspaces.lista',
+        'tareas.lista',
+        'tareas.estado',
+        'tareas.proximas',
+        'tareas.permitirAislado',
+        'tareas.guardar',
+        'tareas.activar',
+        'tareas.confirmar',
+        'tareas.borrar',
+        'tareas.ejecutarAhora',
+        'tareas.historial',
+        'tareas.log',
+        'tareas.propuestas',
+        'tareas.adoptar',
+        'tareas.aWolfcoreYml',
         'workspaces.estados',
         'workspaces.guardar',
         'workspaces.borrar',

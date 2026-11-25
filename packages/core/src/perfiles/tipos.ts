@@ -154,6 +154,7 @@ export interface OpcionesExportarPerfil {
  */
 export const MOTIVOS_PERFIL = [
   'procesos_quitados',
+  'tareas_quitadas',
   'tunel_con_nombre',
   'php_ini',
   'xdebug',

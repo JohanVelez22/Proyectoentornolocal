@@ -240,6 +240,9 @@ export function sitioParaPerfil(s: Sitio): Sitio {
   copia.reglasExtra = enmascararNginx(s.reglasExtra);
   if (typeof s.vhostManual === 'string') copia.vhostManual = enmascararNginx(s.vhostManual);
   copia.procesos = s.procesos.map((p) => ({ ...p, comando: enmascararComando(p.comando) }));
+  // Las tareas programadas (D29) son comandos de este equipo que ya se confirmaron aquí: no
+  // viajan. En el equipo nuevo se vuelven a crear o se adoptan desde el wolfcore.yml del proyecto.
+  delete copia.tareas;
   copia.nota = llevaSecreto(s.nota) || enmascararSecretos(s.nota) !== s.nota ? '' : s.nota;
   // Los campos que el filtro pudo quitar por nombre (nunca debería) vuelven a su forma básica.
   copia.id = s.id;
@@ -287,6 +290,10 @@ export function sitioImportado(bruto: unknown): SitioImportado {
   // Los comandos de los procesos son de otro equipo (de origen ajeno): no se importan.
   if (s.procesos.length > 0) motivos.push('procesos_quitados');
   s.procesos = [];
+  // Tampoco las tareas programadas (D29), aunque el perfil las traiga ya confirmadas y activas:
+  // la confirmación es de quien las escribió en otro equipo, no de este usuario.
+  if ((s.tareas?.length ?? 0) > 0) motivos.push('tareas_quitadas');
+  delete s.tareas;
   s.origen = 'perfil';
   if (s.phpIni !== undefined) {
     try {

@@ -280,6 +280,22 @@ export const fr: Textos = {
         'L’opération n’a pas pu aboutir pour {elemento}. Consultez Services et ses journaux.',
       'workspaces.base_no_responde':
         '{elemento} n’a pas démarré car la base de données de ce projet ne répond pas.',
+      'tareas.cron_invalida':
+        'L’expression cron n’est pas valide. Utilisez 5 champs : minute, heure, jour du mois, mois et jour de la semaine (par exemple, 0 3 * * *).',
+      'tareas.comando_invalido':
+        'Cette commande n’est pas autorisée. Utilisez php, node, npm run ou python avec un fichier du projet, sans code sur la ligne de commande (-r, -e, -c).',
+      'tareas.invalida':
+        'La tâche n’est pas valide : vérifiez son nom, son horaire et sa commande.',
+      'tareas.no_existe': 'Cette tâche n’existe plus.',
+      'tareas.sin_confirmar': 'Confirmez la commande de la tâche pour pouvoir l’exécuter.',
+      'tareas.sitio_no_confiado':
+        'Cochez « Je fais confiance à ce dépôt » sur le projet pour exécuter ses tâches.',
+      'tareas.receta_cambio':
+        'La recette du projet a changé depuis que vous lui avez fait confiance : vérifiez-la et cochez de nouveau « Je fais confiance à ce dépôt ».',
+      'tareas.aislado':
+        'Ceci est un dossier de données de test (WOLFCORE_DATOS) : autorisez les tâches planifiées pour les exécuter.',
+      'tareas.en_curso': 'La tâche est déjà en cours d’exécution.',
+      'tareas.demasiadas': 'Ce projet a trop de tâches (maximum {maximo}).',
       'proyectos.carpeta_no_vacia':
         'Le dossier du projet contient déjà des fichiers : choisissez-en un autre ou videz-le.',
       'secretos.sin_cifrado':
@@ -4820,6 +4836,8 @@ export const fr: Textos = {
       "Cette CA peut signer n'importe quel site web ; importez-la uniquement si c'est la vôtre, comparez l'empreinte.",
     motivos: {
       procesos_quitados: "Ses processus (commandes d'un autre ordinateur) n'ont pas été importés.",
+      tareas_quitadas:
+        "Ses tâches planifiées (commandes d'un autre ordinateur) n'ont pas été importées. Recréez-les ou adoptez-les depuis wolfcore.yml.",
       tunel_con_nombre: 'Son tunnel nommé ne voyage pas : il revient au tunnel rapide.',
       php_ini: "Certains réglages de php.ini n'ont pas été importés.",
       xdebug: "Son réglage Xdebug n'était pas valide et a été retiré.",

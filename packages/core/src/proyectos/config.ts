@@ -4,7 +4,17 @@ import path from 'node:path';
 import { Document, isMap, isScalar, parseDocument } from 'yaml';
 import { z } from 'zod';
 import type { MotorBd } from '../bd/env';
-import { ProcesoProyectoSchema, TIPOS_SITIO, type ProcesoProyecto } from '../tipos';
+import {
+  ID_TAREA,
+  MAX_ARGS_TAREA,
+  MAX_CARACTERES_ARG_TAREA,
+  MAX_TAREAS_SITIO,
+  ProcesoProyectoSchema,
+  TIEMPO_TAREA_MAX_S,
+  TIEMPO_TAREA_MIN_S,
+  TIPOS_SITIO,
+  type ProcesoProyecto,
+} from '../tipos';
 
 export { ProcesoProyectoSchema, type ProcesoProyecto };
 
@@ -64,6 +74,24 @@ export const PasoRecetaSchema = z.object({
 /** `{id; tipo: TipoPaso; titulo; args?: Record<string, unknown>; opcional?: boolean}` */
 export type PasoReceta = z.infer<typeof PasoRecetaSchema>;
 
+/* ───────────── Tareas programadas (D29) ───────────── */
+
+/**
+ * Tarea que `wolfcore.yml` propone (D29): solo el id, el nombre, el cron, el comando y el tiempo
+ * máximo. Es una **propuesta**: nunca se ejecuta por estar aquí. El usuario la revisa en la
+ * interfaz y la confirma; recién entonces pasa a las tareas del sitio. Los campos de más
+ * (`activa`, `confirmada`…) se ignoran. La validez del cron y del comando se comprueba al
+ * mostrarla, no aquí (una tarea rara no debe dejar inservible todo el archivo).
+ */
+export const TareaProyectoSchema = z.object({
+  id: z.string().regex(ID_TAREA, 'El id de la tarea lleva solo letras, números y guiones bajos'),
+  nombre: z.string().max(80).default(''),
+  cron: z.string().max(100),
+  comando: z.array(z.string().min(1).max(MAX_CARACTERES_ARG_TAREA)).min(1).max(MAX_ARGS_TAREA),
+  tiempoMaxS: z.number().int().min(TIEMPO_TAREA_MIN_S).max(TIEMPO_TAREA_MAX_S).optional(),
+});
+export type TareaProyecto = z.output<typeof TareaProyectoSchema>;
+
 /* ───────────── Servicios que pide un proyecto ───────────── */
 
 export const MOTORES_BD = [
@@ -111,6 +139,8 @@ export const ConfigProyectoSchema = z
       .default({}),
     receta: z.array(PasoRecetaSchema).default([]),
     procesos: z.array(ProcesoProyectoSchema).default([]),
+    /** Tareas programadas que propone el proyecto (D29); el usuario las confirma una a una. */
+    tareas: z.array(TareaProyectoSchema).max(MAX_TAREAS_SITIO).default([]),
   })
   .superRefine((c, ctx) => {
     c.receta.forEach((x, i) => {
@@ -122,7 +152,7 @@ export const ConfigProyectoSchema = z
         });
       }
     });
-    for (const campo of ['receta', 'procesos'] as const) {
+    for (const campo of ['receta', 'procesos', 'tareas'] as const) {
       const vistos = new Set<string>();
       c[campo].forEach((x, i) => {
         if (vistos.has(x.id)) {
@@ -154,6 +184,8 @@ const CABECERA = [
   '   procesos  comandos de larga duración (npm run dev, queue:work, uvicorn…) con',
   '             id, nombre, comando (lista), cwd, autoIniciar, reiniciar, puerto y proxy',
   '             (true en el proceso al que apunta el sitio, p. ej. uvicorn y no vite).',
+  '   tareas    tareas programadas (id, nombre, cron de 5 campos, comando como lista y',
+  '             tiempoMaxS). Son propuestas: no corren hasta que las confirme en el proyecto.',
 ].join('\n');
 
 const CLAVES: readonly (keyof ConfigProyecto)[] = [
@@ -167,6 +199,7 @@ const CLAVES: readonly (keyof ConfigProyecto)[] = [
   'env',
   'receta',
   'procesos',
+  'tareas',
 ];
 
 const mensajeError = (e: unknown): string => (e instanceof Error ? e.message : String(e));
