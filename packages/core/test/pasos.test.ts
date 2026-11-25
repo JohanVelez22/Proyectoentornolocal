@@ -686,8 +686,32 @@ describe('python-venv y pip-install', () => {
     expect(lineas.join('\n')).toMatch(/\.venv/);
   });
 
+  it('un sitio confiado con un .venv previo sin registrar lo sigue usando y queda registrado', async () => {
+    const a = await armar({ sitio: { tipo: 'fastapi', confiado: true } });
+    await escribir(a.carpeta, 'requirements.txt', 'fastapi\n');
+    await escribir(a.carpeta, '.venv/Scripts/python.exe', '');
+    expect(await esVenvPropio({ rutas: a.rutas }, a.carpeta)).toBe(false);
+    await correr(a, 'pip-install');
+    expect(a.llamadas).toHaveLength(1);
+    expect(await esVenvPropio({ rutas: a.rutas }, a.carpeta)).toBe(true);
+    const b = await armar({ sitio: { tipo: 'fastapi', confiado: true } });
+    await escribir(b.carpeta, '.venv/Scripts/python.exe', '');
+    await correr(b, 'python-venv');
+    expect(b.llamadas).toHaveLength(0);
+    expect(await esVenvPropio({ rutas: b.rutas }, b.carpeta)).toBe(true);
+  });
+
+  it('una plantilla importada (sinScripts) no acepta un .venv sin registrar aunque el sitio esté confiado', async () => {
+    const a = await armar({ sitio: { tipo: 'fastapi', confiado: true } });
+    await escribir(a.carpeta, 'requirements.txt', 'fastapi\n');
+    await escribir(a.carpeta, '.venv/Scripts/python.exe', '');
+    await expect(correr(a, 'pip-install', { sinScripts: true })).rejects.toMatchObject({
+      codigo: 'proyectos.venv_ajeno',
+    });
+  });
+
   it('un .venv que viene del repositorio no se ejecuta nunca (ni venv ni pip)', async () => {
-    const a = await armar({ sitio: { tipo: 'fastapi' } });
+    const a = await armar({ sitio: { tipo: 'fastapi', confiado: false } });
     await escribir(a.carpeta, '.venv/Scripts/python.exe', 'ejecutable del repo');
     await escribir(a.carpeta, 'requirements.txt', 'fastapi\n');
     await expect(correr(a, 'python-venv')).rejects.toMatchObject({
@@ -698,7 +722,7 @@ describe('python-venv y pip-install', () => {
     });
     expect(a.llamadas).toHaveLength(0);
     // Un .venv sin python (carpeta suelta con un ensurepip.py) tampoco se acepta.
-    const b = await armar({ sitio: { tipo: 'fastapi' } });
+    const b = await armar({ sitio: { tipo: 'fastapi', confiado: false } });
     await escribir(b.carpeta, '.venv/ensurepip.py', 'import os');
     await expect(correr(b, 'python-venv')).rejects.toMatchObject({
       codigo: 'proyectos.venv_ajeno',

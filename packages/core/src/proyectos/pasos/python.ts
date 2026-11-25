@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../../errores';
 import { existe } from '../archivos';
-import type { ImplementacionPaso } from '../pasos';
+import type { ContextoPaso, ImplementacionPaso } from '../pasos';
 import { herramientas, lanzar, pythonExe, pythonVenv, type DepsPasos } from './comun';
 
 /* ───────────── Entornos virtuales propios ───────────── */
@@ -46,6 +46,21 @@ const venvAjeno = (): ErrorWolf =>
     'El proyecto trae su propio .venv y WolfCore Dev no ejecuta el Python de un repositorio. Bórrelo y vuelva a crear el entorno.',
   );
 
+/**
+ * Un `.venv` sin registrar: lo acepta un sitio que el usuario ya confió (ya ejecuta su código, así
+ * que su `.venv` no añade riesgo; queda registrado la primera vez) salvo en una plantilla importada
+ * (`sinScripts`). Cualquier otro caso (repositorio sin confiar) se rechaza. Los procesos del sitio
+ * (uvicorn desde `.venv`) no dependen de este registro.
+ */
+async function exigirVenvAceptable(d: DepsPasos, ctx: ContextoPaso): Promise<void> {
+  if (await esVenvPropio(d, ctx.carpeta)) return;
+  if (ctx.sitio.confiado === true && ctx.paso.args?.sinScripts !== true) {
+    await registrarVenvPropio(d, ctx.carpeta);
+    return;
+  }
+  throw venvAjeno();
+}
+
 /** Opciones de Python para código ajeno: aislado (-I) y UTF-8 (requirements con acentos). */
 const AISLADO = ['-I', '-X', 'utf8'];
 
@@ -59,7 +74,7 @@ export function pasoPythonVenv(d: DepsPasos): ImplementacionPaso {
   return async (ctx) => {
     const venv = path.join(ctx.carpeta, '.venv');
     if (await existe(venv)) {
-      if (!(await esVenvPropio(d, ctx.carpeta))) throw venvAjeno();
+      await exigirVenvAceptable(d, ctx);
       ctx.linea('El entorno virtual .venv ya existe; no se modificó.');
       return;
     }
@@ -116,9 +131,7 @@ export function pasoPipInstall(d: DepsPasos): ImplementacionPaso {
   return async (ctx) => {
     const py = pythonVenv(ctx.carpeta);
     // Solo el .venv que creó WolfCore Dev: el de un repositorio ajeno trae su propio python.
-    if ((await existe(path.join(ctx.carpeta, '.venv'))) && !(await esVenvPropio(d, ctx.carpeta))) {
-      throw venvAjeno();
-    }
+    if (await existe(path.join(ctx.carpeta, '.venv'))) await exigirVenvAceptable(d, ctx);
     if (!(await existe(py))) {
       throw new Error('Falta el entorno virtual .venv: ejecute antes "Crear el entorno virtual".');
     }
