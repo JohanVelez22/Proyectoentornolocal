@@ -217,6 +217,8 @@ export const es = {
         'No se pudo leer el esquema de la base del proyecto: compruebe que su servicio esté encendido.',
       'plantillas.base_no_resuelta':
         'No se puede guardar la plantilla: el servidor de la base es remoto o ninguno de los servicios locales usa ese puerto.',
+      'plantillas.sin_generador_base':
+        'Este tipo de proyecto no tiene un generador base: la plantilla debe incluir los archivos del proyecto.',
       'plantillas.motor_distinto':
         'El esquema de la plantilla es de MySQL y el servidor elegido es MariaDB (o al revés): puede haber diferencias. Confirme que quiere continuar.',
       'bd.sql_no_permitido':

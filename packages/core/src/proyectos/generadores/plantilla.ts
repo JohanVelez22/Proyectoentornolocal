@@ -1,10 +1,16 @@
 import type { PasoReceta } from '../config';
-import { argsPermitidos, PASOS_PERMITIDOS_PLANTILLA, type Plantilla } from '../plantillas';
+import {
+  argsPermitidos,
+  generadorPorTipo,
+  PASOS_PERMITIDOS_PLANTILLA,
+  type Plantilla,
+} from '../plantillas';
 import { procesoUvicorn } from '../recetas';
 import { generadorCodeigniter3, generadorCodeigniter4 } from './codeigniter';
 import { generadorEstatico } from './estatico';
 import { generadorFastapi } from './fastapi';
 import { generadorLaravel } from './laravel';
+import { generadorSymfony } from './symfony';
 import { generadorWordpress } from './wordpress';
 import {
   argsBase,
@@ -32,14 +38,23 @@ export function pasosOmitidosDePlantilla(pl: Pick<Plantilla, 'receta' | 'origen'
 }
 
 /** Generador base de cada tipo de sitio (para una plantilla sin archivos). */
-const BASE_DEL_TIPO: Partial<Record<Plantilla['tipo'], { id: TipoGenerador; gen: Generador }>> = {
-  laravel: { id: 'laravel', gen: generadorLaravel },
-  codeigniter3: { id: 'codeigniter3', gen: generadorCodeigniter3 },
-  codeigniter4: { id: 'codeigniter4', gen: generadorCodeigniter4 },
-  fastapi: { id: 'fastapi', gen: generadorFastapi },
-  wordpress: { id: 'wordpress', gen: generadorWordpress },
-  estatico: { id: 'estatico', gen: generadorEstatico },
+const BASE_DEL_TIPO: Record<TipoGenerador, Generador> = {
+  laravel: generadorLaravel,
+  codeigniter3: generadorCodeigniter3,
+  codeigniter4: generadorCodeigniter4,
+  symfony: generadorSymfony,
+  fastapi: generadorFastapi,
+  wordpress: generadorWordpress,
+  estatico: generadorEstatico,
 };
+
+/** Generador base de una plantilla (para crearla sin archivos); null si su tipo no tiene uno. */
+export function generadorBaseDe(
+  pl: Pick<Plantilla, 'tipo' | 'generador'>,
+): { id: TipoGenerador; gen: Generador } | null {
+  const id = pl.generador ?? generadorPorTipo(pl.tipo);
+  return id ? { id, gen: BASE_DEL_TIPO[id] } : null;
+}
 
 /**
  * Generador de un proyecto nuevo desde una plantilla propia: copia sus archivos, crea la base
@@ -63,7 +78,7 @@ export function generadorDePlantilla(pl: Plantilla): Generador {
         });
       // Sin archivos: se parte del generador base del tipo (como un proyecto nuevo) y encima se
       // restaura el esquema; los ajustes (php.ini, Nginx) los aplica crearProyecto al terminar.
-      const bas = pl.conArchivos ? undefined : BASE_DEL_TIPO[pl.tipo];
+      const bas = pl.conArchivos ? null : generadorBaseDe(pl);
       if (bas) {
         const lista = bas.gen.pasos({ ...p, tipo: bas.id });
         const salida: PasoReceta[] = [];

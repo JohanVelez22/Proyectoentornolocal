@@ -173,7 +173,7 @@ import { VERSION_WORDPRESS, type PedidoProyecto } from './proyectos/generadores'
 import { RegistroPasos } from './proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
 import { leerHuellaWordpress } from './proyectos/pasos/descargarPlantilla';
-import { Plantillas } from './proyectos/plantillas';
+import { generadorPorTipo, Plantillas } from './proyectos/plantillas';
 import { asignarPuertoProxy, datosAlCrear } from './proyectos/pasos/sitio';
 import {
   EjecutorRecetas,
@@ -1035,12 +1035,40 @@ export class Nucleo {
       respaldar: (objetivo, base, carpeta, opciones) =>
         respaldosRef.respaldar(objetivo, base, carpeta, opciones),
       resolverObjetivo: async (motor, puerto) => {
-        const estado = (await servicios.estados()).find((e) => e.id === motor);
-        if (!estado) return null;
-        if (puerto === null) return motor;
-        const instancia = estado.instancias?.find((i) => i.puerto === puerto);
-        if (instancia) return instancia.id;
-        return estado.puertos.includes(puerto) ? motor : null;
+        // Toda la familia (MySQL y MariaDB hablan igual): el .env puede decir mysql y ser MariaDB.
+        const familia: string[] = motor === 'postgresql' ? ['postgresql'] : ['mysql', 'mariadb'];
+        const estados = (await servicios.estados()).filter((e) => familia.includes(e.id));
+        if (puerto === null) {
+          const e = estados.find((x) => x.id === motor);
+          return e ? { servidor: motor, motor } : null;
+        }
+        for (const e of estados) {
+          const instancia = e.instancias?.find((i) => i.puerto === puerto);
+          if (instancia) return { servidor: instancia.id, motor: e.id as MotorBd };
+          if (e.puertos.includes(puerto))
+            return { servidor: e.id as MotorBd, motor: e.id as MotorBd };
+        }
+        return null;
+      },
+      generadorDe: async (s) => {
+        // Symfony, como sitio, es "laravel": se distingue por sus dependencias.
+        if (s.tipo === 'laravel') {
+          try {
+            const composer = JSON.parse(
+              await readFile(path.join(s.carpeta, 'composer.json'), 'utf8'),
+            ) as { require?: Record<string, string> };
+            const req = Object.keys(composer.require ?? {});
+            if (
+              !req.includes('laravel/framework') &&
+              req.some((x) => x.startsWith('symfony/framework-bundle'))
+            ) {
+              return 'symfony';
+            }
+          } catch {
+            // Sin composer.json legible: se queda con el tipo.
+          }
+        }
+        return generadorPorTipo(s.tipo);
       },
       leerEsquema: (servidor, archivo) => respaldosRef.esquemaComoTexto(servidor, archivo),
       usaMongodb: async (s) => (await detectarProyectoB(s.carpeta)).servicios.includes('mongodb'),

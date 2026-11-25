@@ -313,6 +313,7 @@ describe('proyecto desde una plantilla propia', () => {
     reglasNginx: null,
     motorBase: 'mysql',
     origen: 'propia',
+    generador: null,
     moduloAsgi: null,
     conArchivos: true,
     archivoEsquema: 'esquema.sql',

@@ -31,6 +31,7 @@ import { ErrorWolf } from '../errores';
 import { enmascararSecretos } from '../patronesSecretos';
 import type { Rutas } from '../rutas';
 import { SitioSchema, TIPOS_SITIO, type Sitio } from '../tipos';
+import { TIPOS_GENERADOR, type TipoGenerador } from './generadores/comun';
 import { MOTORES_BD, PASOS_SOLO_GENERADOR, PasoRecetaSchema, type PasoReceta } from './config';
 
 /**
@@ -138,6 +139,19 @@ const ID = /^[a-z0-9][a-z0-9-]{0,79}$/;
 const NOMBRE_RESERVADO = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$|[. ]$/i;
 const HEX64 = /^[0-9a-f]{64}$/;
 
+/** Generador base de cada tipo de sitio (Symfony, que como sitio es Laravel, lo detecta el núcleo). */
+export function generadorPorTipo(tipo: Sitio['tipo']): TipoGenerador | null {
+  const mapa: Partial<Record<Sitio['tipo'], TipoGenerador>> = {
+    laravel: 'laravel',
+    codeigniter3: 'codeigniter3',
+    codeigniter4: 'codeigniter4',
+    fastapi: 'fastapi',
+    wordpress: 'wordpress',
+    estatico: 'estatico',
+  };
+  return mapa[tipo] ?? null;
+}
+
 /** Pasos de una plantilla que se vuelven a correr al crear un proyecto (lista cerrada). */
 export const PASOS_PERMITIDOS_PLANTILLA: readonly string[] = [
   'composer-install',
@@ -175,6 +189,8 @@ const PlantillaSchema = z
     /** `propia`: la guardó este usuario; `importada`: viene de un tercero (sin scripts ni confianza). */
     // Se ignora: el origen no sale de plantilla.json (se puede falsificar), sale del registro.
     origen: z.unknown().optional(),
+    /** Generador del tipo de proyecto (Symfony se distingue de Laravel): para una plantilla sin archivos. */
+    generador: z.enum(TIPOS_GENERADOR).nullable().default(null),
     moduloAsgi: z
       .string()
       .regex(/^[A-Za-z0-9_.]{1,80}:[A-Za-z0-9_]{1,80}$/)
@@ -205,6 +221,8 @@ export interface Plantilla {
   motorBase: MotorBd | null;
   /** `importada`: no corre scripts de Composer ni de npm y nunca queda confiada sola. */
   origen: 'propia' | 'importada';
+  /** Generador base del tipo (null: ninguno, no se puede crear sin archivos). */
+  generador: TipoGenerador | null;
   moduloAsgi: string | null;
   conArchivos: boolean;
   /** `esquema.sql` (MySQL, MariaDB) o `esquema.dump` (PostgreSQL); null = sin base. */
@@ -258,9 +276,14 @@ export interface DepsPlantillas {
    * Instancia (o motor predeterminado) que escucha en ese puerto; null si ninguna. Sin esta
    * función se usa el motor predeterminado.
    */
-  resolverObjetivo?: (motor: MotorBd, puerto: number | null) => Promise<ObjetivoBd | null>;
+  resolverObjetivo?: (
+    motor: MotorBd,
+    puerto: number | null,
+  ) => Promise<{ servidor: ObjetivoBd; motor: MotorBd } | null>;
   /** El esquema guardado como texto SQL, para revisarlo (en PostgreSQL pasa por pg_restore -f -). */
   leerEsquema?: (servidor: ObjetivoBd, archivo: string) => Promise<string>;
+  /** Generador que corresponde al proyecto (p. ej. Symfony, que como sitio es Laravel). */
+  generadorDe?: (sitio: Sitio) => Promise<TipoGenerador | null>;
   /** El proyecto usa MongoDB (para avisar que su esquema no se guarda). */
   usaMongodb?: (sitio: Sitio) => Promise<boolean>;
   limites?: Partial<LimitesPlantilla>;
@@ -960,11 +983,12 @@ export class Plantillas {
         'No se pudo saber de qué servidor local es la base del proyecto.',
       );
     if (b.host && !HOST_LOCAL.test(b.host)) throw noResuelta();
-    const servidor = this.d.resolverObjetivo
+    const hallado = this.d.resolverObjetivo
       ? await this.d.resolverObjetivo(b.motor, b.puerto ?? null)
-      : b.motor;
-    if (!servidor) throw noResuelta();
-    return { nombre: b.base, motor: b.motor, servidor };
+      : { servidor: b.motor as ObjetivoBd, motor: b.motor };
+    if (!hallado) throw noResuelta();
+    // El motor es el del servidor que se encontró (el .env puede decir mysql y ser MariaDB).
+    return { nombre: b.base, motor: hallado.motor, servidor: hallado.servidor };
   }
 
   async vistaPrevia(
@@ -1004,6 +1028,15 @@ export class Plantillas {
     }
     const coincidencias = compilarExclusiones(o.excluirExtra);
     const sitio = await this.d.sitio(sitioId);
+    if (
+      o.conArchivos !== true &&
+      ((await this.d.generadorDe?.(sitio)) ?? generadorPorTipo(sitio.tipo)) === null
+    ) {
+      throw new ErrorWolf(
+        'plantillas.sin_generador_base',
+        'Este tipo de proyecto no tiene un generador base: la plantilla debe incluir los archivos.',
+      );
+    }
     const limites = this.limites;
     const base = await this.baseDeOrigen(sitio);
     const recopilado =
@@ -1077,6 +1110,7 @@ export class Plantillas {
           sitio.reglasExtra.trim() === '' ? null : sinSecretosPlantilla(sitio.reglasExtra),
         motorBase: base ? base.motor : null,
         origen: 'propia',
+        generador: (await this.d.generadorDe?.(sitio)) ?? generadorPorTipo(sitio.tipo),
         moduloAsgi: moduloAsgiDe(sitio),
         conArchivos: recopilado !== null,
         archivoEsquema,

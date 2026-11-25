@@ -212,6 +212,8 @@ export const en: Textos = {
         'The project database schema could not be read: check that its service is running.',
       'plantillas.base_no_resuelta':
         'The template cannot be saved: the database server is remote or no local service uses that port.',
+      'plantillas.sin_generador_base':
+        'This project type has no base generator: the template must include the project files.',
       'plantillas.motor_distinto':
         'The template schema is from MySQL and the chosen server is MariaDB (or the other way around): there may be differences. Confirm that you want to continue.',
       'bd.sql_no_permitido':

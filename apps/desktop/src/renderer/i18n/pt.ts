@@ -221,6 +221,8 @@ export const pt: Textos = {
         'Não foi possível ler o esquema do banco do projeto: verifique se o serviço está ligado.',
       'plantillas.base_no_resuelta':
         'Não é possível salvar o modelo: o servidor do banco é remoto ou nenhum serviço local usa essa porta.',
+      'plantillas.sin_generador_base':
+        'Este tipo de projeto não tem um gerador base: o modelo precisa incluir os arquivos do projeto.',
       'plantillas.motor_distinto':
         'O esquema do modelo é do MySQL e o servidor escolhido é o MariaDB (ou o contrário): pode haver diferenças. Confirme que quer continuar.',
       'bd.sql_no_permitido':

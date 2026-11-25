@@ -6,7 +6,7 @@ import { generadorLaravel } from './laravel';
 import { generadorSymfony } from './symfony';
 import { generadorWordpress } from './wordpress';
 
-export { generadorDePlantilla, pasosOmitidosDePlantilla } from './plantilla';
+export { generadorBaseDe, generadorDePlantilla, pasosOmitidosDePlantilla } from './plantilla';
 export {
   TIPOS_GENERADOR,
   VERSION_WORDPRESS,

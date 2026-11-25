@@ -593,6 +593,7 @@ describe('crearProyecto desde una plantilla (mismas validaciones que D12)', () =
     reglasNginx: 'client_max_body_size 50m;',
     motorBase: 'mysql',
     origen: 'propia',
+    generador: null,
     moduloAsgi: null,
     conArchivos: true,
     archivoEsquema: 'esquema.sql',
@@ -921,9 +922,15 @@ describe('I1: un zip manipulado no puede traer lo que una plantilla nunca lleva'
 });
 
 describe('I2: la base y el servidor correctos', () => {
-  const resolver = async (motor: string, puerto: number | null): Promise<string | null> => {
-    if (puerto === null || puerto === 3306) return motor;
-    return puerto === 3307 ? 'mysql@8.4' : null;
+  const resolver = async (
+    motor: string,
+    puerto: number | null,
+  ): Promise<{ servidor: string; motor: string } | null> => {
+    if (puerto === null || puerto === 3306) return { servidor: motor, motor };
+    if (puerto === 3307) return { servidor: 'mysql@8.4', motor: 'mysql' };
+    // Una instancia de MariaDB aunque el .env diga mysql.
+    if (puerto === 3308) return { servidor: 'mariadb@11.4', motor: 'mariadb' };
+    return null;
   };
 
   it('Symfony: .env.local manda sobre .env y el puerto elige la instancia', async () => {
@@ -1001,6 +1008,7 @@ describe('I3 / I6: plantilla importada y motor distinto', () => {
     reglasNginx: null,
     motorBase: 'mysql',
     origen: 'importada',
+    generador: null,
     moduloAsgi: null,
     conArchivos: true,
     archivoEsquema: 'esquema.sql',
@@ -1105,6 +1113,7 @@ describe('I4: plantillas sin archivos y configuración que no viaja', () => {
     reglasNginx: null,
     motorBase: 'mysql',
     origen: 'propia',
+    generador: null,
     moduloAsgi: null,
     conArchivos: false,
     archivoEsquema: 'esquema.sql',
@@ -1206,6 +1215,7 @@ function depsMinimas(extra: Partial<Plantilla>): DepsCrearProyecto {
     reglasNginx: null,
     motorBase: 'mysql',
     origen: 'propia',
+    generador: null,
     moduloAsgi: null,
     conArchivos: false,
     archivoEsquema: 'esquema.sql',
@@ -1310,6 +1320,7 @@ describe('I7: argumentos de la receta', () => {
     reglasNginx: null,
     motorBase: 'mysql',
     origen: 'propia',
+    generador: null,
     moduloAsgi: null,
     conArchivos: true,
     archivoEsquema: null,
@@ -1605,5 +1616,60 @@ describe('R3-I4: el esquema se revisa al guardar', () => {
     ].join('\n');
     const p = await con(sql).guardar('tienda', opciones);
     expect(p.archivoEsquema).toBe('esquema.sql');
+  });
+});
+
+describe('R3-I7 / I8: servidor de la familia y generador base', () => {
+  it('I7: el puerto manda en toda la familia mysql/mariadb y el motor es el del servidor hallado', async () => {
+    await escribir(
+      '.env',
+      'DB_CONNECTION=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3308\nDB_DATABASE=tienda\nDB_USERNAME=root\n',
+    );
+    const resolverMaria = async (motor: string, puerto: number | null) =>
+      puerto === 3308 ? { servidor: 'mariadb@11.4', motor: 'mariadb' } : { servidor: motor, motor };
+    const pl = armar({ baseDe: leerBaseDelProyecto, resolverObjetivo: resolverMaria as never });
+    const v = await pl.vistaPrevia('tienda', {});
+    expect(v.base).toEqual({ nombre: 'tienda', motor: 'mariadb', servidor: 'mariadb@11.4' });
+    const p = await pl.guardar('tienda', opciones);
+    expect(p.motorBase).toBe('mariadb');
+    expect(llamadasRespaldo[0]).toMatchObject({ motor: 'mariadb@11.4' });
+  });
+
+  it('I8: Symfony (que como sitio es laravel) usa su generador base; un tipo sin generador exige archivos', async () => {
+    const symfony = armar({ generadorDe: async () => 'symfony' });
+    const p = await symfony.guardar('tienda', { ...opciones, conArchivos: false });
+    expect(p.generador).toBe('symfony');
+    const pasos = generadorDePlantilla(p).pasos({
+      tipo: 'symfony',
+      plantilla: p.id,
+      nombre: 'nueva',
+      carpeta: 'C:\\x\\nueva',
+      base: null,
+      opciones: {},
+    });
+    expect(pasos.find((x) => x.tipo === 'crear-desde-composer')!.args).toMatchObject({
+      paquete: 'symfony/skeleton',
+    });
+    sitio = sitioBase({ tipo: 'proxy' });
+    await expect(
+      armar().guardar('tienda', { ...opciones, conArchivos: false }),
+    ).rejects.toMatchObject({ codigo: 'plantillas.sin_generador_base' });
+    expect(await readdir(rutas.plantillas()).catch(() => [])).toEqual([p.id]);
+    // Con archivos sí se puede.
+    await expect(armar().guardar('tienda', opciones)).resolves.toBeDefined();
+  });
+
+  it('I8: una plantilla sin archivos de un tipo sin generador no se crea', async () => {
+    const deps = depsMinimas({ tipo: 'proxy', conArchivos: false, archivoEsquema: null });
+    await expect(
+      crearProyecto(deps, {
+        tipo: 'estatico',
+        plantilla: 'base-a1b2c3',
+        nombre: 'nueva',
+        carpeta: path.join(dir, 'nueva'),
+        base: null,
+        opciones: {},
+      }),
+    ).rejects.toMatchObject({ codigo: 'plantillas.sin_generador_base' });
   });
 });

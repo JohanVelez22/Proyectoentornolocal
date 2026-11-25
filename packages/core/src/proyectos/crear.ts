@@ -9,6 +9,7 @@ import type { PasoReceta } from './config';
 import { phpPorDefecto } from './detectar';
 import {
   generador,
+  generadorBaseDe,
   generadorDePlantilla,
   pasosOmitidosDePlantilla,
   TIPOS_GENERADOR,
@@ -266,6 +267,12 @@ async function crearProyectoInterno(
     // Las huellas se verifican ahora, sobre una copia en tmp: de ella se extraen los archivos y
     // se restaura el esquema, así lo verificado es lo mismo que se usa (y antes de crear nada).
     await d.plantillas.preparar?.(id);
+    if (!plantilla.conArchivos && !generadorBaseDe(plantilla)) {
+      throw new ErrorWolf(
+        'plantillas.sin_generador_base',
+        'Este tipo de proyecto no tiene un generador base: la plantilla debe incluir los archivos.',
+      );
+    }
   } else if (!(TIPOS_GENERADOR as readonly string[]).includes(p?.tipo)) {
     throw invalido('tipo', 'El tipo de proyecto no existe.');
   }

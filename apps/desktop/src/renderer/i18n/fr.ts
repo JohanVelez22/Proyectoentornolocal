@@ -223,6 +223,8 @@ export const fr: Textos = {
         'Impossible de lire le schéma de la base du projet : vérifiez que son service est démarré.',
       'plantillas.base_no_resuelta':
         "Impossible d'enregistrer le modèle : le serveur de la base est distant ou aucun service local n'utilise ce port.",
+      'plantillas.sin_generador_base':
+        "Ce type de projet n'a pas de générateur de base : le modèle doit inclure les fichiers du projet.",
       'plantillas.motor_distinto':
         "Le schéma du modèle vient de MySQL et le serveur choisi est MariaDB (ou l'inverse) : il peut y avoir des différences. Confirmez que vous voulez continuer.",
       'bd.sql_no_permitido':
