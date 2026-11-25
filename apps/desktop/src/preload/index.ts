@@ -77,6 +77,14 @@ const api: ApiEntorno = {
     importar: (motor, origen, destino, opciones) =>
       invocar('bd.importar', motor, origen, destino, opciones),
   },
+  instantaneas: {
+    lista: (motor, base) => invocar('instantaneas.lista', motor, base),
+    tomar: (motor, base, nota) => invocar('instantaneas.tomar', motor, base, nota),
+    vistaPrevia: (motor, base, id) => invocar('instantaneas.vistaPrevia', motor, base, id),
+    volver: (motor, base, id, confirmado) =>
+      invocar('instantaneas.volver', motor, base, id, confirmado),
+    borrar: (motor, base, id) => invocar('instantaneas.borrar', motor, base, id),
+  },
   pgvector: {
     estado: () => invocar('pgvector.estado'),
     instalarBuildTools: () => invocar('pgvector.instalarBuildTools'),

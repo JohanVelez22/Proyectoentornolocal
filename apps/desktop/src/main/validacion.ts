@@ -65,6 +65,20 @@ export function herramientaBd(v: unknown): HerramientaBd {
   return v as HerramientaBd;
 }
 
+/** Id de una instantánea de base: el que dio el núcleo (fecha y azar), nunca una ruta. */
+export function idInstantanea(v: unknown): string {
+  if (typeof v !== 'string' || !/^\d{8}-\d{6}-[0-9a-f]{6}$/.test(v)) {
+    throw new Error('Argumento no válido: instantánea');
+  }
+  return v;
+}
+
+/** Volver a una instantánea solo con la confirmación explícita (`true`). */
+export function confirmadoVolver(v: unknown): true {
+  if (v !== true) throw new Error('Argumento no válido: confirmación');
+  return true;
+}
+
 /** Editor elegido: un id conocido; `undefined` o null = el predeterminado. */
 export function idEditor(v: unknown): IdEditor | null {
   if (v === undefined || v === null) return null;

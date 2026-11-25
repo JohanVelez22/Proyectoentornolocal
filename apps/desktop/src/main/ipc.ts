@@ -125,6 +125,8 @@ import {
   opcionesDesbloquear,
   refRespaldoDatos,
   confirmadoBorrar,
+  confirmadoVolver,
+  idInstantanea,
 } from './validacion';
 
 type MotorBdIpc = ReturnType<typeof motorBd>;
@@ -810,6 +812,36 @@ const TABLA: Record<RutaIpc, Manejador> = {
     const d = nombreBase(m, destino, 'base destino');
     const op = opcionesRestaurar(opciones);
     return sinClave(o.clave, () => n.importarBase(objetivo, o, d, op));
+  },
+  // Instantáneas (D19): el id es el que dio el núcleo (nunca una ruta) y volver exige confirmación.
+  'instantaneas.lista': (n, _s, motor, base) => {
+    const { objetivo, motor: m } = objetivoSql(motor);
+    return n.instantaneas.lista(objetivo, nombreBase(m, base));
+  },
+  'instantaneas.tomar': (n, _s, motor, base, nota) => {
+    const { objetivo, motor: m } = objetivoSql(motor);
+    return n.instantaneas.tomar(
+      objetivo,
+      nombreBase(m, base),
+      nota === undefined ? '' : textoAcotado(nota, 0, 200, 'nota'),
+    );
+  },
+  'instantaneas.vistaPrevia': (n, _s, motor, base, id) => {
+    const { objetivo, motor: m } = objetivoSql(motor);
+    return n.instantaneas.vistaPrevia(objetivo, nombreBase(m, base), idInstantanea(id));
+  },
+  'instantaneas.volver': (n, _s, motor, base, id, confirmado) => {
+    const { objetivo, motor: m } = objetivoSql(motor);
+    return n.instantaneas.volver(
+      objetivo,
+      nombreBase(m, base),
+      idInstantanea(id),
+      confirmadoVolver(confirmado),
+    );
+  },
+  'instantaneas.borrar': (n, _s, motor, base, id) => {
+    const { objetivo, motor: m } = objetivoSql(motor);
+    return n.instantaneas.borrar(objetivo, nombreBase(m, base), idInstantanea(id));
   },
   'pgvector.estado': (n) => n.estadoPgvector(),
   'pgvector.instalarBuildTools': (n) => n.instalarBuildTools(),

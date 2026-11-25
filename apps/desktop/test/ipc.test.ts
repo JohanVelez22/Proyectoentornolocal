@@ -59,6 +59,13 @@ function nucleoFalso() {
       guardar: vi.fn(async () => ({ id: 'tienda-a1b2c3' })),
       borrar: vi.fn(async () => undefined),
     },
+    instantaneas: {
+      lista: vi.fn(async () => []),
+      tomar: vi.fn(async () => ({ id: '20261125-103000-abcdef' })),
+      vistaPrevia: vi.fn(async () => ({ instantanea: {}, estadoActual: { tablas: 0, bytes: 0 } })),
+      volver: vi.fn(async () => ({ respaldoPrevio: {}, advertencias: [] })),
+      borrar: vi.fn(async () => undefined),
+    },
     env: {
       ver: vi.fn(async () => ({ existe: true, filas: [] })),
       revelar: vi.fn(async () => 'valor'),
@@ -541,6 +548,11 @@ describe('registrarIpc', () => {
         'bd.restaurar',
         'bd.respaldar',
         'bd.importar',
+        'instantaneas.lista',
+        'instantaneas.tomar',
+        'instantaneas.vistaPrevia',
+        'instantaneas.volver',
+        'instantaneas.borrar',
         'pgvector.estado',
         'pgvector.instalarBuildTools',
         'pgvector.compilarEInstalar',
@@ -1911,6 +1923,45 @@ describe('IPC de la Etapa B', () => {
     f['abrirBaseProyecto']!.mockClear();
     expect((await llamar('accesoBd.abrir', 's1', 'mysql-workbench')).ok).toBe(false);
     expect(f['abrirBaseProyecto']).not.toHaveBeenCalled();
+  });
+
+  it('instantaneas.*: motor SQL, base y id válidos; volver exige true y el id nunca es una ruta', async () => {
+    const { crudo, llamar } = montar();
+    const inst = (crudo as unknown as { instantaneas: Record<string, Mock> }).instantaneas;
+    const id = '20261125-103000-abcdef';
+    expect((await llamar('instantaneas.lista', 'mysql@8.4', 'tienda')).ok).toBe(true);
+    expect(inst['lista']).toHaveBeenCalledWith('mysql@8.4', 'tienda');
+    expect((await llamar('instantaneas.tomar', 'postgresql', 'tienda', 'antes de migrar')).ok).toBe(
+      true,
+    );
+    expect(inst['tomar']).toHaveBeenCalledWith('postgresql', 'tienda', 'antes de migrar');
+    expect((await llamar('instantaneas.tomar', 'mysql', 'tienda')).ok).toBe(true);
+    expect(inst['tomar']).toHaveBeenLastCalledWith('mysql', 'tienda', '');
+    const rvp = await llamar('instantaneas.vistaPrevia', 'mysql', 'tienda', id);
+    expect(rvp, JSON.stringify(rvp)).toMatchObject({ ok: true });
+    expect((await llamar('instantaneas.volver', 'mysql', 'tienda', id, true)).ok).toBe(true);
+    expect(inst['volver']).toHaveBeenCalledWith('mysql', 'tienda', id, true);
+    expect((await llamar('instantaneas.borrar', 'mysql', 'tienda', id)).ok).toBe(true);
+    for (const f of Object.values(inst)) f.mockClear();
+    for (const [ruta, args] of [
+      ['instantaneas.lista', ['mongodb', 'tienda']],
+      ['instantaneas.lista', ['mysql', '../tienda']],
+      ['instantaneas.lista', ['mysql', 'a b']],
+      ['instantaneas.tomar', ['mysql', 'tienda', 'a b']],
+      ['instantaneas.tomar', ['mysql', 'tienda', 'x'.repeat(201)]],
+      ['instantaneas.tomar', ['mysql', 'tienda', 7]],
+      ['instantaneas.vistaPrevia', ['mysql', 'tienda', '../x']],
+      ['instantaneas.volver', ['mysql', 'tienda', id]],
+      ['instantaneas.volver', ['mysql', 'tienda', id, false]],
+      ['instantaneas.volver', ['mysql', 'tienda', id, 'true']],
+      ['instantaneas.volver', ['mysql', 'tienda', 'C:\\x.sql', true]],
+      ['instantaneas.volver', ['mysql', 'tienda', '20261125-103000-abcdef/../../x', true]],
+      ['instantaneas.borrar', ['mysql', 'tienda', '..']],
+      ['instantaneas.borrar', ['mysql', 'tienda', '']],
+    ] as [string, unknown[]][]) {
+      expect((await llamar(ruta, ...args)).ok, `${ruta} ${JSON.stringify(args)}`).toBe(false);
+    }
+    for (const f of Object.values(inst)) expect(f).not.toHaveBeenCalled();
   });
 
   it('sistema.abrirEditor abre la carpeta del sitio por su id (nunca una ruta)', async () => {

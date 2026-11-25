@@ -58,6 +58,7 @@ import type {
   PedidoEnv,
   FilaImportar,
   VistaPreviaImportar,
+  Instantanea,
   OpcionesImportar,
   ResultadoImportar,
   ProblemaImportar,
@@ -525,6 +526,27 @@ export interface ApiEntorno {
       destinoBase: string,
       opciones?: OpcionesRestaurar,
     ): Promise<ResultadoRestaurar>;
+  };
+  /**
+   * Instantáneas de base (D19). `volver` exige `confirmado: true`: antes guarda el estado actual
+   * y, si falla, la base vuelve sola a él.
+   */
+  instantaneas: {
+    lista(motor: ObjetivoSqlIpc, base: string): Promise<Instantanea[]>;
+    tomar(motor: ObjetivoSqlIpc, base: string, nota: string): Promise<Instantanea>;
+    vistaPrevia(
+      motor: ObjetivoSqlIpc,
+      base: string,
+      id: string,
+    ): Promise<{ instantanea: Instantanea; estadoActual: { tablas: number; bytes: number } }>;
+    volver(
+      motor: ObjetivoSqlIpc,
+      base: string,
+      id: string,
+      confirmado: true,
+    ): Promise<{ respaldoPrevio: Instantanea; advertencias: string[] }>;
+    /** A la papelera de WolfCore Dev: se puede recuperar 7 días. */
+    borrar(motor: ObjetivoSqlIpc, base: string, id: string): Promise<void>;
   };
   pgvector: {
     estado(): Promise<EstadoPgvector>;
@@ -1121,6 +1143,11 @@ export const RUTAS_IPC = [
   'bd.restaurar',
   'bd.respaldar',
   'bd.importar',
+  'instantaneas.lista',
+  'instantaneas.tomar',
+  'instantaneas.vistaPrevia',
+  'instantaneas.volver',
+  'instantaneas.borrar',
   'pgvector.estado',
   'pgvector.instalarBuildTools',
   'pgvector.compilarEInstalar',

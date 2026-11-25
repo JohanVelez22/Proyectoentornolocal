@@ -3,6 +3,7 @@ import {
   Add,
   Archive,
   ArrowUndo,
+  Camera,
   CloudDownload,
   KeyOutline,
   Layers,
@@ -29,7 +30,7 @@ import {
 } from 'naive-ui';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import type { DisponibilidadAdminer, MotorBd, MotorSql } from '../../shared/api';
+import type { DisponibilidadAdminer, MotorBd, MotorSql, ObjetivoSqlIpc } from '../../shared/api';
 import { api } from '../api';
 import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import DialogoConexion from '../componentes/DialogoConexion.vue';
@@ -37,6 +38,7 @@ import DialogoImportar from '../componentes/DialogoImportar.vue';
 import DialogoNuevaBase from '../componentes/DialogoNuevaBase.vue';
 import DialogoRespaldar from '../componentes/DialogoRespaldar.vue';
 import DialogoRestaurar from '../componentes/DialogoRestaurar.vue';
+import PanelInstantaneas from '../componentes/PanelInstantaneas.vue';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import PanelProgreso from '../componentes/PanelProgreso.vue';
 import ResultadoOperacion from '../componentes/ResultadoOperacion.vue';
@@ -139,6 +141,7 @@ const dlgRestaurar = ref(false);
 const dlgImportar = ref(false);
 const dlgRespaldar = ref(false);
 const dlgConexion = ref(false);
+const dlgInstantaneas = ref(false);
 const baseFija = ref<string | null>(null);
 const baseElegida = ref('');
 
@@ -151,6 +154,11 @@ function abrirRespaldar(base: string): void {
   if (ocupadaBd.value) return;
   baseElegida.value = base;
   dlgRespaldar.value = true;
+}
+function abrirInstantaneas(base: string): void {
+  if (ocupadaBd.value) return;
+  baseElegida.value = base;
+  dlgInstantaneas.value = true;
 }
 function abrirConexion(base: string): void {
   baseElegida.value = base;
@@ -471,6 +479,23 @@ function irAServicios(): void {
                     </NTooltip>
                     <NTooltip>
                       <template #trigger>
+                        <NButton
+                          size="small"
+                          quaternary
+                          circle
+                          :aria-label="t.acciones.de(textos.instantaneas.abrir, b.nombre)"
+                          :disabled="ocupadaBd"
+                          @click="abrirInstantaneas(b.nombre)"
+                        >
+                          <template #icon
+                            ><NIcon><Camera /></NIcon
+                          ></template>
+                        </NButton>
+                      </template>
+                      {{ ocupadaBd ? t.enCursoAyuda : textos.instantaneas.abrir }}
+                    </NTooltip>
+                    <NTooltip>
+                      <template #trigger>
                         <span>
                           <NButton
                             size="small"
@@ -568,6 +593,13 @@ function irAServicios(): void {
       v-model:show="dlgRespaldar"
       :motor="motorSql"
       :base="baseElegida"
+    />
+    <PanelInstantaneas
+      v-if="motorSql"
+      v-model:show="dlgInstantaneas"
+      :objetivo="bd.objetivo(motorSql) as ObjetivoSqlIpc"
+      :base="baseElegida"
+      @cambio="cargarBases"
     />
     <DialogoConexion v-if="activo" v-model:show="dlgConexion" :motor="activo" :base="baseElegida" />
 
