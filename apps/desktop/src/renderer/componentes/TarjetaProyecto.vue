@@ -68,6 +68,7 @@ import InterruptorLan from './InterruptorLan.vue';
 import InterruptorTunel from './InterruptorTunel.vue';
 import EditorVhost from './EditorVhost.vue';
 import SeccionFtpSitio from './SeccionFtpSitio.vue';
+import SeccionTareasSitio from './SeccionTareasSitio.vue';
 import SeccionPhpSitio from './SeccionPhpSitio.vue';
 
 const props = defineProps<{ sitio: Sitio }>();
@@ -699,6 +700,7 @@ function abrirCarpeta(): void {
         </NButton>
       </div>
       <ProcesosProyecto :sitio="sitio" @aplicado="(r) => emit('aplicado', r)" />
+      <SeccionTareasSitio :sitio="sitio" />
       <InterruptorTunel :sitio="sitio" />
       <InterruptorLan :sitio="sitio" />
       <SeccionPhpSitio :sitio="sitio" @aplicado="(r) => emit('aplicado', r)" />

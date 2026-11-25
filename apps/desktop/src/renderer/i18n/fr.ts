@@ -851,6 +851,156 @@ export const fr: Textos = {
   avisoInicio: {
     titulo: 'Avis de WolfCore Dev',
   },
+  tareas: {
+    titulo: 'Tâches planifiées',
+    resumen: (n: number) => (n === 0 ? 'Aucune tâche' : n === 1 ? '1 tâche' : `${n} tâches`),
+    mostrar: 'Voir les tâches',
+    ocultar: 'Masquer',
+    cargando: 'Chargement des tâches',
+    errorCargar: 'Impossible de charger les tâches',
+    soloAbierta:
+      'Les tâches ne s’exécutent que lorsque WolfCore Dev est ouvert. Elles n’utilisent pas le Planificateur de tâches de Windows : application fermée ou ordinateur en veille, elles ne s’exécutent pas, et une exécution manquée n’est pas rattrapée.',
+    vacio:
+      'Ce projet n’a aucune tâche planifiée. Créez-en une (par exemple « php artisan schedule:run » toutes les minutes dans un Laravel).',
+    nueva: 'Nouvelle tâche',
+    pausada: 'en pause',
+    enCurso: 'En cours…',
+    nunca: 'Pas encore exécutée',
+    ultima: (f: string) => `Dernière : ${f}`,
+    proxima: (f: string) => `prochaine : ${f}`,
+    codigo: (n: number) => `code ${n}`,
+    resultadoTitulo: (n: string) => `« ${n} »`,
+    origen: { usuario: 'écrite ici', 'wolfcore.yml': 'de wolfcore.yml' },
+    describir: {
+      cadaMinuto: 'Toutes les minutes',
+      cadaN: (n: number) => `Toutes les ${n} minutes`,
+      cadaHora: 'Toutes les heures, pile',
+      diaria: (h: string) => `Tous les jours à ${h}`,
+      laborables: (h: string) => `Du lundi au vendredi à ${h}`,
+      personalizada: (e: string) => `Cron ${e}`,
+    },
+    estado: {
+      ok: 'Réussie',
+      fallo: 'Échec',
+      tiempo: 'Durée maximale dépassée',
+      cancelada: 'Annulée',
+      omitida: 'Ignorée',
+      bloqueada: 'Non exécutée',
+    },
+    motivo: {
+      aislado:
+        'C’est un dossier de données de test (WOLFCORE_DATOS) : elle ne s’exécute pas tant que vous n’autorisez pas les tâches pour cette session.',
+      no_confiado:
+        'Le projet n’est pas marqué comme de confiance : cochez « Je fais confiance à ce dépôt » pour qu’elle s’exécute.',
+      receta_cambio:
+        'La recette du projet a changé depuis que vous lui avez fait confiance : vérifiez-la et cochez de nouveau « Je fais confiance à ce dépôt ».',
+      sin_confirmar:
+        'Sa commande doit être confirmée : elle ne s’exécute pas tant que vous ne l’avez pas vérifiée et confirmée.',
+      comando_invalido: 'Sa commande n’est pas autorisée (seulement php, node, npm run et python).',
+      cron_invalida: 'Son horaire n’est pas une expression cron valide.',
+      carpeta: 'Le dossier du projet n’existe pas.',
+      solapada: 'La précédente était encore en cours : celle-ci a été ignorée.',
+      retraso:
+        'Elle est arrivée en retard (l’application était suspendue) : elle n’est pas rattrapée.',
+      error: 'Le programme n’a pas pu être lancé.',
+    },
+    acciones: {
+      ejecutar: 'Exécuter maintenant',
+      editar: 'Modifier',
+      borrar: 'Supprimer',
+      verRegistro: 'Voir le journal',
+      revisarConfirmar: 'Vérifier et confirmer',
+      activar: (n: string) => `Activer la tâche ${n}`,
+    },
+    borrar: {
+      titulo: (n: string) => `Supprimer « ${n} » ?`,
+      texto:
+        'La tâche et son historique sont supprimés. Ce qu’elle a déjà exécuté n’est pas annulé et les fichiers du projet ne sont pas touchés.',
+      confirmar: 'Supprimer',
+      hecho: (n: string) => `Tâche « ${n} » supprimée.`,
+    },
+    aislado: {
+      titulo: 'Dossier de données de test.',
+      texto:
+        'Avec WOLFCORE_DATOS, aucune tâche ne s’exécute seule. Autorisez-les seulement si vous voulez les essayer pendant cette session.',
+      permitir: 'Autoriser pour cette session',
+      confirmarTitulo: 'Autoriser les tâches dans ce dossier de test ?',
+      confirmarTexto:
+        'Les tâches actives des projets de confiance commenceront à s’exécuter jusqu’à la fermeture de l’application. Les commandes sont celles de chaque projet et s’exécutent dans son vrai dossier.',
+      permitido: 'Tâches autorisées pour cette session.',
+    },
+    yml: {
+      titulo: 'Suggestions de wolfcore.yml',
+      texto:
+        'Le fichier du projet suggère ces tâches. Rien ne s’exécute parce que c’est écrit là : vérifiez la commande et confirmez-la pour l’adopter.',
+      estado: { nueva: 'Nouvelle', adoptada: 'Adoptée', cambiada: 'Modifiée' },
+      revisar: 'Vérifier et adopter',
+      cambiada:
+        'La commande de wolfcore.yml a changé depuis que vous l’avez adoptée. La tâche du projet garde la commande que vous avez confirmée ; adoptez la nouvelle version si vous la reconnaissez.',
+      guardarEn: 'Enregistrer dans wolfcore.yml',
+      escribirTitulo: 'Écrire la tâche dans wolfcore.yml ?',
+      escribirTexto:
+        'La tâche est ajoutée ou mise à jour dans le fichier du projet (le reste n’est pas touché) pour voyager avec le dépôt. Quiconque le clone devra la confirmer sur son ordinateur.',
+      escribir: 'Écrire',
+      escrita: 'Tâche enregistrée dans wolfcore.yml.',
+    },
+    registro: {
+      titulo: (n: string) => `Journal de « ${n} »`,
+      historial: 'Dernières exécutions',
+      sinHistorial: 'Aucune exécution pour le moment.',
+      salida: 'Sortie de la dernière exécution',
+      sinSalida: 'Aucune sortie enregistrée.',
+      enmascarado:
+        'Les journaux masquent les mots de passe et les clés, ont une taille maximale et tournent tout seuls.',
+      origen: { programada: 'planifiée', manual: 'manuelle' },
+    },
+    dialogo: {
+      tituloNueva: 'Nouvelle tâche planifiée',
+      tituloEditar: 'Modifier la tâche planifiée',
+      tituloAdoptar: 'Adopter la tâche de wolfcore.yml',
+      tituloConfirmar: 'Confirmer la commande de la tâche',
+      nombre: 'Nom',
+      nombrePlaceholder: 'Tâches Laravel',
+      horario: 'Quand',
+      preset: {
+        cadaMinuto: 'Toutes les minutes',
+        cadaN: 'Toutes les quelques minutes',
+        cadaHora: 'Toutes les heures',
+        diaria: 'Tous les jours à une heure',
+        laborables: 'Du lundi au vendredi à une heure',
+        personalizada: 'Expression cron personnalisée',
+      },
+      cadaNOpcion: (n: number) => `Toutes les ${n} minutes`,
+      hora: 'Heure',
+      horaPlaceholder: '03:00',
+      horaInvalida: 'Saisissez une heure valide, par exemple 03:00.',
+      expresion: 'Expression cron',
+      cronEquivale: 'Expression cron :',
+      expresionAyuda:
+        '5 champs : minute, heure, jour du mois, mois et jour de la semaine (* , - /). Au plus une fois par minute.',
+      proximas: 'Prochaines exécutions :',
+      comando: 'Commande',
+      comandoPlaceholder: 'php artisan schedule:run',
+      comandoAyuda:
+        'Seulement php, node, npm run et python, avec un fichier du projet. Elle s’exécute dans le dossier du projet, sans shell et sans code sur la ligne de commande (-r, -e, -c).',
+      argumentos: 'Elle s’exécutera avec ces arguments :',
+      comillasSinCerrar: 'Un guillemet n’est pas fermé.',
+      tiempo: 'Durée maximale',
+      minutos: 'minutes',
+      tiempoAyuda:
+        'Si elle dure plus longtemps, elle s’arrête toute seule (seulement ce processus et ce qu’il a lancé).',
+      activa: 'Active (s’exécute toute seule tant que l’application est ouverte)',
+      advertencia:
+        'En acceptant, vous autorisez cette commande exacte : elle s’exécutera toute seule, dans le dossier de ce projet, à chaque échéance. Si vous la modifiez, vous devrez la confirmer de nouveau.',
+      revise: 'J’ai vérifié cette commande et je la reconnais.',
+      guardar: 'Enregistrer et confirmer la commande',
+      adoptar: 'Confirmer et adopter',
+      confirmar: 'Confirmer la commande',
+      guardada: 'Tâche enregistrée.',
+      adoptada: 'Tâche adoptée.',
+      confirmada: 'Commande confirmée.',
+    },
+  },
   workspaces: {
     titulo: 'Workspaces',
     descripcion:

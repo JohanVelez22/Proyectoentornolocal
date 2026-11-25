@@ -816,6 +816,153 @@ export const es = {
   avisoInicio: {
     titulo: 'Aviso de WolfCore Dev',
   },
+  tareas: {
+    titulo: 'Tareas programadas',
+    resumen: (n: number) => (n === 0 ? 'Sin tareas' : n === 1 ? '1 tarea' : `${n} tareas`),
+    mostrar: 'Ver tareas',
+    ocultar: 'Ocultar',
+    cargando: 'Cargando las tareas',
+    errorCargar: 'No se pudieron cargar las tareas',
+    soloAbierta:
+      'Las tareas solo corren mientras WolfCore Dev está abierto. No usan el Programador de tareas de Windows: con la aplicación cerrada o el equipo en reposo no se ejecutan, y una ejecución que se pierde no se recupera.',
+    vacio:
+      'Este proyecto no tiene tareas programadas. Cree una (por ejemplo «php artisan schedule:run» cada minuto en un Laravel).',
+    nueva: 'Nueva tarea',
+    pausada: 'pausada',
+    enCurso: 'Ejecutándose…',
+    nunca: 'Aún no se ejecutó',
+    ultima: (f: string) => `Última: ${f}`,
+    proxima: (f: string) => `próxima: ${f}`,
+    codigo: (n: number) => `código ${n}`,
+    resultadoTitulo: (n: string) => `«${n}»`,
+    origen: { usuario: 'escrita aquí', 'wolfcore.yml': 'de wolfcore.yml' },
+    describir: {
+      cadaMinuto: 'Cada minuto',
+      cadaN: (n: number) => `Cada ${n} minutos`,
+      cadaHora: 'Cada hora, en punto',
+      diaria: (h: string) => `Todos los días a las ${h}`,
+      laborables: (h: string) => `De lunes a viernes a las ${h}`,
+      personalizada: (e: string) => `Cron ${e}`,
+    },
+    estado: {
+      ok: 'Correcta',
+      fallo: 'Falló',
+      tiempo: 'Superó el tiempo máximo',
+      cancelada: 'Cancelada',
+      omitida: 'Omitida',
+      bloqueada: 'No se ejecutó',
+    },
+    motivo: {
+      aislado:
+        'Es una carpeta de datos de prueba (WOLFCORE_DATOS): no corre hasta que permita las tareas en esta sesión.',
+      no_confiado:
+        'El proyecto no está marcado como de confianza: marque «Confío en este repositorio» para que corra.',
+      receta_cambio:
+        'La receta del proyecto cambió desde que confió en él: revísela y vuelva a marcar «Confío en este repositorio».',
+      sin_confirmar: 'Falta confirmar su comando: no se ejecuta hasta que lo revise y lo confirme.',
+      comando_invalido: 'Su comando no está permitido (solo php, node, npm run y python).',
+      cron_invalida: 'Su horario no es una expresión cron válida.',
+      carpeta: 'La carpeta del proyecto no existe.',
+      solapada: 'La anterior seguía en ejecución: se saltó esta.',
+      retraso: 'Llegó tarde (la aplicación estaba suspendida): no se recupera.',
+      error: 'No se pudo ejecutar el programa.',
+    },
+    acciones: {
+      ejecutar: 'Ejecutar ahora',
+      editar: 'Editar',
+      borrar: 'Borrar',
+      verRegistro: 'Ver registro',
+      revisarConfirmar: 'Revisar y confirmar',
+      activar: (n: string) => `Activar la tarea ${n}`,
+    },
+    borrar: {
+      titulo: (n: string) => `¿Borrar «${n}»?`,
+      texto:
+        'Se quita la tarea y su historial. Lo que ya ejecutó no se deshace y los archivos del proyecto no se tocan.',
+      confirmar: 'Borrar',
+      hecho: (n: string) => `Tarea «${n}» borrada.`,
+    },
+    aislado: {
+      titulo: 'Carpeta de datos de prueba.',
+      texto:
+        'Con WOLFCORE_DATOS ninguna tarea corre sola. Permítalas solo si quiere probarlas en esta sesión.',
+      permitir: 'Permitir en esta sesión',
+      confirmarTitulo: '¿Permitir las tareas en esta carpeta de prueba?',
+      confirmarTexto:
+        'Las tareas activas de los proyectos de confianza empezarán a ejecutarse hasta que cierre la aplicación. Los comandos son los de cada proyecto y corren en su carpeta real.',
+      permitido: 'Tareas permitidas en esta sesión.',
+    },
+    yml: {
+      titulo: 'Propuestas de wolfcore.yml',
+      texto:
+        'El archivo del proyecto propone estas tareas. Nada corre por estar escrito ahí: revise el comando y confírmelo para adoptarla.',
+      estado: { nueva: 'Nueva', adoptada: 'Adoptada', cambiada: 'Cambió' },
+      revisar: 'Revisar y adoptar',
+      cambiada:
+        'El comando de wolfcore.yml cambió desde que la adoptó. La tarea del proyecto sigue con el comando que confirmó; adopte la versión nueva si la reconoce.',
+      guardarEn: 'Guardar en wolfcore.yml',
+      escribirTitulo: '¿Escribir la tarea en wolfcore.yml?',
+      escribirTexto:
+        'Se agrega o actualiza la tarea en el archivo del proyecto (sin tocar el resto) para que viaje con el repositorio. Quien la clone deberá confirmarla en su equipo.',
+      escribir: 'Escribir',
+      escrita: 'Tarea guardada en wolfcore.yml.',
+    },
+    registro: {
+      titulo: (n: string) => `Registro de «${n}»`,
+      historial: 'Últimas ejecuciones',
+      sinHistorial: 'Aún no hay ejecuciones.',
+      salida: 'Salida de la última ejecución',
+      sinSalida: 'Sin salida guardada.',
+      enmascarado:
+        'Los registros ocultan contraseñas y claves, tienen un tamaño máximo y rotan solos.',
+      origen: { programada: 'programada', manual: 'a mano' },
+    },
+    dialogo: {
+      tituloNueva: 'Nueva tarea programada',
+      tituloEditar: 'Editar tarea programada',
+      tituloAdoptar: 'Adoptar la tarea de wolfcore.yml',
+      tituloConfirmar: 'Confirmar el comando de la tarea',
+      nombre: 'Nombre',
+      nombrePlaceholder: 'Tareas de Laravel',
+      horario: 'Cuándo',
+      preset: {
+        cadaMinuto: 'Cada minuto',
+        cadaN: 'Cada varios minutos',
+        cadaHora: 'Cada hora',
+        diaria: 'Todos los días a una hora',
+        laborables: 'De lunes a viernes a una hora',
+        personalizada: 'Expresión cron propia',
+      },
+      cadaNOpcion: (n: number) => `Cada ${n} minutos`,
+      hora: 'Hora',
+      horaPlaceholder: '03:00',
+      horaInvalida: 'Escriba una hora válida, por ejemplo 03:00.',
+      expresion: 'Expresión cron',
+      cronEquivale: 'Expresión cron:',
+      expresionAyuda:
+        '5 campos: minuto, hora, día del mes, mes y día de la semana (* , - /). Mínimo, una vez por minuto.',
+      proximas: 'Próximas ejecuciones:',
+      comando: 'Comando',
+      comandoPlaceholder: 'php artisan schedule:run',
+      comandoAyuda:
+        'Solo php, node, npm run y python, con un archivo del proyecto. Corre en la carpeta del proyecto, sin shell y sin código en la línea (-r, -e, -c).',
+      argumentos: 'Se ejecutará con estos argumentos:',
+      comillasSinCerrar: 'Falta cerrar unas comillas.',
+      tiempo: 'Tiempo máximo',
+      minutos: 'minutos',
+      tiempoAyuda: 'Si tarda más, se detiene sola (solo ese proceso y lo que lanzó).',
+      activa: 'Activa (corre sola mientras la aplicación esté abierta)',
+      advertencia:
+        'Al aceptar autoriza este comando exacto: se ejecutará solo, en la carpeta de este proyecto, cada vez que toque. Si lo cambia, deberá confirmarlo de nuevo.',
+      revise: 'Revisé este comando y lo reconozco.',
+      guardar: 'Guardar y confirmar el comando',
+      adoptar: 'Confirmar y adoptar',
+      confirmar: 'Confirmar el comando',
+      guardada: 'Tarea guardada.',
+      adoptada: 'Tarea adoptada.',
+      confirmada: 'Comando confirmado.',
+    },
+  },
   workspaces: {
     titulo: 'Workspaces',
     descripcion:
