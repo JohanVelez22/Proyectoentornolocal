@@ -315,6 +315,7 @@ export const PARAMETROS_ERROR = {
   'correo.ocupado': [],
   'correo.limite': ['segundos'],
   'correo.argumento_invalido': ['campo'],
+  'correo.clave_mal_formada': [],
   // agentes
   'agentes.no_existe': [],
   'agentes.sin_confirmar': [],

@@ -424,7 +424,8 @@ export const es = {
       'correo.conexion': 'No se pudo conectar con el servidor SMTP: revise el host y el puerto.',
       'correo.tls':
         'No se pudo establecer una conexión cifrada y válida con el servidor (certificado, nombre o STARTTLS). No se envió nada.',
-      'correo.rechazado': 'El servidor rechazó el mensaje o la dirección de destino.',
+      'correo.rechazado':
+        'El servidor rechazó el mensaje o una dirección. Revise el remitente: muchos proveedores solo aceptan un remitente o dominio verificado.',
       'correo.plazo': 'El servidor no respondió a tiempo (20 s).',
       'correo.host_invalido':
         'El servidor SMTP debe ser un nombre de host o una IP, sin esquema, puerto ni ruta.',
@@ -442,6 +443,8 @@ export const es = {
         'Confirme que quiere escribir las variables de correo en el .env.',
       'correo.ocupado': 'Ya hay una prueba de envío en curso.',
       'correo.limite': 'Espere {segundos} s antes de otra prueba de envío.',
+      'correo.clave_mal_formada':
+        'La clave no tiene un formato válido: solo caracteres imprimibles, sin saltos de línea y de hasta 4096 caracteres.',
       'correo.argumento_invalido': 'Dato no válido ({campo}).',
       'agentes.no_existe': 'Ese agente no está soportado.',
       'agentes.sin_confirmar': 'Confirme la acción en el diálogo antes de continuar.',
@@ -1688,7 +1691,7 @@ export const es = {
         borrar: 'Borrar',
         borrarTitulo: (n: string) => `¿Borrar ${n}?`,
         borrarTexto:
-          'Se borra el proveedor y su clave guardada. Los proyectos que lo usan vuelven al captador local; sus .env no se tocan.',
+          'Se borra el proveedor y su clave guardada. Los proyectos que lo usan vuelven al captador local, pero sus .env no se tocan: conservan las variables MAIL_* de este proveedor (y su clave, si la escribió). Reescriba el bloque de correo en cada .env.',
         borrado: (n: string) => `${n} borrado`,
         usar: 'Usar en un proyecto',
         destino: 'Dirección de destino de la prueba',
@@ -1698,13 +1701,16 @@ export const es = {
         probarAyuda:
           'Envía un solo correo de verdad a esa dirección, con conexión cifrada verificada. Máximo uno cada 15 s.',
         sinClaveParaProbar: 'Guarde la clave del proveedor para poder probar el envío.',
+        hostLocal: 'El nombre de este servidor se resuelve a este equipo o a la red local.',
+        confirmarRed: 'Confirmar red local',
         enviado: (para: string) => `Correo enviado a ${para}. Revise su bandeja.`,
         fallos: {
           'correo.auth': 'El proveedor rechazó el usuario o la clave.',
           'correo.conexion': 'No se pudo conectar: revise el host y el puerto.',
           'correo.tls':
             'La conexión cifrada no es válida (certificado, nombre o STARTTLS). No se envió nada.',
-          'correo.rechazado': 'El servidor rechazó el mensaje o la dirección de destino.',
+          'correo.rechazado':
+            'El servidor rechazó el mensaje o una dirección. Revise el remitente: muchos proveedores solo aceptan un remitente o dominio verificado.',
           'correo.plazo': 'El servidor no respondió a tiempo (20 s).',
         },
       },
@@ -1735,8 +1741,11 @@ export const es = {
         claveNueva: 'Escriba la clave para guardarla',
         claveAyuda:
           'Se guarda cifrada en este equipo y nunca vuelve a mostrarse. Déjela vacía para no cambiarla.',
+        remitente: 'Remitente de la prueba (opcional)',
+        remitenteAyuda:
+          'Muchos proveedores solo envían desde un remitente o dominio verificado. Si lo deja vacío, el remitente es la propia dirección de destino.',
         claveSinEspacios:
-          'Sin espacios: las contraseñas de aplicación de Google se escriben juntas.',
+          'Pegue la clave tal como la da el proveedor: los espacios internos se conservan.',
         borrarClave: 'Borrar la clave',
         borrarClaveTitulo: (n: string) => `¿Borrar la clave de ${n}?`,
         borrarClaveTexto: 'Se borra la clave guardada. El proveedor sigue en la lista.',
@@ -1758,7 +1767,8 @@ export const es = {
         sinProyectos: 'Todavía no hay proyectos.',
         yaUsaSmtp: 'Este proyecto ya envía por un proveedor SMTP.',
         volverCaptador: 'Volver al captador local',
-        volvio: (n: string) => `${n} vuelve a enviar al captador local. Su .env no se tocó.`,
+        volvio: (n: string) =>
+          `${n} vuelve a enviar al captador local, pero su .env no se tocó: conserva las variables MAIL_* del proveedor (y su clave, si la escribió). Reescriba su bloque de correo.`,
         incluirClave: 'Escribir también la clave en el .env',
         incluirClaveAyuda: 'Sin marcar, el bloque no lleva MAIL_PASSWORD y usted la agrega a mano.',
         sinClaveGuardada: 'El proveedor no tiene una clave guardada.',

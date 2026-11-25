@@ -70,6 +70,7 @@ function nucleoFalso() {
       probar: vi.fn(async () => ({ ok: true, idMensaje: '<id>' })),
     },
     usarCorreoEnSitio: vi.fn(async () => undefined),
+    borrarProveedorSmtp: vi.fn(async () => undefined),
     vistaPreviaEnvSmtp: vi.fn(async () => ({
       diff: '+MAIL_HOST=smtp.resend.com',
       huella: 'a'.repeat(64),
@@ -3037,7 +3038,7 @@ describe('correo: proveedores SMTP remotos (D22)', () => {
     // Un id con ruta o una clave con espacios nunca llegan al almacén.
     secretos.guardar.mockClear();
     expect((await llamar('correo.guardarClave', '../x', CENTINELA)).ok).toBe(false);
-    expect((await llamar('correo.guardarClave', 'resend', 'con espacio')).ok).toBe(false);
+    expect((await llamar('correo.guardarClave', 'resend', 'con\nsalto')).ok).toBe(false);
     expect(secretos.guardar).not.toHaveBeenCalled();
   });
 
@@ -3155,7 +3156,54 @@ describe('correo: proveedores SMTP remotos (D22)', () => {
     const r = await llamar('correo.borrarProveedor', 'resend');
     expect(r.ok).toBe(true);
     expect(secretos.borrar).toHaveBeenCalledWith('smtp:resend');
-    expect(f.smtp.borrar).toHaveBeenCalledWith('resend');
+    expect(f.borrarProveedorSmtp).toHaveBeenCalledWith('resend');
+  });
+
+  it('la clave admite espacios internos y tiene su propio código al ser inválida', async () => {
+    const { llamar, secretos } = montarSmtp();
+    const ok = await llamar('correo.guardarClave', 'resend', 'abcd efgh ijkl mnop');
+    expect(ok.ok).toBe(true);
+    expect(secretos.guardar).toHaveBeenCalledWith('smtp:resend', 'abcd efgh ijkl mnop');
+    secretos.guardar.mockClear();
+    for (const mala of ['con\nsalto', '', '   ', 42, 'ñandú']) {
+      const e = await llamar('correo.guardarClave', 'resend', mala);
+      expect(e.ok).toBe(false);
+      expect(e.error?.codigo).toBe('correo.clave_mal_formada');
+    }
+    expect(secretos.guardar).not.toHaveBeenCalled();
+  });
+
+  it('la clave larga no sale ni escapada como en un JSON; una corta no bloquea resultados', async () => {
+    const rara = 'abc"def\\ghi-0123456789';
+    const { llamar, f } = montarSmtp(rara);
+    f.smtp.probar.mockResolvedValueOnce({
+      ok: true,
+      idMensaje: `<${rara}@x>`,
+    });
+    const eco = await llamar('correo.probarEnvio', 'resend', 'yo@ejemplo.com');
+    expect(eco.ok).toBe(false);
+    const corta = montarSmtp('x');
+    const r = await corta.llamar('correo.probarEnvio', 'resend', 'yo@ejemplo.com');
+    expect(r.ok).toBe(true);
+  });
+
+  it('guardarProveedor acepta un remitente y rechaza campos ajenos', async () => {
+    const { llamar, f } = montarSmtp();
+    const base = {
+      id: 'resend',
+      nombre: 'Resend',
+      host: 'smtp.resend.com',
+      puerto: 465,
+      seguridad: 'tls',
+      usuario: 'resend',
+    };
+    expect((await llamar('correo.guardarProveedor', { ...base, remitente: 'a@b.com' })).ok).toBe(
+      true,
+    );
+    expect(f.smtp.guardar).toHaveBeenCalledWith(
+      { ...base, remitente: 'a@b.com' },
+      expect.anything(),
+    );
   });
 
   it('usarEnSitio valida el modo', async () => {

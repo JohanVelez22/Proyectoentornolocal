@@ -149,6 +149,34 @@ describe('Nucleo', () => {
     expect((await n.config.leer()).sitios).toHaveLength(1);
   });
 
+  it('correo SMTP: guardar el sitio conserva su proveedor; borrar el proveedor lo desvincula y avisa', async () => {
+    const n = await crear();
+    await n.guardarSitio(datos());
+    await n.smtp.guardar({
+      id: 'resend',
+      nombre: 'Resend',
+      host: 'smtp.resend.com',
+      puerto: 465,
+      seguridad: 'tls',
+      usuario: 'resend',
+    });
+    await n.usarCorreoEnSitio('demo', { modo: 'smtp', proveedor: 'resend' });
+    // El formulario del sitio no puede cambiar a dónde envía correo (ni con un dato colado).
+    await n.guardarSitio(datos({ nombre: 'Otro' }), 'demo');
+    await n.guardarSitio(
+      datos({ nombre: 'Otro más', correo: { modo: 'captador' } } as Partial<Sitio>),
+      'demo',
+    );
+    const guardado = (await n.config.leer()).sitios[0]!;
+    expect(guardado.nombre).toBe('Otro más');
+    expect(guardado.correo).toEqual({ modo: 'smtp', proveedor: 'resend' });
+    const cambios: Sitio[][] = [];
+    n.eventos.on('sitio:cambio', (s) => cambios.push(s));
+    await n.borrarProveedorSmtp('resend');
+    expect(cambios.at(-1)?.[0]?.correo).toBeUndefined();
+    expect((await n.config.leer()).sitios[0]!.correo).toBeUndefined();
+  });
+
   it('Terminal: usa la pedida o la predeterminada; la predeterminada debe estar instalada', async () => {
     const abiertas: { cwd: string; terminal?: string | null }[] = [];
     plataforma = {

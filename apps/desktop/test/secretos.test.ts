@@ -278,6 +278,19 @@ describe('AlmacenSecretos: clave de un proveedor SMTP remoto', () => {
     expect(readdirSync(carpeta)).toEqual([]);
   });
 
+  it('admite espacios internos (contraseñas de aplicación) pero no saltos ni espacios en los extremos', async () => {
+    const s = almacen();
+    await s.guardar('smtp:gmail', 'abcd efgh ijkl mnop');
+    expect(await s.leer('smtp:gmail')).toBe('abcd efgh ijkl mnop');
+    await s.guardar('smtp:gmail', '  con borde  ');
+    expect(await s.leer('smtp:gmail')).toBe('con borde');
+    for (const mala of ['a\nb', 'a\tb', '', '   ']) {
+      await expect(s.guardar('smtp:gmail', mala), JSON.stringify(mala)).rejects.toThrow();
+    }
+    // Las claves de IA siguen sin admitir espacios.
+    await expect(s.guardar('ia:openai', 'a b')).rejects.toThrow();
+  });
+
   it('rechaza ids que podrían salir de la carpeta', async () => {
     const s = almacen();
     for (const id of ['smtp:../x', 'smtp:', 'smtp:a/b', 'smtp:A', 'smtp:a b', 'smtp:.x']) {

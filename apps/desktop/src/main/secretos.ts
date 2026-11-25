@@ -39,6 +39,8 @@ const MENSAJE_VALOR =
 
 /** ASCII visible, sin espacios: así nunca puede inyectar cabeceras ni líneas de un .env. */
 const VALOR_VALIDO = /^[\x21-\x7e]{1,4096}$/;
+/** Las claves SMTP admiten espacios internos (p. ej. las contraseñas de aplicación de Google). */
+const VALOR_SMTP = /^[\x21-\x7e]([\x20-\x7e]{0,4094}[\x21-\x7e])?$/;
 
 /** Ids de sitio (el slug del dominio): minúsculas, números y guiones. */
 const ID_SITIO_BD = /^[a-z0-9][a-z0-9-]{0,127}$/;
@@ -145,7 +147,9 @@ export class AlmacenSecretos {
     const destino = this.ruta(id);
     const v = typeof valor === 'string' ? valor.trim() : '';
     if (id === 'github') validarToken(v);
-    else if (!VALOR_VALIDO.test(v)) throw new Error(MENSAJE_VALOR);
+    else if (!(id.startsWith('smtp:') ? VALOR_SMTP : VALOR_VALIDO).test(v)) {
+      throw new Error(MENSAJE_VALOR);
+    }
     this.exigirCifrado();
     const datos = this.cifrado.encryptString(v);
     await this.serializar(async () => {

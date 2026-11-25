@@ -1,8 +1,13 @@
 import { lookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
+import net, { isIP } from 'node:net';
 import nodemailer from 'nodemailer';
 import { ErrorWolf } from '../errores';
-import { esDireccionNoPublica, hostSmtpValido, type ProveedorSmtp } from './proveedores';
+import {
+  destinatarioValido,
+  esDireccionNoPublica,
+  hostSmtpValido,
+  type ProveedorSmtp,
+} from './proveedores';
 
 /** Plazo total de una prueba de envío. */
 export const PLAZO_PRUEBA_SMTP_MS = 20_000;
@@ -25,15 +30,6 @@ export interface OpcionesProbarEnvio {
   resolver?: (host: string) => Promise<string[]>;
 }
 
-/** Dirección de correo sencilla (una sola, sin espacios, saltos ni separadores). */
-const CORREO = /^[^\s@<>(),;:"\\]{1,64}@[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$/;
-
-export function destinatarioValido(v: unknown): v is string {
-  return (
-    typeof v === 'string' && v.length <= 254 && CORREO.test(v) && v.includes('.', v.indexOf('@'))
-  );
-}
-
 async function resolverDns(host: string): Promise<string[]> {
   return (await lookup(host, { all: true, verbatim: true })).map((a) => a.address);
 }
@@ -45,26 +41,37 @@ async function resolverDns(host: string): Promise<string[]> {
 export function clasificarFalloSmtp(e: unknown): CodigoFalloEnvio {
   const x = e as { code?: unknown; command?: unknown; message?: unknown; responseCode?: unknown };
   const code = typeof x?.code === 'string' ? x.code : '';
+  const comando = typeof x?.command === 'string' ? x.command : '';
   const msg = typeof x?.message === 'string' ? x.message : '';
-  if (code === 'EAUTH') return 'correo.auth';
+  const respuesta = typeof x?.responseCode === 'number' ? x.responseCode : 0;
+  // Primero lo que dicen el código y el comando: el texto lo escribe el servidor.
+  if (code === 'EAUTH' || comando === 'AUTH PLAIN' || comando === 'AUTH LOGIN') {
+    return 'correo.auth';
+  }
   if (code === 'ETIMEDOUT' || code === 'ETIMEOUT') return 'correo.plazo';
   if (
     code === 'ESTARTTLS' ||
+    code === 'ETLS' ||
+    comando === 'STARTTLS' ||
     code.startsWith('ERR_TLS') ||
     code.startsWith('ERR_SSL') ||
     code === 'DEPTH_ZERO_SELF_SIGNED_CERT' ||
     code === 'SELF_SIGNED_CERT_IN_CHAIN' ||
     code === 'CERT_HAS_EXPIRED' ||
     code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' ||
-    code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY' ||
+    code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY'
+  ) {
+    return 'correo.tls';
+  }
+  if (code === 'EENVELOPE' || code === 'EMESSAGE' || respuesta >= 500) return 'correo.rechazado';
+  // Sin código útil (errores de socket y de TLS de Node): se mira el texto.
+  if (
     /certificate|self[- ]signed|STARTTLS|\bTLS\b|\bSSL\b|handshake|altname|wrong version number/i.test(
       msg,
     )
   ) {
     return 'correo.tls';
   }
-  if (code === 'EENVELOPE' || code === 'EMESSAGE') return 'correo.rechazado';
-  if (typeof x?.responseCode === 'number' && x.responseCode >= 500) return 'correo.rechazado';
   if (/timed? ?out|timeout/i.test(msg)) return 'correo.plazo';
   return 'correo.conexion';
 }
@@ -75,7 +82,7 @@ export function clasificarFalloSmtp(e: unknown): CodigoFalloEnvio {
  * - Exige TLS válido: certificado verificado contra el nombre del host (nunca
  *   `rejectUnauthorized: false`), TLS 1.2 como mínimo, y con STARTTLS no se degrada a texto plano
  *   (`requireTLS`).
- * - Resuelve el host una sola vez y se conecta a esa dirección: si es del equipo o de la red
+ * - Resuelve el host una sola vez y se conecta solo a esas direcciones (hasta 4, en orden): si es del equipo o de la red
  *   local y el usuario no lo confirmó (`redLocal`), no se contacta (evita usar la app como
  *   puente hacia servicios internos, también con un nombre que cambia de dirección).
  * - Plazos de conexión, saludo, inactividad y uno total.
@@ -119,50 +126,73 @@ export async function probarEnvio(
   }
 
   const aMilis = Math.max(200, Math.floor(plazo / 2));
-  const transporte = nodemailer.createTransport({
-    host: direcciones[0]!,
-    port: p.puerto,
-    secure: p.seguridad === 'tls',
-    requireTLS: p.seguridad === 'starttls',
-    auth: { user: p.usuario, pass: clave },
-    tls: {
-      rejectUnauthorized: true,
-      minVersion: 'TLSv1.2',
-      ...(isIP(p.host) === 0 ? { servername: p.host } : {}),
-      ...(o.ca ? { ca: o.ca } : {}),
-    },
-    connectionTimeout: aMilis,
-    greetingTimeout: aMilis,
-    socketTimeout: plazo,
-    dnsTimeout: aMilis,
-    disableFileAccess: true,
-    disableUrlAccess: true,
-    logger: false,
-    debug: false,
-  });
-
+  // Solo se intentan las direcciones ya validadas, en orden y con un único plazo total.
+  const candidatas = direcciones.slice(0, 4);
+  let socketActual: net.Socket | undefined;
+  let vencida = false;
   let temporizador: NodeJS.Timeout | undefined;
   const vencido = new Promise<'plazo'>((resolver) => {
-    temporizador = setTimeout(() => resolver('plazo'), plazo);
+    temporizador = setTimeout(() => {
+      vencida = true;
+      // Corta la conexión en curso de verdad (no basta con cerrar el transporte).
+      socketActual?.destroy();
+      resolver('plazo');
+    }, plazo);
   });
-  try {
-    const envio = transporte
-      .sendMail({
-        // El remitente es el mismo destinatario: es la dirección del propio usuario.
-        from: para,
+  const intentar = async (ip: string): Promise<ResultadoEnvio> => {
+    socketActual = new net.Socket();
+    const transporte = nodemailer.createTransport({
+      host: ip,
+      port: p.puerto,
+      socket: socketActual,
+      name: 'localhost',
+      secure: p.seguridad === 'tls',
+      requireTLS: p.seguridad === 'starttls',
+      auth: { user: p.usuario, pass: clave },
+      tls: {
+        rejectUnauthorized: true,
+        minVersion: 'TLSv1.2',
+        ...(isIP(p.host) === 0 ? { servername: p.host } : {}),
+        ...(o.ca ? { ca: o.ca } : {}),
+      },
+      connectionTimeout: aMilis,
+      greetingTimeout: aMilis,
+      socketTimeout: plazo,
+      dnsTimeout: aMilis,
+      disableFileAccess: true,
+      disableUrlAccess: true,
+      logger: false,
+      debug: false,
+    });
+    try {
+      const info = await transporte.sendMail({
+        from: p.remitente ?? para,
         to: para,
         subject: 'Prueba de WolfCore Dev',
         text: 'Este mensaje confirma que WolfCore Dev puede enviar correo con este proveedor.',
-      })
-      .then(
-        (info) => ({ ok: true as const, idMensaje: String(info.messageId) }),
-        (e: unknown) => ({ ok: false as const, codigo: clasificarFalloSmtp(e) }),
-      );
-    const r = await Promise.race([envio, vencido]);
-    if (r === 'plazo') return { ok: false, codigo: 'correo.plazo' };
-    return r;
+      });
+      return { ok: true, idMensaje: String(info.messageId) };
+    } catch (e) {
+      return { ok: false, codigo: clasificarFalloSmtp(e) };
+    } finally {
+      transporte.close();
+      socketActual.destroy();
+    }
+  };
+  try {
+    const todas = (async (): Promise<ResultadoEnvio> => {
+      let r: ResultadoEnvio = { ok: false, codigo: 'correo.conexion' };
+      for (const ip of candidatas) {
+        if (vencida) break;
+        r = await intentar(ip);
+        // Solo se pasa a la siguiente dirección si no se pudo ni conectar.
+        if (r.ok || r.codigo !== 'correo.conexion') break;
+      }
+      return r;
+    })();
+    const r = await Promise.race([todas, vencido]);
+    return r === 'plazo' ? { ok: false, codigo: 'correo.plazo' } : r;
   } finally {
     if (temporizador) clearTimeout(temporizador);
-    transporte.close();
   }
 }

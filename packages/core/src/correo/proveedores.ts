@@ -167,19 +167,55 @@ const REDES_NO_PUBLICAS = (() => {
   return l;
 })();
 
-/** ¿La dirección IP es de este equipo o de una red no pública? (IPv4-mapeadas incluidas). */
+/** Los 16 bytes de una IPv6 (admite `::` y un final con IPv4 punteada), o null si no es válida. */
+function bytesIpv6(ip: string): number[] | null {
+  if (isIP(ip) !== 6) return null;
+  let t = ip.toLowerCase();
+  const v4 = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(t);
+  if (v4) {
+    const [a, b, c, d] = v4.slice(1).map(Number) as [number, number, number, number];
+    t = t.slice(0, v4.index) + ((a << 8) | b).toString(16) + ':' + ((c << 8) | d).toString(16);
+  }
+  const [cabeza = '', cola] = t.split('::');
+  const g = (x: string): number[] => (x === '' ? [] : x.split(':').map((h) => parseInt(h, 16)));
+  const ini = g(cabeza);
+  const fin = cola === undefined ? [] : g(cola);
+  const medio = cola === undefined ? [] : new Array<number>(8 - ini.length - fin.length).fill(0);
+  const grupos = [...ini, ...medio, ...fin];
+  if (grupos.length !== 8) return null;
+  return grupos.flatMap((x) => [x >> 8, x & 255]);
+}
+
+/**
+ * La IPv4 que lleva dentro una IPv6 de transición: IPv4-mapeada (`::ffff:0:0/96`), compatible
+ * (`::/96`), NAT64 (`64:ff9b::/96`) y 6to4 (`2002::/16`). null si no es de ninguna.
+ */
+function ipv4Embebida(b: number[]): string | null {
+  const cero = (desde: number, hasta: number): boolean =>
+    b.slice(desde, hasta).every((x) => x === 0);
+  const cuatro = (i: number): string => b.slice(i, i + 4).join('.');
+  if (cero(0, 10) && b[10] === 0xff && b[11] === 0xff) return cuatro(12);
+  if (cero(0, 12)) return cuatro(12);
+  if (b[0] === 0x00 && b[1] === 0x64 && b[2] === 0xff && b[3] === 0x9b && cero(4, 12)) {
+    return cuatro(12);
+  }
+  if (b[0] === 0x20 && b[1] === 0x02) return cuatro(2);
+  return null;
+}
+
+/**
+ * ¿La dirección IP es de este equipo o de una red no pública? Una IPv6 de transición (mapeada,
+ * compatible, NAT64 o 6to4) vale lo que valga la IPv4 que lleva dentro.
+ */
 export function esDireccionNoPublica(ip: string): boolean {
   const limpia = ip.replace(/^\[|\]$/g, '').replace(/%.*$/, '');
-  const mapeada = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(limpia);
-  if (mapeada) return esDireccionNoPublica(mapeada[1]!);
-  const hex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i.exec(limpia);
-  if (hex) {
-    const a = parseInt(hex[1]!, 16);
-    const b = parseInt(hex[2]!, 16);
-    return esDireccionNoPublica(`${a >> 8}.${a & 255}.${b >> 8}.${b & 255}`);
-  }
   const v = isIP(limpia);
   if (v === 0) return false;
+  if (v === 6) {
+    const bytes = bytesIpv6(limpia);
+    const interna = bytes ? ipv4Embebida(bytes) : null;
+    if (interna !== null) return esDireccionNoPublica(interna);
+  }
   return REDES_NO_PUBLICAS.check(limpia, v === 4 ? 'ipv4' : 'ipv6');
 }
 
@@ -205,6 +241,15 @@ export function hostEsLocal(host: string): boolean {
 // eslint-disable-next-line no-control-regex
 const TEXTO_SIN_CONTROL = /^[^\u0000-\u001f\u007f]+$/;
 
+/** Dirección de correo sencilla (una sola, sin espacios, saltos ni separadores). */
+const CORREO = /^[^\s@<>(),;:"\\]{1,64}@[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$/;
+
+export function destinatarioValido(v: unknown): v is string {
+  return (
+    typeof v === 'string' && v.length <= 254 && CORREO.test(v) && v.includes('.', v.indexOf('@'))
+  );
+}
+
 export const ID_PROVEEDOR_SMTP = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
 /**
@@ -221,6 +266,15 @@ export const ProveedorSmtpSchema = z.object({
   puerto: z.number().int().min(1).max(65535),
   seguridad: z.enum(SEGURIDADES_SMTP),
   usuario: z.string().min(1).max(256).regex(TEXTO_SIN_CONTROL),
+  /**
+   * Dirección que figura como remitente del correo de prueba (muchos proveedores solo aceptan
+   * un remitente o dominio verificado). Sin ella, el remitente es el propio destinatario.
+   */
+  remitente: z
+    .string()
+    .trim()
+    .refine((r) => destinatarioValido(r))
+    .optional(),
   /**
    * El usuario confirmó que este host es de su equipo o de su red local (p. ej. un relé propio).
    * Sin esto, un host que apunte a una red no pública nunca se contacta.
@@ -252,18 +306,25 @@ export function cifradoEnv(s: SeguridadSmtp): 'ssl' | 'tls' {
   return s === 'tls' ? 'ssl' : 'tls';
 }
 
+/** Host para un `.env`: una IPv6 va entre corchetes. */
+function hostEnv(host: string): string {
+  return isIP(host) === 6 ? `[${host}]` : host;
+}
+
 /**
- * Variables `MAIL_*` hacia el proveedor. `MAIL_PASSWORD` solo va si se pasa la clave (es decir,
- * tras la confirmación explícita del usuario); si no, no se escribe esa variable.
+ * Variables `MAIL_*` hacia el proveedor. `MAIL_PASSWORD` lleva la clave solo si se pasa (tras la
+ * confirmación explícita del usuario); si no, se escribe VACÍA, para que la clave que dejó otro
+ * proveedor en ese `.env` nunca viaje al servidor nuevo. `MAIL_SCHEME` es para Laravel 11 o más
+ * nuevo (`smtps` = TLS directo) y `MAIL_ENCRYPTION` para los anteriores.
  */
 export function bloqueEnvSmtp(p: ProveedorSmtp, clave: string | null): Record<string, string> {
-  const bloque: Record<string, string> = {
+  return {
     MAIL_MAILER: 'smtp',
-    MAIL_HOST: p.host,
+    MAIL_SCHEME: p.seguridad === 'tls' ? 'smtps' : 'smtp',
+    MAIL_HOST: hostEnv(p.host),
     MAIL_PORT: String(p.puerto),
     MAIL_USERNAME: p.usuario,
+    MAIL_PASSWORD: clave ?? '',
+    MAIL_ENCRYPTION: cifradoEnv(p.seguridad),
   };
-  if (clave !== null) bloque['MAIL_PASSWORD'] = clave;
-  bloque['MAIL_ENCRYPTION'] = cifradoEnv(p.seguridad);
-  return bloque;
 }

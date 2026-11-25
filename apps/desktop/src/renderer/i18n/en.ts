@@ -417,7 +417,8 @@ export const en: Textos = {
       'correo.conexion': 'Could not connect to the SMTP server: check the host and port.',
       'correo.tls':
         'Could not establish a valid encrypted connection with the server (certificate, name or STARTTLS). Nothing was sent.',
-      'correo.rechazado': 'The server rejected the message or the destination address.',
+      'correo.rechazado':
+        'The server rejected the message or an address. Check the sender: many providers only accept a verified sender or domain.',
       'correo.plazo': 'The server did not answer in time (20 s).',
       'correo.host_invalido':
         'The SMTP server must be a host name or an IP, without scheme, port or path.',
@@ -434,6 +435,8 @@ export const en: Textos = {
       'correo.env_sin_confirmar': 'Confirm that you want to write the mail variables to the .env.',
       'correo.ocupado': 'A test send is already in progress.',
       'correo.limite': 'Wait {segundos} s before another test send.',
+      'correo.clave_mal_formada':
+        'The key is not valid: only printable characters, no line breaks, up to 4096 characters.',
       'correo.argumento_invalido': 'Invalid value ({campo}).',
       'agentes.no_existe': 'That agent is not supported.',
       'agentes.sin_confirmar': 'Confirm the action in the dialog before continuing.',
@@ -1671,7 +1674,7 @@ export const en: Textos = {
         borrar: 'Delete',
         borrarTitulo: (n: string) => `Delete ${n}?`,
         borrarTexto:
-          'The provider and its saved key are deleted. Projects that use it go back to the local catcher; their .env files are not touched.',
+          'The provider and its saved key are deleted. Projects that use it go back to the local catcher, but their .env files are not touched: they keep this provider’s MAIL_* variables (and its key, if you wrote it). Rewrite the mail block in each .env.',
         borrado: (n: string) => `${n} deleted`,
         usar: 'Use in a project',
         destino: 'Destination address for the test',
@@ -1681,13 +1684,16 @@ export const en: Textos = {
         probarAyuda:
           'Sends one real email to that address over a verified encrypted connection. At most one every 15 s.',
         sinClaveParaProbar: 'Save the provider key to be able to test sending.',
+        hostLocal: 'This server’s name resolves to this computer or the local network.',
+        confirmarRed: 'Confirm local network',
         enviado: (para: string) => `Email sent to ${para}. Check your inbox.`,
         fallos: {
           'correo.auth': 'The provider rejected the username or the key.',
           'correo.conexion': 'Could not connect: check the host and port.',
           'correo.tls':
             'The encrypted connection is not valid (certificate, name or STARTTLS). Nothing was sent.',
-          'correo.rechazado': 'The server rejected the message or the destination address.',
+          'correo.rechazado':
+            'The server rejected the message or an address. Check the sender: many providers only accept a verified sender or domain.',
           'correo.plazo': 'The server did not answer in time (20 s).',
         },
       },
@@ -1718,7 +1724,10 @@ export const en: Textos = {
         claveNueva: 'Type the key to save it',
         claveAyuda:
           'It is stored encrypted on this computer and never shown again. Leave it empty to keep it.',
-        claveSinEspacios: 'No spaces: Google app passwords are typed together.',
+        remitente: 'Sender of the test (optional)',
+        remitenteAyuda:
+          'Many providers only send from a verified sender or domain. If left empty, the sender is the destination address itself.',
+        claveSinEspacios: 'Paste the key exactly as the provider gives it: inner spaces are kept.',
         borrarClave: 'Delete the key',
         borrarClaveTitulo: (n: string) => `Delete the key of ${n}?`,
         borrarClaveTexto: 'The saved key is deleted. The provider stays in the list.',
@@ -1740,7 +1749,8 @@ export const en: Textos = {
         sinProyectos: 'There are no projects yet.',
         yaUsaSmtp: 'This project already sends through an SMTP provider.',
         volverCaptador: 'Go back to the local catcher',
-        volvio: (n: string) => `${n} sends to the local catcher again. Its .env was not touched.`,
+        volvio: (n: string) =>
+          `${n} sends to the local catcher again, but its .env was not touched: it keeps the provider’s MAIL_* variables (and its key, if you wrote it). Rewrite its mail block.`,
         incluirClave: 'Also write the key to the .env',
         incluirClaveAyuda: 'Unchecked, the block has no MAIL_PASSWORD and you add it by hand.',
         sinClaveGuardada: 'The provider has no saved key.',

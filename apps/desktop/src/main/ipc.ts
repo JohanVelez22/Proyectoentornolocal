@@ -50,6 +50,7 @@ import {
   pedidoEnv,
   carpetaExistente,
   claveIa,
+  claveSmtp,
   datosProveedorSmtp,
   destinatarioPrueba,
   idProveedorSmtp,
@@ -697,8 +698,14 @@ async function conClaveSmtp<T>(
   if (clave === null) {
     throw new ErrorWolf('correo.sin_clave', 'El proveedor no tiene una clave guardada.');
   }
-  const valor = await sinClave(clave, () => fn(clave));
-  if (JSON.stringify(valor ?? null).includes(clave)) {
+  const valor = await sinClave(clave, () => fn(clave), quitarClave);
+  // Una clave corta no se busca como subcadena (aparecería en casi cualquier texto), pero una
+  // larga, tal cual o escapada como en un JSON, nunca sale del proceso principal.
+  const json = JSON.stringify(valor ?? null);
+  if (
+    !esClaveCorta(clave) &&
+    (json.includes(clave) || json.includes(JSON.stringify(clave).slice(1, -1)))
+  ) {
     throw new ErrorWolf('correo.sin_clave', 'La respuesta contenía la clave y no se envió.');
   }
   return valor;
@@ -1194,11 +1201,11 @@ const TABLA: Record<RutaIpc, Manejador> = {
     await n.smtp.proveedor(p);
     // Primero la clave: si falla, el proveedor sigue y no queda una clave huérfana.
     await s.secretos.borrar(`smtp:${p}`);
-    await n.smtp.borrar(p);
+    await n.borrarProveedorSmtp(p);
   },
   'correo.guardarClave': async (n, s, id, clave) => {
     const p = idProveedorSmtp(id);
-    const k = claveIa(clave);
+    const k = claveSmtp(clave);
     await n.smtp.proveedor(p);
     await sinClave(k, () => s.secretos.guardar(`smtp:${p}`, k));
     return s.secretos.estado(`smtp:${p}`);

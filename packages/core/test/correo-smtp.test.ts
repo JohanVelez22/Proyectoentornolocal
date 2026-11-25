@@ -3,9 +3,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { GestorSmtp, INTERVALO_PRUEBA_MS, MAX_PRUEBAS_POR_HORA } from '../src/correo/gestorSmtp';
-import { destinatarioValido, probarEnvio } from '../src/correo/probarEnvio';
+import { clasificarFalloSmtp, probarEnvio } from '../src/correo/probarEnvio';
 import {
   bloqueEnvSmtp,
+  destinatarioValido,
   esDireccionNoPublica,
   hostDePreset,
   hostEsLocal,
@@ -15,6 +16,7 @@ import {
   type ProveedorSmtp,
 } from '../src/correo/proveedores';
 import { emitirCertificado, generarCA, type ParCertificado } from '../src/https/ca';
+import { ErrorWolf } from '../src/errores';
 import { ConfigSchema, type Config } from '../src/tipos';
 import { ServidorSmtpFalso } from './servidorSmtpFalso';
 
@@ -120,10 +122,27 @@ describe('validación del host', () => {
       'fd00::1',
       '::ffff:127.0.0.1',
       '::ffff:7f00:1',
+      // IPv6 de transición con una IPv4 privada dentro.
+      '64:ff9b::7f00:1',
+      '64:ff9b::10.0.0.5',
+      '::7f00:1',
+      '::10.1.2.3',
+      '::192.168.0.1',
+      '2002:7f00:1::',
+      '2002:c0a8:0101::1',
+      '2002:0a00:0001::',
     ]) {
       expect(esDireccionNoPublica(ip), ip).toBe(true);
     }
-    for (const ip of ['8.8.8.8', '203.0.113.7', '2606:4700::1111']) {
+    for (const ip of [
+      '8.8.8.8',
+      '203.0.113.7',
+      '2606:4700::1111',
+      // Con una IPv4 pública dentro, la transición no se bloquea.
+      '64:ff9b::808:808',
+      '2002:0808:0808::1',
+      '::ffff:8.8.8.8',
+    ]) {
       expect(esDireccionNoPublica(ip), ip).toBe(false);
     }
     for (const h of ['localhost', 'servidor', 'impresora.local', 'x.internal', '192.168.1.1']) {
@@ -296,6 +315,116 @@ describe('probarEnvio con un servidor falso en 127.0.0.1', () => {
   });
 });
 
+describe('probarEnvio: remitente, plazo y errores del servidor', () => {
+  it('usa el remitente del proveedor y, sin él, el propio destinatario', async () => {
+    const s = await servidor({ starttls: { cert: certIp.certPem, key: certIp.keyPem } });
+    const o = { ca: ca.certPem, plazoMs: 8000 };
+    await probarEnvio(
+      proveedor({ puerto: s.puerto, remitente: 'envios@miempresa.com' }),
+      CENTINELA,
+      'yo@ejemplo.com',
+      o,
+    );
+    expect(s.ultimoRemitente).toBe('envios@miempresa.com');
+    await probarEnvio(proveedor({ puerto: s.puerto }), CENTINELA, 'yo@ejemplo.com', o);
+    expect(s.ultimoRemitente).toBe('yo@ejemplo.com');
+  });
+
+  it('el esquema rechaza un remitente que no es una sola dirección', () => {
+    const base = {
+      id: 'x',
+      nombre: 'X',
+      host: 'smtp.resend.com',
+      puerto: 465,
+      seguridad: 'tls',
+      usuario: 'u',
+    };
+    expect(ProveedorSmtpSchema.safeParse({ ...base, remitente: 'a@b.com' }).success).toBe(true);
+    for (const malo of ['a@b.com,c@d.com', 'a@b.com\r\nBcc: z@y.com', 'sin-arroba']) {
+      expect(ProveedorSmtpSchema.safeParse({ ...base, remitente: malo }).success, malo).toBe(false);
+    }
+  });
+
+  it('un servidor que repite la clave en sus errores no la filtra al resultado', async () => {
+    const mala = 'otra-clave-distinta';
+    const s = await servidor({
+      starttls: { cert: certIp.certPem, key: certIp.keyPem },
+      clave: mala,
+      eco: `clave ${CENTINELA} incorrecta`,
+    });
+    const r = await probarEnvio(proveedor({ puerto: s.puerto }), CENTINELA, 'yo@ejemplo.com', {
+      ca: ca.certPem,
+      plazoMs: 8000,
+    });
+    expect(r).toEqual({ ok: false, codigo: 'correo.auth' });
+    expect(JSON.stringify(r)).not.toContain(CENTINELA);
+    const s2 = await servidor({
+      starttls: { cert: certIp.certPem, key: certIp.keyPem },
+      rechazaDestinatario: true,
+      eco: `usuario ${USUARIO} clave ${CENTINELA}`,
+    });
+    const r2 = await probarEnvio(proveedor({ puerto: s2.puerto }), CENTINELA, 'yo@ejemplo.com', {
+      ca: ca.certPem,
+      plazoMs: 8000,
+    });
+    expect(r2).toEqual({ ok: false, codigo: 'correo.rechazado' });
+    expect(JSON.stringify(r2)).not.toContain(CENTINELA);
+  });
+
+  it('un 550 que menciona TLS sigue siendo "rechazado" (manda el código, no el texto)', () => {
+    expect(
+      clasificarFalloSmtp({
+        code: 'EENVELOPE',
+        responseCode: 550,
+        message: 'TLS required for sender',
+      }),
+    ).toBe('correo.rechazado');
+    expect(clasificarFalloSmtp({ responseCode: 554, message: 'SSL certificate policy' })).toBe(
+      'correo.rechazado',
+    );
+    expect(clasificarFalloSmtp({ command: 'STARTTLS', responseCode: 502, message: 'no' })).toBe(
+      'correo.tls',
+    );
+    expect(clasificarFalloSmtp({ code: 'EAUTH', responseCode: 535, message: 'TLS' })).toBe(
+      'correo.auth',
+    );
+    expect(clasificarFalloSmtp({ code: 'ESOCKET', message: 'self-signed certificate' })).toBe(
+      'correo.tls',
+    );
+  });
+
+  it('al vencer el plazo global se corta la conexión en curso (no queda abierta en el servidor)', async () => {
+    const s = await servidor({ mudo: true });
+    const r = await probarEnvio(proveedor({ puerto: s.puerto }), CENTINELA, 'yo@ejemplo.com', {
+      plazoMs: 1200,
+    });
+    expect(r).toEqual({ ok: false, codigo: 'correo.plazo' });
+    for (let i = 0; i < 20 && s.abiertas > 0; i++) await new Promise((x) => setTimeout(x, 50));
+    expect(s.abiertas).toBe(0);
+  });
+
+  it('se anuncia como localhost, sin el nombre del equipo', async () => {
+    const s = await servidor({ starttls: { cert: certIp.certPem, key: certIp.keyPem } });
+    await probarEnvio(proveedor({ puerto: s.puerto }), CENTINELA, 'yo@ejemplo.com', {
+      ca: ca.certPem,
+      plazoMs: 8000,
+    });
+    expect(s.saludos[0]).toMatch(/^EHLO localhost$/i);
+  });
+
+  it('prueba las demás direcciones ya validadas si la primera no conecta', async () => {
+    const s = await servidor({ starttls: { cert: certNombre.certPem, key: certNombre.keyPem } });
+    // Un puerto cerrado en ::1 no existe aquí: la primera dirección falla y la segunda sirve.
+    const r = await probarEnvio(
+      proveedor({ puerto: s.puerto, host: 'smtp.prueba.test' }),
+      CENTINELA,
+      'yo@ejemplo.com',
+      { ca: ca.certPem, plazoMs: 8000, resolver: async () => ['127.0.0.2', '127.0.0.1'] },
+    );
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe('GestorSmtp', () => {
   let carpeta: string;
   beforeAll(async () => {
@@ -312,6 +441,8 @@ describe('GestorSmtp', () => {
     const gestor = new GestorSmtp({
       leerConfig: async () => config,
       modificarConfig: async (fn) => fn(config),
+      // Nunca el DNS real en las pruebas.
+      resolver: async () => ['93.184.216.34'],
       ...(opciones.ahora ? { ahora: opciones.ahora } : {}),
       ...(opciones.enviar ? { enviar: opciones.enviar } : {}),
     });
@@ -436,6 +567,55 @@ describe('GestorSmtp', () => {
     await gestor.probar('prueba', CENTINELA, 'yo@ejemplo.com');
   });
 
+  it('un nombre público que se resuelve a la red local exige confirmación al guardar', async () => {
+    const config = ConfigSchema.parse({}) as Config;
+    let direcciones = ['10.0.0.9'];
+    const gestor = new GestorSmtp({
+      leerConfig: async () => config,
+      modificarConfig: async (fn) => fn(config),
+      resolver: async () => direcciones,
+    });
+    const interno = datos({ host: 'relay.miempresa.com' });
+    await expect(gestor.guardar(interno)).rejects.toMatchObject({ codigo: 'correo.host_local' });
+    // Una de varias direcciones basta.
+    direcciones = ['93.184.216.34', '::ffff:10.0.0.9'];
+    await expect(gestor.guardar(interno)).rejects.toMatchObject({ codigo: 'correo.host_local' });
+    // Un DNS que falla no impide guardar (de mejor esfuerzo): el envío vuelve a comprobarlo.
+    const sinDns = new GestorSmtp({
+      leerConfig: async () => config,
+      modificarConfig: async (fn) => fn(config),
+      resolver: async () => {
+        throw new Error('ENOTFOUND');
+      },
+    });
+    await sinDns.guardar(interno);
+    // Con confirmación se guarda y se conserva al editar el mismo host.
+    direcciones = ['10.0.0.9'];
+    const lista = await gestor.guardar(interno, { confirmarRedLocal: true });
+    expect(lista[0]!.redLocal).toBe(true);
+    const editado = await gestor.guardar({ ...interno, nombre: 'Otro nombre' });
+    expect(editado[0]!.redLocal).toBe(true);
+    // Si cambia el host, la confirmación ya no vale.
+    await expect(gestor.guardar({ ...interno, host: 'otro.miempresa.com' })).rejects.toMatchObject({
+      codigo: 'correo.host_local',
+    });
+  });
+
+  it('un host rechazado por ser local también gasta el cupo de la prueba', async () => {
+    const reloj = 1_000_000;
+    const enviar: GestorSmtpEnviar = async () => {
+      throw new ErrorWolf('correo.host_local', 'local');
+    };
+    const { gestor } = crear({ ahora: () => reloj, enviar });
+    await gestor.guardar(datos());
+    await expect(gestor.probar('prueba', CENTINELA, 'yo@ejemplo.com')).rejects.toMatchObject({
+      codigo: 'correo.host_local',
+    });
+    await expect(gestor.probar('prueba', CENTINELA, 'yo@ejemplo.com')).rejects.toMatchObject({
+      codigo: 'correo.limite',
+    });
+  });
+
   it('probar de punta a punta con el servidor falso deja un solo correo', async () => {
     const s = await servidor({ starttls: { cert: certIp.certPem, key: certIp.keyPem } });
     const config = ConfigSchema.parse({}) as Config;
@@ -465,64 +645,103 @@ describe('bloque .env', () => {
     usuario: 'resend',
   });
 
-  it('sin confirmación no lleva MAIL_PASSWORD', () => {
-    const b = bloqueEnvSmtp(p, null);
-    expect(b).toEqual({
+  it('sin confirmación escribe MAIL_PASSWORD vacío (nunca omitido ni con otra clave)', () => {
+    expect(bloqueEnvSmtp(p, null)).toEqual({
       MAIL_MAILER: 'smtp',
+      MAIL_SCHEME: 'smtps',
       MAIL_HOST: 'smtp.resend.com',
       MAIL_PORT: '465',
       MAIL_USERNAME: 'resend',
+      MAIL_PASSWORD: '',
       MAIL_ENCRYPTION: 'ssl',
     });
-    expect('MAIL_PASSWORD' in b).toBe(false);
   });
 
-  it('con la clave confirmada la incluye y STARTTLS es "tls"', () => {
+  it('con la clave confirmada la incluye; STARTTLS es "tls" y el esquema "smtp"', () => {
     const b = bloqueEnvSmtp({ ...p, puerto: 587, seguridad: 'starttls' }, CENTINELA);
     expect(b['MAIL_PASSWORD']).toBe(CENTINELA);
     expect(b['MAIL_ENCRYPTION']).toBe('tls');
+    expect(b['MAIL_SCHEME']).toBe('smtp');
+  });
+
+  it('una IPv6 va entre corchetes', () => {
+    const b = bloqueEnvSmtp({ ...p, host: '2606:4700::1111' }, null);
+    expect(b['MAIL_HOST']).toBe('[2606:4700::1111]');
   });
 });
 
 describe('.env del proyecto con el bloque SMTP', () => {
-  it('la vista previa enmascara la clave y escribir la deja solo con la confirmación', async () => {
+  async function montar(inicial: string) {
     const { GestorEnv } = await import('../src/proyectos/env/gestor');
+    const { writeFile } = await import('node:fs/promises');
     const carpeta = await mkdtemp(path.join(tmpdir(), 'wolf-smtp-env-'));
     const respaldos = await mkdtemp(path.join(tmpdir(), 'wolf-smtp-resp-'));
+    await writeFile(path.join(carpeta, '.env'), inicial);
+    await writeFile(path.join(carpeta, '.gitignore'), '.env\n');
+    const sitio = { id: 'miapp', carpeta, tipo: 'laravel' } as never;
+    const g = new GestorEnv({
+      sitio: async () => sitio,
+      carpetaRespaldos: () => respaldos,
+      versionado: async () => false,
+      puertos: async () => ({ correo: 1025, redis: 6379 }),
+    });
+    const limpiar = async () => {
+      await rm(carpeta, { recursive: true, force: true });
+      await rm(respaldos, { recursive: true, force: true });
+    };
+    return { g, carpeta, limpiar, leer: () => readFile(path.join(carpeta, '.env'), 'utf8') };
+  }
+  const resend = ProveedorSmtpSchema.parse({
+    id: 'resend',
+    nombre: 'Resend',
+    host: 'smtp.resend.com',
+    puerto: 465,
+    seguridad: 'tls',
+    usuario: 'resend',
+  });
+  const brevo = ProveedorSmtpSchema.parse({
+    id: 'brevo',
+    nombre: 'Brevo',
+    host: 'smtp-relay.brevo.com',
+    puerto: 587,
+    seguridad: 'starttls',
+    usuario: 'yo@ejemplo.com',
+  });
+
+  it('la vista previa enmascara la clave y escribir la deja solo con la confirmación', async () => {
+    const { g, leer, limpiar } = await montar('APP_NAME=Mi\nMAIL_HOST=127.0.0.1\n');
     try {
-      const { writeFile } = await import('node:fs/promises');
-      await writeFile(path.join(carpeta, '.env'), 'APP_NAME=Mi\nMAIL_HOST=127.0.0.1\n');
-      await writeFile(path.join(carpeta, '.gitignore'), '.env\n');
-      const sitio = { id: 'miapp', carpeta, tipo: 'laravel' } as never;
-      const g = new GestorEnv({
-        sitio: async () => sitio,
-        carpetaRespaldos: () => respaldos,
-        versionado: async () => false,
-        puertos: async () => ({ correo: 1025, redis: 6379 }),
-      });
-      const p = ProveedorSmtpSchema.parse({
-        id: 'resend',
-        nombre: 'Resend',
-        host: 'smtp.resend.com',
-        puerto: 465,
-        seguridad: 'tls',
-        usuario: 'resend',
-      });
-      const vista = await g.vistaPrevia('miapp', { cambios: bloqueEnvSmtp(p, CENTINELA) });
+      const vista = await g.vistaPrevia('miapp', { cambios: bloqueEnvSmtp(resend, CENTINELA) });
       expect(vista.diff).not.toContain(CENTINELA);
       expect(vista.diff).toContain('MAIL_PASSWORD');
       expect(vista.diff).toContain('smtp.resend.com');
-      const sin = await g.vistaPrevia('miapp', { cambios: bloqueEnvSmtp(p, null) });
-      expect(sin.diff).not.toContain('MAIL_PASSWORD');
-      await g.guardar('miapp', { cambios: bloqueEnvSmtp(p, null) }, true);
-      expect(await readFile(path.join(carpeta, '.env'), 'utf8')).not.toContain(CENTINELA);
-      await g.guardar('miapp', { cambios: bloqueEnvSmtp(p, CENTINELA) }, true);
-      const texto = await readFile(path.join(carpeta, '.env'), 'utf8');
+      await g.guardar('miapp', { cambios: bloqueEnvSmtp(resend, null) }, true);
+      expect(await leer()).not.toContain(CENTINELA);
+      await g.guardar('miapp', { cambios: bloqueEnvSmtp(resend, CENTINELA) }, true);
+      const texto = await leer();
       expect(texto).toContain(`MAIL_PASSWORD=${CENTINELA}`);
       expect(texto).toContain('MAIL_HOST=smtp.resend.com');
     } finally {
-      await rm(carpeta, { recursive: true, force: true });
-      await rm(respaldos, { recursive: true, force: true });
+      await limpiar();
+    }
+  });
+
+  it('cambiar de proveedor sin la clave nunca deja la del anterior apuntando al servidor nuevo', async () => {
+    const { g, leer, limpiar } = await montar('APP_NAME=Mi\n');
+    try {
+      await g.guardar('miapp', { cambios: bloqueEnvSmtp(resend, CENTINELA) }, true);
+      expect(await leer()).toContain(`MAIL_PASSWORD=${CENTINELA}`);
+      // La vista previa del segundo proveedor (sin clave) muestra que MAIL_PASSWORD se vacía.
+      const vista = await g.vistaPrevia('miapp', { cambios: bloqueEnvSmtp(brevo, null) });
+      expect(vista.diff).toContain('MAIL_PASSWORD');
+      expect(vista.diff).not.toContain(CENTINELA);
+      await g.guardar('miapp', { cambios: bloqueEnvSmtp(brevo, null) }, true);
+      const texto = await leer();
+      expect(texto).not.toContain(CENTINELA);
+      expect(texto).toMatch(/^MAIL_PASSWORD=$/m);
+      expect(texto).toContain('MAIL_HOST=smtp-relay.brevo.com');
+    } finally {
+      await limpiar();
     }
   });
 });

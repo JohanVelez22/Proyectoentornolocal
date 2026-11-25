@@ -47,6 +47,9 @@ const host = ref('');
 const puerto = ref<number | null>(587);
 const seguridad = ref<'tls' | 'starttls'>('starttls');
 const usuario = ref('');
+const remitente = ref('');
+/** Id del proveedor nuevo: se fija en el primer intento para que un reintento no cree otro. */
+const idNuevo = ref<string | null>(null);
 /** Solo vive mientras el diálogo está abierto; se vacía al guardar o cerrar. */
 const clave = ref('');
 const intentado = ref(false);
@@ -100,6 +103,8 @@ watch(mostrar, (v) => {
   puerto.value = p?.puerto ?? 587;
   seguridad.value = p?.seguridad ?? 'starttls';
   usuario.value = p?.usuario ?? '';
+  remitente.value = p?.remitente ?? '';
+  idNuevo.value = null;
 });
 
 watch(preset, (id) => {
@@ -141,14 +146,21 @@ function confirmar(o: { titulo: string; texto: string; boton: string }): Promise
   });
 }
 
+function idElegido(): string {
+  if (props.proveedor) return props.proveedor.id;
+  idNuevo.value ??= idDeNombre();
+  return idNuevo.value;
+}
+
 async function guardarConfig(): Promise<ProveedorSmtpPublico[] | null> {
   const datos = {
-    id: props.proveedor?.id ?? idDeNombre(),
+    id: idElegido(),
     nombre: nombre.value.trim(),
     host: host.value.trim().toLowerCase(),
     puerto: puerto.value ?? 587,
     seguridad: seguridad.value,
     usuario: usuario.value.trim(),
+    ...(remitente.value.trim() ? { remitente: remitente.value.trim() } : {}),
   };
   const opciones: { confirmarRedLocal?: true; confirmarCambio?: true } = {};
   for (let vuelta = 0; vuelta < 3; vuelta++) {
@@ -181,11 +193,11 @@ async function guardarConfig(): Promise<ProveedorSmtpPublico[] | null> {
 async function guardar(): Promise<void> {
   intentado.value = true;
   if (!valido.value || ocupado('guardar')) return;
-  // La clave sale del campo ya mismo: aunque algo falle, no queda en la pantalla.
+  // El campo se vacía solo cuando el proceso principal confirma que guardó la clave: si algo
+  // falla, no hay que escribirla otra vez.
   const nueva = clave.value.trim();
-  clave.value = '';
   const nombreGuardado = nombre.value.trim();
-  const id = props.proveedor?.id ?? idDeNombre();
+  const id = idElegido();
   const lista = await ejecutar('guardar', async () => {
     const l = await guardarConfig();
     if (!l) return null;
@@ -196,6 +208,7 @@ async function guardar(): Promise<void> {
     return l;
   });
   if (lista) {
+    clave.value = '';
     emit('guardado', lista);
     message.success(t.guardado(nombreGuardado));
     mostrar.value = false;
@@ -270,6 +283,14 @@ function abrirDocumentacion(): void {
           v-model:value="usuario"
           :maxlength="256"
           :input-props="{ spellcheck: false, autocomplete: 'off' }"
+          class="mono"
+        />
+      </NFormItem>
+      <NFormItem :label="t.remitente" :feedback="t.remitenteAyuda">
+        <NInput
+          v-model:value="remitente"
+          :maxlength="254"
+          :input-props="{ type: 'email', spellcheck: false, autocomplete: 'off' }"
           class="mono"
         />
       </NFormItem>

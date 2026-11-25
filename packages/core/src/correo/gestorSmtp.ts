@@ -1,3 +1,5 @@
+import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
 import { ErrorWolf } from '../errores';
 import type { Config } from '../tipos';
 import {
@@ -5,7 +7,13 @@ import {
   type OpcionesProbarEnvio,
   type ResultadoEnvio,
 } from './probarEnvio';
-import { bloqueEnvSmtp, hostEsLocal, ProveedorSmtpSchema, type ProveedorSmtp } from './proveedores';
+import {
+  bloqueEnvSmtp,
+  esDireccionNoPublica,
+  hostEsLocal,
+  ProveedorSmtpSchema,
+  type ProveedorSmtp,
+} from './proveedores';
 
 /** Un envío de prueba por proveedor cada 15 s y, entre todos, 10 por hora. */
 export const INTERVALO_PRUEBA_MS = 15_000;
@@ -25,6 +33,15 @@ export interface DepsGestorSmtp {
     o?: OpcionesProbarEnvio,
   ) => Promise<ResultadoEnvio>;
   opcionesEnvio?: OpcionesProbarEnvio;
+  /** Direcciones de un nombre (pruebas); por defecto el DNS del sistema. */
+  resolver?: (host: string) => Promise<string[]>;
+}
+
+/** Plazo de la consulta de DNS al guardar: si no responde, se sigue (el envío la repite). */
+const PLAZO_DNS_GUARDAR_MS = 3000;
+
+async function resolverDns(host: string): Promise<string[]> {
+  return (await lookup(host, { all: true, verbatim: true })).map((a) => a.address);
 }
 
 /**
@@ -70,15 +87,16 @@ export class GestorSmtp {
     }
     const nuevo: ProveedorSmtp = { ...r.data };
     delete nuevo.redLocal;
-    // `redLocal` solo lo da la confirmación de esta llamada, nunca el dato que llega.
+    const previo = (await this.proveedores()).find((x) => x.id === nuevo.id);
+    // `redLocal` solo lo da una confirmación: la de esta llamada o la que ya tenía el mismo host.
     if (o.confirmarRedLocal === true) nuevo.redLocal = true;
-    else if (hostEsLocal(nuevo.host)) {
+    else if (previo?.redLocal === true && previo.host === nuevo.host) nuevo.redLocal = true;
+    else if (hostEsLocal(nuevo.host) || (await this.resuelveALocal(nuevo.host))) {
       throw new ErrorWolf(
         'correo.host_local',
         'El servidor SMTP apunta a este equipo o a la red local: confírmelo para usarlo.',
       );
     }
-    const previo = (await this.proveedores()).find((x) => x.id === nuevo.id);
     if (
       previo &&
       o.tieneClave === true &&
@@ -99,6 +117,25 @@ export class GestorSmtp {
       c.correo.proveedores = lista;
     });
     return this.proveedores();
+  }
+
+  /**
+   * ¿El nombre se resuelve a una dirección de este equipo o de la red local? Una consulta que
+   * falla o tarda no cuenta (es de mejor esfuerzo): `probar` vuelve a comprobarlo al conectar.
+   */
+  private async resuelveALocal(host: string): Promise<boolean> {
+    if (isIP(host) !== 0) return esDireccionNoPublica(host);
+    try {
+      const direcciones = await Promise.race([
+        (this.d.resolver ?? resolverDns)(host),
+        new Promise<string[]>((_, rechazar) =>
+          setTimeout(() => rechazar(new Error('plazo')), PLAZO_DNS_GUARDAR_MS).unref(),
+        ),
+      ]);
+      return direcciones.some((d) => esDireccionNoPublica(d));
+    } catch {
+      return false;
+    }
   }
 
   /** Quita el proveedor y lo desvincula de los proyectos que lo usaban (vuelven al captador). */
@@ -135,13 +172,12 @@ export class GestorSmtp {
       });
     }
     this.enCurso = true;
+    // Se cuenta antes de enviar: un host rechazado o un fallo también gastan el cupo.
+    this.ultimo.set(id, t);
+    this.envios.push(t);
     try {
       const enviar = this.d.enviar ?? probarEnvioReal;
-      const r = await enviar(p, clave, para, this.d.opcionesEnvio);
-      // Se cuenta después de validar y resolver (los errores de forma no gastan el cupo).
-      this.ultimo.set(id, t);
-      this.envios.push(t);
-      return r;
+      return await enviar(p, clave, para, this.d.opcionesEnvio);
     } finally {
       this.enCurso = false;
     }

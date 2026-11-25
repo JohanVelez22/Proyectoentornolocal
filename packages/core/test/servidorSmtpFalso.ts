@@ -10,6 +10,8 @@ export interface OpcionesSmtpFalso {
   clave?: string;
   /** No contesta nada (para probar plazos). */
   mudo?: boolean;
+  /** Texto que el servidor mete en sus respuestas de error (p. ej. repite la clave). */
+  eco?: string;
   /** Rechaza al destinatario con 550. */
   rechazaDestinatario?: boolean;
 }
@@ -29,6 +31,8 @@ export class ServidorSmtpFalso {
   /** Se vio AUTH en una conexión sin TLS. */
   authEnTextoPlano = false;
   conexiones = 0;
+  /** Las órdenes EHLO/HELO recibidas. */
+  readonly saludos: string[] = [];
   puerto = 0;
   private servidor!: net.Server;
   private readonly sockets = new Set<net.Socket>();
@@ -53,6 +57,16 @@ export class ServidorSmtpFalso {
     this.puerto = (this.servidor.address() as net.AddressInfo).port;
   }
 
+  /** Conexiones que siguen abiertas en el servidor. */
+  get abiertas(): number {
+    return this.sockets.size;
+  }
+
+  /** Remitente del último mensaje recibido (MAIL FROM). */
+  get ultimoRemitente(): string | undefined {
+    return this.mensajes.at(-1)?.de;
+  }
+
   async cerrar(): Promise<void> {
     for (const s of this.sockets) s.destroy();
     await new Promise<void>((r) => this.servidor.close(() => r()));
@@ -74,7 +88,7 @@ export class ServidorSmtpFalso {
     const autenticar = (u: string, c: string): void => {
       if (!cifrado) this.authEnTextoPlano = true;
       if (credencialesOk(u, c)) enviar('235 2.7.0 Autenticado');
-      else enviar('535 5.7.8 Credenciales no válidas');
+      else enviar(`535 5.7.8 Credenciales no válidas ${this.o.eco ?? ''}`);
     };
 
     const linea = (l: string): void => {
@@ -106,6 +120,7 @@ export class ServidorSmtpFalso {
       }
       const cmd = l.toUpperCase();
       if (cmd.startsWith('EHLO') || cmd.startsWith('HELO')) {
+        this.saludos.push(l);
         const ext = ['250-fake.local'];
         if (this.o.starttls && !cifrado) ext.push('250-STARTTLS');
         ext.push('250 AUTH PLAIN LOGIN');
@@ -142,7 +157,8 @@ export class ServidorSmtpFalso {
         de = l.slice(10).replace(/[<>]/g, '').trim();
         enviar('250 2.1.0 OK');
       } else if (cmd.startsWith('RCPT TO')) {
-        if (this.o.rechazaDestinatario) enviar('550 5.1.1 Destinatario rechazado');
+        if (this.o.rechazaDestinatario)
+          enviar(`550 5.1.1 Destinatario rechazado ${this.o.eco ?? ''}`);
         else {
           para = l.slice(8).replace(/[<>]/g, '').trim();
           enviar('250 2.1.5 OK');

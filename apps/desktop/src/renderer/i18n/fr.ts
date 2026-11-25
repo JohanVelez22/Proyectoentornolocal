@@ -444,7 +444,8 @@ export const fr: Textos = {
       'correo.conexion': 'Impossible de se connecter au serveur SMTP : vérifiez l’hôte et le port.',
       'correo.tls':
         'Impossible d’établir une connexion chiffrée valide avec le serveur (certificat, nom ou STARTTLS). Rien n’a été envoyé.',
-      'correo.rechazado': 'Le serveur a refusé le message ou l’adresse de destination.',
+      'correo.rechazado':
+        'Le serveur a refusé le message ou une adresse. Vérifiez l’expéditeur : beaucoup de fournisseurs n’acceptent qu’un expéditeur ou un domaine vérifié.',
       'correo.plazo': 'Le serveur n’a pas répondu à temps (20 s).',
       'correo.host_invalido':
         'Le serveur SMTP doit être un nom d’hôte ou une IP, sans schéma, port ni chemin.',
@@ -462,6 +463,8 @@ export const fr: Textos = {
         'Confirmez que vous voulez écrire les variables de courrier dans le .env.',
       'correo.ocupado': 'Un test d’envoi est déjà en cours.',
       'correo.limite': 'Attendez {segundos} s avant un autre test d’envoi.',
+      'correo.clave_mal_formada':
+        'La clé n’est pas valide : uniquement des caractères imprimables, sans saut de ligne, jusqu’à 4096 caractères.',
       'correo.argumento_invalido': 'Donnée non valide ({campo}).',
       'agentes.no_existe': 'Cet agent n’est pas pris en charge.',
       'agentes.sin_confirmar': 'Confirmez l’action dans la boîte de dialogue avant de continuer.',
@@ -1728,7 +1731,7 @@ export const fr: Textos = {
         borrar: 'Supprimer',
         borrarTitulo: (n: string) => `Supprimer ${n} ?`,
         borrarTexto:
-          'Le fournisseur et sa clé enregistrée sont supprimés. Les projets qui l’utilisent reviennent au capteur local ; leurs .env ne sont pas modifiés.',
+          'Le fournisseur et sa clé enregistrée sont supprimés. Les projets qui l’utilisent reviennent au capteur local, mais leurs .env ne sont pas modifiés : ils gardent les variables MAIL_* de ce fournisseur (et sa clé, si vous l’avez écrite). Réécrivez le bloc courrier dans chaque .env.',
         borrado: (n: string) => `${n} supprimé`,
         usar: 'Utiliser dans un projet',
         destino: 'Adresse de destination du test',
@@ -1738,13 +1741,16 @@ export const fr: Textos = {
         probarAyuda:
           'Envoie un seul vrai courriel à cette adresse, via une connexion chiffrée vérifiée. Au plus un toutes les 15 s.',
         sinClaveParaProbar: 'Enregistrez la clé du fournisseur pour pouvoir tester l’envoi.',
+        hostLocal: 'Le nom de ce serveur se résout vers cet ordinateur ou le réseau local.',
+        confirmarRed: 'Confirmer le réseau local',
         enviado: (para: string) => `Courriel envoyé à ${para}. Vérifiez votre boîte de réception.`,
         fallos: {
           'correo.auth': 'Le fournisseur a refusé l’identifiant ou la clé.',
           'correo.conexion': 'Connexion impossible : vérifiez l’hôte et le port.',
           'correo.tls':
             'La connexion chiffrée n’est pas valide (certificat, nom ou STARTTLS). Rien n’a été envoyé.',
-          'correo.rechazado': 'Le serveur a refusé le message ou l’adresse de destination.',
+          'correo.rechazado':
+            'Le serveur a refusé le message ou une adresse. Vérifiez l’expéditeur : beaucoup de fournisseurs n’acceptent qu’un expéditeur ou un domaine vérifié.',
           'correo.plazo': 'Le serveur n’a pas répondu à temps (20 s).',
         },
       },
@@ -1777,8 +1783,11 @@ export const fr: Textos = {
         claveNueva: 'Saisissez la clé pour l’enregistrer',
         claveAyuda:
           'Elle est stockée chiffrée sur cet ordinateur et n’est plus jamais affichée. Laissez vide pour la conserver.',
+        remitente: 'Expéditeur du test (facultatif)',
+        remitenteAyuda:
+          'Beaucoup de fournisseurs n’envoient que depuis un expéditeur ou un domaine vérifié. Si vous laissez vide, l’expéditeur est l’adresse de destination elle-même.',
         claveSinEspacios:
-          'Sans espaces : les mots de passe d’application Google se saisissent d’un bloc.',
+          'Collez la clé telle que le fournisseur la donne : les espaces internes sont conservés.',
         borrarClave: 'Supprimer la clé',
         borrarClaveTitulo: (n: string) => `Supprimer la clé de ${n} ?`,
         borrarClaveTexto: 'La clé enregistrée est supprimée. Le fournisseur reste dans la liste.',
@@ -1801,7 +1810,7 @@ export const fr: Textos = {
         yaUsaSmtp: 'Ce projet envoie déjà via un fournisseur SMTP.',
         volverCaptador: 'Revenir au capteur local',
         volvio: (n: string) =>
-          `${n} renvoie de nouveau vers le capteur local. Son .env n’a pas été modifié.`,
+          `${n} renvoie de nouveau vers le capteur local, mais son .env n’a pas été modifié : il garde les variables MAIL_* du fournisseur (et sa clé, si vous l’avez écrite). Réécrivez son bloc courrier.`,
         incluirClave: 'Écrire aussi la clé dans le .env',
         incluirClaveAyuda:
           'Sans cocher, le bloc ne contient pas MAIL_PASSWORD et vous l’ajoutez à la main.',

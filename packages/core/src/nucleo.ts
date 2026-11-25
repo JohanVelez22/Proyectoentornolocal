@@ -2134,6 +2134,12 @@ export class Nucleo {
     this.eventos.emit('sitio:cambio', await this.sitios.listar());
   }
 
+  /** Borra el proveedor SMTP y avisa a la interfaz: los proyectos que lo usaban vuelven al captador. */
+  async borrarProveedorSmtp(id: string): Promise<void> {
+    await this.smtp.borrar(id);
+    this.eventos.emit('sitio:cambio', await this.sitios.listar());
+  }
+
   /**
    * Lo que cambiaría en el `.env` del proyecto con el bloque `MAIL_*` del proveedor. La clave
    * (si se pide) va enmascarada en el resultado; no se escribe nada.
@@ -3506,7 +3512,8 @@ export class Nucleo {
     delete resto.xdebug;
     // La captura de dumps solo cambia con capturaDumpsSitio (confirmación de la ventana).
     delete resto.capturaDumps;
-    // A dónde envía correo el proyecto solo cambia con `smtp.usarEnSitio`.
+    // A dónde envía correo el proyecto solo cambia con `usarCorreoEnSitio`: sin `correo` en los
+    // cambios, `sitios.editar` conserva el que tiene (en la misma operación, sin carrera).
     delete resto.correo;
     if (id) await this.cerrarTunelSiCambia(id, datos);
     const previo = id ? (await this.sitios.listar()).find((s) => s.id === id) : undefined;
@@ -3516,7 +3523,6 @@ export class Nucleo {
     delete resto.vhostDesactivado;
     resto.reglasExtra = previo?.reglasExtra ?? '';
     if (previo?.vhostManual) resto.vhostManual = previo.vhostManual;
-    if (previo?.correo) resto.correo = previo.correo;
     // FastAPI/Node con el proceso del proxy sin puerto: se le asigna uno libre (no se rechaza).
     if (this.depsPasos) resto = await asignarPuertoProxy(this.depsPasos, resto, id);
     resto.recetaConfiada = renovarHuella

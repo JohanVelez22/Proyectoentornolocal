@@ -1462,7 +1462,30 @@ export function idProveedorSmtp(v: unknown): string {
   return v;
 }
 
-const CAMPOS_PROVEEDOR_SMTP = new Set(['id', 'nombre', 'host', 'puerto', 'seguridad', 'usuario']);
+const CAMPOS_PROVEEDOR_SMTP = new Set([
+  'id',
+  'nombre',
+  'host',
+  'puerto',
+  'seguridad',
+  'usuario',
+  'remitente',
+]);
+
+/**
+ * Clave de un proveedor SMTP: ASCII imprimible de 1 a 4096 caracteres; admite espacios internos
+ * (se quitan los de los extremos). Código propio; el error nunca la repite.
+ */
+export function claveSmtp(v: unknown): string {
+  const t = typeof v === 'string' ? v.trim() : '';
+  if (!/^[\x21-\x7e]([\x20-\x7e]{0,4094}[\x21-\x7e])?$/.test(t)) {
+    throw new ErrorWolf(
+      'correo.clave_mal_formada',
+      'La clave no tiene un formato válido: solo caracteres imprimibles, sin saltos de línea y de hasta 4096 caracteres.',
+    );
+  }
+  return t;
+}
 
 /**
  * Datos de un proveedor SMTP: solo los campos de la lista (nunca `redLocal`, que lo da la

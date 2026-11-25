@@ -110,14 +110,55 @@ async function borrarClave(p: ProveedorSmtpPublico): Promise<void> {
   await recargar();
 }
 
+/** Proveedores cuya prueba dijo que el servidor es de este equipo o de la red local. */
+const hostLocal = ref<Record<string, boolean>>({});
+
 async function probar(p: ProveedorSmtpPublico): Promise<void> {
   const para = (destinos.value[p.id] ?? '').trim();
   delete resultados.value[p.id];
-  const r = await ejecutar(`probar-${p.id}`, () => api().correo.probarEnvio(p.id, para));
+  hostLocal.value[p.id] = false;
+  const r = await ejecutar(`probar-${p.id}`, async () => {
+    try {
+      return await api().correo.probarEnvio(p.id, para);
+    } catch (e) {
+      // El nombre se resuelve a la red local: se ofrece confirmarlo en la misma tarjeta.
+      if ((e as { codigo?: unknown }).codigo !== 'correo.host_local') throw e;
+      hostLocal.value[p.id] = true;
+      return null;
+    }
+  });
   if (!r) return;
   resultados.value[p.id] = r.ok
     ? { ok: true, texto: t.tarjeta.enviado(para) }
     : { ok: false, texto: t.tarjeta.fallos[r.codigo] };
+}
+
+async function confirmarRedLocal(p: ProveedorSmtpPublico): Promise<void> {
+  if (
+    !(await confirmar(
+      t.dialogo.redLocalTitulo,
+      t.dialogo.redLocalTexto(p.host),
+      t.dialogo.redLocalConfirmar,
+    ))
+  ) {
+    return;
+  }
+  const datos = {
+    id: p.id,
+    nombre: p.nombre,
+    host: p.host,
+    puerto: p.puerto,
+    seguridad: p.seguridad,
+    usuario: p.usuario,
+    ...(p.remitente ? { remitente: p.remitente } : {}),
+  };
+  const lista = await ejecutar('red-local', () =>
+    api().correo.guardarProveedor(datos, { confirmarRedLocal: true }),
+  );
+  if (lista) {
+    proveedores.value = lista;
+    hostLocal.value[p.id] = false;
+  }
 }
 
 const estadoClave = (p: ProveedorSmtpPublico): string =>
@@ -208,6 +249,17 @@ const estadoClave = (p: ProveedorSmtpPublico): string =>
         <small class="tenue">{{
           p.clave.configurada ? t.tarjeta.probarAyuda : t.tarjeta.sinClaveParaProbar
         }}</small>
+        <div v-if="hostLocal[p.id]" class="resultado mal" role="alert">
+          {{ t.tarjeta.hostLocal }}
+          <NButton
+            size="tiny"
+            secondary
+            :loading="ocupado('red-local')"
+            @click="confirmarRedLocal(p)"
+          >
+            {{ t.tarjeta.confirmarRed }}
+          </NButton>
+        </div>
         <p
           v-if="resultados[p.id]"
           :class="['resultado', resultados[p.id]!.ok ? 'ok' : 'mal']"
