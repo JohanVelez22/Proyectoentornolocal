@@ -414,12 +414,12 @@ describe('probarEnvio: remitente, plazo y errores del servidor', () => {
 
   it('prueba las demás direcciones ya validadas si la primera no conecta', async () => {
     const s = await servidor({ starttls: { cert: certNombre.certPem, key: certNombre.keyPem } });
-    // Un puerto cerrado en ::1 no existe aquí: la primera dirección falla y la segunda sirve.
+    // Nada escucha en ::1: la primera dirección rechaza la conexión y la segunda sirve.
     const r = await probarEnvio(
       proveedor({ puerto: s.puerto, host: 'smtp.prueba.test' }),
       CENTINELA,
       'yo@ejemplo.com',
-      { ca: ca.certPem, plazoMs: 8000, resolver: async () => ['127.0.0.2', '127.0.0.1'] },
+      { ca: ca.certPem, plazoMs: 8000, resolver: async () => ['::1', '127.0.0.1'] },
     );
     expect(r.ok).toBe(true);
   });
