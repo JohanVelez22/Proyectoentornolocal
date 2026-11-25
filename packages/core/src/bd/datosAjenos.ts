@@ -304,10 +304,38 @@ export function validarSentenciaDatos(sentencia: string): void {
   if (!/^INSERT\s+(?:(?:LOW_PRIORITY|DELAYED|HIGH_PRIORITY|IGNORE)\s+)*INTO\s/i.test(s)) {
     throw rechazoDatos('solo se aceptan INSERT y SET', s);
   }
-  // Sin los literales ni los identificadores entre comillas: SLEEP(…) dentro de un texto es un dato.
+  // Sobre el código sin cadenas ni comentarios (enmascarados) ni identificadores entre comillas
+  // (en blanco): la cabecera es `INSERT … INTO tabla [(columnas)] VALUES` sin base delante y lo que
+  // sigue son solo valores literales (lo que emite mysqldump) o una lista blanca corta de funciones.
   sobreCodigoMysql(s, (codigo) => {
-    const limpio = codigo.replace(/`(?:[^`]|``)*`/g, ' ');
+    const limpio = codigo.replace(/`(?:[^`]|``)*`/g, '`x`');
     if (PELIGROSAS.test(limpio)) throw rechazoDatos('una función que ocupa el servidor', s);
+    const cab = new RegExp(
+      String.raw`^INSERT\s+(?:(?:LOW_PRIORITY|DELAYED|HIGH_PRIORITY|IGNORE)\s+)*INTO\s+(?:\x60x\x60|\w+)` +
+        String.raw`(\s*\((?:\s*(?:\x60x\x60|\w+)\s*,?)+\))?\s*VALUES?\b`,
+      'i',
+    ).exec(limpio);
+    if (!cab) throw rechazoDatos('la cabecera del INSERT no es la de mysqldump', s);
+    if (/^\s*\./.test(limpio.slice(cab.index + cab[0].length - 0)) || /^[^(]*\./.test(cab[0])) {
+      throw rechazoDatos('nombre con base delante', s);
+    }
+    let resto = limpio.slice(cab[0].length);
+    // `_binary 'x'`, `x'ab'`, `b'01'` y `0x…` (los valores de mysqldump), los números, NULL y las
+    // funciones de la lista blanca; los textos ya están enmascarados.
+    const mascara = String.raw`\d+`;
+    const token = new RegExp(
+      String.raw`^(?:\s+|[(),]|NULL\b|TRUE\b|FALSE\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|0x[0-9a-fA-F]+\b|` +
+        String.raw`_(?:binary|utf8mb4|utf8mb3|utf8|latin1)\b|[xXbB](?=${mascara})|${mascara}|` +
+        String.raw`(?:ST_GEOMFROMTEXT|UNHEX|FROM_BASE64)(?=\s*\())`,
+      'i',
+    );
+    while (resto.length > 0) {
+      const m = token.exec(resto);
+      if (!m || m[0].length === 0) {
+        throw rechazoDatos('un valor que no es un literal', s);
+      }
+      resto = resto.slice(m[0].length);
+    }
     return codigo;
   });
 }

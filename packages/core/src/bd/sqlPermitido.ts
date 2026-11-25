@@ -89,6 +89,24 @@ export function sobreCodigoMysql(texto: string, fn: (codigo: string) => string):
   const n = texto.length;
   while (i < n) {
     const c = texto[i]!;
+    if (c === '`') {
+      // Un identificador entre comillas se deja como está sin leer lo de adentro: una comilla o un
+      // `--` dentro de `a'` no abre una cadena ni un comentario.
+      let j = i + 1;
+      while (j < n) {
+        if (texto[j] === '`') {
+          if (texto[j + 1] === '`') {
+            j += 2;
+            continue;
+          }
+          break;
+        }
+        j++;
+      }
+      salida += texto.slice(i, Math.min(j + 1, n));
+      i = j + 1;
+      continue;
+    }
     if (c === "'" || c === '"') {
       let j = i + 1;
       while (j < n) {
@@ -413,24 +431,33 @@ function reescribirCabecera(
     sinCalificar(c, m[0].length, cruda);
     let resto = c.slice(c.search(/FUNCTION|PROCEDURE/i));
     if (importada) {
-      // Sin los identificadores entre comillas (un alias `SQL SECURITY INVOKER` no cuenta).
-      const limpio = resto.replace(/`(?:[^`]|``)*`/g, (x) => ' '.repeat(x.length));
-      const seg = /SQL\s+SECURITY\s+(DEFINER|INVOKER)/i.exec(limpio);
-      if (seg) {
-        resto =
-          resto.slice(0, seg.index) +
-          'SQL SECURITY INVOKER' +
-          resto.slice(seg.index + seg[0].length);
-      } else {
-        const h = new RegExp(
-          String.raw`^(?:FUNCTION|PROCEDURE)${SP}(?:IF${SP}NOT${SP}EXISTS${SP})?${NOMBRE_OBJ}${SPO}` +
-            String.raw`\((?:[^()]|\([^()]*\))*\)` +
-            String.raw`(?:${SP}RETURNS${SP}[A-Za-z]+(?:${SPO}\(${SPO}\d+(?:${SPO},${SPO}\d+)?${SPO}\))?(?:${SP}UNSIGNED)?)?`,
-          'i',
-        ).exec(resto);
-        if (!h) throw erroneo(cruda, 'no se pudo dejar con SQL SECURITY INVOKER');
-        resto = `${h[0]} SQL SECURITY INVOKER${resto.slice(h[0].length)}`;
-      }
+      // SQL SECURITY solo cuenta entre los `)` de los parámetros (y el RETURNS) y el cuerpo: las
+      // características de la rutina. Lo que haya en el cuerpo no se toca ni se tiene en cuenta.
+      const h = new RegExp(
+        String.raw`^(?:FUNCTION|PROCEDURE)${SP}(?:IF${SP}NOT${SP}EXISTS${SP})?${NOMBRE_OBJ}${SPO}` +
+          String.raw`\((?:[^()]|\([^()]*\))*\)` +
+          String.raw`(?:${SP}RETURNS${SP}[A-Za-z]+(?:${SPO}\(${SPO}\d+(?:${SPO},${SPO}\d+)?${SPO}\))?` +
+          String.raw`(?:${SP}UNSIGNED)?(?:${SP}(?:CHARSET|CHARACTER${SP}SET)${SP}\w+)?(?:${SP}COLLATE${SP}\w+)?)?`,
+        'i',
+      ).exec(resto);
+      if (!h) throw erroneo(cruda, 'no se pudo dejar con SQL SECURITY INVOKER');
+      const cola = resto.slice(h[0].length);
+      const caracteristicas = new RegExp(
+        String.raw`^(?:${SP}(?:LANGUAGE${SP}SQL|NOT${SP}DETERMINISTIC|DETERMINISTIC|CONTAINS${SP}SQL|NO${SP}SQL|` +
+          String.raw`READS${SP}SQL${SP}DATA|MODIFIES${SP}SQL${SP}DATA|SQL${SP}SECURITY${SP}(?:DEFINER|INVOKER)|COMMENT${SP}${MASCARA}))*`,
+        'i',
+      ).exec(cola)![0];
+      const seg = new RegExp(String.raw`SQL${SP}SECURITY${SP}(?:DEFINER|INVOKER)`, 'i').exec(
+        caracteristicas,
+      );
+      resto =
+        seg === null
+          ? `${h[0]} SQL SECURITY INVOKER${cola}`
+          : h[0] +
+            caracteristicas.slice(0, seg.index) +
+            'SQL SECURITY INVOKER' +
+            caracteristicas.slice(seg.index + seg[0].length) +
+            cola.slice(caracteristicas.length);
     }
     return `CREATE ${def}${resto}`;
   });
