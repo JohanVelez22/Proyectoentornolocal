@@ -5,7 +5,8 @@ import { DOMINIO_VALIDO } from '../hosts/bloque';
 import { enmascararSecretos } from '../patronesSecretos';
 import { validarPhpIni } from '../php/poolSitio';
 import { validarXdebug } from '../php/xdebug';
-import { sinSecretosPlantilla } from '../proyectos/plantillas';
+import { llevaSecreto, sinSecretosPlantilla } from '../proyectos/plantillas';
+import { enmascararComando, enmascararNginx } from './secretos';
 import {
   claveInstanciaValida,
   ConfigSchema,
@@ -224,6 +225,12 @@ export function sitioParaPerfil(s: Sitio): Sitio {
   if (s.tunel?.proveedor === 'cloudflare-nombre') delete copia.tunel;
   copia.confiado = false;
   copia.recetaConfiada = null;
+  // Lo que no tiene forma de secreto pero lo es: el valor de directivas con nombre de secreto y
+  // el argumento que sigue a `--token`, `--password`… Una nota con algo así no viaja.
+  copia.reglasExtra = enmascararNginx(s.reglasExtra);
+  if (typeof s.vhostManual === 'string') copia.vhostManual = enmascararNginx(s.vhostManual);
+  copia.procesos = s.procesos.map((p) => ({ ...p, comando: enmascararComando(p.comando) }));
+  copia.nota = llevaSecreto(s.nota) || enmascararSecretos(s.nota) !== s.nota ? '' : s.nota;
   // Los campos que el filtro pudo quitar por nombre (nunca debería) vuelven a su forma básica.
   copia.id = s.id;
   copia.carpeta = s.carpeta;
@@ -318,7 +325,19 @@ export function sitioImportado(bruto: unknown): SitioImportado {
 export function configParaPerfil(c: Config): Record<string, unknown> {
   const { sitios, ...resto } = c;
   void sitios;
-  return sinSecretosPlantilla(resto) as Record<string, unknown>;
+  const salida = sinSecretosPlantilla(resto) as Config;
+  // El usuario de un proveedor SMTP no viaja (salvo el fijo de un proveedor conocido, que no dice
+  // nada): sin él, el otro equipo no importa ese proveedor y lo lista en la vista previa.
+  salida.correo = {
+    ...salida.correo,
+    proveedores: c.correo.proveedores.map((p) => {
+      const { usuario, redLocal, ...resto2 } = p;
+      void redLocal;
+      const fijo = PRESETS_SMTP.find((x) => x.host === p.host)?.usuarioFijo;
+      return (fijo && fijo === usuario ? { ...resto2, usuario } : resto2) as typeof p;
+    }),
+  };
+  return salida as unknown as Record<string, unknown>;
 }
 
 /** Puerto global aceptable desde un perfil: el canónico o uno sin privilegios (≥ 1024). */
@@ -356,6 +375,17 @@ export function fusionarConfig(
   }
   const quitados: string[] = [];
   const c = configImportada(bruta);
+  // Proveedores SMTP que el esquema descartó (p. ej. sin usuario, que no viaja).
+  const correoBruto = (bruta as { correo?: { proveedores?: unknown } }).correo?.proveedores;
+  if (Array.isArray(correoBruto)) {
+    const validos = new Set(c.correo.proveedores.map((p) => p.id));
+    for (const x of correoBruto) {
+      const id = (x as { id?: unknown } | null)?.id;
+      if (typeof id === 'string' && /^[a-z0-9][a-z0-9-]{0,39}$/.test(id) && !validos.has(id)) {
+        quitados.push(`smtp:${id}`);
+      }
+    }
+  }
   const defecto = ConfigSchema.parse({});
   const puertos: [string, () => number, (v: number) => void, number | null][] = [
     ['nginx', () => c.servicios.nginx.puerto, (v) => (c.servicios.nginx.puerto = v), 80],

@@ -26,6 +26,8 @@ import {
   sitioImportado,
 } from '../src/perfiles/manifiesto';
 import { reasignarRutas } from '../src/perfiles/reasignar';
+import { enmascararComando, enmascararNginx } from '../src/perfiles/secretos';
+import { enmascararSecretos } from '../src/patronesSecretos';
 import type { DepsPerfiles, OpcionesImportarPerfil } from '../src/perfiles/tipos';
 import { Rutas, validarCarpetaDatos } from '../src/rutas';
 import { ConfigSchema, SitioSchema, type Config, type Sitio } from '../src/tipos';
@@ -286,6 +288,26 @@ async function prepararOrigen(): Promise<void> {
     });
   const cfg: Config = ConfigSchema.parse({
     mcp: { activo: true, puerto: 7790 },
+    correo: {
+      proveedores: [
+        {
+          id: 'gmail',
+          nombre: 'Gmail',
+          host: 'smtp.gmail.com',
+          puerto: 465,
+          seguridad: 'tls',
+          usuario: `${CENTINELA}@gmail.com`,
+        },
+        {
+          id: 'resend',
+          nombre: 'Resend',
+          host: 'smtp.resend.com',
+          puerto: 465,
+          seguridad: 'tls',
+          usuario: 'resend',
+        },
+      ],
+    },
     ftp: { redLocal: true },
     sitios: [
       sitio({
@@ -295,13 +317,31 @@ async function prepararOrigen(): Promise<void> {
         https: true,
         confiado: true,
         recetaConfiada: 'a'.repeat(64),
-        reglasExtra: `location /x { return 200 "password=${CENTINELA}"; }`,
+        // Secretos sin forma reconocible: el valor de directivas con nombre de secreto.
+        reglasExtra: [
+          `location /x { return 200 "password=${CENTINELA}"; }`,
+          `fastcgi_param DB_PASSWORD ${CENTINELA}-1;`,
+          `proxy_set_header X-Api-Key "${CENTINELA}-2";`,
+          `proxy_set_header Authorization ${CENTINELA}-3;`,
+          `set $stripe_secret ${CENTINELA}-4;`,
+          `env MAIL_PASSWORD=${CENTINELA}-5;`,
+          'fastcgi_param APP_ENV local;',
+        ].join(String.fromCharCode(10)),
         phpIni: { memory_limit: '512M', 'mysqli.default_pw': CENTINELA },
         procesos: [
           {
             id: 'cola',
             nombre: 'Cola',
-            comando: ['php', 'artisan', 'queue:work', `--password=${CENTINELA}`],
+            comando: [
+              'php',
+              'artisan',
+              'queue:work',
+              `--password=${CENTINELA}`,
+              '--token',
+              `${CENTINELA}-6`,
+              `--api-key=${CENTINELA}-7`,
+              '-p3000',
+            ],
             cwd: 'raiz',
             autoIniciar: true,
             reiniciar: false,
@@ -310,7 +350,7 @@ async function prepararOrigen(): Promise<void> {
           },
         ],
         git: { remoto: `https://usuario:${CENTINELA}@github.com/x/tienda.git`, rama: 'main' },
-        nota: `API_TOKEN=${CENTINELA}`,
+        nota: `password: ${CENTINELA}-8`,
         lan: { activo: true, puerto: 8443, https: true },
         tunel: { proveedor: 'cloudflare-nombre', nombre: 'tienda', dominio: 'tienda.ejemplo.com' },
         ftp: { activo: true, usuario: 'tienda', soloLectura: false },
@@ -500,6 +540,32 @@ describe('exportarPerfil: nunca lleva secretos ni estado de este equipo', () => 
     expect(tienda.confiado).toBe(false);
     expect(tienda.recetaConfiada).toBeNull();
     expect(tienda.phpIni).toEqual({ memory_limit: '512M' });
+    // Lo que no es secreto sigue igual (un puerto pegado, una variable cualquiera).
+    expect(tienda.procesos[0].comando).toEqual([
+      'php',
+      'artisan',
+      'queue:work',
+      '--password=***',
+      '--token',
+      '***',
+      '--api-key=***',
+      '-p3000',
+    ]);
+    expect(tienda.reglasExtra).toContain('fastcgi_param APP_ENV local;');
+    expect(tienda.reglasExtra).toContain('fastcgi_param DB_PASSWORD "***";');
+    expect(tienda.nota).toBe('');
+    // El usuario SMTP no viaja (salvo el fijo de un proveedor conocido).
+    expect(m.config.correo.proveedores).toEqual([
+      { id: 'gmail', nombre: 'Gmail', host: 'smtp.gmail.com', puerto: 465, seguridad: 'tls' },
+      {
+        id: 'resend',
+        nombre: 'Resend',
+        host: 'smtp.resend.com',
+        puerto: 465,
+        seguridad: 'tls',
+        usuario: 'resend',
+      },
+    ]);
     expect(m.config.sitios).toBeUndefined();
     expect(m.config.apiKey).toBeUndefined();
     expect(m.instancias).toEqual([{ id: 'mysql@8.4', version: '8.4.3', puerto: 3306 }]);
@@ -1663,5 +1729,29 @@ describe('configuración importada: fusión real con la del equipo', () => {
     });
     expect(c.servicios.nginx.puerto).toBe(80);
     expect(c.servicios.php.trabajadores).toBe(2);
+  });
+});
+
+describe('secretos sin forma reconocible', () => {
+  it('el proveedor SMTP sin usuario no se importa y la vista previa lo dice', async () => {
+    const archivo = await exportar();
+    const d = deps(destino);
+    const vista = await new Perfiles(d).vistaPrevia(archivo);
+    expect(vista.configQuitada).toContain('smtp:gmail');
+    await importar(archivo, d);
+    expect((await d.leerConfig()).correo.proveedores.map((p) => p.id)).toEqual(['resend']);
+  });
+
+  it('un puerto pegado (-p3000) no se enmascara; la clave pegada de mysql sí', () => {
+    expect(enmascararSecretos('vite -p3000 --host')).toBe('vite -p3000 --host');
+    expect(enmascararSecretos('mysql -uroot -pclave tienda')).toBe('mysql -uroot -p*** tienda');
+    expect(enmascararComando(['mysql', '-pclave', '-p8080'])).toEqual(['mysql', '-p***', '-p8080']);
+  });
+
+  it('enmascararNginx deja lo que no es secreto', () => {
+    const t = ['add_header X-Frame-Options DENY;', 'set $raiz /var/www;'].join(
+      String.fromCharCode(10),
+    );
+    expect(enmascararNginx(t)).toBe(t);
   });
 });

@@ -9,7 +9,8 @@ export const PATRONES_SECRETOS: readonly (readonly [RegExp, string])[] = [
   // password=…, PASSWORD=…, DB_PASSWORD=…, --password=…
   [/(password\s*=\s*)("[^"]*"|'[^']*'|\S+)/gi, '$1***'],
   // Clave pegada de mysql: -pclave
-  [/(^|\s)-p(?=\S)\S+/g, '$1-p***'],
+  // (un puerto pegado, `-p3000`, no: es el de vite, next o php -S)
+  [/(^|\s)-p(?!\d{1,5}(?:\s|$))(?=\S)\S+/g, '$1-p***'],
   // Tokens de GitHub
   [/\bgithub_pat_[A-Za-z0-9_]+/g, 'github_pat_***'],
   [/\b(gh[pousr])_[A-Za-z0-9]+/g, '$1_***'],
