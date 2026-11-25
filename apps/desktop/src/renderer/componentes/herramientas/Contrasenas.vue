@@ -270,6 +270,7 @@ const opcionesBase = computed(() =>
               </ul>
             </div>
             <p v-if="resultado.truncado" class="aviso">{{ t.auditar.truncado }}</p>
+            <p v-if="resultado.rlsActiva" class="aviso">{{ t.auditar.rlsActiva }}</p>
 
             <table v-if="debiles.length" class="tabla">
               <thead>

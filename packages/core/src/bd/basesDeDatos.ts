@@ -454,7 +454,9 @@ export class BasesDeDatos {
     if (modo === 'escritura') {
       // Nada de recortes ni conversiones silenciosas: si el hash no cabe, falla.
       await c
-        .consultar("SET SESSION sql_mode = CONCAT_WS(',', @@SESSION.sql_mode, 'STRICT_ALL_TABLES')")
+        .consultar(
+          "SET SESSION sql_mode = CONCAT_WS(',', NULLIF(@@SESSION.sql_mode, ''), 'STRICT_ALL_TABLES')",
+        )
         .catch(async (e) => {
           await c.cerrar();
           await temporal.retirar().catch(() => undefined);

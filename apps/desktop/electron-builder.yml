@@ -5,6 +5,10 @@ directories:
   buildResources: resources
 files:
   - out/**
+# El hilo de trabajo de la auditoría de contraseñas carga bcryptjs por su ruta absoluta desde un
+# `Worker` con `eval`: fuera del .asar para que la ruta sea la de un archivo real.
+asarUnpack:
+  - node_modules/bcryptjs/**
 # El proceso principal va empaquetado por electron-vite y no usa módulos nativos. Sin esto,
 # electron-builder intenta compilar dtrace-provider (opcional de bunyan, vía ftp-srv) y exige
 # Visual Studio en el equipo que arma el instalador.

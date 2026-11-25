@@ -2809,6 +2809,8 @@ export const en: Textos = {
           ldap: 'LDAP format ({SHA}…)',
           otro: 'unknown format',
         },
+        rlsActiva:
+          'The table has row-level security (RLS): the audit sees only the rows the policy allows the limited role, so some accounts may be missing.',
         falsoPositivo:
           'A value of 32 or 40 hexadecimal characters is taken for md5 or sha1, but it could be something else (a token, for example). If the column does not store passwords, the result is meaningless.',
       },
@@ -2843,6 +2845,8 @@ export const en: Textos = {
             'This database belongs to a site marked as having real customer data: resetting a password changes a real account.',
           casilla: 'I understand this is real data and I want to reset this password',
         },
+        rlsActiva:
+          'The table has row-level security (RLS): if the policy hides this account from the limited role, it cannot be reset.',
         copiaSinRestringir:
           'That copy could not be restricted to this computer’s user: check the folder permissions.',
       },

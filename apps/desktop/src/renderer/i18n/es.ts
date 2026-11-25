@@ -2831,6 +2831,8 @@ export const es = {
           ldap: 'formato LDAP ({SHA}…)',
           otro: 'formato desconocido',
         },
+        rlsActiva:
+          'La tabla tiene seguridad por filas (RLS): la auditoría ve solo las filas que la política permite al rol limitado, así que puede faltar alguna cuenta.',
         falsoPositivo:
           'Un valor de 32 o 40 caracteres hexadecimales se toma por md5 o sha1, pero podría ser otra cosa (un token, por ejemplo). Si la columna no guarda contraseñas, el resultado no sirve.',
       },
@@ -2865,6 +2867,8 @@ export const es = {
             'Esta base es de un sitio marcado con datos reales de clientes: restablecer una contraseña cambia una cuenta de verdad.',
           casilla: 'Entiendo que son datos reales y quiero restablecer esta contraseña',
         },
+        rlsActiva:
+          'La tabla tiene seguridad por filas (RLS): si la política oculta esta cuenta al rol limitado, no se podrá restablecer.',
         copiaSinRestringir:
           'No se pudo limitar esa copia al usuario de este equipo: revise los permisos de la carpeta.',
       },

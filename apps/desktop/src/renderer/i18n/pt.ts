@@ -2840,6 +2840,8 @@ export const pt: Textos = {
           ldap: 'formato LDAP ({SHA}…)',
           otro: 'formato desconhecido',
         },
+        rlsActiva:
+          'A tabela tem segurança por linhas (RLS): a auditoria vê apenas as linhas que a política permite ao papel limitado, por isso pode faltar alguma conta.',
         falsoPositivo:
           'Um valor de 32 ou 40 caracteres hexadecimais é tomado por md5 ou sha1, mas pode ser outra coisa (um token, por exemplo). Se a coluna não guarda senhas, o resultado não serve.',
       },
@@ -2874,6 +2876,8 @@ export const pt: Textos = {
             'Esta base é de um site marcado com dados reais de clientes: redefinir uma senha altera uma conta de verdade.',
           casilla: 'Entendo que são dados reais e quero redefinir esta senha',
         },
+        rlsActiva:
+          'A tabela tem segurança por linhas (RLS): se a política ocultar esta conta ao papel limitado, não poderá ser redefinida.',
         copiaSinRestringir:
           'Não foi possível limitar essa cópia ao usuário deste computador: verifique as permissões da pasta.',
       },

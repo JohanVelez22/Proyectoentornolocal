@@ -144,6 +144,8 @@ async function restablecer(): Promise<void> {
         <span class="nota">{{ t.formatoActual(previa.formato) }}</span>
       </div>
 
+      <p v-if="previa.rlsActiva" class="aviso">{{ t.rlsActiva }}</p>
+
       <template v-if="esLegado">
         <p class="aviso">{{ t.avisoLegado }}</p>
         <NCheckbox v-model:checked="aBcrypt">{{ t.aBcrypt }}</NCheckbox>

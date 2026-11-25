@@ -85,6 +85,8 @@ export interface TablaResuelta {
   largoHash: number | null;
   /** Columnas de la clave primaria (vacío si no hay). */
   pk: string[];
+  /** PostgreSQL: la tabla tiene seguridad por filas (RLS) activa: el rol limitado puede ver menos filas. */
+  rls: boolean;
 }
 
 export interface FilaUsuario {
@@ -191,9 +193,23 @@ export class TablasSql {
       ch: citado(hash.c),
       largoHash: hash.l !== null && hash.l !== undefined && Number.isFinite(largo) ? largo : null,
       pk,
+      rls: await this.seguridadPorFilas(esquema, real),
     };
     await this.q.limitar?.({ esquema, tabla: real, columnaHash: hash.c });
     return r;
+  }
+
+  /** ¿La tabla tiene RLS activa? Solo existe en PostgreSQL. */
+  private async seguridadPorFilas(esquema: string, tabla: string): Promise<boolean> {
+    if (!this.pg) return false;
+    const filas = await this.q.consultar(
+      `SELECT c.relrowsecurity AS rls FROM pg_catalog.pg_class c ` +
+        `JOIN pg_catalog.pg_namespace n ON ${this.igual('n.oid', 'c.relnamespace')} ` +
+        `WHERE ${this.igual('n.nspname', this.marca(1, true))} AND ` +
+        `${this.igual('c.relname', this.marca(2, true))}`,
+      [esquema, tabla],
+    );
+    return filas[0]?.['rls'] === true;
   }
 
   private async clavePrimaria(esquema: string, tabla: string): Promise<string[]> {

@@ -39,6 +39,8 @@ export interface VistaPreviaRestablecer {
   cambiaFormato: boolean;
   /** La base es de un sitio marcado con datos reales: restablecer pide una confirmación reforzada. */
   datosReales: boolean;
+  /** PostgreSQL: la tabla tiene RLS: si la política oculta la fila, no se podrá restablecer. */
+  rlsActiva: boolean;
 }
 
 export interface OpcionesRestablecerClave extends OpcionesRestablecer {
@@ -160,6 +162,7 @@ export async function vistaPreviaRestablecer(
       formatoNuevo: pasa ? 'bcrypt' : formato,
       cambiaFormato: pasa,
       datosReales,
+      rlsActiva: r.rls,
     };
   });
 }

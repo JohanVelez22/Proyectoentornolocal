@@ -44,6 +44,8 @@ export interface ResultadoAuditoria {
   noRevisables: number;
   /** Cuántas hay de cada tipo no revisable (`vacio`, `md5crypt`, `sha512crypt`, `otro`…). */
   tiposNoRevisables: { tipo: string; cantidad: number }[];
+  /** PostgreSQL: la tabla tiene seguridad por filas (RLS): puede que no se vean todas las cuentas. */
+  rlsActiva: boolean;
   /** Quedaron cuentas sin revisar: más de 10 000 filas o se agotó el tiempo. */
   truncado: boolean;
 }
@@ -64,7 +66,7 @@ export interface DepsAuditar {
   /** Pruebas: reloj, comparador, pool y topes propios. */
   ahora?: () => number;
   coincide?: (hash: string, claves: readonly string[]) => Promise<boolean>;
-  crearPool?: () => PoolBcrypt | null;
+  crearPool?: () => PoolBcrypt | null | Promise<PoolBcrypt | null>;
   plazoMs?: number;
   maxFilas?: number;
 }
@@ -158,7 +160,7 @@ export async function auditar(
       ((hash: string, claves: readonly string[]) =>
         coincideAlguna(hash, claves, { pool, corte: parar }));
     if (!d.coincide && trabajo.some((t) => t.formato === 'bcrypt')) {
-      pool = (d.crearPool ?? crearPool)();
+      pool = await (d.crearPool ?? crearPool)();
     }
     // Una prueba de bcrypt puede durar más que lo que queda de plazo: el temporizador real corta.
     temporizador = setTimeout(() => {
@@ -229,6 +231,7 @@ export async function auditar(
       debiles,
       noRevisables,
       tiposNoRevisables: [...tipos].map(([tipo, cantidad]) => ({ tipo, cantidad })),
+      rlsActiva: r.rls,
       truncado,
     };
   } finally {

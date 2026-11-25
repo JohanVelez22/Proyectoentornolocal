@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuditoriaClaves } from '../src/bd/auditoriaClaves';
 import { auditar, type DepsAuditar } from '../src/bd/auditoriaClaves/auditar';
 import { CONTRASENAS_COMUNES } from '../src/bd/auditoriaClaves/comunes';
-import { baseDeDatosReales } from '../src/bd/auditoriaClaves/datosReales';
+import { baseDeDatosReales, baseDeSitio } from '../src/bd/auditoriaClaves/datosReales';
 import {
   barajar,
   coincide,
@@ -227,7 +227,7 @@ describe('barajar (I2) y la lista de contraseñas comunes', () => {
 
 describe('poolBcrypt (hilos de trabajo)', () => {
   it('compara fuera del hilo principal y solo devuelve sí o no', async () => {
-    const pool = crearPool(2);
+    const pool = await crearPool(2);
     expect(pool).not.toBeNull();
     try {
       const h = await bc('letmein');
@@ -243,7 +243,7 @@ describe('poolBcrypt (hilos de trabajo)', () => {
   });
 
   it('cerrar rechaza lo pendiente y lo nuevo', async () => {
-    const pool = crearPool(1)!;
+    const pool = (await crearPool(1))!;
     const h = await bc('x', 10);
     const pendiente = codigo(pool.comparar(h, CONTRASENAS_COMUNES));
     await pool.cerrar();
@@ -252,7 +252,7 @@ describe('poolBcrypt (hilos de trabajo)', () => {
   });
 
   it('coincideAlguna usa el pool para bcrypt', async () => {
-    const pool = crearPool(1)!;
+    const pool = (await crearPool(1))!;
     try {
       const h = await bc('letmein');
       expect(await coincideAlguna(h, ['a', 'letmein'], { pool })).toBe(true);
@@ -295,6 +295,8 @@ interface Falsa {
   bloqueo: number | null;
   /** El UPDATE no cambia nada (el servidor recortó o ignoró el valor). */
   ignoraUpdate: boolean;
+  /** La tabla tiene seguridad por filas activa (PostgreSQL). */
+  rls: boolean;
   /** Cambia el hash de la fila justo antes del bloqueo (otro proceso escribió). */
   cambiaAntes: (() => void) | null;
 }
@@ -307,6 +309,7 @@ function baseFalsa(motor: ConsultaSql['motor'], tablas: Record<string, TablaFals
     cerrada: false,
     bloqueo: null,
     ignoraUpdate: false,
+    rls: false,
     cambiaAntes: null,
   };
   const citado = (s: string): string => s.replace(/[`"]/g, '');
@@ -314,6 +317,7 @@ function baseFalsa(motor: ConsultaSql['motor'], tablas: Record<string, TablaFals
     motor,
     async consultar(sql, params = []) {
       f.sql.push({ sql, params });
+      if (sql.includes('pg_catalog.pg_class')) return [{ rls: f.rls }];
       if (sql.includes('information_schema.schemata')) {
         return params[0] === 'public' || params[0] === 'ventas' ? [{ s: params[0] }] : [];
       }
@@ -480,6 +484,7 @@ describe('auditar', () => {
       'debiles',
       'noRevisables',
       'revisadas',
+      'rlsActiva',
       'tiposNoRevisables',
       'truncado',
     ]);
@@ -1206,6 +1211,216 @@ describe('BasesDeDatos.abrirConsulta', () => {
     });
     expect(await codigo(bd.abrirConsulta('mongodb', 'tienda', 'lectura', 1000))).toBe(
       'auditoria.motor_no_soportado',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Revisión final de D20
+// ---------------------------------------------------------------------------------------------
+
+describe('datos reales: de más, nunca de menos (A)', () => {
+  const sitios = [{ carpeta: '', datosReales: true }];
+
+  it('un sitio con datos reales que no da su base cuenta como datos reales', async () => {
+    const d = { sitios: async () => sitios, baseDe: async () => null };
+    expect(await baseDeDatosReales(d, 'mysql', 'cualquiera')).toBe(true);
+    // Sin sitios con datos reales no se pide nada.
+    expect(
+      await baseDeDatosReales(
+        { sitios: async () => [{ carpeta: 'x', datosReales: false }], baseDe: async () => null },
+        'mysql',
+        'otra',
+      ),
+    ).toBe(false);
+  });
+
+  it('baseDeSitio: .env inexistente, ilegible o sin usuario → null (y por tanto true)', async () => {
+    const raiz = await carpetaTemporal('pel-sitio-');
+    const sin = path.join(raiz, 'sin-env');
+    mkdirSync(sin);
+    expect(await baseDeSitio(sin)).toBeNull();
+
+    const ilegible = path.join(raiz, 'ilegible');
+    mkdirSync(path.join(ilegible, '.env'), { recursive: true }); // una carpeta: no se puede leer
+    expect(await baseDeSitio(ilegible)).toBeNull();
+
+    const sinUsuario = path.join(raiz, 'sin-usuario');
+    mkdirSync(sinUsuario);
+    writeFileSync(path.join(sinUsuario, '.env'), 'DB_CONNECTION=mysql\nDB_DATABASE=diamantes\n');
+    expect(await baseDeSitio(sinUsuario)).toBeNull();
+
+    for (const carpeta of [sin, ilegible, sinUsuario]) {
+      const d = { sitios: async () => [{ carpeta, datosReales: true }], baseDe: baseDeSitio };
+      expect(await baseDeDatosReales(d, 'mysql', 'diamantes')).toBe(true);
+      expect(await baseDeDatosReales(d, 'mysql', 'otra')).toBe(true);
+    }
+  });
+
+  it('baseDeSitio lee el .env y, en WordPress, DB_NAME de wp-config.php', async () => {
+    const raiz = await carpetaTemporal('pel-sitio-');
+    const laravel = path.join(raiz, 'laravel');
+    mkdirSync(laravel);
+    writeFileSync(
+      path.join(laravel, '.env'),
+      'DB_CONNECTION=mysql\nDB_DATABASE=diamantes\nDB_USERNAME=wolf_u_diamantes\n',
+    );
+    expect(await baseDeSitio(laravel)).toEqual({ base: 'diamantes', motor: 'mysql' });
+
+    const wp = path.join(raiz, 'wp');
+    mkdirSync(wp);
+    writeFileSync(
+      path.join(wp, 'wp-config.php'),
+      "<?php\ndefine( 'DB_NAME', 'dollar_wp' );\ndefine('DB_USER', 'u');\n",
+    );
+    expect(await baseDeSitio(wp)).toEqual({ base: 'dollar_wp', motor: 'mysql' });
+
+    const d = { sitios: async () => [{ carpeta: wp, datosReales: true }], baseDe: baseDeSitio };
+    expect(await baseDeDatosReales(d, 'mariadb', 'DOLLAR_WP')).toBe(true);
+    expect(await baseDeDatosReales(d, 'postgresql', 'dollar_wp')).toBe(false);
+  });
+});
+
+describe('poolBcrypt: arranque comprobado y respaldo (B)', () => {
+  /** Módulo bcrypt falso que se escribe en una carpeta temporal. */
+  async function modulo(cuerpo: string): Promise<string> {
+    const d = await carpetaTemporal('pel-modbc-');
+    const ruta = path.join(d, 'bcrypt-falso.cjs');
+    writeFileSync(ruta, cuerpo);
+    return ruta;
+  }
+  const MORTAL =
+    "exports.hashSync = () => 'h'; exports.compareSync = (c, h) => { if (c === 'x' && h === 'h') return true; process.exit(1); };";
+
+  it('un módulo que falla al cargar en el hilo da null', async () => {
+    const malo = await modulo("throw new Error('no carga');");
+    expect(await crearPool(2, { modulo: malo, esperaMs: 3000 })).toBeNull();
+    expect(await crearPool(1, { modulo: '/no/existe/bcrypt.cjs', esperaMs: 3000 })).toBeNull();
+  });
+
+  it('un hilo que carga pero falla la comparación de prueba no cuenta', async () => {
+    const roto = await modulo('exports.hashSync = () => "h"; exports.compareSync = () => false;');
+    expect(await crearPool(1, { modulo: roto, esperaMs: 3000 })).toBeNull();
+  });
+
+  it('si muere el último hilo, la tarea en curso y la cola se rechazan', async () => {
+    const pool = (await crearPool(1, { modulo: await modulo(MORTAL), esperaMs: 3000 }))!;
+    expect(pool).not.toBeNull();
+    const resultados = await Promise.allSettled([
+      pool.comparar('hash', ['a']),
+      pool.comparar('hash', ['b']),
+      pool.comparar('hash', ['c']),
+    ]);
+    expect(resultados.every((r) => r.status === 'rejected')).toBe(true);
+    // Sin hilos vivos, lo nuevo se rechaza al instante.
+    await expect(pool.comparar('hash', ['d'])).rejects.toThrow();
+    await pool.cerrar();
+  });
+
+  it('coincideAlguna cae al hilo principal cuando el pool falla', async () => {
+    const pool = (await crearPool(1, { modulo: await modulo(MORTAL), esperaMs: 3000 }))!;
+    const h = await bc('letmein');
+    expect(await coincideAlguna(h, ['uno', 'letmein'], { pool })).toBe(true);
+    expect(await coincideAlguna(h, ['uno', 'dos'], { pool })).toBe(false);
+    await pool.cerrar();
+  });
+
+  it('auditar termina con resultados aunque el pool no arranque o muera', async () => {
+    const malo = await modulo("throw new Error('no carga');");
+    const mortal = await modulo(MORTAL);
+    for (const m of [malo, mortal]) {
+      const f = baseFalsa('mysql', await tablaUsuarios());
+      const { deps } = montar(f);
+      const svc = new AuditoriaClaves({
+        ...deps,
+        crearPool: () => crearPool(1, { modulo: m, esperaMs: 3000 }),
+      });
+      const r = await svc.auditar(OPC);
+      expect(r.revisadas).toBe(5);
+      expect(r.truncado).toBe(false);
+      expect(r.debiles.map((d) => d.usuario)).toEqual([
+        'ana@x.test',
+        'luis@x.test',
+        'pepe@x.test',
+        'dani@x.test',
+      ]);
+    }
+  });
+});
+
+describe('seguridad por filas (RLS) en PostgreSQL', () => {
+  const PG = { ...OPC, instancia: 'postgresql' as never };
+
+  it('avisa cuando la tabla tiene RLS activa', async () => {
+    const f = baseFalsa('postgresql', await tablaUsuarios());
+    f.rls = true;
+    const { svc } = montar(f);
+    expect((await svc.auditar(PG)).rlsActiva).toBe(true);
+    expect((await svc.vistaPreviaRestablecer({ ...PG, usuario: 'ana@x.test' })).rlsActiva).toBe(
+      true,
+    );
+    const q = f.sql.find((x) => x.sql.includes('pg_catalog.pg_class'))!;
+    expect(q.sql).toContain('relrowsecurity');
+    expect(q.sql).toContain('OPERATOR(pg_catalog.=)');
+  });
+
+  it('sin RLS, o en MySQL, no avisa', async () => {
+    const f = baseFalsa('postgresql', await tablaUsuarios());
+    const { svc } = montar(f);
+    expect((await svc.auditar(PG)).rlsActiva).toBe(false);
+    const g = baseFalsa('mysql', await tablaUsuarios());
+    const { svc: s2 } = montar(g);
+    expect((await s2.auditar(OPC)).rlsActiva).toBe(false);
+    expect(g.sql.some((x) => x.sql.includes('pg_class'))).toBe(false);
+  });
+});
+
+describe('MySQL: sql_mode de la sesión de escritura', () => {
+  /** Servidor falso que evalúa el SET SESSION sql_mode con un modo inicial dado. */
+  async function modoFinal(inicial: string): Promise<string> {
+    let modo = inicial;
+    const bd = new BasesDeDatos({
+      servicios: {
+        estados: async () =>
+          [{ id: 'mysql', estado: 'encendido', puertos: [3306] }] as unknown as never,
+      },
+      credenciales: { leer: async () => ({ usuario: 'root', clave: 'k' }) } as never,
+      rutas,
+      exec: async () => ({ codigo: 0, stdout: '', stderr: '' }),
+      fabricas: {
+        mysql: async () => ({
+          async query(s: string) {
+            const m = /^SET SESSION sql_mode = CONCAT_WS\(',', (.+), 'STRICT_ALL_TABLES'\)$/.exec(
+              s,
+            );
+            if (m) {
+              // CONCAT_WS salta los NULL, pero no las cadenas vacías.
+              const previo =
+                m[1] === '@@SESSION.sql_mode'
+                  ? modo
+                  : m[1] === "NULLIF(@@SESSION.sql_mode, '')"
+                    ? modo || null
+                    : 'desconocido';
+              modo = [previo, 'STRICT_ALL_TABLES'].filter((p) => p !== null).join(',');
+            }
+            return [[]];
+          },
+          async end() {},
+        }),
+      },
+    });
+    const q = await bd.abrirConsulta('mysql', 'tienda', 'escritura', 5000);
+    await q.cerrar();
+    return modo;
+  }
+
+  it('con sql_mode vacío no deja una coma inicial', async () => {
+    expect(await modoFinal('')).toBe('STRICT_ALL_TABLES');
+  });
+
+  it('con otros modos los conserva y añade el estricto', async () => {
+    expect(await modoFinal('NO_ZERO_DATE,ONLY_FULL_GROUP_BY')).toBe(
+      'NO_ZERO_DATE,ONLY_FULL_GROUP_BY,STRICT_ALL_TABLES',
     );
   });
 });

@@ -2902,6 +2902,8 @@ export const fr: Textos = {
           ldap: 'format LDAP ({SHA}…)',
           otro: 'format inconnu',
         },
+        rlsActiva:
+          "La table a la sécurité au niveau des lignes (RLS) : l'audit ne voit que les lignes que la politique autorise au rôle limité, il peut donc manquer des comptes.",
         falsoPositivo:
           "Une valeur de 32 ou 40 caractères hexadécimaux est prise pour du md5 ou du sha1, mais ce peut être autre chose (un jeton, par exemple). Si la colonne ne stocke pas de mots de passe, le résultat n'a aucune valeur.",
       },
@@ -2938,6 +2940,8 @@ export const fr: Textos = {
           casilla:
             'Je comprends que ce sont des données réelles et je veux réinitialiser ce mot de passe',
         },
+        rlsActiva:
+          'La table a la sécurité au niveau des lignes (RLS) : si la politique masque ce compte au rôle limité, il ne pourra pas être réinitialisé.',
         copiaSinRestringir:
           "Impossible de limiter cette copie à l'utilisateur de cet ordinateur : vérifiez les droits du dossier.",
       },
