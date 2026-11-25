@@ -57,13 +57,24 @@ export class Rutas {
    * fuera de data/<servicio>/ (ninguna operación borra los datos de los servicios).
    */
   instantaneas(instancia: string, base: string): string {
-    if (!/^[a-z][a-z0-9-]{0,39}(@[A-Za-z0-9._-]{1,40})?$/.test(instancia)) {
-      throw new Error(`Instancia no válida: ${instancia}`);
-    }
     if (!/^[A-Za-z0-9_$.-]{1,64}$/.test(base) || /^\.+$/.test(base)) {
       throw new Error(`Base no válida: ${base}`);
     }
-    return path.join(this.base, 'instantaneas', instancia, base);
+    // Windows no admite como nombre de carpeta CON, NUL, COM1… ni nombres que acaben en punto:
+    // se les antepone "%", que un nombre de base no puede llevar (no hay dos bases en una carpeta).
+    const reservado = /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i.test(base) || base.endsWith('.');
+    return path.join(this.instantaneasDeInstancia(instancia), reservado ? `%${base}` : base);
+  }
+  /** instantaneas/<instancia>/ (todas las bases de esa instancia, existan o no). */
+  instantaneasDeInstancia(instancia: string): string {
+    if (!/^[a-z][a-z0-9-]{0,39}(@[A-Za-z0-9._-]{1,40})?$/.test(instancia)) {
+      throw new Error(`Instancia no válida: ${instancia}`);
+    }
+    return path.join(this.base, 'instantaneas', instancia);
+  }
+  /** Huellas SHA-256 de las instantáneas, fuera de su carpeta: etc/instantaneas-huellas.json. */
+  huellasInstantaneas(): string {
+    return path.join(this.base, 'etc', 'instantaneas-huellas.json');
   }
   /** Lo que el usuario borró desde WolfCore Dev y aún se puede recuperar (7 días). */
   papelera(): string {

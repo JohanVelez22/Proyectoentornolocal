@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ArrowUndo, Camera, TrashOutline } from '@vicons/ionicons5';
-import { NButton, NIcon, NInput, NModal, NSkeleton, NTag, NTooltip } from 'naive-ui';
+import { NButton, NIcon, NInput, NModal, NPopconfirm, NSkeleton, NTag, NTooltip } from 'naive-ui';
 import { ref, watch } from 'vue';
-import type { Instantanea } from '@pel/core';
+import type { Instantanea, InstantaneaBorrada } from '@pel/core';
 import type { ObjetivoSqlIpc } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
@@ -10,7 +10,10 @@ import { formatearFecha, textos } from '../i18n';
 import { formatearTamano } from '../utilidades/bd';
 import DialogoVolverInstantanea from './DialogoVolverInstantanea.vue';
 
-/** Instantáneas de una base: tomar una con nota, volver a una (con vista previa) o borrarla. */
+/**
+ * Instantáneas de una base: tomar una con nota, volver a una (con vista previa), borrarla a la
+ * papelera y recuperarla desde ella. Sirve también para una base que ya no existe.
+ */
 const props = defineProps<{ objetivo: ObjetivoSqlIpc; base: string }>();
 const mostrar = defineModel<boolean>('show', { required: true });
 const emit = defineEmits<{ cambio: [] }>();
@@ -19,6 +22,7 @@ const t = textos.instantaneas;
 const { ejecutar, ocupado } = useAccion();
 
 const lista = ref<Instantanea[] | null>(null);
+const papelera = ref<InstantaneaBorrada[]>([]);
 const nota = ref('');
 const dlgVolver = ref(false);
 const idVolver = ref('');
@@ -26,14 +30,26 @@ const idVolver = ref('');
 const fecha = (iso: string): string =>
   formatearFecha(iso, { dateStyle: 'medium', timeStyle: 'short' });
 
+/** La nota de una automática se arma aquí, en el idioma y la hora de este equipo. */
+function textoNota(i: Instantanea): string {
+  if (!i.automatica) return i.nota || t.sinNota;
+  const origen = i.origen ? lista.value?.find((x) => x.id === i.origen) : undefined;
+  return origen ? t.notaAutomatica(fecha(origen.fecha)) : t.notaAutomaticaSinOrigen;
+}
+
 async function cargar(): Promise<void> {
   const l = await ejecutar('lista', () => api().instantaneas.lista(props.objetivo, props.base));
   lista.value = l ?? [];
+  const p = await ejecutar('papelera', () =>
+    api().instantaneas.papelera(props.objetivo, props.base),
+  );
+  papelera.value = p ?? [];
 }
 
 watch(mostrar, (v) => {
   if (!v) return;
   lista.value = null;
+  papelera.value = [];
   nota.value = '';
   void cargar();
 });
@@ -67,8 +83,20 @@ async function borrar(id: string): Promise<void> {
   if (ok) await cargar();
 }
 
-const ocupadaAlgo = (): boolean =>
-  ocupado('tomar') || (lista.value?.some((i) => ocupado(`borrar:${i.id}`)) ?? false);
+async function recuperar(id: string): Promise<void> {
+  const ok = await ejecutar(
+    `recuperar:${id}`,
+    async () => {
+      await api().instantaneas.recuperar(props.objetivo, props.base, id);
+      return true;
+    },
+    { exito: t.recuperada },
+  );
+  if (ok) {
+    await cargar();
+    emit('cambio');
+  }
+}
 </script>
 
 <template>
@@ -107,15 +135,18 @@ const ocupadaAlgo = (): boolean =>
       <NSkeleton text :repeat="3" />
     </div>
     <p v-else-if="!lista.length" class="vacio">{{ t.vacio }}</p>
-    <ul v-else class="lista" :aria-busy="ocupadaAlgo()">
+    <ul v-else class="lista">
       <li v-for="i in lista" :key="i.id" class="fila">
         <div class="datos">
           <div class="linea">
             <strong>{{ fecha(i.fecha) }}</strong>
             <NTag v-if="i.automatica" size="small" :bordered="false">{{ t.automatica }}</NTag>
           </div>
-          <span class="nota">{{ i.nota || t.sinNota }}</span>
+          <span class="nota">{{ textoNota(i) }}</span>
           <span class="detalle">{{ t.detalle(i.tablas, formatearTamano(i.bytes)) }}</span>
+          <span v-if="i.extensionesNoPermitidas.length" class="detalle aviso">
+            {{ t.extensionesAviso(i.extensionesNoPermitidas.join(', ')) }}
+          </span>
         </div>
         <div class="acciones">
           <NTooltip>
@@ -134,7 +165,11 @@ const ocupadaAlgo = (): boolean =>
             </template>
             {{ t.volver }}
           </NTooltip>
-          <NTooltip>
+          <NPopconfirm
+            :positive-text="t.borrarSi"
+            :negative-text="textos.acciones.cancelar"
+            @positive-click="borrar(i.id)"
+          >
             <template #trigger>
               <NButton
                 size="small"
@@ -142,20 +177,41 @@ const ocupadaAlgo = (): boolean =>
                 circle
                 :aria-label="`${t.borrar}: ${fecha(i.fecha)}`"
                 :loading="ocupado(`borrar:${i.id}`)"
-                @click="borrar(i.id)"
               >
                 <template #icon
                   ><NIcon><TrashOutline /></NIcon
                 ></template>
               </NButton>
             </template>
-            {{ t.borrar }}
-          </NTooltip>
+            {{ t.borrarPregunta }}
+          </NPopconfirm>
         </div>
       </li>
     </ul>
 
+    <section v-if="papelera.length" class="papelera" :aria-label="t.papeleraTitulo">
+      <h3>{{ t.papeleraTitulo }}</h3>
+      <ul class="lista">
+        <li v-for="i in papelera" :key="i.id" class="fila">
+          <div class="datos">
+            <strong>{{ fecha(i.fecha) }}</strong>
+            <span class="nota">{{ textoNota(i) }}</span>
+            <span class="detalle">{{ t.borradaEl(fecha(i.borrada)) }}</span>
+          </div>
+          <NButton
+            size="small"
+            secondary
+            :loading="ocupado(`recuperar:${i.id}`)"
+            @click="recuperar(i.id)"
+          >
+            {{ t.recuperar }}
+          </NButton>
+        </li>
+      </ul>
+    </section>
+
     <p class="pie">{{ t.ubicacion }} {{ t.papelera }}</p>
+    <p class="pie">{{ t.limites }}</p>
 
     <DialogoVolverInstantanea
       :id="idVolver"
@@ -195,7 +251,7 @@ const ocupadaAlgo = (): boolean =>
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 320px;
+  max-height: 280px;
   overflow: auto;
 }
 .fila {
@@ -225,10 +281,20 @@ const ocupadaAlgo = (): boolean =>
   font-size: 12px;
   opacity: 0.65;
 }
+.detalle.aviso {
+  opacity: 0.9;
+}
 .acciones {
   display: flex;
   flex: none;
   gap: 2px;
+}
+.papelera {
+  margin-top: 14px;
+}
+.papelera h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
 }
 .pie {
   margin: 12px 0 0;

@@ -594,7 +594,9 @@ export const fr: Textos = {
       'instantaneas.respaldo_previo_fallo':
         'Impossible d’enregistrer l’état actuel de la base : rien n’a été restauré.',
       'instantaneas.restauracion_fallo':
-        'Impossible de restaurer l’instantané. La base est revenue à son état d’avant.',
+        'Impossible de restaurer l’instantané. La base est revenue à son état d’avant. Motif : {detalle}',
+      'instantaneas.restauracion_sin_copia':
+        'Impossible de restaurer l’instantané et l’état précédent n’avait pas été enregistré : la base peut être vide ou à moitié restaurée. Motif : {detalle}',
       'instantaneas.restauracion_sin_revertir':
         'Impossible de restaurer l’instantané ni de revenir à l’état précédent. Cet état est enregistré dans l’instantané automatique {respaldo} : revenez-y depuis Instantanés.',
     },
@@ -622,6 +624,22 @@ export const fr: Textos = {
     papelera:
       'Les instantanés supprimés peuvent être récupérés pendant 7 jours dans la corbeille de WolfCore Dev.',
     cerrar: 'Fermer',
+    papeleraTitulo: 'Corbeille',
+    papeleraVacia: 'Il n’y a aucun instantané dans la corbeille.',
+    recuperar: 'Récupérer',
+    recuperada: 'Instantané récupéré',
+    borradaEl: (fecha: string) => `Supprimé le ${fecha}`,
+    borrarPregunta: 'Déplacer cet instantané dans la corbeille ?',
+    borrarSi: 'Déplacer dans la corbeille',
+    notaAutomatica: (fecha: string) =>
+      `État précédent, enregistré avant de revenir à l’instantané du ${fecha}`,
+    notaAutomaticaSinOrigen: 'État précédent, enregistré avant de revenir à un autre instantané',
+    extensionesAviso: (lista: string) =>
+      `Il contient des extensions PostgreSQL (${lista}) qui ne sont restaurées qu’avec le registre d’empreintes de cet ordinateur.`,
+    limites:
+      'Les instantanés MySQL et MariaDB conservent aussi les routines, les déclencheurs et les événements. Sous PostgreSQL, c’est une sauvegarde compressée d’une seule base : elle n’inclut pas les rôles ni les utilisateurs du serveur. Un instantané dont on ne peut pas vérifier qu’il vient de cet ordinateur est restauré avec un utilisateur limité à la base, qui n’admet pas de vues, de routines ni de déclencheurs d’autres utilisateurs.',
+    basesBorradas: 'Instantanés de bases qui n’existent plus',
+    basesBorradasAyuda: 'Choisissez une base pour la recréer à partir de son instantané.',
     dialogoVolver: {
       titulo: (base: string) => `Revenir à un instantané de ${base}`,
       cargando: 'Préparation de l’aperçu…',
@@ -640,6 +658,14 @@ export const fr: Textos = {
       hecho: (base: string) => `La base ${base} est revenue à l’instantané`,
       respaldoPrevio: 'L’état précédent a été enregistré dans l’instantané automatique du',
       advertencias: 'La restauration s’est terminée avec des avertissements :',
+      hechoConAvisos: (base: string) =>
+        `La base ${base} est revenue à l’instantané, avec des avertissements`,
+      baseVacia: 'La base n’existe pas ou est vide : il n’y a rien à enregistrer avant de revenir.',
+      sinGuardarTitulo: 'Impossible d’enregistrer l’état actuel',
+      sinGuardarTexto:
+        'WolfCore Dev n’a pas pu enregistrer l’état actuel de la base avant de revenir. Si vous continuez SANS l’enregistrer et que la restauration échoue, les données actuelles de la base sont perdues.',
+      sinGuardarConfirmar: 'Je comprends que les données actuelles de la base seront perdues',
+      sinGuardarBoton: 'Revenir sans enregistrer l’état actuel',
     },
   },
   avisoInicio: {

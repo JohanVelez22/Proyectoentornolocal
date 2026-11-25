@@ -1,8 +1,8 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Respaldos, type DepsRespaldos } from '../src/bd/respaldos';
+import { ErrorBaseTocada, Respaldos, type DepsRespaldos } from '../src/bd/respaldos';
 import { ErrorWolf } from '../src/errores';
 import { nombreEjecutable } from '../src/plataforma/sistema';
 import type { Ejecutor, Lanzador } from '../src/plataforma/tipos';
@@ -30,6 +30,9 @@ let tablas: boolean;
 let listaPg: string;
 let codigoSalida: number;
 let lineasError: string[];
+let intercalacion: string | null;
+let localePg: { e: string; c: string; t: string } | null;
+let parametros: unknown[][];
 
 const estado = (id: string, version: string): EstadoServicio =>
   ({ id, nombre: id, version, estado: 'encendido', puertos: [1], pid: 1 }) as EstadoServicio;
@@ -100,13 +103,18 @@ function armar(): Respaldos {
       mysql: (async () => ({
         query: async (sql: string) => {
           eventos.push(`sql:${sql}`);
+          if (sql.includes('DEFAULT_COLLATION_NAME')) {
+            return [intercalacion ? [{ c: intercalacion }] : []];
+          }
           return [[{ version: '8.4.3' }]];
         },
         end: async () => undefined,
       })) as never,
       postgres: (async () => ({
-        query: async (sql: string) => {
+        query: async (sql: string, params?: unknown[]) => {
           eventos.push(`sql:${sql}`);
+          if (params) parametros.push(params);
+          if (sql.includes('pg_encoding_to_char')) return { rows: localePg ? [localePg] : [] };
           return { rows: sql.includes('pg_get_userbyid') ? [{ dueno: 'wolf_u_tienda' }] : [] };
         },
         end: async () => undefined,
@@ -129,6 +137,9 @@ beforeEach(async () => {
   crearArchivo(`bin/postgresql/17.2/pgsql/bin/${nombreEjecutable('pg_restore')}`);
   crearArchivo(`bin/postgresql/17.2/pgsql/bin/${nombreEjecutable('psql')}`);
   eventos = [];
+  intercalacion = null;
+  localePg = null;
+  parametros = [];
   ejecutados = [];
   lanzados = [];
   tablas = true;
@@ -255,6 +266,75 @@ describe('Respaldos.restaurarAcotada: PostgreSQL', () => {
       armar().restaurarAcotada('postgresql', archivo('t.dump', PGDMP), 'tienda'),
     ).rejects.toThrow(/No se pudo restaurar la base tienda/);
     expect(eventos).toContain('retirar-usuario');
+  });
+});
+
+describe('Respaldos.restaurarEstricta (volcado propio con huella verificada)', () => {
+  it('MySQL: restaura como administrador, estricto, y recrea la base con su intercalación', async () => {
+    intercalacion = 'utf8mb4_unicode_ci';
+    await armar().restaurarEstricta(
+      'mysql',
+      archivo('t.sql', 'CREATE TABLE t (id int);\n'),
+      'tienda',
+    );
+    const l = lanzados[0]!;
+    expect(l.args).toContain('--user=root');
+    expect(l.env.MYSQL_PWD).toBe(CLAVE_ADMIN);
+    expect(l.args).not.toContain('--force');
+    // Sin usuario temporal; la intercalación se lee antes del DROP y se pone tras crear.
+    expect(eventos.some((e) => e.startsWith('crear-usuario'))).toBe(false);
+    const orden = eventos.filter((e) => /DEFAULT_COLLATION|DROP DATABASE|crear:|COLLATE/.test(e));
+    expect(orden).toEqual([
+      expect.stringContaining('DEFAULT_COLLATION_NAME'),
+      'sql:DROP DATABASE `tienda`',
+      'crear:tienda',
+      'sql:ALTER DATABASE `tienda` COLLATE utf8mb4_unicode_ci',
+    ]);
+  });
+
+  it('PostgreSQL: conserva dueños y privilegios y las extensiones (sin -L ni --no-owner)', async () => {
+    localePg = { e: 'UTF8', c: 'es_AR.UTF-8', t: 'es_AR.UTF-8' };
+    await armar().restaurarEstricta('postgresql', archivo('t.dump', PGDMP), 'tienda');
+    const l = lanzados[0]!;
+    expect(l.args).toEqual(expect.arrayContaining(['--exit-on-error', '--single-transaction']));
+    expect(l.args).not.toContain('--no-owner');
+    expect(l.args).not.toContain('--no-privileges');
+    expect(l.args).not.toContain('-L');
+    expect(l.args[l.args.indexOf('-U') + 1]).toBe('postgres');
+    // Las extensiones las crea el propio volcado, con su esquema: el administrador no las pre-crea.
+    expect(eventos.some((e) => e.startsWith('extension:'))).toBe(false);
+    // La base se recrea con la configuración regional que tenía.
+    expect(parametros.some((p) => p.includes('es_AR.UTF-8') && p.includes('UTF8'))).toBe(true);
+    expect(
+      eventos.some((e) => e.startsWith('sql:SELECT format(') && e.includes('TEMPLATE template0')),
+    ).toBe(true);
+    expect(eventos.some((e) => e.includes('ALTER DATABASE'))).toBe(true);
+  });
+
+  it('falla sin tocar la base (extensión no permitida en el camino acotado) con el error original', async () => {
+    listaPg += '\n3080; 3080 16500 EXTENSION - file_fdw';
+    await expect(
+      armar().restaurarAcotada('postgresql', archivo('t.dump', PGDMP), 'tienda'),
+    ).rejects.toMatchObject({ codigo: 'bd.extension_no_permitida' });
+  });
+
+  it('un error después de tocar la base es ErrorBaseTocada con la causa; no hace respaldo previo ni escribe en Documentos', async () => {
+    codigoSalida = 1;
+    let error: unknown;
+    try {
+      await armar().restaurarEstricta(
+        'mysql',
+        archivo('t.sql', 'CREATE TABLE t (id int);\n'),
+        'tienda',
+      );
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(ErrorBaseTocada);
+    expect((error as ErrorBaseTocada).message).toMatch(/No se pudo restaurar la base tienda/);
+    // Ningún mysqldump (respaldo previo) y nada en Documentos.
+    expect(lanzados.every((x) => !x.cmd.includes('dump'))).toBe(true);
+    expect(existsSync(path.join(dir, 'WolfCore Dev'))).toBe(false);
   });
 });
 

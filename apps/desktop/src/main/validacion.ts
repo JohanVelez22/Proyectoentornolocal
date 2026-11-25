@@ -73,10 +73,27 @@ export function idInstantanea(v: unknown): string {
   return v;
 }
 
-/** Volver a una instantánea solo con la confirmación explícita (`true`). */
-export function confirmadoVolver(v: unknown): true {
-  if (v !== true) throw new Error('Argumento no válido: confirmación');
+/**
+ * Volver a una instantánea solo si quien llama escribió el nombre exacto de la base: la
+ * confirmación se comprueba aquí, en el proceso principal, no en la interfaz.
+ */
+export function confirmadoVolver(escrito: unknown, base: string): true {
+  if (typeof escrito !== 'string' || escrito !== base) {
+    throw new Error('Argumento no válido: confirmación');
+  }
   return true;
+}
+
+/** Opciones de volver: solo `sinGuardarEstado` (booleano); cualquier otra clave se rechaza. */
+export function opcionesVolver(v: unknown): { sinGuardarEstado?: boolean } {
+  if (v === undefined || v === null) return {};
+  const o = objetoPlano<Record<string, unknown>>(v, 'opciones');
+  for (const k of Object.keys(o)) {
+    if (k !== 'sinGuardarEstado') throw new Error('Argumento no válido: opciones');
+  }
+  return o.sinGuardarEstado === undefined
+    ? {}
+    : { sinGuardarEstado: booleano(o.sinGuardarEstado, 'sinGuardarEstado') };
 }
 
 /** Editor elegido: un id conocido; `undefined` o null = el predeterminado. */

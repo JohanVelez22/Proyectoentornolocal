@@ -613,6 +613,30 @@ export class ClienteMysql {
     return Number.isFinite(n) ? n : 0;
   }
 
+  /** Intercalación por omisión de la base (p. ej. `utf8mb4_0900_ai_ci`), o null si no se sabe. */
+  async intercalacionBase(nombre: string): Promise<string | null> {
+    validarNombreBd(nombre);
+    const f = await this.filas(
+      'SELECT DEFAULT_COLLATION_NAME AS c FROM information_schema.schemata WHERE schema_name = ?',
+      [nombre],
+    );
+    const c = f[0]?.c;
+    return typeof c === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(c) ? c : null;
+  }
+
+  /** Pone la intercalación por omisión de la base (solo nombres de intercalación válidos). */
+  async fijarIntercalacion(nombre: string, intercalacion: string): Promise<void> {
+    const bd = id(nombre);
+    if (!/^[A-Za-z0-9_]{1,64}$/.test(intercalacion)) {
+      throw new Error('Intercalación no válida.');
+    }
+    try {
+      await this.filas(`ALTER DATABASE ${bd} COLLATE ${intercalacion}`);
+    } catch (e) {
+      throw traducir(e, `poner la intercalación de la base ${nombre}`);
+    }
+  }
+
   /** Tablas de la base (no cuenta vistas). */
   async contarTablas(nombre: string): Promise<number> {
     validarNombreBd(nombre);

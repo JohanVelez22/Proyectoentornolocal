@@ -572,7 +572,9 @@ export const pt: Textos = {
       'instantaneas.respaldo_previo_fallo':
         'Não foi possível guardar o estado atual da base: nada foi restaurado.',
       'instantaneas.restauracion_fallo':
-        'Não foi possível restaurar o instantâneo. A base voltou a como estava antes.',
+        'Não foi possível restaurar o instantâneo. A base voltou a como estava antes. Motivo: {detalle}',
+      'instantaneas.restauracion_sin_copia':
+        'Não foi possível restaurar o instantâneo e o estado anterior não tinha sido guardado: a base pode ter ficado vazia ou pela metade. Motivo: {detalle}',
       'instantaneas.restauracion_sin_revertir':
         'Não foi possível restaurar o instantâneo nem voltar ao estado anterior. Esse estado está guardado no instantâneo automático {respaldo}: volte a ele em Instantâneos.',
     },
@@ -600,6 +602,22 @@ export const pt: Textos = {
     papelera:
       'Os instantâneos apagados podem ser recuperados por 7 dias na lixeira do WolfCore Dev.',
     cerrar: 'Fechar',
+    papeleraTitulo: 'Lixeira',
+    papeleraVacia: 'Não há instantâneos na lixeira.',
+    recuperar: 'Recuperar',
+    recuperada: 'Instantâneo recuperado',
+    borradaEl: (fecha: string) => `Apagado em ${fecha}`,
+    borrarPregunta: 'Mover este instantâneo para a lixeira?',
+    borrarSi: 'Mover para a lixeira',
+    notaAutomatica: (fecha: string) =>
+      `Estado anterior, guardado antes de voltar ao instantâneo de ${fecha}`,
+    notaAutomaticaSinOrigen: 'Estado anterior, guardado antes de voltar a outro instantâneo',
+    extensionesAviso: (lista: string) =>
+      `Traz extensões do PostgreSQL (${lista}) que só são restauradas com o registro de impressões deste computador.`,
+    limites:
+      'Nos instantâneos de MySQL e MariaDB também ficam as rotinas, os gatilhos e os eventos. No PostgreSQL é um despejo comprimido de uma única base: não inclui os papéis nem os usuários do servidor. Um instantâneo que não possa ser verificado como feito neste computador é restaurado com um usuário limitado à base, que não admite visões, rotinas nem gatilhos de outros usuários.',
+    basesBorradas: 'Instantâneos de bases que já não existem',
+    basesBorradasAyuda: 'Escolha uma base para criá-la de novo a partir do seu instantâneo.',
     dialogoVolver: {
       titulo: (base: string) => `Voltar a um instantâneo de ${base}`,
       cargando: 'Preparando a pré-visualização…',
@@ -617,6 +635,13 @@ export const pt: Textos = {
       hecho: (base: string) => `A base ${base} voltou ao instantâneo`,
       respaldoPrevio: 'O estado anterior ficou guardado no instantâneo automático de',
       advertencias: 'A restauração terminou com avisos:',
+      hechoConAvisos: (base: string) => `A base ${base} voltou ao instantâneo, com avisos`,
+      baseVacia: 'A base não existe ou está vazia: não há nada para guardar antes de voltar.',
+      sinGuardarTitulo: 'Não foi possível guardar o estado atual',
+      sinGuardarTexto:
+        'O WolfCore Dev não conseguiu guardar o estado atual da base antes de voltar. Se continuar SEM guardá-lo e a restauração falhar, os dados atuais da base se perdem.',
+      sinGuardarConfirmar: 'Entendo que os dados atuais da base serão perdidos',
+      sinGuardarBoton: 'Voltar sem guardar o estado atual',
     },
   },
   avisoInicio: {

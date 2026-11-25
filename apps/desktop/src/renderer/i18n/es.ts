@@ -568,7 +568,9 @@ export const es = {
       'instantaneas.respaldo_previo_fallo':
         'No se pudo guardar el estado actual de la base: no se restauró nada.',
       'instantaneas.restauracion_fallo':
-        'No se pudo restaurar la instantánea. La base volvió a como estaba antes.',
+        'No se pudo restaurar la instantánea. La base volvió a como estaba antes. Motivo: {detalle}',
+      'instantaneas.restauracion_sin_copia':
+        'No se pudo restaurar la instantánea y no se había guardado el estado anterior: la base puede haber quedado vacía o a medias. Motivo: {detalle}',
       'instantaneas.restauracion_sin_revertir':
         'No se pudo restaurar la instantánea ni volver al estado anterior. Ese estado está guardado en la instantánea automática {respaldo}: vuelva a ella desde Instantáneas.',
     },
@@ -596,6 +598,22 @@ export const es = {
     papelera:
       'Las instantáneas borradas se pueden recuperar durante 7 días desde la papelera de WolfCore Dev.',
     cerrar: 'Cerrar',
+    papeleraTitulo: 'Papelera',
+    papeleraVacia: 'No hay instantáneas en la papelera.',
+    recuperar: 'Recuperar',
+    recuperada: 'Instantánea recuperada',
+    borradaEl: (fecha: string) => `Borrada el ${fecha}`,
+    borrarPregunta: '¿Mover esta instantánea a la papelera?',
+    borrarSi: 'Mover a la papelera',
+    notaAutomatica: (fecha: string) =>
+      `Estado anterior, guardado antes de volver a la instantánea del ${fecha}`,
+    notaAutomaticaSinOrigen: 'Estado anterior, guardado antes de volver a otra instantánea',
+    extensionesAviso: (lista: string) =>
+      `Trae extensiones de PostgreSQL (${lista}) que solo se restauran con el registro de huellas de este equipo.`,
+    limites:
+      'En MySQL y MariaDB se guardan también las rutinas, los disparadores y los eventos. En PostgreSQL es un volcado comprimido de una sola base: no incluye los roles ni los usuarios del servidor. Una instantánea que no se pueda comprobar como propia de este equipo se restaura con un usuario limitado a la base, que no admite vistas, rutinas ni disparadores de otros usuarios.',
+    basesBorradas: 'Instantáneas de bases que ya no existen',
+    basesBorradasAyuda: 'Elija una base para volver a crearla desde su instantánea.',
     dialogoVolver: {
       titulo: (base: string) => `Volver a una instantánea de ${base}`,
       cargando: 'Preparando la vista previa…',
@@ -613,6 +631,13 @@ export const es = {
       hecho: (base: string) => `La base ${base} volvió a la instantánea`,
       respaldoPrevio: 'El estado anterior quedó guardado en la instantánea automática del',
       advertencias: 'La restauración terminó con avisos:',
+      hechoConAvisos: (base: string) => `La base ${base} volvió a la instantánea, con avisos`,
+      baseVacia: 'La base no existe o está vacía: no hay nada que guardar antes de volver.',
+      sinGuardarTitulo: 'No se pudo guardar el estado actual',
+      sinGuardarTexto:
+        'WolfCore Dev no pudo guardar el estado actual de la base antes de volver. Si continúa SIN guardarlo y la restauración falla, los datos actuales de la base se pierden.',
+      sinGuardarConfirmar: 'Entiendo que se perderán los datos actuales de la base',
+      sinGuardarBoton: 'Volver sin guardar el estado actual',
     },
   },
   avisoInicio: {

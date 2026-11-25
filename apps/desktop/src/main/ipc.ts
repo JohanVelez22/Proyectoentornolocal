@@ -126,6 +126,7 @@ import {
   refRespaldoDatos,
   confirmadoBorrar,
   confirmadoVolver,
+  opcionesVolver,
   idInstantanea,
 } from './validacion';
 
@@ -830,14 +831,26 @@ const TABLA: Record<RutaIpc, Manejador> = {
     const { objetivo, motor: m } = objetivoSql(motor);
     return n.instantaneas.vistaPrevia(objetivo, nombreBase(m, base), idInstantanea(id));
   },
-  'instantaneas.volver': (n, _s, motor, base, id, confirmado) => {
+  'instantaneas.volver': (n, _s, motor, base, id, escrito, opciones) => {
     const { objetivo, motor: m } = objetivoSql(motor);
+    const b = nombreBase(m, base);
     return n.instantaneas.volver(
       objetivo,
-      nombreBase(m, base),
+      b,
       idInstantanea(id),
-      confirmadoVolver(confirmado),
+      confirmadoVolver(escrito, b),
+      opcionesVolver(opciones),
     );
+  },
+  'instantaneas.listaInstancia': (n, _s, motor) =>
+    n.instantaneas.listaInstancia(objetivoSql(motor).objetivo),
+  'instantaneas.papelera': (n, _s, motor, base) => {
+    const { objetivo, motor: m } = objetivoSql(motor);
+    return n.instantaneas.papelera(objetivo, nombreBase(m, base));
+  },
+  'instantaneas.recuperar': (n, _s, motor, base, id) => {
+    const { objetivo, motor: m } = objetivoSql(motor);
+    return n.instantaneas.recuperar(objetivo, nombreBase(m, base), idInstantanea(id));
   },
   'instantaneas.borrar': (n, _s, motor, base, id) => {
     const { objetivo, motor: m } = objetivoSql(motor);

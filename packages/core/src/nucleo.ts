@@ -203,6 +203,7 @@ import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
 import { leerHuellaWordpress } from './proyectos/pasos/descargarPlantilla';
 import { generadorPorTipo, Plantillas } from './proyectos/plantillas';
 import { Instantaneas } from './bd/instantaneas';
+import { CerrojoBases } from './bd/cerrojoBases';
 import { asignarPuertoProxy, datosAlCrear } from './proyectos/pasos/sitio';
 import {
   EjecutorRecetas,
@@ -379,6 +380,8 @@ interface ModulosNucleo {
   plantillas: Plantillas;
   /** Instantáneas de base con un clic (D19). */
   instantaneas: Instantaneas;
+  /** Una operación a la vez por base: instantáneas, restaurar, importar y borrar. */
+  cerrojoBases: CerrojoBases;
 }
 
 /** Puerto HTTPS: el estándar 443 o uno de usuario (1024–65535). */
@@ -581,6 +584,7 @@ export class Nucleo {
   readonly plantillas: Plantillas;
   /** Instantáneas de base: tomar, volver con respaldo previo, borrar a la papelera (D19). */
   readonly instantaneas: Instantaneas;
+  private readonly cerrojoBases: CerrojoBases;
   /** Gestor de `.env` de los proyectos: secretos enmascarados, diff, copia y escritura atómica. */
   readonly env: GestorEnv;
   /**
@@ -667,6 +671,7 @@ export class Nucleo {
     this.depsPasos = m.depsPasos;
     this.plantillas = m.plantillas;
     this.instantaneas = m.instantaneas;
+    this.cerrojoBases = m.cerrojoBases;
     this.env = new GestorEnv({
       sitio: async (id) => (await this.sitios.listar()).find((x) => x.id === id),
       carpetaRespaldos: () => this.rutas.respaldosEnv(),
@@ -964,8 +969,10 @@ export class Nucleo {
       exec,
     });
     respaldosRef = new Respaldos({ bd, servicios: serviciosBd, rutas, exec, eventos, plataforma });
+    const cerrojoBases = new CerrojoBases();
     const instantaneas = new Instantaneas({
       rutas,
+      cerrojo: cerrojoBases,
       respaldos: respaldosRef,
       estadoBase: (objetivo, base) => bd.estadoBase(objetivo, base),
       restringir: (ruta) => plat.restringirAlUsuario(ruta),
@@ -1177,6 +1184,7 @@ export class Nucleo {
     const modulos: ModulosNucleo = {
       plantillas,
       instantaneas,
+      cerrojoBases,
       editorVhost,
       ...(o.lanzarEditor ? { lanzarEditor: o.lanzarEditor } : {}),
       iniPhp,
@@ -1423,6 +1431,7 @@ export class Nucleo {
       await supervisor.readoptar();
       void nucleo.limpiarUsuariosTemporales();
       void nucleo.instantaneas.purgarPapelera().catch(() => 0);
+      void nucleo.instantaneas.limpiarHuerfanos().catch(() => 0);
       await tuneles.restaurar();
       await estadoHostsSeguro(hosts, eventos, dominiosDe(await sitios.listar()));
     } catch (e) {
@@ -1651,7 +1660,7 @@ export class Nucleo {
 
   /** Borra una base; `confirmacion` debe ser su nombre exacto. */
   borrarBase(motor: ObjetivoBd, nombre: string, confirmacion: string): Promise<void> {
-    return this.bd.borrar(motor, nombre, confirmacion);
+    return this.cerrojoBases.con(motor, nombre, () => this.bd.borrar(motor, nombre, confirmacion));
   }
 
   /** Datos de conexión del motor, con su clave (solo para "Datos de conexión"). */
@@ -1709,7 +1718,9 @@ export class Nucleo {
     base: string,
     opts?: OpcionesRestaurar,
   ): Promise<ResultadoRestaurar> {
-    return this.respaldos.restaurar(motor, archivo, base, opts);
+    return this.cerrojoBases.con(motor, base, () =>
+      this.respaldos.restaurar(motor, archivo, base, opts),
+    );
   }
 
   respaldarBase(
@@ -1727,7 +1738,9 @@ export class Nucleo {
     destinoBase: string,
     opts?: OpcionesRestaurar,
   ): Promise<ResultadoRestaurar> {
-    return this.respaldos.importar(motor, origen, destinoBase, opts);
+    return this.cerrojoBases.con(motor, destinoBase, () =>
+      this.respaldos.importar(motor, origen, destinoBase, opts),
+    );
   }
 
   // ---- catálogo ----

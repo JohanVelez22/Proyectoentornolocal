@@ -65,6 +65,9 @@ function nucleoFalso() {
       vistaPrevia: vi.fn(async () => ({ instantanea: {}, estadoActual: { tablas: 0, bytes: 0 } })),
       volver: vi.fn(async () => ({ respaldoPrevio: {}, advertencias: [] })),
       borrar: vi.fn(async () => undefined),
+      listaInstancia: vi.fn(async () => []),
+      papelera: vi.fn(async () => []),
+      recuperar: vi.fn(async () => ({ id: '20261125-103000-abcdef' })),
     },
     env: {
       ver: vi.fn(async () => ({ existe: true, filas: [] })),
@@ -553,6 +556,9 @@ describe('registrarIpc', () => {
         'instantaneas.vistaPrevia',
         'instantaneas.volver',
         'instantaneas.borrar',
+        'instantaneas.listaInstancia',
+        'instantaneas.papelera',
+        'instantaneas.recuperar',
         'pgvector.estado',
         'pgvector.instalarBuildTools',
         'pgvector.compilarEInstalar',
@@ -1939,23 +1945,46 @@ describe('IPC de la Etapa B', () => {
     expect(inst['tomar']).toHaveBeenLastCalledWith('mysql', 'tienda', '');
     const rvp = await llamar('instantaneas.vistaPrevia', 'mysql', 'tienda', id);
     expect(rvp, JSON.stringify(rvp)).toMatchObject({ ok: true });
-    expect((await llamar('instantaneas.volver', 'mysql', 'tienda', id, true)).ok).toBe(true);
-    expect(inst['volver']).toHaveBeenCalledWith('mysql', 'tienda', id, true);
+    // El proceso principal comprueba el nombre escrito y pasa `true` al núcleo.
+    expect((await llamar('instantaneas.volver', 'mysql', 'tienda', id, 'tienda')).ok).toBe(true);
+    expect(inst['volver']).toHaveBeenCalledWith('mysql', 'tienda', id, true, {});
+    expect(
+      (
+        await llamar('instantaneas.volver', 'mysql', 'tienda', id, 'tienda', {
+          sinGuardarEstado: true,
+        })
+      ).ok,
+    ).toBe(true);
+    expect(inst['volver']).toHaveBeenLastCalledWith('mysql', 'tienda', id, true, {
+      sinGuardarEstado: true,
+    });
+    expect((await llamar('instantaneas.listaInstancia', 'mysql@8.4')).ok).toBe(true);
+    expect(inst['listaInstancia']).toHaveBeenCalledWith('mysql@8.4');
+    expect((await llamar('instantaneas.papelera', 'mysql', 'tienda')).ok).toBe(true);
+    expect((await llamar('instantaneas.recuperar', 'mysql', 'tienda', id)).ok).toBe(true);
+    expect(inst['recuperar']).toHaveBeenCalledWith('mysql', 'tienda', id);
     expect((await llamar('instantaneas.borrar', 'mysql', 'tienda', id)).ok).toBe(true);
     for (const f of Object.values(inst)) f.mockClear();
     for (const [ruta, args] of [
       ['instantaneas.lista', ['mongodb', 'tienda']],
       ['instantaneas.lista', ['mysql', '../tienda']],
       ['instantaneas.lista', ['mysql', 'a b']],
-      ['instantaneas.tomar', ['mysql', 'tienda', 'a b']],
+      ['instantaneas.tomar', ['mysql', 'tienda', 'a\u0000b']],
       ['instantaneas.tomar', ['mysql', 'tienda', 'x'.repeat(201)]],
       ['instantaneas.tomar', ['mysql', 'tienda', 7]],
       ['instantaneas.vistaPrevia', ['mysql', 'tienda', '../x']],
       ['instantaneas.volver', ['mysql', 'tienda', id]],
-      ['instantaneas.volver', ['mysql', 'tienda', id, false]],
-      ['instantaneas.volver', ['mysql', 'tienda', id, 'true']],
-      ['instantaneas.volver', ['mysql', 'tienda', 'C:\\x.sql', true]],
-      ['instantaneas.volver', ['mysql', 'tienda', '20261125-103000-abcdef/../../x', true]],
+      ['instantaneas.volver', ['mysql', 'tienda', id, true]],
+      ['instantaneas.volver', ['mysql', 'tienda', id, 'otra']],
+      ['instantaneas.volver', ['mysql', 'tienda', id, 'Tienda']],
+      ['instantaneas.volver', ['mysql', 'tienda', id, '']],
+      ['instantaneas.volver', ['mysql', 'tienda', id, 'tienda', { sinGuardarEstado: 'si' }]],
+      ['instantaneas.volver', ['mysql', 'tienda', id, 'tienda', { otra: true }]],
+      ['instantaneas.volver', ['mysql', 'tienda', 'C:\\x.sql', 'tienda']],
+      ['instantaneas.volver', ['mysql', 'tienda', '20261125-103000-abcdef/../../x', 'tienda']],
+      ['instantaneas.recuperar', ['mysql', 'tienda', '../x']],
+      ['instantaneas.papelera', ['mongodb', 'tienda']],
+      ['instantaneas.listaInstancia', ['mongodb']],
       ['instantaneas.borrar', ['mysql', 'tienda', '..']],
       ['instantaneas.borrar', ['mysql', 'tienda', '']],
     ] as [string, unknown[]][]) {

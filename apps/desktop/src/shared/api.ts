@@ -59,6 +59,7 @@ import type {
   FilaImportar,
   VistaPreviaImportar,
   Instantanea,
+  InstantaneaBorrada,
   OpcionesImportar,
   ResultadoImportar,
   ProblemaImportar,
@@ -539,14 +540,23 @@ export interface ApiEntorno {
       base: string,
       id: string,
     ): Promise<{ instantanea: Instantanea; estadoActual: { tablas: number; bytes: number } }>;
+    /**
+     * `nombreEscrito` debe ser el nombre exacto de la base (lo comprueba el proceso principal).
+     * `sinGuardarEstado` solo tras la segunda confirmación, cuando no se pudo guardar el estado actual.
+     */
     volver(
       motor: ObjetivoSqlIpc,
       base: string,
       id: string,
-      confirmado: true,
-    ): Promise<{ respaldoPrevio: Instantanea; advertencias: string[] }>;
+      nombreEscrito: string,
+      opciones?: { sinGuardarEstado?: boolean },
+    ): Promise<{ respaldoPrevio: Instantanea | null; advertencias: string[] }>;
     /** A la papelera de WolfCore Dev: se puede recuperar 7 días. */
     borrar(motor: ObjetivoSqlIpc, base: string, id: string): Promise<void>;
+    /** Las de las bases de una instancia, también las de bases que ya no existen. */
+    listaInstancia(motor: ObjetivoSqlIpc): Promise<Instantanea[]>;
+    papelera(motor: ObjetivoSqlIpc, base: string): Promise<InstantaneaBorrada[]>;
+    recuperar(motor: ObjetivoSqlIpc, base: string, id: string): Promise<Instantanea>;
   };
   pgvector: {
     estado(): Promise<EstadoPgvector>;
@@ -1148,6 +1158,9 @@ export const RUTAS_IPC = [
   'instantaneas.vistaPrevia',
   'instantaneas.volver',
   'instantaneas.borrar',
+  'instantaneas.listaInstancia',
+  'instantaneas.papelera',
+  'instantaneas.recuperar',
   'pgvector.estado',
   'pgvector.instalarBuildTools',
   'pgvector.compilarEInstalar',

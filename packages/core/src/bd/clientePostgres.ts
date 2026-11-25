@@ -631,6 +631,38 @@ export class ClientePostgres {
     return String(f[0]?.version ?? '');
   }
 
+  /** Codificación, LC_COLLATE y LC_CTYPE de la base (`UTF8|es_AR.UTF-8|es_AR.UTF-8`), o null. */
+  async localeBase(nombre: string): Promise<string | null> {
+    validarNombrePg(nombre);
+    const f = await this.filas(
+      'SELECT pg_encoding_to_char(encoding) AS e, datcollate AS c, datctype AS t FROM pg_database WHERE datname = $1',
+      [nombre],
+    );
+    const { e, c, t } = (f[0] ?? {}) as { e?: unknown; c?: unknown; t?: unknown };
+    const ok = (v: unknown): v is string =>
+      typeof v === 'string' && /^[A-Za-z0-9_.@-]{1,64}$/.test(v);
+    return ok(e) && ok(c) && ok(t) ? `${e}|${c}|${t}` : null;
+  }
+
+  /** Crea la base con la codificación y las reglas regionales de `locale` (de `localeBase`). */
+  async crearBaseConLocale(nombre: string, locale: string): Promise<void> {
+    const bd = id(nombre);
+    noSistema(nombre, 'crear');
+    const partes = locale.split('|');
+    if (partes.length !== 3 || !partes.every((p) => /^[A-Za-z0-9_.@-]{1,64}$/.test(p))) {
+      throw new Error('Configuración regional no válida.');
+    }
+    try {
+      const [orden] = await this.filas(
+        "SELECT format('CREATE DATABASE %s TEMPLATE template0 ENCODING %L LC_COLLATE %L LC_CTYPE %L', $1::text, $2::text, $3::text, $4::text) AS s",
+        [bd, partes[0], partes[1], partes[2]],
+      );
+      await this.filas(String(orden?.s ?? ''));
+    } catch (e) {
+      throw traducir(e, `crear la base ${nombre}`);
+    }
+  }
+
   /** Tablas de la base, sin las del sistema ni las vistas. */
   async contarTablas(nombre: string): Promise<number> {
     validarNombrePg(nombre);

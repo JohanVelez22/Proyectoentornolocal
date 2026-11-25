@@ -155,6 +155,27 @@ function abrirRespaldar(base: string): void {
   baseElegida.value = base;
   dlgRespaldar.value = true;
 }
+/** Bases que ya no existen pero conservan instantáneas (para poder volver a crearlas). */
+const basesConInstantaneas = ref<string[]>([]);
+async function cargarInstantaneasHuerfanas(): Promise<void> {
+  const m = motorSql.value;
+  const lista = bases.value;
+  if (!m || !lista || !encendido.value) {
+    basesConInstantaneas.value = [];
+    return;
+  }
+  try {
+    const todas = await api().instantaneas.listaInstancia(bd.objetivo(m) as ObjetivoSqlIpc);
+    const vivas = new Set(lista.map((b) => b.nombre));
+    basesConInstantaneas.value = [...new Set(todas.map((i) => i.base))].filter(
+      (n) => !vivas.has(n),
+    );
+  } catch {
+    basesConInstantaneas.value = [];
+  }
+}
+watch(bases, () => void cargarInstantaneasHuerfanas());
+
 function abrirInstantaneas(base: string): void {
   if (ocupadaBd.value) return;
   baseElegida.value = base;
@@ -576,6 +597,28 @@ function irAServicios(): void {
         </table>
       </section>
 
+      <section v-if="basesConInstantaneas.length" class="tabla-bloque huerfanas">
+        <header class="tabla-cabeza">
+          <span class="total">{{ textos.instantaneas.basesBorradas }}</span>
+        </header>
+        <p class="sin-bases">{{ textos.instantaneas.basesBorradasAyuda }}</p>
+        <div class="acciones">
+          <NButton
+            v-for="n in basesConInstantaneas"
+            :key="n"
+            size="small"
+            secondary
+            :disabled="ocupadaBd"
+            @click="abrirInstantaneas(n)"
+          >
+            <template #icon
+              ><NIcon><Camera /></NIcon
+            ></template>
+            {{ n }}
+          </NButton>
+        </div>
+      </section>
+
       <SeccionPgvector v-if="activo === 'postgresql'" />
     </template>
 
@@ -599,7 +642,10 @@ function irAServicios(): void {
       v-model:show="dlgInstantaneas"
       :objetivo="bd.objetivo(motorSql) as ObjetivoSqlIpc"
       :base="baseElegida"
-      @cambio="cargarBases"
+      @cambio="
+        cargarBases();
+        void cargarInstantaneasHuerfanas();
+      "
     />
     <DialogoConexion v-if="activo" v-model:show="dlgConexion" :motor="activo" :base="baseElegida" />
 

@@ -560,7 +560,9 @@ export const en: Textos = {
       'instantaneas.respaldo_previo_fallo':
         'The current state of the database could not be saved: nothing was restored.',
       'instantaneas.restauracion_fallo':
-        'The snapshot could not be restored. The database went back to how it was.',
+        'The snapshot could not be restored. The database went back to how it was. Reason: {detalle}',
+      'instantaneas.restauracion_sin_copia':
+        'The snapshot could not be restored and the previous state had not been saved: the database may be empty or half restored. Reason: {detalle}',
       'instantaneas.restauracion_sin_revertir':
         'The snapshot could not be restored and the previous state could not be put back. That state is saved in the automatic snapshot {respaldo}: go back to it from Snapshots.',
     },
@@ -587,6 +589,22 @@ export const en: Textos = {
     borrada: 'Snapshot moved to the trash',
     papelera: 'Deleted snapshots can be recovered for 7 days from the WolfCore Dev trash.',
     cerrar: 'Close',
+    papeleraTitulo: 'Trash',
+    papeleraVacia: 'There are no snapshots in the trash.',
+    recuperar: 'Recover',
+    recuperada: 'Snapshot recovered',
+    borradaEl: (fecha: string) => `Deleted on ${fecha}`,
+    borrarPregunta: 'Move this snapshot to the trash?',
+    borrarSi: 'Move to the trash',
+    notaAutomatica: (fecha: string) =>
+      `Previous state, saved before going back to the snapshot from ${fecha}`,
+    notaAutomaticaSinOrigen: 'Previous state, saved before going back to another snapshot',
+    extensionesAviso: (lista: string) =>
+      `It has PostgreSQL extensions (${lista}) that are only restored with this computer's fingerprint record.`,
+    limites:
+      "MySQL and MariaDB snapshots also keep routines, triggers and events. In PostgreSQL it is a compressed dump of a single database: it does not include the server's roles or users. A snapshot that cannot be checked as made on this computer is restored with a user limited to the database, which does not allow views, routines or triggers owned by other users.",
+    basesBorradas: 'Snapshots of databases that no longer exist',
+    basesBorradasAyuda: 'Choose a database to create it again from its snapshot.',
     dialogoVolver: {
       titulo: (base: string) => `Go back to a snapshot of ${base}`,
       cargando: 'Preparing the preview…',
@@ -605,6 +623,15 @@ export const en: Textos = {
       hecho: (base: string) => `The database ${base} went back to the snapshot`,
       respaldoPrevio: 'The previous state was saved in the automatic snapshot from',
       advertencias: 'The restore finished with warnings:',
+      hechoConAvisos: (base: string) =>
+        `The database ${base} went back to the snapshot, with warnings`,
+      baseVacia:
+        'The database does not exist or is empty: there is nothing to save before going back.',
+      sinGuardarTitulo: 'The current state could not be saved',
+      sinGuardarTexto:
+        'WolfCore Dev could not save the current state of the database before going back. If you continue WITHOUT saving it and the restore fails, the current data in the database is lost.',
+      sinGuardarConfirmar: 'I understand the current data in the database will be lost',
+      sinGuardarBoton: 'Go back without saving the current state',
     },
   },
   avisoInicio: {

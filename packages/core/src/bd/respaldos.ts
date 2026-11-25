@@ -64,6 +64,10 @@ export interface ResultadoRestaurar {
 export interface OpcionesRespaldar {
   /** Solo la estructura (CREATE TABLE…), sin ninguna fila: lo que guarda una plantilla. */
   soloEsquema?: boolean;
+  /** MySQL y MariaDB: incluir los eventos programados (las instantáneas los guardan). */
+  eventos?: boolean;
+  /** Cancela el volcado (mata solo el que lanzó). */
+  senal?: AbortSignal;
 }
 
 export interface OpcionesRestaurarEsquema {
@@ -1535,7 +1539,7 @@ export class Respaldos {
      * `estricto` (todo o nada): sin `--force` ni `ON_ERROR_STOP=0`, en una sola transacción donde
      * el motor la admite, y cualquier error es un fallo. `lista`: archivo -L de pg_restore.
      */
-    modo: { estricto?: boolean; lista?: string } = {},
+    modo: { estricto?: boolean; lista?: string; conservarDuenos?: boolean } = {},
   ): Promise<ResultadoRestaurar> {
     const clave = con.clave ?? '';
     const estricto = modo.estricto === true;
@@ -1553,8 +1557,7 @@ export class Respaldos {
         exe = (await this.herramienta(motor, 'restaurar')).exe;
         args = [
           ...(estricto ? ['--exit-on-error', '--single-transaction'] : []),
-          '--no-owner',
-          '--no-privileges',
+          ...(modo.conservarDuenos ? [] : ['--no-owner', '--no-privileges']),
           '--verbose',
           '--no-password',
           ...(modo.lista ? ['-L', modo.lista] : []),
@@ -1663,6 +1666,7 @@ export class Respaldos {
     /** Solo MySQL y MariaDB: sin CREATE (tablas, vistas, rutinas ni disparadores): solo filas. */
     soloDatos = false,
     senal?: AbortSignal,
+    eventos = false,
   ): Promise<Salida> {
     // Windows pasa MYSQL_PWD en la página de códigos local: una clave con acentos llegaría cambiada.
     if (motor !== 'postgresql' && [...origen.clave].some((ch) => ch.charCodeAt(0) > 0x7e)) {
@@ -1700,7 +1704,9 @@ export class Respaldos {
         `--user=${origen.usuario}`,
         // Una transacción de solo lectura con instantánea: sin bloquear ni escribir.
         '--single-transaction',
-        ...(soloDatos ? ['--skip-triggers'] : ['--routines', '--triggers']),
+        ...(soloDatos
+          ? ['--skip-triggers']
+          : ['--routines', '--triggers', ...(eventos ? ['--events'] : [])]),
         '--no-tablespaces',
         '--default-character-set=utf8mb4',
         // Solo estructura: ni una fila (plantillas de proyecto).
@@ -2037,10 +2043,12 @@ export class Respaldos {
    * Restaura un respaldo propio de WolfCore Dev (una instantánea) sobre `base`, todo o nada y con
    * un usuario (MySQL, MariaDB) o rol (PostgreSQL) temporal que solo puede trabajar en esa base:
    * nada de lo que traiga el archivo toca otras bases, ni crea roles, ni lee o escribe archivos
-   * del servidor. Reemplaza el contenido de la base (la borra y la crea de nuevo): quien llama
-   * debe haber hecho antes su respaldo; aquí no se hace. Ante el primer error se corta (sin
-   * `--force`, `ON_ERROR_STOP=1`, una sola transacción en PostgreSQL) y se lanza el error: la
-   * base queda como la dejó el intento, para que quien llama la vuelva a poner desde su respaldo.
+   * del servidor. Es el camino para un archivo que no se puede garantizar que sea propio.
+   * Reemplaza el contenido de la base (la borra y la crea de nuevo): quien llama debe haber hecho
+   * antes su respaldo; aquí no se hace.
+   *
+   * Si falla antes de tocar la base, lanza el error tal cual; si falla después, lanza
+   * `ErrorBaseTocada` con la causa (la base quedó vacía o a medias).
    *
    * PostgreSQL: las extensiones del respaldo (de `EXTENSIONES_PERMITIDAS`) las crea antes el
    * administrador y se restaura sin sus entradas; una que no esté permitida se rechaza antes de
@@ -2051,12 +2059,37 @@ export class Respaldos {
     archivo: string,
     base: string,
   ): Promise<ResultadoRestaurar> {
+    return this.restaurarPropia(objetivo, archivo, base, 'acotada');
+  }
+
+  /**
+   * Igual que `restaurarAcotada` pero como administrador y conservando dueños, privilegios,
+   * extensiones (con su esquema) y la intercalación de la base: solo para un volcado que
+   * WolfCore Dev hizo y cuya huella coincide con su registro. Sigue siendo todo o nada, y no hace
+   * respaldo previo ni escribe en Documentos.
+   */
+  async restaurarEstricta(
+    objetivo: ObjetivoBd,
+    archivo: string,
+    base: string,
+  ): Promise<ResultadoRestaurar> {
+    return this.restaurarPropia(objetivo, archivo, base, 'estricta');
+  }
+
+  private async restaurarPropia(
+    objetivo: ObjetivoBd,
+    archivo: string,
+    base: string,
+    modo: 'acotada' | 'estricta',
+  ): Promise<ResultadoRestaurar> {
     const { r, motor } = await this.para(objetivo);
-    if (r !== this) return r.restaurarAcotada(motor, archivo, base);
+    if (r !== this) return r.restaurarPropia(motor, archivo, base, modo);
     const m = motorSql(motor, 'Restaurar');
     validarBase(m, base);
     const bd = this.d.bd;
-    if (!bd.usuarioTemporal) throw new Error('Esta restauración no está disponible aquí.');
+    if (modo === 'acotada' && !bd.usuarioTemporal) {
+      throw new Error('Esta restauración no está disponible aquí.');
+    }
     const ruta = path.resolve(archivo);
     let info;
     try {
@@ -2074,7 +2107,7 @@ export class Respaldos {
       this.revisarFamilia(m, fuente);
       let lista: string | undefined;
       const extensiones: string[] = [];
-      if (m === 'postgresql' && fuente.tipo === 'pgdump') {
+      if (modo === 'acotada' && m === 'postgresql' && fuente.tipo === 'pgdump') {
         const { exe } = await this.herramienta(m, 'restaurar');
         const leida = await this.d.exec(exe, ['-l', fuente.ruta], { timeoutMs: 2 * 60 * 1000 });
         if (leida.codigo !== 0) throw new Error('El respaldo no se puede leer.');
@@ -2102,35 +2135,50 @@ export class Respaldos {
       const tablas = await bd.tieneTablas(m, base);
       // PostgreSQL: el dueño (el usuario del proyecto) se lee antes de borrar y se devuelve al final.
       const dueno = m === 'postgresql' ? await this.duenoPg(base, con) : null;
-      if (tablas) await this.borrarParaReemplazar(m, base);
-      await bd.crear(m, base);
-      for (const nombre of extensiones) {
-        if (nombre !== 'plpgsql') await bd.crearExtension?.(base, nombre);
-      }
-      const usuario = await bd.usuarioTemporal(m, base);
-      claves.push(usuario.clave);
+      // La intercalación de la base se lee antes de borrarla y se vuelve a poner al crearla.
+      const intercalacion = tablas ? await this.leerIntercalacion(m, base, con) : null;
+      let usuario: Awaited<ReturnType<NonNullable<typeof bd.usuarioTemporal>>> | null = null;
       let resultado: ResultadoRestaurar | null = null;
       let fallo: unknown = null;
+      let tocada = false;
+      const avisos: string[] = [];
       try {
+        tocada = true;
+        if (tablas) await this.borrarParaReemplazar(m, base);
+        await this.crearConIntercalacion(m, base, con, intercalacion);
+        for (const nombre of extensiones) {
+          if (nombre !== 'plpgsql') await bd.crearExtension?.(base, nombre);
+        }
+        let conexion = con;
+        if (modo === 'acotada') {
+          usuario = await bd.usuarioTemporal!(m, base);
+          claves.push(usuario.clave);
+          conexion = { ...con, usuario: usuario.usuario, clave: usuario.clave };
+        }
         resultado = await this.ejecutarRestauracion(
           'restaurar',
           m,
           fuente,
           base,
-          { ...con, usuario: usuario.usuario, clave: usuario.clave },
+          conexion,
           claves,
-          { estricto: true, ...(lista ? { lista } : {}) },
+          {
+            estricto: true,
+            ...(lista ? { lista } : {}),
+            ...(modo === 'estricta' ? { conservarDuenos: true } : {}),
+          },
         );
       } catch (e) {
         fallo = e;
       }
-      const avisos: string[] = [];
-      try {
-        await usuario.retirar();
-      } catch {
-        avisos.push('No se pudo borrar el usuario temporal de la restauración.');
+      if (usuario) {
+        try {
+          await usuario.retirar();
+        } catch {
+          avisos.push('No se pudo borrar el usuario temporal de la restauración.');
+        }
       }
-      if (dueno && dueno !== con.usuario) {
+      if (tocada && dueno && dueno !== con.usuario) {
         try {
           await this.asignarDuenoPg(base, dueno, con);
         } catch (e) {
@@ -2140,10 +2188,86 @@ export class Respaldos {
         }
       }
       // ejecutarRestauracion ya enmascara las claves en sus mensajes.
-      if (fallo) throw fallo;
+      if (fallo) throw new ErrorBaseTocada(fallo);
       return { advertencias: [...resultado!.advertencias, ...avisos] };
     } finally {
       await rm(tmp, OPCIONES_BORRADO).catch(() => undefined);
+    }
+  }
+
+  /** Intercalación (MySQL, MariaDB) o configuración regional (PostgreSQL) de una base, o null. */
+  private async leerIntercalacion(
+    m: MotorSql,
+    base: string,
+    con: DatosConexion,
+  ): Promise<string | null> {
+    try {
+      if (m === 'postgresql') {
+        const c = new ClientePostgres(this.d.fabricas?.postgres);
+        await c.conectar({
+          host: con.host,
+          puerto: con.puerto,
+          usuario: con.usuario,
+          clave: con.clave ?? '',
+        });
+        try {
+          return await c.localeBase(base);
+        } finally {
+          await c.cerrar();
+        }
+      }
+      const c = new ClienteMysql(this.d.fabricas?.mysql);
+      await c.conectar({
+        host: con.host,
+        puerto: con.puerto,
+        usuario: con.usuario,
+        clave: con.clave ?? '',
+      });
+      try {
+        return await c.intercalacionBase(base);
+      } finally {
+        await c.cerrar();
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  /** Crea la base (idempotente) con la intercalación que tenía, si se sabe. */
+  private async crearConIntercalacion(
+    m: MotorSql,
+    base: string,
+    con: DatosConexion,
+    intercalacion: string | null,
+  ): Promise<void> {
+    if (intercalacion && m === 'postgresql') {
+      const c = new ClientePostgres(this.d.fabricas?.postgres);
+      await c.conectar({
+        host: con.host,
+        puerto: con.puerto,
+        usuario: con.usuario,
+        clave: con.clave ?? '',
+      });
+      try {
+        await c.crearBaseConLocale(base, intercalacion);
+      } finally {
+        await c.cerrar();
+      }
+    }
+    await this.d.bd.crear(m, base);
+    if (intercalacion && m !== 'postgresql') {
+      const c = new ClienteMysql(this.d.fabricas?.mysql);
+      await c.conectar({
+        host: con.host,
+        puerto: con.puerto,
+        usuario: con.usuario,
+        clave: con.clave ?? '',
+      });
+      try {
+        await c.fijarIntercalacion(base, intercalacion);
+      } finally {
+        await c.cerrar();
+      }
     }
   }
 
@@ -2157,7 +2281,7 @@ export class Respaldos {
     const m = motorSql(motor, 'Respaldar');
     if (m === 'postgresql') validarNombrePg(base);
     else validarNombreBd(base);
-    return r.respaldarComo(m, base, carpetaDestino, base, opciones.soloEsquema === true);
+    return r.respaldarComo(m, base, carpetaDestino, base, opciones.soloEsquema === true, opciones);
   }
 
   /** Respalda `base` en `<carpeta>\<prefijo>-<AAAAMMDD-HHmm>.dump|.sql`. */
@@ -2167,6 +2291,7 @@ export class Respaldos {
     carpetaDestino: string | undefined,
     prefijo: string,
     soloEsquema = false,
+    opciones: OpcionesRespaldar = {},
   ): Promise<{ archivo: string }> {
     const con = await this.d.bd.conexion(m);
     const carpeta = carpetaDestino ? path.resolve(carpetaDestino) : await this.carpetaRespaldos();
@@ -2188,6 +2313,9 @@ export class Respaldos {
         parcial,
         [clave],
         soloEsquema,
+        false,
+        opciones.senal,
+        opciones.eventos === true,
       );
       await rename(parcial, final);
     } catch (e) {
@@ -2784,6 +2912,17 @@ export function mariadbConSandbox(version: string): boolean {
   };
   const p = minimo[`${mayor}.${menor}`];
   return p !== undefined && parche >= p;
+}
+
+/**
+ * La restauración de un respaldo propio falló después de borrar o crear la base: quedó vacía o a
+ * medias y quien llamó debe volver a ponerla desde su copia. `causa` es el error original.
+ */
+export class ErrorBaseTocada extends Error {
+  constructor(readonly causa: unknown) {
+    super(causa instanceof Error ? causa.message : String(causa), { cause: causa });
+    this.name = 'ErrorBaseTocada';
+  }
 }
 
 /** Falló la restauración después de borrar la base original (queda su respaldo previo). */

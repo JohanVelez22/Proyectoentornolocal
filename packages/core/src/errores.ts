@@ -105,7 +105,8 @@ export const PARAMETROS_ERROR = {
   'instantaneas.tomar_fallo': [],
   'instantaneas.huella_no_coincide': [],
   'instantaneas.respaldo_previo_fallo': [],
-  'instantaneas.restauracion_fallo': [],
+  'instantaneas.restauracion_fallo': ['detalle'],
+  'instantaneas.restauracion_sin_copia': ['detalle'],
   'instantaneas.restauracion_sin_revertir': ['respaldo'],
   // búsqueda
   'buscar.consulta_invalida': [],

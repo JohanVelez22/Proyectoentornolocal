@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { Warning } from '@vicons/ionicons5';
-import { NButton, NForm, NFormItem, NIcon, NInput, NModal, NSkeleton, NSpin } from 'naive-ui';
+import {
+  NButton,
+  NCheckbox,
+  NForm,
+  NFormItem,
+  NIcon,
+  NInput,
+  NModal,
+  NSkeleton,
+  NSpin,
+} from 'naive-ui';
 import { computed, ref, watch } from 'vue';
 import type { Instantanea } from '@pel/core';
 import type { ObjetivoSqlIpc } from '../../shared/api';
@@ -11,7 +21,8 @@ import { confirmacionValida, formatearTamano } from '../utilidades/bd';
 
 /**
  * Volver a una instantánea: vista previa (base, fecha, tamaño, tablas), confirmación escribiendo
- * el nombre de la base y resultado. El núcleo guarda antes el estado actual y, si falla, lo vuelve a poner.
+ * el nombre de la base y resultado. El núcleo guarda antes el estado actual y, si falla, lo vuelve
+ * a poner. Si no puede guardarlo, ofrece seguir sin guardarlo con una segunda confirmación.
  */
 const props = defineProps<{ objetivo: ObjetivoSqlIpc; base: string; id: string }>();
 const mostrar = defineModel<boolean>('show', { required: true });
@@ -25,7 +36,7 @@ interface Previa {
   estadoActual: { tablas: number; bytes: number };
 }
 interface Hecho {
-  respaldoPrevio: Instantanea;
+  respaldoPrevio: Instantanea | null;
   advertencias: string[];
 }
 
@@ -34,6 +45,9 @@ const cargando = ref(false);
 const escrito = ref('');
 const trabajando = ref(false);
 const hecho = ref<Hecho | null>(null);
+/** No se pudo guardar el estado actual: se ofrece volver sin guardarlo. */
+const faltaGuardar = ref(false);
+const entiendo = ref(false);
 
 const valido = computed(() => confirmacionValida(props.base, escrito.value));
 const fecha = (iso: string): string =>
@@ -45,6 +59,8 @@ watch(mostrar, (v) => {
   hecho.value = null;
   escrito.value = '';
   trabajando.value = false;
+  faltaGuardar.value = false;
+  entiendo.value = false;
   cargando.value = true;
   void ejecutar('vista-previa', () =>
     api().instantaneas.vistaPrevia(props.objetivo, props.base, props.id),
@@ -56,12 +72,27 @@ watch(mostrar, (v) => {
     .finally(() => (cargando.value = false));
 });
 
-async function volver(): Promise<void> {
+async function volver(sinGuardarEstado: boolean): Promise<void> {
   if (!valido.value || trabajando.value) return;
+  if (sinGuardarEstado && !entiendo.value) return;
   trabajando.value = true;
-  const r = await ejecutar('volver', () =>
-    api().instantaneas.volver(props.objetivo, props.base, props.id, true),
-  );
+  const r = await ejecutar('volver', async () => {
+    try {
+      return await api().instantaneas.volver(
+        props.objetivo,
+        props.base,
+        props.id,
+        escrito.value,
+        sinGuardarEstado ? { sinGuardarEstado: true } : undefined,
+      );
+    } catch (e) {
+      // El estado actual no se pudo guardar: no se tocó nada. Se ofrece seguir sin guardarlo.
+      if ((e as { codigo?: unknown } | null)?.codigo === 'instantaneas.respaldo_previo_fallo') {
+        faltaGuardar.value = true;
+      }
+      throw e;
+    }
+  });
   trabajando.value = false;
   // Con o sin éxito el núcleo pudo crear la instantánea automática previa: se vuelve a leer la lista.
   emit('hecho');
@@ -132,11 +163,21 @@ function cerrar(): void {
           </tr>
         </tbody>
       </table>
-      <p class="advertencia">
+      <p v-if="previa.estadoActual.tablas === 0" class="nota-vacia">{{ t.baseVacia }}</p>
+      <p v-else class="advertencia">
         <NIcon :size="18"><Warning /></NIcon>
         <span>{{ t.aviso(base) }}</span>
       </p>
-      <NForm :show-feedback="false" @submit.prevent="volver">
+
+      <section v-if="faltaGuardar" class="sin-guardar" role="alert">
+        <strong>{{ t.sinGuardarTitulo }}</strong>
+        <p>{{ t.sinGuardarTexto }}</p>
+        <NCheckbox v-model:checked="entiendo" :disabled="trabajando">
+          {{ t.sinGuardarConfirmar }}
+        </NCheckbox>
+      </section>
+
+      <NForm :show-feedback="false" @submit.prevent="volver(false)">
         <NFormItem :label="t.pedir(base)">
           <NInput
             v-model:value="escrito"
@@ -154,8 +195,11 @@ function cerrar(): void {
     </template>
 
     <div v-else-if="hecho" class="resultado" aria-live="polite">
-      <p class="exito">{{ t.hecho(base) }}</p>
-      <p>
+      <!-- "Volvió a la instantánea" solo si la restauración terminó sin avisos. -->
+      <p class="exito">
+        {{ hecho.advertencias.length ? t.hechoConAvisos(base) : t.hecho(base) }}
+      </p>
+      <p v-if="hecho.respaldoPrevio">
         {{ t.respaldoPrevio }}
         <strong>{{ fecha(hecho.respaldoPrevio.fecha) }}</strong>
       </p>
@@ -179,11 +223,22 @@ function cerrar(): void {
             {{ textos.acciones.cancelar }}
           </NButton>
           <NButton
+            v-if="faltaGuardar"
+            size="small"
+            type="error"
+            :disabled="!previa || !valido || !entiendo || trabajando"
+            :loading="trabajando"
+            @click="volver(true)"
+          >
+            {{ t.sinGuardarBoton }}
+          </NButton>
+          <NButton
+            v-else
             size="small"
             type="error"
             :disabled="!previa || !valido || trabajando"
             :loading="trabajando"
-            @click="volver"
+            @click="volver(false)"
           >
             {{ t.confirmar }}
           </NButton>
@@ -241,6 +296,22 @@ function cerrar(): void {
   flex: none;
   margin-top: 1px;
   color: var(--n-warning, #f0a020);
+}
+.nota-vacia {
+  margin: 0 0 12px;
+  font-size: 13px;
+  opacity: 0.8;
+}
+.sin-guardar {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(208, 48, 80, 0.1);
+  font-size: 13px;
+}
+.sin-guardar p {
+  margin: 4px 0 8px;
+  line-height: 1.45;
 }
 .trabajando {
   display: flex;

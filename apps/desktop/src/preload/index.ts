@@ -81,8 +81,11 @@ const api: ApiEntorno = {
     lista: (motor, base) => invocar('instantaneas.lista', motor, base),
     tomar: (motor, base, nota) => invocar('instantaneas.tomar', motor, base, nota),
     vistaPrevia: (motor, base, id) => invocar('instantaneas.vistaPrevia', motor, base, id),
-    volver: (motor, base, id, confirmado) =>
-      invocar('instantaneas.volver', motor, base, id, confirmado),
+    volver: (motor, base, id, nombreEscrito, opciones) =>
+      invocar('instantaneas.volver', motor, base, id, nombreEscrito, opciones),
+    listaInstancia: (motor) => invocar('instantaneas.listaInstancia', motor),
+    papelera: (motor, base) => invocar('instantaneas.papelera', motor, base),
+    recuperar: (motor, base, id) => invocar('instantaneas.recuperar', motor, base, id),
     borrar: (motor, base, id) => invocar('instantaneas.borrar', motor, base, id),
   },
   pgvector: {
