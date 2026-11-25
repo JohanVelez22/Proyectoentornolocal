@@ -6,7 +6,7 @@ import { validarNombreBd } from '../bd/clienteMysql';
 import { ErrorWolf, type CodigoError } from '../errores';
 import { DOMINIO_VALIDO } from '../hosts/bloque';
 import { existe } from '../proyectos/archivos';
-import { leerVariablesEnv } from '../proyectos/detectar';
+import { detectarProyecto, leerVariablesEnv } from '../proyectos/detectar';
 
 /**
  * Lectura de lo que dejaron otros programas (Laragon, XAMPP, Herd). Todo es entrada no confiable:
@@ -109,7 +109,8 @@ export function esRutaLocalAbsoluta(ruta: string): boolean {
 /** Carpetas del sistema, del perfil y de otros programas que ninguna importación puede vincular. */
 const PROTEGIDAS_WINDOWS =
   /^[a-z]:\/(?:windows|program files(?: \(x86\))?|programdata|system volume information|\$recycle\.bin|recovery|boot|msocache)(?:\/|$)/;
-const PROTEGIDAS_POSIX = /^\/(?:etc|usr|bin|sbin|lib|lib64|dev|proc|sys|boot|root)(?:\/|$)/;
+const PROTEGIDAS_POSIX =
+  /^\/(?:etc|usr|bin|sbin|lib|lib64|dev|proc|sys|boot|root|system|library|private|var|applications)(?:\/|$)/;
 
 /**
  * Carpeta del sistema operativo, raíz de una unidad, `Users`, el perfil entero o su `AppData`:
@@ -122,6 +123,10 @@ export function esRutaProtegida(ruta: string): boolean {
   if (/^[a-z]:\/users(?:\/[^/]+)?$/.test(n) || /^[a-z]:\/users\/[^/]+\/appdata(?:\/|$)/.test(n)) {
     return true;
   }
+  // El perfil de macOS y de Linux entero, y las carpetas ocultas del perfil (.ssh, .aws, .gnupg,
+  // .config, .kube…): ahí viven claves y credenciales, no proyectos.
+  if (/^\/(?:home|users)\/[^/]+$/.test(n)) return true;
+  if (/^(?:[a-z]:\/users|\/home|\/users)\/[^/]+\/\./.test(n)) return true;
   return !n.slice(1).includes('/') && !/^[a-z]:\//.test(n);
 }
 
@@ -161,6 +166,11 @@ export async function validarCarpetaAjena(
     anotar(ctx, sale ? 'importar.ruta_fuera' : 'importar.carpeta_invalida', origen);
     return null;
   }
+  // La ruta real también debe ser local: una unión o una unidad de red resuelve a `\servidor\…`.
+  if (!esRutaLocalAbsoluta(real)) {
+    anotar(ctx, 'importar.ruta_fuera', origen);
+    return null;
+  }
   const raizReal = await realpath(ctx.raiz).catch(() => ctx.raiz);
   const dentro = estaDentro(raizReal, real);
   const prohibidasReales = await Promise.all(ctx.prohibidas.map(realOResuelta));
@@ -182,6 +192,7 @@ export function decodificarTextoAjeno(b: Buffer): string | null {
   } else if (b.length >= 2 && b[0] === 0xff && b[1] === 0xfe) {
     texto = new TextDecoder('utf-16le').decode(b.subarray(2));
   } else if (b.length >= 2 && b[0] === 0xfe && b[1] === 0xff) {
+    if (b.length % 2 !== 0) return null;
     texto = new TextDecoder('utf-16le').decode(Buffer.from(b.subarray(2)).swap16());
   } else {
     // Sin BOM: un texto en UTF-16 de caracteres latinos tiene un 0 en cada segundo byte.
@@ -195,6 +206,7 @@ export function decodificarTextoAjeno(b: Buffer): string | null {
     const mitad = n / 4;
     if (n >= 4 && impares > mitad && pares === 0) texto = new TextDecoder('utf-16le').decode(b);
     else if (n >= 4 && pares > mitad && impares === 0) {
+      if (b.length % 2 !== 0) return null;
       texto = new TextDecoder('utf-16le').decode(Buffer.from(b).swap16());
     } else texto = new TextDecoder('utf-8').decode(b);
   }
@@ -342,10 +354,11 @@ export async function raizDelProyecto(
   for (const c of carpetasDeSitios) {
     if ((await realOResuelta(c)) === padreReal) return docroot;
   }
-  const pistas = ['artisan', 'spark', 'composer.json', 'package.json', 'application', 'app'];
-  let hay = false;
-  for (const p of pistas) if (await existe(path.join(padre, p))) hay = true;
-  if (!hay) return docroot;
+  // Solo se sube si el sitio de WolfCore Dev vuelve a añadir `public` por sí mismo (Laravel y
+  // CodeIgniter 4). Symfony, Drupal (`web`) y el resto se sirven desde su DocumentRoot original.
+  const det = await detectarProyecto(padre, { pgvector: false }).catch(() => null);
+  if (!det || !(det.tipo === 'laravel' || det.tipo === 'codeigniter4')) return docroot;
+  if (path.basename(docroot).toLowerCase() !== 'public') return docroot;
   return (await validarCarpetaAjena(ctx, padre, origen)) ?? docroot;
 }
 

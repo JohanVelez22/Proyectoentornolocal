@@ -31,7 +31,9 @@ export async function detectarXampp(ctx: ContextoDetectar): Promise<CandidatoImp
   for (const archivo of archivos) {
     const texto = await leerConfigAnotando(ctx, archivo);
     if (texto === null) continue;
-    for (const v of leerVhostsApache(texto, { SRVROOT: ctx.raiz.replace(/\\/g, '/') })) {
+    // En XAMPP, SRVROOT de Apache es <instalación>/apache (no la instalación).
+    const srvroot = path.join(ctx.raiz, 'apache').replace(/\\/g, '/');
+    for (const v of leerVhostsApache(texto, { SRVROOT: srvroot })) {
       vhosts.push({ nombre: v.nombre, documentRoot: v.documentRoot, archivo });
     }
   }

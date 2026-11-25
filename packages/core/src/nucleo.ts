@@ -2899,6 +2899,7 @@ export class Nucleo {
    * interrumpida, en los servidores de bases que ya están encendidos. Sin esperar y sin fallar.
    */
   async limpiarUsuariosTemporales(): Promise<void> {
+    await this.respaldos.limpiarTemporalesAjenos().catch(() => undefined);
     try {
       for (const e of await this.servicios.estados()) {
         if (e.id !== 'mysql' && e.id !== 'mariadb' && e.id !== 'postgresql') continue;

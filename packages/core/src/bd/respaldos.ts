@@ -2165,6 +2165,21 @@ export class Respaldos {
     }
   }
 
+  /** Borra los temporales `importar-ajeno-*` que dejó una importación interrumpida (al arrancar). */
+  async limpiarTemporalesAjenos(): Promise<number> {
+    let n = 0;
+    try {
+      for (const nombre of await readdir(this.d.rutas.tmp())) {
+        if (!nombre.startsWith('importar-ajeno-')) continue;
+        await rm(path.join(this.d.rutas.tmp(), nombre), OPCIONES_BORRADO).catch(() => undefined);
+        n++;
+      }
+    } catch {
+      // aún no hay carpeta tmp
+    }
+    return n;
+  }
+
   /** Versión del servidor de origen; sus fallos llevan código (apagado, rechazado, más nuevo). */
   private async versionOrigenAjeno(motor: MotorSql, o: OrigenImportar): Promise<string[]> {
     try {
