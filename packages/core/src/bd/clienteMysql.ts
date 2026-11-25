@@ -613,6 +613,16 @@ export class ClienteMysql {
     return Number.isFinite(n) ? n : 0;
   }
 
+  /** Tablas de la base (no cuenta vistas). */
+  async contarTablas(nombre: string): Promise<number> {
+    validarNombreBd(nombre);
+    const f = await this.filas(
+      "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE'",
+      [nombre],
+    );
+    return Number(f[0]?.n ?? 0);
+  }
+
   async tieneTablas(nombre: string): Promise<boolean> {
     validarNombreBd(nombre);
     const f = await this.filas(

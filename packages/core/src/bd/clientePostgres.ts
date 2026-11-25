@@ -631,6 +631,21 @@ export class ClientePostgres {
     return String(f[0]?.version ?? '');
   }
 
+  /** Tablas de la base, sin las del sistema ni las vistas. */
+  async contarTablas(nombre: string): Promise<number> {
+    validarNombrePg(nombre);
+    try {
+      return await this.enBase(nombre, async (q) => {
+        const { rows } = await q.query(
+          "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema')",
+        );
+        return Number((rows[0] as { n?: unknown } | undefined)?.n ?? 0);
+      });
+    } catch (e) {
+      throw traducir(e, `revisar la base ${nombre}`);
+    }
+  }
+
   async tieneTablas(nombre: string): Promise<boolean> {
     validarNombrePg(nombre);
     try {

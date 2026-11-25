@@ -294,6 +294,23 @@ export class BasesDeDatos {
     return this.conMysql(objetivo, (c) => c.tieneTablas(nombre));
   }
 
+  /** Tablas y bytes de una base que existe (solo lectura; para las instantáneas). */
+  async estadoBase(
+    objetivo: ObjetivoBd,
+    nombre: string,
+  ): Promise<{ tablas: number; bytes: number }> {
+    const motor = motorDe(objetivo);
+    if (motor === 'mongodb') throw new Error('MongoDB no se revisa por tablas.');
+    const base = (await this.listar(objetivo)).find((b) => b.nombre === nombre);
+    if (!base) return { tablas: 0, bytes: 0 };
+    const bytes = base.tamanoBytes;
+    const tablas =
+      motor === 'postgresql'
+        ? await this.conPostgres((c) => c.contarTablas(nombre), objetivo)
+        : await this.conMysql(objetivo, (c) => c.contarTablas(nombre));
+    return { tablas, bytes };
+  }
+
   /**
    * Usuario (MySQL, MariaDB) o rol (PostgreSQL) temporal, limitado a `base`, para ejecutar SQL de
    * confianza dudosa. `retirar` lo borra (en PostgreSQL devuelve antes la base al administrador).

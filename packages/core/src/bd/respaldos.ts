@@ -1531,8 +1531,14 @@ export class Respaldos {
     base: string,
     con: DatosConexion,
     claves: string[],
+    /**
+     * `estricto` (todo o nada): sin `--force` ni `ON_ERROR_STOP=0`, en una sola transacción donde
+     * el motor la admite, y cualquier error es un fallo. `lista`: archivo -L de pg_restore.
+     */
+    modo: { estricto?: boolean; lista?: string } = {},
   ): Promise<ResultadoRestaurar> {
     const clave = con.clave ?? '';
+    const estricto = modo.estricto === true;
     const total = (await stat(fuente.ruta)).size;
     let exe: string;
     let args: string[];
@@ -1546,10 +1552,12 @@ export class Respaldos {
       if (fuente.tipo === 'pgdump') {
         exe = (await this.herramienta(motor, 'restaurar')).exe;
         args = [
+          ...(estricto ? ['--exit-on-error', '--single-transaction'] : []),
           '--no-owner',
           '--no-privileges',
           '--verbose',
           '--no-password',
+          ...(modo.lista ? ['-L', modo.lista] : []),
           ...conexion,
           fuente.ruta,
         ];
@@ -1557,10 +1565,21 @@ export class Respaldos {
           /^pg_restore: (error|warning|advertencia|aviso)/i.test(l),
         );
         // Con errores no fatales (roles inexistentes, etc.) sale con 1 y lo resume al final.
-        correcto = (c) => c === 0 || s.vio(/errors ignored on restore|errores ignorados/i);
+        correcto = (c) =>
+          c === 0 || (!estricto && s.vio(/errors ignored on restore|errores ignorados/i));
       } else {
         exe = (await this.herramienta(motor, 'cliente')).exe;
-        args = ['-X', '-q', '--no-password', '-v', 'ON_ERROR_STOP=0', ...conexion, '-f', '-'];
+        args = [
+          '-X',
+          '-q',
+          ...(estricto ? ['--single-transaction'] : []),
+          '--no-password',
+          '-v',
+          estricto ? 'ON_ERROR_STOP=1' : 'ON_ERROR_STOP=0',
+          ...conexion,
+          '-f',
+          '-',
+        ];
         // Con \restrict, psql rechaza cualquier meta-comando posterior (\!, \o, \i, \connect…).
         // Un psql sin \restrict: se neutraliza todo meta-comando fuera de comillas.
         const filtro: OpcionesFiltro = (await this.psqlRestringe(exe))
@@ -1586,7 +1605,7 @@ export class Respaldos {
         '--binary-mode',
         // MariaDB reciente: además, nada que toque archivos ni ejecute programas.
         ...(motor === 'mariadb' && mariadbConSandbox(cliente.version) ? ['--sandbox'] : []),
-        '--force',
+        ...(estricto ? [] : ['--force']),
         base,
       ];
       s = this.salida(
@@ -1600,7 +1619,8 @@ export class Respaldos {
       // Con --force sigue tras un error de una sentencia y sale con 1: eso es una advertencia.
       // Perder la conexión (2006/2013) o no poder entrar sí es un fallo.
       correcto = (c) =>
-        c === 0 || (s.vio(/^ERROR \d+ \([^)]*\) at line \d+/) && !s.vio(/^ERROR (2006|2013)\b/));
+        c === 0 ||
+        (!estricto && s.vio(/^ERROR \d+ \([^)]*\) at line \d+/) && !s.vio(/^ERROR (2006|2013)\b/));
     }
 
     let codigo: number;
@@ -1975,6 +1995,156 @@ export class Respaldos {
     }
     if (fallo) throw fallo;
     return resultado!;
+  }
+
+  /**
+   * Lo que trae un respaldo propio sin restaurarlo: cuántas tablas y qué extensiones de
+   * PostgreSQL pide. PostgreSQL lo lee con `pg_restore -l` (no conecta a ninguna base); MySQL y
+   * MariaDB cuentan los `CREATE TABLE` del .sql por trozos (sin cargarlo entero).
+   */
+  async inspeccionar(
+    objetivo: ObjetivoBd,
+    archivo: string,
+  ): Promise<{ tablas: number; extensiones: string[] }> {
+    const { r, motor } = await this.para(objetivo);
+    const m = motorSql(motor, 'Leer el respaldo');
+    const ruta = path.resolve(archivo);
+    if (m === 'postgresql') {
+      const { exe } = await r.herramienta('postgresql', 'restaurar');
+      const lista = await this.d.exec(exe, ['-l', ruta], { timeoutMs: 2 * 60 * 1000 });
+      if (lista.codigo !== 0) throw new Error('El respaldo no se puede leer.');
+      let tablas = 0;
+      const extensiones: string[] = [];
+      for (const l of lista.stdout.split(/\r?\n/)) {
+        if (/^\d+; \d+ \d+ TABLE (?!DATA\b)/.test(l)) tablas++;
+        const e = /^\d+; \d+ \d+ EXTENSION - (\S+)/.exec(l);
+        if (e) extensiones.push(e[1]!);
+      }
+      return { tablas, extensiones };
+    }
+    const patron = '\nCREATE TABLE ';
+    let tablas = 0;
+    let cola = '\n';
+    for await (const trozo of createReadStream(ruta)) {
+      const t = cola + (trozo as Buffer).toString('latin1');
+      for (let i = t.indexOf(patron); i !== -1; i = t.indexOf(patron, i + 1)) tablas++;
+      cola = t.slice(-(patron.length - 1));
+    }
+    return { tablas, extensiones: [] };
+  }
+
+  /**
+   * Restaura un respaldo propio de WolfCore Dev (una instantánea) sobre `base`, todo o nada y con
+   * un usuario (MySQL, MariaDB) o rol (PostgreSQL) temporal que solo puede trabajar en esa base:
+   * nada de lo que traiga el archivo toca otras bases, ni crea roles, ni lee o escribe archivos
+   * del servidor. Reemplaza el contenido de la base (la borra y la crea de nuevo): quien llama
+   * debe haber hecho antes su respaldo; aquí no se hace. Ante el primer error se corta (sin
+   * `--force`, `ON_ERROR_STOP=1`, una sola transacción en PostgreSQL) y se lanza el error: la
+   * base queda como la dejó el intento, para que quien llama la vuelva a poner desde su respaldo.
+   *
+   * PostgreSQL: las extensiones del respaldo (de `EXTENSIONES_PERMITIDAS`) las crea antes el
+   * administrador y se restaura sin sus entradas; una que no esté permitida se rechaza antes de
+   * tocar nada.
+   */
+  async restaurarAcotada(
+    objetivo: ObjetivoBd,
+    archivo: string,
+    base: string,
+  ): Promise<ResultadoRestaurar> {
+    const { r, motor } = await this.para(objetivo);
+    if (r !== this) return r.restaurarAcotada(motor, archivo, base);
+    const m = motorSql(motor, 'Restaurar');
+    validarBase(m, base);
+    const bd = this.d.bd;
+    if (!bd.usuarioTemporal) throw new Error('Esta restauración no está disponible aquí.');
+    const ruta = path.resolve(archivo);
+    let info;
+    try {
+      info = await stat(ruta);
+    } catch {
+      throw new Error(`No se encontró el archivo ${ruta}.`);
+    }
+    if (!info.isFile()) throw new Error('Elija un archivo de respaldo, no una carpeta.');
+    const con = await bd.conexion(m);
+    await mkdir(this.d.rutas.tmp(), { recursive: true });
+    const tmp = path.join(this.d.rutas.tmp(), `restaurar-${randomUUID()}`);
+    await mkdir(tmp, { recursive: true });
+    try {
+      const fuente = await this.preparar(ruta, tmp, 0);
+      this.revisarFamilia(m, fuente);
+      let lista: string | undefined;
+      const extensiones: string[] = [];
+      if (m === 'postgresql' && fuente.tipo === 'pgdump') {
+        const { exe } = await this.herramienta(m, 'restaurar');
+        const leida = await this.d.exec(exe, ['-l', fuente.ruta], { timeoutMs: 2 * 60 * 1000 });
+        if (leida.codigo !== 0) throw new Error('El respaldo no se puede leer.');
+        const filtradas = leida.stdout.split(/\r?\n/).filter((l) => {
+          const e = /^\d+; \d+ \d+ EXTENSION - (\S+)/.exec(l);
+          if (e) {
+            extensiones.push(e[1]!);
+            return false;
+          }
+          return !/^\d+; \d+ \d+ COMMENT - EXTENSION /.test(l);
+        });
+        for (const nombre of extensiones) {
+          if (!EXTENSIONES_PERMITIDAS.includes(nombre)) {
+            throw new ErrorWolf(
+              'bd.extension_no_permitida',
+              `El respaldo pide la extensión ${nombre}, que no está permitida.`,
+              { nombre },
+            );
+          }
+        }
+        lista = path.join(tmp, 'lista.txt');
+        await writeFile(lista, `${filtradas.join('\n')}\n`, 'utf8');
+      }
+      const claves = [con.clave ?? ''];
+      const tablas = await bd.tieneTablas(m, base);
+      // PostgreSQL: el dueño (el usuario del proyecto) se lee antes de borrar y se devuelve al final.
+      const dueno = m === 'postgresql' ? await this.duenoPg(base, con) : null;
+      if (tablas) await this.borrarParaReemplazar(m, base);
+      await bd.crear(m, base);
+      for (const nombre of extensiones) {
+        if (nombre !== 'plpgsql') await bd.crearExtension?.(base, nombre);
+      }
+      const usuario = await bd.usuarioTemporal(m, base);
+      claves.push(usuario.clave);
+      let resultado: ResultadoRestaurar | null = null;
+      let fallo: unknown = null;
+      try {
+        resultado = await this.ejecutarRestauracion(
+          'restaurar',
+          m,
+          fuente,
+          base,
+          { ...con, usuario: usuario.usuario, clave: usuario.clave },
+          claves,
+          { estricto: true, ...(lista ? { lista } : {}) },
+        );
+      } catch (e) {
+        fallo = e;
+      }
+      const avisos: string[] = [];
+      try {
+        await usuario.retirar();
+      } catch {
+        avisos.push('No se pudo borrar el usuario temporal de la restauración.');
+      }
+      if (dueno && dueno !== con.usuario) {
+        try {
+          await this.asignarDuenoPg(base, dueno, con);
+        } catch (e) {
+          avisos.push(
+            `Los datos se restauraron, pero no se pudo devolver la propiedad al usuario ${dueno}: ${e instanceof Error ? e.message : String(e)}`,
+          );
+        }
+      }
+      // ejecutarRestauracion ya enmascara las claves en sus mensajes.
+      if (fallo) throw fallo;
+      return { advertencias: [...resultado!.advertencias, ...avisos] };
+    } finally {
+      await rm(tmp, OPCIONES_BORRADO).catch(() => undefined);
+    }
   }
 
   async respaldar(
