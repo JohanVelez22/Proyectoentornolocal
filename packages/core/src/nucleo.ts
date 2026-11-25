@@ -2811,6 +2811,11 @@ export class Nucleo {
           }
         },
         confiar: (id) => this.confiarReceta(id),
+        quitarConfianza: async (id) => {
+          const { id: _id, ...resto } = await this.sitioPorId(id);
+          void _id;
+          await this.guardarSitio({ ...resto, confiado: false }, id);
+        },
         plantillas: this.plantillas,
         extensionesActivas: async (rama) =>
           (await this.extensionesPhp.listar(rama)).filter((e) => e.activa).map((e) => e.nombre),

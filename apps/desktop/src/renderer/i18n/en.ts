@@ -3270,6 +3270,9 @@ export const en: Textos = {
       errorLista: 'The templates could not be read',
       desde: (nombre: string) => `Template: ${nombre}`,
       avisoSinBase: 'This template has no database.',
+      importadaEtiqueta: 'imported',
+      avisoImportada:
+        'This template comes from a third party: the project is created untrusted and without starting its processes, and opening the site runs its code. Review its files first.',
       generadoresTitulo: 'Projects from scratch',
     },
   },

@@ -3296,6 +3296,9 @@ export const pt: Textos = {
       errorLista: 'Não foi possível ler os modelos',
       desde: (nombre: string) => `Modelo: ${nombre}`,
       avisoSinBase: 'Este modelo não tem banco de dados.',
+      importadaEtiqueta: 'importado',
+      avisoImportada:
+        'O modelo vem de terceiros: o projeto é criado sem confiança e sem iniciar seus processos, e abrir o site executa o código dele. Revise os arquivos antes.',
       generadoresTitulo: 'Projetos do zero',
     },
   },

@@ -1981,3 +1981,39 @@ describe('pasos de plantilla de proyecto (D14)', () => {
     expect(PASOS_SOLO_GENERADOR).toContain('restaurar-esquema-plantilla');
   });
 });
+
+describe('plantilla importada: sin scripts de terceros', () => {
+  it('composer install con --no-scripts --no-plugins', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, 'composer.json', '{}');
+    await correr(a, 'composer-install', { sinScripts: true });
+    expect(a.llamadas[0]!.args).toEqual(expect.arrayContaining(['--no-scripts', '--no-plugins']));
+    await correr(a, 'composer-install');
+    expect(a.llamadas[1]!.args).not.toContain('--no-scripts');
+  });
+
+  it('npm con --ignore-scripts', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, 'package.json', '{}');
+    await correr(a, 'npm-ci', { sinScripts: true });
+    expect(a.llamadas[0]!.args).toContain('--ignore-scripts');
+  });
+
+  it('pip solo con ruedas y un requirements.txt simple; pyproject.toml y opciones se rechazan', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, join('.venv', 'Scripts', 'python.exe'), '');
+    await escribir(a.carpeta, 'requirements.txt', 'fastapi==0.115.0\n');
+    await correr(a, 'pip-install', { sinScripts: true });
+    expect(a.llamadas[0]!.args).toEqual(
+      expect.arrayContaining(['--only-binary=:all:', '-r', 'requirements.txt']),
+    );
+    await escribir(a.carpeta, 'requirements.txt', 'fastapi==0.115.0\n-e .\n');
+    await expect(correr(a, 'pip-install', { sinScripts: true })).rejects.toThrow(
+      /requisitos simples/,
+    );
+    await rm(join(a.carpeta, 'requirements.txt'));
+    await escribir(a.carpeta, 'pyproject.toml', '[project]\nname="x"\n');
+    await expect(correr(a, 'pip-install', { sinScripts: true })).rejects.toThrow(/pyproject/);
+    expect(a.llamadas).toHaveLength(1);
+  });
+});

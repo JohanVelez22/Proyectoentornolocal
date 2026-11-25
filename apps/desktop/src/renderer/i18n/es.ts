@@ -3290,6 +3290,9 @@ export const es = {
       errorLista: 'No se pudieron leer las plantillas',
       desde: (nombre: string) => `Plantilla: ${nombre}`,
       avisoSinBase: 'Esta plantilla no trae base de datos.',
+      importadaEtiqueta: 'importada',
+      avisoImportada:
+        'La plantilla viene de un tercero: el proyecto se crea sin confianza y sin arrancar sus procesos, y abrir el sitio ejecuta su código. Revise sus archivos antes.',
       generadoresTitulo: 'Proyectos desde cero',
     },
   },

@@ -110,7 +110,10 @@ export function generadorDePlantilla(pl: Plantilla): Generador {
         if (x.tipo === 'pgvector-activar' && !p.base) continue;
         // Solo los argumentos de la lista del tipo, y los de la base los pone siempre este generador.
         const args: Record<string, unknown> = argsPermitidos(x.tipo, x.args);
-        if (importada && (x.tipo === 'composer-install' || x.tipo === 'npm-ci')) {
+        if (
+          importada &&
+          (x.tipo === 'composer-install' || x.tipo === 'npm-ci' || x.tipo === 'pip-install')
+        ) {
           args.sinScripts = true;
         }
         if (x.tipo === 'env-crear' || x.tipo === 'pgvector-activar') Object.assign(args, base);
@@ -158,7 +161,15 @@ export function generadorDePlantilla(pl: Plantilla): Generador {
           p,
           g,
           pl.tipo === 'fastapi'
-            ? { procesos: [procesoUvicorn({ moduloAsgi: pl.moduloAsgi ?? 'main:app' })] }
+            ? {
+                procesos: [
+                  {
+                    ...procesoUvicorn({ moduloAsgi: pl.moduloAsgi ?? 'main:app' }),
+                    // Una importada no arranca sus procesos sola.
+                    autoIniciar: !importada,
+                  },
+                ],
+              }
             : {},
         ),
       );

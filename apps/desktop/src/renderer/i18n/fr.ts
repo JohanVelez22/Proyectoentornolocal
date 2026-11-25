@@ -3364,6 +3364,9 @@ export const fr: Textos = {
       errorLista: 'Impossible de lire les modèles',
       desde: (nombre: string) => `Modèle : ${nombre}`,
       avisoSinBase: "Ce modèle n'a pas de base de données.",
+      importadaEtiqueta: 'importé',
+      avisoImportada:
+        "Le modèle vient d'un tiers : le projet est créé sans confiance et sans démarrer ses processus, et ouvrir le site exécute son code. Vérifiez ses fichiers d'abord.",
       generadoresTitulo: 'Projets à partir de zéro',
     },
   },

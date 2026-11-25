@@ -49,6 +49,15 @@ const lineas = computed(() =>
       </template>
     </dl>
 
+    <NAlert
+      v-if="form.plantilla?.origen === 'importada'"
+      type="warning"
+      :bordered="false"
+      class="huella"
+    >
+      {{ textos.plantillas.lista.avisoImportada }}
+    </NAlert>
+
     <NAlert v-if="motorDistinto(form)" type="warning" :bordered="false" class="huella">
       {{ textos.errores.codigos['plantillas.motor_distinto'] }}
     </NAlert>

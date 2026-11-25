@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { carpetaTemporal } from './temporales';
 import { ErrorWolf } from '../src/errores';
 import { crearProyecto, type DepsCrearProyecto } from '../src/proyectos/crear';
+import { revisarRequirements } from '../src/proyectos/pasos/python';
 import {
   generadorDePlantilla,
   pasosOmitidosDePlantilla,
@@ -1671,5 +1672,110 @@ describe('R3-I7 / I8: servidor de la familia y generador base', () => {
         opciones: {},
       }),
     ).rejects.toMatchObject({ codigo: 'plantillas.sin_generador_base' });
+  });
+});
+
+describe('R3-I5: una plantilla importada ejecuta código ajeno: sin scripts, sin procesos, sin confianza', () => {
+  const imp = (extra: Partial<Plantilla> = {}): Plantilla => ({
+    id: 'api-a1b2c3',
+    nombre: 'Api',
+    creada: '2026-11-24T00:00:00.000Z',
+    tipo: 'fastapi',
+    receta: [
+      { id: 'python-venv', tipo: 'python-venv', titulo: 'venv' },
+      { id: 'pip-install', tipo: 'pip-install', titulo: 'pip' },
+    ],
+    php: null,
+    phpIni: {},
+    extensiones: [],
+    runtimes: {},
+    reglasNginx: null,
+    motorBase: null,
+    origen: 'importada',
+    generador: 'fastapi',
+    moduloAsgi: 'main:app',
+    conArchivos: true,
+    archivoEsquema: null,
+    sha256: { archivos: 'a'.repeat(64), esquema: null },
+    ...extra,
+  });
+
+  it('pip-install lleva sinScripts y el uvicorn no arranca solo', () => {
+    const p = generadorDePlantilla(imp()).pasos({
+      tipo: 'fastapi',
+      plantilla: 'api-a1b2c3',
+      nombre: 'nueva',
+      carpeta: 'C:\\\\x\\\\nueva',
+      base: null,
+      opciones: {},
+    });
+    expect(p.find((x) => x.tipo === 'pip-install')!.args).toMatchObject({ sinScripts: true });
+    const procesos = p.find((x) => x.tipo === 'sitio-crear')!.args!.procesos as {
+      autoIniciar: boolean;
+    }[];
+    expect(procesos[0]!.autoIniciar).toBe(false);
+    const propia = generadorDePlantilla(imp({ origen: 'propia' })).pasos({
+      tipo: 'fastapi',
+      plantilla: 'api-a1b2c3',
+      nombre: 'nueva',
+      carpeta: 'C:\\\\x\\\\nueva',
+      base: null,
+      opciones: {},
+    });
+    expect(
+      (
+        propia.find((x) => x.tipo === 'sitio-crear')!.args!.procesos as { autoIniciar: boolean }[]
+      )[0]!.autoIniciar,
+    ).toBe(true);
+  });
+
+  it('crearProyecto: no arranca procesos, quita la confianza y avisa', async () => {
+    const quitadas: string[] = [];
+    const iniciados: string[] = [];
+    const deps: DepsCrearProyecto = {
+      ...depsMinimas({}),
+      plantillas: { cargar: async () => imp() },
+      pythonInstaladas: async () => ['3.12.10'],
+      iniciarProcesos: async (id) => void iniciados.push(id),
+      quitarConfianza: async (id) => void quitadas.push(id),
+    };
+    const r = await crearProyecto(deps, {
+      tipo: 'fastapi',
+      plantilla: 'api-a1b2c3',
+      nombre: 'nueva',
+      carpeta: path.join(dir, 'nueva'),
+      base: null,
+      opciones: {},
+    });
+    expect(quitadas).toEqual(['nueva']);
+    expect(iniciados).toEqual([]);
+    expect(r.avisos.join('\n')).toMatch(/tercero.*sin confianza/);
+  });
+});
+
+describe('R3-I5: pip con un requirements.txt ajeno', () => {
+  it.each([
+    ['-e .'],
+    ['-r otro.txt'],
+    ['--index-url https://evil.example/simple'],
+    ['paquete @ https://evil.example/p.whl'],
+    ['git+https://github.com/x/y.git'],
+    ['./local'],
+    ['C:\\\\ruta\\\\p'],
+    ['paquete==1.0 --hash=sha256:abc'],
+    ['https://evil.example/p.tar.gz'],
+  ])('rechaza la línea %s', async (linea) => {
+    const f = path.join(dir, 'requirements.txt');
+    await writeFile(f, `fastapi==0.115.0\n${linea}\n`);
+    await expect(revisarRequirements(f)).rejects.toThrow(/requisitos simples/);
+  });
+
+  it('acepta requisitos simples, con extras, rangos, marcadores y comentarios', async () => {
+    const f = path.join(dir, 'requirements.txt');
+    await writeFile(
+      f,
+      '# deps\nfastapi==0.115.0\nuvicorn[standard]>=0.30,<1  # servidor\npydantic~=2.7 ; python_version >= "3.10"\n\n',
+    );
+    await expect(revisarRequirements(f)).resolves.toBeUndefined();
   });
 });

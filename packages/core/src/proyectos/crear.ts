@@ -81,6 +81,8 @@ export interface DepsCrearProyecto {
     sitioId: string,
     ajustes: { phpIni: Record<string, string>; reglasNginx: string | null },
   ) => Promise<string[]>;
+  /** Quita "Confío en este repositorio" de un sitio (plantillas importadas). */
+  quitarConfianza?: (sitioId: string) => Promise<unknown>;
   /** Extensiones de PHP activas en una rama (para avisar de las que pide la plantilla). */
   extensionesActivas?: (rama: string) => Promise<string[]>;
 }
@@ -482,6 +484,18 @@ async function crearProyectoInterno(
   if (resultado.estado === 'lista' && !plantilla) await d.confiar(sitio.id).catch(() => undefined);
 
   const avisos: string[] = [];
+  const importada = plantilla?.origen === 'importada';
+  if (importada) {
+    // Viene de un tercero: su código no se ejecuta sin que el usuario lo confíe a propósito.
+    try {
+      await d.quitarConfianza?.(sitio.id);
+    } catch (e) {
+      avisos.push(e instanceof Error ? e.message : String(e));
+    }
+    avisos.push(
+      'La plantilla viene de un tercero: el sitio quedó sin confianza y abrirlo ejecuta su código.',
+    );
+  }
   if (plantilla) {
     // Una plantilla no vuelve a correr comandos propios: se dice cuáles se dejaron fuera.
     const omitidos = pasosOmitidosDePlantilla(plantilla);
@@ -521,7 +535,12 @@ async function crearProyectoInterno(
       }
     }
   }
-  if (resultado.estado === 'lista' && gen.tipoSitio === 'fastapi' && d.iniciarProcesos) {
+  if (
+    resultado.estado === 'lista' &&
+    gen.tipoSitio === 'fastapi' &&
+    d.iniciarProcesos &&
+    !importada
+  ) {
     try {
       await d.iniciarProcesos(sitio.id);
     } catch (e) {

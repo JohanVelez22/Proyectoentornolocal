@@ -33,6 +33,7 @@ const fecha = (iso: string): string => iso.slice(0, 10);
           <strong>{{ p.nombre }}</strong>
           <span>
             {{ p.tipo }} · {{ p.conArchivos ? t.conArchivosEtiqueta : t.soloEsquema }}
+            <template v-if="p.origen === 'importada'"> · {{ t.importadaEtiqueta }}</template>
             <template v-if="p.motorBase"> · {{ t.conBase(p.motorBase) }}</template>
             · {{ fecha(p.creada) }}
           </span>
