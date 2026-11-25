@@ -173,6 +173,7 @@ export const en: Textos = {
         'This tunnel has no saved credential: create it again in the tunnel options.',
       'tuneles.cloudflare_datos_invalidos':
         'The tunnel name (lowercase, numbers and hyphens) or the public domain is not valid.',
+      'tuneles.cloudflare_conexion_en_curso': 'A Cloudflare connection is already in progress.',
       'tuneles.cloudflare_fallo': 'cloudflared could not complete the operation: {detalle}',
       'tuneles.credencial_no_protegida':
         'The credential could not be restricted to your user, so it was not used.',
@@ -1326,6 +1327,10 @@ export const en: Textos = {
     conectando: 'Waiting for authorization in your browser…',
     conectarAyuda:
       'Your browser opens so you can authorize WolfCore Dev on your account. The certificate stays only in your data folder.',
+    autorizacion: 'Cloudflare authorization',
+    abrirAutorizacion: 'Open the authorization page',
+    copiarAutorizacion: 'Copy the authorization link',
+    cancelarConexion: 'Cancel',
     desconectar: 'Disconnect',
     nombreTunel: 'Tunnel name',
     nombreTunelAyuda: 'Lowercase letters, numbers and hyphens.',

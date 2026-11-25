@@ -174,6 +174,7 @@ export const es = {
         'Este túnel no tiene credencial guardada: créelo de nuevo en las opciones del túnel.',
       'tuneles.cloudflare_datos_invalidos':
         'El nombre del túnel (minúsculas, números y guiones) o el dominio público no son válidos.',
+      'tuneles.cloudflare_conexion_en_curso': 'Ya hay una conexión con Cloudflare en curso.',
       'tuneles.cloudflare_fallo': 'cloudflared no pudo completar la operación: {detalle}',
       'tuneles.credencial_no_protegida':
         'No se pudo restringir la credencial al usuario, así que no se usó.',
@@ -1343,6 +1344,10 @@ export const es = {
     conectando: 'Esperando la autorización en su navegador…',
     conectarAyuda:
       'Se abre su navegador para autorizar a WolfCore Dev en su cuenta. El certificado queda solo en su carpeta de datos.',
+    autorizacion: 'Autorización de Cloudflare',
+    abrirAutorizacion: 'Abrir la página de autorización',
+    copiarAutorizacion: 'Copiar el enlace de autorización',
+    cancelarConexion: 'Cancelar',
     desconectar: 'Desconectar',
     nombreTunel: 'Nombre del túnel',
     nombreTunelAyuda: 'Minúsculas, números y guiones.',

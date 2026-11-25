@@ -13,13 +13,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
-import type { Ejecutor } from '../src/plataforma/tipos';
+import type { Ejecutor, Lanzador } from '../src/plataforma/tipos';
 import type { DefProceso, EstadoProceso } from '../src/procesos/supervisor';
 import { Supervisor } from '../src/procesos/supervisor';
 import { Rutas } from '../src/rutas';
 import { UrlBase } from '../src/sitios/urlbase';
 import { SitioSchema, type Sitio } from '../src/tipos';
 import type { SecretosTunel } from '../src/tuneles/proveedor';
+import { urlAutorizacion } from '../src/tuneles/cloudflareNombre';
 import { Tuneles } from '../src/tuneles/tuneles';
 
 const CENTINELA = 'centinela-secreta-d';
@@ -56,6 +57,14 @@ let llamadas: Array<{
 let restringidos: string[];
 let bannerEnLog: string;
 let falloCloudflared: string | null;
+let lanzadas: Array<{
+  cmd: string;
+  args: string[];
+  env?: Record<string, string> | undefined;
+  quitar?: readonly string[] | undefined;
+}>;
+let esperarAbort: boolean;
+let autorizaciones: Array<string | null>;
 let guardados: Array<{ sitioId: string; tunel: unknown }>;
 
 const sitio = (extra: Partial<Sitio> = {}): Sitio =>
@@ -112,6 +121,34 @@ const ejecutor: Ejecutor = async (cmd, args, opts) => {
   return { codigo: 0, stdout: '', stderr: '' };
 };
 
+const URL_LOGIN =
+  'https://dash.cloudflare.com/argotunnel?aud=&callback=https%3A%2F%2Flogin.cloudflareaccess.org%2Fabc';
+
+/**
+ * `cloudflared tunnel login` falso que imita al real: ignora --origincert y escribe el
+ * certificado en `$HOME/.cloudflared/cert.pem`; muestra la URL de autorización y espera.
+ */
+const lanzarFalso: Lanzador = async (cmd, args, opts) => {
+  lanzadas.push({ cmd, args, env: opts?.env, quitar: opts?.quitarEntorno });
+  const home = opts?.env?.['HOME'];
+  if (!home) throw new Error('el login real escribiría en el ~/.cloudflared real del usuario');
+  opts?.alLinea?.(
+    'Please open the following URL and log in with your Cloudflare account:',
+    'stderr',
+  );
+  opts?.alLinea?.(URL_LOGIN, 'stderr');
+  if (falloCloudflared !== null) return { codigo: 1 };
+  if (esperarAbort) {
+    await new Promise<void>((resolver) => {
+      opts?.senal?.addEventListener('abort', () => resolver(), { once: true });
+    });
+    return { codigo: 1 };
+  }
+  mkdirSync(path.join(home, '.cloudflared'), { recursive: true });
+  writeFileSync(path.join(home, '.cloudflared', 'cert.pem'), '-----BEGIN PRUEBA-----');
+  return { codigo: 0 };
+};
+
 const secretos: SecretosTunel = {
   disponible: () => cifrado,
   leer: async (id) => {
@@ -146,6 +183,7 @@ function crear(opts = { esperaMs: 300, intervaloMs: 10 }) {
       },
     },
     ejecutor,
+    lanzar: lanzarFalso,
     secretos: () => secretos,
     guardarTunel: async (sitioId, tunel) => {
       guardados.push({ sitioId, tunel });
@@ -185,6 +223,9 @@ beforeEach(() => {
   restringidos = [];
   bannerEnLog = BANNER;
   falloCloudflared = null;
+  lanzadas = [];
+  esperarAbort = false;
+  autorizaciones = [];
   guardados = [];
   // La cuenta ya conectada.
   mkdirSync(rutas.cloudflaredEtc(), { recursive: true });
@@ -364,19 +405,70 @@ describe('Cloudflare con nombre: seguridad de la apertura', () => {
 });
 
 describe('Cloudflare con nombre: cuenta, túnel y dominio', () => {
-  it('conectar usa --origincert en la carpeta de datos y restringe el certificado', async () => {
+  it('conectar lanza el login con un inicio temporal propio y mueve el certificado a etc/', async () => {
     rmSync(path.join(rutas.cloudflaredEtc(), 'cert.pem'));
+    eventos.on('tunel:autorizacion', (e) => autorizaciones.push(e.url));
     const t = crear();
-    await t.cloudflareNombre!.conectar();
+    const r = await t.cloudflareNombre!.conectar();
+    expect(r).toEqual({ cancelado: false });
     const cert = path.join(rutas.cloudflaredEtc(), 'cert.pem');
-    expect(existsSync(cert)).toBe(true);
+    expect(readFileSync(cert, 'utf8')).toContain('PRUEBA');
     expect(restringidos).toContain(cert);
-    const l = llamadas[0]!;
-    expect(l.args).toEqual(['tunnel', '--origincert', cert, 'login']);
-    expect(l.env).toEqual({ TUNNEL_ORIGIN_CERT: cert });
-    // Nada apunta al ~/.cloudflared real.
-    expect(JSON.stringify(llamadas)).not.toContain('.cloudflared');
+    const l = lanzadas[0]!;
+    // Sin --origincert (el login real lo ignora) y con el inicio dentro de la carpeta de datos.
+    expect(l.args).toEqual(['tunnel', 'login']);
+    expect(l.env).toEqual({
+      HOME: rutas.cloudflaredLogin(),
+      USERPROFILE: rutas.cloudflaredLogin(),
+    });
+    expect(rutas.cloudflaredLogin().startsWith(base)).toBe(true);
+    expect(l.quitar).toEqual(['TUNNEL_']);
+    // La carpeta temporal se borra y nada apunta al ~/.cloudflared real.
+    expect(existsSync(rutas.cloudflaredLogin())).toBe(false);
+    expect(JSON.stringify(lanzadas)).not.toContain(os.homedir());
     expect(cert.startsWith(base)).toBe(true);
+    // La URL de autorización se muestra en cuanto aparece y se retira al terminar.
+    expect(autorizaciones).toEqual([URL_LOGIN, null]);
+  });
+
+  it('conectar se puede cancelar: no queda certificado ni carpeta temporal', async () => {
+    rmSync(path.join(rutas.cloudflaredEtc(), 'cert.pem'));
+    esperarAbort = true;
+    eventos.on('tunel:autorizacion', (e) => autorizaciones.push(e.url));
+    const t = crear();
+    const espera = t.cloudflareNombre!.conectar();
+    for (let i = 0; i < 100 && autorizaciones.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    expect(autorizaciones[0]).toBe(URL_LOGIN);
+    // Una segunda conexión mientras espera no lanza otro login.
+    await expect(t.cloudflareNombre!.conectar()).rejects.toMatchObject({
+      codigo: 'tuneles.cloudflare_conexion_en_curso',
+    });
+    t.cloudflareNombre!.cancelarConexion();
+    await expect(espera).resolves.toEqual({ cancelado: true });
+    expect(existsSync(path.join(rutas.cloudflaredEtc(), 'cert.pem'))).toBe(false);
+    expect(existsSync(rutas.cloudflaredLogin())).toBe(false);
+    expect(autorizaciones.at(-1)).toBeNull();
+    expect(lanzadas).toHaveLength(1);
+  });
+
+  it('un login que falla no deja certificado y su error no filtra secretos', async () => {
+    rmSync(path.join(rutas.cloudflaredEtc(), 'cert.pem'));
+    falloCloudflared = 'x';
+    await expect(crear().cloudflareNombre!.conectar()).rejects.toMatchObject({
+      codigo: 'tuneles.cloudflare_fallo',
+    });
+    expect(existsSync(path.join(rutas.cloudflaredEtc(), 'cert.pem'))).toBe(false);
+    expect(existsSync(rutas.cloudflaredLogin())).toBe(false);
+  });
+
+  it('solo se muestra una URL de autorización de cloudflare.com', () => {
+    expect(urlAutorizacion(URL_LOGIN)).toBe(URL_LOGIN);
+    expect(urlAutorizacion('visite https://evil.example.com/x')).toBeNull();
+    expect(urlAutorizacion('https://cloudflare.com.evil.io/x')).toBeNull();
+    expect(urlAutorizacion('http://dash.cloudflare.com/x')).toBeNull();
+    expect(urlAutorizacion('sin url')).toBeNull();
   });
 
   it('crear el túnel guarda la credencial solo en el almacén y borra el archivo temporal', async () => {

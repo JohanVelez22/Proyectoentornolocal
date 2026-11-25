@@ -10,7 +10,7 @@ import type { GestorSitios } from '../sitios/sitios';
 import type { UrlBase } from '../sitios/urlbase';
 import type { Config, EstadoTunel, Sitio } from '../tipos';
 import { nombreEjecutable } from '../plataforma/sistema';
-import type { Ejecutor, PlataformaCompleta } from '../plataforma/tipos';
+import type { Ejecutor, Lanzador, PlataformaCompleta } from '../plataforma/tipos';
 import { enmascararSecretos } from '../patronesSecretos';
 import { CloudflareNombre, detalleSeguro } from './cloudflareNombre';
 import { CloudflareRapido } from './cloudflareRapido';
@@ -34,6 +34,8 @@ export interface DepsTuneles {
   /** Para el túnel con nombre (cuenta y credenciales); sin ellos solo hay Cloudflare rápido. */
   plataforma?: Pick<PlataformaCompleta, 'restringirAlUsuario'>;
   ejecutor?: Ejecutor;
+  /** Para `tunnel login` en streaming (URL de autorización en vivo y cancelar). */
+  lanzar?: Lanzador;
   /** El almacén de secretos del proceso principal (puede fijarse después del arranque). */
   secretos?: () => SecretosTunel | null;
   /** Guarda el proveedor elegido de un sitio (sin tocar nada más del sitio). */
@@ -95,6 +97,8 @@ export class Tuneles {
             rutas: d.rutas,
             plataforma: d.plataforma,
             ejecutor: d.ejecutor,
+            ...(d.lanzar ? { lanzar: d.lanzar } : {}),
+            alAutorizacion: (url) => d.eventos.emit('tunel:autorizacion', { url }),
             ejecutable: () => this.rutaCloudflared(),
             secretos: () => this.secretos?.() ?? null,
           })

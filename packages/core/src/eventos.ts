@@ -40,6 +40,8 @@ export type EventosNucleo = {
   'servicio:estado': EstadoServicio;
   'sitio:cambio': Sitio[];
   'tunel:estado': EstadoTunel;
+  /** URL de autorización de `cloudflared tunnel login` mientras espera (null al terminar). */
+  'tunel:autorizacion': { url: string | null };
   'instalacion:progreso': ProgresoInstalacion;
   'hosts:estado': EstadoHosts;
   'bd:progreso': ProgresoBd;

@@ -1,10 +1,10 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import { enmascararSecretos } from '../patronesSecretos';
-import type { Ejecutor, PlataformaCompleta } from '../plataforma/tipos';
+import type { Ejecutor, Lanzador, PlataformaCompleta } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 import type { Sitio } from '../tipos';
 import {
@@ -20,6 +20,10 @@ export interface DepsCloudflareNombre {
   rutas: Rutas;
   plataforma: Pick<PlataformaCompleta, 'restringirAlUsuario'>;
   ejecutor: Ejecutor;
+  /** Para `tunnel login` (espera al navegador y muestra su URL en vivo). */
+  lanzar?: Lanzador;
+  /** La URL de autorización apareció (o, con null, ya no hace falta). */
+  alAutorizacion?: (url: string | null) => void;
   /** Ruta del cloudflared instalado (lanza `tuneles.cloudflared_no_instalado` si no hay). */
   ejecutable: () => Promise<string>;
   secretos: () => SecretosTunel | null;
@@ -46,6 +50,24 @@ export function detalleSeguro(texto: string, secretos: string[] = []): string {
   for (const s of secretos) if (s.length >= 4) t = t.split(s).join('***');
   t = enmascararSecretos(t).replace(/\s+/g, ' ').trim();
   return t.length > 300 ? `${t.slice(0, 300)}…` : t;
+}
+
+/**
+ * La URL de autorización del `login` si la línea trae una de Cloudflare (https, host
+ * `cloudflare.com` o un subdominio): la que se muestra al usuario para abrirla en su navegador.
+ */
+export function urlAutorizacion(linea: string): string | null {
+  const m = /https:\/\/[^\s"'<>]{1,2000}/.exec(linea);
+  if (!m) return null;
+  try {
+    const u = new URL(m[0]);
+    const h = u.hostname.toLowerCase();
+    return u.protocol === 'https:' && (h === 'cloudflare.com' || h.endsWith('.cloudflare.com'))
+      ? u.toString()
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 function credencialInvalida(): ErrorWolf {
@@ -131,27 +153,85 @@ export class CloudflareNombre implements ProveedorTunel {
     }
   }
 
-  /** `cloudflared tunnel login`: abre el navegador del usuario; el certificado queda en `etc/`. */
-  async conectar(): Promise<void> {
-    const exe = await this.d.ejecutable();
-    await mkdir(this.d.rutas.cloudflaredEtc(), { recursive: true });
-    const r = await this.d.ejecutor(exe, ['tunnel', '--origincert', this.cert(), 'login'], {
-      timeoutMs: 300_000,
-      env: { TUNNEL_ORIGIN_CERT: this.cert() },
-    });
-    if (r.codigo !== 0 || !this.tieneCuenta()) {
-      const detalle = detalleSeguro(`${r.stderr}\n${r.stdout}`);
-      throw new ErrorWolf('tuneles.cloudflare_fallo', `cloudflared login falló: ${detalle}`, {
-        detalle,
-      });
-    }
-    // El certificado da acceso a la cuenta: solo el usuario. Si no se puede, no se conserva.
-    if (!(await this.d.plataforma.restringirAlUsuario(this.cert()).catch(() => false))) {
-      await rm(this.cert(), { force: true });
+  private conexion: AbortController | null = null;
+
+  /** Cancela el `login` en curso (si lo hay): `conectar()` resuelve con `{cancelado: true}`. */
+  cancelarConexion(): void {
+    this.conexion?.abort();
+  }
+
+  /**
+   * `cloudflared tunnel login`. El `login` real ignora `--origincert` y siempre escribe en
+   * `<inicio>/.cloudflared/cert.pem`, así que se lanza con un inicio temporal propio (`HOME` y
+   * `USERPROFILE` en `run/cloudflared-login`); el certificado se mueve a `etc/cloudflared/`, se
+   * restringe al usuario y la carpeta temporal se borra. Nunca se lee ni se toca el `~/.cloudflared`
+   * real. La URL de autorización se muestra en cuanto aparece y el usuario puede cancelar.
+   */
+  async conectar(): Promise<{ cancelado: boolean }> {
+    const lanzar = this.d.lanzar;
+    if (!lanzar) {
       throw new ErrorWolf(
-        'tuneles.credencial_no_protegida',
-        'No se pudo restringir el certificado de Cloudflare al usuario; no se guardó.',
+        'tuneles.proveedor_no_disponible',
+        'Cloudflare con nombre no está disponible.',
+        { proveedor: 'cloudflare-nombre' },
       );
+    }
+    if (this.conexion) {
+      throw new ErrorWolf('tuneles.cloudflare_conexion_en_curso', 'Ya hay una conexión en curso.');
+    }
+    const exe = await this.d.ejecutable();
+    const inicio = this.d.rutas.cloudflaredLogin();
+    const control = new AbortController();
+    this.conexion = control;
+    const lineas: string[] = [];
+    let urlVista = false;
+    try {
+      await rm(inicio, { recursive: true, force: true });
+      await mkdir(inicio, { recursive: true });
+      await this.d.plataforma.restringirAlUsuario(inicio).catch(() => false);
+      let codigo: number;
+      try {
+        ({ codigo } = await lanzar(exe, ['tunnel', 'login'], {
+          env: { HOME: inicio, USERPROFILE: inicio },
+          quitarEntorno: ['TUNNEL_'],
+          senal: control.signal,
+          alLinea: (l) => {
+            if (lineas.length < 20) lineas.push(l);
+            if (urlVista) return;
+            const url = urlAutorizacion(l);
+            if (url) {
+              urlVista = true;
+              this.d.alAutorizacion?.(url);
+            }
+          },
+        }));
+      } catch (e) {
+        if (control.signal.aborted) return { cancelado: true };
+        throw e;
+      }
+      if (control.signal.aborted) return { cancelado: true };
+      const origen = path.join(inicio, '.cloudflared', 'cert.pem');
+      if (codigo !== 0 || !existsSync(origen)) {
+        const detalle = detalleSeguro(lineas.join(' '));
+        throw new ErrorWolf('tuneles.cloudflare_fallo', `cloudflared login falló: ${detalle}`, {
+          detalle,
+        });
+      }
+      await mkdir(this.d.rutas.cloudflaredEtc(), { recursive: true });
+      await copyFile(origen, this.cert());
+      // El certificado da acceso a la cuenta: solo el usuario. Si no se puede, no se conserva.
+      if (!(await this.d.plataforma.restringirAlUsuario(this.cert()).catch(() => false))) {
+        await rm(this.cert(), { force: true });
+        throw new ErrorWolf(
+          'tuneles.credencial_no_protegida',
+          'No se pudo restringir el certificado de Cloudflare al usuario; no se guardó.',
+        );
+      }
+      return { cancelado: false };
+    } finally {
+      await rm(inicio, { recursive: true, force: true }).catch(() => undefined);
+      this.conexion = null;
+      this.d.alAutorizacion?.(null);
     }
   }
 

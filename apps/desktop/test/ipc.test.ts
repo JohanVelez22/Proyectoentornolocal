@@ -41,7 +41,12 @@ function nucleoFalso() {
       estados: vi.fn(),
       elegirProveedor: vi.fn(),
       configurarCloudflareNombre: vi.fn(),
-      cloudflareNombre: { tieneCuenta: vi.fn(() => true), conectar: vi.fn(), desconectar: vi.fn() },
+      cloudflareNombre: {
+        tieneCuenta: vi.fn(() => true),
+        conectar: vi.fn(),
+        cancelarConexion: vi.fn(),
+        desconectar: vi.fn(),
+      },
     },
     instalador: { instalar: vi.fn(), instalados: vi.fn() },
     hosts: { sincronizar: vi.fn(async () => ({ ok: true })) },
@@ -393,6 +398,7 @@ describe('registrarIpc', () => {
       'registro:lineas',
       'servicio:estado',
       'sitio:cambio',
+      'tunel:autorizacion',
       'tunel:estado',
     ]);
   });
@@ -697,6 +703,7 @@ describe('registrarIpc', () => {
         'tuneles.estados',
         'tuneles.cuentaCloudflare',
         'tuneles.conectarCloudflare',
+        'tuneles.cancelarConexionCloudflare',
         'tuneles.desconectarCloudflare',
         'tuneles.configurarCloudflare',
         'tuneles.usarTunelRapido',

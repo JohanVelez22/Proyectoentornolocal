@@ -52,6 +52,13 @@ export class Rutas {
   cloudflaredRun(): string {
     return path.join(this.base, 'run', 'cloudflared');
   }
+  /**
+   * Carpeta de inicio temporal de `cloudflared tunnel login` (que siempre escribe en
+   * `<inicio>/.cloudflared/cert.pem`): así nunca toca el `~/.cloudflared` real del usuario.
+   */
+  cloudflaredLogin(): string {
+    return path.join(this.base, 'run', 'cloudflared-login');
+  }
   /** Secreto de proceso y puerto del canje de tokens de Adminer y phpMyAdmin (solo este usuario). */
   accesoBd(): string {
     return path.join(this.base, 'etc', 'acceso-bd');

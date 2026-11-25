@@ -235,6 +235,7 @@ const api: ApiEntorno = {
     estados: () => invocar('tuneles.estados'),
     cuentaCloudflare: () => invocar('tuneles.cuentaCloudflare'),
     conectarCloudflare: () => invocar('tuneles.conectarCloudflare'),
+    cancelarConexionCloudflare: () => invocar('tuneles.cancelarConexionCloudflare'),
     desconectarCloudflare: () => invocar('tuneles.desconectarCloudflare'),
     configurarCloudflare: (id, nombre, dominio) =>
       invocar('tuneles.configurarCloudflare', id, nombre, dominio),

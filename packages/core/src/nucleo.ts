@@ -948,6 +948,7 @@ export class Nucleo {
       eventos,
       plataforma: plat,
       ejecutor: o.ejecutor ?? ejecutorPorDefecto,
+      lanzar: o.lanzar ?? lanzadorPorDefecto,
       guardarTunel: async (sitioId, tunel) => {
         await sitios.editar(sitioId, { tunel: tunel ?? undefined });
       },

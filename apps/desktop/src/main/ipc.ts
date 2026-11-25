@@ -1340,6 +1340,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
     conectada: n.tuneles.cloudflareNombre?.tieneCuenta() ?? false,
   }),
   'tuneles.conectarCloudflare': (n) => cloudflareNombre(n).conectar(),
+  'tuneles.cancelarConexionCloudflare': (n) => cloudflareNombre(n).cancelarConexion(),
   'tuneles.desconectarCloudflare': (n) => cloudflareNombre(n).desconectar(),
   'tuneles.configurarCloudflare': (n, _s, id, nombre, dominio) =>
     n.tuneles.configurarCloudflareNombre(

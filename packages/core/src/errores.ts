@@ -75,6 +75,7 @@ export const PARAMETROS_ERROR = {
   'tuneles.cloudflare_sin_credencial': [],
   'tuneles.cloudflare_datos_invalidos': [],
   'tuneles.cloudflare_fallo': ['detalle'],
+  'tuneles.cloudflare_conexion_en_curso': [],
   'tuneles.credencial_no_protegida': [],
   'tuneles.sin_cifrado': [],
   'hosts.dominio_invalido': [],

@@ -182,6 +182,7 @@ export const fr: Textos = {
         'Ce tunnel n’a aucun identifiant enregistré : recréez-le dans les options du tunnel.',
       'tuneles.cloudflare_datos_invalidos':
         'Le nom du tunnel (minuscules, chiffres et tirets) ou le domaine public n’est pas valide.',
+      'tuneles.cloudflare_conexion_en_curso': 'Une connexion à Cloudflare est déjà en cours.',
       'tuneles.cloudflare_fallo': 'cloudflared n’a pas pu terminer l’opération : {detalle}',
       'tuneles.credencial_no_protegida':
         'L’identifiant n’a pas pu être limité à l’utilisateur, il n’a donc pas été utilisé.',
@@ -1379,6 +1380,10 @@ export const fr: Textos = {
     conectando: 'En attente de l’autorisation dans votre navigateur…',
     conectarAyuda:
       'Votre navigateur s’ouvre pour autoriser WolfCore Dev sur votre compte. Le certificat reste uniquement dans votre dossier de données.',
+    autorizacion: 'Autorisation Cloudflare',
+    abrirAutorizacion: 'Ouvrir la page d’autorisation',
+    copiarAutorizacion: 'Copier le lien d’autorisation',
+    cancelarConexion: 'Annuler',
     desconectar: 'Déconnecter',
     nombreTunel: 'Nom du tunnel',
     nombreTunelAyuda: 'Minuscules, chiffres et tirets.',

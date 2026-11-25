@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NAlert, NButton, NFormItem, NInput, NModal, NRadio, NRadioGroup } from 'naive-ui';
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { Sitio } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
@@ -54,11 +54,40 @@ watch(
   { immediate: true },
 );
 
+/** La URL de autorización llega en cuanto cloudflared la muestra. */
+const urlAutorizacion = ref<string | null>(null);
+let bajaAutorizacion: (() => void) | null = null;
+onMounted(() => {
+  bajaAutorizacion = api().on('tunel:autorizacion', (e) => {
+    urlAutorizacion.value = e.url;
+  });
+});
+onBeforeUnmount(() => bajaAutorizacion?.());
+
 async function conectar(): Promise<void> {
+  urlAutorizacion.value = null;
   await ejecutar('tunel-conectar', () => api().tuneles.conectarCloudflare(), {
     tituloError: t.opciones,
   });
+  urlAutorizacion.value = null;
   await leerCuenta();
+}
+
+async function cancelarConexion(): Promise<void> {
+  await ejecutar('tunel-cancelar', () => api().tuneles.cancelarConexionCloudflare());
+}
+
+function abrirAutorizacion(): void {
+  if (urlAutorizacion.value)
+    void ejecutar('tunel-url', () => api().sistema.abrirUrl(urlAutorizacion.value!));
+}
+
+function copiarAutorizacion(): void {
+  if (urlAutorizacion.value) {
+    void ejecutar('tunel-copiar', () => api().sistema.copiar(urlAutorizacion.value!), {
+      exito: textos.acciones.copiado,
+    });
+  }
 }
 
 async function desconectar(): Promise<void> {
@@ -137,6 +166,17 @@ async function usarRapido(): Promise<void> {
       <p v-if="!cuenta.conectada" class="ayuda">
         {{ ocupado('tunel-conectar') ? t.conectando : t.conectarAyuda }}
       </p>
+      <div v-if="ocupado('tunel-conectar')" class="fila" role="group" :aria-label="t.autorizacion">
+        <template v-if="urlAutorizacion">
+          <NButton size="small" @click="abrirAutorizacion">{{ t.abrirAutorizacion }}</NButton>
+          <NButton size="small" secondary @click="copiarAutorizacion">{{
+            t.copiarAutorizacion
+          }}</NButton>
+        </template>
+        <NButton size="small" quaternary type="error" @click="cancelarConexion">{{
+          t.cancelarConexion
+        }}</NButton>
+      </div>
 
       <template v-if="cuenta.conectada">
         <NFormItem
