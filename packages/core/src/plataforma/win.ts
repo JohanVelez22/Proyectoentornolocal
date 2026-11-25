@@ -863,6 +863,8 @@ export class PlataformaWindows implements PlataformaCompleta {
     try {
       const datos = Buffer.from(contenido, 'utf8');
       await writeFile(tmp, datos);
+      // Cancelada mientras se preparaba el temporal (la app se cierra): no se abre ningún UAC.
+      if (ctl.signal.aborted) return { ok: false, motivo: 'tiempo' };
       // El script elevado se comprueba a sí mismo antes de copiar: un UAC aceptado tarde (o un
       // temporal que no se pudo borrar) no escribe nada.
       // El hosts del sistema lo ubica el script elevado con la API (no con %SystemRoot%).

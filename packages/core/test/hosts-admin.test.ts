@@ -67,18 +67,40 @@ describe('escritura elevada de hosts: el script se verifica a sí mismo (segurid
     const dir = await carpetaTemporal('pel-adm-');
     const destino = join(dir, 'hosts');
     await writeFile(destino, 'viejo');
+    // Se espera a que la PowerShell falsa esté en marcha (condición), no un tiempo fijo: bajo
+    // carga la escritura del temporal tarda y la cancelación llegaría antes de que exista.
+    let enMarcha!: () => void;
+    const arrancada = new Promise<void>((r) => (enMarcha = r));
     const ejecutor: Ejecutor = (_c, _a, o) =>
       new Promise((resolve) => {
         o?.senal?.addEventListener('abort', () =>
           resolve({ codigo: 1, stdout: '', stderr: 'abortado' }),
         );
+        enMarcha();
       });
     const p = new PlataformaWindows(ejecutor, undefined, { carpetaTemporal: dir });
     const escritura = p.escribirComoAdmin(destino, 'nuevo', { tiempoLimiteMs: 60_000 });
-    await new Promise((r) => setTimeout(r, 10));
+    await arrancada;
     p.cancelarEscriturasAdmin();
     expect(await escritura).toEqual({ ok: false, motivo: 'tiempo' });
     expect(await readFile(destino, 'utf8')).toBe('viejo');
+    expect((await readdir(dir)).filter((n) => n.startsWith(PREFIJO_TEMPORAL_HOSTS))).toEqual([]);
+  }, 15_000);
+
+  it('cancelar antes de que arranque la PowerShell no abre ningún UAC', async () => {
+    const dir = await carpetaTemporal('pel-adm-');
+    const destino = join(dir, 'hosts');
+    await writeFile(destino, 'viejo');
+    let llamadas = 0;
+    const ejecutor: Ejecutor = async () => {
+      llamadas++;
+      return { codigo: 0, stdout: '', stderr: '' };
+    };
+    const p = new PlataformaWindows(ejecutor, undefined, { carpetaTemporal: dir });
+    const escritura = p.escribirComoAdmin(destino, 'nuevo', { tiempoLimiteMs: 60_000 });
+    p.cancelarEscriturasAdmin();
+    expect(await escritura).toEqual({ ok: false, motivo: 'tiempo' });
+    expect(llamadas).toBe(0);
     expect((await readdir(dir)).filter((n) => n.startsWith(PREFIJO_TEMPORAL_HOSTS))).toEqual([]);
   });
 
