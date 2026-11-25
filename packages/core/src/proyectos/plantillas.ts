@@ -288,6 +288,18 @@ const NOMBRE_SECRETO = String.raw`(?:pass(?:word|wd)|pwd|_pw|secret|token|api[_-
  */
 const VALOR_LITERAL = String.raw`["']?(?!env\(|getenv\(|\$|%|null\b|true\b|false\b)[^\s"'#,;)<>]{3,}`;
 
+/** ¿Alguno de los tramos de la ruta (o su prefijo) coincide con una exclusión? */
+function enExcluidos(coincidencias: readonly Coincide[], ruta: string): boolean {
+  const tramos = ruta.split('/').filter(Boolean);
+  let rel = '';
+  for (const t of tramos) {
+    rel = rel ? `${rel}/${t}` : t;
+    const minus = rel.toLowerCase();
+    if (coincidencias.some((c) => c(minus, t))) return true;
+  }
+  return false;
+}
+
 /** Textos que delatan un secreto dentro de un archivo (el archivo se deja fuera). */
 const SECRETO_EN_ARCHIVO: readonly RegExp[] = [
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
@@ -514,6 +526,7 @@ async function sha256De(archivo: string): Promise<string> {
  * entradas o bytes de los topes. Un zip ilegible también es "dañado".
  */
 async function revisarZip(archivo: string, limites: LimitesPlantilla): Promise<void> {
+  const obligatorias = compilarExclusiones([]);
   const zip = await new Promise<yauzl.ZipFile>((resolve, reject) => {
     yauzl.open(archivo, { lazyEntries: true, autoClose: false }, (e, z) =>
       e || !z ? reject(e ?? new Error('zip ilegible')) : resolve(z),
@@ -532,6 +545,9 @@ async function revisarZip(archivo: string, limites: LimitesPlantilla): Promise<v
         bytes += e.uncompressedSize;
         const nombre = e.fileName.replace(/\\/g, '/');
         if (
+          // Lo que una plantilla nunca lleva tampoco puede venir en el zip (un zip manipulado
+          // podría traer un wolfcore.yml, un .env o un vendor/ con código propio).
+          enExcluidos(obligatorias, nombre) ||
           entradas > limites.maxArchivos * 2 + 1000 ||
           bytes > limites.maxBytes * 2 ||
           nombre.startsWith('/') ||

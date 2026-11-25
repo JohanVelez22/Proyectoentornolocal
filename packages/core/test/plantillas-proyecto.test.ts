@@ -664,6 +664,12 @@ describe('crearProyecto desde una plantilla (mismas validaciones que D12)', () =
     expect(r.avisos.join('\n')).toMatch(/omitieron 1 pasos.*comando/);
   });
 
+  it('no vuelve a tomar la huella de la receta de la carpeta (no confía en lo que vino en archivos)', async () => {
+    const confiadas: string[] = [];
+    await crearProyecto(deps({ confiar: async (id) => void confiadas.push(id) }), pedido());
+    expect(confiadas).toEqual([]);
+  });
+
   it('aplica php.ini y reglas de Nginx al terminar y avisa de extensiones que faltan', async () => {
     const r = await crearProyecto(deps(), pedido());
     expect(ajustes).toEqual([
@@ -873,5 +879,34 @@ describe('C1: secretos que no deben escaparse', () => {
     expect(v.excluidos.filter((x) => x.endsWith('(secreto)'))).toEqual([
       'config/cache.php (secreto)',
     ]);
+  });
+});
+
+describe('I1: un zip manipulado no puede traer lo que una plantilla nunca lleva', () => {
+  it.each([
+    ['wolfcore.yml'],
+    ['.env'],
+    ['.ENV.local'],
+    ['vendor/evil/autoload.php'],
+    ['node_modules/x/index.js'],
+    ['.git/hooks/pre-commit'],
+    ['config/id_rsa'],
+    ['certs/a.PEM'],
+    ['wp-config.php'],
+  ])('%s en el zip da plantillas.danada y no se extrae nada', async (entrada) => {
+    const pl = armar();
+    const p = await pl.guardar('tienda', opciones);
+    const dirP = path.join(rutas.plantillas(), p.id);
+    const malo = zipCrudo({ 'app/ok.php': 'ok', [entrada]: 'x' });
+    await writeFile(path.join(dirP, 'archivos.zip'), malo);
+    const json = JSON.parse(await readFile(path.join(dirP, 'plantilla.json'), 'utf8'));
+    json.sha256.archivos = createHash('sha256').update(malo).digest('hex');
+    await writeFile(path.join(dirP, 'plantilla.json'), JSON.stringify(json));
+    const destino = path.join(dir, 'nuevo-i1');
+    await mkdir(destino);
+    await expect(pl.restaurarArchivos(p.id, destino)).rejects.toMatchObject({
+      codigo: 'plantillas.danada',
+    });
+    expect(await readdir(destino)).toEqual([]);
   });
 });

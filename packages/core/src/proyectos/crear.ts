@@ -423,7 +423,9 @@ export async function crearProyecto(
       mensaje: e instanceof Error ? e.message : String(e),
     };
   }
-  if (resultado.estado === 'lista') await d.confiar(sitio.id).catch(() => undefined);
+  // Desde una plantilla no se vuelve a tomar la huella con lo que haya quedado en la carpeta: la
+  // receta que cuenta es la del generador y lo que venga en archivos no gana confianza solo.
+  if (resultado.estado === 'lista' && !plantilla) await d.confiar(sitio.id).catch(() => undefined);
 
   const avisos: string[] = [];
   if (plantilla) {
