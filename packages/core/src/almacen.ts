@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { renombrarConReintentos } from './https/confianza';
 import type { Rutas } from './rutas';
 import {
   ArchivoCredencialesSchema,
@@ -61,7 +62,8 @@ export class Almacen {
     await mkdir(path.dirname(archivo), { recursive: true });
     const tmp = `${archivo}.tmp`;
     await writeFile(tmp, JSON.stringify(valido, null, 2) + '\n', 'utf8');
-    await rename(tmp, archivo);
+    // En Windows un antivirus o un lector puede tener config.json abierto un instante (EPERM).
+    await renombrarConReintentos(tmp, archivo);
   }
 }
 
