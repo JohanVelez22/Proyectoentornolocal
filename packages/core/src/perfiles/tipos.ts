@@ -51,6 +51,11 @@ export interface DepsPerfiles {
   /** Deja la instancia lista para restaurar (creada, con sus datos iniciales y encendida). */
   prepararInstancia(instancia: string): Promise<void>;
   basesDe(instancia: string): Promise<string[]>;
+  /**
+   * Instantánea del entorno (D27) justo antes de escribir nada en la carpeta de datos, ya validado
+   * todo lo demás. Si lanza, no se importa nada.
+   */
+  instantaneaEntorno?: () => Promise<unknown>;
   /** Instantánea automática de una base existente antes de reemplazarla (D19). */
   instantaneaPrevia(instancia: string, base: string): Promise<void>;
   /**

@@ -227,6 +227,71 @@ describe('Instalador', () => {
     expect(await readdir(rutas.tmp())).toEqual([]);
   });
 
+  it('antes de reemplazar PHP toma la instantánea del entorno (y solo entonces)', async () => {
+    const z1 = zip({ 'php-cgi.exe': 'v1' });
+    const z2 = zip({ 'php-cgi.exe': 'v2' });
+    const v = (z: Buffer, version: string): VersionDisponible => ({
+      servicio: 'php',
+      version,
+      rama: '8.4',
+      url: 'https://windows.php.net/downloads/releases/php.zip',
+      sha256: sha(z),
+      formato: 'zip',
+    });
+    const orden: string[] = [];
+    const enganchar = (inst: Instalador): void =>
+      inst.fijarAntesDeActualizar(async (servicio) => {
+        orden.push(
+          `instantanea:${servicio}:${await readFile(path.join(rutas.bin('php', '8.4'), 'php-cgi.exe'), 'utf8')}`,
+        );
+      });
+    // Instalación nueva: nada que proteger.
+    const nueva = new Instalador(rutas, eventos, fetchDe(z1));
+    enganchar(nueva);
+    await nueva.instalar(v(z1, '8.4.26'));
+    expect(orden).toEqual([]);
+    // Un parche nuevo: la instantánea se toma con lo anterior todavía en su sitio.
+    const inst = new Instalador(rutas, eventos, fetchDe(z2));
+    enganchar(inst);
+    await inst.instalar(v(z2, '8.4.27-1'));
+    expect(orden).toEqual(['instantanea:php:v1']);
+    expect(await readFile(path.join(rutas.bin('php', '8.4'), 'php-cgi.exe'), 'utf8')).toBe('v2');
+    // Lo ya instalado y sin cambio no toma otra.
+    await inst.instalar(v(z2, '8.4.27-1'));
+    expect(orden).toHaveLength(1);
+  });
+
+  it('si la instantánea falla, PHP no se reemplaza ni se descarga', async () => {
+    const z1 = zip({ 'php-cgi.exe': 'v1' });
+    const z2 = zip({ 'php-cgi.exe': 'v2' });
+    const v = (z: Buffer, version: string): VersionDisponible => ({
+      servicio: 'php',
+      version,
+      rama: '8.4',
+      url: 'https://windows.php.net/downloads/releases/php.zip',
+      sha256: sha(z),
+      formato: 'zip',
+    });
+    await new Instalador(rutas, eventos, fetchDe(z1)).instalar(v(z1, '8.4.26'));
+    const f = vi.fn(fetchDe(z2));
+    const inst = new Instalador(rutas, eventos, f as unknown as typeof fetch);
+    inst.fijarAntesDeActualizar(async () => {
+      throw new Error('disco lleno');
+    });
+    await expect(inst.instalar(v(z2, '8.4.27-1'))).rejects.toThrow('disco lleno');
+    expect(f).not.toHaveBeenCalled();
+    expect(await readFile(path.join(rutas.bin('php', '8.4'), 'php-cgi.exe'), 'utf8')).toBe('v1');
+  });
+
+  it('un servicio que no es PHP ni Nginx no toma instantánea del entorno', async () => {
+    const inst = new Instalador(rutas, eventos, fetchDe(zipGenerico));
+    const hook = vi.fn(async () => undefined);
+    inst.fijarAntesDeActualizar(hook);
+    await inst.instalar(vGenerico(zipGenerico));
+    await inst.instalar(vGenerico(zipGenerico));
+    expect(hook).not.toHaveBeenCalled();
+  });
+
   it('desinstalar borra la carpeta y tolera inexistentes', async () => {
     const inst = new Instalador(rutas, eventos, fetchDe(zipGenerico));
     await inst.instalar(vGenerico(zipGenerico));

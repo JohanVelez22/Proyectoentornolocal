@@ -347,6 +347,8 @@ export const es = {
         'Esta CA puede firmar cualquier sitio web: impórtela solo si es la suya y compare la huella. Confírmelo aparte para continuar.',
       'perfiles.ca_restricciones_ajenas':
         'La CA del perfil tiene restricciones de nombre que no son las de WolfCore Dev: no se importa.',
+      'perfiles.instantanea_fallo':
+        'No se pudo guardar la copia previa del entorno: no se cambió nada. Revise el espacio en disco y los permisos de la carpeta de datos.',
       'importar.origen_apagado':
         'No se pudo conectar al servidor de base de datos del otro programa: enciéndalo desde ese programa e inténtelo de nuevo. Los sitios sí se importaron.',
       'importar.origen_no_local': 'El servidor de origen debe estar en este equipo (127.0.0.1).',

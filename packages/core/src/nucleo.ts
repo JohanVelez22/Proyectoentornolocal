@@ -26,6 +26,13 @@ import {
 import { huellaDe } from './catalogo/huellas';
 import { aislarPlataforma } from './plataforma/aislada';
 import { exportarPerfil } from './perfiles/exportar';
+import {
+  listarInstantaneasEntorno,
+  tomarInstantaneaEntorno,
+  type DepsInstantaneaEntorno,
+  type InstantaneaEntorno,
+  type MotivoInstantaneaEntorno,
+} from './perfiles/instantaneaEntorno';
 import { Perfiles } from './perfiles/importar';
 import type {
   DepsPerfiles,
@@ -557,6 +564,13 @@ export class Nucleo {
   readonly config: { leer(): Promise<Config> };
   /** Aviso de la migración de la carpeta de datos (si hubo algo que informar). */
   avisoInicio: string | null = null;
+  /**
+   * Arrancó con `WOLFCORE_DATOS` (carpeta de datos de prueba): no se escribe nada del equipo
+   * (hosts, almacén de certificados, PATH). La interfaz lo avisa en Ajustes.
+   */
+  aislado = false;
+  /** Durante una importación de perfil la instantánea del entorno es una sola (la de la importación). */
+  private importandoPerfil = false;
   /** Arranque de los servicios con `autoIniciar` (tras readoptar); resuelve con los errores. */
   arranqueAutomatico: Promise<string[]> = Promise.resolve([]);
   private readonly avisosPendientes: string[] = [];
@@ -1118,6 +1132,10 @@ export class Nucleo {
     // Los pasos de receta llaman a Nucleo.guardarSitio: se resuelve tras construir el núcleo.
     // eslint-disable-next-line prefer-const
     let nucleoRef!: Nucleo;
+    // Reemplazar PHP o Nginx: antes, la instantánea del entorno (D27). Sin copia no se reemplaza.
+    instalador.fijarAntesDeActualizar(async () => {
+      await nucleoRef?.instantaneaAntesDeActualizar();
+    });
     const vivo = (id: string): boolean => {
       const e = supervisor.estado(id);
       return e === 'encendido' || e === 'iniciando';
@@ -1572,6 +1590,7 @@ export class Nucleo {
     );
     nucleoRef = nucleo;
     nucleo.avisoInicio = avisoInicio;
+    nucleo.aislado = o.aislado === true;
     nucleo.bajaFuentesAvisos = conectarFuentesAvisos(eventos, avisos);
     // Solo consulta motores que ya mostraron contenedores en marcha (nada si nunca se abrió la pantalla).
     nucleo.contenedores.iniciarVigilancia();
@@ -1999,6 +2018,8 @@ export class Nucleo {
     if (!carpetas.includes(version)) throw noInstalada();
     if (servicio === 'nginx') {
       const antes = await this.servicios.nginx.versionActiva().catch(() => null);
+      // Cambiar la versión de Nginx es actualizarlo: antes, la instantánea del entorno.
+      if (antes !== version) await this.instantaneaAntesDeActualizar();
       await this.sitios.modificarConfig((c) => {
         c.servicios.nginx.version = version;
       });
@@ -3571,6 +3592,7 @@ export class Nucleo {
       },
       basesDe: async (instancia) =>
         (await this.bd.listar(instancia as IdInstancia)).map((b) => b.nombre),
+      instantaneaEntorno: () => this.instantaneaEntorno('importar-perfil'),
       instantaneaPrevia: async (instancia, base) => {
         await this.instantaneas.tomar(
           instancia as IdInstancia,
@@ -3658,7 +3680,15 @@ export class Nucleo {
     },
   ): Promise<ResultadoImportarPerfil> {
     const { guardarClave, ...resto } = o;
-    const r = await new Perfiles(this.depsPerfiles(guardarClave)).importar(archivo, resto);
+    // La importación toma su propia instantánea del entorno: las de "actualizar" que dispare
+    // instalar versiones dentro de ella no se repiten.
+    this.importandoPerfil = true;
+    let r: ResultadoImportarPerfil;
+    try {
+      r = await new Perfiles(this.depsPerfiles(guardarClave)).importar(archivo, resto);
+    } finally {
+      this.importandoPerfil = false;
+    }
     // Pools propios, Nginx y hosts al día con los sitios importados. Con WOLFCORE_DATOS el hosts
     // no se escribe (plataforma aislada) y el aviso lo dice.
     await this.poolsSitio.sincronizar().catch((e) => {
@@ -3679,6 +3709,36 @@ export class Nucleo {
       });
     }
     return r;
+  }
+
+  // ---- instantánea del entorno (D27) ----
+
+  private depsInstantaneaEntorno(): DepsInstantaneaEntorno {
+    return {
+      rutas: this.rutas,
+      leerConfig: () => this.config.leer(),
+      restringir: (ruta) => this.plataforma.restringirAlUsuario(ruta),
+    };
+  }
+
+  /**
+   * Copia (sin secretos) de la configuración, Nginx y los php.ini en
+   * `respaldos/entorno/<fecha>-<motivo>/`, con las 10 últimas. Devuelve su carpeta (`''` si no
+   * había nada). Si falla, lanza `perfiles.instantanea_fallo`.
+   */
+  instantaneaEntorno(motivo: MotivoInstantaneaEntorno): Promise<string> {
+    return tomarInstantaneaEntorno(this.depsInstantaneaEntorno(), motivo);
+  }
+
+  /** Las instantáneas del entorno que hay, de la más nueva a la más vieja. */
+  instantaneasEntorno(): Promise<InstantaneaEntorno[]> {
+    return listarInstantaneasEntorno(this.depsInstantaneaEntorno());
+  }
+
+  /** Antes de reemplazar PHP o Nginx (salvo dentro de una importación, que ya toma la suya). */
+  private async instantaneaAntesDeActualizar(): Promise<void> {
+    if (this.importandoPerfil) return;
+    await this.instantaneaEntorno('actualizar');
   }
 
   /** Otros proyectos (no `excluir`) cuyo `.env` usa este usuario de base. */

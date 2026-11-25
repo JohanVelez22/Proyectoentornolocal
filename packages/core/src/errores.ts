@@ -238,6 +238,7 @@ export const PARAMETROS_ERROR = {
   'perfiles.ca_restricciones_ajenas': [],
   'perfiles.frase_requerida': [],
   'perfiles.sin_espacio': ['necesarios', 'libres'],
+  'perfiles.instantanea_fallo': [],
   // importar desde Laragon, XAMPP y Herd (D15)
   'importar.origen_apagado': [],
   'importar.origen_no_local': [],

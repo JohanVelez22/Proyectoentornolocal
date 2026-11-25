@@ -801,6 +801,10 @@ export class Perfiles {
       }
     }
 
+    // La instantánea del entorno, ya con todo validado y antes de escribir nada: sin ella no se
+    // importa (la misma garantía que la instantánea previa de una base).
+    await d.instantaneaEntorno?.();
+
     // 2. Copia de lo que se reemplaza.
     const fecha = (d.reloj?.() ?? new Date()).toISOString().replace(/[:.]/g, '-');
     let respaldo: string | null = null;

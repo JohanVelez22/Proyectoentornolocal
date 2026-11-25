@@ -359,6 +359,8 @@ export const fr: Textos = {
         "Cette CA peut signer n'importe quel site web : importez-la uniquement si c'est la vôtre et comparez l'empreinte. Confirmez séparément pour continuer.",
       'perfiles.ca_restricciones_ajenas':
         "La CA du profil a des contraintes de nom qui ne sont pas celles de WolfCore Dev : elle n'est pas importée.",
+      'perfiles.instantanea_fallo':
+        "La copie préalable de l'environnement n'a pas pu être enregistrée : rien n'a été modifié. Vérifiez l'espace disque et les droits du dossier de données.",
       'importar.origen_apagado':
         "Impossible de se connecter au serveur de base de données de l'autre programme : démarrez-le depuis ce programme et réessayez. Les sites ont tout de même été importés.",
       'importar.origen_no_local':

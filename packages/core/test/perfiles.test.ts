@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import yauzl from 'yauzl';
 import yazl from 'yazl';
 import { Almacen } from '../src/almacen';
+import { ErrorWolf } from '../src/errores';
 import { errorUsuarioEnUso } from '../src/bd/clienteMysql';
 import { derRestricciones, generarCA, huellaSha256, type ParCertificado } from '../src/https/ca';
 import { generateKeyPairSync } from 'node:crypto';
@@ -1298,6 +1299,67 @@ describe('importarPerfil sobre una carpeta con datos: vista previa, confirmació
     ]);
     expect(d.reg.restauradas).toEqual([]);
     expect(r.plantillas[0]!.estado).toBe('importado');
+  });
+});
+
+describe('importarPerfil: instantánea del entorno antes de tocar nada (D27)', () => {
+  it('se toma tras validar y antes de copiar lo reemplazado, con la configuración aún intacta', async () => {
+    const cfg = ConfigSchema.parse({ sitios: [] });
+    await escribir(destino.config(), JSON.stringify(cfg));
+    const antes = await readFile(destino.config(), 'utf8');
+    const archivo = await exportar();
+    const vistos: { config: string; respaldos: boolean }[] = [];
+    const d = deps(destino, {
+      instantaneaEntorno: async () => {
+        vistos.push({
+          config: await readFile(destino.config(), 'utf8'),
+          respaldos: existsSync(path.join(destino.base, 'respaldos')),
+        });
+        return 'x';
+      },
+    });
+    await importar(archivo, d);
+    expect(vistos).toEqual([{ config: antes, respaldos: false }]);
+    expect(await readFile(destino.config(), 'utf8')).not.toBe(antes);
+  });
+
+  it('no se toma si la confirmación o la vista previa no valen', async () => {
+    const archivo = await exportar();
+    let llamadas = 0;
+    const p = new Perfiles(
+      deps(destino, {
+        instantaneaEntorno: async () => {
+          llamadas++;
+          return '';
+        },
+      }),
+    );
+    await expect(
+      p.importar(archivo, { rutas: {}, huella: 'f'.repeat(64), confirmado: true }),
+    ).rejects.toMatchObject({ codigo: 'perfiles.vista_previa_vieja' });
+    await expect(
+      p.importar(archivo, { rutas: {}, huella: 'x', confirmado: false as unknown as true }),
+    ).rejects.toMatchObject({ codigo: 'perfiles.sin_confirmar' });
+    expect(llamadas).toBe(0);
+  });
+
+  it('si la instantánea falla no se importa nada', async () => {
+    const cfg = ConfigSchema.parse({ sitios: [] });
+    await escribir(destino.config(), JSON.stringify(cfg));
+    const antes = await readFile(destino.config(), 'utf8');
+    const archivo = await exportar();
+    const d = deps(destino, {
+      instantaneaEntorno: async () => {
+        throw new ErrorWolf('perfiles.instantanea_fallo', 'no se pudo');
+      },
+    });
+    await expect(importar(archivo, d)).rejects.toMatchObject({
+      codigo: 'perfiles.instantanea_fallo',
+    });
+    expect(await readFile(destino.config(), 'utf8')).toBe(antes);
+    expect(existsSync(path.join(destino.base, 'respaldos'))).toBe(false);
+    expect(d.reg.instaladas).toEqual([]);
+    expect(d.reg.restauradas).toEqual([]);
   });
 });
 

@@ -243,6 +243,17 @@ export class Instalador {
     this.antesDeInstalar = fn;
   }
 
+  private antesDeActualizar: ((servicio: 'php' | 'nginx') => Promise<void>) | null = null;
+
+  /**
+   * Se llama antes de **reemplazar** una versión de PHP o Nginx que ya está instalada (un parche
+   * nuevo de la misma rama), con lo anterior todavía en su sitio y antes de descargar nada. El
+   * núcleo lo conecta con la instantánea del entorno (D27): si lanza, no se reemplaza nada.
+   */
+  fijarAntesDeActualizar(fn: (servicio: 'php' | 'nginx') => Promise<void>): void {
+    this.antesDeActualizar = fn;
+  }
+
   /**
    * Quita solo los binarios de bin/<servicio>/<version>: nunca toca `data/`. Una versión que usa
    * alguna instancia se rechaza (`instalador.version_en_uso`).
@@ -378,6 +389,19 @@ export class Instalador {
           );
       this.emitir(v, 'error', 0, e.message);
       throw e;
+    }
+
+    // Un reemplazo (no una instalación nueva) de PHP o Nginx: antes, la instantánea del entorno.
+    if (
+      (v.servicio === 'php' || v.servicio === 'nginx') &&
+      (await this.instalado(v.servicio, clave))
+    ) {
+      try {
+        await this.antesDeActualizar?.(v.servicio);
+      } catch (e) {
+        this.emitir(v, 'error', 0, e instanceof Error ? e.message : String(e));
+        throw e;
+      }
     }
 
     const exe = v.ejecutable ?? (ejecutableDe(v.servicio) as string);

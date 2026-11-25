@@ -160,4 +160,5 @@ export * from './perfiles/cifrado';
 export * from './perfiles/reasignar';
 export * from './perfiles/tipos';
 export { exportarPerfil } from './perfiles/exportar';
+export * from './perfiles/instantaneaEntorno';
 export { abrirPerfil, Perfiles, type PerfilAbierto } from './perfiles/importar';

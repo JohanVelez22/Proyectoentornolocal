@@ -342,6 +342,8 @@ export const en: Textos = {
         'This CA can sign any website: import it only if it is yours and compare the fingerprint. Confirm separately to continue.',
       'perfiles.ca_restricciones_ajenas':
         "The profile's CA has name constraints that are not WolfCore Dev's: it is not imported.",
+      'perfiles.instantanea_fallo':
+        'The environment snapshot could not be saved, so nothing was changed. Check the free disk space and the permissions of the data folder.',
       'importar.origen_apagado':
         "Could not connect to the other program's database server: start it from that program and try again. The sites were imported anyway.",
       'importar.origen_no_local': 'The source server must be on this computer (127.0.0.1).',

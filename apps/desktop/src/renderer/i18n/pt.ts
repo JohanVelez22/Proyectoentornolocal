@@ -351,6 +351,8 @@ export const pt: Textos = {
         'Esta CA pode assinar qualquer site: importe-a somente se for sua e compare a impressão digital. Confirme à parte para continuar.',
       'perfiles.ca_restricciones_ajenas':
         'A CA do perfil tem restrições de nome que não são as do WolfCore Dev: não é importada.',
+      'perfiles.instantanea_fallo':
+        'Não foi possível guardar a cópia prévia do ambiente: nada foi alterado. Verifique o espaço em disco e as permissões da pasta de dados.',
       'importar.origen_apagado':
         'Não foi possível conectar ao servidor de banco de dados do outro programa: ligue-o a partir desse programa e tente de novo. Os sites foram importados mesmo assim.',
       'importar.origen_no_local': 'O servidor de origem deve estar neste computador (127.0.0.1).',
