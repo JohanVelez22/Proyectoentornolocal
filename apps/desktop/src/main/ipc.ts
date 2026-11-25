@@ -115,6 +115,7 @@ import {
   opcionesImportar,
   versionWordpress,
   idServicioDatos,
+  idWorkspace,
   motorBd,
   nombreBase,
   nombreModelo,
@@ -494,6 +495,8 @@ export interface OpcionesIpc {
   idiomaSistema?: () => string;
   /** Aplica tema e idioma al proceso principal (`nativeTheme.themeSource`, bandeja, diálogos). */
   aplicarPreferencias?: (p: PreferenciasUi) => void;
+  /** Se llama tras guardar, borrar, encender o apagar un workspace (la bandeja rearma su menú). */
+  alCambiarWorkspaces?: () => void;
 }
 
 /** Lo que ve cada manejador además del núcleo: el sistema, las rutas elegidas y el emisor. */
@@ -508,6 +511,7 @@ type Contexto = ApiSistema & {
   carpetaProyectosPorDefecto: string;
   idiomaSistema: () => string;
   aplicarPreferencias: (p: PreferenciasUi) => void;
+  alCambiarWorkspaces: () => void;
 };
 
 /** Opciones de ejecución de receta: ids acotados y receta validada (archivos de diálogos). */
@@ -871,6 +875,34 @@ const TABLA: Record<RutaIpc, Manejador> = {
     });
   },
   'sitios.aplicar': (n) => n.sitios.aplicar(),
+  // Workspaces (D28): solo referencias; el núcleo valida la forma y rechaza cualquier campo de más.
+  'workspaces.lista': (n) => n.workspaces.lista(),
+  'workspaces.estados': (n) => n.workspaces.estados(),
+  'workspaces.guardar': async (n, s, w) => {
+    const r = await n.workspaces.guardar(
+      objetoPlano<Parameters<Nucleo['workspaces']['guardar']>[0]>(w, 'workspace'),
+    );
+    s.alCambiarWorkspaces();
+    return r;
+  },
+  'workspaces.borrar': async (n, s, id) => {
+    await n.workspaces.borrar(idWorkspace(id));
+    s.alCambiarWorkspaces();
+  },
+  'workspaces.iniciar': async (n, s, id) => {
+    try {
+      return await n.workspaces.iniciar(idWorkspace(id));
+    } finally {
+      s.alCambiarWorkspaces();
+    }
+  },
+  'workspaces.detener': async (n, s, id) => {
+    try {
+      return await n.workspaces.detener(idWorkspace(id));
+    } finally {
+      s.alCambiarWorkspaces();
+    }
+  },
   'servicios.estados': (n) => n.servicios.estados(),
   'servicios.iniciar': (n, _s, id) =>
     n.servicios.iniciar(idNoVacio(id) as Parameters<Nucleo['servicios']['iniciar']>[0]),
@@ -1963,6 +1995,7 @@ export function registrarIpc(
       opciones.carpetaProyectosPorDefecto ?? CARPETA_PROYECTOS_POR_DEFECTO,
     idiomaSistema: opciones.idiomaSistema ?? (() => 'es'),
     aplicarPreferencias: opciones.aplicarPreferencias ?? (() => undefined),
+    alCambiarWorkspaces: opciones.alCambiarWorkspaces ?? (() => undefined),
   };
   for (const [ruta, fn] of Object.entries(TABLA) as [RutaIpc, Manejador][]) {
     ipcMain.handle(`${PREFIJO_CANAL}${ruta}`, async (e, ...args) => {

@@ -164,6 +164,10 @@ import type {
   ResultadoImportarPerfil,
   VistaPreviaPerfil,
   AvisoPerfil,
+  Workspace,
+  ElementoWorkspace,
+  EstadoWorkspace,
+  ResultadoWorkspace,
 } from '@pel/core';
 
 export type {
@@ -326,6 +330,10 @@ export type {
   ResultadoImportarPerfil,
   VistaPreviaPerfil,
   AvisoPerfil,
+  Workspace,
+  ElementoWorkspace,
+  EstadoWorkspace,
+  ResultadoWorkspace,
   EstadoInstancia,
   IdInstancia,
   PlanActualizar,
@@ -538,6 +546,19 @@ export interface ApiEntorno {
     launchJsonVista(id: string): Promise<{ existe: boolean; contenido: string; diff: string }>;
     /** Escribe .vscode/launch.json (fusiona; copia previa fuera del proyecto). */
     launchJson(id: string): Promise<{ creado: boolean; respaldo: string | null }>;
+  };
+  /**
+   * Workspaces de arranque (D28): conjuntos con nombre de instancias, servicios y procesos que se
+   * encienden y apagan juntos. Guardan solo referencias. Encender y apagar devuelven qué quedó
+   * encendido y qué no; nunca abren túneles ni comparten en la red local.
+   */
+  workspaces: {
+    lista(): Promise<Workspace[]>;
+    estados(): Promise<Record<string, EstadoWorkspace>>;
+    guardar(w: Workspace): Promise<Workspace>;
+    borrar(id: string): Promise<void>;
+    iniciar(id: string): Promise<ResultadoWorkspace[]>;
+    detener(id: string): Promise<ResultadoWorkspace[]>;
   };
   servicios: {
     estados(): Promise<EstadoServicio[]>;
@@ -1395,6 +1416,12 @@ export const RUTAS_IPC = [
   'nginx.historial',
   'nginx.restaurar',
   'nginx.snippets',
+  'workspaces.lista',
+  'workspaces.estados',
+  'workspaces.guardar',
+  'workspaces.borrar',
+  'workspaces.iniciar',
+  'workspaces.detener',
   'servicios.estados',
   'servicios.iniciar',
   'servicios.detener',

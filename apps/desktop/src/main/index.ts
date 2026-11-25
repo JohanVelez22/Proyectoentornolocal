@@ -26,7 +26,7 @@ import {
 import type { ApiSistema } from '../shared/api';
 import { Notificador } from './notificaciones';
 import { textoAviso } from '../shared/textosAvisos';
-import { crearBandeja, menuBandeja, type AccionesBandeja } from './bandeja';
+import { crearBandeja, menuBandeja, type AccionesBandeja, type WorkspaceBandeja } from './bandeja';
 import { idiomaDeLocale, textosMain } from './textos';
 import { programarDoctorAlIniciar } from './doctorInicio';
 import { ControlMetricas, registrarIpc } from './ipc';
@@ -53,6 +53,8 @@ let saliendo = false;
 let cierreSistema: Promise<void> | null = null;
 let idioma: IdiomaUi | null = null;
 let accionesBandeja: AccionesBandeja | null = null;
+/** Workspaces del menú de la bandeja (se rearma al cambiar el estado o al editarlos). */
+let workspacesBandeja: WorkspaceBandeja[] = [];
 
 // Empaquetado, el icono va en resources/ (extraResources); en desarrollo, junto al código.
 const carpetaRecursos = app.isPackaged ? process.resourcesPath : join(__dirname, '../../resources');
@@ -129,7 +131,36 @@ function aplicarPreferencias(p: PreferenciasUi): void {
   const cambio = p.idioma !== idioma;
   idioma = p.idioma;
   if (cambio && bandeja && accionesBandeja)
-    menuBandeja(bandeja, accionesBandeja, textosMain(idioma));
+    menuBandeja(bandeja, accionesBandeja, textosMain(idioma), workspacesBandeja);
+}
+
+let temporizadorBandeja: ReturnType<typeof setTimeout> | null = null;
+
+/** Rearma el menú de la bandeja con los workspaces y su estado (agrupa cambios seguidos). */
+function programarMenuBandeja(): void {
+  if (temporizadorBandeja) return;
+  temporizadorBandeja = setTimeout(() => {
+    temporizadorBandeja = null;
+    void refrescarMenuBandeja();
+  }, 400);
+}
+
+async function refrescarMenuBandeja(): Promise<void> {
+  const n = nucleo;
+  if (!n || !bandeja || !accionesBandeja || saliendo) return;
+  try {
+    const [lista, estados] = await Promise.all([n.workspaces.lista(), n.workspaces.estados()]);
+    workspacesBandeja = lista.map((w) => ({
+      id: w.id,
+      nombre: w.nombre,
+      estado: estados[w.id] ?? 'apagado',
+    }));
+  } catch (e) {
+    console.error('No se pudieron leer los workspaces para la bandeja:', e);
+  }
+  if (bandeja && !bandeja.isDestroyed() && accionesBandeja) {
+    menuBandeja(bandeja, accionesBandeja, textosMain(idioma), workspacesBandeja);
+  }
 }
 
 function mostrarVentana(): void {
@@ -387,7 +418,13 @@ if (errorCarpetaDatos !== null) {
       sistema,
       (e) => (e as { senderFrame?: unknown } | null)?.senderFrame === v.webContents.mainFrame,
       undefined,
-      { secretos, metricas, idiomaSistema: () => app.getLocale(), aplicarPreferencias },
+      {
+        secretos,
+        metricas,
+        idiomaSistema: () => app.getLocale(),
+        aplicarPreferencias,
+        alCambiarWorkspaces: programarMenuBandeja,
+      },
     );
     n.iniciarSondeo();
     // El Doctor revisa una vez en segundo plano (nunca si la app ya se está cerrando) y, si hay
@@ -399,9 +436,16 @@ if (errorCarpetaDatos !== null) {
       abrir: mostrarVentana,
       iniciarTodo: () => void n.iniciarTodo().catch((e) => console.error(e)),
       detenerTodo: () => void n.detenerTodo().catch((e) => console.error(e)),
+      // Encendido: se apaga; apagado o en parte: se enciende. Un fallo ya queda en los avisos.
+      alternarWorkspace: (id, estado) =>
+        void (estado === 'encendido' ? n.workspaces.detener(id) : n.workspaces.iniciar(id))
+          .catch((e) => console.error(e))
+          .finally(programarMenuBandeja),
       salir: () => void salir(),
     };
     bandeja = crearBandeja(rutaIconoBandeja, accionesBandeja, textosMain(idioma));
+    n.eventos.on('servicio:estado', programarMenuBandeja);
+    programarMenuBandeja();
     // Arrancada con una orden (o recibida mientras cargaba): se ejecuta ahora.
     const orden = ordenDeArgs(process.argv);
     if (orden) void ordenes.ejecutar(orden);

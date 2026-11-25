@@ -53,6 +53,14 @@ const api: ApiEntorno = {
     restaurar: (id, version) => invocar('nginx.restaurar', id, version),
     snippets: () => invocar('nginx.snippets'),
   },
+  workspaces: {
+    lista: () => invocar('workspaces.lista'),
+    estados: () => invocar('workspaces.estados'),
+    guardar: (w) => invocar('workspaces.guardar', w),
+    borrar: (id) => invocar('workspaces.borrar', id),
+    iniciar: (id) => invocar('workspaces.iniciar', id),
+    detener: (id) => invocar('workspaces.detener', id),
+  },
   servicios: {
     estados: () => invocar('servicios.estados'),
     iniciar: (id) => invocar('servicios.iniciar', id),

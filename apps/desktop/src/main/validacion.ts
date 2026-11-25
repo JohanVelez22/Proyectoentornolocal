@@ -28,6 +28,7 @@ import {
   ID_PROVEEDOR_SMTP,
   destinatarioValido,
   IDS_CAPTADOR,
+  ID_WORKSPACE,
   IDS_SERVICIO_DATOS,
   TIPOS_PROVEEDOR_IA,
   validarModeloIa,
@@ -133,6 +134,14 @@ export function idEditor(v: unknown): IdEditor | null {
 
 export function texto(v: unknown, nombre = 'valor'): string {
   if (typeof v !== 'string') throw new Error(`Argumento no válido: ${nombre}`);
+  return v;
+}
+
+/** Id de un workspace: minúsculas, dígitos, guion y guion bajo (el mismo patrón que el núcleo). */
+export function idWorkspace(v: unknown): string {
+  if (typeof v !== 'string' || !ID_WORKSPACE.test(v)) {
+    throw new Error('Argumento no válido: workspace');
+  }
   return v;
 }
 

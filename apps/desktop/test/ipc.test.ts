@@ -34,6 +34,14 @@ function nucleoFalso() {
     },
     sitios: { listar: vi.fn(async () => [{ id: 's1' }]), aplicar: vi.fn() },
     servicios: { estados: vi.fn(), iniciar: vi.fn(), detener: vi.fn() },
+    workspaces: {
+      lista: vi.fn(async () => []),
+      estados: vi.fn(async () => ({})),
+      guardar: vi.fn(async (w: unknown) => w),
+      borrar: vi.fn(async () => undefined),
+      iniciar: vi.fn(async () => []),
+      detener: vi.fn(async () => []),
+    },
     lan: {
       estado: vi.fn(),
       activar: vi.fn(),
@@ -568,6 +576,33 @@ describe('registrarIpc', () => {
     await canales.get('entorno:servicios.detenerTodo')!({});
     expect(crudo.detenerTodo).toHaveBeenCalled();
   });
+  it('workspaces: solo ids válidos y objetos planos; el resto lo valida el núcleo', async () => {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const llamar = (c: string, ...a: unknown[]) =>
+      canales.get(`entorno:workspaces.${c}`)!({}, ...a);
+    const w = { id: 'bot', nombre: 'Bot', elementos: [{ tipo: 'servicio', id: 'ollama' }] };
+    expect(await llamar('guardar', w)).toEqual({ ok: true, valor: w });
+    expect(crudo.workspaces.guardar).toHaveBeenCalledWith(w);
+    for (const malo of [[], null, 'x', 5]) {
+      expect(await llamar('guardar', malo)).toMatchObject({ ok: false });
+    }
+    expect(crudo.workspaces.guardar).toHaveBeenCalledTimes(1);
+    await llamar('iniciar', 'bot');
+    await llamar('detener', 'bot');
+    await llamar('borrar', 'bot');
+    expect(crudo.workspaces.iniciar).toHaveBeenCalledWith('bot');
+    expect(crudo.workspaces.detener).toHaveBeenCalledWith('bot');
+    expect(crudo.workspaces.borrar).toHaveBeenCalledWith('bot');
+    for (const c of ['iniciar', 'detener', 'borrar']) {
+      for (const malo of ['../x', 'Con Espacios', '', 5, undefined]) {
+        expect(await llamar(c, malo)).toMatchObject({ ok: false });
+      }
+    }
+    expect(crudo.workspaces.iniciar).toHaveBeenCalledTimes(1);
+  });
+
   it('registra exactamente la lista de rutas de las etapas A y B', () => {
     const { ipcMain, canales } = ipcFalso();
     registrarIpc(nucleoFalso().nucleo, ipcMain, ventanaFalsa().ventana, sistema);
@@ -597,6 +632,12 @@ describe('registrarIpc', () => {
         'nginx.historial',
         'nginx.restaurar',
         'nginx.snippets',
+        'workspaces.lista',
+        'workspaces.estados',
+        'workspaces.guardar',
+        'workspaces.borrar',
+        'workspaces.iniciar',
+        'workspaces.detener',
         'servicios.estados',
         'servicios.iniciar',
         'servicios.detener',
