@@ -34,6 +34,13 @@ function nucleoFalso() {
     },
     sitios: { listar: vi.fn(async () => [{ id: 's1' }]), aplicar: vi.fn() },
     servicios: { estados: vi.fn(), iniciar: vi.fn(), detener: vi.fn() },
+    lan: {
+      estado: vi.fn(),
+      activar: vi.fn(),
+      desactivar: vi.fn(),
+    },
+    caMovil: { abrir: vi.fn(), cerrar: vi.fn() },
+    comandoFirewallLan: vi.fn(() => 'New-NetFirewallRule falso'),
     tuneles: {
       abrir: vi.fn(),
       cerrar: vi.fn(),
@@ -646,6 +653,12 @@ describe('registrarIpc', () => {
         'ftp.credenciales',
         'ftp.url',
         'ftp.redLocal',
+        'lan.estado',
+        'lan.activar',
+        'lan.desactivar',
+        'lan.comandoFirewall',
+        'lan.abrirCaMovil',
+        'lan.cerrarCaMovil',
         'ia.modelos',
         'ia.descargar',
         'ia.cancelar',
@@ -893,6 +906,12 @@ describe('registrarIpc', () => {
         ['ftp.activar', [null]],
         ['ftp.soloLectura', ['s1', 'true']],
         ['ftp.redLocal', [1]],
+        ['lan.activar', ['s1', null]],
+        ['lan.activar', ['s1', { ip: '0.0.0.0; x', https: true }]],
+        ['lan.activar', ['s1', { ip: '192.168.1.5', https: 'si' }]],
+        ['lan.comandoFirewall', [80]],
+        ['lan.comandoFirewall', ['8100; calc']],
+        ['lan.abrirCaMovil', ['no-es-ip']],
         ['ia.descargar', ['../x']],
         ['ia.cancelar', ['']],
         ['ia.borrar', [{}]],
@@ -930,6 +949,7 @@ describe('registrarIpc', () => {
       'activarFtp',
       'ftpSoloLectura',
       'ftpRedLocal',
+      'comandoFirewallLan',
       'descargarModelo',
       'cancelarDescargaModelo',
       'borrarModelo',
@@ -3464,5 +3484,63 @@ describe('IPC de túneles: lo confirmado llega validado al núcleo (D24)', () =>
       expect((await llamar('tuneles.abrir', 's1', true, t)).ok, JSON.stringify(t)).toBe(false);
     }
     expect(crudo.tuneles.abrir).not.toHaveBeenCalled();
+  });
+});
+
+describe('IPC de la red local (D25)', () => {
+  function montar() {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    return {
+      crudo,
+      llamar: (ruta: string, ...args: unknown[]) =>
+        canales.get(`entorno:${ruta}`)!({}, ...args) as Promise<{ ok: boolean; valor?: unknown }>,
+    };
+  }
+
+  it('activar lleva al núcleo lo confirmado (IP, HTTPS y el refuerzo), nada más', async () => {
+    const { crudo, llamar } = montar();
+    const r = await llamar('lan.activar', 's1', {
+      ip: '192.168.1.50',
+      https: true,
+      datosReales: true,
+      extra: 'se ignora',
+    });
+    expect(r.ok).toBe(true);
+    expect(crudo.lan.activar).toHaveBeenCalledWith('s1', {
+      confirmado: true,
+      ip: '192.168.1.50',
+      https: true,
+      confirmadoDatosReales: true,
+    });
+    await llamar('lan.activar', 's1', { ip: '10.0.0.4', https: false });
+    expect(crudo.lan.activar).toHaveBeenLastCalledWith('s1', {
+      confirmado: true,
+      ip: '10.0.0.4',
+      https: false,
+      confirmadoDatosReales: false,
+    });
+  });
+
+  it('la IP debe ser IPv4 y el puerto del cortafuegos, uno de 1024 a 65535', async () => {
+    const { crudo, llamar } = montar();
+    expect((await llamar('lan.activar', 's1', { ip: '300.1.1.1', https: false })).ok).toBe(false);
+    expect((await llamar('lan.activar', 's1', { https: false })).ok).toBe(false);
+    expect(crudo.lan.activar).not.toHaveBeenCalled();
+    expect((await llamar('lan.comandoFirewall', 80)).ok).toBe(false);
+    const ok = await llamar('lan.comandoFirewall', 8100);
+    expect(ok.ok).toBe(true);
+    expect(crudo.comandoFirewallLan).toHaveBeenCalledWith(8100);
+  });
+
+  it('el servidor de la CA se abre con una IP válida o sin ella, y se cierra', async () => {
+    const { crudo, llamar } = montar();
+    await llamar('lan.abrirCaMovil');
+    expect(crudo.caMovil.abrir).toHaveBeenLastCalledWith({});
+    await llamar('lan.abrirCaMovil', '192.168.1.50');
+    expect(crudo.caMovil.abrir).toHaveBeenLastCalledWith({ ip: '192.168.1.50' });
+    await llamar('lan.cerrarCaMovil');
+    expect(crudo.caMovil.cerrar).toHaveBeenCalled();
   });
 });

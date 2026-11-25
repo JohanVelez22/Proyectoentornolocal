@@ -333,6 +333,37 @@ export interface TunelConfirmado {
   modo?: 'serve' | 'funnel';
 }
 
+/** Un sitio compartido en la red local (D25). */
+export interface SitioCompartidoLan {
+  sitioId: string;
+  url: string;
+  ip: string;
+  puerto: number;
+  https: boolean;
+}
+
+/** IP de la red local disponibles y sitios compartidos ahora. */
+export interface EstadoLan {
+  ips: string[];
+  sitios: SitioCompartidoLan[];
+}
+
+/** Lo que el usuario confirmó al compartir: el núcleo comprueba que la IP siga siendo suya. */
+export interface ConfirmacionLan {
+  ip: string;
+  https: boolean;
+  /** Con datos reales, la casilla reforzada. */
+  datosReales?: boolean;
+}
+
+/** Servidor temporal de `ca.crt` para el móvil. */
+export interface CaMovilAbierta {
+  url: string;
+  ip: string;
+  /** Marca de tiempo (ms) en que se cierra solo. */
+  expira: number;
+}
+
 /** Lo único que la interfaz ve de una clave de IA: si hay una y sus 4 últimos caracteres. */
 export interface EstadoClaveIa {
   configurada: boolean;
@@ -696,6 +727,21 @@ export interface ApiEntorno {
     /** `ftp://usuario@host:puerto/`, sin la clave. */
     url(sitioId: string): Promise<string>;
     redLocal(valor: boolean): Promise<void>;
+  };
+  /** Compartir sitios en la red local y entregar la CA al móvil (D25). */
+  lan: {
+    estado(): Promise<EstadoLan>;
+    /** Expone el sitio a la red local: exige la confirmación del diálogo. */
+    activar(
+      sitioId: string,
+      confirmacion: ConfirmacionLan,
+    ): Promise<{ url: string; ip: string; puerto: number }>;
+    desactivar(sitioId: string): Promise<void>;
+    /** Comando de PowerShell (administrador) para la regla del cortafuegos; no se ejecuta solo. */
+    comandoFirewall(puerto: number): Promise<string>;
+    /** Abre el servidor temporal de `ca.crt` (solo ese archivo, 10 minutos como máximo). */
+    abrirCaMovil(ip?: string): Promise<CaMovilAbierta>;
+    cerrarCaMovil(): Promise<void>;
   };
   ia: {
     modelos(): Promise<ModeloOllama[]>;
@@ -1358,6 +1404,12 @@ export const RUTAS_IPC = [
   'ftp.credenciales',
   'ftp.url',
   'ftp.redLocal',
+  'lan.estado',
+  'lan.activar',
+  'lan.desactivar',
+  'lan.comandoFirewall',
+  'lan.abrirCaMovil',
+  'lan.cerrarCaMovil',
   'ia.modelos',
   'ia.descargar',
   'ia.cancelar',

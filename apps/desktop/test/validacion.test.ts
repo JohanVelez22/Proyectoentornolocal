@@ -10,6 +10,7 @@ import {
   texto,
   tipoRuntime,
   urlAbrible,
+  ipv4,
   urlFtpSegura,
   urlHttp,
 } from '../src/main/validacion';
@@ -114,5 +115,24 @@ describe('D7: urlAbrible', () => {
     expect(urlAbrible('ftp://u@127.0.0.1:2121/')).toBe('ftp://u@127.0.0.1:2121/');
     expect(() => urlAbrible('ftp://u:p@127.0.0.1:2121/')).toThrow();
     expect(() => urlAbrible('file:///c:/a.exe')).toThrow();
+  });
+});
+
+describe('D25: ipv4', () => {
+  it('acepta cuatro octetos y rechaza todo lo demás', () => {
+    expect(ipv4('192.168.1.50')).toBe('192.168.1.50');
+    for (const mala of [
+      '',
+      '192.168.1',
+      '192.168.1.256',
+      '1.2.3.4; x',
+      ' 1.2.3.4',
+      '::1',
+      'a.b.c.d',
+      7,
+      null,
+    ]) {
+      expect(() => ipv4(mala), String(mala)).toThrow();
+    }
   });
 });

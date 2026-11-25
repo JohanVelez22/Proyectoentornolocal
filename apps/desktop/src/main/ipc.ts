@@ -146,6 +146,7 @@ import {
   usuarioAuditoria,
   claveNuevaAuditoria,
   confirmadoRestablecer,
+  ipv4,
 } from './validacion';
 
 type MotorBdIpc = ReturnType<typeof motorBd>;
@@ -787,6 +788,23 @@ function opcionesTunel(
   return { confirmado: confirmado === true, ...(t ? { tunelConfirmado: t } : {}) };
 }
 
+/** Lo que confirmó el usuario al compartir en la red local (la IP mostrada, HTTPS y el refuerzo). */
+function confirmacionLan(v: unknown): {
+  confirmado: true;
+  ip: string;
+  https: boolean;
+  confirmadoDatosReales: boolean;
+} {
+  if (typeof v !== 'object' || v === null) throw new Error('Confirmación no válida');
+  const o = v as Record<string, unknown>;
+  return {
+    confirmado: true,
+    ip: ipv4(o['ip']),
+    https: booleano(o['https'], 'https'),
+    confirmadoDatosReales: o['datosReales'] === true,
+  };
+}
+
 /** El gestor de Cloudflare con nombre del núcleo (no existe en un núcleo sin plataforma). */
 function cloudflareNombre(n: NucleoIpc): NonNullable<NucleoIpc['tuneles']['cloudflareNombre']> {
   const c = n.tuneles.cloudflareNombre;
@@ -1043,6 +1061,15 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'ftp.credenciales': (n, _s, id) => n.credencialesFtp(idNoVacio(id)),
   'ftp.url': (n, _s, id) => n.urlFtp(idNoVacio(id)),
   'ftp.redLocal': (n, _s, valor) => n.ftpRedLocal(booleano(valor, 'redLocal')),
+  // Red local (D25): compartir expone el sitio a toda la red; el núcleo exige la confirmación.
+  'lan.estado': (n) => n.lan.estado(),
+  'lan.activar': (n, _s, id, confirmacion) =>
+    n.lan.activar(idNoVacio(id), confirmacionLan(confirmacion)),
+  'lan.desactivar': (n, _s, id) => n.lan.desactivar(idNoVacio(id)),
+  'lan.comandoFirewall': (n, _s, puerto) =>
+    n.comandoFirewallLan(enteroEn(puerto, 1024, 65535, 'puerto')),
+  'lan.abrirCaMovil': (n, _s, ip) => n.caMovil.abrir(ip === undefined ? {} : { ip: ipv4(ip) }),
+  'lan.cerrarCaMovil': (n) => n.caMovil.cerrar(),
   'ia.modelos': (n) => n.modelosIa(),
   'ia.descargar': (n, _s, nombre) => n.descargarModelo(nombreModelo(nombre)),
   'ia.cancelar': (n, _s, nombre) => n.cancelarDescargaModelo(nombreModelo(nombre)),

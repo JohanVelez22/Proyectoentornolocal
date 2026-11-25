@@ -282,6 +282,15 @@ export function urlFtpSegura(v: unknown): string {
   return t;
 }
 
+const IPV4 = new RegExp(String.raw`^${OCTETO}(?:\.${OCTETO}){3}$`);
+
+/** Una dirección IPv4 con cuatro octetos (el núcleo comprueba que sea de la red local). */
+export function ipv4(v: unknown, nombre = 'ip'): string {
+  const t = texto(v, nombre);
+  if (!IPV4.test(t)) throw new Error(`La dirección ${nombre} no es válida`);
+  return t;
+}
+
 /** Direcciones que la app puede abrir con el sistema: http, https o la URL FTP segura. */
 export function urlAbrible(v: unknown): string {
   if (typeof v === 'string' && v.startsWith('ftp:')) return urlFtpSegura(v);

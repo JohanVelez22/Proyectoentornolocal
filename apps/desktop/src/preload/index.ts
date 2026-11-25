@@ -165,6 +165,14 @@ const api: ApiEntorno = {
     url: (id) => invocar('ftp.url', id),
     redLocal: (valor) => invocar('ftp.redLocal', valor),
   },
+  lan: {
+    estado: () => invocar('lan.estado'),
+    activar: (id, confirmacion) => invocar('lan.activar', id, confirmacion),
+    desactivar: (id) => invocar('lan.desactivar', id),
+    comandoFirewall: (puerto) => invocar('lan.comandoFirewall', puerto),
+    abrirCaMovil: (ip) => invocar('lan.abrirCaMovil', ip),
+    cerrarCaMovil: () => invocar('lan.cerrarCaMovil'),
+  },
   ia: {
     modelos: () => invocar('ia.modelos'),
     descargar: (nombre) => invocar('ia.descargar', nombre),

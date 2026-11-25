@@ -64,6 +64,7 @@ import BotonIcono from './BotonIcono.vue';
 import EstadoPunto from './EstadoPunto.vue';
 import GitProyecto from './GitProyecto.vue';
 import ProcesosProyecto from './ProcesosProyecto.vue';
+import InterruptorLan from './InterruptorLan.vue';
 import InterruptorTunel from './InterruptorTunel.vue';
 import EditorVhost from './EditorVhost.vue';
 import SeccionFtpSitio from './SeccionFtpSitio.vue';
@@ -699,6 +700,7 @@ function abrirCarpeta(): void {
       </div>
       <ProcesosProyecto :sitio="sitio" @aplicado="(r) => emit('aplicado', r)" />
       <InterruptorTunel :sitio="sitio" />
+      <InterruptorLan :sitio="sitio" />
       <SeccionPhpSitio :sitio="sitio" @aplicado="(r) => emit('aplicado', r)" />
       <EditorVhost :sitio="sitio" />
       <SeccionFtpSitio :sitio="sitio" />
