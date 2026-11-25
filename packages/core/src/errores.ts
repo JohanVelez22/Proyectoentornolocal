@@ -57,6 +57,14 @@ export const PARAMETROS_ERROR = {
   'instancias.respaldo_en_uso': ['id'],
   'instancias.version_requerida': ['id'],
   'instalador.version_en_uso': ['servicio', 'version', 'instancia'],
+  // limpieza de versiones sin uso (D30)
+  'limpieza.sin_confirmar': [],
+  'limpieza.seleccion_invalida': [],
+  'limpieza.en_curso': [],
+  'limpieza.no_existe': ['servicio', 'version'],
+  'limpieza.en_uso': ['servicio', 'version'],
+  'limpieza.ruta_insegura': ['servicio', 'version'],
+  'limpieza.version_bloqueada': ['servicio', 'version'],
   // bases de datos
   'bd.encender_servicio': ['nombre'],
   'bd.sin_credenciales': ['nombre'],

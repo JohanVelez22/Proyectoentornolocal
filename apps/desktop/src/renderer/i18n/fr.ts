@@ -157,6 +157,16 @@ export const fr: Textos = {
         'On ne sait pas à quelle version ramener {id} : choisissez une version installée de la même version majeure.',
       'instalador.version_en_uso':
         'Impossible de désinstaller {servicio} {version} : l’instance {instancia} l’utilise.',
+      'limpieza.sin_confirmar': 'La confirmation est requise pour nettoyer les versions.',
+      'limpieza.seleccion_invalida': 'La sélection de versions n’est pas valide.',
+      'limpieza.en_curso': 'Un nettoyage de versions est déjà en cours.',
+      'limpieza.no_existe': '{servicio} {version} n’est plus installée.',
+      'limpieza.en_uso':
+        '{servicio} {version} est désormais utilisée : elle n’a pas été supprimée.',
+      'limpieza.ruta_insegura':
+        'Le dossier de {servicio} {version} n’est pas sûr (un lien ou un chemin hors de bin) : il n’a pas été touché.',
+      'limpieza.version_bloqueada':
+        '{servicio} {version} contient des fichiers utilisés ou verrouillés : elle n’a pas été supprimée ni laissée à moitié.',
       'bd.encender_servicio': 'Allumez {nombre} pour gérer ses bases.',
       'bd.sin_credenciales': 'Aucun identifiant enregistré pour {nombre}.',
       'bd.confirmacion_borrado': 'Pour supprimer la base {nombre}, tapez son nom exact.',
@@ -4126,6 +4136,47 @@ export const fr: Textos = {
       copiadas: (l: string) => `Copiées : ${l}.`,
       noCopiada: (b: string, m: string) => `${b} n’a pas été copiée : ${m}`,
     },
+    limpieza: {
+      boton: 'Nettoyer les versions inutilisées…',
+      titulo: 'Nettoyer les versions inutilisées',
+      intro:
+        'Seuls les programmes des versions que rien n’utilise sont supprimés (le dossier bin). Les données des bases, les instances et vos projets ne sont jamais touchés.',
+      cargando: 'Recherche des versions…',
+      vacia: 'Aucune version n’est installée.',
+      sinLibres: 'Toutes les versions installées sont utilisées : il n’y a rien à nettoyer.',
+      fallo: 'Nettoyage impossible',
+      fallaLista: 'Impossible de lire la liste des versions',
+      bloqueada: 'Ne peut pas être cochée',
+      marcadas: (n: number, tam: string) => `${n} ${n === 1 ? 'version' : 'versions'} · ${tam}`,
+      destinoTitulo: 'Que faire de ces versions',
+      papelera:
+        'Déplacer dans la corbeille : conservées 7 jours, elles occupent le disque jusque-là',
+      definitivo: 'Supprimer définitivement : libère l’espace maintenant, irréversible',
+      avisoDefinitivo:
+        'Suppression définitive : pour retrouver ces versions, il faudra les télécharger à nouveau.',
+      instantanea:
+        'Avant de supprimer, une copie de la configuration de l’environnement est enregistrée.',
+      entiendo: 'Je comprends que c’est irréversible',
+      confirmar: (n: number) => `Supprimer ${n} ${n === 1 ? 'version' : 'versions'}`,
+      motivos: {
+        predeterminada: 'C’est la version par défaut',
+        encendida: 'Elle est démarrée ou en cours d’exécution',
+        sitio: 'Un projet l’utilise',
+        instancia: 'Une instance l’utilise (même arrêtée)',
+        plantilla: 'Un modèle l’utilise',
+        workspace: 'Un workspace l’utilise',
+        runtime: 'Un projet l’utilise',
+        tarea: 'Un projet avec des tâches planifiées l’utilise',
+        duda: 'Vérification impossible : on n’y touche pas',
+      },
+      resultadoTitulo: 'Résultat',
+      liberadas: (tam: string) => `${tam} libérés.`,
+      enPapelera: (tam: string) => `${tam} sont dans la corbeille (purgés après 7 jours).`,
+      saltada: (v: string, motivo: string) => `${v} : ${motivo}`,
+      pendientes: (n: number) =>
+        `${n} ${n === 1 ? 'version est déjà hors de bin mais il reste des fichiers' : 'versions sont déjà hors de bin mais il reste des fichiers'} qui seront retentés à l’ouverture de l’application.`,
+      instantaneaGuardada: 'Copie de l’environnement enregistrée avant la suppression.',
+    },
     dialogoDesinstalar: {
       titulo: (v: string) => `Désinstaller ${v}`,
       binario: 'Seuls les programmes de cette version sont retirés.',
@@ -4770,6 +4821,7 @@ export const fr: Textos = {
         motivos: {
           actualizar: 'Avant une mise à jour',
           'importar-perfil': "Avant l'importation d'un profil",
+          'limpiar-versiones': 'Avant le nettoyage des versions',
           manual: 'Manuel',
         },
       },

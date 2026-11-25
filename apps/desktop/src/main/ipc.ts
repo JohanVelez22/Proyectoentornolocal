@@ -137,6 +137,8 @@ import {
   urlAbrible,
   herramientaBd,
   servicioVersiones,
+  seleccionLimpieza,
+  destinoLimpieza,
   versionCatalogo,
   idInstanciaIpc,
   objetivoBd,
@@ -1434,6 +1436,13 @@ const TABLA: Record<RutaIpc, Manejador> = {
   // Solo los binarios: nunca llama a borrar datos (es otra ruta, con su confirmación escrita).
   'instalador.desinstalar': (n, _s, servicio, version) =>
     n.desinstalarVersion(servicioVersiones(servicio), versionCatalogo(version)),
+  // Limpieza de versiones sin uso (D30): la vista previa no borra; limpiar exige `confirmado: true`
+  // (lo da el diálogo que mostró la lista) y el núcleo vuelve a comprobar el uso de cada versión.
+  'limpiezaVersiones.sinUso': (n) => n.versionesSinUso(),
+  'limpiezaVersiones.limpiar': (n, _s, seleccion, confirmado, destino) => {
+    if (confirmado !== true) throw new Error('Argumento no válido: confirmado');
+    return n.limpiarVersiones(seleccionLimpieza(seleccion), true, destinoLimpieza(destino));
+  },
   // ---- Pestaña "Versiones" e instancias (Task 19) ----
   'catalogo.versiones': (n, _s, servicio, filtro) =>
     n.versionesServicio(servicioVersiones(servicio), filtroVersiones(filtro)),

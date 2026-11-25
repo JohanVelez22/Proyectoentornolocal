@@ -174,6 +174,9 @@ import type {
   EstadoPlanificador,
   PropuestaTarea,
   EntradaTarea,
+  VersionSinUso,
+  ResultadoLimpieza,
+  DestinoLimpieza,
 } from '@pel/core';
 
 export type {
@@ -346,6 +349,9 @@ export type {
   EstadoPlanificador,
   PropuestaTarea,
   EntradaTarea,
+  VersionSinUso,
+  ResultadoLimpieza,
+  DestinoLimpieza,
   EstadoInstancia,
   IdInstancia,
   PlanActualizar,
@@ -969,6 +975,20 @@ export interface ApiEntorno {
     /** Solo los binarios (en servicios de datos, los datos quedan). */
     desinstalar(servicio: ServicioVersiones, version: string): Promise<void>;
   };
+  /** Limpieza de versiones sin uso (D30): solo `bin/<servicio>/<versión>`, nunca `data/`. */
+  limpiezaVersiones: {
+    /** Vista previa: todas las instaladas con su tamaño y por qué no se pueden quitar. No borra. */
+    sinUso(): Promise<VersionSinUso[]>;
+    /**
+     * Quita las elegidas (`confirmado` sale SOLO del diálogo que mostró la lista) a la papelera
+     * (se purga a los 7 días) o de forma definitiva. Antes toma la instantánea del entorno.
+     */
+    limpiar(
+      seleccion: { servicio: string; version: string }[],
+      confirmado: true,
+      destino: DestinoLimpieza,
+    ): Promise<ResultadoLimpieza>;
+  };
   tuneles: {
     /**
      * `confirmado`: el usuario confirmó publicar. `tunel`: lo que se le mostró (proveedor, túnel,
@@ -1585,6 +1605,8 @@ export const RUTAS_IPC = [
   'instalador.instalar',
   'instalador.instalados',
   'instalador.desinstalar',
+  'limpiezaVersiones.sinUso',
+  'limpiezaVersiones.limpiar',
   'catalogo.versiones',
   'catalogo.silenciar',
   'instancias.lista',

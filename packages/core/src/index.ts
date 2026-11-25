@@ -36,6 +36,7 @@ export * from './hosts/hosts';
 export * from './plataforma/index';
 export * from './catalogo/catalogo';
 export * from './catalogo/instalador';
+export * from './catalogo/limpieza';
 export * from './catalogo/vivo';
 export * from './catalogo/novedades';
 export * from './catalogo/tablaVersiones';

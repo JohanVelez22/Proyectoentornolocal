@@ -22,7 +22,12 @@ import { enmascararComando, enmascararNginx, enmascararPhpIni } from './secretos
  * ni `data/`. Va en `<datos>/respaldos/entorno/`, restringida al usuario, con las 10 últimas.
  */
 
-export const MOTIVOS_INSTANTANEA_ENTORNO = ['actualizar', 'importar-perfil', 'manual'] as const;
+export const MOTIVOS_INSTANTANEA_ENTORNO = [
+  'actualizar',
+  'importar-perfil',
+  'limpiar-versiones',
+  'manual',
+] as const;
 export type MotivoInstantaneaEntorno = (typeof MOTIVOS_INSTANTANEA_ENTORNO)[number];
 
 /** Cuántas se conservan. */
@@ -34,7 +39,8 @@ const MAX_VHOSTS = 2000;
 
 const NOMBRE_VHOST = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.conf$/;
 const RAMA_PHP = /^\d{1,2}\.\d{1,2}$/;
-const NOMBRE_INSTANTANEA = /^(\d{8}-\d{6})-(actualizar|importar-perfil|manual)(?:-(\d{1,3}))?$/;
+const NOMBRE_INSTANTANEA =
+  /^(\d{8}-\d{6})-(actualizar|importar-perfil|limpiar-versiones|manual)(?:-(\d{1,3}))?$/;
 
 export interface DepsInstantaneaEntorno {
   rutas: Pick<Rutas, 'base' | 'config' | 'nginxConf' | 'vhost' | 'phpIni'>;

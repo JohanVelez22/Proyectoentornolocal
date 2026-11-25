@@ -38,6 +38,14 @@ import { crearPuertoWorkspaces } from './workspaces/puerto';
 import { Workspaces } from './workspaces/workspaces';
 import { GestorTareas } from './tareas/gestor';
 import { Programador } from './tareas/programador';
+import {
+  Limpieza,
+  type DestinoLimpieza,
+  type ResultadoLimpieza,
+  type UsosVersiones,
+  type VersionSinUso,
+} from './catalogo/limpieza';
+import { calcularUsos } from './catalogo/usoVersiones';
 import type {
   DepsPerfiles,
   OpcionesExportarPerfil,
@@ -606,6 +614,8 @@ export class Nucleo {
   readonly programador: Programador;
   /** Altas, cambios y confirmaciones de las tareas programadas de los sitios. */
   readonly tareas: GestorTareas;
+  /** Limpieza de versiones sin uso: solo `bin/<servicio>/<versión>`, nunca `data/` (D30). */
+  readonly limpiezaVersiones: Limpieza;
   private readonly almacenCredenciales: AlmacenCredenciales;
   private readonly plataforma: PlataformaCompleta;
   private readonly lanzarEditor: LanzadorSeparado | undefined;
@@ -794,6 +804,12 @@ export class Nucleo {
       leerSitios: () => this.sitios.listar(),
       modificarConfig: (fn) => this.sitios.modificarConfig(fn),
       programador: this.programador,
+    });
+    this.limpiezaVersiones = new Limpieza({
+      rutas: this.rutas,
+      instaladas: (s) => this.instalador.instalados(s),
+      usos: () => this.usosDeVersiones(),
+      instantanea: () => this.instantaneaEntorno('limpiar-versiones'),
     });
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
@@ -1676,6 +1692,9 @@ export class Nucleo {
     // (WOLFCORE_DATOS) no corre nada hasta que el usuario lo permita.
     nucleo.programador.iniciar();
     void nucleo.programador.purgarHuerfanos().catch(() => undefined);
+    // Limpieza de versiones (D30): la papelera de más de 7 días y los restos de un borrado a medias.
+    void nucleo.limpiezaVersiones.purgarPapelera().catch(() => 0);
+    void nucleo.limpiezaVersiones.limpiarResiduos().catch(() => 0);
     nucleo.iniciarRevisionVencimientos();
     nucleo.iniciarRevisionNovedades(o.retrasoNovedadesMs ?? RETRASO_NOVEDADES_MS);
     // Sin bloquear el arranque: un fallo queda en el estado del servicio y en un aviso.
@@ -2134,6 +2153,63 @@ export class Nucleo {
       );
     }
     await this.instalador.desinstalar(servicio, carpeta);
+  }
+
+  /**
+   * Quién usa cada versión instalada ahora mismo (D30). Sitios, instancias, predeterminadas,
+   * runtimes de proyecto, plantillas, workspaces, tareas y procesos propios en ejecución (por la
+   * ruta real de su ejecutable). Lo que no se pueda comprobar cuenta como en uso.
+   */
+  private usosDeVersiones(): Promise<UsosVersiones> {
+    return calcularUsos({
+      rutas: this.rutas,
+      config: () => this.config.leer(),
+      sitios: () => this.sitios.listar(),
+      plantillas: () => this.plantillas.lista(),
+      estados: () => this.servicios.estados(),
+      instaladas: (s) => this.instalador.instalados(s),
+      runtimesDe: (sitio) => this.runtimes.paraProyecto(sitio),
+      phpPorDefecto: () => this.composer.phpPorDefecto(),
+      nginxActiva: () => this.servicios.nginx.versionActiva().catch(() => null),
+      versionPreferida: (s, instaladas) => this.versionPreferida(s, instaladas),
+      versionEnUso: (s, v) => this.servicios.datos.versionEnUso(s, v),
+      pidsPropios: () =>
+        this.supervisor
+          .ids()
+          .map((id) => this.supervisor.pid(id))
+          .filter((p): p is number => p !== null),
+      ...(this.plataforma.descendientes
+        ? { descendientes: (pids: number[]) => this.plataforma.descendientes(pids) }
+        : {}),
+      rutaProceso: async (pid) => {
+        const directa = await this.plataforma.rutaProceso?.(pid).catch(() => null);
+        if (directa) return directa;
+        return (await this.plataforma.procesoVivo(pid).catch(() => null))?.ejecutable ?? null;
+      },
+      procesoVivo: async (pid) =>
+        (await this.plataforma.procesoVivo(pid).catch(() => ({ vivo: true }))).vivo,
+    });
+  }
+
+  /**
+   * Versiones instaladas con su tamaño y por qué no se pueden quitar (vista previa de la limpieza).
+   * Las que tienen motivo se listan pero no se pueden marcar. No borra nada.
+   */
+  versionesSinUso(): Promise<VersionSinUso[]> {
+    return this.limpiezaVersiones.versionesSinUso();
+  }
+
+  /**
+   * Quita las versiones elegidas de `bin/` (nunca `data/`), a la papelera (se purga a los 7 días)
+   * o de forma definitiva. Toma antes la instantánea del entorno y vuelve a comprobar el uso de
+   * cada una justo antes de moverla.
+   */
+  limpiarVersiones(
+    seleccion: { servicio: string; version: string }[],
+    confirmado: true,
+    destino: DestinoLimpieza = 'papelera',
+  ): Promise<ResultadoLimpieza> {
+    return this.limpiezaVersiones.limpiar(seleccion, confirmado, { destino });
   }
 
   /** Instancias de un servicio de datos (o de todos) con su estado. */

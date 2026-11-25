@@ -827,6 +827,8 @@ describe('registrarIpc', () => {
         'instalador.instalar',
         'instalador.instalados',
         'instalador.desinstalar',
+        'limpiezaVersiones.sinUso',
+        'limpiezaVersiones.limpiar',
         'catalogo.versiones',
         'catalogo.silenciar',
         'instancias.lista',

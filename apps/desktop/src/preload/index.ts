@@ -255,6 +255,11 @@ const api: ApiEntorno = {
     instalados: (s) => invocar('instalador.instalados', s),
     desinstalar: (s, v) => invocar('instalador.desinstalar', s, v),
   },
+  limpiezaVersiones: {
+    sinUso: () => invocar('limpiezaVersiones.sinUso'),
+    limpiar: (sel, confirmado, destino) =>
+      invocar('limpiezaVersiones.limpiar', sel, confirmado, destino),
+  },
   catalogo: {
     versiones: (s, filtro) => invocar('catalogo.versiones', s, filtro),
     silenciar: (s, v) => invocar('catalogo.silenciar', s, v),

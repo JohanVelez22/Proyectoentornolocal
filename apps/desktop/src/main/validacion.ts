@@ -1053,6 +1053,34 @@ export function versionCatalogo(v: unknown, nombre = 'versión'): string {
   return v;
 }
 
+/**
+ * Selección de la limpieza de versiones (D30): servicio de la lista de versiones y carpeta de
+ * `bin/<servicio>/` (nunca una ruta). El núcleo la vuelve a validar antes de tocar nada.
+ */
+export function seleccionLimpieza(v: unknown): { servicio: string; version: string }[] {
+  if (!Array.isArray(v) || v.length === 0 || v.length > 200) {
+    throw new Error('Argumento no válido: selección');
+  }
+  return v.map((x) => {
+    const o = objetoPlano<{ servicio?: unknown; version?: unknown }>(x, 'selección');
+    const servicio = servicioVersiones(o.servicio);
+    if (
+      typeof o.version !== 'string' ||
+      !/^[\w.-]{1,64}$/.test(o.version) ||
+      o.version.includes('..')
+    ) {
+      throw new Error('Argumento no válido: versión');
+    }
+    return { servicio, version: o.version };
+  });
+}
+
+/** Destino de la limpieza de versiones: la papelera o el borrado definitivo. */
+export function destinoLimpieza(v: unknown): 'papelera' | 'definitivo' {
+  if (v !== 'papelera' && v !== 'definitivo') throw new Error('Argumento no válido: destino');
+  return v;
+}
+
 /** Instancia de un servicio de datos (`mysql@8.4`). */
 export function idInstanciaIpc(v: unknown, nombre = 'instancia'): IdInstancia {
   if (!esIdInstancia(v)) throw new Error(`Argumento no válido: ${nombre}`);
