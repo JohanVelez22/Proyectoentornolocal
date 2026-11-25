@@ -264,14 +264,56 @@ export function validarIdPlantilla(id: unknown): string {
 
 type Coincide = (rel: string, nombre: string) => boolean;
 
+/** Comodines (`*`) que admite un patrón: más no tiene sentido y encarece la comparación. */
+const MAX_COMODINES = 5;
+
+/**
+ * ¿`texto` coincide con `patron`, donde `*` es cualquier cosa (dentro del mismo tramo)? Sin
+ * expresiones regulares: el recorrido con retroceso de un solo `*` es lineal en la práctica y no
+ * hay explosión con `a*a*a*…`.
+ */
+function globCoincide(patron: string, texto: string): boolean {
+  let p = 0;
+  let t = 0;
+  let estrella = -1;
+  let marca = 0;
+  while (t < texto.length) {
+    if (p < patron.length && patron[p] === '*') {
+      estrella = p++;
+      marca = t;
+    } else if (p < patron.length && patron[p] === texto[t]) {
+      p++;
+      t++;
+    } else if (estrella >= 0) {
+      p = estrella + 1;
+      t = ++marca;
+    } else {
+      return false;
+    }
+  }
+  while (p < patron.length && patron[p] === '*') p++;
+  return p === patron.length;
+}
+
+/** Junta los `*` repetidos (`a***b` → `a*b`): significan lo mismo y evitan trabajo de más. */
+const juntarComodines = (p: string): string => p.replace(/\*{2,}/g, '*');
+
 function compilarPatron(patron: string): Coincide {
-  const p = patron
-    .replace(/\\/g, '/')
-    .replace(/^\/+|\/+$/g, '')
-    .toLowerCase();
-  if (p.includes('/')) return (rel) => rel === p || rel.startsWith(`${p}/`);
-  const re = new RegExp(`^${p.replace(/[.+^${}()|[\]\\?]/g, '\\$&').replace(/\*/g, '.*')}$`, 'i');
-  return (_rel, nombre) => re.test(nombre);
+  const p = juntarComodines(
+    patron
+      .replace(/\\/g, '/')
+      .replace(/^\/+|\/+$/g, '')
+      .toLowerCase(),
+  );
+  if (p.includes('/')) {
+    // Ruta desde la raíz del proyecto: cada tramo admite `*` y vale también todo lo que cuelga.
+    const tramos = p.split('/');
+    return (rel) => {
+      const partes = rel.split('/');
+      return partes.length >= tramos.length && tramos.every((t, i) => globCoincide(t, partes[i]!));
+    };
+  }
+  return (_rel, nombre) => globCoincide(p, nombre.toLowerCase());
 }
 
 /** Valida y compila las exclusiones que suma el usuario; las obligatorias van siempre. */
@@ -296,6 +338,8 @@ export function compilarExclusiones(extra: unknown): Coincide[] {
     ) {
       throw malo();
     }
+    // Demasiados comodines: no es un patrón razonable (y cuesta compararlo con cada archivo).
+    if ((juntarComodines(t).match(/\*/g) ?? []).length > MAX_COMODINES) throw malo();
     extras.push(t);
   }
   return [...EXCLUSIONES_PLANTILLA, ...extras].map(compilarPatron);

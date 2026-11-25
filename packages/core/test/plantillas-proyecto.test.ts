@@ -1222,3 +1222,49 @@ function depsMinimas(extra: Partial<Plantilla>): DepsCrearProyecto {
     plantillas: { cargar: async () => plantilla },
   };
 }
+
+describe('I5: patrones con ruta y comodines', () => {
+  it('config/secrets/* excluye lo que cuelga de esa carpeta, a cualquier profundidad', async () => {
+    await escribir('config/secrets/a.txt', 'x');
+    await escribir('config/secrets/sub/b.txt', 'x');
+    await escribir('config/publica/c.txt', 'x');
+    await escribir('config/secretsx/d.txt', 'x');
+    const v = await armar().vistaPrevia('tienda', { excluirExtra: ['config/secrets/*'] });
+    expect(v.excluidos).toEqual(
+      expect.arrayContaining(['config/secrets/a.txt', 'config/secrets/sub']),
+    );
+    expect(v.excluidos).not.toContain('config/publica');
+    const p = await armar().guardar('tienda', { ...opciones, excluirExtra: ['config/secrets/*'] });
+    const zip = await leerZip(path.join(rutas.plantillas(), p.id, 'archivos.zip'));
+    expect([...zip.keys()].filter((k) => k.startsWith('config/')).sort()).toEqual([
+      'config/publica/c.txt',
+      'config/secretsx/d.txt',
+    ]);
+  });
+
+  it('un * en medio de la ruta vale por un tramo (app/*/cache)', async () => {
+    await escribir('app/a/cache/x', 'x');
+    await escribir('app/b/cache/y', 'x');
+    await escribir('app/b/otra/z', 'x');
+    const p = await armar().guardar('tienda', { ...opciones, excluirExtra: ['app/*/cache'] });
+    const zip = await leerZip(path.join(rutas.plantillas(), p.id, 'archivos.zip'));
+    expect([...zip.keys()]).toEqual(expect.arrayContaining(['app/b/otra/z']));
+    expect([...zip.keys()].some((k) => k.includes('/cache/'))).toBe(false);
+  });
+
+  it('muchos comodines se rechazan y los repetidos se juntan', async () => {
+    await expect(
+      armar().vistaPrevia('tienda', { excluirExtra: ['a*b*c*d*e*f*g*h'] }),
+    ).rejects.toMatchObject({ codigo: 'plantillas.exclusion_invalida' });
+    // a***b es a*b: un solo comodín.
+    expect(() => compilarExclusiones(['a***b***c'])).not.toThrow();
+  });
+
+  it('un patrón hostil (a*a*a*…b) no cuelga la comparación', () => {
+    const [c] = compilarExclusiones(['a*a*a*a*a*b']).slice(-1);
+    const largo = 'a'.repeat(5000);
+    const t0 = Date.now();
+    expect(c!(largo, largo)).toBe(false);
+    expect(Date.now() - t0).toBeLessThan(1000);
+  });
+});
