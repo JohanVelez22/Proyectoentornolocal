@@ -2889,6 +2889,11 @@ export class Nucleo {
     return this.importador().importar(seleccion, o);
   }
 
+  /** Cancela la importación en curso (mata solo su volcado, por PID); true si había una. */
+  cancelarImportacion(): boolean {
+    return this.importador().cancelar();
+  }
+
   /**
    * Borra los usuarios y roles `wolf_tmp_*` vencidos que dejó una restauración de esquema
    * interrumpida, en los servidores de bases que ya están encendidos. Sin esperar y sin fallar.

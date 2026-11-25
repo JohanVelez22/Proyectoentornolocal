@@ -3380,6 +3380,9 @@ export const pt: Textos = {
     resultado: {
       titulo: 'Resultado da importação',
       importando: 'Importando…',
+      cancelar: 'Cancelar importação',
+      restaurada:
+        'O banco original foi recolocado automaticamente a partir da cópia: ficou como estava.',
       sitioOk: 'Importado',
       sitioFallo: 'Não importado',
       baseOk: (n: string) => `Banco ${n} importado`,

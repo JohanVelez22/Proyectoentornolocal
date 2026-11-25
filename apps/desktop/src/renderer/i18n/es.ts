@@ -3370,6 +3370,8 @@ export const es = {
     resultado: {
       titulo: 'Resultado de la importación',
       importando: 'Importando…',
+      cancelar: 'Cancelar importación',
+      restaurada: 'La base original se volvió a poner sola desde su copia: quedó como estaba.',
       sitioOk: 'Importado',
       sitioFallo: 'No se importó',
       baseOk: (n: string) => `Base ${n} importada`,

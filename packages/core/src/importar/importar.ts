@@ -62,7 +62,14 @@ export interface ResultadoImportar {
     php?: string | null;
     phpDistinto?: boolean;
   }[];
-  bases: { nombre: string; ok: boolean; codigo?: CodigoError; respaldoPrevio: string | null }[];
+  bases: {
+    nombre: string;
+    ok: boolean;
+    codigo?: CodigoError;
+    respaldoPrevio: string | null;
+    /** La base original se volvió a poner sola desde su copia tras un fallo. */
+    restaurada?: boolean;
+  }[];
   /** Nginx y el archivo hosts quedaron al día con los sitios nuevos; null si no se importó ninguno. */
   aplicado: boolean | null;
 }
@@ -145,6 +152,7 @@ function validarOrigen(o: OrigenBdImportar): void {
  */
 export class Importador {
   private enCurso = false;
+  private control: AbortController | null = null;
 
   constructor(private readonly d: DepsImportar) {}
 
@@ -172,6 +180,16 @@ export class Importador {
       }
     }
     return { candidatos, problemas, programas: [...programas] };
+  }
+
+  /**
+   * Cancela la importación en curso: mata solo el volcado que lanzó (por su PID) y deja cada base
+   * como estaba. Lo ya vinculado como sitio se conserva. Sin importación en curso, no hace nada.
+   */
+  cancelar(): boolean {
+    if (!this.control || this.control.signal.aborted) return false;
+    this.control.abort(new ErrorWolf('importar.cancelado', 'Importación cancelada.'));
+    return true;
   }
 
   /** Lo que se puede importar y lo que pasaría con cada sitio (no escribe nada). */
@@ -219,6 +237,7 @@ export class Importador {
       throw new ErrorWolf('importar.en_curso', 'Ya hay una importación en curso.');
     }
     this.enCurso = true;
+    this.control = new AbortController();
     try {
       const { candidatos } = await this.detectarTodo();
       const resultado: ResultadoImportar = { sitios: [], bases: [], aplicado: null };
@@ -237,7 +256,7 @@ export class Importador {
         // Los sitios ya están guardados: si Nginx o hosts fallan, se informa y se sigue con las bases.
         resultado.aplicado = await this.d.aplicar().catch(() => false);
       }
-      if (o.origenBd && o.instancia) {
+      if (o.origenBd && o.instancia && !this.control.signal.aborted) {
         await this.importarBases(
           importados,
           o.origenBd,
@@ -249,6 +268,7 @@ export class Importador {
       return resultado;
     } finally {
       this.enCurso = false;
+      this.control = null;
     }
   }
 
@@ -333,7 +353,17 @@ export class Importador {
       return;
     }
     let origenApagado = false;
+    const senal = this.control?.signal;
     for (const nombre of nombres.values()) {
+      if (senal?.aborted) {
+        resultado.bases.push({
+          nombre,
+          ok: false,
+          codigo: 'importar.cancelado',
+          respaldoPrevio: null,
+        });
+        continue;
+      }
       if (origenApagado) {
         resultado.bases.push({
           nombre,
@@ -365,7 +395,12 @@ export class Importador {
             base: nombre,
           },
           nombre,
-          { confirmarSobrescribir: existe, baseNueva: !existe },
+          {
+            confirmarSobrescribir: existe,
+            baseNueva: !existe,
+            baseExistente: existe,
+            ...(senal ? { senal } : {}),
+          },
         );
         resultado.bases.push({ nombre, ok: true, respaldoPrevio: r.respaldoPrevio ?? null });
       } catch (e) {
@@ -376,6 +411,7 @@ export class Importador {
           ok: false,
           codigo: e instanceof ErrorTrasReemplazo ? 'importar.base_fallo' : codigo,
           respaldoPrevio: e instanceof ErrorTrasReemplazo ? e.respaldoPrevio : null,
+          ...(e instanceof ErrorTrasReemplazo ? { restaurada: e.restaurada } : {}),
         });
       }
     }

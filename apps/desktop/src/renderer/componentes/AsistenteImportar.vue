@@ -44,6 +44,7 @@ const origen = ref({ puerto: '3306', usuario: 'root', clave: '' });
 const reemplazar = ref<string[]>([]);
 const resultado = ref<ResultadoImportar | null>(null);
 const errorImportar = ref<string | null>(null);
+const cancelando = ref(false);
 
 const destinos = computed(() => destinosBd(servicios.lista));
 const opcionesDestino = computed(() =>
@@ -115,7 +116,11 @@ watch(
   { immediate: true },
 );
 watch(destino, (d, anterior) => {
-  if (props.show && d !== anterior && vista.value) void cargar();
+  if (!props.show || d === anterior || !vista.value) return;
+  // Lo que se mostraba ("ya existe", reemplazos marcados) era del servidor anterior.
+  vista.value = null;
+  reemplazar.value = [];
+  void cargar();
 });
 
 function alternar(id: string, v: boolean): void {
@@ -128,6 +133,18 @@ function marcarReemplazo(nombre: string, v: boolean): void {
   reemplazar.value = v
     ? [...new Set([...reemplazar.value, k])]
     : reemplazar.value.filter((n) => n !== k);
+}
+
+/** Corta el volcado en curso (solo el proceso de esta importación) y deja cada base como estaba. */
+async function cancelar(): Promise<void> {
+  cancelando.value = true;
+  try {
+    await api().importar.cancelar();
+  } catch {
+    // si ya terminó, el resultado lo dirá
+  } finally {
+    cancelando.value = false;
+  }
 }
 
 async function importar(): Promise<void> {
@@ -318,6 +335,7 @@ const textoCodigo = (codigo: string | undefined, datos?: Record<string, string |
             }}</strong>
             <small v-if="b.codigo">{{ textoCodigo(b.codigo, { nombre: b.nombre }) }}</small>
             <small v-if="b.respaldoPrevio">{{ t.resultado.copiaPrevia(b.respaldoPrevio) }}</small>
+            <small v-if="b.restaurada">{{ t.resultado.restaurada }}</small>
           </li>
         </ul>
       </template>
@@ -332,10 +350,13 @@ const textoCodigo = (codigo: string | undefined, datos?: Record<string, string |
         >
           {{ motivoNo }}
         </p>
-        <NButton v-if="fase === 'fin'" type="primary" @click="emit('cerrar')">{{
+        <NButton v-if="fase === 'importando'" :loading="cancelando" @click="cancelar">{{
+          t.resultado.cancelar
+        }}</NButton>
+        <NButton v-else-if="fase === 'fin'" type="primary" @click="emit('cerrar')">{{
           t.cerrar
         }}</NButton>
-        <template v-else-if="fase !== 'importando'">
+        <template v-else>
           <NButton @click="fase === 'confirmar' ? (fase = 'vista') : emit('cerrar')">{{
             fase === 'confirmar' ? t.volver : t.cancelar
           }}</NButton>

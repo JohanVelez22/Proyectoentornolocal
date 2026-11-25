@@ -702,6 +702,8 @@ export interface ApiEntorno {
       seleccion: string[],
       opciones: Omit<OpcionesImportar, 'instancia'> & { instancia?: ObjetivoSqlIpc },
     ): Promise<ResultadoImportar>;
+    /** Cancela la importación en curso (mata solo su volcado y deja cada base como estaba). */
+    cancelar(): Promise<boolean>;
   };
   git: {
     disponible(): Promise<DisponibilidadGit>;
@@ -1140,6 +1142,7 @@ export const RUTAS_IPC = [
   'plantillas.borrar',
   'importar.vistaPrevia',
   'importar.ejecutar',
+  'importar.cancelar',
   'git.disponible',
   'git.clonar',
   'git.estado',

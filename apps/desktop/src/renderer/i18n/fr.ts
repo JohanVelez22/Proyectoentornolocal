@@ -3450,6 +3450,9 @@ export const fr: Textos = {
     resultado: {
       titulo: "Résultat de l'importation",
       importando: 'Importation…',
+      cancelar: 'Annuler l’importation',
+      restaurada:
+        "La base d'origine a été remise automatiquement depuis sa copie : elle est telle qu'elle était.",
       sitioOk: 'Importé',
       sitioFallo: 'Non importé',
       baseOk: (n: string) => `Base ${n} importée`,

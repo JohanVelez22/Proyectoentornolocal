@@ -214,7 +214,12 @@ describe('Importador', () => {
       for (const l of llamadasBase) {
         expect(l.objetivo).toBe('mysql@8.0');
         expect(l.origen).toMatchObject({ host: '127.0.0.1', puerto: 3399, clave: CLAVE_ORIGEN });
-        expect(l.opciones).toEqual({ confirmarSobrescribir: false, baseNueva: true });
+        expect(l.opciones).toMatchObject({
+          confirmarSobrescribir: false,
+          baseNueva: true,
+          baseExistente: false,
+        });
+        expect(l.opciones.senal).toBeInstanceOf(AbortSignal);
       }
       // La clave de origen no está en ningún resultado ni en lo que se guarda de los sitios.
       expect(JSON.stringify(r)).not.toContain(CLAVE_ORIGEN);
@@ -248,9 +253,10 @@ describe('Importador', () => {
       });
       const t = r2.bases.find((b) => b.nombre === 'tienda_db')!;
       expect(t).toMatchObject({ ok: true, respaldoPrevio: 'C:/Respaldos/previo.sql' });
-      expect(llamadasBase.find((l) => l.destino === 'tienda_db')!.opciones).toEqual({
+      expect(llamadasBase.find((l) => l.destino === 'tienda_db')!.opciones).toMatchObject({
         confirmarSobrescribir: true,
         baseNueva: false,
+        baseExistente: true,
       });
     });
 
@@ -294,7 +300,43 @@ describe('Importador', () => {
         ok: false,
         codigo: 'importar.base_fallo',
         respaldoPrevio: 'C:/Respaldos/previo.sql',
+        restaurada: false,
       });
+    });
+
+    it('cancelar aborta la señal que recibe el volcado y las bases que faltan quedan canceladas', async () => {
+      const raiz = await copiarFixture('laragon');
+      const imp = await armar([{ programa: 'laragon', raiz }]);
+      respuestaBase = async () => {
+        imp.cancelar();
+        throw new ErrorWolf('importar.cancelado', 'cancelado');
+      };
+      const v = await imp.vistaPrevia();
+      const r = await imp.importar(
+        v.filas.map((f) => f.id),
+        { origenBd: origen, instancia: 'mysql' },
+      );
+      expect(r.bases.map((b) => b.codigo)).toEqual(['importar.cancelado', 'importar.cancelado']);
+      expect(llamadasBase).toHaveLength(1);
+      expect(llamadasBase[0]!.opciones.senal!.aborted).toBe(true);
+      // Sin importación en curso, cancelar no hace nada.
+      expect(imp.cancelar()).toBe(false);
+    });
+
+    it('si la base original se restauró sola tras el fallo, el resultado lo dice', async () => {
+      const raiz = await copiarFixture('laragon');
+      existentes = ['tienda_db'];
+      respuestaBase = async () => {
+        throw new ErrorTrasReemplazo('tienda_db', 'C:/Respaldos/previo.sql', new Error('x'), true);
+      };
+      const imp = await armar([{ programa: 'laragon', raiz }]);
+      const v = await imp.vistaPrevia();
+      const r = await imp.importar([v.filas.find((f) => f.nombre === 'tienda')!.id], {
+        origenBd: origen,
+        instancia: 'mysql',
+        reemplazar: ['tienda_db'],
+      });
+      expect(r.bases[0]).toMatchObject({ ok: false, restaurada: true });
     });
 
     it('un sitio que no se importó no importa su base', async () => {

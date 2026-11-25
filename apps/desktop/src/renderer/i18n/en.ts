@@ -3353,6 +3353,9 @@ export const en: Textos = {
     resultado: {
       titulo: 'Import result',
       importando: 'Importing…',
+      cancelar: 'Cancel import',
+      restaurada:
+        'The original database was put back automatically from its backup: it is as it was.',
       sitioOk: 'Imported',
       sitioFallo: 'Not imported',
       baseOk: (n: string) => `Database ${n} imported`,

@@ -259,6 +259,7 @@ const api: ApiEntorno = {
   importar: {
     vistaPrevia: (instancia) => invocar('importar.vistaPrevia', instancia),
     ejecutar: (seleccion, opciones) => invocar('importar.ejecutar', seleccion, opciones),
+    cancelar: () => invocar('importar.cancelar'),
   },
   agentes: {
     estado: () => invocar('agentes.estado'),

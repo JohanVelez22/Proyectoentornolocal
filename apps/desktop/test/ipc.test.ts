@@ -86,6 +86,7 @@ function nucleoFalso() {
         'importarBase',
         'vistaPreviaImportar',
         'importarDeOtros',
+        'cancelarImportacion',
         'estadoPgvector',
         'instalarBuildTools',
         'compilarPgvector',
@@ -659,6 +660,7 @@ describe('registrarIpc', () => {
         'plantillas.borrar',
         'importar.vistaPrevia',
         'importar.ejecutar',
+        'importar.cancelar',
         'git.disponible',
         'git.clonar',
         'git.estado',
@@ -1798,6 +1800,9 @@ describe('IPC de la Etapa B', () => {
       expect((await llamar('importar.ejecutar', ...malo)).ok, JSON.stringify(malo)).toBe(false);
     }
     expect(f['importarDeOtros']).not.toHaveBeenCalled();
+
+    expect((await llamar('importar.cancelar')).ok).toBe(true);
+    expect(f['cancelarImportacion']).toHaveBeenCalledTimes(1);
 
     // La clave de origen se quita de cualquier error que vuelva al renderer.
     const clave = 'centinela-origen-ipc-d15';

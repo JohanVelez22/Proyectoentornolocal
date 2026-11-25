@@ -1148,6 +1148,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'plantillas.borrar': (n, _s, id) => n.plantillas.borrar(idPlantilla(id)),
   'importar.vistaPrevia': (n, _s, instancia) =>
     n.vistaPreviaImportar(instancia === undefined ? undefined : objetivoSql(instancia).objetivo),
+  'importar.cancelar': (n) => n.cancelarImportacion(),
   'importar.ejecutar': (n, _s, seleccion, opciones) => {
     const ids = idsImportar(seleccion);
     const o = opcionesImportar(opciones);
