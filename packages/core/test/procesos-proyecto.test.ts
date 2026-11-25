@@ -213,6 +213,21 @@ describe('iniciar', () => {
     expect(await readFile(def.log, 'utf8')).toMatch(/\[WolfCore Dev\] .* > npm run dev\n/);
   });
 
+  it('un sitio importado de un perfil (D26) no corre procesos hasta que se confíe en él', async () => {
+    const a = await armar({ sitio: { origen: 'perfil' } });
+    await expect(a.procesos.iniciar('demo', 'vite')).rejects.toMatchObject({
+      codigo: 'proyectos.no_confiado',
+    });
+    expect(a.sup.iniciados).toEqual([]);
+    const b = await armar({ sitio: { origen: 'perfil', confiado: true, pendiente: 'carpeta' } });
+    await expect(b.procesos.iniciar('demo', 'vite')).rejects.toMatchObject({
+      codigo: 'proyectos.no_confiado',
+    });
+    const c = await armar({ sitio: { origen: 'perfil', confiado: true } });
+    await c.procesos.iniciar('demo', 'vite');
+    expect(c.sup.iniciados).toHaveLength(1);
+  });
+
   it('confianza de la CA: el proceso recibe las variables de ConfianzaCa (con la carpeta de trabajo)', async () => {
     const pedidos: { carpeta: string; venv?: string }[] = [];
     const a = await armar({

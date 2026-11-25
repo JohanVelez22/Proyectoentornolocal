@@ -18,7 +18,7 @@ import {
 } from '../tipos';
 import { existe } from './archivos';
 import { entornoProyecto, resolverPrograma, usaPhp, type DepsEntorno } from './pasos/comun';
-import { sanear } from './recetas';
+import { MENSAJE_NO_CONFIADO, sanear } from './recetas';
 
 /**
  * Ruta relativa de wolfcore.json con los separadores de esta plataforma: el archivo se escribe a
@@ -155,6 +155,10 @@ export class ProcesosProyecto {
     procesoId: string,
   ): Promise<void> {
     const { sitio, proceso } = await this.buscar(sitioId, procesoId);
+    // Un sitio importado de un perfil (D26) no corre comandos hasta que el usuario confíe en él.
+    if (sitio.origen === 'perfil' && (sitio.confiado !== true || sitio.pendiente)) {
+      throw new ErrorWolf('proyectos.no_confiado', MENSAJE_NO_CONFIADO);
+    }
     // Ya en marcha: no se toca (ni se escribe en su log).
     const actual = this.d.supervisor.estado(id);
     if (actual === 'encendido' || actual === 'iniciando') return;

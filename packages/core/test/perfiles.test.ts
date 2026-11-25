@@ -750,7 +750,7 @@ describe('importarPerfil: todo lo que llega es importado', () => {
   it('sitios sin confiar, sin red local ni túnel con nombre, procesos que no arrancan solos y Nginx propio fuera', async () => {
     const archivo = await exportar();
     const d = deps(destino);
-    await importar(archivo, d, { rutas: { tienda: path.join(proyectos, 'tienda') } });
+    const r = await importar(archivo, d, { rutas: { tienda: path.join(proyectos, 'tienda') } });
     const cfg = await d.leerConfig();
     const tienda = cfg.sitios.find((s) => s.id === 'tienda')!;
     expect(tienda.confiado).toBe(false);
@@ -758,7 +758,10 @@ describe('importarPerfil: todo lo que llega es importado', () => {
     expect(tienda.lan).toBeUndefined();
     expect(tienda.tunel).toBeUndefined();
     expect(tienda.ftp).toBeUndefined();
-    expect(tienda.procesos.every((p) => !p.autoIniciar)).toBe(true);
+    // Los comandos son de otro equipo: no se importan, y el resultado lo dice.
+    expect(tienda.procesos).toEqual([]);
+    expect(tienda.origen).toBe('perfil');
+    expect(r.sitios.find((s) => s.id === 'tienda')!.motivos).toContain('procesos_quitados');
     expect(tienda.vhostDesactivado).toBe('reglas');
     expect(cfg.mcp.activo).toBe(false);
     expect(cfg.ftp.redLocal).toBe(false);

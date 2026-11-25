@@ -194,6 +194,11 @@ export const SitioSchema = z.object({
    * equipo (el usuario la busca con "buscar carpeta"). Ausente o null = nada pendiente.
    */
   pendiente: z.enum(['carpeta']).nullable().optional(),
+  /**
+   * `perfil`: el sitio llegó de un perfil de otro equipo (D26). Sus procesos no arrancan hasta que
+   * el usuario marque "Confío en este repositorio".
+   */
+  origen: z.enum(['perfil']).optional(),
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 

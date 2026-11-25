@@ -260,7 +260,10 @@ export function sitioImportado(bruto: unknown): SitioImportado {
   }
   s.confiado = false;
   s.recetaConfiada = null;
-  s.procesos = s.procesos.map((p) => ({ ...p, autoIniciar: false }));
+  // Los comandos de los procesos son de otro equipo (de origen ajeno): no se importan.
+  if (s.procesos.length > 0) motivos.push('procesos_quitados');
+  s.procesos = [];
+  s.origen = 'perfil';
   if (s.phpIni !== undefined) {
     try {
       const ini = validarPhpIni(s.phpIni);
