@@ -35,3 +35,11 @@ export function enmascararSecretos(texto: string): string {
   for (const [patron, reemplazo] of PATRONES_SECRETOS) t = t.replace(patron, reemplazo);
   return t;
 }
+
+/**
+ * Nombres de variable de un `.env` cuyo valor es secreto: `*_KEY`, `*_SECRET`, `*_PASSWORD`,
+ * `*_PASS`, `*_TOKEN`, `*_PWD`, `APP_KEY`, claves de API y de credenciales, y las de estilo
+ * CodeIgniter (`database.default.password`). Se enmascaran aunque el valor no tenga forma de secreto.
+ */
+export const NOMBRE_VARIABLE_SECRETA =
+  /(?:SECRET|PASSWORD|PASSWD|PASS|PWD|TOKEN|API[_-]?KEY|PRIVATE[_-]?KEY|CREDENTIAL)|(?:^|[._])KEY$|_KEY(?:_BASE)?$|^APP_KEY$|(?:^|[._])(?:password|pass|pwd|secret|token)$/i;

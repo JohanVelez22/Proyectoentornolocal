@@ -1,4 +1,4 @@
-import { PATRONES_SECRETOS } from '../../patronesSecretos';
+import { NOMBRE_VARIABLE_SECRETA, PATRONES_SECRETOS } from '../../patronesSecretos';
 
 /**
  * Una línea de un `.env`. `crudo` es la línea tal como estaba, con su fin de línea: unir los
@@ -96,16 +96,13 @@ export function escribirEnv(lineas: readonly LineaEnv[]): string {
   return lineas.map((l) => l.crudo).join('');
 }
 
-const NOMBRE_SECRETO =
-  /(?:SECRET|PASSWORD|PASSWD|PASS|PWD|TOKEN|API[_-]?KEY|PRIVATE[_-]?KEY|CREDENTIAL)|(?:^|[._])KEY$|_KEY(?:_BASE)?$|^APP_KEY$|(?:^|[._])(?:password|pass|pwd|secret|token)$/i;
-
 /**
  * ¿Es un valor secreto? Por el nombre (`*_KEY`, `*_SECRET`, `*_PASSWORD`, `*_PASS`, `*_TOKEN`,
  * `*_PWD`, `APP_KEY`, `database.default.password`…) o porque el valor tiene la forma de un secreto
  * (`PATRONES_SECRETOS`: URL con usuario y clave, tokens de GitHub, claves de IA…).
  */
 export function esSecreta(clave: string, valor: string): boolean {
-  if (NOMBRE_SECRETO.test(clave)) return true;
+  if (NOMBRE_VARIABLE_SECRETA.test(clave)) return true;
   return PATRONES_SECRETOS.some(([patron]) => {
     patron.lastIndex = 0;
     const r = patron.test(valor);
