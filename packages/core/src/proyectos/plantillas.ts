@@ -20,7 +20,7 @@ import { z } from 'zod';
 import { leerBaseDelProyecto, type BaseProyecto } from '../bd/baseProyecto';
 import type { ObjetivoBd } from '../bd/basesDeDatos';
 import type { MotorBd } from '../bd/env';
-import { quitarAutoIncrement, quitarDefiner } from '../bd/sqlPermitido';
+import { MAX_BYTES_ESQUEMA, quitarAutoIncrement, quitarDefiner } from '../bd/sqlPermitido';
 import { extraerZip } from '../catalogo/zip';
 import { ErrorWolf } from '../errores';
 import { enmascararSecretos } from '../patronesSecretos';
@@ -120,7 +120,7 @@ export const LIMITES_PLANTILLA = {
   maxProfundidad: 30,
   /** Tamaño de plantilla.json y del esquema que se aceptan al leer. */
   maxBytesJson: 512 * 1024,
-  maxBytesEsquema: 256 * 1024 * 1024,
+  maxBytesEsquema: MAX_BYTES_ESQUEMA,
 };
 export type LimitesPlantilla = typeof LIMITES_PLANTILLA;
 

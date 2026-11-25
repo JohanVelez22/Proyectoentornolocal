@@ -1,7 +1,13 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { dividirSentencias, revisarSql } from '../src/bd/sqlPermitido';
+import {
+  dividirSentencias,
+  quitarAutoIncrement,
+  quitarDefiner,
+  quitarRestrict,
+  revisarSql,
+} from '../src/bd/sqlPermitido';
 import { Respaldos, type DepsRespaldos } from '../src/bd/respaldos';
 import type { Ejecutor, Lanzador } from '../src/plataforma/tipos';
 import { nombreEjecutable } from '../src/plataforma/sistema';
@@ -264,11 +270,14 @@ describe('Respaldos.restaurarEsquema: MySQL y MariaDB', () => {
     expect(admin.some((s) => s.startsWith('CREATE') && s.includes('TRIGGER `trg`'))).toBe(true);
   });
 
-  it('importada: nunca se vuelve a crear nada como administrador', async () => {
-    await armar().restaurarEsquema('mysql', archivo('e.sql', ESQUEMA_MYSQL), 'tienda', {
-      origen: 'importada',
-    });
-    expect(consultas.filter((c) => c.usuario === 'root')).toEqual([]);
+  it('importada con un disparador: se rechaza antes de crear el usuario (corre con privilegios ajenos)', async () => {
+    await expect(
+      armar().restaurarEsquema('mysql', archivo('e.sql', ESQUEMA_MYSQL), 'tienda', {
+        origen: 'importada',
+      }),
+    ).rejects.toMatchObject({ codigo: 'bd.sql_no_permitido' });
+    expect(eventos).toEqual([]);
+    expect(consultas).toEqual([]);
   });
 
   it.each(MALAS_MYSQL)(
@@ -342,6 +351,18 @@ describe('Respaldos.restaurarEsquema: PostgreSQL', () => {
     ]);
   });
 
+  it('pg_restore reciente: las líneas \\restrict y \\unrestrict con la misma clave no estorban', async () => {
+    const clave = 'AbCdEf0123456789';
+    const base = sqlPg;
+    sqlPg = ['\\restrict ' + clave, base, '\\unrestrict ' + clave, ''].join('\n');
+    await armar().restaurarEsquema('postgresql', archivo('e.dump', PGDMP), 'api');
+    expect(lanzados).toHaveLength(1);
+    sqlPg = ['\\restrict ' + clave, base, '\\! calc.exe', ''].join('\n');
+    await expect(
+      armar().restaurarEsquema('postgresql', archivo('f.dump', PGDMP), 'api'),
+    ).rejects.toMatchObject({ codigo: 'bd.sql_no_permitido' });
+  });
+
   it('una extensión fuera de la lista permitida no restaura nada', async () => {
     listaPg += '\n3080; 3080 16500 EXTENSION - file_fdw';
     await expect(
@@ -391,5 +412,89 @@ describe('Respaldos.restaurarEsquema: PostgreSQL', () => {
         'api',
       ),
     ).rejects.toMatchObject({ codigo: 'bd.esquema_fallo' });
+  });
+});
+
+describe('R3: el lector de SQL', () => {
+  it('a$q$ es parte de un identificador: no abre una cadena que esconda SECURITY/**/DEFINER', () => {
+    const sql =
+      'CREATE TABLE a$q$ (x int);\n' +
+      'CREATE FUNCTION f() RETURNS int LANGUAGE sql SECURITY/**/DEFINER AS $$ select 1 $$;\n' +
+      'CREATE TABLE b$q$ (y int);';
+    expect(() => revisarSql(sql, 'postgresql', { origen: 'importada' })).toThrowError(
+      expect.objectContaining({ codigo: 'bd.sql_no_permitido' }),
+    );
+    // Sin el truco, un $$ de verdad sigue abriendo una cadena.
+    expect(
+      revisarSql('CREATE FUNCTION f() RETURNS int LANGUAGE sql AS $$ select 1; $$;', 'postgresql'),
+    ).toHaveLength(1);
+  });
+
+  it('quita exactamente \\restrict y \\unrestrict con la misma clave; otro meta-comando sigue rechazado', () => {
+    const clave = 'AbCdEf0123456789';
+    const sql = `\\restrict ${clave}\nSET statement_timeout = 0;\nCREATE TABLE t (a int);\n\\unrestrict ${clave}\n`;
+    expect(revisarSql(quitarRestrict(sql), 'postgresql')).toHaveLength(2);
+    expect(() => revisarSql(sql, 'postgresql')).toThrow();
+    const otro = `\\restrict ${clave}\nCREATE TABLE t (a int);\n\\unrestrict OtraClave99999\n`;
+    expect(() => revisarSql(quitarRestrict(otro), 'postgresql')).toThrow();
+    const extra = `\\restrict ${clave}\n\\! calc.exe\nCREATE TABLE t (a int);\n\\unrestrict ${clave}\n`;
+    expect(() => revisarSql(quitarRestrict(extra), 'postgresql')).toThrow();
+  });
+
+  it('DEFINER, AUTO_INCREMENT y /*! se tratan fuera de las comillas: las cadenas quedan intactas', () => {
+    const sql =
+      "CREATE TABLE t (c varchar(60) DEFAULT 'DEFINER=x@y AUTO_INCREMENT=5 /*!50000 DROP DATABASE z */', d text COMMENT 'a   b') ENGINE=InnoDB AUTO_INCREMENT=77;";
+    const [s] = revisarSql(sql, 'mysql');
+    expect(s!.texto).toContain("'DEFINER=x@y AUTO_INCREMENT=5 /*!50000 DROP DATABASE z */'");
+    expect(s!.texto).toContain("'a   b'");
+    expect(quitarAutoIncrement(sql)).not.toMatch(/=77/);
+    expect(quitarAutoIncrement(sql)).toContain('AUTO_INCREMENT=5');
+    expect(quitarDefiner('CREATE DEFINER=`root`@`localhost` PROCEDURE p() BEGIN END')).not.toMatch(
+      /DEFINER/,
+    );
+    expect(
+      quitarDefiner("-- DEFINER=a@b\nCREATE TABLE t (c text DEFAULT 'DEFINER=q@w');"),
+    ).toContain("'DEFINER=q@w'");
+  });
+
+  it('un comentario condicional peligroso se desenvuelve y se rechaza, uno en una cadena no', () => {
+    expect(() => revisarSql('/*!50000 DROP DATABASE otra */;', 'mysql')).toThrow();
+    expect(() =>
+      revisarSql('CREATE TABLE t (a int) /*!50100 PARTITION BY HASH (a) */;', 'mysql'),
+    ).not.toThrow();
+  });
+
+  it('PostgreSQL acepta CREATE STATISTICS y CREATE TEXT SEARCH', () => {
+    const sql =
+      'CREATE STATISTICS s1 (dependencies) ON a, b FROM t;\n' +
+      'CREATE TEXT SEARCH CONFIGURATION public.es (COPY = pg_catalog.spanish);\n' +
+      'ALTER TEXT SEARCH CONFIGURATION public.es ALTER MAPPING FOR word WITH simple;';
+    expect(revisarSql(sql, 'postgresql')).toHaveLength(3);
+  });
+
+  it('MySQL importada: vistas y rutinas pasan a INVOKER y un disparador no se acepta', () => {
+    const v = revisarSql('CREATE VIEW v AS select 1;', 'mysql', { origen: 'importada' });
+    expect(v[0]!.texto).toMatch(/SQL SECURITY INVOKER VIEW/);
+    const f = revisarSql('CREATE FUNCTION f(a int) RETURNS int DETERMINISTIC RETURN a;', 'mysql', {
+      origen: 'importada',
+    });
+    expect(f[0]!.texto).toMatch(/RETURNS int SQL SECURITY INVOKER DETERMINISTIC/);
+    const rutina = [
+      'DELIMITER ;;',
+      'CREATE PROCEDURE p(IN a int) BEGIN SELECT a; END;;',
+      'DELIMITER ;',
+    ].join('\n');
+    const p = revisarSql(rutina, 'mysql', {
+      origen: 'importada',
+    });
+    expect(p[0]!.texto).toMatch(/\) SQL SECURITY INVOKER BEGIN/);
+    expect(() =>
+      revisarSql('CREATE TRIGGER t BEFORE INSERT ON x FOR EACH ROW SET NEW.a = 1;', 'mysql', {
+        origen: 'importada',
+      }),
+    ).toThrow();
+    expect(() =>
+      revisarSql('CREATE TRIGGER t BEFORE INSERT ON x FOR EACH ROW SET NEW.a = 1;', 'mysql'),
+    ).not.toThrow();
   });
 });

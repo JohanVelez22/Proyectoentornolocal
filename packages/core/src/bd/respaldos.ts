@@ -15,7 +15,7 @@ import { esIdInstancia } from '../servicios/instancias';
 import type { EstadoInstancia, EstadoServicio } from '../tipos';
 import { motorDe, type BasesDeDatos, type ObjetivoBd } from './basesDeDatos';
 import { ClienteMysql, validarNombreBd, type FabricaConexion } from './clienteMysql';
-import { revisarSql } from './sqlPermitido';
+import { MAX_BYTES_ESQUEMA, quitarRestrict, revisarSql } from './sqlPermitido';
 import { ErrorWolf } from '../errores';
 import { ClientePostgres, validarNombrePg, type FabricaConexionPg } from './clientePostgres';
 import type { DatosConexion, MotorBd } from './env';
@@ -70,9 +70,6 @@ export const EXTENSIONES_PERMITIDAS = [
   'fuzzystrmatch',
   'tablefunc',
 ];
-
-/** Un esquema (solo estructura) no pesa decenas de MB: más que esto no se acepta. */
-const MAX_BYTES_ESQUEMA = 64 * 1024 * 1024;
 
 export interface OrigenImportar {
   host: string;
@@ -1600,7 +1597,7 @@ export class Respaldos {
     if (sql.codigo !== 0) {
       throw new ErrorWolf('bd.esquema_fallo', 'No se pudo leer el esquema del respaldo.');
     }
-    return sql.stdout;
+    return quitarRestrict(sql.stdout);
   }
 
   /**
@@ -1790,7 +1787,7 @@ export class Respaldos {
       { timeoutMs: 2 * 60 * 1000 },
     );
     if (sql.codigo !== 0) throw falla('el respaldo no se puede leer');
-    revisarSql(sql.stdout, 'postgresql', { origen: opts.origen ?? 'propia' });
+    revisarSql(quitarRestrict(sql.stdout), 'postgresql', { origen: opts.origen ?? 'propia' });
     for (const nombre of extensiones) {
       if (nombre !== 'plpgsql') await bd.crearExtension?.(base, nombre);
     }
