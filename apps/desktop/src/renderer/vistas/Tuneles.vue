@@ -9,10 +9,11 @@ import {
   NTooltip,
   type DataTableColumns,
 } from 'naive-ui';
-import { computed, h, onMounted, type Component } from 'vue';
+import { computed, h, onMounted, type Component, type HTMLAttributes } from 'vue';
 import { useRouter } from 'vue-router';
 import type { EstadoTunel } from '../../shared/api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
+import { useFoco } from '../composables/useFoco';
 import { useTunel } from '../composables/useTunel';
 import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import { textos } from '../i18n';
@@ -28,6 +29,7 @@ const sitios = useSitios();
 const tuneles = useTuneles();
 const servicios = useServicios();
 const { cerrar, renovar, abrirUrl, copiar, ocupado, trabajando } = useTunel();
+useFoco();
 
 interface Fila extends EstadoTunel {
   nombre: string;
@@ -66,6 +68,10 @@ onMounted(() => {
 });
 
 const claveFila = (f: Fila): string => f.sitioId;
+
+/** El aviso de un túnel (`sitio:<id>`) resalta su fila. */
+const propsFila = (f: Fila): HTMLAttributes =>
+  ({ 'data-foco': `sitio:${f.sitioId}` }) as HTMLAttributes;
 
 /** Botón de solo icono, con tooltip y nombre accesible. */
 function botonIcono(o: {
@@ -212,6 +218,7 @@ const columnas: DataTableColumns<Fila> = [
       :columns="columnas"
       :data="filas"
       :row-key="claveFila"
+      :row-props="propsFila"
       :bordered="false"
       size="small"
       class="tabla"
