@@ -288,6 +288,7 @@ export const PARAMETROS_ERROR = {
   'doctor.antivirus_sin_exclusion': [],
   'doctor.firewall_reglas': ['cantidad', 'perfiles', 'programa'],
   'doctor.firewall_no_comprobado': [],
+  'doctor.firewall_reglas_ajenas': ['cantidad', 'perfiles'],
   'doctor.servicio_en_error': ['servicio', 'id'],
   'doctor.revision_fallida': ['revision'],
   'doctor.confirmacion_requerida': [],

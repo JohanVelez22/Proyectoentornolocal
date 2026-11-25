@@ -370,13 +370,26 @@ describe('ServidorFtp', () => {
     expect(conecta).toBe(false);
   });
 
-  it('con "red local" escucha en todas las interfaces', async () => {
+  it('con "red local" escucha solo en la IP local elegida, nunca en 0.0.0.0', async () => {
     await servidor.detener();
-    const cfg = await almacen.leer();
-    cfg.ftp.redLocal = true;
-    await almacen.guardar(cfg);
-    await servidor.iniciar();
-    expect(servidor.direccion()).toBe('0.0.0.0');
+    const otro = new ServidorFtp({
+      leerConfig: async () => {
+        const c = await almacen.leer();
+        c.ftp.redLocal = true;
+        return c;
+      },
+      modificarConfig: async () => undefined,
+      credenciales,
+      // Las pruebas nunca abren una IP real de la red.
+      ipLocal: () => '127.0.0.1',
+    });
+    await otro.iniciar();
+    try {
+      expect(otro.direccion()).toBe('127.0.0.1');
+      expect(otro.direccion()).not.toBe('0.0.0.0');
+    } finally {
+      await otro.detener();
+    }
   });
 
   it('un puerto ocupado da un error claro y queda en error', async () => {

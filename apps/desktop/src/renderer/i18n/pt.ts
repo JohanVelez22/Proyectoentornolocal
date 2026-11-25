@@ -427,6 +427,8 @@ export const pt: Textos = {
         'O Windows deixa entrar da rede {cantidad} regra(s) de programas do WolfCore Dev (nginx, PHP ou bancos de dados) nos perfis {perfiles}: esses programas ficam abertos à rede.',
       'doctor.firewall_no_comprobado':
         'Não foi possível verificar o firewall do Windows (pode ser preciso ser administrador).',
+      'doctor.firewall_reglas_ajenas':
+        'Há {cantidad} regra(s) de entrada de outros programas (FlyEnv, Laragon, XAMPP ou outros) para nginx, PHP ou bancos de dados nos perfis {perfiles}. Não são do WolfCore Dev: só são mostradas e nunca removidas daqui.',
       'doctor.servicio_en_error': '{servicio} está com erro.',
       'doctor.revision_fallida': 'Não foi possível concluir a verificação {revision}.',
       'doctor.confirmacion_requerida': 'Confirme o reparo antes de aplicá-lo.',

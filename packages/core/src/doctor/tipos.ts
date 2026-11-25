@@ -75,6 +75,8 @@ export interface VencimientoCertificado {
 
 export interface DepsDoctor {
   plataforma: PlataformaCompleta;
+  /** Carpeta temporal del sistema (restos de pruebas propias en el cortafuegos); por defecto la de `os`. */
+  carpetaTemporal?: string;
   /** Carpeta de datos de WolfCore Dev (entradas propias del PATH, exclusión del antivirus). */
   carpetaDatos: string;
   /** Copias con fecha de lo que se reescribe (hosts, PATH). */

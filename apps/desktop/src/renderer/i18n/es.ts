@@ -421,6 +421,8 @@ export const es = {
         'Windows deja entrar desde la red a {cantidad} regla(s) de programas de WolfCore Dev (nginx, PHP o bases de datos) en los perfiles {perfiles}: esos programas quedan abiertos a la red.',
       'doctor.firewall_no_comprobado':
         'No se pudo comprobar el cortafuegos de Windows (puede hacer falta administrador).',
+      'doctor.firewall_reglas_ajenas':
+        'Hay {cantidad} regla(s) de entrada de otros programas (FlyEnv, Laragon, XAMPP u otros) con nginx, PHP o bases de datos en los perfiles {perfiles}. No son de WolfCore Dev: solo se muestran, nunca se quitan desde aquí.',
       'doctor.servicio_en_error': '{servicio} está en error.',
       'doctor.revision_fallida': 'No se pudo completar la revisión {revision}.',
       'doctor.confirmacion_requerida': 'Confirme la reparación antes de aplicarla.',

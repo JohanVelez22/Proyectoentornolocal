@@ -4,7 +4,10 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Almacen } from '../src/almacen';
+import { Eventos, type EventosNucleo } from '../src/eventos';
 import { VhostsAuxiliares } from '../src/nginx/auxiliares';
+import { GestorSitios } from '../src/sitios/sitios';
 import { GestorLan, ipsLocales, puertoLan } from '../src/red/lan';
 import { ServidorCa } from '../src/red/servidorCa';
 import { Rutas } from '../src/rutas';
@@ -545,5 +548,67 @@ describe('ServidorCa', () => {
   it('el puerto es el que el sistema eligió en la IP dada', async () => {
     const { url } = await srv.abrir({ ip: '127.0.0.1' });
     expect(Number(new URL(url).port)).toBeGreaterThan(0);
+  });
+});
+
+describe('podarRed dentro de Sitios.aplicar (sin bloquear la cola)', () => {
+  it('con un GestorSitios real, aplicar() termina aunque Nginx pode la red al validar', async () => {
+    mkdirSync(path.join(base, 'proyecto'), { recursive: true });
+    // eslint-disable-next-line prefer-const
+    let lanReal!: GestorLan;
+    const gs = new GestorSitios({
+      almacen: new Almacen(rutas),
+      rutas,
+      nginx: {
+        // Igual que `ServicioNginx.generarConf`: poda la red mientras `aplicar` tiene la cola.
+        validar: async () => {
+          await lanReal.podarRed();
+          return { ok: true, salida: 'ok' };
+        },
+        recargar: async () => undefined,
+      },
+      estadoNginx: () => 'apagado',
+      hosts: { sincronizar: async () => ({ ok: true }) },
+      instalador: { instalado: async () => true, instalados: async () => ['1.28.0'] },
+      eventos: new Eventos<EventosNucleo>(),
+    });
+    await gs.crear({
+      nombre: 'Demo',
+      dominio: 'demo.test',
+      alias: [],
+      carpeta: path.join(base, 'proyecto'),
+      tipo: 'estatico',
+      php: null,
+      puertoProxy: null,
+      reglasExtra: '',
+      urlBaseVar: null,
+      datosReales: false,
+      https: false,
+      redirigirHttps: false,
+      confiado: false,
+      git: null,
+      procesos: [],
+      runtimes: {},
+      nota: '',
+    } as never);
+    lanReal = new GestorLan({
+      sitios: gs,
+      vhosts: new VhostsAuxiliares({ rutas, recargar: async () => undefined }),
+      quitarCertificado: async () => undefined,
+      certificado: async () => ({ crt: 'c', key: 'k' }),
+      puertoNginx: async () => 80,
+      interfaces: () => ifaces,
+      reservados: async () => [],
+      probar: async () => true,
+    });
+    await lanReal.activar('demo', OK);
+    expect((await gs.listar())[0]!.lan?.activo).toBe(true);
+    ifaces = { 'Wi-Fi': [info('10.0.0.7')] };
+    const limite = new Promise<string>((r) => setTimeout(() => r('bloqueado'), 5000));
+    const res = await Promise.race([gs.aplicar().then(() => 'terminó'), limite]);
+    expect(res).toBe('terminó');
+    await lanReal.esperarMarcas();
+    expect((await gs.listar())[0]!.lan?.activo).toBe(false);
+    expect(existsSync(rutas.vhostAux('lan-demo'))).toBe(false);
   });
 });

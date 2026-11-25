@@ -441,6 +441,8 @@ export const fr: Textos = {
         'Windows laisse entrer depuis le réseau {cantidad} règle(s) de programmes de WolfCore Dev (nginx, PHP ou bases de données) sur les profils {perfiles} : ces programmes sont ouverts au réseau.',
       'doctor.firewall_no_comprobado':
         'Impossible de vérifier le pare-feu de Windows (les droits d’administrateur peuvent être nécessaires).',
+      'doctor.firewall_reglas_ajenas':
+        'Il y a {cantidad} règle(s) entrante(s) d’autres programmes (FlyEnv, Laragon, XAMPP ou autres) pour nginx, PHP ou des bases de données sur les profils {perfiles}. Elles ne sont pas de WolfCore Dev : elles sont seulement affichées et jamais supprimées d’ici.',
       'doctor.servicio_en_error': '{servicio} est en erreur.',
       'doctor.revision_fallida': 'La vérification {revision} n’a pas pu être menée à terme.',
       'doctor.confirmacion_requerida': 'Confirmez la réparation avant de l’appliquer.',

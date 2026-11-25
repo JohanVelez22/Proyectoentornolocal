@@ -92,10 +92,11 @@ export class ServidorFtp {
     if (this.servidor) return;
     const cfg = await this.d.leerConfig();
     const { puerto, redLocal, pasivos } = cfg.ftp;
-    const host = redLocal ? '0.0.0.0' : '127.0.0.1';
+    // Con "red local" escucha solo en la IP local elegida (nunca 0.0.0.0); sin red, en 127.0.0.1.
     const anunciada = redLocal
       ? ((this.d.ipLocal ?? (() => ipLocal()))() ?? '127.0.0.1')
       : '127.0.0.1';
+    const host = anunciada;
     this.estadoActual = 'iniciando';
     this.mensaje = undefined;
 

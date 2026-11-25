@@ -9,7 +9,7 @@ export const ID_VHOST_AUX = /^[A-Za-z0-9][A-Za-z0-9_-]{0,100}$/;
 const HOST_REENVIADO = /^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$/;
 
 export interface OpcionesVhostProxy {
-  /** Dirección de escucha: `127.0.0.1` (túneles) o `0.0.0.0` (red local, D25). */
+  /** Dirección de escucha: `127.0.0.1` (túneles) o la IP local elegida (red local, D25); nunca `0.0.0.0`. */
   escucha: string;
   puerto: number;
   /** Puerto de Nginx al que se reenvía (donde viven los sitios por `server_name`). */

@@ -416,6 +416,8 @@ export const en: Textos = {
         'Windows lets {cantidad} rule(s) for WolfCore Dev programs (nginx, PHP or databases) accept connections from the network on the profiles {perfiles}: those programs are open to the network.',
       'doctor.firewall_no_comprobado':
         'Could not check the Windows firewall (administrator rights may be needed).',
+      'doctor.firewall_reglas_ajenas':
+        "There are {cantidad} inbound rule(s) from other programs (FlyEnv, Laragon, XAMPP or others) for nginx, PHP or databases on the profiles {perfiles}. They are not WolfCore Dev's: they are only shown and never removed from here.",
       'doctor.servicio_en_error': '{servicio} is in an error state.',
       'doctor.revision_fallida': 'The {revision} check could not be completed.',
       'doctor.confirmacion_requerida': 'Confirm the fix before applying it.',

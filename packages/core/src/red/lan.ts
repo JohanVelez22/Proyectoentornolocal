@@ -146,6 +146,8 @@ export class GestorLan {
   private cola: Promise<unknown> = Promise.resolve();
   /** IP con la que está compartido cada sitio (en memoria: tras reiniciar no hay ninguno). */
   private readonly activos = new Map<string, string>();
+  /** Marcas "ya no compartido" pendientes (se escriben fuera de la cola de los sitios). */
+  private marcas: Promise<void> = Promise.resolve();
 
   constructor(private readonly d: DepsGestorLan) {}
 
@@ -177,9 +179,24 @@ export class GestorLan {
       await this.d.quitarCertificado(idCertLan(id)).catch(() => undefined);
       dominios.push(lista.find((s) => s.id === id)?.dominio ?? id);
     }
-    await this.marcarInactivo(caidos);
+    // Quien llama puede estar dentro de `Sitios.aplicar` (que tiene la cola de los sitios tomada):
+    // editar el sitio aquí esperaría esa cola y se bloquearía. Se marca después, sin esperar.
+    this.diferirMarca(caidos);
     this.d.avisarRedCambio?.(dominios);
     return dominios;
+  }
+
+  private diferirMarca(ids: string[]): void {
+    this.marcas = this.marcas
+      .then(() => new Promise<void>((r) => setImmediate(r)))
+      // Si mientras tanto se volvió a compartir, no se desmarca.
+      .then(() => this.marcarInactivo(ids.filter((id) => !this.activos.has(id))))
+      .catch(() => undefined);
+  }
+
+  /** Espera las marcas diferidas de `podarRed` (para quien no está dentro de la cola de sitios). */
+  esperarMarcas(): Promise<void> {
+    return this.marcas;
   }
 
   async estado(): Promise<{
@@ -191,6 +208,7 @@ export class GestorLan {
     redCambio: string[];
   }> {
     const redCambio = await this.podarRed();
+    await this.esperarMarcas();
     const lista = await this.d.sitios.listar();
     const sitios: SitioCompartido[] = [];
     for (const s of lista) {
@@ -328,6 +346,7 @@ export class GestorLan {
   /** Al cerrar la app: quita todos los `server` de la red local y los marca apagados. */
   apagarTodo(): Promise<void> {
     return this.serializar(async () => {
+      await this.esperarMarcas();
       const ids = await this.d.vhosts.ids(PREFIJO_VHOST_LAN);
       for (const id of ids) {
         await this.d.vhosts.quitar(id);

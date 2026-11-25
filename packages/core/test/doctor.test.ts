@@ -521,11 +521,12 @@ describe('Doctor: VC++, antivirus y servicios', () => {
     });
 
     it('avisa con el perfil y la ruta, y muestra el comando para quitarlas sin ejecutarlo', async () => {
+      const d0 = datos.replaceAll('\\', '/');
       plat.reglasEntrada = {
         ok: true,
         reglas: [
-          regla('{AAAA-1}', 'C:/datos/bin/nginx/1.28/nginx.exe'),
-          regla('{BBBB-2}', 'C:/datos/bin/mysql/8.4/bin/mysqld.exe', 'Private'),
+          regla('{AAAA-1}', `${d0}/bin/nginx/1.28/nginx.exe`),
+          regla('{BBBB-2}', `${d0}/bin/mysql/8.4/bin/mysqld.exe`, 'Private'),
         ],
       };
       const d = new Doctor(deps());
@@ -542,6 +543,64 @@ describe('Doctor: VC++, antivirus y servicios', () => {
       expect(h!.reparacion!.comandoManual).toContain('quitar-reglas-firewall');
       expect(h!.reparacion!.comandoManual).toContain('{AAAA-1}');
       expect(await d.reparar(h!.id, true)).toEqual({ ok: false, codigo: 'doctor.solo_informa' });
+    });
+
+    it('los restos de pruebas de WolfCore bajo %TEMP% entran en el comando, agrupados', async () => {
+      const t = 'C:/Users/yo/AppData/Local/Temp';
+      plat.reglasEntrada = {
+        ok: true,
+        reglas: [
+          regla('{T-1}', `${t}/pel-int-abc/bin/nginx.exe`),
+          regla('{T-2}', `${t}/pel-etapa-b-x/nginx.exe`),
+          regla('{T-3}', `${t}/pel-vhost-real-9/nginx.exe`),
+          regla('{T-4}', `${t}/claude/xyz/scratchpad/ngx1/nginx.exe`),
+        ],
+      };
+      const [h] = await solo(new Doctor(deps({ carpetaTemporal: t })), ['firewall']);
+      expect(h!.datos).toMatchObject({ cantidad: 4 });
+      expect(h!.evidencia).toContain('Restos de pruebas de WolfCore (4)');
+      for (const n of ['{T-1}', '{T-2}', '{T-3}', '{T-4}']) {
+        expect(h!.reparacion!.comandoManual).toContain(n);
+      }
+    });
+
+    it('las reglas de otros programas (FlyEnv, XAMPP, Laragon) solo informan y NUNCA entran en el comando', async () => {
+      const d0 = datos.replaceAll('\\', '/');
+      plat.reglasEntrada = {
+        ok: true,
+        reglas: [
+          regla('{MIA-1}', `${d0}/bin/nginx/1.28/nginx.exe`),
+          regla('{FLY-1}', 'C:/Users/yo/AppData/Roaming/PhpWebStudy/nginx/nginx.exe'),
+          regla('{FLY-2}', 'C:/FlyEnv/app/nginx/nginx.exe'),
+          regla('{XAMPP-1}', 'C:/xampp/apache/bin/php.exe'),
+          regla('{LARAGON-1}', 'C:/laragon/bin/mysql/mysqld.exe'),
+          // Parecida pero fuera de %TEMP% y de la carpeta de datos: ajena.
+          regla('{FALSA-1}', 'D:/trabajo/pel-int-abc/nginx.exe'),
+          // Con variables sin expandir o recorrido: ajena.
+          regla('{VAR-1}', '%TEMP%/pel-int-abc/nginx.exe'),
+        ],
+      };
+      const hs = await solo(
+        new Doctor(deps({ carpetaTemporal: 'C:/Users/yo/AppData/Local/Temp' })),
+        ['firewall'],
+      );
+      const mio = hs.find((x) => x.id === 'firewall:reglas-entrada')!;
+      const ajeno = hs.find((x) => x.id === 'firewall:reglas-ajenas')!;
+      expect(mio.datos).toMatchObject({ cantidad: 1 });
+      const cmd = mio.reparacion!.comandoManual!;
+      expect(cmd).toContain('{MIA-1}');
+      for (const n of ['FLY-1', 'FLY-2', 'XAMPP-1', 'LARAGON-1', 'FALSA-1', 'VAR-1']) {
+        expect(cmd, n).not.toContain(n);
+      }
+      expect(ajeno).toMatchObject({ gravedad: 'info', datos: { cantidad: 6 } });
+      expect(ajeno.reparacion).toBeUndefined();
+      expect(ajeno.evidencia).toContain('FlyEnv');
+    });
+
+    it('con solo reglas ajenas no hay hallazgo con comando', async () => {
+      plat.reglasEntrada = { ok: true, reglas: [regla('{F}', 'C:/FlyEnv/nginx/nginx.exe')] };
+      const hs = await solo(new Doctor(deps()), ['firewall']);
+      expect(hs.map((x) => x.id)).toEqual(['firewall:reglas-ajenas']);
     });
 
     it('si no se pueden leer (sin permisos) es "no se pudo comprobar", no un error', async () => {
