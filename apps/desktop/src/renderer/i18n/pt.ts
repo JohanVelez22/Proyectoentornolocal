@@ -217,6 +217,8 @@ export const pt: Textos = {
       'plantillas.nombre_invalido': 'O nome do modelo não é válido (de 1 a 60 caracteres).',
       'plantillas.esquema_fallo':
         'Não foi possível ler o esquema do banco do projeto: verifique se o serviço está ligado.',
+      'plantillas.base_no_resuelta':
+        'Não é possível salvar o modelo: o servidor do banco é remoto ou nenhum serviço local usa essa porta.',
       'plantillas.sin_esquema': 'O modelo não traz o esquema de um banco de dados.',
       'proyectos.carpeta_invalida': 'A pasta do projeto não é válida.',
       'proyectos.nombre_invalido':
@@ -3256,6 +3258,10 @@ export const pt: Textos = {
       resumen: (archivos: number, tamano: string) => `${archivos} arquivos · ${tamano}`,
       fuera: (n: number) => `${n} deixados de fora`,
       sinArchivos: 'Só a receita, os ajustes e o esquema serão salvos; nenhum arquivo.',
+      baseVolcado: (nombre: string, servidor: string) =>
+        `Só a estrutura do banco ${nombre} (servidor ${servidor}) será salva, sem nenhuma linha.`,
+      sinBase: 'O projeto não declara um banco de dados: nenhum esquema será salvo.',
+      avisoMongodb: 'Este projeto usa MongoDB: o esquema (coleções e índices) não é salvo.',
       guardar: 'Salvar modelo',
       guardada: (nombre: string) => `Modelo “${nombre}” salvo.`,
       errorGuardar: 'Não foi possível salvar o modelo',

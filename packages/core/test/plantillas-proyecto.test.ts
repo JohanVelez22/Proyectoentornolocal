@@ -8,6 +8,7 @@ import { carpetaTemporal } from './temporales';
 import { ErrorWolf } from '../src/errores';
 import { crearProyecto, type DepsCrearProyecto } from '../src/proyectos/crear';
 import type { PedidoProyecto } from '../src/proyectos/generadores';
+import { leerBaseDelProyecto } from '../src/bd/baseProyecto';
 import { Rutas } from '../src/rutas';
 import {
   compilarExclusiones,
@@ -908,5 +909,65 @@ describe('I1: un zip manipulado no puede traer lo que una plantilla nunca lleva'
       codigo: 'plantillas.danada',
     });
     expect(await readdir(destino)).toEqual([]);
+  });
+});
+
+describe('I2: la base y el servidor correctos', () => {
+  const resolver = async (motor: string, puerto: number | null): Promise<string | null> => {
+    if (puerto === null || puerto === 3306) return motor;
+    return puerto === 3307 ? 'mysql@8.4' : null;
+  };
+
+  it('Symfony: .env.local manda sobre .env y el puerto elige la instancia', async () => {
+    await escribir('.env', 'DATABASE_URL="mysql://root:x@127.0.0.1:3306/vieja"\n');
+    await escribir(
+      '.env.local',
+      'DATABASE_URL="mysql://root:y@127.0.0.1:3307/nueva_bd?serverVersion=8.4"\n',
+    );
+    const pl = armar({ baseDe: leerBaseDelProyecto, resolverObjetivo: resolver as never });
+    const v = await pl.vistaPrevia('tienda', {});
+    expect(v.base).toEqual({ nombre: 'nueva_bd', motor: 'mysql', servidor: 'mysql@8.4' });
+    const p = await pl.guardar('tienda', opciones);
+    expect(llamadasRespaldo).toEqual([
+      { motor: 'mysql@8.4', base: 'nueva_bd', opciones: { soloEsquema: true } },
+    ]);
+    expect(p.motorBase).toBe('mysql');
+    // La clave de la URL no sale en ningún lado.
+    expect(JSON.stringify(v)).not.toMatch(/:y@|:x@/);
+  });
+
+  it('Laravel en una instancia: DB_PORT decide el servidor', async () => {
+    await escribir(
+      '.env',
+      'DB_CONNECTION=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3307\nDB_DATABASE=tienda\nDB_USERNAME=root\n',
+    );
+    const pl = armar({ baseDe: leerBaseDelProyecto, resolverObjetivo: resolver as never });
+    expect((await pl.vistaPrevia('tienda', {})).base?.servidor).toBe('mysql@8.4');
+  });
+
+  it('un servidor remoto o un puerto que ninguna instancia usa no se adivina', async () => {
+    await escribir('.env', 'DB_HOST=db.ejemplo.com\nDB_DATABASE=tienda\nDB_USERNAME=root\n');
+    const pl = armar({ baseDe: leerBaseDelProyecto, resolverObjetivo: resolver as never });
+    const v = await pl.vistaPrevia('tienda', {});
+    expect(v.base).toBeNull();
+    expect(v.errorBase).toMatch(/servidor local/);
+    await expect(pl.guardar('tienda', opciones)).rejects.toMatchObject({
+      codigo: 'plantillas.base_no_resuelta',
+    });
+    await escribir(
+      '.env',
+      'DB_HOST=127.0.0.1\nDB_PORT=3999\nDB_DATABASE=tienda\nDB_USERNAME=root\n',
+    );
+    await expect(pl.guardar('tienda', opciones)).rejects.toMatchObject({
+      codigo: 'plantillas.base_no_resuelta',
+    });
+    expect(llamadasRespaldo).toEqual([]);
+    expect(await readdir(rutas.plantillas()).catch(() => [])).toEqual([]);
+  });
+
+  it('avisa cuando el proyecto usa MongoDB (su esquema no se guarda)', async () => {
+    expect((await armar().vistaPrevia('tienda', {})).avisoMongodb).toBe(false);
+    const pl = armar({ usaMongodb: async () => true });
+    expect((await pl.vistaPrevia('tienda', {})).avisoMongodb).toBe(true);
   });
 });

@@ -213,6 +213,8 @@ export const es = {
         'El nombre de la plantilla no es válido (de 1 a 60 caracteres).',
       'plantillas.esquema_fallo':
         'No se pudo leer el esquema de la base del proyecto: compruebe que su servicio esté encendido.',
+      'plantillas.base_no_resuelta':
+        'No se puede guardar la plantilla: el servidor de la base es remoto o ninguno de los servicios locales usa ese puerto.',
       'plantillas.sin_esquema': 'La plantilla no trae el esquema de una base de datos.',
       'proyectos.carpeta_invalida': 'La carpeta del proyecto no es válida.',
       'proyectos.nombre_invalido':
@@ -3249,6 +3251,10 @@ export const es = {
       resumen: (archivos: number, tamano: string) => `${archivos} archivos · ${tamano}`,
       fuera: (n: number) => `${n} dejados fuera`,
       sinArchivos: 'Solo se guardarán la receta, los ajustes y el esquema; ningún archivo.',
+      baseVolcado: (nombre: string, servidor: string) =>
+        `Se guardará solo la estructura de la base ${nombre} (servidor ${servidor}), sin ninguna fila.`,
+      sinBase: 'El proyecto no declara una base de datos: no se guardará ningún esquema.',
+      avisoMongodb: 'Este proyecto usa MongoDB: su esquema (colecciones e índices) no se guarda.',
       guardar: 'Guardar plantilla',
       guardada: (nombre: string) => `Plantilla «${nombre}» guardada.`,
       errorGuardar: 'No se pudo guardar la plantilla',

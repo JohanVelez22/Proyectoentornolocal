@@ -6,7 +6,8 @@ import { pipeline } from 'node:stream/promises';
 import yauzl from 'yauzl';
 import yazl from 'yazl';
 import { z } from 'zod';
-import { baseDelProyecto, type BaseProyecto } from '../bd/baseProyecto';
+import { leerBaseDelProyecto, type BaseProyecto } from '../bd/baseProyecto';
+import type { ObjetivoBd } from '../bd/basesDeDatos';
 import type { MotorBd } from '../bd/env';
 import { extraerZip } from '../catalogo/zip';
 import { ErrorWolf } from '../errores';
@@ -204,6 +205,12 @@ export interface VistaPreviaPlantilla {
   excluidos: string[];
   /** Cuántas se dejaron fuera en total. */
   totalExcluidos: number;
+  /** Base y servidor de los que se volcaría el esquema; null si el proyecto no declara una. */
+  base: { nombre: string; motor: MotorBd; servidor: ObjetivoBd } | null;
+  /** Por qué no se pudo resolver la base (servidor remoto, instancia que no existe…). */
+  errorBase: string | null;
+  /** El proyecto usa MongoDB: su esquema (colecciones e índices) no se guarda. */
+  avisoMongodb: boolean;
 }
 
 export interface DepsPlantillas {
@@ -214,18 +221,29 @@ export interface DepsPlantillas {
   receta: (sitio: Sitio) => Promise<PasoReceta[]>;
   /** Respalda una base en `carpeta`. Plantillas siempre pide `{soloEsquema: true}`. */
   respaldar: (
-    motor: MotorBd,
+    objetivo: ObjetivoBd,
     base: string,
     carpeta: string,
     opciones: { soloEsquema: true },
   ) => Promise<{ archivo: string }>;
   /** Extensiones de PHP activas en una rama (opcional). */
   extensionesActivas?: (rama: string) => Promise<string[]>;
-  /** Base declarada en el `.env` del proyecto (por defecto, la lee de la carpeta). */
-  baseDe?: (carpeta: string) => Promise<BaseProyecto | null>;
+  /** Base declarada en `.env.local`/`.env` del proyecto (por defecto, la lee de la carpeta). */
+  baseDe?: (
+    carpeta: string,
+  ) => Promise<(BaseProyecto & { host?: string | null; puerto?: number | null }) | null>;
+  /**
+   * Instancia (o motor predeterminado) que escucha en ese puerto; null si ninguna. Sin esta
+   * función se usa el motor predeterminado.
+   */
+  resolverObjetivo?: (motor: MotorBd, puerto: number | null) => Promise<ObjetivoBd | null>;
+  /** El proyecto usa MongoDB (para avisar que su esquema no se guarda). */
+  usaMongodb?: (sitio: Sitio) => Promise<boolean>;
   limites?: Partial<LimitesPlantilla>;
   reloj?: () => Date;
 }
+
+const HOST_LOCAL = /^(127\.0\.0\.1|localhost|\[?::1\]?)$/i;
 
 const danada = (detalle: string): ErrorWolf =>
   new ErrorWolf('plantillas.danada', `La plantilla está dañada o fue modificada: ${detalle}`);
@@ -642,6 +660,28 @@ export class Plantillas {
   }
 
   /** Qué entraría en la plantilla, sin escribir nada. */
+  /**
+   * Base de la que se volcaría el esquema, con el servidor correcto (instancia por puerto). Una
+   * base en otro equipo o en un puerto que ninguna instancia local usa no se adivina: error.
+   */
+  private async baseDeOrigen(
+    sitio: Sitio,
+  ): Promise<{ nombre: string; motor: MotorBd; servidor: ObjetivoBd } | null> {
+    const b = await (this.d.baseDe ?? leerBaseDelProyecto)(sitio.carpeta).catch(() => null);
+    if (!b) return null;
+    const noResuelta = (): ErrorWolf =>
+      new ErrorWolf(
+        'plantillas.base_no_resuelta',
+        'No se pudo saber de qué servidor local es la base del proyecto.',
+      );
+    if (b.host && !HOST_LOCAL.test(b.host)) throw noResuelta();
+    const servidor = this.d.resolverObjetivo
+      ? await this.d.resolverObjetivo(b.motor, b.puerto ?? null)
+      : b.motor;
+    if (!servidor) throw noResuelta();
+    return { nombre: b.base, motor: b.motor, servidor };
+  }
+
   async vistaPrevia(
     sitioId: string,
     o: Partial<OpcionesPlantilla> = {},
@@ -649,11 +689,21 @@ export class Plantillas {
     const sitio = await this.d.sitio(sitioId);
     const coincidencias = compilarExclusiones(o.excluirExtra);
     const r = await recopilar(sitio.carpeta, coincidencias, this.limites);
+    let base: VistaPreviaPlantilla['base'] = null;
+    let errorBase: string | null = null;
+    try {
+      base = await this.baseDeOrigen(sitio);
+    } catch (e) {
+      errorBase = e instanceof Error ? e.message : String(e);
+    }
     return {
       archivos: r.archivos.length,
       bytes: r.bytes,
       excluidos: r.excluidos,
       totalExcluidos: r.totalExcluidos,
+      base,
+      errorBase,
+      avisoMongodb: (await this.d.usaMongodb?.(sitio).catch(() => false)) === true,
     };
   }
 
@@ -669,7 +719,7 @@ export class Plantillas {
     const coincidencias = compilarExclusiones(o.excluirExtra);
     const sitio = await this.d.sitio(sitioId);
     const limites = this.limites;
-    const base = await (this.d.baseDe ?? baseDelProyecto)(sitio.carpeta).catch(() => null);
+    const base = await this.baseDeOrigen(sitio);
     const recopilado =
       o.conArchivos === true ? await recopilar(sitio.carpeta, coincidencias, limites) : null;
 
@@ -695,7 +745,9 @@ export class Plantillas {
         await mkdir(tmp);
         let archivo: string;
         try {
-          ({ archivo } = await this.d.respaldar(base.motor, base.base, tmp, { soloEsquema: true }));
+          ({ archivo } = await this.d.respaldar(base.servidor, base.nombre, tmp, {
+            soloEsquema: true,
+          }));
         } catch (e) {
           throw new ErrorWolf(
             'plantillas.esquema_fallo',

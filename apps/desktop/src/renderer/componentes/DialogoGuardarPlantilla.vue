@@ -39,17 +39,13 @@ let contador = 0;
 
 async function calcular(): Promise<void> {
   const sitio = props.sitio;
-  if (!sitio || !conArchivos.value) {
-    vista.value = null;
-    errorVista.value = null;
-    return;
-  }
+  if (!sitio) return;
   const mio = ++contador;
   calculando.value = true;
   try {
     const r = await api().plantillas.vistaPrevia(
       sitio.id,
-      plano({ conArchivos: true, excluirExtra: extras.value }),
+      plano({ conArchivos: conArchivos.value, excluirExtra: extras.value }),
     );
     if (mio !== contador) return;
     vista.value = r;
@@ -81,7 +77,7 @@ watch(
   },
   { immediate: true },
 );
-watch([conArchivos, extras], programar);
+watch(extras, programar);
 onBeforeUnmount(() => {
   if (temporizador) clearTimeout(temporizador);
 });
@@ -136,6 +132,19 @@ async function guardar(): Promise<void> {
     <div class="campo">
       <NCheckbox v-model:checked="conArchivos">{{ t.conArchivos }}</NCheckbox>
       <small class="nota">{{ t.conArchivosAyuda }}</small>
+    </div>
+
+    <div class="vista" aria-live="polite">
+      <NAlert v-if="vista?.errorBase" type="warning" :bordered="false">{{
+        vista.errorBase
+      }}</NAlert>
+      <p v-else-if="vista?.base">
+        {{ t.baseVolcado(vista.base.nombre, vista.base.servidor) }}
+      </p>
+      <p v-else-if="vista">{{ t.sinBase }}</p>
+      <NAlert v-if="vista?.avisoMongodb" type="warning" :bordered="false">{{
+        t.avisoMongodb
+      }}</NAlert>
     </div>
 
     <template v-if="conArchivos">

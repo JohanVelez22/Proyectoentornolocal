@@ -110,6 +110,7 @@ export const PARAMETROS_ERROR = {
   'plantillas.exclusion_invalida': [],
   'plantillas.nombre_invalido': [],
   'plantillas.esquema_fallo': [],
+  'plantillas.base_no_resuelta': [],
   'plantillas.sin_esquema': [],
   'proyectos.carpeta_invalida': [],
   'proyectos.nombre_invalido': ['campo'],

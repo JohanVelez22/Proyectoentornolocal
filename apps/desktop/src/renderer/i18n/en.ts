@@ -208,6 +208,8 @@ export const en: Textos = {
       'plantillas.nombre_invalido': 'The template name is not valid (1 to 60 characters).',
       'plantillas.esquema_fallo':
         'The project database schema could not be read: check that its service is running.',
+      'plantillas.base_no_resuelta':
+        'The template cannot be saved: the database server is remote or no local service uses that port.',
       'plantillas.sin_esquema': 'The template has no database schema.',
       'proyectos.carpeta_invalida': 'The project folder is not valid.',
       'proyectos.nombre_invalido':
@@ -3230,6 +3232,10 @@ export const en: Textos = {
       resumen: (archivos: number, tamano: string) => `${archivos} files · ${tamano}`,
       fuera: (n: number) => `${n} left out`,
       sinArchivos: 'Only the recipe, the settings and the schema will be saved; no files.',
+      baseVolcado: (nombre: string, servidor: string) =>
+        `Only the structure of database ${nombre} (server ${servidor}) will be saved, with no rows.`,
+      sinBase: 'The project does not declare a database: no schema will be saved.',
+      avisoMongodb: 'This project uses MongoDB: its schema (collections and indexes) is not saved.',
       guardar: 'Save template',
       guardada: (nombre: string) => `Template “${nombre}” saved.`,
       errorGuardar: 'The template could not be saved',

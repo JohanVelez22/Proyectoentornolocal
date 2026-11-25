@@ -99,3 +99,39 @@ export async function baseDelProyecto(carpeta: string): Promise<BaseProyecto | n
   const texto = await leerEnvAcotado(path.join(carpeta, '.env'));
   return texto === null ? null : baseDeVariables(leerVariablesEnv(texto));
 }
+
+/** Base del proyecto más el servidor al que apunta (para elegir la instancia correcta). */
+export interface BaseConServidor extends BaseProyecto {
+  host: string | null;
+  puerto: number | null;
+}
+
+/**
+ * Base de un proyecto con `.env.local` por encima de `.env` (como Symfony y Laravel), con el host
+ * y el puerto declarados. La clave no se lee. null si no hay datos completos o no es SQL.
+ */
+export async function leerBaseDelProyecto(carpeta: string): Promise<BaseConServidor | null> {
+  const variables = new Map<string, string>();
+  for (const nombre of ['.env', '.env.local']) {
+    const texto = await leerEnvAcotado(path.join(carpeta, nombre));
+    if (texto !== null) for (const [k, v] of leerVariablesEnv(texto)) variables.set(k, v);
+  }
+  const base = baseDeVariables(variables);
+  if (!base) return null;
+  let host = (variables.get('database.default.hostname') ?? variables.get('DB_HOST') ?? '').trim();
+  let puerto = Number.parseInt(
+    (variables.get('database.default.port') ?? variables.get('DB_PORT') ?? '').trim(),
+    10,
+  );
+  const url = variables.get('DATABASE_URL');
+  if (url && !host) {
+    try {
+      const u = new URL(url.trim());
+      host = u.hostname;
+      if (u.port) puerto = Number.parseInt(u.port, 10);
+    } catch {
+      // URL ilegible: sin servidor declarado.
+    }
+  }
+  return { ...base, host: host || null, puerto: Number.isInteger(puerto) ? puerto : null };
+}

@@ -219,6 +219,8 @@ export const fr: Textos = {
       'plantillas.nombre_invalido': "Le nom du modèle n'est pas valide (de 1 à 60 caractères).",
       'plantillas.esquema_fallo':
         'Impossible de lire le schéma de la base du projet : vérifiez que son service est démarré.',
+      'plantillas.base_no_resuelta':
+        "Impossible d'enregistrer le modèle : le serveur de la base est distant ou aucun service local n'utilise ce port.",
       'plantillas.sin_esquema': "Le modèle ne contient pas le schéma d'une base de données.",
       'proyectos.carpeta_invalida': 'Le dossier du projet n’est pas valide.',
       'proyectos.nombre_invalido':
@@ -3321,6 +3323,11 @@ export const fr: Textos = {
       fuera: (n: number) => `${n} exclus`,
       sinArchivos:
         'Seuls la recette, les réglages et le schéma seront enregistrés ; aucun fichier.',
+      baseVolcado: (nombre: string, servidor: string) =>
+        `Seule la structure de la base ${nombre} (serveur ${servidor}) sera enregistrée, sans aucune ligne.`,
+      sinBase: 'Le projet ne déclare pas de base de données : aucun schéma ne sera enregistré.',
+      avisoMongodb:
+        "Ce projet utilise MongoDB : son schéma (collections et index) n'est pas enregistré.",
       guardar: 'Enregistrer le modèle',
       guardada: (nombre: string) => `Modèle « ${nombre} » enregistré.`,
       errorGuardar: "Impossible d'enregistrer le modèle",

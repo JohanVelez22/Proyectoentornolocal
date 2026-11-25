@@ -1032,8 +1032,17 @@ export class Nucleo {
         return s;
       },
       receta: async (s) => recetaEfectiva(s.carpeta, await detectarProyectoB(s.carpeta)),
-      respaldar: (motor, base, carpeta, opciones) =>
-        respaldosRef.respaldar(motor, base, carpeta, opciones),
+      respaldar: (objetivo, base, carpeta, opciones) =>
+        respaldosRef.respaldar(objetivo, base, carpeta, opciones),
+      resolverObjetivo: async (motor, puerto) => {
+        const estado = (await servicios.estados()).find((e) => e.id === motor);
+        if (!estado) return null;
+        if (puerto === null) return motor;
+        const instancia = estado.instancias?.find((i) => i.puerto === puerto);
+        if (instancia) return instancia.id;
+        return estado.puertos.includes(puerto) ? motor : null;
+      },
+      usaMongodb: async (s) => (await detectarProyectoB(s.carpeta)).servicios.includes('mongodb'),
       extensionesActivas: async (rama) =>
         (await extensionesPhp.listar(rama)).filter((e) => e.activa).map((e) => e.nombre),
     });
