@@ -788,3 +788,90 @@ describe('crearProyecto desde una plantilla (mismas validaciones que D12)', () =
     expect(procesos[0]!.comando).toContain('app.main:app');
   });
 });
+
+describe('C1: secretos que no deben escaparse', () => {
+  const LISTA_DIRS = [
+    'bootstrap/cache/config.php',
+    'storage/framework/sessions/x',
+    'storage/app/privado.txt',
+    'writable/session/x',
+    'var/cache/prod/x.php',
+    'wp-content/uploads/2026/x.txt',
+    '.aws/credentials',
+    '.ssh/config',
+    '.docker/config.json',
+    'app/etc/env.php',
+    'web/sites/default/settings.php',
+    'web/sites/default/settings.local.php',
+    'a/b.decrypt.private.php',
+    '.envrc',
+    '.pgpass',
+    '.my.cnf',
+    '.git-credentials',
+    'sftp.json',
+    '.yarnrc.yml',
+    'claves.kdbx',
+  ];
+
+  it('las carpetas y archivos nuevos se dejan fuera aunque lleven la centinela', async () => {
+    for (const rel of LISTA_DIRS) await escribir(rel, `x ${CENTINELA}`);
+    const p = await armar().guardar('tienda', opciones);
+    const zip = await leerZip(path.join(rutas.plantillas(), p.id, 'archivos.zip'));
+    expect([...zip.keys()].sort()).toEqual(['app/Modelo.php', 'composer.json', 'public/index.php']);
+    expect(await textoDe(path.join(rutas.plantillas(), p.id))).not.toContain(CENTINELA);
+  });
+
+  it.each([
+    [
+      'docker-compose.yml',
+      `services:\n  db:\n    environment:\n      MYSQL_ROOT_PASSWORD: ${CENTINELA}\n`,
+    ],
+    ['config/servicio.json', `{ "api_key": "${CENTINELA}" }`],
+    ['phpunit.xml', `<phpunit><php><env name="DB_PASSWORD" value="${CENTINELA}"/></php></phpunit>`],
+    ['config/a.php', `<?php return ['password' => '${CENTINELA}'];`],
+    ['config/b.php', `<?php return ["DB_pwd"=>"${CENTINELA}"];`],
+    ['config/c.ini', `mysqli.default_pw = ${CENTINELA}`],
+    ['config/d.env', `app_key=${CENTINELA}`],
+    ['config/e.yml', `dsn: ${CENTINELA}`],
+  ])('escaneo de contenido: %s se deja fuera', async (rel, texto) => {
+    await escribir(rel, texto);
+    const v = await armar().vistaPrevia('tienda', {});
+    expect(v.excluidos).toContain(`${rel} (secreto)`);
+    const p = await armar().guardar('tienda', opciones);
+    expect(await textoDe(path.join(rutas.plantillas(), p.id))).not.toContain(CENTINELA);
+  });
+
+  it('UTF-16 con BOM (LE y BE) también se escanea', async () => {
+    const le = Buffer.concat([
+      Buffer.from([0xff, 0xfe]),
+      Buffer.from(`DB_PASSWORD=${CENTINELA}`, 'utf16le'),
+    ]);
+    const be = Buffer.from(le);
+    be.subarray(2).swap16();
+    be[0] = 0xfe;
+    be[1] = 0xff;
+    await escribir('config/le.txt', le);
+    await escribir('config/be.txt', be);
+    const v = await armar().vistaPrevia('tienda', {});
+    expect(v.excluidos).toEqual(
+      expect.arrayContaining(['config/le.txt (secreto)', 'config/be.txt (secreto)']),
+    );
+  });
+
+  it('valores vacíos y referencias (env(), ${VAR}, $VAR) no se toman por secretos', async () => {
+    await escribir('config/vacio.env', 'DB_PASSWORD=\nAPI_KEY=""\n');
+    await escribir(
+      'config/ref.php',
+      "<?php return ['password' => env('DB_PASSWORD'), 'key' => 1];",
+    );
+    await escribir(
+      'docker-compose.yml',
+      'environment:\n  DB_PASSWORD: ${DB_PASSWORD}\n  TOKEN: $TOKEN\n',
+    );
+    await escribir('config/primary.php', "<?php return ['primary_key' => 'identificador'];");
+    const v = await armar().vistaPrevia('tienda', {});
+    expect(v.excluidos.filter((x) => x.endsWith('(secreto)'))).toEqual([
+      'config/cache.php (secreto)',
+    ]);
+  });
+});

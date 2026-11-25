@@ -37,7 +37,29 @@ export const EXCLUSIONES_PLANTILLA: readonly string[] = [
   '.venv',
   'venv',
   '__pycache__',
-  // Registros y cachés
+  // Cachés, sesiones y archivos de la aplicación (pueden traer configuración cacheada o datos)
+  'bootstrap/cache',
+  'storage/framework',
+  'storage/app',
+  'writable',
+  'var',
+  'wp-content/uploads',
+  // Credenciales de herramientas
+  '.aws',
+  '.ssh',
+  '.docker',
+  'app/etc/env.php',
+  'settings.php',
+  'settings.local.php',
+  '*.decrypt.private.php',
+  '.envrc',
+  '.pgpass',
+  '.my.cnf',
+  '.git-credentials',
+  'sftp.json',
+  '.yarnrc.yml',
+  '*.kdbx',
+  // Registros
   'storage/logs',
   'storage/framework/cache',
   'writable/logs',
@@ -257,10 +279,28 @@ export function compilarExclusiones(extra: unknown): Coincide[] {
   return [...EXCLUSIONES_PLANTILLA, ...extras].map(compilarPatron);
 }
 
+/** Nombres de variable, clave o campo que suelen guardar un secreto (sin distinguir mayúsculas). */
+const NOMBRE_SECRETO = String.raw`(?:pass(?:word|wd)|pwd|_pw|secret|token|api[_-]?key|app_?key|(?<!primary|foreign|public|sort|cache)_key|dsn|default_pw|credential|private_key)`;
+
+/**
+ * Valor literal: no vacío y que no sea una referencia (`env(...)`, `getenv(...)`, `$VAR`, `${VAR}`,
+ * `%VAR%`) ni un valor sin secreto (`null`, `true`, `false`).
+ */
+const VALOR_LITERAL = String.raw`["']?(?!env\(|getenv\(|\$|%|null\b|true\b|false\b)[^\s"'#,;)<>]{3,}`;
+
 /** Textos que delatan un secreto dentro de un archivo (el archivo se deja fuera). */
 const SECRETO_EN_ARCHIVO: readonly RegExp[] = [
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
-  /(?:^|[\s"'])[A-Za-z0-9_]*(?:PASSWORD|API_KEY|SECRET|TOKEN)[A-Za-z0-9_]*\s*=\s*["']?[^\s"'#]{3,}/m,
+  // NOMBRE=valor, 'nombre' => 'valor', "nombre": "valor", nombre: valor
+  new RegExp(
+    String.raw`(?<![\w.-])["']?[\w.-]*${NOMBRE_SECRETO}[\w.-]*["']?[ \t]*(?:=>|=|:)[ \t]*${VALOR_LITERAL}`,
+    'im',
+  ),
+  // <env name="DB_PASSWORD" value="valor"/> (phpunit.xml, Symfony, Docker…)
+  new RegExp(
+    String.raw`name[ \t]*=[ \t]*["'][\w.-]*${NOMBRE_SECRETO}[\w.-]*["'][ \t]+value[ \t]*=[ \t]*${VALOR_LITERAL}`,
+    'i',
+  ),
   /\bsk-[A-Za-z0-9_-]{8,}/,
   /\bgithub_pat_[A-Za-z0-9_]{8,}/,
   /\bgh[pousr]_[A-Za-z0-9]{8,}/,
@@ -268,7 +308,28 @@ const SECRETO_EN_ARCHIVO: readonly RegExp[] = [
   /:\/\/[^\s/@:]+:[^\s/@]+@/,
 ];
 
-const llevaSecreto = (texto: string): boolean => SECRETO_EN_ARCHIVO.some((r) => r.test(texto));
+/** Texto de un archivo para escanearlo: UTF-16 (con BOM) se decodifica; lo demás va como latin1. */
+function textoParaEscanear(buf: Buffer): string {
+  if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) {
+    return buf.subarray(2).toString('utf16le');
+  }
+  if (buf.length >= 2 && buf[0] === 0xfe && buf[1] === 0xff) {
+    const b = Buffer.from(buf.subarray(2));
+    if (b.length % 2 === 1)
+      return b
+        .subarray(0, b.length - 1)
+        .swap16()
+        .toString('utf16le');
+    return b.swap16().toString('utf16le');
+  }
+  return buf.toString('latin1');
+}
+
+/** ¿El contenido (texto o bytes) lleva algo que parece una clave o una contraseña? */
+export function llevaSecreto(contenido: string | Buffer): boolean {
+  const texto = typeof contenido === 'string' ? contenido : textoParaEscanear(contenido);
+  return SECRETO_EN_ARCHIVO.some((r) => r.test(texto));
+}
 
 /* ───────────── Datos sin secretos ───────────── */
 
@@ -411,7 +472,7 @@ async function recopilar(
         continue;
       }
       const buf = await readFile(absH);
-      if (llevaSecreto(buf.toString('latin1'))) {
+      if (llevaSecreto(buf)) {
         dejar(relH, 'secreto');
         continue;
       }
