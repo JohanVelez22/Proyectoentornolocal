@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync } from 'node:fs';
 import {
+  copyFile,
   lstat,
   mkdir,
   readdir,
@@ -2765,58 +2766,188 @@ export class Respaldos {
           { maximo: Math.floor(tope / (1024 * 1024)) },
         );
       }
-      // Todo se revisa antes de tocar nada (ni respaldo, ni borrado, ni base nueva).
-      if ((await stat(archivoEsquema)).size > MAX_BYTES_ESQUEMA) {
-        throw new ErrorWolf('bd.esquema_fallo', 'La estructura de la base es demasiado grande.');
-      }
-      revisarSql(
-        (await readFile(archivoEsquema)).toString('utf8').replace(/^\uFEFF/, ''),
-        'mysql',
-        {
-          origen: 'importada',
-        },
-      );
-      const fuente = await this.preparar(archivoDatos, tmp, 0);
-      if (fuente.tipo !== 'sql' || fuente.gz) throw new Error(NO_RECONOCIDO);
-      await this.recorrerDatos(fuente, claves, opts.senal);
-
-      let respaldoPrevio: string | undefined;
-      if (reemplaza) {
-        respaldoPrevio = await this.respaldoDeSeguridad(m, destinoBase, !tablas);
-        await this.borrarParaReemplazar(m, destinoBase);
-      }
-      await bd.crear(m, destinoBase);
-      try {
-        await this.restaurarEsquema(m, archivoEsquema, destinoBase, { origen: 'importada' });
-        const adv = await this.cargarDatos(m, fuente, destinoBase, claves, opts.senal);
-        return {
-          advertencias: [...avisos, ...adv],
-          ...(respaldoPrevio ? { respaldoPrevio } : {}),
-        };
-      } catch (e) {
-        // Todo o nada: ni estructura a medias ni datos a medias.
-        if (opts.baseNueva) await this.borrarParaReemplazar(m, destinoBase).catch(() => undefined);
-        else await bd.reiniciarBase?.(m, destinoBase).catch(() => undefined);
-        if (!respaldoPrevio) throw e;
-        // La base original ya no está: se vuelve a poner desde su respaldo.
-        let restaurada = false;
-        try {
-          await this.restaurarInterno(
-            'importar',
-            m,
-            respaldoPrevio,
-            destinoBase,
-            { confirmarSobrescribir: true },
-            [],
-          );
-          restaurada = true;
-        } catch {
-          // el error nombra el respaldo para restaurarlo a mano
-        }
-        throw new ErrorTrasReemplazo(destinoBase, respaldoPrevio, e, restaurada);
-      }
+      return await this.aplicarVolcadosAjenos(m, archivoEsquema, archivoDatos, destinoBase, tmp, {
+        claves,
+        avisos,
+        tablas,
+        reemplaza,
+        opts,
+      });
     } finally {
       await rm(tmp, OPCIONES_BORRADO).catch(() => undefined);
+    }
+  }
+
+  /**
+   * Bases de un perfil de otro equipo (D26): el mismo camino que `importarAjeno` pero desde los dos
+   * volcados ya hechos (`volcarParaPerfil`), que son de origen ajeno. Solo MySQL y MariaDB: la
+   * estructura entra por la lista de sentencias permitidas (`restaurarEsquema` con origen
+   * `importada`) y los datos, sentencia por sentencia, con un usuario que solo puede INSERT. Todo
+   * se revisa antes de tocar nada; si la base existía se respalda antes y, ante un fallo, vuelve.
+   */
+  async importarVolcadosAjenos(
+    objetivo: ObjetivoBd,
+    archivos: { esquema: string; datos: string },
+    destinoBase: string,
+    opts: OpcionesImportarAjeno = {},
+  ): Promise<ResultadoRestaurar> {
+    const { r, motor } = await this.para(objetivo);
+    if (r !== this) return r.importarVolcadosAjenos(motor, archivos, destinoBase, opts);
+    const m = motorSql(motor, 'Importar');
+    if (m === 'postgresql') {
+      throw new ErrorWolf(
+        'importar.motor_no_soportado',
+        'Solo se importan así bases de MySQL y MariaDB.',
+      );
+    }
+    validarBase(m, destinoBase);
+    if (!this.d.bd.usuarioTemporal) throw new Error('Esta importación no está disponible aquí.');
+    const { con, tablas } = await this.comprobarDestino(m, destinoBase, opts.confirmarSobrescribir);
+    if (opts.baseExistente && opts.confirmarSobrescribir !== true)
+      throw errorConTablas(destinoBase);
+    const reemplaza = tablas || opts.baseExistente === true;
+    const tope = this.d.maxBytesDatosAjenos ?? MAX_BYTES_DATOS_AJENOS;
+    for (const archivo of [archivos.esquema, archivos.datos]) {
+      const info = await stat(archivo).catch(() => null);
+      if (!info?.isFile()) throw new Error('Falta un volcado de la base.');
+    }
+    if ((await stat(archivos.datos)).size > tope) {
+      throw new ErrorWolf(
+        'importar.volcado_enorme',
+        `Los datos de la base ${destinoBase} pesan más de lo que se importa de una vez.`,
+        { maximo: Math.floor(tope / (1024 * 1024)) },
+      );
+    }
+    await mkdir(this.d.rutas.tmp(), { recursive: true });
+    const tmp = path.join(this.d.rutas.tmp(), `importar-perfil-${randomUUID()}`);
+    await mkdir(tmp, { recursive: true });
+    try {
+      // Copias propias: lo que se revisa es lo mismo que se aplica.
+      const archivoEsquema = path.join(tmp, 'esquema.sql');
+      const archivoDatos = path.join(tmp, 'datos.sql');
+      await copyFile(archivos.esquema, archivoEsquema);
+      await copyFile(archivos.datos, archivoDatos);
+      return await this.aplicarVolcadosAjenos(m, archivoEsquema, archivoDatos, destinoBase, tmp, {
+        claves: [con.clave ?? ''],
+        avisos: [],
+        tablas,
+        reemplaza,
+        opts,
+      });
+    } finally {
+      await rm(tmp, OPCIONES_BORRADO).catch(() => undefined);
+    }
+  }
+
+  /**
+   * Volcados de una base local para un perfil (D26). MySQL y MariaDB: estructura (`--no-data`) y
+   * datos (`--no-create-info --skip-triggers`) por separado, los mismos que lee
+   * `importarVolcadosAjenos`; PostgreSQL: un volcado completo (`pg_dump -Fc`) que el otro equipo
+   * restaura con `restaurarAcotada`.
+   */
+  async volcarParaPerfil(
+    objetivo: ObjetivoBd,
+    base: string,
+    carpeta: string,
+  ): Promise<{ esquema: string; datos: string } | { volcado: string }> {
+    const { r, motor } = await this.para(objetivo);
+    if (r !== this) return r.volcarParaPerfil(motor, base, carpeta);
+    const m = motorSql(motor, 'Respaldar');
+    if (m === 'postgresql') {
+      const { archivo } = await this.respaldar(m, base, carpeta);
+      return { volcado: archivo };
+    }
+    validarBase(m, base);
+    const con = await this.d.bd.conexion(m);
+    const local: OrigenImportar = {
+      host: con.host,
+      puerto: con.puerto,
+      usuario: con.usuario,
+      clave: con.clave ?? '',
+      base,
+    };
+    await mkdir(carpeta, { recursive: true });
+    const esquema = path.join(carpeta, 'esquema.sql');
+    const datos = path.join(carpeta, 'datos.sql');
+    const claves = [local.clave];
+    await this.volcarVigilado(m, local, esquema, claves, {
+      esquema: true,
+      datos: false,
+      tope: MAX_BYTES_ESQUEMA,
+    });
+    await this.volcarVigilado(m, local, datos, claves, {
+      esquema: false,
+      datos: true,
+      tope: this.d.maxBytesDatosAjenos ?? MAX_BYTES_DATOS_AJENOS,
+    });
+    return { esquema, datos };
+  }
+
+  /**
+   * Revisa y aplica la estructura y los datos de origen ajeno (todo antes de tocar nada), con
+   * respaldo previo si `reemplaza` y vuelta atrás si algo falla después.
+   */
+  private async aplicarVolcadosAjenos(
+    m: Exclude<MotorSql, 'postgresql'>,
+    archivoEsquema: string,
+    archivoDatos: string,
+    destinoBase: string,
+    tmp: string,
+    c: {
+      claves: string[];
+      avisos: string[];
+      tablas: boolean;
+      reemplaza: boolean;
+      opts: OpcionesImportarAjeno;
+    },
+  ): Promise<ResultadoRestaurar> {
+    const { claves, avisos, tablas, reemplaza, opts } = c;
+    const bd = this.d.bd;
+    // Todo se revisa antes de tocar nada (ni respaldo, ni borrado, ni base nueva).
+    if ((await stat(archivoEsquema)).size > MAX_BYTES_ESQUEMA) {
+      throw new ErrorWolf('bd.esquema_fallo', 'La estructura de la base es demasiado grande.');
+    }
+    revisarSql((await readFile(archivoEsquema)).toString('utf8').replace(/^\uFEFF/, ''), 'mysql', {
+      origen: 'importada',
+    });
+    const fuente = await this.preparar(archivoDatos, tmp, 0);
+    if (fuente.tipo !== 'sql' || fuente.gz) throw new Error(NO_RECONOCIDO);
+    await this.recorrerDatos(fuente, claves, opts.senal);
+
+    let respaldoPrevio: string | undefined;
+    if (reemplaza) {
+      respaldoPrevio = await this.respaldoDeSeguridad(m, destinoBase, !tablas);
+      await this.borrarParaReemplazar(m, destinoBase);
+    }
+    await bd.crear(m, destinoBase);
+    try {
+      await this.restaurarEsquema(m, archivoEsquema, destinoBase, { origen: 'importada' });
+      const adv = await this.cargarDatos(m, fuente, destinoBase, claves, opts.senal);
+      return {
+        advertencias: [...avisos, ...adv],
+        ...(respaldoPrevio ? { respaldoPrevio } : {}),
+      };
+    } catch (e) {
+      // Todo o nada: ni estructura a medias ni datos a medias.
+      if (opts.baseNueva) await this.borrarParaReemplazar(m, destinoBase).catch(() => undefined);
+      else await bd.reiniciarBase?.(m, destinoBase).catch(() => undefined);
+      if (!respaldoPrevio) throw e;
+      // La base original ya no está: se vuelve a poner desde su respaldo.
+      let restaurada = false;
+      try {
+        await this.restaurarInterno(
+          'importar',
+          m,
+          respaldoPrevio,
+          destinoBase,
+          { confirmarSobrescribir: true },
+          [],
+        );
+        restaurada = true;
+      } catch {
+        // el error nombra el respaldo para restaurarlo a mano
+      }
+      throw new ErrorTrasReemplazo(destinoBase, respaldoPrevio, e, restaurada);
     }
   }
 

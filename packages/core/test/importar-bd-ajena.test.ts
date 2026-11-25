@@ -693,3 +693,79 @@ describe('sqlPermitido con vistas de mysqldump', () => {
     expect(revisarSql('DROP TEMPORARY TABLE IF EXISTS `v`;', 'mysql')).toHaveLength(1);
   });
 });
+
+describe('bases de un perfil (D26): importarVolcadosAjenos y volcarParaPerfil', () => {
+  function volcados(e = ESQUEMA, d = DATOS): { esquema: string; datos: string } {
+    const carpeta = path.join(dir, 'perfil');
+    mkdirSync(carpeta, { recursive: true });
+    writeFileSync(path.join(carpeta, 'esquema.sql'), e);
+    writeFileSync(path.join(carpeta, 'datos.sql'), d);
+    return { esquema: path.join(carpeta, 'esquema.sql'), datos: path.join(carpeta, 'datos.sql') };
+  }
+
+  it('estructura por la lista permitida y datos con el usuario que solo inserta', async () => {
+    const r = await armar().importarVolcadosAjenos('mysql', volcados(), 'tienda', {
+      baseNueva: true,
+    });
+    expect(r.advertencias).toEqual([]);
+    // No vuelca nada de ningún origen: usa los archivos del perfil.
+    expect(lanzados).toEqual([]);
+    expect(privilegios).toEqual(['todos', 'datos']);
+    const inserts = delUsuarioDeDatos().filter((s) => s.startsWith('INSERT'));
+    expect(inserts).toHaveLength(1);
+    const vistas = consultas.filter((c) => /CREATE.*VIEW/i.test(c.sql));
+    for (const v of vistas)
+      expect(v.sql).toMatch(/DEFINER = `wolf_dueno_[0-9a-f]{12}`@`localhost`/);
+    sinUsuariosPendientes();
+    expect(readdirSync(rutas.tmp())).toEqual([]);
+  });
+
+  it('una sentencia fuera de la lista (estructura o datos) no toca nada', async () => {
+    await expect(
+      armar().importarVolcadosAjenos(
+        'mysql',
+        volcados("CREATE TABLE t (a int);\nGRANT ALL ON *.* TO 'x'@'%';"),
+        'tienda',
+      ),
+    ).rejects.toMatchObject({ codigo: 'bd.sql_no_permitido' });
+    await expect(
+      armar().importarVolcadosAjenos(
+        'mysql',
+        volcados(ESQUEMA, "INSERT INTO `usuarios` VALUES (1,'a');\nGRANT ALL ON *.* TO 'x'@'%';"),
+        'tienda',
+      ),
+    ).rejects.toMatchObject({ codigo: 'bd.datos_no_permitidos' });
+    expect(eventos).toEqual([]);
+  });
+
+  it('una base con tablas exige confirmación y se respalda antes de reemplazarla', async () => {
+    tablas = true;
+    await expect(armar().importarVolcadosAjenos('mysql', volcados(), 'tienda')).rejects.toThrow(
+      /ya tiene tablas/,
+    );
+    expect(eventos).toEqual([]);
+    const r = await armar().importarVolcadosAjenos('mysql', volcados(), 'tienda', {
+      confirmarSobrescribir: true,
+      baseExistente: true,
+    });
+    expect(respaldosHechos).toBe(1);
+    expect(r.respaldoPrevio).toBeTruthy();
+  });
+
+  it('volcarParaPerfil hace los dos volcados del servidor local (estructura y datos)', async () => {
+    const carpeta = path.join(dir, 'salida');
+    const r = await armar().volcarParaPerfil('mysql', 'tienda', carpeta);
+    expect(r).toEqual({
+      esquema: path.join(carpeta, 'esquema.sql'),
+      datos: path.join(carpeta, 'datos.sql'),
+    });
+    expect(lanzados).toHaveLength(2);
+    expect(lanzados[0]!.args).toContain('--no-data');
+    expect(lanzados[1]!.args).toContain('--no-create-info');
+    // La clave del administrador local solo va en el entorno del proceso, nunca en los argumentos.
+    for (const l of lanzados) {
+      expect(l.env.MYSQL_PWD).toBe(ADMIN);
+      expect(l.args.join(' ')).not.toContain(ADMIN);
+    }
+  });
+});
