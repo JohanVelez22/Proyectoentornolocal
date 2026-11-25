@@ -732,6 +732,12 @@ export const fr: Textos = {
       noInstalado: 'Non installé',
       sinPhp: 'PHP manquant',
       abrirDesdeProyecto: 'S’ouvre depuis la carte de chaque projet, déjà connecté.',
+      faltaExtension: (ext: string, rama: string) =>
+        `PHP ${rama} n’a pas l’extension ${ext} activée. Redémarrez PHP ou activez-la dans son php.ini.`,
+      phpFueraDeRango: (rama: string) =>
+        `phpMyAdmin déclare une prise en charge jusqu’à PHP 8.3 et PHP ${rama} est utilisé : des erreurs peuvent apparaître. Allumez une version de PHP de 7.2 à 8.3 si quelque chose échoue.`,
+      instalarPrimero: 'Installez phpMyAdmin pour l’utiliser.',
+      encenderPhp: 'Allumez PHP pour utiliser phpMyAdmin.',
       instaladoOk: 'phpMyAdmin installé',
     },
     puertos: 'Ports',
@@ -2046,6 +2052,8 @@ export const fr: Textos = {
       phpMyAdminNoListo: 'phpMyAdmin n’est pas prêt',
       entroComoAdmin: (usuario: string) =>
         `Connecté en tant que ${usuario}, l’administrateur du serveur, car ce projet n’utilise pas d’utilisateur propre. Dans le gestionnaire de .env, « Utiliser un utilisateur dédié » en crée un limité à sa base.`,
+      entroComoAdminSinClave: (usuario: string) =>
+        `Connecté en tant que ${usuario}, l’administrateur du serveur : le mot de passe de l’utilisateur propre de ce projet n’est pas enregistré sur cet ordinateur. Dans le gestionnaire de .env, « Utiliser un utilisateur dédié » en génère un nouveau.`,
       abrirSitio: 'Ouvrir le site dans le navigateur',
       github: 'Dépôt',
       abrirRemoto: (url: string) => `Ouvrir ${url}`,

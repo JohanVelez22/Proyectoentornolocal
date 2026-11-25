@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { catalogo } from '../catalogo/catalogo';
 import type { BaseProyecto } from '../bd/baseProyecto';
@@ -7,6 +7,7 @@ import type { Instalador } from '../catalogo/instalador';
 import { PUERTO_ADMINER, puertosPhp } from '../nginx/principal';
 import type { Rutas } from '../rutas';
 import { compararVersiones } from '../servicios/nginx';
+import { escribirAtomico } from '../sitios/urlbase';
 import type { Config } from '../tipos';
 import { phpAdminerLogin } from './php/adminer-login.php';
 
@@ -41,6 +42,8 @@ export interface DepsAdminer {
   leerConfig: () => Promise<Config>;
   /** ¿Algún trabajador de esa rama de PHP está encendido? */
   phpEncendido: (rama: string) => boolean | Promise<boolean>;
+  /** Puertos de las instancias de bases de datos de WolfCore Dev: los únicos a los que Adminer se conecta. */
+  puertosPermitidos?: () => Promise<number[]>;
 }
 
 export type DisponibilidadAdminer =
@@ -94,8 +97,9 @@ export class Adminer {
     if (actual !== null && !actual.includes(MARCA_ENTRADA) && !existsSync(nucleo)) {
       await rename(entrada, nucleo);
     }
-    const nuevo = phpAdminerLogin({ dirAcceso: this.d.rutas.accesoBd() });
-    if (nuevo !== actual) await writeFile(entrada, nuevo, 'utf8');
+    const puertos = (await this.d.puertosPermitidos?.()) ?? [];
+    const nuevo = phpAdminerLogin({ dirAcceso: this.d.rutas.accesoBd(), puertos });
+    if (nuevo !== actual) await escribirAtomico(entrada, Buffer.from(nuevo, 'utf8'));
   }
 
   private async masNuevaEncendida(ramas: string[]): Promise<string | undefined> {
@@ -109,6 +113,8 @@ export class Adminer {
 
   async disponibilidad(): Promise<DisponibilidadAdminer> {
     if (!this.instalado()) return { disponible: false, motivo: MOTIVO_SIN_ADMINER };
+    // Los puertos permitidos del envoltorio siguen a las instancias (alta, baja o cambio de puerto).
+    await this.preparar().catch(() => undefined);
     const rama = await this.masNuevaEncendida(await this.ramas());
     return rama ? { disponible: true, rama } : { disponible: false, motivo: MOTIVO_SIN_PHP };
   }

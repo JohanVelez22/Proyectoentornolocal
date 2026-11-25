@@ -578,7 +578,12 @@ export interface ApiEntorno {
     abrir(
       sitioId: string,
       herramienta: HerramientaBd,
-    ): Promise<{ usuario: string; propio: boolean }>;
+    ): Promise<{
+      usuario: string;
+      propio: boolean;
+      /** Por qué entró como administrador (solo con `propio` false). */
+      motivo?: 'sin_usuario_propio' | 'sin_clave';
+    }>;
   };
   ftp: {
     activar(sitioId: string): Promise<Credenciales>;

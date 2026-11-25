@@ -61,7 +61,8 @@ function wolfcore_fin($codigo) {
  * `wolfcore-signon.php` de phpMyAdmin (`auth_type = signon`): canjea el token de la URL, abre la
  * sesión de entrada con el usuario de la base y redirige a la base **sin** el token. La clave no
  * se escribe en ninguna salida ni en la URL; solo queda en la sesión de PHP (carpeta propia).
- * Con un token que no vale, muestra el aviso y no abre nada.
+ * Con un token que no vale, muestra el aviso y no abre nada. El token queda ligado al sitio por su
+ * puerto: solo entra a un servidor de `config.inc.php` (las instancias de WolfCore Dev).
  */
 export function phpSignon(o: { dirAcceso: string; sesiones: string }): string {
   return `<?php
@@ -96,11 +97,15 @@ if ($servidor < 1 || ($datos['motor'] !== 'mysql' && $datos['motor'] !== 'mariad
 }
 @mkdir(${cadenaPhp(o.sesiones)}, 0700, true);
 session_save_path(${cadenaPhp(o.sesiones)});
+// Cada petición limpia las sesiones de entrada vencidas (8 h): la clave no se queda en disco.
+ini_set('session.gc_probability', '1');
+ini_set('session.gc_divisor', '1');
+ini_set('session.gc_maxlifetime', '28800');
 session_name('WolfCoreSignon');
 if (PHP_VERSION_ID >= 70300) {
-    session_set_cookie_params(array('lifetime' => 0, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax'));
+    session_set_cookie_params(array('lifetime' => 0, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict'));
 } else {
-    session_set_cookie_params(0, '/; samesite=Lax', '', false, true);
+    session_set_cookie_params(0, '/; samesite=Strict', '', false, true);
 }
 session_start();
 session_regenerate_id(true);

@@ -750,26 +750,40 @@ export class Nucleo {
         (i) => supervisor.estado(`php-${rama}-${i}`) === 'encendido',
       );
     };
-    const adminer = new Adminer({ rutas, instalador, leerConfig, phpEncendido });
+    // Servidores de datos de WolfCore Dev (una entrada por instancia; sin instancias configuradas,
+    // el puerto del propio servicio). Adminer y phpMyAdmin solo se conectan a estos.
+    const servidoresDe = async (
+      ids: readonly string[],
+    ): Promise<{ puerto: number; nombre: string }[]> =>
+      (await servicios.estados())
+        .filter((e) => ids.includes(e.id))
+        .flatMap((e) =>
+          e.instancias && e.instancias.length > 0
+            ? e.instancias.map((i) => ({ puerto: i.puerto, nombre: `${e.nombre} ${i.version}` }))
+            : e.puertos.map((p) => ({ puerto: p, nombre: e.nombre })),
+        );
+    const restringir = (ruta: string): Promise<boolean> => plat.restringirAlUsuario(ruta);
+    const adminer = new Adminer({
+      rutas,
+      instalador,
+      leerConfig,
+      phpEncendido,
+      puertosPermitidos: async () =>
+        (await servidoresDe(['mysql', 'mariadb', 'postgresql'])).map((x) => x.puerto),
+    });
     const accesoBd = new AccesoBd({
       rutas,
       puertoHerramienta: (h) => (h === 'adminer' ? PUERTO_ADMINER : PUERTO_PHPMYADMIN),
+      restringir,
     });
     const phpmyadmin = new PhpMyAdmin({
       rutas,
       instalador,
       leerConfig,
       phpEncendido,
-      // phpMyAdmin solo entra a los servidores MySQL y MariaDB de WolfCore Dev (una entrada por
-      // instancia; sin instancias configuradas, el puerto del propio servicio).
-      servidores: async () =>
-        (await servicios.estados())
-          .filter((e) => e.id === 'mysql' || e.id === 'mariadb')
-          .flatMap((e) =>
-            e.instancias && e.instancias.length > 0
-              ? e.instancias.map((i) => ({ puerto: i.puerto, nombre: `${e.nombre} ${i.version}` }))
-              : e.puertos.map((p) => ({ puerto: p, nombre: e.nombre })),
-          ),
+      // phpMyAdmin solo entra a los servidores MySQL y MariaDB de WolfCore Dev.
+      servidores: () => servidoresDe(['mysql', 'mariadb']),
+      restringir,
     });
     const ftp = new ServidorFtp({
       leerConfig,
@@ -2219,7 +2233,13 @@ export class Nucleo {
   async abrirBaseProyecto(
     sitioId: string,
     herramienta: HerramientaBd,
-  ): Promise<{ url: string; usuario: string; propio: boolean }> {
+  ): Promise<{
+    url: string;
+    usuario: string;
+    propio: boolean;
+    /** Por qué entró como administrador (solo con `propio` false). */
+    motivo?: 'sin_usuario_propio' | 'sin_clave';
+  }> {
     const sitio = await this.sitioPorId(sitioId);
     const b = await leerBaseDelProyecto(sitio.carpeta).catch(() => null);
     if (!b) {
@@ -2275,7 +2295,12 @@ export class Nucleo {
         clave: propio ? claveBd : (admin.clave ?? ''),
       },
     });
-    return { url, usuario, propio };
+    const motivo = propio
+      ? undefined
+      : esUsuarioDeProyecto(b.usuario)
+        ? ('sin_clave' as const)
+        : ('sin_usuario_propio' as const);
+    return { url, usuario, propio, ...(motivo ? { motivo } : {}) };
   }
 
   /** URL de Adminer para un motor, sin clave; null si Adminer no lo soporta. */

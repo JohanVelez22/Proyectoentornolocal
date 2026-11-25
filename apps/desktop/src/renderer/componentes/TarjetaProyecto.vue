@@ -43,6 +43,7 @@ import type {
   TerminalDisponible,
 } from '../../shared/api';
 import { avisoEditorSustituido } from '../utilidades/editores';
+import { textoPma } from '../utilidades/phpmyadmin';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -336,22 +337,31 @@ async function abrirBaseDatos(herramienta: HerramientaBd = 'adminer'): Promise<v
       message.warning(tp.tarjeta.sinBase);
       return;
     }
-    const d =
-      herramienta === 'adminer'
-        ? await api().adminer.disponibilidad()
-        : await api().phpmyadmin.disponibilidad();
-    if (!d.disponible) {
-      notification.warning({
-        title: herramienta === 'adminer' ? tp.tarjeta.adminerNoListo : tp.tarjeta.phpMyAdminNoListo,
-        content: d.motivo,
-        duration: 8000,
-      });
+    // Adminer solo da un motivo; phpMyAdmin además dice si falta una extensión o PHP no encaja.
+    let aviso: { titulo: string; contenido: string } | null = null;
+    if (herramienta === 'adminer') {
+      const d = await api().adminer.disponibilidad();
+      if (!d.disponible) aviso = { titulo: tp.tarjeta.adminerNoListo, contenido: d.motivo };
+    } else {
+      const d = await api().phpmyadmin.disponibilidad();
+      if (!d.disponible) {
+        aviso = { titulo: tp.tarjeta.phpMyAdminNoListo, contenido: textoPma(d) ?? d.motivo };
+      }
+    }
+    if (aviso) {
+      notification.warning({ title: aviso.titulo, content: aviso.contenido, duration: 8000 });
       return;
     }
     // El proceso principal abre el navegador con un token de un solo uso: la clave no pasa por la
     // URL, el historial ni esta ventana. Si entró como administrador (el proyecto usa root), se avisa.
     const acceso = await api().accesoBd.abrir(props.sitio.id, herramienta);
-    if (!acceso.propio) message.info(tp.tarjeta.entroComoAdmin(acceso.usuario), { duration: 9000 });
+    if (!acceso.propio) {
+      const texto =
+        acceso.motivo === 'sin_clave'
+          ? tp.tarjeta.entroComoAdminSinClave
+          : tp.tarjeta.entroComoAdmin;
+      message.info(texto(acceso.usuario), { duration: 9000 });
+    }
   });
 }
 

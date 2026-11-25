@@ -147,7 +147,10 @@ describe.skipIf(!hayPhp)('scripts de entrada con php-cgi real', () => {
     const { base, rutas, acceso } = await montar();
     const dir = path.join(base, 'adminer');
     await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, 'index.php'), phpAdminerLogin({ dirAcceso: rutas.accesoBd() }));
+    await writeFile(
+      path.join(dir, 'index.php'),
+      phpAdminerLogin({ dirAcceso: rutas.accesoBd(), puertos: [3307] }),
+    );
     // Un `adminer.php` mínimo que imita lo que usa el envoltorio: la clase de plugins, el hook y
     // la salida de lo que Adminer vería. (El Adminer oficial no está en el repo.)
     await writeFile(
@@ -192,5 +195,36 @@ echo json_encode(array(
       expect(n.csrf).toBeNull();
       expect(n.get).toEqual([]);
     }
+
+    // Un token de un puerto que no es de ninguna instancia (lista del envoltorio: 3307) no entra.
+    const ajeno = await acceso.emitir({
+      herramienta: 'adminer',
+      sitioId: 'tienda',
+      instancia: 'mysql',
+      base: 'b',
+      credenciales: {
+        motor: 'mysql',
+        host: '127.0.0.1',
+        puerto: 3399,
+        usuario: 'u',
+        clave: CENTINELA,
+      },
+    });
+    const bloqueado = JSON.parse(
+      (await pedir(path.join(dir, 'index.php'), new URL(ajeno.url).search.slice(1))).cuerpo,
+    ) as typeof visto;
+    expect(bloqueado.metodo).toBe('GET');
+    expect(bloqueado.post).toEqual([]);
+
+    // Sin adminer.php junto al envoltorio: aviso 503 en cuatro idiomas, nunca un error de PHP.
+    const sin = path.join(base, 'sin-adminer');
+    await mkdir(sin, { recursive: true });
+    await writeFile(
+      path.join(sin, 'index.php'),
+      phpAdminerLogin({ dirAcceso: rutas.accesoBd(), puertos: [3307] }),
+    );
+    const falta = await pedir(path.join(sin, 'index.php'), '');
+    expect(falta.estado).toBe(503);
+    expect(falta.cuerpo).toContain('Adminer is missing');
   });
 });

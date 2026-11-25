@@ -12,6 +12,7 @@ import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos as tx } from '../i18n';
 import { useServicios } from '../stores/servicios';
+import { textoPma } from '../utilidades/phpmyadmin';
 import EstadoPunto from './EstadoPunto.vue';
 
 /** Composer, Adminer y phpMyAdmin: no son procesos, pero se instalan y se usan desde aquí. */
@@ -58,6 +59,7 @@ const ayuda = computed(() => {
     return instalada.value ? t.composer.ayuda : sinPhp.value ? t.composer.sinPhp : null;
   }
   const d = disponibilidad.value;
+  if (esPma.value && d) return textoPma(d as DisponibilidadPhpMyAdmin);
   return instalada.value && d && !d.disponible ? d.motivo : null;
 });
 

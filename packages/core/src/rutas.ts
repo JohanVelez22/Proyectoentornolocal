@@ -48,6 +48,10 @@ export class Rutas {
   accesoBd(): string {
     return path.join(this.base, 'etc', 'acceso-bd');
   }
+  /** Sesiones de entrada de phpMyAdmin (guardan la clave de la base mientras dura la sesión). */
+  sesionesPma(): string {
+    return path.join(this.base, 'tmp', 'phpmyadmin', 'sesiones');
+  }
   /** Copias con fecha de los .env y .gitignore de proyectos antes de escribirlos. */
   respaldosEnv(): string {
     return path.join(this.base, 'etc', 'respaldos', 'env');

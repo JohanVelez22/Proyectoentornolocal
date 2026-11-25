@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -224,6 +224,82 @@ describe('AccesoBd: servidor de canje en 127.0.0.1', () => {
       expect([0, 400, 413]).toContain(raro);
       const noJson = await pedir({ 'x-wolfcore-secreto': secreto }, '{no');
       expect([400, 403]).toContain(noJson.status);
+    } finally {
+      await acceso.detener();
+    }
+  });
+});
+
+describe('AccesoBd: secreto y sesiones de entrada', () => {
+  async function conSesiones(restringidos: string[] = []) {
+    const base = await carpetaTemporal('pel-acceso-ses-');
+    const rutas = new Rutas(base);
+    const reloj = { t: Date.now() };
+    const acceso = new AccesoBd({
+      rutas,
+      puertoHerramienta: () => 8091,
+      ahora: () => reloj.t,
+      restringir: async (ruta) => {
+        // Cuando se restringe el archivo del secreto todavía no lleva el secreto.
+        const f = path.join(rutas.accesoBd(), 'secreto');
+        restringidos.push(
+          ruta === f && existsSync(f) ? `${ruta}|${readFileSync(f, 'utf8')}` : ruta,
+        );
+        return true;
+      },
+    });
+    const dir = rutas.sesionesPma();
+    mkdirSync(dir, { recursive: true });
+    const sesion = (n: string, edadMs = 0): string => {
+      const f = path.join(dir, n);
+      writeFileSync(f, 'PMA_single_signon_password|s:19:"centinela-secreta-d";');
+      const t = (reloj.t - edadMs) / 1000;
+      utimesSync(f, t, t);
+      return f;
+    };
+    return { rutas, acceso, reloj, sesion };
+  }
+
+  it('restringe la carpeta y el archivo del secreto al usuario antes de escribir el secreto', async () => {
+    const restringidos: string[] = [];
+    const { rutas, acceso } = await conSesiones(restringidos);
+    await acceso.iniciar();
+    await acceso.detener();
+    const dir = rutas.accesoBd();
+    const secreto = path.join(dir, 'secreto');
+    expect(restringidos[0]).toBe(dir);
+    // El archivo se restringe vacío: el secreto no se escribió todavía.
+    expect(restringidos[1]).toBe(`${secreto}|`);
+  });
+
+  it('borra los sess_* al iniciar y al detener, y nada más', async () => {
+    const { rutas, acceso, sesion } = await conSesiones();
+    const otro = path.join(rutas.sesionesPma(), 'otra-cosa.txt');
+    writeFileSync(otro, 'x');
+    const a = sesion('sess_abc123');
+    await acceso.iniciar();
+    expect(existsSync(a)).toBe(false);
+    const b = sesion('sess_def456');
+    await acceso.detener();
+    expect(existsSync(b)).toBe(false);
+    expect(existsSync(otro)).toBe(true);
+  });
+
+  it('en cada emisión borra las sesiones de más de 8 h y conserva las recientes', async () => {
+    const { acceso, sesion } = await conSesiones();
+    await acceso.iniciar();
+    const vieja = sesion('sess_vieja', 8 * 60 * 60 * 1000 + 60_000);
+    const reciente = sesion('sess_reciente', 60 * 60 * 1000);
+    await acceso.emitir({
+      herramienta: 'phpmyadmin',
+      sitioId: 's',
+      instancia: 'mysql',
+      base: 'b',
+      credenciales: creds(),
+    });
+    try {
+      expect(existsSync(vieja)).toBe(false);
+      expect(existsSync(reciente)).toBe(true);
     } finally {
       await acceso.detener();
     }

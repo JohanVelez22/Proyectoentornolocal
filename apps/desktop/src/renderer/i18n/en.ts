@@ -698,6 +698,12 @@ export const en: Textos = {
       noInstalado: 'Not installed',
       sinPhp: 'PHP missing',
       abrirDesdeProyecto: "Opens from each project's card, already signed in.",
+      faltaExtension: (ext: string, rama: string) =>
+        `PHP ${rama} does not have the ${ext} extension enabled. Restart PHP or enable it in its php.ini.`,
+      phpFueraDeRango: (rama: string) =>
+        `phpMyAdmin declares support up to PHP 8.3 and PHP ${rama} is in use: it may show errors. Turn on a PHP version from 7.2 to 8.3 if something fails.`,
+      instalarPrimero: 'Install phpMyAdmin to use it.',
+      encenderPhp: 'Turn PHP on to use phpMyAdmin.',
       instaladoOk: 'phpMyAdmin installed',
     },
     puertos: 'Ports',
@@ -1986,6 +1992,8 @@ export const en: Textos = {
       phpMyAdminNoListo: 'phpMyAdmin is not ready',
       entroComoAdmin: (usuario: string) =>
         `Signed in as ${usuario}, the server administrator, because this project does not use its own user. In the .env manager, “Use own user” creates one limited to its database.`,
+      entroComoAdminSinClave: (usuario: string) =>
+        `Signed in as ${usuario}, the server administrator: the password of this project's own user is not stored on this computer. In the .env manager, “Use own user” generates a new one.`,
       abrirSitio: 'Open the site in the browser',
       github: 'Repository',
       abrirRemoto: (url: string) => `Open ${url}`,

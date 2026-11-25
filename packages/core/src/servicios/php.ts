@@ -28,6 +28,7 @@ const EXTENSIONES = [
   'gd',
   'intl',
   'mbstring',
+  'mysqli',
   'openssl',
   'pdo_mysql',
   'pdo_pgsql',

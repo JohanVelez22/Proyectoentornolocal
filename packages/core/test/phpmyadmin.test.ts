@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -13,6 +13,7 @@ import { Adminer } from '../src/herramientas/adminer';
 import { phpAdminerLogin } from '../src/herramientas/php/adminer-login.php';
 import { phpSignon } from '../src/herramientas/php/wolfcore-signon.php';
 import {
+  extensionActiva,
   generarConfigPma,
   PhpMyAdmin,
   type DepsPhpMyAdmin,
@@ -109,8 +110,15 @@ describe('phpMyAdmin: config.inc.php y carpeta', () => {
       tmp: 'C:\\W\\tmp\\phpmyadmin',
       sesiones: 'C:\\W\\tmp\\phpmyadmin\\sesiones',
     });
-    expect(c.match(/\['AllowArbitraryServer'\] = false;/g)).toHaveLength(2);
+    // Directiva global (la de verdad de phpMyAdmin), nunca activa.
+    expect(c.match(/^\$cfg\['AllowArbitraryServer'\] = false;$/gm)).toHaveLength(1);
     expect(c).not.toMatch(/AllowArbitraryServer'\] = true/);
+    expect(c).toContain("$cfg['ZeroConf'] = false;");
+    // Sin avisos de PHP nuevos en pantalla (phpMyAdmin 5.2 con PHP 8.4 o más).
+    expect(c).toContain('error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);');
+    expect(c).toContain("ini_set('display_errors', '0');");
+    expect(c.match(/'httponly' => true, 'samesite' => 'Strict'\)/g)).toHaveLength(2);
+    expect(c.match(/\['LogoutURL'\] = 'wolfcore-signon\.php';/g)).toHaveLength(2);
     expect([...c.matchAll(/\['port'\] = (\d+);/g)].map((m) => Number(m[1]))).toEqual([3306, 3307]);
     expect([...c.matchAll(/\['host'\] = '([^']+)'/g)].map((m) => m[1])).toEqual([
       '127.0.0.1',
@@ -122,6 +130,17 @@ describe('phpMyAdmin: config.inc.php y carpeta', () => {
     expect(c).toContain("'MariaDB 11.4 (trabajo \\'a\\')'");
     expect(c).toContain("$cfg['VersionCheck'] = false;");
     expect(c).not.toMatch(/\['password'\]|\['user'\]/);
+  });
+
+  it('sin instancias, un servidor marcador con un puerto que no existe (nunca el predeterminado)', () => {
+    const c = generarConfigPma({
+      blowfish: 'a'.repeat(32),
+      servidores: [],
+      tmp: 't',
+      sesiones: 's',
+    });
+    expect([...c.matchAll(/\['port'\] = (\d+);/g)].map((m) => Number(m[1]))).toEqual([1]);
+    expect(c).toContain("['auth_type'] = 'signon';");
   });
 
   async function preparada() {
@@ -159,15 +178,82 @@ describe('phpMyAdmin: config.inc.php y carpeta', () => {
     expect(existsSync(path.join(raiz, 'index.php'))).toBe(true);
   });
 
+  it('elige la rama encendida más nueva dentro de >=7.2 <8.4 y avisa si solo hay una fuera de rango', async () => {
+    expect(catalogo.phpmyadmin[0]!.php).toEqual({ min: '7.2', maxExclusivo: '8.4' });
+    const ini = {
+      '8.2': iniCon('mysqli', 'mbstring'),
+      '8.4': iniCon('mysqli', 'mbstring'),
+      '8.5': iniCon('mysqli', 'mbstring'),
+    };
+    const dentro = await crear({
+      ramas: ['8.2', '8.4', '8.5'],
+      encendidos: ['8.2', '8.4', '8.5'],
+      ini,
+    });
+    expect(await dentro.pma.disponibilidad()).toEqual({ disponible: true, rama: '8.2' });
+    expect(await dentro.pma.configNginx()).toMatchObject({ puertos: [9820, 9821] });
+    // Solo hay una fuera de rango: se usa la más nueva, con aviso.
+    const fuera = await crear({ ramas: ['8.4', '8.5'], encendidos: ['8.4', '8.5'], ini });
+    expect(await fuera.pma.disponibilidad()).toEqual({
+      disponible: true,
+      rama: '8.5',
+      aviso: 'php_fuera_de_rango',
+    });
+    // Apagado: el vhost usa la rama instalada más nueva dentro de rango.
+    const apagado = await crear({ ramas: ['8.2', '8.4'], encendidos: [] });
+    expect(await apagado.pma.configNginx()).toMatchObject({ puertos: [9820, 9821] });
+  });
+
+  it('disponibilidad pide mysqli y mbstring activas en el php.ini de la rama elegida', async () => {
+    const sin = await crear({
+      ramas: ['8.2'],
+      encendidos: ['8.2'],
+      ini: { '8.2': iniCon('mbstring') },
+    });
+    expect(await sin.pma.disponibilidad()).toMatchObject({
+      disponible: false,
+      causa: 'sin_extension',
+      falta: ['mysqli'],
+      rama: '8.2',
+    });
+    const ambas = await crear({ ramas: ['8.2'], encendidos: ['8.2'], ini: { '8.2': iniCon() } });
+    expect(await ambas.pma.disponibilidad()).toMatchObject({ falta: ['mysqli', 'mbstring'] });
+    // Con comentario al final, comillas o el nombre php_mysqli.dll también cuenta como activa.
+    expect(extensionActiva('extension="php_mysqli.dll" ; mysql', 'mysqli')).toBe(true);
+    expect(extensionActiva(';extension=mysqli', 'mysqli')).toBe(false);
+    const ok = await crear({
+      ramas: ['8.2'],
+      encendidos: ['8.2'],
+      ini: { '8.2': iniCon('mysqli', 'mbstring') },
+    });
+    expect(await ok.pma.disponibilidad()).toEqual({ disponible: true, rama: '8.2' });
+  });
+
+  it('sin instancias de MySQL o MariaDB no se sirve el vhost', async () => {
+    const o = await crear({ sinServidores: true, encendidos: ['8.2'] });
+    expect(await o.pma.configNginx()).toBeNull();
+  });
+
+  it('preparar deja la carpeta de sesiones solo para el usuario y escribe de forma atómica', async () => {
+    const o = await crear();
+    await o.pma.preparar();
+    expect(o.restringidos).toContain(o.rutas.sesionesPma());
+    const raiz = o.rutas.bin('phpmyadmin', catalogo.phpmyadmin[0]!.version);
+    // Ningún temporal de la escritura atómica queda en la carpeta.
+    expect(readdirSync(raiz).filter((n) => n.includes('.pel-tmp-'))).toEqual([]);
+  });
+
   it('disponibilidad y configNginx: sin instalar, sin PHP y con PHP', async () => {
     expect(await (await crear({ instalada: false })).pma.disponibilidad()).toEqual({
       disponible: false,
       motivo: 'Instale phpMyAdmin para usarlo',
+      causa: 'sin_instalar',
     });
     expect(await (await crear({ instalada: false })).pma.configNginx()).toBeNull();
     expect(await (await crear()).pma.disponibilidad()).toEqual({
       disponible: false,
       motivo: 'Encienda PHP para usar phpMyAdmin',
+      causa: 'sin_php',
     });
     const o = await crear({ encendidos: ['8.2'] });
     expect(await o.pma.disponibilidad()).toEqual({ disponible: true, rama: '8.2' });
@@ -216,8 +302,27 @@ describe('nginx de phpMyAdmin y de Adminer', () => {
     expect(bloque).not.toContain('libraries');
     expect(bloque).toContain('access_log off;');
     expect(bloque).toMatch(/location \/ \{\s*return 404;/);
-    expect(bloque).toContain('display_errors=Off');
+    // PHP_VALUE ya no se usa: la configuración va en config.inc.php.
+    expect(bloque).not.toContain('PHP_VALUE');
   });
+
+  it.each([
+    ['phpmyadmin', 8091],
+    ['adminer', 8090],
+  ] as const)(
+    'el vhost de %s solo atiende Host 127.0.0.1 o localhost con su puerto (421 si no)',
+    (cual, puerto) => {
+      const conf = principal({ [cual]: { raiz: 'C:/W/x', puertos: [9820] } });
+      const bloque = conf.slice(conf.indexOf(`listen 127.0.0.1:${puerto};`));
+      expect(bloque).toContain(
+        `if ($http_host !~* "^(127\\.0\\.0\\.1|localhost):${puerto}$") { return 421; }`,
+      );
+      // La guardia va antes de cualquier ubicación que ejecute PHP.
+      expect(bloque.indexOf('return 421')).toBeLessThan(bloque.indexOf('location'));
+      expect(bloque).toContain('error_log "C:/l/nginx-error.log" crit;');
+      expect(bloque).toContain('access_log off;');
+    },
+  );
 
   it('el vhost de Adminer tampoco registra accesos (la URL lleva el token)', () => {
     const conf = principal({ adminer: { raiz: 'C:/W/tools/adminer', puertos: [9840] } });
@@ -251,12 +356,20 @@ describe('scripts PHP de entrada', () => {
     expect(php).toContain("'Location: index.php?route=/database/structure&server='");
     expect(php).not.toMatch(/Location:[^;]*token/);
     expect(php).toContain("session_name('WolfCoreSignon')");
-    expect(php).toContain("'samesite' => 'Lax'");
+    expect(php).toContain("'samesite' => 'Strict'");
+    // Limpieza de sesiones vencidas en cada petición.
+    expect(php).toContain("ini_set('session.gc_probability', '1');");
+    expect(php).toContain("ini_set('session.gc_divisor', '1');");
   });
 
   it('adminer: envoltorio con plugin que salta solo el CSRF del envío propio', () => {
-    const php = phpAdminerLogin({ dirAcceso: dir });
+    const php = phpAdminerLogin({ dirAcceso: dir, puertos: [3307, 3306, 3306] });
     expect(php).toContain('WolfCore Dev: entrada de Adminer');
+    // Solo 127.0.0.1 y los puertos de las instancias; login() y credentials() lo imponen.
+    expect(php).toContain('$wolfcorePuertos = array(3306, 3307);');
+    expect(php).toContain('function login($login, $password)');
+    expect(php).toContain('function credentials()');
+    expect(php).toContain("if (!is_file(__DIR__ . '/adminer.php'))");
     expect(php).toContain('function adminer_object()');
     expect(php).toContain('extends \\Adminer\\Plugin');
     expect(php).toContain("require __DIR__ . '/adminer.php';");
@@ -274,7 +387,7 @@ describe('scripts PHP de entrada', () => {
     const carpeta = await carpetaTemporal('pel-pma-lint-');
     for (const [n, codigo] of [
       ['signon.php', phpSignon({ dirAcceso: dir, sesiones: carpeta })],
-      ['adminer.php', phpAdminerLogin({ dirAcceso: dir })],
+      ['adminer.php', phpAdminerLogin({ dirAcceso: dir, puertos: [3306] })],
     ] as const) {
       const f = path.join(carpeta, n);
       writeFileSync(f, codigo);
@@ -293,6 +406,7 @@ describe('Adminer: envoltorio de entrada', () => {
       instalador: { instalar: async () => undefined, instalados: async () => ['6.3.0'] },
       leerConfig: async () => ConfigSchema.parse({}),
       phpEncendido: () => false,
+      puertosPermitidos: async () => [3306, 5432],
     });
     return { rutas, adminer };
   }
@@ -312,6 +426,16 @@ describe('Adminer: envoltorio de entrada', () => {
     expect(readFileSync(rutas.herramientas('adminer', 'adminer.php'), 'utf8')).toBe(oficial);
   });
 
+  it('el envoltorio solo permite los puertos de las instancias y se rehace con disponibilidad()', async () => {
+    const { rutas, adminer } = await conAdminer();
+    mkdirSync(rutas.herramientas('adminer'), { recursive: true });
+    writeFileSync(rutas.herramientas('adminer', 'index.php'), '<?php');
+    await adminer.disponibilidad();
+    expect(readFileSync(rutas.herramientas('adminer', 'index.php'), 'utf8')).toContain(
+      '$wolfcorePuertos = array(3306, 5432);',
+    );
+  });
+
   it('sin Adminer instalado no escribe nada', async () => {
     const { rutas, adminer } = await conAdminer();
     await adminer.preparar();
@@ -319,19 +443,37 @@ describe('Adminer: envoltorio de entrada', () => {
   });
 });
 
+/** php.ini mínimo de una rama: las extensiones que se le piden activas. */
+const iniCon = (...exts: string[]): string =>
+  ['[PHP]', ';extension=mysqli', ...exts.map((e) => `extension=${e}`)].join('\r\n');
+
 async function crear(
-  o: { instalada?: boolean; encendidos?: string[]; falla?: boolean } = {},
+  o: {
+    instalada?: boolean;
+    encendidos?: string[];
+    falla?: boolean;
+    ramas?: string[];
+    /** php.ini por rama (sin esta clave, la rama no tiene ini todavía). */
+    ini?: Record<string, string>;
+    sinServidores?: boolean;
+  } = {},
 ): Promise<{
   pma: PhpMyAdmin;
   rutas: Rutas;
   instaladas: VersionDisponible[];
   servidores: ServidorPma[];
+  restringidos: string[];
 }> {
   const base = await carpetaTemporal('pel-pma-');
   const rutas = new Rutas(base);
   const v = catalogo.phpmyadmin[0]!;
   const instaladas: VersionDisponible[] = [];
-  const servidores = [...SERVIDORES];
+  const servidores = o.sinServidores ? [] : [...SERVIDORES];
+  const restringidos: string[] = [];
+  for (const [rama, ini] of Object.entries(o.ini ?? {})) {
+    mkdirSync(path.dirname(rutas.phpIni(rama)), { recursive: true });
+    writeFileSync(rutas.phpIni(rama), ini);
+  }
   const poner = (): void => {
     const raiz = rutas.bin('phpmyadmin', v.version);
     mkdirSync(raiz, { recursive: true });
@@ -348,7 +490,7 @@ async function crear(
       },
       instalados: async (s) =>
         s === 'php'
-          ? ['8.2', '8.4']
+          ? (o.ramas ?? ['8.2', '8.4'])
           : s === 'phpmyadmin' && existsSync(rutas.bin('phpmyadmin', v.version))
             ? [v.version]
             : [],
@@ -356,7 +498,11 @@ async function crear(
     leerConfig: async () => ConfigSchema.parse({}),
     phpEncendido: (r) => (o.encendidos ?? []).includes(r),
     servidores: async () => servidores,
+    restringir: async (ruta) => {
+      restringidos.push(ruta);
+      return true;
+    },
   };
   void CENTINELA;
-  return { pma: new PhpMyAdmin(deps), rutas, instaladas, servidores };
+  return { pma: new PhpMyAdmin(deps), rutas, instaladas, servidores, restringidos };
 }

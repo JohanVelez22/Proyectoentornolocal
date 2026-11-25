@@ -707,6 +707,12 @@ export const es = {
       noInstalado: 'No instalado',
       sinPhp: 'Falta PHP',
       abrirDesdeProyecto: 'Se abre desde la tarjeta de cada proyecto, ya autenticado.',
+      faltaExtension: (ext: string, rama: string) =>
+        `PHP ${rama} no tiene activa la extensión ${ext}. Reinicie PHP o actívela en su php.ini.`,
+      phpFueraDeRango: (rama: string) =>
+        `phpMyAdmin declara soporte hasta PHP 8.3 y se está usando PHP ${rama}: puede mostrar errores. Encienda una versión de PHP 7.2 a 8.3 si algo falla.`,
+      instalarPrimero: 'Instale phpMyAdmin para usarlo.',
+      encenderPhp: 'Encienda PHP para usar phpMyAdmin.',
       instaladoOk: 'phpMyAdmin instalado',
     },
     puertos: 'Puertos',
@@ -2003,6 +2009,8 @@ export const es = {
       phpMyAdminNoListo: 'phpMyAdmin no está listo',
       entroComoAdmin: (usuario: string) =>
         `Entró como ${usuario}, el administrador del servidor, porque este proyecto no usa un usuario propio. En el gestor de .env, «Usar usuario propio» crea uno limitado a su base.`,
+      entroComoAdminSinClave: (usuario: string) =>
+        `Entró como ${usuario}, el administrador del servidor: la clave del usuario propio de este proyecto no está guardada en este equipo. En el gestor de .env, «Usar usuario propio» genera una nueva.`,
       abrirSitio: 'Abrir el sitio en el navegador',
       github: 'Repositorio',
       abrirRemoto: (url: string) => `Abrir ${url}`,

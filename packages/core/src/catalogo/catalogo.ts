@@ -128,6 +128,8 @@ const EntradaSchema = z.object({
   formato: z.enum(['zip', 'exe', 'archivo']),
   subcarpeta: z.string().optional(),
   ejecutable: z.string().min(1),
+  /** Versiones de PHP con las que la herramienta funciona (phpMyAdmin: `>=7.2 <8.4`). */
+  php: z.object({ min: z.string(), maxExclusivo: z.string() }).optional(),
 });
 
 const Lista = z.array(EntradaSchema).default([]);

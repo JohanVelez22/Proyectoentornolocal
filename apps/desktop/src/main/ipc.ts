@@ -842,7 +842,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'accesoBd.abrir': async (n, s, id, herramienta) => {
     const r = await n.abrirBaseProyecto(idNoVacio(id), herramientaBd(herramienta));
     await s.abrirUrl(r.url);
-    return { usuario: r.usuario, propio: r.propio };
+    return { usuario: r.usuario, propio: r.propio, ...(r.motivo ? { motivo: r.motivo } : {}) };
   },
   'ftp.activar': (n, _s, id) => n.activarFtp(idNoVacio(id)),
   'ftp.desactivar': (n, _s, id) => n.desactivarFtp(idNoVacio(id)),

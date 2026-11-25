@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { chmod, mkdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
@@ -60,7 +60,12 @@ export interface DepsAccesoBd {
   puertoHerramienta: (h: HerramientaBd) => number;
   /** Reloj en ms (solo pruebas). */
   ahora?: () => number;
+  /** Deja una carpeta o archivo legible solo por el usuario (`Plataforma.restringirAlUsuario`). */
+  restringir?: (ruta: string) => Promise<boolean>;
 }
+
+/** Una sesión de entrada de phpMyAdmin más vieja que esto se borra (guarda la clave de la base). */
+export const VIGENCIA_SESIONES_MS = 8 * 60 * 60 * 1000;
 
 interface Pendiente {
   herramienta: HerramientaBd;
@@ -127,6 +132,7 @@ export class AccesoBd {
     }
     await this.iniciar();
     this.purgar();
+    await this.limpiarSesiones(false);
     while (this.pendiente.size >= MAX_PENDIENTES) {
       const masViejo = this.pendiente.keys().next().value;
       if (masViejo === undefined) break;
@@ -193,13 +199,39 @@ export class AccesoBd {
     const dir = this.d.rutas.accesoBd();
     await mkdir(dir, { recursive: true, mode: 0o700 });
     await chmod(dir, 0o700).catch(() => undefined);
+    // Antes de escribir nada: la carpeta (y el archivo, vacío) solo para el usuario.
+    await this.d.restringir?.(dir).catch(() => false);
+    const archivoSecreto = path.join(dir, 'secreto');
+    await writeFile(archivoSecreto, '', { mode: 0o600 });
+    await this.d.restringir?.(archivoSecreto).catch(() => false);
+    // Las sesiones de phpMyAdmin de una vida anterior de la app ya no sirven.
+    await this.limpiarSesiones(true);
     // Primero el secreto y al final el puerto: quien ve el puerto ya tiene el secreto.
-    await writeFile(path.join(dir, 'secreto'), `${this.secreto}\n`, { mode: 0o600 });
+    await writeFile(archivoSecreto, `${this.secreto}\n`, { mode: 0o600 });
     await writeFile(path.join(dir, 'puerto'), `${puerto}\n`, { mode: 0o600 });
+  }
+
+  /**
+   * Borra los `sess_*` de las sesiones de entrada de phpMyAdmin (guardan la clave de la base):
+   * todos, o solo los de más de 8 h. Nunca toca otros archivos de la carpeta.
+   */
+  private async limpiarSesiones(todas: boolean): Promise<void> {
+    const dir = this.d.rutas.sesionesPma();
+    const nombres = await readdir(dir).catch(() => [] as string[]);
+    for (const n of nombres) {
+      if (!/^sess_[A-Za-z0-9,-]{1,128}$/.test(n)) continue;
+      const archivo = path.join(dir, n);
+      if (!todas) {
+        const info = await stat(archivo).catch(() => null);
+        if (!info || this.ahora() - info.mtimeMs < VIGENCIA_SESIONES_MS) continue;
+      }
+      await rm(archivo, { force: true }).catch(() => undefined);
+    }
   }
 
   async detener(): Promise<void> {
     this.pendiente.clear();
+    await this.limpiarSesiones(true);
     const s = this.servidor;
     this.servidor = null;
     this.inicio = null;

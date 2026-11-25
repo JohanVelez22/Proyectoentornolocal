@@ -134,7 +134,7 @@ describe('Nucleo.abrirBaseProyecto (D18)', () => {
     const id = await proyecto(n, ENV_ROOT);
     n.fijarProveedorClaveBd(async () => CLAVE_PROPIA);
     const r = await n.abrirBaseProyecto(id, 'adminer');
-    expect(r).toMatchObject({ usuario: 'root', propio: false });
+    expect(r).toMatchObject({ usuario: 'root', propio: false, motivo: 'sin_usuario_propio' });
     expect(canjear(n, r.url, 'adminer')).toMatchObject({ usuario: 'root', clave: CLAVE_ADMIN });
   });
 
@@ -143,7 +143,7 @@ describe('Nucleo.abrirBaseProyecto (D18)', () => {
     const id = await proyecto(n, ENV_PROPIO);
     n.fijarProveedorClaveBd(async () => null);
     const r = await n.abrirBaseProyecto(id, 'phpmyadmin');
-    expect(r).toMatchObject({ usuario: 'root', propio: false });
+    expect(r).toMatchObject({ usuario: 'root', propio: false, motivo: 'sin_clave' });
   });
 
   it('errores con código: sin base, servidor remoto, PostgreSQL en phpMyAdmin y herramienta no lista', async () => {
@@ -170,6 +170,7 @@ describe('Nucleo.abrirBaseProyecto (D18)', () => {
     n.phpmyadmin.disponibilidad = async () => ({
       disponible: false,
       motivo: 'Instale phpMyAdmin para usarlo',
+      causa: 'sin_instalar' as const,
     });
     await expect(n.abrirBaseProyecto(sinBase, 'phpmyadmin')).rejects.toMatchObject({
       codigo: 'acceso_bd.no_listo',

@@ -120,7 +120,8 @@
       "sha256": "2d2e13c735366d318425c78e4ee2cc8fc648d77faba3ddea2cd516e43885733f",
       "formato": "zip",
       "subcarpeta": "phpMyAdmin-5.2.3-all-languages",
-      "ejecutable": "index.php"
+      "ejecutable": "index.php",
+      "php": { "min": "7.2", "maxExclusivo": "8.4" }
     }
   ],
   "pgvector-src": [
