@@ -88,6 +88,22 @@ const api: ApiEntorno = {
     recuperar: (motor, base, id) => invocar('instantaneas.recuperar', motor, base, id),
     borrar: (motor, base, id) => invocar('instantaneas.borrar', motor, base, id),
   },
+  auditoriaClaves: {
+    auditar: (motor, base, seleccion) => invocar('auditoriaClaves.auditar', motor, base, seleccion),
+    vistaPrevia: (motor, base, seleccion, usuario, mantenerFormato) =>
+      invocar('auditoriaClaves.vistaPrevia', motor, base, seleccion, usuario, mantenerFormato),
+    restablecer: (motor, base, seleccion, usuario, claveNueva, usuarioEscrito, mantenerFormato) =>
+      invocar(
+        'auditoriaClaves.restablecer',
+        motor,
+        base,
+        seleccion,
+        usuario,
+        claveNueva,
+        usuarioEscrito,
+        mantenerFormato,
+      ),
+  },
   pgvector: {
     estado: () => invocar('pgvector.estado'),
     instalarBuildTools: () => invocar('pgvector.instalarBuildTools'),

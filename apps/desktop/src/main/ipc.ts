@@ -128,6 +128,10 @@ import {
   confirmadoVolver,
   opcionesVolver,
   idInstantanea,
+  seleccionAuditoria,
+  usuarioAuditoria,
+  claveNuevaAuditoria,
+  confirmadoRestablecer,
 } from './validacion';
 
 type MotorBdIpc = ReturnType<typeof motorBd>;
@@ -855,6 +859,59 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'instantaneas.borrar': (n, _s, motor, base, id) => {
     const { objetivo, motor: m } = objetivoSql(motor);
     return n.instantaneas.borrar(objetivo, nombreBase(m, base), idInstantanea(id));
+  },
+  // Auditoría de contraseñas (D20): solo "débil o no"; restablecer exige escribir el usuario.
+  'auditoriaClaves.auditar': (n, _s, motor, base, seleccion) => {
+    const { objetivo, motor: m } = objetivoSql(motor);
+    return n.auditoriaClaves.auditar({
+      instancia: objetivo,
+      base: nombreBase(m, base),
+      ...seleccionAuditoria(seleccion),
+    });
+  },
+  'auditoriaClaves.vistaPrevia': (n, _s, motor, base, seleccion, usuario, mantenerFormato) => {
+    const { objetivo, motor: m } = objetivoSql(motor);
+    return n.auditoriaClaves.vistaPreviaRestablecer(
+      {
+        instancia: objetivo,
+        base: nombreBase(m, base),
+        ...seleccionAuditoria(seleccion),
+        usuario: usuarioAuditoria(usuario),
+      },
+      mantenerFormato === undefined ? false : booleano(mantenerFormato, 'mantenerFormato'),
+    );
+  },
+  'auditoriaClaves.restablecer': (
+    n,
+    _s,
+    motor,
+    base,
+    seleccion,
+    usuario,
+    claveNueva,
+    escrito,
+    mantenerFormato,
+  ) => {
+    const { objetivo, motor: m } = objetivoSql(motor);
+    const u = usuarioAuditoria(usuario);
+    const clave = claveNuevaAuditoria(claveNueva);
+    // `quitarClave`: una clave corta no destroza el mensaje (solo se quita como palabra suelta).
+    return sinClave(
+      clave,
+      () =>
+        n.auditoriaClaves.restablecer({
+          instancia: objetivo,
+          base: nombreBase(m, base),
+          ...seleccionAuditoria(seleccion),
+          usuario: u,
+          claveNueva: clave,
+          confirmado: confirmadoRestablecer(escrito, u),
+          ...(mantenerFormato === undefined
+            ? {}
+            : { mantenerFormato: booleano(mantenerFormato, 'mantenerFormato') }),
+        }),
+      quitarClave,
+    );
   },
   'pgvector.estado': (n) => n.estadoPgvector(),
   'pgvector.instalarBuildTools': (n) => n.instalarBuildTools(),

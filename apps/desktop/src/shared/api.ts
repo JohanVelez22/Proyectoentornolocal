@@ -60,6 +60,9 @@ import type {
   VistaPreviaImportar,
   Instantanea,
   InstantaneaBorrada,
+  ResultadoAuditoria,
+  VistaPreviaRestablecer,
+  ResultadoRestablecer,
   OpcionesImportar,
   ResultadoImportar,
   ProblemaImportar,
@@ -283,6 +286,13 @@ export type {
 export type MotorSql = Exclude<MotorBd, 'mongodb'>;
 /** Motor (su instancia predeterminada) o una instancia del motor (`mysql@8.0`). */
 export type ObjetivoBdIpc = MotorBd | IdInstancia;
+/** Tabla y columnas de la auditoría de contraseñas: el núcleo las valida contra el catálogo. */
+export interface SeleccionAuditoria {
+  tabla: string;
+  columnaUsuario: string;
+  columnaHash: string;
+}
+
 export type ObjetivoSqlIpc = MotorSql | IdInstancia;
 export type {
   EstadoInstancia,
@@ -557,6 +567,34 @@ export interface ApiEntorno {
     listaInstancia(motor: ObjetivoSqlIpc): Promise<Instantanea[]>;
     papelera(motor: ObjetivoSqlIpc, base: string): Promise<InstantaneaBorrada[]>;
     recuperar(motor: ObjetivoSqlIpc, base: string, id: string): Promise<Instantanea>;
+  };
+  /**
+   * Auditoría de contraseñas de las bases propias (D20). Solo dice "débil o no": nunca cuál de las
+   * contraseñas comunes coincidió. `restablecer` pide escribir el usuario exacto; antes toma una
+   * instantánea y copia la fila.
+   */
+  auditoriaClaves: {
+    auditar(
+      motor: ObjetivoSqlIpc,
+      base: string,
+      seleccion: SeleccionAuditoria,
+    ): Promise<ResultadoAuditoria>;
+    vistaPrevia(
+      motor: ObjetivoSqlIpc,
+      base: string,
+      seleccion: SeleccionAuditoria,
+      usuario: string,
+      mantenerFormato?: boolean,
+    ): Promise<VistaPreviaRestablecer>;
+    restablecer(
+      motor: ObjetivoSqlIpc,
+      base: string,
+      seleccion: SeleccionAuditoria,
+      usuario: string,
+      claveNueva: string,
+      usuarioEscrito: string,
+      mantenerFormato?: boolean,
+    ): Promise<ResultadoRestablecer>;
   };
   pgvector: {
     estado(): Promise<EstadoPgvector>;
@@ -1161,6 +1199,9 @@ export const RUTAS_IPC = [
   'instantaneas.listaInstancia',
   'instantaneas.papelera',
   'instantaneas.recuperar',
+  'auditoriaClaves.auditar',
+  'auditoriaClaves.vistaPrevia',
+  'auditoriaClaves.restablecer',
   'pgvector.estado',
   'pgvector.instalarBuildTools',
   'pgvector.compilarEInstalar',

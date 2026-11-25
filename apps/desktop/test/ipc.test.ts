@@ -69,6 +69,16 @@ function nucleoFalso() {
       papelera: vi.fn(async () => []),
       recuperar: vi.fn(async () => ({ id: '20261125-103000-abcdef' })),
     },
+    auditoriaClaves: {
+      auditar: vi.fn(async () => ({ revisadas: 0, debiles: [], noRevisables: 0, truncado: false })),
+      vistaPreviaRestablecer: vi.fn(async () => ({
+        sentencia: 'UPDATE t SET h = ? WHERE u = ?',
+        formato: 'bcrypt',
+        formatoNuevo: 'bcrypt',
+        cambiaFormato: false,
+      })),
+      restablecer: vi.fn(async () => ({ copiaFila: 'x.json', instantanea: 'id' })),
+    },
     env: {
       ver: vi.fn(async () => ({ existe: true, filas: [] })),
       revelar: vi.fn(async () => 'valor'),
@@ -559,6 +569,9 @@ describe('registrarIpc', () => {
         'instantaneas.listaInstancia',
         'instantaneas.papelera',
         'instantaneas.recuperar',
+        'auditoriaClaves.auditar',
+        'auditoriaClaves.vistaPrevia',
+        'auditoriaClaves.restablecer',
         'pgvector.estado',
         'pgvector.instalarBuildTools',
         'pgvector.compilarEInstalar',
@@ -1991,6 +2004,94 @@ describe('IPC de la Etapa B', () => {
       expect((await llamar(ruta, ...args)).ok, `${ruta} ${JSON.stringify(args)}`).toBe(false);
     }
     for (const f of Object.values(inst)) expect(f).not.toHaveBeenCalled();
+  });
+
+  it('auditoriaClaves.*: selección acotada, usuario escrito para restablecer y la clave nunca vuelve en un error', async () => {
+    const { crudo, llamar } = montar();
+    const aud = (crudo as unknown as { auditoriaClaves: Record<string, Mock> }).auditoriaClaves;
+    const sel = { tabla: 'usuarios', columnaUsuario: 'email', columnaHash: 'clave' };
+    expect((await llamar('auditoriaClaves.auditar', 'mysql@8.4', 'tienda', sel)).ok).toBe(true);
+    expect(aud['auditar']).toHaveBeenCalledWith({
+      instancia: 'mysql@8.4',
+      base: 'tienda',
+      ...sel,
+    });
+    expect(
+      (await llamar('auditoriaClaves.vistaPrevia', 'postgresql', 'tienda', sel, 'ana@x.test')).ok,
+    ).toBe(true);
+    expect(aud['vistaPreviaRestablecer']).toHaveBeenCalledWith(
+      { instancia: 'postgresql', base: 'tienda', ...sel, usuario: 'ana@x.test' },
+      false,
+    );
+    expect(
+      (
+        await llamar(
+          'auditoriaClaves.restablecer',
+          'mysql',
+          'tienda',
+          sel,
+          'ana@x.test',
+          'Clave-Nueva-Centinela-d20',
+          'ana@x.test',
+        )
+      ).ok,
+    ).toBe(true);
+    expect(aud['restablecer']).toHaveBeenCalledWith({
+      instancia: 'mysql',
+      base: 'tienda',
+      ...sel,
+      usuario: 'ana@x.test',
+      claveNueva: 'Clave-Nueva-Centinela-d20',
+      confirmado: true,
+    });
+    // Sin el usuario escrito (o con otro), no llega al núcleo.
+    aud['restablecer']!.mockClear();
+    for (const escrito of [undefined, '', 'ANA@x.test', true, 'otro']) {
+      const r = await llamar(
+        'auditoriaClaves.restablecer',
+        'mysql',
+        'tienda',
+        sel,
+        'ana@x.test',
+        'Clave-Nueva-Centinela-d20',
+        escrito,
+      );
+      expect(r.ok, String(escrito)).toBe(false);
+    }
+    expect(aud['restablecer']).not.toHaveBeenCalled();
+    // Entradas no válidas.
+    for (const [ruta, args] of [
+      ['auditoriaClaves.auditar', ['mongodb', 'tienda', sel]],
+      ['auditoriaClaves.auditar', ['mysql', '../x', sel]],
+      ['auditoriaClaves.auditar', ['mysql', 'tienda', { ...sel, extra: 'x' }]],
+      ['auditoriaClaves.auditar', ['mysql', 'tienda', { ...sel, tabla: '' }]],
+      ['auditoriaClaves.auditar', ['mysql', 'tienda', { ...sel, tabla: 'x'.repeat(129) }]],
+      ['auditoriaClaves.auditar', ['mysql', 'tienda', { ...sel, tabla: 'a b' }]],
+      ['auditoriaClaves.auditar', ['mysql', 'tienda', 'usuarios']],
+      ['auditoriaClaves.vistaPrevia', ['mysql', 'tienda', sel, '']],
+      ['auditoriaClaves.vistaPrevia', ['mysql', 'tienda', sel, 'ana', 'si']],
+      ['auditoriaClaves.restablecer', ['mysql', 'tienda', sel, 'ana', '', 'ana']],
+      ['auditoriaClaves.restablecer', ['mysql', 'tienda', sel, 'ana', 'x'.repeat(1025), 'ana']],
+      ['auditoriaClaves.restablecer', ['mysql', 'tienda', sel, 'ana', 7, 'ana']],
+    ] as [string, unknown[]][]) {
+      expect((await llamar(ruta, ...args)).ok, `${ruta} ${JSON.stringify(args)}`).toBe(false);
+    }
+    expect(aud['auditar']).toHaveBeenCalledTimes(1);
+    // Un error del núcleo no devuelve la clave nueva.
+    aud['restablecer']!.mockRejectedValueOnce(
+      new Error('falló con Clave-Nueva-Centinela-d20 dentro'),
+    );
+    const mal = await llamar(
+      'auditoriaClaves.restablecer',
+      'mysql',
+      'tienda',
+      sel,
+      'ana@x.test',
+      'Clave-Nueva-Centinela-d20',
+      'ana@x.test',
+    );
+    expect(mal.ok).toBe(false);
+    expect(JSON.stringify(mal)).not.toContain('Clave-Nueva-Centinela-d20');
   });
 
   it('sistema.abrirEditor abre la carpeta del sitio por su id (nunca una ruta)', async () => {

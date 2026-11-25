@@ -1371,3 +1371,48 @@ export function huellaEnvPedida(v: unknown): string {
 export function nombreCopiaEnv(v: unknown): string {
   return textoAcotado(v, 1, 120, 'copia');
 }
+
+/**
+ * Tabla y columnas que elige quien audita contraseñas (D20): solo texto corto y sin controles; el
+ * núcleo los busca en el catálogo de la base y nunca los pega en el SQL tal cual.
+ */
+export function seleccionAuditoria(v: unknown): {
+  tabla: string;
+  columnaUsuario: string;
+  columnaHash: string;
+} {
+  const o = objetoPlano<Record<string, unknown>>(v, 'selección');
+  soloClaves(o, ['tabla', 'columnaUsuario', 'columnaHash'], 'selección');
+  return {
+    tabla: textoAcotado(o['tabla'], 1, 128, 'tabla'),
+    columnaUsuario: textoAcotado(o['columnaUsuario'], 1, 128, 'columna del usuario'),
+    columnaHash: textoAcotado(o['columnaHash'], 1, 128, 'columna del hash'),
+  };
+}
+
+/** Usuario (valor de la columna de usuario) cuya contraseña se restablece. */
+export function usuarioAuditoria(v: unknown): string {
+  if (typeof v !== 'string' || v.length < 1 || v.length > 256) {
+    throw new Error('Argumento no válido: usuario');
+  }
+  return v;
+}
+
+/** Contraseña nueva: cualquier texto de 1 a 1024 caracteres (el mensaje nunca la repite). */
+export function claveNuevaAuditoria(v: unknown): string {
+  if (typeof v !== 'string' || v.length < 1 || v.length > 1024) {
+    throw new Error('Argumento no válido: contraseña nueva');
+  }
+  return v;
+}
+
+/**
+ * Restablecer solo si quien llama escribió el usuario exacto: la confirmación se comprueba aquí,
+ * en el proceso principal, no en la interfaz.
+ */
+export function confirmadoRestablecer(escrito: unknown, usuario: string): true {
+  if (typeof escrito !== 'string' || escrito !== usuario) {
+    throw new Error('Argumento no válido: confirmación');
+  }
+  return true;
+}

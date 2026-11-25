@@ -7,6 +7,7 @@ import {
   GitCompare,
   InformationCircle,
   Key,
+  LockClosed,
   QrCode,
   Search,
   ShieldCheckmark,
@@ -39,6 +40,7 @@ const componentes: Record<Clave, Component> = {
   infoArchivo: defineAsyncComponent(() => import('../componentes/herramientas/InfoArchivo.vue')),
   websocket: defineAsyncComponent(() => import('../componentes/herramientas/WebSocket.vue')),
   buscar: defineAsyncComponent(() => import('../componentes/herramientas/Buscar.vue')),
+  contrasenas: defineAsyncComponent(() => import('../componentes/herramientas/Contrasenas.vue')),
 };
 
 const iconos: Record<Clave, Component> = {
@@ -56,10 +58,11 @@ const iconos: Record<Clave, Component> = {
   infoArchivo: InformationCircle,
   websocket: Pulse,
   buscar: Search,
+  contrasenas: LockClosed,
 };
 
 /** Paneles que necesitan más ancho (dos columnas o tablas). */
-const ANCHAS: Clave[] = ['diff', 'puertos', 'regex', 'json', 'markdown', 'buscar'];
+const ANCHAS: Clave[] = ['diff', 'puertos', 'regex', 'json', 'markdown', 'buscar', 'contrasenas'];
 
 const busqueda = ref('');
 const abierta = ref<Clave | null>(null);
