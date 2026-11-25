@@ -322,6 +322,9 @@ export class Tuneles {
         comando: l.comando,
         args: l.args,
         ...(l.env ? { env: l.env } : {}),
+        ...(l.envSecreto ? { envSecreto: l.envSecreto } : {}),
+        // Un TUNNEL_TOKEN (o similar) global del usuario conectaría otro túnel distinto.
+        quitarEntorno: ['TUNNEL_'],
         log: logSalida,
         reiniciar: false,
       });

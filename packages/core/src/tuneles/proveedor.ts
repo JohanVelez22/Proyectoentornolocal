@@ -58,6 +58,8 @@ export interface LanzamientoTunel {
   args: string[];
   /** Variables solo para ese proceso (nunca se persisten ni se muestran). */
   env?: Record<string, string>;
+  /** Como `env`, pero secretas: nunca llegan a `run/estado.json` ni a ningún registro. */
+  envSecreto?: Record<string, string>;
   /** Valores secretos del lanzamiento: se tapan en los logs y en los errores. */
   secretos?: string[];
 }

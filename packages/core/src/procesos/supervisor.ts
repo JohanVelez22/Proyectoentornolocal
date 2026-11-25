@@ -21,24 +21,11 @@ import {
   type LanzadorOculto,
 } from '../plataforma/lanzarOculto';
 import { nombreArchivoDeRuta, rutaDentroDe } from '../plataforma/sistema';
+import { entornoDelHijo } from './entorno';
 import { puertoResponde } from './sonda';
 import { decodificarLinea } from '../monitor/decodificar';
 
-/** Entorno de un hijo: el heredado sin lo que `quitarEntorno` excluye, más `env`. */
-export function entornoDelHijo(
-  heredado: NodeJS.ProcessEnv,
-  def: Pick<DefProceso, 'env' | 'quitarEntorno' | 'conservarEntorno'>,
-): NodeJS.ProcessEnv {
-  const prefijos = (def.quitarEntorno ?? []).map((p) => p.toUpperCase());
-  const conservar = (def.conservarEntorno ?? []).map((p) => p.toUpperCase());
-  const base: NodeJS.ProcessEnv = {};
-  for (const [k, v] of Object.entries(heredado)) {
-    const K = k.toUpperCase();
-    if (prefijos.some((p) => K.startsWith(p)) && !conservar.some((p) => K.startsWith(p))) continue;
-    base[k] = v;
-  }
-  return { ...base, ...def.env };
-}
+export { entornoDelHijo };
 
 export interface DefProceso {
   /** 'nginx', 'php-8.4-0', 'tunel-<sitio>' */
@@ -49,6 +36,11 @@ export interface DefProceso {
   args: string[];
   cwd?: string;
   env?: Record<string, string>;
+  /**
+   * Variables secretas (tokens, credenciales): llegan al proceso pero nunca se escriben en
+   * `run/estado.json` ni en ningún otro registro. Un proceso readoptado ya las tiene.
+   */
+  envSecreto?: Record<string, string>;
   /**
    * Prefijos (sin distinguir mayúsculas) de variables del entorno heredado que NO se pasan al
    * proceso: una variable de la sesión del usuario no debe cambiar su configuración. Se quitan
@@ -524,7 +516,10 @@ export class Supervisor {
       let pidOculto: number | null = null;
       if (this.lanzarOculto) {
         try {
-          pidOculto = await this.lanzarOculto(def, fd);
+          pidOculto = await this.lanzarOculto(
+            { ...def, entorno: entornoDelHijo(process.env, def) },
+            fd,
+          );
         } catch (e) {
           if (!(e instanceof LanzadorNoDisponible)) throw e;
           this.lanzarOculto = null;

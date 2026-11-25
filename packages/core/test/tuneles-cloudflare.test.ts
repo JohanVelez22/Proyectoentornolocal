@@ -45,7 +45,12 @@ let almacenSecretos: Map<string, string>;
 let secretosLeidos: number;
 let cifrado: boolean;
 let sitios: Sitio[];
-let llamadas: Array<{ cmd: string; args: string[]; env?: Record<string, string> }>;
+let llamadas: Array<{
+  cmd: string;
+  args: string[];
+  env?: Record<string, string>;
+  quitar?: readonly string[];
+}>;
 let restringidos: string[];
 let credencialEnArranque: boolean;
 let bannerEnLog: string;
@@ -94,7 +99,12 @@ const supervisor = () =>
 
 /** cloudflared falso: login deja el cert, create deja la credencial, route no hace nada. */
 const ejecutor: Ejecutor = async (cmd, args, opts) => {
-  llamadas.push({ cmd, args, ...(opts?.env ? { env: opts.env } : {}) });
+  llamadas.push({
+    cmd,
+    args,
+    ...(opts?.env ? { env: opts.env } : {}),
+    ...(opts?.quitarEntorno ? { quitar: opts.quitarEntorno } : {}),
+  });
   if (falloCloudflared !== null) return { codigo: 1, stdout: '', stderr: falloCloudflared };
   const cert = args[args.indexOf('--origincert') + 1]!;
   if (args.includes('login')) {
@@ -211,6 +221,11 @@ describe('Cloudflare con nombre: abrir', () => {
     expect(yml).toContain(`tunnel: "${UUID}"`);
     expect(yml).toContain('http_status:404');
     expect(yml).not.toContain(CENTINELA);
+  });
+
+  it('el túnel se lanza sin heredar TUNNEL_* del usuario', async () => {
+    await crear().abrir('wolf');
+    expect(iniciados[0]!.quitarEntorno).toEqual(['TUNNEL_']);
   });
 
   it('la credencial no va en los argumentos, el env ni el config.yml; se restringe al usuario y se borra al conectar', async () => {
@@ -417,6 +432,7 @@ describe('Cloudflare con nombre: cuenta, túnel y dominio', () => {
   it('enrutar el dominio llama a route dns con el nombre y el dominio', async () => {
     await crear().cloudflareNombre!.enrutar('wolf-dev', 'demo.midominio.com');
     expect(llamadas[0]!.args.slice(-4)).toEqual(['route', 'dns', 'wolf-dev', 'demo.midominio.com']);
+    expect(llamadas[0]!.quitar).toEqual(['TUNNEL_']);
   });
 
   it('nombre o dominio inválidos no llegan a cloudflared', async () => {

@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { entornoDelHijo } from '../procesos/entorno';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { open, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -84,7 +85,14 @@ export const ejecutorPorDefecto: Ejecutor = (cmd, args, opts) =>
         cwd: opts?.cwd,
         maxBuffer: 16 * 1024 * 1024,
         ...(opts?.senal ? { signal: opts.senal } : {}),
-        ...(opts?.env ? { env: { ...process.env, ...opts.env } } : {}),
+        ...(opts?.env || opts?.quitarEntorno
+          ? {
+              env: entornoDelHijo(process.env, {
+                env: opts.env,
+                quitarEntorno: opts.quitarEntorno,
+              }),
+            }
+          : {}),
       },
       (err, stdout, stderr) => {
         const code = (err as { code?: unknown } | null)?.code;

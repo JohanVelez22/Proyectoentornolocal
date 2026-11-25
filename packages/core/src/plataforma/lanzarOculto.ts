@@ -20,7 +20,14 @@ import path from 'node:path';
  *   (los PID de Windows son múltiplos de 4: 0–3 indican un fallo).
  */
 export type LanzadorOculto = (
-  def: { comando: string; args: string[]; cwd?: string; env?: Record<string, string> },
+  def: {
+    comando: string;
+    args: string[];
+    cwd?: string;
+    env?: Record<string, string>;
+    /** Entorno completo ya calculado (con `quitarEntorno` y secretos): sustituye al heredado. */
+    entorno?: NodeJS.ProcessEnv;
+  },
   /** Descriptor del log: recibe la salida estándar y de errores del servidor. */
   fd: number,
 ) => Promise<number>;
@@ -146,7 +153,7 @@ export function crearLanzadorOculto(o: OpcionesLanzadorOculto): LanzadorOculto {
               // Sin `detached`: así tiene consola (oculta) y el servidor la hereda.
               windowsHide: true,
               ...(def.cwd ? { cwd: def.cwd } : {}),
-              env: { ...process.env, ...def.env },
+              env: def.entorno ?? { ...process.env, ...def.env },
               stdio: ['ignore', fd, fd],
             },
           );

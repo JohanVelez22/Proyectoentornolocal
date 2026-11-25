@@ -126,6 +126,7 @@ export class CloudflareNombre implements ProveedorTunel {
     const exe = await this.d.ejecutable();
     const r = await this.d.ejecutor(exe, ['tunnel', '--origincert', this.cert(), ...args], {
       timeoutMs,
+      quitarEntorno: ['TUNNEL_'],
       env: { TUNNEL_ORIGIN_CERT: this.cert() },
     });
     if (r.codigo !== 0) {

@@ -287,6 +287,8 @@ export type Ejecutor = (
     env?: Record<string, string>;
     /** Texto que se escribe en la entrada estándar del proceso. */
     entrada?: string;
+    /** Prefijos de variables heredadas que NO se pasan al proceso (se quitan antes de `env`). */
+    quitarEntorno?: readonly string[];
     /** Al abortarse, se mata el proceso (p. ej. la PowerShell que espera un UAC al cerrar). */
     senal?: AbortSignal;
   },
@@ -296,6 +298,8 @@ export interface OpcionesLanzar {
   cwd?: string;
   /** Variables extra (p. ej. PGPASSWORD) solo para este proceso; nunca se persisten. */
   env?: Record<string, string>;
+  /** Prefijos de variables heredadas que NO se pasan al proceso (se quitan antes de `env`). */
+  quitarEntorno?: readonly string[];
   /** Flujo que se copia a la entrada estándar respetando la contrapresión (archivos grandes). */
   entrada?: Readable;
   /** Cada línea de salida, a medida que llega (sin el salto). */

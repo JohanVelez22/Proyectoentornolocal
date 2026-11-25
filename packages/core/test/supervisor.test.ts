@@ -114,6 +114,86 @@ afterEach(() => {
   rmSync(base, { recursive: true, force: true });
 });
 
+describe('Supervisor: envSecreto', () => {
+  const CENTINELA = 'centinela-secreta-d';
+
+  it('el proceso recibe envSecreto, pero estado.json no lo guarda', async () => {
+    const entornos: Array<NodeJS.ProcessEnv | undefined> = [];
+    const s = new Supervisor(rutas, plataforma(), eventos, {
+      intervaloMs: 3000,
+      spawn: ((cmd: string, _a: string[], o: { env?: NodeJS.ProcessEnv }) => {
+        entornos.push(o.env);
+        return (fakeSpawn as unknown as (c: string) => HijoFalso)(cmd);
+      }) as never,
+      sonda: async () => sondaOk,
+      lanzarOculto: null,
+    });
+    await s.iniciar(
+      def({
+        id: 'tunel-x',
+        env: { VISIBLE: '1' },
+        envSecreto: { TUNNEL_CRED_CONTENTS: CENTINELA },
+        quitarEntorno: ['TUNNEL_'],
+      }),
+    );
+    expect(entornos[0]!['TUNNEL_CRED_CONTENTS']).toBe(CENTINELA);
+    expect(entornos[0]!['VISIBLE']).toBe('1');
+    const crudo = readFileSync(rutas.estado(), 'utf8');
+    expect(crudo).toContain('VISIBLE');
+    expect(crudo).not.toContain(CENTINELA);
+    expect(crudo).not.toContain('TUNNEL_CRED_CONTENTS');
+  });
+
+  it('quitarEntorno saca un TUNNEL_TOKEN heredado del usuario antes de aplicar lo propio', async () => {
+    process.env['TUNNEL_TOKEN'] = 'heredado-ajeno';
+    try {
+      const entornos: Array<NodeJS.ProcessEnv | undefined> = [];
+      const s = new Supervisor(rutas, plataforma(), eventos, {
+        intervaloMs: 3000,
+        spawn: ((cmd: string, _a: string[], o: { env?: NodeJS.ProcessEnv }) => {
+          entornos.push(o.env);
+          return (fakeSpawn as unknown as (c: string) => HijoFalso)(cmd);
+        }) as never,
+        sonda: async () => sondaOk,
+        lanzarOculto: null,
+      });
+      await s.iniciar(def({ id: 'tunel-y', quitarEntorno: ['TUNNEL_'] }));
+      expect(entornos[0]!['TUNNEL_TOKEN']).toBeUndefined();
+    } finally {
+      delete process.env['TUNNEL_TOKEN'];
+    }
+  });
+
+  it('con el lanzador oculto también llega el entorno calculado (sin lo quitado y con el secreto)', async () => {
+    process.env['TUNNEL_TOKEN'] = 'heredado-ajeno';
+    try {
+      const vistos: Array<NodeJS.ProcessEnv | undefined> = [];
+      const s = new Supervisor(rutas, plataforma(), eventos, {
+        intervaloMs: 3000,
+        spawn: fakeSpawn,
+        sonda: async () => sondaOk,
+        lanzarOculto: async (d) => {
+          vistos.push(d.entorno);
+          vivos.set(2000, 'cloudflared.exe');
+          return 2000;
+        },
+      });
+      await s.iniciar(
+        def({
+          id: 'tunel-z',
+          envSecreto: { TUNNEL_CRED_CONTENTS: CENTINELA },
+          quitarEntorno: ['TUNNEL_'],
+        }),
+      );
+      expect(vistos[0]!['TUNNEL_CRED_CONTENTS']).toBe(CENTINELA);
+      expect(vistos[0]!['TUNNEL_TOKEN']).toBeUndefined();
+      expect(readFileSync(rutas.estado(), 'utf8')).not.toContain(CENTINELA);
+    } finally {
+      delete process.env['TUNNEL_TOKEN'];
+    }
+  });
+});
+
 describe('Supervisor', () => {
   it('iniciar → iniciando y luego encendido; guarda estado.json y log', async () => {
     const s = crear();

@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { StringDecoder } from 'node:string_decoder';
+import { entornoDelHijo } from '../procesos/entorno';
 import type { Lanzador } from './tipos';
 
 /** Una línea más larga que esto se corta (un INSERT de varios MB no debe quedar en memoria). */
@@ -99,7 +100,10 @@ export const lanzadorPorDefecto: Lanzador = (cmd, args, opts = {}) =>
     const hijo = spawn(cmd, args, {
       windowsHide: true,
       cwd: opts.cwd,
-      env: opts.env ? { ...process.env, ...opts.env } : process.env,
+      env:
+        opts.env || opts.quitarEntorno
+          ? entornoDelHijo(process.env, { env: opts.env, quitarEntorno: opts.quitarEntorno })
+          : process.env,
       stdio: [opts.entrada ? 'pipe' : 'ignore', 'pipe', 'pipe'],
     });
     let errorEntrada: unknown = null;
