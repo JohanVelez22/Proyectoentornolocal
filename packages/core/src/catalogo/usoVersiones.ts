@@ -72,6 +72,27 @@ const RUNTIMES_LIMPIABLES = TIPOS_RUNTIME.filter((t) => t !== 'rust');
 const DATOS = IDS_SERVICIO_DATOS as readonly string[];
 const encendido = (e: string | undefined): boolean => e === 'encendido' || e === 'iniciando';
 
+/**
+ * Ruta real (sin enlaces ni uniones) de la parte que existe más el resto tal cual: un `home` con
+ * una subcarpeta que no está (`…\Scripts`) se compara igual que si existiera, y en macOS `/var`
+ * resuelve a `/private/var`.
+ */
+async function rutaRealAprox(ruta: string): Promise<string> {
+  let actual = ruta;
+  const resto: string[] = [];
+  for (let i = 0; i < 32; i++) {
+    try {
+      return path.join(await realpath(actual), ...resto.reverse());
+    } catch {
+      const padre = path.dirname(actual);
+      if (padre === actual) return ruta;
+      resto.push(path.basename(actual));
+      actual = padre;
+    }
+  }
+  return ruta;
+}
+
 export async function calcularUsos(d: DepsUsoVersiones): Promise<UsosVersiones> {
   const usos: UsosVersiones = new Map();
   const instaladasCache = new Map<string, string[]>();
@@ -266,7 +287,7 @@ export async function calcularUsos(d: DepsUsoVersiones): Promise<UsosVersiones> 
             );
             if (valores.length === 0) throw new Error('pyvenv.cfg sin home');
             for (const valor of valores) {
-              const real = await realpath(valor).catch(() => valor);
+              const real = await rutaRealAprox(valor);
               for (const ruta of [`${real}/x`, real]) {
                 const v = binReal ? versionDeEjecutable(ruta, binReal) : null;
                 if (v?.servicio === 'python') {
@@ -343,7 +364,7 @@ export async function calcularUsos(d: DepsUsoVersiones): Promise<UsosVersiones> 
         if (await d.procesoVivo(pid)) throw new Error(`no se pudo leer la ruta del PID ${pid}`);
         continue;
       }
-      const real = await realpath(ruta).catch(() => ruta);
+      const real = await rutaRealAprox(ruta);
       for (const candidata of [real, ruta]) {
         const v =
           versionDeEjecutable(candidata, bin) ??
