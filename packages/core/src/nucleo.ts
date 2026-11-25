@@ -3651,14 +3651,34 @@ export class Nucleo {
    * Importa un perfil (con la huella de la vista previa y `confirmado`). `guardarClave` guarda en
    * `AlmacenSecretos` (`bd:<sitio>`) la clave nueva de cada usuario propio que se recrea.
    */
-  importarPerfil(
+  async importarPerfil(
     archivo: string,
     o: OpcionesImportarPerfil & {
       guardarClave: (sitioId: string, clave: string) => Promise<void>;
     },
   ): Promise<ResultadoImportarPerfil> {
     const { guardarClave, ...resto } = o;
-    return new Perfiles(this.depsPerfiles(guardarClave)).importar(archivo, resto);
+    const r = await new Perfiles(this.depsPerfiles(guardarClave)).importar(archivo, resto);
+    // Pools propios, Nginx y hosts al día con los sitios importados. Con WOLFCORE_DATOS el hosts
+    // no se escribe (plataforma aislada) y el aviso lo dice.
+    await this.poolsSitio.sincronizar().catch((e) => {
+      console.error('No se pudo poner al día el PHP propio de los sitios:', mensajeDe(e));
+    });
+    try {
+      const a = await this.sitios.aplicar();
+      if (!a.nginx.ok || !a.hosts.ok) {
+        r.avisos.push({
+          codigo: 'aplicar',
+          datos: { nginx: a.nginx.ok ? 'ok' : 'error', hosts: a.hosts.ok ? 'ok' : 'error' },
+        });
+      }
+    } catch (e) {
+      r.avisos.push({
+        codigo: 'aplicar',
+        datos: { nginx: 'error', hosts: 'error', detalle: mensajeDe(e) },
+      });
+    }
+    return r;
   }
 
   /** Otros proyectos (no `excluir`) cuyo `.env` usa este usuario de base. */

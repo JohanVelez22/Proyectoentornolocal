@@ -45,6 +45,7 @@ import {
   type OpcionesImportarPerfil,
   type ResultadoImportarPerfil,
   type VistaPreviaPerfil,
+  type AvisoPerfil,
   type VolcadosBase,
 } from './tipos';
 
@@ -698,7 +699,7 @@ export class Perfiles {
         'La carpeta de datos o el perfil cambiaron desde la vista previa: revísela otra vez.',
       );
     }
-    const avisos: string[] = [];
+    const avisos: AvisoPerfil[] = [];
 
     // 1. La CA primero: una frase equivocada no debe dejar nada a medias. Una CA ajena firma lo que
     // quiera: reemplazar la de este equipo exige una confirmación aparte.
@@ -740,9 +741,7 @@ export class Perfiles {
           plano.fill(0);
         }
       } else {
-        avisos.push(
-          'El perfil trae la CA, pero no se importó: se usa la de este equipo o una nueva.',
-        );
+        avisos.push({ codigo: 'ca_no_importada' });
       }
     }
 
@@ -854,6 +853,7 @@ export class Perfiles {
           version: v.version,
           estado: 'error',
           motivo: motivoDe(e),
+          detalle: detalleDe(e),
         });
       }
     }
@@ -986,7 +986,7 @@ export class Perfiles {
         if (plan.plantillasExistentes.has(id) && copia && existsSync(copia)) {
           await cp(copia, final, { recursive: true, dereference: false }).catch(() => undefined);
         }
-        plantillas.push({ id, estado: 'error', motivo: motivoDe(e) });
+        plantillas.push({ id, estado: 'error', motivo: motivoDe(e), detalle: detalleDe(e) });
       }
     }
 
@@ -1008,7 +1008,7 @@ export class Perfiles {
     try {
       await d.regenerarCertificados();
     } catch (e) {
-      avisos.push(`No se pudieron preparar los certificados: ${motivoDe(e)}`);
+      avisos.push({ codigo: 'certificados', datos: { detalle: detalleDe(e) } });
     }
 
     // 7. Bases: por el camino acotado, con instantánea previa si la base ya estaba.
@@ -1018,7 +1018,15 @@ export class Perfiles {
       const fila = (
         estado: ResultadoImportarPerfil['bases'][number]['estado'],
         motivo: string | null,
-      ) => bases.push({ instancia: b.instancia, base: b.base, estado, motivo });
+        e?: unknown,
+      ) =>
+        bases.push({
+          instancia: b.instancia,
+          base: b.base,
+          estado,
+          motivo,
+          ...(e === undefined ? {} : { detalle: detalleDe(e) }),
+        });
       if (!inst || inst.sinPuerto) {
         fila('pendiente', 'instancia_pendiente');
         continue;
@@ -1047,7 +1055,7 @@ export class Perfiles {
       try {
         await d.prepararInstancia(b.instancia);
       } catch (e) {
-        fila('pendiente', `instancia_apagada: ${motivoDe(e)}`);
+        fila('pendiente', 'instancia_apagada', e);
         continue;
       }
       let existe = false;
@@ -1056,7 +1064,7 @@ export class Perfiles {
           (x) => x.toLowerCase() === b.base.toLowerCase(),
         );
       } catch (e) {
-        fila('pendiente', `instancia_apagada: ${motivoDe(e)}`);
+        fila('pendiente', 'instancia_apagada', e);
         continue;
       }
       if (existe) {
@@ -1064,7 +1072,7 @@ export class Perfiles {
           await d.instantaneaPrevia(b.instancia, b.base);
         } catch (e) {
           // Sin copia previa no se reemplaza nada (la misma garantía que Instantaneas.volver).
-          fila('error', `sin_copia_previa: ${motivoDe(e)}`);
+          fila('error', 'sin_copia_previa', e);
           continue;
         }
       }
@@ -1072,7 +1080,7 @@ export class Perfiles {
         await d.restaurarBase(b.instancia, archivos, b.base, { existe });
         fila('importado', null);
       } catch (e) {
-        fila('error', motivoDe(e));
+        fila('error', motivoDe(e), e);
       }
     }
 
@@ -1147,7 +1155,13 @@ export class Perfiles {
         creados.add(clave_lote);
         env.push({ sitioId: s.id, estado: 'reescrito', motivo: null, copia: r.copia });
       } catch (e) {
-        env.push({ sitioId: s.id, estado: 'error', motivo: motivoDe(e), copia: null });
+        env.push({
+          sitioId: s.id,
+          estado: 'error',
+          motivo: motivoDe(e),
+          detalle: detalleDe(e),
+          copia: null,
+        });
       }
     }
 
@@ -1167,8 +1181,13 @@ export class Perfiles {
 
 const aceptable = (h: HuellaFila): boolean => h === 'fuerte' || h === 'firmada';
 
+/** Código del motivo: el de `ErrorWolf` o `error_inesperado` (el texto va en `detalleDe`). */
 function motivoDe(e: unknown): string {
-  if (esErrorWolf(e)) return e.codigo;
+  return esErrorWolf(e) ? e.codigo : 'error_inesperado';
+}
+
+/** Mensaje de un error, sin secretos y acotado. */
+function detalleDe(e: unknown): string {
   return enmascararSecretos(e instanceof Error ? e.message : String(e)).slice(0, 200);
 }
 

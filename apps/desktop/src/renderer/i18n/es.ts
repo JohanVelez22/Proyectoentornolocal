@@ -4358,6 +4358,52 @@ export const es = {
       },
     },
   },
+  /** Resultado de importar o exportar un perfil (D26). */
+  perfiles: {
+    motivos: {
+      procesos_quitados: 'Sus procesos (comandos de otro equipo) no se importaron.',
+      tunel_con_nombre: 'Su túnel con nombre no viaja: vuelve al túnel rápido.',
+      php_ini: 'Algunos ajustes de php.ini no se importaron.',
+      xdebug: 'Su ajuste de Xdebug no era válido y se quitó.',
+      nginx_desactivado:
+        'Sus reglas de Nginx quedan guardadas pero sin aplicar: revíselas en el editor.',
+      carpeta_no_existe: 'Su carpeta no existe en este equipo: búsquela.',
+      correo_sin_proveedor: 'Su proveedor SMTP no se importó: usa el captador de correo.',
+      sitio_invalido: 'El sitio no es válido.',
+      dominio_invalido: 'Su dominio no es válido (debe terminar en .test).',
+      ruta_protegida: 'Su carpeta es del sistema o de WolfCore Dev: no se importa.',
+      dominio_en_uso: 'Otro sitio de este equipo ya usa ese dominio.',
+      sitio_repetido: 'El sitio está repetido en el perfil.',
+      no_disponible: 'Esa versión ya no está en el catálogo.',
+      huella_debil: 'Esa versión no tiene una huella fuerte: instálela a mano desde Versiones.',
+      tope_descargas:
+        'No se descargó para no hacer demasiadas descargas a la vez: instálela desde Versiones.',
+      instancia_pendiente: 'Su instancia quedó pendiente.',
+      motor_no_soportado: 'Ese motor no se importa desde un perfil.',
+      version_pendiente: 'Su versión del motor quedó pendiente.',
+      danada: 'Sus archivos en el perfil están dañados.',
+      bases_omitidas: 'Se importó sin las bases.',
+      instancia_apagada: 'Su instancia no se pudo encender.',
+      sin_copia_previa: 'No se pudo tomar la instantánea previa: la base no se reemplazó.',
+      sin_base: 'Su .env no apunta a una base local.',
+      base_no_resuelta: 'No se supo de qué instancia es su base.',
+      error_inesperado: 'Algo falló.',
+    },
+    avisos: {
+      base_no_incluida: 'No se incluyó la base {base} ({instancia}).',
+      sin_ca: 'No hay una CA en este equipo: el perfil va sin ella.',
+      ca_no_importada: 'La CA del perfil no se importó: se usa la de este equipo o una nueva.',
+      certificados: 'No se pudieron preparar los certificados.',
+      aplicar:
+        'Los sitios importados no quedaron aplicados del todo (Nginx: {nginx}; hosts: {hosts}).',
+    },
+    quitado: {
+      ia: 'Proveedor de IA {id}: usa una URL propia.',
+      smtp: 'Proveedor SMTP {id}: su host no es de un proveedor conocido o falta su usuario.',
+      puerto: 'Puerto de {id}: fuera de rango, vuelve al de siempre.',
+      carpeta_vigilada: 'La carpeta vigilada es de otro equipo.',
+    },
+  },
 };
 
 export type Textos = typeof es;

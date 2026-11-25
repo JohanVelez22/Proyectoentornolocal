@@ -4365,4 +4365,50 @@ export const pt: Textos = {
       },
     },
   },
+  /** Resultado de importar o exportar un perfil (D26). */
+  perfiles: {
+    motivos: {
+      procesos_quitados: 'Os seus processos (comandos de outro computador) não foram importados.',
+      tunel_con_nombre: 'O seu túnel com nome não viaja: volta ao túnel rápido.',
+      php_ini: 'Alguns ajustes do php.ini não foram importados.',
+      xdebug: 'O seu ajuste do Xdebug não era válido e foi removido.',
+      nginx_desactivado:
+        'As suas regras do Nginx ficam salvas mas sem aplicar: revise-as no editor.',
+      carpeta_no_existe: 'A sua pasta não existe neste computador: procure-a.',
+      correo_sin_proveedor: 'O seu provedor SMTP não foi importado: usa o capturador de e-mail.',
+      sitio_invalido: 'O site não é válido.',
+      dominio_invalido: 'O seu domínio não é válido (deve terminar em .test).',
+      ruta_protegida: 'A sua pasta é do sistema ou do WolfCore Dev: não é importada.',
+      dominio_en_uso: 'Outro site deste computador já usa esse domínio.',
+      sitio_repetido: 'O site está repetido no perfil.',
+      no_disponible: 'Essa versão já não está no catálogo.',
+      huella_debil: 'Essa versão não tem uma impressão forte: instale-a à mão em Versões.',
+      tope_descargas:
+        'Não foi baixada para não fazer downloads demais de uma vez: instale-a em Versões.',
+      instancia_pendiente: 'A sua instância ficou pendente.',
+      motor_no_soportado: 'Esse motor não é importado de um perfil.',
+      version_pendiente: 'A versão do motor ficou pendente.',
+      danada: 'Os seus arquivos no perfil estão danificados.',
+      bases_omitidas: 'Importado sem os bancos.',
+      instancia_apagada: 'Não foi possível ligar a sua instância.',
+      sin_copia_previa: 'Não foi possível tirar o instantâneo prévio: o banco não foi substituído.',
+      sin_base: 'O seu .env não aponta para um banco local.',
+      base_no_resuelta: 'Não se soube de qual instância é o seu banco.',
+      error_inesperado: 'Algo falhou.',
+    },
+    avisos: {
+      base_no_incluida: 'O banco {base} ({instancia}) não foi incluído.',
+      sin_ca: 'Não há uma CA neste computador: o perfil vai sem ela.',
+      ca_no_importada: 'A CA do perfil não foi importada: usa-se a deste computador ou uma nova.',
+      certificados: 'Não foi possível preparar os certificados.',
+      aplicar:
+        'Os sites importados não ficaram aplicados por completo (Nginx: {nginx}; hosts: {hosts}).',
+    },
+    quitado: {
+      ia: 'Provedor de IA {id}: usa uma URL própria.',
+      smtp: 'Provedor SMTP {id}: o host não é de um provedor conhecido ou falta o usuário.',
+      puerto: 'Porta de {id}: fora do intervalo, volta à padrão.',
+      carpeta_vigilada: 'A pasta vigiada é de outro computador.',
+    },
+  },
 };

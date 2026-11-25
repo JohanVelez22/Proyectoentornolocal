@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { CODIGOS_ERROR, IDIOMAS_UI } from '@pel/core';
+import { AVISOS_PERFIL, CODIGOS_ERROR, IDIOMAS_UI, MOTIVOS_PERFIL } from '@pel/core';
 import { describe, expect, it } from 'vitest';
 import { textosMain } from '../src/main/textos';
 import { IDIOMAS, diccionarios } from '../src/renderer/i18n';
@@ -352,6 +352,18 @@ describe('i18n', () => {
         const i = d.errores.codigos[c];
         expect(i, `${id}:${c}`).not.toBe('');
         expect(marcas(i), `${id}:${c}`).toEqual(marcas(e));
+      }
+    }
+  });
+});
+
+describe('perfiles (D26): motivos y avisos en los cuatro idiomas', () => {
+  it('cada código que da el núcleo tiene su texto', () => {
+    for (const t of [es, en, pt, fr]) {
+      for (const m of MOTIVOS_PERFIL) expect(t.perfiles.motivos[m], m).toBeTruthy();
+      for (const a of AVISOS_PERFIL) expect(t.perfiles.avisos[a], a).toBeTruthy();
+      for (const q of ['ia', 'smtp', 'puerto', 'carpeta_vigilada'] as const) {
+        expect(t.perfiles.quitado[q], q).toBeTruthy();
       }
     }
   });

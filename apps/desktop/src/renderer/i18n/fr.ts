@@ -4460,4 +4460,55 @@ export const fr: Textos = {
       },
     },
   },
+  /** Resultado de importar o exportar un perfil (D26). */
+  perfiles: {
+    motivos: {
+      procesos_quitados: "Ses processus (commandes d'un autre ordinateur) n'ont pas été importés.",
+      tunel_con_nombre: 'Son tunnel nommé ne voyage pas : il revient au tunnel rapide.',
+      php_ini: "Certains réglages de php.ini n'ont pas été importés.",
+      xdebug: "Son réglage Xdebug n'était pas valide et a été retiré.",
+      nginx_desactivado:
+        "Ses règles Nginx sont enregistrées mais pas appliquées : vérifiez-les dans l'éditeur.",
+      carpeta_no_existe: "Son dossier n'existe pas sur cet ordinateur : cherchez-le.",
+      correo_sin_proveedor:
+        "Son fournisseur SMTP n'a pas été importé : il utilise le capteur de courrier.",
+      sitio_invalido: "Le site n'est pas valide.",
+      dominio_invalido: "Son domaine n'est pas valide (il doit finir par .test).",
+      ruta_protegida:
+        "Son dossier est un dossier système ou de WolfCore Dev : il n'est pas importé.",
+      dominio_en_uso: 'Un autre site de cet ordinateur utilise déjà ce domaine.',
+      sitio_repetido: 'Le site est répété dans le profil.',
+      no_disponible: "Cette version n'est plus dans le catalogue.",
+      huella_debil:
+        "Cette version n'a pas d'empreinte forte : installez-la à la main depuis Versions.",
+      tope_descargas:
+        'Pas téléchargée pour éviter trop de téléchargements à la fois : installez-la depuis Versions.',
+      instancia_pendiente: 'Son instance est en attente.',
+      motor_no_soportado: "Ce moteur n'est pas importé depuis un profil.",
+      version_pendiente: 'La version du moteur est en attente.',
+      danada: 'Ses fichiers dans le profil sont endommagés.',
+      bases_omitidas: 'Importé sans les bases.',
+      instancia_apagada: "Son instance n'a pas pu démarrer.",
+      sin_copia_previa:
+        "L'instantané préalable n'a pas pu être pris : la base n'a pas été remplacée.",
+      sin_base: 'Son .env ne pointe pas vers une base locale.',
+      base_no_resuelta: 'Impossible de savoir à quelle instance appartient sa base.',
+      error_inesperado: 'Quelque chose a échoué.',
+    },
+    avisos: {
+      base_no_incluida: "La base {base} ({instancia}) n'a pas été incluse.",
+      sin_ca: "Il n'y a pas de CA sur cet ordinateur : le profil part sans elle.",
+      ca_no_importada:
+        "La CA du profil n'a pas été importée : on utilise celle de cet ordinateur ou une nouvelle.",
+      certificados: "Les certificats n'ont pas pu être préparés.",
+      aplicar:
+        "Les sites importés n'ont pas été entièrement appliqués (Nginx : {nginx} ; hosts : {hosts}).",
+    },
+    quitado: {
+      ia: "Fournisseur d'IA {id} : il utilise sa propre URL.",
+      smtp: "Fournisseur SMTP {id} : son hôte n'est pas un fournisseur connu ou son utilisateur manque.",
+      puerto: 'Port de {id} : hors plage, retour à la valeur par défaut.',
+      carpeta_vigilada: 'Le dossier surveillé appartient à un autre ordinateur.',
+    },
+  },
 };

@@ -17,7 +17,12 @@ import {
   VERSION_PERFIL,
   type ManifiestoPerfil,
 } from './manifiesto';
-import type { DepsPerfiles, OpcionesExportarPerfil, ResultadoExportarPerfil } from './tipos';
+import type {
+  AvisoPerfil,
+  DepsPerfiles,
+  OpcionesExportarPerfil,
+  ResultadoExportarPerfil,
+} from './tipos';
 
 export async function sha256Archivo(archivo: string): Promise<string> {
   const h = createHash('sha256');
@@ -64,7 +69,7 @@ export async function exportarPerfil(
       'Los certificados de los sitios solo viajan junto con la CA cifrada.',
     );
   }
-  const avisos: string[] = [];
+  const avisos: AvisoPerfil[] = [];
   const cfg = await d.leerConfig();
   const tmp = d.rutas.tmp();
   await mkdir(tmp, { recursive: true });
@@ -120,9 +125,14 @@ export async function exportarPerfil(
           } else throw new Error('formato de volcado inesperado');
           bases.push({ instancia: b.instancia, base: b.base });
         } catch (e) {
-          avisos.push(
-            `No se incluyó la base ${b.base} (${b.instancia}): ${enmascararSecretos(e instanceof Error ? e.message : String(e)).slice(0, 200)}`,
-          );
+          avisos.push({
+            codigo: 'base_no_incluida',
+            datos: {
+              base: b.base,
+              instancia: b.instancia,
+              detalle: enmascararSecretos(e instanceof Error ? e.message : String(e)).slice(0, 200),
+            },
+          });
         } finally {
           await rm(carpeta, { recursive: true, force: true }).catch(() => undefined);
         }
@@ -137,7 +147,7 @@ export async function exportarPerfil(
       const crt = await leerNormal(d.rutas.caCrt());
       const key = await leerNormal(d.rutas.caKey());
       if (!crt || !key) {
-        avisos.push('No hay una CA en este equipo: el perfil va sin ella.');
+        avisos.push({ codigo: 'sin_ca' });
       } else {
         const certificados: Record<string, { crt: string; key: string }> = {};
         if (o.certificados) {

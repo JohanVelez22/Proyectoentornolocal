@@ -615,7 +615,8 @@ describe('exportarPerfil: nunca lleva secretos ni estado de este equipo', () => 
       frase: FRASE,
     });
     expect(r.avisos).toHaveLength(1);
-    expect(r.avisos[0]).not.toContain(CENTINELA);
+    expect(r.avisos[0]!.codigo).toBe('base_no_incluida');
+    expect(JSON.stringify(r.avisos)).not.toContain(CENTINELA);
     expect([...(await entradasZip(archivo)).keys()].some((n) => n.startsWith('bases/'))).toBe(
       false,
     );
@@ -744,7 +745,7 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
       confirmado: true,
     });
     expect(r.ca).toBe('importada');
-    expect(r.avisos.join(' ')).not.toMatch(/inst[aá]l/i);
+    expect(JSON.stringify(r.avisos)).not.toMatch(/instal/i);
     expect(await readFile(path.join(r.respaldo!, 'ca', 'wolfcore-dev-ca.key'), 'utf8')).toBe(
       'clave local',
     );
@@ -783,7 +784,7 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
     expect(r.ca).toBe('nueva');
     expect(existsSync(destino.caKey())).toBe(false);
     expect(d.reg.certificados).toBe(1);
-    expect(r.avisos.join(' ')).toMatch(/no se import/);
+    expect(r.avisos).toEqual([{ codigo: 'ca_no_importada' }]);
   });
 
   it('bases cifradas: sin frase se pide (o se omiten); con frase mala no se toca nada', async () => {
@@ -1008,7 +1009,9 @@ describe('importarPerfil: todo lo que llega es importado', () => {
       ['plantillas/base-x1/plantilla.json'],
     );
     const r = await importar(archivo, deps(destino));
-    expect(r.plantillas).toEqual([{ id: 'base-x1', estado: 'error', motivo: 'plantillas.danada' }]);
+    expect(r.plantillas).toEqual([
+      { id: 'base-x1', estado: 'error', motivo: 'plantillas.danada', detalle: expect.any(String) },
+    ]);
     expect(
       await readFile(path.join(destino.plantillas(), 'base-x1', 'plantilla.json'), 'utf8'),
     ).toBe(vieja);
@@ -1183,7 +1186,8 @@ describe('importarPerfil sobre una carpeta con datos: vista previa, confirmació
         instancia: 'mysql@8.4',
         base: 'tienda',
         estado: 'error',
-        motivo: 'sin_copia_previa: disco lleno',
+        motivo: 'sin_copia_previa',
+        detalle: 'disco lleno',
       },
     ]);
     expect(d.reg.restauradas).toEqual([]);
@@ -1562,7 +1566,11 @@ describe('usuarios propios (wolf_u_): clave nueva y .env con copia previa', () =
       rutas: { tienda: path.join(proyectos, 'tienda') },
       envProyectos: ['tienda'],
     });
-    expect(r.env[0]).toMatchObject({ estado: 'error', motivo: 'servidor caído' });
+    expect(r.env[0]).toMatchObject({
+      estado: 'error',
+      motivo: 'error_inesperado',
+      detalle: 'servidor caído',
+    });
     expect(await readFile(path.join(proyectos, 'tienda', '.env'), 'utf8')).toBe(antes);
     const e = deps(new Rutas(path.join(dir, 'destino3')), {
       claveCompartida: async (usuario) => {

@@ -120,11 +120,57 @@ export interface OpcionesExportarPerfil {
   frase: string | null;
 }
 
+/**
+ * Motivos (códigos estables) de lo que no se importó del todo; la interfaz los traduce
+ * (`perfiles.motivos.<código>`). Un error del núcleo va con su código de `ErrorWolf`.
+ */
+export const MOTIVOS_PERFIL = [
+  'procesos_quitados',
+  'tunel_con_nombre',
+  'php_ini',
+  'xdebug',
+  'nginx_desactivado',
+  'carpeta_no_existe',
+  'correo_sin_proveedor',
+  'sitio_invalido',
+  'dominio_invalido',
+  'ruta_protegida',
+  'dominio_en_uso',
+  'sitio_repetido',
+  'no_disponible',
+  'huella_debil',
+  'tope_descargas',
+  'instancia_pendiente',
+  'motor_no_soportado',
+  'version_pendiente',
+  'danada',
+  'bases_omitidas',
+  'instancia_apagada',
+  'sin_copia_previa',
+  'sin_base',
+  'base_no_resuelta',
+  'error_inesperado',
+] as const;
+
+/** Avisos del resultado (`perfiles.avisos.<código>` en la interfaz). */
+export const AVISOS_PERFIL = [
+  'base_no_incluida',
+  'sin_ca',
+  'ca_no_importada',
+  'certificados',
+  'aplicar',
+] as const;
+
+export interface AvisoPerfil {
+  codigo: (typeof AVISOS_PERFIL)[number];
+  datos?: Record<string, string>;
+}
+
 export interface ResultadoExportarPerfil {
   archivo: string;
   bytes: number;
   /** Lo que no se pudo incluir (una base apagada, la CA que no existe…). */
-  avisos: string[];
+  avisos: AvisoPerfil[];
 }
 
 export interface OpcionesImportarPerfil {
@@ -209,6 +255,7 @@ export interface ResultadoImportarPerfil {
     version: string;
     estado: 'instalada' | 'ya_instalada' | 'pendiente' | 'error';
     motivo: string | null;
+    detalle?: string;
   }[];
   instancias: {
     id: string;
@@ -216,14 +263,22 @@ export interface ResultadoImportarPerfil {
     puerto: number;
     puertoOriginal: number;
   }[];
-  bases: { instancia: string; base: string; estado: EstadoItem; motivo: string | null }[];
-  plantillas: { id: string; estado: EstadoItem; motivo: string | null }[];
+  bases: {
+    instancia: string;
+    base: string;
+    estado: EstadoItem;
+    motivo: string | null;
+    /** El mensaje del error, si lo hubo (sin secretos). */
+    detalle?: string;
+  }[];
+  plantillas: { id: string; estado: EstadoItem; motivo: string | null; detalle?: string }[];
   env: {
     sitioId: string;
     estado: 'reescrito' | 'sin_marcar' | 'error';
     motivo: string | null;
+    detalle?: string;
     copia: string | null;
   }[];
   ca: 'importada' | 'nueva' | 'sin_cambios';
-  avisos: string[];
+  avisos: AvisoPerfil[];
 }
