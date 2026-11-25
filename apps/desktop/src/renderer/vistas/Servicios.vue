@@ -5,6 +5,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import type { ServicioVersiones } from '../../shared/api';
 import { api } from '../api';
+import DialogoLimpiarVersiones from '../componentes/DialogoLimpiarVersiones.vue';
 import FilaInstalar from '../componentes/FilaInstalar.vue';
 import TarjetaHerramienta from '../componentes/TarjetaHerramienta.vue';
 import TarjetaServicio from '../componentes/TarjetaServicio.vue';
@@ -58,6 +59,7 @@ const gruposInstalar: { titulo: string; servicios: InstalableCatalogo[] }[] = [
   },
 ];
 const seccionInstalar = ref<HTMLElement | null>(null);
+const limpiando = ref(false);
 
 /** Grupos con algo que mostrar; Herramientas siempre está (Composer y Adminer). */
 const grupos = computed<GrupoServicios[]>(() => {
@@ -102,11 +104,15 @@ onMounted(() => {
     <NTab name="servicios">{{ textos.versiones.pestanaServicios }}</NTab>
     <NTab name="versiones">{{ textos.versiones.pestana }}</NTab>
   </NTabs>
-  <VersionesServicio
-    v-if="pestana === 'versiones'"
-    :servicio="servicioVersiones"
-    @elegir="elegirServicioVersiones"
-  />
+  <template v-if="pestana === 'versiones'">
+    <VersionesServicio :servicio="servicioVersiones" @elegir="elegirServicioVersiones" />
+    <div class="limpieza">
+      <NButton size="small" secondary @click="limpiando = true">
+        {{ textos.versiones.limpieza.boton }}
+      </NButton>
+    </div>
+    <DialogoLimpiarVersiones v-model:show="limpiando" />
+  </template>
   <div v-else class="servicios">
     <div class="barra">
       <p class="descripcion">{{ t.descripcion }}</p>
@@ -195,6 +201,11 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.limpieza {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
 .pestanas {
   margin-bottom: 14px;
 }
