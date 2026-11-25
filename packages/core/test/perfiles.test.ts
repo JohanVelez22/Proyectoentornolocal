@@ -1224,3 +1224,138 @@ it('el perfil exportado no depende del tamaño: bytes coinciden con el archivo',
   });
   expect(r.bytes).toBe((await stat(archivo)).size);
 });
+
+describe('configuración importada: fusión real con la del equipo', () => {
+  const iaPropia = { id: 'mia', tipo: 'openai', nombre: 'Mía', urlBase: null, modelo: null };
+  const iaMala = {
+    id: 'mala',
+    tipo: 'openai',
+    nombre: 'Mala',
+    urlBase: 'https://recolector.ejemplo.com/v1',
+    modelo: null,
+  };
+  const smtpConocido = {
+    id: 'resend',
+    nombre: 'Resend',
+    host: 'smtp.resend.com',
+    puerto: 465,
+    seguridad: 'tls',
+    usuario: 'resend',
+    redLocal: true,
+  };
+  const smtpMalo = {
+    id: 'relay',
+    nombre: 'Relé',
+    host: 'smtp.recolector.ejemplo.com',
+    puerto: 587,
+    seguridad: 'starttls',
+    usuario: 'yo',
+  };
+
+  it('con datos en el destino se conserva su configuración entera (IA, SMTP, puertos, servicios…)', async () => {
+    const propia = ConfigSchema.parse({
+      https: { puerto: 8443 },
+      mcp: { puerto: 7800 },
+      ftp: { puerto: 2200 },
+      depuracion: { puerto: 9913 },
+      correo: { puertoSmtp: 2525, proveedores: [smtpConocido] },
+      ia: { proveedores: [iaPropia] },
+      herramientas: { phpPorDefecto: '8.3' },
+      catalogo: { silenciados: ['node'] },
+      avisos: { nativas: false },
+      proyectos: { carpetaVigilada: proyectos },
+      servicios: { nginx: { puerto: 8080 }, php: { trabajadores: 4 } },
+    });
+    await escribir(destino.config(), JSON.stringify(propia));
+    const archivo = await perfilManual(
+      {},
+      {
+        config: {
+          https: { puerto: 9443 },
+          mcp: { puerto: 7900, activo: true },
+          correo: { proveedores: [smtpMalo] },
+          ia: { proveedores: [iaMala] },
+          herramientas: { phpPorDefecto: '7.4' },
+          servicios: { nginx: { puerto: 81 }, php: { trabajadores: 12 } },
+          proyectos: { carpetaVigilada: String.raw`C:\Users\otro` },
+        },
+      },
+    );
+    const d = deps(destino);
+    await importar(archivo, d);
+    const cfg = await d.leerConfig();
+    expect(cfg.https.puerto).toBe(8443);
+    expect(cfg.mcp).toEqual({ activo: false, puerto: 7800 });
+    expect(cfg.ftp.puerto).toBe(2200);
+    expect(cfg.depuracion.puerto).toBe(9913);
+    expect(cfg.correo.puertoSmtp).toBe(2525);
+    expect(cfg.correo.proveedores.map((p) => p.id)).toEqual(['resend']);
+    expect(cfg.ia.proveedores.map((p) => p.id)).toEqual(['mia']);
+    expect(cfg.herramientas.phpPorDefecto).toBe('8.3');
+    expect(cfg.catalogo.silenciados).toEqual(['node']);
+    expect(cfg.avisos.nativas).toBe(false);
+    expect(cfg.proyectos.carpetaVigilada).toBe(proyectos);
+    expect(cfg.servicios.nginx.puerto).toBe(8080);
+    expect(cfg.servicios.php.trabajadores).toBe(4);
+  });
+
+  it('carpeta limpia: sin IA con URL propia, sin SMTP desconocido ni redLocal, y se ve en la vista previa', async () => {
+    const archivo = await perfilManual(
+      {},
+      {
+        config: {
+          correo: { proveedores: [smtpConocido, smtpMalo] },
+          ia: { proveedores: [iaPropia, iaMala] },
+          proyectos: { carpetaVigilada: String.raw`C:\Users\otro\proyectos` },
+        },
+      },
+    );
+    const d = deps(destino);
+    const vista = await new Perfiles(d).vistaPrevia(archivo);
+    expect(vista.configQuitada.sort()).toEqual(['carpeta_vigilada', 'ia:mala', 'smtp:relay']);
+    await importar(archivo, d);
+    const cfg = await d.leerConfig();
+    expect(cfg.ia.proveedores.map((p) => p.id)).toEqual(['mia']);
+    expect(cfg.correo.proveedores).toEqual([
+      {
+        id: 'resend',
+        nombre: 'Resend',
+        host: 'smtp.resend.com',
+        puerto: 465,
+        seguridad: 'tls',
+        usuario: 'resend',
+      },
+    ]);
+    expect(cfg.proyectos.carpetaVigilada).toBeNull();
+  });
+
+  it('carpeta limpia: puertos fuera de rango al valor por defecto, ocupados listados, trabajadores acotados', async () => {
+    const archivo = await perfilManual(
+      {},
+      {
+        config: {
+          servicios: { nginx: { puerto: 22 }, php: { trabajadores: 500 } },
+          https: { puerto: 444 },
+          mcp: { puerto: 7791 },
+        },
+      },
+    );
+    const d = deps(destino, { puertoLibre: async (p) => p !== 7791 });
+    const vista = await new Perfiles(d).vistaPrevia(archivo);
+    expect(vista.configQuitada.sort()).toEqual(['puerto:https', 'puerto:nginx']);
+    expect(vista.puertosOcupados).toEqual([7791]);
+    await importar(archivo, d);
+    const cfg = await d.leerConfig();
+    expect(cfg.servicios.nginx.puerto).toBe(80);
+    expect(cfg.https.puerto).toBe(443);
+    expect(cfg.servicios.php.trabajadores).toBe(2);
+  });
+
+  it('el esquema acota el puerto de Nginx y los trabajadores de PHP sin mandar el config a corrupto', () => {
+    const c = ConfigSchema.parse({
+      servicios: { nginx: { puerto: 70000 }, php: { trabajadores: 99 } },
+    });
+    expect(c.servicios.nginx.puerto).toBe(80);
+    expect(c.servicios.php.trabajadores).toBe(2);
+  });
+});

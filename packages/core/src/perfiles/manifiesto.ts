@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ErrorWolf } from '../errores';
+import { hostDePreset, PRESETS_SMTP } from '../correo/proveedores';
 import { DOMINIO_VALIDO } from '../hosts/bloque';
 import { enmascararSecretos } from '../patronesSecretos';
 import { validarPhpIni } from '../php/poolSitio';
@@ -308,6 +309,87 @@ export function configParaPerfil(c: Config): Record<string, unknown> {
   const { sitios, ...resto } = c;
   void sitios;
   return sinSecretosPlantilla(resto) as Record<string, unknown>;
+}
+
+/** Puerto global aceptable desde un perfil: el canónico o uno sin privilegios (≥ 1024). */
+const puertoAceptable = (p: number, canonico: number | null): boolean =>
+  (canonico !== null && p === canonico) || (p >= 1024 && p <= 65535);
+
+/** ¿El host es el de un proveedor conocido (con la región de SES, si la lleva)? */
+function hostDePresetConocido(host: string): boolean {
+  return PRESETS_SMTP.some((p) =>
+    p.host.includes('{region}')
+      ? (p.regiones ?? []).some((r) => hostDePreset(p, r) === host)
+      : p.host === host,
+  );
+}
+
+/**
+ * Configuración que llega de un perfil, ya validada con `ConfigSchema`:
+ * - **carpeta con datos** (`actual`): se conserva la de este equipo entera (servicios, puertos,
+ *   herramientas, catálogo, avisos, carpeta vigilada, IA, proveedores SMTP, interfaz); del perfil
+ *   solo llegan los sitios y las instancias nuevas (los pone quien llama);
+ * - **carpeta limpia**: la del perfil, con lo que abre algo hacia afuera apagado (FTP en la red
+ *   local, MCP, receptor de dumps, autoarranques), puertos fuera de rango a su valor por
+ *   defecto, sin la carpeta vigilada (es de otro equipo), sin proveedores de IA con URL propia ni
+ *   SMTP con un host que no es de un proveedor conocido (y nunca `redLocal`). Lo quitado se
+ *   devuelve en `quitados` (`ia:<id>`, `smtp:<id>`, `puerto:<campo>`, `carpeta_vigilada`).
+ */
+export function fusionarConfig(
+  bruta: Record<string, unknown>,
+  actual: Config | null,
+): { config: Config; quitados: string[] } {
+  if (actual) {
+    const c = ConfigSchema.parse(structuredClone(actual));
+    c.sitios = [];
+    return { config: c, quitados: [] };
+  }
+  const quitados: string[] = [];
+  const c = configImportada(bruta);
+  const defecto = ConfigSchema.parse({});
+  const puertos: [string, () => number, (v: number) => void, number | null][] = [
+    ['nginx', () => c.servicios.nginx.puerto, (v) => (c.servicios.nginx.puerto = v), 80],
+    ['https', () => c.https.puerto, (v) => (c.https.puerto = v), 443],
+    ['mcp', () => c.mcp.puerto, (v) => (c.mcp.puerto = v), null],
+    ['ftp', () => c.ftp.puerto, (v) => (c.ftp.puerto = v), null],
+    ['depuracion', () => c.depuracion.puerto, (v) => (c.depuracion.puerto = v), null],
+    ['smtp', () => c.correo.puertoSmtp, (v) => (c.correo.puertoSmtp = v), null],
+  ];
+  const porDefecto: Record<string, number> = {
+    nginx: defecto.servicios.nginx.puerto,
+    https: defecto.https.puerto,
+    mcp: defecto.mcp.puerto,
+    ftp: defecto.ftp.puerto,
+    depuracion: defecto.depuracion.puerto,
+    smtp: defecto.correo.puertoSmtp,
+  };
+  for (const [campo, leer, poner, canonico] of puertos) {
+    if (!puertoAceptable(leer(), canonico)) {
+      poner(porDefecto[campo]!);
+      quitados.push(`puerto:${campo}`);
+    }
+  }
+  if (c.proyectos.carpetaVigilada !== null) {
+    c.proyectos.carpetaVigilada = null;
+    quitados.push('carpeta_vigilada');
+  }
+  c.ia.proveedores = c.ia.proveedores.filter((p) => {
+    if (p.urlBase === null) return true;
+    quitados.push(`ia:${p.id}`);
+    return false;
+  });
+  c.correo.proveedores = c.correo.proveedores
+    .filter((p) => {
+      if (hostDePresetConocido(p.host)) return true;
+      quitados.push(`smtp:${p.id}`);
+      return false;
+    })
+    .map((p) => {
+      const { redLocal, ...resto } = p;
+      void redLocal;
+      return resto;
+    });
+  return { config: c, quitados };
 }
 
 /**

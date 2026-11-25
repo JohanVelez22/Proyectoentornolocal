@@ -17,7 +17,7 @@ import type { Config, IdServicioDatos, Sitio } from '../tipos';
 import { descifrarConFrase } from './cifrado';
 import { sha256Archivo } from './exportar';
 import {
-  configImportada,
+  fusionarConfig,
   entradaPeligrosa,
   leerManifiesto,
   parsearInstanciaPerfil,
@@ -211,6 +211,8 @@ interface PlanInstancia {
 
 interface Plan {
   config: Config | null;
+  /** Configuración fusionada (sin sitios ni instancias nuevas) y lo que se le quitó. */
+  fusion: { config: Config; quitados: string[] };
   sitios: PlanSitio[];
   instancias: PlanInstancia[];
   versiones: VistaPreviaPerfil['versiones'];
@@ -310,10 +312,27 @@ async function planificar(
     sitios.push({ sitio: s, existe, omitido, motivos });
   }
 
-  // Instancias: las que ya existen se conservan; las nuevas, con un puerto libre.
-  const usados = puertosDeConfig(actual);
-  const instancias: PlanInstancia[] = [];
+  const fusion = fusionarConfig(m.config, actual);
   const ocupados: number[] = [];
+  // Carpeta limpia: los puertos globales del perfil deben estar libres (se listan si no).
+  if (!actual) {
+    const f = fusion.config;
+    for (const p of [
+      f.servicios.nginx.puerto,
+      f.https.puerto,
+      f.mcp.puerto,
+      f.ftp.puerto,
+      f.depuracion.puerto,
+      f.correo.puertoSmtp,
+    ]) {
+      if (!(await d.puertoLibre(p))) ocupados.push(p);
+    }
+  }
+
+  // Instancias: las que ya existen se conservan; las nuevas, con un puerto libre.
+  const usados = puertosDeConfig(fusion.config);
+  if (actual) for (const p of puertosDeConfig(actual)) usados.add(p);
+  const instancias: PlanInstancia[] = [];
   for (const i of m.instancias) {
     const id = parsearInstanciaPerfil(i.id);
     if (!id) continue;
@@ -394,6 +413,7 @@ async function planificar(
 
   return {
     config: actual,
+    fusion,
     sitios,
     instancias,
     versiones,
@@ -474,6 +494,7 @@ export class Perfiles {
         puertosOcupados: plan.puertosOcupados,
         ignoradas: p.ignoradas,
         carpetaConDatos: plan.config !== null,
+        configQuitada: plan.fusion.quitados,
         huella: huellaVista(p, plan, o),
       };
     });
@@ -621,19 +642,9 @@ export class Perfiles {
       );
 
     // 4. Configuración: la del perfil (importada) con los sitios y las instancias fusionados.
-    const cfg = configImportada(m.config);
+    // Fusión: con datos, la configuración de este equipo; limpia, la del perfil saneada.
+    const cfg = structuredClone(plan.fusion.config);
     const actual = plan.config;
-    if (actual) {
-      // Lo que ya es de este equipo se conserva: sus instancias (con sus datos) y su interfaz.
-      cfg.ui = actual.ui;
-      for (const id of Object.keys(cfg.servicios.datos) as IdServicioDatos[]) {
-        const previas = actual.servicios.datos[id].instancias;
-        if (previas) cfg.servicios.datos[id].instancias = { ...previas };
-        if (actual.servicios.datos[id].predeterminada) {
-          cfg.servicios.datos[id].predeterminada = actual.servicios.datos[id].predeterminada;
-        }
-      }
-    }
     const instancias: ResultadoImportarPerfil['instancias'] = [];
     for (const i of plan.instancias) {
       if (i.existente) {

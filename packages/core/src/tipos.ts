@@ -446,13 +446,14 @@ export const ConfigSchema = z.object({
       nginx: z
         .object({
           version: z.string().nullable().default(null),
-          puerto: z.number().int().default(80),
+          // Un valor fuera de rango vuelve al de por defecto (nunca manda el config a corrupto).
+          puerto: z.number().int().min(1).max(65535).default(80).catch(80),
         })
         .prefault({}),
       php: z
         .object({
           versiones: z.array(z.string()).default([]),
-          trabajadores: z.number().int().min(1).default(2),
+          trabajadores: z.number().int().min(1).max(16).default(2).catch(2),
         })
         .prefault({}),
       cloudflared: z.object({ version: z.string().nullable().default(null) }).prefault({}),

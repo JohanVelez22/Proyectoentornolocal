@@ -144,6 +144,12 @@ export interface VistaPreviaPerfil {
   ignoradas: number;
   /** La carpeta de datos ya tiene una configuración o sitios. */
   carpetaConDatos: boolean;
+  /**
+   * Lo que no se toma de la configuración del perfil (carpeta limpia): `ia:<id>` (URL propia),
+   * `smtp:<id>` (host que no es de un proveedor conocido o sin usuario), `puerto:<campo>`
+   * (fuera de rango), `carpeta_vigilada`.
+   */
+  configQuitada: string[];
   /** Huella de esta vista previa: `importarPerfil` la exige igual. */
   huella: string;
 }
