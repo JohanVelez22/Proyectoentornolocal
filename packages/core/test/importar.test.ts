@@ -73,14 +73,13 @@ describe('detectarImportables: Laragon', () => {
 });
 
 describe.skipIf(process.platform !== 'win32')('rutas con nombres cortos (8.3) de Windows', () => {
-  it('una raíz dada con nombre corto detecta lo mismo que con el largo (como el %TEMP% del CI)', async () => {
-    const largo = await copiarFixture(
-      'laragon',
-      path.join(await carpetaTemporal('pel-nombre-bastante-largo-'), 'laragon'),
-    );
-    let corto = largo;
+  async function conNombreCorto(
+    programa: 'laragon' | 'xampp',
+  ): Promise<{ corto: string; largo: string } | null> {
+    const base = await carpetaTemporal('pel-nombre-bastante-largo-');
+    const largo = await copiarFixture(programa, path.join(base, programa));
     try {
-      corto = execFileSync(
+      const corto = execFileSync(
         'powershell',
         [
           '-NoProfile',
@@ -89,13 +88,27 @@ describe.skipIf(process.platform !== 'win32')('rutas con nombres cortos (8.3) de
         ],
         { encoding: 'utf8', windowsHide: true },
       ).trim();
+      // El volumen puede no crear nombres cortos: entonces no hay nada que comprobar.
+      return corto.toLowerCase() === largo.toLowerCase() ? null : { corto, largo };
     } catch {
-      return;
+      return null;
     }
-    if (corto.toLowerCase() === largo.toLowerCase()) return; // el volumen no crea nombres cortos
-    const l = await detectarImportables(corto, 'laragon');
+  }
+
+  it('Laragon: una raíz con nombre corto detecta lo mismo que con el largo (como el %TEMP% del CI)', async () => {
+    const r = await conNombreCorto('laragon');
+    if (!r) return;
+    const l = await detectarImportables(r.corto, 'laragon');
     expect(porNombre(l, 'tienda').dominio).toBe('tienda.test');
     expect(l.map((c) => c.nombre).sort()).toEqual(['blog', 'solo', 'tienda']);
+  });
+
+  it('XAMPP: el vhost de localhost (htdocs entera) no es un sitio aunque se escriba con otro nombre', async () => {
+    const r = await conNombreCorto('xampp');
+    if (!r) return;
+    const l = await detectarImportables(r.corto, 'xampp');
+    expect(l.map((c) => c.nombre)).not.toContain('htdocs');
+    expect(porNombre(l, 'miapp').dominio).toBe('miapp.local');
   });
 });
 

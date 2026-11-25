@@ -69,7 +69,7 @@ export async function detectarHerd(ctx: ContextoDetectar): Promise<CandidatoImpo
   for (const carpetaSitios of carpetasDeSitios) {
     const real = await validarCarpetaAjena(ctx, carpetaSitios, carpetaSitios);
     if (real === null) continue;
-    for (const sub of await subcarpetas(ctx, real)) {
+    for (const sub of await subcarpetas(ctx, carpetaSitios)) {
       const carpeta = await validarCarpetaAjena(ctx, sub, sub);
       if (carpeta === null) continue;
       const nombre = path.basename(carpeta).toLowerCase();

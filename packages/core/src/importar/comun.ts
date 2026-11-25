@@ -535,8 +535,11 @@ export async function candidatosDeVhosts(
   },
 ): Promise<CandidatoImportar[]> {
   const lista: CandidatoImportar[] = [];
+  // Por ruta real: el vhost puede escribirla con otro nombre (corto 8.3, /var y /private/var…).
   const base = new Set(
-    [...o.carpetasDeSitios, ctx.raiz].map((c) => path.resolve(c).replace(/\\/g, '/').toLowerCase()),
+    (await Promise.all([...o.carpetasDeSitios, ctx.raiz].map(realOResuelta))).map((c) =>
+      c.replace(/\\/g, '/').toLowerCase(),
+    ),
   );
   for (const v of vhosts) {
     if (lista.length >= MAX_CANDIDATOS) {
@@ -575,7 +578,7 @@ export async function candidatosDeCarpetas(
   const real = await validarCarpetaAjena(ctx, carpetaDeSitios, carpetaDeSitios);
   if (real === null) return [];
   const lista: CandidatoImportar[] = [];
-  for (const sub of await subcarpetas(ctx, real)) {
+  for (const sub of await subcarpetas(ctx, carpetaDeSitios)) {
     const carpeta = await validarCarpetaAjena(ctx, sub, sub);
     if (carpeta === null) continue;
     lista.push(
