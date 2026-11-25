@@ -571,6 +571,17 @@ export const pt: Textos = {
       'auditoria.copia_fallo': 'Não foi possível guardar a cópia da linha: nada foi alterado.',
       'auditoria.motor_no_soportado': 'A auditoria de senhas é para MySQL, MariaDB e PostgreSQL.',
       'auditoria.cancelada': 'Auditoria cancelada.',
+      'auditoria.usuario_invalido': 'O usuário deve ter entre 1 e 256 caracteres.',
+      'auditoria.en_curso': 'Já há uma auditoria em curso: espere que termine ou cancele-a.',
+      'auditoria.base_sistema': 'Uma base do sistema não é auditada: escolha a base de um projeto.',
+      'auditoria.esquema_invalido': 'O esquema não existe nessa base.',
+      'auditoria.fila_cambio': 'A conta mudou entretanto: nada foi redefinido. Tente de novo.',
+      'auditoria.verificacion_fallo':
+        'A base não guardou a senha como esperado: a alteração foi desfeita.',
+      'auditoria.columna_corta':
+        'A coluna do hash admite {largo} caracteres e o novo hash precisa de {necesario}: nada foi alterado. Aumente a coluna.',
+      'auditoria.datos_reales_sin_confirmar':
+        'Esta base tem dados reais de clientes: redefinir uma senha exige a confirmação reforçada.',
       'instantaneas.id_invalido': 'O instantâneo não é válido.',
       'instantaneas.no_encontrada':
         'O instantâneo não foi encontrado; talvez já tenha sido apagado.',
@@ -2795,11 +2806,11 @@ export const pt: Textos = {
         sinMotores: 'Não há um servidor MySQL, MariaDB ou PostgreSQL próprio.',
         revisar: 'Rever',
         revisando: 'A rever…',
-        resumen: (revisadas: number, debiles: number) =>
-          `${revisadas} contas revistas · ${debiles} fracas`,
+        resumen: (r: number, d: number) =>
+          `${r} ${r === 1 ? 'conta revista' : 'contas revistas'} · ${d} ${d === 1 ? 'fraca' : 'fracas'}`,
         sinDebiles: 'Nenhuma conta revista coincide com uma senha muito comum.',
         noRevisables: (n: number) =>
-          `${n} contas não puderam ser revistas (hash vazio ou de um formato que não se revê).`,
+          `${n} ${n === 1 ? 'conta não pôde ser revista' : 'contas não puderam ser revistas'}:`,
         truncado:
           'A revisão parou no limite de 10 000 linhas ou 60 segundos: ficaram contas por rever.',
         usuario: 'Usuário',
@@ -2811,6 +2822,26 @@ export const pt: Textos = {
         },
         restablecer: 'Redefinir',
         mas: (n: number) => `e mais ${n} (mostram-se as primeiras 200)`,
+        esquema: 'Esquema (PostgreSQL)',
+        esquemaMarcador: 'public',
+        cancelar: 'Cancelar',
+        cancelando: 'A cancelar…',
+        cancelada: 'Auditoria cancelada.',
+        progreso: (a: number, b: number) => `Revistas ${a} de ${b}`,
+        tiposNoRevisables: {
+          vacio: 'hash vazio',
+          md5crypt: 'md5crypt ($1$)',
+          sha256crypt: 'sha256crypt ($5$)',
+          sha512crypt: 'sha512crypt ($6$)',
+          scrypt: 'scrypt',
+          argon2: 'Argon2 (não disponível neste computador ou com parâmetros acima do limite)',
+          bcrypt_otro: 'bcrypt com custo fora do intervalo ou variante $2x$',
+          pbkdf2_otro: 'PBKDF2 com parâmetros acima do limite',
+          ldap: 'formato LDAP ({SHA}…)',
+          otro: 'formato desconhecido',
+        },
+        falsoPositivo:
+          'Um valor de 32 ou 40 caracteres hexadecimais é tomado por md5 ou sha1, mas pode ser outra coisa (um token, por exemplo). Se a coluna não guarda senhas, o resultado não serve.',
       },
       restablecer: {
         titulo: (u: string) => `Redefinir a senha de ${u}`,
@@ -2820,8 +2851,7 @@ export const pt: Textos = {
         sentencia: 'Vai ser executado (os valores vão à parte e não se mostram)',
         formatoActual: (f: string) => `Formato atual: ${f}`,
         cambiaFormato:
-          'Este formato é fraco: a conta passará a bcrypt. A aplicação tem de aceitar hashes bcrypt para se poder entrar.',
-        mantener: 'Manter o formato atual (menos seguro)',
+          'A conta passará a bcrypt: a aplicação tem de o poder verificar (por exemplo com password_verify); caso contrário, ninguém entrará com essa conta.',
         nueva: 'Nova senha',
         generar: 'Gerar uma',
         mostrar: 'Mostrar',
@@ -2832,9 +2862,20 @@ export const pt: Textos = {
         cancelar: 'Cancelar',
         cerrar: 'Fechar',
         hecho: 'Senha redefinida.',
-        copiaFila: 'Cópia da linha (só você pode lê-la):',
+        copiaFila: 'Cópia da linha (identificação e hash anterior, guardada 30 dias):',
         instantanea: 'Instantâneo da base tirado antes:',
         instantaneaAyuda: 'Pode voltar a ele em Bases de dados › Instantâneos.',
+        aBcrypt: 'Passar para bcrypt: só se a aplicação usa password_verify ou equivalente',
+        avisoLegado:
+          'Este hash é md5 ou sha1 sem sal e mantém esse formato. Se a aplicação guarda o sal à parte (noutra coluna ou numa constante), o hash não pode ser reproduzido e a nova senha não serviria para entrar.',
+        datosReales: {
+          titulo: 'Base com dados reais',
+          texto:
+            'Esta base é de um site marcado com dados reais de clientes: redefinir uma senha altera uma conta de verdade.',
+          casilla: 'Entendo que são dados reais e quero redefinir esta senha',
+        },
+        copiaSinRestringir:
+          'Não foi possível limitar essa cópia ao usuário deste computador: verifique as permissões da pasta.',
       },
     },
   },

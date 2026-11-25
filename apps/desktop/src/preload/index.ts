@@ -90,9 +90,20 @@ const api: ApiEntorno = {
   },
   auditoriaClaves: {
     auditar: (motor, base, seleccion) => invocar('auditoriaClaves.auditar', motor, base, seleccion),
-    vistaPrevia: (motor, base, seleccion, usuario, mantenerFormato) =>
-      invocar('auditoriaClaves.vistaPrevia', motor, base, seleccion, usuario, mantenerFormato),
-    restablecer: (motor, base, seleccion, usuario, claveNueva, usuarioEscrito, mantenerFormato) =>
+    progreso: () => invocar('auditoriaClaves.progreso'),
+    cancelar: () => invocar('auditoriaClaves.cancelar'),
+    vistaPrevia: (motor, base, seleccion, usuario, aBcrypt) =>
+      invocar('auditoriaClaves.vistaPrevia', motor, base, seleccion, usuario, aBcrypt),
+    restablecer: (
+      motor,
+      base,
+      seleccion,
+      usuario,
+      claveNueva,
+      usuarioEscrito,
+      aBcrypt,
+      confirmarDatosReales,
+    ) =>
       invocar(
         'auditoriaClaves.restablecer',
         motor,
@@ -101,7 +112,8 @@ const api: ApiEntorno = {
         usuario,
         claveNueva,
         usuarioEscrito,
-        mantenerFormato,
+        aBcrypt,
+        confirmarDatosReales,
       ),
   },
   pgvector: {

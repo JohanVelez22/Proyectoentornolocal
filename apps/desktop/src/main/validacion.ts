@@ -1394,10 +1394,14 @@ export function seleccionAuditoria(v: unknown): {
   tabla: string;
   columnaUsuario: string;
   columnaHash: string;
+  esquema?: string;
 } {
   const o = objetoPlano<Record<string, unknown>>(v, 'selección');
-  soloClaves(o, ['tabla', 'columnaUsuario', 'columnaHash'], 'selección');
+  soloClaves(o, ['tabla', 'columnaUsuario', 'columnaHash', 'esquema'], 'selección');
   return {
+    ...(o['esquema'] === undefined
+      ? {}
+      : { esquema: textoAcotado(o['esquema'], 1, 128, 'esquema') }),
     tabla: textoAcotado(o['tabla'], 1, 128, 'tabla'),
     columnaUsuario: textoAcotado(o['columnaUsuario'], 1, 128, 'columna del usuario'),
     columnaHash: textoAcotado(o['columnaHash'], 1, 128, 'columna del hash'),

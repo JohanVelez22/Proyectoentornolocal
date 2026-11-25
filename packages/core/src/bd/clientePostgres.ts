@@ -574,6 +574,77 @@ export class ClientePostgres {
     );
   }
 
+  /**
+   * Rol temporal de la auditoría de contraseñas (D20): LOGIN sin ningún privilegio de
+   * administración, que no hereda nada y que no es dueño de nada. Solo puede conectarse a esta
+   * base, usar el esquema y leer la tabla (y, para restablecer, cambiar la columna del hash). Los
+   * disparadores de la tabla corren con sus permisos, no con los del administrador. Vence en una
+   * hora (VALID UNTIL) y su clave viaja ya hasheada (SCRAM-SHA-256). Se quita con
+   * `retirarRolAuditoria`; `limpiarTemporales` recoge el que quede.
+   */
+  async crearRolAuditoria(o: {
+    base: string;
+    esquema: string;
+    tabla: string;
+    columnaHash: string;
+    escritura: boolean;
+  }): Promise<{ usuario: string; clave: string }> {
+    validarNombrePg(o.base);
+    const usuario = nombreTemporal();
+    const clave = randomBytes(18).toString('hex');
+    const vence = new Date(Date.now() + VIDA_TEMPORAL_MS).toISOString();
+    const q = (n: string): string => `"${n.replace(/"/g, '""')}"`;
+    const rol = q(usuario);
+    const tabla = `${q(o.esquema)}.${q(o.tabla)}`;
+    try {
+      await this.filas(
+        `CREATE ROLE ${rol} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS ` +
+          `PASSWORD '${hashScramSha256(clave)}' VALID UNTIL '${vence}'`,
+      );
+      await this.filas(`GRANT CONNECT ON DATABASE ${q(o.base)} TO ${rol}`);
+      await this.filas(`GRANT USAGE ON SCHEMA ${q(o.esquema)} TO ${rol}`);
+      await this.filas(`GRANT SELECT ON TABLE ${tabla} TO ${rol}`);
+      if (o.escritura) {
+        await this.filas(`GRANT UPDATE (${q(o.columnaHash)}) ON TABLE ${tabla} TO ${rol}`);
+      }
+    } catch (e) {
+      await this.retirarRolAuditoria({ ...o, usuario }).catch(() => undefined);
+      throw traducir(e, `crear un rol temporal de lectura para ${o.base}`);
+    }
+    return { usuario, clave };
+  }
+
+  /** Quita los permisos del rol de auditoría, sus restos en esta base y el rol mismo. */
+  async retirarRolAuditoria(o: {
+    usuario: string;
+    base: string;
+    esquema: string;
+    tabla: string;
+  }): Promise<void> {
+    if (!NOMBRE_TEMPORAL.test(o.usuario)) {
+      throw new Error('Solo se borran los roles temporales de WolfCore Dev.');
+    }
+    validarNombrePg(o.base);
+    const q = (n: string): string => `"${n.replace(/"/g, '""')}"`;
+    const rol = q(o.usuario);
+    const pasos = [
+      `REVOKE ALL ON TABLE ${q(o.esquema)}.${q(o.tabla)} FROM ${rol}`,
+      `REVOKE ALL ON SCHEMA ${q(o.esquema)} FROM ${rol}`,
+      `REVOKE ALL ON DATABASE ${q(o.base)} FROM ${rol}`,
+      `DROP OWNED BY ${rol}`,
+      `DROP ROLE IF EXISTS ${rol}`,
+    ];
+    let fallo: unknown;
+    for (const p of pasos) {
+      try {
+        await this.filas(p);
+      } catch (e) {
+        fallo ??= e;
+      }
+    }
+    if (fallo) throw fallo;
+  }
+
   /** Borra los roles `wolf_tmp_*` vencidos que dejó una restauración interrumpida. */
   async limpiarTemporales(): Promise<number> {
     const admin = this.datos?.usuario;

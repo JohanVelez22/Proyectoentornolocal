@@ -203,6 +203,7 @@ import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
 import { leerHuellaWordpress } from './proyectos/pasos/descargarPlantilla';
 import { generadorPorTipo, Plantillas } from './proyectos/plantillas';
 import { AuditoriaClaves } from './bd/auditoriaClaves';
+import { baseDeDatosReales } from './bd/auditoriaClaves/datosReales';
 import { Instantaneas } from './bd/instantaneas';
 import { CerrojoBases } from './bd/cerrojoBases';
 import { asignarPuertoProxy, datosAlCrear } from './proyectos/pasos/sitio';
@@ -988,6 +989,12 @@ export class Nucleo {
       abrir: (objetivo, base, modo, plazoMs) => bd.abrirConsulta(objetivo, base, modo, plazoMs),
       instantaneas,
       cerrojo: cerrojoBases,
+      esDatosReales: (instancia, base) =>
+        baseDeDatosReales(
+          { sitios: () => sitios.listar(), baseDe: (c) => leerBaseDelProyecto(c) },
+          instancia,
+          base,
+        ),
       restringir: (ruta) => plat.restringirAlUsuario(ruta),
     });
     const lanzar = o.lanzar ?? lanzadorPorDefecto;

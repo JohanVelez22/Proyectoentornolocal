@@ -869,7 +869,9 @@ const TABLA: Record<RutaIpc, Manejador> = {
       ...seleccionAuditoria(seleccion),
     });
   },
-  'auditoriaClaves.vistaPrevia': (n, _s, motor, base, seleccion, usuario, mantenerFormato) => {
+  'auditoriaClaves.progreso': (n) => n.auditoriaClaves.progreso(),
+  'auditoriaClaves.cancelar': (n) => n.auditoriaClaves.cancelar(),
+  'auditoriaClaves.vistaPrevia': (n, _s, motor, base, seleccion, usuario, aBcrypt) => {
     const { objetivo, motor: m } = objetivoSql(motor);
     return n.auditoriaClaves.vistaPreviaRestablecer(
       {
@@ -878,7 +880,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
         ...seleccionAuditoria(seleccion),
         usuario: usuarioAuditoria(usuario),
       },
-      mantenerFormato === undefined ? false : booleano(mantenerFormato, 'mantenerFormato'),
+      aBcrypt === undefined ? false : booleano(aBcrypt, 'aBcrypt'),
     );
   },
   'auditoriaClaves.restablecer': (
@@ -890,7 +892,8 @@ const TABLA: Record<RutaIpc, Manejador> = {
     usuario,
     claveNueva,
     escrito,
-    mantenerFormato,
+    aBcrypt,
+    confirmarDatosReales,
   ) => {
     const { objetivo, motor: m } = objetivoSql(motor);
     const u = usuarioAuditoria(usuario);
@@ -906,9 +909,10 @@ const TABLA: Record<RutaIpc, Manejador> = {
           usuario: u,
           claveNueva: clave,
           confirmado: confirmadoRestablecer(escrito, u),
-          ...(mantenerFormato === undefined
+          ...(aBcrypt === undefined ? {} : { aBcrypt: booleano(aBcrypt, 'aBcrypt') }),
+          ...(confirmarDatosReales === undefined
             ? {}
-            : { mantenerFormato: booleano(mantenerFormato, 'mantenerFormato') }),
+            : { confirmarDatosReales: booleano(confirmarDatosReales, 'confirmarDatosReales') }),
         }),
       quitarClave,
     );

@@ -1,13 +1,29 @@
 import * as crypto from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import { hash as bcryptHash } from 'bcryptjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuditoriaClaves } from '../src/bd/auditoriaClaves';
 import { auditar, type DepsAuditar } from '../src/bd/auditoriaClaves/auditar';
 import { CONTRASENAS_COMUNES } from '../src/bd/auditoriaClaves/comunes';
-import { coincide, formatoDe, hashearNueva } from '../src/bd/auditoriaClaves/hashes';
-import type { ConsultaSql } from '../src/bd/auditoriaClaves/tablas';
+import { baseDeDatosReales } from '../src/bd/auditoriaClaves/datosReales';
+import {
+  barajar,
+  coincide,
+  coincideAlguna,
+  formatoDe,
+  hashearNueva,
+  tipoNoRevisable,
+} from '../src/bd/auditoriaClaves/hashes';
+import { crearPool } from '../src/bd/auditoriaClaves/poolBcrypt';
+import { TablasSql, type ConsultaSql } from '../src/bd/auditoriaClaves/tablas';
 import { BasesDeDatos } from '../src/bd/basesDeDatos';
 import { CerrojoBases } from '../src/bd/cerrojoBases';
 import { ErrorWolf } from '../src/errores';
@@ -54,10 +70,24 @@ describe('hashes: formatoDe y coincide', () => {
     expect(formatoDe('a'.repeat(5000))).toBe('desconocido');
   });
 
+  it('$2x$ no se trata como bcrypt', async () => {
+    const h = await bc('x');
+    expect(formatoDe(h.replace('$2b$', '$2x$'))).toBe('desconocido');
+    expect(await coincide(h.replace('$2b$', '$2x$'), 'x')).toBe(false);
+    expect(tipoNoRevisable(h.replace('$2b$', '$2x$'))).toBe('bcrypt_otro');
+  });
+
   it('bcrypt con un costo fuera de rango o PBKDF2 con demasiadas iteraciones no se revisan', async () => {
     const alto = (await bc('x')).replace('$04$', '$31$');
     expect(formatoDe(alto)).toBe('desconocido');
     expect(formatoDe(django('x', 10, 'abc').replace('$10$', '$99999999$'))).toBe('desconocido');
+  });
+
+  it('PBKDF2: una derivada de más de 64 bytes no se acepta', () => {
+    const largo = crypto.pbkdf2Sync('x', 'sal', 10, 65, 'sha256').toString('base64');
+    expect(formatoDe(`pbkdf2_sha256$10$sal$${largo}`)).toBe('desconocido');
+    const ok = crypto.pbkdf2Sync('x', 'sal', 10, 64, 'sha256').toString('base64');
+    expect(formatoDe(`pbkdf2_sha256$10$sal$${ok}`)).toBe('django-pbkdf2');
   });
 
   it('argon2 solo se reconoce si node:crypto lo ofrece', () => {
@@ -71,7 +101,22 @@ describe('hashes: formatoDe y coincide', () => {
       expect(await coincide(h, 'hunter2')).toBe(true);
       expect(await coincide(h, 'hunter3')).toBe(false);
     }
+    expect(await coincide(md5('hunter2').toUpperCase(), 'hunter2')).toBe(true);
     expect(await coincide('no-es-un-hash', 'x')).toBe(false);
+  });
+
+  it('phpass (WordPress): vector conocido, y se reproduce con la sal nueva', async () => {
+    const wp = '$P$9IQRaTwmfeRo7ud9Fh4E2PdI0S3r.L0';
+    expect(formatoDe(wp)).toBe('phpass');
+    expect(await coincide(wp, 'test12345')).toBe(true);
+    expect(await coincide(wp, 'test12346')).toBe(false);
+    const n = await hashearNueva(wp, NUEVA);
+    expect(n.formato).toBe('phpass');
+    expect(n.hash.startsWith('$P$9')).toBe(true);
+    expect(n.hash).not.toBe(wp);
+    expect(await coincide(n.hash, NUEVA)).toBe(true);
+    // Un costo de 2^20 vueltas no se acepta.
+    expect(formatoDe('$P$' + 'I' + wp.slice(4))).toBe('desconocido');
   });
 
   it.skipIf(!tieneArgon2)('argon2: coincide y se reproduce con los mismos parámetros', async () => {
@@ -121,21 +166,26 @@ describe('hashes: hashearNueva (mismo formato y costo)', () => {
     expect(await coincide(n.hash, NUEVA)).toBe(true);
   });
 
-  it('PBKDF2 de Django: mismas iteraciones y digest, sal nueva', async () => {
+  it('PBKDF2 de Django: mismas iteraciones y digest, sal nueva de 22 caracteres', async () => {
     const viejo = django('a', 1234);
     const n = await hashearNueva(viejo, NUEVA);
     expect(n.hash.startsWith('pbkdf2_sha256$1234$')).toBe(true);
-    expect(n.hash.split('$')[2]).not.toBe('sal1234abcde');
+    const sal = n.hash.split('$')[2]!;
+    expect(sal).toMatch(/^[A-Za-z0-9]{22}$/);
     expect(await coincide(n.hash, NUEVA)).toBe(true);
   });
 
-  it('md5 y sha1 pasan a bcrypt con aviso, o se mantienen si se pide', async () => {
+  it('md5 y sha1 conservan su formato por omisión (y las mayúsculas del hex)', async () => {
     const a = await hashearNueva(md5('a'), NUEVA);
+    expect(a).toMatchObject({ formato: 'md5', cambiaFormato: false, hash: md5(NUEVA) });
+    const b = await hashearNueva(sha1('a').toUpperCase(), NUEVA);
+    expect(b.hash).toBe(sha1(NUEVA).toUpperCase());
+  });
+
+  it('md5 pasa a bcrypt solo si se pide', async () => {
+    const a = await hashearNueva(md5('a'), NUEVA, { aBcrypt: true });
     expect(a).toMatchObject({ formato: 'bcrypt', cambiaFormato: true });
     expect(await coincide(a.hash, NUEVA)).toBe(true);
-    const b = await hashearNueva(sha1('a'), NUEVA, { mantenerFormato: true });
-    expect(b).toMatchObject({ formato: 'sha1', cambiaFormato: false });
-    expect(b.hash).toBe(sha1(NUEVA));
   });
 
   it('formato desconocido o clave de más de 72 bytes: error con código', async () => {
@@ -144,20 +194,95 @@ describe('hashes: hashearNueva (mismo formato y costo)', () => {
   });
 });
 
-describe('la lista de contraseñas comunes', () => {
+describe('barajar (I2) y la lista de contraseñas comunes', () => {
   it('tiene 200 entradas distintas', () => {
     expect(CONTRASENAS_COMUNES).toHaveLength(200);
     expect(new Set(CONTRASENAS_COMUNES).size).toBe(200);
   });
+
+  it('barajar conserva los elementos y el orden no es fijo', () => {
+    const a = barajar(CONTRASENAS_COMUNES);
+    const b = barajar(CONTRASENAS_COMUNES);
+    expect([...a].sort()).toEqual([...CONTRASENAS_COMUNES].sort());
+    expect(a).not.toEqual(b);
+    expect(a).not.toEqual([...CONTRASENAS_COMUNES]);
+  });
+
+  it('auditar entrega a cada hash una lista mezclada distinta', async () => {
+    const f = baseFalsa('mysql', await tablaUsuarios());
+    const vistas: (readonly string[])[] = [];
+    const dep: DepsAuditar = {
+      abrir: async () => f.consulta,
+      coincide: async (_h, claves) => {
+        vistas.push(claves);
+        return false;
+      },
+    };
+    await auditar(dep, OPC);
+    expect(vistas.length).toBeGreaterThan(2);
+    expect(vistas.every((v) => v.length === 200)).toBe(true);
+    expect(new Set(vistas.map((v) => v.join('|'))).size).toBe(vistas.length);
+  });
+});
+
+describe('poolBcrypt (hilos de trabajo)', () => {
+  it('compara fuera del hilo principal y solo devuelve sí o no', async () => {
+    const pool = crearPool(2);
+    expect(pool).not.toBeNull();
+    try {
+      const h = await bc('letmein');
+      expect(await pool!.comparar(h, ['uno', 'letmein', 'tres'])).toBe(true);
+      expect(await pool!.comparar(h, ['uno', 'dos'])).toBe(false);
+      const todos = await Promise.all(
+        Array.from({ length: 6 }, (_v, i) => pool!.comparar(h, i % 2 ? ['letmein'] : ['no'])),
+      );
+      expect(todos).toEqual([false, true, false, true, false, true]);
+    } finally {
+      await pool!.cerrar();
+    }
+  });
+
+  it('cerrar rechaza lo pendiente y lo nuevo', async () => {
+    const pool = crearPool(1)!;
+    const h = await bc('x', 10);
+    const pendiente = codigo(pool.comparar(h, CONTRASENAS_COMUNES));
+    await pool.cerrar();
+    expect(await pendiente).toBe('auditoria.cancelada');
+    expect(await codigo(pool.comparar(h, ['x']))).toBe('auditoria.cancelada');
+  });
+
+  it('coincideAlguna usa el pool para bcrypt', async () => {
+    const pool = crearPool(1)!;
+    try {
+      const h = await bc('letmein');
+      expect(await coincideAlguna(h, ['a', 'letmein'], { pool })).toBe(true);
+      expect(await coincideAlguna(h, ['a', 'b'], { pool })).toBe(false);
+    } finally {
+      await pool.cerrar();
+    }
+  });
+});
+
+describe('tipoNoRevisable', () => {
+  it('nombra el tipo sin devolver el hash', () => {
+    expect(tipoNoRevisable(null)).toBe('vacio');
+    expect(tipoNoRevisable('')).toBe('vacio');
+    expect(tipoNoRevisable('$1$abc$def')).toBe('md5crypt');
+    expect(tipoNoRevisable('$6$abc$def')).toBe('sha512crypt');
+    expect(tipoNoRevisable('{SHA}abc')).toBe('ldap');
+    expect(tipoNoRevisable('cualquier cosa')).toBe('otro');
+  });
 });
 
 // ---------------------------------------------------------------------------------------------
-// Base falsa (MySQL en memoria) para auditar y restablecer
+// Base falsa (en memoria) para auditar y restablecer
 // ---------------------------------------------------------------------------------------------
 
 interface TablaFalsa {
   columnas: string[];
   filas: Record<string, unknown>[];
+  largos?: Record<string, number>;
+  pk?: string[];
 }
 
 interface Falsa {
@@ -168,6 +293,10 @@ interface Falsa {
   cerrada: boolean;
   /** Filas que dice haber bloqueado el `SELECT … FOR UPDATE` (carrera simulada). */
   bloqueo: number | null;
+  /** El UPDATE no cambia nada (el servidor recortó o ignoró el valor). */
+  ignoraUpdate: boolean;
+  /** Cambia el hash de la fila justo antes del bloqueo (otro proceso escribió). */
+  cambiaAntes: (() => void) | null;
 }
 
 function baseFalsa(motor: ConsultaSql['motor'], tablas: Record<string, TablaFalsa>): Falsa {
@@ -177,24 +306,33 @@ function baseFalsa(motor: ConsultaSql['motor'], tablas: Record<string, TablaFals
     tablas: new Map(Object.entries(tablas)),
     cerrada: false,
     bloqueo: null,
+    ignoraUpdate: false,
+    cambiaAntes: null,
   };
   const citado = (s: string): string => s.replace(/[`"]/g, '');
   f.consulta = {
     motor,
     async consultar(sql, params = []) {
       f.sql.push({ sql, params });
+      if (sql.includes('information_schema.schemata')) {
+        return params[0] === 'public' || params[0] === 'ventas' ? [{ s: params[0] }] : [];
+      }
       if (sql.includes('information_schema.tables')) {
         const t = f.tablas.has(String(params[1])) ? String(params[1]) : null;
         return t ? [{ t }] : [];
       }
       if (sql.includes('information_schema.columns')) {
-        return (f.tablas.get(String(params[1]))?.columnas ?? []).map((c) => ({ c }));
+        const t = f.tablas.get(String(params[1]));
+        return (t?.columnas ?? []).map((c) => ({ c, l: t?.largos?.[c] ?? null }));
+      }
+      if (sql.includes('key_column_usage')) {
+        return (f.tablas.get(String(params[1]))?.pk ?? []).map((c) => ({ c }));
       }
       const tabla = (): TablaFalsa => {
         const m = /FROM (\S+)\.(\S+)/.exec(sql)!;
         return f.tablas.get(citado(m[2]!))!;
       };
-      const col = (): string => citado(/WHERE (\S+) =/.exec(sql)![1]!);
+      const col = (): string => citado(/WHERE (\S+)/.exec(sql)![1]!);
       if (/^SELECT .* AS u, .* AS h FROM/.test(sql)) {
         const m = /SELECT (\S+) AS u, (\S+) AS h/.exec(sql)!;
         const n = Number(/LIMIT (\d+)/.exec(sql)![1]);
@@ -207,16 +345,21 @@ function baseFalsa(motor: ConsultaSql['motor'], tablas: Record<string, TablaFals
           .filas.filter((r) => r[col()] === params[0])
           .slice(0, 2);
       }
-      if (sql.includes('FOR UPDATE')) {
-        const n = tabla().filas.filter((r) => r[col()] === params[0]).length;
-        return Array.from({ length: f.bloqueo ?? Math.min(n, 3) }, () => ({ n: 1 }));
+      if (/^SELECT \S+ AS h FROM/.test(sql)) {
+        const ch = citado(/^SELECT (\S+) AS h/.exec(sql)![1]!);
+        if (sql.includes('FOR UPDATE')) f.cambiaAntes?.();
+        const filas = tabla().filas.filter((r) => r[col()] === params[0]);
+        const n = sql.includes('FOR UPDATE') && f.bloqueo !== null ? f.bloqueo : filas.length;
+        return Array.from({ length: Math.min(n, 3) }, (_v, i) => ({ h: filas[i]?.[ch] ?? 'x' }));
       }
       if (sql.startsWith('UPDATE')) {
-        const m = /UPDATE \S+\.(\S+) SET (\S+) = \S+ WHERE (\S+) =/.exec(sql)!;
+        const m = /UPDATE \S+\.(\S+) SET (\S+) = \S+ WHERE (\S+)/.exec(sql)!;
         const t = f.tablas.get(citado(m[1]!))!;
-        const fila = t.filas.find((r) => r[citado(m[3]!)] === params[1])!;
-        fila[citado(m[2]!)] = params[0];
-        return motor === 'postgresql' ? [{ n: 1 }] : [];
+        const fila = t.filas.find(
+          (r) => r[citado(m[3]!)] === params[1] && r[citado(m[2]!)] === params[2],
+        );
+        if (fila && !f.ignoraUpdate) fila[citado(m[2]!)] = params[0];
+        return motor === 'postgresql' && fila ? [{ n: 1 }] : [];
       }
       return [];
     },
@@ -236,7 +379,15 @@ beforeEach(async () => {
 });
 
 /** Ordena lo que pasa: instantánea, copia y escritura, para comprobar el orden. */
-function montar(f: Falsa, extra: { tomarFalla?: boolean } = {}) {
+function montar(
+  f: Falsa,
+  extra: {
+    tomarFalla?: boolean;
+    reales?: boolean | 'error';
+    restringir?: (r: string) => Promise<boolean>;
+    reloj?: () => Date;
+  } = {},
+) {
   const orden: string[] = [];
   const original = f.consulta.consultar;
   f.consulta.consultar = async (sql, params) => {
@@ -261,7 +412,12 @@ function montar(f: Falsa, extra: { tomarFalla?: boolean } = {}) {
       },
     },
     cerrojo: new CerrojoBases(),
-    reloj: () => new Date('2026-11-25T10:30:00Z'),
+    esDatosReales: async () => {
+      if (extra.reales === 'error') throw new Error('no se pudo leer');
+      return extra.reales === true;
+    },
+    ...(extra.restringir ? { restringir: extra.restringir } : {}),
+    reloj: extra.reloj ?? (() => new Date('2026-11-25T10:30:00Z')),
   };
   return { deps, orden, abiertas, svc: new AuditoriaClaves(deps) };
 }
@@ -278,6 +434,7 @@ async function tablaUsuarios(): Promise<Record<string, TablaFalsa>> {
   return {
     usuarios: {
       columnas: ['id', 'email', 'clave'],
+      pk: ['id'],
       filas: [
         { id: 1, email: 'ana@x.test', clave: await bc('password') },
         { id: 2, email: 'luis@x.test', clave: md5('Zq9!vN2#rT7@kL4$') },
@@ -304,6 +461,12 @@ describe('auditar', () => {
     ]);
     expect(r.revisadas).toBe(5);
     expect(r.noRevisables).toBe(2);
+    expect(r.tiposNoRevisables).toEqual(
+      expect.arrayContaining([
+        { tipo: 'vacio', cantidad: 1 },
+        { tipo: 'otro', cantidad: 1 },
+      ]),
+    );
     expect(r.truncado).toBe(false);
     expect(f.cerrada).toBe(true);
   });
@@ -313,7 +476,13 @@ describe('auditar', () => {
     const { svc } = montar(f);
     const r = await svc.auditar(OPC);
     for (const d of r.debiles) expect(Object.keys(d).sort()).toEqual(['motivo', 'usuario']);
-    expect(Object.keys(r).sort()).toEqual(['debiles', 'noRevisables', 'revisadas', 'truncado']);
+    expect(Object.keys(r).sort()).toEqual([
+      'debiles',
+      'noRevisables',
+      'revisadas',
+      'tiposNoRevisables',
+      'truncado',
+    ]);
     const json = JSON.stringify(r);
     for (const c of CONTRASENAS_COMUNES) expect(json).not.toContain(`"${c}"`);
     expect(json).not.toContain('password');
@@ -374,7 +543,24 @@ describe('auditar', () => {
     }
   });
 
-  it('PostgreSQL: identificadores entre comillas dobles y parámetros $n', async () => {
+  it('rechaza las bases del sistema sin abrir ninguna conexión', async () => {
+    const f = baseFalsa('mysql', await tablaUsuarios());
+    const { svc, abiertas } = montar(f);
+    for (const base of ['mysql', 'sys', 'performance_schema', 'information_schema', 'MySQL']) {
+      expect(await codigo(svc.auditar({ ...OPC, base }))).toBe('auditoria.base_sistema');
+      expect(
+        await codigo(
+          svc.restablecer({ ...OPC, base, usuario: 'a', claveNueva: NUEVA, confirmado: true }),
+        ),
+      ).toBe('auditoria.base_sistema');
+    }
+    expect(
+      await codigo(svc.auditar({ ...OPC, instancia: 'postgresql' as never, base: 'postgres' })),
+    ).toBe('auditoria.base_sistema');
+    expect(abiertas).toEqual([]);
+  });
+
+  it('PostgreSQL (I1): identificadores calificados, operador y tipo del catálogo', async () => {
     const f = baseFalsa('postgresql', await tablaUsuarios());
     const { svc } = montar(f);
     await svc.auditar({ ...OPC, instancia: 'postgresql' as never });
@@ -382,16 +568,31 @@ describe('auditar', () => {
     expect(lectura.sql).toContain('"public"."usuarios"');
     expect(lectura.sql).toContain('"email" AS u');
     const cat = f.sql.find((q) => q.sql.includes('information_schema.tables'))!;
-    expect(cat.sql).toContain('$1');
+    expect(cat.sql).toContain('$1::pg_catalog.text');
+    expect(cat.sql).toContain('OPERATOR(pg_catalog.=)');
     expect(cat.params).toEqual(['public', 'usuarios']);
+    // Ninguna comparación con `=` desnudo en las consultas al catálogo ni a la tabla.
+    for (const q of f.sql.filter((x) => x.sql.includes(' WHERE '))) {
+      expect(q.sql.replace(/OPERATOR\(pg_catalog\.=\)/g, '')).not.toMatch(/\s=\s/);
+    }
+  });
+
+  it('PostgreSQL: esquema elegido, validado contra el catálogo', async () => {
+    const tablas = await tablaUsuarios();
+    const f = baseFalsa('postgresql', tablas);
+    const { svc } = montar(f);
+    await svc.auditar({ ...OPC, instancia: 'postgresql' as never, esquema: 'ventas' });
+    expect(f.sql.find((q) => / AS u, /.test(q.sql))!.sql).toContain('"ventas"."usuarios"');
+    for (const esquema of ['pg_catalog', 'information_schema', 'no_existe', '']) {
+      expect(await codigo(svc.auditar({ ...OPC, instancia: 'postgresql' as never, esquema }))).toBe(
+        'auditoria.esquema_invalido',
+      );
+    }
   });
 
   it('tope de filas: marca truncado y revisa solo hasta el tope', async () => {
     const f = baseFalsa('mysql', await tablaUsuarios());
-    const dep: DepsAuditar = {
-      abrir: async () => f.consulta,
-      maxFilas: 2,
-    };
+    const dep: DepsAuditar = { abrir: async () => f.consulta, maxFilas: 2 };
     const r = await auditar(dep, OPC);
     expect(r.truncado).toBe(true);
     expect(r.revisadas + r.noRevisables).toBeLessThanOrEqual(2);
@@ -413,7 +614,25 @@ describe('auditar', () => {
     };
     const r = await auditar(dep, OPC);
     expect(r.truncado).toBe(true);
-    expect(r.revisadas).toBe(0);
+    expect(r.revisadas).toBeLessThan(5);
+  });
+
+  it('revisa primero los formatos baratos y avisa del avance', async () => {
+    const f = baseFalsa('mysql', await tablaUsuarios());
+    const formatos: string[] = [];
+    const avances: { revisadas: number; total: number }[] = [];
+    const dep: DepsAuditar = {
+      abrir: async () => f.consulta,
+      coincide: async (hash) => {
+        formatos.push(formatoDe(hash));
+        return false;
+      },
+    };
+    await auditar(dep, OPC, undefined, (p) => avances.push(p));
+    expect(formatos.indexOf('bcrypt')).toBeGreaterThan(formatos.indexOf('md5'));
+    expect(formatos.indexOf('bcrypt')).toBeGreaterThan(formatos.indexOf('django-pbkdf2'));
+    expect(avances[0]).toEqual({ revisadas: 0, total: 5 });
+    expect(avances.at(-1)).toEqual({ revisadas: 5, total: 5 });
   });
 
   it('se puede cancelar', async () => {
@@ -423,6 +642,33 @@ describe('auditar', () => {
     c.abort();
     expect(await codigo(svc.auditar(OPC, c.signal))).toBe('auditoria.cancelada');
     expect(f.cerrada).toBe(true);
+  });
+
+  it('una sola auditoría a la vez; progreso y cancelar llegan a la que corre', async () => {
+    const f = baseFalsa('mysql', await tablaUsuarios());
+    let soltar!: () => void;
+    const espera = new Promise<void>((ok) => (soltar = ok));
+    const { deps } = montar(f);
+    const svc = new AuditoriaClaves({
+      ...deps,
+      coincide: async () => {
+        await espera;
+        return false;
+      },
+    });
+    expect(svc.progreso()).toBeNull();
+    expect(svc.cancelar()).toBe(false);
+    const primera = svc.auditar(OPC);
+    primera.catch(() => undefined);
+    await vi.waitFor(() => expect(svc.progreso()?.total).toBe(5));
+    expect(await codigo(svc.auditar(OPC))).toBe('auditoria.en_curso');
+    expect(svc.cancelar()).toBe(true);
+    soltar();
+    expect(await codigo(primera)).toBe('auditoria.cancelada');
+    expect(svc.progreso()).toBeNull();
+    // Libre otra vez.
+    const r = await new AuditoriaClaves({ ...deps, coincide: async () => false }).auditar(OPC);
+    expect(r.revisadas).toBe(5);
   });
 });
 
@@ -440,18 +686,59 @@ describe('restablecer', () => {
     expect(r.instantanea).toBe('20261125-103000-abcdef');
     expect(r.copiaFila.startsWith(rutas.respaldosAuditoria())).toBe(true);
 
-    const copia = JSON.parse(readFileSync(r.copiaFila, 'utf8')) as {
-      usuario: string;
-      fila: { clave: string };
-    };
-    expect(copia.usuario).toBe('ana@x.test');
-    expect(copia.fila.clave).toBe(antes);
-
     const nuevo = String(f.tablas.get('usuarios')!.filas[0]!['clave']);
     expect(nuevo).not.toBe(antes);
     expect(nuevo.startsWith('$2b$04$')).toBe(true);
     expect(await coincide(nuevo, NUEVA)).toBe(true);
     expect(f.cerrada).toBe(true);
+  });
+
+  it('la copia guarda solo la clave primaria, el usuario y el hash anterior', async () => {
+    const f = baseFalsa('mysql', await tablaUsuarios());
+    f.tablas.get('usuarios')!.filas[0]!['otro'] = 'dato-que-no-debe-copiarse';
+    f.tablas.get('usuarios')!.columnas.push('otro');
+    const antes = String(f.tablas.get('usuarios')!.filas[0]!['clave']);
+    const { svc } = montar(f);
+    const r = await svc.restablecer({ ...U, claveNueva: NUEVA, confirmado: true });
+    const copia = JSON.parse(readFileSync(r.copiaFila, 'utf8')) as Record<string, unknown>;
+    expect(copia).toMatchObject({
+      usuario: 'ana@x.test',
+      pk: { id: 1 },
+      hashAnterior: antes,
+      tabla: 'usuarios',
+    });
+    expect(Object.keys(copia)).not.toContain('fila');
+    expect(JSON.stringify(copia)).not.toContain('dato-que-no-debe-copiarse');
+  });
+
+  it('retención: se borran las copias de más de 30 días y se conservan las recientes', async () => {
+    const f = baseFalsa('mysql', await tablaUsuarios());
+    const carpeta = rutas.respaldosAuditoria();
+    mkdirSync(carpeta, { recursive: true });
+    writeFileSync(path.join(carpeta, '20261001-100000-aaaaaa.json'), '{}');
+    writeFileSync(path.join(carpeta, '20261120-100000-bbbbbb.json'), '{}');
+    writeFileSync(path.join(carpeta, 'otro-archivo.txt'), 'x');
+    utimesSync(path.join(carpeta, 'otro-archivo.txt'), new Date(2020, 0, 1), new Date(2020, 0, 1));
+    const { svc } = montar(f);
+    await svc.restablecer({ ...U, claveNueva: NUEVA, confirmado: true });
+    const nombres = readdirSync(carpeta);
+    expect(nombres).not.toContain('20261001-100000-aaaaaa.json');
+    expect(nombres).toContain('20261120-100000-bbbbbb.json');
+    expect(nombres).toContain('otro-archivo.txt');
+    expect(nombres).toHaveLength(3);
+  });
+
+  it('si no se puede limitar la copia al usuario, lo avisa', async () => {
+    const f = baseFalsa('mysql', await tablaUsuarios());
+    const { svc } = montar(f, { restringir: async () => false });
+    expect(
+      (await svc.restablecer({ ...U, claveNueva: NUEVA, confirmado: true })).copiaRestringida,
+    ).toBe(false);
+    const g = baseFalsa('mysql', await tablaUsuarios());
+    const { svc: s2 } = montar(g, { restringir: async () => true });
+    expect(
+      (await s2.restablecer({ ...U, claveNueva: NUEVA, confirmado: true })).copiaRestringida,
+    ).toBe(true);
   });
 
   it('la clave nueva no aparece en el SQL, el resultado, la copia ni los registros', async () => {
@@ -471,19 +758,69 @@ describe('restablecer', () => {
     expect(readFileSync(r.copiaFila, 'utf8')).not.toContain(NUEVA);
   });
 
-  it('solo escribe con un UPDATE parametrizado de una fila (valores como parámetros)', async () => {
+  it('solo escribe con un UPDATE parametrizado de una fila, condicionado al hash copiado', async () => {
     const f = baseFalsa('mysql', await tablaUsuarios());
+    const antes = String(f.tablas.get('usuarios')!.filas[0]!['clave']);
     const { svc } = montar(f);
     await svc.restablecer({ ...U, claveNueva: NUEVA, confirmado: true });
     const upd = f.sql.filter((q) => q.sql.startsWith('UPDATE'));
     expect(upd).toHaveLength(1);
     expect(upd[0]!.sql).toBe(
-      'UPDATE `tienda`.`usuarios` SET `clave` = ? WHERE `email` = ? LIMIT 1',
+      'UPDATE `tienda`.`usuarios` SET `clave` = ? WHERE `email` = ? AND `clave` = ? LIMIT 1',
     );
     expect(upd[0]!.params[1]).toBe('ana@x.test');
+    expect(upd[0]!.params[2]).toBe(antes);
     const ordenes = f.sql.map((q) => q.sql.split(' ')[0]);
     expect(ordenes).toContain('START');
     expect(ordenes.at(-1)).toBe('COMMIT');
+    // Relee lo escrito antes de confirmar.
+    const iUpd = f.sql.findIndex((q) => q.sql.startsWith('UPDATE'));
+    expect(f.sql[iUpd + 1]!.sql).toMatch(/^SELECT .* AS h FROM .* LIMIT 2$/);
+  });
+
+  it('si el servidor no guardó lo esperado, ROLLBACK y error', async () => {
+    const f = baseFalsa('mysql', await tablaUsuarios());
+    f.ignoraUpdate = true;
+    const { svc } = montar(f);
+    expect(await codigo(svc.restablecer({ ...U, claveNueva: NUEVA, confirmado: true }))).toBe(
+      'auditoria.verificacion_fallo',
+    );
+    expect(f.sql.some((q) => q.sql === 'ROLLBACK')).toBe(true);
+    expect(f.sql.some((q) => q.sql === 'COMMIT')).toBe(false);
+  });
+
+  it('si el hash cambió entre la lectura y el bloqueo, no escribe', async () => {
+    const f = baseFalsa('mysql', await tablaUsuarios());
+    f.cambiaAntes = () => {
+      f.tablas.get('usuarios')!.filas[0]!['clave'] = md5('otro-proceso');
+    };
+    const { svc } = montar(f);
+    expect(await codigo(svc.restablecer({ ...U, claveNueva: NUEVA, confirmado: true }))).toBe(
+      'auditoria.fila_cambio',
+    );
+    expect(f.sql.some((q) => q.sql.startsWith('UPDATE'))).toBe(false);
+    expect(f.sql.some((q) => q.sql === 'ROLLBACK')).toBe(true);
+  });
+
+  it('columna del hash demasiado corta (I6): error antes de la instantánea', async () => {
+    const tablas = await tablaUsuarios();
+    tablas.usuarios!.largos = { clave: 40 };
+    const f = baseFalsa('mysql', tablas);
+    const { svc, orden } = montar(f);
+    expect(await codigo(svc.restablecer({ ...U, claveNueva: NUEVA, confirmado: true }))).toBe(
+      'auditoria.columna_corta',
+    );
+    expect(orden).toEqual([]);
+    expect(f.sql.some((q) => q.sql.startsWith('UPDATE'))).toBe(false);
+    expect(existsSync(rutas.respaldosAuditoria())).toBe(false);
+  });
+
+  it('una columna que sí cabe no estorba', async () => {
+    const tablas = await tablaUsuarios();
+    tablas.usuarios!.largos = { clave: 60 };
+    const f = baseFalsa('mysql', tablas);
+    const { svc } = montar(f);
+    await svc.restablecer({ ...U, claveNueva: NUEVA, confirmado: true });
   });
 
   it('sin confirmado no hace nada', async () => {
@@ -499,6 +836,85 @@ describe('restablecer', () => {
     expect(f.sql).toEqual([]);
   });
 
+  describe('datos reales (confirmación reforzada)', () => {
+    it('sin la confirmación reforzada, el núcleo rechaza aunque lleve confirmado', async () => {
+      const f = baseFalsa('mysql', await tablaUsuarios());
+      const { svc, orden, abiertas } = montar(f, { reales: true });
+      for (const reforzada of [undefined, false, 'si' as never, 1 as never]) {
+        expect(
+          await codigo(
+            svc.restablecer({
+              ...U,
+              claveNueva: NUEVA,
+              confirmado: true,
+              confirmarDatosReales: reforzada,
+            }),
+          ),
+        ).toBe('auditoria.datos_reales_sin_confirmar');
+      }
+      expect(orden).toEqual([]);
+      expect(abiertas).toEqual([]);
+      expect(f.sql).toEqual([]);
+    });
+
+    it('con la confirmación reforzada, procede', async () => {
+      const f = baseFalsa('mysql', await tablaUsuarios());
+      const { svc, orden } = montar(f, { reales: true });
+      await svc.restablecer({
+        ...U,
+        claveNueva: NUEVA,
+        confirmado: true,
+        confirmarDatosReales: true,
+      });
+      expect(orden).toEqual(['instantanea:tienda', 'update:copia=si']);
+    });
+
+    it('si no se puede saber, se pide la confirmación (ante la duda, reforzada)', async () => {
+      const f = baseFalsa('mysql', await tablaUsuarios());
+      const { svc } = montar(f, { reales: 'error' });
+      expect(await codigo(svc.restablecer({ ...U, claveNueva: NUEVA, confirmado: true }))).toBe(
+        'auditoria.datos_reales_sin_confirmar',
+      );
+    });
+
+    it('una base sin datos reales no pide más, y la vista previa lo indica', async () => {
+      const f = baseFalsa('mysql', await tablaUsuarios());
+      const { svc } = montar(f, { reales: false });
+      expect((await svc.vistaPreviaRestablecer(U)).datosReales).toBe(false);
+      const g = baseFalsa('mysql', await tablaUsuarios());
+      const { svc: s2 } = montar(g, { reales: true });
+      expect((await s2.vistaPreviaRestablecer(U)).datosReales).toBe(true);
+    });
+
+    it('baseDeDatosReales: compara el nombre de la base del sitio y la familia del motor', async () => {
+      const sitios = [
+        { carpeta: '/a', datosReales: true },
+        { carpeta: '/b', datosReales: false },
+        { carpeta: '/c', datosReales: true },
+      ];
+      const bases: Record<string, { base: string; motor: string } | null> = {
+        '/a': { base: 'diamantes', motor: 'mysql' },
+        '/b': { base: 'pruebas', motor: 'mysql' },
+        '/c': { base: 'dollar', motor: 'postgresql' },
+      };
+      const d = { sitios: async () => sitios, baseDe: async (c: string) => bases[c] ?? null };
+      expect(await baseDeDatosReales(d, 'mysql', 'Diamantes')).toBe(true);
+      expect(await baseDeDatosReales(d, 'mariadb@11.4', 'diamantes')).toBe(true);
+      expect(await baseDeDatosReales(d, 'postgresql', 'diamantes')).toBe(false);
+      expect(await baseDeDatosReales(d, 'postgresql', 'dollar')).toBe(true);
+      expect(await baseDeDatosReales(d, 'mysql', 'pruebas')).toBe(false);
+      expect(await baseDeDatosReales(d, 'mysql', 'otra')).toBe(false);
+      // Un sitio con datos reales cuyo .env no se puede leer: ante la duda, sí.
+      const roto = {
+        sitios: async () => sitios,
+        baseDe: async () => {
+          throw new Error('x');
+        },
+      };
+      expect(await baseDeDatosReales(roto, 'mysql', 'otra')).toBe(true);
+    });
+  });
+
   it('usuario repetido (dos filas): no toma instantánea ni escribe', async () => {
     const tablas = await tablaUsuarios();
     tablas.usuarios!.filas.push({ id: 99, email: 'ana@x.test', clave: md5('otra') });
@@ -511,7 +927,7 @@ describe('restablecer', () => {
     expect(f.sql.some((q) => q.sql.startsWith('UPDATE'))).toBe(false);
   });
 
-  it('usuario inexistente: error y sin escribir', async () => {
+  it('usuario inexistente o inválido: error y sin escribir', async () => {
     const f = baseFalsa('mysql', await tablaUsuarios());
     const { svc, orden } = montar(f);
     expect(
@@ -519,6 +935,11 @@ describe('restablecer', () => {
         svc.restablecer({ ...U, usuario: 'nadie@x.test', claveNueva: NUEVA, confirmado: true }),
       ),
     ).toBe('auditoria.usuario_no_encontrado');
+    expect(
+      await codigo(
+        svc.restablecer({ ...U, usuario: 'x'.repeat(300), claveNueva: NUEVA, confirmado: true }),
+      ),
+    ).toBe('auditoria.usuario_invalido');
     expect(orden).toEqual([]);
   });
 
@@ -561,21 +982,27 @@ describe('restablecer', () => {
     expect(orden).toEqual([]);
   });
 
-  it('md5: pasa a bcrypt por omisión y se mantiene si se pide', async () => {
+  it('md5 conserva su formato por omisión; pasar a bcrypt es explícito', async () => {
     const f = baseFalsa('mysql', await tablaUsuarios());
     const { svc } = montar(f);
     const luis = { ...U, usuario: 'luis@x.test' };
     const prev = await svc.vistaPreviaRestablecer(luis);
-    expect(prev).toMatchObject({ formato: 'md5', formatoNuevo: 'bcrypt', cambiaFormato: true });
-    await svc.restablecer({ ...luis, claveNueva: NUEVA, confirmado: true, mantenerFormato: true });
+    expect(prev).toMatchObject({ formato: 'md5', formatoNuevo: 'md5', cambiaFormato: false });
+    const prevB = await svc.vistaPreviaRestablecer(luis, true);
+    expect(prevB).toMatchObject({ formatoNuevo: 'bcrypt', cambiaFormato: true });
+    await svc.restablecer({ ...luis, claveNueva: NUEVA, confirmado: true });
     expect(f.tablas.get('usuarios')!.filas[1]!['clave']).toBe(md5(NUEVA));
+    await svc.restablecer({ ...luis, claveNueva: NUEVA, confirmado: true, aBcrypt: true });
+    expect(String(f.tablas.get('usuarios')!.filas[1]!['clave']).startsWith('$2b$10$')).toBe(true);
   });
 
   it('vista previa: sentencia con ? y sin valores, y no escribe', async () => {
     const f = baseFalsa('mysql', await tablaUsuarios());
     const { svc, orden, abiertas } = montar(f);
     const v = await svc.vistaPreviaRestablecer(U);
-    expect(v.sentencia).toBe('UPDATE `tienda`.`usuarios` SET `clave` = ? WHERE `email` = ?');
+    expect(v.sentencia).toBe(
+      'UPDATE `tienda`.`usuarios` SET `clave` = ? WHERE `email` = ? AND `clave` = ?',
+    );
     expect(v.formato).toBe('bcrypt');
     expect(v.cambiaFormato).toBe(false);
     expect(JSON.stringify(v)).not.toContain('$2b$');
@@ -584,7 +1011,7 @@ describe('restablecer', () => {
     expect(f.sql.some((q) => q.sql.startsWith('UPDATE'))).toBe(false);
   });
 
-  it('PostgreSQL: RETURNING para contar la fila y $n en los valores', async () => {
+  it('PostgreSQL: RETURNING para contar la fila, $n y operadores calificados', async () => {
     const f = baseFalsa('postgresql', await tablaUsuarios());
     const { svc } = montar(f);
     await svc.restablecer({
@@ -595,9 +1022,10 @@ describe('restablecer', () => {
     });
     const upd = f.sql.find((q) => q.sql.startsWith('UPDATE'))!;
     expect(upd.sql).toBe(
-      'UPDATE "public"."usuarios" SET "clave" = $1 WHERE "email" = $2 RETURNING 1 AS n',
+      'UPDATE "public"."usuarios" SET "clave" = $1 WHERE "email" OPERATOR(pg_catalog.=) $2 ' +
+        'AND "clave" OPERATOR(pg_catalog.=) $3 RETURNING 1 AS n',
     );
-    expect(f.sql[f.sql.findIndex((q) => q.sql === 'BEGIN')]).toBeDefined();
+    expect(f.sql.some((q) => q.sql === 'BEGIN')).toBe(true);
   });
 
   it('la copia queda en respaldos/auditoria con un nombre con fecha', async () => {
@@ -653,12 +1081,14 @@ describe('BasesDeDatos.abrirConsulta', () => {
       const consulta = sql.find((x) => x.sql === 'SELECT 1')!;
       expect(consulta.usuario).toMatch(/^wolf_tmp_/);
       expect(sql.some((x) => x.sql.startsWith('DROP USER'))).toBe(true);
+      // I6: la sesión de escritura fuerza el modo estricto; la de lectura no necesita nada.
+      expect(sql.some((x) => x.sql.includes('STRICT_ALL_TABLES'))).toBe(modo === 'escritura');
     }
   });
 
-  it('PostgreSQL: administrador con la sesión en solo lectura para auditar, y escritura sin ese ajuste', async () => {
-    for (const modo of ['lectura', 'escritura'] as const) {
-      const sql: string[] = [];
+  describe('PostgreSQL: rol temporal limitado (C1)', () => {
+    async function correr(modo: 'lectura' | 'escritura', cerrarAntes = false) {
+      const log: { usuario: string; sql: string }[] = [];
       const bd = new BasesDeDatos({
         servicios: {
           estados: async () =>
@@ -670,9 +1100,15 @@ describe('BasesDeDatos.abrirConsulta', () => {
         fabricas: {
           postgres: async (c) => {
             expect(c.base).toBe('tienda');
+            log.push({ usuario: c.usuario, sql: '<<conecta>>' });
             return {
-              async query(s: string) {
-                sql.push(s);
+              async query(s: string, p?: unknown[]) {
+                log.push({ usuario: c.usuario, sql: s });
+                if (s.includes('information_schema.schemata')) return { rows: [{ s: p?.[0] }] };
+                if (s.includes('information_schema.tables')) return { rows: [{ t: 'usuarios' }] };
+                if (s.includes('information_schema.columns')) {
+                  return { rows: ['email', 'clave'].map((c2) => ({ c: c2, l: null })) };
+                }
                 return { rows: [] };
               },
               async end() {},
@@ -681,10 +1117,84 @@ describe('BasesDeDatos.abrirConsulta', () => {
         },
       });
       const q = await bd.abrirConsulta('postgresql', 'tienda', modo, 5000);
+      if (!cerrarAntes) {
+        await new TablasSql(q, 'tienda').resolver('usuarios', 'email', 'clave');
+        await q.consultar('SELECT 1 AS marca');
+      }
       await q.cerrar();
-      expect(sql.includes('SET default_transaction_read_only = on')).toBe(modo === 'lectura');
-      expect(sql.some((x) => x.startsWith('SET statement_timeout = 5000'))).toBe(true);
+      return log;
     }
+
+    it('crea un rol sin privilegios, sin ser dueño de nada, y consulta con él', async () => {
+      const log = await correr('escritura');
+      const crear = log.find((x) => x.sql.startsWith('CREATE ROLE'))!;
+      expect(crear.usuario).toBe('postgres');
+      expect(crear.sql).toMatch(
+        /"wolf_tmp_[0-9a-f]{16}" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT/,
+      );
+      expect(crear.sql).toContain('NOREPLICATION NOBYPASSRLS');
+      expect(crear.sql).toContain("PASSWORD 'SCRAM-SHA-256$");
+      // Ni dueño de la base ni de la tabla, ni miembro de otros roles.
+      for (const x of log) {
+        expect(x.sql).not.toMatch(/OWNER|SUPERUSER(?<!NOSUPERUSER)|REASSIGN|GRANT "?pg_/);
+        expect(x.sql).not.toMatch(/ALTER DATABASE/);
+      }
+      expect(crear.sql).not.toMatch(/(?<!NO)SUPERUSER/);
+      const rol = /"(wolf_tmp_[0-9a-f]{16})"/.exec(crear.sql)![1]!;
+      const concesiones = log.filter((x) => x.sql.startsWith('GRANT')).map((x) => x.sql);
+      expect(concesiones).toEqual([
+        `GRANT CONNECT ON DATABASE "tienda" TO "${rol}"`,
+        `GRANT USAGE ON SCHEMA "public" TO "${rol}"`,
+        `GRANT SELECT ON TABLE "public"."usuarios" TO "${rol}"`,
+        `GRANT UPDATE ("clave") ON TABLE "public"."usuarios" TO "${rol}"`,
+      ]);
+      // Lo que consulta la tabla lo hace el rol, no el administrador.
+      expect(log.find((x) => x.sql === 'SELECT 1 AS marca')!.usuario).toBe(rol);
+    });
+
+    it('solo lectura: sin UPDATE y con la sesión en solo lectura', async () => {
+      const log = await correr('lectura');
+      expect(log.some((x) => x.sql.startsWith('GRANT UPDATE'))).toBe(false);
+      const rol = /"(wolf_tmp_[0-9a-f]{16})"/.exec(
+        log.find((x) => x.sql.startsWith('CREATE ROLE'))!.sql,
+      )![1]!;
+      expect(
+        log.some((x) => x.usuario === rol && x.sql === 'SET default_transaction_read_only = on'),
+      ).toBe(true);
+    });
+
+    it('I1: cada conexión parte con search_path = pg_catalog, pg_temp', async () => {
+      const log = await correr('escritura');
+      const conexiones = log.filter((x) => x.sql === '<<conecta>>').length;
+      const fijados = log.filter((x) => x.sql === 'SET search_path = pg_catalog, pg_temp').length;
+      expect(conexiones).toBeGreaterThanOrEqual(3);
+      expect(fijados).toBe(conexiones);
+      // Y es lo primero que se ejecuta en cada una.
+      for (let i = 0; i < log.length; i++) {
+        if (log[i]!.sql === '<<conecta>>') {
+          expect(log[i + 1]!.sql).toBe('SET search_path = pg_catalog, pg_temp');
+        }
+      }
+    });
+
+    it('al cerrar: REVOKE, luego DROP OWNED y DROP ROLE', async () => {
+      const log = await correr('escritura');
+      const sqls = log.map((x) => x.sql);
+      const iRev = sqls.findIndex((s) => s.startsWith('REVOKE ALL ON TABLE'));
+      const iOwned = sqls.findIndex((s) => s.startsWith('DROP OWNED BY'));
+      const iRol = sqls.findIndex((s) => s.startsWith('DROP ROLE'));
+      expect(iRev).toBeGreaterThan(sqls.findIndex((s) => s.startsWith('GRANT UPDATE')));
+      expect(iOwned).toBeGreaterThan(iRev);
+      expect(iRol).toBeGreaterThan(iOwned);
+      expect(sqls.some((s) => s.startsWith('REVOKE ALL ON SCHEMA'))).toBe(true);
+      expect(sqls.some((s) => s.startsWith('REVOKE ALL ON DATABASE'))).toBe(true);
+      expect(log[iRol]!.usuario).toBe('postgres');
+    });
+
+    it('si no se llegó a validar la tabla, no se crea ningún rol', async () => {
+      const log = await correr('lectura', true);
+      expect(log.some((x) => x.sql.startsWith('CREATE ROLE'))).toBe(false);
+    });
   });
 
   it('MongoDB no se audita; un nombre de base inválido se rechaza', async () => {

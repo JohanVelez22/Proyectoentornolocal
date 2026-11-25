@@ -569,6 +569,18 @@ export const es = {
       'auditoria.motor_no_soportado':
         'La auditoría de contraseñas es para MySQL, MariaDB y PostgreSQL.',
       'auditoria.cancelada': 'Auditoría cancelada.',
+      'auditoria.usuario_invalido': 'El usuario debe tener entre 1 y 256 caracteres.',
+      'auditoria.en_curso': 'Ya hay una auditoría en curso: espere a que termine o cancélela.',
+      'auditoria.base_sistema': 'No se audita una base del sistema: elija la base de un proyecto.',
+      'auditoria.esquema_invalido': 'El esquema no existe en esa base.',
+      'auditoria.fila_cambio':
+        'La cuenta cambió mientras tanto: no se restableció. Vuelva a intentarlo.',
+      'auditoria.verificacion_fallo':
+        'La base no guardó la contraseña tal como se esperaba: se deshizo el cambio.',
+      'auditoria.columna_corta':
+        'La columna del hash admite {largo} caracteres y el hash nuevo necesita {necesario}: no se cambió nada. Amplíe la columna.',
+      'auditoria.datos_reales_sin_confirmar':
+        'Esta base tiene datos reales de clientes: restablecer una contraseña exige la confirmación reforzada.',
       'instantaneas.id_invalido': 'La instantánea no es válida.',
       'instantaneas.no_encontrada': 'No se encontró la instantánea; puede que ya se haya borrado.',
       'instantaneas.otra_base': 'Esta instantánea es de otra base: no se puede aplicar a esta.',
@@ -2785,11 +2797,11 @@ export const es = {
         sinMotores: 'No hay un servidor de MySQL, MariaDB o PostgreSQL propio.',
         revisar: 'Revisar',
         revisando: 'Revisando…',
-        resumen: (revisadas: number, debiles: number) =>
-          `${revisadas} cuentas revisadas · ${debiles} débiles`,
+        resumen: (r: number, d: number) =>
+          `${r} ${r === 1 ? 'cuenta revisada' : 'cuentas revisadas'} · ${d} ${d === 1 ? 'débil' : 'débiles'}`,
         sinDebiles: 'Ninguna cuenta revisada coincide con una contraseña muy común.',
         noRevisables: (n: number) =>
-          `${n} cuentas no se pudieron revisar (hash vacío o de un formato que no se revisa).`,
+          `${n} ${n === 1 ? 'cuenta no se pudo revisar' : 'cuentas no se pudieron revisar'}:`,
         truncado:
           'La revisión se cortó por el tope de 10 000 filas o de 60 segundos: quedaron cuentas sin revisar.',
         usuario: 'Usuario',
@@ -2801,6 +2813,26 @@ export const es = {
         },
         restablecer: 'Restablecer',
         mas: (n: number) => `y ${n} más (se muestran las primeras 200)`,
+        esquema: 'Esquema (PostgreSQL)',
+        esquemaMarcador: 'public',
+        cancelar: 'Cancelar',
+        cancelando: 'Cancelando…',
+        cancelada: 'Auditoría cancelada.',
+        progreso: (a: number, b: number) => `Revisadas ${a} de ${b}`,
+        tiposNoRevisables: {
+          vacio: 'hash vacío',
+          md5crypt: 'md5crypt ($1$)',
+          sha256crypt: 'sha256crypt ($5$)',
+          sha512crypt: 'sha512crypt ($6$)',
+          scrypt: 'scrypt',
+          argon2: 'Argon2 (no disponible en este equipo o con parámetros fuera del tope)',
+          bcrypt_otro: 'bcrypt con costo fuera de rango o variante $2x$',
+          pbkdf2_otro: 'PBKDF2 con parámetros fuera del tope',
+          ldap: 'formato LDAP ({SHA}…)',
+          otro: 'formato desconocido',
+        },
+        falsoPositivo:
+          'Un valor de 32 o 40 caracteres hexadecimales se toma por md5 o sha1, pero podría ser otra cosa (un token, por ejemplo). Si la columna no guarda contraseñas, el resultado no sirve.',
       },
       restablecer: {
         titulo: (u: string) => `Restablecer la contraseña de ${u}`,
@@ -2810,8 +2842,7 @@ export const es = {
         sentencia: 'Se ejecutará (los valores van aparte y no se muestran)',
         formatoActual: (f: string) => `Formato actual: ${f}`,
         cambiaFormato:
-          'Este formato es débil: la cuenta pasará a bcrypt. La aplicación debe aceptar hashes bcrypt para que se pueda entrar.',
-        mantener: 'Mantener el formato actual (menos seguro)',
+          'La cuenta pasará a bcrypt: la aplicación debe poder verificarlo (por ejemplo con password_verify); si no, nadie podrá entrar con esa cuenta.',
         nueva: 'Contraseña nueva',
         generar: 'Generar una',
         mostrar: 'Mostrar',
@@ -2822,9 +2853,20 @@ export const es = {
         cancelar: 'Cancelar',
         cerrar: 'Cerrar',
         hecho: 'Contraseña restablecida.',
-        copiaFila: 'Copia de la fila (solo usted puede leerla):',
+        copiaFila: 'Copia de la fila (identificación y hash anterior, se conserva 30 días):',
         instantanea: 'Instantánea previa de la base:',
         instantaneaAyuda: 'Se puede volver a ella desde Bases de datos › Instantáneas.',
+        aBcrypt: 'Pasar a bcrypt: solo si la aplicación usa password_verify o algo equivalente',
+        avisoLegado:
+          'Este hash es md5 o sha1 sin sal y se conserva en ese formato. Si la aplicación guarda la sal aparte (en otra columna o en una constante), el hash no se puede reproducir y la contraseña nueva no serviría para entrar.',
+        datosReales: {
+          titulo: 'Base con datos reales',
+          texto:
+            'Esta base es de un sitio marcado con datos reales de clientes: restablecer una contraseña cambia una cuenta de verdad.',
+          casilla: 'Entiendo que son datos reales y quiero restablecer esta contraseña',
+        },
+        copiaSinRestringir:
+          'No se pudo limitar esa copia al usuario de este equipo: revise los permisos de la carpeta.',
       },
     },
   },

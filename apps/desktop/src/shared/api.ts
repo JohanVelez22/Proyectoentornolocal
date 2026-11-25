@@ -61,6 +61,7 @@ import type {
   Instantanea,
   InstantaneaBorrada,
   ResultadoAuditoria,
+  ProgresoAuditoria,
   VistaPreviaRestablecer,
   ResultadoRestablecer,
   OpcionesImportar,
@@ -291,6 +292,8 @@ export interface SeleccionAuditoria {
   tabla: string;
   columnaUsuario: string;
   columnaHash: string;
+  /** PostgreSQL: esquema de la tabla (por omisión `public`). */
+  esquema?: string;
 }
 
 export type ObjetivoSqlIpc = MotorSql | IdInstancia;
@@ -580,12 +583,16 @@ export interface ApiEntorno {
       base: string,
       seleccion: SeleccionAuditoria,
     ): Promise<ResultadoAuditoria>;
+    /** Avance de la auditoría en curso (null si no hay). Solo corre una a la vez. */
+    progreso(): Promise<ProgresoAuditoria | null>;
+    /** Cancela la auditoría en curso; false si no había ninguna. */
+    cancelar(): Promise<boolean>;
     vistaPrevia(
       motor: ObjetivoSqlIpc,
       base: string,
       seleccion: SeleccionAuditoria,
       usuario: string,
-      mantenerFormato?: boolean,
+      aBcrypt?: boolean,
     ): Promise<VistaPreviaRestablecer>;
     restablecer(
       motor: ObjetivoSqlIpc,
@@ -594,7 +601,8 @@ export interface ApiEntorno {
       usuario: string,
       claveNueva: string,
       usuarioEscrito: string,
-      mantenerFormato?: boolean,
+      aBcrypt?: boolean,
+      confirmarDatosReales?: boolean,
     ): Promise<ResultadoRestablecer>;
   };
   pgvector: {
@@ -1201,6 +1209,8 @@ export const RUTAS_IPC = [
   'instantaneas.papelera',
   'instantaneas.recuperar',
   'auditoriaClaves.auditar',
+  'auditoriaClaves.progreso',
+  'auditoriaClaves.cancelar',
   'auditoriaClaves.vistaPrevia',
   'auditoriaClaves.restablecer',
   'pgvector.estado',

@@ -559,6 +559,17 @@ export const en: Textos = {
       'auditoria.copia_fallo': 'Could not save the copy of the row: nothing was changed.',
       'auditoria.motor_no_soportado': 'The password audit is for MySQL, MariaDB and PostgreSQL.',
       'auditoria.cancelada': 'Audit cancelled.',
+      'auditoria.usuario_invalido': 'The user must be between 1 and 256 characters.',
+      'auditoria.en_curso': 'An audit is already running: wait for it to finish or cancel it.',
+      'auditoria.base_sistema': 'A system database is not audited: choose a project database.',
+      'auditoria.esquema_invalido': 'The schema does not exist in that database.',
+      'auditoria.fila_cambio': 'The account changed in the meantime: nothing was reset. Try again.',
+      'auditoria.verificacion_fallo':
+        'The database did not store the password as expected: the change was undone.',
+      'auditoria.columna_corta':
+        'The hash column holds {largo} characters and the new hash needs {necesario}: nothing was changed. Widen the column.',
+      'auditoria.datos_reales_sin_confirmar':
+        'This database has real customer data: resetting a password requires the reinforced confirmation.',
       'instantaneas.id_invalido': 'The snapshot is not valid.',
       'instantaneas.no_encontrada': 'The snapshot was not found; it may have been deleted already.',
       'instantaneas.otra_base':
@@ -2764,11 +2775,11 @@ export const en: Textos = {
         sinMotores: 'There is no MySQL, MariaDB or PostgreSQL server of your own.',
         revisar: 'Review',
         revisando: 'Reviewing…',
-        resumen: (revisadas: number, debiles: number) =>
-          `${revisadas} accounts reviewed · ${debiles} weak`,
+        resumen: (r: number, d: number) =>
+          `${r} ${r === 1 ? 'account reviewed' : 'accounts reviewed'} · ${d} weak`,
         sinDebiles: 'No reviewed account matches a very common password.',
         noRevisables: (n: number) =>
-          `${n} accounts could not be reviewed (empty hash or a format that is not reviewed).`,
+          `${n} ${n === 1 ? 'account could not be reviewed' : 'accounts could not be reviewed'}:`,
         truncado:
           'The review stopped at the limit of 10,000 rows or 60 seconds: some accounts were not reviewed.',
         usuario: 'User',
@@ -2780,6 +2791,26 @@ export const en: Textos = {
         },
         restablecer: 'Reset',
         mas: (n: number) => `and ${n} more (the first 200 are shown)`,
+        esquema: 'Schema (PostgreSQL)',
+        esquemaMarcador: 'public',
+        cancelar: 'Cancel',
+        cancelando: 'Cancelling…',
+        cancelada: 'Audit cancelled.',
+        progreso: (a: number, b: number) => `Reviewed ${a} of ${b}`,
+        tiposNoRevisables: {
+          vacio: 'empty hash',
+          md5crypt: 'md5crypt ($1$)',
+          sha256crypt: 'sha256crypt ($5$)',
+          sha512crypt: 'sha512crypt ($6$)',
+          scrypt: 'scrypt',
+          argon2: 'Argon2 (not available on this computer or with parameters over the limit)',
+          bcrypt_otro: 'bcrypt with a cost out of range or the $2x$ variant',
+          pbkdf2_otro: 'PBKDF2 with parameters over the limit',
+          ldap: 'LDAP format ({SHA}…)',
+          otro: 'unknown format',
+        },
+        falsoPositivo:
+          'A value of 32 or 40 hexadecimal characters is taken for md5 or sha1, but it could be something else (a token, for example). If the column does not store passwords, the result is meaningless.',
       },
       restablecer: {
         titulo: (u: string) => `Reset the password of ${u}`,
@@ -2789,8 +2820,7 @@ export const en: Textos = {
         sentencia: 'This will run (the values are sent separately and not shown)',
         formatoActual: (f: string) => `Current format: ${f}`,
         cambiaFormato:
-          'This format is weak: the account will move to bcrypt. The application must accept bcrypt hashes for sign-in to work.',
-        mantener: 'Keep the current format (less secure)',
+          'The account will switch to bcrypt: the application must be able to verify it (for example with password_verify); otherwise nobody will be able to sign in with that account.',
         nueva: 'New password',
         generar: 'Generate one',
         mostrar: 'Show',
@@ -2801,9 +2831,20 @@ export const en: Textos = {
         cancelar: 'Cancel',
         cerrar: 'Close',
         hecho: 'Password reset.',
-        copiaFila: 'Copy of the row (only you can read it):',
+        copiaFila: 'Copy of the row (identification and previous hash, kept for 30 days):',
         instantanea: 'Snapshot of the database taken before:',
         instantaneaAyuda: 'You can go back to it from Databases › Snapshots.',
+        aBcrypt: 'Switch to bcrypt: only if the application uses password_verify or the equivalent',
+        avisoLegado:
+          'This hash is unsalted md5 or sha1 and keeps that format. If the application stores the salt separately (in another column or a constant), the hash cannot be reproduced and the new password would not work for sign-in.',
+        datosReales: {
+          titulo: 'Database with real data',
+          texto:
+            'This database belongs to a site marked as having real customer data: resetting a password changes a real account.',
+          casilla: 'I understand this is real data and I want to reset this password',
+        },
+        copiaSinRestringir:
+          'That copy could not be restricted to this computer’s user: check the folder permissions.',
       },
     },
   },

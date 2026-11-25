@@ -32,24 +32,35 @@ const cargando = ref(false);
 const clave = ref('');
 const verClave = ref(false);
 const escrito = ref('');
-const mantener = ref(false);
+const aBcrypt = ref(false);
+const reales = ref(false);
 const trabajando = ref(false);
-const hecho = ref<{ copiaFila: string; instantanea: string } | null>(null);
+const hecho = ref<{
+  copiaFila: string;
+  copiaRestringida: boolean;
+  instantanea: string;
+} | null>(null);
 
 const esLegado = computed(
   () => previa.value?.formato === 'md5' || previa.value?.formato === 'sha1',
 );
-const cambiaFormato = computed(() => esLegado.value && !mantener.value);
+const cambiaFormato = computed(() => esLegado.value && aBcrypt.value);
+const datosReales = computed(() => previa.value?.datosReales === true);
 const valido = computed(
   () =>
-    !!previa.value && clave.value !== '' && escrito.value === props.usuario && !trabajando.value,
+    !!previa.value &&
+    clave.value !== '' &&
+    escrito.value === props.usuario &&
+    (!datosReales.value || reales.value) &&
+    !trabajando.value,
 );
 
 function limpiar(): void {
   clave.value = '';
   escrito.value = '';
   verClave.value = false;
-  mantener.value = false;
+  aBcrypt.value = false;
+  reales.value = false;
 }
 
 watch(mostrar, async (v) => {
@@ -95,7 +106,8 @@ async function restablecer(): Promise<void> {
         props.usuario,
         clave.value,
         escrito.value,
-        esLegado.value && mantener.value ? true : undefined,
+        esLegado.value && aBcrypt.value ? true : undefined,
+        datosReales.value && reales.value ? true : undefined,
       ),
     { exito: t.hecho },
   );
@@ -133,9 +145,16 @@ async function restablecer(): Promise<void> {
       </div>
 
       <template v-if="esLegado">
+        <p class="aviso">{{ t.avisoLegado }}</p>
+        <NCheckbox v-model:checked="aBcrypt">{{ t.aBcrypt }}</NCheckbox>
         <p v-if="cambiaFormato" class="aviso">{{ t.cambiaFormato }}</p>
-        <NCheckbox v-model:checked="mantener">{{ t.mantener }}</NCheckbox>
       </template>
+
+      <div v-if="datosReales" class="reales" role="alert">
+        <strong>{{ t.datosReales.titulo }}</strong>
+        <p>{{ t.datosReales.texto }}</p>
+        <NCheckbox v-model:checked="reales">{{ t.datosReales.casilla }}</NCheckbox>
+      </div>
 
       <div class="bloque">
         <label class="etiqueta" for="clave-nueva-auditoria">{{ t.nueva }}</label>
@@ -181,6 +200,7 @@ async function restablecer(): Promise<void> {
       <div class="bloque">
         <span class="etiqueta">{{ t.copiaFila }}</span>
         <code class="sentencia">{{ hecho.copiaFila }}</code>
+        <p v-if="!hecho.copiaRestringida" class="aviso">{{ t.copiaSinRestringir }}</p>
       </div>
       <div class="bloque">
         <span class="etiqueta">{{ t.instantanea }} {{ hecho.instantanea }}</span>
@@ -254,6 +274,19 @@ async function restablecer(): Promise<void> {
   font-size: 12.5px;
   color: var(--texto-aviso);
   background: rgba(234, 179, 8, 0.12);
+}
+.reales {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(220, 38, 38, 0.5);
+  background: rgba(220, 38, 38, 0.08);
+}
+.reales p {
+  margin: 0;
+  font-size: 12.5px;
 }
 .acciones {
   display: flex;

@@ -78,6 +78,8 @@ function nucleoFalso() {
         cambiaFormato: false,
       })),
       restablecer: vi.fn(async () => ({ copiaFila: 'x.json', instantanea: 'id' })),
+      progreso: vi.fn(() => ({ revisadas: 1, total: 2 })),
+      cancelar: vi.fn(() => true),
     },
     env: {
       ver: vi.fn(async () => ({ existe: true, filas: [] })),
@@ -570,6 +572,8 @@ describe('registrarIpc', () => {
         'instantaneas.papelera',
         'instantaneas.recuperar',
         'auditoriaClaves.auditar',
+        'auditoriaClaves.progreso',
+        'auditoriaClaves.cancelar',
         'auditoriaClaves.vistaPrevia',
         'auditoriaClaves.restablecer',
         'pgvector.estado',
@@ -2106,6 +2110,47 @@ describe('IPC de la Etapa B', () => {
       expect((await llamar(ruta, ...args)).ok, `${ruta} ${JSON.stringify(args)}`).toBe(false);
     }
     expect(aud['auditar']).toHaveBeenCalledTimes(1);
+    // Casillas de datos reales y bcrypt; progreso y cancelar; esquema opcional.
+    aud['restablecer']!.mockClear();
+    expect(
+      (
+        await llamar(
+          'auditoriaClaves.restablecer',
+          'postgresql',
+          'tienda',
+          { ...sel, esquema: 'ventas' },
+          'ana@x.test',
+          'Clave-Nueva-Centinela-d20',
+          'ana@x.test',
+          true,
+          true,
+        )
+      ).ok,
+    ).toBe(true);
+    expect(aud['restablecer']).toHaveBeenCalledWith(
+      expect.objectContaining({ esquema: 'ventas', aBcrypt: true, confirmarDatosReales: true }),
+    );
+    for (const malo of ['si', 1, null]) {
+      expect(
+        (
+          await llamar(
+            'auditoriaClaves.restablecer',
+            'mysql',
+            'tienda',
+            sel,
+            'ana@x.test',
+            'Clave-Nueva-Centinela-d20',
+            'ana@x.test',
+            undefined,
+            malo,
+          )
+        ).ok,
+      ).toBe(false);
+    }
+    expect((await llamar('auditoriaClaves.progreso')).ok).toBe(true);
+    expect((await llamar('auditoriaClaves.cancelar')).ok).toBe(true);
+    expect(aud['progreso']).toHaveBeenCalledTimes(1);
+    expect(aud['cancelar']).toHaveBeenCalledTimes(1);
     // Un error del núcleo no devuelve la clave nueva.
     aud['restablecer']!.mockRejectedValueOnce(
       new Error('falló con Clave-Nueva-Centinela-d20 dentro'),

@@ -594,6 +594,19 @@ export const fr: Textos = {
       'auditoria.motor_no_soportado':
         "L'audit des mots de passe concerne MySQL, MariaDB et PostgreSQL.",
       'auditoria.cancelada': 'Audit annulé.',
+      'auditoria.usuario_invalido': "L'utilisateur doit comporter entre 1 et 256 caractères.",
+      'auditoria.en_curso': "Un audit est déjà en cours : attendez qu'il se termine ou annulez-le.",
+      'auditoria.base_sistema':
+        "Une base système n'est pas auditée : choisissez la base d'un projet.",
+      'auditoria.esquema_invalido': "Le schéma n'existe pas dans cette base.",
+      'auditoria.fila_cambio':
+        "Le compte a changé entre-temps : rien n'a été réinitialisé. Réessayez.",
+      'auditoria.verificacion_fallo':
+        "La base n'a pas enregistré le mot de passe comme prévu : la modification a été annulée.",
+      'auditoria.columna_corta':
+        'La colonne du hash accepte {largo} caractères et le nouveau hash en demande {necesario} : rien n’a été modifié. Agrandissez la colonne.',
+      'auditoria.datos_reales_sin_confirmar':
+        'Cette base contient des données réelles de clients : réinitialiser un mot de passe exige la confirmation renforcée.',
       'instantaneas.id_invalido': 'L’instantané n’est pas valide.',
       'instantaneas.no_encontrada': 'Instantané introuvable ; il a peut-être déjà été supprimé.',
       'instantaneas.otra_base':
@@ -2855,11 +2868,11 @@ export const fr: Textos = {
         sinMotores: "Il n'y a pas de serveur MySQL, MariaDB ou PostgreSQL propre.",
         revisar: 'Examiner',
         revisando: 'Examen en cours…',
-        resumen: (revisadas: number, debiles: number) =>
-          `${revisadas} comptes examinés · ${debiles} faibles`,
+        resumen: (r: number, d: number) =>
+          `${r} ${r === 1 ? 'compte examiné' : 'comptes examinés'} · ${d} ${d === 1 ? 'faible' : 'faibles'}`,
         sinDebiles: 'Aucun compte examiné ne correspond à un mot de passe très courant.',
         noRevisables: (n: number) =>
-          `${n} comptes n'ont pas pu être examinés (hash vide ou d'un format non examiné).`,
+          `${n} ${n === 1 ? "compte n'a pas pu être examiné" : "comptes n'ont pas pu être examinés"} :`,
         truncado:
           "L'examen s'est arrêté à la limite de 10 000 lignes ou de 60 secondes : des comptes n'ont pas été examinés.",
         usuario: 'Utilisateur',
@@ -2871,6 +2884,26 @@ export const fr: Textos = {
         },
         restablecer: 'Réinitialiser',
         mas: (n: number) => `et ${n} de plus (les 200 premiers sont affichés)`,
+        esquema: 'Schéma (PostgreSQL)',
+        esquemaMarcador: 'public',
+        cancelar: 'Annuler',
+        cancelando: 'Annulation…',
+        cancelada: 'Audit annulé.',
+        progreso: (a: number, b: number) => `${a} sur ${b} examinés`,
+        tiposNoRevisables: {
+          vacio: 'hash vide',
+          md5crypt: 'md5crypt ($1$)',
+          sha256crypt: 'sha256crypt ($5$)',
+          sha512crypt: 'sha512crypt ($6$)',
+          scrypt: 'scrypt',
+          argon2: 'Argon2 (indisponible sur cet ordinateur ou paramètres au-delà de la limite)',
+          bcrypt_otro: 'bcrypt avec un coût hors limites ou variante $2x$',
+          pbkdf2_otro: 'PBKDF2 avec des paramètres au-delà de la limite',
+          ldap: 'format LDAP ({SHA}…)',
+          otro: 'format inconnu',
+        },
+        falsoPositivo:
+          "Une valeur de 32 ou 40 caractères hexadécimaux est prise pour du md5 ou du sha1, mais ce peut être autre chose (un jeton, par exemple). Si la colonne ne stocke pas de mots de passe, le résultat n'a aucune valeur.",
       },
       restablecer: {
         titulo: (u: string) => `Réinitialiser le mot de passe de ${u}`,
@@ -2880,8 +2913,7 @@ export const fr: Textos = {
         sentencia: "Sera exécuté (les valeurs sont envoyées à part et ne s'affichent pas)",
         formatoActual: (f: string) => `Format actuel : ${f}`,
         cambiaFormato:
-          "Ce format est faible : le compte passera à bcrypt. L'application doit accepter les hashes bcrypt pour que la connexion fonctionne.",
-        mantener: 'Garder le format actuel (moins sûr)',
+          "Le compte passera à bcrypt : l'application doit pouvoir le vérifier (par exemple avec password_verify) ; sinon personne ne pourra se connecter avec ce compte.",
         nueva: 'Nouveau mot de passe',
         generar: 'En générer un',
         mostrar: 'Afficher',
@@ -2892,9 +2924,22 @@ export const fr: Textos = {
         cancelar: 'Annuler',
         cerrar: 'Fermer',
         hecho: 'Mot de passe réinitialisé.',
-        copiaFila: 'Copie de la ligne (vous seul pouvez la lire) :',
+        copiaFila: 'Copie de la ligne (identification et ancien hash, conservée 30 jours) :',
         instantanea: 'Instantané de la base pris avant :',
         instantaneaAyuda: 'Vous pouvez y revenir depuis Bases de données › Instantanés.',
+        aBcrypt:
+          "Passer à bcrypt : seulement si l'application utilise password_verify ou équivalent",
+        avisoLegado:
+          "Ce hash est du md5 ou du sha1 sans sel et garde ce format. Si l'application stocke le sel à part (dans une autre colonne ou une constante), le hash ne peut pas être reproduit et le nouveau mot de passe ne permettrait pas de se connecter.",
+        datosReales: {
+          titulo: 'Base avec données réelles',
+          texto:
+            'Cette base appartient à un site marqué avec des données réelles de clients : réinitialiser un mot de passe modifie un vrai compte.',
+          casilla:
+            'Je comprends que ce sont des données réelles et je veux réinitialiser ce mot de passe',
+        },
+        copiaSinRestringir:
+          "Impossible de limiter cette copie à l'utilisateur de cet ordinateur : vérifiez les droits du dossier.",
       },
     },
   },

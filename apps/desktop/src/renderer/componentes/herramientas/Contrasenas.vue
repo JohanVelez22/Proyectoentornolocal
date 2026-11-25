@@ -72,6 +72,8 @@ watch(bases, (l) => {
 const tabla = ref('users');
 const columnaUsuario = ref('email');
 const columnaHash = ref('password');
+const esquema = ref('');
+const esPostgres = computed(() => motor.value === 'postgresql');
 const resultado = ref<ResultadoAuditoria | null>(null);
 /** Selección con la que se revisó (la que usan las acciones de restablecer). */
 const revisada = ref<{ base: string; seleccion: SeleccionAuditoria } | null>(null);
@@ -96,14 +98,41 @@ async function revisar(): Promise<void> {
     tabla: tabla.value.trim(),
     columnaUsuario: columnaUsuario.value.trim(),
     columnaHash: columnaHash.value.trim(),
+    ...(esPostgres.value && esquema.value.trim() !== '' ? { esquema: esquema.value.trim() } : {}),
   };
   resultado.value = null;
-  const r = await ejecutar('auditar', () =>
-    api().auditoriaClaves.auditar(objetivo.value as never, base.value!, seleccion),
-  );
+  progreso.value = null;
+  // El núcleo solo corre una auditoría a la vez: se pregunta su avance mientras dura.
+  const reloj = setInterval(() => {
+    void api()
+      .auditoriaClaves.progreso()
+      .then((p) => (progreso.value = p))
+      .catch(() => undefined);
+  }, 500);
+  let r: ResultadoAuditoria | undefined;
+  try {
+    r = await ejecutar('auditar', () =>
+      api().auditoriaClaves.auditar(objetivo.value as never, base.value!, seleccion),
+    );
+  } finally {
+    clearInterval(reloj);
+    progreso.value = null;
+    cancelando.value = false;
+  }
   if (!r) return;
   resultado.value = r;
   revisada.value = { base: base.value, seleccion };
+}
+
+const nombreTipo = (tipo: string): string =>
+  (t.auditar.tiposNoRevisables as Record<string, string>)[tipo] ?? tipo;
+const progreso = ref<{ revisadas: number; total: number } | null>(null);
+const cancelando = ref(false);
+async function cancelar(): Promise<void> {
+  cancelando.value = true;
+  await api()
+    .auditoriaClaves.cancelar()
+    .catch(() => false);
 }
 
 // ---- Restablecer ----
@@ -150,6 +179,7 @@ const opcionesBase = computed(() =>
       <div class="seccion">
         <p class="aviso">{{ t.auditar.limite }}</p>
         <p class="nota">{{ t.auditar.privacidad }}</p>
+        <p class="nota">{{ t.auditar.falsoPositivo }}</p>
 
         <p v-if="!motores.length" class="nota">{{ t.auditar.sinMotores }}</p>
         <template v-else>
@@ -169,6 +199,14 @@ const opcionesBase = computed(() =>
                 :options="opcionesBase"
                 :disabled="!encendido || !opcionesBase.length"
                 :aria-label="t.auditar.base"
+              />
+            </label>
+            <label v-if="esPostgres" class="campo">
+              <span class="etiqueta">{{ t.auditar.esquema }}</span>
+              <NInput
+                v-model:value="esquema"
+                :maxlength="128"
+                :placeholder="t.auditar.esquemaMarcador"
               />
             </label>
             <label class="campo">
@@ -199,7 +237,7 @@ const opcionesBase = computed(() =>
           <p v-if="!encendido" class="nota">{{ t.auditar.apagado }}</p>
           <p v-else-if="bases && !bases.length" class="nota">{{ t.auditar.sinBases }}</p>
 
-          <div>
+          <div class="acciones">
             <NButton
               type="primary"
               :disabled="!puedeRevisar"
@@ -208,16 +246,29 @@ const opcionesBase = computed(() =>
             >
               {{ ocupado('auditar') ? t.auditar.revisando : t.auditar.revisar }}
             </NButton>
+            <NButton v-if="ocupado('auditar')" secondary :disabled="cancelando" @click="cancelar">
+              {{ cancelando ? t.auditar.cancelando : t.auditar.cancelar }}
+            </NButton>
           </div>
+
+          <p v-if="progreso && progreso.total" class="nota" role="status">
+            {{ t.auditar.progreso(progreso.revisadas, progreso.total) }}
+          </p>
 
           <div v-if="resultado" class="resultado" aria-live="polite">
             <p class="resumen">
               {{ t.auditar.resumen(resultado.revisadas, resultado.debiles.length) }}
             </p>
             <p v-if="!resultado.debiles.length" class="nota">{{ t.auditar.sinDebiles }}</p>
-            <p v-if="resultado.noRevisables" class="nota">
+            <div v-if="resultado.noRevisables" class="nota">
               {{ t.auditar.noRevisables(resultado.noRevisables) }}
-            </p>
+              <ul class="tipos">
+                <li v-for="x in resultado.tiposNoRevisables" :key="x.tipo">
+                  {{ nombreTipo(x.tipo) }}:
+                  {{ x.cantidad }}
+                </li>
+              </ul>
+            </div>
             <p v-if="resultado.truncado" class="aviso">{{ t.auditar.truncado }}</p>
 
             <table v-if="debiles.length" class="tabla">
@@ -314,6 +365,14 @@ const opcionesBase = computed(() =>
   padding: 6px 8px;
   text-align: left;
   border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+}
+.acciones {
+  display: flex;
+  gap: 8px;
+}
+.tipos {
+  margin: 4px 0 0;
+  padding-left: 18px;
 }
 .usuario {
   overflow-wrap: anywhere;

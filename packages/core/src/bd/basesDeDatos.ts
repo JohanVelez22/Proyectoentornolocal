@@ -350,10 +350,9 @@ export class BasesDeDatos {
    * Conexión a UNA base para la auditoría de contraseñas (D20), con el menor poder viable:
    * - MySQL y MariaDB: un usuario temporal limitado a la base con solo SELECT (`lectura`) o
    *   SELECT y UPDATE (`escritura`); se borra al cerrar.
-   * - PostgreSQL: el administrador, con la sesión en solo lectura (`default_transaction_read_only`)
-   *   para auditar. No hay un rol temporal viable: el de D19 pasa a ser dueño de la base y no
-   *   puede leer las tablas del usuario propio del proyecto, y el usuario propio de D16 guarda su
-   *   clave solo en el proceso principal (`AlmacenSecretos`), que el núcleo no recibe.
+   * - PostgreSQL: un rol temporal `wolf_tmp_*` (LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT,
+   *   que no es dueño de nada) con CONNECT en la base, USAGE en el esquema, SELECT en la tabla y,
+   *   solo para restablecer, UPDATE de la columna del hash. El administrador solo lee el catálogo.
    * Los nombres de tabla y de columna los valida `TablasSql` contra el catálogo antes de usarlos.
    */
   async abrirConsulta(
@@ -372,22 +371,71 @@ export class BasesDeDatos {
     const x = await this.conexion(objetivo);
     if (motor === 'postgresql') {
       validarNombrePg(base);
-      const c = new ClientePostgres(this.d.fabricas?.postgres);
-      await c.conectar({
-        host: x.host,
-        puerto: x.puerto,
-        usuario: x.usuario,
-        clave: x.clave ?? '',
-        base,
-      });
+      const fab = this.d.fabricas?.postgres;
+      /** Conexión a la base con el `search_path` del catálogo: ningún esquema ajeno tapa un operador. */
+      const conectar = async (usuario: string, clave: string): Promise<ClientePostgres> => {
+        const c = new ClientePostgres(fab);
+        await c.conectar({ host: x.host, puerto: x.puerto, usuario, clave, base });
+        try {
+          await c.consultar('SET search_path = pg_catalog, pg_temp');
+          await c.consultar(`SET statement_timeout = ${Math.max(1000, Math.floor(plazoMs))}`);
+        } catch (e) {
+          await c.cerrar();
+          throw e;
+        }
+        return c;
+      };
+      // El administrador solo lee el catálogo (sesión en solo lectura) para validar la tabla;
+      // luego `limitar` crea el rol temporal y todo lo demás va con él.
+      const admin = await conectar(x.usuario, x.clave ?? '');
+      let activo = admin;
+      let rol: { usuario: string; clave: string } | null = null;
+      let conRol: ClientePostgres | null = null;
+      let destino: { esquema: string; tabla: string } | null = null;
       try {
-        await c.consultar(`SET statement_timeout = ${Math.max(1000, Math.floor(plazoMs))}`);
-        if (modo === 'lectura') await c.consultar('SET default_transaction_read_only = on');
+        await admin.consultar('SET default_transaction_read_only = on');
       } catch (e) {
-        await c.cerrar();
+        await admin.cerrar();
         throw e;
       }
-      return { motor, consultar: (s, p) => c.consultar(s, p), cerrar: () => c.cerrar() };
+      return {
+        motor,
+        consultar: (s, p) => activo.consultar(s, p),
+        async limitar(o) {
+          const gestor = await conectar(x.usuario, x.clave ?? '');
+          try {
+            rol = await gestor.crearRolAuditoria({
+              base,
+              esquema: o.esquema,
+              tabla: o.tabla,
+              columnaHash: o.columnaHash,
+              escritura: modo === 'escritura',
+            });
+          } finally {
+            await gestor.cerrar();
+          }
+          destino = { esquema: o.esquema, tabla: o.tabla };
+          conRol = await conectar(rol.usuario, rol.clave);
+          if (modo === 'lectura') await conRol.consultar('SET default_transaction_read_only = on');
+          activo = conRol;
+        },
+        async cerrar() {
+          await (conRol as ClientePostgres | null)?.cerrar();
+          await admin.cerrar();
+          const r = rol as { usuario: string; clave: string } | null;
+          const dest = destino as { esquema: string; tabla: string } | null;
+          if (r && dest) {
+            // REVOKE, DROP OWNED y DROP ROLE; si algo falla, `limpiarTemporales` lo recoge al vencer.
+            const gestor = await conectar(x.usuario, x.clave ?? '').catch(() => null);
+            if (gestor) {
+              await gestor
+                .retirarRolAuditoria({ usuario: r.usuario, base, ...dest })
+                .catch(() => undefined);
+              await gestor.cerrar();
+            }
+          }
+        },
+      };
     }
     validarNombreBd(base);
     const temporal = await this.usuarioTemporal(objetivo, base, modo);
@@ -402,6 +450,16 @@ export class BasesDeDatos {
     } catch (e) {
       await temporal.retirar().catch(() => undefined);
       throw e;
+    }
+    if (modo === 'escritura') {
+      // Nada de recortes ni conversiones silenciosas: si el hash no cabe, falla.
+      await c
+        .consultar("SET SESSION sql_mode = CONCAT_WS(',', @@SESSION.sql_mode, 'STRICT_ALL_TABLES')")
+        .catch(async (e) => {
+          await c.cerrar();
+          await temporal.retirar().catch(() => undefined);
+          throw e;
+        });
     }
     return {
       motor,
