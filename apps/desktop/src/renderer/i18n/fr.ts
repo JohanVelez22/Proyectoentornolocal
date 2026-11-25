@@ -3340,6 +3340,8 @@ export const fr: Textos = {
       sinBase: 'Le projet ne déclare pas de base de données : aucun schéma ne sera enregistré.',
       avisoMongodb:
         "Ce projet utilise MongoDB : son schéma (collections et index) n'est pas enregistré.",
+      incluirDeTodosModos: 'Inclure quand même',
+      avisoIncluir: 'Si ce fichier contient une vraie clé, elle se retrouvera dans le modèle.',
       guardar: 'Enregistrer le modèle',
       guardada: (nombre: string) => `Modèle « ${nombre} » enregistré.`,
       errorGuardar: "Impossible d'enregistrer le modèle",

@@ -236,6 +236,11 @@ export interface OpcionesPlantilla {
   conArchivos: boolean;
   /** Patrones que se suman a `EXCLUSIONES_PLANTILLA` (nunca la reducen). */
   excluirExtra: string[];
+  /**
+   * Rutas (como las lista la vista previa) de archivos que el escaneo dejó fuera por parecer un
+   * secreto y que el usuario decidió incluir. Nunca vale para lo excluido por nombre.
+   */
+  incluir?: string[];
 }
 
 export interface VistaPreviaPlantilla {
@@ -359,6 +364,29 @@ function compilarPatron(patron: string): Coincide {
   return (_rel, nombre) => globCoincide(p, nombre.toLowerCase());
 }
 
+/** Valida las rutas que el usuario eligió "incluir de todos modos" (rutas relativas simples). */
+export function validarIncluir(incluir: unknown): Set<string> {
+  const malo = (): ErrorWolf =>
+    new ErrorWolf('plantillas.exclusion_invalida', 'Una de las exclusiones no es válida.');
+  if (incluir === undefined) return new Set();
+  if (!Array.isArray(incluir) || incluir.length > 200) throw malo();
+  const r = new Set<string>();
+  for (const x of incluir) {
+    if (
+      typeof x !== 'string' ||
+      x === '' ||
+      x.length > 300 ||
+      path.isAbsolute(x) ||
+      /[\0:\\]/.test(x) ||
+      x.split('/').includes('..')
+    ) {
+      throw malo();
+    }
+    r.add(x);
+  }
+  return r;
+}
+
 /** Valida y compila las exclusiones que suma el usuario; las obligatorias van siempre. */
 export function compilarExclusiones(extra: unknown): Coincide[] {
   const malo = (): ErrorWolf =>
@@ -391,12 +419,6 @@ export function compilarExclusiones(extra: unknown): Coincide[] {
 /** Nombres de variable, clave o campo que suelen guardar un secreto (sin distinguir mayúsculas). */
 const NOMBRE_SECRETO = String.raw`(?:pass(?:word|wd)|pwd|_pw|secret|token|api[_-]?key|app_?key|(?<!primary|foreign|public|sort|cache)_key|dsn|default_pw|credential|private_key)`;
 
-/**
- * Valor literal: no vacío y que no sea una referencia (`env(...)`, `getenv(...)`, `$VAR`, `${VAR}`,
- * `%VAR%`) ni un valor sin secreto (`null`, `true`, `false`).
- */
-const VALOR_LITERAL = String.raw`["']?(?!env\(|getenv\(|\$|%|null\b|true\b|false\b)[^\s"'#,;)<>]{3,}`;
-
 /** ¿Alguno de los tramos de la ruta (o su prefijo) coincide con una exclusión? */
 function enExcluidos(coincidencias: readonly Coincide[], ruta: string): boolean {
   const tramos = ruta.split('/').filter(Boolean);
@@ -409,25 +431,103 @@ function enExcluidos(coincidencias: readonly Coincide[], ruta: string): boolean 
   return false;
 }
 
-/** Textos que delatan un secreto dentro de un archivo (el archivo se deja fuera). */
-const SECRETO_EN_ARCHIVO: readonly RegExp[] = [
+/** Textos que delatan un secreto por su forma, sea cual sea el nombre que lleven. */
+const SECRETO_POR_FORMA: readonly RegExp[] = [
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
-  // NOMBRE=valor, 'nombre' => 'valor', "nombre": "valor", nombre: valor
-  new RegExp(
-    String.raw`(?<![\w.-])["']?[\w.-]*${NOMBRE_SECRETO}[\w.-]*["']?[ \t]*(?:=>|=|:)[ \t]*${VALOR_LITERAL}`,
-    'im',
-  ),
-  // <env name="DB_PASSWORD" value="valor"/> (phpunit.xml, Symfony, Docker…)
-  new RegExp(
-    String.raw`name[ \t]*=[ \t]*["'][\w.-]*${NOMBRE_SECRETO}[\w.-]*["'][ \t]+value[ \t]*=[ \t]*${VALOR_LITERAL}`,
-    'i',
-  ),
   /\bsk-[A-Za-z0-9_-]{8,}/,
+  /\b(?:sk|rk)_live_[A-Za-z0-9]{8,}/,
+  /\bAKIA[0-9A-Z]{12,}/,
+  /\bxox[bap]-[A-Za-z0-9-]{8,}/,
   /\bgithub_pat_[A-Za-z0-9_]{8,}/,
   /\bgh[pousr]_[A-Za-z0-9]{8,}/,
   /\bAIza[0-9A-Za-z_-]{20,}/,
   /:\/\/[^\s/@:]+:[^\s/@]+@/,
+  // define('AUTH_KEY', 'valor'): wp-config.php y similares
+  new RegExp(
+    String.raw`\bdefine\s*\(\s*["'][\w.-]*(?:${NOMBRE_SECRETO}|salt)[\w.-]*["']\s*,\s*["'](?![^"']*[\s$(])[^"']{4,}["']`,
+    'i',
+  ),
 ];
+
+/** Palabras comunes que acompañan a un nombre de secreto sin ser el secreto (reglas, tipos, etiquetas). */
+const PALABRAS_COMUNES = new Set([
+  'hashed',
+  'required',
+  'confirmed',
+  'password',
+  'string',
+  'nullable',
+  'boolean',
+  'integer',
+  'numeric',
+  'email',
+  'token',
+  'secret',
+  'bcrypt',
+  'encrypted',
+  'datetime',
+  'array',
+  'json',
+  'date',
+  'text',
+  'null',
+  'true',
+  'false',
+  'current_password',
+  'remember_token',
+  'changeme',
+  'example',
+]);
+
+/** ¿El valor (ya sin comillas) podría ser un secreto literal? Nada de referencias ni expresiones. */
+function valorLiteral(v: string, citado: boolean): boolean {
+  if (v.length < (citado ? 4 : 3)) return false;
+  if (PALABRAS_COMUNES.has(v.toLowerCase())) return false;
+  if (/[|$(){}]|::|->|=>/.test(v)) return false;
+  if (/^(?:env|getenv)\b|^%/i.test(v)) return false;
+  // Un texto con espacios es un mensaje, no una clave.
+  if (citado && /\s/.test(v)) return false;
+  return true;
+}
+
+/** Valor que sigue a un `nombre =`, `'nombre' =>` o `nombre:` (lo que queda de la línea). */
+function valorDeAsignacion(resto: string, separador: string, clave: string): boolean {
+  const linea = (resto.split(/\r?\n/)[0] ?? '').trimStart();
+  const comilla = /^["']/.exec(linea)?.[0];
+  if (comilla) {
+    const fin = linea.indexOf(comilla, 1);
+    if (fin < 0) return false;
+    return valorLiteral(linea.slice(1, fin), true);
+  }
+  // Sin comillas: solo en estilo variable de entorno (NOMBRE=valor, NOMBRE: valor en YAML) o, con
+  // `:`, si el valor parece un token largo. Con `=>` no (en PHP sin comillas es código).
+  if (separador === '=>') return false;
+  const token = /^[^\s#,;)>]+/.exec(linea)?.[0] ?? '';
+  if (!valorLiteral(token, false)) return false;
+  if (separador === '=') return true;
+  return /^[A-Z][A-Z0-9_]*$/.test(clave) || (token.length >= 16 && /[0-9_-]/.test(token));
+}
+
+const ASIGNACION = new RegExp(
+  String.raw`(?<![\w.-])["']?([\w.-]*${NOMBRE_SECRETO}[\w.-]*)["']?[ \t]*(=>|=|:)[ \t]*`,
+  'gi',
+);
+const ATRIBUTO_XML = new RegExp(
+  String.raw`name[ \t]*=[ \t]*["'][\w.-]*${NOMBRE_SECRETO}[\w.-]*["'][ \t]+value[ \t]*=[ \t]*(["'][^"']*["'])`,
+  'gi',
+);
+
+function llevaSecretoEnTexto(texto: string): boolean {
+  if (SECRETO_POR_FORMA.some((r) => r.test(texto))) return true;
+  for (const m of texto.matchAll(ASIGNACION)) {
+    const fin = (m.index ?? 0) + m[0].length;
+    if (valorDeAsignacion(texto.slice(fin, fin + 400), m[2]!, m[1]!)) return true;
+  }
+  for (const m of texto.matchAll(ATRIBUTO_XML)) {
+    if (valorLiteral(m[1]!.slice(1, -1), true)) return true;
+  }
+  return false;
+}
 
 /** Texto de un archivo para escanearlo: UTF-16 (con BOM) se decodifica; lo demás va como latin1. */
 function textoParaEscanear(buf: Buffer): string {
@@ -449,7 +549,7 @@ function textoParaEscanear(buf: Buffer): string {
 /** ¿El contenido (texto o bytes) lleva algo que parece una clave o una contraseña? */
 export function llevaSecreto(contenido: string | Buffer): boolean {
   const texto = typeof contenido === 'string' ? contenido : textoParaEscanear(contenido);
-  return SECRETO_EN_ARCHIVO.some((r) => r.test(texto));
+  return llevaSecretoEnTexto(texto);
 }
 
 /* ───────────── Datos sin secretos ───────────── */
@@ -584,6 +684,7 @@ async function recopilar(
   carpeta: string,
   coincidencias: readonly Coincide[],
   limites: LimitesPlantilla,
+  incluir: ReadonlySet<string> = new Set(),
 ): Promise<Recopilado> {
   const r: Recopilado = { archivos: [], bytes: 0, excluidos: [], totalExcluidos: 0 };
   const dejar = (rel: string, motivo?: string): void => {
@@ -656,7 +757,7 @@ async function recopilar(
         continue;
       }
       const buf = await readFile(absH);
-      if (llevaSecreto(buf)) {
+      if (llevaSecreto(buf) && !incluir.has(relH)) {
         dejar(relH, 'secreto');
         continue;
       }
@@ -997,7 +1098,12 @@ export class Plantillas {
   ): Promise<VistaPreviaPlantilla> {
     const sitio = await this.d.sitio(sitioId);
     const coincidencias = compilarExclusiones(o.excluirExtra);
-    const r = await recopilar(sitio.carpeta, coincidencias, this.limites);
+    const r = await recopilar(
+      sitio.carpeta,
+      coincidencias,
+      this.limites,
+      validarIncluir(o.incluir),
+    );
     let base: VistaPreviaPlantilla['base'] = null;
     let errorBase: string | null = null;
     try {
@@ -1040,7 +1146,9 @@ export class Plantillas {
     const limites = this.limites;
     const base = await this.baseDeOrigen(sitio);
     const recopilado =
-      o.conArchivos === true ? await recopilar(sitio.carpeta, coincidencias, limites) : null;
+      o.conArchivos === true
+        ? await recopilar(sitio.carpeta, coincidencias, limites, validarIncluir(o.incluir))
+        : null;
 
     const raiz = this.d.rutas.plantillas();
     await mkdir(raiz, { recursive: true });

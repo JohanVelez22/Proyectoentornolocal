@@ -1130,10 +1130,10 @@ export function idPlantilla(v: unknown): string {
 export function opcionesPlantilla(
   v: unknown,
   conNombre: boolean,
-): { nombre: string; conArchivos: boolean; excluirExtra: string[] } {
+): { nombre: string; conArchivos: boolean; excluirExtra: string[]; incluir: string[] } {
   const o = objetoPlano<Record<string, unknown>>(v, 'plantilla');
   for (const k of Object.keys(o)) {
-    if (!['nombre', 'conArchivos', 'excluirExtra'].includes(k)) {
+    if (!['nombre', 'conArchivos', 'excluirExtra', 'incluir'].includes(k)) {
       throw new Error('Argumento no válido: plantilla');
     }
   }
@@ -1144,9 +1144,16 @@ export function opcionesPlantilla(
   if (extra !== undefined && (!Array.isArray(extra) || extra.length > 50)) {
     throw new Error('Argumento no válido: excluirExtra');
   }
+  const incluir = o['incluir'];
+  if (incluir !== undefined && (!Array.isArray(incluir) || incluir.length > 200)) {
+    throw new Error('Argumento no válido: incluir');
+  }
   return {
     nombre: conNombre ? textoAcotado(o['nombre'], 1, 60, 'nombre') : '',
     conArchivos: o['conArchivos'] === true,
+    incluir: ((incluir as unknown[] | undefined) ?? []).map((x) =>
+      textoAcotado(x, 1, 300, 'incluir'),
+    ),
     excluirExtra: ((extra as unknown[] | undefined) ?? []).map((x) =>
       textoAcotado(x, 1, 120, 'excluirExtra'),
     ),

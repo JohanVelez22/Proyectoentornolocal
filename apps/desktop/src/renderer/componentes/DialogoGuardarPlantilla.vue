@@ -23,6 +23,17 @@ const nombre = ref('');
 const conArchivos = ref(true);
 const extraTexto = ref('');
 const vista = ref<VistaPreviaPlantilla | null>(null);
+/** Archivos que el escaneo dejó fuera por parecer un secreto y que el usuario quiere incluir. */
+const incluidos = ref<string[]>([]);
+const SUFIJO_SECRETO = ' (secreto)';
+const esSecreto = (x: string): boolean => x.endsWith(SUFIJO_SECRETO);
+const rutaDe = (x: string): string => x.slice(0, -SUFIJO_SECRETO.length);
+function alternarIncluir(x: string, v: boolean): void {
+  const ruta = rutaDe(x);
+  incluidos.value = v
+    ? [...new Set([...incluidos.value, ruta])]
+    : incluidos.value.filter((r) => r !== ruta);
+}
 const errorVista = ref<string | null>(null);
 const calculando = ref(false);
 
@@ -45,7 +56,11 @@ async function calcular(): Promise<void> {
   try {
     const r = await api().plantillas.vistaPrevia(
       sitio.id,
-      plano({ conArchivos: conArchivos.value, excluirExtra: extras.value }),
+      plano({
+        conArchivos: conArchivos.value,
+        excluirExtra: extras.value,
+        incluir: incluidos.value,
+      }),
     );
     if (mio !== contador) return;
     vista.value = r;
@@ -71,13 +86,14 @@ watch(
     nombre.value = s.nombre || s.dominio.replace(/\.test$/, '');
     conArchivos.value = true;
     extraTexto.value = '';
+    incluidos.value = [];
     vista.value = null;
     errorVista.value = null;
     void calcular();
   },
   { immediate: true },
 );
-watch(extras, programar);
+watch([extras, incluidos], programar);
 onBeforeUnmount(() => {
   if (temporizador) clearTimeout(temporizador);
 });
@@ -94,6 +110,7 @@ async function guardar(): Promise<void> {
           nombre: nombre.value.trim(),
           conArchivos: conArchivos.value,
           excluirExtra: extras.value,
+          incluir: incluidos.value,
         }),
       ),
     { tituloError: t.errorGuardar },
@@ -175,6 +192,15 @@ async function guardar(): Promise<void> {
             <ul class="excluidos">
               <li v-for="x in vista.excluidos" :key="x">
                 <code>{{ x }}</code>
+                <NCheckbox
+                  v-if="esSecreto(x)"
+                  size="small"
+                  :title="t.avisoIncluir"
+                  :checked="incluidos.includes(rutaDe(x))"
+                  @update:checked="(v: boolean) => alternarIncluir(x, v)"
+                >
+                  {{ t.incluirDeTodosModos }}
+                </NCheckbox>
               </li>
             </ul>
           </details>

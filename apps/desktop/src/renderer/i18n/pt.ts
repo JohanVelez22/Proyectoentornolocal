@@ -3273,6 +3273,8 @@ export const pt: Textos = {
         `Só a estrutura do banco ${nombre} (servidor ${servidor}) será salva, sem nenhuma linha.`,
       sinBase: 'O projeto não declara um banco de dados: nenhum esquema será salvo.',
       avisoMongodb: 'Este projeto usa MongoDB: o esquema (coleções e índices) não é salvo.',
+      incluirDeTodosModos: 'Incluir mesmo assim',
+      avisoIncluir: 'Se esse arquivo tiver uma chave de verdade, ela ficará dentro do modelo.',
       guardar: 'Salvar modelo',
       guardada: (nombre: string) => `Modelo “${nombre}” salvo.`,
       errorGuardar: 'Não foi possível salvar o modelo',

@@ -3247,6 +3247,8 @@ export const en: Textos = {
         `Only the structure of database ${nombre} (server ${servidor}) will be saved, with no rows.`,
       sinBase: 'The project does not declare a database: no schema will be saved.',
       avisoMongodb: 'This project uses MongoDB: its schema (collections and indexes) is not saved.',
+      incluirDeTodosModos: 'Include anyway',
+      avisoIncluir: 'If that file holds a real key, it will end up inside the template.',
       guardar: 'Save template',
       guardada: (nombre: string) => `Template “${nombre}” saved.`,
       errorGuardar: 'The template could not be saved',

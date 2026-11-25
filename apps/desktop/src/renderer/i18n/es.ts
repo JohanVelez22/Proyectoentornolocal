@@ -3266,6 +3266,8 @@ export const es = {
         `Se guardará solo la estructura de la base ${nombre} (servidor ${servidor}), sin ninguna fila.`,
       sinBase: 'El proyecto no declara una base de datos: no se guardará ningún esquema.',
       avisoMongodb: 'Este proyecto usa MongoDB: su esquema (colecciones e índices) no se guarda.',
+      incluirDeTodosModos: 'Incluir de todos modos',
+      avisoIncluir: 'Si ese archivo trae una clave de verdad, quedará dentro de la plantilla.',
       guardar: 'Guardar plantilla',
       guardada: (nombre: string) => `Plantilla «${nombre}» guardada.`,
       errorGuardar: 'No se pudo guardar la plantilla',

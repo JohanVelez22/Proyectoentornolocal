@@ -1717,13 +1717,15 @@ describe('IPC de la Etapa B', () => {
     const pl = (crudo as unknown as { plantillas: Record<string, Mock> }).plantillas;
     expect((await llamar('plantillas.lista')).ok).toBe(true);
     const opciones = { nombre: 'Mi base', conArchivos: true, excluirExtra: ['uploads'] };
+    const esperadas = { ...opciones, incluir: [] };
     expect((await llamar('plantillas.guardar', 's1', opciones)).ok).toBe(true);
-    expect(pl['guardar']).toHaveBeenCalledWith('s1', opciones);
+    expect(pl['guardar']).toHaveBeenCalledWith('s1', esperadas);
     expect((await llamar('plantillas.vistaPrevia', 's1', { excluirExtra: ['x'] })).ok).toBe(true);
     expect(pl['vistaPrevia']).toHaveBeenCalledWith('s1', {
       nombre: '',
       conArchivos: false,
       excluirExtra: ['x'],
+      incluir: [],
     });
     pl['guardar']!.mockClear();
     for (const malo of [

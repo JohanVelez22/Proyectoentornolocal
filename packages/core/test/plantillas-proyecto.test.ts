@@ -1779,3 +1779,168 @@ describe('R3-I5: pip con un requirements.txt ajeno', () => {
     await expect(revisarRequirements(f)).resolves.toBeUndefined();
   });
 });
+
+describe('R3-I6: falsos positivos y negativos del escaneo', () => {
+  const USER = `<?php
+
+namespace App\\Models;
+
+use Illuminate\\Database\\Eloquent\\Factories\\HasFactory;
+use Illuminate\\Foundation\\Auth\\User as Authenticatable;
+use Illuminate\\Notifications\\Notifiable;
+
+class User extends Authenticatable
+{
+    use HasFactory, Notifiable;
+
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
+}
+`;
+  const FACTORY = `<?php
+
+namespace Database\\Factories;
+
+use Illuminate\\Database\\Eloquent\\Factories\\Factory;
+use Illuminate\\Support\\Facades\\Hash;
+use Illuminate\\Support\\Str;
+
+class UserFactory extends Factory
+{
+    protected static ?string $password;
+
+    public function definition(): array
+    {
+        return [
+            'name' => fake()->name(),
+            'email' => fake()->unique()->safeEmail(),
+            'email_verified_at' => now(),
+            'password' => static::$password ??= Hash::make('password'),
+            'remember_token' => Str::random(10),
+        ];
+    }
+}
+`;
+  const AUTH = `<?php
+
+return [
+    'failed' => 'These credentials do not match our records.',
+    'password' => 'The provided password is incorrect.',
+    'throttle' => 'Too many login attempts. Please try again in :seconds seconds.',
+];
+`;
+  const CONFIG_AUTH = `<?php
+
+return [
+    'defaults' => ['guard' => env('AUTH_GUARD', 'web'), 'passwords' => env('AUTH_PASSWORD_BROKER', 'users')],
+    'passwords' => [
+        'users' => [
+            'provider' => 'users',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+    ],
+    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+];
+`;
+  const VALIDACION = `<?php
+return [
+    'password' => 'required|min:8|confirmed',
+    'current_password' => 'The password is incorrect.',
+    'token' => 'string',
+    'secret' => $secret,
+];
+`;
+
+  it('User.php, UserFactory y lang/en/auth.php de Laravel 12 no se excluyen', async () => {
+    await escribir('app/Models/User.php', USER);
+    await escribir('database/factories/UserFactory.php', FACTORY);
+    await escribir('lang/en/auth.php', AUTH);
+    await escribir('config/auth.php', CONFIG_AUTH);
+    await escribir('lang/en/validation.php', VALIDACION);
+    const v = await armar().vistaPrevia('tienda', {});
+    const secretos = v.excluidos.filter((x) => x.endsWith('(secreto)'));
+    expect(secretos).toEqual(['config/cache.php (secreto)']);
+    const p = await armar().guardar('tienda', opciones);
+    const zip = await leerZip(path.join(rutas.plantillas(), p.id, 'archivos.zip'));
+    for (const f of [
+      'app/Models/User.php',
+      'database/factories/UserFactory.php',
+      'lang/en/auth.php',
+      'config/auth.php',
+      'lang/en/validation.php',
+    ]) {
+      expect(zip.has(f), f).toBe(true);
+    }
+  });
+
+  it.each([
+    ['config/stripe.php', "<?php return ['key' => 'sk_live_abcdefghijklmnop1234'];"],
+    ['config/stripe2.txt', 'restricted rk_live_abcdefghijklmnop1234'],
+    ['config/aws.txt', 'AKIAIOSFODNN7EXAMPLE'],
+    ['config/slack.txt', 'xoxb-1234567890-abcdefghij'],
+    [
+      'wp-salts.php',
+      "<?php define('AUTH_KEY', 'put-your-unique-phrase-here-1234'); define('NONCE_SALT', 'abcdef123456');",
+    ],
+    ['config/sesion.json', '{ "token": "abcdef-123456-abcdef-123456" }'],
+  ])('se excluye %s', async (rel, texto) => {
+    await escribir(rel, texto);
+    const v = await armar().vistaPrevia('tienda', {});
+    expect(v.excluidos).toContain(`${rel} (secreto)`);
+  });
+
+  it('con => y : solo cuenta un literal entre comillas sin | :: -> ( ni $', async () => {
+    await escribir(
+      'config/a.php',
+      "<?php return ['password' => 'required|min:8', 'secret' => 'Foo::bar', 'token' => 'a->b', 'key' => 'f(x)', 'api_key' => '$valor'];",
+    );
+    await escribir('config/b.ts', 'const token: string = obtener(); const password: hashed = 1;');
+    const v = await armar().vistaPrevia('tienda', {});
+    expect(
+      v.excluidos.some((x) => x.startsWith('config/a.php') || x.startsWith('config/b.ts')),
+    ).toBe(false);
+  });
+
+  it('"incluir de todos modos": un archivo marcado como secreto entra si el usuario lo pide', async () => {
+    await escribir('config/servicio.json', '{ "api_key": "abcdef-123456-abcdef" }');
+    const sin = await armar().guardar('tienda', opciones);
+    const z0 = await leerZip(path.join(rutas.plantillas(), sin.id, 'archivos.zip'));
+    expect(z0.has('config/servicio.json')).toBe(false);
+    const con = await armar().guardar('tienda', { ...opciones, incluir: ['config/servicio.json'] });
+    const z1 = await leerZip(path.join(rutas.plantillas(), con.id, 'archivos.zip'));
+    expect(z1.has('config/servicio.json')).toBe(true);
+  });
+
+  it('incluir nunca vale para lo excluido por nombre y se valida', async () => {
+    const p = await armar().guardar('tienda', {
+      ...opciones,
+      incluir: ['.env', 'certs/sitio.pem'],
+    });
+    const zip = await leerZip(path.join(rutas.plantillas(), p.id, 'archivos.zip'));
+    expect(zip.has('.env')).toBe(false);
+    expect(zip.has('certs/sitio.pem')).toBe(false);
+    for (const malo of ['../x', '/etc/passwd', 'a:b', '']) {
+      await expect(armar().vistaPrevia('tienda', { incluir: [malo] })).rejects.toMatchObject({
+        codigo: 'plantillas.exclusion_invalida',
+      });
+    }
+  });
+});
