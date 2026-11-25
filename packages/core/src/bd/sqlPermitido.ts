@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { ErrorWolf } from '../errores';
 
 /**
@@ -23,6 +24,12 @@ export interface OpcionesRevisarSql {
   origen?: 'propia' | 'importada';
   /** Tope de sentencias (una plantilla de esquema no tiene decenas de miles). */
   maxSentencias?: number;
+  /**
+   * MySQL: cuenta (`usuario`@`host`, ya entrecomillada) que figura como DEFINER de las vistas,
+   * rutinas y disparadores. Nunca el administrador: una cuenta bloqueada con permisos solo sobre
+   * la base (ver `nombreDuenoMysql`).
+   */
+  definer?: string;
 }
 
 const MAX_SENTENCIAS = 20_000;
@@ -74,7 +81,7 @@ const erroneo = (sentencia: string, motivo: string): ErrorWolf =>
  * barra-asterisco) se enmascaran antes y se devuelven intactos después. Los comentarios
  * condicionales (barra-asterisco-admiración) cuentan como código: el servidor los ejecuta.
  */
-function sobreCodigoMysql(texto: string, fn: (codigo: string) => string): string {
+export function sobreCodigoMysql(texto: string, fn: (codigo: string) => string): string {
   const piezas: string[] = [];
   const guardar = (p: string): string => `\uE000${piezas.push(p) - 1}\uE000`;
   let salida = '';
@@ -328,21 +335,105 @@ function nombreDeObjeto(sentencia: string): string | null {
   return m[1]!.split('.').at(-1)!.replace(/`/g, '');
 }
 
+/** Cuenta bloqueada que figura como DEFINER de los objetos de una base importada (MySQL/MariaDB). */
+export function nombreDuenoMysql(base: string): string {
+  // El nombre completo no cabe (hasta 32 caracteres en MySQL): se abrevia con una huella de la base.
+  return `wolf_dueno_${createHash('sha256').update(base.toLowerCase()).digest('hex').slice(0, 12)}`;
+}
+
+/** Texto `usuario`@`localhost` (entrecomillado) listo para `DEFINER = …`. */
+export const definerMysql = (usuario: string): string => `\`${usuario}\`@\`localhost\``;
+
+const MASCARA = String.raw`\d+`;
+/** Espacios y comentarios (enmascarados) entre las palabras de una cabecera. */
+const SP = String.raw`(?:\s|${MASCARA})+`;
+const SPO = String.raw`(?:\s|${MASCARA})*`;
+const NOMBRE_OBJ = String.raw`(` + '`(?:[^`]|``)+`' + String.raw`|[\w$]+)`;
+
+/** Rechaza un nombre con base delante (`otra.v`): el objeto se crearía fuera de la base. */
+function sinCalificar(codigo: string, tras: number, sentencia: string): void {
+  if (new RegExp(String.raw`^${SPO}\.`).test(codigo.slice(tras))) {
+    throw erroneo(sentencia, 'nombre con base delante');
+  }
+}
+
 /**
- * Rutina de MySQL de una plantilla importada: se le agrega `SQL SECURITY INVOKER` (así corre con
- * los privilegios de quien la llama y no con los de un definer). Si no se puede ubicar dónde,
- * no se acepta.
+ * Reescribe la cabecera de una vista, rutina o disparador, solo sobre el código (cadenas y
+ * comentarios enmascarados, así que una frase dentro de una cadena o un alias no cuenta):
+ * - ningún nombre lleva base delante (ni el objeto ni la tabla de un disparador);
+ * - DEFINER es `definer` (nunca el administrador);
+ * - `importada`: vistas y rutinas con SQL SECURITY INVOKER (se inserta o se sustituye);
+ * - las vistas se crean con OR REPLACE (mysqldump las crea dos veces).
+ * Si la cabecera no se reconoce, la sentencia se rechaza.
  */
-function rutinaInvoker(s: string): string | null {
-  if (/\bSQL\s+SECURITY\s+INVOKER\b/i.test(s)) return s;
-  if (/\bSQL\s+SECURITY\s+DEFINER\b/i.test(s))
-    return s.replace(/\bSQL\s+SECURITY\s+DEFINER\b/gi, 'SQL SECURITY INVOKER');
-  const m =
-    /^(CREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE)\s+[^\s(]+\s*\((?:[^()]|\([^()]*\))*\))(\s+RETURNS\s+[A-Za-z]+(?:\s*\(\s*\d+(?:\s*,\s*\d+)?\s*\))?(?:\s+UNSIGNED)?)?/i.exec(
-      s,
-    );
-  if (!m) return null;
-  return `${m[0]} SQL SECURITY INVOKER${s.slice(m[0].length)}`;
+function reescribirCabecera(
+  cruda: string,
+  clase: 'vista' | 'funcion' | 'procedimiento' | 'disparador',
+  importada: boolean,
+  definer: string | undefined,
+): string {
+  const def = definer ? `DEFINER = ${definer} ` : '';
+  return sobreCodigoMysql(cruda, (c) => {
+    if (clase === 'vista') {
+      const m = new RegExp(
+        String.raw`^${SPO}CREATE${SP}(?:OR${SP}REPLACE${SP})?(?:ALGORITHM${SPO}=${SPO}(\w+)${SP})?` +
+          String.raw`(?:SQL${SP}SECURITY${SP}(DEFINER|INVOKER)${SP})?VIEW${SP}${NOMBRE_OBJ}`,
+        'i',
+      ).exec(c);
+      if (!m) throw erroneo(cruda, 'cabecera de vista no reconocida');
+      sinCalificar(c, m[0].length, cruda);
+      const seguridad = importada ? 'INVOKER' : m[2]?.toUpperCase();
+      return (
+        `CREATE OR REPLACE ${m[1] ? `ALGORITHM = ${m[1]} ` : ''}${def}` +
+        `${seguridad ? `SQL SECURITY ${seguridad} ` : ''}VIEW ${m[3]}${c.slice(m[0].length)}`
+      );
+    }
+    if (clase === 'disparador') {
+      const m = new RegExp(
+        String.raw`^${SPO}CREATE${SP}(?:OR${SP}REPLACE${SP})?TRIGGER${SP}(?:IF${SP}NOT${SP}EXISTS${SP})?` +
+          String.raw`${NOMBRE_OBJ}${SP}(?:BEFORE|AFTER)${SP}(?:INSERT|UPDATE|DELETE)${SP}ON${SP}${NOMBRE_OBJ}`,
+        'i',
+      ).exec(c);
+      if (!m) throw erroneo(cruda, 'cabecera de disparador no reconocida');
+      // Ni el nombre del disparador ni la tabla llevan base delante.
+      const nombre = new RegExp(
+        String.raw`TRIGGER${SP}(?:IF${SP}NOT${SP}EXISTS${SP})?${NOMBRE_OBJ}`,
+        'i',
+      ).exec(m[0])!;
+      sinCalificar(c, nombre.index + nombre[0].length, cruda);
+      sinCalificar(c, m[0].length, cruda);
+      return `CREATE ${def}${c.slice(c.search(/TRIGGER/i))}`;
+    }
+    const m = new RegExp(
+      String.raw`^${SPO}CREATE${SP}(?:OR${SP}REPLACE${SP})?(?:AGGREGATE${SP})?(FUNCTION|PROCEDURE)${SP}` +
+        String.raw`(?:IF${SP}NOT${SP}EXISTS${SP})?${NOMBRE_OBJ}`,
+      'i',
+    ).exec(c);
+    if (!m) throw erroneo(cruda, 'cabecera de rutina no reconocida');
+    sinCalificar(c, m[0].length, cruda);
+    let resto = c.slice(c.search(/FUNCTION|PROCEDURE/i));
+    if (importada) {
+      // Sin los identificadores entre comillas (un alias `SQL SECURITY INVOKER` no cuenta).
+      const limpio = resto.replace(/`(?:[^`]|``)*`/g, (x) => ' '.repeat(x.length));
+      const seg = /SQL\s+SECURITY\s+(DEFINER|INVOKER)/i.exec(limpio);
+      if (seg) {
+        resto =
+          resto.slice(0, seg.index) +
+          'SQL SECURITY INVOKER' +
+          resto.slice(seg.index + seg[0].length);
+      } else {
+        const h = new RegExp(
+          String.raw`^(?:FUNCTION|PROCEDURE)${SP}(?:IF${SP}NOT${SP}EXISTS${SP})?${NOMBRE_OBJ}${SPO}` +
+            String.raw`\((?:[^()]|\([^()]*\))*\)` +
+            String.raw`(?:${SP}RETURNS${SP}[A-Za-z]+(?:${SPO}\(${SPO}\d+(?:${SPO},${SPO}\d+)?${SPO}\))?(?:${SP}UNSIGNED)?)?`,
+          'i',
+        ).exec(resto);
+        if (!h) throw erroneo(cruda, 'no se pudo dejar con SQL SECURITY INVOKER');
+        resto = `${h[0]} SQL SECURITY INVOKER${resto.slice(h[0].length)}`;
+      }
+    }
+    return `CREATE ${def}${resto}`;
+  });
 }
 
 /**
@@ -381,21 +472,17 @@ export function revisarSql(
     if (dialecto === 'postgresql' && importada && /\bSECURITY\s+DEFINER\b/i.test(s)) {
       throw erroneo(cruda, 'SECURITY DEFINER');
     }
-    if (dialecto === 'mysql' && importada) {
-      if (clase === 'disparador')
-        throw erroneo(cruda, 'un disparador corre con privilegios ajenos');
-      if (clase === 'vista') {
-        s = /\bSQL\s+SECURITY\s+(?:DEFINER|INVOKER)\b/i.test(s)
-          ? s.replace(/\bSQL\s+SECURITY\s+DEFINER\b/gi, 'SQL SECURITY INVOKER')
-          : s.replace(
-              /^(CREATE\s+(?:OR\s+REPLACE\s+)?(?:ALGORITHM\s*=\s*\w+\s+)?)VIEW\b/i,
-              '$1SQL SECURITY INVOKER VIEW',
-            );
-      } else if (clase === 'funcion' || clase === 'procedimiento') {
-        const r = rutinaInvoker(s);
-        if (r === null) throw erroneo(cruda, 'no se pudo dejar con SQL SECURITY INVOKER');
-        s = r;
-      }
+    if (dialecto === 'mysql' && importada && clase === 'disparador') {
+      throw erroneo(cruda, 'un disparador corre con privilegios ajenos');
+    }
+    if (
+      dialecto === 'mysql' &&
+      (clase === 'vista' ||
+        clase === 'funcion' ||
+        clase === 'procedimiento' ||
+        clase === 'disparador')
+    ) {
+      s = reescribirCabecera(s, clase, importada, opciones.definer);
     }
     salida.push({ texto: s, clase, objeto: nombreDeObjeto(s) });
   }

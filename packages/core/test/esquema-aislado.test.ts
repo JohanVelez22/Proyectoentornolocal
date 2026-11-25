@@ -2,6 +2,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  definerMysql,
+  nombreDuenoMysql,
   dividirSentencias,
   quitarAutoIncrement,
   quitarDefiner,
@@ -265,7 +267,7 @@ describe('Respaldos.restaurarEsquema: MySQL y MariaDB', () => {
     expect(limitado.some((c) => c.sql.includes('CREATE TABLE'))).toBe(true);
     // Con el binlog de MySQL 8, un usuario sin SUPER no puede crear disparadores, rutinas ni vistas.
     expect(limitado.some((c) => /TRIGGER|PROCEDURE|FUNCTION|VIEW/i.test(c.sql))).toBe(false);
-    expect(consultas.map((c) => c.sql).join('\n')).not.toMatch(/DEFINER\s*=\s*`/);
+    expect(limitado.map((c) => c.sql).join('\n')).not.toMatch(/DEFINER/);
     expect(eventos).toEqual(['crear-usuario:tienda', 'retirar-usuario']);
   });
 
@@ -274,10 +276,13 @@ describe('Respaldos.restaurarEsquema: MySQL y MariaDB', () => {
       origen: 'propia',
     });
     const admin = consultas.filter((c) => c.usuario === 'root').map((c) => c.sql);
-    expect(admin[0]).toBe('USE `tienda`');
-    expect(admin.some((s) => /^CREATE\s+DEFINER = CURRENT_USER\s+TRIGGER\s+`trg`/.test(s))).toBe(
-      true,
-    );
+    expect(admin).toContain('USE `tienda`');
+    // El DEFINER es la cuenta bloqueada de la base, nunca root ni CURRENT_USER.
+    const dueno = definerMysql(nombreDuenoMysql('tienda'));
+    expect(admin.some((s) => s.startsWith(`CREATE DEFINER = ${dueno} TRIGGER \`trg\``))).toBe(true);
+    expect(admin.join('\n')).not.toMatch(/CURRENT_USER|`root`/);
+    expect(admin.some((s) => /^CREATE USER IF NOT EXISTS/.test(s))).toBe(true);
+    expect(admin.some((s) => /^GRANT ALL PRIVILEGES ON `tienda`\.\*/.test(s))).toBe(true);
     expect(admin.some((s) => s.includes('CREATE TABLE'))).toBe(false);
   });
 
@@ -291,12 +296,16 @@ describe('Respaldos.restaurarEsquema: MySQL y MariaDB', () => {
       origen: 'importada',
     });
     const admin = consultas.filter((c) => c.usuario === 'root').map((c) => c.sql);
-    expect(admin.some((s) => /DEFINER = CURRENT_USER SQL SECURITY INVOKER VIEW/.test(s))).toBe(
-      true,
-    );
+    const dueno = definerMysql(nombreDuenoMysql('tienda'));
     expect(
-      admin.some((s) => /DEFINER = CURRENT_USER FUNCTION `f`.*SQL SECURITY INVOKER/.test(s)),
+      admin.some((s) =>
+        s.startsWith(`CREATE OR REPLACE DEFINER = ${dueno} SQL SECURITY INVOKER VIEW`),
+      ),
     ).toBe(true);
+    expect(
+      admin.some((s) => /^CREATE DEFINER = \S+ FUNCTION `f`.*SQL SECURITY INVOKER/.test(s)),
+    ).toBe(true);
+    expect(admin.join('\n')).not.toMatch(/CURRENT_USER/);
     expect(admin.join('\n')).not.toMatch(/SECURITY DEFINER/);
   });
 

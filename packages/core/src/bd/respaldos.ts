@@ -15,7 +15,13 @@ import { esIdInstancia } from '../servicios/instancias';
 import type { EstadoInstancia, EstadoServicio } from '../tipos';
 import { motorDe, type BasesDeDatos, type ObjetivoBd } from './basesDeDatos';
 import { ClienteMysql, validarNombreBd, type FabricaConexion } from './clienteMysql';
-import { MAX_BYTES_ESQUEMA, quitarRestrict, revisarSql } from './sqlPermitido';
+import {
+  definerMysql,
+  MAX_BYTES_ESQUEMA,
+  nombreDuenoMysql,
+  quitarRestrict,
+  revisarSql,
+} from './sqlPermitido';
 import { ErrorWolf } from '../errores';
 import { ClientePostgres, validarNombrePg, type FabricaConexionPg } from './clientePostgres';
 import type { DatosConexion, MotorBd } from './env';
@@ -1749,25 +1755,16 @@ export class Respaldos {
       ? new TextDecoder(fuente.utf16 === 'le' ? 'utf-16le' : 'utf-16be').decode(bruto)
       : bruto.toString('utf8').replace(/^\uFEFF/, '');
     // Antes de tocar nada: todo el SQL contra la lista de sentencias permitidas.
-    const sentencias = revisarSql(texto, 'mysql', { origen: opts.origen ?? 'propia' });
+    // Vistas, rutinas y disparadores llevan como DEFINER una cuenta bloqueada con permisos solo
+    // sobre esta base (nunca el administrador): así nada de lo que traiga puede salirse de ella.
+    const definer = definerMysql(nombreDuenoMysql(base));
+    const sentencias = revisarSql(texto, 'mysql', { origen: opts.origen ?? 'propia', definer });
     // Con el binlog activo, MySQL 8 no deja a un usuario sin SUPER crear disparadores, rutinas ni
     // vistas con otro definer: el usuario limitado solo crea tablas, índices y ALTER; lo demás lo
-    // crea el administrador después, con un DEFINER explícito (él mismo).
+    // crea el administrador después, con el DEFINER de arriba (ya reescrito en la cabecera).
     const conDefiner = new Set(['vista', 'disparador', 'funcion', 'procedimiento']);
     const fase1 = sentencias.filter((x) => !conDefiner.has(x.clase)).map((x) => x.texto);
-    const fase2 = sentencias
-      .filter((x) => conDefiner.has(x.clase))
-      .map((x) => {
-        // mysqldump crea cada vista dos veces (marcador y definitiva): la segunda reemplaza.
-        const texto =
-          x.clase === 'vista' && !/^CREATE\s+OR\s+REPLACE\b/i.test(x.texto)
-            ? x.texto.replace(/^CREATE\s+/i, 'CREATE OR REPLACE ')
-            : x.texto;
-        return texto.replace(
-          /^(CREATE\s+(?:OR\s+REPLACE\s+)?(?:ALGORITHM\s*=\s*\w+\s+)?)/i,
-          '$1DEFINER = CURRENT_USER ',
-        );
-      });
+    const fase2 = sentencias.filter((x) => conDefiner.has(x.clase)).map((x) => x.texto);
     const bd = this.d.bd;
     const con = await bd.conexion(motor);
     const claves = [con.clave ?? ''];
@@ -1790,6 +1787,7 @@ export class Respaldos {
       const admin = new ClienteMysql(this.d.fabricas?.mysql);
       try {
         await conectar(admin, con.usuario, con.clave ?? '');
+        await admin.crearDuenoObjetos(base);
         await admin.ejecutarSentencias(base, fase2);
       } catch (e) {
         fallo = e;

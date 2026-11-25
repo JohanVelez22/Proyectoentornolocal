@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { createConnection } from 'mysql2/promise';
+import { nombreDuenoMysql } from './sqlPermitido';
 import { nombreTemporal, NOMBRE_TEMPORAL, temporalVencido } from './temporales';
 import { ErrorWolf } from '../errores';
 
@@ -330,6 +331,29 @@ export class ClienteMysql {
       throw traducir(e, `crear un usuario temporal para ${base}`);
     }
     return { usuario, clave };
+  }
+
+  /**
+   * Cuenta que figura como DEFINER de las vistas, rutinas y disparadores de una base importada:
+   * bloqueada (nadie puede entrar con ella) y con permisos solo sobre `base`.*. Se conserva
+   * mientras la base exista (los objetos la nombran).
+   */
+  async crearDuenoObjetos(base: string): Promise<string> {
+    id(base);
+    noSistema(base, 'crear');
+    const usuario = nombreDuenoMysql(base);
+    const escapado = '`' + base.replace(/_/g, '\\_') + '`';
+    try {
+      await this.filas("CREATE USER IF NOT EXISTS ?@'localhost' ACCOUNT LOCK", [usuario]);
+    } catch {
+      // Servidores sin ACCOUNT LOCK: una clave al azar que nadie conoce.
+      await this.filas("CREATE USER IF NOT EXISTS ?@'localhost' IDENTIFIED BY ?", [
+        usuario,
+        randomBytes(24).toString('hex'),
+      ]);
+    }
+    await this.filas(`GRANT ALL PRIVILEGES ON ${escapado}.* TO ?@'localhost'`, [usuario]);
+    return usuario;
   }
 
   /** Borra un usuario creado por `crearUsuarioTemporal` (y solo esos). */
