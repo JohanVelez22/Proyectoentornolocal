@@ -202,6 +202,7 @@ import { RegistroPasos } from './proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
 import { leerHuellaWordpress } from './proyectos/pasos/descargarPlantilla';
 import { generadorPorTipo, Plantillas } from './proyectos/plantillas';
+import { AuditoriaClaves } from './bd/auditoriaClaves';
 import { Instantaneas } from './bd/instantaneas';
 import { CerrojoBases } from './bd/cerrojoBases';
 import { asignarPuertoProxy, datosAlCrear } from './proyectos/pasos/sitio';
@@ -380,6 +381,8 @@ interface ModulosNucleo {
   plantillas: Plantillas;
   /** Instantáneas de base con un clic (D19). */
   instantaneas: Instantaneas;
+  /** Auditoría de contraseñas de las bases propias (D20). */
+  auditoriaClaves: AuditoriaClaves;
   /** Una operación a la vez por base: instantáneas, restaurar, importar y borrar. */
   cerrojoBases: CerrojoBases;
 }
@@ -584,6 +587,8 @@ export class Nucleo {
   readonly plantillas: Plantillas;
   /** Instantáneas de base: tomar, volver con respaldo previo, borrar a la papelera (D19). */
   readonly instantaneas: Instantaneas;
+  /** Auditoría de contraseñas: revisar hashes y restablecer una contraseña con copia (D20). */
+  readonly auditoriaClaves: AuditoriaClaves;
   private readonly cerrojoBases: CerrojoBases;
   /** Gestor de `.env` de los proyectos: secretos enmascarados, diff, copia y escritura atómica. */
   readonly env: GestorEnv;
@@ -671,6 +676,7 @@ export class Nucleo {
     this.depsPasos = m.depsPasos;
     this.plantillas = m.plantillas;
     this.instantaneas = m.instantaneas;
+    this.auditoriaClaves = m.auditoriaClaves;
     this.cerrojoBases = m.cerrojoBases;
     this.env = new GestorEnv({
       sitio: async (id) => (await this.sitios.listar()).find((x) => x.id === id),
@@ -977,6 +983,13 @@ export class Nucleo {
       estadoBase: (objetivo, base) => bd.estadoBase(objetivo, base),
       restringir: (ruta) => plat.restringirAlUsuario(ruta),
     });
+    const auditoriaClaves = new AuditoriaClaves({
+      rutas,
+      abrir: (objetivo, base, modo, plazoMs) => bd.abrirConsulta(objetivo, base, modo, plazoMs),
+      instantaneas,
+      cerrojo: cerrojoBases,
+      restringir: (ruta) => plat.restringirAlUsuario(ruta),
+    });
     const lanzar = o.lanzar ?? lanzadorPorDefecto;
     // Los pasos de receta llaman a Nucleo.guardarSitio: se resuelve tras construir el núcleo.
     // eslint-disable-next-line prefer-const
@@ -1184,6 +1197,7 @@ export class Nucleo {
     const modulos: ModulosNucleo = {
       plantillas,
       instantaneas,
+      auditoriaClaves,
       cerrojoBases,
       editorVhost,
       ...(o.lanzarEditor ? { lanzarEditor: o.lanzarEditor } : {}),

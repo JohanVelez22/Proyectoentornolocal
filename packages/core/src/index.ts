@@ -57,6 +57,7 @@ export * from './bd/formato';
 export * from './bd/respaldos';
 export * from './bd/instantaneas';
 export * from './bd/pgvector';
+export * from './bd/auditoriaClaves';
 export * from './bd/baseProyecto';
 export * from './herramientas/composer';
 export * from './herramientas/terminal';

@@ -80,6 +80,10 @@ export class Rutas {
   papelera(): string {
     return path.join(this.base, 'papelera');
   }
+  /** Copia de la fila de usuario que cambia al restablecer una contraseña (D20): respaldos/auditoria/. */
+  respaldosAuditoria(): string {
+    return path.join(this.base, 'respaldos', 'auditoria');
+  }
   /** Copias con fecha de los .env y .gitignore de proyectos antes de escribirlos. */
   respaldosEnv(): string {
     return path.join(this.base, 'etc', 'respaldos', 'env');

@@ -235,6 +235,14 @@ export class ClientePostgres {
     return (await (await this.conexion()).query(sql, params)).rows as Record<string, unknown>[];
   }
 
+  /**
+   * Una consulta con parámetros y sus filas (D20). Quien la llama arma el SQL solo con nombres que
+   * ya comprobó contra el catálogo; los valores van siempre en `params`.
+   */
+  async consultar(sql: string, params: unknown[] = []): Promise<Record<string, unknown>[]> {
+    return this.filas(sql, params);
+  }
+
   /** Abre una conexión breve a otra base con las mismas credenciales. */
   private async enBase<T>(base: string, fn: (q: ConexionBajaPg) => Promise<T>): Promise<T> {
     await this.conexion();

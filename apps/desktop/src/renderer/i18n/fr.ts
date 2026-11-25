@@ -575,6 +575,25 @@ export const fr: Textos = {
       'acceso_bd.servidor_no_resuelto':
         'La base de ce projet n’est pas sur un serveur local de WolfCore Dev.',
       'acceso_bd.no_listo': 'L’outil n’est pas prêt : installez-le depuis Services et allumez PHP.',
+      'auditoria.tabla_invalida': "La table n'existe pas dans cette base.",
+      'auditoria.columna_invalida':
+        "La colonne n'existe pas dans cette table (et celles de l'utilisateur et du hash doivent être différentes).",
+      'auditoria.usuario_no_encontrado': "Aucun compte n'a cet utilisateur.",
+      'auditoria.usuario_repetido':
+        "Plusieurs comptes ont cet utilisateur : rien n'a été réinitialisé, pour ne pas toucher le mauvais.",
+      'auditoria.formato_no_soportado':
+        "Le format du hash actuel ne peut pas être reproduit : rien n'a été réinitialisé.",
+      'auditoria.clave_larga':
+        "bcrypt n'utilise que les 72 premiers octets du mot de passe : choisissez-en un plus court.",
+      'auditoria.clave_invalida': "Le nouveau mot de passe n'est pas valide.",
+      'auditoria.sin_confirmar': 'Confirmez que vous voulez réinitialiser ce mot de passe.',
+      'auditoria.respaldo_previo_fallo':
+        "Impossible d'enregistrer une copie de la base avant la réinitialisation : rien n'a été modifié.",
+      'auditoria.copia_fallo':
+        "Impossible d'enregistrer la copie de la ligne : rien n'a été modifié.",
+      'auditoria.motor_no_soportado':
+        "L'audit des mots de passe concerne MySQL, MariaDB et PostgreSQL.",
+      'auditoria.cancelada': 'Audit annulé.',
       'instantaneas.id_invalido': 'L’instantané n’est pas valide.',
       'instantaneas.no_encontrada': 'Instantané introuvable ; il a peut-être déjà été supprimé.',
       'instantaneas.otra_base':

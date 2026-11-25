@@ -187,6 +187,13 @@ const fabricaReal: FabricaConexion = async (c) =>
   })) as unknown as ConexionBaja;
 
 /** Administración básica de bases en MySQL o MariaDB. */
+const PERMISOS_TEMPORAL = {
+  todos: 'ALL PRIVILEGES',
+  datos: 'INSERT',
+  lectura: 'SELECT',
+  escritura: 'SELECT, UPDATE',
+} as const;
+
 export class ClienteMysql {
   private con: ConexionBaja | null = null;
   private datos: ConexionMysql | null = null;
@@ -468,8 +475,11 @@ export class ClienteMysql {
    */
   async crearUsuarioTemporal(
     base: string,
-    /** `datos`: solo INSERT (el usuario que carga los datos de un tercero). */
-    privilegios: 'todos' | 'datos' = 'todos',
+    /**
+     * `datos`: solo INSERT (el usuario que carga los datos de un tercero). `lectura`: solo SELECT
+     * y `escritura`: SELECT y UPDATE (la auditoría de contraseñas, D20).
+     */
+    privilegios: 'todos' | 'datos' | 'lectura' | 'escritura' = 'todos',
   ): Promise<{ usuario: string; clave: string }> {
     id(base);
     const escapado = `\`${base.replace(/_/g, '\\_')}\``;
@@ -481,7 +491,7 @@ export class ClienteMysql {
       for (const host of ['localhost', '127.0.0.1']) {
         await this.filas(`CREATE USER ?@'${host}' IDENTIFIED BY ?`, [usuario, clave]);
         // `_` es un comodín en los permisos de base: se escapa para no alcanzar otras bases.
-        const permisos = privilegios === 'datos' ? 'INSERT' : 'ALL PRIVILEGES';
+        const permisos = PERMISOS_TEMPORAL[privilegios];
         await this.filas(`GRANT ${permisos} ON ${escapado}.* TO ?@'${host}'`, [usuario]);
       }
     } catch (e) {
@@ -532,6 +542,14 @@ export class ClienteMysql {
   }
 
   /** Una sola sentencia (el driver no admite varias en la misma consulta). */
+  /**
+   * Una consulta con parámetros y sus filas (D20). Quien la llama arma el SQL solo con nombres que
+   * ya comprobó contra el catálogo; los valores van siempre en `params`.
+   */
+  async consultar(sql: string, params: unknown[] = []): Promise<Record<string, unknown>[]> {
+    return this.filas(sql, params);
+  }
+
   async ejecutarUna(sentencia: string): Promise<void> {
     await this.conLimite(this.conexion().query(sentencia));
   }

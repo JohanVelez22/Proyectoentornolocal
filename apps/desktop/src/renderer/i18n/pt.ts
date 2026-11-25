@@ -554,6 +554,23 @@ export const pt: Textos = {
       'acceso_bd.servidor_no_resuelto':
         'O banco deste projeto não é de um servidor local do WolfCore Dev.',
       'acceso_bd.no_listo': 'A ferramenta não está pronta: instale-a em Serviços e ligue o PHP.',
+      'auditoria.tabla_invalida': 'A tabela não existe nessa base.',
+      'auditoria.columna_invalida':
+        'A coluna não existe nessa tabela (e as colunas do usuário e do hash devem ser diferentes).',
+      'auditoria.usuario_no_encontrado': 'Nenhuma conta tem esse usuário.',
+      'auditoria.usuario_repetido':
+        'Há mais de uma conta com esse usuário: nada foi redefinido, para não tocar na errada.',
+      'auditoria.formato_no_soportado':
+        'O formato do hash atual não pode ser reproduzido: nada foi redefinido.',
+      'auditoria.clave_larga':
+        'O bcrypt só usa os primeiros 72 bytes da senha: escolha uma mais curta.',
+      'auditoria.clave_invalida': 'A nova senha não é válida.',
+      'auditoria.sin_confirmar': 'Confirme que quer redefinir esta senha.',
+      'auditoria.respaldo_previo_fallo':
+        'Não foi possível guardar uma cópia da base antes de redefinir: nada foi alterado.',
+      'auditoria.copia_fallo': 'Não foi possível guardar a cópia da linha: nada foi alterado.',
+      'auditoria.motor_no_soportado': 'A auditoria de senhas é para MySQL, MariaDB e PostgreSQL.',
+      'auditoria.cancelada': 'Auditoria cancelada.',
       'instantaneas.id_invalido': 'O instantâneo não é válido.',
       'instantaneas.no_encontrada':
         'O instantâneo não foi encontrado; talvez já tenha sido apagado.',

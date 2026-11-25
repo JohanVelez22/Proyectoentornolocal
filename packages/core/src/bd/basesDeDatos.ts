@@ -14,9 +14,16 @@ import type {
   IdInstancia,
   TipoSitio,
 } from '../tipos';
-import { ClienteMysql, type FabricaConexion, type ResultadoCrearBase } from './clienteMysql';
+import type { ConsultaSql } from './auditoriaClaves/tablas';
+import {
+  ClienteMysql,
+  validarNombreBd,
+  type FabricaConexion,
+  type ResultadoCrearBase,
+} from './clienteMysql';
 import {
   ClientePostgres,
+  validarNombrePg,
   type FabricaConexionPg,
   type ResultadoCrearBasePg,
 } from './clientePostgres';
@@ -318,11 +325,14 @@ export class BasesDeDatos {
   async usuarioTemporal(
     objetivo: ObjetivoBd,
     base: string,
-    privilegios: 'todos' | 'datos' = 'todos',
+    privilegios: 'todos' | 'datos' | 'lectura' | 'escritura' = 'todos',
   ): Promise<{ usuario: string; clave: string; retirar: () => Promise<void> }> {
     const motor = motorDe(objetivo);
     if (motor === 'mongodb') throw new Error('MongoDB no usa usuarios temporales de SQL.');
     if (motor === 'postgresql') {
+      if (privilegios === 'lectura' || privilegios === 'escritura') {
+        throw new Error('PostgreSQL no usa roles temporales de lectura: ver abrirConsulta.');
+      }
       const r = await this.conPostgres((c) => c.crearRolTemporal(base), objetivo);
       return {
         ...r,
@@ -333,6 +343,73 @@ export class BasesDeDatos {
     return {
       ...r,
       retirar: () => this.conMysql(objetivo, (c) => c.borrarUsuarioTemporal(r.usuario)),
+    };
+  }
+
+  /**
+   * Conexión a UNA base para la auditoría de contraseñas (D20), con el menor poder viable:
+   * - MySQL y MariaDB: un usuario temporal limitado a la base con solo SELECT (`lectura`) o
+   *   SELECT y UPDATE (`escritura`); se borra al cerrar.
+   * - PostgreSQL: el administrador, con la sesión en solo lectura (`default_transaction_read_only`)
+   *   para auditar. No hay un rol temporal viable: el de D19 pasa a ser dueño de la base y no
+   *   puede leer las tablas del usuario propio del proyecto, y el usuario propio de D16 guarda su
+   *   clave solo en el proceso principal (`AlmacenSecretos`), que el núcleo no recibe.
+   * Los nombres de tabla y de columna los valida `TablasSql` contra el catálogo antes de usarlos.
+   */
+  async abrirConsulta(
+    objetivo: ObjetivoBd,
+    base: string,
+    modo: 'lectura' | 'escritura',
+    plazoMs: number,
+  ): Promise<ConsultaSql> {
+    const motor = motorDe(objetivo);
+    if (motor === 'mongodb') {
+      throw new ErrorWolf(
+        'auditoria.motor_no_soportado',
+        'La auditoría de contraseñas es para MySQL, MariaDB y PostgreSQL.',
+      );
+    }
+    const x = await this.conexion(objetivo);
+    if (motor === 'postgresql') {
+      validarNombrePg(base);
+      const c = new ClientePostgres(this.d.fabricas?.postgres);
+      await c.conectar({
+        host: x.host,
+        puerto: x.puerto,
+        usuario: x.usuario,
+        clave: x.clave ?? '',
+        base,
+      });
+      try {
+        await c.consultar(`SET statement_timeout = ${Math.max(1000, Math.floor(plazoMs))}`);
+        if (modo === 'lectura') await c.consultar('SET default_transaction_read_only = on');
+      } catch (e) {
+        await c.cerrar();
+        throw e;
+      }
+      return { motor, consultar: (s, p) => c.consultar(s, p), cerrar: () => c.cerrar() };
+    }
+    validarNombreBd(base);
+    const temporal = await this.usuarioTemporal(objetivo, base, modo);
+    const c = new ClienteMysql(this.d.fabricas?.mysql, { limiteMs: plazoMs });
+    try {
+      await c.conectar({
+        host: x.host,
+        puerto: x.puerto,
+        usuario: temporal.usuario,
+        clave: temporal.clave,
+      });
+    } catch (e) {
+      await temporal.retirar().catch(() => undefined);
+      throw e;
+    }
+    return {
+      motor,
+      consultar: (s, p) => c.consultar(s, p),
+      cerrar: async () => {
+        await c.cerrar();
+        await temporal.retirar().catch(() => undefined);
+      },
     };
   }
 

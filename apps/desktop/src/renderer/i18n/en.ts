@@ -542,6 +542,23 @@ export const en: Textos = {
       'acceso_bd.servidor_no_resuelto':
         "This project's database is not on a local WolfCore Dev server.",
       'acceso_bd.no_listo': 'The tool is not ready: install it from Services and turn PHP on.',
+      'auditoria.tabla_invalida': 'The table does not exist in that database.',
+      'auditoria.columna_invalida':
+        'The column does not exist in that table (and the user and hash columns must differ).',
+      'auditoria.usuario_no_encontrado': 'No account has that user.',
+      'auditoria.usuario_repetido':
+        'More than one account has that user: nothing was reset, so the wrong one is not touched.',
+      'auditoria.formato_no_soportado':
+        'The current hash format cannot be reproduced: nothing was reset.',
+      'auditoria.clave_larga':
+        'bcrypt only uses the first 72 bytes of the password: choose a shorter one.',
+      'auditoria.clave_invalida': 'The new password is not valid.',
+      'auditoria.sin_confirmar': 'Confirm that you want to reset this password.',
+      'auditoria.respaldo_previo_fallo':
+        'Could not save a copy of the database before resetting: nothing was changed.',
+      'auditoria.copia_fallo': 'Could not save the copy of the row: nothing was changed.',
+      'auditoria.motor_no_soportado': 'The password audit is for MySQL, MariaDB and PostgreSQL.',
+      'auditoria.cancelada': 'Audit cancelled.',
       'instantaneas.id_invalido': 'The snapshot is not valid.',
       'instantaneas.no_encontrada': 'The snapshot was not found; it may have been deleted already.',
       'instantaneas.otra_base':

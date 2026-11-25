@@ -551,6 +551,24 @@ export const es = {
         'La base de este proyecto no es de un servidor local de WolfCore Dev.',
       'acceso_bd.no_listo':
         'La herramienta no está lista: instálela desde Servicios y encienda PHP.',
+      'auditoria.tabla_invalida': 'La tabla no existe en esa base.',
+      'auditoria.columna_invalida':
+        'La columna no existe en esa tabla (y la del usuario y la del hash deben ser distintas).',
+      'auditoria.usuario_no_encontrado': 'No hay ninguna cuenta con ese usuario.',
+      'auditoria.usuario_repetido':
+        'Hay más de una cuenta con ese usuario: no se restablece, para no tocar la que no es.',
+      'auditoria.formato_no_soportado':
+        'El formato del hash actual no se puede reproducir: no se restablece.',
+      'auditoria.clave_larga':
+        'bcrypt solo usa los primeros 72 bytes de la contraseña: elija una más corta.',
+      'auditoria.clave_invalida': 'La contraseña nueva no es válida.',
+      'auditoria.sin_confirmar': 'Confirme que quiere restablecer esta contraseña.',
+      'auditoria.respaldo_previo_fallo':
+        'No se pudo guardar una copia de la base antes de restablecer: no se cambió nada.',
+      'auditoria.copia_fallo': 'No se pudo guardar la copia de la fila: no se cambió nada.',
+      'auditoria.motor_no_soportado':
+        'La auditoría de contraseñas es para MySQL, MariaDB y PostgreSQL.',
+      'auditoria.cancelada': 'Auditoría cancelada.',
       'instantaneas.id_invalido': 'La instantánea no es válida.',
       'instantaneas.no_encontrada': 'No se encontró la instantánea; puede que ya se haya borrado.',
       'instantaneas.otra_base': 'Esta instantánea es de otra base: no se puede aplicar a esta.',
