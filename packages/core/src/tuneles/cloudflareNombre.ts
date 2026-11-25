@@ -140,7 +140,7 @@ export class CloudflareNombre implements ProveedorTunel {
     return { ok: true };
   }
 
-  private async cloudflared(args: string[], timeoutMs: number): Promise<void> {
+  private async cloudflared(args: string[], timeoutMs: number): Promise<string> {
     const exe = await this.d.ejecutable();
     const r = await this.d.ejecutor(exe, ['tunnel', '--origincert', this.cert(), ...args], {
       timeoutMs,
@@ -151,6 +151,8 @@ export class CloudflareNombre implements ProveedorTunel {
       const detalle = detalleSeguro(`${r.stderr}\n${r.stdout}`);
       throw new ErrorWolf('tuneles.cloudflare_fallo', `cloudflared falló: ${detalle}`, { detalle });
     }
+    return `${r.stdout}
+${r.stderr}`;
   }
 
   private conexion: AbortController | null = null;
@@ -252,16 +254,41 @@ export class CloudflareNombre implements ProveedorTunel {
     if ((await s.leer(idSecretoTunelNombre(nombre))) !== null) return;
     const carpeta = await this.carpetaTemporal();
     const tmp = path.join(carpeta, `crear-${randomBytes(6).toString('hex')}.json`);
+    let creado = false;
     try {
       await this.cloudflared(['create', '--credentials-file', tmp, nombre], 60_000);
+      creado = true;
       // Lo que cloudflared dejó en el archivo se limita al usuario mientras se lee.
       await this.d.plataforma.restringirAlUsuario(tmp).catch(() => false);
       const texto = await readFile(tmp, 'utf8').catch(() => '');
       const c = leerCredencial(texto);
       await s.guardar(idSecretoTunelNombre(nombre), JSON.stringify(c));
+    } catch (e) {
+      // El túnel existe en Cloudflare pero no hay dónde guardar su credencial: no se deja huérfano.
+      if (creado) await this.cloudflared(['delete', nombre], 60_000).catch(() => undefined);
+      throw e;
     } finally {
       await rm(tmp, { force: true });
     }
+  }
+
+  /**
+   * Olvida un túnel: borra su credencial guardada y, si se pide, también el túnel en Cloudflare
+   * (`tunnel delete`). Lo confirma quien llama.
+   */
+  async olvidarTunel(nombre: string, borrarEnCloudflare: boolean): Promise<void> {
+    if (!nombreTunelValido(nombre)) throw this.datosInvalidos();
+    if (borrarEnCloudflare) {
+      if (!this.tieneCuenta()) throw this.sinCuenta();
+      await this.cloudflared(['delete', nombre], 60_000);
+    }
+    await this.d.secretos()?.borrar(idSecretoTunelNombre(nombre));
+  }
+
+  /** Recrear: borra el túnel en Cloudflare y su credencial, y crea uno nuevo con el mismo nombre. */
+  async recrearTunel(nombre: string): Promise<void> {
+    await this.olvidarTunel(nombre, true);
+    await this.crearTunel(nombre);
   }
 
   /** `run/cloudflared/`: temporal y restringida al usuario antes de escribir nada dentro. */
@@ -272,17 +299,26 @@ export class CloudflareNombre implements ProveedorTunel {
     return carpeta;
   }
 
-  /** `tunnel route dns`: apunta el dominio público al túnel. */
+  /**
+   * `tunnel route dns`: apunta el dominio público al túnel. Si Cloudflare registra otro nombre
+   * (el dominio no pertenece a la zona autorizada, p. ej. `demo.midominio.com.otra.com`), falla
+   * con el nombre registrado: el sitio no se deja apuntando a un dominio que no resuelve.
+   */
   async enrutar(nombre: string, dominio: string): Promise<void> {
     if (!nombreTunelValido(nombre) || !dominioPublicoValido(dominio)) throw this.datosInvalidos();
     if (!this.tieneCuenta()) throw this.sinCuenta();
-    await this.cloudflared(['route', 'dns', nombre, dominio], 60_000);
-  }
-
-  /** Borra la credencial guardada de un túnel (al dejar de usarlo). */
-  async olvidar(nombre: string): Promise<void> {
-    if (!nombreTunelValido(nombre)) throw this.datosInvalidos();
-    await this.d.secretos()?.borrar(idSecretoTunelNombre(nombre));
+    const salida = await this.cloudflared(['route', 'dns', nombre, dominio], 60_000);
+    const registrado = /Added CNAME\s+(\S+)\s+which will route/i
+      .exec(salida)?.[1]
+      ?.replace(/\.$/, '');
+    if (registrado && registrado.toLowerCase() !== dominio.toLowerCase()) {
+      const r = detalleSeguro(registrado).slice(0, 253);
+      throw new ErrorWolf(
+        'tuneles.cloudflare_dominio_distinto',
+        `Cloudflare registró ${r} en lugar de ${dominio}.`,
+        { registrado: r, dominio },
+      );
+    }
   }
 
   private datosInvalidos(): ErrorWolf {

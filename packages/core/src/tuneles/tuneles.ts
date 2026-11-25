@@ -529,6 +529,23 @@ export class Tuneles {
     }
     if (!(await this.buscar(sitioId)))
       throw new ErrorWolf('tuneles.sitio_no_encontrado', 'Sitio no encontrado');
+    // Un túnel con nombre pertenece a un solo sitio: dos conectores con ingress distintos se
+    // repartirían el tráfico (y uno recibiría el del otro).
+    for (const otro of await this.d.sitios.listar()) {
+      if (otro.id === sitioId || otro.tunel?.proveedor !== 'cloudflare-nombre') continue;
+      if (otro.tunel.nombre === nombre) {
+        throw new ErrorWolf('tuneles.nombre_en_uso', `El túnel ${nombre} ya lo usa otro sitio.`, {
+          nombre,
+        });
+      }
+      if (otro.tunel.dominio?.toLowerCase() === dominio.toLowerCase()) {
+        throw new ErrorWolf(
+          'tuneles.dominio_en_uso',
+          `El dominio ${dominio} ya lo usa otro sitio.`,
+          { dominio },
+        );
+      }
+    }
     await cf.crearTunel(nombre);
     await cf.enrutar(nombre, dominio);
     await this.elegirProveedor(sitioId, { proveedor: 'cloudflare-nombre', nombre, dominio });
@@ -599,5 +616,59 @@ export class Tuneles {
 
   private quitarRegistro(sitioId: string): void {
     this.escribirRegistros(this.leerRegistros().filter((x) => x.sitioId !== sitioId));
+  }
+
+  /** Sitios que usan un túnel con nombre. */
+  private async sitiosDelTunel(nombre: string): Promise<Sitio[]> {
+    return (await this.d.sitios.listar()).filter(
+      (s) => s.tunel?.proveedor === 'cloudflare-nombre' && s.tunel.nombre === nombre,
+    );
+  }
+
+  private exigirConfirmacionOlvidar(nombre: string, confirmado: boolean | undefined): void {
+    if (confirmado !== true) {
+      throw new ErrorWolf(
+        'tuneles.confirmacion_olvidar',
+        `Olvidar o recrear el túnel ${nombre} exige confirmarlo.`,
+        { nombre },
+      );
+    }
+  }
+
+  /**
+   * Olvida un túnel con nombre: cierra los túneles abiertos de los sitios que lo usan, borra su
+   * credencial guardada (y, con `borrarEnCloudflare`, el túnel en Cloudflare) y devuelve esos
+   * sitios al túnel rápido. Exige `confirmado`.
+   */
+  async olvidarTunelNombre(
+    nombre: string,
+    o: { confirmado?: boolean; borrarEnCloudflare?: boolean },
+  ): Promise<void> {
+    this.exigirConfirmacionOlvidar(nombre, o.confirmado);
+    const cf = this.cloudflareNombre;
+    if (!cf)
+      throw new ErrorWolf(
+        'tuneles.proveedor_no_disponible',
+        'Cloudflare con nombre no está disponible.',
+        { proveedor: 'cloudflare-nombre' },
+      );
+    const usan = await this.sitiosDelTunel(nombre);
+    for (const s of usan) await this.cerrar(s.id);
+    await cf.olvidarTunel(nombre, o.borrarEnCloudflare === true);
+    for (const s of usan) await this.d.guardarTunel?.(s.id, null);
+  }
+
+  /** Recrea el túnel (nuevo en Cloudflare y nueva credencial). Cierra los túneles que lo usan. */
+  async recrearTunelNombre(nombre: string, o: { confirmado?: boolean }): Promise<void> {
+    this.exigirConfirmacionOlvidar(nombre, o.confirmado);
+    const cf = this.cloudflareNombre;
+    if (!cf)
+      throw new ErrorWolf(
+        'tuneles.proveedor_no_disponible',
+        'Cloudflare con nombre no está disponible.',
+        { proveedor: 'cloudflare-nombre' },
+      );
+    for (const s of await this.sitiosDelTunel(nombre)) await this.cerrar(s.id);
+    await cf.recrearTunel(nombre);
   }
 }

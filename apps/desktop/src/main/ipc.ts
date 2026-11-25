@@ -1340,6 +1340,16 @@ const TABLA: Record<RutaIpc, Manejador> = {
     conectada: n.tuneles.cloudflareNombre?.tieneCuenta() ?? false,
   }),
   'tuneles.conectarCloudflare': (n) => cloudflareNombre(n).conectar(),
+  // Olvidar y recrear exigen `confirmado` (el núcleo lo vuelve a comprobar).
+  'tuneles.olvidarCloudflare': (n, _s, nombre, confirmado) =>
+    n.tuneles.olvidarTunelNombre(textoAcotado(nombre, 1, 63, 'nombre'), {
+      confirmado: confirmado === true,
+      borrarEnCloudflare: true,
+    }),
+  'tuneles.recrearCloudflare': (n, _s, nombre, confirmado) =>
+    n.tuneles.recrearTunelNombre(textoAcotado(nombre, 1, 63, 'nombre'), {
+      confirmado: confirmado === true,
+    }),
   'tuneles.cancelarConexionCloudflare': (n) => cloudflareNombre(n).cancelarConexion(),
   'tuneles.desconectarCloudflare': (n) => cloudflareNombre(n).desconectar(),
   'tuneles.configurarCloudflare': (n, _s, id, nombre, dominio) =>

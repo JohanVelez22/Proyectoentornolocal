@@ -174,6 +174,12 @@ export const en: Textos = {
       'tuneles.cloudflare_datos_invalidos':
         'The tunnel name (lowercase, numbers and hyphens) or the public domain is not valid.',
       'tuneles.cloudflare_conexion_en_curso': 'A Cloudflare connection is already in progress.',
+      'tuneles.cloudflare_dominio_distinto':
+        'Cloudflare registered {registrado} instead of {dominio}: the domain is not in the zone you authorized. Delete that record in the Cloudflare dashboard.',
+      'tuneles.nombre_en_uso': 'The tunnel {nombre} is already used by another site.',
+      'tuneles.dominio_en_uso': 'The domain {dominio} is already used by another site.',
+      'tuneles.confirmacion_olvidar':
+        'Forgetting or recreating the tunnel {nombre} must be confirmed.',
       'tuneles.cloudflare_fallo': 'cloudflared could not complete the operation: {detalle}',
       'tuneles.credencial_no_protegida':
         'The credential could not be restricted to your user, so it was not used.',
@@ -1331,6 +1337,14 @@ export const en: Textos = {
     abrirAutorizacion: 'Open the authorization page',
     copiarAutorizacion: 'Copy the authorization link',
     cancelarConexion: 'Cancel',
+    recrear: 'Recreate the tunnel',
+    olvidar: 'Forget the tunnel',
+    recrearTitulo: 'Recreate the tunnel',
+    recrearTexto: (n: string) =>
+      `Tunnel “${n}” will be deleted in Cloudflare and a new one created with the same name. Sites using it are closed.`,
+    olvidarTitulo: 'Forget the tunnel',
+    olvidarTexto: (n: string) =>
+      `Tunnel “${n}” will be deleted in Cloudflare along with its saved credential. Sites using it go back to the quick tunnel.`,
     desconectar: 'Disconnect',
     nombreTunel: 'Tunnel name',
     nombreTunelAyuda: 'Lowercase letters, numbers and hyphens.',

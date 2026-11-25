@@ -41,6 +41,8 @@ function nucleoFalso() {
       estados: vi.fn(),
       elegirProveedor: vi.fn(),
       configurarCloudflareNombre: vi.fn(),
+      olvidarTunelNombre: vi.fn(),
+      recrearTunelNombre: vi.fn(),
       cloudflareNombre: {
         tieneCuenta: vi.fn(() => true),
         conectar: vi.fn(),
@@ -705,6 +707,8 @@ describe('registrarIpc', () => {
         'tuneles.conectarCloudflare',
         'tuneles.cancelarConexionCloudflare',
         'tuneles.desconectarCloudflare',
+        'tuneles.olvidarCloudflare',
+        'tuneles.recrearCloudflare',
         'tuneles.configurarCloudflare',
         'tuneles.usarTunelRapido',
         'hosts.sincronizar',
@@ -3282,6 +3286,20 @@ describe('IPC de túneles (D23)', () => {
       'wolf-dev',
       'demo.midominio.com',
     );
+  });
+
+  it('olvidar y recrear llegan al núcleo con confirmado=false salvo confirmación explícita', async () => {
+    const { crudo, llamar } = montar();
+    await llamar('tuneles.olvidarCloudflare', 'wolf-dev');
+    expect(crudo.tuneles.olvidarTunelNombre).toHaveBeenLastCalledWith('wolf-dev', {
+      confirmado: false,
+      borrarEnCloudflare: true,
+    });
+    await llamar('tuneles.recrearCloudflare', 'wolf-dev', true);
+    expect(crudo.tuneles.recrearTunelNombre).toHaveBeenLastCalledWith('wolf-dev', {
+      confirmado: true,
+    });
+    expect((await llamar('tuneles.olvidarCloudflare', 7)).ok).toBe(false);
   });
 
   it('la cuenta de Cloudflare solo expone si está conectada', async () => {

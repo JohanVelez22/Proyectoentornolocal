@@ -175,6 +175,11 @@ export const es = {
       'tuneles.cloudflare_datos_invalidos':
         'El nombre del túnel (minúsculas, números y guiones) o el dominio público no son válidos.',
       'tuneles.cloudflare_conexion_en_curso': 'Ya hay una conexión con Cloudflare en curso.',
+      'tuneles.cloudflare_dominio_distinto':
+        'Cloudflare registró {registrado} en lugar de {dominio}: el dominio no pertenece a la zona que autorizó. Borre ese registro en el panel de Cloudflare.',
+      'tuneles.nombre_en_uso': 'El túnel {nombre} ya lo usa otro sitio.',
+      'tuneles.dominio_en_uso': 'El dominio {dominio} ya lo usa otro sitio.',
+      'tuneles.confirmacion_olvidar': 'Olvidar o recrear el túnel {nombre} exige confirmarlo.',
       'tuneles.cloudflare_fallo': 'cloudflared no pudo completar la operación: {detalle}',
       'tuneles.credencial_no_protegida':
         'No se pudo restringir la credencial al usuario, así que no se usó.',
@@ -1348,6 +1353,14 @@ export const es = {
     abrirAutorizacion: 'Abrir la página de autorización',
     copiarAutorizacion: 'Copiar el enlace de autorización',
     cancelarConexion: 'Cancelar',
+    recrear: 'Recrear el túnel',
+    olvidar: 'Olvidar el túnel',
+    recrearTitulo: 'Recrear el túnel',
+    recrearTexto: (n: string) =>
+      `Se borrará el túnel «${n}» en Cloudflare y se creará uno nuevo con el mismo nombre. Los sitios que lo usan se cierran.`,
+    olvidarTitulo: 'Olvidar el túnel',
+    olvidarTexto: (n: string) =>
+      `Se borrará el túnel «${n}» en Cloudflare y su credencial guardada. Los sitios que lo usan vuelven al túnel rápido.`,
     desconectar: 'Desconectar',
     nombreTunel: 'Nombre del túnel',
     nombreTunelAyuda: 'Minúsculas, números y guiones.',

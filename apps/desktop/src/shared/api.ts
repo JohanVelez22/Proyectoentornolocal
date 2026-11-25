@@ -823,6 +823,10 @@ export interface ApiEntorno {
     /** Cancela el `login` en curso (el navegador ya no hace falta). */
     cancelarConexionCloudflare(): Promise<void>;
     desconectarCloudflare(): Promise<void>;
+    /** Borra la credencial guardada y el túnel en Cloudflare (exige `confirmado`). */
+    olvidarCloudflare(nombre: string, confirmado: boolean): Promise<void>;
+    /** Borra y crea de nuevo el túnel con nombre (exige `confirmado`). */
+    recrearCloudflare(nombre: string, confirmado: boolean): Promise<void>;
     /** Crea el túnel, enruta el dominio y lo deja elegido para el sitio (no lo abre). */
     configurarCloudflare(sitioId: string, nombre: string, dominio: string): Promise<void>;
     /** Vuelve al túnel rápido (sin cuenta) en el sitio. */
@@ -1393,6 +1397,8 @@ export const RUTAS_IPC = [
   'tuneles.conectarCloudflare',
   'tuneles.cancelarConexionCloudflare',
   'tuneles.desconectarCloudflare',
+  'tuneles.olvidarCloudflare',
+  'tuneles.recrearCloudflare',
   'tuneles.configurarCloudflare',
   'tuneles.usarTunelRapido',
   'hosts.sincronizar',

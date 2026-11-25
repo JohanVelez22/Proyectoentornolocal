@@ -64,6 +64,8 @@ let lanzadas: Array<{
   quitar?: readonly string[] | undefined;
 }>;
 let esperarAbort: boolean;
+let salidaRoute: string;
+let fallaGuardar: boolean;
 let autorizaciones: Array<string | null>;
 let guardados: Array<{ sitioId: string; tunel: unknown }>;
 
@@ -118,7 +120,7 @@ const ejecutor: Ejecutor = async (cmd, args, opts) => {
   if (args.includes('create')) {
     writeFileSync(args[args.indexOf('--credentials-file') + 1]!, CREDENCIAL);
   }
-  return { codigo: 0, stdout: '', stderr: '' };
+  return { codigo: 0, stdout: '', stderr: args.includes('route') ? salidaRoute : '' };
 };
 
 const URL_LOGIN =
@@ -156,6 +158,7 @@ const secretos: SecretosTunel = {
     return almacenSecretos.get(id) ?? null;
   },
   guardar: async (id, v) => {
+    if (fallaGuardar) throw new Error('no se pudo guardar');
     almacenSecretos.set(id, v);
   },
   borrar: async (id) => {
@@ -225,6 +228,8 @@ beforeEach(() => {
   falloCloudflared = null;
   lanzadas = [];
   esperarAbort = false;
+  salidaRoute = '';
+  fallaGuardar = false;
   autorizaciones = [];
   guardados = [];
   // La cuenta ya conectada.
@@ -309,7 +314,9 @@ describe('Cloudflare con nombre: abrir', () => {
     await t.abrir('wolf');
     estados.delete('tunel-wolf');
     for (const f of salidas) f('tunel-wolf', 1);
-    await new Promise((r) => setTimeout(r, 30));
+    for (let i = 0; i < 100 && readFileSync(env(), 'utf8') !== ENV_ORIGINAL; i++) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
     expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
     expect(existsSync(rutas.cloudflaredRun())).toBe(false);
   });
@@ -530,6 +537,91 @@ describe('Cloudflare con nombre: cuenta, túnel y dominio', () => {
     expect((e as Error).message).not.toContain('sk-prueba-falsa-0000');
     expect((e as Error).message).not.toContain('abc.def.ghi');
     expect(JSON.stringify((e as { datos?: unknown }).datos)).not.toContain(CENTINELA);
+  });
+
+  it('si create funciona pero falla el guardado, borra el túnel recién creado y no guarda nada', async () => {
+    almacenSecretos.clear();
+    fallaGuardar = true;
+    await expect(crear().cloudflareNombre!.crearTunel('wolf-dev')).rejects.toThrow(
+      'no se pudo guardar',
+    );
+    expect(llamadas.map((l) => l.args.find((a) => ['create', 'delete'].includes(a)))).toEqual([
+      'create',
+      'delete',
+    ]);
+    expect(llamadas.at(-1)!.args.slice(-2)).toEqual(['delete', 'wolf-dev']);
+    expect(almacenSecretos.size).toBe(0);
+    for (const f of archivos(base)) expect(readFileSync(f, 'latin1'), f).not.toContain(CENTINELA);
+  });
+
+  it('route dns que registra otro nombre falla con el nombre registrado y no elige el proveedor', async () => {
+    salidaRoute =
+      'INF Added CNAME demo.midominio.com.otra.com which will route to this tunnel tunnelID=x';
+    await expect(
+      crear().configurarCloudflareNombre('wolf', 'wolf-dev', 'demo.midominio.com'),
+    ).rejects.toMatchObject({
+      codigo: 'tuneles.cloudflare_dominio_distinto',
+      datos: { registrado: 'demo.midominio.com.otra.com', dominio: 'demo.midominio.com' },
+    });
+    expect(guardados).toEqual([]);
+  });
+
+  it('route dns que registra el mismo nombre sigue adelante', async () => {
+    salidaRoute = 'INF Added CNAME demo.midominio.com which will route to this tunnel tunnelID=x';
+    await crear().configurarCloudflareNombre('wolf', 'wolf-dev', 'demo.midominio.com');
+    expect(guardados).toHaveLength(1);
+  });
+
+  it('un nombre de túnel o un dominio que ya usa otro sitio se rechaza antes de crear nada', async () => {
+    sitios = [
+      sitio(),
+      sitio({
+        id: 'otro',
+        dominio: 'otro.test',
+        tunel: {
+          proveedor: 'cloudflare-nombre',
+          nombre: 'otro-dev',
+          dominio: 'otro.midominio.com',
+        },
+      }),
+    ];
+    const t = crear();
+    await expect(
+      t.configurarCloudflareNombre('wolf', 'otro-dev', 'nuevo.midominio.com'),
+    ).rejects.toMatchObject({ codigo: 'tuneles.nombre_en_uso', datos: { nombre: 'otro-dev' } });
+    await expect(
+      t.configurarCloudflareNombre('wolf', 'nuevo', 'otro.midominio.com'),
+    ).rejects.toMatchObject({ codigo: 'tuneles.dominio_en_uso' });
+    // El propio sitio sí puede reconfigurar su túnel.
+    await t.configurarCloudflareNombre('wolf', 'wolf-dev', 'demo.midominio.com');
+    expect(llamadas.some((l) => l.args.includes('create') && l.args.includes('otro-dev'))).toBe(
+      false,
+    );
+    expect(guardados).toHaveLength(1);
+  });
+
+  it('olvidar o recrear un túnel exige confirmación; olvidar devuelve los sitios al túnel rápido', async () => {
+    const t = crear();
+    await expect(t.olvidarTunelNombre('wolf-dev', {})).rejects.toMatchObject({
+      codigo: 'tuneles.confirmacion_olvidar',
+    });
+    await expect(t.recrearTunelNombre('wolf-dev', { confirmado: false })).rejects.toMatchObject({
+      codigo: 'tuneles.confirmacion_olvidar',
+    });
+    expect(almacenSecretos.size).toBe(1);
+    expect(llamadas).toEqual([]);
+    await t.olvidarTunelNombre('wolf-dev', { confirmado: true, borrarEnCloudflare: true });
+    expect(llamadas.at(-1)!.args.slice(-2)).toEqual(['delete', 'wolf-dev']);
+    expect(almacenSecretos.size).toBe(0);
+    expect(guardados).toEqual([{ sitioId: 'wolf', tunel: null }]);
+  });
+
+  it('recrear borra el túnel en Cloudflare y crea uno nuevo con credencial nueva', async () => {
+    const t = crear();
+    await t.recrearTunelNombre('wolf-dev', { confirmado: true });
+    const verbos = llamadas.map((l) => l.args.find((a) => ['delete', 'create'].includes(a)));
+    expect(verbos).toEqual(['delete', 'create']);
+    expect(almacenSecretos.get('tunel:cloudflare-nombre:wolf-dev')).toContain(CENTINELA);
   });
 
   it('configurar crea, enruta y deja elegido el proveedor del sitio (cerrando un túnel abierto)', async () => {

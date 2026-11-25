@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { NAlert, NButton, NFormItem, NInput, NModal, NRadio, NRadioGroup } from 'naive-ui';
+import {
+  NAlert,
+  NButton,
+  NFormItem,
+  NInput,
+  NModal,
+  NRadio,
+  NRadioGroup,
+  useDialog,
+} from 'naive-ui';
+import { dominioPublicoValido, nombreTunelValido } from '@pel/core';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { Sitio } from '../../shared/api';
 import { api } from '../api';
@@ -22,13 +32,35 @@ const cuenta = ref<{ disponible: boolean; conectada: boolean }>({
 });
 const aviso = ref<string | null>(null);
 
-/** Mismas reglas que valida el núcleo (que vuelve a validar al crear). */
-const NOMBRE = /^[a-z0-9][a-z0-9-]{0,62}$/;
-const DOMINIO =
-  /^(?=.{3,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
+/** Las mismas reglas que valida el núcleo (que vuelve a validar al crear). */
+const nombreOk = computed(() => nombreTunelValido(nombre.value));
+const dominioOk = computed(() => dominioPublicoValido(dominio.value));
 
-const nombreOk = computed(() => NOMBRE.test(nombre.value));
-const dominioOk = computed(() => DOMINIO.test(dominio.value));
+const dialog = useDialog();
+
+/** Olvidar o recrear: siempre se confirma antes (el núcleo lo exige también). */
+function confirmarTunel(accion: 'olvidar' | 'recrear'): void {
+  const n = props.sitio.tunel?.nombre;
+  if (!n) return;
+  dialog.warning({
+    title: accion === 'olvidar' ? t.olvidarTitulo : t.recrearTitulo,
+    content: accion === 'olvidar' ? t.olvidarTexto(n) : t.recrearTexto(n),
+    positiveText: accion === 'olvidar' ? t.olvidar : t.recrear,
+    negativeText: textos.acciones.cancelar,
+    autoFocus: false,
+    onPositiveClick: () => {
+      void ejecutar(
+        `tunel-${accion}`,
+        async () => {
+          if (accion === 'olvidar') await api().tuneles.olvidarCloudflare(n, true);
+          else await api().tuneles.recrearCloudflare(n, true);
+          return true;
+        },
+        { tituloError: t.opciones },
+      );
+    },
+  });
+}
 
 async function leerCuenta(): Promise<void> {
   try {
@@ -193,14 +225,33 @@ async function usarRapido(): Promise<void> {
         >
           <NInput v-model:value="dominio" placeholder="demo.midominio.com" :maxlength="253" />
         </NFormItem>
-        <NButton
-          type="primary"
-          :disabled="!nombreOk || !dominioOk"
-          :loading="ocupado('tunel-crear')"
-          @click="crear"
-        >
-          {{ t.crear }}
-        </NButton>
+        <div class="fila">
+          <NButton
+            type="primary"
+            :disabled="!nombreOk || !dominioOk"
+            :loading="ocupado('tunel-crear')"
+            @click="crear"
+          >
+            {{ t.crear }}
+          </NButton>
+          <template v-if="sitio.tunel?.nombre">
+            <NButton
+              secondary
+              :loading="ocupado('tunel-recrear')"
+              @click="confirmarTunel('recrear')"
+            >
+              {{ t.recrear }}
+            </NButton>
+            <NButton
+              secondary
+              type="error"
+              :loading="ocupado('tunel-olvidar')"
+              @click="confirmarTunel('olvidar')"
+            >
+              {{ t.olvidar }}
+            </NButton>
+          </template>
+        </div>
       </template>
     </template>
 

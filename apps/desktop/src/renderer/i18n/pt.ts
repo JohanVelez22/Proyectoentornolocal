@@ -179,6 +179,11 @@ export const pt: Textos = {
       'tuneles.cloudflare_datos_invalidos':
         'O nome do túnel (minúsculas, números e hífens) ou o domínio público não são válidos.',
       'tuneles.cloudflare_conexion_en_curso': 'Já há uma conexão com a Cloudflare em andamento.',
+      'tuneles.cloudflare_dominio_distinto':
+        'A Cloudflare registrou {registrado} em vez de {dominio}: o domínio não pertence à zona que você autorizou. Apague esse registro no painel da Cloudflare.',
+      'tuneles.nombre_en_uso': 'O túnel {nombre} já é usado por outro site.',
+      'tuneles.dominio_en_uso': 'O domínio {dominio} já é usado por outro site.',
+      'tuneles.confirmacion_olvidar': 'Esquecer ou recriar o túnel {nombre} exige confirmação.',
       'tuneles.cloudflare_fallo': 'O cloudflared não conseguiu concluir a operação: {detalle}',
       'tuneles.credencial_no_protegida':
         'Não foi possível restringir a credencial ao usuário, por isso não foi usada.',
@@ -1348,6 +1353,14 @@ export const pt: Textos = {
     abrirAutorizacion: 'Abrir a página de autorização',
     copiarAutorizacion: 'Copiar o link de autorização',
     cancelarConexion: 'Cancelar',
+    recrear: 'Recriar o túnel',
+    olvidar: 'Esquecer o túnel',
+    recrearTitulo: 'Recriar o túnel',
+    recrearTexto: (n: string) =>
+      `O túnel «${n}» será apagado na Cloudflare e um novo será criado com o mesmo nome. Os sites que o usam são fechados.`,
+    olvidarTitulo: 'Esquecer o túnel',
+    olvidarTexto: (n: string) =>
+      `O túnel «${n}» será apagado na Cloudflare, junto com a credencial salva. Os sites que o usam voltam ao túnel rápido.`,
     desconectar: 'Desconectar',
     nombreTunel: 'Nome do túnel',
     nombreTunelAyuda: 'Minúsculas, números e hífens.',

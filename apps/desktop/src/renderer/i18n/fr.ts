@@ -183,6 +183,11 @@ export const fr: Textos = {
       'tuneles.cloudflare_datos_invalidos':
         'Le nom du tunnel (minuscules, chiffres et tirets) ou le domaine public n’est pas valide.',
       'tuneles.cloudflare_conexion_en_curso': 'Une connexion à Cloudflare est déjà en cours.',
+      'tuneles.cloudflare_dominio_distinto':
+        'Cloudflare a enregistré {registrado} au lieu de {dominio} : le domaine n’appartient pas à la zone autorisée. Supprimez cet enregistrement dans le tableau de bord Cloudflare.',
+      'tuneles.nombre_en_uso': 'Le tunnel {nombre} est déjà utilisé par un autre site.',
+      'tuneles.dominio_en_uso': 'Le domaine {dominio} est déjà utilisé par un autre site.',
+      'tuneles.confirmacion_olvidar': 'Oublier ou recréer le tunnel {nombre} doit être confirmé.',
       'tuneles.cloudflare_fallo': 'cloudflared n’a pas pu terminer l’opération : {detalle}',
       'tuneles.credencial_no_protegida':
         'L’identifiant n’a pas pu être limité à l’utilisateur, il n’a donc pas été utilisé.',
@@ -1384,6 +1389,14 @@ export const fr: Textos = {
     abrirAutorizacion: 'Ouvrir la page d’autorisation',
     copiarAutorizacion: 'Copier le lien d’autorisation',
     cancelarConexion: 'Annuler',
+    recrear: 'Recréer le tunnel',
+    olvidar: 'Oublier le tunnel',
+    recrearTitulo: 'Recréer le tunnel',
+    recrearTexto: (n: string) =>
+      `Le tunnel « ${n} » sera supprimé chez Cloudflare et un nouveau sera créé avec le même nom. Les sites qui l’utilisent sont fermés.`,
+    olvidarTitulo: 'Oublier le tunnel',
+    olvidarTexto: (n: string) =>
+      `Le tunnel « ${n} » sera supprimé chez Cloudflare avec son identifiant enregistré. Les sites qui l’utilisent reviennent au tunnel rapide.`,
     desconectar: 'Déconnecter',
     nombreTunel: 'Nom du tunnel',
     nombreTunelAyuda: 'Minuscules, chiffres et tirets.',

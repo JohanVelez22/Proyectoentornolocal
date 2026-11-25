@@ -237,6 +237,10 @@ const api: ApiEntorno = {
     conectarCloudflare: () => invocar('tuneles.conectarCloudflare'),
     cancelarConexionCloudflare: () => invocar('tuneles.cancelarConexionCloudflare'),
     desconectarCloudflare: () => invocar('tuneles.desconectarCloudflare'),
+    olvidarCloudflare: (nombre, confirmado) =>
+      invocar('tuneles.olvidarCloudflare', nombre, confirmado === true),
+    recrearCloudflare: (nombre, confirmado) =>
+      invocar('tuneles.recrearCloudflare', nombre, confirmado === true),
     configurarCloudflare: (id, nombre, dominio) =>
       invocar('tuneles.configurarCloudflare', id, nombre, dominio),
     usarTunelRapido: (id) => invocar('tuneles.usarTunelRapido', id),
