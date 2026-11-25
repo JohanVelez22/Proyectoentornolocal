@@ -51,6 +51,8 @@ import type {
   Plantilla,
   OpcionesPlantilla,
   VistaPreviaPlantilla,
+  VistaEnv,
+  PedidoEnv,
   FilaImportar,
   VistaPreviaImportar,
   OpcionesImportar,
@@ -211,6 +213,8 @@ export type {
   Plantilla,
   OpcionesPlantilla,
   VistaPreviaPlantilla,
+  VistaEnv,
+  PedidoEnv,
   FilaImportar,
   VistaPreviaImportar,
   OpcionesImportar,
@@ -691,6 +695,39 @@ export interface ApiEntorno {
     borrar(id: string): Promise<void>;
   };
   /**
+   * Gestor de .env de un proyecto. El renderer nunca recibe un valor secreto: `ver` y
+   * `vistaPrevia` los traen enmascarados y solo `revelar` (una clave, por un clic explícito del
+   * usuario) devuelve un valor completo. Guardar exige confirmación, deja una copia con fecha y
+   * escribe de forma atómica. La clave del usuario propio de la base la genera y la guarda el
+   * proceso principal (nunca pasa por aquí).
+   */
+  env: {
+    ver(sitioId: string): Promise<VistaEnv>;
+    /** El valor completo de UNA variable (el botón "Mostrar"). */
+    revelar(sitioId: string, clave: string): Promise<string>;
+    vistaPrevia(sitioId: string, pedido: PedidoEnv): Promise<{ diff: string }>;
+    guardar(
+      sitioId: string,
+      pedido: PedidoEnv,
+      opciones: { confirmado: true; aceptarVersionado?: boolean; agregarGitignore?: boolean },
+    ): Promise<{ copia: string | null; gitignoreAgregado: boolean }>;
+    /** Copias de este .env (nombres, de la más nueva a la más vieja). */
+    copias(sitioId: string): Promise<string[]>;
+    restaurarCopia(
+      sitioId: string,
+      nombre: string,
+      opciones: { confirmado: true },
+    ): Promise<{ copia: string | null }>;
+    /**
+     * "Usar usuario propio": crea un usuario limitado a la base del proyecto (MySQL y MariaDB) y
+     * lo pone en el .env, con copia previa.
+     */
+    usarUsuarioPropio(
+      sitioId: string,
+      opciones: { confirmado: true; aceptarVersionado?: boolean },
+    ): Promise<{ usuario: string; copia: string | null }>;
+  };
+  /**
    * Importar desde Laragon, XAMPP y Herd. Los sitios se identifican por el id de la vista previa
    * (nunca por rutas) y se vinculan en su lugar; las bases se vuelcan del servidor de origen que
    * enciende el usuario (la clave solo viaja en `ejecutar` y nunca se guarda).
@@ -1140,6 +1177,13 @@ export const RUTAS_IPC = [
   'plantillas.vistaPrevia',
   'plantillas.guardar',
   'plantillas.borrar',
+  'env.ver',
+  'env.revelar',
+  'env.vistaPrevia',
+  'env.guardar',
+  'env.copias',
+  'env.restaurarCopia',
+  'env.usarUsuarioPropio',
   'importar.vistaPrevia',
   'importar.ejecutar',
   'importar.cancelar',

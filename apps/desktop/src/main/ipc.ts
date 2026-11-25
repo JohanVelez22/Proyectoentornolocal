@@ -17,6 +17,7 @@ import {
   TIPOS_AVISO,
   type TipoAviso,
   PasoRecetaSchema,
+  generarClaveBd,
   quitarClave,
   SNIPPETS_NGINX,
   validarUrlGit,
@@ -40,6 +41,10 @@ import {
 import {
   archivoExistente,
   booleano,
+  claveEnv,
+  nombreCopiaEnv,
+  opcionesEnv,
+  pedidoEnv,
   carpetaExistente,
   claveIa,
   confirmadoAgente,
@@ -647,6 +652,15 @@ async function proveedoresPublicos(n: NucleoIpc, s: Contexto): Promise<Proveedor
   );
 }
 
+/** Clave guardada del usuario propio de la base de un proyecto (null si no hay o no se lee). */
+async function claveBdGuardada(s: Contexto, sitioId: string): Promise<string | null> {
+  try {
+    return await s.secretos.leer(`bd:${sitioId}`);
+  } catch {
+    return null;
+  }
+}
+
 /** Carpeta de proyectos por defecto si no hay carpeta vigilada (si existe). */
 export const CARPETA_PROYECTOS_POR_DEFECTO = 'C:\\Proyectos';
 
@@ -706,7 +720,10 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'sitios.borrar': (n, s, id) => {
     const sitioId = idNoVacio(id);
     s.seguimientos.dejarSitio(sitioId);
-    return n.borrarSitio(sitioId);
+    return n.borrarSitio(sitioId).then(async () => {
+      // La clave del usuario propio de su base ya no sirve a nadie.
+      await s.secretos.borrar(`bd:${sitioId}`).catch(() => undefined);
+    });
   },
   'sitios.aplicar': (n) => n.sitios.aplicar(),
   'servicios.estados': (n) => n.servicios.estados(),
@@ -1122,7 +1139,11 @@ const TABLA: Record<RutaIpc, Manejador> = {
     n.recetaPropuesta(await carpetaExistente(carpeta)),
   'proyectos.ejecutarReceta': async (n, s, sitioId, opciones) => {
     const id = idCorto(sitioId, 'sitio');
-    return n.ejecutarReceta(id, await opcionesReceta(opciones, s.elegidas));
+    const opts = await opcionesReceta(opciones, s.elegidas);
+    // El núcleo toma la clave del usuario propio de la base por su proveedor (en memoria); aquí solo
+    // se quita de cualquier error que la repitiera.
+    const claveBd = await claveBdGuardada(s, id);
+    return sinClave(claveBd ?? '', () => n.ejecutarReceta(id, opts));
   },
   'proyectos.omitirPaso': (n, _s, sitioId, pasoId) =>
     n.omitirPasoReceta(idCorto(sitioId, 'sitio'), idCorto(pasoId, 'paso', 64)),
@@ -1133,11 +1154,67 @@ const TABLA: Record<RutaIpc, Manejador> = {
     const d = objetoPlano<Parameters<Nucleo['crearSitioProyecto']>[0]>(datos, 'datos');
     return n.crearSitioProyecto(d, await recetaObligatoria(receta, s.elegidas));
   },
-  'proyectos.crear': async (n, s, pedido) =>
-    n.crearProyecto(validarPedidoProyecto(pedido, s.elegidas)),
+  // La clave del usuario propio de la base del proyecto nueva la genera este proceso; el núcleo
+  // la usa en memoria y `alCrearSitio` la guarda en el almacén (bd:<sitio>) antes de crear el usuario.
+  'proyectos.crear': async (n, s, pedido) => {
+    const p = validarPedidoProyecto(pedido, s.elegidas);
+    const claveBd = generarClaveBd();
+    const r = await sinClave(claveBd, () =>
+      n.crearProyecto(p, {
+        secretos: { claveBd },
+        alCrearSitio: (id) => s.secretos.guardar(`bd:${id}`, claveBd),
+      }),
+    );
+    if (JSON.stringify(r ?? null).includes(claveBd)) {
+      throw new ErrorWolf(
+        'proyectos.clave_bd_falta',
+        'La respuesta contenía la clave y no se envió.',
+      );
+    }
+    return r;
+  },
   'proyectos.huellaWordpress': (n, _s, version) =>
     n.huellaWordpress(version === undefined ? undefined : versionWordpress(version)),
   'proyectos.confiar': (n, _s, sitioId) => n.confiarReceta(idCorto(sitioId, 'sitio')),
+
+  // ---- Gestor de .env: solo `revelar` devuelve un valor secreto completo (una clave, por clic) ----
+  'env.ver': (n, _s, sitioId) => n.env.ver(idCorto(sitioId, 'sitio')),
+  // Es la única ruta que devuelve un valor secreto: el usuario la pide con el botón Mostrar de una
+  // variable. No se registra ni emite eventos.
+  'env.revelar': (n, _s, sitioId, clave) =>
+    n.env.revelar(idCorto(sitioId, 'sitio'), claveEnv(clave)),
+  'env.vistaPrevia': (n, _s, sitioId, pedido) =>
+    n.env.vistaPrevia(idCorto(sitioId, 'sitio'), pedidoEnv(pedido)),
+  'env.guardar': (n, _s, sitioId, pedido, opciones) =>
+    n.env.guardar(
+      idCorto(sitioId, 'sitio'),
+      pedidoEnv(pedido),
+      true,
+      opcionesEnv(opciones, ['aceptarVersionado', 'agregarGitignore']),
+    ),
+  'env.copias': (n, _s, sitioId) => n.env.copias(idCorto(sitioId, 'sitio')),
+  'env.restaurarCopia': (n, _s, sitioId, nombre, opciones) => {
+    opcionesEnv(opciones, []);
+    return n.env.restaurarCopia(idCorto(sitioId, 'sitio'), nombreCopiaEnv(nombre), true);
+  },
+  // La clave del usuario nuevo la genera este proceso y la guarda en el almacén (bd:<sitio>) antes
+  // de que el núcleo cree el usuario; nunca viaja al renderer.
+  'env.usarUsuarioPropio': async (n, s, sitioId, opciones) => {
+    const id = idCorto(sitioId, 'sitio');
+    const o = opcionesEnv(opciones, ['aceptarVersionado']);
+    const claveBd = generarClaveBd();
+    return sinClave(claveBd, () =>
+      n.usarUsuarioPropio(
+        id,
+        {
+          claveBd,
+          guardarClave: () => s.secretos.guardar(`bd:${id}`, claveBd),
+          ...(o.aceptarVersionado ? { aceptarVersionado: true } : {}),
+        },
+        true,
+      ),
+    );
+  },
 
   // ---- Plantillas de proyecto: el id sale de la lista y nunca es una ruta ----
   'plantillas.lista': (n) => n.plantillas.lista(),

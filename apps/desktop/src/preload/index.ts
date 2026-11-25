@@ -256,6 +256,16 @@ const api: ApiEntorno = {
     guardar: (sitioId, opciones) => invocar('plantillas.guardar', sitioId, opciones),
     borrar: (id) => invocar('plantillas.borrar', id),
   },
+  env: {
+    ver: (sitioId) => invocar('env.ver', sitioId),
+    revelar: (sitioId, clave) => invocar('env.revelar', sitioId, clave),
+    vistaPrevia: (sitioId, pedido) => invocar('env.vistaPrevia', sitioId, pedido),
+    guardar: (sitioId, pedido, opciones) => invocar('env.guardar', sitioId, pedido, opciones),
+    copias: (sitioId) => invocar('env.copias', sitioId),
+    restaurarCopia: (sitioId, nombre, opciones) =>
+      invocar('env.restaurarCopia', sitioId, nombre, opciones),
+    usarUsuarioPropio: (sitioId, opciones) => invocar('env.usarUsuarioPropio', sitioId, opciones),
+  },
   importar: {
     vistaPrevia: (instancia) => invocar('importar.vistaPrevia', instancia),
     ejecutar: (seleccion, opciones) => invocar('importar.ejecutar', seleccion, opciones),

@@ -21,6 +21,7 @@ import {
   validarModeloIa,
   type ConfigProveedorIa,
   type OpcionesEnvIa,
+  type PedidoEnv,
   type TipoProveedorIa,
   NOMBRE_BD_MONGO,
   NOMBRE_BD_MYSQL,
@@ -1212,4 +1213,91 @@ export function versionWordpress(v: unknown): string {
   const t = textoAcotado(v, 3, 12, 'versión');
   if (!/^\d{1,2}\.\d{1,2}(\.\d{1,2})?$/.test(t)) throw new Error('Argumento no válido: versión');
   return t;
+}
+
+/* ───────────── Gestor de .env (D16) ───────────── */
+
+const CLAVE_ENV = /^[A-Za-z_][A-Za-z0-9_.]{0,127}$/;
+const BLOQUES_ENV_IPC = ['bd', 'correo', 'ia', 'redis'] as const;
+
+/** Nombre de una variable del .env. Los mensajes de error nunca repiten el valor recibido. */
+export function claveEnv(v: unknown): string {
+  if (typeof v !== 'string' || !CLAVE_ENV.test(v)) throw new Error('Argumento no válido: variable');
+  return v;
+}
+
+/**
+ * Lo que se quiere cambiar en un .env: variables (valor de texto de una línea, o null para
+ * quitarla), claves cuyo valor se toma del ejemplo y bloques de plantilla. El núcleo valida cada
+ * valor otra vez; aquí solo la forma y el tamaño. Nunca se repite un valor en un error.
+ */
+export function pedidoEnv(v: unknown): PedidoEnv {
+  const malo = (): never => {
+    throw new Error('Argumento no válido: cambios del .env');
+  };
+  const o = objetoPlano<Record<string, unknown>>(v, 'cambios del .env');
+  for (const k of Object.keys(o)) {
+    if (!['cambios', 'desdeEjemplo', 'bloques'].includes(k)) malo();
+  }
+  const pedido: PedidoEnv = {};
+  if (o['cambios'] !== undefined) {
+    const c = objetoPlano<Record<string, unknown>>(o['cambios'], 'cambios del .env');
+    const entradas = Object.entries(c);
+    if (entradas.length > 200) malo();
+    const cambios: Record<string, string | null> = {};
+    for (const [k, valor] of entradas) {
+      claveEnv(k);
+      if (valor !== null && (typeof valor !== 'string' || valor.length > 4096)) malo();
+      cambios[k] = valor as string | null;
+    }
+    pedido.cambios = cambios;
+  }
+  if (o['desdeEjemplo'] !== undefined) {
+    const d = o['desdeEjemplo'];
+    if (!Array.isArray(d) || d.length > 200) malo();
+    pedido.desdeEjemplo = (d as unknown[]).map(claveEnv);
+  }
+  if (o['bloques'] !== undefined) {
+    const b = o['bloques'];
+    if (
+      !Array.isArray(b) ||
+      b.length > 4 ||
+      !(b as unknown[]).every((x) => (BLOQUES_ENV_IPC as readonly unknown[]).includes(x))
+    ) {
+      malo();
+    }
+    pedido.bloques = b as PedidoEnv['bloques'];
+  }
+  return pedido;
+}
+
+/**
+ * Opciones de guardar o de "Usar usuario propio": `confirmado` debe ser exactamente `true` (solo
+ * lo pone el diálogo de confirmación) y las demás son banderas.
+ */
+export function opcionesEnv(
+  v: unknown,
+  permitidas: readonly string[],
+): { aceptarVersionado?: boolean; agregarGitignore?: boolean } {
+  const o = objetoPlano<Record<string, unknown>>(v, 'opciones del .env');
+  for (const k of Object.keys(o)) {
+    if (k !== 'confirmado' && !permitidas.includes(k)) {
+      throw new Error('Argumento no válido: opciones del .env');
+    }
+  }
+  if (o['confirmado'] !== true) {
+    throw new ErrorWolf('env.sin_confirmar', 'Falta confirmar el cambio del .env.');
+  }
+  const salida: { aceptarVersionado?: boolean; agregarGitignore?: boolean } = {};
+  for (const k of permitidas) {
+    if (o[k] !== undefined) {
+      (salida as Record<string, boolean>)[k] = booleano(o[k], k);
+    }
+  }
+  return salida;
+}
+
+/** Nombre de una copia del .env (el núcleo comprueba que sea de ese sitio). */
+export function nombreCopiaEnv(v: unknown): string {
+  return textoAcotado(v, 1, 120, 'copia');
 }

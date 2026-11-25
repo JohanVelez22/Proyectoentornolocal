@@ -207,3 +207,38 @@ describe('AlmacenSecretos: cifrado en texto plano (Linux sin llavero)', () => {
     expect(await s.leer('ia:openai')).toBe(CLAVE);
   });
 });
+
+describe('AlmacenSecretos: clave del usuario propio de la base de un proyecto', () => {
+  const CENTINELA = 'centinela-secreta-d';
+
+  it('guarda cifrada como bd-<sitio>.bin, da solo el final y borra', async () => {
+    const s = almacen();
+    await s.guardar('bd:mi-tienda', CENTINELA);
+    const archivo = path.join(carpeta, 'bd-mi-tienda.bin');
+    expect(existsSync(archivo)).toBe(true);
+    expect(readFileSync(archivo).toString('utf8')).not.toContain(CENTINELA);
+    expect(await s.leer('bd:mi-tienda')).toBe(CENTINELA);
+    const estado = await s.estado('bd:mi-tienda');
+    expect(estado.configurada).toBe(true);
+    expect(JSON.stringify(estado)).not.toContain(CENTINELA);
+    await s.borrar('bd:mi-tienda');
+    expect(await s.leer('bd:mi-tienda')).toBeNull();
+    expect(readdirSync(carpeta)).toEqual([]);
+  });
+
+  it('rechaza ids que podrían salir de la carpeta o no son de un sitio', async () => {
+    const s = almacen();
+    for (const id of ['bd:../x', 'bd:', 'bd:a/b', 'bd:A', 'bd:a b', 'bd:a\b', 'bd:.x']) {
+      await expect(s.guardar(id as never, CENTINELA), id).rejects.toThrow();
+      await expect(s.leer(id as never), id).rejects.toThrow();
+    }
+    expect(existsSync(carpeta)).toBe(false);
+  });
+
+  it('sin cifrado del sistema no se guarda ni se lee, y el error no repite la clave', async () => {
+    const s = almacen(false);
+    const e = await s.guardar('bd:mi-tienda', CENTINELA).catch((x: unknown) => x as Error);
+    expect((e as Error).message).toBe(MENSAJE_SIN_CIFRADO);
+    expect(existsSync(carpeta)).toBe(false);
+  });
+});

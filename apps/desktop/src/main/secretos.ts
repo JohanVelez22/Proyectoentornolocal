@@ -16,8 +16,11 @@ export interface CifradoSeguro {
   getSelectedStorageBackend?(): string;
 }
 
-/** `github` (token de GitHub) o `ia:<id del proveedor>` (clave de un proveedor de IA). */
-export type IdSecreto = 'github' | `ia:${string}`;
+/**
+ * `github` (token de GitHub), `ia:<id del proveedor>` (clave de un proveedor de IA) o
+ * `bd:<id del sitio>` (clave del usuario propio de la base de un proyecto).
+ */
+export type IdSecreto = 'github' | `ia:${string}` | `bd:${string}`;
 
 /** Lo único que ve el renderer de un secreto: si hay uno y sus 4 últimos caracteres. */
 export interface EstadoSecreto {
@@ -36,11 +39,17 @@ const MENSAJE_VALOR =
 /** ASCII visible, sin espacios: así nunca puede inyectar cabeceras ni líneas de un .env. */
 const VALOR_VALIDO = /^[\x21-\x7e]{1,4096}$/;
 
+/** Ids de sitio (el slug del dominio): minúsculas, números y guiones. */
+const ID_SITIO_BD = /^[a-z0-9][a-z0-9-]{0,127}$/;
+
 /** `github` → `github.bin`; `ia:openai` → `ia-openai.bin`. Lanza si el id no es válido. */
 function archivoDe(id: IdSecreto): string {
   if (id === 'github') return 'github.bin';
   if (typeof id === 'string' && id.startsWith('ia:') && ID_PROVEEDOR_IA.test(id.slice(3))) {
     return `ia-${id.slice(3)}.bin`;
+  }
+  if (typeof id === 'string' && id.startsWith('bd:') && ID_SITIO_BD.test(id.slice(3))) {
+    return `bd-${id.slice(3)}.bin`;
   }
   throw new Error(MENSAJE_ID);
 }

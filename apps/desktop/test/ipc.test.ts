@@ -59,6 +59,15 @@ function nucleoFalso() {
       guardar: vi.fn(async () => ({ id: 'tienda-a1b2c3' })),
       borrar: vi.fn(async () => undefined),
     },
+    env: {
+      ver: vi.fn(async () => ({ existe: true, filas: [] })),
+      revelar: vi.fn(async () => 'valor'),
+      vistaPrevia: vi.fn(async () => ({ diff: '' })),
+      guardar: vi.fn(async () => ({ copia: null, gitignoreAgregado: false })),
+      copias: vi.fn(async () => []),
+      restaurarCopia: vi.fn(async () => ({ copia: null })),
+    },
+    usarUsuarioPropio: vi.fn(async () => ({ usuario: 'wolf_u_x', copia: null })),
     config: { leer: vi.fn() },
     estadoGeneral: vi.fn(),
     guardarAjustes: vi.fn(async () => ({ aplicar: {}, reiniciados: [], errores: [] })),
@@ -633,6 +642,13 @@ describe('registrarIpc', () => {
         'depuracion.leer',
         'depuracion.limpiar',
         'depuracion.copiar',
+        'env.ver',
+        'env.revelar',
+        'env.vistaPrevia',
+        'env.guardar',
+        'env.copias',
+        'env.restaurarCopia',
+        'env.usarUsuarioPropio',
         'errores.lista',
         'errores.leer',
         'editor.abrirEn',
@@ -1652,10 +1668,14 @@ describe('IPC de la Etapa B', () => {
     expect((await llamar('proyectos.crear', pedido)).ok).toBe(true);
     const { carpetaPadre: _p, ...resto } = pedido;
     void _p;
-    expect(f['crearProyecto']).toHaveBeenCalledWith({
-      ...resto,
-      carpeta: path.join(padre, 'tienda'),
-    });
+    expect(f['crearProyecto']).toHaveBeenCalledWith(
+      { ...resto, carpeta: path.join(padre, 'tienda') },
+      // La clave del usuario propio de la base la genera el main y la guarda por alCrearSitio.
+      {
+        secretos: { claveBd: expect.stringMatching(/^[A-Za-z0-9_-]{32}$/) },
+        alCrearSitio: expect.any(Function),
+      },
+    );
   });
 
   it('proyectos.crear rechaza pedidos mal formados sin llamar al núcleo', async () => {
@@ -1715,6 +1735,7 @@ describe('IPC de la Etapa B', () => {
         plantilla: 'tienda-a1b2c3',
         carpeta: path.join(padre, 'tienda'),
       }),
+      expect.objectContaining({ secretos: expect.anything() }),
     );
   });
 
@@ -2424,5 +2445,140 @@ describe('IPC de versiones e instancias (Task 19)', () => {
     expect(n['tieneTablas']).toHaveBeenCalledWith('postgresql@17', 'tienda');
     expect((await llamar('bd.listar', 'redis@7')).ok).toBe(false);
     expect((await llamar('bd.tieneTablas', 'mongodb@8.0', 'x')).ok).toBe(false);
+  });
+});
+
+/* ───────────── Gestor de .env y clave del usuario propio de la base (D16) ───────────── */
+
+describe('IPC del gestor de .env', () => {
+  const CENTINELA = 'centinela-secreta-d';
+
+  function montarEnv() {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    const guardadas = new Map<string, string>();
+    const secretos = {
+      guardadas,
+      guardar: vi.fn(async (id: string, v: string) => void guardadas.set(id, v)),
+      leer: vi.fn(async (id: string) => guardadas.get(id) ?? null),
+      borrar: vi.fn(async (id: string) => void guardadas.delete(id)),
+      hay: vi.fn((id: string) => guardadas.has(id)),
+      estado: vi.fn(async () => ({ configurada: false, final: null })),
+      guardarTokenGithub: vi.fn(),
+      leerTokenGithub: vi.fn(async () => null),
+      borrarTokenGithub: vi.fn(),
+      hayTokenGithub: vi.fn(() => false),
+    };
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema, () => true, undefined, {
+      secretos: secretos as never,
+    });
+    const llamar = async (ruta: string, ...args: unknown[]) =>
+      (await canales.get(`entorno:${ruta}`)!({}, ...args)) as {
+        ok: boolean;
+        valor?: unknown;
+        error?: { mensaje: string; codigo?: string };
+      };
+    const env = (crudo as unknown as { env: Record<string, Mock> }).env;
+    const f = crudo as unknown as Record<string, Mock>;
+    return { llamar, env, f, secretos };
+  }
+
+  it('las rutas llaman al gestor con ids y pedidos validados', async () => {
+    const { llamar, env } = montarEnv();
+    expect((await llamar('env.ver', 's1')).ok).toBe(true);
+    expect(env['ver']).toHaveBeenCalledWith('s1');
+    expect((await llamar('env.revelar', 's1', 'DB_PASSWORD')).valor).toBe('valor');
+    expect(env['revelar']).toHaveBeenCalledWith('s1', 'DB_PASSWORD');
+    const pedido = { cambios: { A: '1', B: null }, desdeEjemplo: ['C'], bloques: ['redis'] };
+    await llamar('env.vistaPrevia', 's1', pedido);
+    expect(env['vistaPrevia']).toHaveBeenCalledWith('s1', pedido);
+    await llamar('env.guardar', 's1', pedido, { confirmado: true, aceptarVersionado: true });
+    expect(env['guardar']).toHaveBeenCalledWith('s1', pedido, true, { aceptarVersionado: true });
+    await llamar('env.restaurarCopia', 's1', 'env-s1-x.respaldo', { confirmado: true });
+    expect(env['restaurarCopia']).toHaveBeenCalledWith('s1', 'env-s1-x.respaldo', true);
+  });
+
+  it('guardar, volver a una copia y usar usuario propio exigen confirmado === true', async () => {
+    const { llamar, env, f } = montarEnv();
+    for (const o of [{}, { confirmado: false }, { confirmado: 'si' }, undefined]) {
+      const g = await llamar('env.guardar', 's1', { cambios: { A: '1' } }, o);
+      expect(g.ok).toBe(false);
+      expect((await llamar('env.restaurarCopia', 's1', 'x', o)).ok).toBe(false);
+      expect((await llamar('env.usarUsuarioPropio', 's1', o)).ok).toBe(false);
+    }
+    expect(env['guardar']).not.toHaveBeenCalled();
+    expect(env['restaurarCopia']).not.toHaveBeenCalled();
+    expect(f['usarUsuarioPropio']).not.toHaveBeenCalled();
+  });
+
+  it('rechaza pedidos mal formados sin llamar al núcleo ni repetir el valor en el error', async () => {
+    const { llamar, env } = montarEnv();
+    const malos: unknown[] = [
+      'x',
+      { cambios: { 'MAL NOMBRE': CENTINELA } },
+      { cambios: { A: 5 } },
+      { cambios: { A: 'x'.repeat(5000) } },
+      { cambios: 'x' },
+      { desdeEjemplo: 'A' },
+      { desdeEjemplo: ['no valida'] },
+      { bloques: ['otro'] },
+      { rutas: ['C:/'] },
+    ];
+    for (const m of malos) {
+      const r = await llamar('env.vistaPrevia', 's1', m);
+      expect(r.ok, JSON.stringify(m)?.slice(0, 40)).toBe(false);
+      expect(JSON.stringify(r)).not.toContain(CENTINELA);
+    }
+    for (const clave of ['', 'con espacio', '1A', 7, 'x'.repeat(200)]) {
+      expect((await llamar('env.revelar', 's1', clave)).ok, String(clave)).toBe(false);
+    }
+    expect(env['vistaPrevia']).not.toHaveBeenCalled();
+    expect(env['revelar']).not.toHaveBeenCalled();
+  });
+
+  it('usar usuario propio: la clave la genera el main, se guarda como bd:<sitio> y no vuelve al renderer', async () => {
+    const { llamar, f, secretos } = montarEnv();
+    let clave = '';
+    f['usarUsuarioPropio']!.mockImplementation(
+      async (_id: string, o: { claveBd: string; guardarClave: () => Promise<void> }) => {
+        clave = o.claveBd;
+        await o.guardarClave();
+        return { usuario: 'wolf_u_x', copia: 'env-s1.respaldo' };
+      },
+    );
+    const r = await llamar('env.usarUsuarioPropio', 's1', { confirmado: true });
+    expect(r).toEqual({ ok: true, valor: { usuario: 'wolf_u_x', copia: 'env-s1.respaldo' } });
+    expect(clave).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect(secretos.guardadas.get('bd:s1')).toBe(clave);
+    expect(JSON.stringify(r)).not.toContain(clave);
+  });
+
+  it('un error del núcleo que repitiera la clave sale sin ella', async () => {
+    const { llamar, f } = montarEnv();
+    f['usarUsuarioPropio']!.mockImplementation(async (_id: string, o: { claveBd: string }) => {
+      throw new Error(`falló con ${o.claveBd}`);
+    });
+    const r = await llamar('env.usarUsuarioPropio', 's1', { confirmado: true });
+    expect(r.ok).toBe(false);
+    expect(r.error?.mensaje).toBe('falló con ***');
+  });
+
+  it('borrar un sitio borra también la clave de su usuario de base', async () => {
+    const { llamar, f, secretos } = montarEnv();
+    f['borrarSitio'] = vi.fn(async () => undefined);
+    secretos.guardadas.set('bd:s1', 'x');
+    await llamar('sitios.borrar', 's1');
+    expect(secretos.guardadas.has('bd:s1')).toBe(false);
+  });
+
+  it('ejecutar una receta: un error que repitiera la clave guardada sale sin ella', async () => {
+    const { llamar, f, secretos } = montarEnv();
+    secretos.guardadas.set('bd:s1', CENTINELA);
+    f['ejecutarReceta'] = vi.fn(async () => {
+      throw new Error(`conexión con ${CENTINELA}`);
+    });
+    const r = await llamar('proyectos.ejecutarReceta', 's1');
+    expect(r.ok).toBe(false);
+    expect(JSON.stringify(r)).not.toContain(CENTINELA);
   });
 });

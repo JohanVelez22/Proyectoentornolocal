@@ -303,6 +303,15 @@ if (!app.requestSingleInstanceLock()) {
     // token viejo de etc/github.token pasa solo al almacén nuevo la primera vez que se lee.
     const secretos = new AlmacenSecretos(n.rutas.secretos(), n.rutas.tokenGithub(), safeStorage);
     n.fijarProveedorTokenGithub(() => secretos.leerTokenGithub());
+    // Clave del usuario propio de la base de cada proyecto (bd:<sitio>): el núcleo la pide por llamada
+    // (reintentos de receta, MCP) y solo la usa en memoria.
+    n.fijarProveedorClaveBd(async (sitioId) => {
+      try {
+        return await secretos.leer(`bd:${sitioId}`);
+      } catch {
+        return null;
+      }
+    });
     // Métricas solo con la ventana visible (oculta en la bandeja o minimizada: en pausa).
     const metricas = new ControlMetricas(n);
     const visible = (): void => metricas.visibilidad(v.isVisible() && !v.isMinimized());
