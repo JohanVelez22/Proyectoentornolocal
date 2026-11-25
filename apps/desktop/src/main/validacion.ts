@@ -10,6 +10,7 @@ import {
   MAX_BYTES_INI,
   NOMBRE_EXTENSION_PHP,
   ErrorWolf,
+  tokenTunelValido,
   HERRAMIENTAS_BD,
   IDS_AGENTE,
   IDS_EDITOR,
@@ -1595,4 +1596,45 @@ export function opcionesEnvSmtp(v: unknown): OpcionesEnvSmtp {
     if (x) salida[k] = true;
   }
   return salida;
+}
+
+/** Proveedores de túnel que usan un token guardado (Tailscale usa la sesión del propio equipo). */
+export const PROVEEDORES_TUNEL_CON_TOKEN = ['ngrok', 'expose'] as const;
+export type ProveedorTunelConToken = (typeof PROVEEDORES_TUNEL_CON_TOKEN)[number];
+
+export function proveedorTunelConToken(v: unknown): ProveedorTunelConToken {
+  if (typeof v === 'string' && (PROVEEDORES_TUNEL_CON_TOKEN as readonly string[]).includes(v)) {
+    return v as ProveedorTunelConToken;
+  }
+  throw new Error('Argumento no válido: proveedor');
+}
+
+/**
+ * Token de ngrok o Expose (letras, números y `_ . -`, de 8 a 200). Código propio; el error nunca lo
+ * repite.
+ */
+export function tokenTunel(v: unknown): string {
+  const t = typeof v === 'string' ? v.trim() : '';
+  if (!tokenTunelValido(t)) {
+    throw new ErrorWolf(
+      'tuneles.token_invalido',
+      'El token no tiene un formato válido: solo letras, números y _ . - (de 8 a 200 caracteres).',
+    );
+  }
+  return t;
+}
+
+/** Proveedor y modo que `tuneles.usarProveedor` acepta (cloudflare tiene sus propios caminos). */
+export function eleccionTunel(
+  proveedor: unknown,
+  modo: unknown,
+): { proveedor: 'ngrok' | 'expose' | 'tailscale'; modo?: 'serve' | 'funnel' } {
+  if (proveedor !== 'ngrok' && proveedor !== 'expose' && proveedor !== 'tailscale') {
+    throw new Error('Argumento no válido: proveedor');
+  }
+  if (modo === undefined) return { proveedor };
+  if (proveedor !== 'tailscale' || (modo !== 'serve' && modo !== 'funnel')) {
+    throw new Error('Argumento no válido: modo');
+  }
+  return { proveedor, modo };
 }

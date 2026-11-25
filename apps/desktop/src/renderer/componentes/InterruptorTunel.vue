@@ -7,7 +7,7 @@ import { useTunel } from '../composables/useTunel';
 import { textos } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
-import { motivoTunelBloqueado } from '../utilidades/sitios';
+import { motivoTunelBloqueado, usaCloudflared } from '../utilidades/sitios';
 import DialogoQr from './DialogoQr.vue';
 import DialogoTunel from './DialogoTunel.vue';
 
@@ -38,6 +38,8 @@ const fase = computed<'apagado' | 'abriendo' | 'cerrando' | 'activo' | 'error'>(
 });
 
 const cloudflared = computed(() => {
+  // ngrok, Expose y Tailscale no necesitan cloudflared.
+  if (!usaCloudflared(props.sitio.tunel)) return undefined;
   const v = servicios.instalados['cloudflared'];
   return v === undefined ? undefined : v.length > 0;
 });

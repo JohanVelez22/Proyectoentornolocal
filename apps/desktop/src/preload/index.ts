@@ -249,6 +249,10 @@ const api: ApiEntorno = {
     configurarCloudflare: (id, nombre, dominio) =>
       invocar('tuneles.configurarCloudflare', id, nombre, dominio),
     usarTunelRapido: (id) => invocar('tuneles.usarTunelRapido', id),
+    usarProveedor: (id, proveedor, modo) => invocar('tuneles.usarProveedor', id, proveedor, modo),
+    estadoToken: (proveedor) => invocar('tuneles.estadoToken', proveedor),
+    guardarToken: (proveedor, token) => invocar('tuneles.guardarToken', proveedor, token),
+    borrarToken: (proveedor) => invocar('tuneles.borrarToken', proveedor),
   },
   hosts: { sincronizar: () => invocar('hosts.sincronizar') },
   detectarProyecto: (carpeta) => invocar('detectarProyecto', carpeta),

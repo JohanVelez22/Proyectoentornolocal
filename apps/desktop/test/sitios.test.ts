@@ -11,6 +11,8 @@ import {
   filtrarSitios,
   limpiarDatos,
   motivoTunelBloqueado,
+  confirmacionDeTunel,
+  usaCloudflared,
   nombreDeCarpeta,
   normalizarAlias,
   ordenarSitios,
@@ -382,5 +384,56 @@ describe('Correo', () => {
       ].join('\n'),
     );
     expect(bloqueEnvCorreo(2525)).toContain('MAIL_PORT=2525');
+  });
+});
+
+describe('confirmación de túnel por proveedor (D24)', () => {
+  const base = { dominio: 'wolf.test', datosReales: false };
+
+  it('Tailscale Serve dice que solo llega a la tailnet; Funnel, que es internet', () => {
+    const serve = confirmacionDeTunel({ ...base, tunel: { proveedor: 'tailscale' } });
+    expect(serve.contenido).toContain('Tailscale Serve');
+    expect(serve.contenido).toContain('no se publica en internet');
+    expect(
+      confirmacionDeTunel({ ...base, tunel: { proveedor: 'tailscale', modo: 'serve' } }),
+    ).toEqual(serve);
+    const funnel = confirmacionDeTunel({
+      ...base,
+      tunel: { proveedor: 'tailscale', modo: 'funnel' },
+    });
+    expect(funnel.contenido).toContain('Tailscale Funnel');
+    expect(funnel.contenido).toContain('en internet');
+    expect(funnel.titulo).not.toBe(serve.titulo);
+  });
+
+  it('ngrok y Expose dicen el proveedor y que es internet', () => {
+    expect(confirmacionDeTunel({ ...base, tunel: { proveedor: 'ngrok' } }).contenido).toContain(
+      'ngrok',
+    );
+    expect(confirmacionDeTunel({ ...base, tunel: { proveedor: 'expose' } }).contenido).toContain(
+      'Expose',
+    );
+  });
+
+  it('con datos reales: internet usa el aviso fuerte y Serve el suyo (sin decir que es público)', () => {
+    const reales = { ...base, datosReales: true };
+    expect(confirmacionDeTunel({ ...reales, tunel: { proveedor: 'ngrok' } }).titulo).toBe(
+      'Publicar un sitio con datos reales',
+    );
+    const serve = confirmacionDeTunel({ ...reales, tunel: { proveedor: 'tailscale' } });
+    expect(serve.contenido).toContain('datos reales');
+    expect(serve.contenido).toContain('tailnet');
+  });
+
+  it('sin proveedor elegido se confirma como antes (Cloudflare rápido)', () => {
+    expect(confirmacionDeTunel({ ...base, tunel: undefined }).contenido).toContain('Cloudflare');
+  });
+
+  it('solo los proveedores de Cloudflare necesitan cloudflared', () => {
+    expect(usaCloudflared(undefined)).toBe(true);
+    expect(usaCloudflared({ proveedor: 'cloudflare-nombre' })).toBe(true);
+    for (const proveedor of ['ngrok', 'expose', 'tailscale'] as const) {
+      expect(usaCloudflared({ proveedor })).toBe(false);
+    }
   });
 });

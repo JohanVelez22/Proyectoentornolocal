@@ -836,6 +836,19 @@ export interface ApiEntorno {
     configurarCloudflare(sitioId: string, nombre: string, dominio: string): Promise<void>;
     /** Vuelve al túnel rápido (sin cuenta) en el sitio. */
     usarTunelRapido(sitioId: string): Promise<void>;
+    /**
+     * Elige ngrok, Expose o Tailscale para el sitio (`modo`: solo Tailscale, `serve` = solo la
+     * tailnet, `funnel` = internet; por defecto `serve`). Cierra el túnel abierto; no abre nada.
+     */
+    usarProveedor(
+      sitioId: string,
+      proveedor: 'ngrok' | 'expose' | 'tailscale',
+      modo?: 'serve' | 'funnel',
+    ): Promise<void>;
+    /** Del token de ngrok o Expose solo se ve si hay uno y sus 4 últimos caracteres. */
+    estadoToken(proveedor: 'ngrok' | 'expose'): Promise<EstadoClaveIa>;
+    guardarToken(proveedor: 'ngrok' | 'expose', token: string): Promise<EstadoClaveIa>;
+    borrarToken(proveedor: 'ngrok' | 'expose'): Promise<void>;
   };
   hosts: {
     sincronizar(): Promise<ResultadoSync>;
@@ -1406,6 +1419,10 @@ export const RUTAS_IPC = [
   'tuneles.recrearCloudflare',
   'tuneles.configurarCloudflare',
   'tuneles.usarTunelRapido',
+  'tuneles.usarProveedor',
+  'tuneles.estadoToken',
+  'tuneles.guardarToken',
+  'tuneles.borrarToken',
   'hosts.sincronizar',
   'detectarProyecto',
   'config.leer',

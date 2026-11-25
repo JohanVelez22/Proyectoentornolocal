@@ -711,6 +711,10 @@ describe('registrarIpc', () => {
         'tuneles.recrearCloudflare',
         'tuneles.configurarCloudflare',
         'tuneles.usarTunelRapido',
+        'tuneles.usarProveedor',
+        'tuneles.estadoToken',
+        'tuneles.guardarToken',
+        'tuneles.borrarToken',
         'hosts.sincronizar',
         'detectarProyecto',
         'config.leer',
@@ -3317,5 +3321,96 @@ describe('IPC de túneles (D23)', () => {
     const { crudo, llamar } = montar();
     await llamar('tuneles.usarTunelRapido', 's1');
     expect(crudo.tuneles.elegirProveedor).toHaveBeenCalledWith('s1', null);
+  });
+});
+
+describe('IPC de túneles (D24): ngrok, Expose y Tailscale', () => {
+  const TOKEN = 'ngrok-prueba-falsa-centinela-secreta-d';
+
+  function montar() {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    const secretos = {
+      guardar: vi.fn(async () => undefined),
+      leer: vi.fn(async () => TOKEN),
+      borrar: vi.fn(async () => undefined),
+      hay: vi.fn(() => true),
+      estado: vi.fn(async () => ({ configurada: true, final: 'et-d' })),
+      disponible: vi.fn(() => true),
+      guardarTokenGithub: vi.fn(),
+      leerTokenGithub: vi.fn(async () => null),
+      borrarTokenGithub: vi.fn(),
+      hayTokenGithub: vi.fn(() => false),
+    };
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema, () => true, undefined, {
+      secretos,
+      seguimientos: new Seguimientos(),
+      metricas: new ControlMetricas(nucleo),
+    });
+    const llamar = async (ruta: string, ...args: unknown[]) =>
+      (await canales.get(`entorno:${ruta}`)!({}, ...args)) as {
+        ok: boolean;
+        valor?: unknown;
+        error?: { mensaje: string; codigo?: string };
+      };
+    return { crudo, secretos, llamar };
+  }
+
+  it('el token va al almacén (tunel:<proveedor>) y solo vuelve {configurada, final}', async () => {
+    const { llamar, secretos } = montar();
+    const r = await llamar('tuneles.guardarToken', 'ngrok', TOKEN);
+    expect(secretos.guardar).toHaveBeenCalledWith('tunel:ngrok', TOKEN);
+    expect(r).toEqual({ ok: true, valor: { configurada: true, final: 'et-d' } });
+    await llamar('tuneles.guardarToken', 'expose', TOKEN);
+    expect(secretos.guardar).toHaveBeenLastCalledWith('tunel:expose', TOKEN);
+    expect(JSON.stringify(await llamar('tuneles.estadoToken', 'ngrok'))).not.toContain(TOKEN);
+    await llamar('tuneles.borrarToken', 'ngrok');
+    expect(secretos.borrar).toHaveBeenCalledWith('tunel:ngrok');
+  });
+
+  it('proveedores o tokens que no valen nunca llegan al almacén y el error no repite el token', async () => {
+    const { llamar, secretos } = montar();
+    for (const args of [
+      ['tailscale', TOKEN],
+      ['cloudflare-nombre', TOKEN],
+      ['../x', TOKEN],
+      ['ngrok', 'corto'],
+      ['ngrok', "x'; system('x'); 12345"],
+      ['ngrok', 'con\nsalto-123456'],
+      ['ngrok', 42],
+    ]) {
+      const r = await llamar('tuneles.guardarToken', ...args);
+      expect(r.ok, JSON.stringify(args)).toBe(false);
+      expect(JSON.stringify(r)).not.toContain(TOKEN);
+    }
+    expect((await llamar('tuneles.estadoToken', 'tailscale')).ok).toBe(false);
+    expect((await llamar('tuneles.borrarToken', 'tailscale')).ok).toBe(false);
+    expect(secretos.guardar).not.toHaveBeenCalled();
+    expect(secretos.borrar).not.toHaveBeenCalled();
+  });
+
+  it('usarProveedor valida proveedor y modo y solo el núcleo elige', async () => {
+    const { llamar, crudo } = montar();
+    for (const args of [
+      ['s1', 'cloudflare-nombre'],
+      ['s1', 'otro'],
+      ['s1', 'ngrok', 'funnel'],
+      ['s1', 'tailscale', 'otro'],
+      [42, 'ngrok'],
+    ]) {
+      expect((await llamar('tuneles.usarProveedor', ...args)).ok, JSON.stringify(args)).toBe(false);
+    }
+    expect(crudo.tuneles.elegirProveedor).not.toHaveBeenCalled();
+    await llamar('tuneles.usarProveedor', 's1', 'ngrok');
+    expect(crudo.tuneles.elegirProveedor).toHaveBeenLastCalledWith('s1', { proveedor: 'ngrok' });
+    await llamar('tuneles.usarProveedor', 's1', 'tailscale', 'funnel');
+    expect(crudo.tuneles.elegirProveedor).toHaveBeenLastCalledWith('s1', {
+      proveedor: 'tailscale',
+      modo: 'funnel',
+    });
+    await llamar('tuneles.usarProveedor', 's1', 'tailscale');
+    expect(crudo.tuneles.elegirProveedor).toHaveBeenLastCalledWith('s1', {
+      proveedor: 'tailscale',
+    });
   });
 });

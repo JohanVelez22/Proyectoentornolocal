@@ -51,6 +51,9 @@ import {
   carpetaExistente,
   claveIa,
   claveSmtp,
+  eleccionTunel,
+  proveedorTunelConToken,
+  tokenTunel,
   datosProveedorSmtp,
   destinatarioPrueba,
   idProveedorSmtp,
@@ -1359,6 +1362,28 @@ const TABLA: Record<RutaIpc, Manejador> = {
       textoAcotado(dominio, 1, 253, 'dominio'),
     ),
   'tuneles.usarTunelRapido': (n, _s, id) => n.tuneles.elegirProveedor(idNoVacio(id), null),
+  // ngrok, Expose y Tailscale (Serve o Funnel). Elegirlo cierra el túnel abierto del sitio y no
+  // abre nada: abrirlo exige la confirmación, que dice el proveedor y hasta dónde llega.
+  'tuneles.usarProveedor': (n, _s, id, proveedor, modo) => {
+    const e = eleccionTunel(proveedor, modo);
+    return n.tuneles.elegirProveedor(idNoVacio(id), {
+      proveedor: e.proveedor,
+      ...(e.modo ? { modo: e.modo } : {}),
+    });
+  },
+  // Los tokens de ngrok y Expose viven solo en el almacén (`tunel:<proveedor>`): el renderer manda
+  // el token una vez y después solo ve {configurada, final}.
+  'tuneles.estadoToken': (_n, s, proveedor) =>
+    s.secretos.estado(`tunel:${proveedorTunelConToken(proveedor)}`),
+  'tuneles.guardarToken': async (_n, s, proveedor, token) => {
+    const p = proveedorTunelConToken(proveedor);
+    const t = tokenTunel(token);
+    await sinClave(t, () => s.secretos.guardar(`tunel:${p}`, t));
+    return s.secretos.estado(`tunel:${p}`);
+  },
+  'tuneles.borrarToken': async (_n, s, proveedor) => {
+    await s.secretos.borrar(`tunel:${proveedorTunelConToken(proveedor)}`);
+  },
   'hosts.sincronizar': async (n) => {
     const sitios = await n.sitios.listar();
     // Pedido explícito ("Aplicar hosts pendientes"): vuelve a pedir permiso aunque el último

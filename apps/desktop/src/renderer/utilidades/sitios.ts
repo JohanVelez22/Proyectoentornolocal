@@ -1,3 +1,4 @@
+import { alcanceDe, modoTailscaleDe } from '@pel/core';
 import type {
   DatosSitio,
   EstadoHttps,
@@ -173,6 +174,52 @@ export function confirmacionTunel(
   sitio: Pick<Sitio, 'datosReales'> | undefined,
 ): 'reales' | 'publico' {
   return sitio?.datosReales === true ? 'reales' : 'publico';
+}
+
+/** ¿El proveedor del sitio usa cloudflared? (ngrok, Expose y Tailscale no.) */
+export function usaCloudflared(tunel: Sitio['tunel'] | undefined): boolean {
+  return (
+    !tunel || tunel.proveedor === 'cloudflare-rapido' || tunel.proveedor === 'cloudflare-nombre'
+  );
+}
+
+/**
+ * Lo que se pregunta al publicar: siempre se dice el proveedor y hasta dónde llega el enlace
+ * (Tailscale Serve solo a la tailnet; Funnel y los demás, a todo internet).
+ */
+export function confirmacionDeTunel(sitio: Pick<Sitio, 'datosReales' | 'dominio' | 'tunel'>): {
+  titulo: string;
+  contenido: string;
+} {
+  const t = textos.tunel;
+  const reales = confirmacionTunel(sitio) === 'reales';
+  const proveedor = sitio.tunel?.proveedor;
+  if (alcanceDe(sitio.tunel) === 'tailnet') {
+    return reales
+      ? {
+          titulo: t.confirmarTailnetTitulo,
+          contenido: t.confirmarTailnetRealesTexto(sitio.dominio),
+        }
+      : { titulo: t.confirmarTailnetTitulo, contenido: t.confirmarTailnetTexto(sitio.dominio) };
+  }
+  const titulo = reales ? t.confirmarTitulo : t.confirmarPublicoTitulo;
+  if (reales) return { titulo, contenido: t.confirmarTexto };
+  if (proveedor === 'cloudflare-nombre' && sitio.tunel?.dominio) {
+    return { titulo, contenido: t.confirmarPublicoNombreTexto(sitio.dominio, sitio.tunel.dominio) };
+  }
+  if (proveedor === 'tailscale' && modoTailscaleDe(sitio.tunel) === 'funnel') {
+    return { titulo, contenido: t.confirmarFunnelTexto(sitio.dominio) };
+  }
+  if (proveedor === 'ngrok' || proveedor === 'expose') {
+    return {
+      titulo,
+      contenido: t.confirmarProveedorTexto(
+        sitio.dominio,
+        proveedor === 'ngrok' ? 'ngrok' : 'Expose',
+      ),
+    };
+  }
+  return { titulo, contenido: t.confirmarPublicoTexto(sitio.dominio) };
 }
 
 /**

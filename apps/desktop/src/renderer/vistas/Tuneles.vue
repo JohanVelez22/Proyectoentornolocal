@@ -20,7 +20,7 @@ import { textos } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
 import { useTuneles } from '../stores/tuneles';
-import { motivoTunelBloqueado } from '../utilidades/sitios';
+import { motivoTunelBloqueado, usaCloudflared } from '../utilidades/sitios';
 
 const t = textos.tuneles;
 const tt = textos.tunel;
@@ -59,7 +59,7 @@ const bloqueo = (f: Fila): string | null => {
   const v = servicios.instalados['cloudflared'];
   return motivoTunelBloqueado({
     nginx: servicios.porId['nginx']?.estado,
-    cloudflaredInstalado: v === undefined ? undefined : v.length > 0,
+    cloudflaredInstalado: v === undefined || !usaCloudflared(f.tunel) ? undefined : v.length > 0,
     tunel: f.estado,
   });
 };

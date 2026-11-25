@@ -2,7 +2,7 @@ import { useDialog } from 'naive-ui';
 import type { Sitio } from '../../shared/api';
 import { api } from '../api';
 import { textos } from '../i18n';
-import { confirmacionTunel } from '../utilidades/sitios';
+import { confirmacionDeTunel } from '../utilidades/sitios';
 import { useAccion } from './useAccion';
 
 /**
@@ -21,7 +21,7 @@ export function useTunel() {
   function confirmarPublicar(
     sitio: Pick<Sitio, 'datosReales' | 'dominio' | 'tunel'>,
   ): Promise<boolean> {
-    const reales = confirmacionTunel(sitio) === 'reales';
+    const { titulo, contenido } = confirmacionDeTunel(sitio);
     return new Promise((resolve) => {
       let respondido = false;
       const responder = (v: boolean): void => {
@@ -30,12 +30,8 @@ export function useTunel() {
         resolve(v);
       };
       dialog.warning({
-        title: reales ? t.confirmarTitulo : t.confirmarPublicoTitulo,
-        content: reales
-          ? t.confirmarTexto
-          : sitio.tunel?.proveedor === 'cloudflare-nombre' && sitio.tunel.dominio
-            ? t.confirmarPublicoNombreTexto(sitio.dominio, sitio.tunel.dominio)
-            : t.confirmarPublicoTexto(sitio.dominio),
+        title: titulo,
+        content: contenido,
         positiveText: t.confirmar,
         negativeText: textos.acciones.cancelar,
         autoFocus: false,
