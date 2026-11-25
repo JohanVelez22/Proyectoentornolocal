@@ -219,6 +219,8 @@ export const es = {
         'No se puede guardar la plantilla: el servidor de la base es remoto o ninguno de los servicios locales usa ese puerto.',
       'plantillas.sin_generador_base':
         'Este tipo de proyecto no tiene un generador base: la plantilla debe incluir los archivos del proyecto.',
+      'plantillas.exclusiones_nuevas':
+        'La plantilla trae un archivo que ahora se excluye ({archivo}): guárdela de nuevo desde el proyecto o bórrela.',
       'plantillas.motor_distinto':
         'El esquema de la plantilla es de MySQL y el servidor elegido es MariaDB (o al revés): puede haber diferencias. Confirme que quiere continuar.',
       'bd.sql_no_permitido':

@@ -904,22 +904,25 @@ describe('I1: un zip manipulado no puede traer lo que una plantilla nunca lleva'
     ['config/id_rsa'],
     ['certs/a.PEM'],
     ['wp-config.php'],
-  ])('%s en el zip da plantillas.danada y no se extrae nada', async (entrada) => {
-    const pl = armar();
-    const p = await pl.guardar('tienda', opciones);
-    const dirP = path.join(rutas.plantillas(), p.id);
-    const malo = zipCrudo({ 'app/ok.php': 'ok', [entrada]: 'x' });
-    await writeFile(path.join(dirP, 'archivos.zip'), malo);
-    const json = JSON.parse(await readFile(path.join(dirP, 'plantilla.json'), 'utf8'));
-    json.sha256.archivos = createHash('sha256').update(malo).digest('hex');
-    await writeFile(path.join(dirP, 'plantilla.json'), JSON.stringify(json));
-    const destino = path.join(dir, 'nuevo-i1');
-    await mkdir(destino);
-    await expect(pl.restaurarArchivos(p.id, destino)).rejects.toMatchObject({
-      codigo: 'plantillas.danada',
-    });
-    expect(await readdir(destino)).toEqual([]);
-  });
+  ])(
+    '%s en el zip da un mensaje claro (plantillas.exclusiones_nuevas) y no se extrae nada',
+    async (entrada) => {
+      const pl = armar();
+      const p = await pl.guardar('tienda', opciones);
+      const dirP = path.join(rutas.plantillas(), p.id);
+      const malo = zipCrudo({ 'app/ok.php': 'ok', [entrada]: 'x' });
+      await writeFile(path.join(dirP, 'archivos.zip'), malo);
+      const json = JSON.parse(await readFile(path.join(dirP, 'plantilla.json'), 'utf8'));
+      json.sha256.archivos = createHash('sha256').update(malo).digest('hex');
+      await writeFile(path.join(dirP, 'plantilla.json'), JSON.stringify(json));
+      const destino = path.join(dir, 'nuevo-i1');
+      await mkdir(destino);
+      await expect(pl.restaurarArchivos(p.id, destino)).rejects.toMatchObject({
+        codigo: 'plantillas.exclusiones_nuevas',
+      });
+      expect(await readdir(destino)).toEqual([]);
+    },
+  );
 });
 
 describe('I2: la base y el servidor correctos', () => {
@@ -1479,7 +1482,8 @@ describe('menores de la segunda revisión', () => {
   it('4: preparar verifica las huellas sobre una copia y de ella se extrae (no del original)', async () => {
     const pl = armar();
     const p = await pl.guardar('tienda', opciones);
-    await pl.preparar(p.id);
+    const uso = 'a1b2c3d4e5f60718';
+    await pl.preparar(p.id, uso);
     // El original cambia DESPUÉS de verificar: lo que se usa es la copia verificada.
     await writeFile(
       path.join(rutas.plantillas(), p.id, 'archivos.zip'),
@@ -1488,10 +1492,16 @@ describe('menores de la segunda revisión', () => {
     await writeFile(path.join(rutas.plantillas(), p.id, 'esquema.sql'), 'DROP DATABASE mysql;');
     const destino = path.join(dir, 'nuevo-uso');
     await mkdir(destino);
-    expect((await pl.restaurarArchivos(p.id, destino)).archivos).toBe(3);
+    expect((await pl.restaurarArchivos(p.id, destino, uso)).archivos).toBe(3);
     expect(await readFile(path.join(destino, 'app', 'Modelo.php'), 'utf8')).toBe('<?php // modelo');
-    expect(await readFile((await pl.rutaEsquema(p.id)).ruta, 'utf8')).toContain('CREATE TABLE');
-    await pl.liberar(p.id);
+    expect(await readFile((await pl.rutaEsquema(p.id, uso)).ruta, 'utf8')).toContain(
+      'CREATE TABLE',
+    );
+    // Otra creación de la misma plantilla no comparte esa copia.
+    await expect(pl.rutaEsquema(p.id, 'ffffffffffffffff')).rejects.toMatchObject({
+      codigo: 'plantillas.danada',
+    });
+    await pl.liberar(p.id, uso);
     expect(await readdir(rutas.tmp()).catch(() => [])).toEqual([]);
     // Sin copia preparada se vuelve a verificar el original: ahora está cambiado.
     await expect(pl.rutaEsquema(p.id)).rejects.toMatchObject({ codigo: 'plantillas.danada' });
@@ -1521,10 +1531,10 @@ describe('menores de la segunda revisión', () => {
       confiar: async () => undefined,
       plantillas: {
         cargar: (id) => pl.cargar(id),
-        preparar: (id) => pl.preparar(id),
-        liberar: async (id) => {
+        preparar: (id, uso) => pl.preparar(id, uso),
+        liberar: async (id, uso) => {
           liberadas.push(id);
-          await pl.liberar(id);
+          await pl.liberar(id, uso);
         },
       },
     };
@@ -1942,5 +1952,62 @@ return [
         codigo: 'plantillas.exclusion_invalida',
       });
     }
+  });
+});
+
+describe('R3 menor 3 y 7: copia por creación y mensaje de exclusiones nuevas', () => {
+  it('cada creación genera su propio identificador y lo pasa a los pasos que usan la copia', async () => {
+    const usos: string[] = [];
+    const recetas: PasoReceta[][] = [];
+    const base = depsMinimas({ conArchivos: true });
+    const deps: DepsCrearProyecto = {
+      ...base,
+      ejecutarReceta: async (_id, receta) => {
+        recetas.push(receta);
+        return { estado: 'lista' };
+      },
+      plantillas: {
+        cargar: base.plantillas!.cargar,
+        preparar: async (_id, uso) => void usos.push(uso),
+        liberar: async (_id, uso) => void usos.push(`libera:${uso}`),
+      },
+    };
+    const pedido = (nombre: string): PedidoProyecto => ({
+      tipo: 'laravel',
+      plantilla: 'base-a1b2c3',
+      nombre,
+      carpeta: path.join(dir, nombre),
+      // Un uso que venga de afuera no cuenta: el pedido lo pisa.
+      uso: 'ffffffffffffffff',
+      base: null,
+      opciones: {},
+    });
+    await crearProyecto(deps, pedido('uno'));
+    await crearProyecto(deps, pedido('dos'));
+    expect(usos[0]).toMatch(/^[0-9a-f]{16}$/);
+    expect(usos[0]).not.toBe('ffffffffffffffff');
+    expect(usos[1]).toBe(`libera:${usos[0]}`);
+    expect(usos[2]).not.toBe(usos[0]);
+    const usoDe = (r: PasoReceta[]): unknown =>
+      r.find((x) => x.tipo === 'restaurar-plantilla-archivos')!.args!.uso;
+    expect(usoDe(recetas[0]!)).toBe(usos[0]);
+    expect(usoDe(recetas[1]!)).toBe(usos[2]);
+  });
+
+  it('un zip con un archivo que ahora se excluye dice cuál es', async () => {
+    const pl = armar();
+    const p = await pl.guardar('tienda', opciones);
+    const dirP = path.join(rutas.plantillas(), p.id);
+    const malo = zipCrudo({ 'app/ok.php': 'ok', 'certs/viejo.pem': 'x' });
+    await writeFile(path.join(dirP, 'archivos.zip'), malo);
+    const json = JSON.parse(await readFile(path.join(dirP, 'plantilla.json'), 'utf8'));
+    json.sha256.archivos = createHash('sha256').update(malo).digest('hex');
+    await writeFile(path.join(dirP, 'plantilla.json'), JSON.stringify(json));
+    const destino = path.join(dir, 'nuevo-msg');
+    await mkdir(destino);
+    await expect(pl.restaurarArchivos(p.id, destino)).rejects.toMatchObject({
+      codigo: 'plantillas.exclusiones_nuevas',
+      datos: { archivo: 'certs/viejo.pem' },
+    });
   });
 });

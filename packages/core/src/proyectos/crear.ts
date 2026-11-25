@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { lstat, mkdir, readdir, realpath, rmdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { motorDe, type ObjetivoBd } from '../bd/basesDeDatos';
@@ -72,9 +73,9 @@ export interface DepsCrearProyecto {
   plantillas?: {
     cargar: (id: string) => Promise<Plantilla>;
     /** Copia, verifica y deja listos sus archivos y su esquema antes de crear nada. */
-    preparar?: (id: string) => Promise<void>;
+    preparar?: (id: string, uso: string) => Promise<void>;
     /** Suelta la copia de trabajo hecha por `preparar`. */
-    liberar?: (id: string) => Promise<void>;
+    liberar?: (id: string, uso: string) => Promise<void>;
   };
   /** Aplica a un sitio recién creado los ajustes de la plantilla (php.ini y reglas de Nginx). */
   aplicarAjustes?: (
@@ -240,12 +241,14 @@ export async function crearProyecto(
   d: DepsCrearProyecto,
   p: PedidoProyecto,
 ): Promise<ResultadoCrearProyecto> {
+  // Identificador de esta creación (siempre propio: lo que venga en el pedido no cuenta).
+  const uso = randomBytes(8).toString('hex');
   try {
-    return await crearProyectoInterno(d, p);
+    return await crearProyectoInterno(d, { ...p, uso });
   } finally {
     // La copia de trabajo de la plantilla no sobrevive a la creación.
     if (typeof p?.plantilla === 'string') {
-      await d.plantillas?.liberar?.(p.plantilla).catch(() => undefined);
+      await d.plantillas?.liberar?.(p.plantilla, uso).catch(() => undefined);
     }
   }
 }
@@ -268,7 +271,7 @@ async function crearProyectoInterno(
     plantilla = await d.plantillas.cargar(id);
     // Las huellas se verifican ahora, sobre una copia en tmp: de ella se extraen los archivos y
     // se restaura el esquema, así lo verificado es lo mismo que se usa (y antes de crear nada).
-    await d.plantillas.preparar?.(id);
+    await d.plantillas.preparar?.(id, p.uso!);
     if (!plantilla.conArchivos && !generadorBaseDe(plantilla)) {
       throw new ErrorWolf(
         'plantillas.sin_generador_base',

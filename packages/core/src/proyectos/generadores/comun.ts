@@ -24,6 +24,8 @@ export interface PedidoProyecto {
    * (`tipo` se ignora: manda el de la plantilla).
    */
   plantilla?: string;
+  /** Identificador de esta creación (lo pone `crearProyecto`): ata los pasos a su copia de la plantilla. */
+  uso?: string;
   php?: string;
   python?: string;
   /** Instancia (o, sin ella, el motor predeterminado) y nombre de la base; null = sin base. */

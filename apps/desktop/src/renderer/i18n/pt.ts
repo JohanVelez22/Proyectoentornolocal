@@ -223,6 +223,8 @@ export const pt: Textos = {
         'Não é possível salvar o modelo: o servidor do banco é remoto ou nenhum serviço local usa essa porta.',
       'plantillas.sin_generador_base':
         'Este tipo de projeto não tem um gerador base: o modelo precisa incluir os arquivos do projeto.',
+      'plantillas.exclusiones_nuevas':
+        'O modelo traz um arquivo que agora é excluído ({archivo}): salve-o de novo a partir do projeto ou apague-o.',
       'plantillas.motor_distinto':
         'O esquema do modelo é do MySQL e o servidor escolhido é o MariaDB (ou o contrário): pode haver diferenças. Confirme que quer continuar.',
       'bd.sql_no_permitido':

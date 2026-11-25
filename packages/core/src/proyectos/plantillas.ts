@@ -792,6 +792,16 @@ const sinOrigen = (p: Plantilla): Omit<Plantilla, 'origen'> => {
   void origen;
   return resto;
 };
+/**
+ * Identificador de una creación (lo genera `crearProyecto`, nunca llega de afuera): la copia
+ * verificada es de esa creación, no de la plantilla, así dos creaciones a la vez no se pisan.
+ */
+export const USO_VALIDO = /^[0-9a-f]{16}$/;
+const claveDeUso = (id: string, uso: string): string => {
+  if (!USO_VALIDO.test(uso)) throw new Error('Identificador de uso no válido.');
+  return `${id}:${uso}`;
+};
+
 const sha256Texto = (t: string): string => createHash('sha256').update(t, 'utf8').digest('hex');
 
 async function sha256De(archivo: string): Promise<string> {
@@ -824,10 +834,21 @@ async function revisarZip(archivo: string, limites: LimitesPlantilla): Promise<v
         entradas++;
         bytes += e.uncompressedSize;
         const nombre = e.fileName.replace(/\\/g, '/');
+        // Lo que ahora se excluye (o lo que un tercero agregó): mensaje claro, con el archivo, para
+        // que el usuario sepa que debe guardar la plantilla otra vez desde el proyecto.
+        if (enExcluidos(obligatorias, nombre)) {
+          reject(
+            new ErrorWolf(
+              'plantillas.exclusiones_nuevas',
+              `La plantilla trae un archivo que ahora se excluye (${nombre.slice(0, 80)}): guárdela de nuevo desde el proyecto o bórrela.`,
+              { archivo: nombre.slice(0, 80) },
+            ),
+          );
+          return;
+        }
         if (
           // Lo que una plantilla nunca lleva tampoco puede venir en el zip (un zip manipulado
           // podría traer un wolfcore.yml, un .env o un vendor/ con código propio).
-          enExcluidos(obligatorias, nombre) ||
           entradas > limites.maxArchivos * 2 + 1000 ||
           bytes > limites.maxBytes * 2 ||
           nombre.startsWith('/') ||
@@ -930,9 +951,10 @@ export class Plantillas {
    * y las revisa; de ahí salen luego la extracción y la restauración. Se llama antes de crear nada:
    * lo que se verificó es lo mismo que se usa (no se puede cambiar entre una cosa y la otra).
    */
-  async preparar(id: string): Promise<void> {
+  async preparar(id: string, uso: string): Promise<void> {
     const p = await this.cargar(id);
-    await this.liberar(id);
+    const clave = claveDeUso(id, uso);
+    await this.liberar(id, uso);
     const tmp = this.d.rutas.tmp();
     await mkdir(tmp, { recursive: true });
     const dir = path.join(tmp, `plantilla-uso-${randomBytes(6).toString('hex')}`);
@@ -965,7 +987,7 @@ export class Plantillas {
           this.limites.maxBytesEsquema,
         );
       }
-      this.preparadas.set(id, { dir, zip, esquema });
+      this.preparadas.set(clave, { dir, zip, esquema });
     } catch (e) {
       await rm(dir, { recursive: true, force: true }).catch(() => undefined);
       throw e;
@@ -973,9 +995,10 @@ export class Plantillas {
   }
 
   /** Borra la copia de trabajo de `preparar`. */
-  async liberar(id: string): Promise<void> {
-    const x = this.preparadas.get(validarIdPlantilla(id));
-    this.preparadas.delete(id);
+  async liberar(id: string, uso: string): Promise<void> {
+    const clave = claveDeUso(validarIdPlantilla(id), uso);
+    const x = this.preparadas.get(clave);
+    this.preparadas.delete(clave);
     if (x) await rm(x.dir, { recursive: true, force: true }).catch(() => undefined);
   }
 
@@ -1265,12 +1288,13 @@ export class Plantillas {
   /** Ruta del esquema, ya comprobada contra su huella. */
   async rutaEsquema(
     id: string,
+    uso?: string,
   ): Promise<{ ruta: string; motor: MotorBd; origen: 'propia' | 'importada' }> {
     const p = await this.cargar(id);
     if (!p.archivoEsquema || !p.motorBase || !p.sha256.esquema) {
       throw new ErrorWolf('plantillas.sin_esquema', 'La plantilla no trae el esquema de una base.');
     }
-    const preparada = this.preparadas.get(id)?.esquema;
+    const preparada = uso ? this.preparadas.get(claveDeUso(id, uso))?.esquema : undefined;
     if (preparada) return { ruta: preparada, motor: p.motorBase, origen: p.origen };
     const ruta = path.join(this.carpeta(id), p.archivoEsquema);
     let info;
@@ -1291,12 +1315,16 @@ export class Plantillas {
    * Una plantilla con rutas que salen de la carpeta o con otra huella da `plantillas.danada` y no
    * escribe nada.
    */
-  async restaurarArchivos(id: string, destino: string): Promise<{ archivos: number }> {
+  async restaurarArchivos(
+    id: string,
+    destino: string,
+    uso?: string,
+  ): Promise<{ archivos: number }> {
     const p = await this.cargar(id);
     if (!p.conArchivos || !p.sha256.archivos) return { archivos: 0 };
     const limites = this.limites;
     // Con `preparar` ya hecho se usa la copia verificada; si no, se verifica el original ahora.
-    let zip = this.preparadas.get(id)?.zip ?? null;
+    let zip = (uso ? this.preparadas.get(claveDeUso(id, uso))?.zip : null) ?? null;
     if (!zip) {
       zip = path.join(this.carpeta(id), 'archivos.zip');
       let info;

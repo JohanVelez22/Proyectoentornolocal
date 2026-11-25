@@ -112,6 +112,7 @@ export const PARAMETROS_ERROR = {
   'plantillas.nombre_invalido': [],
   'plantillas.esquema_fallo': [],
   'plantillas.base_no_resuelta': [],
+  'plantillas.exclusiones_nuevas': ['archivo'],
   'plantillas.sin_generador_base': [],
   'plantillas.motor_distinto': [],
   'bd.sql_no_permitido': ['sentencia'],

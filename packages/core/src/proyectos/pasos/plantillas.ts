@@ -1,10 +1,16 @@
 import { motorDe } from '../../bd/basesDeDatos';
 import { ErrorWolf } from '../../errores';
 import type { ImplementacionPaso } from '../pasos';
-import { validarIdPlantilla } from '../plantillas';
+import { USO_VALIDO, validarIdPlantilla } from '../plantillas';
 import { sanear } from '../recetas';
 import { argsDe, comprobarSenal, nombreBase, objetivoDe, type DepsPasos } from './comun';
 import { carpetaVacia } from './crearDesdeComposer';
+
+/** Identificador de la creación que dejó la copia verificada (si ya no está, se verifica de nuevo). */
+const usoDe = (ctx: Parameters<ImplementacionPaso>[0]): string | undefined => {
+  const u = argsDe(ctx).uso;
+  return typeof u === 'string' && USO_VALIDO.test(u) ? u : undefined;
+};
 
 function plantillasDe(d: DepsPasos): NonNullable<DepsPasos['plantillas']> {
   if (!d.plantillas) throw new Error('Las plantillas de proyecto no están disponibles.');
@@ -25,7 +31,7 @@ export function pasoRestaurarPlantillaArchivos(d: DepsPasos): ImplementacionPaso
         'La carpeta ya tiene archivos: no se copia la plantilla encima.',
       );
     }
-    const r = await plantillasDe(d).restaurarArchivos(id, ctx.carpeta);
+    const r = await plantillasDe(d).restaurarArchivos(id, ctx.carpeta, usoDe(ctx));
     comprobarSenal(ctx);
     ctx.linea(`Se copiaron ${r.archivos} archivos de la plantilla.`);
   };
@@ -44,7 +50,7 @@ export function pasoRestaurarEsquemaPlantilla(d: DepsPasos): ImplementacionPaso 
     if (!objetivo) throw new Error('El proyecto no indica una base de datos para el esquema.');
     const motor = motorDe(objetivo);
     const base = nombreBase(ctx.sitio, args);
-    const esquema = await plantillasDe(d).rutaEsquema(id);
+    const esquema = await plantillasDe(d).rutaEsquema(id, usoDe(ctx));
     // Un volcado de PostgreSQL no entra en MySQL ni al revés (MySQL y MariaDB sí se entienden).
     if ((esquema.motor === 'postgresql') !== (motor === 'postgresql')) {
       throw new ErrorWolf(

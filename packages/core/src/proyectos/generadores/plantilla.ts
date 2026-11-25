@@ -75,6 +75,7 @@ export function generadorDePlantilla(pl: Plantilla): Generador {
         paso('restaurar-esquema-plantilla', 'Crear las tablas de la plantilla (sin datos)', {
           ...base,
           plantilla: pl.id,
+          ...(p.uso ? { uso: p.uso } : {}),
         });
       // Sin archivos: se parte del generador base del tipo (como un proyecto nuevo) y encima se
       // restaura el esquema; los ajustes (php.ini, Nginx) los aplica crearProyecto al terminar.
@@ -98,6 +99,7 @@ export function generadorDePlantilla(pl: Plantilla): Generador {
         pasos.push(
           paso('restaurar-plantilla-archivos', 'Copiar los archivos de la plantilla', {
             plantilla: pl.id,
+            ...(p.uso ? { uso: p.uso } : {}),
           }),
         );
       }

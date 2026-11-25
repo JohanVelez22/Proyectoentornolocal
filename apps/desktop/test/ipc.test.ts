@@ -1738,6 +1738,8 @@ describe('IPC de la Etapa B', () => {
       ['s1', { ...opciones, excluirExtra: [7] }],
       ['s1', { ...opciones, excluirExtra: Array(51).fill('a') }],
       ['s1', { ...opciones, ruta: 'C:\\' }],
+      ['s1', { ...opciones, incluir: 'x' }],
+      ['s1', { ...opciones, incluir: [7] }],
     ] as [string, unknown][]) {
       expect((await llamar('plantillas.guardar', ...malo)).ok, JSON.stringify(malo)).toBe(false);
     }
