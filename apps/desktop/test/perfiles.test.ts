@@ -23,6 +23,7 @@ import {
   ofreceCa,
   opcionesImportar,
   prefijoDesdeElegida,
+  puedeConfirmarRevision,
   problemaExportar,
   puedeImportar,
   resumenImportacion,
@@ -209,6 +210,14 @@ describe('perfiles (D27): utilidades del asistente', () => {
       huella: 'c'.repeat(64),
       confirmado: true,
     });
+  });
+
+  it('no se confirma la revisión mientras haya un error al recalcular la vista previa', () => {
+    const base = { cargando: false, hayVista: true, errorVista: null };
+    expect(puedeConfirmarRevision(base)).toBe(true);
+    expect(puedeConfirmarRevision({ ...base, errorVista: 'falló' })).toBe(false);
+    expect(puedeConfirmarRevision({ ...base, cargando: true })).toBe(false);
+    expect(puedeConfirmarRevision({ ...base, hayVista: false })).toBe(false);
   });
 
   it('exportar: frase de al menos 10 caracteres, repetida igual, y certificados solo con la CA', () => {
@@ -469,6 +478,7 @@ describe('perfiles (D27): rutas IPC', () => {
     'perfiles.vistaPrevia',
     'perfiles.importar',
     'perfiles.instantaneas',
+    'perfiles.quitarCaAnterior',
     'perfiles.instantanea',
   ] as const;
 

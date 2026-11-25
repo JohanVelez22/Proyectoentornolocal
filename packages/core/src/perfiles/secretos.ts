@@ -66,3 +66,32 @@ export function enmascararComando(args: readonly string[]): string[] {
   }
   return salida;
 }
+
+/** Claves de php.ini con valor secreto aunque no lo diga `NOMBRE_VARIABLE_SECRETA` (`mysqli.default_pw`, licencias…). */
+const CLAVE_INI_SECRETA = /_pw$|license|licence|auth/i;
+
+/** Parámetros de URL con credenciales (`?auth=…`, `&password=…`). */
+const PARAMETRO_SECRETO = /([?&](?:auth|password)=)[^\s&"'#;]+/gi;
+
+/**
+ * php.ini sin valores secretos, línea por línea: tapa el valor de las claves con nombre de secreto
+ * (`NOMBRE_VARIABLE_SECRETA`, `_pw`, `license`, `auth`, sin distinguir mayúsculas), los parámetros
+ * `?auth=` / `&password=` de cualquier valor y lo que tenga forma de secreto.
+ */
+export function enmascararPhpIni(texto: string): string {
+  const lineas = texto.split(/(\r?\n)/);
+  return lineas
+    .map((l) => {
+      const m = /^(\s*[A-Za-z0-9_.\-[\]]+\s*=\s*)(.*)$/.exec(l);
+      if (!m) return enmascararSecretos(l.replace(PARAMETRO_SECRETO, `$1${ENMASCARADO}`));
+      const clave = m[1]!.split('=')[0]!.trim();
+      if (
+        m[2]!.trim() !== '' &&
+        (NOMBRE_VARIABLE_SECRETA.test(clave) || CLAVE_INI_SECRETA.test(clave))
+      ) {
+        return `${m[1]}"${ENMASCARADO}"`;
+      }
+      return enmascararSecretos(m[1] + m[2]!.replace(PARAMETRO_SECRETO, `$1${ENMASCARADO}`));
+    })
+    .join('');
+}

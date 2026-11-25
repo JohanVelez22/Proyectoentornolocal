@@ -1,20 +1,21 @@
 import { lstat, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
-import { enmascararSecretos } from '../patronesSecretos';
 import type { Rutas } from '../rutas';
 import { selloFecha } from '../servicios/actualizar';
 import type { Config } from '../tipos';
-import { configParaPerfil, sitioParaPerfil } from './manifiesto';
-import { enmascararNginx } from './secretos';
+import { enmascararSecretos } from '../patronesSecretos';
+import { esSecreta } from '../proyectos/env/leer';
+import { llevaSecreto } from '../proyectos/plantillas';
+import { enmascararComando, enmascararNginx, enmascararPhpIni } from './secretos';
 
 /**
  * Instantánea automática del entorno (D27): una copia pequeña de lo que decide cómo se comporta
  * el entorno (la configuración, Nginx y los php.ini), que se toma antes de actualizar PHP o
  * Nginx, antes de importar un perfil o cuando el usuario la pide.
  *
- * Es una **lista blanca**, como un perfil: `config.json` (como lo exporta un perfil: sin secretos
- * ni estado de este equipo), `etc/nginx/nginx.conf`, `etc/nginx/sites/*.conf` (sin el valor de lo
+ * Es una **lista blanca**, como un perfil: `config.json` (la completa y validada, para poder volver
+ * atrás, sin lo que `esSecreta` reconozca), `etc/nginx/nginx.conf`, `etc/nginx/sites/*.conf` (sin el valor de lo
  * que tenga nombre de secreto) y `etc/php/<rama>/php.ini`. Nunca `etc/secretos/`, las
  * credenciales, `etc/respaldos/`, `etc/acceso-bd/`, `etc/cloudflared/`, `etc/nginx/extras/` (red
  * local y túneles), `instantaneas/`, `papelera/`, `respaldos/`, `tmp/`, `run/`, `ca/`, `certs/`
@@ -65,6 +66,51 @@ function fallo(motivo: string, causa?: unknown): ErrorWolf {
     undefined,
     causa === undefined ? undefined : { cause: causa },
   );
+}
+
+/** Carpeta de verdad (no un enlace ni una unión): lo que cuelga de ella no sale de `etc/`. */
+async function esCarpetaReal(ruta: string): Promise<boolean> {
+  const s = await lstat(ruta).catch(() => null);
+  return s !== null && s.isDirectory() && !s.isSymbolicLink();
+}
+
+/** Quita de un valor de configuración lo que `esSecreta` reconoce (por nombre o por forma). */
+function sinSecretos(valor: unknown): unknown {
+  if (Array.isArray(valor)) return valor.map(sinSecretos);
+  if (valor !== null && typeof valor === 'object') {
+    const salida: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(valor as Record<string, unknown>)) {
+      if ((typeof v === 'string' || typeof v === 'number') && esSecreta(k, String(v))) continue;
+      salida[k] = sinSecretos(v);
+    }
+    return salida;
+  }
+  return valor;
+}
+
+/** La configuración completa (validada), sin secretos: comandos, reglas de Nginx y notas incluidos. */
+function configSinSecretos(c: Config): unknown {
+  const copia = sinSecretos(c) as Record<string, unknown>;
+  const sitios = (copia['sitios'] as Record<string, unknown>[] | undefined) ?? [];
+  copia['sitios'] = sitios.map((s) => {
+    const x = { ...s };
+    if (typeof x['reglasExtra'] === 'string') x['reglasExtra'] = enmascararNginx(x['reglasExtra']);
+    if (typeof x['vhostManual'] === 'string') x['vhostManual'] = enmascararNginx(x['vhostManual']);
+    if (
+      typeof x['nota'] === 'string' &&
+      (llevaSecreto(x['nota']) || enmascararSecretos(x['nota']) !== x['nota'])
+    )
+      x['nota'] = '';
+    if (Array.isArray(x['procesos'])) {
+      x['procesos'] = (x['procesos'] as Record<string, unknown>[]).map((p) =>
+        Array.isArray(p['comando'])
+          ? { ...p, comando: enmascararComando(p['comando'] as string[]) }
+          : p,
+      );
+    }
+    return x;
+  });
+  return copia;
 }
 
 /** Texto de un archivo normal (nunca un enlace) de tamaño razonable, o null. */
@@ -122,18 +168,18 @@ async function copiarEntorno(d: DepsInstantaneaEntorno, destino: string): Promis
   });
   const hayConfig = (await lstat(d.rutas.config()).catch(() => null))?.isFile() === true;
   if (hayConfig) {
-    const sinSitios = configParaPerfil(config);
-    await poner(
-      'config.json',
-      JSON.stringify({ ...sinSitios, sitios: config.sitios.map(sitioParaPerfil) }, null, 2),
-    );
+    await poner('config.json', JSON.stringify(configSinSecretos(config), null, 2));
   }
 
   const nginx = await leerTexto(d.rutas.nginxConf());
   if (nginx !== null) await poner('nginx/nginx.conf', enmascararNginx(nginx));
 
   const carpetaVhosts = path.dirname(d.rutas.vhost('x'));
-  const vhosts = (await readdir(carpetaVhosts, { withFileTypes: true }).catch(() => []))
+  const vhosts = (
+    (await esCarpetaReal(carpetaVhosts))
+      ? await readdir(carpetaVhosts, { withFileTypes: true }).catch(() => [])
+      : []
+  )
     .filter((e) => e.isFile() && NOMBRE_VHOST.test(e.name))
     .map((e) => e.name)
     .sort()
@@ -144,22 +190,28 @@ async function copiarEntorno(d: DepsInstantaneaEntorno, destino: string): Promis
   }
 
   const carpetaPhp = path.dirname(path.dirname(d.rutas.phpIni('0.0')));
-  const ramas = (await readdir(carpetaPhp, { withFileTypes: true }).catch(() => []))
+  const ramas = (
+    (await esCarpetaReal(carpetaPhp))
+      ? await readdir(carpetaPhp, { withFileTypes: true }).catch(() => [])
+      : []
+  )
     .filter((e) => e.isDirectory() && RAMA_PHP.test(e.name))
     .map((e) => e.name)
     .sort();
   for (const rama of ramas) {
+    if (!(await esCarpetaReal(path.dirname(d.rutas.phpIni(rama))))) continue;
     const texto = await leerTexto(d.rutas.phpIni(rama));
-    if (texto !== null) await poner(`php/${rama}/php.ini`, enmascararSecretos(texto));
+    if (texto !== null) await poner(`php/${rama}/php.ini`, enmascararPhpIni(texto));
   }
   return n;
 }
 
 /** Borra las más viejas hasta dejar `maximo` (solo carpetas con el nombre de una instantánea). */
-async function aplicarRetencion(d: DepsInstantaneaEntorno): Promise<void> {
+async function aplicarRetencion(d: DepsInstantaneaEntorno, nueva: string): Promise<void> {
   const raiz = carpetaEntorno(d);
-  const lista = await listarInstantaneasEntorno(d);
-  for (const x of lista.slice(d.maximo ?? MAX_INSTANTANEAS_ENTORNO)) {
+  // La recién tomada nunca se borra (aunque el reloj haya retrocedido y parezca la más vieja).
+  const lista = (await listarInstantaneasEntorno(d)).filter((x) => x.nombre !== nueva);
+  for (const x of lista.slice((d.maximo ?? MAX_INSTANTANEAS_ENTORNO) - 1)) {
     const ruta = path.join(raiz, x.nombre);
     // Nunca se sigue un enlace: `rm` quita el enlace, no su destino, y aun así se comprueba.
     const s = await lstat(ruta).catch(() => null);
@@ -208,7 +260,7 @@ export async function tomarInstantaneaEntorno(
     await rename(parcial, final);
     creada = false;
     await restringir(d, final);
-    await aplicarRetencion(d);
+    await aplicarRetencion(d, nombre);
     return final;
   } catch (e) {
     if (creada) await rm(parcial, { recursive: true, force: true }).catch(() => undefined);

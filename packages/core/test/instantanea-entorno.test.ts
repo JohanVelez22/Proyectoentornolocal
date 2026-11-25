@@ -1,5 +1,5 @@
 import { existsSync, symlinkSync } from 'node:fs';
-import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Almacen } from '../src/almacen';
@@ -86,7 +86,18 @@ async function prepararDatos(): Promise<void> {
     `worker_processes 1;\nproxy_set_header X-Api-Key "${CENTINELA}-4";\n`,
   );
   await escribir(rutas.vhost('tienda'), 'server { server_name tienda.test; }\n');
-  await escribir(rutas.phpIni('8.4'), `memory_limit = 512M\nmysqli.default_pw = "x"\n`);
+  await escribir(
+    rutas.phpIni('8.4'),
+    [
+      'memory_limit = 512M',
+      `mysqli.default_pw = ${CENTINELA}-5`,
+      `OPCACHE.LICENSE_KEY = "${CENTINELA}-6"`,
+      `soap.wsdl_cache_dir = http://x/?AUTH=${CENTINELA}-7&a=1`,
+      `session.save_path = "x?password=${CENTINELA}-8"`,
+      'extension_dir = "ext"',
+      '',
+    ].join('\n'),
+  );
   const nunca: Record<string, string> = {
     'etc/secretos/ia_openai.bin': CENTINELA,
     'etc/secretos/bd_tienda.bin': CENTINELA,
@@ -162,15 +173,58 @@ describe('instantánea del entorno', () => {
       );
     }
     for (const rel of rels) {
-      expect(await readFile(path.join(carpeta, rel), 'utf8'), rel).not.toContain(CENTINELA);
+      const t = await readFile(path.join(carpeta, rel), 'utf8');
+      expect(
+        t.split('\n').filter((l) => l.includes(CENTINELA)),
+        rel,
+      ).toEqual([]);
     }
     // Lo que no es secreto de las reglas sigue ahí.
     const cfg = await readFile(path.join(carpeta, 'config.json'), 'utf8');
     expect(cfg).toContain('APP_ENV');
-    // Nunca la red local, que es estado de este equipo.
-    expect(cfg).not.toContain('8443');
+    // Para volver atrás de verdad: completa y válida, con lo que no es secreto (red local incluida).
+    expect(cfg).toContain('8443');
+    expect(() => ConfigSchema.parse(JSON.parse(cfg))).not.toThrow();
+    expect(await readFile(path.join(carpeta, 'php', '8.4', 'php.ini'), 'utf8')).toContain(
+      'extension_dir = "ext"',
+    );
     // Los archivos originales no se tocaron.
     expect(await readFile(rutas.config(), 'utf8')).toContain(CENTINELA);
+  });
+
+  it('la recién tomada nunca se borra, aunque el reloj haya retrocedido', async () => {
+    await prepararDatos();
+    for (let i = 0; i < 3; i++) {
+      await tomarInstantaneaEntorno(
+        deps({ reloj: () => new Date(2026, 10, 24, 10, 0, 10 + i), maximo: 3 }),
+        'actualizar',
+      );
+    }
+    const vieja = await tomarInstantaneaEntorno(
+      deps({ reloj: () => new Date(2026, 0, 1, 0, 0, 0), maximo: 3 }),
+      'manual',
+    );
+    expect(existsSync(vieja)).toBe(true);
+    expect(await listarInstantaneasEntorno(deps())).toHaveLength(3);
+  });
+
+  it('una carpeta etc/nginx/sites o etc/php que es un enlace no se recorre', async () => {
+    await prepararDatos();
+    const fuera = path.join(dir, 'fuera');
+    await escribir(path.join(fuera, 'x.conf'), CENTINELA);
+    await escribir(path.join(fuera, '8.4', 'php.ini'), CENTINELA);
+    const sites = path.dirname(rutas.vhost('x'));
+    const php = path.dirname(path.dirname(rutas.phpIni('8.4')));
+    await rm(sites, { recursive: true });
+    await rm(php, { recursive: true });
+    try {
+      symlinkSync(fuera, sites, 'junction');
+      symlinkSync(fuera, php, 'junction');
+    } catch {
+      return;
+    }
+    const carpeta = await tomarInstantaneaEntorno(deps(), 'manual');
+    expect(await arbol(carpeta)).toEqual(['config.json', 'nginx/nginx.conf']);
   });
 
   it('se restringe al usuario antes de escribir nada', async () => {

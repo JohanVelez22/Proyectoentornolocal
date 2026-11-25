@@ -353,6 +353,7 @@ export const pt: Textos = {
         'A CA do perfil tem restrições de nome que não são as do WolfCore Dev: não é importada.',
       'perfiles.instantanea_fallo':
         'Não foi possível guardar a cópia prévia do ambiente: nada foi alterado. Verifique o espaço em disco e as permissões da pasta de dados.',
+      'perfiles.en_curso': 'Já há uma importação de perfil em andamento: aguarde o término.',
       'importar.origen_apagado':
         'Não foi possível conectar ao servidor de banco de dados do outro programa: ligue-o a partir desse programa e tente de novo. Os sites foram importados mesmo assim.',
       'importar.origen_no_local': 'O servidor de origem deve estar neste computador (127.0.0.1).',
@@ -4417,6 +4418,8 @@ export const pt: Textos = {
         titulo: 'Instantâneos do ambiente',
         texto:
           'Antes de atualizar o PHP ou o Nginx e antes de importar um perfil, o WolfCore Dev guarda uma cópia da sua configuração, do Nginx e dos php.ini, sem chaves nem dados e só para você. Os 10 últimos são mantidos.',
+        compartidas:
+          'Os 10 são compartilhados entre todos os motivos: ao tirar um novo, o mais antigo é substituído, inclusive se foi manual.',
         tomar: 'Tirar um agora',
         tomada: 'Instantâneo salvo.',
         sinNada: 'Ainda não há nada para copiar.',
@@ -4566,6 +4569,16 @@ export const pt: Textos = {
         },
       },
       progreso: 'Importando o perfil… Não feche a janela: com bancos ou downloads pode demorar.',
+      fases: {
+        copia: 'Copiando o que é substituído',
+        versiones: 'Instalando versões',
+        configuracion: 'Salvando a configuração e os sites',
+        plantillas: 'Copiando modelos',
+        ca: 'Preparando a CA e os certificados',
+        bases: 'Restaurando bancos de dados',
+        env: 'Reescrevendo os .env',
+      },
+      avance: (paso: number, de: number) => `Passo ${paso} de ${de}`,
       resultado: {
         titulo: 'Resultado da importação',
         resumen: (importados: number, pendientes: number, omitidos: number, errores: number) =>
@@ -4599,6 +4612,14 @@ export const pt: Textos = {
           importada: 'CA importada',
           nueva: 'Nova CA gerada',
           sin_cambios: 'A CA não mudou',
+        },
+        quitarCa: {
+          boton: 'Remover a CA anterior…',
+          titulo: 'Remover a CA anterior da confiança',
+          texto:
+            'A CA que este computador tinha antes será removida do repositório de certificados do sistema. O Windows pode pedir confirmação. A CA nova não é instalada sozinha.',
+          si: 'Remover',
+          hecho: 'CA anterior removida da confiança.',
         },
         puerto: (de: number, a: number) => `Porta ${de} → ${a}`,
         copiaEnv: (ruta: string) => `Cópia do .env: ${ruta}`,
@@ -4637,10 +4658,12 @@ export const pt: Textos = {
       error_inesperado: 'Algo falhou.',
     },
     avisos: {
+      ca_reemplazada:
+        'A CA anterior deste computador continua no repositório de confiança do sistema e já não é usada. Você pode removê-la daqui.',
       base_no_incluida: 'O banco {base} ({instancia}) não foi incluído.',
       sin_ca: 'Não há uma CA neste computador: o perfil vai sem ela.',
       ca_no_importada: 'A CA do perfil não foi importada: usa-se a deste computador ou uma nova.',
-      certificados: 'Não foi possível preparar os certificados.',
+      certificados: 'Não foi possível preparar os certificados: {detalle}',
       aplicar:
         'Os sites importados não ficaram aplicados por completo (Nginx: {nginx}; hosts: {hosts}).',
     },

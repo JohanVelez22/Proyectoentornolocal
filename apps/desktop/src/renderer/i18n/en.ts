@@ -344,6 +344,7 @@ export const en: Textos = {
         "The profile's CA has name constraints that are not WolfCore Dev's: it is not imported.",
       'perfiles.instantanea_fallo':
         'The environment snapshot could not be saved, so nothing was changed. Check the free disk space and the permissions of the data folder.',
+      'perfiles.en_curso': 'A profile import is already in progress: wait for it to finish.',
       'importar.origen_apagado':
         "Could not connect to the other program's database server: start it from that program and try again. The sites were imported anyway.",
       'importar.origen_no_local': 'The source server must be on this computer (127.0.0.1).',
@@ -4386,6 +4387,8 @@ export const en: Textos = {
         titulo: 'Environment snapshots',
         texto:
           'Before updating PHP or Nginx and before importing a profile, WolfCore Dev saves a copy of your configuration, Nginx and the php.ini files, without keys or data and only for you. The 10 latest are kept.',
+        compartidas:
+          'The 10 are shared among all reasons: taking a new one replaces the oldest, manual ones included.',
         tomar: 'Take one now',
         tomada: 'Snapshot saved.',
         sinNada: 'There is nothing to copy yet.',
@@ -4538,6 +4541,16 @@ export const en: Textos = {
       },
       progreso:
         'Importing the profile… Do not close the window: with databases or downloads it can take a while.',
+      fases: {
+        copia: 'Copying what is replaced',
+        versiones: 'Installing versions',
+        configuracion: 'Saving the configuration and sites',
+        plantillas: 'Copying templates',
+        ca: 'Preparing the CA and certificates',
+        bases: 'Restoring databases',
+        env: 'Rewriting the .env files',
+      },
+      avance: (paso: number, de: number) => `Step ${paso} of ${de}`,
       resultado: {
         titulo: 'Import result',
         resumen: (importados: number, pendientes: number, omitidos: number, errores: number) =>
@@ -4571,6 +4584,14 @@ export const en: Textos = {
           importada: 'CA imported',
           nueva: 'New CA generated',
           sin_cambios: 'The CA did not change',
+        },
+        quitarCa: {
+          boton: 'Remove the previous CA…',
+          titulo: 'Remove the previous CA from trust',
+          texto:
+            'The CA this computer had before will be removed from the system certificate store. Windows may ask for confirmation. The new CA is not installed by itself.',
+          si: 'Remove',
+          hecho: 'Previous CA removed from trust.',
         },
         puerto: (de: number, a: number) => `Port ${de} → ${a}`,
         copiaEnv: (ruta: string) => `.env copy: ${ruta}`,
@@ -4608,11 +4629,13 @@ export const en: Textos = {
       error_inesperado: 'Something failed.',
     },
     avisos: {
+      ca_reemplazada:
+        "This computer's previous CA is still in the system trust store and is no longer used. You can remove it from here.",
       base_no_incluida: 'The database {base} ({instancia}) was not included.',
       sin_ca: 'There is no CA on this computer: the profile goes without it.',
       ca_no_importada:
         "The profile's CA was not imported: this computer's CA or a new one is used.",
-      certificados: 'The certificates could not be prepared.',
+      certificados: 'The certificates could not be prepared: {detalle}',
       aplicar: 'The imported sites were not fully applied (Nginx: {nginx}; hosts: {hosts}).',
     },
     quitado: {

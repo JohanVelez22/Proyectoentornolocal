@@ -4,6 +4,7 @@ import {
   cp,
   lstat,
   mkdir,
+  readdir,
   readFile,
   realpath,
   rename,
@@ -19,14 +20,14 @@ import yauzl from 'yauzl';
 import { leerBaseDelProyecto } from '../bd/baseProyecto';
 import { generarClaveBd, usuarioDeProyecto } from '../bd/usuarioProyecto';
 import { huellaDeFila } from '../catalogo/tablaVersiones';
-import { huellaSha256, restriccionesDeCa } from '../https/ca';
+import { huellaSha1, huellaSha256, restriccionesDeCa } from '../https/ca';
 import type { HuellaFila } from '../catalogo/tablaVersiones';
 import { ErrorWolf, esErrorWolf } from '../errores';
 import { esRutaLocalAbsoluta, esRutaProtegida } from '../importar/comun';
 import { enmascararSecretos } from '../patronesSecretos';
 import { idSitioSeguro } from '../tuneles/proveedor';
 import type { Config, IdServicioDatos, Sitio } from '../tipos';
-import { descifrarConFrase, LlaveFrase } from './cifrado';
+import { cifrarConFrase, descifrarConFrase, LlaveFrase } from './cifrado';
 import { sha256Archivo } from './exportar';
 import {
   fusionarConfig,
@@ -666,8 +667,7 @@ export class Perfiles {
             ? {
                 huella: m.ca.huella,
                 reemplazaLocal: existsSync(this.d.rutas.caCrt()),
-                restringida: restriccionesDeCa(m.ca.certificado) === 'nuestras',
-                restriccionesAjenas: restriccionesDeCa(m.ca.certificado) === 'ajenas',
+                ...estadoCaVista(m.ca.certificado),
               }
             : null,
         configQuitada: plan.fusion.quitados,
@@ -712,6 +712,8 @@ export class Perfiles {
     // 1. La CA primero: una frase equivocada no debe dejar nada a medias. Una CA ajena firma lo que
     // quiera: reemplazar la de este equipo exige una confirmación aparte.
     let caDescifrada: CaPerfil | null = null;
+    // SHA-1 de la CA de este equipo que la del perfil reemplaza (para ofrecer quitarla de la confianza).
+    let caAnterior: string | null = null;
     const frase = typeof o.frase === 'string' && o.frase !== '' ? o.frase : null;
     const conBases = m.bases.length > 0 && o.omitirBases !== true;
     if ((conBases || o.importarCa === true) && !frase) {
@@ -803,31 +805,86 @@ export class Perfiles {
 
     // La instantánea del entorno, ya con todo validado y antes de escribir nada: sin ella no se
     // importa (la misma garantía que la instantánea previa de una base).
-    await d.instantaneaEntorno?.();
+    await d.instantaneaEntorno();
 
+    d.progreso?.({ fase: 'copia', paso: 1, de: 7 });
     // 2. Copia de lo que se reemplaza.
     const fecha = (d.reloj?.() ?? new Date()).toISOString().replace(/[:.]/g, '-');
     let respaldo: string | null = null;
+    // La carpeta del respaldo: solo para el usuario desde antes del primer archivo (hereda el permiso).
+    const abrirRespaldo = async (): Promise<string> => {
+      if (respaldo) return respaldo;
+      const raiz = path.join(d.rutas.base, 'respaldos');
+      await mkdir(raiz, { recursive: true, mode: 0o700 });
+      await limpiarPrePerfil(d, raiz);
+      const carpeta = path.join(raiz, `pre-perfil-${fecha}`);
+      await mkdir(carpeta, { recursive: true, mode: 0o700 });
+      if ((await d.restringir?.(carpeta).catch(() => false)) !== true && d.restringir) {
+        console.warn('No se pudo restringir al usuario la copia previa a importar el perfil.');
+      }
+      respaldo = carpeta;
+      return carpeta;
+    };
     const copiar = async (origen: string, rel: string): Promise<void> => {
       if (!existsSync(origen)) return;
-      respaldo ??= path.join(d.rutas.base, 'respaldos', `pre-perfil-${fecha}`);
-      await mkdir(path.join(respaldo, path.dirname(rel)), { recursive: true });
-      await cp(origen, path.join(respaldo, rel), {
+      const raiz = await abrirRespaldo();
+      await mkdir(path.join(raiz, path.dirname(rel)), { recursive: true });
+      await cp(origen, path.join(raiz, rel), {
         recursive: true,
         force: false,
         errorOnExist: true,
         dereference: false,
       });
     };
+    // Una carpeta con claves privadas (la CA y los certificados): lo público se copia tal cual y las
+    // claves (`.key`, `.pem`) van juntas y cifradas con la frase del perfil, nunca en claro.
+    const copiarCifrandoClaves = async (origen: string, rel: string): Promise<void> => {
+      if (!existsSync(origen)) return;
+      const raiz = await abrirRespaldo();
+      const esClave = (n: string): boolean => /\.(?:key|pem)$/i.test(n);
+      await cp(origen, path.join(raiz, rel), {
+        recursive: true,
+        force: false,
+        errorOnExist: true,
+        dereference: false,
+        filter: (src) => !esClave(src),
+      });
+      const claves: Record<string, string> = {};
+      const recorrer = async (dir: string, pre: string): Promise<void> => {
+        for (const e of await readdir(dir, { withFileTypes: true })) {
+          const ruta = path.join(dir, e.name);
+          if (e.isDirectory()) await recorrer(ruta, `${pre}${e.name}/`);
+          else if (e.isFile() && esClave(e.name)) {
+            claves[`${pre}${e.name}`] = (await readFile(ruta)).toString('base64');
+          }
+        }
+      };
+      await recorrer(origen, '');
+      if (Object.keys(claves).length === 0 || !frase) return;
+      await mkdir(path.join(raiz, rel), { recursive: true });
+      await writeFile(
+        path.join(raiz, rel, 'claves.cifrado'),
+        await cifrarConFrase(Buffer.from(JSON.stringify(claves)), frase),
+        { flag: 'wx' },
+      );
+    };
     if (plan.config) await copiar(d.rutas.config(), 'config.json');
     for (const id of plan.plantillasExistentes) {
       await copiar(path.join(d.rutas.plantillas(), id), path.join('plantillas', id));
     }
     if (caDescifrada) {
-      await copiar(path.dirname(d.rutas.caCrt()), 'ca');
-      await copiar(path.dirname(d.rutas.certCrt('x')), 'certs');
+      await copiarCifrandoClaves(path.dirname(d.rutas.caCrt()), 'ca');
+      await copiarCifrandoClaves(path.dirname(d.rutas.certCrt('x')), 'certs');
+      if (existsSync(d.rutas.caCrt())) {
+        try {
+          caAnterior = huellaSha1(await readFile(d.rutas.caCrt(), 'utf8'));
+        } catch {
+          // una CA anterior ilegible no se puede identificar para quitarla: no se ofrece
+        }
+      }
     }
 
+    d.progreso?.({ fase: 'versiones', paso: 2, de: 7 });
     // 3. Versiones: con huella fuerte o firma desde el catálogo; las demás quedan pendientes.
     const versiones: ResultadoImportarPerfil['versiones'] = [];
     let instaladasAhora = 0;
@@ -898,6 +955,7 @@ export class Perfiles {
           (v.estado === 'instalada' || v.estado === 'ya_instalada'),
       );
 
+    d.progreso?.({ fase: 'configuracion', paso: 3, de: 7 });
     // 4. Configuración: la del perfil (importada) con los sitios y las instancias fusionados.
     // Fusión: con datos, la configuración de este equipo; limpia, la del perfil saneada.
     const cfg = structuredClone(plan.fusion.config);
@@ -989,6 +1047,7 @@ export class Perfiles {
     cfg.sitios = [...(actual?.sitios ?? []).filter((s) => !ids.has(s.id)), ...importados];
     await d.guardarConfig(cfg);
 
+    d.progreso?.({ fase: 'plantillas', paso: 4, de: 7 });
     // 5. Plantillas: copiadas como importadas (nunca entran al registro de propias).
     const plantillas: ResultadoImportarPerfil['plantillas'] = [];
     for (const id of m.plantillas) {
@@ -1023,6 +1082,7 @@ export class Perfiles {
       }
     }
 
+    d.progreso?.({ fase: 'ca', paso: 5, de: 7 });
     // 6. CA y certificados.
     let ca: ResultadoImportarPerfil['ca'] = 'sin_cambios';
     if (caDescifrada) {
@@ -1035,6 +1095,9 @@ export class Perfiles {
         await escribirPrivado(d.rutas.certKey(id), c.key);
       }
       ca = 'importada';
+      if (caAnterior && !d.aislado) {
+        avisos.push({ codigo: 'ca_reemplazada', datos: { huella: caAnterior } });
+      }
     } else if (!existsSync(d.rutas.caCrt())) {
       ca = 'nueva';
     }
@@ -1044,6 +1107,7 @@ export class Perfiles {
       avisos.push({ codigo: 'certificados', datos: { detalle: detalleDe(e) } });
     }
 
+    d.progreso?.({ fase: 'bases', paso: 6, de: 7 });
     // 7. Bases: por el camino acotado, con instantánea previa si la base ya estaba.
     const bases: ResultadoImportarPerfil['bases'] = [];
     for (const b of m.bases) {
@@ -1117,6 +1181,7 @@ export class Perfiles {
       }
     }
 
+    d.progreso?.({ fase: 'env', paso: 7, de: 7 });
     // 8. .env de los proyectos marcados: usuario propio nuevo con una clave nueva.
     const env: ResultadoImportarPerfil['env'] = [];
     const marcados = new Set(o.envProyectos ?? []);
@@ -1251,4 +1316,35 @@ async function escribirPrivado(destino: string, contenido: string): Promise<void
   const tmp = `${destino}.${randomBytes(4).toString('hex')}.tmp`;
   await writeFile(tmp, contenido, { encoding: 'utf8', mode: 0o600 });
   await rename(tmp, destino);
+}
+
+/** Cuánto se conservan las copias `pre-perfil-*` (días). */
+export const DIAS_PRE_PERFIL = 30;
+
+/** Borra las copias `pre-perfil-<fecha>` de más de 30 días (solo carpetas con ese nombre, nunca enlaces). */
+async function limpiarPrePerfil(d: DepsPerfiles, raiz: string): Promise<void> {
+  const ahora = (d.reloj?.() ?? new Date()).getTime();
+  for (const e of await readdir(raiz, { withFileTypes: true }).catch(() => [])) {
+    const m = /^pre-perfil-(\d{4}-\d{2}-\d{2})T/.exec(e.name);
+    if (!m || !e.isDirectory()) continue;
+    const t = Date.parse(`${m[1]}T00:00:00Z`);
+    if (Number.isNaN(t) || ahora - t < DIAS_PRE_PERFIL * 86_400_000) continue;
+    const ruta = path.join(raiz, e.name);
+    const s = await lstat(ruta).catch(() => null);
+    if (s?.isDirectory() && !s.isSymbolicLink()) {
+      await rm(ruta, { recursive: true, force: true }).catch(() => undefined);
+    }
+  }
+}
+
+/**
+ * Lo que la vista previa dice de las restricciones de la CA: `restringida` si lleva exactamente las
+ * de WolfCore Dev; `restriccionesAjenas` si lleva otras **o no se puede leer** (nunca se ofrece).
+ */
+export function estadoCaVista(certificado: string): {
+  restringida: boolean;
+  restriccionesAjenas: boolean;
+} {
+  const r = restriccionesDeCa(certificado);
+  return { restringida: r === 'nuestras', restriccionesAjenas: r === 'ajenas' || r === 'ilegible' };
 }

@@ -24,7 +24,26 @@ export const LIMITES_PERFIL = {
 };
 export type LimitesPerfil = typeof LIMITES_PERFIL;
 
+/** Avance de una importación: la fase que empieza y cuántas de cuántas (para la barra de la interfaz). */
+export const FASES_IMPORTAR_PERFIL = [
+  'copia',
+  'versiones',
+  'configuracion',
+  'plantillas',
+  'ca',
+  'bases',
+  'env',
+] as const;
+export interface ProgresoPerfil {
+  fase: (typeof FASES_IMPORTAR_PERFIL)[number];
+  /** Número de la fase (desde 1) y total. */
+  paso: number;
+  de: number;
+}
+
 export interface DepsPerfiles {
+  /** Avisa de cada fase de la importación (sin datos del perfil). */
+  progreso?: (p: ProgresoPerfil) => void;
   rutas: Pick<
     Rutas,
     'base' | 'tmp' | 'plantillas' | 'config' | 'caCrt' | 'caKey' | 'certCrt' | 'certKey'
@@ -55,7 +74,11 @@ export interface DepsPerfiles {
    * Instantánea del entorno (D27) justo antes de escribir nada en la carpeta de datos, ya validado
    * todo lo demás. Si lanza, no se importa nada.
    */
-  instantaneaEntorno?: () => Promise<unknown>;
+  instantaneaEntorno: () => Promise<unknown>;
+  /** Deja una carpeta solo para el usuario (`Plataforma.restringirAlUsuario`). */
+  restringir?: (ruta: string) => Promise<boolean>;
+  /** La app corre con `WOLFCORE_DATOS`: no se ofrece quitar nada del almacén de confianza. */
+  aislado?: boolean;
   /** Instantánea automática de una base existente antes de reemplazarla (D19). */
   instantaneaPrevia(instancia: string, base: string): Promise<void>;
   /**
@@ -164,6 +187,7 @@ export const AVISOS_PERFIL = [
   'ca_no_importada',
   'certificados',
   'aplicar',
+  'ca_reemplazada',
 ] as const;
 
 export interface AvisoPerfil {

@@ -1,7 +1,24 @@
 <script setup lang="ts">
-import { NAlert, NButton, NCheckbox, NInput, NModal, NSpin, NStep, NSteps, NTag } from 'naive-ui';
-import { computed, ref, watch } from 'vue';
-import type { PrefijoRuta, ResultadoImportarPerfil, VistaPreviaPerfil } from '../../shared/api';
+import {
+  NAlert,
+  NButton,
+  NCheckbox,
+  NInput,
+  NModal,
+  NSpin,
+  NStep,
+  NSteps,
+  NTag,
+  useDialog,
+  useMessage,
+} from 'naive-ui';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import type {
+  PrefijoRuta,
+  ProgresoPerfil,
+  ResultadoImportarPerfil,
+  VistaPreviaPerfil,
+} from '../../shared/api';
 import { api, plano } from '../api';
 import { mensajeDeError } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -16,6 +33,7 @@ import {
   ofreceCa,
   opcionesImportar,
   prefijoDesdeElegida,
+  puedeConfirmarRevision,
   puedeImportar,
   rellenar,
   resumenImportacion,
@@ -54,6 +72,18 @@ const aceptarSinRestricciones = ref(false);
 const omitirBases = ref(false);
 const envProyectos = ref<string[]>([]);
 const resultado = ref<ResultadoImportarPerfil | null>(null);
+const progreso = ref<ProgresoPerfil | null>(null);
+const caQuitada = ref(false);
+const dialog = useDialog();
+const message = useMessage();
+
+let bajaProgreso: (() => void) | null = null;
+onMounted(() => {
+  bajaProgreso = api().on('perfil:progreso', (p) => {
+    progreso.value = p;
+  });
+});
+onBeforeUnmount(() => bajaProgreso?.());
 const errorImportar = ref<string | null>(null);
 
 const estado = computed<EstadoImportar | null>(() =>
@@ -107,6 +137,8 @@ function reiniciar(): void {
   envProyectos.value = [];
   resultado.value = null;
   errorImportar.value = null;
+  progreso.value = null;
+  caQuitada.value = false;
 }
 
 watch(
@@ -184,6 +216,7 @@ async function importar(): Promise<void> {
   if (!e || !archivo.value || !puedeImportar(e)) return;
   fase.value = 'importando';
   errorImportar.value = null;
+  progreso.value = null;
   try {
     resultado.value = await api().perfiles.importar(archivo.value, plano(opcionesImportar(e)));
   } catch (x) {
@@ -219,6 +252,27 @@ const textoMotivo = (m: string | null): string =>
   m === null ? '' : (motivos[m] ?? traducirError({ codigo: m }));
 const textoQuitado = (tipo: keyof typeof quitado, id: string): string =>
   rellenar(quitado[tipo], { id });
+function quitarCaAnterior(huella: string): void {
+  dialog.warning({
+    title: t.resultado.quitarCa.titulo,
+    content: t.resultado.quitarCa.texto,
+    positiveText: t.resultado.quitarCa.si,
+    negativeText: textos.acciones.cancelar,
+    onPositiveClick: async () => {
+      try {
+        const r = await api().perfiles.quitarCaAnterior(huella);
+        if (r.ok) {
+          caQuitada.value = true;
+          message.success(t.resultado.quitarCa.hecho);
+        } else {
+          message.error(r.mensaje);
+        }
+      } catch (e) {
+        message.error(mensajeDeError(e));
+      }
+    },
+  });
+}
 const textoAviso = (codigo: string, datos?: Record<string, string>): string =>
   rellenar(avisos[codigo] ?? codigo, datos);
 const estadoTexto = (e: string): string => (t.resultado.estados as Record<string, string>)[e] ?? e;
@@ -470,7 +524,12 @@ const tipoDe = (e: string): 'success' | 'warning' | 'error' | 'default' =>
     </template>
 
     <!-- Importando -->
-    <p v-else-if="fase === 'importando'" class="estado"><NSpin :size="16" /> {{ t.progreso }}</p>
+    <div v-else-if="fase === 'importando'">
+      <p class="estado"><NSpin :size="16" /> {{ t.progreso }}</p>
+      <p v-if="progreso" class="ayuda" role="status" data-progreso>
+        {{ t.fases[progreso.fase] }} — {{ t.avance(progreso.paso, progreso.de) }}
+      </p>
+    </div>
 
     <!-- 4 · Resultado -->
     <template v-else-if="fase === 'fin'">
@@ -501,7 +560,15 @@ const tipoDe = (e: string): 'success' | 'warning' | 'error' | 'default' =>
           type="warning"
           :bordered="false"
           class="bloque"
-          >{{ textoAviso(a.codigo, a.datos) }}</NAlert
+          >{{ textoAviso(a.codigo, a.datos) }}
+          <div
+            v-if="a.codigo === 'ca_reemplazada' && a.datos?.huella && !caQuitada"
+            class="acciones-aviso"
+          >
+            <NButton size="small" @click="quitarCaAnterior(a.datos.huella)">{{
+              t.resultado.quitarCa.boton
+            }}</NButton>
+          </div></NAlert
         >
 
         <section v-if="resultado.sitios.length" class="bloque">
@@ -598,9 +665,12 @@ const tipoDe = (e: string): 'success' | 'warning' | 'error' | 'default' =>
         <template v-else-if="fase === 'revisar'">
           <NButton @click="cerrar">{{ textos.acciones.cancelar }}</NButton>
           <NButton :disabled="cargando" @click="reiniciar">{{ t.archivo.cambiar }}</NButton>
-          <NButton type="primary" :disabled="cargando || !vista" @click="fase = 'confirmar'">{{
-            t.confirmar.titulo
-          }}</NButton>
+          <NButton
+            type="primary"
+            :disabled="!puedeConfirmarRevision({ cargando, hayVista: !!vista, errorVista })"
+            @click="fase = 'confirmar'"
+            >{{ t.confirmar.titulo }}</NButton
+          >
         </template>
         <template v-else-if="fase === 'confirmar'">
           <NButton @click="fase = 'revisar'">{{ t.confirmar.volver }}</NButton>
@@ -715,6 +785,9 @@ const tipoDe = (e: string): 'success' | 'warning' | 'error' | 'default' =>
   padding-left: 18px;
   font-size: 12.5px;
   color: var(--texto-error);
+}
+.acciones-aviso {
+  margin-top: 8px;
 }
 .pie {
   display: flex;

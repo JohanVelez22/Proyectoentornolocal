@@ -261,6 +261,31 @@ describe('Instalador', () => {
     expect(orden).toHaveLength(1);
   });
 
+  it('una instalación de una importación (sinInstantaneaEntorno) no toma otra; la siguiente sí', async () => {
+    const z1 = zip({ 'php-cgi.exe': 'v1' });
+    const z2 = zip({ 'php-cgi.exe': 'v2' });
+    const z3 = zip({ 'php-cgi.exe': 'v3' });
+    const v = (z: Buffer, version: string): VersionDisponible => ({
+      servicio: 'php',
+      version,
+      rama: '8.4',
+      url: 'https://windows.php.net/downloads/releases/php.zip',
+      sha256: sha(z),
+      formato: 'zip',
+    });
+    await new Instalador(rutas, eventos, fetchDe(z1)).instalar(v(z1, '8.4.26'));
+    const hook = vi.fn(async () => undefined);
+    const a = new Instalador(rutas, eventos, fetchDe(z2));
+    a.fijarAntesDeActualizar(hook);
+    await a.instalar(v(z2, '8.4.27-1'), { sinInstantaneaEntorno: true });
+    expect(hook).not.toHaveBeenCalled();
+    // La opción es de esa llamada: otra actualización que llegue después toma su instantánea.
+    const b = new Instalador(rutas, eventos, fetchDe(z3));
+    b.fijarAntesDeActualizar(hook);
+    await b.instalar(v(z3, '8.4.28-1'));
+    expect(hook).toHaveBeenCalledTimes(1);
+  });
+
   it('si la instantánea falla, PHP no se reemplaza ni se descarga', async () => {
     const z1 = zip({ 'php-cgi.exe': 'v1' });
     const z2 = zip({ 'php-cgi.exe': 'v2' });

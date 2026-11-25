@@ -569,7 +569,7 @@ export class Nucleo {
    * (hosts, almacén de certificados, PATH). La interfaz lo avisa en Ajustes.
    */
   aislado = false;
-  /** Durante una importación de perfil la instantánea del entorno es una sola (la de la importación). */
+  /** Una sola importación de perfil a la vez (`perfiles.en_curso`). */
   private importandoPerfil = false;
   /** Arranque de los servicios con `autoIniciar` (tras readoptar); resuelve con los errores. */
   arranqueAutomatico: Promise<string[]> = Promise.resolve([]);
@@ -1748,6 +1748,11 @@ export class Nucleo {
   }
 
   /** Quita la autoridad del almacén del usuario (los sitios vuelven a HTTP al aplicar). */
+  /** Quita una CA anterior (por su huella SHA-1) del almacén de confianza; nunca la actual. */
+  quitarCaAnterior(huella: string): Promise<ResultadoCA> {
+    return this.https.quitarPorHuella(huella);
+  }
+
   quitarCA(): Promise<ResultadoCA> {
     return this.https.quitarCA();
   }
@@ -3568,7 +3573,9 @@ export class Nucleo {
       buscarVersion: (servicio, version) =>
         this.catalogoVivo.buscar(servicio as ServicioInstalable, version),
       versionInstalada: versionEn,
-      instalarVersion: (v) => this.instalador.instalar(v),
+      // La importación ya tomó su instantánea: las versiones que instala no toman otra. Una
+      // actualización que el usuario lance mientras tanto sí (la opción es de esta llamada).
+      instalarVersion: (v) => this.instalador.instalar(v, { sinInstantaneaEntorno: true }),
       puertoLibre: (p) => puertoLibreAhora(p),
       basesParaExportar: async () => {
         const res: { instancia: string; base: string }[] = [];
@@ -3593,6 +3600,9 @@ export class Nucleo {
       basesDe: async (instancia) =>
         (await this.bd.listar(instancia as IdInstancia)).map((b) => b.nombre),
       instantaneaEntorno: () => this.instantaneaEntorno('importar-perfil'),
+      progreso: (p) => this.eventos.emit('perfil:progreso', p),
+      restringir: (ruta) => this.plataforma.restringirAlUsuario(ruta),
+      aislado: this.aislado,
       instantaneaPrevia: async (instancia, base) => {
         await this.instantaneas.tomar(
           instancia as IdInstancia,
@@ -3680,8 +3690,10 @@ export class Nucleo {
     },
   ): Promise<ResultadoImportarPerfil> {
     const { guardarClave, ...resto } = o;
-    // La importación toma su propia instantánea del entorno: las de "actualizar" que dispare
-    // instalar versiones dentro de ella no se repiten.
+    // Una sola importación a la vez; toma su propia instantánea del entorno.
+    if (this.importandoPerfil) {
+      throw new ErrorWolf('perfiles.en_curso', 'Ya hay una importación de perfil en curso.');
+    }
     this.importandoPerfil = true;
     let r: ResultadoImportarPerfil;
     try {
@@ -3735,9 +3747,8 @@ export class Nucleo {
     return listarInstantaneasEntorno(this.depsInstantaneaEntorno());
   }
 
-  /** Antes de reemplazar PHP o Nginx (salvo dentro de una importación, que ya toma la suya). */
+  /** Antes de reemplazar PHP o Nginx. Las instalaciones de una importación no pasan por aquí. */
   private async instantaneaAntesDeActualizar(): Promise<void> {
-    if (this.importandoPerfil) return;
     await this.instantaneaEntorno('actualizar');
   }
 

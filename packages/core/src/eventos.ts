@@ -5,6 +5,7 @@ import type { FinBusqueda, LoteBusqueda } from './herramientas/buscar';
 import type { ResumenDump } from './depuracion/receptor';
 import type { CierreConfirmacion, SolicitudConfirmacion } from './mcp/servidor';
 import type { MuestraSistema } from './monitor/metricas';
+import type { ProgresoPerfil } from './perfiles/tipos';
 import type { SugerenciaProyecto } from './proyectos/vigilar';
 import type { EstadoHosts, EstadoServicio, EstadoTunel, ProgresoInstalacion, Sitio } from './tipos';
 
@@ -45,6 +46,8 @@ export type EventosNucleo = {
   'instalacion:progreso': ProgresoInstalacion;
   'hosts:estado': EstadoHosts;
   'bd:progreso': ProgresoBd;
+  /** La importación de un perfil pasó a otra fase. */
+  'perfil:progreso': ProgresoPerfil;
   'ia:progreso': ProgresoIa;
   'receta:progreso': ProgresoReceta;
   /** Un proceso de proyecto terminó y no se reinicia: `codigo` 0 = terminó bien. */

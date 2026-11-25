@@ -159,6 +159,7 @@ import type {
   OpcionesExportarPerfil,
   OpcionesImportarPerfil,
   PrefijoRuta,
+  ProgresoPerfil,
   ResultadoExportarPerfil,
   ResultadoImportarPerfil,
   VistaPreviaPerfil,
@@ -316,6 +317,7 @@ export interface SeleccionAuditoria {
 
 export type ObjetivoSqlIpc = MotorSql | IdInstancia;
 export type {
+  ProgresoPerfil,
   InstantaneaEntorno,
   OpcionesExportarPerfil,
   OpcionesImportarPerfil,
@@ -511,6 +513,8 @@ export interface ApiEntorno {
     ): Promise<VistaPreviaPerfil>;
     /** Exige `confirmado: true` y la huella de la última vista previa. */
     importar(archivo: string, o: OpcionesImportarPerfil): Promise<ResultadoImportarPerfil>;
+    /** Quita de la confianza del sistema la CA que reemplazó un perfil (por su huella SHA-1). */
+    quitarCaAnterior(huella: string): Promise<ResultadoCA>;
     /** Las instantáneas automáticas del entorno (10 últimas), de la más nueva a la más vieja. */
     instantaneas(): Promise<InstantaneaEntorno[]>;
     /** Toma una a mano; devuelve su carpeta (`''` si no había nada que copiar). */
@@ -1375,6 +1379,7 @@ export const RUTAS_IPC = [
   'perfiles.vistaPrevia',
   'perfiles.importar',
   'perfiles.instantaneas',
+  'perfiles.quitarCaAnterior',
   'perfiles.instantanea',
   'sitios.listar',
   'sitios.guardar',
@@ -1672,6 +1677,7 @@ export const EVENTOS_IPC = [
   'tunel:estado',
   'tunel:autorizacion',
   'instalacion:progreso',
+  'perfil:progreso',
   'hosts:estado',
   'bd:progreso',
   'ia:progreso',

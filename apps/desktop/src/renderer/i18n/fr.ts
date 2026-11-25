@@ -361,6 +361,8 @@ export const fr: Textos = {
         "La CA du profil a des contraintes de nom qui ne sont pas celles de WolfCore Dev : elle n'est pas importée.",
       'perfiles.instantanea_fallo':
         "La copie préalable de l'environnement n'a pas pu être enregistrée : rien n'a été modifié. Vérifiez l'espace disque et les droits du dossier de données.",
+      'perfiles.en_curso':
+        "Une importation de profil est déjà en cours : attendez qu'elle se termine.",
       'importar.origen_apagado':
         "Impossible de se connecter au serveur de base de données de l'autre programme : démarrez-le depuis ce programme et réessayez. Les sites ont tout de même été importés.",
       'importar.origen_no_local':
@@ -4514,6 +4516,8 @@ export const fr: Textos = {
         titulo: "Instantanés de l'environnement",
         texto:
           "Avant de mettre à jour PHP ou Nginx et avant d'importer un profil, WolfCore Dev enregistre une copie de votre configuration, de Nginx et des php.ini, sans clés ni données et rien que pour vous. Les 10 derniers sont conservés.",
+        compartidas:
+          "Les 10 sont partagés entre tous les motifs : en prendre un nouveau remplace le plus ancien, même s'il était manuel.",
         tomar: 'En prendre un maintenant',
         tomada: 'Instantané enregistré.',
         sinNada: "Il n'y a encore rien à copier.",
@@ -4669,6 +4673,16 @@ export const fr: Textos = {
       },
       progreso:
         'Importation du profil… Ne fermez pas la fenêtre : avec des bases ou des téléchargements, cela peut être long.',
+      fases: {
+        copia: 'Copie de ce qui est remplacé',
+        versiones: 'Installation des versions',
+        configuracion: 'Enregistrement de la configuration et des sites',
+        plantillas: 'Copie des modèles',
+        ca: 'Préparation de la CA et des certificats',
+        bases: 'Restauration des bases de données',
+        env: 'Réécriture des .env',
+      },
+      avance: (paso: number, de: number) => `Étape ${paso} sur ${de}`,
       resultado: {
         titulo: "Résultat de l'importation",
         resumen: (importados: number, pendientes: number, omitidos: number, errores: number) =>
@@ -4702,6 +4716,14 @@ export const fr: Textos = {
           importada: 'CA importée',
           nueva: 'Nouvelle CA générée',
           sin_cambios: "La CA n'a pas changé",
+        },
+        quitarCa: {
+          boton: "Retirer l'ancienne CA…",
+          titulo: "Retirer l'ancienne CA de la confiance",
+          texto:
+            "La CA que cet ordinateur avait avant sera retirée du magasin de certificats du système. Windows peut demander une confirmation. La nouvelle CA ne s'installe pas toute seule.",
+          si: 'Retirer',
+          hecho: 'Ancienne CA retirée de la confiance.',
         },
         puerto: (de: number, a: number) => `Port ${de} → ${a}`,
         copiaEnv: (ruta: string) => `Copie du .env : ${ruta}`,
@@ -4744,11 +4766,13 @@ export const fr: Textos = {
       error_inesperado: 'Quelque chose a échoué.',
     },
     avisos: {
+      ca_reemplazada:
+        "L'ancienne CA de cet ordinateur est toujours dans le magasin de confiance du système et n'est plus utilisée. Vous pouvez la retirer d'ici.",
       base_no_incluida: "La base {base} ({instancia}) n'a pas été incluse.",
       sin_ca: "Il n'y a pas de CA sur cet ordinateur : le profil part sans elle.",
       ca_no_importada:
         "La CA du profil n'a pas été importée : on utilise celle de cet ordinateur ou une nouvelle.",
-      certificados: "Les certificats n'ont pas pu être préparés.",
+      certificados: "Les certificats n'ont pas pu être préparés : {detalle}",
       aplicar:
         "Les sites importés n'ont pas été entièrement appliqués (Nginx : {nginx} ; hosts : {hosts}).",
     },

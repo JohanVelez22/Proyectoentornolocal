@@ -845,6 +845,14 @@ const TABLA: Record<RutaIpc, Manejador> = {
       }),
     );
   },
+  // Quitar de la confianza la CA que reemplazó un perfil: solo por su huella (el usuario lo confirma
+  // en la interfaz); el núcleo rechaza la CA actual.
+  'perfiles.quitarCaAnterior': (n, _s, huella) => {
+    if (typeof huella !== 'string' || !/^[0-9A-Fa-f]{40}$/.test(huella)) {
+      throw new Error('Argumento no válido: huella');
+    }
+    return n.quitarCaAnterior(huella);
+  },
   'perfiles.instantaneas': (n) => n.instantaneasEntorno(),
   'perfiles.instantanea': (n) => n.instantaneaEntorno('manual'),
   'sitios.listar': (n) => n.sitios.listar(),

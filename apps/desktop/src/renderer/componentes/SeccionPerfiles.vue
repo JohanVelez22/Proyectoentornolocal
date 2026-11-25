@@ -72,7 +72,11 @@ async function exportar(): Promise<void> {
   const destino = await ejecutar('exportar', () =>
     api().sistema.guardarArchivo('entorno.wolfperfil'),
   );
-  if (!destino) return;
+  if (!destino) {
+    // Cancelar el diálogo de guardar tampoco deja la frase en memoria.
+    limpiarFrase();
+    return;
+  }
   const conFrase = necesitaFrase.value;
   const r = await ejecutar(
     'exportar',
@@ -212,7 +216,7 @@ const fecha = (iso: string): string => new Date(iso).toLocaleString();
 
     <section class="bloque">
       <h3 class="subtitulo">{{ t.instantaneas.titulo }}</h3>
-      <p class="ayuda">{{ t.instantaneas.texto }}</p>
+      <p class="ayuda">{{ t.instantaneas.texto }} {{ t.instantaneas.compartidas }}</p>
       <ul v-if="instantaneas.length" class="instantaneas">
         <li v-for="i in instantaneas" :key="i.nombre">
           <strong>{{ fecha(i.creado) }}</strong>

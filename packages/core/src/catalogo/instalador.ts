@@ -118,6 +118,11 @@ export interface OpcionesInstalar {
    * lo pasa un camino automático.
    */
   confirmarSinHuella?: true;
+  /**
+   * La instalación forma parte de una operación que ya tomó su propia instantánea del entorno
+   * (importar un perfil): no toma otra. Solo afecta a esta llamada.
+   */
+  sinInstantaneaEntorno?: true;
   /** Cancela la instalación (hoy solo la de Rust la usa para cortar rustup). */
   senal?: AbortSignal;
 }
@@ -394,6 +399,7 @@ export class Instalador {
     // Un reemplazo (no una instalación nueva) de PHP o Nginx: antes, la instantánea del entorno.
     if (
       (v.servicio === 'php' || v.servicio === 'nginx') &&
+      !o.sinInstantaneaEntorno &&
       (await this.instalado(v.servicio, clave))
     ) {
       try {

@@ -131,6 +131,29 @@ export class GestorHttps {
     );
   }
 
+  /**
+   * Quita del almacén de confianza una CA anterior por su huella SHA-1 (la que dejó un perfil al
+   * reemplazarla). Nunca la actual: si coincide con la CA de este equipo, se rechaza.
+   */
+  async quitarPorHuella(huella: string): Promise<ResultadoCA> {
+    if (!/^[0-9A-Fa-f]{40}$/.test(huella)) {
+      return { ok: false, motivo: 'error', mensaje: 'La huella no es válida.' };
+    }
+    let actual: string | null = null;
+    try {
+      if (this.caCreada()) actual = huellaSha1(await readFile(this.d.rutas.caCrt(), 'utf8'));
+    } catch {
+      // una CA actual ilegible no impide quitar la anterior
+    }
+    if (actual?.toUpperCase() === huella.toUpperCase()) {
+      return { ok: false, motivo: 'error', mensaje: 'Esa es la CA actual de este equipo.' };
+    }
+    return this.resultado(
+      await this.d.plataforma.quitarCertificadoUsuario(huella.toUpperCase()),
+      'quitar',
+    );
+  }
+
   async quitarCA(): Promise<ResultadoCA> {
     if (!this.caCreada()) return { ok: true };
     const huella = huellaSha1(await readFile(this.d.rutas.caCrt(), 'utf8'));

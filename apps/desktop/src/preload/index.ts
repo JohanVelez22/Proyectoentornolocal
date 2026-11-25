@@ -31,6 +31,7 @@ const api: ApiEntorno = {
     exportar: (o) => invocar('perfiles.exportar', o),
     vistaPrevia: (archivo, o) => invocar('perfiles.vistaPrevia', archivo, o),
     importar: (archivo, o) => invocar('perfiles.importar', archivo, o),
+    quitarCaAnterior: (huella) => invocar('perfiles.quitarCaAnterior', huella),
     instantaneas: () => invocar('perfiles.instantaneas'),
     instantanea: () => invocar('perfiles.instantanea'),
   },

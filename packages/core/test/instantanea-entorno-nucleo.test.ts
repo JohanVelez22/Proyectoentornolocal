@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { VersionDisponible } from '../src/catalogo/catalogo';
+import { huellaSha1 } from '../src/https/ca';
 import { Nucleo } from '../src/nucleo';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
 import { nombreEjecutable } from '../src/plataforma/sistema';
@@ -124,6 +125,42 @@ describe('Nucleo: instantánea del entorno (D27)', () => {
       codigo: 'perfiles.instantanea_fallo',
     });
     expect(await readFile(path.join(base, 'bin', 'php', '8.4', 'php-cgi.exe'), 'utf8')).toBe('v1');
+  });
+
+  it('una segunda importación mientras corre otra se rechaza (perfiles.en_curso)', async () => {
+    const { n, base } = await crear();
+    const destino = path.join(path.dirname(base), 'entorno.wolfperfil');
+    await n.exportarPerfil({ destino, bases: false, certificados: false, ca: false, frase: null });
+    const vista = await n.vistaPreviaImportarPerfil(destino, { rutas: {} });
+    const o = {
+      rutas: {},
+      huella: vista.huella,
+      confirmado: true as const,
+      guardarClave: async () => undefined,
+    };
+    const primera = n.importarPerfil(destino, o);
+    await expect(n.importarPerfil(destino, o)).rejects.toMatchObject({
+      codigo: 'perfiles.en_curso',
+    });
+    await primera;
+    // Terminada la primera, se puede importar otra vez.
+    const vista2 = await n.vistaPreviaImportarPerfil(destino, { rutas: {} });
+    await n.importarPerfil(destino, { ...o, huella: vista2.huella });
+  }, 30_000);
+
+  it('quitar la CA anterior: solo por huella válida y nunca la actual', async () => {
+    const { n, base } = await crear();
+    const anterior = 'AB'.repeat(20);
+    plataforma.certificados.add(anterior);
+    expect(await n.quitarCaAnterior('no-es-una-huella')).toMatchObject({ ok: false });
+    expect(await n.quitarCaAnterior(anterior)).toEqual({ ok: true });
+    expect(plataforma.certificados.has(anterior)).toBe(false);
+    // La CA actual de este equipo no se quita por aquí.
+    await n.https.crearCaSiFalta();
+    const actual = huellaSha1(await readFile(path.join(base, 'ca', 'wolfcore-dev-ca.crt'), 'utf8'));
+    plataforma.certificados.add(actual);
+    expect(await n.quitarCaAnterior(actual)).toMatchObject({ ok: false });
+    expect(plataforma.certificados.has(actual)).toBe(true);
   });
 
   it('importar un perfil toma una sola instantánea, la de la importación', async () => {

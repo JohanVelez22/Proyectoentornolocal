@@ -9,7 +9,13 @@ import yazl from 'yazl';
 import { Almacen } from '../src/almacen';
 import { ErrorWolf } from '../src/errores';
 import { errorUsuarioEnUso } from '../src/bd/clienteMysql';
-import { derRestricciones, generarCA, huellaSha256, type ParCertificado } from '../src/https/ca';
+import {
+  derRestricciones,
+  generarCA,
+  huellaSha1,
+  huellaSha256,
+  type ParCertificado,
+} from '../src/https/ca';
 import { generateKeyPairSync } from 'node:crypto';
 import forge from 'node-forge';
 import type { VersionDisponible } from '../src/catalogo/catalogo';
@@ -22,7 +28,12 @@ import {
   PARAMETROS_CIFRADO,
 } from '../src/perfiles/cifrado';
 import { exportarPerfil } from '../src/perfiles/exportar';
-import { MAX_INSTALAR_POR_PERFIL, Perfiles, tamanoLegible } from '../src/perfiles/importar';
+import {
+  estadoCaVista,
+  MAX_INSTALAR_POR_PERFIL,
+  Perfiles,
+  tamanoLegible,
+} from '../src/perfiles/importar';
 import {
   EXCLUSIONES_PERFIL,
   rutaPermitidaEnPerfil,
@@ -310,6 +321,7 @@ function deps(rutas: Rutas, extra: Partial<DepsPerfiles> = {}): DepsPerfiles & {
       return { copia: r.copia };
     },
     regenerarCertificados: async () => void reg.certificados++,
+    instantaneaEntorno: async () => '',
     sistema: 'prueba',
     idCatalogo: 'prueba-x64',
     ...extra,
@@ -805,9 +817,17 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
     });
     expect(r.ca).toBe('importada');
     expect(JSON.stringify(r.avisos)).not.toMatch(/instal/i);
-    expect(await readFile(path.join(r.respaldo!, 'ca', 'wolfcore-dev-ca.key'), 'utf8')).toBe(
-      'clave local',
-    );
+    // La clave vieja no queda en claro: va cifrada con la frase.
+    expect(existsSync(path.join(r.respaldo!, 'ca', 'wolfcore-dev-ca.key'))).toBe(false);
+    const claves = JSON.parse(
+      (
+        await descifrarConFrase(
+          await readFile(path.join(r.respaldo!, 'ca', 'claves.cifrado')),
+          FRASE,
+        )
+      ).toString('utf8'),
+    ) as Record<string, string>;
+    expect(Buffer.from(claves['wolfcore-dev-ca.key']!, 'base64').toString()).toBe('clave local');
   });
 
   it('una CA cifrada que no coincide con la huella del manifiesto → dañado', async () => {
@@ -1299,6 +1319,114 @@ describe('importarPerfil sobre una carpeta con datos: vista previa, confirmació
     ]);
     expect(d.reg.restauradas).toEqual([]);
     expect(r.plantillas[0]!.estado).toBe('importado');
+  });
+});
+
+describe('copia previa de la CA (revisión D27)', () => {
+  const VIEJA = generarCA();
+  const CLAVE_SUELTA =
+    '-----BEGIN PRIVATE KEY-----\nclave-suelta-centinela\n-----END PRIVATE KEY-----\n';
+
+  async function importarConCaLocal(extra: Partial<DepsPerfiles> = {}) {
+    await escribir(destino.caCrt(), VIEJA.certPem);
+    await escribir(destino.caKey(), VIEJA.keyPem);
+    await escribir(destino.certKey('otro'), CLAVE_SUELTA);
+    await escribir(destino.certCrt('otro'), 'crt publico');
+    const archivo = await exportar({ ca: true });
+    const d = deps(destino, extra);
+    const r = await importar(archivo, d, { importarCa: true, reemplazarCa: true });
+    return { r, d };
+  }
+
+  it('las claves privadas de la CA vieja no quedan en claro y se recuperan con la frase', async () => {
+    const restringidas: string[] = [];
+    const { r } = await importarConCaLocal({
+      restringir: async (ruta) => {
+        restringidas.push(ruta);
+        return true;
+      },
+    });
+    expect(r.ca).toBe('importada');
+    const todos = await arbol(r.respaldo!);
+    for (const rel of todos) {
+      const t = (await readFile(path.join(r.respaldo!, rel))).toString('latin1');
+      expect(t, rel).not.toContain('PRIVATE KEY');
+      expect(t, rel).not.toContain('clave-suelta-centinela');
+    }
+    expect(todos.some((x) => /\.(key|pem)$/i.test(x))).toBe(false);
+    // Lo público sí.
+    expect(await readFile(path.join(r.respaldo!, 'ca', 'wolfcore-dev-ca.crt'), 'utf8')).toBe(
+      VIEJA.certPem,
+    );
+    const cif = await readFile(path.join(r.respaldo!, 'ca', 'claves.cifrado'));
+    const claves = JSON.parse((await descifrarConFrase(cif, FRASE)).toString('utf8')) as Record<
+      string,
+      string
+    >;
+    expect(Buffer.from(Object.values(claves)[0]!, 'base64').toString()).toContain('PRIVATE KEY');
+    const certs = await readFile(path.join(r.respaldo!, 'certs', 'claves.cifrado'));
+    expect((await descifrarConFrase(certs, FRASE)).toString('utf8')).toContain(
+      Buffer.from(CLAVE_SUELTA).toString('base64'),
+    );
+    // La carpeta se restringió antes del primer archivo.
+    expect(restringidas).toContain(r.respaldo);
+  });
+
+  it('avisa de la CA anterior (con su huella SHA-1) salvo en la carpeta de prueba', async () => {
+    const { r } = await importarConCaLocal();
+    expect(r.avisos).toContainEqual({
+      codigo: 'ca_reemplazada',
+      datos: { huella: huellaSha1(VIEJA.certPem) },
+    });
+    // Un entorno nuevo en otra carpeta, aislado: nada que ofrecer.
+    destino = new Rutas(path.join(dir, 'destino2'));
+    const { r: r2 } = await importarConCaLocal({ aislado: true });
+    expect(r2.avisos.some((a) => a.codigo === 'ca_reemplazada')).toBe(false);
+  });
+
+  it('las copias pre-perfil de más de 30 días se borran; las recientes y lo demás, no', async () => {
+    const respaldos = path.join(destino.base, 'respaldos');
+    await escribir(path.join(respaldos, 'pre-perfil-2020-01-01T00-00-00-000Z', 'config.json'), 'x');
+    await escribir(path.join(respaldos, 'pre-perfil-2026-11-20T00-00-00-000Z', 'config.json'), 'x');
+    await escribir(path.join(respaldos, 'auditoria', 'a.json'), 'x');
+    await escribir(path.join(respaldos, 'entorno', 'otra', 'a.txt'), 'x');
+    await escribir(destino.config(), JSON.stringify(ConfigSchema.parse({ sitios: [] })));
+    const archivo = await exportar();
+    const reloj = () => new Date('2026-11-25T10:00:00Z');
+    const r = await importar(archivo, deps(destino, { reloj }));
+    expect(r.respaldo).not.toBeNull();
+    expect((await readdir(respaldos)).sort()).toEqual([
+      'auditoria',
+      'entorno',
+      'pre-perfil-2026-11-20T00-00-00-000Z',
+      'pre-perfil-2026-11-25T10-00-00-000Z',
+    ]);
+  });
+
+  it('avisa de cada fase de la importación, en orden y sin datos del perfil', async () => {
+    const archivo = await exportar();
+    const vistas: { fase: string; paso: number; de: number }[] = [];
+    await importar(archivo, deps(destino, { progreso: (p) => void vistas.push(p) }));
+    expect(vistas.map((x) => x.fase)).toEqual([
+      'copia',
+      'versiones',
+      'configuracion',
+      'plantillas',
+      'ca',
+      'bases',
+      'env',
+    ]);
+    expect(vistas.map((x) => x.paso)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(new Set(vistas.map((x) => x.de))).toEqual(new Set([7]));
+    expect(JSON.stringify(vistas)).not.toContain(CENTINELA);
+  });
+
+  it('una CA que no se puede leer cuenta como de restricciones ajenas', () => {
+    expect(estadoCaVista('no es un certificado')).toEqual({
+      restringida: false,
+      restriccionesAjenas: true,
+    });
+    expect(estadoCaVista(CA_CRT)).toEqual({ restringida: true, restriccionesAjenas: false });
   });
 });
 

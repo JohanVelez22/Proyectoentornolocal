@@ -48,6 +48,15 @@ export interface EstadoImportar {
   envProyectos: string[];
 }
 
+/** "Confirmar" del paso de revisión: con la vista previa al día, sin error y sin leer. */
+export function puedeConfirmarRevision(c: {
+  cargando: boolean;
+  hayVista: boolean;
+  errorVista: string | null;
+}): boolean {
+  return !c.cargando && c.hayVista && c.errorVista === null;
+}
+
 export type BloqueoImportar =
   'sitios_sin_carpeta' | 'frase_requerida' | 'ca_ajena' | 'ca_sin_restricciones' | 'reemplazar_ca';
 
