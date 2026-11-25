@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { finalDeClave, ID_PROVEEDOR_IA, validarToken } from '@pel/core';
+import { finalDeClave, ID_PROVEEDOR_IA, ID_PROVEEDOR_SMTP, validarToken } from '@pel/core';
 
 /** Lo que se usa de `safeStorage` de Electron (en las pruebas, uno falso). */
 export interface CifradoSeguro {
@@ -17,10 +17,11 @@ export interface CifradoSeguro {
 }
 
 /**
- * `github` (token de GitHub), `ia:<id del proveedor>` (clave de un proveedor de IA) o
- * `bd:<id del sitio>` (clave del usuario propio de la base de un proyecto).
+ * `github` (token de GitHub), `ia:<id del proveedor>` (clave de un proveedor de IA),
+ * `bd:<id del sitio>` (clave del usuario propio de la base de un proyecto) o
+ * `smtp:<id del proveedor>` (clave de un proveedor SMTP remoto).
  */
-export type IdSecreto = 'github' | `ia:${string}` | `bd:${string}`;
+export type IdSecreto = 'github' | `ia:${string}` | `bd:${string}` | `smtp:${string}`;
 
 /** Lo único que ve el renderer de un secreto: si hay uno y sus 4 últimos caracteres. */
 export interface EstadoSecreto {
@@ -50,6 +51,9 @@ function archivoDe(id: IdSecreto): string {
   }
   if (typeof id === 'string' && id.startsWith('bd:') && ID_SITIO_BD.test(id.slice(3))) {
     return `bd-${id.slice(3)}.bin`;
+  }
+  if (typeof id === 'string' && id.startsWith('smtp:') && ID_PROVEEDOR_SMTP.test(id.slice(5))) {
+    return `smtp-${id.slice(5)}.bin`;
   }
   throw new Error(MENSAJE_ID);
 }

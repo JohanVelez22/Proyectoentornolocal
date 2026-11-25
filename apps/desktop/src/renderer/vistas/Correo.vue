@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router';
 import type { EstadoCaptador, IdCaptador } from '../../shared/api';
 import { api } from '../api';
 import SeccionCaptadores from '../componentes/SeccionCaptadores.vue';
+import SeccionProveedoresSmtp from '../componentes/SeccionProveedoresSmtp.vue';
 import { useAccion, mensajeDeError } from '../composables/useAccion';
 import { useNoLeidos } from '../composables/useNoLeidos';
 import { textos } from '../i18n';
@@ -136,10 +137,7 @@ function copiar(texto: string): void {
       <small class="tenue">{{ t.envAyuda(elegido.nombre) }}</small>
     </section>
 
-    <section class="proveedores" :aria-label="t.seccionProveedores">
-      <h3 class="titulo">{{ t.seccionProveedores }}</h3>
-      <p class="tenue">{{ t.proveedoresProximamente }}</p>
-    </section>
+    <SeccionProveedoresSmtp />
   </div>
 </template>
 
@@ -147,10 +145,6 @@ function copiar(texto: string): void {
 .descripcion {
   margin: 0 0 18px;
   opacity: 0.65;
-}
-.titulo {
-  margin: 0 0 6px;
-  font-size: 15px;
 }
 .panel {
   display: grid;
@@ -224,11 +218,6 @@ function copiar(texto: string): void {
   white-space: pre-wrap;
   word-break: break-all;
   user-select: text;
-}
-.proveedores {
-  padding: 16px 18px;
-  border-radius: 12px;
-  border: 1px dashed rgba(128, 128, 128, 0.35);
 }
 .tenue {
   font-size: 12px;

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TIPOS_AVISO, type TipoAviso } from './avisos/tipos';
+import { ID_PROVEEDOR_SMTP, ListaProveedoresSmtpSchema } from './correo/proveedores';
 import { ConfigIaSchema } from './ia/proveedores';
 import { IDS_EDITOR, IDS_TERMINAL } from './plataforma/tipos';
 
@@ -166,7 +167,7 @@ export const SitioSchema = z.object({
   correo: z
     .discriminatedUnion('modo', [
       z.object({ modo: z.literal('captador') }),
-      z.object({ modo: z.literal('smtp'), proveedor: z.string().regex(/^[a-z0-9-]{1,40}$/) }),
+      z.object({ modo: z.literal('smtp'), proveedor: z.string().regex(ID_PROVEEDOR_SMTP) }),
     ])
     .optional(),
 });
@@ -464,6 +465,8 @@ export const ConfigSchema = z.object({
        * proyectos siguen valiendo al cambiar de captador. Cambia desde Servicios.
        */
       puertoSmtp: z.number().int().min(1024).max(65535).default(1025).catch(1025),
+      /** Proveedores SMTP remotos (D22): sin clave, que vive en `AlmacenSecretos` (`smtp:<id>`). */
+      proveedores: ListaProveedoresSmtpSchema,
     })
     .prefault({}),
   /** Avisos: notificaciones nativas y qué tipos se muestran. */

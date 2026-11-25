@@ -53,6 +53,28 @@ function nucleoFalso() {
       sitiosConRespaldosDeClave: vi.fn(async () => []),
       limpiarRespaldosDeClave: vi.fn(async () => ({ sitios: 0 })),
     },
+    smtp: {
+      proveedores: vi.fn(async () => [
+        {
+          id: 'resend',
+          nombre: 'Resend',
+          host: 'smtp.resend.com',
+          puerto: 465,
+          seguridad: 'tls',
+          usuario: 'resend',
+        },
+      ]),
+      proveedor: vi.fn(async (id: string) => ({ id })),
+      guardar: vi.fn(async () => []),
+      borrar: vi.fn(async () => undefined),
+      probar: vi.fn(async () => ({ ok: true, idMensaje: '<id>' })),
+    },
+    usarCorreoEnSitio: vi.fn(async () => undefined),
+    vistaPreviaEnvSmtp: vi.fn(async () => ({
+      diff: '+MAIL_HOST=smtp.resend.com',
+      huella: 'a'.repeat(64),
+    })),
+    escribirEnvSmtp: vi.fn(async () => ({ copia: null, gitignoreAgregado: false })),
     plantillas: {
       lista: vi.fn(async () => []),
       vistaPrevia: vi.fn(async () => ({ archivos: 0, bytes: 0, excluidos: [], totalExcluidos: 0 })),
@@ -629,6 +651,16 @@ describe('registrarIpc', () => {
         'mailpit.noLeidos',
         'correo.captadores',
         'correo.elegir',
+        'correo.presets',
+        'correo.proveedores',
+        'correo.guardarProveedor',
+        'correo.borrarProveedor',
+        'correo.guardarClave',
+        'correo.borrarClave',
+        'correo.probarEnvio',
+        'correo.usarEnSitio',
+        'correo.vistaPreviaEnv',
+        'correo.escribirEnv',
         'instalador.listarVersiones',
         'instalador.instalar',
         'instalador.instalados',
@@ -2944,5 +2976,198 @@ describe('IPC del gestor de .env', () => {
     const r = await llamar('proyectos.ejecutarReceta', 's1');
     expect(r.ok).toBe(false);
     expect(JSON.stringify(r)).not.toContain(CENTINELA);
+  });
+});
+
+describe('correo: proveedores SMTP remotos (D22)', () => {
+  const CENTINELA = 'centinela-secreta-d';
+  const HUELLA = 'a'.repeat(64);
+
+  function montarSmtp(clave: string | null = CENTINELA) {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    const f = crudo as unknown as Record<string, Mock> & {
+      smtp: { guardar: Mock; borrar: Mock; probar: Mock };
+    };
+    const secretos = {
+      guardar: vi.fn(async () => undefined),
+      leer: vi.fn(async () => clave),
+      borrar: vi.fn(async () => undefined),
+      hay: vi.fn(() => clave !== null),
+      estado: vi.fn(async () =>
+        clave === null ? { configurada: false, final: null } : { configurada: true, final: 'ta-d' },
+      ),
+      disponible: vi.fn(() => true),
+      guardarTokenGithub: vi.fn(),
+      leerTokenGithub: vi.fn(async () => null),
+      borrarTokenGithub: vi.fn(),
+      hayTokenGithub: vi.fn(() => false),
+    };
+    (crudo.config.leer as Mock).mockResolvedValue({ proyectos: { carpetaVigilada: null } });
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema, () => true, undefined, {
+      secretos,
+      seguimientos: new Seguimientos(),
+      metricas: new ControlMetricas(nucleo),
+    });
+    const llamar = async (ruta: string, ...args: unknown[]) =>
+      (await canales.get(`entorno:${ruta}`)!({}, ...args)) as {
+        ok: boolean;
+        valor?: unknown;
+        error?: { mensaje: string; codigo?: string };
+      };
+    return { f, secretos, llamar };
+  }
+
+  it('la lista solo lleva {configurada, final} de la clave', async () => {
+    const { llamar } = montarSmtp();
+    const r = await llamar('correo.proveedores');
+    expect(r.ok).toBe(true);
+    expect((r.valor as { clave: unknown }[])[0]!.clave).toEqual({
+      configurada: true,
+      final: 'ta-d',
+    });
+    expect(JSON.stringify(r)).not.toContain(CENTINELA);
+  });
+
+  it('guardarClave va al almacén (smtp:<id>) y devuelve solo el estado', async () => {
+    const { llamar, secretos } = montarSmtp();
+    const r = await llamar('correo.guardarClave', 'resend', CENTINELA);
+    expect(secretos.guardar).toHaveBeenCalledWith('smtp:resend', CENTINELA);
+    expect(r).toEqual({ ok: true, valor: { configurada: true, final: 'ta-d' } });
+    // Un id con ruta o una clave con espacios nunca llegan al almacén.
+    secretos.guardar.mockClear();
+    expect((await llamar('correo.guardarClave', '../x', CENTINELA)).ok).toBe(false);
+    expect((await llamar('correo.guardarClave', 'resend', 'con espacio')).ok).toBe(false);
+    expect(secretos.guardar).not.toHaveBeenCalled();
+  });
+
+  it('guardarProveedor rechaza campos que no son de la lista (clave, redLocal)', async () => {
+    const { llamar, f } = montarSmtp();
+    const base = {
+      id: 'resend',
+      nombre: 'Resend',
+      host: 'smtp.resend.com',
+      puerto: 465,
+      seguridad: 'tls',
+      usuario: 'resend',
+    };
+    expect((await llamar('correo.guardarProveedor', { ...base, clave: CENTINELA })).ok).toBe(false);
+    expect((await llamar('correo.guardarProveedor', { ...base, redLocal: true })).ok).toBe(false);
+    expect((await llamar('correo.guardarProveedor', base, { confirmarRedLocal: 'si' })).ok).toBe(
+      false,
+    );
+    expect(f.smtp.guardar).not.toHaveBeenCalled();
+    expect((await llamar('correo.guardarProveedor', base, { confirmarRedLocal: true })).ok).toBe(
+      true,
+    );
+    expect(f.smtp.guardar).toHaveBeenCalledWith(
+      base,
+      expect.objectContaining({ confirmarRedLocal: true }),
+    );
+  });
+
+  it('probarEnvio lee la clave del almacén, valida el destino y no la devuelve', async () => {
+    const { llamar, f } = montarSmtp();
+    const r = await llamar('correo.probarEnvio', 'resend', 'yo@ejemplo.com');
+    expect(r.ok).toBe(true);
+    expect(f.smtp.probar).toHaveBeenCalledWith('resend', CENTINELA, 'yo@ejemplo.com');
+    f.smtp.probar.mockClear();
+    for (const malo of ['a@b.com,c@d.com', 'x@y.com\r\nBcc: z@w.com', 'sin-arroba', 42]) {
+      const e = await llamar('correo.probarEnvio', 'resend', malo);
+      expect(e.ok).toBe(false);
+      expect(e.error?.codigo).toBe('correo.destinatario_invalido');
+    }
+    expect(f.smtp.probar).not.toHaveBeenCalled();
+  });
+
+  it('un error o un resultado con la clave nunca sale del proceso principal', async () => {
+    const { llamar, f } = montarSmtp();
+    f.smtp.probar.mockRejectedValueOnce(
+      new ErrorWolf('correo.auth', `Falló con ${CENTINELA}`, { detalle: CENTINELA }),
+    );
+    const e = await llamar('correo.probarEnvio', 'resend', 'yo@ejemplo.com');
+    expect(e.ok).toBe(false);
+    expect(JSON.stringify(e)).not.toContain(CENTINELA);
+    f.smtp.probar.mockResolvedValueOnce({ ok: true, idMensaje: `<${CENTINELA}@x>` });
+    const eco = await llamar('correo.probarEnvio', 'resend', 'yo@ejemplo.com');
+    expect(eco.ok).toBe(false);
+    expect(JSON.stringify(eco)).not.toContain(CENTINELA);
+  });
+
+  it('sin clave guardada, probar no llama al núcleo', async () => {
+    const { llamar, f } = montarSmtp(null);
+    const r = await llamar('correo.probarEnvio', 'resend', 'yo@ejemplo.com');
+    expect(r.error?.codigo).toBe('correo.sin_clave');
+    expect(f.smtp.probar).not.toHaveBeenCalled();
+  });
+
+  it('escribirEnv exige confirmación; la clave solo pasa si se pide expresamente', async () => {
+    const { llamar, f, secretos } = montarSmtp();
+    const comun = { huella: HUELLA };
+    // Sin confirmar o sin decir si incluir la clave: no se llama al núcleo ni se lee la clave.
+    for (const o of [
+      undefined,
+      { ...comun, incluirClave: true },
+      { ...comun, confirmado: true },
+      { confirmado: true, incluirClave: false },
+      { ...comun, confirmado: 'si', incluirClave: false },
+    ]) {
+      expect((await llamar('correo.escribirEnv', 's1', 'resend', o)).ok).toBe(false);
+    }
+    expect(f.escribirEnvSmtp).not.toHaveBeenCalled();
+    expect(secretos.leer).not.toHaveBeenCalled();
+    // Sin clave: nunca se lee del almacén.
+    const sin = await llamar('correo.escribirEnv', 's1', 'resend', {
+      ...comun,
+      confirmado: true,
+      incluirClave: false,
+    });
+    expect(sin.ok).toBe(true);
+    expect(f.escribirEnvSmtp).toHaveBeenLastCalledWith('s1', 'resend', null, expect.anything());
+    expect(secretos.leer).not.toHaveBeenCalled();
+    // Con clave: la lee el proceso principal y llega al núcleo.
+    const con = await llamar('correo.escribirEnv', 's1', 'resend', {
+      ...comun,
+      confirmado: true,
+      incluirClave: true,
+    });
+    expect(con.ok).toBe(true);
+    expect(f.escribirEnvSmtp).toHaveBeenLastCalledWith(
+      's1',
+      'resend',
+      CENTINELA,
+      expect.anything(),
+    );
+    expect(JSON.stringify(con)).not.toContain(CENTINELA);
+  });
+
+  it('la vista previa sin pedir la clave nunca la lee', async () => {
+    const { llamar, f, secretos } = montarSmtp();
+    const r = await llamar('correo.vistaPreviaEnv', 's1', 'resend', false);
+    expect(r.ok).toBe(true);
+    expect(f.vistaPreviaEnvSmtp).toHaveBeenCalledWith('s1', 'resend', null);
+    expect(secretos.leer).not.toHaveBeenCalled();
+    expect((await llamar('correo.vistaPreviaEnv', 's1', 'resend', 'si')).ok).toBe(false);
+  });
+
+  it('borrar el proveedor borra primero su clave', async () => {
+    const { llamar, f, secretos } = montarSmtp();
+    const r = await llamar('correo.borrarProveedor', 'resend');
+    expect(r.ok).toBe(true);
+    expect(secretos.borrar).toHaveBeenCalledWith('smtp:resend');
+    expect(f.smtp.borrar).toHaveBeenCalledWith('resend');
+  });
+
+  it('usarEnSitio valida el modo', async () => {
+    const { llamar, f } = montarSmtp();
+    expect((await llamar('correo.usarEnSitio', 's1', { modo: 'otro' })).ok).toBe(false);
+    expect((await llamar('correo.usarEnSitio', 's1', { modo: 'smtp' })).ok).toBe(false);
+    expect((await llamar('correo.usarEnSitio', 's1', { modo: 'smtp', proveedor: '../x' })).ok).toBe(
+      false,
+    );
+    expect(f.usarCorreoEnSitio).not.toHaveBeenCalled();
+    const ok = await llamar('correo.usarEnSitio', 's1', { modo: 'smtp', proveedor: 'resend' });
+    expect(ok.ok).toBe(true);
+    expect(f.usarCorreoEnSitio).toHaveBeenCalledWith('s1', { modo: 'smtp', proveedor: 'resend' });
   });
 });

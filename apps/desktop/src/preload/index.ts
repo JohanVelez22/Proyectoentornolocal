@@ -194,6 +194,17 @@ const api: ApiEntorno = {
   correo: {
     captadores: () => invocar('correo.captadores'),
     elegir: (id) => invocar('correo.elegir', id),
+    presets: () => invocar('correo.presets'),
+    proveedores: () => invocar('correo.proveedores'),
+    guardarProveedor: (p, o) => invocar('correo.guardarProveedor', p, o),
+    borrarProveedor: (id) => invocar('correo.borrarProveedor', id),
+    guardarClave: (id, clave) => invocar('correo.guardarClave', id, clave),
+    borrarClave: (id) => invocar('correo.borrarClave', id),
+    probarEnvio: (id, para) => invocar('correo.probarEnvio', id, para),
+    usarEnSitio: (sitioId, modo) => invocar('correo.usarEnSitio', sitioId, modo),
+    vistaPreviaEnv: (sitioId, id, incluir) =>
+      invocar('correo.vistaPreviaEnv', sitioId, id, incluir),
+    escribirEnv: (sitioId, id, o) => invocar('correo.escribirEnv', sitioId, id, o),
   },
   avisoInicio: () => invocar('avisoInicio'),
   instalador: {

@@ -20,6 +20,8 @@ import {
   type IdTerminal,
   type IdAgente,
   ID_PROVEEDOR_IA,
+  ID_PROVEEDOR_SMTP,
+  destinatarioValido,
   IDS_CAPTADOR,
   IDS_SERVICIO_DATOS,
   TIPOS_PROVEEDOR_IA,
@@ -1446,4 +1448,128 @@ export function confirmadoRestablecer(escrito: unknown, usuario: string): true {
     throw new Error('Argumento no válido: confirmación');
   }
   return true;
+}
+
+// ---- Correo: proveedores SMTP remotos (D22) ----
+
+function argumentoCorreo(campo: string): ErrorWolf {
+  return new ErrorWolf('correo.argumento_invalido', `Argumento no válido: ${campo}`, { campo });
+}
+
+/** Id de un proveedor SMTP (`ID_PROVEEDOR_SMTP`): sirve de nombre de archivo del secreto. */
+export function idProveedorSmtp(v: unknown): string {
+  if (typeof v !== 'string' || !ID_PROVEEDOR_SMTP.test(v)) throw argumentoCorreo('proveedor');
+  return v;
+}
+
+const CAMPOS_PROVEEDOR_SMTP = new Set(['id', 'nombre', 'host', 'puerto', 'seguridad', 'usuario']);
+
+/**
+ * Datos de un proveedor SMTP: solo los campos de la lista (nunca `redLocal`, que lo da la
+ * confirmación aparte, ni una clave). El núcleo vuelve a validar cada campo.
+ */
+export function datosProveedorSmtp(v: unknown): Record<string, unknown> {
+  let o: Record<string, unknown>;
+  try {
+    o = objetoPlano<Record<string, unknown>>(v, 'proveedor');
+  } catch {
+    throw argumentoCorreo('proveedor');
+  }
+  for (const k of Object.keys(o))
+    if (!CAMPOS_PROVEEDOR_SMTP.has(k)) throw argumentoCorreo('proveedor');
+  return { ...o };
+}
+
+/** `{confirmarRedLocal?, confirmarCambio?}`: solo valen si son exactamente `true`. */
+export function opcionesGuardarSmtp(v: unknown): {
+  confirmarRedLocal?: true;
+  confirmarCambio?: true;
+} {
+  if (v === undefined) return {};
+  let o: Record<string, unknown>;
+  try {
+    o = objetoPlano<Record<string, unknown>>(v, 'opciones');
+  } catch {
+    throw argumentoCorreo('opciones');
+  }
+  const salida: { confirmarRedLocal?: true; confirmarCambio?: true } = {};
+  for (const [k, valor] of Object.entries(o)) {
+    if (k !== 'confirmarRedLocal' && k !== 'confirmarCambio') throw argumentoCorreo('opciones');
+    if (valor === undefined) continue;
+    if (valor !== true) throw argumentoCorreo(k);
+    salida[k] = true;
+  }
+  return salida;
+}
+
+/** Dirección a la que se manda la prueba: la escribe el usuario, una sola. */
+export function destinatarioPrueba(v: unknown): string {
+  if (!destinatarioValido(v)) {
+    throw new ErrorWolf('correo.destinatario_invalido', 'La dirección de destino no es válida.');
+  }
+  return v;
+}
+
+/** A dónde envía correo un proyecto. */
+export function modoCorreoSitio(
+  v: unknown,
+): { modo: 'captador' } | { modo: 'smtp'; proveedor: string } {
+  let o: Record<string, unknown>;
+  try {
+    o = objetoPlano<Record<string, unknown>>(v, 'modo');
+  } catch {
+    throw argumentoCorreo('modo');
+  }
+  const claves = Object.keys(o);
+  if (o['modo'] === 'captador' && claves.length === 1) return { modo: 'captador' };
+  if (o['modo'] === 'smtp' && claves.length === 2) {
+    return { modo: 'smtp', proveedor: idProveedorSmtp(o['proveedor']) };
+  }
+  throw argumentoCorreo('modo');
+}
+
+export interface OpcionesEnvSmtp {
+  incluirClave: boolean;
+  huella: string;
+  aceptarVersionado?: boolean;
+  agregarGitignore?: boolean;
+}
+
+/**
+ * Opciones de `correo.escribirEnv`. `confirmado` debe ser exactamente `true` (el aviso de que la
+ * clave, si se incluye, queda en texto plano); `incluirClave` es obligatorio.
+ */
+export function opcionesEnvSmtp(v: unknown): OpcionesEnvSmtp {
+  const sinConfirmar = (): ErrorWolf =>
+    new ErrorWolf(
+      'correo.env_sin_confirmar',
+      'Confirme que quiere escribir las variables de correo en el .env.',
+    );
+  if (v === undefined || v === null) throw sinConfirmar();
+  let o: Record<string, unknown>;
+  try {
+    o = objetoPlano<Record<string, unknown>>(v, 'opciones');
+  } catch {
+    throw argumentoCorreo('opciones');
+  }
+  for (const k of Object.keys(o)) {
+    if (
+      !['confirmado', 'incluirClave', 'huella', 'aceptarVersionado', 'agregarGitignore'].includes(k)
+    ) {
+      throw argumentoCorreo('opciones');
+    }
+  }
+  if (o['confirmado'] !== true) throw sinConfirmar();
+  if (typeof o['incluirClave'] !== 'boolean') throw argumentoCorreo('incluirClave');
+  const salida: OpcionesEnvSmtp = {
+    incluirClave: o['incluirClave'],
+    huella: huellaEnvPedida(o),
+  };
+  for (const k of ['aceptarVersionado', 'agregarGitignore'] as const) {
+    const x = o[k];
+    if (x === undefined) continue;
+    if (typeof x !== 'boolean') throw argumentoCorreo(k);
+    if (x) salida[k] = true;
+  }
+  return salida;
 }

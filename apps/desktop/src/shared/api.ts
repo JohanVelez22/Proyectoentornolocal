@@ -121,6 +121,9 @@ import type {
   ResultadoFirefox,
   ResultadoReparacion,
   ConfigProveedorIa,
+  PresetSmtp,
+  ProveedorSmtp,
+  ResultadoEnvio,
   ModeloIa,
   OpcionesEnvIa,
   ResultadoEnvIa,
@@ -184,6 +187,9 @@ export type {
   OrigenAgente,
   ResultadoRegistroMcp,
   ConfigProveedorIa,
+  PresetSmtp,
+  ProveedorSmtp,
+  ResultadoEnvio,
   ModeloIa,
   OpcionesEnvIa,
   ResultadoEnvIa,
@@ -327,6 +333,11 @@ export interface EstadoClaveIa {
 
 /** Proveedor de IA en la nube tal como lo ve la interfaz (sin la clave). */
 export interface ProveedorIaPublico extends ConfigProveedorIa {
+  clave: EstadoClaveIa;
+}
+
+/** Proveedor SMTP remoto tal como lo ve la interfaz (sin la clave). */
+export interface ProveedorSmtpPublico extends ProveedorSmtp {
   clave: EstadoClaveIa;
 }
 
@@ -733,6 +744,55 @@ export interface ApiEntorno {
     captadores(): Promise<EstadoCaptador[]>;
     /** Enciende el captador (apaga el que corriera) y lo deja como el de los proyectos. */
     elegir(id: IdCaptador): Promise<void>;
+    /* ── Proveedores SMTP remotos (la clave nunca vuelve a la interfaz) ── */
+    /** Proveedores con sus datos oficiales (host y puerto de la documentación de cada uno). */
+    presets(): Promise<PresetSmtp[]>;
+    proveedores(): Promise<ProveedorSmtpPublico[]>;
+    /**
+     * Crea o actualiza un proveedor. Un host de este equipo o de la red local falla con
+     * `correo.host_local` salvo con `confirmarRedLocal`; cambiar host, puerto o usuario con clave
+     * guardada falla con `correo.cambia_con_clave` salvo con `confirmarCambio`.
+     */
+    guardarProveedor(
+      proveedor: Omit<ProveedorSmtp, 'redLocal'>,
+      opciones?: { confirmarRedLocal?: true; confirmarCambio?: true },
+    ): Promise<ProveedorSmtpPublico[]>;
+    /** Borra el proveedor y su clave; los proyectos que lo usaban vuelven al captador. */
+    borrarProveedor(id: string): Promise<void>;
+    /** Va directo al almacén cifrado del proceso principal; solo devuelve el estado. */
+    guardarClave(id: string, clave: string): Promise<EstadoClaveIa>;
+    borrarClave(id: string): Promise<void>;
+    /**
+     * Manda UN correo de prueba a la dirección que escribe el usuario, con TLS verificado y plazo
+     * de 20 s. Máximo uno cada 15 s por proveedor y 10 por hora. Falla con códigos fijos.
+     */
+    probarEnvio(id: string, para: string): Promise<ResultadoEnvio>;
+    /** A dónde envía correo un proyecto: el captador local o un proveedor SMTP. */
+    usarEnSitio(
+      sitioId: string,
+      modo: { modo: 'captador' } | { modo: 'smtp'; proveedor: string },
+    ): Promise<void>;
+    /** Lo que cambiaría en el `.env` del proyecto (la clave, si se incluye, va enmascarada). */
+    vistaPreviaEnv(
+      sitioId: string,
+      proveedorId: string,
+      incluirClave: boolean,
+    ): Promise<{ diff: string; huella: string }>;
+    /**
+     * Escribe el bloque `MAIL_*` en el `.env` del proyecto. `confirmado` es el aviso de que la
+     * clave, si se incluye, queda en texto plano; `huella` es la de `vistaPreviaEnv`.
+     */
+    escribirEnv(
+      sitioId: string,
+      proveedorId: string,
+      opciones: {
+        confirmado: true;
+        incluirClave: boolean;
+        huella: string;
+        aceptarVersionado?: boolean;
+        agregarGitignore?: boolean;
+      },
+    ): Promise<{ copia: string | null; gitignoreAgregado: boolean }>;
   };
   /**
    * Avisos de inicio pendientes (migración de la carpeta de datos, servicios que no encendieron),
@@ -1282,6 +1342,16 @@ export const RUTAS_IPC = [
   'mailpit.noLeidos',
   'correo.captadores',
   'correo.elegir',
+  'correo.presets',
+  'correo.proveedores',
+  'correo.guardarProveedor',
+  'correo.borrarProveedor',
+  'correo.guardarClave',
+  'correo.borrarClave',
+  'correo.probarEnvio',
+  'correo.usarEnSitio',
+  'correo.vistaPreviaEnv',
+  'correo.escribirEnv',
   'avisoInicio',
   'instalador.listarVersiones',
   'instalador.instalar',

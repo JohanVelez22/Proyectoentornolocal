@@ -61,6 +61,7 @@ import { Terminal } from './herramientas/terminal';
 import { ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
 import { bloqueEnvIa, limpiarRespaldosEnv } from './ia/envIa';
 import { GestorIa } from './ia/gestorIa';
+import { GestorSmtp } from './correo/gestorSmtp';
 import { completarPlataforma, crearPlataforma } from './plataforma/index';
 import type {
   EditorDisponible,
@@ -360,6 +361,7 @@ interface ModulosNucleo {
   agentes: Agentes;
   /** Proveedores de IA en la nube (config, pruebas y bloque .env por proyecto). */
   ia: GestorIa;
+  smtp: GestorSmtp;
   avisos: CentroAvisos;
   bd: BasesDeDatos;
   respaldos: Respaldos;
@@ -582,6 +584,8 @@ export class Nucleo {
   private esperaNovedades: ReturnType<typeof setTimeout> | null = null;
   /** Proveedores de IA en la nube; la clave la pasa el proceso principal en cada llamada. */
   readonly ia: GestorIa;
+  /** Proveedores SMTP remotos: config, prueba de envío y bloque `.env` (D22). */
+  readonly smtp: GestorSmtp;
   /** Agentes: detección, instalación, MCP y apertura en un proyecto (nunca se lanzan solos). */
   readonly agentes: Agentes;
   /** Editor del vhost de Nginx por sitio: reglas propias, modo avanzado, historial. */
@@ -683,6 +687,7 @@ export class Nucleo {
       },
     });
     this.ia = m.ia;
+    this.smtp = m.smtp;
     this.agentes = m.agentes;
     this.iniPhp = m.iniPhp;
     this.editorVhost = m.editorVhost;
@@ -1142,6 +1147,10 @@ export class Nucleo {
       carpetaRespaldos: () => rutas.respaldosEnv(),
       ...(o.fetch ? { fetch: (u, i) => o.fetch!(u, i) } : {}),
     });
+    const gestorSmtp = new GestorSmtp({
+      leerConfig,
+      modificarConfig: (fn) => sitios.modificarConfig(fn),
+    });
     const sondaNginx = o.sonda ?? ((p: number) => puertoResponde(p));
     const editorVhost = new EditorVhost({
       rutas,
@@ -1246,6 +1255,7 @@ export class Nucleo {
         ...(o.fetch ? { fetch: (u, i) => o.fetch!(u, i) } : {}),
       }),
       ia: gestorIa,
+      smtp: gestorSmtp,
       avisos,
       bd,
       respaldos: respaldosRef,
@@ -2113,6 +2123,52 @@ export class Nucleo {
   }
 
   // ---- Correo ----
+
+  /** A dónde envía correo un proyecto: el captador local o un proveedor SMTP remoto (D22). */
+  async usarCorreoEnSitio(
+    sitioId: string,
+    modo: { modo: 'captador' } | { modo: 'smtp'; proveedor: string },
+  ): Promise<void> {
+    await this.sitioPorId(sitioId);
+    await this.smtp.usarEnSitio(sitioId, modo);
+    this.eventos.emit('sitio:cambio', await this.sitios.listar());
+  }
+
+  /**
+   * Lo que cambiaría en el `.env` del proyecto con el bloque `MAIL_*` del proveedor. La clave
+   * (si se pide) va enmascarada en el resultado; no se escribe nada.
+   */
+  async vistaPreviaEnvSmtp(
+    sitioId: string,
+    proveedorId: string,
+    clave: string | null,
+  ): Promise<{ diff: string; huella: string }> {
+    return this.env.vistaPrevia(sitioId, {
+      cambios: await this.smtp.bloqueEnv(proveedorId, clave),
+    });
+  }
+
+  /**
+   * Escribe el bloque `MAIL_*` en el `.env` del proyecto (con copia, escritura atómica y las
+   * comprobaciones de git y `.gitignore` de C) y lo deja enviando por ese proveedor. La clave solo
+   * se escribe si `clave` no es null; el IPC solo la pasa tras la confirmación explícita del
+   * usuario, que sabe que queda en texto plano.
+   */
+  async escribirEnvSmtp(
+    sitioId: string,
+    proveedorId: string,
+    clave: string | null,
+    opciones: { aceptarVersionado?: boolean; agregarGitignore?: boolean; huella?: string } = {},
+  ): Promise<{ copia: string | null; gitignoreAgregado: boolean }> {
+    const r = await this.env.guardar(
+      sitioId,
+      { cambios: await this.smtp.bloqueEnv(proveedorId, clave) },
+      true,
+      opciones,
+    );
+    await this.usarCorreoEnSitio(sitioId, { modo: 'smtp', proveedor: proveedorId });
+    return r;
+  }
 
   /** Mensajes sin leer: solo Mailpit expone ese dato; con otro captador, 0. */
   async noLeidosCorreo(): Promise<number> {
@@ -3450,6 +3506,8 @@ export class Nucleo {
     delete resto.xdebug;
     // La captura de dumps solo cambia con capturaDumpsSitio (confirmación de la ventana).
     delete resto.capturaDumps;
+    // A dónde envía correo el proyecto solo cambia con `smtp.usarEnSitio`.
+    delete resto.correo;
     if (id) await this.cerrarTunelSiCambia(id, datos);
     const previo = id ? (await this.sitios.listar()).find((s) => s.id === id) : undefined;
     // Las reglas propias y el vhost manual solo cambian con el editor de vhost (revisión,
@@ -3458,6 +3516,7 @@ export class Nucleo {
     delete resto.vhostDesactivado;
     resto.reglasExtra = previo?.reglasExtra ?? '';
     if (previo?.vhostManual) resto.vhostManual = previo.vhostManual;
+    if (previo?.correo) resto.correo = previo.correo;
     // FastAPI/Node con el proceso del proxy sin puerto: se le asigna uno libre (no se rechaza).
     if (this.depsPasos) resto = await asignarPuertoProxy(this.depsPasos, resto, id);
     resto.recetaConfiada = renovarHuella

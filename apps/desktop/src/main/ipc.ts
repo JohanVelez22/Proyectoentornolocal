@@ -25,6 +25,7 @@ import {
   type Nucleo,
   type OpcionesReceta,
   type PreferenciasUi,
+  PRESETS_SMTP,
 } from '@pel/core';
 import { idiomaDeLocale } from '../shared/idiomas';
 import { SECRETOS_NO_DISPONIBLES, type AlmacenSecretos } from './secretos';
@@ -35,6 +36,7 @@ import {
   type ApiSistema,
   type DatosError,
   type ProveedorIaPublico,
+  type ProveedorSmtpPublico,
   type ResultadoIpc,
   type RutaIpc,
 } from '../shared/api';
@@ -48,6 +50,12 @@ import {
   pedidoEnv,
   carpetaExistente,
   claveIa,
+  datosProveedorSmtp,
+  destinatarioPrueba,
+  idProveedorSmtp,
+  modoCorreoSitio,
+  opcionesEnvSmtp,
+  opcionesGuardarSmtp,
   confirmadoAgente,
   configProveedorIa,
   idAgente,
@@ -664,6 +672,46 @@ async function proveedoresPublicos(n: NucleoIpc, s: Contexto): Promise<Proveedor
   );
 }
 
+/** Clave guardada de un proveedor SMTP (null si no hay). Un fallo al descifrar nunca la repite. */
+async function claveSmtpGuardada(s: Contexto, id: string): Promise<string | null> {
+  try {
+    return await s.secretos.leer(`smtp:${id}`);
+  } catch {
+    throw new ErrorWolf(
+      'correo.clave_ilegible',
+      'No se pudo leer la clave guardada del proveedor: bórrela y vuelva a guardarla.',
+    );
+  }
+}
+
+/**
+ * Ejecuta con la clave SMTP del almacén (nunca la del renderer). Los errores salen sin ella y un
+ * resultado que la llevara no sale del proceso principal.
+ */
+async function conClaveSmtp<T>(
+  s: Contexto,
+  id: string,
+  fn: (clave: string) => Promise<T>,
+): Promise<T> {
+  const clave = await claveSmtpGuardada(s, id);
+  if (clave === null) {
+    throw new ErrorWolf('correo.sin_clave', 'El proveedor no tiene una clave guardada.');
+  }
+  const valor = await sinClave(clave, () => fn(clave));
+  if (JSON.stringify(valor ?? null).includes(clave)) {
+    throw new ErrorWolf('correo.sin_clave', 'La respuesta contenía la clave y no se envió.');
+  }
+  return valor;
+}
+
+/** Proveedores SMTP con lo único que el renderer ve de su clave: `{configurada, final}`. */
+async function proveedoresSmtpPublicos(n: NucleoIpc, s: Contexto): Promise<ProveedorSmtpPublico[]> {
+  const lista = await n.smtp.proveedores();
+  return Promise.all(
+    lista.map(async (p) => ({ ...p, clave: await s.secretos.estado(`smtp:${p.id}`) })),
+  );
+}
+
 /** Clave guardada del usuario propio de la base de un proyecto (null si no hay o no se lee). */
 async function claveBdGuardada(s: Contexto, sitioId: string): Promise<string | null> {
   try {
@@ -1126,6 +1174,70 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'mailpit.noLeidos': (n) => n.noLeidosCorreo(),
   'correo.captadores': (n) => n.captadoresCorreo(),
   'correo.elegir': (n, _s, id) => n.elegirCaptador(idCaptador(id)),
+
+  // ---- Proveedores SMTP remotos: la clave entra por guardarClave y solo la lee este proceso ----
+  'correo.presets': () => [...PRESETS_SMTP],
+  'correo.proveedores': (n, s) => proveedoresSmtpPublicos(n, s),
+  'correo.guardarProveedor': async (n, s, datos, opciones) => {
+    const d = datosProveedorSmtp(datos);
+    const o = opcionesGuardarSmtp(opciones);
+    const id = idProveedorSmtp(d['id']);
+    // Una clave guardada sin proveedor (quedó de un borrado a medias) nunca se reutiliza para un
+    // proveedor nuevo con el mismo id: iría a un servidor que el usuario no eligió con ella.
+    const existe = (await n.smtp.proveedores()).some((p) => p.id === id);
+    if (!existe && s.secretos.hay(`smtp:${id}`)) await s.secretos.borrar(`smtp:${id}`);
+    await n.smtp.guardar(d, { ...o, tieneClave: existe && s.secretos.hay(`smtp:${id}`) });
+    return proveedoresSmtpPublicos(n, s);
+  },
+  'correo.borrarProveedor': async (n, s, id) => {
+    const p = idProveedorSmtp(id);
+    await n.smtp.proveedor(p);
+    // Primero la clave: si falla, el proveedor sigue y no queda una clave huérfana.
+    await s.secretos.borrar(`smtp:${p}`);
+    await n.smtp.borrar(p);
+  },
+  'correo.guardarClave': async (n, s, id, clave) => {
+    const p = idProveedorSmtp(id);
+    const k = claveIa(clave);
+    await n.smtp.proveedor(p);
+    await sinClave(k, () => s.secretos.guardar(`smtp:${p}`, k));
+    return s.secretos.estado(`smtp:${p}`);
+  },
+  'correo.borrarClave': async (n, s, id) => {
+    const p = idProveedorSmtp(id);
+    await n.smtp.proveedor(p);
+    await s.secretos.borrar(`smtp:${p}`);
+  },
+  'correo.probarEnvio': (n, s, id, para) => {
+    const p = idProveedorSmtp(id);
+    const destino = destinatarioPrueba(para);
+    return conClaveSmtp(s, p, (k) => n.smtp.probar(p, k, destino));
+  },
+  'correo.usarEnSitio': async (n, _s, sitioId, modo) =>
+    n.usarCorreoEnSitio(await sitioExistente(n, sitioId), modoCorreoSitio(modo)),
+  'correo.vistaPreviaEnv': async (n, s, sitioId, id, incluirClave) => {
+    const p = idProveedorSmtp(id);
+    const sitio = await sitioExistente(n, sitioId);
+    if (typeof incluirClave !== 'boolean') {
+      throw new ErrorWolf('correo.argumento_invalido', 'Argumento no válido: incluirClave', {
+        campo: 'incluirClave',
+      });
+    }
+    if (!incluirClave) return n.vistaPreviaEnvSmtp(sitio, p, null);
+    return conClaveSmtp(s, p, (k) => n.vistaPreviaEnvSmtp(sitio, p, k));
+  },
+  'correo.escribirEnv': async (n, s, sitioId, id, opciones) => {
+    const p = idProveedorSmtp(id);
+    const o = opcionesEnvSmtp(opciones);
+    const sitio = await sitioExistente(n, sitioId);
+    const comunes = {
+      huella: o.huella,
+      ...(o.aceptarVersionado ? { aceptarVersionado: true } : {}),
+      ...(o.agregarGitignore ? { agregarGitignore: true } : {}),
+    };
+    if (!o.incluirClave) return n.escribirEnvSmtp(sitio, p, null, comunes);
+    return conClaveSmtp(s, p, (k) => n.escribirEnvSmtp(sitio, p, k, comunes));
+  },
   // Se entrega una sola vez: una recarga del renderer no lo vuelve a mostrar.
   avisoInicio: (n) => n.tomarAvisoInicio(),
   'instalador.listarVersiones': (n, _s, servicio, filtro) =>

@@ -258,3 +258,39 @@ describe('AlmacenSecretos: clave del usuario propio de la base de un proyecto', 
     expect(existsSync(carpeta)).toBe(false);
   });
 });
+
+describe('AlmacenSecretos: clave de un proveedor SMTP remoto', () => {
+  const CENTINELA = 'centinela-secreta-d';
+
+  it('guarda cifrada como smtp-<id>.bin, la lee, da solo {configurada, final} y borra', async () => {
+    const s = almacen();
+    await s.guardar('smtp:resend', CENTINELA);
+    const archivo = path.join(carpeta, 'smtp-resend.bin');
+    expect(existsSync(archivo)).toBe(true);
+    expect(readFileSync(archivo).toString('utf8')).not.toContain(CENTINELA);
+    expect(await s.leer('smtp:resend')).toBe(CENTINELA);
+    const estado = await s.estado('smtp:resend');
+    expect(Object.keys(estado).sort()).toEqual(['configurada', 'final']);
+    expect(estado.configurada).toBe(true);
+    expect(JSON.stringify(estado)).not.toContain(CENTINELA);
+    await s.borrar('smtp:resend');
+    expect(await s.leer('smtp:resend')).toBeNull();
+    expect(readdirSync(carpeta)).toEqual([]);
+  });
+
+  it('rechaza ids que podrían salir de la carpeta', async () => {
+    const s = almacen();
+    for (const id of ['smtp:../x', 'smtp:', 'smtp:a/b', 'smtp:A', 'smtp:a b', 'smtp:.x']) {
+      await expect(s.guardar(id as never, CENTINELA), id).rejects.toThrow();
+      await expect(s.leer(id as never), id).rejects.toThrow();
+    }
+    expect(existsSync(carpeta)).toBe(false);
+  });
+
+  it('sin cifrado del sistema no se guarda y el error no repite la clave', async () => {
+    const s = almacen(false);
+    const e = await s.guardar('smtp:resend', CENTINELA).catch((x: unknown) => x as Error);
+    expect((e as Error).message).toBe(MENSAJE_SIN_CIFRADO);
+    expect(existsSync(carpeta)).toBe(false);
+  });
+});

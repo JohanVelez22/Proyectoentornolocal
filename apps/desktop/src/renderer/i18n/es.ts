@@ -420,6 +420,29 @@ export const es = {
       'ia.clave_ilegible':
         'No se pudo leer la clave guardada del proveedor: bórrela y vuelva a guardarla.',
       'ia.argumento_invalido': 'Dato no válido ({campo}).',
+      'correo.auth': 'El proveedor rechazó el usuario o la clave.',
+      'correo.conexion': 'No se pudo conectar con el servidor SMTP: revise el host y el puerto.',
+      'correo.tls':
+        'No se pudo establecer una conexión cifrada y válida con el servidor (certificado, nombre o STARTTLS). No se envió nada.',
+      'correo.rechazado': 'El servidor rechazó el mensaje o la dirección de destino.',
+      'correo.plazo': 'El servidor no respondió a tiempo (20 s).',
+      'correo.host_invalido':
+        'El servidor SMTP debe ser un nombre de host o una IP, sin esquema, puerto ni ruta.',
+      'correo.host_local':
+        'Ese servidor apunta a este equipo o a la red local: confírmelo para usarlo.',
+      'correo.destinatario_invalido': 'La dirección de destino no es válida.',
+      'correo.proveedor_invalido': 'Los datos del proveedor no son válidos.',
+      'correo.proveedor_no_existe': 'El proveedor de correo ya no existe.',
+      'correo.sin_clave': 'El proveedor no tiene una clave guardada.',
+      'correo.clave_ilegible':
+        'No se pudo leer la clave guardada del proveedor: bórrela y vuelva a guardarla.',
+      'correo.cambia_con_clave':
+        'El proveedor tiene una clave guardada: confirme que quiere enviarla al nuevo servidor.',
+      'correo.env_sin_confirmar':
+        'Confirme que quiere escribir las variables de correo en el .env.',
+      'correo.ocupado': 'Ya hay una prueba de envío en curso.',
+      'correo.limite': 'Espere {segundos} s antes de otra prueba de envío.',
+      'correo.argumento_invalido': 'Dato no válido ({campo}).',
       'agentes.no_existe': 'Ese agente no está soportado.',
       'agentes.sin_confirmar': 'Confirme la acción en el diálogo antes de continuar.',
       'agentes.no_instalable':
@@ -1646,8 +1669,131 @@ export const es = {
       'Los captadores atrapan los correos que envían sus proyectos para que los revise sin que salgan a internet. Escuchan solo en este equipo (127.0.0.1) y solo uno está encendido a la vez.',
     seccionCaptadores: 'Captadores locales',
     seccionProveedores: 'Proveedores SMTP remotos',
-    proveedoresProximamente:
-      'Aquí podrá configurar un proveedor SMTP real (Mailtrap, Brevo, SendGrid…) y probar el envío. Llega en la siguiente entrega.',
+    proveedores: {
+      descripcion:
+        'Un proveedor SMTP real envía el correo de verdad: úselo para probar el envío de su proyecto antes de publicarlo. La clave se guarda cifrada en este equipo y nunca se muestra.',
+      agregar: 'Agregar proveedor',
+      vacio:
+        'Todavía no agregó ningún proveedor. Elija Mailtrap, Resend, Brevo, Mailgun, SendGrid, Postmark, Amazon SES, SMTP2GO o Gmail, o escriba el suyo.',
+      errorLista: 'No se pudo leer la lista de proveedores',
+      tarjeta: {
+        servidor: 'Servidor',
+        usuario: 'Usuario',
+        clave: 'Clave',
+        sinClave: 'Sin clave',
+        claveIlegible: 'Guardada (no se pudo leer)',
+        red: 'Red',
+        redLocal: 'Servidor de este equipo o de la red local (confirmado)',
+        editar: 'Editar',
+        borrar: 'Borrar',
+        borrarTitulo: (n: string) => `¿Borrar ${n}?`,
+        borrarTexto:
+          'Se borra el proveedor y su clave guardada. Los proyectos que lo usan vuelven al captador local; sus .env no se tocan.',
+        borrado: (n: string) => `${n} borrado`,
+        usar: 'Usar en un proyecto',
+        destino: 'Dirección de destino de la prueba',
+        destinoPlaceholder: 'su-direccion@ejemplo.com',
+        probar: 'Probar envío',
+        probando: 'Enviando…',
+        probarAyuda:
+          'Envía un solo correo de verdad a esa dirección, con conexión cifrada verificada. Máximo uno cada 15 s.',
+        sinClaveParaProbar: 'Guarde la clave del proveedor para poder probar el envío.',
+        enviado: (para: string) => `Correo enviado a ${para}. Revise su bandeja.`,
+        fallos: {
+          'correo.auth': 'El proveedor rechazó el usuario o la clave.',
+          'correo.conexion': 'No se pudo conectar: revise el host y el puerto.',
+          'correo.tls':
+            'La conexión cifrada no es válida (certificado, nombre o STARTTLS). No se envió nada.',
+          'correo.rechazado': 'El servidor rechazó el mensaje o la dirección de destino.',
+          'correo.plazo': 'El servidor no respondió a tiempo (20 s).',
+        },
+      },
+      dialogo: {
+        nuevo: 'Agregar proveedor SMTP',
+        editar: (n: string) => `Editar ${n}`,
+        preset: 'Proveedor',
+        presetOtro: 'Otro (escribir los datos)',
+        presetAyuda: 'Host y puerto vienen de la documentación oficial de cada proveedor.',
+        documentacion: 'Ver documentación',
+        region: 'Región',
+        nombre: 'Nombre',
+        nombreObligatorio: 'Escriba un nombre.',
+        host: 'Servidor (host)',
+        hostAyuda: 'Solo el nombre o la IP, sin smtp:// ni puerto.',
+        hostObligatorio: 'Escriba el servidor.',
+        puerto: 'Puerto',
+        seguridad: 'Cifrado',
+        seguridadAyuda:
+          'Siempre se exige una conexión cifrada y con certificado válido: nunca se baja a texto plano.',
+        tls: 'TLS directo (puerto 465)',
+        starttls: 'STARTTLS (puerto 587)',
+        usuario: 'Usuario',
+        usuarioObligatorio: 'Escriba el usuario.',
+        usuarioFijoAyuda: 'Este proveedor usa siempre este usuario; la clave es la de su cuenta.',
+        clave: 'Clave SMTP',
+        claveGuardada: (f: string) => `Guardada: ••••${f}`,
+        claveNueva: 'Escriba la clave para guardarla',
+        claveAyuda:
+          'Se guarda cifrada en este equipo y nunca vuelve a mostrarse. Déjela vacía para no cambiarla.',
+        claveSinEspacios:
+          'Sin espacios: las contraseñas de aplicación de Google se escriben juntas.',
+        borrarClave: 'Borrar la clave',
+        borrarClaveTitulo: (n: string) => `¿Borrar la clave de ${n}?`,
+        borrarClaveTexto: 'Se borra la clave guardada. El proveedor sigue en la lista.',
+        claveBorrada: 'Clave borrada',
+        guardar: 'Guardar',
+        guardado: (n: string) => `${n} guardado`,
+        redLocalTitulo: 'Servidor en este equipo o en la red local',
+        redLocalTexto: (h: string) =>
+          `${h} apunta a este equipo o a la red local. WolfCore Dev solo se conecta ahí si usted lo confirma. ¿Es un servidor suyo?`,
+        redLocalConfirmar: 'Sí, es mío',
+        cambiaTitulo: 'Enviar la clave a otro servidor',
+        cambiaTexto: (h: string) =>
+          `El proveedor tiene una clave guardada y cambió el servidor o el usuario. La clave se enviará a ${h}. ¿Continuar?`,
+        cambiaConfirmar: 'Sí, continuar',
+      },
+      env: {
+        titulo: (n: string) => `Usar ${n} en un proyecto`,
+        proyecto: 'Proyecto',
+        sinProyectos: 'Todavía no hay proyectos.',
+        yaUsaSmtp: 'Este proyecto ya envía por un proveedor SMTP.',
+        volverCaptador: 'Volver al captador local',
+        volvio: (n: string) => `${n} vuelve a enviar al captador local. Su .env no se tocó.`,
+        incluirClave: 'Escribir también la clave en el .env',
+        incluirClaveAyuda: 'Sin marcar, el bloque no lleva MAIL_PASSWORD y usted la agrega a mano.',
+        sinClaveGuardada: 'El proveedor no tiene una clave guardada.',
+        vista: 'Cambios en el .env (la clave va enmascarada)',
+        textoPlano:
+          'La clave quedará en texto plano en el .env del proyecto. Cualquiera con acceso a esa carpeta, o a su repositorio si lo sube, podrá leerla.',
+        claveTitulo: 'Escribir la clave en el .env',
+        claveTexto:
+          'La clave se guarda en texto plano en el archivo .env del proyecto. Úsela solo si el proyecto no se sube a un repositorio y la carpeta es solo suya.',
+        claveConfirmar: 'Entiendo, incluir la clave',
+        agregarGitignore: 'Agregar .env al .gitignore',
+        gitignoreTitulo: 'Modificar .gitignore',
+        gitignoreTexto:
+          'Se agrega la línea .env al .gitignore del proyecto (con una copia previa).',
+        gitignoreConfirmar: 'Agregar',
+        versionadoTitulo: 'Git ya sigue el .env',
+        versionadoTexto:
+          'El próximo commit subiría sus valores. Quítelo del índice con git rm --cached .env.',
+        desconocidoTitulo: 'No se pudo comprobar git',
+        desconocidoTexto: 'No se pudo saber si git sigue el .env de este proyecto.',
+        aceptarVersionado: 'Escribir de todos modos',
+        aceptarTitulo: 'Escribir en un .env versionado',
+        aceptarTexto:
+          'Si git sigue el .env, estas variables pueden acabar en el repositorio. ¿Escribir de todos modos?',
+        aceptarConfirmar: 'Escribir de todos modos',
+        confirmarTitulo: 'Escribir en el .env',
+        confirmarTexto: (ruta: string) =>
+          `Se guardará una copia de ${ruta} y se agregarán las variables MAIL_* sin la clave.`,
+        confirmarTextoClave: (ruta: string) =>
+          `Se guardará una copia de ${ruta} y se agregarán las variables MAIL_*, con la clave en texto plano.`,
+        confirmar: 'Escribir',
+        escribir: 'Escribir en el .env',
+        escrito: (n: string) => `${n} ahora envía por este proveedor`,
+      },
+    },
     estado: 'Estado',
     smtp: 'SMTP',
     buzon: 'Buzón web',

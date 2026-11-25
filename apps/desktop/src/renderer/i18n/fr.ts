@@ -440,6 +440,29 @@ export const fr: Textos = {
       'ia.clave_ilegible':
         'Impossible de lire la clé enregistrée du fournisseur : supprimez-la et enregistrez-la de nouveau.',
       'ia.argumento_invalido': 'Donnée non valide ({campo}).',
+      'correo.auth': 'Le fournisseur a refusé l’identifiant ou la clé.',
+      'correo.conexion': 'Impossible de se connecter au serveur SMTP : vérifiez l’hôte et le port.',
+      'correo.tls':
+        'Impossible d’établir une connexion chiffrée valide avec le serveur (certificat, nom ou STARTTLS). Rien n’a été envoyé.',
+      'correo.rechazado': 'Le serveur a refusé le message ou l’adresse de destination.',
+      'correo.plazo': 'Le serveur n’a pas répondu à temps (20 s).',
+      'correo.host_invalido':
+        'Le serveur SMTP doit être un nom d’hôte ou une IP, sans schéma, port ni chemin.',
+      'correo.host_local':
+        'Ce serveur pointe vers cet ordinateur ou le réseau local : confirmez pour l’utiliser.',
+      'correo.destinatario_invalido': 'L’adresse de destination n’est pas valide.',
+      'correo.proveedor_invalido': 'Les données du fournisseur ne sont pas valides.',
+      'correo.proveedor_no_existe': 'Le fournisseur de courrier n’existe plus.',
+      'correo.sin_clave': 'Le fournisseur n’a pas de clé enregistrée.',
+      'correo.clave_ilegible':
+        'Impossible de lire la clé enregistrée du fournisseur : supprimez-la et enregistrez-la de nouveau.',
+      'correo.cambia_con_clave':
+        'Le fournisseur a une clé enregistrée : confirmez que vous voulez l’envoyer au nouveau serveur.',
+      'correo.env_sin_confirmar':
+        'Confirmez que vous voulez écrire les variables de courrier dans le .env.',
+      'correo.ocupado': 'Un test d’envoi est déjà en cours.',
+      'correo.limite': 'Attendez {segundos} s avant un autre test d’envoi.',
+      'correo.argumento_invalido': 'Donnée non valide ({campo}).',
       'agentes.no_existe': 'Cet agent n’est pas pris en charge.',
       'agentes.sin_confirmar': 'Confirmez l’action dans la boîte de dialogue avant de continuer.',
       'agentes.no_instalable':
@@ -1686,8 +1709,135 @@ export const fr: Textos = {
       "Les capteurs interceptent les courriers envoyés par vos projets pour que vous les examiniez sans qu'ils sortent sur internet. Ils écoutent uniquement sur cet ordinateur (127.0.0.1) et un seul est actif à la fois.",
     seccionCaptadores: 'Capteurs locaux',
     seccionProveedores: 'Fournisseurs SMTP distants',
-    proveedoresProximamente:
-      "Vous pourrez ici configurer un vrai fournisseur SMTP (Mailtrap, Brevo, SendGrid…) et tester l'envoi. Disponible à la prochaine livraison.",
+    proveedores: {
+      descripcion:
+        'Un vrai fournisseur SMTP envoie réellement le courrier : utilisez-le pour tester l’envoi de votre projet avant de le publier. La clé est stockée chiffrée sur cet ordinateur et n’est jamais affichée.',
+      agregar: 'Ajouter un fournisseur',
+      vacio:
+        'Vous n’avez encore ajouté aucun fournisseur. Choisissez Mailtrap, Resend, Brevo, Mailgun, SendGrid, Postmark, Amazon SES, SMTP2GO ou Gmail, ou saisissez le vôtre.',
+      errorLista: 'Impossible de lire la liste des fournisseurs',
+      tarjeta: {
+        servidor: 'Serveur',
+        usuario: 'Identifiant',
+        clave: 'Clé',
+        sinClave: 'Sans clé',
+        claveIlegible: 'Enregistrée (illisible)',
+        red: 'Réseau',
+        redLocal: 'Serveur de cet ordinateur ou du réseau local (confirmé)',
+        editar: 'Modifier',
+        borrar: 'Supprimer',
+        borrarTitulo: (n: string) => `Supprimer ${n} ?`,
+        borrarTexto:
+          'Le fournisseur et sa clé enregistrée sont supprimés. Les projets qui l’utilisent reviennent au capteur local ; leurs .env ne sont pas modifiés.',
+        borrado: (n: string) => `${n} supprimé`,
+        usar: 'Utiliser dans un projet',
+        destino: 'Adresse de destination du test',
+        destinoPlaceholder: 'votre-adresse@exemple.com',
+        probar: 'Tester l’envoi',
+        probando: 'Envoi…',
+        probarAyuda:
+          'Envoie un seul vrai courriel à cette adresse, via une connexion chiffrée vérifiée. Au plus un toutes les 15 s.',
+        sinClaveParaProbar: 'Enregistrez la clé du fournisseur pour pouvoir tester l’envoi.',
+        enviado: (para: string) => `Courriel envoyé à ${para}. Vérifiez votre boîte de réception.`,
+        fallos: {
+          'correo.auth': 'Le fournisseur a refusé l’identifiant ou la clé.',
+          'correo.conexion': 'Connexion impossible : vérifiez l’hôte et le port.',
+          'correo.tls':
+            'La connexion chiffrée n’est pas valide (certificat, nom ou STARTTLS). Rien n’a été envoyé.',
+          'correo.rechazado': 'Le serveur a refusé le message ou l’adresse de destination.',
+          'correo.plazo': 'Le serveur n’a pas répondu à temps (20 s).',
+        },
+      },
+      dialogo: {
+        nuevo: 'Ajouter un fournisseur SMTP',
+        editar: (n: string) => `Modifier ${n}`,
+        preset: 'Fournisseur',
+        presetOtro: 'Autre (saisir les données)',
+        presetAyuda:
+          'L’hôte et le port proviennent de la documentation officielle de chaque fournisseur.',
+        documentacion: 'Voir la documentation',
+        region: 'Région',
+        nombre: 'Nom',
+        nombreObligatorio: 'Saisissez un nom.',
+        host: 'Serveur (hôte)',
+        hostAyuda: 'Seulement le nom ou l’IP, sans smtp:// ni port.',
+        hostObligatorio: 'Saisissez le serveur.',
+        puerto: 'Port',
+        seguridad: 'Chiffrement',
+        seguridadAyuda:
+          'Une connexion chiffrée avec un certificat valide est toujours exigée : on ne retombe jamais en texte clair.',
+        tls: 'TLS direct (port 465)',
+        starttls: 'STARTTLS (port 587)',
+        usuario: 'Identifiant',
+        usuarioObligatorio: 'Saisissez l’identifiant.',
+        usuarioFijoAyuda:
+          'Ce fournisseur utilise toujours cet identifiant ; la clé est celle de votre compte.',
+        clave: 'Clé SMTP',
+        claveGuardada: (f: string) => `Enregistrée : ••••${f}`,
+        claveNueva: 'Saisissez la clé pour l’enregistrer',
+        claveAyuda:
+          'Elle est stockée chiffrée sur cet ordinateur et n’est plus jamais affichée. Laissez vide pour la conserver.',
+        claveSinEspacios:
+          'Sans espaces : les mots de passe d’application Google se saisissent d’un bloc.',
+        borrarClave: 'Supprimer la clé',
+        borrarClaveTitulo: (n: string) => `Supprimer la clé de ${n} ?`,
+        borrarClaveTexto: 'La clé enregistrée est supprimée. Le fournisseur reste dans la liste.',
+        claveBorrada: 'Clé supprimée',
+        guardar: 'Enregistrer',
+        guardado: (n: string) => `${n} enregistré`,
+        redLocalTitulo: 'Serveur sur cet ordinateur ou le réseau local',
+        redLocalTexto: (h: string) =>
+          `${h} pointe vers cet ordinateur ou le réseau local. WolfCore Dev ne s’y connecte que si vous le confirmez. Est-ce un serveur à vous ?`,
+        redLocalConfirmar: 'Oui, c’est le mien',
+        cambiaTitulo: 'Envoyer la clé à un autre serveur',
+        cambiaTexto: (h: string) =>
+          `Le fournisseur a une clé enregistrée et vous avez changé le serveur ou l’identifiant. La clé sera envoyée à ${h}. Continuer ?`,
+        cambiaConfirmar: 'Oui, continuer',
+      },
+      env: {
+        titulo: (n: string) => `Utiliser ${n} dans un projet`,
+        proyecto: 'Projet',
+        sinProyectos: 'Il n’y a pas encore de projets.',
+        yaUsaSmtp: 'Ce projet envoie déjà via un fournisseur SMTP.',
+        volverCaptador: 'Revenir au capteur local',
+        volvio: (n: string) =>
+          `${n} renvoie de nouveau vers le capteur local. Son .env n’a pas été modifié.`,
+        incluirClave: 'Écrire aussi la clé dans le .env',
+        incluirClaveAyuda:
+          'Sans cocher, le bloc ne contient pas MAIL_PASSWORD et vous l’ajoutez à la main.',
+        sinClaveGuardada: 'Le fournisseur n’a pas de clé enregistrée.',
+        vista: 'Modifications du .env (la clé est masquée)',
+        textoPlano:
+          'La clé sera en texte clair dans le .env du projet. Toute personne ayant accès à ce dossier, ou à son dépôt si vous le publiez, pourra la lire.',
+        claveTitulo: 'Écrire la clé dans le .env',
+        claveTexto:
+          'La clé est enregistrée en texte clair dans le fichier .env du projet. N’utilisez cette option que si le projet n’est pas publié dans un dépôt et que le dossier est uniquement à vous.',
+        claveConfirmar: 'Je comprends, inclure la clé',
+        agregarGitignore: 'Ajouter .env au .gitignore',
+        gitignoreTitulo: 'Modifier le .gitignore',
+        gitignoreTexto:
+          'La ligne .env est ajoutée au .gitignore du projet (avec une copie préalable).',
+        gitignoreConfirmar: 'Ajouter',
+        versionadoTitulo: 'Git suit déjà le .env',
+        versionadoTexto:
+          'Le prochain commit publierait ses valeurs. Retirez-le de l’index avec git rm --cached .env.',
+        desconocidoTitulo: 'Impossible de vérifier Git',
+        desconocidoTexto: 'Impossible de savoir si Git suit le .env de ce projet.',
+        aceptarVersionado: 'Écrire quand même',
+        aceptarTitulo: 'Écrire dans un .env suivi',
+        aceptarTexto:
+          'Si Git suit le .env, ces variables peuvent finir dans le dépôt. Écrire quand même ?',
+        aceptarConfirmar: 'Écrire quand même',
+        confirmarTitulo: 'Écrire dans le .env',
+        confirmarTexto: (ruta: string) =>
+          `Une copie de ${ruta} sera enregistrée et les variables MAIL_* seront ajoutées sans la clé.`,
+        confirmarTextoClave: (ruta: string) =>
+          `Une copie de ${ruta} sera enregistrée et les variables MAIL_* seront ajoutées, avec la clé en texte clair.`,
+        confirmar: 'Écrire',
+        escribir: 'Écrire dans le .env',
+        escrito: (n: string) => `${n} envoie désormais via ce fournisseur`,
+      },
+    },
     estado: 'État',
     smtp: 'SMTP',
     buzon: 'Boîte web',

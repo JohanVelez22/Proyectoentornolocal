@@ -133,3 +133,6 @@ export * from './depuracion/receptor';
 export { rutasDepuracion } from './depuracion/prepend';
 export * from './depuracion/errores';
 export * from './contenedores/contenedores';
+export * from './correo/proveedores';
+export * from './correo/probarEnvio';
+export * from './correo/gestorSmtp';

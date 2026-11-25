@@ -46,7 +46,11 @@ afterEach(() => rmSync(base, { recursive: true, force: true }));
 
 describe('puerto SMTP común y configuración antigua', () => {
   it('por defecto 1025 y un config.json anterior a D21 se lee con Mailpit y su puerto', async () => {
-    expect(ConfigSchema.parse({}).correo).toEqual({ captador: 'mailpit', puertoSmtp: 1025 });
+    expect(ConfigSchema.parse({}).correo).toEqual({
+      captador: 'mailpit',
+      puertoSmtp: 1025,
+      proveedores: [],
+    });
     const rutas = new Rutas(base);
     mkdirSync(path.dirname(rutas.config()), { recursive: true });
     // Config de antes de D21: sin `correo`, con Mailpit en un puerto propio.
@@ -55,7 +59,7 @@ describe('puerto SMTP común y configuración antigua', () => {
       JSON.stringify({ servicios: { datos: { mailpit: { puerto: 1030 } } } }),
     );
     const cfg = await new Almacen(rutas).leer();
-    expect(cfg.correo).toEqual({ captador: 'mailpit', puertoSmtp: 1030 });
+    expect(cfg.correo).toEqual({ captador: 'mailpit', puertoSmtp: 1030, proveedores: [] });
     // Y un config sin ningún dato de correo también.
     writeFileSync(rutas.config(), JSON.stringify({}));
     expect((await new Almacen(rutas).leer()).correo.captador).toBe('mailpit');
