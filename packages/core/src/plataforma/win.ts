@@ -317,6 +317,8 @@ export interface OpcionesPlataformaWindows {
   arquitectura?: string;
   /** Carpeta de los temporales de hosts (por defecto, %TEMP%). */
   carpetaTemporal?: string;
+  /** Escribe el temporal de la escritura elevada (por defecto `writeFile`; las pruebas lo detienen). */
+  escribirTemporal?: (ruta: string, datos: Buffer) => Promise<void>;
   /**
    * ¿Leer del registro dónde está Git for Windows? Por defecto sí, salvo con `entorno` inyectado
    * (pruebas), para no ejecutar PowerShell real.
@@ -332,6 +334,7 @@ export class PlataformaWindows implements PlataformaCompleta {
   private colaElevacion: Promise<unknown> = Promise.resolve();
   private generacion = 0;
   private readonly carpetaTemporal: string;
+  private readonly escribirTemporal: (ruta: string, datos: Buffer) => Promise<void>;
   private readonly entorno: NodeJS.ProcessEnv;
   private readonly existeRuta: (ruta: string) => boolean;
   private readonly lanzarSeparado: LanzadorSeparado;
@@ -354,6 +357,7 @@ export class PlataformaWindows implements PlataformaCompleta {
     this.lanzarGui = o.lanzarGui ?? lanzarSeparado;
     this.arquitectura = o.arquitectura ?? arch();
     this.carpetaTemporal = o.carpetaTemporal ?? tmpdir();
+    this.escribirTemporal = o.escribirTemporal ?? ((ruta, datos) => writeFile(ruta, datos));
     this.gitRegistro = o.gitRegistro ?? o.entorno === undefined;
   }
 
@@ -890,7 +894,7 @@ export class PlataformaWindows implements PlataformaCompleta {
     this.elevaciones.add(ctl);
     try {
       const datos = Buffer.from(contenido, 'utf8');
-      await writeFile(tmp, datos);
+      await this.escribirTemporal(tmp, datos);
       // Cancelada mientras se preparaba el temporal (la app se cierra): no se abre ningún UAC.
       if (ctl.signal.aborted) return { ok: false, motivo: 'tiempo' };
       // El script elevado se comprueba a sí mismo antes de copiar: un UAC aceptado tarde (o un

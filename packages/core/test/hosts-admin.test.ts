@@ -104,6 +104,41 @@ describe('escritura elevada de hosts: el script se verifica a sí mismo (segurid
     expect((await readdir(dir)).filter((n) => n.startsWith(PREFIJO_TEMPORAL_HOSTS))).toEqual([]);
   });
 
+  it('cancelar mientras se escribe el temporal no abre ningún UAC y no deja el temporal', async () => {
+    const dir = await carpetaTemporal('pel-adm-');
+    const destino = join(dir, 'hosts');
+    await writeFile(destino, 'viejo');
+    let llamadas = 0;
+    let escribiendo!: () => void;
+    const enEscritura = new Promise<void>((r) => (escribiendo = r));
+    let soltar!: () => void;
+    const puerta = new Promise<void>((r) => (soltar = r));
+    const p = new PlataformaWindows(
+      async () => {
+        llamadas++;
+        return { codigo: 0, stdout: '', stderr: '' };
+      },
+      undefined,
+      {
+        carpetaTemporal: dir,
+        // La escritura del temporal queda detenida hasta que la prueba la suelta.
+        escribirTemporal: async (ruta, datos) => {
+          escribiendo();
+          await puerta;
+          await writeFile(ruta, datos);
+        },
+      },
+    );
+    const escritura = p.escribirComoAdmin(destino, 'nuevo', { tiempoLimiteMs: 60_000 });
+    await enEscritura;
+    p.cancelarEscriturasAdmin();
+    soltar();
+    expect(await escritura).toEqual({ ok: false, motivo: 'tiempo' });
+    expect(llamadas).toBe(0);
+    expect(await readFile(destino, 'utf8')).toBe('viejo');
+    expect((await readdir(dir)).filter((n) => n.startsWith(PREFIJO_TEMPORAL_HOSTS))).toEqual([]);
+  });
+
   it('el script lee el temporal una sola vez y escribe esos mismos bytes', () => {
     const s = scriptCopiaHosts({
       temporal: 'C:/t/x.txt',
