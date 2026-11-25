@@ -324,6 +324,21 @@ export const pt: Textos = {
         'O despejo de dados traz algo que não são dados (só se aceitam INSERT, LOCK TABLES e SET): nada foi importado.',
       'bd.datos_fallo':
         'Não foi possível importar os dados: o banco ficou como estava, sem nada pela metade.',
+      'perfiles.destino_invalido': 'Escolha onde salvar o perfil (um arquivo .wolfperfil).',
+      'perfiles.frase_debil': 'A frase da CA deve ter pelo menos {minimo} caracteres.',
+      'perfiles.frase_incorrecta': 'A frase não está correta: nada foi importado.',
+      'perfiles.certificados_sin_ca':
+        'Os certificados dos sites só viajam junto com a CA cifrada: inclua a CA com uma frase.',
+      'perfiles.no_existe': 'O arquivo do perfil não existe.',
+      'perfiles.danado': 'O perfil está danificado ou foi modificado: nada foi importado.',
+      'perfiles.demasiado_grande': 'O perfil é grande demais (até {maximo} MB).',
+      'perfiles.version_no_soportada':
+        'O perfil é de uma versão mais nova do WolfCore Dev (formato {version}): atualize o app para importá-lo.',
+      'perfiles.sin_confirmar': 'Confirme que deseja importar o perfil.',
+      'perfiles.vista_previa_vieja':
+        'A pasta de dados ou o perfil mudaram desde a pré-visualização: revise-a novamente.',
+      'perfiles.carpeta_datos_invalida':
+        'WOLFCORE_DATOS não é uma pasta de dados válida: deve ser absoluta, não do sistema e diferente da pasta real.',
       'importar.origen_apagado':
         'Não foi possível conectar ao servidor de banco de dados do outro programa: ligue-o a partir desse programa e tente de novo. Os sites foram importados mesmo assim.',
       'importar.origen_no_local': 'O servidor de origem deve estar neste computador (127.0.0.1).',

@@ -320,6 +320,21 @@ export const es = {
         'El volcado de datos trae algo que no son datos (solo se aceptan INSERT, LOCK TABLES y SET): no se importó nada.',
       'bd.datos_fallo':
         'No se pudieron importar los datos: la base quedó como estaba, sin nada a medias.',
+      'perfiles.destino_invalido': 'Elija dónde guardar el perfil (un archivo .wolfperfil).',
+      'perfiles.frase_debil': 'La frase de la CA debe tener al menos {minimo} caracteres.',
+      'perfiles.frase_incorrecta': 'La frase no es correcta: no se importó nada.',
+      'perfiles.certificados_sin_ca':
+        'Los certificados de los sitios solo viajan junto con la CA cifrada: incluya la CA con una frase.',
+      'perfiles.no_existe': 'El archivo del perfil no existe.',
+      'perfiles.danado': 'El perfil está dañado o fue modificado: no se importó nada.',
+      'perfiles.demasiado_grande': 'El perfil es demasiado grande (hasta {maximo} MB).',
+      'perfiles.version_no_soportada':
+        'El perfil es de una versión más nueva de WolfCore Dev (formato {version}): actualice la app para importarlo.',
+      'perfiles.sin_confirmar': 'Confirme que quiere importar el perfil.',
+      'perfiles.vista_previa_vieja':
+        'La carpeta de datos o el perfil cambiaron desde la vista previa: revísela otra vez.',
+      'perfiles.carpeta_datos_invalida':
+        'WOLFCORE_DATOS no es una carpeta de datos válida: debe ser absoluta, no del sistema y distinta de la carpeta real.',
       'importar.origen_apagado':
         'No se pudo conectar al servidor de base de datos del otro programa: enciéndalo desde ese programa e inténtelo de nuevo. Los sitios sí se importaron.',
       'importar.origen_no_local': 'El servidor de origen debe estar en este equipo (127.0.0.1).',

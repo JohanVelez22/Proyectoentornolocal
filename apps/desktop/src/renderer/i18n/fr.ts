@@ -332,6 +332,21 @@ export const fr: Textos = {
         "L'export de données contient autre chose que des données (seuls INSERT, LOCK TABLES et SET sont acceptés) : rien n'a été importé.",
       'bd.datos_fallo':
         "Impossible d'importer les données : la base est restée telle quelle, rien n'a été laissé à moitié.",
+      'perfiles.destino_invalido': 'Choisissez où enregistrer le profil (un fichier .wolfperfil).',
+      'perfiles.frase_debil': 'La phrase de la CA doit comporter au moins {minimo} caractères.',
+      'perfiles.frase_incorrecta': "La phrase n'est pas correcte : rien n'a été importé.",
+      'perfiles.certificados_sin_ca':
+        "Les certificats des sites ne voyagent qu'avec la CA chiffrée : incluez la CA avec une phrase.",
+      'perfiles.no_existe': "Le fichier du profil n'existe pas.",
+      'perfiles.danado': "Le profil est endommagé ou a été modifié : rien n'a été importé.",
+      'perfiles.demasiado_grande': "Le profil est trop volumineux (jusqu'à {maximo} Mo).",
+      'perfiles.version_no_soportada':
+        "Le profil provient d'une version plus récente de WolfCore Dev (format {version}) : mettez l'application à jour pour l'importer.",
+      'perfiles.sin_confirmar': 'Confirmez que vous voulez importer le profil.',
+      'perfiles.vista_previa_vieja':
+        "Le dossier de données ou le profil a changé depuis l'aperçu : vérifiez-le à nouveau.",
+      'perfiles.carpeta_datos_invalida':
+        "WOLFCORE_DATOS n'est pas un dossier de données valide : il doit être absolu, hors des dossiers système et différent du dossier réel.",
       'importar.origen_apagado':
         "Impossible de se connecter au serveur de base de données de l'autre programme : démarrez-le depuis ce programme et réessayez. Les sites ont tout de même été importés.",
       'importar.origen_no_local':

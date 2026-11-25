@@ -1270,6 +1270,16 @@ export class Plantillas {
     }
   }
 
+  /**
+   * Quita la plantilla del registro de propias (D26): lo que llega de un perfil es de origen
+   * ajeno y queda `importada` aunque su `plantilla.json` sea idéntico al de una propia.
+   */
+  async marcarImportada(id: string): Promise<void> {
+    validarIdPlantilla(id);
+    if (!(id in (await this.leerRegistro()))) return;
+    await this.anotarRegistro(id, null);
+  }
+
   /** Borra la carpeta de la plantilla (y solo esa). Una dañada también se puede borrar. */
   async borrar(id: string): Promise<void> {
     const dir = this.carpeta(id);

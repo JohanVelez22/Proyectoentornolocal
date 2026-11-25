@@ -1,5 +1,6 @@
 import { mkdir, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
+import { ErrorWolf } from './errores';
 
 export { NOMBRE_CARPETA, NOMBRE_CARPETA_ANTERIOR, rutaBasePorDefecto } from './plataforma/carpetas';
 
@@ -13,6 +14,76 @@ export function claveMayorMenor(version: string): string {
 export function claveMayor(version: string): string {
   const m = /^(\d+)/.exec(version);
   return m ? m[1]! : version;
+}
+
+/** Variable de entorno para arrancar con otra carpeta de datos (D26). */
+export const VARIABLE_DATOS = 'WOLFCORE_DATOS';
+
+const normalizarRuta = (r: string): string =>
+  r.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+
+/** ¿`hija` es `padre` o está dentro (sin distinguir mayúsculas ni separadores)? */
+function dentroDe(padre: string, hija: string): boolean {
+  const p = normalizarRuta(padre);
+  const h = normalizarRuta(hija);
+  return h === p || h.startsWith(`${p}/`);
+}
+
+/**
+ * Carpeta del sistema donde nunca pueden vivir los datos: la raíz de una unidad, Windows, Program
+ * Files, ProgramData, `Users` o el perfil entero (sí una carpeta dentro de él, como AppData), y
+ * las del sistema en Linux y macOS.
+ */
+function esCarpetaDeSistema(ruta: string): boolean {
+  const n = normalizarRuta(ruta);
+  if (n === '' || /^[a-z]:$/.test(n)) return true;
+  if (
+    /^[a-z]:\/(?:windows|program files(?: \(x86\))?|programdata|system volume information|\$recycle\.bin|recovery|boot)(?:\/|$)/.test(
+      n,
+    )
+  ) {
+    return true;
+  }
+  if (/^[a-z]:\/users(?:\/[^/]+)?$/.test(n)) return true;
+  // POSIX: cualquier carpeta de primer nivel y los árboles del sistema; el perfil entero.
+  if (/^\/[^/]+$/.test(n)) return true;
+  if (
+    /^\/(?:etc|usr|bin|sbin|lib|lib64|dev|proc|sys|boot|root|system|library|applications)\//.test(
+      `${n}/`,
+    )
+  ) {
+    return true;
+  }
+  return /^\/(?:home|users)\/[^/]+$/.test(n);
+}
+
+/**
+ * Valida la carpeta de `WOLFCORE_DATOS`: absoluta y local (nunca relativa, UNC ni con `:` de más),
+ * no del sistema, y nunca la carpeta de datos real (`real`) ni una que la contenga o esté dentro:
+ * con la variable, la carpeta real no se lee ni se escribe. Devuelve la ruta sin barra final.
+ */
+export function validarCarpetaDatos(ruta: string, real: string): string {
+  const invalida = (motivo: string): ErrorWolf =>
+    new ErrorWolf(
+      'perfiles.carpeta_datos_invalida',
+      `${VARIABLE_DATOS} no es una carpeta de datos válida: ${motivo}.`,
+    );
+  const r = typeof ruta === 'string' ? ruta.trim() : '';
+  const absoluta =
+    r !== '' &&
+    r.length <= 400 &&
+    ![...r].some((c) => c.charCodeAt(0) < 0x20) &&
+    !/^[\\/]{2}/.test(r) &&
+    (/^[A-Za-z]:[\\/]/.test(r) ? !r.slice(2).includes(':') : r.startsWith('/') && !r.includes(':'));
+  if (!absoluta) throw invalida('debe ser una ruta absoluta y local');
+  if (r.split(/[\\/]+/).some((t) => t === '..' || t === '.')) {
+    throw invalida('no puede llevar "." ni ".."');
+  }
+  if (esCarpetaDeSistema(r)) throw invalida('es una carpeta del sistema');
+  if (dentroDe(real, r) || dentroDe(r, real)) {
+    throw invalida('no puede ser la carpeta de datos real ni contenerla');
+  }
+  return r.replace(/[\\/]+$/, '');
 }
 
 export class Rutas {

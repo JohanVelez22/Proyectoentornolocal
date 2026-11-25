@@ -189,6 +189,11 @@ export const SitioSchema = z.object({
   tunel: TunelSitioSchema.optional(),
   /** Compartido en la red local (solo lo cambia `Nucleo.lan`, nunca el formulario del sitio). */
   lan: LanSitioSchema.optional(),
+  /**
+   * Importado de un perfil (D26) con algo por resolver: `carpeta` = su carpeta no existe en este
+   * equipo (el usuario la busca con "buscar carpeta"). Ausente o null = nada pendiente.
+   */
+  pendiente: z.enum(['carpeta']).nullable().optional(),
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 

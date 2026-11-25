@@ -220,6 +220,18 @@ export const PARAMETROS_ERROR = {
   'bd.esquema_fallo': [],
   'bd.datos_no_permitidos': [],
   'bd.datos_fallo': [],
+  // perfiles del entorno (D26)
+  'perfiles.destino_invalido': [],
+  'perfiles.frase_debil': ['minimo'],
+  'perfiles.frase_incorrecta': [],
+  'perfiles.certificados_sin_ca': [],
+  'perfiles.no_existe': [],
+  'perfiles.danado': [],
+  'perfiles.demasiado_grande': ['maximo'],
+  'perfiles.version_no_soportada': ['version'],
+  'perfiles.sin_confirmar': [],
+  'perfiles.vista_previa_vieja': [],
+  'perfiles.carpeta_datos_invalida': [],
   // importar desde Laragon, XAMPP y Herd (D15)
   'importar.origen_apagado': [],
   'importar.origen_no_local': [],

@@ -1,5 +1,6 @@
 import type * as childProcess from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { Almacen, AlmacenCredenciales, migrarCredenciales } from './almacen';
@@ -16,7 +17,23 @@ import { migrarInstancias } from './migraciones/instancias';
 import { puertosConfigurados } from './servicios/instancias';
 import type { RespaldoDatos, TipoRespaldoDatos } from './servicios/actualizar';
 import type { PlanActualizar, ResultadoNuevaRama } from './servicios/definicion';
-import { armarTabla, type ServicioVersiones, type TablaVersiones } from './catalogo/tablaVersiones';
+import {
+  armarTabla,
+  SERVICIOS_VERSIONES,
+  type ServicioVersiones,
+  type TablaVersiones,
+} from './catalogo/tablaVersiones';
+import { huellaDe } from './catalogo/huellas';
+import { exportarPerfil } from './perfiles/exportar';
+import { Perfiles } from './perfiles/importar';
+import type {
+  DepsPerfiles,
+  OpcionesExportarPerfil,
+  OpcionesImportarPerfil,
+  ResultadoExportarPerfil,
+  ResultadoImportarPerfil,
+  VistaPreviaPerfil,
+} from './perfiles/tipos';
 import { detectarFormato, type FormatoRespaldo } from './bd/formato';
 import { InstaladorPgvector, type ResultadoBuildTools } from './bd/pgvector';
 import {
@@ -3475,6 +3492,150 @@ export class Nucleo {
     return { usuario, copia: r.copia };
   }
 
+  // ---- perfiles del entorno (D26) ----
+
+  /** Dependencias de los perfiles; `guardarClave` la da el proceso principal (`AlmacenSecretos`). */
+  private depsPerfiles(
+    guardarClave: (sitioId: string, clave: string) => Promise<void> = async () => {
+      throw new ErrorWolf('secretos.sin_cifrado', 'No hay dónde guardar la clave de la base.');
+    },
+  ): DepsPerfiles {
+    const motores = ['mysql', 'mariadb', 'postgresql'] as const;
+    const servicioDe = (id: string): IdServicioDatos =>
+      id.slice(0, id.indexOf('@')) as IdServicioDatos;
+    const versionEn = async (servicio: string, version: string): Promise<boolean> => {
+      for (const clave of await this.instalador.instalados(servicio)) {
+        if (clave === version) return true;
+        if ((await this.instalador.versionInstalada(servicio, clave)) === version) return true;
+      }
+      return false;
+    };
+    return {
+      rutas: this.rutas,
+      leerConfig: () => this.config.leer(),
+      // En la cola de escrituras de config.json de los sitios (nada se pisa entre medio).
+      guardarConfig: (c) =>
+        this.sitios.modificarConfig((x) => {
+          Object.assign(x, c);
+        }),
+      plantillas: this.plantillas,
+      versionesInstaladas: async () => {
+        const res: { servicio: string; version: string; huella: string | null }[] = [];
+        for (const servicio of SERVICIOS_VERSIONES) {
+          for (const clave of await this.instalador.instalados(servicio)) {
+            const version = await this.instalador.versionInstalada(servicio, clave);
+            const v = await this.catalogoVivo.buscar(servicio, version).catch(() => null);
+            const h = v ? huellaDe(v) : null;
+            res.push({ servicio, version, huella: h ? `${h.algoritmo}:${h.valor}` : null });
+          }
+        }
+        return res;
+      },
+      buscarVersion: (servicio, version) =>
+        this.catalogoVivo.buscar(servicio as ServicioInstalable, version),
+      versionInstalada: versionEn,
+      instalarVersion: (v) => this.instalador.instalar(v),
+      puertoLibre: (p) => puertoLibreAhora(p),
+      basesParaExportar: async () => {
+        const res: { instancia: string; base: string }[] = [];
+        for (const m of motores) {
+          for (const i of await this.servicios.datos.listaInstancias(m)) {
+            if (i.estado !== 'encendido') continue;
+            for (const b of await this.bd.listar(i.id).catch(() => [])) {
+              res.push({ instancia: i.id, base: b.nombre });
+            }
+          }
+        }
+        return res;
+      },
+      volcarBase: (instancia, base, carpeta) =>
+        this.respaldos.volcarParaPerfil(instancia as IdInstancia, base, carpeta),
+      prepararInstancia: async (instancia) => {
+        const lista = await this.servicios.datos.listaInstancias(servicioDe(instancia));
+        const i = lista.find((x) => x.id === instancia);
+        if (!i) throw new Error('La instancia no existe.');
+        if (i.estado !== 'encendido') await this.servicios.iniciar(instancia as IdInstancia);
+      },
+      basesDe: async (instancia) =>
+        (await this.bd.listar(instancia as IdInstancia)).map((b) => b.nombre),
+      instantaneaPrevia: async (instancia, base) => {
+        await this.instantaneas.tomar(
+          instancia as IdInstancia,
+          base,
+          'Antes de importar un perfil',
+        );
+      },
+      restaurarBase: async (instancia, archivos, base, o) => {
+        const objetivo = instancia as IdInstancia;
+        if ('volcado' in archivos) {
+          await this.respaldos.restaurarAcotada(objetivo, archivos.volcado, base);
+          return;
+        }
+        await this.respaldos.importarVolcadosAjenos(objetivo, archivos, base, {
+          confirmarSobrescribir: o.existe,
+          baseExistente: o.existe,
+          baseNueva: !o.existe,
+        });
+      },
+      crearUsuarioBd: async (instancia, base, usuario, clave) => {
+        await this.bd.crear(instancia as IdInstancia, base, { usuario, clave, cambiarClave: true });
+      },
+      guardarClaveBd: guardarClave,
+      ponerUsuarioEnv: async (sitioId, usuario, clave, puerto) => {
+        const r = await this.env.ponerUsuarioBd(sitioId, usuario, clave);
+        if (puerto !== null) {
+          const s = await this.sitioPorId(sitioId);
+          const texto = await readFile(path.join(s.carpeta, '.env'), 'utf8').catch(() => '');
+          if (/^\s*DB_PORT\s*=/m.test(texto)) {
+            await this.env.guardar(sitioId, { cambios: { DB_PORT: String(puerto) } }, true);
+          }
+        }
+        return { copia: r.copia };
+      },
+      regenerarCertificados: async () => {
+        await this.https.crearCaSiFalta();
+        for (const s of await this.sitios.listar()) {
+          if (!s.https || s.pendiente) continue;
+          await this.https.asegurarCertificado(s).catch((e) => {
+            console.error('No se pudo emitir el certificado del sitio:', mensajeDe(e));
+          });
+        }
+      },
+      sistema: this.plataforma.idCatalogo(),
+      idCatalogo: this.plataforma.idCatalogo(),
+    };
+  }
+
+  /**
+   * Exporta el entorno a un `.wolfperfil` (sin secretos; bases y CA cifrada opcionales). La ruta
+   * de destino sale de un diálogo del proceso principal.
+   */
+  exportarPerfil(o: OpcionesExportarPerfil): Promise<ResultadoExportarPerfil> {
+    return exportarPerfil(this.depsPerfiles(), o);
+  }
+
+  /** Lo que importaría un perfil en esta carpeta de datos (no escribe nada). */
+  vistaPreviaImportarPerfil(
+    archivo: string,
+    o: Pick<OpcionesImportarPerfil, 'rutas' | 'prefijos'> = { rutas: {} },
+  ): Promise<VistaPreviaPerfil> {
+    return new Perfiles(this.depsPerfiles()).vistaPrevia(archivo, o);
+  }
+
+  /**
+   * Importa un perfil (con la huella de la vista previa y `confirmado`). `guardarClave` guarda en
+   * `AlmacenSecretos` (`bd:<sitio>`) la clave nueva de cada usuario propio que se recrea.
+   */
+  importarPerfil(
+    archivo: string,
+    o: OpcionesImportarPerfil & {
+      guardarClave: (sitioId: string, clave: string) => Promise<void>;
+    },
+  ): Promise<ResultadoImportarPerfil> {
+    const { guardarClave, ...resto } = o;
+    return new Perfiles(this.depsPerfiles(guardarClave)).importar(archivo, resto);
+  }
+
   /** Otros proyectos (no `excluir`) cuyo `.env` usa este usuario de base. */
   private async otrosConUsuarioBd(usuario: string, excluir: string): Promise<Sitio[]> {
     const salida: Sitio[] = [];
@@ -3625,6 +3786,8 @@ export class Nucleo {
     delete resto.vhostDesactivado;
     resto.reglasExtra = previo?.reglasExtra ?? '';
     if (previo?.vhostManual) resto.vhostManual = previo.vhostManual;
+    // Importado de un perfil con la carpeta pendiente (D26): deja de estarlo cuando la carpeta existe.
+    if (existsSync(resto.carpeta)) resto.pendiente = null;
     // FastAPI/Node con el proceso del proxy sin puerto: se le asigna uno libre (no se rechaza).
     if (this.depsPasos) resto = await asignarPuertoProxy(this.depsPasos, resto, id);
     resto.recetaConfiada = renovarHuella

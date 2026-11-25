@@ -315,6 +315,21 @@ export const en: Textos = {
         'The data dump contains something that is not data (only INSERT, LOCK TABLES and SET are accepted): nothing was imported.',
       'bd.datos_fallo':
         'The data could not be imported: the database was left as it was, nothing half done.',
+      'perfiles.destino_invalido': 'Choose where to save the profile (a .wolfperfil file).',
+      'perfiles.frase_debil': 'The CA passphrase must have at least {minimo} characters.',
+      'perfiles.frase_incorrecta': 'The passphrase is not correct: nothing was imported.',
+      'perfiles.certificados_sin_ca':
+        'Site certificates only travel together with the encrypted CA: include the CA with a passphrase.',
+      'perfiles.no_existe': 'The profile file does not exist.',
+      'perfiles.danado': 'The profile is damaged or was modified: nothing was imported.',
+      'perfiles.demasiado_grande': 'The profile is too large (up to {maximo} MB).',
+      'perfiles.version_no_soportada':
+        'The profile comes from a newer version of WolfCore Dev (format {version}): update the app to import it.',
+      'perfiles.sin_confirmar': 'Confirm that you want to import the profile.',
+      'perfiles.vista_previa_vieja':
+        'The data folder or the profile changed since the preview: review it again.',
+      'perfiles.carpeta_datos_invalida':
+        'WOLFCORE_DATOS is not a valid data folder: it must be absolute, not a system folder and different from the real one.',
       'importar.origen_apagado':
         "Could not connect to the other program's database server: start it from that program and try again. The sites were imported anyway.",
       'importar.origen_no_local': 'The source server must be on this computer (127.0.0.1).',
