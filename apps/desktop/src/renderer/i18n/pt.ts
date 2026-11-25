@@ -4373,6 +4373,237 @@ export const pt: Textos = {
   },
   /** Resultado de importar o exportar un perfil (D26). */
   perfiles: {
+    pantalla: {
+      titulo: 'Backup e perfis',
+      descripcion:
+        'Um perfil leva o seu ambiente para outro computador: sites, versões, instâncias, modelos e ajustes. Nunca leva chaves, tokens nem senhas.',
+      aislado: {
+        titulo: 'Pasta de teste',
+        texto: (ruta: string) =>
+          `O WolfCore Dev está usando uma pasta de dados de teste (${ruta}). O que você fizer aqui não toca na sua pasta real nem no seu computador: o arquivo hosts não é gravado e nenhum certificado é instalado.`,
+      },
+      exportar: {
+        titulo: 'Exportar o ambiente',
+        texto:
+          'Salva um arquivo .wolfperfil com seus sites, versões, instâncias, modelos e ajustes.',
+        bases: 'Incluir os bancos de dados',
+        basesAyuda:
+          'Os dumps completos (com os dados dos seus clientes) viajam criptografados com a frase.',
+        ca: 'Incluir a autoridade certificadora (CA)',
+        caAyuda: 'Vai criptografada com a frase. Importe-a só em um computador seu.',
+        certificados: 'Incluir os certificados dos sites',
+        certificadosAyuda: 'Só viajam junto com a CA e criptografados com ela.',
+        frase: 'Frase',
+        fraseRepetir: 'Repetir a frase',
+        fraseAyuda: (minimo: number) =>
+          `Pelo menos ${minimo} caracteres. Sem ela não é possível recuperar os bancos nem a CA, e ela não é guardada em lugar nenhum.`,
+        problemas: {
+          frase_corta: (minimo: number) => `A frase deve ter pelo menos ${minimo} caracteres.`,
+          frase_distinta: 'As duas frases não coincidem.',
+          certificados_sin_ca: 'Os certificados só viajam junto com a CA.',
+        },
+        exportar: 'Exportar perfil…',
+        nota: 'O perfil nunca leva chaves, tokens nem senhas, nem os instantâneos, a lixeira, os backups ou a pasta data.',
+        listo: 'Perfil exportado',
+        guardado: (archivo: string, tamano: string) => `Salvo em ${archivo} (${tamano}).`,
+      },
+      importar: {
+        titulo: 'Importar um perfil',
+        texto:
+          'Escolha um arquivo .wolfperfil. Antes de mudar qualquer coisa você verá tudo o que é substituído, removido ou fica pendente, e é guardada uma cópia do que é substituído.',
+        boton: 'Importar perfil…',
+      },
+      instantaneas: {
+        titulo: 'Instantâneos do ambiente',
+        texto:
+          'Antes de atualizar o PHP ou o Nginx e antes de importar um perfil, o WolfCore Dev guarda uma cópia da sua configuração, do Nginx e dos php.ini, sem chaves nem dados e só para você. Os 10 últimos são mantidos.',
+        tomar: 'Tirar um agora',
+        tomada: 'Instantâneo salvo.',
+        sinNada: 'Ainda não há nada para copiar.',
+        vacia: 'Ainda não há instantâneos.',
+        motivos: {
+          actualizar: 'Antes de atualizar',
+          'importar-perfil': 'Antes de importar um perfil',
+          manual: 'Manual',
+        },
+      },
+    },
+    reasignar: {
+      titulo: 'Pastas dos sites',
+      texto:
+        'Estas pastas vêm do outro computador. Procure onde elas estão neste ou importe o site como pendente: ele fica sem pasta até você escolher uma.',
+      sitio: 'Site',
+      origen: 'Pasta no perfil',
+      destino: 'Pasta neste computador',
+      existe: 'Existe',
+      noExiste: 'Não existe neste computador',
+      buscar: 'Procurar pasta…',
+      cambiar: 'Mudar',
+      comoPendiente: 'Importar mesmo assim como pendente',
+      prefijo: (viejo: string, nuevo: string) =>
+        `Usar a mesma mudança para os demais (${viejo} → ${nuevo})`,
+      omitido: 'Não será importado',
+    },
+    asistente: {
+      titulo: 'Importar um perfil',
+      pasos: {
+        archivo: 'Arquivo',
+        revisar: 'Revisar',
+        confirmar: 'Confirmar',
+        resultado: 'Resultado',
+      },
+      archivo: {
+        texto:
+          'Escolha o arquivo .wolfperfil. Ainda nada muda: primeiro você verá o que será substituído, removido ou deixado pendente.',
+        elegir: 'Escolher arquivo…',
+        cambiar: 'Escolher outro',
+        ninguno: 'Nenhum arquivo escolhido',
+        leyendo: 'Lendo o perfil…',
+        error: 'Não foi possível ler o perfil',
+      },
+      origen: (fecha: string, sistema: string) => `Criado em ${fecha} em ${sistema}.`,
+      ignoradas: (n: number) => `${n} entradas do arquivo não são de um perfil e são ignoradas.`,
+      reemplaza: {
+        titulo: 'O que é substituído',
+        ninguno: 'Não há dados nesta pasta: a importação é feita sobre uma instalação limpa.',
+        copia:
+          'Antes de substituir, é copiado para respaldos/pre-perfil-… e é tirado um instantâneo do ambiente; cada banco substituído tem seu próprio instantâneo. A pasta data nunca é apagada.',
+        config: 'A configuração (config.json)',
+        sitio: (id: string) => `O site ${id}`,
+        base: (instancia: string, base: string) => `O banco ${base} (${instancia})`,
+        plantilla: (id: string) => `O modelo ${id}`,
+        ca: 'A autoridade certificadora (CA) deste computador',
+      },
+      versiones: {
+        titulo: 'Versões',
+        ninguna: 'O perfil não traz versões.',
+        instalada: 'Já instalada',
+        descargar: 'Será baixada com a impressão digital verificada',
+        pendienteDebil: 'Pendente: sem impressão digital forte, instale-a manualmente',
+        pendienteFuera: 'Pendente: não está mais no catálogo',
+        huellas: {
+          fuerte: 'Impressão digital SHA-256 ou SHA-512',
+          firmada: 'Assinada',
+          debil: 'Impressão digital fraca',
+          ninguna: 'Sem impressão digital',
+        },
+        descargas: (n: number) =>
+          `${n} versões serão baixadas de sites oficiais, cada uma com sua impressão digital ou assinatura verificada.`,
+      },
+      instancias: {
+        titulo: 'Instâncias de bancos de dados',
+        existente: 'Já existe: é mantida com sua porta e sua versão',
+        nueva: (puerto: number) => `É criada com credenciais novas na porta ${puerto}`,
+        reasignada: (de: number, a: number) => `A porta ${de} está ocupada: usará a ${a}`,
+      },
+      bases: {
+        titulo: 'Bancos de dados',
+        ninguna: 'O perfil não traz bancos.',
+        texto:
+          'São restaurados com um usuário limitado a cada banco e só com instruções permitidas. Os que já existem recebem backup antes.',
+        omitir: 'Importar sem os bancos',
+      },
+      plantillas: {
+        titulo: 'Modelos',
+        existe: 'Já existe: é substituído',
+        nueva: 'Novo',
+      },
+      quitado: {
+        titulo: 'O que não é tomado da configuração',
+        texto:
+          'Esta pasta de dados está limpa: do perfil não é tomado o que aponta para fora deste computador.',
+      },
+      puertos: {
+        titulo: 'Portas ocupadas',
+        texto: (lista: string) =>
+          `Estas portas do perfil já são usadas por outro programa neste computador: ${lista}. Mude-as em Serviços depois de importar.`,
+      },
+      ca: {
+        titulo: 'Autoridade certificadora (CA)',
+        texto:
+          'O perfil traz uma CA criptografada. Importe-a só se for sua: este computador aceitaria os certificados que ela assinar.',
+        huella: 'Impressão digital SHA-256 da CA do perfil',
+        comparar: 'Compare-a com a do seu computador de origem antes de aceitá-la.',
+        importar: 'Importar a CA do perfil',
+        noImportar: 'Sem importá-la, este computador usa a CA atual ou cria uma nova.',
+        ajena:
+          'Esta CA tem restrições de nome que não são as do WolfCore Dev: não pode ser importada.',
+        sinRestricciones:
+          'Esta CA não tem restrições de nome: pode assinar certificados de qualquer site, inclusive de bancos e e-mail. Importe-a só se for sua e a impressão digital coincidir.',
+        aceptarSin: 'Entendo o risco: é a minha CA e a impressão digital coincide',
+        reemplazaLocal:
+          'Este computador já tem uma CA. Importar a do perfil a substitui (fica uma cópia no backup anterior).',
+        reemplazar: 'Substituir a CA deste computador',
+        noSeInstala: 'A CA não é instalada sozinha no repositório de certificados do sistema.',
+      },
+      frase: {
+        titulo: 'Frase do perfil',
+        texto:
+          'O perfil traz bancos ou a CA criptografados. Digite a frase que você escolheu ao exportá-lo.',
+        campo: 'Frase',
+        omitirBases: 'Importar sem os bancos',
+        nota: 'A frase só é usada nesta janela: não é guardada e é apagada ao terminar ou ao fechar.',
+      },
+      env: {
+        titulo: 'Conexão dos projetos',
+        texto:
+          'Marque os projetos cujo .env deve apontar para um novo usuário próprio do seu banco (com cópia prévia do .env). Os demais não são tocados e ficam informados.',
+      },
+      confirmar: {
+        titulo: 'Confirmar a importação',
+        resumen: (sitios: number, versiones: number, bases: number) =>
+          `Serão importados ${sitios} sites, ${versiones} versões e ${bases} bancos.`,
+        importar: 'Importar',
+        revisar: 'Revisar',
+        volver: 'Voltar',
+        bloqueos: {
+          sitios_sin_carpeta:
+            'Escolha a pasta de cada site ou marque-o para ser importado como pendente.',
+          frase_requerida: 'Digite a frase do perfil ou importe sem os bancos.',
+          ca_ajena: 'A CA do perfil não pode ser importada.',
+          ca_sin_restricciones: 'Confirme à parte que quer importar uma CA sem restrições.',
+          reemplazar_ca: 'Confirme à parte que quer substituir a CA deste computador.',
+        },
+      },
+      progreso: 'Importando o perfil… Não feche a janela: com bancos ou downloads pode demorar.',
+      resultado: {
+        titulo: 'Resultado da importação',
+        resumen: (importados: number, pendientes: number, omitidos: number, errores: number) =>
+          `${importados} importados, ${pendientes} pendentes, ${omitidos} omitidos e ${errores} com erro.`,
+        respaldo: (ruta: string) => `Cópia do que foi substituído: ${ruta}`,
+        pendientes: 'O que ficou pendente pode ser concluído manualmente.',
+        error: 'Não foi possível importar o perfil',
+        secciones: {
+          sitios: 'Sites',
+          versiones: 'Versões',
+          instancias: 'Instâncias',
+          bases: 'Bancos',
+          plantillas: 'Modelos',
+          env: 'Arquivos .env',
+          ca: 'CA',
+        },
+        estados: {
+          importado: 'Importado',
+          pendiente: 'Pendente',
+          omitido: 'Omitido',
+          error: 'Erro',
+          instalada: 'Instalada',
+          ya_instalada: 'Já estava',
+          creada: 'Criada',
+          existente: 'Já existia',
+          puerto_reasignado: 'Porta reatribuída',
+          reescrito: 'Reescrito',
+          sin_marcar: 'Sem marcar',
+        },
+        ca: {
+          importada: 'CA importada',
+          nueva: 'Nova CA gerada',
+          sin_cambios: 'A CA não mudou',
+        },
+        puerto: (de: number, a: number) => `Porta ${de} → ${a}`,
+        copiaEnv: (ruta: string) => `Cópia do .env: ${ruta}`,
+      },
+    },
     /** Aviso fuerte de la vista previa: la CA del perfil no tiene restricciones de nombre. */
     caSinRestricciones:
       'Esta CA pode assinar qualquer site; importe-a somente se for sua, compare a impressão digital.',

@@ -32,6 +32,7 @@ import EstadoPunto from '../componentes/EstadoPunto.vue';
 import SeccionApariencia from '../componentes/SeccionApariencia.vue';
 import SeccionAvisos from '../componentes/SeccionAvisos.vue';
 import SeccionMcp from '../componentes/SeccionMcp.vue';
+import SeccionPerfiles from '../componentes/SeccionPerfiles.vue';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 
@@ -568,6 +569,8 @@ async function aplicarPath(activar: boolean): Promise<void> {
     </NCard>
 
     <SeccionMcp />
+
+    <SeccionPerfiles />
 
     <NCard :title="t.acerca" size="small" class="tarjeta">
       <div class="acerca-marca">

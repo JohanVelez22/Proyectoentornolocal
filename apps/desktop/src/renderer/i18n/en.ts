@@ -4343,6 +4343,239 @@ export const en: Textos = {
   },
   /** Resultado de importar o exportar un perfil (D26). */
   perfiles: {
+    pantalla: {
+      titulo: 'Backup and profiles',
+      descripcion:
+        'A profile takes your environment to another computer: sites, versions, instances, templates and settings. It never carries keys, tokens or passwords.',
+      aislado: {
+        titulo: 'Test folder',
+        texto: (ruta: string) =>
+          `WolfCore Dev is using a test data folder (${ruta}). Nothing you do here touches your real folder or your computer: the hosts file is not written and no certificates are installed.`,
+      },
+      exportar: {
+        titulo: 'Export the environment',
+        texto:
+          'Saves a .wolfperfil file with your sites, versions, instances, templates and settings.',
+        bases: 'Include the databases',
+        basesAyuda: 'Full dumps (with your customers’ data) travel encrypted with the passphrase.',
+        ca: 'Include the certificate authority (CA)',
+        caAyuda: 'It is encrypted with the passphrase. Import it only on a computer of yours.',
+        certificados: 'Include the sites’ certificates',
+        certificadosAyuda: 'They only travel together with the CA, encrypted with it.',
+        frase: 'Passphrase',
+        fraseRepetir: 'Repeat the passphrase',
+        fraseAyuda: (minimo: number) =>
+          `At least ${minimo} characters. Without it the databases and the CA cannot be recovered, and it is not stored anywhere.`,
+        problemas: {
+          frase_corta: (minimo: number) => `The passphrase must be at least ${minimo} characters.`,
+          frase_distinta: 'The two passphrases do not match.',
+          certificados_sin_ca: 'Certificates only travel together with the CA.',
+        },
+        exportar: 'Export profile…',
+        nota: 'A profile never carries keys, tokens or passwords, nor snapshots, the trash, backups or the data folder.',
+        listo: 'Profile exported',
+        guardado: (archivo: string, tamano: string) => `Saved to ${archivo} (${tamano}).`,
+      },
+      importar: {
+        titulo: 'Import a profile',
+        texto:
+          'Choose a .wolfperfil file. Before anything changes you will see everything that is replaced, removed or left pending, and a copy of what is replaced is saved.',
+        boton: 'Import profile…',
+      },
+      instantaneas: {
+        titulo: 'Environment snapshots',
+        texto:
+          'Before updating PHP or Nginx and before importing a profile, WolfCore Dev saves a copy of your configuration, Nginx and the php.ini files, without keys or data and only for you. The 10 latest are kept.',
+        tomar: 'Take one now',
+        tomada: 'Snapshot saved.',
+        sinNada: 'There is nothing to copy yet.',
+        vacia: 'There are no snapshots yet.',
+        motivos: {
+          actualizar: 'Before updating',
+          'importar-perfil': 'Before importing a profile',
+          manual: 'Manual',
+        },
+      },
+    },
+    reasignar: {
+      titulo: 'Site folders',
+      texto:
+        'These folders come from the other computer. Find where they are on this one, or import the site as pending: it stays without a folder until you choose one.',
+      sitio: 'Site',
+      origen: 'Folder in the profile',
+      destino: 'Folder on this computer',
+      existe: 'Exists',
+      noExiste: 'Does not exist on this computer',
+      buscar: 'Find folder…',
+      cambiar: 'Change',
+      comoPendiente: 'Import anyway as pending',
+      prefijo: (viejo: string, nuevo: string) =>
+        `Use the same change for the others (${viejo} → ${nuevo})`,
+      omitido: 'It will not be imported',
+    },
+    asistente: {
+      titulo: 'Import a profile',
+      pasos: {
+        archivo: 'File',
+        revisar: 'Review',
+        confirmar: 'Confirm',
+        resultado: 'Result',
+      },
+      archivo: {
+        texto:
+          'Choose the .wolfperfil file. Nothing changes yet: first you will see what is going to be replaced, removed or left pending.',
+        elegir: 'Choose file…',
+        cambiar: 'Choose another',
+        ninguno: 'No file chosen',
+        leyendo: 'Reading the profile…',
+        error: 'The profile could not be read',
+      },
+      origen: (fecha: string, sistema: string) => `Created on ${fecha} on ${sistema}.`,
+      ignoradas: (n: number) =>
+        `${n} entries in the file are not part of a profile and are ignored.`,
+      reemplaza: {
+        titulo: 'What is replaced',
+        ninguno: 'There is no data in this folder: the import goes onto a clean installation.',
+        copia:
+          'Before replacing, it is copied to respaldos/pre-perfil-… and an environment snapshot is taken; every database that is replaced has its own snapshot. The data folder is never deleted.',
+        config: 'The configuration (config.json)',
+        sitio: (id: string) => `The site ${id}`,
+        base: (instancia: string, base: string) => `The database ${base} (${instancia})`,
+        plantilla: (id: string) => `The template ${id}`,
+        ca: 'The certificate authority (CA) of this computer',
+      },
+      versiones: {
+        titulo: 'Versions',
+        ninguna: 'The profile has no versions.',
+        instalada: 'Already installed',
+        descargar: 'Will be downloaded with its fingerprint verified',
+        pendienteDebil: 'Pending: no strong fingerprint, install it by hand',
+        pendienteFuera: 'Pending: it is no longer in the catalog',
+        huellas: {
+          fuerte: 'SHA-256 or SHA-512 fingerprint',
+          firmada: 'Signed',
+          debil: 'Weak fingerprint',
+          ninguna: 'No fingerprint',
+        },
+        descargas: (n: number) =>
+          `${n} versions will be downloaded from official sites, each with its fingerprint or signature verified.`,
+      },
+      instancias: {
+        titulo: 'Database instances',
+        existente: 'Already exists: kept with its port and version',
+        nueva: (puerto: number) => `Created with new credentials on port ${puerto}`,
+        reasignada: (de: number, a: number) => `Port ${de} is busy: it will use ${a}`,
+      },
+      bases: {
+        titulo: 'Databases',
+        ninguna: 'The profile has no databases.',
+        texto:
+          'They are restored with a user limited to each database and only with allowed statements. Existing ones are backed up first.',
+        omitir: 'Import without the databases',
+      },
+      plantillas: {
+        titulo: 'Templates',
+        existe: 'Already exists: replaced',
+        nueva: 'New',
+      },
+      quitado: {
+        titulo: 'What is not taken from the configuration',
+        texto:
+          'This data folder is clean: anything in the profile that points outside this computer is not taken.',
+      },
+      puertos: {
+        titulo: 'Busy ports',
+        texto: (lista: string) =>
+          `These ports from the profile are already used by another program on this computer: ${lista}. Change them from Services after importing.`,
+      },
+      ca: {
+        titulo: 'Certificate authority (CA)',
+        texto:
+          'The profile carries an encrypted CA. Import it only if it is yours: this computer would accept the certificates it signs.',
+        huella: 'SHA-256 fingerprint of the profile’s CA',
+        comparar: 'Compare it with the one on your original computer before accepting it.',
+        importar: 'Import the profile’s CA',
+        noImportar:
+          'If you do not import it, this computer uses its current CA or creates a new one.',
+        ajena: 'This CA has name constraints that are not WolfCore Dev’s: it cannot be imported.',
+        sinRestricciones:
+          'This CA has no name constraints: it can sign certificates for any website, banks and email included. Import it only if it is yours and the fingerprint matches.',
+        aceptarSin: 'I understand the risk: it is my CA and the fingerprint matches',
+        reemplazaLocal:
+          'This computer already has a CA. Importing the profile’s replaces it (a copy stays in the previous backup).',
+        reemplazar: 'Replace this computer’s CA',
+        noSeInstala: 'The CA is not installed by itself in the system certificate store.',
+      },
+      frase: {
+        titulo: 'Profile passphrase',
+        texto:
+          'The profile carries encrypted databases or CA. Type the passphrase you chose when exporting it.',
+        campo: 'Passphrase',
+        omitirBases: 'Import without the databases',
+        nota: 'The passphrase is only used in this window: it is not stored and it is erased when finished or closed.',
+      },
+      env: {
+        titulo: 'Project connection',
+        texto:
+          'Mark the projects whose .env should point to a new user of its own for their database (with a prior copy of the .env). The others are not touched and are reported.',
+      },
+      confirmar: {
+        titulo: 'Confirm the import',
+        resumen: (sitios: number, versiones: number, bases: number) =>
+          `${sitios} sites, ${versiones} versions and ${bases} databases will be imported.`,
+        importar: 'Import',
+        revisar: 'Review',
+        volver: 'Back',
+        bloqueos: {
+          sitios_sin_carpeta:
+            'Choose the folder of each site or mark it to be imported as pending.',
+          frase_requerida: 'Type the profile passphrase or import without the databases.',
+          ca_ajena: 'The profile’s CA cannot be imported.',
+          ca_sin_restricciones:
+            'Confirm separately that you want to import a CA without restrictions.',
+          reemplazar_ca: 'Confirm separately that you want to replace this computer’s CA.',
+        },
+      },
+      progreso:
+        'Importing the profile… Do not close the window: with databases or downloads it can take a while.',
+      resultado: {
+        titulo: 'Import result',
+        resumen: (importados: number, pendientes: number, omitidos: number, errores: number) =>
+          `${importados} imported, ${pendientes} pending, ${omitidos} skipped and ${errores} with errors.`,
+        respaldo: (ruta: string) => `Copy of what was replaced: ${ruta}`,
+        pendientes: 'What was left pending can be completed by hand.',
+        error: 'The profile could not be imported',
+        secciones: {
+          sitios: 'Sites',
+          versiones: 'Versions',
+          instancias: 'Instances',
+          bases: 'Databases',
+          plantillas: 'Templates',
+          env: '.env files',
+          ca: 'CA',
+        },
+        estados: {
+          importado: 'Imported',
+          pendiente: 'Pending',
+          omitido: 'Skipped',
+          error: 'Error',
+          instalada: 'Installed',
+          ya_instalada: 'Already there',
+          creada: 'Created',
+          existente: 'Already existed',
+          puerto_reasignado: 'Port reassigned',
+          reescrito: 'Rewritten',
+          sin_marcar: 'Not marked',
+        },
+        ca: {
+          importada: 'CA imported',
+          nueva: 'New CA generated',
+          sin_cambios: 'The CA did not change',
+        },
+        puerto: (de: number, a: number) => `Port ${de} → ${a}`,
+        copiaEnv: (ruta: string) => `.env copy: ${ruta}`,
+      },
+    },
     /** Aviso fuerte de la vista previa: la CA del perfil no tiene restricciones de nombre. */
     caSinRestricciones:
       'This CA can sign any website; import it only if it is yours, compare the fingerprint.',

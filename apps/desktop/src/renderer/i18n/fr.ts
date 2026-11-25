@@ -4468,6 +4468,245 @@ export const fr: Textos = {
   },
   /** Resultado de importar o exportar un perfil (D26). */
   perfiles: {
+    pantalla: {
+      titulo: 'Sauvegarde et profils',
+      descripcion:
+        "Un profil emporte votre environnement sur un autre ordinateur : sites, versions, instances, modèles et réglages. Il n'emporte jamais de clés, de jetons ni de mots de passe.",
+      aislado: {
+        titulo: 'Dossier de test',
+        texto: (ruta: string) =>
+          `WolfCore Dev utilise un dossier de données de test (${ruta}). Ce que vous faites ici ne touche ni votre dossier réel ni votre ordinateur : le fichier hosts n'est pas modifié et aucun certificat n'est installé.`,
+      },
+      exportar: {
+        titulo: "Exporter l'environnement",
+        texto:
+          'Enregistre un fichier .wolfperfil avec vos sites, versions, instances, modèles et réglages.',
+        bases: 'Inclure les bases de données',
+        basesAyuda:
+          'Les vidages complets (avec les données de vos clients) voyagent chiffrés avec la phrase.',
+        ca: "Inclure l'autorité de certification (CA)",
+        caAyuda:
+          'Elle est chiffrée avec la phrase. Importez-la uniquement sur un de vos ordinateurs.',
+        certificados: 'Inclure les certificats des sites',
+        certificadosAyuda: 'Ils ne voyagent qu’avec la CA, chiffrés avec elle.',
+        frase: 'Phrase secrète',
+        fraseRepetir: 'Répéter la phrase secrète',
+        fraseAyuda: (minimo: number) =>
+          `Au moins ${minimo} caractères. Sans elle, les bases et la CA sont irrécupérables, et elle n'est enregistrée nulle part.`,
+        problemas: {
+          frase_corta: (minimo: number) =>
+            `La phrase secrète doit comporter au moins ${minimo} caractères.`,
+          frase_distinta: 'Les deux phrases ne correspondent pas.',
+          certificados_sin_ca: "Les certificats ne voyagent qu'avec la CA.",
+        },
+        exportar: 'Exporter le profil…',
+        nota: "Le profil n'emporte jamais de clés, de jetons ni de mots de passe, ni les instantanés, la corbeille, les sauvegardes ou le dossier data.",
+        listo: 'Profil exporté',
+        guardado: (archivo: string, tamano: string) => `Enregistré dans ${archivo} (${tamano}).`,
+      },
+      importar: {
+        titulo: 'Importer un profil',
+        texto:
+          'Choisissez un fichier .wolfperfil. Avant de modifier quoi que ce soit, vous verrez tout ce qui est remplacé, retiré ou laissé en attente, et une copie de ce qui est remplacé est enregistrée.',
+        boton: 'Importer un profil…',
+      },
+      instantaneas: {
+        titulo: "Instantanés de l'environnement",
+        texto:
+          "Avant de mettre à jour PHP ou Nginx et avant d'importer un profil, WolfCore Dev enregistre une copie de votre configuration, de Nginx et des php.ini, sans clés ni données et rien que pour vous. Les 10 derniers sont conservés.",
+        tomar: 'En prendre un maintenant',
+        tomada: 'Instantané enregistré.',
+        sinNada: "Il n'y a encore rien à copier.",
+        vacia: "Il n'y a pas encore d'instantanés.",
+        motivos: {
+          actualizar: 'Avant une mise à jour',
+          'importar-perfil': "Avant l'importation d'un profil",
+          manual: 'Manuel',
+        },
+      },
+    },
+    reasignar: {
+      titulo: 'Dossiers des sites',
+      texto:
+        "Ces dossiers viennent de l'autre ordinateur. Cherchez où ils se trouvent sur celui-ci ou importez le site en attente : il reste sans dossier jusqu'à ce que vous en choisissiez un.",
+      sitio: 'Site',
+      origen: 'Dossier dans le profil',
+      destino: 'Dossier sur cet ordinateur',
+      existe: 'Existe',
+      noExiste: "N'existe pas sur cet ordinateur",
+      buscar: 'Chercher le dossier…',
+      cambiar: 'Changer',
+      comoPendiente: 'Importer quand même en attente',
+      prefijo: (viejo: string, nuevo: string) =>
+        `Appliquer le même changement aux autres (${viejo} → ${nuevo})`,
+      omitido: 'Ne sera pas importé',
+    },
+    asistente: {
+      titulo: 'Importer un profil',
+      pasos: {
+        archivo: 'Fichier',
+        revisar: 'Vérifier',
+        confirmar: 'Confirmer',
+        resultado: 'Résultat',
+      },
+      archivo: {
+        texto:
+          "Choisissez le fichier .wolfperfil. Rien n'est encore modifié : vous verrez d'abord ce qui sera remplacé, retiré ou laissé en attente.",
+        elegir: 'Choisir un fichier…',
+        cambiar: 'En choisir un autre',
+        ninguno: 'Aucun fichier choisi',
+        leyendo: 'Lecture du profil…',
+        error: 'Le profil n’a pas pu être lu',
+      },
+      origen: (fecha: string, sistema: string) => `Créé le ${fecha} sur ${sistema}.`,
+      ignoradas: (n: number) =>
+        `${n} entrées du fichier ne font pas partie d'un profil et sont ignorées.`,
+      reemplaza: {
+        titulo: 'Ce qui est remplacé',
+        ninguno:
+          "Il n'y a pas de données dans ce dossier : l'importation se fait sur une installation propre.",
+        copia:
+          "Avant de remplacer, tout est copié dans respaldos/pre-perfil-… et un instantané de l'environnement est pris ; chaque base remplacée a son propre instantané. Le dossier data n'est jamais supprimé.",
+        config: 'La configuration (config.json)',
+        sitio: (id: string) => `Le site ${id}`,
+        base: (instancia: string, base: string) => `La base ${base} (${instancia})`,
+        plantilla: (id: string) => `Le modèle ${id}`,
+        ca: "L'autorité de certification (CA) de cet ordinateur",
+      },
+      versiones: {
+        titulo: 'Versions',
+        ninguna: "Le profil n'a aucune version.",
+        instalada: 'Déjà installée',
+        descargar: 'Sera téléchargée avec son empreinte vérifiée',
+        pendienteDebil: "En attente : pas d'empreinte forte, installez-la à la main",
+        pendienteFuera: "En attente : elle n'est plus dans le catalogue",
+        huellas: {
+          fuerte: 'Empreinte SHA-256 ou SHA-512',
+          firmada: 'Signée',
+          debil: 'Empreinte faible',
+          ninguna: "Pas d'empreinte",
+        },
+        descargas: (n: number) =>
+          `${n} versions seront téléchargées depuis des sites officiels, chacune avec son empreinte ou sa signature vérifiée.`,
+      },
+      instancias: {
+        titulo: 'Instances de bases de données',
+        existente: 'Existe déjà : conservée avec son port et sa version',
+        nueva: (puerto: number) => `Créée avec de nouveaux identifiants sur le port ${puerto}`,
+        reasignada: (de: number, a: number) => `Le port ${de} est occupé : elle utilisera le ${a}`,
+      },
+      bases: {
+        titulo: 'Bases de données',
+        ninguna: "Le profil n'a aucune base.",
+        texto:
+          'Elles sont restaurées avec un utilisateur limité à chaque base et seulement avec des instructions autorisées. Celles qui existent déjà sont sauvegardées avant.',
+        omitir: 'Importer sans les bases',
+      },
+      plantillas: {
+        titulo: 'Modèles',
+        existe: 'Existe déjà : remplacé',
+        nueva: 'Nouveau',
+      },
+      quitado: {
+        titulo: 'Ce qui n’est pas repris de la configuration',
+        texto:
+          'Ce dossier de données est vide : on ne reprend pas du profil ce qui pointe en dehors de cet ordinateur.',
+      },
+      puertos: {
+        titulo: 'Ports occupés',
+        texto: (lista: string) =>
+          `Ces ports du profil sont déjà utilisés par un autre programme sur cet ordinateur : ${lista}. Changez-les depuis Services après l'importation.`,
+      },
+      ca: {
+        titulo: 'Autorité de certification (CA)',
+        texto:
+          "Le profil contient une CA chiffrée. Importez-la uniquement si c'est la vôtre : cet ordinateur accepterait les certificats qu'elle signe.",
+        huella: 'Empreinte SHA-256 de la CA du profil',
+        comparar: "Comparez-la avec celle de votre ordinateur d'origine avant de l'accepter.",
+        importar: 'Importer la CA du profil',
+        noImportar:
+          "Sans l'importer, cet ordinateur utilise sa CA actuelle ou en crée une nouvelle.",
+        ajena:
+          'Cette CA a des contraintes de nom qui ne sont pas celles de WolfCore Dev : elle ne peut pas être importée.',
+        sinRestricciones:
+          "Cette CA n'a aucune contrainte de nom : elle peut signer des certificats pour n'importe quel site web, banques et messagerie compris. Importez-la uniquement si c'est la vôtre et que l'empreinte correspond.",
+        aceptarSin: "Je comprends le risque : c'est ma CA et l'empreinte correspond",
+        reemplazaLocal:
+          'Cet ordinateur a déjà une CA. Importer celle du profil la remplace (une copie reste dans la sauvegarde préalable).',
+        reemplazar: 'Remplacer la CA de cet ordinateur',
+        noSeInstala:
+          "La CA ne s'installe pas toute seule dans le magasin de certificats du système.",
+      },
+      frase: {
+        titulo: 'Phrase secrète du profil',
+        texto:
+          "Le profil contient des bases ou la CA chiffrées. Saisissez la phrase secrète choisie lors de l'exportation.",
+        campo: 'Phrase secrète',
+        omitirBases: 'Importer sans les bases',
+        nota: "La phrase n'est utilisée que dans cette fenêtre : elle n'est pas enregistrée et elle est effacée à la fin ou à la fermeture.",
+      },
+      env: {
+        titulo: 'Connexion des projets',
+        texto:
+          'Cochez les projets dont le .env doit pointer vers un nouvel utilisateur propre à leur base (avec copie préalable du .env). Les autres ne sont pas touchés et sont signalés.',
+      },
+      confirmar: {
+        titulo: "Confirmer l'importation",
+        resumen: (sitios: number, versiones: number, bases: number) =>
+          `${sitios} sites, ${versiones} versions et ${bases} bases seront importés.`,
+        importar: 'Importer',
+        revisar: 'Vérifier',
+        volver: 'Retour',
+        bloqueos: {
+          sitios_sin_carpeta:
+            "Choisissez le dossier de chaque site ou cochez-le pour l'importer en attente.",
+          frase_requerida: 'Saisissez la phrase secrète du profil ou importez sans les bases.',
+          ca_ajena: 'La CA du profil ne peut pas être importée.',
+          ca_sin_restricciones:
+            'Confirmez à part que vous voulez importer une CA sans contraintes.',
+          reemplazar_ca: 'Confirmez à part que vous voulez remplacer la CA de cet ordinateur.',
+        },
+      },
+      progreso:
+        'Importation du profil… Ne fermez pas la fenêtre : avec des bases ou des téléchargements, cela peut être long.',
+      resultado: {
+        titulo: "Résultat de l'importation",
+        resumen: (importados: number, pendientes: number, omitidos: number, errores: number) =>
+          `${importados} importés, ${pendientes} en attente, ${omitidos} ignorés et ${errores} en erreur.`,
+        respaldo: (ruta: string) => `Copie de ce qui a été remplacé : ${ruta}`,
+        pendientes: 'Ce qui est resté en attente peut être terminé à la main.',
+        error: "Le profil n'a pas pu être importé",
+        secciones: {
+          sitios: 'Sites',
+          versiones: 'Versions',
+          instancias: 'Instances',
+          bases: 'Bases',
+          plantillas: 'Modèles',
+          env: 'Fichiers .env',
+          ca: 'CA',
+        },
+        estados: {
+          importado: 'Importé',
+          pendiente: 'En attente',
+          omitido: 'Ignoré',
+          error: 'Erreur',
+          instalada: 'Installée',
+          ya_instalada: 'Déjà là',
+          creada: 'Créée',
+          existente: 'Existait déjà',
+          puerto_reasignado: 'Port réattribué',
+          reescrito: 'Réécrit',
+          sin_marcar: 'Non coché',
+        },
+        ca: {
+          importada: 'CA importée',
+          nueva: 'Nouvelle CA générée',
+          sin_cambios: "La CA n'a pas changé",
+        },
+        puerto: (de: number, a: number) => `Port ${de} → ${a}`,
+        copiaEnv: (ruta: string) => `Copie du .env : ${ruta}`,
+      },
+    },
     /** Aviso fuerte de la vista previa: la CA del perfil no tiene restricciones de nombre. */
     caSinRestricciones:
       "Cette CA peut signer n'importe quel site web ; importez-la uniquement si c'est la vôtre, comparez l'empreinte.",

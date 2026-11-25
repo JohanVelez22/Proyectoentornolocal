@@ -4366,6 +4366,236 @@ export const es = {
   },
   /** Resultado de importar o exportar un perfil (D26). */
   perfiles: {
+    pantalla: {
+      titulo: 'Respaldo y perfiles',
+      descripcion:
+        'Un perfil lleva su entorno a otro equipo: sitios, versiones, instancias, plantillas y ajustes. Nunca lleva claves, tokens ni contraseñas.',
+      aislado: {
+        titulo: 'Carpeta de prueba',
+        texto: (ruta: string) =>
+          `WolfCore Dev usa una carpeta de datos de prueba (${ruta}). Lo que haga aquí no toca su carpeta real ni su equipo: no se escribe el archivo hosts ni se instalan certificados.`,
+      },
+      exportar: {
+        titulo: 'Exportar el entorno',
+        texto:
+          'Guarda un archivo .wolfperfil con sus sitios, versiones, instancias, plantillas y ajustes.',
+        bases: 'Incluir las bases de datos',
+        basesAyuda:
+          'Los volcados completos (con los datos de sus clientes) viajan cifrados con la frase.',
+        ca: 'Incluir la autoridad de certificación (CA)',
+        caAyuda: 'Va cifrada con la frase. Impórtela solo en un equipo suyo.',
+        certificados: 'Incluir los certificados de los sitios',
+        certificadosAyuda: 'Solo viajan junto con la CA y cifrados con ella.',
+        frase: 'Frase',
+        fraseRepetir: 'Repetir la frase',
+        fraseAyuda: (minimo: number) =>
+          `Al menos ${minimo} caracteres. Sin ella no se pueden recuperar las bases ni la CA, y no se guarda en ningún sitio.`,
+        problemas: {
+          frase_corta: (minimo: number) => `La frase debe tener al menos ${minimo} caracteres.`,
+          frase_distinta: 'Las dos frases no coinciden.',
+          certificados_sin_ca: 'Los certificados solo viajan junto con la CA.',
+        },
+        exportar: 'Exportar perfil…',
+        nota: 'El perfil nunca lleva claves, tokens ni contraseñas, ni las instantáneas, la papelera, los respaldos ni la carpeta data.',
+        listo: 'Perfil exportado',
+        guardado: (archivo: string, tamano: string) => `Guardado en ${archivo} (${tamano}).`,
+      },
+      importar: {
+        titulo: 'Importar un perfil',
+        texto:
+          'Elija un archivo .wolfperfil. Antes de cambiar nada verá todo lo que se reemplaza, se quita o queda pendiente, y se guarda una copia de lo que se reemplaza.',
+        boton: 'Importar perfil…',
+      },
+      instantaneas: {
+        titulo: 'Instantáneas del entorno',
+        texto:
+          'Antes de actualizar PHP o Nginx y antes de importar un perfil, WolfCore Dev guarda una copia de su configuración, de Nginx y de los php.ini, sin claves ni datos y solo para usted. Se conservan las 10 últimas.',
+        tomar: 'Tomar una ahora',
+        tomada: 'Instantánea guardada.',
+        sinNada: 'Todavía no hay nada que copiar.',
+        vacia: 'Todavía no hay instantáneas.',
+        motivos: {
+          actualizar: 'Antes de actualizar',
+          'importar-perfil': 'Antes de importar un perfil',
+          manual: 'A mano',
+        },
+      },
+    },
+    reasignar: {
+      titulo: 'Carpetas de los sitios',
+      texto:
+        'Estas carpetas vienen del otro equipo. Busque dónde están en este o importe el sitio como pendiente: queda sin carpeta hasta que la elija.',
+      sitio: 'Sitio',
+      origen: 'Carpeta en el perfil',
+      destino: 'Carpeta en este equipo',
+      existe: 'Existe',
+      noExiste: 'No existe en este equipo',
+      buscar: 'Buscar carpeta…',
+      cambiar: 'Cambiar',
+      comoPendiente: 'Importar igual como pendiente',
+      prefijo: (viejo: string, nuevo: string) =>
+        `Usar el mismo cambio para los demás (${viejo} → ${nuevo})`,
+      omitido: 'No se importará',
+    },
+    asistente: {
+      titulo: 'Importar un perfil',
+      pasos: {
+        archivo: 'Archivo',
+        revisar: 'Revisar',
+        confirmar: 'Confirmar',
+        resultado: 'Resultado',
+      },
+      archivo: {
+        texto:
+          'Elija el archivo .wolfperfil. Todavía no se cambia nada: primero verá lo que se va a reemplazar, quitar o dejar pendiente.',
+        elegir: 'Elegir archivo…',
+        cambiar: 'Elegir otro',
+        ninguno: 'Ningún archivo elegido',
+        leyendo: 'Leyendo el perfil…',
+        error: 'No se pudo leer el perfil',
+      },
+      origen: (fecha: string, sistema: string) => `Creado el ${fecha} en ${sistema}.`,
+      ignoradas: (n: number) => `${n} entradas del archivo no son de un perfil y se ignoran.`,
+      reemplaza: {
+        titulo: 'Lo que se reemplaza',
+        ninguno: 'No hay datos en esta carpeta: se importa sobre una instalación limpia.',
+        copia:
+          'Antes de reemplazar se copia en respaldos/pre-perfil-… y se toma una instantánea del entorno; cada base que se reemplaza tiene su propia instantánea. La carpeta data nunca se borra.',
+        config: 'La configuración (config.json)',
+        sitio: (id: string) => `El sitio ${id}`,
+        base: (instancia: string, base: string) => `La base ${base} (${instancia})`,
+        plantilla: (id: string) => `La plantilla ${id}`,
+        ca: 'La autoridad de certificación (CA) de este equipo',
+      },
+      versiones: {
+        titulo: 'Versiones',
+        ninguna: 'El perfil no trae versiones.',
+        instalada: 'Ya instalada',
+        descargar: 'Se descargará con su huella verificada',
+        pendienteDebil: 'Pendiente: sin huella fuerte, instálela a mano',
+        pendienteFuera: 'Pendiente: ya no está en el catálogo',
+        huellas: {
+          fuerte: 'Huella SHA-256 o SHA-512',
+          firmada: 'Firmada',
+          debil: 'Huella débil',
+          ninguna: 'Sin huella',
+        },
+        descargas: (n: number) =>
+          `Se descargarán ${n} versiones de sitios oficiales, cada una con su huella o firma verificada.`,
+      },
+      instancias: {
+        titulo: 'Instancias de bases de datos',
+        existente: 'Ya existe: se conserva con su puerto y su versión',
+        nueva: (puerto: number) => `Se crea con credenciales nuevas en el puerto ${puerto}`,
+        reasignada: (de: number, a: number) => `El puerto ${de} está ocupado: usará el ${a}`,
+      },
+      bases: {
+        titulo: 'Bases de datos',
+        ninguna: 'El perfil no trae bases.',
+        texto:
+          'Se restauran con un usuario limitado a cada base y solo con sentencias permitidas. Las que ya existen se respaldan antes.',
+        omitir: 'Importar sin las bases',
+      },
+      plantillas: {
+        titulo: 'Plantillas',
+        existe: 'Ya existe: se reemplaza',
+        nueva: 'Nueva',
+      },
+      quitado: {
+        titulo: 'Lo que no se toma de la configuración',
+        texto:
+          'Esta carpeta de datos está limpia: del perfil no se toma lo que apunta fuera de este equipo.',
+      },
+      puertos: {
+        titulo: 'Puertos ocupados',
+        texto: (lista: string) =>
+          `Estos puertos del perfil ya los usa otro programa en este equipo: ${lista}. Cámbielos desde Servicios después de importar.`,
+      },
+      ca: {
+        titulo: 'Autoridad de certificación (CA)',
+        texto:
+          'El perfil trae una CA cifrada. Impórtela solo si es la suya: este equipo aceptaría los certificados que firme.',
+        huella: 'Huella SHA-256 de la CA del perfil',
+        comparar: 'Compárela con la de su equipo de origen antes de aceptarla.',
+        importar: 'Importar la CA del perfil',
+        noImportar: 'Sin importarla, este equipo usa su CA actual o crea una nueva.',
+        ajena:
+          'Esta CA tiene restricciones de nombre que no son las de WolfCore Dev: no se puede importar.',
+        sinRestricciones:
+          'Esta CA no tiene restricciones de nombre: puede firmar certificados de cualquier sitio web, también de bancos y correo. Impórtela solo si es la suya y la huella coincide.',
+        aceptarSin: 'Entiendo el riesgo: es mi CA y la huella coincide',
+        reemplazaLocal:
+          'Este equipo ya tiene una CA. Importar la del perfil la reemplaza (queda una copia en el respaldo previo).',
+        reemplazar: 'Reemplazar la CA de este equipo',
+        noSeInstala: 'La CA no se instala sola en el almacén de certificados del sistema.',
+      },
+      frase: {
+        titulo: 'Frase del perfil',
+        texto: 'El perfil trae bases o la CA cifradas. Escriba la frase que eligió al exportarlo.',
+        campo: 'Frase',
+        omitirBases: 'Importar sin las bases',
+        nota: 'La frase solo se usa en esta ventana: no se guarda y se borra al terminar o al cerrar.',
+      },
+      env: {
+        titulo: 'Conexión de los proyectos',
+        texto:
+          'Marque los proyectos cuyo .env debe apuntar a un usuario propio nuevo de su base (con copia previa del .env). Los demás no se tocan y quedan informados.',
+      },
+      confirmar: {
+        titulo: 'Confirmar la importación',
+        resumen: (sitios: number, versiones: number, bases: number) =>
+          `Se importarán ${sitios} sitios, ${versiones} versiones y ${bases} bases.`,
+        importar: 'Importar',
+        revisar: 'Revisar',
+        volver: 'Volver',
+        bloqueos: {
+          sitios_sin_carpeta:
+            'Elija la carpeta de cada sitio o márquelo para importarlo como pendiente.',
+          frase_requerida: 'Escriba la frase del perfil o importe sin las bases.',
+          ca_ajena: 'La CA del perfil no se puede importar.',
+          ca_sin_restricciones: 'Confirme aparte que quiere importar una CA sin restricciones.',
+          reemplazar_ca: 'Confirme aparte que quiere reemplazar la CA de este equipo.',
+        },
+      },
+      progreso: 'Importando el perfil… No cierre la ventana: con bases o descargas puede tardar.',
+      resultado: {
+        titulo: 'Resultado de la importación',
+        resumen: (importados: number, pendientes: number, omitidos: number, errores: number) =>
+          `${importados} importados, ${pendientes} pendientes, ${omitidos} omitidos y ${errores} con error.`,
+        respaldo: (ruta: string) => `Copia de lo que se reemplazó: ${ruta}`,
+        pendientes: 'Lo que quedó pendiente se puede completar a mano.',
+        error: 'No se pudo importar el perfil',
+        secciones: {
+          sitios: 'Sitios',
+          versiones: 'Versiones',
+          instancias: 'Instancias',
+          bases: 'Bases',
+          plantillas: 'Plantillas',
+          env: 'Archivos .env',
+          ca: 'CA',
+        },
+        estados: {
+          importado: 'Importado',
+          pendiente: 'Pendiente',
+          omitido: 'Omitido',
+          error: 'Error',
+          instalada: 'Instalada',
+          ya_instalada: 'Ya estaba',
+          creada: 'Creada',
+          existente: 'Ya existía',
+          puerto_reasignado: 'Puerto reasignado',
+          reescrito: 'Reescrito',
+          sin_marcar: 'Sin marcar',
+        },
+        ca: {
+          importada: 'CA importada',
+          nueva: 'CA nueva generada',
+          sin_cambios: 'La CA no cambió',
+        },
+        puerto: (de: number, a: number) => `Puerto ${de} → ${a}`,
+        copiaEnv: (ruta: string) => `Copia del .env: ${ruta}`,
+      },
+    },
     /** Aviso fuerte de la vista previa: la CA del perfil no tiene restricciones de nombre. */
     caSinRestricciones:
       'Esta CA puede firmar cualquier sitio web; impórtela solo si es la suya, compare la huella.',

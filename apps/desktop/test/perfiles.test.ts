@@ -12,7 +12,11 @@ import {
 import { RUTAS_IPC, type VistaPreviaPerfil } from '../src/shared/api';
 import {
   bloqueosImportar,
+  estadoVersion,
+  filaReemplaza,
   fraseNecesaria,
+  rellenar,
+  tamanoLegible,
   huellaEnGrupos,
   lineasConfigQuitada,
   MIN_FRASE,
@@ -276,6 +280,44 @@ describe('perfiles (D27): utilidades del asistente', () => {
       avisos: [],
     });
     expect(r).toEqual({ importados: 3, pendientes: 2, omitidos: 1, errores: 1 });
+  });
+});
+
+describe('perfiles (D27): textos de la vista previa', () => {
+  it('interpreta lo que se reemplaza', () => {
+    expect(filaReemplaza('config.json')).toEqual({ tipo: 'config' });
+    expect(filaReemplaza('ca')).toEqual({ tipo: 'ca' });
+    expect(filaReemplaza('sitio:tienda')).toEqual({ tipo: 'sitio', id: 'tienda' });
+    expect(filaReemplaza('plantilla:base-laravel-abc')).toEqual({
+      tipo: 'plantilla',
+      id: 'base-laravel-abc',
+    });
+    expect(filaReemplaza('base:mysql@8.4/tienda')).toEqual({
+      tipo: 'base',
+      instancia: 'mysql@8.4',
+      base: 'tienda',
+    });
+    for (const raro of ['', 'base:sin-barra', 'base:/x', 'sitio:', 'otra:cosa']) {
+      expect(filaReemplaza(raro), raro).toBeNull();
+    }
+  });
+
+  it('una versión se instala sola solo con huella fuerte o firma; el resto queda pendiente', () => {
+    const v = (o: Partial<Parameters<typeof estadoVersion>[0]>) =>
+      estadoVersion({ instalada: false, disponible: true, huella: 'fuerte', ...o });
+    expect(v({ instalada: true })).toBe('instalada');
+    expect(v({})).toBe('descargar');
+    expect(v({ huella: 'firmada' })).toBe('descargar');
+    expect(v({ huella: 'debil' })).toBe('pendienteDebil');
+    expect(v({ huella: 'ninguna' })).toBe('pendienteDebil');
+    expect(v({ disponible: false })).toBe('pendienteFuera');
+  });
+
+  it('tamaños y parámetros', () => {
+    expect(tamanoLegible(512 * 1024)).toBe('0.5 MB');
+    expect(tamanoLegible(40 * 1024 * 1024)).toBe('40 MB');
+    expect(tamanoLegible(3 * 1024 * 1024 * 1024)).toBe('3.0 GB');
+    expect(rellenar('base {base} ({instancia})', { base: 'a' })).toBe('base a ({instancia})');
   });
 });
 

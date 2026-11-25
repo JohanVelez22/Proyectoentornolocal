@@ -188,3 +188,54 @@ export function resumenImportacion(r: ResultadoImportarPerfil): ResumenImportaci
   for (const b of r.bases) sumar(b.estado);
   return c;
 }
+
+/* ───────────── Texto de lo que muestra la vista previa y el resultado ───────────── */
+
+export type FilaReemplaza =
+  | { tipo: 'config' }
+  | { tipo: 'ca' }
+  | { tipo: 'sitio'; id: string }
+  | { tipo: 'plantilla'; id: string }
+  | { tipo: 'base'; instancia: string; base: string };
+
+/** Interpreta los textos de `reemplaza` de la vista previa (`sitio:<id>`, `base:<inst>/<base>`…). */
+export function filaReemplaza(x: string): FilaReemplaza | null {
+  if (x === 'config.json') return { tipo: 'config' };
+  if (x === 'ca') return { tipo: 'ca' };
+  const i = x.indexOf(':');
+  if (i < 0) return null;
+  const tipo = x.slice(0, i);
+  const resto = x.slice(i + 1);
+  if (tipo === 'sitio' && resto) return { tipo: 'sitio', id: resto };
+  if (tipo === 'plantilla' && resto) return { tipo: 'plantilla', id: resto };
+  if (tipo === 'base') {
+    const j = resto.indexOf('/');
+    if (j > 0 && j < resto.length - 1) {
+      return { tipo: 'base', instancia: resto.slice(0, j), base: resto.slice(j + 1) };
+    }
+  }
+  return null;
+}
+
+export type EstadoVersionVista = 'instalada' | 'descargar' | 'pendienteDebil' | 'pendienteFuera';
+
+/** Qué pasará con una versión del perfil (la huella es la del catálogo de este equipo). */
+export function estadoVersion(
+  v: Pick<VistaPreviaPerfil['versiones'][number], 'instalada' | 'disponible' | 'huella'>,
+): EstadoVersionVista {
+  if (v.instalada) return 'instalada';
+  if (!v.disponible) return 'pendienteFuera';
+  return v.huella === 'fuerte' || v.huella === 'firmada' ? 'descargar' : 'pendienteDebil';
+}
+
+/** Tamaño en MB o GB (un decimal). */
+export function tamanoLegible(bytes: number): string {
+  const mb = bytes / (1024 * 1024);
+  if (mb < 1024) return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
+  return `${(mb / 1024).toFixed(1)} GB`;
+}
+
+/** Rellena los `{parámetros}` de un texto. */
+export function rellenar(plantilla: string, datos: Record<string, string> | undefined): string {
+  return plantilla.replace(/\{(\w+)\}/g, (marca, k: string) => datos?.[k] ?? marca);
+}
