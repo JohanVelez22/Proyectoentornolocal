@@ -100,7 +100,7 @@ export const PARAMETROS_ERROR = {
   // red local (D25)
   'lan.sitio_no_encontrado': [],
   'lan.confirmacion_requerida': ['dominio'],
-  'lan.confirmacion_datos_reales': ['dominio'],
+  'lan.datos_reales': ['dominio'],
   'lan.sin_red': [],
   'lan.ip_no_valida': ['ip'],
   'lan.requiere_https': ['dominio'],
@@ -286,6 +286,8 @@ export const PARAMETROS_ERROR = {
   'doctor.vcredist_ausente': [],
   'doctor.enlazador_msvc_ausente': [],
   'doctor.antivirus_sin_exclusion': [],
+  'doctor.firewall_reglas': ['cantidad', 'perfiles', 'programa'],
+  'doctor.firewall_no_comprobado': [],
   'doctor.servicio_en_error': ['servicio', 'id'],
   'doctor.revision_fallida': ['revision'],
   'doctor.confirmacion_requerida': [],

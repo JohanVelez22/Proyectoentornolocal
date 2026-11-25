@@ -169,7 +169,7 @@ const api: ApiEntorno = {
     estado: () => invocar('lan.estado'),
     activar: (id, confirmacion) => invocar('lan.activar', id, confirmacion),
     desactivar: (id) => invocar('lan.desactivar', id),
-    comandoFirewall: (puerto) => invocar('lan.comandoFirewall', puerto),
+    comandoFirewall: (puerto, para) => invocar('lan.comandoFirewall', puerto, para),
     abrirCaMovil: (ip) => invocar('lan.abrirCaMovil', ip),
     cerrarCaMovil: () => invocar('lan.cerrarCaMovil'),
   },

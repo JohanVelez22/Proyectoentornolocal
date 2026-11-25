@@ -1,4 +1,4 @@
-import { mkdir, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import path from 'node:path';
 import type { Rutas } from '../rutas';
@@ -108,29 +108,46 @@ export class VhostsAuxiliares {
     return p;
   }
 
-  /** Escribe el vhost y recarga Nginx; si Nginx lo rechaza, no queda nada y el error sube. */
+  /**
+   * Escribe el vhost y recarga Nginx. Si Nginx lo rechaza vuelve a lo que había (el contenido
+   * anterior, o nada si era nuevo) y el error sube.
+   */
   agregar(id: string, contenido: string): Promise<void> {
     return this.serializar(async () => {
       const f = this.archivo(id);
       await mkdir(path.dirname(f), { recursive: true });
+      const previo = await readFile(f, 'utf8').catch(() => null);
       await writeFile(f, contenido, 'utf8');
       try {
         await this.d.recargar();
       } catch (e) {
-        await rm(f, { force: true });
+        if (previo === null) await rm(f, { force: true });
+        else await writeFile(f, previo, 'utf8');
         throw e;
       }
     });
   }
 
-  /** Lo quita (idempotente) y, si existía, recarga Nginx. Un fallo al recargar no impide quitarlo. */
+  /**
+   * Lo quita (idempotente) y, si existía, recarga Nginx. Un fallo al recargar no impide quitarlo.
+   * Los de la red local (`lan-`) recargan siempre: un `server` que Nginx tenga cargado de una
+   * sesión anterior quedaría abierto aunque el archivo ya no esté.
+   */
   quitar(id: string): Promise<void> {
     return this.serializar(async () => {
       const f = this.archivo(id);
       const habia = (await this.ids()).includes(id);
       await rm(f, { force: true });
-      if (habia) await this.d.recargar().catch(() => undefined);
+      if (habia || id.startsWith('lan-')) await this.d.recargar().catch(() => undefined);
     });
+  }
+
+  /**
+   * Lo quita sin recargar ni pasar por la cola: para quien ya está dentro de una recarga o
+   * generación de la configuración (quitar un `server` cuya IP ya no existe antes de probarla).
+   */
+  async quitarSinRecargar(id: string): Promise<void> {
+    await rm(this.archivo(id), { force: true });
   }
 
   /** Ids presentes (con `prefijo` si se da). */

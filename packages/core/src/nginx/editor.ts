@@ -520,18 +520,19 @@ function revisarDestino(d: Directiva, ctx: ContextoVhost, avisos: AvisoVhost[]):
 }
 
 /**
- * Modo avanzado: `listen <puerto>` o `*:<puerto>` y nada más. Una dirección concreta
- * (`127.0.0.1:80`, `[::]:80`) haría del sitio el servidor por defecto de esa dirección, y las
+ * Modo avanzado: `listen 127.0.0.1:<puerto>` o `listen [::1]:<puerto>` y nada más. Sin dirección
+ * o con `*:` / `0.0.0.0` / `[::]` Nginx escucharía en toda la red (con el aviso del cortafuegos
+ * aceptado, todos los sitios quedarían expuestos): la red local va solo por los `lan-*`. Las
  * opciones son del socket (las de un sitio cambiarían a todos): `ssl` es obligatoria en el
  * puerto HTTPS y `http2` solo va ahí; en el HTTP, ninguna.
  */
 function revisarListen(d: Directiva, ctx: ContextoVhost): void {
-  const m = /^(?:\*:)?(\d{1,5})$/.exec(d.args[0] ?? '');
+  const m = /^(?:127\.0\.0\.1|\[::1\]):(\d{1,5})$/.exec(d.args[0] ?? '');
   const puerto = m ? Number(m[1]) : NaN;
   if (puerto !== ctx.puertoHttp && puerto !== ctx.puertoHttps) {
     throw new ErrorWolf(
       'nginx.puerto_ajeno',
-      `Línea ${d.linea}: el sitio solo puede escuchar en los puertos de Nginx (${ctx.puertoHttp} y ${ctx.puertoHttps}), sin dirección.`,
+      `Línea ${d.linea}: el sitio solo puede escuchar en los puertos de Nginx (${ctx.puertoHttp} y ${ctx.puertoHttps}), en 127.0.0.1 o [::1] (la red local va solo por «Red local»).`,
       { linea: d.linea },
     );
   }

@@ -507,6 +507,51 @@ describe('Doctor: VC++, antivirus y servicios', () => {
     expect(await d.reparar(h!.id, true)).toEqual({ ok: false, codigo: 'doctor.solo_informa' });
   });
 
+  describe('firewall: reglas de entrada Allow de nginx, PHP, MySQL y PostgreSQL', () => {
+    const regla = (nombre: string, programa: string, perfil = 'Public, Private') => ({
+      nombre,
+      nombreVisible: programa.split('/').pop()!,
+      perfil,
+      programa,
+    });
+
+    it('sin reglas no hay hallazgo', async () => {
+      plat.reglasEntrada = { ok: true, reglas: [] };
+      expect(await solo(new Doctor(deps()), ['firewall'])).toEqual([]);
+    });
+
+    it('avisa con el perfil y la ruta, y muestra el comando para quitarlas sin ejecutarlo', async () => {
+      plat.reglasEntrada = {
+        ok: true,
+        reglas: [
+          regla('{AAAA-1}', 'C:/datos/bin/nginx/1.28/nginx.exe'),
+          regla('{BBBB-2}', 'C:/datos/bin/mysql/8.4/bin/mysqld.exe', 'Private'),
+        ],
+      };
+      const d = new Doctor(deps());
+      const [h] = await solo(d, ['firewall']);
+      expect(h).toMatchObject({
+        codigo: 'doctor.firewall_reglas',
+        gravedad: 'aviso',
+        datos: { cantidad: 2, perfiles: 'Private, Public, Private' },
+        reparacion: { soloInforma: true, requiereAdmin: true },
+      });
+      expect(h!.evidencia).toContain('nginx.exe');
+      expect(h!.evidencia).toContain('Public, Private');
+      expect(h!.evidencia).toContain('mysqld.exe');
+      expect(h!.reparacion!.comandoManual).toContain('quitar-reglas-firewall');
+      expect(h!.reparacion!.comandoManual).toContain('{AAAA-1}');
+      expect(await d.reparar(h!.id, true)).toEqual({ ok: false, codigo: 'doctor.solo_informa' });
+    });
+
+    it('si no se pueden leer (sin permisos) es "no se pudo comprobar", no un error', async () => {
+      plat.reglasEntrada = { ok: false, reglas: [] };
+      const [h] = await solo(new Doctor(deps()), ['firewall']);
+      expect(h).toMatchObject({ codigo: 'doctor.firewall_no_comprobado', gravedad: 'info' });
+      expect(h!.reparacion).toBeUndefined();
+    });
+  });
+
   it('servicio en error: evidencia con el final del log y reintento', async () => {
     expect(await solo(new Doctor(deps()), ['servicios'])).toEqual([]);
     estados[1] = servicio({

@@ -329,11 +329,15 @@ describe('revisarVhost: vhost completo (modo avanzado)', () => {
   it('el vhost generado (con HTTPS y redirección) es un buen punto de partida', () => {
     const g = generado();
     expect(revisarVhost(g, 'manual', ctx()).avisos).toEqual([]);
-    expect(revisarVhost(g.replace('listen 80;', 'listen *:80;'), 'manual', ctx()).avisos).toEqual(
-      [],
-    );
     expect(
-      revisarVhost(g.replace('listen 443 ssl;', 'listen 443 ssl http2;'), 'manual', ctx()).avisos,
+      revisarVhost(g.replace('listen 127.0.0.1:80;', 'listen [::1]:80;'), 'manual', ctx()).avisos,
+    ).toEqual([]);
+    expect(
+      revisarVhost(
+        g.replace('listen 127.0.0.1:443 ssl;', 'listen 127.0.0.1:443 ssl http2;'),
+        'manual',
+        ctx(),
+      ).avisos,
     ).toEqual([]);
   });
 
@@ -343,10 +347,14 @@ describe('revisarVhost: vhost completo (modo avanzado)', () => {
       (g: string) => g.replace('server_name blog.test', 'server_name otro.test'),
       'nginx.dominio_ajeno',
     ],
-    ['otro puerto', (g: string) => g.replace('listen 80;', 'listen 8081;'), 'nginx.puerto_ajeno'],
+    [
+      'otro puerto',
+      (g: string) => g.replace('listen 127.0.0.1:80;', 'listen 127.0.0.1:8081;'),
+      'nginx.puerto_ajeno',
+    ],
     [
       'default_server',
-      (g: string) => g.replace('listen 80;', 'listen 80 default_server;'),
+      (g: string) => g.replace('listen 127.0.0.1:80;', 'listen 127.0.0.1:80 default_server;'),
       'nginx.directiva_prohibida',
     ],
     [
@@ -356,28 +364,43 @@ describe('revisarVhost: vhost completo (modo avanzado)', () => {
     ],
     ['sin server', () => 'gzip on;', 'nginx.fuera_de_server'],
     [
-      'una dirección (sería el servidor por defecto de 127.0.0.1:80)',
-      (g: string) => g.replace('listen 80;', 'listen 127.0.0.1:80;'),
+      'listen sin dirección (escucharía en toda la red)',
+      (g: string) => g.replace('listen 127.0.0.1:80;', 'listen 80;'),
       'nginx.puerto_ajeno',
     ],
     [
-      'IPv6 (sería el servidor por defecto de [::]:80)',
-      (g: string) => g.replace('listen 80;', 'listen [::]:80;'),
+      '*:puerto (toda la red)',
+      (g: string) => g.replace('listen 127.0.0.1:80;', 'listen *:80;'),
+      'nginx.puerto_ajeno',
+    ],
+    [
+      '0.0.0.0 (toda la red)',
+      (g: string) => g.replace('listen 127.0.0.1:80;', 'listen 0.0.0.0:80;'),
+      'nginx.puerto_ajeno',
+    ],
+    [
+      'IPv6 [::] (toda la red)',
+      (g: string) => g.replace('listen 127.0.0.1:80;', 'listen [::]:80;'),
+      'nginx.puerto_ajeno',
+    ],
+    [
+      'una IP de la red local',
+      (g: string) => g.replace('listen 127.0.0.1:80;', 'listen 192.168.1.50:80;'),
       'nginx.puerto_ajeno',
     ],
     [
       'ssl en el puerto HTTP (pasaría el 80 a TLS para todos)',
-      (g: string) => g.replace('listen 80;', 'listen 80 ssl;'),
+      (g: string) => g.replace('listen 127.0.0.1:80;', 'listen 127.0.0.1:80 ssl;'),
       'nginx.directiva_prohibida',
     ],
     [
       'http2 en el puerto HTTP',
-      (g: string) => g.replace('listen 80;', 'listen 80 http2;'),
+      (g: string) => g.replace('listen 127.0.0.1:80;', 'listen 127.0.0.1:80 http2;'),
       'nginx.directiva_prohibida',
     ],
     [
       'el puerto HTTPS sin ssl (lo pasaría a texto plano)',
-      (g: string) => g.replace('listen 443 ssl;', 'listen 443;'),
+      (g: string) => g.replace('listen 127.0.0.1:443 ssl;', 'listen 127.0.0.1:443;'),
       'nginx.directiva_prohibida',
     ],
   ])('rechaza %s', (_n, cambiar, codigo) => {

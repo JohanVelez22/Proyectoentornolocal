@@ -1,4 +1,5 @@
 import { revisarAntivirus } from './revisiones/antivirus';
+import { revisarFirewall } from './revisiones/firewall';
 import { revisarCa, revisarCertificados, revisarConfianza } from './revisiones/ca';
 import { revisarEnlazadorMsvc } from './revisiones/enlazador';
 import { revisarHosts } from './revisiones/hosts';
@@ -29,6 +30,7 @@ const REVISIONES: Record<IdRevision, Revision> = {
   vcredist: revisarVcRedist,
   'enlazador-msvc': revisarEnlazadorMsvc,
   antivirus: revisarAntivirus,
+  firewall: revisarFirewall,
   servicios: revisarServicios,
 };
 

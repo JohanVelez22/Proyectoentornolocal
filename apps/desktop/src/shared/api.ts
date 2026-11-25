@@ -346,14 +346,18 @@ export interface SitioCompartidoLan {
 export interface EstadoLan {
   ips: string[];
   sitios: SitioCompartidoLan[];
+  /** Perfil de cada red según Windows (`null`: no se pudo leer). Una red pública merece un aviso. */
+  perfiles: Record<string, 'privado' | 'publico' | 'dominio' | null>;
+  /** Dominios que se dejaron de compartir en esta consulta porque la IP ya no es de este equipo. */
+  redCambio: string[];
 }
 
 /** Lo que el usuario confirmó al compartir: el núcleo comprueba que la IP siga siendo suya. */
 export interface ConfirmacionLan {
   ip: string;
   https: boolean;
-  /** Con datos reales, la casilla reforzada. */
-  datosReales?: boolean;
+  /** Solo lo envía el botón "Compartir" del diálogo: sin `true` el núcleo no abre nada. */
+  confirmado: boolean;
 }
 
 /** Servidor temporal de `ca.crt` para el móvil. */
@@ -362,6 +366,10 @@ export interface CaMovilAbierta {
   ip: string;
   /** Marca de tiempo (ms) en que se cierra solo. */
   expira: number;
+  /** Puerto en el que escucha (el del comando del cortafuegos). */
+  puerto: number;
+  /** Huellas del `ca.crt`, para compararlas en el móvil antes de confiar. */
+  huellas: { sha256: string; sha1: string };
 }
 
 /** Lo único que la interfaz ve de una clave de IA: si hay una y sus 4 últimos caracteres. */
@@ -738,7 +746,7 @@ export interface ApiEntorno {
     ): Promise<{ url: string; ip: string; puerto: number }>;
     desactivar(sitioId: string): Promise<void>;
     /** Comando de PowerShell (administrador) para la regla del cortafuegos; no se ejecuta solo. */
-    comandoFirewall(puerto: number): Promise<string>;
+    comandoFirewall(puerto: number, para?: 'sitio' | 'ca'): Promise<string>;
     /** Abre el servidor temporal de `ca.crt` (solo ese archivo, 10 minutos como máximo). */
     abrirCaMovil(ip?: string): Promise<CaMovilAbierta>;
     cerrarCaMovil(): Promise<void>;

@@ -54,7 +54,7 @@ describe('generarVhost', () => {
     );
     for (const l of [
       'server_name a.test b.test;',
-      'listen 80;',
+      'listen 127.0.0.1:80;',
       'charset utf-8;',
       'access_log "C:/L/a.log";',
       'error_log "C:/L/e.log";',
@@ -160,7 +160,7 @@ describe('generarNginxPrincipal', () => {
       logsDir: 'C:/D/logs',
       puerto: 8089,
     });
-    expect(c).toContain('listen 8089 default_server;');
+    expect(c).toContain('listen 127.0.0.1:8089 default_server;');
     expect(c).toContain('server_name _;');
     expect(c).toMatch(/return 404 '[^']*Sitio no encontrado en WolfCore Dev[^']*';/);
     expect(c.indexOf('default_server')).toBeLessThan(c.indexOf('include "C:/D/sites/*.conf";'));
@@ -213,10 +213,19 @@ describe('generarVhost con HTTPS', () => {
     expect(generarVhost(sitio({ https: true }), o)).not.toContain('ssl');
   });
 
+  it('ningún listen de un sitio queda sin dirección o en 0.0.0.0 (solo 127.0.0.1)', () => {
+    const v = generarVhost(sitio({ https: true, redirigirHttps: true }), { ...o, https });
+    for (const texto of [v]) {
+      const listens = texto.match(/^\s*listen\s+.*$/gm) ?? [];
+      expect(listens.length).toBeGreaterThan(0);
+      for (const l of listens) expect(l, l).toMatch(/listen 127\.0\.0\.1:\d+/);
+    }
+  });
+
   it('con https agrega listen ssl, http2 y los certificados', () => {
     const v = generarVhost(sitio({ https: true }), { ...o, https });
-    expect(v).toContain('listen 80;');
-    expect(v).toContain('listen 443 ssl;');
+    expect(v).toContain('listen 127.0.0.1:80;');
+    expect(v).toContain('listen 127.0.0.1:443 ssl;');
     expect(v).toContain('http2 on;');
     expect(v).toContain('ssl_certificate "C:/C/a.crt";');
     expect(v).toContain('ssl_certificate_key "C:/C/a.key";');
@@ -227,9 +236,9 @@ describe('generarVhost con HTTPS', () => {
     const v = generarVhost(sitio({ https: true, redirigirHttps: true }), { ...o, https });
     const [http, ssl] = v.split('\nserver {');
     expect(http).toContain(REDIR);
-    expect(http).toContain('listen 80;');
+    expect(http).toContain('listen 127.0.0.1:80;');
     expect(http).not.toContain('ssl_certificate');
-    expect(ssl).toContain('listen 443 ssl;');
+    expect(ssl).toContain('listen 127.0.0.1:443 ssl;');
     expect(ssl).not.toContain('pel_redir');
     // El túnel de Cloudflare llega por HTTP con estas cabeceras: nunca debe redirigir.
     expect(v.indexOf('$http_cf_connecting_ip')).toBeLessThan(v.indexOf('return 301'));
@@ -252,12 +261,22 @@ describe('generarNginxPrincipal con HTTPS', () => {
     logsDir: 'C:\\l',
     puerto: 80,
   };
+  it('ningún listen del servidor por defecto queda sin dirección o en 0.0.0.0', () => {
+    const c = generarNginxPrincipal({
+      ...principal,
+      https: { puerto: 443, crt: 'C:/c/l.crt', key: 'C:/c/l.key' },
+    });
+    const listens = c.match(/^\s*listen\s+.*$/gm) ?? [];
+    expect(listens.length).toBeGreaterThan(1);
+    for (const l of listens) expect(l, l).toMatch(/listen 127\.0\.0\.1:\d+/);
+  });
+
   it('escucha también en el puerto HTTPS con el certificado de localhost', () => {
     const c = generarNginxPrincipal({
       ...principal,
       https: { puerto: 443, crt: 'C:\\c\\l.crt', key: 'C:\\c\\l.key' },
     });
-    expect(c).toContain('listen 443 ssl default_server;');
+    expect(c).toContain('listen 127.0.0.1:443 ssl default_server;');
     expect(c).toContain('ssl_certificate "C:/c/l.crt";');
   });
   it('sin https no escucha en 443', () => {

@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -19,6 +19,8 @@ export interface DepsServidorCa {
   /** Solo para pruebas: qué IP se acepta (por defecto, las de `ipsLocales`). */
   permitirIp?: (ip: string) => boolean;
   duracionMs?: number;
+  /** Puerto en el que escuchar en esa IP (el rango 8100-8199 de la red local); sin él, el sistema elige. */
+  elegirPuerto?: (ip: string) => Promise<number>;
 }
 
 interface Abierto {
@@ -26,6 +28,8 @@ interface Abierto {
   url: string;
   ip: string;
   expira: number;
+  puerto: number;
+  huellas: { sha256: string; sha1: string };
   temporizador: NodeJS.Timeout;
 }
 
@@ -34,6 +38,24 @@ export interface CaMovilAbierta {
   ip: string;
   /** Marca de tiempo (ms) en que se cierra solo. */
   expira: number;
+  /** Puerto en el que escucha (el que hay que permitir en el cortafuegos). */
+  puerto: number;
+  /** Huellas del `ca.crt` que se entrega, para compararlas en el móvil antes de confiar. */
+  huellas: { sha256: string; sha1: string };
+}
+
+const conDosPuntos = (hex: string): string => (hex.toUpperCase().match(/../g) ?? []).join(':');
+
+/** SHA-256 y SHA-1 del DER del certificado (lo que muestran Android e iOS), o null si no es un PEM. */
+export function huellasDePem(pem: string): { sha256: string; sha1: string } | null {
+  const m = /-----BEGIN CERTIFICATE-----([\s\S]+?)-----END CERTIFICATE-----/.exec(pem);
+  if (!m) return null;
+  const der = Buffer.from(m[1]!.replace(/\s+/g, ''), 'base64');
+  if (der.length === 0) return null;
+  return {
+    sha256: conDosPuntos(createHash('sha256').update(der).digest('hex')),
+    sha1: conDosPuntos(createHash('sha1').update(der).digest('hex')),
+  };
 }
 
 /**
@@ -65,8 +87,12 @@ export class ServidorCa {
 
   private async abrirInterno(o: { ip?: string }): Promise<CaMovilAbierta> {
     if (this.abierto_) {
-      const { url, ip, expira } = this.abierto_;
-      return { url, ip, expira };
+      // Otra IP: el servidor anterior se cierra antes de abrir el nuevo (nunca dos a la vez).
+      if (o.ip === undefined || o.ip === this.abierto_.ip) {
+        const { url, ip, expira, puerto, huellas } = this.abierto_;
+        return { url, ip, expira, puerto, huellas };
+      }
+      await this.cerrarYa();
     }
     const ips = ipsLocales(this.d.interfaces?.());
     if (ips.length === 0 && !o.ip) {
@@ -80,6 +106,9 @@ export class ServidorCa {
       });
     }
     await this.d.asegurarCa();
+    const huellas = huellasDePem(await readFile(this.d.rutaCa(), 'utf8'));
+    if (!huellas) throw new ErrorWolf('lan.sin_red', 'La CA no es un certificado válido.');
+    const puertoElegido = (await this.d.elegirPuerto?.(ip)) ?? 0;
     const token = randomBytes(16).toString('hex');
     const esperado = Buffer.from(`/${token}/ca.crt`);
 
@@ -93,7 +122,7 @@ export class ServidorCa {
     servidor.maxHeadersCount = 40;
     await new Promise<void>((resolve, reject) => {
       servidor.once('error', reject);
-      servidor.listen({ host: ip, port: 0, exclusive: true }, () => {
+      servidor.listen({ host: ip, port: puertoElegido, exclusive: true }, () => {
         servidor.off('error', reject);
         resolve();
       });
@@ -102,11 +131,11 @@ export class ServidorCa {
     const puerto = (servidor.address() as AddressInfo).port;
     const duracion = this.d.duracionMs ?? DURACION_SERVIDOR_CA_MS;
     const expira = Date.now() + duracion;
-    const temporizador = setTimeout(() => void this.cerrar(), duracion);
+    const temporizador = setTimeout(() => void this.cerrarYa(), duracion);
     temporizador.unref();
     const url = `http://${ip}:${puerto}/${token}/ca.crt`;
-    this.abierto_ = { servidor, url, ip, expira, temporizador };
-    return { url, ip, expira };
+    this.abierto_ = { servidor, url, ip, expira, puerto, huellas, temporizador };
+    return { url, ip, expira, puerto, huellas };
   }
 
   private async responder(
@@ -158,6 +187,12 @@ export class ServidorCa {
 
   /** Cierra el servidor y corta las conexiones abiertas (idempotente). */
   async cerrar(): Promise<void> {
+    // Un `abrir` en curso termina primero: si no, su servidor quedaría abierto tras cerrar.
+    if (this.abriendo) await this.abriendo.catch(() => undefined);
+    await this.cerrarYa();
+  }
+
+  private async cerrarYa(): Promise<void> {
     const a = this.abierto_;
     this.abierto_ = null;
     if (!a) return;

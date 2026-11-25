@@ -147,6 +147,7 @@ import {
   claveNuevaAuditoria,
   confirmadoRestablecer,
   ipv4,
+  unoDe,
 } from './validacion';
 
 type MotorBdIpc = ReturnType<typeof motorBd>;
@@ -788,20 +789,17 @@ function opcionesTunel(
   return { confirmado: confirmado === true, ...(t ? { tunelConfirmado: t } : {}) };
 }
 
-/** Lo que confirmó el usuario al compartir en la red local (la IP mostrada, HTTPS y el refuerzo). */
-function confirmacionLan(v: unknown): {
-  confirmado: true;
-  ip: string;
-  https: boolean;
-  confirmadoDatosReales: boolean;
-} {
+/**
+ * Lo que confirmó el usuario al compartir en la red local (la IP mostrada y HTTPS). El
+ * `confirmado` viene del diálogo: aquí no se inventa; sin `true`, el núcleo no abre nada.
+ */
+function confirmacionLan(v: unknown): { confirmado: boolean; ip: string; https: boolean } {
   if (typeof v !== 'object' || v === null) throw new Error('Confirmación no válida');
   const o = v as Record<string, unknown>;
   return {
-    confirmado: true,
+    confirmado: o['confirmado'] === true,
     ip: ipv4(o['ip']),
     https: booleano(o['https'], 'https'),
-    confirmadoDatosReales: o['datosReales'] === true,
   };
 }
 
@@ -1066,8 +1064,11 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'lan.activar': (n, _s, id, confirmacion) =>
     n.lan.activar(idNoVacio(id), confirmacionLan(confirmacion)),
   'lan.desactivar': (n, _s, id) => n.lan.desactivar(idNoVacio(id)),
-  'lan.comandoFirewall': (n, _s, puerto) =>
-    n.comandoFirewallLan(enteroEn(puerto, 1024, 65535, 'puerto')),
+  'lan.comandoFirewall': (n, _s, puerto, para) =>
+    n.comandoFirewallLan(
+      enteroEn(puerto, 1024, 65535, 'puerto'),
+      para === undefined ? 'sitio' : unoDe(para, ['sitio', 'ca'] as const, 'para'),
+    ),
   'lan.abrirCaMovil': (n, _s, ip) => n.caMovil.abrir(ip === undefined ? {} : { ip: ipv4(ip) }),
   'lan.cerrarCaMovil': (n) => n.caMovil.cerrar(),
   'ia.modelos': (n) => n.modelosIa(),

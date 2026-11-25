@@ -208,15 +208,15 @@ export const pt: Textos = {
       'lan.sitio_no_encontrado': 'O site não foi encontrado.',
       'lan.confirmacion_requerida':
         'Compartilhar {dominio} na rede local exige confirmação no WolfCore Dev.',
-      'lan.confirmacion_datos_reales':
-        '{dominio} tem dados reais: compartilhá-lo na rede local exige a confirmação reforçada no WolfCore Dev.',
+      'lan.datos_reales':
+        '{dominio} tem dados reais: não é compartilhado na rede local, nem com confirmação. Use uma cópia sem dados de clientes.',
       'lan.sin_red':
         'Não há uma rede local conectada (Wi-Fi ou Ethernet). Conecte-se a uma rede e tente novamente.',
       'lan.ip_no_valida':
         'O endereço {ip} já não é um da sua rede local. Abra o diálogo novamente e confirme de novo.',
       'lan.requiere_https': '{dominio} redireciona para HTTPS: compartilhe-o com a opção HTTPS.',
       'lan.sin_puertos':
-        'Não há portas livres entre 8100 e 8199 para a rede local. Pare de compartilhar algum site e tente novamente.',
+        'Não há portas livres entre 8100 e 8199 para a rede local (os sites compartilhados e o link da CA usam essa faixa). Pare de compartilhar um site ou feche o diálogo da CA e tente novamente.',
       'tuneles.expose_no_instalado':
         'O Expose não está instalado. No Windows só funciona com o expose.phar: coloque-o em {carpeta}.',
       'tuneles.expose_datos_reales':
@@ -423,6 +423,10 @@ export const pt: Textos = {
         'O Rust está instalado, mas faltam as ferramentas C++ do Visual Studio Build Tools (vinculador MSVC): o cargo não conseguirá vincular os programas.',
       'doctor.antivirus_sin_exclusion':
         'O antivírus verifica a pasta de dados do WolfCore Dev: o PHP e os serviços podem iniciar devagar.',
+      'doctor.firewall_reglas':
+        'O Windows deixa entrar da rede {cantidad} regra(s) de programas do WolfCore Dev (nginx, PHP ou bancos de dados) nos perfis {perfiles}: esses programas ficam abertos à rede.',
+      'doctor.firewall_no_comprobado':
+        'Não foi possível verificar o firewall do Windows (pode ser preciso ser administrador).',
       'doctor.servicio_en_error': '{servicio} está com erro.',
       'doctor.revision_fallida': 'Não foi possível concluir a verificação {revision}.',
       'doctor.confirmacion_requerida': 'Confirme o reparo antes de aplicá-lo.',
@@ -1780,10 +1784,6 @@ export const pt: Textos = {
     confirmarTitulo: 'Compartilhar na rede local',
     confirmarTexto: (dominio: string, ip: string) =>
       `${dominio} ficará visível para qualquer dispositivo conectado à mesma rede deste computador (${ip}), sem pedir senha. O compartilhamento termina ao desligar o interruptor, ao fechar o WolfCore Dev e ao iniciá-lo de novo.`,
-    confirmarRealesTexto: (dominio: string, ip: string) =>
-      `${dominio} tem DADOS REAIS de clientes. Se você compartilhar, qualquer dispositivo da rede (${ip}) poderá ver e usar esses dados, sem senha. Faça isso só em uma rede de confiança: nunca em Wi-Fi público, de convidados ou de um estabelecimento.`,
-    casillaReales:
-      'Entendo que qualquer pessoa nesta rede poderá ver os dados reais e que a rede é de confiança.',
     ipEtiqueta: 'Rede (IP deste computador)',
     https: 'Usar HTTPS',
     httpsAyuda:
@@ -1793,8 +1793,12 @@ export const pt: Textos = {
     tituloError: 'Não foi possível compartilhar na rede local',
     caBoton: 'Instalar a CA no celular',
     firewallTitulo: 'Não abre no celular?',
+    datosRealesBloqueado: (dominio: string) =>
+      `${dominio} tem dados reais e não é compartilhado na rede local, nem com confirmação.`,
+    redPublica:
+      'Esta rede está marcada como pública no Windows: o firewall bloqueará a entrada e o comando só abre redes privadas. Marque-a como privada se for a sua rede de confiança.',
     firewallTexto:
-      'O Windows pode perguntar se permite que o WolfCore Dev (Nginx) receba conexões: aceite só em redes privadas. O WolfCore Dev não altera o firewall por você. Se o celular não conectar, execute este comando no PowerShell como administrador:',
+      'O WolfCore Dev não altera o firewall. Não aceite o aviso do Windows para o programa inteiro: use o comando desta porta (só a sub-rede local e só redes privadas) no PowerShell como administrador. Em rede pública não abrirá, e uma regra de bloqueio existente tem prioridade sobre a de permitir.',
     copiarComando: 'Copiar o comando',
   },
   caMovil: {
@@ -1810,17 +1814,21 @@ export const pt: Textos = {
     pasosAndroid: [
       'Leia o QR ou abra o endereço no navegador do celular e baixe o arquivo.',
       'Abra Configurações > Segurança e privacidade > Mais segurança > Criptografia e credenciais > Instalar um certificado > Certificado de CA (os nomes variam conforme a marca).',
+      'Antes de confiar, compare a impressão digital SHA-256 que o celular mostra com a deste diálogo: se forem diferentes, não instale.',
       'Escolha o arquivo baixado e aceite o aviso: é normal, o Android avisa para qualquer CA.',
     ],
     pasosIos: [
       'Abra o endereço no Safari e permita baixar o perfil.',
-      'Abra Ajustes > Perfil baixado e instale-o.',
+      'Abra Ajustes > Perfil baixado e compare a impressão digital SHA-1 dos detalhes com a deste diálogo: se forem diferentes, não instale. Depois instale-o.',
       'Abra Ajustes > Geral > Sobre > Ajustes de confiança de certificado e ative a confiança total para a CA do WolfCore Dev.',
     ],
     aviso:
       'Uma CA instalada dá confiança a tudo o que ela assinar nesse celular: instale-a só nos seus dispositivos e remova-a ao terminar.',
-    firewallAviso:
-      'O Windows pode mostrar um aviso do firewall ao abrir o link: é normal. Aceite só em redes privadas; o WolfCore Dev não altera o firewall por você.',
+    firewallAviso: (puerto: number) =>
+      'Para o celular chegar ao link é preciso abrir a porta ' +
+      puerto +
+      ' (só a sub-rede local e redes privadas). Não aceite o aviso do Windows para o programa inteiro: execute este comando no PowerShell como administrador. Em rede pública não abrirá, e uma regra de bloqueio existente tem prioridade.',
+    huellas: 'Impressões digitais do certificado',
     tituloError: 'Não foi possível abrir o link da CA',
   },
   dialogoQr: {
@@ -3304,6 +3312,7 @@ export const pt: Textos = {
       vcredist: 'Visual C++',
       'enlazador-msvc': 'Vinculador C++',
       antivirus: 'Antivírus',
+      firewall: 'Firewall',
       servicios: 'Serviços',
     },
     reparaciones: {
@@ -3329,6 +3338,8 @@ export const pt: Textos = {
         'Instale o Visual Studio Build Tools (com as ferramentas C++) com o comando mostrado: ocupa vários GB e pede permissão de administrador, então a decisão é sua.',
       antivirus:
         'Adicionar a pasta de dados às exclusões do antivírus é decisão sua, com o comando mostrado.',
+      firewall:
+        'Remover essas regras é decisão sua, com o comando mostrado, em um console de administrador. O WolfCore Dev nunca altera o firewall.',
       reintentar_servicio: 'Iniciar o serviço de novo.',
       firefox_confianza:
         'Adicionar no user.js de cada perfil do Firefox a preferência que confia na autoridade do Windows, com uma cópia prévia. O prefs.js não é tocado e os perfis abertos são pulados.',

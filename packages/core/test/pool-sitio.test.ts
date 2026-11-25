@@ -66,7 +66,7 @@ describe('pool propio por sitio', () => {
     expect(generarVhost(sitio({ id: 'mi-tienda', xdebug: X }), OPCIONES_VHOST)).toBe(
       [
         'server {',
-        '    listen 80;',
+        '    listen 127.0.0.1:80;',
         '    server_name tienda.test;',
         '    charset utf-8;',
         '    root "C:/Proyectos/Tienda/public";',

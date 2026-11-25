@@ -214,15 +214,15 @@ export const fr: Textos = {
       'lan.sitio_no_encontrado': 'Le site est introuvable.',
       'lan.confirmacion_requerida':
         'Partager {dominio} sur le réseau local doit être confirmé dans WolfCore Dev.',
-      'lan.confirmacion_datos_reales':
-        '{dominio} contient des données réelles : le partager sur le réseau local exige la confirmation renforcée dans WolfCore Dev.',
+      'lan.datos_reales':
+        '{dominio} contient des données réelles : il n’est pas partagé sur le réseau local, même avec confirmation. Utilisez une copie sans données de clients.',
       'lan.sin_red':
         'Aucun réseau local n’est connecté (Wi-Fi ou Ethernet). Connectez-vous à un réseau et réessayez.',
       'lan.ip_no_valida':
         'L’adresse {ip} ne fait plus partie de votre réseau local. Rouvrez la boîte de dialogue et confirmez à nouveau.',
       'lan.requiere_https': '{dominio} redirige vers HTTPS : partagez-le avec l’option HTTPS.',
       'lan.sin_puertos':
-        'Aucun port libre entre 8100 et 8199 pour le réseau local. Arrêtez de partager un site et réessayez.',
+        'Aucun port libre entre 8100 et 8199 pour le réseau local (les sites partagés et le lien de l’AC utilisent cette plage). Arrêtez de partager un site ou fermez la boîte de dialogue de l’AC et réessayez.',
       'tuneles.expose_no_instalado':
         'Expose n’est pas installé. Sous Windows il ne fonctionne qu’avec expose.phar : placez-le dans {carpeta}.',
       'tuneles.expose_datos_reales':
@@ -437,6 +437,10 @@ export const fr: Textos = {
         'Rust est installé mais les outils C++ de Visual Studio Build Tools (éditeur de liens MSVC) manquent : cargo ne pourra pas lier les programmes.',
       'doctor.antivirus_sin_exclusion':
         'L’antivirus analyse le dossier de données de WolfCore Dev : PHP et les services peuvent démarrer lentement.',
+      'doctor.firewall_reglas':
+        'Windows laisse entrer depuis le réseau {cantidad} règle(s) de programmes de WolfCore Dev (nginx, PHP ou bases de données) sur les profils {perfiles} : ces programmes sont ouverts au réseau.',
+      'doctor.firewall_no_comprobado':
+        'Impossible de vérifier le pare-feu de Windows (les droits d’administrateur peuvent être nécessaires).',
       'doctor.servicio_en_error': '{servicio} est en erreur.',
       'doctor.revision_fallida': 'La vérification {revision} n’a pas pu être menée à terme.',
       'doctor.confirmacion_requerida': 'Confirmez la réparation avant de l’appliquer.',
@@ -1822,10 +1826,6 @@ export const fr: Textos = {
     confirmarTitulo: 'Partager sur le réseau local',
     confirmarTexto: (dominio: string, ip: string) =>
       `${dominio} sera visible pour tout appareil connecté au même réseau que cet ordinateur (${ip}), sans mot de passe. Le partage s’arrête quand vous éteignez l’interrupteur, à la fermeture de WolfCore Dev et à son prochain démarrage.`,
-    confirmarRealesTexto: (dominio: string, ip: string) =>
-      `${dominio} contient des DONNÉES RÉELLES de clients. Si vous le partagez, tout appareil du réseau (${ip}) pourra voir et utiliser ces données, sans mot de passe. Ne le faites que sur un réseau de confiance : jamais sur un Wi-Fi public, invité ou de commerce.`,
-    casillaReales:
-      'Je comprends que toute personne sur ce réseau pourra voir les données réelles et que le réseau est de confiance.',
     ipEtiqueta: 'Réseau (IP de cet ordinateur)',
     https: 'Utiliser HTTPS',
     httpsAyuda:
@@ -1835,8 +1835,12 @@ export const fr: Textos = {
     tituloError: 'Impossible de partager sur le réseau local',
     caBoton: 'Installer l’AC sur le mobile',
     firewallTitulo: 'Ça ne s’ouvre pas sur le mobile ?',
+    datosRealesBloqueado: (dominio: string) =>
+      `${dominio} contient des données réelles et n’est pas partagé sur le réseau local, même avec confirmation.`,
+    redPublica:
+      'Ce réseau est marqué comme public dans Windows : le pare-feu bloquera l’entrée et la commande n’ouvre que les réseaux privés. Marquez-le comme privé s’il s’agit de votre réseau de confiance.',
     firewallTexto:
-      'Windows peut demander s’il faut autoriser WolfCore Dev (Nginx) à recevoir des connexions : acceptez uniquement pour les réseaux privés. WolfCore Dev ne modifie pas le pare-feu à votre place. Si le mobile ne se connecte pas, exécutez cette commande dans PowerShell en administrateur :',
+      'WolfCore Dev ne modifie pas le pare-feu. N’acceptez pas l’avertissement de Windows pour tout le programme : utilisez la commande de ce port (sous-réseau local et réseaux privés uniquement) dans PowerShell en administrateur. Sur un réseau public, ça n’ouvrira pas, et une règle de blocage existante est prioritaire sur celle d’autorisation.',
     copiarComando: 'Copier la commande',
   },
   caMovil: {
@@ -1852,17 +1856,21 @@ export const fr: Textos = {
     pasosAndroid: [
       'Scannez le QR ou ouvrez l’adresse dans le navigateur du mobile et téléchargez le fichier.',
       'Ouvrez Paramètres > Sécurité et confidentialité > Plus de sécurité > Chiffrement et identifiants > Installer un certificat > Certificat d’AC (les noms varient selon la marque).',
+      'Avant de faire confiance, comparez l’empreinte SHA-256 affichée par le mobile à celle de cette boîte de dialogue : si elles diffèrent, ne l’installez pas.',
       'Choisissez le fichier téléchargé et acceptez l’avertissement : c’est normal, Android avertit pour toute AC.',
     ],
     pasosIos: [
       'Ouvrez l’adresse dans Safari et autorisez le téléchargement du profil.',
-      'Ouvrez Réglages > Profil téléchargé et installez-le.',
+      'Ouvrez Réglages > Profil téléchargé et comparez l’empreinte SHA-1 du détail à celle de cette boîte de dialogue : si elles diffèrent, ne l’installez pas. Puis installez-le.',
       'Ouvrez Réglages > Général > Informations > Réglages des certificats de confiance et activez la confiance totale pour l’AC de WolfCore Dev.',
     ],
     aviso:
       'Une AC installée fait confiance à tout ce qu’elle signe sur ce mobile : installez-la uniquement sur vos appareils et retirez-la ensuite.',
-    firewallAviso:
-      'Windows peut afficher un avertissement du pare-feu à l’ouverture du lien : c’est normal. Acceptez uniquement pour les réseaux privés ; WolfCore Dev ne modifie pas le pare-feu à votre place.',
+    firewallAviso: (puerto: number) =>
+      'Pour que le mobile atteigne le lien, il faut ouvrir le port ' +
+      puerto +
+      ' (sous-réseau local et réseaux privés uniquement). N’acceptez pas l’avertissement de Windows pour tout le programme : exécutez cette commande dans PowerShell en administrateur. Sur un réseau public, ça n’ouvrira pas, et une règle de blocage existante est prioritaire.',
+    huellas: 'Empreintes du certificat',
     tituloError: 'Impossible d’ouvrir le lien de l’AC',
   },
   dialogoQr: {
@@ -3376,6 +3384,7 @@ export const fr: Textos = {
       vcredist: 'Visual C++',
       'enlazador-msvc': 'Éditeur de liens C++',
       antivirus: 'Antivirus',
+      firewall: 'Pare-feu',
       servicios: 'Services',
     },
     reparaciones: {
@@ -3401,6 +3410,8 @@ export const fr: Textos = {
         'Installez Visual Studio Build Tools (avec les outils C++) avec la commande affichée : ils pèsent plusieurs Go et demandent l’autorisation d’administrateur, c’est donc à vous de décider.',
       antivirus:
         'Ajouter le dossier de données aux exclusions de l’antivirus est votre décision, avec la commande affichée.',
+      firewall:
+        'Supprimer ces règles est votre décision, avec la commande affichée, dans une console administrateur. WolfCore Dev ne modifie jamais le pare-feu.',
       reintentar_servicio: 'Redémarrer le service.',
       firefox_confianza:
         'Ajouter dans le user.js de chaque profil Firefox la préférence qui fait confiance à l’autorité de Windows, avec une copie préalable. prefs.js n’est pas touché et les profils ouverts sont ignorés.',

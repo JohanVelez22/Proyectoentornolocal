@@ -161,10 +161,10 @@ export function generarNginxPrincipal(o: {
       // Host desconocido (un túnel mal dirigido o un dominio mal escrito): 404 propio en vez
       // de servir el primer sitio que encuentre nginx.
       '    server {',
-      `        listen ${o.puerto} default_server;`,
+      `        listen 127.0.0.1:${o.puerto} default_server;`,
       ...(o.https
         ? [
-            `        listen ${o.https.puerto} ssl default_server;`,
+            `        listen 127.0.0.1:${o.https.puerto} ssl default_server;`,
             `        ssl_certificate "${limpiar(o.https.crt)}";`,
             `        ssl_certificate_key "${limpiar(o.https.key)}";`,
           ]

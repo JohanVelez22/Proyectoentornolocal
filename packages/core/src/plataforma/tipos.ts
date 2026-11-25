@@ -1,3 +1,4 @@
+import type { PerfilRed, ReglasEntrada } from './firewallWin';
 import type { Readable } from 'node:stream';
 import type { LanzadorOculto } from './lanzarOculto';
 
@@ -131,7 +132,14 @@ export type ComandoManual =
   | { tipo: 'instalar-vcredist' }
   | { tipo: 'instalar-build-tools' }
   /** Permitir la entrada TCP de un sitio compartido en la red local (solo redes privadas). */
-  | { tipo: 'regla-firewall-lan'; puerto: number };
+  | {
+      tipo: 'regla-firewall-lan';
+      puerto: number;
+      /** Ruta del programa que recibe la conexión (nginx.exe); sin ella, solo el puerto. */
+      programa?: string;
+    }
+  /** Quitar reglas de entrada por su `Name` (las que lista el Doctor); nunca se ejecuta solo. */
+  | { tipo: 'quitar-reglas-firewall'; nombres: string[] };
 
 /**
  * Lo que la Etapa C agregó a la interfaz. Todo lo que depende del sistema operativo pasa por
@@ -232,6 +240,13 @@ export interface CapacidadesPlataforma {
    * del sistema) y si tiene sesión iniciada (`BackendState` en marcha). Solo lee: no cambia nada.
    */
   tailscale(): Promise<{ ruta: string | null; sesion: boolean }>;
+  /**
+   * Perfil de la red (privada, pública o de dominio) de la interfaz que tiene esa IP; null si no
+   * se pudo leer. Solo lee.
+   */
+  perfilRedDe(ip: string): Promise<PerfilRed | null>;
+  /** Reglas de entrada Allow para nginx, PHP, MySQL y PostgreSQL. Solo lee. */
+  reglasEntradaPermitidas(): Promise<ReglasEntrada>;
 }
 
 /**

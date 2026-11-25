@@ -91,6 +91,8 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'restringirAlUsuario',
   'instalacionesAjenas',
   'tailscale',
+  'perfilRedDe',
+  'reglasEntradaPermitidas',
 ];
 
 /**

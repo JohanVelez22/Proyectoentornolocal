@@ -244,7 +244,7 @@ describe('aplicar con HTTPS', () => {
     await g.crear(nuevo({}));
     const r = await g.aplicar();
     expect(r.httpsPendiente).toEqual([]);
-    expect(vhost()).toContain('listen 443 ssl;');
+    expect(vhost()).toContain('listen 127.0.0.1:443 ssl;');
     expect(vhost()).toContain('http2 on;');
     expect(vhost()).toContain(
       `ssl_certificate "${path.join(base, 'certs', 'a.crt').replace(/\\/g, '/')}";`,
@@ -260,7 +260,7 @@ describe('aplicar con HTTPS', () => {
     expect(r.httpsPendiente).toEqual(['a']);
     expect(vhost()).not.toContain('ssl');
     expect(vhost()).not.toContain('pel_redir');
-    expect(vhost()).toContain('listen 80;');
+    expect(vhost()).toContain('listen 127.0.0.1:80;');
   });
 
   it('sin CA el sitio queda pendiente', async () => {

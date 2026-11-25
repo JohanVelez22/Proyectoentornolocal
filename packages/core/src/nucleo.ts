@@ -844,6 +844,9 @@ export class Nucleo {
     // eslint-disable-next-line prefer-const
     let respaldosRef!: Respaldos;
     let catalogoRef!: CatalogoVivo;
+    // La red local se crea después de Servicios (usa su Nginx): Nginx la llama por esta referencia.
+    // eslint-disable-next-line prefer-const
+    let lanRef!: GestorLan;
     const servicios: Servicios = new Servicios({
       instalarVersion: async (servicio, version, opciones) => {
         const v = await catalogoRef.buscar(servicio, version);
@@ -897,6 +900,7 @@ export class Nucleo {
       httpsPrincipal: async () => https.datosPrincipal((await leerConfig()).https.puerto),
       adminerPrincipal: () => adminer.configNginx(),
       phpmyadminPrincipal: () => phpmyadmin.configNginx(),
+      podarRed: async () => (await lanRef.podarRed()).length > 0,
       procesosProyecto: {
         estadosServicio: () => procesos.estadosServicio(),
         detenerTodos: () => procesos.detenerTodos(),
@@ -950,12 +954,25 @@ export class Nucleo {
     });
     // Vhosts propios de una función (túneles, red local): incluidos aparte de los de los sitios.
     const vhostsAux = new VhostsAuxiliares({ rutas, recargar: () => servicios.nginx.recargar() });
+    const quitarCertLan = async (id: string): Promise<void> => {
+      await rm(rutas.certCrt(id), { force: true });
+      await rm(rutas.certKey(id), { force: true });
+    };
     // Compartir en la red local: un `server` por sitio, solo en la IP elegida y su propio puerto.
     const lan = new GestorLan({
       sitios,
       vhosts: vhostsAux,
       certificado: (s) => https.asegurarCertificado(s),
       puertoNginx: async () => (await leerConfig()).servicios.nginx.puerto,
+      quitarCertificado: quitarCertLan,
+      perfilRedDe: (ip) => plat.perfilRedDe(ip),
+      avisarRedCambio: (dominios) =>
+        avisos.publicar({
+          nivel: 'aviso',
+          tipo: 'doctor',
+          codigo: 'avisos.lan_red_cambio',
+          datos: { fuente: dominios.join(', ').slice(0, 120) },
+        }),
       reservados: async () => {
         const res = puertosReservados(await leerConfig());
         for (const r of await plat.rangosReservados('tcp').catch(() => [])) {
@@ -966,10 +983,12 @@ export class Nucleo {
         return res;
       },
     });
+    lanRef = lan;
     // Servidor temporal de `ca.crt` para el móvil (solo ese archivo, nunca la clave).
     const caMovil = new ServidorCa({
       rutaCa: () => rutas.caCrt(),
       asegurarCa: () => https.crearCaSiFalta(),
+      elegirPuerto: (ip) => lan.puertoParaCa(ip),
     });
     const tuneles = new Tuneles({
       supervisor,
@@ -2590,8 +2609,13 @@ export class Nucleo {
    * Comando de la consola de administrador para permitir la entrada de un sitio compartido en la
    * red local (solo redes privadas). WolfCore Dev nunca lo ejecuta ni toca el cortafuegos.
    */
-  comandoFirewallLan(puerto: number): string {
-    return this.plataforma.comandoManual({ tipo: 'regla-firewall-lan', puerto });
+  async comandoFirewallLan(puerto: number, para: 'sitio' | 'ca' = 'sitio'): Promise<string> {
+    // La regla de un sitio lleva el nginx.exe que lo sirve; la del enlace de la CA, solo el puerto
+    // (lo escucha la propia app: nunca se invita a permitirla entera).
+    if (para === 'ca') return this.plataforma.comandoManual({ tipo: 'regla-firewall-lan', puerto });
+    const bin = this.rutas.bin('nginx', await this.servicios.nginx.versionActiva().catch(() => ''));
+    const programa = path.join(bin, this.plataforma.ejecutable('nginx'));
+    return this.plataforma.comandoManual({ tipo: 'regla-firewall-lan', puerto, programa });
   }
 
   /** Usuario y clave de un servicio propio para "Datos de conexión" (null si aún no se generaron). */
@@ -3697,15 +3721,17 @@ export class Nucleo {
 
   /**
    * Si el sitio se comparte en la red local y cambia lo que el `server` de la red local da por
-   * hecho (el dominio con el que reenvía, o que ahora redirige a HTTPS sin que la red local lo
-   * use), se deja de compartir antes de editar: lo que se confirmó ya no es lo que se serviría.
+   * hecho (el dominio con el que reenvía, que ahora redirige a HTTPS sin que la red local lo use o
+   * que pasa a tener datos reales), se deja de compartir antes de editar: lo que se confirmó ya no es lo que se serviría.
    */
   private async cerrarLanSiCambia(id: string, datos: Omit<Sitio, 'id'>): Promise<void> {
     const actual = (await this.sitios.listar()).find((s) => s.id === id);
     if (!actual?.lan?.activo) return;
     const cambia =
       actual.dominio !== datos.dominio.trim().toLowerCase() ||
-      (datos.redirigirHttps && !actual.lan.https);
+      (datos.redirigirHttps && !actual.lan.https) ||
+      // Con datos reales no se comparte en la red: si el sitio pasa a tenerlos, se deja de compartir.
+      (datos.datosReales && !actual.datosReales);
     if (cambia) await this.lan.desactivar(id);
   }
 

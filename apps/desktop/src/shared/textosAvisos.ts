@@ -93,6 +93,10 @@ const ES: Diccionario = {
       titulo: 'Ajustes de PHP descartados',
       cuerpo: `Algunos ajustes de PHP de ${limpio(d['fuente'], 'un sitio')} no son válidos y no se aplicaron: ${limpio(d['claves'], 'revise la sección PHP')}.`,
     }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: 'Se dejó de compartir en la red local',
+      cuerpo: `La red cambió: se dejó de compartir ${limpio(d['fuente'], 'un sitio')}.`,
+    }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Reglas de Nginx descartadas',
       cuerpo: `Las reglas propias de ${limpio(d['fuente'], 'un sitio')} ya no pasan la revisión (cambió su carpeta, sus dominios o los puertos) y quedaron fuera de su vhost. Revíselas en su sección Nginx.`,
@@ -236,6 +240,10 @@ const EN: Diccionario = {
       titulo: 'PHP settings discarded',
       cuerpo: `Some PHP settings of ${limpio(d['fuente'], 'a site')} are not valid and were not applied: ${limpio(d['claves'], 'check the PHP section')}.`,
     }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: 'Sharing on the local network stopped',
+      cuerpo: `The network changed: stopped sharing ${limpio(d['fuente'], 'a site')}.`,
+    }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Custom Nginx rules discarded',
       cuerpo: `The custom rules of ${limpio(d['fuente'], 'a site')} no longer pass the check (its folder, domains or ports changed) and were left out of its vhost. Review them in its Nginx section.`,
@@ -369,6 +377,10 @@ const PT: Diccionario = {
     'avisos.php_sitio_descartados': (d) => ({
       titulo: 'Configurações do PHP descartadas',
       cuerpo: `Algumas configurações do PHP de ${limpio(d['fuente'], 'um site')} não são válidas e não foram aplicadas: ${limpio(d['claves'], 'confira a seção PHP')}.`,
+    }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: 'O compartilhamento na rede local parou',
+      cuerpo: `A rede mudou: parou de compartilhar ${limpio(d['fuente'], 'um site')}.`,
     }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Regras do Nginx descartadas',
@@ -515,6 +527,10 @@ const FR: Diccionario = {
     'avisos.php_sitio_descartados': (d) => ({
       titulo: 'Réglages PHP ignorés',
       cuerpo: `Certains réglages PHP de ${limpio(d['fuente'], 'un site')} ne sont pas valides et n’ont pas été appliqués : ${limpio(d['claves'], 'consultez la section PHP')}.`,
+    }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: 'Le partage sur le réseau local s’est arrêté',
+      cuerpo: `Le réseau a changé : le partage de ${limpio(d['fuente'], 'un site')} a été arrêté.`,
     }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Règles Nginx ignorées',

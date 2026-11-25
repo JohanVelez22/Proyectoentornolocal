@@ -187,11 +187,11 @@ export function generarVhost(s: Sitio, o: OpcionesVhost): string {
       '}',
     ].join('\n') + '\n';
 
-  const http = [`listen ${o.puertoNginx};`];
+  const http = [`listen 127.0.0.1:${o.puertoNginx};`];
   const https = o.https && s.https ? o.https : null;
   if (!https) return servidor(http);
   const ssl = [
-    `listen ${https.puerto} ssl;`,
+    `listen 127.0.0.1:${https.puerto} ssl;`,
     'http2 on;',
     `ssl_certificate "${barras(https.crt)}";`,
     `ssl_certificate_key "${barras(https.key)}";`,

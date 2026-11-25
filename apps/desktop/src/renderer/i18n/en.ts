@@ -203,15 +203,15 @@ export const en: Textos = {
       'lan.sitio_no_encontrado': 'The site was not found.',
       'lan.confirmacion_requerida':
         'Sharing {dominio} on the local network must be confirmed in WolfCore Dev.',
-      'lan.confirmacion_datos_reales':
-        '{dominio} has real data: sharing it on the local network requires the reinforced confirmation in WolfCore Dev.',
+      'lan.datos_reales':
+        '{dominio} has real data: it is not shared on the local network, not even with confirmation. Use a copy without customer data.',
       'lan.sin_red':
         'No local network is connected (Wi-Fi or Ethernet). Connect to a network and try again.',
       'lan.ip_no_valida':
         'The address {ip} is no longer one of your local network. Reopen the dialog and confirm again.',
       'lan.requiere_https': '{dominio} redirects to HTTPS: share it with the HTTPS option.',
       'lan.sin_puertos':
-        'There are no free ports between 8100 and 8199 for the local network. Stop sharing a site and try again.',
+        'There are no free ports between 8100 and 8199 for the local network (shared sites and the CA link use that range). Stop sharing a site or close the CA dialog and try again.',
       'tuneles.expose_no_instalado':
         'Expose is not installed. On Windows it only works with expose.phar: put it in {carpeta}.',
       'tuneles.expose_datos_reales':
@@ -412,6 +412,10 @@ export const en: Textos = {
         'Rust is installed but the Visual Studio Build Tools C++ tools (MSVC linker) are missing: cargo will not be able to link programs.',
       'doctor.antivirus_sin_exclusion':
         'The antivirus scans the WolfCore Dev data folder: PHP and services may start slowly.',
+      'doctor.firewall_reglas':
+        'Windows lets {cantidad} rule(s) for WolfCore Dev programs (nginx, PHP or databases) accept connections from the network on the profiles {perfiles}: those programs are open to the network.',
+      'doctor.firewall_no_comprobado':
+        'Could not check the Windows firewall (administrator rights may be needed).',
       'doctor.servicio_en_error': '{servicio} is in an error state.',
       'doctor.revision_fallida': 'The {revision} check could not be completed.',
       'doctor.confirmacion_requerida': 'Confirm the fix before applying it.',
@@ -1762,10 +1766,6 @@ export const en: Textos = {
     confirmarTitulo: 'Share on the local network',
     confirmarTexto: (dominio: string, ip: string) =>
       `${dominio} will be visible to any device connected to the same network as this computer (${ip}), with no password. Sharing stops when you turn the switch off, when WolfCore Dev closes and when it starts again.`,
-    confirmarRealesTexto: (dominio: string, ip: string) =>
-      `${dominio} has REAL customer data. If you share it, any device on the network (${ip}) will be able to see and use that data, with no password. Do it only on a network you trust: never on public, guest or venue Wi-Fi.`,
-    casillaReales:
-      'I understand that anyone on this network will be able to see the real data and that the network is trusted.',
     ipEtiqueta: 'Network (this computer’s IP)',
     https: 'Use HTTPS',
     httpsAyuda:
@@ -1775,8 +1775,12 @@ export const en: Textos = {
     tituloError: 'Could not share on the local network',
     caBoton: 'Install the CA on the phone',
     firewallTitulo: 'Does not open on the phone?',
+    datosRealesBloqueado: (dominio: string) =>
+      `${dominio} has real data and is not shared on the local network, not even with confirmation.`,
+    redPublica:
+      'This network is marked as public in Windows: the firewall will block inbound traffic and the command only opens private networks. Mark it as private if it is your trusted network.',
     firewallTexto:
-      'Windows may ask whether to allow WolfCore Dev (Nginx) to receive connections: accept for private networks only. WolfCore Dev does not change the firewall for you. If the phone cannot connect, run this command in PowerShell as administrator:',
+      'WolfCore Dev does not change the firewall. Do not accept the Windows prompt for the whole program: use the command for this port (local subnet only, private networks only) in PowerShell as administrator. It will not open on a public network, and an existing block rule takes priority over an allow rule.',
     copiarComando: 'Copy the command',
   },
   caMovil: {
@@ -1792,17 +1796,21 @@ export const en: Textos = {
     pasosAndroid: [
       'Scan the QR or open the address in the phone browser and download the file.',
       'Open Settings > Security & privacy > More security > Encryption & credentials > Install a certificate > CA certificate (names vary by brand).',
+      'Before trusting it, compare the SHA-256 fingerprint the phone shows with the one in this dialog: if they differ, do not install it.',
       'Pick the downloaded file and accept the warning: it is normal, Android warns for every CA.',
     ],
     pasosIos: [
       'Open the address in Safari and allow the profile to download.',
-      'Open Settings > Profile Downloaded and install it.',
+      'Open Settings > Profile Downloaded and compare the SHA-1 fingerprint in its details with the one in this dialog: if they differ, do not install it. Then install it.',
       'Open Settings > General > About > Certificate Trust Settings and turn on full trust for the WolfCore Dev CA.',
     ],
     aviso:
       'An installed CA trusts everything it signs on that phone: install it only on your own devices and remove it when you are done.',
-    firewallAviso:
-      'Windows may show a firewall prompt when the link opens: that is normal. Accept for private networks only; WolfCore Dev does not change the firewall for you.',
+    firewallAviso: (puerto: number) =>
+      'For the phone to reach the link, port ' +
+      puerto +
+      ' must be opened (local subnet and private networks only). Do not accept the Windows prompt for the whole program: run this command in PowerShell as administrator. It will not open on a public network, and an existing block rule takes priority.',
+    huellas: 'Certificate fingerprints',
     tituloError: 'Could not open the CA link',
   },
   dialogoQr: {
@@ -3268,6 +3276,7 @@ export const en: Textos = {
       vcredist: 'Visual C++',
       'enlazador-msvc': 'C++ linker',
       antivirus: 'Antivirus',
+      firewall: 'Firewall',
       servicios: 'Services',
     },
     reparaciones: {
@@ -3293,6 +3302,8 @@ export const en: Textos = {
         'Install the Visual Studio Build Tools (with the C++ tools) using the command shown: they take several GB and ask for administrator permission, so it is up to you.',
       antivirus:
         'Adding the data folder to the antivirus exclusions is up to you, with the command shown.',
+      firewall:
+        'Removing those rules is up to you, with the command shown, in an administrator console. WolfCore Dev never changes the firewall.',
       reintentar_servicio: 'Start the service again.',
       firefox_confianza:
         'Add to the user.js of each Firefox profile the preference that trusts the Windows authority, with a copy first. prefs.js is not touched and open profiles are skipped.',

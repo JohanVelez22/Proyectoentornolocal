@@ -15,6 +15,7 @@ export const IDS_REVISION = [
   'vcredist',
   'enlazador-msvc',
   'antivirus',
+  'firewall',
   'servicios',
 ] as const;
 export type IdRevision = (typeof IDS_REVISION)[number];

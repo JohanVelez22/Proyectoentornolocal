@@ -2,6 +2,7 @@ import net from 'node:net';
 import os from 'node:os';
 import { ErrorWolf } from '../errores';
 import { generarVhostProxy, type VhostsAuxiliares } from '../nginx/auxiliares';
+import type { PerfilRed } from '../plataforma/firewallWin';
 import type { Sitio } from '../tipos';
 
 type Interfaces = NodeJS.Dict<os.NetworkInterfaceInfo[]>;
@@ -9,6 +10,11 @@ type Interfaces = NodeJS.Dict<os.NetworkInterfaceInfo[]>;
 /** Prefijo de los vhosts de la red local (`lan-<sitio>`): los de los túneles empiezan por `tunel-`. */
 export const PREFIJO_VHOST_LAN = 'lan-';
 export const idVhostLan = (sitioId: string): string => `${PREFIJO_VHOST_LAN}${sitioId}`;
+/**
+ * Id del certificado de un sitio en la red local. Empieza por `_`, que el slug de un dominio nunca
+ * produce: ningún sitio puede llamarse así y pisar el certificado de otro.
+ */
+export const idCertLan = (sitioId: string): string => `_lan-${sitioId}`;
 
 /** Primer puerto de la red local y último que se prueba (cien sitios compartidos de sobra). */
 export const PRIMER_PUERTO_LAN = 8100;
@@ -93,10 +99,8 @@ export interface SitioCompartido {
 }
 
 export interface OpcionesActivarLan {
-  /** El usuario confirmó (en la ventana) exponer el sitio a la red local. */
-  confirmado: true;
-  /** Con datos reales, la confirmación reforzada. */
-  confirmadoDatosReales?: boolean;
+  /** El usuario confirmó (en la ventana) exponer el sitio a la red local; sin `true`, nada se abre. */
+  confirmado: boolean;
   /** La IP que se le mostró: si ya no es una de la red local, no se abre (lo confirmado manda). */
   ip: string;
   https: boolean;
@@ -107,13 +111,19 @@ export interface DepsGestorLan {
     listar(): Promise<Sitio[]>;
     editar(id: string, cambios: Partial<Sitio>): Promise<Sitio>;
   };
-  vhosts: Pick<VhostsAuxiliares, 'agregar' | 'quitar' | 'ids' | 'barrer'>;
+  vhosts: Pick<VhostsAuxiliares, 'agregar' | 'quitar' | 'quitarSinRecargar' | 'ids' | 'barrer'>;
   /** Certificado del sitio para la IP (emitido por la CA propia; la crea si falta). */
   certificado: (s: {
     id: string;
     dominio: string;
     alias: string[];
   }) => Promise<{ crt: string; key: string }>;
+  /** Borra el `.crt` y el `.key` del certificado de un sitio (idempotente). */
+  quitarCertificado: (id: string) => Promise<void>;
+  /** Perfil de la red de esa IP (Windows: pública, privada, dominio); solo lectura. */
+  perfilRedDe?: (ip: string) => Promise<PerfilRed | null>;
+  /** Se llama con los dominios que se dejaron de compartir porque la IP ya no es de este equipo. */
+  avisarRedCambio?: (dominios: string[]) => void;
   /** Puerto de Nginx al que se reenvía (donde viven los sitios por `server_name`). */
   puertoNginx: () => Promise<number>;
   interfaces?: () => Interfaces;
@@ -149,7 +159,38 @@ export class GestorLan {
     return ipsLocales(this.d.interfaces?.());
   }
 
-  async estado(): Promise<{ ips: string[]; sitios: SitioCompartido[] }> {
+  /**
+   * Deja de compartir lo que está en una IP que ya no es de este equipo (cambió la red: el
+   * `listen` no se podría abrir y Nginx no arrancaría). Quita el vhost sin recargar —quien llama
+   * ya está a punto de generar o recargar la configuración—, marca el sitio y avisa. Devuelve los
+   * dominios que se dejaron de compartir.
+   */
+  async podarRed(): Promise<string[]> {
+    const ips = this.ips();
+    const caidos = [...this.activos].filter(([, ip]) => !ips.includes(ip)).map(([id]) => id);
+    if (caidos.length === 0) return [];
+    const lista = await this.d.sitios.listar().catch(() => [] as Sitio[]);
+    const dominios: string[] = [];
+    for (const id of caidos) {
+      this.activos.delete(id);
+      await this.d.vhosts.quitarSinRecargar(idVhostLan(id));
+      await this.d.quitarCertificado(idCertLan(id)).catch(() => undefined);
+      dominios.push(lista.find((s) => s.id === id)?.dominio ?? id);
+    }
+    await this.marcarInactivo(caidos);
+    this.d.avisarRedCambio?.(dominios);
+    return dominios;
+  }
+
+  async estado(): Promise<{
+    ips: string[];
+    sitios: SitioCompartido[];
+    /** Perfil de cada red (`null`: no se pudo leer). Una red pública merece un aviso. */
+    perfiles: Record<string, PerfilRed | null>;
+    /** Dominios que se dejaron de compartir en esta consulta porque la red cambió. */
+    redCambio: string[];
+  }> {
+    const redCambio = await this.podarRed();
     const lista = await this.d.sitios.listar();
     const sitios: SitioCompartido[] = [];
     for (const s of lista) {
@@ -163,7 +204,10 @@ export class GestorLan {
         https: s.lan.https,
       });
     }
-    return { ips: this.ips(), sitios };
+    const ips = this.ips();
+    const perfiles: Record<string, PerfilRed | null> = {};
+    for (const ip of ips) perfiles[ip] = (await this.d.perfilRedDe?.(ip).catch(() => null)) ?? null;
+    return { ips, sitios, perfiles, redCambio };
   }
 
   activar(
@@ -180,18 +224,20 @@ export class GestorLan {
     const lista = await this.d.sitios.listar();
     const sitio = lista.find((s) => s.id === sitioId);
     if (!sitio) throw new ErrorWolf('lan.sitio_no_encontrado', 'Sitio no encontrado');
-    // Sin confirmación (con datos reales, la reforzada) no se toca nada.
+    // Con datos reales no se comparte en la red, ni con confirmación (como Expose): cualquiera en
+    // esa red los vería sin contraseña.
+    if (sitio.datosReales) {
+      throw new ErrorWolf(
+        'lan.datos_reales',
+        `${sitio.dominio} tiene datos reales: no se comparte en la red local.`,
+        { dominio: sitio.dominio },
+      );
+    }
+    // Sin confirmación no se toca nada.
     if ((o as { confirmado?: unknown }).confirmado !== true) {
       throw new ErrorWolf(
         'lan.confirmacion_requerida',
         `${sitio.dominio}: compartirlo en la red local exige confirmarlo en la ventana de WolfCore Dev.`,
-        { dominio: sitio.dominio },
-      );
-    }
-    if (sitio.datosReales && o.confirmadoDatosReales !== true) {
-      throw new ErrorWolf(
-        'lan.confirmacion_datos_reales',
-        `${sitio.dominio} tiene datos reales: compartirlo en la red local exige la confirmación reforzada.`,
         { dominio: sitio.dominio },
       );
     }
@@ -235,7 +281,7 @@ export class GestorLan {
     });
 
     const ssl = o.https
-      ? await this.d.certificado({ id: idVhostLan(sitioId), dominio: o.ip, alias: [] })
+      ? await this.d.certificado({ id: idCertLan(sitioId), dominio: o.ip, alias: [] })
       : undefined;
     await this.d.vhosts.agregar(
       idVhostLan(sitioId),
@@ -257,9 +303,23 @@ export class GestorLan {
     return { url: urlLan(o.https, o.ip, puerto), ip: o.ip, puerto };
   }
 
+  /** Un puerto libre del rango de la red local en esa IP, para el servidor de la CA del móvil. */
+  async puertoParaCa(ip: string): Promise<number> {
+    const lista = await this.d.sitios.listar();
+    const probar = this.d.probar ?? puertoLibreEn;
+    return puertoLan({
+      ocupados: [
+        ...(await this.d.reservados()),
+        ...lista.filter((s) => s.lan?.activo).map((s) => s.lan!.puerto),
+      ],
+      probar: (p) => probar(ip, p),
+    });
+  }
+
   desactivar(sitioId: string): Promise<void> {
     return this.serializar(async () => {
       await this.d.vhosts.quitar(idVhostLan(sitioId));
+      await this.d.quitarCertificado(idCertLan(sitioId)).catch(() => undefined);
       this.activos.delete(sitioId);
       await this.marcarInactivo([sitioId]);
     });
@@ -269,7 +329,12 @@ export class GestorLan {
   apagarTodo(): Promise<void> {
     return this.serializar(async () => {
       const ids = await this.d.vhosts.ids(PREFIJO_VHOST_LAN);
-      for (const id of ids) await this.d.vhosts.quitar(id);
+      for (const id of ids) {
+        await this.d.vhosts.quitar(id);
+        await this.d
+          .quitarCertificado(idCertLan(id.slice(PREFIJO_VHOST_LAN.length)))
+          .catch(() => undefined);
+      }
       this.activos.clear();
       const lista = await this.d.sitios.listar().catch(() => [] as Sitio[]);
       await this.marcarInactivo(lista.filter((s) => s.lan?.activo).map((s) => s.id));

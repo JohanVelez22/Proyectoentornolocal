@@ -34,6 +34,14 @@ import {
   scriptElevar,
   sha256,
 } from './hostsAdmin';
+import {
+  interpretarPerfilRed,
+  interpretarReglasEntrada,
+  SCRIPT_REGLAS_ENTRADA,
+  scriptPerfilRed,
+  type PerfilRed,
+  type ReglasEntrada,
+} from './firewallWin';
 import { crearLanzadorOculto, type LanzadorOculto } from './lanzarOculto';
 import { interpretarNetstatTodos, interpretarTasklist, interpretarTasklistTodos } from './netstat';
 import { aBase64, codificarPowerShell, PathUsuarioWindows } from './pathUsuarioWin';
@@ -325,6 +333,8 @@ export interface OpcionesPlataformaWindows {
    */
   gitRegistro?: boolean;
 }
+
+const NOMBRE_REGLA_FIREWALL = /^[\w{}.\- @:()[\]]{1,200}$/;
 
 export class PlataformaWindows implements PlataformaCompleta {
   private contador = 0;
@@ -814,9 +824,42 @@ export class PlataformaWindows implements PlataformaCompleta {
         if (!Number.isInteger(c.puerto) || c.puerto < 1 || c.puerto > 65535) {
           throw new Error(`Puerto no válido: ${c.puerto}`);
         }
-        // Solo perfiles privados (la red de casa u oficina), nunca públicos.
-        return `New-NetFirewallRule -DisplayName 'WolfCore Dev red local ${c.puerto}' -Direction Inbound -Protocol TCP -LocalPort ${c.puerto} -Action Allow -Profile Private`;
+        const nombre = `WolfCore Dev red local ${c.puerto}`;
+        // Solo la subred local y solo redes privadas (la de casa u oficina), nunca públicas. Si ya
+        // hay una regla con ese nombre se reemplaza (no se acumulan).
+        return [
+          `Remove-NetFirewallRule -DisplayName ${literal(nombre)} -ErrorAction SilentlyContinue`,
+          `New-NetFirewallRule -DisplayName ${literal(nombre)} -Direction Inbound -Protocol TCP -LocalPort ${c.puerto} -Action Allow -Profile Private -RemoteAddress LocalSubnet${c.programa ? ` -Program ${literal(c.programa)}` : ''}`,
+        ].join('; ');
       }
+      case 'quitar-reglas-firewall':
+        return c.nombres
+          .filter((n) => NOMBRE_REGLA_FIREWALL.test(n))
+          .map((n) => `Remove-NetFirewallRule -Name ${literal(n)}`)
+          .join('; ');
+    }
+  }
+
+  async perfilRedDe(ip: string): Promise<PerfilRed | null> {
+    try {
+      const r = await this.ejecutar('powershell', codificarPowerShell(scriptPerfilRed(ip)), {
+        timeoutMs: 15_000,
+      });
+      return r.codigo === 0 ? interpretarPerfilRed(r.stdout) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async reglasEntradaPermitidas(): Promise<ReglasEntrada> {
+    try {
+      const r = await this.ejecutar('powershell', codificarPowerShell(SCRIPT_REGLAS_ENTRADA), {
+        timeoutMs: 60_000,
+      });
+      if (r.codigo !== 0) return { ok: false, reglas: [] };
+      return { ok: true, reglas: interpretarReglasEntrada(r.stdout) };
+    } catch {
+      return { ok: false, reglas: [] };
     }
   }
 

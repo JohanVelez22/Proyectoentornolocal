@@ -1,3 +1,4 @@
+import type { PerfilRed, ReglasEntrada } from './firewallWin';
 import { desinstalarEnCarpeta } from './rustupRegistro';
 import { chmod, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -91,6 +92,10 @@ export class PlataformaFalsa implements PlataformaCompleta {
   antivirusEstado: EstadoAntivirus | null = null;
   /** Instalaciones de Laragon, XAMPP y Herd que dice haber (`instalacionesAjenas`). */
   instalaciones: InstalacionAjena[] = [];
+  /** Perfil de red por IP (`perfilRedDe`); sin entrada, null. */
+  perfiles = new Map<string, PerfilRed>();
+  /** Lo que devuelve `reglasEntradaPermitidas`. */
+  reglasEntrada: ReglasEntrada = { ok: true, reglas: [] };
   /** Lo que devuelve `tailscale` (por defecto, no instalado). */
   tailscaleEstado: { ruta: string | null; sesion: boolean } = { ruta: null, sesion: false };
   /** Archivos que se pidió restringir al usuario. */
@@ -324,6 +329,14 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async instalacionesAjenas(): Promise<InstalacionAjena[]> {
     return this.instalaciones.map((i) => ({ ...i }));
+  }
+
+  async perfilRedDe(ip: string): Promise<PerfilRed | null> {
+    return this.perfiles.get(ip) ?? null;
+  }
+
+  async reglasEntradaPermitidas(): Promise<ReglasEntrada> {
+    return { ok: this.reglasEntrada.ok, reglas: this.reglasEntrada.reglas.map((r) => ({ ...r })) };
   }
 
   async tailscale(): Promise<{ ruta: string | null; sesion: boolean }> {

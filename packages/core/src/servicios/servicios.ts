@@ -63,6 +63,11 @@ export interface DepsServicios {
   adminerPrincipal?: () => Promise<{ raiz: string; puertos: number[] } | null>;
   /** Carpeta y puertos PHP del vhost interno de phpMyAdmin (null si no está instalado). */
   phpmyadminPrincipal?: () => Promise<{ raiz: string; puertos: number[] } | null>;
+  /**
+   * Deja de compartir en la red local lo que está en una IP que ya no es de este equipo; true si
+   * quitó algo. Se llama antes de generar la configuración de Nginx y si `nginx -t` falla.
+   */
+  podarRed?: () => Promise<boolean>;
   /** Servidor FTP del proceso: aparece como servicio "ftp" (herramienta). */
   ftp?: Pick<ServidorFtp, 'estado' | 'iniciar' | 'detener'>;
   /** Procesos de los proyectos: aparecen en los estados y se detienen primero en detenerTodo. */
@@ -163,6 +168,7 @@ export class Servicios {
       d.httpsPrincipal,
       d.adminerPrincipal,
       d.phpmyadminPrincipal,
+      d.podarRed,
     );
     this.php = new ServicioPhp(d.rutas, d.plataforma, d.supervisor, d.instalador, d.leerConfig);
     const definiciones = d.definiciones;

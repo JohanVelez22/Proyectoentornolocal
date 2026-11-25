@@ -40,7 +40,7 @@ function nucleoFalso() {
       desactivar: vi.fn(),
     },
     caMovil: { abrir: vi.fn(), cerrar: vi.fn() },
-    comandoFirewallLan: vi.fn(() => 'New-NetFirewallRule falso'),
+    comandoFirewallLan: vi.fn(async () => 'New-NetFirewallRule falso'),
     tuneles: {
       abrir: vi.fn(),
       cerrar: vi.fn(),
@@ -3499,28 +3499,33 @@ describe('IPC de la red local (D25)', () => {
     };
   }
 
-  it('activar lleva al núcleo lo confirmado (IP, HTTPS y el refuerzo), nada más', async () => {
+  it('activar lleva al núcleo lo confirmado (IP, HTTPS y confirmado), nada más', async () => {
     const { crudo, llamar } = montar();
     const r = await llamar('lan.activar', 's1', {
+      confirmado: true,
       ip: '192.168.1.50',
       https: true,
-      datosReales: true,
       extra: 'se ignora',
+      datosReales: true,
     });
     expect(r.ok).toBe(true);
     expect(crudo.lan.activar).toHaveBeenCalledWith('s1', {
       confirmado: true,
       ip: '192.168.1.50',
       https: true,
-      confirmadoDatosReales: true,
     });
-    await llamar('lan.activar', 's1', { ip: '10.0.0.4', https: false });
-    expect(crudo.lan.activar).toHaveBeenLastCalledWith('s1', {
-      confirmado: true,
-      ip: '10.0.0.4',
-      https: false,
-      confirmadoDatosReales: false,
-    });
+  });
+
+  it('el IPC no inventa la confirmación: sin confirmado === true llega false al núcleo', async () => {
+    const { crudo, llamar } = montar();
+    for (const c of [undefined, false, 'true', 1, {}]) {
+      await llamar('lan.activar', 's1', { ip: '10.0.0.4', https: false, confirmado: c });
+      expect(crudo.lan.activar).toHaveBeenLastCalledWith('s1', {
+        confirmado: false,
+        ip: '10.0.0.4',
+        https: false,
+      });
+    }
   });
 
   it('la IP debe ser IPv4 y el puerto del cortafuegos, uno de 1024 a 65535', async () => {
@@ -3529,9 +3534,11 @@ describe('IPC de la red local (D25)', () => {
     expect((await llamar('lan.activar', 's1', { https: false })).ok).toBe(false);
     expect(crudo.lan.activar).not.toHaveBeenCalled();
     expect((await llamar('lan.comandoFirewall', 80)).ok).toBe(false);
-    const ok = await llamar('lan.comandoFirewall', 8100);
-    expect(ok.ok).toBe(true);
-    expect(crudo.comandoFirewallLan).toHaveBeenCalledWith(8100);
+    expect((await llamar('lan.comandoFirewall', 8100, 'otro')).ok).toBe(false);
+    expect((await llamar('lan.comandoFirewall', 8100)).ok).toBe(true);
+    expect(crudo.comandoFirewallLan).toHaveBeenLastCalledWith(8100, 'sitio');
+    expect((await llamar('lan.comandoFirewall', 8101, 'ca')).ok).toBe(true);
+    expect(crudo.comandoFirewallLan).toHaveBeenLastCalledWith(8101, 'ca');
   });
 
   it('el servidor de la CA se abre con una IP válida o sin ella, y se cierra', async () => {

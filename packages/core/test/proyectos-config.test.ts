@@ -494,7 +494,7 @@ describe('plantillas nuevas', () => {
     expect(generarVhost(sitio({ tipo: 'codeigniter4', php: '8.3' }), o)).toBe(
       [
         'server {',
-        '    listen 80;',
+        '    listen 127.0.0.1:80;',
         '    server_name a.test;',
         '    charset utf-8;',
         '    root "C:/Proyectos/a/public";',
@@ -520,7 +520,7 @@ describe('plantillas nuevas', () => {
     expect(generarVhost(sitio({ tipo: 'wordpress', php: '8.2' }), o)).toBe(
       [
         'server {',
-        '    listen 80;',
+        '    listen 127.0.0.1:80;',
         '    server_name a.test;',
         '    charset utf-8;',
         '    root "C:/Proyectos/a";',

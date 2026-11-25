@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
@@ -76,6 +77,8 @@ let recargas: number;
 let ifaces: Ifaces;
 let probados: Array<[string, number]>;
 let reservados: number[];
+let perfiles: Record<string, 'privado' | 'publico' | 'dominio'>;
+let avisos: string[][];
 let lan: GestorLan;
 
 const sitio = (id: string, extra: Partial<Sitio> = {}): Sitio =>
@@ -96,11 +99,14 @@ beforeEach(() => {
   sitios = [
     sitio('demo'),
     sitio('clientes', { datosReales: true }),
+    sitio('otro'),
     sitio('seguro', { redirigirHttps: true }),
   ];
   recargas = 0;
   probados = [];
   reservados = [];
+  perfiles = {};
+  avisos = [];
   ifaces = { 'Wi-Fi': [info('192.168.1.50')] };
   lan = new GestorLan({
     sitios: {
@@ -118,6 +124,12 @@ beforeEach(() => {
         recargas++;
       },
     }),
+    quitarCertificado: async (id) => {
+      rmSync(rutas.certCrt(id), { force: true });
+      rmSync(rutas.certKey(id), { force: true });
+    },
+    perfilRedDe: async (ip) => perfiles[ip] ?? null,
+    avisarRedCambio: (d) => void avisos.push(d),
     certificado: async (s) => {
       const crt = rutas.certCrt(s.id);
       const key = rutas.certKey(s.id);
@@ -154,9 +166,9 @@ describe('GestorLan.activar', () => {
 
   it('cada sitio recibe su propio puerto', async () => {
     const a = await lan.activar('demo', OK);
-    const b = await lan.activar('clientes', { ...OK, confirmadoDatosReales: true });
+    const b = await lan.activar('otro', OK);
     expect(b.puerto).not.toBe(a.puerto);
-    expect(vhost('clientes')).toContain(`listen 192.168.1.50:${b.puerto};`);
+    expect(vhost('otro')).toContain(`listen 192.168.1.50:${b.puerto};`);
   });
 
   it('sin confirmación no toca nada', async () => {
@@ -168,14 +180,23 @@ describe('GestorLan.activar', () => {
     expect(sitios[0]!.lan).toBeUndefined();
   });
 
-  it('con datos reales exige la confirmación reforzada', async () => {
-    await expect(lan.activar('clientes', OK)).rejects.toMatchObject({
-      codigo: 'lan.confirmacion_datos_reales',
-    });
+  it('con datos reales no se comparte, ni con confirmación (como Expose)', async () => {
+    for (const o of [OK, { ...OK, https: true }]) {
+      await expect(lan.activar('clientes', o)).rejects.toMatchObject({
+        codigo: 'lan.datos_reales',
+      });
+    }
     expect(existsSync(rutas.vhostAux('lan-clientes'))).toBe(false);
-    await expect(
-      lan.activar('clientes', { ...OK, confirmadoDatosReales: true }),
-    ).resolves.toBeDefined();
+    expect(recargas).toBe(0);
+  });
+
+  it('solo un confirmado === true abre (un valor parecido no vale)', async () => {
+    for (const confirmado of [undefined, false, 'true', 1]) {
+      await expect(
+        lan.activar('demo', { ...OK, confirmado: confirmado as never }),
+      ).rejects.toMatchObject({ codigo: 'lan.confirmacion_requerida' });
+    }
+    expect(existsSync(rutas.vhostAux('lan-demo'))).toBe(false);
   });
 
   it('la IP confirmada debe seguir siendo una de la red local', async () => {
@@ -194,7 +215,7 @@ describe('GestorLan.activar', () => {
     reservados = [8100];
     const a = await lan.activar('demo', OK);
     expect(a.puerto).toBe(8101);
-    const b = await lan.activar('clientes', { ...OK, confirmadoDatosReales: true });
+    const b = await lan.activar('otro', OK);
     expect(b.puerto).toBe(8102);
   });
 
@@ -210,8 +231,8 @@ describe('GestorLan.activar', () => {
     await lan.activar('demo', { ...OK, https: true });
     const c = vhost('demo');
     expect(c).toContain('listen 192.168.1.50:8100 ssl;');
-    expect(c).toContain(`ssl_certificate "${rutas.certCrt('lan-demo').replace(/\\/g, '/')}";`);
-    expect(readFileSync(rutas.certCrt('lan-demo'), 'utf8')).toBe('CRT 192.168.1.50');
+    expect(c).toContain(`ssl_certificate "${rutas.certCrt('_lan-demo').replace(/\\/g, '/')}";`);
+    expect(readFileSync(rutas.certCrt('_lan-demo'), 'utf8')).toBe('CRT 192.168.1.50');
     expect(sitios[0]!.lan?.https).toBe(true);
   });
 
@@ -219,6 +240,63 @@ describe('GestorLan.activar', () => {
     await expect(lan.activar('nada', OK)).rejects.toMatchObject({
       codigo: 'lan.sitio_no_encontrado',
     });
+  });
+});
+
+describe('GestorLan: certificado, red y perfil', () => {
+  it('el certificado de la red local usa un id que un slug no produce y se borra al dejar de compartir', async () => {
+    await lan.activar('demo', { ...OK, https: true });
+    expect(existsSync(rutas.certCrt('_lan-demo'))).toBe(true);
+    expect(existsSync(rutas.certKey('_lan-demo'))).toBe(true);
+    expect(vhost('demo')).toContain('_lan-demo.crt');
+    await lan.desactivar('demo');
+    expect(existsSync(rutas.certCrt('_lan-demo'))).toBe(false);
+    expect(existsSync(rutas.certKey('_lan-demo'))).toBe(false);
+  });
+
+  it('al apagar todo también se borran los certificados', async () => {
+    await lan.activar('demo', { ...OK, https: true });
+    await lan.apagarTodo();
+    expect(existsSync(rutas.certCrt('_lan-demo'))).toBe(false);
+  });
+
+  it('si la IP ya no es de este equipo, se deja de compartir, se avisa y el estado lo refleja', async () => {
+    await lan.activar('demo', OK);
+    await lan.activar('otro', OK);
+    ifaces = { 'Wi-Fi': [info('10.0.0.7')] };
+    const e = await lan.estado();
+    expect(e.sitios).toEqual([]);
+    expect(e.redCambio.sort()).toEqual(['demo.test', 'otro.test']);
+    expect(existsSync(rutas.vhostAux('lan-demo'))).toBe(false);
+    expect(existsSync(rutas.vhostAux('lan-otro'))).toBe(false);
+    expect(sitios.find((s) => s.id === 'demo')!.lan?.activo).toBe(false);
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]!.sort()).toEqual(['demo.test', 'otro.test']);
+    // Segunda consulta: ya no hay nada que podar ni avisar.
+    expect((await lan.estado()).redCambio).toEqual([]);
+    expect(avisos).toHaveLength(1);
+  });
+
+  it('podarRed no recarga Nginx (quien llama ya está generando la configuración) y deja lo que sigue valiendo', async () => {
+    await lan.activar('demo', OK);
+    ifaces = { 'Wi-Fi': [info('192.168.1.50'), info('10.0.0.7')] };
+    const antes = recargas;
+    expect(await lan.podarRed()).toEqual([]);
+    ifaces = { 'Wi-Fi': [info('10.0.0.7')] };
+    expect(await lan.podarRed()).toEqual(['demo.test']);
+    expect(recargas).toBe(antes);
+  });
+
+  it('el estado trae el perfil de cada red (para avisar de una red pública)', async () => {
+    perfiles = { '192.168.1.50': 'publico' };
+    expect((await lan.estado()).perfiles).toEqual({ '192.168.1.50': 'publico' });
+    perfiles = {};
+    expect((await lan.estado()).perfiles).toEqual({ '192.168.1.50': null });
+  });
+
+  it('un puerto para el servidor de la CA sale del mismo rango y salta lo compartido', async () => {
+    await lan.activar('demo', OK);
+    expect(await lan.puertoParaCa('192.168.1.50')).toBe(8101);
   });
 });
 
@@ -233,7 +311,7 @@ describe('GestorLan.desactivar y apagado', () => {
 
   it('al cerrar el núcleo ningún sitio queda compartido y se recarga Nginx', async () => {
     await lan.activar('demo', OK);
-    await lan.activar('clientes', { ...OK, confirmadoDatosReales: true });
+    await lan.activar('otro', OK);
     const antes = recargas;
     await lan.apagarTodo();
     expect(await new VhostsAuxiliares({ rutas, recargar: async () => {} }).ids('lan-')).toEqual([]);
@@ -347,11 +425,20 @@ describe('ServidorCa', () => {
       `/${token}/%2e%2e/wolfcore-dev-ca.key`,
       `/${'0'.repeat(32)}/ca.crt`,
       `/${token}/ca.crt/extra`,
+      `//${token}/ca.crt`,
+      `/${token}//ca.crt`,
+      `/${token}\\ca.crt`,
+      `\\${token}\\ca.crt`,
+      `/${token.toUpperCase()}/ca.crt`,
+      `/${token}/CA.CRT`,
+      `/${token}/ca.crt%00`,
+      `/${token}/ca.crt/`,
+      `/${token}/ca.crt#x`,
       `/${token}/ca.crt?x=1`.replace('?x=1', '/..'),
     ];
     for (const p of malas) {
       const r = await pedir(url, { path: p });
-      expect(r.estado, p).toBe(404);
+      expect([400, 404], p).toContain(r.estado);
       expect(r.cuerpo, p).not.toContain('PRIVATE');
       expect(r.cuerpo, p).not.toContain('BEGIN');
     }
@@ -386,6 +473,45 @@ describe('ServidorCa', () => {
     expect(srv.abierto()).toBe(false);
     vi.useRealTimers();
     await expect(pedir(url)).rejects.toBeDefined();
+  });
+
+  it('cerrar espera al abrir en curso: no queda un servidor abierto', async () => {
+    const abriendo = srv.abrir({ ip: '127.0.0.1' });
+    await srv.cerrar();
+    await abriendo.catch(() => undefined);
+    expect(srv.abierto()).toBe(false);
+  });
+
+  it('muestra las huellas SHA-256 y SHA-1 del ca.crt que entrega y el puerto elegido', async () => {
+    const real = new ServidorCa({
+      rutaCa: () => ca,
+      asegurarCa: async () => {},
+      permitirIp: (ip) => ip === '127.0.0.1',
+      elegirPuerto: async () => 0,
+    });
+    const r = await real.abrir({ ip: '127.0.0.1' });
+    const der = Buffer.from('MIIBfake', 'base64');
+    const esperada = (alg: string): string =>
+      (createHash(alg).update(der).digest('hex').toUpperCase().match(/../g) ?? []).join(':');
+    expect(r.huellas).toEqual({ sha256: esperada('sha256'), sha1: esperada('sha1') });
+    expect(r.huellas.sha256).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
+    expect(r.huellas.sha1).toMatch(/^([0-9A-F]{2}:){19}[0-9A-F]{2}$/);
+    expect(r.puerto).toBe(Number(new URL(r.url).port));
+    await real.cerrar();
+  });
+
+  it('un abrir con otra IP cierra primero el servidor anterior', async () => {
+    const dos = new ServidorCa({
+      rutaCa: () => ca,
+      asegurarCa: async () => {},
+      permitirIp: (ip) => ip === '127.0.0.1' || ip === '::1',
+    });
+    const a = await dos.abrir({ ip: '127.0.0.1' });
+    const b = await dos.abrir({ ip: '::1' }).catch(() => null);
+    // Con ::1 ocupado o no, el primero ya no responde y nunca hay dos abiertos.
+    await expect(pedir(a.url)).rejects.toBeDefined();
+    expect(b === null ? !dos.abierto() : dos.abierto()).toBe(true);
+    await dos.cerrar();
   });
 
   it('rechaza una IP que no es de la red local (nunca 0.0.0.0) y avisa si no hay red', async () => {

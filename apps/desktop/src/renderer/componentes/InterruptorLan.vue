@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Copy, Open, PhonePortrait, QrCode } from '@vicons/ionicons5';
-import { NButton, NCheckbox, NIcon, NModal, NSpin, NSwitch, NTooltip } from 'naive-ui';
+import { NAlert, NButton, NCheckbox, NIcon, NModal, NSpin, NSwitch, NTooltip } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
 import type { EstadoLan, Sitio, SitioCompartidoLan } from '../../shared/api';
 import { api } from '../api';
@@ -17,7 +17,7 @@ const t = textos.lan;
 const servicios = useServicios();
 const { ejecutar, ocupado } = useAccion();
 
-const estado = ref<EstadoLan>({ ips: [], sitios: [] });
+const estado = ref<EstadoLan>({ ips: [], sitios: [], perfiles: {}, redCambio: [] });
 const compartido = computed<SitioCompartidoLan | null>(
   () => estado.value.sitios.find((s) => s.sitioId === props.sitio.id) ?? null,
 );
@@ -25,15 +25,18 @@ const activo = computed(() => props.sitio.lan?.activo === true);
 const trabajando = computed(
   () => ocupado(`lan-activar-${props.sitio.id}`) || ocupado(`lan-desactivar-${props.sitio.id}`),
 );
-const bloqueo = computed(() =>
-  !activo.value && servicios.porId['nginx']?.estado !== 'encendido' ? t.sinNginx : null,
-);
+// Con datos reales no se comparte en la red (ni con confirmación); el núcleo también lo rechaza.
+const bloqueo = computed(() => {
+  if (activo.value) return null;
+  if (props.sitio.datosReales) return t.datosRealesBloqueado(props.sitio.dominio);
+  return servicios.porId['nginx']?.estado !== 'encendido' ? t.sinNginx : null;
+});
 
 async function refrescar(): Promise<void> {
   try {
     estado.value = await api().lan.estado();
   } catch {
-    estado.value = { ips: [], sitios: [] };
+    estado.value = { ips: [], sitios: [], perfiles: {}, redCambio: [] };
   }
 }
 watch(() => props.sitio.lan?.activo, refrescar, { immediate: true });
@@ -43,11 +46,10 @@ watch(() => props.sitio.lan?.activo, refrescar, { immediate: true });
 const confirmando = ref(false);
 const ip = ref('');
 const https = ref(false);
-const reales = ref(false);
 const httpsObligatorio = computed(() => props.sitio.redirigirHttps === true);
-const puedeConfirmar = computed(
-  () => ip.value !== '' && (!props.sitio.datosReales || reales.value),
-);
+const puedeConfirmar = computed(() => ip.value !== '' && !props.sitio.datosReales);
+// Una red pública: el cortafuegos de Windows la bloquea y la regla solo abre las privadas.
+const redPublica = computed(() => estado.value.perfiles[ip.value] === 'publico');
 const opcionesIp = computed(() => estado.value.ips.map((x) => ({ label: x, value: x })));
 
 async function pedirConfirmacion(): Promise<void> {
@@ -60,7 +62,6 @@ async function pedirConfirmacion(): Promise<void> {
   }
   ip.value = estado.value.ips[0]!;
   https.value = httpsObligatorio.value;
-  reales.value = false;
   confirmando.value = true;
 }
 
@@ -73,7 +74,7 @@ async function compartir(): Promise<void> {
       api().lan.activar(props.sitio.id, {
         ip: ip.value,
         https: https.value || httpsObligatorio.value,
-        ...(props.sitio.datosReales ? { datosReales: reales.value } : {}),
+        confirmado: true,
       }),
     { tituloError: t.tituloError },
   );
@@ -108,8 +109,9 @@ async function alternarFirewall(): Promise<void> {
   verFirewall.value = !verFirewall.value;
   if (verFirewall.value && compartido.value) {
     comando.value =
-      (await ejecutar('lan-firewall', () => api().lan.comandoFirewall(compartido.value!.puerto))) ??
-      '';
+      (await ejecutar('lan-firewall', () =>
+        api().lan.comandoFirewall(compartido.value!.puerto, 'sitio'),
+      )) ?? '';
   }
 }
 </script>
@@ -245,16 +247,8 @@ async function alternarFirewall(): Promise<void> {
           <span class="tenue">{{ t.ipEtiqueta }}</span>
           <Desplegable v-model:value="ip" :options="opcionesIp" size="small" />
         </label>
-        <p :class="{ peligro: sitio.datosReales }">
-          {{
-            sitio.datosReales
-              ? t.confirmarRealesTexto(sitio.dominio, ip)
-              : t.confirmarTexto(sitio.dominio, ip)
-          }}
-        </p>
-        <NCheckbox v-if="sitio.datosReales" v-model:checked="reales">
-          {{ t.casillaReales }}
-        </NCheckbox>
+        <p>{{ t.confirmarTexto(sitio.dominio, ip) }}</p>
+        <NAlert v-if="redPublica" type="warning" :show-icon="false">{{ t.redPublica }}</NAlert>
         <div class="campo">
           <NCheckbox v-model:checked="https" :disabled="httpsObligatorio">
             {{ t.https }}
@@ -356,10 +350,6 @@ async function alternarFirewall(): Promise<void> {
 }
 .confirmar p {
   margin: 0;
-}
-.peligro {
-  color: var(--texto-error);
-  font-weight: 500;
 }
 .campo {
   display: flex;

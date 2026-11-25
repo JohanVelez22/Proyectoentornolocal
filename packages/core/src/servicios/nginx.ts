@@ -86,6 +86,8 @@ export class ServicioNginx {
       raiz: string;
       puertos: number[];
     } | null> = async () => null,
+    /** Poda lo compartido en la red local cuya IP ya no existe (un `listen` que no abriría). */
+    private readonly podarRed: () => Promise<boolean> = async () => false,
   ) {}
 
   /** Versión configurada si está instalada; si no, la más reciente instalada. */
@@ -129,6 +131,8 @@ export class ServicioNginx {
     destino: string,
     sitesDir = path.dirname(this.rutas.vhost('x')),
   ): Promise<void> {
+    // Antes de leer los vhost: uno de la red local con una IP que ya no es nuestra no abriría.
+    await this.podarRed();
     const https = await this.httpsPrincipal();
     const adminer = await this.adminer();
     const phpmyadmin = await this.phpmyadmin();
@@ -211,7 +215,12 @@ export class ServicioNginx {
     const base = await this.argsBase();
     const candidato = `${this.rutas.nginxConf()}.nuevo`;
     await this.generarConf(base.bin, candidato);
-    const prueba = await this.probarConfig(candidato);
+    let prueba = await this.probarConfig(candidato);
+    // `nginx -t` falló: si es por un `listen` de la red local cuya IP cambió, se poda y se reintenta.
+    if (!prueba.ok && (await this.podarRed())) {
+      await this.generarConf(base.bin, candidato);
+      prueba = await this.probarConfig(candidato);
+    }
     if (!prueba.ok) {
       await rm(candidato, { force: true });
       throw new Error(prueba.salida || 'La configuración de nginx no es válida');

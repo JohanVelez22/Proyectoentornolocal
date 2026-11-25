@@ -16,6 +16,7 @@ const props = defineProps<{ show: boolean; ip: string }>();
 const emit = defineEmits<{ 'update:show': [valor: boolean] }>();
 
 const t = textos.caMovil;
+const comando = ref('');
 const { ejecutar } = useAccion();
 const abierta = ref<CaMovilAbierta | null>(null);
 const imagen = ref<string | null>(null);
@@ -50,6 +51,10 @@ async function abrir(): Promise<void> {
     return;
   }
   abierta.value = r;
+  // El comando del cortafuegos solo para este puerto (la propia app lo escucha: nunca se invita a
+  // permitir el programa entero).
+  comando.value =
+    (await ejecutar('ca-movil-comando', () => api().lan.comandoFirewall(r.puerto, 'ca'))) ?? '';
   ahora.value = Date.now();
   pararReloj();
   reloj = setInterval(() => {
@@ -64,11 +69,18 @@ async function abrir(): Promise<void> {
   }
 }
 
+function copiar(): void {
+  void ejecutar('ca-movil-copiar', () => api().sistema.copiar(comando.value), {
+    exito: textos.acciones.copiado,
+  });
+}
+
 async function cerrar(): Promise<void> {
   turno++;
   pararReloj();
   abierta.value = null;
   imagen.value = null;
+  comando.value = '';
   await api()
     .lan.cerrarCaMovil()
     .catch(() => undefined);
@@ -114,6 +126,15 @@ onBeforeUnmount(() => {
         <p v-if="abierta && !vencida" class="tenue">{{ t.expira(minutos) }}</p>
         <NButton v-if="vencida" size="small" @click="abrir">{{ t.reabrir }}</NButton>
       </div>
+      <div v-if="abierta && !vencida" class="huellas">
+        <strong>{{ t.huellas }}</strong>
+        <div>
+          <span class="tenue">SHA-256</span> <code>{{ abierta.huellas.sha256 }}</code>
+        </div>
+        <div>
+          <span class="tenue">SHA-1</span> <code>{{ abierta.huellas.sha1 }}</code>
+        </div>
+      </div>
       <NTabs type="segment" size="small" animated>
         <NTabPane name="android" :tab="t.android">
           <ol class="pasos">
@@ -127,7 +148,15 @@ onBeforeUnmount(() => {
         </NTabPane>
       </NTabs>
       <NAlert type="warning" :show-icon="false">{{ t.aviso }}</NAlert>
-      <p class="tenue">{{ t.firewallAviso }}</p>
+      <div v-if="abierta && !vencida" class="firewall">
+        <p class="tenue">{{ t.firewallAviso(abierta.puerto) }}</p>
+        <div class="comando">
+          <code>{{ comando }}</code>
+          <NButton size="tiny" secondary :disabled="!comando" @click="copiar">
+            {{ textos.lan.copiarComando }}
+          </NButton>
+        </div>
+      </div>
     </div>
     <template #footer>
       <div class="pie">
@@ -176,6 +205,27 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+.huellas {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+.huellas code {
+  font-family: var(--fuente-mono);
+  word-break: break-all;
+}
+.comando {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.comando code {
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  word-break: break-all;
+  flex: 1;
 }
 .pie {
   display: flex;

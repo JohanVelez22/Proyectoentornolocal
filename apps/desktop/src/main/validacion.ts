@@ -282,6 +282,14 @@ export function urlFtpSegura(v: unknown): string {
   return t;
 }
 
+/** Uno de los valores permitidos (nunca otro texto). */
+export function unoDe<T extends string>(v: unknown, permitidos: readonly T[], nombre = 'valor'): T {
+  const t = texto(v, nombre);
+  const r = permitidos.find((p) => p === t);
+  if (r === undefined) throw new Error(`El valor de ${nombre} no es válido`);
+  return r;
+}
+
 const IPV4 = new RegExp(String.raw`^${OCTETO}(?:\.${OCTETO}){3}$`);
 
 /** Una dirección IPv4 con cuatro octetos (el núcleo comprueba que sea de la red local). */

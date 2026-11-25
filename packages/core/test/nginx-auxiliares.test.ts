@@ -99,6 +99,29 @@ describe('VhostsAuxiliares', () => {
     expect(existsSync(rutas.vhostAux('tunel-wolf'))).toBe(false);
   });
 
+  it('si Nginx rechaza un vhost que reemplaza a otro, vuelve el contenido anterior', async () => {
+    await v.agregar('lan-wolf', 'server { listen 1; }');
+    falla = true;
+    await expect(v.agregar('lan-wolf', 'server {')).rejects.toThrow(/nginx -t/);
+    expect(readFileSync(rutas.vhostAux('lan-wolf'), 'utf8')).toBe('server { listen 1; }');
+  });
+
+  it('quitar uno de la red local (lan-) recarga siempre; uno de túnel, solo si existía', async () => {
+    await v.quitar('lan-nada');
+    expect(recargas).toBe(1);
+    await v.quitar('tunel-nada');
+    expect(recargas).toBe(1);
+  });
+
+  it('quitarSinRecargar borra el archivo sin recargar ni esperar la cola', async () => {
+    await v.agregar('lan-a', 'x');
+    const antes = recargas;
+    await v.quitarSinRecargar('lan-a');
+    expect(existsSync(rutas.vhostAux('lan-a'))).toBe(false);
+    expect(recargas).toBe(antes);
+    await expect(v.quitarSinRecargar('../x')).rejects.toThrow();
+  });
+
   it('quitar borra aunque no se pueda recargar', async () => {
     await v.agregar('tunel-wolf', 'server {}');
     falla = true;

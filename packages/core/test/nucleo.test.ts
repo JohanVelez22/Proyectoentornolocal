@@ -623,7 +623,7 @@ describe('Nucleo', () => {
       expect(cfg.servicios.nginx.puerto).toBe(8089);
       expect(cfg.servicios.php.trabajadores).toBe(3);
       expect(cfg.sitios).toHaveLength(1);
-      expect(readFileSync(n.rutas.vhost('demo'), 'utf8')).toContain('listen 8089;');
+      expect(readFileSync(n.rutas.vhost('demo'), 'utf8')).toContain('listen 127.0.0.1:8089;');
     });
 
     it('rechaza valores fuera de rango sin guardar', async () => {
@@ -1771,6 +1771,28 @@ describe('Nucleo y la red local (D25)', () => {
     const b = await crear();
     expect(existsSync(extras('lan-demo'))).toBe(false);
     expect((await b.sitios.listar())[0]!.lan?.activo).toBe(false);
+  });
+
+  it('un sitio guardado con datos reales deja de compartirse', async () => {
+    const n = await crear();
+    await n.guardarSitio(datos());
+    await n.sitios.editar('demo', { lan });
+    mkdirSync(path.dirname(extras('lan-demo')), { recursive: true });
+    writeFileSync(extras('lan-demo'), 'server {}');
+    await n.guardarSitio(datos({ datosReales: true }), 'demo');
+    expect(existsSync(extras('lan-demo'))).toBe(false);
+    expect((await n.sitios.listar())[0]!.lan?.activo).toBe(false);
+  });
+
+  it('el comando del cortafuegos de un sitio lleva nginx y la subred; el de la CA, solo el puerto', async () => {
+    const n = await crear();
+    const sitio = await n.comandoFirewallLan(8100, 'sitio');
+    expect(sitio).toContain('-LocalPort 8100');
+    expect(sitio).toContain('-RemoteAddress LocalSubnet');
+    expect(sitio).toMatch(/-Program '.*nginx/);
+    const ca = await n.comandoFirewallLan(8101, 'ca');
+    expect(ca).toContain('-LocalPort 8101');
+    expect(ca).not.toContain('-Program');
   });
 
   it('borrar un sitio compartido quita su server', async () => {
