@@ -26,6 +26,14 @@ async function invocar<T>(ruta: RutaIpc, ...args: unknown[]): Promise<T> {
 const api: ApiEntorno = {
   estadoGeneral: () => invocar('estadoGeneral'),
   carpetaDatos: () => invocar('carpetaDatos'),
+  perfiles: {
+    entorno: () => invocar('perfiles.entorno'),
+    exportar: (o) => invocar('perfiles.exportar', o),
+    vistaPrevia: (archivo, o) => invocar('perfiles.vistaPrevia', archivo, o),
+    importar: (archivo, o) => invocar('perfiles.importar', archivo, o),
+    instantaneas: () => invocar('perfiles.instantaneas'),
+    instantanea: () => invocar('perfiles.instantanea'),
+  },
   sitios: {
     listar: () => invocar('sitios.listar'),
     guardar: (datos, id) => invocar('sitios.guardar', datos, id),

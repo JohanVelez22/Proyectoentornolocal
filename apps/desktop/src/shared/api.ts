@@ -155,6 +155,14 @@ import type {
   ServicioVersiones,
   TablaVersiones,
   TipoRespaldoDatos,
+  InstantaneaEntorno,
+  OpcionesExportarPerfil,
+  OpcionesImportarPerfil,
+  PrefijoRuta,
+  ResultadoExportarPerfil,
+  ResultadoImportarPerfil,
+  VistaPreviaPerfil,
+  AvisoPerfil,
 } from '@pel/core';
 
 export type {
@@ -308,6 +316,14 @@ export interface SeleccionAuditoria {
 
 export type ObjetivoSqlIpc = MotorSql | IdInstancia;
 export type {
+  InstantaneaEntorno,
+  OpcionesExportarPerfil,
+  OpcionesImportarPerfil,
+  PrefijoRuta,
+  ResultadoExportarPerfil,
+  ResultadoImportarPerfil,
+  VistaPreviaPerfil,
+  AvisoPerfil,
   EstadoInstancia,
   IdInstancia,
   PlanActualizar,
@@ -480,6 +496,26 @@ export interface ApiEntorno {
   estadoGeneral(): Promise<EstadoGeneral>;
   /** Carpeta de datos del programa (solo lectura). */
   carpetaDatos(): Promise<string>;
+  /**
+   * Perfiles del entorno (D27). Las rutas (el archivo del perfil, el destino y las carpetas de los
+   * sitios) salen de diálogos (`sistema.elegirArchivo`, `guardarArchivo`, `elegirCarpeta`). La
+   * frase nunca se guarda: viaja en la llamada y se borra al terminar.
+   */
+  perfiles: {
+    /** `aislado`: la app corre con `WOLFCORE_DATOS` (carpeta de prueba). */
+    entorno(): Promise<{ aislado: boolean; carpeta: string }>;
+    exportar(o: OpcionesExportarPerfil): Promise<ResultadoExportarPerfil>;
+    vistaPrevia(
+      archivo: string,
+      o?: { rutas: Record<string, string>; prefijos?: PrefijoRuta[] },
+    ): Promise<VistaPreviaPerfil>;
+    /** Exige `confirmado: true` y la huella de la última vista previa. */
+    importar(archivo: string, o: OpcionesImportarPerfil): Promise<ResultadoImportarPerfil>;
+    /** Las instantáneas automáticas del entorno (10 últimas), de la más nueva a la más vieja. */
+    instantaneas(): Promise<InstantaneaEntorno[]>;
+    /** Toma una a mano; devuelve su carpeta (`''` si no había nada que copiar). */
+    instantanea(): Promise<string>;
+  };
   sitios: {
     listar(): Promise<Sitio[]>;
     guardar(datos: DatosSitio, id?: string): Promise<{ sitio: Sitio; aplicar: ResultadoAplicar }>;
@@ -1334,6 +1370,12 @@ export const PREFIJO_CANAL = 'entorno:';
 export const RUTAS_IPC = [
   'estadoGeneral',
   'carpetaDatos',
+  'perfiles.entorno',
+  'perfiles.exportar',
+  'perfiles.vistaPrevia',
+  'perfiles.importar',
+  'perfiles.instantaneas',
+  'perfiles.instantanea',
   'sitios.listar',
   'sitios.guardar',
   'sitios.borrar',

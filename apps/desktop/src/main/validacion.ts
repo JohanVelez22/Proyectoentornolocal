@@ -55,6 +55,9 @@ import {
   type IdInstancia,
   type ServicioVersiones,
   type TipoRespaldoDatos,
+  type OpcionesExportarPerfil,
+  type OpcionesImportarPerfil,
+  type PrefijoRuta,
 } from '@pel/core';
 
 /** Terminal elegida: un id conocido; `undefined` o null = la predeterminada. */
@@ -1695,5 +1698,150 @@ export function tunelConfirmado(
     ...(o['nombre'] !== undefined ? { nombre: o['nombre'] as string } : {}),
     ...(o['dominio'] !== undefined ? { dominio: o['dominio'] as string } : {}),
     ...(o['modo'] !== undefined ? { modo: o['modo'] as 'serve' | 'funnel' } : {}),
+  };
+}
+
+/* ───────────── Perfiles del entorno (D27) ───────────── */
+
+/** Frase de un perfil: texto de hasta 1024 caracteres, sin controles. Nunca se repite en un error. */
+const FRASE_PERFIL_MAX = 1024;
+const ID_SITIO_PERFIL = /^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/;
+
+/**
+ * Exportar un perfil: el destino sale de un diálogo de "guardar" y las casillas son booleanos de
+ * verdad; la frase (o null) nunca aparece en un mensaje de error.
+ */
+export function validarExportarPerfil(v: unknown, elegidas: RutasElegidas): OpcionesExportarPerfil {
+  const o = objetoPlano<Record<string, unknown>>(v, 'perfil');
+  soloClaves(o, ['destino', 'bases', 'certificados', 'ca', 'frase'], 'perfil');
+  const destino = elegidas.exigir(o['destino'], 'archivo', 'guardar');
+  const frase =
+    o['frase'] === null || o['frase'] === undefined
+      ? null
+      : textoAcotado(o['frase'], 1, FRASE_PERFIL_MAX, 'frase');
+  return {
+    destino,
+    bases: booleano(o['bases'], 'bases'),
+    certificados: booleano(o['certificados'], 'certificados'),
+    ca: booleano(o['ca'], 'ca'),
+    frase,
+  };
+}
+
+/** Las carpetas de la reasignación de rutas: cada una sale de un diálogo; ids y topes acotados. */
+function rutasDePerfil(
+  v: unknown,
+  elegidas: RutasElegidas,
+): { rutas: Record<string, string>; prefijos: PrefijoRuta[] } {
+  const o = objetoPlano<Record<string, unknown>>(v ?? {}, 'rutas');
+  const crudas = objetoPlano<Record<string, unknown>>(o['rutas'] ?? {}, 'rutas');
+  const ids = Object.keys(crudas);
+  if (ids.length > 2000) throw new Error('Argumento no válido: rutas');
+  const rutas: Record<string, string> = {};
+  for (const id of ids) {
+    if (!ID_SITIO_PERFIL.test(id)) throw new Error('Argumento no válido: sitio');
+    rutas[id] = elegidas.exigir(crudas[id], 'carpeta');
+  }
+  const brutos = o['prefijos'] ?? [];
+  if (!Array.isArray(brutos) || brutos.length > 50)
+    throw new Error('Argumento no válido: prefijos');
+  const prefijos = brutos.map((p): PrefijoRuta => {
+    const x = objetoPlano<Record<string, unknown>>(p, 'prefijo');
+    soloClaves(x, ['viejo', 'nuevo'], 'prefijo');
+    return {
+      viejo: textoAcotado(x['viejo'], 1, 260, 'prefijo'),
+      nuevo: elegidas.exigir(x['nuevo'], 'carpeta'),
+    };
+  });
+  return { rutas, prefijos };
+}
+
+/** Vista previa de un perfil: el archivo y las carpetas de los sitios salen de diálogos. */
+export function validarVistaPreviaPerfil(
+  archivo: unknown,
+  opciones: unknown,
+  elegidas: RutasElegidas,
+): { archivo: string; rutas: Record<string, string>; prefijos: PrefijoRuta[] } {
+  const ruta = elegidas.exigir(archivo, 'archivo');
+  return { archivo: ruta, ...rutasDePerfil(opciones, elegidas) };
+}
+
+const HEX64 = /^[0-9a-f]{64}$/;
+
+/**
+ * Importar un perfil: `confirmado: true` y la huella de la vista previa son obligatorios; las
+ * confirmaciones aparte (CA, sin restricciones, sin bases) solo valen como `true`; `guardarClave`
+ * nunca viene del renderer (la pone el proceso principal).
+ */
+export function validarImportarPerfil(
+  archivo: unknown,
+  opciones: unknown,
+  elegidas: RutasElegidas,
+): { archivo: string; opciones: Omit<OpcionesImportarPerfil, never> } {
+  const ruta = elegidas.exigir(archivo, 'archivo');
+  const o = objetoPlano<Record<string, unknown>>(opciones, 'importar');
+  soloClaves(
+    o,
+    [
+      'rutas',
+      'prefijos',
+      'frase',
+      'importarCa',
+      'omitirBases',
+      'envProyectos',
+      'reemplazarCa',
+      'aceptarCaSinRestricciones',
+      'huella',
+      'confirmado',
+    ],
+    'importar',
+  );
+  if (o['confirmado'] !== true) throw new Error('Argumento no válido: confirmado');
+  if (typeof o['huella'] !== 'string' || !HEX64.test(o['huella'])) {
+    throw new Error('Argumento no válido: huella');
+  }
+  const { rutas, prefijos } = rutasDePerfil(
+    { rutas: o['rutas'], prefijos: o['prefijos'] },
+    elegidas,
+  );
+  const verdadero = (clave: string): true | undefined => {
+    if (o[clave] === undefined) return undefined;
+    if (o[clave] !== true) throw new Error(`Argumento no válido: ${clave}`);
+    return true;
+  };
+  const importarCa = verdadero('importarCa');
+  const omitirBases = verdadero('omitirBases');
+  const reemplazarCa = verdadero('reemplazarCa');
+  const aceptarCaSinRestricciones = verdadero('aceptarCaSinRestricciones');
+  const envProyectos =
+    o['envProyectos'] === undefined
+      ? undefined
+      : (() => {
+          const l = o['envProyectos'];
+          if (!Array.isArray(l) || l.length > 2000)
+            throw new Error('Argumento no válido: proyectos');
+          return l.map((id) => {
+            if (typeof id !== 'string' || !ID_SITIO_PERFIL.test(id)) {
+              throw new Error('Argumento no válido: sitio');
+            }
+            return id;
+          });
+        })();
+  return {
+    archivo: ruta,
+    opciones: {
+      rutas,
+      ...(prefijos.length > 0 ? { prefijos } : {}),
+      ...(o['frase'] !== undefined
+        ? { frase: textoAcotado(o['frase'], 1, FRASE_PERFIL_MAX, 'frase') }
+        : {}),
+      ...(importarCa ? { importarCa } : {}),
+      ...(omitirBases ? { omitirBases } : {}),
+      ...(reemplazarCa ? { reemplazarCa } : {}),
+      ...(aceptarCaSinRestricciones ? { aceptarCaSinRestricciones } : {}),
+      ...(envProyectos ? { envProyectos } : {}),
+      huella: o['huella'],
+      confirmado: true,
+    },
   };
 }

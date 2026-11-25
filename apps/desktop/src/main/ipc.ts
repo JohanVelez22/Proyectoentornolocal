@@ -106,6 +106,9 @@ import {
   rutaAbsoluta,
   tipoRuntime,
   validarPedidoProyecto,
+  validarExportarPerfil,
+  validarVistaPreviaPerfil,
+  validarImportarPerfil,
   opcionesPlantilla,
   idPlantilla,
   idsImportar,
@@ -822,6 +825,28 @@ type Manejador = (nucleo: NucleoIpc, sistema: Contexto, ...args: unknown[]) => u
 const TABLA: Record<RutaIpc, Manejador> = {
   estadoGeneral: (n) => n.estadoGeneral(),
   carpetaDatos: (n) => n.rutas.base,
+  // Perfiles del entorno (D27): las rutas salen de diálogos; la frase se limpia de cualquier error
+  // y nunca se guarda ni se registra. Las claves nuevas de las bases van al almacén (bd:<sitio>).
+  'perfiles.entorno': (n) => ({ aislado: n.aislado, carpeta: n.rutas.base }),
+  'perfiles.exportar': async (n, s, o) => {
+    const opciones = validarExportarPerfil(o, s.elegidas);
+    return sinClave(opciones.frase ?? '', () => n.exportarPerfil(opciones));
+  },
+  'perfiles.vistaPrevia': (n, s, archivo, o) => {
+    const p = validarVistaPreviaPerfil(archivo, o, s.elegidas);
+    return n.vistaPreviaImportarPerfil(p.archivo, { rutas: p.rutas, prefijos: p.prefijos });
+  },
+  'perfiles.importar': async (n, s, archivo, o) => {
+    const p = validarImportarPerfil(archivo, o, s.elegidas);
+    return sinClave(p.opciones.frase ?? '', () =>
+      n.importarPerfil(p.archivo, {
+        ...p.opciones,
+        guardarClave: (sitioId, clave) => s.secretos.guardar(`bd:${sitioId}`, clave),
+      }),
+    );
+  },
+  'perfiles.instantaneas': (n) => n.instantaneasEntorno(),
+  'perfiles.instantanea': (n) => n.instantaneaEntorno('manual'),
   'sitios.listar': (n) => n.sitios.listar(),
   'sitios.guardar': (n, _s, datos, id) =>
     n.guardarSitio(

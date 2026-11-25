@@ -574,6 +574,12 @@ describe('registrarIpc', () => {
       [
         'estadoGeneral',
         'carpetaDatos',
+        'perfiles.entorno',
+        'perfiles.exportar',
+        'perfiles.vistaPrevia',
+        'perfiles.importar',
+        'perfiles.instantaneas',
+        'perfiles.instantanea',
         'avisoInicio',
         'sitios.listar',
         'sitios.guardar',
