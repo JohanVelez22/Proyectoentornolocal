@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import { enmascararSecretos } from '../patronesSecretos';
@@ -86,11 +86,10 @@ function leerCredencial(texto: string): Credencial {
 /**
  * Cloudflare con nombre (dominio propio). El certificado de la cuenta (`cert.pem`) vive en
  * `etc/cloudflared/` (nunca en `~/.cloudflared`). La credencial del túnel (los datos del
- * `<UUID>.json`) vive solo en `AlmacenSecretos` (`tunel:cloudflare-nombre:<túnel>`): `cloudflared`
- * solo la lee de un archivo (los túneles creados por consola no admiten `--token`, que es de los
- * gestionados en el panel), así que al abrir se escribe un archivo restringido al usuario en
- * `run/cloudflared/` que se borra en cuanto el túnel conecta, al cerrarlo, si el proceso muere y
- * al arrancar la app tras una caída.
+ * `<UUID>.json`) vive solo en `AlmacenSecretos` (`tunel:cloudflare-nombre:<túnel>`) y llega a
+ * `cloudflared` por `TUNNEL_CRED_CONTENTS` en el entorno del proceso (`envSecreto`: no se escribe
+ * en archivos ni en `estado.json`). Los túneles creados por consola no admiten `--token`, que es
+ * de los gestionados en el panel.
  */
 export class CloudflareNombre implements ProveedorTunel {
   readonly id = 'cloudflare-nombre' as const;
@@ -99,9 +98,6 @@ export class CloudflareNombre implements ProveedorTunel {
 
   private cert(): string {
     return path.join(this.d.rutas.cloudflaredEtc(), 'cert.pem');
-  }
-  private archivoCredencial(sitioId: string): string {
-    return path.join(this.d.rutas.cloudflaredRun(), `${sitioId}.json`);
   }
   private archivoConfig(sitioId: string): string {
     return path.join(this.d.rutas.cloudflaredEtc(), `${sitioId}.yml`);
@@ -174,8 +170,7 @@ export class CloudflareNombre implements ProveedorTunel {
     const s = this.d.secretos();
     if (!s || !s.disponible()) throw this.sinCifrado();
     if ((await s.leer(idSecretoTunelNombre(nombre))) !== null) return;
-    const carpeta = this.d.rutas.cloudflaredRun();
-    await mkdir(carpeta, { recursive: true });
+    const carpeta = await this.carpetaTemporal();
     const tmp = path.join(carpeta, `crear-${randomBytes(6).toString('hex')}.json`);
     try {
       await this.cloudflared(['create', '--credentials-file', tmp, nombre], 60_000);
@@ -187,6 +182,14 @@ export class CloudflareNombre implements ProveedorTunel {
     } finally {
       await rm(tmp, { force: true });
     }
+  }
+
+  /** `run/cloudflared/`: temporal y restringida al usuario antes de escribir nada dentro. */
+  private async carpetaTemporal(): Promise<string> {
+    const carpeta = this.d.rutas.cloudflaredRun();
+    await mkdir(carpeta, { recursive: true });
+    await this.d.plataforma.restringirAlUsuario(carpeta).catch(() => false);
+    return carpeta;
   }
 
   /** `tunnel route dns`: apunta el dominio público al túnel. */
@@ -230,41 +233,28 @@ export class CloudflareNombre implements ProveedorTunel {
       );
     }
     const cred = leerCredencial(guardado);
-    const archivo = this.archivoCredencial(sitio.id);
     const config = this.archivoConfig(sitio.id);
-    await mkdir(this.d.rutas.cloudflaredRun(), { recursive: true });
     await mkdir(this.d.rutas.cloudflaredEtc(), { recursive: true });
-    await rm(archivo, { force: true });
-    try {
-      await writeFile(archivo, JSON.stringify(cred), { flag: 'wx', mode: 0o600 });
-      if (!(await this.d.plataforma.restringirAlUsuario(archivo).catch(() => false))) {
-        throw new ErrorWolf(
-          'tuneles.credencial_no_protegida',
-          'No se pudo restringir la credencial del túnel al usuario; no se abrió el túnel.',
-        );
-      }
-      // El YAML lleva rutas y nombres, nunca la credencial (solo la ruta de su archivo).
-      const q = (v: string): string => JSON.stringify(v);
-      const yml = [
-        `tunnel: ${q(cred.TunnelID)}`,
-        `credentials-file: ${q(archivo)}`,
-        'ingress:',
-        `  - hostname: ${q(dominio)}`,
-        `    service: ${q(`http://127.0.0.1:${c.puertoNginx}`)}`,
-        '    originRequest:',
-        `      httpHostHeader: ${q(sitio.dominio)}`,
-        '  - service: http_status:404',
-        '',
-      ].join('\n');
-      await writeFile(config, yml, 'utf8');
-    } catch (e) {
-      await rm(archivo, { force: true });
-      throw e;
-    }
+    // El YAML lleva rutas y nombres, nunca la credencial: esa va solo en el entorno del proceso.
+    const q = (v: string): string => JSON.stringify(v);
+    const yml = [
+      `tunnel: ${q(cred.TunnelID)}`,
+      'ingress:',
+      `  - hostname: ${q(dominio)}`,
+      `    service: ${q(`http://127.0.0.1:${c.puertoNginx}`)}`,
+      '    originRequest:',
+      `      httpHostHeader: ${q(sitio.dominio)}`,
+      '  - service: http_status:404',
+      '',
+    ].join('\n');
+    await writeFile(config, yml, 'utf8');
+    const contenido = JSON.stringify(cred);
     return {
       comando: c.cloudflared,
       args: ['tunnel', '--no-autoupdate', '--config', config, '--logfile', c.logCloudflared, 'run'],
-      secretos: [cred.TunnelSecret, JSON.stringify(cred)],
+      // La credencial viaja solo en el entorno del proceso (nunca en un archivo ni en estado.json).
+      envSecreto: { TUNNEL_CRED_CONTENTS: contenido },
+      secretos: [cred.TunnelSecret, contenido],
     };
   }
 
@@ -274,26 +264,8 @@ export class CloudflareNombre implements ProveedorTunel {
     return LISTO.test(texto) ? `https://${dominio}` : null;
   }
 
-  /** Ya conectó: cloudflared tiene la credencial en memoria, el archivo sobra. */
-  async alEstarListo(sitioId: string): Promise<void> {
-    await rm(this.archivoCredencial(sitioId), { force: true });
-  }
-
-  async cerrar(sitioId: string): Promise<void> {
-    await rm(this.archivoCredencial(sitioId), { force: true });
-  }
-
-  async barrer(vivos: ReadonlySet<string>): Promise<void> {
-    let nombres: string[] = [];
-    try {
-      nombres = await readdir(this.d.rutas.cloudflaredRun());
-    } catch {
-      return;
-    }
-    for (const n of nombres) {
-      const m = /^(.+)\.json$/.exec(n);
-      if (!m || vivos.has(m[1]!)) continue;
-      await rm(path.join(this.d.rutas.cloudflaredRun(), n), { force: true });
-    }
+  /** Sin archivos temporales por sitio: la credencial va en el entorno del proceso. */
+  async cerrar(): Promise<void> {
+    // Nada que borrar.
   }
 }

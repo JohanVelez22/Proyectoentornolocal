@@ -76,12 +76,8 @@ export interface ProveedorTunel {
   abrir(sitio: Sitio, c: ContextoTunel): Promise<LanzamientoTunel>;
   /** La URL pública si en `texto` (los logs del proceso) el túnel ya está listo. */
   url(sitio: Sitio, texto: string): string | null;
-  /** El túnel ya conectó: el proveedor puede soltar lo que solo hacía falta al arrancar. */
-  alEstarListo?(sitioId: string): Promise<void>;
   /** Borra lo temporal del sitio (idempotente; también tras una caída). */
   cerrar(sitioId: string): Promise<void>;
-  /** Borra lo temporal de todo sitio que no esté en `vivos`. */
-  barrer?(vivos: ReadonlySet<string>): Promise<void>;
 }
 
 /** Lo que el núcleo usa del almacén de secretos del proceso principal. */

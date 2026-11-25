@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import {
   existsSync,
   mkdirSync,
@@ -14,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import type { Ejecutor } from '../src/plataforma/tipos';
 import type { DefProceso, EstadoProceso } from '../src/procesos/supervisor';
+import { Supervisor } from '../src/procesos/supervisor';
 import { Rutas } from '../src/rutas';
 import { UrlBase } from '../src/sitios/urlbase';
 import { SitioSchema, type Sitio } from '../src/tipos';
@@ -52,7 +54,6 @@ let llamadas: Array<{
   quitar?: readonly string[];
 }>;
 let restringidos: string[];
-let credencialEnArranque: boolean;
 let bannerEnLog: string;
 let falloCloudflared: string | null;
 let guardados: Array<{ sitioId: string; tunel: unknown }>;
@@ -75,12 +76,6 @@ const supervisor = () =>
       iniciados.push(d);
       estados.set(d.id, 'iniciando');
       pids.set(d.id, 4242);
-      // El archivo de credenciales existe mientras cloudflared arranca.
-      const cfg = d.args[d.args.indexOf('--config') + 1];
-      if (cfg) {
-        const m = /credentials-file: (".*")/.exec(readFileSync(cfg, 'utf8'));
-        credencialEnArranque = !!m && existsSync(JSON.parse(m[1]!) as string);
-      }
       const li = d.args.indexOf('--logfile');
       if (li >= 0) {
         mkdirSync(path.dirname(d.args[li + 1]!), { recursive: true });
@@ -188,7 +183,6 @@ beforeEach(() => {
   sitios = [sitio()];
   llamadas = [];
   restringidos = [];
-  credencialEnArranque = false;
   bannerEnLog = BANNER;
   falloCloudflared = null;
   guardados = [];
@@ -228,17 +222,18 @@ describe('Cloudflare con nombre: abrir', () => {
     expect(iniciados[0]!.quitarEntorno).toEqual(['TUNNEL_']);
   });
 
-  it('la credencial no va en los argumentos, el env ni el config.yml; se restringe al usuario y se borra al conectar', async () => {
+  it('la credencial viaja solo en envSecreto: ni en args, ni en env, ni en el config.yml, ni en archivos', async () => {
     const t = crear();
     await t.abrir('wolf');
     const d = iniciados[0]!;
+    expect(d.envSecreto).toEqual({ TUNNEL_CRED_CONTENTS: CREDENCIAL });
     expect(JSON.stringify(d.args)).not.toContain(CENTINELA);
     expect(JSON.stringify(d.env ?? {})).not.toContain(CENTINELA);
-    expect(credencialEnArranque).toBe(true);
-    const archivo = path.join(rutas.cloudflaredRun(), 'wolf.json');
-    expect(restringidos).toContain(archivo);
-    // Ya conectó: el archivo sobra.
-    expect(existsSync(archivo)).toBe(false);
+    const yml = readFileSync(path.join(rutas.cloudflaredEtc(), 'wolf.yml'), 'utf8');
+    expect(yml).not.toContain('credentials-file');
+    expect(yml).not.toContain(CENTINELA);
+    // Nunca se escribe un archivo de credencial.
+    expect(existsSync(rutas.cloudflaredRun())).toBe(false);
   });
 
   it('nada del núcleo guarda la credencial en disco (config, logs, registro) fuera del almacén', async () => {
@@ -250,13 +245,13 @@ describe('Cloudflare con nombre: abrir', () => {
     }
   });
 
-  it('cerrar borra la credencial aunque el túnel no hubiera conectado y restaura el .env', async () => {
+  it('cerrar restaura el .env y no deja ningún archivo de credencial', async () => {
     const t = crear();
     await t.abrir('wolf');
     expect(readFileSync(env(), 'utf8')).toContain('APP_URL=https://demo.midominio.com/');
     await t.cerrar('wolf');
     expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
-    expect(existsSync(path.join(rutas.cloudflaredRun(), 'wolf.json'))).toBe(false);
+    expect(existsSync(rutas.cloudflaredRun())).toBe(false);
   });
 
   it('si el túnel nunca conecta, no deja la credencial y el .env vuelve', async () => {
@@ -264,7 +259,7 @@ describe('Cloudflare con nombre: abrir', () => {
     const t = crear({ esperaMs: 60, intervaloMs: 10 });
     const e = await t.abrir('wolf');
     expect(e.estado).toBe('error');
-    expect(existsSync(path.join(rutas.cloudflaredRun(), 'wolf.json'))).toBe(false);
+    expect(existsSync(rutas.cloudflaredRun())).toBe(false);
     expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
   });
 
@@ -275,21 +270,18 @@ describe('Cloudflare con nombre: abrir', () => {
     for (const f of salidas) f('tunel-wolf', 1);
     await new Promise((r) => setTimeout(r, 30));
     expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
-    expect(existsSync(path.join(rutas.cloudflaredRun(), 'wolf.json'))).toBe(false);
+    expect(existsSync(rutas.cloudflaredRun())).toBe(false);
   });
 
-  it('tras matar la app a mano: al arrancar restaura el .env y barre las credenciales sueltas', async () => {
+  it('tras matar la app a mano: al arrancar restaura el .env', async () => {
     const t = crear();
     await t.abrir('wolf');
-    // Simula la caída: el proceso ya no existe y queda una credencial suelta.
+    // Simula la caída: el proceso ya no existe.
     estados.clear();
     pids.clear();
-    writeFileSync(path.join(rutas.cloudflaredRun(), 'wolf.json'), CREDENCIAL);
-    writeFileSync(path.join(rutas.cloudflaredRun(), 'otro.json'), CREDENCIAL);
     const nuevo = crear();
     await nuevo.restaurar();
     expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
-    expect(readdirSync(rutas.cloudflaredRun())).toEqual([]);
     expect(nuevo.estados()).toEqual([]);
   });
 
@@ -362,30 +354,6 @@ describe('Cloudflare con nombre: seguridad de la apertura', () => {
     expect(iniciados).toEqual([]);
   });
 
-  it('si la credencial no se puede restringir al usuario, no abre y no deja el archivo', async () => {
-    const t = new Tuneles({
-      supervisor: supervisor(),
-      sitios: { listar: async () => sitios },
-      almacen: { leer: async () => ({ servicios: { nginx: { puerto: 8080 } } }) } as never,
-      instalador: { instalados: async () => ['2026.10.1'] } as never,
-      rutas,
-      urlBase: new UrlBase({
-        rutas,
-        ejecutor: async () => ({ codigo: 0, stdout: '', stderr: '' }),
-      }),
-      eventos,
-      plataforma: { restringirAlUsuario: async () => false },
-      ejecutor,
-      secretos: () => secretos,
-    });
-    await expect(t.abrir('wolf')).rejects.toMatchObject({
-      codigo: 'tuneles.credencial_no_protegida',
-    });
-    expect(existsSync(path.join(rutas.cloudflaredRun(), 'wolf.json'))).toBe(false);
-    expect(iniciados).toEqual([]);
-    expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
-  });
-
   it('un proveedor sin implementar (ngrok) no abre nada', async () => {
     sitios = [sitio({ tunel: { proveedor: 'ngrok' } })];
     await expect(crear().abrir('wolf')).rejects.toMatchObject({
@@ -422,6 +390,12 @@ describe('Cloudflare con nombre: cuenta, túnel y dominio', () => {
     expect(l.args[i + 1]!.startsWith(rutas.cloudflaredRun())).toBe(true);
     expect(existsSync(l.args[i + 1]!)).toBe(false);
     for (const f of archivos(base)) expect(readFileSync(f, 'latin1'), f).not.toContain(CENTINELA);
+  });
+
+  it('la carpeta temporal se restringe al usuario antes de que cloudflared escriba en ella', async () => {
+    almacenSecretos.clear();
+    await crear().cloudflareNombre!.crearTunel('wolf-dev');
+    expect(restringidos[0]).toBe(rutas.cloudflaredRun());
   });
 
   it('crear de nuevo un túnel que ya tiene credencial no llama a cloudflared', async () => {
@@ -482,5 +456,75 @@ describe('Cloudflare con nombre: cuenta, túnel y dominio', () => {
     ]);
     // Lo guardado en el sitio no lleva credenciales.
     expect(JSON.stringify(guardados)).not.toContain(CENTINELA);
+  });
+});
+
+describe('Cloudflare con nombre con el Supervisor real', () => {
+  it('estado.json, los eventos y los errores nunca llevan la credencial; el proceso sí la recibe', async () => {
+    const entornos: Array<NodeJS.ProcessEnv | undefined> = [];
+    const vivos = new Set<number>();
+    const sup = new Supervisor(
+      rutas,
+      {
+        procesoVivo: async (pid: number) => ({
+          vivo: vivos.has(pid),
+          ejecutable: 'cloudflared.exe',
+        }),
+        matarArbol: async (pid: number) => {
+          vivos.delete(pid);
+        },
+        inicioProceso: async () => null,
+      } as never,
+      eventos,
+      {
+        intervaloMs: 60_000,
+        lanzarOculto: null,
+        sonda: async () => true,
+        spawn: ((_c: string, args: string[], o: { env?: NodeJS.ProcessEnv }) => {
+          entornos.push(o.env);
+          const li = args.indexOf('--logfile');
+          mkdirSync(path.dirname(args[li + 1]!), { recursive: true });
+          writeFileSync(args[li + 1]!, BANNER);
+          vivos.add(7000);
+          return Object.assign(new EventEmitter(), {
+            pid: 7000,
+            unref: () => undefined,
+          });
+        }) as never,
+      },
+    );
+    const emitidos: unknown[] = [];
+    eventos.on('tunel:estado', (e) => emitidos.push(e));
+    const t = new Tuneles({
+      supervisor: sup,
+      sitios: { listar: async () => sitios },
+      almacen: { leer: async () => ({ servicios: { nginx: { puerto: 8080 } } }) } as never,
+      instalador: { instalados: async () => ['2026.10.1'] } as never,
+      rutas,
+      urlBase: new UrlBase({
+        rutas,
+        ejecutor: async () => ({ codigo: 0, stdout: '', stderr: '' }),
+      }),
+      eventos,
+      opts: { esperaMs: 500, intervaloMs: 10 },
+      plataforma: { restringirAlUsuario: async () => true },
+      ejecutor,
+      secretos: () => secretos,
+    });
+    process.env['TUNNEL_TOKEN'] = 'heredado-ajeno';
+    try {
+      const e = await t.abrir('wolf');
+      expect(e.estado).toBe('activo');
+      expect(entornos[0]!['TUNNEL_CRED_CONTENTS']).toBe(CREDENCIAL);
+      expect(entornos[0]!['TUNNEL_TOKEN']).toBeUndefined();
+      expect(readFileSync(rutas.estado(), 'utf8')).not.toContain(CENTINELA);
+      expect(JSON.stringify(emitidos)).not.toContain(CENTINELA);
+      expect(JSON.stringify(e)).not.toContain(CENTINELA);
+      await t.cerrar('wolf');
+      for (const f of archivos(base)) expect(readFileSync(f, 'latin1'), f).not.toContain(CENTINELA);
+    } finally {
+      delete process.env['TUNNEL_TOKEN'];
+      await sup.cerrar().catch(() => undefined);
+    }
   });
 });

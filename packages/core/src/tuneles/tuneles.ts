@@ -208,11 +208,6 @@ export class Tuneles {
       await this.limpiarProveedores(r.sitioId);
     }
     this.escribirRegistros(vivos);
-    // Credenciales temporales que quedaron de una caída (también las de aperturas sin registro).
-    const idsVivos = new Set(vivos.map((v) => v.sitioId));
-    for (const p of this.proveedores.values()) {
-      await p.barrer?.(idsVivos).catch((e) => console.error('No se pudo barrer el túnel:', e));
-    }
     await this.barrerHuerfanos(new Set(vivos.map((v) => v.sitioId)));
   }
 
@@ -390,8 +385,6 @@ export class Tuneles {
     const sitioId = sitio.id;
     const pid = this.d.supervisor.pid(PREFIJO + sitioId);
     if (pid !== null) this.agregarRegistro({ sitioId, url, pid });
-    // Conectó: lo temporal del proveedor (credenciales) ya no hace falta.
-    await this.proveedores.get(proveedorDeSitio(sitio))?.alEstarListo?.(sitioId);
     let mensaje: string | undefined;
     if (this.mapa.get(sitioId)?.estado !== 'iniciando') return this.estadoActual(sitioId);
     if (sitio.urlBaseVar) {
