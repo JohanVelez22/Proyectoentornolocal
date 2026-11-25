@@ -24,6 +24,7 @@ import {
   type TablaVersiones,
 } from './catalogo/tablaVersiones';
 import { huellaDe } from './catalogo/huellas';
+import { aislarPlataforma } from './plataforma/aislada';
 import { exportarPerfil } from './perfiles/exportar';
 import { Perfiles } from './perfiles/importar';
 import type {
@@ -282,6 +283,11 @@ import { PUERTO_ADMINER, PUERTO_PHPMYADMIN } from './nginx/principal';
 
 export interface OpcionesNucleo {
   base?: string;
+  /**
+   * Carpeta de datos de prueba (`WOLFCORE_DATOS`): no se escribe el `hosts`, el almacén de
+   * certificados, el PATH ni las variables del usuario (ver `aislarPlataforma`).
+   */
+  aislado?: boolean;
   plataforma?: Plataforma;
   fetch?: typeof fetch;
   /** Para pruebas: reemplazos de procesos hijos y de ejecución de comandos. */
@@ -764,12 +770,19 @@ export class Nucleo {
     const rutas = new Rutas(baseElegida);
     await rutas.asegurar();
     await rutas.purgarTemporales();
-    const plataforma = o.plataforma ?? crearPlataforma();
+    // Carpeta de datos de prueba (WOLFCORE_DATOS): nada que sea del equipo y no de esa carpeta se
+    // escribe (hosts, almacén de certificados, PATH y variables del usuario, servicios).
+    const aislar = <T extends object>(x: T): T =>
+      o.aislado
+        ? aislarPlataforma(x, (que) =>
+            console.warn(`Carpeta de datos de prueba: no se hace ${que} (WOLFCORE_DATOS).`),
+          )
+        : x;
+    const plataforma = aislar(o.plataforma ?? crearPlataforma());
     // Lo que una plataforma parcial (pruebas) no tenga lo pone la de Windows con el mismo ejecutor:
     // es lo que hacía el núcleo antes de pasar todo por la plataforma.
-    const plat = completarPlataforma(
-      plataforma,
-      new PlataformaWindows(o.ejecutor ?? ejecutorPorDefecto),
+    const plat = aislar(
+      completarPlataforma(plataforma, new PlataformaWindows(o.ejecutor ?? ejecutorPorDefecto)),
     );
     const eventos = new Eventos<EventosNucleo>();
     const almacen = new Almacen(rutas);

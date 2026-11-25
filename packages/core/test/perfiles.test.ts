@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { createWriteStream, existsSync, readFileSync } from 'node:fs';
+import { createWriteStream, existsSync, readFileSync, symlinkSync } from 'node:fs';
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
@@ -1540,6 +1540,26 @@ describe('reasignarRutas', () => {
       { viejo: '/home/viejo', nuevo: '/x' },
     ]);
     expect(r[0]!.carpeta).toBe('/Home/viejo/a');
+  });
+});
+
+describe('validarCarpetaDatos: ruta real y carpeta anterior', () => {
+  it('rechaza la carpeta de antes del cambio de nombre y un enlace a la real', async () => {
+    const real = path.join(dir, 'Local', 'WolfCoreDev');
+    await mkdir(real, { recursive: true });
+    expect(() =>
+      validarCarpetaDatos(path.join(dir, 'Local', 'Proyectoentornolocal'), real),
+    ).toThrow(expect.objectContaining({ codigo: 'perfiles.carpeta_datos_invalida' }));
+    const enlace = path.join(dir, 'enlace');
+    // Una unión en Windows (no pide permisos), un enlace simbólico en los demás.
+    symlinkSync(real, enlace, 'junction');
+    expect(() => validarCarpetaDatos(enlace, real)).toThrow(
+      expect.objectContaining({ codigo: 'perfiles.carpeta_datos_invalida' }),
+    );
+    expect(() => validarCarpetaDatos(path.join(enlace, 'sub'), real)).toThrow(
+      expect.objectContaining({ codigo: 'perfiles.carpeta_datos_invalida' }),
+    );
+    expect(validarCarpetaDatos(path.join(dir, 'prueba'), real)).toBe(path.join(dir, 'prueba'));
   });
 });
 

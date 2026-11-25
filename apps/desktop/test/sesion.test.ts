@@ -10,6 +10,7 @@ import {
   topeCierre,
   usarCarpetaDatos,
 } from '../src/main/sesion';
+import { idiomaDeLocale, textosMain } from '../src/main/textos';
 
 let base: string;
 let carpeta: string;
@@ -124,6 +125,19 @@ describe('WOLFCORE_DATOS (D26)', () => {
       expect(() => carpetaDatosDeEntorno({ WOLFCORE_DATOS: mala }, real()), mala).toThrow(
         expect.objectContaining({ codigo: 'perfiles.carpeta_datos_invalida' }),
       );
+    }
+  });
+});
+
+describe('textos del diálogo de WOLFCORE_DATOS', () => {
+  it('en los cuatro idiomas, con el idioma del sistema', () => {
+    expect(idiomaDeLocale('es-CO')).toBe('es');
+    expect(idiomaDeLocale('pt-BR')).toBe('pt');
+    expect(idiomaDeLocale('fr-FR')).toBe('fr');
+    expect(idiomaDeLocale('de-DE')).toBe('en');
+    for (const i of ['es', 'en', 'pt', 'fr'] as const) {
+      expect(textosMain(i).carpetaDatosInvalida).toContain('WOLFCORE_DATOS');
+      expect(textosMain(i).carpetaDatosAislada.length).toBeGreaterThan(10);
     }
   });
 });

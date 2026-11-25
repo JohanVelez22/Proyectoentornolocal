@@ -27,7 +27,7 @@ import type { ApiSistema } from '../shared/api';
 import { Notificador } from './notificaciones';
 import { textoAviso } from '../shared/textosAvisos';
 import { crearBandeja, menuBandeja, type AccionesBandeja } from './bandeja';
-import { textosMain } from './textos';
+import { idiomaDeLocale, textosMain } from './textos';
 import { programarDoctorAlIniciar } from './doctorInicio';
 import { ControlMetricas, registrarIpc } from './ipc';
 import { AlmacenSecretos } from './secretos';
@@ -280,7 +280,7 @@ try {
   if (carpetaDatos) {
     const userData = usarCarpetaDatos(app, carpetaDatos);
     console.info(
-      `WolfCore Dev usa la carpeta de datos ${carpetaDatos} (${VARIABLE_DATOS}); Electron, ${userData}. La carpeta real no se toca.`,
+      `WolfCore Dev usa la carpeta de datos ${carpetaDatos} (${VARIABLE_DATOS}); Electron, ${userData}. La carpeta real no se toca y no se escriben el hosts, el PATH, las variables del usuario ni el almacén de certificados.`,
     );
   }
 } catch (e) {
@@ -288,7 +288,10 @@ try {
 }
 
 if (errorCarpetaDatos !== null) {
-  dialog.showErrorBox('WolfCore Dev', errorCarpetaDatos);
+  // Aún no hay preferencias: el idioma del sistema.
+  const t = textosMain(idiomaDeLocale(Intl.DateTimeFormat().resolvedOptions().locale));
+  console.error(errorCarpetaDatos);
+  dialog.showErrorBox('WolfCore Dev', t.carpetaDatosInvalida);
   app.exit(1);
 } else if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -308,7 +311,7 @@ if (errorCarpetaDatos !== null) {
   });
   void app.whenReady().then(async () => {
     try {
-      nucleo = await Nucleo.crear(carpetaDatos ? { base: carpetaDatos } : {});
+      nucleo = await Nucleo.crear(carpetaDatos ? { base: carpetaDatos, aislado: true } : {});
     } catch (e) {
       const detalle = e instanceof Error ? e.message : String(e);
       dialog.showErrorBox('WolfCore Dev', `No se pudo iniciar el núcleo: ${detalle}`);
@@ -328,7 +331,7 @@ if (errorCarpetaDatos !== null) {
     ventana = v;
     if (carpetaDatos) {
       // Que se vea siempre con qué carpeta corre esta ventana.
-      const titulo = `WolfCore Dev — ${textosMain(idioma).carpetaDatos}: ${carpetaDatos}`;
+      const titulo = `WolfCore Dev — ${textosMain(idioma).carpetaDatosAislada}: ${carpetaDatos}`;
       v.on('page-title-updated', (e) => e.preventDefault());
       v.setTitle(titulo);
     }

@@ -11,7 +11,10 @@ const TEXTOS = {
     siApagar: 'Sí, apagar',
     noApagar: 'No, dejarlos encendidos',
     cancelar: 'Cancelar',
-    carpetaDatos: 'carpeta de datos',
+    carpetaDatosAislada:
+      'carpeta de datos de prueba, sin tocar hosts, PATH ni certificados del sistema',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS no es una carpeta de datos válida: debe ser absoluta, no del sistema y distinta de la carpeta real (y de la anterior). La app se cierra sin tocar nada.',
   },
   en: {
     abrir: 'Open',
@@ -22,7 +25,10 @@ const TEXTOS = {
     siApagar: 'Yes, stop them',
     noApagar: 'No, keep them running',
     cancelar: 'Cancel',
-    carpetaDatos: 'data folder',
+    carpetaDatosAislada:
+      'test data folder, without touching the system hosts, PATH or certificates',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS is not a valid data folder: it must be absolute, not a system folder and different from the real one (and the previous one). The app closes without touching anything.',
   },
   pt: {
     abrir: 'Abrir',
@@ -33,7 +39,10 @@ const TEXTOS = {
     siApagar: 'Sim, desligar',
     noApagar: 'Não, deixá-los ligados',
     cancelar: 'Cancelar',
-    carpetaDatos: 'pasta de dados',
+    carpetaDatosAislada:
+      'pasta de dados de teste, sem tocar o hosts, o PATH nem os certificados do sistema',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS não é uma pasta de dados válida: deve ser absoluta, não do sistema e diferente da pasta real (e da anterior). O app fecha sem tocar em nada.',
   },
   fr: {
     abrir: 'Ouvrir',
@@ -44,7 +53,10 @@ const TEXTOS = {
     siApagar: 'Oui, les arrêter',
     noApagar: 'Non, les laisser actifs',
     cancelar: 'Annuler',
-    carpetaDatos: 'dossier de données',
+    carpetaDatosAislada:
+      'dossier de données de test, sans toucher au hosts, au PATH ni aux certificats du système',
+    carpetaDatosInvalida:
+      "WOLFCORE_DATOS n'est pas un dossier de données valide : il doit être absolu, hors des dossiers système et différent du dossier réel (et du précédent). L'application se ferme sans rien toucher.",
   },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
@@ -52,4 +64,10 @@ export type TextosMain = (typeof TEXTOS)['es'];
 
 export function textosMain(idioma: IdiomaUi | null): TextosMain {
   return TEXTOS[idioma ?? 'es'];
+}
+
+/** Idioma de la interfaz para un locale del sistema (`es-CO` → `es`); inglés si no es de los cuatro. */
+export function idiomaDeLocale(locale: string): IdiomaUi {
+  const l = (locale || '').slice(0, 2).toLowerCase();
+  return l === 'es' || l === 'pt' || l === 'fr' ? l : 'en';
 }

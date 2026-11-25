@@ -1,7 +1,9 @@
+import { realpathSync } from 'node:fs';
 import { mkdir, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from './errores';
 
+import { NOMBRE_CARPETA_ANTERIOR } from './plataforma/carpetas';
 export { NOMBRE_CARPETA, NOMBRE_CARPETA_ANTERIOR, rutaBasePorDefecto } from './plataforma/carpetas';
 
 /** "8.4.13" → "8.4"; si no tiene esa forma, la versión tal cual. */
@@ -80,10 +82,39 @@ export function validarCarpetaDatos(ruta: string, real: string): string {
     throw invalida('no puede llevar "." ni ".."');
   }
   if (esCarpetaDeSistema(r)) throw invalida('es una carpeta del sistema');
-  if (dentroDe(real, r) || dentroDe(r, real)) {
-    throw invalida('no puede ser la carpeta de datos real ni contenerla');
+  // La real y la de antes del cambio de nombre, comparadas también por su ruta real (un enlace o
+  // una unión que apunte a ellas tampoco vale).
+  const reales = [real, path.join(path.dirname(real), NOMBRE_CARPETA_ANTERIOR)];
+  const candidatas = [r, rutaReal(r)];
+  for (const x of reales.flatMap((y) => [y, rutaReal(y)])) {
+    for (const c of candidatas) {
+      if (dentroDe(x, c) || dentroDe(c, x)) {
+        throw invalida('no puede ser la carpeta de datos real ni contenerla');
+      }
+    }
   }
+  if (esCarpetaDeSistema(rutaReal(r))) throw invalida('es una carpeta del sistema');
   return r.replace(/[\\/]+$/, '');
+}
+
+/**
+ * Ruta real (sin enlaces ni uniones) de `ruta`: la de su parte que existe más el resto. Si no se
+ * puede resolver, la misma.
+ */
+function rutaReal(ruta: string): string {
+  let actual = path.resolve(ruta);
+  const resto: string[] = [];
+  for (let i = 0; i < 64; i++) {
+    try {
+      return path.join(realpathSync.native(actual), ...resto.reverse());
+    } catch {
+      const padre = path.dirname(actual);
+      if (padre === actual) return ruta;
+      resto.push(path.basename(actual));
+      actual = padre;
+    }
+  }
+  return ruta;
 }
 
 export class Rutas {
