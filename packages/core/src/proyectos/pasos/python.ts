@@ -12,7 +12,14 @@ export function pasoPythonVenv(d: DepsPasos): ImplementacionPaso {
       return;
     }
     const h = await herramientas(ctx, d);
-    await lanzar(ctx, d, h, pythonExe(d, h), ['-m', 'venv', '.venv'], 'python -m venv .venv');
+    await lanzar(
+      ctx,
+      d,
+      h,
+      pythonExe(d, h),
+      ['-I', '-m', 'venv', '.venv'],
+      'python -I -m venv .venv',
+    );
   };
 }
 
@@ -69,8 +76,8 @@ export function pasoPipInstall(d: DepsPasos): ImplementacionPaso {
       d,
       h,
       py,
-      ['-m', 'pip', 'install', ...(sinScripts ? ['--only-binary=:all:'] : []), ...destino],
-      ['python -m pip install', ...(sinScripts ? ['--only-binary=:all:'] : []), ...destino].join(
+      ['-I', '-m', 'pip', 'install', ...(sinScripts ? ['--only-binary=:all:'] : []), ...destino],
+      ['python -I -m pip install', ...(sinScripts ? ['--only-binary=:all:'] : []), ...destino].join(
         ' ',
       ),
     );

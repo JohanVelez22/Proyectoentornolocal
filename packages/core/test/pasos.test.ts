@@ -659,7 +659,7 @@ describe('python-venv y pip-install', () => {
     const a = await armar({ sitio: { tipo: 'fastapi' } });
     await correr(a, 'python-venv');
     expect(a.llamadas.map((l) => [l.cmd, ...l.args])).toEqual([
-      [join(a.pythonDir, 'python.exe'), '-m', 'venv', '.venv'],
+      [join(a.pythonDir, 'python.exe'), '-I', '-m', 'venv', '.venv'],
     ]);
   });
 
@@ -679,6 +679,7 @@ describe('python-venv y pip-install', () => {
     const l = a.llamadas[0]!;
     expect([l.cmd, ...l.args]).toEqual([
       join(a.carpeta, '.venv', 'Scripts', 'python.exe'),
+      '-I',
       '-m',
       'pip',
       'install',
@@ -697,7 +698,18 @@ describe('python-venv y pip-install', () => {
     await escribir(a.carpeta, 'pyproject.toml', '[project]\nname="x"\n');
     await escribir(a.carpeta, '.venv/Scripts/python.exe', '');
     await correr(a, 'pip-install');
-    expect(a.llamadas[0]!.args).toEqual(['-m', 'pip', 'install', '-e', '.']);
+    expect(a.llamadas[0]!.args).toEqual(['-I', '-m', 'pip', 'install', '-e', '.']);
+  });
+
+  it('python-venv y pip-install lanzan Python en modo aislado (-I): un pip.py o venv.py del proyecto no se importa', async () => {
+    const a = await armar({ sitio: { tipo: 'fastapi' } });
+    await correr(a, 'python-venv');
+    const b = await armar({ sitio: { tipo: 'fastapi' } });
+    await escribir(b.carpeta, 'requirements.txt', 'fastapi\n');
+    await escribir(b.carpeta, '.venv/Scripts/python.exe', '');
+    await correr(b, 'pip-install');
+    for (const l of [...a.llamadas, ...b.llamadas])
+      expect(l.args.slice(0, 2)).toEqual(['-I', '-m']);
   });
 
   it('pip-install sin .venv pide crear el entorno', async () => {
