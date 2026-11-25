@@ -288,6 +288,31 @@ USE mysql;
       await armar().importarAjeno('mysql', origen, 'tienda');
     });
 
+    it('acepta el encabezado y el pie reales de mysqldump y de MariaDB, también con fin de línea de Windows', async () => {
+      datos = [
+        '/*M!999999\\- enable the sandbox mode */ ',
+        '-- MariaDB dump 10.19  Distrib 10.4.32-MariaDB, for Win64 (AMD64)',
+        '--',
+        '-- Host: 127.0.0.1    Database: tienda',
+        '/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;',
+        '/*!40101 SET NAMES utf8mb4 */;',
+        "/*!40103 SET TIME_ZONE='+00:00' */;",
+        '/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;',
+        "/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;",
+        '/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;',
+        'LOCK TABLES `usuarios` WRITE;',
+        '/*!40000 ALTER TABLE `usuarios` DISABLE KEYS */;',
+        'INSERT INTO `usuarios` VALUES (1,0x416E61);',
+        '/*!40000 ALTER TABLE `usuarios` ENABLE KEYS */;',
+        'UNLOCK TABLES;',
+        '/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;',
+        '/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;',
+        '-- Dump completed on 2026-11-24 21:00:00',
+      ].join('\r\n');
+      await armar().importarAjeno('mysql', origen, 'tienda');
+      expect(eventos).not.toContain('reiniciar:tienda');
+    });
+
     it('acepta cadenas con ; saltos de línea y palabras de SQL dentro de los datos', async () => {
       datos = [
         'LOCK TABLES `usuarios` WRITE;',
