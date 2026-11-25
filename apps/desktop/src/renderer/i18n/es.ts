@@ -801,6 +801,68 @@ export const es = {
   avisoInicio: {
     titulo: 'Aviso de WolfCore Dev',
   },
+  workspaces: {
+    titulo: 'Workspaces',
+    descripcion:
+      'Conjuntos con nombre de bases de datos, servicios y procesos que se encienden y se apagan juntos.',
+    nuevo: 'Nuevo workspace',
+    vacio:
+      'Todavía no hay workspaces. Cree uno, por ejemplo «Bot FastAPI» con PostgreSQL, Redis, Ollama y el proceso de su proyecto.',
+    elementos: (n: number) => (n === 1 ? '1 elemento' : `${n} elementos`),
+    sinElementos: 'Sin elementos',
+    estado: { apagado: 'Apagado', parcial: 'En parte', encendido: 'Encendido' },
+    acciones: {
+      iniciar: 'Encender',
+      detener: 'Apagar',
+      editar: 'Editar',
+      borrar: 'Borrar',
+      cerrar: 'Cerrar',
+    },
+    borrar: {
+      titulo: (n: string) => `¿Borrar «${n}»?`,
+      texto:
+        'Borrar el workspace no apaga ni borra nada: solo quita el conjunto. Lo que está encendido sigue encendido.',
+      confirmar: 'Borrar',
+      hecho: (n: string) => `Workspace «${n}» borrado.`,
+    },
+    dialogo: {
+      tituloNuevo: 'Nuevo workspace',
+      tituloEditar: 'Editar workspace',
+      nombre: 'Nombre',
+      nombrePlaceholder: 'Bot FastAPI',
+      nombreVacio: 'Escriba un nombre.',
+      aviso:
+        'Un workspace solo guarda qué encender. No abre túneles, no comparte en la red local y no enciende los procesos de un proyecto en el que no confía.',
+      secciones: {
+        instancias: 'Bases de datos',
+        servicios: 'Servicios',
+        procesos: 'Procesos de proyectos',
+      },
+      sinOpciones: 'No hay nada para elegir aquí.',
+      captadorUnico: 'Solo un captador de correo a la vez: elegir otro reemplaza al anterior.',
+      yaNoExisten: (lista: string) => `Ya no existen y se quitarán al guardar: ${lista}`,
+      guardar: 'Guardar',
+      guardado: (n: string) => `Workspace «${n}» guardado.`,
+    },
+    resultado: {
+      tituloIniciar: (n: string) => `«${n}»: así quedó al encender`,
+      tituloDetener: (n: string) => `«${n}»: así quedó al apagar`,
+      encendido: 'Encendido',
+      apagado: 'Apagado',
+      yaEncendido: 'Ya estaba encendido',
+      yaApagado: 'Ya estaba apagado',
+      noExiste: 'Ya no existe: se ignoró',
+      compartido: 'Sigue encendido: lo usa otro workspace encendido',
+      reemplaza: (otro: string) => `Encendido; apagó ${otro}, del mismo grupo de correo`,
+      fallo: 'No quedó encendido',
+      falloApagar: 'Sigue encendido',
+      ok: (n: string) => `«${n}» listo.`,
+      parcial: (n: string, encendidos: number, total: number) =>
+        `«${n}»: quedaron encendidos ${encendidos} de ${total}. Revise lo que no arrancó.`,
+      parcialApagar: (n: string, siguen: number) =>
+        `«${n}»: ${siguen} siguen encendidos. Revise lo que no se apagó.`,
+    },
+  },
   inicio: {
     titulo: 'Inicio',
     bienvenida: 'Su entorno de desarrollo, de un vistazo.',
@@ -3928,6 +3990,8 @@ export const es = {
     apagar: (servicio: string) => `Apagar ${servicio}`,
     iniciarTodo: 'Iniciar todos los servicios',
     detenerTodo: 'Detener todos los servicios',
+    iniciarWorkspace: (n: string) => `Encender el workspace ${n}`,
+    detenerWorkspace: (n: string) => `Apagar el workspace ${n}`,
     abrirSitio: (nombre: string) => `Abrir ${nombre} en el navegador`,
     traerCambios: (nombre: string) => `Traer cambios en ${nombre}`,
     abrirHerramienta: (nombre: string) => `Abrir ${nombre}`,
@@ -4512,6 +4576,15 @@ export const es = {
         existe: 'Ya existe: se reemplaza',
         nueva: 'Nueva',
       },
+      workspaces: {
+        titulo: 'Workspaces',
+        texto:
+          'Solo llevan referencias a bases de datos y servicios (los procesos de proyectos no viajan). Se validan contra lo que existe aquí y nunca arrancan solos.',
+        existe: 'Ya tiene uno con el mismo id: se conserva el suyo',
+        nuevo: 'Nuevo',
+        elementos: (n: number) => (n === 1 ? '1 elemento' : `${n} elementos`),
+        invalidos: (n: number) => `${n} del perfil no son válidos y no se importan.`,
+      },
       quitado: {
         titulo: 'Lo que no se toma de la configuración',
         texto:
@@ -4592,6 +4665,7 @@ export const es = {
           instancias: 'Instancias',
           bases: 'Bases',
           plantillas: 'Plantillas',
+          workspaces: 'Workspaces',
           env: 'Archivos .env',
           ca: 'CA',
         },
@@ -4621,6 +4695,8 @@ export const es = {
           si: 'Quitar',
           hecho: 'CA anterior quitada de la confianza.',
         },
+        descartadosWorkspace: (lista: string) => `No existe aquí y se quitó: ${lista}`,
+        workspacesInvalidos: (n: number) => `${n} workspaces no válidos no se importaron.`,
         puerto: (de: number, a: number) => `Puerto ${de} → ${a}`,
         copiaEnv: (ruta: string) => `Copia del .env: ${ruta}`,
       },

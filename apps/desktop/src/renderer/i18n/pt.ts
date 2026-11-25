@@ -802,6 +802,68 @@ export const pt: Textos = {
   avisoInicio: {
     titulo: 'Aviso do WolfCore Dev',
   },
+  workspaces: {
+    titulo: 'Workspaces',
+    descripcion:
+      'Conjuntos com nome de bancos de dados, serviços e processos que ligam e desligam juntos.',
+    nuevo: 'Novo workspace',
+    vacio:
+      'Ainda não há workspaces. Crie um, por exemplo «Bot FastAPI» com PostgreSQL, Redis, Ollama e o processo do seu projeto.',
+    elementos: (n: number) => (n === 1 ? '1 item' : `${n} itens`),
+    sinElementos: 'Sem itens',
+    estado: { apagado: 'Desligado', parcial: 'Em parte', encendido: 'Ligado' },
+    acciones: {
+      iniciar: 'Ligar',
+      detener: 'Desligar',
+      editar: 'Editar',
+      borrar: 'Excluir',
+      cerrar: 'Fechar',
+    },
+    borrar: {
+      titulo: (n: string) => `Excluir «${n}»?`,
+      texto:
+        'Excluir o workspace não desliga nem apaga nada: só remove o conjunto. O que está ligado continua ligado.',
+      confirmar: 'Excluir',
+      hecho: (n: string) => `Workspace «${n}» excluído.`,
+    },
+    dialogo: {
+      tituloNuevo: 'Novo workspace',
+      tituloEditar: 'Editar workspace',
+      nombre: 'Nome',
+      nombrePlaceholder: 'Bot FastAPI',
+      nombreVacio: 'Digite um nome.',
+      aviso:
+        'Um workspace só guarda o que ligar. Não abre túneis, não compartilha na rede local e não liga os processos de um projeto em que você não confia.',
+      secciones: {
+        instancias: 'Bancos de dados',
+        servicios: 'Serviços',
+        procesos: 'Processos de projetos',
+      },
+      sinOpciones: 'Não há nada para escolher aqui.',
+      captadorUnico: 'Só um captador de e-mail por vez: escolher outro substitui o anterior.',
+      yaNoExisten: (lista: string) => `Não existem mais e serão removidos ao salvar: ${lista}`,
+      guardar: 'Salvar',
+      guardado: (n: string) => `Workspace «${n}» salvo.`,
+    },
+    resultado: {
+      tituloIniciar: (n: string) => `«${n}»: como ficou ao ligar`,
+      tituloDetener: (n: string) => `«${n}»: como ficou ao desligar`,
+      encendido: 'Ligado',
+      apagado: 'Desligado',
+      yaEncendido: 'Já estava ligado',
+      yaApagado: 'Já estava desligado',
+      noExiste: 'Não existe mais: foi ignorado',
+      compartido: 'Continua ligado: outro workspace ligado o usa',
+      reemplaza: (otro: string) => `Ligado; desligou ${otro}, do mesmo grupo de e-mail`,
+      fallo: 'Não ficou ligado',
+      falloApagar: 'Continua ligado',
+      ok: (n: string) => `«${n}» pronto.`,
+      parcial: (n: string, encendidos: number, total: number) =>
+        `«${n}»: ${encendidos} de ${total} ficaram ligados. Veja o que não iniciou.`,
+      parcialApagar: (n: string, siguen: number) =>
+        `«${n}»: ${siguen} continuam ligados. Veja o que não desligou.`,
+    },
+  },
   inicio: {
     titulo: 'Início',
     bienvenida: 'O seu ambiente de desenvolvimento, de relance.',
@@ -3937,6 +3999,8 @@ export const pt: Textos = {
     apagar: (servicio: string) => `Desligar ${servicio}`,
     iniciarTodo: 'Iniciar todos os serviços',
     detenerTodo: 'Parar todos os serviços',
+    iniciarWorkspace: (n: string) => `Ligar o workspace ${n}`,
+    detenerWorkspace: (n: string) => `Desligar o workspace ${n}`,
     abrirSitio: (nombre: string) => `Abrir ${nombre} no navegador`,
     traerCambios: (nombre: string) => `Trazer mudanças em ${nombre}`,
     abrirHerramienta: (nombre: string) => `Abrir ${nombre}`,
@@ -4519,6 +4583,15 @@ export const pt: Textos = {
         existe: 'Já existe: é substituído',
         nueva: 'Novo',
       },
+      workspaces: {
+        titulo: 'Workspaces',
+        texto:
+          'Levam só referências a bancos de dados e serviços (os processos de projetos não viajam). São validados contra o que existe aqui e nunca iniciam sozinhos.',
+        existe: 'Você já tem um com esse id: o seu é mantido',
+        nuevo: 'Novo',
+        elementos: (n: number) => (n === 1 ? '1 item' : `${n} itens`),
+        invalidos: (n: number) => `${n} do perfil não são válidos e não serão importados.`,
+      },
       quitado: {
         titulo: 'O que não é tomado da configuração',
         texto:
@@ -4600,6 +4673,7 @@ export const pt: Textos = {
           instancias: 'Instâncias',
           bases: 'Bancos',
           plantillas: 'Modelos',
+          workspaces: 'Workspaces',
           env: 'Arquivos .env',
           ca: 'CA',
         },
@@ -4629,6 +4703,8 @@ export const pt: Textos = {
           si: 'Remover',
           hecho: 'CA anterior removida da confiança.',
         },
+        descartadosWorkspace: (lista: string) => `Não existe aqui e foi removido: ${lista}`,
+        workspacesInvalidos: (n: number) => `${n} workspaces inválidos não foram importados.`,
         puerto: (de: number, a: number) => `Porta ${de} → ${a}`,
         copiaEnv: (ruta: string) => `Cópia do .env: ${ruta}`,
       },

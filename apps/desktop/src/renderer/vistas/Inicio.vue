@@ -12,12 +12,14 @@ import {
   Warning,
 } from '@vicons/ionicons5';
 import { NAlert, NButton, NCard, NIcon, NSpace, NTag } from 'naive-ui';
-import { computed, watch, type Component } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '../api';
 import AvisoHosts from '../componentes/AvisoHosts.vue';
+import DialogoWorkspace from '../componentes/DialogoWorkspace.vue';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import PanelRendimiento from '../componentes/PanelRendimiento.vue';
+import TarjetaWorkspace from '../componentes/TarjetaWorkspace.vue';
 import { useAccion } from '../composables/useAccion';
 import { useFoco } from '../composables/useFoco';
 import { solicitudes } from '../composables/solicitudes';
@@ -28,6 +30,8 @@ import { useIa } from '../stores/ia';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
 import { useTuneles } from '../stores/tuneles';
+import { useWorkspaces } from '../stores/workspaces';
+import type { Workspace } from '../../shared/api';
 
 const t = textos.inicio;
 const router = useRouter();
@@ -40,6 +44,33 @@ const { ejecutar } = useAccion();
 const ia = useIa();
 const correo = useNoLeidos();
 const ti = textos.inicioExtra;
+
+// Workspaces de arranque (D28): se cargan al entrar y su estado se relee cuando cambian los servicios.
+const workspaces = useWorkspaces();
+const tw = textos.workspaces;
+const dialogoWorkspace = ref(false);
+const enEdicion = ref<Workspace | null>(null);
+function nuevoWorkspace(): void {
+  enEdicion.value = null;
+  dialogoWorkspace.value = true;
+}
+function editarWorkspace(w: Workspace): void {
+  enEdicion.value = w;
+  dialogoWorkspace.value = true;
+}
+let temporizadorEstados: ReturnType<typeof setTimeout> | null = null;
+const huellaServicios = computed(() => servicios.lista.map((s) => `${s.id}:${s.estado}`).join(','));
+watch(huellaServicios, () => {
+  if (!workspaces.cargado || temporizadorEstados) return;
+  temporizadorEstados = setTimeout(() => {
+    temporizadorEstados = null;
+    void workspaces.refrescarEstados().catch(() => undefined);
+  }, 400);
+});
+onMounted(() => void workspaces.cargar().catch(() => undefined));
+onBeforeUnmount(() => {
+  if (temporizadorEstados) clearTimeout(temporizadorEstados);
+});
 
 const mailpit = computed(() => servicios.porId['mailpit']);
 const ollama = computed(() => servicios.porId['ollama']);
@@ -204,6 +235,28 @@ function abrir(url: string): void {
 
     <PanelRendimiento />
 
+    <NCard :title="tw.titulo" size="small" class="tarjeta workspaces">
+      <template #header-extra>
+        <NButton size="small" secondary @click="nuevoWorkspace">
+          <template #icon
+            ><NIcon><Add /></NIcon
+          ></template>
+          {{ tw.nuevo }}
+        </NButton>
+      </template>
+      <p class="descripcion">{{ tw.descripcion }}</p>
+      <div v-if="workspaces.lista.length" class="rejilla-workspaces">
+        <TarjetaWorkspace
+          v-for="w in workspaces.lista"
+          :key="w.id"
+          :workspace="w"
+          @editar="editarWorkspace"
+        />
+      </div>
+      <p v-else class="vacio">{{ tw.vacio }}</p>
+    </NCard>
+    <DialogoWorkspace v-model:show="dialogoWorkspace" :workspace="enEdicion" />
+
     <div class="columnas">
       <NCard :title="t.servicios.titulo" size="small" class="tarjeta">
         <template #header-extra>
@@ -332,6 +385,19 @@ function abrir(url: string): void {
 }
 .dominios {
   margin: 8px 0 12px;
+}
+.workspaces {
+  margin-bottom: 14px;
+}
+.descripcion {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  opacity: 0.7;
+}
+.rejilla-workspaces {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
 }
 .columnas {
   display: grid;

@@ -835,6 +835,70 @@ export const fr: Textos = {
   avisoInicio: {
     titulo: 'Avis de WolfCore Dev',
   },
+  workspaces: {
+    titulo: 'Workspaces',
+    descripcion:
+      'Ensembles nommés de bases de données, de services et de processus qui démarrent et s’arrêtent ensemble.',
+    nuevo: 'Nouveau workspace',
+    vacio:
+      'Aucun workspace pour le moment. Créez-en un, par exemple « Bot FastAPI » avec PostgreSQL, Redis, Ollama et le processus de votre projet.',
+    elementos: (n: number) => (n === 1 ? '1 élément' : `${n} éléments`),
+    sinElementos: 'Aucun élément',
+    estado: { apagado: 'Arrêté', parcial: 'En partie', encendido: 'Démarré' },
+    acciones: {
+      iniciar: 'Démarrer',
+      detener: 'Arrêter',
+      editar: 'Modifier',
+      borrar: 'Supprimer',
+      cerrar: 'Fermer',
+    },
+    borrar: {
+      titulo: (n: string) => `Supprimer « ${n} » ?`,
+      texto:
+        'Supprimer le workspace n’arrête ni ne supprime rien : cela retire seulement l’ensemble. Ce qui tourne continue de tourner.',
+      confirmar: 'Supprimer',
+      hecho: (n: string) => `Workspace « ${n} » supprimé.`,
+    },
+    dialogo: {
+      tituloNuevo: 'Nouveau workspace',
+      tituloEditar: 'Modifier le workspace',
+      nombre: 'Nom',
+      nombrePlaceholder: 'Bot FastAPI',
+      nombreVacio: 'Saisissez un nom.',
+      aviso:
+        'Un workspace ne garde que ce qu’il faut démarrer. Il n’ouvre pas de tunnels, ne partage pas sur le réseau local et ne démarre pas les processus d’un projet auquel vous ne faites pas confiance.',
+      secciones: {
+        instancias: 'Bases de données',
+        servicios: 'Services',
+        procesos: 'Processus des projets',
+      },
+      sinOpciones: 'Il n’y a rien à choisir ici.',
+      captadorUnico:
+        'Un seul capteur de courrier à la fois : en choisir un autre remplace le précédent.',
+      yaNoExisten: (lista: string) =>
+        `N’existent plus et seront retirés à l’enregistrement : ${lista}`,
+      guardar: 'Enregistrer',
+      guardado: (n: string) => `Workspace « ${n} » enregistré.`,
+    },
+    resultado: {
+      tituloIniciar: (n: string) => `« ${n} » : état après le démarrage`,
+      tituloDetener: (n: string) => `« ${n} » : état après l’arrêt`,
+      encendido: 'Démarré',
+      apagado: 'Arrêté',
+      yaEncendido: 'Déjà démarré',
+      yaApagado: 'Déjà arrêté',
+      noExiste: 'N’existe plus : ignoré',
+      compartido: 'Toujours démarré : un autre workspace démarré l’utilise',
+      reemplaza: (otro: string) => `Démarré ; a arrêté ${otro}, du même groupe de courrier`,
+      fallo: 'N’a pas démarré',
+      falloApagar: 'Toujours démarré',
+      ok: (n: string) => `« ${n} » est prêt.`,
+      parcial: (n: string, encendidos: number, total: number) =>
+        `« ${n} » : ${encendidos} sur ${total} sont démarrés. Vérifiez ce qui n’a pas démarré.`,
+      parcialApagar: (n: string, siguen: number) =>
+        `« ${n} » : ${siguen} tournent encore. Vérifiez ce qui ne s’est pas arrêté.`,
+    },
+  },
   inicio: {
     titulo: 'Accueil',
     bienvenida: 'Votre environnement de développement, en un coup d’œil.',
@@ -4019,6 +4083,8 @@ export const fr: Textos = {
     apagar: (servicio: string) => `Éteindre ${servicio}`,
     iniciarTodo: 'Démarrer tous les services',
     detenerTodo: 'Arrêter tous les services',
+    iniciarWorkspace: (n: string) => `Démarrer le workspace ${n}`,
+    detenerWorkspace: (n: string) => `Arrêter le workspace ${n}`,
     abrirSitio: (nombre: string) => `Ouvrir ${nombre} dans le navigateur`,
     traerCambios: (nombre: string) => `Récupérer les changements de ${nombre}`,
     abrirHerramienta: (nombre: string) => `Ouvrir ${nombre}`,
@@ -4619,6 +4685,15 @@ export const fr: Textos = {
         existe: 'Existe déjà : remplacé',
         nueva: 'Nouveau',
       },
+      workspaces: {
+        titulo: 'Workspaces',
+        texto:
+          'Ils ne portent que des références à des bases de données et à des services (les processus des projets ne voyagent pas). Ils sont vérifiés par rapport à ce qui existe ici et ne démarrent jamais seuls.',
+        existe: 'Vous en avez déjà un avec cet id : le vôtre est conservé',
+        nuevo: 'Nouveau',
+        elementos: (n: number) => (n === 1 ? '1 élément' : `${n} éléments`),
+        invalidos: (n: number) => `${n} du profil ne sont pas valides et ne seront pas importés.`,
+      },
       quitado: {
         titulo: 'Ce qui n’est pas repris de la configuration',
         texto:
@@ -4704,6 +4779,7 @@ export const fr: Textos = {
           instancias: 'Instances',
           bases: 'Bases',
           plantillas: 'Modèles',
+          workspaces: 'Workspaces',
           env: 'Fichiers .env',
           ca: 'CA',
         },
@@ -4733,6 +4809,8 @@ export const fr: Textos = {
           si: 'Retirer',
           hecho: 'Ancienne CA retirée de la confiance.',
         },
+        descartadosWorkspace: (lista: string) => `N’existe pas ici et a été retiré : ${lista}`,
+        workspacesInvalidos: (n: number) => `${n} workspaces non valides n’ont pas été importés.`,
         puerto: (de: number, a: number) => `Port ${de} → ${a}`,
         copiaEnv: (ruta: string) => `Copie du .env : ${ruta}`,
       },

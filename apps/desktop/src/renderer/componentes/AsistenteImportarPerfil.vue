@@ -416,6 +416,20 @@ const tipoDe = (e: string): 'success' | 'warning' | 'error' | 'default' =>
         </ul>
       </section>
 
+      <section v-if="vista.workspaces.length > 0 || vista.workspacesInvalidos > 0" class="bloque">
+        <h3 class="subtitulo">{{ t.workspaces.titulo }}</h3>
+        <p class="ayuda">{{ t.workspaces.texto }}</p>
+        <ul class="items">
+          <li v-for="w in vista.workspaces" :key="w.id">
+            <strong>{{ w.nombre }}</strong> ({{ t.workspaces.elementos(w.elementos) }}) —
+            {{ w.existe ? t.workspaces.existe : t.workspaces.nuevo }}
+          </li>
+        </ul>
+        <p v-if="vista.workspacesInvalidos > 0" class="ayuda">
+          {{ t.workspaces.invalidos(vista.workspacesInvalidos) }}
+        </p>
+      </section>
+
       <section v-if="vista.configQuitada.length > 0" class="bloque">
         <h3 class="subtitulo">{{ t.quitado.titulo }}</h3>
         <p class="ayuda">{{ t.quitado.texto }}</p>
@@ -635,6 +649,25 @@ const tipoDe = (e: string): 'success' | 'warning' | 'error' | 'default' =>
               <small v-if="p.detalle">{{ p.detalle }}</small>
             </li>
           </ul>
+        </section>
+        <section v-if="resultado.workspaces.length || resultado.workspacesInvalidos" class="bloque">
+          <h4 class="subtitulo">{{ t.resultado.secciones.workspaces }}</h4>
+          <ul class="items resultado">
+            <li v-for="w in resultado.workspaces" :key="w.id">
+              <strong>{{ w.nombre }}</strong>
+              <NTag size="small" :type="tipoDe(w.estado)" :bordered="false">{{
+                estadoTexto(w.estado)
+              }}</NTag>
+              <small v-if="w.descartados.some((d) => d !== 'elemento_invalido')">{{
+                t.resultado.descartadosWorkspace(
+                  w.descartados.filter((d) => d !== 'elemento_invalido').join(', '),
+                )
+              }}</small>
+            </li>
+          </ul>
+          <p v-if="resultado.workspacesInvalidos" class="ayuda">
+            {{ t.resultado.workspacesInvalidos(resultado.workspacesInvalidos) }}
+          </p>
         </section>
         <section v-if="resultado.env.length" class="bloque">
           <h4 class="subtitulo">{{ t.resultado.secciones.env }}</h4>

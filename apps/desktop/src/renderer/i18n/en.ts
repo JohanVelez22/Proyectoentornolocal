@@ -792,6 +792,67 @@ export const en: Textos = {
   avisoInicio: {
     titulo: 'WolfCore Dev notice',
   },
+  workspaces: {
+    titulo: 'Workspaces',
+    descripcion: 'Named sets of databases, services and processes that start and stop together.',
+    nuevo: 'New workspace',
+    vacio:
+      'There are no workspaces yet. Create one, for example “FastAPI bot” with PostgreSQL, Redis, Ollama and your project’s process.',
+    elementos: (n: number) => (n === 1 ? '1 item' : `${n} items`),
+    sinElementos: 'No items',
+    estado: { apagado: 'Stopped', parcial: 'Partly on', encendido: 'Running' },
+    acciones: {
+      iniciar: 'Start',
+      detener: 'Stop',
+      editar: 'Edit',
+      borrar: 'Delete',
+      cerrar: 'Close',
+    },
+    borrar: {
+      titulo: (n: string) => `Delete “${n}”?`,
+      texto:
+        'Deleting the workspace does not stop or delete anything: it only removes the set. What is running keeps running.',
+      confirmar: 'Delete',
+      hecho: (n: string) => `Workspace “${n}” deleted.`,
+    },
+    dialogo: {
+      tituloNuevo: 'New workspace',
+      tituloEditar: 'Edit workspace',
+      nombre: 'Name',
+      nombrePlaceholder: 'FastAPI bot',
+      nombreVacio: 'Enter a name.',
+      aviso:
+        'A workspace only stores what to start. It does not open tunnels, does not share on the local network and does not start the processes of a project you do not trust.',
+      secciones: {
+        instancias: 'Databases',
+        servicios: 'Services',
+        procesos: 'Project processes',
+      },
+      sinOpciones: 'There is nothing to choose here.',
+      captadorUnico: 'Only one mail catcher at a time: choosing another replaces the previous one.',
+      yaNoExisten: (lista: string) => `These no longer exist and will be removed on save: ${lista}`,
+      guardar: 'Save',
+      guardado: (n: string) => `Workspace “${n}” saved.`,
+    },
+    resultado: {
+      tituloIniciar: (n: string) => `“${n}”: how it ended up after starting`,
+      tituloDetener: (n: string) => `“${n}”: how it ended up after stopping`,
+      encendido: 'Running',
+      apagado: 'Stopped',
+      yaEncendido: 'Was already running',
+      yaApagado: 'Was already stopped',
+      noExiste: 'No longer exists: skipped',
+      compartido: 'Still running: another running workspace uses it',
+      reemplaza: (otro: string) => `Running; it stopped ${otro}, of the same mail group`,
+      fallo: 'Did not start',
+      falloApagar: 'Still running',
+      ok: (n: string) => `“${n}” is ready.`,
+      parcial: (n: string, encendidos: number, total: number) =>
+        `“${n}”: ${encendidos} of ${total} are running. Check what did not start.`,
+      parcialApagar: (n: string, siguen: number) =>
+        `“${n}”: ${siguen} are still running. Check what did not stop.`,
+    },
+  },
   inicio: {
     titulo: 'Home',
     bienvenida: 'Your development environment at a glance.',
@@ -3901,6 +3962,8 @@ export const en: Textos = {
     apagar: (servicio: string) => `Stop ${servicio}`,
     iniciarTodo: 'Start all services',
     detenerTodo: 'Stop all services',
+    iniciarWorkspace: (n: string) => `Start the ${n} workspace`,
+    detenerWorkspace: (n: string) => `Stop the ${n} workspace`,
     abrirSitio: (nombre: string) => `Open ${nombre} in the browser`,
     traerCambios: (nombre: string) => `Pull changes in ${nombre}`,
     abrirHerramienta: (nombre: string) => `Open ${nombre}`,
@@ -4489,6 +4552,15 @@ export const en: Textos = {
         existe: 'Already exists: replaced',
         nueva: 'New',
       },
+      workspaces: {
+        titulo: 'Workspaces',
+        texto:
+          'They only carry references to databases and services (project processes do not travel). They are checked against what exists here and never start on their own.',
+        existe: 'You already have one with that id: yours is kept',
+        nuevo: 'New',
+        elementos: (n: number) => (n === 1 ? '1 item' : `${n} items`),
+        invalidos: (n: number) => `${n} in the profile are not valid and will not be imported.`,
+      },
       quitado: {
         titulo: 'What is not taken from the configuration',
         texto:
@@ -4572,6 +4644,7 @@ export const en: Textos = {
           instancias: 'Instances',
           bases: 'Databases',
           plantillas: 'Templates',
+          workspaces: 'Workspaces',
           env: '.env files',
           ca: 'CA',
         },
@@ -4601,6 +4674,8 @@ export const en: Textos = {
           si: 'Remove',
           hecho: 'Previous CA removed from trust.',
         },
+        descartadosWorkspace: (lista: string) => `Does not exist here and was removed: ${lista}`,
+        workspacesInvalidos: (n: number) => `${n} invalid workspaces were not imported.`,
         puerto: (de: number, a: number) => `Port ${de} → ${a}`,
         copiaEnv: (ruta: string) => `.env copy: ${ruta}`,
       },

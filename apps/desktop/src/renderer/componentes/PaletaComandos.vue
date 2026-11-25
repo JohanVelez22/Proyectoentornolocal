@@ -5,12 +5,15 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
+import { useOperacionWorkspace } from '../composables/useOperacionWorkspace';
 import { solicitudes } from '../composables/solicitudes';
 import { IDIOMAS, textos } from '../i18n';
 import { SECCIONES_NAV } from '../navegacion';
 import { usePreferencias, type TemaUi } from '../stores/preferencias';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
+import { useWorkspaces } from '../stores/workspaces';
+import { accionPrincipal } from '../utilidades/workspaces';
 import {
   comandoNuevoProyecto,
   filtrarComandos,
@@ -29,6 +32,8 @@ const servicios = useServicios();
 const sitios = useSitios();
 const preferencias = usePreferencias();
 const { ejecutar } = useAccion();
+const workspaces = useWorkspaces();
+const { operar: operarWorkspace } = useOperacionWorkspace();
 
 const consulta = ref('');
 const seleccion = ref(0);
@@ -84,6 +89,17 @@ const comandos = computed<Comando[]>(() => {
       ejecutar: () => void ejecutar('detenerTodo', () => api().servicios.detenerTodo()),
     },
   );
+  // Workspaces de arranque: encender o apagar el conjunto (nunca abre túneles ni comparte en la red).
+  for (const w of workspaces.lista) {
+    const accion = accionPrincipal(workspaces.estadoDe(w.id));
+    r.push({
+      id: `workspace-${w.id}`,
+      grupo: 'servicios',
+      titulo: accion === 'iniciar' ? t.iniciarWorkspace(w.nombre) : t.detenerWorkspace(w.nombre),
+      claves: 'workspace',
+      ejecutar: () => void operarWorkspace(w, accion),
+    });
+  }
   const puertoNginx = servicios.porId['nginx']?.puertos[0];
   for (const s of ordenarSitios(sitios.lista)) {
     const nombre = s.nombre || s.dominio;
@@ -174,6 +190,8 @@ watch(visible, (v) => {
   if (v) {
     consulta.value = '';
     seleccion.value = 0;
+    // Los workspaces y su estado al abrir la paleta (sin esperar a visitar Inicio).
+    void workspaces.cargar().catch(() => undefined);
   }
 });
 
