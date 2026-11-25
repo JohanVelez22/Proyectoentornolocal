@@ -23,6 +23,9 @@ export const INSTALABLES_CATALOGO = [
   'mongodb',
   'mongosh',
   'mailpit',
+  'smtp4dev',
+  'inbucket',
+  'papercut',
   'ollama',
 ] as const satisfies readonly ServicioInstalable[];
 export type InstalableCatalogo = (typeof INSTALABLES_CATALOGO)[number];
@@ -38,8 +41,19 @@ export const IDS_DATOS: readonly IdServicioDatos[] = [
   'redis',
   'mongodb',
   'mailpit',
+  'smtp4dev',
+  'inbucket',
+  'papercut',
   'ollama',
 ];
+
+/** Captadores de correo locales (D21): se agrupan en Correo y nunca corren dos a la vez. */
+export const CAPTADORES_CORREO: ReadonlySet<string> = new Set([
+  'mailpit',
+  'smtp4dev',
+  'inbucket',
+  'papercut',
+]);
 
 export function esServicioDatos(id: string): id is IdServicioDatos {
   return (IDS_DATOS as readonly string[]).includes(id);
@@ -50,7 +64,7 @@ export const CATEGORIAS = ['web', 'php', 'bd', 'correo', 'ia', 'herramientas'] a
 export type CategoriaUi = (typeof CATEGORIAS)[number];
 
 export function categoriaDe(s: Pick<EstadoServicio, 'id' | 'categoria'>): CategoriaUi {
-  if (s.id === 'mailpit') return 'correo';
+  if (CAPTADORES_CORREO.has(s.id)) return 'correo';
   switch (s.categoria) {
     case 'web':
     case 'php':

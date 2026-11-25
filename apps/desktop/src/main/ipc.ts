@@ -82,6 +82,7 @@ import {
   acotadoJson,
   enteroEn,
   idCorto,
+  idCaptador,
   idNoVacio,
   idEditor,
   idTerminal,
@@ -1123,6 +1124,8 @@ const TABLA: Record<RutaIpc, Manejador> = {
   },
   'nginx.snippets': () => SNIPPETS_NGINX,
   'mailpit.noLeidos': (n) => n.noLeidosCorreo(),
+  'correo.captadores': (n) => n.captadoresCorreo(),
+  'correo.elegir': (n, _s, id) => n.elegirCaptador(idCaptador(id)),
   // Se entrega una sola vez: una recarga del renderer no lo vuelve a mostrar.
   avisoInicio: (n) => n.tomarAvisoInicio(),
   'instalador.listarVersiones': (n, _s, servicio, filtro) =>

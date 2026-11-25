@@ -1,47 +1,12 @@
-import { mkdir } from 'node:fs/promises';
 import { ErrorWolf } from '../errores';
-import path from 'node:path';
-import type { DefProceso } from '../procesos/supervisor';
 import { registrarDefinicion } from './datos';
 import type { DefServicio } from './definicion';
-import { nombreEjecutable } from '../plataforma/sistema';
+import { defServicioCaptador } from './correo/captadores';
 
 const PUERTO_WEB = 8025;
 
 export function defMailpit(): DefServicio {
-  return {
-    id: 'mailpit',
-    nombre: 'Mailpit',
-    categoria: 'herramienta',
-    puertoPorDefecto: 1025,
-    puertosExtra: [PUERTO_WEB],
-    claveDatos: () => 'actual',
-    multiInstancia: false,
-
-    async inicializar(c) {
-      await mkdir(c.datos, { recursive: true });
-    },
-
-    async proceso(c): Promise<DefProceso> {
-      return {
-        id: 'mailpit',
-        comando: path.join(c.bin, nombreEjecutable('mailpit')),
-        args: [
-          '--smtp',
-          `127.0.0.1:${c.puerto}`,
-          '--listen',
-          `127.0.0.1:${PUERTO_WEB}`,
-          '--database',
-          path.join(c.datos, 'mailpit.db'),
-        ],
-        cwd: c.bin,
-        // La sonda usa la interfaz web.
-        puerto: PUERTO_WEB,
-        log: c.rutas.logs('mailpit.log'),
-        reiniciar: false,
-      };
-    },
-  };
+  return defServicioCaptador('mailpit');
 }
 
 type Fetch = (url: string) => Promise<{ ok: boolean; status?: number; json(): Promise<unknown> }>;

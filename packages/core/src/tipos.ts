@@ -159,6 +159,16 @@ export const SitioSchema = z.object({
    * `Nucleo.capturaDumpsSitio` (con la confirmación de la ventana); nunca es global.
    */
   capturaDumps: z.boolean().optional(),
+  /**
+   * A dónde envía correo el proyecto: el captador local elegido (`Config.correo.captador`) o un
+   * proveedor SMTP remoto (lo llena D22). Ausente = el captador.
+   */
+  correo: z
+    .discriminatedUnion('modo', [
+      z.object({ modo: z.literal('captador') }),
+      z.object({ modo: z.literal('smtp'), proveedor: z.string().regex(/^[a-z0-9-]{1,40}$/) }),
+    ])
+    .optional(),
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 
@@ -170,6 +180,9 @@ export const IDS_SERVICIO_DATOS = [
   'redis',
   'mongodb',
   'mailpit',
+  'smtp4dev',
+  'inbucket',
+  'papercut',
   'ollama',
 ] as const;
 export type IdServicioDatos = (typeof IDS_SERVICIO_DATOS)[number];
@@ -182,6 +195,10 @@ export const PUERTOS_POR_DEFECTO: Record<IdServicioDatos, number> = {
   redis: 6379,
   mongodb: 27017,
   mailpit: 1025,
+  // Captadores de correo (D21): uno encendido a la vez; cada uno con su puerto SMTP por defecto.
+  smtp4dev: 1026,
+  inbucket: 2500,
+  papercut: 2525,
   ollama: 11434,
 };
 
@@ -416,6 +433,9 @@ export const ConfigSchema = z.object({
           redis: servicioDatos(PUERTOS_POR_DEFECTO.redis),
           mongodb: servicioDatos(PUERTOS_POR_DEFECTO.mongodb),
           mailpit: servicioDatos(PUERTOS_POR_DEFECTO.mailpit),
+          smtp4dev: servicioDatos(PUERTOS_POR_DEFECTO.smtp4dev),
+          inbucket: servicioDatos(PUERTOS_POR_DEFECTO.inbucket),
+          papercut: servicioDatos(PUERTOS_POR_DEFECTO.papercut),
           ollama: servicioDatos(PUERTOS_POR_DEFECTO.ollama),
         })
         .prefault({}),
@@ -429,6 +449,15 @@ export const ConfigSchema = z.object({
     .object({
       activa: z.boolean().default(false),
       puerto: z.number().int().min(1024).max(65535).default(9912),
+    })
+    .prefault({}),
+  /** Correo local: el captador que reciben los proyectos (uno encendido a la vez). */
+  correo: z
+    .object({
+      captador: z
+        .enum(['mailpit', 'smtp4dev', 'inbucket', 'papercut'])
+        .default('mailpit')
+        .catch('mailpit'),
     })
     .prefault({}),
   /** Avisos: notificaciones nativas y qué tipos se muestran. */

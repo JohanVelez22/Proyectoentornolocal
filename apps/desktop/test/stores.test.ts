@@ -55,9 +55,18 @@ function apiFalsa(general: Partial<EstadoGeneral> = {}) {
         ftp: { redLocal: false },
         servicios: {
           datos: Object.fromEntries(
-            ['mysql', 'mariadb', 'postgresql', 'redis', 'mongodb', 'mailpit', 'ollama'].map(
-              (id) => [id, { version: null, puerto: 1, autoIniciar: id === 'mysql' }],
-            ),
+            [
+              'mysql',
+              'mariadb',
+              'postgresql',
+              'redis',
+              'mongodb',
+              'mailpit',
+              'smtp4dev',
+              'inbucket',
+              'papercut',
+              'ollama',
+            ].map((id) => [id, { version: null, puerto: 1, autoIniciar: id === 'mysql' }]),
           ),
         },
       })),

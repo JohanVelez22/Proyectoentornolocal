@@ -54,6 +54,8 @@ interface OpcionesArmado {
   salida?: string[];
   sitio?: Partial<Sitio>;
   mailpit?: boolean;
+  /** Captador elegido distinto de Mailpit (D21). */
+  captador?: { nombre: string; puerto: number };
   basesExistentes?: string[];
   tablas?: boolean;
   avisos?: string[];
@@ -127,7 +129,8 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
       restauradas.push({ motor, archivo, base: b, opts });
       return { advertencias: ['aviso del respaldo'] };
     },
-    mailpit: async () => (o.mailpit ? { puerto: 1025 } : null),
+    correo: async () =>
+      o.captador ? o.captador : o.mailpit ? { nombre: 'Mailpit', puerto: 1025 } : null,
     guardarSitio: async (datos, id) => {
       guardados.push({ datos, id });
     },
@@ -430,6 +433,29 @@ describe('env-crear', () => {
     expect(env).toContain('MAIL_MAILER=smtp\n');
     expect(env).toContain('MAIL_HOST=127.0.0.1\n');
     expect(env).toContain('MAIL_PORT=1025\n');
+  });
+
+  it('el bloque MAIL_* apunta al captador elegido y a su puerto SMTP (D21)', async () => {
+    const a = await armar({ captador: { nombre: 'smtp4dev', puerto: 1999 } });
+    await escribir(a.carpeta, '.env.example', EJEMPLO_LARAVEL);
+    await escribir(a.carpeta, 'artisan', '');
+    const lineas = await correr(a, 'env-crear');
+    const env = await leer(a.carpeta, '.env');
+    expect(env).toContain('MAIL_HOST=127.0.0.1\n');
+    expect(env).toContain('MAIL_PORT=1999\n');
+    expect(lineas.join('\n')).toContain('smtp4dev (puerto 1999)');
+  });
+
+  it('un proyecto con proveedor SMTP no recibe el bloque del captador (D22)', async () => {
+    const a = await armar({
+      captador: { nombre: 'smtp4dev', puerto: 1999 },
+      sitio: { correo: { modo: 'smtp', proveedor: 'brevo' } },
+    });
+    await escribir(a.carpeta, '.env.example', EJEMPLO_LARAVEL);
+    await escribir(a.carpeta, 'artisan', '');
+    await correr(a, 'env-crear');
+    const env = await leer(a.carpeta, '.env');
+    expect(env).not.toContain('MAIL_PORT=1999');
   });
 
   it('sin .env.example crea un .env mínimo válido de Laravel (Review Focus 2)', async () => {

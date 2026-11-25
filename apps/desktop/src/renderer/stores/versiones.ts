@@ -38,6 +38,9 @@ export const SERVICIOS_CON_VERSIONES: readonly ServicioVersiones[] = [
   'dart',
   'composer',
   'mailpit',
+  'smtp4dev',
+  'inbucket',
+  'papercut',
   'ollama',
   'cloudflared',
 ];

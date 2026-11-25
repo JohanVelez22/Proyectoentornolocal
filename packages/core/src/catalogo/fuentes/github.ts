@@ -49,6 +49,12 @@ export interface OpcionesGithub {
   formato: FormatoPaquete;
   subcarpeta?: (version: string) => string;
   ejecutable: string;
+  /**
+   * Lee solo `releases/latest` (la última estable): para repositorios que publican decenas de
+   * prereleases de integración continua y llenarían la página de 10 releases sin ninguna estable
+   * (smtp4dev). La respuesta es una sola release, no una lista.
+   */
+  soloUltima?: boolean;
 }
 
 /** Archivos de sumas que publican algunas releases junto a los binarios. */
@@ -134,22 +140,27 @@ export function fuenteGithub(o: OpcionesGithub): FuenteVersiones {
     hostsIndice: ['api.github.com'],
     async listar(ctx) {
       if (ctx.idCatalogo !== 'win-x64') return [];
-      const crudo = Releases.safeParse(
-        await leerIndiceJson(
-          ctx,
-          `https://api.github.com/repos/${o.dueno}/${o.repo}/releases?per_page=${POR_PAGINA}`,
-          {
-            encabezados: {
-              accept: 'application/vnd.github+json',
-              'x-github-api-version': '2022-11-28',
-            },
+      const indice = await leerIndiceJson(
+        ctx,
+        o.soloUltima
+          ? `https://api.github.com/repos/${o.dueno}/${o.repo}/releases/latest`
+          : `https://api.github.com/repos/${o.dueno}/${o.repo}/releases?per_page=${POR_PAGINA}`,
+        {
+          encabezados: {
+            accept: 'application/vnd.github+json',
+            'x-github-api-version': '2022-11-28',
           },
-        ),
+        },
       );
+      const crudo = Releases.safeParse(o.soloUltima ? [indice] : indice);
       if (!crudo.success) throw new IndiceMalformado(`Releases de ${o.repo} con forma rara`);
       const salida: VersionDisponible[] = [];
       for (const r of crudo.data) {
+        // La última estable no puede ser un borrador ni una prerelease (si lo fuera, el índice es raro).
         if (r.draft) continue;
+        if (o.soloUltima && r.prerelease) {
+          throw new IndiceMalformado(`La última release de ${o.repo} es una prerelease`);
+        }
         let version = r.tag_name.replace(/^v/, '');
         if (o.prefijoTag !== undefined) {
           if (!r.tag_name.startsWith(o.prefijoTag)) continue;
@@ -235,6 +246,40 @@ export const fuenteMailpit = fuenteGithub({
   asset: () => 'mailpit-windows-amd64.zip',
   formato: 'zip',
   ejecutable: nombreEjecutable('mailpit'),
+});
+
+/**
+ * smtp4dev publica una prerelease de integración continua por cada compilación: solo se lee la
+ * última estable. El asset `win-x64` trae su runtime; el digest SHA-256 lo da GitHub.
+ */
+export const fuenteSmtp4dev = fuenteGithub({
+  servicio: 'smtp4dev',
+  dueno: 'rnwood',
+  repo: 'smtp4dev',
+  asset: (v) => `Rnwood.Smtp4dev-win-x64-${v}.zip`,
+  formato: 'zip',
+  ejecutable: nombreEjecutable('Rnwood.Smtp4dev'),
+  soloUltima: true,
+});
+
+export const fuenteInbucket = fuenteGithub({
+  servicio: 'inbucket',
+  dueno: 'inbucket',
+  repo: 'inbucket',
+  asset: (v) => `inbucket_${v}_windows_amd64.zip`,
+  formato: 'zip',
+  subcarpeta: (v) => `inbucket_${v}_windows_amd64`,
+  ejecutable: nombreEjecutable('inbucket'),
+});
+
+/** Papercut: el zip del servicio (consola con web), no el instalador de escritorio. */
+export const fuentePapercut = fuenteGithub({
+  servicio: 'papercut',
+  dueno: 'ChangemakerStudios',
+  repo: 'Papercut-SMTP',
+  asset: (v) => `Papercut.Smtp.Service.${v}-win-x64.zip`,
+  formato: 'zip',
+  ejecutable: nombreEjecutable('Papercut.Service'),
 });
 
 export const fuenteOllama = fuenteGithub({

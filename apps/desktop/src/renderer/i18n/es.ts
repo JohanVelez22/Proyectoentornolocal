@@ -772,6 +772,9 @@ export const es = {
         redis: 'todas las claves y datos guardados en Redis',
         mongodb: 'todas las bases, colecciones y datos de MongoDB',
         mailpit: 'todos los correos atrapados por Mailpit',
+        smtp4dev: 'todos los correos atrapados por smtp4dev',
+        inbucket: 'todos los correos atrapados por Inbucket',
+        papercut: 'todos los correos atrapados por Papercut SMTP',
         ollama: 'todos los modelos descargados de Ollama',
       } as Record<string, string>,
       texto: (que: string) =>
@@ -1107,6 +1110,12 @@ export const es = {
       mongodb: { nombre: 'MongoDB', detalle: 'Base de datos de documentos (mongodb.com)' },
       mongosh: { nombre: 'mongosh', detalle: 'Consola de MongoDB (mongodb.com)' },
       mailpit: { nombre: 'Mailpit', detalle: 'Correo de prueba (github.com/axllent)' },
+      smtp4dev: { nombre: 'smtp4dev', detalle: 'Correo de prueba (github.com/rnwood)' },
+      inbucket: { nombre: 'Inbucket', detalle: 'Correo de prueba (github.com/inbucket)' },
+      papercut: {
+        nombre: 'Papercut SMTP',
+        detalle: 'Correo de prueba (github.com/ChangemakerStudios)',
+      },
       ollama: { nombre: 'Ollama', detalle: 'IA local (ollama.com)' },
       composer: { nombre: 'Composer', detalle: 'Dependencias de PHP (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Administrador web de bases de datos' },
@@ -1634,7 +1643,11 @@ export const es = {
   },
   correo: {
     descripcion:
-      'Mailpit atrapa los correos que envían sus proyectos para que los revise sin que salgan a internet.',
+      'Los captadores atrapan los correos que envían sus proyectos para que los revise sin que salgan a internet. Escuchan solo en este equipo (127.0.0.1) y solo uno está encendido a la vez.',
+    seccionCaptadores: 'Captadores locales',
+    seccionProveedores: 'Proveedores SMTP remotos',
+    proveedoresProximamente:
+      'Aquí podrá configurar un proveedor SMTP real (Mailtrap, Brevo, SendGrid…) y probar el envío. Llega en la siguiente entrega.',
     estado: 'Estado',
     smtp: 'SMTP',
     buzon: 'Buzón web',
@@ -1645,18 +1658,27 @@ export const es = {
     actualizar: 'Volver a contar los correos',
     actualizaSolo: 'Se actualiza cada 15 segundos mientras esta pantalla está abierta.',
     env: 'Bloque para el .env de Laravel',
-    envAyuda:
-      'Péguelo en el .env de su proyecto. El correo queda en Mailpit, sin cifrado y sin usuario.',
+    envAyuda: (captador: string) =>
+      `Péguelo en el .env de su proyecto. El correo queda en ${captador}, sin cifrado y sin usuario.`,
     copiarEnv: 'Copiar bloque',
-    sinInstalarTitulo: 'Mailpit no está instalado',
-    sinInstalar: 'Instálelo desde Servicios para atrapar los correos de sus proyectos.',
     irAServicios: 'Ir a Servicios',
-    apagadoTitulo: 'Mailpit está apagado',
-    apagado: 'Enciéndalo para recibir correos y ver el buzón.',
-    iniciando: 'Mailpit se está encendiendo…',
-    errorTitulo: 'Mailpit no pudo encender',
-    encender: 'Encender Mailpit',
-    verServicios: 'Ver en Servicios',
+    cargando: 'Leyendo los captadores…',
+    errorLista: 'No se pudo leer la lista de captadores',
+    captador: {
+      opcional: 'Opcional',
+      elegido: 'Recibe el correo de sus proyectos',
+      noInstalado: 'No instalado',
+      instalar: 'Instalar',
+      usar: 'Usar este',
+      apagar: 'Apagar',
+      iniciando: 'Encendiéndose…',
+      avisoMantenimiento:
+        'Este captador casi no recibe mantenimiento. Prefiera Mailpit o smtp4dev.',
+    },
+    notaDescartados:
+      'MailHog y MailDev no se ofrecen: MailHog no publica una huella con la que comprobar la descarga y MailDev solo existe en npm. Sin huella verificable no se descarga nada.',
+    notaHost:
+      'Los buzones web solo responden en 127.0.0.1. smtp4dev y Papercut rechazan además cabeceras Host ajenas; Mailpit e Inbucket no pueden, así que no deje su buzón abierto mientras navega por sitios que no conoce.',
   },
   ia: {
     descripcion:
@@ -3246,6 +3268,9 @@ export const es = {
       python: 'Python',
       composer: 'Composer',
       mailpit: 'Mailpit',
+      smtp4dev: 'smtp4dev',
+      inbucket: 'Inbucket',
+      papercut: 'Papercut SMTP',
       ollama: 'Ollama',
       cloudflared: 'cloudflared',
       java: 'Java',

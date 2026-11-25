@@ -45,6 +45,7 @@ export * from './servicios/bd/postgresql';
 export * from './servicios/bd/redis';
 export * from './servicios/bd/mongodb';
 export * from './servicios/mailpit';
+export * from './servicios/correo/captadores';
 export * from './servicios/ollama';
 export * from './bd/clientePostgres';
 export * from './bd/basesDeDatos';

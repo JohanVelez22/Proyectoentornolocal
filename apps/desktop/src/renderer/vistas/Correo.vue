@@ -1,59 +1,74 @@
 <script setup lang="ts">
-import { Copy, Mail, MailUnread, Open, Power, Refresh } from '@vicons/ionicons5';
-import { NButton, NEmpty, NIcon, NSkeleton, NTooltip } from 'naive-ui';
-import { computed, onMounted, ref } from 'vue';
+import { Copy, MailUnread, Refresh } from '@vicons/ionicons5';
+import { NButton, NIcon, NTooltip } from 'naive-ui';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import type { EstadoCaptador, IdCaptador } from '../../shared/api';
 import { api } from '../api';
-import IlustracionVacia from '../componentes/IlustracionVacia.vue';
-import EstadoPunto from '../componentes/EstadoPunto.vue';
-import { useAccion } from '../composables/useAccion';
+import SeccionCaptadores from '../componentes/SeccionCaptadores.vue';
+import { useAccion, mensajeDeError } from '../composables/useAccion';
 import { useNoLeidos } from '../composables/useNoLeidos';
 import { textos } from '../i18n';
-import { useServicios } from '../stores/servicios';
-import {
-  PUERTO_BUZON,
-  PUERTO_SMTP_POR_DEFECTO,
-  URL_BUZON,
-  bloqueEnvCorreo,
-} from '../utilidades/correo';
+import { CAPTADORES_CORREO, useServicios } from '../stores/servicios';
+import { bloqueEnvCorreo } from '../utilidades/correo';
 
 const t = textos.correo;
 const router = useRouter();
 const servicios = useServicios();
-const { ejecutar, ocupado } = useAccion();
-const { noLeidos, error, cargando, encendido, actualizar } = useNoLeidos();
+const { ejecutar } = useAccion();
+const { noLeidos, error, cargando, actualizar } = useNoLeidos();
 
-const instaladosListos = ref(false);
-const servicio = computed(() => servicios.porId['mailpit']);
-/** Sin estado en el núcleo y sin versiones instaladas: no está instalado. */
-const sinInstalar = computed(
-  () =>
-    instaladosListos.value &&
-    !servicio.value &&
-    (servicios.instalados['mailpit']?.length ?? 0) === 0,
-);
-const puertoSmtp = computed(() => servicio.value?.puertos[0] ?? PUERTO_SMTP_POR_DEFECTO);
-const bloque = computed(() => bloqueEnvCorreo(puertoSmtp.value));
+const captadores = ref<EstadoCaptador[] | null>(null);
+const errorLista = ref<string | null>(null);
+const ocupado = ref<IdCaptador | null>(null);
 
-onMounted(() => {
-  void servicios
-    .cargarInstalados('mailpit')
-    .catch(() => undefined)
-    .finally(() => (instaladosListos.value = true));
-});
-
-function encender(): void {
-  if (ocupado('encender')) return;
-  void ejecutar('encender', () => api().servicios.iniciar('mailpit'));
+async function recargar(): Promise<void> {
+  try {
+    captadores.value = await api().correo.captadores();
+    errorLista.value = null;
+  } catch (e) {
+    errorLista.value = mensajeDeError(e);
+  }
 }
-function abrirBuzon(): void {
-  void ejecutar('buzon', () => api().sistema.abrirUrl(URL_BUZON));
+
+/** El captador que reciben los proyectos y su puerto SMTP (para el bloque del .env). */
+const elegido = computed(() => captadores.value?.find((c) => c.elegido) ?? null);
+const bloque = computed(() => bloqueEnvCorreo(elegido.value?.puertoSmtp));
+const mostrarNoLeidos = computed(() => elegido.value?.id === 'mailpit' && elegido.value.encendido);
+
+onMounted(() => void recargar());
+// Los estados llegan por eventos: la lista se lee de nuevo cuando cambia el de algún captador.
+watch(
+  () => [...CAPTADORES_CORREO].map((id) => servicios.porId[id]?.estado ?? '').join('|'),
+  () => void recargar(),
+);
+
+async function usar(id: IdCaptador): Promise<void> {
+  ocupado.value = id;
+  try {
+    await ejecutar('usar', () => api().correo.elegir(id));
+  } finally {
+    ocupado.value = null;
+    await recargar();
+  }
+}
+async function apagar(id: IdCaptador): Promise<void> {
+  ocupado.value = id;
+  try {
+    await ejecutar('apagar', () => api().servicios.detener(id));
+  } finally {
+    ocupado.value = null;
+    await recargar();
+  }
+}
+function abrir(c: EstadoCaptador): void {
+  void ejecutar('buzon', () => api().sistema.abrirUrl(c.urlWeb));
+}
+function instalar(id: IdCaptador): void {
+  void router.push({ name: 'servicios.versiones', params: { servicio: id } });
 }
 function copiar(texto: string): void {
   void ejecutar('copiar', () => api().sistema.copiar(texto), { exito: textos.acciones.copiado });
-}
-function irAServicios(): void {
-  void router.push({ name: 'servicios' });
 }
 </script>
 
@@ -61,61 +76,18 @@ function irAServicios(): void {
   <div class="correo">
     <p class="descripcion">{{ t.descripcion }}</p>
 
-    <NSkeleton v-if="!instaladosListos && !servicio" height="120px" class="esqueleto" />
+    <SeccionCaptadores
+      :captadores="captadores"
+      :ocupado="ocupado"
+      :error="errorLista"
+      @usar="usar"
+      @apagar="apagar"
+      @abrir="abrir"
+      @instalar="instalar"
+    />
 
-    <!-- Sin instalar -->
-    <div v-else-if="sinInstalar" class="vacio">
-      <NEmpty size="large">
-        <template #icon><IlustracionVacia :icono="Mail" /></template>
-        <template #default>
-          <strong class="vacio-titulo">{{ t.sinInstalarTitulo }}</strong>
-          <span class="vacio-texto">{{ t.sinInstalar }}</span>
-        </template>
-        <template #extra>
-          <NButton type="primary" @click="irAServicios">{{ t.irAServicios }}</NButton>
-        </template>
-      </NEmpty>
-    </div>
-
-    <!-- Apagado, encendiéndose o con error -->
-    <div v-else-if="!encendido" class="apagado">
-      <span class="apagado-icono"
-        ><NIcon :size="22"><Power /></NIcon
-      ></span>
-      <div class="apagado-texto">
-        <strong>
-          {{
-            servicio?.estado === 'iniciando'
-              ? t.iniciando
-              : servicio?.estado === 'error'
-                ? t.errorTitulo
-                : t.apagadoTitulo
-          }}
-        </strong>
-        <span v-if="servicio?.estado === 'error' && servicio.mensaje" class="apagado-mensaje">
-          {{ servicio.mensaje }}
-        </span>
-        <span v-else>{{ t.apagado }}</span>
-      </div>
-      <div class="apagado-botones">
-        <NButton
-          size="small"
-          type="primary"
-          :loading="ocupado('encender') || servicio?.estado === 'iniciando'"
-          :disabled="servicio?.estado === 'iniciando'"
-          @click="encender"
-        >
-          <template #icon
-            ><NIcon><Power /></NIcon
-          ></template>
-          {{ t.encender }}
-        </NButton>
-        <NButton size="small" quaternary @click="irAServicios">{{ t.verServicios }}</NButton>
-      </div>
-    </div>
-
-    <!-- Encendido -->
-    <section v-else class="panel">
+    <!-- Solo Mailpit expone el conteo de correos sin leer -->
+    <section v-if="mostrarNoLeidos" class="panel">
       <div class="contador" :aria-busy="cargando">
         <span class="contador-icono"
           ><NIcon :size="22"><MailUnread /></NIcon
@@ -147,36 +119,10 @@ function irAServicios(): void {
           {{ t.actualizar }}
         </NTooltip>
       </div>
-
-      <dl class="datos">
-        <div class="dato">
-          <dt>{{ t.estado }}</dt>
-          <dd><EstadoPunto :estado="servicio?.estado ?? 'apagado'" /></dd>
-        </div>
-        <div class="dato">
-          <dt>{{ t.smtp }}</dt>
-          <dd>
-            <code>127.0.0.1:{{ puertoSmtp }}</code>
-          </dd>
-        </div>
-        <div class="dato">
-          <dt>{{ t.buzon }}</dt>
-          <dd>
-            <code>127.0.0.1:{{ PUERTO_BUZON }}</code>
-          </dd>
-        </div>
-      </dl>
-
-      <NButton type="primary" :loading="ocupado('buzon')" class="abrir" @click="abrirBuzon">
-        <template #icon
-          ><NIcon><Open /></NIcon
-        ></template>
-        {{ t.abrirBuzon }}
-      </NButton>
     </section>
 
-    <!-- Bloque .env: útil aunque Mailpit esté apagado -->
-    <section v-if="!sinInstalar" class="env">
+    <!-- Bloque .env del captador elegido: útil aunque esté apagado -->
+    <section v-if="elegido?.instalado" class="env">
       <div class="env-cabeza">
         <span>{{ t.env }}</span>
         <NButton size="tiny" secondary @click="copiar(bloque)">
@@ -187,7 +133,12 @@ function irAServicios(): void {
         </NButton>
       </div>
       <pre class="bloque">{{ bloque }}</pre>
-      <small class="tenue">{{ t.envAyuda }}</small>
+      <small class="tenue">{{ t.envAyuda(elegido.nombre) }}</small>
+    </section>
+
+    <section class="proveedores" :aria-label="t.seccionProveedores">
+      <h3 class="titulo">{{ t.seccionProveedores }}</h3>
+      <p class="tenue">{{ t.proveedoresProximamente }}</p>
     </section>
   </div>
 </template>
@@ -197,72 +148,13 @@ function irAServicios(): void {
   margin: 0 0 18px;
   opacity: 0.65;
 }
-.esqueleto {
-  border-radius: 12px;
-}
-.vacio {
-  padding: 48px 0 40px;
-  border: 1px dashed rgba(128, 128, 128, 0.3);
-  border-radius: 12px;
-}
-.vacio-titulo {
-  display: block;
+.titulo {
+  margin: 0 0 6px;
   font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  text-align: center;
-}
-.vacio-texto {
-  display: block;
-  max-width: 380px;
-  margin: 0 auto;
-  text-align: center;
-}
-.apagado {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px dashed rgba(128, 128, 128, 0.35);
-  margin-bottom: 16px;
-}
-.apagado-icono {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: rgba(128, 128, 128, 0.1);
-  flex: none;
-}
-.apagado-texto {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 220px;
-  font-size: 13px;
-}
-.apagado-texto strong {
-  font-size: 14.5px;
-}
-.apagado-texto span {
-  opacity: 0.7;
-}
-.apagado-mensaje {
-  color: var(--texto-error);
-  opacity: 1 !important;
-  white-space: pre-wrap;
-}
-.apagado-botones {
-  display: flex;
-  gap: 6px;
 }
 .panel {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(0, 1.4fr);
+  grid-template-columns: minmax(260px, 1fr);
   align-items: center;
   gap: 16px 24px;
   padding: 18px 20px;
@@ -308,30 +200,9 @@ function irAServicios(): void {
   color: var(--texto-error);
   font-size: 12.5px;
 }
-.datos {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px 16px;
-  margin: 0;
-}
-.dato dt {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  opacity: 0.55;
-}
-.dato dd {
-  margin: 4px 0 0;
-}
-.dato code {
-  font-family: var(--fuente-mono);
-  font-size: 13px;
-}
-.abrir {
-  justify-self: start;
-}
 .env {
   padding: 16px 18px;
+  margin-bottom: 20px;
   border-radius: 12px;
   border: 1px solid rgba(128, 128, 128, 0.2);
 }
@@ -354,6 +225,11 @@ function irAServicios(): void {
   word-break: break-all;
   user-select: text;
 }
+.proveedores {
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px dashed rgba(128, 128, 128, 0.35);
+}
 .tenue {
   font-size: 12px;
   opacity: 0.6;
@@ -365,10 +241,5 @@ function irAServicios(): void {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
-}
-@media (max-width: 900px) {
-  .panel {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

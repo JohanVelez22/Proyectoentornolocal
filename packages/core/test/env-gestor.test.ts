@@ -136,7 +136,7 @@ describe('aplicarCambios y diffTexto', () => {
 
 describe('plantillas de bloques', () => {
   it('ningún bloque trae una clave', () => {
-    const ctx = { tipo: 'laravel' as const, base: null, mailpit: 1025, redis: 6379 };
+    const ctx = { tipo: 'laravel' as const, base: null, correo: 1025, redis: 6379 };
     for (const [nombre, f] of Object.entries(PLANTILLAS_ENV)) {
       for (const [k, v] of Object.entries(f(ctx))) {
         if (esSecreta(k, v)) expect(v === '' || v === 'null', `${nombre}.${k}`).toBe(true);
@@ -182,7 +182,7 @@ describe('GestorEnv', () => {
       sitio: async (id) => (id === sitio.id ? sitio : undefined),
       carpetaRespaldos: () => respaldos,
       versionado: async () => versionado,
-      puertos: async () => ({ mailpit: 1025, redis: 6379 }),
+      puertos: async () => ({ correo: 1025, redis: 6379 }),
     });
   });
 
@@ -585,7 +585,7 @@ describe('revisión final de D16: estilo python y multilínea sin cierre', () =>
       sitio: async (id) => (id === sitio.id ? sitio : undefined),
       carpetaRespaldos: () => respaldos,
       versionado: async () => false,
-      puertos: async () => ({ mailpit: null, redis: null }),
+      puertos: async () => ({ correo: null, redis: null }),
     });
     const env = path.join(proyecto, '.env');
     await writeFile(env, 'A="vieja"\nB=x\n');

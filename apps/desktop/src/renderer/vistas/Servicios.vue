@@ -52,7 +52,10 @@ const gruposInstalar: { titulo: string; servicios: InstalableCatalogo[] }[] = [
     titulo: textos.instalar.grupos.bd,
     servicios: ['mysql', 'mariadb', 'postgresql', 'redis', 'mongodb', 'mongosh'],
   },
-  { titulo: textos.instalar.grupos.otros, servicios: ['mailpit', 'ollama', 'cloudflared'] },
+  {
+    titulo: textos.instalar.grupos.otros,
+    servicios: ['mailpit', 'smtp4dev', 'inbucket', 'papercut', 'ollama', 'cloudflared'],
+  },
 ];
 const seccionInstalar = ref<HTMLElement | null>(null);
 

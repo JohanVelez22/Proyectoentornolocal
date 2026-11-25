@@ -58,8 +58,8 @@ export interface DepsPasos {
   usuarioBdEnUso?: (usuario: string, sitioId: string) => Promise<boolean>;
   /** Plantillas de proyecto (D14): sus archivos y su esquema, ya comprobados contra su huella. */
   plantillas?: Pick<Plantillas, 'restaurarArchivos' | 'rutaEsquema'>;
-  /** Puerto SMTP de Mailpit si está instalado; null si no. */
-  mailpit: () => Promise<{ puerto: number } | null>;
+  /** Captador de correo elegido (D21): su nombre y puerto SMTP si está instalado; null si no. */
+  correo: () => Promise<{ nombre: string; puerto: number } | null>;
   /** `Nucleo.guardarSitio` (edita el sitio `id` y aplica). */
   guardarSitio: (datos: Omit<Sitio, 'id'>, id: string) => Promise<unknown>;
   /** El sitio tal como está guardado ahora (si falta, se usa el del contexto). */

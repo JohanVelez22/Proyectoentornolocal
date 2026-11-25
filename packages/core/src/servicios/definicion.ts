@@ -56,6 +56,7 @@ import {
   type InstaladorServicios,
   type SupervisorServicios,
 } from './nginx';
+import { GRUPO_CORREO } from './correo/tipos';
 import { usoCompatible, type UsoBase } from './usoBases';
 
 export interface CtxServicio {
@@ -81,7 +82,7 @@ export interface CtxServicio {
 }
 
 export interface DefServicio {
-  id: 'mysql' | 'mariadb' | 'postgresql' | 'redis' | 'mongodb' | 'mailpit' | 'ollama';
+  id: IdServicioDatos;
   nombre: string;
   categoria: 'bd' | 'herramienta' | 'ia';
   puertoPorDefecto: number;
@@ -94,6 +95,11 @@ export interface DefServicio {
   claveDatos?(version: string): string;
   /** false: una sola instancia (Mailpit, Ollama). Por defecto, una por rama. */
   multiInstancia?: boolean;
+  /**
+   * Servicios del mismo grupo (los captadores de correo): solo uno encendido a la vez; encender
+   * uno detiene al que estuviera encendido.
+   */
+  grupoExclusivo?: string;
   // Prepara datos y configuración la primera vez; debe ser idempotente.
   inicializar(ctx: CtxServicio): Promise<void>;
   // El supervisor lo lanza con este DefProceso.
@@ -132,6 +138,9 @@ export const NOMBRE_SERVICIO: Record<IdServicioDatos, string> = {
   redis: 'Redis',
   mongodb: 'MongoDB',
   mailpit: 'Mailpit',
+  smtp4dev: 'smtp4dev',
+  inbucket: 'Inbucket',
+  papercut: 'Papercut SMTP',
   ollama: 'Ollama',
 };
 
@@ -142,6 +151,9 @@ export const USUARIO_POR_DEFECTO: Record<IdServicioDatos, string> = {
   redis: 'default',
   mongodb: 'admin',
   mailpit: 'mailpit',
+  smtp4dev: 'smtp4dev',
+  inbucket: 'inbucket',
+  papercut: 'papercut',
   ollama: 'ollama',
 };
 
@@ -740,8 +752,26 @@ export class ServiciosDatos {
     return this.enCola(this.servicioDe(ref), async () => {
       const cfg = await this.d.leerConfig();
       const { def, inst } = await this.objetivo(ref, cfg);
+      // Un captador de correo a la vez: antes de encender uno se apaga el otro que corra.
+      if (def.grupoExclusivo !== undefined && !this.vivo(inst.proceso)) {
+        await this.detenerExclusivos(def);
+      }
       await this.iniciarSinCola(def, inst, cfg);
+      // El captador que se enciende pasa a ser el de los proyectos (bloque MAIL_* del .env).
+      if (def.grupoExclusivo === GRUPO_CORREO && cfg.correo.captador !== def.id) {
+        await this.d.modificarConfig((c) => {
+          c.correo.captador = def.id as Config['correo']['captador'];
+        });
+      }
     });
+  }
+
+  /** Apaga los servicios encendidos del mismo grupo exclusivo que `def` (sin contarlo a él). */
+  private async detenerExclusivos(def: DefServicio): Promise<void> {
+    for (const otro of this.d.definiciones()) {
+      if (otro.id === def.id || otro.grupoExclusivo !== def.grupoExclusivo) continue;
+      if (this.vivo(otro.id)) await this.detener(otro.id);
+    }
   }
 
   private async iniciarSinCola(

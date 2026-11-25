@@ -83,6 +83,17 @@ import { ejecutorPorDefecto, PlataformaWindows } from './plataforma/win';
 import { Supervisor } from './procesos/supervisor';
 import { claveMayorMenor, Rutas } from './rutas';
 import { Mailpit } from './servicios/mailpit';
+import {
+  CAPTADORES,
+  captadorElegido,
+  esIdCaptador,
+  puertoSmtpElegido,
+  puertosFijosCaptadores,
+  DIRECCION_LOCAL,
+  IDS_CAPTADOR,
+  type EstadoCaptador,
+  type IdCaptador,
+} from './servicios/correo/captadores';
 import { Servicios, type IdServicio } from './servicios/servicios';
 import { usosDeCarpeta, type UsoSitio } from './servicios/usoBases';
 import { compararVersiones } from './servicios/nginx';
@@ -166,6 +177,7 @@ import './servicios/bd/postgresql';
 import './servicios/bd/redis';
 import './servicios/bd/mongodb';
 import './servicios/mailpit';
+import './servicios/correo/captadores';
 import './servicios/ollama';
 import {
   esTipoRuntime,
@@ -685,7 +697,8 @@ export class Nucleo {
       versionado: (carpeta) => this.git.versionado(carpeta),
       puertos: async () => {
         const datos = (await this.config.leer()).servicios.datos;
-        return { mailpit: datos.mailpit.puerto, redis: datos.redis.puerto };
+        const cfg = await this.config.leer();
+        return { correo: puertoSmtpElegido(cfg), redis: datos.redis.puerto };
       },
     });
     internos.on('servicio:estado', () => this.pedirRecalculo());
@@ -1402,9 +1415,11 @@ export class Nucleo {
       entregarBase: (objetivo, base, usuario) => bd.entregarBase(objetivo, base, usuario),
       usuarioBdEnUso: (usuario, sitioId) => nucleoRef.usuarioBdEnUso(usuario, sitioId),
       plantillas,
-      mailpit: async () => {
-        if ((await instalador.instalados('mailpit')).length === 0) return null;
-        return { puerto: (await leerConfig()).servicios.datos.mailpit.puerto };
+      correo: async () => {
+        const cfg = await leerConfig();
+        const id = captadorElegido(cfg);
+        if ((await instalador.instalados(id)).length === 0) return null;
+        return { nombre: CAPTADORES[id].nombre, puerto: puertoSmtpElegido(cfg) };
       },
       guardarSitio: (datos, id) => nucleoRef.guardarSitio(datos, id),
       leerSitio: async (id) => (await sitios.listar()).find((s) => s.id === id),
@@ -1873,7 +1888,7 @@ export class Nucleo {
       }
       return;
     }
-    if (servicio === 'mailpit' || servicio === 'ollama') {
+    if (esServicioUnico(servicio)) {
       const estado = (await this.servicios.estados()).find((e) => e.id === servicio)?.estado;
       await this.sitios.modificarConfig((c) => {
         c.servicios.datos[servicio].version = version;
@@ -1913,7 +1928,7 @@ export class Nucleo {
     // instalar); con otras instaladas, antes hay que elegir otra como activa.
     let enUso: string | null = null;
     if (servicio === 'php') enUso = vivo(`php-${carpeta}`) ? `php-${carpeta}` : null;
-    else if (servicio === 'nginx' || servicio === 'mailpit' || servicio === 'ollama') {
+    else if (servicio === 'nginx' || esServicioUnico(servicio)) {
       const activa =
         servicio === 'nginx'
           ? await this.servicios.nginx.versionActiva().catch(() => null)
@@ -2091,10 +2106,49 @@ export class Nucleo {
     return [...SUGERIDOS];
   }
 
-  // ---- Correo (Mailpit) ----
+  // ---- Correo ----
 
-  noLeidosCorreo(): Promise<number> {
+  /** Mensajes sin leer: solo Mailpit expone ese dato; con otro captador, 0. */
+  async noLeidosCorreo(): Promise<number> {
+    const cfg = await this.config.leer();
+    if (captadorElegido(cfg) !== 'mailpit') return 0;
     return this.mailpit.noLeidos();
+  }
+
+  /** Los captadores locales con su estado (D21). Solo escuchan en 127.0.0.1. */
+  async captadoresCorreo(): Promise<EstadoCaptador[]> {
+    const cfg = await this.config.leer();
+    const elegido = captadorElegido(cfg);
+    const estados = await this.servicios.estados();
+    const salida: EstadoCaptador[] = [];
+    for (const id of IDS_CAPTADOR) {
+      const c = CAPTADORES[id];
+      const e = estados.find((x) => x.id === id)?.estado;
+      salida.push({
+        id,
+        nombre: c.nombre,
+        opcional: c.opcional,
+        avisoMantenimiento: c.avisoMantenimiento,
+        instalado: (await this.instalador.instalados(id)).length > 0,
+        encendido: e === 'encendido' || e === 'iniciando',
+        elegido: id === elegido,
+        puertoSmtp: cfg.servicios.datos[id].puerto,
+        puertoWeb: c.puertoWeb,
+        urlWeb: `http://${DIRECCION_LOCAL}:${c.puertoWeb}`,
+      });
+    }
+    return salida;
+  }
+
+  /**
+   * Enciende un captador (y apaga el que corriera) y lo deja como el de los proyectos nuevos.
+   * No cambia el `.env` de proyectos existentes: eso lo hace el bloque de correo del gestor.
+   */
+  async elegirCaptador(id: IdCaptador): Promise<void> {
+    if (!esIdCaptador(id)) {
+      throw new ErrorWolf('servicios.desconocido', `Captador desconocido: ${String(id)}`, { id });
+    }
+    await this.servicios.iniciar(id);
   }
 
   /** Instala Composer y regenera los shims de tools/bin. */
@@ -3744,8 +3798,10 @@ export class Nucleo {
   }
 }
 
-/** Puerto de la interfaz web de Mailpit (fijo). */
-const PUERTO_WEB_MAILPIT = 8025;
+/** Servicios de datos con una sola versión activa: los captadores de correo y Ollama. */
+function esServicioUnico(s: string): s is IdCaptador | 'ollama' {
+  return s === 'ollama' || esIdCaptador(s);
+}
 
 /**
  * Puertos que un proceso de proyecto nuevo no puede tomar: los de los servicios (Nginx, HTTPS,
@@ -3790,7 +3846,7 @@ function puertosServicios(cfg: Config, sitioId: string | null = null): number[] 
     cfg.mcp.puerto,
     cfg.depuracion.puerto,
     PUERTO_ADMINER,
-    PUERTO_WEB_MAILPIT,
+    ...puertosFijosCaptadores(),
     ...Object.values(cfg.servicios.datos).map((d) => d.puerto),
     ...puertosConfigurados(cfg).map((p) => p.puerto),
   ]);

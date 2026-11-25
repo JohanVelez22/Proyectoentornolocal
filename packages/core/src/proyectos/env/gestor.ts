@@ -87,7 +87,7 @@ export interface DepsGestorEnv {
   sitio: (id: string) => Promise<Sitio | undefined>;
   carpetaRespaldos: () => string;
   versionado: (carpeta: string) => Promise<boolean | null>;
-  puertos: () => Promise<{ mailpit: number | null; redis: number | null }>;
+  puertos: () => Promise<{ correo: number | null; redis: number | null }>;
 }
 
 /** Lee un archivo de texto del proyecto: null si no existe; enlaces y archivos enormes se rechazan. */

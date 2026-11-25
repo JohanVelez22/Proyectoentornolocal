@@ -764,6 +764,9 @@ export const en: Textos = {
         redis: 'all keys and data stored in Redis',
         mongodb: 'all MongoDB databases, collections and data',
         mailpit: 'all emails caught by Mailpit',
+        smtp4dev: 'all emails caught by smtp4dev',
+        inbucket: 'all emails caught by Inbucket',
+        papercut: 'all emails caught by Papercut SMTP',
         ollama: 'all models downloaded by Ollama',
       } as Record<string, string>,
       texto: (que: string) =>
@@ -1095,6 +1098,9 @@ export const en: Textos = {
       mongodb: { nombre: 'MongoDB', detalle: 'Document database (mongodb.com)' },
       mongosh: { nombre: 'mongosh', detalle: 'MongoDB shell (mongodb.com)' },
       mailpit: { nombre: 'Mailpit', detalle: 'Test mail (github.com/axllent)' },
+      smtp4dev: { nombre: 'smtp4dev', detalle: 'Test mail (github.com/rnwood)' },
+      inbucket: { nombre: 'Inbucket', detalle: 'Test mail (github.com/inbucket)' },
+      papercut: { nombre: 'Papercut SMTP', detalle: 'Test mail (github.com/ChangemakerStudios)' },
       ollama: { nombre: 'Ollama', detalle: 'Local AI (ollama.com)' },
       composer: { nombre: 'Composer', detalle: 'PHP dependencies (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Web database manager' },
@@ -1621,7 +1627,11 @@ export const en: Textos = {
   },
   correo: {
     descripcion:
-      'Mailpit catches the emails your projects send so you can review them without them reaching the internet.',
+      'Catchers capture the emails your projects send so you can review them without them reaching the internet. They listen only on this computer (127.0.0.1) and only one runs at a time.',
+    seccionCaptadores: 'Local catchers',
+    seccionProveedores: 'Remote SMTP providers',
+    proveedoresProximamente:
+      'Here you will be able to set up a real SMTP provider (Mailtrap, Brevo, SendGrid…) and test sending. It arrives in the next delivery.',
     estado: 'Status',
     smtp: 'SMTP',
     buzon: 'Web inbox',
@@ -1632,18 +1642,26 @@ export const en: Textos = {
     actualizar: 'Recount emails',
     actualizaSolo: 'Updates every 15 seconds while this screen is open.',
     env: 'Block for the Laravel .env',
-    envAyuda:
-      "Paste it into your project's .env. Mail stays in Mailpit, without encryption or a user.",
+    envAyuda: (captador: string) =>
+      `Paste it into your project's .env. Mail stays in ${captador}, without encryption or a user.`,
     copiarEnv: 'Copy block',
-    sinInstalarTitulo: 'Mailpit is not installed',
-    sinInstalar: "Install it from Services to catch your projects' emails.",
     irAServicios: 'Go to Services',
-    apagadoTitulo: 'Mailpit is stopped',
-    apagado: 'Start it to receive emails and view the inbox.',
-    iniciando: 'Mailpit is starting…',
-    errorTitulo: 'Mailpit failed to start',
-    encender: 'Start Mailpit',
-    verServicios: 'View in Services',
+    cargando: 'Reading the catchers…',
+    errorLista: 'Could not read the list of catchers',
+    captador: {
+      opcional: 'Optional',
+      elegido: "Receives your projects' mail",
+      noInstalado: 'Not installed',
+      instalar: 'Install',
+      usar: 'Use this one',
+      apagar: 'Stop',
+      iniciando: 'Starting…',
+      avisoMantenimiento: 'This catcher is barely maintained. Prefer Mailpit or smtp4dev.',
+    },
+    notaDescartados:
+      'MailHog and MailDev are not offered: MailHog publishes no checksum to verify the download and MailDev exists only on npm. Nothing is downloaded without a verifiable checksum.',
+    notaHost:
+      'The web inboxes only answer on 127.0.0.1. smtp4dev and Papercut also reject foreign Host headers; Mailpit and Inbucket cannot, so do not leave your inbox open while browsing sites you do not know.',
   },
   ia: {
     descripcion:
@@ -3226,6 +3244,9 @@ export const en: Textos = {
       python: 'Python',
       composer: 'Composer',
       mailpit: 'Mailpit',
+      smtp4dev: 'smtp4dev',
+      inbucket: 'Inbucket',
+      papercut: 'Papercut SMTP',
       ollama: 'Ollama',
       cloudflared: 'cloudflared',
       java: 'Java',

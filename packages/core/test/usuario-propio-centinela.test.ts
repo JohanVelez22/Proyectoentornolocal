@@ -69,7 +69,7 @@ describe('la clave del usuario propio de la base solo queda en el .env del proye
         activarVector: async () => undefined,
       },
       restaurar: async () => ({ advertencias: [] }),
-      mailpit: async () => null,
+      correo: async () => null,
       guardarSitio: async () => undefined,
       puertoLibre: async () => 8000,
     } as unknown as DepsPasos;

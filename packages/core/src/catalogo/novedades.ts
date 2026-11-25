@@ -18,6 +18,9 @@ export const SERVICIOS_NOVEDADES: readonly ServicioInstalable[] = [
   'nginx',
   'composer',
   'mailpit',
+  'smtp4dev',
+  'inbucket',
+  'papercut',
   'ollama',
   'cloudflared',
 ];

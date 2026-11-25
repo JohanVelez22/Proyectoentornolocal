@@ -803,6 +803,9 @@ export const fr: Textos = {
         redis: 'toutes les clés et données enregistrées dans Redis',
         mongodb: 'toutes les bases, collections et données de MongoDB',
         mailpit: 'tous les courriers capturés par Mailpit',
+        smtp4dev: 'tous les courriers capturés par smtp4dev',
+        inbucket: 'tous les courriers capturés par Inbucket',
+        papercut: 'tous les courriers capturés par Papercut SMTP',
         ollama: 'tous les modèles téléchargés d’Ollama',
       } as Record<string, string>,
       texto: (que: string) =>
@@ -1139,6 +1142,12 @@ export const fr: Textos = {
       mongodb: { nombre: 'MongoDB', detalle: 'Base de données de documents (mongodb.com)' },
       mongosh: { nombre: 'mongosh', detalle: 'Console MongoDB (mongodb.com)' },
       mailpit: { nombre: 'Mailpit', detalle: 'Courrier de test (github.com/axllent)' },
+      smtp4dev: { nombre: 'smtp4dev', detalle: 'Courrier de test (github.com/rnwood)' },
+      inbucket: { nombre: 'Inbucket', detalle: 'Courrier de test (github.com/inbucket)' },
+      papercut: {
+        nombre: 'Papercut SMTP',
+        detalle: 'Courrier de test (github.com/ChangemakerStudios)',
+      },
       ollama: { nombre: 'Ollama', detalle: 'IA locale (ollama.com)' },
       composer: { nombre: 'Composer', detalle: 'Dépendances PHP (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Administrateur web de bases de données' },
@@ -1674,7 +1683,11 @@ export const fr: Textos = {
   },
   correo: {
     descripcion:
-      'Mailpit capture les courriers envoyés par vos projets pour que vous les consultiez sans qu’ils sortent sur Internet.',
+      "Les capteurs interceptent les courriers envoyés par vos projets pour que vous les examiniez sans qu'ils sortent sur internet. Ils écoutent uniquement sur cet ordinateur (127.0.0.1) et un seul est actif à la fois.",
+    seccionCaptadores: 'Capteurs locaux',
+    seccionProveedores: 'Fournisseurs SMTP distants',
+    proveedoresProximamente:
+      "Vous pourrez ici configurer un vrai fournisseur SMTP (Mailtrap, Brevo, SendGrid…) et tester l'envoi. Disponible à la prochaine livraison.",
     estado: 'État',
     smtp: 'SMTP',
     buzon: 'Boîte web',
@@ -1683,20 +1696,28 @@ export const fr: Textos = {
     noLeidosValor: (n: number) => plural(n, 'courrier non lu', 'courriers non lus'),
     noLeidosError: 'Impossible de lire la boîte',
     actualizar: 'Recompter les courriers',
-    actualizaSolo: 'Mise à jour toutes les 15 secondes tant que cet écran est ouvert.',
+    actualizaSolo: 'Se met à jour toutes les 15 secondes tant que cet écran est ouvert.',
     env: 'Bloc pour le .env de Laravel',
-    envAyuda:
-      'Collez-le dans le .env de votre projet. Le courrier reste dans Mailpit, sans chiffrement et sans utilisateur.',
+    envAyuda: (captador: string) =>
+      `Collez-le dans le .env de votre projet. Le courrier reste dans ${captador}, sans chiffrement ni utilisateur.`,
     copiarEnv: 'Copier le bloc',
-    sinInstalarTitulo: 'Mailpit n’est pas installé',
-    sinInstalar: 'Installez-le depuis Services pour capturer les courriers de vos projets.',
     irAServicios: 'Aller à Services',
-    apagadoTitulo: 'Mailpit est éteint',
-    apagado: 'Allumez-le pour recevoir des courriers et voir la boîte.',
-    iniciando: 'Mailpit est en cours de démarrage…',
-    errorTitulo: 'Mailpit n’a pas pu s’allumer',
-    encender: 'Allumer Mailpit',
-    verServicios: 'Voir dans Services',
+    cargando: 'Lecture des capteurs…',
+    errorLista: 'Impossible de lire la liste des capteurs',
+    captador: {
+      opcional: 'Optionnel',
+      elegido: 'Reçoit le courrier de vos projets',
+      noInstalado: 'Non installé',
+      instalar: 'Installer',
+      usar: 'Utiliser celui-ci',
+      apagar: 'Arrêter',
+      iniciando: 'Démarrage…',
+      avisoMantenimiento: "Ce capteur n'est presque plus maintenu. Préférez Mailpit ou smtp4dev.",
+    },
+    notaDescartados:
+      "MailHog et MailDev ne sont pas proposés : MailHog ne publie aucune empreinte pour vérifier le téléchargement et MailDev n'existe que sur npm. Rien n'est téléchargé sans empreinte vérifiable.",
+    notaHost:
+      'Les boîtes web ne répondent que sur 127.0.0.1. smtp4dev et Papercut rejettent en plus les en-têtes Host étrangers ; Mailpit et Inbucket ne le peuvent pas, ne laissez donc pas votre boîte ouverte en naviguant sur des sites inconnus.',
   },
   ia: {
     descripcion:
@@ -3326,6 +3347,9 @@ export const fr: Textos = {
       python: 'Python',
       composer: 'Composer',
       mailpit: 'Mailpit',
+      smtp4dev: 'smtp4dev',
+      inbucket: 'Inbucket',
+      papercut: 'Papercut SMTP',
       ollama: 'Ollama',
       cloudflared: 'cloudflared',
       java: 'Java',

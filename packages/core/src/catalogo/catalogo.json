@@ -86,6 +86,34 @@
       "ejecutable": "mailpit.exe"
     }
   ],
+  "smtp4dev": [
+    {
+      "version": "3.16.1",
+      "url": "https://github.com/rnwood/smtp4dev/releases/download/3.16.1/Rnwood.Smtp4dev-win-x64-3.16.1.zip",
+      "sha256": "0c69374d909ab7b61312f8c4edce4da46474d6dd4f25e289fe1d61643e62a3a1",
+      "formato": "zip",
+      "ejecutable": "Rnwood.Smtp4dev.exe"
+    }
+  ],
+  "inbucket": [
+    {
+      "version": "3.2.0",
+      "url": "https://github.com/inbucket/inbucket/releases/download/v3.2.0/inbucket_3.2.0_windows_amd64.zip",
+      "sha256": "ad307e52863e9281098d4340adcb8dc677c114fbe9a3351b5cdce348792c31b3",
+      "formato": "zip",
+      "subcarpeta": "inbucket_3.2.0_windows_amd64",
+      "ejecutable": "inbucket.exe"
+    }
+  ],
+  "papercut": [
+    {
+      "version": "8.1.0",
+      "url": "https://github.com/ChangemakerStudios/Papercut-SMTP/releases/download/8.1.0/Papercut.Smtp.Service.8.1.0-win-x64.zip",
+      "sha256": "a0735593b52ac9886991bb8f3f4b1a0eafae5ca65681808ae0fcabe76e9cb29f",
+      "formato": "zip",
+      "ejecutable": "Papercut.Service.exe"
+    }
+  ],
   "ollama": [
     {
       "version": "0.40.16",
@@ -121,7 +149,10 @@
       "formato": "zip",
       "subcarpeta": "phpMyAdmin-5.2.3-all-languages",
       "ejecutable": "index.php",
-      "php": { "min": "7.2", "maxExclusivo": "8.4" }
+      "php": {
+        "min": "7.2",
+        "maxExclusivo": "8.4"
+      }
     }
   ],
   "pgvector-src": [

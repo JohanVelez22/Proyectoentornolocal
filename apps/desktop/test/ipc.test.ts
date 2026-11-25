@@ -627,6 +627,8 @@ describe('registrarIpc', () => {
         'ia.previsualizarEnv',
         'ia.escribirEnv',
         'mailpit.noLeidos',
+        'correo.captadores',
+        'correo.elegir',
         'instalador.listarVersiones',
         'instalador.instalar',
         'instalador.instalados',

@@ -88,10 +88,12 @@ import type {
   EstadoGeneral,
   EstadoHosts,
   EstadoHttps,
+  EstadoCaptador,
   EstadoServicio,
   EstadoTunel,
   EventosNucleo,
   FormatoRespaldo,
+  IdCaptador,
   IdServicioDatos,
   ModeloOllama,
   MotorBd,
@@ -258,10 +260,12 @@ export type {
   EstadoGeneral,
   EstadoHosts,
   EstadoHttps,
+  EstadoCaptador,
   EstadoServicio,
   EstadoTunel,
   EventosNucleo,
   FormatoRespaldo,
+  IdCaptador,
   IdServicioDatos,
   ModeloOllama,
   MotorBd,
@@ -723,6 +727,12 @@ export interface ApiEntorno {
   };
   mailpit: {
     noLeidos(): Promise<number>;
+  };
+  correo: {
+    /** Los captadores locales (solo en 127.0.0.1) con su estado. */
+    captadores(): Promise<EstadoCaptador[]>;
+    /** Enciende el captador (apaga el que corriera) y lo deja como el de los proyectos. */
+    elegir(id: IdCaptador): Promise<void>;
   };
   /**
    * Avisos de inicio pendientes (migración de la carpeta de datos, servicios que no encendieron),
@@ -1270,6 +1280,8 @@ export const RUTAS_IPC = [
   'agentes.quitarMcp',
   'agentes.abrir',
   'mailpit.noLeidos',
+  'correo.captadores',
+  'correo.elegir',
   'avisoInicio',
   'instalador.listarVersiones',
   'instalador.instalar',

@@ -1,0 +1,22 @@
+{
+  "assets": [
+    {
+      "browser_download_url": "https://github.com/rnwood/smtp4dev/releases/download/3.16.1/Rnwood.Smtp4dev-linux-x64-3.16.1.zip",
+      "digest": "sha256:3b9395b9ca6e6f5ac0b0a73d953949ed4780a1b794611a97df1a0c7baf909c46",
+      "name": "Rnwood.Smtp4dev-linux-x64-3.16.1.zip"
+    },
+    {
+      "browser_download_url": "https://github.com/rnwood/smtp4dev/releases/download/3.16.1/Rnwood.Smtp4dev-win-x64-3.16.1.zip",
+      "digest": "sha256:0c69374d909ab7b61312f8c4edce4da46474d6dd4f25e289fe1d61643e62a3a1",
+      "name": "Rnwood.Smtp4dev-win-x64-3.16.1.zip"
+    },
+    {
+      "browser_download_url": "https://github.com/rnwood/smtp4dev/releases/download/3.16.1/Rnwood.Smtp4dev.Desktop-win-x64-3.16.1.zip",
+      "digest": "sha256:5bade4758aa54f3c5893809911cca6987c23661eb821c2f8bfad9e8c0e1d5f18",
+      "name": "Rnwood.Smtp4dev.Desktop-win-x64-3.16.1.zip"
+    }
+  ],
+  "draft": false,
+  "prerelease": false,
+  "tag_name": "3.16.1"
+}

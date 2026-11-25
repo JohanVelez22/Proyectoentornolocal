@@ -186,7 +186,7 @@ function valorDe(t: string, clave: string): string | undefined {
  *    run/env-<id>-<fecha>.respaldo; la confirmación la pide la interfaz).
  * 2. Parte de .env.example (o .env.sample, .env.dist, `env` de CI4) o, sin ninguno, de un mínimo
  *    según el tipo.
- * 3. Rellena la URL y el nombre, la conexión de la BD (con el lector del tipo), Mailpit si está
+ * 3. Rellena la URL y el nombre, la conexión de la BD (con el lector del tipo), el captador de correo si está
  *    instalado y los valores extra de wolfcore.yml.
  * 4. Lo escribe de forma atómica. Si algo falla antes (motor apagado, valor que el lector no
  *    admite), no escribe nada. Nunca manda valores al registro.
@@ -273,14 +273,14 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
       lineaBd = `Se configuró la conexión a ${NOMBRE_SERVICIO[motor]} (base ${base}).`;
     }
 
-    // Correo: Mailpit, si está instalado.
-    const mailpit = local ? null : await d.mailpit();
+    // Correo: el captador elegido, si está instalado y el proyecto no usa un proveedor SMTP (D22).
+    const captador = local || sitio.correo?.modo === 'smtp' ? null : await d.correo();
     let lineaCorreo: string | null = null;
-    if (mailpit && (sitio.tipo === 'laravel' || /^[ \t]*#*[ \t]*MAIL_HOST[ \t]*=/m.test(t))) {
+    if (captador && (sitio.tipo === 'laravel' || /^[ \t]*#*[ \t]*MAIL_HOST[ \t]*=/m.test(t))) {
       if (sitio.tipo === 'laravel' || tieneClave(t, 'MAIL_MAILER')) poner('MAIL_MAILER', 'smtp');
       poner('MAIL_HOST', '127.0.0.1');
-      poner('MAIL_PORT', String(mailpit.puerto));
-      lineaCorreo = `El correo sale por Mailpit (puerto ${mailpit.puerto}).`;
+      poner('MAIL_PORT', String(captador.puerto));
+      lineaCorreo = `El correo sale por ${captador.nombre} (puerto ${captador.puerto}).`;
     }
 
     // Valores extra de wolfcore.yml.

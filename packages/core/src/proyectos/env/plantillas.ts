@@ -13,7 +13,8 @@ export interface ContextoPlantillaEnv {
     usuario: string;
     puerto: number;
   } | null;
-  mailpit: number | null;
+  /** Puerto SMTP del captador de correo elegido (D21). */
+  correo: number | null;
   redis: number | null;
 }
 
@@ -39,7 +40,7 @@ export const PLANTILLAS_ENV: Record<
   correo: (c) => ({
     MAIL_MAILER: 'smtp',
     MAIL_HOST: '127.0.0.1',
-    MAIL_PORT: String(c.mailpit ?? 1025),
+    MAIL_PORT: String(c.correo ?? 1025),
     MAIL_USERNAME: '',
     MAIL_PASSWORD: '',
     MAIL_FROM_ADDRESS: 'hola@ejemplo.test',

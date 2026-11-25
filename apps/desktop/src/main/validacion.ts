@@ -20,6 +20,7 @@ import {
   type IdTerminal,
   type IdAgente,
   ID_PROVEEDOR_IA,
+  IDS_CAPTADOR,
   IDS_SERVICIO_DATOS,
   TIPOS_PROVEEDOR_IA,
   validarModeloIa,
@@ -34,6 +35,7 @@ import {
   TIPOS_SITIO,
   TIPOS_GENERADOR,
   type PedidoProyecto,
+  type IdCaptador,
   type IdServicioDatos,
   type MotorBd,
   type ServicioInstalable,
@@ -159,6 +161,9 @@ const INSTALABLES = [
   'mongodb',
   'mongosh',
   'mailpit',
+  'smtp4dev',
+  'inbucket',
+  'papercut',
   'ollama',
   'node',
   'python',
@@ -372,6 +377,14 @@ export function idServicioDatos(v: unknown): IdServicioDatos {
     throw new Error('Argumento no válido: servicio');
   }
   return v as IdServicioDatos;
+}
+
+/** Id de un captador de correo local (D21). */
+export function idCaptador(v: unknown): IdCaptador {
+  if (typeof v !== 'string' || !(IDS_CAPTADOR as readonly string[]).includes(v)) {
+    throw new Error('Argumento no válido: captador');
+  }
+  return v as IdCaptador;
 }
 
 export function tipoProyecto(v: unknown): TipoSitio | 'generico' {

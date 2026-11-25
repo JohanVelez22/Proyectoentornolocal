@@ -20,6 +20,9 @@ export type ServicioInstalable =
   | 'mongodb'
   | 'mongosh'
   | 'mailpit'
+  | 'smtp4dev'
+  | 'inbucket'
+  | 'papercut'
   | 'ollama'
   | 'composer'
   | 'adminer'
@@ -52,6 +55,9 @@ export const EJECUTABLE_POR_SERVICIO: Record<ServicioInstalable, string> = {
   mongodb: `bin/${nombreEjecutable('mongod')}`,
   mongosh: `bin/${nombreEjecutable('mongosh')}`,
   mailpit: nombreEjecutable('mailpit'),
+  smtp4dev: nombreEjecutable('Rnwood.Smtp4dev'),
+  inbucket: nombreEjecutable('inbucket'),
+  papercut: nombreEjecutable('Papercut.Service'),
   ollama: nombreEjecutable('ollama'),
   composer: 'composer.phar',
   adminer: 'adminer.php',
@@ -211,6 +217,9 @@ export const CatalogoSchema = z.object({
   mongodb: Lista,
   mongosh: Lista,
   mailpit: Lista,
+  smtp4dev: Lista,
+  inbucket: Lista,
+  papercut: Lista,
   ollama: Lista,
   composer: Lista,
   adminer: Lista,

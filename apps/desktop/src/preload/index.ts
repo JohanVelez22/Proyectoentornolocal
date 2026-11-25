@@ -191,6 +191,10 @@ const api: ApiEntorno = {
       invocar('ia.escribirEnv', sitioId, proveedorId, opciones),
   },
   mailpit: { noLeidos: () => invocar('mailpit.noLeidos') },
+  correo: {
+    captadores: () => invocar('correo.captadores'),
+    elegir: (id) => invocar('correo.elegir', id),
+  },
   avisoInicio: () => invocar('avisoInicio'),
   instalador: {
     listarVersiones: (s, filtro) => invocar('instalador.listarVersiones', s, filtro),
