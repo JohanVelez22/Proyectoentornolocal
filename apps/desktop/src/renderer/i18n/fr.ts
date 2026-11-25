@@ -211,6 +211,18 @@ export const fr: Textos = {
         'Tailscale n’est pas connecté : connectez-vous à Tailscale puis réessayez.',
       'tuneles.tailscale_puerto_ocupado':
         'Tailscale publie déjà quelque chose sur le port HTTPS {puerto}. WolfCore Dev ne l’écrase pas : retirez-le avec Tailscale puis réessayez.',
+      'lan.sitio_no_encontrado': 'Le site est introuvable.',
+      'lan.confirmacion_requerida':
+        'Partager {dominio} sur le réseau local doit être confirmé dans WolfCore Dev.',
+      'lan.confirmacion_datos_reales':
+        '{dominio} contient des données réelles : le partager sur le réseau local exige la confirmation renforcée dans WolfCore Dev.',
+      'lan.sin_red':
+        'Aucun réseau local n’est connecté (Wi-Fi ou Ethernet). Connectez-vous à un réseau et réessayez.',
+      'lan.ip_no_valida':
+        'L’adresse {ip} ne fait plus partie de votre réseau local. Rouvrez la boîte de dialogue et confirmez à nouveau.',
+      'lan.requiere_https': '{dominio} redirige vers HTTPS : partagez-le avec l’option HTTPS.',
+      'lan.sin_puertos':
+        'Aucun port libre entre 8100 et 8199 pour le réseau local. Arrêtez de partager un site et réessayez.',
       'tuneles.expose_no_instalado':
         'Expose n’est pas installé. Sous Windows il ne fonctionne qu’avec expose.phar : placez-le dans {carpeta}.',
       'tuneles.expose_datos_reales':
@@ -1792,6 +1804,66 @@ export const fr: Textos = {
     restaurarTexto: (fecha: string) =>
       `Le vhost revient à son état du ${fecha}. La version actuelle reste dans l’historique.`,
     restaurado: 'Version restaurée',
+  },
+  lan: {
+    etiqueta: 'Réseau local',
+    interruptor: (dominio: string) => `Partager ${dominio} sur le réseau local`,
+    apagadoAyuda: 'Ouvrez ce site depuis votre mobile ou un autre appareil du même réseau.',
+    sinNginx: 'Démarrez Nginx pour partager le site sur le réseau local.',
+    sinRed: 'Aucun réseau local n’est connecté (Wi-Fi ou Ethernet).',
+    activo: 'Visible sur le réseau local',
+    abriendo: 'Partage en cours…',
+    cerrando: 'Arrêt du partage…',
+    abrirUrl: 'Ouvrir sur cet ordinateur',
+    copiarUrl: 'Copier l’adresse',
+    verQr: 'Afficher le QR',
+    qrTitulo: (dominio: string) => `${dominio} sur le réseau local`,
+    qrAviso: 'Scannez le QR avec un mobile connecté au même réseau.',
+    confirmarTitulo: 'Partager sur le réseau local',
+    confirmarTexto: (dominio: string, ip: string) =>
+      `${dominio} sera visible pour tout appareil connecté au même réseau que cet ordinateur (${ip}), sans mot de passe. Le partage s’arrête quand vous éteignez l’interrupteur, à la fermeture de WolfCore Dev et à son prochain démarrage.`,
+    confirmarRealesTexto: (dominio: string, ip: string) =>
+      `${dominio} contient des DONNÉES RÉELLES de clients. Si vous le partagez, tout appareil du réseau (${ip}) pourra voir et utiliser ces données, sans mot de passe. Ne le faites que sur un réseau de confiance : jamais sur un Wi-Fi public, invité ou de commerce.`,
+    casillaReales:
+      'Je comprends que toute personne sur ce réseau pourra voir les données réelles et que le réseau est de confiance.',
+    ipEtiqueta: 'Réseau (IP de cet ordinateur)',
+    https: 'Utiliser HTTPS',
+    httpsAyuda:
+      'Avec HTTPS, le mobile doit faire confiance à l’AC de WolfCore Dev (bouton « Installer l’AC sur le mobile »). Sans HTTPS, le site passe en HTTP.',
+    httpsObligatorio: 'Ce site redirige vers HTTPS : il est donc partagé en HTTPS.',
+    compartir: 'Partager sur le réseau',
+    tituloError: 'Impossible de partager sur le réseau local',
+    caBoton: 'Installer l’AC sur le mobile',
+    firewallTitulo: 'Ça ne s’ouvre pas sur le mobile ?',
+    firewallTexto:
+      'Windows peut demander s’il faut autoriser WolfCore Dev (Nginx) à recevoir des connexions : acceptez uniquement pour les réseaux privés. WolfCore Dev ne modifie pas le pare-feu à votre place. Si le mobile ne se connecte pas, exécutez cette commande dans PowerShell en administrateur :',
+    copiarComando: 'Copier la commande',
+  },
+  caMovil: {
+    titulo: 'Installer l’AC sur le mobile',
+    intro:
+      'Scannez le QR avec un mobile connecté au même réseau pour télécharger le certificat de l’autorité de WolfCore Dev. Seul ce fichier est servi et le lien se ferme tout seul.',
+    abriendo: 'Ouverture du lien…',
+    expira: (minutos: number) => `Le lien se ferme tout seul dans ${minutos} min.`,
+    expirado: 'Le lien a été fermé.',
+    reabrir: 'Rouvrir',
+    android: 'Android',
+    ios: 'iPhone ou iPad',
+    pasosAndroid: [
+      'Scannez le QR ou ouvrez l’adresse dans le navigateur du mobile et téléchargez le fichier.',
+      'Ouvrez Paramètres > Sécurité et confidentialité > Plus de sécurité > Chiffrement et identifiants > Installer un certificat > Certificat d’AC (les noms varient selon la marque).',
+      'Choisissez le fichier téléchargé et acceptez l’avertissement : c’est normal, Android avertit pour toute AC.',
+    ],
+    pasosIos: [
+      'Ouvrez l’adresse dans Safari et autorisez le téléchargement du profil.',
+      'Ouvrez Réglages > Profil téléchargé et installez-le.',
+      'Ouvrez Réglages > Général > Informations > Réglages des certificats de confiance et activez la confiance totale pour l’AC de WolfCore Dev.',
+    ],
+    aviso:
+      'Une AC installée fait confiance à tout ce qu’elle signe sur ce mobile : installez-la uniquement sur vos appareils et retirez-la ensuite.',
+    firewallAviso:
+      'Windows peut afficher un avertissement du pare-feu à l’ouverture du lien : c’est normal. Acceptez uniquement pour les réseaux privés ; WolfCore Dev ne modifie pas le pare-feu à votre place.',
+    tituloError: 'Impossible d’ouvrir le lien de l’AC',
   },
   dialogoQr: {
     descargar: 'Télécharger le PNG',

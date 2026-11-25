@@ -810,6 +810,13 @@ export class PlataformaWindows implements PlataformaCompleta {
         return 'winget install --id Microsoft.VCRedist.2015+.x64 --exact --source winget';
       case 'instalar-build-tools':
         return 'winget install --id Microsoft.VisualStudio.2022.BuildTools --exact --source winget --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"';
+      case 'regla-firewall-lan': {
+        if (!Number.isInteger(c.puerto) || c.puerto < 1 || c.puerto > 65535) {
+          throw new Error(`Puerto no válido: ${c.puerto}`);
+        }
+        // Solo perfiles privados (la red de casa u oficina), nunca públicos.
+        return `New-NetFirewallRule -DisplayName 'WolfCore Dev red local ${c.puerto}' -Direction Inbound -Protocol TCP -LocalPort ${c.puerto} -Action Allow -Profile Private`;
+      }
     }
   }
 

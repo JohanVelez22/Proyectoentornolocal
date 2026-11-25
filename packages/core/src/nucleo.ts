@@ -175,6 +175,8 @@ import {
   type PreferenciasUi,
 } from './tipos';
 import { VhostsAuxiliares } from './nginx/auxiliares';
+import { GestorLan, PRIMER_PUERTO_LAN, ULTIMO_PUERTO_LAN } from './red/lan';
+import { ServidorCa } from './red/servidorCa';
 import { Tuneles } from './tuneles/tuneles';
 import type { SecretosTunel } from './tuneles/proveedor';
 // Registran sus DefServicio al cargarse: el núcleo no depende de que alguien importe index.ts.
@@ -376,6 +378,8 @@ interface ModulosNucleo {
   phpmyadmin: PhpMyAdmin;
   accesoBd: AccesoBd;
   ftp: ServidorFtp;
+  lan: GestorLan;
+  caMovil: ServidorCa;
   ollama: ClienteOllama;
   mailpit: Mailpit;
   credenciales: AlmacenCredenciales;
@@ -548,6 +552,9 @@ export class Nucleo {
   readonly phpmyadmin: PhpMyAdmin;
   readonly accesoBd: AccesoBd;
   readonly ftp: ServidorFtp;
+  /** Compartir sitios en la red local y entregar la CA al móvil (D25). */
+  readonly lan: GestorLan;
+  readonly caMovil: ServidorCa;
   readonly ollama: ClienteOllama;
   readonly mailpit: Mailpit;
   /** Procesos supervisados de los proyectos (npm run dev, uvicorn…). */
@@ -652,6 +659,8 @@ export class Nucleo {
     this.phpmyadmin = m.phpmyadmin;
     this.accesoBd = m.accesoBd;
     this.ftp = m.ftp;
+    this.lan = m.lan;
+    this.caMovil = m.caMovil;
     this.ollama = m.ollama;
     this.mailpit = m.mailpit;
     this.procesos = m.procesos;
@@ -939,6 +948,29 @@ export class Nucleo {
       rutas,
       ejecutor: o.ejecutor ?? ejecutorPorDefecto,
     });
+    // Vhosts propios de una función (túneles, red local): incluidos aparte de los de los sitios.
+    const vhostsAux = new VhostsAuxiliares({ rutas, recargar: () => servicios.nginx.recargar() });
+    // Compartir en la red local: un `server` por sitio, solo en la IP elegida y su propio puerto.
+    const lan = new GestorLan({
+      sitios,
+      vhosts: vhostsAux,
+      certificado: (s) => https.asegurarCertificado(s),
+      puertoNginx: async () => (await leerConfig()).servicios.nginx.puerto,
+      reservados: async () => {
+        const res = puertosReservados(await leerConfig());
+        for (const r of await plat.rangosReservados('tcp').catch(() => [])) {
+          const desde = Math.max(r.desde, PRIMER_PUERTO_LAN);
+          const hasta = Math.min(r.hasta, ULTIMO_PUERTO_LAN);
+          for (let p = desde; p <= hasta; p++) res.push(p);
+        }
+        return res;
+      },
+    });
+    // Servidor temporal de `ca.crt` para el móvil (solo ese archivo, nunca la clave).
+    const caMovil = new ServidorCa({
+      rutaCa: () => rutas.caCrt(),
+      asegurarCa: () => https.crearCaSiFalta(),
+    });
     const tuneles = new Tuneles({
       supervisor,
       sitios,
@@ -951,7 +983,7 @@ export class Nucleo {
       ejecutor: o.ejecutor ?? ejecutorPorDefecto,
       lanzar: o.lanzar ?? lanzadorPorDefecto,
       // Server de Nginx propio de un túnel (Tailscale): valida y recarga con el resto de la config.
-      vhostsAux: new VhostsAuxiliares({ rutas, recargar: () => servicios.nginx.recargar() }),
+      vhostsAux,
       guardarTunel: async (sitioId, tunel) => {
         await sitios.editar(sitioId, { tunel: tunel ?? undefined });
       },
@@ -1317,6 +1349,8 @@ export class Nucleo {
       phpmyadmin,
       accesoBd,
       ftp,
+      lan,
+      caMovil,
       ollama: new ClienteOllama({
         base: () => `http://127.0.0.1:${puertoOllama.valor}`,
         modelosDir: () =>
@@ -1499,6 +1533,10 @@ export class Nucleo {
       void nucleo.instantaneas.purgarPapelera().catch(() => 0);
       void nucleo.instantaneas.limpiarHuerfanos().catch(() => 0);
       await tuneles.restaurar();
+      // Nada de la red local sobrevive a una sesión: lo que dejó una caída se quita.
+      await lan.restaurar().catch((e: unknown) => {
+        console.error('No se pudo limpiar la red local:', mensajeDe(e));
+      });
       await estadoHostsSeguro(hosts, eventos, dominiosDe(await sitios.listar()));
     } catch (e) {
       nucleo.cerrado = true;
@@ -2548,6 +2586,14 @@ export class Nucleo {
     }
   }
 
+  /**
+   * Comando de la consola de administrador para permitir la entrada de un sitio compartido en la
+   * red local (solo redes privadas). WolfCore Dev nunca lo ejecuta ni toca el cortafuegos.
+   */
+  comandoFirewallLan(puerto: number): string {
+    return this.plataforma.comandoManual({ tipo: 'regla-firewall-lan', puerto });
+  }
+
   /** Usuario y clave de un servicio propio para "Datos de conexión" (null si aún no se generaron). */
   async credenciales(id: IdServicioDatos | IdInstancia): Promise<Credenciales | null> {
     return this.almacenCredenciales.leer(await this.servicios.datos.claveCredencial(id));
@@ -3544,7 +3590,10 @@ export class Nucleo {
     delete resto.correo;
     // El proveedor de túnel solo cambia con `tuneles.elegirProveedor` (cierra el túnel abierto).
     delete resto.tunel;
+    // Compartir en la red local solo cambia con `lan.activar`/`lan.desactivar` (confirmación).
+    delete resto.lan;
     if (id) await this.cerrarTunelSiCambia(id, datos);
+    if (id) await this.cerrarLanSiCambia(id, datos);
     const previo = id ? (await this.sitios.listar()).find((s) => s.id === id) : undefined;
     // Las reglas propias y el vhost manual solo cambian con el editor de vhost (revisión,
     // nginx -t y vuelta atrás): guardar el sitio conserva los que tenía y nunca los regenera.
@@ -3647,6 +3696,20 @@ export class Nucleo {
   }
 
   /**
+   * Si el sitio se comparte en la red local y cambia lo que el `server` de la red local da por
+   * hecho (el dominio con el que reenvía, o que ahora redirige a HTTPS sin que la red local lo
+   * use), se deja de compartir antes de editar: lo que se confirmó ya no es lo que se serviría.
+   */
+  private async cerrarLanSiCambia(id: string, datos: Omit<Sitio, 'id'>): Promise<void> {
+    const actual = (await this.sitios.listar()).find((s) => s.id === id);
+    if (!actual?.lan?.activo) return;
+    const cambia =
+      actual.dominio !== datos.dominio.trim().toLowerCase() ||
+      (datos.redirigirHttps && !actual.lan.https);
+    if (cambia) await this.lan.desactivar(id);
+  }
+
+  /**
    * Guarda el puerto de Nginx y los trabajadores de PHP y los pone en marcha: regenera los
    * vhosts (nuevo `listen`), reinicia Nginx si estaba encendido y cambió el puerto (si no, lo
    * recarga) y reinicia las ramas de PHP encendidas si cambiaron los trabajadores.
@@ -3654,6 +3717,8 @@ export class Nucleo {
   async guardarAjustes(a: AjustesServicios): Promise<ResultadoAjustes> {
     validarAjustes(a);
     const previo = await this.config.leer();
+    // Los `server` de la red local reenvían al puerto de Nginx: si cambia, se deja de compartir.
+    if (a.puerto !== previo.servicios.nginx.puerto) await this.lan.apagarTodo();
     await this.sitios.guardarAjustes(a);
     const reiniciados: string[] = [];
     const errores: string[] = [];
@@ -3721,6 +3786,10 @@ export class Nucleo {
     } catch {
       // el túnel puede no estar abierto
     }
+    // Un sitio borrado no puede seguir visible en la red local.
+    await this.lan.desactivar(id).catch((e: unknown) => {
+      console.error('No se pudo dejar de compartir el sitio borrado:', mensajeDe(e));
+    });
     await this.procesos.detenerSitio(id);
     await this.ftp.desactivarSitio(id).catch(() => undefined);
     await this.sitios.borrar(id);
@@ -3873,6 +3942,13 @@ export class Nucleo {
     });
     await this.accesoBd.detener().catch((e: unknown) => {
       console.error('No se pudo detener el canje de accesos a la base:', mensajeDe(e));
+    });
+    // La red local y el servidor de la CA se apagan siempre al salir (con o sin detener servicios).
+    await this.caMovil.cerrar().catch((e: unknown) => {
+      console.error('No se pudo cerrar el servidor de la CA para el móvil:', mensajeDe(e));
+    });
+    await this.lan.apagarTodo().catch((e: unknown) => {
+      console.error('No se pudo apagar el acceso por la red local:', mensajeDe(e));
     });
     let primero: unknown;
     let fallo = false;

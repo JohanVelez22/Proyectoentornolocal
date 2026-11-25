@@ -201,6 +201,18 @@ export const es = {
         'Tailscale no tiene la sesión iniciada: inicie sesión en Tailscale y vuelva a intentarlo.',
       'tuneles.tailscale_puerto_ocupado':
         'Tailscale ya publica algo en el puerto HTTPS {puerto}. WolfCore Dev no lo pisa: retírelo con Tailscale y vuelva a intentarlo.',
+      'lan.sitio_no_encontrado': 'No se encontró el sitio.',
+      'lan.confirmacion_requerida':
+        'Compartir {dominio} en la red local exige confirmarlo en WolfCore Dev.',
+      'lan.confirmacion_datos_reales':
+        '{dominio} tiene datos reales: compartirlo en la red local exige la confirmación reforzada en WolfCore Dev.',
+      'lan.sin_red':
+        'No hay una red local conectada (Wi-Fi o Ethernet). Conéctese a una red y vuelva a intentarlo.',
+      'lan.ip_no_valida':
+        'La dirección {ip} ya no es una de su red local. Vuelva a abrir el diálogo y confirme de nuevo.',
+      'lan.requiere_https': '{dominio} redirige a HTTPS: compártalo con la opción HTTPS.',
+      'lan.sin_puertos':
+        'No hay puertos libres entre 8100 y 8199 para la red local. Deje de compartir algún sitio y vuelva a intentarlo.',
       'tuneles.expose_no_instalado':
         'Expose no está instalado. En Windows solo funciona con expose.phar: póngalo en {carpeta}.',
       'tuneles.expose_datos_reales':
@@ -1748,6 +1760,66 @@ export const es = {
     restaurarTexto: (fecha: string) =>
       `El vhost vuelve a como estaba el ${fecha}. La versión actual queda en el historial.`,
     restaurado: 'Versión restaurada',
+  },
+  lan: {
+    etiqueta: 'Red local',
+    interruptor: (dominio: string) => `Compartir ${dominio} en la red local`,
+    apagadoAyuda: 'Abra este sitio desde su móvil u otro equipo de la misma red.',
+    sinNginx: 'Encienda Nginx para compartir el sitio en la red local.',
+    sinRed: 'No hay una red local conectada (Wi-Fi o Ethernet).',
+    activo: 'Visible en la red local',
+    abriendo: 'Compartiendo…',
+    cerrando: 'Dejando de compartir…',
+    abrirUrl: 'Abrir en este equipo',
+    copiarUrl: 'Copiar la dirección',
+    verQr: 'Mostrar el QR',
+    qrTitulo: (dominio: string) => `${dominio} en la red local`,
+    qrAviso: 'Escanee el QR con un móvil conectado a la misma red.',
+    confirmarTitulo: 'Compartir en la red local',
+    confirmarTexto: (dominio: string, ip: string) =>
+      `${dominio} quedará visible para cualquier dispositivo conectado a la misma red que este equipo (${ip}), sin pedir contraseña. Se deja de compartir al apagar el interruptor, al cerrar WolfCore Dev y al arrancarlo de nuevo.`,
+    confirmarRealesTexto: (dominio: string, ip: string) =>
+      `${dominio} tiene DATOS REALES de clientes. Si lo comparte, cualquier dispositivo de la red (${ip}) podrá ver y usar esos datos, sin contraseña. Hágalo solo en una red de confianza: nunca en un Wi-Fi público, de invitados o de un local.`,
+    casillaReales:
+      'Entiendo que cualquiera en esta red podrá ver los datos reales y que la red es de confianza.',
+    ipEtiqueta: 'Red (IP de este equipo)',
+    https: 'Usar HTTPS',
+    httpsAyuda:
+      'Con HTTPS el móvil debe confiar en la CA de WolfCore Dev (botón «Instalar la CA en el móvil»). Sin él, el sitio va por HTTP.',
+    httpsObligatorio: 'Este sitio redirige a HTTPS, así que se comparte con HTTPS.',
+    compartir: 'Compartir en la red',
+    tituloError: 'No se pudo compartir en la red local',
+    caBoton: 'Instalar la CA en el móvil',
+    firewallTitulo: '¿No abre en el móvil?',
+    firewallTexto:
+      'Windows puede preguntar si permite que WolfCore Dev (Nginx) reciba conexiones: acepte solo en redes privadas. WolfCore Dev no cambia el cortafuegos por usted. Si el móvil no conecta, ejecute este comando en PowerShell como administrador:',
+    copiarComando: 'Copiar el comando',
+  },
+  caMovil: {
+    titulo: 'Instalar la CA en el móvil',
+    intro:
+      'Escanee el QR con un móvil conectado a la misma red para descargar el certificado de la autoridad de WolfCore Dev. Solo se entrega ese archivo y el enlace se cierra solo.',
+    abriendo: 'Abriendo el enlace…',
+    expira: (minutos: number) => `El enlace se cierra solo en ${minutos} min.`,
+    expirado: 'El enlace se cerró.',
+    reabrir: 'Abrir de nuevo',
+    android: 'Android',
+    ios: 'iPhone o iPad',
+    pasosAndroid: [
+      'Escanee el QR o abra la dirección en el navegador del móvil y descargue el archivo.',
+      'Abra Ajustes > Seguridad y privacidad > Más seguridad > Cifrado y credenciales > Instalar un certificado > Certificado de CA (los nombres cambian según la marca).',
+      'Elija el archivo descargado y acepte el aviso: es normal, Android avisa con toda CA.',
+    ],
+    pasosIos: [
+      'Abra la dirección en Safari y permita descargar el perfil.',
+      'Abra Ajustes > Perfil descargado e instálelo.',
+      'Abra Ajustes > General > Información > Ajustes de confianza de certificados y active la confianza total para la CA de WolfCore Dev.',
+    ],
+    aviso:
+      'Una CA instalada da confianza a todo lo que firme en ese móvil: instálela solo en sus dispositivos y quítela cuando termine.',
+    firewallAviso:
+      'Windows puede mostrar un aviso del cortafuegos al abrir el enlace: es normal. Acepte solo en redes privadas; WolfCore Dev no cambia el cortafuegos por usted.',
+    tituloError: 'No se pudo abrir el enlace de la CA',
   },
   dialogoQr: {
     descargar: 'Descargar PNG',

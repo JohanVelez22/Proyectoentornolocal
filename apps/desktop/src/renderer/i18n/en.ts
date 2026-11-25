@@ -200,6 +200,18 @@ export const en: Textos = {
         'Tailscale is not signed in: sign in to Tailscale and try again.',
       'tuneles.tailscale_puerto_ocupado':
         'Tailscale already publishes something on HTTPS port {puerto}. WolfCore Dev does not overwrite it: remove it with Tailscale and try again.',
+      'lan.sitio_no_encontrado': 'The site was not found.',
+      'lan.confirmacion_requerida':
+        'Sharing {dominio} on the local network must be confirmed in WolfCore Dev.',
+      'lan.confirmacion_datos_reales':
+        '{dominio} has real data: sharing it on the local network requires the reinforced confirmation in WolfCore Dev.',
+      'lan.sin_red':
+        'No local network is connected (Wi-Fi or Ethernet). Connect to a network and try again.',
+      'lan.ip_no_valida':
+        'The address {ip} is no longer one of your local network. Reopen the dialog and confirm again.',
+      'lan.requiere_https': '{dominio} redirects to HTTPS: share it with the HTTPS option.',
+      'lan.sin_puertos':
+        'There are no free ports between 8100 and 8199 for the local network. Stop sharing a site and try again.',
       'tuneles.expose_no_instalado':
         'Expose is not installed. On Windows it only works with expose.phar: put it in {carpeta}.',
       'tuneles.expose_datos_reales':
@@ -1732,6 +1744,66 @@ export const en: Textos = {
     restaurarTexto: (fecha: string) =>
       `The vhost goes back to how it was on ${fecha}. The current version stays in the history.`,
     restaurado: 'Version restored',
+  },
+  lan: {
+    etiqueta: 'Local network',
+    interruptor: (dominio: string) => `Share ${dominio} on the local network`,
+    apagadoAyuda: 'Open this site from your phone or another device on the same network.',
+    sinNginx: 'Start Nginx to share the site on the local network.',
+    sinRed: 'No local network is connected (Wi-Fi or Ethernet).',
+    activo: 'Visible on the local network',
+    abriendo: 'Sharing…',
+    cerrando: 'Stopping…',
+    abrirUrl: 'Open on this computer',
+    copiarUrl: 'Copy the address',
+    verQr: 'Show the QR',
+    qrTitulo: (dominio: string) => `${dominio} on the local network`,
+    qrAviso: 'Scan the QR with a phone connected to the same network.',
+    confirmarTitulo: 'Share on the local network',
+    confirmarTexto: (dominio: string, ip: string) =>
+      `${dominio} will be visible to any device connected to the same network as this computer (${ip}), with no password. Sharing stops when you turn the switch off, when WolfCore Dev closes and when it starts again.`,
+    confirmarRealesTexto: (dominio: string, ip: string) =>
+      `${dominio} has REAL customer data. If you share it, any device on the network (${ip}) will be able to see and use that data, with no password. Do it only on a network you trust: never on public, guest or venue Wi-Fi.`,
+    casillaReales:
+      'I understand that anyone on this network will be able to see the real data and that the network is trusted.',
+    ipEtiqueta: 'Network (this computer’s IP)',
+    https: 'Use HTTPS',
+    httpsAyuda:
+      'With HTTPS the phone must trust the WolfCore Dev CA (“Install the CA on the phone” button). Without it, the site is served over HTTP.',
+    httpsObligatorio: 'This site redirects to HTTPS, so it is shared with HTTPS.',
+    compartir: 'Share on the network',
+    tituloError: 'Could not share on the local network',
+    caBoton: 'Install the CA on the phone',
+    firewallTitulo: 'Does not open on the phone?',
+    firewallTexto:
+      'Windows may ask whether to allow WolfCore Dev (Nginx) to receive connections: accept for private networks only. WolfCore Dev does not change the firewall for you. If the phone cannot connect, run this command in PowerShell as administrator:',
+    copiarComando: 'Copy the command',
+  },
+  caMovil: {
+    titulo: 'Install the CA on the phone',
+    intro:
+      'Scan the QR with a phone connected to the same network to download the WolfCore Dev authority certificate. Only that file is served and the link closes by itself.',
+    abriendo: 'Opening the link…',
+    expira: (minutos: number) => `The link closes by itself in ${minutos} min.`,
+    expirado: 'The link was closed.',
+    reabrir: 'Open again',
+    android: 'Android',
+    ios: 'iPhone or iPad',
+    pasosAndroid: [
+      'Scan the QR or open the address in the phone browser and download the file.',
+      'Open Settings > Security & privacy > More security > Encryption & credentials > Install a certificate > CA certificate (names vary by brand).',
+      'Pick the downloaded file and accept the warning: it is normal, Android warns for every CA.',
+    ],
+    pasosIos: [
+      'Open the address in Safari and allow the profile to download.',
+      'Open Settings > Profile Downloaded and install it.',
+      'Open Settings > General > About > Certificate Trust Settings and turn on full trust for the WolfCore Dev CA.',
+    ],
+    aviso:
+      'An installed CA trusts everything it signs on that phone: install it only on your own devices and remove it when you are done.',
+    firewallAviso:
+      'Windows may show a firewall prompt when the link opens: that is normal. Accept for private networks only; WolfCore Dev does not change the firewall for you.',
+    tituloError: 'Could not open the CA link',
   },
   dialogoQr: {
     descargar: 'Download PNG',

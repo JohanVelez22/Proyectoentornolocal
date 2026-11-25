@@ -16,6 +16,8 @@ export interface OpcionesVhostProxy {
   destino: number;
   /** `Host` con el que se reenvía: el dominio del sitio, para que Nginx elija su vhost. */
   host: string;
+  /** Escuchar con TLS (red local con HTTPS): certificado y clave del sitio para la IP. */
+  ssl?: { crt: string; key: string };
 }
 
 /** Un puerto libre de 127.0.0.1 (el sistema elige; otro programa podría tomarlo antes: raro). */
@@ -43,10 +45,22 @@ export function generarVhostProxy(o: OpcionesVhostProxy): string {
     throw new Error('Vhost auxiliar no válido');
   }
   if (!HOST_REENVIADO.test(o.host)) throw new Error('Host del vhost auxiliar no válido');
+  // Rutas de los certificados: nunca algo que cierre las comillas o la directiva.
+  const barras = (r: string): string => r.replaceAll('\\', '/');
+  if (o.ssl && [o.ssl.crt, o.ssl.key].some((r) => /["\r\n;{}]/.test(barras(r)))) {
+    throw new Error('Ruta del certificado del vhost auxiliar no válida');
+  }
   return (
     [
       'server {',
-      `    listen ${o.escucha}:${o.puerto};`,
+      `    listen ${o.escucha}:${o.puerto}${o.ssl ? ' ssl' : ''};`,
+      ...(o.ssl
+        ? [
+            `    ssl_certificate "${barras(o.ssl.crt)}";`,
+            `    ssl_certificate_key "${barras(o.ssl.key)}";`,
+            '    ssl_protocols TLSv1.2 TLSv1.3;',
+          ]
+        : []),
       '    server_name _;',
       '    client_max_body_size 64m;',
       '    location / {',
@@ -54,7 +68,10 @@ export function generarVhostProxy(o: OpcionesVhostProxy): string {
       `        proxy_set_header Host "${o.host}";`,
       '        proxy_set_header X-Forwarded-Host $http_host;',
       '        proxy_set_header X-Forwarded-For $remote_addr;',
-      '        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;',
+      // Con TLS propio el sitio ve https (y no redirige en bucle); sin él, lo que ya traiga.
+      o.ssl
+        ? '        proxy_set_header X-Forwarded-Proto https;'
+        : '        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;',
       '        proxy_http_version 1.1;',
       '        proxy_set_header Upgrade $http_upgrade;',
       '        proxy_set_header Connection "upgrade";',

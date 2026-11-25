@@ -41,6 +41,29 @@ describe('generarVhostProxy', () => {
     expect(c).not.toContain('default_server');
   });
 
+  it('con ssl escucha con TLS, usa el certificado dado y reenvía como https', () => {
+    const c = generarVhostProxy({
+      escucha: '192.168.1.50',
+      puerto: 8100,
+      destino: 80,
+      host: 'wolf.test',
+      ssl: { crt: 'C:\\datos\\certs\\lan-wolf.crt', key: 'C:\\datos\\certs\\lan-wolf.key' },
+    });
+    expect(c).toContain('listen 192.168.1.50:8100 ssl;');
+    expect(c).toContain('ssl_certificate "C:/datos/certs/lan-wolf.crt";');
+    expect(c).toContain('ssl_certificate_key "C:/datos/certs/lan-wolf.key";');
+    expect(c).toContain('proxy_set_header X-Forwarded-Proto https;');
+    expect(() =>
+      generarVhostProxy({
+        escucha: '192.168.1.50',
+        puerto: 8100,
+        destino: 80,
+        host: 'wolf.test',
+        ssl: { crt: 'a";}\nserver{', key: 'k' },
+      }),
+    ).toThrow();
+  });
+
   it('rechaza lo que rompería la directiva', () => {
     const ok = { escucha: '127.0.0.1', puerto: 41000, destino: 8080, host: 'wolf.test' };
     for (const mal of [

@@ -80,6 +80,17 @@ export const XdebugSitioSchema = z.object({
 });
 export type XdebugSitio = z.infer<typeof XdebugSitioSchema>;
 
+/**
+ * Acceso por la red local (D25). `activo` solo vale mientras la app corre: al salir (y al
+ * arrancar) todo se apaga. `puerto` se conserva para que el QR siga siendo el mismo.
+ */
+export const LanSitioSchema = z.object({
+  activo: z.boolean().default(false),
+  puerto: z.number().int().min(1024).max(65535),
+  https: z.boolean().default(false),
+});
+export type LanSitio = z.infer<typeof LanSitioSchema>;
+
 export const SitioSchema = z.object({
   id: z.string(),
   nombre: z.string(),
@@ -176,6 +187,8 @@ export const SitioSchema = z.object({
    * público. Ausente = Cloudflare rápido. Nunca lleva tokens: viven en `AlmacenSecretos`.
    */
   tunel: TunelSitioSchema.optional(),
+  /** Compartido en la red local (solo lo cambia `Nucleo.lan`, nunca el formulario del sitio). */
+  lan: LanSitioSchema.optional(),
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 

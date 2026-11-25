@@ -1735,3 +1735,61 @@ describe('Nucleo: puerto automático al guardar FastAPI/Node (QA 3)', () => {
     expect(pb).not.toBe(pa);
   });
 });
+
+describe('Nucleo y la red local (D25)', () => {
+  const extras = (id: string): string => path.join(base, 'etc', 'nginx', 'extras', `${id}.conf`);
+  const lan = { activo: true, puerto: 8100, https: false };
+
+  it('guardar el sitio nunca cambia si está compartido: solo lan.activar lo hace', async () => {
+    const n = await crear();
+    const { sitio } = await n.guardarSitio(datos({ lan } as Partial<Omit<Sitio, 'id'>>));
+    expect(sitio.lan).toBeUndefined();
+  });
+
+  it('al cerrar la app no queda ningún server de la red local ni la marca de compartido', async () => {
+    const n = await crear();
+    await n.guardarSitio(datos());
+    await n.sitios.editar('demo', { lan });
+    mkdirSync(path.dirname(extras('lan-demo')), { recursive: true });
+    writeFileSync(extras('lan-demo'), 'server {}');
+    await n.cerrar({ detenerServicios: false });
+    expect(existsSync(extras('lan-demo'))).toBe(false);
+    expect((await n.sitios.listar())[0]!.lan?.activo).toBe(false);
+  });
+
+  it('al arrancar quita lo que dejó una caída (el server y la marca)', async () => {
+    const a = await crear();
+    await a.guardarSitio(datos());
+    await a.cerrar({ detenerServicios: false });
+    // Una caída: la marca y los archivos quedaron en disco.
+    const cfg = path.join(base, 'config.json');
+    const j = JSON.parse(readFileSync(cfg, 'utf8')) as { sitios: Array<Record<string, unknown>> };
+    j.sitios[0]!['lan'] = lan;
+    writeFileSync(cfg, JSON.stringify(j));
+    mkdirSync(path.dirname(extras('lan-demo')), { recursive: true });
+    writeFileSync(extras('lan-demo'), 'server {}');
+    const b = await crear();
+    expect(existsSync(extras('lan-demo'))).toBe(false);
+    expect((await b.sitios.listar())[0]!.lan?.activo).toBe(false);
+  });
+
+  it('borrar un sitio compartido quita su server', async () => {
+    const n = await crear();
+    await n.guardarSitio(datos());
+    mkdirSync(path.dirname(extras('lan-demo')), { recursive: true });
+    writeFileSync(extras('lan-demo'), 'server {}');
+    await n.borrarSitio('demo');
+    expect(existsSync(extras('lan-demo'))).toBe(false);
+  });
+
+  it('cambiar el dominio de un sitio compartido deja de compartirlo', async () => {
+    const n = await crear();
+    await n.guardarSitio(datos());
+    await n.sitios.editar('demo', { lan });
+    mkdirSync(path.dirname(extras('lan-demo')), { recursive: true });
+    writeFileSync(extras('lan-demo'), 'server {}');
+    await n.guardarSitio(datos({ dominio: 'otro.test' }), 'demo');
+    expect(existsSync(extras('lan-demo'))).toBe(false);
+    expect((await n.sitios.listar())[0]!.lan?.activo).toBe(false);
+  });
+});

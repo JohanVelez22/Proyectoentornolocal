@@ -79,6 +79,11 @@ export class GestorHttps {
     };
   }
 
+  /** Crea la CA si falta (sin instalarla en ningún almacén): el móvil necesita su `ca.crt`. */
+  async crearCaSiFalta(): Promise<void> {
+    await this.asegurarCA();
+  }
+
   private creandoCA: Promise<ParCertificado> | null = null;
 
   /** Una sola creación a la vez: dos primeras llamadas concurrentes no generan dos CA. */

@@ -153,3 +153,5 @@ export * from './contenedores/contenedores';
 export * from './correo/proveedores';
 export * from './correo/probarEnvio';
 export * from './correo/gestorSmtp';
+export * from './red/lan';
+export * from './red/servidorCa';

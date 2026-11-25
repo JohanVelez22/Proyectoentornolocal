@@ -129,7 +129,9 @@ export type ComandoManual =
   | { tipo: 'quitar-solo-lectura-hosts' }
   | { tipo: 'detener-servicio'; nombre: string }
   | { tipo: 'instalar-vcredist' }
-  | { tipo: 'instalar-build-tools' };
+  | { tipo: 'instalar-build-tools' }
+  /** Permitir la entrada TCP de un sitio compartido en la red local (solo redes privadas). */
+  | { tipo: 'regla-firewall-lan'; puerto: number };
 
 /**
  * Lo que la Etapa C agregó a la interfaz. Todo lo que depende del sistema operativo pasa por

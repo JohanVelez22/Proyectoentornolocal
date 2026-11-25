@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import os from 'node:os';
 import ftpSrv from 'ftp-srv';
 import type { AlmacenCredenciales } from '../almacen';
+import { ipLocal } from '../red/lan';
 import { generarClave } from '../servicios/definicion';
 import type { Config, Credenciales, EstadoServicio } from '../tipos';
 import { SistemaArchivosEncerrado } from './sistemaArchivos';
@@ -41,16 +41,6 @@ const registroSilencioso = (): Record<string, unknown> => {
 function clavesIguales(a: string, b: string): boolean {
   const h = (s: string): Buffer => createHash('sha256').update(s, 'utf8').digest();
   return timingSafeEqual(h(a), h(b));
-}
-
-/** Primera IPv4 no interna (la de la red local), para anunciarla en modo pasivo. */
-function ipLocal(): string | null {
-  for (const lista of Object.values(os.networkInterfaces())) {
-    for (const i of lista ?? []) {
-      if (i.family === 'IPv4' && !i.internal) return i.address;
-    }
-  }
-  return null;
 }
 
 const claveDe = (sitioId: string): `ftp:${string}` => `ftp:${sitioId}`;
@@ -103,7 +93,9 @@ export class ServidorFtp {
     const cfg = await this.d.leerConfig();
     const { puerto, redLocal, pasivos } = cfg.ftp;
     const host = redLocal ? '0.0.0.0' : '127.0.0.1';
-    const anunciada = redLocal ? ((this.d.ipLocal ?? ipLocal)() ?? '127.0.0.1') : '127.0.0.1';
+    const anunciada = redLocal
+      ? ((this.d.ipLocal ?? (() => ipLocal()))() ?? '127.0.0.1')
+      : '127.0.0.1';
     this.estadoActual = 'iniciando';
     this.mensaje = undefined;
 
@@ -251,7 +243,9 @@ export class ServidorFtp {
     const cfg = await this.d.leerConfig();
     const sitio = cfg.sitios.find((s) => s.id === id);
     if (!sitio?.ftp?.activo) throw new Error('El FTP de este sitio no está activo.');
-    const host = cfg.ftp.redLocal ? ((this.d.ipLocal ?? ipLocal)() ?? '127.0.0.1') : '127.0.0.1';
+    const host = cfg.ftp.redLocal
+      ? ((this.d.ipLocal ?? (() => ipLocal()))() ?? '127.0.0.1')
+      : '127.0.0.1';
     return urlFtp({ usuario: sitio.ftp.usuario, host, puerto: cfg.ftp.puerto });
   }
 

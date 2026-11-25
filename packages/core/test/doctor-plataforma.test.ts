@@ -222,6 +222,14 @@ describe('Plataforma: capacidades del Doctor', () => {
     expect(p.comandoManual({ tipo: 'instalar-build-tools' })).toBe(
       'winget install --id Microsoft.VisualStudio.2022.BuildTools --exact --source winget --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"',
     );
+    // Regla de la red local: un solo puerto, solo redes privadas, y nunca un puerto raro.
+    expect(p.comandoManual({ tipo: 'regla-firewall-lan', puerto: 8100 })).toBe(
+      "New-NetFirewallRule -DisplayName 'WolfCore Dev red local 8100' -Direction Inbound -Protocol TCP -LocalPort 8100 -Action Allow -Profile Private",
+    );
+    expect(() => p.comandoManual({ tipo: 'regla-firewall-lan', puerto: 0 })).toThrow(/no válido/);
+    expect(() =>
+      p.comandoManual({ tipo: 'regla-firewall-lan', puerto: '80; calc' as unknown as number }),
+    ).toThrow(/no válido/);
   });
 
   it('raicesSistema: exporta las raíces de confianza por .NET (sin módulos) y devuelve solo PEM', async () => {
