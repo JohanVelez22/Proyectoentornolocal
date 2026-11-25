@@ -177,6 +177,8 @@ import type {
   VersionSinUso,
   ResultadoLimpieza,
   DestinoLimpieza,
+  SeleccionLimpieza,
+  VersionEnPapelera,
 } from '@pel/core';
 
 export type {
@@ -352,6 +354,8 @@ export type {
   VersionSinUso,
   ResultadoLimpieza,
   DestinoLimpieza,
+  SeleccionLimpieza,
+  VersionEnPapelera,
   EstadoInstancia,
   IdInstancia,
   PlanActualizar,
@@ -983,8 +987,12 @@ export interface ApiEntorno {
      * Quita las elegidas (`confirmado` sale SOLO del diálogo que mostró la lista) a la papelera
      * (se purga a los 7 días) o de forma definitiva. Antes toma la instantánea del entorno.
      */
+    /** Lo que está en la papelera de limpieza (se purga a los 7 días). */
+    papelera(): Promise<VersionEnPapelera[]>;
+    /** Devuelve una versión de la papelera a `bin/` (falla si esa carpeta ya existe). */
+    recuperar(id: string): Promise<void>;
     limpiar(
-      seleccion: { servicio: string; version: string }[],
+      seleccion: SeleccionLimpieza[],
       confirmado: true,
       destino: DestinoLimpieza,
     ): Promise<ResultadoLimpieza>;
@@ -1607,6 +1615,8 @@ export const RUTAS_IPC = [
   'instalador.desinstalar',
   'limpiezaVersiones.sinUso',
   'limpiezaVersiones.limpiar',
+  'limpiezaVersiones.papelera',
+  'limpiezaVersiones.recuperar',
   'catalogo.versiones',
   'catalogo.silenciar',
   'instancias.lista',

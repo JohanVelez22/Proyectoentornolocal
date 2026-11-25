@@ -138,6 +138,7 @@ import {
   herramientaBd,
   servicioVersiones,
   seleccionLimpieza,
+  idPapeleraVersion,
   destinoLimpieza,
   versionCatalogo,
   idInstanciaIpc,
@@ -1439,6 +1440,8 @@ const TABLA: Record<RutaIpc, Manejador> = {
   // Limpieza de versiones sin uso (D30): la vista previa no borra; limpiar exige `confirmado: true`
   // (lo da el diálogo que mostró la lista) y el núcleo vuelve a comprobar el uso de cada versión.
   'limpiezaVersiones.sinUso': (n) => n.versionesSinUso(),
+  'limpiezaVersiones.papelera': (n) => n.versionesEnPapelera(),
+  'limpiezaVersiones.recuperar': (n, _s, id) => n.recuperarVersion(idPapeleraVersion(id)),
   'limpiezaVersiones.limpiar': (n, _s, seleccion, confirmado, destino) => {
     if (confirmado !== true) throw new Error('Argumento no válido: confirmado');
     return n.limpiarVersiones(seleccionLimpieza(seleccion), true, destinoLimpieza(destino));

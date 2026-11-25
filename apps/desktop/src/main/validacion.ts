@@ -1057,12 +1057,18 @@ export function versionCatalogo(v: unknown, nombre = 'versión'): string {
  * Selección de la limpieza de versiones (D30): servicio de la lista de versiones y carpeta de
  * `bin/<servicio>/` (nunca una ruta). El núcleo la vuelve a validar antes de tocar nada.
  */
-export function seleccionLimpieza(v: unknown): { servicio: string; version: string }[] {
+export function seleccionLimpieza(
+  v: unknown,
+): { servicio: string; version: string; incluirContenidoAjeno?: boolean }[] {
   if (!Array.isArray(v) || v.length === 0 || v.length > 200) {
     throw new Error('Argumento no válido: selección');
   }
   return v.map((x) => {
-    const o = objetoPlano<{ servicio?: unknown; version?: unknown }>(x, 'selección');
+    const o = objetoPlano<{
+      servicio?: unknown;
+      version?: unknown;
+      incluirContenidoAjeno?: unknown;
+    }>(x, 'selección');
     const servicio = servicioVersiones(o.servicio);
     if (
       typeof o.version !== 'string' ||
@@ -1071,8 +1077,27 @@ export function seleccionLimpieza(v: unknown): { servicio: string; version: stri
     ) {
       throw new Error('Argumento no válido: versión');
     }
-    return { servicio, version: o.version };
+    if (o.incluirContenidoAjeno !== undefined && typeof o.incluirContenidoAjeno !== 'boolean') {
+      throw new Error('Argumento no válido: incluirContenidoAjeno');
+    }
+    return {
+      servicio,
+      version: o.version,
+      ...(o.incluirContenidoAjeno === true ? { incluirContenidoAjeno: true } : {}),
+    };
   });
+}
+
+/** Versión de la papelera de limpieza (`<servicio>__<versión>__<fecha>-<hex>`). */
+export function idPapeleraVersion(v: unknown): string {
+  if (
+    typeof v !== 'string' ||
+    v.includes('..') ||
+    !/^[a-z0-9-]{1,40}__[\w.-]{1,64}__\d{8}-\d{6}-[0-9a-f]{6}$/.test(v)
+  ) {
+    throw new Error('Argumento no válido: versión de la papelera');
+  }
+  return v;
 }
 
 /** Destino de la limpieza de versiones: la papelera o el borrado definitivo. */

@@ -163,6 +163,12 @@ export const pt: Textos = {
         'A pasta de {servicio} {version} não é segura (um link ou um caminho fora de bin): não foi tocada.',
       'limpieza.version_bloqueada':
         '{servicio} {version} tem arquivos em uso ou bloqueados: não foi removida nem deixada pela metade.',
+      'limpieza.otro_volumen':
+        '{servicio} {version} está em outro disco que a pasta temporária de dados: não deu para movê-la inteira e não foi tocada.',
+      'limpieza.contenido_ajeno':
+        '{servicio} {version} tem pacotes instalados por você (npm, pip…): é preciso aceitar perdê-los para removê-la.',
+      'limpieza.destino_ocupado':
+        'Já existe uma pasta de {servicio} {version} em bin: não é sobrescrita. Remova-a antes de recuperar a outra.',
       'bd.encender_servicio': 'Ligue {nombre} para administrar os bancos dele.',
       'bd.sin_credenciales': 'Não há credenciais salvas de {nombre}.',
       'bd.confirmacion_borrado': 'Para apagar o banco {nombre}, digite o nome exato dele.',
@@ -4065,7 +4071,8 @@ export const pt: Textos = {
       definitivo: 'Apagar definitivamente: libera o espaço agora e não dá para desfazer',
       avisoDefinitivo:
         'Exclusão definitiva: para ter estas versões de novo será preciso baixá-las outra vez.',
-      instantanea: 'Antes de apagar, é guardada uma cópia da configuração do ambiente.',
+      instantanea:
+        'Com a exclusão definitiva, antes é guardada uma cópia da configuração do ambiente; na lixeira dá para recuperar.',
       entiendo: 'Entendo que não dá para desfazer',
       confirmar: (n: number) => `Remover ${n} ${n === 1 ? 'versão' : 'versões'}`,
       motivos: {
@@ -4078,6 +4085,8 @@ export const pt: Textos = {
         runtime: 'Um projeto a usa',
         tarea: 'Um projeto com tarefas agendadas a usa',
         duda: 'Não deu para verificar: não é tocada',
+        datos: 'Tem dados que só esta versão pode abrir',
+        herramienta: 'O phpMyAdmin ou o Adminer a usa',
       },
       resultadoTitulo: 'Resultado',
       liberadas: (tam: string) => `${tam} liberados.`,
@@ -4086,6 +4095,15 @@ export const pt: Textos = {
       pendientes: (n: number) =>
         `${n} ${n === 1 ? 'versão já saiu de bin mas ficaram restos' : 'versões já saíram de bin mas ficaram restos'} que serão tentados de novo ao abrir o aplicativo.`,
       instantaneaGuardada: 'Cópia do ambiente guardada antes de apagar.',
+      ajeno: (lista: string) =>
+        `Traz o que foi instalado dentro dela: ${lista}. Ao removê-la, isso se perde.`,
+      incluirAjeno: 'Remover mesmo perdendo isso',
+      sinCatalogo: 'Já não está no catálogo: se removê-la, não poderá baixá-la de novo.',
+      papeleraTitulo: 'Na lixeira',
+      recuperar: 'Recuperar',
+      recuperada: (v: string) => `${v} recuperada.`,
+      borradaEl: (f: string) => `Apagada em ${f}`,
+      fallaRecuperar: 'Não foi possível recuperar',
     },
     dialogoDesinstalar: {
       titulo: (v: string) => `Desinstalar ${v}`,

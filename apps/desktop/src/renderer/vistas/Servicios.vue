@@ -83,6 +83,10 @@ function iniciarTodo(): void {
 function detenerTodo(): void {
   void ejecutar('detenerTodo', () => api().servicios.detenerTodo());
 }
+/** Tras limpiar o recuperar versiones, la tabla de Versiones se vuelve a leer. */
+function recargarVersiones(): void {
+  void ejecutar('recargarVersiones', () => versiones.cargar());
+}
 function irAInstalar(): void {
   seccionInstalar.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -111,7 +115,7 @@ onMounted(() => {
         {{ textos.versiones.limpieza.boton }}
       </NButton>
     </div>
-    <DialogoLimpiarVersiones v-model:show="limpiando" />
+    <DialogoLimpiarVersiones v-model:show="limpiando" @limpiado="recargarVersiones" />
   </template>
   <div v-else class="servicios">
     <div class="barra">

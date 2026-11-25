@@ -257,6 +257,8 @@ const api: ApiEntorno = {
   },
   limpiezaVersiones: {
     sinUso: () => invocar('limpiezaVersiones.sinUso'),
+    papelera: () => invocar('limpiezaVersiones.papelera'),
+    recuperar: (id) => invocar('limpiezaVersiones.recuperar', id),
     limpiar: (sel, confirmado, destino) =>
       invocar('limpiezaVersiones.limpiar', sel, confirmado, destino),
   },

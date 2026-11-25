@@ -2,7 +2,12 @@
 import { Warning } from '@vicons/ionicons5';
 import { NAlert, NButton, NCheckbox, NIcon, NModal, NRadio, NRadioGroup, NSpin } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
-import type { DestinoLimpieza, ResultadoLimpieza, VersionSinUso } from '../../shared/api';
+import type {
+  DestinoLimpieza,
+  ResultadoLimpieza,
+  VersionEnPapelera,
+  VersionSinUso,
+} from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -12,10 +17,13 @@ import { mensajeDeError } from '../utilidades/errores';
 /**
  * Limpieza de versiones sin uso (D30). Muestra todas las versiones instaladas con su tamaño y,
  * las que algo usa, el motivo (no se pueden marcar). Lo marcado se quita de `bin/` a la papelera
- * (7 días) o de forma definitiva, tras la instantánea del entorno; los datos de las bases y los
- * proyectos nunca se tocan. El borrado definitivo pide una casilla aparte.
+ * (7 días, se puede recuperar desde aquí) o de forma definitiva, tras la instantánea del entorno;
+ * los datos de las bases y los proyectos nunca se tocan. El borrado definitivo pide una casilla
+ * aparte, y una versión con paquetes instalados por el usuario, otra por cada una.
  */
 const mostrar = defineModel<boolean>('show', { required: true });
+/** Cambió lo instalado (se limpió o se recuperó algo): la lista de versiones debe recargarse. */
+const emit = defineEmits<{ limpiado: [] }>();
 const t = textos.versiones.limpieza;
 const { ejecutar, ocupado } = useAccion();
 
@@ -25,6 +33,8 @@ const marcadas = ref(new Set<string>());
 const destino = ref<DestinoLimpieza>('papelera');
 const entiendo = ref(false);
 const resultado = ref<ResultadoLimpieza | null>(null);
+const papelera = ref<VersionEnPapelera[]>([]);
+const conAjeno = ref(new Set<string>());
 
 const clave = (v: { servicio: string; version: string }): string => `${v.servicio}/${v.version}`;
 const nombre = (v: { servicio: string; version: string }): string =>
@@ -35,8 +45,15 @@ const motivo = (m: VersionSinUso['motivoBloqueo']): string =>
 const libres = computed(() => (lista.value ?? []).filter((v) => v.motivoBloqueo === null));
 const elegidas = computed(() => libres.value.filter((v) => marcadas.value.has(clave(v))));
 const bytesElegidos = computed(() => elegidas.value.reduce((s, v) => s + v.bytes, 0));
+/** Cada versión marcada con paquetes del usuario dentro necesita su propia casilla. */
+const ajenoAceptado = computed(() =>
+  elegidas.value.every((v) => v.contenidoAjeno.length === 0 || conAjeno.value.has(clave(v))),
+);
 const puede = computed(
-  () => elegidas.value.length > 0 && (destino.value === 'papelera' || entiendo.value),
+  () =>
+    elegidas.value.length > 0 &&
+    ajenoAceptado.value &&
+    (destino.value === 'papelera' || entiendo.value),
 );
 
 async function cargar(): Promise<void> {
@@ -48,6 +65,12 @@ async function cargar(): Promise<void> {
     errorLista.value = mensajeDeError(e);
   }
   marcadas.value = new Set();
+  conAjeno.value = new Set();
+  try {
+    papelera.value = await api().limpiezaVersiones.papelera();
+  } catch {
+    papelera.value = [];
+  }
 }
 
 watch(
@@ -72,7 +95,11 @@ function alternar(v: VersionSinUso, on: boolean): void {
 
 async function confirmar(): Promise<void> {
   if (!puede.value) return;
-  const seleccion = elegidas.value.map((v) => ({ servicio: v.servicio, version: v.version }));
+  const seleccion = elegidas.value.map((v) => ({
+    servicio: v.servicio,
+    version: v.version,
+    ...(conAjeno.value.has(clave(v)) ? { incluirContenidoAjeno: true } : {}),
+  }));
   const r = await ejecutar(
     'limpiarVersiones',
     () => api().limpiezaVersiones.limpiar(seleccion, true, destino.value),
@@ -81,7 +108,32 @@ async function confirmar(): Promise<void> {
   if (!r) return;
   resultado.value = r;
   await cargar();
+  emit('limpiado');
 }
+
+function aceptarAjeno(v: VersionSinUso, on: boolean): void {
+  const c = new Set(conAjeno.value);
+  if (on) c.add(clave(v));
+  else c.delete(clave(v));
+  conAjeno.value = c;
+}
+
+async function recuperar(v: VersionEnPapelera): Promise<void> {
+  const ok = await ejecutar(
+    'recuperarVersion',
+    async () => {
+      await api().limpiezaVersiones.recuperar(v.id);
+      return true;
+    },
+    { exito: t.recuperada(nombre(v)), tituloError: t.fallaRecuperar },
+  );
+  if (!ok) return;
+  resultado.value = null;
+  await cargar();
+  emit('limpiado');
+}
+
+const fecha = (iso: string): string => (iso ? new Date(iso).toLocaleDateString() : '—');
 
 /** Lo que no se quitó, con el motivo traducido por su código. */
 const saltadas = computed(() =>
@@ -157,6 +209,17 @@ const saltadas = computed(() =>
           </NCheckbox>
           <span class="tam">{{ formatearTamano(v.bytes) }}</span>
           <span v-if="v.motivoBloqueo !== null" class="motivo">{{ motivo(v.motivoBloqueo) }}</span>
+          <span v-if="v.sinCatalogo" class="motivo aviso-fila">{{ t.sinCatalogo }}</span>
+          <span v-if="v.contenidoAjeno.length > 0" class="motivo aviso-fila">
+            {{ t.ajeno(v.contenidoAjeno.join(', ')) }}
+            <NCheckbox
+              v-if="v.motivoBloqueo === null && marcadas.has(clave(v))"
+              :checked="conAjeno.has(clave(v))"
+              :disabled="ocupado('limpiarVersiones')"
+              @update:checked="(on: boolean) => aceptarAjeno(v, on)"
+              >{{ t.incluirAjeno }}</NCheckbox
+            >
+          </span>
         </li>
       </ul>
 
@@ -180,6 +243,27 @@ const saltadas = computed(() =>
         <p class="texto nota">{{ t.instantanea }}</p>
       </template>
     </template>
+
+    <section v-if="papelera.length > 0" class="papelera" :aria-label="t.papeleraTitulo">
+      <p class="subtitulo">{{ t.papeleraTitulo }}</p>
+      <ul class="filas" role="list">
+        <li v-for="v in papelera" :key="v.id" class="fila">
+          <span class="nombre">{{ nombre(v) }}</span>
+          <NButton
+            size="tiny"
+            secondary
+            :loading="ocupado('recuperarVersion')"
+            :disabled="ocupado('limpiarVersiones') || ocupado('recuperarVersion')"
+            @click="recuperar(v)"
+          >
+            {{ t.recuperar }}
+          </NButton>
+          <span class="motivo"
+            >{{ formatearTamano(v.bytes) }} · {{ t.borradaEl(fecha(v.borrada)) }}</span
+          >
+        </li>
+      </ul>
+    </section>
 
     <template #footer>
       <div class="pie">
@@ -250,6 +334,12 @@ const saltadas = computed(() =>
   font-size: 12px;
   opacity: 0.8;
   padding-left: 24px;
+}
+.aviso-fila {
+  color: #b45309;
+}
+.papelera {
+  margin-top: 6px;
 }
 .subtitulo {
   margin: 14px 0 6px;

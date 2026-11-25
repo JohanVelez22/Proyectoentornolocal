@@ -167,6 +167,12 @@ export const fr: Textos = {
         'Le dossier de {servicio} {version} n’est pas sûr (un lien ou un chemin hors de bin) : il n’a pas été touché.',
       'limpieza.version_bloqueada':
         '{servicio} {version} contient des fichiers utilisés ou verrouillés : elle n’a pas été supprimée ni laissée à moitié.',
+      'limpieza.otro_volumen':
+        '{servicio} {version} est sur un autre disque que le dossier temporaire des données : impossible de la déplacer entière, elle n’a pas été touchée.',
+      'limpieza.contenido_ajeno':
+        '{servicio} {version} contient des paquets que vous avez installés (npm, pip…) : il faut accepter de les perdre pour la supprimer.',
+      'limpieza.destino_ocupado':
+        'Un dossier {servicio} {version} existe déjà dans bin : il n’est pas écrasé. Supprimez-le avant de récupérer l’autre.',
       'bd.encender_servicio': 'Allumez {nombre} pour gérer ses bases.',
       'bd.sin_credenciales': 'Aucun identifiant enregistré pour {nombre}.',
       'bd.confirmacion_borrado': 'Pour supprimer la base {nombre}, tapez son nom exact.',
@@ -4155,7 +4161,7 @@ export const fr: Textos = {
       avisoDefinitivo:
         'Suppression définitive : pour retrouver ces versions, il faudra les télécharger à nouveau.',
       instantanea:
-        'Avant de supprimer, une copie de la configuration de l’environnement est enregistrée.',
+        'Avec la suppression définitive, une copie de la configuration de l’environnement est d’abord enregistrée ; dans la corbeille, les versions se récupèrent.',
       entiendo: 'Je comprends que c’est irréversible',
       confirmar: (n: number) => `Supprimer ${n} ${n === 1 ? 'version' : 'versions'}`,
       motivos: {
@@ -4168,6 +4174,8 @@ export const fr: Textos = {
         runtime: 'Un projet l’utilise',
         tarea: 'Un projet avec des tâches planifiées l’utilise',
         duda: 'Vérification impossible : on n’y touche pas',
+        datos: 'Elle a des données que seule cette version peut ouvrir',
+        herramienta: 'phpMyAdmin ou Adminer l’utilise',
       },
       resultadoTitulo: 'Résultat',
       liberadas: (tam: string) => `${tam} libérés.`,
@@ -4176,6 +4184,16 @@ export const fr: Textos = {
       pendientes: (n: number) =>
         `${n} ${n === 1 ? 'version est déjà hors de bin mais il reste des fichiers' : 'versions sont déjà hors de bin mais il reste des fichiers'} qui seront retentés à l’ouverture de l’application.`,
       instantaneaGuardada: 'Copie de l’environnement enregistrée avant la suppression.',
+      ajeno: (lista: string) =>
+        `Elle contient ce que vous avez installé dedans : ${lista}. La supprimer le perd.`,
+      incluirAjeno: 'La supprimer même si cela se perd',
+      sinCatalogo:
+        'Elle n’est plus au catalogue : si vous la supprimez, vous ne pourrez plus la télécharger.',
+      papeleraTitulo: 'Dans la corbeille',
+      recuperar: 'Récupérer',
+      recuperada: (v: string) => `${v} récupérée.`,
+      borradaEl: (f: string) => `Supprimée le ${f}`,
+      fallaRecuperar: 'Récupération impossible',
     },
     dialogoDesinstalar: {
       titulo: (v: string) => `Désinstaller ${v}`,

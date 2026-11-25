@@ -159,6 +159,12 @@ export const es = {
         'La carpeta de {servicio} {version} no es segura (un enlace o una ruta fuera de bin): no se tocó.',
       'limpieza.version_bloqueada':
         '{servicio} {version} tiene archivos en uso o bloqueados: no se quitó ni se dejó a medias.',
+      'limpieza.otro_volumen':
+        '{servicio} {version} está en otro disco que la carpeta temporal de datos: no se pudo mover entera y no se tocó.',
+      'limpieza.contenido_ajeno':
+        '{servicio} {version} tiene paquetes instalados por usted (npm, pip…): hay que aceptar perderlos para quitarla.',
+      'limpieza.destino_ocupado':
+        'Ya hay una carpeta de {servicio} {version} en bin: no se sobrescribe. Quítela antes de recuperar la otra.',
       'bd.encender_servicio': 'Encienda {nombre} para administrar sus bases.',
       'bd.sin_credenciales': 'No hay credenciales guardadas de {nombre}.',
       'bd.confirmacion_borrado': 'Para borrar la base {nombre} escriba su nombre exacto.',
@@ -4043,7 +4049,7 @@ export const es = {
       boton: 'Limpiar versiones sin uso…',
       titulo: 'Limpiar versiones sin uso',
       intro:
-        'Se quitan solo los programas de versiones que ninguna parte usa (la carpeta bin). Nunca se tocan los datos de las bases, las instancias ni tus proyectos.',
+        'Se quitan solo los programas de versiones que ninguna parte usa (la carpeta bin). Nunca se tocan los datos de las bases, las instancias ni sus proyectos.',
       cargando: 'Buscando versiones…',
       vacia: 'No hay versiones instaladas.',
       sinLibres: 'Todas las versiones instaladas están en uso: no hay nada que limpiar.',
@@ -4056,7 +4062,8 @@ export const es = {
       definitivo: 'Borrar de forma definitiva: libera el espacio ahora y no se puede deshacer',
       avisoDefinitivo:
         'Borrado definitivo: para volver a tener estas versiones habrá que descargarlas otra vez.',
-      instantanea: 'Antes de borrar se guarda una copia de la configuración del entorno.',
+      instantanea:
+        'Si elige el borrado definitivo, antes se guarda una copia de la configuración del entorno; en la papelera se pueden recuperar.',
       entiendo: 'Entiendo que no se puede deshacer',
       confirmar: (n: number) => `Quitar ${n} ${n === 1 ? 'versión' : 'versiones'}`,
       motivos: {
@@ -4069,6 +4076,8 @@ export const es = {
         runtime: 'La usa un proyecto',
         tarea: 'La usa un proyecto con tareas programadas',
         duda: 'No se pudo comprobar: no se toca',
+        datos: 'Tiene datos que solo esta versión puede abrir',
+        herramienta: 'La usa phpMyAdmin o Adminer',
       },
       resultadoTitulo: 'Resultado',
       liberadas: (tam: string) => `Se liberaron ${tam}.`,
@@ -4077,6 +4086,15 @@ export const es = {
       pendientes: (n: number) =>
         `${n} ${n === 1 ? 'versión ya está fuera de bin pero quedaron restos' : 'versiones ya están fuera de bin pero quedaron restos'} que se reintentarán al abrir la aplicación.`,
       instantaneaGuardada: 'Copia del entorno guardada antes de borrar.',
+      ajeno: (lista: string) =>
+        `Trae lo que usted instaló dentro: ${lista}. Al quitarla se pierde.`,
+      incluirAjeno: 'Quitarla aunque se pierda eso',
+      sinCatalogo: 'Ya no está en el catálogo: si la quita, no podrá volver a descargarla.',
+      papeleraTitulo: 'En la papelera',
+      recuperar: 'Recuperar',
+      recuperada: (v: string) => `${v} recuperada.`,
+      borradaEl: (f: string) => `Borrada el ${f}`,
+      fallaRecuperar: 'No se pudo recuperar',
     },
     dialogoDesinstalar: {
       titulo: (v: string) => `Desinstalar ${v}`,

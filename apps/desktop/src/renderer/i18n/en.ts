@@ -159,6 +159,12 @@ export const en: Textos = {
         'The folder of {servicio} {version} is not safe (a link or a path outside bin): it was not touched.',
       'limpieza.version_bloqueada':
         '{servicio} {version} has files in use or locked: it was not removed nor left half-done.',
+      'limpieza.otro_volumen':
+        '{servicio} {version} is on a different disk than the temporary data folder: it could not be moved whole and was not touched.',
+      'limpieza.contenido_ajeno':
+        '{servicio} {version} has packages you installed (npm, pip…): you must accept losing them to remove it.',
+      'limpieza.destino_ocupado':
+        'A {servicio} {version} folder already exists in bin: it is not overwritten. Remove it before recovering the other one.',
       'bd.encender_servicio': 'Start {nombre} to manage its databases.',
       'bd.sin_credenciales': 'There are no saved credentials for {nombre}.',
       'bd.confirmacion_borrado': 'To delete the database {nombre}, type its exact name.',
@@ -4029,7 +4035,8 @@ export const en: Textos = {
       definitivo: 'Delete permanently: frees the space now and cannot be undone',
       avisoDefinitivo:
         'Permanent deletion: to have these versions again you will have to download them again.',
-      instantanea: 'Before deleting, a copy of the environment configuration is saved.',
+      instantanea:
+        'With permanent deletion, a copy of the environment configuration is saved first; versions in the recycle bin can be recovered.',
       entiendo: 'I understand this cannot be undone',
       confirmar: (n: number) => `Remove ${n} ${n === 1 ? 'version' : 'versions'}`,
       motivos: {
@@ -4042,6 +4049,8 @@ export const en: Textos = {
         runtime: 'A project uses it',
         tarea: 'A project with scheduled tasks uses it',
         duda: 'Could not be checked: left alone',
+        datos: 'It has data that only this version can open',
+        herramienta: 'phpMyAdmin or Adminer uses it',
       },
       resultadoTitulo: 'Result',
       liberadas: (tam: string) => `${tam} freed.`,
@@ -4050,6 +4059,16 @@ export const en: Textos = {
       pendientes: (n: number) =>
         `${n} ${n === 1 ? 'version is already out of bin but leftovers remain' : 'versions are already out of bin but leftovers remain'} and will be retried when the app opens.`,
       instantaneaGuardada: 'Environment copy saved before deleting.',
+      ajeno: (lista: string) =>
+        `It contains what you installed inside: ${lista}. Removing it loses that.`,
+      incluirAjeno: 'Remove it even if that is lost',
+      sinCatalogo:
+        'It is no longer in the catalog: if you remove it, you will not be able to download it again.',
+      papeleraTitulo: 'In the recycle bin',
+      recuperar: 'Recover',
+      recuperada: (v: string) => `${v} recovered.`,
+      borradaEl: (f: string) => `Deleted on ${f}`,
+      fallaRecuperar: 'Could not recover',
     },
     dialogoDesinstalar: {
       titulo: (v: string) => `Uninstall ${v}`,
