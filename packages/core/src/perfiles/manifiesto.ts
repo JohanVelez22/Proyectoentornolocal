@@ -68,7 +68,7 @@ export const EXCLUSIONES_PERFIL: readonly string[] = [
 ];
 
 const ID_PLANTILLA = '[a-z0-9][a-z0-9-]{0,79}';
-const INSTANCIA = `(?:${IDS_SERVICIO_DATOS.join('|')})@[0-9a-z][0-9a-z.]{0,15}`;
+const CLAVE_INSTANCIA = '[0-9a-z][0-9a-z.]{0,15}';
 const BASE = '[A-Za-z0-9_$-]{1,64}';
 
 /** Rutas que un perfil puede llevar (y las únicas que se leen al importar). */
@@ -78,7 +78,12 @@ const RUTAS_PERFIL: readonly RegExp[] = [
   new RegExp(
     `^plantillas/${ID_PLANTILLA}/(?:plantilla\\.json|archivos\\.zip|esquema\\.sql|esquema\\.dump)$`,
   ),
-  new RegExp(`^bases/${INSTANCIA}/${BASE}/(?:esquema\\.sql|datos\\.sql|volcado\\.dump)$`),
+  // Cada motor con su formato (siempre cifrado con la frase): PostgreSQL, un `pg_dump`; MySQL y
+  // MariaDB, la estructura y los datos por separado.
+  new RegExp(`^bases/postgresql@${CLAVE_INSTANCIA}/${BASE}/volcado\\.dump\\.cifrado$`),
+  new RegExp(
+    `^bases/(?:mysql|mariadb)@${CLAVE_INSTANCIA}/${BASE}/(?:esquema|datos)\\.sql\\.cifrado$`,
+  ),
 ];
 
 /** Nombres de dispositivo de Windows y tramos que terminan en punto o espacio. */

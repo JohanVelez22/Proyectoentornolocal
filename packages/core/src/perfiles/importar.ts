@@ -15,7 +15,7 @@ import { esRutaLocalAbsoluta, esRutaProtegida } from '../importar/comun';
 import { enmascararSecretos } from '../patronesSecretos';
 import { idSitioSeguro } from '../tuneles/proveedor';
 import type { Config, IdServicioDatos, Sitio } from '../tipos';
-import { descifrarConFrase } from './cifrado';
+import { descifrarConFrase, LlaveFrase } from './cifrado';
 import { sha256Archivo } from './exportar';
 import {
   fusionarConfig,
@@ -495,6 +495,7 @@ export class Perfiles {
         puertosOcupados: plan.puertosOcupados,
         ignoradas: p.ignoradas,
         carpetaConDatos: plan.config !== null,
+        requiereFrase: m.bases.length > 0 || m.incluye.ca,
         ca:
           m.ca && m.incluye.ca
             ? { huella: m.ca.huella, reemplazaLocal: existsSync(this.d.rutas.caCrt()) }
@@ -539,8 +540,16 @@ export class Perfiles {
     // 1. La CA primero: una frase equivocada no debe dejar nada a medias. Una CA ajena firma lo que
     // quiera: reemplazar la de este equipo exige una confirmación aparte.
     let caDescifrada: CaPerfil | null = null;
+    const frase = typeof o.frase === 'string' && o.frase !== '' ? o.frase : null;
+    const conBases = m.bases.length > 0 && o.omitirBases !== true;
+    if ((conBases || o.importarCa === true) && !frase) {
+      throw new ErrorWolf(
+        'perfiles.frase_requerida',
+        'Escriba la frase del perfil (o importe sin sus bases).',
+      );
+    }
     if (m.incluye.ca && 'ca.cifrada' in m.archivos) {
-      if (typeof o.frase === 'string' && o.frase !== '') {
+      if (o.importarCa === true && frase) {
         if (existsSync(d.rutas.caCrt()) && o.reemplazarCa !== true) {
           throw new ErrorWolf(
             'perfiles.confirmar_reemplazar_ca',
@@ -549,7 +558,7 @@ export class Perfiles {
         }
         const plano = await descifrarConFrase(
           await readFile(path.join(p.dir, 'ca.cifrada')),
-          o.frase,
+          frase,
         );
         try {
           const j = JSON.parse(plano.toString('utf8')) as Partial<CaPerfil> | null;
@@ -571,7 +580,36 @@ export class Perfiles {
           plano.fill(0);
         }
       } else {
-        avisos.push('El perfil trae la CA, pero no se dio su frase: se usa una CA nueva.');
+        avisos.push(
+          'El perfil trae la CA, pero no se importó: se usa la de este equipo o una nueva.',
+        );
+      }
+    }
+
+    // Los volcados de las bases se descifran antes de tocar nada: una frase equivocada (o un
+    // volcado cambiado) no deja nada a medias.
+    const claros = new Map<string, VolcadosBase>();
+    if (conBases && frase) {
+      const llave = new LlaveFrase(frase);
+      try {
+        for (const b of m.bases) {
+          const v = volcadosDe(p.dir, m, b.instancia, b.base);
+          if (!v) continue;
+          const claro = async (cifrado: string): Promise<string> => {
+            const destino = cifrado.replace(/\.cifrado$/, '');
+            await llave.descifrarArchivo(cifrado, destino, this.limites.maxBytesArchivo);
+            await rm(cifrado, { force: true });
+            return destino;
+          };
+          claros.set(
+            `${b.instancia}/${b.base}`,
+            'volcado' in v
+              ? { volcado: await claro(v.volcado) }
+              : { esquema: await claro(v.esquema), datos: await claro(v.datos) },
+          );
+        }
+      } finally {
+        llave.olvidar();
       }
     }
 
@@ -821,7 +859,11 @@ export class Perfiles {
         fila('pendiente', 'version_pendiente');
         continue;
       }
-      const archivos = volcadosDe(p.dir, m, b.instancia, b.base);
+      if (!conBases) {
+        fila('omitido', 'bases_omitidas');
+        continue;
+      }
+      const archivos = claros.get(`${b.instancia}/${b.base}`);
       if (!archivos) {
         fila('error', 'danada');
         continue;
@@ -954,6 +996,7 @@ function motivoDe(e: unknown): string {
   return enmascararSecretos(e instanceof Error ? e.message : String(e)).slice(0, 200);
 }
 
+/** Volcados (cifrados) de una base, según el motor de su instancia. */
 function volcadosDe(
   dir: string,
   m: ManifiestoPerfil,
@@ -962,9 +1005,14 @@ function volcadosDe(
 ): VolcadosBase | null {
   const raiz = `bases/${instancia}/${base}`;
   const ruta = (n: string): string => path.join(dir, ...raiz.split('/'), n);
-  if (`${raiz}/volcado.dump` in m.archivos) return { volcado: ruta('volcado.dump') };
-  if (`${raiz}/esquema.sql` in m.archivos && `${raiz}/datos.sql` in m.archivos) {
-    return { esquema: ruta('esquema.sql'), datos: ruta('datos.sql') };
+  if (instancia.startsWith('postgresql@')) {
+    return `${raiz}/volcado.dump.cifrado` in m.archivos
+      ? { volcado: ruta('volcado.dump.cifrado') }
+      : null;
+  }
+  if (!/^(mysql|mariadb)@/.test(instancia)) return null;
+  if (`${raiz}/esquema.sql.cifrado` in m.archivos && `${raiz}/datos.sql.cifrado` in m.archivos) {
+    return { esquema: ruta('esquema.sql.cifrado'), datos: ruta('datos.sql.cifrado') };
   }
   return null;
 }

@@ -334,6 +334,8 @@ export const en: Textos = {
         'The profile carries a CA and this computer already has one: compare the fingerprint and confirm separately that you want to replace it (only if it is your own CA).',
       'herramientas.fuera_de_la_ca':
         'The WolfCore Dev CA only signs .test domains, localhost and local addresses: {dominio} cannot be included.',
+      'perfiles.frase_requerida':
+        'Enter the profile passphrase to import its databases or its CA (or import without the databases).',
       'importar.origen_apagado':
         "Could not connect to the other program's database server: start it from that program and try again. The sites were imported anyway.",
       'importar.origen_no_local': 'The source server must be on this computer (127.0.0.1).',

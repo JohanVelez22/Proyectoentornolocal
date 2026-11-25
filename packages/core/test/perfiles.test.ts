@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
-import { createWriteStream, existsSync } from 'node:fs';
+import { createWriteStream, existsSync, readFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import yauzl from 'yauzl';
 import yazl from 'yazl';
 import { Almacen } from '../src/almacen';
@@ -12,7 +12,12 @@ import { huellaSha256 } from '../src/https/ca';
 import type { VersionDisponible } from '../src/catalogo/catalogo';
 import { Plantillas } from '../src/proyectos/plantillas';
 import { GestorEnv } from '../src/proyectos/env/gestor';
-import { cifrarConFrase, descifrarConFrase, PARAMETROS_CIFRADO } from '../src/perfiles/cifrado';
+import {
+  cifrarConFrase,
+  descifrarConFrase,
+  LlaveFrase,
+  PARAMETROS_CIFRADO,
+} from '../src/perfiles/cifrado';
 import { exportarPerfil } from '../src/perfiles/exportar';
 import { Perfiles } from '../src/perfiles/importar';
 import {
@@ -25,6 +30,9 @@ import type { DepsPerfiles, OpcionesImportarPerfil } from '../src/perfiles/tipos
 import { Rutas, validarCarpetaDatos } from '../src/rutas';
 import { ConfigSchema, SitioSchema, type Config, type Sitio } from '../src/tipos';
 import { carpetaTemporal } from './temporales';
+
+// scrypt (N = 2^17) es caro a propósito: con las pruebas en paralelo, más margen.
+vi.setConfig({ testTimeout: 60_000 });
 
 const CENTINELA = 'centinela-secreta-d';
 const FRASE = 'frase larga de prueba 123';
@@ -147,7 +155,13 @@ const versionCatalogo = (
 
 interface Registro {
   instaladas: string[];
-  restauradas: { instancia: string; base: string; archivos: unknown; existe: boolean }[];
+  restauradas: {
+    instancia: string;
+    base: string;
+    archivos: unknown;
+    existe: boolean;
+    textos: string[];
+  }[];
   instantaneas: string[];
   usuarios: {
     instancia: string;
@@ -228,7 +242,13 @@ function deps(rutas: Rutas, extra: Partial<DepsPerfiles> = {}): DepsPerfiles & {
     },
     restaurarBase: async (instancia, archivos, base, o) => {
       reg.orden.push(`restaurar:${instancia}/${base}`);
-      reg.restauradas.push({ instancia, base, archivos, existe: o.existe });
+      reg.restauradas.push({
+        instancia,
+        base,
+        archivos,
+        existe: o.existe,
+        textos: Object.values(archivos).map((f: string) => readFileSync(f, 'utf8')),
+      });
     },
     crearUsuarioBd: async (instancia, base, usuario, clave, o) => {
       reg.orden.push(`usuario:${usuario}`);
@@ -353,7 +373,8 @@ async function exportar(
     destino: archivo,
     bases: true,
     certificados: false,
-    ca: null,
+    ca: false,
+    frase: FRASE,
     ...extra,
   });
   return archivo;
@@ -430,6 +451,7 @@ async function importar(
   const vista = await p.vistaPrevia(archivo, { rutas: o.rutas ?? {}, prefijos: o.prefijos ?? [] });
   return p.importar(archivo, {
     rutas: {},
+    frase: FRASE,
     huella: vista.huella,
     confirmado: true,
     ...o,
@@ -449,16 +471,16 @@ beforeEach(async () => {
 
 describe('exportarPerfil: nunca lleva secretos ni estado de este equipo', () => {
   it('la centinela no aparece en ningún lugar del ZIP (crudo, entradas y ZIP internos)', async () => {
-    const archivo = await exportar({ ca: { frase: FRASE }, certificados: true });
+    const archivo = await exportar({ ca: true, certificados: true });
     expect(await contieneCentinela(archivo)).toEqual([]);
   });
 
   it('solo lleva rutas de la lista blanca: nada de etc/, run/, tmp/, instantaneas/, papelera/ ni respaldos/', async () => {
-    const archivo = await exportar({ ca: { frase: FRASE }, certificados: true });
+    const archivo = await exportar({ ca: true, certificados: true });
     const nombres = [...(await entradasZip(archivo)).keys()].filter((n) => !n.includes('!'));
     expect(nombres.sort()).toEqual([
-      'bases/mysql@8.4/tienda/datos.sql',
-      'bases/mysql@8.4/tienda/esquema.sql',
+      'bases/mysql@8.4/tienda/datos.sql.cifrado',
+      'bases/mysql@8.4/tienda/esquema.sql.cifrado',
       'ca.cifrada',
       'manifiesto.json',
       'plantillas/base-laravel-abc123/plantilla.json',
@@ -495,7 +517,7 @@ describe('exportarPerfil: nunca lleva secretos ni estado de este equipo', () => 
   });
 
   it('una frase corta no sirve para cifrar la CA', async () => {
-    await expect(exportar({ ca: { frase: 'corta' } })).rejects.toMatchObject({
+    await expect(exportar({ ca: true, frase: 'corta' })).rejects.toMatchObject({
       codigo: 'perfiles.frase_debil',
     });
   });
@@ -506,7 +528,8 @@ describe('exportarPerfil: nunca lleva secretos ni estado de este equipo', () => 
         destino: 'perfil.zip',
         bases: false,
         certificados: false,
-        ca: null,
+        ca: false,
+        frase: FRASE,
       }),
     ).rejects.toMatchObject({ codigo: 'perfiles.destino_invalido' });
   });
@@ -522,7 +545,8 @@ describe('exportarPerfil: nunca lleva secretos ni estado de este equipo', () => 
       destino: archivo,
       bases: true,
       certificados: false,
-      ca: null,
+      ca: false,
+      frase: FRASE,
     });
     expect(r.avisos).toHaveLength(1);
     expect(r.avisos[0]).not.toContain(CENTINELA);
@@ -536,7 +560,7 @@ describe('exportarPerfil: nunca lleva secretos ni estado de este equipo', () => 
 
 describe('CA cifrada (scrypt + AES-256-GCM)', () => {
   it('no contiene el PEM en claro y se recupera con la frase', async () => {
-    const archivo = await exportar({ ca: { frase: FRASE }, certificados: true });
+    const archivo = await exportar({ ca: true, certificados: true });
     const cifrada = (await entradasZip(archivo)).get('ca.cifrada')!;
     expect(cifrada.toString('utf8')).not.toContain('PRIVATE KEY');
     expect(cifrada.toString('utf8')).not.toContain('BEGIN CERTIFICATE');
@@ -558,15 +582,48 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
     await expect(descifrarConFrase(Buffer.from(JSON.stringify(j)), FRASE)).rejects.toMatchObject({
       codigo: 'perfiles.frase_incorrecta',
     });
-    j.cabecera.kdf.N = 2 ** 30;
-    await expect(descifrarConFrase(Buffer.from(JSON.stringify(j)), FRASE)).rejects.toMatchObject({
-      codigo: 'perfiles.danado',
-    });
+    for (const n of [2 ** 30, 2 ** 19]) {
+      j.cabecera.kdf.N = n;
+      await expect(descifrarConFrase(Buffer.from(JSON.stringify(j)), FRASE)).rejects.toMatchObject({
+        codigo: 'perfiles.danado',
+      });
+    }
     expect(PARAMETROS_CIFRADO.N).toBe(2 ** 17);
   });
 
+  it('archivos grandes en flujo: se recuperan con la frase; con otra o cambiados, nada queda escrito', async () => {
+    const claro = path.join(dir, 'claro.sql');
+    const datos = Buffer.alloc(3 * 1024 * 1024 + 7, 'INSERT INTO t VALUES (1);');
+    await writeFile(claro, datos);
+    const cifrado = path.join(dir, 'claro.sql.cifrado');
+    const llave = new LlaveFrase(FRASE);
+    await llave.cifrarArchivo(claro, cifrado);
+    expect((await readFile(cifrado)).includes(Buffer.from('INSERT INTO'))).toBe(false);
+    const vuelta = path.join(dir, 'vuelta.sql');
+    await new LlaveFrase(FRASE).descifrarArchivo(cifrado, vuelta, 10 * 1024 * 1024);
+    expect((await readFile(vuelta)).equals(datos)).toBe(true);
+    const mala = path.join(dir, 'mala.sql');
+    await expect(
+      new LlaveFrase('otra frase cualquiera').descifrarArchivo(cifrado, mala, 10 * 1024 * 1024),
+    ).rejects.toMatchObject({ codigo: 'perfiles.frase_incorrecta' });
+    expect(existsSync(mala)).toBe(false);
+    const b = await readFile(cifrado);
+    b[b.length - 100]! ^= 1;
+    await writeFile(cifrado, b);
+    await expect(
+      new LlaveFrase(FRASE).descifrarArchivo(cifrado, mala, 10 * 1024 * 1024),
+    ).rejects.toMatchObject({ codigo: 'perfiles.frase_incorrecta' });
+    expect(existsSync(mala)).toBe(false);
+    // Un tope menor que el contenido corta (sin dejar el archivo).
+    await llave.cifrarArchivo(claro, path.join(dir, 'otro.cifrado'));
+    await expect(
+      new LlaveFrase(FRASE).descifrarArchivo(path.join(dir, 'otro.cifrado'), mala, 1024),
+    ).rejects.toMatchObject({ codigo: 'perfiles.danado' });
+    expect(existsSync(mala)).toBe(false);
+  });
+
   it('al importar, la CA solo se escribe con la frase correcta; mala → nada escrito', async () => {
-    const archivo = await exportar({ ca: { frase: FRASE }, certificados: true });
+    const archivo = await exportar({ ca: true, certificados: true });
     const d = deps(destino);
     const p = new Perfiles(d);
     const vista = await p.vistaPrevia(archivo, { rutas: {} });
@@ -574,6 +631,7 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
       p.importar(archivo, {
         rutas: {},
         frase: 'frase equivocada!!',
+        importarCa: true,
         huella: vista.huella,
         confirmado: true,
       }),
@@ -583,6 +641,7 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
     const r = await p.importar(archivo, {
       rutas: {},
       frase: FRASE,
+      importarCa: true,
       huella: vista.huella,
       confirmado: true,
     });
@@ -592,7 +651,7 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
   });
 
   it('la vista previa muestra la huella de la CA ajena; reemplazar la local exige confirmarlo aparte', async () => {
-    const archivo = await exportar({ ca: { frase: FRASE } });
+    const archivo = await exportar({ ca: true });
     await escribir(destino.caCrt(), 'CA local');
     await escribir(destino.caKey(), 'clave local');
     const d = deps(destino);
@@ -600,13 +659,20 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
     const vista = await p.vistaPrevia(archivo);
     expect(vista.ca).toEqual({ huella: huellaSha256(CA_CRT), reemplazaLocal: true });
     await expect(
-      p.importar(archivo, { rutas: {}, frase: FRASE, huella: vista.huella, confirmado: true }),
+      p.importar(archivo, {
+        rutas: {},
+        frase: FRASE,
+        importarCa: true,
+        huella: vista.huella,
+        confirmado: true,
+      }),
     ).rejects.toMatchObject({ codigo: 'perfiles.confirmar_reemplazar_ca' });
     expect(existsSync(destino.config())).toBe(false);
     expect(await readFile(destino.caKey(), 'utf8')).toBe('clave local');
     const r = await p.importar(archivo, {
       rutas: {},
       frase: FRASE,
+      importarCa: true,
       reemplazarCa: true,
       huella: vista.huella,
       confirmado: true,
@@ -636,20 +702,50 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
       },
       ['ca.cifrada'],
     );
-    await expect(importar(archivo, deps(destino), { frase: FRASE })).rejects.toMatchObject({
+    await expect(
+      importar(archivo, deps(destino), { frase: FRASE, importarCa: true }),
+    ).rejects.toMatchObject({
       codigo: 'perfiles.danado',
     });
     expect(existsSync(destino.caKey())).toBe(false);
   });
 
-  it('sin frase: CA nueva y certificados regenerados', async () => {
-    const archivo = await exportar({ ca: { frase: FRASE } });
+  it('la CA no se importa si no se pide (aunque se dé la frase): CA nueva y certificados regenerados', async () => {
+    const archivo = await exportar({ ca: true });
     const d = deps(destino);
     const r = await importar(archivo, d);
     expect(r.ca).toBe('nueva');
     expect(existsSync(destino.caKey())).toBe(false);
     expect(d.reg.certificados).toBe(1);
-    expect(r.avisos.join(' ')).toMatch(/frase/);
+    expect(r.avisos.join(' ')).toMatch(/no se import/);
+  });
+
+  it('bases cifradas: sin frase se pide (o se omiten); con frase mala no se toca nada', async () => {
+    const archivo = await exportar();
+    // Los volcados no van en claro dentro del ZIP.
+    const e = await entradasZip(archivo);
+    expect(e.get('bases/mysql@8.4/tienda/datos.sql.cifrado')!.toString()).not.toContain('INSERT');
+    const d = deps(destino);
+    const vista = await new Perfiles(d).vistaPrevia(archivo);
+    expect(vista.requiereFrase).toBe(true);
+    await expect(importar(archivo, d, { frase: undefined })).rejects.toMatchObject({
+      codigo: 'perfiles.frase_requerida',
+    });
+    await expect(importar(archivo, d, { frase: 'otra frase distinta' })).rejects.toMatchObject({
+      codigo: 'perfiles.frase_incorrecta',
+    });
+    expect(existsSync(destino.config())).toBe(false);
+    const sin = await importar(archivo, d, { frase: undefined, omitirBases: true });
+    expect(sin.bases).toEqual([
+      { instancia: 'mysql@8.4', base: 'tienda', estado: 'omitido', motivo: 'bases_omitidas' },
+    ]);
+    expect(d.reg.restauradas).toEqual([]);
+  });
+
+  it('las bases solo se exportan con una frase', async () => {
+    await expect(exportar({ frase: null })).rejects.toMatchObject({
+      codigo: 'perfiles.frase_debil',
+    });
   });
 });
 
@@ -710,6 +806,18 @@ describe('perfil manipulado: se rechaza entero y no se escribe nada', () => {
     });
   });
 
+  it('un volcado de PostgreSQL bajo una instancia de MySQL (o al revés) → dañado', async () => {
+    for (const rel of [
+      'bases/mysql@8.4/tienda/volcado.dump.cifrado',
+      'bases/postgresql@17/tienda/esquema.sql.cifrado',
+    ]) {
+      const archivo = await perfilManual({ [rel]: 'x' }, {}, [rel]);
+      await expect(new Perfiles(deps(destino)).vistaPrevia(archivo)).rejects.toMatchObject({
+        codigo: 'perfiles.danado',
+      });
+    }
+  });
+
   it('versión futura del manifiesto → perfiles.version_no_soportada', async () => {
     const archivo = await perfilManual({}, { version: 2 });
     await expect(new Perfiles(deps(destino)).vistaPrevia(archivo)).rejects.toMatchObject({
@@ -754,7 +862,13 @@ describe('perfil manipulado: se rechaza entero y no se escribe nada', () => {
       expect(rutaPermitidaEnPerfil(`${x}plantilla.json`)).toBe(false);
     }
     expect(rutaPermitidaEnPerfil('instantaneas/mysql@8.4/tienda/esquema.sql')).toBe(false);
-    expect(rutaPermitidaEnPerfil('bases/mysql@8.4/tienda/esquema.sql')).toBe(true);
+    expect(rutaPermitidaEnPerfil('bases/mysql@8.4/tienda/esquema.sql.cifrado')).toBe(true);
+    expect(rutaPermitidaEnPerfil('bases/postgresql@17/tienda/volcado.dump.cifrado')).toBe(true);
+    // Cada motor con su formato, y nunca en claro.
+    expect(rutaPermitidaEnPerfil('bases/mysql@8.4/tienda/esquema.sql')).toBe(false);
+    expect(rutaPermitidaEnPerfil('bases/mysql@8.4/tienda/volcado.dump.cifrado')).toBe(false);
+    expect(rutaPermitidaEnPerfil('bases/postgresql@17/tienda/datos.sql.cifrado')).toBe(false);
+    expect(rutaPermitidaEnPerfil('bases/mongodb@7/tienda/volcado.dump.cifrado')).toBe(false);
   });
 });
 
@@ -855,7 +969,7 @@ describe('importarPerfil: todo lo que llega es importado', () => {
   });
 
   it('la centinela no llega a la carpeta de datos del destino', async () => {
-    const archivo = await exportar({ ca: { frase: FRASE }, certificados: true });
+    const archivo = await exportar({ ca: true, certificados: true });
     await importar(archivo, deps(destino), {
       frase: FRASE,
       rutas: { tienda: path.join(proyectos, 'tienda') },
@@ -1097,6 +1211,9 @@ describe('importarPerfil en otro equipo: se reasigna, se marca y se sigue', () =
       'datos',
       'esquema',
     ]);
+    // Llegan descifrados (y la estructura y los datos por separado).
+    expect(d.reg.restauradas[0]!.textos.join('')).toContain('CREATE TABLE tienda_t');
+    expect(d.reg.restauradas[0]!.textos.join('')).toContain('INSERT INTO tienda_t');
     expect(d.reg.instantaneas).toEqual([]);
     // instantaneas/ y papelera/ no se crean ni se tocan.
     expect(existsSync(path.join(destino.base, 'instantaneas'))).toBe(false);
@@ -1373,7 +1490,8 @@ it('el perfil exportado no depende del tamaño: bytes coinciden con el archivo',
     destino: archivo,
     bases: false,
     certificados: false,
-    ca: null,
+    ca: false,
+    frase: FRASE,
   });
   expect(r.bytes).toBe((await stat(archivo)).size);
 });

@@ -8,7 +8,7 @@ import { ErrorWolf } from '../errores';
 import { huellaSha256 } from '../https/ca';
 import { enmascararSecretos } from '../patronesSecretos';
 import { idSitioSeguro } from '../tuneles/proveedor';
-import { cifrarConFrase, validarFrase } from './cifrado';
+import { cifrarConFrase, LlaveFrase, validarFrase } from './cifrado';
 import {
   configParaPerfil,
   EXTENSION_PERFIL,
@@ -56,8 +56,9 @@ export async function exportarPerfil(
       `Elija dónde guardar el perfil (un archivo ${EXTENSION_PERFIL}).`,
     );
   }
-  const frase = o.ca ? validarFrase(o.ca.frase) : null;
-  if (o.certificados && !frase) {
+  // La CA y las bases (datos de clientes) solo viajan cifradas con una frase del usuario.
+  const frase = o.ca || o.bases ? validarFrase(o.frase) : null;
+  if (o.certificados && !o.ca) {
     throw new ErrorWolf(
       'perfiles.certificados_sin_ca',
       'Los certificados de los sitios solo viajan junto con la CA cifrada.',
@@ -75,6 +76,15 @@ export async function exportarPerfil(
     const destino = path.join(stage, ...rel.split('/'));
     await mkdir(path.dirname(destino), { recursive: true });
     await copyFile(origen, destino);
+    archivos[rel] = await sha256Archivo(destino);
+  };
+  const llave = frase ? new LlaveFrase(frase) : null;
+  /** Como `poner`, pero cifrado en flujo con la frase (nunca queda una copia en claro). */
+  const ponerCifrado = async (rel: string, origen: string): Promise<void> => {
+    if (!rutaPermitidaEnPerfil(rel) || !llave) throw new Error(`Ruta no permitida: ${rel}`);
+    const destino = path.join(stage, ...rel.split('/'));
+    await mkdir(path.dirname(destino), { recursive: true });
+    await llave.cifrarArchivo(origen, destino);
     archivos[rel] = await sha256Archivo(destino);
   };
   try {
@@ -101,11 +111,13 @@ export async function exportarPerfil(
         try {
           const v = await d.volcarBase(b.instancia, b.base, carpeta);
           const raiz = `bases/${b.instancia}/${b.base}`;
-          if ('volcado' in v) await poner(`${raiz}/volcado.dump`, v.volcado);
-          else {
-            await poner(`${raiz}/esquema.sql`, v.esquema);
-            await poner(`${raiz}/datos.sql`, v.datos);
-          }
+          const pg = b.instancia.startsWith('postgresql@');
+          // Cada motor con su formato: un volcado de otra forma no se incluye.
+          if ('volcado' in v && pg) await ponerCifrado(`${raiz}/volcado.dump.cifrado`, v.volcado);
+          else if ('esquema' in v && !pg) {
+            await ponerCifrado(`${raiz}/esquema.sql.cifrado`, v.esquema);
+            await ponerCifrado(`${raiz}/datos.sql.cifrado`, v.datos);
+          } else throw new Error('formato de volcado inesperado');
           bases.push({ instancia: b.instancia, base: b.base });
         } catch (e) {
           avisos.push(
@@ -121,7 +133,7 @@ export async function exportarPerfil(
     let conCa = false;
     let huellaCa: string | null = null;
     let conCertificados = false;
-    if (frase) {
+    if (frase && o.ca) {
       const crt = await leerNormal(d.rutas.caCrt());
       const key = await leerNormal(d.rutas.caKey());
       if (!crt || !key) {
@@ -200,6 +212,7 @@ export async function exportarPerfil(
     }
     return { archivo: o.destino, bytes: (await stat(o.destino)).size, avisos };
   } finally {
+    llave?.olvidar();
     await rm(stage, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }).catch(
       () => undefined,
     );

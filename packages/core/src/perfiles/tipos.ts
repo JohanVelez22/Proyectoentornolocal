@@ -106,10 +106,14 @@ export interface DepsPerfiles {
 export interface OpcionesExportarPerfil {
   /** Ruta del archivo (de un diálogo); debe terminar en `.wolfperfil`. */
   destino: string;
+  /** Volcados de las bases: solo cifrados con `frase`. */
   bases: boolean;
+  /** Certificados de los sitios: solo junto con la CA. */
   certificados: boolean;
-  /** La CA solo viaja cifrada con una frase que elige el usuario; null = no viaja. */
-  ca: { frase: string } | null;
+  /** La CA: solo cifrada con `frase`. */
+  ca: boolean;
+  /** Frase que elige el usuario; obligatoria con `bases` o `ca`. */
+  frase: string | null;
 }
 
 export interface ResultadoExportarPerfil {
@@ -124,8 +128,12 @@ export interface OpcionesImportarPerfil {
   rutas: Record<string, string>;
   /** Cambios de prefijo elegidos por el usuario (`C:\Users\viejo\` → `D:\dev\`). */
   prefijos?: PrefijoRuta[];
-  /** Frase de la CA, si el perfil la trae y el usuario la quiere importar. */
+  /** Frase del perfil: obligatoria si trae bases (salvo `omitirBases`) o para importar la CA. */
   frase?: string;
+  /** Importar la CA del perfil (solo si es la propia: la vista previa muestra su huella). */
+  importarCa?: true;
+  /** Importar sin las bases del perfil (p. ej. sin la frase). */
+  omitirBases?: true;
   /** Sitios cuyo `.env` se reescribe con el usuario propio nuevo (marcados por el usuario). */
   envProyectos?: string[];
   /**
@@ -167,6 +175,8 @@ export interface VistaPreviaPerfil {
   ignoradas: number;
   /** La carpeta de datos ya tiene una configuración o sitios. */
   carpetaConDatos: boolean;
+  /** El perfil trae bases o la CA (cifradas): para importarlas hace falta su frase. */
+  requiereFrase: boolean;
   /**
    * Lo que no se toma de la configuración del perfil (carpeta limpia): `ia:<id>` (URL propia),
    * `smtp:<id>` (host que no es de un proveedor conocido o sin usuario), `puerto:<campo>`

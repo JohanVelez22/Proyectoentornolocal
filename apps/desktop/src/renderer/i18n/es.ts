@@ -339,6 +339,8 @@ export const es = {
         'El perfil trae una CA y este equipo ya tiene la suya: compare la huella y confirme aparte que quiere reemplazarla (solo si es su propia CA).',
       'herramientas.fuera_de_la_ca':
         'La CA de WolfCore Dev solo firma dominios .test, localhost y direcciones locales: {dominio} no se puede incluir.',
+      'perfiles.frase_requerida':
+        'Escriba la frase del perfil para importar sus bases o su CA (o importe sin las bases).',
       'importar.origen_apagado':
         'No se pudo conectar al servidor de base de datos del otro programa: enciéndalo desde ese programa e inténtelo de nuevo. Los sitios sí se importaron.',
       'importar.origen_no_local': 'El servidor de origen debe estar en este equipo (127.0.0.1).',

@@ -3568,7 +3568,7 @@ export class Nucleo {
       restaurarBase: async (instancia, archivos, base, o) => {
         const objetivo = instancia as IdInstancia;
         if ('volcado' in archivos) {
-          await this.respaldos.restaurarAcotada(objetivo, archivos.volcado, base);
+          await this.respaldos.restaurarPgDePerfil(objetivo, archivos.volcado, base);
           return;
         }
         await this.respaldos.importarVolcadosAjenos(objetivo, archivos, base, {

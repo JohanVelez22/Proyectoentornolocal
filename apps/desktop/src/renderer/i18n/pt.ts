@@ -343,6 +343,8 @@ export const pt: Textos = {
         'O perfil traz uma CA e este computador já tem a sua: compare a impressão digital e confirme à parte que deseja substituí-la (somente se for a sua própria CA).',
       'herramientas.fuera_de_la_ca':
         'A CA do WolfCore Dev só assina domínios .test, localhost e endereços locais: {dominio} não pode ser incluído.',
+      'perfiles.frase_requerida':
+        'Digite a frase do perfil para importar os seus bancos ou a sua CA (ou importe sem os bancos).',
       'importar.origen_apagado':
         'Não foi possível conectar ao servidor de banco de dados do outro programa: ligue-o a partir desse programa e tente de novo. Os sites foram importados mesmo assim.',
       'importar.origen_no_local': 'O servidor de origem deve estar neste computador (127.0.0.1).',

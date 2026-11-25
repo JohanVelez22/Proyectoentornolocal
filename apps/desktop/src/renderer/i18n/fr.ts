@@ -351,6 +351,8 @@ export const fr: Textos = {
         "Le profil contient une CA et cet ordinateur a déjà la sienne : comparez l'empreinte et confirmez séparément que vous voulez la remplacer (uniquement s'il s'agit de votre propre CA).",
       'herramientas.fuera_de_la_ca':
         'La CA de WolfCore Dev ne signe que les domaines .test, localhost et les adresses locales : {dominio} ne peut pas être inclus.',
+      'perfiles.frase_requerida':
+        'Saisissez la phrase du profil pour importer ses bases ou sa CA (ou importez sans les bases).',
       'importar.origen_apagado':
         "Impossible de se connecter au serveur de base de données de l'autre programme : démarrez-le depuis ce programme et réessayez. Les sites ont tout de même été importés.",
       'importar.origen_no_local':

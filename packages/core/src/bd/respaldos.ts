@@ -2840,6 +2840,51 @@ export class Respaldos {
   }
 
   /**
+   * Base de PostgreSQL de un perfil (D26): solo un volcado de `pg_dump` (nunca SQL plano, que psql
+   * ejecutaría con sus metacomandos), restaurado por el camino acotado (rol limitado a la base,
+   * extensiones solo de `EXTENSIONES_PERMITIDAS`, una transacción) y revisado después con
+   * `auditarEsquema` como origen ajeno: si el catálogo trae algo que no debía, la base se vacía.
+   */
+  async restaurarPgDePerfil(
+    objetivo: ObjetivoBd,
+    archivo: string,
+    base: string,
+  ): Promise<ResultadoRestaurar> {
+    const { r, motor } = await this.para(objetivo);
+    if (r !== this) return r.restaurarPgDePerfil(motor, archivo, base);
+    if (motor !== 'postgresql') {
+      throw new ErrorWolf('importar.motor_no_soportado', 'Este volcado es solo para PostgreSQL.');
+    }
+    validarBase(motor, base);
+    if (formatoDeCabeza(await leerCabeza(archivo)) !== 'pgdump') {
+      throw new ErrorWolf(
+        'perfiles.danado',
+        'El volcado de PostgreSQL del perfil no es de pg_dump.',
+      );
+    }
+    const bd = this.d.bd;
+    if (!bd.auditarEsquema || !bd.reiniciarBase) {
+      throw new Error('Esta restauración no está disponible aquí.');
+    }
+    const res = await this.restaurarAcotada(motor, archivo, base);
+    const problemas = await bd.auditarEsquema(motor, base, {
+      permitidas: EXTENSIONES_PERMITIDAS,
+      importada: true,
+    });
+    if (problemas.length > 0) {
+      await bd.reiniciarBase(motor, base).catch(() => undefined);
+      throw new ErrorWolf(
+        'bd.esquema_fallo',
+        `La base ${base} del perfil trae objetos que no se permiten (${problemas.join(', ')}): se vació.`.slice(
+          0,
+          400,
+        ),
+      );
+    }
+    return res;
+  }
+
+  /**
    * Volcados de una base local para un perfil (D26). MySQL y MariaDB: estructura (`--no-data`) y
    * datos (`--no-create-info --skip-triggers`) por separado, los mismos que lee
    * `importarVolcadosAjenos`; PostgreSQL: un volcado completo (`pg_dump -Fc`) que el otro equipo
