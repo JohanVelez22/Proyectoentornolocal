@@ -3,7 +3,7 @@ import { ErrorWolf } from '../../errores';
 import type { ImplementacionPaso } from '../pasos';
 import { USO_VALIDO, validarIdPlantilla } from '../plantillas';
 import { sanear } from '../recetas';
-import { argsDe, comprobarSenal, nombreBase, objetivoDe, type DepsPasos } from './comun';
+import { argsDe, comprobarSenal, nombreBase, objetivoDe, texto, type DepsPasos } from './comun';
 import { carpetaVacia } from './crearDesdeComposer';
 
 /** Identificador de la creación que dejó la copia verificada (si ya no está, se verifica de nuevo). */
@@ -75,5 +75,11 @@ export function pasoRestaurarEsquemaPlantilla(d: DepsPasos): ImplementacionPaso 
       origen: esquema.origen,
     });
     for (const a of r.advertencias) ctx.linea(sanear(a));
+    // Con usuario propio, la base y sus tablas pasan a él (PostgreSQL las deja en un rol sin login).
+    const usuario = texto(args.usuario);
+    if (usuario && d.entregarBase) {
+      comprobarSenal(ctx);
+      await d.entregarBase(objetivo, base, usuario);
+    }
   };
 }

@@ -208,6 +208,24 @@ export const fr: Textos = {
       'proyectos.paso_no_omitible': 'L’étape "Créer le site" ne peut pas être ignorée.',
       'proyectos.carpeta_no_vacia':
         'Le dossier du projet contient déjà des fichiers : choisissez-en un autre ou videz-le.',
+      'proyectos.clave_bd_falta':
+        'Le mot de passe de l’utilisateur {usuario} est absent : rien n’a été écrit. Utilisez « Utiliser un utilisateur dédié » dans le gestionnaire de .env.',
+      'env.archivo_grande': 'Le fichier de variables est trop volumineux (maximum {maximo}).',
+      'env.no_regular': 'Le .env n’est pas un fichier normal : il n’est ni lu ni modifié.',
+      'env.clave_inexistente': 'La variable {clave} n’existe pas.',
+      'env.cambio_invalido': 'Une modification du .env n’est pas valide ({clave}).',
+      'env.sin_confirmar': 'Confirmez que vous voulez enregistrer les modifications du .env.',
+      'env.versionado':
+        'Git suit déjà le .env de ce projet : le prochain commit enverrait ses valeurs. Confirmez séparément pour continuer.',
+      'env.versionado_desconocido':
+        'Impossible de vérifier si git suit le .env de ce projet : confirmez séparément pour continuer.',
+      'env.copia_invalida': 'La copie du .env n’est pas valide ou n’existe plus.',
+      'env.sin_base': 'Le .env de ce projet n’a pas de connexion à une base de données.',
+      'env.base_no_resuelta':
+        'La base de ce projet n’est pas sur un serveur local de WolfCore Dev : rien n’a été modifié.',
+      'env.motor_no_soportado':
+        'Pour l’instant « Utiliser un utilisateur dédié » fonctionne avec MySQL et MariaDB.',
+      'env.ya_usa_usuario_propio': 'Ce projet utilise déjà son propre utilisateur.',
       'plantillas.id_invalido': "L'identifiant du modèle n'est pas valide.",
       'plantillas.no_existe': "Le modèle n'existe pas.",
       'plantillas.danada':

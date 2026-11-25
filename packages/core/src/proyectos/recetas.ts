@@ -16,7 +16,7 @@ import {
   type TipoPaso,
 } from './config';
 import { detectarProyecto, type Deteccion } from './detectar';
-import type { RegistroPasos } from './pasos';
+import type { RegistroPasos, SecretosReceta } from './pasos';
 import { nombreEjecutable } from '../plataforma/sistema';
 import { enmascararSecretos } from '../patronesSecretos';
 
@@ -278,6 +278,30 @@ export interface OpcionesReceta {
    * receta guardada ni su estado; sus eventos llevan `suelta: true`.
    */
   suelta?: boolean;
+  /**
+   * Secretos de esta corrida (clave del usuario propio de la base). Solo en memoria: no se guardan
+   * en el estado, no salen en el registro ni en los eventos (se ocultan donde aparezcan).
+   */
+  secretos?: SecretosReceta;
+}
+
+/** Argumentos de un paso que nunca se guardan: la clave de una base va por `secretos`. */
+const ARGS_SECRETOS = ['clave', 'password', 'contrasena'] as const;
+
+function sinSecretosEnArgs(p: PasoReceta): PasoReceta {
+  if (!p.args || !ARGS_SECRETOS.some((k) => k in p.args!)) return p;
+  const args = { ...p.args };
+  for (const k of ARGS_SECRETOS) delete args[k];
+  return { ...p, args };
+}
+
+/** Cambia por `••••` cada aparición literal de un secreto en un texto (una red de seguridad más). */
+export function ocultarSecretos(texto: string, secretos: SecretosReceta | undefined): string {
+  let t = texto;
+  for (const v of Object.values(secretos ?? {})) {
+    if (typeof v === 'string' && v.length >= 4) t = t.split(v).join('••••');
+  }
+  return t;
 }
 
 /** Mensaje al intentar omitir un paso que no se puede omitir. */
@@ -475,7 +499,7 @@ export class EjecutorRecetas {
       };
 
       const anteriores = new Map(previo.pasos.map((p) => [p.id, p]));
-      const pasos: PasoConEstado[] = receta.map((def) => {
+      const pasos: PasoConEstado[] = receta.map(sinSecretosEnArgs).map((def) => {
         const a = continua ? anteriores.get(def.id) : undefined;
         return a
           ? {
@@ -540,7 +564,7 @@ export class EjecutorRecetas {
       let fallo: ResultadoReceta | null = null;
       for (const i of aCorrer) {
         if (control.signal.aborted) break;
-        fallo = await this.correrPaso(sitio, e, pasos[i]!, control.signal);
+        fallo = await this.correrPaso(sitio, e, pasos[i]!, control.signal, op.secretos);
         if (fallo || control.signal.aborted) break;
       }
 
@@ -589,6 +613,7 @@ export class EjecutorRecetas {
     e: EstadoReceta,
     paso: PasoConEstado,
     senal: AbortSignal,
+    secretos?: SecretosReceta,
   ): Promise<ResultadoReceta | null> {
     const { sitioId } = e;
     paso.estado = 'corriendo';
@@ -610,6 +635,7 @@ export class EjecutorRecetas {
           paso: sinEstado(paso),
           carpeta,
           senal,
+          ...(secretos ? { secretos } : {}),
           marcas: [...(paso.marcas ?? [])],
           marcar: (marca) => {
             if (!vivo) return;
@@ -621,7 +647,7 @@ export class EjecutorRecetas {
             for (const bruta of String(texto)
               .replace(/\r?\n$/, '')
               .split(/\r?\n/)) {
-              const l = sanear(bruta);
+              const l = ocultarSecretos(sanear(bruta), secretos);
               agregar(l);
               this.emitir(sitioId, paso.id, 'corriendo', l);
             }
@@ -650,7 +676,7 @@ export class EjecutorRecetas {
         this.emitir(sitioId, paso.id, 'pendiente');
         return null;
       }
-      const mensaje = sanear(mensajeError(err));
+      const mensaje = ocultarSecretos(sanear(mensajeError(err)), secretos);
       paso.estado = 'error';
       paso.mensaje = mensaje;
       agregar(mensaje);

@@ -185,6 +185,8 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
 let marcasPaso: string[] = [];
 /** Marcas de corridas anteriores que recibe el paso (se fijan antes de `correr`). */
 let marcasPrevias: string[] = [];
+/** Secretos que recibe el paso (se fijan antes de `correr` y se limpian al terminar). */
+let secretosPaso: { claveBd?: string } | undefined;
 
 async function correr(
   a: Armado,
@@ -196,6 +198,8 @@ async function correr(
   marcasPaso = [];
   const previas = marcasPrevias;
   marcasPrevias = [];
+  const secretos = secretosPaso;
+  secretosPaso = undefined;
   const paso: PasoReceta = { id: tipo, tipo, titulo: tipo, ...(args ? { args } : {}) };
   const ctx: ContextoPaso = {
     sitio: a.sitio,
@@ -204,6 +208,7 @@ async function correr(
     linea: (t) => lineas.push(t),
     marcar: (m) => marcasPaso.push(m),
     marcas: previas,
+    ...(secretos ? { secretos } : {}),
     senal,
   };
   await a.registro.obtener(tipo)!(ctx);
@@ -788,8 +793,37 @@ describe('bd-crear, bd-restaurar y pgvector-activar', () => {
 
   it('bd-crear crea la base (y el usuario si se pide)', async () => {
     const a = await armar();
+    secretosPaso = { claveBd: 'clave-bd-prueba-falsa-0000' };
     await correr(a, 'bd-crear', { motor: 'mysql', usuario: 'tienda' });
-    expect(a.creadas).toEqual([{ motor: 'mysql', nombre: 'tienda', opts: { usuario: 'tienda' } }]);
+    expect(a.creadas).toEqual([
+      {
+        motor: 'mysql',
+        nombre: 'tienda',
+        opts: { usuario: 'tienda', clave: 'clave-bd-prueba-falsa-0000' },
+      },
+    ]);
+  });
+
+  it('bd-crear con un usuario sin su clave falla antes de crear nada (proyectos.clave_bd_falta)', async () => {
+    const a = await armar();
+    await expect(
+      correr(a, 'bd-crear', { motor: 'mysql', usuario: 'tienda' }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.clave_bd_falta' });
+    expect(a.creadas).toHaveLength(0);
+  });
+
+  it('bd-crear: la clave de args.clave se ignora (nunca viaja por los argumentos)', async () => {
+    const a = await armar();
+    await expect(
+      correr(a, 'bd-crear', { motor: 'mysql', usuario: 'tienda', clave: 'por-args' }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.clave_bd_falta' });
+  });
+
+  it('bd-crear: un usuario wolf_u_ que quedó de un proyecto anterior cambia su clave a la nueva', async () => {
+    const a = await armar();
+    secretosPaso = { claveBd: 'clave-bd-prueba-falsa-0000' };
+    await correr(a, 'bd-crear', { motor: 'mysql', usuario: 'wolf_u_tienda', base: 'tienda' });
+    expect(a.creadas[0]!.opts).toMatchObject({ usuario: 'wolf_u_tienda', cambiarClave: true });
   });
 
   it('bd-crear no hace nada si la base ya existe', async () => {
@@ -1051,6 +1085,38 @@ describe('ronda de arreglos', () => {
       { cmd: 'D:\\Win\\System32\\taskkill.exe', args: ['/PID', '1234', '/T', '/F'] },
     ]);
     expect(rutaTaskkill({})).toBe('C:\\Windows\\System32\\taskkill.exe');
+  });
+
+  it('env-crear con usuario propio: el usuario y la clave de ctx.secretos van al .env, no los del administrador', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, '.env.example', EJEMPLO_LARAVEL);
+    secretosPaso = { claveBd: 'centinela-secreta-d' };
+    const lineas = await correr(a, 'env-crear', { motor: 'mysql', usuario: 'wolf_u_tienda' });
+    const v = leerVariablesEnv(await leer(a.carpeta, '.env'));
+    expect(v.get('DB_USERNAME')).toBe('wolf_u_tienda');
+    expect(v.get('DB_PASSWORD')).toBe('centinela-secreta-d');
+    expect(await leer(a.carpeta, '.env')).not.toContain(CLAVE);
+    // Ni el registro del paso ni sus argumentos llevan la clave.
+    expect(lineas.join('\n')).not.toContain('centinela-secreta-d');
+  });
+
+  it('env-crear con usuario propio y DATABASE_URL (FastAPI): la URL lleva usuario y clave propios', async () => {
+    const a = await armar({ sitio: { tipo: 'fastapi' } });
+    await escribir(a.carpeta, '.env.example', 'DATABASE_URL=postgresql://x:y@localhost/db\n');
+    secretosPaso = { claveBd: 'centinela-secreta-d' };
+    await correr(a, 'env-crear', { motor: 'postgresql', base: 'api', usuario: 'wolf_u_api' });
+    const t = await leer(a.carpeta, '.env');
+    expect(t).toContain('wolf_u_api:centinela-secreta-d@127.0.0.1:5432/api');
+    expect(t).not.toContain(CLAVE);
+  });
+
+  it('env-crear con usuario propio pero sin clave falla con proyectos.clave_bd_falta y no escribe', async () => {
+    const a = await armar();
+    await escribir(a.carpeta, '.env.example', EJEMPLO_LARAVEL);
+    await expect(
+      correr(a, 'env-crear', { motor: 'mysql', usuario: 'wolf_u_tienda', clave: 'por-args' }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.clave_bd_falta' });
+    await expect(leer(a.carpeta, '.env')).rejects.toThrow();
   });
 
   it('env-crear con args.usuario sin args.clave falla sin escribir', async () => {
@@ -1573,6 +1639,37 @@ describe('config-bd-crear', () => {
     expect(await leer(a.carpeta, 'wp-config-sample.php')).toBe(SAMPLE);
   });
 
+  it('WordPress con usuario propio: wp-config.php lleva el usuario y la clave propios, no los del administrador', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    await escribir(a.carpeta, 'wp-config-sample.php', SAMPLE);
+    secretosPaso = { claveBd: 'centinela-secreta-d' };
+    const lineas = await correr(a, 'config-bd-crear', {
+      marco: 'wordpress',
+      motor: 'mysql',
+      base: 'mi_blog',
+      usuario: 'wolf_u_mi_blog',
+    });
+    const t = await leer(a.carpeta, 'wp-config.php');
+    expect(t).toContain("define( 'DB_USER', 'wolf_u_mi_blog' );");
+    expect(t).toContain("define( 'DB_PASSWORD', 'centinela-secreta-d' );");
+    expect(t).not.toContain(CLAVE);
+    expect(lineas.join('\n')).not.toContain('centinela-secreta-d');
+  });
+
+  it('WordPress y CodeIgniter 3 con usuario propio sin clave: proyectos.clave_bd_falta y nada escrito', async () => {
+    const a = await armar({ sitio: { tipo: 'wordpress' } });
+    await escribir(a.carpeta, 'wp-config-sample.php', SAMPLE);
+    await expect(
+      correr(a, 'config-bd-crear', {
+        marco: 'wordpress',
+        motor: 'mysql',
+        base: 'blog',
+        usuario: 'wolf_u_blog',
+      }),
+    ).rejects.toMatchObject({ codigo: 'proyectos.clave_bd_falta' });
+    await expect(leer(a.carpeta, 'wp-config.php')).rejects.toThrow();
+  });
+
   it('WordPress: una clave con comillas y barras se escapa para PHP', async () => {
     const a = await armar({ sitio: { tipo: 'wordpress' } });
     a.deps.bd.conexion = async () => ({
@@ -2011,6 +2108,19 @@ describe('pasos de plantilla de proyecto (D14)', () => {
       { objetivo: 'mysql', archivo: join(a.base, 'esquema.sql'), base: 'tienda', origen: 'propia' },
     ]);
     expect(a.restauradas).toEqual([]);
+  });
+
+  it('restaurar-esquema-plantilla con usuario propio entrega la base a ese usuario', async () => {
+    const { a } = await conPlantillas();
+    const entregas: unknown[][] = [];
+    a.deps.entregarBase = async (...x) => void entregas.push(x);
+    await correr(a, 'restaurar-esquema-plantilla', {
+      plantilla: 'mi-base-a1b2c3',
+      motor: 'mysql',
+      base: 'tienda',
+      usuario: 'wolf_u_tienda',
+    });
+    expect(entregas).toEqual([['mysql', 'tienda', 'wolf_u_tienda']]);
   });
 
   it('nunca restaura el esquema sobre una base con tablas ni en otro motor', async () => {

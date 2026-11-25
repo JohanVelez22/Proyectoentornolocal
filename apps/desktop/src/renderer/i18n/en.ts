@@ -197,6 +197,23 @@ export const en: Textos = {
       'proyectos.paso_no_omitible': 'The "Create the site" step cannot be skipped.',
       'proyectos.carpeta_no_vacia':
         'The project folder already has files: choose another one or empty it.',
+      'proyectos.clave_bd_falta':
+        'The password for user {usuario} is missing: nothing was written. Use "Use own user" in the .env manager.',
+      'env.archivo_grande': 'The variables file is too large (maximum {maximo}).',
+      'env.no_regular': 'The .env is not a regular file: it is not read or modified.',
+      'env.clave_inexistente': 'The variable {clave} does not exist.',
+      'env.cambio_invalido': 'A change to the .env is not valid ({clave}).',
+      'env.sin_confirmar': 'Confirm that you want to save the .env changes.',
+      'env.versionado':
+        'Git already tracks this project’s .env: the next commit would upload its values. Confirm separately to continue.',
+      'env.versionado_desconocido':
+        'Could not check whether git tracks this project’s .env: confirm separately to continue.',
+      'env.copia_invalida': 'The .env backup is not valid or no longer exists.',
+      'env.sin_base': 'This project’s .env has no database connection.',
+      'env.base_no_resuelta':
+        'This project’s database is not on a local WolfCore Dev server: nothing was changed.',
+      'env.motor_no_soportado': 'For now "Use own user" works with MySQL and MariaDB.',
+      'env.ya_usa_usuario_propio': 'This project already uses its own user.',
       'plantillas.id_invalido': 'The template identifier is not valid.',
       'plantillas.no_existe': 'The template does not exist.',
       'plantillas.danada':

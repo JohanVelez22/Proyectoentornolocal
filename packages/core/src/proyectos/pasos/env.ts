@@ -14,7 +14,7 @@ import {
   comprobarSenal,
   nombreBase,
   objetivoDe,
-  texto,
+  usuarioDelPaso,
   type DatosConexion,
   type DepsPasos,
   type MotorBd,
@@ -75,7 +75,7 @@ export function fijarLinea(texto: string, clave: string, linea: string): string 
 }
 
 /** Lector del .env según el tipo (ver `EstiloEnv`). */
-function estiloDe(tipo: TipoSitio, t: string): EstiloEnv {
+export function estiloDe(tipo: TipoSitio, t: string): EstiloEnv {
   if (tipo === 'codeigniter4') return 'ci4';
   if (tipo === 'codeigniter3') return CI4_FORMATO.test(t) ? 'ci4' : 'literal';
   return 'dotenv';
@@ -243,17 +243,12 @@ export function pasoEnvCrear(d: DepsPasos): ImplementacionPaso {
     if (objetivo && motor) {
       const base = nombreBase(sitio, args);
       const x = { ...(await d.bd.conexion(objetivo)) };
-      const usuario = texto(args.usuario);
-      if (usuario) {
-        const clave = texto(args.clave);
-        // Nunca se mezcla un usuario propio con la clave del administrador del motor.
-        if (!clave) {
-          throw new Error(
-            `Indique también la clave del usuario ${usuario} (args.clave) para escribirla en el .env.`,
-          );
-        }
-        x.usuario = usuario;
-        x.clave = clave;
+      // Nunca se mezcla un usuario propio con la clave del administrador del motor: la clave del
+      // usuario llega por `ctx.secretos` (y sin ella el paso falla antes de escribir).
+      const propio = usuarioDelPaso(ctx);
+      if (propio) {
+        x.usuario = propio.usuario;
+        x.clave = propio.clave;
       }
       const conUrl =
         local ||

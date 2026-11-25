@@ -102,6 +102,21 @@ export const PARAMETROS_ERROR = {
   'proyectos.paso_no_omitible': [],
   // proyectos nuevos (D12)
   'proyectos.carpeta_no_vacia': [],
+  // usuario propio de la base de cada proyecto (D16)
+  'proyectos.clave_bd_falta': ['usuario'],
+  // gestor de .env (D16)
+  'env.archivo_grande': ['maximo'],
+  'env.no_regular': [],
+  'env.clave_inexistente': ['clave'],
+  'env.cambio_invalido': ['clave'],
+  'env.sin_confirmar': [],
+  'env.versionado': [],
+  'env.versionado_desconocido': [],
+  'env.copia_invalida': [],
+  'env.sin_base': [],
+  'env.base_no_resuelta': [],
+  'env.motor_no_soportado': [],
+  'env.ya_usa_usuario_propio': [],
   // plantillas de proyecto (D14)
   'plantillas.id_invalido': [],
   'plantillas.no_existe': [],

@@ -1,4 +1,5 @@
 import type { MotorBd } from '../../bd/env';
+import { usuarioDeProyecto } from '../../bd/usuarioProyecto';
 import type { IdInstancia, TipoSitio } from '../../tipos';
 import type { PasoReceta, TipoPaso } from '../config';
 
@@ -66,12 +67,17 @@ export function paso(tipo: TipoPaso, titulo: string, args?: Record<string, unkno
   return { id: tipo, tipo, titulo, ...(args ? { args } : {}) };
 }
 
-/** Argumentos que dicen a los pasos de base de datos dónde crearla. */
+/**
+ * Argumentos que dicen a los pasos de base de datos dónde crearla. Con MySQL, MariaDB o
+ * PostgreSQL, el proyecto usa un usuario propio limitado a su base (`usuario` es solo el nombre:
+ * la clave viaja por `ctx.secretos`, nunca por los argumentos que se guardan en la receta).
+ */
 export function argsBase(p: PedidoProyecto, motor: MotorBd | null): Record<string, unknown> {
   if (!p.base || !motor) return {};
   return {
     ...(p.base.instancia ? { instancia: p.base.instancia } : { motor }),
     base: p.base.nombre,
+    ...(motor !== 'mongodb' ? { usuario: usuarioDeProyecto(p.base.nombre) } : {}),
   };
 }
 

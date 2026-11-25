@@ -3,6 +3,7 @@ import type { BasesDeDatos, DatosConexion, MotorBd, ObjetivoBd } from '../../bd/
 import { validarNombreBd } from '../../bd/clienteMysql';
 import type { OpcionesRestaurar, ResultadoRestaurar } from '../../bd/respaldos';
 import { MENSAJE_CANCELADO } from '../../plataforma/lanzar';
+import { ErrorWolf } from '../../errores';
 import type { Lanzador } from '../../plataforma/tipos';
 import type { Rutas } from '../../rutas';
 import { TIPOS_RUNTIME, type Runtimes, type VersionesRuntime } from '../../runtimes/runtimes';
@@ -48,6 +49,8 @@ export interface DepsPasos {
     base: string,
     opts: { origen: 'propia' | 'importada' },
   ) => Promise<ResultadoRestaurar>;
+  /** Pasa la base restaurada al usuario propio del proyecto (`BasesDeDatos.entregarBase`). */
+  entregarBase?: (objetivo: ObjetivoBd, base: string, usuario: string) => Promise<void>;
   /** Plantillas de proyecto (D14): sus archivos y su esquema, ya comprobados contra su huella. */
   plantillas?: Pick<Plantillas, 'restaurarArchivos' | 'rutaEsquema'>;
   /** Puerto SMTP de Mailpit si está instalado; null si no. */
@@ -153,6 +156,26 @@ export async function objetivoDe(
     return instancia as ObjetivoBd;
   }
   return motorDe(ctx, d, det);
+}
+
+/**
+ * Usuario propio de la base del paso (`args.usuario`, un nombre) con su clave, que llega por
+ * `ctx.secretos` y nunca por los argumentos (estos se guardan en el estado de la receta). null si
+ * el paso usa la conexión del administrador del motor. Sin clave, falla con
+ * `proyectos.clave_bd_falta` antes de tocar nada.
+ */
+export function usuarioDelPaso(ctx: ContextoPaso): { usuario: string; clave: string } | null {
+  const usuario = texto(argsDe(ctx).usuario);
+  if (!usuario) return null;
+  const clave = ctx.secretos?.claveBd;
+  if (typeof clave !== 'string' || clave === '') {
+    throw new ErrorWolf(
+      'proyectos.clave_bd_falta',
+      `Falta la clave del usuario ${usuario}: no se escribió nada. Vuelva a crear el usuario de la base desde el gestor de .env.`,
+      { usuario },
+    );
+  }
+  return { usuario, clave };
 }
 
 export type { DatosConexion, MotorBd, ObjetivoBd };

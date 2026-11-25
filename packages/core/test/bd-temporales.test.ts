@@ -93,6 +93,24 @@ describe('ClientePostgres: rol temporal', () => {
     await expect(cliente.retirarRolTemporal('postgres', 'mi_base')).rejects.toThrow(/temporales/);
   });
 
+  it('entregarBase pasa la base y lo que restauró al usuario propio (nunca a postgres ni a un rol pg_)', async () => {
+    const dueno = rolDuenoDe('mi_base');
+    const { cliente, consultas } = pgFalso((sql) =>
+      sql.includes('FROM pg_roles') ? [{ n: 1 }] : [],
+    );
+    await cliente.conectar({ host: '127.0.0.1', puerto: 5432, usuario: 'postgres', clave: 'x' });
+    await cliente.entregarBase('mi_base', 'wolf_u_mi_base');
+    const sql = consultas.map((c) => c.sql);
+    expect(sql).toContain('ALTER DATABASE "mi_base" OWNER TO "wolf_u_mi_base"');
+    expect(sql).toContain(`REASSIGN OWNED BY "${dueno}" TO "wolf_u_mi_base"`);
+    await expect(cliente.entregarBase('mi_base', 'postgres')).rejects.toMatchObject({
+      codigo: 'bd.usuario_privilegiado',
+    });
+    await expect(cliente.entregarBase('mi_base', 'pg_write_all_data')).rejects.toMatchObject({
+      codigo: 'bd.usuario_privilegiado',
+    });
+  });
+
   it('auditarCatalogo informa disparadores de evento, extensiones, lenguajes y SECURITY DEFINER', async () => {
     const { cliente } = pgFalso((sql) => {
       if (sql.includes('pg_event_trigger')) return [{ evtname: 'ddl_hook' }];

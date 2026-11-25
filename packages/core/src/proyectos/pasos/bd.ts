@@ -3,7 +3,16 @@ import path from 'node:path';
 import { NOMBRE_SERVICIO } from '../../servicios/definicion';
 import type { ImplementacionPaso } from '../pasos';
 import { sanear } from '../recetas';
-import { argsDe, comprobarSenal, nombreBase, objetivoDe, texto, type DepsPasos } from './comun';
+import {
+  argsDe,
+  comprobarSenal,
+  nombreBase,
+  objetivoDe,
+  texto,
+  usuarioDelPaso,
+  type DepsPasos,
+} from './comun';
+import { esUsuarioDeProyecto } from '../../bd/usuarioProyecto';
 import { motorDe } from '../../bd/basesDeDatos';
 import { ErrorWolf } from '../../errores';
 
@@ -49,10 +58,18 @@ export function pasoBdCrear(d: DepsPasos): ImplementacionPaso {
       return;
     }
     comprobarSenal(ctx);
-    const usuario = texto(args.usuario);
-    const clave = texto(args.clave);
+    const propio = usuarioDelPaso(ctx);
+    const usuario = propio?.usuario;
     const opts = {
-      ...(usuario ? { usuario, ...(clave ? { clave } : {}) } : {}),
+      ...(propio
+        ? {
+            usuario: propio.usuario,
+            clave: propio.clave,
+            // Un usuario `wolf_u_…` que quedó de un proyecto anterior con esta base lo creó
+            // WolfCore Dev para esa base: su clave pasa a ser la nueva (nunca la de otra cuenta).
+            ...(esUsuarioDeProyecto(propio.usuario) ? { cambiarClave: true } : {}),
+          }
+        : {}),
       ...(nueva ? { nueva } : {}),
     };
     await d.bd.crear(objetivo, base, opts);

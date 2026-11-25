@@ -7,7 +7,7 @@ import { ErrorWolf } from '../src/errores';
 import { Nucleo } from '../src/nucleo';
 import type { Plataforma } from '../src/plataforma/tipos';
 import {
-  crearProyecto,
+  crearProyecto as crearProyectoReal,
   validarCarpetaNueva,
   validarNombreProyecto,
   type DepsCrearProyecto,
@@ -21,6 +21,14 @@ import {
 import type { PasoReceta } from '../src/proyectos/config';
 import type { ResultadoReceta } from '../src/proyectos/recetas';
 import type { Sitio } from '../src/tipos';
+
+/** Clave de prueba (obviamente falsa) del usuario propio de la base: la pasa el proceso principal. */
+const CLAVE_BD = 'clave-bd-prueba-falsa-0000';
+const crearProyecto = (
+  d: DepsCrearProyecto,
+  p: PedidoProyecto,
+  o: Parameters<typeof crearProyectoReal>[2] = { secretos: { claveBd: CLAVE_BD } },
+): ReturnType<typeof crearProyectoReal> => crearProyectoReal(d, p, o);
 
 vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
@@ -91,9 +99,14 @@ describe('generadores: lista de pasos', () => {
     expect(paso(p, 'bd-crear').args).toEqual({
       instancia: 'mariadb@11.4',
       base: 'tienda',
+      usuario: 'wolf_u_tienda',
       nueva: true,
     });
-    expect(paso(p, 'env-crear').args).toEqual({ instancia: 'mariadb@11.4', base: 'tienda' });
+    expect(paso(p, 'env-crear').args).toEqual({
+      instancia: 'mariadb@11.4',
+      base: 'tienda',
+      usuario: 'wolf_u_tienda',
+    });
   });
 
   it('sin base no hay pasos de base ni migraciones', () => {
@@ -357,6 +370,72 @@ describe('crearProyecto (sobre fakes: sin red, sin Composer, sin bases reales)',
     bases = [];
     php = ['8.3', '8.4'];
     confiadas = [];
+  });
+
+  describe('usuario propio de la base (la clave la pasa el proceso principal)', () => {
+    it('sin clave no se crea nada: ni carpeta, ni sitio, ni receta (proyectos.clave_bd_falta)', async () => {
+      await expect(crearProyecto(deps(), nuevo(), {})).rejects.toMatchObject({
+        codigo: 'proyectos.clave_bd_falta',
+      });
+      await expect(stat(path.join(base, 'mi-tienda'))).rejects.toThrow();
+      expect(creados).toEqual([]);
+      expect(ejecutadas).toEqual([]);
+    });
+
+    it('la receta lleva solo el nombre del usuario; la clave va por la corrida y no en los argumentos', async () => {
+      const guardadas: string[] = [];
+      const claves: (string | undefined)[] = [];
+      await crearProyecto(
+        deps({
+          ejecutarReceta: async (id, receta, secretos) => {
+            ejecutadas.push({ id, receta });
+            claves.push(secretos?.claveBd);
+            return resultado;
+          },
+        }),
+        nuevo(),
+        {
+          secretos: { claveBd: CLAVE_BD },
+          alCrearSitio: async (id) => void guardadas.push(id),
+        },
+      );
+      expect(guardadas).toEqual(['mi-tienda']);
+      expect(claves).toEqual([CLAVE_BD]);
+      const pasos = ejecutadas[0]!.receta;
+      for (const tipo of ['bd-crear', 'env-crear']) {
+        expect(paso(pasos, tipo).args).toMatchObject({ usuario: 'wolf_u_mi_tienda' });
+      }
+      expect(JSON.stringify(pasos)).not.toContain(CLAVE_BD);
+      expect(JSON.stringify(creados)).not.toContain(CLAVE_BD);
+    });
+
+    it('si la clave no se puede guardar, la receta no corre (no se crea el usuario de la base)', async () => {
+      const r = await crearProyecto(deps(), nuevo(), {
+        secretos: { claveBd: CLAVE_BD },
+        alCrearSitio: async () => {
+          throw new Error('Sin cifrado del sistema');
+        },
+      });
+      expect(r.receta.estado).toBe('error');
+      expect(ejecutadas).toEqual([]);
+      expect(JSON.stringify(r)).not.toContain(CLAVE_BD);
+    });
+
+    it('sin base no se pide clave ni se llama a alCrearSitio', async () => {
+      let llamado = false;
+      const r = await crearProyecto(deps(), nuevo({ base: null }), {
+        alCrearSitio: async () => void (llamado = true),
+      });
+      expect(r.receta.estado).toBe('lista');
+      expect(llamado).toBe(false);
+    });
+
+    it('MongoDB no usa usuario: no se pide clave', async () => {
+      const p = nuevo({ base: { instancia: 'mongodb@7.0', nombre: 'mi_tienda' } });
+      const r = await crearProyecto(deps(), p, {});
+      expect(r.receta.estado).toBe('lista');
+      expect(JSON.stringify(ejecutadas[0]!.receta)).not.toContain('wolf_u_');
+    });
   });
 
   it('crea la carpeta y el sitio confiado con HTTPS y corre la receta del generador', async () => {
@@ -796,6 +875,77 @@ describe('Nucleo.crearProyecto (estático, de punta a punta)', () => {
     expect(await readFile(path.join(carpeta, 'index.html'), 'utf8')).toContain('<h1>mi-sitio</h1>');
     expect(await readFile(hosts, 'utf8')).toContain('mi-sitio.test');
     expect((await n.config.leer()).sitios.map((s) => s.dominio)).toEqual(['mi-sitio.test']);
+  });
+
+  describe('usarUsuarioPropio (acción manual del gestor de .env)', () => {
+    const conEnv = async (n: Nucleo, env: string): Promise<string> => {
+      const carpeta = path.join(proyectos, 'mi-sitio');
+      const r = await n.crearProyecto({
+        tipo: 'estatico',
+        nombre: 'mi-sitio',
+        carpeta,
+        base: null,
+        opciones: {},
+      });
+      await writeFile(path.join(carpeta, '.env'), env);
+      return r.sitio.id;
+    };
+    const opciones = (guardada: string[]) => ({
+      claveBd: 'centinela-secreta-d',
+      guardarClave: async () => void guardada.push('guardada'),
+    });
+
+    it('exige la confirmación', async () => {
+      const n = await crear();
+      const id = await conEnv(n, 'DB_DATABASE=x\nDB_USERNAME=root\nDB_PASSWORD=\n');
+      await expect(
+        n.usarUsuarioPropio(id, opciones([]), false as unknown as true),
+      ).rejects.toMatchObject({ codigo: 'env.sin_confirmar' });
+    });
+
+    it('sin base en el .env, con un servidor ajeno o con PostgreSQL: error con código y nada se guarda', async () => {
+      const n = await crear();
+      const guardada: string[] = [];
+      const casos: [string, string][] = [
+        ['APP_NAME=x\n', 'env.sin_base'],
+        [
+          'DB_CONNECTION=mysql\nDB_HOST=10.0.0.5\nDB_DATABASE=x\nDB_USERNAME=root\nDB_PASSWORD=p\n',
+          'env.base_no_resuelta',
+        ],
+        [
+          'DB_CONNECTION=pgsql\nDB_DATABASE=x\nDB_USERNAME=postgres\nDB_PASSWORD=p\n',
+          'env.motor_no_soportado',
+        ],
+        [
+          'DB_CONNECTION=mysql\nDB_DATABASE=x\nDB_USERNAME=wolf_u_x\nDB_PASSWORD=p\n',
+          'env.ya_usa_usuario_propio',
+        ],
+      ];
+      for (const [env, codigo] of casos) {
+        const id = await conEnv(n, env);
+        await expect(n.usarUsuarioPropio(id, opciones(guardada), true)).rejects.toMatchObject({
+          codigo,
+        });
+        await rm(path.join(proyectos, 'mi-sitio'), { recursive: true, force: true });
+        await n.borrarSitio(id).catch(() => undefined);
+      }
+      expect(guardada).toEqual([]);
+    });
+
+    it('con el motor apagado guarda la clave y falla al crear el usuario, sin tocar el .env', async () => {
+      const n = await crear();
+      const env = 'DB_CONNECTION=mysql\nDB_DATABASE=x\nDB_USERNAME=root\nDB_PASSWORD=vieja\n';
+      const id = await conEnv(n, env);
+      const guardada: string[] = [];
+      const e = await n
+        .usarUsuarioPropio(id, opciones(guardada), true)
+        .then(() => null)
+        .catch((x: unknown) => x as Error);
+      expect(e).toMatchObject({ codigo: 'bd.encender_servicio' });
+      expect(JSON.stringify(e)).not.toContain('centinela-secreta-d');
+      expect(guardada).toEqual(['guardada']);
+      expect(await readFile(path.join(proyectos, 'mi-sitio', '.env'), 'utf8')).toBe(env);
+    });
   });
 
   it('una segunda vez sobre la misma carpeta no pisa nada', async () => {

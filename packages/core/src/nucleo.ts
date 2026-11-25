@@ -56,7 +56,12 @@ import { bloqueEnvIa } from './ia/envIa';
 import { GestorIa } from './ia/gestorIa';
 import { completarPlataforma, crearPlataforma } from './plataforma/index';
 import type { IdTerminal, PlataformaCompleta, TerminalDisponible } from './plataforma/tipos';
-import { baseDelProyecto, leerEnvAcotado, type BaseProyecto } from './bd/baseProyecto';
+import {
+  baseDelProyecto,
+  leerBaseDelProyecto,
+  leerEnvAcotado,
+  type BaseProyecto,
+} from './bd/baseProyecto';
 
 export { LIMITE_ENV_BYTES } from './bd/baseProyecto';
 import { nombreEjecutable } from './plataforma/sistema';
@@ -170,7 +175,14 @@ import {
 } from './proyectos/detectar';
 import { Importador } from './importar/importar';
 import type { OpcionesImportar, ResultadoImportar, VistaPreviaImportar } from './importar/importar';
-import { crearProyecto, type ResultadoCrearProyecto } from './proyectos/crear';
+import {
+  crearProyecto,
+  type OpcionesCrearProyecto,
+  type ResultadoCrearProyecto,
+} from './proyectos/crear';
+import { GestorEnv } from './proyectos/env/gestor';
+import { esUsuarioDeProyecto, usuarioDeProyecto } from './bd/usuarioProyecto';
+import type { SecretosReceta } from './proyectos/pasos';
 import { VERSION_WORDPRESS, type PedidoProyecto } from './proyectos/generadores';
 import { RegistroPasos } from './proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
@@ -542,6 +554,14 @@ export class Nucleo {
   private readonly depsPasos: DepsPasos | undefined;
   /** Plantillas de proyecto: guardar, listar, borrar y crear proyectos desde ellas. */
   readonly plantillas: Plantillas;
+  /** Gestor de `.env` de los proyectos: secretos enmascarados, diff, copia y escritura atómica. */
+  readonly env: GestorEnv;
+  /**
+   * Clave del usuario propio de la base de un proyecto, para las recetas que no pasan por la
+   * ventana (MCP, reintentos). La fija el proceso principal (`AlmacenSecretos`); el núcleo nunca la
+   * guarda, la registra ni la emite.
+   */
+  private proveedorClaveBd: (sitioId: string) => Promise<string | null> = async () => null;
 
   private constructor(
     readonly rutas: Rutas,
@@ -616,6 +636,15 @@ export class Nucleo {
     this.ajustesPhpSitio = m.ajustesPhpSitio;
     this.depsPasos = m.depsPasos;
     this.plantillas = m.plantillas;
+    this.env = new GestorEnv({
+      sitio: async (id) => (await this.sitios.listar()).find((x) => x.id === id),
+      carpetaRespaldos: () => this.rutas.respaldosEnv(),
+      versionado: (carpeta) => this.git.versionado(carpeta),
+      puertos: async () => {
+        const datos = (await this.config.leer()).servicios.datos;
+        return { mailpit: datos.mailpit.puerto, redis: datos.redis.puerto };
+      },
+    });
     internos.on('servicio:estado', () => this.pedirRecalculo());
     this.mcp = new ServidorMcp({
       operaciones: this.operacionesMcp(),
@@ -1273,6 +1302,7 @@ export class Nucleo {
         modulos.respaldos.restaurar(motor, archivo, base, opts),
       restaurarEsquema: (objetivo, archivo, base, opts) =>
         modulos.respaldos.restaurarEsquema(objetivo, archivo, base, opts),
+      entregarBase: (objetivo, base, usuario) => bd.entregarBase(objetivo, base, usuario),
       plantillas,
       mailpit: async () => {
         if ((await instalador.instalados('mailpit')).length === 0) return null;
@@ -2178,7 +2208,9 @@ export class Nucleo {
           ejecutar: () => {
             if (usada) return Promise.reject(new Error('Esta receta preparada ya se usó.'));
             usada = true;
-            return this.recetas.ejecutar(sitioId, { receta: r.receta });
+            return this.conSecretos(sitioId, { receta: r.receta }).then((op) =>
+              this.recetas.ejecutar(sitioId, op),
+            );
           },
         };
       },
@@ -2277,8 +2309,23 @@ export class Nucleo {
   }
 
   /** Ejecuta la receta (exige `confiado`); el avance llega por `receta:progreso`. */
-  ejecutarReceta(sitioId: string, opciones: OpcionesReceta = {}): Promise<ResultadoReceta> {
-    return this.recetas.ejecutar(sitioId, opciones);
+  async ejecutarReceta(sitioId: string, opciones: OpcionesReceta = {}): Promise<ResultadoReceta> {
+    return this.recetas.ejecutar(sitioId, await this.conSecretos(sitioId, opciones));
+  }
+
+  /**
+   * La clave del usuario propio de la base de un proyecto (si el proceso principal tiene una) va
+   * a la corrida de la receta, solo en memoria. Una que ya traen las opciones manda.
+   */
+  private async conSecretos(sitioId: string, opciones: OpcionesReceta): Promise<OpcionesReceta> {
+    if (opciones.secretos?.claveBd) return opciones;
+    const claveBd = await this.proveedorClaveBd(sitioId).catch(() => null);
+    return claveBd ? { ...opciones, secretos: { ...opciones.secretos, claveBd } } : opciones;
+  }
+
+  /** Quien da la clave del usuario de la base de cada proyecto (el proceso principal). */
+  fijarProveedorClaveBd(fn: (sitioId: string) => Promise<string | null>): void {
+    this.proveedorClaveBd = fn;
   }
 
   /** Marca el paso como omitido y sigue desde el siguiente. */
@@ -2795,12 +2842,13 @@ export class Nucleo {
    * `receta:progreso`). Nunca pisa una carpeta con archivos; si un paso falla no borra nada y el
    * resultado dice qué quedó creado.
    */
-  crearProyecto(p: PedidoProyecto): Promise<ResultadoCrearProyecto> {
+  crearProyecto(p: PedidoProyecto, o: OpcionesCrearProyecto = {}): Promise<ResultadoCrearProyecto> {
     return crearProyecto(
       {
         rutas: this.rutas,
         crearSitio: (datos, receta) => this.crearSitioProyecto(datos, receta),
-        ejecutarReceta: (id, receta) => this.recetas.ejecutar(id, { receta }),
+        ejecutarReceta: (id, receta, secretos?: SecretosReceta) =>
+          this.recetas.ejecutar(id, { receta, ...(secretos ? { secretos } : {}) }),
         estadoReceta: (id) => this.recetas.estado(id),
         sitios: () => this.sitios.listar(),
         basesDe: async (objetivo) => (await this.bd.listar(objetivo)).map((b) => b.nombre),
@@ -2835,7 +2883,93 @@ export class Nucleo {
         },
       },
       p,
+      o,
     );
+  }
+
+  /**
+   * "Usar usuario propio": crea para un proyecto que ya existe un usuario de base limitado a SU
+   * base (todos los permisos de esa base y nada más: sin FILE, SUPER, GRANT OPTION ni otras bases)
+   * y lo pone en el `.env` (con copia previa y escritura atómica). Solo MySQL y MariaDB locales de
+   * WolfCore Dev. La clave la genera el proceso principal; `guardarClave` la guarda en
+   * `AlmacenSecretos` antes de crear el usuario. El núcleo no la guarda ni la devuelve.
+   */
+  async usarUsuarioPropio(
+    sitioId: string,
+    o: {
+      claveBd: string;
+      guardarClave: () => Promise<void>;
+      aceptarVersionado?: boolean;
+    },
+    confirmado: true,
+  ): Promise<{ usuario: string; copia: string | null }> {
+    if (confirmado !== true) {
+      throw new ErrorWolf(
+        'env.sin_confirmar',
+        'Confirme que quiere cambiar el usuario de la base en el .env.',
+      );
+    }
+    const sitio = await this.sitioPorId(sitioId);
+    const b = await leerBaseDelProyecto(sitio.carpeta).catch(() => null);
+    if (!b) {
+      throw new ErrorWolf(
+        'env.sin_base',
+        'El .env de este proyecto no apunta a una base de datos.',
+      );
+    }
+    if (b.host && !/^(127\.0\.0\.1|localhost|\[?::1\]?)$/i.test(b.host)) {
+      throw new ErrorWolf(
+        'env.base_no_resuelta',
+        'La base de este proyecto no es de un servidor local de WolfCore Dev.',
+      );
+    }
+    if (b.motor === 'postgresql') {
+      throw new ErrorWolf(
+        'env.motor_no_soportado',
+        'Por ahora "Usar usuario propio" funciona con MySQL y MariaDB.',
+      );
+    }
+    if (esUsuarioDeProyecto(b.usuario)) {
+      throw new ErrorWolf('env.ya_usa_usuario_propio', 'Este proyecto ya usa un usuario propio.');
+    }
+    const objetivo = await this.objetivoDeServidor(b.motor, b.puerto);
+    if (!objetivo) {
+      throw new ErrorWolf(
+        'env.base_no_resuelta',
+        'No se pudo saber de qué servidor local es la base del proyecto.',
+      );
+    }
+    const usuario = usuarioDeProyecto(b.base);
+    const r = await this.env.ponerUsuarioBd(sitioId, usuario, o.claveBd, {
+      ...(o.aceptarVersionado ? { aceptarVersionado: true } : {}),
+      // Con el `.env` listo para escribirse: primero se guarda la clave y luego se crea el usuario.
+      antes: async () => {
+        await o.guardarClave();
+        await this.bd.crear(objetivo, b.base, {
+          usuario,
+          clave: o.claveBd,
+          cambiarClave: true,
+        });
+      },
+    });
+    return { usuario, copia: r.copia };
+  }
+
+  /** Servidor local (instancia por puerto) de un motor SQL, o null si ninguno lo usa. */
+  private async objetivoDeServidor(
+    motor: 'mysql' | 'mariadb' | 'postgresql',
+    puerto: number | null,
+  ): Promise<ObjetivoBd | null> {
+    const familia: string[] = motor === 'postgresql' ? ['postgresql'] : ['mysql', 'mariadb'];
+    const estados = (await this.servicios.estados()).filter((e) => familia.includes(e.id));
+    // Sin puerto declarado: el motor predeterminado (si está apagado, lo dice BasesDeDatos).
+    if (puerto === null) return motor;
+    for (const e of estados) {
+      const instancia = e.instancias?.find((i) => i.puerto === puerto);
+      if (instancia) return instancia.id;
+      if (e.puertos.includes(puerto)) return e.id as MotorBd;
+    }
+    return null;
   }
 
   private importadorAjeno: Importador | undefined;

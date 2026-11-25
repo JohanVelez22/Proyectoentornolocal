@@ -6,7 +6,14 @@ import type { MotorBd } from '../../bd/env';
 import { NOMBRE_SERVICIO } from '../../servicios/definicion';
 import { existe, leerTexto } from '../archivos';
 import type { ContextoPaso, ImplementacionPaso } from '../pasos';
-import { argsDe, comprobarSenal, nombreBase, objetivoDe, type DepsPasos } from './comun';
+import {
+  argsDe,
+  comprobarSenal,
+  nombreBase,
+  objetivoDe,
+  usuarioDelPaso,
+  type DepsPasos,
+} from './comun';
 import { sello } from './env';
 
 const CLAVES_SAL = [
@@ -33,7 +40,13 @@ async function conexionDe(ctx: ContextoPaso, d: DepsPasos, motoresOk: readonly M
     );
   }
   const base = nombreBase(ctx.sitio, argsDe(ctx));
-  const x = await d.bd.conexion(objetivo);
+  const x = { ...(await d.bd.conexion(objetivo)) };
+  // Con usuario propio, la clave llega por `ctx.secretos`; sin ella falla antes de escribir.
+  const propio = usuarioDelPaso(ctx);
+  if (propio) {
+    x.usuario = propio.usuario;
+    x.clave = propio.clave;
+  }
   for (const v of [base, x.usuario, x.clave ?? '']) {
     if (/[\r\n\0]/.test(v)) throw new Error('Valor no válido para el archivo de configuración.');
   }

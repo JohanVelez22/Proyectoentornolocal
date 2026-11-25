@@ -463,6 +463,26 @@ export class ClientePostgres {
   }
 
   /**
+   * Pasa la base y los objetos que restauró un esquema (hoy del rol sin login `wolf_dueno_…`) al
+   * usuario propio del proyecto, que no es superusuario ni tiene roles `pg_*`: así el proyecto
+   * puede usar las tablas que trajo la plantilla.
+   */
+  async entregarBase(base: string, usuario: string): Promise<void> {
+    validarNombrePg(base);
+    if (ROLES_RESERVADOS.includes(usuario) || /^pg_/i.test(usuario)) {
+      throw errorUsuarioPrivilegiado(usuario);
+    }
+    const dueno = rolDuenoDe(base);
+    const rol = id(usuario);
+    const hay = await this.filas('SELECT 1 AS n FROM pg_roles WHERE rolname = $1', [dueno]);
+    await this.filas(`ALTER DATABASE ${id(base)} OWNER TO ${rol}`);
+    if (hay.length === 0) return;
+    await this.enBase(base, async (q) => {
+      await q.query(`REASSIGN OWNED BY ${id(dueno)} TO ${rol}`);
+    });
+  }
+
+  /**
    * Revisa el catálogo de `base` después de restaurar: disparadores de evento, funciones
    * SECURITY DEFINER (solo en importadas), extensiones fuera de `permitidas`, foráneos y
    * lenguajes que no sean SQL ni plpgsql. Devuelve lo que encontró (vacío si está limpio).

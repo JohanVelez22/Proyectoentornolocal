@@ -201,6 +201,23 @@ export const es = {
       'proyectos.paso_no_omitible': 'El paso "Crear el sitio" no se puede omitir.',
       'proyectos.carpeta_no_vacia':
         'La carpeta del proyecto ya tiene archivos: elija otra o vacíela.',
+      'proyectos.clave_bd_falta':
+        'Falta la clave del usuario {usuario}: no se escribió nada. Use "Usar usuario propio" en el gestor de .env.',
+      'env.archivo_grande': 'El archivo de variables es demasiado grande (máximo {maximo}).',
+      'env.no_regular': 'El archivo .env no es un archivo normal: no se lee ni se modifica.',
+      'env.clave_inexistente': 'La variable {clave} no existe.',
+      'env.cambio_invalido': 'Un cambio del .env no es válido ({clave}).',
+      'env.sin_confirmar': 'Confirme que quiere guardar los cambios del .env.',
+      'env.versionado':
+        'Git ya sigue el .env de este proyecto: el próximo commit subiría sus valores. Confirme aparte para continuar.',
+      'env.versionado_desconocido':
+        'No se pudo comprobar si git sigue el .env de este proyecto: confirme aparte para continuar.',
+      'env.copia_invalida': 'La copia del .env no es válida o ya no existe.',
+      'env.sin_base': 'El .env de este proyecto no tiene una conexión a una base de datos.',
+      'env.base_no_resuelta':
+        'La base de este proyecto no es de un servidor local de WolfCore Dev: no se cambió nada.',
+      'env.motor_no_soportado': 'Por ahora "Usar usuario propio" funciona con MySQL y MariaDB.',
+      'env.ya_usa_usuario_propio': 'Este proyecto ya usa un usuario propio.',
       'plantillas.id_invalido': 'El identificador de la plantilla no es válido.',
       'plantillas.no_existe': 'La plantilla no existe.',
       'plantillas.danada':

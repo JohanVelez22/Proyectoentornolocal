@@ -213,14 +213,18 @@ const ID_SITIO = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 /** Copias del .env que se guardan por sitio (las más viejas se borran). */
 export const MAX_RESPALDOS_ENV = 5;
 
-function validarSitio(sitioId: string): void {
+export function validarSitio(sitioId: string): void {
   if (typeof sitioId !== 'string' || !ID_SITIO.test(sitioId) || sitioId.includes('..')) {
     throw new Error('Id de sitio no válido.');
   }
 }
 
 /** Copia con fecha en `carpetaRespaldos` (fuera del proyecto: nunca acaba en el repositorio). */
-async function respaldar(ruta: string, carpetaRespaldos: string, prefijo: string): Promise<string> {
+export async function respaldar(
+  ruta: string,
+  carpetaRespaldos: string,
+  prefijo: string,
+): Promise<string> {
   await mkdir(carpetaRespaldos, { recursive: true });
   const nombre = `${prefijo}-${sello(new Date())}-${randomBytes(3).toString('hex')}.respaldo`;
   const destino = path.join(carpetaRespaldos, nombre);
@@ -229,7 +233,7 @@ async function respaldar(ruta: string, carpetaRespaldos: string, prefijo: string
 }
 
 /** Copias `env-<sitio>-…` (las de un sitio, o todas), de la más vieja a la más nueva. */
-async function copiasEnv(carpetaRespaldos: string, sitioId?: string): Promise<string[]> {
+export async function copiasEnv(carpetaRespaldos: string, sitioId?: string): Promise<string[]> {
   let nombres: string[];
   try {
     nombres = await readdir(carpetaRespaldos);

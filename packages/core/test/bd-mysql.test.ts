@@ -212,7 +212,7 @@ describe('ClienteMysql', () => {
         (q) => q.sql === 'CREATE DATABASE IF NOT EXISTS `mi_bd` CHARACTER SET utf8mb4',
       ),
     ).toBe(true);
-    expect(consultas.some((q) => q.sql.includes('GRANT ALL PRIVILEGES ON `mi_bd`.*'))).toBe(true);
+    expect(consultas.some((q) => q.sql.includes('GRANT ALL PRIVILEGES ON `mi\\_bd`.*'))).toBe(true);
     expect(consultas.some((q) => q.sql.includes('CREATE USER') && q.params?.includes('x'))).toBe(
       true,
     );

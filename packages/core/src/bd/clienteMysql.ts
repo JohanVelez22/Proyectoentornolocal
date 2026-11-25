@@ -285,6 +285,9 @@ export class ClienteMysql {
 
   async crearBase(nombre: string, opts: OpcionesCrearBaseMotor = {}): Promise<ResultadoCrearBase> {
     const bd = id(nombre);
+    // En GRANT, `_` y `%` del nombre de la base son comodines: se escapan para que el permiso sea
+    // solo de esta base y no de las que se le parezcan (`mi_app` y `miXapp`).
+    const bdGrant = '`' + nombre.replace(/_/g, '\\_') + '`';
     noSistema(nombre, 'crear');
     const { usuario, clave } = opts;
     if (usuario !== undefined) {
@@ -354,14 +357,14 @@ export class ClienteMysql {
             usuario,
             clave,
           ]);
-          await this.filas(`GRANT ALL PRIVILEGES ON ${bd}.* TO ?@'${host}'`, [usuario]);
+          await this.filas(`GRANT ALL PRIVILEGES ON ${bdGrant}.* TO ?@'${host}'`, [usuario]);
         }
         return { usuarioActualizado: false };
       }
       // Usuario existente: permisos a SUS cuentas; no se crean otras (una 'app'@'localhost'
       // nueva taparía a la 'app'@'%' que ya usa el proyecto).
       for (const host of hostsExistentes) {
-        await this.filas(`GRANT ALL PRIVILEGES ON ${bd}.* TO ?@?`, [usuario, host]);
+        await this.filas(`GRANT ALL PRIVILEGES ON ${bdGrant}.* TO ?@?`, [usuario, host]);
       }
       if (!opts.cambiarClave) {
         return {

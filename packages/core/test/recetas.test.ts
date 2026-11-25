@@ -883,3 +883,44 @@ describe('args.carpeta de un paso (QA 2)', () => {
     expect(m.contextos).toHaveLength(1);
   });
 });
+
+describe('secretos de la receta (clave del usuario propio de la base)', () => {
+  const CENTINELA = 'centinela-secreta-d';
+
+  it('el paso recibe los secretos de la corrida; no quedan en el estado, el registro ni los eventos', async () => {
+    const m = await montar();
+    m.registro.registrar('comando', async (ctx) => {
+      ctx.linea(`conectando con ${ctx.secretos?.claveBd}`);
+      if (ctx.paso.id === 'dos') throw new Error(`falló con ${ctx.secretos?.claveBd}`);
+    });
+    const r = await m.ejecutor.ejecutar(m.s.id, { secretos: { claveBd: CENTINELA } });
+    expect(r.estado).toBe('error');
+    expect(JSON.stringify(r)).not.toContain(CENTINELA);
+    expect(JSON.stringify(m.ejecutor.estado(m.s.id))).not.toContain(CENTINELA);
+    expect(JSON.stringify(m.progreso)).not.toContain(CENTINELA);
+    expect(JSON.stringify(m.terminadas)).not.toContain(CENTINELA);
+    const guardado = await readFile(m.rutas.receta(m.s.id), 'utf8');
+    expect(guardado).not.toContain(CENTINELA);
+    for (const f of await readdir(join(m.base, 'run'))) {
+      expect(await readFile(join(m.base, 'run', f), 'utf8')).not.toContain(CENTINELA);
+    }
+    expect(JSON.stringify(m.progreso)).toContain('••••');
+  });
+
+  it('una clave que viene en los argumentos del paso no se guarda en el estado', async () => {
+    const m = await montar({
+      receta: [
+        { id: 'uno', tipo: 'comando', titulo: 'Uno', args: { usuario: 'u', clave: CENTINELA } },
+      ],
+    });
+    await m.ejecutor.ejecutar(m.s.id, {});
+    expect(m.contextos[0]!.paso.args).toEqual({ usuario: 'u' });
+    expect(await readFile(m.rutas.receta(m.s.id), 'utf8')).not.toContain(CENTINELA);
+  });
+
+  it('sin secretos, ctx.secretos no existe', async () => {
+    const m = await montar();
+    await m.ejecutor.ejecutar(m.s.id, {});
+    expect(m.contextos[0]!.secretos).toBeUndefined();
+  });
+});

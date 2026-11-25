@@ -315,6 +315,15 @@ export class BasesDeDatos {
     };
   }
 
+  /**
+   * Después de restaurar un esquema en una base con usuario propio: en PostgreSQL pasa la base y
+   * sus objetos a ese usuario (en MySQL y MariaDB sus permisos ya cubren toda la base).
+   */
+  async entregarBase(objetivo: ObjetivoBd, base: string, usuario: string): Promise<void> {
+    if (motorDe(objetivo) !== 'postgresql') return;
+    await this.conPostgres((c) => c.entregarBase(base, usuario), objetivo);
+  }
+
   /** Deja la base vacía: vuelta atrás de una restauración de esquema fallida. */
   async reiniciarBase(objetivo: ObjetivoBd, base: string): Promise<void> {
     if (motorDe(objetivo) === 'mongodb') throw new Error('MongoDB no se reinicia por SQL.');

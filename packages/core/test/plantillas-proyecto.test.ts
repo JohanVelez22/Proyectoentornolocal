@@ -6,7 +6,7 @@ import yauzl from 'yauzl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { carpetaTemporal } from './temporales';
 import { ErrorWolf } from '../src/errores';
-import { crearProyecto, type DepsCrearProyecto } from '../src/proyectos/crear';
+import { crearProyecto as crearProyectoReal, type DepsCrearProyecto } from '../src/proyectos/crear';
 import { revisarRequirements } from '../src/proyectos/pasos/python';
 import {
   generadorDePlantilla,
@@ -26,6 +26,14 @@ import {
 } from '../src/proyectos/plantillas';
 import type { PasoReceta } from '../src/proyectos/config';
 import type { Sitio } from '../src/tipos';
+
+/** Clave de prueba (obviamente falsa) del usuario propio de la base: la pasa el proceso principal. */
+const CLAVE_BD = 'clave-bd-prueba-falsa-0000';
+const crearProyecto = (
+  d: DepsCrearProyecto,
+  p: PedidoProyecto,
+  o: Parameters<typeof crearProyectoReal>[2] = { secretos: { claveBd: CLAVE_BD } },
+): ReturnType<typeof crearProyectoReal> => crearProyectoReal(d, p, o);
 
 vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
@@ -1345,6 +1353,8 @@ describe('I7: argumentos de la receta', () => {
       valores: { APP_NAME: 'T', NUM: 3 },
       instancia: 'mysql@8.4',
       base: 'nueva',
+      // El usuario lo pone el generador (solo el nombre; la clave nunca va en los argumentos).
+      usuario: 'wolf_u_nueva',
     });
     expect(p.find((x) => x.tipo === 'migrar')!.args).toBeUndefined();
   });

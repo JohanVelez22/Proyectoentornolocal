@@ -7,6 +7,7 @@ import { ErrorWolf } from '../errores';
 import type { Rutas } from '../rutas';
 import { TIPOS_CON_PHP, type Sitio } from '../tipos';
 import type { PasoReceta } from './config';
+import type { SecretosReceta } from './pasos';
 import { phpPorDefecto } from './detectar';
 import {
   generador,
@@ -55,7 +56,11 @@ export interface DepsCrearProyecto {
     datos: Omit<Sitio, 'id'>,
     receta: readonly PasoReceta[],
   ) => Promise<{ sitio: Sitio }>;
-  ejecutarReceta: (sitioId: string, receta: PasoReceta[]) => Promise<ResultadoReceta>;
+  ejecutarReceta: (
+    sitioId: string,
+    receta: PasoReceta[],
+    secretos?: SecretosReceta,
+  ) => Promise<ResultadoReceta>;
   /** Pasos de la receta con su estado y marcas (para saber qué quedó hecho de verdad). */
   estadoReceta: (sitioId: string) => {
     pasos: { tipo: string; estado: string; marcas?: string[] }[];
@@ -86,6 +91,17 @@ export interface DepsCrearProyecto {
   quitarConfianza?: (sitioId: string) => Promise<unknown>;
   /** Extensiones de PHP activas en una rama (para avisar de las que pide la plantilla). */
   extensionesActivas?: (rama: string) => Promise<string[]>;
+}
+
+/** Lo que el proceso principal pasa a una creación (por llamada; el núcleo no guarda nada de esto). */
+export interface OpcionesCrearProyecto {
+  /** Clave del usuario propio de la base del proyecto (la genera y la guarda el proceso principal). */
+  secretos?: SecretosReceta;
+  /**
+   * Se llama con el id del sitio recién creado y ANTES de crear el usuario de la base: el proceso
+   * principal guarda ahí la clave en `AlmacenSecretos`. Si falla, no se crea nada en la base.
+   */
+  alCrearSitio?: (sitioId: string) => Promise<void>;
 }
 
 /** `campo` es un nombre corto y legible en cualquier idioma: tipo, php, python, base, opciones. */
@@ -240,11 +256,12 @@ export async function validarCarpetaNueva(
 export async function crearProyecto(
   d: DepsCrearProyecto,
   p: PedidoProyecto,
+  o: OpcionesCrearProyecto = {},
 ): Promise<ResultadoCrearProyecto> {
   // Identificador de esta creación (siempre propio: lo que venga en el pedido no cuenta).
   const uso = randomBytes(8).toString('hex');
   try {
-    return await crearProyectoInterno(d, { ...p, uso });
+    return await crearProyectoInterno(d, { ...p, uso }, o);
   } finally {
     // La copia de trabajo de la plantilla no sobrevive a la creación.
     if (typeof p?.plantilla === 'string') {
@@ -256,6 +273,7 @@ export async function crearProyecto(
 async function crearProyectoInterno(
   d: DepsCrearProyecto,
   p: PedidoProyecto,
+  o: OpcionesCrearProyecto,
 ): Promise<ResultadoCrearProyecto> {
   let plantilla: Plantilla | null = null;
   if (p?.plantilla !== undefined) {
@@ -438,6 +456,15 @@ async function crearProyectoInterno(
   }
 
   const receta = gen.pasos({ ...pedido, opciones: { ...p.opciones } });
+  // Con usuario propio en la base hace falta su clave: se comprueba antes de crear nada.
+  const conUsuarioPropio = receta.some((x) => typeof x.args?.usuario === 'string');
+  if (conUsuarioPropio && !o.secretos?.claveBd) {
+    throw new ErrorWolf(
+      'proyectos.clave_bd_falta',
+      'Falta la clave del usuario de la base del proyecto: no se creó nada.',
+      { usuario: String(receta.find((x) => typeof x.args?.usuario === 'string')?.args?.usuario) },
+    );
+  }
 
   let creaCarpeta = false;
   if (crear) {
@@ -475,7 +502,9 @@ async function crearProyectoInterno(
 
   let resultado: ResultadoReceta;
   try {
-    resultado = await d.ejecutarReceta(sitio.id, receta);
+    // La clave se guarda antes de crear el usuario en la base: si no se puede guardar, no se crea.
+    if (conUsuarioPropio) await o.alCrearSitio?.(sitio.id);
+    resultado = await d.ejecutarReceta(sitio.id, receta, o.secretos);
   } catch (e) {
     resultado = {
       estado: 'error',
