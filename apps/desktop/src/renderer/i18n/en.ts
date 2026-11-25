@@ -155,6 +155,8 @@ export const en: Textos = {
       'bd.confirmacion_borrado': 'To delete the database {nombre}, type its exact name.',
       'bd.usuario_privilegiado':
         'User {usuario} is an administrator or a system role: choose a dedicated user for the project.',
+      'bd.usuario_en_uso':
+        'Another project already uses user {usuario}: its password is not changed so that project keeps its connection. Nothing was created.',
       'bd.rol_sin_login':
         'User {usuario} exists but cannot log in (role without LOGIN or a server access rule). Nothing was changed.',
       'bd.usuario_clave_distinta':
@@ -197,12 +199,18 @@ export const en: Textos = {
       'proyectos.paso_no_omitible': 'The "Create the site" step cannot be skipped.',
       'proyectos.carpeta_no_vacia':
         'The project folder already has files: choose another one or empty it.',
+      'secretos.sin_cifrado':
+        'System encryption is not available: the password of the dedicated user cannot be stored. Nothing was changed.',
       'proyectos.clave_bd_falta':
-        'The password for user {usuario} is missing: nothing was written. Use "Use own user" in the .env manager.',
+        'The stored password for user {usuario} is missing: nothing was written. In the .env manager, "Use own user" generates a new password.',
       'env.archivo_grande': 'The variables file is too large (maximum {maximo}).',
       'env.no_regular': 'The .env is not a regular file: it is not read or modified.',
       'env.clave_inexistente': 'The variable {clave} does not exist.',
-      'env.cambio_invalido': 'A change to the .env is not valid ({clave}).',
+      'env.cambio_invalido': 'A change to the .env is not valid.',
+      'env.variable_invalida': 'The change to variable {clave} is not valid.',
+      'env.solo_lectura': 'Variable {clave} spans several lines: edit it by hand in the file.',
+      'env.cambio_externo':
+        'The .env changed after the preview was shown: review it again before saving.',
       'env.sin_confirmar': 'Confirm that you want to save the .env changes.',
       'env.versionado':
         'Git already tracks this project’s .env: the next commit would upload its values. Confirm separately to continue.',
@@ -3288,6 +3296,8 @@ export const en: Textos = {
       quedoBase: (nombre: string) => `database ${nombre}`,
       quedoSitio: 'the site',
       avisos: 'Warnings',
+      sinUsuarioPropio:
+        'System encryption is not available: the project uses the database administrator connection. Once it is available, use "Use own user" in the .env manager.',
       editorFallo: 'The editor could not be opened.',
     },
   },
@@ -3452,6 +3462,11 @@ export const en: Textos = {
     tablaEtiqueta: '.env variables',
     sinVariables: 'The .env has no variables.',
     secretaEtiqueta: 'secret',
+    duplicadaEtiqueta: 'repeated',
+    duplicadaAyuda:
+      'This variable appears more than once in the .env: the last one is shown and changed.',
+    soloLecturaEtiqueta: 'multi-line',
+    soloLecturaAyuda: 'It spans several lines: edit it by hand in the file.',
     seQuitara: 'It will be removed when you save',
     valorNuevo: 'New value',
     valorNuevoDe: (clave: string) => `New value for ${clave}`,
@@ -3485,7 +3500,7 @@ export const en: Textos = {
     bloques: {
       titulo: 'Add a block of variables',
       ayuda:
-        'Adds that topic’s variables without passwords or keys; fill them in later in the table.',
+        'Adds only that topic’s variables that the .env is missing (existing ones are left untouched), without passwords or keys; fill them in later in the table.',
       bd: 'Database',
       correo: 'Mail',
       ia: 'AI',

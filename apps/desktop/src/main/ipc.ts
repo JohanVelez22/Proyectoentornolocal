@@ -44,6 +44,7 @@ import {
   claveEnv,
   nombreCopiaEnv,
   opcionesEnv,
+  huellaEnvPedida,
   pedidoEnv,
   carpetaExistente,
   claveIa,
@@ -238,6 +239,7 @@ export type SecretosIpc = Pick<
   | 'leerTokenGithub'
   | 'borrarTokenGithub'
   | 'hayTokenGithub'
+  | 'disponible'
 >;
 
 /**
@@ -1158,6 +1160,9 @@ const TABLA: Record<RutaIpc, Manejador> = {
   // la usa en memoria y `alCrearSitio` la guarda en el almacén (bd:<sitio>) antes de crear el usuario.
   'proyectos.crear': async (n, s, pedido) => {
     const p = validarPedidoProyecto(pedido, s.elegidas);
+    // Sin cifrado no hay dónde guardar la clave: se crea sin usuario propio (conexión del
+    // administrador, como antes) y la respuesta lo avisa. Se mira antes de crear el sitio.
+    if (!s.secretos.disponible()) return n.crearProyecto(p, { sinUsuarioPropio: true });
     const claveBd = generarClaveBd();
     const r = await sinClave(claveBd, () =>
       n.crearProyecto(p, {
@@ -1186,12 +1191,10 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'env.vistaPrevia': (n, _s, sitioId, pedido) =>
     n.env.vistaPrevia(idCorto(sitioId, 'sitio'), pedidoEnv(pedido)),
   'env.guardar': (n, _s, sitioId, pedido, opciones) =>
-    n.env.guardar(
-      idCorto(sitioId, 'sitio'),
-      pedidoEnv(pedido),
-      true,
-      opcionesEnv(opciones, ['aceptarVersionado', 'agregarGitignore']),
-    ),
+    n.env.guardar(idCorto(sitioId, 'sitio'), pedidoEnv(pedido), true, {
+      ...opcionesEnv(opciones, ['aceptarVersionado', 'agregarGitignore', 'huella']),
+      huella: huellaEnvPedida(opciones),
+    }),
   'env.copias': (n, _s, sitioId) => n.env.copias(idCorto(sitioId, 'sitio')),
   'env.restaurarCopia': (n, _s, sitioId, nombre, opciones) => {
     opcionesEnv(opciones, []);
@@ -1202,13 +1205,20 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'env.usarUsuarioPropio': async (n, s, sitioId, opciones) => {
     const id = idCorto(sitioId, 'sitio');
     const o = opcionesEnv(opciones, ['aceptarVersionado']);
+    if (!s.secretos.disponible()) {
+      throw new ErrorWolf(
+        'secretos.sin_cifrado',
+        'El cifrado del sistema no está disponible: no se puede guardar la clave del usuario propio. No se cambió nada.',
+      );
+    }
     const claveBd = generarClaveBd();
     return sinClave(claveBd, () =>
       n.usarUsuarioPropio(
         id,
         {
           claveBd,
-          guardarClave: () => s.secretos.guardar(`bd:${id}`, claveBd),
+          // La que el núcleo decida usar: la nueva o la de otro proyecto con el mismo usuario.
+          guardarClave: (clave) => s.secretos.guardar(`bd:${id}`, clave),
           ...(o.aceptarVersionado ? { aceptarVersionado: true } : {}),
         },
         true,

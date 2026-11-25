@@ -88,6 +88,19 @@ export class AlmacenSecretos {
     if (respaldo === 'basic_text') throw new Error(MENSAJE_SIN_CIFRADO);
   }
 
+  /**
+   * ¿Se pueden guardar secretos? No si safeStorage no cifra o, en Linux, usa `basic_text` (sin
+   * llavero). Se mira antes de crear algo que dependa de una clave guardada.
+   */
+  disponible(): boolean {
+    try {
+      this.exigirCifrado();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private ruta(id: IdSecreto): string {
     return path.join(this.carpeta, archivoDe(id));
   }
@@ -223,7 +236,9 @@ export const SECRETOS_NO_DISPONIBLES: Pick<
   | 'leerTokenGithub'
   | 'borrarTokenGithub'
   | 'hayTokenGithub'
+  | 'disponible'
 > = {
+  disponible: () => false,
   guardar: async () => {
     throw new Error(MENSAJE_SIN_CIFRADO);
   },

@@ -313,7 +313,9 @@ describe('ClientePostgres', () => {
     });
     expect(consultas[1]!.sql).toBe('ORDEN 1');
     expect(consultas[2]!.params).toEqual([SQL_ASIGNAR_DUENO, 'App"Rol']);
-    expect(consultas[3]!.sql).toBe('ORDEN 3');
+    // Dentro de la base, el administrador fija search_path: un esquema ajeno no tapa pg_catalog.
+    expect(consultas[3]!.sql).toBe('SET search_path = pg_catalog, pg_temp');
+    expect(consultas[4]!.sql).toBe('ORDEN 3');
     // el DO corre conectado a la base restaurada
     expect(conexiones.at(-1)!.base).toBe('mi_bd');
     expect(conexiones.at(-1)!.cerrada).toBe(true);
@@ -578,5 +580,117 @@ describe('ClientePostgres: roles privilegiados y sin login (ronda de seguridad)'
       });
     }
     expect(consultas).toHaveLength(0);
+  });
+});
+
+describe('ClientePostgres: usuario de proyecto wolf_u_ (revisión de D16)', () => {
+  const cx = { host: '127.0.0.1', puerto: 5432, usuario: 'postgres', clave: CLAVE };
+  type Rol = { priv?: boolean; miembro?: number };
+  const montar = (rol: Rol | null = null, fallaGrant = false) => {
+    const consultas: { sql: string; params?: unknown[]; base?: string }[] = [];
+    const alCrear: number[] = [];
+    const cliente = new ClientePostgres(async (c) => ({
+      query: async (sql: string, params?: unknown[]) => {
+        consultas.push({ sql, params, base: c.base });
+        if (sql.includes('FROM pg_roles')) {
+          return {
+            rows: rol
+              ? [
+                  {
+                    n: 1,
+                    login: true,
+                    super: false,
+                    priv: rol.priv ?? false,
+                    miembro: rol.miembro ?? 0,
+                  },
+                ]
+              : [{ n: 0 }],
+          };
+        }
+        if (sql.startsWith('SELECT format(')) return { rows: [{ s: `ORDEN ${consultas.length}` }] };
+        if (fallaGrant && sql.startsWith('GRANT CONNECT')) throw new Error('sin permiso');
+        return { rows: [] };
+      },
+      end: async () => undefined,
+    }));
+    return { cliente, consultas, alCrear };
+  };
+
+  it('I6: con usuario, la base queda cerrada a PUBLIC y abierta solo a su usuario', async () => {
+    const { cliente, consultas } = montar();
+    await cliente.conectar(cx);
+    await cliente.crearBase('tienda', { usuario: 'wolf_u_tienda', clave: 'clave-prueba-falsa' });
+    const sqls = consultas.map((q) => q.sql);
+    const iBd = sqls.findIndex((s) => s.startsWith('CREATE DATABASE "tienda"'));
+    const iRevoke = sqls.indexOf('REVOKE CONNECT, TEMPORARY ON DATABASE "tienda" FROM PUBLIC');
+    const iGrant = sqls.indexOf('GRANT CONNECT, TEMPORARY ON DATABASE "tienda" TO "wolf_u_tienda"');
+    expect(iBd).toBeGreaterThanOrEqual(0);
+    expect(iRevoke).toBeGreaterThan(iBd);
+    expect(iGrant).toBeGreaterThan(iRevoke);
+  });
+
+  it('I6: entregarBase también cierra la base a PUBLIC', async () => {
+    const { cliente, consultas } = montar();
+    await cliente.conectar(cx);
+    await cliente.entregarBase('tienda', 'wolf_u_tienda');
+    const sqls = consultas.map((q) => q.sql);
+    expect(sqls).toContain('REVOKE CONNECT, TEMPORARY ON DATABASE "tienda" FROM PUBLIC');
+    expect(sqls).toContain('GRANT CONNECT, TEMPORARY ON DATABASE "tienda" TO "wolf_u_tienda"');
+  });
+
+  it('I6: las conexiones del administrador a otra base fijan search_path = pg_catalog, pg_temp', async () => {
+    const { cliente, consultas } = montar();
+    await cliente.conectar(cx);
+    await cliente.tieneTablas('tienda').catch(() => undefined);
+    const enLaBase = consultas.filter((q) => q.base === 'tienda');
+    expect(enLaBase[0]?.sql).toBe('SET search_path = pg_catalog, pg_temp');
+  });
+
+  it('menor 2: la clave de un wolf_u_ viaja como verificador SCRAM, nunca en claro', async () => {
+    const { cliente, consultas } = montar();
+    await cliente.conectar(cx);
+    await cliente.crearBase('tienda', { usuario: 'wolf_u_tienda', clave: 'centinela-secreta-d' });
+    const format = consultas.find((q) => q.sql.includes("'CREATE ROLE"));
+    expect(String(format?.params?.[1])).toMatch(/^SCRAM-SHA-256\$4096:/);
+    expect(JSON.stringify(consultas)).not.toContain('centinela-secreta-d');
+  });
+
+  it('menor 1: un wolf_u_ existente con CREATEROLE/CREATEDB/BYPASSRLS/REPLICATION o miembro de un rol se rechaza', async () => {
+    for (const rol of [{ priv: true }, { miembro: 1 }]) {
+      for (const cambiarClave of [false, true]) {
+        const { cliente, consultas } = montar(rol);
+        await cliente.conectar(cx);
+        await expect(
+          cliente.crearBase('tienda', {
+            usuario: 'wolf_u_tienda',
+            clave: 'clave-prueba-falsa',
+            cambiarClave,
+          }),
+        ).rejects.toMatchObject({ codigo: 'bd.usuario_privilegiado' });
+        expect(
+          consultas.some(
+            (q) => /^(CREATE|ALTER|GRANT|REVOKE)/.test(q.sql) || q.sql.includes("'ALTER ROLE"),
+          ),
+        ).toBe(false);
+      }
+    }
+  });
+
+  it('I4: alCrearBase se llama tras CREATE DATABASE aunque luego falle el permiso', async () => {
+    const { cliente, consultas } = montar(null, true);
+    await cliente.conectar(cx);
+    const marcas: string[] = [];
+    await expect(
+      cliente.crearBase('tienda', {
+        usuario: 'wolf_u_tienda',
+        clave: 'clave-prueba-falsa',
+        nueva: true,
+        alCrearBase: () => marcas.push(consultas.at(-1)!.sql),
+      }),
+    ).rejects.toThrow();
+    expect(marcas).toHaveLength(1);
+    expect(marcas[0]).toMatch(/^CREATE DATABASE "tienda"/);
+    // Nunca se deshace borrando la base: el reintento la retoma con la marca.
+    expect(consultas.some((q) => q.sql.startsWith('DROP'))).toBe(false);
   });
 });

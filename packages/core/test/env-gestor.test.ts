@@ -7,6 +7,7 @@ import { diffEnv } from '../src/proyectos/env/diff';
 import { aplicarCambios, diffTexto } from '../src/proyectos/env/escribir';
 import { enmascarar, esSecreta, escribirEnv, leerEnv } from '../src/proyectos/env/leer';
 import { PLANTILLAS_ENV } from '../src/proyectos/env/plantillas';
+import { respaldar } from '../src/ia/envIa';
 import type { Sitio } from '../src/tipos';
 
 /** Valor secreto de prueba: nunca debe salir de `revelar`. */
@@ -296,7 +297,7 @@ describe('GestorEnv', () => {
         .guardar(sitio.id, { cambios }, true)
         .then(() => null)
         .catch((x: unknown) => x as Error);
-      expect(e, JSON.stringify(cambios)).toMatchObject({ codigo: 'env.cambio_invalido' });
+      expect(e, JSON.stringify(cambios)).toMatchObject({ codigo: 'env.variable_invalida' });
       expect(JSON.stringify(e)).not.toContain(CENTINELA);
       expect(String((e as Error).message)).not.toContain(CENTINELA);
     }
@@ -418,5 +419,153 @@ describe('GestorEnv', () => {
       }),
     ).rejects.toMatchObject({ codigo: 'env.versionado' });
     expect(llamado).toBe(false);
+  });
+
+  /* ───── Revisión de D16 ───── */
+
+  it('I1: un bloque no pisa variables que ya existen (DB_PASSWORD, OPENAI_API_KEY, REDIS_PASSWORD)', async () => {
+    const original = `DB_HOST=10.0.0.9\nDB_PASSWORD=${CENTINELA}\nOPENAI_API_KEY=sk-prueba-falsa-0000\nREDIS_PASSWORD=secreta-redis-1234\n`;
+    await writeFile(env(), original);
+    const previa = await gestor.vistaPrevia(sitio.id, { bloques: ['bd', 'ia', 'redis'] });
+    expect(previa.diff).not.toMatch(/^-/m);
+    await gestor.guardar(sitio.id, { bloques: ['bd', 'ia', 'redis'] }, true);
+    const t = await readFile(env(), 'utf8');
+    expect(t.startsWith(original)).toBe(true);
+    expect(t).toContain(`DB_PASSWORD=${CENTINELA}`);
+    expect(t).toContain('OPENAI_API_KEY=sk-prueba-falsa-0000');
+    expect(t).toContain('REDIS_PASSWORD=secreta-redis-1234');
+    expect(t).not.toContain('REDIS_PASSWORD=null');
+    // Las que faltaban sí se agregan.
+    expect(t).toContain('DB_DATABASE=');
+    expect(t).toContain('REDIS_PORT=6379');
+  });
+
+  it('menor 3: DATABASE_URL, *_URI y *_DSN con @ son secretas en ver y en el diff', async () => {
+    await writeFile(
+      env(),
+      `DATABASE_URL=mysql://u@127.0.0.1/x?k=${CENTINELA}\nSENTRY_DSN=https://${CENTINELA}@o1.ingest.example.test/1\nAPP_URL=https://tienda.test\n`,
+    );
+    const v = await gestor.ver(sitio.id);
+    expect(JSON.stringify(v)).not.toContain(CENTINELA);
+    expect(v.filas.find((f) => f.clave === 'SENTRY_DSN')?.secreta).toBe(true);
+    expect(v.filas.find((f) => f.clave === 'APP_URL')?.secreta).toBe(false);
+    const previa = await gestor.vistaPrevia(sitio.id, {
+      cambios: { SENTRY_DSN: `https://otro-${CENTINELA}@o2.ingest.example.test/2` },
+    });
+    expect(previa.diff).not.toContain(CENTINELA);
+  });
+
+  it('menor 4: una variable multilínea se ve pero es de solo lectura, y la ida y vuelta es exacta', async () => {
+    const texto = 'A=1\nCLAVE_PEM="-----BEGIN-----\nabc\n-----END-----"\nB=2\n';
+    expect(escribirEnv(leerEnv(texto))).toBe(texto);
+    expect(
+      leerEnv(texto)
+        .filter((l) => l.tipo === 'variable')
+        .map((l) => l.clave),
+    ).toEqual(['A', 'CLAVE_PEM', 'B']);
+    await writeFile(env(), texto);
+    const v = await gestor.ver(sitio.id);
+    expect(v.filas.find((f) => f.clave === 'CLAVE_PEM')).toMatchObject({ soloLectura: true });
+    for (const cambios of [{ CLAVE_PEM: 'x' }, { CLAVE_PEM: null }]) {
+      await expect(gestor.guardar(sitio.id, { cambios }, true)).rejects.toMatchObject({
+        codigo: 'env.solo_lectura',
+        datos: { clave: 'CLAVE_PEM' },
+      });
+    }
+    await gestor.guardar(sitio.id, { cambios: { B: '3' } }, true);
+    expect(await readFile(env(), 'utf8')).toBe(texto.replace('B=2', 'B=3'));
+  });
+
+  it('menor 4: con claves repetidas se muestra, se revela y se cambia la última (y se avisa)', async () => {
+    await writeFile(env(), 'A=primero\nB=x\nA=ultimo\n');
+    const v = await gestor.ver(sitio.id);
+    expect(v.filas.filter((f) => f.clave === 'A')).toEqual([
+      expect.objectContaining({ valorVisible: 'ultimo', duplicada: true }),
+    ]);
+    expect(await gestor.revelar(sitio.id, 'A')).toBe('ultimo');
+    await gestor.guardar(sitio.id, { cambios: { A: 'nuevo' } }, true);
+    expect(await readFile(env(), 'utf8')).toBe('A=primero\nB=x\nA=nuevo\n');
+  });
+
+  it('menor 4: $ entre comillas dobles se escapa al escribir y se lee igual', async () => {
+    await writeFile(env(), 'CLAVE="vieja"\n');
+    await gestor.guardar(sitio.id, { cambios: { CLAVE: 'a$b${C}' } }, true);
+    const t = await readFile(env(), 'utf8');
+    expect(t).toBe('CLAVE="a\\$b\\${C}"\n');
+    expect(leerEnv(t)[0]).toMatchObject({ valor: 'a$b${C}' });
+    expect(await gestor.revelar(sitio.id, 'CLAVE')).toBe('a$b${C}');
+  });
+
+  it('menor 4: KEY= # nota tiene valor vacío y un valor nuevo no se pega al comentario', async () => {
+    expect(leerEnv('KEY= # nota\n')[0]).toMatchObject({ clave: 'KEY', valor: '' });
+    expect(leerEnv('KEY=#nota\n')[0]).toMatchObject({ valor: '#nota' });
+    await writeFile(env(), 'KEY= # nota\n');
+    await gestor.guardar(sitio.id, { cambios: { KEY: 'valor' } }, true);
+    const t = await readFile(env(), 'utf8');
+    expect(t).toBe('KEY=valor # nota\n');
+    expect(leerEnv(t)[0]).toMatchObject({ valor: 'valor' });
+  });
+
+  it('menor 5: ponerUsuarioBd agrega la clave si el .env tiene el usuario pero no la clave', async () => {
+    await writeFile(env(), 'DB_DATABASE=tienda\nDB_USERNAME=root\n');
+    await gestor.ponerUsuarioBd(sitio.id, 'wolf_u_tienda', 'clave-nueva-prueba-0000');
+    expect(await readFile(env(), 'utf8')).toBe(
+      'DB_DATABASE=tienda\nDB_USERNAME=wolf_u_tienda\nDB_PASSWORD=clave-nueva-prueba-0000\n',
+    );
+  });
+
+  it('menor 6: guardar con la huella de la vista previa; si el .env cambió por fuera, env.cambio_externo', async () => {
+    await writeFile(env(), 'A=1\n');
+    const { huella } = await gestor.vistaPrevia(sitio.id, { cambios: { A: '2' } });
+    expect(huella).toMatch(/^[0-9a-f]{64}$/);
+    expect((await gestor.ver(sitio.id)).huella).toBe(huella);
+    await writeFile(env(), 'A=1\nB=lo-escribio-otro\n');
+    await expect(
+      gestor.guardar(sitio.id, { cambios: { A: '2' } }, true, { huella }),
+    ).rejects.toMatchObject({ codigo: 'env.cambio_externo' });
+    expect(await readFile(env(), 'utf8')).toBe('A=1\nB=lo-escribio-otro\n');
+    const otra = await gestor.vistaPrevia(sitio.id, { cambios: { A: '2' } });
+    await gestor.guardar(sitio.id, { cambios: { A: '2' } }, true, { huella: otra.huella });
+    expect(await readFile(env(), 'utf8')).toBe('A=2\nB=lo-escribio-otro\n');
+  });
+
+  it('menor 6: si antes() falla, el .gitignore no se toca', async () => {
+    await writeFile(env(), 'A=1\n');
+    await writeFile(path.join(proyecto, '.gitignore'), 'vendor/\n');
+    await expect(
+      gestor.guardar(sitio.id, { cambios: { A: '2' } }, true, {
+        agregarGitignore: true,
+        antes: async () => {
+          throw new Error('no se pudo crear el usuario');
+        },
+      }),
+    ).rejects.toThrow(/usuario/);
+    expect(await readFile(path.join(proyecto, '.gitignore'), 'utf8')).toBe('vendor/\n');
+    expect(await readFile(env(), 'utf8')).toBe('A=1\n');
+  });
+
+  it('menor 7: env.cambio_invalido sin variable no lleva {clave}; con variable, env.variable_invalida', async () => {
+    await writeFile(env(), 'A=1\n');
+    const muchos = Object.fromEntries(Array.from({ length: 201 }, (_, i) => [`V${i}`, 'x']));
+    const e = await gestor
+      .guardar(sitio.id, { cambios: muchos }, true)
+      .catch((x: unknown) => x as { codigo: string; datos?: unknown });
+    expect(e).toMatchObject({ codigo: 'env.cambio_invalido' });
+    expect((e as { datos?: unknown }).datos ?? {}).toEqual({});
+    await expect(
+      gestor.guardar(sitio.id, { cambios: { 'MAL NOMBRE': 'x' } }, true),
+    ).rejects.toMatchObject({ codigo: 'env.variable_invalida', datos: { clave: 'MAL NOMBRE' } });
+  });
+});
+
+describe.skipIf(process.platform === 'win32')('copias del .env en POSIX (I5)', () => {
+  it('la carpeta de copias queda en 0700 y cada copia en 0600', async () => {
+    const proyecto = await carpetaTemporal('pel-env-modo-');
+    const carpeta = path.join(await carpetaTemporal('pel-env-modo-resp-'), 'respaldos', 'env');
+    await mkdir(carpeta, { recursive: true, mode: 0o755 });
+    await writeFile(path.join(proyecto, '.env'), `DB_PASSWORD=${CENTINELA}\n`, { mode: 0o644 });
+    const copia = await respaldar(path.join(proyecto, '.env'), carpeta, 'env-tienda-test');
+    expect((await stat(carpeta)).mode & 0o777).toBe(0o700);
+    expect((await stat(copia)).mode & 0o777).toBe(0o600);
   });
 });

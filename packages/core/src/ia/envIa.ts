@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { copyFile, lstat, mkdir, readdir, readFile, rm } from 'node:fs/promises';
+import { chmod, copyFile, lstat, mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { valorEnv, type EstiloEnv } from '../bd/env';
 import { ErrorWolf } from '../errores';
@@ -219,16 +219,28 @@ export function validarSitio(sitioId: string): void {
   }
 }
 
-/** Copia con fecha en `carpetaRespaldos` (fuera del proyecto: nunca acaba en el repositorio). */
+/**
+ * Copia con fecha en `carpetaRespaldos` (fuera del proyecto: nunca acaba en el repositorio). Lleva
+ * valores en claro: en POSIX la carpeta queda en 0700 y la copia en 0600 (en Windows, el modo no
+ * aplica y la carpeta hereda los permisos de la de datos del usuario).
+ */
 export async function respaldar(
   ruta: string,
   carpetaRespaldos: string,
   prefijo: string,
 ): Promise<string> {
-  await mkdir(carpetaRespaldos, { recursive: true });
+  await mkdir(carpetaRespaldos, { recursive: true, mode: 0o700 });
+  // Una carpeta que ya existía (de antes) también se cierra.
+  await chmod(carpetaRespaldos, 0o700).catch(() => undefined);
   const nombre = `${prefijo}-${sello(new Date())}-${randomBytes(3).toString('hex')}.respaldo`;
   const destino = path.join(carpetaRespaldos, nombre);
   await copyFile(ruta, destino);
+  try {
+    await chmod(destino, 0o600);
+  } catch (e) {
+    await rm(destino, { force: true });
+    throw e;
+  }
   return destino;
 }
 

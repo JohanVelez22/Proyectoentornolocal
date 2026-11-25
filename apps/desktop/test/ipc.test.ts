@@ -1155,6 +1155,7 @@ describe('IPC de la Etapa B', () => {
       borrar: vi.fn(async () => undefined),
       hay: vi.fn(() => false),
       estado: vi.fn(async () => ({ configurada: false, final: null })),
+      disponible: vi.fn(() => true),
     };
   }
 
@@ -1676,6 +1677,26 @@ describe('IPC de la Etapa B', () => {
         alCrearSitio: expect.any(Function),
       },
     );
+  });
+
+  it('I3: proyectos.crear sin cifrado disponible crea sin usuario propio y sin generar clave', async () => {
+    const secretos = secretosFalsos();
+    secretos.disponible.mockReturnValue(false);
+    const { f, llamar } = montar({ secretos });
+    const padre = temporal();
+    sistema.elegirCarpeta.mockResolvedValueOnce(padre);
+    await llamar('sistema.elegirCarpeta');
+    const pedido = {
+      tipo: 'laravel',
+      nombre: 'tienda',
+      carpetaPadre: padre,
+      php: '8.4',
+      base: { instancia: 'mysql@8.4', nombre: 'tienda' },
+      opciones: {},
+    };
+    expect((await llamar('proyectos.crear', pedido)).ok).toBe(true);
+    expect(f['crearProyecto']).toHaveBeenCalledWith(expect.any(Object), { sinUsuarioPropio: true });
+    expect(secretos.guardar).not.toHaveBeenCalled();
   });
 
   it('proyectos.crear rechaza pedidos mal formados sin llamar al núcleo', async () => {
@@ -2459,6 +2480,7 @@ describe('IPC del gestor de .env', () => {
     const guardadas = new Map<string, string>();
     const secretos = {
       guardadas,
+      disponible: vi.fn(() => true),
       guardar: vi.fn(async (id: string, v: string) => void guardadas.set(id, v)),
       leer: vi.fn(async (id: string) => guardadas.get(id) ?? null),
       borrar: vi.fn(async (id: string) => void guardadas.delete(id)),
@@ -2492,8 +2514,16 @@ describe('IPC del gestor de .env', () => {
     const pedido = { cambios: { A: '1', B: null }, desdeEjemplo: ['C'], bloques: ['redis'] };
     await llamar('env.vistaPrevia', 's1', pedido);
     expect(env['vistaPrevia']).toHaveBeenCalledWith('s1', pedido);
-    await llamar('env.guardar', 's1', pedido, { confirmado: true, aceptarVersionado: true });
-    expect(env['guardar']).toHaveBeenCalledWith('s1', pedido, true, { aceptarVersionado: true });
+    const huella = 'a'.repeat(64);
+    await llamar('env.guardar', 's1', pedido, {
+      confirmado: true,
+      aceptarVersionado: true,
+      huella,
+    });
+    expect(env['guardar']).toHaveBeenCalledWith('s1', pedido, true, {
+      aceptarVersionado: true,
+      huella,
+    });
     await llamar('env.restaurarCopia', 's1', 'env-s1-x.respaldo', { confirmado: true });
     expect(env['restaurarCopia']).toHaveBeenCalledWith('s1', 'env-s1-x.respaldo', true);
   });
@@ -2509,6 +2539,42 @@ describe('IPC del gestor de .env', () => {
     expect(env['guardar']).not.toHaveBeenCalled();
     expect(env['restaurarCopia']).not.toHaveBeenCalled();
     expect(f['usarUsuarioPropio']).not.toHaveBeenCalled();
+  });
+
+  it('menor 6: env.guardar exige la huella de la vista previa (64 hex)', async () => {
+    const { llamar, env } = montarEnv();
+    for (const huella of [undefined, '', 'x', 'A'.repeat(64), 7]) {
+      const r = await llamar(
+        'env.guardar',
+        's1',
+        { cambios: { A: '1' } },
+        { confirmado: true, huella },
+      );
+      expect(r.ok, String(huella)).toBe(false);
+    }
+    expect(env['guardar']).not.toHaveBeenCalled();
+  });
+
+  it('I3: usar usuario propio sin cifrado disponible: secretos.sin_cifrado y el núcleo no se entera', async () => {
+    const { llamar, f, secretos } = montarEnv();
+    secretos.disponible.mockReturnValue(false);
+    const r = await llamar('env.usarUsuarioPropio', 's1', { confirmado: true });
+    expect(r.ok).toBe(false);
+    expect(r.error?.codigo).toBe('secretos.sin_cifrado');
+    expect(f['usarUsuarioPropio']).not.toHaveBeenCalled();
+    expect(secretos.guardar).not.toHaveBeenCalled();
+  });
+
+  it('I2: usar usuario propio guarda la clave que el núcleo decide usar (la reutilizada)', async () => {
+    const { llamar, f, secretos } = montarEnv();
+    f['usarUsuarioPropio']!.mockImplementation(
+      async (_id: string, o: { guardarClave: (c: string) => Promise<void> }) => {
+        await o.guardarClave('clave-de-otro-sitio');
+        return { usuario: 'wolf_u_x', copia: null };
+      },
+    );
+    expect((await llamar('env.usarUsuarioPropio', 's1', { confirmado: true })).ok).toBe(true);
+    expect(secretos.guardadas.get('bd:s1')).toBe('clave-de-otro-sitio');
   });
 
   it('rechaza pedidos mal formados sin llamar al núcleo ni repetir el valor en el error', async () => {
@@ -2540,9 +2606,9 @@ describe('IPC del gestor de .env', () => {
     const { llamar, f, secretos } = montarEnv();
     let clave = '';
     f['usarUsuarioPropio']!.mockImplementation(
-      async (_id: string, o: { claveBd: string; guardarClave: () => Promise<void> }) => {
+      async (_id: string, o: { claveBd: string; guardarClave: (c: string) => Promise<void> }) => {
         clave = o.claveBd;
-        await o.guardarClave();
+        await o.guardarClave(o.claveBd);
         return { usuario: 'wolf_u_x', copia: 'env-s1.respaldo' };
       },
     );

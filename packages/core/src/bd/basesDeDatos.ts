@@ -40,6 +40,8 @@ export interface OpcionesCrearBase {
   cambiarClave?: boolean;
   /** La base debe ser nueva: si ya existe falla con `proyectos.base_existe`. */
   nueva?: boolean;
+  /** Justo después de crear la base (no si ya existía); ver `OpcionesCrearBaseMotor`. */
+  alCrearBase?: () => void;
 }
 
 export type ResultadoCrear = ResultadoCrearBase | ResultadoCrearBasePg;

@@ -50,6 +50,8 @@ const nuevoValor = ref('');
 
 const confirmando = ref(false);
 const diffTexto = ref('');
+/** Huella del .env que mostró la vista previa: guardar falla si cambió por fuera entretanto. */
+const huellaVista = ref('');
 const aceptarVersionado = ref(false);
 const agregarGitignore = ref(false);
 
@@ -171,6 +173,7 @@ async function revisar(): Promise<void> {
   });
   if (!r) return;
   diffTexto.value = r.diff;
+  huellaVista.value = r.huella;
   aceptarVersionado.value = false;
   agregarGitignore.value = false;
   confirmando.value = true;
@@ -187,6 +190,7 @@ async function guardar(): Promise<void> {
         pedido(),
         plano({
           confirmado: true as const,
+          huella: huellaVista.value,
           ...(aceptarVersionado.value ? { aceptarVersionado: true } : {}),
           ...(agregarGitignore.value ? { agregarGitignore: true } : {}),
         }),

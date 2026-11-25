@@ -52,7 +52,7 @@ import { PathUsuario, respaldoPathUsuario } from './herramientas/pathUsuario';
 import { abrirArchivoDelSitio, abrirEnVsCode } from './herramientas/editor';
 import { Terminal } from './herramientas/terminal';
 import { ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
-import { bloqueEnvIa } from './ia/envIa';
+import { bloqueEnvIa, limpiarRespaldosEnv } from './ia/envIa';
 import { GestorIa } from './ia/gestorIa';
 import { completarPlataforma, crearPlataforma } from './plataforma/index';
 import type { IdTerminal, PlataformaCompleta, TerminalDisponible } from './plataforma/tipos';
@@ -182,6 +182,7 @@ import {
 } from './proyectos/crear';
 import { GestorEnv } from './proyectos/env/gestor';
 import { esUsuarioDeProyecto, usuarioDeProyecto } from './bd/usuarioProyecto';
+import { errorUsuarioEnUso } from './bd/clienteMysql';
 import type { SecretosReceta } from './proyectos/pasos';
 import { VERSION_WORDPRESS, type PedidoProyecto } from './proyectos/generadores';
 import { RegistroPasos } from './proyectos/pasos';
@@ -1303,6 +1304,7 @@ export class Nucleo {
       restaurarEsquema: (objetivo, archivo, base, opts) =>
         modulos.respaldos.restaurarEsquema(objetivo, archivo, base, opts),
       entregarBase: (objetivo, base, usuario) => bd.entregarBase(objetivo, base, usuario),
+      usuarioBdEnUso: (usuario, sitioId) => nucleoRef.usuarioBdEnUso(usuario, sitioId),
       plantillas,
       mailpit: async () => {
         if ((await instalador.instalados('mailpit')).length === 0) return null;
@@ -2898,7 +2900,8 @@ export class Nucleo {
     sitioId: string,
     o: {
       claveBd: string;
-      guardarClave: () => Promise<void>;
+      /** Guarda en `AlmacenSecretos` la clave que va a usar el proyecto (la nueva o la reutilizada). */
+      guardarClave: (clave: string) => Promise<void>;
       aceptarVersionado?: boolean;
     },
     confirmado: true,
@@ -2929,7 +2932,12 @@ export class Nucleo {
         'Por ahora "Usar usuario propio" funciona con MySQL y MariaDB.',
       );
     }
-    if (esUsuarioDeProyecto(b.usuario)) {
+    // Ya usa un usuario propio: solo se vuelve a generar si falta su clave guardada (se creó sin
+    // cifrado disponible o se perdió); si la tiene, no hay nada que hacer.
+    if (
+      esUsuarioDeProyecto(b.usuario) &&
+      (await this.proveedorClaveBd(sitioId).catch(() => null))
+    ) {
       throw new ErrorWolf('env.ya_usa_usuario_propio', 'Este proyecto ya usa un usuario propio.');
     }
     const objetivo = await this.objetivoDeServidor(b.motor, b.puerto);
@@ -2940,19 +2948,48 @@ export class Nucleo {
       );
     }
     const usuario = usuarioDeProyecto(b.base);
-    const r = await this.env.ponerUsuarioBd(sitioId, usuario, o.claveBd, {
+    // Otro proyecto con la misma base ya usa este usuario: su clave nunca se cambia (lo dejaría sin
+    // conexión). Se reutiliza la que tiene guardada, y `crear` la comprueba contra el servidor.
+    let clave = o.claveBd;
+    let reutilizada = false;
+    for (const otro of await this.otrosConUsuarioBd(usuario, sitioId)) {
+      const suya = await this.proveedorClaveBd(otro.id).catch(() => null);
+      if (suya) {
+        clave = suya;
+        reutilizada = true;
+        break;
+      }
+      throw errorUsuarioEnUso(usuario);
+    }
+    const r = await this.env.ponerUsuarioBd(sitioId, usuario, clave, {
       ...(o.aceptarVersionado ? { aceptarVersionado: true } : {}),
       // Con el `.env` listo para escribirse: primero se guarda la clave y luego se crea el usuario.
       antes: async () => {
-        await o.guardarClave();
+        await o.guardarClave(clave);
         await this.bd.crear(objetivo, b.base, {
           usuario,
-          clave: o.claveBd,
-          cambiarClave: true,
+          clave,
+          ...(reutilizada ? {} : { cambiarClave: true }),
         });
       },
     });
     return { usuario, copia: r.copia };
+  }
+
+  /** Otros proyectos (no `excluir`) cuyo `.env` usa este usuario de base. */
+  private async otrosConUsuarioBd(usuario: string, excluir: string): Promise<Sitio[]> {
+    const salida: Sitio[] = [];
+    for (const s of await this.sitios.listar()) {
+      if (s.id === excluir) continue;
+      const b = await leerBaseDelProyecto(s.carpeta).catch(() => null);
+      if (b && b.usuario.toLowerCase() === usuario.toLowerCase()) salida.push(s);
+    }
+    return salida;
+  }
+
+  /** ¿Otro proyecto (no `sitioId`) usa ya este usuario de base en su `.env`? */
+  async usuarioBdEnUso(usuario: string, sitioId: string): Promise<boolean> {
+    return (await this.otrosConUsuarioBd(usuario, sitioId)).length > 0;
   }
 
   /** Servidor local (instancia por puerto) de un motor SQL, o null si ninguno lo usa. */
@@ -3253,6 +3290,10 @@ export class Nucleo {
     await this.procesos.detenerSitio(id);
     await this.ftp.desactivarSitio(id).catch(() => undefined);
     await this.sitios.borrar(id);
+    // Sus copias del .env llevan valores en claro: no se quedan para otro sitio con el mismo id.
+    await limpiarRespaldosEnv(this.rutas.respaldosEnv(), id).catch((e) => {
+      console.error('No se pudieron borrar las copias del .env del sitio borrado:', mensajeDe(e));
+    });
     const aplicar = await this.sitios.aplicar();
     // Nginx ya no lo sirve: se apaga su PHP propio (si tenía) y se borra su ini.
     await this.poolsSitio.sincronizar().catch((e) => {

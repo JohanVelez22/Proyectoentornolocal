@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { lstat, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { leerBaseDelProyecto } from '../../bd/baseProyecto';
@@ -16,7 +17,7 @@ import type { Sitio } from '../../tipos';
 import { estiloDe as estiloDeTipo } from '../pasos/env';
 import { diffEnv, type DiffEnv } from './diff';
 import { aplicarCambios, diffTexto, validarCambios, type CambiosEnv } from './escribir';
-import { enmascarar, esSecreta, escribirEnv, leerEnv } from './leer';
+import { enmascarar, esSecreta, escribirEnv, leerEnv, type LineaEnv } from './leer';
 import {
   BLOQUES_ENV,
   PLANTILLAS_ENV,
@@ -37,6 +38,10 @@ export interface FilaEnv {
   secreta: boolean;
   /** El valor está vacío (no hay nada que mostrar). */
   vacia: boolean;
+  /** Está definida más de una vez: se muestra y se cambia la última. */
+  duplicada?: boolean;
+  /** Ocupa varias líneas: no se cambia ni se quita desde aquí. */
+  soloLectura?: boolean;
 }
 
 export interface VistaEnv {
@@ -49,6 +54,8 @@ export interface VistaEnv {
   gitignore: EstadoGitignore;
   /** Copias que guardó WolfCore Dev de este `.env`. */
   copias: number;
+  /** Huella del `.env` leído: `guardar` la exige igual (nadie lo cambió por fuera entretanto). */
+  huella: string;
 }
 
 /** Lo que se quiere cambiar: variables a mano, valores tomados del ejemplo y bloques de plantilla. */
@@ -64,6 +71,11 @@ export interface OpcionesGuardarEnv {
   aceptarVersionado?: boolean;
   /** Agrega `.env` al `.gitignore` (con copia previa). */
   agregarGitignore?: boolean;
+  /**
+   * Huella del `.env` que se mostró (`ver` o `vistaPrevia`): si el archivo cambió desde entonces,
+   * no se guarda (`env.cambio_externo`). El IPC la exige siempre.
+   */
+  huella?: string;
   /**
    * Solo para el núcleo: corre después de todas las comprobaciones y justo antes de copiar y
    * escribir (p. ej. crear el usuario de la base solo cuando el `.env` seguro se puede escribir).
@@ -101,6 +113,13 @@ async function leerArchivo(ruta: string): Promise<string | null> {
   const datos = await readFile(ruta);
   if (datos.length > MAX_BYTES_ENV) throw grande();
   return datos.toString('utf8');
+}
+
+/** Huella del contenido del `.env` (o de que no existe). */
+export function huellaEnv(texto: string | null): string {
+  return createHash('sha256')
+    .update(texto === null ? '!sin-archivo' : `=${texto}`)
+    .digest('hex');
 }
 
 /** Nombres de copia de este sitio: `env-<sitio>-AAAAMMDD-HHmmss-mmm-xxxxxx.respaldo`. */
@@ -145,19 +164,25 @@ export class GestorEnv {
     const s = await this.sitioExistente(sitioId);
     const texto = await leerArchivo(path.join(s.carpeta, '.env'));
     const ejemplo = await this.ejemplo(s.carpeta);
-    const filas: FilaEnv[] = [];
-    const vistas = new Set<string>();
+    // Una fila por variable, en el orden de su primera aparición y con el valor de la última
+    // (la que se cambia al guardar).
+    const ultimas = new Map<string, { l: LineaEnv; veces: number }>();
     for (const l of leerEnv(texto ?? '')) {
-      if (l.tipo !== 'variable' || vistas.has(l.clave!)) continue;
-      vistas.add(l.clave!);
+      if (l.tipo !== 'variable') continue;
+      const previa = ultimas.get(l.clave!);
+      ultimas.set(l.clave!, { l, veces: (previa?.veces ?? 0) + 1 });
+    }
+    const filas: FilaEnv[] = [...ultimas.values()].map(({ l, veces }) => {
       const secreta = esSecreta(l.clave!, l.valor!);
-      filas.push({
+      return {
         clave: l.clave!,
         valorVisible: secreta ? enmascarar(l.valor!) : l.valor!,
         secreta,
         vacia: l.valor === '',
-      });
-    }
+        ...(veces > 1 ? { duplicada: true } : {}),
+        ...(l.multilinea ? { soloLectura: true } : {}),
+      };
+    });
     return {
       existe: texto !== null,
       filas,
@@ -168,6 +193,7 @@ export class GestorEnv {
       hayEjemplo: ejemplo !== null,
       gitignore: await estadoGitignore(s.carpeta, { versionado: this.d.versionado }),
       copias: (await copiasEnv(this.d.carpetaRespaldos(), s.id)).length,
+      huella: huellaEnv(texto),
     };
   }
 
@@ -175,7 +201,8 @@ export class GestorEnv {
   async revelar(sitioId: string, clave: string): Promise<string> {
     const s = await this.sitioExistente(sitioId);
     const texto = await leerArchivo(path.join(s.carpeta, '.env'));
-    const l = leerEnv(texto ?? '').find((x) => x.tipo === 'variable' && x.clave === clave);
+    // La última definición, la misma que muestra `ver`.
+    const l = leerEnv(texto ?? '').findLast((x) => x.tipo === 'variable' && x.clave === clave);
     if (typeof clave !== 'string' || !l) {
       throw new ErrorWolf('env.clave_inexistente', 'La variable no existe en el .env.', {
         clave: typeof clave === 'string' ? clave.slice(0, 40) : '',
@@ -185,8 +212,13 @@ export class GestorEnv {
   }
 
   /** Cambios del pedido ya resueltos (ejemplo y bloques incluidos) y validados. */
-  private async resolver(s: Sitio, p: PedidoEnv): Promise<CambiosEnv> {
+  private async resolver(s: Sitio, p: PedidoEnv, texto: string | null): Promise<CambiosEnv> {
     const cambios: CambiosEnv = {};
+    const actuales = new Set(
+      leerEnv(texto ?? '')
+        .filter((l) => l.tipo === 'variable')
+        .map((l) => l.clave!),
+    );
     for (const b of p.bloques ?? []) {
       if (!BLOQUES_ENV.includes(b)) {
         throw new ErrorWolf('env.cambio_invalido', 'El bloque de variables no existe.');
@@ -205,7 +237,11 @@ export class GestorEnv {
           : null,
         ...puertos,
       };
-      Object.assign(cambios, PLANTILLAS_ENV[b](contexto));
+      // Un bloque solo agrega las variables que faltan: nunca pisa una que ya está (una clave
+      // escrita por el usuario no se vacía).
+      for (const [k, v] of Object.entries(PLANTILLAS_ENV[b](contexto))) {
+        if (!actuales.has(k) && !(k in cambios)) cambios[k] = v;
+      }
     }
     if (p.desdeEjemplo !== undefined && p.desdeEjemplo.length > 0) {
       const ejemplo = await this.ejemplo(s.carpeta);
@@ -230,7 +266,7 @@ export class GestorEnv {
 
   private async preparar(s: Sitio, p: PedidoEnv) {
     const texto = await leerArchivo(path.join(s.carpeta, '.env'));
-    const cambios = await this.resolver(s, p);
+    const cambios = await this.resolver(s, p, texto);
     const antes = leerEnv(texto ?? '');
     const despues = aplicarCambios(antes, cambios, (clave) =>
       estiloDeTipo(s.tipo, clave.includes('.') ? 'database.default.x =' : (texto ?? '')),
@@ -239,10 +275,10 @@ export class GestorEnv {
   }
 
   /** Lo que cambiaría, con los secretos enmascarados. No escribe nada. */
-  async vistaPrevia(sitioId: string, p: PedidoEnv): Promise<{ diff: string }> {
+  async vistaPrevia(sitioId: string, p: PedidoEnv): Promise<{ diff: string; huella: string }> {
     const s = await this.sitioExistente(sitioId);
-    const { antes, despues } = await this.preparar(s, p);
-    return { diff: diffTexto(antes, despues) };
+    const { texto, antes, despues } = await this.preparar(s, p);
+    return { diff: diffTexto(antes, despues), huella: huellaEnv(texto) };
   }
 
   /**
@@ -262,6 +298,12 @@ export class GestorEnv {
     const s = await this.sitioExistente(sitioId);
     return this.serializar(async () => {
       const { texto, despues } = await this.preparar(s, p);
+      if (o.huella !== undefined && o.huella !== huellaEnv(texto)) {
+        throw new ErrorWolf(
+          'env.cambio_externo',
+          'El .env cambió desde que se mostró: vuelva a revisarlo antes de guardar.',
+        );
+      }
       const versionado = await this.d.versionado(s.carpeta);
       if (versionado !== false && o.aceptarVersionado !== true) {
         throw new ErrorWolf(
@@ -273,12 +315,14 @@ export class GestorEnv {
       }
       const destino = path.join(s.carpeta, '.env');
       const carpetaRespaldos = this.d.carpetaRespaldos();
+      // Primero lo que puede fallar del núcleo (p. ej. crear el usuario de la base): si falla, el
+      // .gitignore tampoco se toca.
+      await o.antes?.();
       let gitignoreAgregado = false;
       if (o.agregarGitignore === true && !(await estadoGitignore(s.carpeta)).ignoraEnv) {
         await agregarEnvAGitignore(s.carpeta, carpetaRespaldos);
         gitignoreAgregado = true;
       }
-      await o.antes?.();
       let copia: string | null = null;
       if (texto !== null) copia = await respaldar(destino, carpetaRespaldos, `env-${s.id}`);
       await escribirAtomico(destino, Buffer.from(escribirEnv(despues), 'utf8'));
@@ -306,11 +350,19 @@ export class GestorEnv {
         .map((l) => [l.clave!, l.valor!] as const),
     );
     const cambios: CambiosEnv = {};
-    for (const [nombres, valor] of [
-      [['DB_USERNAME', 'DB_USER', 'database.default.username'], usuario],
-      [['DB_PASSWORD', 'DB_PASS', 'database.default.password'], clave],
+    // Cada variable de usuario con su pareja de clave: si el .env tiene el usuario pero no la
+    // clave (servidor sin contraseña), la clave se agrega.
+    for (const [nombreUsuario, nombreClave] of [
+      ['DB_USERNAME', 'DB_PASSWORD'],
+      ['DB_USER', 'DB_PASS'],
+      ['database.default.username', 'database.default.password'],
     ] as const) {
-      for (const n of nombres) if (vars.has(n)) cambios[n] = valor;
+      if (vars.has(nombreUsuario)) {
+        cambios[nombreUsuario] = usuario;
+        cambios[nombreClave] = clave;
+      } else if (vars.has(nombreClave)) {
+        cambios[nombreClave] = clave;
+      }
     }
     const url = vars.get('DATABASE_URL');
     if (url) {

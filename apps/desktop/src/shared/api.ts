@@ -705,11 +705,18 @@ export interface ApiEntorno {
     ver(sitioId: string): Promise<VistaEnv>;
     /** El valor completo de UNA variable (el botón "Mostrar"). */
     revelar(sitioId: string, clave: string): Promise<string>;
-    vistaPrevia(sitioId: string, pedido: PedidoEnv): Promise<{ diff: string }>;
+    /** El diff enmascarado y la huella del .env que se comparó (`guardar` la exige). */
+    vistaPrevia(sitioId: string, pedido: PedidoEnv): Promise<{ diff: string; huella: string }>;
     guardar(
       sitioId: string,
       pedido: PedidoEnv,
-      opciones: { confirmado: true; aceptarVersionado?: boolean; agregarGitignore?: boolean },
+      opciones: {
+        confirmado: true;
+        /** La de `vistaPrevia`: si el .env cambió desde entonces, falla con `env.cambio_externo`. */
+        huella: string;
+        aceptarVersionado?: boolean;
+        agregarGitignore?: boolean;
+      },
     ): Promise<{ copia: string | null; gitignoreAgregado: boolean }>;
     /** Copias de este .env (nombres, de la más nueva a la más vieja). */
     copias(sitioId: string): Promise<string[]>;

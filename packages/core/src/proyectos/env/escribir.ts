@@ -11,10 +11,13 @@ export const MAX_CAMBIOS_ENV = 200;
 
 /** Valida los cambios pedidos (nombres, valores de una línea y cantidad). Nunca repite un valor. */
 export function validarCambios(cambios: unknown): CambiosEnv {
+  // Con la variable, su propio código (el texto la nombra); sin ella, uno que no la pide.
   const invalido = (clave?: string): ErrorWolf =>
-    new ErrorWolf('env.cambio_invalido', 'Un cambio del .env no es válido.', {
-      ...(clave ? { clave: clave.slice(0, 40) } : {}),
-    });
+    clave
+      ? new ErrorWolf('env.variable_invalida', 'Un cambio del .env no es válido.', {
+          clave: clave.slice(0, 40),
+        })
+      : new ErrorWolf('env.cambio_invalido', 'Un cambio del .env no es válido.');
   if (typeof cambios !== 'object' || cambios === null || Array.isArray(cambios)) throw invalido();
   const salida: CambiosEnv = {};
   const entradas = Object.entries(cambios as Record<string, unknown>);
@@ -36,6 +39,10 @@ export function validarCambios(cambios: unknown): CambiosEnv {
 /** Valor listo para escribir respetando las comillas que la variable ya usaba. */
 function formatear(valor: string, previas: '"' | "'" | null, estilo: EstiloEnv): string {
   try {
+    if (previas === '"' && estilo === 'ci4' && /\$\{[A-Za-z0-9_.]+\}/.test(valor)) {
+      // DotEnv de CodeIgniter 4 reemplaza ${NOMBRE} también entre comillas dobles.
+      throw new Error('${…} en CodeIgniter 4');
+    }
     if (previas === '"' && estilo !== 'literal') {
       const escapado = valor.replace(/[\\"]/g, '\\$&');
       return `"${estilo === 'dotenv' ? escapado.replace(/\$/g, '\\$') : escapado}"`;
@@ -59,15 +66,29 @@ export function aplicarCambios(
 ): LineaEnv[] {
   let salida = lineas.map((l) => ({ ...l }));
   const eol = lineas.some((l) => l.crudo.endsWith('\r\n')) ? '\r\n' : '\n';
+  const soloLectura = (clave: string): ErrorWolf =>
+    new ErrorWolf(
+      'env.solo_lectura',
+      'La variable ocupa varias líneas: edítela a mano en el archivo.',
+      { clave: clave.slice(0, 40) },
+    );
   for (const [clave, valor] of Object.entries(cambios)) {
+    const definiciones = salida.filter((l) => l.tipo === 'variable' && l.clave === clave);
     if (valor === null) {
+      if (definiciones.some((l) => l.multilinea)) throw soloLectura(clave);
       salida = salida.filter((l) => !(l.tipo === 'variable' && l.clave === clave));
       continue;
     }
-    const i = salida.findIndex((l) => l.tipo === 'variable' && l.clave === clave);
+    // Repetida: cuenta la última (la que ganan dotenv de Node y Python); es la que se muestra y se
+    // cambia, y la interfaz avisa que hay más.
+    const i = salida.findLastIndex((l) => l.tipo === 'variable' && l.clave === clave);
     const estilo = estiloDe(clave);
     if (i >= 0) {
       const l = salida[i]!;
+      if (l.multilinea) {
+        if (l.valor === valor) continue;
+        throw soloLectura(clave);
+      }
       const fin = /\r?\n$/.exec(l.crudo)?.[0] ?? '';
       const bom = l.crudo.startsWith('﻿') ? '﻿' : '';
       const nuevo = formatear(valor, l.comillas ?? null, estilo);
@@ -109,7 +130,8 @@ function lineaDiff(clave: string, valor: string): string {
 export function diffTexto(antes: readonly LineaEnv[], despues: readonly LineaEnv[]): string {
   const valores = (ls: readonly LineaEnv[]): Map<string, string> => {
     const m = new Map<string, string>();
-    for (const l of ls) if (l.tipo === 'variable' && !m.has(l.clave!)) m.set(l.clave!, l.valor!);
+    // Como en `ver`: si se repite, cuenta la última definición.
+    for (const l of ls) if (l.tipo === 'variable') m.set(l.clave!, l.valor!);
     return m;
   };
   const a = valores(antes);

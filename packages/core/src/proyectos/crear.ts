@@ -47,6 +47,11 @@ export interface ResultadoCrearProyecto {
   creado: CreadoProyecto;
   /** Avisos que no impiden el proyecto (p. ej. el proceso no arrancó). */
   avisos: string[];
+  /**
+   * El proyecto se creó con la conexión del administrador porque no había dónde guardar la clave
+   * de un usuario propio (cifrado del sistema no disponible). Se cambia luego con "Usar usuario propio".
+   */
+  sinUsuarioPropio?: boolean;
 }
 
 export interface DepsCrearProyecto {
@@ -102,6 +107,19 @@ export interface OpcionesCrearProyecto {
    * principal guarda ahí la clave en `AlmacenSecretos`. Si falla, no se crea nada en la base.
    */
   alCrearSitio?: (sitioId: string) => Promise<void>;
+  /**
+   * No hay dónde guardar la clave (el cifrado del sistema no está disponible): el proyecto se crea
+   * sin usuario propio, con la conexión del administrador como antes de D16.
+   */
+  sinUsuarioPropio?: boolean;
+}
+
+/** El paso sin `args.usuario`: usa la conexión del administrador del motor. */
+function sinUsuario(paso: PasoReceta): PasoReceta {
+  if (!paso.args || !('usuario' in paso.args)) return paso;
+  const { usuario: _u, ...args } = paso.args;
+  void _u;
+  return { ...paso, args };
 }
 
 /** `campo` es un nombre corto y legible en cualquier idioma: tipo, php, python, base, opciones. */
@@ -455,7 +473,10 @@ async function crearProyectoInterno(
     throw invalido('base', 'pgvector necesita una base de datos.');
   }
 
-  const receta = gen.pasos({ ...pedido, opciones: { ...p.opciones } });
+  const generada = gen.pasos({ ...pedido, opciones: { ...p.opciones } });
+  const pideUsuario = generada.some((x) => typeof x.args?.usuario === 'string');
+  // Sin cifrado no se puede guardar la clave: los pasos usan la conexión del administrador.
+  const receta = o.sinUsuarioPropio ? generada.map(sinUsuario) : generada;
   // Con usuario propio en la base hace falta su clave: se comprueba antes de crear nada.
   const conUsuarioPropio = receta.some((x) => typeof x.args?.usuario === 'string');
   if (conUsuarioPropio && !o.secretos?.claveBd) {
@@ -594,5 +615,6 @@ async function crearProyectoInterno(
     receta: resultado,
     creado: { carpeta: true, base: baseCreada, sitio: sitio.id },
     avisos,
+    ...(o.sinUsuarioPropio && pideUsuario ? { sinUsuarioPropio: true } : {}),
   };
 }

@@ -55,6 +55,12 @@ function empezarCambio(): void {
     <code class="clave">
       {{ fila.clave }}
       <span v-if="fila.secreta" class="etiqueta">{{ t.secretaEtiqueta }}</span>
+      <span v-if="fila.duplicada" class="etiqueta" :title="t.duplicadaAyuda">
+        {{ t.duplicadaEtiqueta }}
+      </span>
+      <span v-if="fila.soloLectura" class="etiqueta" :title="t.soloLecturaAyuda">
+        {{ t.soloLecturaEtiqueta }}
+      </span>
     </code>
 
     <div class="valor">
@@ -85,6 +91,7 @@ function empezarCambio(): void {
       <NInput
         v-else
         size="small"
+        :readonly="fila.soloLectura === true"
         :value="mostrado()"
         :placeholder="fila.vacia ? t.vacio : ''"
         :input-props="{ spellcheck: false, 'aria-label': t.valorDe(fila.clave) }"
@@ -113,7 +120,9 @@ function empezarCambio(): void {
         >
           {{ t.ocultar }}
         </NButton>
-        <NButton size="tiny" quaternary @click="empezarCambio">{{ t.cambiar }}</NButton>
+        <NButton v-if="!fila.soloLectura" size="tiny" quaternary @click="empezarCambio">
+          {{ t.cambiar }}
+        </NButton>
       </template>
       <NButton
         v-if="cambio !== undefined"
@@ -125,7 +134,7 @@ function empezarCambio(): void {
         {{ t.deshacer }}
       </NButton>
       <NButton
-        v-else
+        v-else-if="!fila.soloLectura"
         size="tiny"
         quaternary
         type="error"

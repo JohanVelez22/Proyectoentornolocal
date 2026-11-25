@@ -159,6 +159,8 @@ export const pt: Textos = {
       'bd.confirmacion_borrado': 'Para apagar o banco {nombre}, digite o nome exato dele.',
       'bd.usuario_privilegiado':
         'O usuário {usuario} é um administrador ou uma função do sistema: escolha um usuário próprio para o projeto.',
+      'bd.usuario_en_uso':
+        'Outro projeto já usa o usuário {usuario}: a senha dele não é alterada para não deixá-lo sem conexão. Nada foi criado.',
       'bd.rol_sin_login':
         'O usuário {usuario} existe, mas não pode fazer login (função sem LOGIN ou regra de acesso do servidor). Nada foi alterado.',
       'bd.usuario_clave_distinta':
@@ -206,12 +208,18 @@ export const pt: Textos = {
       'proyectos.paso_no_omitible': 'A etapa "Criar o site" não pode ser pulada.',
       'proyectos.carpeta_no_vacia':
         'A pasta do projeto já tem arquivos: escolha outra ou esvazie-a.',
+      'secretos.sin_cifrado':
+        'A criptografia do sistema não está disponível: não é possível guardar a senha do usuário próprio. Nada foi alterado.',
       'proyectos.clave_bd_falta':
-        'Falta a senha do usuário {usuario}: nada foi gravado. Use "Usar usuário próprio" no gerenciador de .env.',
+        'Falta a senha guardada do usuário {usuario}: nada foi gravado. No gerenciador de .env, "Usar usuário próprio" gera uma senha nova.',
       'env.archivo_grande': 'O arquivo de variáveis é grande demais (máximo {maximo}).',
       'env.no_regular': 'O .env não é um arquivo normal: não é lido nem modificado.',
       'env.clave_inexistente': 'A variável {clave} não existe.',
-      'env.cambio_invalido': 'Uma alteração do .env não é válida ({clave}).',
+      'env.cambio_invalido': 'Uma alteração do .env não é válida.',
+      'env.variable_invalida': 'A alteração da variável {clave} não é válida.',
+      'env.solo_lectura': 'A variável {clave} ocupa várias linhas: edite-a à mão no arquivo.',
+      'env.cambio_externo':
+        'O .env mudou depois que a pré-visualização foi mostrada: revise-o de novo antes de salvar.',
       'env.sin_confirmar': 'Confirme que quer salvar as alterações do .env.',
       'env.versionado':
         'O git já acompanha o .env deste projeto: o próximo commit enviaria seus valores. Confirme à parte para continuar.',
@@ -3314,6 +3322,8 @@ export const pt: Textos = {
       quedoBase: (nombre: string) => `o banco ${nombre}`,
       quedoSitio: 'o site',
       avisos: 'Avisos',
+      sinUsuarioPropio:
+        'A criptografia do sistema não está disponível: o projeto usa a conexão do administrador do banco. Quando estiver, use "Usar usuário próprio" no gerenciador de .env.',
       editorFallo: 'Não foi possível abrir o editor.',
     },
   },
@@ -3479,6 +3489,11 @@ export const pt: Textos = {
     tablaEtiqueta: 'Variáveis do .env',
     sinVariables: 'O .env não tem variáveis.',
     secretaEtiqueta: 'secreta',
+    duplicadaEtiqueta: 'repetida',
+    duplicadaAyuda:
+      'Esta variável aparece mais de uma vez no .env: a última é mostrada e alterada.',
+    soloLecturaEtiqueta: 'várias linhas',
+    soloLecturaAyuda: 'Ocupa várias linhas: edite-a à mão no arquivo.',
     seQuitara: 'Será removida ao salvar',
     valorNuevo: 'Novo valor',
     valorNuevoDe: (clave: string) => `Novo valor de ${clave}`,
@@ -3512,7 +3527,7 @@ export const pt: Textos = {
     bloques: {
       titulo: 'Adicionar um bloco de variáveis',
       ayuda:
-        'Adiciona as variáveis desse tema sem senhas nem chaves; preencha-as depois na tabela.',
+        'Adiciona só as variáveis desse tema que faltam no .env (as que já existem não são alteradas), sem senhas nem chaves; preencha-as depois na tabela.',
       bd: 'Banco de dados',
       correo: 'E-mail',
       ia: 'IA',

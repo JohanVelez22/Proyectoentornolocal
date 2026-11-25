@@ -606,6 +606,9 @@ const titulosPaso = computed(() => [t.pasos.tipo, t.pasos.datos, t.pasos.resumen
             {{ t.acciones[errorCreacion.accion] }}
           </NButton>
         </NAlert>
+        <NAlert v-if="resultado?.sinUsuarioPropio" type="warning" :bordered="false">
+          {{ t.progreso.sinUsuarioPropio }}
+        </NAlert>
         <NAlert v-if="resultado?.avisos.length" type="warning" :bordered="false">
           <strong>{{ t.progreso.avisos }}</strong>
           <p v-for="(a, i) in resultado.avisos" :key="i">{{ a }}</p>

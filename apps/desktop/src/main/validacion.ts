@@ -1290,11 +1290,24 @@ export function opcionesEnv(
   }
   const salida: { aceptarVersionado?: boolean; agregarGitignore?: boolean } = {};
   for (const k of permitidas) {
+    if (k === 'huella') continue;
     if (o[k] !== undefined) {
       (salida as Record<string, boolean>)[k] = booleano(o[k], k);
     }
   }
   return salida;
+}
+
+/**
+ * Huella del `.env` que la vista previa mostró (`env.vistaPrevia`): obligatoria para guardar, así
+ * un cambio hecho por fuera entretanto no se pisa.
+ */
+export function huellaEnvPedida(v: unknown): string {
+  const h = (v as Record<string, unknown> | null)?.['huella'];
+  if (typeof h !== 'string' || !/^[0-9a-f]{64}$/.test(h)) {
+    throw new Error('Argumento no válido: huella del .env');
+  }
+  return h;
 }
 
 /** Nombre de una copia del .env (el núcleo comprueba que sea de ese sitio). */

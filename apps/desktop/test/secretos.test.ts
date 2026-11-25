@@ -14,6 +14,7 @@ import {
   AlmacenSecretos,
   MENSAJE_SIN_CIFRADO,
   MENSAJE_TOKEN_ILEGIBLE,
+  SECRETOS_NO_DISPONIBLES,
   type CifradoSeguro,
 } from '../src/main/secretos';
 
@@ -195,6 +196,21 @@ describe('AlmacenSecretos: cifrado en texto plano (Linux sin llavero)', () => {
     mkdirSync(carpeta, { recursive: true });
     writeFileSync(path.join(carpeta, 'ia-openai.bin'), cifrado().encryptString(CLAVE));
     await expect(s.leer('ia:openai')).rejects.toThrow(MENSAJE_SIN_CIFRADO);
+  });
+
+  it('I3: disponible() dice si se puede guardar antes de crear nada (basic_text o sin cifrado: no)', () => {
+    const plano: CifradoSeguro = { ...cifrado(), getSelectedStorageBackend: () => 'basic_text' };
+    expect(new AlmacenSecretos(carpeta, viejo, plano).disponible()).toBe(false);
+    expect(new AlmacenSecretos(carpeta, viejo, cifrado(false)).disponible()).toBe(false);
+    const raro: CifradoSeguro = {
+      ...cifrado(),
+      getSelectedStorageBackend: () => {
+        throw new Error('no aplica');
+      },
+    };
+    expect(new AlmacenSecretos(carpeta, viejo, raro).disponible()).toBe(true);
+    expect(new AlmacenSecretos(carpeta, viejo, cifrado()).disponible()).toBe(true);
+    expect(SECRETOS_NO_DISPONIBLES.disponible()).toBe(false);
   });
 
   it('con un llavero real (gnome_libsecret) funciona', async () => {

@@ -51,6 +51,11 @@ export interface DepsPasos {
   ) => Promise<ResultadoRestaurar>;
   /** Pasa la base restaurada al usuario propio del proyecto (`BasesDeDatos.entregarBase`). */
   entregarBase?: (objetivo: ObjetivoBd, base: string, usuario: string) => Promise<void>;
+  /**
+   * ¿Otro proyecto (distinto de `sitioId`) usa ya este usuario de base en su `.env`? Entonces su
+   * clave no se cambia (`bd.usuario_en_uso`).
+   */
+  usuarioBdEnUso?: (usuario: string, sitioId: string) => Promise<boolean>;
   /** Plantillas de proyecto (D14): sus archivos y su esquema, ya comprobados contra su huella. */
   plantillas?: Pick<Plantillas, 'restaurarArchivos' | 'rutaEsquema'>;
   /** Puerto SMTP de Mailpit si está instalado; null si no. */
@@ -171,7 +176,7 @@ export function usuarioDelPaso(ctx: ContextoPaso): { usuario: string; clave: str
   if (typeof clave !== 'string' || clave === '') {
     throw new ErrorWolf(
       'proyectos.clave_bd_falta',
-      `Falta la clave del usuario ${usuario}: no se escribió nada. Vuelva a crear el usuario de la base desde el gestor de .env.`,
+      `Falta la clave guardada del usuario ${usuario}: no se escribió nada. En el gestor de .env, "Usar usuario propio" genera una clave nueva.`,
       { usuario },
     );
   }

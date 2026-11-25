@@ -436,6 +436,19 @@ describe('crearProyecto (sobre fakes: sin red, sin Composer, sin bases reales)',
       expect(r.receta.estado).toBe('lista');
       expect(JSON.stringify(ejecutadas[0]!.receta)).not.toContain('wolf_u_');
     });
+
+    it('I3: sin cifrado (sinUsuarioPropio) se crea con la conexión del administrador y se avisa', async () => {
+      let llamado = false;
+      const r = await crearProyecto(deps(), nuevo(), {
+        sinUsuarioPropio: true,
+        alCrearSitio: async () => void (llamado = true),
+      });
+      expect(r.receta.estado).toBe('lista');
+      expect(r.sinUsuarioPropio).toBe(true);
+      expect(llamado).toBe(false);
+      expect(JSON.stringify(ejecutadas[0]!.receta)).not.toContain('wolf_u_');
+      expect(JSON.stringify(creados[0]!.receta)).not.toContain('wolf_u_');
+    });
   });
 
   it('crea la carpeta y el sitio confiado con HTTPS y corre la receta del generador', async () => {
@@ -903,6 +916,124 @@ describe('Nucleo.crearProyecto (estático, de punta a punta)', () => {
       ).rejects.toMatchObject({ codigo: 'env.sin_confirmar' });
     });
 
+    /* ───── Revisión de D16 ───── */
+
+    /** Un proyecto estático `nombre` con este `.env`. */
+    const otroConEnv = async (n: Nucleo, nombre: string, env: string): Promise<string> => {
+      const carpeta = path.join(proyectos, nombre);
+      const r = await n.crearProyecto({
+        tipo: 'estatico',
+        nombre,
+        carpeta,
+        base: null,
+        opciones: {},
+      });
+      await writeFile(path.join(carpeta, '.env'), env);
+      return r.sitio.id;
+    };
+    /** Sustituye la creación real de la base (el motor está apagado en estas pruebas). */
+    const espiarCrear = (n: Nucleo) => {
+      const pedidos: { base: string; opts: Record<string, unknown> }[] = [];
+      (n.bd as unknown as { crear: unknown }).crear = async (
+        _o: unknown,
+        base: string,
+        opts: Record<string, unknown>,
+      ) => {
+        pedidos.push({ base, opts });
+        return { usuarioActualizado: false };
+      };
+      return pedidos;
+    };
+
+    it('I2: si otro proyecto ya usa wolf_u_<base>, se reutiliza su clave y nunca se cambia', async () => {
+      const n = await crear();
+      const a = await otroConEnv(
+        n,
+        'sitio-a',
+        'DB_CONNECTION=mysql\nDB_DATABASE=tienda\nDB_USERNAME=wolf_u_tienda\nDB_PASSWORD=clave-de-a-prueba\n',
+      );
+      const b = await otroConEnv(
+        n,
+        'sitio-b',
+        'DB_CONNECTION=mysql\nDB_DATABASE=tienda\nDB_USERNAME=root\nDB_PASSWORD=\n',
+      );
+      n.fijarProveedorClaveBd(async (id) => (id === a ? 'clave-de-a-prueba' : null));
+      const pedidos = espiarCrear(n);
+      const guardadas: string[] = [];
+      const r = await n.usarUsuarioPropio(
+        b,
+        { claveBd: 'centinela-secreta-d', guardarClave: async (c) => void guardadas.push(c) },
+        true,
+      );
+      expect(r.usuario).toBe('wolf_u_tienda');
+      expect(guardadas).toEqual(['clave-de-a-prueba']);
+      expect(pedidos).toEqual([
+        { base: 'tienda', opts: { usuario: 'wolf_u_tienda', clave: 'clave-de-a-prueba' } },
+      ]);
+      expect(await readFile(path.join(proyectos, 'sitio-b', '.env'), 'utf8')).toContain(
+        'DB_PASSWORD=clave-de-a-prueba',
+      );
+    });
+
+    it('I2: si otro proyecto lo usa y no hay clave guardada que reutilizar, bd.usuario_en_uso sin tocar nada', async () => {
+      const n = await crear();
+      await otroConEnv(
+        n,
+        'sitio-a',
+        'DB_CONNECTION=mysql\nDB_DATABASE=tienda\nDB_USERNAME=wolf_u_tienda\nDB_PASSWORD=x\n',
+      );
+      const envB = 'DB_CONNECTION=mysql\nDB_DATABASE=tienda\nDB_USERNAME=root\nDB_PASSWORD=\n';
+      const b = await otroConEnv(n, 'sitio-b', envB);
+      const pedidos = espiarCrear(n);
+      const guardadas: string[] = [];
+      await expect(
+        n.usarUsuarioPropio(
+          b,
+          { claveBd: 'centinela-secreta-d', guardarClave: async (c) => void guardadas.push(c) },
+          true,
+        ),
+      ).rejects.toMatchObject({ codigo: 'bd.usuario_en_uso' });
+      expect(pedidos).toEqual([]);
+      expect(guardadas).toEqual([]);
+      expect(await readFile(path.join(proyectos, 'sitio-b', '.env'), 'utf8')).toBe(envB);
+    });
+
+    it('I3: el .env ya usa wolf_u_ pero falta su clave guardada: se regenera', async () => {
+      const n = await crear();
+      const id = await otroConEnv(
+        n,
+        'sitio-a',
+        'DB_CONNECTION=mysql\nDB_DATABASE=tienda\nDB_USERNAME=wolf_u_tienda\nDB_PASSWORD=perdida\n',
+      );
+      const pedidos = espiarCrear(n);
+      const guardadas: string[] = [];
+      await n.usarUsuarioPropio(
+        id,
+        { claveBd: 'clave-nueva-prueba-0000', guardarClave: async (c) => void guardadas.push(c) },
+        true,
+      );
+      expect(guardadas).toEqual(['clave-nueva-prueba-0000']);
+      expect(pedidos[0]!.opts).toMatchObject({ usuario: 'wolf_u_tienda', cambiarClave: true });
+      expect(await readFile(path.join(proyectos, 'sitio-a', '.env'), 'utf8')).toContain(
+        'DB_PASSWORD=clave-nueva-prueba-0000',
+      );
+    });
+
+    it('I5: borrar un sitio borra sus copias del .env (y no las de otro)', async () => {
+      const n = await crear();
+      const id = await otroConEnv(n, 'sitio-a', 'A=1\n');
+      const carpeta = n.rutas.respaldosEnv();
+      await mkdir(carpeta, { recursive: true });
+      const suya = `env-${id}-20260101-000000-000-abcdef.respaldo`;
+      const ajena = 'env-otro-sitio-20260101-000000-000-abcdef.respaldo';
+      await writeFile(path.join(carpeta, suya), 'DB_PASSWORD=centinela-secreta-d\n');
+      await writeFile(path.join(carpeta, ajena), 'B=2\n');
+      await n.borrarSitio(id);
+      const quedan = await readdir(carpeta);
+      expect(quedan).toContain(ajena);
+      expect(quedan).not.toContain(suya);
+    });
+
     it('sin base en el .env, con un servidor ajeno o con PostgreSQL: error con código y nada se guarda', async () => {
       const n = await crear();
       const guardada: string[] = [];
@@ -921,6 +1052,8 @@ describe('Nucleo.crearProyecto (estático, de punta a punta)', () => {
           'env.ya_usa_usuario_propio',
         ],
       ];
+      // El que ya usa wolf_u_ tiene su clave guardada: no hay nada que regenerar.
+      n.fijarProveedorClaveBd(async () => 'clave-ya-guardada');
       for (const [env, codigo] of casos) {
         const id = await conEnv(n, env);
         await expect(n.usarUsuarioPropio(id, opciones(guardada), true)).rejects.toMatchObject({

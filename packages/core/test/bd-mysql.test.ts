@@ -10,7 +10,7 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ClienteMysql, validarNombreBd } from '../src/bd/clienteMysql';
+import { ClienteMysql, esPermisoDeSuBase, validarNombreBd } from '../src/bd/clienteMysql';
 import type { Ejecutor } from '../src/plataforma/tipos';
 import { Rutas } from '../src/rutas';
 import { DEFINICIONES } from '../src/servicios/datos';
@@ -597,5 +597,123 @@ describe('ClienteMysql: cuentas existentes y códigos (ronda de seguridad)', () 
       { codigo: 'bd.usuario_privilegiado' },
     );
     expect(consultas).toHaveLength(0);
+  });
+});
+
+describe('ClienteMysql: usuario de proyecto wolf_u_ (revisión de D16)', () => {
+  const cx = { host: '127.0.0.1', puerto: 3306, usuario: 'root', clave: CLAVE };
+  /** Servidor falso: `wolf_u_tienda` existe en `hosts` con estos permisos y la clave `buena`. */
+  const montar = (o: { hosts?: string[]; grants?: string[]; fallaCreateUser?: boolean } = {}) => {
+    const consultas: { sql: string; params?: unknown[] }[] = [];
+    const cliente = new ClienteMysql(async (c) => {
+      if (c.usuario === 'wolf_u_tienda' && c.clave !== 'buena') {
+        throw Object.assign(new Error('Access denied'), { code: 'ER_ACCESS_DENIED_ERROR' });
+      }
+      return {
+        query: async (sql: string, params?: unknown[]) => {
+          consultas.push({ sql, params });
+          if (sql.includes('mysql.user')) {
+            return [
+              (o.hosts ?? []).map((host) => ({ host, super_priv: 'N', grant_priv: 'N' })),
+            ] as never;
+          }
+          if (sql.startsWith('SHOW GRANTS')) {
+            return [(o.grants ?? []).map((g) => ({ 'Grants for wolf_u_tienda': g }))] as never;
+          }
+          if (o.fallaCreateUser && sql.startsWith('CREATE USER')) {
+            throw Object.assign(new Error('x'), { code: 'ER_CANNOT_USER' });
+          }
+          return [[]] as never;
+        },
+        end: async () => undefined,
+      };
+    });
+    return { cliente, consultas };
+  };
+
+  it('esPermisoDeSuBase: solo USAGE global y su base exacta, sin GRANT OPTION', () => {
+    expect(esPermisoDeSuBase('GRANT USAGE ON *.* TO `wolf_u_tienda`@`localhost`', 'tienda')).toBe(
+      true,
+    );
+    expect(
+      esPermisoDeSuBase(
+        'GRANT ALL PRIVILEGES ON `tienda`.* TO `wolf_u_tienda`@`localhost`',
+        'tienda',
+      ),
+    ).toBe(true);
+    expect(
+      esPermisoDeSuBase(
+        'GRANT ALL PRIVILEGES ON `mi\\_app`.* TO `wolf_u_mi_app`@`localhost`',
+        'mi_app',
+      ),
+    ).toBe(true);
+    for (const g of [
+      // comodín: `mi_app` sin escapar alcanza a miXapp
+      'GRANT ALL PRIVILEGES ON `mi_app`.* TO `wolf_u_mi_app`@`localhost`',
+      'GRANT ALL PRIVILEGES ON `otra`.* TO `wolf_u_mi_app`@`localhost`',
+      'GRANT SELECT ON `mysql`.* TO `wolf_u_mi_app`@`localhost`',
+      'GRANT ALL PRIVILEGES ON `mi\\_app`.* TO `wolf_u_mi_app`@`localhost` WITH GRANT OPTION',
+      'GRANT `rol_admin`@`%` TO `wolf_u_mi_app`@`localhost`',
+      "GRANT PROXY ON ''@'%' TO 'wolf_u_mi_app'@'localhost'",
+      'GRANT SELECT ON *.* TO `wolf_u_mi_app`@`localhost`',
+    ]) {
+      expect(esPermisoDeSuBase(g, 'mi_app'), g).toBe(false);
+    }
+  });
+
+  it('wolf_u_ existente con algo más que USAGE y su base: bd.usuario_privilegiado y nada cambia', async () => {
+    for (const extra of [
+      'GRANT SELECT ON `mysql`.* TO `wolf_u_tienda`@`localhost`',
+      'GRANT ALL PRIVILEGES ON `otra`.* TO `wolf_u_tienda`@`localhost`',
+      'GRANT `rol_x`@`%` TO `wolf_u_tienda`@`localhost`',
+      'GRANT ALL PRIVILEGES ON `tienda`.* TO `wolf_u_tienda`@`localhost` WITH GRANT OPTION',
+    ]) {
+      for (const cambiarClave of [true, false]) {
+        const { cliente, consultas } = montar({
+          hosts: ['localhost'],
+          grants: ['GRANT USAGE ON *.* TO `wolf_u_tienda`@`localhost`', extra],
+        });
+        await cliente.conectar(cx);
+        const e = await cliente
+          .crearBase('tienda', { usuario: 'wolf_u_tienda', clave: 'buena', cambiarClave })
+          .catch((x: unknown) => x);
+        expect((e as { codigo?: string }).codigo, extra).toBe('bd.usuario_privilegiado');
+        expect(consultas.some((q) => /^(CREATE|GRANT|ALTER)/.test(q.sql))).toBe(false);
+      }
+    }
+  });
+
+  it('wolf_u_ existente con exactamente USAGE y su base: se reutiliza y completa la cuenta que falta', async () => {
+    const { cliente, consultas } = montar({
+      hosts: ['localhost'],
+      grants: [
+        'GRANT USAGE ON *.* TO `wolf_u_tienda`@`localhost`',
+        'GRANT ALL PRIVILEGES ON `tienda`.* TO `wolf_u_tienda`@`localhost`',
+      ],
+    });
+    await cliente.conectar(cx);
+    const r = await cliente.crearBase('tienda', { usuario: 'wolf_u_tienda', clave: 'buena' });
+    expect(r.usuarioActualizado).toBe(false);
+    // Quedó a medias (solo localhost): se crea la de 127.0.0.1 con la clave ya comprobada.
+    const creados = consultas.filter((q) => q.sql.startsWith('CREATE USER'));
+    expect(creados).toHaveLength(1);
+    expect(creados[0]!.sql).toContain("'127.0.0.1'");
+    expect(consultas.some((q) => q.sql.startsWith('ALTER USER'))).toBe(false);
+  });
+
+  it('alCrearBase se llama justo después de CREATE DATABASE (nueva), antes del usuario', async () => {
+    const { cliente, consultas } = montar({ fallaCreateUser: true });
+    await cliente.conectar(cx);
+    const marcas: number[] = [];
+    await expect(
+      cliente.crearBase('tienda', {
+        usuario: 'wolf_u_tienda',
+        clave: 'buena',
+        nueva: true,
+        alCrearBase: () => marcas.push(consultas.length),
+      }),
+    ).rejects.toThrow();
+    expect(marcas).toHaveLength(1);
+    expect(consultas[marcas[0]! - 1]!.sql).toMatch(/^CREATE DATABASE `tienda`/);
   });
 });

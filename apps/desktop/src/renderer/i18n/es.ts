@@ -155,6 +155,8 @@ export const es = {
       'bd.confirmacion_borrado': 'Para borrar la base {nombre} escriba su nombre exacto.',
       'bd.usuario_privilegiado':
         'El usuario {usuario} es un administrador o un rol del sistema: elija un usuario propio para el proyecto.',
+      'bd.usuario_en_uso':
+        'Otro proyecto ya usa el usuario {usuario}: no se cambia su clave para no dejarlo sin conexión. No se creó nada.',
       'bd.rol_sin_login':
         'El usuario {usuario} existe pero no puede iniciar sesión (rol sin LOGIN o regla de acceso del servidor). No se cambió nada.',
       'bd.usuario_clave_distinta':
@@ -201,12 +203,18 @@ export const es = {
       'proyectos.paso_no_omitible': 'El paso "Crear el sitio" no se puede omitir.',
       'proyectos.carpeta_no_vacia':
         'La carpeta del proyecto ya tiene archivos: elija otra o vacíela.',
+      'secretos.sin_cifrado':
+        'El cifrado del sistema no está disponible: no se puede guardar la clave del usuario propio. No se cambió nada.',
       'proyectos.clave_bd_falta':
-        'Falta la clave del usuario {usuario}: no se escribió nada. Use "Usar usuario propio" en el gestor de .env.',
+        'Falta la clave guardada del usuario {usuario}: no se escribió nada. En el gestor de .env, "Usar usuario propio" genera una clave nueva.',
       'env.archivo_grande': 'El archivo de variables es demasiado grande (máximo {maximo}).',
       'env.no_regular': 'El archivo .env no es un archivo normal: no se lee ni se modifica.',
       'env.clave_inexistente': 'La variable {clave} no existe.',
-      'env.cambio_invalido': 'Un cambio del .env no es válido ({clave}).',
+      'env.cambio_invalido': 'Un cambio del .env no es válido.',
+      'env.variable_invalida': 'El cambio de la variable {clave} no es válido.',
+      'env.solo_lectura': 'La variable {clave} ocupa varias líneas: edítela a mano en el archivo.',
+      'env.cambio_externo':
+        'El .env cambió desde que se mostró la vista previa: revíselo de nuevo antes de guardar.',
       'env.sin_confirmar': 'Confirme que quiere guardar los cambios del .env.',
       'env.versionado':
         'Git ya sigue el .env de este proyecto: el próximo commit subiría sus valores. Confirme aparte para continuar.',
@@ -3306,6 +3314,8 @@ export const es = {
       quedoBase: (nombre: string) => `la base ${nombre}`,
       quedoSitio: 'el sitio',
       avisos: 'Avisos',
+      sinUsuarioPropio:
+        'El cifrado del sistema no está disponible: el proyecto usa la conexión del administrador de la base. Cuando lo esté, use "Usar usuario propio" en el gestor de .env.',
       editorFallo: 'No se pudo abrir el editor.',
     },
   },
@@ -3469,6 +3479,11 @@ export const es = {
     tablaEtiqueta: 'Variables del .env',
     sinVariables: 'El .env no tiene variables.',
     secretaEtiqueta: 'secreta',
+    duplicadaEtiqueta: 'repetida',
+    duplicadaAyuda:
+      'Esta variable aparece más de una vez en el .env: se muestra y se cambia la última.',
+    soloLecturaEtiqueta: 'varias líneas',
+    soloLecturaAyuda: 'Ocupa varias líneas: edítela a mano en el archivo.',
     seQuitara: 'Se quitará al guardar',
     valorNuevo: 'Valor nuevo',
     valorNuevoDe: (clave: string) => `Valor nuevo de ${clave}`,
@@ -3502,7 +3517,7 @@ export const es = {
     bloques: {
       titulo: 'Agregar un bloque de variables',
       ayuda:
-        'Agrega las variables de ese tema sin contraseñas ni claves; complételas después en la tabla.',
+        'Agrega solo las variables de ese tema que faltan en el .env (las que ya tiene no se tocan), sin contraseñas ni claves; complételas después en la tabla.',
       bd: 'Base de datos',
       correo: 'Correo',
       ia: 'IA',

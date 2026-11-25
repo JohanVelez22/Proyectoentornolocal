@@ -387,6 +387,7 @@ describe('restaurar', () => {
       expect.stringMatching(/^sql: SELECT format\('ALTER DATABASE "diamantes" OWNER TO %I'/),
       'sql: ORDEN(base)',
       'sql: SELECT format($1, $2::text) AS s',
+      'sql: SET search_path = pg_catalog, pg_temp',
       'sql: ORDEN(objetos)',
     ]);
   });

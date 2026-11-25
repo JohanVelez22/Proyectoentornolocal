@@ -65,6 +65,7 @@ export const PARAMETROS_ERROR = {
   'bd.usuario_clave_distinta': ['usuario'],
   'bd.usuario_privilegiado': ['usuario'],
   'bd.rol_sin_login': ['usuario'],
+  'bd.usuario_en_uso': ['usuario'],
   // túneles, hosts y HTTPS
   'tuneles.sitio_no_encontrado': [],
   'tuneles.cloudflared_no_instalado': [],
@@ -104,11 +105,15 @@ export const PARAMETROS_ERROR = {
   'proyectos.carpeta_no_vacia': [],
   // usuario propio de la base de cada proyecto (D16)
   'proyectos.clave_bd_falta': ['usuario'],
+  'secretos.sin_cifrado': [],
   // gestor de .env (D16)
   'env.archivo_grande': ['maximo'],
   'env.no_regular': [],
   'env.clave_inexistente': ['clave'],
-  'env.cambio_invalido': ['clave'],
+  'env.cambio_invalido': [],
+  'env.variable_invalida': ['clave'],
+  'env.solo_lectura': ['clave'],
+  'env.cambio_externo': [],
   'env.sin_confirmar': [],
   'env.versionado': [],
   'env.versionado_desconocido': [],

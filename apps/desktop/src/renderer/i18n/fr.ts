@@ -162,6 +162,8 @@ export const fr: Textos = {
       'bd.confirmacion_borrado': 'Pour supprimer la base {nombre}, tapez son nom exact.',
       'bd.usuario_privilegiado':
         'L’utilisateur {usuario} est un administrateur ou un rôle système : choisissez un utilisateur propre au projet.',
+      'bd.usuario_en_uso':
+        'Un autre projet utilise déjà l’utilisateur {usuario} : son mot de passe n’est pas modifié pour ne pas le priver de connexion. Rien n’a été créé.',
       'bd.rol_sin_login':
         'L’utilisateur {usuario} existe mais ne peut pas se connecter (rôle sans LOGIN ou règle d’accès du serveur). Rien n’a été modifié.',
       'bd.usuario_clave_distinta':
@@ -208,12 +210,19 @@ export const fr: Textos = {
       'proyectos.paso_no_omitible': 'L’étape "Créer le site" ne peut pas être ignorée.',
       'proyectos.carpeta_no_vacia':
         'Le dossier du projet contient déjà des fichiers : choisissez-en un autre ou videz-le.',
+      'secretos.sin_cifrado':
+        'Le chiffrement du système n’est pas disponible : le mot de passe de l’utilisateur dédié ne peut pas être enregistré. Rien n’a été modifié.',
       'proyectos.clave_bd_falta':
-        'Le mot de passe de l’utilisateur {usuario} est absent : rien n’a été écrit. Utilisez « Utiliser un utilisateur dédié » dans le gestionnaire de .env.',
+        'Le mot de passe enregistré de l’utilisateur {usuario} est absent : rien n’a été écrit. Dans le gestionnaire de .env, « Utiliser un utilisateur dédié » génère un nouveau mot de passe.',
       'env.archivo_grande': 'Le fichier de variables est trop volumineux (maximum {maximo}).',
       'env.no_regular': 'Le .env n’est pas un fichier normal : il n’est ni lu ni modifié.',
       'env.clave_inexistente': 'La variable {clave} n’existe pas.',
-      'env.cambio_invalido': 'Une modification du .env n’est pas valide ({clave}).',
+      'env.cambio_invalido': 'Une modification du .env n’est pas valide.',
+      'env.variable_invalida': 'La modification de la variable {clave} n’est pas valide.',
+      'env.solo_lectura':
+        'La variable {clave} occupe plusieurs lignes : modifiez-la à la main dans le fichier.',
+      'env.cambio_externo':
+        'Le .env a changé depuis l’aperçu : vérifiez-le de nouveau avant d’enregistrer.',
       'env.sin_confirmar': 'Confirmez que vous voulez enregistrer les modifications du .env.',
       'env.versionado':
         'Git suit déjà le .env de ce projet : le prochain commit enverrait ses valeurs. Confirmez séparément pour continuer.',
@@ -3383,6 +3392,8 @@ export const fr: Textos = {
       quedoBase: (nombre: string) => `la base ${nombre}`,
       quedoSitio: 'le site',
       avisos: 'Avertissements',
+      sinUsuarioPropio:
+        'Le chiffrement du système n’est pas disponible : le projet utilise la connexion de l’administrateur de la base. Dès qu’il le sera, utilisez « Utiliser un utilisateur dédié » dans le gestionnaire de .env.',
       editorFallo: 'L’éditeur n’a pas pu être ouvert.',
     },
   },
@@ -3554,6 +3565,11 @@ export const fr: Textos = {
     tablaEtiqueta: 'Variables du .env',
     sinVariables: 'Le .env n’a aucune variable.',
     secretaEtiqueta: 'secrète',
+    duplicadaEtiqueta: 'répétée',
+    duplicadaAyuda:
+      'Cette variable apparaît plus d’une fois dans le .env : la dernière est affichée et modifiée.',
+    soloLecturaEtiqueta: 'plusieurs lignes',
+    soloLecturaAyuda: 'Elle occupe plusieurs lignes : modifiez-la à la main dans le fichier.',
     seQuitara: 'Elle sera supprimée à l’enregistrement',
     valorNuevo: 'Nouvelle valeur',
     valorNuevoDe: (clave: string) => `Nouvelle valeur de ${clave}`,
@@ -3587,7 +3603,7 @@ export const fr: Textos = {
     bloques: {
       titulo: 'Ajouter un bloc de variables',
       ayuda:
-        'Ajoute les variables de ce thème sans mots de passe ni clés ; complétez-les ensuite dans le tableau.',
+        'N’ajoute que les variables de ce thème absentes du .env (celles qui existent ne sont pas modifiées), sans mots de passe ni clés ; complétez-les ensuite dans le tableau.',
       bd: 'Base de données',
       correo: 'Courrier',
       ia: 'IA',

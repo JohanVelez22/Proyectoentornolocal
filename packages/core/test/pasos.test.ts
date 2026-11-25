@@ -2198,3 +2198,74 @@ describe('plantilla importada: sin scripts de terceros', () => {
     expect(a.llamadas).toHaveLength(1);
   });
 });
+
+describe('bd-crear con usuario propio: revisión de D16', () => {
+  const CLAVE_PROPIA = 'clave-bd-prueba-falsa-0000';
+
+  it('I4: falla CREATE USER tras crear la base; el reintento con la marca completa el usuario', async () => {
+    const a = await armar();
+    let hayBase = false;
+    let falla = true;
+    a.deps.bd.listar = async () => (hayBase ? [{ nombre: 'tienda', tamanoBytes: 0 }] : []);
+    a.deps.bd.crear = async (motor, nombre, opts) => {
+      a.creadas.push({ motor, nombre, opts });
+      if (!hayBase) {
+        hayBase = true;
+        opts?.alCrearBase?.();
+      }
+      if (falla) throw new Error('CREATE USER falló');
+      return { usuarioActualizado: false };
+    };
+    secretosPaso = { claveBd: CLAVE_PROPIA };
+    const args = { motor: 'mysql', base: 'tienda', usuario: 'wolf_u_tienda', nueva: true };
+    await expect(correr(a, 'bd-crear', args)).rejects.toThrow(/CREATE USER/);
+    // La marca quedó aunque el paso falló: la base es de este proyecto.
+    expect(marcasPaso).toEqual(['base-creada']);
+    falla = false;
+    marcasPrevias = ['base-creada'];
+    secretosPaso = { claveBd: CLAVE_PROPIA };
+    await correr(a, 'bd-crear', args);
+    // El reintento no pide una base nueva: da acceso al usuario sobre la que ya está.
+    expect(a.creadas[1]).toMatchObject({
+      nombre: 'tienda',
+      opts: { usuario: 'wolf_u_tienda', clave: CLAVE_PROPIA, cambiarClave: true },
+    });
+    expect(a.creadas[1]!.opts).not.toHaveProperty('nueva');
+    expect(marcasPaso).toEqual(['base-creada']);
+  });
+
+  it('I4: una base que ya existía (sin nueva) da acceso al usuario propio que va a usar el .env', async () => {
+    const a = await armar({ basesExistentes: ['tienda'] });
+    secretosPaso = { claveBd: CLAVE_PROPIA };
+    const lineas = await correr(a, 'bd-crear', {
+      motor: 'mysql',
+      base: 'tienda',
+      usuario: 'wolf_u_tienda',
+    });
+    expect(a.creadas).toHaveLength(1);
+    expect(a.creadas[0]!.opts).toMatchObject({ usuario: 'wolf_u_tienda', clave: CLAVE_PROPIA });
+    expect(lineas.join('\n')).toMatch(/wolf_u_tienda/);
+  });
+
+  it('I2: cambiarClave solo para el wolf_u_ de ESA base', async () => {
+    const a = await armar();
+    secretosPaso = { claveBd: CLAVE_PROPIA };
+    await correr(a, 'bd-crear', { motor: 'mysql', base: 'tienda', usuario: 'wolf_u_otra' });
+    expect(a.creadas[0]!.opts).not.toHaveProperty('cambiarClave');
+  });
+
+  it('I2: si otro proyecto ya usa el usuario, falla con bd.usuario_en_uso y no crea nada', async () => {
+    const a = await armar();
+    const preguntas: [string, string][] = [];
+    a.deps.usuarioBdEnUso = async (usuario, sitioId) => {
+      preguntas.push([usuario, sitioId]);
+      return true;
+    };
+    secretosPaso = { claveBd: CLAVE_PROPIA };
+    await expect(
+      correr(a, 'bd-crear', { motor: 'mysql', base: 'tienda', usuario: 'wolf_u_tienda' }),
+    ).rejects.toMatchObject({ codigo: 'bd.usuario_en_uso', datos: { usuario: 'wolf_u_tienda' } });
+    expect(preguntas).toEqual([['wolf_u_tienda', 'tienda-test']]);
+    expect(a.creadas).toEqual([]);
+  });
+});

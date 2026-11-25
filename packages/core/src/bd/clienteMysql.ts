@@ -3,6 +3,7 @@ import { createConnection } from 'mysql2/promise';
 import { nombreDuenoMysql } from './sqlPermitido';
 import { nombreTemporal, NOMBRE_TEMPORAL, temporalVencido } from './temporales';
 import { ErrorWolf } from '../errores';
+import { esUsuarioDeProyecto } from './usuarioProyecto';
 
 export interface ConexionMysql {
   host: string;
@@ -75,6 +76,24 @@ export function esPermisoGlobal(linea: unknown): boolean {
   return !/^USAGE$/i.test(m[1]!.trim()) || /WITH\s+GRANT\s+OPTION/i.test(t);
 }
 
+/**
+ * ¿La línea de `SHOW GRANTS` es de las que puede tener un usuario de proyecto (`wolf_u_…`)? Solo
+ * `USAGE ON *.*` o permisos sobre su base exacta (con `_` escapado, sin comodines), nunca con
+ * GRANT OPTION. Un rol concedido, un PROXY, `mysql.*` u otra base no lo son.
+ */
+export function esPermisoDeSuBase(linea: unknown, base: string): boolean {
+  if (typeof linea !== 'string') return false;
+  const t = linea.trim();
+  if (/WITH\s+GRANT\s+OPTION/i.test(t)) return false;
+  if (/^GRANT\s+USAGE\s+ON\s+\*\.\*\s+TO\s/i.test(t)) return true;
+  const m =
+    /^GRANT\s+.+?\s+ON\s+(?:(?:TABLE|FUNCTION|PROCEDURE)\s+)?`((?:[^`]|``)+)`\.(?:\*|`(?:[^`]|``)+`)\s+TO\s/i.exec(
+      t,
+    );
+  if (!m) return false;
+  return m[1]!.replace(/``/g, '`').toLowerCase() === base.replace(/_/g, '\\_').toLowerCase();
+}
+
 /** Un usuario que no se puede usar para un proyecto (el administrador, un rol del sistema…). */
 export const errorUsuarioPrivilegiado = (usuario: string): ErrorWolf =>
   new ErrorWolf(
@@ -102,6 +121,17 @@ export const errorClaveDistinta = (usuario: string): ErrorWolf =>
     { usuario },
   );
 
+/**
+ * Otro proyecto ya usa este usuario de base: su clave nunca se cambia desde aquí (lo dejaría sin
+ * conexión).
+ */
+export const errorUsuarioEnUso = (usuario: string): ErrorWolf =>
+  new ErrorWolf(
+    'bd.usuario_en_uso',
+    `Otro proyecto ya usa el usuario ${usuario}: no se cambió su clave ni se creó nada.`,
+    { usuario },
+  );
+
 /** Opciones de `crearBase`. */
 export interface OpcionesCrearBaseMotor {
   usuario?: string;
@@ -110,6 +140,11 @@ export interface OpcionesCrearBaseMotor {
   cambiarClave?: boolean;
   /** Falla con `proyectos.base_existe` si la base ya existe (sin `IF NOT EXISTS`). */
   nueva?: boolean;
+  /**
+   * Se llama justo después de que `CREATE DATABASE` creó la base (no si ya existía): quien la
+   * pidió la marca como suya antes de crear el usuario y sus permisos, que aún pueden fallar.
+   */
+  alCrearBase?: () => void;
 }
 
 export interface ResultadoCrearBase {
@@ -316,13 +351,18 @@ export class ClienteMysql {
         existia = hostsExistentes.length > 0;
         // Como con rolsuper en PostgreSQL: la clave de una cuenta con privilegios globales
         // nunca se cambia desde aquí (podría ser la de otro administrador).
-        if (existia && opts.cambiarClave) {
+        // Un usuario de proyecto que ya existe solo se reutiliza si tiene exactamente USAGE y su
+        // base: nada de roles, GRANT OPTION, mysql.* ni otras bases (alguien pudo ampliarlo).
+        const deProyecto = esUsuarioDeProyecto(usuario);
+        if (existia && (opts.cambiarClave || deProyecto)) {
           if (f.some((x) => x.super_priv === 'Y' || x.grant_priv === 'Y')) {
             throw errorUsuarioPrivilegiado(usuario);
           }
           for (const host of hostsExistentes) {
             const grants = await this.filas('SHOW GRANTS FOR ?@?', [usuario, host]);
-            if (grants.some((g) => Object.values(g).some(esPermisoGlobal))) {
+            const lineas = grants.flatMap((g) => Object.values(g));
+            if (lineas.some(esPermisoGlobal)) throw errorUsuarioPrivilegiado(usuario);
+            if (deProyecto && !lineas.every((l) => esPermisoDeSuBase(l, nombre))) {
               throw errorUsuarioPrivilegiado(usuario);
             }
           }
@@ -350,6 +390,9 @@ export class ClienteMysql {
         }
         throw e;
       }
+      // Sin IF NOT EXISTS, llegar aquí es haberla creado: un fallo del usuario o de sus permisos
+      // ya no deja una base ajena para el reintento.
+      if (opts.nueva) opts.alCrearBase?.();
       if (usuario === undefined) return { usuarioActualizado: false };
       if (!existia) {
         for (const host of ['localhost', '127.0.0.1']) {
@@ -365,6 +408,18 @@ export class ClienteMysql {
       // nueva taparía a la 'app'@'%' que ya usa el proyecto).
       for (const host of hostsExistentes) {
         await this.filas(`GRANT ALL PRIVILEGES ON ${bdGrant}.* TO ?@?`, [usuario, host]);
+      }
+      // Un usuario de proyecto que quedó a medias (falló la segunda cuenta) se completa: sus dos
+      // cuentas son siempre localhost y 127.0.0.1, con la clave ya comprobada o la nueva.
+      if (esUsuarioDeProyecto(usuario)) {
+        for (const host of ['localhost', '127.0.0.1']) {
+          if (hostsExistentes.includes(host)) continue;
+          await this.filas(`CREATE USER IF NOT EXISTS ?@'${host}' IDENTIFIED BY ?`, [
+            usuario,
+            clave,
+          ]);
+          await this.filas(`GRANT ALL PRIVILEGES ON ${bdGrant}.* TO ?@'${host}'`, [usuario]);
+        }
       }
       if (!opts.cambiarClave) {
         return {

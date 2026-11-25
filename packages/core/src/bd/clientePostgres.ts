@@ -9,6 +9,7 @@ import {
   VIDA_TEMPORAL_MS,
 } from './temporales';
 import { ErrorWolf } from '../errores';
+import { esUsuarioDeProyecto } from './usuarioProyecto';
 import {
   errorClaveDistinta,
   errorRolSinLogin,
@@ -239,6 +240,8 @@ export class ClientePostgres {
     await this.conexion();
     const c = await this.fabrica({ ...this.datos!, base });
     try {
+      // Un esquema de la base (de un tercero) no puede tapar funciones del catálogo del administrador.
+      await c.query('SET search_path = pg_catalog, pg_temp');
       return await fn(c);
     } finally {
       await c.end().catch(() => undefined);
@@ -297,7 +300,7 @@ export class ClientePostgres {
       const rolConClave = async (verbo: 'CREATE ROLE' | 'ALTER ROLE'): Promise<void> => {
         const [orden] = await this.filas(
           `SELECT format('${verbo} %I LOGIN PASSWORD %L', $1::text, $2::text) AS s`,
-          [usuario, clave],
+          [usuario, esUsuarioDeProyecto(usuario!) ? hashScramSha256(clave!) : clave],
         );
         await this.filas(String(orden?.s ?? ''));
       };
@@ -311,7 +314,9 @@ export class ClientePostgres {
       }
       if (usuario !== undefined) {
         const r = await this.filas(
-          'SELECT COUNT(*) AS n, bool_and(rolcanlogin) AS login, bool_or(rolsuper) AS super ' +
+          'SELECT COUNT(*) AS n, bool_and(rolcanlogin) AS login, bool_or(rolsuper) AS super, ' +
+            'bool_or(rolcreaterole OR rolcreatedb OR rolbypassrls OR rolreplication) AS priv, ' +
+            '(SELECT COUNT(*) FROM pg_auth_members m JOIN pg_roles q ON q.oid = m.member WHERE q.rolname = $1) AS miembro ' +
             'FROM pg_roles WHERE rolname = $1',
           [usuario],
         );
@@ -319,6 +324,14 @@ export class ClientePostgres {
         // Un superusuario o un rol NOLOGIN nunca se usan ni se tocan (ni con cambiarClave):
         // nunca se hace ALTER ROLE … LOGIN sobre un rol que no podía entrar.
         if (existia && r[0]?.super === true) throw errorUsuarioPrivilegiado(usuario);
+        // Un wolf_u_ existente solo se reutiliza si no tiene nada más que su base.
+        if (
+          existia &&
+          esUsuarioDeProyecto(usuario) &&
+          (r[0]?.priv === true || Number(r[0]?.miembro ?? 0) > 0)
+        ) {
+          throw errorUsuarioPrivilegiado(usuario);
+        }
         if (existia && r[0]?.login === false) throw errorRolSinLogin(usuario);
         // Rol existente: su clave no se toca salvo pedido explícito; antes de crear nada se
         // comprueba que la indicada sea la suya.
@@ -331,9 +344,12 @@ export class ClientePostgres {
         await this.filas(
           `CREATE DATABASE ${bd}${dueno} ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'`,
         );
+        // Desde aquí la base es de esta creación: un reintento tras un fallo posterior la retoma.
+        opts.alCrearBase?.();
       } else if (usuario !== undefined) {
         await this.filas(`ALTER DATABASE ${bd} OWNER TO ${rol}`);
       }
+      if (usuario !== undefined) await this.aislarBase(nombre, usuario);
       if (usuario === undefined) return { usuarioActualizado: false };
       if (!existia) return { usuarioActualizado: false };
       if (!opts.cambiarClave) {
@@ -355,6 +371,15 @@ export class ClientePostgres {
       if (claveCambiada) err.message += ` La clave del usuario ${usuario} ya se cambió a la nueva.`;
       throw err;
     }
+  }
+
+  /**
+   * Solo el dueño entra a su base: quita CONNECT y TEMPORARY a PUBLIC y se los da al usuario
+   * (el administrador conserva su acceso por ser superusuario).
+   */
+  private async aislarBase(base: string, usuario: string): Promise<void> {
+    await this.filas(`REVOKE CONNECT, TEMPORARY ON DATABASE ${id(base)} FROM PUBLIC`);
+    await this.filas(`GRANT CONNECT, TEMPORARY ON DATABASE ${id(base)} TO ${id(usuario)}`);
   }
 
   /** Dueño actual de la base (null si no existe). */
@@ -476,6 +501,7 @@ export class ClientePostgres {
     const rol = id(usuario);
     const hay = await this.filas('SELECT 1 AS n FROM pg_roles WHERE rolname = $1', [dueno]);
     await this.filas(`ALTER DATABASE ${id(base)} OWNER TO ${rol}`);
+    await this.aislarBase(base, usuario);
     if (hay.length === 0) return;
     await this.enBase(base, async (q) => {
       await q.query(`REASSIGN OWNED BY ${id(dueno)} TO ${rol}`);
