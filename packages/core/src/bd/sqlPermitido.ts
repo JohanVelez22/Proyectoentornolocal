@@ -294,7 +294,7 @@ const PERMITIDAS_MYSQL: { re: RegExp; clase: SentenciaSql['clase'] }[] = [
   { re: /^CREATE (OR REPLACE )?FUNCTION /, clase: 'funcion' },
   { re: /^CREATE (OR REPLACE )?PROCEDURE /, clase: 'procedimiento' },
   { re: /^ALTER TABLE /, clase: 'otra' },
-  { re: /^DROP (TABLE|VIEW|TRIGGER|FUNCTION|PROCEDURE) IF EXISTS /, clase: 'otra' },
+  { re: /^DROP (TEMPORARY )?(TABLE|VIEW|TRIGGER|FUNCTION|PROCEDURE) IF EXISTS /, clase: 'otra' },
   { re: /^(START TRANSACTION|COMMIT|BEGIN)$/, clase: 'otra' },
 ];
 

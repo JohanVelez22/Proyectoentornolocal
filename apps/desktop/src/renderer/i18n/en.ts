@@ -223,6 +223,20 @@ export const en: Textos = {
       'bd.extension_no_permitida':
         'The schema asks for extension {nombre}, which is not on the allowed list: nothing was restored.',
       'bd.esquema_fallo': 'The full schema could not be restored: nothing was left half done.',
+      'bd.datos_no_permitidos':
+        'The data dump contains something that is not data (only INSERT, LOCK TABLES and SET are accepted): nothing was imported.',
+      'bd.datos_fallo':
+        'The data could not be imported: the database was left as it was, nothing half done.',
+      'importar.origen_apagado':
+        "Could not connect to the other program's database server: start it from that program and try again. The sites were imported anyway.",
+      'importar.origen_no_local': 'The source server must be on this computer (127.0.0.1).',
+      'importar.origen_rechazado': 'The source server rejected the user or password.',
+      'importar.origen_version':
+        'The source server version cannot be imported with what WolfCore Dev has installed.',
+      'importar.volcado_enorme':
+        'The database data is larger than {maximo} MB: it is not imported in one go.',
+      'importar.motor_no_soportado':
+        'Only MySQL and MariaDB databases can be imported from other programs.',
       'plantillas.sin_esquema': 'The template has no database schema.',
       'proyectos.carpeta_invalida': 'The project folder is not valid.',
       'proyectos.nombre_invalido':

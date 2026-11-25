@@ -71,6 +71,17 @@ export const EXTENSIONES_PERMITIDAS = [
   'tablefunc',
 ];
 
+export interface OpcionesImportarAjeno extends OpcionesRestaurar {
+  /**
+   * La base de destino no existía: si la importación falla se borra (no queda una base vacía con
+   * el nombre del origen). Sin esto, ante un fallo la base vuelve a quedar vacía como estaba.
+   */
+  baseNueva?: boolean;
+}
+
+/** Tope por omisión del volcado de datos de un programa ajeno. */
+export const MAX_BYTES_DATOS_AJENOS = 4 * 1024 * 1024 * 1024;
+
 export interface OrigenImportar {
   host: string;
   puerto: number;
@@ -100,6 +111,8 @@ export interface DepsRespaldos {
   reloj?: () => Date;
   /** Por defecto %SystemRoot%\System32\tar.exe (bsdtar de Windows, no el de Git). */
   rutaTar?: string;
+  /** Tope del volcado de datos de un programa ajeno (por defecto 4 GiB; pruebas). */
+  maxBytesDatosAjenos?: number;
 }
 
 export const MENSAJE_DESCOMPRIMA = 'Descomprima el archivo y elija el .sql o .dump que contiene';
@@ -316,6 +329,8 @@ interface EstadoLexico {
   stdin: boolean;
   /** Terminó un `COPY … FROM stdin`: los datos empiezan en la línea siguiente. */
   copyPendiente: boolean;
+  /** Terminadores de sentencia vistos hasta ahora (para contar los de cada línea). */
+  sentencias: number;
 }
 
 /**
@@ -356,6 +371,7 @@ class Hipotesis {
       copy: false,
       stdin: false,
       copyPendiente: false,
+      sentencias: 0,
     };
   }
 
@@ -387,6 +403,7 @@ class Hipotesis {
     e.vacia = false;
     e.inicio = e.cola.endsWith(e.delimitador);
     if (e.inicio) {
+      e.sentencias++;
       // Fin de sentencia: un COPY … FROM stdin deja los datos para la línea siguiente.
       if (e.copy && e.stdin) e.copyPendiente = true;
       e.copy = false;
@@ -650,6 +667,39 @@ export interface OpcionesFiltro {
   claveRestrict?: string;
   /** PostgreSQL sin `\restrict`: cualquier meta-comando fuera de comillas se neutraliza. */
   estricto?: boolean;
+  /**
+   * MySQL/MariaDB, volcado de solo datos de un tercero: solo pasan INSERT, LOCK/UNLOCK TABLES,
+   * SET (sin GLOBAL ni registro binario) y comentarios, una sentencia por vez; todo lo demás
+   * corta el flujo con `MENSAJE_DATOS_NO_PERMITIDOS`.
+   */
+  soloDatos?: boolean;
+}
+
+export const MENSAJE_DATOS_NO_PERMITIDOS =
+  'El volcado de datos trae algo que no son datos (solo se aceptan INSERT, LOCK TABLES y SET); no se importó.';
+
+/** Líneas con las que puede empezar una sentencia de un volcado de solo datos (`soloDatos`). */
+const SET_PELIGROSO = /SQL_LOG_BIN|@@\s*(?:GLOBAL|PERSIST)|\b(?:GLOBAL|PERSIST|PASSWORD|ROLE)\b/i;
+function lineaDeDatos(texto: string): boolean {
+  const l = texto.trim();
+  if (l === '' || /^--(?:\s|$)/.test(l) || l.startsWith('#')) return true;
+  // Comentario de bloque que ocupa toda la línea (nunca el condicional `/*!…`).
+  if (/^\/\*(?!!|M!)(?:(?!\*\/)[^])*\*\/$/.test(l)) return true;
+  // Primera línea de un volcado de MariaDB reciente (modo sandbox): solo un comentario.
+  if (/^\/\*M!999999\\-[^]*\*\/\s*;?$/.test(l)) return true;
+  if (
+    /^(?:INSERT|REPLACE)\s+(?:(?:LOW_PRIORITY|DELAYED|HIGH_PRIORITY|IGNORE)\s+)*INTO\s/i.test(l)
+  ) {
+    return true;
+  }
+  if (/^(?:LOCK|UNLOCK)\s+TABLES\b/i.test(l)) return true;
+  if (
+    /^(?:\/\*!\d+\s+)?ALTER\s+TABLE\s+\S+\s+(?:DISABLE|ENABLE)\s+KEYS\s*(?:\*\/)?\s*;$/i.test(l)
+  ) {
+    return true;
+  }
+  const set = /^(?:\/\*!\d+\s+)?SET\s[^;]*?(?:\*\/)?\s*;$/i.exec(l);
+  return set !== null && !SET_PELIGROSO.test(l);
 }
 
 type Omitida = 'base' | 'psql';
@@ -687,6 +737,9 @@ export class FiltroCambioDeBase extends Transform {
   private readonly estricto: boolean;
   private readonly restringido: boolean;
   private readonly mensaje: string;
+  /** `soloDatos`: terminadores de sentencia que llevaba el léxico al empezar la línea en curso. */
+  private sentenciasAlEmpezar = 0;
+  private datosRechazados = false;
 
   constructor(
     private readonly tipo: 'pg' | 'mysql',
@@ -708,6 +761,10 @@ export class FiltroCambioDeBase extends Transform {
     }
   }
 
+  private fallo(): Error {
+    return new Error(this.datosRechazados ? MENSAJE_DATOS_NO_PERMITIDOS : this.mensaje);
+  }
+
   override _transform(trozo: Buffer, _cod: BufferEncoding, cb: TransformCallback): void {
     this.prefijo();
     let i = 0;
@@ -716,12 +773,12 @@ export class FiltroCambioDeBase extends Transform {
       if (!this.enCabeza) {
         const fin = j === -1 ? trozo.length : j + 1;
         if (!this.cuerpo(trozo.subarray(i, fin))) {
-          cb(new Error(this.mensaje));
+          cb(this.fallo());
           return;
         }
         i = fin;
         if (j !== -1 && !this.finDeLinea()) {
-          cb(new Error(this.mensaje));
+          cb(this.fallo());
           return;
         }
         continue;
@@ -734,12 +791,12 @@ export class FiltroCambioDeBase extends Transform {
       i = corte;
       if (completa || this.largo >= MAX_CABEZA_LINEA) {
         if (!this.soltar()) {
-          cb(new Error(this.mensaje));
+          cb(this.fallo());
           return;
         }
         if (!completa) this.enCabeza = false;
         else if (!this.finDeLinea()) {
-          cb(new Error(this.mensaje));
+          cb(this.fallo());
           return;
         }
       }
@@ -750,7 +807,7 @@ export class FiltroCambioDeBase extends Transform {
   override _flush(cb: TransformCallback): void {
     this.prefijo();
     if (this.largo > 0 && !this.soltar()) {
-      cb(new Error(this.mensaje));
+      cb(this.fallo());
       return;
     }
     cb();
@@ -762,6 +819,15 @@ export class FiltroCambioDeBase extends Transform {
     if (!this.enCopy && !this.saltarLinea) {
       // Un meta-comando en la parte ya enviada de la línea no se puede comentar.
       if (this.lexico.avanzar(b.toString('latin1')).some(Boolean)) return false;
+      if (this.opciones.soloDatos && this.tipo === 'mysql') {
+        // El resto de una línea larga: ni una sentencia más, ni nada tras la que cierra.
+        const e = this.lexico.h[0]!.e;
+        const n = e.sentencias - this.sentenciasAlEmpezar;
+        if (n > 1 || (n === 1 && !e.inicio)) {
+          this.datosRechazados = true;
+          return false;
+        }
+      }
     }
     this.push(b);
     return true;
@@ -872,6 +938,18 @@ export class FiltroCambioDeBase extends Transform {
       this.push(b);
       this.saltarLinea = true;
       return true;
+    }
+    if (this.opciones.soloDatos && this.tipo === 'mysql') {
+      // Volcado de solo datos de un tercero: cada sentencia empieza con una línea de la lista, y
+      // la línea trae a lo sumo una sentencia completa (nada antes ni después de su `;`).
+      const e = h[0]!.e;
+      const previo = antes[0]!;
+      const n = e.sentencias - previo.sentencias;
+      this.sentenciasAlEmpezar = previo.sentencias;
+      if ((previo.inicio && !lineaDeDatos(sinBom)) || n > 1 || (n === 1 && !e.inicio)) {
+        this.datosRechazados = true;
+        return false;
+      }
     }
     if (inicio) {
       if (this.tipo === 'pg') this.escapesAlTerminar = escapesPg(sinBom);
@@ -1529,6 +1607,8 @@ export class Respaldos {
     destino: string,
     claves: string[],
     soloEsquema = false,
+    /** Solo MySQL y MariaDB: sin CREATE (tablas, vistas, rutinas ni disparadores): solo filas. */
+    soloDatos = false,
   ): Promise<Salida> {
     const { exe } = await this.herramienta(motor, 'volcado');
     let args: string[];
@@ -1559,12 +1639,13 @@ export class Respaldos {
         `--user=${origen.usuario}`,
         // Una transacción de solo lectura con instantánea: sin bloquear ni escribir.
         '--single-transaction',
-        '--routines',
-        '--triggers',
+        ...(soloDatos ? ['--skip-triggers'] : ['--routines', '--triggers']),
         '--no-tablespaces',
         '--default-character-set=utf8mb4',
         // Solo estructura: ni una fila (plantillas de proyecto).
         ...(soloEsquema ? ['--no-data'] : []),
+        // Solo filas, con los binarios en hexadecimal (texto plano que el filtro puede leer).
+        ...(soloDatos ? ['--no-create-info', '--hex-blob'] : []),
         ...(motor === 'mysql' ? ['--set-gtid-purged=OFF'] : []),
         '--verbose',
         `--result-file=${destino}`,
@@ -1676,12 +1757,17 @@ export class Respaldos {
     const fase1 = sentencias.filter((x) => !conDefiner.has(x.clase)).map((x) => x.texto);
     const fase2 = sentencias
       .filter((x) => conDefiner.has(x.clase))
-      .map((x) =>
-        x.texto.replace(
+      .map((x) => {
+        // mysqldump crea cada vista dos veces (marcador y definitiva): la segunda reemplaza.
+        const texto =
+          x.clase === 'vista' && !/^CREATE\s+OR\s+REPLACE\b/i.test(x.texto)
+            ? x.texto.replace(/^CREATE\s+/i, 'CREATE OR REPLACE ')
+            : x.texto;
+        return texto.replace(
           /^(CREATE\s+(?:OR\s+REPLACE\s+)?(?:ALGORITHM\s*=\s*\w+\s+)?)/i,
           '$1DEFINER = CURRENT_USER ',
-        ),
-      );
+        );
+      });
     const bd = this.d.bd;
     const con = await bd.conexion(motor);
     const claves = [con.clave ?? ''];
@@ -2040,6 +2126,207 @@ export class Respaldos {
       return { ...r, advertencias: [...avisos, ...r.advertencias] };
     } finally {
       await rm(tmp, OPCIONES_BORRADO).catch(() => undefined);
+    }
+  }
+
+  /** Versión del servidor de origen; sus fallos llevan código (apagado, rechazado, más nuevo). */
+  private async versionOrigenAjeno(motor: MotorSql, o: OrigenImportar): Promise<string[]> {
+    try {
+      return await this.comprobarVersionOrigen(motor, o);
+    } catch (e) {
+      const mensaje = e instanceof Error ? e.message : String(e);
+      if (!mensaje.startsWith('No se pudo consultar el servidor de origen')) {
+        throw new ErrorWolf('importar.origen_version', mensaje.slice(0, 300));
+      }
+      const rechazado = /access denied|1045|authentication|autentificaci/i.test(mensaje);
+      throw new ErrorWolf(
+        rechazado ? 'importar.origen_rechazado' : 'importar.origen_apagado',
+        rechazado
+          ? 'El servidor de origen rechazó el usuario o la clave.'
+          : `No se pudo conectar al servidor de origen ${o.host}:${o.puerto}: enciéndalo desde su programa e inténtelo de nuevo.`,
+      );
+    }
+  }
+
+  /**
+   * Copia a una base local la base de un programa ajeno (Laragon, XAMPP, Herd), cuyo servidor
+   * enciende el usuario. Solo MySQL y MariaDB. El contenido del origen es de un tercero, así que
+   * cada parte entra por su propia puerta, con los privilegios mínimos y todo o nada:
+   *
+   * - **Estructura** (volcado `--no-data`): se revisa entera contra la lista de sentencias
+   *   permitidas de las plantillas (origen `importada`: sin disparadores, vistas y rutinas con
+   *   `SQL SECURITY INVOKER`) ANTES de crear o reemplazar nada, y se restaura con
+   *   `restaurarEsquema` (usuario temporal limitado a la base; vistas y rutinas las crea el
+   *   administrador).
+   * - **Datos** (volcado `--no-create-info --skip-triggers`): una base real tiene decenas de
+   *   miles o millones de INSERT, así que no pasa por la lista (tope de 64 MiB y 20 000
+   *   sentencias). Sus defensas: el volcado se pide solo de filas (sin vistas, rutinas ni
+   *   disparadores, que son lo que inyecta un servidor hostil); un filtro en streaming acepta
+   *   únicamente INSERT, LOCK/UNLOCK TABLES, SET (sin GLOBAL ni registro binario) y comentarios,
+   *   una sentencia por línea y sin nada tras su `;`; se ejecuta con el mismo usuario temporal
+   *   (sin FILE, SUPER ni acceso a otras bases), con `--binary-mode`, `--local-infile=0`, sandbox
+   *   en MariaDB y sin `--force`: el primer error corta y la base vuelve a quedar vacía.
+   * - Con `confirmarSobrescribir` y la base con tablas: respaldo previo verificado antes de
+   *   reemplazarla; si algo falla después, el error lo nombra (`ErrorTrasReemplazo`).
+   * - La clave del origen solo vive en memoria y se enmascara en todo mensaje.
+   */
+  async importarAjeno(
+    objetivo: ObjetivoBd,
+    origen: OrigenImportar,
+    destinoBase: string,
+    opts: OpcionesImportarAjeno = {},
+  ): Promise<ResultadoRestaurar> {
+    const { r, motor } = await this.para(objetivo);
+    if (r !== this) return r.importarAjeno(motor, origen, destinoBase, opts);
+    const m = motorSql(motor, 'Importar');
+    if (m === 'postgresql') {
+      throw new ErrorWolf(
+        'importar.motor_no_soportado',
+        'Solo se importan bases de MySQL y MariaDB desde otros programas.',
+      );
+    }
+    validarBase(m, destinoBase);
+    validarOrigen(origen);
+    if (!esLocal(origen.host)) {
+      throw new ErrorWolf(
+        'importar.origen_no_local',
+        'El servidor de origen debe estar en este equipo (127.0.0.1).',
+      );
+    }
+    const local = await this.d.bd.conexion(m);
+    if (
+      esLocal(origen.host) &&
+      origen.puerto === local.puerto &&
+      origen.base.toLowerCase() === destinoBase.toLowerCase()
+    ) {
+      throw new Error('El origen y el destino son la misma base.');
+    }
+    const bd = this.d.bd;
+    if (!bd.usuarioTemporal) throw new Error('Esta importación no está disponible aquí.');
+    const { tablas } = await this.comprobarDestino(m, destinoBase, opts.confirmarSobrescribir);
+    const avisos = await this.versionOrigenAjeno(m, origen);
+
+    await mkdir(this.d.rutas.tmp(), { recursive: true });
+    const tmp = path.join(this.d.rutas.tmp(), `importar-ajeno-${randomUUID()}`);
+    await mkdir(tmp, { recursive: true });
+    const claves = [origen.clave, local.clave ?? ''];
+    try {
+      const archivoEsquema = path.join(tmp, 'esquema.sql');
+      const archivoDatos = path.join(tmp, 'datos.sql');
+      try {
+        await this.volcar('importar', m, destinoBase, origen, archivoEsquema, claves, true);
+        await this.volcar('importar', m, destinoBase, origen, archivoDatos, claves, false, true);
+      } catch (e) {
+        throw errorOrigen(e, origen, claves);
+      }
+      const tope = this.d.maxBytesDatosAjenos ?? MAX_BYTES_DATOS_AJENOS;
+      if ((await stat(archivoDatos)).size > tope) {
+        throw new ErrorWolf(
+          'importar.volcado_enorme',
+          `Los datos de la base ${origen.base} pesan más de lo que se importa de una vez.`,
+          { maximo: Math.floor(tope / (1024 * 1024)) },
+        );
+      }
+      // La estructura se revisa entera antes de tocar nada (ni respaldo ni base nueva).
+      const infoEsquema = await stat(archivoEsquema);
+      if (infoEsquema.size > MAX_BYTES_ESQUEMA) {
+        throw new ErrorWolf('bd.esquema_fallo', 'La estructura de la base es demasiado grande.');
+      }
+      revisarSql(
+        (await readFile(archivoEsquema)).toString('utf8').replace(/^\uFEFF/, ''),
+        'mysql',
+        {
+          origen: 'importada',
+        },
+      );
+
+      let respaldoPrevio: string | undefined;
+      if (tablas) {
+        respaldoPrevio = await this.respaldoDeSeguridad(m, destinoBase);
+        await this.borrarParaReemplazar(m, destinoBase);
+      }
+      await bd.crear(m, destinoBase);
+      try {
+        await this.restaurarEsquema(m, archivoEsquema, destinoBase, { origen: 'importada' });
+        const fuente = await this.preparar(archivoDatos, tmp, 0);
+        const adv = await this.restaurarDatosLimitado(m, fuente, destinoBase, claves);
+        return {
+          advertencias: [...avisos, ...adv],
+          ...(respaldoPrevio ? { respaldoPrevio } : {}),
+        };
+      } catch (e) {
+        // Todo o nada: ni estructura a medias ni datos a medias.
+        if (opts.baseNueva) await this.borrarParaReemplazar(m, destinoBase).catch(() => undefined);
+        else await bd.reiniciarBase?.(m, destinoBase).catch(() => undefined);
+        throw respaldoPrevio ? new ErrorTrasReemplazo(destinoBase, respaldoPrevio, e) : e;
+      }
+    } finally {
+      await rm(tmp, OPCIONES_BORRADO).catch(() => undefined);
+    }
+  }
+
+  /** Datos de un tercero con el usuario temporal de la base (ver `importarAjeno`). */
+  private async restaurarDatosLimitado(
+    motor: MotorSql,
+    fuente: Fuente,
+    base: string,
+    clavesBase: string[],
+  ): Promise<string[]> {
+    if (fuente.tipo !== 'sql') throw new Error(NO_RECONOCIDO);
+    const bd = this.d.bd;
+    const con = await bd.conexion(motor);
+    const usuario = await bd.usuarioTemporal!(motor, base);
+    const claves = [...clavesBase, usuario.clave];
+    try {
+      const cliente = await this.herramienta(motor, 'cliente');
+      const s = this.salida(
+        'importar',
+        motor,
+        base,
+        claves,
+        (l) => /^(ERROR|Warning)\b/i.test(l) && !RUIDO_CLIENTE.test(l),
+      );
+      const total = (await stat(fuente.ruta)).size;
+      const entrada = this.flujoSql(fuente, 'mysql', s, total, { soloDatos: true });
+      const args = [
+        `--host=${con.host}`,
+        `--port=${con.puerto}`,
+        `--user=${usuario.usuario}`,
+        '--default-character-set=utf8mb4',
+        '--binary-mode',
+        '--local-infile=0',
+        ...(motor === 'mariadb' && mariadbConSandbox(cliente.version) ? ['--sandbox'] : []),
+        base,
+      ];
+      let codigo: number;
+      try {
+        ({ codigo } = await this.lanzar(cliente.exe, args, {
+          env: { MYSQL_PWD: usuario.clave },
+          entrada,
+          alLinea: (l) => s.linea(l),
+        }));
+      } catch (e) {
+        s.fin();
+        const texto = e instanceof Error ? e.message : String(e);
+        if (texto.startsWith(MENSAJE_DATOS_NO_PERMITIDOS)) {
+          throw new ErrorWolf('bd.datos_no_permitidos', MENSAJE_DATOS_NO_PERMITIDOS);
+        }
+        throw new ErrorWolf(
+          'bd.datos_fallo',
+          `No se pudieron importar los datos: ${enmascarar(texto, claves)}`.slice(0, 400),
+        );
+      }
+      s.fin();
+      if (codigo !== 0) {
+        const detalle = s.detalle();
+        throw new ErrorWolf(
+          'bd.datos_fallo',
+          `No se pudieron importar los datos${detalle ? `: ${detalle}` : '.'}`.slice(0, 400),
+        );
+      }
+      return s.lista();
+    } finally {
+      await usuario.retirar().catch(() => undefined);
     }
   }
 }

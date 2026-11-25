@@ -232,6 +232,19 @@ export const pt: Textos = {
       'bd.extension_no_permitida':
         'O esquema pede a extensão {nombre}, que não está na lista permitida: nada foi restaurado.',
       'bd.esquema_fallo': 'Não foi possível restaurar o esquema completo: nada ficou pela metade.',
+      'bd.datos_no_permitidos':
+        'O despejo de dados traz algo que não são dados (só se aceitam INSERT, LOCK TABLES e SET): nada foi importado.',
+      'bd.datos_fallo':
+        'Não foi possível importar os dados: o banco ficou como estava, sem nada pela metade.',
+      'importar.origen_apagado':
+        'Não foi possível conectar ao servidor de banco de dados do outro programa: ligue-o a partir desse programa e tente de novo. Os sites foram importados mesmo assim.',
+      'importar.origen_no_local': 'O servidor de origem deve estar neste computador (127.0.0.1).',
+      'importar.origen_rechazado': 'O servidor de origem recusou o usuário ou a senha.',
+      'importar.origen_version':
+        'A versão do servidor de origem não pode ser importada com o que o WolfCore Dev tem instalado.',
+      'importar.volcado_enorme':
+        'Os dados do banco pesam mais de {maximo} MB: não são importados de uma vez.',
+      'importar.motor_no_soportado': 'Só se importam bancos MySQL e MariaDB de outros programas.',
       'plantillas.sin_esquema': 'O modelo não traz o esquema de um banco de dados.',
       'proyectos.carpeta_invalida': 'A pasta do projeto não é válida.',
       'proyectos.nombre_invalido':

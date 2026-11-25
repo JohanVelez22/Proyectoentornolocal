@@ -235,6 +235,21 @@ export const fr: Textos = {
         "Le schéma demande l'extension {nombre}, qui n'est pas dans la liste autorisée : rien n'a été restauré.",
       'bd.esquema_fallo':
         "Impossible de restaurer le schéma complet : rien n'a été laissé à moitié.",
+      'bd.datos_no_permitidos':
+        "L'export de données contient autre chose que des données (seuls INSERT, LOCK TABLES et SET sont acceptés) : rien n'a été importé.",
+      'bd.datos_fallo':
+        "Impossible d'importer les données : la base est restée telle quelle, rien n'a été laissé à moitié.",
+      'importar.origen_apagado':
+        "Impossible de se connecter au serveur de base de données de l'autre programme : démarrez-le depuis ce programme et réessayez. Les sites ont tout de même été importés.",
+      'importar.origen_no_local':
+        'Le serveur source doit se trouver sur cet ordinateur (127.0.0.1).',
+      'importar.origen_rechazado': "Le serveur source a refusé l'utilisateur ou le mot de passe.",
+      'importar.origen_version':
+        'La version du serveur source ne peut pas être importée avec ce que WolfCore Dev a installé.',
+      'importar.volcado_enorme':
+        "Les données de la base dépassent {maximo} Mo : elles ne sont pas importées d'un coup.",
+      'importar.motor_no_soportado':
+        "Seules les bases MySQL et MariaDB peuvent être importées depuis d'autres programmes.",
       'plantillas.sin_esquema': "Le modèle ne contient pas le schéma d'une base de données.",
       'proyectos.carpeta_invalida': 'Le dossier du projet n’est pas valide.',
       'proyectos.nombre_invalido':

@@ -228,6 +228,20 @@ export const es = {
       'bd.extension_no_permitida':
         'El esquema pide la extensión {nombre}, que no está en la lista permitida: no se restauró nada.',
       'bd.esquema_fallo': 'No se pudo restaurar el esquema completo: no se dejó nada a medias.',
+      'bd.datos_no_permitidos':
+        'El volcado de datos trae algo que no son datos (solo se aceptan INSERT, LOCK TABLES y SET): no se importó nada.',
+      'bd.datos_fallo':
+        'No se pudieron importar los datos: la base quedó como estaba, sin nada a medias.',
+      'importar.origen_apagado':
+        'No se pudo conectar al servidor de base de datos del otro programa: enciéndalo desde ese programa e inténtelo de nuevo. Los sitios sí se importaron.',
+      'importar.origen_no_local': 'El servidor de origen debe estar en este equipo (127.0.0.1).',
+      'importar.origen_rechazado': 'El servidor de origen rechazó el usuario o la clave.',
+      'importar.origen_version':
+        'La versión del servidor de origen no se puede importar con lo que hay instalado en WolfCore Dev.',
+      'importar.volcado_enorme':
+        'Los datos de la base pesan más de {maximo} MB: no se importan de una vez.',
+      'importar.motor_no_soportado':
+        'Solo se importan bases de MySQL y MariaDB desde otros programas.',
       'plantillas.sin_esquema': 'La plantilla no trae el esquema de una base de datos.',
       'proyectos.carpeta_invalida': 'La carpeta del proyecto no es válida.',
       'proyectos.nombre_invalido':
