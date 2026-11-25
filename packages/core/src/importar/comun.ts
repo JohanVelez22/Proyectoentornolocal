@@ -5,7 +5,6 @@ import { TextDecoder } from 'node:util';
 import { validarNombreBd } from '../bd/clienteMysql';
 import { ErrorWolf, type CodigoError } from '../errores';
 import { DOMINIO_VALIDO } from '../hosts/bloque';
-import { existe } from '../proyectos/archivos';
 import { detectarProyecto, leerVariablesEnv } from '../proyectos/detectar';
 
 /**
