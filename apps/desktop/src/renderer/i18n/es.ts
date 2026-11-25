@@ -189,6 +189,20 @@ export const es = {
         'No se pudo restringir la credencial al usuario, así que no se usó.',
       'tuneles.sin_cifrado':
         'El cifrado del sistema no está disponible: no se pueden guardar credenciales.',
+      'tuneles.token_invalido':
+        'El token no es válido: solo letras, números y _ . - (de 8 a 200 caracteres). Guárdelo de nuevo en las opciones del túnel.',
+      'tuneles.ngrok_no_instalado':
+        'ngrok no está instalado en este equipo. Instálelo desde ngrok.com y vuelva a intentarlo.',
+      'tuneles.ngrok_sin_token': 'Falta el token de ngrok: guárdelo en las opciones del túnel.',
+      'tuneles.expose_no_instalado':
+        'Expose no está instalado: instálelo o ponga expose.phar en {carpeta}.',
+      'tuneles.expose_sin_token': 'Falta el token de Expose: guárdelo en las opciones del túnel.',
+      'tuneles.tailscale_no_instalado':
+        'Tailscale no está instalado en este equipo. WolfCore Dev no lo instala: instálelo desde tailscale.com.',
+      'tuneles.tailscale_sin_sesion':
+        'Tailscale no tiene la sesión iniciada: inicie sesión en Tailscale y vuelva a intentarlo.',
+      'tuneles.tailscale_puerto_ocupado':
+        'Tailscale ya publica algo en el puerto HTTPS {puerto}. WolfCore Dev no lo pisa: retírelo con Tailscale y vuelva a intentarlo.',
       'hosts.dominio_invalido': 'Hay un dominio no válido.',
       'hosts.tiempo_agotado':
         'No hubo respuesta al permiso de administrador en {segundos} s; el archivo hosts quedó igual.',
@@ -1383,6 +1397,44 @@ export const es = {
     nombreActual: (nombre: string, dominio: string) => `Túnel «${nombre}» en ${dominio}`,
     confirmarPublicoNombreTexto: (dominio: string, publico: string) =>
       `Se publicará ${dominio} en ${publico} con un túnel de Cloudflare: cualquiera con el enlace podrá entrar mientras siga abierto. ¿Publicar?`,
+    proveedorNgrokAyuda:
+      'Con su cuenta de ngrok. Necesita el programa ngrok ya instalado en este equipo.',
+    proveedorExposeAyuda: 'Con su cuenta de Expose. Necesita Expose ya instalado en este equipo.',
+    proveedorTailscaleAyuda:
+      'Por su red privada de Tailscale. Necesita Tailscale instalado y con sesión iniciada.',
+    tokenGuardado: (f: string) => `Token guardado (termina en ${f}).`,
+    tokenSinGuardar: 'Todavía no hay un token guardado.',
+    tokenNgrok: 'Token de ngrok',
+    tokenExpose: 'Token de Expose',
+    tokenAyuda:
+      'Se guarda cifrado en este equipo y solo se entrega al programa al abrir el túnel; nunca se muestra.',
+    tokenPlaceholder: 'Pegue aquí el token',
+    guardarToken: 'Guardar el token',
+    borrarToken: 'Borrar el token',
+    usarProveedor: 'Usar este proveedor',
+    guardadoProveedor: 'Proveedor guardado. Al abrir el túnel se pedirá confirmación.',
+    ngrokAyudaInstalacion:
+      'ngrok ya debe estar instalado en este equipo (WolfCore Dev no lo descarga porque ngrok no publica una descarga verificable). Su configuración global no se toca.',
+    exposeAyudaInstalacion:
+      'Expose ya debe estar instalado, o su expose.phar en la carpeta bin/expose de los datos de WolfCore Dev (no hay descarga con huella). Su configuración global no se toca.',
+    tailscaleAlcance: 'Hasta dónde llega',
+    tailscaleServe: 'Serve: solo su tailnet',
+    tailscaleServeAyuda: 'Solo los equipos de su red Tailscale. No sale a internet.',
+    tailscaleFunnel: 'Funnel: todo internet',
+    tailscaleFunnelAyuda: 'Cualquiera con el enlace puede entrar, esté o no en su tailnet.',
+    tailscaleFunnelAviso:
+      'Funnel publica este sitio en internet: cualquiera con el enlace podrá entrar mientras esté abierto.',
+    tailscaleAyudaInstalacion:
+      'WolfCore Dev no instala Tailscale (es un servicio del sistema): debe estar instalado y con sesión iniciada. No se cambia nada de lo que ya publica con Tailscale; el sitio usa el puerto HTTPS 8443.',
+    confirmarTailnetTitulo: 'Compartir con su tailnet',
+    confirmarTailnetTexto: (dominio: string) =>
+      `Se compartirá ${dominio} con Tailscale Serve: solo podrán entrar los equipos de su tailnet; no se publica en internet. ¿Compartir?`,
+    confirmarTailnetRealesTexto: (dominio: string) =>
+      `${dominio} tiene datos reales de clientes. Con Tailscale Serve solo podrán verlo los equipos de su tailnet (no se publica en internet). ¿Compartir?`,
+    confirmarFunnelTexto: (dominio: string) =>
+      `Se publicará ${dominio} en internet con Tailscale Funnel: cualquiera con el enlace podrá entrar mientras siga abierto. ¿Publicar?`,
+    confirmarProveedorTexto: (dominio: string, proveedor: string) =>
+      `Se publicará ${dominio} en internet con ${proveedor}: cualquiera con el enlace podrá entrar mientras siga abierto. ¿Publicar?`,
     tituloError: 'No se pudo abrir el túnel',
   },
   tuneles: {

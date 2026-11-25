@@ -762,6 +762,77 @@ describe('ServidorMcp: acciones destructivas', () => {
     });
   });
 
+  it('abrir_tunel con ngrok, Expose y Tailscale: la confirmación dice el proveedor y lo confirmado se pasa al núcleo', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    const casos: Array<[Record<string, unknown>, string, Record<string, unknown>]> = [
+      [{ proveedor: 'ngrok' }, 'ngrok', { proveedor: 'ngrok' }],
+      [{ proveedor: 'expose' }, 'Expose', { proveedor: 'expose' }],
+    ];
+    for (const [tunel, texto, esperado] of casos) {
+      m.confirmaciones.length = 0;
+      vi.mocked(m.ops.abrirTunel).mockClear();
+      vi.mocked(m.ops.listarProyectos).mockResolvedValue([
+        { id: 'demo', dominio: 'demo.test', datosReales: false, tunel },
+      ]);
+      const llamada = c.callTool({ name: 'abrir_tunel', arguments: { sitioId: 'demo' } });
+      const sol = await esperarConfirmacion(m);
+      expect(sol.resumen).toContain(texto);
+      expect(sol.resumen).toContain('en internet');
+      m.servidor.responderConfirmacion(sol.id, true);
+      expect((await llamada).isError).toBeFalsy();
+      expect(m.ops.abrirTunel).toHaveBeenCalledWith('demo', esperado);
+    }
+  });
+
+  it('abrir_tunel con Tailscale: Serve dice que no sale a internet y Funnel que sí', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    // Serve (también cuando el modo no está escrito).
+    for (const tunel of [{ proveedor: 'tailscale' }, { proveedor: 'tailscale', modo: 'serve' }]) {
+      m.confirmaciones.length = 0;
+      vi.mocked(m.ops.abrirTunel).mockClear();
+      vi.mocked(m.ops.listarProyectos).mockResolvedValue([
+        { id: 'demo', dominio: 'demo.test', datosReales: false, tunel },
+      ]);
+      const llamada = c.callTool({ name: 'abrir_tunel', arguments: { sitioId: 'demo' } });
+      const sol = await esperarConfirmacion(m);
+      expect(sol.resumen).toContain('Tailscale Serve');
+      expect(sol.resumen).toContain('solo');
+      expect(sol.resumen).toContain('no se publica en internet');
+      expect(sol.resumen).not.toContain('Publicar demo.test en internet');
+      m.servidor.responderConfirmacion(sol.id, true);
+      await llamada;
+      expect(m.ops.abrirTunel).toHaveBeenCalledWith('demo', {
+        proveedor: 'tailscale',
+        modo: 'serve',
+      });
+    }
+    // Funnel: a todo internet, con datos reales también.
+    m.confirmaciones.length = 0;
+    vi.mocked(m.ops.abrirTunel).mockClear();
+    vi.mocked(m.ops.listarProyectos).mockResolvedValue([
+      {
+        id: 'demo',
+        dominio: 'demo.test',
+        datosReales: true,
+        tunel: { proveedor: 'tailscale', modo: 'funnel' },
+      },
+    ]);
+    const llamada = c.callTool({ name: 'abrir_tunel', arguments: { sitioId: 'demo' } });
+    const sol = await esperarConfirmacion(m);
+    expect(sol.resumen).toContain('Tailscale Funnel');
+    expect(sol.resumen).toContain('todo internet');
+    expect(sol.resumen).toContain('Publicar demo.test en internet');
+    expect(sol.resumen).toContain('DATOS REALES');
+    m.servidor.responderConfirmacion(sol.id, true);
+    await llamada;
+    expect(m.ops.abrirTunel).toHaveBeenCalledWith('demo', {
+      proveedor: 'tailscale',
+      modo: 'funnel',
+    });
+  });
+
   it('abrir_tunel rechazado no abre nada; un sitio que no existe ni pregunta', async () => {
     const m = await montar();
     vi.mocked(m.ops.listarProyectos).mockResolvedValue([{ id: 'demo', dominio: 'demo.test' }]);

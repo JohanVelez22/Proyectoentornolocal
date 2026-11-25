@@ -48,7 +48,7 @@ export interface OperacionesMcp {
   /** `tunel`: el proveedor que se mostró en la confirmación (el núcleo lo compara al abrir). */
   abrirTunel(
     sitioId: string,
-    tunel: { proveedor: string; nombre?: string; dominio?: string },
+    tunel: { proveedor: string; nombre?: string; dominio?: string; modo?: string },
   ): Promise<unknown>;
   cerrarTunel(sitioId: string): Promise<unknown>;
   /**
@@ -670,7 +670,9 @@ export class ServidorMcp {
     dominio: string;
     datosReales: boolean;
     publico: string;
-    tunel: { proveedor: string; nombre?: string; dominio?: string };
+    /** Frase completa de lo que se hará (con su alcance: internet o solo la tailnet). */
+    alcance: 'internet' | 'tailnet';
+    tunel: { proveedor: string; nombre?: string; dominio?: string; modo?: string };
   }> {
     const lista = await this.d.operaciones.listarProyectos();
     const s = Array.isArray(lista)
@@ -684,14 +686,21 @@ export class ServidorMcp {
     // Con Cloudflare con nombre, el sitio queda en el dominio público de su dueño: se dice cuál.
     const t = s['tunel'];
     const tt = typeof t === 'object' && t !== null ? (t as Record<string, unknown>) : {};
+    // Tailscale Serve solo llega a la tailnet del usuario; Funnel y los demás, a todo internet.
+    const funnel = tt['proveedor'] === 'tailscale' && tt['modo'] === 'funnel';
+    const serve = tt['proveedor'] === 'tailscale' && !funnel;
     const publico =
       tt['proveedor'] === 'cloudflare-nombre' && typeof tt['dominio'] === 'string'
         ? `un túnel de Cloudflare con nombre en https://${limpiar(tt['dominio'], 200)}`
-        : tt['proveedor'] === 'ngrok' ||
-            tt['proveedor'] === 'expose' ||
-            tt['proveedor'] === 'tailscale'
-          ? `un túnel público (${tt['proveedor']})`
-          : 'un túnel público de Cloudflare';
+        : tt['proveedor'] === 'ngrok'
+          ? 'un túnel público de ngrok (con su cuenta)'
+          : tt['proveedor'] === 'expose'
+            ? 'un túnel público de Expose (con su cuenta)'
+            : funnel
+              ? 'Tailscale Funnel (abierto a todo internet)'
+              : serve
+                ? 'Tailscale Serve (solo los equipos de su tailnet, no internet)'
+                : 'un túnel público de Cloudflare';
     // Lo confirmado queda fijado: el núcleo lo compara con el sitio al abrir (sin TOCTOU).
     const proveedor =
       typeof tt['proveedor'] === 'string' && tt['proveedor']
@@ -701,11 +710,13 @@ export class ServidorMcp {
       proveedor,
       ...(typeof tt['nombre'] === 'string' ? { nombre: tt['nombre'] } : {}),
       ...(typeof tt['dominio'] === 'string' ? { dominio: tt['dominio'] } : {}),
+      ...(proveedor === 'tailscale' ? { modo: funnel ? 'funnel' : 'serve' } : {}),
     };
     return {
       dominio: limpiar(dominio, 200),
       datosReales: s['datosReales'] === true,
       publico,
+      alcance: serve ? 'tailnet' : 'internet',
       tunel,
     };
   }
@@ -888,7 +899,7 @@ export class ServidorMcp {
       'abrir_tunel',
       {
         description:
-          'Abre un túnel público (Cloudflare) hacia un proyecto: cualquiera con el enlace podrá entrar. Pide confirmación en la ventana de WolfCore Dev.',
+          'Abre un túnel hacia un proyecto con el proveedor que tenga elegido (Cloudflare, ngrok, Expose o Tailscale): con Serve solo entran los equipos de su tailnet; con los demás y con Funnel, cualquiera con el enlace. Pide confirmación en la ventana de WolfCore Dev, que dice cuál es.',
         inputSchema: { sitioId },
         annotations: { ...cambio, openWorldHint: true },
       },
@@ -898,7 +909,9 @@ export class ServidorMcp {
           const reales = sitio.datosReales ? ' Tiene DATOS REALES de clientes.' : '';
           return this.confirmarYEjecutar(
             'abrir_tunel',
-            `Publicar ${sitio.dominio} en internet con ${sitio.publico}: cualquiera con el enlace podrá entrar mientras siga abierto.${reales}`,
+            sitio.alcance === 'tailnet'
+              ? `Compartir ${sitio.dominio} solo con su tailnet usando ${sitio.publico}: no se publica en internet; podrán entrar los equipos de su red Tailscale mientras siga abierto.${reales}`
+              : `Publicar ${sitio.dominio} en internet con ${sitio.publico}: cualquiera con el enlace podrá entrar mientras siga abierto.${reales}`,
             { proyecto: sitio.dominio },
             senal(extra),
             () => ops.abrirTunel(id, sitio.tunel),

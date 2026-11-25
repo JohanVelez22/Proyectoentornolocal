@@ -977,6 +977,14 @@ export class Nucleo {
         ini: await servicios.php.asegurarPhpIni(elegida),
       };
     };
+    // `expose.phar` se ejecuta con el PHP de la app (null si no hay PHP instalado).
+    tuneles.fijarPhp(async () => {
+      try {
+        return (await phpDe(null)).exe;
+      } catch {
+        return null;
+      }
+    });
     const confianza = new ConfianzaCa({
       rutas,
       plataforma: plat,

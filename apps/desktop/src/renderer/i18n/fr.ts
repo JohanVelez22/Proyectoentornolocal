@@ -197,6 +197,22 @@ export const fr: Textos = {
         'L’identifiant n’a pas pu être limité à l’utilisateur, il n’a donc pas été utilisé.',
       'tuneles.sin_cifrado':
         'Le chiffrement du système n’est pas disponible : impossible d’enregistrer des identifiants.',
+      'tuneles.token_invalido':
+        'Le jeton n’est pas valide : uniquement des lettres, des chiffres et _ . - (de 8 à 200 caractères). Enregistrez-le à nouveau dans les options du tunnel.',
+      'tuneles.ngrok_no_instalado':
+        'ngrok n’est pas installé sur cet ordinateur. Installez-le depuis ngrok.com puis réessayez.',
+      'tuneles.ngrok_sin_token':
+        'Le jeton ngrok est manquant : enregistrez-le dans les options du tunnel.',
+      'tuneles.expose_no_instalado':
+        'Expose n’est pas installé : installez-le ou placez expose.phar dans {carpeta}.',
+      'tuneles.expose_sin_token':
+        'Le jeton Expose est manquant : enregistrez-le dans les options du tunnel.',
+      'tuneles.tailscale_no_instalado':
+        'Tailscale n’est pas installé sur cet ordinateur. WolfCore Dev ne l’installe pas : téléchargez-le sur tailscale.com.',
+      'tuneles.tailscale_sin_sesion':
+        'Tailscale n’est pas connecté : connectez-vous à Tailscale puis réessayez.',
+      'tuneles.tailscale_puerto_ocupado':
+        'Tailscale publie déjà quelque chose sur le port HTTPS {puerto}. WolfCore Dev ne l’écrase pas : retirez-le avec Tailscale puis réessayez.',
       'hosts.dominio_invalido': 'Un domaine n’est pas valide.',
       'hosts.tiempo_agotado':
         'Aucune réponse à la demande d’autorisation administrateur en {segundos} s ; le fichier hosts est resté tel quel.',
@@ -1419,6 +1435,47 @@ export const fr: Textos = {
     nombreActual: (nombre: string, dominio: string) => `Tunnel « ${nombre} » sur ${dominio}`,
     confirmarPublicoNombreTexto: (dominio: string, publico: string) =>
       `${dominio} sera publié sur ${publico} via un tunnel Cloudflare : toute personne disposant du lien peut y accéder tant qu’il reste ouvert. Publier ?`,
+    proveedorNgrokAyuda:
+      'Avec votre compte ngrok. Nécessite le programme ngrok déjà installé sur cet ordinateur.',
+    proveedorExposeAyuda:
+      'Avec votre compte Expose. Nécessite Expose déjà installé sur cet ordinateur.',
+    proveedorTailscaleAyuda:
+      'Par votre réseau privé Tailscale. Nécessite Tailscale installé et connecté.',
+    tokenGuardado: (f: string) => `Jeton enregistré (se termine par ${f}).`,
+    tokenSinGuardar: "Aucun jeton enregistré pour l'instant.",
+    tokenNgrok: 'Jeton ngrok',
+    tokenExpose: 'Jeton Expose',
+    tokenAyuda:
+      "Il est enregistré chiffré sur cet ordinateur et n'est remis au programme qu'à l'ouverture du tunnel ; il n'est jamais affiché.",
+    tokenPlaceholder: 'Collez le jeton ici',
+    guardarToken: 'Enregistrer le jeton',
+    borrarToken: 'Supprimer le jeton',
+    usarProveedor: 'Utiliser ce fournisseur',
+    guardadoProveedor: "Fournisseur enregistré. L'ouverture du tunnel demandera une confirmation.",
+    ngrokAyudaInstalacion:
+      "ngrok doit déjà être installé sur cet ordinateur (WolfCore Dev ne le télécharge pas car ngrok ne publie aucun téléchargement vérifiable). Sa configuration globale n'est pas touchée.",
+    exposeAyudaInstalacion:
+      "Expose doit déjà être installé, ou son expose.phar dans le dossier bin/expose des données de WolfCore Dev (il n'y a pas de téléchargement avec empreinte). Sa configuration globale n'est pas touchée.",
+    tailscaleAlcance: "Jusqu'où il va",
+    tailscaleServe: 'Serve : votre tailnet seulement',
+    tailscaleServeAyuda:
+      "Seulement les appareils de votre réseau Tailscale. Il n'atteint pas Internet.",
+    tailscaleFunnel: 'Funnel : tout Internet',
+    tailscaleFunnelAyuda:
+      "Toute personne ayant le lien peut entrer, qu'elle soit ou non sur votre tailnet.",
+    tailscaleFunnelAviso:
+      "Funnel publie ce site sur Internet : toute personne ayant le lien pourra entrer tant qu'il reste ouvert.",
+    tailscaleAyudaInstalacion:
+      "WolfCore Dev n'installe pas Tailscale (c'est un service système) : il doit être installé et connecté. Rien de ce que vous publiez déjà avec Tailscale n'est modifié ; le site utilise le port HTTPS 8443.",
+    confirmarTailnetTitulo: 'Partager avec votre tailnet',
+    confirmarTailnetTexto: (dominio: string) =>
+      `${dominio} sera partagé avec Tailscale Serve : seuls les appareils de votre tailnet pourront entrer ; il n'est pas publié sur Internet. Partager ?`,
+    confirmarTailnetRealesTexto: (dominio: string) =>
+      `${dominio} contient de vraies données clients. Avec Tailscale Serve, seuls les appareils de votre tailnet pourront le voir (il n'est pas publié sur Internet). Partager ?`,
+    confirmarFunnelTexto: (dominio: string) =>
+      `${dominio} sera publié sur Internet avec Tailscale Funnel : toute personne ayant le lien pourra entrer tant qu'il reste ouvert. Publier ?`,
+    confirmarProveedorTexto: (dominio: string, proveedor: string) =>
+      `${dominio} sera publié sur Internet avec ${proveedor} : toute personne ayant le lien pourra entrer tant qu'il reste ouvert. Publier ?`,
     tituloError: 'Impossible d’ouvrir le tunnel',
   },
   tuneles: {

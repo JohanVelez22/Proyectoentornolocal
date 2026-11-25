@@ -27,15 +27,54 @@ export function dominioPublicoValido(d: unknown): d is string {
 }
 
 /** Cómo se publica un sitio. Nunca lleva tokens ni credenciales (viven en `AlmacenSecretos`). */
-export const TunelSitioSchema = z.object({
-  proveedor: z.enum(IDS_PROVEEDOR_TUNEL),
-  nombre: z.string().regex(NOMBRE_TUNEL).optional(),
-  dominio: z
-    .string()
-    .refine((d) => dominioPublicoValido(d))
-    .optional(),
-});
+export const MODOS_TAILSCALE = ['serve', 'funnel'] as const;
+export type ModoTailscale = (typeof MODOS_TAILSCALE)[number];
+
+export const TunelSitioSchema = z
+  .object({
+    proveedor: z.enum(IDS_PROVEEDOR_TUNEL),
+    nombre: z.string().regex(NOMBRE_TUNEL).optional(),
+    dominio: z
+      .string()
+      .refine((d) => dominioPublicoValido(d))
+      .optional(),
+    /** Solo Tailscale: `serve` (solo la tailnet) o `funnel` (internet). Ausente = `serve`. */
+    modo: z.enum(MODOS_TAILSCALE).optional(),
+  })
+  .refine((t) => t.modo === undefined || t.proveedor === 'tailscale', {
+    message: 'El modo solo existe con Tailscale',
+  });
 export type TunelSitio = z.infer<typeof TunelSitioSchema>;
+
+/**
+ * Hasta dónde llega el enlace: `internet` (cualquiera con él) o `tailnet` (solo los equipos de la
+ * red privada Tailscale del usuario). Tailscale Serve es `tailnet`; Funnel y todo lo demás,
+ * `internet`. La confirmación (interfaz y MCP) dice cuál es.
+ */
+export type AlcanceTunel = 'internet' | 'tailnet';
+
+export function modoTailscaleDe(
+  t: Pick<TunelSitio, 'proveedor' | 'modo'> | undefined,
+): ModoTailscale {
+  return t?.proveedor === 'tailscale' && t.modo === 'funnel' ? 'funnel' : 'serve';
+}
+
+export function alcanceDe(t: Pick<TunelSitio, 'proveedor' | 'modo'> | undefined): AlcanceTunel {
+  return t?.proveedor === 'tailscale' && modoTailscaleDe(t) === 'serve' ? 'tailnet' : 'internet';
+}
+
+/** Token de ngrok o Expose: letras, números y `_ . -` (nunca algo que rompa un archivo o un entorno). */
+export const TOKEN_TUNEL = /^[A-Za-z0-9_.-]{8,200}$/;
+export const tokenTunelValido = (t: unknown): t is string =>
+  typeof t === 'string' && TOKEN_TUNEL.test(t);
+
+/** Quita los códigos de color ANSI de la salida de un CLI (`ESC [ … letra`). */
+export const sinAnsi = (t: string): string =>
+  t.replace(new RegExp(String.fromCharCode(27) + '\\[[0-9;?]*[A-Za-z]', 'g'), '');
+
+/** Id de sitio apto para nombrar archivos propios del túnel. */
+export const idSitioSeguro = (id: unknown): id is string =>
+  typeof id === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/.test(id);
 
 export const PROVEEDOR_TUNEL_PREDETERMINADO: IdProveedorTunel = 'cloudflare-rapido';
 
@@ -62,6 +101,13 @@ export interface LanzamientoTunel {
   envSecreto?: Record<string, string>;
   /** Valores secretos del lanzamiento: se tapan en los logs y en los errores. */
   secretos?: string[];
+  /**
+   * Prefijos de variables heredadas del entorno que NO se pasan al proceso (p. ej. `NGROK_`,
+   * `TS_`): las del usuario no deben pisar las nuestras. Sin esto, `TUNNEL_` (cloudflared).
+   */
+  quitarEntorno?: string[];
+  /** Carpeta de trabajo del proceso (que no sea la de un proyecto con archivos de configuración). */
+  cwd?: string;
 }
 
 /**
@@ -70,6 +116,8 @@ export interface LanzamientoTunel {
  */
 export interface ProveedorTunel {
   readonly id: IdProveedorTunel;
+  /** El proveedor no usa cloudflared: `Tuneles` no lo exige instalado. */
+  readonly sinCloudflared?: boolean;
   /** ¿Se puede abrir ahora? Si no, el código del error. */
   disponible(sitio: Sitio): Promise<{ ok: boolean; codigo?: string }>;
   /** Prepara lo necesario (config, credenciales temporales) y devuelve qué lanzar. */

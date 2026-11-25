@@ -91,6 +91,8 @@ export class PlataformaFalsa implements PlataformaCompleta {
   antivirusEstado: EstadoAntivirus | null = null;
   /** Instalaciones de Laragon, XAMPP y Herd que dice haber (`instalacionesAjenas`). */
   instalaciones: InstalacionAjena[] = [];
+  /** Lo que devuelve `tailscale` (por defecto, no instalado). */
+  tailscaleEstado: { ruta: string | null; sesion: boolean } = { ruta: null, sesion: false };
   /** Archivos que se pidió restringir al usuario. */
   readonly restringidos: string[] = [];
   firefox: string[] = [];
@@ -322,6 +324,10 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async instalacionesAjenas(): Promise<InstalacionAjena[]> {
     return this.instalaciones.map((i) => ({ ...i }));
+  }
+
+  async tailscale(): Promise<{ ruta: string | null; sesion: boolean }> {
+    return { ...this.tailscaleEstado };
   }
 
   comandoManual(c: ComandoManual): string {

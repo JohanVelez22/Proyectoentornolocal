@@ -90,6 +90,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'comandoManual',
   'restringirAlUsuario',
   'instalacionesAjenas',
+  'tailscale',
 ];
 
 /**

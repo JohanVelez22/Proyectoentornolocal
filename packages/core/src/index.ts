@@ -2,7 +2,14 @@ export const VERSION = '0.1.0';
 export * from './tipos';
 export {
   IDS_PROVEEDOR_TUNEL,
+  MODOS_TAILSCALE,
   NOMBRE_TUNEL,
+  TOKEN_TUNEL,
+  alcanceDe,
+  modoTailscaleDe,
+  tokenTunelValido,
+  type AlcanceTunel,
+  type ModoTailscale,
   dominioPublicoValido,
   nombreTunelValido,
   proveedorDeSitio,

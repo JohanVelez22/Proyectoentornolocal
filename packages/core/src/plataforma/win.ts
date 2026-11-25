@@ -410,6 +410,34 @@ export class PlataformaWindows implements PlataformaCompleta {
     return hay;
   }
 
+  /**
+   * Tailscale ya instalado: `tailscale.exe` del PATH o de `Program Files\Tailscale`. La sesión se
+   * lee con `status --json` (solo lectura); sin ejecutable o sin sesión, `sesion` es false.
+   */
+  async tailscale(): Promise<{ ruta: string | null; sesion: boolean }> {
+    const extras = [
+      this.entorno.ProgramFiles,
+      this.entorno.ProgramW6432,
+      this.entorno['ProgramFiles(x86)'],
+    ]
+      .filter((d): d is string => typeof d === 'string' && d !== '')
+      .map((d) => path.win32.join(d, 'Tailscale'));
+    const ruta = await this.buscarEjecutable('tailscale', extras);
+    if (!ruta) return { ruta: null, sesion: false };
+    try {
+      const r = await this.ejecutar(ruta, ['status', '--json'], {
+        timeoutMs: 8000,
+        // Variables de Tailscale del usuario (TS_SOCKET, TS_AUTHKEY…) no cambian a qué demonio se habla.
+        quitarEntorno: ['TS_', 'TAILSCALE_'],
+      });
+      if (r.codigo !== 0) return { ruta, sesion: false };
+      const estado = (JSON.parse(r.stdout) as { BackendState?: unknown }).BackendState;
+      return { ruta, sesion: estado === 'Running' };
+    } catch {
+      return { ruta, sesion: false };
+    }
+  }
+
   async carpetasContenedores(motor: 'docker' | 'podman'): Promise<string[]> {
     // Se lee del registro solo donde también se lee el de Git (sin `entorno` inyectado en pruebas).
     const deRegistro = async (): Promise<string[]> => {

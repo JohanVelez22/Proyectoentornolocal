@@ -188,6 +188,20 @@ export const en: Textos = {
       'tuneles.credencial_no_protegida':
         'The credential could not be restricted to your user, so it was not used.',
       'tuneles.sin_cifrado': 'System encryption is not available: credentials cannot be saved.',
+      'tuneles.token_invalido':
+        'The token is not valid: only letters, numbers and _ . - (8 to 200 characters). Save it again in the tunnel options.',
+      'tuneles.ngrok_no_instalado':
+        'ngrok is not installed on this computer. Install it from ngrok.com and try again.',
+      'tuneles.ngrok_sin_token': 'The ngrok token is missing: save it in the tunnel options.',
+      'tuneles.expose_no_instalado':
+        'Expose is not installed: install it or put expose.phar in {carpeta}.',
+      'tuneles.expose_sin_token': 'The Expose token is missing: save it in the tunnel options.',
+      'tuneles.tailscale_no_instalado':
+        'Tailscale is not installed on this computer. WolfCore Dev does not install it: get it from tailscale.com.',
+      'tuneles.tailscale_sin_sesion':
+        'Tailscale is not signed in: sign in to Tailscale and try again.',
+      'tuneles.tailscale_puerto_ocupado':
+        'Tailscale already publishes something on HTTPS port {puerto}. WolfCore Dev does not overwrite it: remove it with Tailscale and try again.',
       'hosts.dominio_invalido': 'A domain is not valid.',
       'hosts.tiempo_agotado':
         'The administrator prompt got no answer within {segundos} s; the hosts file was not changed.',
@@ -1366,6 +1380,47 @@ export const en: Textos = {
     nombreActual: (nombre: string, dominio: string) => `Tunnel “${nombre}” on ${dominio}`,
     confirmarPublicoNombreTexto: (dominio: string, publico: string) =>
       `${dominio} will be published at ${publico} through a Cloudflare tunnel: anyone with the link can access it while it stays open. Publish?`,
+    proveedorNgrokAyuda:
+      'With your ngrok account. Needs the ngrok program already installed on this computer.',
+    proveedorExposeAyuda:
+      'With your Expose account. Needs Expose already installed on this computer.',
+    proveedorTailscaleAyuda:
+      'Through your private Tailscale network. Needs Tailscale installed and signed in.',
+    tokenGuardado: (f: string) => `Token saved (ends in ${f}).`,
+    tokenSinGuardar: 'No token saved yet.',
+    tokenNgrok: 'ngrok token',
+    tokenExpose: 'Expose token',
+    tokenAyuda:
+      'It is stored encrypted on this computer and only handed to the program when the tunnel opens; it is never shown.',
+    tokenPlaceholder: 'Paste the token here',
+    guardarToken: 'Save the token',
+    borrarToken: 'Delete the token',
+    usarProveedor: 'Use this provider',
+    guardadoProveedor: 'Provider saved. Opening the tunnel will ask for confirmation.',
+    ngrokAyudaInstalacion:
+      'ngrok must already be installed on this computer (WolfCore Dev does not download it because ngrok publishes no verifiable download). Its global configuration is not touched.',
+    exposeAyudaInstalacion:
+      'Expose must already be installed, or its expose.phar in the bin/expose folder of the WolfCore Dev data (there is no download with a checksum). Its global configuration is not touched.',
+    tailscaleAlcance: 'How far it reaches',
+    tailscaleServe: 'Serve: your tailnet only',
+    tailscaleServeAyuda:
+      'Only the devices on your Tailscale network. It does not reach the internet.',
+    tailscaleFunnel: 'Funnel: the whole internet',
+    tailscaleFunnelAyuda:
+      'Anyone with the link can get in, whether or not they are on your tailnet.',
+    tailscaleFunnelAviso:
+      'Funnel puts this site on the internet: anyone with the link can get in while it is open.',
+    tailscaleAyudaInstalacion:
+      'WolfCore Dev does not install Tailscale (it is a system service): it must be installed and signed in. Nothing you already publish with Tailscale is changed; the site uses HTTPS port 8443.',
+    confirmarTailnetTitulo: 'Share with your tailnet',
+    confirmarTailnetTexto: (dominio: string) =>
+      `${dominio} will be shared with Tailscale Serve: only the devices on your tailnet can get in; it is not published on the internet. Share?`,
+    confirmarTailnetRealesTexto: (dominio: string) =>
+      `${dominio} has real customer data. With Tailscale Serve only the devices on your tailnet can see it (it is not published on the internet). Share?`,
+    confirmarFunnelTexto: (dominio: string) =>
+      `${dominio} will be published on the internet with Tailscale Funnel: anyone with the link can get in while it stays open. Publish?`,
+    confirmarProveedorTexto: (dominio: string, proveedor: string) =>
+      `${dominio} will be published on the internet with ${proveedor}: anyone with the link can get in while it stays open. Publish?`,
     tituloError: 'Could not open the tunnel',
   },
   tuneles: {

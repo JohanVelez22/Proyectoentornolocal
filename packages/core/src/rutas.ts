@@ -59,6 +59,18 @@ export class Rutas {
   cloudflaredLogin(): string {
     return path.join(this.base, 'run', 'cloudflared-login');
   }
+  /** ngrok: configuración mínima y política de tráfico por sitio (sin secretos; se borran al cerrar). */
+  ngrokRun(): string {
+    return path.join(this.base, 'run', 'ngrok');
+  }
+  /** Expose: archivo de configuración con el token por sitio y su inicio propio (se borran al cerrar). */
+  exposeRun(): string {
+    return path.join(this.base, 'run', 'expose');
+  }
+  /** Donde el usuario deja su `expose.phar` (WolfCore Dev no lo descarga: no hay huella oficial). */
+  exposeBin(): string {
+    return path.join(this.base, 'bin', 'expose');
+  }
   /** Secreto de proceso y puerto del canje de tokens de Adminer y phpMyAdmin (solo este usuario). */
   accesoBd(): string {
     return path.join(this.base, 'etc', 'acceso-bd');

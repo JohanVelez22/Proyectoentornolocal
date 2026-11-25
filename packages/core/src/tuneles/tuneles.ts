@@ -14,7 +14,11 @@ import type { Ejecutor, Lanzador, PlataformaCompleta } from '../plataforma/tipos
 import { enmascararSecretos } from '../patronesSecretos';
 import { CloudflareNombre, detalleSeguro } from './cloudflareNombre';
 import { CloudflareRapido } from './cloudflareRapido';
+import { Expose } from './expose';
+import { Ngrok } from './ngrok';
+import { Tailscale } from './tailscale';
 import {
+  modoTailscaleDe,
   proveedorDeSitio,
   type IdProveedorTunel,
   type ProveedorTunel,
@@ -32,8 +36,11 @@ export interface DepsTuneles {
   eventos: Eventos<EventosNucleo>;
   opts?: { esperaMs?: number; intervaloMs?: number };
   /** Para el túnel con nombre (cuenta y credenciales); sin ellos solo hay Cloudflare rápido. */
-  plataforma?: Pick<PlataformaCompleta, 'restringirAlUsuario'>;
+  plataforma?: Pick<PlataformaCompleta, 'restringirAlUsuario'> &
+    Partial<Pick<PlataformaCompleta, 'buscarEjecutable' | 'tailscale'>>;
   ejecutor?: Ejecutor;
+  /** El `php` CLI de la app (para ejecutar `expose.phar`); null si no hay PHP instalado. */
+  phpCli?: () => Promise<string | null>;
   /** Para `tunnel login` en streaming (URL de autorización en vivo y cancelar). */
   lanzar?: Lanzador;
   /** El almacén de secretos del proceso principal (puede fijarse después del arranque). */
@@ -54,7 +61,7 @@ const PREFIJO = 'tunel-';
 export interface OpcionesAbrirTunel {
   confirmado?: boolean;
   /** Lo que se mostró al confirmar (MCP): proveedor y, con nombre, túnel y dominio público. */
-  tunelConfirmado?: { proveedor: string; nombre?: string; dominio?: string };
+  tunelConfirmado?: { proveedor: string; nombre?: string; dominio?: string; modo?: string };
 }
 const MSG_CERRADO = 'El túnel se cerró. Use Renovar.';
 
@@ -87,9 +94,12 @@ export class Tuneles {
   readonly cloudflareNombre: CloudflareNombre | null;
 
   private secretos: (() => SecretosTunel | null) | undefined;
+  private phpCli: (() => Promise<string | null>) | undefined;
+  private readonly expose: Expose | null = null;
 
   constructor(private readonly d: DepsTuneles) {
     this.secretos = d.secretos;
+    this.phpCli = d.phpCli;
     this.esperaMs = d.opts?.esperaMs ?? 30_000;
     this.intervaloMs = d.opts?.intervaloMs ?? 500;
     this.proveedores.set('cloudflare-rapido', new CloudflareRapido());
@@ -106,6 +116,29 @@ export class Tuneles {
           })
         : null;
     if (this.cloudflareNombre) this.proveedores.set('cloudflare-nombre', this.cloudflareNombre);
+    const plat = d.plataforma;
+    if (plat?.buscarEjecutable) {
+      const comun = {
+        rutas: d.rutas,
+        plataforma: {
+          restringirAlUsuario: plat.restringirAlUsuario,
+          buscarEjecutable: plat.buscarEjecutable.bind(plat),
+        },
+        secretos: () => this.secretos?.() ?? null,
+      };
+      this.proveedores.set('ngrok', new Ngrok(comun));
+      this.expose = new Expose({ ...comun, phpCli: async () => (await this.phpCli?.()) ?? null });
+      this.proveedores.set('expose', this.expose);
+    }
+    if (plat?.tailscale && d.ejecutor) {
+      this.proveedores.set(
+        'tailscale',
+        new Tailscale({
+          plataforma: { tailscale: plat.tailscale.bind(plat) },
+          ejecutor: d.ejecutor,
+        }),
+      );
+    }
     d.supervisor.alSalir((id) => {
       void this.alSalirProceso(id);
     });
@@ -114,6 +147,11 @@ export class Tuneles {
   /** El proceso principal entrega su almacén de secretos cuando lo tiene (nunca va al renderer). */
   fijarSecretos(fn: () => SecretosTunel | null): void {
     this.secretos = fn;
+  }
+
+  /** El proceso principal entrega cómo ejecutar el PHP de la app (para `expose.phar`). */
+  fijarPhp(fn: () => Promise<string | null>): void {
+    this.phpCli = fn;
   }
 
   estados(): EstadoTunel[] {
@@ -185,6 +223,8 @@ export class Tuneles {
     // Lo que una caída dejó a medias (inicio temporal del login, `crear-*.json`).
     await this.cloudflareNombre?.barrerTemporales();
     const registros = this.leerRegistros();
+    // Archivos de Expose con token de un sitio sin túnel vivo: se borran.
+    await this.expose?.barrerTemporales(new Set(registros.map((r) => r.sitioId)));
     const vivos: RegistroTunel[] = [];
     const muertos: RegistroTunel[] = [];
     for (const r of registros) {
@@ -280,7 +320,9 @@ export class Tuneles {
       c &&
       (c.proveedor !== proveedorDeSitio(sitio) ||
         (c.nombre ?? null) !== (sitio.tunel?.nombre ?? null) ||
-        (c.dominio ?? null) !== (sitio.tunel?.dominio ?? null))
+        (c.dominio ?? null) !== (sitio.tunel?.dominio ?? null) ||
+        // Tailscale: Serve (solo la tailnet) y Funnel (internet) no son lo mismo.
+        (c.proveedor === 'tailscale' && (c.modo ?? 'serve') !== modoTailscaleDe(sitio.tunel)))
     ) {
       throw new ErrorWolf(
         'tuneles.confirmacion_obsoleta',
@@ -313,7 +355,8 @@ export class Tuneles {
         { proveedor: idProveedor },
       );
     }
-    const cloudflared = await this.rutaCloudflared();
+    // Solo los proveedores de Cloudflare necesitan cloudflared instalado.
+    const cloudflared = proveedor.sinCloudflared ? '' : await this.rutaCloudflared();
     const puerto = (await this.d.almacen.leer()).servicios.nginx.puerto;
 
     const id = PREFIJO + sitioId;
@@ -345,8 +388,9 @@ export class Tuneles {
         args: l.args,
         ...(l.env ? { env: l.env } : {}),
         ...(l.envSecreto ? { envSecreto: l.envSecreto } : {}),
-        // Un TUNNEL_TOKEN (o similar) global del usuario conectaría otro túnel distinto.
-        quitarEntorno: ['TUNNEL_'],
+        // Un TUNNEL_TOKEN, NGROK_AUTHTOKEN, TS_AUTHKEY… del usuario no debe pisar lo nuestro.
+        quitarEntorno: l.quitarEntorno ?? ['TUNNEL_'],
+        ...(l.cwd ? { cwd: l.cwd } : {}),
         log: logSalida,
         reiniciar: false,
       });

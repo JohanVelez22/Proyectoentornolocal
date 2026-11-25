@@ -193,6 +193,20 @@ export const pt: Textos = {
         'Não foi possível restringir a credencial ao usuário, por isso não foi usada.',
       'tuneles.sin_cifrado':
         'A criptografia do sistema não está disponível: não é possível salvar credenciais.',
+      'tuneles.token_invalido':
+        'O token não é válido: apenas letras, números e _ . - (de 8 a 200 caracteres). Guarde-o novamente nas opções do túnel.',
+      'tuneles.ngrok_no_instalado':
+        'O ngrok não está instalado neste computador. Instale-o em ngrok.com e tente novamente.',
+      'tuneles.ngrok_sin_token': 'Falta o token do ngrok: guarde-o nas opções do túnel.',
+      'tuneles.expose_no_instalado':
+        'O Expose não está instalado: instale-o ou coloque o expose.phar em {carpeta}.',
+      'tuneles.expose_sin_token': 'Falta o token do Expose: guarde-o nas opções do túnel.',
+      'tuneles.tailscale_no_instalado':
+        'O Tailscale não está instalado neste computador. O WolfCore Dev não o instala: obtenha-o em tailscale.com.',
+      'tuneles.tailscale_sin_sesion':
+        'O Tailscale não tem a sessão iniciada: inicie sessão no Tailscale e tente novamente.',
+      'tuneles.tailscale_puerto_ocupado':
+        'O Tailscale já publica algo na porta HTTPS {puerto}. O WolfCore Dev não a substitui: retire-o com o Tailscale e tente novamente.',
       'hosts.dominio_invalido': 'Há um domínio inválido.',
       'hosts.tiempo_agotado':
         'Não houve resposta à permissão de administrador em {segundos} s; o arquivo hosts ficou como estava.',
@@ -1383,6 +1397,45 @@ export const pt: Textos = {
     nombreActual: (nombre: string, dominio: string) => `Túnel «${nombre}» em ${dominio}`,
     confirmarPublicoNombreTexto: (dominio: string, publico: string) =>
       `${dominio} será publicado em ${publico} por um túnel da Cloudflare: qualquer pessoa com o link poderá acessar enquanto estiver aberto. Publicar?`,
+    proveedorNgrokAyuda:
+      'Com a sua conta do ngrok. Precisa do programa ngrok já instalado neste computador.',
+    proveedorExposeAyuda:
+      'Com a sua conta do Expose. Precisa do Expose já instalado neste computador.',
+    proveedorTailscaleAyuda:
+      'Pela sua rede privada do Tailscale. Precisa do Tailscale instalado e com sessão iniciada.',
+    tokenGuardado: (f: string) => `Token guardado (termina em ${f}).`,
+    tokenSinGuardar: 'Ainda não há um token guardado.',
+    tokenNgrok: 'Token do ngrok',
+    tokenExpose: 'Token do Expose',
+    tokenAyuda:
+      'É guardado cifrado neste computador e só é entregue ao programa ao abrir o túnel; nunca é mostrado.',
+    tokenPlaceholder: 'Cole aqui o token',
+    guardarToken: 'Guardar o token',
+    borrarToken: 'Apagar o token',
+    usarProveedor: 'Usar este provedor',
+    guardadoProveedor: 'Provedor guardado. Ao abrir o túnel será pedida confirmação.',
+    ngrokAyudaInstalacion:
+      'O ngrok já deve estar instalado neste computador (o WolfCore Dev não o descarrega porque o ngrok não publica um download verificável). A sua configuração global não é tocada.',
+    exposeAyudaInstalacion:
+      'O Expose já deve estar instalado, ou o seu expose.phar na pasta bin/expose dos dados do WolfCore Dev (não há download com checksum). A sua configuração global não é tocada.',
+    tailscaleAlcance: 'Até onde chega',
+    tailscaleServe: 'Serve: só a sua tailnet',
+    tailscaleServeAyuda: 'Só os dispositivos da sua rede Tailscale. Não chega à internet.',
+    tailscaleFunnel: 'Funnel: toda a internet',
+    tailscaleFunnelAyuda: 'Qualquer pessoa com o link pode entrar, esteja ou não na sua tailnet.',
+    tailscaleFunnelAviso:
+      'O Funnel publica este site na internet: qualquer pessoa com o link poderá entrar enquanto estiver aberto.',
+    tailscaleAyudaInstalacion:
+      'O WolfCore Dev não instala o Tailscale (é um serviço do sistema): deve estar instalado e com sessão iniciada. Nada do que já publica com o Tailscale é alterado; o site usa a porta HTTPS 8443.',
+    confirmarTailnetTitulo: 'Partilhar com a sua tailnet',
+    confirmarTailnetTexto: (dominio: string) =>
+      `${dominio} será partilhado com o Tailscale Serve: só os dispositivos da sua tailnet poderão entrar; não é publicado na internet. Partilhar?`,
+    confirmarTailnetRealesTexto: (dominio: string) =>
+      `${dominio} tem dados reais de clientes. Com o Tailscale Serve só os dispositivos da sua tailnet o poderão ver (não é publicado na internet). Partilhar?`,
+    confirmarFunnelTexto: (dominio: string) =>
+      `${dominio} será publicado na internet com o Tailscale Funnel: qualquer pessoa com o link poderá entrar enquanto continuar aberto. Publicar?`,
+    confirmarProveedorTexto: (dominio: string, proveedor: string) =>
+      `${dominio} será publicado na internet com ${proveedor}: qualquer pessoa com o link poderá entrar enquanto continuar aberto. Publicar?`,
     tituloError: 'Não foi possível abrir o túnel',
   },
   tuneles: {

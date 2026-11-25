@@ -225,6 +225,11 @@ export interface CapacidadesPlataforma {
    * exista: no lee ni ejecuta nada). Para importar sus sitios y bases.
    */
   instalacionesAjenas(): Promise<InstalacionAjena[]>;
+  /**
+   * El CLI de Tailscale ya instalado en el equipo (WolfCore Dev nunca lo instala: es un servicio
+   * del sistema) y si tiene sesión iniciada (`BackendState` en marcha). Solo lee: no cambia nada.
+   */
+  tailscale(): Promise<{ ruta: string | null; sesion: boolean }>;
 }
 
 /**
