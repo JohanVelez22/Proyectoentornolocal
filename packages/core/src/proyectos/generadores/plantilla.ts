@@ -1,5 +1,5 @@
 import type { PasoReceta } from '../config';
-import { PASOS_PERMITIDOS_PLANTILLA, type Plantilla } from '../plantillas';
+import { argsPermitidos, PASOS_PERMITIDOS_PLANTILLA, type Plantilla } from '../plantillas';
 import { procesoUvicorn } from '../recetas';
 import { generadorCodeigniter3, generadorCodeigniter4 } from './codeigniter';
 import { generadorEstatico } from './estatico';
@@ -94,7 +94,8 @@ export function generadorDePlantilla(pl: Plantilla): Generador {
         // El esquema ya trae la tabla de migraciones; sin base no hay qué migrar.
         if (x.tipo === 'migrar' && (conEsquema || !p.base)) continue;
         if (x.tipo === 'pgvector-activar' && !p.base) continue;
-        const args: Record<string, unknown> = { ...(x.args ?? {}) };
+        // Solo los argumentos de la lista del tipo, y los de la base los pone siempre este generador.
+        const args: Record<string, unknown> = argsPermitidos(x.tipo, x.args);
         if (importada && (x.tipo === 'composer-install' || x.tipo === 'npm-ci')) {
           args.sinScripts = true;
         }

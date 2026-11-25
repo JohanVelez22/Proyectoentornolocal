@@ -17,6 +17,7 @@ import { Rutas } from '../src/rutas';
 import {
   compilarExclusiones,
   EXCLUSIONES_PLANTILLA,
+  argsPermitidos,
   Plantillas,
   sinSecretosPlantilla,
   type Plantilla,
@@ -1266,5 +1267,96 @@ describe('I5: patrones con ruta y comodines', () => {
     const t0 = Date.now();
     expect(c!(largo, largo)).toBe(false);
     expect(Date.now() - t0).toBeLessThan(1000);
+  });
+});
+
+describe('I7: argumentos de la receta', () => {
+  const mala = (): Plantilla => ({
+    id: 'tienda-a1b2c3',
+    nombre: 'Tienda',
+    creada: '2026-11-24T00:00:00.000Z',
+    tipo: 'laravel',
+    receta: [
+      {
+        id: 'env-crear',
+        tipo: 'env-crear',
+        titulo: 'env',
+        args: {
+          valores: { APP_NAME: 'T', 'MALO NOMBRE': 'x', SALTO: 'a\nb', NUM: 3 },
+          usuario: 'root',
+          clave: 'admin',
+          sobrescribir: true,
+          semilla: true,
+          base: 'otra_base',
+          motor: 'postgresql',
+          instancia: 'mysql@9.0',
+          carpeta: '..\\..',
+        },
+      },
+      { id: 'migrar', tipo: 'migrar', titulo: 'm', args: { semilla: true, sobrescribir: true } },
+      {
+        id: 'pgvector-activar',
+        tipo: 'pgvector-activar',
+        titulo: 'pg',
+        args: { base: 'otra', instancia: 'postgresql@16', usuario: 'x' },
+      },
+    ],
+    php: '8.3',
+    phpIni: {},
+    extensiones: [],
+    runtimes: {},
+    reglasNginx: null,
+    motorBase: 'mysql',
+    origen: 'propia',
+    moduloAsgi: null,
+    conArchivos: true,
+    archivoEsquema: null,
+    sha256: { archivos: 'a'.repeat(64), esquema: null },
+  });
+
+  it('una plantilla manipulada no manda instancia, usuario, clave, sobrescribir ni semilla', () => {
+    const p = generadorDePlantilla(mala()).pasos({
+      tipo: 'laravel',
+      plantilla: 'tienda-a1b2c3',
+      nombre: 'nueva',
+      carpeta: 'C:\\x\\nueva',
+      base: { instancia: 'mysql@8.4', nombre: 'nueva' },
+      opciones: {},
+    });
+    const env = p.find((x) => x.tipo === 'env-crear')!.args!;
+    expect(env).toEqual({
+      valores: { APP_NAME: 'T', NUM: 3 },
+      instancia: 'mysql@8.4',
+      base: 'nueva',
+    });
+    expect(p.find((x) => x.tipo === 'migrar')!.args).toBeUndefined();
+  });
+
+  it('argsPermitidos descarta todo lo que no está en la lista del tipo', () => {
+    expect(argsPermitidos('migrar', { semilla: true })).toEqual({});
+    expect(argsPermitidos('comando', { comando: ['calc'] })).toEqual({});
+    expect(argsPermitidos('env-crear', 'x')).toEqual({});
+    expect(argsPermitidos('env-crear', { valores: [1] })).toEqual({});
+    expect(argsPermitidos('env-crear', { base: 'a', clave: 'b', valores: { A: '1' } })).toEqual({
+      valores: { A: '1' },
+    });
+  });
+
+  it('al guardar, la receta de la plantilla ya viene filtrada', async () => {
+    receta = [
+      {
+        id: 'env-crear',
+        tipo: 'env-crear',
+        titulo: 'env',
+        args: { instancia: 'mysql@9.0', usuario: 'root', valores: { A: '1' } },
+      },
+      { id: 'migrar', tipo: 'migrar', titulo: 'm', args: { semilla: true } },
+      { id: 'comando', tipo: 'comando', titulo: 'c', args: { comando: ['calc'] } },
+    ];
+    const p = await armar().guardar('tienda', opciones);
+    expect(p.receta).toEqual([
+      { id: 'env-crear', tipo: 'env-crear', titulo: 'env', args: { valores: { A: '1' } } },
+      { id: 'migrar', tipo: 'migrar', titulo: 'm' },
+    ]);
   });
 });

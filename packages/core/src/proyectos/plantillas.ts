@@ -428,6 +428,53 @@ export function sinSecretosPlantilla<T>(valor: T): T {
   return valor;
 }
 
+/**
+ * Argumentos que admite cada tipo de paso de una plantilla (lista cerrada). Todo lo demás se
+ * descarta al guardar y otra vez al crear: una plantilla manipulada no puede mandar una
+ * instancia, un usuario, una clave, `sobrescribir` ni `semilla` a un paso.
+ */
+const ARGS_PERMITIDOS: Record<string, readonly string[]> = {
+  'composer-install': [],
+  'env-crear': ['valores'],
+  'key-generate': [],
+  migrar: [],
+  'storage-link': [],
+  'npm-ci': [],
+  'npm-build': [],
+  'python-venv': [],
+  'pip-install': [],
+  'pgvector-activar': [],
+};
+
+/** Argumentos de la base que SIEMPRE los pone el generador (nunca vienen de la plantilla). */
+const ARGS_DE_BASE = ['base', 'motor', 'instancia', 'usuario', 'clave', 'sobrescribir', 'semilla'];
+
+/**
+ * Argumentos de un paso de plantilla ya filtrados: solo los de la lista del tipo y, en `valores`,
+ * nombres de variable válidos con valores de texto, número o booleano cortos. Nunca los de
+ * `ARGS_DE_BASE`.
+ */
+export function argsPermitidos(tipo: string, args: unknown): Record<string, unknown> {
+  const salida: Record<string, unknown> = {};
+  if (!args || typeof args !== 'object' || Array.isArray(args)) return salida;
+  const origen = args as Record<string, unknown>;
+  for (const k of ARGS_PERMITIDOS[tipo] ?? []) {
+    if (ARGS_DE_BASE.includes(k) || !(k in origen)) continue;
+    if (k === 'valores') {
+      const v = origen[k];
+      if (!v || typeof v !== 'object' || Array.isArray(v)) continue;
+      const limpio: Record<string, string | number | boolean> = {};
+      for (const [n, x] of Object.entries(v)) {
+        if (!/^[A-Za-z_][A-Za-z0-9_.]{0,63}$/.test(n)) continue;
+        if (typeof x === 'string' && x.length <= 500 && !/[\r\n\0]/.test(x)) limpio[n] = x;
+        else if (typeof x === 'number' || typeof x === 'boolean') limpio[n] = x;
+      }
+      if (Object.keys(limpio).length > 0) salida[k] = limpio;
+    }
+  }
+  return salida;
+}
+
 /** Pasos que no entran en la plantilla: los de base y el sitio los pone el generador. */
 const PASOS_FUERA = new Set<string>([
   'sitio-crear',
@@ -436,20 +483,18 @@ const PASOS_FUERA = new Set<string>([
   'config-bd-crear',
   ...PASOS_SOLO_GENERADOR,
 ]);
-/** Argumentos que solo valen una vez o vienen de un diálogo. */
-const ARGS_FUERA = ['archivo', 'confirmarSobrescribir', 'sobrescribir', 'semilla', 'nueva'];
 
 function recetaDePlantilla(receta: readonly PasoReceta[]): PasoReceta[] {
   return receta
     .filter((p) => !PASOS_FUERA.has(p.tipo))
+    .filter((p) => p.tipo in ARGS_PERMITIDOS)
     .map((p) => {
-      const args = p.args ? { ...p.args } : undefined;
-      if (args) for (const k of ARGS_FUERA) delete args[k];
+      const args = argsPermitidos(p.tipo, p.args);
       return sinSecretosPlantilla({
         id: p.id,
         tipo: p.tipo,
         titulo: p.titulo,
-        ...(args && Object.keys(args).length > 0 ? { args } : {}),
+        ...(Object.keys(args).length > 0 ? { args } : {}),
         ...(p.opcional ? { opcional: true } : {}),
       });
     });
