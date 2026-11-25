@@ -110,6 +110,13 @@ const api: ApiEntorno = {
     url: (motor, usuario) => invocar('adminer.url', motor, usuario),
     proyecto: (id) => invocar('adminer.proyecto', id),
   },
+  phpmyadmin: {
+    instalar: () => invocar('phpmyadmin.instalar'),
+    disponibilidad: () => invocar('phpmyadmin.disponibilidad'),
+  },
+  accesoBd: {
+    abrir: (sitioId, herramienta) => invocar('accesoBd.abrir', sitioId, herramienta),
+  },
   ftp: {
     activar: (id) => invocar('ftp.activar', id),
     desactivar: (id) => invocar('ftp.desactivar', id),

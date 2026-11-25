@@ -59,17 +59,20 @@ export function huellaDe(v: { huella?: Huella | null; sha256?: string | null }):
  * Fuentes que publican una firma PGP de sus descargas (D10). Con firma, `instalar` la verifica
  * con el anillo fijado de la fuente **antes** de usar la suma o el archivo y falla cerrado.
  */
-export type FuenteFirma = 'node' | 'composer' | 'nginx';
+export type FuenteFirma = 'node' | 'composer' | 'nginx' | 'phpmyadmin';
 
 /**
  * Fuente de la firma de una versión, o null si su fuente no la publica:
  * - Node: `SHASUMS256.txt.sig` (firma la lista de sumas) en todas las versiones;
  * - Composer: `composer.phar.asc` desde 2.0.3 (1.x y 2.0.0–2.0.2 no la publican: 404
  *   comprobado; esas solo tienen su suma);
- * - Nginx: `nginx-<v>.zip.asc` (nginx.org no publica sumas, solo firmas).
+ * - Nginx: `nginx-<v>.zip.asc` (nginx.org no publica sumas, solo firmas);
+ * - phpMyAdmin: `phpMyAdmin-<v>-all-languages.zip.asc` (D18), además de su `.sha256`.
  */
 export function fuenteFirmaDe(v: { servicio: string; version: string }): FuenteFirma | null {
-  if (v.servicio === 'node' || v.servicio === 'nginx') return v.servicio;
+  if (v.servicio === 'node' || v.servicio === 'nginx' || v.servicio === 'phpmyadmin') {
+    return v.servicio;
+  }
   if (v.servicio === 'composer') {
     const m = /^(\d+)\.(\d+)\.(\d+)/.exec(v.version);
     if (!m) return null;

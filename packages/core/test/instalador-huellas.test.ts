@@ -159,6 +159,7 @@ describe('Instalador: firmas PGP (D10)', () => {
     node: { '24': '24.0.0' },
     composer: { '2.11': '2.11.3', '2.0': '2.0.3' },
     nginx: { '1.29': '1.29.9' },
+    phpmyadmin: { '5.2': '5.2.3' },
   };
 
   function firmado(

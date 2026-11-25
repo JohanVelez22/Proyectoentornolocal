@@ -114,6 +114,7 @@ import {
   textoLibre,
   tipoProyecto,
   urlAbrible,
+  herramientaBd,
   servicioVersiones,
   versionCatalogo,
   idInstanciaIpc,
@@ -834,6 +835,14 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'adminer.url': (n, _s, motor, usuario) => {
     const m = motorBd(motor);
     return n.urlAdminer(m, nombreBase(m === 'mongodb' ? 'mysql' : m, usuario, 'usuario'));
+  },
+  'phpmyadmin.instalar': (n) => n.instalarPhpMyAdmin(),
+  'phpmyadmin.disponibilidad': (n) => n.disponibilidadPhpMyAdmin(),
+  // El token de un solo uso va de aquí al navegador: la interfaz nunca ve la URL ni la clave.
+  'accesoBd.abrir': async (n, s, id, herramienta) => {
+    const r = await n.abrirBaseProyecto(idNoVacio(id), herramientaBd(herramienta));
+    await s.abrirUrl(r.url);
+    return { usuario: r.usuario, propio: r.propio };
   },
   'ftp.activar': (n, _s, id) => n.activarFtp(idNoVacio(id)),
   'ftp.desactivar': (n, _s, id) => n.desactivarFtp(idNoVacio(id)),

@@ -77,6 +77,8 @@ import type {
   Credenciales,
   DatosConexion,
   DisponibilidadAdminer,
+  DisponibilidadPhpMyAdmin,
+  HerramientaBd,
   EstadoGeneral,
   EstadoHosts,
   EstadoHttps,
@@ -239,6 +241,8 @@ export type {
   Credenciales,
   DatosConexion,
   DisponibilidadAdminer,
+  DisponibilidadPhpMyAdmin,
+  HerramientaBd,
   BaseProyecto,
   IdTerminal,
   TerminalDisponible,
@@ -309,6 +313,8 @@ export interface ProveedorIaPublico extends ConfigProveedorIa {
 
 /** Puerto fijo de Adminer (igual que `PUERTO_ADMINER` del núcleo; solo se muestra). */
 export const PUERTO_ADMINER = 8090;
+/** Puerto fijo de phpMyAdmin (igual que `PUERTO_PHPMYADMIN` del núcleo; solo se muestra). */
+export const PUERTO_PHPMYADMIN = 8091;
 
 export interface EstadoPgvector {
   buildTools: boolean;
@@ -558,6 +564,21 @@ export interface ApiEntorno {
     url(motor: MotorBd, usuario: string): Promise<string | null>;
     /** Base del proyecto (según su .env) y su URL de Adminer, sin clave; url null si no hay. */
     proyecto(sitioId: string): Promise<{ base: BaseProyecto | null; url: string | null }>;
+  };
+  phpmyadmin: {
+    instalar(): Promise<void>;
+    disponibilidad(): Promise<DisponibilidadPhpMyAdmin>;
+  };
+  accesoBd: {
+    /**
+     * Abre la base del proyecto en Adminer o phpMyAdmin ya autenticada. El proceso principal abre
+     * el navegador con un token de un solo uso: la interfaz solo recibe con qué usuario entró
+     * (`propio` false = el administrador del servidor, porque el proyecto usa root u otro usuario).
+     */
+    abrir(
+      sitioId: string,
+      herramienta: HerramientaBd,
+    ): Promise<{ usuario: string; propio: boolean }>;
   };
   ftp: {
     activar(sitioId: string): Promise<Credenciales>;
@@ -1116,6 +1137,9 @@ export const RUTAS_IPC = [
   'adminer.disponibilidad',
   'adminer.url',
   'adminer.proyecto',
+  'phpmyadmin.instalar',
+  'phpmyadmin.disponibilidad',
+  'accesoBd.abrir',
   'ftp.activar',
   'ftp.desactivar',
   'ftp.regenerarClave',

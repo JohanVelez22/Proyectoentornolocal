@@ -22,6 +22,8 @@ export const HOSTS_PERMITIDOS: readonly string[] = [
   'getcomposer.org',
   'nodejs.org',
   'api.nuget.org',
+  // phpMyAdmin: zip y firma de su servidor oficial de descargas.
+  'files.phpmyadmin.net',
   // Java (Temurin) baja de GitHub Releases (ya permitido); .NET, Go y Rust de sus sitios oficiales.
   'builds.dotnet.microsoft.com',
   'go.dev',

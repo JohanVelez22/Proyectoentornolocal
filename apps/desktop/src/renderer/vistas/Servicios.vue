@@ -168,6 +168,7 @@ onMounted(() => {
           <template v-if="g.categoria === 'herramientas'">
             <TarjetaHerramienta herramienta="composer" />
             <TarjetaHerramienta herramienta="adminer" />
+            <TarjetaHerramienta herramienta="phpmyadmin" />
           </template>
         </div>
       </section>

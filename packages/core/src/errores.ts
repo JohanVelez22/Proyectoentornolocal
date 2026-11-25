@@ -87,6 +87,12 @@ export const PARAMETROS_ERROR = {
   'herramientas.sin_seleccion': [],
   'herramientas.dominio_invalido': [],
   'herramientas.demasiados_dominios': ['maximo'],
+  // acceso a la base con Adminer o phpMyAdmin (D18)
+  'acceso_bd.datos_invalidos': [],
+  'acceso_bd.sin_base': [],
+  'acceso_bd.motor_no_soportado': [],
+  'acceso_bd.servidor_no_resuelto': [],
+  'acceso_bd.no_listo': [],
   // búsqueda
   'buscar.consulta_invalida': [],
   'buscar.raiz_invalida': [],

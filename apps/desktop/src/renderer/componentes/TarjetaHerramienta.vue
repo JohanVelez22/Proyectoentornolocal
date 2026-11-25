@@ -2,15 +2,20 @@
 import { CloudDownload, Grid, Open, Refresh, Terminal } from '@vicons/ionicons5';
 import { NButton, NIcon, NProgress, NSkeleton, NTooltip, useMessage } from 'naive-ui';
 import { computed, onMounted, ref, watch } from 'vue';
-import { PUERTO_ADMINER, type DisponibilidadAdminer } from '../../shared/api';
+import {
+  PUERTO_ADMINER,
+  PUERTO_PHPMYADMIN,
+  type DisponibilidadAdminer,
+  type DisponibilidadPhpMyAdmin,
+} from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos as tx } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import EstadoPunto from './EstadoPunto.vue';
 
-/** Composer y Adminer: no son procesos, pero se instalan y se usan desde aquí. */
-const props = defineProps<{ herramienta: 'composer' | 'adminer' }>();
+/** Composer, Adminer y phpMyAdmin: no son procesos, pero se instalan y se usan desde aquí. */
+const props = defineProps<{ herramienta: 'composer' | 'adminer' | 'phpmyadmin' }>();
 
 const t = tx.servicios;
 const servicios = useServicios();
@@ -20,11 +25,15 @@ const message = useMessage();
 const cargada = ref(false);
 const versionComposer = ref<string | null>(null);
 const versionesAdminer = ref<string[]>([]);
-const disponibilidad = ref<DisponibilidadAdminer | null>(null);
+const disponibilidad = ref<DisponibilidadAdminer | DisponibilidadPhpMyAdmin | null>(null);
 
 const esComposer = computed(() => props.herramienta === 'composer');
-const textos = computed(() => (esComposer.value ? t.composer : t.adminer));
+const esPma = computed(() => props.herramienta === 'phpmyadmin');
+const textos = computed(() =>
+  esComposer.value ? t.composer : esPma.value ? t.phpmyadmin : t.adminer,
+);
 const urlAdminer = `http://127.0.0.1:${PUERTO_ADMINER}/`;
+const puertoWeb = computed(() => (esPma.value ? PUERTO_PHPMYADMIN : PUERTO_ADMINER));
 
 const instalada = computed(() =>
   esComposer.value ? versionComposer.value !== null : versionesAdminer.value.length > 0,
@@ -37,8 +46,8 @@ const estado = computed<{ punto: 'encendido' | 'apagado' | 'aviso'; etiqueta: st
   if (!instalada.value) return { punto: 'apagado', etiqueta: textos.value.noInstalado };
   if (esComposer.value) return { punto: 'encendido', etiqueta: t.composer.instalado };
   return disponibilidad.value?.disponible
-    ? { punto: 'encendido', etiqueta: t.adminer.disponible }
-    : { punto: 'aviso', etiqueta: t.adminer.sinPhp };
+    ? { punto: 'encendido', etiqueta: (esPma.value ? t.phpmyadmin : t.adminer).disponible }
+    : { punto: 'aviso', etiqueta: (esPma.value ? t.phpmyadmin : t.adminer).sinPhp };
 });
 
 /** Composer necesita PHP para instalarse y para correr. */
@@ -74,7 +83,10 @@ async function cargar(): Promise<void> {
     versionComposer.value = v ?? null;
   } else {
     const r = await ejecutar('cargar', () =>
-      Promise.all([api().instalador.instalados('adminer'), api().adminer.disponibilidad()]),
+      Promise.all([
+        api().instalador.instalados(esPma.value ? 'phpmyadmin' : 'adminer'),
+        esPma.value ? api().phpmyadmin.disponibilidad() : api().adminer.disponibilidad(),
+      ]),
     );
     if (r) [versionesAdminer.value, disponibilidad.value] = r;
   }
@@ -87,7 +99,11 @@ async function instalar(): Promise<void> {
   const ok = await ejecutar(
     'instalar',
     async () => {
-      await (esComposer.value ? api().composer.instalar() : api().adminer.instalar());
+      await (esComposer.value
+        ? api().composer.instalar()
+        : esPma.value
+          ? api().phpmyadmin.instalar()
+          : api().adminer.instalar());
       return true;
     },
     { exito: textos.value.instaladoOk },
@@ -139,7 +155,7 @@ watch(
     <dl class="datos">
       <div>
         <dt>{{ esComposer ? t.composer.uso : t.adminer.direccion }}</dt>
-        <dd>{{ esComposer ? t.composer.usoTexto : `127.0.0.1:${PUERTO_ADMINER}` }}</dd>
+        <dd>{{ esComposer ? t.composer.usoTexto : `127.0.0.1:${puertoWeb}` }}</dd>
       </div>
       <div>
         <dt>&nbsp;</dt>
@@ -194,6 +210,8 @@ watch(
           ></template>
           {{ tx.acciones.actualizar }}
         </NButton>
+        <!-- phpMyAdmin no tiene pantalla de inicio: se entra desde la tarjeta de cada proyecto. -->
+        <span v-else-if="esPma" class="aparte">{{ t.phpmyadmin.abrirDesdeProyecto }}</span>
         <NButton
           v-else
           size="small"
@@ -287,6 +305,11 @@ watch(
   flex-direction: column;
   gap: 6px;
   font-size: 12px;
+}
+.aparte {
+  font-size: 12px;
+  opacity: 0.7;
+  text-align: right;
 }
 .pie {
   margin-top: auto;

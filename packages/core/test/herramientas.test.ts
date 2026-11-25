@@ -538,7 +538,7 @@ describe('Adminer', () => {
     expect(urlAdminer('mysql', 'root', 3306)).not.toMatch(/pass|clave|password/i);
   });
 
-  it('instalar copia adminer.php a tools/adminer/index.php', async () => {
+  it('instalar copia adminer.php intacto y deja el envoltorio de entrada como index.php', async () => {
     const a = new Adminer({
       rutas,
       instalador: {
@@ -551,7 +551,10 @@ describe('Adminer', () => {
       phpEncendido: () => false,
     });
     await a.instalar();
-    expect(readFileSync(rutas.herramientas('adminer', 'index.php'), 'utf8')).toBe('x');
+    expect(readFileSync(rutas.herramientas('adminer', 'adminer.php'), 'utf8')).toBe('x');
+    expect(readFileSync(rutas.herramientas('adminer', 'index.php'), 'utf8')).toContain(
+      'WolfCore Dev: entrada de Adminer',
+    );
     expect(a.instalado()).toBe(true);
   });
 });

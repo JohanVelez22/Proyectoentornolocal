@@ -35,6 +35,7 @@ import { computed, h, onMounted, ref, type Component } from 'vue';
 import { useRouter } from 'vue-router';
 import type {
   EditorDisponible,
+  HerramientaBd,
   IdEditor,
   IdTerminal,
   ResultadoAplicar,
@@ -316,37 +317,62 @@ function elegirTerminal(k: string | number): void {
   abrirTerminal(k as IdTerminal);
 }
 
-/* ───── Base de datos del proyecto en Adminer (phpMyAdmin: Etapa D) ───── */
+/* ───── Base de datos del proyecto en Adminer o phpMyAdmin, ya autenticada ───── */
 const baseDetectada = ref<string | null>(null);
+const motorBase = ref<string | null>(null);
 const ayudaAbrir = computed(() => `${tp.tarjeta.abrirSitio}\n${url.value}`);
 const ayudaCarpeta = computed(() => `${t.abrirCarpeta}\n${props.sitio.carpeta}`);
 const ayudaBd = computed(
   () =>
-    `${baseDetectada.value ? tp.tarjeta.baseDatosAyuda(baseDetectada.value) : tp.tarjeta.baseDatosSinDetectar}\n${tp.tarjeta.phpMyAdminPendiente}`,
+    `${baseDetectada.value ? tp.tarjeta.baseDatosAyuda(baseDetectada.value) : tp.tarjeta.baseDatosSinDetectar}\n${tp.tarjeta.entradaAutomatica}`,
 );
-function abrirBaseDatos(): void {
+async function abrirBaseDatos(herramienta: HerramientaBd = 'adminer'): Promise<void> {
   if (ocupado('bd')) return;
-  void ejecutar('bd', async () => {
-    const [r, d] = await Promise.all([
-      api().adminer.proyecto(props.sitio.id),
-      api().adminer.disponibilidad(),
-    ]);
+  await ejecutar('bd', async () => {
+    const r = await api().adminer.proyecto(props.sitio.id);
     baseDetectada.value = r.base?.base ?? null;
-    if (!r.url) {
+    motorBase.value = r.base?.motor ?? null;
+    if (!r.base) {
       message.warning(tp.tarjeta.sinBase);
       return;
     }
+    const d =
+      herramienta === 'adminer'
+        ? await api().adminer.disponibilidad()
+        : await api().phpmyadmin.disponibilidad();
     if (!d.disponible) {
       notification.warning({
-        title: tp.tarjeta.adminerNoListo,
+        title: herramienta === 'adminer' ? tp.tarjeta.adminerNoListo : tp.tarjeta.phpMyAdminNoListo,
         content: d.motivo,
         duration: 8000,
       });
       return;
     }
-    // La URL lleva servidor, usuario y base; la clave la pide Adminer (nunca va en la URL).
-    await api().sistema.abrirUrl(r.url);
+    // El proceso principal abre el navegador con un token de un solo uso: la clave no pasa por la
+    // URL, el historial ni esta ventana. Si entró como administrador (el proyecto usa root), se avisa.
+    const acceso = await api().accesoBd.abrir(props.sitio.id, herramienta);
+    if (!acceso.propio) message.info(tp.tarjeta.entroComoAdmin(acceso.usuario), { duration: 9000 });
   });
+}
+
+/* Elegir la herramienta (el motor de la base se consulta al abrir el menú: PostgreSQL no va en phpMyAdmin). */
+const menuBd = ref(false);
+const opcionesBd = computed<DropdownOption[]>(() => [
+  { key: 'adminer', label: tp.tarjeta.opcionAdminer },
+  motorBase.value === 'postgresql'
+    ? { key: 'phpmyadmin', label: tp.tarjeta.opcionPhpMyAdminSoloMysql, disabled: true }
+    : { key: 'phpmyadmin', label: tp.tarjeta.opcionPhpMyAdmin },
+]);
+async function cambiarMenuBd(mostrar: boolean): Promise<void> {
+  if (mostrar) {
+    const r = await ejecutar('bdMenu', () => api().adminer.proyecto(props.sitio.id));
+    motorBase.value = r?.base?.motor ?? null;
+  }
+  menuBd.value = mostrar;
+}
+function elegirBd(k: string | number): void {
+  menuBd.value = false;
+  void abrirBaseDatos(k as HerramientaBd);
 }
 function abrirCarpeta(): void {
   void ejecutar('carpeta', () => api().sistema.abrirCarpeta(props.sitio.carpeta));
@@ -524,13 +550,37 @@ function abrirCarpeta(): void {
             </NButton>
           </MenuDesplegable>
         </div>
-        <BotonIcono
-          :icono="Server"
-          :etiqueta="tp.tarjeta.baseDatos"
-          :ayuda="ayudaBd"
-          :cargando="ocupado('bd')"
-          @click="abrirBaseDatos"
-        />
+        <div class="grupo">
+          <BotonIcono
+            :icono="Server"
+            :etiqueta="tp.tarjeta.baseDatos"
+            :ayuda="ayudaBd"
+            :cargando="ocupado('bd')"
+            pegado
+            @click="abrirBaseDatos()"
+          />
+          <MenuDesplegable
+            trigger="click"
+            :options="opcionesBd"
+            alinear-fin
+            :show="menuBd"
+            @update:show="cambiarMenuBd"
+            @select="elegirBd"
+          >
+            <NButton
+              size="small"
+              secondary
+              class="grupo-der"
+              :loading="ocupado('bdMenu')"
+              :aria-label="tp.tarjeta.elegirBd"
+              :title="tp.tarjeta.elegirBd"
+            >
+              <template #icon
+                ><NIcon aria-hidden="true"><ChevronDown /></NIcon
+              ></template>
+            </NButton>
+          </MenuDesplegable>
+        </div>
         <div class="grupo">
           <BotonIcono
             :icono="CodeSlash"

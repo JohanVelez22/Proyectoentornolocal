@@ -547,6 +547,13 @@ export const pt: Textos = {
         'A assinatura de {servicio} {version} ou sua chave expirou: nada foi instalado. Atualize o WolfCore Dev para ter as chaves em dia.',
       'catalogo.reloj_atrasado':
         'A assinatura de {servicio} {version} tem data futura: verifique a data e a hora do computador e tente de novo.',
+      'acceso_bd.datos_invalidos': 'Os dados de acesso ao banco não são válidos.',
+      'acceso_bd.sin_base': 'O .env deste projeto não aponta para um banco de dados.',
+      'acceso_bd.motor_no_soportado':
+        'O phpMyAdmin só abre bancos MySQL e MariaDB; use o Adminer para PostgreSQL.',
+      'acceso_bd.servidor_no_resuelto':
+        'O banco deste projeto não é de um servidor local do WolfCore Dev.',
+      'acceso_bd.no_listo': 'A ferramenta não está pronta: instale-a em Serviços e ligue o PHP.',
     },
   },
   avisoInicio: {
@@ -694,6 +701,16 @@ export const pt: Textos = {
       sinPhp: 'Falta o PHP',
       abrir: 'Abrir o Adminer',
       instaladoOk: 'Adminer instalado',
+    },
+    phpmyadmin: {
+      nombre: 'phpMyAdmin',
+      detalle: 'Administrador web de MySQL e MariaDB',
+      direccion: 'Endereço',
+      disponible: 'Pronto',
+      noInstalado: 'Não instalado',
+      sinPhp: 'Falta o PHP',
+      abrirDesdeProyecto: 'Abre-se a partir do cartão de cada projeto, já autenticado.',
+      instaladoOk: 'phpMyAdmin instalado',
     },
     puertos: 'Portas',
     pid: 'PID',
@@ -972,6 +989,7 @@ export const pt: Textos = {
       ollama: { nombre: 'Ollama', detalle: 'IA local (ollama.com)' },
       composer: { nombre: 'Composer', detalle: 'Dependências do PHP (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Administrador web de bancos de dados' },
+      phpmyadmin: { nombre: 'phpMyAdmin', detalle: 'Administrador web de MySQL (phpmyadmin.net)' },
     },
     grupos: {
       web: 'Web e PHP',
@@ -1979,11 +1997,18 @@ export const pt: Textos = {
       vscodeError: 'Não foi possível abrir o editor',
       baseDatos: 'Banco de dados',
       baseDatosAyuda: (base: string) =>
-        `Abrir o banco «${base}» no Adminer (pede a senha ao entrar)`,
-      baseDatosSinDetectar: 'Abrir o banco de dados do projeto no Adminer',
+        `Abrir o banco «${base}» já autenticado (Adminer ou phpMyAdmin)`,
+      baseDatosSinDetectar: 'Abrir o banco de dados do projeto (Adminer ou phpMyAdmin)',
       sinBase: 'O .env do projeto não declara um banco MySQL, MariaDB ou PostgreSQL.',
       adminerNoListo: 'O Adminer não está pronto',
-      phpMyAdminPendiente: 'O phpMyAdmin chega na Etapa D; por enquanto usa-se o Adminer.',
+      entradaAutomatica: 'Abre já autenticado, sem digitar a senha.',
+      elegirBd: 'Escolher Adminer ou phpMyAdmin',
+      opcionAdminer: 'Adminer',
+      opcionPhpMyAdmin: 'phpMyAdmin',
+      opcionPhpMyAdminSoloMysql: 'phpMyAdmin (só MySQL e MariaDB)',
+      phpMyAdminNoListo: 'O phpMyAdmin não está pronto',
+      entroComoAdmin: (usuario: string) =>
+        `Entrou como ${usuario}, o administrador do servidor, porque este projeto não usa um usuário próprio. No gerenciador de .env, “Usar usuário próprio” cria um limitado ao seu banco.`,
       abrirSitio: 'Abrir o site no navegador',
       github: 'Repositório',
       abrirRemoto: (url: string) => `Abrir ${url}`,

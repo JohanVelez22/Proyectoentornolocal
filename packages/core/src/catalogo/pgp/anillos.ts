@@ -1,5 +1,6 @@
 import claveComposer from '../claves/composer.asc?raw';
 import claveNginx from '../claves/nginx.asc?raw';
+import clavePhpMyAdmin from '../claves/phpmyadmin.asc?raw';
 import claveNode from '../claves/node.asc?raw';
 import type { FuenteFirma } from '../huellas';
 import { digestDe, firmaCuadra, NOMBRE_HASH } from './cripto';
@@ -257,6 +258,7 @@ const ARMADURAS: Record<FuenteFirma, string> = {
   node: claveNode,
   composer: claveComposer,
   nginx: claveNginx,
+  phpmyadmin: clavePhpMyAdmin,
 };
 const cache = new Map<FuenteFirma, readonly ClavePublica[]>();
 

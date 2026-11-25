@@ -23,6 +23,7 @@ export interface VigenciaAnillo {
   node: Readonly<Record<string, string>>;
   composer: Readonly<Record<string, string>>;
   nginx: Readonly<Record<string, string>>;
+  phpmyadmin: Readonly<Record<string, string>>;
 }
 
 export const VIGENCIA_FIJADA: VigenciaAnillo = vigenciaFijada;

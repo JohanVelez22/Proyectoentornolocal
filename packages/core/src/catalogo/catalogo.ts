@@ -23,6 +23,7 @@ export type ServicioInstalable =
   | 'ollama'
   | 'composer'
   | 'adminer'
+  | 'phpmyadmin'
   | 'pgvector-src'
   | 'node'
   | 'python'
@@ -54,6 +55,7 @@ export const EJECUTABLE_POR_SERVICIO: Record<ServicioInstalable, string> = {
   ollama: nombreEjecutable('ollama'),
   composer: 'composer.phar',
   adminer: 'adminer.php',
+  phpmyadmin: 'index.php',
   'pgvector-src': 'Makefile.win',
   node: nombreEjecutable('node'),
   python: nombreEjecutable('python'),
@@ -210,6 +212,7 @@ export const CatalogoSchema = z.object({
   ollama: Lista,
   composer: Lista,
   adminer: Lista,
+  phpmyadmin: Lista,
   'pgvector-src': Lista,
   node: Lista,
   python: Lista,

@@ -11,6 +11,9 @@
  * - Composer: la huella que nombra el flujo de publicación oficial de `composer/composer`
  *   (`.github/workflows/release.yml`, secreto `GPG_KEY_<huella>`) y la clave de
  *   `keys.openpgp.org` con esa huella (correo verificado `contact@packagist.com`);
+ * - phpMyAdmin: la huella del release manager que publica `docs.phpmyadmin.net` (capítulo
+ *   "Verifying phpMyAdmin releases"); la clave debe estar en `files.phpmyadmin.net/phpmyadmin.keyring`
+ *   con esa huella y el archivo fijado la conserva (solo esa clave, no todo el llavero);
  * - Nginx: `nginx.org/en/pgp_keys.html` → `nginx.org/keys/<nombre>.key` (salvo
  *   `nginx_signing.key`, que firma paquetes y repositorios, no las descargas; y salvo las claves
  *   ya vencidas).
@@ -115,6 +118,30 @@ async function nginx() {
   return partes.join('\n') + '\n';
 }
 
+/** Huella del release manager de phpMyAdmin (Isaac Bennetch), según docs.phpmyadmin.net. */
+const HUELLA_PHPMYADMIN = '3D06A59ECE730EB71B511C17CE752F178259BD92';
+
+async function phpmyadmin() {
+  const docs = await bajar('https://docs.phpmyadmin.net/en/latest/setup.html');
+  const legible = HUELLA_PHPMYADMIN.match(/.{4}/g).join(' ');
+  if (!docs.replace(/\s+/g, ' ').includes(legible)) {
+    throw new Error('docs.phpmyadmin.net ya no publica la huella fijada del release manager');
+  }
+  const llavero = await bajar('https://files.phpmyadmin.net/phpmyadmin.keyring');
+  const clave = primarias(llavero).find((c) => c.huella === HUELLA_PHPMYADMIN);
+  if (!clave) throw new Error('phpmyadmin.keyring no trae la clave del release manager');
+  if (clave.revocada) throw new Error('La clave del release manager de phpMyAdmin está revocada');
+  const actual = await readFile(path.join(CLAVES, 'phpmyadmin.asc'), 'utf8');
+  const fijada = primarias(actual).find((c) => c.huella === HUELLA_PHPMYADMIN);
+  if (!fijada) throw new Error('El archivo fijado no trae la clave del release manager');
+  // El archivo fijado solo cambia a mano (extraer la clave del llavero con gpg --export-options
+  // export-minimal): aquí se avisa si el vencimiento del llavero ya no coincide.
+  if (fijada.expiracion !== clave.expiracion) {
+    console.log('  phpmyadmin: el vencimiento del llavero cambió; vuelva a exportar la clave');
+  }
+  return actual;
+}
+
 const fecha = (s) => (s === null ? 'no vence' : new Date(s * 1000).toISOString().slice(0, 10));
 const describir = (c) => {
   const tipo = c.algoritmo === 22 ? 'Ed25519' : `RSA ${c.material.n.length * 8}`;
@@ -164,7 +191,14 @@ async function vigencia() {
     throw new Error('No se pudieron leer las versiones publicadas');
   }
   if (Object.keys(composer).length === 0) throw new Error('getcomposer.org/download sin versiones');
-  return { node, composer, nginx };
+  // phpMyAdmin: solo la línea 5.x (la que ofrece el catálogo) del índice oficial de versiones.
+  const indicePma = JSON.parse(await bajar('https://www.phpmyadmin.net/home_page/version.json'));
+  const phpmyadmin = masNuevas(
+    'phpmyadmin',
+    (indicePma.releases ?? []).map((e) => String(e.version)).filter((v) => /^5\.\d+\.\d+$/.test(v)),
+  );
+  if (Object.keys(phpmyadmin).length === 0) throw new Error('version.json de phpMyAdmin sin 5.x');
+  return { node, composer, nginx, phpmyadmin };
 }
 
 let cambios = 0;
@@ -173,6 +207,7 @@ for (const [fuente, obtener] of [
   ['node', node],
   ['composer', composer],
   ['nginx', nginx],
+  ['phpmyadmin', phpmyadmin],
 ]) {
   const archivo = path.join(CLAVES, `${fuente}.asc`);
   const actual = await readFile(archivo, 'utf8').catch(() => '');
@@ -211,7 +246,7 @@ const vigenciaActual = JSON.parse(await readFile(archivoVigencia, 'utf8').catch(
 const versiones = await vigencia();
 const { fecha: fechaActual, ...restoActual } = vigenciaActual;
 console.log(`\nvigencia.json (FECHA_ANILLO ${fechaActual ?? 'sin fecha'}):`);
-for (const f of ['node', 'composer', 'nginx']) {
+for (const f of ['node', 'composer', 'nginx', 'phpmyadmin']) {
   const antes = restoActual[f] ?? {};
   for (const [rama, v] of Object.entries(versiones[f])) {
     if (antes[rama] !== v) console.log(`  ~ ${f} ${rama}: ${antes[rama] ?? '(nueva)'} → ${v}`);

@@ -46,7 +46,9 @@ import { ServidorFtp } from './ftp/servidorFtp';
 import { GestorHosts } from './hosts/hosts';
 import { GestorHttps, type EstadoHttps, type ResultadoCA } from './https/certificados';
 import { ConfianzaCa, type EstadoConfianza, type ResultadoFirefox } from './https/confianza';
+import { AccesoBd, type HerramientaBd } from './herramientas/accesoBd';
 import { Adminer } from './herramientas/adminer';
+import { PhpMyAdmin } from './herramientas/phpmyadmin';
 import { Composer } from './herramientas/composer';
 import { PathUsuario, respaldoPathUsuario } from './herramientas/pathUsuario';
 import {
@@ -235,7 +237,7 @@ import { entornoSistema, PLAZO_VERSION_MS, type EntornoSistema } from './herrami
 import { muestraSistemaWindows } from './plataforma/win';
 import { lanzadorPorDefecto } from './plataforma/lanzar';
 import type { Lanzador, MuestraPlataforma } from './plataforma/tipos';
-import { PUERTO_ADMINER } from './nginx/principal';
+import { PUERTO_ADMINER, PUERTO_PHPMYADMIN } from './nginx/principal';
 
 export interface OpcionesNucleo {
   base?: string;
@@ -348,6 +350,8 @@ interface ModulosNucleo {
   terminal: Terminal;
   pathUsuario: PathUsuario;
   adminer: Adminer;
+  phpmyadmin: PhpMyAdmin;
+  accesoBd: AccesoBd;
   ftp: ServidorFtp;
   ollama: ClienteOllama;
   mailpit: Mailpit;
@@ -512,6 +516,8 @@ export class Nucleo {
   readonly terminal: Terminal;
   readonly pathUsuario: PathUsuario;
   readonly adminer: Adminer;
+  readonly phpmyadmin: PhpMyAdmin;
+  readonly accesoBd: AccesoBd;
   readonly ftp: ServidorFtp;
   readonly ollama: ClienteOllama;
   readonly mailpit: Mailpit;
@@ -607,6 +613,8 @@ export class Nucleo {
     this.terminal = m.terminal;
     this.pathUsuario = m.pathUsuario;
     this.adminer = m.adminer;
+    this.phpmyadmin = m.phpmyadmin;
+    this.accesoBd = m.accesoBd;
     this.ftp = m.ftp;
     this.ollama = m.ollama;
     this.mailpit = m.mailpit;
@@ -736,16 +744,32 @@ export class Nucleo {
     let pools!: PoolsSitio;
     const https = new GestorHttps({ rutas, plataforma, pidNginx: () => supervisor.pid('nginx') });
     const credenciales = new AlmacenCredenciales(rutas, (fn) => sitios.enCola(fn));
-    const adminer = new Adminer({
+    const phpEncendido = async (rama: string): Promise<boolean> => {
+      const n = (await leerConfig()).servicios.php.trabajadores;
+      return Array.from({ length: n }, (_, i) => i).some(
+        (i) => supervisor.estado(`php-${rama}-${i}`) === 'encendido',
+      );
+    };
+    const adminer = new Adminer({ rutas, instalador, leerConfig, phpEncendido });
+    const accesoBd = new AccesoBd({
+      rutas,
+      puertoHerramienta: (h) => (h === 'adminer' ? PUERTO_ADMINER : PUERTO_PHPMYADMIN),
+    });
+    const phpmyadmin = new PhpMyAdmin({
       rutas,
       instalador,
       leerConfig,
-      phpEncendido: async (rama) => {
-        const n = (await leerConfig()).servicios.php.trabajadores;
-        return Array.from({ length: n }, (_, i) => i).some(
-          (i) => supervisor.estado(`php-${rama}-${i}`) === 'encendido',
-        );
-      },
+      phpEncendido,
+      // phpMyAdmin solo entra a los servidores MySQL y MariaDB de WolfCore Dev (una entrada por
+      // instancia; sin instancias configuradas, el puerto del propio servicio).
+      servidores: async () =>
+        (await servicios.estados())
+          .filter((e) => e.id === 'mysql' || e.id === 'mariadb')
+          .flatMap((e) =>
+            e.instancias && e.instancias.length > 0
+              ? e.instancias.map((i) => ({ puerto: i.puerto, nombre: `${e.nombre} ${i.version}` }))
+              : e.puertos.map((p) => ({ puerto: p, nombre: e.nombre })),
+          ),
     });
     const ftp = new ServidorFtp({
       leerConfig,
@@ -807,6 +831,7 @@ export class Nucleo {
       ...(o.ejecutor ? { exec: o.ejecutor } : {}),
       httpsPrincipal: async () => https.datosPrincipal((await leerConfig()).https.puerto),
       adminerPrincipal: () => adminer.configNginx(),
+      phpmyadminPrincipal: () => phpmyadmin.configNginx(),
       procesosProyecto: {
         estadosServicio: () => procesos.estadosServicio(),
         detenerTodos: () => procesos.detenerTodos(),
@@ -1192,6 +1217,8 @@ export class Nucleo {
         acceso: plat.pathUsuario({ respaldo: respaldoPathUsuario(rutas) }),
       }),
       adminer,
+      phpmyadmin,
+      accesoBd,
       ftp,
       ollama: new ClienteOllama({
         base: () => `http://127.0.0.1:${puertoOllama.valor}`,
@@ -2152,12 +2179,103 @@ export class Nucleo {
   }
 
   /** Instala Adminer (se sirve en 127.0.0.1:8090 al aplicar la configuración de nginx). */
-  instalarAdminer(): Promise<void> {
-    return this.adminer.instalar();
+  async instalarAdminer(): Promise<void> {
+    await this.adminer.instalar();
+    await this.publicarHerramientaWeb();
+  }
+
+  /**
+   * El vhost interno de Adminer o phpMyAdmin entra al conf de nginx: si nginx ya corre, se recarga
+   * para que el servidor nuevo responda sin esperar a otro cambio de sitios. Un fallo aquí no
+   * deshace la instalación (el vhost aparece en la próxima aplicación de la configuración).
+   */
+  private async publicarHerramientaWeb(): Promise<void> {
+    await this.servicios.nginx.recargar().catch((e: unknown) => {
+      console.error('No se pudo recargar nginx tras instalar la herramienta:', mensajeDe(e));
+    });
   }
 
   disponibilidadAdminer(): ReturnType<Adminer['disponibilidad']> {
     return this.adminer.disponibilidad();
+  }
+
+  /** Instala phpMyAdmin (zip oficial con su SHA-256 y su firma PGP; se sirve en 127.0.0.1:8091). */
+  async instalarPhpMyAdmin(): Promise<void> {
+    await this.phpmyadmin.instalar();
+    await this.publicarHerramientaWeb();
+  }
+
+  disponibilidadPhpMyAdmin(): ReturnType<PhpMyAdmin['disponibilidad']> {
+    return this.phpmyadmin.disponibilidad();
+  }
+
+  /**
+   * Abre la base del proyecto (según su `.env`) en Adminer o phpMyAdmin ya autenticada: emite un
+   * token de un solo uso (60 s) y devuelve la URL que lo lleva (solo el token: nunca la clave).
+   * Entra con el usuario propio `wolf_u_*` del proyecto si lo tiene y su clave está guardada; si no
+   * (el proyecto usa root u otro usuario), entra con el administrador del servidor y `propio` es
+   * false para que la interfaz lo explique. La clave solo pasa por la memoria del núcleo.
+   */
+  async abrirBaseProyecto(
+    sitioId: string,
+    herramienta: HerramientaBd,
+  ): Promise<{ url: string; usuario: string; propio: boolean }> {
+    const sitio = await this.sitioPorId(sitioId);
+    const b = await leerBaseDelProyecto(sitio.carpeta).catch(() => null);
+    if (!b) {
+      throw new ErrorWolf(
+        'acceso_bd.sin_base',
+        'El .env de este proyecto no apunta a una base de datos.',
+      );
+    }
+    if (b.host && !/^(127\.0\.0\.1|localhost|\[?::1\]?)$/i.test(b.host)) {
+      throw new ErrorWolf(
+        'acceso_bd.servidor_no_resuelto',
+        'La base de este proyecto no es de un servidor local de WolfCore Dev.',
+      );
+    }
+    if (herramienta === 'phpmyadmin' && b.motor === 'postgresql') {
+      throw new ErrorWolf(
+        'acceso_bd.motor_no_soportado',
+        'phpMyAdmin solo abre bases de MySQL y MariaDB; use Adminer para PostgreSQL.',
+      );
+    }
+    const disp =
+      herramienta === 'adminer'
+        ? await this.adminer.disponibilidad()
+        : await this.phpmyadmin.disponibilidad();
+    if (!disp.disponible) {
+      throw new ErrorWolf('acceso_bd.no_listo', disp.motivo);
+    }
+    const objetivo = await this.objetivoDeServidor(b.motor, b.puerto);
+    if (!objetivo) {
+      throw new ErrorWolf(
+        'acceso_bd.servidor_no_resuelto',
+        'No se pudo saber de qué servidor local es la base del proyecto.',
+      );
+    }
+    const admin = await this.bd.conexion(objetivo);
+    const claveBd = esUsuarioDeProyecto(b.usuario)
+      ? await this.proveedorClaveBd(sitioId).catch(() => null)
+      : null;
+    const propio = claveBd !== null && claveBd !== '';
+    const usuario = propio ? b.usuario : admin.usuario;
+    if (herramienta === 'adminer') await this.adminer.preparar();
+    else await this.phpmyadmin.preparar();
+    const { url } = await this.accesoBd.emitir({
+      herramienta,
+      sitioId,
+      instancia: objetivo,
+      base: b.base,
+      credenciales: {
+        motor: b.motor,
+        host: '127.0.0.1',
+        puerto: admin.puerto,
+        usuario,
+        clave: propio ? claveBd : (admin.clave ?? ''),
+      },
+    });
+    return { url, usuario, propio };
   }
 
   /** URL de Adminer para un motor, sin clave; null si Adminer no lo soporta. */
@@ -3523,6 +3641,9 @@ export class Nucleo {
     });
     await this.depuracion.detener().catch((e: unknown) => {
       console.error('No se pudo detener el receptor de dumps:', mensajeDe(e));
+    });
+    await this.accesoBd.detener().catch((e: unknown) => {
+      console.error('No se pudo detener el canje de accesos a la base:', mensajeDe(e));
     });
     let primero: unknown;
     let fallo = false;

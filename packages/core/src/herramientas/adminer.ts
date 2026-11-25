@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { copyFile, mkdir } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { catalogo } from '../catalogo/catalogo';
 import type { BaseProyecto } from '../bd/baseProyecto';
@@ -8,6 +8,7 @@ import { PUERTO_ADMINER, puertosPhp } from '../nginx/principal';
 import type { Rutas } from '../rutas';
 import { compararVersiones } from '../servicios/nginx';
 import type { Config } from '../tipos';
+import { phpAdminerLogin } from './php/adminer-login.php';
 
 export const MOTIVO_SIN_PHP = 'Encienda PHP para usar Adminer';
 export const MOTIVO_SIN_ADMINER = 'Instale Adminer para usarlo';
@@ -45,9 +46,14 @@ export interface DepsAdminer {
 export type DisponibilidadAdminer =
   { disponible: true; rama: string } | { disponible: false; motivo: string };
 
+/** Marca del index.php propio de WolfCore Dev (el de Adminer oficial no la tiene). */
+const MARCA_ENTRADA = 'WolfCore Dev: entrada de Adminer';
+
 /**
- * Adminer se instala en bin/adminer/<v>/adminer.php y se copia a tools/adminer/index.php, que es
- * lo que sirve el vhost interno de nginx (solo 127.0.0.1:8090).
+ * Adminer se instala en bin/adminer/<v>/adminer.php y se copia a tools/adminer/adminer.php, intacto
+ * (con la misma suma). El index.php que sirve el vhost interno de nginx (solo 127.0.0.1:8090) es
+ * un envoltorio generado que, con un token de un solo uso, entra ya autenticado (D18) y luego
+ * carga adminer.php.
  */
 export class Adminer {
   constructor(private readonly d: DepsAdminer) {}
@@ -71,8 +77,25 @@ export class Adminer {
     await mkdir(this.raiz(), { recursive: true });
     await copyFile(
       path.join(this.d.rutas.bin('adminer', version), 'adminer.php'),
-      path.join(this.raiz(), 'index.php'),
+      path.join(this.raiz(), 'adminer.php'),
     );
+    await this.preparar();
+  }
+
+  /**
+   * Deja el envoltorio de entrada al día (idempotente). Una instalación anterior tiene el
+   * Adminer oficial como index.php: pasa a adminer.php sin tocar su contenido.
+   */
+  async preparar(): Promise<void> {
+    const entrada = path.join(this.raiz(), 'index.php');
+    const nucleo = path.join(this.raiz(), 'adminer.php');
+    const actual = await readFile(entrada, 'utf8').catch(() => null);
+    if (actual === null && !existsSync(nucleo)) return;
+    if (actual !== null && !actual.includes(MARCA_ENTRADA) && !existsSync(nucleo)) {
+      await rename(entrada, nucleo);
+    }
+    const nuevo = phpAdminerLogin({ dirAcceso: this.d.rutas.accesoBd() });
+    if (nuevo !== actual) await writeFile(entrada, nuevo, 'utf8');
   }
 
   private async masNuevaEncendida(ramas: string[]): Promise<string | undefined> {

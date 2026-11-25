@@ -81,6 +81,11 @@ export class ServicioNginx {
       raiz: string;
       puertos: number[];
     } | null> = async () => null,
+    /** Vhost interno de phpMyAdmin (null si no está instalado). */
+    private readonly phpmyadmin: () => Promise<{
+      raiz: string;
+      puertos: number[];
+    } | null> = async () => null,
   ) {}
 
   /** Versión configurada si está instalada; si no, la más reciente instalada. */
@@ -126,6 +131,7 @@ export class ServicioNginx {
   ): Promise<void> {
     const https = await this.httpsPrincipal();
     const adminer = await this.adminer();
+    const phpmyadmin = await this.phpmyadmin();
     const contenido = generarNginxPrincipal({
       prefijo: bin,
       sitesDir,
@@ -134,6 +140,7 @@ export class ServicioNginx {
       puerto: (await this.leerConfig()).servicios.nginx.puerto,
       ...(https ? { https } : {}),
       ...(adminer ? { adminer } : {}),
+      ...(phpmyadmin ? { phpmyadmin } : {}),
     });
     await mkdir(this.rutas.logs(), { recursive: true });
     await mkdir(path.dirname(this.rutas.vhost('x')), { recursive: true });

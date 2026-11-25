@@ -10,10 +10,12 @@ import {
   MAX_BYTES_INI,
   NOMBRE_EXTENSION_PHP,
   ErrorWolf,
+  HERRAMIENTAS_BD,
   IDS_AGENTE,
   IDS_EDITOR,
   IDS_TERMINAL,
   MAX_MENSAJE_COMMIT,
+  type HerramientaBd,
   type IdEditor,
   type IdTerminal,
   type IdAgente,
@@ -53,6 +55,14 @@ export function idTerminal(v: unknown): IdTerminal | null {
     throw new ErrorWolf('terminal.invalida', 'Terminal no válida.');
   }
   return v as IdTerminal;
+}
+
+/** Herramienta de base de datos: Adminer o phpMyAdmin (nada más). */
+export function herramientaBd(v: unknown): HerramientaBd {
+  if (typeof v !== 'string' || !(HERRAMIENTAS_BD as readonly string[]).includes(v)) {
+    throw new Error('Argumento no válido: herramienta');
+  }
+  return v as HerramientaBd;
 }
 
 /** Editor elegido: un id conocido; `undefined` o null = el predeterminado. */
@@ -123,6 +133,7 @@ const DEL_CATALOGO = [
   ...INSTALABLES,
   'composer',
   'adminer',
+  'phpmyadmin',
   'pgvector-src',
 ] as const satisfies readonly ServicioInstalable[];
 

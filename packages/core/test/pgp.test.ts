@@ -957,6 +957,7 @@ describe('cota de fecha fijada (FECHA_ANILLO)', () => {
     node: { '24': '24.22.3' },
     composer: { '2.11': '2.11.3' },
     nginx: { '1.30': '1.30.8' },
+    phpmyadmin: { '5.2': '5.2.3' },
   };
   const fecha48 = new Date(Date.parse('2026-11-24T00:00:00Z') - 48 * 3600 * 1000);
 

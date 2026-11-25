@@ -535,6 +535,13 @@ export const en: Textos = {
         'The signature of {servicio} {version} or its key has expired: nothing was installed. Update WolfCore Dev to get current keys.',
       'catalogo.reloj_atrasado':
         "The signature of {servicio} {version} is dated in the future: check this computer's date and time and try again.",
+      'acceso_bd.datos_invalidos': 'The database access data is not valid.',
+      'acceso_bd.sin_base': "This project's .env does not point to a database.",
+      'acceso_bd.motor_no_soportado':
+        'phpMyAdmin only opens MySQL and MariaDB databases; use Adminer for PostgreSQL.',
+      'acceso_bd.servidor_no_resuelto':
+        "This project's database is not on a local WolfCore Dev server.",
+      'acceso_bd.no_listo': 'The tool is not ready: install it from Services and turn PHP on.',
     },
   },
   avisoInicio: {
@@ -682,6 +689,16 @@ export const en: Textos = {
       sinPhp: 'PHP missing',
       abrir: 'Open Adminer',
       instaladoOk: 'Adminer installed',
+    },
+    phpmyadmin: {
+      nombre: 'phpMyAdmin',
+      detalle: 'MySQL and MariaDB web manager',
+      direccion: 'Address',
+      disponible: 'Ready',
+      noInstalado: 'Not installed',
+      sinPhp: 'PHP missing',
+      abrirDesdeProyecto: "Opens from each project's card, already signed in.",
+      instaladoOk: 'phpMyAdmin installed',
     },
     puertos: 'Ports',
     pid: 'PID',
@@ -957,6 +974,7 @@ export const en: Textos = {
       ollama: { nombre: 'Ollama', detalle: 'Local AI (ollama.com)' },
       composer: { nombre: 'Composer', detalle: 'PHP dependencies (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Web database manager' },
+      phpmyadmin: { nombre: 'phpMyAdmin', detalle: 'MySQL web manager (phpmyadmin.net)' },
     },
     grupos: {
       web: 'Web and PHP',
@@ -1956,11 +1974,18 @@ export const en: Textos = {
       vscodeError: 'Could not open the editor',
       baseDatos: 'Database',
       baseDatosAyuda: (base: string) =>
-        `Open the "${base}" database in Adminer (it asks for the password)`,
-      baseDatosSinDetectar: "Open the project's database in Adminer",
+        `Open the "${base}" database already signed in (Adminer or phpMyAdmin)`,
+      baseDatosSinDetectar: "Open the project's database (Adminer or phpMyAdmin)",
       sinBase: "The project's .env does not declare a MySQL, MariaDB or PostgreSQL database.",
       adminerNoListo: 'Adminer is not ready',
-      phpMyAdminPendiente: 'phpMyAdmin arrives in Stage D; Adminer is used for now.',
+      entradaAutomatica: 'Opens already signed in, without typing the password.',
+      elegirBd: 'Choose Adminer or phpMyAdmin',
+      opcionAdminer: 'Adminer',
+      opcionPhpMyAdmin: 'phpMyAdmin',
+      opcionPhpMyAdminSoloMysql: 'phpMyAdmin (MySQL and MariaDB only)',
+      phpMyAdminNoListo: 'phpMyAdmin is not ready',
+      entroComoAdmin: (usuario: string) =>
+        `Signed in as ${usuario}, the server administrator, because this project does not use its own user. In the .env manager, “Use own user” creates one limited to its database.`,
       abrirSitio: 'Open the site in the browser',
       github: 'Repository',
       abrirRemoto: (url: string) => `Open ${url}`,

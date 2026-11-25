@@ -114,6 +114,9 @@ function nucleoFalso() {
         'instalarAdminer',
         'disponibilidadAdminer',
         'urlAdminer',
+        'abrirBaseProyecto',
+        'instalarPhpMyAdmin',
+        'disponibilidadPhpMyAdmin',
         'activarFtp',
         'desactivarFtp',
         'regenerarClaveFtp',
@@ -480,13 +483,13 @@ describe('registrarIpc', () => {
     registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
     const llamar = (s: unknown) =>
       canales.get('entorno:instalador.instalados')!({}, s) as Promise<{ ok: boolean }>;
-    for (const bueno of ['php', 'mysql', 'composer', 'adminer', 'pgvector-src']) {
+    for (const bueno of ['php', 'mysql', 'composer', 'adminer', 'phpmyadmin', 'pgvector-src']) {
       expect((await llamar(bueno)).ok, bueno).toBe(true);
     }
     for (const malo of ['..', '..\\..\\Windows', 'php/../..', 'cualquiera', '', 3, null]) {
       expect((await llamar(malo)).ok, String(malo)).toBe(false);
     }
-    expect(crudo.instalador.instalados).toHaveBeenCalledTimes(5);
+    expect(crudo.instalador.instalados).toHaveBeenCalledTimes(6);
   });
 
   it('servicios.detenerTodo usa Nucleo.detenerTodo (cierra túneles primero)', async () => {
@@ -559,6 +562,9 @@ describe('registrarIpc', () => {
         'adminer.disponibilidad',
         'adminer.url',
         'adminer.proyecto',
+        'phpmyadmin.instalar',
+        'phpmyadmin.disponibilidad',
+        'accesoBd.abrir',
         'ftp.activar',
         'ftp.desactivar',
         'ftp.regenerarClave',
@@ -783,6 +789,9 @@ describe('registrarIpc', () => {
         ['terminal.abrir', ['']],
         ['path.cambiar', ['si']],
         ['adminer.url', ['mysql', 'root; x']],
+        ['accesoBd.abrir', ['s1', 'otra']],
+        ['accesoBd.abrir', ['', 'adminer']],
+        ['accesoBd.abrir', ['s1', null]],
         ['ftp.activar', [null]],
         ['ftp.soloLectura', ['s1', 'true']],
         ['ftp.redLocal', [1]],
@@ -819,6 +828,7 @@ describe('registrarIpc', () => {
       'abrirTerminal',
       'cambiarPathUsuario',
       'urlAdminer',
+      'abrirBaseProyecto',
       'activarFtp',
       'ftpSoloLectura',
       'ftpRedLocal',
@@ -1885,6 +1895,22 @@ describe('IPC de la Etapa B', () => {
     const suelta = [{ id: 'migrar', tipo: 'migrar', titulo: '' }];
     await llamar('proyectos.ejecutarReceta', 's1', { receta: suelta, suelta: true });
     expect(f['ejecutarReceta']).toHaveBeenLastCalledWith('s1', { receta: suelta, suelta: true });
+  });
+
+  it('accesoBd.abrir abre el navegador desde el proceso principal y nunca devuelve la URL ni la clave', async () => {
+    const { f, llamar } = montar();
+    const url = 'http://127.0.0.1:8091/wolfcore-signon.php?wolfcore_token=' + 'A'.repeat(43);
+    f['abrirBaseProyecto']!.mockResolvedValueOnce({ url, usuario: 'wolf_u_tienda', propio: true });
+    sistema.abrirUrl.mockClear();
+    const r = await llamar('accesoBd.abrir', 's1', 'phpmyadmin');
+    expect(r).toEqual({ ok: true, valor: { usuario: 'wolf_u_tienda', propio: true } });
+    expect(f['abrirBaseProyecto']).toHaveBeenCalledWith('s1', 'phpmyadmin');
+    expect(sistema.abrirUrl).toHaveBeenCalledWith(url);
+    expect(JSON.stringify(r)).not.toContain('wolfcore_token');
+    // Una herramienta que no es Adminer ni phpMyAdmin no llega al núcleo.
+    f['abrirBaseProyecto']!.mockClear();
+    expect((await llamar('accesoBd.abrir', 's1', 'mysql-workbench')).ok).toBe(false);
+    expect(f['abrirBaseProyecto']).not.toHaveBeenCalled();
   });
 
   it('sistema.abrirEditor abre la carpeta del sitio por su id (nunca una ruta)', async () => {

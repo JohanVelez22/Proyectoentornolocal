@@ -44,6 +44,10 @@ export class Rutas {
   secretos(): string {
     return path.join(this.base, 'etc', 'secretos');
   }
+  /** Secreto de proceso y puerto del canje de tokens de Adminer y phpMyAdmin (solo este usuario). */
+  accesoBd(): string {
+    return path.join(this.base, 'etc', 'acceso-bd');
+  }
   /** Copias con fecha de los .env y .gitignore de proyectos antes de escribirlos. */
   respaldosEnv(): string {
     return path.join(this.base, 'etc', 'respaldos', 'env');

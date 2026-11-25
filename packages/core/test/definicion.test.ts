@@ -692,6 +692,7 @@ describe('ronda de correcciones 1', () => {
     const s = crear([defFalsa()]);
     const casos: [number, string][] = [
       [8090, 'Adminer'],
+      [8091, 'phpMyAdmin'],
       [2121, 'FTP'],
       [30000, 'FTP (puertos pasivos)'],
       [30100, 'FTP (puertos pasivos)'],

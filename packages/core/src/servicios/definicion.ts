@@ -153,6 +153,7 @@ export function puertosFijos(cfg: Config): { desde: number; hasta: number; nombr
   return [
     { desde: https, hasta: https, nombre: 'HTTPS' },
     { desde: 8090, hasta: 8090, nombre: 'Adminer' },
+    { desde: 8091, hasta: 8091, nombre: 'phpMyAdmin' },
     { desde: ftp, hasta: ftp, nombre: 'FTP' },
     {
       desde: Math.min(pasivoMin, pasivoMax),

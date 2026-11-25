@@ -543,6 +543,14 @@ export const es = {
         'La firma de {servicio} {version} o su clave están vencidas: no se instaló nada. Actualice WolfCore Dev para tener las claves al día.',
       'catalogo.reloj_atrasado':
         'La firma de {servicio} {version} tiene fecha futura: revise la fecha y hora del equipo y vuelva a intentarlo.',
+      'acceso_bd.datos_invalidos': 'Los datos de acceso a la base no son válidos.',
+      'acceso_bd.sin_base': 'El .env de este proyecto no apunta a una base de datos.',
+      'acceso_bd.motor_no_soportado':
+        'phpMyAdmin solo abre bases de MySQL y MariaDB; use Adminer para PostgreSQL.',
+      'acceso_bd.servidor_no_resuelto':
+        'La base de este proyecto no es de un servidor local de WolfCore Dev.',
+      'acceso_bd.no_listo':
+        'La herramienta no está lista: instálela desde Servicios y encienda PHP.',
     },
   },
   avisoInicio: {
@@ -690,6 +698,16 @@ export const es = {
       sinPhp: 'Falta PHP',
       abrir: 'Abrir Adminer',
       instaladoOk: 'Adminer instalado',
+    },
+    phpmyadmin: {
+      nombre: 'phpMyAdmin',
+      detalle: 'Administrador web de MySQL y MariaDB',
+      direccion: 'Dirección',
+      disponible: 'Listo',
+      noInstalado: 'No instalado',
+      sinPhp: 'Falta PHP',
+      abrirDesdeProyecto: 'Se abre desde la tarjeta de cada proyecto, ya autenticado.',
+      instaladoOk: 'phpMyAdmin instalado',
     },
     puertos: 'Puertos',
     pid: 'PID',
@@ -969,6 +987,7 @@ export const es = {
       ollama: { nombre: 'Ollama', detalle: 'IA local (ollama.com)' },
       composer: { nombre: 'Composer', detalle: 'Dependencias de PHP (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Administrador web de bases de datos' },
+      phpmyadmin: { nombre: 'phpMyAdmin', detalle: 'Administrador web de MySQL (phpmyadmin.net)' },
     },
     grupos: {
       web: 'Web y PHP',
@@ -1972,11 +1991,18 @@ export const es = {
       vscodeError: 'No se pudo abrir el editor',
       baseDatos: 'Base de datos',
       baseDatosAyuda: (base: string) =>
-        `Abrir la base «${base}» en Adminer (pide la clave al entrar)`,
-      baseDatosSinDetectar: 'Abrir la base de datos del proyecto en Adminer',
+        `Abrir la base «${base}» ya autenticada (Adminer o phpMyAdmin)`,
+      baseDatosSinDetectar: 'Abrir la base de datos del proyecto (Adminer o phpMyAdmin)',
       sinBase: 'El .env del proyecto no declara una base MySQL, MariaDB o PostgreSQL.',
       adminerNoListo: 'Adminer no está listo',
-      phpMyAdminPendiente: 'phpMyAdmin llegará en la Etapa D; por ahora se usa Adminer.',
+      entradaAutomatica: 'Entra ya autenticada, sin escribir la clave.',
+      elegirBd: 'Elegir Adminer o phpMyAdmin',
+      opcionAdminer: 'Adminer',
+      opcionPhpMyAdmin: 'phpMyAdmin',
+      opcionPhpMyAdminSoloMysql: 'phpMyAdmin (solo MySQL y MariaDB)',
+      phpMyAdminNoListo: 'phpMyAdmin no está listo',
+      entroComoAdmin: (usuario: string) =>
+        `Entró como ${usuario}, el administrador del servidor, porque este proyecto no usa un usuario propio. En el gestor de .env, «Usar usuario propio» crea uno limitado a su base.`,
       abrirSitio: 'Abrir el sitio en el navegador',
       github: 'Repositorio',
       abrirRemoto: (url: string) => `Abrir ${url}`,
