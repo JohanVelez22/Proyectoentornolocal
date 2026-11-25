@@ -239,7 +239,8 @@ export function dividirSentencias(texto: string, dialecto: DialectoSql): string[
     }
     if (c === '/' && t[i + 1] === '*') {
       const cond = dialecto === 'mysql' ? /^\/\*M?!\d*/.exec(t.slice(i, i + 12)) : null;
-      if (cond) {
+      // `/*M!999999\- … */` (modo sandbox de MariaDB) lleva una versión que ningún servidor alcanza.
+      if (cond && !/^\/\*M?!999999/.test(cond[0])) {
         // Comentario condicional: el servidor ejecuta lo de adentro.
         condicional++;
         actual += ' ';

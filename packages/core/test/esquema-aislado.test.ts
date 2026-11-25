@@ -247,27 +247,56 @@ beforeEach(async () => {
 });
 
 describe('Respaldos.restaurarEsquema: MySQL y MariaDB', () => {
-  it('ejecuta cada sentencia como el usuario temporal, sin DEFINER, y lo borra al terminar', async () => {
+  it('el usuario limitado solo crea tablas, índices y ALTER, sin DEFINER, y se borra al terminar', async () => {
     const a = archivo('e.sql', ESQUEMA_MYSQL);
     const r = await armar().restaurarEsquema('mysql', a, 'tienda');
     expect(r.advertencias).toEqual([]);
     const limitado = consultas.filter((c) => c.usuario === 'wolf_tmp_0123456789abcdef');
     expect(limitado[0]!.sql).toBe('USE `tienda`');
-    expect(limitado.map((c) => c.sql).join('\n')).not.toMatch(/DEFINER=/);
-    expect(limitado.some((c) => c.sql.includes('TRIGGER `trg`'))).toBe(true);
-    expect(consultas.every((c) => c.usuario !== 'root' || !c.sql.includes('CREATE TABLE'))).toBe(
-      true,
-    );
+    expect(limitado.some((c) => c.sql.includes('CREATE TABLE'))).toBe(true);
+    // Con el binlog de MySQL 8, un usuario sin SUPER no puede crear disparadores, rutinas ni vistas.
+    expect(limitado.some((c) => /TRIGGER|PROCEDURE|FUNCTION|VIEW/i.test(c.sql))).toBe(false);
+    expect(consultas.map((c) => c.sql).join('\n')).not.toMatch(/DEFINER\s*=\s*`/);
     expect(eventos).toEqual(['crear-usuario:tienda', 'retirar-usuario']);
   });
 
-  it('propia: los disparadores se vuelven a crear como administrador (el definer temporal ya no existe)', async () => {
+  it('propia: disparadores, rutinas y vistas los crea el administrador con DEFINER explícito', async () => {
     await armar().restaurarEsquema('mysql', archivo('e.sql', ESQUEMA_MYSQL), 'tienda', {
       origen: 'propia',
     });
     const admin = consultas.filter((c) => c.usuario === 'root').map((c) => c.sql);
-    expect(admin).toContain('DROP TRIGGER IF EXISTS `trg`');
-    expect(admin.some((s) => s.startsWith('CREATE') && s.includes('TRIGGER `trg`'))).toBe(true);
+    expect(admin[0]).toBe('USE `tienda`');
+    expect(admin.some((s) => /^CREATE\s+DEFINER = CURRENT_USER\s+TRIGGER\s+`trg`/.test(s))).toBe(
+      true,
+    );
+    expect(admin.some((s) => s.includes('CREATE TABLE'))).toBe(false);
+  });
+
+  it('importada: vistas y rutinas con SQL SECURITY INVOKER y DEFINER explícito del administrador', async () => {
+    const sql = [
+      'CREATE TABLE `t` (`a` int);',
+      'CREATE VIEW `v` AS select 1;',
+      'CREATE FUNCTION `f`(a int) RETURNS int DETERMINISTIC RETURN a;',
+    ].join('\n');
+    await armar().restaurarEsquema('mysql', archivo('i.sql', sql), 'tienda', {
+      origen: 'importada',
+    });
+    const admin = consultas.filter((c) => c.usuario === 'root').map((c) => c.sql);
+    expect(admin.some((s) => /DEFINER = CURRENT_USER SQL SECURITY INVOKER VIEW/.test(s))).toBe(
+      true,
+    );
+    expect(
+      admin.some((s) => /DEFINER = CURRENT_USER FUNCTION `f`.*SQL SECURITY INVOKER/.test(s)),
+    ).toBe(true);
+    expect(admin.join('\n')).not.toMatch(/SECURITY DEFINER/);
+  });
+
+  it('si falla lo que crea el administrador, todo o nada: base vacía y usuario borrado', async () => {
+    falloEn = 'TRIGGER `trg`';
+    await expect(
+      armar().restaurarEsquema('mysql', archivo('e.sql', ESQUEMA_MYSQL), 'tienda'),
+    ).rejects.toMatchObject({ codigo: 'bd.esquema_fallo' });
+    expect(eventos).toEqual(['crear-usuario:tienda', 'reiniciar-base', 'retirar-usuario']);
   });
 
   it('importada con un disparador: se rechaza antes de crear el usuario (corre con privilegios ajenos)', async () => {

@@ -1269,6 +1269,8 @@ describe('respaldar', () => {
     const carpeta = path.join(dir, 'esquemas');
     const e1 = await armar().respaldar('mysql', 'tienda', carpeta, { soloEsquema: true });
     expect(lanzados[0]!.args).toContain('--no-data');
+    // Sin eventos programados: son código que corre solo con privilegios de su definer.
+    expect(lanzados[0]!.args).not.toContain('--events');
     expect(readFileSync(e1.archivo, 'utf8')).not.toContain('centinela-fila-d');
     const e2 = await armar().respaldar('postgresql', 'diamantes', carpeta, { soloEsquema: true });
     expect(lanzados[1]!.args).toContain('--schema-only');

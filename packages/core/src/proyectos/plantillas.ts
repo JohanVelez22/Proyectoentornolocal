@@ -20,7 +20,12 @@ import { z } from 'zod';
 import { leerBaseDelProyecto, type BaseProyecto } from '../bd/baseProyecto';
 import type { ObjetivoBd } from '../bd/basesDeDatos';
 import type { MotorBd } from '../bd/env';
-import { MAX_BYTES_ESQUEMA, quitarAutoIncrement, quitarDefiner } from '../bd/sqlPermitido';
+import {
+  MAX_BYTES_ESQUEMA,
+  quitarAutoIncrement,
+  quitarDefiner,
+  revisarSql,
+} from '../bd/sqlPermitido';
 import { extraerZip } from '../catalogo/zip';
 import { ErrorWolf } from '../errores';
 import { enmascararSecretos } from '../patronesSecretos';
@@ -782,6 +787,14 @@ export class Plantillas {
       if (texto !== original) await writeFile(archivo, texto, 'utf8');
     } else if (this.d.leerEsquema) {
       texto = await this.d.leerEsquema(servidor, archivo);
+    }
+    if (texto !== null) {
+      // La misma lista de sentencias que se usará al restaurar: mejor fallar ahora que al crear.
+      try {
+        revisarSql(texto, nombre === 'esquema.sql' ? 'mysql' : 'postgresql', { origen: 'propia' });
+      } catch {
+        throw rechazar('trae sentencias que no se podrían restaurar después.');
+      }
     }
     if (texto !== null && llevaSecreto(texto)) {
       throw rechazar('trae algo que parece una clave o una contraseña, así que no se guarda.');

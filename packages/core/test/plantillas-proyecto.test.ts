@@ -1574,3 +1574,36 @@ describe('R3-I1: el origen no sale de plantilla.json', () => {
     expect(registro[p.id]).toBeUndefined();
   });
 });
+
+describe('R3-I4: el esquema se revisa al guardar', () => {
+  const con = (texto: string) =>
+    armar({
+      respaldar: async (_o, base, carpeta) => {
+        await mkdir(carpeta, { recursive: true });
+        const archivo = path.join(carpeta, `${base}.sql`);
+        await writeFile(archivo, texto);
+        return { archivo };
+      },
+    });
+
+  it('un esquema con sentencias que no se podrían restaurar no se guarda', async () => {
+    await expect(
+      con('CREATE TABLE t (a int);\nGRANT ALL ON *.* TO x;').guardar('tienda', opciones),
+    ).rejects.toMatchObject({ codigo: 'plantillas.esquema_fallo' });
+    expect(await readdir(rutas.plantillas())).toEqual([]);
+  });
+
+  it('un volcado real de MariaDB (modo sandbox, condicionales, rutinas) sí se guarda', async () => {
+    const sql = [
+      '/*M!999999\\- enable the sandbox mode */',
+      '/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;',
+      'DROP TABLE IF EXISTS `t`;',
+      'CREATE TABLE `t` (`a` int(11) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;',
+      'DELIMITER ;;',
+      'CREATE DEFINER=`root`@`localhost` PROCEDURE `p`() BEGIN SELECT 1; END ;;',
+      'DELIMITER ;',
+    ].join('\n');
+    const p = await con(sql).guardar('tienda', opciones);
+    expect(p.archivoEsquema).toBe('esquema.sql');
+  });
+});

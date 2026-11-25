@@ -1661,29 +1661,47 @@ export class Respaldos {
       : bruto.toString('utf8').replace(/^\uFEFF/, '');
     // Antes de tocar nada: todo el SQL contra la lista de sentencias permitidas.
     const sentencias = revisarSql(texto, 'mysql', { origen: opts.origen ?? 'propia' });
+    // Con el binlog activo, MySQL 8 no deja a un usuario sin SUPER crear disparadores, rutinas ni
+    // vistas con otro definer: el usuario limitado solo crea tablas, índices y ALTER; lo demás lo
+    // crea el administrador después, con un DEFINER explícito (él mismo).
+    const conDefiner = new Set(['vista', 'disparador', 'funcion', 'procedimiento']);
+    const fase1 = sentencias.filter((x) => !conDefiner.has(x.clase)).map((x) => x.texto);
+    const fase2 = sentencias
+      .filter((x) => conDefiner.has(x.clase))
+      .map((x) =>
+        x.texto.replace(
+          /^(CREATE\s+(?:OR\s+REPLACE\s+)?(?:ALGORITHM\s*=\s*\w+\s+)?)/i,
+          '$1DEFINER = CURRENT_USER ',
+        ),
+      );
     const bd = this.d.bd;
     const con = await bd.conexion(motor);
     const claves = [con.clave ?? ''];
     const advertencias: string[] = [];
     const usuario = await bd.usuarioTemporal!(motor, base);
     claves.push(usuario.clave);
-    const limitado = new ClienteMysql(this.d.fabricas?.mysql);
+    const conectar = async (cliente: ClienteMysql, u: string, k: string): Promise<void> =>
+      cliente.conectar({ host: con.host, puerto: con.puerto, usuario: u, clave: k });
     let fallo: unknown = null;
+    const limitado = new ClienteMysql(this.d.fabricas?.mysql);
     try {
-      await limitado.conectar({
-        host: con.host,
-        puerto: con.puerto,
-        usuario: usuario.usuario,
-        clave: usuario.clave,
-      });
-      await limitado.ejecutarSentencias(
-        base,
-        sentencias.map((x) => x.texto),
-      );
+      await conectar(limitado, usuario.usuario, usuario.clave);
+      await limitado.ejecutarSentencias(base, fase1);
     } catch (e) {
       fallo = e;
     } finally {
       await limitado.cerrar();
+    }
+    if (!fallo && fase2.length > 0) {
+      const admin = new ClienteMysql(this.d.fabricas?.mysql);
+      try {
+        await conectar(admin, con.usuario, con.clave ?? '');
+        await admin.ejecutarSentencias(base, fase2);
+      } catch (e) {
+        fallo = e;
+      } finally {
+        await admin.cerrar();
+      }
     }
     if (fallo) {
       // Todo o nada: la base vuelve a quedar vacía.
@@ -1699,40 +1717,6 @@ export class Respaldos {
       await usuario.retirar();
     } catch {
       advertencias.push('No se pudo borrar el usuario temporal de la restauración.');
-    }
-    // Un esquema propio: los disparadores, rutinas y vistas quedaron con un definer que ya no
-    // existe; se vuelven a crear como administrador (lo que el usuario ya tenía en su servidor).
-    if ((opts.origen ?? 'propia') === 'propia') {
-      const tipos = {
-        disparador: 'TRIGGER',
-        funcion: 'FUNCTION',
-        procedimiento: 'PROCEDURE',
-        vista: 'VIEW',
-      } as const;
-      const rehacer = sentencias.filter((x) => x.objeto !== null && x.clase in tipos);
-      if (rehacer.length > 0) {
-        const admin = new ClienteMysql(this.d.fabricas?.mysql);
-        try {
-          await admin.conectar({
-            host: con.host,
-            puerto: con.puerto,
-            usuario: con.usuario,
-            clave: con.clave ?? '',
-          });
-          const orden: string[] = [];
-          for (const x of rehacer) {
-            const tipo = tipos[x.clase as keyof typeof tipos];
-            orden.push(`DROP ${tipo} IF EXISTS \`${x.objeto}\``, x.texto);
-          }
-          await admin.ejecutarSentencias(base, orden);
-        } catch (e) {
-          advertencias.push(
-            `No se pudo reasignar el definer de triggers, rutinas y vistas: ${enmascarar(e instanceof Error ? e.message : String(e), claves)}`,
-          );
-        } finally {
-          await admin.cerrar();
-        }
-      }
     }
     return { advertencias };
   }
