@@ -297,6 +297,7 @@ export class BasesDeDatos {
   async usuarioTemporal(
     objetivo: ObjetivoBd,
     base: string,
+    privilegios: 'todos' | 'datos' = 'todos',
   ): Promise<{ usuario: string; clave: string; retirar: () => Promise<void> }> {
     const motor = motorDe(objetivo);
     if (motor === 'mongodb') throw new Error('MongoDB no usa usuarios temporales de SQL.');
@@ -307,7 +308,7 @@ export class BasesDeDatos {
         retirar: () => this.conPostgres((c) => c.retirarRolTemporal(r.usuario, base), objetivo),
       };
     }
-    const r = await this.conMysql(objetivo, (c) => c.crearUsuarioTemporal(base));
+    const r = await this.conMysql(objetivo, (c) => c.crearUsuarioTemporal(base, privilegios));
     return {
       ...r,
       retirar: () => this.conMysql(objetivo, (c) => c.borrarUsuarioTemporal(r.usuario)),

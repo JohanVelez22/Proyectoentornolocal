@@ -9,6 +9,8 @@ export interface ConexionMysql {
   puerto: number;
   usuario: string;
   clave: string;
+  /** Juego de caracteres de la conexión (la de importación fija utf8mb4). */
+  charset?: string;
 }
 
 export interface BaseMysql {
@@ -132,6 +134,9 @@ const fabricaReal: FabricaConexion = async (c) =>
     user: c.usuario,
     password: c.clave,
     connectTimeout: 10_000,
+    // Una sola sentencia por consulta: un `;` de más da un error del servidor y no otra sentencia.
+    multipleStatements: false,
+    ...(c.charset ? { charset: c.charset } : {}),
   })) as unknown as ConexionBaja;
 
 /** Administración básica de bases en MySQL o MariaDB. */
@@ -313,7 +318,11 @@ export class ClienteMysql {
    * ni SET_USER_ID, que son globales y no se otorgan). Lo usa la restauración de esquemas: el SQL
    * de un tercero se ejecuta con él y se borra al terminar (`borrarUsuarioTemporal`).
    */
-  async crearUsuarioTemporal(base: string): Promise<{ usuario: string; clave: string }> {
+  async crearUsuarioTemporal(
+    base: string,
+    /** `datos`: solo INSERT (el usuario que carga los datos de un tercero). */
+    privilegios: 'todos' | 'datos' = 'todos',
+  ): Promise<{ usuario: string; clave: string }> {
     id(base);
     const escapado = `\`${base.replace(/_/g, '\\_')}\``;
     noSistema(base, 'crear');
@@ -324,7 +333,8 @@ export class ClienteMysql {
       for (const host of ['localhost', '127.0.0.1']) {
         await this.filas(`CREATE USER ?@'${host}' IDENTIFIED BY ?`, [usuario, clave]);
         // `_` es un comodín en los permisos de base: se escapa para no alcanzar otras bases.
-        await this.filas(`GRANT ALL PRIVILEGES ON ${escapado}.* TO ?@'${host}'`, [usuario]);
+        const permisos = privilegios === 'datos' ? 'INSERT' : 'ALL PRIVILEGES';
+        await this.filas(`GRANT ${permisos} ON ${escapado}.* TO ?@'${host}'`, [usuario]);
       }
     } catch (e) {
       await this.borrarUsuarioTemporal(usuario).catch(() => undefined);
@@ -354,6 +364,21 @@ export class ClienteMysql {
     }
     await this.filas(`GRANT ALL PRIVILEGES ON ${escapado}.* TO ?@'localhost'`, [usuario]);
     return usuario;
+  }
+
+  /**
+   * Deja la sesión lista para cargar datos de un tercero: la base, utf8mb4 y un `sql_mode` conocido
+   * (sin NO_BACKSLASH_ESCAPES ni ANSI_QUOTES: así el servidor lee las comillas como el divisor).
+   */
+  async prepararDatos(base: string): Promise<void> {
+    await this.filas(`USE ${id(base)}`);
+    await this.filas("SET SESSION sql_mode = 'NO_AUTO_VALUE_ON_ZERO'");
+    await this.filas('SET NAMES utf8mb4');
+  }
+
+  /** Una sola sentencia (el driver no admite varias en la misma consulta). */
+  async ejecutarUna(sentencia: string): Promise<void> {
+    await this.conexion().query(sentencia);
   }
 
   /** Borra un usuario creado por `crearUsuarioTemporal` (y solo esos). */
@@ -413,6 +438,16 @@ export class ClienteMysql {
   async version(): Promise<string> {
     const f = await this.filas('SELECT version() AS version');
     return String(f[0]?.version ?? '');
+  }
+
+  /** Bytes aproximados de una base (datos más índices); 0 si no se sabe. */
+  async tamanoBase(nombre: string): Promise<number> {
+    const f = await this.filas(
+      'SELECT COALESCE(SUM(data_length + index_length), 0) AS b FROM information_schema.tables WHERE table_schema = ?',
+      [nombre],
+    );
+    const n = Number(f[0]?.b ?? 0);
+    return Number.isFinite(n) ? n : 0;
   }
 
   async tieneTablas(nombre: string): Promise<boolean> {

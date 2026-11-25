@@ -266,6 +266,14 @@ export const es = {
         'Los datos del servidor de origen no son válidos (usuario, clave o puerto).',
       'importar.sin_seleccion': 'Elija al menos un sitio para importar.',
       'importar.en_curso': 'Ya hay una importación en curso: espere a que termine.',
+      'importar.cancelado': 'Importación cancelada: lo que se estaba importando quedó como estaba.',
+      'importar.origen_estancado':
+        'El servidor del otro programa dejó de responder durante el volcado: no se importó la base.',
+      'importar.sin_espacio':
+        'No hay espacio libre suficiente para importar la base: hacen falta unos {necesarios} MB y hay {libres} MB.',
+      'importar.origen_fallo': 'No se pudo volcar la base del otro programa.',
+      'importar.clave_no_ascii':
+        'La clave tiene acentos o símbolos que no se pueden pasar al volcado: use una clave solo con caracteres ASCII.',
       'plantillas.sin_esquema': 'La plantilla no trae el esquema de una base de datos.',
       'proyectos.carpeta_invalida': 'La carpeta del proyecto no es válida.',
       'proyectos.nombre_invalido':

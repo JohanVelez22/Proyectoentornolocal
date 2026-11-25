@@ -1,6 +1,16 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync } from 'node:fs';
-import { lstat, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import {
+  lstat,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  statfs,
+  writeFile,
+} from 'node:fs/promises';
 import path from 'node:path';
 import { TextDecoder } from 'node:util';
 import { Transform, type Readable, type TransformCallback } from 'node:stream';
@@ -14,6 +24,7 @@ import { NOMBRE_SERVICIO } from '../servicios/definicion';
 import { esIdInstancia } from '../servicios/instancias';
 import type { EstadoInstancia, EstadoServicio } from '../tipos';
 import { motorDe, type BasesDeDatos, type ObjetivoBd } from './basesDeDatos';
+import { DivisorSentencias, rechazoDatos, validarSentenciaDatos } from './datosAjenos';
 import { ClienteMysql, validarNombreBd, type FabricaConexion } from './clienteMysql';
 import {
   definerMysql,
@@ -83,6 +94,10 @@ export interface OpcionesImportarAjeno extends OpcionesRestaurar {
    * el nombre del origen). Sin esto, ante un fallo la base vuelve a quedar vacía como estaba.
    */
   baseNueva?: boolean;
+  /** La base ya existe en el destino (aunque no tenga tablas): se respalda siempre antes de reemplazarla. */
+  baseExistente?: boolean;
+  /** Cancela la importación: mata solo el volcado que lanzó y deja todo como estaba. */
+  senal?: AbortSignal;
 }
 
 /** Tope por omisión del volcado de datos de un programa ajeno. */
@@ -119,6 +134,10 @@ export interface DepsRespaldos {
   rutaTar?: string;
   /** Tope del volcado de datos de un programa ajeno (por defecto 4 GiB; pruebas). */
   maxBytesDatosAjenos?: number;
+  /** Vigilancia del volcado del origen (por omisión cada 2 s, corte a los 120 s sin avance). */
+  vigilancia?: { intervaloMs: number; estancamientoMs: number };
+  /** Bytes libres de la unidad de `ruta` (por omisión `statfs`; pruebas). */
+  espacioLibre?: (ruta: string) => Promise<number>;
 }
 
 export const MENSAJE_DESCOMPRIMA = 'Descomprima el archivo y elija el .sql o .dump que contiene';
@@ -1080,8 +1099,8 @@ export class Respaldos {
         // Lo de la restauración de esquemas siempre va a esta instancia.
         ...(this.d.bd.usuarioTemporal
           ? {
-              usuarioTemporal: (_o: ObjetivoBd, base: string) =>
-                this.d.bd.usuarioTemporal!(objetivo, base),
+              usuarioTemporal: (_o: ObjetivoBd, base: string, privilegios?: 'todos' | 'datos') =>
+                this.d.bd.usuarioTemporal!(objetivo, base, privilegios),
             }
           : {}),
         ...(this.d.bd.reiniciarBase
@@ -1200,7 +1219,11 @@ export class Respaldos {
   }
 
   /** Respaldo automático de la base que se va a reemplazar; si falla, no se toca nada. */
-  private async respaldoDeSeguridad(motor: MotorSql, base: string): Promise<string> {
+  private async respaldoDeSeguridad(
+    motor: MotorSql,
+    base: string,
+    permitirVacio = false,
+  ): Promise<string> {
     let archivo: string;
     try {
       ({ archivo } = await this.respaldarComo(
@@ -1215,7 +1238,7 @@ export class Respaldos {
         `No se sobrescribió la base ${base}: falló su respaldo previo y no se tocó nada. ${detalle}`,
       );
     }
-    if (!(await respaldoValido(archivo, motor))) {
+    if (!(permitirVacio ? (await stat(archivo)).size > 0 : await respaldoValido(archivo, motor))) {
       await rm(archivo, { force: true }).catch(() => undefined);
       throw new Error(
         `No se sobrescribió la base ${base}: su respaldo previo quedó vacío o incompleto; no se tocó nada.`,
@@ -1615,7 +1638,15 @@ export class Respaldos {
     soloEsquema = false,
     /** Solo MySQL y MariaDB: sin CREATE (tablas, vistas, rutinas ni disparadores): solo filas. */
     soloDatos = false,
+    senal?: AbortSignal,
   ): Promise<Salida> {
+    // Windows pasa MYSQL_PWD en la página de códigos local: una clave con acentos llegaría cambiada.
+    if (motor !== 'postgresql' && [...origen.clave].some((ch) => ch.charCodeAt(0) > 0x7e)) {
+      throw new ErrorWolf(
+        'importar.clave_no_ascii',
+        'La clave tiene caracteres que no son ASCII y no se puede pasar al volcado: use una sin acentos ni símbolos especiales.',
+      );
+    }
     const { exe } = await this.herramienta(motor, 'volcado');
     let args: string[];
     let env: Record<string, string>;
@@ -1651,7 +1682,9 @@ export class Respaldos {
         // Solo estructura: ni una fila (plantillas de proyecto).
         ...(soloEsquema ? ['--no-data'] : []),
         // Solo filas, con los binarios en hexadecimal (texto plano que el filtro puede leer).
-        ...(soloDatos ? ['--no-create-info', '--hex-blob'] : []),
+        ...(soloDatos
+          ? ['--no-create-info', '--hex-blob', '--skip-add-locks', '--skip-disable-keys']
+          : []),
         ...(motor === 'mysql' ? ['--set-gtid-purged=OFF'] : []),
         '--verbose',
         `--result-file=${destino}`,
@@ -1667,11 +1700,16 @@ export class Respaldos {
     );
     let codigo: number;
     try {
-      ({ codigo } = await this.lanzar(exe, args, { env, alLinea: (l) => s.linea(l) }));
+      ({ codigo } = await this.lanzar(exe, args, {
+        env,
+        alLinea: (l) => s.linea(l),
+        ...(senal ? { senal } : {}),
+      }));
     } catch {
       codigo = -1;
     }
     s.fin();
+    if (senal?.aborted) throw razonDe(senal);
     if (codigo !== 0) throw new ErrorVolcado(s.detalle());
     return s;
   }
@@ -2146,6 +2184,132 @@ export class Respaldos {
     }
   }
 
+  /** Tamaño aproximado de la base en el origen (datos más índices); 0 si no se pudo saber. */
+  private async tamanoOrigen(o: OrigenImportar): Promise<number> {
+    const c = new ClienteMysql(this.d.fabricas?.mysql);
+    try {
+      await c.conectar({ host: o.host, puerto: o.puerto, usuario: o.usuario, clave: o.clave });
+      return await c.tamanoBase(o.base);
+    } catch {
+      return 0;
+    } finally {
+      await c.cerrar();
+    }
+  }
+
+  private async espacioLibre(ruta: string): Promise<number | null> {
+    try {
+      if (this.d.espacioLibre) return await this.d.espacioLibre(ruta);
+      const s = await statfs(ruta);
+      return Number(s.bavail) * Number(s.bsize);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Un volcado del origen con vigilancia: se corta si el archivo pasa de `tope` bytes, si deja de
+   * crecer durante `estancamientoMs` (el servidor no responde) o si el usuario cancela. El proceso
+   * que se mata es solo el que lanzó esta importación (por su PID, con su árbol).
+   */
+  private async volcarVigilado(
+    motor: MotorSql,
+    origen: OrigenImportar,
+    destino: string,
+    claves: string[],
+    o: { esquema: boolean; datos: boolean; tope: number; senal?: AbortSignal },
+  ): Promise<void> {
+    const ac = new AbortController();
+    const alCancelar = (): void => ac.abort(razonDe(o.senal));
+    if (o.senal?.aborted) alCancelar();
+    else o.senal?.addEventListener('abort', alCancelar, { once: true });
+    const v = this.d.vigilancia ?? { intervaloMs: 2_000, estancamientoMs: 120_000 };
+    let ultimo = -1;
+    let desde = Date.now();
+    const reloj = setInterval(() => {
+      void (async () => {
+        try {
+          const tam = (await stat(destino)).size;
+          if (tam > o.tope) {
+            ac.abort(
+              new ErrorWolf(
+                'importar.volcado_enorme',
+                `La base ${origen.base} pesa más de lo que se importa de una vez.`,
+                { maximo: Math.floor(o.tope / (1024 * 1024)) },
+              ),
+            );
+          }
+          if (tam !== ultimo) {
+            ultimo = tam;
+            desde = Date.now();
+          }
+        } catch {
+          // el archivo aún no existe
+        }
+        if (Date.now() - desde > v.estancamientoMs) {
+          ac.abort(
+            new ErrorWolf(
+              'importar.origen_estancado',
+              `El servidor de origen ${origen.host}:${origen.puerto} dejó de responder durante el volcado.`,
+            ),
+          );
+        }
+      })();
+    }, v.intervaloMs);
+    try {
+      await this.volcar(
+        'importar',
+        motor,
+        origen.base,
+        origen,
+        destino,
+        claves,
+        o.esquema,
+        o.datos,
+        ac.signal,
+      );
+    } finally {
+      clearInterval(reloj);
+      o.senal?.removeEventListener('abort', alCancelar);
+    }
+  }
+
+  /**
+   * Recorre los datos (ya con el filtro de texto) sentencia por sentencia: cada una se valida y, si
+   * hay `ejecutar`, se manda sola al servidor. Cualquier problema corta con su código.
+   */
+  private async recorrerDatos(
+    fuente: Extract<Fuente, { tipo: 'sql' }>,
+    claves: string[],
+    senal: AbortSignal | undefined,
+    ejecutar?: (sentencia: string) => Promise<void>,
+  ): Promise<string[]> {
+    const s = this.salida('importar', 'mysql', '', claves, () => false);
+    const total = (await stat(fuente.ruta)).size;
+    const divisor = new DivisorSentencias();
+    const entrada = this.flujoSql(fuente, 'mysql', s, total, { soloDatos: true });
+    pipeline(entrada, divisor).catch(() => undefined);
+    try {
+      for await (const sentencia of divisor as AsyncIterable<string>) {
+        if (senal?.aborted) throw razonDe(senal);
+        validarSentenciaDatos(sentencia);
+        if (ejecutar) await ejecutar(sentencia);
+      }
+    } catch (e) {
+      divisor.destroy();
+      if (e instanceof ErrorWolf) throw e;
+      const texto = e instanceof Error ? e.message : String(e);
+      if (texto.startsWith(MENSAJE_DATOS_NO_PERMITIDOS)) throw rechazoDatos('no son datos');
+      throw new ErrorWolf(
+        'bd.datos_fallo',
+        `No se pudieron importar los datos: ${enmascarar(texto, claves)}`.slice(0, 400),
+      );
+    } finally {
+      s.fin();
+    }
+    return s.lista();
+  }
+
   /**
    * Copia a una base local la base de un programa ajeno (Laragon, XAMPP, Herd), cuyo servidor
    * enciende el usuario. Solo MySQL y MariaDB. El contenido del origen es de un tercero, así que
@@ -2153,19 +2317,20 @@ export class Respaldos {
    *
    * - **Estructura** (volcado `--no-data`): se revisa entera contra la lista de sentencias
    *   permitidas de las plantillas (origen `importada`: sin disparadores, vistas y rutinas con
-   *   `SQL SECURITY INVOKER`) ANTES de crear o reemplazar nada, y se restaura con
-   *   `restaurarEsquema` (usuario temporal limitado a la base; vistas y rutinas las crea el
-   *   administrador).
-   * - **Datos** (volcado `--no-create-info --skip-triggers`): una base real tiene decenas de
-   *   miles o millones de INSERT, así que no pasa por la lista (tope de 64 MiB y 20 000
-   *   sentencias). Sus defensas: el volcado se pide solo de filas (sin vistas, rutinas ni
-   *   disparadores, que son lo que inyecta un servidor hostil); un filtro en streaming acepta
-   *   únicamente INSERT, LOCK/UNLOCK TABLES, SET (sin GLOBAL ni registro binario) y comentarios,
-   *   una sentencia por línea y sin nada tras su `;`; se ejecuta con el mismo usuario temporal
-   *   (sin FILE, SUPER ni acceso a otras bases), con `--binary-mode`, `--local-infile=0`, sandbox
-   *   en MariaDB y sin `--force`: el primer error corta y la base vuelve a quedar vacía.
-   * - Con `confirmarSobrescribir` y la base con tablas: respaldo previo verificado antes de
-   *   reemplazarla; si algo falla después, el error lo nombra (`ErrorTrasReemplazo`).
+   *   `SQL SECURITY INVOKER` y DEFINER una cuenta bloqueada de la base) ANTES de crear o reemplazar
+   *   nada, y se restaura con `restaurarEsquema`.
+   * - **Datos** (volcado `--no-create-info --skip-triggers --skip-add-locks --skip-disable-keys`):
+   *   una base real no cabe en la lista de estructura (tope de 64 MiB y 20 000 sentencias). El
+   *   volcado se pide solo de filas; un filtro de texto neutraliza los cambios de base; después se
+   *   parte en sentencias y CADA UNA se valida contra una lista cerrada (INSERT y un SET de la lista
+   *   de `mysqldump`) y se manda sola, con el driver (sin varias sentencias por consulta), con un
+   *   usuario temporal que solo puede INSERT en la base, utf8mb4 y un `sql_mode` fijo. Así, si la
+   *   lectura del texto se equivocara, el servidor daría un error y no ejecutaría otra sentencia.
+   *   Todo el archivo se valida ANTES de respaldar o borrar nada.
+   * - Si la base existe (con o sin tablas) se respalda antes de reemplazarla; si algo falla después,
+   *   se restaura ese respaldo solo (`ErrorTrasReemplazo.restaurada`).
+   * - Vigilancia: tope de tamaño durante el volcado y espacio libre antes, corte si el origen deja
+   *   de responder y cancelación (`senal`), que mata solo el proceso lanzado por esta importación.
    * - La clave del origen solo vive en memoria y se enmascara en todo mensaje.
    */
   async importarAjeno(
@@ -2202,9 +2367,34 @@ export class Respaldos {
     const bd = this.d.bd;
     if (!bd.usuarioTemporal) throw new Error('Esta importación no está disponible aquí.');
     const { tablas } = await this.comprobarDestino(m, destinoBase, opts.confirmarSobrescribir);
+    if (opts.baseExistente && opts.confirmarSobrescribir !== true)
+      throw errorConTablas(destinoBase);
+    const reemplaza = tablas || opts.baseExistente === true;
     const avisos = await this.versionOrigenAjeno(m, origen);
+    const tope = this.d.maxBytesDatosAjenos ?? MAX_BYTES_DATOS_AJENOS;
+    const estimado = await this.tamanoOrigen(origen);
+    if (estimado > tope) {
+      throw new ErrorWolf(
+        'importar.volcado_enorme',
+        `La base ${origen.base} pesa más de lo que se importa de una vez.`,
+        { maximo: Math.floor(tope / (1024 * 1024)) },
+      );
+    }
 
     await mkdir(this.d.rutas.tmp(), { recursive: true });
+    // Un volcado ocupa lo de la base y, con el respaldo previo, otro tanto: se comprueba antes.
+    const libre = await this.espacioLibre(this.d.rutas.tmp());
+    const necesario = Math.ceil(estimado * (reemplaza ? 2.4 : 1.2)) + 64 * 1024 * 1024;
+    if (libre !== null && estimado > 0 && libre < necesario) {
+      throw new ErrorWolf(
+        'importar.sin_espacio',
+        'No hay espacio libre suficiente para el volcado de la base.',
+        {
+          necesarios: Math.ceil(necesario / (1024 * 1024)),
+          libres: Math.floor(libre / (1024 * 1024)),
+        },
+      );
+    }
     const tmp = path.join(this.d.rutas.tmp(), `importar-ajeno-${randomUUID()}`);
     await mkdir(tmp, { recursive: true });
     const claves = [origen.clave, local.clave ?? ''];
@@ -2212,12 +2402,21 @@ export class Respaldos {
       const archivoEsquema = path.join(tmp, 'esquema.sql');
       const archivoDatos = path.join(tmp, 'datos.sql');
       try {
-        await this.volcar('importar', m, destinoBase, origen, archivoEsquema, claves, true);
-        await this.volcar('importar', m, destinoBase, origen, archivoDatos, claves, false, true);
+        await this.volcarVigilado(m, origen, archivoEsquema, claves, {
+          esquema: true,
+          datos: false,
+          tope: MAX_BYTES_ESQUEMA,
+          ...(opts.senal ? { senal: opts.senal } : {}),
+        });
+        await this.volcarVigilado(m, origen, archivoDatos, claves, {
+          esquema: false,
+          datos: true,
+          tope,
+          ...(opts.senal ? { senal: opts.senal } : {}),
+        });
       } catch (e) {
-        throw errorOrigen(e, origen, claves);
+        throw e instanceof ErrorWolf ? e : errorOrigen(e, origen, claves);
       }
-      const tope = this.d.maxBytesDatosAjenos ?? MAX_BYTES_DATOS_AJENOS;
       if ((await stat(archivoDatos)).size > tope) {
         throw new ErrorWolf(
           'importar.volcado_enorme',
@@ -2225,9 +2424,8 @@ export class Respaldos {
           { maximo: Math.floor(tope / (1024 * 1024)) },
         );
       }
-      // La estructura se revisa entera antes de tocar nada (ni respaldo ni base nueva).
-      const infoEsquema = await stat(archivoEsquema);
-      if (infoEsquema.size > MAX_BYTES_ESQUEMA) {
+      // Todo se revisa antes de tocar nada (ni respaldo, ni borrado, ni base nueva).
+      if ((await stat(archivoEsquema)).size > MAX_BYTES_ESQUEMA) {
         throw new ErrorWolf('bd.esquema_fallo', 'La estructura de la base es demasiado grande.');
       }
       revisarSql(
@@ -2237,17 +2435,19 @@ export class Respaldos {
           origen: 'importada',
         },
       );
+      const fuente = await this.preparar(archivoDatos, tmp, 0);
+      if (fuente.tipo !== 'sql' || fuente.gz) throw new Error(NO_RECONOCIDO);
+      await this.recorrerDatos(fuente, claves, opts.senal);
 
       let respaldoPrevio: string | undefined;
-      if (tablas) {
-        respaldoPrevio = await this.respaldoDeSeguridad(m, destinoBase);
+      if (reemplaza) {
+        respaldoPrevio = await this.respaldoDeSeguridad(m, destinoBase, !tablas);
         await this.borrarParaReemplazar(m, destinoBase);
       }
       await bd.crear(m, destinoBase);
       try {
         await this.restaurarEsquema(m, archivoEsquema, destinoBase, { origen: 'importada' });
-        const fuente = await this.preparar(archivoDatos, tmp, 0);
-        const adv = await this.restaurarDatosLimitado(m, fuente, destinoBase, claves);
+        const adv = await this.cargarDatos(m, fuente, destinoBase, claves, opts.senal);
         return {
           advertencias: [...avisos, ...adv],
           ...(respaldoPrevio ? { respaldoPrevio } : {}),
@@ -2256,74 +2456,65 @@ export class Respaldos {
         // Todo o nada: ni estructura a medias ni datos a medias.
         if (opts.baseNueva) await this.borrarParaReemplazar(m, destinoBase).catch(() => undefined);
         else await bd.reiniciarBase?.(m, destinoBase).catch(() => undefined);
-        throw respaldoPrevio ? new ErrorTrasReemplazo(destinoBase, respaldoPrevio, e) : e;
+        if (!respaldoPrevio) throw e;
+        // La base original ya no está: se vuelve a poner desde su respaldo.
+        let restaurada = false;
+        try {
+          await this.restaurarInterno(
+            'importar',
+            m,
+            respaldoPrevio,
+            destinoBase,
+            { confirmarSobrescribir: true },
+            [],
+          );
+          restaurada = true;
+        } catch {
+          // el error nombra el respaldo para restaurarlo a mano
+        }
+        throw new ErrorTrasReemplazo(destinoBase, respaldoPrevio, e, restaurada);
       }
     } finally {
       await rm(tmp, OPCIONES_BORRADO).catch(() => undefined);
     }
   }
 
-  /** Datos de un tercero con el usuario temporal de la base (ver `importarAjeno`). */
-  private async restaurarDatosLimitado(
+  /** Datos de un tercero con un usuario que solo puede INSERT, sentencia por sentencia. */
+  private async cargarDatos(
     motor: MotorSql,
-    fuente: Fuente,
+    fuente: Extract<Fuente, { tipo: 'sql' }>,
     base: string,
     clavesBase: string[],
+    senal: AbortSignal | undefined,
   ): Promise<string[]> {
-    if (fuente.tipo !== 'sql') throw new Error(NO_RECONOCIDO);
     const bd = this.d.bd;
     const con = await bd.conexion(motor);
-    const usuario = await bd.usuarioTemporal!(motor, base);
+    const usuario = await bd.usuarioTemporal!(motor, base, 'datos');
     const claves = [...clavesBase, usuario.clave];
+    const cliente = new ClienteMysql(this.d.fabricas?.mysql);
     try {
-      const cliente = await this.herramienta(motor, 'cliente');
-      const s = this.salida(
-        'importar',
-        motor,
-        base,
-        claves,
-        (l) => /^(ERROR|Warning)\b/i.test(l) && !RUIDO_CLIENTE.test(l),
+      await cliente.conectar({
+        host: con.host,
+        puerto: con.puerto,
+        usuario: usuario.usuario,
+        clave: usuario.clave,
+        charset: 'utf8mb4',
+      });
+      await cliente.prepararDatos(base);
+      return await this.recorrerDatos(fuente, claves, senal, (sentencia) =>
+        cliente.ejecutarUna(sentencia),
       );
-      const total = (await stat(fuente.ruta)).size;
-      const entrada = this.flujoSql(fuente, 'mysql', s, total, { soloDatos: true });
-      const args = [
-        `--host=${con.host}`,
-        `--port=${con.puerto}`,
-        `--user=${usuario.usuario}`,
-        '--default-character-set=utf8mb4',
-        '--binary-mode',
-        '--local-infile=0',
-        ...(motor === 'mariadb' && mariadbConSandbox(cliente.version) ? ['--sandbox'] : []),
-        base,
-      ];
-      let codigo: number;
-      try {
-        ({ codigo } = await this.lanzar(cliente.exe, args, {
-          env: { MYSQL_PWD: usuario.clave },
-          entrada,
-          alLinea: (l) => s.linea(l),
-        }));
-      } catch (e) {
-        s.fin();
-        const texto = e instanceof Error ? e.message : String(e);
-        if (texto.startsWith(MENSAJE_DATOS_NO_PERMITIDOS)) {
-          throw new ErrorWolf('bd.datos_no_permitidos', MENSAJE_DATOS_NO_PERMITIDOS);
-        }
-        throw new ErrorWolf(
-          'bd.datos_fallo',
-          `No se pudieron importar los datos: ${enmascarar(texto, claves)}`.slice(0, 400),
-        );
-      }
-      s.fin();
-      if (codigo !== 0) {
-        const detalle = s.detalle();
-        throw new ErrorWolf(
-          'bd.datos_fallo',
-          `No se pudieron importar los datos${detalle ? `: ${detalle}` : '.'}`.slice(0, 400),
-        );
-      }
-      return s.lista();
+    } catch (e) {
+      if (e instanceof ErrorWolf) throw e;
+      throw new ErrorWolf(
+        'bd.datos_fallo',
+        `No se pudieron importar los datos: ${enmascarar(e instanceof Error ? e.message : String(e), claves)}`.slice(
+          0,
+          400,
+        ),
+      );
     } finally {
+      await cliente.cerrar();
       await usuario.retirar().catch(() => undefined);
     }
   }
@@ -2367,9 +2558,13 @@ export class ErrorTrasReemplazo extends Error {
     base: string,
     readonly respaldoPrevio: string,
     causa: unknown,
+    /** La base original ya se volvió a poner desde su respaldo. */
+    readonly restaurada = false,
   ) {
     super(
-      `No se pudo completar la restauración de ${base}. La base original se reemplazó; su copia de seguridad está en ${respaldoPrevio}. Puede restaurarla desde Bases de datos.`,
+      restaurada
+        ? `No se pudo importar ${base}; la base original se restauró desde su copia de seguridad (${respaldoPrevio}).`
+        : `No se pudo completar la restauración de ${base}. La base original se reemplazó; su copia de seguridad está en ${respaldoPrevio}. Puede restaurarla desde Bases de datos.`,
       { cause: causa },
     );
   }
@@ -2400,25 +2595,39 @@ async function respaldoValido(ruta: string, motor: MotorSql): Promise<boolean> {
   return false;
 }
 
+/** El error de una señal abortada: el que se pasó a `abort(…)` si es de WolfCore, si no "cancelado". */
+function razonDe(senal: AbortSignal | undefined): ErrorWolf {
+  return senal?.reason instanceof ErrorWolf
+    ? senal.reason
+    : new ErrorWolf('importar.cancelado', 'Importación cancelada.');
+}
+
 class ErrorVolcado extends Error {
   constructor(readonly detalle: string) {
     super(detalle || 'El volcado falló.');
   }
 }
 
-function errorOrigen(e: unknown, o: OrigenImportar, claves: string[]): Error {
+function errorOrigen(e: unknown, o: OrigenImportar, claves: string[]): ErrorWolf {
   const detalle = enmascarar(e instanceof ErrorVolcado ? e.detalle : String(e), claves);
   if (/access denied|password authentication failed|autentificaci[oó]n/i.test(detalle)) {
-    return new Error('El servidor de origen rechazó el usuario o la clave.');
+    return new ErrorWolf(
+      'importar.origen_rechazado',
+      'El servidor de origen rechazó el usuario o la clave.',
+    );
   }
   if (
     /can't connect|could not connect|connection refused|unknown (mysql )?server host|could not translate host/i.test(
       detalle,
     )
   ) {
-    return new Error(`No se pudo conectar al servidor de origen ${o.host}:${o.puerto}.`);
+    return new ErrorWolf(
+      'importar.origen_apagado',
+      `No se pudo conectar al servidor de origen ${o.host}:${o.puerto}.`,
+    );
   }
-  return new Error(
-    `No se pudo volcar la base ${o.base} del origen${detalle ? `: ${detalle}` : '.'}`,
+  return new ErrorWolf(
+    'importar.origen_fallo',
+    `No se pudo volcar la base ${o.base} del origen${detalle ? `: ${detalle}` : '.'}`.slice(0, 400),
   );
 }

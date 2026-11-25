@@ -276,6 +276,15 @@ export const fr: Textos = {
         'Les informations du serveur source ne sont pas valides (utilisateur, mot de passe ou port).',
       'importar.sin_seleccion': 'Choisissez au moins un site à importer.',
       'importar.en_curso': "Une importation est déjà en cours : attendez qu'elle se termine.",
+      'importar.cancelado':
+        "Importation annulée : ce qui était en cours d'importation est resté tel quel.",
+      'importar.origen_estancado':
+        "Le serveur de l'autre programme a cessé de répondre pendant l'export : la base n'a pas été importée.",
+      'importar.sin_espacio':
+        "Pas assez d'espace libre pour importer la base : environ {necesarios} Mo sont nécessaires et {libres} Mo sont libres.",
+      'importar.origen_fallo': "Impossible d'exporter la base de l'autre programme.",
+      'importar.clave_no_ascii':
+        "Le mot de passe contient des accents ou des symboles qui ne peuvent pas être transmis à l'export : utilisez un mot de passe en ASCII uniquement.",
       'plantillas.sin_esquema': "Le modèle ne contient pas le schéma d'une base de données.",
       'proyectos.carpeta_invalida': 'Le dossier du projet n’est pas valide.',
       'proyectos.nombre_invalido':

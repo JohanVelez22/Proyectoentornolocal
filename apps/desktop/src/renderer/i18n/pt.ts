@@ -271,6 +271,14 @@ export const pt: Textos = {
         'Os dados do servidor de origem não são válidos (usuário, senha ou porta).',
       'importar.sin_seleccion': 'Escolha pelo menos um site para importar.',
       'importar.en_curso': 'Já há uma importação em andamento: aguarde terminar.',
+      'importar.cancelado': 'Importação cancelada: o que estava sendo importado ficou como estava.',
+      'importar.origen_estancado':
+        'O servidor do outro programa parou de responder durante a exportação: o banco não foi importado.',
+      'importar.sin_espacio':
+        'Não há espaço livre suficiente para importar o banco: são necessários cerca de {necesarios} MB e há {libres} MB.',
+      'importar.origen_fallo': 'Não foi possível exportar o banco do outro programa.',
+      'importar.clave_no_ascii':
+        'A senha tem acentos ou símbolos que não podem ser passados à exportação: use uma senha só com caracteres ASCII.',
       'plantillas.sin_esquema': 'O modelo não traz o esquema de um banco de dados.',
       'proyectos.carpeta_invalida': 'A pasta do projeto não é válida.',
       'proyectos.nombre_invalido':

@@ -262,6 +262,14 @@ export const en: Textos = {
         'The source server details are not valid (user, password or port).',
       'importar.sin_seleccion': 'Choose at least one site to import.',
       'importar.en_curso': 'An import is already in progress: wait for it to finish.',
+      'importar.cancelado': 'Import cancelled: what was being imported was left as it was.',
+      'importar.origen_estancado':
+        "The other program's server stopped responding during the dump: the database was not imported.",
+      'importar.sin_espacio':
+        'There is not enough free space to import the database: about {necesarios} MB are needed and {libres} MB are free.',
+      'importar.origen_fallo': "The other program's database could not be dumped.",
+      'importar.clave_no_ascii':
+        'The password has accents or symbols that cannot be passed to the dump: use an ASCII-only password.',
       'plantillas.sin_esquema': 'The template has no database schema.',
       'proyectos.carpeta_invalida': 'The project folder is not valid.',
       'proyectos.nombre_invalido':
