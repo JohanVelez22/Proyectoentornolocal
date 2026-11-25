@@ -15,28 +15,8 @@ import { MAX_ARGS_TAREA, MAX_CARACTERES_ARG_TAREA } from '../tipos';
 export const PROGRAMAS_TAREA = ['php', 'node', 'npm', 'python'] as const;
 export type ProgramaTarea = (typeof PROGRAMAS_TAREA)[number];
 
-/** Opciones que no se admiten, por programa (en minúsculas; también la forma `--opcion=valor`). */
-const OPCIONES_PROHIBIDAS: Record<ProgramaTarea, readonly string[]> = {
-  php: [
-    '-r',
-    '-R',
-    '-B',
-    '-E',
-    '-F',
-    '-a',
-    '-S',
-    '-i',
-    '--run',
-    '--process-begin',
-    '--interactive',
-  ],
-  node: ['-e', '--eval', '-p', '--print', '-i', '--interactive', '-r', '--require', '--import'],
-  npm: [],
-  python: ['-c', '-i', '--command'],
-};
-
-/** Subcomandos de npm que se admiten: ejecutar un script del `package.json`. */
-const SUBCOMANDOS_NPM = ['run', 'run-script'];
+/** Módulos que `python -m` admite: herramientas de gestión y servidores de un proyecto web. Nunca `pip` ni `http.server`. */
+export const MODULOS_PYTHON = ['django', 'flask', 'uvicorn', 'celery'] as const;
 
 const invalido = (detalle: string): ErrorWolf =>
   new ErrorWolf('tareas.comando_invalido', `El comando de la tarea no es válido: ${detalle}`, {
@@ -51,8 +31,31 @@ function nombreDe(programa: string): string | null {
 }
 
 /**
- * Valida el comando de una tarea. Lanza `tareas.comando_invalido` con el motivo. No toca el disco
- * ni el sistema: solo mira la lista de argumentos.
+ * Archivo del proyecto: relativo y sin salir de la carpeta. Rechaza lo que empieza por `-` (una
+ * opción), las rutas absolutas, de unidad (`C:`) o UNC (`\servidor\...`, `//servidor/...`) y
+ * cualquier tramo `..`.
+ */
+function archivoRelativo(a: string, que: string): void {
+  if (a.startsWith('-'))
+    throw invalido(`${que}: se esperaba un archivo del proyecto, no una opción`);
+  if (/^[\\/]/.test(a) || /^[A-Za-z]:/.test(a)) {
+    throw invalido(`${que}: el archivo debe ser relativo a la carpeta del proyecto`);
+  }
+  if (a.split(/[\\/]+/).some((t) => t === '..')) {
+    throw invalido(`${que}: el archivo no puede salir de la carpeta del proyecto`);
+  }
+}
+
+/**
+ * Valida el comando de una tarea por **posición** (lista blanca, no lista negra de opciones):
+ *
+ * - `php [-f] <archivo> [args…]`: ninguna otra opción antes del archivo (`-r`, `-d`, `-S`, `-B`…).
+ * - `node <archivo> [args…]`: ninguna opción antes del archivo (`-e`, `--loader`, `--inspect`…).
+ * - `python <archivo> [args…]` o `python -m <módulo> [args…]` con un módulo de `MODULOS_PYTHON`.
+ * - `npm run <script> [-- args…]`: sin opciones de npm (`--prefix`, `--script-shell`…).
+ *
+ * Lo que va después del archivo (o de `--`) son argumentos del propio programa del proyecto.
+ * Lanza `tareas.comando_invalido`. No toca el disco: solo mira la lista de argumentos.
  */
 export function validarComandoTarea(comando: unknown): asserts comando is string[] {
   if (!Array.isArray(comando) || comando.length === 0) throw invalido('está vacío');
@@ -68,19 +71,42 @@ export function validarComandoTarea(comando: unknown): asserts comando is string
   if (nombre === null || !(PROGRAMAS_TAREA as readonly string[]).includes(nombre)) {
     throw invalido(`el programa debe ser uno de: ${PROGRAMAS_TAREA.join(', ')}`);
   }
-  const prog = nombre as ProgramaTarea;
-  if (resto.length === 0 && prog === 'npm') throw invalido('npm necesita "run <script>"');
-  for (const a of resto) {
-    const opcion = a.split('=')[0]!;
-    if (a.startsWith('-') && OPCIONES_PROHIBIDAS[prog].includes(opcion)) {
-      throw invalido(`la opción ${opcion} no se admite en las tareas`);
+  switch (nombre as ProgramaTarea) {
+    case 'php': {
+      const i = resto[0] === '-f' ? 1 : 0;
+      if (resto[i] === undefined) throw invalido('falta el archivo que se ejecuta');
+      archivoRelativo(resto[i]!, 'php');
+      return;
+    }
+    case 'node':
+      if (resto[0] === undefined) throw invalido('falta el archivo que se ejecuta');
+      archivoRelativo(resto[0], 'node');
+      return;
+    case 'python':
+      if (resto[0] === '-m') {
+        if (!(MODULOS_PYTHON as readonly string[]).includes(resto[1] ?? '')) {
+          throw invalido(`python -m solo admite: ${MODULOS_PYTHON.join(', ')}`);
+        }
+        return;
+      }
+      if (resto[0] === undefined) throw invalido('falta el archivo que se ejecuta');
+      archivoRelativo(resto[0], 'python');
+      return;
+    case 'npm': {
+      if (resto[0] !== 'run' && resto[0] !== 'run-script') {
+        throw invalido('npm solo admite "run <script>"');
+      }
+      const script = resto[1];
+      if (script === undefined || !/^[A-Za-z0-9_][A-Za-z0-9:_.@/-]*$/.test(script)) {
+        throw invalido('falta el nombre del script de npm, o no es válido');
+      }
+      // Después del script solo `-- <args>`: ninguna opción de npm.
+      if (resto.length > 2 && resto[2] !== '--') {
+        throw invalido('las opciones de npm no se admiten: use "-- <argumentos>"');
+      }
+      return;
     }
   }
-  if (prog === 'npm') {
-    if (!SUBCOMANDOS_NPM.includes(resto[0]!)) throw invalido('npm solo admite "run <script>"');
-    if (resto.length < 2) throw invalido('falta el nombre del script de npm');
-  }
-  if (resto.length === 0 && prog !== 'npm') throw invalido('falta lo que se ejecuta (un archivo)');
 }
 
 /**

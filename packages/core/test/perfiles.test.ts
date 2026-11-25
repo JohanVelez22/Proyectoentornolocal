@@ -1210,6 +1210,13 @@ describe('importarPerfil: todo lo que llega es importado', () => {
     expect(r.motivos).toContain('tareas_quitadas');
   });
 
+  it('un manifiesto que trae tareas se rechaza (las tareas no viajan)', async () => {
+    const { ManifiestoPerfilSchema } = await import('../src/perfiles/manifiesto');
+    const r = ManifiestoPerfilSchema.shape.tareas.safeParse([{ id: 'x' }]);
+    expect(r.success).toBe(false);
+    expect(ManifiestoPerfilSchema.shape.tareas.safeParse([]).success).toBe(true);
+  });
+
   it('el perfil exportado no lleva las tareas ni sus comandos', async () => {
     const archivo = await exportar();
     const bruto = (await readFile(archivo)).toString('latin1');

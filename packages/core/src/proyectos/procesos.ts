@@ -229,6 +229,10 @@ export class ProcesosProyecto {
       env: { ...entorno.cambios, ...ca },
       senal: o.senal,
       alLinea: (l) => o.alLinea(l),
+      // Una tarea que se pasa de tiempo debe terminar de verdad: grupo entero (POSIX) y 5 s de
+      // gracia si un nieto sigue con la salida heredada abierta.
+      matarGrupo: true,
+      graciaMs: 5000,
     });
   }
 

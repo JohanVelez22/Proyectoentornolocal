@@ -266,6 +266,7 @@ async function abrirRegistro(v: VistaTarea): Promise<void> {
 
     <div v-if="abierto" :id="idPanel" class="panel">
       <NAlert type="info" :show-icon="false" class="aviso">{{ t.soloAbierta }}</NAlert>
+      <NAlert type="warning" :show-icon="false" class="aviso">{{ t.repoEjecuta }}</NAlert>
 
       <NAlert v-if="plan?.aislado && !plan.permitido" type="warning" class="aviso">
         <strong>{{ t.aislado.titulo }}</strong> {{ t.aislado.texto }}

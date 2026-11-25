@@ -484,3 +484,139 @@ describe('Programador: temporizador', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 });
+
+describe('Programador: revisión de D29', () => {
+  it('una tarea larga no congela al planificador: las demás siguen y la larga anota solapada', async () => {
+    const esperaReal = globalThis.setTimeout;
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    vi.setSystemTime(new Date(Date.UTC(2026, 4, 10, 10, 0, 5)));
+    const larga = tarea({
+      id: 'larga',
+      comando: ['php', 'larga.php'],
+      confirmada: huellaTarea(['php', 'larga.php']),
+    });
+    const corta = tarea({
+      id: 'corta',
+      comando: ['php', 'corta.php'],
+      confirmada: huellaTarea(['php', 'corta.php']),
+    });
+    const a = await armar({
+      sitios: [sitio({}, [larga, corta])],
+      ejecutar: (_s, c, o) =>
+        c[1] === 'larga.php'
+          ? new Promise((r) => o.senal.addEventListener('abort', () => r({ codigo: 1 })))
+          : Promise.resolve({ codigo: 0 }),
+    });
+    delete a.deps.ahora;
+    a.p.iniciar();
+    // La E/S es real: se espera con el temporizador real (el simulado solo mueve los minutos).
+    const dejar = async (cond: () => boolean | Promise<boolean>): Promise<void> => {
+      for (let i = 0; i < 1200 && !(await cond()); i++) await new Promise((r) => esperaReal(r, 5));
+    };
+    // Terminada del todo: anotada en el historial y fuera de las ejecuciones en curso.
+    const terminadas = async (): Promise<number> => {
+      const enCurso = (await a.p.vista('tienda')).find((v) => v.tarea.id === 'corta')?.enCurso;
+      if (enCurso) return 0;
+      return (await a.p.historialDe('tienda', 'corta')).filter((e) => e.estado === 'ok').length;
+    };
+    const cortas = (): number =>
+      a.ejecutar.mock.calls.filter((c) => c[1][1] === 'corta.php').length;
+    await vi.advanceTimersByTimeAsync(60_000);
+    await dejar(async () => (await terminadas()) >= 1);
+    expect(cortas()).toBe(1);
+    // Pasan más de 2 minutos con la larga aún corriendo: la corta sigue corriendo cada minuto.
+    for (let i = 0; i < 3; i++) {
+      await vi.advanceTimersByTimeAsync(60_000);
+      await dejar(async () => (await terminadas()) >= i + 2);
+    }
+    expect(cortas()).toBe(4);
+    const h = await a.p.historialDe('tienda', 'larga');
+    expect(h.filter((e) => e.motivo === 'solapada').length).toBeGreaterThanOrEqual(2);
+    await a.p.detener();
+  });
+
+  it('detener() no se queda esperando a un proceso que ignora la señal (tope)', async () => {
+    const a = await armar({ ejecutar: () => new Promise(() => undefined) });
+    a.deps.topeDetenerMs = 100;
+    await listo(a);
+    void a.p.tick(minuto(1));
+    await vi.waitFor(() => expect(a.ejecutar).toHaveBeenCalledTimes(1));
+    const t0 = Date.now();
+    await a.p.detener();
+    expect(Date.now() - t0).toBeLessThan(3000);
+  });
+
+  it('con el planificador deteniéndose no se ejecuta a mano', async () => {
+    const a = await armar();
+    await a.p.detener();
+    await expect(a.p.ejecutarAhora('tienda', 'sched')).rejects.toBeInstanceOf(ErrorWolf);
+    expect(a.ejecutar).not.toHaveBeenCalled();
+  });
+
+  it('una carpeta que no existe da tareas.carpeta al ejecutar a mano', async () => {
+    const a = await armar();
+    a.existe.valor = false;
+    await expect(a.p.ejecutarAhora('tienda', 'sched')).rejects.toMatchObject({
+      codigo: 'tareas.carpeta',
+    });
+  });
+
+  it('abortarSitio aborta solo las ejecuciones de ese sitio', async () => {
+    let senal!: AbortSignal;
+    const a = await armar({
+      ejecutar: (_s, _c, o) =>
+        new Promise((r) => {
+          senal = o.senal;
+          o.senal.addEventListener('abort', () => r({ codigo: 1 }));
+        }),
+    });
+    await listo(a);
+    const corriendo = a.p.tick(minuto(1));
+    await vi.waitFor(() => expect(a.ejecutar).toHaveBeenCalledTimes(1));
+    a.p.abortarSitio('otro');
+    expect(senal.aborted).toBe(false);
+    a.p.abortarSitio('tienda');
+    expect(senal.aborted).toBe(true);
+    await corriendo;
+    expect((await a.p.historialDe('tienda', 'sched'))[0]).toMatchObject({ estado: 'cancelada' });
+  });
+
+  it('el tope de salida cuenta bytes reales (UTF-8 de varios bytes)', async () => {
+    const a = await armar({
+      ejecutar: async (_s, _c, o) => {
+        for (let i = 0; i < 5000; i++) o.alLinea('ñ'.repeat(200));
+        return { codigo: 0 };
+      },
+    });
+    await listo(a);
+    await a.p.tick(minuto(1));
+    const bruto = await readFile(a.rutas.logTarea('tienda', 'sched'));
+    expect(bruto.length).toBeLessThan(300 * 1024);
+  });
+
+  it('olvidar borra el .log y el .1; purgarHuerfanos quita lo de sitios y tareas que ya no existen', async () => {
+    const { writeFile, mkdir, access } = await import('node:fs/promises');
+    const a = await armar();
+    await listo(a);
+    await a.p.tick(minuto(1));
+    const ruta = a.rutas.logTarea('tienda', 'sched');
+    await writeFile(`${ruta}.1`, 'viejo');
+    const existe = async (f: string): Promise<boolean> =>
+      access(f).then(
+        () => true,
+        () => false,
+      );
+    await mkdir(path.dirname(ruta), { recursive: true });
+    await writeFile(a.rutas.logTarea('borrado', 'otra'), 'x');
+    await writeFile(`${a.rutas.logTarea('borrado', 'otra')}.1`, 'x');
+    await writeFile(path.join(path.dirname(ruta), 'notas.txt'), 'x');
+    await a.p.purgarHuerfanos();
+    expect(await existe(a.rutas.logTarea('borrado', 'otra'))).toBe(false);
+    expect(await existe(`${a.rutas.logTarea('borrado', 'otra')}.1`)).toBe(false);
+    expect(await existe(path.join(path.dirname(ruta), 'notas.txt'))).toBe(true);
+    expect(await existe(ruta)).toBe(true);
+    await a.p.olvidar('tienda', 'sched');
+    expect(await existe(ruta)).toBe(false);
+    expect(await existe(`${ruta}.1`)).toBe(false);
+  });
+});

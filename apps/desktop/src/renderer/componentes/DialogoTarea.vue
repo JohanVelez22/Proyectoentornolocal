@@ -19,6 +19,7 @@ import { mensajeDeError } from '../utilidades/errores';
 import {
   analizarHora,
   comandoATexto,
+  comandoSeRepresenta,
   cronDePreset,
   presetDeCron,
   textoAComando,
@@ -60,6 +61,8 @@ const activa = ref(true);
 const revisado = ref(false);
 
 const soloLectura = computed(() => props.modo === 'adoptar' || props.modo === 'confirmar');
+/** Un comando con argumentos que no se pueden escribir como texto se muestra y se conserva tal cual (sin editar). */
+const comandoFijo = ref(false);
 
 /** Lo que el usuario ve y acepta: la tarea o propuesta con su comando y su huella. */
 const origen = computed<{
@@ -101,6 +104,7 @@ watch(mostrar, (v) => {
     horaTexto.value = '03:00';
   }
   if (p.tipo === 'personalizada') expresion.value = p.expr;
+  comandoFijo.value = o ? !comandoSeRepresenta(o.comando) : false;
   comandoTexto.value = o ? comandoATexto(o.comando) : '';
   tiempoMin.value = Math.max(1, Math.round((o?.tiempoMaxS ?? 300) / 60));
   activa.value = props.modo === 'nueva' ? true : (o?.activa ?? true);
@@ -170,7 +174,9 @@ const formatoFecha = (iso: string): string =>
 
 /* ───────────── Comando ───────────── */
 
-const argumentos = computed(() => textoAComando(comandoTexto.value));
+const argumentos = computed(() =>
+  comandoFijo.value && origen.value ? origen.value.comando : textoAComando(comandoTexto.value),
+);
 const comillasSinCerrar = computed(
   () => comandoTexto.value.trim() !== '' && argumentos.value === null,
 );
@@ -315,12 +321,13 @@ async function aceptar(): Promise<void> {
           :placeholder="t.comandoPlaceholder"
           maxlength="2000"
           :status="comillasSinCerrar ? 'error' : undefined"
-          :disabled="soloLectura || ocupado('guardar')"
+          :disabled="soloLectura || comandoFijo || ocupado('guardar')"
           :aria-label="t.comando"
           class="mono"
         />
       </NFormItem>
       <p class="ayuda">{{ t.comandoAyuda }}</p>
+      <p v-if="comandoFijo" class="ayuda">{{ t.comandoFijo }}</p>
       <p v-if="comillasSinCerrar" class="error" role="alert">{{ t.comillasSinCerrar }}</p>
       <div v-else-if="argumentos && argumentos.length" class="argumentos">
         <span class="etiqueta">{{ t.argumentos }}</span>
@@ -348,6 +355,9 @@ async function aceptar(): Promise<void> {
       </div>
 
       <NAlert type="warning" :show-icon="false" class="advertencia">{{ t.advertencia }}</NAlert>
+      <NAlert type="info" :show-icon="false" class="advertencia">{{
+        textos.tareas.repoEjecuta
+      }}</NAlert>
       <NCheckbox v-if="soloLectura" v-model:checked="revisado" class="revisado">
         {{ t.revise }}
       </NCheckbox>

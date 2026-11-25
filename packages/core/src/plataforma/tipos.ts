@@ -336,6 +336,19 @@ export interface OpcionesLanzar {
    * abortada, no se lanza nada y la promesa se rechaza con "Cancelado".
    */
   senal?: AbortSignal;
+  /**
+   * En sistemas POSIX lanza el proceso como líder de su propio grupo y, al abortar, mata el grupo
+   * entero (`kill(-pid)`): nada de lo que lanzó sobrevive. Solo para quien lo pide (las tareas
+   * programadas): un proceso desprendido no muere si la app se cierra sin abortar. En Windows no
+   * cambia nada (`taskkill /T` ya mata el árbol del PID).
+   */
+  matarGrupo?: boolean;
+  /**
+   * Plazo (ms) para que el lanzamiento termine una vez que el proceso salió o se abortó. Si un
+   * nieto sigue con la salida heredada abierta, `close` no llega nunca: pasado el plazo se destruyen
+   * stdout y stderr y se resuelve con el código que haya (1 si se abortó). Sin él, como siempre.
+   */
+  graciaMs?: number;
 }
 
 /** Como `Ejecutor`, pero en streaming: no junta la salida en memoria. */

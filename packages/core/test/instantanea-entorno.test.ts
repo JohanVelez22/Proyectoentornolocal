@@ -75,6 +75,18 @@ async function prepararDatos(): Promise<void> {
             proxy: false,
           },
         ],
+        tareas: [
+          {
+            id: 'cron',
+            nombre: 'Cron',
+            cron: '* * * * *',
+            comando: ['php', 'job.php', '--token', `${CENTINELA}-9`],
+            activa: true,
+            confirmada: 'a'.repeat(64),
+            tiempoMaxS: 300,
+            origen: 'usuario',
+          },
+        ],
         lan: { activo: true, puerto: 8443, https: true },
         nota: `password: ${CENTINELA}-3`,
       }),

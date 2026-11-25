@@ -82,8 +82,8 @@ export const TIEMPO_TAREA_MIN_S = 5;
 
 /**
  * Una tarea programada de un sitio: un comando del proyecto (lista de argumentos, sin shell) con
- * una expresión cron de 5 campos. `confirmada` es la huella (SHA-256) del comando que el usuario
- * aceptó en la interfaz: sin ella, o si no coincide con el comando actual, la tarea no se ejecuta
+ * una expresión cron de 5 campos. `confirmada` es la huella (SHA-256, sin clave: un hash como
+ * `confiado`, no una firma) del comando que el usuario aceptó en la interfaz: sin ella, o si no coincide con el comando actual, la tarea no se ejecuta
  * (un comando que llegó de un `wolfcore.yml`, de un config.json editado a mano o de otra fuente
  * nunca corre solo). Solo cambia con `Nucleo.guardarTarea` y `confirmarTarea`; `guardarSitio` la
  * conserva tal cual. Estricto: un campo de más invalida la tarea.

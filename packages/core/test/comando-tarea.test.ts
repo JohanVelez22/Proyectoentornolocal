@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ErrorWolf } from '../src/errores';
 import { huellaTarea, validarComandoTarea } from '../src/tareas/comando';
 
+const bs = String.fromCharCode(92);
 const malo = (c: unknown): void => {
   try {
     validarComandoTarea(c);
@@ -20,7 +21,10 @@ describe('validarComandoTarea (lista cerrada)', () => {
       ['php', 'spark', 'tasks:run'],
       ['PHP.exe', 'artisan', 'queue:work', '--stop-when-empty'],
       ['python', 'manage.py', 'clearsessions'],
-      ['python', '-m', 'app.tareas'],
+      ['php', '-f', 'bin/job.php', 'x'],
+      ['python', '-m', 'celery', 'worker'],
+      ['python', '-m', 'django', 'clearsessions'],
+      ['npm', 'run', 'cron', '--', '--rapido'],
       ['node', 'scripts/limpiar.js'],
       ['npm', 'run', 'cron'],
       ['npm', 'run-script', 'cron', '--', '--rapido'],
@@ -50,33 +54,59 @@ describe('validarComandoTarea (lista cerrada)', () => {
     }
   });
 
-  it('rechaza el código dado en la propia línea y los modos interactivos', () => {
+  it('lista blanca por posición: nada de opciones antes del archivo (casos de la revisión)', () => {
     for (const c of [
+      ['php', '-recho 1;'],
       ['php', '-r', 'system("x");'],
+      ['php', '-d', 'auto_prepend_file=x.php', 'a.php'],
+      ['php', '-dauto_prepend_file=x.php', 'a.php'],
       ['php', '-a'],
       ['php', '-S', 'localhost:8000'],
+      ['php', '-f', '-r', 'x'],
+      ['php', '-f'],
+      ['node', '-pe', '1'],
       ['node', '-e', 'x'],
       ['node', '--eval=x'],
-      ['node', '-p', '1'],
+      ['node', '--loader', 'x.mjs', 'a.js'],
+      ['node', '--inspect=0.0.0.0', 'a.js'],
       ['node', '--require', 'x.js', 'a.js'],
       ['node', '--import=x', 'a.js'],
+      ['python', '-cprint(1)'],
       ['python', '-c', 'import os'],
+      ['python', '-Ic', 'x'],
       ['python', '-i'],
+      ['python', '-m', 'pip', 'install', 'x'],
+      ['python', '-m', 'http.server'],
+      ['python', '-mpip', 'x'],
+      ['python', '-m'],
+      ['npm', 'run', 'x', '--script-shell=cmd.exe'],
+      ['npm', 'run', '--script-shell=cmd.exe', 'x'],
+      ['npm', '--prefix', 'x', 'run', 'y'],
+      ['npm', 'run', 'x', '--node-options=--require=y'],
+      ['npm', 'run', '-w', 'x'],
+      ['npm', 'run', '--prefix=x'],
     ]) {
       malo(c);
     }
   });
 
-  it('npm solo admite "run <script>"', () => {
-    for (const c of [
-      ['npm'],
-      ['npm', 'install'],
-      ['npm', 'exec', 'x'],
-      ['npm', 'run'],
-      ['npm', 'x', 'run', 'cron'],
-    ]) {
-      malo(c);
+  it('el primer argumento no puede ser una ruta absoluta, de unidad, UNC ni salir con ..', () => {
+    for (const prog of ['php', 'node', 'python']) {
+      for (const f of [
+        '/etc/x.php',
+        bs + 'x.php',
+        bs + bs + 'srv' + bs + 'share' + bs + 'a.php',
+        '//srv/share/a.php',
+        'C:' + bs + 'x' + bs + 'a.php',
+        'c:a.php',
+        '../a.php',
+        'a/../../b.php',
+        'a' + bs + '..' + bs + '..' + bs + 'b.php',
+      ]) {
+        malo([prog, f]);
+      }
     }
+    malo(['php', '-f', bs + bs + 'srv' + bs + 'a.php']);
   });
 
   it('exige algo que ejecutar y acota la forma', () => {

@@ -108,6 +108,13 @@ function configSinSecretos(c: Config): unknown {
           : p,
       );
     }
+    if (Array.isArray(x['tareas'])) {
+      x['tareas'] = (x['tareas'] as Record<string, unknown>[]).map((t) =>
+        Array.isArray(t['comando'])
+          ? { ...t, comando: enmascararComando(t['comando'] as string[]) }
+          : t,
+      );
+    }
     return x;
   });
   return copia;

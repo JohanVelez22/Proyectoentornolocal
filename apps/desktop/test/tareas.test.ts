@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   analizarHora,
   comandoATexto,
+  comandoSeRepresenta,
   cronDePreset,
   duracionCorta,
   presetDeCron,
@@ -107,6 +108,21 @@ describe('comando como texto y como lista (sin shell)', () => {
   });
 });
 
+describe('comando con comillas: nunca se quitan en silencio', () => {
+  it('un argumento con comillas dobles se escribe con simples y vuelve igual', () => {
+    const c = ['php', 'job.php', 'dice "hola"'];
+    expect(comandoATexto(c)).toBe('php job.php \'dice "hola"\'');
+    expect(textoAComando(comandoATexto(c))).toEqual(c);
+    expect(comandoSeRepresenta(c)).toBe(true);
+    expect(comandoSeRepresenta(['php', "it's"])).toBe(true);
+  });
+
+  it('un argumento con las dos clases de comillas no se puede escribir: se marca', () => {
+    const c = ['php', 'job.php', `a "b" y 'c'`];
+    expect(comandoSeRepresenta(c)).toBe(false);
+  });
+});
+
 describe('presentación', () => {
   it('colores de estado y duraciones', () => {
     expect(tipoEstadoEjecucion('ok')).toBe('success');
@@ -140,6 +156,14 @@ describe('textos de tareas programadas en los cuatro idiomas', () => {
         expect((t.tareas.motivo as Record<string, string>)[m], m).toBeTruthy();
       for (const e of estados)
         expect((t.tareas.estado as Record<string, string>)[e], e).toBeTruthy();
+    }
+  });
+
+  it('avisa que lo del repositorio se ejecuta tal cual, en los cuatro idiomas', () => {
+    for (const t of [es, en, pt, fr]) {
+      expect(t.tareas.repoEjecuta).toMatch(/artisan/);
+      expect(t.tareas.repoEjecuta).toMatch(/package\.json/);
+      expect(t.tareas.dialogo.comandoFijo).toBeTruthy();
     }
   });
 

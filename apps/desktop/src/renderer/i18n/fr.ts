@@ -294,6 +294,7 @@ export const fr: Textos = {
         'La recette du projet a changé depuis que vous lui avez fait confiance : vérifiez-la et cochez de nouveau « Je fais confiance à ce dépôt ».',
       'tareas.aislado':
         'Ceci est un dossier de données de test (WOLFCORE_DATOS) : autorisez les tâches planifiées pour les exécuter.',
+      'tareas.carpeta': 'Le dossier du projet n’existe pas : la tâche ne peut pas s’exécuter.',
       'tareas.en_curso': 'La tâche est déjà en cours d’exécution.',
       'tareas.demasiadas': 'Ce projet a trop de tâches (maximum {maximo}).',
       'proyectos.carpeta_no_vacia':
@@ -860,6 +861,8 @@ export const fr: Textos = {
     errorCargar: 'Impossible de charger les tâches',
     soloAbierta:
       'Les tâches ne s’exécutent que lorsque WolfCore Dev est ouvert. Elles n’utilisent pas le Planificateur de tâches de Windows : application fermée ou ordinateur en veille, elles ne s’exécutent pas, et une exécution manquée n’est pas rattrapée.',
+    repoEjecuta:
+      'Dans un projet de confiance, ce qui se trouve dans le dépôt s’exécute tel quel : le fichier que nomme la tâche, `artisan`, les scripts de `package.json`, `.venv`… S’ils changent après un `git pull`, la tâche exécutera la nouvelle version.',
     vacio:
       'Ce projet n’a aucune tâche planifiée. Créez-en une (par exemple « php artisan schedule:run » toutes les minutes dans un Laravel).',
     nueva: 'Nouvelle tâche',
@@ -983,6 +986,8 @@ export const fr: Textos = {
       comandoPlaceholder: 'php artisan schedule:run',
       comandoAyuda:
         'Seulement php, node, npm run et python, avec un fichier du projet. Elle s’exécute dans le dossier du projet, sans shell et sans code sur la ligne de commande (-r, -e, -c).',
+      comandoFijo:
+        'Cette commande contient des arguments avec des guillemets qui ne peuvent pas s’écrire comme texte : elle est conservée telle quelle et n’est pas modifiable ici (supprimez-la et créez-en une autre si besoin).',
       argumentos: 'Elle s’exécutera avec ces arguments :',
       comillasSinCerrar: 'Un guillemet n’est pas fermé.',
       tiempo: 'Durée maximale',

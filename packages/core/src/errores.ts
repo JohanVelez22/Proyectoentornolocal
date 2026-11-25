@@ -196,6 +196,7 @@ export const PARAMETROS_ERROR = {
   'tareas.sitio_no_confiado': [],
   'tareas.receta_cambio': [],
   'tareas.aislado': [],
+  'tareas.carpeta': [],
   'tareas.en_curso': [],
   'tareas.demasiadas': ['maximo'],
   // proyectos nuevos (D12)

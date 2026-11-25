@@ -288,6 +288,7 @@ export const pt: Textos = {
         'A receita do projeto mudou desde que você confiou nele: revise-a e marque «Confio neste repositório» de novo.',
       'tareas.aislado':
         'Esta é uma pasta de dados de teste (WOLFCORE_DATOS): permita as tarefas agendadas para executá-las.',
+      'tareas.carpeta': 'A pasta do projeto não existe: a tarefa não pode ser executada.',
       'tareas.en_curso': 'A tarefa já está em execução.',
       'tareas.demasiadas': 'Há tarefas demais neste projeto (máximo {maximo}).',
       'proyectos.carpeta_no_vacia':
@@ -826,6 +827,8 @@ export const pt: Textos = {
     errorCargar: 'Não foi possível carregar as tarefas',
     soloAbierta:
       'As tarefas só correm enquanto o WolfCore Dev está aberto. Não usam o Agendador de Tarefas do Windows: com a aplicação fechada ou o computador em repouso não são executadas, e uma execução perdida não é recuperada.',
+    repoEjecuta:
+      'Num projeto confiável, o que está dentro do repositório é executado tal como está: o arquivo que a tarefa nomeia, `artisan`, os scripts do `package.json`, `.venv`… Se mudarem após um `git pull`, a tarefa executará a versão nova.',
     vacio:
       'Este projeto não tem tarefas agendadas. Crie uma (por exemplo «php artisan schedule:run» a cada minuto num Laravel).',
     nueva: 'Nova tarefa',
@@ -947,6 +950,8 @@ export const pt: Textos = {
       comandoPlaceholder: 'php artisan schedule:run',
       comandoAyuda:
         'Só php, node, npm run e python, com um arquivo do projeto. Corre na pasta do projeto, sem shell e sem código na linha (-r, -e, -c).',
+      comandoFijo:
+        'Este comando tem argumentos com aspas que não se podem escrever como texto: é mantido tal como está e não se edita aqui (apague-o e crie outro se precisar de o mudar).',
       argumentos: 'Será executado com estes argumentos:',
       comillasSinCerrar: 'Falta fechar umas aspas.',
       tiempo: 'Tempo máximo',

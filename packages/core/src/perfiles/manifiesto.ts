@@ -160,7 +160,8 @@ export const ManifiestoPerfilSchema = z
     plantillas: z.array(z.string().regex(new RegExp(`^${ID_PLANTILLA}$`))).max(500),
     /** D28: workspaces (solo referencias); D29 llena las tareas. Cada uno se valida al importar. */
     workspaces: z.array(z.unknown()).max(200).default([]),
-    tareas: z.array(z.unknown()).max(1000).default([]),
+    // D29: las tareas programadas no viajan en un perfil: un manifiesto que las traiga se rechaza.
+    tareas: z.array(z.unknown()).max(0).default([]),
     incluye: z.object({ bases: z.boolean(), certificados: z.boolean(), ca: z.boolean() }),
     /** Huella SHA-256 del certificado de la CA que viaja cifrada (se comprueba al descifrarla). */
     ca: z

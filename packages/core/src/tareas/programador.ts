@@ -1,4 +1,13 @@
-import { appendFile, mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import {
+  appendFile,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { z } from 'zod';
@@ -17,7 +26,9 @@ import { interpretarCron, siguiente, zonaLocal, type Cron } from './cron';
  * del sistema. Cada ejecución:
  *
  * - solo en un sitio **confiado** cuya receta no cambió desde que se confió (misma huella);
- * - solo si el usuario **confirmó** ese comando (huella en `tarea.confirmada`);
+ * - solo si el usuario **confirmó** ese comando (huella en `tarea.confirmada`: un hash sin clave,
+ *   como `confiado`; protege de cambios y de lo que llega por otras vías, no de quien ya puede
+ *   escribir `config.json`);
  * - sin shell, con lista de argumentos y en la carpeta del sitio (lo resuelve `deps.ejecutar`);
  * - nunca dos a la vez de la misma tarea (la que llega con la otra corriendo se salta y se anota);
  * - con un tiempo máximo, pasado el cual se mata solo el árbol de su propio proceso;
@@ -67,6 +78,8 @@ export const MAX_HISTORIAL_TAREA = 50;
 const MAX_ATRASO_MS = 2 * 60_000;
 /** Salida que se guarda de una ejecución (el resto se descarta y se anota). */
 const MAX_BYTES_SALIDA = 256 * 1024;
+/** Lo máximo que `detener()` espera a que terminen las tareas abortadas. */
+const TOPE_DETENER_MS = 10_000;
 const MAX_LINEA = 2000;
 /** Un log pasa a `.1` al llegar a esto (así ocupa como mucho el doble). */
 const MAX_BYTES_LOG = 1024 * 1024;
@@ -96,6 +109,8 @@ export interface DepsProgramador {
   aislado?: () => boolean;
   ahora?: () => Date;
   zona?: string;
+  /** Para pruebas: tope de espera de `detener()` (ms). */
+  topeDetenerMs?: number;
 }
 
 export interface VistaTarea {
@@ -165,8 +180,15 @@ export class Programador {
     this.temporizador = null;
     const activas = [...this.enCurso.values()];
     for (const a of activas) a.control.abort();
-    await Promise.allSettled(activas.map((a) => a.fin));
-    await this.cola.catch(() => undefined);
+    // Con tope: si un proceso no suelta la salida, el cierre de la app no se queda esperando.
+    let tope: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      Promise.allSettled(activas.map((a) => a.fin)).then(() => this.cola.catch(() => undefined)),
+      new Promise<void>((r) => {
+        tope = setTimeout(r, this.d.topeDetenerMs ?? TOPE_DETENER_MS);
+      }),
+    ]);
+    if (tope) clearTimeout(tope);
   }
 
   estado(): EstadoPlanificador {
@@ -189,9 +211,12 @@ export class Programador {
     const espera = 60_000 - (ahora % 60_000) + 1000;
     this.temporizador = setTimeout(() => {
       this.temporizador = null;
-      void this.tick(this.ahora())
-        .catch((e: unknown) => console.error('Error en las tareas programadas:', mensajeDe(e)))
-        .finally(() => this.programarSiguiente());
+      // El siguiente minuto se agenda ANTES de lanzar: una tarea larga no congela al planificador
+      // (las demás siguen su horario y la misma tarea anota `solapada`).
+      this.programarSiguiente();
+      void this.tick(this.ahora()).catch((e: unknown) =>
+        console.error('Error en las tareas programadas:', mensajeDe(e)),
+      );
     }, espera);
     this.temporizador.unref?.();
   }
@@ -210,7 +235,8 @@ export class Programador {
 
   /**
    * Revisa qué tareas tocan desde el último minuto revisado hasta `ahora` y las lanza. Resuelve
-   * cuando las ejecuciones lanzadas terminan (el temporizador no la espera). Una tarea que tocaba
+   * cuando las ejecuciones lanzadas terminan; el temporizador no la espera (agenda el minuto
+   * siguiente antes de llamarla), así que una tarea larga no frena a las demás. Una tarea que tocaba
    * hace más de 2 minutos (equipo dormido) se anota como omitida: no se recupera.
    */
   async tick(ahora: Date): Promise<void> {
@@ -256,7 +282,7 @@ export class Programador {
   }
 
   private async correrProgramada(sitio: Sitio, tarea: TareaSitio, ahora: Date): Promise<void> {
-    if (this.enCurso.has(clave(sitio.id, tarea.id))) {
+    const solapada = async (): Promise<void> => {
       await this.registrar(sitio.id, tarea.id, {
         inicio: ahora.toISOString(),
         fin: ahora.toISOString(),
@@ -266,15 +292,21 @@ export class Programador {
         origen: 'programada',
         duracionMs: 0,
       });
-      return;
-    }
+    };
+    if (this.enCurso.has(clave(sitio.id, tarea.id))) return solapada();
     const motivo = await this.bloqueoDe(sitio, tarea);
     if (motivo !== null) {
       await this.anotarBloqueo(sitio, tarea, motivo, ahora);
       return;
     }
     this.bloqueos.delete(clave(sitio.id, tarea.id));
-    await this.correr(sitio, tarea, 'programada');
+    try {
+      await this.correr(sitio, tarea, 'programada');
+    } catch (e) {
+      // Otra ejecución (a mano) ganó mientras se comprobaban las condiciones.
+      if (e instanceof ErrorWolf && e.codigo === 'tareas.en_curso') return solapada();
+      throw e;
+    }
   }
 
   /** Anota el bloqueo (y avisa) solo si cambió el motivo desde la última vez. */
@@ -368,6 +400,9 @@ export class Programador {
    * `tareas.en_curso`. Un bloqueo lanza el error con su código.
    */
   async ejecutarAhora(sitioId: string, tareaId: string): Promise<EjecucionTarea> {
+    if (this.deteniendo) {
+      throw new ErrorWolf('tareas.en_curso', 'El planificador se está deteniendo.');
+    }
     const sitio = (await this.d.leerSitios()).find((s) => s.id === sitioId);
     if (!sitio) throw new ErrorWolf('proyectos.no_existe', `No existe el proyecto ${sitioId}`);
     const tarea = (sitio.tareas ?? []).find((t) => t.id === tareaId);
@@ -399,12 +434,13 @@ export class Programador {
     let vencio = false;
     const alLinea = (l: string): void => {
       const limpia = sanear(l.length > MAX_LINEA ? `${l.slice(0, MAX_LINEA)}…` : l);
-      if (bytes + limpia.length + 50 > MAX_BYTES_SALIDA) {
+      const peso = Buffer.byteLength(limpia, 'utf8') + 50;
+      if (bytes + peso > MAX_BYTES_SALIDA) {
         descartadas++;
         return;
       }
       // La línea del registro lleva además su marca de fecha (~45 caracteres).
-      bytes += limpia.length + 50;
+      bytes += peso;
       lineas.push(limpia);
     };
     const reloj = setTimeout(() => {
@@ -572,8 +608,12 @@ export class Programador {
     const k = clave(sitioId, tareaId);
     const lista = [e, ...(mapa.get(k) ?? [])].slice(0, MAX_HISTORIAL_TAREA);
     mapa.set(k, lista);
-    const copia = Object.fromEntries(mapa);
-    // Serializado: dos ejecuciones que terminan a la vez no se pisan el archivo.
+    await this.guardarHistorial();
+  }
+
+  /** Escribe el historial con archivo temporal y renombrado (nunca queda a medias). */
+  private guardarHistorial(): Promise<void> {
+    const copia = Object.fromEntries(this.historial ?? new Map());
     this.cola = this.cola
       .catch(() => undefined)
       .then(async () => {
@@ -586,21 +626,58 @@ export class Programador {
       .catch((err: unknown) =>
         console.error('No se pudo guardar el historial de tareas:', mensajeDe(err)),
       );
-    await this.cola;
+    return this.cola as Promise<void>;
   }
 
-  /** Borra el historial y el registro de una tarea (al borrarla). */
+  /** Borra el historial y los registros (`.log` y `.1`) de una tarea (al borrarla). */
   async olvidar(sitioId: string, tareaId: string): Promise<void> {
     const mapa = await this.cargarHistorial();
-    if (mapa.delete(clave(sitioId, tareaId))) {
-      const copia = Object.fromEntries(mapa);
-      this.cola = this.cola
-        .catch(() => undefined)
-        .then(() => writeFile(this.d.rutas.historialTareas(), JSON.stringify(copia), 'utf8'))
-        .catch(() => undefined);
-      await this.cola;
-    }
+    if (mapa.delete(clave(sitioId, tareaId))) await this.guardarHistorial();
     this.bloqueos.delete(clave(sitioId, tareaId));
+    try {
+      const ruta = this.d.rutas.logTarea(sitioId, tareaId);
+      await rm(ruta, { force: true });
+      await rm(`${ruta}.1`, { force: true });
+    } catch {
+      // un registro que no se puede borrar no impide nada
+    }
+  }
+
+  /**
+   * Quita el historial y los registros de los sitios y tareas que ya no existen (al abrir la app y
+   * al borrar un sitio). Un nombre de registro que no encaja con `<sitio>-<tarea>.log` no se toca.
+   */
+  async purgarHuerfanos(): Promise<void> {
+    const sitios = await this.d.leerSitios();
+    const vigentes = new Set<string>();
+    for (const s of sitios) for (const t of s.tareas ?? []) vigentes.add(clave(s.id, t.id));
+    const mapa = await this.cargarHistorial();
+    let cambio = false;
+    for (const k of [...mapa.keys()]) {
+      if (!vigentes.has(k)) {
+        mapa.delete(k);
+        cambio = true;
+      }
+    }
+    if (cambio) await this.guardarHistorial();
+    try {
+      const carpeta = path.dirname(this.d.rutas.logTarea('x', 'x'));
+      for (const f of await readdir(carpeta)) {
+        const m = /^([A-Za-z0-9][A-Za-z0-9_-]*)-([A-Za-z0-9][A-Za-z0-9_]*)\.log(?:\.1)?$/.exec(f);
+        if (m && !vigentes.has(clave(m[1]!, m[2]!))) {
+          await rm(path.join(carpeta, f), { force: true });
+        }
+      }
+    } catch {
+      // sin carpeta de registros: nada que purgar
+    }
+  }
+
+  /** Aborta las ejecuciones en curso de un sitio (cambió su confianza o su carpeta, o se borró). */
+  abortarSitio(sitioId: string): void {
+    for (const [k, a] of this.enCurso) {
+      if (k.startsWith(`${sitioId}/`)) a.control.abort();
+    }
   }
 }
 
@@ -614,6 +691,8 @@ function errorDeBloqueo(motivo: MotivoTarea): ErrorWolf {
       return new ErrorWolf('tareas.receta_cambio', MENSAJES_BLOQUEO.receta_cambio);
     case 'sin_confirmar':
       return new ErrorWolf('tareas.sin_confirmar', MENSAJES_BLOQUEO.sin_confirmar);
+    case 'carpeta':
+      return new ErrorWolf('tareas.carpeta', MENSAJES_BLOQUEO.carpeta);
     case 'comando_invalido':
       return new ErrorWolf('tareas.comando_invalido', 'El comando de la tarea no es válido.', {
         detalle: '',
@@ -636,4 +715,5 @@ const MENSAJES_BLOQUEO = {
   receta_cambio:
     'La receta del proyecto cambió desde que confió en él: revísela y vuelva a marcar "Confío en este repositorio".',
   sin_confirmar: 'Confirme el comando de la tarea para poder ejecutarla.',
+  carpeta: 'La carpeta del proyecto no existe.',
 } as const;

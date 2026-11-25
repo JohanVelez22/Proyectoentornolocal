@@ -187,4 +187,41 @@ describe('Nucleo: tareas programadas (D29)', () => {
       ErrorWolf,
     );
   });
+
+  it('cambiar la carpeta o la confianza del sitio aborta sus ejecuciones; otra carpeta invalida lo confirmado', async () => {
+    const { n } = await crear();
+    const t = await n.tareas.guardar('tienda', entrada());
+    const abortar = vi.spyOn(n.programador, 'abortarSitio');
+    const { id: _id, ...datos } = (await n.config.leer()).sitios[0]!;
+    void _id;
+    // Mismo sitio sin cambios de carpeta ni de confianza: no aborta.
+    await n.guardarSitio({ ...datos, nota: 'x' }, 'tienda');
+    expect(abortar).not.toHaveBeenCalled();
+    expect((await n.config.leer()).sitios[0]!.tareas![0]!.confirmada).toBe(t.confirmada);
+    // Deja de ser de confianza: aborta.
+    await n.guardarSitio({ ...datos, confiado: false }, 'tienda');
+    expect(abortar).toHaveBeenCalledWith('tienda');
+    // Otra carpeta: lo confirmado ya no vale.
+    const otra = path.join(path.dirname(datos.carpeta), 'otra');
+    await mkdir(otra, { recursive: true });
+    abortar.mockClear();
+    await n.guardarSitio({ ...datos, carpeta: otra, confiado: true }, 'tienda');
+    expect(abortar).toHaveBeenCalledWith('tienda');
+    const despues = (await n.config.leer()).sitios[0]!.tareas![0]!;
+    expect(despues.confirmada).toBeNull();
+    expect(despues.comando).toEqual(COMANDO);
+  });
+
+  it('borrar el sitio aborta lo que corre y purga su historial y registros', async () => {
+    const { n } = await crear();
+    const t = await n.tareas.guardar('tienda', entrada());
+    await n.programador.ejecutarAhora('tienda', t.id);
+    expect((await n.programador.historialDe('tienda', t.id)).length).toBeGreaterThan(0);
+    const abortar = vi.spyOn(n.programador, 'abortarSitio');
+    await n.borrarSitio('tienda');
+    expect(abortar).toHaveBeenCalledWith('tienda');
+    await vi.waitFor(async () =>
+      expect(await n.programador.historialDe('tienda', t.id)).toEqual([]),
+    );
+  });
 });

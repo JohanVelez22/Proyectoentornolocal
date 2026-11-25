@@ -1675,6 +1675,7 @@ export class Nucleo {
     // Tareas programadas (D29): corren solo con la app abierta; en carpeta de datos de prueba
     // (WOLFCORE_DATOS) no corre nada hasta que el usuario lo permita.
     nucleo.programador.iniciar();
+    void nucleo.programador.purgarHuerfanos().catch(() => undefined);
     nucleo.iniciarRevisionVencimientos();
     nucleo.iniciarRevisionNovedades(o.retrasoNovedadesMs ?? RETRASO_NOVEDADES_MS);
     // Sin bloquear el arranque: un fallo queda en el estado del servicio y en un aviso.
@@ -3952,6 +3953,14 @@ export class Nucleo {
     if (existsSync(resto.carpeta)) resto.pendiente = null;
     // FastAPI/Node con el proceso del proxy sin puerto: se le asigna uno libre (no se rechaza).
     if (this.depsPasos) resto = await asignarPuertoProxy(this.depsPasos, resto, id);
+    // Otra carpeta es otro código: lo que se confirmó antes ya no vale y lo que corre se detiene.
+    // Lo mismo si deja de ser de confianza (o si cambia: la huella se toma de nuevo).
+    if (previo && (previo.carpeta !== resto.carpeta || previo.confiado !== resto.confiado)) {
+      this.programador.abortarSitio(previo.id);
+    }
+    if (previo && previo.carpeta !== resto.carpeta && previo.tareas?.length) {
+      resto.tareas = previo.tareas.map((t) => ({ ...t, confirmada: null }));
+    }
     resto.recetaConfiada = renovarHuella
       ? await this.huellaCarpeta(datos.carpeta)
       : await this.huellaPara(datos, previo);
@@ -4143,7 +4152,10 @@ export class Nucleo {
     });
     await this.procesos.detenerSitio(id);
     await this.ftp.desactivarSitio(id).catch(() => undefined);
+    // Lo que esté corriendo de ese sitio se detiene y sus registros se purgan.
+    this.programador.abortarSitio(id);
     await this.sitios.borrar(id);
+    void this.programador.purgarHuerfanos().catch(() => undefined);
     // Sus copias del .env llevan valores en claro: no se quedan para otro sitio con el mismo id.
     await limpiarRespaldosEnv(this.rutas.respaldosEnv(), id).catch((e) => {
       console.error('No se pudieron borrar las copias del .env del sitio borrado:', mensajeDe(e));

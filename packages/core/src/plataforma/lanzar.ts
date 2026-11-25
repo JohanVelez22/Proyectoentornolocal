@@ -68,6 +68,10 @@ export interface OpcionesMatar {
   plataforma?: NodeJS.Platform;
   env?: NodeJS.ProcessEnv;
   lanzar?: typeof spawn;
+  /** Fuera de Windows: el proceso es líder de su grupo y se mata el grupo entero. */
+  grupo?: boolean;
+  /** Para pruebas: reemplaza `process.kill`. */
+  matarProceso?: (pid: number, senal: NodeJS.Signals) => void;
 }
 
 /** Mata el proceso y sus hijos: en Windows `taskkill /T /F`; en otros sistemas, SIGKILL. */
@@ -84,6 +88,14 @@ export function matarArbol(
     k.once('error', () => hijo.kill());
     return;
   }
+  if (o.grupo && hijo.pid !== undefined) {
+    try {
+      (o.matarProceso ?? process.kill)(-hijo.pid, 'SIGKILL');
+      return;
+    } catch {
+      // el grupo ya no existe: se prueba con el proceso solo
+    }
+  }
   hijo.kill('SIGKILL');
 }
 
@@ -97,6 +109,7 @@ export const lanzadorPorDefecto: Lanzador = (cmd, args, opts = {}) =>
       reject(new Error(MENSAJE_CANCELADO));
       return;
     }
+    const grupo = opts.matarGrupo === true && process.platform !== 'win32';
     const hijo = spawn(cmd, args, {
       windowsHide: true,
       cwd: opts.cwd,
@@ -105,6 +118,8 @@ export const lanzadorPorDefecto: Lanzador = (cmd, args, opts = {}) =>
           ? entornoDelHijo(process.env, { env: opts.env, quitarEntorno: opts.quitarEntorno })
           : process.env,
       stdio: [opts.entrada ? 'pipe' : 'ignore', 'pipe', 'pipe'],
+      // Líder de su grupo (POSIX) para poder matar todo lo que lance; en Windows no hace falta.
+      detached: grupo,
     });
     let errorEntrada: unknown = null;
     let terminado = false;
@@ -121,19 +136,42 @@ export const lanzadorPorDefecto: Lanzador = (cmd, args, opts = {}) =>
     }
     const senal = opts.senal;
     let salio = false;
-    hijo.once('exit', () => {
+    let gracia: ReturnType<typeof setTimeout> | null = null;
+    /** Pasado el plazo sin `close` (un nieto con la salida abierta): se corta y se resuelve igual. */
+    const armarGracia = (codigo: number): void => {
+      if (opts.graciaMs === undefined || gracia || terminado) return;
+      gracia = setTimeout(() => {
+        if (terminado) return;
+        terminado = true;
+        soltarSenal();
+        hijo.stdout?.destroy();
+        hijo.stderr?.destroy();
+        opts.entrada?.destroy();
+        if (errorEntrada) reject(errorEntrada);
+        else resolve({ codigo });
+      }, opts.graciaMs);
+      gracia.unref?.();
+    };
+    hijo.once('exit', (codigo) => {
       salio = true;
+      armarGracia(codigo ?? 1);
     });
-    const alAbortar = (): void => matarArbol(hijo, { salio });
+    const alAbortar = (): void => {
+      matarArbol(hijo, { salio, grupo });
+      armarGracia(1);
+    };
     senal?.addEventListener('abort', alAbortar, { once: true });
     const soltarSenal = (): void => senal?.removeEventListener('abort', alAbortar);
     hijo.on('error', (e) => {
+      if (gracia) clearTimeout(gracia);
       terminado = true;
       soltarSenal();
       opts.entrada?.destroy();
       reject(e);
     });
     hijo.on('close', (codigo) => {
+      if (gracia) clearTimeout(gracia);
+      if (terminado) return;
       terminado = true;
       soltarSenal();
       opts.entrada?.destroy();

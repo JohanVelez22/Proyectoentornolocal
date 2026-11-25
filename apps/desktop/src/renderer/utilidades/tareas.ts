@@ -81,11 +81,26 @@ export function analizarHora(t: string): { hora: number; minuto: number } | null
   return hora <= 23 && minuto <= 59 ? { hora, minuto } : null;
 }
 
-/** El comando como lo escribe el usuario: los argumentos con espacios van entre comillas. */
+/**
+ * El comando como lo escribe el usuario: los argumentos con espacios o comillas van entre comillas
+ * dobles (o simples si el argumento lleva dobles). Un argumento con las dos clases de comillas no
+ * se puede escribir así: ver `comandoSeRepresenta`.
+ */
 export function comandoATexto(comando: readonly string[]): string {
   return comando
-    .map((a) => (/[\s"']/.test(a) || a === '' ? `"${a.replace(/"/g, '')}"` : a))
+    .map((a) => {
+      if (a !== '' && !/[\s"']/.test(a)) return a;
+      if (!a.includes('"')) return `"${a}"`;
+      if (!a.includes("'")) return `'${a}'`;
+      return a;
+    })
     .join(' ');
+}
+
+/** ¿El texto de `comandoATexto` vuelve a dar exactamente los mismos argumentos? */
+export function comandoSeRepresenta(comando: readonly string[]): boolean {
+  const v = textoAComando(comandoATexto(comando));
+  return v !== null && v.length === comando.length && v.every((a, i) => a === comando[i]);
 }
 
 /**

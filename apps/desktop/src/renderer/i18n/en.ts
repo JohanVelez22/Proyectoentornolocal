@@ -278,6 +278,7 @@ export const en: Textos = {
         'The project recipe changed since you trusted it: review it and tick “I trust this repository” again.',
       'tareas.aislado':
         'This is a test data folder (WOLFCORE_DATOS): allow scheduled tasks to run them.',
+      'tareas.carpeta': 'The project folder does not exist: the task cannot run.',
       'tareas.en_curso': 'The task is already running.',
       'tareas.demasiadas': 'This project has too many tasks (maximum {maximo}).',
       'proyectos.carpeta_no_vacia':
@@ -815,6 +816,8 @@ export const en: Textos = {
     errorCargar: 'The tasks could not be loaded',
     soloAbierta:
       'Tasks only run while WolfCore Dev is open. They do not use the Windows Task Scheduler: with the app closed or the computer asleep they do not run, and a missed run is not made up.',
+    repoEjecuta:
+      'In a trusted project, whatever is inside the repository runs as is: the file the task names, `artisan`, the `package.json` scripts, `.venv`… If they change after a `git pull`, the task will run the new version.',
     vacio:
       'This project has no scheduled tasks. Create one (for example “php artisan schedule:run” every minute in a Laravel project).',
     nueva: 'New task',
@@ -936,6 +939,8 @@ export const en: Textos = {
       comandoPlaceholder: 'php artisan schedule:run',
       comandoAyuda:
         'Only php, node, npm run and python, with a project file. It runs in the project folder, without a shell and with no code on the command line (-r, -e, -c).',
+      comandoFijo:
+        'This command has quoted arguments that cannot be written as text: it is kept as is and not edited here (delete it and create another if you need to change it).',
       argumentos: 'It will run with these arguments:',
       comillasSinCerrar: 'A quote is not closed.',
       tiempo: 'Time limit',

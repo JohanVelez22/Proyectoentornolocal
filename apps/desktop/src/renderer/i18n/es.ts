@@ -283,6 +283,7 @@ export const es = {
         'La receta del proyecto cambió desde que confió en él: revísela y vuelva a marcar «Confío en este repositorio».',
       'tareas.aislado':
         'Esta es una carpeta de datos de prueba (WOLFCORE_DATOS): permita las tareas programadas para ejecutarlas.',
+      'tareas.carpeta': 'No existe la carpeta del proyecto: la tarea no se puede ejecutar.',
       'tareas.en_curso': 'La tarea ya se está ejecutando.',
       'tareas.demasiadas': 'Hay demasiadas tareas en este proyecto (máximo {maximo}).',
       'proyectos.carpeta_no_vacia':
@@ -825,6 +826,8 @@ export const es = {
     errorCargar: 'No se pudieron cargar las tareas',
     soloAbierta:
       'Las tareas solo corren mientras WolfCore Dev está abierto. No usan el Programador de tareas de Windows: con la aplicación cerrada o el equipo en reposo no se ejecutan, y una ejecución que se pierde no se recupera.',
+    repoEjecuta:
+      'En un proyecto de confianza, lo que está dentro del repositorio se ejecuta tal cual: el archivo que nombra la tarea, `artisan`, los scripts de `package.json`, `.venv`… Si cambian al hacer `git pull`, la tarea ejecutará la versión nueva.',
     vacio:
       'Este proyecto no tiene tareas programadas. Cree una (por ejemplo «php artisan schedule:run» cada minuto en un Laravel).',
     nueva: 'Nueva tarea',
@@ -946,6 +949,8 @@ export const es = {
       comandoPlaceholder: 'php artisan schedule:run',
       comandoAyuda:
         'Solo php, node, npm run y python, con un archivo del proyecto. Corre en la carpeta del proyecto, sin shell y sin código en la línea (-r, -e, -c).',
+      comandoFijo:
+        'Este comando tiene argumentos con comillas que no se pueden escribir como texto: se conserva tal cual y no se edita aquí (bórrela y cree otra si necesita cambiarlo).',
       argumentos: 'Se ejecutará con estos argumentos:',
       comillasSinCerrar: 'Falta cerrar unas comillas.',
       tiempo: 'Tiempo máximo',
