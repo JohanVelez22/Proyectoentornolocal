@@ -17,7 +17,9 @@ import { CloudflareRapido } from './cloudflareRapido';
 import { Expose } from './expose';
 import { Ngrok } from './ngrok';
 import { Tailscale } from './tailscale';
+import { puertoLibreLocal, type VhostsAuxiliares } from '../nginx/auxiliares';
 import {
+  alcanceDe,
   modoTailscaleDe,
   proveedorDeSitio,
   type IdProveedorTunel,
@@ -41,6 +43,10 @@ export interface DepsTuneles {
   ejecutor?: Ejecutor;
   /** El `php` CLI de la app (para ejecutar `expose.phar`); null si no hay PHP instalado. */
   phpCli?: () => Promise<string | null>;
+  /** Vhosts propios de Nginx (sin ellos, Tailscale no está disponible). */
+  vhostsAux?: VhostsAuxiliares;
+  /** Un puerto libre de 127.0.0.1 (por defecto, el del sistema). */
+  puertoLibre?: () => Promise<number>;
   /** Para `tunnel login` en streaming (URL de autorización en vivo y cancelar). */
   lanzar?: Lanzador;
   /** El almacén de secretos del proceso principal (puede fijarse después del arranque). */
@@ -96,6 +102,7 @@ export class Tuneles {
   private secretos: (() => SecretosTunel | null) | undefined;
   private phpCli: (() => Promise<string | null>) | undefined;
   private readonly expose: Expose | null = null;
+  private readonly tailscale: Tailscale | null = null;
 
   constructor(private readonly d: DepsTuneles) {
     this.secretos = d.secretos;
@@ -130,14 +137,14 @@ export class Tuneles {
       this.expose = new Expose({ ...comun, phpCli: async () => (await this.phpCli?.()) ?? null });
       this.proveedores.set('expose', this.expose);
     }
-    if (plat?.tailscale && d.ejecutor) {
-      this.proveedores.set(
-        'tailscale',
-        new Tailscale({
-          plataforma: { tailscale: plat.tailscale.bind(plat) },
-          ejecutor: d.ejecutor,
-        }),
-      );
+    if (plat?.tailscale && d.ejecutor && d.vhostsAux) {
+      this.tailscale = new Tailscale({
+        plataforma: { tailscale: plat.tailscale.bind(plat) },
+        ejecutor: d.ejecutor,
+        vhosts: d.vhostsAux,
+        puertoLibre: d.puertoLibre ?? puertoLibreLocal,
+      });
+      this.proveedores.set('tailscale', this.tailscale);
     }
     d.supervisor.alSalir((id) => {
       void this.alSalirProceso(id);
@@ -225,6 +232,8 @@ export class Tuneles {
     const registros = this.leerRegistros();
     // Archivos de Expose con token de un sitio sin túnel vivo: se borran.
     await this.expose?.barrerTemporales(new Set(registros.map((r) => r.sitioId)));
+    // Servers de Nginx de túneles que no siguen vivos (los de otras funciones no se tocan).
+    await this.tailscale?.barrerTemporales(new Set(registros.map((r) => r.sitioId)));
     const vivos: RegistroTunel[] = [];
     const muertos: RegistroTunel[] = [];
     for (const r of registros) {
@@ -309,6 +318,14 @@ export class Tuneles {
    */
   private exigirConfirmacion(sitio: Sitio, o: OpcionesAbrirTunel): void {
     if (o.confirmado !== true) {
+      // Tailscale Serve no publica en internet: su aviso no lo dice.
+      if (alcanceDe(sitio.tunel) === 'tailnet') {
+        throw new ErrorWolf(
+          'tuneles.confirmacion_requerida_tailnet',
+          `${sitio.dominio}: compartirlo con su tailnet exige confirmarlo en la ventana de WolfCore Dev.`,
+          { dominio: sitio.dominio },
+        );
+      }
       throw new ErrorWolf(
         'tuneles.confirmacion_requerida',
         `${sitio.dominio}: publicarlo en internet exige confirmarlo en la ventana de WolfCore Dev.`,
@@ -352,7 +369,7 @@ export class Tuneles {
       throw new ErrorWolf(
         (disp.codigo ?? 'tuneles.proveedor_no_disponible') as 'tuneles.proveedor_no_disponible',
         `El túnel (${idProveedor}) no está disponible: ${disp.codigo ?? 'sin motivo'}.`,
-        { proveedor: idProveedor },
+        { proveedor: idProveedor, ...disp.datos },
       );
     }
     // Solo los proveedores de Cloudflare necesitan cloudflared instalado.
@@ -425,7 +442,29 @@ export class Tuneles {
     for (;;) {
       if (this.gen(sitioId) !== gen) return this.apagado(sitioId);
       const url = proveedor.url(sitio, leerTexto(logCloudflared) + '\n' + leerTexto(logSalida));
-      if (url) return this.alEncontrarUrl(sitio, url, gen);
+      if (url) return this.alEncontrarUrl(sitio, url, gen, proveedor);
+      // El programa ya explicó qué falla (Funnel sin habilitar, ngrok viejo): no se espera el plazo.
+      const problema = proveedor.problema?.(
+        sitio,
+        leerTexto(logCloudflared) + ' ' + leerTexto(logSalida),
+      );
+      if (problema) {
+        this.cerrando.add(sitioId);
+        try {
+          await this.d.supervisor.detener(id);
+        } catch (e) {
+          console.error('No se pudo cerrar el túnel con problema:', e);
+        } finally {
+          this.cerrando.delete(sitioId);
+        }
+        await this.limpiarProveedores(sitioId);
+        if (sitio.urlBaseVar) await this.restaurarUrlBase(sitio);
+        const mensaje = `El túnel (${idProveedor}) no se pudo abrir: ${problema.codigo}.`;
+        this.fijar({ sitioId, estado: 'error', url: null, mensaje });
+        throw new ErrorWolf(problema.codigo as 'tuneles.ngrok_desactualizado', mensaje, {
+          ...problema.datos,
+        });
+      }
       if (this.gen(sitioId) !== gen) return this.apagado(sitioId);
       const actual = this.mapa.get(sitioId);
       if (!actual || actual.estado !== 'iniciando')
@@ -452,8 +491,17 @@ export class Tuneles {
     });
   }
 
-  private async alEncontrarUrl(sitio: Sitio, url: string, gen: number): Promise<EstadoTunel> {
+  private async alEncontrarUrl(
+    sitio: Sitio,
+    url: string,
+    gen: number,
+    proveedor: ProveedorTunel,
+  ): Promise<EstadoTunel> {
     if (this.gen(sitio.id) !== gen) return this.apagado(sitio.id);
+    // Lo que solo hacía falta para arrancar (el archivo con el token de Expose) se borra ya.
+    await proveedor.listo?.(sitio).catch((e: unknown) => {
+      console.error('No se pudo limpiar lo temporal del túnel:', e);
+    });
     const sitioId = sitio.id;
     const pid = this.d.supervisor.pid(PREFIJO + sitioId);
     if (pid !== null) this.agregarRegistro({ sitioId, url, pid });

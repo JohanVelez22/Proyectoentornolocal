@@ -82,6 +82,17 @@ export function proveedorDeSitio(s: Pick<Sitio, 'tunel'>): IdProveedorTunel {
   return s.tunel?.proveedor ?? PROVEEDOR_TUNEL_PREDETERMINADO;
 }
 
+export interface ResultadoDisponible {
+  ok: boolean;
+  codigo?: string;
+  datos?: Record<string, string | number>;
+}
+
+export interface ProblemaTunel {
+  codigo: string;
+  datos?: Record<string, string | number>;
+}
+
 /** Lo que `Tuneles` necesita para lanzar el proceso de un túnel. */
 export interface ContextoTunel {
   /** Ruta del ejecutable de cloudflared elegido. */
@@ -118,12 +129,19 @@ export interface ProveedorTunel {
   readonly id: IdProveedorTunel;
   /** El proveedor no usa cloudflared: `Tuneles` no lo exige instalado. */
   readonly sinCloudflared?: boolean;
-  /** ¿Se puede abrir ahora? Si no, el código del error. */
-  disponible(sitio: Sitio): Promise<{ ok: boolean; codigo?: string }>;
+  /** ¿Se puede abrir ahora? Si no, el código del error (y los datos que lleva su texto). */
+  disponible(sitio: Sitio): Promise<ResultadoDisponible>;
   /** Prepara lo necesario (config, credenciales temporales) y devuelve qué lanzar. */
   abrir(sitio: Sitio, c: ContextoTunel): Promise<LanzamientoTunel>;
   /** La URL pública si en `texto` (los logs del proceso) el túnel ya está listo. */
   url(sitio: Sitio, texto: string): string | null;
+  /**
+   * Un problema que el programa ya explicó en su salida (p. ej. Funnel sin habilitar, ngrok viejo):
+   * `Tuneles` cierra el túnel y lo informa con ese código sin esperar el plazo.
+   */
+  problema?(sitio: Sitio, texto: string): ProblemaTunel | null;
+  /** El túnel ya está listo (hay URL): lo que solo hacía falta para arrancar se puede borrar. */
+  listo?(sitio: Sitio): Promise<void>;
   /** Borra lo temporal del sitio (idempotente; también tras una caída). */
   cerrar(sitioId: string): Promise<void>;
 }

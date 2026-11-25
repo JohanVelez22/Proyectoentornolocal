@@ -203,8 +203,6 @@ export const fr: Textos = {
         'ngrok n’est pas installé sur cet ordinateur. Installez-le depuis ngrok.com puis réessayez.',
       'tuneles.ngrok_sin_token':
         'Le jeton ngrok est manquant : enregistrez-le dans les options du tunnel.',
-      'tuneles.expose_no_instalado':
-        'Expose n’est pas installé : installez-le ou placez expose.phar dans {carpeta}.',
       'tuneles.expose_sin_token':
         'Le jeton Expose est manquant : enregistrez-le dans les options du tunnel.',
       'tuneles.tailscale_no_instalado':
@@ -213,6 +211,18 @@ export const fr: Textos = {
         'Tailscale n’est pas connecté : connectez-vous à Tailscale puis réessayez.',
       'tuneles.tailscale_puerto_ocupado':
         'Tailscale publie déjà quelque chose sur le port HTTPS {puerto}. WolfCore Dev ne l’écrase pas : retirez-le avec Tailscale puis réessayez.',
+      'tuneles.expose_no_instalado':
+        'Expose n’est pas installé. Sous Windows il ne fonctionne qu’avec expose.phar : placez-le dans {carpeta}.',
+      'tuneles.expose_datos_reales':
+        'Expose n’est pas utilisé avec des sites contenant de vraies données : son inspecteur de requêtes est visible sur tout le réseau local. Utilisez un autre fournisseur.',
+      'tuneles.confirmacion_requerida_tailnet':
+        'Partager {dominio} avec votre tailnet doit être confirmé dans WolfCore Dev.',
+      'tuneles.tailscale_estado_ilegible':
+        'Impossible de lire ce que Tailscale publie déjà sur cet ordinateur ; rien n’a été ouvert pour ne pas l’écraser. Vérifiez que Tailscale est en cours d’exécution puis réessayez.',
+      'tuneles.tailscale_no_habilitado':
+        'Serve ou Funnel n’est pas activé sur votre tailnet. Activez-le sur {enlace} puis réessayez.',
+      'tuneles.ngrok_desactualizado':
+        'Votre ngrok est une version ancienne qui ne prend pas en charge ce dont WolfCore Dev a besoin. Mettez-le à jour (ngrok update) puis réessayez.',
       'hosts.dominio_invalido': 'Un domaine n’est pas valide.',
       'hosts.tiempo_agotado':
         'Aucune réponse à la demande d’autorisation administrateur en {segundos} s ; le fichier hosts est resté tel quel.',
@@ -1385,8 +1395,11 @@ export const fr: Textos = {
     renovar: 'Renouveler (nouveau lien)',
     cerrar: 'Fermer le tunnel',
     confirmarTitulo: 'Publier un site contenant des données réelles',
-    confirmarTexto:
-      'Ce site contient des données réelles de clients. Toute personne disposant du lien pourra le voir. Publier ?',
+    confirmarRealesTexto: (dominio: string, destino: string) =>
+      `${dominio} contient de vraies données clients et serait publié sur Internet avec ${destino} : toute personne ayant le lien pourra le voir tant qu’il reste ouvert. Publier ?`,
+    confirmarExposeTexto: (dominio: string) =>
+      `${dominio} sera publié sur Internet avec Expose : toute personne ayant le lien pourra entrer tant qu’il reste ouvert. De plus, l’inspecteur de requêtes d’Expose est visible par tous les appareils de votre réseau local. Publier ?`,
+    compartir: 'Partager',
     confirmar: 'Publier',
     confirmarPublicoTitulo: 'Publier le site sur Internet',
     confirmarPublicoTexto: (dominio: string) =>
@@ -1438,7 +1451,7 @@ export const fr: Textos = {
     proveedorNgrokAyuda:
       'Avec votre compte ngrok. Nécessite le programme ngrok déjà installé sur cet ordinateur.',
     proveedorExposeAyuda:
-      'Avec votre compte Expose. Nécessite Expose déjà installé sur cet ordinateur.',
+      'Avec votre compte Expose. Nécessite Expose déjà installé sur cet ordinateur ; sous Windows il ne fonctionne qu’avec expose.phar. Son inspecteur est visible sur le réseau local, il n’est donc pas utilisé avec des sites contenant de vraies données.',
     proveedorTailscaleAyuda:
       'Par votre réseau privé Tailscale. Nécessite Tailscale installé et connecté.',
     tokenGuardado: (f: string) => `Jeton enregistré (se termine par ${f}).`,
@@ -1455,7 +1468,7 @@ export const fr: Textos = {
     ngrokAyudaInstalacion:
       "ngrok doit déjà être installé sur cet ordinateur (WolfCore Dev ne le télécharge pas car ngrok ne publie aucun téléchargement vérifiable). Sa configuration globale n'est pas touchée.",
     exposeAyudaInstalacion:
-      "Expose doit déjà être installé, ou son expose.phar dans le dossier bin/expose des données de WolfCore Dev (il n'y a pas de téléchargement avec empreinte). Sa configuration globale n'est pas touchée.",
+      'Expose doit déjà être installé ou avoir son expose.phar dans le dossier bin/expose des données de WolfCore Dev (sous Windows il ne fonctionne qu’avec le phar ; il n’y a pas de téléchargement avec empreinte). Son inspecteur de requêtes est visible sur tout le réseau local, il n’est donc pas utilisé avec des sites contenant de vraies données. Sa configuration globale n’est pas touchée.',
     tailscaleAlcance: "Jusqu'où il va",
     tailscaleServe: 'Serve : votre tailnet seulement',
     tailscaleServeAyuda:

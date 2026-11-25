@@ -119,6 +119,8 @@ export function generarNginxPrincipal(o: {
   puerto: number;
   /** También escucha por HTTPS con el certificado de localhost (solo si el HTTPS es usable). */
   https?: { puerto: number; crt: string; key: string };
+  /** Carpeta de los vhosts auxiliares (túneles, red local); sin ella no se incluye ninguno. */
+  extrasDir?: string;
   /** Vhost interno de Adminer: carpeta con index.php y puertos del PHP que lo atiende. */
   adminer?: { raiz: string; puertos: number[] };
   /** Vhost interno de phpMyAdmin: carpeta instalada y puertos del PHP que lo atiende. */
@@ -175,6 +177,7 @@ export function generarNginxPrincipal(o: {
       ...(o.adminer ? bloqueAdminer(o.adminer, logs) : []),
       ...(o.phpmyadmin ? bloquePhpMyAdmin(o.phpmyadmin, logs) : []),
       `    include "${limpiar(o.sitesDir)}/*.conf";`,
+      ...(o.extrasDir ? [`    include "${limpiar(o.extrasDir)}/*.conf";`] : []),
       '}',
     ].join('\n') + '\n'
   );

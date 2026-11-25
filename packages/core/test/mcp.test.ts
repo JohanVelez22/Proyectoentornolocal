@@ -785,6 +785,27 @@ describe('ServidorMcp: acciones destructivas', () => {
     }
   });
 
+  it('abrir_tunel con Expose: avisa del inspector en la red local y con datos reales ni pregunta', async () => {
+    const m = await montar();
+    const c = await conectar(m.url);
+    vi.mocked(m.ops.listarProyectos).mockResolvedValue([
+      { id: 'demo', dominio: 'demo.test', datosReales: false, tunel: { proveedor: 'expose' } },
+    ]);
+    const llamada = c.callTool({ name: 'abrir_tunel', arguments: { sitioId: 'demo' } });
+    const sol = await esperarConfirmacion(m);
+    expect(sol.resumen).toContain('red local');
+    m.servidor.responderConfirmacion(sol.id, false);
+    await llamada;
+    vi.mocked(m.ops.listarProyectos).mockResolvedValue([
+      { id: 'demo', dominio: 'demo.test', datosReales: true, tunel: { proveedor: 'expose' } },
+    ]);
+    m.confirmaciones.length = 0;
+    const r = await c.callTool({ name: 'abrir_tunel', arguments: { sitioId: 'demo' } });
+    expect(r.isError).toBe(true);
+    expect(m.confirmaciones).toHaveLength(0);
+    expect(m.ops.abrirTunel).not.toHaveBeenCalled();
+  });
+
   it('abrir_tunel con Tailscale: Serve dice que no sale a internet y Funnel que sí', async () => {
     const m = await montar();
     const c = await conectar(m.url);

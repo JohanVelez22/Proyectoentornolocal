@@ -121,6 +121,10 @@ export class Rutas {
   vhost(id: string): string {
     return path.join(this.base, 'etc', 'nginx', 'sites', `${id}.conf`);
   }
+  /** Vhosts auxiliares (túneles, red local): incluidos por nginx.conf aparte de los de los sitios. */
+  vhostAux(id: string): string {
+    return path.join(this.base, 'etc', 'nginx', 'extras', `${id}.conf`);
+  }
   caCrt(): string {
     return path.join(this.base, 'ca', 'wolfcore-dev-ca.crt');
   }

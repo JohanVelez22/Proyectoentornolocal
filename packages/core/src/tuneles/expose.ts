@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
 import { chmod, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
-import net from 'node:net';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import type { PlataformaCompleta } from '../plataforma/tipos';
@@ -13,6 +12,7 @@ import {
   type ContextoTunel,
   type LanzamientoTunel,
   type ProveedorTunel,
+  type ResultadoDisponible,
   type SecretosTunel,
 } from './proveedor';
 
@@ -24,23 +24,9 @@ export interface DepsExpose {
   secretos: () => SecretosTunel | null;
   /** El `php` CLI de WolfCore Dev con el que se ejecuta `expose.phar` (null si no hay PHP). */
   phpCli: () => Promise<string | null>;
-  /** Un puerto libre de 127.0.0.1 para el panel local de Expose (por defecto, el del sistema). */
-  puertoLibre?: () => Promise<number>;
 }
 
 const HOST_LOCAL = /^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$/i;
-
-async function puertoLibreDelSistema(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const s = net.createServer();
-    s.once('error', reject);
-    s.listen(0, '127.0.0.1', () => {
-      const a = s.address();
-      const puerto = typeof a === 'object' && a ? a.port : 0;
-      s.close(() => (puerto ? resolve(puerto) : reject(new Error('Sin puerto libre'))));
-    });
-  });
-}
 
 /** Un valor como cadena PHP entre comillas simples (el token ya se validó; esto es defensa). */
 const cadenaPhp = (v: string): string => `'${v.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
@@ -59,6 +45,10 @@ const cadenaPhp = (v: string): string => `'${v.replace(/\\/g, '\\\\').replace(/'
  * - **Binario**: Expose no publica ningún binario con huella (las releases de GitHub no traen
  *   archivos y el instalador oficial es `curl | sh`). Se usa el `expose` que el usuario ya tiene o
  *   su `expose.phar` en `bin/expose/` de los datos de WolfCore Dev, ejecutado con el PHP de la app.
+ * - **Windows**: Expose no publica un `.exe`; allí solo funciona con `expose.phar` (y el PHP de la app).
+ * - **Inspector**: Expose 3 abre un panel de peticiones en 0.0.0.0 e ignora `dashboard_port`, así que
+ *   queda visible en la red local. No se cierra con cortafuegos (exige elevar permisos): con datos
+ *   reales se rechaza y en los demás sitios la confirmación lo avisa.
  * - **No se pasa `-v`**: con verbosidad Expose imprime el token en pantalla.
  */
 export class Expose implements ProveedorTunel {
@@ -97,8 +87,15 @@ export class Expose implements ProveedorTunel {
     );
   }
 
-  async disponible(): Promise<{ ok: boolean; codigo?: string }> {
-    if (!(await this.comando())) return { ok: false, codigo: 'tuneles.expose_no_instalado' };
+  async disponible(sitio: Sitio): Promise<ResultadoDisponible> {
+    if (sitio.datosReales) return { ok: false, codigo: 'tuneles.expose_datos_reales' };
+    if (!(await this.comando())) {
+      return {
+        ok: false,
+        codigo: 'tuneles.expose_no_instalado',
+        datos: { carpeta: this.d.rutas.exposeBin() },
+      };
+    }
     const s = this.d.secretos();
     if (!s || !s.disponible()) return { ok: false, codigo: 'tuneles.sin_cifrado' };
     if ((await leerToken(s, ID_SECRETO_EXPOSE)) === null) {
@@ -108,6 +105,13 @@ export class Expose implements ProveedorTunel {
   }
 
   async abrir(sitio: Sitio, c: ContextoTunel): Promise<LanzamientoTunel> {
+    // El inspector de Expose escucha en toda la red local: nunca con datos reales de clientes.
+    if (sitio.datosReales) {
+      throw new ErrorWolf(
+        'tuneles.expose_datos_reales',
+        'Expose no se usa con sitios con datos reales: su inspector queda visible en la red local.',
+      );
+    }
     if (!idSitioSeguro(sitio.id) || !HOST_LOCAL.test(sitio.dominio)) {
       throw new ErrorWolf('tuneles.cloudflare_datos_invalidos', 'El sitio no es válido.');
     }
@@ -126,16 +130,10 @@ export class Expose implements ProveedorTunel {
     await this.d.plataforma.restringirAlUsuario(carpeta).catch(() => false);
     const inicio = this.inicio(sitio.id);
     await mkdir(inicio, { recursive: true });
-    const panel = await (this.d.puertoLibre ?? puertoLibreDelSistema)();
     const config = this.config(sitio.id);
-    const php = [
-      '<?php',
-      'return [',
-      `    'auth_token' => ${cadenaPhp(token)},`,
-      `    'dashboard_port' => ${Math.trunc(panel)},`,
-      '];',
-      '',
-    ].join('\n');
+    const php = ['<?php', 'return [', `    'auth_token' => ${cadenaPhp(token)},`, '];', ''].join(
+      '\n',
+    );
     await writeFile(config, php, { encoding: 'utf8', mode: 0o600 });
     await chmod(config, 0o600).catch(() => undefined);
     // El archivo con el token: si no se puede dejar solo al usuario, no se usa.
@@ -151,7 +149,16 @@ export class Expose implements ProveedorTunel {
       comando: cmd.comando,
       args: [...cmd.previos, 'share', `http://${sitio.dominio}${puerto}`, '--no-vite-detection'],
       // Sin token en el entorno ni en la línea de órdenes: solo la ruta del archivo restringido.
-      env: { EXPOSE_CONFIG_FILE: config, HOME: inicio, USERPROFILE: inicio },
+      // El SQLite de peticiones y los temporales de Expose caen en su inicio (se borra al cerrar),
+      // no en %TEMP% del usuario.
+      env: {
+        EXPOSE_CONFIG_FILE: config,
+        HOME: inicio,
+        USERPROFILE: inicio,
+        TMP: inicio,
+        TEMP: inicio,
+        TMPDIR: inicio,
+      },
       secretos: [token],
       quitarEntorno: ['EXPOSE_'],
       cwd: carpeta,
@@ -163,6 +170,11 @@ export class Expose implements ProveedorTunel {
     const limpio = sinAnsi(texto);
     const m = /Public (?:URL|HTTPS)[^\n]*?(https:\/\/[A-Za-z0-9.-]+(?::\d+)?)/i.exec(limpio);
     return m ? urlHttps(m[1]!) : null;
+  }
+
+  /** Con la URL ya hay conexión: el archivo con el token deja de hacer falta y se borra. */
+  async listo(sitio: Sitio): Promise<void> {
+    if (idSitioSeguro(sitio.id)) await rm(this.config(sitio.id), { force: true });
   }
 
   async cerrar(sitioId: string): Promise<void> {

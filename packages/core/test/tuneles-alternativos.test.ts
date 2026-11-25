@@ -13,6 +13,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Eventos, type EventosNucleo } from '../src/eventos';
+import { VhostsAuxiliares } from '../src/nginx/auxiliares';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
 import { PlataformaWindows } from '../src/plataforma/win';
 import type { Ejecutor } from '../src/plataforma/tipos';
@@ -77,6 +78,11 @@ let llamadas: Array<{ cmd: string; args: string[]; quitar?: readonly string[] }>
 let restringidos: string[];
 let phpRuta: string | null;
 let restringirOk: boolean;
+/** Lo que decía el archivo de configuración de Expose cuando se lanzó el proceso. */
+let configVisto: string | null;
+let recargas: number;
+let falloRecarga: boolean;
+let vhosts: VhostsAuxiliares;
 
 const sitio = (extra: Partial<Sitio> = {}): Sitio =>
   SitioSchema.parse({
@@ -98,6 +104,8 @@ const supervisor = () =>
       pids.set(d.id, 4242);
       mkdirSync(path.dirname(d.log), { recursive: true });
       writeFileSync(d.log, salidaProceso);
+      const cfgExpose = d.env?.['EXPOSE_CONFIG_FILE'];
+      if (cfgExpose && existsSync(cfgExpose)) configVisto = readFileSync(cfgExpose, 'utf8');
     },
     detener: async (id: string) => {
       estados.delete(id);
@@ -155,6 +163,8 @@ function crear(opts = { esperaMs: 300, intervaloMs: 10 }) {
     ejecutor,
     secretos: () => secretos,
     phpCli: async () => phpRuta,
+    vhostsAux: vhosts,
+    puertoLibre: async () => 41234,
   });
   return t;
 }
@@ -197,6 +207,16 @@ beforeEach(() => {
   restringidos = [];
   phpRuta = 'C:\\falso\\php.exe';
   restringirOk = true;
+  configVisto = null;
+  recargas = 0;
+  falloRecarga = false;
+  vhosts = new VhostsAuxiliares({
+    rutas,
+    recargar: async () => {
+      recargas++;
+      if (falloRecarga) throw new Error('nginx -t falló');
+    },
+  });
 });
 afterEach(() => rmSync(base, { recursive: true, force: true }));
 
@@ -341,7 +361,13 @@ describe('ngrok', () => {
     await t.abrir('wolf', SI);
     estados.delete('tunel-wolf');
     for (const f of salidas) f('tunel-wolf', 1);
-    for (let i = 0; i < 100 && readFileSync(env(), 'utf8') !== ENV_ORIGINAL; i++) {
+    for (
+      let i = 0;
+      i < 200 &&
+      (readFileSync(env(), 'utf8') !== ENV_ORIGINAL ||
+        existsSync(path.join(rutas.ngrokRun(), 'wolf.yml')));
+      i++
+    ) {
       await new Promise((r) => setTimeout(r, 10));
     }
     expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
@@ -370,9 +396,50 @@ describe('Expose', () => {
     expect(JSON.stringify(d.env)).not.toContain(CENTINELA);
     expect(d.envSecreto).toBeUndefined();
     expect(restringidos).toEqual(expect.arrayContaining([rutas.exposeRun(), cfg]));
-    const php = readFileSync(cfg, 'utf8');
+    const php = configVisto!;
     expect(php).toContain(`'auth_token' => '${TOKEN_EXPOSE}'`);
     expect(php.startsWith('<?php')).toBe(true);
+    // Expose 3 ignora dashboard_port: no se escribe una opción muerta.
+    expect(php).not.toContain('dashboard_port');
+  });
+
+  it('el archivo con el token se borra en cuanto aparece la URL (no dura lo que dura el túnel)', async () => {
+    const t = crear();
+    await t.abrir('wolf', SI);
+    expect(configVisto).toContain(TOKEN_EXPOSE);
+    expect(existsSync(path.join(rutas.exposeRun(), 'wolf.php'))).toBe(false);
+    for (const f of archivos(base)) expect(readFileSync(f, 'latin1'), f).not.toContain(CENTINELA);
+  });
+
+  it('el SQLite y los temporales de Expose caen en su inicio: TMP, TEMP y TMPDIR', async () => {
+    const t = crear();
+    await t.abrir('wolf', SI);
+    const inicio = path.join(rutas.exposeRun(), 'inicio-wolf');
+    const d = iniciados[0]!;
+    for (const v of ['TMP', 'TEMP', 'TMPDIR', 'HOME', 'USERPROFILE']) {
+      expect(d.env?.[v], v).toBe(inicio);
+    }
+    // Lo que Expose dejó en ese inicio se borra al cerrar.
+    writeFileSync(path.join(inicio, 'expose-logs.sqlite'), 'datos de peticiones');
+    await t.cerrar('wolf');
+    expect(existsSync(inicio)).toBe(false);
+  });
+
+  it('con datos reales Expose se rechaza con su código y no se escribe nada (su inspector queda en la red local)', async () => {
+    sitios = [sitio({ tunel: { proveedor: 'expose' }, datosReales: true })];
+    await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
+      codigo: 'tuneles.expose_datos_reales',
+    });
+    expect(iniciados).toEqual([]);
+    expect(existsSync(rutas.exposeRun())).toBe(false);
+  });
+
+  it('expose_no_instalado lleva la carpeta para que el texto no muestre {carpeta}', async () => {
+    rmSync(rutas.exposeBin(), { recursive: true, force: true });
+    await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
+      codigo: 'tuneles.expose_no_instalado',
+      datos: { carpeta: rutas.exposeBin() },
+    });
   });
 
   it('ejecuta el phar con el PHP de la app, con su propio inicio y sin EXPOSE_* heredado', async () => {
@@ -412,7 +479,6 @@ describe('Expose', () => {
   it('cerrar borra el archivo con el token y restaura el .env', async () => {
     const t = crear();
     await t.abrir('wolf', SI);
-    expect(existsSync(path.join(rutas.exposeRun(), 'wolf.php'))).toBe(true);
     await t.cerrar('wolf');
     expect(existsSync(path.join(rutas.exposeRun(), 'wolf.php'))).toBe(false);
     expect(existsSync(path.join(rutas.exposeRun(), 'inicio-wolf'))).toBe(false);
@@ -497,7 +563,7 @@ describe('Tailscale', () => {
     expect(e).toMatchObject({ estado: 'activo', url: 'https://mi-pc.tail1234.ts.net:8443' });
     const d = iniciados[0]!;
     expect(d.comando).toBe('C:\\falso\\tailscale.exe');
-    expect(d.args).toEqual(['serve', '--https=8443', 'http://127.0.0.1:8080']);
+    expect(d.args).toEqual(['serve', '--https=8443', 'http://127.0.0.1:41234']);
     expect(d.args).not.toContain('--bg');
     expect(d.args).not.toContain('--yes');
     expect(d.quitarEntorno).toEqual(['TS_', 'TAILSCALE_']);
@@ -510,7 +576,7 @@ describe('Tailscale', () => {
     sitios = [sitio({ tunel: { proveedor: 'tailscale', modo: 'funnel' } })];
     salidaProceso = SALIDA_FUNNEL;
     await crear().abrir('wolf', SI);
-    expect(iniciados[0]!.args).toEqual(['funnel', '--https=8443', 'http://127.0.0.1:8080']);
+    expect(iniciados[0]!.args).toEqual(['funnel', '--https=8443', 'http://127.0.0.1:41234']);
   });
 
   it('si el usuario ya publica en el puerto 8443, no se abre ni se pisa', async () => {
@@ -565,7 +631,7 @@ describe('Tailscale', () => {
 
   it('exige la confirmación', async () => {
     await expect(crear().abrir('wolf')).rejects.toMatchObject({
-      codigo: 'tuneles.confirmacion_requerida',
+      codigo: 'tuneles.confirmacion_requerida_tailnet',
     });
     expect(llamadas).toEqual([]);
   });
@@ -588,6 +654,7 @@ describe('elegir proveedor', () => {
       plataforma: plataforma() as never,
       ejecutor,
       secretos: () => secretos,
+      vhostsAux: vhosts,
       guardarTunel: async (_id, tunel) => {
         guardados.push(tunel);
       },
@@ -760,6 +827,183 @@ describe('Plataforma.tailscale', () => {
         expect(await montar(stdout).p.tailscale()).toEqual({ ruta: EXE, sesion: false });
       }
       expect(await montar('', 1).p.tailscale()).toEqual({ ruta: EXE, sesion: false });
+    });
+  });
+});
+
+describe('Tailscale: server de Nginx propio del túnel (el Host .ts.net no cae en el default_server)', () => {
+  beforeEach(() => {
+    sitios = [sitio({ tunel: { proveedor: 'tailscale' } })];
+    salidaProceso = SALIDA_SERVE;
+  });
+  const conf = () => path.join(rutas.vhostAux('tunel-wolf'));
+
+  it('Tailscale apunta a un puerto propio cuyo server atiende cualquier Host y reenvía con el del sitio', async () => {
+    await crear().abrir('wolf', SI);
+    const d = iniciados[0]!;
+    expect(d.args).toEqual(['serve', '--https=8443', 'http://127.0.0.1:41234']);
+    const c = readFileSync(conf(), 'utf8');
+    expect(c).toContain('listen 127.0.0.1:41234;');
+    expect(c).toContain('server_name _;');
+    expect(c).toContain('proxy_set_header Host "wolf.test";');
+    expect(c).toContain('proxy_pass http://127.0.0.1:8080;');
+    // No es el server por defecto de Nginx ni toca el vhost del sitio.
+    expect(c).not.toContain('default_server');
+    expect(existsSync(rutas.vhost('wolf'))).toBe(false);
+    expect(recargas).toBeGreaterThanOrEqual(1);
+  });
+
+  it('cerrar quita el server y recarga Nginx', async () => {
+    const t = crear();
+    await t.abrir('wolf', SI);
+    const antes = recargas;
+    await t.cerrar('wolf');
+    expect(existsSync(conf())).toBe(false);
+    expect(recargas).toBeGreaterThan(antes);
+  });
+
+  it('si el proceso cae, el server se quita', async () => {
+    const t = crear();
+    await t.abrir('wolf', SI);
+    estados.delete('tunel-wolf');
+    for (const f of salidas) f('tunel-wolf', 1);
+    for (let i = 0; i < 100 && existsSync(conf()); i++) await new Promise((r) => setTimeout(r, 10));
+    expect(existsSync(conf())).toBe(false);
+  });
+
+  it('al arrancar: el de un túnel vivo sobrevive (readopción) y el huérfano se quita', async () => {
+    await crear().abrir('wolf', SI);
+    writeFileSync(rutas.vhostAux('tunel-huerfano'), 'server { listen 127.0.0.1:1; }');
+    writeFileSync(rutas.vhostAux('lan-otro'), 'server { listen 127.0.0.1:2; }');
+    // Otra instancia del núcleo (la app reiniciada): el proceso del túnel sigue vivo.
+    await crear().restaurar();
+    expect(existsSync(conf())).toBe(true);
+    expect(existsSync(rutas.vhostAux('tunel-huerfano'))).toBe(false);
+    // Lo que no es de un túnel (la red local de D25) no se toca.
+    expect(existsSync(rutas.vhostAux('lan-otro'))).toBe(true);
+  });
+
+  it('al arrancar con el túnel muerto, su server se quita', async () => {
+    await crear().abrir('wolf', SI);
+    estados.delete('tunel-wolf');
+    pids.delete('tunel-wolf');
+    await crear().restaurar();
+    expect(existsSync(conf())).toBe(false);
+  });
+
+  it('si Nginx rechaza el server, no se lanza nada ni queda archivo', async () => {
+    falloRecarga = true;
+    await expect(crear().abrir('wolf', SI)).rejects.toThrow(/nginx -t/);
+    expect(iniciados).toEqual([]);
+    expect(existsSync(conf())).toBe(false);
+  });
+
+  it('si el túnel no llega a conectar, el server tampoco queda', async () => {
+    salidaProceso = 'esperando…';
+    const e = await crear({ esperaMs: 50, intervaloMs: 10 }).abrir('wolf', SI);
+    expect(e.estado).toBe('error');
+    expect(existsSync(conf())).toBe(false);
+  });
+
+  it('abrir y cerrar dos veces seguidas no deja restos', async () => {
+    const t = crear();
+    await t.abrir('wolf', SI);
+    await t.cerrar('wolf');
+    await t.abrir('wolf', SI);
+    await t.cerrar('wolf');
+    expect(readdirSync(path.dirname(conf()))).toEqual([]);
+  });
+});
+
+describe('Tailscale: menores', () => {
+  beforeEach(() => {
+    sitios = [sitio({ tunel: { proveedor: 'tailscale' } })];
+    salidaProceso = SALIDA_SERVE;
+  });
+
+  it('puertoEnUso también recorre Foreground.*.TCP y Web', () => {
+    const fg = (cuerpo: object) => JSON.stringify({ Foreground: { 'sesion-1': cuerpo } });
+    expect(puertoEnUso(fg({ TCP: { '8443': { HTTPS: true } } }), 8443)).toBe(true);
+    expect(puertoEnUso(fg({ Web: { 'pc.ts.net:8443': {} } }), 8443)).toBe(true);
+    expect(puertoEnUso(fg({ TCP: { '443': {} } }), 8443)).toBe(false);
+    expect(puertoEnUso(JSON.stringify({ Foreground: 5 }), 8443)).toBe(false);
+  });
+
+  it('si serve status sale con error, falla cerrado: no se abre ni se crea el server', async () => {
+    const mal: Ejecutor = async (cmd, args) => {
+      llamadas.push({ cmd, args });
+      return { codigo: 1, stdout: '', stderr: 'no se pudo hablar con tailscaled' };
+    };
+    const t = new Tuneles({
+      supervisor: supervisor(),
+      sitios: { listar: async () => sitios },
+      almacen: { leer: async () => ({ servicios: { nginx: { puerto: 8080 } } }) } as never,
+      instalador: { instalados: async () => [] } as never,
+      rutas,
+      urlBase: new UrlBase({
+        rutas,
+        ejecutor: async () => ({ codigo: 0, stdout: '', stderr: '' }),
+      }),
+      eventos,
+      plataforma: plataforma() as never,
+      ejecutor: mal,
+      secretos: () => secretos,
+      vhostsAux: vhosts,
+      puertoLibre: async () => 41234,
+    });
+    await expect(t.abrir('wolf', SI)).rejects.toMatchObject({
+      codigo: 'tuneles.tailscale_estado_ilegible',
+    });
+    expect(iniciados).toEqual([]);
+    expect(existsSync(rutas.vhostAux('tunel-wolf'))).toBe(false);
+  });
+
+  it('Funnel o Serve sin habilitar: se reconoce la URL de login.tailscale.com y se informa con su código', async () => {
+    salidaProceso =
+      'Serve is not enabled on your tailnet.\nTo enable, visit:\n\n         https://login.tailscale.com/f/serve?node=n123abc\n';
+    const t = crear();
+    await expect(t.abrir('wolf', SI)).rejects.toMatchObject({
+      codigo: 'tuneles.tailscale_no_habilitado',
+      datos: { enlace: 'https://login.tailscale.com/f/serve?node=n123abc' },
+    });
+    expect(t.estados()[0]).toMatchObject({ estado: 'error' });
+    // El túnel se cerró y no deja el server.
+    expect(existsSync(rutas.vhostAux('tunel-wolf'))).toBe(false);
+    expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
+  });
+
+  it('un enlace que no es de login.tailscale.com no se muestra como el de habilitación', async () => {
+    salidaProceso = 'Serve is not enabled on your tailnet.\nvisit https://malo.example/f/serve';
+    const e = await crear({ esperaMs: 50, intervaloMs: 10 }).abrir('wolf', SI);
+    expect(e.estado).toBe('error');
+  });
+
+  it('sin confirmar, Serve no habla de internet', async () => {
+    const e = await crear()
+      .abrir('wolf')
+      .catch((x: unknown) => x);
+    expect(e).toMatchObject({ codigo: 'tuneles.confirmacion_requerida_tailnet' });
+    expect(String((e as Error).message)).not.toMatch(/internet/i);
+    sitios = [sitio({ tunel: { proveedor: 'tailscale', modo: 'funnel' } })];
+    const f = await crear()
+      .abrir('wolf')
+      .catch((x: unknown) => x);
+    expect(f).toMatchObject({ codigo: 'tuneles.confirmacion_requerida' });
+  });
+});
+
+describe('ngrok: versión antigua', () => {
+  it('un ngrok que no entiende los flags pide actualizarlo', async () => {
+    salidaProceso = 'Error: unknown flag: --traffic-policy-file';
+    const t = crear();
+    await expect(t.abrir('wolf', SI)).rejects.toMatchObject({
+      codigo: 'tuneles.ngrok_desactualizado',
+    });
+    expect(existsSync(path.join(rutas.ngrokRun(), 'wolf.yml'))).toBe(false);
+    expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
+    salidaProceso = 'ERR_NGROK_121\n\nYour ngrok-agent version "3.1.0" is too old.';
+    await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
+      codigo: 'tuneles.ngrok_desactualizado',
     });
   });
 });

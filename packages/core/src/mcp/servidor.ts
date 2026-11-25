@@ -695,12 +695,19 @@ export class ServidorMcp {
         : tt['proveedor'] === 'ngrok'
           ? 'un túnel público de ngrok (con su cuenta)'
           : tt['proveedor'] === 'expose'
-            ? 'un túnel público de Expose (con su cuenta)'
+            ? 'un túnel público de Expose (con su cuenta; su inspector de peticiones queda visible en toda la red local)'
             : funnel
               ? 'Tailscale Funnel (abierto a todo internet)'
               : serve
                 ? 'Tailscale Serve (solo los equipos de su tailnet, no internet)'
                 : 'un túnel público de Cloudflare';
+    // Expose abre un inspector en toda la red local: con datos reales ni se pregunta.
+    if (tt['proveedor'] === 'expose' && s['datosReales'] === true) {
+      throw new ErrorWolf(
+        'tuneles.expose_datos_reales',
+        'Expose no se usa con sitios con datos reales: su inspector queda visible en la red local.',
+      );
+    }
     // Lo confirmado queda fijado: el núcleo lo compara con el sitio al abrir (sin TOCTOU).
     const proveedor =
       typeof tt['proveedor'] === 'string' && tt['proveedor']

@@ -166,6 +166,20 @@ describe('generarNginxPrincipal', () => {
     expect(c.indexOf('default_server')).toBeLessThan(c.indexOf('include "C:/D/sites/*.conf";'));
   });
 
+  it('incluye los vhosts auxiliares (túneles, red local) aparte de los de los sitios', () => {
+    const base = {
+      prefijo: 'C:/D/nginx',
+      sitesDir: 'C:/D/sites',
+      phpUpstreams: [],
+      logsDir: 'C:/D/logs',
+      puerto: 8089,
+    };
+    const c = generarNginxPrincipal({ ...base, extrasDir: 'C:/D/extras' });
+    expect(c).toContain('include "C:/D/extras/*.conf";');
+    expect(c.indexOf('sites/*.conf')).toBeLessThan(c.indexOf('extras/*.conf'));
+    expect(generarNginxPrincipal(base)).not.toContain('extras');
+  });
+
   it('genera upstreams, include e ítems base', () => {
     const c = generarNginxPrincipal({
       puerto: 80,

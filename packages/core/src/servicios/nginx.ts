@@ -135,6 +135,7 @@ export class ServicioNginx {
     const contenido = generarNginxPrincipal({
       prefijo: bin,
       sitesDir,
+      extrasDir: path.dirname(this.rutas.vhostAux('x')),
       phpUpstreams: await this.obtenerUpstreams(),
       logsDir: this.rutas.logs(),
       puerto: (await this.leerConfig()).servicios.nginx.puerto,
@@ -144,6 +145,7 @@ export class ServicioNginx {
     });
     await mkdir(this.rutas.logs(), { recursive: true });
     await mkdir(path.dirname(this.rutas.vhost('x')), { recursive: true });
+    await mkdir(path.dirname(this.rutas.vhostAux('x')), { recursive: true });
     await this.copiarIncluidos(bin);
     await writeFile(destino, contenido, 'utf8');
   }

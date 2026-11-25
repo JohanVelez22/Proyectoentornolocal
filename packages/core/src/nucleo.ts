@@ -174,6 +174,7 @@ import {
   type CambiosPreferenciasUi,
   type PreferenciasUi,
 } from './tipos';
+import { VhostsAuxiliares } from './nginx/auxiliares';
 import { Tuneles } from './tuneles/tuneles';
 import type { SecretosTunel } from './tuneles/proveedor';
 // Registran sus DefServicio al cargarse: el núcleo no depende de que alguien importe index.ts.
@@ -949,6 +950,8 @@ export class Nucleo {
       plataforma: plat,
       ejecutor: o.ejecutor ?? ejecutorPorDefecto,
       lanzar: o.lanzar ?? lanzadorPorDefecto,
+      // Server de Nginx propio de un túnel (Tailscale): valida y recarga con el resto de la config.
+      vhostsAux: new VhostsAuxiliares({ rutas, recargar: () => servicios.nginx.recargar() }),
       guardarTunel: async (sitioId, tunel) => {
         await sitios.editar(sitioId, { tunel: tunel ?? undefined });
       },

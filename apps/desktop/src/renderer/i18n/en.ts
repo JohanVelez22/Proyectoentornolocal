@@ -193,8 +193,6 @@ export const en: Textos = {
       'tuneles.ngrok_no_instalado':
         'ngrok is not installed on this computer. Install it from ngrok.com and try again.',
       'tuneles.ngrok_sin_token': 'The ngrok token is missing: save it in the tunnel options.',
-      'tuneles.expose_no_instalado':
-        'Expose is not installed: install it or put expose.phar in {carpeta}.',
       'tuneles.expose_sin_token': 'The Expose token is missing: save it in the tunnel options.',
       'tuneles.tailscale_no_instalado':
         'Tailscale is not installed on this computer. WolfCore Dev does not install it: get it from tailscale.com.',
@@ -202,6 +200,18 @@ export const en: Textos = {
         'Tailscale is not signed in: sign in to Tailscale and try again.',
       'tuneles.tailscale_puerto_ocupado':
         'Tailscale already publishes something on HTTPS port {puerto}. WolfCore Dev does not overwrite it: remove it with Tailscale and try again.',
+      'tuneles.expose_no_instalado':
+        'Expose is not installed. On Windows it only works with expose.phar: put it in {carpeta}.',
+      'tuneles.expose_datos_reales':
+        'Expose is not used with sites that have real data: its request inspector is visible on the whole local network. Use another provider.',
+      'tuneles.confirmacion_requerida_tailnet':
+        'Sharing {dominio} with your tailnet must be confirmed in WolfCore Dev.',
+      'tuneles.tailscale_estado_ilegible':
+        'Could not read what Tailscale already publishes on this computer, so nothing was opened to avoid overwriting it. Check that Tailscale is running and try again.',
+      'tuneles.tailscale_no_habilitado':
+        'Serve or Funnel is not enabled on your tailnet. Enable it at {enlace} and try again.',
+      'tuneles.ngrok_desactualizado':
+        'Your ngrok is an old version that does not support what WolfCore Dev needs. Update it (ngrok update) and try again.',
       'hosts.dominio_invalido': 'A domain is not valid.',
       'hosts.tiempo_agotado':
         'The administrator prompt got no answer within {segundos} s; the hosts file was not changed.',
@@ -1331,8 +1341,11 @@ export const en: Textos = {
     renovar: 'Renew (new link)',
     cerrar: 'Close tunnel',
     confirmarTitulo: 'Publish a site with real data',
-    confirmarTexto:
-      'This site has real customer data. Anyone with the link will be able to see it. Publish?',
+    confirmarRealesTexto: (dominio: string, destino: string) =>
+      `${dominio} has real customer data and would be published on the internet with ${destino}: anyone with the link can see it while it stays open. Publish?`,
+    confirmarExposeTexto: (dominio: string) =>
+      `${dominio} will be published on the internet with Expose: anyone with the link can get in while it stays open. Also, the Expose request inspector is visible to every device on your local network. Publish?`,
+    compartir: 'Share',
     confirmar: 'Publish',
     confirmarPublicoTitulo: 'Publish the site on the internet',
     confirmarPublicoTexto: (dominio: string) =>
@@ -1383,7 +1396,7 @@ export const en: Textos = {
     proveedorNgrokAyuda:
       'With your ngrok account. Needs the ngrok program already installed on this computer.',
     proveedorExposeAyuda:
-      'With your Expose account. Needs Expose already installed on this computer.',
+      'With your Expose account. Needs Expose already installed on this computer; on Windows it only works with expose.phar. Its inspector is visible on the local network, so it is not used with sites that have real data.',
     proveedorTailscaleAyuda:
       'Through your private Tailscale network. Needs Tailscale installed and signed in.',
     tokenGuardado: (f: string) => `Token saved (ends in ${f}).`,
@@ -1400,7 +1413,7 @@ export const en: Textos = {
     ngrokAyudaInstalacion:
       'ngrok must already be installed on this computer (WolfCore Dev does not download it because ngrok publishes no verifiable download). Its global configuration is not touched.',
     exposeAyudaInstalacion:
-      'Expose must already be installed, or its expose.phar in the bin/expose folder of the WolfCore Dev data (there is no download with a checksum). Its global configuration is not touched.',
+      'Expose must already be installed or have its expose.phar in the bin/expose folder of the WolfCore Dev data (on Windows it only works with the phar; there is no download with a checksum). Its request inspector is visible on the whole local network, so it is not used with sites that have real data. Its global configuration is not touched.',
     tailscaleAlcance: 'How far it reaches',
     tailscaleServe: 'Serve: your tailnet only',
     tailscaleServeAyuda:

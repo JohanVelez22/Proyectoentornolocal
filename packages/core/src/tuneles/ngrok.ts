@@ -9,6 +9,8 @@ import {
   tokenTunelValido,
   type ContextoTunel,
   type LanzamientoTunel,
+  type ProblemaTunel,
+  type ResultadoDisponible,
   type ProveedorTunel,
   type SecretosTunel,
 } from './proveedor';
@@ -54,7 +56,7 @@ export class Ngrok implements ProveedorTunel {
     return path.join(this.d.rutas.ngrokRun(), `${sitioId}.politica.yml`);
   }
 
-  async disponible(): Promise<{ ok: boolean; codigo?: string }> {
+  async disponible(): Promise<ResultadoDisponible> {
     if (!(await this.d.plataforma.buscarEjecutable('ngrok'))) {
       return { ok: false, codigo: 'tuneles.ngrok_no_instalado' };
     }
@@ -120,6 +122,18 @@ export class Ngrok implements ProveedorTunel {
       quitarEntorno: ['NGROK_'],
       cwd: carpeta,
     };
+  }
+
+  /**
+   * Un ngrok 3.x antiguo no conoce `--traffic-policy-file` (o la política de tráfico) y se queja:
+   * se pide actualizarlo en vez de esperar un plazo sin URL.
+   */
+  problema(_sitio: Sitio, texto: string): ProblemaTunel | null {
+    return /unknown flag|flag provided but not defined|ERR_NGROK_121|agent version.{0,40}too old|too old/i.test(
+      texto,
+    )
+      ? { codigo: 'tuneles.ngrok_desactualizado' }
+      : null;
   }
 
   /** La URL de la línea `started tunnel` del log JSON de ngrok. */
