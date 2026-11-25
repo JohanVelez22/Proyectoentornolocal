@@ -1,4 +1,10 @@
-import { restaurarUrlBaseSincrono, type Rutas } from '@pel/core';
+import { join } from 'node:path';
+import {
+  restaurarUrlBaseSincrono,
+  validarCarpetaDatos,
+  VARIABLE_DATOS,
+  type Rutas,
+} from '@pel/core';
 
 /** Fin de sesión o apagado de Windows: el sistema no espera mucho más. */
 export const TOPE_CIERRE_FIN_SESION_MS = 5_000;
@@ -43,4 +49,30 @@ export function registrarFinDeSesion(
     devolverEnv();
     apagar();
   });
+}
+
+/**
+ * Carpeta de datos de `WOLFCORE_DATOS` (D26: "PC nuevo" y pruebas manuales), ya validada contra la
+ * carpeta real (`real`): absoluta, no del sistema y nunca la real ni una que la contenga. null sin
+ * la variable. Lanza `perfiles.carpeta_datos_invalida` si no sirve: la app no arranca con ella.
+ */
+export function carpetaDatosDeEntorno(env: NodeJS.ProcessEnv, real: string): string | null {
+  const v = env[VARIABLE_DATOS];
+  if (v === undefined || v.trim() === '') return null;
+  return validarCarpetaDatos(v, real);
+}
+
+export interface AppConRutas {
+  setPath(nombre: 'userData', ruta: string): void;
+}
+
+/**
+ * Con otra carpeta de datos, Electron también guarda lo suyo (caché, almacenamiento de la ventana,
+ * el candado de instancia única) en `<base>/electron`: se llama antes de
+ * `requestSingleInstanceLock`, así una app de prueba no choca con la real ni toca su `userData`.
+ */
+export function usarCarpetaDatos(app: AppConRutas, base: string): string {
+  const userData = join(base, 'electron');
+  app.setPath('userData', userData);
+  return userData;
 }

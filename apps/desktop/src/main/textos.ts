@@ -11,6 +11,7 @@ const TEXTOS = {
     siApagar: 'Sí, apagar',
     noApagar: 'No, dejarlos encendidos',
     cancelar: 'Cancelar',
+    carpetaDatos: 'carpeta de datos',
   },
   en: {
     abrir: 'Open',
@@ -21,6 +22,7 @@ const TEXTOS = {
     siApagar: 'Yes, stop them',
     noApagar: 'No, keep them running',
     cancelar: 'Cancel',
+    carpetaDatos: 'data folder',
   },
   pt: {
     abrir: 'Abrir',
@@ -31,6 +33,7 @@ const TEXTOS = {
     siApagar: 'Sim, desligar',
     noApagar: 'Não, deixá-los ligados',
     cancelar: 'Cancelar',
+    carpetaDatos: 'pasta de dados',
   },
   fr: {
     abrir: 'Ouvrir',
@@ -41,6 +44,7 @@ const TEXTOS = {
     siApagar: 'Oui, les arrêter',
     noApagar: 'Non, les laisser actifs',
     cancelar: 'Annuler',
+    carpetaDatos: 'dossier de données',
   },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 

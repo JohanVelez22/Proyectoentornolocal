@@ -4,7 +4,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Rutas, SitioSchema, UrlBase } from '@pel/core';
-import { registrarFinDeSesion, topeCierre } from '../src/main/sesion';
+import {
+  carpetaDatosDeEntorno,
+  registrarFinDeSesion,
+  topeCierre,
+  usarCarpetaDatos,
+} from '../src/main/sesion';
 
 let base: string;
 let carpeta: string;
@@ -86,5 +91,39 @@ describe('topeCierre', () => {
   it('fin de sesión: 5 s; salida normal: más margen para el apagado limpio en paralelo', () => {
     expect(topeCierre(true)).toBe(5_000);
     expect(topeCierre(false)).toBeGreaterThanOrEqual(15_000);
+  });
+});
+
+describe('WOLFCORE_DATOS (D26)', () => {
+  // La carpeta "real" de la prueba es una temporal: nunca se mira la de %LOCALAPPDATA%.
+  const real = (): string => path.join(base, 'real', 'WolfCoreDev');
+
+  it('sin la variable, null y userData no cambia', () => {
+    expect(carpetaDatosDeEntorno({}, real())).toBeNull();
+    expect(carpetaDatosDeEntorno({ WOLFCORE_DATOS: '  ' }, real())).toBeNull();
+  });
+
+  it('con la variable, el núcleo recibe esa base y userData pasa a <base>/electron', () => {
+    const otra = path.join(base, 'pc-nuevo');
+    const elegida = carpetaDatosDeEntorno({ WOLFCORE_DATOS: otra }, real());
+    expect(elegida).toBe(otra);
+    const setPath = vi.fn();
+    expect(usarCarpetaDatos({ setPath }, elegida!)).toBe(path.join(otra, 'electron'));
+    expect(setPath).toHaveBeenCalledWith('userData', path.join(otra, 'electron'));
+  });
+
+  it('rechaza una ruta relativa, una del sistema y la carpeta real (o una que la contenga)', () => {
+    for (const mala of [
+      'datos-relativos',
+      path.join(real()),
+      path.join(real(), 'sub'),
+      path.join(base, 'real'),
+      String.raw`C:\Windows\Temp`,
+      '/etc/wolf',
+    ]) {
+      expect(() => carpetaDatosDeEntorno({ WOLFCORE_DATOS: mala }, real()), mala).toThrow(
+        expect.objectContaining({ codigo: 'perfiles.carpeta_datos_invalida' }),
+      );
+    }
   });
 });

@@ -16,6 +16,8 @@ import {
 import {
   ErrorWolf,
   Nucleo,
+  rutaBasePorDefecto,
+  VARIABLE_DATOS,
   type IdiomaUi,
   type PreferenciasUi,
   type Rutas,
@@ -31,7 +33,12 @@ import { ControlMetricas, registrarIpc } from './ipc';
 import { AlmacenSecretos } from './secretos';
 import { crearOrdenes, ordenDeArgs } from './ordenes';
 import { crearSalida } from './salida';
-import { registrarFinDeSesion, topeCierre } from './sesion';
+import {
+  carpetaDatosDeEntorno,
+  registrarFinDeSesion,
+  topeCierre,
+  usarCarpetaDatos,
+} from './sesion';
 import { carpetaExistente, urlAbrible, urlHttp } from './validacion';
 
 // El Node de Electron prueba cada dirección (IPv6 e IPv4) solo 250 ms antes de pasar a la
@@ -263,7 +270,27 @@ const ordenes = crearOrdenes({
   },
 });
 
-if (!app.requestSingleInstanceLock()) {
+// WOLFCORE_DATOS (D26): otra carpeta de datos ("PC nuevo", pruebas manuales). Se valida y se fija
+// el userData de Electron dentro de ella ANTES del candado de instancia única: la carpeta real no se
+// lee ni se escribe. Lo que se usa queda en el registro y en el título de la ventana.
+let carpetaDatos: string | null = null;
+let errorCarpetaDatos: string | null = null;
+try {
+  carpetaDatos = carpetaDatosDeEntorno(process.env, rutaBasePorDefecto());
+  if (carpetaDatos) {
+    const userData = usarCarpetaDatos(app, carpetaDatos);
+    console.info(
+      `WolfCore Dev usa la carpeta de datos ${carpetaDatos} (${VARIABLE_DATOS}); Electron, ${userData}. La carpeta real no se toca.`,
+    );
+  }
+} catch (e) {
+  errorCarpetaDatos = e instanceof Error ? e.message : String(e);
+}
+
+if (errorCarpetaDatos !== null) {
+  dialog.showErrorBox('WolfCore Dev', errorCarpetaDatos);
+  app.exit(1);
+} else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   // Otra instancia: con --iniciar-todo/--detener-todo ejecuta la orden aquí; si no, muestra la
@@ -281,7 +308,7 @@ if (!app.requestSingleInstanceLock()) {
   });
   void app.whenReady().then(async () => {
     try {
-      nucleo = await Nucleo.crear();
+      nucleo = await Nucleo.crear(carpetaDatos ? { base: carpetaDatos } : {});
     } catch (e) {
       const detalle = e instanceof Error ? e.message : String(e);
       dialog.showErrorBox('WolfCore Dev', `No se pudo iniciar el núcleo: ${detalle}`);
@@ -299,6 +326,12 @@ if (!app.requestSingleInstanceLock()) {
     }
     const v = crearVentana(n.rutas);
     ventana = v;
+    if (carpetaDatos) {
+      // Que se vea siempre con qué carpeta corre esta ventana.
+      const titulo = `WolfCore Dev — ${textosMain(idioma).carpetaDatos}: ${carpetaDatos}`;
+      v.on('page-title-updated', (e) => e.preventDefault());
+      v.setTitle(titulo);
+    }
     // Token de GitHub y claves de IA: cifrados en etc/secretos/ (solo este proceso los lee). El
     // token viejo de etc/github.token pasa solo al almacén nuevo la primera vez que se lee.
     const secretos = new AlmacenSecretos(n.rutas.secretos(), n.rutas.tokenGithub(), safeStorage);
