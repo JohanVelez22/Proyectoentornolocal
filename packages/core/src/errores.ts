@@ -155,6 +155,7 @@ export const PARAMETROS_ERROR = {
   'proyectos.dominio_existe': ['dominio'],
   'proyectos.carpeta_de_otro_sitio': ['dominio'],
   'proyectos.sin_python': [],
+  'proyectos.venv_ajeno': [],
   'proyectos.paso_base_no_omitible': [],
   'proyectos.sin_php': [],
   'proyectos.php_no_instalado': ['version'],

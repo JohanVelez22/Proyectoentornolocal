@@ -284,6 +284,8 @@ export const es = {
       'proyectos.carpeta_de_otro_sitio':
         'Esa carpeta es la del proyecto {dominio} o está dentro de ella: elija otra.',
       'proyectos.sin_python': 'No hay Python instalado: instálelo desde Servicios.',
+      'proyectos.venv_ajeno':
+        'El proyecto trae su propio .venv y WolfCore Dev no ejecuta el Python de un repositorio ajeno: bórrelo y vuelva a crear el entorno.',
       'proyectos.paso_base_no_omitible':
         'El paso "Crear la base de datos" de un proyecto nuevo no se puede omitir.',
       'proyectos.sin_php': 'No hay PHP instalado: instálelo desde Servicios.',

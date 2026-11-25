@@ -11,6 +11,7 @@ import type { Lanzador, OpcionesLanzar } from '../src/plataforma/tipos';
 import { TIPOS_PASO, type PasoReceta, type TipoPaso } from '../src/proyectos/config';
 import { RegistroPasos, type ContextoPaso } from '../src/proyectos/pasos';
 import { registrarPasosReales, type DepsPasos } from '../src/proyectos/pasos/index';
+import { esVenvPropio, registrarVenvPropio } from '../src/proyectos/pasos/python';
 import { leerHuellaWordpress } from '../src/proyectos/pasos/descargarPlantilla';
 import { nombreBase } from '../src/proyectos/pasos/comun';
 import { recetaEfectiva, recetaPorDefecto } from '../src/proyectos/recetas';
@@ -46,6 +47,7 @@ interface Armado {
   phpIni: string;
   nodeDir: string;
   pythonDir: string;
+  rutas: Rutas;
 }
 
 interface OpcionesArmado {
@@ -176,6 +178,7 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
     phpIni,
     nodeDir,
     pythonDir,
+    rutas,
   };
 }
 
@@ -655,31 +658,67 @@ describe('npm-ci y npm-build', () => {
 /* ───────────── python ───────────── */
 
 describe('python-venv y pip-install', () => {
-  it('python -m venv .venv con el Python del proyecto', async () => {
+  /** Marca el .venv de la carpeta como creado por WolfCore Dev (como lo deja `python-venv`). */
+  const propio = async (a: Armado): Promise<void> => {
+    await escribir(a.carpeta, '.venv/Scripts/python.exe', '');
+    await registrarVenvPropio({ rutas: a.rutas }, a.carpeta);
+  };
+
+  it('crea el .venv desde fuera del proyecto, sin pip, y luego instala pip con ensurepip', async () => {
     const a = await armar({ sitio: { tipo: 'fastapi' } });
     await correr(a, 'python-venv');
+    const venv = join(a.carpeta, '.venv');
     expect(a.llamadas.map((l) => [l.cmd, ...l.args])).toEqual([
-      [join(a.pythonDir, 'python.exe'), '-I', '-m', 'venv', '.venv'],
+      [join(a.pythonDir, 'python.exe'), '-I', '-X', 'utf8', '-m', 'venv', '--without-pip', venv],
+      [join(venv, 'Scripts', 'python.exe'), '-I', '-X', 'utf8', '-m', 'ensurepip', '--default-pip'],
     ]);
+    // Ninguno corre con la carpeta del proyecto (ni el .venv) como directorio de trabajo.
+    for (const l of a.llamadas) {
+      expect(l.opts.cwd).toBe(a.rutas.tmp());
+      expect(l.opts.cwd).not.toBe(a.carpeta);
+    }
+    expect(await esVenvPropio({ rutas: a.rutas }, a.carpeta)).toBe(true);
   });
 
-  it('python-venv no rehace un .venv que ya existe', async () => {
+  it('python-venv no rehace un .venv propio que ya existe', async () => {
     const a = await armar({ sitio: { tipo: 'fastapi' } });
-    await escribir(a.carpeta, '.venv/Scripts/python.exe', '');
+    await propio(a);
     const lineas = await correr(a, 'python-venv');
     expect(a.llamadas).toHaveLength(0);
     expect(lineas.join('\n')).toMatch(/\.venv/);
   });
 
+  it('un .venv que viene del repositorio no se ejecuta nunca (ni venv ni pip)', async () => {
+    const a = await armar({ sitio: { tipo: 'fastapi' } });
+    await escribir(a.carpeta, '.venv/Scripts/python.exe', 'ejecutable del repo');
+    await escribir(a.carpeta, 'requirements.txt', 'fastapi\n');
+    await expect(correr(a, 'python-venv')).rejects.toMatchObject({
+      codigo: 'proyectos.venv_ajeno',
+    });
+    await expect(correr(a, 'pip-install')).rejects.toMatchObject({
+      codigo: 'proyectos.venv_ajeno',
+    });
+    expect(a.llamadas).toHaveLength(0);
+    // Un .venv sin python (carpeta suelta con un ensurepip.py) tampoco se acepta.
+    const b = await armar({ sitio: { tipo: 'fastapi' } });
+    await escribir(b.carpeta, '.venv/ensurepip.py', 'import os');
+    await expect(correr(b, 'python-venv')).rejects.toMatchObject({
+      codigo: 'proyectos.venv_ajeno',
+    });
+    expect(b.llamadas).toHaveLength(0);
+  });
+
   it('pip -r requirements.txt con el Scripts del venv antes que el Python del runtime', async () => {
     const a = await armar({ sitio: { tipo: 'fastapi' } });
     await escribir(a.carpeta, 'requirements.txt', 'fastapi\n');
-    await escribir(a.carpeta, '.venv/Scripts/python.exe', '');
+    await propio(a);
     await correr(a, 'pip-install');
     const l = a.llamadas[0]!;
     expect([l.cmd, ...l.args]).toEqual([
       join(a.carpeta, '.venv', 'Scripts', 'python.exe'),
       '-I',
+      '-X',
+      'utf8',
       '-m',
       'pip',
       'install',
@@ -696,20 +735,17 @@ describe('python-venv y pip-install', () => {
   it('pip -e . si solo hay pyproject', async () => {
     const a = await armar({ sitio: { tipo: 'fastapi' } });
     await escribir(a.carpeta, 'pyproject.toml', '[project]\nname="x"\n');
-    await escribir(a.carpeta, '.venv/Scripts/python.exe', '');
+    await propio(a);
     await correr(a, 'pip-install');
-    expect(a.llamadas[0]!.args).toEqual(['-I', '-m', 'pip', 'install', '-e', '.']);
+    expect(a.llamadas[0]!.args).toEqual(['-I', '-X', 'utf8', '-m', 'pip', 'install', '-e', '.']);
   });
 
-  it('python-venv y pip-install lanzan Python en modo aislado (-I): un pip.py o venv.py del proyecto no se importa', async () => {
+  it('un requirements.txt con acentos se lee como UTF-8 (-X utf8) y no rompe la revisión', async () => {
     const a = await armar({ sitio: { tipo: 'fastapi' } });
-    await correr(a, 'python-venv');
-    const b = await armar({ sitio: { tipo: 'fastapi' } });
-    await escribir(b.carpeta, 'requirements.txt', 'fastapi\n');
-    await escribir(b.carpeta, '.venv/Scripts/python.exe', '');
-    await correr(b, 'pip-install');
-    for (const l of [...a.llamadas, ...b.llamadas])
-      expect(l.args.slice(0, 2)).toEqual(['-I', '-m']);
+    await escribir(a.carpeta, 'requirements.txt', '# Árbol de dependencias: Á é ñ\nfastapi\n');
+    await propio(a);
+    await correr(a, 'pip-install', { sinScripts: true });
+    expect(a.llamadas[0]!.args.slice(0, 3)).toEqual(['-I', '-X', 'utf8']);
   });
 
   it('pip-install sin .venv pide crear el entorno', async () => {
@@ -2014,6 +2050,7 @@ describe('plantilla importada: sin scripts de terceros', () => {
   it('pip solo con ruedas y un requirements.txt simple; pyproject.toml y opciones se rechazan', async () => {
     const a = await armar();
     await escribir(a.carpeta, join('.venv', 'Scripts', 'python.exe'), '');
+    await registrarVenvPropio({ rutas: a.rutas }, a.carpeta);
     await escribir(a.carpeta, 'requirements.txt', 'fastapi==0.115.0\n');
     await correr(a, 'pip-install', { sinScripts: true });
     expect(a.llamadas[0]!.args).toEqual(

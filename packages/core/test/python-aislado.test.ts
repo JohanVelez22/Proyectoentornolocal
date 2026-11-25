@@ -52,4 +52,37 @@ describe.skipIf(python === null)('python -I con un proyecto hostil', () => {
     expect(p.status === 0 || p.status === 1).toBe(true);
     expect(existsSync(centinela)).toBe(false);
   });
+
+  it('el flujo de python-venv (venv sin pip + ensurepip desde fuera, pip con -I -X utf8) no importa nada del proyecto', async () => {
+    const { carpeta, centinela } = await proyecto();
+    const codigo = `open(${JSON.stringify(centinela)}, 'w').write('ejecutado')
+`;
+    await writeFile(join(carpeta, 'ensurepip.py'), codigo);
+    await writeFile(join(carpeta, 'requirements.txt'), '# Árbol de dependencias: Á é ñ\n');
+    const fuera = await carpetaTemporal('pel-py-fuera-');
+    const venv = join(carpeta, '.venv');
+    const aislado = ['-I', '-X', 'utf8'];
+    const a = spawnSync(python!, [...aislado, '-m', 'venv', '--without-pip', venv], {
+      cwd: fuera,
+      windowsHide: true,
+      encoding: 'utf8',
+    });
+    expect(a.status, a.stderr).toBe(0);
+    const exe = existsSync(join(venv, 'Scripts', 'python.exe'))
+      ? join(venv, 'Scripts', 'python.exe')
+      : join(venv, 'bin', 'python');
+    const b = spawnSync(exe, [...aislado, '-m', 'ensurepip', '--default-pip'], {
+      cwd: fuera,
+      windowsHide: true,
+      encoding: 'utf8',
+    });
+    expect(b.status, b.stderr).toBe(0);
+    const c = spawnSync(exe, [...aislado, '-m', 'pip', 'install', '-r', 'requirements.txt'], {
+      cwd: carpeta,
+      windowsHide: true,
+      encoding: 'utf8',
+    });
+    expect(c.stderr).not.toMatch(/UnicodeDecodeError/);
+    expect(existsSync(centinela)).toBe(false);
+  }, 120_000);
 });

@@ -280,6 +280,8 @@ export const en: Textos = {
       'proyectos.carpeta_de_otro_sitio':
         'That folder is the one of project {dominio} or is inside it: choose another one.',
       'proyectos.sin_python': 'No Python is installed: install it from Services.',
+      'proyectos.venv_ajeno':
+        "The project ships its own .venv and WolfCore Dev does not run the Python from someone else's repository: delete it and create the environment again.",
       'proyectos.paso_base_no_omitible':
         'The "Create the database" step of a new project cannot be skipped.',
       'proyectos.sin_php': 'No PHP is installed: install it from Services.',

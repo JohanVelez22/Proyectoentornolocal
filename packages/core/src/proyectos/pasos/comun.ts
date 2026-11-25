@@ -332,11 +332,13 @@ export async function lanzar(
   cmd: string,
   args: string[],
   descripcion: string,
+  /** Carpeta de trabajo (por omisión la del proyecto). */
+  cwd: string = ctx.carpeta,
 ): Promise<void> {
   comprobarSenal(ctx);
   ctx.linea(sanear(`> ${descripcion}`));
   const r = await d.lanzar(cmd, args, {
-    cwd: ctx.carpeta,
+    cwd,
     env: h.env,
     senal: ctx.senal,
     alLinea: (l) => ctx.linea(sanear(l)),

@@ -1,25 +1,90 @@
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { ErrorWolf } from '../../errores';
 import { existe } from '../archivos';
 import type { ImplementacionPaso } from '../pasos';
 import { herramientas, lanzar, pythonExe, pythonVenv, type DepsPasos } from './comun';
 
-/** `python -m venv .venv` con el Python del proyecto; si el .venv ya existe, no hace nada. */
+/* ───────────── Entornos virtuales propios ───────────── */
+
+/**
+ * Los `.venv` que creó WolfCore Dev, anotados fuera del proyecto (en la carpeta de datos). Un
+ * `.venv` que viene en un repositorio ajeno trae su propio `python`: ejecutarlo es ejecutar el
+ * código del repositorio, así que solo se usan los que están aquí.
+ */
+const rutaRegistro = (d: Pick<DepsPasos, 'rutas'>): string =>
+  path.join(d.rutas.base, 'etc', 'venvs-propios.json');
+const claveVenv = (carpeta: string): string =>
+  path.resolve(carpeta).replace(/\\/g, '/').toLowerCase();
+
+async function leerRegistro(d: Pick<DepsPasos, 'rutas'>): Promise<string[]> {
+  try {
+    const j: unknown = JSON.parse(await readFile(rutaRegistro(d), 'utf8'));
+    return Array.isArray(j) ? j.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function esVenvPropio(d: Pick<DepsPasos, 'rutas'>, carpeta: string): Promise<boolean> {
+  return (await leerRegistro(d)).includes(claveVenv(carpeta));
+}
+
+export async function registrarVenvPropio(
+  d: Pick<DepsPasos, 'rutas'>,
+  carpeta: string,
+): Promise<void> {
+  const lista = new Set(await leerRegistro(d));
+  lista.add(claveVenv(carpeta));
+  await mkdir(path.dirname(rutaRegistro(d)), { recursive: true });
+  await writeFile(rutaRegistro(d), JSON.stringify([...lista].sort(), null, 2), 'utf8');
+}
+
+const venvAjeno = (): ErrorWolf =>
+  new ErrorWolf(
+    'proyectos.venv_ajeno',
+    'El proyecto trae su propio .venv y WolfCore Dev no ejecuta el Python de un repositorio. Bórrelo y vuelva a crear el entorno.',
+  );
+
+/** Opciones de Python para código ajeno: aislado (-I) y UTF-8 (requirements con acentos). */
+const AISLADO = ['-I', '-X', 'utf8'];
+
+/**
+ * Crea `.venv` con el Python del proyecto, desde fuera de la carpeta del proyecto y sin pip
+ * (`--without-pip`); luego instala pip con `ensurepip`, también desde fuera. Un `venv.py`, un
+ * `ensurepip.py` o un `pip.py` en el proyecto no se importan. Si el `.venv` ya existe: uno propio
+ * no se toca; uno que no creó WolfCore Dev se rechaza (`proyectos.venv_ajeno`).
+ */
 export function pasoPythonVenv(d: DepsPasos): ImplementacionPaso {
   return async (ctx) => {
-    if (await existe(pythonVenv(ctx.carpeta))) {
+    const venv = path.join(ctx.carpeta, '.venv');
+    if (await existe(venv)) {
+      if (!(await esVenvPropio(d, ctx.carpeta))) throw venvAjeno();
       ctx.linea('El entorno virtual .venv ya existe; no se modificó.');
       return;
     }
     const h = await herramientas(ctx, d);
+    const fuera = d.rutas.tmp();
+    await mkdir(fuera, { recursive: true });
     await lanzar(
       ctx,
       d,
       h,
       pythonExe(d, h),
-      ['-I', '-m', 'venv', '.venv'],
-      'python -I -m venv .venv',
+      [...AISLADO, '-m', 'venv', '--without-pip', venv],
+      'python -I -X utf8 -m venv --without-pip .venv',
+      fuera,
     );
+    await lanzar(
+      ctx,
+      d,
+      h,
+      pythonVenv(ctx.carpeta),
+      [...AISLADO, '-m', 'ensurepip', '--default-pip'],
+      'python -I -X utf8 -m ensurepip',
+      fuera,
+    );
+    await registrarVenvPropio(d, ctx.carpeta);
   };
 }
 
@@ -50,6 +115,10 @@ export async function revisarRequirements(archivo: string): Promise<void> {
 export function pasoPipInstall(d: DepsPasos): ImplementacionPaso {
   return async (ctx) => {
     const py = pythonVenv(ctx.carpeta);
+    // Solo el .venv que creó WolfCore Dev: el de un repositorio ajeno trae su propio python.
+    if ((await existe(path.join(ctx.carpeta, '.venv'))) && !(await esVenvPropio(d, ctx.carpeta))) {
+      throw venvAjeno();
+    }
     if (!(await existe(py))) {
       throw new Error('Falta el entorno virtual .venv: ejecute antes "Crear el entorno virtual".');
     }
@@ -76,10 +145,19 @@ export function pasoPipInstall(d: DepsPasos): ImplementacionPaso {
       d,
       h,
       py,
-      ['-I', '-m', 'pip', 'install', ...(sinScripts ? ['--only-binary=:all:'] : []), ...destino],
-      ['python -I -m pip install', ...(sinScripts ? ['--only-binary=:all:'] : []), ...destino].join(
-        ' ',
-      ),
+      [
+        ...AISLADO,
+        '-m',
+        'pip',
+        'install',
+        ...(sinScripts ? ['--only-binary=:all:'] : []),
+        ...destino,
+      ],
+      [
+        'python -I -X utf8 -m pip install',
+        ...(sinScripts ? ['--only-binary=:all:'] : []),
+        ...destino,
+      ].join(' '),
     );
   };
 }
