@@ -6,6 +6,7 @@ import {
   CreateOutline,
   DocumentText,
   EllipsisHorizontal,
+  KeyOutline,
   FolderOpen,
   LockClosed,
   Open,
@@ -70,6 +71,8 @@ const emit = defineEmits<{
   revisarReceta: [sitio: Sitio];
   verRegistros: [sitio: Sitio];
   guardarPlantilla: [sitio: Sitio];
+  /** Abrir el gestor de variables del .env. */
+  verEnv: [sitio: Sitio];
 }>();
 
 const t = textos.sitios;
@@ -100,6 +103,7 @@ const opciones: DropdownOption[] = [
   { key: 'duplicar', label: textos.acciones.duplicar, icon: icono(CopyOutline) },
   { key: 'registros', label: tp.tarjeta.verRegistros, icon: icono(DocumentText) },
   // Receta, ajustes y esquema de la base sin datos (nunca .env ni claves).
+  { key: 'env', label: textos.env.accion, icon: icono(KeyOutline) },
   { key: 'plantilla', label: textos.plantillas.guardarComo, icon: icono(Albums) },
   // Lleva a Agentes con el proyecto elegido: el agente se abre allí, con su diálogo.
   { key: 'agente', label: tp.tarjeta.abrirAgente, icon: icono(Chatbubbles) },
@@ -116,6 +120,7 @@ function elegir(clave: string | number): void {
   if (clave === 'editar') emit('editar', props.sitio);
   else if (clave === 'duplicar') emit('duplicar', props.sitio);
   else if (clave === 'registros') emit('verRegistros', props.sitio);
+  else if (clave === 'env') emit('verEnv', props.sitio);
   else if (clave === 'plantilla') emit('guardarPlantilla', props.sitio);
   else if (clave === 'agente')
     void router.push({ name: 'agentes', query: { sitio: props.sitio.id } });

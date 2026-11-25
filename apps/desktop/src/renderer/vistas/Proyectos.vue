@@ -12,6 +12,7 @@ import FormSitio from '../componentes/FormSitio.vue';
 import RegistrosProyecto from '../componentes/RegistrosProyecto.vue';
 import SugerenciasProyectos from '../componentes/SugerenciasProyectos.vue';
 import DialogoGuardarPlantilla from '../componentes/DialogoGuardarPlantilla.vue';
+import EditorEnv from '../componentes/EditorEnv.vue';
 import TarjetaProyecto from '../componentes/TarjetaProyecto.vue';
 import { useAccion } from '../composables/useAccion';
 import { useFoco } from '../composables/useFoco';
@@ -54,6 +55,8 @@ const asistente = ref<ObjetivoAsistente | null>(null);
 const registros = ref<Sitio | null>(null);
 /** Proyecto que se guarda como plantilla (null: el diálogo está cerrado). */
 const plantillaDe = ref<Sitio | null>(null);
+/** Proyecto cuyo .env se está viendo (null: el gestor está cerrado). */
+const envDe = ref<Sitio | null>(null);
 
 const ordenados = computed(() => ordenarSitios(sitios.lista));
 const conBuscador = computed(() => sitios.lista.length > UMBRAL_BUSCADOR);
@@ -210,6 +213,7 @@ onMounted(() => {
             @revisar-receta="revisarReceta"
             @ver-registros="(x: Sitio) => (registros = x)"
             @guardar-plantilla="(x: Sitio) => (plantillaDe = x)"
+            @ver-env="(x: Sitio) => (envDe = x)"
           />
         </TransitionGroup>
         <p v-if="!visibles.length" class="sin-resultados">{{ t.sinResultados(busqueda.trim()) }}</p>
@@ -226,6 +230,7 @@ onMounted(() => {
     <AsistenteNuevoProyecto :show="creandoProyecto" @cerrar="creandoProyecto = false" />
     <AsistenteImportar :show="importando" @cerrar="importando = false" />
     <DialogoGuardarPlantilla :sitio="plantillaDe" @cerrar="plantillaDe = null" />
+    <EditorEnv :sitio="envDe" @cerrar="envDe = null" />
     <AsistenteReceta :objetivo="asistente" @cerrar="asistente = null" @aplicado="alAplicar" />
     <RegistrosProyecto :sitio="registros" @cerrar="registros = null" />
   </div>
