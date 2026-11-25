@@ -19,6 +19,9 @@ const BANNER = [
   '2026-11-17T10:00:02Z INF |  https://lucky-words-here.trycloudflare.com  |',
 ].join('\n');
 
+/** Toda apertura exige la confirmación del usuario. */
+const SI = { confirmado: true };
+
 let base: string;
 let carpeta: string;
 let rutas: Rutas;
@@ -143,29 +146,43 @@ beforeEach(() => {
 afterEach(() => rmSync(base, { recursive: true, force: true }));
 
 describe('Tuneles.abrir', () => {
-  it('un sitio con datos reales no se publica sin confirmación (abrir ni renovar)', async () => {
-    sitios = [sitio({ datosReales: true })];
+  it.each([false, true])(
+    'ningún sitio se publica sin confirmación (abrir ni renovar), con datos reales=%s',
+    async (datosReales) => {
+      sitios = [sitio({ datosReales })];
+      const t = crear();
+      for (const o of [undefined, {}, { confirmado: false }]) {
+        await expect(t.abrir('wolf', o)).rejects.toMatchObject({
+          codigo: 'tuneles.confirmacion_requerida',
+        });
+        await expect(t.renovar('wolf', o)).rejects.toMatchObject({
+          codigo: 'tuneles.confirmacion_requerida',
+        });
+      }
+      expect(iniciados).toEqual([]);
+      await expect(t.abrir('wolf', SI)).resolves.toMatchObject({ estado: 'activo' });
+      // Renovar sin confirmar tampoco cierra el que ya está abierto.
+      await expect(t.renovar('wolf')).rejects.toMatchObject({
+        codigo: 'tuneles.confirmacion_requerida',
+      });
+      expect(detenidos).toEqual([]);
+    },
+  );
+
+  it('si el túnel confirmado ya no es el del sitio (MCP), no se abre', async () => {
     const t = crear();
-    await expect(t.abrir('wolf')).rejects.toMatchObject({
-      codigo: 'tuneles.confirmacion_requerida',
-    });
-    await expect(t.renovar('wolf')).rejects.toMatchObject({
-      codigo: 'tuneles.confirmacion_requerida',
-    });
+    await expect(
+      t.abrir('wolf', { confirmado: true, tunelConfirmado: { proveedor: 'cloudflare-nombre' } }),
+    ).rejects.toMatchObject({ codigo: 'tuneles.confirmacion_obsoleta' });
     expect(iniciados).toEqual([]);
-    await expect(t.abrir('wolf', { confirmado: true })).resolves.toMatchObject({
-      estado: 'activo',
-    });
-    // Renovar sin confirmar tampoco cierra el que ya está abierto.
-    await expect(t.renovar('wolf')).rejects.toMatchObject({
-      codigo: 'tuneles.confirmacion_requerida',
-    });
-    expect(detenidos).toEqual([]);
+    await expect(
+      t.abrir('wolf', { confirmado: true, tunelConfirmado: { proveedor: 'cloudflare-rapido' } }),
+    ).resolves.toMatchObject({ estado: 'activo' });
   });
 
   it('lanza cloudflared con los argumentos exactos y devuelve la URL', async () => {
     const t = crear();
-    const e = await t.abrir('wolf');
+    const e = await t.abrir('wolf', SI);
     expect(e).toMatchObject({
       sitioId: 'wolf',
       estado: 'activo',
@@ -193,7 +210,7 @@ describe('Tuneles.abrir', () => {
 
   it('también lee la URL del log de salida del supervisor (stderr)', async () => {
     destino = 'salida';
-    const e = await crear().abrir('wolf');
+    const e = await crear().abrir('wolf', SI);
     expect(e.url).toBe('https://lucky-words-here.trycloudflare.com');
   });
 
@@ -204,7 +221,7 @@ describe('Tuneles.abrir', () => {
       '|  https://viejo-viejo.trycloudflare.com  |',
     );
     escribirBanner = false;
-    const e = await crear({ esperaMs: 80, intervaloMs: 10 }).abrir('wolf');
+    const e = await crear({ esperaMs: 80, intervaloMs: 10 }).abrir('wolf', SI);
     expect(e.estado).toBe('error');
     expect(e.url).toBeNull();
   });
@@ -213,7 +230,7 @@ describe('Tuneles.abrir', () => {
     escribirBanner = false;
     writeFileSync(env(), 'APP_URL=http://wolf.test\n');
     const t = crear({ esperaMs: 80, intervaloMs: 10 });
-    const e = await t.abrir('wolf');
+    const e = await t.abrir('wolf', SI);
     expect(e.estado).toBe('error');
     expect(e.mensaje).toBeTruthy();
     expect(detenidos).toContain('tunel-wolf');
@@ -222,12 +239,12 @@ describe('Tuneles.abrir', () => {
   });
 
   it('sitio inexistente', async () => {
-    await expect(crear().abrir('nada')).rejects.toThrow('Sitio no encontrado');
+    await expect(crear().abrir('nada', SI)).rejects.toThrow('Sitio no encontrado');
   });
 
   it('cloudflared no instalado', async () => {
     instalados = [];
-    await expect(crear().abrir('wolf')).rejects.toThrow(
+    await expect(crear().abrir('wolf', SI)).rejects.toThrow(
       'cloudflared no está instalado. Instálelo desde Servicios.',
     );
   });
@@ -235,21 +252,21 @@ describe('Tuneles.abrir', () => {
   it('si el supervisor no puede iniciar, estado error y se propaga', async () => {
     fallaIniciar = true;
     const t = crear();
-    await expect(t.abrir('wolf')).rejects.toThrow('No se pudo iniciar');
+    await expect(t.abrir('wolf', SI)).rejects.toThrow('No se pudo iniciar');
     expect(t.estados()[0]!.estado).toBe('error');
   });
 
   it('abrir dos veces no duplica el proceso', async () => {
     const t = crear();
-    await t.abrir('wolf');
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
+    await t.abrir('wolf', SI);
     expect(iniciados).toHaveLength(1);
   });
 
   it('el proceso muere mientras se espera la URL: error enseguida', async () => {
     escribirBanner = false;
     const t = crear({ esperaMs: 5000, intervaloMs: 10 });
-    const p = t.abrir('wolf');
+    const p = t.abrir('wolf', SI);
     await vi.waitFor(() => expect(iniciados).toHaveLength(1));
     estados.set('tunel-wolf', 'error');
     salidas.forEach((f) => f('tunel-wolf', 1));
@@ -264,7 +281,7 @@ describe('Tuneles y URL base (Review Focus 5)', () => {
     const original = 'APP_NAME=Wolf\r\nAPP_KEY=abc\r\n';
     writeFileSync(env(), original);
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     expect(readFileSync(env(), 'utf8')).toBe(
       `${original}APP_URL=https://lucky-words-here.trycloudflare.com/\r\n`,
     );
@@ -279,7 +296,7 @@ describe('Tuneles y URL base (Review Focus 5)', () => {
     const original = 'APP_URL="http://wolf.test"\nB=2';
     writeFileSync(env(), original);
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     expect(readFileSync(env(), 'utf8')).toContain(
       'APP_URL="https://lucky-words-here.trycloudflare.com/"',
     );
@@ -291,14 +308,14 @@ describe('Tuneles y URL base (Review Focus 5)', () => {
     sitios = [sitio({ urlBaseVar: null })];
     writeFileSync(env(), 'A=1\n');
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     expect(readFileSync(env(), 'utf8')).toBe('A=1\n');
     expect(existsSync(path.join(carpeta, '.env.pel-respaldo'))).toBe(false);
   });
 
   it('fallo de urlBase no mata el túnel: queda activo con mensaje', async () => {
     const t = crear();
-    const e = await t.abrir('wolf'); // sin .env
+    const e = await t.abrir('wolf', SI); // sin .env
     expect(e.estado).toBe('activo');
     expect(e.mensaje).toBe('El sitio no tiene .env');
   });
@@ -309,7 +326,7 @@ describe('Tuneles cierre inesperado, renovar y restauración', () => {
     const original = 'A=1\n';
     writeFileSync(env(), original);
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     estados.set('tunel-wolf', 'error');
     salidas.forEach((f) => f('tunel-wolf', 1));
     await vi.waitFor(() => expect(readFileSync(env(), 'utf8')).toBe(original));
@@ -321,15 +338,15 @@ describe('Tuneles cierre inesperado, renovar y restauración', () => {
 
   it('ignora salidas de procesos que no son túneles', async () => {
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     salidas.forEach((f) => f('nginx', 1));
     expect(t.estados()[0]!.estado).toBe('activo');
   });
 
   it('renovar cierra y abre de nuevo', async () => {
     const t = crear();
-    await t.abrir('wolf');
-    const e = await t.renovar('wolf');
+    await t.abrir('wolf', SI);
+    const e = await t.renovar('wolf', SI);
     expect(e.estado).toBe('activo');
     expect(iniciados).toHaveLength(2);
     expect(detenidos).toEqual(['tunel-wolf']);
@@ -337,7 +354,7 @@ describe('Tuneles cierre inesperado, renovar y restauración', () => {
 
   it('persiste en run/tuneles.json y restaura tras reiniciar la app', async () => {
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     const guardado = JSON.parse(readFileSync(path.join(rutas.base, 'run', 'tuneles.json'), 'utf8'));
     expect(guardado).toEqual([
       { sitioId: 'wolf', url: 'https://lucky-words-here.trycloudflare.com', pid: 4242 },
@@ -361,7 +378,7 @@ describe('Tuneles cierre inesperado, renovar y restauración', () => {
     const original = 'A=1\n';
     writeFileSync(env(), original);
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     estados.clear();
     pids.clear();
     const t2 = crear();
@@ -391,7 +408,7 @@ describe('Tuneles carreras y barrido (fix ronda 1)', () => {
       restaurar: (s) => ub.restaurar(s),
       restaurarPorId: (id) => ub.restaurarPorId(id),
     }));
-    const abrir = t.abrir('wolf');
+    const abrir = t.abrir('wolf', SI);
     await dentro;
     await t.cerrar('wolf');
     soltar();
@@ -414,11 +431,11 @@ describe('Tuneles carreras y barrido (fix ronda 1)', () => {
   it('cerrar() durante un abrir() en curso: el siguiente abrir() empieza de cero', async () => {
     escribirBanner = false;
     const t = crear({ esperaMs: 2000, intervaloMs: 10 });
-    const primero = t.abrir('wolf');
+    const primero = t.abrir('wolf', SI);
     await vi.waitFor(() => expect(iniciados).toHaveLength(1));
     await t.cerrar('wolf');
     escribirBanner = true;
-    const e = await t.abrir('wolf');
+    const e = await t.abrir('wolf', SI);
     expect(e.estado).toBe('activo');
     expect(iniciados).toHaveLength(2);
     expect((await primero).estado).toBe('apagado');
@@ -427,7 +444,7 @@ describe('Tuneles carreras y barrido (fix ronda 1)', () => {
   it('no se puede limpiar el log anterior: estado error con mensaje, sin lanzar', async () => {
     const log = rutas.logs('tuneles', 'tunel-wolf.log');
     mkdirSync(path.join(log, 'dentro'), { recursive: true });
-    const e = await crear().abrir('wolf');
+    const e = await crear().abrir('wolf', SI);
     expect(e.estado).toBe('error');
     expect(e.mensaje).toContain('log anterior');
     expect(iniciados).toHaveLength(0);
@@ -440,7 +457,7 @@ describe('Tuneles guardas de generación (fix ronda 2)', () => {
     gateIniciar = new Promise<void>((r) => (soltar = r));
     detenerAlSoltar = true;
     const t = crear({ esperaMs: 300, intervaloMs: 10 });
-    const abrir = t.abrir('wolf');
+    const abrir = t.abrir('wolf', SI);
     await vi.waitFor(() => expect(entradasIniciar).toBe(1));
     await t.cerrar('wolf');
     soltar();
@@ -454,7 +471,7 @@ describe('Tuneles guardas de generación (fix ronda 2)', () => {
     let soltar!: () => void;
     gateIniciar = new Promise<void>((r) => (soltar = r));
     const t = crear({ esperaMs: 300, intervaloMs: 10 });
-    const abrir = t.abrir('wolf');
+    const abrir = t.abrir('wolf', SI);
     await vi.waitFor(() => expect(entradasIniciar).toBe(1));
     await t.cerrar('wolf');
     soltar();
@@ -468,11 +485,11 @@ describe('Tuneles guardas de generación (fix ronda 2)', () => {
 
   it('abrir() espera a que termine un cerrar() en curso del mismo sitio', async () => {
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     let soltar!: () => void;
     gateDetener = new Promise<void>((r) => (soltar = r));
     const cerrar = t.cerrar('wolf');
-    const nuevo = t.abrir('wolf');
+    const nuevo = t.abrir('wolf', SI);
     await vi.waitFor(() => expect(entradasDetener).toBe(1));
     // Unas vueltas del bucle de eventos: el abrir() sigue esperando al cierre.
     for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
@@ -510,7 +527,7 @@ describe('Tuneles huérfanos y cierre total (ola final)', () => {
 
   it('restaurar() detiene un túnel readoptado cuyo PID no coincide con el registro', async () => {
     const t0 = crear();
-    await t0.abrir('wolf');
+    await t0.abrir('wolf', SI);
     pids.set('tunel-wolf', 555);
     const t = crear();
     await t.restaurar();
@@ -522,7 +539,7 @@ describe('Tuneles huérfanos y cierre total (ola final)', () => {
     const original = 'A=1\n';
     writeFileSync(env(), original);
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     let envAlDetener: string | null = null;
     alDetener = () => {
       envAlDetener = readFileSync(env(), 'utf8');

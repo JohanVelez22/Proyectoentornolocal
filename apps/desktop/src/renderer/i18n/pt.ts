@@ -168,7 +168,9 @@ export const pt: Textos = {
       'bd.mongosh_faltante': 'Falta o mongosh: instale-o em Serviços para administrar o MongoDB.',
       'tuneles.sitio_no_encontrado': 'O projeto não foi encontrado.',
       'tuneles.confirmacion_requerida':
-        '{dominio} tem dados reais: confirme a publicação no WolfCore Dev.',
+        'Publicar {dominio} na internet exige confirmação no WolfCore Dev.',
+      'tuneles.confirmacion_obsoleta':
+        'O túnel de {dominio} mudou depois de confirmado: confirme de novo.',
       'tuneles.cloudflared_no_instalado':
         'O cloudflared não está instalado. Instale-o em Serviços.',
       'tuneles.proveedor_no_disponible': 'O provedor de túnel {proveedor} não está disponível.',

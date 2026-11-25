@@ -36,6 +36,9 @@ const CREDENCIAL = JSON.stringify({
   TunnelID: UUID,
 });
 
+/** Toda apertura exige la confirmación del usuario. */
+const SI = { confirmado: true };
+
 let base: string;
 let carpeta: string;
 let rutas: Rutas;
@@ -241,7 +244,7 @@ afterEach(() => rmSync(base, { recursive: true, force: true }));
 describe('Cloudflare con nombre: abrir', () => {
   it('genera el config.yml con el dominio y el puerto, y lanza cloudflared con la ruta del config', async () => {
     const t = crear();
-    const e = await t.abrir('wolf');
+    const e = await t.abrir('wolf', SI);
     expect(e).toMatchObject({ estado: 'activo', url: 'https://demo.midominio.com' });
     const d = iniciados[0]!;
     const cfg = path.join(rutas.cloudflaredEtc(), 'wolf.yml');
@@ -264,13 +267,13 @@ describe('Cloudflare con nombre: abrir', () => {
   });
 
   it('el túnel se lanza sin heredar TUNNEL_* del usuario', async () => {
-    await crear().abrir('wolf');
+    await crear().abrir('wolf', SI);
     expect(iniciados[0]!.quitarEntorno).toEqual(['TUNNEL_']);
   });
 
   it('la credencial viaja solo en envSecreto: ni en args, ni en env, ni en el config.yml, ni en archivos', async () => {
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     const d = iniciados[0]!;
     expect(d.envSecreto).toEqual({ TUNNEL_CRED_CONTENTS: CREDENCIAL });
     expect(JSON.stringify(d.args)).not.toContain(CENTINELA);
@@ -284,7 +287,7 @@ describe('Cloudflare con nombre: abrir', () => {
 
   it('nada del núcleo guarda la credencial en disco (config, logs, registro) fuera del almacén', async () => {
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     await t.cerrar('wolf');
     for (const f of archivos(base)) {
       expect(readFileSync(f, 'latin1'), f).not.toContain(CENTINELA);
@@ -293,7 +296,7 @@ describe('Cloudflare con nombre: abrir', () => {
 
   it('cerrar restaura el .env y no deja ningún archivo de credencial', async () => {
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     expect(readFileSync(env(), 'utf8')).toContain('APP_URL=https://demo.midominio.com/');
     await t.cerrar('wolf');
     expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
@@ -303,7 +306,7 @@ describe('Cloudflare con nombre: abrir', () => {
   it('si el túnel nunca conecta, no deja la credencial y el .env vuelve', async () => {
     bannerEnLog = 'INF Starting tunnel';
     const t = crear({ esperaMs: 60, intervaloMs: 10 });
-    const e = await t.abrir('wolf');
+    const e = await t.abrir('wolf', SI);
     expect(e.estado).toBe('error');
     expect(existsSync(rutas.cloudflaredRun())).toBe(false);
     expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
@@ -311,7 +314,7 @@ describe('Cloudflare con nombre: abrir', () => {
 
   it('si cloudflared muere, se limpia y el .env vuelve', async () => {
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     estados.delete('tunel-wolf');
     for (const f of salidas) f('tunel-wolf', 1);
     for (let i = 0; i < 100 && readFileSync(env(), 'utf8') !== ENV_ORIGINAL; i++) {
@@ -323,7 +326,7 @@ describe('Cloudflare con nombre: abrir', () => {
 
   it('tras matar la app a mano: al arrancar restaura el .env', async () => {
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     // Simula la caída: el proceso ya no existe.
     estados.clear();
     pids.clear();
@@ -336,7 +339,7 @@ describe('Cloudflare con nombre: abrir', () => {
   it('el log de cloudflared pasa por enmascararSecretos al cerrar y al mostrarlo', async () => {
     bannerEnLog = `${BANNER}\nERR TUNNEL_TOKEN=abc123token y ${CENTINELA} con sk-prueba-falsa-0000`;
     const t = crear();
-    await t.abrir('wolf');
+    await t.abrir('wolf', SI);
     const visto = t.log('wolf');
     expect(visto).not.toContain(CENTINELA);
     expect(visto).not.toContain('abc123token');
@@ -350,22 +353,54 @@ describe('Cloudflare con nombre: abrir', () => {
 });
 
 describe('Cloudflare con nombre: seguridad de la apertura', () => {
-  it('un sitio con datos reales no se abre sin confirmación: no lee secretos ni escribe nada', async () => {
-    sitios = [sitio({ datosReales: true })];
+  it.each([false, true])(
+    'sin confirmación no se abre (datos reales=%s): no lee secretos ni escribe nada',
+    async (datosReales) => {
+      sitios = [sitio({ datosReales })];
+      const t = crear();
+      await expect(t.abrir('wolf')).rejects.toMatchObject({
+        codigo: 'tuneles.confirmacion_requerida',
+      });
+      await expect(t.renovar('wolf', { confirmado: false })).rejects.toMatchObject({
+        codigo: 'tuneles.confirmacion_requerida',
+      });
+      expect(secretosLeidos).toBe(0);
+      expect(iniciados).toEqual([]);
+      expect(existsSync(path.join(rutas.cloudflaredEtc(), 'wolf.yml'))).toBe(false);
+      expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
+      await expect(t.abrir('wolf', SI)).resolves.toMatchObject({ estado: 'activo' });
+    },
+  );
+
+  it('el proveedor confirmado por el MCP debe ser el del sitio al abrir (sin TOCTOU)', async () => {
     const t = crear();
-    await expect(t.abrir('wolf')).rejects.toMatchObject({
-      codigo: 'tuneles.confirmacion_requerida',
-    });
-    await expect(t.renovar('wolf')).rejects.toMatchObject({
-      codigo: 'tuneles.confirmacion_requerida',
-    });
+    // Se confirmó el túnel rápido, pero el sitio ya usa el túnel con nombre.
+    await expect(
+      t.abrir('wolf', { confirmado: true, tunelConfirmado: { proveedor: 'cloudflare-rapido' } }),
+    ).rejects.toMatchObject({ codigo: 'tuneles.confirmacion_obsoleta' });
+    // Se confirmó otro dominio público.
+    await expect(
+      t.abrir('wolf', {
+        confirmado: true,
+        tunelConfirmado: {
+          proveedor: 'cloudflare-nombre',
+          nombre: 'wolf-dev',
+          dominio: 'otro.midominio.com',
+        },
+      }),
+    ).rejects.toMatchObject({ codigo: 'tuneles.confirmacion_obsoleta' });
     expect(secretosLeidos).toBe(0);
     expect(iniciados).toEqual([]);
-    expect(existsSync(path.join(rutas.cloudflaredEtc(), 'wolf.yml'))).toBe(false);
-    expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
-    await expect(t.abrir('wolf', { confirmado: true })).resolves.toMatchObject({
-      estado: 'activo',
-    });
+    await expect(
+      t.abrir('wolf', {
+        confirmado: true,
+        tunelConfirmado: {
+          proveedor: 'cloudflare-nombre',
+          nombre: 'wolf-dev',
+          dominio: 'demo.midominio.com',
+        },
+      }),
+    ).resolves.toMatchObject({ estado: 'activo' });
   });
 
   it('nombre o dominio inválidos se rechazan antes de llamar a cloudflared o al almacén', async () => {
@@ -374,7 +409,7 @@ describe('Cloudflare con nombre: seguridad de la apertura', () => {
       { proveedor: 'cloudflare-nombre', dominio: 'demo.midominio.com' },
     ]) {
       sitios = [{ ...sitio(), tunel } as Sitio];
-      await expect(crear().abrir('wolf')).rejects.toMatchObject({
+      await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
         codigo: 'tuneles.cloudflare_datos_invalidos',
       });
     }
@@ -385,18 +420,20 @@ describe('Cloudflare con nombre: seguridad de la apertura', () => {
 
   it('sin la cuenta conectada o sin cifrado, no abre y lo dice con código', async () => {
     rmSync(path.join(rutas.cloudflaredEtc(), 'cert.pem'));
-    await expect(crear().abrir('wolf')).rejects.toMatchObject({
+    await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
       codigo: 'tuneles.cloudflare_sin_cuenta',
     });
     writeFileSync(path.join(rutas.cloudflaredEtc(), 'cert.pem'), 'x');
     cifrado = false;
-    await expect(crear().abrir('wolf')).rejects.toMatchObject({ codigo: 'tuneles.sin_cifrado' });
+    await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
+      codigo: 'tuneles.sin_cifrado',
+    });
     expect(iniciados).toEqual([]);
   });
 
   it('sin credencial guardada para ese túnel no abre', async () => {
     almacenSecretos.clear();
-    await expect(crear().abrir('wolf')).rejects.toMatchObject({
+    await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
       codigo: 'tuneles.cloudflare_sin_credencial',
     });
     expect(iniciados).toEqual([]);
@@ -404,7 +441,7 @@ describe('Cloudflare con nombre: seguridad de la apertura', () => {
 
   it('un proveedor sin implementar (ngrok) no abre nada', async () => {
     sitios = [sitio({ tunel: { proveedor: 'ngrok' } })];
-    await expect(crear().abrir('wolf')).rejects.toMatchObject({
+    await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
       codigo: 'tuneles.proveedor_no_disponible',
     });
     expect(iniciados).toEqual([]);
@@ -697,7 +734,7 @@ describe('Cloudflare con nombre con el Supervisor real', () => {
     });
     process.env['TUNNEL_TOKEN'] = 'heredado-ajeno';
     try {
-      const e = await t.abrir('wolf');
+      const e = await t.abrir('wolf', SI);
       expect(e.estado).toBe('activo');
       expect(entornos[0]!['TUNNEL_CRED_CONTENTS']).toBe(CREDENCIAL);
       expect(entornos[0]!['TUNNEL_TOKEN']).toBeUndefined();

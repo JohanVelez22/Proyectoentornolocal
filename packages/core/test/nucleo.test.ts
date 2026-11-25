@@ -1279,8 +1279,8 @@ describe('Nucleo (Etapa B)', () => {
     const abrir = vi
       .spyOn(n.tuneles, 'abrir')
       .mockResolvedValue({ sitioId: 'demo', estado: 'activo', url: 'https://demo.midominio.com' });
-    await ops(n).abrirTunel('demo');
-    expect(abrir).toHaveBeenCalledWith('demo', { confirmado: true });
+    await ops(n).abrirTunel('demo', tunel);
+    expect(abrir).toHaveBeenCalledWith('demo', { confirmado: true, tunelConfirmado: tunel });
     // Volver al rápido quita el proveedor.
     await n.tuneles.elegirProveedor('demo', null);
     expect((await n.sitios.listar())[0]!.tunel).toBeUndefined();

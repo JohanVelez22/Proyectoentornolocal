@@ -53,6 +53,8 @@ const PREFIJO = 'tunel-';
 /** Cómo se pidió abrir: `confirmado` solo si el usuario confirmó publicar (interfaz o MCP). */
 export interface OpcionesAbrirTunel {
   confirmado?: boolean;
+  /** Lo que se mostró al confirmar (MCP): proveedor y, con nombre, túnel y dominio público. */
+  tunelConfirmado?: { proveedor: string; nombre?: string; dominio?: string };
 }
 const MSG_CERRADO = 'El túnel se cerró. Use Renovar.';
 
@@ -119,8 +121,8 @@ export class Tuneles {
   }
 
   /**
-   * Abre el túnel de un sitio. Un sitio con datos reales solo se publica con `confirmado` (el
-   * usuario lo confirmó en la ventana): si no, `tuneles.confirmacion_requerida`.
+   * Abre el túnel de un sitio. Solo se publica con `confirmado` (el usuario lo confirmó en la
+   * ventana): si no, `tuneles.confirmacion_requerida`.
    */
   abrir(sitioId: string, o: OpcionesAbrirTunel = {}): Promise<EstadoTunel> {
     const cierre = this.cierres.get(sitioId);
@@ -257,11 +259,30 @@ export class Tuneles {
     }
   }
 
+  /**
+   * Toda apertura de túnel expone el sitio en internet: exige `confirmado === true` (el usuario lo
+   * confirmó en la ventana, por la interfaz o por el MCP), con datos reales o sin ellos. Si la
+   * confirmación fue sobre un proveedor concreto (`tunelConfirmado`) y el sitio ya no lo usa, no
+   * se abre (lo confirmado no es lo que se publicaría).
+   */
   private exigirConfirmacion(sitio: Sitio, o: OpcionesAbrirTunel): void {
-    if (sitio.datosReales && o.confirmado !== true) {
+    if (o.confirmado !== true) {
       throw new ErrorWolf(
         'tuneles.confirmacion_requerida',
-        `${sitio.dominio} tiene datos reales: publicarlo exige confirmarlo en la ventana de WolfCore Dev.`,
+        `${sitio.dominio}: publicarlo en internet exige confirmarlo en la ventana de WolfCore Dev.`,
+        { dominio: sitio.dominio },
+      );
+    }
+    const c = o.tunelConfirmado;
+    if (
+      c &&
+      (c.proveedor !== proveedorDeSitio(sitio) ||
+        (c.nombre ?? null) !== (sitio.tunel?.nombre ?? null) ||
+        (c.dominio ?? null) !== (sitio.tunel?.dominio ?? null))
+    ) {
+      throw new ErrorWolf(
+        'tuneles.confirmacion_obsoleta',
+        `El túnel de ${sitio.dominio} cambió desde que se confirmó: confirme de nuevo.`,
         { dominio: sitio.dominio },
       );
     }

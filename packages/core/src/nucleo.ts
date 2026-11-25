@@ -2636,7 +2636,8 @@ export class Nucleo {
       borrarBase: (motor, nombre, confirmacion) => this.borrarBase(motor, nombre, confirmacion),
       carpetaRespaldos: () => this.carpetaRespaldos(),
       // Solo se llama tras la confirmación en la ventana (abrir_tunel la pide siempre).
-      abrirTunel: (sitioId) => this.tuneles.abrir(sitioId, { confirmado: true }),
+      abrirTunel: (sitioId, tunel) =>
+        this.tuneles.abrir(sitioId, { confirmado: true, tunelConfirmado: tunel }),
       cerrarTunel: (sitioId) => this.tuneles.cerrar(sitioId),
     };
   }

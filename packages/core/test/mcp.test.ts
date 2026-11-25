@@ -718,7 +718,7 @@ describe('ServidorMcp: acciones destructivas', () => {
     expect(m.ops.abrirTunel).not.toHaveBeenCalled();
     m.servidor.responderConfirmacion(sol.id, true);
     expect((await llamada).isError).toBeFalsy();
-    expect(m.ops.abrirTunel).toHaveBeenCalledWith('demo');
+    expect(m.ops.abrirTunel).toHaveBeenCalledWith('demo', { proveedor: 'cloudflare-rapido' });
   });
 
   it('abrir_tunel con Cloudflare con nombre y datos reales: la confirmación dice el dominio público y los datos reales', async () => {
@@ -754,7 +754,12 @@ describe('ServidorMcp: acciones destructivas', () => {
     expect(sol2.id).not.toBe(sol.id);
     m.servidor.responderConfirmacion(sol2.id, true);
     expect((await otra).isError).toBeFalsy();
-    expect(m.ops.abrirTunel).toHaveBeenCalledWith('demo');
+    // Lo confirmado (proveedor, túnel y dominio) se pasa al núcleo para compararlo al abrir.
+    expect(m.ops.abrirTunel).toHaveBeenCalledWith('demo', {
+      proveedor: 'cloudflare-nombre',
+      nombre: 'wolf-dev',
+      dominio: 'demo.midominio.com',
+    });
   });
 
   it('abrir_tunel rechazado no abre nada; un sitio que no existe ni pregunta', async () => {

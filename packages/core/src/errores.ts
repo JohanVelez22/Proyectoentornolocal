@@ -70,6 +70,7 @@ export const PARAMETROS_ERROR = {
   'tuneles.sitio_no_encontrado': [],
   'tuneles.cloudflared_no_instalado': [],
   'tuneles.confirmacion_requerida': ['dominio'],
+  'tuneles.confirmacion_obsoleta': ['dominio'],
   'tuneles.proveedor_no_disponible': ['proveedor'],
   'tuneles.cloudflare_sin_cuenta': [],
   'tuneles.cloudflare_sin_credencial': [],

@@ -45,7 +45,11 @@ export interface OperacionesMcp {
   borrarBase(motor: MotorBd | IdInstancia, nombre: string, confirmacion: string): Promise<unknown>;
   /** Carpeta de respaldos: lo único que `restaurar_base` puede leer. */
   carpetaRespaldos(): Promise<string>;
-  abrirTunel(sitioId: string): Promise<unknown>;
+  /** `tunel`: el proveedor que se mostró en la confirmación (el núcleo lo compara al abrir). */
+  abrirTunel(
+    sitioId: string,
+    tunel: { proveedor: string; nombre?: string; dominio?: string },
+  ): Promise<unknown>;
   cerrarTunel(sitioId: string): Promise<unknown>;
   /**
    * Prepara la receta de un proyecto para una solicitud: lo que se muestra al confirmar y
@@ -662,9 +666,12 @@ export class ServidorMcp {
   }
 
   /** Dominio y datos reales del sitio (para la confirmación de `abrir_tunel`). */
-  private async sitioParaTunel(
-    id: string,
-  ): Promise<{ dominio: string; datosReales: boolean; publico: string }> {
+  private async sitioParaTunel(id: string): Promise<{
+    dominio: string;
+    datosReales: boolean;
+    publico: string;
+    tunel: { proveedor: string; nombre?: string; dominio?: string };
+  }> {
     const lista = await this.d.operaciones.listarProyectos();
     const s = Array.isArray(lista)
       ? (lista as unknown[]).find(
@@ -685,7 +692,22 @@ export class ServidorMcp {
             tt['proveedor'] === 'tailscale'
           ? `un túnel público (${tt['proveedor']})`
           : 'un túnel público de Cloudflare';
-    return { dominio: limpiar(dominio, 200), datosReales: s['datosReales'] === true, publico };
+    // Lo confirmado queda fijado: el núcleo lo compara con el sitio al abrir (sin TOCTOU).
+    const proveedor =
+      typeof tt['proveedor'] === 'string' && tt['proveedor']
+        ? tt['proveedor']
+        : 'cloudflare-rapido';
+    const tunel = {
+      proveedor,
+      ...(typeof tt['nombre'] === 'string' ? { nombre: tt['nombre'] } : {}),
+      ...(typeof tt['dominio'] === 'string' ? { dominio: tt['dominio'] } : {}),
+    };
+    return {
+      dominio: limpiar(dominio, 200),
+      datosReales: s['datosReales'] === true,
+      publico,
+      tunel,
+    };
   }
 
   /** Ruta real del respaldo, solo si es un archivo dentro de la carpeta de respaldos. */
@@ -879,7 +901,7 @@ export class ServidorMcp {
             `Publicar ${sitio.dominio} en internet con ${sitio.publico}: cualquiera con el enlace podrá entrar mientras siga abierto.${reales}`,
             { proyecto: sitio.dominio },
             senal(extra),
-            () => ops.abrirTunel(id),
+            () => ops.abrirTunel(id, sitio.tunel),
           );
         }),
     );

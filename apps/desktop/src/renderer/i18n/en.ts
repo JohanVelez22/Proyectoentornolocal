@@ -164,7 +164,9 @@ export const en: Textos = {
       'bd.mongosh_faltante': 'mongosh is missing: install it from Services to manage MongoDB.',
       'tuneles.sitio_no_encontrado': 'The project was not found.',
       'tuneles.confirmacion_requerida':
-        '{dominio} has real data: confirm publishing it in WolfCore Dev.',
+        'Publishing {dominio} on the internet must be confirmed in WolfCore Dev.',
+      'tuneles.confirmacion_obsoleta':
+        'The tunnel for {dominio} changed after you confirmed: confirm again.',
       'tuneles.cloudflared_no_instalado': 'cloudflared is not installed. Install it from Services.',
       'tuneles.proveedor_no_disponible': 'The tunnel provider {proveedor} is not available.',
       'tuneles.cloudflare_sin_cuenta':
