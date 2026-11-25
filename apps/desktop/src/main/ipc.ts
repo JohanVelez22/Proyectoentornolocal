@@ -83,6 +83,7 @@ import {
   enteroEn,
   idCorto,
   idNoVacio,
+  idEditor,
   idTerminal,
   listaTextos,
   MAX_BYTES_RECETA,
@@ -1105,7 +1106,8 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'sistema.abrirCarpeta': async (_n, s, ruta) => s.abrirCarpeta(await carpetaExistente(ruta)),
   'sistema.copiar': (_n, s, t) => s.copiar(texto(t, 'texto')),
   'sistema.version': (_n, s) => s.version(),
-  'sistema.abrirEditor': async (n, _s, sitioId) => n.abrirEditor(await sitioExistente(n, sitioId)),
+  'sistema.abrirEditor': async (n, _s, sitioId, editor) =>
+    n.abrirEditor(await sitioExistente(n, sitioId), idEditor(editor)),
   // Solo sirve como destino (propósito 'guardar'), nunca para leer.
   'sistema.guardarArchivo': async (_n, s, nombre) =>
     s.elegidas.registrar(
@@ -1416,8 +1418,15 @@ const TABLA: Record<RutaIpc, Manejador> = {
   // ---- Visor de errores: ids, huellas y fechas; el archivo solo se abre si está en el sitio ----
   'errores.lista': (n, _s, filtro) => n.listaErrores(filtroErrores(filtro)),
   'errores.leer': (n, _s, huella) => n.leerError(huellaErrorIpc(huella)),
-  'editor.abrirEn': (n, _s, sitioId, archivo, linea) =>
-    n.abrirEnEditor(idSitioDepuracion(sitioId), archivoEditor(archivo), lineaEditor(linea)),
+  'editor.abrirEn': (n, _s, sitioId, archivo, linea, editor) =>
+    n.abrirEnEditor(
+      idSitioDepuracion(sitioId),
+      archivoEditor(archivo),
+      lineaEditor(linea),
+      idEditor(editor),
+    ),
+  'editor.disponibles': (n) => n.editores(),
+  'editor.cambiarPorDefecto': (n, _s, editor) => n.cambiarEditorPredeterminado(idEditor(editor)),
 
   // ---- Centro de avisos ----
   // ---- Contenedores (motor de la lista blanca, id validado; nunca texto libre a la CLI) ----

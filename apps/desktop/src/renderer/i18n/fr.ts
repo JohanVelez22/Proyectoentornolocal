@@ -185,8 +185,11 @@ export const fr: Textos = {
       'herramientas.proceso_propio':
         'Impossible de terminer WolfCore Dev ni le processus qui l’a lancé.',
       'herramientas.proceso_inexistente': 'Le processus {pid} n’existe plus.',
-      'herramientas.sin_vscode':
-        'Visual Studio Code est introuvable. Installez-le (code.visualstudio.com) ou ajoutez "code" au PATH.',
+      'herramientas.sin_editor':
+        'Aucun éditeur de code n’a été trouvé. Installez-en un (VS Code, Cursor, PhpStorm, Sublime Text…).',
+      'herramientas.editor_no_instalado':
+        '{nombre} n’est pas installé. Choisissez un autre éditeur dans les Paramètres.',
+      'herramientas.editor_invalido': 'Cet éditeur n’est pas valide.',
       'herramientas.carpeta_sitio_inexistente': 'Le dossier du projet n’existe pas.',
       'herramientas.ruta_no_absoluta': 'Le chemin doit être absolu.',
       'herramientas.sin_seleccion': 'Choisissez au moins un élément.',
@@ -1281,6 +1284,12 @@ export const fr: Textos = {
       terminalAyuda:
         'Celui qu’ouvre « Terminal » dans les projets. Si le projet a besoin de variables propres (son PHP dans le PATH, la clé d’un agent), avec « Windows Terminal » PowerShell s’ouvre dans le terminal par défaut de Windows : un Windows Terminal déjà ouvert ne recevrait pas ces variables.',
       terminalGuardada: 'Terminal par défaut mis à jour',
+      editor: 'Éditeur par défaut',
+      editorPrimero: 'Le premier détecté',
+      editorAyuda:
+        'Celui qu’ouvre « Éditeur » dans les projets et « Ouvrir dans l’éditeur » dans les recherches et les erreurs. VS Code, Cursor, Windsurf, PhpStorm, Sublime Text, Zed et Notepad++ sont détectés.',
+      editorGuardado: 'Éditeur par défaut mis à jour',
+      editorNinguno: 'Aucun éditeur n’a été détecté.',
     },
   },
   /* ───────────── HTTPS, terminal et FTP dans les sites ; Courrier ; IA locale ───────────── */
@@ -1323,6 +1332,16 @@ export const fr: Textos = {
     ayuda: 'Ouvre un terminal dans le dossier du projet, avec son PHP et Composer dans le PATH.',
     elegir: 'Choisir un terminal',
     predeterminada: 'par défaut',
+  },
+  editorSitio: {
+    ayuda: 'Ouvre le dossier du projet dans l’éditeur par défaut.',
+    elegir: 'Ouvrir avec…',
+    predeterminada: 'par défaut',
+    sustituido: (pred: string, usado: string) =>
+      '{pred} n’est pas installé : ouvert avec {usado}.'
+        .replace('{pred}', pred)
+        .replace('{usado}', usado),
+    error: 'Impossible d’ouvrir l’éditeur',
   },
   phpSitio: {
     etiqueta: 'PHP',
@@ -1992,9 +2011,9 @@ export const fr: Textos = {
       runtimes: 'Avis de versions',
       verRegistros: 'Voir les journaux',
       abrirAgente: 'Ouvrir un agent d’IA',
-      vscode: 'VS Code',
-      vscodeAyuda: 'Ouvrir le dossier du projet dans Visual Studio Code',
-      vscodeError: 'Impossible d’ouvrir VS Code',
+      vscode: 'Éditeur',
+      vscodeAyuda: 'Ouvrir le dossier du projet dans l’éditeur par défaut',
+      vscodeError: 'Impossible d’ouvrir l’éditeur',
       baseDatos: 'Base de données',
       baseDatosAyuda: (base: string) =>
         `Ouvrir la base « ${base} » dans Adminer (le mot de passe est demandé à l’entrée)`,

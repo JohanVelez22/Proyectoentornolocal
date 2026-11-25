@@ -625,6 +625,8 @@ describe('registrarIpc', () => {
         'sistema.guardarArchivo',
         'sistema.elegirArchivos',
         'sistema.abrirEditor',
+        'editor.disponibles',
+        'editor.cambiarPorDefecto',
         'avisos.lista',
         'avisos.marcarLeidos',
         'avisos.limpiar',
@@ -1888,7 +1890,7 @@ describe('IPC de la Etapa B', () => {
   it('sistema.abrirEditor abre la carpeta del sitio por su id (nunca una ruta)', async () => {
     const { f, llamar } = montar();
     expect((await llamar('sistema.abrirEditor', 's1')).ok).toBe(true);
-    expect(f['abrirEditor']).toHaveBeenCalledWith('s1');
+    expect(f['abrirEditor']).toHaveBeenCalledWith('s1', null);
     f['abrirEditor']!.mockRejectedValueOnce(new Error('No se encontró Visual Studio Code.'));
     expect((await llamar('sistema.abrirEditor', 's1')).error?.mensaje).toMatch(/Visual Studio/);
   });

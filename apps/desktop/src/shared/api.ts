@@ -21,6 +21,9 @@ import type {
   BaseProyecto,
   IdTerminal,
   TerminalDisponible,
+  EditorDisponible,
+  IdEditor,
+  ResultadoAbrirEditor,
   CambiosPreferenciasUi,
   PreferenciasUi,
   CierreConfirmacion,
@@ -239,6 +242,9 @@ export type {
   BaseProyecto,
   IdTerminal,
   TerminalDisponible,
+  EditorDisponible,
+  IdEditor,
+  ResultadoAbrirEditor,
   EstadoGeneral,
   EstadoHosts,
   EstadoHttps,
@@ -351,8 +357,11 @@ export interface ApiSistema {
 
 /** Accesos del sistema que pasan por el núcleo (la ruta sale de la configuración del sitio). */
 export interface ApiSistemaNucleo {
-  /** Abre la carpeta del proyecto en VS Code; error claro si no está instalado. */
-  abrirEditor(sitioId: string): Promise<void>;
+  /**
+   * Abre la carpeta del proyecto en el editor elegido o, sin él, en el predeterminado de Ajustes
+   * (si ese ya no está instalado, en el primero detectado: `sustituyo` lo dice).
+   */
+  abrirEditor(sitioId: string, editor?: IdEditor | null): Promise<ResultadoAbrirEditor>;
 }
 
 /** Lo que se puede pedir al ejecutar una receta desde la interfaz. */
@@ -956,10 +965,19 @@ export interface ApiEntorno {
   };
   editor: {
     /**
-     * Abre un archivo del sitio en VS Code en una línea. El núcleo exige que sea un archivo real
-     * dentro de la carpeta del sitio (`depuracion.archivo_fuera_del_sitio` si no).
+     * Abre un archivo del sitio en una línea con el editor elegido (o el predeterminado). El núcleo
+     * exige que sea un archivo real dentro de la carpeta del sitio
+     * (`depuracion.archivo_fuera_del_sitio` si no).
      */
-    abrirEn(sitioId: string, archivo: string, linea: number): Promise<void>;
+    abrirEn(
+      sitioId: string,
+      archivo: string,
+      linea: number,
+      editor?: IdEditor | null,
+    ): Promise<ResultadoAbrirEditor>;
+    /** Editores instalados y el predeterminado (null = el primero detectado). */
+    disponibles(): Promise<{ disponibles: EditorDisponible[]; porDefecto: IdEditor | null }>;
+    cambiarPorDefecto(editor: IdEditor | null): Promise<void>;
   };
   contenedores: {
     /** Docker y Podman: ruta, si responden, versión y si se ignoró un host remoto. */
@@ -1250,6 +1268,8 @@ export const RUTAS_IPC = [
   'errores.lista',
   'errores.leer',
   'editor.abrirEn',
+  'editor.disponibles',
+  'editor.cambiarPorDefecto',
   'contenedores.motores',
   'contenedores.lista',
   'contenedores.accion',

@@ -196,7 +196,10 @@ const api: ApiEntorno = {
     leer: (huella) => invocar('errores.leer', huella),
   },
   editor: {
-    abrirEn: (sitioId, archivo, linea) => invocar('editor.abrirEn', sitioId, archivo, linea),
+    abrirEn: (sitioId, archivo, linea, editor) =>
+      invocar('editor.abrirEn', sitioId, archivo, linea, editor ?? null),
+    disponibles: () => invocar('editor.disponibles'),
+    cambiarPorDefecto: (editor) => invocar('editor.cambiarPorDefecto', editor),
   },
   contenedores: {
     motores: () => invocar('contenedores.motores'),
@@ -233,7 +236,7 @@ const api: ApiEntorno = {
     version: () => invocar('sistema.version'),
     guardarArchivo: (nombre) => invocar('sistema.guardarArchivo', nombre),
     elegirArchivos: () => invocar('sistema.elegirArchivos'),
-    abrirEditor: (sitioId) => invocar('sistema.abrirEditor', sitioId),
+    abrirEditor: (sitioId, editor) => invocar('sistema.abrirEditor', sitioId, editor ?? null),
   },
   proyectos: {
     detectar: (carpeta) => invocar('proyectos.detectar', carpeta),

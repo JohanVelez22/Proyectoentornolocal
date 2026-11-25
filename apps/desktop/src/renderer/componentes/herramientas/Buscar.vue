@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { NAlert, NButton, NCheckbox, NInput, NRadioButton, NRadioGroup } from 'naive-ui';
+import {
+  NAlert,
+  NButton,
+  NCheckbox,
+  NInput,
+  NRadioButton,
+  NRadioGroup,
+  useMessage,
+} from 'naive-ui';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import type {
   FinBusqueda,
@@ -13,9 +21,11 @@ import { useAccion } from '../../composables/useAccion';
 import { textos } from '../../i18n';
 import { useSitios } from '../../stores/sitios';
 import { traducirError } from '../../utilidades/errores';
+import { avisoEditorSustituido } from '../../utilidades/editores';
 import Desplegable from '../Desplegable.vue';
 
 const t = textos.herramientas.busqueda;
+const message = useMessage();
 const { ejecutar, ocupado } = useAccion();
 const sitios = useSitios();
 
@@ -185,7 +195,11 @@ async function cancelar(): Promise<void> {
 function abrirEnEditor(r: ResultadoBusqueda): void {
   const id = sitioDeBusqueda.value;
   if (!id) return;
-  void ejecutar('abrir', () => api().editor.abrirEn(id, r.archivo, r.linea ?? 1));
+  void ejecutar('abrir', async () => {
+    const res = await api().editor.abrirEn(id, r.archivo, r.linea ?? 1);
+    const aviso = avisoEditorSustituido(res);
+    if (aviso) message.info(aviso);
+  });
 }
 </script>
 

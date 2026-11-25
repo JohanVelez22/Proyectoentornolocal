@@ -27,6 +27,7 @@ import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { useDepuracion } from '../stores/depuracion';
 import { useSitios } from '../stores/sitios';
+import { avisoEditorSustituido } from '../utilidades/editores';
 
 const t = textos.depuracion;
 const dep = useDepuracion();
@@ -93,7 +94,11 @@ function abrirEnEditor(): void {
   const e = dep.errorElegido;
   if (!e || !e.sitioId || !e.archivo || e.linea === null) return;
   const { sitioId, archivo, linea } = e;
-  void ejecutar('editor', () => api().editor.abrirEn(sitioId, archivo, linea));
+  void ejecutar('editor', async () => {
+    const r = await api().editor.abrirEn(sitioId, archivo, linea);
+    const aviso = avisoEditorSustituido(r);
+    if (aviso) message.info(aviso);
+  });
 }
 
 /* ───────────── Receptor y captura por sitio ───────────── */

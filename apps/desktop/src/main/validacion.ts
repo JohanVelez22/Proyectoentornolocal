@@ -11,8 +11,10 @@ import {
   NOMBRE_EXTENSION_PHP,
   ErrorWolf,
   IDS_AGENTE,
+  IDS_EDITOR,
   IDS_TERMINAL,
   MAX_MENSAJE_COMMIT,
+  type IdEditor,
   type IdTerminal,
   type IdAgente,
   ID_PROVEEDOR_IA,
@@ -51,6 +53,15 @@ export function idTerminal(v: unknown): IdTerminal | null {
     throw new ErrorWolf('terminal.invalida', 'Terminal no válida.');
   }
   return v as IdTerminal;
+}
+
+/** Editor elegido: un id conocido; `undefined` o null = el predeterminado. */
+export function idEditor(v: unknown): IdEditor | null {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== 'string' || !(IDS_EDITOR as readonly string[]).includes(v)) {
+    throw new ErrorWolf('herramientas.editor_invalido', 'Editor no válido.');
+  }
+  return v as IdEditor;
 }
 
 export function texto(v: unknown, nombre = 'valor'): string {

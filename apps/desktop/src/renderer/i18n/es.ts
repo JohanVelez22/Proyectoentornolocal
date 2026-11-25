@@ -178,8 +178,11 @@ export const es = {
       'herramientas.proceso_propio':
         'No se puede finalizar WolfCore Dev ni el proceso que lo inició.',
       'herramientas.proceso_inexistente': 'El proceso {pid} ya no existe.',
-      'herramientas.sin_vscode':
-        'No se encontró Visual Studio Code. Instálelo (code.visualstudio.com) o agregue "code" al PATH.',
+      'herramientas.sin_editor':
+        'No se encontró ningún editor de código. Instale uno (VS Code, Cursor, PhpStorm, Sublime Text…).',
+      'herramientas.editor_no_instalado':
+        '{nombre} no está instalado. Elija otro editor en Ajustes.',
+      'herramientas.editor_invalido': 'Ese editor no es válido.',
       'herramientas.carpeta_sitio_inexistente': 'La carpeta del proyecto no existe.',
       'herramientas.ruta_no_absoluta': 'La ruta debe ser absoluta.',
       'herramientas.sin_seleccion': 'Elija al menos un elemento.',
@@ -1250,6 +1253,12 @@ export const es = {
       terminalAyuda:
         'La que abre «Terminal» en los proyectos. Si el proyecto necesita variables propias (su PHP en el PATH, la clave de un agente), con «Windows Terminal» se abre PowerShell dentro de la terminal predeterminada de Windows: Windows Terminal ya abierto no recibiría esas variables.',
       terminalGuardada: 'Terminal predeterminada actualizada',
+      editor: 'Editor predeterminado',
+      editorPrimero: 'El primero que se detecte',
+      editorAyuda:
+        'El que abre «Editor» en los proyectos y «Abrir en el editor» en las búsquedas y los errores. Se detectan VS Code, Cursor, Windsurf, PhpStorm, Sublime Text, Zed y Notepad++.',
+      editorGuardado: 'Editor predeterminado actualizado',
+      editorNinguno: 'No se detectó ningún editor.',
     },
   },
   /* ───────────── HTTPS, terminal y FTP en sitios; Correo; IA local ───────────── */
@@ -1291,6 +1300,16 @@ export const es = {
     ayuda: 'Abre una terminal en la carpeta del proyecto, con su PHP y Composer en el PATH.',
     elegir: 'Elegir terminal',
     predeterminada: 'predeterminada',
+  },
+  editorSitio: {
+    ayuda: 'Abre la carpeta del proyecto en el editor predeterminado.',
+    elegir: 'Abrir con…',
+    predeterminada: 'predeterminado',
+    sustituido: (pred: string, usado: string) =>
+      '{pred} no está instalado: se abrió con {usado}.'
+        .replace('{pred}', pred)
+        .replace('{usado}', usado),
+    error: 'No se pudo abrir el editor',
   },
   phpSitio: {
     etiqueta: 'PHP',
@@ -1948,9 +1967,9 @@ export const es = {
       runtimes: 'Avisos de versiones',
       verRegistros: 'Ver registros',
       abrirAgente: 'Abrir un agente de IA',
-      vscode: 'VS Code',
-      vscodeAyuda: 'Abrir la carpeta del proyecto en Visual Studio Code',
-      vscodeError: 'No se pudo abrir VS Code',
+      vscode: 'Editor',
+      vscodeAyuda: 'Abrir la carpeta del proyecto en el editor predeterminado',
+      vscodeError: 'No se pudo abrir el editor',
       baseDatos: 'Base de datos',
       baseDatosAyuda: (base: string) =>
         `Abrir la base «${base}» en Adminer (pide la clave al entrar)`,

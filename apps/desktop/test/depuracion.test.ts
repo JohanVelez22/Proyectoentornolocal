@@ -178,7 +178,7 @@ describe('IPC de la captura de dumps', () => {
     expect(nucleo.leerError).toHaveBeenCalledWith('0123456789abcdef');
     expect((await llamar('editor.abrirEn', 'tienda', 'C:/p/tienda/app/X.php', 12)).ok).toBe(true);
     // La validación de que el archivo está dentro del sitio la hace el núcleo (rutas reales).
-    expect(nucleo.abrirEnEditor).toHaveBeenCalledWith('tienda', 'C:/p/tienda/app/X.php', 12);
+    expect(nucleo.abrirEnEditor).toHaveBeenCalledWith('tienda', 'C:/p/tienda/app/X.php', 12, null);
   });
 
   it('pantalla en la barra lateral y textos en es y en', () => {

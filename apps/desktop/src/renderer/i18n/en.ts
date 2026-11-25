@@ -176,8 +176,11 @@ export const en: Textos = {
       'herramientas.pid_sistema': 'PID {pid} belongs to the system and cannot be ended.',
       'herramientas.proceso_propio': 'You cannot end WolfCore Dev or the process that started it.',
       'herramientas.proceso_inexistente': 'Process {pid} no longer exists.',
-      'herramientas.sin_vscode':
-        'Visual Studio Code was not found. Install it (code.visualstudio.com) or add "code" to the PATH.',
+      'herramientas.sin_editor':
+        'No code editor was found. Install one (VS Code, Cursor, PhpStorm, Sublime Text…).',
+      'herramientas.editor_no_instalado':
+        '{nombre} is not installed. Choose another editor in Settings.',
+      'herramientas.editor_invalido': 'That editor is not valid.',
       'herramientas.carpeta_sitio_inexistente': 'The project folder does not exist.',
       'herramientas.ruta_no_absoluta': 'The path must be absolute.',
       'herramientas.sin_seleccion': 'Choose at least one item.',
@@ -1237,6 +1240,12 @@ export const en: Textos = {
       terminalAyuda:
         'The one "Terminal" opens on projects. If the project needs its own variables (its PHP on the PATH, an agent key), choosing "Windows Terminal" opens PowerShell inside the Windows default terminal: an already open Windows Terminal would not receive those variables.',
       terminalGuardada: 'Default terminal updated',
+      editor: 'Default editor',
+      editorPrimero: 'The first one detected',
+      editorAyuda:
+        'The one "Editor" opens on projects, and "Open in editor" in searches and errors. VS Code, Cursor, Windsurf, PhpStorm, Sublime Text, Zed and Notepad++ are detected.',
+      editorGuardado: 'Default editor updated',
+      editorNinguno: 'No editor was detected.',
     },
   },
   /* ───────────── HTTPS, terminal and FTP on sites; Mail; Local AI ───────────── */
@@ -1278,6 +1287,16 @@ export const en: Textos = {
     ayuda: "Opens a terminal in the project's folder, with its PHP and Composer in the PATH.",
     elegir: 'Choose terminal',
     predeterminada: 'default',
+  },
+  editorSitio: {
+    ayuda: 'Opens the project folder in the default editor.',
+    elegir: 'Open with…',
+    predeterminada: 'default',
+    sustituido: (pred: string, usado: string) =>
+      '{pred} is not installed: opened with {usado}.'
+        .replace('{pred}', pred)
+        .replace('{usado}', usado),
+    error: 'Could not open the editor',
   },
   phpSitio: {
     etiqueta: 'PHP',
@@ -1932,9 +1951,9 @@ export const en: Textos = {
       runtimes: 'Version warnings',
       verRegistros: 'View logs',
       abrirAgente: 'Open an AI agent',
-      vscode: 'VS Code',
-      vscodeAyuda: 'Open the project folder in Visual Studio Code',
-      vscodeError: 'Could not open VS Code',
+      vscode: 'Editor',
+      vscodeAyuda: 'Open the project folder in the default editor',
+      vscodeError: 'Could not open the editor',
       baseDatos: 'Database',
       baseDatosAyuda: (base: string) =>
         `Open the "${base}" database in Adminer (it asks for the password)`,

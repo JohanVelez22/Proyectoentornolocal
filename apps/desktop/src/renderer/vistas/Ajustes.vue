@@ -21,6 +21,8 @@ import { computed, onMounted, ref } from 'vue';
 import {
   PUERTO_ADMINER,
   type Config,
+  type EditorDisponible,
+  type IdEditor,
   type IdTerminal,
   type ResultadoCA,
   type TerminalDisponible,
@@ -85,9 +87,21 @@ const opcionesPhp = computed<SelectOption[]>(() => [
 ]);
 const enPath = ref<boolean | null>(null);
 /** Error al leer cada sección: uno no deja en blanco a los demás. */
-const errores = ref<{ ca?: string; php?: string; path?: string; terminal?: string }>({});
+const errores = ref<{
+  ca?: string;
+  php?: string;
+  path?: string;
+  terminal?: string;
+  editor?: string;
+}>({});
 
 // ---- Terminal predeterminada ----
+const editores = ref<EditorDisponible[] | null>(null);
+const editor = ref<IdEditor | ''>('');
+const opcionesEditor = computed<SelectOption[]>(() => [
+  { value: '', label: tt.editorPrimero },
+  ...(editores.value ?? []).map((x) => ({ value: x.id, label: x.nombre })),
+]);
 const terminales = ref<TerminalDisponible[] | null>(null);
 /** '' representa "la del sistema" (null en la configuración). */
 const terminal = ref<IdTerminal | ''>('');
@@ -115,11 +129,12 @@ onMounted(() => {
 });
 
 async function cargarExtra(): Promise<void> {
-  const [estadoCa, ramas, path, term] = await Promise.allSettled([
+  const [estadoCa, ramas, path, term, edit] = await Promise.allSettled([
     api().https.estado(),
     api().instalador.instalados('php'),
     api().path.estado(),
     api().terminal.disponibles(),
+    api().editor.disponibles(),
   ]);
   const error = (r: PromiseRejectedResult): string => t.errorSeccion(mensajeDeError(r.reason));
   errores.value = {
@@ -127,11 +142,16 @@ async function cargarExtra(): Promise<void> {
     ...(ramas.status === 'rejected' ? { php: error(ramas) } : {}),
     ...(path.status === 'rejected' ? { path: error(path) } : {}),
     ...(term.status === 'rejected' ? { terminal: error(term) } : {}),
+    ...(edit.status === 'rejected' ? { editor: error(edit) } : {}),
   };
   if (term.status === 'fulfilled') {
     terminales.value = term.value.disponibles;
     terminal.value = term.value.porDefecto ?? '';
   } else terminales.value = [];
+  if (edit.status === 'fulfilled') {
+    editores.value = edit.value.disponibles;
+    editor.value = edit.value.porDefecto ?? '';
+  } else editores.value = [];
   if (estadoCa.status === 'fulfilled') ca.value = estadoCa.value;
   if (ramas.status === 'fulfilled') ramasPhp.value = ramas.value;
   else ramasPhp.value = [];
@@ -243,6 +263,20 @@ async function cambiarPhp(valor: string): Promise<void> {
     { exito: tt.phpGuardado },
   );
   if (!ok) phpPorDefecto.value = antes;
+}
+
+async function cambiarEditor(valor: IdEditor | ''): Promise<void> {
+  const antes = editor.value;
+  editor.value = valor;
+  const ok = await ejecutar(
+    'editor',
+    async () => {
+      await api().editor.cambiarPorDefecto(valor === '' ? null : valor);
+      return true;
+    },
+    { exito: tt.editorGuardado },
+  );
+  if (!ok) editor.value = antes;
 }
 
 async function cambiarTerminal(valor: IdTerminal | ''): Promise<void> {
@@ -487,6 +521,23 @@ async function aplicarPath(activar: boolean): Promise<void> {
             />
             <small v-if="errores.terminal" class="ayuda error">{{ errores.terminal }}</small>
             <small v-else class="ayuda">{{ tt.terminalAyuda }}</small>
+          </div>
+        </NFormItem>
+        <NFormItem :label="tt.editor" class="separado">
+          <div class="campo">
+            <Desplegable
+              :value="editor"
+              :options="opcionesEditor"
+              :loading="editores === null || ocupado('editor')"
+              :disabled="!editores"
+              class="selector-terminal"
+              @update:value="cambiarEditor"
+            />
+            <small v-if="errores.editor" class="ayuda error">{{ errores.editor }}</small>
+            <small v-else-if="editores && editores.length === 0" class="ayuda">{{
+              tt.editorNinguno
+            }}</small>
+            <small v-else class="ayuda">{{ tt.editorAyuda }}</small>
           </div>
         </NFormItem>
         <NFormItem :label="tt.path" class="separado">

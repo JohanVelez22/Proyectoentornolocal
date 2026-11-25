@@ -33,7 +33,15 @@ import {
 import MenuDesplegable from './MenuDesplegable.vue';
 import { computed, h, onMounted, ref, type Component } from 'vue';
 import { useRouter } from 'vue-router';
-import type { IdTerminal, ResultadoAplicar, Sitio, TerminalDisponible } from '../../shared/api';
+import type {
+  EditorDisponible,
+  IdEditor,
+  IdTerminal,
+  ResultadoAplicar,
+  Sitio,
+  TerminalDisponible,
+} from '../../shared/api';
+import { avisoEditorSustituido } from '../utilidades/editores';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -227,10 +235,45 @@ async function reinstalar(): Promise<void> {
   });
 }
 
-function abrirEditor(): void {
-  void ejecutar('editor', () => api().sistema.abrirEditor(props.sitio.id), {
-    tituloError: tp.tarjeta.vscodeError,
-  });
+function abrirEditor(editor: IdEditor | null = null): void {
+  if (ocupado('editor')) return;
+  void ejecutar(
+    'editor',
+    async () => {
+      const r = await api().sistema.abrirEditor(props.sitio.id, editor);
+      const aviso = avisoEditorSustituido(r);
+      if (aviso) message.info(aviso);
+    },
+    { tituloError: tp.tarjeta.vscodeError },
+  );
+}
+
+/* ───── Abrir con… (lista de los editores instalados, se lee al abrir el menú) ───── */
+const editores = ref<EditorDisponible[] | null>(null);
+const editorPorDefecto = ref<IdEditor | null>(null);
+const opcionesEditor = computed<DropdownOption[]>(() =>
+  (editores.value ?? []).map((x) => ({
+    key: x.id,
+    label:
+      x.id === (editorPorDefecto.value ?? editores.value?.[0]?.id)
+        ? `${x.nombre} (${textos.editorSitio.predeterminada})`
+        : x.nombre,
+  })),
+);
+const menuEditor = ref(false);
+async function cambiarMenuEditor(mostrar: boolean): Promise<void> {
+  if (mostrar) {
+    const r = await ejecutar('editores', () => api().editor.disponibles());
+    if (r) {
+      editores.value = r.disponibles;
+      editorPorDefecto.value = r.porDefecto;
+    }
+  }
+  menuEditor.value = mostrar && (editores.value?.length ?? 0) > 0;
+}
+function elegirEditor(k: string | number): void {
+  menuEditor.value = false;
+  abrirEditor(k as IdEditor);
 }
 
 function abrirSitio(): void {
@@ -488,13 +531,37 @@ function abrirCarpeta(): void {
           :cargando="ocupado('bd')"
           @click="abrirBaseDatos"
         />
-        <BotonIcono
-          :icono="CodeSlash"
-          :etiqueta="tp.tarjeta.vscode"
-          :ayuda="tp.tarjeta.vscodeAyuda"
-          :cargando="ocupado('editor')"
-          @click="abrirEditor"
-        />
+        <div class="grupo">
+          <BotonIcono
+            :icono="CodeSlash"
+            :etiqueta="tp.tarjeta.vscode"
+            :ayuda="tp.tarjeta.vscodeAyuda"
+            :cargando="ocupado('editor')"
+            pegado
+            @click="abrirEditor()"
+          />
+          <MenuDesplegable
+            trigger="click"
+            :options="opcionesEditor"
+            alinear-fin
+            :show="menuEditor"
+            @update:show="cambiarMenuEditor"
+            @select="elegirEditor"
+          >
+            <NButton
+              size="small"
+              secondary
+              class="grupo-der"
+              :loading="ocupado('editores')"
+              :aria-label="textos.editorSitio.elegir"
+              :title="textos.editorSitio.elegir"
+            >
+              <template #icon
+                ><NIcon aria-hidden="true"><ChevronDown /></NIcon
+              ></template>
+            </NButton>
+          </MenuDesplegable>
+        </div>
         <MenuDesplegable trigger="click" :options="opciones" alinear-fin @select="elegir">
           <NButton
             size="small"
