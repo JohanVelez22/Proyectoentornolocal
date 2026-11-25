@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { createConnection } from 'mysql2/promise';
+import { nombreTemporal, NOMBRE_TEMPORAL, temporalVencido } from './temporales';
 import { ErrorWolf } from '../errores';
 
 export interface ConexionMysql {
@@ -315,7 +316,8 @@ export class ClienteMysql {
     id(base);
     const escapado = `\`${base.replace(/_/g, '\\_')}\``;
     noSistema(base, 'crear');
-    const usuario = `wolf_tmp_${randomBytes(8).toString('hex')}`;
+    await this.limpiarTemporales().catch(() => undefined);
+    const usuario = nombreTemporal();
     const clave = randomBytes(18).toString('hex');
     try {
       for (const host of ['localhost', '127.0.0.1']) {
@@ -332,12 +334,31 @@ export class ClienteMysql {
 
   /** Borra un usuario creado por `crearUsuarioTemporal` (y solo esos). */
   async borrarUsuarioTemporal(usuario: string): Promise<void> {
-    if (!/^wolf_tmp_[0-9a-f]{16}$/.test(usuario)) {
+    if (!NOMBRE_TEMPORAL.test(usuario)) {
       throw new Error('Solo se borran los usuarios temporales de WolfCore Dev.');
     }
     for (const host of ['localhost', '127.0.0.1']) {
       await this.filas(`DROP USER IF EXISTS ?@'${host}'`, [usuario]);
     }
+  }
+
+  /** Borra los usuarios `wolf_tmp_*` vencidos que dejó una restauración interrumpida. */
+  async limpiarTemporales(): Promise<number> {
+    const f = await this.filas(
+      "SELECT DISTINCT User AS usuario FROM mysql.user WHERE User LIKE 'wolf\\_tmp\\_%'",
+    );
+    let n = 0;
+    for (const x of f) {
+      const usuario = String(x.usuario ?? x.User);
+      if (!temporalVencido(usuario)) continue;
+      try {
+        await this.borrarUsuarioTemporal(usuario);
+        n++;
+      } catch {
+        // Otro intento lo limpiará.
+      }
+    }
+    return n;
   }
 
   /** Ejecuta las sentencias en `base`, una a una, y se detiene en la primera que falle. */

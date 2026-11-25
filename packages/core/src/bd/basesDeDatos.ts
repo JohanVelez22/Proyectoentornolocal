@@ -314,12 +314,31 @@ export class BasesDeDatos {
     };
   }
 
-  /** Deja la base vacía (MySQL y MariaDB): vuelta atrás de una restauración de esquema fallida. */
+  /** Deja la base vacía: vuelta atrás de una restauración de esquema fallida. */
   async reiniciarBase(objetivo: ObjetivoBd, base: string): Promise<void> {
+    if (motorDe(objetivo) === 'mongodb') throw new Error('MongoDB no se reinicia por SQL.');
     if (motorDe(objetivo) === 'postgresql') {
-      throw new Error('PostgreSQL restaura en una sola transacción: no hay nada que reiniciar.');
+      await this.conPostgres((c) => c.reiniciarBase(base), objetivo);
+      return;
     }
     await this.conMysql(objetivo, (c) => c.reiniciarBase(base));
+  }
+
+  /** Revisa el catálogo de una base de PostgreSQL ya restaurada; devuelve lo que no debería estar. */
+  async auditarEsquema(
+    objetivo: ObjetivoBd,
+    base: string,
+    o: { permitidas: readonly string[]; importada: boolean },
+  ): Promise<string[]> {
+    return this.conPostgres((c) => c.auditarCatalogo(base, o), objetivo);
+  }
+
+  /** Borra los usuarios y roles temporales vencidos de un servidor encendido. */
+  async limpiarTemporales(objetivo: ObjetivoBd): Promise<number> {
+    const motor = motorDe(objetivo);
+    if (motor === 'mongodb') return 0;
+    if (motor === 'postgresql') return this.conPostgres((c) => c.limpiarTemporales(), objetivo);
+    return this.conMysql(objetivo, (c) => c.limpiarTemporales());
   }
 
   /** Crea una extensión de PostgreSQL en la base (como administrador). */

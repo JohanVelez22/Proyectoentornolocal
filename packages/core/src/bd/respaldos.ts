@@ -81,7 +81,9 @@ export interface OrigenImportar {
 
 export interface DepsRespaldos {
   bd: Pick<BasesDeDatos, 'conexion' | 'crear' | 'tieneTablas'> &
-    Partial<Pick<BasesDeDatos, 'usuarioTemporal' | 'reiniciarBase' | 'crearExtension'>>;
+    Partial<
+      Pick<BasesDeDatos, 'usuarioTemporal' | 'reiniciarBase' | 'crearExtension' | 'auditarEsquema'>
+    >;
   servicios: {
     estados(): Promise<EstadoServicio[]>;
     /** Instancias de un motor (para respaldar o restaurar una instancia concreta). */
@@ -1004,6 +1006,12 @@ export class Respaldos {
                 this.d.bd.reiniciarBase!(objetivo, base),
             }
           : {}),
+        ...(this.d.bd.auditarEsquema
+          ? {
+              auditarEsquema: (_o: ObjetivoBd, base: string, o: never) =>
+                this.d.bd.auditarEsquema!(objetivo, base, o),
+            }
+          : {}),
         ...(this.d.bd.crearExtension
           ? {
               crearExtension: (base: string, nombre: string) =>
@@ -1816,6 +1824,17 @@ export class Respaldos {
       s.fin();
       if (codigo !== 0) throw falla(s.detalle() || `código ${codigo}`);
       resultado = { advertencias: s.lista() };
+      // Después de restaurar se revisa el catálogo: si aparece algo que la lista de sentencias no
+      // debía dejar pasar, se revierte (la base vuelve a quedar vacía).
+      const problemas =
+        (await bd.auditarEsquema?.('postgresql', base, {
+          permitidas: EXTENSIONES_PERMITIDAS,
+          importada: opts.origen === 'importada',
+        })) ?? [];
+      if (problemas.length > 0) {
+        await bd.reiniciarBase?.('postgresql', base).catch(() => undefined);
+        throw falla(`el catálogo trae ${problemas.join(', ')}`);
+      }
     } catch (e) {
       fallo =
         e instanceof ErrorWolf

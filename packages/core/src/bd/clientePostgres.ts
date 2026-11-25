@@ -1,5 +1,13 @@
 import { randomBytes } from 'node:crypto';
 import pg from 'pg';
+import {
+  hashScramSha256,
+  nombreTemporal,
+  NOMBRE_TEMPORAL,
+  rolDuenoDe,
+  temporalVencido,
+  VIDA_TEMPORAL_MS,
+} from './temporales';
 import { ErrorWolf } from '../errores';
 import {
   errorClaveDistinta,
@@ -402,21 +410,23 @@ export class ClientePostgres {
     }
   }
 
-  /** `forzar` (PostgreSQL 13+) agrega WITH (FORCE): cierra las conexiones que queden abiertas. */
   /**
    * Rol temporal sin privilegios (LOGIN, NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION
    * NOBYPASSRLS, sin ningún rol pg_*) que pasa a ser el dueño de `base`: puede crear sus objetos y
-   * nada más. Se retira con `retirarRolTemporal`, que devuelve todo al administrador.
+   * nada más. Vence en una hora (VALID UNTIL) y su clave viaja ya hasheada (SCRAM-SHA-256). Se
+   * retira con `retirarRolTemporal`.
    */
   async crearRolTemporal(base: string): Promise<{ usuario: string; clave: string }> {
     const bd = id(base);
     noSistema(base, 'crear');
-    const usuario = `wolf_tmp_${randomBytes(8).toString('hex')}`;
+    await this.limpiarTemporales().catch(() => undefined);
+    const usuario = nombreTemporal();
     const clave = randomBytes(18).toString('hex');
+    const vence = new Date(Date.now() + VIDA_TEMPORAL_MS).toISOString();
     try {
       const [orden] = await this.filas(
-        "SELECT format('CREATE ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L', $1::text, $2::text) AS s",
-        [usuario, clave],
+        "SELECT format('CREATE ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L VALID UNTIL %L', $1::text, $2::text, $3::text) AS s",
+        [usuario, hashScramSha256(clave), vence],
       );
       await this.filas(String(orden?.s ?? ''));
       await this.filas(`ALTER DATABASE ${bd} OWNER TO ${id(usuario)}`);
@@ -427,20 +437,118 @@ export class ClientePostgres {
     return { usuario, clave };
   }
 
-  /** Devuelve al administrador la base y sus objetos y borra el rol temporal. */
+  /**
+   * Pasa la base y sus objetos a un rol por base sin login ni privilegios (`wolf_dueno_…`), no al
+   * administrador: una función SECURITY DEFINER del esquema nunca corre como superusuario. Luego
+   * borra el rol temporal.
+   */
   async retirarRolTemporal(usuario: string, base: string): Promise<void> {
-    if (!/^wolf_tmp_[0-9a-f]{16}$/.test(usuario)) {
+    if (!NOMBRE_TEMPORAL.test(usuario)) {
       throw new Error('Solo se borran los roles temporales de WolfCore Dev.');
     }
     const rol = id(usuario);
-    const admin = this.datos?.usuario;
-    if (!admin) throw new Error('No hay conexión: conecte con el servidor primero.');
     validarNombrePg(base);
+    const dueno = rolDuenoDe(base);
+    const hay = await this.filas('SELECT 1 AS n FROM pg_roles WHERE rolname = $1', [dueno]);
+    if (hay.length === 0) {
+      await this.filas(
+        `CREATE ROLE ${id(dueno)} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`,
+      );
+    }
     await this.enBase(base, async (q) => {
-      await q.query(`REASSIGN OWNED BY ${rol} TO ${id(admin)}`);
+      await q.query(`REASSIGN OWNED BY ${rol} TO ${id(dueno)}`);
       await q.query(`DROP OWNED BY ${rol}`);
     });
     await this.filas(`DROP ROLE IF EXISTS ${rol}`);
+  }
+
+  /**
+   * Revisa el catálogo de `base` después de restaurar: disparadores de evento, funciones
+   * SECURITY DEFINER (solo en importadas), extensiones fuera de `permitidas`, foráneos y
+   * lenguajes que no sean SQL ni plpgsql. Devuelve lo que encontró (vacío si está limpio).
+   */
+  async auditarCatalogo(
+    base: string,
+    o: { permitidas: readonly string[]; importada: boolean },
+  ): Promise<string[]> {
+    validarNombrePg(base);
+    const problemas: string[] = [];
+    await this.enBase(base, async (q) => {
+      const fila = async (sql: string, p: unknown[] = []): Promise<Record<string, unknown>[]> =>
+        (await q.query(sql, p)).rows as Record<string, unknown>[];
+      for (const f of await fila('SELECT evtname FROM pg_event_trigger')) {
+        problemas.push(`disparador de evento ${String(f.evtname)}`);
+      }
+      for (const f of await fila(
+        'SELECT extname FROM pg_extension WHERE extname <> ALL($1::text[])',
+        [[...o.permitidas]],
+      )) {
+        problemas.push(`extensión ${String(f.extname)}`);
+      }
+      for (const f of await fila('SELECT srvname FROM pg_foreign_server')) {
+        problemas.push(`servidor foráneo ${String(f.srvname)}`);
+      }
+      const propias =
+        "n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e')";
+      for (const f of await fila(
+        `SELECT DISTINCT l.lanname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_language l ON l.oid = p.prolang WHERE ${propias} AND l.lanname NOT IN ('sql', 'plpgsql')`,
+      )) {
+        problemas.push(`lenguaje ${String(f.lanname)}`);
+      }
+      if (o.importada) {
+        for (const f of await fila(
+          `SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE p.prosecdef AND ${propias}`,
+        )) {
+          problemas.push(`función SECURITY DEFINER ${String(f.proname)}`);
+        }
+      }
+    });
+    return problemas;
+  }
+
+  /** Deja la base vacía (la borra y la vuelve a crear a nombre del administrador). */
+  async reiniciarBase(nombre: string): Promise<void> {
+    const bd = id(nombre);
+    noSistema(nombre, 'borrar');
+    await this.filas(`DROP DATABASE IF EXISTS ${bd} WITH (FORCE)`);
+    await this.filas(
+      `CREATE DATABASE ${bd} ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'`,
+    );
+  }
+
+  /** Borra los roles `wolf_tmp_*` vencidos que dejó una restauración interrumpida. */
+  async limpiarTemporales(): Promise<number> {
+    const admin = this.datos?.usuario;
+    if (!admin) return 0;
+    const roles = await this.filas(
+      "SELECT rolname FROM pg_roles WHERE rolname LIKE 'wolf\\_tmp\\_%'",
+    );
+    let n = 0;
+    for (const r of roles) {
+      const rol = String(r.rolname);
+      if (!temporalVencido(rol)) continue;
+      try {
+        const bases = await this.filas(
+          'SELECT datname FROM pg_database WHERE datdba = (SELECT oid FROM pg_roles WHERE rolname = $1)',
+          [rol],
+        );
+        for (const b of bases) {
+          await this.filas(`ALTER DATABASE ${id(String(b.datname))} OWNER TO ${id(admin)}`);
+        }
+        const todas = await this.filas('SELECT datname FROM pg_database WHERE NOT datistemplate');
+        for (const b of todas) {
+          await this.enBase(String(b.datname), async (q) => {
+            await q.query(`REASSIGN OWNED BY ${id(rol)} TO ${id(admin)}`);
+            await q.query(`DROP OWNED BY ${id(rol)}`);
+          }).catch(() => undefined);
+        }
+        await this.filas(`DROP ROLE IF EXISTS ${id(rol)}`);
+        n++;
+      } catch {
+        // Otro intento lo limpiará.
+      }
+    }
+    return n;
   }
 
   /** Crea una extensión en la base (lo hace el administrador, desde una lista permitida). */
@@ -454,6 +562,7 @@ export class ClientePostgres {
     }
   }
 
+  /** `forzar` (PostgreSQL 13+) agrega WITH (FORCE): cierra las conexiones que queden abiertas. */
   async borrarBase(nombre: string, opts: { forzar?: boolean } = {}): Promise<void> {
     const bd = id(nombre);
     noSistema(nombre, 'borrar');

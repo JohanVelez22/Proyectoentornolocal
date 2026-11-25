@@ -1288,6 +1288,7 @@ export class Nucleo {
     o.alIniciar?.(eventos);
     try {
       await supervisor.readoptar();
+      void nucleo.limpiarUsuariosTemporales();
       await tuneles.restaurar();
       await estadoHostsSeguro(hosts, eventos, dominiosDe(await sitios.listar()));
     } catch (e) {
@@ -2800,6 +2801,28 @@ export class Nucleo {
       },
       p,
     );
+  }
+
+  /**
+   * Borra los usuarios y roles `wolf_tmp_*` vencidos que dejó una restauración de esquema
+   * interrumpida, en los servidores de bases que ya están encendidos. Sin esperar y sin fallar.
+   */
+  async limpiarUsuariosTemporales(): Promise<void> {
+    try {
+      for (const e of await this.servicios.estados()) {
+        if (e.id !== 'mysql' && e.id !== 'mariadb' && e.id !== 'postgresql') continue;
+        const objetivos: string[] = e.instancias?.length
+          ? e.instancias.filter((i) => i.estado === 'encendido').map((i) => i.id)
+          : e.estado === 'encendido'
+            ? [e.id]
+            : [];
+        for (const o of objetivos) {
+          await this.bd.limpiarTemporales(o as ObjetivoBd).catch(() => undefined);
+        }
+      }
+    } catch {
+      // Es mantenimiento: nunca estorba al arranque.
+    }
   }
 
   /**

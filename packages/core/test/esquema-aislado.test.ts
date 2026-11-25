@@ -136,6 +136,8 @@ let tablas: boolean;
 let listaPg: string;
 let sqlPg: string;
 let codigoPg: number;
+let problemasCatalogo: string[];
+let opcionesAuditoria: unknown;
 
 const estado = (id: string, version: string): EstadoServicio =>
   ({ id, nombre: id, version, estado: 'encendido', puertos: [1], pid: 1 }) as EstadoServicio;
@@ -183,6 +185,11 @@ function armar(): Respaldos {
         };
       },
       reiniciarBase: async () => void eventos.push('reiniciar-base'),
+      auditarEsquema: async (_o: string, _b: string, o: unknown) => {
+        eventos.push('auditar');
+        opcionesAuditoria = o;
+        return problemasCatalogo;
+      },
       crearExtension: async (_b: string, nombre: string) =>
         void eventos.push(`extension:${nombre}`),
     } as never,
@@ -234,6 +241,8 @@ beforeEach(async () => {
   falloEn = null;
   tablas = false;
   codigoPg = 0;
+  problemasCatalogo = [];
+  opcionesAuditoria = null;
   listaPg = [
     ';',
     '; Archive created',
@@ -376,6 +385,7 @@ describe('Respaldos.restaurarEsquema: PostgreSQL', () => {
       'extension:pgcrypto',
       'crear-usuario:api',
       'pg_restore',
+      'auditar',
       'retirar-usuario',
     ]);
   });
@@ -525,5 +535,31 @@ describe('R3: el lector de SQL', () => {
     expect(() =>
       revisarSql('CREATE TRIGGER t BEFORE INSERT ON x FOR EACH ROW SET NEW.a = 1;', 'mysql'),
     ).not.toThrow();
+  });
+});
+
+describe('R3-I2: PostgreSQL revisa el catálogo y devuelve la propiedad sin privilegios', () => {
+  it('después de restaurar se audita el catálogo con la lista de extensiones y el origen', async () => {
+    await armar().restaurarEsquema('postgresql', archivo('e.dump', PGDMP), 'api', {
+      origen: 'importada',
+    });
+    expect(opcionesAuditoria).toMatchObject({ importada: true });
+    expect((opcionesAuditoria as { permitidas: string[] }).permitidas).toContain('pgcrypto');
+    expect(eventos).toContain('auditar');
+  });
+
+  it('si el catálogo trae algo (SECURITY DEFINER, disparador de evento, lenguaje…), revierte y falla', async () => {
+    problemasCatalogo = ['función SECURITY DEFINER f', 'disparador de evento x'];
+    await expect(
+      armar().restaurarEsquema('postgresql', archivo('e.dump', PGDMP), 'api'),
+    ).rejects.toMatchObject({ codigo: 'bd.esquema_fallo' });
+    expect(eventos).toEqual([
+      'extension:pgcrypto',
+      'crear-usuario:api',
+      'pg_restore',
+      'auditar',
+      'reiniciar-base',
+      'retirar-usuario',
+    ]);
   });
 });
