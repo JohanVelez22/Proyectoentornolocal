@@ -3,6 +3,7 @@ import { ErrorWolf } from '../errores';
 import { hostDePreset, PRESETS_SMTP } from '../correo/proveedores';
 import { DOMINIO_VALIDO } from '../hosts/bloque';
 import { enmascararSecretos } from '../patronesSecretos';
+import { VALORES_RAPIDOS } from '../php/ini';
 import { validarPhpIni } from '../php/poolSitio';
 import { validarXdebug } from '../php/xdebug';
 import { llevaSecreto, sinSecretosPlantilla } from '../proyectos/plantillas';
@@ -245,10 +246,6 @@ export interface SitioImportado {
 
 const ID_SITIO = /^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/;
 
-/** Ajustes de php.ini que no se importan de un perfil (código, comandos y rutas de otro equipo). */
-const PHP_INI_NO_IMPORTABLE =
-  /^(auto_prepend_file|auto_append_file|sendmail_path|sendmail_from|include_path|open_basedir|disable_functions|disable_classes|error_log|mail\.log|user_ini\.filename|.*_(path|dir|file))$/i;
-
 /**
  * Sitio que llega de un perfil: siempre **importado**, nunca propio. Se valida con el esquema y se
  * le quita lo que nunca viaja (aunque el perfil lo traiga); no queda confiado, sus procesos no
@@ -285,9 +282,10 @@ export function sitioImportado(bruto: unknown): SitioImportado {
   if (s.phpIni !== undefined) {
     try {
       const ini = validarPhpIni(s.phpIni);
-      // De un perfil, además, nada que cargue código, ejecute un comando o apunte a una ruta.
+      // De un perfil, solo los ajustes rápidos (con su validador de valores): nada que cargue
+      // código, ejecute un comando o apunte a una ruta de otro equipo.
       for (const k of Object.keys(ini)) {
-        if (PHP_INI_NO_IMPORTABLE.test(k)) {
+        if (!Object.hasOwn(VALORES_RAPIDOS, k)) {
           delete ini[k];
           if (!motivos.includes('php_ini')) motivos.push('php_ini');
         }

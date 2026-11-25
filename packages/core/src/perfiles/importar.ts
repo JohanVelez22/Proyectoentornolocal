@@ -1,6 +1,17 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createWriteStream, existsSync } from 'node:fs';
-import { cp, lstat, mkdir, readFile, rename, rm, stat, statfs, writeFile } from 'node:fs/promises';
+import {
+  cp,
+  lstat,
+  mkdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  stat,
+  statfs,
+  writeFile,
+} from 'node:fs/promises';
 import path from 'node:path';
 import { Transform, Writable, type TransformCallback } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -44,6 +55,9 @@ const danado = (detalle?: string): ErrorWolf =>
   );
 
 const MOTORES_SQL: readonly IdServicioDatos[] = ['mysql', 'mariadb', 'postgresql'];
+
+/** Versiones que una importación descarga como máximo (la vista previa dice cuántas serían). */
+export const MAX_INSTALAR_POR_PERFIL = 6;
 
 /** Corta un flujo que trae más bytes de los que se permiten (un ZIP que miente en su cabecera). */
 class Tope extends Transform {
@@ -359,11 +373,22 @@ function puertosDeConfig(c: Config | null): Set<number> {
   return s;
 }
 
+/** ¿`hija` es `padre` o está dentro (sin distinguir mayúsculas ni separadores)? */
+function dentroDe(padre: string, hija: string): boolean {
+  const n = (x: string): string =>
+    x
+      .replace(/[\\/]+/g, '/')
+      .replace(/\/+$/, '')
+      .toLowerCase();
+  return n(hija) === n(padre) || n(hija).startsWith(`${n(padre)}/`);
+}
+
 async function planificar(
   d: DepsPerfiles,
   p: PerfilAbierto,
   o: Pick<OpcionesImportarPerfil, 'rutas' | 'prefijos'>,
 ): Promise<Plan> {
+  const protegida = d.rutaProtegida ?? esRutaProtegida;
   const m = p.manifiesto;
   const actual = await leerConfigExistente(d);
   const reemplaza: string[] = [];
@@ -402,14 +427,21 @@ async function planificar(
     const s = reasignados[i]!;
     const motivos = [...validos[i]!.motivos];
     const elegida = Object.prototype.hasOwnProperty.call(mapa, s.id);
-    const porPrefijo = !elegida && s.carpeta !== validos[i]!.sitio.carpeta;
     let omitido: string | null = null;
+    // Ruta real (sin enlaces ni uniones) de lo que existe; si no existe, la ruta tal cual.
+    const real =
+      esRutaLocalAbsoluta(s.carpeta) && restoSeguro(s.carpeta)
+        ? await realpath(s.carpeta).catch(() => s.carpeta)
+        : s.carpeta;
     if (vistos.has(s.id)) omitido = 'sitio_repetido';
     else if (
       !esRutaLocalAbsoluta(s.carpeta) ||
       !restoSeguro(s.carpeta) ||
-      // Una ruta que sale del perfil (no la eligió el usuario) nunca puede ser del sistema.
-      (!elegida && !porPrefijo && esRutaProtegida(s.carpeta))
+      // Nunca la carpeta de datos (ni una que la contenga o esté dentro).
+      [s.carpeta, real].some((c) => dentroDe(d.rutas.base, c) || dentroDe(c, d.rutas.base)) ||
+      // Lo que no eligió el usuario en un diálogo (lo del perfil, también tras cambiar el prefijo)
+      // nunca puede ser del sistema, ni por su ruta real.
+      (!elegida && (protegida(s.carpeta) || protegida(real)))
     ) {
       omitido = 'ruta_protegida';
     } else if (
@@ -617,6 +649,13 @@ export class Perfiles {
         puertosOcupados: plan.puertosOcupados,
         ignoradas: p.ignoradas,
         carpetaConDatos: plan.config !== null,
+        descargas: Math.min(
+          MAX_INSTALAR_POR_PERFIL,
+          plan.versiones.filter(
+            (v) =>
+              !v.instalada && v.disponible && (v.huella === 'fuerte' || v.huella === 'firmada'),
+          ).length,
+        ),
         requiereFrase: m.bases.length > 0 || m.incluye.ca,
         ca:
           m.ca && m.incluye.ca
@@ -759,6 +798,7 @@ export class Perfiles {
 
     // 3. Versiones: con huella fuerte o firma desde el catálogo; las demás quedan pendientes.
     const versiones: ResultadoImportarPerfil['versiones'] = [];
+    let instaladasAhora = 0;
     for (const v of plan.versiones) {
       if (v.instalada) {
         versiones.push({
@@ -787,6 +827,17 @@ export class Perfiles {
         });
         continue;
       }
+      // Tope de descargas por importación: el resto queda pendiente (se instala desde Versiones).
+      if (instaladasAhora >= MAX_INSTALAR_POR_PERFIL) {
+        versiones.push({
+          servicio: v.servicio,
+          version: v.version,
+          estado: 'pendiente',
+          motivo: 'tope_descargas',
+        });
+        continue;
+      }
+      instaladasAhora++;
       try {
         const disp = await d.buscarVersion(v.servicio, v.version);
         if (!disp || !aceptable(huellaDeFila(disp))) throw new Error('huella');
@@ -976,7 +1027,11 @@ export class Perfiles {
         fila('omitido', 'motor_no_soportado');
         continue;
       }
-      if (!versionLista(inst.servicio, inst.version)) {
+      // Una instancia que ya existe usa sus binarios: basta que estén instalados aquí.
+      const lista = inst.existente
+        ? await d.versionInstalada(inst.servicio, inst.version).catch(() => false)
+        : versionLista(inst.servicio, inst.version);
+      if (!lista) {
         fila('pendiente', 'version_pendiente');
         continue;
       }

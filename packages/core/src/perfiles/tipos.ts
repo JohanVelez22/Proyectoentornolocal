@@ -101,6 +101,8 @@ export interface DepsPerfiles {
   idCatalogo: string;
   reloj?: () => Date;
   limites?: Partial<LimitesPerfil>;
+  /** ¿Ruta del sistema? (por omisión `esRutaProtegida`; pruebas en carpetas temporales). */
+  rutaProtegida?: (ruta: string) => boolean;
   /** Bytes libres de la unidad de `ruta` (por omisión `statfs`; pruebas). */
   espacioLibre?: (ruta: string) => Promise<number | null>;
 }
@@ -177,6 +179,8 @@ export interface VistaPreviaPerfil {
   ignoradas: number;
   /** La carpeta de datos ya tiene una configuración o sitios. */
   carpetaConDatos: boolean;
+  /** Versiones que se descargarían (con huella fuerte o firma, hasta `MAX_INSTALAR_POR_PERFIL`). */
+  descargas: number;
   /** El perfil trae bases o la CA (cifradas): para importarlas hace falta su frase. */
   requiereFrase: boolean;
   /**

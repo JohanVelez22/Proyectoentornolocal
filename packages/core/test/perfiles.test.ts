@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { createWriteStream, existsSync, readFileSync, symlinkSync } from 'node:fs';
-import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,7 +19,7 @@ import {
   PARAMETROS_CIFRADO,
 } from '../src/perfiles/cifrado';
 import { exportarPerfil } from '../src/perfiles/exportar';
-import { Perfiles, tamanoLegible } from '../src/perfiles/importar';
+import { MAX_INSTALAR_POR_PERFIL, Perfiles, tamanoLegible } from '../src/perfiles/importar';
 import {
   EXCLUSIONES_PERFIL,
   rutaPermitidaEnPerfil,
@@ -1207,7 +1207,9 @@ describe('importarPerfil en otro equipo: se reasigna, se marca y se sigue', () =
 
   it('rutas de otro usuario se reasignan por prefijo', async () => {
     const archivo = await exportar();
-    const d = deps(destino);
+    // La carpeta temporal de las pruebas cuelga de AppData (Windows) o de /var (macOS), que son
+    // protegidas: aquí se mide la reasignación (la protección tiene su propia prueba).
+    const d = deps(destino, { rutaProtegida: () => false });
     await mkdir(path.join(proyectos, 'blog'), { recursive: true });
     const r = await importar(archivo, d, {
       prefijos: [{ viejo: 'C:\\Users\\viejo\\proyectos', nuevo: proyectos }],
@@ -1216,6 +1218,89 @@ describe('importarPerfil en otro equipo: se reasigna, se marca y se sigue', () =
       estado: 'importado',
       carpeta: path.join(proyectos, 'blog'),
     });
+  });
+
+  it('tras cambiar el prefijo la ruta tampoco puede ser del sistema, ni la carpeta de datos', async () => {
+    const archivo = await exportar();
+    const r = await importar(archivo, deps(destino), {
+      prefijos: [{ viejo: 'C:\\Users\\viejo\\proyectos', nuevo: 'C:\\Windows' }],
+    });
+    expect(r.sitios.map((s) => [s.id, s.estado, s.motivos[0]])).toEqual([
+      ['tienda', 'omitido', 'ruta_protegida'],
+      ['blog', 'omitido', 'ruta_protegida'],
+    ]);
+    const r2 = await importar(archivo, deps(new Rutas(path.join(dir, 'd2'))), {
+      rutas: { tienda: path.join(dir, 'd2', 'plantillas'), blog: path.join(dir, 'd2') },
+    });
+    expect(r2.sitios.map((s) => s.estado)).toEqual(['omitido', 'omitido']);
+  });
+
+  it('una unión hacia una carpeta del sistema se juzga por su ruta real', async () => {
+    const archivo = await exportar();
+    const dentro = path.join(dir, 'dentro');
+    await mkdir(dentro, { recursive: true });
+    symlinkSync(dentro, path.join(proyectos, 'union'), 'junction');
+    const real = await realpath(dentro);
+    const r = await importar(
+      archivo,
+      deps(destino, { rutaProtegida: (x) => x.toLowerCase() === real.toLowerCase() }),
+      {
+        prefijos: [
+          { viejo: 'C:\\Users\\viejo\\proyectos\\tienda', nuevo: path.join(proyectos, 'union') },
+        ],
+      },
+    );
+    expect(r.sitios.find((s) => s.id === 'tienda')).toMatchObject({ estado: 'omitido' });
+  });
+
+  it('php.ini importado: solo los ajustes rápidos', () => {
+    const r = sitioImportado({
+      id: 'x',
+      nombre: 'X',
+      dominio: 'x.test',
+      carpeta: '/proyectos/x',
+      tipo: 'laravel',
+      php: '8.4',
+      phpIni: { memory_limit: '256M', 'session.gc_maxlifetime': '60', 'opcache.enable': '1' },
+    });
+    expect(r.sitio!.phpIni).toEqual({ memory_limit: '256M', 'opcache.enable': '1' });
+    expect(r.motivos).toContain('php_ini');
+  });
+
+  it('una instancia que ya existe no exige que su versión venga en el perfil', async () => {
+    const cfg = ConfigSchema.parse({});
+    cfg.servicios.datos.mysql.instancias = {
+      '8.4': { version: '8.4.1', puerto: 3310, autoIniciar: false },
+    };
+    await escribir(destino.config(), JSON.stringify(cfg));
+    const archivo = await exportar();
+    const d = deps(destino, {
+      versionInstalada: async (s, v) => s === 'mysql' && v === '8.4.1',
+      buscarVersion: async () => null,
+    });
+    const r = await importar(archivo, d);
+    expect(r.bases).toEqual([
+      { instancia: 'mysql@8.4', base: 'tienda', estado: 'importado', motivo: null },
+    ]);
+  });
+
+  it('las descargas de una importación tienen un tope; la vista previa dice cuántas', async () => {
+    const muchas = Array.from({ length: 9 }, (_, i) => ({
+      servicio: 'php',
+      version: `8.${i}.0`,
+      huella: null,
+    }));
+    const archivo = await perfilManual({}, { versiones: muchas });
+    const d = deps(destino, {
+      buscarVersion: async (s, v) => versionCatalogo(s, v, 'fuerte'),
+    });
+    const vista = await new Perfiles(d).vistaPrevia(archivo);
+    expect(vista.descargas).toBe(MAX_INSTALAR_POR_PERFIL);
+    const r = await importar(archivo, d);
+    expect(d.reg.instaladas).toHaveLength(MAX_INSTALAR_POR_PERFIL);
+    expect(r.versiones.filter((v) => v.motivo === 'tope_descargas')).toHaveLength(
+      9 - MAX_INSTALAR_POR_PERFIL,
+    );
   });
 
   it('una ruta del perfil que es del sistema no se importa (salvo que el usuario la elija)', async () => {
