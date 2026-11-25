@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Add, Albums, Search, Sparkles } from '@vicons/ionicons5';
+import { Add, Albums, DownloadOutline, Search, Sparkles } from '@vicons/ionicons5';
 import { NButton, NEmpty, NIcon, NInput } from 'naive-ui';
 import { computed, onMounted, ref, watch } from 'vue';
 import type { ResultadoAplicar, Sitio } from '../../shared/api';
 import AgregarProyecto from '../componentes/AgregarProyecto.vue';
+import AsistenteImportar from '../componentes/AsistenteImportar.vue';
 import AsistenteNuevoProyecto from '../componentes/AsistenteNuevoProyecto.vue';
 import AsistenteReceta from '../componentes/AsistenteReceta.vue';
 import AvisoHosts from '../componentes/AvisoHosts.vue';
@@ -48,6 +49,7 @@ const objetivo = ref<ObjetivoForm | null>(null);
 const falloHosts = ref<FalloHosts | null>(null);
 const agregando = ref(false);
 const creandoProyecto = ref(false);
+const importando = ref(false);
 const asistente = ref<ObjetivoAsistente | null>(null);
 const registros = ref<Sitio | null>(null);
 /** Proyecto que se guarda como plantilla (null: el diálogo está cerrado). */
@@ -143,6 +145,12 @@ onMounted(() => {
           ></template>
           {{ textos.nuevoProyecto.boton }}
         </NButton>
+        <NButton size="small" secondary @click="importando = true">
+          <template #icon
+            ><NIcon><DownloadOutline /></NIcon
+          ></template>
+          {{ textos.importar.boton }}
+        </NButton>
         <NButton v-if="sitios.lista.length" type="primary" size="small" @click="nuevo">
           <template #icon
             ><NIcon><Add /></NIcon
@@ -216,6 +224,7 @@ onMounted(() => {
       @manual="manual"
     />
     <AsistenteNuevoProyecto :show="creandoProyecto" @cerrar="creandoProyecto = false" />
+    <AsistenteImportar :show="importando" @cerrar="importando = false" />
     <DialogoGuardarPlantilla :sitio="plantillaDe" @cerrar="plantillaDe = null" />
     <AsistenteReceta :objetivo="asistente" @cerrar="asistente = null" @aplicado="alAplicar" />
     <RegistrosProyecto :sitio="registros" @cerrar="registros = null" />

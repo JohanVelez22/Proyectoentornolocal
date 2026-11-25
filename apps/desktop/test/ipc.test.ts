@@ -84,6 +84,8 @@ function nucleoFalso() {
         'restaurarBase',
         'respaldarBase',
         'importarBase',
+        'vistaPreviaImportar',
+        'importarDeOtros',
         'estadoPgvector',
         'instalarBuildTools',
         'compilarPgvector',
@@ -655,6 +657,8 @@ describe('registrarIpc', () => {
         'plantillas.vistaPrevia',
         'plantillas.guardar',
         'plantillas.borrar',
+        'importar.vistaPrevia',
+        'importar.ejecutar',
         'git.disponible',
         'git.clonar',
         'git.estado',
@@ -1750,6 +1754,60 @@ describe('IPC de la Etapa B', () => {
     expect(pl['borrar']).not.toHaveBeenCalled();
     expect((await llamar('plantillas.borrar', 'tienda-a1b2c3')).ok).toBe(true);
     expect(pl['borrar']).toHaveBeenCalledWith('tienda-a1b2c3');
+  });
+
+  it('importar.*: ids de sitios (nunca rutas), origen siempre local y la clave nunca vuelve en un error', async () => {
+    const { crudo, llamar } = montar();
+    const f = crudo as unknown as Record<string, Mock>;
+    expect((await llamar('importar.vistaPrevia')).ok).toBe(true);
+    expect(f['vistaPreviaImportar']).toHaveBeenLastCalledWith(undefined);
+    expect((await llamar('importar.vistaPrevia', 'mysql@8.0')).ok).toBe(true);
+    expect(f['vistaPreviaImportar']).toHaveBeenLastCalledWith('mysql@8.0');
+    expect((await llamar('importar.vistaPrevia', 'mongodb')).ok).toBe(false);
+    expect((await llamar('importar.vistaPrevia', 'C:/x')).ok).toBe(false);
+
+    const id = 'laragon-0123456789ab';
+    const origenBd = { host: '127.0.0.1', puerto: 3306, usuario: 'root', clave: '' };
+    const buenas = { origenBd, instancia: 'mysql', reemplazar: ['tienda_db'] };
+    expect((await llamar('importar.ejecutar', [id], buenas)).ok).toBe(true);
+    expect(f['importarDeOtros']).toHaveBeenLastCalledWith([id], buenas);
+    expect((await llamar('importar.ejecutar', [id], undefined)).ok).toBe(true);
+    expect(f['importarDeOtros']).toHaveBeenLastCalledWith([id], {});
+    f['importarDeOtros']!.mockClear();
+    for (const malo of [
+      [[], buenas],
+      [['C:/laragon/www/x'], buenas],
+      [['../x'], buenas],
+      [['laragon-xyz'], buenas],
+      [['otro-0123456789ab'], buenas],
+      ['laragon-0123456789ab', buenas],
+      [Array(201).fill(id), buenas],
+      [[id], { ...buenas, origenBd: { ...origenBd, host: '10.0.0.5' } }],
+      [[id], { ...buenas, origenBd: { ...origenBd, host: 'localhost' } }],
+      [[id], { ...buenas, origenBd: { ...origenBd, puerto: 0 } }],
+      [[id], { ...buenas, origenBd: { ...origenBd, usuario: '' } }],
+      [[id], { ...buenas, origenBd: { ...origenBd, clave: 'a' + String.fromCharCode(10) + 'b' } }],
+      [[id], { ...buenas, origenBd: { ...origenBd, extra: 1 } }],
+      [[id], { ...buenas, instancia: 'mongodb' }],
+      [[id], { ...buenas, instancia: 'C:/x' }],
+      [[id], { ...buenas, reemplazar: ['x y'] }],
+      [[id], { ...buenas, reemplazar: 'tienda' }],
+      [[id], { ...buenas, ruta: 'C:/x' }],
+      [[id], 'x'],
+    ] as [unknown, unknown][]) {
+      expect((await llamar('importar.ejecutar', ...malo)).ok, JSON.stringify(malo)).toBe(false);
+    }
+    expect(f['importarDeOtros']).not.toHaveBeenCalled();
+
+    // La clave de origen se quita de cualquier error que vuelva al renderer.
+    const clave = 'centinela-origen-ipc-d15';
+    f['importarDeOtros']!.mockRejectedValueOnce(new Error(`Acceso denegado con ${clave}`));
+    const r = await llamar('importar.ejecutar', [id], {
+      ...buenas,
+      origenBd: { ...origenBd, clave },
+    });
+    expect(r.ok).toBe(false);
+    expect(JSON.stringify(r)).not.toContain(clave);
   });
 
   it('proyectos.huellaWordpress valida la versión y llega al núcleo', async () => {

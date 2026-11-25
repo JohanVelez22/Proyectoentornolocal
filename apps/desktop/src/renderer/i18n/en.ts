@@ -3264,6 +3264,100 @@ export const en: Textos = {
       editorFallo: 'The editor could not be opened.',
     },
   },
+  importar: {
+    boton: 'Import…',
+    titulo: 'Import from Laragon, XAMPP or Herd',
+    intro:
+      'Sites are linked where they are: no folder is moved, copied or modified. If you want, their databases are copied too. WolfCore Dev only reads the other programs’ installations.',
+    buscando: 'Looking for installations…',
+    nada: 'Laragon, XAMPP and Herd were not found in the usual folders.',
+    errorVista: 'Could not look for what can be imported',
+    programas: { laragon: 'Laragon', xampp: 'XAMPP', herd: 'Herd' },
+    sitios: {
+      titulo: 'Sites',
+      todos: 'Select all',
+      ninguno: 'Clear all',
+      dominio: (d: string) => `Domain ${d}`,
+      dominioPropuesto: (d: string) => `Domain ${d} (suggested)`,
+      php: (v: string) => `PHP ${v}`,
+      phpSe: (de: string, a: string) => `PHP ${de} → ${a}`,
+      sinPhp: 'PHP not determined',
+      base: (nombre: string, motor: string) => `Database ${nombre} (${motor})`,
+      yaVinculado: 'Already a WolfCore Dev site',
+      dominioEnUso: 'Another site already uses that domain',
+    },
+    avisos: {
+      sin_dominio: 'It has no domain in the other program: one is suggested.',
+      dominio_invalido: 'Its domain is not valid: one is suggested.',
+      sin_vhost: 'It has no virtual host of its own: a domain is suggested.',
+      php_desconocido: 'It is not known which PHP version it uses: an installed one is chosen.',
+      base_no_local: 'Its database is on another server: it is not imported.',
+      base_nombre_invalido: 'Its database name is not valid: it is not imported.',
+      motor_no_soportado: 'Its database is not MySQL or MariaDB: it is not imported.',
+    },
+    problemas: {
+      titulo: (n: number) =>
+        `${n} ${n === 1 ? 'thing was' : 'things were'} discarded or could not be read`,
+    },
+    bases: {
+      titulo: 'Databases',
+      importarBases: 'Also import the databases',
+      ayuda:
+        'Start the other program’s database server before continuing: WolfCore Dev does not start or stop other programs. The password is only used for this import and is not saved.',
+      destino: 'Destination server',
+      apagada: 'stopped',
+      sinMotores:
+        'MySQL and MariaDB are not installed: install them from Services to import databases.',
+      puerto: 'Source server port',
+      usuario: 'User',
+      clave: 'Password',
+      claveAyuda: 'Leave it empty if the user has no password (like root in Laragon or XAMPP).',
+      existe: 'already exists at the destination',
+      reemplazar: 'Replace (a backup is made first)',
+      noSeToca: 'It is left alone unless you tick it.',
+    },
+    pasos: { elegir: 'Choose', confirmar: 'Confirm' },
+    continuar: 'Continue',
+    volver: 'Back',
+    cancelar: 'Cancel',
+    importar: 'Import',
+    cerrar: 'Close',
+    sinSeleccion: 'Choose at least one site.',
+    origenIncompleto: 'Enter the port and user of the source server.',
+    confirmar: {
+      titulo: 'Confirm the import',
+      sitios: (n: number) =>
+        `${n} ${n === 1 ? 'site' : 'sites'} will be linked in their current folder. No file is moved, copied or modified.`,
+      sinConfianza: 'No imported site runs recipes until you tick “I trust this repository”.',
+      hosts:
+        'Nginx and the hosts file will be updated (Windows may ask for administrator permission).',
+      basesNuevas: (nombres: string) => `These databases will be copied: ${nombres}.`,
+      basesReemplazo: (nombres: string) =>
+        `These databases already exist and will be replaced: ${nombres}. A backup of each is made first.`,
+      basesSinTocar: (nombres: string) =>
+        `These databases already exist and will not be touched: ${nombres}.`,
+      origen: (puerto: number, usuario: string) =>
+        `They will be dumped from the other program’s server (127.0.0.1:${puerto}, user ${usuario}). It is only read, never modified.`,
+      sinBases: 'No database will be imported.',
+      proteccion:
+        'Each database structure is checked first and the data goes in with a limited user: if anything fails, the database is left as it was.',
+    },
+    resultado: {
+      titulo: 'Import result',
+      importando: 'Importing…',
+      sitioOk: 'Imported',
+      sitioFallo: 'Not imported',
+      baseOk: (n: string) => `Database ${n} imported`,
+      baseFallo: (n: string) => `Database ${n} not imported`,
+      copiaPrevia: (ruta: string) => `Backup of the previous database: ${ruta}`,
+      phpDistinto: (v: string) => `PHP ${v} was used (the original version is not installed).`,
+      sinAplicar:
+        'Nginx or the hosts file were not brought up to date: check the notice in Projects and try again.',
+      resumen: (s: number, b: number) =>
+        `${s} ${s === 1 ? 'site' : 'sites'} imported, ${b} ${b === 1 ? 'database' : 'databases'} imported.`,
+      errorImportar: 'Could not import',
+    },
+  },
   plantillas: {
     guardarComo: 'Save as template…',
     dialogo: {

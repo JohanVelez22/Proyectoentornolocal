@@ -1122,6 +1122,53 @@ export function idPlantilla(v: unknown): string {
   return t;
 }
 
+/** Ids de sitios detectados en Laragon, XAMPP o Herd (`laragon-0123456789ab`): nunca una ruta. */
+export function idsImportar(v: unknown): string[] {
+  if (!Array.isArray(v) || v.length < 1 || v.length > 200) {
+    throw new Error('Argumento no válido: sitios a importar');
+  }
+  return v.map((x) => {
+    const t = textoAcotado(x, 1, 40, 'sitio a importar');
+    if (!/^(?:laragon|xampp|herd)-[0-9a-f]{12}$/.test(t)) {
+      throw new Error('Argumento no válido: sitio a importar');
+    }
+    return t;
+  });
+}
+
+/**
+ * Opciones de la importación desde otros programas: el servidor de origen (siempre 127.0.0.1; la
+ * clave solo viaja en esta llamada), el servidor local de destino y las bases que el usuario
+ * confirmó reemplazar. Cualquier otra clave hace fallar la llamada.
+ */
+export function opcionesImportar(v: unknown): {
+  origenBd?: { host: '127.0.0.1'; puerto: number; usuario: string; clave: string };
+  instancia?: ReturnType<typeof objetivoSql>['objetivo'];
+  reemplazar?: string[];
+} {
+  const o = objetoPlano<Record<string, unknown>>(v ?? {}, 'importar');
+  soloClaves(o, ['origenBd', 'instancia', 'reemplazar'], 'importar');
+  const salida: ReturnType<typeof opcionesImportar> = {};
+  if (o['instancia'] !== undefined) salida.instancia = objetivoSql(o['instancia']).objetivo;
+  if (o['origenBd'] !== undefined) {
+    const b = objetoPlano<Record<string, unknown>>(o['origenBd'], 'origen');
+    soloClaves(b, ['host', 'puerto', 'usuario', 'clave'], 'origen');
+    if (b['host'] !== '127.0.0.1') throw new Error('Argumento no válido: servidor de origen');
+    salida.origenBd = {
+      host: '127.0.0.1',
+      puerto: enteroEn(b['puerto'], 1, 65535, 'puerto de origen'),
+      usuario: textoAcotado(b['usuario'], 1, 64, 'usuario de origen'),
+      clave: textoAcotado(b['clave'], 0, 256, 'clave de origen'),
+    };
+  }
+  const re = o['reemplazar'];
+  if (re !== undefined) {
+    if (!Array.isArray(re) || re.length > 200) throw new Error('Argumento no válido: reemplazar');
+    salida.reemplazar = re.map((x) => nombreBase('mysql', x, 'base a reemplazar'));
+  }
+  return salida;
+}
+
 /**
  * Opciones para guardar (o previsualizar) una plantilla. Con `conNombre` el nombre es obligatorio.
  * Las exclusiones extra son texto corto; el núcleo las vuelve a validar y nunca puede quitar las

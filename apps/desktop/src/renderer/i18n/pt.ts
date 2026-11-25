@@ -3290,6 +3290,101 @@ export const pt: Textos = {
       editorFallo: 'Não foi possível abrir o editor.',
     },
   },
+  importar: {
+    boton: 'Importar…',
+    titulo: 'Importar do Laragon, XAMPP ou Herd',
+    intro:
+      'Os sites são vinculados onde estão: nenhuma pasta é movida, copiada ou modificada. Se quiser, seus bancos de dados também são copiados. O WolfCore Dev só lê as instalações dos outros programas.',
+    buscando: 'Procurando instalações…',
+    nada: 'Laragon, XAMPP e Herd não foram encontrados nas pastas habituais.',
+    errorVista: 'Não foi possível procurar o que pode ser importado',
+    programas: { laragon: 'Laragon', xampp: 'XAMPP', herd: 'Herd' },
+    sitios: {
+      titulo: 'Sites',
+      todos: 'Escolher todos',
+      ninguno: 'Remover todos',
+      dominio: (d: string) => `Domínio ${d}`,
+      dominioPropuesto: (d: string) => `Domínio ${d} (sugerido)`,
+      php: (v: string) => `PHP ${v}`,
+      phpSe: (de: string, a: string) => `PHP ${de} → ${a}`,
+      sinPhp: 'PHP não determinado',
+      base: (nombre: string, motor: string) => `Banco ${nombre} (${motor})`,
+      yaVinculado: 'Já é um site do WolfCore Dev',
+      dominioEnUso: 'Outro site já usa esse domínio',
+    },
+    avisos: {
+      sin_dominio: 'Não tem domínio no outro programa: um é sugerido.',
+      dominio_invalido: 'O domínio não é válido: um é sugerido.',
+      sin_vhost: 'Não tem um host virtual próprio: um domínio é sugerido.',
+      php_desconocido: 'Não se sabe qual versão do PHP usa: uma instalada é escolhida.',
+      base_no_local: 'O banco está em outro servidor: não é importado.',
+      base_nombre_invalido: 'O nome do banco não é válido: não é importado.',
+      motor_no_soportado: 'O banco não é MySQL nem MariaDB: não é importado.',
+    },
+    problemas: {
+      titulo: (n: number) =>
+        `${n} ${n === 1 ? 'item foi descartado ou não pôde' : 'itens foram descartados ou não puderam'} ser lido${n === 1 ? '' : 's'}`,
+    },
+    bases: {
+      titulo: 'Bancos de dados',
+      importarBases: 'Importar também os bancos de dados',
+      ayuda:
+        'Ligue o servidor de bancos de dados do outro programa antes de continuar: o WolfCore Dev não liga nem desliga programas alheios. A senha é usada só nesta importação e não é salva.',
+      destino: 'Servidor de destino',
+      apagada: 'desligado',
+      sinMotores:
+        'MySQL e MariaDB não estão instalados: instale-os em Serviços para importar bancos.',
+      puerto: 'Porta do servidor de origem',
+      usuario: 'Usuário',
+      clave: 'Senha',
+      claveAyuda: 'Deixe em branco se o usuário não tem senha (como o root no Laragon ou XAMPP).',
+      existe: 'já existe no destino',
+      reemplazar: 'Substituir (antes é feita uma cópia)',
+      noSeToca: 'Não é alterado se você não marcar.',
+    },
+    pasos: { elegir: 'Escolher', confirmar: 'Confirmar' },
+    continuar: 'Continuar',
+    volver: 'Voltar',
+    cancelar: 'Cancelar',
+    importar: 'Importar',
+    cerrar: 'Fechar',
+    sinSeleccion: 'Escolha pelo menos um site.',
+    origenIncompleto: 'Informe a porta e o usuário do servidor de origem.',
+    confirmar: {
+      titulo: 'Confirme a importação',
+      sitios: (n: number) =>
+        `${n} ${n === 1 ? 'site será vinculado' : 'sites serão vinculados'} na pasta atual. Nenhum arquivo é movido, copiado ou modificado.`,
+      sinConfianza:
+        'Nenhum site importado executa receitas até que você marque “Confio neste repositório”.',
+      hosts:
+        'O Nginx e o arquivo hosts serão atualizados (o Windows pode pedir permissão de administrador).',
+      basesNuevas: (nombres: string) => `Estes bancos serão copiados: ${nombres}.`,
+      basesReemplazo: (nombres: string) =>
+        `Estes bancos já existem e serão substituídos: ${nombres}. Antes é salva uma cópia de cada um.`,
+      basesSinTocar: (nombres: string) =>
+        `Estes bancos já existem e não serão alterados: ${nombres}.`,
+      origen: (puerto: number, usuario: string) =>
+        `Serão exportados do servidor do outro programa (127.0.0.1:${puerto}, usuário ${usuario}). Ele só é lido, nunca modificado.`,
+      sinBases: 'Nenhum banco de dados será importado.',
+      proteccion:
+        'A estrutura de cada banco é verificada antes e os dados entram com um usuário limitado: se algo falhar, o banco fica como estava.',
+    },
+    resultado: {
+      titulo: 'Resultado da importação',
+      importando: 'Importando…',
+      sitioOk: 'Importado',
+      sitioFallo: 'Não importado',
+      baseOk: (n: string) => `Banco ${n} importado`,
+      baseFallo: (n: string) => `Banco ${n} não importado`,
+      copiaPrevia: (ruta: string) => `Cópia do banco anterior: ${ruta}`,
+      phpDistinto: (v: string) => `Foi usado o PHP ${v} (a versão original não está instalada).`,
+      sinAplicar:
+        'O Nginx ou o arquivo hosts não ficaram atualizados: veja o aviso em Projetos e tente de novo.',
+      resumen: (s: number, b: number) =>
+        `${s} ${s === 1 ? 'site importado' : 'sites importados'}, ${b} ${b === 1 ? 'banco importado' : 'bancos importados'}.`,
+      errorImportar: 'Não foi possível importar',
+    },
+  },
   plantillas: {
     guardarComo: 'Salvar como modelo…',
     dialogo: {

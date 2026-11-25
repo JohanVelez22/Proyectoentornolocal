@@ -87,6 +87,8 @@ import {
   validarPedidoProyecto,
   opcionesPlantilla,
   idPlantilla,
+  idsImportar,
+  opcionesImportar,
   versionWordpress,
   idServicioDatos,
   motorBd,
@@ -1144,6 +1146,14 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'plantillas.guardar': async (n, _s, sitioId, opciones) =>
     n.plantillas.guardar(await sitioExistente(n, sitioId), opcionesPlantilla(opciones, true)),
   'plantillas.borrar': (n, _s, id) => n.plantillas.borrar(idPlantilla(id)),
+  'importar.vistaPrevia': (n, _s, instancia) =>
+    n.vistaPreviaImportar(instancia === undefined ? undefined : objetivoSql(instancia).objetivo),
+  'importar.ejecutar': (n, _s, seleccion, opciones) => {
+    const ids = idsImportar(seleccion);
+    const o = opcionesImportar(opciones);
+    // La clave del servidor de origen solo vive en esta llamada y se quita de cualquier error.
+    return sinClave(o.origenBd?.clave ?? '', () => n.importarDeOtros(ids, o));
+  },
 
   // ---- Git y GitHub: el token lo agrega este proceso; nunca vuelve al renderer ----
   'git.disponible': (n) => n.disponibilidadGit(),

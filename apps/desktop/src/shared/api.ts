@@ -51,6 +51,13 @@ import type {
   Plantilla,
   OpcionesPlantilla,
   VistaPreviaPlantilla,
+  FilaImportar,
+  VistaPreviaImportar,
+  OpcionesImportar,
+  ResultadoImportar,
+  ProblemaImportar,
+  AvisoImportar,
+  ProgramaAjeno,
   ResultadoCrearProyecto,
   TipoGenerador,
   ResultadoTraer,
@@ -204,6 +211,13 @@ export type {
   Plantilla,
   OpcionesPlantilla,
   VistaPreviaPlantilla,
+  FilaImportar,
+  VistaPreviaImportar,
+  OpcionesImportar,
+  ResultadoImportar,
+  ProblemaImportar,
+  AvisoImportar,
+  ProgramaAjeno,
   ResultadoCrearProyecto,
   TipoGenerador,
   ResultadoTraer,
@@ -676,6 +690,19 @@ export interface ApiEntorno {
     /** Borra solo la plantilla (nunca un proyecto). */
     borrar(id: string): Promise<void>;
   };
+  /**
+   * Importar desde Laragon, XAMPP y Herd. Los sitios se identifican por el id de la vista previa
+   * (nunca por rutas) y se vinculan en su lugar; las bases se vuelcan del servidor de origen que
+   * enciende el usuario (la clave solo viaja en `ejecutar` y nunca se guarda).
+   */
+  importar: {
+    /** Qué se puede importar y qué pasaría con cada sitio; no escribe nada. */
+    vistaPrevia(instancia?: ObjetivoSqlIpc): Promise<VistaPreviaImportar>;
+    ejecutar(
+      seleccion: string[],
+      opciones: Omit<OpcionesImportar, 'instancia'> & { instancia?: ObjetivoSqlIpc },
+    ): Promise<ResultadoImportar>;
+  };
   git: {
     disponible(): Promise<DisponibilidadGit>;
     /**
@@ -1111,6 +1138,8 @@ export const RUTAS_IPC = [
   'plantillas.vistaPrevia',
   'plantillas.guardar',
   'plantillas.borrar',
+  'importar.vistaPrevia',
+  'importar.ejecutar',
   'git.disponible',
   'git.clonar',
   'git.estado',

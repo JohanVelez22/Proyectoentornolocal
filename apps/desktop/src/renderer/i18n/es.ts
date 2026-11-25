@@ -3282,6 +3282,99 @@ export const es = {
       editorFallo: 'No se pudo abrir el editor.',
     },
   },
+  importar: {
+    boton: 'Importar…',
+    titulo: 'Importar desde Laragon, XAMPP o Herd',
+    intro:
+      'Los sitios se vinculan donde están: no se mueve, copia ni modifica ninguna carpeta. Si quiere, también se copian sus bases de datos. WolfCore Dev solo lee las instalaciones de los otros programas.',
+    buscando: 'Buscando instalaciones…',
+    nada: 'No se encontró Laragon, XAMPP ni Herd en las carpetas habituales.',
+    errorVista: 'No se pudo buscar lo que se puede importar',
+    programas: { laragon: 'Laragon', xampp: 'XAMPP', herd: 'Herd' },
+    sitios: {
+      titulo: 'Sitios',
+      todos: 'Elegir todos',
+      ninguno: 'Quitar todos',
+      dominio: (d: string) => `Dominio ${d}`,
+      dominioPropuesto: (d: string) => `Dominio ${d} (propuesto)`,
+      php: (v: string) => `PHP ${v}`,
+      phpSe: (de: string, a: string) => `PHP ${de} → ${a}`,
+      sinPhp: 'PHP sin determinar',
+      base: (nombre: string, motor: string) => `Base ${nombre} (${motor})`,
+      yaVinculado: 'Ya es un sitio de WolfCore Dev',
+      dominioEnUso: 'Otro sitio ya usa ese dominio',
+    },
+    avisos: {
+      sin_dominio: 'No tiene dominio en el otro programa: se propone uno.',
+      dominio_invalido: 'Su dominio no es válido: se propone uno.',
+      sin_vhost: 'No tiene un host virtual propio: se propone un dominio.',
+      php_desconocido: 'No se sabe qué versión de PHP usa: se elige una instalada.',
+      base_no_local: 'Su base está en otro servidor: no se importa.',
+      base_nombre_invalido: 'El nombre de su base no es válido: no se importa.',
+      motor_no_soportado: 'Su base no es MySQL ni MariaDB: no se importa.',
+    },
+    problemas: {
+      titulo: (n: number) => `${n} cosas se descartaron o no se pudieron leer`,
+    },
+    bases: {
+      titulo: 'Bases de datos',
+      importarBases: 'Importar también las bases de datos',
+      ayuda:
+        'Encienda el servidor de bases de datos del otro programa antes de seguir: WolfCore Dev no arranca ni detiene programas ajenos. La clave se usa solo en esta importación y no se guarda.',
+      destino: 'Servidor de destino',
+      apagada: 'apagado',
+      sinMotores:
+        'No hay MySQL ni MariaDB instalados: instálelos desde Servicios para importar bases.',
+      puerto: 'Puerto del servidor de origen',
+      usuario: 'Usuario',
+      clave: 'Clave',
+      claveAyuda: 'Déjela vacía si el usuario no tiene clave (como root en Laragon o XAMPP).',
+      existe: 'ya existe en el destino',
+      reemplazar: 'Reemplazar (se hace una copia antes)',
+      noSeToca: 'No se toca si no la marca.',
+    },
+    pasos: { elegir: 'Elegir', confirmar: 'Confirmar' },
+    continuar: 'Continuar',
+    volver: 'Volver',
+    cancelar: 'Cancelar',
+    importar: 'Importar',
+    cerrar: 'Cerrar',
+    sinSeleccion: 'Elija al menos un sitio.',
+    origenIncompleto: 'Indique el puerto y el usuario del servidor de origen.',
+    confirmar: {
+      titulo: 'Confirme la importación',
+      sitios: (n: number) =>
+        `Se vincularán ${n} ${n === 1 ? 'sitio' : 'sitios'} en su carpeta actual. No se mueve, copia ni modifica ningún archivo.`,
+      sinConfianza:
+        'Ningún sitio importado ejecuta recetas hasta que usted marque «Confío en este repositorio».',
+      hosts:
+        'Se actualizarán Nginx y el archivo hosts (Windows puede pedir permiso de administrador).',
+      basesNuevas: (nombres: string) => `Se copiarán las bases: ${nombres}.`,
+      basesReemplazo: (nombres: string) =>
+        `Se reemplazarán estas bases, que ya existen: ${nombres}. Antes se guarda una copia de cada una.`,
+      basesSinTocar: (nombres: string) => `No se tocarán estas bases, que ya existen: ${nombres}.`,
+      origen: (puerto: number, usuario: string) =>
+        `Se volcarán del servidor del otro programa (127.0.0.1:${puerto}, usuario ${usuario}). Se lee sin modificarlo.`,
+      sinBases: 'No se importará ninguna base de datos.',
+      proteccion:
+        'La estructura de cada base se revisa antes y los datos entran con un usuario limitado: si algo falla, la base queda como estaba.',
+    },
+    resultado: {
+      titulo: 'Resultado de la importación',
+      importando: 'Importando…',
+      sitioOk: 'Importado',
+      sitioFallo: 'No se importó',
+      baseOk: (n: string) => `Base ${n} importada`,
+      baseFallo: (n: string) => `Base ${n} no importada`,
+      copiaPrevia: (ruta: string) => `Copia de la base anterior: ${ruta}`,
+      phpDistinto: (v: string) => `Se usó PHP ${v} (no estaba instalada la versión original).`,
+      sinAplicar:
+        'Nginx o el archivo hosts no quedaron al día: revise el aviso en Proyectos y reintente.',
+      resumen: (s: number, b: number) =>
+        `${s} ${s === 1 ? 'sitio importado' : 'sitios importados'}, ${b} ${b === 1 ? 'base importada' : 'bases importadas'}.`,
+      errorImportar: 'No se pudo importar',
+    },
+  },
   plantillas: {
     guardarComo: 'Guardar como plantilla…',
     dialogo: {

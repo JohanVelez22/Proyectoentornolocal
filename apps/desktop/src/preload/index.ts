@@ -256,6 +256,10 @@ const api: ApiEntorno = {
     guardar: (sitioId, opciones) => invocar('plantillas.guardar', sitioId, opciones),
     borrar: (id) => invocar('plantillas.borrar', id),
   },
+  importar: {
+    vistaPrevia: (instancia) => invocar('importar.vistaPrevia', instancia),
+    ejecutar: (seleccion, opciones) => invocar('importar.ejecutar', seleccion, opciones),
+  },
   agentes: {
     estado: () => invocar('agentes.estado'),
     version: (id) => invocar('agentes.version', id),
