@@ -1891,6 +1891,7 @@ describe('pasos de plantilla de proyecto (D14)', () => {
   const conPlantillas = async (
     o: OpcionesArmado = {},
     esquemaDe: 'mysql' | 'postgresql' = 'mysql',
+    origen: 'propia' | 'importada' = 'propia',
   ): Promise<{ a: Armado; copias: { id: string; destino: string }[] }> => {
     const a = await armar(o);
     const copias: { id: string; destino: string }[] = [];
@@ -1903,7 +1904,7 @@ describe('pasos de plantilla de proyecto (D14)', () => {
         copias.push({ id, destino });
         return { archivos: 3 };
       },
-      rutaEsquema: async () => ({ ruta: join(a.base, 'esquema.sql'), motor: esquemaDe }),
+      rutaEsquema: async () => ({ ruta: join(a.base, 'esquema.sql'), motor: esquemaDe, origen }),
     };
     a.registro = registrarPasosReales(new RegistroPasos(), a.deps);
     return { a, copias };
@@ -1961,6 +1962,17 @@ describe('pasos de plantilla de proyecto (D14)', () => {
     ).rejects.toMatchObject({ codigo: 'proyectos.argumento_invalido' });
     expect(a.esquemas).toEqual([]);
     expect(otro.a.esquemas).toEqual([]);
+  });
+
+  it('el origen lo dice Plantillas: un arg origen=propia no lo cambia', async () => {
+    const { a } = await conPlantillas({}, 'mysql', 'importada');
+    await correr(a, 'restaurar-esquema-plantilla', {
+      plantilla: 'mi-base-a1b2c3',
+      motor: 'mysql',
+      base: 'tienda',
+      origen: 'propia',
+    });
+    expect(a.esquemas[0]!.origen).toBe('importada');
   });
 
   it('un wolfcore.yml no puede traer estos pasos', async () => {

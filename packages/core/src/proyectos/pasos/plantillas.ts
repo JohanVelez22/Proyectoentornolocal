@@ -65,7 +65,8 @@ export function pasoRestaurarEsquemaPlantilla(d: DepsPasos): ImplementacionPaso 
     ctx.linea(sanear(`Creando las tablas de la plantilla en ${base}…`));
     // Con los privilegios mínimos y todo o nada (usuario temporal limitado a la base).
     const r = await d.restaurarEsquema(objetivo, esquema.ruta, base, {
-      origen: argsDe(ctx).origen === 'importada' ? 'importada' : 'propia',
+      // El origen lo dice Plantillas (registro del equipo), nunca los args del paso.
+      origen: esquema.origen,
     });
     for (const a of r.advertencias) ctx.linea(sanear(a));
   };

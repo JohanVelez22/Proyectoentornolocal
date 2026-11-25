@@ -168,7 +168,8 @@ const PlantillaSchema = z
     motorBase: z.enum(MOTORES_BD).nullable(),
     /** Módulo ASGI (`main:app`) del uvicorn de un FastAPI; los demás procesos no se guardan. */
     /** `propia`: la guardó este usuario; `importada`: viene de un tercero (sin scripts ni confianza). */
-    origen: z.enum(['propia', 'importada']).default('propia'),
+    // Se ignora: el origen no sale de plantilla.json (se puede falsificar), sale del registro.
+    origen: z.unknown().optional(),
     moduloAsgi: z
       .string()
       .regex(/^[A-Za-z0-9_.]{1,80}:[A-Za-z0-9_]{1,80}$/)
@@ -230,7 +231,7 @@ export interface VistaPreviaPlantilla {
 }
 
 export interface DepsPlantillas {
-  rutas: Pick<Rutas, 'plantillas' | 'tmp'>;
+  rutas: Pick<Rutas, 'plantillas' | 'plantillasPropias' | 'tmp'>;
   /** El sitio por id; lanza si no existe. */
   sitio: (id: string) => Promise<Sitio>;
   /** Receta efectiva del proyecto (sin argumentos de interfaz). */
@@ -656,6 +657,14 @@ async function escribirZip(destino: string, archivos: readonly ArchivoPlantilla[
   await fin;
 }
 
+/** El json no lleva el origen (sale del registro del equipo). */
+const sinOrigen = (p: Plantilla): Omit<Plantilla, 'origen'> => {
+  const { origen, ...resto } = p;
+  void origen;
+  return resto;
+};
+const sha256Texto = (t: string): string => createHash('sha256').update(t, 'utf8').digest('hex');
+
 async function sha256De(archivo: string): Promise<string> {
   const h = createHash('sha256');
   await pipeline(createReadStream(archivo), h);
@@ -887,6 +896,10 @@ export class Plantillas {
     const r = PlantillaSchema.safeParse(bruto);
     if (!r.success || r.data.id !== id) throw danada('plantilla.json no es válido');
     const p = r.data as Plantilla;
+    // El origen: propia solo si este equipo la guardó y su plantilla.json no cambió desde entonces.
+    // Lo que diga el json no cuenta; por defecto, importada.
+    const registro = await this.leerRegistro();
+    p.origen = registro[id] === sha256Texto(texto) ? 'propia' : 'importada';
     // Coherencia: las huellas existen justo cuando existe el archivo.
     if ((p.sha256.archivos !== null) !== p.conArchivos) throw danada('las huellas no coinciden');
     if ((p.sha256.esquema !== null) !== (p.archivoEsquema !== null)) {
@@ -895,7 +908,30 @@ export class Plantillas {
     return p;
   }
 
-  /** Qué entraría en la plantilla, sin escribir nada. */
+  private async leerRegistro(): Promise<Record<string, string>> {
+    try {
+      const j: unknown = JSON.parse(await readFile(this.d.rutas.plantillasPropias(), 'utf8'));
+      if (!j || typeof j !== 'object' || Array.isArray(j)) return {};
+      const salida: Record<string, string> = {};
+      for (const [k, v] of Object.entries(j)) if (typeof v === 'string') salida[k] = v;
+      return salida;
+    } catch {
+      return {};
+    }
+  }
+
+  /** Anota (huella) o quita (null) una plantilla del registro, con escritura atómica. */
+  private async anotarRegistro(id: string, huella: string | null): Promise<void> {
+    const registro = await this.leerRegistro();
+    if (huella === null) delete registro[id];
+    else registro[id] = huella;
+    const destino = this.d.rutas.plantillasPropias();
+    await mkdir(path.dirname(destino), { recursive: true });
+    const tmp = `${destino}.${randomBytes(4).toString('hex')}.tmp`;
+    await writeFile(tmp, JSON.stringify(registro, null, 2), 'utf8');
+    await rename(tmp, destino);
+  }
+
   /**
    * Base de la que se volcaría el esquema, con el servidor correcto (instancia por puerto). Una
    * base en otro equipo o en un puerto que ninguna instancia local usa no se adivina: error.
@@ -1040,10 +1076,15 @@ export class Plantillas {
       }
       await writeFile(
         path.join(parcial, 'plantilla.json'),
-        JSON.stringify(plantilla, null, 2),
+        JSON.stringify(sinOrigen(plantilla), null, 2),
         'utf8',
       );
       await rename(parcial, path.join(raiz, id));
+      // Lo guardó este equipo: queda registrada con la huella de su plantilla.json.
+      await this.anotarRegistro(
+        id,
+        sha256Texto(await readFile(path.join(raiz, id, 'plantilla.json'), 'utf8')),
+      );
       return plantilla;
     } catch (e) {
       await rm(parcial, { recursive: true, force: true }).catch(() => undefined);
@@ -1063,16 +1104,19 @@ export class Plantillas {
     // Un enlace se quita sin entrar en él.
     if (info.isSymbolicLink()) await rm(dir, { force: true });
     else await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    await this.anotarRegistro(id, null).catch(() => undefined);
   }
 
   /** Ruta del esquema, ya comprobada contra su huella. */
-  async rutaEsquema(id: string): Promise<{ ruta: string; motor: MotorBd }> {
+  async rutaEsquema(
+    id: string,
+  ): Promise<{ ruta: string; motor: MotorBd; origen: 'propia' | 'importada' }> {
     const p = await this.cargar(id);
     if (!p.archivoEsquema || !p.motorBase || !p.sha256.esquema) {
       throw new ErrorWolf('plantillas.sin_esquema', 'La plantilla no trae el esquema de una base.');
     }
     const preparada = this.preparadas.get(id)?.esquema;
-    if (preparada) return { ruta: preparada, motor: p.motorBase };
+    if (preparada) return { ruta: preparada, motor: p.motorBase, origen: p.origen };
     const ruta = path.join(this.carpeta(id), p.archivoEsquema);
     let info;
     try {
@@ -1083,7 +1127,7 @@ export class Plantillas {
     if (!info.isFile() || info.size > this.limites.maxBytesEsquema)
       throw danada('el esquema no es válido');
     if ((await sha256De(ruta)) !== p.sha256.esquema) throw danada('el esquema cambió');
-    return { ruta, motor: p.motorBase };
+    return { ruta, motor: p.motorBase, origen: p.origen };
   }
 
   /**

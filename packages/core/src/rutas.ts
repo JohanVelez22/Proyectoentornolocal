@@ -99,6 +99,14 @@ export class Rutas {
   tmp(): string {
     return path.join(this.base, 'tmp');
   }
+  /**
+   * Registro de las plantillas que guardó este equipo (id → huella de su plantilla.json). Está
+   * fuera de `plantillas/`: una plantilla que llega copiada de otro lado no trae su entrada y es
+   * "importada".
+   */
+  plantillasPropias(): string {
+    return path.join(this.base, 'etc', 'plantillas-propias.json');
+  }
   /** Plantillas de proyecto: plantillas/<id>/ (receta, esquema sin datos y archivos). */
   plantillas(): string {
     return path.join(this.base, 'plantillas');

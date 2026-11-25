@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readdir, readFile, stat, symlink, utimes, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, stat, symlink, utimes, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { crc32, deflateRawSync } from 'node:zlib';
 import yauzl from 'yauzl';
@@ -1023,9 +1023,9 @@ describe('I3 / I6: plantilla importada y motor distinto', () => {
     expect(t).not.toContain('npm-build');
     expect(p.find((x) => x.tipo === 'composer-install')!.args).toMatchObject({ sinScripts: true });
     expect(p.find((x) => x.tipo === 'npm-ci')!.args).toMatchObject({ sinScripts: true });
-    expect(p.find((x) => x.tipo === 'restaurar-esquema-plantilla')!.args).toMatchObject({
-      origen: 'importada',
-    });
+    expect(p.find((x) => x.tipo === 'restaurar-esquema-plantilla')!.args).not.toHaveProperty(
+      'origen',
+    );
     expect(pasosOmitidosDePlantilla(pl()).map((x) => x.tipo)).toEqual([
       'key-generate',
       'storage-link',
@@ -1529,5 +1529,48 @@ describe('menores de la segunda revisión', () => {
     expect(creados).toEqual([]);
     await expect(stat(path.join(dir, 'nueva'))).rejects.toThrow();
     expect(liberadas).toEqual([p.id]);
+  });
+});
+
+describe('R3-I1: el origen no sale de plantilla.json', () => {
+  it('una plantilla guardada aquí es propia; manipular el json (aunque diga propia) la vuelve importada', async () => {
+    const pl = armar();
+    const p = await pl.guardar('tienda', opciones);
+    expect(p.origen).toBe('propia');
+    expect((await pl.cargar(p.id)).origen).toBe('propia');
+    const json = path.join(rutas.plantillas(), p.id, 'plantilla.json');
+    const obj = JSON.parse(await readFile(json, 'utf8'));
+    expect(obj.origen).toBeUndefined();
+    // Cualquier cambio al json (aquí, el nombre) rompe la huella registrada.
+    await writeFile(json, JSON.stringify({ ...obj, nombre: 'Otro', origen: 'propia' }, null, 2));
+    expect((await pl.cargar(p.id)).origen).toBe('importada');
+  });
+
+  it('un json que dice propia pero no está registrado en este equipo es importada', async () => {
+    const pl = armar();
+    const p = await pl.guardar('tienda', opciones);
+    // La misma carpeta copiada a otro equipo (otro registro, otra carpeta de datos).
+    const otra = new Rutas(path.join(dir, 'otro-equipo'));
+    await mkdir(otra.plantillas(), { recursive: true });
+    await cp(path.join(rutas.plantillas(), p.id), path.join(otra.plantillas(), p.id), {
+      recursive: true,
+    });
+    const ajena = new Plantillas({
+      rutas: otra,
+      sitio: async () => sitio,
+      receta: async () => receta,
+      respaldar: async () => ({ archivo: '' }),
+    });
+    const importada = await ajena.cargar(p.id);
+    expect(importada.origen).toBe('importada');
+    expect((await ajena.lista())[0]!.origen).toBe('importada');
+  });
+
+  it('borrar una plantilla la quita del registro', async () => {
+    const pl = armar();
+    const p = await pl.guardar('tienda', opciones);
+    await pl.borrar(p.id);
+    const registro = JSON.parse(await readFile(rutas.plantillasPropias(), 'utf8'));
+    expect(registro[p.id]).toBeUndefined();
   });
 });
