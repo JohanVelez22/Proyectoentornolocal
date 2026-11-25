@@ -47,7 +47,6 @@ interface Armado {
   phpIni: string;
   nodeDir: string;
   pythonDir: string;
-  rutas: Rutas;
 }
 
 interface OpcionesArmado {
@@ -178,7 +177,6 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
     phpIni,
     nodeDir,
     pythonDir,
-    rutas,
   };
 }
 
