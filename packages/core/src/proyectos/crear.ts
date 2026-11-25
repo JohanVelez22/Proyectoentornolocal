@@ -86,7 +86,7 @@ const STARTER_KITS = ['ninguno', 'react', 'vue', 'livewire'];
 const VERSION_WP = /^\d{1,2}\.\d{1,2}(\.\d{1,2})?$/;
 
 /** Opciones contra listas cerradas: lo que no se reconoce se rechaza, no se ignora. */
-function validarOpciones(p: PedidoProyecto, conPlantilla = false): void {
+function validarOpciones(p: PedidoProyecto, plantilla: Plantilla | null = null): void {
   const o: unknown = p.opciones ?? {};
   if (typeof o !== 'object' || o === null || Array.isArray(o)) {
     throw invalido('opciones', 'Las opciones del proyecto no son válidas.');
@@ -120,9 +120,16 @@ function validarOpciones(p: PedidoProyecto, conPlantilla = false): void {
   ) {
     throw invalido('opciones', 'La versión de WordPress no es válida.');
   }
-  if (conPlantilla) {
-    // Desde una plantilla solo cuenta pgvector: lo demás ya lo decidió la plantilla.
-    for (const k of ['starterKit', 'symfonyWebapp', 'versionWordpress', 'confirmarHuellaDebil']) {
+  if (plantilla) {
+    // Desde una plantilla solo cuenta pgvector (y, sin archivos, la descarga de WordPress): lo
+    // demás ya lo decidió la plantilla.
+    const descarga = !plantilla.conArchivos && plantilla.tipo === 'wordpress';
+    const ajenas = [
+      'starterKit',
+      'symfonyWebapp',
+      ...(descarga ? [] : ['versionWordpress', 'confirmarHuellaDebil']),
+    ];
+    for (const k of ajenas) {
       if (x[k] !== undefined) throw invalido('opciones', 'Esa opción no aplica a una plantilla.');
     }
   } else if (p.tipo !== 'laravel' && x.starterKit !== undefined && x.starterKit !== 'ninguno') {
@@ -240,14 +247,17 @@ export async function crearProyecto(
     throw invalido('tipo', 'El tipo de proyecto no existe.');
   }
   const nombre = validarNombreProyecto(p.nombre);
-  validarOpciones(p, plantilla !== null);
+  validarOpciones(p, plantilla);
   const gen: Generador = plantilla
     ? generadorDePlantilla(plantilla)
     : generador(p.tipo as TipoGenerador);
   const dominio = gen.dominio(nombre);
-  // WordPress solo publica SHA-1 (débil): sin la confirmación no se crea nada. (Desde una
-  // plantilla no se descarga nada: sus archivos ya están en el equipo.)
-  if (!plantilla && p.tipo === 'wordpress' && p.opciones?.confirmarHuellaDebil !== true) {
+  // WordPress solo publica SHA-1 (débil): sin la confirmación no se crea nada. (Una plantilla con
+  // archivos no descarga nada; sin archivos, WordPress se descarga como en un proyecto nuevo.)
+  const descargaWp = plantilla
+    ? !plantilla.conArchivos && plantilla.tipo === 'wordpress'
+    : p.tipo === 'wordpress';
+  if (descargaWp && p.opciones?.confirmarHuellaDebil !== true) {
     throw new ErrorWolf(
       'catalogo.huella_debil',
       'WordPress solo publica una huella SHA-1 (débil): hay que confirmar la descarga',

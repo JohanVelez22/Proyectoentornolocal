@@ -1087,3 +1087,138 @@ describe('I3 / I6: plantilla importada y motor distinto', () => {
     ).resolves.toBeDefined();
   });
 });
+
+describe('I4: plantillas sin archivos y configuración que no viaja', () => {
+  const pl = (extra: Partial<Plantilla> = {}): Plantilla => ({
+    id: 'base-a1b2c3',
+    nombre: 'Base',
+    creada: '2026-11-24T00:00:00.000Z',
+    tipo: 'laravel',
+    receta: [{ id: 'npm-ci', tipo: 'npm-ci', titulo: 'npm' }],
+    php: '8.3',
+    phpIni: {},
+    extensiones: [],
+    runtimes: {},
+    reglasNginx: null,
+    motorBase: 'mysql',
+    origen: 'propia',
+    moduloAsgi: null,
+    conArchivos: false,
+    archivoEsquema: 'esquema.sql',
+    sha256: { archivos: null, esquema: 'b'.repeat(64) },
+    ...extra,
+  });
+  const ped = (
+    tipo: PedidoProyecto['tipo'],
+    extra: Partial<PedidoProyecto> = {},
+  ): PedidoProyecto => ({
+    tipo,
+    plantilla: 'base-a1b2c3',
+    nombre: 'nueva',
+    carpeta: 'C:\\x\\nueva',
+    base: { instancia: null, nombre: 'nueva', motor: 'mysql' },
+    opciones: {},
+    ...extra,
+  });
+  const tipos = (p: { tipo: string }[]): string[] => p.map((x) => x.tipo);
+
+  it('Laravel sin archivos: el generador base del tipo y el esquema en lugar de migrar', () => {
+    const p = generadorDePlantilla(pl()).pasos(ped('laravel'));
+    expect(tipos(p)).toEqual([
+      'crear-desde-composer',
+      'bd-crear',
+      'env-crear',
+      'key-generate',
+      'restaurar-esquema-plantilla',
+      'sitio-crear',
+    ]);
+    expect(p.find((x) => x.tipo === 'crear-desde-composer')!.args).toEqual({
+      paquete: 'laravel/laravel',
+    });
+  });
+
+  it('sin base no hay esquema y Laravel migra como en un proyecto nuevo', () => {
+    const p = generadorDePlantilla(pl()).pasos(ped('laravel', { base: null }));
+    expect(tipos(p)).not.toContain('restaurar-esquema-plantilla');
+    expect(tipos(p)).not.toContain('bd-crear');
+  });
+
+  it('WordPress sin archivos descarga y crea wp-config.php; pide la huella débil', async () => {
+    const p = generadorDePlantilla(pl({ tipo: 'wordpress' })).pasos(ped('wordpress'));
+    expect(tipos(p)).toEqual([
+      'descargar-plantilla',
+      'bd-crear',
+      'config-bd-crear',
+      'restaurar-esquema-plantilla',
+      'sitio-crear',
+    ]);
+    const deps = depsMinimas({ tipo: 'wordpress', conArchivos: false });
+    await expect(
+      crearProyecto(deps, { ...ped('wordpress'), carpeta: path.join(dir, 'nueva') }),
+    ).rejects.toMatchObject({ codigo: 'catalogo.huella_debil' });
+    await expect(
+      crearProyecto(deps, {
+        ...ped('wordpress'),
+        carpeta: path.join(dir, 'nueva'),
+        opciones: { confirmarHuellaDebil: true },
+      }),
+    ).resolves.toBeDefined();
+  });
+
+  it('WordPress y CodeIgniter 3 con archivos: wp-config.php y database.php se vuelven a crear', () => {
+    const wp = generadorDePlantilla(pl({ tipo: 'wordpress', conArchivos: true, receta: [] })).pasos(
+      ped('wordpress'),
+    );
+    expect(tipos(wp)).toEqual([
+      'restaurar-plantilla-archivos',
+      'bd-crear',
+      'config-bd-crear',
+      'restaurar-esquema-plantilla',
+      'sitio-crear',
+    ]);
+    expect(wp.find((x) => x.tipo === 'config-bd-crear')!.args).toMatchObject({
+      marco: 'wordpress',
+    });
+    const ci = generadorDePlantilla(
+      pl({ tipo: 'codeigniter3', conArchivos: true, receta: [] }),
+    ).pasos(ped('codeigniter3', { base: null }));
+    expect(ci.find((x) => x.tipo === 'config-bd-crear')!.args).toMatchObject({
+      marco: 'codeigniter3',
+      sinBd: true,
+    });
+  });
+});
+
+function depsMinimas(extra: Partial<Plantilla>): DepsCrearProyecto {
+  const plantilla: Plantilla = {
+    id: 'base-a1b2c3',
+    nombre: 'Base',
+    creada: '2026-11-24T00:00:00.000Z',
+    tipo: 'laravel',
+    receta: [],
+    php: '8.3',
+    phpIni: {},
+    extensiones: [],
+    runtimes: {},
+    reglasNginx: null,
+    motorBase: 'mysql',
+    origen: 'propia',
+    moduloAsgi: null,
+    conArchivos: false,
+    archivoEsquema: 'esquema.sql',
+    sha256: { archivos: null, esquema: 'b'.repeat(64) },
+    ...extra,
+  };
+  return {
+    rutas: { base: path.join(dir, 'datos') },
+    crearSitio: async (d) => ({ sitio: { ...d, id: 'nueva' } as Sitio }),
+    ejecutarReceta: async () => ({ estado: 'lista' }),
+    estadoReceta: () => ({ pasos: [] }),
+    sitios: async () => [],
+    basesDe: async () => [],
+    phpInstaladas: async () => ['8.3'],
+    pythonInstaladas: async () => [],
+    confiar: async () => undefined,
+    plantillas: { cargar: async () => plantilla },
+  };
+}

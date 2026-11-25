@@ -5,6 +5,7 @@ import { textos } from '../src/renderer/i18n';
 import {
   accionDeError,
   aPedido,
+  descargaWordpress,
   formularioDePlantilla,
   formularioInicial,
   infoDe,
@@ -351,10 +352,20 @@ describe('proyecto desde una plantilla propia', () => {
     expect(aPedido(form()).plantilla).toBeUndefined();
   });
 
-  it('una plantilla de WordPress no pide la huella débil (no descarga nada)', () => {
+  it('una plantilla de WordPress con archivos no pide la huella débil (no descarga nada)', () => {
     const f = dePlantilla(pl({ tipo: 'wordpress' }));
     expect(validarPedido(f, t)).toBeNull();
     expect(aPedido(f).opciones).toEqual({});
+    expect(descargaWordpress(f)).toBe(false);
+  });
+
+  it('una plantilla de WordPress sin archivos descarga WordPress y exige la casilla', () => {
+    const f = dePlantilla(pl({ tipo: 'wordpress', conArchivos: false }));
+    expect(descargaWordpress(f)).toBe(true);
+    expect(validarPedido(f, t)).toBe(t.huellaDebil);
+    const ok = { ...f, confirmarHuellaDebil: true };
+    expect(validarPedido(ok, t)).toBeNull();
+    expect(aPedido(ok).opciones).toEqual({ confirmarHuellaDebil: true });
   });
 
   it('el esquema solo va a un motor de su familia', () => {

@@ -1,6 +1,11 @@
 import type { PasoReceta } from '../config';
 import { PASOS_PERMITIDOS_PLANTILLA, type Plantilla } from '../plantillas';
 import { procesoUvicorn } from '../recetas';
+import { generadorCodeigniter3, generadorCodeigniter4 } from './codeigniter';
+import { generadorEstatico } from './estatico';
+import { generadorFastapi } from './fastapi';
+import { generadorLaravel } from './laravel';
+import { generadorWordpress } from './wordpress';
 import {
   argsBase,
   dominioDe,
@@ -9,6 +14,7 @@ import {
   pasoSitio,
   type Generador,
   type PedidoProyecto,
+  type TipoGenerador,
 } from './comun';
 
 /** Pasos que ejecutan el código del proyecto (artisan, `npm run`): no se corren en una importada. */
@@ -25,6 +31,16 @@ export function pasosOmitidosDePlantilla(pl: Pick<Plantilla, 'receta' | 'origen'
   return pl.receta.filter((x) => !pasoSeRepite(pl, x));
 }
 
+/** Generador base de cada tipo de sitio (para una plantilla sin archivos). */
+const BASE_DEL_TIPO: Partial<Record<Plantilla['tipo'], { id: TipoGenerador; gen: Generador }>> = {
+  laravel: { id: 'laravel', gen: generadorLaravel },
+  codeigniter3: { id: 'codeigniter3', gen: generadorCodeigniter3 },
+  codeigniter4: { id: 'codeigniter4', gen: generadorCodeigniter4 },
+  fastapi: { id: 'fastapi', gen: generadorFastapi },
+  wordpress: { id: 'wordpress', gen: generadorWordpress },
+  estatico: { id: 'estatico', gen: generadorEstatico },
+};
+
 /**
  * Generador de un proyecto nuevo desde una plantilla propia: copia sus archivos, crea la base
  * (nueva, nunca una existente), repite los pasos permitidos de su receta, restaura el esquema sin
@@ -40,6 +56,29 @@ export function generadorDePlantilla(pl: Plantilla): Generador {
       const motor = motorDelPedido(p, pl.motorBase);
       const base = argsBase(p, motor);
       const conEsquema = p.base !== null && pl.archivoEsquema !== null;
+      const pasoEsquema = (): PasoReceta =>
+        paso('restaurar-esquema-plantilla', 'Crear las tablas de la plantilla (sin datos)', {
+          ...base,
+          plantilla: pl.id,
+          origen: pl.origen,
+        });
+      // Sin archivos: se parte del generador base del tipo (como un proyecto nuevo) y encima se
+      // restaura el esquema; los ajustes (php.ini, Nginx) los aplica crearProyecto al terminar.
+      const bas = pl.conArchivos ? undefined : BASE_DEL_TIPO[pl.tipo];
+      if (bas) {
+        const lista = bas.gen.pasos({ ...p, tipo: bas.id });
+        const salida: PasoReceta[] = [];
+        let puesto = false;
+        for (const x of lista) {
+          if (x.tipo === 'migrar' && conEsquema) continue;
+          if (x.tipo === 'sitio-crear' && conEsquema && !puesto) {
+            salida.push(pasoEsquema());
+            puesto = true;
+          }
+          salida.push(x);
+        }
+        return salida;
+      }
       const pasos: PasoReceta[] = [];
       if (pl.conArchivos) {
         pasos.push(
@@ -77,15 +116,21 @@ export function generadorDePlantilla(pl: Plantilla): Generador {
           ...(x.opcional ? { opcional: true } : {}),
         });
       }
-      if (conEsquema) {
+      // wp-config.php y database.php de CodeIgniter 3 no viajan en la plantilla (llevan la clave de
+      // la base): se vuelven a crear con la conexión del proyecto nuevo.
+      if (pl.conArchivos && pl.tipo === 'wordpress' && p.base) {
+        pasos.push(paso('config-bd-crear', 'Crear wp-config.php', { ...base, marco: 'wordpress' }));
+      }
+      if (pl.conArchivos && pl.tipo === 'codeigniter3') {
         pasos.push(
-          paso('restaurar-esquema-plantilla', 'Crear las tablas de la plantilla (sin datos)', {
+          paso('config-bd-crear', p.base ? 'Configurar CodeIgniter 3' : 'Configurar base_url', {
             ...base,
-            plantilla: pl.id,
-            origen: pl.origen,
+            marco: 'codeigniter3',
+            ...(p.base ? {} : { sinBd: true }),
           }),
         );
       }
+      if (conEsquema) pasos.push(pasoEsquema());
       if (
         p.opciones.pgvector === true &&
         p.base &&

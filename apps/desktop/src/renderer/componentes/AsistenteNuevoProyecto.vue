@@ -32,6 +32,7 @@ import {
   accionDeError,
   aPedido,
   baseSugerida,
+  descargaWordpress,
   formularioDePlantilla,
   formularioInicial,
   infoDe,
@@ -213,7 +214,7 @@ const leyendoHuella = ref(false);
 const confirmada = ref(false);
 
 async function leerHuella(): Promise<void> {
-  if (form.tipo !== 'wordpress' || form.plantilla || huella.value || leyendoHuella.value) return;
+  if (!descargaWordpress(form) || huella.value || leyendoHuella.value) return;
   leyendoHuella.value = true;
   try {
     huella.value = await api().proyectos.huellaWordpress();

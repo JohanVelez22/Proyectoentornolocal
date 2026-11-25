@@ -132,13 +132,20 @@ export interface FormProyecto {
   plantilla: Plantilla | null;
 }
 
+/** ¿Se va a descargar WordPress (y hay que confirmar su huella débil)? */
+export const descargaWordpress = (f: Pick<FormProyecto, 'tipo' | 'plantilla'>): boolean =>
+  f.tipo === 'wordpress' && !f.plantilla?.conArchivos;
+
 /** Info del tipo del formulario: la de la plantilla si se parte de una. */
 export const infoDe = (f: Pick<FormProyecto, 'tipo' | 'plantilla'>): InfoTipo =>
   f.plantilla ? infoDePlantilla(f.plantilla) : infoTipo(f.tipo);
 
-/** Generador del formulario (null si se parte de una plantilla: no hay huella ni starter kit). */
+/**
+ * Generador del formulario. Una plantilla con archivos no descarga nada (null); una sin archivos
+ * parte del generador base de su tipo (WordPress se descarga con su huella débil).
+ */
 const generadorDe = (f: Pick<FormProyecto, 'tipo' | 'plantilla'>): TipoGenerador | null =>
-  f.plantilla ? null : f.tipo;
+  f.plantilla?.conArchivos ? null : f.tipo;
 
 export function formularioInicial(tipo: TipoGenerador): FormProyecto {
   return {

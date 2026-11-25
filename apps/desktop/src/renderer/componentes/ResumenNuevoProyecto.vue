@@ -3,7 +3,12 @@ import { Warning } from '@vicons/ionicons5';
 import { NAlert, NCheckbox, NIcon, NSpin } from 'naive-ui';
 import { computed } from 'vue';
 import { textos } from '../i18n';
-import { motorDistinto, resumen, type FormProyecto } from '../utilidades/nuevoProyecto';
+import {
+  descargaWordpress,
+  motorDistinto,
+  resumen,
+  type FormProyecto,
+} from '../utilidades/nuevoProyecto';
 
 /**
  * Paso 3: lo que se va a crear y, en WordPress, la huella SHA-1 que publica wordpress.org con la
@@ -48,12 +53,7 @@ const lineas = computed(() =>
       {{ textos.errores.codigos['plantillas.motor_distinto'] }}
     </NAlert>
 
-    <NAlert
-      v-if="form.tipo === 'wordpress' && !form.plantilla"
-      type="warning"
-      :bordered="false"
-      class="huella"
-    >
+    <NAlert v-if="descargaWordpress(form)" type="warning" :bordered="false" class="huella">
       <template #icon
         ><NIcon><Warning /></NIcon
       ></template>
