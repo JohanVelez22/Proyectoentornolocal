@@ -356,7 +356,8 @@ export class Tuneles {
         return this.apagado(sitioId);
       }
       this.fijar({ sitioId, estado: 'error', url: null, mensaje });
-      throw e;
+      // El error que sube (IPC, MCP) tampoco lleva secretos del túnel.
+      throw e instanceof ErrorWolf ? e : new Error(mensaje);
     }
 
     if (this.gen(sitioId) !== gen) {

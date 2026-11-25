@@ -439,6 +439,21 @@ describe('Cloudflare con nombre: seguridad de la apertura', () => {
     expect(iniciados).toEqual([]);
   });
 
+  it('si el lanzamiento falla con un secreto en el mensaje, ni el estado, ni el evento, ni el error lo llevan', async () => {
+    const eventosVistos: unknown[] = [];
+    eventos.on('tunel:estado', (e) => eventosVistos.push(e));
+    const t = crear();
+    (t as unknown as { d: { supervisor: { iniciar: unknown } } }).d.supervisor.iniciar =
+      async () => {
+        throw new Error(`no arrancó: TUNNEL_CRED_CONTENTS=${CREDENCIAL} y ${CENTINELA}`);
+      };
+    const e = await t.abrir('wolf', SI).catch((x: unknown) => x as Error);
+    expect((e as Error).message).not.toContain(CENTINELA);
+    expect(JSON.stringify(t.estados())).not.toContain(CENTINELA);
+    expect(JSON.stringify(eventosVistos)).not.toContain(CENTINELA);
+    expect(readFileSync(env(), 'utf8')).toBe(ENV_ORIGINAL);
+  });
+
   it('un proveedor sin implementar (ngrok) no abre nada', async () => {
     sitios = [sitio({ tunel: { proveedor: 'ngrok' } })];
     await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
