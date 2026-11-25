@@ -816,6 +816,15 @@ export interface ApiEntorno {
     cerrar(sitioId: string): Promise<void>;
     renovar(sitioId: string, confirmado?: boolean): Promise<EstadoTunel>;
     estados(): Promise<EstadoTunel[]>;
+    /** ¿Hay una cuenta de Cloudflare conectada para túneles con nombre? */
+    cuentaCloudflare(): Promise<{ disponible: boolean; conectada: boolean }>;
+    /** `cloudflared tunnel login`: abre el navegador del usuario; puede tardar minutos. */
+    conectarCloudflare(): Promise<void>;
+    desconectarCloudflare(): Promise<void>;
+    /** Crea el túnel, enruta el dominio y lo deja elegido para el sitio (no lo abre). */
+    configurarCloudflare(sitioId: string, nombre: string, dominio: string): Promise<void>;
+    /** Vuelve al túnel rápido (sin cuenta) en el sitio. */
+    usarTunelRapido(sitioId: string): Promise<void>;
   };
   hosts: {
     sincronizar(): Promise<ResultadoSync>;
@@ -1378,6 +1387,11 @@ export const RUTAS_IPC = [
   'tuneles.cerrar',
   'tuneles.renovar',
   'tuneles.estados',
+  'tuneles.cuentaCloudflare',
+  'tuneles.conectarCloudflare',
+  'tuneles.desconectarCloudflare',
+  'tuneles.configurarCloudflare',
+  'tuneles.usarTunelRapido',
   'hosts.sincronizar',
   'detectarProyecto',
   'config.leer',

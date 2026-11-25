@@ -771,6 +771,19 @@ async function destinoClon(n: NucleoIpc, s: Contexto, v: unknown): Promise<strin
   return destino;
 }
 
+/** El gestor de Cloudflare con nombre del núcleo (no existe en un núcleo sin plataforma). */
+function cloudflareNombre(n: NucleoIpc): NonNullable<NucleoIpc['tuneles']['cloudflareNombre']> {
+  const c = n.tuneles.cloudflareNombre;
+  if (!c) {
+    throw new ErrorWolf(
+      'tuneles.proveedor_no_disponible',
+      'Cloudflare con nombre no está disponible.',
+      { proveedor: 'cloudflare-nombre' },
+    );
+  }
+  return c;
+}
+
 type Manejador = (nucleo: NucleoIpc, sistema: Contexto, ...args: unknown[]) => unknown;
 
 /** Tabla explícita: el renderer solo puede invocar estas rutas; cada una valida sus argumentos. */
@@ -1320,6 +1333,21 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'tuneles.renovar': (n, _s, id, confirmado) =>
     n.tuneles.renovar(idNoVacio(id), { confirmado: confirmado === true }),
   'tuneles.estados': (n) => n.tuneles.estados(),
+  // Cloudflare con nombre: la credencial del túnel la guarda el núcleo en el almacén de secretos
+  // (nunca llega aquí ni al renderer); el renderer solo manda el nombre y el dominio.
+  'tuneles.cuentaCloudflare': (n) => ({
+    disponible: n.tuneles.cloudflareNombre !== null,
+    conectada: n.tuneles.cloudflareNombre?.tieneCuenta() ?? false,
+  }),
+  'tuneles.conectarCloudflare': (n) => cloudflareNombre(n).conectar(),
+  'tuneles.desconectarCloudflare': (n) => cloudflareNombre(n).desconectar(),
+  'tuneles.configurarCloudflare': (n, _s, id, nombre, dominio) =>
+    n.tuneles.configurarCloudflareNombre(
+      idNoVacio(id),
+      textoAcotado(nombre, 1, 63, 'nombre'),
+      textoAcotado(dominio, 1, 253, 'dominio'),
+    ),
+  'tuneles.usarTunelRapido': (n, _s, id) => n.tuneles.elegirProveedor(idNoVacio(id), null),
   'hosts.sincronizar': async (n) => {
     const sitios = await n.sitios.listar();
     // Pedido explícito ("Aplicar hosts pendientes"): vuelve a pedir permiso aunque el último

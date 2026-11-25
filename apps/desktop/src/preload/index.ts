@@ -233,6 +233,12 @@ const api: ApiEntorno = {
     cerrar: (id) => invocar('tuneles.cerrar', id),
     renovar: (id, confirmado) => invocar('tuneles.renovar', id, confirmado === true),
     estados: () => invocar('tuneles.estados'),
+    cuentaCloudflare: () => invocar('tuneles.cuentaCloudflare'),
+    conectarCloudflare: () => invocar('tuneles.conectarCloudflare'),
+    desconectarCloudflare: () => invocar('tuneles.desconectarCloudflare'),
+    configurarCloudflare: (id, nombre, dominio) =>
+      invocar('tuneles.configurarCloudflare', id, nombre, dominio),
+    usarTunelRapido: (id) => invocar('tuneles.usarTunelRapido', id),
   },
   hosts: { sincronizar: () => invocar('hosts.sincronizar') },
   detectarProyecto: (carpeta) => invocar('detectarProyecto', carpeta),

@@ -9,8 +9,18 @@ import type { Rutas } from '../rutas';
 import type { GestorSitios } from '../sitios/sitios';
 import type { UrlBase } from '../sitios/urlbase';
 import type { Config, EstadoTunel, Sitio } from '../tipos';
-import { extraerUrlTunel } from './url';
 import { nombreEjecutable } from '../plataforma/sistema';
+import type { Ejecutor, PlataformaCompleta } from '../plataforma/tipos';
+import { enmascararSecretos } from '../patronesSecretos';
+import { CloudflareNombre, detalleSeguro } from './cloudflareNombre';
+import { CloudflareRapido } from './cloudflareRapido';
+import {
+  proveedorDeSitio,
+  type IdProveedorTunel,
+  type ProveedorTunel,
+  type SecretosTunel,
+  type TunelSitio,
+} from './proveedor';
 
 export interface DepsTuneles {
   supervisor: Pick<Supervisor, 'iniciar' | 'detener' | 'estado' | 'pid' | 'alSalir' | 'ids'>;
@@ -21,6 +31,13 @@ export interface DepsTuneles {
   urlBase: Pick<UrlBase, 'aplicar' | 'restaurar' | 'restaurarPorId'>;
   eventos: Eventos<EventosNucleo>;
   opts?: { esperaMs?: number; intervaloMs?: number };
+  /** Para el túnel con nombre (cuenta y credenciales); sin ellos solo hay Cloudflare rápido. */
+  plataforma?: Pick<PlataformaCompleta, 'restringirAlUsuario'>;
+  ejecutor?: Ejecutor;
+  /** El almacén de secretos del proceso principal (puede fijarse después del arranque). */
+  secretos?: () => SecretosTunel | null;
+  /** Guarda el proveedor elegido de un sitio (sin tocar nada más del sitio). */
+  guardarTunel?: (sitioId: string, tunel: TunelSitio | null) => Promise<void>;
 }
 
 interface RegistroTunel {
@@ -59,13 +76,38 @@ export class Tuneles {
   private readonly lanzamientos = new Map<string, number>();
   private readonly esperaMs: number;
   private readonly intervaloMs: number;
+  private readonly proveedores = new Map<IdProveedorTunel, ProveedorTunel>();
+  /** Valores secretos de cada túnel abierto (solo en memoria): se tapan en logs y errores. */
+  private readonly secretosVivos = new Map<string, string[]>();
+  /** Cuenta y túneles de Cloudflare con nombre (solo si hay plataforma y ejecutor). */
+  readonly cloudflareNombre: CloudflareNombre | null;
+
+  private secretos: (() => SecretosTunel | null) | undefined;
 
   constructor(private readonly d: DepsTuneles) {
+    this.secretos = d.secretos;
     this.esperaMs = d.opts?.esperaMs ?? 30_000;
     this.intervaloMs = d.opts?.intervaloMs ?? 500;
+    this.proveedores.set('cloudflare-rapido', new CloudflareRapido());
+    this.cloudflareNombre =
+      d.plataforma && d.ejecutor
+        ? new CloudflareNombre({
+            rutas: d.rutas,
+            plataforma: d.plataforma,
+            ejecutor: d.ejecutor,
+            ejecutable: () => this.rutaCloudflared(),
+            secretos: () => this.secretos?.() ?? null,
+          })
+        : null;
+    if (this.cloudflareNombre) this.proveedores.set('cloudflare-nombre', this.cloudflareNombre);
     d.supervisor.alSalir((id) => {
       void this.alSalirProceso(id);
     });
+  }
+
+  /** El proceso principal entrega su almacén de secretos cuando lo tiene (nunca va al renderer). */
+  fijarSecretos(fn: () => SecretosTunel | null): void {
+    this.secretos = fn;
   }
 
   estados(): EstadoTunel[] {
@@ -115,6 +157,7 @@ export class Tuneles {
       await this.d.supervisor.detener(id);
       const sitio = await this.buscar(sitioId);
       if (sitio) await this.restaurarUrlBase(sitio);
+      await this.limpiarProveedores(sitioId);
       this.mapa.delete(sitioId);
       this.quitarRegistro(sitioId);
       this.d.eventos.emit('tunel:estado', { sitioId, estado: 'apagado', url: null });
@@ -162,8 +205,14 @@ export class Tuneles {
     for (const r of muertos) {
       const sitio = await this.buscar(r.sitioId);
       if (sitio) await this.restaurarUrlBase(sitio);
+      await this.limpiarProveedores(r.sitioId);
     }
     this.escribirRegistros(vivos);
+    // Credenciales temporales que quedaron de una caída (también las de aperturas sin registro).
+    const idsVivos = new Set(vivos.map((v) => v.sitioId));
+    for (const p of this.proveedores.values()) {
+      await p.barrer?.(idsVivos).catch((e) => console.error('No se pudo barrer el túnel:', e));
+    }
     await this.barrerHuerfanos(new Set(vivos.map((v) => v.sitioId)));
   }
 
@@ -223,20 +272,26 @@ export class Tuneles {
     const gen = this.generacion.get(sitioId) ?? 0;
     const sitio = await this.buscar(sitioId);
     if (!sitio) throw new ErrorWolf('tuneles.sitio_no_encontrado', 'Sitio no encontrado');
+    // Primero la confirmación (con cualquier proveedor): sin ella no se toca nada.
     this.exigirConfirmacion(sitio, o);
-    const versiones = await this.d.instalador.instalados('cloudflared');
-    // Configuración de una versión anterior (o parcial): sin predeterminada, la más nueva.
-    const cfg: Partial<Config> = await this.d.almacen.leer();
-    const elegida = cfg.catalogo?.predeterminadas?.cloudflared;
-    const version =
-      elegida && versiones.includes(elegida)
-        ? elegida
-        : [...versiones].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))[0];
-    if (!version)
+    const idProveedor = proveedorDeSitio(sitio);
+    const proveedor = this.proveedores.get(idProveedor);
+    if (!proveedor) {
       throw new ErrorWolf(
-        'tuneles.cloudflared_no_instalado',
-        'cloudflared no está instalado. Instálelo desde Servicios.',
+        'tuneles.proveedor_no_disponible',
+        `El proveedor de túnel ${idProveedor} no está disponible.`,
+        { proveedor: idProveedor },
       );
+    }
+    const disp = await proveedor.disponible(sitio);
+    if (!disp.ok) {
+      throw new ErrorWolf(
+        (disp.codigo ?? 'tuneles.proveedor_no_disponible') as 'tuneles.proveedor_no_disponible',
+        `El túnel (${idProveedor}) no está disponible: ${disp.codigo ?? 'sin motivo'}.`,
+        { proveedor: idProveedor },
+      );
+    }
+    const cloudflared = await this.rutaCloudflared();
     const puerto = (await this.d.almacen.leer()).servicios.nginx.puerto;
 
     const id = PREFIJO + sitioId;
@@ -260,36 +315,24 @@ export class Tuneles {
     const token = (this.lanzamientos.get(sitioId) ?? 0) + 1;
     this.lanzamientos.set(sitioId, token);
     try {
+      const l = await proveedor.abrir(sitio, { cloudflared, puertoNginx: puerto, logCloudflared });
+      if (l.secretos?.length) this.secretosVivos.set(sitioId, l.secretos);
       await this.d.supervisor.iniciar({
         id,
-        comando: path.join(
-          this.d.rutas.bin('cloudflared', version),
-          nombreEjecutable('cloudflared'),
-        ),
-        args: [
-          'tunnel',
-          '--no-autoupdate',
-          '--url',
-          `http://127.0.0.1:${puerto}`,
-          '--http-host-header',
-          sitio.dominio,
-          '--logfile',
-          logCloudflared,
-        ],
+        comando: l.comando,
+        args: l.args,
+        ...(l.env ? { env: l.env } : {}),
         log: logSalida,
         reiniciar: false,
       });
     } catch (e) {
+      const mensaje = this.sinSecretos(sitioId, e instanceof Error ? e.message : String(e));
+      await this.limpiarProveedores(sitioId);
       // Cerrado a propósito mientras arrancaba: no es un error.
       if (e instanceof ErrorDetenidoAlIniciar || this.gen(sitioId) !== gen) {
         return this.apagado(sitioId);
       }
-      this.fijar({
-        sitioId,
-        estado: 'error',
-        url: null,
-        mensaje: e instanceof Error ? e.message : String(e),
-      });
+      this.fijar({ sitioId, estado: 'error', url: null, mensaje });
       throw e;
     }
 
@@ -311,7 +354,7 @@ export class Tuneles {
     const limite = Date.now() + this.esperaMs;
     for (;;) {
       if (this.gen(sitioId) !== gen) return this.apagado(sitioId);
-      const url = extraerUrlTunel(leerTexto(logCloudflared) + '\n' + leerTexto(logSalida));
+      const url = proveedor.url(sitio, leerTexto(logCloudflared) + '\n' + leerTexto(logSalida));
       if (url) return this.alEncontrarUrl(sitio, url, gen);
       if (this.gen(sitioId) !== gen) return this.apagado(sitioId);
       const actual = this.mapa.get(sitioId);
@@ -329,6 +372,7 @@ export class Tuneles {
     } finally {
       this.cerrando.delete(sitioId);
     }
+    await this.limpiarProveedores(sitioId);
     const seg = Math.round(this.esperaMs / 1000);
     return this.fijar({
       sitioId,
@@ -343,6 +387,8 @@ export class Tuneles {
     const sitioId = sitio.id;
     const pid = this.d.supervisor.pid(PREFIJO + sitioId);
     if (pid !== null) this.agregarRegistro({ sitioId, url, pid });
+    // Conectó: lo temporal del proveedor (credenciales) ya no hace falta.
+    await this.proveedores.get(proveedorDeSitio(sitio))?.alEstarListo?.(sitioId);
     let mensaje: string | undefined;
     if (this.mapa.get(sitioId)?.estado !== 'iniciando') return this.estadoActual(sitioId);
     if (sitio.urlBaseVar) {
@@ -374,7 +420,118 @@ export class Tuneles {
     this.fijar({ sitioId, estado: 'error', url: actual.url, mensaje: MSG_CERRADO });
     const sitio = await this.buscar(sitioId);
     if (sitio) await this.restaurarUrlBase(sitio);
+    await this.limpiarProveedores(sitioId);
     this.quitarRegistro(sitioId);
+  }
+
+  /** Ruta de cloudflared: la versión predeterminada o, sin ella, la más nueva instalada. */
+  private async rutaCloudflared(): Promise<string> {
+    const versiones = await this.d.instalador.instalados('cloudflared');
+    // Configuración de una versión anterior (o parcial): sin predeterminada, la más nueva.
+    const cfg: Partial<Config> = await this.d.almacen.leer();
+    const elegida = cfg.catalogo?.predeterminadas?.cloudflared;
+    const version =
+      elegida && versiones.includes(elegida)
+        ? elegida
+        : [...versiones].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))[0];
+    if (!version)
+      throw new ErrorWolf(
+        'tuneles.cloudflared_no_instalado',
+        'cloudflared no está instalado. Instálelo desde Servicios.',
+      );
+    return path.join(this.d.rutas.bin('cloudflared', version), nombreEjecutable('cloudflared'));
+  }
+
+  /** Borra lo temporal de todos los proveedores (credenciales) y tapa los secretos de los logs. */
+  private async limpiarProveedores(sitioId: string): Promise<void> {
+    for (const p of this.proveedores.values()) {
+      try {
+        await p.cerrar(sitioId);
+      } catch (e) {
+        console.error('No se pudo limpiar lo temporal del túnel:', e);
+      }
+    }
+    this.enmascararLogs(sitioId);
+    this.secretosVivos.delete(sitioId);
+  }
+
+  private sinSecretos(sitioId: string, texto: string): string {
+    return detalleSeguro(texto, this.secretosVivos.get(sitioId) ?? []);
+  }
+
+  /** Texto de un log del túnel sin secretos (patrones conocidos y los valores del propio túnel). */
+  private limpiarTexto(sitioId: string, texto: string): string {
+    let t = texto;
+    for (const v of this.secretosVivos.get(sitioId) ?? []) {
+      if (v.length >= 4) t = t.split(v).join('***');
+    }
+    return enmascararSecretos(t);
+  }
+
+  /** Reescribe los logs del túnel ya sin secretos (al cerrar o caer). */
+  private enmascararLogs(sitioId: string): void {
+    const id = PREFIJO + sitioId;
+    for (const f of [
+      this.d.rutas.logs('tuneles', `${id}.log`),
+      this.d.rutas.logs('tuneles', `${id}.salida.log`),
+    ]) {
+      try {
+        const t = readFileSync(f, 'utf8');
+        const limpio = this.limpiarTexto(sitioId, t);
+        if (limpio !== t) writeFileSync(f, limpio);
+      } catch {
+        // sin log
+      }
+    }
+  }
+
+  /** El log del túnel (cloudflared y su salida) sin secretos, para mostrarlo. */
+  log(sitioId: string): string {
+    const id = PREFIJO + sitioId;
+    const t =
+      leerTexto(this.d.rutas.logs('tuneles', `${id}.log`)) +
+      leerTexto(this.d.rutas.logs('tuneles', `${id}.salida.log`));
+    return this.limpiarTexto(sitioId, t);
+  }
+
+  /** Elige el proveedor de un sitio. Cierra el túnel abierto: cambia la URL y el `.env`. */
+  async elegirProveedor(sitioId: string, tunel: TunelSitio | null): Promise<void> {
+    if (!this.d.guardarTunel) throw new Error('No se puede guardar el proveedor de túnel.');
+    if (!(await this.buscar(sitioId)))
+      throw new ErrorWolf('tuneles.sitio_no_encontrado', 'Sitio no encontrado');
+    if (tunel && !this.proveedores.has(tunel.proveedor)) {
+      throw new ErrorWolf(
+        'tuneles.proveedor_no_disponible',
+        `El proveedor de túnel ${tunel.proveedor} no está disponible.`,
+        { proveedor: tunel.proveedor },
+      );
+    }
+    await this.cerrar(sitioId);
+    await this.d.guardarTunel(sitioId, tunel);
+  }
+
+  /**
+   * Cloudflare con nombre para un sitio: crea el túnel (si hace falta), enruta el dominio y lo
+   * deja elegido. No lo abre: abrirlo sigue exigiendo la confirmación.
+   */
+  async configurarCloudflareNombre(
+    sitioId: string,
+    nombre: string,
+    dominio: string,
+  ): Promise<void> {
+    const cf = this.cloudflareNombre;
+    if (!cf) {
+      throw new ErrorWolf(
+        'tuneles.proveedor_no_disponible',
+        'Cloudflare con nombre no está disponible.',
+        { proveedor: 'cloudflare-nombre' },
+      );
+    }
+    if (!(await this.buscar(sitioId)))
+      throw new ErrorWolf('tuneles.sitio_no_encontrado', 'Sitio no encontrado');
+    await cf.crearTunel(nombre);
+    await cf.enrutar(nombre, dominio);
+    await this.elegirProveedor(sitioId, { proveedor: 'cloudflare-nombre', nombre, dominio });
   }
 
   private async restaurarUrlBase(sitio: Sitio): Promise<void> {

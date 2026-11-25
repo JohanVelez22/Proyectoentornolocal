@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Copy, Open, QrCode, Refresh } from '@vicons/ionicons5';
+import { Copy, Open, QrCode, Refresh, Settings } from '@vicons/ionicons5';
 import { NButton, NIcon, NSpin, NSwitch, NTooltip } from 'naive-ui';
 import { computed, ref } from 'vue';
 import type { EstadoTunel, Sitio } from '../../shared/api';
@@ -9,6 +9,7 @@ import { useServicios } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
 import { motivoTunelBloqueado } from '../utilidades/sitios';
 import DialogoQr from './DialogoQr.vue';
+import DialogoTunel from './DialogoTunel.vue';
 
 const props = defineProps<{ sitio: Sitio }>();
 
@@ -49,6 +50,7 @@ const bloqueo = computed(() =>
 );
 
 const verQr = ref(false);
+const verOpciones = ref(false);
 
 const encendido = computed(() => fase.value === 'activo' || fase.value === 'abriendo');
 
@@ -77,6 +79,25 @@ function cambiar(valor: boolean): void {
       </template>
       {{ bloqueo }}
     </NTooltip>
+
+    <NTooltip>
+      <template #trigger>
+        <NButton
+          quaternary
+          circle
+          size="tiny"
+          :disabled="fase === 'abriendo' || fase === 'cerrando'"
+          :aria-label="t.opciones"
+          @click="verOpciones = true"
+        >
+          <template #icon
+            ><NIcon><Settings /></NIcon
+          ></template>
+        </NButton>
+      </template>
+      {{ t.opciones }}
+    </NTooltip>
+    <DialogoTunel v-model:show="verOpciones" :sitio="sitio" />
 
     <div class="detalle" aria-live="polite">
       <template v-if="fase === 'abriendo' || fase === 'cerrando'">

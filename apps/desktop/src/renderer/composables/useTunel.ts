@@ -18,7 +18,9 @@ export function useTunel() {
    * Siempre se confirma antes de publicar (el sitio queda en internet); con datos reales, con el
    * aviso fuerte. Devuelve false si se cancela.
    */
-  function confirmarPublicar(sitio: Pick<Sitio, 'datosReales' | 'dominio'>): Promise<boolean> {
+  function confirmarPublicar(
+    sitio: Pick<Sitio, 'datosReales' | 'dominio' | 'tunel'>,
+  ): Promise<boolean> {
     const reales = confirmacionTunel(sitio) === 'reales';
     return new Promise((resolve) => {
       let respondido = false;
@@ -29,7 +31,11 @@ export function useTunel() {
       };
       dialog.warning({
         title: reales ? t.confirmarTitulo : t.confirmarPublicoTitulo,
-        content: reales ? t.confirmarTexto : t.confirmarPublicoTexto(sitio.dominio),
+        content: reales
+          ? t.confirmarTexto
+          : sitio.tunel?.proveedor === 'cloudflare-nombre' && sitio.tunel.dominio
+            ? t.confirmarPublicoNombreTexto(sitio.dominio, sitio.tunel.dominio)
+            : t.confirmarPublicoTexto(sitio.dominio),
         positiveText: t.confirmar,
         negativeText: textos.acciones.cancelar,
         autoFocus: false,
@@ -42,7 +48,9 @@ export function useTunel() {
     });
   }
 
-  async function abrir(sitio: Pick<Sitio, 'id' | 'datosReales' | 'dominio'>): Promise<void> {
+  async function abrir(
+    sitio: Pick<Sitio, 'id' | 'datosReales' | 'dominio' | 'tunel'>,
+  ): Promise<void> {
     if (!(await confirmarPublicar(sitio))) return;
     await ejecutar(`abrir-${sitio.id}`, () => api().tuneles.abrir(sitio.id, true), {
       tituloError: t.tituloError,
@@ -54,7 +62,9 @@ export function useTunel() {
   }
 
   /** Renovar publica un enlace nuevo: con datos reales se confirma igual que al abrir. */
-  async function renovar(sitio: Pick<Sitio, 'id' | 'datosReales' | 'dominio'>): Promise<void> {
+  async function renovar(
+    sitio: Pick<Sitio, 'id' | 'datosReales' | 'dominio' | 'tunel'>,
+  ): Promise<void> {
     if (!(await confirmarPublicar(sitio))) return;
     const sitioId = sitio.id;
     await ejecutar(`renovar-${sitioId}`, () => api().tuneles.renovar(sitioId, true), {

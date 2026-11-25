@@ -11,7 +11,7 @@ import {
 } from 'naive-ui';
 import { computed, h, onMounted, type Component, type HTMLAttributes } from 'vue';
 import { useRouter } from 'vue-router';
-import type { EstadoTunel } from '../../shared/api';
+import type { EstadoTunel, Sitio } from '../../shared/api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import { useFoco } from '../composables/useFoco';
 import { useTunel } from '../composables/useTunel';
@@ -35,6 +35,7 @@ interface Fila extends EstadoTunel {
   nombre: string;
   dominio: string;
   datosReales: boolean;
+  tunel: Sitio['tunel'];
 }
 
 const filas = computed<Fila[]>(() =>
@@ -47,6 +48,7 @@ const filas = computed<Fila[]>(() =>
         nombre: sitio?.nombre || sitio?.dominio || t.sinNombre,
         dominio: sitio?.dominio ?? tun.sitioId,
         datosReales: sitio?.datosReales ?? false,
+        tunel: sitio?.tunel,
       };
     })
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
@@ -171,7 +173,12 @@ const columnas: DataTableColumns<Fila> = [
           cargando: ocupado(`renovar-${f.sitioId}`),
           deshabilitado: ocupadoFila || f.estado === 'iniciando' || !!bloqueo(f),
           alPulsar: () =>
-            void renovar({ id: f.sitioId, datosReales: f.datosReales, dominio: f.dominio }),
+            void renovar({
+              id: f.sitioId,
+              datosReales: f.datosReales,
+              dominio: f.dominio,
+              tunel: f.tunel,
+            }),
         }),
         botonIcono({
           etiqueta: tt.cerrar,

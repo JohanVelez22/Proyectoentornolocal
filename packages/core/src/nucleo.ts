@@ -175,6 +175,7 @@ import {
   type PreferenciasUi,
 } from './tipos';
 import { Tuneles } from './tuneles/tuneles';
+import type { SecretosTunel } from './tuneles/proveedor';
 // Registran sus DefServicio al cargarse: el núcleo no depende de que alguien importe index.ts.
 import './servicios/bd/mysql';
 import './servicios/bd/postgresql';
@@ -945,6 +946,11 @@ export class Nucleo {
       rutas,
       urlBase,
       eventos,
+      plataforma: plat,
+      ejecutor: o.ejecutor ?? ejecutorPorDefecto,
+      guardarTunel: async (sitioId, tunel) => {
+        await sitios.editar(sitioId, { tunel: tunel ?? undefined });
+      },
     });
 
     const exec = o.ejecutor ?? ejecutorPorDefecto;
@@ -2707,6 +2713,14 @@ export class Nucleo {
     this.proveedorClaveBd = fn;
   }
 
+  /**
+   * El proceso principal entrega su almacén de secretos para las credenciales de los túneles con
+   * nombre (`tunel:<proveedor>`): el núcleo las lee por llamada y nunca las guarda ni las muestra.
+   */
+  fijarSecretosTunel(fn: () => SecretosTunel | null): void {
+    this.tuneles.fijarSecretos(fn);
+  }
+
   /** Marca el paso como omitido y sigue desde el siguiente. */
   omitirPasoReceta(sitioId: string, pasoId: string): Promise<ResultadoReceta> {
     return this.recetas.omitir(sitioId, pasoId);
@@ -3515,6 +3529,8 @@ export class Nucleo {
     // A dónde envía correo el proyecto solo cambia con `usarCorreoEnSitio`: sin `correo` en los
     // cambios, `sitios.editar` conserva el que tiene (en la misma operación, sin carrera).
     delete resto.correo;
+    // El proveedor de túnel solo cambia con `tuneles.elegirProveedor` (cierra el túnel abierto).
+    delete resto.tunel;
     if (id) await this.cerrarTunelSiCambia(id, datos);
     const previo = id ? (await this.sitios.listar()).find((s) => s.id === id) : undefined;
     // Las reglas propias y el vhost manual solo cambian con el editor de vhost (revisión,

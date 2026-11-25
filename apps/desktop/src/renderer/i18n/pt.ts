@@ -171,6 +171,18 @@ export const pt: Textos = {
         '{dominio} tem dados reais: confirme a publicação no WolfCore Dev.',
       'tuneles.cloudflared_no_instalado':
         'O cloudflared não está instalado. Instale-o em Serviços.',
+      'tuneles.proveedor_no_disponible': 'O provedor de túnel {proveedor} não está disponível.',
+      'tuneles.cloudflare_sin_cuenta':
+        'Conecte primeiro a sua conta da Cloudflare nas opções do túnel.',
+      'tuneles.cloudflare_sin_credencial':
+        'Este túnel não tem credencial salva: crie-o de novo nas opções do túnel.',
+      'tuneles.cloudflare_datos_invalidos':
+        'O nome do túnel (minúsculas, números e hífens) ou o domínio público não são válidos.',
+      'tuneles.cloudflare_fallo': 'O cloudflared não conseguiu concluir a operação: {detalle}',
+      'tuneles.credencial_no_protegida':
+        'Não foi possível restringir a credencial ao usuário, por isso não foi usada.',
+      'tuneles.sin_cifrado':
+        'A criptografia do sistema não está disponível: não é possível salvar credenciais.',
       'hosts.dominio_invalido': 'Há um domínio inválido.',
       'hosts.tiempo_agotado':
         'Não houve resposta à permissão de administrador em {segundos} s; o arquivo hosts ficou como estava.',
@@ -1317,6 +1329,34 @@ export const pt: Textos = {
     confirmarPublicoTitulo: 'Publicar o site na internet',
     confirmarPublicoTexto: (dominio: string) =>
       `Será aberto um túnel público da Cloudflare para ${dominio}: qualquer pessoa com o link poderá entrar enquanto ele estiver aberto. Publicar?`,
+    opciones: 'Opções do túnel',
+    opcionesDe: (dominio: string) => `Opções do túnel de ${dominio}`,
+    proveedor: 'Provedor',
+    proveedorRapido: 'Rápido (sem conta)',
+    proveedorRapidoAyuda: 'Um link trycloudflare.com que muda a cada abertura.',
+    proveedorNombre: 'Com nome (seu domínio)',
+    proveedorNombreAyuda:
+      'Um link fixo em um domínio seu na Cloudflare. Precisa de uma conta da Cloudflare.',
+    cuentaConectada: 'Conta da Cloudflare conectada.',
+    cuentaSinConectar: 'Ainda não há uma conta da Cloudflare conectada.',
+    conectar: 'Conectar com a Cloudflare',
+    conectando: 'Aguardando a autorização no seu navegador…',
+    conectarAyuda:
+      'Seu navegador abre para autorizar o WolfCore Dev na sua conta. O certificado fica só na sua pasta de dados.',
+    desconectar: 'Desconectar',
+    nombreTunel: 'Nome do túnel',
+    nombreTunelAyuda: 'Minúsculas, números e hífens.',
+    dominioPublico: 'Domínio público',
+    dominioPublicoAyuda:
+      'Um subdomínio de um domínio seu na Cloudflare, p. ex. demo.meudominio.com.',
+    crear: 'Criar e rotear',
+    guardadoNombre: 'Túnel com nome pronto. Ao abri-lo será pedida confirmação.',
+    guardadoRapido: 'Este site volta a usar o túnel rápido.',
+    cambiarCierra: 'Ao trocar de provedor, o túnel aberto deste site é fechado.',
+    usarRapido: 'Usar o túnel rápido',
+    nombreActual: (nombre: string, dominio: string) => `Túnel «${nombre}» em ${dominio}`,
+    confirmarPublicoNombreTexto: (dominio: string, publico: string) =>
+      `${dominio} será publicado em ${publico} por um túnel da Cloudflare: qualquer pessoa com o link poderá acessar enquanto estiver aberto. Publicar?`,
     tituloError: 'Não foi possível abrir o túnel',
   },
   tuneles: {

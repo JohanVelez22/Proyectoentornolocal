@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { TIPOS_AVISO, type TipoAviso } from './avisos/tipos';
 import { ID_PROVEEDOR_SMTP, ListaProveedoresSmtpSchema } from './correo/proveedores';
+import { TunelSitioSchema } from './tuneles/proveedor';
 import { ConfigIaSchema } from './ia/proveedores';
 import { IDS_EDITOR, IDS_TERMINAL } from './plataforma/tipos';
 
@@ -170,6 +171,11 @@ export const SitioSchema = z.object({
       z.object({ modo: z.literal('smtp'), proveedor: z.string().regex(ID_PROVEEDOR_SMTP) }),
     ])
     .optional(),
+  /**
+   * Cómo se publica el sitio (D23): proveedor y, con Cloudflare con nombre, el túnel y el dominio
+   * público. Ausente = Cloudflare rápido. Nunca lleva tokens: viven en `AlmacenSecretos`.
+   */
+  tunel: TunelSitioSchema.optional(),
 });
 export type Sitio = z.infer<typeof SitioSchema>;
 

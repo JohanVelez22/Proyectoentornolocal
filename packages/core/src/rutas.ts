@@ -44,6 +44,14 @@ export class Rutas {
   secretos(): string {
     return path.join(this.base, 'etc', 'secretos');
   }
+  /** Túneles de Cloudflare con nombre: `cert.pem` y un `<sitio>.yml` por sitio (sin secretos). */
+  cloudflaredEtc(): string {
+    return path.join(this.base, 'etc', 'cloudflared');
+  }
+  /** Credenciales temporales de un túnel con nombre (se borran al conectar y al cerrar). */
+  cloudflaredRun(): string {
+    return path.join(this.base, 'run', 'cloudflared');
+  }
   /** Secreto de proceso y puerto del canje de tokens de Adminer y phpMyAdmin (solo este usuario). */
   accesoBd(): string {
     return path.join(this.base, 'etc', 'acceso-bd');

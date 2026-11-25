@@ -721,6 +721,42 @@ describe('ServidorMcp: acciones destructivas', () => {
     expect(m.ops.abrirTunel).toHaveBeenCalledWith('demo');
   });
 
+  it('abrir_tunel con Cloudflare con nombre y datos reales: la confirmación dice el dominio público y los datos reales', async () => {
+    const m = await montar();
+    vi.mocked(m.ops.listarProyectos).mockResolvedValue([
+      {
+        id: 'demo',
+        dominio: 'demo.test',
+        datosReales: true,
+        tunel: {
+          proveedor: 'cloudflare-nombre',
+          nombre: 'wolf-dev',
+          dominio: 'demo.midominio.com',
+        },
+      },
+    ]);
+    const c = await conectar(m.url);
+    const llamada = c.callTool({ name: 'abrir_tunel', arguments: { sitioId: 'demo' } });
+    const sol = await esperarConfirmacion(m);
+    expect(sol.resumen).toContain('https://demo.midominio.com');
+    expect(sol.resumen).toContain('DATOS REALES');
+    expect(m.ops.abrirTunel).not.toHaveBeenCalled();
+    // Rechazada: no se abre nada.
+    m.servidor.responderConfirmacion(sol.id, false);
+    expect((await llamada).isError).toBe(true);
+    expect(m.ops.abrirTunel).not.toHaveBeenCalled();
+    // Aprobada: abre.
+    const otra = c.callTool({ name: 'abrir_tunel', arguments: { sitioId: 'demo' } });
+    for (let i = 0; i < 200 && m.confirmaciones.length < 2; i++) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    const sol2 = m.confirmaciones[1]!;
+    expect(sol2.id).not.toBe(sol.id);
+    m.servidor.responderConfirmacion(sol2.id, true);
+    expect((await otra).isError).toBeFalsy();
+    expect(m.ops.abrirTunel).toHaveBeenCalledWith('demo');
+  });
+
   it('abrir_tunel rechazado no abre nada; un sitio que no existe ni pregunta', async () => {
     const m = await montar();
     vi.mocked(m.ops.listarProyectos).mockResolvedValue([{ id: 'demo', dominio: 'demo.test' }]);

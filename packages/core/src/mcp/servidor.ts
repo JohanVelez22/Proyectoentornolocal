@@ -662,7 +662,9 @@ export class ServidorMcp {
   }
 
   /** Dominio y datos reales del sitio (para la confirmación de `abrir_tunel`). */
-  private async sitioParaTunel(id: string): Promise<{ dominio: string; datosReales: boolean }> {
+  private async sitioParaTunel(
+    id: string,
+  ): Promise<{ dominio: string; datosReales: boolean; publico: string }> {
     const lista = await this.d.operaciones.listarProyectos();
     const s = Array.isArray(lista)
       ? (lista as unknown[]).find(
@@ -672,7 +674,18 @@ export class ServidorMcp {
       : undefined;
     if (!s) throw new ErrorWolf('tuneles.sitio_no_encontrado', 'Sitio no encontrado');
     const dominio = typeof s['dominio'] === 'string' && s['dominio'] ? s['dominio'] : id;
-    return { dominio: limpiar(dominio, 200), datosReales: s['datosReales'] === true };
+    // Con Cloudflare con nombre, el sitio queda en el dominio público de su dueño: se dice cuál.
+    const t = s['tunel'];
+    const tt = typeof t === 'object' && t !== null ? (t as Record<string, unknown>) : {};
+    const publico =
+      tt['proveedor'] === 'cloudflare-nombre' && typeof tt['dominio'] === 'string'
+        ? `un túnel de Cloudflare con nombre en https://${limpiar(tt['dominio'], 200)}`
+        : tt['proveedor'] === 'ngrok' ||
+            tt['proveedor'] === 'expose' ||
+            tt['proveedor'] === 'tailscale'
+          ? `un túnel público (${tt['proveedor']})`
+          : 'un túnel público de Cloudflare';
+    return { dominio: limpiar(dominio, 200), datosReales: s['datosReales'] === true, publico };
   }
 
   /** Ruta real del respaldo, solo si es un archivo dentro de la carpeta de respaldos. */
@@ -863,7 +876,7 @@ export class ServidorMcp {
           const reales = sitio.datosReales ? ' Tiene DATOS REALES de clientes.' : '';
           return this.confirmarYEjecutar(
             'abrir_tunel',
-            `Publicar ${sitio.dominio} en internet con un túnel público de Cloudflare: cualquiera con el enlace podrá entrar mientras siga abierto.${reales}`,
+            `Publicar ${sitio.dominio} en internet con ${sitio.publico}: cualquiera con el enlace podrá entrar mientras siga abierto.${reales}`,
             { proyecto: sitio.dominio },
             senal(extra),
             () => ops.abrirTunel(id),

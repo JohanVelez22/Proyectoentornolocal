@@ -312,6 +312,14 @@ if (!app.requestSingleInstanceLock()) {
         return null;
       }
     });
+    // Credenciales de los túneles con nombre (tunel:<proveedor>:<túnel>): el núcleo las lee al
+    // abrir el túnel (también desde el MCP) y las guarda al crearlo; nunca van al renderer.
+    n.fijarSecretosTunel(() => ({
+      disponible: () => secretos.disponible(),
+      leer: (id) => secretos.leer(id as `tunel:${string}`),
+      guardar: (id, v) => secretos.guardar(id as `tunel:${string}`, v),
+      borrar: (id) => secretos.borrar(id as `tunel:${string}`),
+    }));
     // Métricas solo con la ventana visible (oculta en la bandeja o minimizada: en pausa).
     const metricas = new ControlMetricas(n);
     const visible = (): void => metricas.visibilidad(v.isVisible() && !v.isMinimized());

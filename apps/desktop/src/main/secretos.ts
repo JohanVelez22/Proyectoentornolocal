@@ -19,9 +19,11 @@ export interface CifradoSeguro {
 /**
  * `github` (token de GitHub), `ia:<id del proveedor>` (clave de un proveedor de IA),
  * `bd:<id del sitio>` (clave del usuario propio de la base de un proyecto) o
- * `smtp:<id del proveedor>` (clave de un proveedor SMTP remoto).
+ * `smtp:<id del proveedor>` (clave de un proveedor SMTP remoto) o `tunel:<proveedor>[:<túnel>]`
+ * (credencial de un túnel, p. ej. `tunel:cloudflare-nombre:<nombre del túnel>`).
  */
-export type IdSecreto = 'github' | `ia:${string}` | `bd:${string}` | `smtp:${string}`;
+export type IdSecreto =
+  'github' | `ia:${string}` | `bd:${string}` | `smtp:${string}` | `tunel:${string}`;
 
 /** Lo único que ve el renderer de un secreto: si hay uno y sus 4 últimos caracteres. */
 export interface EstadoSecreto {
@@ -42,6 +44,9 @@ const VALOR_VALIDO = /^[\x21-\x7e]{1,4096}$/;
 /** Las claves SMTP admiten espacios internos (p. ej. las contraseñas de aplicación de Google). */
 const VALOR_SMTP = /^[\x21-\x7e]([\x20-\x7e]{0,4094}[\x21-\x7e])?$/;
 
+/** `tunel:<proveedor>` o `tunel:<proveedor>:<túnel>`: proveedores con credencial y nombre acotado. */
+const ID_TUNEL = /^(cloudflare-nombre|ngrok|expose)(?::([a-z0-9][a-z0-9-]{0,62}))?$/;
+
 /** Ids de sitio (el slug del dominio): minúsculas, números y guiones. */
 const ID_SITIO_BD = /^[a-z0-9][a-z0-9-]{0,127}$/;
 
@@ -56,6 +61,10 @@ function archivoDe(id: IdSecreto): string {
   }
   if (typeof id === 'string' && id.startsWith('smtp:') && ID_PROVEEDOR_SMTP.test(id.slice(5))) {
     return `smtp-${id.slice(5)}.bin`;
+  }
+  if (typeof id === 'string' && id.startsWith('tunel:')) {
+    const m = ID_TUNEL.exec(id.slice(6));
+    if (m) return `tunel-${m[1]}${m[2] ? `-${m[2]}` : ''}.bin`;
   }
   throw new Error(MENSAJE_ID);
 }

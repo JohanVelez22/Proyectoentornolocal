@@ -307,3 +307,49 @@ describe('AlmacenSecretos: clave de un proveedor SMTP remoto', () => {
     expect(existsSync(carpeta)).toBe(false);
   });
 });
+
+describe('AlmacenSecretos: credencial de un túnel (tunel:<proveedor>)', () => {
+  const CENTINELA = 'centinela-secreta-d';
+  const CRED = JSON.stringify({ AccountTag: 'abcdef0123456789', TunnelSecret: CENTINELA });
+
+  it('guarda cifrada como tunel-<proveedor>-<túnel>.bin y solo da {configurada, final}', async () => {
+    const s = almacen();
+    await s.guardar('tunel:cloudflare-nombre:wolf-dev', CRED);
+    const archivo = path.join(carpeta, 'tunel-cloudflare-nombre-wolf-dev.bin');
+    expect(existsSync(archivo)).toBe(true);
+    expect(readFileSync(archivo).toString('utf8')).not.toContain(CENTINELA);
+    expect(await s.leer('tunel:cloudflare-nombre:wolf-dev')).toBe(CRED);
+    const estado = await s.estado('tunel:cloudflare-nombre:wolf-dev');
+    expect(Object.keys(estado).sort()).toEqual(['configurada', 'final']);
+    expect(JSON.stringify(estado)).not.toContain(CENTINELA);
+    await s.guardar('tunel:ngrok', 'ngrok-prueba-falsa');
+    expect(existsSync(path.join(carpeta, 'tunel-ngrok.bin'))).toBe(true);
+    await s.borrar('tunel:cloudflare-nombre:wolf-dev');
+    expect(await s.leer('tunel:cloudflare-nombre:wolf-dev')).toBeNull();
+  });
+
+  it('rechaza ids que podrían salir de la carpeta o de otro proveedor', async () => {
+    const s = almacen();
+    for (const id of [
+      'tunel:',
+      'tunel:../x',
+      'tunel:cloudflare-nombre:../x',
+      'tunel:cloudflare-nombre:A',
+      'tunel:otro',
+      'tunel:ngrok:a/b',
+    ]) {
+      await expect(s.guardar(id as never, CENTINELA), id).rejects.toThrow();
+      await expect(s.leer(id as never), id).rejects.toThrow();
+    }
+    expect(existsSync(carpeta)).toBe(false);
+  });
+
+  it('sin cifrado del sistema no se guarda y el error no repite la credencial', async () => {
+    const s = almacen(false);
+    const e = await s
+      .guardar('tunel:cloudflare-nombre:wolf-dev', CRED)
+      .catch((x: unknown) => x as Error);
+    expect((e as Error).message).toBe(MENSAJE_SIN_CIFRADO);
+    expect(existsSync(carpeta)).toBe(false);
+  });
+});

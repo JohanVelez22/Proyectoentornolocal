@@ -174,6 +174,19 @@ export const fr: Textos = {
         '{dominio} contient des données réelles : confirmez la publication dans WolfCore Dev.',
       'tuneles.cloudflared_no_instalado':
         'cloudflared n’est pas installé. Installez-le depuis Services.',
+      'tuneles.proveedor_no_disponible':
+        'Le fournisseur de tunnel {proveedor} n’est pas disponible.',
+      'tuneles.cloudflare_sin_cuenta':
+        'Connectez d’abord votre compte Cloudflare dans les options du tunnel.',
+      'tuneles.cloudflare_sin_credencial':
+        'Ce tunnel n’a aucun identifiant enregistré : recréez-le dans les options du tunnel.',
+      'tuneles.cloudflare_datos_invalidos':
+        'Le nom du tunnel (minuscules, chiffres et tirets) ou le domaine public n’est pas valide.',
+      'tuneles.cloudflare_fallo': 'cloudflared n’a pas pu terminer l’opération : {detalle}',
+      'tuneles.credencial_no_protegida':
+        'L’identifiant n’a pas pu être limité à l’utilisateur, il n’a donc pas été utilisé.',
+      'tuneles.sin_cifrado':
+        'Le chiffrement du système n’est pas disponible : impossible d’enregistrer des identifiants.',
       'hosts.dominio_invalido': 'Un domaine n’est pas valide.',
       'hosts.tiempo_agotado':
         'Aucune réponse à la demande d’autorisation administrateur en {segundos} s ; le fichier hosts est resté tel quel.',
@@ -1352,6 +1365,34 @@ export const fr: Textos = {
     confirmarPublicoTitulo: 'Publier le site sur Internet',
     confirmarPublicoTexto: (dominio: string) =>
       `Un tunnel public Cloudflare sera ouvert pour ${dominio} : toute personne disposant du lien pourra entrer tant qu’il reste ouvert. Publier ?`,
+    opciones: 'Options du tunnel',
+    opcionesDe: (dominio: string) => `Options du tunnel de ${dominio}`,
+    proveedor: 'Fournisseur',
+    proveedorRapido: 'Rapide (sans compte)',
+    proveedorRapidoAyuda: 'Un lien trycloudflare.com qui change à chaque ouverture.',
+    proveedorNombre: 'Nommé (votre domaine)',
+    proveedorNombreAyuda:
+      'Un lien fixe sur un de vos domaines Cloudflare. Nécessite un compte Cloudflare.',
+    cuentaConectada: 'Compte Cloudflare connecté.',
+    cuentaSinConectar: 'Aucun compte Cloudflare n’est encore connecté.',
+    conectar: 'Se connecter à Cloudflare',
+    conectando: 'En attente de l’autorisation dans votre navigateur…',
+    conectarAyuda:
+      'Votre navigateur s’ouvre pour autoriser WolfCore Dev sur votre compte. Le certificat reste uniquement dans votre dossier de données.',
+    desconectar: 'Déconnecter',
+    nombreTunel: 'Nom du tunnel',
+    nombreTunelAyuda: 'Minuscules, chiffres et tirets.',
+    dominioPublico: 'Domaine public',
+    dominioPublicoAyuda:
+      'Un sous-domaine d’un de vos domaines Cloudflare, p. ex. demo.mondomaine.com.',
+    crear: 'Créer et router',
+    guardadoNombre: 'Tunnel nommé prêt. Une confirmation sera demandée à l’ouverture.',
+    guardadoRapido: 'Ce site utilise de nouveau le tunnel rapide.',
+    cambiarCierra: 'Changer de fournisseur ferme le tunnel ouvert de ce site.',
+    usarRapido: 'Utiliser le tunnel rapide',
+    nombreActual: (nombre: string, dominio: string) => `Tunnel « ${nombre} » sur ${dominio}`,
+    confirmarPublicoNombreTexto: (dominio: string, publico: string) =>
+      `${dominio} sera publié sur ${publico} via un tunnel Cloudflare : toute personne disposant du lien peut y accéder tant qu’il reste ouvert. Publier ?`,
     tituloError: 'Impossible d’ouvrir le tunnel',
   },
   tuneles: {

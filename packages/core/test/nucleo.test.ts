@@ -1252,6 +1252,40 @@ describe('Nucleo (Etapa B)', () => {
     }
   });
 
+  it('túneles: con datos reales la interfaz y el MCP pasan por la confirmación del núcleo, y el proveedor solo cambia con elegirProveedor', async () => {
+    const n = await crear();
+    await n.guardarSitio(datos({ datosReales: true }));
+    const tunel = {
+      proveedor: 'cloudflare-nombre' as const,
+      nombre: 'wolf-dev',
+      dominio: 'demo.midominio.com',
+    };
+    await n.tuneles.elegirProveedor('demo', tunel);
+    expect((await n.sitios.listar())[0]!.tunel).toEqual(tunel);
+    // Camino de la interfaz sin confirmación reforzada: el núcleo lo rechaza antes de nada.
+    await expect(n.tuneles.abrir('demo')).rejects.toMatchObject({
+      codigo: 'tuneles.confirmacion_requerida',
+    });
+    await expect(n.tuneles.abrir('demo', { confirmado: false })).rejects.toMatchObject({
+      codigo: 'tuneles.confirmacion_requerida',
+    });
+    // Guardar el sitio desde la interfaz no cambia el proveedor.
+    await n.guardarSitio(
+      { ...datos({ datosReales: true }), tunel: { proveedor: 'ngrok' } } as never,
+      'demo',
+    );
+    expect((await n.sitios.listar())[0]!.tunel).toEqual(tunel);
+    // Camino del MCP: solo se llama tras la confirmación en la ventana y siempre la declara.
+    const abrir = vi
+      .spyOn(n.tuneles, 'abrir')
+      .mockResolvedValue({ sitioId: 'demo', estado: 'activo', url: 'https://demo.midominio.com' });
+    await ops(n).abrirTunel('demo');
+    expect(abrir).toHaveBeenCalledWith('demo', { confirmado: true });
+    // Volver al rápido quita el proveedor.
+    await n.tuneles.elegirProveedor('demo', null);
+    expect((await n.sitios.listar())[0]!.tunel).toBeUndefined();
+  });
+
   it('resumenReceta muestra el comando real de cada paso, no el título', async () => {
     yml(['node', 'scripts/borrar-todo.js', '--sin preguntar']);
     const n = await crear();

@@ -34,7 +34,15 @@ function nucleoFalso() {
     },
     sitios: { listar: vi.fn(async () => [{ id: 's1' }]), aplicar: vi.fn() },
     servicios: { estados: vi.fn(), iniciar: vi.fn(), detener: vi.fn() },
-    tuneles: { abrir: vi.fn(), cerrar: vi.fn(), renovar: vi.fn(), estados: vi.fn() },
+    tuneles: {
+      abrir: vi.fn(),
+      cerrar: vi.fn(),
+      renovar: vi.fn(),
+      estados: vi.fn(),
+      elegirProveedor: vi.fn(),
+      configurarCloudflareNombre: vi.fn(),
+      cloudflareNombre: { tieneCuenta: vi.fn(() => true), conectar: vi.fn(), desconectar: vi.fn() },
+    },
     instalador: { instalar: vi.fn(), instalados: vi.fn() },
     hosts: { sincronizar: vi.fn(async () => ({ ok: true })) },
     ia: {
@@ -687,6 +695,11 @@ describe('registrarIpc', () => {
         'tuneles.cerrar',
         'tuneles.renovar',
         'tuneles.estados',
+        'tuneles.cuentaCloudflare',
+        'tuneles.conectarCloudflare',
+        'tuneles.desconectarCloudflare',
+        'tuneles.configurarCloudflare',
+        'tuneles.usarTunelRapido',
         'hosts.sincronizar',
         'detectarProyecto',
         'config.leer',
@@ -3217,5 +3230,62 @@ describe('correo: proveedores SMTP remotos (D22)', () => {
     const ok = await llamar('correo.usarEnSitio', 's1', { modo: 'smtp', proveedor: 'resend' });
     expect(ok.ok).toBe(true);
     expect(f.usarCorreoEnSitio).toHaveBeenCalledWith('s1', { modo: 'smtp', proveedor: 'resend' });
+  });
+});
+
+describe('IPC de túneles (D23)', () => {
+  function montar() {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    return {
+      crudo,
+      llamar: (ruta: string, ...args: unknown[]) =>
+        canales.get(`entorno:${ruta}`)!({}, ...args) as Promise<{ ok: boolean }>,
+    };
+  }
+
+  it('abrir sin confirmar llega al núcleo con confirmado=false (el núcleo exige la reforzada)', async () => {
+    const { crudo, llamar } = montar();
+    await llamar('tuneles.abrir', 's1');
+    expect(crudo.tuneles.abrir).toHaveBeenCalledWith('s1', { confirmado: false });
+    await llamar('tuneles.abrir', 's1', 'si');
+    expect(crudo.tuneles.abrir).toHaveBeenLastCalledWith('s1', { confirmado: false });
+    await llamar('tuneles.abrir', 's1', true);
+    expect(crudo.tuneles.abrir).toHaveBeenLastCalledWith('s1', { confirmado: true });
+  });
+
+  it('configurar Cloudflare valida los argumentos y nunca recibe credenciales', async () => {
+    const { crudo, llamar } = montar();
+    for (const args of [
+      [42, 'a', 'b.com'],
+      ['s1', 7, 'b.com'],
+      ['s1', 'a', null],
+      ['s1', '', 'b.com'],
+    ]) {
+      expect((await llamar('tuneles.configurarCloudflare', ...args)).ok, JSON.stringify(args)).toBe(
+        false,
+      );
+    }
+    expect(crudo.tuneles.configurarCloudflareNombre).not.toHaveBeenCalled();
+    const ok = await llamar('tuneles.configurarCloudflare', 's1', 'wolf-dev', 'demo.midominio.com');
+    expect(ok.ok).toBe(true);
+    expect(crudo.tuneles.configurarCloudflareNombre).toHaveBeenCalledWith(
+      's1',
+      'wolf-dev',
+      'demo.midominio.com',
+    );
+  });
+
+  it('la cuenta de Cloudflare solo expone si está conectada', async () => {
+    const { llamar } = montar();
+    const r = (await llamar('tuneles.cuentaCloudflare')) as unknown as { valor: unknown };
+    expect(r.valor).toEqual({ disponible: true, conectada: true });
+  });
+
+  it('volver al túnel rápido borra el proveedor del sitio', async () => {
+    const { crudo, llamar } = montar();
+    await llamar('tuneles.usarTunelRapido', 's1');
+    expect(crudo.tuneles.elegirProveedor).toHaveBeenCalledWith('s1', null);
   });
 });
