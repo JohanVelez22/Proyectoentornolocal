@@ -13,6 +13,7 @@ export type {
   IdCatalogo,
   Lanzador,
   IdTerminal,
+  InstalacionAjena,
   OpcionesAbrirTerminal,
   OpcionesEscrituraAdmin,
   OpcionesLanzar,
@@ -85,6 +86,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'antivirus',
   'comandoManual',
   'restringirAlUsuario',
+  'instalacionesAjenas',
 ];
 
 /**

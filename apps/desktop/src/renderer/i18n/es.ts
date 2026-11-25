@@ -242,6 +242,30 @@ export const es = {
         'Los datos de la base pesan más de {maximo} MB: no se importan de una vez.',
       'importar.motor_no_soportado':
         'Solo se importan bases de MySQL y MariaDB desde otros programas.',
+      'importar.ruta_fuera':
+        'Se descartó una carpeta o archivo que apunta fuera de la instalación o a una carpeta del sistema.',
+      'importar.carpeta_invalida': 'Se descartó una carpeta que ya no existe o no es una carpeta.',
+      'importar.archivo_grande':
+        'Un archivo de configuración pesa más de {maximo} KB y no se leyó.',
+      'importar.archivo_ilegible': 'Un archivo de configuración no es de texto o no se pudo leer.',
+      'importar.demasiados':
+        'Hay demasiados sitios o archivos de configuración: solo se leyeron los primeros.',
+      'importar.candidato_desconocido':
+        'Ese sitio ya no aparece en el programa de origen: vuelva a buscar.',
+      'importar.ya_vinculado': 'Esa carpeta ya es un sitio de WolfCore Dev.',
+      'importar.dominio_existe':
+        'Ya hay un sitio con el dominio {dominio}: cámbielo antes de importar.',
+      'importar.sin_php':
+        'Este sitio necesita PHP y no hay ninguna versión instalada: instálela desde Servicios.',
+      'importar.base_existe':
+        'La base {nombre} ya existe en el destino y no se tocó. Confirme el reemplazo para importarla (se hace una copia antes).',
+      'importar.base_fallo':
+        'No se pudo importar la base {nombre}: quedó como estaba, sin nada a medias.',
+      'importar.sitio_fallo': 'No se pudo crear el sitio.',
+      'importar.origen_invalido':
+        'Los datos del servidor de origen no son válidos (usuario, clave o puerto).',
+      'importar.sin_seleccion': 'Elija al menos un sitio para importar.',
+      'importar.en_curso': 'Ya hay una importación en curso: espere a que termine.',
       'plantillas.sin_esquema': 'La plantilla no trae el esquema de una base de datos.',
       'proyectos.carpeta_invalida': 'La carpeta del proyecto no es válida.',
       'proyectos.nombre_invalido':

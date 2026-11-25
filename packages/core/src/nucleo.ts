@@ -168,6 +168,8 @@ import {
   phpPorDefecto,
   type Deteccion,
 } from './proyectos/detectar';
+import { Importador } from './importar/importar';
+import type { OpcionesImportar, ResultadoImportar, VistaPreviaImportar } from './importar/importar';
 import { crearProyecto, type ResultadoCrearProyecto } from './proyectos/crear';
 import { VERSION_WORDPRESS, type PedidoProyecto } from './proyectos/generadores';
 import { RegistroPasos } from './proyectos/pasos';
@@ -2834,6 +2836,57 @@ export class Nucleo {
       },
       p,
     );
+  }
+
+  private importadorAjeno: Importador | undefined;
+
+  /** Importador de Laragon, XAMPP y Herd (uno por proceso: no admite dos importaciones a la vez). */
+  private importador(): Importador {
+    this.importadorAjeno ??= new Importador({
+      instalaciones: () => this.plataforma.instalacionesAjenas(),
+      // Nunca se vincula la carpeta de datos de WolfCore Dev ni una que la contenga.
+      prohibidas: [this.rutas.base],
+      sitios: () => this.sitios.listar(),
+      // Sin "Confío en este repositorio" y sin aplicar: Nginx y hosts se ponen al día una vez al final.
+      guardarSitio: async (datos) => {
+        let resto: Omit<Sitio, 'id'> = { ...datos, confiado: false, recetaConfiada: null };
+        delete resto.ftp;
+        delete resto.phpIni;
+        delete resto.xdebug;
+        delete resto.capturaDumps;
+        delete resto.vhostManual;
+        delete resto.vhostDesactivado;
+        resto.reglasExtra = '';
+        if (this.depsPasos) resto = await asignarPuertoProxy(this.depsPasos, resto, undefined);
+        return { sitio: await this.sitios.crear(resto) };
+      },
+      aplicar: async () => {
+        await this.poolsSitio.sincronizar().catch(() => undefined);
+        const r = await this.sitios.aplicar();
+        return r.nginx.ok && r.hosts.ok;
+      },
+      phpInstaladas: () => this.instalador.instalados('php'),
+      basesDe: async (objetivo) => (await this.bd.listar(objetivo)).map((b) => b.nombre),
+      importarBase: (objetivo, origen, destino, opciones) =>
+        this.respaldos.importarAjeno(objetivo, origen, destino, opciones),
+    });
+    return this.importadorAjeno;
+  }
+
+  /**
+   * Lo que se puede importar de Laragon, XAMPP y Herd (sus rutas conocidas), con lo que pasaría
+   * con cada sitio. Solo lee: no mueve, no escribe ni enciende nada del otro programa.
+   */
+  vistaPreviaImportar(instancia?: ObjetivoBd): Promise<VistaPreviaImportar> {
+    return this.importador().vistaPrevia(instancia);
+  }
+
+  /**
+   * Importa los sitios elegidos (vinculados en su lugar) y, con los datos del servidor de origen
+   * que encendió el usuario, sus bases (todo o nada; una base existente solo con confirmación).
+   */
+  importarDeOtros(seleccion: readonly string[], o: OpcionesImportar): Promise<ResultadoImportar> {
+    return this.importador().importar(seleccion, o);
   }
 
   /**

@@ -9,6 +9,7 @@ import type {
   EstadoAntivirus,
   IdCatalogo,
   IdTerminal,
+  InstalacionAjena,
   OpcionesAbrirTerminal,
   PerfilFirefoxSistema,
   PlataformaCompleta,
@@ -81,6 +82,8 @@ export class PlataformaFalsa implements PlataformaCompleta {
   soloLecturaQuitado = 0;
   /** Lo que devuelve `antivirus` (null: sin antivirus o ilegible). */
   antivirusEstado: EstadoAntivirus | null = null;
+  /** Instalaciones de Laragon, XAMPP y Herd que dice haber (`instalacionesAjenas`). */
+  instalaciones: InstalacionAjena[] = [];
   /** Archivos que se pidió restringir al usuario. */
   readonly restringidos: string[] = [];
   firefox: string[] = [];
@@ -301,6 +304,10 @@ export class PlataformaFalsa implements PlataformaCompleta {
   async restringirAlUsuario(ruta: string): Promise<boolean> {
     this.restringidos.push(ruta);
     return true;
+  }
+
+  async instalacionesAjenas(): Promise<InstalacionAjena[]> {
+    return this.instalaciones.map((i) => ({ ...i }));
   }
 
   comandoManual(c: ComandoManual): string {

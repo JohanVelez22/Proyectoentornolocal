@@ -198,6 +198,11 @@ export interface CapacidadesPlataforma {
    * quien llama decide si sigue (la carpeta de datos ya es del usuario).
    */
   restringirAlUsuario(ruta: string): Promise<boolean>;
+  /**
+   * Instalaciones de Laragon, XAMPP y Herd en sus rutas conocidas (solo comprueba que la carpeta
+   * exista: no lee ni ejecuta nada). Para importar sus sitios y bases.
+   */
+  instalacionesAjenas(): Promise<InstalacionAjena[]>;
 }
 
 /**
@@ -205,6 +210,12 @@ export interface CapacidadesPlataforma {
  * implementaciones parciales anteriores sigan valiendo; `completarPlataforma` da una
  * `PlataformaCompleta`, que es lo que deben usar los módulos nuevos.
  */
+/** Un programa de desarrollo local ajeno y la carpeta donde está instalado o configurado. */
+export interface InstalacionAjena {
+  programa: 'laragon' | 'xampp' | 'herd';
+  raiz: string;
+}
+
 export interface Plataforma extends Partial<CapacidadesPlataforma> {
   rutaHosts(): string;
   escribirComoAdmin(

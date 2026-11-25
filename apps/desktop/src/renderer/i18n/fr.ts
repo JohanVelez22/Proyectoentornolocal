@@ -250,6 +250,32 @@ export const fr: Textos = {
         "Les données de la base dépassent {maximo} Mo : elles ne sont pas importées d'un coup.",
       'importar.motor_no_soportado':
         "Seules les bases MySQL et MariaDB peuvent être importées depuis d'autres programmes.",
+      'importar.ruta_fuera':
+        "Un dossier ou fichier qui pointe hors de l'installation ou vers un dossier système a été écarté.",
+      'importar.carpeta_invalida':
+        "Un dossier qui n'existe plus ou n'est pas un dossier a été écarté.",
+      'importar.archivo_grande':
+        "Un fichier de configuration dépasse {maximo} Ko et n'a pas été lu.",
+      'importar.archivo_ilegible':
+        "Un fichier de configuration n'est pas du texte ou n'a pas pu être lu.",
+      'importar.demasiados':
+        'Il y a trop de sites ou de fichiers de configuration : seuls les premiers ont été lus.',
+      'importar.candidato_desconocido':
+        "Ce site n'apparaît plus dans le programme source : relancez la recherche.",
+      'importar.ya_vinculado': 'Ce dossier est déjà un site WolfCore Dev.',
+      'importar.dominio_existe':
+        "Un site avec le domaine {dominio} existe déjà : modifiez-le avant d'importer.",
+      'importar.sin_php':
+        "Ce site a besoin de PHP et aucune version n'est installée : installez-en une depuis Services.",
+      'importar.base_existe':
+        "La base {nombre} existe déjà à destination et n'a pas été touchée. Confirmez le remplacement pour l'importer (une copie est faite avant).",
+      'importar.base_fallo':
+        "Impossible d'importer la base {nombre} : elle est restée telle quelle, rien n'a été laissé à moitié.",
+      'importar.sitio_fallo': 'Impossible de créer le site.',
+      'importar.origen_invalido':
+        'Les informations du serveur source ne sont pas valides (utilisateur, mot de passe ou port).',
+      'importar.sin_seleccion': 'Choisissez au moins un site à importer.',
+      'importar.en_curso': "Une importation est déjà en cours : attendez qu'elle se termine.",
       'plantillas.sin_esquema': "Le modèle ne contient pas le schéma d'une base de données.",
       'proyectos.carpeta_invalida': 'Le dossier du projet n’est pas valide.',
       'proyectos.nombre_invalido':

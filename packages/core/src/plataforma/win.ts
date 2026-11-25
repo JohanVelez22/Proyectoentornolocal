@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { open, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { open, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { arch, homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { rutaBasePorDefecto } from './carpetas';
@@ -57,6 +57,7 @@ import type {
   EstadoAntivirus,
   Ejecutor,
   IdCatalogo,
+  InstalacionAjena,
   MuestraPlataforma,
   OpcionesEscrituraAdmin,
   OpcionesAbrirTerminal,
@@ -372,6 +373,31 @@ export class PlataformaWindows implements PlataformaCompleta {
   carpetasNpmGlobal(): string[] {
     const appData = this.entorno.APPDATA;
     return appData ? [path.win32.join(appData, 'npm')] : [];
+  }
+
+  /**
+   * `C:\laragon`, `C:\xampp` y las carpetas de Herd (`%USERPROFILE%\Herd` y su configuración
+   * `%USERPROFILE%\.config\herd`), las que existan. Solo mira; no abre ningún archivo.
+   */
+  async instalacionesAjenas(): Promise<InstalacionAjena[]> {
+    const sd = this.entorno.SystemDrive ?? '';
+    const unidad = /^[A-Za-z]:$/.test(sd) ? sd : 'C:';
+    const inicio = this.carpetaInicio();
+    const candidatas: InstalacionAjena[] = [
+      { programa: 'laragon', raiz: path.win32.join(unidad, '\\', 'laragon') },
+      { programa: 'xampp', raiz: path.win32.join(unidad, '\\', 'xampp') },
+      { programa: 'herd', raiz: path.win32.join(inicio, 'Herd') },
+      { programa: 'herd', raiz: path.win32.join(inicio, '.config', 'herd') },
+    ];
+    const hay: InstalacionAjena[] = [];
+    for (const c of candidatas) {
+      try {
+        if ((await stat(c.raiz)).isDirectory()) hay.push(c);
+      } catch {
+        // no está instalado
+      }
+    }
+    return hay;
   }
 
   async carpetasContenedores(motor: 'docker' | 'podman'): Promise<string[]> {

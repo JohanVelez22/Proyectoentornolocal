@@ -97,6 +97,8 @@ export * from './proyectos/config';
 export * from './proyectos/crear';
 export * from './proyectos/generadores';
 export * from './proyectos/plantillas';
+export * from './importar/detectar';
+export * from './importar/importar';
 export * from './proyectos/detectar';
 export * from './proyectos/pasos';
 export * from './proyectos/pasos/index';

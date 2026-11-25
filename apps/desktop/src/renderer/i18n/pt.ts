@@ -245,6 +245,32 @@ export const pt: Textos = {
       'importar.volcado_enorme':
         'Os dados do banco pesam mais de {maximo} MB: não são importados de uma vez.',
       'importar.motor_no_soportado': 'Só se importam bancos MySQL e MariaDB de outros programas.',
+      'importar.ruta_fuera':
+        'Uma pasta ou arquivo que aponta para fora da instalação ou para uma pasta do sistema foi descartado.',
+      'importar.carpeta_invalida':
+        'Uma pasta que não existe mais ou não é uma pasta foi descartada.',
+      'importar.archivo_grande':
+        'Um arquivo de configuração pesa mais de {maximo} KB e não foi lido.',
+      'importar.archivo_ilegible':
+        'Um arquivo de configuração não é de texto ou não pôde ser lido.',
+      'importar.demasiados':
+        'Há sites ou arquivos de configuração demais: só os primeiros foram lidos.',
+      'importar.candidato_desconocido':
+        'Esse site não aparece mais no programa de origem: busque de novo.',
+      'importar.ya_vinculado': 'Essa pasta já é um site do WolfCore Dev.',
+      'importar.dominio_existe':
+        'Já existe um site com o domínio {dominio}: altere-o antes de importar.',
+      'importar.sin_php':
+        'Este site precisa de PHP e nenhuma versão está instalada: instale uma em Serviços.',
+      'importar.base_existe':
+        'O banco {nombre} já existe no destino e não foi alterado. Confirme a substituição para importá-lo (antes é feita uma cópia).',
+      'importar.base_fallo':
+        'Não foi possível importar o banco {nombre}: ficou como estava, sem nada pela metade.',
+      'importar.sitio_fallo': 'Não foi possível criar o site.',
+      'importar.origen_invalido':
+        'Os dados do servidor de origem não são válidos (usuário, senha ou porta).',
+      'importar.sin_seleccion': 'Escolha pelo menos um site para importar.',
+      'importar.en_curso': 'Já há uma importação em andamento: aguarde terminar.',
       'plantillas.sin_esquema': 'O modelo não traz o esquema de um banco de dados.',
       'proyectos.carpeta_invalida': 'A pasta do projeto não é válida.',
       'proyectos.nombre_invalido':

@@ -237,6 +237,31 @@ export const en: Textos = {
         'The database data is larger than {maximo} MB: it is not imported in one go.',
       'importar.motor_no_soportado':
         'Only MySQL and MariaDB databases can be imported from other programs.',
+      'importar.ruta_fuera':
+        'A folder or file that points outside the installation or to a system folder was discarded.',
+      'importar.carpeta_invalida':
+        'A folder that no longer exists or is not a folder was discarded.',
+      'importar.archivo_grande':
+        'A configuration file is larger than {maximo} KB and was not read.',
+      'importar.archivo_ilegible': 'A configuration file is not text or could not be read.',
+      'importar.demasiados':
+        'There are too many sites or configuration files: only the first ones were read.',
+      'importar.candidato_desconocido':
+        'That site no longer appears in the source program: search again.',
+      'importar.ya_vinculado': 'That folder is already a WolfCore Dev site.',
+      'importar.dominio_existe':
+        'A site with the domain {dominio} already exists: change it before importing.',
+      'importar.sin_php':
+        'This site needs PHP and no version is installed: install one from Services.',
+      'importar.base_existe':
+        'The database {nombre} already exists at the destination and was not touched. Confirm the replacement to import it (a backup is made first).',
+      'importar.base_fallo':
+        'The database {nombre} could not be imported: it was left as it was, nothing half done.',
+      'importar.sitio_fallo': 'The site could not be created.',
+      'importar.origen_invalido':
+        'The source server details are not valid (user, password or port).',
+      'importar.sin_seleccion': 'Choose at least one site to import.',
+      'importar.en_curso': 'An import is already in progress: wait for it to finish.',
       'plantillas.sin_esquema': 'The template has no database schema.',
       'proyectos.carpeta_invalida': 'The project folder is not valid.',
       'proyectos.nombre_invalido':
