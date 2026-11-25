@@ -552,4 +552,21 @@ describe('emitirCertificadoLibre', () => {
     const clave = forge.pki.privateKeyFromPem(r.clavePem) as forge.pki.rsa.PrivateKey;
     expect((cert.publicKey as forge.pki.rsa.PublicKey).n.equals(clave.n)).toBe(true);
   });
+
+  it('con una CA restringida (D26) no firma dominios ni IP fuera de sus restricciones', async () => {
+    const rutas = new Rutas(base);
+    const ca = generarCA();
+    mkdirSync(path.dirname(rutas.caCrt()), { recursive: true });
+    writeFileSync(rutas.caCrt(), ca.certPem);
+    writeFileSync(rutas.caKey(), ca.keyPem);
+    await expect(
+      emitirCertificadoLibre(['app.test', 'banco.com'], { rutas }),
+    ).rejects.toMatchObject({
+      codigo: 'herramientas.fuera_de_la_ca',
+      datos: { dominio: 'banco.com' },
+    });
+    await expect(emitirCertificadoLibre(['8.8.8.8'], { rutas })).rejects.toMatchObject({
+      codigo: 'herramientas.fuera_de_la_ca',
+    });
+  });
 });

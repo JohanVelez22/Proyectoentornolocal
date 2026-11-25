@@ -110,6 +110,11 @@ export interface OpcionesImportarPerfil {
   frase?: string;
   /** Sitios cuyo `.env` se reescribe con el usuario propio nuevo (marcados por el usuario). */
   envProyectos?: string[];
+  /**
+   * Confirmación aparte para reemplazar la CA de este equipo por la del perfil (que firma lo que
+   * quiera y no se instala sola).
+   */
+  reemplazarCa?: true;
   /** La huella de la vista previa que vio el usuario: si algo cambió desde entonces, no se importa. */
   huella: string;
   confirmado: true;
@@ -150,6 +155,11 @@ export interface VistaPreviaPerfil {
    * (fuera de rango), `carpeta_vigilada`.
    */
   configQuitada: string[];
+  /**
+   * La CA que trae el perfil (cifrada): su huella SHA-256 para compararla con la propia. Solo se
+   * importa si es la del usuario; `reemplazaLocal`: este equipo ya tiene una CA.
+   */
+  ca: { huella: string; reemplazaLocal: boolean } | null;
   /** Huella de esta vista previa: `importarPerfil` la exige igual. */
   huella: string;
 }

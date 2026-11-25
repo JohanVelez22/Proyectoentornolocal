@@ -339,6 +339,10 @@ export const pt: Textos = {
         'A pasta de dados ou o perfil mudaram desde a pré-visualização: revise-a novamente.',
       'perfiles.carpeta_datos_invalida':
         'WOLFCORE_DATOS não é uma pasta de dados válida: deve ser absoluta, não do sistema e diferente da pasta real.',
+      'perfiles.confirmar_reemplazar_ca':
+        'O perfil traz uma CA e este computador já tem a sua: compare a impressão digital e confirme à parte que deseja substituí-la (somente se for a sua própria CA).',
+      'herramientas.fuera_de_la_ca':
+        'A CA do WolfCore Dev só assina domínios .test, localhost e endereços locais: {dominio} não pode ser incluído.',
       'importar.origen_apagado':
         'Não foi possível conectar ao servidor de banco de dados do outro programa: ligue-o a partir desse programa e tente de novo. Os sites foram importados mesmo assim.',
       'importar.origen_no_local': 'O servidor de origem deve estar neste computador (127.0.0.1).',

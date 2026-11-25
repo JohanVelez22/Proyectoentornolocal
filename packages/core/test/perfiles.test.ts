@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import yauzl from 'yauzl';
 import yazl from 'yazl';
 import { Almacen } from '../src/almacen';
+import { huellaSha256 } from '../src/https/ca';
 import type { VersionDisponible } from '../src/catalogo/catalogo';
 import { Plantillas } from '../src/proyectos/plantillas';
 import { GestorEnv } from '../src/proyectos/env/gestor';
@@ -580,6 +581,57 @@ describe('CA cifrada (scrypt + AES-256-GCM)', () => {
     expect(r.ca).toBe('importada');
     expect(await readFile(destino.caKey(), 'utf8')).toBe(CA_KEY);
     expect(existsSync(destino.certKey('tienda'))).toBe(true);
+  });
+
+  it('la vista previa muestra la huella de la CA ajena; reemplazar la local exige confirmarlo aparte', async () => {
+    const archivo = await exportar({ ca: { frase: FRASE } });
+    await escribir(destino.caCrt(), 'CA local');
+    await escribir(destino.caKey(), 'clave local');
+    const d = deps(destino);
+    const p = new Perfiles(d);
+    const vista = await p.vistaPrevia(archivo);
+    expect(vista.ca).toEqual({ huella: huellaSha256(CA_CRT), reemplazaLocal: true });
+    await expect(
+      p.importar(archivo, { rutas: {}, frase: FRASE, huella: vista.huella, confirmado: true }),
+    ).rejects.toMatchObject({ codigo: 'perfiles.confirmar_reemplazar_ca' });
+    expect(existsSync(destino.config())).toBe(false);
+    expect(await readFile(destino.caKey(), 'utf8')).toBe('clave local');
+    const r = await p.importar(archivo, {
+      rutas: {},
+      frase: FRASE,
+      reemplazarCa: true,
+      huella: vista.huella,
+      confirmado: true,
+    });
+    expect(r.ca).toBe('importada');
+    expect(r.avisos.join(' ')).not.toMatch(/inst[aá]l/i);
+    expect(await readFile(path.join(r.respaldo!, 'ca', 'wolfcore-dev-ca.key'), 'utf8')).toBe(
+      'clave local',
+    );
+  });
+
+  it('una CA cifrada que no coincide con la huella del manifiesto → dañado', async () => {
+    const otra = await cifrarConFrase(
+      Buffer.from(
+        JSON.stringify({
+          ca: { crt: CA_CRT.replace('Falsa', 'Otraa'), key: CA_KEY },
+          certificados: {},
+        }),
+      ),
+      FRASE,
+    );
+    const archivo = await perfilManual(
+      { 'ca.cifrada': otra },
+      {
+        incluye: { bases: false, certificados: false, ca: true },
+        ca: { huella: huellaSha256(CA_CRT) },
+      },
+      ['ca.cifrada'],
+    );
+    await expect(importar(archivo, deps(destino), { frase: FRASE })).rejects.toMatchObject({
+      codigo: 'perfiles.danado',
+    });
+    expect(existsSync(destino.caKey())).toBe(false);
   });
 
   it('sin frase: CA nueva y certificados regenerados', async () => {

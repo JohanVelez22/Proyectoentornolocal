@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { ErrorWolf } from '../errores';
 import { readFile } from 'node:fs/promises';
 import { isIPv4, isIPv6 } from 'node:net';
-import { emitirCertificado } from '../https/ca';
+import { caConRestricciones, dentroDeRestriccionesCa, emitirCertificado } from '../https/ca';
 import type { Rutas } from '../rutas';
 
 export const MAX_DOMINIOS_LIBRES = 20;
@@ -99,6 +99,18 @@ export async function emitirCertificadoLibre(
     certPem: await readFile(d.rutas.caCrt(), 'utf8'),
     keyPem: await readFile(d.rutas.caKey(), 'utf8'),
   };
+  // Una CA con restricciones de nombre (las nuevas desde D26) no firma fuera de ellas: el
+  // certificado no valdría en ningún navegador.
+  const fuera = caConRestricciones(ca.certPem)
+    ? lista.find((n) => !dentroDeRestriccionesCa(n))
+    : undefined;
+  if (fuera !== undefined) {
+    throw new ErrorWolf(
+      'herramientas.fuera_de_la_ca',
+      `La CA de WolfCore Dev solo firma dominios .test, localhost y direcciones locales: ${fuera} no.`,
+      { dominio: fuera.slice(0, 80) },
+    );
+  }
   const par = emitirCertificado(ca, lista, d.ahora ? d.ahora() : new Date());
   return { certPem: par.certPem, clavePem: par.keyPem };
 }

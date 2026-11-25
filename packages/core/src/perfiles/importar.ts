@@ -8,6 +8,7 @@ import yauzl from 'yauzl';
 import { leerBaseDelProyecto } from '../bd/baseProyecto';
 import { generarClaveBd, usuarioDeProyecto } from '../bd/usuarioProyecto';
 import { huellaDeFila } from '../catalogo/tablaVersiones';
+import { huellaSha256 } from '../https/ca';
 import type { HuellaFila } from '../catalogo/tablaVersiones';
 import { ErrorWolf, esErrorWolf } from '../errores';
 import { esRutaLocalAbsoluta, esRutaProtegida } from '../importar/comun';
@@ -494,6 +495,10 @@ export class Perfiles {
         puertosOcupados: plan.puertosOcupados,
         ignoradas: p.ignoradas,
         carpetaConDatos: plan.config !== null,
+        ca:
+          m.ca && m.incluye.ca
+            ? { huella: m.ca.huella, reemplazaLocal: existsSync(this.d.rutas.caCrt()) }
+            : null,
         configQuitada: plan.fusion.quitados,
         huella: huellaVista(p, plan, o),
       };
@@ -531,10 +536,17 @@ export class Perfiles {
     }
     const avisos: string[] = [];
 
-    // 1. La CA primero: una frase equivocada no debe dejar nada a medias.
+    // 1. La CA primero: una frase equivocada no debe dejar nada a medias. Una CA ajena firma lo que
+    // quiera: reemplazar la de este equipo exige una confirmación aparte.
     let caDescifrada: CaPerfil | null = null;
     if (m.incluye.ca && 'ca.cifrada' in m.archivos) {
       if (typeof o.frase === 'string' && o.frase !== '') {
+        if (existsSync(d.rutas.caCrt()) && o.reemplazarCa !== true) {
+          throw new ErrorWolf(
+            'perfiles.confirmar_reemplazar_ca',
+            'El perfil trae una CA y este equipo ya tiene la suya: confirme aparte que quiere reemplazarla.',
+          );
+        }
         const plano = await descifrarConFrase(
           await readFile(path.join(p.dir, 'ca.cifrada')),
           o.frase,
@@ -550,6 +562,8 @@ export class Perfiles {
           ) {
             throw new Error('forma');
           }
+          // La que se descifró debe ser la que mostró la vista previa.
+          if (!m.ca || huellaSha256(j.ca.crt) !== m.ca.huella) throw new Error('huella');
           caDescifrada = { ca: j.ca, certificados: j.certificados ?? {} };
         } catch {
           throw danado('la CA no es válida');
@@ -778,7 +792,6 @@ export class Perfiles {
         await escribirPrivado(d.rutas.certKey(id), c.key);
       }
       ca = 'importada';
-      avisos.push('La CA del perfil no queda instalada en el sistema: instálela desde HTTPS.');
     } else if (!existsSync(d.rutas.caCrt())) {
       ca = 'nueva';
     }

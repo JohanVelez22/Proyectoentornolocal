@@ -347,6 +347,10 @@ export const fr: Textos = {
         "Le dossier de données ou le profil a changé depuis l'aperçu : vérifiez-le à nouveau.",
       'perfiles.carpeta_datos_invalida':
         "WOLFCORE_DATOS n'est pas un dossier de données valide : il doit être absolu, hors des dossiers système et différent du dossier réel.",
+      'perfiles.confirmar_reemplazar_ca':
+        "Le profil contient une CA et cet ordinateur a déjà la sienne : comparez l'empreinte et confirmez séparément que vous voulez la remplacer (uniquement s'il s'agit de votre propre CA).",
+      'herramientas.fuera_de_la_ca':
+        'La CA de WolfCore Dev ne signe que les domaines .test, localhost et les adresses locales : {dominio} ne peut pas être inclus.',
       'importar.origen_apagado':
         "Impossible de se connecter au serveur de base de données de l'autre programme : démarrez-le depuis ce programme et réessayez. Les sites ont tout de même été importés.",
       'importar.origen_no_local':

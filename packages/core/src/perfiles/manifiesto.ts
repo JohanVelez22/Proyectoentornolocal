@@ -150,6 +150,11 @@ export const ManifiestoPerfilSchema = z
     workspaces: z.array(z.unknown()).max(200).default([]),
     tareas: z.array(z.unknown()).max(1000).default([]),
     incluye: z.object({ bases: z.boolean(), certificados: z.boolean(), ca: z.boolean() }),
+    /** Huella SHA-256 del certificado de la CA que viaja cifrada (se comprueba al descifrarla). */
+    ca: z
+      .object({ huella: z.string().regex(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/) })
+      .nullable()
+      .default(null),
     bases: z
       .array(
         z.object({

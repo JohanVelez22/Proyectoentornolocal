@@ -121,6 +121,7 @@ export const PARAMETROS_ERROR = {
   'herramientas.ruta_no_absoluta': [],
   'herramientas.sin_seleccion': [],
   'herramientas.dominio_invalido': [],
+  'herramientas.fuera_de_la_ca': ['dominio'],
   'herramientas.demasiados_dominios': ['maximo'],
   // acceso a la base con Adminer o phpMyAdmin (D18)
   'acceso_bd.datos_invalidos': [],
@@ -232,6 +233,7 @@ export const PARAMETROS_ERROR = {
   'perfiles.sin_confirmar': [],
   'perfiles.vista_previa_vieja': [],
   'perfiles.carpeta_datos_invalida': [],
+  'perfiles.confirmar_reemplazar_ca': [],
   // importar desde Laragon, XAMPP y Herd (D15)
   'importar.origen_apagado': [],
   'importar.origen_no_local': [],
