@@ -342,7 +342,15 @@ if (errorCarpetaDatos !== null) {
   });
   void app.whenReady().then(async () => {
     try {
-      nucleo = await Nucleo.crear(carpetaDatos ? { base: carpetaDatos, aislado: true } : {});
+      // El servidor de órdenes de la CLI `wolf` (D31): 127.0.0.1, puerto y token propios de esta
+      // carpeta de datos (run/cli.json). `abrirUrl` solo recibe la dirección de un sitio (http/https).
+      nucleo = await Nucleo.crear({
+        ...(carpetaDatos ? { base: carpetaDatos, aislado: true } : {}),
+        servidorCli: {
+          version: app.getVersion(),
+          abrirUrl: (url) => shell.openExternal(urlHttp(url)),
+        },
+      });
     } catch (e) {
       const detalle = e instanceof Error ? e.message : String(e);
       dialog.showErrorBox('WolfCore Dev', `No se pudo iniciar el núcleo: ${detalle}`);
