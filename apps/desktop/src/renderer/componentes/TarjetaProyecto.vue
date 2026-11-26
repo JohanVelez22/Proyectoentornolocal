@@ -409,7 +409,7 @@ function abrirCarpeta(): void {
       <EstadoPunto :estado="estado.punto" :etiqueta="estado.etiqueta" solo-punto class="punto" />
       <div class="cuerpo">
         <div class="linea">
-          <h3 class="nombre">{{ nombre }}</h3>
+          <h3 class="nombre" :title="nombre">{{ nombre }}</h3>
           <NTag size="small" :bordered="false" class="etiqueta">{{
             t.tiposCortos[sitio.tipo]
           }}</NTag>

@@ -207,14 +207,17 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
   margin: 2px 0 0;
   font-size: 12.5px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 2px 6px;
   min-width: 0;
 }
 .ancho {
   grid-column: 1 / -1;
 }
+.datos dd.ruta,
 .ruta {
+  /* Más específico que `.datos dd` (flex): en un contenedor flex los puntos suspensivos no salen. */
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;

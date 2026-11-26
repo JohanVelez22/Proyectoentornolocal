@@ -101,6 +101,7 @@ export function temaDe(oscuro: boolean, acento: string | null): GlobalThemeOverr
         ...primarios,
         bodyColor: '#121317',
         placeholderColor: 'rgba(255, 255, 255, 0.62)',
+        textColor3: 'rgba(255, 255, 255, 0.68)',
         // El texto de los botones y etiquetas de aviso lleva el color del tipo sobre un fondo teñido:
         // los tonos por defecto de Naive UI quedan en 3.9–4.2:1.
         errorColor: '#ff9c9c',
@@ -112,9 +113,9 @@ export function temaDe(oscuro: boolean, acento: string | null): GlobalThemeOverr
       Badge: { color: '#c42a43', textColor: '#ffffff' },
       Button: {
         ...botonPrimario,
-        colorOpacitySecondary: '0.1',
-        colorOpacitySecondaryHover: '0.15',
-        colorOpacitySecondaryPressed: '0.2',
+        colorOpacitySecondary: '0.07',
+        colorOpacitySecondaryHover: '0.11',
+        colorOpacitySecondaryPressed: '0.15',
       },
       Empty: { textColor: 'rgba(255, 255, 255, 0.66)' },
       Layout: { siderColor: '#17181d', headerColor: '#121317', color: '#121317' },

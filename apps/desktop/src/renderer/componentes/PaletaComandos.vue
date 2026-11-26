@@ -306,7 +306,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', atajo));
           @click="correr(c)"
         >
           <span class="texto">
-            <span class="titulo">{{ c.titulo }}</span>
+            <span class="titulo" :title="c.titulo">{{ c.titulo }}</span>
             <span v-if="c.detalle" class="detalle">{{ c.detalle }}</span>
           </span>
           <NTag size="small" :bordered="false" class="grupo">{{ t.grupos[c.grupo] }}</NTag>

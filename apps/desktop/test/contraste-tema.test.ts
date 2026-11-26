@@ -58,7 +58,11 @@ describe('el tema da contraste AA (4.5:1) a los textos secundarios de Naive UI',
 
   it('oscuro: marcador y texto vacío sobre los fondos de página, tarjeta y campo', () => {
     for (const fondo of ['#121317', '#1a1b21', '#2a2c34']) {
-      for (const c of [String(oscuro.common!.placeholderColor), String(oscuro.Empty!.textColor)]) {
+      for (const c of [
+        String(oscuro.common!.placeholderColor),
+        String(oscuro.common!.textColor3),
+        String(oscuro.Empty!.textColor),
+      ]) {
         expect(
           contraste(sobre(c, fondo), rgb(fondo)),
           `${c} sobre ${fondo}`,
