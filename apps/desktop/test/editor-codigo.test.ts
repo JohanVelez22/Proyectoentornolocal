@@ -26,7 +26,7 @@ const guardado = {
 
 function elegidas(): RutasElegidas {
   const e = new RutasElegidas();
-  e.registrar(archivo);
+  e.registrar(archivo, 'editor');
   return e;
 }
 
@@ -38,6 +38,28 @@ describe('editor de código: validación del proceso principal (D43)', () => {
     expect(validarAbrirEditor(archivo, { confirmadoRiesgo: true }, elegidas()).opciones).toEqual({
       confirmadoRiesgo: true,
     });
+  });
+
+  it('una ruta elegida para otra cosa (abrir) no vale para el editor, ni al revés', () => {
+    const solo = new RutasElegidas();
+    solo.registrar(archivo, 'abrir');
+    expect(() => validarAbrirEditor(archivo, {}, solo)).toThrow(/diálogo/);
+    expect(() => validarGuardarEditor(archivo, guardado, solo)).toThrow(/diálogo/);
+    const ed = elegidas();
+    expect(ed.tiene(archivo, 'abrir')).toBe(false);
+  });
+
+  it('guardar acepta eol mixto y aceptarNormalizar booleano', () => {
+    const v = validarGuardarEditor(
+      archivo,
+      { ...guardado, eol: 'mixto', aceptarNormalizar: true },
+      elegidas(),
+    );
+    expect(v.opciones.eol).toBe('mixto');
+    expect(v.opciones.aceptarNormalizar).toBe(true);
+    expect(() =>
+      validarGuardarEditor(archivo, { ...guardado, aceptarNormalizar: 'si' }, elegidas()),
+    ).toThrow();
   });
 
   it('abrir rechaza claves de más y confirmadoRiesgo que no es booleano', () => {
@@ -106,6 +128,16 @@ describe('editor de código: textos en los cuatro idiomas (D43)', () => {
       expect(d.herramientas.lista.editor.descripcion.length, id).toBeGreaterThan(10);
       for (const k of CLAVES_CM)
         expect(d.editorCodigo.cm[k as keyof typeof d.editorCodigo.cm], `${id}:${k}`).toBeTruthy();
+      for (const k of [
+        d.editorCodigo.enlaceDuro,
+        d.editorCodigo.saltosMixtos.aviso,
+        d.editorCodigo.saltosMixtos.aceptar,
+        d.editorCodigo.envGestor.aviso,
+        d.editorCodigo.envGestor.boton,
+        d.editorCodigo.huellaPerdida,
+      ]) {
+        expect(k.length, id).toBeGreaterThan(10);
+      }
       expect(d.editorCodigo.refuerzo.instruccion('x.txt'), id).toContain('x.txt');
       expect(d.editorCodigo.confirmarGuardar.texto('x.txt'), id).toContain('x.txt');
     }
@@ -174,7 +206,7 @@ describe('rutas editorCodigo.* (D43)', () => {
     expect(await t.llamar('editorCodigo.guardar', archivo, guardado)).toMatchObject({ ok: false });
     expect(t.nucleo.abrirArchivoEditor).not.toHaveBeenCalled();
     expect(t.nucleo.guardarArchivoEditor).not.toHaveBeenCalled();
-    await t.llamar('sistema.elegirArchivo');
+    await t.llamar('editorCodigo.elegir');
     expect(await t.llamar('editorCodigo.abrir', archivo, {})).toMatchObject({
       ok: true,
       valor: { estado: 'confirmar' },
@@ -185,14 +217,19 @@ describe('rutas editorCodigo.* (D43)', () => {
     const casos: [string, Error | null, unknown][] = [
       ['guardado', null, { estado: 'guardado', huella, copia: 'c' }],
       ['cambiado', new ErrorWolf('editor.archivo_cambiado', 'x'), { estado: 'cambiado' }],
-      ['reforzar', new ErrorWolf('editor.confirmacion_reforzada', 'x'), { estado: 'reforzar' }],
+      [
+        'reforzar',
+        new ErrorWolf('editor.confirmacion_reforzada', 'x', { riesgos: 'secreto,enlace-duro' }),
+        { estado: 'reforzar', riesgos: ['secreto', 'enlace-duro'] },
+      ],
+      ['normalizar', new ErrorWolf('editor.eol_mixto', 'x'), { estado: 'normalizar' }],
     ];
     for (const [nombre, error, esperado] of casos) {
       const t = preparar(async () => {
         if (error) throw error;
         return { huella, copia: 'c' };
       });
-      await t.llamar('sistema.elegirArchivo');
+      await t.llamar('editorCodigo.elegir');
       expect(await t.llamar('editorCodigo.guardar', archivo, guardado), nombre).toEqual({
         ok: true,
         valor: esperado,
@@ -204,7 +241,7 @@ describe('rutas editorCodigo.* (D43)', () => {
     const t = preparar(async () => {
       throw new ErrorWolf('editor.archivo_env', 'No se edita.');
     });
-    await t.llamar('sistema.elegirArchivo');
+    await t.llamar('editorCodigo.elegir');
     expect(await t.llamar('editorCodigo.guardar', archivo, guardado)).toMatchObject({
       ok: false,
       error: { codigo: 'editor.archivo_env' },

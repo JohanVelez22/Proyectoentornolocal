@@ -469,6 +469,10 @@ export const es = {
         'Los archivos .env se gestionan desde las variables del proyecto, no desde el editor.',
       'editor.demasiado_grande': 'El archivo es demasiado grande para el editor (máximo {maximo}).',
       'editor.binario': 'El archivo no es de texto (es binario): no se edita aquí.',
+      'editor.codificacion': 'El archivo no está en UTF-8: el editor no lo abre para no dañarlo.',
+      'editor.no_abierto':
+        'Ese archivo no se abrió en el editor (o su versión cambió): ábrelo de nuevo.',
+      'editor.eol_mixto': 'El archivo mezcla saltos de línea: confirma normalizarlos para guardar.',
       'editor.contenido_invalido': 'El contenido no es texto válido.',
       'editor.huella_invalida': 'Falta la huella del archivo abierto: vuelve a abrirlo.',
       'editor.archivo_cambiado':
@@ -4676,6 +4680,17 @@ export const es = {
     guardado: 'Archivo guardado.',
     copiaPrevia: (ruta: string) => `Copia previa: ${ruta}`,
     cancelar: 'Cancelar',
+    enlaceDuro:
+      'Este archivo tiene más de un nombre en el disco (enlace duro). Guardarlo rompe ese enlace: los otros nombres seguirán con el contenido anterior.',
+    saltosMixtos: {
+      aviso: 'Este archivo mezcla saltos de línea. Al guardar se normalizan todos a LF.',
+      aceptar: 'Acepto normalizar los saltos de línea',
+    },
+    envGestor: {
+      aviso: 'Los archivos .env se editan en las variables del proyecto, con su flujo de secretos.',
+      boton: 'Abrir las variables del proyecto',
+    },
+    huellaPerdida: 'Guardado, pero no se pudo leer la huella nueva: se recargó el archivo.',
     confirmarGuardar: {
       titulo: 'Guardar cambios',
       texto: (nombre: string) =>

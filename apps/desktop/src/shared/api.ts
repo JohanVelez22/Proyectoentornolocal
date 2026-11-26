@@ -422,7 +422,8 @@ export type {
 export type ResultadoGuardarEditor =
   | ({ estado: 'guardado' } & ResultadoGuardarArchivo)
   | { estado: 'cambiado' }
-  | { estado: 'reforzar' };
+  | { estado: 'reforzar'; riesgos: RiesgoEditor[] }
+  | { estado: 'normalizar' };
 /** Una copia de `data/<servicio>/` por sus ids (nunca por su ruta). */
 export interface RefRespaldoDatos {
   servicio: IdServicioDatos;
@@ -1451,8 +1452,10 @@ export interface ApiEntorno {
     abrirRegistros(): Promise<void>;
   };
   editorCodigo: {
+    /** Diálogo nativo para elegir el archivo del editor: solo esa ruta se puede abrir y guardar. */
+    elegir(): Promise<string | null>;
     /**
-     * Abre un archivo de texto elegido en un diálogo nativo (`sistema.elegirArchivo`). Nunca un
+     * Abre un archivo de texto elegido con `elegir`. Nunca un
      * `.env`, un binario, uno de más de 2 MB ni nada de la carpeta de datos de WolfCore. Con forma
      * de secreto o de un sitio con datos reales devuelve `confirmar` (sin contenido) hasta que
      * llegue `confirmadoRiesgo: true`.
@@ -1907,6 +1910,7 @@ export const RUTAS_IPC = [
   'limpiezaDisco.limpiar',
   'limpiezaDisco.cancelar',
   'limpiezaDisco.abrirRegistros',
+  'editorCodigo.elegir',
   'editorCodigo.abrir',
   'editorCodigo.guardar',
   'captura.leer',

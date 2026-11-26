@@ -13,6 +13,10 @@ const TEXTOS = {
     siApagar: 'Sí, apagar',
     noApagar: 'No, dejarlos encendidos',
     cancelar: 'Cancelar',
+    sinGuardarTitulo: 'Cambios sin guardar',
+    sinGuardarTexto: 'El editor de código tiene cambios sin guardar. Si sigue, se pierden.',
+    sinGuardarSalir: 'Salir sin guardar',
+    sinGuardarSeguir: 'Seguir editando',
     cliTitulo: 'Orden de la terminal (wolf)',
     cliTunelInternet:
       'Una orden de la terminal quiere publicar {dominio} en internet con {proveedor}. Cualquiera con el enlace podrá verlo.',
@@ -48,6 +52,10 @@ const TEXTOS = {
     siApagar: 'Yes, stop them',
     noApagar: 'No, keep them running',
     cancelar: 'Cancel',
+    sinGuardarTitulo: 'Unsaved changes',
+    sinGuardarTexto: 'The code editor has unsaved changes. If you continue, they are lost.',
+    sinGuardarSalir: 'Leave without saving',
+    sinGuardarSeguir: 'Keep editing',
     cliTitulo: 'Terminal command (wolf)',
     cliTunelInternet:
       'A terminal command wants to publish {dominio} on the internet with {proveedor}. Anyone with the link will be able to see it.',
@@ -83,6 +91,10 @@ const TEXTOS = {
     siApagar: 'Sim, desligar',
     noApagar: 'Não, deixá-los ligados',
     cancelar: 'Cancelar',
+    sinGuardarTitulo: 'Alterações não salvas',
+    sinGuardarTexto: 'O editor de código tem alterações não salvas. Se continuar, elas se perdem.',
+    sinGuardarSalir: 'Sair sem salvar',
+    sinGuardarSeguir: 'Continuar editando',
     cliTitulo: 'Comando do terminal (wolf)',
     cliTunelInternet:
       'Um comando do terminal quer publicar {dominio} na internet com {proveedor}. Qualquer pessoa com o link poderá vê-lo.',
@@ -118,6 +130,11 @@ const TEXTOS = {
     siApagar: 'Oui, les arrêter',
     noApagar: 'Non, les laisser actifs',
     cancelar: 'Annuler',
+    sinGuardarTitulo: 'Modifications non enregistrées',
+    sinGuardarTexto:
+      'L’éditeur de code contient des modifications non enregistrées. Si vous continuez, elles sont perdues.',
+    sinGuardarSalir: 'Quitter sans enregistrer',
+    sinGuardarSeguir: 'Continuer à modifier',
     cliTitulo: 'Commande du terminal (wolf)',
     cliTunelInternet:
       'Une commande du terminal veut publier {dominio} sur internet avec {proveedor}. Toute personne ayant le lien pourra le voir.',

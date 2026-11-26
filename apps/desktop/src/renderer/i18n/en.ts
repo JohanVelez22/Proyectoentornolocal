@@ -462,6 +462,11 @@ export const en: Textos = {
         '.env files are managed from the project variables, not from the editor.',
       'editor.demasiado_grande': 'The file is too large for the editor (maximum {maximo}).',
       'editor.binario': 'The file is not text (it is binary): it cannot be edited here.',
+      'editor.codificacion':
+        'The file is not UTF-8: the editor does not open it so as not to damage it.',
+      'editor.no_abierto':
+        'That file was not opened in the editor (or its version changed): open it again.',
+      'editor.eol_mixto': 'The file mixes line endings: confirm normalizing them to save.',
       'editor.contenido_invalido': 'The content is not valid text.',
       'editor.huella_invalida': 'The fingerprint of the open file is missing: open it again.',
       'editor.archivo_cambiado':
@@ -4651,6 +4656,17 @@ export const en: Textos = {
     guardado: 'File saved.',
     copiaPrevia: (ruta: string) => `Backup copy: ${ruta}`,
     cancelar: 'Cancel',
+    enlaceDuro:
+      'This file has more than one name on disk (a hard link). Saving it breaks that link: the other names keep the old content.',
+    saltosMixtos: {
+      aviso: 'This file mixes line endings. Saving normalizes them all to LF.',
+      aceptar: 'I accept normalizing the line endings',
+    },
+    envGestor: {
+      aviso: '.env files are edited in the project variables, with their secrets flow.',
+      boton: 'Open the project variables',
+    },
+    huellaPerdida: 'Saved, but the new fingerprint could not be read: the file was reloaded.',
     confirmarGuardar: {
       titulo: 'Save changes',
       texto: (nombre: string) =>

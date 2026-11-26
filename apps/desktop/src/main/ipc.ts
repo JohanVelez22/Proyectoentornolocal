@@ -1930,6 +1930,9 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'limpiezaDisco.cancelar': async (n) => n.cancelarLimpieza(),
   'limpiezaDisco.abrirRegistros': async (n, s) => s.abrirCarpeta(await n.carpetaRegistroLimpieza()),
   // ---- Editor de código (D43): la ruta sale de un diálogo; guardar exige confirmado === true ----
+  // Su propio diálogo: la ruta queda registrada con el propósito 'editor' (nada más la abre). D44
+  // registra así los resultados de Buscar: lo hace este proceso, nunca la ventana.
+  'editorCodigo.elegir': async (_n, s) => s.elegidas.registrar(await s.elegirArchivo(), 'editor'),
   'editorCodigo.abrir': (n, s, ruta, opciones) => {
     const v = validarAbrirEditor(ruta, opciones, s.elegidas);
     return n.abrirArchivoEditor(v.ruta, v.opciones);
@@ -1944,8 +1947,13 @@ const TABLA: Record<RutaIpc, Manejador> = {
       if (e instanceof ErrorWolf && e.codigo === 'editor.archivo_cambiado')
         return { estado: 'cambiado' };
       if (e instanceof ErrorWolf && e.codigo === 'editor.confirmacion_reforzada') {
-        return { estado: 'reforzar' };
+        const riesgos = String(e.datos?.['riesgos'] ?? '')
+          .split(',')
+          .filter((r) => r === 'secreto' || r === 'datos-reales' || r === 'enlace-duro');
+        return { estado: 'reforzar', riesgos };
       }
+      if (e instanceof ErrorWolf && e.codigo === 'editor.eol_mixto')
+        return { estado: 'normalizar' };
       throw e;
     }
   },

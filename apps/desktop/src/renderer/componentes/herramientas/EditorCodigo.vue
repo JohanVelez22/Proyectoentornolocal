@@ -2,10 +2,11 @@
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { MAX_BYTES_EDITOR } from '@pel/core';
-import { NAlert, NButton, NInput, NTag, useDialog, useNotification } from 'naive-ui';
+import { NAlert, NButton, NCheckbox, NInput, NTag, useDialog, useNotification } from 'naive-ui';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import type { ArchivoEditor, RiesgoEditor } from '../../../shared/api';
 import { api } from '../../api';
+import { router } from '../../router';
 import { solicitudes } from '../../composables/solicitudes';
 import { textos } from '../../i18n';
 import { extensionesBase, lenguajeDe, temaEditor } from '../../utilidades/editorCm';
@@ -38,6 +39,10 @@ const aviso = ref<{ tipo: 'ok'; texto: string } | null>(null);
 /** Riesgos de un archivo que aún no se abrió: se pide escribir su nombre. */
 const pendiente = ref<{ ruta: string; nombre: string; riesgos: RiesgoEditor[] } | null>(null);
 const escrito = ref('');
+/** El usuario aceptó normalizar los saltos de línea mezclados de este archivo. */
+const aceptaNormalizar = ref(false);
+/** Se rechazó un .env: si es de un proyecto, se ofrece su gestor de variables. */
+const errorEnv = ref<{ sitio: string; texto: string } | null>(null);
 type PanelGuardar = 'normal' | 'refuerzo' | 'cambio-externo' | 'sobrescribir' | null;
 const panel = ref<PanelGuardar>(null);
 
@@ -48,7 +53,12 @@ const leerTema = (): boolean => document.documentElement.dataset['tema'] === 'os
 const sensible = computed(() => (archivo.value?.riesgos.length ?? 0) > 0);
 
 function textoRiesgos(riesgos: RiesgoEditor[]): string[] {
-  return riesgos.map((r) => (r === 'secreto' ? t.refuerzo.secreto : t.refuerzo.datosReales));
+  const textos: Record<RiesgoEditor, string> = {
+    secreto: t.refuerzo.secreto,
+    'datos-reales': t.refuerzo.datosReales,
+    'enlace-duro': t.enlaceDuro,
+  };
+  return riesgos.map((r) => textos[r]);
 }
 
 function notificarError(e: unknown): void {
@@ -117,10 +127,26 @@ async function confirmarDescartar(): Promise<boolean> {
   });
 }
 
-async function abrirRuta(ruta: string, confirmadoRiesgo = false): Promise<void> {
+const mismosRiesgos = (a: RiesgoEditor[], b: RiesgoEditor[]): boolean =>
+  a.length === b.length && a.every((x) => b.includes(x));
+
+/**
+ * `previos`: los riesgos ya confirmados de este archivo (al recargar). Si siguen siendo los mismos
+ * no se vuelve a pedir; si cambiaron (p. ej. ahora es un enlace duro o trae un secreto), sí.
+ */
+async function abrirRuta(
+  ruta: string,
+  confirmadoRiesgo = false,
+  previos?: RiesgoEditor[],
+): Promise<void> {
   ocupado.value = 'abrir';
+  errorEnv.value = null;
   try {
     const r = await api().editorCodigo.abrir(ruta, confirmadoRiesgo ? { confirmadoRiesgo } : {});
+    if (r.estado === 'confirmar' && previos && mismosRiesgos(previos, r.riesgos)) {
+      ocupado.value = null;
+      return await abrirRuta(ruta, true);
+    }
     if (r.estado === 'confirmar') {
       pendiente.value = { ruta, nombre: r.nombre, riesgos: r.riesgos };
       escrito.value = '';
@@ -129,10 +155,22 @@ async function abrirRuta(ruta: string, confirmadoRiesgo = false): Promise<void> 
     rutaElegida.value = ruta;
     await mostrar(r.archivo);
   } catch (e) {
-    notificarError(e);
+    const x = e as { codigo?: string; datos?: { sitio?: string } } | null;
+    if (x?.codigo === 'editor.archivo_env') {
+      errorEnv.value = { sitio: String(x.datos?.sitio ?? ''), texto: mensajeDeError(e) };
+    } else {
+      notificarError(e);
+    }
   } finally {
     ocupado.value = null;
   }
+}
+
+function abrirGestorEnv(): void {
+  const id = errorEnv.value?.sitio;
+  if (!id) return;
+  solicitudes.verEnv = id;
+  void router.push({ name: 'proyectos' });
 }
 
 async function elegir(): Promise<void> {
@@ -140,7 +178,7 @@ async function elegir(): Promise<void> {
   ocupado.value = 'abrir';
   let ruta: string | null = null;
   try {
-    ruta = await api().sistema.elegirArchivo();
+    ruta = await api().editorCodigo.elegir();
   } catch (e) {
     notificarError(e);
   } finally {
@@ -151,14 +189,18 @@ async function elegir(): Promise<void> {
 
 async function recargar(): Promise<void> {
   if (!rutaElegida.value || !(await confirmarDescartar())) return;
-  await abrirRuta(rutaElegida.value, sensible.value);
+  await abrirRuta(rutaElegida.value, false, archivo.value?.riesgos);
 }
 
 function pedirGuardar(): void {
   if (!archivo.value || ocupado.value) return;
   escrito.value = '';
+  aceptaNormalizar.value = false;
   panel.value = sensible.value ? 'refuerzo' : 'normal';
 }
+
+const mixto = computed(() => archivo.value?.eol === 'mixto');
+const faltaNormalizar = computed(() => mixto.value && !aceptaNormalizar.value);
 
 const nombreCoincide = computed(
   () => escrito.value.trim() === (pendiente.value?.nombre ?? archivo.value?.nombre ?? '\0'),
@@ -179,16 +221,27 @@ async function guardar(sobrescribir = false): Promise<void> {
       confirmado: true,
       ...(sensible.value ? { confirmadoRiesgo: true } : {}),
       ...(sobrescribir ? { sobrescribir: true } : {}),
+      ...(a.eol === 'mixto' && aceptaNormalizar.value ? { aceptarNormalizar: true } : {}),
     });
     if (r.estado === 'cambiado') {
       panel.value = 'cambio-externo';
     } else if (r.estado === 'reforzar') {
       // El texto nuevo trae un secreto que el archivo no tenía: se pide el refuerzo.
-      archivo.value = { ...a, riesgos: [...new Set<RiesgoEditor>([...a.riesgos, 'secreto'])] };
+      archivo.value = { ...a, riesgos: r.riesgos };
       escrito.value = '';
       panel.value = 'refuerzo';
+    } else if (r.estado === 'normalizar') {
+      aceptaNormalizar.value = false;
+      panel.value = sensible.value ? 'refuerzo' : 'normal';
+    } else if (r.huella === null) {
+      // Se guardó, pero no se pudo leer la huella nueva: se vuelve a abrir para tener una.
+      modificado.value = false;
+      panel.value = null;
+      await abrirRuta(rutaElegida.value, false, a.riesgos);
+      aviso.value = { tipo: 'ok', texto: `${t.huellaPerdida} ${t.copiaPrevia(r.copia)}` };
     } else {
-      archivo.value = { ...a, huella: r.huella };
+      // Tras guardar, los saltos ya son uniformes (LF) y la huella nueva vale para el siguiente.
+      archivo.value = { ...a, huella: r.huella, eol: a.eol === 'mixto' ? 'lf' : a.eol };
       modificado.value = false;
       panel.value = null;
       aviso.value = { tipo: 'ok', texto: `${t.guardado} ${t.copiaPrevia(r.copia)}` };
@@ -204,7 +257,7 @@ async function guardar(sobrescribir = false): Promise<void> {
 async function recargarDescartando(): Promise<void> {
   modificado.value = false;
   panel.value = null;
-  await abrirRuta(rutaElegida.value, sensible.value);
+  await abrirRuta(rutaElegida.value, false, archivo.value?.riesgos);
 }
 
 // Pedido de Buscar (D44) u otra pantalla: `abrirEnEditor(ruta)`.
@@ -226,7 +279,15 @@ watch(oscuro, (v) => {
   vista.value?.dispatch({ effects: compTema.reconfigure(temaEditor(v)) });
 });
 
+/** Cerrar o recargar la ventana con cambios sin guardar: el sistema pide confirmar. */
+function antesDeCerrar(e: BeforeUnloadEvent): void {
+  if (!modificado.value) return;
+  e.preventDefault();
+  e.returnValue = '';
+}
+
 onMounted(() => {
+  window.addEventListener('beforeunload', antesDeCerrar);
   oscuro.value = leerTema();
   observador = new MutationObserver(() => {
     oscuro.value = leerTema();
@@ -239,6 +300,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', antesDeCerrar);
   observador?.disconnect();
   vista.value?.destroy();
   vista.value = null;
@@ -282,6 +344,20 @@ onBeforeUnmount(() => {
       <span class="herr-tenue">{{ t.posicion(posicion.linea, posicion.columna) }}</span>
     </p>
 
+    <p v-if="archivo && mixto" class="herr-tenue">{{ t.saltosMixtos.aviso }}</p>
+
+    <section v-if="errorEnv" class="panel" role="alert">
+      <p>{{ errorEnv.texto }}</p>
+      <template v-if="errorEnv.sitio">
+        <p>{{ t.envGestor.aviso }}</p>
+        <div class="herr-fila">
+          <NButton size="small" type="primary" @click="abrirGestorEnv">{{
+            t.envGestor.boton
+          }}</NButton>
+        </div>
+      </template>
+    </section>
+
     <!-- Archivo delicado: se pide escribir su nombre antes de abrirlo. -->
     <section v-if="pendiente" class="panel" role="alertdialog" :aria-label="t.refuerzo.abrirTitulo">
       <strong>{{ t.refuerzo.abrirTitulo }}: {{ pendiente.nombre }}</strong>
@@ -317,8 +393,18 @@ onBeforeUnmount(() => {
     >
       <strong>{{ t.confirmarGuardar.titulo }}</strong>
       <p>{{ t.confirmarGuardar.texto(archivo.nombre) }}</p>
+      <template v-if="mixto">
+        <p class="herr-tenue">{{ t.saltosMixtos.aviso }}</p>
+        <NCheckbox v-model:checked="aceptaNormalizar">{{ t.saltosMixtos.aceptar }}</NCheckbox>
+      </template>
       <div class="herr-fila">
-        <NButton type="primary" size="small" :loading="ocupado === 'guardar'" @click="guardar()">
+        <NButton
+          type="primary"
+          size="small"
+          :disabled="faltaNormalizar"
+          :loading="ocupado === 'guardar'"
+          @click="guardar()"
+        >
           {{ t.confirmarGuardar.boton }}
         </NButton>
         <NButton size="small" secondary @click="panel = null">{{ t.cancelar }}</NButton>
@@ -335,19 +421,23 @@ onBeforeUnmount(() => {
       <strong>{{ t.refuerzo.guardarTitulo }}</strong>
       <p v-for="r in textoRiesgos(archivo.riesgos)" :key="r">{{ r }}</p>
       <p>{{ t.confirmarGuardar.texto(archivo.nombre) }}</p>
+      <template v-if="mixto">
+        <p class="herr-tenue">{{ t.saltosMixtos.aviso }}</p>
+        <NCheckbox v-model:checked="aceptaNormalizar">{{ t.saltosMixtos.aceptar }}</NCheckbox>
+      </template>
       <p>{{ t.refuerzo.instruccion(archivo.nombre) }}</p>
       <NInput
         v-model:value="escrito"
         size="small"
         :placeholder="t.refuerzo.etiqueta"
         :input-props="{ 'aria-label': t.refuerzo.etiqueta, spellcheck: false, autocomplete: 'off' }"
-        @keydown.enter.prevent="nombreCoincide && guardar()"
+        @keydown.enter.prevent="nombreCoincide && !faltaNormalizar && guardar()"
       />
       <div class="herr-fila">
         <NButton
           type="warning"
           size="small"
-          :disabled="!nombreCoincide"
+          :disabled="!nombreCoincide || faltaNormalizar"
           :loading="ocupado === 'guardar'"
           @click="guardar()"
         >

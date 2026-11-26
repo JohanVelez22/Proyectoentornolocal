@@ -475,7 +475,7 @@ export function ramaPhp(v: unknown): string | null {
 }
 
 /** Para qué se eligió una ruta: `abrir` (leer, diálogo de abrir) o `guardar` (destino). */
-export type PropositoRuta = 'abrir' | 'guardar';
+export type PropositoRuta = 'abrir' | 'guardar' | 'editor';
 
 /**
  * Rutas que el usuario eligió en los diálogos de esta sesión. Las rutas que leen o escriben
@@ -1960,7 +1960,7 @@ export function validarAbrirEditor(
   opciones: unknown,
   elegidas: RutasElegidas,
 ): { ruta: string; opciones: OpcionesAbrirArchivo } {
-  const r = elegidas.exigir(ruta, 'archivo');
+  const r = elegidas.exigir(ruta, 'archivo', 'editor');
   const o = objetoPlano<Record<string, unknown>>(opciones ?? {}, 'editor');
   soloClaves(o, ['confirmadoRiesgo'], 'editor');
   return {
@@ -1981,11 +1981,20 @@ export function validarGuardarEditor(
   opciones: unknown,
   elegidas: RutasElegidas,
 ): { ruta: string; opciones: OpcionesGuardarArchivo } {
-  const r = elegidas.exigir(ruta, 'archivo');
+  const r = elegidas.exigir(ruta, 'archivo', 'editor');
   const o = objetoPlano<Record<string, unknown>>(opciones, 'editor');
   soloClaves(
     o,
-    ['contenido', 'huella', 'eol', 'bom', 'confirmado', 'confirmadoRiesgo', 'sobrescribir'],
+    [
+      'contenido',
+      'huella',
+      'eol',
+      'bom',
+      'confirmado',
+      'confirmadoRiesgo',
+      'sobrescribir',
+      'aceptarNormalizar',
+    ],
     'editor',
   );
   const contenido = o['contenido'];
@@ -2001,7 +2010,8 @@ export function validarGuardarEditor(
   const hash = textoAcotado(h['hash'], 64, 64, 'huella');
   if (!/^[0-9a-f]{64}$/.test(hash)) throw new Error('Argumento no válido: huella');
   const eol = o['eol'];
-  if (eol !== 'lf' && eol !== 'crlf') throw new Error('Argumento no válido: eol');
+  if (eol !== 'lf' && eol !== 'crlf' && eol !== 'mixto')
+    throw new Error('Argumento no válido: eol');
   return {
     ruta: r,
     opciones: {
@@ -2016,6 +2026,9 @@ export function validarGuardarEditor(
       ...(o['sobrescribir'] === undefined
         ? {}
         : { sobrescribir: booleano(o['sobrescribir'], 'sobrescribir') }),
+      ...(o['aceptarNormalizar'] === undefined
+        ? {}
+        : { aceptarNormalizar: booleano(o['aceptarNormalizar'], 'aceptarNormalizar') }),
     },
   };
 }

@@ -472,6 +472,11 @@ export const pt: Textos = {
         'Os arquivos .env são gerenciados pelas variáveis do projeto, não pelo editor.',
       'editor.demasiado_grande': 'O arquivo é grande demais para o editor (máximo {maximo}).',
       'editor.binario': 'O arquivo não é de texto (é binário): não pode ser editado aqui.',
+      'editor.codificacion':
+        'O arquivo não está em UTF-8: o editor não o abre para não danificá-lo.',
+      'editor.no_abierto':
+        'Esse arquivo não foi aberto no editor (ou a versão mudou): abra-o novamente.',
+      'editor.eol_mixto': 'O arquivo mistura quebras de linha: confirme normalizá-las para salvar.',
       'editor.contenido_invalido': 'O conteúdo não é um texto válido.',
       'editor.huella_invalida': 'Falta a impressão digital do arquivo aberto: abra-o novamente.',
       'editor.archivo_cambiado':
@@ -4690,6 +4695,18 @@ export const pt: Textos = {
     guardado: 'Arquivo salvo.',
     copiaPrevia: (ruta: string) => `Cópia prévia: ${ruta}`,
     cancelar: 'Cancelar',
+    enlaceDuro:
+      'Este arquivo tem mais de um nome no disco (link físico). Salvá-lo quebra esse link: os outros nomes ficam com o conteúdo anterior.',
+    saltosMixtos: {
+      aviso: 'Este arquivo mistura quebras de linha. Ao salvar, todas são normalizadas para LF.',
+      aceptar: 'Aceito normalizar as quebras de linha',
+    },
+    envGestor: {
+      aviso: 'Os arquivos .env são editados nas variáveis do projeto, com o fluxo de segredos.',
+      boton: 'Abrir as variáveis do projeto',
+    },
+    huellaPerdida:
+      'Salvo, mas não foi possível ler a nova impressão digital: o arquivo foi recarregado.',
     confirmarGuardar: {
       titulo: 'Salvar alterações',
       texto: (nombre: string) =>

@@ -231,6 +231,26 @@ function crearVentana(rutas: Rutas): BrowserWindow {
     }
     return { action: 'deny' };
   });
+  // El editor de código (D43) pide confirmar con `beforeunload` si hay cambios sin guardar:
+  // al recargar o al salir de la aplicación se pregunta; el cierre del sistema nunca se bloquea.
+  v.webContents.on('will-prevent-unload', (e) => {
+    if (cierreSistema) {
+      e.preventDefault();
+      return;
+    }
+    const t = textosMain(idioma);
+    const elegido = dialog.showMessageBoxSync(v, {
+      type: 'warning',
+      title: t.sinGuardarTitulo,
+      message: t.sinGuardarTitulo,
+      detail: t.sinGuardarTexto,
+      buttons: [t.sinGuardarSalir, t.sinGuardarSeguir],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    if (elegido === 0) e.preventDefault();
+    else saliendo = false;
+  });
   v.webContents.on('will-navigate', (e, url) => {
     if (!urlPropia(url)) e.preventDefault();
   });

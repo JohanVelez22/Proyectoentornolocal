@@ -125,7 +125,15 @@ watch(
   (c) => {
     if (!c) return;
     solicitudes.herramienta = null;
-    if (c in componentes) abierta.value = c as Clave;
+    if (!(c in componentes)) return;
+    // Cambiar de herramienta desde Ctrl+K con cambios sin guardar en el editor: se pregunta antes.
+    if (abierta.value === 'editor' && c !== 'editor') {
+      void confirmarSalida().then((ok) => {
+        if (ok) abierta.value = c as Clave;
+      });
+      return;
+    }
+    abierta.value = c as Clave;
   },
   { immediate: true },
 );

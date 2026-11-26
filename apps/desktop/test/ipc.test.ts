@@ -979,6 +979,7 @@ describe('registrarIpc', () => {
         'limpiezaDisco.limpiar',
         'limpiezaDisco.cancelar',
         'limpiezaDisco.abrirRegistros',
+        'editorCodigo.elegir',
         'editorCodigo.abrir',
         'editorCodigo.guardar',
         'captura.leer',

@@ -12,6 +12,8 @@ export const solicitudes = reactive({
   archivoEditor: null as string | null,
   /** El editor de código tiene cambios sin guardar (para avisar al cerrar o salir). */
   editorSinGuardar: false,
+  /** Proyecto (id) cuyo gestor de variables .env debe abrir Proyectos (lo pide el editor de código). */
+  verEnv: null as string | null,
   /** Abrir "Agregar proyecto" (en la pestaña de GitHub) en Proyectos. */
   agregarProyecto: false,
   /** Abrir el asistente "Nuevo proyecto" en Proyectos. */

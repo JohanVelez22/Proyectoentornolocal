@@ -108,6 +108,20 @@ watch(
   { immediate: true },
 );
 
+// El editor de código rechazó un .env de este proyecto: se abre su gestor de variables (D16).
+watch(
+  [() => solicitudes.verEnv, () => sitios.lista],
+  () => {
+    const id = solicitudes.verEnv;
+    if (!id) return;
+    const s = sitios.lista.find((x) => x.id === id);
+    if (!s) return;
+    solicitudes.verEnv = null;
+    envDe.value = s;
+  },
+  { immediate: true },
+);
+
 // "Nuevo proyecto" desde la paleta de comandos o Inicio.
 watch(
   () => solicitudes.nuevoProyecto,

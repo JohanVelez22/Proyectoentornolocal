@@ -489,6 +489,12 @@ export const fr: Textos = {
         'Le fichier est trop volumineux pour l’éditeur (maximum {maximo}).',
       'editor.binario':
         'Le fichier n’est pas du texte (il est binaire) : il ne peut pas être modifié ici.',
+      'editor.codificacion':
+        'Le fichier n’est pas en UTF-8 : l’éditeur ne l’ouvre pas afin de ne pas l’endommager.',
+      'editor.no_abierto':
+        'Ce fichier n’a pas été ouvert dans l’éditeur (ou sa version a changé) : rouvrez-le.',
+      'editor.eol_mixto':
+        'Le fichier mélange des fins de ligne : confirmez leur normalisation pour enregistrer.',
       'editor.contenido_invalido': 'Le contenu n’est pas du texte valide.',
       'editor.huella_invalida': 'L’empreinte du fichier ouvert est absente : rouvrez-le.',
       'editor.archivo_cambiado':
@@ -4799,6 +4805,20 @@ export const fr: Textos = {
     guardado: 'Fichier enregistré.',
     copiaPrevia: (ruta: string) => `Copie préalable : ${ruta}`,
     cancelar: 'Annuler',
+    enlaceDuro:
+      'Ce fichier porte plusieurs noms sur le disque (lien physique). L’enregistrer rompt ce lien : les autres noms gardent l’ancien contenu.',
+    saltosMixtos: {
+      aviso:
+        'Ce fichier mélange des fins de ligne. À l’enregistrement, elles sont toutes normalisées en LF.',
+      aceptar: 'J’accepte de normaliser les fins de ligne',
+    },
+    envGestor: {
+      aviso:
+        'Les fichiers .env se modifient dans les variables du projet, avec leur circuit des secrets.',
+      boton: 'Ouvrir les variables du projet',
+    },
+    huellaPerdida:
+      'Enregistré, mais la nouvelle empreinte n’a pas pu être lue : le fichier a été rechargé.',
     confirmarGuardar: {
       titulo: 'Enregistrer les modifications',
       texto: (nombre: string) =>
