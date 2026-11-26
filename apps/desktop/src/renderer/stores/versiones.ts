@@ -423,7 +423,7 @@ export const useVersiones = defineStore('versiones', () => {
     confirmarSinHuella: boolean,
   ): ReturnType<ReturnType<typeof api>['servicios']['nuevaRama']> {
     const d = dialogo.value;
-    if (d?.tipo !== 'nuevaRama') throw new Error('No hay una rama nueva pendiente.');
+    if (d?.tipo !== 'nuevaRama') throw new Error('nuevaRama sin dialogo abierto');
     if (d.sinHuella && !confirmarSinHuella)
       throw new Error(textos.versiones.dialogoSinHuella.casilla);
     const r = await api().servicios.nuevaRama(d.servicio, d.nueva, {

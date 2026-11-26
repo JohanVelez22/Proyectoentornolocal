@@ -149,12 +149,12 @@ const ES: Diccionario = {
       cuerpo: `${limpio(d['nueva'], 'Una versión nueva')} ya está publicada (tiene ${limpio(d['actual'], 'otra')}), sin huella publicada: no se puede verificar la descarga. Revísela en Servicios → Versiones; instalarla pide su confirmación.`,
     }),
     'avisos.rama_nueva_sin_huella': (d) => ({
-      titulo: `Nueva rama de ${limpio(d['servicio'], 'un servicio')}`,
-      cuerpo: `${limpio(d['nueva'], 'Una rama nueva')} es más nueva que la que usa (${limpio(d['actual'], '?')}), sin huella publicada: no se puede verificar la descarga. Revísela en Servicios → Versiones; instalarla pide su confirmación.`,
+      titulo: `Nueva versión principal de ${limpio(d['servicio'], 'un servicio')}`,
+      cuerpo: `${limpio(d['nueva'], 'Una versión principal nueva')} es más nueva que la que usa (${limpio(d['actual'], '?')}), sin huella publicada: no se puede verificar la descarga. Revísela en Servicios → Versiones; instalarla pide su confirmación.`,
     }),
     'avisos.rama_nueva': (d) => ({
-      titulo: `Nueva rama de ${limpio(d['servicio'], 'un servicio')}`,
-      cuerpo: `${limpio(d['nueva'], 'Una rama nueva')} es más nueva que la que usa (${limpio(d['actual'], '?')}). Se instala aparte, sin tocar sus datos.`,
+      titulo: `Nueva versión principal de ${limpio(d['servicio'], 'un servicio')}`,
+      cuerpo: `${limpio(d['nueva'], 'Una versión principal nueva')} es más nueva que la que usa (${limpio(d['actual'], '?')}). Se instala aparte, sin tocar sus datos.`,
       accion: 'Actualizar',
     }),
     'doctor.hallazgos': (d) => ({
@@ -323,12 +323,12 @@ const EN: Diccionario = {
       cuerpo: `${limpio(d['nueva'], 'A new version')} has been published (you have ${limpio(d['actual'], 'another one')}), with no published checksum: the download cannot be verified. Review it in Services → Versions; installing it asks for your confirmation.`,
     }),
     'avisos.rama_nueva_sin_huella': (d) => ({
-      titulo: `New ${limpio(d['servicio'], 'service')} branch`,
-      cuerpo: `${limpio(d['nueva'], 'A new branch')} is newer than the one you use (${limpio(d['actual'], '?')}), with no published checksum: the download cannot be verified. Review it in Services → Versions; installing it asks for your confirmation.`,
+      titulo: `New major version of ${limpio(d['servicio'], 'service')}`,
+      cuerpo: `${limpio(d['nueva'], 'A new major version')} is newer than the one you use (${limpio(d['actual'], '?')}), with no published checksum: the download cannot be verified. Review it in Services → Versions; installing it asks for your confirmation.`,
     }),
     'avisos.rama_nueva': (d) => ({
-      titulo: `New ${limpio(d['servicio'], 'service')} branch`,
-      cuerpo: `${limpio(d['nueva'], 'A new branch')} is newer than the one you use (${limpio(d['actual'], '?')}). It installs side by side, without touching your data.`,
+      titulo: `New major version of ${limpio(d['servicio'], 'service')}`,
+      cuerpo: `${limpio(d['nueva'], 'A new major version')} is newer than the one you use (${limpio(d['actual'], '?')}). It installs side by side, without touching your data.`,
       accion: 'Update',
     }),
     'doctor.hallazgos': (d) => ({
@@ -670,12 +670,12 @@ const FR: Diccionario = {
       cuerpo: `${limpio(d['nueva'], 'Une nouvelle version')} est publiée (vous avez ${limpio(d['actual'], 'une autre')}), sans empreinte publiée : le téléchargement ne peut pas être vérifié. Consultez-la dans Services → Versions ; l’installer demande votre confirmation.`,
     }),
     'avisos.rama_nueva_sin_huella': (d) => ({
-      titulo: `Nouvelle branche de ${limpio(d['servicio'], 'un service')}`,
-      cuerpo: `${limpio(d['nueva'], 'Une nouvelle branche')} est plus récente que celle que vous utilisez (${limpio(d['actual'], '?')}), sans empreinte publiée : le téléchargement ne peut pas être vérifié. Consultez-la dans Services → Versions ; l’installer demande votre confirmation.`,
+      titulo: `Nouvelle version majeure de ${limpio(d['servicio'], 'un service')}`,
+      cuerpo: `${limpio(d['nueva'], 'Une nouvelle version majeure')} est plus récente que celle que vous utilisez (${limpio(d['actual'], '?')}), sans empreinte publiée : le téléchargement ne peut pas être vérifié. Consultez-la dans Services → Versions ; l’installer demande votre confirmation.`,
     }),
     'avisos.rama_nueva': (d) => ({
-      titulo: `Nouvelle branche de ${limpio(d['servicio'], 'un service')}`,
-      cuerpo: `${limpio(d['nueva'], 'Une nouvelle branche')} est plus récente que celle que vous utilisez (${limpio(d['actual'], '?')}). Elle s’installe à côté, sans toucher à vos données.`,
+      titulo: `Nouvelle version majeure de ${limpio(d['servicio'], 'un service')}`,
+      cuerpo: `${limpio(d['nueva'], 'Une nouvelle version majeure')} est plus récente que celle que vous utilisez (${limpio(d['actual'], '?')}). Elle s’installe à côté, sans toucher à vos données.`,
       accion: 'Mettre à jour',
     }),
     'doctor.hallazgos': (d) => ({

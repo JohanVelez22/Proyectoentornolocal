@@ -134,7 +134,10 @@ function esquemaVersion(servicio: ServicioInstalable) {
       )
       .refine((v) => !v.huellaDiferida || v.huella === null, 'Huella diferida con huella')
       // En PHP la rama es además la carpeta de instalación.
-      .refine((v) => servicio !== 'php' || claveValida(v.rama), 'Rama de PHP no válida')
+      .refine(
+        (v) => servicio !== 'php' || claveValida(v.rama),
+        'Versión principal de PHP no válida',
+      )
   );
 }
 

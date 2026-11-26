@@ -36,7 +36,7 @@ const cadenaPhp = (t: string): string => `'${t.replace(/\\/g, '\\\\').replace(/'
  *   Symfony, igual que antes). Sin VarDumper (CodeIgniter 3) muestra con `print_r`.
  * - Enviar tiene un plazo de 200 ms; si el receptor no está, no hace nada visible: sin avisos, sin
  *   excepciones, sin salida. `dd()` sigue deteniendo con `exit(1)`.
- * - Un `auto_prepend_file` anterior del sitio o de la rama queda en `wolfcore.prepend_previo` y
+ * - Un `auto_prepend_file` anterior del sitio o de su versión de PHP queda en `wolfcore.prepend_previo` y
  *   se carga al final, en el ámbito global, como antes.
  */
 export function prependPhp(o: { rutaReceptor: string }): string {
@@ -243,7 +243,7 @@ if (!class_exists('WolfCoreDump', false)) {
         /**
          * Texto como el de print_r, pero sin búferes de salida (print_r con retorno usa uno, y
          * eso es un error fatal dentro de un manejador de ob_start) y acotado a MAX_TEXTO: nunca
-         * más que eso en memoria. Un objeto que se repite en la misma rama: *RECURSION*.
+         * más que eso en memoria. Un objeto que se repite en su propia cadena de referencias: *RECURSION*.
          */
         private static function estructura($v)
         {
@@ -421,7 +421,7 @@ if (!function_exists('dd')) {
     }
 }
 
-// El prepend anterior (del sitio o de la rama), en el ámbito global. Nunca este mismo archivo
+// El prepend anterior (del sitio o de su versión de PHP), en el ámbito global. Nunca este mismo archivo
 // (sería una recursión sin fin); require_once además evita cargarlo dos veces.
 if (is_string(get_cfg_var('wolfcore.prepend_previo')) && get_cfg_var('wolfcore.prepend_previo') !== ''
     && WolfCoreDump::esOtroArchivo(get_cfg_var('wolfcore.prepend_previo'), __FILE__)) {

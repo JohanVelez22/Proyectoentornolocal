@@ -1632,7 +1632,7 @@ export class ServiciosDatos {
         if (!ok) {
           throw new ErrorWolf(
             'instancias.version_requerida',
-            `No se sabe a qué versión volver ${id}: elija una versión instalada de su rama.`,
+            `No se sabe a qué versión volver ${id}: elija una versión instalada de su serie.`,
             { id },
           );
         }
@@ -1803,7 +1803,7 @@ export class ServiciosDatos {
       if (typeof version !== 'string' || claveDe(def, version) !== inst.clave) {
         throw new ErrorWolf(
           'servicios.otra_rama',
-          `${def.nombre} ${version} es de otra rama: créela como instancia nueva.`,
+          `${def.nombre} ${version} es de otra serie: créela como instancia nueva.`,
           { nombre: def.nombre, version },
         );
       }

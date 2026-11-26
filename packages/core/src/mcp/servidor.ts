@@ -1160,12 +1160,12 @@ export class ServidorMcp {
       'listar_versiones',
       {
         description:
-          'Versiones publicadas de un servicio (PHP, MySQL, MariaDB, PostgreSQL, Redis, MongoDB, Node, Python, Nginx, Composer, Mailpit, Ollama o cloudflared), agrupadas por rama, con lo instalado, lo encendido y las actualizaciones. Solo lectura: no instala ni actualiza nada.',
+          'Versiones publicadas de un servicio (PHP, MySQL, MariaDB, PostgreSQL, Redis, MongoDB, Node, Python, Nginx, Composer, Mailpit, Ollama o cloudflared), agrupadas por versión principal, con lo instalado, lo encendido y las actualizaciones. Solo lectura: no instala ni actualiza nada.',
         inputSchema: {
           servicio: z.enum(SERVICIOS_VERSIONES, { error: 'Servicio no válido.' }),
           rama: z
             .string()
-            .regex(/^\d{1,4}(\.\d{1,4})?$/, 'La rama no es válida (p. ej. 8.4 o 17).')
+            .regex(/^\d{1,4}(\.\d{1,4})?$/, 'La versión principal no es válida (p. ej. 8.4 o 17).')
             .optional(),
         },
         // Consulta los índices oficiales en internet (con caché): mundo abierto.

@@ -291,29 +291,117 @@ describe('i18n', () => {
     expect(hojas.filter((h) => /[áéíóúñ¿¡]/.test(h))).toEqual([]);
   });
 
-  it('ningún texto fuera de Git dice rama', () => {
-    const hojas: string[] = [];
-    const recorrer = (o: unknown, ruta: string): void => {
-      for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
-        const r = ruta ? `${ruta}.${k}` : k;
-        if (/(^|\.)git/i.test(r)) continue;
-        let texto: string | undefined;
-        if (typeof v === 'string') texto = v;
-        else if (typeof v === 'function') {
-          try {
-            texto = String((v as (...a: unknown[]) => unknown)('X', 'X', 'X'));
-          } catch {
-            texto = undefined;
-          }
-        } else if (v && typeof v === 'object') recorrer(v, r);
-        if (texto !== undefined) hojas.push(texto.replace(/\{\w+\}/g, ''));
+  describe('"rama" solo existe en contextos de Git (D1 + D41)', () => {
+    /** es "rama/ramo", en "branch", pt "branch/ramo", fr "branche": ninguno fuera de Git. */
+    const PROHIBIDA = /\b(?:ramas?|ramos?|branch(?:es)?|branches?|branche)\b/i;
+
+    /** Hojas de texto (funciones evaluadas con 'X'); sin los marcadores `{rama}` (son parámetros). */
+    function hojasDe(dic: unknown): { ruta: string; texto: string }[] {
+      const hojas: { ruta: string; texto: string }[] = [];
+      const recorrer = (o: unknown, ruta: string): void => {
+        for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+          const r = ruta ? `${ruta}.${k}` : k;
+          let texto: string | undefined;
+          if (typeof v === 'string') texto = v;
+          else if (typeof v === 'function') {
+            try {
+              texto = String((v as (...a: unknown[]) => unknown)('X', 'X', 'X'));
+            } catch {
+              texto = undefined;
+            }
+          } else if (v && typeof v === 'object') recorrer(v, r);
+          if (texto !== undefined) hojas.push({ ruta: r, texto: texto.replace(/\{\w+\}/g, '') });
+        }
+      };
+      recorrer(dic, '');
+      return hojas;
+    }
+
+    /** Lista blanca explícita: solo las claves de Git de los diccionarios (`git.*`, `*.git.*`, `git*`). */
+    const RUTA_GIT = /(^|\.)git/i;
+
+    it('ningún diccionario del renderer (es, en, pt y fr) lo usa fuera de Git', () => {
+      const fallos: string[] = [];
+      for (const [id, d] of Object.entries({ es, en, pt, fr })) {
+        for (const h of hojasDe(d)) {
+          if (!RUTA_GIT.test(h.ruta) && PROHIBIDA.test(h.texto)) fallos.push(`${id}: ${h.ruta}`);
+        }
       }
-    };
-    recorrer(es, '');
-    recorrer(en, '');
-    const coincidencias = (re: RegExp): string[] => hojas.filter((h) => re.test(h));
-    expect(coincidencias(/\bramas?\b/i)).toEqual([]);
-    expect(coincidencias(/\bbranch(es)?\b/i)).toEqual([]);
+      expect(fallos).toEqual([]);
+    });
+
+    it('ni los textos de main (bandeja y diálogos nativos) en ningún idioma', () => {
+      const fallos: string[] = [];
+      for (const id of IDIOMAS_UI) {
+        for (const h of hojasDe(textosMain(id))) {
+          if (PROHIBIDA.test(h.texto)) fallos.push(`${id}: ${h.ruta}`);
+        }
+      }
+      expect(fallos).toEqual([]);
+    });
+
+    it('ni los avisos y los textos del Doctor (textosAvisos) en ningún idioma', () => {
+      const datos = { servicio: 'X', nueva: 'X', actual: 'X', version: 'X', nombre: 'X' };
+      const fallos: string[] = [];
+      for (const id of IDIOMAS_UI) {
+        for (const codigo of CODIGOS_AVISO_POR_IDIOMA[id]) {
+          if (RUTA_GIT.test(codigo)) continue;
+          const t = textoAviso(id, { tipo: 'doctor', codigo, datos });
+          for (const campo of [t.titulo, t.cuerpo, t.accion ?? '']) {
+            if (PROHIBIDA.test(campo)) fallos.push(`${id}: ${codigo}`);
+          }
+        }
+      }
+      expect(fallos).toEqual([]);
+    });
+
+    it('ni las cadenas fijas del núcleo, de main, shared y preload (errores, Doctor, tooltips)', () => {
+      const RAIZ_SRC = join(__dirname, '../src');
+      const RAIZ_NUCLEO = join(__dirname, '../../../packages/core/src');
+      /** Lista blanca de archivos que hablan de Git (ramas del repositorio del usuario). */
+      const ARCHIVOS_GIT = new Set(['git/git.ts', 'git/tipos.ts']);
+      /** Líneas de Git en otros archivos: se justifica cada una aquí, con la palabra de Git. */
+      const LINEAS_GIT = [/\bgit (?:fetch|pull)\b/i, /repositorio del proyecto/i];
+
+      const recorrerTs = (dir: string): string[] =>
+        readdirSync(dir).flatMap((n) => {
+          const p = join(dir, n);
+          if (statSync(p).isDirectory()) return n === 'i18n' ? [] : recorrerTs(p);
+          return /\.(ts|vue)$/.test(n) ? [p] : [];
+        });
+      /** Literales de cadena; los comentarios se saltan sin romper un "/*" dentro de una cadena. */
+      const literales = (c: string): string[] =>
+        [
+          ...c.matchAll(
+            /\/\*[\s\S]*?\*\/|\/\/[^\n]*|'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g,
+          ),
+        ].map((m) => m[1] ?? m[2] ?? m[3] ?? '');
+
+      const fallos: string[] = [];
+      for (const [raiz, base] of [
+        [RAIZ_NUCLEO, ''],
+        [RAIZ_SRC, ''],
+      ] as const) {
+        for (const f of recorrerTs(raiz)) {
+          const rel = relative(raiz, f).replaceAll('\\', '/');
+          if (base === '' && ARCHIVOS_GIT.has(rel)) continue;
+          const fuente = readFileSync(f, 'utf8');
+          // De una plantilla solo cuentan los scripts: sus textos fijos ya los vigila otra prueba.
+          const codigo = f.endsWith('.vue')
+            ? [...fuente.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)]
+                .map((m) => m[1] ?? '')
+                .join('\n')
+            : fuente;
+          for (const l of literales(codigo)) {
+            const texto = l.replace(/\$\{[^}]*\}/g, '').replace(/\{\w+\}/g, '');
+            if (!/\s/.test(texto) || !PROHIBIDA.test(texto)) continue;
+            if (LINEAS_GIT.some((re) => re.test(texto))) continue;
+            fallos.push(`${rel}: ${texto.slice(0, 80)}`);
+          }
+        }
+      }
+      expect(fallos).toEqual([]);
+    });
   });
 
   it('ninguna plantilla .vue tiene texto fijo fuera de i18n', () => {

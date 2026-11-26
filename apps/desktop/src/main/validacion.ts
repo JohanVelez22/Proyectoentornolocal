@@ -264,7 +264,7 @@ export function filtroVersiones(v: unknown): {
   }
   if (o['rama'] !== undefined) {
     if (typeof o['rama'] !== 'string' || !/^\d{1,4}(\.\d{1,4})?$/.test(o['rama'])) {
-      throw new Error('Argumento no válido: rama');
+      throw new Error('Argumento no válido: versión principal');
     }
     salida.rama = o['rama'];
   }
@@ -466,7 +466,8 @@ export function tipoProyecto(v: unknown): TipoSitio | 'generico' {
 /** Rama de PHP ("8.4") o null (el más reciente instalado). */
 export function ramaPhp(v: unknown): string | null {
   if (v === null) return null;
-  if (typeof v !== 'string' || !/^\d+\.\d+$/.test(v)) throw new Error('Argumento no válido: rama');
+  if (typeof v !== 'string' || !/^\d+\.\d+$/.test(v))
+    throw new Error('Argumento no válido: versión principal');
   return v;
 }
 

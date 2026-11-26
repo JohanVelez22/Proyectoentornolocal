@@ -41,7 +41,7 @@ const urlSumas = (v: string): string => `${ARCHIVO}mariadb-${v}/winx64-packages/
 /** SHA-256 del zip de Windows de cada parche de una rama según la REST (sin zip: no aparece). */
 async function parchesDeRama(ctx: ContextoFuente, rama: string): Promise<Map<string, string>> {
   const r = Rama.safeParse(await leerIndiceJson(ctx, `${REST}${rama}/`));
-  if (!r.success) throw new IndiceMalformado(`Rama ${rama} de MariaDB con forma rara`);
+  if (!r.success) throw new IndiceMalformado(`Serie ${rama} de MariaDB con forma rara`);
   const res = new Map<string, string>();
   for (const [version, rel] of Object.entries(r.data.releases)) {
     if (!claveValida(version) || !version.startsWith(`${rama}.`)) continue;
@@ -89,12 +89,12 @@ export const fuenteMariadb: FuenteVersiones = {
   async listar(ctx) {
     if (ctx.idCatalogo !== 'win-x64') return [];
     const ramas = Ramas.safeParse(await leerIndiceJson(ctx, REST));
-    if (!ramas.success) throw new IndiceMalformado('Ramas de MariaDB con forma rara');
+    if (!ramas.success) throw new IndiceMalformado('Series de MariaDB con forma rara');
     const hoy = (ctx.ahora ?? new Date()).toISOString().slice(0, 10);
     const salida: VersionDisponible[] = [];
     for (const r of ramas.data.major_releases) {
       if (!RAMA_VALIDA.test(r.release_id) || !r.release_id.includes('.')) {
-        throw new IndiceMalformado(`Rama rara en MariaDB: ${r.release_id.slice(0, 20)}`);
+        throw new IndiceMalformado(`Serie rara en MariaDB: ${r.release_id.slice(0, 20)}`);
       }
       const fin =
         r.release_eol_date && /^\d{4}-\d{2}-\d{2}$/.test(r.release_eol_date)
@@ -125,7 +125,7 @@ export const fuenteMariadb: FuenteVersiones = {
   },
   async completar(v, ctx) {
     const rama = v.rama ?? '';
-    if (!RAMA_VALIDA.test(rama)) throw new IndiceMalformado('Rama de MariaDB no válida');
+    if (!RAMA_VALIDA.test(rama)) throw new IndiceMalformado('Serie de MariaDB no válida');
     const suma = (await parchesDeRama(ctx, rama)).get(v.version);
     // La REST ya no la trae: no hay huella publicada para esa versión.
     if (!suma) return null;
