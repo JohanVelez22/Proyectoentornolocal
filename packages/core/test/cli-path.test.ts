@@ -50,7 +50,12 @@ describe('wolf en el PATH (D32)', () => {
     await n.cambiarCliPath(true);
     const carpeta = path.join(base, 'bin', 'cli');
     expect(plat.path).toEqual([...PATH_INICIAL, carpeta]);
-    expect((await readdir(carpeta)).sort()).toEqual(['wolf.cjs', 'wolf.cmd']);
+    expect((await readdir(carpeta)).sort()).toEqual([
+      'wolf',
+      'wolf.cjs',
+      'wolf.cmd',
+      'wolf.runtime',
+    ]);
     expect(await readFile(path.join(carpeta, 'wolf.cmd'), 'utf8')).toContain('WolfCore Dev.exe');
     // Copia del PATH original (como la de php y composer)
     expect(await readFile(path.join(base, 'etc', 'path-usuario.respaldo.txt'), 'utf8')).toBe(
@@ -160,8 +165,8 @@ describe('wolf.cmd', () => {
 
   it('con letras fuera de ASCII usa UTF-8 y devuelve la página de códigos', () => {
     const t = contenidoWolfCmd({ exe: 'C:\\Users\\José\\app.exe' });
-    expect(t).toContain('chcp 65001 >nul');
-    expect(t).toContain('chcp %WOLF_CP% >nul');
+    expect(t).toContain('"%SystemRoot%\\System32\\chcp.com" 65001 >nul');
+    expect(t).toContain('chcp.com" %WOLF_CP% >nul');
     expect(t).toContain('exit /b %WOLF_RC%');
   });
 

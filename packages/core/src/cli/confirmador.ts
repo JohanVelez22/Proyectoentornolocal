@@ -36,7 +36,7 @@ export class ConfirmadorCli {
     if (this.pendientes >= (this.d.maximo ?? MAX_CONFIRMACIONES_CLI)) return 'ocupado';
     const ahora = (this.d.ahora ?? Date.now)();
     this.abiertos = this.abiertos.filter((t) => ahora - t < VENTANA_DIALOGOS_MS);
-    if (this.abiertos.length >= (this.d.porMinuto ?? MAX_DIALOGOS_POR_MINUTO)) return 'ocupado';
+    if (this.abiertos.length >= (this.d.porMinuto ?? MAX_DIALOGOS_POR_MINUTO)) return 'limite';
     this.abiertos.push(ahora);
     this.pendientes++;
     const respuesta = preguntar(s).then(

@@ -1226,10 +1226,10 @@ describe('revisión D31 · C1: la ventana de la app decide (compartir y usar --g
     const preguntar = vi.fn(async () => false);
     const c = new ConfirmadorCli({ preguntar, ahora: () => t });
     for (let i = 0; i < 5; i++) expect(await c.pedir(s)).toBe('rechazada');
-    expect(await c.pedir(s)).toBe('ocupado');
+    expect(await c.pedir(s)).toBe('limite');
     expect(preguntar).toHaveBeenCalledTimes(5);
     t += 59_000;
-    expect(await c.pedir(s)).toBe('ocupado');
+    expect(await c.pedir(s)).toBe('limite');
     t += 2_000;
     expect(await c.pedir(s)).toBe('rechazada');
     expect(preguntar).toHaveBeenCalledTimes(6);
@@ -1598,5 +1598,20 @@ describe('arrastre D31 · dueño de run/ en modo aislado', () => {
       await s.iniciar();
       expect(s.estado().activo).toBe(true);
     }
+  });
+});
+
+describe('revisión D32 · límite de diálogos y --token con espacio', () => {
+  it('un diálogo rechazado por frecuencia sale con su código propio (cli.demasiados_dialogos)', async () => {
+    const ops = operacionesFalsas();
+    ops.confirmar = vi.fn(async () => 'limite' as const);
+    const m = await montar({ ops });
+    const r = await m.orden('compartir', { sitio: 'tienda', si: true });
+    expect(r.json.error).toEqual({ codigo: 'cli.demasiados_dialogos' });
+  });
+
+  it('--token -x con espacio no se enmascara a propósito (es otra bandera), --token=-x sí', () => {
+    expect(enmascararSecretos('--token -x')).toBe('--token -x');
+    expect(enmascararSecretos('--token=-x')).toBe('--token=***');
   });
 });

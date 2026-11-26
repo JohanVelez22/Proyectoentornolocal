@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
-import { depsLecturaReales, leerArchivoCliSeguro } from './archivoCli';
+import { appAbierta, depsLecturaReales, leerArchivoCliSeguro } from './archivoCli';
 import type { DepsCli } from './cliente';
 import { esIdioma, idiomaDeLocale, type Idioma } from './textos';
 
@@ -107,6 +107,7 @@ export function depsReales(carpetaScript: string, senal: AbortSignal): DepsCli {
     cwd: process.cwd(),
     tty: Boolean(process.stdin.isTTY && process.stderr.isTTY),
     preguntar: preguntarEnTerminal,
+    appAbierta: () => appAbierta(path.join(datos, 'run', 'app.pid'), lectura),
     abrirApp: async () => lanzarApp(env),
     senal,
   };

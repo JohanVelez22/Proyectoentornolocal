@@ -349,6 +349,8 @@ export const es = {
       'cli.path_aislado':
         'Con una carpeta de datos de prueba (WOLFCORE_DATOS) no se cambia el PATH del usuario.',
       'cli.sin_cliente': 'Esta versión de WolfCore Dev no trae el cliente wolf (falta compilarlo).',
+      'cli.demasiados_dialogos':
+        'Demasiadas confirmaciones en el último minuto: espere un momento y vuelva a intentarlo.',
       'cli.error': 'No se pudo completar la orden: {detalle}',
       'proyectos.carpeta_no_vacia':
         'La carpeta del proyecto ya tiene archivos: elija otra o vacíela.',
@@ -1901,6 +1903,7 @@ export const es = {
       pathAgregar: 'Agregar al PATH del usuario',
       pathQuitar: 'Quitar del PATH',
       pathTitulo: 'PATH actualizado',
+      pathAviso: 'Abra una terminal nueva para ver el cambio: las terminales abiertas no lo ven.',
       pathQuitarTitulo: '¿Quitar WolfCore Dev del PATH?',
       pathQuitarTexto:
         'php y composer de WolfCore Dev dejarán de estar disponibles en las terminales nuevas. Las terminales abiertas no cambian.',
@@ -3091,6 +3094,13 @@ export const es = {
     },
   },
   cli: {
+    avisoTerminalNueva:
+      'Abra una terminal nueva para ver el cambio: las terminales abiertas no lo ven.',
+    enPathSinCliente: 'En el PATH, pero falta el comando',
+    reparar: 'Reparar',
+    repararTitulo: '¿Reparar el comando wolf?',
+    repararTexto:
+      'wolf está en el PATH pero sus archivos no están completos. Se volverán a copiar a la carpeta de datos y se encenderá el servidor local, como al agregarlo.',
     titulo: 'Terminal: comando wolf',
     descripcion:
       'Maneja WolfCore Dev desde PowerShell, cmd o Git Bash: wolf status, wolf use php@8.4, wolf share, wolf logs. Solo funciona con la app abierta.',

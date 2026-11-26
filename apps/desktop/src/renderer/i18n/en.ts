@@ -343,6 +343,8 @@ export const en: Textos = {
       'cli.path_aislado': 'With a test data folder (WOLFCORE_DATOS) the user PATH is not changed.',
       'cli.sin_cliente':
         'This build of WolfCore Dev does not include the wolf client (it still has to be built).',
+      'cli.demasiados_dialogos':
+        'Too many confirmations in the last minute: wait a moment and try again.',
       'cli.error': 'The command could not be completed: {detalle}',
       'proyectos.carpeta_no_vacia':
         'The project folder already has files: choose another one or empty it.',
@@ -1883,6 +1885,8 @@ export const en: Textos = {
       pathAgregar: 'Add to user PATH',
       pathQuitar: 'Remove from PATH',
       pathTitulo: 'PATH updated',
+      pathAviso:
+        'Open a new terminal to see the change: terminals that are already open do not see it.',
       pathQuitarTitulo: 'Remove WolfCore Dev from the PATH?',
       pathQuitarTexto:
         "WolfCore Dev's php and composer will no longer be available in new terminals. Open terminals do not change.",
@@ -3062,6 +3066,13 @@ export const en: Textos = {
     },
   },
   cli: {
+    avisoTerminalNueva:
+      'Open a new terminal to see the change: terminals that are already open do not see it.',
+    enPathSinCliente: 'In the PATH, but the command is missing',
+    reparar: 'Repair',
+    repararTitulo: 'Repair the wolf command?',
+    repararTexto:
+      'wolf is in the PATH but its files are incomplete. They will be copied again to the data folder and the local server will start, as when adding it.',
     titulo: 'Terminal: wolf command',
     descripcion:
       'Manage WolfCore Dev from PowerShell, cmd or Git Bash: wolf status, wolf use php@8.4, wolf share, wolf logs. It only works while the app is open.',

@@ -82,7 +82,7 @@ export interface OperacionesCli {
   confirmar(s: SolicitudCli): Promise<ResultadoConfirmacionCli>;
 }
 
-export type ResultadoConfirmacionCli = 'aprobada' | 'rechazada' | 'vencida' | 'ocupado';
+export type ResultadoConfirmacionCli = 'aprobada' | 'rechazada' | 'vencida' | 'ocupado' | 'limite';
 
 /** Lo que la ventana muestra al confirmar (datos del núcleo, nunca del cliente). */
 export type SolicitudCli =
@@ -135,6 +135,9 @@ export function limpiarSalida(v: unknown, nivel = 0): unknown {
 function exigirVentana(r: ResultadoConfirmacionCli): void {
   if (r === 'aprobada') return;
   if (r === 'vencida') throw falla('cli.confirmacion_vencida', 'Nadie confirmó a tiempo.');
+  if (r === 'limite') {
+    throw falla('cli.demasiados_dialogos', 'Demasiadas confirmaciones en el último minuto.');
+  }
   if (r === 'ocupado') throw falla('cli.ocupado', 'Hay demasiadas confirmaciones pendientes.');
   throw falla('cli.confirmacion_rechazada', 'La confirmación se rechazó.');
 }

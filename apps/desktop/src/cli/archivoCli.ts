@@ -1,6 +1,5 @@
 import { execFile } from 'node:child_process';
 import { lstat, readFile } from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 
 /** Lo que escribe el servidor en `run/cli.json` (D31). */
@@ -23,16 +22,17 @@ export type LecturaCli =
 const MAX_BYTES = 4096;
 
 export interface DepsLectura {
-  /** ¿Está vivo ese PID? (`process.kill(pid, 0)`). */
+  /** ¿Está vivo ese PID? */
   pidVivo: (pid: number) => boolean;
   /** Nombre de imagen del proceso (`WolfCore Dev.exe`), o null si no existe. */
   imagenDe: (pid: number) => Promise<string | null>;
   /** Nombre de imagen que se espera: el del propio ejecutable (el cliente corre sobre el de la app). */
   imagenEsperada: string;
-  /** Windows: las ACE de la ruta (`icacls`), o null si no se pudo leer. */
-  aclDe?: (ruta: string) => Promise<string[] | null>;
-  /** Cuentas del usuario (sin dominio) que valen en la ACL (nombre de usuario y `USERNAME`). */
-  usuarios: string[];
+  /**
+   * Windows: ¿el dueño de la ruta es el SID del usuario actual y su ACL es una sola regla, propia
+   * (no heredada) y de ese mismo SID? Se decide por SID, no por nombres (que pueden llevar tildes).
+   */
+  aclEsDelUsuario?: (ruta: string) => Promise<boolean>;
   plataforma: NodeJS.Platform;
   uidActual?: number | null;
 }
@@ -71,34 +71,6 @@ function forma(v: unknown): ArchivoCli | null {
 }
 
 /**
- * Las ACE que `icacls` muestra para el archivo. Una sola entrada propia (`restringirAlUsuario`
- * quita lo heredado y deja solo al usuario) y ninguna heredada; si no, otro usuario podría haberlo
- * puesto o podría leerlo.
- */
-export function aclEsSoloDelUsuario(entradas: string[], usuarios: string[]): boolean {
-  if (entradas.length !== 1) return false;
-  const e = entradas[0]!;
-  const m = /^(.+?):\((.*)\)$/.exec(e.trim());
-  if (!m) return false;
-  if (/\(I\)/.test(e)) return false;
-  const cuenta = m[1]!.split('\\').pop() ?? '';
-  return usuarios.some((u) => u !== '' && cuenta.toLowerCase() === u.toLowerCase());
-}
-
-/** Extrae las ACE de la salida de `icacls <archivo>`. */
-export function entradasDeIcacls(salida: string, ruta: string): string[] {
-  const lineas = salida.split(/\r?\n/);
-  const res: string[] = [];
-  for (let l of lineas) {
-    if (l.includes(ruta)) l = l.slice(l.indexOf(ruta) + ruta.length);
-    l = l.trim();
-    // "DOMINIO\usuario:(F)" y "(I)(F)" van en la misma línea que la ruta o debajo.
-    if (/^.+:\(.*\)$/.test(l)) res.push(l);
-  }
-  return res;
-}
-
-/**
  * Lee `run/cli.json` solo si es de fiar: un archivo normal (no un enlace ni un enlace duro, y la
  * carpeta `run/` tampoco), de este usuario y con el `pid` de un proceso de WolfCore vivo. Un archivo
  * que falla cualquiera de esas comprobaciones nunca se usa: el token que lleva se mandaría a quien
@@ -121,9 +93,8 @@ export async function leerArchivoCliSeguro(ruta: string, d: DepsLectura): Promis
     return { ok: false, motivo: 'ausente' };
   }
   if (d.plataforma === 'win32') {
-    const acl = d.aclDe ? await d.aclDe(ruta) : null;
-    if (acl === null || !aclEsSoloDelUsuario(acl, d.usuarios))
-      return { ok: false, motivo: 'inseguro' };
+    const propio = d.aclEsDelUsuario ? await d.aclEsDelUsuario(ruta).catch(() => false) : false;
+    if (!propio) return { ok: false, motivo: 'inseguro' };
   } else {
     const uid = d.uidActual;
     if ((uid !== null && uid !== undefined && st.uid !== uid) || (st.mode & 0o077) !== 0) {
@@ -137,17 +108,79 @@ export async function leerArchivoCliSeguro(ruta: string, d: DepsLectura): Promis
     return { ok: false, motivo: 'ilegible' };
   }
   if (!archivo) return { ok: false, motivo: 'ilegible' };
-  if (!d.pidVivo(archivo.pid)) return { ok: false, motivo: 'proceso' };
-  const imagen = await d.imagenDe(archivo.pid).catch(() => null);
-  if (imagen === null || !mismaImagen(imagen, d.imagenEsperada)) {
-    return { ok: false, motivo: 'proceso' };
-  }
+  if (!(await procesoDeLaApp(archivo.pid, d))) return { ok: false, motivo: 'proceso' };
   return { ok: true, archivo };
+}
+
+/** ¿Ese PID está vivo y es el ejecutable de WolfCore (el mismo que corre este cliente)? */
+async function procesoDeLaApp(pid: number, d: DepsLectura): Promise<boolean> {
+  if (!d.pidVivo(pid)) return false;
+  const imagen = await d.imagenDe(pid).catch(() => null);
+  return imagen !== null && mismaImagen(imagen, d.imagenEsperada);
+}
+
+/**
+ * ¿Hay una app de WolfCore abierta aunque la CLI esté apagada? `run/app.pid` (sin secretos) lo
+ * escribe la app mientras vive. `wolf --abrir` lo usa para no lanzar una segunda instancia.
+ */
+export async function appAbierta(ruta: string, d: DepsLectura): Promise<boolean> {
+  try {
+    const st = await lstat(ruta);
+    if (!st.isFile() || st.isSymbolicLink() || st.size > 32) return false;
+    const pid = Number((await readFile(ruta, 'utf8')).trim());
+    if (!Number.isInteger(pid) || pid < 1) return false;
+    return await procesoDeLaApp(pid, d);
+  } catch {
+    return false;
+  }
+}
+
+/* ───────── Windows: ACL por SID con PowerShell ───────── */
+
+const comillas = (t: string): string => `'${t.replace(/'/g, "''")}'`;
+
+/**
+ * Script (ASCII, con la ruta ya entre comillas): `SI` solo si el dueño es el SID del usuario actual,
+ * hay UNA regla, no es heredada y es de ese mismo SID. Nada depende de nombres de cuenta.
+ */
+export function scriptAclUsuario(ruta: string): string {
+  return [
+    "$ErrorActionPreference = 'Stop'",
+    '$yo = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value',
+    `$a = Get-Acl -LiteralPath ${comillas(ruta)}`,
+    '$dueno = $a.GetOwner([System.Security.Principal.SecurityIdentifier]).Value',
+    '$r = @($a.Access)',
+    '$ok = ($dueno -eq $yo) -and ($r.Count -eq 1) -and (-not $r[0].IsInherited) -and ($r[0].IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -eq $yo)',
+    "if ($ok) { [Console]::Out.Write('SI') } else { [Console]::Out.Write('NO') }",
+  ].join('\n');
+}
+
+/** Argumentos de PowerShell con el script en Base64 de UTF-16LE (viaja como ASCII puro). */
+export const argumentosPowerShell = (script: string): string[] => [
+  '-NoProfile',
+  '-NonInteractive',
+  '-ExecutionPolicy',
+  'Bypass',
+  '-EncodedCommand',
+  Buffer.from(script, 'utf16le').toString('base64'),
+];
+
+export type EjecutarSimple = (cmd: string, args: string[]) => Promise<string | null>;
+
+/** Comprueba la ACL y el dueño de `ruta` por SID (salida ASCII: `SI` o `NO`). */
+export async function aclEsDelUsuarioPorSid(
+  ruta: string,
+  ejecutar: EjecutarSimple,
+  sistema32: string,
+): Promise<boolean> {
+  const exe = path.win32.join(sistema32, 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  const salida = await ejecutar(exe, argumentosPowerShell(scriptAclUsuario(ruta)));
+  return salida !== null && salida.trim() === 'SI';
 }
 
 /* ───────── Implementaciones reales (solo las usa `wolf.ts`) ───────── */
 
-function ejecutar(cmd: string, args: string[], tiempoMs = 10_000): Promise<string | null> {
+function ejecutar(cmd: string, args: string[], tiempoMs = 20_000): Promise<string | null> {
   return new Promise((resolve) => {
     try {
       execFile(cmd, args, { timeout: tiempoMs, windowsHide: true, encoding: 'utf8' }, (e, out) => {
@@ -170,9 +203,8 @@ export function depsLecturaReales(): DepsLectura {
         process.kill(pid, 0);
         return true;
       } catch (e) {
-        // EPERM: existe pero es de otro usuario (no es la app de este usuario).
-        void e;
-        return false;
+        // EPERM: el proceso existe pero no se puede señalar: está vivo (la imagen se comprueba aparte).
+        return (e as { code?: string }).code === 'EPERM';
       }
     },
     imagenDe: async (pid) => {
@@ -193,13 +225,10 @@ export function depsLecturaReales(): DepsLectura {
     imagenEsperada: path.basename(process.execPath),
     ...(plataforma === 'win32'
       ? {
-          aclDe: async (ruta: string) => {
-            const out = await ejecutar(path.join(sistema32(), 'icacls.exe'), [ruta]);
-            return out === null ? null : entradasDeIcacls(out, ruta);
-          },
+          aclEsDelUsuario: (ruta: string) =>
+            aclEsDelUsuarioPorSid(ruta, (c, a) => ejecutar(c, a), sistema32()),
         }
       : {}),
-    usuarios: [os.userInfo().username, process.env.USERNAME ?? ''],
     plataforma,
     uidActual: typeof process.getuid === 'function' ? process.getuid() : null,
   };

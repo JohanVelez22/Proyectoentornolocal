@@ -267,11 +267,22 @@ describe('PathUsuario', () => {
     Buffer.from(args[args.indexOf('-EncodedCommand') + 1]!, 'base64').toString('utf16le');
   /** Registro falso detrás de PowerShell: guarda el valor y el tipo (String / ExpandString). */
   const fake = (inicial: string | null, tipo = 'ExpandString') => {
-    const reg = { valor: inicial, tipo, escrituras: 0, tipoEscrito: '', lecturas: 0 };
+    const reg = {
+      valor: inicial,
+      tipo,
+      escrituras: 0,
+      tipoEscrito: '',
+      lecturas: 0,
+      difusiones: 0,
+    };
     const exec: Ejecutor = async (cmd, args, opts) => {
       expect(cmd).toBe('powershell');
       const s = script(args);
       expect(s).toContain("'Environment'");
+      if (s.includes('SendMessageTimeout')) {
+        reg.difusiones++;
+        return { codigo: 0, stdout: '', stderr: '' };
+      }
       if (s.includes('SetValue')) {
         const m = /RegistryValueKind\]::(\w+)/.exec(s);
         reg.tipoEscrito = m![1]!;
@@ -287,6 +298,47 @@ describe('PathUsuario', () => {
     };
     return { reg, p: new PathUsuario({ rutas, exec }) };
   };
+
+  it('tras escribir difunde WM_SETTINGCHANGE (una vez) y un fallo de la difusión no deshace nada', async () => {
+    const { reg, p } = fake('C:/Otro');
+    await p.agregar();
+    expect(reg.difusiones).toBe(1);
+    expect(reg.valor).toBe(`C:/Otro;${entrada()}`);
+    // Sin cambios no se difunde
+    await p.agregar();
+    expect(reg.difusiones).toBe(1);
+  });
+
+  it('el script de difusión manda WM_SETTINGCHANGE a todas las ventanas, en ASCII', async () => {
+    const { SCRIPT_DIFUNDIR_ENTORNO } = await import('../src/plataforma/pathUsuarioWin');
+    expect(SCRIPT_DIFUNDIR_ENTORNO).toContain('SendMessageTimeout');
+    expect(SCRIPT_DIFUNDIR_ENTORNO).toContain('0x1A');
+    expect(SCRIPT_DIFUNDIR_ENTORNO).toContain('0xffff');
+    expect(SCRIPT_DIFUNDIR_ENTORNO).toContain("'Environment'");
+    expect(/^[\n\x20-\x7e]+$/.test(SCRIPT_DIFUNDIR_ENTORNO)).toBe(true);
+  });
+
+  it('dos instancias que cambian el PATH a la vez no se pisan (cerrojo compartido)', async () => {
+    let valor = ['C:/Otro'];
+    const lento = (): {
+      leer: () => Promise<string[]>;
+      escribir: (e: string[]) => Promise<void>;
+    } => ({
+      leer: async () => {
+        const v = [...valor];
+        await new Promise((r) => setTimeout(r, 15));
+        return v;
+      },
+      escribir: async (e) => {
+        await new Promise((r) => setTimeout(r, 15));
+        valor = [...e];
+      },
+    });
+    const a = new PathUsuario({ rutas, acceso: lento() });
+    const b = new PathUsuario({ rutas, entrada: path.join(base, 'bin', 'cli'), acceso: lento() });
+    await Promise.all([a.agregar(), b.agregar()]);
+    expect(valor).toEqual(['C:/Otro', entrada(), path.join(base, 'bin', 'cli')]);
+  });
 
   it('agrega al final conservando %VARS% y el resto', async () => {
     const { reg, p } = fake('%USERPROFILE%\\bin;C:\\Otro');

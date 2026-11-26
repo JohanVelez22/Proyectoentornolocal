@@ -142,6 +142,13 @@ export class Rutas {
     return path.join(this.base, 'run', 'cli.json');
   }
   /**
+   * `run/app.pid`: el PID de la app abierta (sin secretos). `wolf --abrir` lo usa para distinguir
+   * "app cerrada" de "app abierta con la CLI apagada" y no lanzar una segunda instancia.
+   */
+  cliApp(): string {
+    return path.join(this.base, 'run', 'app.pid');
+  }
+  /**
    * Carpeta del cliente `wolf` (D32): `bin/cli/wolf.cmd` y `wolf.cjs`. Es la entrada que se agrega
    * al PATH del usuario (aparte de `tools/bin`, la de PHP y Composer).
    */

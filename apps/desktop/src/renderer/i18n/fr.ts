@@ -363,6 +363,8 @@ export const fr: Textos = {
         'Avec un dossier de données de test (WOLFCORE_DATOS), le PATH de l’utilisateur n’est pas modifié.',
       'cli.sin_cliente':
         'Cette version de WolfCore Dev n’inclut pas le client wolf (il reste à le compiler).',
+      'cli.demasiados_dialogos':
+        'Trop de confirmations en une minute : patientez un instant et réessayez.',
       'cli.error': 'La commande n’a pas pu être terminée : {detalle}',
       'proyectos.carpeta_no_vacia':
         'Le dossier du projet contient déjà des fichiers : choisissez-en un autre ou videz-le.',
@@ -1952,6 +1954,8 @@ export const fr: Textos = {
       pathAgregar: 'Ajouter au PATH de l’utilisateur',
       pathQuitar: 'Retirer du PATH',
       pathTitulo: 'PATH mis à jour',
+      pathAviso:
+        'Ouvrez un nouveau terminal pour voir le changement : les terminaux déjà ouverts ne le voient pas.',
       pathQuitarTitulo: 'Retirer WolfCore Dev du PATH ?',
       pathQuitarTexto:
         'php et composer de WolfCore Dev ne seront plus disponibles dans les nouveaux terminaux. Les terminaux déjà ouverts ne changent pas.',
@@ -3166,6 +3170,13 @@ export const fr: Textos = {
     },
   },
   cli: {
+    avisoTerminalNueva:
+      'Ouvrez un nouveau terminal pour voir le changement : les terminaux déjà ouverts ne le voient pas.',
+    enPathSinCliente: 'Dans le PATH, mais la commande manque',
+    reparar: 'Réparer',
+    repararTitulo: 'Réparer la commande wolf ?',
+    repararTexto:
+      'wolf est dans le PATH mais ses fichiers sont incomplets. Ils seront copiés de nouveau dans le dossier de données et le serveur local démarrera, comme à l’ajout.',
     titulo: 'Terminal : commande wolf',
     descripcion:
       'Pilotez WolfCore Dev depuis PowerShell, cmd ou Git Bash : wolf status, wolf use php@8.4, wolf share, wolf logs. Cela ne fonctionne que si l’application est ouverte.',

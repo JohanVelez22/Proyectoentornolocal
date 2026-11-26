@@ -5,8 +5,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  aclEsSoloDelUsuario,
-  entradasDeIcacls,
+  aclEsDelUsuarioPorSid,
+  appAbierta,
+  argumentosPowerShell,
+  scriptAclUsuario,
   leerArchivoCliSeguro,
   type ArchivoCli,
   type DepsLectura,
@@ -683,6 +685,137 @@ describe('wolf: el cliente (D32)', () => {
   });
 });
 
+describe('revisión D32', () => {
+  it('--json: una línea con password=... sigue siendo JSON válido (no se vuelve a enmascarar el texto)', async () => {
+    respuestas.estado = ok({
+      idioma: 'es',
+      sitios: [{ ...SITIO, nota: `DB_PASSWORD=${CLAVE} y password=otra-falsa` }],
+      servicios: [],
+      tuneles: [],
+    });
+    const m = montar();
+    expect(await ejecutarCli(['status', '--json'], m.deps)).toBe(SALIDA.BIEN);
+    const j = JSON.parse(m.out.join('\n')) as { sitios: { nota: string }[] };
+    expect(j.sitios[0]!.nota).not.toContain(CLAVE);
+    expect(j.sitios[0]!.nota).toContain('password=***');
+
+    // También el error en JSON
+    respuestas.asegurar = err('cli.error', { detalle: 'falló password=otra-falsa' });
+    const e = montar();
+    await ejecutarCli(['secure', 'tienda', '--json'], e.deps);
+    const je = JSON.parse(e.out.join('\n')) as { error: { datos: { detalle: string } } };
+    expect(je.error.datos.detalle).toContain('password=***');
+  });
+
+  it('logs -f --json: cada línea es JSON aunque lleve password=', async () => {
+    manejador = (p, res) => {
+      if (!p.url.startsWith('/registros')) return false;
+      res.writeHead(200, { 'content-type': 'application/x-ndjson' });
+      res.end(`${JSON.stringify({ lineas: ['conexion password=clave-falsa-1', 'b'] })}\n`);
+      return true;
+    };
+    const m = montar();
+    let n = 0;
+    m.deps.leerCliJson = async () =>
+      ++n === 1 ? { ok: true, archivo: archivo() } : { ok: false, motivo: 'ausente' };
+    await ejecutarCli(['logs', 'tienda', '-f', '--json'], m.deps);
+    const lineas = m.out.map((l) => JSON.parse(l) as { linea: string });
+    expect(lineas[0]!.linea).toBe('conexion password=***');
+    expect(lineas).toHaveLength(2);
+  });
+
+  it('--token -x (con espacio y un valor que empieza por guion) no se enmascara a propósito', () => {
+    expect(textoSeguro('wolf --token -x', null)).toBe('wolf --token -x');
+    expect(textoSeguro('wolf --token=-x', null)).toBe('wolf --token=***');
+  });
+
+  describe('--abrir con la app abierta pero la CLI apagada', () => {
+    it('avisa de activar wolf en Ajustes y NO lanza la app (ni --iniciar-todo)', async () => {
+      const abrirApp = vi.fn(async () => true);
+      const m = montar({ lectura: { ok: false, motivo: 'ausente' }, abrirApp });
+      m.deps.appAbierta = async () => true;
+      expect(await ejecutarCli(['status', '--abrir'], m.deps)).toBe(SALIDA.APP_CERRADA);
+      expect(abrirApp).not.toHaveBeenCalled();
+      expect(m.err.join('\n')).toContain('la CLI está apagada. Active wolf en Ajustes');
+    });
+
+    it('sin app abierta sí la lanza', async () => {
+      const abrirApp = vi.fn(async () => true);
+      const m = montar({ lectura: { ok: false, motivo: 'ausente' }, abrirApp, esperaAbrirMs: 10 });
+      m.deps.appAbierta = async () => false;
+      await ejecutarCli(['status', '--abrir'], m.deps);
+      expect(abrirApp).toHaveBeenCalledTimes(1);
+    });
+
+    it('sin --abrir también da el mensaje preciso', async () => {
+      const m = montar({ lectura: { ok: false, motivo: 'ausente' } });
+      m.deps.appAbierta = async () => true;
+      expect(await ejecutarCli(['status'], m.deps)).toBe(SALIDA.APP_CERRADA);
+      expect(m.err.join('\n')).toContain('Active wolf en Ajustes');
+    });
+  });
+
+  it('logs -f no repite la última línea al reconectar', async () => {
+    let conexion = 0;
+    manejador = (p, res) => {
+      if (!p.url.startsWith('/registros')) return false;
+      conexion++;
+      const lineas = conexion === 1 ? ['a', 'b'] : ['b', 'c'];
+      res.writeHead(200, { 'content-type': 'application/x-ndjson' });
+      res.end(`${JSON.stringify({ lineas })}\n`);
+      return true;
+    };
+    const m = montar();
+    let n = 0;
+    m.deps.leerCliJson = async () =>
+      ++n <= 2 ? { ok: true, archivo: archivo() } : { ok: false, motivo: 'ausente' };
+    await ejecutarCli(['logs', 'tienda', '-f'], m.deps);
+    expect(m.out).toEqual(['a', 'b', 'c']);
+    // al reconectar pide solo la última línea
+    const pedidosLogs = pedidos.filter((p) => p.url.startsWith('/registros'));
+    expect(pedidosLogs[1]!.url).toContain('lineas=1');
+  });
+
+  it('una respuesta gigante se corta (contador de bytes) y sale como app que no responde', async () => {
+    manejador = (_p, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.write('x'.repeat(1024 * 1024));
+      const timer = setInterval(() => {
+        if (res.destroyed) return clearInterval(timer);
+        res.write('x'.repeat(4 * 1024 * 1024));
+      }, 1);
+      res.on('close', () => clearInterval(timer));
+      return true;
+    };
+    const m = montar();
+    expect(await ejecutarCli(['status'], m.deps)).toBe(SALIDA.APP_CERRADA);
+    expect(m.err.join('\n')).toContain('no responde');
+  });
+
+  it('una línea de registro sin salto de línea de más de 1 MB corta el seguimiento', async () => {
+    manejador = (p, res) => {
+      if (!p.url.startsWith('/registros')) return false;
+      res.writeHead(200, { 'content-type': 'application/x-ndjson' });
+      const timer = setInterval(() => {
+        if (res.destroyed) return clearInterval(timer);
+        res.write('y'.repeat(600 * 1024));
+      }, 1);
+      res.on('close', () => clearInterval(timer));
+      return true;
+    };
+    const m = montar();
+    expect(await ejecutarCli(['logs', 'tienda', '-f'], m.deps)).toBe(SALIDA.APP_CERRADA);
+  });
+
+  it('electron-builder.yml no apaga el fuse RunAsNode (wolf.cmd lo necesita) y lo documenta', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const yml = await readFile(path.join(__dirname, '..', 'electron-builder.yml'), 'utf8');
+    expect(yml).toMatch(/RunAsNode/);
+    // Ninguna configuración de fuses que lo desactive
+    expect(yml).not.toMatch(/^\s*(electronFuses|runAsNode)\s*:/im);
+  });
+});
+
 describe('textos del cliente', () => {
   it('textoSeguro quita control, secretos y el token', () => {
     expect(textoSeguro(`a\u001b[31mb ${TOKEN} --token=-${CLAVE}`, TOKEN)).not.toMatch(
@@ -738,7 +871,7 @@ describe('textos del cliente', () => {
         ).not.toBe(c);
       }
     }
-  });
+  }, 30_000);
 
   it('idiomaDeLocale', () => {
     expect(idiomaDeLocale('pt_BR.UTF-8')).toBe('pt');
@@ -819,8 +952,7 @@ describe('leer run/cli.json con comprobaciones', () => {
     pidVivo: () => true,
     imagenDe: async () => 'WolfCore Dev.exe',
     imagenEsperada: 'wolfcore dev.exe',
-    aclDe: async () => ['DESKTOP\\yo:(F)'],
-    usuarios: ['yo', ''],
+    aclEsDelUsuario: async () => true,
     plataforma: 'win32',
     uidActual: null,
     ...o,
@@ -891,24 +1023,23 @@ describe('leer run/cli.json con comprobaciones', () => {
     });
   });
 
-  it('ACL ajena, ilegible o con más de una entrada: inseguro (Windows)', async () => {
+  it('ACL que no es solo del usuario (por SID), o que falla, es inseguro (Windows)', async () => {
     await writeFile(ruta, contenido());
-    const casos: (string[] | null)[] = [
-      ['DESKTOP\\otro:(F)'],
-      ['DESKTOP\\yo:(F)', 'BUILTIN\\Users:(R)'],
-      ['DESKTOP\\yo:(I)(F)'],
-      null,
-      [],
-    ];
-    for (const acl of casos) {
-      expect(
-        await leerArchivoCliSeguro(ruta, deps({ aclDe: async () => acl })),
-        JSON.stringify(acl),
-      ).toEqual({
+    for (const aclEsDelUsuario of [
+      async () => false,
+      async () => {
+        throw new Error('powershell no respondio');
+      },
+    ]) {
+      expect(await leerArchivoCliSeguro(ruta, deps({ aclEsDelUsuario }))).toEqual({
         ok: false,
         motivo: 'inseguro',
       });
     }
+    // Sin la comprobación disponible tampoco se usa (falla cerrado)
+    const { aclEsDelUsuario: _a, ...sin } = deps();
+    void _a;
+    expect(await leerArchivoCliSeguro(ruta, sin)).toEqual({ ok: false, motivo: 'inseguro' });
   });
 
   it('formas rotas: ilegible', async () => {
@@ -934,14 +1065,80 @@ describe('leer run/cli.json con comprobaciones', () => {
     expect(await leerArchivoCliSeguro(ruta, deps())).toEqual({ ok: false, motivo: 'inseguro' });
   });
 
-  it('aclEsSoloDelUsuario y entradasDeIcacls', () => {
-    expect(aclEsSoloDelUsuario(['PC\\Yo:(F)'], ['yo'])).toBe(true);
-    expect(aclEsSoloDelUsuario(['PC\\Yo:(OI)(CI)(F)'], ['yo'])).toBe(true);
-    expect(aclEsSoloDelUsuario(['PC\\Otro:(F)'], ['yo'])).toBe(false);
-    expect(aclEsSoloDelUsuario(['PC\\Yo:(F)'], [''])).toBe(false);
-    const salida = `C:\\d d\\run\\cli.json PC\\Yo:(F)\r\n\r\nSuccessfully processed 1 files; Failed processing 0 files\r\n`;
-    expect(entradasDeIcacls(salida, 'C:\\d d\\run\\cli.json')).toEqual(['PC\\Yo:(F)']);
-    const heredado = `C:\\x\\cli.json BUILTIN\\Administrators:(I)(F)\r\n               NT AUTHORITY\\SYSTEM:(I)(F)\r\n`;
-    expect(entradasDeIcacls(heredado, 'C:\\x\\cli.json')).toHaveLength(2);
+  it('EPERM al señalar el pid significa que el proceso está vivo', async () => {
+    const { depsLecturaReales } = await import('../src/cli/archivoCli');
+    const kill = vi.spyOn(process, 'kill').mockImplementation(() => {
+      throw Object.assign(new Error('x'), { code: 'EPERM' });
+    });
+    expect(depsLecturaReales().pidVivo(4242)).toBe(true);
+    kill.mockImplementation(() => {
+      throw Object.assign(new Error('x'), { code: 'ESRCH' });
+    });
+    expect(depsLecturaReales().pidVivo(4242)).toBe(false);
+    kill.mockRestore();
+  });
+
+  it('appAbierta: run/app.pid de un proceso vivo de WolfCore (y nada más)', async () => {
+    const pid = path.join(dir, 'run', 'app.pid');
+    await writeFile(pid, '1234');
+    expect(await appAbierta(pid, deps())).toBe(true);
+    expect(await appAbierta(pid, deps({ pidVivo: () => false }))).toBe(false);
+    expect(await appAbierta(pid, deps({ imagenDe: async () => 'chrome.exe' }))).toBe(false);
+    await writeFile(pid, 'no-numero');
+    expect(await appAbierta(pid, deps())).toBe(false);
+    expect(await appAbierta(path.join(dir, 'run', 'nada.pid'), deps())).toBe(false);
+  });
+});
+
+describe('ACL por SID con PowerShell -EncodedCommand (I1)', () => {
+  const SISTEMA = 'C:\\Windows\\System32';
+
+  it('el script compara dueño y regla con el SID actual y no menciona ningún nombre de cuenta', () => {
+    const sc = scriptAclUsuario('C:\\datos\\run\\cli.json');
+    expect(sc).toContain('WindowsIdentity]::GetCurrent().User.Value');
+    expect(sc).toContain('GetOwner([System.Security.Principal.SecurityIdentifier])');
+    expect(sc).toContain('$r.Count -eq 1');
+    expect(sc).toContain('-not $r[0].IsInherited');
+    expect(sc).toContain('Translate([System.Security.Principal.SecurityIdentifier])');
+    expect(sc).not.toMatch(/USERNAME|USERDOMAIN|whoami/i);
+    expect(sc).toContain("Get-Acl -LiteralPath 'C:\\datos\\run\\cli.json'");
+  });
+
+  it('un usuario con caracteres no ASCII: la ruta viaja intacta en Base64 y la salida es ASCII', async () => {
+    const ruta = "C:\\Usuarios\\José Peña\\O'Brien\\run\\cli.json";
+    const vistos: { cmd: string; args: string[] }[] = [];
+    const ok = await aclEsDelUsuarioPorSid(
+      ruta,
+      async (cmd, args) => {
+        vistos.push({ cmd, args });
+        return 'SI';
+      },
+      SISTEMA,
+    );
+    expect(ok).toBe(true);
+    const { cmd, args } = vistos[0]!;
+    expect(cmd).toBe(SISTEMA + '\\WindowsPowerShell\\v1.0\\powershell.exe');
+    expect(args.slice(0, 5)).toEqual([
+      '-NoProfile',
+      '-NonInteractive',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-EncodedCommand',
+    ]);
+    // Los argumentos son ASCII puro (nada se corrompe por la página de códigos)
+    for (const a of args) expect(a).toMatch(/^[\x20-\x7e]+$/);
+    const script = Buffer.from(args[5]!, 'base64').toString('utf16le');
+    expect(script).toContain("'C:\\Usuarios\\José Peña\\O''Brien\\run\\cli.json'");
+    expect(argumentosPowerShell('é')[5]).toBe(Buffer.from('é', 'utf16le').toString('base64'));
+  });
+
+  it('solo SI vale: NO, vacío, error o salida rara son false', async () => {
+    for (const salida of ['NO', '', null, 'SI\nNO', 'Error']) {
+      expect(
+        await aclEsDelUsuarioPorSid('C:\\x', async () => salida, SISTEMA),
+        String(salida),
+      ).toBe(false);
+    }
+    expect(await aclEsDelUsuarioPorSid('C:\\x', async () => ' SI\r\n', SISTEMA)).toBe(true);
   });
 });

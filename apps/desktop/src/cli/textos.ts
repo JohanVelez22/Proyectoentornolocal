@@ -26,6 +26,7 @@ export interface TextosCli {
   versionInvalida: string;
   appCerrada: string;
   appCerradaAbrir: string;
+  cliApagada: string;
   archivoInseguro: string;
   archivoViejo: string;
   abriendoApp: string;
@@ -207,6 +208,8 @@ Codes de sortie : 0 réussi, 1 erreur de la commande, 2 mauvaise utilisation, 3 
 export const TEXTOS_CLI: Record<Idioma, TextosCli> = {
   es: {
     uso: USO.es,
+    cliApagada:
+      'WolfCore Dev está abierto, pero la CLI está apagada. Active wolf en Ajustes (agregarlo al PATH la enciende).',
     usoIncorrecto: (d) => `Uso incorrecto: ${d}\nEscriba «wolf --help» para ver las órdenes.`,
     argumentoDesconocido: (a) => `argumento desconocido: ${a}`,
     faltaArgumento: (c) => `falta ${c}`,
@@ -274,6 +277,8 @@ export const TEXTOS_CLI: Record<Idioma, TextosCli> = {
   },
   en: {
     uso: USO.en,
+    cliApagada:
+      'WolfCore Dev is open, but the CLI is off. Turn wolf on in Settings (adding it to the PATH turns it on).',
     usoIncorrecto: (d) => `Wrong usage: ${d}\nType “wolf --help” to see the commands.`,
     argumentoDesconocido: (a) => `unknown argument: ${a}`,
     faltaArgumento: (c) => `missing ${c}`,
@@ -337,6 +342,8 @@ export const TEXTOS_CLI: Record<Idioma, TextosCli> = {
   },
   pt: {
     uso: USO.pt,
+    cliApagada:
+      'O WolfCore Dev está aberto, mas a CLI está desligada. Ative o wolf em Ajustes (adicioná-lo ao PATH a liga).',
     usoIncorrecto: (d) => `Uso incorreto: ${d}\nDigite «wolf --help» para ver os comandos.`,
     argumentoDesconocido: (a) => `argumento desconhecido: ${a}`,
     faltaArgumento: (c) => `falta ${c}`,
@@ -401,6 +408,8 @@ export const TEXTOS_CLI: Record<Idioma, TextosCli> = {
   },
   fr: {
     uso: USO.fr,
+    cliApagada:
+      'WolfCore Dev est ouvert, mais la CLI est désactivée. Activez wolf dans les Réglages (l’ajouter au PATH l’active).',
     usoIncorrecto: (d) =>
       `Mauvaise utilisation : ${d}\nTapez « wolf --help » pour voir les commandes.`,
     argumentoDesconocido: (a) => `argument inconnu : ${a}`,

@@ -52,8 +52,7 @@ async function montar(confirmar?: () => Promise<boolean>) {
     pidVivo: () => true,
     imagenDe: async () => 'wolf-prueba',
     imagenEsperada: 'wolf-prueba',
-    aclDe: async () => [`PC\\${os.userInfo().username}:(F)`],
-    usuarios: [os.userInfo().username],
+    aclEsDelUsuario: async () => true,
     plataforma: process.platform === 'win32' ? 'win32' : 'linux',
     uidActual: typeof process.getuid === 'function' ? process.getuid() : null,
   };
@@ -132,8 +131,7 @@ describe('wolf contra el servidor real de la app (D32)', () => {
         pidVivo: (pid) => pid === process.pid,
         imagenDe: async () => 'wolf-prueba',
         imagenEsperada: 'wolf-prueba',
-        aclDe: async () => [`PC\\${os.userInfo().username}:(F)`],
-        usuarios: [os.userInfo().username],
+        aclEsDelUsuario: async () => true,
         plataforma: 'win32',
       });
     expect(await ejecutarCli(['status'], m.deps)).toBe(SALIDA.APP_CERRADA);

@@ -14,9 +14,11 @@ import {
   type Tray,
 } from 'electron';
 import {
+  ejecutorPorDefecto,
   ErrorWolf,
   Nucleo,
   rutaBasePorDefecto,
+  rutaCsc,
   VARIABLE_DATOS,
   type IdiomaUi,
   type PreferenciasUi,
@@ -356,6 +358,11 @@ if (errorCarpetaDatos !== null) {
             script: join(app.getAppPath(), 'out', 'cli', 'wolf.cjs'),
             ...(app.isPackaged ? {} : { carpetaApp: app.getAppPath() }),
           },
+          // wolf.exe: el lanzador que PowerShell y cmd prefieren a wolf.cmd (un .cmd deja que cmd.exe
+          // interprete `&` y `|` de los argumentos). Se compila con el csc de .NET Framework de Windows.
+          ...(process.platform === 'win32'
+            ? { lanzadorExe: { ejecutar: ejecutorPorDefecto, csc: rutaCsc() } }
+            : {}),
           abrirUrl: (url) => shell.openExternal(urlHttp(url)),
           // Publicar un sitio o cambiar el PHP global lo decide esta ventana, nunca la terminal.
           confirmar: crearConfirmarCli({

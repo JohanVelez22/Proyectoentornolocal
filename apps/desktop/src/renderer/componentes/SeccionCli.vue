@@ -35,7 +35,8 @@ onMounted(() => void cargar());
 function cambiar(): void {
   const e = estado.value;
   if (!e || e.aislado) return;
-  if (e.enPath) {
+  const incompleta = e.enPath && !e.instalado;
+  if (e.enPath && !incompleta) {
     dialog.warning({
       title: t.quitarTitulo,
       content: t.quitarTexto,
@@ -47,9 +48,9 @@ function cambiar(): void {
   }
   // Agregar cambia el PATH del usuario y abre un servidor local: siempre se confirma.
   dialog.warning({
-    title: t.agregarTitulo,
-    content: t.agregarTexto,
-    positiveText: t.agregar,
+    title: incompleta ? t.repararTitulo : t.agregarTitulo,
+    content: incompleta ? t.repararTexto : t.agregarTexto,
+    positiveText: incompleta ? t.reparar : t.agregar,
     negativeText: textos.acciones.cancelar,
     onPositiveClick: () => void aplicar(true),
   });
@@ -64,7 +65,7 @@ async function aplicar(agregar: boolean): Promise<void> {
   if (r) {
     notification.success({
       title: t.listoTitulo,
-      content: r.aviso,
+      content: t.avisoTerminalNueva,
       duration: 12000,
       keepAliveOnHover: true,
     });
@@ -90,17 +91,25 @@ async function aplicar(agregar: boolean): Promise<void> {
       <EstadoPunto
         v-else
         :estado="estado.enPath && estado.activo ? 'encendido' : 'apagado'"
-        :etiqueta="estado.enPath ? (estado.activo ? t.activo : t.enPathSinServidor) : t.inactivo"
+        :etiqueta="
+          estado.enPath
+            ? !estado.instalado
+              ? t.enPathSinCliente
+              : estado.activo
+                ? t.activo
+                : t.enPathSinServidor
+            : t.inactivo
+        "
       />
       <NButton
         size="small"
-        :type="estado?.enPath ? 'default' : 'primary'"
-        :secondary="!!estado?.enPath"
+        :type="estado?.enPath && estado.instalado ? 'default' : 'primary'"
+        :secondary="!!estado?.enPath && estado.instalado"
         :disabled="!estado || estado.aislado"
         :loading="ocupado('cli-path')"
         @click="cambiar"
       >
-        {{ estado?.enPath ? t.quitarBoton : t.agregarBoton }}
+        {{ estado?.enPath ? (estado.instalado ? t.quitarBoton : t.reparar) : t.agregarBoton }}
       </NButton>
     </div>
     <small v-if="estado?.aislado" class="ayuda">{{ t.aislado }}</small>

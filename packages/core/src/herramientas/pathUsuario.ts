@@ -20,6 +20,18 @@ export interface DepsPathUsuario {
   subclave?: string;
 }
 
+/**
+ * Un solo cambio del PATH del usuario a la vez en todo el proceso: PHP y Composer (`tools/bin`) y
+ * `wolf` (`bin/cli`) son dos instancias que leen y reescriben el mismo valor; sin esto, dos
+ * cambios a la vez pisarían el uno al otro.
+ */
+let cerrojoPath: Promise<unknown> = Promise.resolve();
+function conCerrojo<T>(fn: () => Promise<T>): Promise<T> {
+  const turno = cerrojoPath.then(fn, fn);
+  cerrojoPath = turno.catch(() => undefined);
+  return turno;
+}
+
 const normalizar = (e: string): string =>
   e.trim().replace(/\//g, '\\').replace(/\\+$/, '').toLowerCase();
 
@@ -58,18 +70,22 @@ export class PathUsuario {
     return (await this.acceso.leer()).some((p) => normalizar(p) === mia);
   }
 
-  async agregar(): Promise<{ aviso: string }> {
-    const partes = await this.acceso.leer();
-    if (!partes.some((p) => normalizar(p) === normalizar(this.entrada()))) {
-      await this.acceso.escribir([...partes, this.entrada()]);
-    }
-    return { aviso: AVISO_TERMINAL_NUEVA };
+  agregar(): Promise<{ aviso: string }> {
+    return conCerrojo(async () => {
+      const partes = await this.acceso.leer();
+      if (!partes.some((p) => normalizar(p) === normalizar(this.entrada()))) {
+        await this.acceso.escribir([...partes, this.entrada()]);
+      }
+      return { aviso: AVISO_TERMINAL_NUEVA };
+    });
   }
 
-  async quitar(): Promise<{ aviso: string }> {
-    const partes = await this.acceso.leer();
-    const resto = partes.filter((p) => normalizar(p) !== normalizar(this.entrada()));
-    if (resto.length !== partes.length) await this.acceso.escribir(resto);
-    return { aviso: AVISO_TERMINAL_NUEVA };
+  quitar(): Promise<{ aviso: string }> {
+    return conCerrojo(async () => {
+      const partes = await this.acceso.leer();
+      const resto = partes.filter((p) => normalizar(p) !== normalizar(this.entrada()));
+      if (resto.length !== partes.length) await this.acceso.escribir(resto);
+      return { aviso: AVISO_TERMINAL_NUEVA };
+    });
   }
 }

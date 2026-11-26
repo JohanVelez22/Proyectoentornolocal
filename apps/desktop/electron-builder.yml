@@ -13,6 +13,10 @@ asarUnpack:
 # electron-builder intenta compilar dtrace-provider (opcional de bunyan, vía ftp-srv) y exige
 # Visual Studio en el equipo que arma el instalador.
 npmRebuild: false
+# El comando `wolf` corre sobre el Electron de la app como Node (ELECTRON_RUN_AS_NODE=1, que pone
+# wolf.exe / wolf.cmd solo para ese proceso). Eso necesita el fuse RunAsNode ENCENDIDO, que es el valor
+# por defecto de Electron: no agregar `electronFuses` con `runAsNode: false` sin antes cambiar el
+# cliente (apps/desktop/src/cli). `test/cli.test.ts` lo vigila.
 # El icono de ventana y bandeja se lee en tiempo de ejecución desde process.resourcesPath.
 extraResources:
   - from: resources/icono.png

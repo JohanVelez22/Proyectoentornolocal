@@ -12,6 +12,10 @@ export const SALIDA = { BIEN: 0, ERROR: 1, USO: 2, APP_CERRADA: 3 } as const;
 export const ESPERA_ABRIR_MS = 30_000;
 /** Plazo de una petición: la orden más lenta del servidor tarda 5 min (iniciar/detener). */
 const PLAZO_PETICION_MS = 6 * 60_000;
+/** Respuesta de una orden: 16 MB como mucho (el servidor manda mucho menos). */
+export const LIMITE_RESPUESTA = 16 * 1024 * 1024;
+/** Una línea de registro sin salto de línea: 1 MB como mucho. */
+export const LIMITE_LINEA = 1024 * 1024;
 const FUENTES = ['error', 'acceso', 'laravel', 'ci3', 'tunel'] as const;
 
 export interface DepsCli {
@@ -27,6 +31,8 @@ export interface DepsCli {
   preguntar: (texto: string) => Promise<string | null>;
   /** `--abrir`: lanza la app (con `--iniciar-todo`). Sin esto, `--abrir` no puede hacer nada. */
   abrirApp?: () => Promise<boolean>;
+  /** ¿Hay una app de WolfCore abierta (aunque la CLI esté apagada)? Evita lanzar una segunda instancia. */
+  appAbierta?: () => Promise<boolean>;
   /** Pruebas: espera entre lecturas de `cli.json` y plazo total de `--abrir`. */
   esperaAbrirMs?: number;
   pausaMs?: number;
@@ -268,12 +274,18 @@ function pedir(
         ...(o.senal ? { signal: o.senal } : {}),
       },
       (res) => {
-        const partes: Buffer[] = [];
+        const partes: string[] = [];
+        let total = 0;
         let resto = '';
+        const cortar = (): void => {
+          reject(new ErrorConexion('no-responde'));
+          req.destroy();
+        };
         res.setEncoding('utf8');
         res.on('data', (d: string) => {
           if (alLinea && (res.statusCode ?? 0) === 200) {
             resto += d;
+            if (resto.length > LIMITE_LINEA && !resto.includes('\n')) return cortar();
             let i: number;
             while ((i = resto.indexOf('\n')) >= 0) {
               const linea = resto.slice(0, i);
@@ -281,8 +293,9 @@ function pedir(
               if (linea) alLinea(linea);
             }
           } else {
-            partes.push(Buffer.from(d, 'utf8'));
-            if (Buffer.concat(partes).length > 16 * 1024 * 1024) req.destroy();
+            total += d.length;
+            if (total > LIMITE_RESPUESTA) return cortar();
+            partes.push(d);
           }
         });
         res.on('end', () => {
@@ -293,7 +306,7 @@ function pedir(
           }
           let json: unknown = null;
           try {
-            json = JSON.parse(Buffer.concat(partes).toString('utf8'));
+            json = JSON.parse(partes.join(''));
           } catch {
             // no es JSON
           }
@@ -394,7 +407,10 @@ export async function ejecutarCli(argv: readonly string[], d: DepsCli): Promise<
     extra?: Record<string, unknown>,
   ): number => {
     if (json) {
-      out(JSON.stringify(jsonSeguro({ ok: false, error: { codigo, mensaje, ...extra } }, token)));
+      // Ya pasó por `jsonSeguro`: volver a enmascarar el texto JSON podría romperlo (un `password=` se come las comillas).
+      d.salida.out(
+        JSON.stringify(jsonSeguro({ ok: false, error: { codigo, mensaje, ...extra } }, token)),
+      );
     } else err(mensaje);
     return salida;
   };
@@ -446,6 +462,10 @@ export async function ejecutarCli(argv: readonly string[], d: DepsCli): Promise<
 
   // 1. ¿Hay app a la que hablarle?
   let lectura = await d.leerCliJson();
+  // App abierta con la CLI apagada: no hay `cli.json`, pero lanzar otra instancia solo encendería todo.
+  if (!lectura.ok && lectura.motivo === 'ausente' && (await d.appAbierta?.().catch(() => false))) {
+    return fallo('wolf.cli_apagada', T.cliApagada, SALIDA.APP_CERRADA);
+  }
   if (!lectura.ok && f.abrir && d.abrirApp && lectura.motivo !== 'inseguro') {
     err(T.abriendoApp);
     const total = d.esperaAbrirMs ?? ESPERA_ABRIR_MS;
@@ -508,7 +528,7 @@ export async function ejecutarCli(argv: readonly string[], d: DepsCli): Promise<
   };
 
   const imprimir = (datos: unknown, lineas: string[]): void => {
-    if (json) out(JSON.stringify(jsonSeguro(datos, token), null, 2));
+    if (json) d.salida.out(JSON.stringify(jsonSeguro(datos, token), null, 2));
     else for (const l of lineas) out(l);
   };
 
@@ -735,6 +755,7 @@ export async function ejecutarCli(argv: readonly string[], d: DepsCli): Promise<
           json,
           token,
           falloServidor,
+          salidaJson: (t) => d.salida.out(t),
           setAcceso: (a) => (token = a.token),
         });
       }
@@ -827,6 +848,8 @@ interface ParamsSeguimiento {
   json: boolean;
   token: string | null;
   falloServidor: (e: ErrorServidor) => number;
+  /** Salida cruda (ya limpia): para `--json` por línea. */
+  salidaJson: (t: string) => void;
   setAcceso: (a: ArchivoCli) => void;
 }
 
@@ -837,12 +860,16 @@ interface ParamsSeguimiento {
 async function seguirRegistros(p: ParamsSeguimiento): Promise<number> {
   let acceso = p.acceso;
   let primera = true;
+  /** La última línea que se mostró: al reconectar, la primera del lote nuevo puede ser esa misma. */
+  let ultima: string | null = null;
   for (;;) {
     const q = new URLSearchParams({ sitio: p.id, seguir: '1' });
     if (p.f.fuente) q.set('fuente', p.f.fuente);
     // Al volver a pedir solo hace falta la última línea (no se repite lo ya mostrado).
     q.set('lineas', String(primera ? (p.f.lineas ?? 50) : 1));
+    const reconexion = !primera;
     primera = false;
+    let saltarRepetida = reconexion;
     let rechazo: ResultadoOrden | null = null;
     const r = await pedir(
       acceso,
@@ -856,8 +883,14 @@ async function seguirRegistros(p: ParamsSeguimiento): Promise<number> {
           const o = JSON.parse(linea) as { lineas?: unknown };
           if (!Array.isArray(o.lineas)) return;
           for (const l of o.lineas) {
-            if (p.json) p.out(JSON.stringify({ linea: textoSeguro(String(l), p.token) }));
-            else p.out(String(l));
+            const texto = String(l);
+            if (saltarRepetida) {
+              saltarRepetida = false;
+              if (texto === ultima) continue;
+            }
+            ultima = texto;
+            if (p.json) p.salidaJson(JSON.stringify({ linea: textoSeguro(texto, p.token) }));
+            else p.out(texto);
           }
         } catch {
           // una línea rota del flujo no corta el seguimiento

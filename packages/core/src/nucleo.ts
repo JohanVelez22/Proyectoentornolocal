@@ -1,7 +1,7 @@
 import type * as childProcess from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { readFile, rm } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Almacen, AlmacenCredenciales, migrarCredenciales } from './almacen';
 import {
@@ -369,6 +369,12 @@ export interface OpcionesNucleo {
      * ruta real de la app. Sin esto, agregar `wolf` al PATH falla con `cli.sin_cliente`.
      */
     cliente?: OrigenClienteCli;
+    /**
+     * Para compilar `wolf.exe` (lanzador mínimo que PowerShell y cmd prefieren a `wolf.cmd`: un `.cmd`
+     * no puede evitar que cmd.exe interprete `&` o `|` de los argumentos). Solo Windows; sin esto se
+     * instala solo `wolf.cmd`.
+     */
+    lanzadorExe?: { ejecutar: Ejecutor; csc: string | null };
   };
 }
 
@@ -1759,11 +1765,16 @@ export class Nucleo {
         });
       }
     }
-    // Una actualización puede cambiar la ruta de la app: `wolf.cmd` se reescribe si ya estaba instalado.
+    if (o.servidorCli) {
+      await writeFile(rutas.cliApp(), String(process.pid), 'utf8').catch(() => undefined);
+    }
+    // Una actualización puede cambiar la ruta de la app: el cliente se reescribe si ya estaba instalado.
     if (o.servidorCli?.cliente && !nucleo.aislado && (await clienteCliInstalado(rutas))) {
-      await instalarClienteCli(rutas, o.servidorCli.cliente).catch((e: unknown) => {
-        nucleo.avisosPendientes.push(`No se pudo actualizar el cliente wolf: ${mensajeDe(e)}`);
-      });
+      await instalarClienteCli(rutas, o.servidorCli.cliente, o.servidorCli.lanzadorExe).catch(
+        (e: unknown) => {
+          nucleo.avisosPendientes.push(`No se pudo actualizar el cliente wolf: ${mensajeDe(e)}`);
+        },
+      );
     }
     // Apagada (o sin servidor): ningún `cli.json` de una sesión anterior se queda con un token vivo.
     if (!nucleo.cli.estado().activo)
@@ -3094,6 +3105,17 @@ export class Nucleo {
     return this.estadoCli();
   }
 
+  /** Borra `run/app.pid` solo si es de este proceso. */
+  private async borrarMarcaApp(): Promise<void> {
+    try {
+      if ((await readFile(this.rutas.cliApp(), 'utf8')).trim() === String(process.pid)) {
+        await rm(this.rutas.cliApp(), { force: true });
+      }
+    } catch {
+      // no estaba
+    }
+  }
+
   /** El botón "Agregar wolf al PATH" de Ajustes: ¿está en el PATH, instalado y encendido? */
   async estadoCliPath(): Promise<{
     enPath: boolean;
@@ -3132,11 +3154,13 @@ export class Nucleo {
       // Primero lo que puede fallar sin dejar rastro (sin proteger el token, la CLI no se activa).
       await this.activarCli(true);
       try {
-        await instalarClienteCli(this.rutas, cliente);
+        await instalarClienteCli(this.rutas, cliente, this.opcionesCli.lanzadorExe);
         return await this.pathCli.agregar();
       } catch (e) {
+        // Deshace todo: CLI apagada, sin cliente copiado y sin la entrada en el PATH (si llegó a escribirse).
         await this.activarCli(false).catch(() => undefined);
         await quitarClienteCli(this.rutas);
+        await this.pathCli.quitar().catch(() => undefined);
         throw e;
       }
     }
@@ -4629,6 +4653,7 @@ export class Nucleo {
     await this.cli.detener().catch((e: unknown) => {
       console.error('No se pudo detener el servidor de la CLI:', mensajeDe(e));
     });
+    await this.borrarMarcaApp();
     await this.mcp.detener().catch((e: unknown) => {
       console.error('No se pudo detener el servidor MCP:', mensajeDe(e));
     });

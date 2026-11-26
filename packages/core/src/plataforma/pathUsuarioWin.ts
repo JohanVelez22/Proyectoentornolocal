@@ -47,6 +47,19 @@ export function scriptEscribir(subclave: string, tipo: 'String' | 'ExpandString'
   ].join('\n');
 }
 
+/**
+ * Avisa a las ventanas abiertas (el Explorador, que lanza las terminales nuevas) de que el
+ * entorno cambió: WM_SETTINGCHANGE (0x1A) con "Environment" a todas las ventanas de primer nivel
+ * (HWND_BROADCAST = 0xFFFF), esperando 5 s como mucho a cada una (SMTO_ABORTIFHUNG = 2). Todo
+ * ASCII. Es un extra: si falla, el PATH ya está guardado.
+ */
+export const SCRIPT_DIFUNDIR_ENTORNO = [
+  "$ErrorActionPreference = 'Stop'",
+  'Add-Type -Namespace WolfNat -Name Msg -MemberDefinition \'[DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);\'',
+  '$r = [UIntPtr]::Zero',
+  "[void][WolfNat.Msg]::SendMessageTimeout([IntPtr]0xffff, 0x1A, [UIntPtr]::Zero, 'Environment', 2, 5000, [ref]$r)",
+].join('\n');
+
 export type TipoPath = 'String' | 'ExpandString';
 
 export interface OpcionesPathUsuarioWindows {
@@ -61,7 +74,7 @@ export interface OpcionesPathUsuarioWindows {
  * PATH del USUARIO (HKCU\Environment\Path). Se lee y escribe con PowerShell y .NET (no con
  * reg.exe, cuya salida sale en la página de códigos OEM y estropea rutas con tildes o ñ): el valor
  * viaja en Base64 de UTF-16LE, sin expandir los %VARIABLES% y conservando su tipo. No se difunde
- * WM_SETTINGCHANGE: las terminales nuevas lo leen al abrirse.
+ * WM_SETTINGCHANGE al terminar, para que el Explorador pase el PATH nuevo a las terminales que abra.
  */
 export class PathUsuarioWindows implements AccesoPathUsuario {
   private readonly subclave: string;
@@ -130,5 +143,9 @@ export class PathUsuarioWindows implements AccesoPathUsuario {
     if (escrito.valor !== valor) {
       throw new Error('El PATH del usuario no quedó como se esperaba. Revise el respaldo en etc/.');
     }
+    // Las terminales que se abran desde ahora ven el cambio sin cerrar sesión (si no se puede, el PATH ya está).
+    await this.o
+      .exec('powershell', codificarPowerShell(SCRIPT_DIFUNDIR_ENTORNO), { timeoutMs: 30_000 })
+      .catch(() => undefined);
   }
 }

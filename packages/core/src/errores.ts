@@ -218,6 +218,7 @@ export const PARAMETROS_ERROR = {
   'cli.formato_no_admitido': [],
   'cli.plazo': [],
   'cli.ocupado': [],
+  'cli.demasiados_dialogos': [],
   'cli.requiere_confirmacion': ['sitio'],
   'cli.requiere_confirmacion_datos_reales': ['sitio'],
   'cli.requiere_confirmacion_global': [],

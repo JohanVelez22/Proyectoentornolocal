@@ -82,6 +82,8 @@ export * from './herramientas/composer';
 export * from './herramientas/terminal';
 export type { ResultadoAbrirEditor } from './herramientas/editor';
 export * from './herramientas/pathUsuario';
+export { rutaCsc } from './plataforma/lanzadorWin';
+export { ejecutorPorDefecto } from './plataforma/win';
 export * from './herramientas/adminer';
 export * from './herramientas/phpmyadmin';
 export type { CredencialesAcceso, HerramientaBd } from './herramientas/accesoBd';

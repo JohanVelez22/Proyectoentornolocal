@@ -322,7 +322,7 @@ async function aplicarPath(activar: boolean): Promise<void> {
   if (r) {
     notification.success({
       title: tt.pathTitulo,
-      content: r.aviso,
+      content: tt.pathAviso,
       duration: 12000,
       keepAliveOnHover: true,
     });
