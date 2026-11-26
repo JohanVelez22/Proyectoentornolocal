@@ -520,7 +520,7 @@ describe('Doctor: VC++, antivirus y servicios', () => {
       expect(await solo(new Doctor(deps()), ['firewall'])).toEqual([]);
     });
 
-    it('avisa con el perfil y la ruta, y muestra el comando para quitarlas sin ejecutarlo', async () => {
+    it('avisa con el perfil y la ruta, y ofrece quitarlas (D46) sin hacerlo sin confirmación', async () => {
       const d0 = datos.replaceAll('\\', '/');
       plat.reglasEntrada = {
         ok: true,
@@ -535,14 +535,18 @@ describe('Doctor: VC++, antivirus y servicios', () => {
         codigo: 'doctor.firewall_reglas',
         gravedad: 'aviso',
         datos: { cantidad: 2, perfiles: 'Private, Public, Private' },
-        reparacion: { soloInforma: true, requiereAdmin: true },
+        reparacion: { soloInforma: false, requiereAdmin: true },
       });
       expect(h!.evidencia).toContain('nginx.exe');
       expect(h!.evidencia).toContain('Public, Private');
       expect(h!.evidencia).toContain('mysqld.exe');
       expect(h!.reparacion!.comandoManual).toContain('quitar-reglas-firewall');
       expect(h!.reparacion!.comandoManual).toContain('{AAAA-1}');
-      expect(await d.reparar(h!.id, true)).toEqual({ ok: false, codigo: 'doctor.solo_informa' });
+      expect(await d.reparar(h!.id, false as unknown as true)).toEqual({
+        ok: false,
+        codigo: 'doctor.confirmacion_requerida',
+      });
+      expect(plat.reglasEntrada.reglas).toHaveLength(2);
     });
 
     it('los restos de pruebas de WolfCore bajo %TEMP% entran en el comando, agrupados', async () => {

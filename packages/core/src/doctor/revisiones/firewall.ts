@@ -1,89 +1,63 @@
-import os from 'node:os';
 import type { ReglaEntrada } from '../../plataforma/firewallWin';
+import {
+  clasificarReal,
+  quitarReglasPeligrosas,
+  restaurables,
+  restaurarReglas,
+  type Objetivo,
+} from '../firewallCambios';
 import type { DepsDoctor, HallazgoInterno } from '../tipos';
+import { origenDeRegla, type Origen } from './firewallOrigen';
+
+export { origenDeRegla, type Origen };
 
 /** Cuántas reglas se listan en la evidencia y en el comando (el resto se cuenta pero no se muestra). */
 const MAX_REGLAS = 100;
 
-/** Ruta en minúsculas, con `/`, sin barra final ni variables sin expandir (las de Windows son sin distinguir mayúsculas). */
-function normalizar(ruta: string): string {
-  return ruta
-    .replace(/^"|"$/g, '')
-    .replace(/\\/g, '/')
-    .replace(/\/+/g, '/')
-    .replace(/\/$/, '')
-    .toLowerCase();
-}
-
-const bajo = (ruta: string, carpeta: string): boolean =>
-  carpeta !== '' && (ruta === carpeta || ruta.startsWith(`${carpeta}/`));
-
-/** Carpetas que dejan las pruebas de WolfCore Dev bajo la carpeta temporal. */
-const RESTO_PRUEBA =
-  /\/(pel-int-[^/]*|pel-etapa-[^/]*|pel-vhost-real-[^/]*|scratchpad\/ngx[^/]*)\//;
-
-export type Origen = 'propia' | 'prueba' | 'ajena';
-
-/**
- * De quién es una regla según la ruta del programa: `propia` si cuelga de la carpeta de datos de
- * WolfCore Dev; `prueba` si es un resto de pruebas de WolfCore bajo la carpeta temporal; `ajena`
- * el resto (FlyEnv, Laragon, XAMPP, el propio PHP o MySQL del usuario…). Solo las dos primeras
- * pueden entrar en un comando de limpieza.
- */
-export function origenDeRegla(
-  programa: string,
-  carpetaDatos: string,
-  carpetaTemporal: string,
-): Origen {
-  const p = normalizar(programa);
-  // Una ruta con variables sin expandir o relativa nunca se atribuye a WolfCore Dev.
-  if (p.includes('%') || p.includes('..') || !/^([a-z]:)?\//.test(p)) return 'ajena';
-  if (bajo(p, normalizar(carpetaDatos))) return 'propia';
-  const tmp = normalizar(carpetaTemporal);
-  if ((bajo(p, tmp) || /\/temp\//.test(p)) && RESTO_PRUEBA.test(p)) return 'prueba';
-  return 'ajena';
-}
-
-const perfiles = (rs: ReglaEntrada[]): string =>
+const perfiles = (rs: { perfil: string }[]): string =>
   [...new Set(rs.map((x) => x.perfil || '?'))].sort().join(', ');
 
-const linea = (x: ReglaEntrada): string =>
-  `${x.perfil || '?'} · ${x.programa} · ${x.nombreVisible || x.nombre}`;
+/** Nombre, programa, perfil y dirección: lo que el usuario ve antes de confirmar. */
+const linea = (x: {
+  nombre: string;
+  nombreVisible: string;
+  perfil: string;
+  programa: string;
+}): string =>
+  `${x.nombreVisible || x.nombre} [${x.nombre}] · ${x.programa} · ${x.perfil || '?'} · Inbound/Allow`;
 
 /**
- * Reglas de entrada Allow para nginx, PHP, MySQL o PostgreSQL. Windows las crea cuando el usuario
- * acepta el aviso del cortafuegos ("permitir acceso") y dejan al programa abierto a la red. Aquí
- * solo se leen: el comando para quitarlas lleva únicamente las de WolfCore Dev (su carpeta de
- * datos y los restos de sus pruebas); las de otros programas (FlyEnv, Laragon, XAMPP…) se
- * muestran como información y nunca entran en el comando. Si no se pueden leer (sin permisos),
- * se informa "no se pudo comprobar", no un error.
+ * Reglas de entrada Allow para nginx, PHP, bases de datos y demás servicios de WolfCore Dev.
+ * Windows las crea cuando el usuario acepta el aviso del cortafuegos ("permitir acceso") y dejan
+ * al programa abierto a la red. La reparación (D46, solo con confirmación y UAC) quita ÚNICAMENTE
+ * las de WolfCore Dev (su carpeta de datos y los restos de sus pruebas), por su `Name` exacto;
+ * las de otros programas (FlyEnv, Laragon, XAMPP…) se muestran como información y nunca se
+ * tocan. Si no se pueden leer (sin permisos), se informa "no se pudo comprobar", no un error.
  */
 export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]> {
+  const res: HallazgoInterno[] = [];
   const r = await d.plataforma.reglasEntradaPermitidas();
   if (!r.ok) {
-    return [
-      {
-        id: 'firewall:no-comprobado',
-        revision: 'firewall',
-        gravedad: 'info',
-        codigo: 'doctor.firewall_no_comprobado',
-        datos: {},
-        evidencia:
-          'No se pudieron leer las reglas del cortafuegos (puede hacer falta administrador).',
-      },
-    ];
+    res.push({
+      id: 'firewall:no-comprobado',
+      revision: 'firewall',
+      gravedad: 'info',
+      codigo: 'doctor.firewall_no_comprobado',
+      datos: {},
+      evidencia:
+        'No se pudieron leer las reglas del cortafuegos (puede hacer falta administrador).',
+    });
   }
-  const tmp = d.carpetaTemporal ?? os.tmpdir();
   const propias: ReglaEntrada[] = [];
   const pruebas: ReglaEntrada[] = [];
   const ajenas: ReglaEntrada[] = [];
   for (const x of r.reglas) {
-    const o = origenDeRegla(x.programa, d.carpetaDatos, tmp);
+    const o = (await clasificarReal(d, x.programa)).origen;
     (o === 'propia' ? propias : o === 'prueba' ? pruebas : ajenas).push(x);
   }
-  const res: HallazgoInterno[] = [];
   const mias = [...propias, ...pruebas];
   if (mias.length > 0) {
+    // Lo que se muestra es exactamente lo que la reparación quita.
     const mostradas = mias.slice(0, MAX_REGLAS);
     const secciones = [
       ...(propias.length ? ['WolfCore Dev:', ...propias.slice(0, MAX_REGLAS).map(linea)] : []),
@@ -94,6 +68,10 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
           ]
         : []),
     ];
+    const objetivos: Objetivo[] = mostradas.map((x) => ({
+      nombre: x.nombre,
+      programa: x.programa,
+    }));
     res.push({
       id: 'firewall:reglas-entrada',
       revision: 'firewall',
@@ -109,12 +87,14 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
         id: 'quitar-reglas-firewall',
         codigo: 'doctor.reparaciones.firewall',
         requiereAdmin: true,
-        soloInforma: true,
+        soloInforma: false,
         comandoManual: d.plataforma.comandoManual({
           tipo: 'quitar-reglas-firewall',
           nombres: mostradas.map((x) => x.nombre),
         }),
       },
+      // Solo se llega aquí por `Doctor.reparar`, que exige `confirmacion === true`.
+      aplicar: () => quitarReglasPeligrosas(d, objetivos, { confirmado: true }),
     });
   }
   if (ajenas.length > 0) {
@@ -126,6 +106,31 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
       codigo: 'doctor.firewall_reglas_ajenas',
       datos: { cantidad: ajenas.length, perfiles: perfiles(ajenas) },
       evidencia: ajenas.slice(0, MAX_REGLAS).map(linea).join('\n'),
+    });
+  }
+  // Lo que se quitó antes y se puede recrear (el registro es de WolfCore Dev, no del cortafuegos).
+  const quitadas = (await restaurables(d)).slice(0, MAX_REGLAS);
+  if (quitadas.length > 0) {
+    const objetivos: Objetivo[] = quitadas.map((x) => ({
+      nombre: x.entrada.nombre,
+      programa: x.entrada.programa,
+    }));
+    res.push({
+      id: 'firewall:quitadas',
+      revision: 'firewall',
+      gravedad: 'info',
+      codigo: 'doctor.firewall_quitadas',
+      datos: { cantidad: quitadas.length },
+      evidencia: quitadas
+        .map((x) => linea({ ...x.entrada, nombreVisible: x.entrada.regla.nombreVisible }))
+        .join('\n'),
+      reparacion: {
+        id: 'restaurar-reglas-firewall',
+        codigo: 'doctor.reparaciones.firewall_restaurar',
+        requiereAdmin: true,
+        soloInforma: false,
+      },
+      aplicar: () => restaurarReglas(d, objetivos, { confirmado: true }),
     });
   }
   return res;
