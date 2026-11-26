@@ -2,11 +2,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { listarVersiones } from '../src/catalogo/catalogo';
+import { listarVersiones, type VersionDisponible } from '../src/catalogo/catalogo';
+import { CatalogoVivo, listaFija } from '../src/catalogo/vivo';
 import { fuenteMeilisearch } from '../src/catalogo/fuentes/github';
 import { IndiceMalformado, type ContextoFuente } from '../src/catalogo/fuentes/tipos';
 import { FUENTES_VERSIONES } from '../src/catalogo/vivo';
 import { ArchivoCredencialesSchema, ConfigSchema } from '../src/tipos';
+import { entornoDelHijo } from '../src/procesos/entorno';
 import { Rutas } from '../src/rutas';
 import { DEFINICIONES } from '../src/servicios/datos';
 import type { CtxServicio } from '../src/servicios/definicion';
@@ -116,6 +118,29 @@ describe('Meilisearch: arranque', () => {
     expect(argsMeilisearch(c.datos, 7701)).toContain('127.0.0.1:7701');
     expect(def.claveDatos!('1.58.0')).toBe('1.58');
   });
+
+  it('I3: no hereda las variables MEILI_* de la sesión del usuario', async () => {
+    const def = defMeilisearch();
+    const c = ctx('meilisearch', '1.58.0', 7700, (v) => def.claveDatos!(v));
+    const p = await def.proceso(c);
+    const hijo = entornoDelHijo(
+      {
+        PATH: 'x',
+        MEILI_IMPORT_DUMP: 'C:/algo.dump',
+        MEILI_HTTP_ADDR: '0.0.0.0:7700',
+        meili_env: 'development',
+        MEILI_MASTER_KEY: 'OTRA-CLAVE-FALSA',
+      },
+      p,
+    );
+    expect(hijo['PATH']).toBe('x');
+    expect(hijo['MEILI_IMPORT_DUMP']).toBeUndefined();
+    expect(hijo['MEILI_HTTP_ADDR']).toBeUndefined();
+    expect(hijo['meili_env']).toBeUndefined();
+    // La clave del proceso es la propia, no la heredada.
+    expect(hijo['MEILI_MASTER_KEY']).toBe(CLAVE_FALSA);
+    expect(hijo['MEILI_NO_ANALYTICS']).toBe('true');
+  });
 });
 
 describe('registro', () => {
@@ -156,5 +181,42 @@ describe('config guardada con MinIO (retirado del catálogo)', () => {
     expect(r.mysql?.usuario).toBe('root');
     // Se conservan tal cual (el archivo no se pierde) pero nadie las usa.
     expect(Object.keys(r)).toContain('minio');
+  });
+});
+
+describe('M2: la huella en vivo debe coincidir con la fijada', () => {
+  const fijaMeili = (): VersionDisponible => listaFija('meilisearch')[0]!;
+  const enVivo = (valor: string): VersionDisponible => ({
+    ...fijaMeili(),
+    huella: { algoritmo: 'sha256', valor },
+    sha256: valor,
+    origen: 'vivo',
+  });
+  const catalogoCon = async (v: VersionDisponible) => {
+    const rutas = new Rutas(base);
+    await rutas.asegurar();
+    return new CatalogoVivo(rutas, { idCatalogo: () => 'win-x64' }, fetch, {
+      ahora: () => HOY,
+      fuentes: {
+        meilisearch: {
+          servicio: 'meilisearch',
+          hostsIndice: ['api.github.com'],
+          listar: async () => [v],
+        },
+      },
+    });
+  };
+
+  it('con la misma huella, el índice en vivo vale', async () => {
+    const c = await catalogoCon(enVivo(fijaMeili().sha256!));
+    expect((await c.listar('meilisearch')).origen).toBe('vivo');
+  });
+
+  it('con otra huella para la misma versión y URL, se usa la lista fija y no la nueva', async () => {
+    const c = await catalogoCon(enVivo('f'.repeat(64)));
+    const r = await c.listar('meilisearch');
+    expect(r.origen).toBe('fija');
+    expect(r.versiones.map((v) => v.sha256)).toEqual([fijaMeili().sha256]);
+    expect((await c.buscar('meilisearch', fijaMeili().version))?.sha256).toBe(fijaMeili().sha256);
   });
 });

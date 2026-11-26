@@ -56,6 +56,9 @@ export function defMeilisearch(): DefServicio {
         cwd: c.datos,
         env: { MEILI_NO_ANALYTICS: 'true' },
         envSecreto: { MEILI_MASTER_KEY: c.credenciales.clave },
+        // Meilisearch lee cualquier MEILI_* del entorno (MEILI_IMPORT_DUMP, MEILI_HTTP_ADDR…): una
+        // variable de la sesión del usuario no debe cambiar dónde escucha ni qué importa.
+        quitarEntorno: ['MEILI_'],
         puerto: c.puerto,
         log: c.rutas.logs('meilisearch.log'),
         reiniciar: false,

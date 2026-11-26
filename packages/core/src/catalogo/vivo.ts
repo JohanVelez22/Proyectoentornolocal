@@ -49,6 +49,7 @@ import { fuentePhp } from './fuentes/php';
 import { fuentePostgresql } from './fuentes/postgresql';
 import { fuentePython } from './fuentes/python';
 import {
+  IndiceMalformado,
   SinCambios,
   type ContextoFuente,
   type FuenteVersiones,
@@ -199,6 +200,29 @@ export function listaFija(servicio: ServicioInstalable): VersionDisponible[] {
   });
 }
 
+/**
+ * Una versión que el índice en vivo trae con la misma URL que la lista fija debe traer también
+ * la misma huella fuerte (mismo algoritmo). Si cambió, el binario publicado ya no es el que se
+ * fijó al armar el catálogo: se descarta el índice entero (caché o lista fija) y nunca se instala
+ * con una huella nueva sin que nadie lo note.
+ */
+export function verificarContraListaFija(
+  servicio: ServicioInstalable,
+  versiones: readonly VersionDisponible[],
+): void {
+  const fija = listaFija(servicio);
+  for (const v of versiones) {
+    const f = fija.find((x) => x.version === v.version && x.url === v.url);
+    if (!f || !huellaFuerte(f.huella) || !huellaFuerte(v.huella)) continue;
+    if (f.huella!.algoritmo !== v.huella!.algoritmo) continue;
+    if (f.huella!.valor.toLowerCase() !== v.huella!.valor.toLowerCase()) {
+      throw new IndiceMalformado(
+        `La huella en vivo de ${servicio} ${v.version} no coincide con la fijada en el catálogo`,
+      );
+    }
+  }
+}
+
 export interface FiltroVersiones {
   rama?: string;
   /** Muestra también previews y ramas sin soporte. */
@@ -335,6 +359,7 @@ export class CatalogoVivo {
       };
       const versiones = validarIndice(servicio, await fuente.listar(ctx));
       if (versiones.length === 0) throw new Error('El índice no trae versiones');
+      verificarContraListaFija(servicio, versiones);
       const fecha = this.ahora.toISOString();
       await this.cache.guardar(servicio, fecha, versiones, guardar).catch(() => undefined);
       return { versiones: this.conHuellaFija(servicio, versiones), origen: 'vivo', fecha };
