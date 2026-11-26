@@ -376,6 +376,16 @@ export const PARAMETROS_ERROR = {
   'bd.esquema_fallo': [],
   'bd.datos_no_permitidos': [],
   'bd.datos_fallo': [],
+  // consultas lentas y visor de esquema (D45b, D45d)
+  'bd.lentas_confirmar': [],
+  'bd.lentas_umbral_invalido': [],
+  'bd.lentas_motor_no_soportado': [],
+  'bd.lentas_literal_no_permitido': [],
+  'bd.lentas_entrada_no_existe': [],
+  'bd.lentas_fallo': [],
+  'bd.esquema_base_no_existe': [],
+  'bd.esquema_motor_no_soportado': [],
+  'bd.esquema_lectura_fallo': [],
   // perfiles del entorno (D26)
   'perfiles.destino_invalido': [],
   'perfiles.frase_debil': ['minimo'],

@@ -313,6 +313,8 @@ import { registrarPasosReales, type DepsPasos } from './proyectos/pasos/index';
 import { leerHuellaWordpress } from './proyectos/pasos/descargarPlantilla';
 import { generadorPorTipo, Plantillas } from './proyectos/plantillas';
 import { AuditoriaClaves } from './bd/auditoriaClaves';
+import { ConsultasLentas } from './bd/consultasLentas/consultasLentas';
+import type { EsquemaBase } from './bd/esquema';
 import { baseDeDatosReales, baseDeSitio } from './bd/auditoriaClaves/datosReales';
 import { Instantaneas } from './bd/instantaneas';
 import { CerrojoBases } from './bd/cerrojoBases';
@@ -560,6 +562,7 @@ interface ModulosNucleo {
   instantaneas: Instantaneas;
   /** Auditoría de contraseñas de las bases propias (D20). */
   auditoriaClaves: AuditoriaClaves;
+  consultasLentas: ConsultasLentas;
   /** Una operación a la vez por base: instantáneas, restaurar, importar y borrar. */
   cerrojoBases: CerrojoBases;
 }
@@ -802,6 +805,7 @@ export class Nucleo {
   readonly instantaneas: Instantaneas;
   /** Auditoría de contraseñas: revisar hashes y restablecer una contraseña con copia (D20). */
   readonly auditoriaClaves: AuditoriaClaves;
+  readonly consultasLentas: ConsultasLentas;
   private readonly cerrojoBases: CerrojoBases;
   /** Gestor de `.env` de los proyectos: secretos enmascarados, diff, copia y escritura atómica. */
   readonly env: GestorEnv;
@@ -929,6 +933,7 @@ export class Nucleo {
     this.plantillas = m.plantillas;
     this.instantaneas = m.instantaneas;
     this.auditoriaClaves = m.auditoriaClaves;
+    this.consultasLentas = m.consultasLentas;
     this.cerrojoBases = m.cerrojoBases;
     this.env = new GestorEnv({
       sitio: async (id) => (await this.sitios.listar()).find((x) => x.id === id),
@@ -1382,6 +1387,13 @@ export class Nucleo {
       estadoBase: (objetivo, base) => bd.estadoBase(objetivo, base),
       restringir: (ruta) => plat.restringirAlUsuario(ruta),
     });
+    const consultasLentas = new ConsultasLentas({
+      rutas,
+      bd,
+      ubicacion: (o) => servicios.datos.ubicacionInstancia(o),
+      esDatosReales: (instancia, base) =>
+        baseDeDatosReales({ sitios: () => sitios.listar(), baseDe: baseDeSitio }, instancia, base),
+    });
     const auditoriaClaves = new AuditoriaClaves({
       rutas,
       abrir: (objetivo, base, modo, plazoMs) => bd.abrirConsulta(objetivo, base, modo, plazoMs),
@@ -1607,6 +1619,7 @@ export class Nucleo {
       plantillas,
       instantaneas,
       auditoriaClaves,
+      consultasLentas,
       cerrojoBases,
       editorVhost,
       ...(o.lanzarEditor ? { lanzarEditor: o.lanzarEditor } : {}),
@@ -2136,6 +2149,11 @@ export class Nucleo {
   /** Borra una base; `confirmacion` debe ser su nombre exacto. */
   borrarBase(motor: ObjetivoBd, nombre: string, confirmacion: string): Promise<void> {
     return this.cerrojoBases.con(motor, nombre, () => this.bd.borrar(motor, nombre, confirmacion));
+  }
+
+  /** Esquema (solo metadatos) de una base; el nombre se valida contra las bases reales (D45d). */
+  esquemaBd(motor: ObjetivoBd, base: string): Promise<EsquemaBase> {
+    return this.bd.esquema(motor, base);
   }
 
   /** Datos de conexión del motor, con su clave (uso interno: nunca llega tal cual a la interfaz). */

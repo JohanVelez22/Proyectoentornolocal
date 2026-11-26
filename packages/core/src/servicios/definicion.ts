@@ -542,6 +542,22 @@ export class ServiciosDatos {
     return this.d.rutas.datos(def.id, version, clave ? (v) => clave.call(def, v) : undefined);
   }
 
+  /**
+   * Dónde viven los datos y el registro de una instancia gestionada por WolfCore (su carpeta de
+   * datos y el archivo donde el supervisor escribe su salida). Solo para el núcleo: la interfaz
+   * nunca recibe estas rutas.
+   */
+  async ubicacionInstancia(
+    ref: IdServicioDatos | IdInstancia,
+  ): Promise<{ servicio: IdServicioDatos; claveDatos: string; log: string }> {
+    const { def, inst } = await this.objetivo(ref, await this.d.leerConfig());
+    return {
+      servicio: def.id,
+      claveDatos: path.basename(this.carpetaInstancia(def.id, inst.clave)),
+      log: this.d.rutas.logs(inst.implicita ? `${def.id}.log` : `${def.id}-${inst.clave}.log`),
+    };
+  }
+
   /** data/<servicio>/<clave> de una instancia. */
   carpetaInstancia(servicio: IdServicioDatos, clave: string): string {
     return this.d.rutas.datos(servicio, clave, () => clave);

@@ -28,6 +28,12 @@ import {
   type ResultadoCrearBasePg,
 } from './clientePostgres';
 import { bloqueEnv, type DatosConexion, type MotorBd } from './env';
+import {
+  leerEsquemaMysql,
+  leerEsquemaPostgres,
+  PLAZO_ESQUEMA_MS,
+  type EsquemaBase,
+} from './esquema';
 import { nombreEjecutable } from '../plataforma/sistema';
 
 export {
@@ -507,6 +513,135 @@ export class BasesDeDatos {
     o: { permitidas: readonly string[]; importada: boolean },
   ): Promise<string[]> {
     return this.conPostgres((c) => c.auditarCatalogo(base, o), objetivo);
+  }
+
+  /**
+   * Esquema (solo metadatos) de una base de MySQL, MariaDB o PostgreSQL. El nombre se valida contra
+   * la lista real de bases del servidor; la sesión va en solo lectura y con un plazo total de 15 s.
+   */
+  async esquema(objetivo: ObjetivoBd, base: string): Promise<EsquemaBase> {
+    const motor = motorDe(objetivo);
+    if (motor === 'mongodb') {
+      throw new ErrorWolf(
+        'bd.esquema_motor_no_soportado',
+        'El visor de esquema es para MySQL, MariaDB y PostgreSQL.',
+      );
+    }
+    if (typeof base !== 'string' || !(await this.listar(objetivo)).some((b) => b.nombre === base)) {
+      throw new ErrorWolf('bd.esquema_base_no_existe', 'La base no existe en ese servidor.');
+    }
+    const x = await this.conexion(objetivo);
+    const fallo = (): ErrorWolf =>
+      new ErrorWolf('bd.esquema_lectura_fallo', 'No se pudo leer el esquema de la base.');
+    if (motor === 'postgresql') {
+      validarNombrePg(base);
+      const c = new ClientePostgres(this.d.fabricas?.postgres);
+      let fin: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const plazo = new Promise<never>((_r, rechazar) => {
+          fin = setTimeout(() => rechazar(fallo()), PLAZO_ESQUEMA_MS);
+        });
+        return await Promise.race([
+          (async () => {
+            await c.conectar({ host: x.host, puerto: x.puerto, usuario: x.usuario, clave: x.clave ?? '', base });
+            await c.consultar('SET search_path = pg_catalog, pg_temp');
+            await c.consultar('SET default_transaction_read_only = on');
+            await c.consultar(`SET statement_timeout = ${PLAZO_ESQUEMA_MS}`);
+            return leerEsquemaPostgres((q, p) => c.consultar(q, p), base);
+          })(),
+          plazo,
+        ]);
+      } catch (e) {
+        throw e instanceof ErrorWolf ? e : fallo();
+      } finally {
+        if (fin) clearTimeout(fin);
+        await c.cerrar();
+      }
+    }
+    validarNombreBd(base);
+    const c = new ClienteMysql(this.d.fabricas?.mysql, {
+      senal: AbortSignal.timeout(PLAZO_ESQUEMA_MS),
+    });
+    try {
+      await c.conectar({ host: x.host, puerto: x.puerto, usuario: x.usuario, clave: x.clave ?? '' });
+      await c.consultar('SET SESSION TRANSACTION READ ONLY');
+      return await leerEsquemaMysql((q, p) => c.consultar(q, p), motor, base);
+    } catch (e) {
+      throw e instanceof ErrorWolf ? e : fallo();
+    } finally {
+      await c.cerrar();
+    }
+  }
+
+  /** Estado global de las consultas lentas del servidor (MySQL, MariaDB, PostgreSQL). */
+  async lentasEstado(objetivo: ObjetivoBd): Promise<{ activo: boolean; segundos: number | null }> {
+    const motor = motorDe(objetivo);
+    if (motor === 'mongodb') {
+      throw new ErrorWolf(
+        'bd.lentas_motor_no_soportado',
+        'Las consultas lentas son para MySQL, MariaDB y PostgreSQL.',
+      );
+    }
+    if (motor === 'postgresql') {
+      const f = await this.conPostgres(
+        (c) =>
+          c.consultar(
+            "SELECT setting FROM pg_catalog.pg_settings WHERE name = 'log_min_duration_statement'",
+          ),
+        objetivo,
+      );
+      const ms = Number(f[0]?.['setting'] ?? -1);
+      return { activo: ms >= 0, segundos: ms >= 0 ? ms / 1000 : null };
+    }
+    const f = await this.conMysql(objetivo, (c) =>
+      c.consultar(
+        'SELECT @@GLOBAL.slow_query_log AS activo, @@GLOBAL.long_query_time AS segundos',
+      ),
+    );
+    const a = f[0];
+    return { activo: Number(a?.['activo']) === 1, segundos: a ? Number(a['segundos']) : null };
+  }
+
+  /**
+   * Cambio GLOBAL del servidor: activa o desactiva el registro de consultas lentas. Quien llama ya
+   * exigió la confirmación y comprobó que la instancia es de WolfCore. `archivo` (solo MySQL y
+   * MariaDB) sale de la carpeta de registros de la instancia, nunca de texto del usuario.
+   */
+  async lentasAplicar(
+    objetivo: ObjetivoBd,
+    a: { activo: boolean; segundos: number; archivo: string },
+  ): Promise<void> {
+    const motor = motorDe(objetivo);
+    if (motor === 'mongodb') {
+      throw new ErrorWolf(
+        'bd.lentas_motor_no_soportado',
+        'Las consultas lentas son para MySQL, MariaDB y PostgreSQL.',
+      );
+    }
+    if (motor === 'postgresql') {
+      const ms = Math.round(a.segundos * 1000);
+      await this.conPostgres(async (c) => {
+        // ALTER SYSTEM no admite parámetros: los valores son un entero ya validado y constantes.
+        if (a.activo) {
+          await c.consultar(`ALTER SYSTEM SET log_min_duration_statement = ${ms}`);
+          await c.consultar("ALTER SYSTEM SET log_line_prefix = '%m [%p] db=%d '");
+        } else {
+          await c.consultar('ALTER SYSTEM RESET log_min_duration_statement');
+          await c.consultar('ALTER SYSTEM RESET log_line_prefix');
+        }
+        await c.consultar('SELECT pg_catalog.pg_reload_conf()');
+      }, objetivo);
+      return;
+    }
+    await this.conMysql(objetivo, async (c) => {
+      if (a.activo) {
+        await c.consultar('SET GLOBAL slow_query_log_file = ?', [a.archivo.replaceAll('\\', '/')]);
+        await c.consultar('SET GLOBAL long_query_time = ?', [a.segundos]);
+        await c.consultar('SET GLOBAL slow_query_log = 1');
+      } else {
+        await c.consultar('SET GLOBAL slow_query_log = 0');
+      }
+    });
   }
 
   /** Borra los usuarios y roles temporales vencidos de un servidor encendido. */

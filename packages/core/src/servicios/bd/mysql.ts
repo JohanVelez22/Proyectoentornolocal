@@ -6,6 +6,7 @@ import type { DefProceso } from '../../procesos/supervisor';
 import { registrarDefinicion } from '../datos';
 import type { CtxServicio, DefServicio } from '../definicion';
 import { nombreEjecutable } from '../../plataforma/sistema';
+import { leerAjuste, rutaAjuste, rutaLogLento } from '../../bd/consultasLentas/ajustes';
 
 export type VarianteMysql = 'mysql' | 'mariadb';
 
@@ -16,7 +17,12 @@ const elegir = (c: CtxServicio, candidatos: string[]): string =>
 const adelante = (p: string): string => p.replaceAll('\\', '/');
 
 /** Contenido del my.ini; las rutas llevan "/" porque MySQL trata "\" como escape. */
-export function contenidoIni(v: VarianteMysql, datadir: string, puerto: number): string {
+export function contenidoIni(
+  v: VarianteMysql,
+  datadir: string,
+  puerto: number,
+  lentas?: { segundos: number; archivo: string },
+): string {
   const lineas = [
     '[mysqld]',
     `datadir="${adelante(datadir)}"`,
@@ -25,6 +31,14 @@ export function contenidoIni(v: VarianteMysql, datadir: string, puerto: number):
     'character-set-server=utf8mb4',
   ];
   if (v === 'mysql') lineas.push('mysqlx=OFF');
+  // Consultas lentas (D45b): solo si el usuario las activó; el archivo va en la carpeta de registros.
+  if (lentas) {
+    lineas.push(
+      'slow_query_log=1',
+      `long_query_time=${lentas.segundos}`,
+      `slow_query_log_file="${adelante(lentas.archivo)}"`,
+    );
+  }
   return lineas.join('\n') + '\n';
 }
 
@@ -36,7 +50,12 @@ function rutaIni(c: CtxServicio, v: VarianteMysql): string {
 async function escribirIni(c: CtxServicio, v: VarianteMysql): Promise<string> {
   const ini = rutaIni(c, v);
   await mkdir(path.dirname(ini), { recursive: true });
-  await writeFile(ini, contenidoIni(v, c.datos, c.puerto), 'utf8');
+  const clave = path.basename(c.datos);
+  const ajuste = await leerAjuste(rutaAjuste(c.rutas, v, clave));
+  const lentas = ajuste?.activo
+    ? { segundos: ajuste.segundos, archivo: rutaLogLento(c.rutas, v, clave) }
+    : undefined;
+  await writeFile(ini, contenidoIni(v, c.datos, c.puerto, lentas), 'utf8');
   return ini;
 }
 
