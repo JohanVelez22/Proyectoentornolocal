@@ -1,5 +1,4 @@
-import { mkdirSync, symlinkSync } from 'node:fs';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, realpathSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -225,7 +224,12 @@ describe('optimizador de RAM: lista protegida', () => {
     }
     const falsa = escenario();
     falsa.procesosUsuario.push(
-      proc({ pid: 400, nombre: 'viaje.exe', ruta: path.join(real, 'viaje.exe') }),
+      proc({
+        pid: 400,
+        nombre: 'viaje.exe',
+        // El programa vive en la carpeta real (la que resuelve el enlace), con su nombre canónico.
+        ruta: path.join(realpathSync.native(real), 'viaje.exe'),
+      }),
     );
     const plan = await new OptimizadorMemoria(
       depsBase(falsa, { rutasPropias: () => [enlace] }),
