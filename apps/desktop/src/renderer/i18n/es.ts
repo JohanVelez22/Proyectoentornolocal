@@ -5100,10 +5100,10 @@ export const es = {
     },
     acentoPropio: (color: string) => `Personalizado (${color})`,
     errorGuardar: 'No se pudo guardar la preferencia',
-    asistente: 'Asistente de primer uso',
+    asistente: 'Recorrido de bienvenida',
     asistenteAyuda:
-      'Vuelva a recorrer los pasos iniciales: carpeta de proyectos, lo básico, la CA, GitHub y la carpeta vigilada.',
-    asistenteAbrir: 'Abrir el asistente',
+      'Vuelva a ver el recorrido por las pantallas principales: servicios, proyectos, bases de datos, herramientas y Doctor.',
+    asistenteAbrir: 'Ver el recorrido',
     avanzadas: 'Mostrar secciones avanzadas',
     avanzadasAyuda:
       'Añade a la barra lateral las pantallas que casi no se usan, como Contenedores. También se llega a ellas con Ctrl+K.',
@@ -5139,7 +5139,7 @@ export const es = {
     nuevoProyecto: 'Crear un proyecto nuevo',
     tema: (tema: string) => `Tema: ${tema}`,
     idioma: (idioma: string) => `Idioma: ${idioma}`,
-    asistente: 'Abrir el asistente de primer uso',
+    asistente: 'Ver el recorrido de bienvenida',
   },
   nuevoProyecto: {
     titulo: 'Nuevo proyecto',
@@ -5525,55 +5525,50 @@ export const es = {
     guardadoConCopia: 'El .env se guardó; la versión anterior quedó como copia.',
   },
   asistenteInicio: {
-    titulo: 'Bienvenido a WolfCore Dev',
-    subtitulo:
-      'Cinco pasos para dejar el entorno listo. Nada se instala ni se cambia hasta que usted pulse el botón de cada paso.',
+    titulo: 'Recorrido de bienvenida',
     paso: (n: number, total: number) => `Paso ${n} de ${total}`,
     anterior: 'Anterior',
     siguiente: 'Siguiente',
-    omitirTodo: 'Omitir el asistente',
-    terminar: 'Terminar',
-    hecho: 'Hecho',
-    reabrir: 'Puede volver a abrirlo desde Ajustes.',
+    saltar: 'Saltar recorrido',
+    terminar: 'Empezar',
+    cerrar: 'Cerrar el recorrido',
+    reabrir: 'Pulse Esc para salir. Puede volver a verlo desde Ajustes › Apariencia.',
+    ir: (destino: string) => `Ir a ${destino}`,
     pasos: {
-      carpeta: {
-        titulo: 'Carpeta de proyectos',
+      bienvenida: {
+        titulo: 'Bienvenido a WolfCore Dev',
         texto:
-          'Dónde guarda sus proyectos. Ahí se clonan los repositorios nuevos y es la carpeta que se vigila en el último paso.',
-        elegir: 'Elegir carpeta',
-        actual: (ruta: string) => `Carpeta elegida: ${ruta}`,
-        guardada: (ruta: string) => `Carpeta actual: ${ruta}`,
-        ninguna: 'Sin elegir: se usa C:\\Proyectos si existe.',
+          'Su entorno de desarrollo local en una sola ventana: servicios, sitios .test con HTTPS, bases de datos, correo y herramientas. Este recorrido dura un minuto y no cambia nada en su equipo.',
       },
-      basicos: {
-        titulo: 'Instalar lo básico',
+      servicios: {
+        titulo: 'Servicios',
         texto:
-          'Nginx, PHP 8.4, Composer y Node LTS desde sus fuentes oficiales, con la huella verificada. Cada uno se instala solo al pulsar su botón.',
-        instalado: 'Instalado',
-        instalar: (version: string) => `Instalar ${version}`,
-        sinVersion: 'Sin versión en el catálogo',
-        cargando: 'Buscando versiones…',
-        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
+          'Encienda aquí Nginx, PHP y las bases de datos con un interruptor. Si aún no están instalados, la pestaña Versiones los descarga con la huella verificada.',
       },
-      ca: {
-        titulo: 'Confiar en la autoridad local',
+      proyectos: {
+        titulo: 'Proyectos',
         texto:
-          'Para que los sitios .test abran por HTTPS sin avisos, Windows debe confiar en la autoridad de WolfCore Dev. Windows le pedirá confirmación.',
-        confiar: 'Confiar en la CA',
-        confiada: 'Windows ya confía en la autoridad local.',
+          'Cree un proyecto nuevo o importe una carpeta o un repositorio. Cada sitio recibe su propia dirección .test con HTTPS.',
       },
-      github: {
-        titulo: 'Conectar GitHub',
+      bases: {
+        titulo: 'Bases de datos',
         texto:
-          'Para ver sus repositorios y clonarlos con un clic. Use la sesión de GitHub CLI o un token personal, que se guarda cifrado en este equipo.',
+          'Cree bases, importe y exporte volcados, y haga respaldos y restauraciones sin salir de la aplicación.',
       },
-      vigilar: {
-        titulo: 'Vigilar la carpeta',
+      herramientas: {
+        titulo: 'Herramientas y Ctrl+K',
         texto:
-          'WolfCore Dev le sugerirá montar cada carpeta nueva que aparezca en la carpeta de proyectos. No se monta nada sin su confirmación.',
-        activar: 'Vigilar esta carpeta',
-        activa: (ruta: string) => `Vigilando ${ruta}`,
-        sinCarpeta: 'Elija primero la carpeta de proyectos (paso 1).',
+          'Editor, buscador, comparador, contraseñas, imágenes y más, agrupadas por secciones. Pulse Ctrl+K en cualquier pantalla para saltar a lo que busque.',
+      },
+      doctor: {
+        titulo: 'Doctor',
+        texto:
+          'Revisa puertos, hosts, certificados y versiones, y le propone cómo arreglar lo que falle. Ábralo cuando algo no responda.',
+      },
+      listo: {
+        titulo: 'Todo listo',
+        texto:
+          'Empiece por encender un servicio o por crear su primer proyecto. Puede volver a ver este recorrido desde Ajustes › Apariencia.',
       },
     },
   },

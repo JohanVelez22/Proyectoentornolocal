@@ -179,6 +179,8 @@ try {
   await ventana
     .evaluate(() => window.entorno.preferencias.guardar({ asistenteVisto: true }))
     .catch(() => undefined);
+  // El recorrido de bienvenida puede haberse abierto antes de marcarlo como visto: Esc lo cierra.
+  if (await ventana.$('[data-recorrido]')) await ventana.keyboard.press('Escape');
   await ventana.waitForTimeout(800);
 
   for (const [nombre, hash] of VISTAS) {

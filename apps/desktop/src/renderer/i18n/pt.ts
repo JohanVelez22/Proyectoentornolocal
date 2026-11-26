@@ -5111,10 +5111,10 @@ export const pt: Textos = {
     },
     acentoPropio: (color: string) => `Personalizada (${color})`,
     errorGuardar: 'Não foi possível salvar a preferência',
-    asistente: 'Assistente de primeiro uso',
+    asistente: 'Tour de boas-vindas',
     asistenteAyuda:
-      'Percorra de novo os passos iniciais: pasta de projetos, o básico, a CA, o GitHub e a pasta monitorada.',
-    asistenteAbrir: 'Abrir o assistente',
+      'Veja de novo o tour pelas telas principais: serviços, projetos, bancos de dados, ferramentas e Doctor.',
+    asistenteAbrir: 'Ver o tour',
     avanzadas: 'Mostrar seções avançadas',
     avanzadasAyuda:
       'Adiciona à barra lateral as telas pouco usadas, como Contêineres. Também dá para chegar a elas com Ctrl+K.',
@@ -5150,7 +5150,7 @@ export const pt: Textos = {
     nuevoProyecto: 'Criar um projeto novo',
     tema: (tema: string) => `Tema: ${tema}`,
     idioma: (idioma: string) => `Idioma: ${idioma}`,
-    asistente: 'Abrir o assistente de primeiro uso',
+    asistente: 'Ver o tour de boas-vindas',
   },
   nuevoProyecto: {
     titulo: 'Novo projeto',
@@ -5534,55 +5534,50 @@ export const pt: Textos = {
     guardadoConCopia: 'O .env foi salvo; a versão anterior ficou como cópia.',
   },
   asistenteInicio: {
-    titulo: 'Bem-vindo ao WolfCore Dev',
-    subtitulo:
-      'Cinco passos para deixar o ambiente pronto. Nada é instalado nem alterado até você clicar no botão de cada passo.',
+    titulo: 'Tour de boas-vindas',
     paso: (n: number, total: number) => `Passo ${n} de ${total}`,
     anterior: 'Anterior',
     siguiente: 'Próximo',
-    omitirTodo: 'Pular o assistente',
-    terminar: 'Concluir',
-    hecho: 'Feito',
-    reabrir: 'Você pode abri-lo de novo em Configurações.',
+    saltar: 'Pular tour',
+    terminar: 'Começar',
+    cerrar: 'Fechar o tour',
+    reabrir: 'Pressione Esc para sair. Você pode ver o tour de novo em Configurações › Aparência.',
+    ir: (destino: string) => `Ir para ${destino}`,
     pasos: {
-      carpeta: {
-        titulo: 'Pasta de projetos',
+      bienvenida: {
+        titulo: 'Bem-vindo ao WolfCore Dev',
         texto:
-          'Onde você guarda os seus projetos. É lá que os novos repositórios são clonados e é a pasta monitorada no último passo.',
-        elegir: 'Escolher pasta',
-        actual: (ruta: string) => `Pasta escolhida: ${ruta}`,
-        guardada: (ruta: string) => `Pasta atual: ${ruta}`,
-        ninguna: 'Sem escolher: usa-se C:\\Proyectos se existir.',
+          'Seu ambiente de desenvolvimento local em uma só janela: serviços, sites .test com HTTPS, bancos de dados, e-mail e ferramentas. Este tour leva um minuto e não altera nada no seu computador.',
       },
-      basicos: {
-        titulo: 'Instalar o básico',
+      servicios: {
+        titulo: 'Serviços',
         texto:
-          'Nginx, PHP 8.4, Composer e Node LTS a partir das fontes oficiais, com o checksum verificado. Cada um é instalado somente ao clicar no botão dele.',
-        instalado: 'Instalado',
-        instalar: (version: string) => `Instalar ${version}`,
-        sinVersion: 'Sem versão no catálogo',
-        cargando: 'Buscando versões…',
-        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
+          'Ligue aqui o Nginx, o PHP e os bancos de dados com um interruptor. Se ainda não estiverem instalados, a aba Versões os baixa com a impressão digital verificada.',
       },
-      ca: {
-        titulo: 'Confiar na autoridade local',
+      proyectos: {
+        titulo: 'Projetos',
         texto:
-          'Para que os sites .test abram por HTTPS sem avisos, o Windows deve confiar na autoridade do WolfCore Dev. O Windows vai pedir confirmação.',
-        confiar: 'Confiar na CA',
-        confiada: 'O Windows já confia na autoridade local.',
+          'Crie um projeto novo ou importe uma pasta ou um repositório. Cada site recebe seu próprio endereço .test com HTTPS.',
       },
-      github: {
-        titulo: 'Conectar o GitHub',
+      bases: {
+        titulo: 'Bancos de dados',
         texto:
-          'Para ver os seus repositórios e cloná-los com um clique. Use a sessão do GitHub CLI ou um token pessoal, que é guardado criptografado neste computador.',
+          'Crie bancos, importe e exporte dumps, e faça backups e restaurações sem sair do aplicativo.',
       },
-      vigilar: {
-        titulo: 'Monitorar a pasta',
+      herramientas: {
+        titulo: 'Ferramentas e Ctrl+K',
         texto:
-          'O WolfCore Dev vai sugerir montar cada pasta nova que aparecer na pasta de projetos. Nada é montado sem a sua confirmação.',
-        activar: 'Monitorar esta pasta',
-        activa: (ruta: string) => `Monitorando ${ruta}`,
-        sinCarpeta: 'Escolha primeiro a pasta de projetos (passo 1).',
+          'Editor, busca, comparador, senhas, imagens e mais, agrupados por seção. Pressione Ctrl+K em qualquer tela para ir direto ao que procura.',
+      },
+      doctor: {
+        titulo: 'Doctor',
+        texto:
+          'Verifica portas, hosts, certificados e versões, e sugere como corrigir o que falhar. Abra-o quando algo não responder.',
+      },
+      listo: {
+        titulo: 'Tudo pronto',
+        texto:
+          'Comece ligando um serviço ou criando seu primeiro projeto. Você pode ver este tour de novo em Configurações › Aparência.',
       },
     },
   },

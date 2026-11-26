@@ -78,37 +78,7 @@ describe('paleta de comandos', () => {
   });
 });
 
-describe('asistente de primer uso: lo básico', () => {
-  const v = (servicio: string, version: string, rama?: string) =>
-    ({ servicio, version, ...(rama ? { rama } : {}) }) as never;
-
-  it('propone la versión más nueva; en PHP, la más nueva de la rama 8.4', async () => {
-    const { BASICOS, versionBasica } = await import('../src/renderer/utilidades/asistenteInicio');
-    const php = BASICOS.find((b) => b.servicio === 'php')!;
-    const node = BASICOS.find((b) => b.servicio === 'node')!;
-    const lista = [
-      v('php', '8.3.20', '8.3'),
-      v('php', '8.4.9', '8.4'),
-      v('php', '8.4.12', '8.4'),
-      v('php', '8.5.0', '8.5'),
-      v('node', '22.20.0'),
-      v('node', '24.11.1'),
-    ];
-    expect(versionBasica(php, lista)?.version).toBe('8.4.12');
-    expect(versionBasica(node, lista)?.version).toBe('24.11.1');
-    expect(versionBasica(BASICOS[0]!, lista)).toBeUndefined();
-  });
-
-  it('ya instalado: cualquier versión, o la rama en PHP', async () => {
-    const { BASICOS, yaInstalado } = await import('../src/renderer/utilidades/asistenteInicio');
-    const php = BASICOS.find((b) => b.servicio === 'php')!;
-    expect(yaInstalado(php, ['8.3'])).toBe(false);
-    expect(yaInstalado(php, ['8.4'])).toBe(true);
-    expect(yaInstalado(php, ['8.4.12'])).toBe(true);
-    expect(yaInstalado(BASICOS[0]!, [])).toBe(false);
-    expect(yaInstalado(BASICOS[0]!, ['1.28.0'])).toBe(true);
-  });
-
+describe('comando «Nuevo proyecto»', () => {
   it('el comando "Nuevo proyecto" va en proyectos y lo encuentran nuevo, crear y los tipos', () => {
     let llamado = 0;
     const nuevo = comandoNuevoProyecto('Crear un proyecto nuevo', () => void llamado++);

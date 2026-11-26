@@ -5071,10 +5071,10 @@ export const en: Textos = {
     },
     acentoPropio: (color: string) => `Custom (${color})`,
     errorGuardar: 'Could not save the preference',
-    asistente: 'First-run wizard',
+    asistente: 'Welcome tour',
     asistenteAyuda:
-      'Go through the initial steps again: projects folder, the basics, the CA, GitHub and the watched folder.',
-    asistenteAbrir: 'Open the wizard',
+      'Watch the tour of the main screens again: services, projects, databases, tools and Doctor.',
+    asistenteAbrir: 'Watch the tour',
     avanzadas: 'Show advanced sections',
     avanzadasAyuda:
       'Adds the rarely used screens to the sidebar, such as Containers. They are also reachable with Ctrl+K.',
@@ -5110,7 +5110,7 @@ export const en: Textos = {
     nuevoProyecto: 'Create a new project',
     tema: (tema: string) => `Theme: ${tema}`,
     idioma: (idioma: string) => `Language: ${idioma}`,
-    asistente: 'Open the first-run wizard',
+    asistente: 'Watch the welcome tour',
   },
   nuevoProyecto: {
     titulo: 'New project',
@@ -5500,55 +5500,50 @@ export const en: Textos = {
     guardadoConCopia: 'The .env was saved; the previous version was kept as a copy.',
   },
   asistenteInicio: {
-    titulo: 'Welcome to WolfCore Dev',
-    subtitulo:
-      'Five steps to get your environment ready. Nothing is installed or changed until you click the button in each step.',
+    titulo: 'Welcome tour',
     paso: (n: number, total: number) => `Step ${n} of ${total}`,
     anterior: 'Back',
     siguiente: 'Next',
-    omitirTodo: 'Skip the wizard',
-    terminar: 'Finish',
-    hecho: 'Done',
-    reabrir: 'You can open it again from Settings.',
+    saltar: 'Skip tour',
+    terminar: 'Get started',
+    cerrar: 'Close the tour',
+    reabrir: 'Press Esc to leave. You can watch it again from Settings › Appearance.',
+    ir: (destino: string) => `Go to ${destino}`,
     pasos: {
-      carpeta: {
-        titulo: 'Projects folder',
+      bienvenida: {
+        titulo: 'Welcome to WolfCore Dev',
         texto:
-          'Where you keep your projects. New repositories are cloned there, and it is the folder watched in the last step.',
-        elegir: 'Choose folder',
-        actual: (ruta: string) => `Chosen folder: ${ruta}`,
-        guardada: (ruta: string) => `Current folder: ${ruta}`,
-        ninguna: 'Not chosen: C:\\Proyectos is used if it exists.',
+          'Your local development environment in a single window: services, .test sites with HTTPS, databases, mail and tools. This tour takes a minute and changes nothing on your computer.',
       },
-      basicos: {
-        titulo: 'Install the basics',
+      servicios: {
+        titulo: 'Services',
         texto:
-          'Nginx, PHP 8.4, Composer and Node LTS from their official sources, with verified checksums. Each one is installed only when you click its button.',
-        instalado: 'Installed',
-        instalar: (version: string) => `Install ${version}`,
-        sinVersion: 'No version in the catalog',
-        cargando: 'Looking for versions…',
-        nombres: { nginx: 'Nginx', php: 'PHP 8.4', composer: 'Composer', node: 'Node LTS' },
+          'Turn on Nginx, PHP and the databases here with a switch. If they are not installed yet, the Versions tab downloads them with a verified checksum.',
       },
-      ca: {
-        titulo: 'Trust the local authority',
+      proyectos: {
+        titulo: 'Projects',
         texto:
-          'For .test sites to open over HTTPS without warnings, Windows must trust the WolfCore Dev authority. Windows will ask you to confirm.',
-        confiar: 'Trust the CA',
-        confiada: 'Windows already trusts the local authority.',
+          'Create a new project or import a folder or a repository. Each site gets its own .test address with HTTPS.',
       },
-      github: {
-        titulo: 'Connect GitHub',
+      bases: {
+        titulo: 'Databases',
         texto:
-          'To see your repositories and clone them in one click. Use your GitHub CLI session or a personal token, stored encrypted on this computer.',
+          'Create databases, import and export dumps, and back up and restore without leaving the app.',
       },
-      vigilar: {
-        titulo: 'Watch the folder',
+      herramientas: {
+        titulo: 'Tools and Ctrl+K',
         texto:
-          'WolfCore Dev will suggest setting up each new folder that appears in the projects folder. Nothing is set up without your confirmation.',
-        activar: 'Watch this folder',
-        activa: (ruta: string) => `Watching ${ruta}`,
-        sinCarpeta: 'Choose the projects folder first (step 1).',
+          'Editor, search, compare, passwords, images and more, grouped by section. Press Ctrl+K on any screen to jump to what you need.',
+      },
+      doctor: {
+        titulo: 'Doctor',
+        texto:
+          'It checks ports, hosts, certificates and versions, and suggests how to fix what fails. Open it when something does not respond.',
+      },
+      listo: {
+        titulo: 'All set',
+        texto:
+          'Start by turning on a service or creating your first project. You can watch this tour again from Settings › Appearance.',
       },
     },
   },

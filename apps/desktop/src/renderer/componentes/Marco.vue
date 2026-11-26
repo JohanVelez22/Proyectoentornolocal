@@ -29,7 +29,16 @@ import {
   type MenuOption,
 } from 'naive-ui';
 import type { Aviso } from '../../shared/api';
-import { computed, h, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue';
+import {
+  computed,
+  h,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+  type Component,
+  type HTMLAttributes,
+} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
@@ -95,6 +104,8 @@ const item = (k: SeccionNav): MenuOption => ({
   key: k,
   label: textos.nav[k],
   icon: icono(ICONOS[k]),
+  // El recorrido de bienvenida resalta la entrada por este atributo.
+  props: { 'data-nav': k } as HTMLAttributes,
 });
 /** Barra lateral agrupada (se rearma al cambiar de idioma). */
 const opciones = computed<MenuOption[]>(() => [
