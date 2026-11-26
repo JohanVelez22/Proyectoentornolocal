@@ -25,6 +25,8 @@ export default tseslint.config(
         process: 'readonly',
         console: 'readonly',
         setTimeout: 'readonly',
+        fetch: 'readonly',
+        AbortSignal: 'readonly',
         window: 'readonly',
         document: 'readonly',
         location: 'readonly',

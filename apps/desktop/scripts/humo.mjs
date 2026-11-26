@@ -8,7 +8,7 @@
 // En Linux se lanza sin sandbox de Chromium (el CI no instala chrome-sandbox con SUID) y debe correr
 // bajo xvfb-run.
 import { chromium } from 'playwright-core';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -60,7 +60,7 @@ function buscarEjecutable() {
 }
 
 const datos = mkdtempSync(path.join(tmpdir(), 'wolfcore-humo-'));
-const env = { ...process.env, WOLFCORE_DATOS: datos };
+const env = { ...process.env, WOLFCORE_DATOS: datos, ELECTRON_ENABLE_LOGGING: '1' };
 delete env.ELECTRON_RENDERER_URL;
 delete env.ELECTRON_RUN_AS_NODE;
 const comunes = process.platform === 'linux' ? ['--no-sandbox', '--disable-gpu'] : [];
@@ -71,6 +71,29 @@ const falla = (m) => {
   console.error(`FALLO: ${m}`);
 };
 const registro = (m) => console.log(m);
+
+/** Si no se puede conectar: qué responde el puerto de depuración y cómo está el proceso. */
+async function diagnosticar(puerto, pid) {
+  for (const ruta of ['json/version', 'json/list']) {
+    try {
+      const r = await fetch(`http://127.0.0.1:${puerto}/${ruta}`, {
+        signal: AbortSignal.timeout(8000),
+      });
+      console.error(`diagnóstico ${ruta}: ${r.status} ${(await r.text()).slice(0, 600)}`);
+    } catch (e) {
+      console.error(`diagnóstico ${ruta}: ${e}`);
+    }
+  }
+  if (process.platform !== 'win32' && pid) {
+    for (const ps of [
+      ['-o', 'pid,stat,pcpu,time,comm', '-p', String(pid)],
+      ['-o', 'pid,stat,pcpu,comm', '--ppid', String(pid)],
+    ]) {
+      const r = spawnSync('ps', ps, { encoding: 'utf8' });
+      console.error(`diagnóstico ps: ${r.stdout}${r.stderr}`);
+    }
+  }
+}
 
 let proc = null;
 let browser = null;
@@ -107,7 +130,12 @@ try {
       throw new Error('La app terminó antes de abrir el puerto de depuración.');
   }
   if (!ws) throw new Error('La app no abrió el puerto de depuración en 120 s.');
-  browser = await chromium.connectOverCDP(ws);
+  try {
+    browser = await chromium.connectOverCDP(ws, { timeout: 60_000 });
+  } catch (e) {
+    await diagnosticar(puerto, proc.pid);
+    throw e;
+  }
   const contexto = browser.contexts()[0];
   const consola = [];
   const alerta = (tipo, texto) => consola.push(`${tipo}: ${texto}`.slice(0, 500));
