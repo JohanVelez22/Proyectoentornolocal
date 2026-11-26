@@ -58,6 +58,12 @@ const puertoNuevo = computed(() => {
   return p.hallazgo.datos['alternativo'] ?? null;
 });
 
+/** Cortafuegos (D46): el diálogo muestra la lista exacta de reglas antes de confirmar. */
+const conLista = computed(() => {
+  const id = pedido.value?.reparacion.id;
+  return id === 'quitar-reglas-firewall' || id === 'restaurar-reglas-firewall';
+});
+
 /** Única vía a `reparar`: el botón "Aplicar" del diálogo, que pasa la confirmación explícita. */
 function aplicar(): void {
   const p = pedido.value;
@@ -243,6 +249,11 @@ const firefoxActivos = computed(() => conf.value?.firefox.some((p) => p.activo) 
         </p>
         <p>{{ t.dialogo.queHara }}</p>
         <p class="que-hara">{{ textoReparacion(pedido.reparacion.codigo) }}</p>
+        <template v-if="conLista">
+          <p>{{ t.dialogo.reglas }}</p>
+          <pre class="lista-exacta">{{ pedido.hallazgo.evidencia }}</pre>
+          <p>{{ t.dialogo.reglasNota }}</p>
+        </template>
         <p v-if="puertoNuevo !== null">{{ t.dialogo.puerto(puertoNuevo) }}</p>
         <NAlert v-if="pedido.reparacion.requiereAdmin" type="warning" :show-icon="false">
           {{ t.dialogo.admin }}
@@ -352,5 +363,18 @@ h3 {
 }
 .que-hara {
   line-height: 1.5;
+}
+.lista-exacta {
+  max-height: 220px;
+  overflow: auto;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(128, 128, 128, 0.14);
+  color: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 </style>

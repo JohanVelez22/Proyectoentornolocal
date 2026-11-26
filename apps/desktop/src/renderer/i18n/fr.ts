@@ -685,6 +685,14 @@ export const fr: Textos = {
         'Impossible de vérifier le pare-feu de Windows (les droits d’administrateur peuvent être nécessaires).',
       'doctor.firewall_reglas_ajenas':
         'Il y a {cantidad} règle(s) entrante(s) d’autres programmes (FlyEnv, Laragon, XAMPP ou autres) pour nginx, PHP ou des bases de données sur les profils {perfiles}. Elles ne sont pas de WolfCore Dev : elles sont seulement affichées et jamais supprimées d’ici.',
+      'doctor.firewall_quitadas':
+        'WolfCore Dev a supprimé auparavant {cantidad} règle(s) du pare-feu et en a gardé une copie : vous pouvez les recréer si besoin.',
+      'doctor.firewall_parcial':
+        'Certaines règles ont été supprimées, d’autres non : elles ont changé depuis l’affichage de la liste, n’étaient pas de WolfCore Dev ou Windows n’a pas permis de les supprimer. Vérifiez la liste.',
+      'doctor.firewall_sin_cambios':
+        'Aucune règle n’a été modifiée : elles ne correspondent plus à ce qui était affiché ou n’ont pas pu être modifiées.',
+      'doctor.firewall_registro_fallido':
+        'La copie des règles n’a pas pu être enregistrée dans etc/cortafuegos-quitadas.json : rien n’a été modifié.',
       'doctor.servicio_en_error': '{servicio} est en erreur.',
       'doctor.revision_fallida': 'La vérification {revision} n’a pas pu être menée à terme.',
       'doctor.confirmacion_requerida': 'Confirmez la réparation avant de l’appliquer.',
@@ -4202,6 +4210,9 @@ export const fr: Textos = {
       titulo: 'Confirmer la réparation',
       queHara: 'Voici ce qui sera fait :',
       admin: 'Windows vous demandera l’autorisation administrateur.',
+      reglas: 'Règles concernées (la liste exacte) :',
+      reglasNota:
+        'Rien ne change sans votre confirmation et l’autorisation administrateur. Si une règle a changé depuis son affichage, elle est ignorée.',
       puerto: (p: string | number) => `Le nouveau port sera ${p}.`,
       aplicar: 'Appliquer',
       cancelar: 'Annuler',
@@ -4249,7 +4260,9 @@ export const fr: Textos = {
       antivirus:
         'Ajouter le dossier de données aux exclusions de l’antivirus est votre décision, avec la commande affichée.',
       firewall:
-        'Supprimer ces règles est votre décision, avec la commande affichée, dans une console administrateur. WolfCore Dev ne modifie jamais le pare-feu.',
+        'Supprimer ces règles entrantes du pare-feu, une par une et par leur nom exact. Une copie est d’abord enregistrée dans etc/cortafuegos-quitadas.json pour pouvoir les recréer. Les règles des autres programmes ne sont jamais touchées.',
+      firewall_restaurar:
+        'Recréer les règles supprimées auparavant, telles qu’elles étaient (d’après la copie de etc/cortafuegos-quitadas.json). Ces programmes pourront de nouveau recevoir des connexions du réseau.',
       reintentar_servicio: 'Redémarrer le service.',
       firefox_confianza:
         'Ajouter dans le user.js de chaque profil Firefox la préférence qui fait confiance à l’autorité de Windows, avec une copie préalable. prefs.js n’est pas touché et les profils ouverts sont ignorés.',

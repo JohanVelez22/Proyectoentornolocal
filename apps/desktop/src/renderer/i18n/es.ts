@@ -647,6 +647,14 @@ export const es = {
         'No se pudo comprobar el cortafuegos de Windows (puede hacer falta administrador).',
       'doctor.firewall_reglas_ajenas':
         'Hay {cantidad} regla(s) de entrada de otros programas (FlyEnv, Laragon, XAMPP u otros) con nginx, PHP o bases de datos en los perfiles {perfiles}. No son de WolfCore Dev: solo se muestran, nunca se quitan desde aquí.',
+      'doctor.firewall_quitadas':
+        'WolfCore Dev quitó antes {cantidad} regla(s) del cortafuegos y guardó una copia: puede volver a crearlas si las necesita.',
+      'doctor.firewall_parcial':
+        'Se quitaron algunas reglas, pero otras no: cambiaron desde que se mostró la lista, no eran de WolfCore Dev o Windows no dejó quitarlas. Revise la lista.',
+      'doctor.firewall_sin_cambios':
+        'No se cambió ninguna regla: ya no coinciden con lo que se mostró o no se pudieron cambiar.',
+      'doctor.firewall_registro_fallido':
+        'No se pudo guardar la copia de las reglas en etc/cortafuegos-quitadas.json: no se cambió nada.',
       'doctor.servicio_en_error': '{servicio} está en error.',
       'doctor.revision_fallida': 'No se pudo completar la revisión {revision}.',
       'doctor.confirmacion_requerida': 'Confirme la reparación antes de aplicarla.',
@@ -4090,6 +4098,9 @@ export const es = {
       titulo: 'Confirmar la reparación',
       queHara: 'Esto es lo que se hará:',
       admin: 'Windows le pedirá permiso de administrador.',
+      reglas: 'Reglas afectadas (la lista exacta):',
+      reglasNota:
+        'Nada cambia sin su confirmación y el permiso de administrador. Si una regla cambió desde que se mostró, se salta.',
       puerto: (p: string | number) => `El nuevo puerto será ${p}.`,
       aplicar: 'Aplicar',
       cancelar: 'Cancelar',
@@ -4136,7 +4147,9 @@ export const es = {
       antivirus:
         'Agregar la carpeta de datos a las exclusiones del antivirus lo decide usted, con el comando que se muestra.',
       firewall:
-        'Quitar esas reglas lo decide usted, con el comando que se muestra, en una consola de administrador. WolfCore Dev nunca cambia el cortafuegos.',
+        'Quitar esas reglas de entrada del cortafuegos, una por una y por su nombre exacto. Antes se guarda una copia en etc/cortafuegos-quitadas.json para poder recrearlas. Las reglas de otros programas nunca se tocan.',
+      firewall_restaurar:
+        'Volver a crear las reglas que se quitaron antes, tal como estaban (según la copia de etc/cortafuegos-quitadas.json). Esos programas volverán a poder recibir conexiones de la red.',
       reintentar_servicio: 'Volver a iniciar el servicio.',
       firefox_confianza:
         'Agregar en el user.js de cada perfil de Firefox la preferencia que confía en la autoridad de Windows, con una copia previa. prefs.js no se toca y los perfiles abiertos se saltan.',

@@ -642,6 +642,14 @@ export const en: Textos = {
         'Could not check the Windows firewall (administrator rights may be needed).',
       'doctor.firewall_reglas_ajenas':
         "There are {cantidad} inbound rule(s) from other programs (FlyEnv, Laragon, XAMPP or others) for nginx, PHP or databases on the profiles {perfiles}. They are not WolfCore Dev's: they are only shown and never removed from here.",
+      'doctor.firewall_quitadas':
+        'WolfCore Dev removed {cantidad} firewall rule(s) earlier and kept a copy: you can recreate them if you need them.',
+      'doctor.firewall_parcial':
+        'Some rules were removed, but others were not: they changed since the list was shown, were not WolfCore Dev’s, or Windows would not let them go. Check the list.',
+      'doctor.firewall_sin_cambios':
+        'No rule was changed: they no longer match what was shown, or they could not be changed.',
+      'doctor.firewall_registro_fallido':
+        'The copy of the rules could not be saved to etc/cortafuegos-quitadas.json: nothing was changed.',
       'doctor.servicio_en_error': '{servicio} is in an error state.',
       'doctor.revision_fallida': 'The {revision} check could not be completed.',
       'doctor.confirmacion_requerida': 'Confirm the fix before applying it.',
@@ -4061,6 +4069,9 @@ export const en: Textos = {
       titulo: 'Confirm the fix',
       queHara: 'This is what will be done:',
       admin: 'Windows will ask for administrator permission.',
+      reglas: 'Affected rules (the exact list):',
+      reglasNota:
+        'Nothing changes without your confirmation and the administrator permission. If a rule changed after it was shown, it is skipped.',
       puerto: (p: string | number) => `The new port will be ${p}.`,
       aplicar: 'Apply',
       cancelar: 'Cancel',
@@ -4108,7 +4119,9 @@ export const en: Textos = {
       antivirus:
         'Adding the data folder to the antivirus exclusions is up to you, with the command shown.',
       firewall:
-        'Removing those rules is up to you, with the command shown, in an administrator console. WolfCore Dev never changes the firewall.',
+        'Remove those inbound firewall rules, one by one and by their exact name. A copy is saved first in etc/cortafuegos-quitadas.json so they can be recreated. Rules of other programs are never touched.',
+      firewall_restaurar:
+        'Recreate the rules that were removed earlier, exactly as they were (from the copy in etc/cortafuegos-quitadas.json). Those programs will be able to accept network connections again.',
       reintentar_servicio: 'Start the service again.',
       firefox_confianza:
         'Add to the user.js of each Firefox profile the preference that trusts the Windows authority, with a copy first. prefs.js is not touched and open profiles are skipped.',
