@@ -16,7 +16,7 @@ const hallazgo = (o: Partial<Hallazgo> & { id: string }): Hallazgo => ({
   gravedad: 'error',
   codigo: 'doctor.puerto_iis',
   datos: { puerto: 80, servicio: 'nginx', programa: 'IIS' },
-  evidencia: 'C:\\Windows\\System32\\inetsrv (PID 4)',
+  evidencia: { codigo: 'puerto_dueno', datos: { puerto: 80, proceso: 'System', pid: 4 } },
   reparacion: {
     id: 'detener-w3svc',
     codigo: 'doctor.reparaciones.detener_iis',

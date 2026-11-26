@@ -45,7 +45,7 @@ export async function revisarHosts(d: DepsDoctor): Promise<HallazgoInterno[]> {
           gravedad: 'error',
           codigo: 'doctor.hosts_ilegible',
           datos: {},
-          evidencia: { codigo: 'hosts_ilegible', datos: { ruta, motivo: code ?? '' } },
+          evidencia: { codigo: 'hosts_ilegible', datos: { ruta, motivo: code ?? 'UNKNOWN' } },
         },
       ];
     }

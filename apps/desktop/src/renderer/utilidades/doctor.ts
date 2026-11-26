@@ -1,5 +1,5 @@
 import type { RouteLocationRaw } from 'vue-router';
-import { textos } from '../i18n';
+import { textos, type Textos } from '../i18n';
 import { destinoServicio, destinoSitio } from './foco';
 
 /**
@@ -24,4 +24,25 @@ export function textoReparacion(codigo: string | undefined): string {
   const clave = codigo.slice(prefijo.length);
   const tabla = textos.doctor.reparaciones as Record<string, string>;
   return Object.hasOwn(tabla, clave) ? tabla[clave]! : '';
+}
+
+/** Lo que el Doctor vio: código estable del núcleo + datos (nunca una frase). */
+export interface EvidenciaVista {
+  codigo: string;
+  datos: Record<string, string | number>;
+  lineas?: EvidenciaVista[];
+}
+
+/**
+ * Texto de la evidencia en el idioma activo: la plantilla `doctor.evidencias.<codigo>` con los
+ * `{datos}` rellenos y, debajo, sus líneas (reglas, perfiles…). Un código desconocido muestra
+ * solo el dato `texto`, si lo trae: no se inventa una frase.
+ */
+export function textoEvidencia(e: EvidenciaVista, t: Textos = textos): string {
+  const tabla = t.doctor.evidencias as Record<string, string>;
+  const plantilla = Object.hasOwn(tabla, e.codigo) ? tabla[e.codigo]! : '{texto}';
+  const cabeza = plantilla.replace(/\{(\w+)\}/g, (_m, k: string) => String(e.datos[k] ?? ''));
+  return [cabeza, ...(e.lineas ?? []).map((l) => textoEvidencia(l, t))]
+    .filter((x) => x !== '')
+    .join('\n');
 }

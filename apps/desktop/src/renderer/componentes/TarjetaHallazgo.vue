@@ -7,7 +7,7 @@ import { solicitudes } from '../composables/solicitudes';
 import type { Hallazgo } from '../../shared/api';
 import { textos } from '../i18n';
 import type { EstadoReparacion } from '../stores/doctor';
-import { destinoHallazgo, textoReparacion } from '../utilidades/doctor';
+import { destinoHallazgo, textoEvidencia, textoReparacion } from '../utilidades/doctor';
 import { traducirError } from '../utilidades/errores';
 
 /**
@@ -28,6 +28,7 @@ const TONO = { error: 'error', aviso: 'warning', info: 'info' } as const;
 const titulo = computed(() =>
   traducirError({ codigo: props.hallazgo.codigo, datos: props.hallazgo.datos }),
 );
+const evidencia = computed(() => textoEvidencia(props.hallazgo.evidencia));
 const rep = computed(() => props.hallazgo.reparacion);
 /** `doctor.reparaciones.<clave>` del núcleo → texto de lo que hará la reparación. */
 const queHara = computed(() => textoReparacion(rep.value?.codigo));
@@ -72,7 +73,7 @@ const resultado = computed(() => {
       }}</NButton>
     </div>
     <p class="evidencia">
-      <span class="etiqueta">{{ t.evidencia }}:</span> <code>{{ hallazgo.evidencia }}</code>
+      <span class="etiqueta">{{ t.evidencia }}:</span> <code>{{ evidencia }}</code>
     </p>
     <div v-if="rep" class="reparacion">
       <p>{{ queHara }}</p>
@@ -153,6 +154,9 @@ const resultado = computed(() => {
   font-size: 12px;
   opacity: 0.8;
   overflow-wrap: anywhere;
+}
+.evidencia code {
+  white-space: pre-wrap;
 }
 .etiqueta {
   opacity: 0.9;
