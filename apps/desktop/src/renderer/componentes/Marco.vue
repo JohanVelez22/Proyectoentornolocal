@@ -102,10 +102,9 @@ const ICONOS: Record<SeccionNav, Component> = {
 };
 const item = (k: SeccionNav): MenuOption => ({
   key: k,
-  label: textos.nav[k],
+  // El recorrido de bienvenida resalta la entrada por el atributo data-nav de su texto.
+  label: () => h('span', { 'data-nav': k }, textos.nav[k]),
   icon: icono(ICONOS[k]),
-  // El recorrido de bienvenida resalta la entrada por este atributo.
-  props: { 'data-nav': k } as HTMLAttributes,
 });
 /** Barra lateral agrupada (se rearma al cambiar de idioma). */
 const opciones = computed<MenuOption[]>(() => [

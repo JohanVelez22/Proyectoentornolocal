@@ -120,7 +120,7 @@ const estiloZona = computed(() => {
 const estiloTarjeta = computed(() => {
   const z = zona.value;
   if (!z) return null;
-  const ancho = Math.min(380, window.innerWidth - 32);
+  const ancho = Math.min(440, window.innerWidth - 32);
   if (z.x < 320) {
     const alto = 300;
     const top = Math.max(16, Math.min(z.y - 8, window.innerHeight - alto - 16));
@@ -196,11 +196,6 @@ const estiloTarjeta = computed(() => {
   position: fixed;
   inset: 0;
   z-index: 4000;
-}
-:global([data-tema='oscuro']) .recorrido {
-  --rec-fondo: #1c1d24;
-  --rec-texto: #eceef6;
-  --rec-suave: #b6bbcd;
 }
 .velo {
   position: absolute;
@@ -315,5 +310,14 @@ h2 {
   .zona {
     transition: none;
   }
+}
+</style>
+
+<!-- Sin ámbito: el recorrido va en el body (Teleport) y el tema vive en <html data-tema>. -->
+<style>
+:root[data-tema='oscuro'] .recorrido {
+  --rec-fondo: #1c1d24;
+  --rec-texto: #eceef6;
+  --rec-suave: #b6bbcd;
 }
 </style>

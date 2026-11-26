@@ -31,7 +31,7 @@ export function rectaDeZona(zona: SeccionNav | undefined): RectaZona | null {
   if (!zona || typeof document === 'undefined') return null;
   const el = document.querySelector<HTMLElement>(`[data-nav="${zona}"]`);
   if (!el) return null;
-  const r = el.getBoundingClientRect();
+  const r = (el.closest<HTMLElement>('.n-menu-item') ?? el).getBoundingClientRect();
   if (r.width === 0 || r.height === 0) return null;
   return { x: r.left, y: r.top, ancho: r.width, alto: r.height };
 }

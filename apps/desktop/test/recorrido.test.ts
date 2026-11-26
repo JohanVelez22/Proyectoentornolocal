@@ -41,7 +41,7 @@ describe('Recorrido de bienvenida (D38b)', () => {
   });
 
   it('la barra lateral marca cada entrada con data-nav y Ajustes puede reabrir el recorrido', () => {
-    expect(fuente('componentes', 'Marco.vue')).toContain("'data-nav': k");
+    expect(fuente('componentes', 'Marco.vue')).toContain("{ 'data-nav': k }");
     expect(fuente('componentes', 'SeccionApariencia.vue')).toContain(
       'solicitudes.asistente = true',
     );
