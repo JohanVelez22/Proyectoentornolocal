@@ -476,6 +476,8 @@ export const fr: Textos = {
       'conversor.limite_paginas': 'Le PDF a trop de pages (jusqu’à {maximo}).',
       'conversor.pdf_cifrado': 'Le PDF est protégé par mot de passe et ne peut pas être converti.',
       'conversor.plazo': 'La conversion a duré plus de {segundos} s et a été annulée.',
+      'conversor.ocupado':
+        'Une conversion est déjà en cours et une autre est en attente : attendez qu’elle se termine.',
       'conversor.cancelado': 'Conversion annulée.',
       'conversor.libreoffice_ausente':
         'Cette conversion nécessite LibreOffice, qui n’est pas installé sur cet ordinateur (WolfCore Dev ne l’installe pas).',

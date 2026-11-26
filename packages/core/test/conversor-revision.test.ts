@@ -271,8 +271,8 @@ describe('LibreOffice endurecido (I4)', () => {
       'DisableMacrosExecution" oor:op="fuse"><value>true',
       'MacroSecurityLevel" oor:op="fuse"><value>3',
       'BlockUntrustedRefererLinks" oor:op="fuse"><value>true',
-      '/org.openoffice.Office.Writer/Content/Update"><prop oor:name="Link" oor:op="fuse"><value>2',
-      '/org.openoffice.Office.Calc/Content/Update"><prop oor:name="Link" oor:op="fuse"><value>2',
+      '/org.openoffice.Office.Writer/Content/Update"><prop oor:name="Link" oor:op="fuse"><value>0',
+      '/org.openoffice.Office.Calc/Content/Update"><prop oor:name="Link" oor:op="fuse"><value>1',
     ]) {
       expect(CONFIGURACION_PERFIL, clave).toContain(clave);
     }

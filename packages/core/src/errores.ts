@@ -163,6 +163,7 @@ export const PARAMETROS_ERROR = {
   'conversor.pdf_cifrado': [],
   'conversor.plazo': ['segundos'],
   'conversor.cancelado': [],
+  'conversor.ocupado': [],
   'conversor.libreoffice_ausente': [],
   'conversor.libreoffice_fallo': [],
   'conversor.pdf_no_disponible': [],

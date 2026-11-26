@@ -461,6 +461,7 @@ export const pt: Textos = {
       'conversor.limite_paginas': 'O PDF tem páginas demais (até {maximo}).',
       'conversor.pdf_cifrado': 'O PDF está protegido por senha e não pode ser convertido.',
       'conversor.plazo': 'A conversão levou mais de {segundos} s e foi cancelada.',
+      'conversor.ocupado': 'Já há uma conversão em andamento e outra em espera: aguarde o término.',
       'conversor.cancelado': 'Conversão cancelada.',
       'conversor.libreoffice_ausente':
         'Essa conversão precisa do LibreOffice, que não está instalado neste computador (o WolfCore Dev não o instala).',

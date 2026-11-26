@@ -79,6 +79,62 @@ describe('supervisor del proceso de trabajo', () => {
     expect(await b).toEqual({ ok: true });
   });
 
+  it('valida la respuesta del proceso: forma incorrecta es fallo y lo mata', async () => {
+    const malas: unknown[] = [
+      null,
+      'hola',
+      { texto: 'x' },
+      { ok: 'si' },
+      { ok: true, texto: 5 },
+      { ok: true, texto: 'x'.repeat(11) },
+      { ok: true, datos: [1, 2] },
+      { ok: false, codigo: 'no.existe' },
+      { ok: false },
+    ];
+    const MSG_LIM = { ...MSG, lim: { salida: 10 } } as unknown as MensajeTrabajo;
+    for (const mala of malas) {
+      const p = new Falso();
+      const ejecutar = crearEjecutorSupervisado({ lanzar: () => p, memoriaDe: () => 1 });
+      const r = ejecutar(MSG_LIM, { plazoMs: 5000 });
+      await new Promise((x) => setTimeout(x, 10));
+      p.contestar(mala);
+      expect(await codigoDe(r), JSON.stringify(mala)).toBe('conversor.archivo_invalido');
+      expect(p.matado).toBe(true);
+    }
+    const p = new Falso();
+    const ejecutar = crearEjecutorSupervisado({ lanzar: () => p, memoriaDe: () => 1 });
+    const r = ejecutar(MSG_LIM, { plazoMs: 5000 });
+    await new Promise((x) => setTimeout(x, 10));
+    p.contestar({ ok: false, codigo: 'conversor.plazo', datos: { segundos: 1 } });
+    expect(await r).toEqual({ ok: false, codigo: 'conversor.plazo', datos: { segundos: 1 } });
+  });
+
+  it('la cola tiene tope: con uno en curso y uno esperando rechaza con conversor.ocupado', async () => {
+    const procesos: Falso[] = [];
+    const ejecutar = crearEjecutorSupervisado({
+      lanzar: () => {
+        const p = new Falso();
+        procesos.push(p);
+        return p;
+      },
+      memoriaDe: () => 1,
+    });
+    const a = ejecutar(MSG, { plazoMs: 5000 });
+    const b = ejecutar(MSG, { plazoMs: 5000 });
+    expect(await codigoDe(ejecutar(MSG, { plazoMs: 5000 }))).toBe('conversor.ocupado');
+    await new Promise((x) => setTimeout(x, 20));
+    procesos[0]!.contestar({ ok: true });
+    await a;
+    await new Promise((x) => setTimeout(x, 20));
+    // ya hay hueco: se acepta otro
+    const c = ejecutar(MSG, { plazoMs: 5000 });
+    procesos[1]!.contestar({ ok: true });
+    await b;
+    await new Promise((x) => setTimeout(x, 20));
+    procesos[2]!.contestar({ ok: true });
+    await c;
+  });
+
   it('plazo vencido: mata el proceso y devuelve conversor.plazo', async () => {
     const p = new Falso();
     const ejecutar = crearEjecutorSupervisado({ lanzar: () => p, memoriaDe: () => 1 });

@@ -63,16 +63,20 @@ export const lanzarLibreOffice: Lanzar = (ejecutable, args, o) =>
 
 /**
  * Configuración del perfil temporal de LibreOffice: sin macros, sin vínculos remotos y sin
- * actualizar vínculos al abrir (Writer y Calc: 2 = nunca). El documento es no confiable y
- * LibreOffice resuelve por su cuenta macros, enlaces a archivos y "referers" remotos.
+ * actualizar vínculos al abrir. El documento es no confiable y LibreOffice resuelve por su
+ * cuenta macros, enlaces a archivos y "referers" remotos.
+ *
+ * OJO, los valores de "nunca" NO coinciden entre módulos (no invertirlos):
+ * - Writer (sw/inc/linkenum.hxx): NEVER=0, MANUAL=1, AUTOMATIC=2 -> Link=0.
+ * - Calc (ScLkUpdMode): LM_ALWAYS=0, LM_NEVER=1, LM_ON_DEMAND=2 -> Link=1.
  */
 export const CONFIGURACION_PERFIL = `<?xml version="1.0" encoding="UTF-8"?>
 <oor:items xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <item oor:path="/org.openoffice.Office.Common/Security/Scripting"><prop oor:name="DisableMacrosExecution" oor:op="fuse"><value>true</value></prop></item>
 <item oor:path="/org.openoffice.Office.Common/Security/Scripting"><prop oor:name="MacroSecurityLevel" oor:op="fuse"><value>3</value></prop></item>
 <item oor:path="/org.openoffice.Office.Common/Security/Scripting"><prop oor:name="BlockUntrustedRefererLinks" oor:op="fuse"><value>true</value></prop></item>
-<item oor:path="/org.openoffice.Office.Writer/Content/Update"><prop oor:name="Link" oor:op="fuse"><value>2</value></prop></item>
-<item oor:path="/org.openoffice.Office.Calc/Content/Update"><prop oor:name="Link" oor:op="fuse"><value>2</value></prop></item>
+<item oor:path="/org.openoffice.Office.Writer/Content/Update"><prop oor:name="Link" oor:op="fuse"><value>0</value></prop></item>
+<item oor:path="/org.openoffice.Office.Calc/Content/Update"><prop oor:name="Link" oor:op="fuse"><value>1</value></prop></item>
 </oor:items>
 `;
 

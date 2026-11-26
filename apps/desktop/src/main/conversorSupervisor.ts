@@ -1,4 +1,5 @@
 import {
+  CODIGOS_ERROR,
   ErrorWolf,
   type EjecutorTrabajo,
   type MensajeTrabajo,
@@ -43,10 +44,32 @@ export const LIMITE_MEMORIA_TRABAJO = 768 * 1024 * 1024;
 
 const MB = 1024 * 1024;
 
+/** Máximo de trabajos a la vez: uno en ejecución y uno esperando (cada uno retiene hasta 50 MB). */
+const MAX_PENDIENTES = 2;
+
+const CODIGOS_CONOCIDOS: ReadonlySet<string> = new Set(CODIGOS_ERROR);
+
+/** Valida lo que contesta el proceso de trabajo (no se confía en su forma). */
+function respuestaValida(r: unknown, topeTexto: number | undefined): r is RespuestaTrabajo {
+  if (typeof r !== 'object' || r === null) return false;
+  const o = r as Record<string, unknown>;
+  if (typeof o.ok !== 'boolean') return false;
+  if (o.texto !== undefined) {
+    if (typeof o.texto !== 'string') return false;
+    if (topeTexto !== undefined && o.texto.length > topeTexto) return false;
+  }
+  if (o.ok) return o.datos === undefined || o.datos instanceof Uint8Array;
+  // Error: `datos` son los parámetros del mensaje (objeto plano), no bytes.
+  if (typeof o.codigo !== 'string' || !CODIGOS_CONOCIDOS.has(o.codigo)) return false;
+  return o.datos === undefined || (typeof o.datos === 'object' && o.datos !== null);
+}
+
 export function crearEjecutorSupervisado(o: OpcionesSupervisor): EjecutorTrabajo {
   const limite = o.limiteMemoriaBytes ?? LIMITE_MEMORIA_TRABAJO;
   const intervalo = o.intervaloMs ?? 75;
   let cola: Promise<unknown> = Promise.resolve();
+  /** Trabajos en ejecución o esperando (tope: uno corriendo y uno esperando). */
+  let pendientes = 0;
 
   const ejecutar = (m: MensajeTrabajo, op: OpcionesEjecucion): Promise<RespuestaTrabajo> =>
     new Promise((resolve, reject) => {
@@ -108,7 +131,13 @@ export function crearEjecutorSupervisado(o: OpcionesSupervisor): EjecutorTrabajo
         cerrar(() => reject(new ErrorWolf('conversor.cancelado', 'Conversión cancelada.')));
       op.senal?.addEventListener('abort', alAbortar, { once: true });
 
-      proceso.onMessage((r) => cerrar(() => resolve(r as RespuestaTrabajo)));
+      proceso.onMessage((r) =>
+        cerrar(() => {
+          if (respuestaValida(r, m.lim?.salida)) resolve(r);
+          else
+            reject(new ErrorWolf('conversor.archivo_invalido', 'Respuesta no válida del proceso.'));
+        }),
+      );
       proceso.onExit(() =>
         cerrar(() =>
           reject(
@@ -134,12 +163,25 @@ export function crearEjecutorSupervisado(o: OpcionesSupervisor): EjecutorTrabajo
     });
 
   return (m, op) => {
+    if (pendientes >= MAX_PENDIENTES) {
+      return Promise.reject(
+        new ErrorWolf('conversor.ocupado', 'Ya hay una conversión en curso y otra en espera.'),
+      );
+    }
+    pendientes++;
     // Una sola conversión a la vez; un fallo de la anterior no frena a la siguiente.
     const siguiente = cola.then(
       () => ejecutar(m, op),
       () => ejecutar(m, op),
     );
-    cola = siguiente.catch(() => undefined);
+    cola = siguiente.then(
+      () => {
+        pendientes--;
+      },
+      () => {
+        pendientes--;
+      },
+    );
     return siguiente;
   };
 }
