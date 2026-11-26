@@ -174,6 +174,45 @@ Para no pagar dos veces la multiplataforma, **la tarea 1 de C crea la capa `Plat
 
 **Verificable aquí:** Windows completo. **Linux:** núcleo y pruebas de integración en WSL2 (Ubuntu), y la app con WSLg. Pero WSL no es una distro de escritorio real (sin agente polkit, systemd y red distintos), así que `pkexec` y el llavero no quedan probados. **macOS: solo en CI.** No hay Mac disponible, así que la interfaz, el llavero y el diálogo de `osascript` nunca se ven en una máquina real; el `.dmg` se entrega **sin firmar ni notarizar** y Gatekeeper lo bloquea la primera vez (clic derecho → Abrir o `xattr -d com.apple.quarantine`).
 
+#### Etapa E: aplazada (decisión del usuario del 2026-11-26)
+
+En palabras del usuario: "no hagamos con Linux y mac dejémonos por ahora en Windows ya después miramos para volverlo multiplataforma".
+- Hasta el 2026-12-02 solo se trabaja en Windows.
+- El CI sigue corriendo lint, tipos, pruebas y empaquetado en los 3 SO para que el código siga siendo portable, pero no se invierten horas en Linux ni en macOS.
+- La prueba de humo solo arranca la app en Windows, porque `crearPlataforma` lanza «Plataforma aún no soportada (fase 4)» en los demás sistemas.
+
+Las estimaciones son tiempo de agentes, con su revisión incluida.
+
+**Beta de E, unas 12–15 h** (que la app arranque y haga lo básico en Linux y macOS):
+1. **`PlataformaLinux` y `PlataformaMac` mínimas, unas 5 h, revisión opus.**
+   - Cubren carpetas de datos, procesos con PID propio y señales, puertos y un Doctor básico, sin elevación.
+   - No se escribe el hosts: se usan nombres `*.localhost`, que los navegadores ya resuelven a 127.0.0.1.
+   - La CA no se instala sola; se ofrece una guía para confiar en ella a mano.
+   - Nginx escucha en 8080 y 8443, así que no hace falta root.
+   - Hay que quitar el error «fase 4» de `crearPlataforma`.
+2. **Catálogo por sistema y arquitectura para el núcleo de los 6 proyectos, unas 4 h, revisión opus por las descargas.**
+   - PHP (static-php-cli verificado), Nginx, MySQL, PostgreSQL, Node, Python, Mailpit y cloudflared, en x64 y arm64 cuando existan.
+   - El resto de servicios se muestra como «no disponible en este sistema todavía».
+3. **AppImage y `.dmg` sin firmar en CI, con prueba de humo en Linux y macOS, unas 2 h.** Hay que quitar el aviso del inicio de `apps/desktop/scripts/humo.mjs`.
+4. **`safeStorage` en Linux, unas 1 h.** Si no hay llavero, se avisa al usuario y la clave no se guarda o se pide en cada sesión.
+
+**Completa, unas 35–45 h.** Es lo anterior más:
+- elevación con `pkexec` (con caída a `sudo`) y `osascript`, y escritura del hosts;
+- CA automática en NSS, `update-ca-certificates` o `trust`, y el llavero de macOS;
+- puertos 80 y 443 (`setcap` en Linux);
+- `.deb`;
+- autoactualización con `electron-updater`;
+- desinstalación limpia que revierte hosts, CA y PATH en los tres sistemas;
+- pgvector compilado con `make`;
+- el resto de servicios por sistema;
+- un flujo de release con humo por sistema;
+- el guardián de datos reales en macOS, que hoy no redirige `homedir`;
+- los pendientes M10 (conservar los permisos POSIX al guardar en el editor) y M14 (mayúsculas en APFS) de D43.
+
+**Límite de verificación.**
+- Linux se puede probar en WSL2 con WSLg, pero sin polkit ni llavero reales.
+- macOS solo se puede probar en CI, porque no hay un Mac.
+
 ### Etapa F — Resto de paridad y superación (~16 tareas, se puede partir)
 
 DNS propio y comodín `*.proyecto.test` (45); Apache/Caddy y `.htaccess` real (14); FrankenPHP/Octane (12); contenedores Podman/Docker (46); Meilisearch, MinIO, RabbitMQ y Reverb (28); inspector de SQL, jobs y HTTP (4); perfilado (6); inspector de webhooks (33); rama como subdominio con `git worktree`; WordPress completo (21); pruebas y calidad por sitio (43); ahorro de recursos y arranque perezoso (42); modo portable (41); sincronizar entre equipos (47); RAG local por proyecto con pgvector (48); restos técnicos: restauración con rol limitado, FTP pasivo por subred, FTPS/SFTP, *name constraints* en la CA.
