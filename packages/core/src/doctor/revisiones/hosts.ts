@@ -45,7 +45,7 @@ export async function revisarHosts(d: DepsDoctor): Promise<HallazgoInterno[]> {
           gravedad: 'error',
           codigo: 'doctor.hosts_ilegible',
           datos: {},
-          evidencia: `${ruta}: ${code ?? 'error de lectura'}`,
+          evidencia: { codigo: 'hosts_ilegible', datos: { ruta, motivo: code ?? '' } },
         },
       ];
     }
@@ -63,7 +63,10 @@ export async function revisarHosts(d: DepsDoctor): Promise<HallazgoInterno[]> {
       gravedad: 'error',
       codigo: 'doctor.hosts_utf16',
       datos: {},
-      evidencia: `${ruta}: codificación ${codificacion.toUpperCase()}`,
+      evidencia: {
+        codigo: 'hosts_codificacion',
+        datos: { ruta, codificacion: codificacion.toUpperCase() },
+      },
     });
   }
   if (bloques > 1) {
@@ -73,7 +76,7 @@ export async function revisarHosts(d: DepsDoctor): Promise<HallazgoInterno[]> {
       gravedad: 'aviso',
       codigo: 'doctor.hosts_bloque_duplicado',
       datos: { bloques },
-      evidencia: `${ruta}: ${bloques} bloques de WolfCore Dev`,
+      evidencia: { codigo: 'hosts_bloques', datos: { ruta, bloques } },
     });
   }
   if (sinCierre) {
@@ -83,7 +86,7 @@ export async function revisarHosts(d: DepsDoctor): Promise<HallazgoInterno[]> {
       gravedad: 'error',
       codigo: 'doctor.hosts_bloque_sin_cierre',
       datos: {},
-      evidencia: `${ruta}: un bloque de WolfCore Dev no tiene su marca de cierre`,
+      evidencia: { codigo: 'hosts_sin_cierre', datos: { ruta } },
     });
   }
   const pedidos = normalizarDominios(await d.dominios());
@@ -97,7 +100,10 @@ export async function revisarHosts(d: DepsDoctor): Promise<HallazgoInterno[]> {
       gravedad: 'error',
       codigo: 'doctor.hosts_dominios_faltantes',
       datos: { cantidad: faltan.length },
-      evidencia: `Faltan en hosts: ${faltan.slice(0, 20).join(', ')}${faltan.length > 20 ? '…' : ''}`,
+      evidencia: {
+        codigo: 'hosts_faltan',
+        datos: { dominios: `${faltan.slice(0, 20).join(', ')}${faltan.length > 20 ? '…' : ''}` },
+      },
     });
   }
   if (bytes.length > 0 && ((await stat(ruta)).mode & 0o200) === 0) {
@@ -109,7 +115,7 @@ export async function revisarHosts(d: DepsDoctor): Promise<HallazgoInterno[]> {
       gravedad: 'aviso',
       codigo: 'doctor.hosts_solo_lectura',
       datos: {},
-      evidencia: `${ruta}: atributo de solo lectura`,
+      evidencia: { codigo: 'hosts_solo_lectura', datos: { ruta } },
       reparacion: {
         id: 'hosts-quitar-solo-lectura',
         codigo: 'doctor.reparaciones.hosts_solo_lectura',

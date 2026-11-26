@@ -8,7 +8,7 @@ import {
   type Objetivo,
   type ObjetivoRestaurar,
 } from '../firewallCambios';
-import type { DepsDoctor, HallazgoInterno } from '../tipos';
+import { lineaTexto, type DepsDoctor, type Evidencia, type HallazgoInterno } from '../tipos';
 import { origenDeRegla, type Origen } from './firewallOrigen';
 
 export { origenDeRegla, type Origen };
@@ -28,20 +28,30 @@ const linea = (x: {
 }): string =>
   `${x.nombreVisible || x.nombre} [${x.nombre}] · ${x.programa} · ${x.perfil || '?'} · Inbound/Allow`;
 
-/** Todos los campos de lo que se va a crear al restaurar: protocolo, puertos, direcciones, perfil… */
+/**
+ * Todos los campos de lo que se va a crear al restaurar: protocolo, puertos, direcciones, perfil…
+ * Con los nombres de campo de netsh/PowerShell (`Profile`, `LocalPort`…): son términos técnicos
+ * iguales en todos los idiomas, no frases.
+ */
 const lineaRestaurar = (r: ReglaExportada): string =>
   [
     `${r.nombreVisible || r.nombre} [${r.nombre}]`,
     r.programa,
-    `perfil ${r.perfil || '?'}`,
+    `Profile=${r.perfil || '?'}`,
     `${r.direccion}/${r.accion}`,
-    `protocolo ${r.protocolo}`,
-    `puerto local ${r.puertoLocal.join(',') || 'Any'}`,
-    `puerto remoto ${r.puertoRemoto.join(',') || 'Any'}`,
-    `dirección local ${r.direccionLocal.join(',') || 'Any'}`,
-    `dirección remota ${r.direccionRemota.join(',') || 'Any'}`,
-    r.habilitada ? 'habilitada' : 'deshabilitada',
+    `Protocol=${r.protocolo}`,
+    `LocalPort=${r.puertoLocal.join(',') || 'Any'}`,
+    `RemotePort=${r.puertoRemoto.join(',') || 'Any'}`,
+    `LocalAddress=${r.direccionLocal.join(',') || 'Any'}`,
+    `RemoteAddress=${r.direccionRemota.join(',') || 'Any'}`,
+    r.habilitada ? 'Enabled' : 'Disabled',
   ].join(' · ');
+
+const lista = (
+  codigo: Evidencia['codigo'],
+  datos: Evidencia['datos'],
+  textos: string[],
+): Evidencia => ({ codigo, datos, lineas: textos.map(lineaTexto) });
 
 /**
  * Reglas de entrada Allow para nginx, PHP, bases de datos y demás servicios de WolfCore Dev.
@@ -61,8 +71,7 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
       gravedad: 'info',
       codigo: 'doctor.firewall_no_comprobado',
       datos: {},
-      evidencia:
-        'No se pudieron leer las reglas del cortafuegos (puede hacer falta administrador).',
+      evidencia: { codigo: 'firewall_no_comprobado', datos: {} },
     });
   }
   const propias: ReglaEntrada[] = [];
@@ -82,13 +91,8 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
     // Lo que se muestra es exactamente lo que la reparación puede quitar (y el usuario marca).
     const mostradas = mias.slice(0, MAX_REGLAS);
     const secciones = [
-      ...(propias.length ? ['WolfCore Dev:', ...propias.slice(0, MAX_REGLAS).map(linea)] : []),
-      ...(pruebas.length
-        ? [
-            `Restos de pruebas de WolfCore (${pruebas.length}):`,
-            ...pruebas.slice(0, MAX_REGLAS).map(linea),
-          ]
-        : []),
+      ...propias.slice(0, MAX_REGLAS).map(linea),
+      ...pruebas.slice(0, MAX_REGLAS).map(linea),
     ];
     const objetivos: Objetivo[] = mostradas.map((x) => ({
       nombre: x.nombre,
@@ -104,7 +108,11 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
         perfiles: perfiles(mias),
         programa: mias[0]!.programa,
       },
-      evidencia: secciones.join('\n'),
+      evidencia: lista(
+        'firewall_reglas',
+        { propias: propias.length, pruebas: pruebas.length },
+        secciones,
+      ),
       elementos: mostradas.map((x) => ({ clave: x.nombre, texto: linea(x) })),
       reparacion: {
         id: 'quitar-reglas-firewall',
@@ -131,7 +139,7 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
       gravedad: 'info',
       codigo: 'doctor.firewall_reglas_acotadas',
       datos: { cantidad: acotadas.length },
-      evidencia: acotadas.slice(0, MAX_REGLAS).map(linea).join('\n'),
+      evidencia: lista('firewall_acotadas', {}, acotadas.slice(0, MAX_REGLAS).map(linea)),
     });
   }
   if (ajenas.length > 0) {
@@ -142,7 +150,7 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
       gravedad: 'info',
       codigo: 'doctor.firewall_reglas_ajenas',
       datos: { cantidad: ajenas.length, perfiles: perfiles(ajenas) },
-      evidencia: ajenas.slice(0, MAX_REGLAS).map(linea).join('\n'),
+      evidencia: lista('firewall_ajenas', {}, ajenas.slice(0, MAX_REGLAS).map(linea)),
     });
   }
   // Lo que se quitó antes y se puede recrear: solo de la copia protegida de la plataforma.
@@ -158,7 +166,11 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
       gravedad: 'info',
       codigo: 'doctor.firewall_quitadas',
       datos: { cantidad: quitadas.length },
-      evidencia: quitadas.map((x) => lineaRestaurar(x.registro.regla)).join('\n'),
+      evidencia: lista(
+        'firewall_quitadas',
+        {},
+        quitadas.map((x) => lineaRestaurar(x.registro.regla)),
+      ),
       elementos: quitadas.map((x) => ({
         clave: x.registro.id,
         texto: lineaRestaurar(x.registro.regla),

@@ -622,7 +622,10 @@ describe('servidor de órdenes de la CLI (D31): nada de secretos en la salida', 
         gravedad: 'aviso' as const,
         codigo: 'doctor.hosts_sin_bloque' as never,
         datos: { clave: CENTINELA },
-        evidencia: `línea: SECRET=${CENTINELA}`,
+        evidencia: {
+          codigo: 'texto' as const,
+          datos: { texto: `línea: SECRET=${CENTINELA}`, clave: CENTINELA },
+        },
       },
     ]);
     const m = await montar({ ops });

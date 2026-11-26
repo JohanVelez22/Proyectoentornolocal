@@ -1,15 +1,38 @@
+import { evidenciaPlana } from './evidencia-plana';
 import { existsSync } from 'node:fs';
 import { chmod, mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { carpetaTemporal } from './temporales';
 import type { EntradaAviso } from '../src/avisos/avisos';
-import { Doctor, type DepsDoctor, type Hallazgo } from '../src/doctor/doctor';
+import { Doctor, type DepsDoctor, type Evidencia, type Hallazgo } from '../src/doctor/doctor';
+import { CODIGOS_EVIDENCIA } from '../src/doctor/tipos';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { MARCA_FIN, MARCA_INICIO } from '../src/hosts/bloque';
 import { GestorHosts } from '../src/hosts/hosts';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
 import type { EstadoServicio } from '../src/tipos';
+
+/** Evidencia válida: código conocido, datos planos y líneas con la misma forma (nunca una frase suelta). */
+function validarEvidencia(e: Evidencia): void {
+  expect(typeof e).toBe('object');
+  expect(CODIGOS_EVIDENCIA).toContain(e.codigo);
+  for (const v of Object.values(e.datos)) expect(['string', 'number']).toContain(typeof v);
+  for (const l of e.lineas ?? []) validarEvidencia(l);
+}
+
+// Todas las pruebas de este archivo pasan por `revisar`: ninguna revisión puede devolver texto libre.
+const revisarOriginal = Doctor.prototype.revisar;
+beforeAll(() => {
+  Doctor.prototype.revisar = async function (this: Doctor, ids) {
+    const hs = await revisarOriginal.call(this, ids);
+    for (const h of hs) validarEvidencia(h.evidencia);
+    return hs;
+  };
+});
+afterAll(() => {
+  Doctor.prototype.revisar = revisarOriginal;
+});
 
 let dir: string;
 let datos: string;
@@ -340,7 +363,7 @@ describe('Doctor: hosts', () => {
       datos: { cantidad: 1 },
       reparacion: { id: 'hosts-reescribir', requiereAdmin: true },
     });
-    expect(h!.evidencia).toContain('b.test');
+    expect(evidenciaPlana(h!.evidencia)).toContain('b.test');
     expect(await d.reparar(h!.id, true)).toEqual({ ok: true });
     const nuevo = await readFile(rutaHosts, 'utf8');
     expect(nuevo).toContain('127.0.0.1  b.test');
@@ -470,7 +493,7 @@ describe('Doctor: PATH', () => {
       datos: { programa: 'php', origen: 'FlyEnv' },
       reparacion: { soloInforma: true },
     });
-    expect(h!.evidencia).toContain(flyenv);
+    expect(evidenciaPlana(h!.evidencia)).toContain(flyenv);
     expect(await d.reparar(h!.id, true)).toEqual({ ok: false, codigo: 'doctor.solo_informa' });
     expect(plat.path).toEqual([flyenv, ajena, propio]);
   });
@@ -537,9 +560,9 @@ describe('Doctor: VC++, antivirus y servicios', () => {
         datos: { cantidad: 2, perfiles: 'Private, Public, Private' },
         reparacion: { soloInforma: false, requiereAdmin: true },
       });
-      expect(h!.evidencia).toContain('nginx.exe');
-      expect(h!.evidencia).toContain('Public, Private');
-      expect(h!.evidencia).toContain('mysqld.exe');
+      expect(evidenciaPlana(h!.evidencia)).toContain('nginx.exe');
+      expect(evidenciaPlana(h!.evidencia)).toContain('Public, Private');
+      expect(evidenciaPlana(h!.evidencia)).toContain('mysqld.exe');
       expect(h!.reparacion!.comandoManual).toContain('quitar-reglas-firewall');
       expect(h!.reparacion!.comandoManual).toContain('{AAAA-1}');
       expect(await d.reparar(h!.id, false as unknown as true)).toEqual({
@@ -562,7 +585,7 @@ describe('Doctor: VC++, antivirus y servicios', () => {
       };
       const [h] = await solo(new Doctor(deps({ carpetaTemporal: t })), ['firewall']);
       expect(h!.datos).toMatchObject({ cantidad: 4 });
-      expect(h!.evidencia).toContain('Restos de pruebas de WolfCore (4)');
+      expect(h!.evidencia.datos).toMatchObject({ propias: 0, pruebas: 4 });
       for (const n of ['{T-1}', '{T-2}', '{T-3}', '{T-4}']) {
         expect(h!.reparacion!.comandoManual).toContain(n);
       }
@@ -598,7 +621,7 @@ describe('Doctor: VC++, antivirus y servicios', () => {
       }
       expect(ajeno).toMatchObject({ gravedad: 'info', datos: { cantidad: 6 } });
       expect(ajeno.reparacion).toBeUndefined();
-      expect(ajeno.evidencia).toContain('FlyEnv');
+      expect(evidenciaPlana(ajeno.evidencia)).toContain('FlyEnv');
     });
 
     it('con solo reglas ajenas no hay hallazgo con comando', async () => {
@@ -632,7 +655,7 @@ describe('Doctor: VC++, antivirus y servicios', () => {
       datos: { servicio: 'MySQL' },
       reparacion: { id: 'reintentar-servicio' },
     });
-    expect(h!.evidencia).toContain('InnoDB');
+    expect(evidenciaPlana(h!.evidencia)).toContain('InnoDB');
     expect(await d.reparar(h!.id, true)).toEqual({ ok: true });
     expect(reintentos).toEqual(['mysql']);
   });
@@ -746,7 +769,7 @@ describe('Doctor: confianza de la CA en Firefox', () => {
         soloInforma: false,
       },
     });
-    expect(h!.evidencia).toContain('a.default');
+    expect(evidenciaPlana(h!.evidencia)).toContain('a.default');
     expect(await d.reparar(h!.id, true)).toEqual({ ok: true });
     expect(p.activados).toEqual([{ activar: true }]);
   });
@@ -765,7 +788,10 @@ describe('Doctor: confianza de la CA en Firefox', () => {
     ]);
     const d = new Doctor(deps({ confianza: p.confianza }));
     const [h] = await solo(d, ['confianza']);
-    expect(h!.evidencia).toMatch(/lejos \(fuera/);
+    expect(h!.evidencia.lineas).toContainEqual({
+      codigo: 'firefox_perfil_fuera',
+      datos: { perfil: 'lejos' },
+    });
     expect(await d.reparar(h!.id, true)).toEqual({ ok: false, codigo: 'firefox.fuera' });
     expect(p.activados).toEqual([{ activar: true }]);
   });

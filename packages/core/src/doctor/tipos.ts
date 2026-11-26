@@ -25,6 +25,55 @@ export type GravedadHallazgo = 'info' | 'aviso' | 'error';
 /** Datos de un hallazgo: texto corto y números (se traducen con el código en la interfaz). */
 export type DatosHallazgo = Record<string, string | number>;
 
+/**
+ * Códigos de lo que el Doctor «vio». El núcleo no devuelve frases: la interfaz traduce el código
+ * (`doctor.evidencias.<clave>` en cada idioma) y rellena `{datos}`. `texto` lleva un dato crudo
+ * (final de un registro, mensaje de un error del sistema) que se muestra tal cual.
+ */
+export const CODIGOS_EVIDENCIA = [
+  'texto',
+  'puerto_dueno',
+  'puerto_dueno_exe',
+  'rango_reservado',
+  'ca_vencida',
+  'ca_por_vencer',
+  'certificado_vencido',
+  'certificado_por_vencer',
+  'firefox_perfiles',
+  'firefox_perfil',
+  'firefox_perfil_abierto',
+  'firefox_perfil_fuera',
+  'hosts_ilegible',
+  'hosts_codificacion',
+  'hosts_bloques',
+  'hosts_sin_cierre',
+  'hosts_faltan',
+  'hosts_solo_lectura',
+  'path_repetidas',
+  'path_delante',
+  'antivirus_sin_leer',
+  'antivirus_sin_exclusion',
+  'enlazador_ausente',
+  'vcredist_ausente',
+  'firewall_no_comprobado',
+  'firewall_reglas',
+  'firewall_acotadas',
+  'firewall_ajenas',
+  'firewall_quitadas',
+] as const;
+export type CodigoEvidencia = (typeof CODIGOS_EVIDENCIA)[number];
+
+/** Lo que se vio, como código y datos (nunca una frase): la interfaz lo traduce. */
+export interface Evidencia {
+  codigo: CodigoEvidencia;
+  datos: DatosHallazgo;
+  /** Detalle línea por línea (reglas del cortafuegos, perfiles de Firefox…). */
+  lineas?: Evidencia[];
+}
+
+/** Línea de datos crudos (nombre de regla, ruta…): se muestra tal cual en todos los idiomas. */
+export const lineaTexto = (texto: string): Evidencia => ({ codigo: 'texto', datos: { texto } });
+
 export interface Reparacion {
   /** Qué se hará: `cambiar-puerto`, `detener-w3svc`, `hosts-reescribir`… */
   id: string;
@@ -52,8 +101,8 @@ export interface Hallazgo {
   gravedad: GravedadHallazgo;
   codigo: CodigoError;
   datos: DatosHallazgo;
-  /** Lo que se vio (proceso, línea del archivo, final del log…), tal cual para mostrar. */
-  evidencia: string;
+  /** Lo que se vio (proceso, línea del archivo, final del log…), como código y datos. */
+  evidencia: Evidencia;
   reparacion?: Reparacion;
   /**
    * Lo que la reparación cambiará, uno por uno: el diálogo los muestra con una casilla cada uno

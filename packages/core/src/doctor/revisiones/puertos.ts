@@ -1,6 +1,12 @@
 import type { CodigoError } from '../../errores';
 import type { RangoPuertos } from '../../plataforma/tipos';
-import type { DepsDoctor, HallazgoInterno, Reparacion, ResultadoReparacion } from '../tipos';
+import type {
+  DepsDoctor,
+  Evidencia,
+  HallazgoInterno,
+  Reparacion,
+  ResultadoReparacion,
+} from '../tipos';
 import {
   enRango,
   fallo,
@@ -129,7 +135,15 @@ export async function revisarPuertos(d: DepsDoctor): Promise<HallazgoInterno[]> 
         servicio: ps.servicio,
         ...(quien === 'otro' ? { proceso: dueno.nombre } : { programa: PROGRAMA[quien] }),
       },
-      evidencia: `Puerto ${ps.puerto}: ${dueno.nombre} (PID ${dueno.pid})${ejecutable ? ` — ${ejecutable}` : ''}`,
+      evidencia: {
+        codigo: (ejecutable ? 'puerto_dueno_exe' : 'puerto_dueno') as Evidencia['codigo'],
+        datos: {
+          puerto: ps.puerto,
+          proceso: dueno.nombre,
+          pid: dueno.pid,
+          ...(ejecutable ? { ejecutable } : {}),
+        },
+      },
     };
     const resuelto = async (): Promise<boolean> => !(await sigueOcupado(d, ps.puerto));
     if (quien === 'iis') {
@@ -188,7 +202,10 @@ export async function revisarRangosReservados(d: DepsDoctor): Promise<HallazgoIn
           gravedad: 'error',
           codigo: 'doctor.puerto_reservado',
           datos: { puerto: ps.puerto, servicio: ps.servicio, desde: r.desde, hasta: r.hasta },
-          evidencia: `Rango reservado ${r.desde}-${r.hasta} (incluye ${ps.puerto})`,
+          evidencia: {
+            codigo: 'rango_reservado',
+            datos: { desde: r.desde, hasta: r.hasta, puerto: ps.puerto },
+          },
         },
         ps,
         {

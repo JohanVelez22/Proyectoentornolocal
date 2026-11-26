@@ -11,7 +11,7 @@ export async function revisarVcRedist(d: DepsDoctor): Promise<HallazgoInterno[]>
       gravedad: 'error',
       codigo: 'doctor.vcredist_ausente',
       datos: {},
-      evidencia: 'No está instalado Microsoft Visual C++ 2015-2022 (x64)',
+      evidencia: { codigo: 'vcredist_ausente', datos: {} },
       reparacion: {
         id: 'instalar-vcredist',
         codigo: 'doctor.reparaciones.instalar_vcredist',

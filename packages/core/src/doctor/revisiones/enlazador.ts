@@ -16,7 +16,7 @@ export async function revisarEnlazadorMsvc(d: DepsDoctor): Promise<HallazgoInter
       gravedad: 'info',
       codigo: 'doctor.enlazador_msvc_ausente',
       datos: {},
-      evidencia: 'No se encontraron las herramientas de C++ de Visual Studio Build Tools',
+      evidencia: { codigo: 'enlazador_ausente', datos: {} },
       reparacion: {
         id: 'instalar-build-tools',
         codigo: 'doctor.reparaciones.instalar_build_tools',

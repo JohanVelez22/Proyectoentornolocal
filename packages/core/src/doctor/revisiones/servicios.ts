@@ -1,4 +1,4 @@
-import type { DepsDoctor, HallazgoInterno } from '../tipos';
+import { lineaTexto, type DepsDoctor, type HallazgoInterno } from '../tipos';
 import { fallo } from './comun';
 
 /** Servicios en error, con el final de su registro como evidencia. */
@@ -11,7 +11,7 @@ export async function revisarServicios(d: DepsDoctor): Promise<HallazgoInterno[]
       gravedad: 'error',
       codigo: 'doctor.servicio_en_error',
       datos: { servicio: s.nombre, id: s.id },
-      evidencia: s.mensaje ?? '',
+      evidencia: lineaTexto(s.mensaje ?? ''),
       reparacion: {
         id: 'reintentar-servicio',
         codigo: 'doctor.reparaciones.reintentar_servicio',

@@ -69,7 +69,7 @@ export async function revisarPath(d: DepsDoctor): Promise<HallazgoInterno[]> {
       gravedad: 'aviso',
       codigo: 'doctor.path_duplicados',
       datos: { cantidad: repetidas.length },
-      evidencia: `Repetidas: ${repetidas.join(' ; ')}`,
+      evidencia: { codigo: 'path_repetidas', datos: { entradas: repetidas.join(' ; ') } },
       reparacion: {
         id: 'path-quitar-duplicados',
         codigo: 'doctor.reparaciones.path_duplicados',
@@ -115,7 +115,7 @@ export async function revisarPath(d: DepsDoctor): Promise<HallazgoInterno[]> {
           gravedad: 'aviso',
           codigo: 'doctor.path_ajeno_delante',
           datos: { programa: p, origen: origen(x.real) },
-          evidencia: `${x.e} está antes que las herramientas de WolfCore Dev y también tiene ${p}`,
+          evidencia: { codigo: 'path_delante', datos: { entrada: x.e, programa: p } },
           reparacion: {
             id: 'path-ajeno',
             codigo: 'doctor.reparaciones.path_ajeno',

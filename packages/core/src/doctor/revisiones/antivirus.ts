@@ -15,10 +15,10 @@ export async function revisarAntivirus(d: DepsDoctor): Promise<HallazgoInterno[]
       gravedad: 'info',
       codigo: 'doctor.antivirus_sin_exclusion',
       datos: {},
-      evidencia:
-        a.excluida === null
-          ? 'El antivirus está activo; no se pudieron leer sus exclusiones (hace falta administrador)'
-          : 'El antivirus está activo y la carpeta de datos de WolfCore Dev no está excluida',
+      evidencia: {
+        codigo: a.excluida === null ? 'antivirus_sin_leer' : 'antivirus_sin_exclusion',
+        datos: {},
+      },
       reparacion: {
         id: 'antivirus-exclusion',
         codigo: 'doctor.reparaciones.antivirus',

@@ -9,6 +9,7 @@ import { revisarServicios } from './revisiones/servicios';
 import { revisarVcRedist } from './revisiones/vcredist';
 import {
   IDS_REVISION,
+  lineaTexto,
   type DepsDoctor,
   type Hallazgo,
   type HallazgoInterno,
@@ -67,7 +68,7 @@ export class Doctor {
         gravedad: 'info',
         codigo: 'doctor.revision_fallida',
         datos: { revision: id },
-        evidencia: e instanceof Error ? e.message : String(e),
+        evidencia: lineaTexto(e instanceof Error ? e.message : String(e)),
       },
     ]);
     this.enCurso.set(id, p);

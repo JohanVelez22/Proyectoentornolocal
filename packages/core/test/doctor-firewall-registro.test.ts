@@ -1,3 +1,4 @@
+import { evidenciaPlana } from './evidencia-plana';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -129,10 +130,10 @@ describe('N6: quitar y restaurar con una ruta y un nombre con acentos (cortafueg
     plat.reglasFirewallDetalle.set('{J-1} Aplicación €', { descripcion: 'Descripción: José €' });
     const d = new Doctor(deps());
     const h = (await d.revisar(['firewall'])).find((x) => x.id === 'firewall:reglas-entrada')!;
-    expect(h.evidencia).toContain('José');
+    expect(evidenciaPlana(h.evidencia)).toContain('José');
     expect(await d.reparar(h.id, true)).toEqual({ ok: true });
     const q = d.ultimo().find((x: Hallazgo) => x.id === 'firewall:quitadas')!;
-    expect(q.evidencia).toContain('Aplicación €');
+    expect(evidenciaPlana(q.evidencia)).toContain('Aplicación €');
     expect(await d.reparar(q.id, true)).toEqual({ ok: true });
     expect(plat.reglasEntrada.reglas.map((r) => r.nombre)).toEqual(['{J-1} Aplicación €']);
   });

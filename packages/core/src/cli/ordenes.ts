@@ -1,7 +1,7 @@
 import { realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import type { ZodType } from 'zod';
-import type { Hallazgo } from '../doctor/tipos';
+import type { Evidencia, Hallazgo } from '../doctor/tipos';
 import { datosPermitidos, ErrorWolf, type CodigoError } from '../errores';
 import { enmascararSecretos } from '../patronesSecretos';
 import { rutaComparable, rutaDentroDe } from '../plataforma/sistema';
@@ -529,6 +529,20 @@ const registros: Orden<'registros'> = async (ops, a) => {
   return { sitio: a.sitio, fuente: a.fuente ?? 'error', lineas };
 };
 
+/** Evidencia del Doctor para la CLI: código y datos (sin claves secretas) y a lo sumo 50 líneas. */
+function evidenciaCli(e: Evidencia): Evidencia {
+  const datos = Object.fromEntries(
+    Object.entries(e.datos)
+      .filter(([k]) => !CLAVE_SECRETA_ESTRICTA.test(k))
+      .map(([k, v]) => [k, typeof v === 'string' ? v.slice(0, 500) : v]),
+  );
+  return {
+    codigo: e.codigo,
+    datos,
+    ...(e.lineas ? { lineas: e.lineas.slice(0, 50).map(evidenciaCli) } : {}),
+  };
+}
+
 const doctor: Orden<'doctor'> = async (ops) => {
   const hallazgos = await ops.revisarDoctor();
   return {
@@ -540,7 +554,7 @@ const doctor: Orden<'doctor'> = async (ops) => {
       datos: Object.fromEntries(
         Object.entries(h.datos).filter(([k]) => !CLAVE_SECRETA_ESTRICTA.test(k)),
       ),
-      evidencia: h.evidencia.slice(0, 500),
+      evidencia: evidenciaCli(h.evidencia),
       reparable: h.reparacion !== undefined && !h.reparacion.soloInforma,
     })),
   };

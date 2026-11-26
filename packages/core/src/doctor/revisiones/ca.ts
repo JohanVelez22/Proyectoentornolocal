@@ -23,7 +23,9 @@ export async function revisarCa(d: DepsDoctor): Promise<HallazgoInterno[]> {
       gravedad: vencida ? 'error' : 'aviso',
       codigo: vencida ? 'doctor.ca_vencida' : 'doctor.ca_por_vencer',
       datos: vencida ? {} : { dias: ca.dias },
-      evidencia: vencida ? `La CA venció hace ${-ca.dias} días` : `La CA vence en ${ca.dias} días`,
+      evidencia: vencida
+        ? { codigo: 'ca_vencida', datos: { dias: -ca.dias } }
+        : { codigo: 'ca_por_vencer', datos: { dias: ca.dias } },
       reparacion: {
         id: 'regenerar-ca',
         codigo: 'doctor.reparaciones.regenerar_ca',
@@ -49,8 +51,8 @@ export async function revisarCertificados(d: DepsDoctor): Promise<HallazgoIntern
       codigo: vencido ? 'doctor.certificado_vencido' : 'doctor.certificado_por_vencer',
       datos: vencido ? { dominio } : { dominio, dias: v.dias },
       evidencia: vencido
-        ? `El certificado de ${dominio} venció hace ${-v.dias} días`
-        : `El certificado de ${dominio} vence en ${v.dias} días`,
+        ? { codigo: 'certificado_vencido', datos: { dominio, dias: -v.dias } }
+        : { codigo: 'certificado_por_vencer', datos: { dominio, dias: v.dias } },
       reparacion: {
         id: 'regenerar-certificados',
         codigo: 'doctor.reparaciones.regenerar_certificados',
@@ -79,15 +81,18 @@ export async function revisarConfianza(d: DepsDoctor): Promise<HallazgoInterno[]
       gravedad: 'aviso',
       codigo: 'doctor.firefox_sin_confianza',
       datos: { cantidad: faltan.length },
-      evidencia: `Perfiles de Firefox sin la confianza: ${faltan
-        .map((p) =>
-          p.fuera
-            ? `${p.perfil} (fuera de la carpeta de Firefox)`
+      evidencia: {
+        codigo: 'firefox_perfiles',
+        datos: { cantidad: faltan.length },
+        lineas: faltan.map((p) => ({
+          codigo: p.fuera
+            ? 'firefox_perfil_fuera'
             : p.abierto
-              ? `${p.perfil} (abierto)`
-              : p.perfil,
-        )
-        .join(', ')}`,
+              ? 'firefox_perfil_abierto'
+              : 'firefox_perfil',
+          datos: { perfil: p.perfil },
+        })),
+      },
       reparacion: {
         id: 'firefox-confianza',
         codigo: 'doctor.reparaciones.firefox_confianza',

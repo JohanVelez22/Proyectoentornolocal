@@ -1,3 +1,4 @@
+import { evidenciaPlana } from './evidencia-plana';
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -81,11 +82,13 @@ describe('D46: quitar reglas peligrosas del cortafuegos (simulado)', () => {
     const h = quitar(hs);
     expect(h.reparacion).toMatchObject({ soloInforma: false, requiereAdmin: true });
     for (const t of ['{A-1}', nginx, 'Public, Private', 'Inbound/Allow', '{B-2}', mysqld]) {
-      expect(h.evidencia).toContain(t);
+      expect(evidenciaPlana(h.evidencia)).toContain(t);
     }
     expect(h.elementos!.map((e) => e.clave).sort()).toEqual(['{A-1}', '{B-2}']);
-    expect(h.evidencia).not.toContain('FLY-1');
-    expect(hs.find((x) => x.id === 'firewall:reglas-ajenas')!.evidencia).toContain('FLY-1');
+    expect(evidenciaPlana(h.evidencia)).not.toContain('FLY-1');
+    expect(evidenciaPlana(hs.find((x) => x.id === 'firewall:reglas-ajenas')!.evidencia)).toContain(
+      'FLY-1',
+    );
   });
 
   it('sin confirmado no hace nada: ni elevación ni registro', async () => {
@@ -346,7 +349,7 @@ describe('D46: quitar reglas peligrosas del cortafuegos (simulado)', () => {
       const a = hs.find((x) => x.id === 'firewall:reglas-acotadas')!;
       expect(a).toMatchObject({ gravedad: 'info', datos: { cantidad: 1 } });
       expect(a.reparacion).toBeUndefined();
-      expect(a.evidencia).toContain('{L-1}');
+      expect(evidenciaPlana(a.evidencia)).toContain('{L-1}');
       expect(quitar(hs).elementos!.map((e) => e.clave)).toEqual(['{A-1}']);
     });
 
@@ -435,12 +438,12 @@ describe('D46: quitar reglas peligrosas del cortafuegos (simulado)', () => {
       const linea = q.elementos!.find((e) => e.texto.includes('{A-1}'))!.texto;
       for (const t of [
         nginx,
-        'perfil Public, Private',
+        'Profile=Public, Private',
         'Inbound/Allow',
-        'protocolo TCP',
-        'puerto local 8080',
-        'dirección remota LocalSubnet',
-        'habilitada',
+        'Protocol=TCP',
+        'LocalPort=8080',
+        'RemoteAddress=LocalSubnet',
+        'Enabled',
       ]) {
         expect(linea).toContain(t);
       }
@@ -583,7 +586,7 @@ describe('D46: quitar reglas peligrosas del cortafuegos (simulado)', () => {
       plat.reglasEntrada = { ok: true, reglas: [regla(nombre, nginx)] };
       const d = new Doctor(deps());
       const h = quitar(await revisar(d));
-      expect(h.evidencia).toContain(nombre);
+      expect(evidenciaPlana(h.evidencia)).toContain(nombre);
       expect(await d.reparar(h.id, true)).toEqual({ ok: true });
       expect(plat.reglasEntrada.reglas).toEqual([]);
     });
