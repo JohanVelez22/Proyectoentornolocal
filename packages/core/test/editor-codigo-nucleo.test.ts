@@ -13,7 +13,7 @@ afterEach(async () => {
 
 /** Núcleo aislado (`WOLFCORE_DATOS`) con plataforma falsa: todo en una carpeta temporal. */
 async function crear() {
-  const raiz = realpathSync(await carpetaTemporal('pel-editor-nucleo-'));
+  const raiz = realpathSync.native(await carpetaTemporal('pel-editor-nucleo-'));
   const base = path.join(raiz, 'datos');
   const usuario = path.join(raiz, 'usuario');
   mkdirSync(usuario, { recursive: true });

@@ -32,7 +32,7 @@ type Sitios = (proyecto: string) => { carpeta: string; datosReales: boolean }[];
  * carpeta del usuario. Nada toca la carpeta real de WolfCore Dev.
  */
 async function escenario(extra: Partial<DepsEditorCodigo> = {}, sitios: Sitios = () => []) {
-  const raiz = realpathSync(await carpetaTemporal('pel-editor-'));
+  const raiz = realpathSync.native(await carpetaTemporal('pel-editor-'));
   const datos = path.join(raiz, 'WolfCoreDatos');
   const proyecto = path.join(raiz, 'proyecto');
   mkdirSync(path.join(datos, 'data', 'mysql'), { recursive: true });
