@@ -56,6 +56,7 @@ export const pt: Textos = {
     abrir: 'Abrir',
     copiar: 'Copiar',
     copiado: 'Copiado para a área de transferência',
+    copiarCompleto: 'Copiar o texto completo',
     guardar: 'Salvar',
     cerrar: 'Fechar',
     abrirCarpeta: 'Abrir pasta',

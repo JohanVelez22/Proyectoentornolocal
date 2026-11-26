@@ -52,6 +52,7 @@ export const en: Textos = {
     abrir: 'Open',
     copiar: 'Copy',
     copiado: 'Copied to clipboard',
+    copiarCompleto: 'Copy the full text',
     guardar: 'Save',
     cerrar: 'Close',
     abrirCarpeta: 'Open folder',

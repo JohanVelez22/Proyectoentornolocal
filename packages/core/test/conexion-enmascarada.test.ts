@@ -88,7 +88,9 @@ describe('Nucleo: datos de conexión sin secreto y rutas «revelar»', () => {
     const normal = await n.bloqueEnvBd('mysql', 'tienda', 'laravel');
     expect(normal).not.toContain(CLAVE);
     expect(normal).toContain(`DB_PASSWORD=${MASCARA_CLAVE}`);
-    const completo = await n.bloqueEnvBd('mysql', 'tienda', 'laravel', undefined, { revelar: true });
+    const completo = await n.bloqueEnvBd('mysql', 'tienda', 'laravel', undefined, {
+      revelar: true,
+    });
     expect(completo).toContain(`DB_PASSWORD=${CLAVE}`);
   });
 

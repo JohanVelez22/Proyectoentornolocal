@@ -57,6 +57,7 @@ export const fr: Textos = {
     abrir: 'Ouvrir',
     copiar: 'Copier',
     copiado: 'Copié dans le presse-papiers',
+    copiarCompleto: 'Copier le texte complet',
     guardar: 'Enregistrer',
     cerrar: 'Fermer',
     abrirCarpeta: 'Ouvrir le dossier',

@@ -11,6 +11,7 @@ import { NButton, NIcon, NTag, NTooltip } from 'naive-ui';
 import { computed } from 'vue';
 import type { EstadoAgente } from '../../shared/api';
 import { textos } from '../i18n';
+import TextoLargo from './TextoLargo.vue';
 
 /**
  * Un agente: si está instalado (y de dónde sale), su versión, si tiene el MCP registrado y sus
@@ -81,7 +82,7 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
           <dd class="tenue">{{ t.origen[a.origen] }}</dd>
         </div>
         <div class="ancho">
-          <dd class="mono tenue ruta" :title="a.ruta ?? ''">{{ a.ruta }}</dd>
+          <dd class="tenue ruta"><TextoLargo :texto="a.ruta ?? ''" mono /></dd>
         </div>
       </template>
       <p v-else-if="!a.instalable" class="nota">{{ t.soloGuia }}</p>
@@ -97,7 +98,7 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
       >
         {{ a.mcpRegistrado ? t.mcpRegistrado : t.mcpSinRegistrar }}
       </NTag>
-      <span class="tenue mono ruta" :title="a.archivoConfig">{{ a.archivoConfig }}</span>
+      <span class="tenue ruta"><TextoLargo :texto="a.archivoConfig" mono /></span>
     </div>
 
     <footer class="acciones" role="group" :aria-label="a.nombre">
@@ -217,12 +218,10 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
 }
 .datos dd.ruta,
 .ruta {
-  /* Más específico que `.datos dd` (flex): en un contenedor flex los puntos suspensivos no salen. */
+  /* El recorte por el centro lo hace TextoLargo; aquí solo se le da el ancho disponible. */
   display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   min-width: 0;
+  flex: 1;
 }
 .nota {
   grid-column: 1 / -1;

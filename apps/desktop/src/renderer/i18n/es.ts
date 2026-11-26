@@ -51,6 +51,7 @@ export const es = {
     abrir: 'Abrir',
     copiar: 'Copiar',
     copiado: 'Copiado al portapapeles',
+    copiarCompleto: 'Copiar el texto completo',
     guardar: 'Guardar',
     cerrar: 'Cerrar',
     abrirCarpeta: 'Abrir carpeta',

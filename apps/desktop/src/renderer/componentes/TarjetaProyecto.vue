@@ -68,6 +68,7 @@ import ProcesosProyecto from './ProcesosProyecto.vue';
 import SeccionReverb from './SeccionReverb.vue';
 import InterruptorLan from './InterruptorLan.vue';
 import InterruptorTunel from './InterruptorTunel.vue';
+import TextoLargo from './TextoLargo.vue';
 import EditorVhost from './EditorVhost.vue';
 import SeccionFtpSitio from './SeccionFtpSitio.vue';
 import SeccionTareasSitio from './SeccionTareasSitio.vue';
@@ -413,7 +414,7 @@ function abrirCarpeta(): void {
       <EstadoPunto :estado="estado.punto" :etiqueta="estado.etiqueta" solo-punto class="punto" />
       <div class="cuerpo">
         <div class="linea">
-          <h3 class="nombre" :title="nombre">{{ nombre }}</h3>
+          <h3 class="nombre"><TextoLargo :texto="nombre" :cola="10" :copiable="false" /></h3>
           <NTag size="small" :bordered="false" class="etiqueta">{{
             t.tiposCortos[sitio.tipo]
           }}</NTag>
@@ -767,9 +768,7 @@ function abrirCarpeta(): void {
   margin: 0;
   font-size: 14.5px;
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
   max-width: 100%;
 }
 .mono {
