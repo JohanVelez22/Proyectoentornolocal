@@ -20,7 +20,7 @@ import { computed, watchEffect } from 'vue';
 import Marco from './componentes/Marco.vue';
 import { idioma } from './i18n';
 import { esOscuro, usePreferencias } from './stores/preferencias';
-import { mezclar, primarioDe, temaDe } from './tema';
+import { mezclar, primarioDe, temaDe, textoSobre } from './tema';
 
 const preferencias = usePreferencias();
 const osTheme = useOsTheme();
@@ -42,6 +42,7 @@ watchEffect(() => {
   const raiz = document.documentElement.style;
   raiz.setProperty('--acento', p);
   raiz.setProperty('--acento-rgb', `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`);
+  raiz.setProperty('--sobre-acento', textoSobre(p));
   raiz.setProperty('--acento-claro', mezclar(p, 0.15));
   raiz.setProperty('--acento-oscuro', mezclar(p, -0.2));
   document.documentElement.dataset['tema'] = oscuro.value ? 'oscuro' : 'claro';

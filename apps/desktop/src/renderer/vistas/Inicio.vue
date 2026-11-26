@@ -324,7 +324,7 @@ function abrir(url: string): void {
 }
 .bienvenida {
   margin: 0 0 18px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .tiles {
   display: grid;
@@ -387,13 +387,13 @@ function abrir(url: string): void {
 .tile-valor small {
   font-size: 12px;
   font-weight: 400;
-  opacity: 0.6;
+  opacity: 0.72;
   letter-spacing: 0;
   margin-left: 4px;
 }
 .tile-etiqueta {
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .aviso-hosts {
   margin-bottom: 18px;
@@ -407,7 +407,7 @@ function abrir(url: string): void {
 .descripcion {
   margin: 0 0 12px;
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .rejilla-workspaces {
   display: grid;
@@ -461,20 +461,20 @@ function abrir(url: string): void {
 .meta {
   font-family: var(--fuente-mono);
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .url {
   font-size: 12px;
   font-weight: 400;
   color: inherit;
-  opacity: 0.7;
+  opacity: 0.76;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .vacio {
   margin: 6px 0;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 @media (max-width: 1080px) {
   .tiles {

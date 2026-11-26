@@ -357,7 +357,7 @@ function abrirDocumentacion(): void {
 .ayuda {
   margin: -6px 0 0;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .pie {
   display: flex;

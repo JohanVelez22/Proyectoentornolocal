@@ -205,7 +205,7 @@ onMounted(() => {
 }
 .detalle {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .instalados {
   display: flex;
@@ -218,7 +218,7 @@ onMounted(() => {
 }
 .ninguno {
   font-size: 12px;
-  opacity: 0.5;
+  opacity: 0.72;
 }
 .acciones {
   display: flex;

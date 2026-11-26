@@ -144,7 +144,7 @@ function copiar(texto: string): void {
 <style scoped>
 .descripcion {
   margin: 0 0 18px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .panel {
   display: grid;
@@ -181,7 +181,7 @@ function copiar(texto: string): void {
 }
 .contador-etiqueta {
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .contador-valor {
   font-size: 30px;
@@ -221,7 +221,7 @@ function copiar(texto: string): void {
 }
 .tenue {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .sr-only {
   position: absolute;

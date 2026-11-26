@@ -675,7 +675,7 @@ const titulosPaso = computed(() => [t.pasos.tipo, t.pasos.datos, t.pasos.resumen
   font-size: 12px;
 }
 .campo > span {
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .mono,
 .ruta {
@@ -683,7 +683,7 @@ const titulosPaso = computed(() => [t.pasos.tipo, t.pasos.datos, t.pasos.resumen
 }
 .nota {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .nota.error {
   color: var(--texto-error);

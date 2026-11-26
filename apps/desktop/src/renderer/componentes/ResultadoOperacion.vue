@@ -139,7 +139,7 @@ function abrirCarpeta(ruta: string): void {
 }
 .etiqueta {
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
   width: 100%;
 }
 .ruta code {

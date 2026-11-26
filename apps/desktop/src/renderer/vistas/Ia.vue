@@ -683,7 +683,7 @@ const filasConexion = computed(() => [
 <style scoped>
 .descripcion {
   margin: 0 0 18px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .nube {
   display: flex;
@@ -711,7 +711,7 @@ const filasConexion = computed(() => [
   display: block;
   margin-top: 6px;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .esqueleto {
   border-radius: 12px;
@@ -805,7 +805,7 @@ const filasConexion = computed(() => [
 }
 .tenue {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .mono,
 .mono :deep(input) {
@@ -813,7 +813,7 @@ const filasConexion = computed(() => [
 }
 .sin-modelos {
   margin: 4px 0;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .modelos,
 .descargas {
@@ -941,7 +941,7 @@ const filasConexion = computed(() => [
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .dato dd {
   display: flex;

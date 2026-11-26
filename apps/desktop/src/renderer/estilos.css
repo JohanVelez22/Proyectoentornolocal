@@ -8,6 +8,8 @@
   --acento-rgb: 79, 91, 213;
   --acento-claro: #6470e0;
   --acento-oscuro: #3d48b8;
+  /* Texto sobre un fondo del color del acento (blanco u oscuro según el contraste): lo fija App.vue. */
+  --sobre-acento: #fff;
   /* Duración de las transiciones de la interfaz. */
   --transicion: 150ms;
 }

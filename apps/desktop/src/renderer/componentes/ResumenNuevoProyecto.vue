@@ -93,7 +93,7 @@ const lineas = computed(() =>
 .nota {
   margin: 6px 0;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .lista {
   display: grid;
@@ -103,7 +103,7 @@ const lineas = computed(() =>
   font-size: 13px;
 }
 .lista dt {
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .lista dd {
   margin: 0;

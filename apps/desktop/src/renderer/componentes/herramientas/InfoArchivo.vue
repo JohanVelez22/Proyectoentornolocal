@@ -112,7 +112,7 @@ async function elegido(e: Event): Promise<void> {
   height: 34px;
   border-radius: 6px;
   background: var(--acento);
-  color: #fff;
+  color: var(--sobre-acento);
   font-size: 14px;
   cursor: pointer;
 }

@@ -254,7 +254,7 @@ const fecha = (iso: string): string => new Date(iso).toLocaleString();
 }
 .tenue {
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
   margin: 0 0 8px;
 }
 :global(.modal-diff) {

@@ -196,7 +196,7 @@ onBeforeUnmount(() => {
 }
 .tenue {
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .pasos {
   margin: 8px 0 0;

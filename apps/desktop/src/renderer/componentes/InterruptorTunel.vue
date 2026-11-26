@@ -220,7 +220,7 @@ function cambiar(valor: boolean): void {
   flex: 1;
 }
 .tenue {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .url {
   font-family: var(--fuente-mono);

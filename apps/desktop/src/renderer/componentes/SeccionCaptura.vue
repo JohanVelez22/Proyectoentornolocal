@@ -164,7 +164,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', alPulsar, true));
 .ayuda {
   display: block;
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .ayuda.error {
   color: var(--texto-error);

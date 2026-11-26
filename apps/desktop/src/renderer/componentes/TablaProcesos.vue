@@ -177,7 +177,7 @@ th {
   text-align: left;
   font-weight: 500;
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
   padding: 6px 8px;
   white-space: nowrap;
 }
@@ -214,6 +214,6 @@ td {
 }
 .vacio {
   margin: 6px 0;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 </style>

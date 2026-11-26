@@ -133,7 +133,7 @@ watch(
   color: var(--texto-error);
 }
 .tenue {
-  opacity: 0.45;
+  opacity: 0.72;
 }
 .texto {
   flex: 1;
@@ -147,12 +147,12 @@ watch(
   font-size: 13px;
 }
 .e-omitido .titulo {
-  opacity: 0.6;
+  opacity: 0.72;
   text-decoration: line-through;
 }
 .estado {
   font-size: 11.5px;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .botones {
   display: flex;

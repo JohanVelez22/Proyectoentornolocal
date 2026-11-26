@@ -276,7 +276,7 @@ function cerrar(): void {
   border: 1px dashed rgba(128, 128, 128, 0.35);
 }
 .archivo-icono {
-  opacity: 0.6;
+  opacity: 0.72;
   flex: none;
 }
 .archivo-nombre {
@@ -291,7 +291,7 @@ function cerrar(): void {
 .archivo-vacio {
   flex: 1;
   font-size: 13px;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .formato {
   display: flex;
@@ -301,7 +301,7 @@ function cerrar(): void {
   font-size: 12.5px;
 }
 .formato-etiqueta {
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .aviso-formato {
   display: flex;
@@ -335,7 +335,7 @@ function cerrar(): void {
 .tenue {
   margin: 0;
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .acciones {
   display: flex;

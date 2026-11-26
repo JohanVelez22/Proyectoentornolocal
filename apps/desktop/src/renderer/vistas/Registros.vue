@@ -239,7 +239,7 @@ function cambiarNiveles(v: (string | number)[]): void {
 }
 .descripcion {
   margin: 0 0 6px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .barra {
   display: flex;
@@ -264,7 +264,7 @@ function cambiarNiveles(v: (string | number)[]): void {
 }
 .cuenta {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
   font-variant-numeric: tabular-nums;
 }
 .visor-envoltura {
@@ -306,7 +306,7 @@ function cambiarNiveles(v: (string | number)[]): void {
   opacity: 0.8;
 }
 .sin-lineas {
-  opacity: 0.6;
+  opacity: 0.72;
   font-family: var(--fuente);
 }
 .vacio {

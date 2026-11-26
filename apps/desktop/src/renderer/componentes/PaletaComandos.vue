@@ -367,7 +367,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', atajo));
 }
 .detalle {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -379,12 +379,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', atajo));
 .vacio {
   margin: 18px 0 12px;
   text-align: center;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .ayuda {
   margin: 8px 4px 0;
   font-size: 11.5px;
-  opacity: 0.5;
+  opacity: 0.72;
 }
 @media (prefers-reduced-motion: reduce) {
   .item {

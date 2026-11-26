@@ -222,7 +222,7 @@ onMounted(() => {
 }
 .descripcion {
   margin: 0;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .grupo {
   margin-bottom: 22px;
@@ -244,7 +244,7 @@ onMounted(() => {
 }
 .cabeza-grupo small {
   font-size: 12px;
-  opacity: 0.5;
+  opacity: 0.72;
 }
 .rejilla {
   display: grid;
@@ -278,7 +278,7 @@ onMounted(() => {
 .cabeza-instalar small {
   font-size: 12px;
   font-weight: 400;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .bloque-instalar + .bloque-instalar {
   margin-top: 14px;
@@ -289,6 +289,6 @@ onMounted(() => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 </style>

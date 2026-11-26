@@ -105,7 +105,7 @@ function descargar(): void {
 .tenue {
   margin: 0;
   font-size: 12.5px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .error {
   margin: 0;

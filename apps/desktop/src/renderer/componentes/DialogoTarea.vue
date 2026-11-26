@@ -422,7 +422,7 @@ async function aceptar(): Promise<void> {
   font-size: 12.5px;
 }
 .etiqueta {
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .arg {
   padding: 1px 6px;

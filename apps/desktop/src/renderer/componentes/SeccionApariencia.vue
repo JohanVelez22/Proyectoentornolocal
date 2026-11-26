@@ -82,7 +82,7 @@ async function elegirAcento(claro: string): Promise<void> {
 .ayuda-tarjeta {
   margin: -4px 0 14px;
   font-size: 12.5px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .dos {
   display: grid;
@@ -126,7 +126,7 @@ async function elegirAcento(claro: string): Promise<void> {
 }
 .propio {
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .asistente {
   display: flex;
@@ -144,7 +144,7 @@ async function elegirAcento(claro: string): Promise<void> {
 }
 .ayuda {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 @media (prefers-reduced-motion: reduce) {
   .acento {

@@ -125,7 +125,7 @@ onMounted(async () => {
 
 <style scoped>
 .tenue {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .lista {
   margin: 0;

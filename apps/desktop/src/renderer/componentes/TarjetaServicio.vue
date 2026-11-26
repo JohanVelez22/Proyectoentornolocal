@@ -511,7 +511,7 @@ function cambiarRedLocal(valor: boolean): void {
 .instancias {
   margin: 0 0 6px;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .tarjeta {
   display: flex;
@@ -556,7 +556,7 @@ function cambiarRedLocal(valor: boolean): void {
 .version {
   font-family: var(--fuente-mono);
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .datos {
   display: grid;
@@ -568,7 +568,7 @@ function cambiarRedLocal(valor: boolean): void {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .datos dd {
   margin: 2px 0 0;
@@ -622,7 +622,7 @@ function cambiarRedLocal(valor: boolean): void {
 .mensaje {
   margin: 0;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .opcion {
   display: inline-flex;
@@ -639,7 +639,7 @@ function cambiarRedLocal(valor: boolean): void {
 .ayuda {
   margin: 0;
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .pie {
   margin-top: auto;
@@ -650,7 +650,7 @@ function cambiarRedLocal(valor: boolean): void {
 }
 .externo {
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .campo-puerto {
   width: 160px;

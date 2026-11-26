@@ -237,7 +237,7 @@ async function recuperar(id: string): Promise<void> {
   display: block;
   margin-bottom: 4px;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .fila-tomar {
   display: flex;
@@ -245,7 +245,7 @@ async function recuperar(id: string): Promise<void> {
 }
 .vacio {
   margin: 8px 0;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .lista {
   list-style: none;
@@ -279,7 +279,7 @@ async function recuperar(id: string): Promise<void> {
 }
 .detalle {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .detalle.aviso {
   opacity: 0.9;
@@ -300,6 +300,6 @@ async function recuperar(id: string): Promise<void> {
   margin: 12px 0 0;
   font-size: 12px;
   line-height: 1.45;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 </style>

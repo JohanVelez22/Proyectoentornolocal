@@ -189,12 +189,12 @@ async function crear(): Promise<void> {
   font-size: 12.5px;
 }
 .codificacion span {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .tenue {
   margin: 4px 0 10px;
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .fila {
   display: flex;

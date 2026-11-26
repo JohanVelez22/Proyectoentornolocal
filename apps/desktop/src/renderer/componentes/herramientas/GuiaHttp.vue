@@ -193,7 +193,7 @@ const total = computed(() =>
 .resumen {
   flex-basis: 100%;
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .cuerpo {
   padding-bottom: 12px;

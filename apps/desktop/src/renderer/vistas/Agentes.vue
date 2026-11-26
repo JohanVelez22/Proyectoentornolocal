@@ -310,7 +310,7 @@ function abrir(): void {
 }
 .tenue {
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .campo {
   margin-top: 10px;

@@ -319,7 +319,7 @@ const saltadas = computed(() =>
   border-radius: 6px;
 }
 .fila.bloqueada {
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .nombre {
   font-weight: 500;

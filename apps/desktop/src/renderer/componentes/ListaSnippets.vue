@@ -48,7 +48,7 @@ function titulo(s: SnippetNginx): string {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.55;
+  opacity: 0.72;
   margin-right: 4px;
 }
 </style>

@@ -251,7 +251,7 @@ onMounted(() => {
 }
 .descripcion {
   margin: 0;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .vacio {
   padding: 56px 0 48px;
@@ -285,7 +285,7 @@ onMounted(() => {
 }
 .total {
   font-size: 12.5px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .lista {
   display: flex;
@@ -294,7 +294,7 @@ onMounted(() => {
 }
 .sin-resultados {
   margin: 12px 0;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .fila-enter-active,
 .fila-leave-active {

@@ -54,6 +54,6 @@ const recortado = computed(() => props.diff.split('\n').length > MAX_LINEAS);
   background: rgba(248, 81, 73, 0.16);
 }
 .tramo {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 </style>

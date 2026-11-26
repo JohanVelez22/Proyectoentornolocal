@@ -109,7 +109,7 @@ const instanciaDeRama = computed(
 }
 .cabeza small {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 /* Tarjetas que se reparten el ancho disponible: más columnas en ventanas anchas, una en estrechas. */
 .cuadricula {

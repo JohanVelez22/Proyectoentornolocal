@@ -219,7 +219,7 @@ async function confirmar(): Promise<void> {
   word-break: break-all;
 }
 .etiqueta {
-  opacity: 0.65;
+  opacity: 0.75;
   margin-right: 6px;
 }
 .tam {

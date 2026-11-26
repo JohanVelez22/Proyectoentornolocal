@@ -47,6 +47,28 @@ export function mezclar(hex: string, t: number): string {
     .join('')}`;
 }
 
+function luminancia(hex: string): number {
+  const f = (v: number): number => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const [r, g, b] = rgb(hex);
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+
+/** Contraste WCAG entre dos colores `#rrggbb`. */
+export function contraste(a: string, b: string): number {
+  const [x, y] = [luminancia(a), luminancia(b)].sort((p, q) => q - p) as [number, number];
+  return (x + 0.05) / (y + 0.05);
+}
+
+const TEXTO_OSCURO = '#10121a';
+
+/** Texto (blanco u oscuro) que se lee mejor sobre un fondo del color del acento. */
+export function textoSobre(fondo: string): string {
+  return contraste('#ffffff', fondo) >= contraste(TEXTO_OSCURO, fondo) ? '#ffffff' : TEXTO_OSCURO;
+}
+
 /** Color primario del tema a partir del acento guardado (`#rrggbb` o null). */
 export function primarioDe(acento: string | null, oscuro: boolean): string {
   const a = acentoDe(acento);
@@ -64,15 +86,76 @@ export function temaDe(oscuro: boolean, acento: string | null): GlobalThemeOverr
     primaryColorPressed: mezclar(p, -0.15),
     primaryColorSuppl: mezclar(p, 0.15),
   };
+  const sobre = textoSobre(p);
+  const botonPrimario = {
+    textColorPrimary: sobre,
+    textColorHoverPrimary: sobre,
+    textColorPressedPrimary: sobre,
+    textColorFocusPrimary: sobre,
+  };
   if (oscuro) {
     return {
-      common: { ...comunes, ...primarios, bodyColor: '#121317' },
+      // Marcadores y textos vacíos de Naive UI: por defecto llegan a 2.9:1; AA pide 4.5:1.
+      common: {
+        ...comunes,
+        ...primarios,
+        bodyColor: '#121317',
+        placeholderColor: 'rgba(255, 255, 255, 0.62)',
+        // El texto de los botones y etiquetas de aviso lleva el color del tipo sobre un fondo teñido:
+        // los tonos por defecto de Naive UI quedan en 3.9–4.2:1.
+        errorColor: '#ff9c9c',
+        errorColorHover: '#ffb0b0',
+        errorColorPressed: '#ff8585',
+        errorColorSuppl: '#ff9c9c',
+      },
+      // La insignia de la campana: texto blanco sobre rojo (el rosa claro de errorColor no da contraste).
+      Badge: { color: '#c42a43', textColor: '#ffffff' },
+      Button: {
+        ...botonPrimario,
+        colorOpacitySecondary: '0.1',
+        colorOpacitySecondaryHover: '0.15',
+        colorOpacitySecondaryPressed: '0.2',
+      },
+      Empty: { textColor: 'rgba(255, 255, 255, 0.66)' },
       Layout: { siderColor: '#17181d', headerColor: '#121317', color: '#121317' },
       Card: { color: '#1a1b21', borderColor: '#2a2c34' },
     };
   }
   return {
-    common: { ...comunes, ...primarios, bodyColor: '#f5f6f8' },
+    // Por defecto Naive UI da 4.0:1 al texto terciario, 1.8:1 al marcador y 1.7:1 al texto vacío, y
+    // blanco sobre su ámbar (2.1:1) en los botones de aviso: todo por debajo de AA (4.5:1).
+    common: {
+      ...comunes,
+      ...primarios,
+      bodyColor: '#f5f6f8',
+      textColor3: '#59606a',
+      placeholderColor: '#636a75',
+      warningColor: '#9a4207',
+      warningColorHover: '#8a3b06',
+      warningColorPressed: '#7a3305',
+      warningColorSuppl: '#9a4207',
+      errorColor: '#b0213f',
+      errorColorHover: '#a01c38',
+      errorColorPressed: '#8f1a33',
+      errorColorSuppl: '#b0213f',
+      successColor: '#0c6b3a',
+      successColorHover: '#0a5c32',
+      successColorPressed: '#084d2a',
+      successColorSuppl: '#0c6b3a',
+      infoColor: '#1558b8',
+      infoColorHover: '#124ca0',
+      infoColorPressed: '#0f4088',
+      infoColorSuppl: '#1558b8',
+    },
+    // Los botones "secundarios" y las etiquetas tiñen su fondo con el color del tipo: con menos tinte
+    // el texto del mismo color llega a 4.5:1 (con el 16 % por defecto se quedaba en 3.5–4.1:1).
+    Button: {
+      ...botonPrimario,
+      colorOpacitySecondary: '0.05',
+      colorOpacitySecondaryHover: '0.09',
+      colorOpacitySecondaryPressed: '0.13',
+    },
+    Empty: { textColor: '#59606a' },
     Layout: { siderColor: '#fbfbfc', headerColor: '#f5f6f8', color: '#f5f6f8' },
     Card: { borderColor: '#e6e8ec' },
   };

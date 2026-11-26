@@ -217,7 +217,7 @@ function finalizar(a: AlertaPanel): void {
 }
 .nota {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .esperando {
   margin: 8px 0 0;
@@ -255,7 +255,7 @@ function finalizar(a: AlertaPanel): void {
 }
 .etiqueta {
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .valor {
   font-size: 20px;
@@ -272,7 +272,7 @@ function finalizar(a: AlertaPanel): void {
   display: block;
   margin-top: 6px;
   font-size: 11.5px;
-  opacity: 0.65;
+  opacity: 0.75;
   font-variant-numeric: tabular-nums;
 }
 .leyenda {

@@ -117,7 +117,7 @@ const motivos = textos.perfiles.motivos as Record<string, string>;
   font-size: 12px;
 }
 .etiqueta {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 code {
   font-family: var(--fuente-mono);

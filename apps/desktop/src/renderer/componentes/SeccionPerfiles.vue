@@ -265,7 +265,7 @@ const fecha = (iso: string): string => new Date(iso).toLocaleString();
 .ayuda {
   margin: 4px 0;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .casillas {
   display: flex;

@@ -815,16 +815,16 @@ function abrirCarpeta(): void {
 }
 .alias {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
   cursor: default;
 }
 .estado-texto {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .nota {
   margin: 2px 0 0;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .acciones {
   display: flex;
@@ -876,7 +876,7 @@ function abrirCarpeta(): void {
 .receta-titulo {
   font-size: 12px;
   font-weight: 600;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .receta-barra {
   max-width: 140px;

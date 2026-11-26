@@ -379,7 +379,7 @@ function confirmarRestaurar(v: VersionVhost): void {
   flex: 1;
 }
 .tenue {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .desplegar {
   font-size: 12px;

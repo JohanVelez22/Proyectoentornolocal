@@ -160,7 +160,7 @@ async function responder(aprobado: boolean): Promise<void> {
   font-size: 13px;
 }
 .datos dt {
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .datos dd {
   margin: 0;
@@ -173,7 +173,7 @@ async function responder(aprobado: boolean): Promise<void> {
 .subtitulo {
   margin: 0 0 6px;
   font-size: 13px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .pasos {
   margin: 0;

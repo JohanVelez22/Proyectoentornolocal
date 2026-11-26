@@ -388,7 +388,7 @@ const textoCodigo = (codigo: string | undefined, datos?: Record<string, string |
 }
 .nada {
   margin: 8px 0;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .titulo-lista {
   display: flex;
@@ -431,7 +431,7 @@ code {
 .nota {
   margin: 0;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .campos {
   display: flex;
@@ -450,7 +450,7 @@ code {
   flex-basis: 100%;
 }
 .campo > span {
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .subtitulo {
   margin: 0 0 8px;
@@ -502,6 +502,6 @@ code {
 .motivo {
   margin: 0 auto 0 0;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 </style>

@@ -82,7 +82,7 @@ const avisos = computed(() =>
   list-style: none;
 }
 .fila.bloqueada {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .cuerpo {
   min-width: 0;
@@ -100,7 +100,7 @@ const avisos = computed(() =>
 .carpeta {
   font-family: var(--fuente-mono);
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -114,7 +114,7 @@ const avisos = computed(() =>
 .aviso {
   margin: 0;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .existe {
   display: flex;

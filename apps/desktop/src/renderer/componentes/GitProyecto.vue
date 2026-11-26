@@ -212,7 +212,7 @@ function abrirRemoto(): void {
   font-family: var(--fuente-mono);
 }
 .dato {
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .dato.aviso {
   color: var(--texto-aviso);

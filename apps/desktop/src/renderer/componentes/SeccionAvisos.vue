@@ -110,7 +110,7 @@ async function guardar(cambios: Parameters<ReturnType<typeof api>['avisos']['con
 .ayuda-tarjeta {
   margin: -4px 0 14px;
   font-size: 12.5px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .fila {
   display: flex;
@@ -125,7 +125,7 @@ async function guardar(cambios: Parameters<ReturnType<typeof api>['avisos']['con
 .ayuda {
   display: block;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .subtitulo {
   margin: 14px 0 4px;

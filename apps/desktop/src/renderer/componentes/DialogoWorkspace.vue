@@ -222,13 +222,13 @@ async function guardar(): Promise<void> {
   list-style: none;
 }
 .sitio {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .vacio,
 .ayuda {
   margin: 4px 0 0;
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .faltan {
   color: var(--texto-aviso, #d97706);

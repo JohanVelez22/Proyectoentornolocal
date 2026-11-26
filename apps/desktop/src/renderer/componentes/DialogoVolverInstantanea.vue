@@ -259,7 +259,7 @@ function cerrar(): void {
 <style scoped>
 .cargando {
   margin: 0 0 8px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .previa {
   width: 100%;
@@ -275,7 +275,7 @@ function cerrar(): void {
 }
 .previa thead th {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .previa tbody th {
   width: 28%;

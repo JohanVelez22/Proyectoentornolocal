@@ -179,7 +179,7 @@ const visible = computed({
 <style scoped>
 .descripcion {
   margin: 0 0 14px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .buscador {
   max-width: 420px;
@@ -237,7 +237,7 @@ const visible = computed({
 }
 .texto span {
   font-size: 12.5px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .vacio {
   padding: 40px 0;
@@ -264,7 +264,7 @@ const visible = computed({
 }
 .herr-etiqueta {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
   margin-bottom: 4px;
 }
 .herr-mono,
@@ -298,7 +298,7 @@ const visible = computed({
 }
 .herr-tenue {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
   margin: 0;
 }
 .herr-datos {
@@ -309,7 +309,7 @@ const visible = computed({
   font-size: 13px;
 }
 .herr-datos dt {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .herr-datos dd {
   margin: 0;

@@ -117,7 +117,7 @@ function cerrar(): void {
 .formato {
   margin: 0 0 14px;
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .destino {
   display: flex;
@@ -126,7 +126,7 @@ function cerrar(): void {
 }
 .etiqueta {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .ruta {
   display: flex;
@@ -137,7 +137,7 @@ function cerrar(): void {
   background: rgba(128, 128, 128, 0.08);
 }
 .ruta .n-icon {
-  opacity: 0.6;
+  opacity: 0.72;
   flex: none;
 }
 .ruta code {

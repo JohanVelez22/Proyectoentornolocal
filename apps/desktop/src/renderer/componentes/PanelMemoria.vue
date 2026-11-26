@@ -238,7 +238,7 @@ const hayPedidos = computed(() => resultado.value?.resultados.some((r) => r.esta
 }
 .etiqueta {
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .lista {
   list-style: none;

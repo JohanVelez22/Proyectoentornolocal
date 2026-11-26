@@ -157,7 +157,7 @@ td {
 td.num {
   width: 44px;
   text-align: right;
-  opacity: 0.45;
+  opacity: 0.72;
   user-select: none;
 }
 tr.quitado .izq,

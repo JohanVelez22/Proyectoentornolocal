@@ -519,7 +519,7 @@ async function abrirRegistro(v: VistaTarea): Promise<void> {
 }
 .tenue {
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .chevron {
   transition: transform 0.15s ease;

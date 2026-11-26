@@ -236,7 +236,7 @@ const columnas: DataTableColumns<Fila> = [
 <style scoped>
 .descripcion {
   margin: 0 0 14px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .explicacion {
   margin-bottom: 18px;
@@ -275,7 +275,7 @@ const columnas: DataTableColumns<Fila> = [
 .tabla :deep(.dominio) {
   font-family: var(--fuente-mono);
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .tabla :deep(.url) {
   font-family: var(--fuente-mono);
@@ -291,7 +291,7 @@ const columnas: DataTableColumns<Fila> = [
   font-size: 12.5px;
 }
 .tabla :deep(.tenue) {
-  opacity: 0.6;
+  opacity: 0.72;
   font-size: 12.5px;
 }
 .tabla :deep(.celda-acciones) {

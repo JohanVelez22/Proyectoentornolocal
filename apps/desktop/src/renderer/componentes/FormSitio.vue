@@ -604,7 +604,7 @@ function alCambiarVisible(v: boolean): void {
   margin: 0 0 12px;
   max-width: 340px;
   font-size: 13px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .error-campo {
   color: var(--texto-error);
@@ -642,11 +642,11 @@ function alCambiarVisible(v: boolean): void {
 .sufijo {
   font-family: var(--fuente-mono);
   font-size: 12.5px;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .ayuda {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .ayuda.bloque {
   display: block;
@@ -711,7 +711,7 @@ function alCambiarVisible(v: boolean): void {
   gap: 12px;
 }
 .https-fila.deshabilitada .https-texto {
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .https-icono {
   display: grid;

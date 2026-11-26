@@ -463,12 +463,12 @@ function quitar(p: ProcesoProyectoPublico): void {
 .titulo {
   font-size: 12px;
   font-weight: 600;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .vacio {
   margin: 0;
   font-size: 12px;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .lista {
   margin: 0;
@@ -496,7 +496,7 @@ function quitar(p: ProcesoProyectoPublico): void {
 }
 .comando {
   font-size: 11.5px;
-  opacity: 0.6;
+  opacity: 0.72;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -505,7 +505,7 @@ function quitar(p: ProcesoProyectoPublico): void {
 }
 .estado {
   font-size: 11.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .estado.e-encendido {
   color: var(--texto-ok);
@@ -567,10 +567,10 @@ function quitar(p: ProcesoProyectoPublico): void {
   font-size: 12px;
 }
 .campo > span {
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .campo small {
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .dos {
   display: grid;

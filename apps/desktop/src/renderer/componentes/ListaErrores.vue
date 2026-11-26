@@ -84,7 +84,7 @@ li.elegido {
 .fecha {
   margin-left: auto;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .mensaje {
   font-size: 13px;

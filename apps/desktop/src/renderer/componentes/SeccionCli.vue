@@ -143,7 +143,7 @@ async function aplicar(agregar: boolean): Promise<void> {
 }
 .ayuda {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .ayuda.error {
   color: var(--texto-error);

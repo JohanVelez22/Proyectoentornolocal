@@ -400,7 +400,7 @@ async function vigilar(): Promise<void> {
 .subtitulo {
   margin: -6px 0 16px;
   font-size: 13px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .pasos {
   margin-bottom: 18px;
@@ -414,7 +414,7 @@ async function vigilar(): Promise<void> {
   font-size: 11.5px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .cuerpo h3 {
   margin: 2px 0 6px;
@@ -474,7 +474,7 @@ async function vigilar(): Promise<void> {
 }
 .basico-texto small {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .barra {
   max-width: 220px;
@@ -496,7 +496,7 @@ async function vigilar(): Promise<void> {
 .nota {
   margin: 8px 0 0;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .pie {
   display: flex;
@@ -506,7 +506,7 @@ async function vigilar(): Promise<void> {
 .espacio {
   flex: 1;
   font-size: 11.5px;
-  opacity: 0.5;
+  opacity: 0.72;
   text-align: right;
 }
 .paso-enter-active,

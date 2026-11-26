@@ -732,7 +732,7 @@ function irAServicios(): void {
 }
 .descripcion {
   margin: 0;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .vacio {
   padding: 40px 0 32px;
@@ -850,7 +850,7 @@ function irAServicios(): void {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .tabla {
   width: 100%;
@@ -864,7 +864,7 @@ function irAServicios(): void {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  opacity: 0.55;
+  opacity: 0.72;
   border-bottom: 1px solid rgba(128, 128, 128, 0.2);
 }
 .tabla td {
@@ -911,7 +911,7 @@ function irAServicios(): void {
 .sin-bases {
   margin: 8px 0;
   font-size: 13px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .error-lista {
   display: flex;

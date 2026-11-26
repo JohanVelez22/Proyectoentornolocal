@@ -161,12 +161,12 @@ const fecha = (iso: string): string => formatearFecha(iso, { dateStyle: 'medium'
 .fecha {
   margin-left: auto;
   font-size: 11.5px;
-  opacity: 0.5;
+  opacity: 0.72;
 }
 .descripcion {
   margin: 2px 0 0;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

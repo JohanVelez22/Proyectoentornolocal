@@ -341,7 +341,7 @@ function cerrar(): void {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .fila {
   display: flex;
@@ -373,7 +373,7 @@ function cerrar(): void {
 .tenue {
   margin: 0;
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .acciones {
   display: flex;

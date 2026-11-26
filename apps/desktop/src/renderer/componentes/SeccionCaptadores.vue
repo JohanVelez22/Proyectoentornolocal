@@ -69,6 +69,6 @@ const t = textos.correo;
 }
 .nota {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 </style>

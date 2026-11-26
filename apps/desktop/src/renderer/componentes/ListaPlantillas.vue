@@ -60,7 +60,7 @@ const fecha = (iso: string): string => iso.slice(0, 10);
 .vacia {
   margin: 0 0 8px;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .rejilla {
   display: grid;
@@ -105,6 +105,6 @@ const fecha = (iso: string): string => iso.slice(0, 10);
 }
 .opcion span {
   font-size: 11.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 </style>

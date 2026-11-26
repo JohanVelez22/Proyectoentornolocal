@@ -599,7 +599,7 @@ async function aplicarPath(activar: boolean): Promise<void> {
 }
 .descripcion {
   margin: 0 0 18px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .tarjeta {
   border-radius: 12px;
@@ -618,7 +618,7 @@ async function aplicarPath(activar: boolean): Promise<void> {
 }
 .ayuda {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .ayuda.error {
   color: var(--texto-error);

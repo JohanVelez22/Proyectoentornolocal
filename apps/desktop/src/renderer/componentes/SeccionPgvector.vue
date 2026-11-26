@@ -204,7 +204,7 @@ function instalar(): void {
 }
 .titulo small {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .datos {
   display: flex;
@@ -216,7 +216,7 @@ function instalar(): void {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .datos dd {
   margin: 4px 0 0;
@@ -229,7 +229,7 @@ function instalar(): void {
 .tenue {
   margin: 0;
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .progreso {
   display: flex;

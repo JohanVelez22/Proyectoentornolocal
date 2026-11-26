@@ -67,7 +67,7 @@ header {
   flex-wrap: wrap;
 }
 .fecha {
-  opacity: 0.7;
+  opacity: 0.76;
   font-size: 12px;
   margin-right: auto;
 }
@@ -79,7 +79,7 @@ dl {
   font-size: 12px;
 }
 dt {
-  opacity: 0.7;
+  opacity: 0.76;
 }
 dd {
   margin: 0;

@@ -552,7 +552,7 @@ async function usarUsuarioPropio(sitioId: string, compartir: boolean): Promise<b
 .nota {
   margin: 0 0 6px;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .opciones {
   display: flex;

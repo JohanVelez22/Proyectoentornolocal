@@ -167,7 +167,7 @@ function empezarCambio(): void {
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .valor {
   min-width: 0;
@@ -178,7 +178,7 @@ function empezarCambio(): void {
 }
 .nota {
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .cambiada {
   background: rgba(46, 160, 67, 0.08);

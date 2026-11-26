@@ -108,7 +108,7 @@ dl {
   font-size: 12px;
 }
 dt {
-  opacity: 0.7;
+  opacity: 0.76;
 }
 dd {
   margin: 0;
@@ -134,6 +134,6 @@ h4 {
 .sin-traza {
   margin: 0;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 </style>

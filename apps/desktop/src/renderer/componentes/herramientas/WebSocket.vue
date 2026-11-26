@@ -162,7 +162,7 @@ onBeforeUnmount(() => {
   padding: 1px 0;
 }
 .hora {
-  opacity: 0.5;
+  opacity: 0.72;
   flex: none;
 }
 .marca {
@@ -184,6 +184,6 @@ onBeforeUnmount(() => {
   color: var(--texto-error);
 }
 .sistema {
-  opacity: 0.7;
+  opacity: 0.76;
 }
 </style>

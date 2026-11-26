@@ -186,7 +186,7 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
 }
 .tenue {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .mono {
   font-family: var(--fuente-mono);
@@ -201,7 +201,7 @@ const versionDesconocida = computed(() => a.value.instalado && a.value.version =
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .datos dd {
   margin: 2px 0 0;

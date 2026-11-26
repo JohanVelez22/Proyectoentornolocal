@@ -92,6 +92,6 @@ async function capturar(modo: ModoCaptura): Promise<void> {
   white-space: normal;
 }
 .modo-texto small {
-  opacity: 0.65;
+  opacity: 0.75;
 }
 </style>

@@ -239,11 +239,11 @@ async function guardar(): Promise<void> {
   font-size: 12px;
 }
 .campo > span {
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .nota {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .vista {
   display: flex;

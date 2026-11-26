@@ -288,7 +288,7 @@ const firefoxActivos = computed(() => conf.value?.firefox.some((p) => p.activo) 
 }
 .descripcion {
   margin: 0 0 10px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .vacio {
   padding: 32px 0;

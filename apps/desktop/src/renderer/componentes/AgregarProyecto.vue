@@ -523,7 +523,7 @@ function alCambiarVisible(v: boolean): void {
 }
 .conexion-texto span {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .conexion-botones {
   display: flex;
@@ -534,7 +534,7 @@ function alCambiarVisible(v: boolean): void {
 .nota {
   margin: 6px 0 0;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .nota.error {
   color: var(--texto-error);
@@ -553,7 +553,7 @@ function alCambiarVisible(v: boolean): void {
   font-size: 12px;
 }
 .campo > span {
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .carpeta {
   display: flex;
@@ -569,7 +569,7 @@ function alCambiarVisible(v: boolean): void {
   font-size: 13.5px;
 }
 .carpeta-icono {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .vigilada {
   padding-top: 12px;

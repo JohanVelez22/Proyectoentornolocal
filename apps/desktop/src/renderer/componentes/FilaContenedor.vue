@@ -122,7 +122,7 @@ tr.elegido td {
 }
 .id {
   font-size: 11px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .imagen {
   word-break: break-all;

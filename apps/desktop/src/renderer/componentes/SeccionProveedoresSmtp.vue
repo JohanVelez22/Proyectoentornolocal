@@ -334,7 +334,7 @@ const estadoClave = (p: ProveedorSmtpPublico): string =>
   font-size: 12.5px;
 }
 .datos dt {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .datos dd {
   margin: 0;
@@ -360,7 +360,7 @@ const estadoClave = (p: ProveedorSmtpPublico): string =>
 }
 .tenue {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
   margin: 0;
 }
 </style>

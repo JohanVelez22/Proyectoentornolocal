@@ -109,6 +109,6 @@ const consejos = computed(() =>
 .nota {
   margin: 0;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 </style>

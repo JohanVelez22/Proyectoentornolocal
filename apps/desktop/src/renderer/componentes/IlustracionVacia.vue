@@ -55,7 +55,7 @@ withDefaults(defineProps<{ icono: Component; pequena?: boolean }>(), { pequena: 
   fill: rgba(var(--acento-rgb), 0.35);
 }
 .suave {
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .punto {
   fill: rgba(var(--acento-rgb), 0.45);
@@ -71,7 +71,7 @@ withDefaults(defineProps<{ icono: Component; pequena?: boolean }>(), { pequena: 
   height: 44px;
   border-radius: 12px;
   background: var(--acento);
-  color: #fff;
+  color: var(--sobre-acento);
   box-shadow: 0 6px 16px rgba(var(--acento-rgb), 0.35);
 }
 .pequena .icono {

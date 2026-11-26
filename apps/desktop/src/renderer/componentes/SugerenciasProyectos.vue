@@ -82,7 +82,7 @@ const proyectos = useProyectos();
   min-width: 0;
   font-family: var(--fuente-mono);
   font-size: 11.5px;
-  opacity: 0.55;
+  opacity: 0.72;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

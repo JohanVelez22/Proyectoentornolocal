@@ -344,7 +344,7 @@ function abrirEnEditor(r: ResultadoBusqueda): void {
   text-align: right;
   font-family: var(--fuente-mono);
   font-size: 12px;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .extracto {
   flex: 1;

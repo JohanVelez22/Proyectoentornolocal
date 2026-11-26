@@ -134,6 +134,6 @@ function instalar(e: ExtensionPhp): void {
 }
 .tenue {
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 </style>

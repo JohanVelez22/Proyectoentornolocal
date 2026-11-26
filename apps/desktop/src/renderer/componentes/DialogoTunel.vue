@@ -445,7 +445,7 @@ async function usarRapido(): Promise<void> {
 .ayuda {
   display: block;
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .estado {
   margin: 8px 0;

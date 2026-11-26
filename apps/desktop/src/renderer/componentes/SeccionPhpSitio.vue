@@ -426,7 +426,7 @@ function copiarPhpStorm(): void {
   flex: 1;
 }
 .tenue {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .desplegar {
   font-size: 12px;
@@ -484,7 +484,7 @@ function copiarPhpStorm(): void {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .modos {
   display: flex;

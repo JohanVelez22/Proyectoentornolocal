@@ -400,7 +400,7 @@ const filas = computed(() => {
   flex: 1;
 }
 .tenue {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .desplegar {
   font-size: 12px;
@@ -428,7 +428,7 @@ const filas = computed(() => {
   gap: 8px;
 }
 .aviso-icono {
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .aviso.alerta {
   color: var(--texto-aviso);
@@ -446,7 +446,7 @@ const filas = computed(() => {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .dato dd {
   display: flex;
@@ -473,7 +473,7 @@ const filas = computed(() => {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.55;
+  opacity: 0.72;
   margin-right: 4px;
 }
 .url {

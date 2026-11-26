@@ -247,7 +247,7 @@ const huellaTexto = computed(() =>
 }
 .etiqueta-puerto {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .puerto {
   width: 84px;

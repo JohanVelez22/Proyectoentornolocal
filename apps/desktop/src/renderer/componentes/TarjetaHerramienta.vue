@@ -273,7 +273,7 @@ watch(
 .version {
   font-family: var(--fuente-mono);
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .datos {
   display: grid;
@@ -285,7 +285,7 @@ watch(
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .datos dd {
   margin: 2px 0 0;
@@ -295,12 +295,12 @@ watch(
 .datos dd.detalle {
   font-family: var(--fuente);
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .mensaje {
   margin: 0;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .progreso {
   display: flex;
@@ -310,7 +310,7 @@ watch(
 }
 .aparte {
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
   text-align: right;
 }
 .pie {

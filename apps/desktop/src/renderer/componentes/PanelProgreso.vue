@@ -83,10 +83,10 @@ watch(
   word-break: break-word;
 }
 .vacio {
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .nota {
   font-size: 11.5px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 </style>

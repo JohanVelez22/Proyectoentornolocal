@@ -160,7 +160,7 @@ async function hacerCommit(): Promise<void> {
 }
 .tenue {
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .mensaje {
   margin-top: 12px;

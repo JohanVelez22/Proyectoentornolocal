@@ -394,7 +394,7 @@ function limpiar(): void {
   gap: 8px;
 }
 .total {
-  opacity: 0.7;
+  opacity: 0.76;
   font-size: 12px;
 }
 .sitios h3 {
@@ -416,7 +416,7 @@ function limpiar(): void {
 }
 .nota {
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .filtros {
   display: flex;

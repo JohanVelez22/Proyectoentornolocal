@@ -75,7 +75,7 @@ li.elegido {
   min-width: 0;
 }
 .hora {
-  opacity: 0.7;
+  opacity: 0.76;
   font-variant-numeric: tabular-nums;
 }
 .sitio {

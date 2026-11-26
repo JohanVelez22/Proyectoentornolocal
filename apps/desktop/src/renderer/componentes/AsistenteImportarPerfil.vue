@@ -738,7 +738,7 @@ const tipoDe = (e: string): 'success' | 'warning' | 'error' | 'default' =>
 .ayuda {
   margin: 4px 0;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .items {
   margin: 0;
@@ -778,7 +778,7 @@ const tipoDe = (e: string): 'success' | 'warning' | 'error' | 'default' =>
   word-break: break-all;
 }
 .vacio {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .estado {
   display: flex;
@@ -789,7 +789,7 @@ const tipoDe = (e: string): 'success' | 'warning' | 'error' | 'default' =>
 .etiqueta-huella {
   margin: 8px 0 2px;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .huella {
   margin: 0 0 6px;

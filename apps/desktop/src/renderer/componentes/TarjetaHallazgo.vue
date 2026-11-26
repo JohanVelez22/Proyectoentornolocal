@@ -141,7 +141,7 @@ const resultado = computed(() => {
   overflow-wrap: anywhere;
 }
 .etiqueta {
-  opacity: 0.7;
+  opacity: 0.9;
   font-size: 12px;
 }
 .reparacion p {
@@ -159,7 +159,7 @@ const resultado = computed(() => {
 }
 .nota {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .resultado {
   margin-top: 10px;

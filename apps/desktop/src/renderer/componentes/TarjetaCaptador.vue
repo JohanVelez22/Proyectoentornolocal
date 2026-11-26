@@ -118,7 +118,7 @@ const estado = computed(() => (props.captador.encendido ? 'encendido' : 'apagado
 }
 .tenue {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .aviso {
   font-size: 12.5px;
@@ -133,7 +133,7 @@ const estado = computed(() => (props.captador.encendido ? 'encendido' : 'apagado
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .dato dd {
   margin: 4px 0 0;

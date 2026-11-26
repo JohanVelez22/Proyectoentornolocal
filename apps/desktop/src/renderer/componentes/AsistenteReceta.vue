@@ -736,7 +736,7 @@ function alCambiarVisible(v: boolean): void {
 .carpeta {
   margin: -6px 0 12px;
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.72;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -775,7 +775,7 @@ function alCambiarVisible(v: boolean): void {
 .ayuda {
   margin: 0 0 8px;
   font-size: 12px;
-  opacity: 0.62;
+  opacity: 0.72;
 }
 .aviso {
   margin: 8px 0 0;
@@ -794,14 +794,14 @@ function alCambiarVisible(v: boolean): void {
   font-size: 12px;
 }
 .campo > span {
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .campo.ancho {
   grid-column: 1 / -1;
 }
 .sufijo {
   font-family: var(--fuente-mono);
-  opacity: 0.55;
+  opacity: 0.72;
 }
 .pasos {
   margin: 0;
@@ -826,7 +826,7 @@ function alCambiarVisible(v: boolean): void {
 }
 .n {
   font-size: 11px;
-  opacity: 0.45;
+  opacity: 0.72;
   width: 14px;
   text-align: right;
 }

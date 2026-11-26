@@ -298,6 +298,6 @@ th {
   word-break: break-all;
 }
 .tenue {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 </style>

@@ -93,7 +93,7 @@ const texto = computed(() => props.etiqueta ?? textos.estado[props.estado]);
 @keyframes pulso {
   from {
     transform: scale(1);
-    opacity: 0.7;
+    opacity: 0.76;
   }
   to {
     transform: scale(2.6);
