@@ -22,7 +22,11 @@ import VistaDiff from './VistaDiff.vue';
  * pide con «Mostrar» en su fila y se olvida a los 30 segundos o al cerrar. Guardar muestra antes
  * un diff (también enmascarado), hace una copia con fecha y escribe de forma atómica.
  */
-const props = defineProps<{ sitio: Sitio | null }>();
+const props = defineProps<{
+  sitio: Sitio | null;
+  /** Variables propuestas (p. ej. REVERB_*): se cargan como cambios y se abre la vista previa. */
+  propuesta?: Record<string, string> | null;
+}>();
 const emit = defineEmits<{ cerrar: [] }>();
 
 type Bloque = NonNullable<PedidoEnv['bloques']>[number];
@@ -98,6 +102,11 @@ async function cargar(): Promise<void> {
     errorCarga.value = mensajeDeError(e);
   } finally {
     cargando.value = false;
+  }
+  // Una propuesta no escribe nada: solo llena los cambios y abre la vista previa (con su confirmación).
+  if (vista.value && props.propuesta && Object.keys(props.propuesta).length > 0) {
+    for (const [k, v] of Object.entries(props.propuesta)) cambios[k] = v;
+    await revisar();
   }
 }
 

@@ -303,6 +303,7 @@ function cambiarRedLocal(valor: boolean): void {
     </header>
 
     <p v-if="resumenInstancias" class="instancias">{{ resumenInstancias }}</p>
+    <p v-if="servicio.id === 'minio'" class="aviso-minio" role="note">{{ t.avisoMinio }}</p>
     <dl class="datos">
       <div>
         <dt>{{ servicio.puertos.length > 1 ? t.puertos : t.puerto }}</dt>
@@ -574,6 +575,11 @@ function cambiarRedLocal(valor: boolean): void {
   margin: 2px 0 0;
   font-family: var(--fuente-mono);
   font-size: 13px;
+}
+.aviso-minio {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
 }
 .puerto {
   display: flex;

@@ -1424,6 +1424,8 @@ export const fr: Textos = {
     puertos: 'Ports',
     pid: 'PID',
     sinVersion: 'sans version',
+    avisoMinio:
+      'MinIO est un projet archivé : il ne reçoit plus de mises à jour de sécurité. Il n’écoute que sur 127.0.0.1 ; n’y stockez pas de données réelles.',
     sinPuertos: '—',
     terminado: 'Terminé sans erreur',
     externo: 'Géré hors de WolfCore Dev',
@@ -1708,7 +1710,11 @@ export const fr: Textos = {
         nombre: 'Meilisearch',
         detalle: 'Recherche pour Laravel Scout (github.com/meilisearch)',
       },
-      minio: { nombre: 'MinIO', detalle: 'Stockage S3, projet archivé (github.com/minio)' },
+      minio: {
+        nombre: 'MinIO',
+        detalle:
+          'Stockage S3 (github.com/minio). Projet archivé : il ne reçoit plus de mises à jour de sécurité ; il n’écoute que sur 127.0.0.1. Ne stockez pas de données réelles.',
+      },
       composer: { nombre: 'Composer', detalle: 'Dépendances PHP (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Administrateur web de bases de données' },
       phpmyadmin: { nombre: 'phpMyAdmin', detalle: 'Administrateur web de MySQL (phpmyadmin.net)' },
@@ -2279,6 +2285,32 @@ export const fr: Textos = {
     restaurarTexto: (fecha: string) =>
       `Le vhost revient à son état du ${fecha}. La version actuelle reste dans l’historique.`,
     restaurado: 'Version restaurée',
+  },
+  reverb: {
+    titulo: 'Reverb',
+    ayuda: 'WebSockets de Laravel, uniquement sur 127.0.0.1.',
+    puerto: (p: number) => 'Port {p}'.replace('{p}', String(p)),
+    interruptor: (dominio: string) =>
+      'Activer ou désactiver Reverb pour {d}'.replace('{d}', dominio),
+    activarTitulo: 'Activer Reverb ?',
+    activarTexto: (dominio: string) =>
+      '« php artisan reverb:start » sera exécuté dans {d}, en écoutant uniquement sur 127.0.0.1 avec un port libre. Le code du projet s’exécute avec son PHP.'.replace(
+        '{d}',
+        dominio,
+      ),
+    desactivarTitulo: 'Désactiver Reverb ?',
+    desactivarTexto:
+      'Le processus est arrêté et retiré du projet. Les variables REVERB_* du .env ne sont pas modifiées.',
+    activar: 'Activer',
+    desactivar: 'Désactiver',
+    proponer: 'Proposer les variables REVERB_*',
+    tituloError: 'Reverb',
+    estados: {
+      apagado: 'Arrêté',
+      iniciando: 'Démarrage',
+      encendido: 'En marche',
+      error: 'En erreur',
+    },
   },
   lan: {
     etiqueta: 'Réseau local',

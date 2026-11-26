@@ -65,6 +65,7 @@ import BotonIcono from './BotonIcono.vue';
 import EstadoPunto from './EstadoPunto.vue';
 import GitProyecto from './GitProyecto.vue';
 import ProcesosProyecto from './ProcesosProyecto.vue';
+import SeccionReverb from './SeccionReverb.vue';
 import InterruptorLan from './InterruptorLan.vue';
 import InterruptorTunel from './InterruptorTunel.vue';
 import EditorVhost from './EditorVhost.vue';
@@ -86,6 +87,8 @@ const emit = defineEmits<{
   guardarPlantilla: [sitio: Sitio];
   /** Abrir el gestor de variables del .env. */
   verEnv: [sitio: Sitio];
+  /** Abrir el gestor de .env con variables propuestas ya cargadas (vista previa). */
+  proponerEnv: [sitio: Sitio, variables: Record<string, string>];
 }>();
 
 const t = textos.sitios;
@@ -712,6 +715,7 @@ function abrirCarpeta(): void {
         </NButton>
       </div>
       <ProcesosProyecto :sitio="sitio" @aplicado="(r) => emit('aplicado', r)" />
+      <SeccionReverb :sitio="sitio" @proponer="(s, v) => emit('proponerEnv', s, v)" />
       <SeccionTareasSitio :sitio="sitio" />
       <InterruptorTunel :sitio="sitio" />
       <InterruptorLan :sitio="sitio" />

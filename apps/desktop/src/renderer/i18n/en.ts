@@ -1359,6 +1359,8 @@ export const en: Textos = {
     puertos: 'Ports',
     pid: 'PID',
     sinVersion: 'no version',
+    avisoMinio:
+      'MinIO is an archived project: it no longer gets security updates. It only listens on 127.0.0.1; do not store real data here.',
     sinPuertos: '—',
     terminado: 'Finished without errors',
     externo: 'Managed outside WolfCore Dev',
@@ -1635,7 +1637,11 @@ export const en: Textos = {
         nombre: 'Meilisearch',
         detalle: 'Search for Laravel Scout (github.com/meilisearch)',
       },
-      minio: { nombre: 'MinIO', detalle: 'S3 storage, archived project (github.com/minio)' },
+      minio: {
+        nombre: 'MinIO',
+        detalle:
+          'S3 storage (github.com/minio). Archived project: it no longer gets security updates; it only listens on 127.0.0.1. Do not store real data.',
+      },
       composer: { nombre: 'Composer', detalle: 'PHP dependencies (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Web database manager' },
       phpmyadmin: { nombre: 'phpMyAdmin', detalle: 'MySQL web manager (phpmyadmin.net)' },
@@ -2197,6 +2203,31 @@ export const en: Textos = {
     restaurarTexto: (fecha: string) =>
       `The vhost goes back to how it was on ${fecha}. The current version stays in the history.`,
     restaurado: 'Version restored',
+  },
+  reverb: {
+    titulo: 'Reverb',
+    ayuda: 'Laravel WebSockets, on 127.0.0.1 only.',
+    puerto: (p: number) => 'Port {p}'.replace('{p}', String(p)),
+    interruptor: (dominio: string) => 'Turn Reverb on or off for {d}'.replace('{d}', dominio),
+    activarTitulo: 'Turn Reverb on?',
+    activarTexto: (dominio: string) =>
+      '“php artisan reverb:start” will run in {d}, listening only on 127.0.0.1 on a free port. The project’s code runs with its PHP.'.replace(
+        '{d}',
+        dominio,
+      ),
+    desactivarTitulo: 'Turn Reverb off?',
+    desactivarTexto:
+      'The process stops and is removed from the project. The REVERB_* variables in .env are not touched.',
+    activar: 'Turn on',
+    desactivar: 'Turn off',
+    proponer: 'Suggest REVERB_* variables',
+    tituloError: 'Reverb',
+    estados: {
+      apagado: 'Stopped',
+      iniciando: 'Starting',
+      encendido: 'Running',
+      error: 'Failed',
+    },
   },
   lan: {
     etiqueta: 'Local network',

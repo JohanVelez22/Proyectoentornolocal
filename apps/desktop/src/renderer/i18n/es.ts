@@ -1368,6 +1368,8 @@ export const es = {
     puertos: 'Puertos',
     pid: 'PID',
     sinVersion: 'sin versión',
+    avisoMinio:
+      'MinIO es un proyecto archivado: ya no recibe actualizaciones de seguridad. Solo escucha en 127.0.0.1; no guarde aquí datos reales.',
     sinPuertos: '—',
     terminado: 'Terminó sin errores',
     externo: 'Administrado fuera de WolfCore Dev',
@@ -1653,7 +1655,8 @@ export const es = {
       },
       minio: {
         nombre: 'MinIO',
-        detalle: 'Almacenamiento S3, proyecto archivado (github.com/minio)',
+        detalle:
+          'Almacenamiento S3 (github.com/minio). Proyecto archivado: ya no recibe actualizaciones de seguridad; solo escucha en 127.0.0.1. No guarde datos reales.',
       },
       composer: { nombre: 'Composer', detalle: 'Dependencias de PHP (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Administrador web de bases de datos' },
@@ -2215,6 +2218,31 @@ export const es = {
     restaurarTexto: (fecha: string) =>
       `El vhost vuelve a como estaba el ${fecha}. La versión actual queda en el historial.`,
     restaurado: 'Versión restaurada',
+  },
+  reverb: {
+    titulo: 'Reverb',
+    ayuda: 'WebSockets de Laravel, solo en 127.0.0.1.',
+    puerto: (p: number) => 'Puerto {p}'.replace('{p}', String(p)),
+    interruptor: (dominio: string) => 'Encender o apagar Reverb de {d}'.replace('{d}', dominio),
+    activarTitulo: '¿Encender Reverb?',
+    activarTexto: (dominio: string) =>
+      'Se ejecutará «php artisan reverb:start» en {d}, escuchando solo en 127.0.0.1 con un puerto libre. El código del proyecto se ejecuta con su PHP.'.replace(
+        '{d}',
+        dominio,
+      ),
+    desactivarTitulo: '¿Apagar Reverb?',
+    desactivarTexto:
+      'Se detiene el proceso y se quita del proyecto. Las variables REVERB_* del .env no se tocan.',
+    activar: 'Encender',
+    desactivar: 'Apagar',
+    proponer: 'Proponer variables REVERB_*',
+    tituloError: 'Reverb',
+    estados: {
+      apagado: 'Apagado',
+      iniciando: 'Iniciando',
+      encendido: 'Encendido',
+      error: 'Con error',
+    },
   },
   lan: {
     etiqueta: 'Red local',

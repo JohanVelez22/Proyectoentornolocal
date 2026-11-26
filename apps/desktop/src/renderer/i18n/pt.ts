@@ -1370,6 +1370,8 @@ export const pt: Textos = {
     puertos: 'Portas',
     pid: 'PID',
     sinVersion: 'sem versão',
+    avisoMinio:
+      'O MinIO é um projeto arquivado: já não recebe atualizações de segurança. Só escuta em 127.0.0.1; não guarde aqui dados reais.',
     sinPuertos: '—',
     terminado: 'Terminou sem erros',
     externo: 'Administrado fora do WolfCore Dev',
@@ -1652,7 +1654,11 @@ export const pt: Textos = {
         nombre: 'Meilisearch',
         detalle: 'Busca para o Laravel Scout (github.com/meilisearch)',
       },
-      minio: { nombre: 'MinIO', detalle: 'Armazenamento S3, projeto arquivado (github.com/minio)' },
+      minio: {
+        nombre: 'MinIO',
+        detalle:
+          'Armazenamento S3 (github.com/minio). Projeto arquivado: já não recebe atualizações de segurança; só escuta em 127.0.0.1. Não guarde dados reais.',
+      },
       composer: { nombre: 'Composer', detalle: 'Dependências do PHP (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Administrador web de bancos de dados' },
       phpmyadmin: { nombre: 'phpMyAdmin', detalle: 'Administrador web de MySQL (phpmyadmin.net)' },
@@ -2215,6 +2221,31 @@ export const pt: Textos = {
     restaurarTexto: (fecha: string) =>
       `O vhost volta a ser como era em ${fecha}. A versão atual fica no histórico.`,
     restaurado: 'Versão restaurada',
+  },
+  reverb: {
+    titulo: 'Reverb',
+    ayuda: 'WebSockets do Laravel, só em 127.0.0.1.',
+    puerto: (p: number) => 'Porta {p}'.replace('{p}', String(p)),
+    interruptor: (dominio: string) => 'Ligar ou desligar o Reverb de {d}'.replace('{d}', dominio),
+    activarTitulo: 'Ligar o Reverb?',
+    activarTexto: (dominio: string) =>
+      'Será executado «php artisan reverb:start» em {d}, escutando só em 127.0.0.1 numa porta livre. O código do projeto é executado com o seu PHP.'.replace(
+        '{d}',
+        dominio,
+      ),
+    desactivarTitulo: 'Desligar o Reverb?',
+    desactivarTexto:
+      'O processo é parado e removido do projeto. As variáveis REVERB_* do .env não são alteradas.',
+    activar: 'Ligar',
+    desactivar: 'Desligar',
+    proponer: 'Propor variáveis REVERB_*',
+    tituloError: 'Reverb',
+    estados: {
+      apagado: 'Parado',
+      iniciando: 'Iniciando',
+      encendido: 'Ligado',
+      error: 'Com erro',
+    },
   },
   lan: {
     etiqueta: 'Rede local',

@@ -57,6 +57,8 @@ const registros = ref<Sitio | null>(null);
 const plantillaDe = ref<Sitio | null>(null);
 /** Proyecto cuyo .env se está viendo (null: el gestor está cerrado). */
 const envDe = ref<Sitio | null>(null);
+/** Variables propuestas (Reverb) que el gestor de .env carga y enseña en su vista previa. */
+const propuestaEnv = ref<Record<string, string> | null>(null);
 
 const ordenados = computed(() => ordenarSitios(sitios.lista));
 const conBuscador = computed(() => sitios.lista.length > UMBRAL_BUSCADOR);
@@ -227,7 +229,10 @@ onMounted(() => {
             @revisar-receta="revisarReceta"
             @ver-registros="(x: Sitio) => (registros = x)"
             @guardar-plantilla="(x: Sitio) => (plantillaDe = x)"
-            @ver-env="(x: Sitio) => (envDe = x)"
+            @ver-env="(x: Sitio) => ((propuestaEnv = null), (envDe = x))"
+            @proponer-env="
+              (x: Sitio, v: Record<string, string>) => ((propuestaEnv = v), (envDe = x))
+            "
           />
         </TransitionGroup>
         <p v-if="!visibles.length" class="sin-resultados">{{ t.sinResultados(busqueda.trim()) }}</p>
@@ -244,7 +249,11 @@ onMounted(() => {
     <AsistenteNuevoProyecto :show="creandoProyecto" @cerrar="creandoProyecto = false" />
     <AsistenteImportar :show="importando" @cerrar="importando = false" />
     <DialogoGuardarPlantilla :sitio="plantillaDe" @cerrar="plantillaDe = null" />
-    <EditorEnv :sitio="envDe" @cerrar="envDe = null" />
+    <EditorEnv
+      :sitio="envDe"
+      :propuesta="propuestaEnv"
+      @cerrar="((envDe = null), (propuestaEnv = null))"
+    />
     <AsistenteReceta :objetivo="asistente" @cerrar="asistente = null" @aplicado="alAplicar" />
     <RegistrosProyecto :sitio="registros" @cerrar="registros = null" />
   </div>
