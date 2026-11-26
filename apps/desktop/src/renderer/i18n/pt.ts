@@ -460,6 +460,26 @@ export const pt: Textos = {
       'disco.sin_analisis': 'Analise de novo antes de limpar: a análise expirou ou não existe.',
       'disco.ocupada': 'Já há uma análise ou limpeza em andamento.',
       'disco.sin_registro': 'Não foi possível criar o registro da limpeza; nada foi apagado.',
+      'editor.sin_confirmar': 'Confirme o salvamento antes de continuar.',
+      'editor.confirmacion_reforzada':
+        'Este arquivo parece guardar segredos ou é de um site com dados reais: confirme com reforço para salvá-lo.',
+      'editor.ruta_invalida': 'O caminho do arquivo não é válido.',
+      'editor.no_existe': 'O arquivo não existe.',
+      'editor.no_regular': 'Só arquivos normais podem ser editados.',
+      'editor.ruta_vetada':
+        'Esse arquivo está na pasta de dados do WolfCore Dev: não é aberto nem salvo pelo editor.',
+      'editor.archivo_env':
+        'Os arquivos .env são gerenciados pelas variáveis do projeto, não pelo editor.',
+      'editor.demasiado_grande': 'O arquivo é grande demais para o editor (máximo {maximo}).',
+      'editor.binario': 'O arquivo não é de texto (é binário): não pode ser editado aqui.',
+      'editor.contenido_invalido': 'O conteúdo não é um texto válido.',
+      'editor.huella_invalida': 'Falta a impressão digital do arquivo aberto: abra-o novamente.',
+      'editor.archivo_cambiado':
+        'O arquivo mudou fora do editor desde que foi aberto. Recarregue-o ou confirme a sobrescrita.',
+      'editor.copia_fallo': 'Não foi possível fazer a cópia prévia ({codigo}); nada foi salvo.',
+      'editor.lectura_fallo': 'Não foi possível ler o arquivo ({codigo}).',
+      'editor.escritura_fallo':
+        'Não foi possível salvar o arquivo ({codigo}). O original não foi alterado.',
       'memoria.sin_confirmar': 'Confirme a ação no diálogo antes de continuar.',
       'memoria.modo_invalido': 'Esse modo de otimização não existe.',
       'memoria.plan_caducado':
@@ -3412,6 +3432,10 @@ export const pt: Textos = {
         descripcion:
           'Analisa e apaga temporários e caches regeneráveis, com lista prévia e confirmação.',
       },
+      editor: {
+        nombre: 'Editor de código',
+        descripcion: 'Edite arquivos de texto com realce, cópia prévia e salvamento confirmado.',
+      },
     },
     errores: {
       jsonVacio: 'Digite ou cole um JSON.',
@@ -4647,6 +4671,84 @@ export const pt: Textos = {
         '4xx': '4xx Erro do cliente',
         '5xx': '5xx Erro do servidor',
       },
+    },
+  },
+  editorCodigo: {
+    intro: (mb: number) =>
+      `Editor leve com realce para arquivos de texto de até ${mb} MB. Escolha o arquivo no diálogo do sistema; salvar sempre pede confirmação e antes deixa uma cópia na pasta de dados do WolfCore Dev.`,
+    abrir: 'Abrir arquivo…',
+    abriendo: 'Abrindo…',
+    guardar: 'Salvar',
+    guardando: 'Salvando…',
+    recargar: 'Recarregar do disco',
+    vacio: 'Abra um arquivo para começar a editar.',
+    sinCambios: 'Sem alterações',
+    conCambios: 'Alterações não salvas',
+    posicion: (linea: number, columna: number) => `Linha ${linea}, coluna ${columna}`,
+    areaTexto: (nombre: string) => `Editor de código: ${nombre}`,
+    salirTeclado: 'Para sair do editor pelo teclado, pressione Esc e depois Tab.',
+    guardado: 'Arquivo salvo.',
+    copiaPrevia: (ruta: string) => `Cópia prévia: ${ruta}`,
+    cancelar: 'Cancelar',
+    confirmarGuardar: {
+      titulo: 'Salvar alterações',
+      texto: (nombre: string) =>
+        `${nombre} vai ser gravado. Antes, uma cópia do conteúdo atual do disco é guardada na pasta de dados do WolfCore Dev.`,
+      boton: 'Salvar com cópia prévia',
+    },
+    refuerzo: {
+      abrirTitulo: 'Arquivo sensível',
+      guardarTitulo: 'Salvar um arquivo sensível',
+      secreto:
+        'Este arquivo parece conter segredos (chaves privadas, tokens ou credenciais). O conteúdo será exibido na tela.',
+      datosReales:
+        'Este arquivo é de um site marcado com dados reais. Uma alteração errada pode afetar informações de verdade.',
+      instruccion: (nombre: string) => `Para continuar, digite o nome do arquivo: ${nombre}`,
+      etiqueta: 'Nome do arquivo',
+      abrirBoton: 'Abrir mesmo assim',
+      guardarBoton: 'Salvar mesmo assim',
+    },
+    cambioExterno: {
+      titulo: 'O arquivo mudou fora do editor',
+      texto:
+        'Outro programa o modificou depois que você o abriu, então nada foi salvo. Você pode recarregá-lo (suas alterações se perdem) ou sobrescrevê-lo com o que tem aqui.',
+      recargar: 'Recarregar e descartar minhas alterações',
+      sobrescribir: 'Sobrescrever…',
+      sobrescribirTitulo: 'Sobrescrever o arquivo',
+      sobrescribirTexto:
+        'As alterações feitas pelo outro programa serão perdidas. O conteúdo atual dele ficará na cópia prévia.',
+      sobrescribirBoton: 'Sim, sobrescrever',
+      volver: 'Voltar',
+    },
+    descartar: {
+      titulo: 'Alterações não salvas',
+      texto: 'Há alterações não salvas no editor. Se continuar, elas se perdem.',
+      confirmar: 'Descartar alterações',
+      seguir: 'Continuar editando',
+    },
+    cm: {
+      'Control character': 'Caractere de controle',
+      'Selection deleted': 'Seleção removida',
+      'Go to line': 'Ir para a linha',
+      go: 'ir',
+      Find: 'Localizar',
+      Replace: 'Substituir',
+      next: 'próxima',
+      previous: 'anterior',
+      all: 'todas',
+      'match case': 'diferenciar maiúsculas',
+      regexp: 'expressão regular',
+      'by word': 'palavra inteira',
+      replace: 'substituir',
+      'replace all': 'substituir tudo',
+      close: 'fechar',
+      'current match': 'ocorrência atual',
+      'on line': 'na linha',
+      'replaced match on line $': 'ocorrência substituída na linha $',
+      'replaced $ matches': '$ ocorrências substituídas',
+      'folded code': 'código recolhido',
+      unfold: 'expandir',
+      to: 'a',
     },
   },
   limpiezaDisco: {

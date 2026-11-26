@@ -475,6 +475,29 @@ export const fr: Textos = {
       'disco.sin_analisis': 'Analysez de nouveau avant de nettoyer : l’analyse a expiré ou manque.',
       'disco.ocupada': 'Une analyse ou un nettoyage est déjà en cours.',
       'disco.sin_registro': 'Le journal du nettoyage n’a pas pu être créé ; rien n’a été supprimé.',
+      'editor.sin_confirmar': 'Confirmez l’enregistrement avant de continuer.',
+      'editor.confirmacion_reforzada':
+        'Ce fichier semble contenir des secrets ou appartient à un site avec des données réelles : confirmez avec la vérification renforcée pour l’enregistrer.',
+      'editor.ruta_invalida': 'Le chemin du fichier n’est pas valide.',
+      'editor.no_existe': 'Le fichier n’existe pas.',
+      'editor.no_regular': 'Seuls les fichiers ordinaires peuvent être modifiés.',
+      'editor.ruta_vetada':
+        'Ce fichier se trouve dans le dossier de données de WolfCore Dev : il ne s’ouvre ni ne s’enregistre depuis l’éditeur.',
+      'editor.archivo_env':
+        'Les fichiers .env se gèrent depuis les variables du projet, pas depuis l’éditeur.',
+      'editor.demasiado_grande':
+        'Le fichier est trop volumineux pour l’éditeur (maximum {maximo}).',
+      'editor.binario':
+        'Le fichier n’est pas du texte (il est binaire) : il ne peut pas être modifié ici.',
+      'editor.contenido_invalido': 'Le contenu n’est pas du texte valide.',
+      'editor.huella_invalida': 'L’empreinte du fichier ouvert est absente : rouvrez-le.',
+      'editor.archivo_cambiado':
+        'Le fichier a changé en dehors de l’éditeur depuis son ouverture. Rechargez-le ou confirmez l’écrasement.',
+      'editor.copia_fallo':
+        'La copie préalable n’a pas pu être faite ({codigo}) ; rien n’a été enregistré.',
+      'editor.lectura_fallo': 'Le fichier n’a pas pu être lu ({codigo}).',
+      'editor.escritura_fallo':
+        'Le fichier n’a pas pu être enregistré ({codigo}). L’original n’a pas été touché.',
       'memoria.sin_confirmar': 'Confirmez l’action dans la boîte de dialogue avant de continuer.',
       'memoria.modo_invalido': 'Ce mode d’optimisation n’existe pas.',
       'memoria.plan_caducado':
@@ -3495,6 +3518,11 @@ export const fr: Textos = {
         descripcion:
           'Analyse et supprime les fichiers temporaires et les caches régénérables, avec aperçu et confirmation.',
       },
+      editor: {
+        nombre: 'Éditeur de code',
+        descripcion:
+          'Modifiez des fichiers texte avec coloration, copie préalable et enregistrement confirmé.',
+      },
     },
     errores: {
       jsonVacio: 'Saisissez ou collez un JSON.',
@@ -4752,6 +4780,85 @@ export const fr: Textos = {
         '4xx': '4xx Erreur du client',
         '5xx': '5xx Erreur du serveur',
       },
+    },
+  },
+  editorCodigo: {
+    intro: (mb: number) =>
+      `Éditeur léger avec coloration pour les fichiers texte jusqu’à ${mb} Mo. Choisissez le fichier dans la boîte de dialogue du système ; l’enregistrement demande toujours une confirmation et laisse d’abord une copie dans le dossier de données de WolfCore Dev.`,
+    abrir: 'Ouvrir un fichier…',
+    abriendo: 'Ouverture…',
+    guardar: 'Enregistrer',
+    guardando: 'Enregistrement…',
+    recargar: 'Recharger depuis le disque',
+    vacio: 'Ouvrez un fichier pour commencer à le modifier.',
+    sinCambios: 'Aucune modification',
+    conCambios: 'Modifications non enregistrées',
+    posicion: (linea: number, columna: number) => `Ligne ${linea}, colonne ${columna}`,
+    areaTexto: (nombre: string) => `Éditeur de code : ${nombre}`,
+    salirTeclado: 'Pour quitter l’éditeur au clavier, appuyez sur Échap puis sur Tab.',
+    guardado: 'Fichier enregistré.',
+    copiaPrevia: (ruta: string) => `Copie préalable : ${ruta}`,
+    cancelar: 'Annuler',
+    confirmarGuardar: {
+      titulo: 'Enregistrer les modifications',
+      texto: (nombre: string) =>
+        `${nombre} va être écrit. Auparavant, une copie du contenu actuel du disque est conservée dans le dossier de données de WolfCore Dev.`,
+      boton: 'Enregistrer avec copie préalable',
+    },
+    refuerzo: {
+      abrirTitulo: 'Fichier sensible',
+      guardarTitulo: 'Enregistrer un fichier sensible',
+      secreto:
+        'Ce fichier semble contenir des secrets (clés privées, jetons ou identifiants). Son contenu sera affiché à l’écran.',
+      datosReales:
+        'Ce fichier appartient à un site marqué comme contenant des données réelles. Une mauvaise modification peut toucher des informations bien réelles.',
+      instruccion: (nombre: string) => `Pour continuer, saisissez le nom du fichier : ${nombre}`,
+      etiqueta: 'Nom du fichier',
+      abrirBoton: 'Ouvrir quand même',
+      guardarBoton: 'Enregistrer quand même',
+    },
+    cambioExterno: {
+      titulo: 'Le fichier a changé en dehors de l’éditeur',
+      texto:
+        'Un autre programme l’a modifié depuis que vous l’avez ouvert ; rien n’a donc été enregistré. Vous pouvez le recharger (vos modifications sont perdues) ou l’écraser avec ce que vous avez ici.',
+      recargar: 'Recharger et abandonner mes modifications',
+      sobrescribir: 'Écraser…',
+      sobrescribirTitulo: 'Écraser le fichier',
+      sobrescribirTexto:
+        'Les modifications faites par l’autre programme seront perdues. Son contenu actuel restera dans la copie préalable.',
+      sobrescribirBoton: 'Oui, écraser',
+      volver: 'Retour',
+    },
+    descartar: {
+      titulo: 'Modifications non enregistrées',
+      texto:
+        'L’éditeur contient des modifications non enregistrées. Si vous continuez, elles sont perdues.',
+      confirmar: 'Abandonner les modifications',
+      seguir: 'Continuer à modifier',
+    },
+    cm: {
+      'Control character': 'Caractère de contrôle',
+      'Selection deleted': 'Sélection supprimée',
+      'Go to line': 'Aller à la ligne',
+      go: 'aller',
+      Find: 'Rechercher',
+      Replace: 'Remplacer',
+      next: 'suivant',
+      previous: 'précédent',
+      all: 'tout',
+      'match case': 'respecter la casse',
+      regexp: 'expression régulière',
+      'by word': 'mot entier',
+      replace: 'remplacer',
+      'replace all': 'tout remplacer',
+      close: 'fermer',
+      'current match': 'occurrence actuelle',
+      'on line': 'à la ligne',
+      'replaced match on line $': 'occurrence remplacée à la ligne $',
+      'replaced $ matches': '$ occurrences remplacées',
+      'folded code': 'code replié',
+      unfold: 'déplier',
+      to: 'à',
     },
   },
   limpiezaDisco: {

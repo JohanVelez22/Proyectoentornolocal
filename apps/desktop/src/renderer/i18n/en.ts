@@ -450,6 +450,26 @@ export const en: Textos = {
       'disco.sin_analisis': 'Analyze again before cleaning: the analysis expired or is missing.',
       'disco.ocupada': 'An analysis or cleanup is already running.',
       'disco.sin_registro': 'The cleanup log could not be created; nothing was deleted.',
+      'editor.sin_confirmar': 'Confirm the save before continuing.',
+      'editor.confirmacion_reforzada':
+        'This file looks like it holds secrets or belongs to a site with real data: confirm with the extra check to save it.',
+      'editor.ruta_invalida': 'The file path is not valid.',
+      'editor.no_existe': 'The file does not exist.',
+      'editor.no_regular': 'Only regular files can be edited.',
+      'editor.ruta_vetada':
+        'That file is inside the WolfCore Dev data folder: it cannot be opened or saved from the editor.',
+      'editor.archivo_env':
+        '.env files are managed from the project variables, not from the editor.',
+      'editor.demasiado_grande': 'The file is too large for the editor (maximum {maximo}).',
+      'editor.binario': 'The file is not text (it is binary): it cannot be edited here.',
+      'editor.contenido_invalido': 'The content is not valid text.',
+      'editor.huella_invalida': 'The fingerprint of the open file is missing: open it again.',
+      'editor.archivo_cambiado':
+        'The file changed outside the editor since it was opened. Reload it or confirm overwriting it.',
+      'editor.copia_fallo': 'The backup copy could not be made ({codigo}); nothing was saved.',
+      'editor.lectura_fallo': 'The file could not be read ({codigo}).',
+      'editor.escritura_fallo':
+        'The file could not be saved ({codigo}). The original was not touched.',
       'memoria.sin_confirmar': 'Confirm the action in the dialog before continuing.',
       'memoria.modo_invalido': 'That optimization mode does not exist.',
       'memoria.plan_caducado':
@@ -3376,6 +3396,10 @@ export const en: Textos = {
         descripcion:
           'Analyze and delete temp files and regenerable caches, with a preview and confirmation.',
       },
+      editor: {
+        nombre: 'Code editor',
+        descripcion: 'Edit text files with highlighting, a backup copy and confirmed saving.',
+      },
     },
     errores: {
       jsonVacio: 'Type or paste some JSON.',
@@ -4608,6 +4632,84 @@ export const en: Textos = {
         '4xx': '4xx Client error',
         '5xx': '5xx Server error',
       },
+    },
+  },
+  editorCodigo: {
+    intro: (mb: number) =>
+      `A light editor with highlighting for text files up to ${mb} MB. Choose the file in the system dialog; saving always asks for confirmation and first leaves a copy in the WolfCore Dev data folder.`,
+    abrir: 'Open file…',
+    abriendo: 'Opening…',
+    guardar: 'Save',
+    guardando: 'Saving…',
+    recargar: 'Reload from disk',
+    vacio: 'Open a file to start editing.',
+    sinCambios: 'No changes',
+    conCambios: 'Unsaved changes',
+    posicion: (linea: number, columna: number) => `Line ${linea}, column ${columna}`,
+    areaTexto: (nombre: string) => `Code editor: ${nombre}`,
+    salirTeclado: 'To leave the editor with the keyboard, press Esc and then Tab.',
+    guardado: 'File saved.',
+    copiaPrevia: (ruta: string) => `Backup copy: ${ruta}`,
+    cancelar: 'Cancel',
+    confirmarGuardar: {
+      titulo: 'Save changes',
+      texto: (nombre: string) =>
+        `${nombre} is about to be written. First, a copy of what is on disk now is saved in the WolfCore Dev data folder.`,
+      boton: 'Save with a backup copy',
+    },
+    refuerzo: {
+      abrirTitulo: 'Sensitive file',
+      guardarTitulo: 'Save a sensitive file',
+      secreto:
+        'This file looks like it contains secrets (private keys, tokens or credentials). Its content will be shown on screen.',
+      datosReales:
+        'This file belongs to a site marked as holding real data. A wrong change can affect real information.',
+      instruccion: (nombre: string) => `To continue, type the file name: ${nombre}`,
+      etiqueta: 'File name',
+      abrirBoton: 'Open anyway',
+      guardarBoton: 'Save anyway',
+    },
+    cambioExterno: {
+      titulo: 'The file changed outside the editor',
+      texto:
+        'Another program modified it since you opened it, so nothing was saved. You can reload it (your changes are lost) or overwrite it with what you have here.',
+      recargar: 'Reload and discard my changes',
+      sobrescribir: 'Overwrite…',
+      sobrescribirTitulo: 'Overwrite the file',
+      sobrescribirTexto:
+        'The changes made by the other program will be lost. Its current content will stay in the backup copy.',
+      sobrescribirBoton: 'Yes, overwrite',
+      volver: 'Go back',
+    },
+    descartar: {
+      titulo: 'Unsaved changes',
+      texto: 'There are unsaved changes in the editor. If you continue, they are lost.',
+      confirmar: 'Discard changes',
+      seguir: 'Keep editing',
+    },
+    cm: {
+      'Control character': 'Control character',
+      'Selection deleted': 'Selection deleted',
+      'Go to line': 'Go to line',
+      go: 'go',
+      Find: 'Find',
+      Replace: 'Replace',
+      next: 'next',
+      previous: 'previous',
+      all: 'all',
+      'match case': 'match case',
+      regexp: 'regexp',
+      'by word': 'by word',
+      replace: 'replace',
+      'replace all': 'replace all',
+      close: 'close',
+      'current match': 'current match',
+      'on line': 'on line',
+      'replaced match on line $': 'replaced match on line $',
+      'replaced $ matches': 'replaced $ matches',
+      'folded code': 'folded code',
+      unfold: 'unfold',
+      to: 'to',
     },
   },
   limpiezaDisco: {

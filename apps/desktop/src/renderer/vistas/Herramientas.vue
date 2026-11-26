@@ -3,6 +3,7 @@ import {
   Archive,
   Book,
   Brush,
+  Create,
   Camera,
   DocumentAttach,
   CodeSlash,
@@ -23,8 +24,9 @@ import {
   Text,
   TrashBin,
 } from '@vicons/ionicons5';
-import { NDrawer, NDrawerContent, NEmpty, NIcon, NInput } from 'naive-ui';
+import { NDrawer, NDrawerContent, NEmpty, NIcon, NInput, useDialog } from 'naive-ui';
 import { computed, defineAsyncComponent, ref, watch, type Component } from 'vue';
+import { onBeforeRouteLeave } from 'vue-router';
 import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import { solicitudes } from '../composables/solicitudes';
 import { textos } from '../i18n';
@@ -58,6 +60,7 @@ const componentes: Record<Clave, Component> = {
   ),
   guiaTuneles: defineAsyncComponent(() => import('../componentes/herramientas/GuiaTuneles.vue')),
   guiaHttp: defineAsyncComponent(() => import('../componentes/herramientas/GuiaHttp.vue')),
+  editor: defineAsyncComponent(() => import('../componentes/herramientas/EditorCodigo.vue')),
 };
 
 const iconos: Record<Clave, Component> = {
@@ -84,6 +87,7 @@ const iconos: Record<Clave, Component> = {
   limpiezaDisco: TrashBin,
   guiaTuneles: Book,
   guiaHttp: Book,
+  editor: Create,
 };
 
 /** Paneles que necesitan más ancho (dos columnas o tablas). */
@@ -98,6 +102,7 @@ const ANCHAS: Clave[] = [
   'limpiezaDisco',
   'guiaTuneles',
   'guiaHttp',
+  'editor',
 ];
 
 const busqueda = ref('');
@@ -125,12 +130,37 @@ watch(
   { immediate: true },
 );
 
+const dialogo = useDialog();
+
+/** Con cambios sin guardar en el editor, cerrar o salir pide confirmación. */
+function confirmarSalida(): Promise<boolean> {
+  if (!solicitudes.editorSinGuardar) return Promise.resolve(true);
+  const d = textos.editorCodigo.descartar;
+  return new Promise((resolver) => {
+    dialogo.warning({
+      title: d.titulo,
+      content: d.texto,
+      positiveText: d.confirmar,
+      negativeText: d.seguir,
+      onPositiveClick: () => resolver(true),
+      onNegativeClick: () => resolver(false),
+      onClose: () => resolver(false),
+      onMaskClick: () => resolver(false),
+    });
+  });
+}
+
 const visible = computed({
   get: () => abierta.value !== null,
   set: (v: boolean) => {
-    if (!v) abierta.value = null;
+    if (v) return;
+    void confirmarSalida().then((ok) => {
+      if (ok) abierta.value = null;
+    });
   },
 });
+
+onBeforeRouteLeave(() => confirmarSalida());
 </script>
 
 <template>
@@ -168,6 +198,8 @@ const visible = computed({
       v-model:show="visible"
       :width="abierta && ANCHAS.includes(abierta) ? 'min(1000px, 92vw)' : 'min(620px, 92vw)'"
       placement="right"
+      :close-on-esc="abierta !== 'editor'"
+      :mask-closable="abierta !== 'editor'"
     >
       <NDrawerContent v-if="abierta" :title="t.lista[abierta].nombre" closable>
         <component :is="componentes[abierta]" />

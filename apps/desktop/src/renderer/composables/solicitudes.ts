@@ -8,6 +8,10 @@ import { reactive } from 'vue';
 export const solicitudes = reactive({
   /** Herramienta que debe abrir la pantalla Herramientas (p. ej. 'puertos'). */
   herramienta: null as string | null,
+  /** Archivo que el editor de código (D43) debe abrir; lo pide `abrirEnEditor`. */
+  archivoEditor: null as string | null,
+  /** El editor de código tiene cambios sin guardar (para avisar al cerrar o salir). */
+  editorSinGuardar: false,
   /** Abrir "Agregar proyecto" (en la pestaña de GitHub) en Proyectos. */
   agregarProyecto: false,
   /** Abrir el asistente "Nuevo proyecto" en Proyectos. */
