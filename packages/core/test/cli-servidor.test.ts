@@ -1,12 +1,13 @@
-import { mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, realpath, stat, symlink, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ORDENES_CLI } from '../src/cli/esquemas';
+import { ConfirmadorCli } from '../src/cli/confirmador';
 import { enmascararSecretos } from '../src/patronesSecretos';
-import type { OperacionesCli } from '../src/cli/ordenes';
+import { limpiarSalida, type OperacionesCli, type SolicitudCli } from '../src/cli/ordenes';
 import { ServidorCli, type ArchivoCli } from '../src/cli/servidor';
 import { Nucleo } from '../src/nucleo';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
@@ -125,6 +126,7 @@ function operacionesFalsas(sitios: Sitio[] = [SITIO, SITIO_REAL]): OperacionesCl
     iniciarTodo: vi.fn(async () => undefined),
     detenerTodo: vi.fn(async () => undefined),
     caConfiable: vi.fn(async () => true),
+    confirmar: vi.fn(async () => 'aprobada' as const),
   };
 }
 
@@ -360,8 +362,8 @@ describe('servidor de órdenes de la CLI (D31): run/cli.json', () => {
     const dir = await carpetaTemporal('pel-cli-json-');
     const rutas = new Rutas(path.join(dir, 'datos'));
     let contenidoAlRestringir: string | null = null;
-    const restringir = vi.fn(async (ruta: string) => {
-      contenidoAlRestringir = await readFile(ruta, 'utf8');
+    const restringir = vi.fn(async (ruta: string, o?: { carpeta?: boolean }) => {
+      if (!o?.carpeta) contenidoAlRestringir = await readFile(ruta, 'utf8');
       return true;
     });
     const s = new ServidorCli({
@@ -378,10 +380,11 @@ describe('servidor de órdenes de la CLI (D31): run/cli.json', () => {
     expect(a.version).toEqual({ app: '9.9.9', idioma: 'fr' });
     // 32 bytes aleatorios en base64url (43 caracteres).
     expect(a.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(restringir).toHaveBeenCalledTimes(1);
-    // El token todavía no estaba en el archivo cuando se le quitaron los permisos a los demás.
+    // Primero la carpeta run/ (con herencia) y luego el temporal, que aún no tenía el token.
+    expect(restringir).toHaveBeenCalledTimes(2);
+    expect(restringir.mock.calls[0]).toEqual([path.dirname(rutas.cliJson()), { carpeta: true }]);
+    expect(restringir.mock.calls[1]![0]).not.toBe(rutas.cliJson());
     expect(contenidoAlRestringir).toBe('');
-    expect(restringir.mock.calls[0]![0]).not.toBe(rutas.cliJson());
     expect(await readFile(rutas.cliJson(), 'utf8')).not.toBe('');
   });
 
@@ -492,7 +495,7 @@ describe('servidor de órdenes de la CLI (D31): compartir (túnel) y sus confirm
     const sin = await m.orden('compartir', { sitio: 'clientes', si: true });
     expect(sin.json.error).toEqual({
       codigo: 'cli.requiere_confirmacion_datos_reales',
-      datos: { sitio: 'clientes', dominio: 'clientes.test' },
+      datos: { sitio: 'clientes' },
     });
     for (const confirmaDatosReales of [
       '',
@@ -562,7 +565,7 @@ describe('servidor de órdenes de la CLI (D31): compartir (túnel) y sus confirm
   it('cambiar el PHP de todas las terminales exige `si`', async () => {
     const m = await montar();
     const sin = await m.orden('usar', { servicio: 'php', version: '8.4', global: true });
-    expect(sin.json.error.codigo).toBe('cli.requiere_confirmacion');
+    expect(sin.json.error.codigo).toBe('cli.requiere_confirmacion_global');
     expect(m.ops.cambiarPhpPorDefecto).not.toHaveBeenCalled();
     const con = await m.orden('usar', {
       servicio: 'php',
@@ -646,7 +649,7 @@ describe('servidor de órdenes de la CLI (D31): nada de secretos en la salida', 
     expect(salidas[0]).toContain('tienda.test');
     expect(flujo.estado).toBe(200);
     // El error del túnel llega con código, no con el texto del proceso.
-    expect(JSON.parse(salidas[3]!).error.codigo).toBe('cli.error');
+    expect(JSON.parse(salidas[3]!).error.codigo).toBe('cli.tunel_fallo');
   });
 });
 
@@ -773,6 +776,8 @@ async function crearNucleo(
   extra: {
     aPreparar?: (base: string, dir: string) => Promise<void>;
     spawn?: ReturnType<typeof vi.fn>;
+    confirmar?: (s: SolicitudCli) => Promise<boolean>;
+    activo?: boolean;
   } = {},
 ): Promise<{
   n: Nucleo;
@@ -784,7 +789,10 @@ async function crearNucleo(
   const dir = await carpetaTemporal('pel-cli-nuc-');
   const base = path.join(dir, 'datos');
   await mkdir(base, { recursive: true });
-  await writeFile(path.join(base, 'config.json'), JSON.stringify(config, null, 2));
+  await writeFile(
+    path.join(base, 'config.json'),
+    JSON.stringify({ ...(config as object), cli: { activo: extra.activo !== false } }, null, 2),
+  );
   await extra.aPreparar?.(base, dir);
   const n = await Nucleo.crear({
     base,
@@ -793,11 +801,14 @@ async function crearNucleo(
     fetch: (async () => new Response('{}')) as typeof fetch,
     retrasoNovedadesMs: 60_000,
     aislado: true,
-    servidorCli: { version: '0.0.1' },
+    servidorCli: { version: '0.0.1', ...(extra.confirmar ? { confirmar: extra.confirmar } : {}) },
     ...(extra.spawn ? { spawn: extra.spawn as never } : {}),
   });
   nucleos.push(n);
-  const cli = JSON.parse(await readFile(path.join(base, 'run', 'cli.json'), 'utf8')) as ArchivoCli;
+  const cli =
+    extra.activo === false
+      ? ({ puerto: 0, token: '', pid: 0, version: { app: '', idioma: null } } as ArchivoCli)
+      : (JSON.parse(await readFile(path.join(base, 'run', 'cli.json'), 'utf8')) as ArchivoCli);
   return {
     n,
     dir,
@@ -973,7 +984,8 @@ describe('servidor de órdenes de la CLI (D31): con el núcleo', () => {
       ],
     });
     const spawn = vi.fn();
-    const c = await crearNucleo(cfg, { spawn });
+    const confirmar = vi.fn(async () => true);
+    const c = await crearNucleo(cfg, { spawn, confirmar });
     const secretos = {
       disponible: () => true,
       leer: async () => CENTINELA,
@@ -1103,5 +1115,414 @@ describe('lista blanca de órdenes', () => {
       'iniciar',
       'detener',
     ]);
+  });
+});
+
+/* ───────────── Revisión de D31 ───────────── */
+
+describe('revisión D31 · C1: la ventana de la app decide (compartir y usar --global)', () => {
+  it('compartir pregunta en la ventana con lo que se publica y, solo si aprueba, abre', async () => {
+    const m = await montar();
+    const r = await m.orden('compartir', { sitio: 'tienda', si: true });
+    expect(r.estado).toBe(200);
+    expect(m.ops.confirmar).toHaveBeenCalledWith({
+      tipo: 'tunel',
+      sitio: 'tienda',
+      dominio: 'tienda.test',
+      datosReales: false,
+      proveedor: 'cloudflare-rapido',
+      alcance: 'internet',
+      publicoEn: null,
+    });
+    expect(m.ops.abrirTunel).toHaveBeenCalledTimes(1);
+  });
+
+  it('si se rechaza en la ventana, vence o hay demasiadas pendientes, no se abre nada', async () => {
+    for (const [resultado, codigo, estado] of [
+      ['rechazada', 'cli.confirmacion_rechazada', 422],
+      ['vencida', 'cli.confirmacion_vencida', 422],
+      ['ocupado', 'cli.ocupado', 429],
+    ] as const) {
+      const ops = operacionesFalsas();
+      ops.confirmar = vi.fn(async () => resultado);
+      const m = await montar({ ops });
+      // Con `si` y con la confirmación reforzada de la terminal: la ventana manda igual.
+      const r = await m.orden('compartir', {
+        sitio: 'clientes',
+        si: true,
+        confirmaDatosReales: 'clientes.test',
+      });
+      expect(r.json.error.codigo, resultado).toBe(codigo);
+      expect(r.estado, resultado).toBe(estado);
+      expect(ops.abrirTunel).not.toHaveBeenCalled();
+    }
+  });
+
+  it('con datos reales la ventana recibe datosReales y el dominio (se elige allí)', async () => {
+    const m = await montar();
+    await m.orden('compartir', {
+      sitio: 'clientes',
+      si: true,
+      confirmaDatosReales: 'clientes.test',
+    });
+    expect(m.ops.confirmar).toHaveBeenCalledWith(
+      expect.objectContaining({ datosReales: true, dominio: 'clientes.test' }),
+    );
+  });
+
+  it('cerrar un túnel no pregunta; el error de datos reales ya no lleva el dominio', async () => {
+    const m = await montar();
+    await m.orden('compartir', { sitio: 'tienda', cerrar: true });
+    expect(m.ops.confirmar).not.toHaveBeenCalled();
+    const r = await m.orden('compartir', { sitio: 'clientes', si: true });
+    expect(r.json.error).toEqual({
+      codigo: 'cli.requiere_confirmacion_datos_reales',
+      datos: { sitio: 'clientes' },
+    });
+  });
+
+  it('usar --global también pasa por la ventana y tiene su propio código sin `si`', async () => {
+    const ops = operacionesFalsas();
+    ops.confirmar = vi.fn(async () => 'rechazada' as const);
+    const m = await montar({ ops });
+    const args = { servicio: 'php', version: '8.4', global: true };
+    expect((await m.orden('usar', args)).json.error.codigo).toBe(
+      'cli.requiere_confirmacion_global',
+    );
+    const r = await m.orden('usar', { ...args, si: true });
+    expect(r.json.error.codigo).toBe('cli.confirmacion_rechazada');
+    expect(ops.confirmar).toHaveBeenCalledWith({ tipo: 'php-global', version: '8.4' });
+    expect(ops.cambiarPhpPorDefecto).not.toHaveBeenCalled();
+  });
+
+  it('ConfirmadorCli: sin ventana rechaza; vence; limita pendientes; un fallo es rechazo', async () => {
+    const s: SolicitudCli = { tipo: 'php-global', version: '8.4' };
+    expect(await new ConfirmadorCli({}).pedir(s)).toBe('rechazada');
+    expect(await new ConfirmadorCli({ preguntar: async () => true }).pedir(s)).toBe('aprobada');
+    expect(await new ConfirmadorCli({ preguntar: async () => false }).pedir(s)).toBe('rechazada');
+    expect(
+      await new ConfirmadorCli({
+        preguntar: async () => {
+          throw new Error('x');
+        },
+      }).pedir(s),
+    ).toBe('rechazada');
+    // Vence, y el diálogo que sigue abierto cuenta como pendiente hasta que se responda.
+    let responder: (v: boolean) => void = () => undefined;
+    const c = new ConfirmadorCli({
+      preguntar: () => new Promise<boolean>((r) => (responder = r)),
+      plazoMs: () => 20,
+      maximo: 1,
+    });
+    expect(await c.pedir(s)).toBe('vencida');
+    expect(await c.pedir(s)).toBe('ocupado');
+    responder(false);
+    await vi.waitFor(async () => expect(await c.pedir(s)).not.toBe('ocupado'));
+  });
+
+  it('con el núcleo: sin ventana o con la ventana rechazando, el túnel no se abre', async () => {
+    const dir = await carpetaTemporal('pel-cli-ventana-');
+    const cfg = ConfigSchema.parse({
+      sitios: [
+        SitioSchema.parse({
+          id: 'tienda',
+          nombre: 'Tienda',
+          dominio: 'tienda.test',
+          carpeta: dir,
+          tipo: 'estatico',
+        }),
+      ],
+    });
+    for (const confirmar of [undefined, vi.fn(async () => false)]) {
+      const spawn = vi.fn();
+      const c = await crearNucleo(cfg, { spawn, ...(confirmar ? { confirmar } : {}) });
+      const r = await llamar(c, 'compartir', { sitio: 'tienda', si: true });
+      expect(r.json.error.codigo).toBe('cli.confirmacion_rechazada');
+      expect(spawn).not.toHaveBeenCalled();
+      expect(c.n.tuneles.estados()).toEqual([]);
+      const g = await llamar(c, 'usar', {
+        servicio: 'php',
+        version: '8.4',
+        global: true,
+        si: true,
+      });
+      expect(g.json.error.codigo).not.toBe(undefined);
+      await c.n.cerrar({ detenerServicios: false });
+    }
+  });
+});
+
+describe('revisión D31 · C1: el servidor es opcional (cli.activo apagado por defecto)', () => {
+  it('apagado no hay puerto ni cli.json, y uno viejo se borra', async () => {
+    const dir = await carpetaTemporal('pel-cli-apagado-');
+    const base = path.join(dir, 'datos');
+    await mkdir(path.join(base, 'run'), { recursive: true });
+    await writeFile(
+      path.join(base, 'run', 'cli.json'),
+      JSON.stringify({ puerto: 1, token: 'viejo' }),
+    );
+    expect(ConfigSchema.parse({}).cli.activo).toBe(false);
+    const n = await Nucleo.crear({
+      base,
+      plataforma: new PlataformaFalsa({ carpetaDatos: dir, carpetaInicio: dir }),
+      sonda: async () => false,
+      fetch: (async () => new Response('{}')) as typeof fetch,
+      retrasoNovedadesMs: 60_000,
+      servidorCli: { version: '1' },
+    });
+    nucleos.push(n);
+    expect(n.cli.estado()).toMatchObject({ activo: false, puerto: null });
+    expect(await n.estadoCli()).toEqual({ activo: false, ajuste: false });
+    await expect(stat(path.join(base, 'run', 'cli.json'))).rejects.toThrow();
+  });
+
+  it('activarCli enciende, guarda el ajuste y escribe cli.json; apagarlo lo quita todo', async () => {
+    const c = await crearNucleo(ConfigSchema.parse({}), { activo: false });
+    const archivo = path.join(c.base, 'run', 'cli.json');
+    expect(await c.n.activarCli(true)).toEqual({ activo: true, ajuste: true });
+    expect((await c.n.config.leer()).cli.activo).toBe(true);
+    const a = JSON.parse(await readFile(archivo, 'utf8')) as ArchivoCli;
+    const r = await pedir(a.puerto, {
+      metodo: 'POST',
+      ruta: '/orden',
+      cabeceras: {
+        host: `127.0.0.1:${a.puerto}`,
+        authorization: `Bearer ${a.token}`,
+        'x-wolf-cli': '1',
+        'content-type': 'application/json',
+      },
+      cuerpo: '{"orden":"estado"}',
+    });
+    expect(r.estado).toBe(200);
+    expect(await c.n.activarCli(false)).toEqual({ activo: false, ajuste: false });
+    expect((await c.n.config.leer()).cli.activo).toBe(false);
+    await expect(stat(archivo)).rejects.toThrow();
+    // Ya no hay nadie escuchando.
+    const error = await new Promise<string>((resolve) => {
+      const s = net.connect({ host: '127.0.0.1', port: a.puerto });
+      s.once('connect', () => {
+        s.destroy();
+        resolve('conectó');
+      });
+      s.once('error', (e: NodeJS.ErrnoException) => resolve(e.code ?? 'error'));
+    });
+    expect(error).not.toBe('conectó');
+  });
+});
+
+describe('revisión D31 · M1: la carpeta run/ y el temporal', () => {
+  const montarSolo = async (
+    restringir: (ruta: string, o?: { carpeta?: boolean }) => Promise<boolean>,
+    antes?: (run: string) => Promise<void>,
+  ): Promise<{ s: ServidorCli; rutas: Rutas }> => {
+    const dir = await carpetaTemporal('pel-cli-run-');
+    const rutas = new Rutas(path.join(dir, 'datos'));
+    await antes?.(path.dirname(rutas.cliJson()));
+    const s = new ServidorCli({
+      rutas,
+      operaciones: operacionesFalsas(),
+      restringir,
+      version: async () => ({ app: '1', idioma: null }),
+    });
+    servidores.push(s);
+    return { s, rutas };
+  };
+
+  it('si no se puede restringir la carpeta run/, no se activa y no escribe nada', async () => {
+    const { s, rutas } = await montarSolo(async (_r, o) => !o?.carpeta);
+    await expect(s.iniciar()).rejects.toMatchObject({ codigo: 'cli.token_no_protegido' });
+    expect(await readdir(path.dirname(rutas.cliJson()))).toEqual([]);
+    expect(s.estado().activo).toBe(false);
+  });
+
+  it('si run/ es un enlace o unión, no se activa', async () => {
+    const { s } = await montarSolo(
+      async () => true,
+      async (run) => {
+        const destino = path.join(path.dirname(run), 'otro');
+        await mkdir(destino, { recursive: true });
+        await symlink(destino, run, 'junction');
+      },
+    );
+    await expect(s.iniciar()).rejects.toMatchObject({ codigo: 'cli.token_no_protegido' });
+    expect(s.estado().activo).toBe(false);
+  });
+
+  it('el temporal tiene nombre aleatorio (distinto en cada arranque) y no queda ninguno', async () => {
+    const vistos: string[] = [];
+    const { s, rutas } = await montarSolo(async (r, o) => {
+      if (!o?.carpeta) vistos.push(path.basename(r));
+      return true;
+    });
+    await s.iniciar();
+    await s.detener();
+    await s.iniciar();
+    expect(vistos).toHaveLength(2);
+    expect(vistos[0]).not.toBe(vistos[1]);
+    expect(vistos[0]).toMatch(/^cli\.json\.[0-9a-f]{16}\.tmp$/);
+    expect(await readdir(path.dirname(rutas.cliJson()))).toEqual(['cli.json']);
+  });
+});
+
+describe('revisión D31 · M2: el turno de la cola', () => {
+  it('una orden vencida que sigue viva no deja pasar a otra que pisaría lo mismo', async () => {
+    const ops = operacionesFalsas();
+    let soltar: () => void = () => undefined;
+    ops.cambiarPhpPorDefecto = vi.fn(
+      () =>
+        new Promise<void>((r) => {
+          soltar = r;
+        }),
+    );
+    const m = await montar({ ops, plazos: { usar: 60 } });
+    const args = { servicio: 'php', version: '8.4', global: true, si: true };
+    expect((await m.orden('usar', args)).json.error.codigo).toBe('cli.plazo');
+    // La segunda espera el turno de la primera (que sigue viva), vence y nunca llega a correr.
+    expect((await m.orden('usar', args)).json.error.codigo).toBe('cli.plazo');
+    expect(ops.cambiarPhpPorDefecto).toHaveBeenCalledTimes(1);
+    soltar();
+    await new Promise((r) => setTimeout(r, 20));
+    // Ya terminó de verdad: la cola sigue sirviendo, y la vencida de antes no se ejecutó después.
+    ops.cambiarPhpPorDefecto = vi.fn(async () => undefined);
+    expect((await m.orden('usar', args)).estado).toBe(200);
+    expect(ops.cambiarPhpPorDefecto).toHaveBeenCalledTimes(1);
+  });
+
+  it('las vencidas vivas cuentan dentro del máximo de la cola (429)', async () => {
+    const ops = operacionesFalsas();
+    ops.cambiarPhpPorDefecto = vi.fn(() => new Promise<void>(() => undefined));
+    const m = await montar({ ops, plazos: { usar: 3000 } });
+    const args = { servicio: 'php', version: '8.4', global: true, si: true };
+    const r = await Promise.all(Array.from({ length: 10 }, () => m.orden('usar', args)));
+    expect(r.filter((x) => x.estado === 429).length).toBeGreaterThanOrEqual(2);
+    expect(r.find((x) => x.estado === 429)!.json.error.codigo).toBe('cli.ocupado');
+  }, 20_000);
+});
+
+describe('revisión D31 · M3 y M4: cupos, semáforo y frecuencia', () => {
+  it('varios seguimientos a la vez no rebasan el cupo de 4', async () => {
+    const ops = operacionesFalsas();
+    ops.leerRegistro = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, 60));
+      return ['x'];
+    });
+    ops.seguirRegistro = vi.fn(async () => () => undefined);
+    const m = await montar({ ops });
+    const estados: number[] = [];
+    const reqs: http.ClientRequest[] = [];
+    await Promise.all(
+      Array.from(
+        { length: 8 },
+        () =>
+          new Promise<void>((resolve) => {
+            const req = http.request(
+              {
+                host: '127.0.0.1',
+                port: m.puerto,
+                path: '/registros?sitio=tienda&seguir=1',
+                headers: m.cabeceras,
+              },
+              (res) => {
+                estados.push(res.statusCode ?? 0);
+                res.resume();
+                resolve();
+              },
+            );
+            req.on('error', () => resolve());
+            reqs.push(req);
+            req.end();
+          }),
+      ),
+    );
+    for (const r of reqs) r.destroy();
+    expect(estados.filter((e) => e === 200)).toHaveLength(4);
+    expect(estados.filter((e) => e === 429)).toHaveLength(4);
+  });
+
+  it('las órdenes de solo lectura entran de a 4 (semáforo)', async () => {
+    const ops = operacionesFalsas();
+    ops.sitios = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, 120));
+      return [SITIO];
+    });
+    const m = await montar({ ops });
+    const r = await Promise.all(Array.from({ length: 7 }, () => m.orden('estado')));
+    expect(r.filter((x) => x.estado === 200)).toHaveLength(4);
+    expect(r.filter((x) => x.estado === 429)).toHaveLength(3);
+    // Al terminar, el cupo vuelve.
+    expect((await m.orden('estado')).estado).toBe(200);
+  });
+
+  it('`abrir` tiene límite de frecuencia', async () => {
+    const m = await montar();
+    const r: number[] = [];
+    for (let i = 0; i < 7; i++) r.push((await m.orden('abrir', { sitio: 'tienda' })).estado);
+    expect(r.slice(0, 5)).toEqual([200, 200, 200, 200, 200]);
+    expect(r.slice(5)).toEqual([429, 429]);
+  });
+});
+
+describe('revisión D31 · M5: banderas con prefijo y saltos de línea', () => {
+  it('enmascara prefijos (--ngrok-authtoken, --access_token) y comillas', () => {
+    for (const t of [
+      `--ngrok-authtoken ${CENTINELA}`,
+      `x --access-token=${CENTINELA}`,
+      `--my_api_key\t${CENTINELA}`,
+      `--client-secret "${CENTINELA}"`,
+      `--authkey ${CENTINELA}`,
+    ]) {
+      expect(enmascararSecretos(t), t).not.toContain(CENTINELA);
+    }
+  });
+
+  it('no se come lo que no es el valor: otra bandera, el salto de línea, medio de palabra', () => {
+    expect(enmascararSecretos('--token --verbose')).toBe('--token --verbose');
+    expect(enmascararSecretos('--token\nhola')).toBe('--token\nhola');
+    expect(enmascararSecretos('--token \nhola')).toBe('--token \nhola');
+    expect(enmascararSecretos('mi--token valor')).toBe('mi--token valor');
+    expect(enmascararSecretos('--tokenizer fast')).toBe('--tokenizer fast');
+  });
+});
+
+describe('revisión D31 · M7 y M8', () => {
+  it('vincular compara también con la ruta real de los sitios (un enlace al mismo proyecto)', async () => {
+    const dir = await carpetaTemporal('pel-cli-enlace-');
+    const real = path.join(dir, 'proyecto');
+    const enlace = path.join(dir, 'enlace');
+    await mkdir(real, { recursive: true });
+    await symlink(real, enlace, 'junction');
+    const existente = SitioSchema.parse({
+      ...SITIO,
+      id: 'previo',
+      dominio: 'previo.test',
+      carpeta: enlace,
+    });
+    const m = await montar({
+      ops: { ...operacionesFalsas([existente]), carpetaDatos: () => path.join(dir, 'datos') },
+    });
+    const r = await m.orden('vincular', { carpeta: real });
+    expect(r.json.error).toEqual({ codigo: 'cli.ya_vinculada', datos: { sitio: 'previo' } });
+    expect(m.ops.guardarSitio).not.toHaveBeenCalled();
+  });
+
+  it('limpiarSalida deja pasar `clave` como rama y sigue quitando token, secret y password', () => {
+    expect(
+      limpiarSalida({
+        clave: '8.4',
+        token: 'x',
+        apiKey: 'y',
+        api_key: 'y',
+        secret: 'z',
+        password: 'p',
+      }),
+    ).toEqual({
+      clave: '8.4',
+    });
+    expect(
+      limpiarSalida({ n: { clave: 'main', credencial: 'q' }, l: [{ passwd: 'x', ok: 1 }] }),
+    ).toEqual({
+      n: { clave: 'main' },
+      l: [{ ok: 1 }],
+    });
   });
 });

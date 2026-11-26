@@ -229,7 +229,8 @@ export interface CapacidadesPlataforma {
    * control total para el usuario; en Unix basta el modo 600 al crearlo). false si no se pudo:
    * quien llama decide si sigue (la carpeta de datos ya es del usuario).
    */
-  restringirAlUsuario(ruta: string): Promise<boolean>;
+  restringirAlUsuario(ruta: string, o?: { carpeta?: boolean }): Promise<boolean>;
+  // Con `carpeta: true` el permiso se hereda a lo que se cree dentro (`(OI)(CI)` en Windows).
   /**
    * Instalaciones de Laragon, XAMPP y Herd en sus rutas conocidas (solo comprueba que la carpeta
    * exista: no lee ni ejecuta nada). Para importar sus sitios y bases.

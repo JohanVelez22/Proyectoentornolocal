@@ -592,6 +592,11 @@ export const ConfigSchema = z.object({
       puerto: z.number().int().min(1024).max(65535).default(7790),
     })
     .prefault({}),
+  /**
+   * Servidor de órdenes de la CLI `wolf` (D31): apagado por defecto. Se enciende al agregar `wolf`
+   * al PATH y se apaga en Ajustes; apagado no escucha ni existe `run/cli.json`.
+   */
+  cli: z.object({ activo: z.boolean().default(false) }).prefault({}),
   /** Editor de código: null = el primero detectado. */
   editor: z
     .object({

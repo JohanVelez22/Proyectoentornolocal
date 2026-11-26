@@ -775,7 +775,7 @@ export class PlataformaWindows implements PlataformaCompleta {
    * `icacls` de System32 (nunca uno del PATH): quita los permisos heredados y deja solo al
    * usuario actual con control total. Lo usa el archivo del token de la captura de dumps.
    */
-  async restringirAlUsuario(ruta: string): Promise<boolean> {
+  async restringirAlUsuario(ruta: string, o: { carpeta?: boolean } = {}): Promise<boolean> {
     // Por SID (no por USERNAME/USERDOMAIN, que vienen del entorno) y con whoami e icacls de la
     // carpeta del sistema validada (una SystemRoot rara no elige qué ejecutable corre).
     const sistema32 = path.win32.join(raizSistema(this.entorno), 'System32');
@@ -792,7 +792,7 @@ export class PlataformaWindows implements PlataformaCompleta {
       }
       const r = await this.ejecutar(
         path.win32.join(sistema32, 'icacls.exe'),
-        [ruta, '/inheritance:r', '/grant:r', `*${sid}:(F)`],
+        [ruta, '/inheritance:r', '/grant:r', `*${sid}:${o.carpeta ? '(OI)(CI)' : ''}(F)`],
         { timeoutMs: 15_000 },
       );
       return r.codigo === 0;

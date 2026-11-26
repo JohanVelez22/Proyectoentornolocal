@@ -325,7 +325,16 @@ export const fr: Textos = {
       'cli.requiere_confirmacion':
         'Cette commande publie ou modifie quelque chose et doit être confirmée (--si) pour {sitio}.',
       'cli.requiere_confirmacion_datos_reales':
-        '{sitio} contient des données réelles : pour le publier, confirmez en saisissant son domaine ({dominio}).',
+        '{sitio} contient des données réelles : confirmez aussi avec l’option données réelles de la commande (le domaine du site).',
+      'cli.requiere_confirmacion_global':
+        'Changer le PHP de tous les terminaux doit être confirmé (--si).',
+      'cli.confirmacion_rechazada':
+        'La confirmation dans la fenêtre de WolfCore Dev a été refusée ou indisponible : rien n’a été fait.',
+      'cli.confirmacion_vencida':
+        'Personne n’a confirmé à temps dans la fenêtre de WolfCore Dev : rien n’a été fait.',
+      'cli.tunel_fallo':
+        'Le tunnel n’a pas pu être ouvert. Consultez son journal dans WolfCore Dev.',
+      'cli.interno': 'Erreur interne du serveur de la CLI.',
       'cli.proveedor_distinto':
         'Le site utilise un autre fournisseur de tunnel ({proveedor}). Vérifiez et confirmez à nouveau.',
       'cli.sitio_no_encontrado': 'Le site {sitio} n’existe pas.',

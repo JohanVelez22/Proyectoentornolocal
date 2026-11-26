@@ -668,6 +668,20 @@ describe('restringirAlUsuario (ACL del archivo del token)', () => {
     expect(llamadas.filter((l) => l.cmd.endsWith('whoami.exe'))).toHaveLength(1);
   });
 
+  it('Windows: una carpeta se restringe con herencia a lo que se cree dentro ((OI)(CI))', async () => {
+    const llamadas: { cmd: string; args: string[] }[] = [];
+    const p = new PlataformaWindows(ejecutorSid(llamadas), undefined, {
+      entorno: { SystemRoot: 'C:\\Windows' },
+    });
+    expect(await p.restringirAlUsuario('C:\\Datos\\run', { carpeta: true })).toBe(true);
+    expect(llamadas.at(-1)!.args).toEqual([
+      'C:\\Datos\\run',
+      '/inheritance:r',
+      '/grant:r',
+      `*${SID}:(OI)(CI)(F)`,
+    ]);
+  });
+
   it('Windows: una raíz del sistema rara (red, relativa, con ..) no decide qué icacls corre', async () => {
     for (const SystemRoot of ['\\\\srv\\c\\Windows', 'Windows', 'C:\\Windows\\..\\Temp']) {
       const llamadas: { cmd: string; args: string[] }[] = [];

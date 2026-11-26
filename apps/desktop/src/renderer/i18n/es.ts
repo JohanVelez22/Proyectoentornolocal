@@ -314,7 +314,15 @@ export const es = {
       'cli.requiere_confirmacion':
         'Esta orden publica o cambia algo y exige confirmarla (--si) en {sitio}.',
       'cli.requiere_confirmacion_datos_reales':
-        '{sitio} tiene datos reales: para publicarlo, confirme escribiendo su dominio ({dominio}).',
+        '{sitio} tiene datos reales: confirme también con la opción de datos reales de la orden (el dominio del sitio).',
+      'cli.requiere_confirmacion_global':
+        'Cambiar el PHP de todas las terminales exige confirmarlo (--si).',
+      'cli.confirmacion_rechazada':
+        'La confirmación en la ventana de WolfCore Dev se rechazó o no estaba disponible: no se hizo nada.',
+      'cli.confirmacion_vencida':
+        'Nadie confirmó en la ventana de WolfCore Dev a tiempo: no se hizo nada.',
+      'cli.tunel_fallo': 'No se pudo abrir el túnel. Revise su registro en WolfCore Dev.',
+      'cli.interno': 'Error interno del servidor de la CLI.',
       'cli.proveedor_distinto':
         'El sitio usa otro proveedor de túnel ({proveedor}). Revise y confirme de nuevo.',
       'cli.sitio_no_encontrado': 'El sitio {sitio} no existe.',

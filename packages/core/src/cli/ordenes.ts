@@ -15,7 +15,7 @@ import {
   type EstadoTunel,
   type Sitio,
 } from '../tipos';
-import { modoTailscaleDe, proveedorDeSitio } from '../tuneles/proveedor';
+import { alcanceDe, modoTailscaleDe, proveedorDeSitio } from '../tuneles/proveedor';
 import type { OpcionesAbrirTunel } from '../tuneles/tuneles';
 import type { ResultadoWorkspace } from '../workspaces/workspaces';
 import {
@@ -75,13 +75,37 @@ export interface OperacionesCli {
   caConfiable(): Promise<boolean>;
   /** Abre la URL en el navegador del usuario (la app); sin esto solo se devuelve la URL. */
   abrirUrl?(url: string): Promise<boolean>;
+  /**
+   * Pregunta en una ventana de la app (diálogo nativo): publicar un sitio o cambiar el PHP de todas
+   * las terminales nunca lo decide la línea de órdenes. Con plazo y máximo de pendientes.
+   */
+  confirmar(s: SolicitudCli): Promise<ResultadoConfirmacionCli>;
 }
+
+export type ResultadoConfirmacionCli = 'aprobada' | 'rechazada' | 'vencida' | 'ocupado';
+
+/** Lo que la ventana muestra al confirmar (datos del núcleo, nunca del cliente). */
+export type SolicitudCli =
+  | {
+      tipo: 'tunel';
+      sitio: string;
+      dominio: string;
+      datosReales: boolean;
+      proveedor: string;
+      alcance: 'internet' | 'tailnet';
+      /** Dominio público de un túnel de Cloudflare con nombre. */
+      publicoEn: string | null;
+    }
+  | { tipo: 'php-global'; version: string };
 
 const MAX_TEXTO = 4000;
 const MAX_DETALLE = 200;
 const MAX_PROFUNDIDAD = 8;
 /** Claves que no salen nunca, aunque algún objeto las trajera. */
-const CLAVE_SECRETA = /token|clave|secret|passw|contrase|credencial|authtoken|apikey|api_key/i;
+// `clave` no está: en datos del núcleo suele ser una rama o una llave de tabla; los valores igual se enmascaran.
+const CLAVE_SECRETA = /token|secret|passw|contrase|credencial|apikey|api_key/i;
+/** Para los datos libres de un hallazgo del Doctor: ahí sí cae `clave`. */
+const CLAVE_SECRETA_ESTRICTA = /token|clave|secret|passw|contrase|credencial|apikey|api_key/i;
 
 /**
  * Limpia lo que sale por la CLI (también con `--json`): los textos pasan por `enmascararSecretos`
@@ -105,6 +129,14 @@ export function limpiarSalida(v: unknown, nivel = 0): unknown {
     return salida;
   }
   return null;
+}
+
+/** La ventana de la app respondió: solo `aprobada` deja seguir. */
+function exigirVentana(r: ResultadoConfirmacionCli): void {
+  if (r === 'aprobada') return;
+  if (r === 'vencida') throw falla('cli.confirmacion_vencida', 'Nadie confirmó a tiempo.');
+  if (r === 'ocupado') throw falla('cli.ocupado', 'Hay demasiadas confirmaciones pendientes.');
+  throw falla('cli.confirmacion_rechazada', 'La confirmación se rechazó.');
 }
 
 /** Un error del núcleo como lo ve la CLI: código estable y solo los datos que el código declara. */
@@ -271,9 +303,21 @@ const estado: Orden<'estado'> = async (ops) => {
  */
 const vincular: Orden<'vincular'> = async (ops, a) => {
   const real = await carpetaDelUsuario(a.carpeta, ops.carpetaDatos());
-  const existente = (await ops.sitios()).find(
-    (s) => rutaComparable(path.resolve(s.carpeta)) === rutaComparable(path.resolve(real)),
-  );
+  const igual = (a: string): boolean =>
+    rutaComparable(path.resolve(a)) === rutaComparable(path.resolve(real));
+  let existente: Sitio | undefined;
+  for (const s of await ops.sitios()) {
+    let propia: string | null = null;
+    try {
+      propia = await realpath(s.carpeta);
+    } catch {
+      // la carpeta del sitio ya no existe: se compara tal cual
+    }
+    if (igual(s.carpeta) || (propia !== null && igual(propia))) {
+      existente = s;
+      break;
+    }
+  }
   if (existente) {
     throw falla('cli.ya_vinculada', 'Esa carpeta ya es un sitio.', { sitio: existente.id });
   }
@@ -311,11 +355,8 @@ const usar: Orden<'usar'> = async (ops, a) => {
     // Cambia el PHP de todas las terminales: lo mismo que pide confirmar la interfaz.
     if (a.si !== true) {
       throw falla(
-        'cli.requiere_confirmacion',
+        'cli.requiere_confirmacion_global',
         'Cambiar el PHP de todas las terminales exige confirmar.',
-        {
-          sitio: '',
-        },
       );
     }
     if (!(await ops.phpInstaladas()).includes(rama)) {
@@ -324,6 +365,8 @@ const usar: Orden<'usar'> = async (ops, a) => {
         version: rama,
       });
     }
+    // `si` solo salta la pregunta de la terminal: la ventana de la app decide siempre.
+    exigirVentana(await ops.confirmar({ tipo: 'php-global', version: rama }));
     await ops.cambiarPhpPorDefecto(rama);
     return { servicio: 'php', version: rama, global: true };
   }
@@ -401,14 +444,27 @@ const compartir: Orden<'compartir'> = async (ops, a) => {
   if (sitio.datosReales && a.confirmaDatosReales !== sitio.dominio) {
     throw falla(
       'cli.requiere_confirmacion_datos_reales',
-      'Este sitio tiene datos reales: confirme escribiendo su dominio.',
-      { sitio: sitio.id, dominio: sitio.dominio },
+      'Este sitio tiene datos reales: confirme con su dominio.',
+      { sitio: sitio.id },
     );
   }
   const proveedor = proveedorDeSitio(sitio);
   if (a.proveedor !== undefined && a.proveedor !== proveedor) {
     throw falla('cli.proveedor_distinto', 'El sitio usa otro proveedor de túnel.', { proveedor });
   }
+  // La confirmación de verdad es la de la ventana de la app (con datos reales, el dominio se elige
+  // ahí): `si` y `confirmaDatosReales` solo prueban que la terminal ya preguntó.
+  exigirVentana(
+    await ops.confirmar({
+      tipo: 'tunel',
+      sitio: sitio.id,
+      dominio: sitio.dominio,
+      datosReales: sitio.datosReales,
+      proveedor,
+      alcance: alcanceDe(sitio.tunel),
+      publicoEn: sitio.tunel?.dominio ?? null,
+    }),
+  );
   let estadoTunel: EstadoTunel;
   try {
     estadoTunel = await ops.abrirTunel(sitio.id, {
@@ -424,7 +480,7 @@ const compartir: Orden<'compartir'> = async (ops, a) => {
     // Los errores con código ya vienen limpios del núcleo. Un error suelto de un proceso de túnel
     // puede traer un token de su línea de órdenes: no se repite su texto (está en el registro del túnel).
     if (e instanceof ErrorWolf) throw e;
-    throw falla('cli.error', 'No se pudo abrir el túnel.', { detalle: 'tunel' });
+    throw falla('cli.tunel_fallo', 'No se pudo abrir el túnel.');
   }
   return {
     sitio: sitio.id,
@@ -478,7 +534,9 @@ const doctor: Orden<'doctor'> = async (ops) => {
       revision: h.revision,
       gravedad: h.gravedad,
       codigo: h.codigo,
-      datos: h.datos,
+      datos: Object.fromEntries(
+        Object.entries(h.datos).filter(([k]) => !CLAVE_SECRETA_ESTRICTA.test(k)),
+      ),
       evidencia: h.evidencia.slice(0, 500),
       reparable: h.reparacion !== undefined && !h.reparacion.soloInforma,
     })),

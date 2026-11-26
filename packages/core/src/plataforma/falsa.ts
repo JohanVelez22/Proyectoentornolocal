@@ -100,6 +100,7 @@ export class PlataformaFalsa implements PlataformaCompleta {
   tailscaleEstado: { ruta: string | null; sesion: boolean } = { ruta: null, sesion: false };
   /** Archivos que se pidió restringir al usuario. */
   readonly restringidos: string[] = [];
+  readonly restringidasCarpetas: string[] = [];
   firefox: string[] = [];
   /** Perfiles (rutas de `firefox`) fuera de la carpeta de Firefox. */
   readonly firefoxFuera = new Set<string>();
@@ -322,8 +323,9 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return this.antivirusEstado;
   }
 
-  async restringirAlUsuario(ruta: string): Promise<boolean> {
+  async restringirAlUsuario(ruta: string, o: { carpeta?: boolean } = {}): Promise<boolean> {
     this.restringidos.push(ruta);
+    if (o.carpeta) this.restringidasCarpetas.push(ruta);
     return true;
   }
 

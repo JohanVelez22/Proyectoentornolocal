@@ -147,7 +147,8 @@ import { ErrorWolf } from './errores';
 import { Contenedores } from './contenedores/contenedores';
 import { ServidorMcp, type EstadoMcp, type OperacionesMcp } from './mcp/servidor';
 import { asegurarArchivosDepuracion, rutasDepuracion } from './depuracion/prepend';
-import type { OperacionesCli } from './cli/ordenes';
+import type { OperacionesCli, SolicitudCli } from './cli/ordenes';
+import { ConfirmadorCli } from './cli/confirmador';
 import { ServidorCli } from './cli/servidor';
 import {
   VisorErrores,
@@ -343,11 +344,21 @@ export interface OpcionesNucleo {
    */
   retrasoNovedadesMs?: number;
   /**
-   * Enciende el servidor de órdenes de la CLI `wolf` (D31) al arrancar: 127.0.0.1, puerto
-   * aleatorio y token en `run/cli.json`. Solo lo pide la aplicación (las pruebas no lo encienden).
+   * Habilita el servidor de órdenes de la CLI `wolf` (D31): 127.0.0.1, puerto aleatorio y token en
+   * `run/cli.json`. Solo lo pide la aplicación, y solo escucha con el ajuste `cli.activo` (apagado
+   * por defecto: se enciende al agregar `wolf` al PATH).
    * `abrirUrl` abre una dirección en el navegador del usuario (orden `open`).
    */
-  servidorCli?: { version: string; abrirUrl?: (url: string) => Promise<void> };
+  servidorCli?: {
+    version: string;
+    abrirUrl?: (url: string) => Promise<void>;
+    /**
+     * Diálogo nativo de la app: publicar un sitio o cambiar el PHP de todas las terminales nunca lo
+     * decide la línea de órdenes. Sin esto, esas órdenes se rechazan.
+     */
+    confirmar?: (s: SolicitudCli) => Promise<boolean>;
+    plazoConfirmacionMs?: number;
+  };
 }
 
 /** Fuente de registro tal como la ve la interfaz: sin la ruta del archivo. */
@@ -639,6 +650,10 @@ export class Nucleo {
   /** Servidor de órdenes de la CLI `wolf` (D31); solo escucha si `OpcionesNucleo.servidorCli`. */
   readonly cli: ServidorCli;
   private opcionesCli: NonNullable<OpcionesNucleo['servidorCli']> = { version: '0.0.0' };
+  private readonly confirmadorCli = new ConfirmadorCli({
+    preguntar: (s) => this.opcionesCli.confirmar?.(s) ?? Promise.resolve(false),
+    plazoMs: () => this.opcionesCli.plazoConfirmacionMs,
+  });
   readonly runtimes: Runtimes;
   /** Motor de recetas con los pasos reales registrados. */
   readonly recetas: EjecutorRecetas;
@@ -848,7 +863,7 @@ export class Nucleo {
     this.cli = new ServidorCli({
       rutas: this.rutas,
       operaciones: this.operacionesCli(),
-      restringir: (ruta) => this.plataforma.restringirAlUsuario(ruta),
+      restringir: (ruta, o) => this.plataforma.restringirAlUsuario(ruta, o),
       version: async () => ({
         app: this.opcionesCli.version,
         idioma: (await this.config.leer()).ui.idioma,
@@ -1716,11 +1731,16 @@ export class Nucleo {
     }
     if (o.servidorCli) {
       nucleo.opcionesCli = o.servidorCli;
-      // Sin poder proteger el token, la CLI no se activa: queda como aviso.
-      await nucleo.cli.iniciar().catch((e: unknown) => {
-        nucleo.avisosPendientes.push(`No se pudo iniciar el servidor de la CLI: ${mensajeDe(e)}`);
-      });
+      if ((await leerConfig()).cli.activo) {
+        // Sin poder proteger el token, la CLI no se activa: queda como aviso.
+        await nucleo.cli.iniciar().catch((e: unknown) => {
+          nucleo.avisosPendientes.push(`No se pudo iniciar el servidor de la CLI: ${mensajeDe(e)}`);
+        });
+      }
     }
+    // Apagada (o sin servidor): ningún `cli.json` de una sesión anterior se queda con un token vivo.
+    if (!nucleo.cli.estado().activo)
+      await rm(rutas.cliJson(), { force: true }).catch(() => undefined);
     if ((await leerConfig()).mcp.activo) {
       // Un puerto ocupado no impide el arranque: queda como aviso.
       await nucleo.mcp.iniciar().catch((e: unknown) => {
@@ -3012,6 +3032,7 @@ export class Nucleo {
       iniciarTodo: () => this.iniciarTodo(),
       detenerTodo: () => this.detenerTodo(),
       caConfiable: async () => (await this.https.estado()).caInstalada,
+      confirmar: (s) => this.confirmadorCli.pedir(s),
       abrirUrl: async (url) => {
         const abrir = this.opcionesCli.abrirUrl;
         if (!abrir) return false;
@@ -3019,6 +3040,31 @@ export class Nucleo {
         return true;
       },
     };
+  }
+
+  /** ¿Está encendido el servidor de la CLI `wolf`, y el ajuste `cli.activo`? */
+  async estadoCli(): Promise<{ activo: boolean; ajuste: boolean }> {
+    return { activo: this.cli.estado().activo, ajuste: (await this.config.leer()).cli.activo };
+  }
+
+  /**
+   * Enciende o apaga la CLI y lo guarda en `cli.activo`. Apagada no escucha y no existe `cli.json`.
+   * Se enciende al agregar `wolf` al PATH (D32) y se apaga en Ajustes.
+   */
+  async activarCli(activa: boolean): Promise<{ activo: boolean; ajuste: boolean }> {
+    if (activa) {
+      await this.cli.iniciar();
+      await this.sitios.modificarConfig((c) => {
+        c.cli.activo = true;
+      });
+    } else {
+      await this.sitios.modificarConfig((c) => {
+        c.cli.activo = false;
+      });
+      await this.cli.detener();
+      await rm(this.rutas.cliJson(), { force: true }).catch(() => undefined);
+    }
+    return this.estadoCli();
   }
 
   // ---- Proyectos: detección, wolfcore.yml y recetas ----

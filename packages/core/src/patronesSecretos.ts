@@ -8,9 +8,9 @@ export const PATRONES_SECRETOS: readonly (readonly [RegExp, string])[] = [
   [/(:\/\/)[^\s/@:]+:[^\s/@]*@/g, '$1***@'],
   // password=…, PASSWORD=…, DB_PASSWORD=…, --password=…
   [/(password\s*=\s*)("[^"]*"|'[^']*'|\S+)/gi, '$1***'],
-  // Valores de banderas de línea de órdenes: --token X, --authtoken=X, --api-key X, --secret X
+  // Valores de banderas de línea de órdenes: --token X, --authtoken=X, --api-key X, --secret X (también con prefijo: --ngrok-authtoken)
   [
-    /(--(?:auth-?token|token|api-?key|secret|password|passwd)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi,
+    /((?<![\w-])--(?:[a-z0-9]+[-_])*(?:auth[-_]?token|token|api[-_]?key|secret|password|passwd|authkey)(?:=|[ \t]+))(?!-)("[^"]*"|'[^']*'|\S+)/gi,
     '$1***',
   ],
   // Clave pegada de mysql: -pclave

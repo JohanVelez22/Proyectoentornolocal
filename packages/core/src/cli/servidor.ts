@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import type { AddressInfo, Socket } from 'node:net';
 import path from 'node:path';
@@ -34,6 +34,11 @@ export const LIMITE_CUERPO_CLI = 64 * 1024;
 const MAX_EN_COLA = 8;
 /** Registros seguidos a la vez como mucho. */
 const MAX_SEGUIMIENTOS = 4;
+/** Órdenes de solo lectura a la vez como mucho (semáforo). */
+const MAX_LECTURAS = 4;
+/** `abrir` lanza el navegador del usuario: a lo sumo 5 veces cada 10 s. */
+const MAX_ABRIR = 5;
+const VENTANA_ABRIR_MS = 10_000;
 /** Un seguimiento de registros dura una hora como mucho (el cliente vuelve a pedirlo). */
 export const DURACION_MAX_SEGUIMIENTO_MS = 60 * 60 * 1000;
 /** Si el cliente no lee y se acumulan más de esto en el socket, se corta el seguimiento. */
@@ -65,7 +70,7 @@ export interface DepsServidorCli {
   rutas: Rutas;
   operaciones: OperacionesCli;
   /** `Plataforma.restringirAlUsuario`: el archivo del token solo lo lee el usuario actual. */
-  restringir: (ruta: string) => Promise<boolean>;
+  restringir: (ruta: string, o?: { carpeta?: boolean }) => Promise<boolean>;
   /** Versión de la app y el idioma (de `Config.ui.idioma`). */
   version: () => Promise<{ app: string; idioma: string | null }>;
   /** Para pruebas: plazos distintos de los de `PLAZOS_ORDEN_MS`. */
@@ -147,7 +152,11 @@ export class ServidorCli {
   private readonly sockets = new Set<Socket>();
   private readonly seguimientos = new Set<() => void>();
   private cola: Promise<unknown> = Promise.resolve();
+  /** Turnos de órdenes que cambian algo ocupados: esperando, en curso o vencidas que siguen vivas. */
   private enCola = 0;
+  private lecturas = 0;
+  private reservados = 0;
+  private abiertas: number[] = [];
 
   constructor(private readonly d: DepsServidorCli) {}
 
@@ -173,7 +182,7 @@ export class ServidorCli {
     await rm(archivo, { force: true });
     const token = randomBytes(32).toString('base64url');
     const servidor = http.createServer((req, res) => void this.atender(req, res));
-    servidor.headersTimeout = 5000;
+    servidor.headersTimeout = 2000;
     servidor.requestTimeout = 10_000;
     servidor.keepAliveTimeout = 2000;
     servidor.maxHeadersCount = 30;
@@ -194,19 +203,34 @@ export class ServidorCli {
     });
     servidor.on('error', (e) => console.error('Error en el servidor de órdenes:', e.message));
     const puerto = (servidor.address() as AddressInfo).port;
-    const tmp = `${archivo}.${process.pid}.tmp`;
+    // Nombre aleatorio y `wx`: nunca se escribe sobre un archivo o enlace que ya estuviera ahí.
+    const tmp = `${archivo}.${randomBytes(8).toString('hex')}.tmp`;
+    const sinProteger = (): ErrorWolf =>
+      new ErrorWolf(
+        'cli.token_no_protegido',
+        'No se pudo restringir el archivo del token al usuario actual: la CLI no se activa.',
+      );
     try {
       const version = await this.d.version();
-      await mkdir(path.dirname(archivo), { recursive: true });
+      const carpeta = path.dirname(archivo);
+      await mkdir(carpeta, { recursive: true });
+      // La carpeta `run/` primero (con herencia a lo que se cree dentro) y sin ser un enlace o
+      // unión: otro usuario no puede cambiarla por un enlace ni leer lo que se escriba en ella.
+      const esReal = async (): Promise<boolean> => {
+        const st = await lstat(carpeta);
+        return st.isDirectory() && !st.isSymbolicLink();
+      };
+      if (!(await esReal())) throw sinProteger();
+      if (!(await this.d.restringir(carpeta, { carpeta: true }).catch(() => false))) {
+        throw sinProteger();
+      }
+      if (!(await esReal())) throw sinProteger();
       // Vacío y restringido primero; el token se escribe después (el rename conserva la ACL).
-      await writeFile(tmp, '', { mode: 0o600 });
+      await writeFile(tmp, '', { mode: 0o600, flag: 'wx' });
       const protegido = await this.d.restringir(tmp).catch(() => false);
       if (!protegido) {
         // Sin poder limitarlo al usuario, un token en disco abriría la app a otros usuarios.
-        throw new ErrorWolf(
-          'cli.token_no_protegido',
-          'No se pudo restringir el archivo del token al usuario actual: la CLI no se activa.',
-        );
+        throw sinProteger();
       }
       const contenido: ArchivoCli = { puerto, token, pid: process.pid, version };
       await writeFile(tmp, JSON.stringify(contenido), { mode: 0o600 });
@@ -308,7 +332,7 @@ export class ServidorCli {
       await this.atenderOrden(req, res);
     } catch (e) {
       console.error('Error al atender una orden de la CLI:', e instanceof Error ? e.message : e);
-      responder(res, 500, respuestaError('cli.error', { detalle: 'interno' }));
+      responder(res, 500, respuestaError('cli.interno'));
     }
   }
 
@@ -359,24 +383,26 @@ export class ServidorCli {
   }
 
   /**
-   * Corre la orden con su plazo. Las que cambian algo van de una en una (dos `usar` a la vez
-   * pisarían el mismo sitio). Al vencer el plazo se responde `cli.plazo` y la orden sigue por su
-   * cuenta (no se puede cancelar a medias), pero ya no frena a las demás.
+   * Corre la orden con su plazo (que cuenta desde que llega, esperando turno incluido). Las que
+   * cambian algo van de una en una: el turno se libera solo cuando la orden termina de verdad, y
+   * una vencida que sigue viva sigue contando en `MAX_EN_COLA` (no se abre un hueco para otra que
+   * pisaría lo mismo). Una que vence esperando su turno se salta al llegarle. Las de solo lectura
+   * entran de a 4, y `abrir` tiene su límite de frecuencia.
    */
   private correr(orden: OrdenCli, fn: () => Promise<RespuestaCli>): Promise<RespuestaCli> {
     const plazo = this.d.plazos?.[orden] ?? PLAZOS_ORDEN_MS[orden];
-    const conPlazo = (): Promise<RespuestaCli> => {
-      const p = fn();
-      p.catch(() => undefined);
-      return new Promise<RespuestaCli>((resolve, reject) => {
-        const t = setTimeout(
-          () => reject(new ErrorWolf('cli.plazo', 'La orden tardó demasiado.')),
-          plazo,
-        );
+    const tarea = { vencida: false };
+    const conPlazo = (p: Promise<RespuestaCli | undefined>): Promise<RespuestaCli> =>
+      new Promise<RespuestaCli>((resolve, reject) => {
+        const t = setTimeout(() => {
+          tarea.vencida = true;
+          reject(new ErrorWolf('cli.plazo', 'La orden tardó demasiado.'));
+        }, plazo);
         p.then(
           (v) => {
             clearTimeout(t);
-            resolve(v);
+            if (v) resolve(v);
+            else reject(new ErrorWolf('cli.plazo', 'La orden tardó demasiado.'));
           },
           (e: unknown) => {
             clearTimeout(t);
@@ -384,19 +410,42 @@ export class ServidorCli {
           },
         );
       });
-    };
-    if (!ORDENES_QUE_CAMBIAN.includes(orden)) return conPlazo();
+    if (!ORDENES_QUE_CAMBIAN.includes(orden)) {
+      if (orden === 'abrir') {
+        const ahora = Date.now();
+        this.abiertas = this.abiertas.filter((t) => ahora - t < VENTANA_ABRIR_MS);
+        if (this.abiertas.length >= MAX_ABRIR) {
+          return Promise.reject(new ErrorWolf('cli.ocupado', 'Demasiadas aperturas seguidas.'));
+        }
+        this.abiertas.push(ahora);
+      }
+      if (this.lecturas >= MAX_LECTURAS) {
+        return Promise.reject(new ErrorWolf('cli.ocupado', 'Hay demasiadas órdenes a la vez.'));
+      }
+      this.lecturas++;
+      const p = fn();
+      p.catch(() => undefined);
+      return conPlazo(p).finally(() => {
+        // La lectura vencida sigue ocupando su lugar hasta que termina de verdad.
+        void p.then(
+          () => this.lecturas--,
+          () => this.lecturas--,
+        );
+      });
+    }
     if (this.enCola >= MAX_EN_COLA) {
       return Promise.reject(new ErrorWolf('cli.ocupado', 'Hay demasiadas órdenes esperando.'));
     }
     this.enCola++;
-    const r = this.cola.then(conPlazo, conPlazo);
-    this.cola = r
+    const real: Promise<RespuestaCli | undefined> = this.cola.then(() =>
+      tarea.vencida ? undefined : fn(),
+    );
+    this.cola = real
       .catch(() => undefined)
       .finally(() => {
         this.enCola--;
       });
-    return r;
+    return conPlazo(real);
   }
 
   /** `GET /registros?sitio=&fuente=&lineas=&seguir=1`: las últimas líneas y, con `seguir`, las nuevas. */
@@ -416,9 +465,21 @@ export class ServidorCli {
       return;
     }
     const seguir = q.get('seguir') === '1';
-    if (seguir && this.seguimientos.size >= MAX_SEGUIMIENTOS) {
-      responder(res, 429, respuestaError('cli.ocupado'));
-      return;
+    // El cupo se reserva antes de cualquier `await`: varias peticiones a la vez no lo rebasan.
+    let reservado = false;
+    const soltarReserva = (): void => {
+      if (reservado) {
+        reservado = false;
+        this.reservados--;
+      }
+    };
+    if (seguir) {
+      if (this.seguimientos.size + this.reservados >= MAX_SEGUIMIENTOS) {
+        responder(res, 429, respuestaError('cli.ocupado'));
+        return;
+      }
+      reservado = true;
+      this.reservados++;
     }
     const ops = this.d.operaciones;
     let id: string;
@@ -427,6 +488,7 @@ export class ServidorCli {
       id = await fuenteDeSitio(ops, args.data);
       inicial = await ops.leerRegistro(id, args.data.lineas ?? LINEAS_REGISTRO_CLI);
     } catch (e) {
+      soltarReserva();
       responder(res, 422, { ok: false, error: errorParaCli(e) });
       return;
     }
@@ -468,6 +530,7 @@ export class ServidorCli {
     };
     const plazo = setTimeout(terminar, this.d.duracionSeguimientoMs ?? DURACION_MAX_SEGUIMIENTO_MS);
     this.seguimientos.add(terminar);
+    soltarReserva();
     res.on('close', terminar);
     req.on('error', terminar);
     escribir(inicial);
