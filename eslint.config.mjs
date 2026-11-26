@@ -18,6 +18,20 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'].map((c) => ({ ...c, files: ['apps/desktop/**/*.vue'] })),
   {
+    // Scripts de Node (prueba de humo): corren en Node y mandan funciones a la página (`window`…).
+    files: ['apps/desktop/scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        window: 'readonly',
+        document: 'readonly',
+        location: 'readonly',
+      },
+    },
+  },
+  {
     files: ['apps/desktop/**/*.vue'],
     languageOptions: {
       parser: vueParser,
