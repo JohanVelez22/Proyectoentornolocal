@@ -2,6 +2,7 @@ import { lstat, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf, esErrorWolf, type CodigoError } from '../errores';
 import { rutaDentroDe } from '../plataforma/sistema';
+import { sitiosConRutasReales } from './archivoSensible';
 import {
   LIMITES_DIFF,
   resolverSeguro,
@@ -55,6 +56,8 @@ export interface DepsDiffCarpetas {
   ejecutor: EjecutorDiff;
   /** Carpetas de datos de WolfCore: no se comparan. */
   carpetasPropias: () => readonly string[];
+  /** Sitios registrados (carpeta y si tienen datos reales): sus archivos sensibles no se muestran. */
+  sitios?: () => Promise<readonly { carpeta: string; datosReales: boolean }[]>;
   ahora?: () => number;
 }
 
@@ -116,6 +119,17 @@ export class DiffCarpetas {
     return real;
   }
 
+  /** Carpetas propias de WolfCore, cada una tal cual y con su `realpath` (uniones y nombres 8.3). */
+  private async vetadas(): Promise<string[]> {
+    const salida: string[] = [];
+    for (const propia of this.deps.carpetasPropias()) {
+      salida.push(path.resolve(propia));
+      const real = await realpath(propia).catch(() => null);
+      if (real) salida.push(real);
+    }
+    return [...new Set(salida)];
+  }
+
   private tomarTurno(): AbortController {
     if (this.enCurso) {
       throw new ErrorWolf('diff.ocupado', 'Ya hay una comparación en curso: cancélela o espere.');
@@ -140,7 +154,7 @@ export class DiffCarpetas {
           op: 'carpetas',
           a,
           b,
-          vetadas: [...this.deps.carpetasPropias()],
+          vetadas: await this.vetadas(),
           lim: { ...LIMITES_DIFF },
         },
         control,
@@ -202,10 +216,24 @@ export class DiffCarpetas {
     if (grupo !== 'distintos') {
       throw new ErrorWolf('diff.archivo_invalido', 'Ese archivo ya no se puede comparar.');
     }
+    // Si no se puede saber qué sitios hay, no se compara: falla cerrado.
+    let sitios: Awaited<ReturnType<typeof sitiosConRutasReales>>;
+    try {
+      sitios = await sitiosConRutasReales((await this.deps.sitios?.()) ?? []);
+    } catch {
+      throw new ErrorWolf('diff.fallo', 'No se pudo comprobar a qué sitio pertenece el archivo.');
+    }
     const control = this.tomarTurno();
     try {
       const r = await this.ejecutar(
-        { op: 'archivo', a: g.a, b: g.b, rel: entrada.ruta, lim: { ...LIMITES_DIFF } },
+        {
+          op: 'archivo',
+          a: g.a,
+          b: g.b,
+          rel: entrada.ruta,
+          sitios,
+          lim: { ...LIMITES_DIFF },
+        },
         control,
       );
       return r as ResultadoArchivoDiff;

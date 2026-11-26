@@ -37,7 +37,7 @@ export * from './plataforma/index';
 export * from './sistema/memoria';
 export * from './sistema/limpiezaDisco';
 export * from './herramientas/editorCodigo';
-export { MAX_BYTES_EDITOR } from './constantesUi';
+export { BYTES_TEXTO_DIFF, MAX_BYTES_EDITOR } from './constantesUi';
 export * from './catalogo/catalogo';
 export * from './catalogo/instalador';
 export * from './catalogo/limpieza';

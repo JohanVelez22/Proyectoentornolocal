@@ -5,6 +5,7 @@ import { StringDecoder } from 'node:string_decoder';
 import vm from 'node:vm';
 import { ErrorWolf } from '../errores';
 import { rutaDentroDe } from '../plataforma/sistema';
+import { crearDetectorSensible, sitiosConRutasReales } from './archivoSensible';
 
 /**
  * Búsqueda por palabra clave en un archivo o una carpeta (por nombre y por contenido).
@@ -34,6 +35,11 @@ export interface OpcionesBusqueda {
   incluirPesadas?: boolean;
   /** Carpetas que nunca se buscan (la carpeta de datos de WolfCore). Las pone el núcleo. */
   vetadas?: string[];
+  /**
+   * Sitios registrados (carpeta y si tienen datos reales). Los pone el núcleo: de los archivos
+   * sensibles (`.env`, claves, datos reales, enlaces duros) solo se dice que coinciden en la línea N.
+   */
+  sitios?: () => Promise<readonly { carpeta: string; datosReales: boolean }[]>;
 }
 
 export interface ResultadoBusqueda {
@@ -55,6 +61,11 @@ export interface ResultadoBusqueda {
   /** Líneas de contexto (recortadas), de la más lejana a la más cercana. */
   antes: string[];
   despues: string[];
+  /**
+   * Archivo sensible (como en el editor de código): coincide en `linea`, pero no se entrega ni la
+   * línea ni su contexto (`extracto` vacío).
+   */
+  sensible: boolean;
 }
 
 export interface ResumenBusqueda {
@@ -213,6 +224,13 @@ function comparadorRegexEn(consulta: string, flags: string, plazoMs: number): Co
           'La expresión regular tarda demasiado: simplifíquela o use texto literal.',
         );
       }
+      // Sin pila para seguir retrocediendo (RangeError del motor): es una expresión demasiado costosa.
+      if ((e as Error | null)?.name === 'RangeError') {
+        throw new ErrorWolf(
+          'buscar.regex_lenta',
+          'La expresión regular tarda demasiado: simplifíquela o use texto literal.',
+        );
+      }
       throw new ErrorWolf('buscar.regex_invalida', 'La expresión regular no es válida.');
     } finally {
       (contexto as Record<string, unknown>)['__lineas'] = undefined;
@@ -323,6 +341,7 @@ function resultadoDeNombre(
     largo: Math.min(h.largo, texto.length - inicio),
     antes: [],
     despues: [],
+    sensible: false,
   };
 }
 
@@ -382,6 +401,8 @@ export async function buscar(
     const real = await realpath(v).catch(() => null);
     if (real) vetadas.push(real);
   }
+  // Si no se puede saber qué sitios hay, la búsqueda falla (no se arriesga a mostrar datos reales).
+  const detector = crearDetectorSensible(await sitiosConRutasReales((await o.sitios?.()) ?? []));
   if (vetadas.some((v) => rutaDentroDe(v, raizReal) || rutaDentroDe(v, path.resolve(o.raiz)))) {
     throw new ErrorWolf(
       'buscar.ruta_vetada',
@@ -426,7 +447,7 @@ export async function buscar(
   const leerContenido = async (
     archivo: string,
     tamano: number,
-    estado: { tuvo: boolean },
+    estado: { tuvo: boolean; sensible: boolean },
   ): Promise<void> => {
     if (tamano > limites.bytesPorArchivo || EXTENSION_BINARIA.test(archivo)) {
       resumen.omitidos++;
@@ -442,6 +463,22 @@ export async function buscar(
     let lineas: string[] = [];
     let revisadas = 0;
     let primeraLinea = 1;
+    /** Resultados del archivo: salen al terminar, porque un secreto puede aparecer en un trozo tardío. */
+    const pendientes: Omit<ResultadoBusqueda, 'id'>[] = [];
+    let colaPrevia = '';
+
+    const vaciar = (): void => {
+      if (senal.aborted) return;
+      for (const r of pendientes.splice(0)) {
+        emitir(
+          estado.sensible
+            ? { ...r, extracto: '', inicio: 0, largo: 0, antes: [], despues: [], sensible: true }
+            : r,
+          !estado.tuvo,
+        );
+        estado.tuvo = true;
+      }
+    };
 
     const procesar = (texto: string, ultimo: boolean): void => {
       let t = resto + texto;
@@ -458,22 +495,19 @@ export async function buscar(
         for (const h of comparar(lote)) {
           const idx = revisadas + h.i;
           const { texto: extracto, inicio } = extractoDe(lineas[idx]!, h.col);
-          emitir(
-            {
-              tipo: 'contenido',
-              archivo,
-              esCarpeta: false,
-              linea: primeraLinea + idx,
-              columna: h.col + 1,
-              extracto,
-              inicio,
-              largo: Math.min(h.largo, extracto.length - inicio),
-              antes: lineas.slice(Math.max(0, idx - contexto), idx).map(contextoDe),
-              despues: lineas.slice(idx + 1, idx + 1 + contexto).map(contextoDe),
-            },
-            !estado.tuvo,
-          );
-          estado.tuvo = true;
+          pendientes.push({
+            tipo: 'contenido',
+            archivo,
+            esCarpeta: false,
+            linea: primeraLinea + idx,
+            columna: h.col + 1,
+            extracto,
+            inicio,
+            largo: Math.min(h.largo, extracto.length - inicio),
+            antes: lineas.slice(Math.max(0, idx - contexto), idx).map(contextoDe),
+            despues: lineas.slice(idx + 1, idx + 1 + contexto).map(contextoDe),
+            sensible: false,
+          });
         }
         revisadas = hasta;
       }
@@ -504,7 +538,11 @@ export async function buscar(
           return;
         }
         revisar();
-        procesar(decodificador.write(buf), false);
+        const texto = decodificador.write(buf);
+        // Un secreto en el contenido (también partido entre dos trozos) vuelve sensible el archivo.
+        if (!estado.sensible && detector.porContenido(colaPrevia + texto)) estado.sensible = true;
+        colaPrevia = texto.slice(-400);
+        procesar(texto, false);
       }
       procesar(decodificador.end(), true);
     } catch (e) {
@@ -513,17 +551,30 @@ export async function buscar(
       resumen.omitidos++;
     } finally {
       flujo.destroy();
+      vaciar();
     }
   };
 
-  const mirarArchivo = async (archivo: string, relativa: string, tamano: number): Promise<void> => {
+  /** Ruta REAL de algo que se recorre desde la raíz (no hay enlaces dentro: se parte de `raizReal`). */
+  const realDe = (rel: string): string =>
+    rel === '' ? raizReal : path.join(raizReal, ...rel.split('/'));
+
+  const mirarArchivo = async (
+    archivo: string,
+    relativa: string,
+    tamano: number,
+    enlaces: number,
+  ): Promise<void> => {
     revisar();
     if (resumen.examinados >= limites.archivosExaminados) throw new Corte('archivos');
     resumen.examinados++;
     const nombre = path.basename(archivo);
     if (incluir.length && !coincidePatron(incluir, nombre, relativa)) return;
     // Un archivo cuenta una sola vez aunque coincida por nombre y por contenido.
-    const estado = { tuvo: false };
+    const estado = {
+      tuvo: false,
+      sensible: detector.porRuta(infoRaiz.isFile() ? raizReal : realDe(relativa), enlaces),
+    };
     const porEnNombre = porNombre ? comparar([nombre])[0] : undefined;
     if (porEnNombre) {
       emitir(resultadoDeNombre(archivo, nombre, false, porEnNombre), true);
@@ -551,20 +602,24 @@ export async function buscar(
       if (coincidePatron(excluir, e.name, rel)) continue;
       if (e.isDirectory()) {
         // Nunca se entra en la carpeta de datos de WolfCore (si la raíz la contiene).
-        if (vetadas.some((v) => rutaDentroDe(v, ruta))) continue;
+        // Se compara también la ruta real: una unión o un nombre 8.3 en la raíz no la esquivan.
+        const real = realDe(rel);
+        if (vetadas.some((v) => rutaDentroDe(v, ruta) || rutaDentroDe(v, real))) continue;
         const enNombre = porNombre && incluir.length === 0 ? comparar([e.name])[0] : undefined;
         if (enNombre) emitir(resultadoDeNombre(ruta, e.name, true, enNombre), true);
         if (profundidad < limites.profundidad) subcarpetas.push({ ruta, rel });
       } else if (e.isFile()) {
         let tamano = 0;
+        let enlaces = 1;
         try {
           const info = await lstat(ruta);
           if (info.isSymbolicLink()) continue;
           tamano = info.size;
+          enlaces = info.nlink;
         } catch {
           continue;
         }
-        await mirarArchivo(ruta, rel, tamano);
+        await mirarArchivo(ruta, rel, tamano, enlaces);
       }
     }
     for (const s of subcarpetas) {
@@ -581,7 +636,7 @@ export async function buscar(
 
   try {
     if (infoRaiz.isFile()) {
-      await mirarArchivo(o.raiz, path.basename(o.raiz), infoRaiz.size);
+      await mirarArchivo(o.raiz, path.basename(o.raiz), infoRaiz.size, infoRaiz.nlink);
     } else {
       await recorrer(o.raiz, '', 0);
     }

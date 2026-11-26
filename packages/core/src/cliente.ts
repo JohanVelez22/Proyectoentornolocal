@@ -11,4 +11,9 @@ export {
   nombreTunelValido,
   tokenTunelValido,
 } from './tuneles/proveedor';
-export { ATAJO_CAPTURA_POR_DEFECTO, IDIOMAS_UI, MAX_BYTES_EDITOR } from './constantesUi';
+export {
+  ATAJO_CAPTURA_POR_DEFECTO,
+  BYTES_TEXTO_DIFF,
+  IDIOMAS_UI,
+  MAX_BYTES_EDITOR,
+} from './constantesUi';

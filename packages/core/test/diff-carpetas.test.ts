@@ -44,7 +44,7 @@ const lim = (o: Partial<LimitesDiff> = {}): LimitesDiff => ({ ...LIMITES_DIFF, .
 const carpetas = (a: string, b: string, o: Partial<LimitesDiff> = {}, vetadas: string[] = []) =>
   compararCarpetas({ op: 'carpetas', a, b, vetadas, lim: lim(o) });
 const archivo = async (a: string, b: string, rel: string, o: Partial<LimitesDiff> = {}) =>
-  compararArchivo({ op: 'archivo', a, b, rel, lim: lim(o) });
+  compararArchivo({ op: 'archivo', a, b, rel, sitios: [], lim: lim(o) });
 const texto = (r: ResultadoArchivoDiff) => {
   if (r.tipo !== 'texto') throw new Error(`se esperaba texto y fue ${r.tipo}`);
   return r;
@@ -305,6 +305,7 @@ describe('compararArchivo: diff de texto', () => {
     }
     const r = await operarDiff({
       op: 'archivo',
+      sitios: [],
       a: e.a,
       b: e.b,
       rel: '../secreto.txt',

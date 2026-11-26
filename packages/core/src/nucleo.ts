@@ -3873,7 +3873,11 @@ export class Nucleo {
    */
   iniciarBusqueda(o: OpcionesBusqueda): string {
     // Lo propio de WolfCore (datos, respaldos, secretos…) nunca se busca, lo pida quien lo pida.
-    return this.busquedas.iniciar({ ...o, vetadas: this.carpetasPropias() });
+    return this.busquedas.iniciar({
+      ...o,
+      vetadas: this.carpetasPropias(),
+      sitios: () => this.sitios.listar(),
+    });
   }
 
   /**
@@ -3900,6 +3904,7 @@ export class Nucleo {
     return (this.diffCarpetasServ ??= new DiffCarpetas({
       ejecutor: this.ejecutorDiff ?? ejecutarDiffEnProceso,
       carpetasPropias: () => this.carpetasPropias(),
+      sitios: () => this.sitios.listar(),
     }));
   }
 
@@ -5010,6 +5015,9 @@ export class Nucleo {
 
   async cerrar(o: { detenerServicios: boolean }): Promise<void> {
     this.cerrado = true;
+    // Buscar y el diff de carpetas leen disco y, en el diff, hay un proceso de trabajo: se cortan.
+    this.busquedasEnCurso?.cancelarTodas();
+    this.diffCarpetasServ?.cancelar();
     // Un UAC abierto no debe sobrevivir a la app: se corta la PowerShell que lo espera.
     this.hosts.cancelarElevacion();
     if (this.temporizador) clearInterval(this.temporizador);

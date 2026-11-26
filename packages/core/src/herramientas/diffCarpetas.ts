@@ -3,7 +3,9 @@ import { createReadStream } from 'node:fs';
 import { lstat, open, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { esErrorWolf, type DatosErrorWolf } from '../errores';
+import { BYTES_TEXTO_DIFF } from '../constantesUi';
 import { rutaDentroDe } from '../plataforma/sistema';
+import { crearDetectorSensible, type SitioSensible } from './archivoSensible';
 
 /**
  * Diff de carpetas (D44), parte que corre en el proceso de trabajo (un `utilityProcess` en la
@@ -42,7 +44,7 @@ export const LIMITES_DIFF: Readonly<LimitesDiff> = {
   bytesPorArchivo: 256 * 1024 * 1024,
   bytesTotales: 4 * 1024 * 1024 * 1024,
   entradasPorGrupo: 5_000,
-  bytesTexto: 2 * 1024 * 1024,
+  bytesTexto: BYTES_TEXTO_DIFF,
   filasDiff: 5_000,
   cambiosMaximos: 2_000,
   plazoMs: 5 * 60 * 1000,
@@ -108,12 +110,22 @@ export type ResultadoArchivoDiff =
       soloSaltos: boolean;
     }
   | { tipo: 'binario' }
+  /** Archivo sensible (como en el editor): distinto, pero no se muestra nada de su contenido. */
+  | { tipo: 'sensible' }
   | { tipo: 'tope'; bytesA: number; bytesB: number }
   | { tipo: 'demasiado-distinto' };
 
 export type MensajeDiff =
   | { op: 'carpetas'; a: string; b: string; vetadas: string[]; lim: LimitesDiff }
-  | { op: 'archivo'; a: string; b: string; rel: string; lim: LimitesDiff };
+  | {
+      op: 'archivo';
+      a: string;
+      b: string;
+      rel: string;
+      /** Sitios (con su ruta y su `realpath`) para saber cuáles tienen datos reales. */
+      sitios: SitioSensible[];
+      lim: LimitesDiff;
+    };
 
 export type RespuestaDiff =
   | { ok: true; datos: ResultadoCarpetas | ResultadoArchivoDiff }
@@ -146,7 +158,7 @@ const MAX_TEXTO_FILA = 500;
 export async function resolverSeguro(
   raiz: string,
   rel: string,
-): Promise<{ ruta: string; tamano: number }> {
+): Promise<{ ruta: string; tamano: number; enlaces: number }> {
   const partes = rel.split('/');
   if (
     rel === '' ||
@@ -167,7 +179,7 @@ export async function resolverSeguro(
   }
   if (!info.isFile()) throw new Error('no es un archivo normal');
   if (!rutaDentroDe(raiz, actual)) throw new Error('fuera de la carpeta');
-  return { ruta: actual, tamano: info.size };
+  return { ruta: actual, tamano: info.size, enlaces: info.nlink };
 }
 
 /* ───────────── Carpetas ───────────── */
@@ -439,7 +451,8 @@ export function diffLineasMyers(a: string[], b: string[], maxD: number): Op[] | 
       camino.push({ tipo: 'igual', a: ini + x, b: ini + y });
     }
     camino.reverse();
-    ops.push(...camino);
+    // Un bucle y no `push(...camino)`: con cientos de miles de líneas el spread revienta la pila.
+    for (const o of camino) ops.push(o);
   }
   for (let i = finA, j = finB; i < a.length; i++, j++) ops.push({ tipo: 'igual', a: i, b: j });
   return ops;
@@ -532,6 +545,11 @@ export async function compararArchivo(
 ): Promise<ResultadoArchivoDiff> {
   if (senal?.aborted) throw new Corte('cancelado');
   const [fa, fb] = [await resolverSeguro(m.a, m.rel), await resolverSeguro(m.b, m.rel)];
+  // Un archivo sensible (D43) es distinto, pero no se lee ni se muestra nada de él.
+  const detector = crearDetectorSensible(m.sitios);
+  if (detector.porRuta(fa.ruta, fa.enlaces) || detector.porRuta(fb.ruta, fb.enlaces)) {
+    return { tipo: 'sensible' };
+  }
   if (fa.tamano > m.lim.bytesTexto || fb.tamano > m.lim.bytesTexto) {
     return { tipo: 'tope', bytesA: fa.tamano, bytesB: fb.tamano };
   }
@@ -544,6 +562,9 @@ export async function compararArchivo(
   }
   const [ta, tb] = [decodificar(da), decodificar(db)];
   if (ta === null || tb === null) return { tipo: 'binario' };
+  if (detector.porContenido(ta.texto) || detector.porContenido(tb.texto)) {
+    return { tipo: 'sensible' };
+  }
   const [la, lb] = [lineasDe(ta.texto), lineasDe(tb.texto)];
   const ops = diffLineasMyers(la, lb, m.lim.cambiosMaximos);
   if (ops === null) return { tipo: 'demasiado-distinto' };

@@ -107,7 +107,7 @@ export interface DepsEditorCodigo {
 }
 
 /** Nombres de archivo que casi siempre guardan un secreto. */
-const NOMBRE_SECRETO =
+export const NOMBRE_SECRETO =
   /^(?:id_(?:rsa|dsa|ecdsa|ed25519)|credentials?(?:\..*)?|\.netrc|_netrc|\.npmrc|\.pgpass|\.htpasswd|\.git-credentials|auth\.json|secrets?(?:\..*)?|.*\.(?:pem|key|p12|pfx|ppk|jks|keystore|kdbx|asc|gpg))$/i;
 
 const tieneControles = (t: string): boolean => [...t].some((c) => c.charCodeAt(0) < 0x20);

@@ -16,3 +16,6 @@ export const ATAJO_CAPTURA_POR_DEFECTO = 'Ctrl+Alt+Shift+S';
 
 /** Tope de tamaño de un archivo que abre o guarda el editor de código (D43). */
 export const MAX_BYTES_EDITOR = 2 * 1024 * 1024;
+
+/** Tope de cada archivo para el diff de texto del Diff de carpetas (D44). */
+export const BYTES_TEXTO_DIFF = 2 * 1024 * 1024;
