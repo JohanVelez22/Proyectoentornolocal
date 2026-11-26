@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   Archive,
+  Book,
   Brush,
   Camera,
   DocumentAttach,
@@ -55,6 +56,8 @@ const componentes: Record<Clave, Component> = {
   limpiezaDisco: defineAsyncComponent(
     () => import('../componentes/herramientas/LimpiezaDisco.vue'),
   ),
+  guiaTuneles: defineAsyncComponent(() => import('../componentes/herramientas/GuiaTuneles.vue')),
+  guiaHttp: defineAsyncComponent(() => import('../componentes/herramientas/GuiaHttp.vue')),
 };
 
 const iconos: Record<Clave, Component> = {
@@ -79,6 +82,8 @@ const iconos: Record<Clave, Component> = {
   conversor: DocumentAttach,
   captura: Camera,
   limpiezaDisco: TrashBin,
+  guiaTuneles: Book,
+  guiaHttp: Book,
 };
 
 /** Paneles que necesitan más ancho (dos columnas o tablas). */
@@ -91,6 +96,8 @@ const ANCHAS: Clave[] = [
   'buscar',
   'contrasenas',
   'limpiezaDisco',
+  'guiaTuneles',
+  'guiaHttp',
 ];
 
 const busqueda = ref('');

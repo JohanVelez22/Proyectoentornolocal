@@ -3399,6 +3399,14 @@ export const pt: Textos = {
         nombre: 'Captura de tela',
         descripcion: 'Região, janela ou tela inteira, com editor rápido.',
       },
+      guiaTuneles: {
+        nombre: 'Guia de túneis',
+        descripcion: 'Cloudflare e ngrok passo a passo, com comandos para copiar.',
+      },
+      guiaHttp: {
+        nombre: 'Guia HTTP',
+        descripcion: 'Códigos de status e métodos, com busca e exemplos.',
+      },
       limpiezaDisco: {
         nombre: 'Limpeza de disco',
         descripcion:
@@ -4610,6 +4618,36 @@ export const pt: Textos = {
       no_se_pudo: 'Não foi possível pedir o fechamento (o programa tem permissões elevadas)',
     },
     otraVez: 'Recomeçar',
+  },
+  guias: {
+    tuneles: { titulo: 'Guia de túneis', copiar: 'Copiar o comando' },
+    http: {
+      buscar: 'Buscar por número, nome ou texto',
+      familia: 'Família',
+      todas: 'Todas',
+      verMetodos: 'Métodos',
+      verCodigos: 'Códigos de status',
+      resultados: (n: number) => `${n} ${n === 1 ? 'resultado' : 'resultados'}`,
+      vacio: 'Nada corresponde à busca.',
+      seguro: 'Seguro',
+      noSeguro: 'Não seguro',
+      idempotente: 'Idempotente',
+      noIdempotente: 'Não idempotente',
+      noEstandar: 'Não padrão',
+      broma: 'Código de brincadeira (RFC 2324)',
+      causas: 'Causas comuns',
+      solucion: 'Como resolver',
+      ejemplo: 'Exemplo',
+      copiarEjemplo: 'Copiar o exemplo',
+      sinTraduccion: 'Sem tradução para este idioma: exibido em inglês.',
+      familias: {
+        '1xx': '1xx Informativos',
+        '2xx': '2xx Sucesso',
+        '3xx': '3xx Redirecionamento',
+        '4xx': '4xx Erro do cliente',
+        '5xx': '5xx Erro do servidor',
+      },
+    },
   },
   limpiezaDisco: {
     intro:

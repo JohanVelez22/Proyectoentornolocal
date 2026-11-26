@@ -3363,6 +3363,14 @@ export const en: Textos = {
         nombre: 'Screen capture',
         descripcion: 'Region, window or full screen, with a quick editor.',
       },
+      guiaTuneles: {
+        nombre: 'Tunnels guide',
+        descripcion: 'Cloudflare and ngrok step by step, with commands to copy.',
+      },
+      guiaHttp: {
+        nombre: 'HTTP guide',
+        descripcion: 'Status codes and methods, with search and examples.',
+      },
       limpiezaDisco: {
         nombre: 'Disk cleanup',
         descripcion:
@@ -4571,6 +4579,36 @@ export const en: Textos = {
       no_se_pudo: 'The close request could not be sent (the program runs with elevated rights)',
     },
     otraVez: 'Start over',
+  },
+  guias: {
+    tuneles: { titulo: 'Tunnels guide', copiar: 'Copy the command' },
+    http: {
+      buscar: 'Search by number, name or text',
+      familia: 'Family',
+      todas: 'All',
+      verMetodos: 'Methods',
+      verCodigos: 'Status codes',
+      resultados: (n: number) => `${n} ${n === 1 ? 'result' : 'results'}`,
+      vacio: 'Nothing matches the search.',
+      seguro: 'Safe',
+      noSeguro: 'Not safe',
+      idempotente: 'Idempotent',
+      noIdempotente: 'Not idempotent',
+      noEstandar: 'Non-standard',
+      broma: 'Joke code (RFC 2324)',
+      causas: 'Common causes',
+      solucion: 'How to fix it',
+      ejemplo: 'Example',
+      copiarEjemplo: 'Copy the example',
+      sinTraduccion: 'Not translated into this language: shown in English.',
+      familias: {
+        '1xx': '1xx Informational',
+        '2xx': '2xx Success',
+        '3xx': '3xx Redirection',
+        '4xx': '4xx Client error',
+        '5xx': '5xx Server error',
+      },
+    },
   },
   limpiezaDisco: {
     intro:

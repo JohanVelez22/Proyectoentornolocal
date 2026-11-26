@@ -3391,6 +3391,14 @@ export const es = {
         nombre: 'Captura de pantalla',
         descripcion: 'Región, ventana o pantalla completa, con editor rápido.',
       },
+      guiaTuneles: {
+        nombre: 'Guía de túneles',
+        descripcion: 'Cloudflare y ngrok paso a paso, con comandos para copiar.',
+      },
+      guiaHttp: {
+        nombre: 'Guía HTTP',
+        descripcion: 'Códigos de estado y métodos, con buscador y ejemplos.',
+      },
       limpiezaDisco: {
         nombre: 'Limpieza de disco',
         descripcion:
@@ -4597,6 +4605,36 @@ export const es = {
       no_se_pudo: 'No se pudo pedir el cierre (el programa tiene permisos elevados)',
     },
     otraVez: 'Volver a empezar',
+  },
+  guias: {
+    tuneles: { titulo: 'Guía de túneles', copiar: 'Copiar el comando' },
+    http: {
+      buscar: 'Buscar por número, nombre o texto',
+      familia: 'Familia',
+      todas: 'Todas',
+      verMetodos: 'Métodos',
+      verCodigos: 'Códigos de estado',
+      resultados: (n: number) => `${n} ${n === 1 ? 'resultado' : 'resultados'}`,
+      vacio: 'Nada coincide con la búsqueda.',
+      seguro: 'Seguro',
+      noSeguro: 'No seguro',
+      idempotente: 'Idempotente',
+      noIdempotente: 'No idempotente',
+      noEstandar: 'No estándar',
+      broma: 'Código de broma (RFC 2324)',
+      causas: 'Causas comunes',
+      solucion: 'Cómo solucionarlo',
+      ejemplo: 'Ejemplo',
+      copiarEjemplo: 'Copiar el ejemplo',
+      sinTraduccion: 'Sin traducción a este idioma: se muestra en inglés.',
+      familias: {
+        '1xx': '1xx Informativos',
+        '2xx': '2xx Éxito',
+        '3xx': '3xx Redirección',
+        '4xx': '4xx Error del cliente',
+        '5xx': '5xx Error del servidor',
+      },
+    },
   },
   limpiezaDisco: {
     intro:

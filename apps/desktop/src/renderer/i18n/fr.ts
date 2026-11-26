@@ -3482,6 +3482,14 @@ export const fr: Textos = {
         nombre: 'Capture d’écran',
         descripcion: 'Région, fenêtre ou plein écran, avec éditeur rapide.',
       },
+      guiaTuneles: {
+        nombre: 'Guide des tunnels',
+        descripcion: 'Cloudflare et ngrok pas à pas, avec des commandes à copier.',
+      },
+      guiaHttp: {
+        nombre: 'Guide HTTP',
+        descripcion: 'Codes d’état et méthodes, avec recherche et exemples.',
+      },
       limpiezaDisco: {
         nombre: 'Nettoyage du disque',
         descripcion:
@@ -4715,6 +4723,36 @@ export const fr: Textos = {
         'La demande de fermeture n’a pas pu être envoyée (le programme a des droits élevés)',
     },
     otraVez: 'Recommencer',
+  },
+  guias: {
+    tuneles: { titulo: 'Guide des tunnels', copiar: 'Copier la commande' },
+    http: {
+      buscar: 'Rechercher par numéro, nom ou texte',
+      familia: 'Famille',
+      todas: 'Toutes',
+      verMetodos: 'Méthodes',
+      verCodigos: 'Codes d’état',
+      resultados: (n: number) => `${n} ${n > 1 ? 'résultats' : 'résultat'}`,
+      vacio: 'Aucun résultat pour cette recherche.',
+      seguro: 'Sûre',
+      noSeguro: 'Non sûre',
+      idempotente: 'Idempotente',
+      noIdempotente: 'Non idempotente',
+      noEstandar: 'Non standard',
+      broma: 'Code pour rire (RFC 2324)',
+      causas: 'Causes courantes',
+      solucion: 'Comment le résoudre',
+      ejemplo: 'Exemple',
+      copiarEjemplo: 'Copier l’exemple',
+      sinTraduccion: 'Pas de traduction dans cette langue : affiché en anglais.',
+      familias: {
+        '1xx': '1xx Informatifs',
+        '2xx': '2xx Succès',
+        '3xx': '3xx Redirection',
+        '4xx': '4xx Erreur du client',
+        '5xx': '5xx Erreur du serveur',
+      },
+    },
   },
   limpiezaDisco: {
     intro:
