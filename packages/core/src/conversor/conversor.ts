@@ -1,25 +1,28 @@
-import { lstat, readFile, rm } from 'node:fs/promises';
+import { lstat, open, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import { abrirNuevo } from '../herramientas/salidaNueva';
-import { dimensionesImagen, LIMITES_IMAGEN } from '../herramientas/imagenes';
-import { celdaSegura, decodificarTexto, escribirCsv, leerCsv, type Celda } from './csv';
 import { convertirConLibreOffice, type Lanzar } from './libreoffice';
-import { markdownAHtml, plantillaHtml, sanitizarHtml } from './markdown';
-import { ejecutarHilo, type LimitesHilo, type RutasModulos } from './trabajador';
-import { inspeccionarZip } from './zipSeguro';
+import {
+  errorDeRespuesta,
+  resolverRutas,
+  type EjecutorTrabajo,
+  type LimitesTrabajo,
+  type MensajeTrabajo,
+  type RespuestaTrabajo,
+  type RutasModulos,
+} from './protocolo';
 
 /**
  * Conversor de documentos local (D34). Nada sale del equipo: no hay `fetch` ni red en ningún
  * paso. Cada documento es una entrada no confiable:
  *
- * - tope de tamaño de entrada; la entrada se lee UNA vez y esos mismos bytes se revisan y se
- *   convierten (sin carrera entre la revisión y el uso);
- * - ZIP (docx, xlsx, pptx, odt): revisión previa de entradas, tamaño descomprimido real,
- *   proporción y XML con DTD/entidades (`zipSeguro.ts`), antes de tocar la biblioteca;
- * - el trabajo pesado va en un hilo con plazo, tope de montón y vigilancia de la memoria externa
- *   (`trabajador.ts`); PDF sin ejecutar nada del PDF;
- * - tablas con tope de filas y columnas; fórmulas neutralizadas al escribir hojas de cálculo;
+ * - tope de tamaño de entrada; la entrada se lee UNA vez (`open` + `fstat` + lectura con tope
+ *   sobre el mismo descriptor) y esos mismos bytes se revisan y se convierten;
+ * - TODO lo pesado va en un proceso de trabajo aparte (`EjecutorTrabajo`, inyectado): revisión del ZIP
+ *   con JSZip (`zipSeguro.ts`), mammoth, exceljs, pdfjs, análisis del CSV, markdown-it y saneado
+ *   de HTML, con plazo y vigilancia de su memoria. Este módulo solo coordina;
+ * - tablas con tope de filas, columnas y celdas; fórmulas neutralizadas al escribir hojas;
  * - HTML siempre saneado; la salida nunca pisa un archivo (`abrirNuevo`) y siempre lleva la
  *   extensión del formato pedido, venga lo que venga del diálogo.
  */
@@ -62,18 +65,21 @@ const MB = 1024 * 1024;
 
 export const LIMITES_CONVERSOR = {
   bytesEntrada: 50 * MB,
-  /** Markdown y HTML se procesan en el hilo principal: tope menor. */
+  /** Markdown y HTML: tope menor (se convierten a una cadena grande en memoria). */
   bytesEntradaTexto: 10 * MB,
   entradasZip: 10_000,
   bytesDescomprimidos: 500 * MB,
   proporcion: 200,
   plazoMs: 120_000,
-  memoriaMb: 1536,
-  crecimientoMb: 1536,
   filas: 200_000,
   columnas: 1_000,
+  /** Filas × columnas, tanto al leer un CSV como un xlsx. */
+  celdas: 5_000_000,
   paginasPdf: 5_000,
   bytesSalida: 200 * MB,
+  /** Lo que puede inflarse un flujo de un PDF y todos juntos (pdf-lib), en MB. */
+  topeStreamMb: 256,
+  topeTotalMb: 512,
 } as const;
 
 export type LimitesConversor = { -readonly [K in keyof typeof LIMITES_CONVERSOR]: number };
@@ -82,6 +88,8 @@ export type LimitesConversor = { -readonly [K in keyof typeof LIMITES_CONVERSOR]
 export type ImprimirPdf = (html: string, senal?: AbortSignal) => Promise<Uint8Array>;
 
 export interface ContextoConversor {
+  /** Quien ejecuta lo pesado en un proceso aparte. Sin él no se convierte nada. */
+  ejecutor?: EjecutorTrabajo;
   /** Ruta de `soffice` si LibreOffice está instalado (`Plataforma.libreOffice()`). */
   libreOffice?: string | null;
   imprimirPdf?: ImprimirPdf;
@@ -112,7 +120,7 @@ export const FORMATOS_CONVERSOR: readonly Formato[] = [
 ];
 
 /** Partes que debe traer cada tipo de documento ZIP (si no, no es de ese tipo). */
-const PARTES_ZIP: Partial<Record<Formato, readonly string[]>> = {
+export const PARTES_ZIP: Partial<Record<Formato, readonly string[]>> = {
   docx: ['word/document.xml'],
   xlsx: ['xl/workbook.xml'],
   pptx: ['ppt/presentation.xml'],
@@ -142,27 +150,6 @@ const invalido = (): ErrorWolf =>
 const sinFormato = (): ErrorWolf =>
   new ErrorWolf('conversor.formato', 'Esa conversión no está disponible.');
 
-/** `<img>` de un HTML saneado: solo se imprimen las imágenes `data:` con dimensiones razonables. */
-function limitarImagenes(html: string): string {
-  return html.replace(/<img\b[^>]*>/g, (tag) => {
-    const m = /src="data:image\/[a-z]+;base64,([A-Za-z0-9+/=]*)"/.exec(tag);
-    if (!m) return '';
-    const cabecera = new Uint8Array(Buffer.from(m[1]!.slice(0, 2048), 'base64'));
-    const d = dimensionesImagen(cabecera);
-    if (
-      !d ||
-      d.ancho < 1 ||
-      d.alto < 1 ||
-      d.ancho > LIMITES_IMAGEN.ladoMax ||
-      d.alto > LIMITES_IMAGEN.ladoMax ||
-      d.ancho * d.alto > LIMITES_IMAGEN.pixelesMax
-    ) {
-      return '';
-    }
-    return tag;
-  });
-}
-
 function enTiempo<T>(p: Promise<T>, plazoMs: number, senal?: AbortSignal): Promise<T> {
   return new Promise((resolve, reject) => {
     const reloj = setTimeout(
@@ -186,6 +173,46 @@ function enTiempo<T>(p: Promise<T>, plazoMs: number, senal?: AbortSignal): Promi
 }
 
 /**
+ * Lee el archivo con tope sobre un solo descriptor: `open`, `fstat` y lectura de a lo sumo
+ * `tope + 1` bytes. Un archivo que crece entre medias no se lee entero.
+ */
+async function leerAcotado(ruta: string, tope: number): Promise<Uint8Array> {
+  let st;
+  try {
+    st = await lstat(ruta);
+  } catch {
+    throw invalido();
+  }
+  if (!st.isFile()) throw invalido(); // ni enlaces ni carpetas ni archivos especiales
+  const grande = (): ErrorWolf =>
+    new ErrorWolf('conversor.archivo_grande', 'El archivo pesa demasiado.', {
+      maximo: `${Math.round(tope / MB)} MB`,
+    });
+  let f;
+  try {
+    f = await open(ruta, 'r');
+  } catch {
+    throw invalido();
+  }
+  try {
+    const e = await f.stat();
+    if (!e.isFile()) throw invalido();
+    if (e.size > tope) throw grande();
+    const buf = Buffer.alloc(Math.min(e.size, tope) + 1);
+    let n = 0;
+    while (n < buf.length) {
+      const { bytesRead } = await f.read(buf, n, buf.length - n, n);
+      if (bytesRead === 0) break;
+      n += bytesRead;
+    }
+    if (n > tope) throw grande();
+    return new Uint8Array(buf.buffer, buf.byteOffset, n);
+  } finally {
+    await f.close().catch(() => undefined);
+  }
+}
+
+/**
  * Convierte `origen` (de un diálogo "Abrir") a `a` en `destino` (de un diálogo "Guardar"). Si
  * `destino` ya existe se escribe `nombre (1).ext`; nunca se pisa nada.
  */
@@ -197,7 +224,7 @@ export async function convertir(
   const lim: LimitesConversor = { ...LIMITES_CONVERSOR, ...ctx.limites };
   const de = formatoDe(o.origen);
   const conv = de ? CONVERSIONES.find((c) => c.de === de && c.a === o.a) : undefined;
-  if (!de || !conv) throw sinFormato();
+  if (!de || !conv || !ctx.ejecutor) throw sinFormato();
   if (conv.motor === 'libreoffice' && !ctx.libreOffice) {
     throw new ErrorWolf('conversor.libreoffice_ausente', 'LibreOffice no está instalado.');
   }
@@ -205,107 +232,101 @@ export async function convertir(
     throw new ErrorWolf('conversor.pdf_no_disponible', 'La impresión a PDF no está disponible.');
   }
 
-  let st;
-  try {
-    st = await lstat(o.origen);
-  } catch {
-    throw invalido();
-  }
-  if (!st.isFile()) throw invalido();
   const tope = de === 'md' || de === 'html' ? lim.bytesEntradaTexto : lim.bytesEntrada;
-  if (st.size > tope) {
-    throw new ErrorWolf('conversor.archivo_grande', 'El archivo pesa demasiado.', {
-      maximo: `${Math.round(tope / MB)} MB`,
-    });
-  }
-  const datos = new Uint8Array(await readFile(o.origen));
-  if (datos.byteLength > tope) {
-    throw new ErrorWolf('conversor.archivo_grande', 'El archivo pesa demasiado.', {
-      maximo: `${Math.round(tope / MB)} MB`,
-    });
-  }
+  const datos = await leerAcotado(o.origen, tope);
 
-  // Revisión previa del contenido (sobre los mismos bytes que se convertirán).
-  const partes = PARTES_ZIP[de];
-  if (partes) {
-    await inspeccionarZip(
-      Buffer.from(datos.buffer, datos.byteOffset, datos.byteLength),
-      {
-        entradas: lim.entradasZip,
-        bytesDescomprimidos: lim.bytesDescomprimidos,
-        proporcion: lim.proporcion,
-      },
-      partes,
-    );
-  } else if (de === 'pdf' && Buffer.from(datos.subarray(0, 1024)).indexOf('%PDF-') < 0) {
-    throw invalido();
-  }
-
-  const hilo: LimitesHilo = {
-    plazoMs: lim.plazoMs,
-    memoriaMb: lim.memoriaMb,
-    crecimientoMb: lim.crecimientoMb,
+  const lt: LimitesTrabajo = {
     filas: lim.filas,
     columnas: lim.columnas,
+    celdas: lim.celdas,
     paginas: lim.paginasPdf,
     salida: lim.bytesSalida,
+    entradasZip: lim.entradasZip,
+    bytesDescomprimidos: lim.bytesDescomprimidos,
+    proporcion: lim.proporcion,
+    topeStream: lim.topeStreamMb * MB,
+    topeTotal: lim.topeTotalMb * MB,
   };
-  const comunes = {
-    lim: hilo,
-    ...(senal ? { senal } : {}),
-    ...(ctx.rutas ? { rutas: ctx.rutas } : {}),
+  const rutas = ctx.rutas ?? resolverRutas();
+  const partes = PARTES_ZIP[de] ?? [];
+  // Un corte propio: si vence el plazo o se cancela, el proceso de trabajo recibe la señal.
+  const corte = new AbortController();
+  senal?.addEventListener('abort', () => corte.abort(), { once: true });
+  const ejecutar = async (
+    m: {
+      [K in MensajeTrabajo['op']]: Omit<Extract<MensajeTrabajo, { op: K }>, 'rutas' | 'lim'>;
+    }[MensajeTrabajo['op']],
+  ): Promise<Extract<RespuestaTrabajo, { ok: true }>> => {
+    const r = await enTiempo(
+      ctx.ejecutor!({ ...m, rutas, lim: lt } as MensajeTrabajo, {
+        plazoMs: lim.plazoMs,
+        senal: corte.signal,
+      }),
+      lim.plazoMs,
+      senal,
+    );
+    if (!r.ok) throw errorDeRespuesta(r);
+    return r;
   };
+  const bytesDe = (t: string | undefined): Uint8Array => new TextEncoder().encode(t ?? '');
 
   let salida: Uint8Array;
-  if (conv.motor === 'libreoffice') {
-    salida = await convertirConLibreOffice({
-      soffice: ctx.libreOffice!,
-      datos,
-      de,
-      a: o.a,
-      plazoMs: lim.plazoMs,
-      maxSalida: lim.bytesSalida,
-      ...(senal ? { senal } : {}),
-      ...(ctx.lanzarLibreOffice ? { lanzar: ctx.lanzarLibreOffice } : {}),
-    });
-  } else if (de === 'docx') {
-    const r = await ejecutarHilo({
-      op: 'docx',
-      datos,
-      formato: o.a as 'html' | 'md' | 'txt',
-      ...comunes,
-    });
-    const texto = r.texto ?? '';
-    salida = new TextEncoder().encode(
-      o.a === 'html' ? plantillaHtml(sanitizarHtml(texto), { imagenesRemotas: true }) : texto,
-    );
-  } else if (de === 'xlsx') {
-    const r = await ejecutarHilo({ op: 'xlsxAFilas', datos, ...comunes });
-    salida = new TextEncoder().encode(escribirCsv(r.filas ?? []));
-  } else if (de === 'csv') {
-    const filas = leerCsv(decodificarTexto(datos), { filas: lim.filas, columnas: lim.columnas });
-    const seguras: Celda[][] = filas.map((f) => f.map(celdaSegura));
-    const r = await ejecutarHilo({ op: 'filasAXlsx', filas: seguras, ...comunes });
-    salida = r.datos ?? new Uint8Array();
-  } else if (de === 'pdf') {
-    const r = await ejecutarHilo({ op: 'pdf', datos, ...comunes });
-    salida = new TextEncoder().encode(r.texto ?? '');
-  } else {
-    // md → html | pdf, html → pdf
-    const texto = decodificarTexto(datos);
-    const cuerpo = de === 'md' ? markdownAHtml(texto) : sanitizarHtml(texto);
-    if (o.a === 'html') {
-      salida = new TextEncoder().encode(plantillaHtml(cuerpo, { imagenesRemotas: true }));
+  try {
+    if (de === 'pdf' && Buffer.from(datos.subarray(0, 1024)).indexOf('%PDF-') < 0) {
+      throw invalido();
+    }
+    if (conv.motor === 'libreoffice') {
+      // Los ZIP (odt, pptx, docx) se revisan en el proceso de trabajo antes de dárselos a LibreOffice.
+      if (partes.length) await ejecutar({ op: 'zip', datos, partes });
+      salida = await convertirConLibreOffice({
+        soffice: ctx.libreOffice!,
+        datos,
+        de,
+        a: o.a,
+        plazoMs: lim.plazoMs,
+        maxSalida: lim.bytesSalida,
+        senal: corte.signal,
+        ...(ctx.lanzarLibreOffice ? { lanzar: ctx.lanzarLibreOffice } : {}),
+      });
+      // El HTML de LibreOffice es un documento completo: se sanea como cualquier otro.
+      if (o.a === 'html') {
+        const r = await ejecutar({
+          op: 'htmlSanear',
+          datos: salida,
+          para: 'html',
+          extraerCuerpo: true,
+        });
+        salida = bytesDe(r.texto);
+      }
+    } else if (de === 'docx') {
+      const r = await ejecutar({
+        op: 'docx',
+        datos,
+        partes,
+        formato: o.a as 'html' | 'md' | 'txt',
+      });
+      salida = bytesDe(r.texto);
+    } else if (de === 'xlsx') {
+      salida = bytesDe((await ejecutar({ op: 'xlsxACsv', datos, partes })).texto);
+    } else if (de === 'csv') {
+      salida = (await ejecutar({ op: 'csvAXlsx', datos })).datos ?? new Uint8Array();
+    } else if (de === 'pdf') {
+      salida = bytesDe((await ejecutar({ op: 'pdfATexto', datos })).texto);
     } else {
-      const html = plantillaHtml(limitarImagenes(cuerpo), { imagenesRemotas: false });
-      // La señal propia permite cortar la impresión (cerrar su ventana) si vence el plazo.
-      const corte = new AbortController();
-      try {
-        salida = await enTiempo(ctx.imprimirPdf!(html, corte.signal), lim.plazoMs, senal);
-      } finally {
-        corte.abort();
+      // md → html | pdf, html → pdf
+      const para = o.a === 'html' ? 'html' : 'pdf';
+      const r =
+        de === 'md'
+          ? await ejecutar({ op: 'mdAHtml', datos, para })
+          : await ejecutar({ op: 'htmlSanear', datos, para, extraerCuerpo: true });
+      if (o.a === 'html') {
+        salida = bytesDe(r.texto);
+      } else {
+        salida = await enTiempo(ctx.imprimirPdf!(r.texto ?? '', corte.signal), lim.plazoMs, senal);
       }
     }
+  } finally {
+    corte.abort();
   }
   if (salida.byteLength > lim.bytesSalida) {
     throw new ErrorWolf('conversor.archivo_grande', 'El resultado pesa demasiado.', {

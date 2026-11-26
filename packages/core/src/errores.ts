@@ -158,6 +158,8 @@ export const PARAMETROS_ERROR = {
   'conversor.limite_filas': ['maximo'],
   'conversor.limite_columnas': ['maximo'],
   'conversor.limite_paginas': ['maximo'],
+  'conversor.limite_celdas': ['maximo'],
+  'conversor.memoria': ['maximo'],
   'conversor.pdf_cifrado': [],
   'conversor.plazo': ['segundos'],
   'conversor.cancelado': [],

@@ -152,6 +152,8 @@ export * from './herramientas/zip';
 export * from './conversor/conversor';
 export { sanitizarHtml } from './conversor/markdown';
 export { neutralizarFormula } from './conversor/csv';
+export * from './conversor/protocolo';
+export { operar, ejecutarEnProceso } from './conversor/operaciones';
 export * from './herramientas/certificadosLibres';
 export * from './herramientas/entorno';
 export * from './mcp/servidor';

@@ -306,6 +306,7 @@ import {
 import { limpiarBom, type ResultadoBom } from './herramientas/bom';
 import { guardarImagen, leerImagen, type ImagenLeida } from './herramientas/imagenes';
 import { optimizarPdf, type ResultadoPdf } from './herramientas/pdf';
+import type { EjecutorTrabajo } from './conversor/protocolo';
 import { comprimirZip, type ResultadoZip } from './herramientas/zip';
 import {
   conversionesDisponibles,
@@ -347,6 +348,11 @@ export interface OpcionesNucleo {
    * con el Chromium de Electron, sin red ni JavaScript; sin esto esas conversiones no se ofrecen.
    */
   imprimirPdf?: ImprimirPdf;
+  /**
+   * Proceso de trabajo del conversor y de la optimización de PDF (`utilityProcess` en la
+   * aplicación, con plazo y vigilancia de su memoria). Sin él no se ofrece ninguna conversión.
+   */
+  ejecutorConversor?: EjecutorTrabajo;
   /** Para pruebas: lanzador de los comandos con streaming (pasos de receta, git). */
   lanzar?: Lanzador;
   /** PID del proceso principal y de su padre (por defecto, los de este proceso). */
@@ -448,6 +454,7 @@ interface ModulosNucleo {
   plataforma: PlataformaCompleta;
   lanzarEditor?: LanzadorSeparado;
   imprimirPdf?: ImprimirPdf;
+  ejecutorConversor?: EjecutorTrabajo;
   /** Editor del vhost de cada sitio (reglas propias o vhost completo, con nginx -t y vuelta atrás). */
   editorVhost: EditorVhost;
   /** php.ini de cada rama (editor con prueba, copia y vuelta atrás). */
@@ -679,6 +686,7 @@ export class Nucleo {
   private readonly plataforma: PlataformaCompleta;
   private readonly lanzarEditor: LanzadorSeparado | undefined;
   private readonly imprimirPdf: ImprimirPdf | undefined;
+  private readonly ejecutorConversor: EjecutorTrabajo | undefined;
   /** Puerto de Ollama según la configuración (ClienteOllama lo lee de forma síncrona). */
   private readonly puertoOllama: { valor: number };
   /** Servidor MCP local; se maneja con iniciarMcp/detenerMcp (que guardan `mcp.activo`). */
@@ -775,6 +783,7 @@ export class Nucleo {
     this.plataforma = m.plataforma;
     this.lanzarEditor = m.lanzarEditor;
     this.imprimirPdf = m.imprimirPdf;
+    this.ejecutorConversor = m.ejecutorConversor;
     this.bd = m.bd;
     this.respaldos = m.respaldos;
     this.pgvector = m.pgvector;
@@ -1499,6 +1508,7 @@ export class Nucleo {
       editorVhost,
       ...(o.lanzarEditor ? { lanzarEditor: o.lanzarEditor } : {}),
       ...(o.imprimirPdf ? { imprimirPdf: o.imprimirPdf } : {}),
+      ...(o.ejecutorConversor ? { ejecutorConversor: o.ejecutorConversor } : {}),
       iniPhp,
       poolsSitio: pools,
       ajustesPhpSitio,
@@ -3540,17 +3550,19 @@ export class Nucleo {
 
   /** PDF re-guardado en un hilo aparte; solo deja archivo si pesa menos que el original. */
   optimizarPdf(origen: string, destino: string): Promise<ResultadoPdf> {
-    return optimizarPdf(origen, destino);
+    return optimizarPdf(origen, destino, {
+      ...(this.ejecutorConversor ? { ejecutor: this.ejecutorConversor } : {}),
+    });
   }
 
   /** Conversiones de documentos que se pueden ofrecer ahora (LibreOffice solo si está instalado). */
   async conversionesDocumento(): Promise<{ conversiones: Conversion[]; libreOffice: boolean }> {
     const lo = await this.plataforma.libreOffice();
     return {
-      conversiones: conversionesDisponibles({
-        libreOffice: lo,
-        imprimirPdf: this.imprimirPdf !== undefined,
-      }),
+      // Sin proceso de trabajo no se convierte nada: lo pesado nunca corre en el principal.
+      conversiones: this.ejecutorConversor
+        ? conversionesDisponibles({ libreOffice: lo, imprimirPdf: this.imprimirPdf !== undefined })
+        : [],
       libreOffice: lo !== null,
     };
   }
@@ -3566,6 +3578,7 @@ export class Nucleo {
   ): Promise<{ destino: string; bytes: number }> {
     return convertir({ origen, a, destino }, undefined, {
       libreOffice: await this.plataforma.libreOffice(),
+      ...(this.ejecutorConversor ? { ejecutor: this.ejecutorConversor } : {}),
       ...(this.imprimirPdf ? { imprimirPdf: this.imprimirPdf } : {}),
     });
   }

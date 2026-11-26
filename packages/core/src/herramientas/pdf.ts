@@ -3,6 +3,7 @@ import { lstat, open, readFile, rm } from 'node:fs/promises';
 import { Worker } from 'node:worker_threads';
 import { ErrorWolf } from '../errores';
 import { abrirNuevo } from './salidaNueva';
+import { errorDeRespuesta, resolverRutas, type EjecutorTrabajo } from '../conversor/protocolo';
 
 /**
  * Optimizar un PDF re-guardándolo con `pdf-lib` y flujos de objetos (D33).
@@ -40,6 +41,12 @@ export interface OpcionesPdf {
   topeStreamMb?: number;
   topeTotalMb?: number;
   crecimientoMb?: number;
+  /**
+   * Proceso de trabajo (`utilityProcess` en la aplicación): el PDF se optimiza allí, con plazo y
+   * vigilancia de la memoria de ESE proceso. Sin él (pruebas) se usa el hilo de este módulo, que
+   * es solo el doble de prueba.
+   */
+  ejecutor?: EjecutorTrabajo;
 }
 
 export interface ResultadoPdf {
@@ -192,6 +199,49 @@ function reguardar(
   });
 }
 
+/** Optimización en el hilo de este módulo (doble de prueba; la aplicación usa el proceso de trabajo). */
+function reguardarEnHilo(datos: Uint8Array, o: OpcionesPdf): Promise<Uint8Array> {
+  const modulo = o.modulo ?? rutaPdfLib();
+  if (!modulo) return Promise.reject(invalido());
+  return reguardar(datos, modulo, o.plazoMs ?? LIMITES_PDF.plazoMs, {
+    stream: (o.topeStreamMb ?? LIMITES_PDF.topeStreamMb) * 1024 * 1024,
+    total: (o.topeTotalMb ?? LIMITES_PDF.topeTotalMb) * 1024 * 1024,
+    crecimiento: (o.crecimientoMb ?? LIMITES_PDF.crecimientoMb) * 1024 * 1024,
+  });
+}
+
+/** Optimización en el proceso de trabajo inyectado. */
+async function reguardarFuera(
+  datos: Uint8Array,
+  ejecutor: EjecutorTrabajo,
+  o: OpcionesPdf,
+): Promise<Uint8Array> {
+  const plazoMs = o.plazoMs ?? LIMITES_PDF.plazoMs;
+  const r = await ejecutor(
+    {
+      op: 'pdfOptimizar',
+      datos,
+      rutas: resolverRutas(),
+      lim: {
+        filas: 0,
+        columnas: 0,
+        celdas: 0,
+        paginas: 0,
+        salida: 0,
+        entradasZip: 0,
+        bytesDescomprimidos: 0,
+        proporcion: 0,
+        topeStream: (o.topeStreamMb ?? LIMITES_PDF.topeStreamMb) * 1024 * 1024,
+        topeTotal: (o.topeTotalMb ?? LIMITES_PDF.topeTotalMb) * 1024 * 1024,
+      },
+    },
+    { plazoMs },
+  );
+  if (!r.ok) throw errorDeRespuesta(r);
+  if (!r.datos) throw invalido();
+  return r.datos;
+}
+
 /**
  * Optimiza `origen` y, solo si pesa menos, lo escribe en un archivo nuevo (`destino`; si existe,
  * `nombre (1).pdf`). Ambas rutas salen de diálogos.
@@ -217,18 +267,9 @@ export async function optimizarPdf(
   const original = await readFile(origen);
   if (original.subarray(0, 1024).indexOf('%PDF-') < 0) throw invalido();
 
-  const modulo = o.modulo ?? rutaPdfLib();
-  if (!modulo) throw invalido();
-  const nuevo = await reguardar(
-    new Uint8Array(original),
-    modulo,
-    o.plazoMs ?? LIMITES_PDF.plazoMs,
-    {
-      stream: (o.topeStreamMb ?? LIMITES_PDF.topeStreamMb) * 1024 * 1024,
-      total: (o.topeTotalMb ?? LIMITES_PDF.topeTotalMb) * 1024 * 1024,
-      crecimiento: (o.crecimientoMb ?? LIMITES_PDF.crecimientoMb) * 1024 * 1024,
-    },
-  );
+  const nuevo = o.ejecutor
+    ? await reguardarFuera(new Uint8Array(original), o.ejecutor, o)
+    : await reguardarEnHilo(new Uint8Array(original), o);
 
   const antes = original.byteLength;
   if (nuevo.byteLength >= antes) {

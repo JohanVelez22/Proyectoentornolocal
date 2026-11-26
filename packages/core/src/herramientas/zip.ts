@@ -230,6 +230,9 @@ export async function comprimirZip(o: OpcionesZip): Promise<ResultadoZip> {
   // Un archivo que cambió o dejó de leerse a mitad: el error del ZipFile corta el flujo de salida
   // y `pipeline` lo recibe (si no, quedaría esperando para siempre).
   zip.on('error', (e: Error) => (zip.outputStream as unknown as Readable).destroy(e));
+  // Un error tardío (otra entrada que falla cuando `pipeline` ya terminó) no debe quedar sin oyente:
+  // sería una excepción no capturada. `pipeline` sigue recibiendo el suyo.
+  (zip.outputStream as unknown as Readable).on('error', () => undefined);
   for (const e of entradas) {
     const entrada = lectura(e, o.antesDeAbrir);
     entrada.on('error', (err: Error) => zip.emit('error', err));

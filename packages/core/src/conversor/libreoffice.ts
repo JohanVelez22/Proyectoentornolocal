@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -61,6 +61,21 @@ export const lanzarLibreOffice: Lanzar = (ejecutable, args, o) =>
     });
   });
 
+/**
+ * Configuración del perfil temporal de LibreOffice: sin macros, sin vínculos remotos y sin
+ * actualizar vínculos al abrir (Writer y Calc: 2 = nunca). El documento es no confiable y
+ * LibreOffice resuelve por su cuenta macros, enlaces a archivos y "referers" remotos.
+ */
+export const CONFIGURACION_PERFIL = `<?xml version="1.0" encoding="UTF-8"?>
+<oor:items xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<item oor:path="/org.openoffice.Office.Common/Security/Scripting"><prop oor:name="DisableMacrosExecution" oor:op="fuse"><value>true</value></prop></item>
+<item oor:path="/org.openoffice.Office.Common/Security/Scripting"><prop oor:name="MacroSecurityLevel" oor:op="fuse"><value>3</value></prop></item>
+<item oor:path="/org.openoffice.Office.Common/Security/Scripting"><prop oor:name="BlockUntrustedRefererLinks" oor:op="fuse"><value>true</value></prop></item>
+<item oor:path="/org.openoffice.Office.Writer/Content/Update"><prop oor:name="Link" oor:op="fuse"><value>2</value></prop></item>
+<item oor:path="/org.openoffice.Office.Calc/Content/Update"><prop oor:name="Link" oor:op="fuse"><value>2</value></prop></item>
+</oor:items>
+`;
+
 export interface OpcionesLibreOffice {
   soffice: string;
   datos: Uint8Array;
@@ -83,6 +98,8 @@ export async function convertirConLibreOffice(o: OpcionesLibreOffice): Promise<U
     const salida = path.join(trabajo, 'salida');
     const perfil = path.join(trabajo, 'perfil');
     await writeFile(entrada, o.datos);
+    await mkdir(path.join(perfil, 'user'), { recursive: true });
+    await writeFile(path.join(perfil, 'user', 'registrymodifications.xcu'), CONFIGURACION_PERFIL);
     const args = [
       `-env:UserInstallation=${pathToFileURL(perfil).href}`,
       '--headless',
@@ -128,6 +145,9 @@ export async function convertirConLibreOffice(o: OpcionesLibreOffice): Promise<U
     }
     return new Uint8Array(await readFile(resultado));
   } finally {
-    await rm(trabajo, { recursive: true, force: true }).catch(() => undefined);
+    // Tras matar el árbol por el plazo, Windows puede tardar en soltar los archivos: se reintenta.
+    await rm(trabajo, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }).catch(
+      () => undefined,
+    );
   }
 }

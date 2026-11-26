@@ -8,14 +8,22 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   CONVERSIONES,
   conversionesDisponibles,
-  convertir,
+  convertir as convertirBase,
   type ContextoConversor,
   type Formato,
 } from '../src/conversor/conversor';
 import { escribirCsv, leerCsv, neutralizarFormula } from '../src/conversor/csv';
 import { sanitizarHtml } from '../src/conversor/markdown';
 import { esErrorWolf } from '../src/errores';
+import { ejecutarEnProceso } from '../src/conversor/operaciones';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
+
+/** Las pruebas del núcleo usan el ejecutor sin aislamiento (doble de prueba). */
+const convertir = (
+  o: Parameters<typeof convertirBase>[0],
+  senal?: AbortSignal,
+  ctx: ContextoConversor = {},
+) => convertirBase(o, senal, { ejecutor: ejecutarEnProceso, ...ctx });
 
 let dir: string;
 beforeEach(() => {
@@ -111,6 +119,7 @@ describe('conversor: documentos válidos', () => {
     const filas = leerCsv(readFileSync(vuelta.destino, 'utf8').replace(/^\uFEFF/, ''), {
       filas: 100,
       columnas: 100,
+      celdas: 10_000,
     });
     expect(filas).toEqual([
       ['nombre', 'cantidad'],
@@ -219,10 +228,20 @@ describe('conversor: CSV y hojas de cálculo', () => {
     const libro = new ExcelJS.Workbook();
     await libro.xlsx.readFile(x.destino);
     const hoja = libro.worksheets[0]!;
-    expect(hoja.getCell('A2').value).toBe(`'=HYPERLINK("http://x.test","clic")`);
+    // En xlsx el valor no cambia: la celda es texto con quotePrefix.
+    expect(hoja.getCell('A2').value).toBe('=HYPERLINK("http://x.test","clic")');
+    expect(hoja.getCell('A2').numFmt).toBe('@');
     expect(hoja.getCell('B2').value).toBe(-5);
-    expect(hoja.getCell('A3').value).toBe("'@cmd");
-    expect(hoja.getCell('B3').value).toBe("'+x");
+    expect(hoja.getCell('B2').numFmt).not.toBe('@');
+    expect(hoja.getCell('A3').value).toBe('@cmd');
+    expect(hoja.getCell('A3').numFmt).toBe('@');
+    // Y el estilo de texto lleva quotePrefix (no se cambia el valor con un apóstrofo).
+    const JSZipT = (await import('jszip')).default;
+    const z = await JSZipT.loadAsync(readFileSync(x.destino));
+    expect(await z.file('xl/styles.xml')!.async('string')).toMatch(
+      /<xf[^>]*numFmtId="49"[^>]*quotePrefix="1"/,
+    );
+    expect(hoja.getCell('B3').value).toBe('+x');
     // Y al volver a CSV, un texto peligroso del xlsx también se neutraliza.
     const peligroso = new ExcelJS.Workbook();
     peligroso.addWorksheet('H').addRow(['=2+2', 7, 'ok']);
@@ -275,7 +294,7 @@ describe('conversor: CSV y hojas de cálculo', () => {
   });
 
   it('leerCsv entiende comillas, saltos dentro de campos, punto y coma y BOM', () => {
-    expect(leerCsv('a;b\n"x;y";"l1\nl2"\n', { filas: 9, columnas: 9 })).toEqual([
+    expect(leerCsv('a;b\n"x;y";"l1\nl2"\n', { filas: 9, columnas: 9, celdas: 100 })).toEqual([
       ['a', 'b'],
       ['x;y', 'l1\nl2'],
     ]);
@@ -411,31 +430,23 @@ describe('conversor: documentos maliciosos', () => {
     ).toBe('conversor.limite_paginas');
   });
 
-  it('plazo vencido → conversor.plazo y el hilo se termina', async () => {
-    const doc = await PDFDocument.create();
-    doc.addPage();
-    const origen = escribir('q.pdf', await doc.save());
+  it('plazo vencido → conversor.plazo y se avisa al proceso de trabajo para que lo termine', async () => {
+    const origen = escribir('q.pdf', Buffer.from('%PDF-1.4 x'));
+    let senal: AbortSignal | undefined;
+    const colgado: ContextoConversor = {
+      ejecutor: (_m, o) => {
+        senal = o.senal;
+        return new Promise(() => undefined);
+      },
+      limites: { plazoMs: 50 },
+    };
     expect(
       await codigoDe(
-        convertir({ origen, a: 'txt', destino: salida('q.txt') }, undefined, {
-          limites: { plazoMs: 1 },
-        }),
+        convertirBase({ origen, a: 'txt', destino: salida('q.txt') }, undefined, colgado),
       ),
     ).toBe('conversor.plazo');
+    expect(senal?.aborted).toBe(true);
     expect(existsSync(salida('q.txt'))).toBe(false);
-  });
-
-  it('si la memoria del proceso crece más de lo permitido durante la conversión, se corta', async () => {
-    const doc = await PDFDocument.create();
-    doc.addPage();
-    const origen = escribir('mem.pdf', await doc.save());
-    expect(
-      await codigoDe(
-        convertir({ origen, a: 'txt', destino: salida('mem.txt') }, undefined, {
-          limites: { crecimientoMb: -100_000 },
-        }),
-      ),
-    ).toBe('conversor.archivo_peligroso');
   });
 
   it('cancelar con la señal corta la conversión', async () => {
