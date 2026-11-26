@@ -603,6 +603,10 @@ async function usosDeSitios(sitios: Pick<GestorSitios, 'listar'>): Promise<UsoSi
   return res;
 }
 
+/** El lanzador `wolf.exe` no pasó su prueba (ASR, AppLocker o antivirus): se usa `wolf.cmd`. */
+const AVISO_LANZADOR_BLOQUEADO =
+  'El lanzador wolf.exe fue bloqueado (ASR, AppLocker o el antivirus): wolf usa wolf.cmd, que no admite & ni | sin comillas en los argumentos.';
+
 export class Nucleo {
   private temporizador: ReturnType<typeof setInterval> | null = null;
   private sondeando = false;
@@ -1770,11 +1774,13 @@ export class Nucleo {
     }
     // Una actualización puede cambiar la ruta de la app: el cliente se reescribe si ya estaba instalado.
     if (o.servidorCli?.cliente && !nucleo.aislado && (await clienteCliInstalado(rutas))) {
-      await instalarClienteCli(rutas, o.servidorCli.cliente, o.servidorCli.lanzadorExe).catch(
-        (e: unknown) => {
+      await instalarClienteCli(rutas, o.servidorCli.cliente, o.servidorCli.lanzadorExe)
+        .then((r) => {
+          if (r.bloqueado) nucleo.avisosPendientes.push(AVISO_LANZADOR_BLOQUEADO);
+        })
+        .catch((e: unknown) => {
           nucleo.avisosPendientes.push(`No se pudo actualizar el cliente wolf: ${mensajeDe(e)}`);
-        },
-      );
+        });
     }
     // Apagada (o sin servidor): ningún `cli.json` de una sesión anterior se queda con un token vivo.
     if (!nucleo.cli.estado().activo)
@@ -3154,7 +3160,11 @@ export class Nucleo {
       // Primero lo que puede fallar sin dejar rastro (sin proteger el token, la CLI no se activa).
       await this.activarCli(true);
       try {
-        await instalarClienteCli(this.rutas, cliente, this.opcionesCli.lanzadorExe);
+        const inst = await instalarClienteCli(this.rutas, cliente, this.opcionesCli.lanzadorExe);
+        if (inst.bloqueado) {
+          this.avisosPendientes.push(AVISO_LANZADOR_BLOQUEADO);
+          console.warn(AVISO_LANZADOR_BLOQUEADO);
+        }
         return await this.pathCli.agregar();
       } catch (e) {
         // Deshace todo: CLI apagada, sin cliente copiado y sin la entrada en el PATH (si llegó a escribirse).

@@ -1,7 +1,13 @@
+import { createHash } from 'node:crypto';
 import { access, mkdir, readFile, rename, rm, rmdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
-import { NOMBRE_EXE, NOMBRE_VERSION_EXE, compilarLanzadorWin } from '../plataforma/lanzadorWin';
+import {
+  NOMBRE_EXE,
+  NOMBRE_VERSION_EXE,
+  compilarLanzadorWin,
+  type ResultadoLanzador,
+} from '../plataforma/lanzadorWin';
 import type { Ejecutor } from '../plataforma/tipos';
 import type { Rutas } from '../rutas';
 
@@ -21,8 +27,6 @@ export const NOMBRE_SCRIPT = 'wolf.cjs';
 export const NOMBRE_SH = 'wolf';
 /** Datos del lanzador (ruta de la app): se reescribe en cada instalación, el `.exe` no cambia. */
 export const NOMBRE_RUNTIME = 'wolf.runtime';
-/** Súbela al cambiar `FUENTE_LANZADOR`: el `.exe` se vuelve a compilar. */
-export const VERSION_LANZADOR = '2';
 
 /** Mensaje en los cuatro idiomas (solo ASCII: un `.cmd` no sabe de páginas de códigos). */
 export const MENSAJES_SIN_APP: readonly string[] = [
@@ -161,6 +165,8 @@ static class Wolf
 
     static int Main(string[] args)
     {
+        // Ctrl+C lo recibe también el cliente (que cierra bien); el lanzador espera su código de salida.
+        Console.CancelKeyPress += (s, e) => e.Cancel = true;
         string dir = AppDomain.CurrentDomain.BaseDirectory;
         string exe = null, app = null;
         try
@@ -170,13 +176,12 @@ static class Wolf
             if (cfg.Length > 1 && cfg[1].Trim().Length > 0) app = cfg[1].Trim();
         }
         catch { }
-        if (string.IsNullOrEmpty(exe) || !File.Exists(exe))
+        if (string.IsNullOrEmpty(exe) || !Path.IsPathRooted(exe) || !File.Exists(exe))
         {
 ${MENSAJES_SIN_APP.map((m) => `            Console.Error.WriteLine("${m}");`).join('\n')}
             return 3;
         }
         var sb = new StringBuilder();
-        if (app != null) sb.Append(Quote(app)).Append(' ');
         sb.Append(Quote(Path.Combine(dir, "${NOMBRE_SCRIPT}")));
         foreach (string a in args) sb.Append(' ').Append(Quote(a));
         var psi = new ProcessStartInfo(exe, sb.ToString());
@@ -197,11 +202,17 @@ ${MENSAJES_SIN_APP.map((m) => `            Console.Error.WriteLine("${m}");`).jo
 }
 `;
 
+/** La versión del lanzador es el hash de su fuente: cambiarla vuelve a compilar, sin marca manual. */
+export const VERSION_LANZADOR = createHash('sha256')
+  .update(FUENTE_LANZADOR)
+  .digest('hex')
+  .slice(0, 16);
+
 /** Compila `wolf.exe` si hace falta (ver `plataforma/lanzadorWin.ts`). */
 export function asegurarLanzadorExe(
   carpeta: string,
   d: { ejecutar: Ejecutor; csc: string | null },
-): Promise<boolean> {
+): Promise<ResultadoLanzador> {
   return compilarLanzadorWin(carpeta, {
     ...d,
     fuente: FUENTE_LANZADOR,
@@ -234,7 +245,7 @@ export async function instalarClienteCli(
   rutas: Rutas,
   o: OrigenClienteCli,
   d: DepsInstalarCli = {},
-): Promise<{ exe: boolean }> {
+): Promise<{ exe: boolean; bloqueado: boolean }> {
   const carpeta = rutas.cliCliente();
   await mkdir(carpeta, { recursive: true });
   const base = { exe: o.exe, ...(o.carpetaApp ? { carpetaApp: o.carpetaApp } : {}) };
@@ -246,10 +257,10 @@ export async function instalarClienteCli(
   await escribirAtomico(path.join(carpeta, NOMBRE_RUNTIME), runtime);
   await escribirAtomico(path.join(carpeta, NOMBRE_SH), sh);
   await escribirAtomico(path.join(carpeta, NOMBRE_CMD), cmd);
-  const tieneExe = d.ejecutar
+  const r = d.ejecutar
     ? await asegurarLanzadorExe(carpeta, { ejecutar: d.ejecutar, csc: d.csc ?? null })
-    : false;
-  return { exe: tieneExe };
+    : 'sin-csc';
+  return { exe: r === 'ok', bloqueado: r === 'bloqueado' };
 }
 
 /** Quita lo que escribió `instalarClienteCli` (solo esos archivos; la carpeta, si queda vacía). */

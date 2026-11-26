@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   FUENTE_LANZADOR,
+  VERSION_LANZADOR,
   MENSAJES_SIN_APP,
   asegurarLanzadorExe,
   clienteCliInstalado,
@@ -81,6 +82,11 @@ describe('lanzador wolf.exe (I2)', () => {
     expect(FUENTE_LANZADOR).toContain('Quote(');
     // El lanzador solo lee su carpeta: ninguna ruta sale de los argumentos
     expect(FUENTE_LANZADOR).toContain('wolf.runtime');
+    // La carpeta de la app viaja en WOLFCORE_APP_DIR, nunca como primer argumento
+    expect(FUENTE_LANZADOR).not.toMatch(/sb\.Append\(Quote\(app\)\)/);
+    expect(FUENTE_LANZADOR).toContain('Console.CancelKeyPress += (s, e) => e.Cancel = true;');
+    expect(FUENTE_LANZADOR).toContain('p.WaitForExit()');
+    expect(FUENTE_LANZADOR).toContain('Path.IsPathRooted(exe)');
     expect(FUENTE_LANZADOR).toContain('Environment' + 'Variables.Remove("WOLFCORE_APP_DIR")');
   });
 });
@@ -162,22 +168,61 @@ describe('instalar, quitar e instalado', () => {
     const llamadas: string[][] = [];
     const ejecutar = (async (_c: string, args: string[]) => {
       llamadas.push(args);
-      const salida = args.find((a) => a.startsWith('/out:'))!.slice(5);
-      await writeFile(salida, 'MZ');
+      const salida = args.find((a) => a.startsWith('/out:'));
+      if (salida) await writeFile(salida.slice(5), 'MZ');
       return { codigo: 0, stdout: '', stderr: '' };
     }) as never;
-    expect(await asegurarLanzadorExe(dir, { ejecutar, csc: 'C:\\csc.exe' })).toBe(true);
-    expect(llamadas).toHaveLength(1);
+    expect(await asegurarLanzadorExe(dir, { ejecutar, csc: 'C:\\csc.exe' })).toBe('ok');
+    // compilar (1) y la prueba inocua con plazo corto (1)
+    expect(llamadas).toHaveLength(2);
+    expect(llamadas[1]).toEqual(['--help']);
     expect(await readFile(path.join(dir, 'wolf.exe'), 'utf8')).toBe('MZ');
-    expect(await asegurarLanzadorExe(dir, { ejecutar, csc: 'C:\\csc.exe' })).toBe(true);
-    expect(llamadas).toHaveLength(1);
+    expect(await asegurarLanzadorExe(dir, { ejecutar, csc: 'C:\\csc.exe' })).toBe('ok');
+    expect(llamadas).toHaveLength(2);
+    // la versión es el hash de la fuente
+    expect(await readFile(path.join(dir, 'wolf.exe.version'), 'utf8')).toBe(VERSION_LANZADOR);
+  });
+
+  it('la versión del lanzador es el hash de su fuente (sin marca manual)', async () => {
+    const { createHash } = await import('node:crypto');
+    expect(VERSION_LANZADOR).toBe(
+      createHash('sha256').update(FUENTE_LANZADOR).digest('hex').slice(0, 16),
+    );
+  });
+
+  it('si el .exe compilado no pasa la prueba (ASR, AppLocker, antivirus), se borra y queda el .cmd', async () => {
+    const dir = await carpetaTemporal('pel-cli-csc3-');
+    const ejecutar = (async (cmd: string, args: string[]) => {
+      const salida = args.find((a) => a.startsWith('/out:'));
+      if (salida) {
+        await writeFile(salida.slice(5), 'MZ');
+        return { codigo: 0, stdout: '', stderr: '' };
+      }
+      return { codigo: 1, stdout: '', stderr: 'bloqueado por la directiva' };
+    }) as never;
+    expect(await asegurarLanzadorExe(dir, { ejecutar, csc: 'C:\\csc.exe' })).toBe('bloqueado');
+    await expect(stat(path.join(dir, 'wolf.exe'))).rejects.toThrow();
+    await expect(stat(path.join(dir, 'wolf.exe.version'))).rejects.toThrow();
+    // y un ejecutor que lanza (plazo vencido) también lo descarta
+    const cuelga = (async (cmd: string, args: string[]) => {
+      const salida = args.find((a) => a.startsWith('/out:'));
+      if (salida) {
+        await writeFile(salida.slice(5), 'MZ');
+        return { codigo: 0, stdout: '', stderr: '' };
+      }
+      throw new Error('plazo vencido');
+    }) as never;
+    expect(await asegurarLanzadorExe(dir, { ejecutar: cuelga, csc: 'C:\\csc.exe' })).toBe(
+      'bloqueado',
+    );
+    await expect(stat(path.join(dir, 'wolf.exe'))).rejects.toThrow();
   });
 
   it('sin csc o con un compilador que falla: false y queda el .cmd', async () => {
     const dir = await carpetaTemporal('pel-cli-csc2-');
     const ejecutar = (async () => ({ codigo: 1, stdout: '', stderr: 'x' })) as never;
-    expect(await asegurarLanzadorExe(dir, { ejecutar, csc: null })).toBe(false);
-    expect(await asegurarLanzadorExe(dir, { ejecutar, csc: 'C:\\csc.exe' })).toBe(false);
+    expect(await asegurarLanzadorExe(dir, { ejecutar, csc: null })).toBe('sin-csc');
+    expect(await asegurarLanzadorExe(dir, { ejecutar, csc: 'C:\\csc.exe' })).toBe('fallo');
   });
 });
 
@@ -226,16 +271,66 @@ describe.skipIf(process.platform !== 'win32' || rutaCsc() === null)(
       await expect(stat(marca)).rejects.toThrow();
     }, 90_000);
 
+    it('con carpetaApp (dev) el eco recibe exactamente los args y la carpeta va en WOLFCORE_APP_DIR', async () => {
+      const dir = await carpetaTemporal('pel-cli-exe3-');
+      const { ejecutorPorDefecto } = await import('../src/plataforma/win');
+      const s = path.join(dir, 'eco.js');
+      await writeFile(
+        s,
+        'console.log(JSON.stringify({ args: process.argv.slice(2), app: process.env.WOLFCORE_APP_DIR ?? null, nodo: process.env.ELECTRON_RUN_AS_NODE }));\n',
+      );
+      const rutas = new Rutas(path.join(dir, 'datos'));
+      const carpetaApp = path.join(dir, 'app dev');
+      const inst = await instalarClienteCli(
+        rutas,
+        { exe: process.execPath, script: s, carpetaApp },
+        { ejecutar: ejecutorPorDefecto, csc: rutaCsc() },
+      );
+      expect(inst).toEqual({ exe: true, bloqueado: false });
+      const args = ['status', '--json', 'R&D', 'con espacio'];
+      const p = spawnSync(path.join(rutas.cliCliente(), 'wolf.exe'), args, {
+        encoding: 'utf8',
+        windowsHide: true,
+      });
+      expect(p.status).toBe(0);
+      expect(JSON.parse(p.stdout.trim())).toEqual({ args, app: carpetaApp, nodo: '1' });
+    }, 90_000);
+
+    it('una ruta de la app que no es absoluta se trata como app inexistente (código 3)', async () => {
+      const dir = await carpetaTemporal('pel-cli-exe4-');
+      const { ejecutorPorDefecto } = await import('../src/plataforma/win');
+      const s = path.join(dir, 'eco.js');
+      await writeFile(s, 'console.log(1)\n');
+      const rutas = new Rutas(path.join(dir, 'datos'));
+      const inst = await instalarClienteCli(
+        rutas,
+        { exe: process.execPath, script: s },
+        { ejecutar: ejecutorPorDefecto, csc: rutaCsc() },
+      );
+      expect(inst.exe).toBe(true);
+      await writeFile(path.join(rutas.cliCliente(), 'wolf.runtime'), 'node.exe\n\n');
+      const p = spawnSync(path.join(rutas.cliCliente(), 'wolf.exe'), [], {
+        encoding: 'utf8',
+        windowsHide: true,
+      });
+      expect(p.status).toBe(3);
+    }, 90_000);
+
     it('con la app inexistente: mensaje claro y código 3', async () => {
       const dir = await carpetaTemporal('pel-cli-exe2-');
       const { ejecutorPorDefecto } = await import('../src/plataforma/win');
       const s = path.join(dir, 'eco.js');
       await writeFile(s, 'console.log(1)\n');
       const rutas = new Rutas(path.join(dir, 'datos'));
+      // Se instala con una app válida (la prueba inocua la exige) y después la app desaparece
       await instalarClienteCli(
         rutas,
-        { exe: path.join(dir, 'no-existe.exe'), script: s },
+        { exe: process.execPath, script: s },
         { ejecutar: ejecutorPorDefecto, csc: rutaCsc() },
+      );
+      await writeFile(
+        path.join(rutas.cliCliente(), 'wolf.runtime'),
+        `${path.join(dir, 'no-existe.exe')}\n\n`,
       );
       const p = spawnSync(path.join(rutas.cliCliente(), 'wolf.exe'), [], {
         encoding: 'utf8',
