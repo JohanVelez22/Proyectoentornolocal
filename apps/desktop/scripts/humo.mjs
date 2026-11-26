@@ -7,7 +7,8 @@
 //
 // En Linux se lanza sin sandbox de Chromium (el CI no instala chrome-sandbox con SUID) y debe correr
 // bajo xvfb-run.
-import { _electron as electron } from 'playwright-core';
+import { chromium } from 'playwright-core';
+import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -71,30 +72,54 @@ const falla = (m) => {
 };
 const registro = (m) => console.log(m);
 
-let app;
+let proc = null;
+let browser = null;
+const salidaApp = [];
 try {
+  const puerto = String(9400 + Math.floor(Math.random() * 400));
+  let exe;
+  let argsApp;
+  let cwd = DESKTOP;
   if (usarOut) {
     registro(`Arrancando out/ con Electron (datos aislados en ${datos})`);
-    app = await electron.launch({
-      args: [...comunes, '.'],
-      cwd: DESKTOP,
-      env,
-      executablePath: (await import('electron')).default,
-    });
+    exe = (await import('electron')).default;
+    argsApp = [...comunes, `--remote-debugging-port=${puerto}`, '.'];
   } else {
-    const exe = buscarEjecutable();
+    exe = buscarEjecutable();
     registro(`Arrancando ${exe} (datos aislados en ${datos})`);
-    app = await electron.launch({ executablePath: exe, args: comunes, env });
+    argsApp = [...comunes, `--remote-debugging-port=${puerto}`];
+    cwd = path.dirname(exe);
   }
+  // Se arranca la app a mano y se conecta por CDP: `_electron.launch` espera al inspector de Node y
+  // en macOS y Linux se quedaba esperando aunque la app estuviera arriba.
+  proc = spawn(exe, argsApp, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const guardar = (t) => salidaApp.push(String(t));
+  proc.stdout.on('data', guardar);
+  proc.stderr.on('data', guardar);
+  proc.on('exit', (c, sg) => salidaApp.push(`[proceso terminó: código ${c}, señal ${sg}]`));
 
+  let ws = null;
+  for (let i = 0; i < 240 && !ws; i++) {
+    await new Promise((r) => setTimeout(r, 500));
+    const m = /DevTools listening on (ws:\/\/\S+)/.exec(salidaApp.join(''));
+    if (m) ws = m[1];
+    if (proc.exitCode !== null)
+      throw new Error('La app terminó antes de abrir el puerto de depuración.');
+  }
+  if (!ws) throw new Error('La app no abrió el puerto de depuración en 120 s.');
+  browser = await chromium.connectOverCDP(ws);
+  const contexto = browser.contexts()[0];
   const consola = [];
   const alerta = (tipo, texto) => consola.push(`${tipo}: ${texto}`.slice(0, 500));
-  app.context().on('console', (m) => {
+  contexto.on('console', (m) => {
     if (m.type() === 'error' || m.type() === 'warning') alerta(m.type(), m.text());
   });
-  app.context().on('weberror', (e) => alerta('excepción', String(e.error())));
-
-  const ventana = await app.firstWindow({ timeout: 60_000 });
+  let ventana = contexto.pages().find((p) => !p.url().startsWith('devtools:'));
+  for (let i = 0; i < 240 && !ventana; i++) {
+    await new Promise((r) => setTimeout(r, 500));
+    ventana = contexto.pages().find((p) => !p.url().startsWith('devtools:'));
+  }
+  if (!ventana) throw new Error('La app no abrió ninguna ventana en 120 s.');
   ventana.on('pageerror', (e) => alerta('excepción', String(e)));
   // Se recarga con los oyentes puestos: nada de lo que pase al cargar se escapa.
   await ventana.reload();
@@ -148,20 +173,21 @@ try {
   if (!fallos.length || !/sin Marco/.test(String(e)))
     falla(`excepción en la prueba: ${e?.stack ?? e}`);
 } finally {
-  if (app) {
-    const proc = app.process();
-    await Promise.race([
-      app.evaluate(({ app: a }) => a.exit(0)).catch(() => undefined),
-      new Promise((r) => setTimeout(r, 15_000)),
-    ]);
-    // Solo por su propio PID.
-    if (proc.exitCode === null && proc.pid) {
-      try {
-        process.kill(proc.pid);
-      } catch {
-        /* ya salió */
-      }
+  if (browser) await browser.close().catch(() => undefined);
+  // Solo por su propio PID.
+  if (proc && proc.exitCode === null && proc.pid) {
+    try {
+      process.kill(proc.pid);
+    } catch {
+      /* ya salió */
     }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  if (fallos.length > 0 && salidaApp.length > 0) {
+    console.error('--- salida de la app (últimas líneas) ---');
+    console.error(
+      salidaApp.join('').split(String.fromCharCode(10)).slice(-40).join(String.fromCharCode(10)),
+    );
   }
   try {
     rmSync(datos, { recursive: true, force: true });
