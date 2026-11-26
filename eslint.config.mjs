@@ -27,6 +27,7 @@ export default tseslint.config(
         setTimeout: 'readonly',
         fetch: 'readonly',
         AbortSignal: 'readonly',
+        WebSocket: 'readonly',
         window: 'readonly',
         document: 'readonly',
         location: 'readonly',

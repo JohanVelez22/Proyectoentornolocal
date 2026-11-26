@@ -73,7 +73,44 @@ const falla = (m) => {
 const registro = (m) => console.log(m);
 
 /** Si no se puede conectar: qué responde el puerto de depuración y cómo está el proceso. */
-async function diagnosticar(puerto, pid) {
+async function pausarYMirar(urlWs) {
+  try {
+    const ws = new WebSocket(urlWs);
+    await new Promise((res, rej) => {
+      ws.onopen = res;
+      ws.onerror = () => rej(new Error('no abre'));
+      setTimeout(() => rej(new Error('sin respuesta al abrir')), 8000);
+    });
+    const pila = await new Promise((res) => {
+      ws.onmessage = (m) => {
+        const d = JSON.parse(String(m.data));
+        if (d.method === 'Debugger.paused') res(d.params.callFrames);
+      };
+      ws.send(JSON.stringify({ id: 1, method: 'Debugger.enable' }));
+      ws.send(JSON.stringify({ id: 2, method: 'Debugger.pause' }));
+      setTimeout(() => res(null), 15_000);
+    });
+    if (!pila)
+      return console.error(
+        'diagnóstico JS: el hilo principal no se detuvo en 15 s (bloqueado fuera de JS).',
+      );
+    const lineas = pila
+      .slice(0, 18)
+      .map(
+        (f) =>
+          `  ${f.functionName || '(anónima)'} ${String(f.url).split('/').slice(-2).join('/')}:${f.location.lineNumber + 1}`,
+      );
+    console.error(
+      `diagnóstico JS (pila del hilo principal):${String.fromCharCode(10)}${lineas.join(String.fromCharCode(10))}`,
+    );
+    ws.close();
+  } catch (e) {
+    console.error(`diagnóstico JS: ${e}`);
+  }
+}
+
+async function diagnosticar(puerto, pid, urlInspector) {
+  if (urlInspector) await pausarYMirar(urlInspector);
   for (const ruta of ['json/version', 'json/list']) {
     try {
       const r = await fetch(`http://127.0.0.1:${puerto}/${ruta}`, {
@@ -114,11 +151,11 @@ try {
   if (usarOut) {
     registro(`Arrancando out/ con Electron (datos aislados en ${datos})`);
     exe = (await import('electron')).default;
-    argsApp = [...comunes, `--remote-debugging-port=${puerto}`, '.'];
+    argsApp = [...comunes, '--inspect=0', `--remote-debugging-port=${puerto}`, '.'];
   } else {
     exe = buscarEjecutable();
     registro(`Arrancando ${exe} (datos aislados en ${datos})`);
-    argsApp = [...comunes, `--remote-debugging-port=${puerto}`];
+    argsApp = [...comunes, '--inspect=0', `--remote-debugging-port=${puerto}`];
     cwd = path.dirname(exe);
   }
   // Se arranca la app a mano y se conecta por CDP: `_electron.launch` espera al inspector de Node y
@@ -141,7 +178,8 @@ try {
   try {
     browser = await chromium.connectOverCDP(ws, { timeout: 60_000 });
   } catch (e) {
-    await diagnosticar(puerto, proc.pid);
+    const mi = /Debugger listening on (ws:\/\/\S+)/.exec(salidaApp.join(''));
+    await diagnosticar(puerto, proc.pid, mi?.[1]);
     throw e;
   }
   const contexto = browser.contexts()[0];
