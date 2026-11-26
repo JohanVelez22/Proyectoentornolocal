@@ -133,6 +133,19 @@ async function diagnosticar(puerto, pid, urlInspector) {
     console.error(`diagnóstico hilos:
 ${r.stdout}${r.stderr}`);
   }
+  if (process.platform === 'linux' && pid && process.env.CI) {
+    // Pila nativa del hilo principal (gdb sin símbolos de Electron, pero con los de V8 y Node exportados).
+    spawnSync('sudo', ['-n', 'apt-get', 'install', '-y', '-qq', 'gdb'], {
+      encoding: 'utf8',
+      timeout: 120_000,
+    });
+    const r = spawnSync(
+      'sudo',
+      ['-n', 'gdb', '-p', String(pid), '-batch', '-ex', 'thread 1', '-ex', 'bt 30'],
+      { encoding: 'utf8', timeout: 90_000 },
+    );
+    console.error(`diagnóstico gdb:${String.fromCharCode(10)}${r.stdout}${r.stderr}`);
+  }
   if (process.platform === 'darwin' && pid) {
     const r = spawnSync('sample', [String(pid), '2'], { encoding: 'utf8', timeout: 30_000 });
     console.error(`diagnóstico sample:
