@@ -272,6 +272,18 @@ export const pt: Textos = {
       'buscar.regex_lenta':
         'A expressão regular demora demais: simplifique-a ou use texto literal.',
       'buscar.demasiadas': 'Já há {maximo} buscas em andamento: cancele uma ou aguarde.',
+      'buscar.ruta_vetada': 'Essa pasta é de dados do WolfCore Dev: não é pesquisada.',
+      'buscar.resultado_caducado': 'Esse resultado não está mais disponível: busque de novo.',
+      'buscar.resultado_invalido': 'Esse resultado não pode ser aberto.',
+      'diff.raiz_invalida': 'Escolha duas pastas que existam e não sejam links.',
+      'diff.ruta_vetada': 'Essa pasta é de dados do WolfCore Dev: não é comparada.',
+      'diff.cancelado': 'Comparação cancelada.',
+      'diff.plazo': 'A comparação levou mais de {segundos} s e foi cancelada.',
+      'diff.memoria': 'A comparação precisa de memória demais (mais de {maximo}) e foi cancelada.',
+      'diff.ocupado': 'Já há uma comparação em andamento: cancele-a ou aguarde.',
+      'diff.caducado': 'Essa comparação não está mais disponível: compare de novo.',
+      'diff.archivo_invalido': 'Esse arquivo não pode mais ser comparado: mudou ou desapareceu.',
+      'diff.fallo': 'A comparação falhou.',
       'terminal.no_abrio': 'Não foi possível abrir o terminal.',
       'terminal.no_instalada':
         '{nombre} não está instalado. Escolha outro terminal em Configurações.',

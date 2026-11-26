@@ -868,7 +868,7 @@ export class Nucleo {
     });
     this.editorCodigo = new EditorCodigo({
       carpetaCopias: () => this.rutas.editorCopias(),
-      carpetasPropias: () => [...new Set([this.rutas.base, this.plataforma.carpetaDatos()])],
+      carpetasPropias: () => this.carpetasPropias(),
       sitios: () => this.sitios.listar(),
     });
     this.registros = m.registros;
@@ -3861,7 +3861,21 @@ export class Nucleo {
    * carpeta de un proyecto por id.
    */
   iniciarBusqueda(o: OpcionesBusqueda): string {
-    return this.busquedas.iniciar(o);
+    // Lo propio de WolfCore (datos, respaldos, secretos…) nunca se busca, lo pida quien lo pida.
+    return this.busquedas.iniciar({ ...o, vetadas: this.carpetasPropias() });
+  }
+
+  /**
+   * Ruta de un resultado que produjo esta búsqueda (D44). Es la única vía para que la ventana abra
+   * un resultado en el editor: la ventana nunca aporta la ruta. Caduca a los 15 minutos.
+   */
+  rutaDeResultadoBusqueda(idBusqueda: string, idResultado: number): Promise<string> {
+    return this.busquedas.rutaDeResultado(idBusqueda, idResultado);
+  }
+
+  /** Carpetas de datos de WolfCore: ni se buscan ni se comparan ni se abren en el editor. */
+  private carpetasPropias(): string[] {
+    return [...new Set([this.rutas.base, this.plataforma.carpetaDatos()])];
   }
 
   cancelarBusqueda(id: string): boolean {

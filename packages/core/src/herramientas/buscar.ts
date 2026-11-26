@@ -1,9 +1,10 @@
 import { createReadStream } from 'node:fs';
-import { lstat, readdir } from 'node:fs/promises';
+import { lstat, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import vm from 'node:vm';
 import { ErrorWolf } from '../errores';
+import { rutaDentroDe } from '../plataforma/sistema';
 
 /**
  * Búsqueda por palabra clave en un archivo o una carpeta (por nombre y por contenido).
@@ -27,21 +28,43 @@ export interface OpcionesBusqueda {
   incluir: string[];
   /** Patrones de archivos y carpetas que se saltan. */
   excluir: string[];
+  /** Líneas de contexto antes y después de cada coincidencia de contenido (0 a 5; por omisión 2). */
+  contexto?: number;
+  /** `true`: también se miran las carpetas pesadas (node_modules, vendor, .git…). */
+  incluirPesadas?: boolean;
+  /** Carpetas que nunca se buscan (la carpeta de datos de WolfCore). Las pone el núcleo. */
+  vetadas?: string[];
 }
 
 export interface ResultadoBusqueda {
+  /** Número de resultado dentro de su búsqueda (1, 2, 3…): con él se pide abrirlo en el editor. */
+  id: number;
+  /** Por qué salió: el nombre del archivo o su contenido. */
+  tipo: 'nombre' | 'contenido';
   archivo: string;
+  /** Solo en las coincidencias de nombre: es una carpeta (no se abre en el editor). */
+  esCarpeta: boolean;
   /** Base 1; null en las coincidencias de nombre. */
   linea: number | null;
   columna: number | null;
+  /** La línea encontrada (recortada alrededor de la coincidencia) o el nombre. */
   extracto: string;
+  /** Dónde empieza y cuánto mide la coincidencia dentro de `extracto`. */
+  inicio: number;
+  largo: number;
+  /** Líneas de contexto (recortadas), de la más lejana a la más cercana. */
+  antes: string[];
+  despues: string[];
 }
 
 export interface ResumenBusqueda {
   /** Archivos con al menos un resultado. */
   archivos: number;
   coincidencias: number;
-  /** Se cortó por un tope (resultados, archivos o tiempo): hay más de lo que se muestra. */
+  /** Resultados por nombre y por contenido (suman `coincidencias`). */
+  nombres: number;
+  contenidos: number;
+  /** Se cortó por un tope (resultados, archivos, bytes o tiempo): hay más de lo que se muestra. */
   truncado: boolean;
   cancelado: boolean;
   /** Archivos leídos o comparados por nombre. */
@@ -66,6 +89,8 @@ export const LIMITES_BUSQUEDA = {
   profundidad: 40,
   /** Archivos revisados en total (con o sin resultado). */
   archivosExaminados: 200_000,
+  /** Bytes leídos en total (de todos los archivos). */
+  bytesTotales: 2 * 1024 * 1024 * 1024,
   /** Tiempo total de una búsqueda. */
   plazoMs: 60_000,
 } as const;
@@ -79,6 +104,13 @@ export const MAX_PATRONES = 50;
 export const MAX_LARGO_PATRON = 200;
 const BYTES_SONDEO = 8 * 1024;
 const MAX_EXTRACTO = 240;
+/** Largo máximo de cada línea de contexto. */
+const MAX_LINEA_CONTEXTO = 200;
+export const MAX_CONTEXTO = 5;
+export const CONTEXTO_POR_OMISION = 2;
+/** Extensiones que casi siempre son binarias: se compara el nombre pero no se abre el archivo. */
+const EXTENSION_BINARIA =
+  /\.(?:png|jpe?g|gif|webp|ico|bmp|tiff?|psd|zip|gz|tgz|bz2|xz|7z|rar|jar|war|exe|dll|so|dylib|bin|obj|class|pyc|pdf|woff2?|ttf|otf|eot|mp3|mp4|mkv|avi|mov|wav|flac|ogg|webm|sqlite3?|db|iso|dmg|msi)$/i;
 /** Cuántos trozos de línea se entregan juntos al motor de expresiones (acota el tiempo por llamada). */
 const MAX_COINCIDENCIAS_POR_LINEA = 50;
 
@@ -93,6 +125,7 @@ interface Hallazgo {
   i: number;
   /** Índice base 0 dentro de la línea. */
   col: number;
+  largo: number;
 }
 
 /** Busca la consulta en un lote de líneas; devuelve cada coincidencia (línea y columna). */
@@ -112,7 +145,7 @@ function comparadorLiteral(consulta: string, mayusculas: boolean): Comparador {
       re.lastIndex = 0;
       let n = 0;
       for (let m = re.exec(lineas[i]!); m !== null && n < MAX_COINCIDENCIAS_POR_LINEA; n++) {
-        salida.push({ i, col: m.index });
+        salida.push({ i, col: m.index, largo: m[0].length });
         m = re.exec(lineas[i]!);
       }
     }
@@ -128,7 +161,7 @@ globalThis.__buscar = function (lineas, tope) {
     let n = 0;
     let m;
     while ((m = __re.exec(lineas[i])) !== null && n < tope) {
-      salida.push(i, m.index);
+      salida.push(i, m.index, m[0].length);
       n++;
       if (m[0].length === 0) __re.lastIndex++;
     }
@@ -186,7 +219,9 @@ function comparadorRegexEn(consulta: string, flags: string, plazoMs: number): Co
     }
     const arr = Array.from(plano as ArrayLike<number>);
     const salida: Hallazgo[] = [];
-    for (let k = 0; k + 1 < arr.length; k += 2) salida.push({ i: arr[k]!, col: arr[k + 1]! });
+    for (let k = 0; k + 2 < arr.length; k += 3) {
+      salida.push({ i: arr[k]!, col: arr[k + 1]!, largo: arr[k + 2]! });
+    }
     return salida;
   };
 }
@@ -249,20 +284,46 @@ function coincidePatron(patrones: Patron[], nombre: string, relativa: string): b
   });
 }
 
-function extractoDe(linea: string, col: number): string {
+function extractoDe(linea: string, col: number): { texto: string; inicio: number } {
   const limpia = linea.replace(/\r$/, '');
-  if (limpia.length <= MAX_EXTRACTO) return limpia;
+  if (limpia.length <= MAX_EXTRACTO) return { texto: limpia, inicio: col };
   const ini = Math.max(0, Math.min(col - 60, limpia.length - MAX_EXTRACTO));
-  return limpia.slice(ini, ini + MAX_EXTRACTO);
+  return { texto: limpia.slice(ini, ini + MAX_EXTRACTO), inicio: col - ini };
 }
+
+const contextoDe = (linea: string): string => linea.replace(/\r$/, '').slice(0, MAX_LINEA_CONTEXTO);
 
 /** Cede el turno al bucle de eventos (la búsqueda nunca acapara el proceso principal). */
 const ceder = (): Promise<void> => new Promise((r) => setImmediate(r));
 
 class Corte extends Error {
-  constructor(readonly motivo: 'resultados' | 'tiempo' | 'archivos' | 'cancelado') {
+  constructor(readonly motivo: 'resultados' | 'tiempo' | 'archivos' | 'bytes' | 'cancelado') {
     super(motivo);
   }
+}
+
+/** `\\servidor\recurso`, `//x/y`, `\\?\` y `\\.\`: se saltarían el veto de la carpeta de datos. */
+const esUnc = (r: string): boolean => /^[\\/]{2}/.test(r);
+
+function resultadoDeNombre(
+  archivo: string,
+  nombre: string,
+  esCarpeta: boolean,
+  h: Hallazgo,
+): Omit<ResultadoBusqueda, 'id'> {
+  const { texto, inicio } = extractoDe(nombre, h.col);
+  return {
+    tipo: 'nombre',
+    archivo,
+    esCarpeta,
+    linea: null,
+    columna: null,
+    extracto: texto,
+    inicio,
+    largo: Math.min(h.largo, texto.length - inicio),
+    antes: [],
+    despues: [],
+  };
 }
 
 export async function buscar(
@@ -283,12 +344,24 @@ export async function buscar(
   ) {
     throw new ErrorWolf('buscar.consulta_invalida', 'Escriba qué buscar (hasta 500 caracteres).');
   }
+  const contexto = o.contexto ?? CONTEXTO_POR_OMISION;
+  if (!Number.isInteger(contexto) || contexto < 0 || contexto > MAX_CONTEXTO) {
+    throw new ErrorWolf('buscar.consulta_invalida', 'El contexto va de 0 a 5 líneas.');
+  }
   const incluir = compilarPatrones(o.incluir);
-  const excluir = compilarPatrones(o.excluir);
+  // Las carpetas pesadas se saltan salvo que se pida lo contrario (no depende de lo que mande la ventana).
+  const excluir = compilarPatrones([
+    ...(o.incluirPesadas === true ? [] : EXCLUIR_POR_DEFECTO),
+    ...o.excluir,
+  ]);
   const comparar = o.regex
     ? comparadorRegex(o.consulta, o.mayusculas, plazoRegex)
     : comparadorLiteral(o.consulta, o.mayusculas);
 
+  // Rutas UNC fuera; y nada de lo que hay dentro de la carpeta de datos de WolfCore.
+  if (esUnc(o.raiz)) {
+    throw new ErrorWolf('buscar.raiz_invalida', 'La carpeta o el archivo no es válido.');
+  }
   let infoRaiz;
   try {
     infoRaiz = await lstat(o.raiz);
@@ -299,6 +372,22 @@ export async function buscar(
   if (infoRaiz.isSymbolicLink() || (!infoRaiz.isDirectory() && !infoRaiz.isFile())) {
     throw new ErrorWolf('buscar.raiz_invalida', 'La carpeta o el archivo no es válido.');
   }
+  const raizReal = await realpath(o.raiz).catch(() => path.resolve(o.raiz));
+  if (esUnc(raizReal)) {
+    throw new ErrorWolf('buscar.raiz_invalida', 'La carpeta o el archivo no es válido.');
+  }
+  const vetadas: string[] = [];
+  for (const v of o.vetadas ?? []) {
+    vetadas.push(path.resolve(v));
+    const real = await realpath(v).catch(() => null);
+    if (real) vetadas.push(real);
+  }
+  if (vetadas.some((v) => rutaDentroDe(v, raizReal) || rutaDentroDe(v, path.resolve(o.raiz)))) {
+    throw new ErrorWolf(
+      'buscar.ruta_vetada',
+      'Esa carpeta es de datos de WolfCore Dev: no se busca dentro de ella.',
+    );
+  }
 
   const inicio = ahora();
   const resumen: ResumenBusqueda = {
@@ -308,7 +397,10 @@ export async function buscar(
     cancelado: false,
     examinados: 0,
     omitidos: 0,
+    nombres: 0,
+    contenidos: 0,
   };
+  let bytesLeidos = 0;
   const porNombre = o.modo !== 'contenido';
   const porContenido = o.modo !== 'nombre';
 
@@ -317,14 +409,16 @@ export async function buscar(
     if (ahora() - inicio > limites.plazoMs) throw new Corte('tiempo');
   };
 
-  const emitir = (r: ResultadoBusqueda, nuevoArchivo: boolean): void => {
+  const emitir = (r: Omit<ResultadoBusqueda, 'id'>, nuevoArchivo: boolean): void => {
     if (nuevoArchivo) {
       if (resumen.archivos >= limites.archivosConResultado) throw new Corte('resultados');
       resumen.archivos++;
     }
     if (resumen.coincidencias >= limites.coincidencias) throw new Corte('resultados');
     resumen.coincidencias++;
-    alResultado(r);
+    if (r.tipo === 'nombre') resumen.nombres++;
+    else resumen.contenidos++;
+    alResultado({ ...r, id: resumen.coincidencias });
     // Llegar al tope ya corta: es posible que haya más, así que se marca como truncado.
     if (resumen.coincidencias >= limites.coincidencias) throw new Corte('resultados');
   };
@@ -334,17 +428,20 @@ export async function buscar(
     tamano: number,
     estado: { tuvo: boolean },
   ): Promise<void> => {
-    if (tamano > limites.bytesPorArchivo) {
+    if (tamano > limites.bytesPorArchivo || EXTENSION_BINARIA.test(archivo)) {
       resumen.omitidos++;
       return;
     }
     const flujo = createReadStream(archivo, { highWaterMark: 64 * 1024 });
     const decodificador = new StringDecoder('utf8');
     let resto = '';
-    let lineaBase = 1;
     let primero = true;
     let sondeado = false;
     let leidos = 0;
+    /** Líneas por revisar y, delante, hasta `contexto` ya revisadas (su contexto previo). */
+    let lineas: string[] = [];
+    let revisadas = 0;
+    let primeraLinea = 1;
 
     const procesar = (texto: string, ultimo: boolean): void => {
       let t = resto + texto;
@@ -353,21 +450,39 @@ export async function buscar(
       const partes = t.split('\n');
       resto = ultimo ? '' : (partes.pop() ?? '');
       if (ultimo && partes.length && partes[partes.length - 1] === '') partes.pop();
-      if (partes.length === 0) return;
-      for (const h of comparar(partes)) {
-        const linea = partes[h.i]!;
-        emitir(
-          {
-            archivo,
-            linea: lineaBase + h.i,
-            columna: h.col + 1,
-            extracto: extractoDe(linea, h.col),
-          },
-          !estado.tuvo,
-        );
-        estado.tuvo = true;
+      lineas = lineas.concat(partes);
+      // Se retienen las últimas `contexto` líneas hasta tener su contexto posterior.
+      const hasta = ultimo ? lineas.length : Math.max(revisadas, lineas.length - contexto);
+      if (hasta > revisadas) {
+        const lote = lineas.slice(revisadas, hasta);
+        for (const h of comparar(lote)) {
+          const idx = revisadas + h.i;
+          const { texto: extracto, inicio } = extractoDe(lineas[idx]!, h.col);
+          emitir(
+            {
+              tipo: 'contenido',
+              archivo,
+              esCarpeta: false,
+              linea: primeraLinea + idx,
+              columna: h.col + 1,
+              extracto,
+              inicio,
+              largo: Math.min(h.largo, extracto.length - inicio),
+              antes: lineas.slice(Math.max(0, idx - contexto), idx).map(contextoDe),
+              despues: lineas.slice(idx + 1, idx + 1 + contexto).map(contextoDe),
+            },
+            !estado.tuvo,
+          );
+          estado.tuvo = true;
+        }
+        revisadas = hasta;
       }
-      lineaBase += partes.length;
+      const sobra = revisadas - contexto;
+      if (sobra > 0) {
+        lineas = lineas.slice(sobra);
+        revisadas -= sobra;
+        primeraLinea += sobra;
+      }
     };
 
     try {
@@ -381,6 +496,8 @@ export async function buscar(
           }
         }
         leidos += buf.length;
+        bytesLeidos += buf.length;
+        if (bytesLeidos > limites.bytesTotales) throw new Corte('bytes');
         if (leidos > limites.bytesPorArchivo) {
           // Creció mientras se leía: se deja lo ya revisado.
           resumen.omitidos++;
@@ -407,8 +524,9 @@ export async function buscar(
     if (incluir.length && !coincidePatron(incluir, nombre, relativa)) return;
     // Un archivo cuenta una sola vez aunque coincida por nombre y por contenido.
     const estado = { tuvo: false };
-    if (porNombre && comparar([nombre]).length) {
-      emitir({ archivo, linea: null, columna: null, extracto: nombre }, true);
+    const porEnNombre = porNombre ? comparar([nombre])[0] : undefined;
+    if (porEnNombre) {
+      emitir(resultadoDeNombre(archivo, nombre, false, porEnNombre), true);
       estado.tuvo = true;
     }
     if (porContenido) await leerContenido(archivo, tamano, estado);
@@ -432,9 +550,10 @@ export async function buscar(
       const rel = relDir === '' ? e.name : `${relDir}/${e.name}`;
       if (coincidePatron(excluir, e.name, rel)) continue;
       if (e.isDirectory()) {
-        if (porNombre && incluir.length === 0 && comparar([e.name]).length) {
-          emitir({ archivo: ruta, linea: null, columna: null, extracto: e.name }, true);
-        }
+        // Nunca se entra en la carpeta de datos de WolfCore (si la raíz la contiene).
+        if (vetadas.some((v) => rutaDentroDe(v, ruta))) continue;
+        const enNombre = porNombre && incluir.length === 0 ? comparar([e.name])[0] : undefined;
+        if (enNombre) emitir(resultadoDeNombre(ruta, e.name, true, enNombre), true);
         if (profundidad < limites.profundidad) subcarpetas.push({ ruta, rel });
       } else if (e.isFile()) {
         let tamano = 0;
@@ -477,6 +596,10 @@ export async function buscar(
 /* ───────────── Búsquedas en segundo plano ───────────── */
 
 export const MAX_BUSQUEDAS_SIMULTANEAS = 3;
+/** Cuánto vive el registro de resultados de una búsqueda terminada (para abrirlos en el editor). */
+export const CADUCIDAD_RESULTADOS_MS = 15 * 60 * 1000;
+/** Búsquedas con resultados guardados a la vez (las más viejas se olvidan). */
+const MAX_BUSQUEDAS_GUARDADAS = 6;
 const LOTE_RESULTADOS = 50;
 const ESPERA_LOTE_MS = 100;
 
@@ -504,6 +627,14 @@ export interface SalidaBusquedas {
 export class Busquedas {
   private readonly enCurso = new Map<string, AbortController>();
   private contador = 0;
+  /**
+   * Resultados que produjo el propio núcleo, por búsqueda y por número. La ventana nunca aporta una
+   * ruta: pide abrir «el resultado 7 de la búsqueda b3» y la ruta sale de aquí.
+   */
+  private readonly guardadas = new Map<
+    string,
+    { resultados: Map<number, { archivo: string; esCarpeta: boolean }>; expira: number }
+  >();
 
   constructor(
     private readonly salida: SalidaBusquedas,
@@ -521,6 +652,12 @@ export class Busquedas {
     const id = `b${Date.now().toString(36)}${(++this.contador).toString(36)}`;
     const control = new AbortController();
     this.enCurso.set(id, control);
+    this.guardadas.set(id, { resultados: new Map(), expira: Number.POSITIVE_INFINITY });
+    while (this.guardadas.size > MAX_BUSQUEDAS_GUARDADAS) {
+      const vieja = [...this.guardadas.keys()].find((k) => !this.enCurso.has(k));
+      if (vieja === undefined) break;
+      this.guardadas.delete(vieja);
+    }
     void this.correr(id, o, control);
     return id;
   }
@@ -534,6 +671,36 @@ export class Busquedas {
 
   cancelarTodas(): void {
     for (const c of this.enCurso.values()) c.abort();
+  }
+
+  /**
+   * Ruta absoluta del resultado `idResultado` de la búsqueda `idBusqueda`, solo si lo produjo el
+   * núcleo, no caducó, es un archivo normal (no una carpeta ni un enlace) y sigue existiendo.
+   */
+  async rutaDeResultado(idBusqueda: string, idResultado: number): Promise<string> {
+    const ahora = this.deps.ahora ?? Date.now;
+    const g = this.guardadas.get(idBusqueda);
+    if (!g || g.expira < ahora()) {
+      this.guardadas.delete(idBusqueda);
+      throw new ErrorWolf(
+        'buscar.resultado_caducado',
+        'Ese resultado ya no está disponible: vuelva a buscar.',
+      );
+    }
+    const r = g.resultados.get(idResultado);
+    if (!r || r.esCarpeta) {
+      throw new ErrorWolf('buscar.resultado_invalido', 'Ese resultado no se puede abrir.');
+    }
+    try {
+      const info = await lstat(r.archivo);
+      if (!info.isFile() || info.isSymbolicLink()) throw new Error('no es un archivo normal');
+    } catch {
+      throw new ErrorWolf(
+        'buscar.resultado_caducado',
+        'Ese resultado ya no está disponible: vuelva a buscar.',
+      );
+    }
+    return r.archivo;
   }
 
   private async correr(id: string, o: OpcionesBusqueda, control: AbortController): Promise<void> {
@@ -553,6 +720,10 @@ export class Busquedas {
       const resumen = await buscar(
         o,
         (r) => {
+          const g = this.guardadas.get(id);
+          if (g && g.resultados.size < LIMITES_BUSQUEDA.coincidencias) {
+            g.resultados.set(r.id, { archivo: r.archivo, esCarpeta: r.esCarpeta });
+          }
           lote.push(r);
           if (lote.length >= LOTE_RESULTADOS) vaciar();
           else temporizador ??= setTimeout(vaciar, ESPERA_LOTE_MS);
@@ -575,6 +746,8 @@ export class Busquedas {
       });
     } finally {
       this.enCurso.delete(id);
+      const g = this.guardadas.get(id);
+      if (g) g.expira = (this.deps.ahora ?? Date.now)() + CADUCIDAD_RESULTADOS_MS;
     }
   }
 }

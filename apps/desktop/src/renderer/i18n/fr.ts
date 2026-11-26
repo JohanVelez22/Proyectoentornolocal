@@ -278,6 +278,18 @@ export const fr: Textos = {
       'buscar.regex_lenta':
         'L’expression régulière est trop lente : simplifiez-la ou utilisez du texte littéral.',
       'buscar.demasiadas': '{maximo} recherches sont déjà en cours : annulez-en une ou patientez.',
+      'buscar.ruta_vetada': 'Ce dossier contient des données de WolfCore Dev : il n’est pas exploré.',
+      'buscar.resultado_caducado': 'Ce résultat n’est plus disponible : relancez la recherche.',
+      'buscar.resultado_invalido': 'Ce résultat ne peut pas être ouvert.',
+      'diff.raiz_invalida': 'Choisissez deux dossiers existants qui ne sont pas des liens.',
+      'diff.ruta_vetada': 'Ce dossier contient des données de WolfCore Dev : il n’est pas comparé.',
+      'diff.cancelado': 'Comparaison annulée.',
+      'diff.plazo': 'La comparaison a duré plus de {segundos} s et a été annulée.',
+      'diff.memoria': 'La comparaison nécessite trop de mémoire (plus de {maximo}) et a été annulée.',
+      'diff.ocupado': 'Une comparaison est déjà en cours : annulez-la ou patientez.',
+      'diff.caducado': 'Cette comparaison n’est plus disponible : relancez-la.',
+      'diff.archivo_invalido': 'Ce fichier ne peut plus être comparé : il a changé ou a disparu.',
+      'diff.fallo': 'La comparaison a échoué.',
       'terminal.no_abrio': 'Impossible d’ouvrir le terminal.',
       'terminal.no_instalada':
         '{nombre} n’est pas installé. Choisissez un autre terminal dans Réglages.',
