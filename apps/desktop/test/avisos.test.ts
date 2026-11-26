@@ -410,7 +410,7 @@ describe('aviso de credenciales sin proteger (D38c)', () => {
       const t = textoAviso(id, a);
       const g = textoAviso(id, { ...a, codigo: 'otro' });
       expect(t.titulo, id).not.toBe(g.titulo);
-      expect(t.cuerpo, id).not.toMatch(/[\/]|credenciales\.json/);
+      expect(t.cuerpo, id).not.toMatch(/[\\/]|credenciales\.json/);
       genericos.add(t.titulo);
     }
     expect(genericos.size).toBe(4);
