@@ -451,7 +451,11 @@ function filasDe(ops: Op[], a: string[], b: string[], tope: number) {
   const mostrar = new Array<boolean>(ops.length).fill(false);
   ops.forEach((o, i) => {
     if (o.tipo === 'igual') return;
-    for (let k = Math.max(0, i - CONTEXTO_DIFF); k <= Math.min(ops.length - 1, i + CONTEXTO_DIFF); k++) {
+    for (
+      let k = Math.max(0, i - CONTEXTO_DIFF);
+      k <= Math.min(ops.length - 1, i + CONTEXTO_DIFF);
+      k++
+    ) {
       mostrar[k] = true;
     }
   });
@@ -460,7 +464,8 @@ function filasDe(ops: Op[], a: string[], b: string[], tope: number) {
   let quitadas = 0;
   let omitidas = 0;
   let truncado = false;
-  const recorte = (s: string): string => (s.length > MAX_TEXTO_FILA ? s.slice(0, MAX_TEXTO_FILA) : s);
+  const recorte = (s: string): string =>
+    s.length > MAX_TEXTO_FILA ? s.slice(0, MAX_TEXTO_FILA) : s;
   const cerrarSalto = (): void => {
     if (omitidas > 0 && filas.length > 0) {
       filas.push({ tipo: 'salto', numA: null, numB: null, texto: String(omitidas) });
@@ -558,10 +563,7 @@ export async function compararArchivo(
 /* ───────────── Entrada del proceso de trabajo ───────────── */
 
 /** Ejecuta un mensaje y devuelve la respuesta (los errores salen con código). */
-export async function operarDiff(
-  m: MensajeDiff,
-  senal?: AbortSignal,
-): Promise<RespuestaDiff> {
+export async function operarDiff(m: MensajeDiff, senal?: AbortSignal): Promise<RespuestaDiff> {
   try {
     if (m.op === 'carpetas') return { ok: true, datos: await compararCarpetas(m, senal) };
     if (m.op === 'archivo') return { ok: true, datos: await compararArchivo(m, senal) };
@@ -570,9 +572,14 @@ export async function operarDiff(
     if (e instanceof Corte) {
       return e.motivo === 'cancelado'
         ? { ok: false, codigo: 'diff.cancelado' }
-        : { ok: false, codigo: 'diff.plazo', datos: { segundos: Math.round(m.lim.plazoMs / 1000) } };
+        : {
+            ok: false,
+            codigo: 'diff.plazo',
+            datos: { segundos: Math.round(m.lim.plazoMs / 1000) },
+          };
     }
-    if (esErrorWolf(e)) return { ok: false, codigo: e.codigo, ...(e.datos ? { datos: e.datos } : {}) };
+    if (esErrorWolf(e))
+      return { ok: false, codigo: e.codigo, ...(e.datos ? { datos: e.datos } : {}) };
     return { ok: false, codigo: 'diff.archivo_invalido' };
   }
 }

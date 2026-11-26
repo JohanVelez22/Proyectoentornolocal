@@ -67,7 +67,10 @@ describe('Buscar (D44): grupos y vista previa', () => {
   });
 
   it('da la línea con contexto antes y después y marca dónde está la coincidencia', async () => {
-    await escribir('f.txt', ['uno', 'dos', 'tres', 'una AGUJA aquí', 'cinco', 'seis', 'siete'].join('\r\n'));
+    await escribir(
+      'f.txt',
+      ['uno', 'dos', 'tres', 'una AGUJA aquí', 'cinco', 'seis', 'siete'].join('\r\n'),
+    );
     const { res } = await correr({ modo: 'contenido', contexto: 2 });
     expect(res).toHaveLength(1);
     const r = res[0]!;
@@ -110,8 +113,12 @@ describe('Buscar (D44): grupos y vista previa', () => {
 
   it('un contexto fuera de 0 a 5 se rechaza con código', async () => {
     await escribir('f.txt', 'aguja');
-    await expect(correr({ contexto: 6 })).rejects.toMatchObject({ codigo: 'buscar.consulta_invalida' });
-    await expect(correr({ contexto: -1 })).rejects.toMatchObject({ codigo: 'buscar.consulta_invalida' });
+    await expect(correr({ contexto: 6 })).rejects.toMatchObject({
+      codigo: 'buscar.consulta_invalida',
+    });
+    await expect(correr({ contexto: -1 })).rejects.toMatchObject({
+      codigo: 'buscar.consulta_invalida',
+    });
   });
 });
 
@@ -178,7 +185,11 @@ describe('Buscar (D44): qué se ignora', () => {
     const { res } = await correr({ modo: 'contenido', vetadas: [path.join(raiz, 'datos')] });
     expect(res.map(rel)).toEqual(['proyecto/a.txt']);
     // Tampoco por nombre.
-    const n = await correr({ consulta: 'datos', modo: 'nombre', vetadas: [path.join(raiz, 'datos')] });
+    const n = await correr({
+      consulta: 'datos',
+      modo: 'nombre',
+      vetadas: [path.join(raiz, 'datos')],
+    });
     expect(n.res).toHaveLength(0);
   });
 });

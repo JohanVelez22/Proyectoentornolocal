@@ -171,7 +171,10 @@ describe('compararCarpetas: topes y cancelación', () => {
     e.poner(e.a, 'a.txt', 'a');
     const control = new AbortController();
     control.abort();
-    const r = await operarDiff({ op: 'carpetas', a: e.a, b: e.b, vetadas: [], lim: lim() }, control.signal);
+    const r = await operarDiff(
+      { op: 'carpetas', a: e.a, b: e.b, vetadas: [], lim: lim() },
+      control.signal,
+    );
     expect(r).toMatchObject({ ok: false, codigo: 'diff.cancelado' });
     let t = 0;
     await expect(
@@ -211,14 +214,26 @@ describe('compararArchivo: diff de texto', () => {
     e.poner(e.a, 'm.txt', 'uno\r\ndos\r\ntres\r\n');
     e.poner(e.b, 'm.txt', 'uno\ndos\ntres\n');
     const s = texto(await archivo(e.a, e.b, 'm.txt'));
-    expect(s).toMatchObject({ saltosA: 'crlf', saltosB: 'lf', soloSaltos: true, agregadas: 0, quitadas: 0 });
+    expect(s).toMatchObject({
+      saltosA: 'crlf',
+      saltosB: 'lf',
+      soloSaltos: true,
+      agregadas: 0,
+      quitadas: 0,
+    });
     // En la carpeta aparecen como distintos (el tamaño cambia).
     const c = await carpetas(e.a, e.b);
     expect(c.distintos.map((x) => x.ruta)).toEqual(['m.txt']);
     e.poner(e.a, 'n.txt', 'uno\r\ndos\r\n');
     e.poner(e.b, 'n.txt', 'uno\nDOS\n');
     const n = texto(await archivo(e.a, e.b, 'n.txt'));
-    expect(n).toMatchObject({ saltosA: 'crlf', saltosB: 'lf', soloSaltos: false, agregadas: 1, quitadas: 1 });
+    expect(n).toMatchObject({
+      saltosA: 'crlf',
+      saltosB: 'lf',
+      soloSaltos: false,
+      agregadas: 1,
+      quitadas: 1,
+    });
     // El texto de las filas no arrastra el \r.
     expect(n.filas.every((f) => !f.texto.includes('\r'))).toBe(true);
   });
@@ -271,7 +286,15 @@ describe('compararArchivo: diff de texto', () => {
     e.poner(e.a, 'f.txt', 'a');
     e.poner(e.b, 'f.txt', 'b');
     e.poner(e.raiz, 'secreto.txt', 's');
-    for (const rel of ['../secreto.txt', '/etc/passwd', 'a/../f.txt', 'C:/x', 'f.txt:flujo', '', 'f\\x']) {
+    for (const rel of [
+      '../secreto.txt',
+      '/etc/passwd',
+      'a/../f.txt',
+      'C:/x',
+      'f.txt:flujo',
+      '',
+      'f\\x',
+    ]) {
       await expect(resolverSeguro(e.a, rel)).rejects.toThrow();
     }
     try {
@@ -280,7 +303,13 @@ describe('compararArchivo: diff de texto', () => {
     } catch {
       /* sin permiso para crear enlaces */
     }
-    const r = await operarDiff({ op: 'archivo', a: e.a, b: e.b, rel: '../secreto.txt', lim: lim() });
+    const r = await operarDiff({
+      op: 'archivo',
+      a: e.a,
+      b: e.b,
+      rel: '../secreto.txt',
+      lim: lim(),
+    });
     expect(r.ok).toBe(false);
   });
 });
@@ -308,7 +337,8 @@ describe('diffLineasMyers', () => {
       const t = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0));
       for (let i = 1; i <= a.length; i++)
         for (let j = 1; j <= b.length; j++)
-          t[i]![j] = a[i - 1] === b[j - 1] ? t[i - 1]![j - 1]! + 1 : Math.max(t[i - 1]![j]!, t[i]![j - 1]!);
+          t[i]![j] =
+            a[i - 1] === b[j - 1] ? t[i - 1]![j - 1]! + 1 : Math.max(t[i - 1]![j]!, t[i]![j - 1]!);
       const cambios = ops.filter((o) => o.tipo !== 'igual').length;
       expect(cambios).toBe(a.length + b.length - 2 * t[a.length]![b.length]!);
     }
@@ -323,7 +353,10 @@ describe('solo lectura', () => {
     e.poner(e.a, 'solo.txt', 'a');
     e.poner(e.b, 'bin.dat', Buffer.from([0, 1, 2]));
     const antes = [instantanea(e.a), instantanea(e.b)];
-    const servicio = new DiffCarpetas({ ejecutor: ejecutarDiffEnProceso, carpetasPropias: () => [] });
+    const servicio = new DiffCarpetas({
+      ejecutor: ejecutarDiffEnProceso,
+      carpetasPropias: () => [],
+    });
     const c = await servicio.comparar(e.a, e.b);
     await servicio.archivo(c.id, c.distintos[0]!.id);
     await servicio.rutaParaEditor(c.id, c.soloA[0]!.id, 'a');
@@ -342,7 +375,9 @@ describe('solo lectura', () => {
     expect(fuente).not.toMatch(
       /\b(writeFile|appendFile|createWriteStream|unlink|rmdir|rename|mkdir|copyFile|truncate|chmod|chown|utimes|symlink|link|writeSync)\b\s*\(/,
     );
-    expect(imports).not.toMatch(/\b(writeFile|appendFile|createWriteStream|unlink|rm|rename|mkdir|copyFile)\b/);
+    expect(imports).not.toMatch(
+      /\b(writeFile|appendFile|createWriteStream|unlink|rm|rename|mkdir|copyFile)\b/,
+    );
     // Y abre los archivos solo para leer.
     expect(fuente).toContain("open(ruta, 'r')");
   });
@@ -386,9 +421,9 @@ describe('DiffCarpetas (servicio)', () => {
     expect(await codigo(s.rutaParaEditor(c.id, sa.id, 'b'))).toBe('diff.archivo_invalido');
     // Ids inventados, rutas en lugar de ids, lados raros, comparación inexistente.
     expect(await codigo(s.rutaParaEditor(c.id, 999, 'a'))).toBe('diff.archivo_invalido');
-    expect(await codigo(s.rutaParaEditor(c.id, path.join(e.a, 'dif.txt') as unknown as number, 'a'))).toBe(
-      'diff.archivo_invalido',
-    );
+    expect(
+      await codigo(s.rutaParaEditor(c.id, path.join(e.a, 'dif.txt') as unknown as number, 'a')),
+    ).toBe('diff.archivo_invalido');
     expect(await codigo(s.rutaParaEditor(c.id, di.id, 'c' as 'a'))).toBe('diff.archivo_invalido');
     expect(await codigo(s.rutaParaEditor('c-inventada', di.id, 'a'))).toBe('diff.caducado');
     // El diff de un archivo solo vale para los distintos.
@@ -440,7 +475,9 @@ describe('DiffCarpetas (servicio)', () => {
         new Promise((resolve) => {
           vistaSenal = o.senal;
           liberar = () => resolve({ ok: false, codigo: 'diff.cancelado' });
-          o.senal?.addEventListener('abort', () => resolve({ ok: false, codigo: 'diff.cancelado' }));
+          o.senal?.addEventListener('abort', () =>
+            resolve({ ok: false, codigo: 'diff.cancelado' }),
+          );
         }),
     });
     const primera = s.comparar(e.a, e.b);

@@ -102,7 +102,10 @@ export class DiffCarpetas {
     }
     if (esUnc(real)) throw invalida();
     for (const propia of this.deps.carpetasPropias()) {
-      const propias = [path.resolve(propia), await realpath(propia).catch(() => path.resolve(propia))];
+      const propias = [
+        path.resolve(propia),
+        await realpath(propia).catch(() => path.resolve(propia)),
+      ];
       if (propias.some((p) => rutaDentroDe(p, real) || rutaDentroDe(p, path.resolve(ruta)))) {
         throw new ErrorWolf(
           'diff.ruta_vetada',
@@ -178,7 +181,10 @@ export class DiffCarpetas {
     const g = typeof id === 'string' ? this.guardadas.get(id) : undefined;
     if (!g || g.expira < this.ahora()) {
       if (g) this.guardadas.delete(id);
-      throw new ErrorWolf('diff.caducado', 'Esa comparación ya no está disponible: vuelva a comparar.');
+      throw new ErrorWolf(
+        'diff.caducado',
+        'Esa comparación ya no está disponible: vuelva a comparar.',
+      );
     }
     return g;
   }
@@ -221,7 +227,10 @@ export class DiffCarpetas {
     try {
       return (await resolverSeguro(lado === 'a' ? g.a : g.b, entrada.ruta)).ruta;
     } catch {
-      throw new ErrorWolf('diff.archivo_invalido', 'Ese archivo ya no se puede abrir: cambió o desapareció.');
+      throw new ErrorWolf(
+        'diff.archivo_invalido',
+        'Ese archivo ya no se puede abrir: cambió o desapareció.',
+      );
     }
   }
 
