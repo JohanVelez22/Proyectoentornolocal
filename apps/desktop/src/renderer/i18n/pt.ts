@@ -5041,6 +5041,9 @@ export const pt: Textos = {
     asistenteAyuda:
       'Percorra de novo os passos iniciais: pasta de projetos, o básico, a CA, o GitHub e a pasta monitorada.',
     asistenteAbrir: 'Abrir o assistente',
+    avanzadas: 'Mostrar seções avançadas',
+    avanzadasAyuda:
+      'Adiciona à barra lateral as telas pouco usadas, como Contêineres. Também dá para chegar a elas com Ctrl+K.',
   },
   paleta: {
     titulo: 'Paleta de comandos',

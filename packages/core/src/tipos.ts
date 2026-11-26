@@ -449,6 +449,8 @@ export const PreferenciasUiSchema = z
     asistenteVisto: z.boolean().default(false).catch(false),
     /** Ya se mostró el aviso de costo al abrir un agente por primera vez. */
     avisoCostoAgentes: z.boolean().default(false).catch(false),
+    /** Muestra en la barra lateral las secciones avanzadas (hoy, Contenedores). */
+    seccionesAvanzadas: z.boolean().default(false).catch(false),
   })
   .prefault({});
 export type PreferenciasUi = z.infer<typeof PreferenciasUiSchema>;
@@ -460,6 +462,7 @@ export const CambiosPreferenciasUiSchema = z.strictObject({
   acento: z.string().regex(ACENTO_UI).nullable().optional(),
   asistenteVisto: z.boolean().optional(),
   avisoCostoAgentes: z.boolean().optional(),
+  seccionesAvanzadas: z.boolean().optional(),
 });
 export type CambiosPreferenciasUi = z.infer<typeof CambiosPreferenciasUiSchema>;
 

@@ -5030,6 +5030,9 @@ export const es = {
     asistenteAyuda:
       'Vuelva a recorrer los pasos iniciales: carpeta de proyectos, lo básico, la CA, GitHub y la carpeta vigilada.',
     asistenteAbrir: 'Abrir el asistente',
+    avanzadas: 'Mostrar secciones avanzadas',
+    avanzadasAyuda:
+      'Añade a la barra lateral las pantallas que casi no se usan, como Contenedores. También se llega a ellas con Ctrl+K.',
   },
   paleta: {
     titulo: 'Paleta de comandos',

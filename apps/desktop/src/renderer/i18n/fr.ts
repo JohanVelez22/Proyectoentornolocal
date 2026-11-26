@@ -5170,6 +5170,9 @@ export const fr: Textos = {
     asistenteAyuda:
       'Reprenez les étapes initiales : dossier des projets, l’essentiel, la CA, GitHub et le dossier surveillé.',
     asistenteAbrir: 'Ouvrir l’assistant',
+    avanzadas: 'Afficher les sections avancées',
+    avanzadasAyuda:
+      'Ajoute à la barre latérale les écrans rarement utilisés, comme Conteneurs. Vous y accédez aussi avec Ctrl+K.',
   },
   paleta: {
     titulo: 'Palette de commandes',

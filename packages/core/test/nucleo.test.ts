@@ -1439,6 +1439,7 @@ describe('Nucleo (Etapa B)', () => {
       acento: null,
       asistenteVisto: false,
       avisoCostoAgentes: false,
+      seccionesAvanzadas: false,
     });
     expect(await n.guardarPreferenciasUi({ avisoCostoAgentes: true })).toMatchObject({
       avisoCostoAgentes: true,

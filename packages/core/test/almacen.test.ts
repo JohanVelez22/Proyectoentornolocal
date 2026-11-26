@@ -88,6 +88,7 @@ describe('Almacen', () => {
       acento: null,
       asistenteVisto: false,
       avisoCostoAgentes: false,
+      seccionesAvanzadas: false,
     });
     const archivos = await readdir(join(rutas.config(), '..'));
     expect(archivos.some((f) => f.startsWith('config.corrupto'))).toBe(false);
@@ -108,6 +109,7 @@ describe('Almacen', () => {
       acento: null,
       asistenteVisto: false,
       avisoCostoAgentes: false,
+      seccionesAvanzadas: false,
     });
     await writeFile(rutas.config(), JSON.stringify({ ui: 'texto', https: { puerto: 8443 } }));
     const d = await new Almacen(rutas).leer();

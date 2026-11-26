@@ -5000,6 +5000,9 @@ export const en: Textos = {
     asistenteAyuda:
       'Go through the initial steps again: projects folder, the basics, the CA, GitHub and the watched folder.',
     asistenteAbrir: 'Open the wizard',
+    avanzadas: 'Show advanced sections',
+    avanzadasAyuda:
+      'Adds the rarely used screens to the sidebar, such as Containers. They are also reachable with Ctrl+K.',
   },
   paleta: {
     titulo: 'Command palette',

@@ -92,6 +92,29 @@ describe('preferencias', () => {
   });
 });
 
+describe('secciones avanzadas', () => {
+  it('empiezan ocultas, se activan al instante y se guardan', async () => {
+    const api = apiFalsa({ tema: 'sistema', idioma: 'es', acento: null, asistenteVisto: true });
+    const p = usePreferencias();
+    await p.cargar();
+    expect(p.seccionesAvanzadas).toBe(false);
+    const promesa = p.cambiarSeccionesAvanzadas(true);
+    expect(p.seccionesAvanzadas).toBe(true); // antes de que responda el proceso principal
+    await promesa;
+    expect(api.preferencias.guardar).toHaveBeenCalledWith({ seccionesAvanzadas: true });
+    expect(p.seccionesAvanzadas).toBe(true);
+  });
+
+  it('si guardar falla vuelve a ocultarlas', async () => {
+    const api = apiFalsa({ tema: 'sistema', idioma: 'es', acento: null, asistenteVisto: true });
+    const p = usePreferencias();
+    await p.cargar();
+    api.preferencias.guardar.mockRejectedValueOnce(new Error('disco lleno'));
+    await expect(p.cambiarSeccionesAvanzadas(true)).rejects.toThrow('disco lleno');
+    expect(p.seccionesAvanzadas).toBe(false);
+  });
+});
+
 describe('tema y acento', () => {
   it('el acento por defecto es el índigo de siempre en ambos modos', () => {
     expect(primarioDe(null, false)).toBe('#4f5bd5');

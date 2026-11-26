@@ -21,6 +21,8 @@ export const usePreferencias = defineStore('preferencias', () => {
   const asistenteVisto = ref(true);
   /** Ya se avisó del costo de abrir un agente (se muestra una sola vez). */
   const avisoCostoAgentes = ref(false);
+  /** Muestra las secciones avanzadas de la barra lateral (Contenedores). */
+  const seccionesAvanzadas = ref(false);
   const cargado = ref(false);
 
   function aplicar(p: PreferenciasUi): void {
@@ -28,6 +30,7 @@ export const usePreferencias = defineStore('preferencias', () => {
     acento.value = p.acento;
     asistenteVisto.value = p.asistenteVisto;
     avisoCostoAgentes.value = p.avisoCostoAgentes;
+    seccionesAvanzadas.value = p.seccionesAvanzadas === true;
     if (p.idioma) cambiarIdioma(p.idioma);
   }
 
@@ -46,6 +49,7 @@ export const usePreferencias = defineStore('preferencias', () => {
       acento: acento.value,
       asistenteVisto: asistenteVisto.value,
       avisoCostoAgentes: avisoCostoAgentes.value,
+      seccionesAvanzadas: seccionesAvanzadas.value,
     };
     aplicar({ ...previo, ...cambios });
     try {
@@ -62,6 +66,7 @@ export const usePreferencias = defineStore('preferencias', () => {
     acento,
     asistenteVisto,
     avisoCostoAgentes,
+    seccionesAvanzadas,
     cargado,
     cargar,
     guardar,
@@ -69,6 +74,7 @@ export const usePreferencias = defineStore('preferencias', () => {
     cambiarIdioma: (i: Idioma) => guardar({ idioma: i }),
     cambiarAcento: (a: string | null) => guardar({ acento: a }),
     marcarAsistenteVisto: () => guardar({ asistenteVisto: true }),
+    cambiarSeccionesAvanzadas: (v: boolean) => guardar({ seccionesAvanzadas: v }),
     marcarAvisoCostoAgentes: () => guardar({ avisoCostoAgentes: true }),
   };
 });

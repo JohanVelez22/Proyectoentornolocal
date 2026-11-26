@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Checkmark, RocketOutline } from '@vicons/ionicons5';
-import { NButton, NCard, NForm, NFormItem, NIcon, useNotification } from 'naive-ui';
+import { NButton, NCard, NForm, NFormItem, NIcon, NSwitch, useNotification } from 'naive-ui';
 import { computed } from 'vue';
 import { mensajeDeError } from '../composables/useAccion';
 import { solicitudes } from '../composables/solicitudes';
@@ -14,6 +14,14 @@ import SelectorTema from './SelectorTema.vue';
 const t = textos.preferencias;
 const preferencias = usePreferencias();
 const notification = useNotification();
+
+async function cambiarAvanzadas(v: boolean): Promise<void> {
+  try {
+    await preferencias.cambiarSeccionesAvanzadas(v);
+  } catch (e) {
+    notification.error({ title: t.errorGuardar, content: mensajeDeError(e), duration: 6000 });
+  }
+}
 
 /** Acento elegido: el de la tabla, o null si es un color propio puesto a mano. */
 const actual = computed(() => acentoDe(preferencias.acento));
@@ -63,6 +71,17 @@ async function elegirAcento(claro: string): Promise<void> {
         </div>
       </NFormItem>
     </NForm>
+    <div class="asistente">
+      <div>
+        <strong id="etiqueta-avanzadas">{{ t.avanzadas }}</strong>
+        <small class="ayuda">{{ t.avanzadasAyuda }}</small>
+      </div>
+      <NSwitch
+        :value="preferencias.seccionesAvanzadas"
+        aria-labelledby="etiqueta-avanzadas"
+        @update:value="cambiarAvanzadas"
+      />
+    </div>
     <div class="asistente">
       <div>
         <strong>{{ t.asistente }}</strong>
