@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { Refresh, Trash } from '@vicons/ionicons5';
+import { Bug, Refresh, Trash } from '@vicons/ionicons5';
 import {
   NAlert,
   NButton,
-  NEmpty,
   NIcon,
   NInput,
   NModal,
@@ -16,6 +15,7 @@ import {
   useMessage,
 } from 'naive-ui';
 import Desplegable from '../componentes/Desplegable.vue';
+import EstadoVacio from '../componentes/EstadoVacio.vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { Sitio } from '../../shared/api';
 import { api } from '../api';
@@ -30,6 +30,7 @@ import { useSitios } from '../stores/sitios';
 import { avisoEditorSustituido } from '../utilidades/editores';
 
 const t = textos.depuracion;
+const tv = textos.estadosVacios;
 const dep = useDepuracion();
 const sitios = useSitios();
 const message = useMessage();
@@ -268,11 +269,24 @@ function limpiar(): void {
 
         <div class="panel">
           <div class="columna-lista">
-            <NEmpty
-              v-if="dep.lista.length === 0"
-              :description="dep.activo ? t.vacio : t.vacioApagado"
-              class="vacio"
+            <EstadoVacio
+              v-if="dep.lista.length === 0 && dep.activo"
+              pequena
+              :icono="Bug"
+              :titulo="tv.depuracionVacio.titulo"
+              :texto="tv.depuracionVacio.texto"
             />
+            <EstadoVacio
+              v-else-if="dep.lista.length === 0"
+              pequena
+              :icono="Bug"
+              :titulo="tv.depuracionApagado.titulo"
+              :texto="tv.depuracionApagado.texto"
+            >
+              <NButton type="primary" size="small" @click="activarReceptor(true)">
+                {{ tv.depuracionApagado.accion }}
+              </NButton>
+            </EstadoVacio>
             <ListaDumps
               v-else
               :lista="dep.lista"
@@ -289,7 +303,13 @@ function limpiar(): void {
               :copiando="ocupado('copiar')"
               @copiar="copiar"
             />
-            <NEmpty v-else :description="t.elegir" class="vacio" />
+            <EstadoVacio
+              v-else
+              pequena
+              :icono="Bug"
+              :titulo="tv.depuracionElegir.titulo"
+              :texto="tv.depuracionElegir.texto"
+            />
           </div>
         </div>
       </NTabPane>
@@ -317,7 +337,13 @@ function limpiar(): void {
         </section>
         <div class="panel">
           <div class="columna-lista">
-            <NEmpty v-if="dep.errores.length === 0" :description="t.erroresVacio" class="vacio" />
+            <EstadoVacio
+              v-if="dep.errores.length === 0"
+              pequena
+              :icono="Bug"
+              :titulo="tv.erroresVacio.titulo"
+              :texto="tv.erroresVacio.texto"
+            />
             <ListaErrores
               v-else
               :lista="dep.errores"
@@ -334,7 +360,13 @@ function limpiar(): void {
               :abriendo="ocupado('editor')"
               @abrir="abrirEnEditor"
             />
-            <NEmpty v-else :description="t.erroresElegir" class="vacio" />
+            <EstadoVacio
+              v-else
+              pequena
+              :icono="Bug"
+              :titulo="tv.erroresElegir.titulo"
+              :texto="tv.erroresElegir.texto"
+            />
           </div>
         </div>
       </NTabPane>

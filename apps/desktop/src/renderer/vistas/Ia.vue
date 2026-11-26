@@ -359,7 +359,20 @@ const filasConexion = computed(() => [
           {{ ia.errorProveedores }}
         </NAlert>
         <NSkeleton v-else-if="ia.proveedores === null" height="120px" class="esqueleto" />
-        <p v-else-if="!ia.proveedores.length" class="sin-modelos">{{ tn.nube.vacio }}</p>
+        <EstadoVacio
+          v-else-if="!ia.proveedores.length"
+          marco
+          :icono="Sparkles"
+          :titulo="textos.estadosVacios.iaNube.titulo"
+          :texto="textos.estadosVacios.iaNube.texto"
+        >
+          <NButton type="primary" size="small" @click="nuevoProveedor">
+            <template #icon
+              ><NIcon><Add /></NIcon
+            ></template>
+            {{ textos.estadosVacios.iaNube.accion }}
+          </NButton>
+        </EstadoVacio>
         <div v-else class="tarjetas">
           <TarjetaProveedorIa
             v-for="p in ia.proveedores"
@@ -481,7 +494,13 @@ const filasConexion = computed(() => [
           {{ ia.errorModelos }}
         </NAlert>
         <NSkeleton v-else-if="!ia.modelos" text :repeat="3" />
-        <p v-else-if="!ia.modelos.length" class="sin-modelos">{{ t.sinModelos }}</p>
+        <EstadoVacio
+          v-else-if="!ia.modelos.length"
+          pequena
+          :icono="CloudDownload"
+          :titulo="textos.estadosVacios.iaSinModelos.titulo"
+          :texto="textos.estadosVacios.iaSinModelos.texto"
+        />
         <ul v-else class="modelos">
           <li v-for="m in ia.modelos" :key="m.nombre">
             <span class="modelo-nombre">{{ m.nombre }}</span>

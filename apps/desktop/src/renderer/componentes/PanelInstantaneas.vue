@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ArrowUndo, Camera, TrashOutline } from '@vicons/ionicons5';
+import EstadoVacio from './EstadoVacio.vue';
 import { NButton, NIcon, NInput, NModal, NPopconfirm, NSkeleton, NTag, NTooltip } from 'naive-ui';
 import { ref, watch } from 'vue';
 import type { Instantanea, InstantaneaBorrada } from '@pel/core';
@@ -134,7 +135,13 @@ async function recuperar(id: string): Promise<void> {
       <p class="vacio">{{ t.cargando }}</p>
       <NSkeleton text :repeat="3" />
     </div>
-    <p v-else-if="!lista.length" class="vacio">{{ t.vacio }}</p>
+    <EstadoVacio
+      v-else-if="!lista.length"
+      pequena
+      :icono="Camera"
+      :titulo="textos.estadosVacios.instantaneas.titulo"
+      :texto="textos.estadosVacios.instantaneas.texto"
+    />
     <ul v-else class="lista">
       <li v-for="i in lista" :key="i.id" class="fila">
         <div class="datos">

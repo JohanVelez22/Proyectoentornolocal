@@ -5533,6 +5533,104 @@ export const pt: Textos = {
     guardado: 'O .env foi salvo.',
     guardadoConCopia: 'O .env foi salvo; a versão anterior ficou como cópia.',
   },
+  /** Estados vacíos que guían: qué es, por qué está vacío y la acción principal (D38b). */
+  estadosVacios: {
+    registrosSinFuentes: {
+      titulo: 'Ainda não há registros',
+      texto:
+        'Os registros aparecem quando um serviço, um site ou um processo escreve o primeiro. Ligue um serviço e volte aqui.',
+      accion: 'Ir para Serviços',
+    },
+    registrosElegir: {
+      titulo: 'Escolha um registro',
+      texto: 'Escolha uma fonte no seletor acima para acompanhar as linhas ao vivo.',
+      accion: '',
+    },
+    depuracionVacio: {
+      titulo: 'Nenhum dump chegou ainda',
+      texto:
+        'Quando um site executar dump(), dd() ou wd(), o dump aparece aqui na hora. Abra seu site e execute esse código.',
+      accion: '',
+    },
+    depuracionApagado: {
+      titulo: 'A captura está desligada',
+      texto:
+        'Com a captura ligada, os dump() e dd() dos seus sites chegam aqui sem mexer no navegador. Ligue-a e ligue um site.',
+      accion: 'Ligar a captura',
+    },
+    depuracionElegir: {
+      titulo: 'Escolha um dump',
+      texto: 'Selecione um dump da lista para ver o conteúdo, o arquivo e a URL de origem.',
+      accion: '',
+    },
+    erroresVacio: {
+      titulo: 'Sem erros nos registros',
+      texto:
+        'Os erros do PHP, do Nginx e dos projetos aparecem aqui, agrupados, assim que são escritos. Lista vazia é boa notícia.',
+      accion: '',
+    },
+    erroresElegir: {
+      titulo: 'Escolha um erro',
+      texto: 'Selecione um erro da lista para ver o rastreamento e abrir o arquivo no editor.',
+      accion: '',
+    },
+    doctorSinRevision: {
+      titulo: 'Ainda não há uma verificação',
+      texto:
+        'O Doctor verifica portas, hosts, certificados e versões, e diz como corrigir o que falhar. Faça a primeira verificação.',
+      accion: 'Verificar agora',
+    },
+    doctorSinHallazgos: {
+      titulo: 'Tudo em ordem',
+      texto:
+        'A última verificação não encontrou problemas. Verifique de novo se algo deixar de responder.',
+      accion: 'Verificar de novo',
+    },
+    contenedoresVacio: {
+      titulo: 'Nenhum contêiner',
+      texto:
+        'Os contêineres do Docker ou do Podman deste computador aparecem aqui. Crie um com docker run ou docker compose e clique em Atualizar.',
+      accion: 'Atualizar',
+    },
+    avisos: {
+      titulo: 'Nenhum aviso',
+      texto: 'Quedas de serviços, portas ocupadas e certificados prestes a vencer aparecerão aqui.',
+      accion: '',
+    },
+    instantaneas: {
+      titulo: 'Ainda não há instantâneos',
+      texto:
+        'Um instantâneo guarda o estado deste banco para você voltar a ele se algo der errado. Tire o primeiro com o botão acima.',
+      accion: '',
+    },
+    basesSinBases: {
+      titulo: 'Este servidor não tem bancos próprios',
+      texto: 'Crie um banco para o seu projeto ou importe um dump existente.',
+      accion: 'Criar banco',
+    },
+    iaNube: {
+      titulo: 'Ainda não há provedores de IA',
+      texto:
+        'Um provedor (OpenAI, Anthropic, OpenRouter e outros) permite usar modelos na nuvem nos seus agentes. A chave fica criptografada neste computador.',
+      accion: 'Adicionar provedor',
+    },
+    iaSinModelos: {
+      titulo: 'Ainda não há modelos locais',
+      texto: 'Baixe um modelo da lista abaixo para usá-lo sem conexão.',
+      accion: '',
+    },
+    versiones: {
+      titulo: 'Nenhuma versão para mostrar',
+      texto: 'A lista é baixada do catálogo oficial. Verifique sua conexão e atualize a lista.',
+      accion: 'Atualizar lista',
+    },
+    buscar: {
+      titulo: 'Sem correspondências',
+      texto:
+        'Nada na pasta corresponde ao texto buscado. Tente outras palavras, desmarque «Diferenciar maiúsculas» ou revise os filtros de arquivos.',
+      accion: '',
+    },
+  },
   asistenteInicio: {
     titulo: 'Tour de boas-vindas',
     paso: (n: number, total: number) => `Passo ${n} de ${total}`,

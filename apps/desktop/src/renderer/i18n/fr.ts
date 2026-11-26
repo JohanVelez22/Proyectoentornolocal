@@ -5679,6 +5679,108 @@ export const fr: Textos = {
     guardado: 'Le .env a été enregistré.',
     guardadoConCopia: 'Le .env a été enregistré ; la version précédente est conservée en copie.',
   },
+  /** Estados vacíos que guían: qué es, por qué está vacío y la acción principal (D38b). */
+  estadosVacios: {
+    registrosSinFuentes: {
+      titulo: 'Aucun journal pour le moment',
+      texto:
+        'Les journaux apparaissent dès qu’un service, un site ou un processus écrit sa première ligne. Démarrez un service puis revenez ici.',
+      accion: 'Aller à Services',
+    },
+    registrosElegir: {
+      titulo: 'Choisissez un journal',
+      texto: 'Choisissez une source dans le sélecteur ci-dessus pour suivre ses lignes en direct.',
+      accion: '',
+    },
+    depuracionVacio: {
+      titulo: 'Aucun dump reçu pour le moment',
+      texto:
+        'Quand un site exécute dump(), dd() ou wd(), le dump s’affiche ici aussitôt. Ouvrez votre site et exécutez ce code.',
+      accion: '',
+    },
+    depuracionApagado: {
+      titulo: 'La capture est désactivée',
+      texto:
+        'Capture activée, les dump() et dd() de vos sites arrivent ici sans toucher au navigateur. Activez-la et démarrez un site.',
+      accion: 'Activer la capture',
+    },
+    depuracionElegir: {
+      titulo: 'Choisissez un dump',
+      texto:
+        'Sélectionnez un dump dans la liste pour voir son contenu, son fichier et son URL d’origine.',
+      accion: '',
+    },
+    erroresVacio: {
+      titulo: 'Aucune erreur dans les journaux',
+      texto:
+        'Les erreurs de PHP, Nginx et de vos projets apparaissent ici, regroupées, dès qu’elles sont écrites. Une liste vide est une bonne nouvelle.',
+      accion: '',
+    },
+    erroresElegir: {
+      titulo: 'Choisissez une erreur',
+      texto:
+        'Sélectionnez une erreur dans la liste pour voir sa trace et ouvrir le fichier dans l’éditeur.',
+      accion: '',
+    },
+    doctorSinRevision: {
+      titulo: 'Aucune vérification pour le moment',
+      texto:
+        'Doctor vérifie les ports, les hosts, les certificats et les versions, et vous dit comment corriger ce qui échoue. Lancez la première vérification.',
+      accion: 'Vérifier maintenant',
+    },
+    doctorSinHallazgos: {
+      titulo: 'Tout est en ordre',
+      texto:
+        'La dernière vérification n’a trouvé aucun problème. Revérifiez si quelque chose cesse de répondre.',
+      accion: 'Revérifier',
+    },
+    contenedoresVacio: {
+      titulo: 'Aucun conteneur',
+      texto:
+        'Les conteneurs Docker ou Podman de cet ordinateur apparaissent ici. Créez-en un avec docker run ou docker compose, puis cliquez sur Actualiser.',
+      accion: 'Actualiser',
+    },
+    avisos: {
+      titulo: 'Aucun avis',
+      texto:
+        'Les pannes de services, les ports occupés et les certificats bientôt expirés apparaîtront ici.',
+      accion: '',
+    },
+    instantaneas: {
+      titulo: 'Aucun instantané pour le moment',
+      texto:
+        'Un instantané conserve l’état de cette base pour y revenir si quelque chose tourne mal. Prenez le premier avec le bouton ci-dessus.',
+      accion: '',
+    },
+    basesSinBases: {
+      titulo: 'Ce serveur n’a pas de base propre',
+      texto: 'Créez une base pour votre projet ou importez un dump existant.',
+      accion: 'Créer une base',
+    },
+    iaNube: {
+      titulo: 'Aucun fournisseur d’IA pour le moment',
+      texto:
+        'Un fournisseur (OpenAI, Anthropic, OpenRouter et d’autres) permet d’utiliser des modèles dans le cloud depuis vos agents. La clé est chiffrée sur cet ordinateur.',
+      accion: 'Ajouter un fournisseur',
+    },
+    iaSinModelos: {
+      titulo: 'Aucun modèle local pour le moment',
+      texto: 'Téléchargez un modèle dans la liste ci-dessous pour l’utiliser hors ligne.',
+      accion: '',
+    },
+    versiones: {
+      titulo: 'Aucune version à afficher',
+      texto:
+        'La liste est téléchargée depuis le catalogue officiel. Vérifiez votre connexion puis actualisez la liste.',
+      accion: 'Actualiser la liste',
+    },
+    buscar: {
+      titulo: 'Aucune correspondance',
+      texto:
+        'Rien dans le dossier ne correspond à votre recherche. Essayez d’autres mots, décochez « Respecter la casse » ou vérifiez les filtres de fichiers.',
+      accion: '',
+    },
+  },
   asistenteInicio: {
     titulo: 'Visite de bienvenue',
     paso: (n: number, total: number) => `Étape ${n} sur ${total}`,

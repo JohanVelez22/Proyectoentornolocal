@@ -23,6 +23,8 @@ import { textos } from '../../i18n';
 import { useSitios } from '../../stores/sitios';
 import { traducirError } from '../../utilidades/errores';
 import Desplegable from '../Desplegable.vue';
+import EstadoVacio from '../EstadoVacio.vue';
+import { Search } from '@vicons/ionicons5';
 
 const t = textos.herramientas.busqueda;
 const { ejecutar, ocupado } = useAccion();
@@ -384,7 +386,13 @@ function partes(r: ResultadoBusqueda): { antes: string; mid: string; despues: st
     <p v-if="errorBusqueda" class="herr-error">{{ errorBusqueda }}</p>
     <template v-if="resumen">
       <p v-if="resumen.cancelado" class="herr-tenue">{{ t.cancelada }}</p>
-      <p v-else-if="resumen.coincidencias === 0" class="herr-tenue">{{ t.sinResultados }}</p>
+      <EstadoVacio
+        v-else-if="resumen.coincidencias === 0"
+        pequena
+        :icono="Search"
+        :titulo="textos.estadosVacios.buscar.titulo"
+        :texto="textos.estadosVacios.buscar.texto"
+      />
       <p v-else class="herr-ok">
         {{ t.coincidencias(resumen.coincidencias) }}
         {{ t.resumen(resumen.archivos, resumen.examinados) }}

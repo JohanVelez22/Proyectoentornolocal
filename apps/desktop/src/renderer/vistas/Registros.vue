@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ArrowDown, Copy, FolderOpen, Pause, Play, Refresh, Trash } from '@vicons/ionicons5';
+import {
+  ArrowDown,
+  Copy,
+  DocumentText,
+  FolderOpen,
+  Pause,
+  Play,
+  Refresh,
+  Trash,
+} from '@vicons/ionicons5';
 import {
   NButton,
   NCheckbox,
   NCheckboxGroup,
-  NEmpty,
   NIcon,
   NInput,
   NSpace,
@@ -12,8 +20,9 @@ import {
   useThemeVars,
 } from 'naive-ui';
 import Desplegable from '../componentes/Desplegable.vue';
+import EstadoVacio from '../componentes/EstadoVacio.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
@@ -23,6 +32,8 @@ import { agruparFuentes, NIVELES_REGISTRO, type NivelRegistro } from '../utilida
 
 const t = textos.registros;
 const route = useRoute();
+const router = useRouter();
+const tv = textos.estadosVacios;
 const registros = useRegistros();
 const sitios = useSitios();
 const { ejecutar, ocupado } = useAccion();
@@ -194,7 +205,22 @@ function cambiarNiveles(v: (string | number)[]): void {
     <div class="visor-envoltura">
       <NSpin :show="registros.cargando" class="spin">
         <div v-if="!registros.actual" class="vacio">
-          <NEmpty :description="registros.fuentes.length ? t.elegirFuente : t.sinFuentes" />
+          <EstadoVacio
+            v-if="registros.fuentes.length"
+            :icono="DocumentText"
+            :titulo="tv.registrosElegir.titulo"
+            :texto="tv.registrosElegir.texto"
+          />
+          <EstadoVacio
+            v-else
+            :icono="DocumentText"
+            :titulo="tv.registrosSinFuentes.titulo"
+            :texto="tv.registrosSinFuentes.texto"
+          >
+            <NButton type="primary" size="small" @click="router.push({ name: 'servicios' })">
+              {{ tv.registrosSinFuentes.accion }}
+            </NButton>
+          </EstadoVacio>
         </div>
         <pre
           v-else

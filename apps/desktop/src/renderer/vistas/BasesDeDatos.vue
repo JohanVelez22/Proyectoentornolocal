@@ -36,6 +36,7 @@ import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import DialogoConexion from '../componentes/DialogoConexion.vue';
 import DialogoImportar from '../componentes/DialogoImportar.vue';
 import DialogoNuevaBase from '../componentes/DialogoNuevaBase.vue';
+import EstadoVacio from '../componentes/EstadoVacio.vue';
 import DialogoRespaldar from '../componentes/DialogoRespaldar.vue';
 import DialogoRestaurar from '../componentes/DialogoRestaurar.vue';
 import PanelInstantaneas from '../componentes/PanelInstantaneas.vue';
@@ -471,7 +472,20 @@ function irAServicios(): void {
           </div>
         </div>
         <NSkeleton v-else-if="!bases" text :repeat="3" />
-        <p v-else-if="!bases.length" class="sin-bases">{{ t.sinBases }}</p>
+        <EstadoVacio
+          v-else-if="!bases.length"
+          pequena
+          :icono="Layers"
+          :titulo="textos.estadosVacios.basesSinBases.titulo"
+          :texto="textos.estadosVacios.basesSinBases.texto"
+        >
+          <NButton type="primary" size="small" @click="dlgNueva = true">
+            <template #icon
+              ><NIcon><Add /></NIcon
+            ></template>
+            {{ textos.estadosVacios.basesSinBases.accion }}
+          </NButton>
+        </EstadoVacio>
         <table v-else class="tabla">
           <thead>
             <tr>

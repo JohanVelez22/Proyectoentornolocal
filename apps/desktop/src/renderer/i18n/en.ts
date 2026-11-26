@@ -5499,6 +5499,104 @@ export const en: Textos = {
     guardado: 'The .env was saved.',
     guardadoConCopia: 'The .env was saved; the previous version was kept as a copy.',
   },
+  /** Estados vacíos que guían: qué es, por qué está vacío y la acción principal (D38b). */
+  estadosVacios: {
+    registrosSinFuentes: {
+      titulo: 'No logs yet',
+      texto:
+        'Logs appear as soon as a service, a site or a process writes its first line. Turn on a service and come back.',
+      accion: 'Go to Services',
+    },
+    registrosElegir: {
+      titulo: 'Pick a log',
+      texto: 'Choose a source in the selector above to follow its lines live.',
+      accion: '',
+    },
+    depuracionVacio: {
+      titulo: 'No dumps have arrived yet',
+      texto:
+        'When a site runs dump(), dd() or wd(), the dump shows up here instantly. Open your site and run that code.',
+      accion: '',
+    },
+    depuracionApagado: {
+      titulo: 'Capture is off',
+      texto:
+        'With capture on, your sites’ dump() and dd() calls arrive here without touching the browser. Turn it on and start a site.',
+      accion: 'Turn on capture',
+    },
+    depuracionElegir: {
+      titulo: 'Pick a dump',
+      texto: 'Select a dump from the list to see its content, file and source URL.',
+      accion: '',
+    },
+    erroresVacio: {
+      titulo: 'No errors in the logs',
+      texto:
+        'PHP, Nginx and project errors show up here, grouped, as soon as they are written. An empty list is good news.',
+      accion: '',
+    },
+    erroresElegir: {
+      titulo: 'Pick an error',
+      texto: 'Select an error from the list to see its trace and open the file in the editor.',
+      accion: '',
+    },
+    doctorSinRevision: {
+      titulo: 'No check has run yet',
+      texto:
+        'Doctor checks ports, hosts, certificates and versions, and tells you how to fix what fails. Run the first check.',
+      accion: 'Check now',
+    },
+    doctorSinHallazgos: {
+      titulo: 'All good',
+      texto: 'The last check found no problems. Check again if something stops responding.',
+      accion: 'Check again',
+    },
+    contenedoresVacio: {
+      titulo: 'No containers',
+      texto:
+        'The Docker or Podman containers on this computer appear here. Create one with docker run or docker compose and press Refresh.',
+      accion: 'Refresh',
+    },
+    avisos: {
+      titulo: 'No notices',
+      texto: 'Service outages, busy ports and expiring certificates will show up here.',
+      accion: '',
+    },
+    instantaneas: {
+      titulo: 'No snapshots yet',
+      texto:
+        'A snapshot saves this database’s state so you can go back if something goes wrong. Take the first one with the button above.',
+      accion: '',
+    },
+    basesSinBases: {
+      titulo: 'This server has no databases of its own',
+      texto: 'Create a database for your project or import an existing dump.',
+      accion: 'Create database',
+    },
+    iaNube: {
+      titulo: 'No AI providers yet',
+      texto:
+        'A provider (OpenAI, Anthropic, OpenRouter and others) lets your agents use cloud models. The key is stored encrypted on this computer.',
+      accion: 'Add provider',
+    },
+    iaSinModelos: {
+      titulo: 'No local models yet',
+      texto: 'Download a model from the list below to use it offline.',
+      accion: '',
+    },
+    versiones: {
+      titulo: 'No versions to show',
+      texto:
+        'The list is downloaded from the official catalog. Check your connection and refresh the list.',
+      accion: 'Refresh list',
+    },
+    buscar: {
+      titulo: 'No matches',
+      texto:
+        'Nothing in the folder matches your search. Try other words, uncheck “Match case” or review the file filters.',
+      accion: '',
+    },
+  },
   asistenteInicio: {
     titulo: 'Welcome tour',
     paso: (n: number, total: number) => `Step ${n} of ${total}`,

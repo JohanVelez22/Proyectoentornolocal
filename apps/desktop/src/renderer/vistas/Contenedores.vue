@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Close, Refresh } from '@vicons/ionicons5';
+import { Close, Cube, Refresh } from '@vicons/ionicons5';
+import EstadoVacio from '../componentes/EstadoVacio.vue';
 import {
   NAlert,
   NButton,
-  NEmpty,
   NIcon,
   NModal,
   NRadioButton,
@@ -21,6 +21,7 @@ import { textos } from '../i18n';
 import { useContenedores } from '../stores/contenedores';
 
 const t = textos.contenedores;
+const tv = textos.estadosVacios;
 const tienda = useContenedores();
 const { ejecutar, ocupado } = useAccion();
 
@@ -170,7 +171,17 @@ watch(
     </NAlert>
 
     <template v-if="estado?.responde">
-      <NEmpty v-if="tienda.lista.length === 0" :description="t.vacio" class="vacio" />
+      <EstadoVacio
+        v-if="tienda.lista.length === 0"
+        marco
+        :icono="Cube"
+        :titulo="tv.contenedoresVacio.titulo"
+        :texto="tv.contenedoresVacio.texto"
+      >
+        <NButton size="small" :loading="ocupado('refrescar')" @click="refrescar">
+          {{ tv.contenedoresVacio.accion }}
+        </NButton>
+      </EstadoVacio>
       <div v-else class="tabla">
         <table>
           <thead>

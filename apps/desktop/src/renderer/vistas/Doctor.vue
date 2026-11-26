@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { Pulse, ShieldCheckmark } from '@vicons/ionicons5';
+import { Medkit, Pulse, ShieldCheckmark } from '@vicons/ionicons5';
 import {
   NAlert,
   NButton,
   NCheckbox,
-  NEmpty,
   NIcon,
   NModal,
   NSpace,
@@ -16,6 +15,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Hallazgo, Reparacion } from '../../shared/api';
 import { api } from '../api';
+import EstadoVacio from '../componentes/EstadoVacio.vue';
 import TarjetaHallazgo from '../componentes/TarjetaHallazgo.vue';
 import { useAccion } from '../composables/useAccion';
 import { useFoco } from '../composables/useFoco';
@@ -25,6 +25,7 @@ import { destinoHallazgo, textoReparacion } from '../utilidades/doctor';
 import { traducirError } from '../utilidades/errores';
 
 const t = textos.doctor;
+const tv = textos.estadosVacios;
 const router = useRouter();
 const tc = textos.doctor.confianza;
 const doctor = useDoctor();
@@ -173,11 +174,22 @@ const firefoxActivos = computed(() => conf.value?.firefox.some((p) => p.activo) 
       </NButton>
     </div>
 
-    <NEmpty
+    <EstadoVacio
       v-if="doctor.hallazgos.length === 0"
-      :description="doctor.cargado ? t.sinHallazgos : t.sinRevision"
-      class="vacio"
-    />
+      marco
+      :icono="doctor.cargado ? ShieldCheckmark : Medkit"
+      :titulo="doctor.cargado ? tv.doctorSinHallazgos.titulo : tv.doctorSinRevision.titulo"
+      :texto="doctor.cargado ? tv.doctorSinHallazgos.texto : tv.doctorSinRevision.texto"
+    >
+      <NButton
+        :type="doctor.cargado ? 'default' : 'primary'"
+        size="small"
+        :loading="doctor.revisando"
+        @click="ejecutar('revisar', () => doctor.revisar())"
+      >
+        {{ doctor.cargado ? tv.doctorSinHallazgos.accion : tv.doctorSinRevision.accion }}
+      </NButton>
+    </EstadoVacio>
     <section v-for="g in doctor.porGravedad" :key="g.gravedad" class="grupo">
       <h3>{{ t.gravedades[g.gravedad] }} ({{ g.hallazgos.length }})</h3>
       <TarjetaHallazgo

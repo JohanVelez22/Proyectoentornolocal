@@ -5524,6 +5524,105 @@ export const es = {
     guardado: 'El .env se guardó.',
     guardadoConCopia: 'El .env se guardó; la versión anterior quedó como copia.',
   },
+  /** Estados vacíos que guían: qué es, por qué está vacío y la acción principal (D38b). */
+  estadosVacios: {
+    registrosSinFuentes: {
+      titulo: 'Aún no hay registros',
+      texto:
+        'Los registros aparecen cuando un servicio, un sitio o un proceso escribe el primero. Encienda un servicio y vuelva aquí.',
+      accion: 'Ir a Servicios',
+    },
+    registrosElegir: {
+      titulo: 'Elija un registro',
+      texto: 'Escoja una fuente en el selector de arriba para seguir sus líneas en vivo.',
+      accion: '',
+    },
+    depuracionVacio: {
+      titulo: 'Todavía no llegó ningún volcado',
+      texto:
+        'Cuando un sitio ejecute dump(), dd() o wd(), el volcado aparece aquí al instante. Abra su sitio y ejecute ese código.',
+      accion: '',
+    },
+    depuracionApagado: {
+      titulo: 'La captura está apagada',
+      texto:
+        'Con la captura encendida, los dump() y dd() de sus sitios llegan aquí sin tocar el navegador. Actívela y encienda un sitio.',
+      accion: 'Activar captura',
+    },
+    depuracionElegir: {
+      titulo: 'Elija un volcado',
+      texto: 'Pulse un volcado de la lista para ver su contenido, el archivo y la URL de origen.',
+      accion: '',
+    },
+    erroresVacio: {
+      titulo: 'Sin errores en los registros',
+      texto:
+        'Aquí aparecen, agrupados, los errores de PHP, Nginx y de sus proyectos en cuanto se escriben. Que esté vacío es buena señal.',
+      accion: '',
+    },
+    erroresElegir: {
+      titulo: 'Elija un error',
+      texto: 'Pulse un error de la lista para ver su traza y abrir el archivo en el editor.',
+      accion: '',
+    },
+    doctorSinRevision: {
+      titulo: 'Todavía no hay una revisión',
+      texto:
+        'El Doctor revisa puertos, hosts, certificados y versiones, y le dice cómo arreglar lo que falle. Lance la primera revisión.',
+      accion: 'Revisar ahora',
+    },
+    doctorSinHallazgos: {
+      titulo: 'Todo en orden',
+      texto:
+        'La última revisión no encontró problemas. Vuelva a revisar si algo deja de responder.',
+      accion: 'Revisar de nuevo',
+    },
+    contenedoresVacio: {
+      titulo: 'No hay contenedores',
+      texto:
+        'Aquí aparecen los contenedores de Docker o Podman de este equipo. Cree uno con docker run o docker compose y pulse Refrescar.',
+      accion: 'Refrescar',
+    },
+    avisos: {
+      titulo: 'No hay avisos',
+      texto:
+        'Aquí aparecerán las caídas de servicios, los puertos ocupados y los certificados por vencer.',
+      accion: '',
+    },
+    instantaneas: {
+      titulo: 'Todavía no hay instantáneas',
+      texto:
+        'Una instantánea guarda el estado de esta base para volver a él si algo sale mal. Tome la primera con el botón de arriba.',
+      accion: '',
+    },
+    basesSinBases: {
+      titulo: 'Este servidor no tiene bases propias',
+      texto: 'Cree una base para su proyecto o importe un volcado existente.',
+      accion: 'Crear base',
+    },
+    iaNube: {
+      titulo: 'Aún no hay proveedores de IA',
+      texto:
+        'Un proveedor (OpenAI, Anthropic, OpenRouter y otros) permite usar modelos en la nube desde sus agentes. La clave se guarda cifrada en este equipo.',
+      accion: 'Agregar proveedor',
+    },
+    iaSinModelos: {
+      titulo: 'Todavía no hay modelos locales',
+      texto: 'Descargue un modelo de la lista de más abajo para usarlo sin conexión.',
+      accion: '',
+    },
+    versiones: {
+      titulo: 'No hay versiones para mostrar',
+      texto: 'La lista se descarga del catálogo oficial. Revise su conexión y actualice la lista.',
+      accion: 'Actualizar lista',
+    },
+    buscar: {
+      titulo: 'Sin coincidencias',
+      texto:
+        'Nada en la carpeta coincide con el texto buscado. Pruebe con otras palabras, desmarque «Distinguir mayúsculas» o revise los filtros de archivos.',
+      accion: '',
+    },
+  },
   asistenteInicio: {
     titulo: 'Recorrido de bienvenida',
     paso: (n: number, total: number) => `Paso ${n} de ${total}`,

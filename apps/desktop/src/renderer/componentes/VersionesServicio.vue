@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { CloudOffline, Refresh, TrashOutline } from '@vicons/ionicons5';
+import { CloudOffline, Layers, Refresh, TrashOutline } from '@vicons/ionicons5';
+import EstadoVacio from './EstadoVacio.vue';
 import {
   NButton,
   NCheckbox,
   NAlert,
-  NEmpty,
   NIcon,
   NSkeleton,
   NTag,
@@ -227,7 +227,17 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
     <div v-if="!v.tabla && ocupado('cargar')" aria-busy="true">
       <NSkeleton v-for="n in 2" :key="n" :height="120" :sharp="false" class="esqueleto" />
     </div>
-    <NEmpty v-else-if="!v.tabla || !v.tabla.ramas.length" :description="t.vacio" />
+    <EstadoVacio
+      v-else-if="!v.tabla || !v.tabla.ramas.length"
+      marco
+      :icono="Layers"
+      :titulo="textos.estadosVacios.versiones.titulo"
+      :texto="textos.estadosVacios.versiones.texto"
+    >
+      <NButton size="small" secondary :loading="ocupado('cargar')" @click="cargar(true)">
+        {{ textos.estadosVacios.versiones.accion }}
+      </NButton>
+    </EstadoVacio>
     <div v-else class="grupos">
       <GrupoRama
         v-for="r in v.tabla.ramas"

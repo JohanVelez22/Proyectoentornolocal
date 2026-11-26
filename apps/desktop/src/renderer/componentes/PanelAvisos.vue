@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { NButton, NDrawer, NDrawerContent, NEmpty, NTag } from 'naive-ui';
+import { Notifications } from '@vicons/ionicons5';
+import { NButton, NDrawer, NDrawerContent, NTag } from 'naive-ui';
+import EstadoVacio from './EstadoVacio.vue';
 import type { Aviso } from '../../shared/api';
 import { computed } from 'vue';
 import { formatearFecha, idioma, textos } from '../i18n';
@@ -57,7 +59,13 @@ function ver(a: Aviso): void {
           {{ t.limpiar }}
         </NButton>
       </div>
-      <NEmpty v-if="filas.length === 0" :description="t.vacio" class="vacio" />
+      <EstadoVacio
+        v-if="filas.length === 0"
+        pequena
+        :icono="Notifications"
+        :titulo="textos.estadosVacios.avisos.titulo"
+        :texto="textos.estadosVacios.avisos.texto"
+      />
       <ul v-else class="lista">
         <li v-for="f in filas" :key="f.aviso.id" class="aviso" :class="{ nuevo: !f.aviso.leido }">
           <div class="cabecera">
