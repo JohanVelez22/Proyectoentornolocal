@@ -34,7 +34,11 @@ export function normalizarSql(sql: string, dialecto: DialectoSql): string {
     const c = sql[i]!;
     const sig = sql[i + 1];
     // Comentarios: se quitan (pueden llevar datos).
-    if (c === '-' && sig === '-' && (pg || sql[i + 2] === ' ' || sql[i + 2] === '\t' || i + 2 >= n)) {
+    if (
+      c === '-' &&
+      sig === '-' &&
+      (pg || sql[i + 2] === ' ' || sql[i + 2] === '\t' || i + 2 >= n)
+    ) {
       while (i < n && sql[i] !== '\n') i++;
       continue;
     }

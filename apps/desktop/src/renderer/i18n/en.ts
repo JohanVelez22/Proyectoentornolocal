@@ -426,6 +426,20 @@ export const en: Textos = {
         'The data dump contains something that is not data (only INSERT, LOCK TABLES and SET are accepted): nothing was imported.',
       'bd.datos_fallo':
         'The data could not be imported: the database was left as it was, nothing half done.',
+      'bd.lentas_confirmar':
+        'Changing slow query logging affects the whole server: it has to be confirmed. Nothing was changed.',
+      'bd.lentas_umbral_invalido': 'The time must be between 0.1 and 60 seconds.',
+      'bd.lentas_motor_no_soportado':
+        'Slow queries can only be changed on MySQL, MariaDB and PostgreSQL managed by WolfCore Dev.',
+      'bd.lentas_literal_no_permitido':
+        'The SQL is not shown with its values: the database has real data or the query cannot be attributed to a known database.',
+      'bd.lentas_entrada_no_existe': 'That query is no longer in the log. Read it again.',
+      'bd.lentas_fallo':
+        'The slow query log could not be read or changed. Check that the server is running.',
+      'bd.esquema_base_no_existe': 'The database does not exist on that server.',
+      'bd.esquema_motor_no_soportado': 'The schema viewer is for MySQL, MariaDB and PostgreSQL.',
+      'bd.esquema_lectura_fallo':
+        'The database schema could not be read. Check that the server is running.',
       'perfiles.destino_invalido': 'Choose where to save the profile (a .wolfperfil file).',
       'perfiles.frase_debil': 'The CA passphrase must have at least {minimo} characters.',
       'perfiles.frase_incorrecta': 'The passphrase is not correct: nothing was imported.',
@@ -6011,5 +6025,88 @@ export const en: Textos = {
       puerto: 'Port of {id}: out of range, back to the default.',
       carpeta_vigilada: 'The watched folder belongs to another computer.',
     },
+  },
+
+  consultasLentas: {
+    boton: 'Slow queries',
+    titulo: (motor: string) => `Slow queries on ${motor}`,
+    descripcion:
+      'The queries that take longer than the time you choose, from the slowest to the fastest.',
+    cargando: 'Loading slow queries…',
+    estadoTitulo: 'Log status',
+    estadoActivo: (s: string) => `Logging is on: queries over ${s} s are recorded.`,
+    estadoApagado: 'Logging is off.',
+    noGestionada:
+      'WolfCore Dev does not manage this server (for example, one started by another program): you can only view it here, not change it.',
+    umbral: 'Record queries over (seconds)',
+    activar: 'Turn logging on',
+    aplicarUmbral: 'Change the time',
+    desactivar: 'Turn logging off',
+    actualizar: 'Read the log again',
+    confirmarTitulo: 'Change slow query logging',
+    confirmarActivar: (motor: string, s: string) =>
+      `Logging will be turned on for the whole ${motor} server (queries over ${s} s) and saved in its configuration. It affects all of its databases.`,
+    confirmarDesactivar: (motor: string) =>
+      `Logging will be turned off for the whole ${motor} server and saved in its configuration. What was already recorded is kept.`,
+    confirmarBoton: 'Confirm the change',
+    cancelar: 'Cancel',
+    activado: 'Slow query logging turned on',
+    desactivado: 'Slow query logging turned off',
+    privacidad:
+      'The SQL is shown with its values replaced by “?”, because it can contain real customer data. None of this leaves this computer or is written to the application logs.',
+    columnas: {
+      duracion: 'Duration',
+      filas: 'Rows examined',
+      base: 'Database',
+      fecha: 'Date',
+      sql: 'Query',
+      acciones: 'Actions',
+    },
+    sinBase: 'Not attributed',
+    verLiteral: 'Show literal',
+    ocultarLiteral: 'Hide literal',
+    literalAviso: 'SQL as is, with its values',
+    copiar: 'Copy',
+    copiado: 'Query copied',
+    truncado: (n: number) =>
+      `At most the ${n} slowest queries from the tail of the log (the last 5 MB) are shown.`,
+    vacioTitulo: 'No slow queries recorded yet',
+    vacioTextoApagado:
+      'Turn logging on and use your sites: queries that take longer than the chosen time will appear here.',
+    vacioTextoActivo:
+      'So far no query went over the chosen time. Use your sites and read the log again.',
+  },
+  esquemaBd: {
+    boton: 'View schema',
+    titulo: (base: string) => `Schema of ${base}`,
+    descripcion:
+      'Read only: tables, columns, keys and relations. No data from your tables is read.',
+    cargando: 'Reading the schema…',
+    error: 'The database schema could not be read.',
+    reintentar: 'Try again',
+    buscar: 'Search for a table',
+    tablas: (n: number) => plural(n, 'table', 'tables'),
+    vista: 'view',
+    truncado: (n: number) => `The list was cut to ${n} tables: the database has more.`,
+    sinResultados: 'No table matches the search.',
+    elegir: 'Choose a table from the list to see its columns, keys and relations.',
+    columnas: 'Columns',
+    indices: 'Indexes',
+    sinIndices: 'This table has no indexes.',
+    relaciones: 'Relations',
+    sinRelaciones: 'This table has no relations with others.',
+    salientes: 'References',
+    entrantes: 'Referenced by',
+    alBorrar: 'On delete:',
+    alActualizar: 'On update:',
+    irA: (tabla: string) => `Go to table ${tabla}`,
+    col: { nombre: 'Column', tipo: 'Type', nulo: 'Nullable', defecto: 'Default', clave: 'Key' },
+    si: 'Yes',
+    no: 'No',
+    pk: 'PK',
+    unico: 'unique',
+    vacioTitulo: 'This database has no tables',
+    vacioTexto:
+      'When you create tables (for example, with your project migrations) they will appear here.',
   },
 };

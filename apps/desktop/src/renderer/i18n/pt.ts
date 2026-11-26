@@ -434,6 +434,20 @@ export const pt: Textos = {
         'O despejo de dados traz algo que não são dados (só se aceitam INSERT, LOCK TABLES e SET): nada foi importado.',
       'bd.datos_fallo':
         'Não foi possível importar os dados: o banco ficou como estava, sem nada pela metade.',
+      'bd.lentas_confirmar':
+        'Alterar o registro de consultas lentas afeta todo o servidor: é preciso confirmar. Nada foi alterado.',
+      'bd.lentas_umbral_invalido': 'O tempo deve estar entre 0,1 e 60 segundos.',
+      'bd.lentas_motor_no_soportado':
+        'As consultas lentas só podem ser alteradas no MySQL, MariaDB e PostgreSQL gerenciados pelo WolfCore Dev.',
+      'bd.lentas_literal_no_permitido':
+        'O SQL não é mostrado com seus valores: o banco tem dados reais ou a consulta não pode ser atribuída a um banco conhecido.',
+      'bd.lentas_entrada_no_existe': 'Essa consulta não está mais no registro. Leia-o novamente.',
+      'bd.lentas_fallo':
+        'Não foi possível ler ou alterar o registro de consultas lentas. Verifique se o servidor está ligado.',
+      'bd.esquema_base_no_existe': 'O banco não existe nesse servidor.',
+      'bd.esquema_motor_no_soportado': 'O visor de esquema é para MySQL, MariaDB e PostgreSQL.',
+      'bd.esquema_lectura_fallo':
+        'Não foi possível ler o esquema do banco. Verifique se o servidor está ligado.',
       'perfiles.destino_invalido': 'Escolha onde salvar o perfil (um arquivo .wolfperfil).',
       'perfiles.frase_debil': 'A frase da CA deve ter pelo menos {minimo} caracteres.',
       'perfiles.frase_incorrecta': 'A frase não está correta: nada foi importado.',
@@ -6046,5 +6060,88 @@ export const pt: Textos = {
       puerto: 'Porta de {id}: fora do intervalo, volta à padrão.',
       carpeta_vigilada: 'A pasta vigiada é de outro computador.',
     },
+  },
+
+  consultasLentas: {
+    boton: 'Consultas lentas',
+    titulo: (motor: string) => `Consultas lentas de ${motor}`,
+    descripcion:
+      'As consultas que demoram mais do que o tempo escolhido, da mais lenta à mais rápida.',
+    cargando: 'Carregando consultas lentas…',
+    estadoTitulo: 'Estado do registro',
+    estadoActivo: (s: string) => `Registro ativo: as consultas com mais de ${s} s são anotadas.`,
+    estadoApagado: 'O registro está desligado.',
+    noGestionada:
+      'O WolfCore Dev não gerencia este servidor (por exemplo, o de outro programa): aqui só é possível ver, não alterar.',
+    umbral: 'Anotar consultas com mais de (segundos)',
+    activar: 'Ativar o registro',
+    aplicarUmbral: 'Alterar o tempo',
+    desactivar: 'Desativar o registro',
+    actualizar: 'Ler o registro novamente',
+    confirmarTitulo: 'Alterar o registro de consultas lentas',
+    confirmarActivar: (motor: string, s: string) =>
+      `O registro será ativado em todo o servidor ${motor} (consultas com mais de ${s} s) e ficará salvo na configuração dele. Afeta todos os seus bancos.`,
+    confirmarDesactivar: (motor: string) =>
+      `O registro será desativado em todo o servidor ${motor} e ficará salvo na configuração dele. O que já foi anotado é mantido.`,
+    confirmarBoton: 'Confirmar a alteração',
+    cancelar: 'Cancelar',
+    activado: 'Registro de consultas lentas ativado',
+    desactivado: 'Registro de consultas lentas desativado',
+    privacidad:
+      'O SQL é mostrado com os valores trocados por «?», pois pode conter dados reais de clientes. Nada disso sai deste computador nem é gravado nos registros do aplicativo.',
+    columnas: {
+      duracion: 'Duração',
+      filas: 'Linhas examinadas',
+      base: 'Banco',
+      fecha: 'Data',
+      sql: 'Consulta',
+      acciones: 'Ações',
+    },
+    sinBase: 'Sem atribuição',
+    verLiteral: 'Ver literal',
+    ocultarLiteral: 'Ocultar literal',
+    literalAviso: 'SQL original, com os valores',
+    copiar: 'Copiar',
+    copiado: 'Consulta copiada',
+    truncado: (n: number) =>
+      `São mostradas, no máximo, as ${n} mais lentas do final do registro (os últimos 5 MB).`,
+    vacioTitulo: 'Ainda não há consultas lentas anotadas',
+    vacioTextoApagado:
+      'Ative o registro e use seus sites: as consultas que demorarem mais do que o tempo escolhido aparecerão aqui.',
+    vacioTextoActivo:
+      'Até agora nenhuma consulta passou do tempo escolhido. Use seus sites e leia o registro novamente.',
+  },
+  esquemaBd: {
+    boton: 'Ver esquema',
+    titulo: (base: string) => `Esquema de ${base}`,
+    descripcion:
+      'Somente leitura: tabelas, colunas, chaves e relações. Nenhum dado das suas tabelas é lido.',
+    cargando: 'Lendo o esquema…',
+    error: 'Não foi possível ler o esquema do banco.',
+    reintentar: 'Tentar novamente',
+    buscar: 'Buscar uma tabela',
+    tablas: (n: number) => plural(n, 'tabela', 'tabelas'),
+    vista: 'view',
+    truncado: (n: number) => `A lista foi reduzida a ${n} tabelas: o banco tem mais.`,
+    sinResultados: 'Nenhuma tabela corresponde à busca.',
+    elegir: 'Escolha uma tabela da lista para ver suas colunas, chaves e relações.',
+    columnas: 'Colunas',
+    indices: 'Índices',
+    sinIndices: 'Esta tabela não tem índices.',
+    relaciones: 'Relações',
+    sinRelaciones: 'Esta tabela não tem relações com outras.',
+    salientes: 'Faz referência a',
+    entrantes: 'É referenciada por',
+    alBorrar: 'Ao excluir:',
+    alActualizar: 'Ao atualizar:',
+    irA: (tabla: string) => `Ir para a tabela ${tabla}`,
+    col: { nombre: 'Coluna', tipo: 'Tipo', nulo: 'Aceita nulo', defecto: 'Padrão', clave: 'Chave' },
+    si: 'Sim',
+    no: 'Não',
+    pk: 'PK',
+    unico: 'único',
+    vacioTitulo: 'Este banco não tem tabelas',
+    vacioTexto:
+      'Quando você criar tabelas (por exemplo, com as migrações do seu projeto), elas aparecerão aqui.',
   },
 };

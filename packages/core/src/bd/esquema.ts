@@ -130,7 +130,12 @@ function armar(
   for (const i of c.indices) {
     const t = tablas.get(clave(i.esquema, i.tabla));
     if (!t) continue;
-    t.indices.push({ nombre: i.nombre, unico: i.unico, primario: i.primario, columnas: i.columnas });
+    t.indices.push({
+      nombre: i.nombre,
+      unico: i.unico,
+      primario: i.primario,
+      columnas: i.columnas,
+    });
     if (i.primario) primarias.set(clave(i.esquema, i.tabla), new Set(i.columnas));
   }
   for (const col of c.columnas) {
@@ -171,9 +176,7 @@ function armar(
 }
 
 /** Agrupa filas de columnas de índice o de clave foránea por (tabla, nombre) en orden. */
-function agrupar<T extends { esquema: string; tabla: string; nombre: string }>(
-  filas: T[],
-): T[][] {
+function agrupar<T extends { esquema: string; tabla: string; nombre: string }>(filas: T[]): T[][] {
   const m = new Map<string, T[]>();
   for (const f of filas) {
     const k = `${clave(f.esquema, f.tabla)}\u0000${f.nombre}`;

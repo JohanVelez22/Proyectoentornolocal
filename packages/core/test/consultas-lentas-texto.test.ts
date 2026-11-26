@@ -16,9 +16,9 @@ describe('normalizarSql', () => {
   });
 
   it('en PostgreSQL la comilla doble es un identificador y la barra no escapa', () => {
-    expect(normalizarSql('SELECT "Nombre" FROM "Clientes" WHERE a = \'x\\\' AND b = 2', 'postgresql')).toBe(
-      'SELECT "Nombre" FROM "Clientes" WHERE a = ? AND b = ?',
-    );
+    expect(
+      normalizarSql('SELECT "Nombre" FROM "Clientes" WHERE a = \'x\\\' AND b = 2', 'postgresql'),
+    ).toBe('SELECT "Nombre" FROM "Clientes" WHERE a = ? AND b = ?');
   });
 
   it('en MySQL la comilla doble es una cadena y la comilla inversa un identificador', () => {
@@ -35,7 +35,10 @@ describe('normalizarSql', () => {
 
   it('cadenas con dólares de PostgreSQL y comentarios', () => {
     expect(
-      normalizarSql("SELECT $q$ dato 'x' $q$, 1 -- nota con datos\n FROM t /* otro dato */", 'postgresql'),
+      normalizarSql(
+        "SELECT $q$ dato 'x' $q$, 1 -- nota con datos\n FROM t /* otro dato */",
+        'postgresql',
+      ),
     ).toBe('SELECT ? FROM t');
   });
 
@@ -88,7 +91,11 @@ describe('parsearMysql', () => {
       fecha: '2026-11-26T10:00:00.123456Z',
       sql: "SELECT * FROM pedidos WHERE cliente = 'cliente-falso'",
     });
-    expect(r[1]).toMatchObject({ duracionMs: 300, base: 'tienda_falsa', sql: 'SELECT 1\nFROM dual' });
+    expect(r[1]).toMatchObject({
+      duracionMs: 300,
+      base: 'tienda_falsa',
+      sql: 'SELECT 1\nFROM dual',
+    });
   });
 
   it('una entrada sin base conocida queda con base null (cola de un archivo cortado)', () => {
@@ -109,7 +116,11 @@ describe('parsearMysql', () => {
       ].join('\n'),
     );
     expect(r).toHaveLength(1);
-    expect(r[0]).toMatchObject({ base: 'otra_falsa', fecha: '2026-11-26 10:00:00', duracionMs: 1250 });
+    expect(r[0]).toMatchObject({
+      base: 'otra_falsa',
+      fecha: '2026-11-26 10:00:00',
+      duracionMs: 1250,
+    });
   });
 });
 

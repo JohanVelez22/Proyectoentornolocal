@@ -30,8 +30,13 @@ export function parsearMysql(texto: string): EntradaLentaCruda[] {
     if (actual?.visto) {
       const sql = actual.lineas.join('\n').trim().replace(/;$/, '').trim();
       if (sql !== '') {
-        const { lineas: _l, visto: _v, ...e } = actual;
-        salida.push({ ...e, sql });
+        salida.push({
+          duracionMs: actual.duracionMs,
+          filasExaminadas: actual.filasExaminadas,
+          base: actual.base,
+          fecha: actual.fecha,
+          sql,
+        });
       }
     }
     actual = null;

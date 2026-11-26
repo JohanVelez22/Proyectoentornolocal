@@ -20,7 +20,7 @@ beforeEach(async () => {
   mkdirSync(rutas.logs(), { recursive: true });
 });
 
-const SLOW = (base: string | null, seg: number, sql: string, extra = ''): string =>
+const SLOW = (base: string | null, seg: string | number, sql: string, extra = ''): string =>
   [
     '# Time: 2026-11-26T10:00:00.000000Z',
     '# User@Host: root[root] @ localhost [127.0.0.1]  Id: 8',
@@ -59,15 +59,19 @@ function armar(opts: {
         estadoServidor.activo = a.activo;
         estadoServidor.segundos = a.segundos;
       },
-      listar: async () => (opts.bases ?? ['tienda_falsa', 'otra_falsa']).map((nombre) => ({ nombre })),
+      listar: async () =>
+        (opts.bases ?? ['tienda_falsa', 'otra_falsa']).map((nombre) => ({ nombre })),
     },
     ubicacion: async () => {
-      if (opts.gestionada === false) throw new ErrorWolf('servicios.no_instalado', 'no', { nombre: 'x' });
+      if (opts.gestionada === false)
+        throw new ErrorWolf('servicios.no_instalado', 'no', { nombre: 'x' });
       return { servicio: motor, claveDatos: '8.4', log };
     },
     esDatosReales: async (_o, base) => (opts.datosReales ?? []).includes(base),
     leerCola: async () =>
-      opts.texto === null || opts.texto === undefined ? null : { texto: opts.texto, recortado: false },
+      opts.texto === null || opts.texto === undefined
+        ? null
+        : { texto: opts.texto, recortado: false },
   });
   return { c, aplicadas };
 }
@@ -76,9 +80,9 @@ describe('activar y desactivar (cambio global)', () => {
   it('sin confirmado === true no toca nada', async () => {
     const { c, aplicadas } = armar({});
     for (const confirmado of [false, undefined, 'true', 1] as unknown[]) {
-      await expect(c.cambiar('mysql', { activo: true, confirmado: confirmado as boolean })).rejects.toMatchObject(
-        { codigo: 'bd.lentas_confirmar' },
-      );
+      await expect(
+        c.cambiar('mysql', { activo: true, confirmado: confirmado as boolean }),
+      ).rejects.toMatchObject({ codigo: 'bd.lentas_confirmar' });
     }
     expect(aplicadas).toHaveLength(0);
   });
@@ -86,7 +90,9 @@ describe('activar y desactivar (cambio global)', () => {
   it('el umbral va de 0,1 a 60 s', async () => {
     const { c, aplicadas } = armar({});
     for (const segundos of [0.05, 61, Number.NaN, '1' as unknown as number]) {
-      await expect(c.cambiar('mysql', { activo: true, segundos, confirmado: true })).rejects.toMatchObject({
+      await expect(
+        c.cambiar('mysql', { activo: true, segundos, confirmado: true }),
+      ).rejects.toMatchObject({
         codigo: 'bd.lentas_umbral_invalido',
       });
     }
@@ -116,7 +122,9 @@ describe('activar y desactivar (cambio global)', () => {
 
   it('solo en instancias gestionadas por WolfCore: un motor externo se rechaza', async () => {
     const { c, aplicadas } = armar({ gestionada: false });
-    await expect(c.cambiar('mysql', { activo: true, confirmado: true })).rejects.toBeInstanceOf(ErrorWolf);
+    await expect(c.cambiar('mysql', { activo: true, confirmado: true })).rejects.toBeInstanceOf(
+      ErrorWolf,
+    );
     expect(aplicadas).toHaveLength(0);
     expect(await c.estado('mysql')).toMatchObject({ gestionada: false, activo: false });
   });
@@ -126,7 +134,9 @@ describe('activar y desactivar (cambio global)', () => {
     await expect(c.cambiar('mongodb', { activo: true, confirmado: true })).rejects.toMatchObject({
       codigo: 'bd.lentas_motor_no_soportado',
     });
-    await expect(c.leer('mongodb')).rejects.toMatchObject({ codigo: 'bd.lentas_motor_no_soportado' });
+    await expect(c.leer('mongodb')).rejects.toMatchObject({
+      codigo: 'bd.lentas_motor_no_soportado',
+    });
   });
 
   it('PostgreSQL no escribe archivo propio ni ajuste: ALTER SYSTEM ya persiste', async () => {
@@ -162,7 +172,9 @@ describe('leer', () => {
   });
 
   it('como mucho 500 entradas, marcando el recorte', async () => {
-    const texto = Array.from({ length: 520 }, (_v, i) => SLOW('tienda_falsa', String(1 + i / 1000), `SELECT ${i}`)).join('\n');
+    const texto = Array.from({ length: 520 }, (_v, i) =>
+      SLOW('tienda_falsa', String(1 + i / 1000), `SELECT ${i}`),
+    ).join('\n');
     const { c } = armar({ texto });
     const r = await c.leer('mysql');
     expect(r.entradas).toHaveLength(500);
@@ -171,7 +183,7 @@ describe('leer', () => {
 
   it('lee la cola de PostgreSQL (líneas duration:)', async () => {
     const texto =
-      '2026-11-26 10:00:00.000 CST [1] db=tienda_falsa LOG:  duration: 800.5 ms  statement: SELECT * FROM t WHERE a = \'dato-falso\'\n';
+      "2026-11-26 10:00:00.000 CST [1] db=tienda_falsa LOG:  duration: 800.5 ms  statement: SELECT * FROM t WHERE a = 'dato-falso'\n";
     const { c } = armar({ motor: 'postgresql', texto });
     const r = await c.leer('postgresql');
     expect(r.entradas[0]).toMatchObject({
@@ -227,9 +239,10 @@ describe('«Ver literal» y datos reales', () => {
 
   it('si no se puede saber si la base tiene datos reales, se rechaza', async () => {
     const { c } = armar({ texto: SLOW('tienda_falsa', '2', "SELECT 'valor-falso-e'") });
-    (c as unknown as { d: { esDatosReales: () => Promise<boolean> } }).d.esDatosReales = async () => {
-      throw new Error('ilegible');
-    };
+    (c as unknown as { d: { esDatosReales: () => Promise<boolean> } }).d.esDatosReales =
+      async () => {
+        throw new Error('ilegible');
+      };
     const e = (await c.leer('mysql')).entradas[0]!;
     expect(e.literalPermitido).toBe(false);
   });
@@ -267,7 +280,14 @@ describe('configuración persistente de MySQL y MariaDB', () => {
 // ---- Los SQL que se mandan al servidor (clientes falsos) ----
 
 const estado = (id: string, puerto: number): EstadoServicio =>
-  ({ id, nombre: id, version: '1', estado: 'encendido', puertos: [puerto], pid: 1 }) as EstadoServicio;
+  ({
+    id,
+    nombre: id,
+    version: '1',
+    estado: 'encendido',
+    puertos: [puerto],
+    pid: 1,
+  }) as EstadoServicio;
 
 function bdFalsa(respuestas: (motor: string, sql: string) => unknown) {
   const sql: { motor: string; sql: string; params?: unknown[] }[] = [];
@@ -293,7 +313,11 @@ function bdFalsa(respuestas: (motor: string, sql: string) => unknown) {
 describe('SQL de activación', () => {
   it('MySQL: SET GLOBAL con parámetros, en orden, y apagar solo apaga', async () => {
     const { bd, sql } = bdFalsa(() => []);
-    await bd.lentasAplicar('mysql', { activo: true, segundos: 0.5, archivo: 'C:\\falso\\logs\\l.log' });
+    await bd.lentasAplicar('mysql', {
+      activo: true,
+      segundos: 0.5,
+      archivo: 'C:\\falso\\logs\\l.log',
+    });
     const sets = sql.filter((s) => s.sql.startsWith('SET GLOBAL'));
     expect(sets.map((s) => s.sql)).toEqual([
       'SET GLOBAL slow_query_log_file = ?',

@@ -67,6 +67,9 @@ import type {
   Instantanea,
   InstantaneaBorrada,
   ResultadoAuditoria,
+  EstadoConsultasLentas,
+  ConsultasLentasLeidas,
+  EsquemaBase,
   ProgresoAuditoria,
   VistaPreviaRestablecer,
   ResultadoRestablecer,
@@ -800,6 +803,19 @@ export interface ApiEntorno {
      */
     bloqueEnvSitio(sitioId: string, motor: ObjetivoBdIpc, base: string): Promise<string>;
     /** Carpeta real de respaldos y copias de seguridad automáticas (Documentos\WolfCore Dev\Respaldos). */
+    /** Consultas lentas (D45b): estado global del servidor (sin SQL). */
+    lentasEstado(motor: ObjetivoSqlIpc): Promise<EstadoConsultasLentas>;
+    /** Cambio global del servidor: exige `confirmado: true` (solo instancias de WolfCore). */
+    lentasCambiar(
+      motor: ObjetivoSqlIpc,
+      pedido: { activo: boolean; segundos?: number; confirmado: boolean },
+    ): Promise<EstadoConsultasLentas>;
+    /** Las más lentas primero, con el SQL normalizado (sin literales). */
+    lentasLeer(motor: ObjetivoSqlIpc): Promise<ConsultasLentasLeidas>;
+    /** El SQL tal cual de una entrada; el núcleo lo rechaza si la base tiene datos reales. */
+    lentasLiteral(motor: ObjetivoSqlIpc, id: string): Promise<string>;
+    /** Esquema (solo metadatos) de una base: tablas, columnas, claves, índices y relaciones. */
+    esquema(motor: ObjetivoSqlIpc, base: string): Promise<EsquemaBase>;
     carpetaRespaldos(): Promise<string>;
     tieneTablas(motor: ObjetivoSqlIpc, base: string): Promise<boolean>;
     formato(archivo: string): Promise<FormatoRespaldo>;
@@ -1772,6 +1788,11 @@ export const RUTAS_IPC = [
   'servicios.revelarSecreto',
   'bd.bloqueEnv',
   'bd.bloqueEnvSitio',
+  'bd.lentasEstado',
+  'bd.lentasCambiar',
+  'bd.lentasLeer',
+  'bd.lentasLiteral',
+  'bd.esquema',
   'bd.carpetaRespaldos',
   'bd.tieneTablas',
   'bd.formato',
@@ -2071,6 +2092,14 @@ export type {
   ResultadoAtajo,
   ResultadoIniciarCaptura,
 } from './captura';
+export type {
+  ConsultasLentasLeidas,
+  EntradaLenta,
+  EsquemaBase,
+  EstadoConsultasLentas,
+  RefTabla,
+  TablaEsquema,
+} from '@pel/core';
 export type RutaIpc = (typeof RUTAS_IPC)[number];
 
 /** Lo que manda la interfaz: la raíz va aparte (proyecto o diálogo). */

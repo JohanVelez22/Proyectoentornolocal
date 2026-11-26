@@ -1167,6 +1167,25 @@ export function objetivoSql(v: unknown): {
   };
 }
 
+/** Pedido de activar o desactivar las consultas lentas (D45b): el núcleo exige `confirmado === true`. */
+export function pedidoLentas(v: unknown): {
+  activo: boolean;
+  segundos?: number;
+  confirmado: boolean;
+} {
+  const o = objetoPlano<Record<string, unknown>>(v, 'consultas lentas');
+  soloClaves(o, ['activo', 'segundos', 'confirmado'], 'consultas lentas');
+  const segundos = o['segundos'];
+  if (segundos !== undefined && (typeof segundos !== 'number' || !Number.isFinite(segundos))) {
+    throw new Error('Argumento no válido: segundos');
+  }
+  return {
+    activo: booleano(o['activo'], 'activo'),
+    ...(segundos === undefined ? {} : { segundos }),
+    confirmado: o['confirmado'] === true,
+  };
+}
+
 /** Solo claves conocidas; cualquier otra hace fallar la llamada. */
 function soloClaves(
   o: Record<string, unknown>,

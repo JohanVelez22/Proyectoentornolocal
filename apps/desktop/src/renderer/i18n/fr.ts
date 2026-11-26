@@ -452,6 +452,21 @@ export const fr: Textos = {
         "L'export de données contient autre chose que des données (seuls INSERT, LOCK TABLES et SET sont acceptés) : rien n'a été importé.",
       'bd.datos_fallo':
         "Impossible d'importer les données : la base est restée telle quelle, rien n'a été laissé à moitié.",
+      'bd.lentas_confirmar':
+        "Modifier le journal des requêtes lentes concerne tout le serveur : il faut le confirmer. Rien n'a été modifié.",
+      'bd.lentas_umbral_invalido': 'La durée doit être comprise entre 0,1 et 60 secondes.',
+      'bd.lentas_motor_no_soportado':
+        'Les requêtes lentes ne peuvent être modifiées que sur MySQL, MariaDB et PostgreSQL gérés par WolfCore Dev.',
+      'bd.lentas_literal_no_permitido':
+        "Le SQL n'est pas affiché avec ses valeurs : la base contient de vraies données ou la requête ne peut pas être attribuée à une base connue.",
+      'bd.lentas_entrada_no_existe': "Cette requête n'est plus dans le journal. Relisez-le.",
+      'bd.lentas_fallo':
+        'Impossible de lire ou de modifier le journal des requêtes lentes. Vérifiez que le serveur est démarré.',
+      'bd.esquema_base_no_existe': "La base n'existe pas sur ce serveur.",
+      'bd.esquema_motor_no_soportado':
+        'Le visualiseur de schéma est destiné à MySQL, MariaDB et PostgreSQL.',
+      'bd.esquema_lectura_fallo':
+        'Impossible de lire le schéma de la base. Vérifiez que le serveur est démarré.',
       'perfiles.destino_invalido': 'Choisissez où enregistrer le profil (un fichier .wolfperfil).',
       'perfiles.frase_debil': 'La phrase de la CA doit comporter au moins {minimo} caractères.',
       'perfiles.frase_incorrecta': "La phrase n'est pas correcte : rien n'a été importé.",
@@ -6209,5 +6224,90 @@ export const fr: Textos = {
       puerto: 'Port de {id} : hors plage, retour à la valeur par défaut.',
       carpeta_vigilada: 'Le dossier surveillé appartient à un autre ordinateur.',
     },
+  },
+
+  consultasLentas: {
+    boton: 'Requêtes lentes',
+    titulo: (motor: string) => `Requêtes lentes de ${motor}`,
+    descripcion:
+      'Les requêtes qui prennent plus de temps que la durée que vous choisissez, de la plus lente à la plus rapide.',
+    cargando: 'Chargement des requêtes lentes…',
+    estadoTitulo: 'État du journal',
+    estadoActivo: (s: string) =>
+      `Journal actif : les requêtes de plus de ${s} s sont enregistrées.`,
+    estadoApagado: 'Le journal est désactivé.',
+    noGestionada:
+      "WolfCore Dev ne gère pas ce serveur (par exemple, celui d'un autre programme) : ici, vous pouvez seulement le consulter, pas le modifier.",
+    umbral: 'Enregistrer les requêtes de plus de (secondes)',
+    activar: 'Activer le journal',
+    aplicarUmbral: 'Changer la durée',
+    desactivar: 'Désactiver le journal',
+    actualizar: 'Relire le journal',
+    confirmarTitulo: 'Modifier le journal des requêtes lentes',
+    confirmarActivar: (motor: string, s: string) =>
+      `Le journal sera activé sur tout le serveur ${motor} (requêtes de plus de ${s} s) et enregistré dans sa configuration. Il concerne toutes ses bases.`,
+    confirmarDesactivar: (motor: string) =>
+      `Le journal sera désactivé sur tout le serveur ${motor} et enregistré dans sa configuration. Ce qui a déjà été enregistré est conservé.`,
+    confirmarBoton: 'Confirmer la modification',
+    cancelar: 'Annuler',
+    activado: 'Journal des requêtes lentes activé',
+    desactivado: 'Journal des requêtes lentes désactivé',
+    privacidad:
+      "Le SQL est affiché avec ses valeurs remplacées par « ? », car il peut contenir de vraies données de clients. Rien de tout cela ne quitte cet ordinateur ni n'est écrit dans les journaux de l'application.",
+    columnas: {
+      duracion: 'Durée',
+      filas: 'Lignes examinées',
+      base: 'Base',
+      fecha: 'Date',
+      sql: 'Requête',
+      acciones: 'Actions',
+    },
+    sinBase: 'Non attribuée',
+    verLiteral: 'Voir le littéral',
+    ocultarLiteral: 'Masquer le littéral',
+    literalAviso: 'SQL tel quel, avec ses valeurs',
+    copiar: 'Copier',
+    copiado: 'Requête copiée',
+    truncado: (n: number) =>
+      `Au plus les ${n} requêtes les plus lentes de la fin du journal (les 5 derniers Mo) sont affichées.`,
+    vacioTitulo: "Aucune requête lente n'est encore enregistrée",
+    vacioTextoApagado:
+      'Activez le journal et utilisez vos sites : les requêtes plus longues que la durée choisie apparaîtront ici.',
+    vacioTextoActivo:
+      "Pour l'instant, aucune requête n'a dépassé la durée choisie. Utilisez vos sites puis relisez le journal.",
+  },
+  esquemaBd: {
+    boton: 'Voir le schéma',
+    titulo: (base: string) => `Schéma de ${base}`,
+    descripcion:
+      "Lecture seule : tables, colonnes, clés et relations. Aucune donnée de vos tables n'est lue.",
+    cargando: 'Lecture du schéma…',
+    error: 'Impossible de lire le schéma de la base.',
+    reintentar: 'Réessayer',
+    buscar: 'Rechercher une table',
+    tablas: (n: number) => plural(n, 'table', 'tables'),
+    vista: 'vue',
+    truncado: (n: number) =>
+      `La liste a été limitée à ${n} tables : la base en contient davantage.`,
+    sinResultados: 'Aucune table ne correspond à la recherche.',
+    elegir: 'Choisissez une table dans la liste pour voir ses colonnes, ses clés et ses relations.',
+    columnas: 'Colonnes',
+    indices: 'Index',
+    sinIndices: "Cette table n'a aucun index.",
+    relaciones: 'Relations',
+    sinRelaciones: "Cette table n'a pas de relation avec d'autres.",
+    salientes: 'Référence',
+    entrantes: 'Est référencée par',
+    alBorrar: 'À la suppression :',
+    alActualizar: 'À la mise à jour :',
+    irA: (tabla: string) => `Aller à la table ${tabla}`,
+    col: { nombre: 'Colonne', tipo: 'Type', nulo: 'Nullable', defecto: 'Par défaut', clave: 'Clé' },
+    si: 'Oui',
+    no: 'Non',
+    pk: 'PK',
+    unico: 'unique',
+    vacioTitulo: "Cette base n'a aucune table",
+    vacioTexto:
+      'Lorsque vous créerez des tables (par exemple avec les migrations de votre projet), elles apparaîtront ici.',
   },
 };

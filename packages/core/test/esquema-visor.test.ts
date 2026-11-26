@@ -12,7 +12,14 @@ beforeEach(async () => {
 });
 
 const estado = (id: string, puerto: number): EstadoServicio =>
-  ({ id, nombre: id, version: '1', estado: 'encendido', puertos: [puerto], pid: 1 }) as EstadoServicio;
+  ({
+    id,
+    nombre: id,
+    version: '1',
+    estado: 'encendido',
+    puertos: [puerto],
+    pid: 1,
+  }) as EstadoServicio;
 
 interface Reg {
   motor: string;
@@ -42,7 +49,13 @@ function armar(
   };
   const exec: Ejecutor = async () => ({ codigo: 0, stdout: '', stderr: '' });
   const bd = new BasesDeDatos({
-    servicios: { estados: async () => [estado('mysql', 3306), estado('postgresql', 5432), estado('mongodb', 27017)] },
+    servicios: {
+      estados: async () => [
+        estado('mysql', 3306),
+        estado('postgresql', 5432),
+        estado('mongodb', 27017),
+      ],
+    },
     credenciales: { leer: async () => ({ usuario: 'x', clave: 'ClaveFalsa123' }) },
     rutas,
     exec,
@@ -63,7 +76,13 @@ const mysqlFilas = (_m: string, s: string): Record<string, unknown>[] => {
       { tabla: 'clientes', nombre: 'id', tipo: 'bigint unsigned', nulo: 'NO', defecto: null },
       { tabla: 'clientes', nombre: 'estado', tipo: 'varchar(10)', nulo: 'YES', defecto: 'activo' },
       { tabla: 'pedidos', nombre: 'id', tipo: 'int', nulo: 'NO', defecto: null },
-      { tabla: 'pedidos', nombre: 'cliente_id', tipo: 'bigint unsigned', nulo: 'NO', defecto: null },
+      {
+        tabla: 'pedidos',
+        nombre: 'cliente_id',
+        tipo: 'bigint unsigned',
+        nulo: 'NO',
+        defecto: null,
+      },
     ];
   if (s.includes('information_schema.STATISTICS'))
     return [
@@ -152,7 +171,9 @@ describe('visor de esquema: MySQL y MariaDB', () => {
       tipo: 'BASE TABLE',
     }));
     const { bd } = armar((m, s) =>
-      s.includes('information_schema.TABLES') && !s.includes('schema_name') ? muchas : mysqlFilas(m, s),
+      s.includes('information_schema.TABLES') && !s.includes('schema_name')
+        ? muchas
+        : mysqlFilas(m, s),
     );
     const e = await bd.esquema('mysql', 'tienda_falsa');
     expect(e.tablas).toHaveLength(MAX_TABLAS_ESQUEMA);
@@ -185,12 +206,33 @@ const pgFilas = (_m: string, s: string): Record<string, unknown>[] => {
     ];
   if (s.includes('FROM pg_catalog.pg_attribute a'))
     return [
-      { esquema: 'public', tabla: 'clientes', nombre: 'id', tipo: 'bigint', nulo: false, defecto: "nextval('clientes_id_seq'::regclass)" },
-      { esquema: 'public', tabla: 'pedidos', nombre: 'cliente_id', tipo: 'bigint', nulo: false, defecto: null },
+      {
+        esquema: 'public',
+        tabla: 'clientes',
+        nombre: 'id',
+        tipo: 'bigint',
+        nulo: false,
+        defecto: "nextval('clientes_id_seq'::regclass)",
+      },
+      {
+        esquema: 'public',
+        tabla: 'pedidos',
+        nombre: 'cliente_id',
+        tipo: 'bigint',
+        nulo: false,
+        defecto: null,
+      },
     ];
   if (s.includes('pg_index i'))
     return [
-      { esquema: 'public', tabla: 'clientes', nombre: 'clientes_pkey', unico: true, primario: true, columnas: ['id'] },
+      {
+        esquema: 'public',
+        tabla: 'clientes',
+        nombre: 'clientes_pkey',
+        unico: true,
+        primario: true,
+        columnas: ['id'],
+      },
     ];
   if (s.includes('pg_constraint c'))
     return [
@@ -219,9 +261,17 @@ describe('visor de esquema: PostgreSQL', () => {
       'public.pedidos',
     ]);
     const clientes = e.tablas[1]!;
-    expect(clientes.columnas[0]).toMatchObject({ primaria: true, porDefecto: "nextval('clientes_id_seq'::regclass)" });
-    expect(e.tablas[2]!.clavesForaneas[0]).toMatchObject({ alBorrar: 'CASCADE', alActualizar: 'NO ACTION' });
-    expect(clientes.clavesEntrantes[0]).toMatchObject({ origen: { esquema: 'public', tabla: 'pedidos' } });
+    expect(clientes.columnas[0]).toMatchObject({
+      primaria: true,
+      porDefecto: "nextval('clientes_id_seq'::regclass)",
+    });
+    expect(e.tablas[2]!.clavesForaneas[0]).toMatchObject({
+      alBorrar: 'CASCADE',
+      alActualizar: 'NO ACTION',
+    });
+    expect(clientes.clavesEntrantes[0]).toMatchObject({
+      origen: { esquema: 'public', tabla: 'pedidos' },
+    });
 
     const propias = reg.filter((r) => !r.sql.includes('pg_database'));
     expect(propias.slice(0, 3).map((r) => r.sql)).toEqual([
@@ -235,7 +285,9 @@ describe('visor de esquema: PostgreSQL', () => {
       expect(r.sql).toContain('pg_catalog.');
     }
     // Se conectó a la base elegida (la lista de bases se pidió a la de mantenimiento).
-    expect(conectadas.some((x) => (x as { c: { base?: string } }).c.base === 'tienda_falsa')).toBe(true);
+    expect(conectadas.some((x) => (x as { c: { base?: string } }).c.base === 'tienda_falsa')).toBe(
+      true,
+    );
   });
 
   it('valida el nombre contra la lista real', async () => {

@@ -83,6 +83,20 @@ export * from './bd/respaldos';
 export * from './bd/instantaneas';
 export * from './bd/pgvector';
 export * from './bd/auditoriaClaves';
+export type {
+  EntradaLenta,
+  ConsultasLentasLeidas,
+  EstadoConsultasLentas,
+} from './bd/consultasLentas/consultasLentas';
+export type {
+  EsquemaBase,
+  TablaEsquema,
+  ColumnaEsquema,
+  IndiceEsquema,
+  ClaveForaneaEsquema,
+  ClaveEntranteEsquema,
+  RefTabla,
+} from './bd/esquema';
 export * from './bd/baseProyecto';
 export * from './herramientas/composer';
 export * from './herramientas/terminal';

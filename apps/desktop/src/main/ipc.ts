@@ -157,6 +157,7 @@ import {
   objetivoBd,
   objetivoConexionServicio,
   objetivoSql,
+  pedidoLentas,
   opcionesActualizar,
   opcionesNuevaRama,
   opcionesDesbloquear,
@@ -1048,6 +1049,19 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'bd.bloqueEnvSitio': (n, _s, sitioId, motor, base) => {
     const { objetivo, motor: m } = objetivoBd(motor);
     return n.bloqueEnvSitio(textoAcotado(sitioId, 1, 128, 'sitio'), objetivo, nombreBase(m, base));
+  },
+  // Consultas lentas (D45b). Activar es un cambio global del servidor: el núcleo exige
+  // `confirmado === true`. `bd.lentasLiteral` devuelve SQL con valores (nunca se registra).
+  'bd.lentasEstado': (n, _s, motor) => n.consultasLentas.estado(objetivoSql(motor).objetivo),
+  'bd.lentasCambiar': (n, _s, motor, pedido) =>
+    n.consultasLentas.cambiar(objetivoSql(motor).objetivo, pedidoLentas(pedido)),
+  'bd.lentasLeer': (n, _s, motor) => n.consultasLentas.leer(objetivoSql(motor).objetivo),
+  'bd.lentasLiteral': (n, _s, motor, id) =>
+    n.consultasLentas.literal(objetivoSql(motor).objetivo, idCorto(id, 'consulta', 64)),
+  // Visor de esquema (D45d): solo metadatos; el nombre se valida contra las bases reales.
+  'bd.esquema': (n, _s, motor, base) => {
+    const { objetivo, motor: m } = objetivoSql(motor);
+    return n.esquemaBd(objetivo, nombreBase(m, base));
   },
   'bd.carpetaRespaldos': (n) => n.carpetaRespaldos(),
   'bd.tieneTablas': (n, _s, motor, base) => {

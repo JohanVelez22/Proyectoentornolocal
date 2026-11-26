@@ -72,7 +72,10 @@ export interface DepsConsultasLentas {
   /** ¿La base es la de un sitio con `datosReales`? (ante la duda, true). */
   esDatosReales(o: ObjetivoBd, base: string): Promise<boolean>;
   /** Cola del archivo (para pruebas). Por defecto lee los últimos `maxBytes` de la ruta. */
-  leerCola?: (ruta: string, maxBytes: number) => Promise<{ texto: string; recortado: boolean } | null>;
+  leerCola?: (
+    ruta: string,
+    maxBytes: number,
+  ) => Promise<{ texto: string; recortado: boolean } | null>;
 }
 
 /** Lee la cola de un archivo (null si no existe). Se descarta la primera línea si quedó cortada. */
@@ -213,10 +216,12 @@ export class ConsultasLentas {
     const motor = this.soloSql(o);
     const u = await this.d.ubicacion(o).catch(() => null);
     if (!u) return { entradas: [], recortado: false, sinArchivo: true };
-    const ruta = motor === 'postgresql' ? u.log : rutaLogLento(this.d.rutas, u.servicio, u.claveDatos);
+    const ruta =
+      motor === 'postgresql' ? u.log : rutaLogLento(this.d.rutas, u.servicio, u.claveDatos);
     const cola = await (this.d.leerCola ?? colaDeArchivo)(ruta, MAX_BYTES_LENTAS);
     if (!cola) return { entradas: [], recortado: false, sinArchivo: true };
-    const entradas = motor === 'postgresql' ? parsearPostgres(cola.texto) : parsearMysql(cola.texto);
+    const entradas =
+      motor === 'postgresql' ? parsearPostgres(cola.texto) : parsearMysql(cola.texto);
     return { entradas, recortado: cola.recortado, sinArchivo: false };
   }
 

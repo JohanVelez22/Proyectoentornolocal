@@ -543,7 +543,13 @@ export class BasesDeDatos {
         });
         return await Promise.race([
           (async () => {
-            await c.conectar({ host: x.host, puerto: x.puerto, usuario: x.usuario, clave: x.clave ?? '', base });
+            await c.conectar({
+              host: x.host,
+              puerto: x.puerto,
+              usuario: x.usuario,
+              clave: x.clave ?? '',
+              base,
+            });
             await c.consultar('SET search_path = pg_catalog, pg_temp');
             await c.consultar('SET default_transaction_read_only = on');
             await c.consultar(`SET statement_timeout = ${PLAZO_ESQUEMA_MS}`);
@@ -563,7 +569,12 @@ export class BasesDeDatos {
       senal: AbortSignal.timeout(PLAZO_ESQUEMA_MS),
     });
     try {
-      await c.conectar({ host: x.host, puerto: x.puerto, usuario: x.usuario, clave: x.clave ?? '' });
+      await c.conectar({
+        host: x.host,
+        puerto: x.puerto,
+        usuario: x.usuario,
+        clave: x.clave ?? '',
+      });
       await c.consultar('SET SESSION TRANSACTION READ ONLY');
       return await leerEsquemaMysql((q, p) => c.consultar(q, p), motor, base);
     } catch (e) {
@@ -594,9 +605,7 @@ export class BasesDeDatos {
       return { activo: ms >= 0, segundos: ms >= 0 ? ms / 1000 : null };
     }
     const f = await this.conMysql(objetivo, (c) =>
-      c.consultar(
-        'SELECT @@GLOBAL.slow_query_log AS activo, @@GLOBAL.long_query_time AS segundos',
-      ),
+      c.consultar('SELECT @@GLOBAL.slow_query_log AS activo, @@GLOBAL.long_query_time AS segundos'),
     );
     const a = f[0];
     return { activo: Number(a?.['activo']) === 1, segundos: a ? Number(a['segundos']) : null };

@@ -105,6 +105,11 @@ const api: ApiEntorno = {
     bloqueEnv: (motor, base, tipo, envActual) =>
       invocar('bd.bloqueEnv', motor, base, tipo, envActual),
     bloqueEnvSitio: (sitioId, motor, base) => invocar('bd.bloqueEnvSitio', sitioId, motor, base),
+    lentasEstado: (motor) => invocar('bd.lentasEstado', motor),
+    lentasCambiar: (motor, pedido) => invocar('bd.lentasCambiar', motor, pedido),
+    lentasLeer: (motor) => invocar('bd.lentasLeer', motor),
+    lentasLiteral: (motor, id) => invocar('bd.lentasLiteral', motor, id),
+    esquema: (motor, base) => invocar('bd.esquema', motor, base),
     carpetaRespaldos: () => invocar('bd.carpetaRespaldos'),
     tieneTablas: (motor, base) => invocar('bd.tieneTablas', motor, base),
     formato: (archivo) => invocar('bd.formato', archivo),

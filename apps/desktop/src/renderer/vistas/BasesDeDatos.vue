@@ -5,12 +5,14 @@ import {
   ArrowUndo,
   Camera,
   CloudDownload,
+  Grid,
   KeyOutline,
   Layers,
   OpenOutline,
   Power,
   Refresh,
   Sparkles,
+  Timer,
   TrashOutline,
   Warning,
 } from '@vicons/ionicons5';
@@ -32,6 +34,8 @@ import { useRoute, useRouter } from 'vue-router';
 import type { DisponibilidadAdminer, MotorBd, MotorSql, ObjetivoSqlIpc } from '../../shared/api';
 import { api } from '../api';
 import DialogoConexion from '../componentes/DialogoConexion.vue';
+import DialogoConsultasLentas from '../componentes/DialogoConsultasLentas.vue';
+import DialogoEsquema from '../componentes/DialogoEsquema.vue';
 import DialogoImportar from '../componentes/DialogoImportar.vue';
 import DialogoNuevaBase from '../componentes/DialogoNuevaBase.vue';
 import EstadoVacio from '../componentes/EstadoVacio.vue';
@@ -165,6 +169,8 @@ const dlgImportar = ref(false);
 const dlgRespaldar = ref(false);
 const dlgConexion = ref(false);
 const dlgInstantaneas = ref(false);
+const dlgLentas = ref(false);
+const dlgEsquema = ref(false);
 const baseFija = ref<string | null>(null);
 const baseElegida = ref('');
 
@@ -203,6 +209,10 @@ function abrirInstantaneas(base: string): void {
   if (ocupadaBd.value) return;
   baseElegida.value = base;
   dlgInstantaneas.value = true;
+}
+function abrirEsquema(base: string): void {
+  baseElegida.value = base;
+  dlgEsquema.value = true;
 }
 function abrirConexion(base: string): void {
   baseElegida.value = base;
@@ -378,6 +388,24 @@ function irAServicios(): void {
                   ? t.encenderPrimero(nombre(activo))
                   : t.enCursoAyuda
             }}
+          </NTooltip>
+          <NTooltip :disabled="!!motorSql && encendido">
+            <template #trigger>
+              <span>
+                <NButton
+                  size="small"
+                  secondary
+                  :disabled="!motorSql || !encendido"
+                  @click="dlgLentas = true"
+                >
+                  <template #icon
+                    ><NIcon><Timer /></NIcon
+                  ></template>
+                  {{ textos.consultasLentas.boton }}
+                </NButton>
+              </span>
+            </template>
+            {{ !motorSql ? t.soloSql : t.encenderPrimero(nombre(activo)) }}
           </NTooltip>
         </div>
       </div>
@@ -561,6 +589,22 @@ function irAServicios(): void {
                     </NTooltip>
                     <NTooltip>
                       <template #trigger>
+                        <NButton
+                          size="small"
+                          quaternary
+                          circle
+                          :aria-label="t.acciones.de(textos.esquemaBd.boton, b.nombre)"
+                          @click="abrirEsquema(b.nombre)"
+                        >
+                          <template #icon
+                            ><NIcon><Grid /></NIcon
+                          ></template>
+                        </NButton>
+                      </template>
+                      {{ textos.esquemaBd.boton }}
+                    </NTooltip>
+                    <NTooltip>
+                      <template #trigger>
                         <span>
                           <NButton
                             size="small"
@@ -692,6 +736,20 @@ function irAServicios(): void {
       "
     />
     <DialogoConexion v-if="activo" v-model:show="dlgConexion" :motor="activo" :base="baseElegida" />
+    <DialogoConsultasLentas
+      v-if="motorSql"
+      v-model:show="dlgLentas"
+      :motor="motorSql"
+      :objetivo="bd.objetivo(motorSql) as ObjetivoSqlIpc"
+      :nombre="nombre(motorSql)"
+    />
+    <DialogoEsquema
+      v-if="motorSql"
+      v-model:show="dlgEsquema"
+      :motor="motorSql"
+      :objetivo="bd.objetivo(motorSql) as ObjetivoSqlIpc"
+      :base="baseElegida"
+    />
 
     <NModal
       v-model:show="dlgBorrar"

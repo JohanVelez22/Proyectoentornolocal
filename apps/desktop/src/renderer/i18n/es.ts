@@ -433,6 +433,20 @@ export const es = {
         'El volcado de datos trae algo que no son datos (solo se aceptan INSERT, LOCK TABLES y SET): no se importó nada.',
       'bd.datos_fallo':
         'No se pudieron importar los datos: la base quedó como estaba, sin nada a medias.',
+      'bd.lentas_confirmar':
+        'Cambiar el registro de consultas lentas afecta a todo el servidor: hay que confirmarlo. No se cambió nada.',
+      'bd.lentas_umbral_invalido': 'El tiempo debe estar entre 0,1 y 60 segundos.',
+      'bd.lentas_motor_no_soportado':
+        'Las consultas lentas solo se pueden cambiar en MySQL, MariaDB y PostgreSQL gestionados por WolfCore Dev.',
+      'bd.lentas_literal_no_permitido':
+        'No se muestra el SQL con sus valores: la base tiene datos reales o la consulta no se puede atribuir a una base conocida.',
+      'bd.lentas_entrada_no_existe': 'Esa consulta ya no está en el registro. Vuelva a leerlo.',
+      'bd.lentas_fallo':
+        'No se pudo leer o cambiar el registro de consultas lentas. Compruebe que el servidor está encendido.',
+      'bd.esquema_base_no_existe': 'La base no existe en ese servidor.',
+      'bd.esquema_motor_no_soportado': 'El visor de esquema es para MySQL, MariaDB y PostgreSQL.',
+      'bd.esquema_lectura_fallo':
+        'No se pudo leer el esquema de la base. Compruebe que el servidor está encendido.',
       'perfiles.destino_invalido': 'Elija dónde guardar el perfil (un archivo .wolfperfil).',
       'perfiles.frase_debil': 'La frase de la CA debe tener al menos {minimo} caracteres.',
       'perfiles.frase_incorrecta': 'La frase no es correcta: no se importó nada.',
@@ -6037,6 +6051,95 @@ export const es = {
       puerto: 'Puerto de {id}: fuera de rango, vuelve al de siempre.',
       carpeta_vigilada: 'La carpeta vigilada es de otro equipo.',
     },
+  },
+
+  consultasLentas: {
+    boton: 'Consultas lentas',
+    titulo: (motor: string) => `Consultas lentas de ${motor}`,
+    descripcion:
+      'Las consultas que tardan más que el tiempo que usted elija, de la más lenta a la más rápida.',
+    cargando: 'Cargando consultas lentas…',
+    estadoTitulo: 'Estado del registro',
+    estadoActivo: (s: string) => `Registro activo: se anotan las consultas de más de ${s} s.`,
+    estadoApagado: 'El registro está apagado.',
+    noGestionada:
+      'Este servidor no lo gestiona WolfCore Dev (por ejemplo, el de otro programa): aquí solo se puede ver, no cambiar.',
+    umbral: 'Anotar consultas de más de (segundos)',
+    activar: 'Activar el registro',
+    aplicarUmbral: 'Cambiar el tiempo',
+    desactivar: 'Desactivar el registro',
+    actualizar: 'Volver a leer el registro',
+    confirmarTitulo: 'Cambiar el registro de consultas lentas',
+    confirmarActivar: (motor: string, s: string) =>
+      `Se activará el registro en todo el servidor ${motor} (consultas de más de ${s} s) y quedará guardado en su configuración. Afecta a todas sus bases.`,
+    confirmarDesactivar: (motor: string) =>
+      `Se desactivará el registro en todo el servidor ${motor} y quedará guardado en su configuración. Lo ya anotado se conserva.`,
+    confirmarBoton: 'Confirmar el cambio',
+    cancelar: 'Cancelar',
+    activado: 'Registro de consultas lentas activado',
+    desactivado: 'Registro de consultas lentas desactivado',
+    privacidad:
+      'El SQL se muestra con los valores cambiados por «?», porque puede contener datos reales de clientes. Nada de esto sale de este equipo ni se escribe en los registros de la aplicación.',
+    columnas: {
+      duracion: 'Duración',
+      filas: 'Filas examinadas',
+      base: 'Base',
+      fecha: 'Fecha',
+      sql: 'Consulta',
+      acciones: 'Acciones',
+    },
+    sinBase: 'Sin atribuir',
+    verLiteral: 'Ver literal',
+    ocultarLiteral: 'Ocultar literal',
+    literalAviso: 'SQL tal cual, con sus valores',
+    copiar: 'Copiar',
+    copiado: 'Consulta copiada',
+    truncado: (n: number) =>
+      `Se muestran como mucho las ${n} más lentas de la cola del registro (los últimos 5 MB).`,
+    vacioTitulo: 'Todavía no hay consultas lentas anotadas',
+    vacioTextoApagado:
+      'Active el registro y use sus sitios: las consultas que tarden más que el tiempo elegido aparecerán aquí.',
+    vacioTextoActivo:
+      'Por ahora ninguna consulta superó el tiempo elegido. Use sus sitios y vuelva a leer el registro.',
+  },
+  esquemaBd: {
+    boton: 'Ver esquema',
+    titulo: (base: string) => `Esquema de ${base}`,
+    descripcion:
+      'Solo lectura: tablas, columnas, claves y relaciones. No se lee ningún dato de sus tablas.',
+    cargando: 'Leyendo el esquema…',
+    error: 'No se pudo leer el esquema de la base.',
+    reintentar: 'Reintentar',
+    buscar: 'Buscar una tabla',
+    tablas: (n: number) => plural(n, 'tabla', 'tablas'),
+    vista: 'vista',
+    truncado: (n: number) => `La lista se recortó a ${n} tablas: hay más en la base.`,
+    sinResultados: 'Ninguna tabla coincide con la búsqueda.',
+    elegir: 'Elija una tabla de la lista para ver sus columnas, claves y relaciones.',
+    columnas: 'Columnas',
+    indices: 'Índices',
+    sinIndices: 'Esta tabla no tiene índices.',
+    relaciones: 'Relaciones',
+    sinRelaciones: 'Esta tabla no tiene relaciones con otras.',
+    salientes: 'Hace referencia a',
+    entrantes: 'Es referenciada por',
+    alBorrar: 'Al borrar:',
+    alActualizar: 'Al actualizar:',
+    irA: (tabla: string) => `Ir a la tabla ${tabla}`,
+    col: {
+      nombre: 'Columna',
+      tipo: 'Tipo',
+      nulo: 'Admite nulo',
+      defecto: 'Por defecto',
+      clave: 'Clave',
+    },
+    si: 'Sí',
+    no: 'No',
+    pk: 'PK',
+    unico: 'único',
+    vacioTitulo: 'Esta base no tiene tablas',
+    vacioTexto:
+      'Cuando cree tablas (por ejemplo, con las migraciones de su proyecto) aparecerán aquí.',
   },
 };
 
