@@ -264,6 +264,50 @@ export interface CapacidadesPlataforma {
    * (macOS aún no lo ha pedido). Solo consulta: nunca captura ni muestra diálogos.
    */
   capturaDisponible(): Promise<EstadoCaptura>;
+  /**
+   * Procesos del usuario y la sesión actuales (nunca los del sistema, de servicios ni de otros
+   * usuarios si la plataforma puede distinguirlos). Solo LEE: es el insumo del optimizador de RAM
+   * (D36), que además vuelve a filtrar y a comprobar cada proceso antes de tocarlo.
+   */
+  procesosDelUsuario(): Promise<ProcesoUsuario[]>;
+  /**
+   * Pide al proceso `pid` que cierre su ventana principal, como al pulsar la X (cierre amable: el
+   * programa puede preguntar si guarda). Nunca termina ni mata el proceso ni actúa por nombre.
+   * Devuelve false si el proceso ya no existe, no tiene ventana o no es del usuario y la sesión
+   * actuales.
+   */
+  cerrarVentanaPrincipal(pid: number): Promise<boolean>;
+  /** Usuario (identificador estable) y sesión del proceso actual. */
+  identidadActual(): Promise<IdentidadUsuario>;
+  /**
+   * Carpetas del sistema cuyos programas nunca se proponen para cerrar (la de Windows, la del
+   * antivirus integrado…). Solo lee el entorno.
+   */
+  rutasProtegidas(): string[];
+}
+
+/** Un proceso del usuario tal como lo da `Plataforma.procesosDelUsuario()` (D36). */
+export interface ProcesoUsuario {
+  pid: number;
+  nombre: string;
+  /** Ruta completa del ejecutable; null si no se pudo leer (entonces se trata como protegido). */
+  ruta: string | null;
+  /** Hora de creación (texto opaco: se compara por igualdad); distingue un PID reutilizado. */
+  inicio: string | null;
+  /** Memoria de trabajo en bytes. */
+  memoria: number;
+  /** ¿Tiene una ventana principal visible que se pueda cerrar? */
+  ventana: boolean;
+  sesion: number;
+  /** Identificador del dueño (el SID en Windows). */
+  usuario: string;
+  /** true si es un servicio del sistema (la plataforma lo sabe; el optimizador lo protege). */
+  servicio?: boolean;
+}
+
+export interface IdentidadUsuario {
+  usuario: string;
+  sesion: number;
 }
 
 /** Resultado de `Plataforma.capturaDisponible()` (D35). */

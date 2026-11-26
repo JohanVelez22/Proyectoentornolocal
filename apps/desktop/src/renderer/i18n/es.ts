@@ -450,6 +450,8 @@ export const es = {
       'captura.sin_imagen': 'No hay ninguna imagen para capturar.',
       'captura.imagen_invalida': 'La imagen de la captura no es válida.',
       'conversor.formato': 'Esa conversión no está disponible.',
+      'memoria.sin_confirmar': 'Confirma la acción en el diálogo antes de continuar.',
+      'memoria.modo_invalido': 'Ese modo de optimización no existe.',
       'conversor.archivo_invalido':
         'El archivo está dañado o no es del tipo que indica su extensión.',
       'conversor.archivo_grande': 'El archivo pesa demasiado (hasta {maximo}).',
@@ -4509,6 +4511,61 @@ export const es = {
     cerrar: 'Cerrar',
     niveles: { info: 'Información', aviso: 'Aviso', error: 'Error' },
     sinLeer: 'Sin leer',
+  },
+  memoria: {
+    boton: 'Memoria',
+    tituloBoton: 'Optimizar la memoria',
+    titulo: 'Optimizador de memoria',
+    intro:
+      'Elige un modo y revisa la lista. No se cierra ni se detiene nada hasta que lo confirmes, y nunca se ejecuta solo.',
+    modo: 'Modo',
+    modos: { liviano: 'Liviano', moderado: 'Moderado', profundo: 'Profundo' },
+    descripciones: {
+      liviano: 'Solo vacía cachés de la aplicación y de su sesión. No detiene ni cierra nada.',
+      moderado:
+        'Además propone dejar un solo trabajador de PHP y detener servicios de WolfCore Dev sin actividad.',
+      profundo:
+        'Además lista programas tuyos que usan mucha memoria para pedirles que cierren su ventana. Salen desmarcados.',
+    },
+    ver: 'Ver la lista',
+    revisando: 'Revisando…',
+    vacio: 'No hay nada que liberar en este modo.',
+    tipos: {
+      'cache-app': 'Vaciar caché',
+      'reducir-pool': 'Dejar un solo trabajador',
+      'detener-inactivo': 'Detener (sin actividad)',
+      'cerrar-programa': 'Pedir que cierre su ventana',
+    },
+    caches: {
+      sesion: 'Caché de la sesión de la aplicación',
+      nucleo: 'Muestras guardadas del monitor',
+    },
+    estimado: (cantidad: string) => `Se liberarían unos ${cantidad}`,
+    marcadas: (n: number, total: number) => `${n} de ${total} marcadas`,
+    sinDatos:
+      'Aún no hay datos de actividad suficientes para proponer detener servicios o reducir PHP. Deja abierto Inicio unos minutos y vuelve a mirar.',
+    avisoCerrar:
+      'A los programas solo se les pide cerrar su ventana, como al pulsar la X: pueden preguntarte si guardas. Nunca se fuerza ni se termina un programa.',
+    protegidos:
+      'Nunca aparecen programas del sistema, servicios de Windows, de otros usuarios, FlyEnv ni WolfCore Dev.',
+    aplicar: 'Aplicar lo marcado',
+    confirmarTitulo: '¿Aplicar estas acciones?',
+    confirmarTexto: (n: number) =>
+      n === 1 ? 'Se hará 1 acción de la lista.' : `Se harán ${n} acciones de la lista.`,
+    confirmar: 'Sí, aplicar',
+    cancelar: 'Cancelar',
+    resultadoTitulo: 'Resultado',
+    liberado: (cantidad: string) => `Calculado: unos ${cantidad} liberados`,
+    estados: { hecho: 'Hecho', saltado: 'Omitido', error: 'Falló' },
+    motivos: {
+      no_en_plan: 'No estaba en la lista',
+      protegido: 'Es un programa protegido',
+      cambio: 'Cambió desde que se mostró la lista',
+      sin_ventana: 'Ya no tiene una ventana que cerrar',
+      ya_apagado: 'Ya no había nada que reducir',
+      ocupado: 'Estaba ocupado',
+    },
+    otraVez: 'Volver a empezar',
   },
   barra: {
     paleta: 'Buscar o ejecutar un comando',

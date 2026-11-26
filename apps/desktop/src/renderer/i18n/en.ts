@@ -443,6 +443,8 @@ export const en: Textos = {
       'captura.sin_imagen': 'There is no image to capture.',
       'captura.imagen_invalida': 'The capture image is not valid.',
       'conversor.formato': 'That conversion is not available.',
+      'memoria.sin_confirmar': 'Confirm the action in the dialog before continuing.',
+      'memoria.modo_invalido': 'That optimization mode does not exist.',
       'conversor.archivo_invalido': 'The file is damaged or is not the type its extension says.',
       'conversor.archivo_grande': 'The file is too large (up to {maximo}).',
       'conversor.archivo_peligroso':
@@ -4482,6 +4484,60 @@ export const en: Textos = {
     cerrar: 'Close',
     niveles: { info: 'Information', aviso: 'Warning', error: 'Error' },
     sinLeer: 'Unread',
+  },
+  memoria: {
+    boton: 'Memory',
+    tituloBoton: 'Optimize memory',
+    titulo: 'Memory optimizer',
+    intro:
+      'Pick a mode and review the list. Nothing is closed or stopped until you confirm, and it never runs on its own.',
+    modo: 'Mode',
+    modos: { liviano: 'Light', moderado: 'Moderate', profundo: 'Deep' },
+    descripciones: {
+      liviano: 'Only clears the app and session caches. It stops and closes nothing.',
+      moderado: 'Also offers to leave a single PHP worker and to stop idle WolfCore Dev services.',
+      profundo:
+        'Also lists your own memory-hungry programs so you can ask them to close their window. They start unchecked.',
+    },
+    ver: 'Show the list',
+    revisando: 'Checking…',
+    vacio: 'There is nothing to free in this mode.',
+    tipos: {
+      'cache-app': 'Clear cache',
+      'reducir-pool': 'Leave a single worker',
+      'detener-inactivo': 'Stop (idle)',
+      'cerrar-programa': 'Ask it to close its window',
+    },
+    caches: {
+      sesion: 'Application session cache',
+      nucleo: 'Monitor samples kept in memory',
+    },
+    estimado: (cantidad: string) => `About ${cantidad} would be freed`,
+    marcadas: (n: number, total: number) => `${n} of ${total} checked`,
+    sinDatos:
+      'There is not enough activity data yet to offer stopping services or reducing PHP. Leave Home open for a few minutes and look again.',
+    avisoCerrar:
+      'Programs are only asked to close their window, like clicking the X: they may ask whether to save. A program is never forced or terminated.',
+    protegidos:
+      'System programs, Windows services, other users, FlyEnv and WolfCore Dev never appear.',
+    aplicar: 'Apply the checked ones',
+    confirmarTitulo: 'Apply these actions?',
+    confirmarTexto: (n: number) =>
+      n === 1 ? '1 action from the list will run.' : `${n} actions from the list will run.`,
+    confirmar: 'Yes, apply',
+    cancelar: 'Cancel',
+    resultadoTitulo: 'Result',
+    liberado: (cantidad: string) => `Estimated: about ${cantidad} freed`,
+    estados: { hecho: 'Done', saltado: 'Skipped', error: 'Failed' },
+    motivos: {
+      no_en_plan: 'It was not in the list',
+      protegido: 'It is a protected program',
+      cambio: 'It changed since the list was shown',
+      sin_ventana: 'It no longer has a window to close',
+      ya_apagado: 'There was nothing left to reduce',
+      ocupado: 'It was busy',
+    },
+    otraVez: 'Start over',
   },
   barra: {
     paleta: 'Search or run a command',

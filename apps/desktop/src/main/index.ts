@@ -11,6 +11,7 @@ import {
   ipcMain,
   nativeTheme,
   safeStorage,
+  session,
   shell,
   type Tray,
 } from 'electron';
@@ -430,6 +431,19 @@ if (errorCarpetaDatos !== null) {
       guardar: (id, v) => secretos.guardar(id as `tunel:${string}`, v),
       borrar: (id) => secretos.borrar(id as `tunel:${string}`),
     }));
+    // Optimizador de RAM (D36): la caché HTTP de la sesión de Electron se puede vaciar sin perder
+    // nada (no toca cookies ni almacenamiento). Solo se vacía cuando el usuario lo confirma.
+    n.registrarCacheApp({
+      id: 'sesion',
+      etiqueta: 'Sesión de Electron',
+      estimar: () => session.defaultSession.getCacheSize().catch(() => 0),
+      vaciar: async () => {
+        const antes = await session.defaultSession.getCacheSize().catch(() => 0);
+        await session.defaultSession.clearCache();
+        await session.defaultSession.clearCodeCaches({});
+        return antes;
+      },
+    });
     // Métricas solo con la ventana visible (oculta en la bandeja o minimizada: en pausa).
     const metricas = new ControlMetricas(n);
     const visible = (): void => metricas.visibilidad(v.isVisible() && !v.isMinimized());

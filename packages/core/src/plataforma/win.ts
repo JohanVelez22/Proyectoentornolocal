@@ -46,6 +46,7 @@ import { crearLanzadorOculto, type LanzadorOculto } from './lanzarOculto';
 import { interpretarNetstatTodos, interpretarTasklist, interpretarTasklistTodos } from './netstat';
 import { aBase64, codificarPowerShell, PathUsuarioWindows } from './pathUsuarioWin';
 import { ProcesosWindows, descendientesEnTabla, rutaSistema32 } from './procesosWin';
+import { ProcesosUsuarioWindows } from './procesosUsuarioWin';
 import {
   abrirTerminalWindows,
   leerRutaDockerRegistro,
@@ -66,6 +67,8 @@ import type {
   ComandoManual,
   EstadoAntivirus,
   EstadoCaptura,
+  IdentidadUsuario,
+  ProcesoUsuario,
   Ejecutor,
   IdCatalogo,
   InstalacionAjena,
@@ -887,6 +890,28 @@ export class PlataformaWindows implements PlataformaCompleta {
   /** Windows no pide permiso para capturar la pantalla (`desktopCapturer` basta). */
   async capturaDisponible(): Promise<EstadoCaptura> {
     return { disponible: true, permiso: 'no_aplica' };
+  }
+
+  private procesosUsuario(): ProcesosUsuarioWindows {
+    return new ProcesosUsuarioWindows(this.ejecutar, this.entorno);
+  }
+
+  /** Procesos del usuario y la sesión actuales (solo lee; sin servicios de Windows). */
+  procesosDelUsuario(): Promise<ProcesoUsuario[]> {
+    return this.procesosUsuario().listar();
+  }
+
+  /** Cierre amable (CloseMainWindow) por PID: nunca termina el proceso. */
+  cerrarVentanaPrincipal(pid: number): Promise<boolean> {
+    return this.procesosUsuario().cerrarVentana(pid);
+  }
+
+  identidadActual(): Promise<IdentidadUsuario> {
+    return this.procesosUsuario().identidad();
+  }
+
+  rutasProtegidas(): string[] {
+    return this.procesosUsuario().rutasProtegidas();
   }
 
   async reglasEntradaPermitidas(): Promise<ReglasEntrada> {

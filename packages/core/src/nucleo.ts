@@ -247,7 +247,20 @@ import {
   type RuntimesProyecto,
   type TipoRuntime,
 } from './runtimes/runtimes';
-import { ProcesosProyecto, type EstadoProcesoProyecto } from './proyectos/procesos';
+import {
+  ProcesosProyecto,
+  separarIdSupervisor,
+  type EstadoProcesoProyecto,
+} from './proyectos/procesos';
+import {
+  OptimizadorMemoria,
+  type CacheApp,
+  type ModoMemoria,
+  type PlanMemoria,
+  type PoolReducible,
+  type ResultadoMemoria,
+  type ServicioPropio,
+} from './sistema/memoria';
 import {
   escribirConfigProyecto,
   leerConfigProyecto,
@@ -766,6 +779,9 @@ export class Nucleo {
    * guarda, la registra ni la emite.
    */
   private proveedorClaveBd: (sitioId: string) => Promise<string | null> = async () => null;
+  /** Cachés propias que el optimizador de RAM sabe vaciar (la del núcleo y las que registra la app). */
+  private readonly cachesApp = new Map<string, CacheApp>();
+  private readonly optimizadorMemoria: OptimizadorMemoria;
 
   private constructor(
     readonly rutas: Rutas,
@@ -813,6 +829,33 @@ export class Nucleo {
     this.github = m.github;
     this.vigilante = m.vigilante;
     this.metricas = m.metricas;
+    this.registrarCacheApp({
+      id: 'nucleo',
+      etiqueta: 'Núcleo',
+      estimar: async () => this.metricas.tamanoCache(),
+      vaciar: async () => {
+        const antes = this.metricas.tamanoCache();
+        this.metricas.vaciarCache();
+        return antes;
+      },
+    });
+    this.optimizadorMemoria = new OptimizadorMemoria({
+      plataforma: this.plataforma,
+      rutasPropias: () => [this.rutas.base, path.dirname(process.execPath)],
+      pidApp: process.pid,
+      pidsSupervisados: () => this.pidsSupervisados(),
+      caches: () => [...this.cachesApp.values()],
+      pools: () => this.poolsReducibles(),
+      reducirPool: (version) =>
+        this.instalador.cerrojos.con('php', () => this.servicios.php.reducirAUno(version)),
+      servicios: () => this.serviciosPropiosEncendidos(),
+      detenerServicio: (id) => {
+        const p = separarIdSupervisor(id);
+        return p
+          ? this.procesos.detener(p.sitioId, p.procesoId)
+          : this.servicios.detener(id as IdServicio);
+      },
+    });
     this.registros = m.registros;
     this.errores = new VisorErrores({
       registros: this.registros,
@@ -3514,6 +3557,84 @@ export class Nucleo {
   /** ¿Se puede capturar la pantalla aquí y está el permiso del sistema? */
   capturaDisponible(): Promise<EstadoCaptura> {
     return this.plataforma.capturaDisponible();
+  }
+
+  // ---- Optimizador de RAM (D36) ----
+
+  /** La app (proceso principal) registra aquí una caché que sabe vaciar, p. ej. la de Electron. */
+  registrarCacheApp(c: CacheApp): void {
+    this.cachesApp.set(c.id, c);
+  }
+
+  /** Lista lo que se podría liberar (solo lee). Nada se hace hasta `aplicarMemoria`. */
+  planMemoria(modo: ModoMemoria): Promise<PlanMemoria> {
+    return this.optimizadorMemoria.planMemoria(modo);
+  }
+
+  /** Aplica las acciones elegidas del último plan; exige `confirmado === true`. */
+  aplicarMemoria(ids: string[], confirmado: true): Promise<ResultadoMemoria> {
+    return this.optimizadorMemoria.aplicarMemoria(ids, confirmado);
+  }
+
+  private pidsSupervisados(): number[] {
+    const res: number[] = [];
+    for (const id of this.supervisor.ids()) {
+      const pid = this.supervisor.pid(id);
+      if (pid !== null) res.push(pid);
+    }
+    return res;
+  }
+
+  private async poolsReducibles(): Promise<PoolReducible[]> {
+    const ultima = this.metricas.ultimos(1).at(-1);
+    const res: PoolReducible[] = [];
+    for (const version of await this.instalador.instalados('php')) {
+      const encendidos = this.servicios.php.trabajadoresEncendidos(version);
+      if (encendidos.length < 2) continue;
+      const ids = encendidos.map((i) => this.servicios.php.idTrabajador(version, i));
+      const inact = ids.map((id) => this.metricas.inactividadMs(id));
+      const obs = ids.map((id) => this.metricas.observadoMs(id));
+      const sobran = new Set(ids.slice(1));
+      res.push({
+        version,
+        trabajadores: encendidos.length,
+        memoria: (ultima?.procesos ?? [])
+          .filter((p) => sobran.has(p.id))
+          .reduce((t, p) => t + p.ramBytes, 0),
+        // Inactivo solo si todos lo están; sin observar alguno, no se sabe.
+        inactivoMs: inact.some((x) => x === null) ? null : Math.min(...(inact as number[])),
+        observadoMs: obs.some((x) => x === null) ? null : Math.min(...(obs as number[])),
+      });
+    }
+    return res;
+  }
+
+  /** Servicios de datos, instancias y procesos de proyecto encendidos (no nginx, FTP ni PHP). */
+  private async serviciosPropiosEncendidos(): Promise<ServicioPropio[]> {
+    const ultima = this.metricas.ultimos(1).at(-1);
+    const porPid = new Map((ultima?.procesos ?? []).map((p) => [p.pid, p]));
+    const res: ServicioPropio[] = [];
+    const agregar = (id: string, nombre: string, pid: number | null): void => {
+      const m = pid === null ? undefined : porPid.get(pid);
+      res.push({
+        id,
+        nombre,
+        memoria: m?.ramBytes ?? 0,
+        inactivoMs: m ? this.metricas.inactividadMs(m.id) : null,
+        observadoMs: m ? this.metricas.observadoMs(m.id) : null,
+      });
+    };
+    for (const s of await this.servicios.estados()) {
+      if (s.id === 'nginx' || s.id === 'ftp' || s.id.startsWith('php-')) continue;
+      if (s.instancias && s.instancias.length > 0) {
+        for (const i of s.instancias) {
+          if (i.estado === 'encendido') agregar(i.id, `${s.nombre} ${i.version}`, i.pid);
+        }
+      } else if (s.estado === 'encendido') {
+        agregar(s.id, s.nombre, s.pid);
+      }
+    }
+    return res;
   }
 
   // ---- Métricas y registros ----

@@ -10,6 +10,8 @@ import type {
   EditorDisponible,
   EstadoAntivirus,
   EstadoCaptura,
+  IdentidadUsuario,
+  ProcesoUsuario,
   IdCatalogo,
   IdTerminal,
   InstalacionAjena,
@@ -164,7 +166,11 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return this.procesos.has(pid) ? (this.rutasProceso.get(pid) ?? null) : null;
   }
 
+  /** Si es true, `matarArbol` falla la prueba: el optimizador de RAM nunca debe matar. */
+  prohibirMatar = false;
+
   async matarArbol(pid: number): Promise<void> {
+    if (this.prohibirMatar) throw new Error(`PROHIBIDO matar procesos (pid ${pid})`);
     this.matados.push(pid);
     this.procesos.delete(pid);
   }
@@ -358,6 +364,35 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async capturaDisponible(): Promise<EstadoCaptura> {
     return { ...this.estadoCaptura };
+  }
+
+  /** Procesos que ve `procesosDelUsuario` (D36); la prueba los pone y los cambia. */
+  procesosUsuario: ProcesoUsuario[] = [];
+  identidad: IdentidadUsuario = { usuario: 'S-1-5-21-yo', sesion: 1 };
+  carpetasProtegidas: string[] = [
+    String.raw`C:\Windows`,
+    String.raw`C:\Program Files\Windows Defender`,
+  ];
+  /** PIDs a los que se pidió cerrar la ventana (nunca se mata nada). */
+  readonly cierresPedidos: number[] = [];
+
+  async procesosDelUsuario(): Promise<ProcesoUsuario[]> {
+    return this.procesosUsuario.map((p) => ({ ...p }));
+  }
+
+  async cerrarVentanaPrincipal(pid: number): Promise<boolean> {
+    const p = this.procesosUsuario.find((x) => x.pid === pid);
+    if (!p || !p.ventana) return false;
+    this.cierresPedidos.push(pid);
+    return true;
+  }
+
+  async identidadActual(): Promise<IdentidadUsuario> {
+    return { ...this.identidad };
+  }
+
+  rutasProtegidas(): string[] {
+    return [...this.carpetasProtegidas];
   }
 
   async reglasEntradaPermitidas(): Promise<ReglasEntrada> {

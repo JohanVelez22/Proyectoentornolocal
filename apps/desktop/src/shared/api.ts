@@ -186,6 +186,11 @@ import type {
   VersionEnPapelera,
   CambiosCaptura,
   CapturaConfig,
+  AccionMemoria,
+  ModoMemoria,
+  PlanMemoria,
+  ResultadoAccionMemoria,
+  ResultadoMemoria,
 } from '@pel/core';
 import type {
   EstadoCapturaUi,
@@ -377,6 +382,11 @@ export type {
   VersionEnPapelera,
   CambiosCaptura,
   CapturaConfig,
+  ModoMemoria,
+  PlanMemoria,
+  ResultadoMemoria,
+  AccionMemoria,
+  ResultadoAccionMemoria,
   EstadoInstancia,
   IdInstancia,
   PlanActualizar,
@@ -1383,6 +1393,19 @@ export interface ApiEntorno {
       destino: string,
     ): Promise<{ destino: string; bytes: number }>;
   };
+  memoria: {
+    /**
+     * Lista lo que se podría liberar en ese modo (solo lee). `cerrar-programa` viene desmarcado y
+     * solo en `profundo`; nunca aparecen procesos del sistema, de otros usuarios, FlyEnv ni
+     * WolfCore Dev.
+     */
+    plan(modo: ModoMemoria): Promise<PlanMemoria>;
+    /**
+     * Aplica las acciones elegidas del último plan. `confirmado` debe ser `true`. Nunca mata
+     * procesos: a un programa solo se le pide cerrar su ventana.
+     */
+    aplicar(ids: string[], confirmado: true): Promise<ResultadoMemoria>;
+  };
   captura: {
     /** Configuración, estado del sistema y del atajo global (D35). */
     leer(): Promise<EstadoCapturaUi>;
@@ -1819,6 +1842,8 @@ export const RUTAS_IPC = [
   'herramientas.optimizarPdf',
   'herramientas.conversionesDocumento',
   'herramientas.convertirDocumento',
+  'memoria.plan',
+  'memoria.aplicar',
   'captura.leer',
   'captura.guardarConfig',
   'captura.iniciar',

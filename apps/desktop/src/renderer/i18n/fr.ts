@@ -468,6 +468,8 @@ export const fr: Textos = {
       'captura.sin_imagen': 'Il n’y a aucune image à capturer.',
       'captura.imagen_invalida': 'L’image de la capture n’est pas valide.',
       'conversor.formato': 'Cette conversion n’est pas disponible.',
+      'memoria.sin_confirmar': 'Confirmez l’action dans la boîte de dialogue avant de continuer.',
+      'memoria.modo_invalido': 'Ce mode d’optimisation n’existe pas.',
       'conversor.archivo_invalido':
         'Le fichier est endommagé ou n’est pas du type indiqué par son extension.',
       'conversor.archivo_grande': 'Le fichier est trop volumineux (jusqu’à {maximo}).',
@@ -4617,6 +4619,64 @@ export const fr: Textos = {
     cerrar: 'Fermer',
     niveles: { info: 'Information', aviso: 'Avertissement', error: 'Erreur' },
     sinLeer: 'Non lu',
+  },
+  memoria: {
+    boton: 'Mémoire',
+    tituloBoton: 'Optimiser la mémoire',
+    titulo: 'Optimiseur de mémoire',
+    intro:
+      'Choisissez un mode et vérifiez la liste. Rien n’est fermé ni arrêté tant que vous ne confirmez pas, et rien ne se lance tout seul.',
+    modo: 'Mode',
+    modos: { liviano: 'Léger', moderado: 'Modéré', profundo: 'Approfondi' },
+    descripciones: {
+      liviano:
+        'Vide seulement les caches de l’application et de sa session. N’arrête ni ne ferme rien.',
+      moderado:
+        'Propose aussi de ne garder qu’un seul processus PHP et d’arrêter les services inactifs de WolfCore Dev.',
+      profundo:
+        'Liste aussi vos programmes gourmands en mémoire pour leur demander de fermer leur fenêtre. Ils sont décochés.',
+    },
+    ver: 'Afficher la liste',
+    revisando: 'Vérification…',
+    vacio: 'Il n’y a rien à libérer dans ce mode.',
+    tipos: {
+      'cache-app': 'Vider le cache',
+      'reducir-pool': 'Ne garder qu’un processus',
+      'detener-inactivo': 'Arrêter (inactif)',
+      'cerrar-programa': 'Demander de fermer sa fenêtre',
+    },
+    caches: {
+      sesion: 'Cache de la session de l’application',
+      nucleo: 'Échantillons du moniteur en mémoire',
+    },
+    estimado: (cantidad: string) => `Environ ${cantidad} seraient libérés`,
+    marcadas: (n: number, total: number) => `${n} sur ${total} cochées`,
+    sinDatos:
+      'Il n’y a pas encore assez de données d’activité pour proposer d’arrêter des services ou de réduire PHP. Laissez Accueil ouvert quelques minutes et regardez à nouveau.',
+    avisoCerrar:
+      'On demande seulement aux programmes de fermer leur fenêtre, comme en cliquant sur la croix : ils peuvent demander s’il faut enregistrer. Un programme n’est jamais forcé ni terminé.',
+    protegidos:
+      'Les programmes système, les services Windows, ceux d’autres utilisateurs, FlyEnv et WolfCore Dev n’apparaissent jamais.',
+    aplicar: 'Appliquer la sélection',
+    confirmarTitulo: 'Appliquer ces actions ?',
+    confirmarTexto: (n: number) =>
+      n === 1
+        ? '1 action de la liste sera exécutée.'
+        : `${n} actions de la liste seront exécutées.`,
+    confirmar: 'Oui, appliquer',
+    cancelar: 'Annuler',
+    resultadoTitulo: 'Résultat',
+    liberado: (cantidad: string) => `Estimation : environ ${cantidad} libérés`,
+    estados: { hecho: 'Fait', saltado: 'Ignoré', error: 'Échec' },
+    motivos: {
+      no_en_plan: 'Ce n’était pas dans la liste',
+      protegido: 'C’est un programme protégé',
+      cambio: 'Cela a changé depuis l’affichage de la liste',
+      sin_ventana: 'Il n’a plus de fenêtre à fermer',
+      ya_apagado: 'Il n’y avait plus rien à réduire',
+      ocupado: 'Il était occupé',
+    },
+    otraVez: 'Recommencer',
   },
   barra: {
     paleta: 'Rechercher ou exécuter une commande',

@@ -38,9 +38,11 @@ import { argsDeAviso, useVersiones } from '../stores/versiones';
 import { rutaConFoco } from '../utilidades/foco';
 import { solicitudes } from '../composables/solicitudes';
 import AsistenteInicio from './AsistenteInicio.vue';
+import BotonMemoria from './BotonMemoria.vue';
 import CampanaAvisos from './CampanaAvisos.vue';
 import ConfirmacionMcp from './ConfirmacionMcp.vue';
 import PanelAvisos from './PanelAvisos.vue';
+import PanelMemoria from './PanelMemoria.vue';
 import PaletaComandos from './PaletaComandos.vue';
 import SelectorIdioma from './SelectorIdioma.vue';
 import SelectorTema from './SelectorTema.vue';
@@ -65,6 +67,7 @@ const notification = useNotification();
 
 const avisos = useAvisos();
 const panelAvisos = ref(false);
+const panelMemoria = ref(false);
 const contraido = ref(false);
 const falloArranque = ref(false);
 
@@ -254,6 +257,7 @@ onBeforeUnmount(() => {
             ></template>
             <kbd>{{ textos.barra.atajoPaleta }}</kbd>
           </NButton>
+          <BotonMemoria @abrir="panelMemoria = true" />
           <CampanaAvisos @abrir="panelAvisos = true" />
           <SelectorIdioma compacto />
           <SelectorTema compacto />
@@ -278,6 +282,7 @@ onBeforeUnmount(() => {
     </NLayout>
     <!-- Confirmaciones del servidor MCP: una sola instancia para toda la ventana. -->
     <PanelAvisos v-model:visible="panelAvisos" @abrir="abrirAviso" />
+    <PanelMemoria v-model:visible="panelMemoria" />
     <ConfirmacionMcp />
     <PaletaComandos />
     <AsistenteInicio />

@@ -84,6 +84,9 @@ const sistemaReal: SistemaMetricas = {
   statfs: (ruta) => statfs(ruta),
 };
 
+/** CPU (% del equipo) por encima de la cual un proceso supervisado cuenta como activo. */
+export const UMBRAL_ACTIVIDAD_CPU = 0.25;
+
 const acotar = (n: number, min: number, max: number): number => Math.min(max, Math.max(min, n));
 
 /**
@@ -104,6 +107,13 @@ export class Metricas {
   private redAnterior: { rx: number; tx: number; marca: number } | null = null;
   /** Último árbol leído: cambia poco y leerlo cuesta otra consulta al sistema. */
   private arbol: { pids: string; marca: number; hijos: Map<number, number[]> } | null = null;
+  /**
+   * Actividad observada de cada proceso supervisado (D36): desde cuándo se le ve y la última vez
+   * que su CPU pasó el umbral. Solo se llena mientras se muestrea; un hueco largo entre muestras
+   * (la interfaz pausó el muestreo) la borra, porque entonces no se sabe qué pasó.
+   */
+  private actividad = new Map<string, { pid: number; visto: number; activo: number }>();
+  private marcaAnterior: number | null = null;
 
   constructor(private readonly d: DepsMetricas) {
     this.sistema = d.sistema ?? sistemaReal;
@@ -209,9 +219,54 @@ export class Metricas {
       procesos,
     };
     if (generacion !== this.generacion) return muestra;
+    this.anotarActividad(muestra);
     this.guardar(muestra);
     this.d.eventos.emit('metricas:muestra', muestra);
     return muestra;
+  }
+
+  /**
+   * Cuánto hace (ms) que el proceso supervisado `id` no pasa del umbral de CPU, contado solo desde
+   * que se le observa; null si no se le ha observado. Es una cota inferior: con poco tiempo
+   * observado nunca afirma una inactividad larga.
+   */
+  inactividadMs(id: string): number | null {
+    const a = this.actividad.get(id);
+    return a === undefined ? null : Math.max(0, this.ahora() - a.activo);
+  }
+
+  /** Cuánto tiempo (ms) se lleva observando el proceso `id`; null si no se le ha observado. */
+  observadoMs(id: string): number | null {
+    const a = this.actividad.get(id);
+    return a === undefined ? null : Math.max(0, this.ahora() - a.visto);
+  }
+
+  /** Bytes que ocupan, a grandes rasgos, las muestras guardadas (para el optimizador de RAM). */
+  tamanoCache(): number {
+    return this.bufer.reduce((t, m) => t + 512 + m.procesos.length * 160, 0);
+  }
+
+  /** Olvida las muestras guardadas (no la actividad observada ni el muestreo en curso). */
+  vaciarCache(): void {
+    this.bufer = [];
+  }
+
+  private anotarActividad(m: MuestraSistema): void {
+    if (this.marcaAnterior !== null && m.marca - this.marcaAnterior > this.intervaloMs * 5) {
+      this.actividad.clear();
+    }
+    this.marcaAnterior = m.marca;
+    const vivos = new Set<string>();
+    for (const p of m.procesos) {
+      vivos.add(p.id);
+      const a = this.actividad.get(p.id);
+      if (!a || a.pid !== p.pid) {
+        this.actividad.set(p.id, { pid: p.pid, visto: m.marca, activo: m.marca });
+      } else if (p.cpu > UMBRAL_ACTIVIDAD_CPU) {
+        a.activo = m.marca;
+      }
+    }
+    for (const id of [...this.actividad.keys()]) if (!vivos.has(id)) this.actividad.delete(id);
   }
 
   /** Descendientes de los PIDs (de la caché si no cambiaron ni venció); vacío si falla. */

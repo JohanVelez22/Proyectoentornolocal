@@ -491,6 +491,10 @@ const api: ApiEntorno = {
     convertirDocumento: (origen, a, destino) =>
       invocar('herramientas.convertirDocumento', origen, a, destino),
   },
+  memoria: {
+    plan: (modo) => invocar('memoria.plan', modo),
+    aplicar: (ids, confirmado) => invocar('memoria.aplicar', ids, confirmado),
+  },
   captura: {
     leer: () => invocar('captura.leer'),
     guardarConfig: (cambios) => invocar('captura.guardarConfig', cambios),

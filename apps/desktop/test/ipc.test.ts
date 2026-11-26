@@ -973,6 +973,8 @@ describe('registrarIpc', () => {
         'herramientas.limpiarBom',
         'buscar.iniciar',
         'buscar.cancelar',
+        'memoria.plan',
+        'memoria.aplicar',
         'captura.leer',
         'captura.guardarConfig',
         'captura.iniciar',

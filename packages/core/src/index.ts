@@ -34,6 +34,7 @@ export * from './nginx/snippets';
 export * from './hosts/bloque';
 export * from './hosts/hosts';
 export * from './plataforma/index';
+export * from './sistema/memoria';
 export * from './catalogo/catalogo';
 export * from './catalogo/instalador';
 export * from './catalogo/limpieza';
