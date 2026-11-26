@@ -3,7 +3,7 @@ import { entornoDelHijo } from '../procesos/entorno';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { open, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
-import { arch, homedir, tmpdir } from 'node:os';
+import { arch, homedir, tmpdir, userInfo } from 'node:os';
 import path from 'node:path';
 import { rutaBasePorDefecto } from './carpetas';
 import { editoresWindows } from './editoresWin';
@@ -52,7 +52,17 @@ import {
   rutaSistema32,
 } from './procesosWin';
 import { ProcesosUsuarioWindows } from './procesosUsuarioWin';
-import { navegadoresDeProcesos, rutasLimpiezaWindows, SCRIPT_ES_ADMIN } from './limpiezaWin';
+import {
+  type AnclasLimpieza,
+  interpretarAnclas,
+  lecturaReal,
+  letraUnidad,
+  navegadoresDeProcesos,
+  rutasLimpiezaWindows,
+  SCRIPT_ANCLAS_LIMPIEZA,
+  SCRIPT_ES_ADMIN,
+  scriptTipoUnidad,
+} from './limpiezaWin';
 import {
   abrirTerminalWindows,
   leerRutaDockerRegistro,
@@ -346,6 +356,13 @@ export interface OpcionesPlataformaWindows {
    * (pruebas), para no ejecutar PowerShell real.
    */
   gitRegistro?: boolean;
+  /**
+   * Anclas de la limpieza de disco (por defecto, el perfil del token y `GetFolderPath` con el
+   * PowerShell del sistema; las pruebas las inyectan).
+   */
+  anclasLimpieza?: () => Promise<AnclasLimpieza | null>;
+  /** Tipo de unidad (`Win32_LogicalDisk.DriveType`) de una letra; por defecto, con PowerShell. */
+  tipoUnidad?: (letra: string) => Promise<number | null>;
 }
 
 const NOMBRE_REGLA_FIREWALL = /^[\w{}.\- @:()[\]]{1,200}$/;
@@ -383,6 +400,8 @@ export class PlataformaWindows implements PlataformaCompleta {
     this.carpetaTemporal = o.carpetaTemporal ?? tmpdir();
     this.escribirTemporal = o.escribirTemporal ?? ((ruta, datos) => writeFile(ruta, datos));
     this.gitRegistro = o.gitRegistro ?? o.entorno === undefined;
+    this.anclasInyectadas = o.anclasLimpieza ?? null;
+    this.tipoUnidadInyectado = o.tipoUnidad ?? null;
   }
 
   /** Carpeta de Git for Windows del registro (una lectura por sesión). */
@@ -937,9 +956,61 @@ export class PlataformaWindows implements PlataformaCompleta {
   // ---- Limpieza de disco (D37) ----
 
   private enviarAPapelera: ((ruta: string) => Promise<void>) | null = null;
+  private readonly anclasInyectadas: (() => Promise<AnclasLimpieza | null>) | null;
+  private readonly tipoUnidadInyectado: ((letra: string) => Promise<number | null>) | null;
+  /** Anclas leídas una vez por sesión (si la lectura falla, se reintenta la próxima vez). */
+  private anclasLeidas: Promise<AnclasLimpieza | null> | null = null;
+  /** Tipo de cada unidad, leído una vez. */
+  private readonly tiposUnidad = new Map<string, Promise<number | null>>();
 
-  rutasLimpieza(carpetaDatos: string): Promise<RutasCategoriaLimpieza[]> {
-    return rutasLimpiezaWindows(this.entorno, carpetaDatos, undefined, this.carpetaTemporal);
+  async rutasLimpieza(carpetaDatos: string): Promise<RutasCategoriaLimpieza[]> {
+    return rutasLimpiezaWindows(this.entorno, carpetaDatos, lecturaReal, await this.anclas());
+  }
+
+  /** Perfil del token y carpetas de `GetFolderPath`; nunca de las variables de entorno. */
+  private anclas(): Promise<AnclasLimpieza | null> {
+    if (this.anclasInyectadas) return this.anclasInyectadas();
+    this.anclasLeidas ??= (async () => {
+      try {
+        const perfil = userInfo().homedir;
+        const r = await this.ejecutar(
+          rutaPowerShell(this.entorno),
+          codificarPowerShell(SCRIPT_ANCLAS_LIMPIEZA),
+          { timeoutMs: 30_000 },
+        );
+        return r.codigo === 0 ? interpretarAnclas(r.stdout, perfil) : null;
+      } catch {
+        return null;
+      }
+    })();
+    const p = this.anclasLeidas;
+    void p.then((a) => {
+      if (a === null && this.anclasLeidas === p) this.anclasLeidas = null;
+    });
+    return p;
+  }
+
+  /** DriveType de la unidad (3 = disco fijo local); null si no se puede saber. */
+  private tipoUnidad(letra: string): Promise<number | null> {
+    if (this.tipoUnidadInyectado) return this.tipoUnidadInyectado(letra);
+    let p = this.tiposUnidad.get(letra);
+    if (!p) {
+      p = (async () => {
+        try {
+          const r = await this.ejecutar(
+            rutaPowerShell(this.entorno),
+            codificarPowerShell(scriptTipoUnidad(letra)),
+            { timeoutMs: 20_000 },
+          );
+          const n = Number.parseInt(r.stdout.trim(), 10);
+          return r.codigo === 0 && Number.isInteger(n) ? n : null;
+        } catch {
+          return null;
+        }
+      })();
+      this.tiposUnidad.set(letra, p);
+    }
+    return p;
   }
 
   /** Navegadores abiertos según la lista de procesos del usuario; si no se lee, falla. */
@@ -967,6 +1038,10 @@ export class PlataformaWindows implements PlataformaCompleta {
 
   async aPapelera(ruta: string): Promise<boolean> {
     if (!this.enviarAPapelera) return false;
+    // Solo en un disco fijo local: en un USB o una unidad de red la papelera no existe o borra
+    // sin preguntar, así que ni se intenta (quien llama lo cuenta como `sin-papelera`).
+    const letra = letraUnidad(ruta);
+    if (letra === null || (await this.tipoUnidad(letra)) !== 3) return false;
     try {
       await this.enviarAPapelera(ruta);
       return true;

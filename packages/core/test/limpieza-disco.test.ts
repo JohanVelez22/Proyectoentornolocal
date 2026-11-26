@@ -15,8 +15,11 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ErrorWolf } from '../src/errores';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
+import { PlataformaWindows } from '../src/plataforma/win';
 import {
   nombresPerfilesFirefox,
+  interpretarAnclas,
+  lecturaReal,
   rutasLimpiezaWindows,
   validarTemp,
 } from '../src/plataforma/limpiezaWin';
@@ -589,18 +592,17 @@ describe('limpieza de disco: rutas de Windows', () => {
         recursive: true,
       });
       const datos = path.join(raiz, 'WolfCoreDev');
-      const r = await rutasLimpiezaWindows(
-        {
-          LOCALAPPDATA: local,
-          APPDATA: roaming,
-          USERPROFILE: raiz,
-          TEMP: path.join(raiz, 'Temp'),
-          SystemRoot: path.join(raiz, 'Win'),
-        },
-        datos,
-      );
+      const r = await rutasLimpiezaWindows({ TEMP: path.join(raiz, 'Temp') }, datos, lecturaReal, {
+        perfil: raiz,
+        local,
+        roaming,
+        windows: path.join(raiz, 'Win'),
+        conocidas: [],
+      });
+      // Las rutas salen de las anclas reales (sin nombres cortos 8.3).
+      const udReal = path.join(realpathSync.native(local), 'Google', 'Chrome', 'User Data');
       const de = (c: CategoriaLimpieza): string[] => r.find((x) => x.categoria === c)!.rutas;
-      const chrome = de('cache-chrome').map((x) => path.relative(ud, x).replace(/\\/g, '/'));
+      const chrome = de('cache-chrome').map((x) => path.relative(udReal, x).replace(/\\/g, '/'));
       expect(chrome.sort()).toEqual(
         [
           'Default/Cache',
@@ -619,6 +621,10 @@ describe('limpieza de disco: rutas de Windows', () => {
       expect(de('wolfcore-descargas')).toEqual([path.join(datos, 'tmp')]);
       expect(de('wolfcore-registros')).toEqual([path.join(datos, 'logs')]);
       expect(r.find((x) => x.categoria === 'prefetch')!.requiereAdmin).toBe(true);
+      expect(de('cache-chrome').length).toBeGreaterThan(0);
+      expect(r.find((x) => x.categoria === 'cache-chrome')!.anclas).toEqual([
+        realpathSync.native(local),
+      ]);
       expect(r.find((x) => x.categoria === 'cache-edge')!.navegador).toBe('edge');
       // Nunca data ni respaldos.
       expect(r.flatMap((x) => x.rutas).some((x) => /respaldos|[\\/]data([\\/]|$)/i.test(x))).toBe(
@@ -734,8 +740,16 @@ describe('limpieza de disco: TEMP validado (revisión de D37)', () => {
   const ctx = {
     perfil: 'C:\\Users\\ana',
     local: 'C:\\Users\\ana\\AppData\\Local',
-    tmpdir: 'C:\\Users\\ana\\AppData\\Local\\Temp',
+    windows: 'C:\\Windows',
+    conocidas: [
+      'C:\\Users\\ana\\Documents',
+      'C:\\Users\\ana\\Desktop',
+      'D:\\MisDocumentos',
+      'C:\\Users\\ana\\OneDrive - Empresa',
+    ],
   };
+  const estado = async (temp: string, c = ctx, ausentes: string[] = []): Promise<string> =>
+    (await validarTemp(temp, c, lec(ausentes))).estado;
 
   it('rechaza TEMP en Documents, en una raíz de unidad, en UNC, en el perfil o un ancestro', async () => {
     for (const temp of [
@@ -743,6 +757,8 @@ describe('limpieza de disco: TEMP validado (revisión de D37)', () => {
       'C:\\Users\\ana\\Documentos\\Temp',
       'C:\\Users\\ana\\Desktop\\Tmp',
       'C:\\Users\\ana\\OneDrive - Empresa\\Temp',
+      'C:\\Users\\ana\\source\\repos\\tmp',
+      'D:\\MisDocumentos\\Temp',
       'D:\\',
       'D:',
       '\\\\servidor\\recurso\\Temp',
@@ -751,75 +767,126 @@ describe('limpieza de disco: TEMP validado (revisión de D37)', () => {
       'C:\\Users\\ana',
       'C:\\Users',
       'C:\\Users\\ana\\AppData\\Local\\Programas',
+      'D:\\Sistema\\Temp',
       'Temp',
     ]) {
-      expect(await validarTemp(temp, ctx, lec()), temp).toBe('invalido');
+      expect(await estado(temp), temp).toBe('invalido');
     }
   });
 
-  it('ni siendo os.tmpdir() vale una carpeta del usuario o una que no se llama Temp', async () => {
-    const docs = 'C:\\Users\\ana\\Documents\\Temp';
-    expect(await validarTemp(docs, { ...ctx, tmpdir: docs }, lec())).toBe('invalido');
-    const nombre = 'D:\\Datos\\Cosas';
-    expect(await validarTemp(nombre, { ...ctx, tmpdir: nombre }, lec())).toBe('invalido');
+  it('con el perfil vacío o una raíz de unidad como perfil no vale nada', async () => {
+    const temp = 'C:\\Users\\ana\\AppData\\Local\\Temp';
+    expect(await estado(temp, { ...ctx, perfil: '' })).toBe('invalido');
+    expect(await estado(temp, { ...ctx, perfil: 'C:\\' })).toBe('invalido');
+    expect(await estado(temp, { ...ctx, local: '' })).toBe('invalido');
   });
 
-  it('acepta %LOCALAPPDATA%\\Temp, su subcarpeta numérica y la de os.tmpdir()', async () => {
-    expect(await validarTemp('C:\\Users\\ana\\AppData\\Local\\Temp', ctx, lec())).toBe('valido');
-    expect(await validarTemp('C:\\Users\\ana\\AppData\\Local\\Temp\\2', ctx, lec())).toBe('valido');
-    expect(await validarTemp('\\\\?\\C:\\Users\\ana\\AppData\\Local\\Temp', ctx, lec())).toBe(
-      'valido',
-    );
-    const otro = 'D:\\Sistema\\Temp';
-    expect(await validarTemp(otro, ctx, lec())).toBe('invalido');
-    expect(await validarTemp(otro, { ...ctx, tmpdir: otro }, lec())).toBe('valido');
-    expect(await validarTemp(ctx.tmpdir, ctx, lec([ctx.tmpdir]))).toBe('ausente');
+  it('una carpeta conocida movida dentro de LocalAppData también se rechaza', async () => {
+    const temp = 'C:\\Users\\ana\\AppData\\Local\\Temp';
+    expect(await estado(temp, { ...ctx, conocidas: [temp] })).toBe('invalido');
   });
 
-  it('rutasLimpiezaWindows bloquea TEMP no seguro y no ofrece cachés si LOCALAPPDATA sale del perfil', async () => {
+  it('acepta <LocalAppData>\\Temp, su subcarpeta numérica y <Windows>\\Temp', async () => {
+    expect(await estado('C:\\Users\\ana\\AppData\\Local\\Temp')).toBe('valido');
+    expect(await estado('C:\\Users\\ana\\AppData\\Local\\Temp\\2')).toBe('valido');
+    expect(await estado('\\\\?\\C:\\Users\\ana\\AppData\\Local\\Temp')).toBe('valido');
+    expect(await estado('C:\\Windows\\Temp')).toBe('valido');
+    expect(await estado('C:\\Windows\\Temp\\2')).toBe('invalido');
+    const t = 'C:\\Users\\ana\\AppData\\Local\\Temp';
+    expect(await estado(t, ctx, [t])).toBe('ausente');
+    // Devuelve la ruta real (la que se limpia), no la del entorno.
+    const r = await validarTemp('C:\\Users\\ANA~1\\AppData\\Local\\Temp', ctx, {
+      canonica: async () => 'C:\\Users\\ana\\AppData\\Local\\Temp',
+    });
+    expect(r).toEqual({ estado: 'valido', real: 'C:\\Users\\ana\\AppData\\Local\\Temp' });
+  });
+
+  it('interpretarAnclas solo acepta rutas absolutas con unidad', () => {
+    const json = JSON.stringify({
+      local: 'C:\\Users\\ana\\AppData\\Local',
+      roaming: 'C:\\Users\\ana\\AppData\\Roaming',
+      windows: 'C:\\WINDOWS',
+      conocidas: ['C:\\Users\\ana\\Documents', '', 'relativa', 'D:\\Docs'],
+    });
+    expect(interpretarAnclas(json, 'C:\\Users\\ana')).toEqual({
+      perfil: 'C:\\Users\\ana',
+      local: 'C:\\Users\\ana\\AppData\\Local',
+      roaming: 'C:\\Users\\ana\\AppData\\Roaming',
+      windows: 'C:\\WINDOWS',
+      conocidas: ['C:\\Users\\ana\\Documents', 'D:\\Docs'],
+    });
+    expect(interpretarAnclas(json, '')).toBeNull();
+    expect(interpretarAnclas(json, 'C:\\')).toBeNull();
+    expect(interpretarAnclas('no es json', 'C:\\Users\\ana')).toBeNull();
+    expect(interpretarAnclas(JSON.stringify({ local: 'x', windows: 'C:\\W' }), 'C:\\U')).toBeNull();
+  });
+
+  it('rutasLimpiezaWindows no se fía del entorno: las anclas mandan', async () => {
     const lectura = {
       subcarpetas: async () => [],
       existeCarpeta: async () => false,
       leerTexto: async () => null,
       canonica: async (r: string) => r,
     };
-    const base = {
-      USERPROFILE: 'C:\\Users\\ana',
-      LOCALAPPDATA: 'C:\\Users\\ana\\AppData\\Local',
-      APPDATA: 'C:\\Users\\ana\\AppData\\Roaming',
-      SystemRoot: 'D:\\Win',
+    const anclas = {
+      perfil: 'C:\\Users\\ana',
+      local: 'C:\\Users\\ana\\AppData\\Local',
+      roaming: 'C:\\Users\\ana\\AppData\\Roaming',
+      windows: 'D:\\Win',
+      conocidas: ['C:\\Users\\ana\\Documents'],
     };
+    const de = (r: RutasCategoriaLimpieza[], c: CategoriaLimpieza) =>
+      r.find((x) => x.categoria === c);
+    // USERPROFILE vacío o C:\ y LOCALAPPDATA apuntando a Documentos: no cambian nada.
     let r = await rutasLimpiezaWindows(
-      { ...base, TEMP: 'C:\\Users\\ana\\Documents' },
+      {
+        USERPROFILE: '',
+        LOCALAPPDATA: 'C:\\Users\\ana\\Documents',
+        TEMP: 'C:\\Users\\ana\\Documents\\Temp',
+        SystemRoot: 'E:\\Falso',
+      },
       'C:\\datos',
       lectura,
-      'C:\\Users\\ana\\Documents',
+      anclas,
     );
-    const temp = r.find((x) => x.categoria === 'temp')!;
-    expect(temp.bloqueo).toBe('temp-no-seguro');
-    expect(temp.rutas).toEqual([]);
-    // Prefetch sale de la carpeta de System32 un nivel por encima.
-    expect(r.find((x) => x.categoria === 'prefetch')!.rutas).toEqual(['D:\\Win\\Prefetch']);
-    expect(r.some((x) => x.categoria === 'cache-chrome')).toBe(true);
+    expect(de(r, 'temp')!.bloqueo).toBe('temp-no-seguro');
+    expect(de(r, 'temp')!.rutas).toEqual([]);
+    // Prefetch sale de la carpeta de Windows real, no de %SystemRoot%.
+    expect(de(r, 'prefetch')!.rutas).toEqual(['D:\\Win\\Prefetch']);
+    expect(de(r, 'prefetch')!.anclas).toEqual(['D:\\Win']);
+    expect(de(r, 'cache-chrome')!.anclas).toEqual(['C:\\Users\\ana\\AppData\\Local']);
     r = await rutasLimpiezaWindows(
-      { ...base, TEMP: 'C:\\Users\\ana\\AppData\\Local\\Temp' },
+      { USERPROFILE: 'C:\\', TEMP: 'C:\\Users\\ana\\AppData\\Local\\Temp' },
       'C:\\datos',
       lectura,
-      'C:\\otro',
+      anclas,
     );
-    expect(r.find((x) => x.categoria === 'temp')).toEqual({
+    expect(de(r, 'temp')).toEqual({
       categoria: 'temp',
       rutas: ['C:\\Users\\ana\\AppData\\Local\\Temp'],
       requiereAdmin: false,
+      anclas: ['C:\\Users\\ana\\AppData\\Local', 'D:\\Win'],
     });
-    r = await rutasLimpiezaWindows(
-      { ...base, LOCALAPPDATA: 'D:\\Local', TEMP: 'D:\\Local\\Temp' },
-      'C:\\datos',
-      lectura,
-      'C:\\otro',
-    );
+    // Sin anclas (no se pudieron leer) o con el perfil vacío o en una raíz de unidad: TEMP
+    // bloqueado, sin cachés de navegador y Prefetch sin rutas.
+    for (const a of [null, { ...anclas, perfil: '' }, { ...anclas, perfil: 'C:\\' }]) {
+      r = await rutasLimpiezaWindows(
+        { TEMP: 'C:\\Users\\ana\\AppData\\Local\\Temp' },
+        'C:\\datos',
+        lectura,
+        a,
+      );
+      expect(de(r, 'temp')!.bloqueo).toBe('temp-no-seguro');
+      expect(r.some((x) => x.categoria.startsWith('cache-'))).toBe(false);
+      if (a === null) expect(de(r, 'prefetch')!.rutas).toEqual([]);
+    }
+    // LocalAppData fuera del perfil: tampoco.
+    r = await rutasLimpiezaWindows({ TEMP: 'D:\\Local\\Temp' }, 'C:\\datos', lectura, {
+      ...anclas,
+      local: 'D:\\Local',
+    });
     expect(r.some((x) => x.categoria === 'cache-chrome')).toBe(false);
-    expect(r.find((x) => x.categoria === 'temp')!.bloqueo).toBe('temp-no-seguro');
+    expect(de(r, 'temp')!.bloqueo).toBe('temp-no-seguro');
   });
 
   it('una categoría que la plataforma marca como TEMP no seguro queda bloqueada y no se borra nada', async () => {
@@ -876,33 +943,85 @@ describe('limpieza de disco: registro, edades y vetos (revisión de D37)', () =>
     return res;
   }
 
-  it('el registro se escribe por lotes a medida que se borra', async () => {
+  /** Líneas de rutas `.tmp` escritas en el registro falso. */
+  const rutasEscritas = (escrito: string[]): string[] =>
+    escrito.flatMap((t) => t.split('\n')).filter((x) => x.endsWith('.tmp'));
+
+  it('el registro se escribe por lotes, y cada lote antes de borrarlo', async () => {
     const reg = registroFalso(null);
-    const e = await escenario({ abrirRegistro: reg.abrir });
+    let antes = 0;
+    const e = await escenario({
+      abrirRegistro: reg.abrir,
+      // Cuando se va a borrar un archivo, su ruta ya está en el registro.
+      antesDeBorrar: (ruta) => {
+        if (rutasEscritas(reg.escrito).includes(ruta)) antes++;
+      },
+    });
     masa(e.rutas.temp, 450);
     await e.l.analizar(['temp']);
     const r = await e.l.limpiar(['temp'], true);
     expect(r.registroFallido).toBe(false);
+    expect(r.sinAnotar).toEqual([]);
+    expect(antes).toBe(452);
     expect(reg.escrito[0]).toContain('Limpieza de disco');
     expect(reg.escrito[0]).not.toContain('.tmp');
-    // Cabecera, dos lotes de 200, el resto con la línea de la categoría y el resumen.
-    expect(reg.escrito.length).toBeGreaterThanOrEqual(4);
-    expect(reg.escrito[1]!.split('\n').filter((x) => x.endsWith('.tmp'))).toHaveLength(200);
+    const lotes = reg.escrito.map((t) => t.split('\n').filter((x) => x.endsWith('.tmp')).length);
+    expect(lotes.filter((n) => n === 200)).toHaveLength(2);
+    expect(Math.max(...lotes)).toBe(200);
     expect(reg.escrito.join('')).toContain('temp: 452 archivos');
   });
 
-  it('si el registro deja de escribirse, se para de borrar y se avisa', async () => {
-    const reg = registroFalso(2);
+  it('si el registro deja de escribirse, se para: solo se borró lo ya anotado', async () => {
+    const reg = registroFalso(3);
     const e = await escenario({ abrirRegistro: reg.abrir });
     const archivos = masa(e.rutas.temp, 450);
     e.falsa.administrador = true;
     await e.l.analizar(['temp', 'prefetch']);
     const r = await e.l.limpiar(['temp', 'prefetch'], true);
     expect(r.registroFallido).toBe(true);
-    expect(r.archivos).toBe(200);
+    // Todo lo borrado está en el registro; el lote que no se pudo escribir vuelve sin borrar.
+    expect(r.archivos).toBe(rutasEscritas(reg.escrito).length);
+    expect(r.archivos).toBeLessThanOrEqual(2);
+    expect(r.sinAnotar.filter((x) => x.endsWith('.tmp')).length).toBeGreaterThan(0);
+    for (const x of r.sinAnotar.filter((l) => l.endsWith('.tmp'))) expect(existe(x)).toBe(true);
     expect(archivos.filter(existe).length).toBeGreaterThanOrEqual(250);
-    // La categoría siguiente ya no se toca.
+    // Ni la categoría siguiente ni las carpetas vacías se tocan.
     expect(existe(e.f.pf)).toBe(true);
+    expect(existe(path.join(e.rutas.temp, 'masa'))).toBe(true);
+  });
+
+  it('pasadas las 5000 rutas, un fallo del registro también se detecta y se para', async () => {
+    let n = 0;
+    const escrito: string[] = [];
+    const e = await escenario({
+      abrirRegistro: async (destino) => ({
+        ruta: destino,
+        escribir: async (t) => {
+          // Falla la primera línea de cuenta (la de los lotes sin detalle).
+          if (t.includes('rutas sin detalle') && n++ === 0) throw new Error('disco lleno');
+          escrito.push(t);
+        },
+        cerrar: async () => undefined,
+      }),
+    });
+    const archivos = masa(e.rutas.temp, 5600);
+    await e.l.analizar(['temp']);
+    const r = await e.l.limpiar(['temp'], true);
+    expect(r.registroFallido).toBe(true);
+    expect(r.archivos).toBe(rutasEscritas(escrito).length);
+    expect(r.archivos).toBeLessThanOrEqual(5000);
+    expect(r.archivos).toBeGreaterThan(4700);
+    expect(archivos.filter(existe).length).toBeGreaterThanOrEqual(600);
+  });
+
+  it('las carpetas vacías que se quitan quedan en el registro', async () => {
+    const e = await escenario();
+    await e.l.analizar(['temp']);
+    const r = await e.l.limpiar(['temp'], true);
+    const txt = readFileSync(r.registro, 'utf8');
+    expect(existe(path.join(e.rutas.temp, 'sub'))).toBe(false);
+    const vacias = txt.split('\n').filter((l) => l.startsWith('carpeta vacia quitada: '));
+    expect(vacias.map((l) => path.basename(l)).sort()).toEqual(['hondo', 'sub']);
   });
 
   it('si ni la cabecera del registro se escribe, no se borra nada', async () => {
@@ -991,5 +1110,88 @@ describe('limpieza de disco: registro, edades y vetos (revisión de D37)', () =>
     expect(existe(reciente)).toBe(true);
     expect(existe(ajeno)).toBe(true);
     expect(existe(r.registro)).toBe(true);
+  });
+});
+
+describe('limpieza de disco: anclas y papelera (re-revisión de D37)', () => {
+  it('una unión por encima del padre (en User Data) se detecta desde el ancla: el centinela queda', async (ctx) => {
+    const e = await escenario();
+    const ancla = e.p('usuario');
+    // Imita Default\Cache dentro de una carpeta ajena.
+    const ajena = e.p('ajena');
+    const centinela = archivo(path.join(ajena, 'Default', 'Cache', 'centinela.bin'), 321, 9999);
+    const userData = path.join(ancla, 'Chrome2', 'User Data');
+    if (!union(ajena, userData)) return ctx.skip();
+    const enlazada = path.join(userData, 'Default', 'Cache');
+    e.falsa.limpieza = e.falsa.limpieza.map((c) =>
+      c.categoria === 'cache-chrome'
+        ? {
+            ...c,
+            rutas: [...c.rutas, enlazada, path.join(ajena, 'Default', 'Cache')],
+            anclas: [ancla],
+          }
+        : c,
+    );
+    const [c] = await e.l.analizar(['cache-chrome']);
+    // Las 4 cachés de verdad siguen valiendo (también en macOS, con /var → /private/var encima).
+    expect(c!.archivos).toBe(4);
+    expect(c!.carpetas).toHaveLength(4);
+    const r = await e.l.limpiar(['cache-chrome'], true);
+    expect(r.archivos).toBe(4);
+    // La enlazada y la que no cuelga del ancla se rechazan.
+    expect(r.categorias[0]!.motivos.enlace).toBe(2);
+    expect(existe(centinela)).toBe(true);
+    expect(existe(e.f.chromeCache)).toBe(false);
+  });
+
+  it('con solo la raíz bajo la unión de User Data, el análisis no cuenta nada', async (ctx) => {
+    const e = await escenario();
+    const ajena = e.p('ajena');
+    archivo(path.join(ajena, 'Default', 'Cache', 'centinela.bin'), 321, 9999);
+    const userData = e.p('usuario', 'Chrome2', 'User Data');
+    if (!union(ajena, userData)) return ctx.skip();
+    e.falsa.limpieza = [
+      {
+        categoria: 'cache-chrome',
+        rutas: [path.join(userData, 'Default', 'Cache')],
+        requiereAdmin: false,
+        navegador: 'chrome',
+        anclas: [e.p('usuario')],
+      },
+    ];
+    const [c] = await e.l.analizar(['cache-chrome']);
+    expect(c!.archivos).toBe(0);
+  });
+
+  it('la papelera solo se usa en un disco fijo local (no en USB, red ni UNC)', async () => {
+    const tipos: Record<string, number | null> = { C: 3, E: 2, Z: 4, X: null };
+    const pedidas: string[] = [];
+    const p = new PlataformaWindows(undefined, undefined, {
+      entorno: {},
+      tipoUnidad: async (letra) => {
+        pedidas.push(letra);
+        return tipos[letra] ?? null;
+      },
+    });
+    const enviadas: string[] = [];
+    p.registrarPapelera(async (r) => {
+      enviadas.push(r);
+    });
+    expect(await p.aPapelera('C:\\datos\\logs\\a.log')).toBe(true);
+    expect(await p.aPapelera('E:\\datos\\logs\\b.log')).toBe(false);
+    expect(await p.aPapelera('Z:\\datos\\logs\\c.log')).toBe(false);
+    expect(await p.aPapelera('X:\\datos\\logs\\d.log')).toBe(false);
+    expect(await p.aPapelera('\\\\servidor\\recurso\\e.log')).toBe(false);
+    expect(enviadas).toEqual(['C:\\datos\\logs\\a.log']);
+    expect(pedidas).toEqual(['C', 'E', 'Z', 'X']);
+  });
+
+  it('una categoría que la plataforma deja sin papelera lo cuenta como sin-papelera', async () => {
+    const e = await escenario();
+    e.falsa.papeleraDisponible = false;
+    await e.l.analizar(['wolfcore-descargas']);
+    const r = await e.l.limpiar(['wolfcore-descargas'], true);
+    expect(r.categorias[0]!.motivos['sin-papelera']).toBe(1);
+    expect(existe(e.f.zip)).toBe(true);
   });
 });

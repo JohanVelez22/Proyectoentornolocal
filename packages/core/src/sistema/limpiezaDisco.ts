@@ -34,7 +34,8 @@ import type {
  * - Archivos en uso (EBUSY, EPERM, EACCES): se saltan y se cuentan. Hay un tope de archivos por
  *   ejecución y se puede cancelar.
  * - Cada ejecución deja un registro de texto en la carpeta de registros de WolfCore Dev, escrito
- *   a medida que se borra; si no se puede escribir, se deja de borrar.
+ *   por lotes: cada lote se anota ANTES de borrarlo (y las carpetas vacías que se quitan, después);
+ *   si no se puede escribir, se deja de borrar.
  */
 
 export const CATEGORIAS_LIMPIEZA = [
@@ -69,6 +70,10 @@ export const VIGENCIA_ANALISIS_MS = 30 * 60_000;
 export const MAX_RUTAS_REGISTRO = 5000;
 /** Cada cuántas rutas borradas se escriben en el registro (y al terminar cada categoría). */
 export const LOTE_REGISTRO = 200;
+/** Tope de líneas sin anotar que se devuelven en el resultado. */
+export const MAX_SIN_ANOTAR = 1000;
+/** Carpetas vacías quitadas que se listan por raíz; después, solo la cuenta. */
+export const MAX_CARPETAS_REGISTRO = 1000;
 
 /** Únicas carpetas de un perfil de navegador que se limpian. */
 const CARPETAS_CACHE = new Set(['cache', 'code cache', 'gpucache', 'cache2']);
@@ -191,6 +196,8 @@ export interface ResultadoLimpiezaDisco {
   registro: string;
   /** true si el registro dejó de poder escribirse: la limpieza se paró ahí. */
   registroFallido: boolean;
+  /** Líneas que no se pudieron escribir en el registro (con tope); sus archivos no se borraron. */
+  sinAnotar: string[];
 }
 
 /** Registro abierto de una ejecución: se escribe por partes, a medida que se borra. */
@@ -337,6 +344,34 @@ export class LimpiezaDisco {
    * padre ya resuelto para que un nombre corto 8.3 (`RUNNER~1`) o `/var` → `/private/var` más
    * arriba no rechace una raíz legítima. null si no cuadra.
    */
+  /**
+   * Ruta real de `r` comprobada desde su ancla (la más honda de `anclas` que la contiene): cada
+   * tramo desde el ancla hacia abajo es una carpeta de verdad (`lstat`, sin enlaces ni uniones) y
+   * la ruta real de `r` es la real del ancla más la ruta relativa esperada. Lo que hay por encima
+   * del ancla (`/var` → `/private/var` en macOS, nombres cortos 8.3) no cuenta. null si `r` no
+   * cuelga de ningún ancla o algo no cuadra.
+   */
+  private async realDesdeAncla(r: string, anclas: readonly string[]): Promise<string | null> {
+    const ancla = anclas
+      .filter((a) => a !== '' && dentroDe(a, r))
+      .sort((a, b) => normalizar(b).length - normalizar(a).length)[0];
+    if (ancla === undefined) return null;
+    const realAncla = await realpath(ancla).catch(() => null);
+    if (realAncla === null) return null;
+    const relativa = path.relative(ancla, r);
+    if (relativa.startsWith('..') || path.isAbsolute(relativa)) return null;
+    const tramos = relativa.split(/[\\/]+/).filter((t) => t !== '');
+    let actual = ancla;
+    for (const t of tramos) {
+      actual = path.join(actual, t);
+      const st = await lstat(actual).catch(() => null);
+      if (st === null || st.isSymbolicLink() || !st.isDirectory()) return null;
+    }
+    const real = await realpath(r).catch(() => null);
+    if (real === null) return null;
+    return normalizar(real) === normalizar(path.join(realAncla, ...tramos)) ? real : null;
+  }
+
   private async realSinRedirigir(r: string): Promise<string | null> {
     const real = await realpath(r).catch(() => null);
     if (real === null) return null;
@@ -396,7 +431,10 @@ export class LimpiezaDisco {
         saltar('enlace');
         continue;
       }
-      const real = await this.realSinRedirigir(r);
+      const real =
+        ruta.anclas !== undefined
+          ? await this.realDesdeAncla(r, ruta.anclas)
+          : await this.realSinRedirigir(r);
       if (real === null) {
         saltar('enlace');
         continue;
@@ -670,7 +708,7 @@ export class LimpiezaDisco {
             `Limpieza de disco ${new Date(this.ahora()).toISOString()}`,
             `Categorias pedidas: ${plan.map((p) => p.categoria).join(', ') || '(ninguna)'}`,
             '',
-            'Rutas borradas:',
+            'Rutas a borrar (cada lote se anota antes de borrarlo):',
             '',
           ].join('\n'),
         );
@@ -700,30 +738,49 @@ export class LimpiezaDisco {
         truncado: false,
         registro: registro.ruta,
         registroFallido: false,
+        sinAnotar: [],
       };
-      // Registro incremental: las rutas se escriben por lotes; si falla, se deja de borrar.
-      let pendientes: string[] = [];
+      // Registro ANTES de borrar: cada lote de candidatos se escribe y solo después se borra. Si
+      // una escritura falla, ese lote no se borra y la limpieza se para. Pasadas las
+      // `MAX_RUTAS_REGISTRO` rutas, cada lote deja una línea con la cuenta (así un fallo se sigue
+      // detectando). Lo que no se pudo escribir vuelve en `sinAnotar`.
       let rutasEscritas = 0;
       let totalRutas = 0;
-      const volcar = async (extra: string[] = []): Promise<boolean> => {
-        if (resultado.registroFallido) return false;
-        const lineas = [...pendientes, ...extra];
-        pendientes = [];
-        if (lineas.length === 0) return true;
+      const guardarSinAnotar = (lineas: readonly string[]): void => {
+        for (const l of lineas) {
+          if (resultado.sinAnotar.length >= MAX_SIN_ANOTAR) return;
+          resultado.sinAnotar.push(l);
+        }
+      };
+      const escribir = async (lineas: string[]): Promise<boolean> => {
+        if (lineas.length === 0) return !resultado.registroFallido;
+        if (resultado.registroFallido) {
+          guardarSinAnotar(lineas);
+          return false;
+        }
         try {
           await registro.escribir(`${lineas.join('\n')}\n`);
           return true;
         } catch {
           resultado.registroFallido = true;
+          guardarSinAnotar(lineas);
           return false;
         }
       };
-      const anotar = async (linea: string): Promise<boolean> => {
-        totalRutas++;
-        if (rutasEscritas >= MAX_RUTAS_REGISTRO) return true;
-        rutasEscritas++;
-        pendientes.push(linea);
-        return pendientes.length >= LOTE_REGISTRO ? volcar() : true;
+      const anotarLote = async (lineas: string[]): Promise<boolean> => {
+        const detalle = lineas.slice(0, Math.max(0, MAX_RUTAS_REGISTRO - rutasEscritas));
+        const resto = lineas.length - detalle.length;
+        const texto =
+          resto > 0
+            ? [
+                ...detalle,
+                `... lote de ${resto} rutas sin detalle (van ${totalRutas + lineas.length})`,
+              ]
+            : detalle;
+        if (!(await escribir(texto))) return false;
+        rutasEscritas += detalle.length;
+        totalRutas += lineas.length;
+        return true;
       };
       const tope = this.d.topeArchivos ?? MAX_ARCHIVOS_LIMPIEZA;
       try {
@@ -775,45 +832,66 @@ export class LimpiezaDisco {
                     senal,
                     saltar,
                     async (_dir, archivos) => {
-                      for (const f of archivos) {
+                      for (let i = 0; i < archivos.length;) {
                         if (senal.aborted) {
                           resultado.cancelado = true;
                           return false;
                         }
-                        if (resultado.archivos >= tope) {
+                        const cabe = tope - resultado.archivos;
+                        if (cabe <= 0) {
                           resultado.truncado = true;
                           return false;
                         }
-                        const r = await this.borrarUno(f.ruta, raiz, regla, vetos, referencia);
-                        if (r.estado === 'saltado') {
-                          saltar(r.motivo);
-                          continue;
-                        }
-                        if (r.estado === 'ausente') continue;
-                        cat.archivos++;
-                        cat.bytes += r.bytes;
-                        resultado.archivos++;
-                        resultado.liberados += r.bytes;
-                        if (r.estado === 'papelera') resultado.enPapelera += r.bytes;
-                        if (regla.carpetasVacias) {
-                          for (
-                            let p = path.dirname(f.ruta);
-                            dentroDe(raiz, p) && normalizar(p) !== normalizar(raiz);
-                            p = path.dirname(p)
-                          ) {
-                            tocadas.add(p);
+                        const lote = archivos.slice(i, i + Math.min(LOTE_REGISTRO, cabe));
+                        i += lote.length;
+                        const anotado = await anotarLote(
+                          lote.map((f) =>
+                            regla.borrado === 'papelera' ? `${f.ruta}  (papelera)` : f.ruta,
+                          ),
+                        );
+                        if (!anotado) return false;
+                        for (const f of lote) {
+                          if (senal.aborted) {
+                            resultado.cancelado = true;
+                            return false;
+                          }
+                          const r = await this.borrarUno(f.ruta, raiz, regla, vetos, referencia);
+                          if (r.estado === 'saltado') {
+                            saltar(r.motivo);
+                            continue;
+                          }
+                          if (r.estado === 'ausente') continue;
+                          cat.archivos++;
+                          cat.bytes += r.bytes;
+                          resultado.archivos++;
+                          resultado.liberados += r.bytes;
+                          if (r.estado === 'papelera') resultado.enPapelera += r.bytes;
+                          if (regla.carpetasVacias) {
+                            for (
+                              let p = path.dirname(f.ruta);
+                              dentroDe(raiz, p) && normalizar(p) !== normalizar(raiz);
+                              p = path.dirname(p)
+                            ) {
+                              tocadas.add(p);
+                            }
                           }
                         }
-                        const ok = await anotar(
-                          r.estado === 'papelera' ? `${f.ruta}  (papelera)` : f.ruta,
-                        );
-                        if (!ok) return false;
                       }
                       return true;
                     },
                   );
                 } finally {
-                  if (regla.carpetasVacias) await this.quitarVacias(tocadas, raiz, vetos);
+                  // Con el registro roto no se quita nada más (ni carpetas vacías).
+                  if (regla.carpetasVacias && !resultado.registroFallido) {
+                    const quitadas = await this.quitarVacias(tocadas, raiz, vetos);
+                    const detalle = quitadas.slice(0, MAX_CARPETAS_REGISTRO);
+                    await escribir([
+                      ...detalle.map((d) => `carpeta vacia quitada: ${d}`),
+                      ...(quitadas.length > detalle.length
+                        ? [`... y ${quitadas.length - detalle.length} carpetas vacias mas`]
+                        : []),
+                    ]);
+                  }
                 }
                 if (resultado.cancelado || resultado.truncado || resultado.registroFallido) break;
               }
@@ -828,7 +906,7 @@ export class LimpiezaDisco {
               }
             }
           }
-          await volcar([this.lineaCategoria(cat)]);
+          await escribir([this.lineaCategoria(cat)]);
           if (resultado.cancelado) break;
         }
       } finally {
@@ -845,7 +923,7 @@ export class LimpiezaDisco {
             : []),
           '',
         ];
-        await volcar(resumen);
+        await escribir(resumen);
         try {
           await registro.cerrar();
         } catch {
@@ -927,7 +1005,12 @@ export class LimpiezaDisco {
   }
 
   /** Quita carpetas vacías (de la más honda a la más alta); `rmdir` no borra las que tienen algo. */
-  private async quitarVacias(tocadas: Set<string>, raiz: string, vetos: string[]): Promise<void> {
+  private async quitarVacias(
+    tocadas: Set<string>,
+    raiz: string,
+    vetos: string[],
+  ): Promise<string[]> {
+    const quitadas: string[] = [];
     const orden = [...tocadas].sort((a, b) => b.length - a.length);
     for (const dir of orden) {
       if (!dentroDe(raiz, dir) || normalizar(dir) === normalizar(raiz)) continue;
@@ -939,8 +1022,15 @@ export class LimpiezaDisco {
       const real = await realpath(dir).catch(() => null);
       if (real === null || normalizar(real) !== normalizar(dir)) continue;
       if (!(await this.carpetaIntacta(dir, raiz))) continue;
-      await rmdir(dir).catch(() => undefined);
+      if (
+        await rmdir(dir).then(
+          () => true,
+          () => false,
+        )
+      )
+        quitadas.push(dir);
     }
+    return quitadas;
   }
 
   /** Borra los registros de limpieza de más de 90 días (nunca el que se acaba de abrir). */

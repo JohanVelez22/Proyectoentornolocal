@@ -1,7 +1,5 @@
 import { lstat, readFile, readdir, realpath } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { rutaSistema32 } from './procesosWin';
 import type { CategoriaLimpieza, NavegadorLimpieza, RutasCategoriaLimpieza } from './tipos';
 
 /**
@@ -142,72 +140,149 @@ export const CARPETAS_USUARIO = [
 
 const NOMBRES_TEMP = new Set(['temp', 'tmp']);
 
-export interface ContextoTemp {
-  /** `%LOCALAPPDATA%` (ya validado dentro del perfil) o '' si no vale. */
-  local: string;
-  /** `%USERPROFILE%` o '' si no se conoce. */
+/**
+ * Carpetas de referencia de la limpieza. NUNCA salen de las variables de entorno (TEMP,
+ * USERPROFILE o LOCALAPPDATA las puede poner cualquiera que lance el proceso): el perfil sale del
+ * token (`os.userInfo().homedir`) y el resto de `[Environment]::GetFolderPath` y del registro
+ * (`Shell Folders`), así que una carpeta movida (Documentos en `D:\`) o OneDrive también cuentan.
+ */
+export interface AnclasLimpieza {
+  /** Perfil del usuario (del token). */
   perfil: string;
-  /** `os.tmpdir()` del proceso. */
-  tmpdir: string;
+  /** LocalApplicationData. */
+  local: string;
+  /** ApplicationData (Roaming). */
+  roaming: string;
+  /** Carpeta de Windows. */
+  windows: string;
+  /** Documentos, Escritorio, Imágenes, Música, Vídeos, Descargas y las de OneDrive. */
+  conocidas: string[];
 }
 
 /**
- * ¿Se puede limpiar `temp` como carpeta TEMP? Solo si su ruta real es `%LOCALAPPDATA%\Temp` (o
- * una subcarpeta numérica, `Temp\2`, la de las sesiones de Escritorio remoto) o la de
- * `os.tmpdir()`, su nombre es `Temp` o `Tmp` y no es una raíz de unidad, una ruta UNC, el perfil
- * del usuario o un ancestro suyo, ni está en Documentos, Escritorio, Descargas, Imágenes, Música,
- * Vídeos u OneDrive. `ausente` si no existe (no hay nada que limpiar).
+ * Script que imprime en JSON las carpetas de `AnclasLimpieza` (sin el perfil, que da Node). Solo
+ * lee; no depende de TEMP, USERPROFILE ni LOCALAPPDATA.
+ */
+export const SCRIPT_ANCLAS_LIMPIEZA = [
+  "$ErrorActionPreference = 'Stop'",
+  // UTF-8 para que una carpeta con tildes llegue bien.
+  '[Console]::OutputEncoding = [Text.Encoding]::UTF8',
+  '$g = { param($n) [Environment]::GetFolderPath([Environment+SpecialFolder]::$n) }',
+  '$c = @()',
+  "foreach ($n in 'MyDocuments','Desktop','MyPictures','MyMusic','MyVideos') { $c += & $g $n }",
+  'try {',
+  "  $sf = Get-ItemProperty -LiteralPath 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders'",
+  "  $d = $sf.'{374DE290-123F-4565-9164-39C4925E467B}'",
+  '  if ($d) { $c += $d }',
+  '} catch {}',
+  'try {',
+  "  $od = Get-ItemProperty -LiteralPath 'HKCU:\\Software\\Microsoft\\OneDrive' -ErrorAction SilentlyContinue",
+  '  if ($od -and $od.UserFolder) { $c += $od.UserFolder }',
+  "  Get-ChildItem -LiteralPath 'HKCU:\\Software\\Microsoft\\OneDrive\\Accounts' -ErrorAction SilentlyContinue | ForEach-Object {",
+  '    $u = (Get-ItemProperty -LiteralPath $_.PSPath -ErrorAction SilentlyContinue).UserFolder',
+  '    if ($u) { $c += $u }',
+  '  }',
+  '} catch {}',
+  '$r = [ordered]@{',
+  "  local = & $g 'LocalApplicationData'",
+  "  roaming = & $g 'ApplicationData'",
+  "  windows = & $g 'Windows'",
+  '  conocidas = @($c | Where-Object { $_ })',
+  '}',
+  '[Console]::Out.Write(($r | ConvertTo-Json -Compress))',
+].join('\n');
+
+/** Ruta absoluta con unidad que no es la raíz de la unidad (`C:\algo`). */
+const rutaConUnidad = (r: unknown): r is string =>
+  typeof r === 'string' && /^[A-Za-z]:\\[^"<>|?*\0]+$/.test(r) && !/(^|\\)\.\.(\\|$)/.test(r);
+
+/** Lee la salida de `SCRIPT_ANCLAS_LIMPIEZA`; null si falta algo o no es una ruta válida. */
+export function interpretarAnclas(salida: string, perfil: string): AnclasLimpieza | null {
+  let j: unknown;
+  try {
+    j = JSON.parse(salida.trim());
+  } catch {
+    return null;
+  }
+  const o = j as Record<string, unknown> | null;
+  if (o === null || typeof o !== 'object') return null;
+  if (!rutaConUnidad(perfil) || !rutaConUnidad(o.local) || !rutaConUnidad(o.windows)) return null;
+  const lista = Array.isArray(o.conocidas) ? o.conocidas : o.conocidas ? [o.conocidas] : [];
+  return {
+    perfil,
+    local: o.local,
+    roaming: rutaConUnidad(o.roaming) ? o.roaming : '',
+    windows: o.windows,
+    conocidas: lista.filter(rutaConUnidad),
+  };
+}
+
+export interface ContextoTemp {
+  /** Perfil del usuario (ruta real). */
+  perfil: string;
+  /** LocalApplicationData (ruta real, ya comprobada dentro del perfil). */
+  local: string;
+  /** Carpeta de Windows (ruta real) o '' si no vale. */
+  windows: string;
+  /** Carpetas conocidas del usuario (rutas reales). */
+  conocidas: string[];
+}
+
+export type EstadoTemp =
+  { estado: 'valido'; real: string } | { estado: 'invalido' } | { estado: 'ausente' };
+
+/**
+ * ¿Se puede limpiar `temp` como carpeta TEMP? Solo si su ruta real es `<LocalAppData>\Temp`,
+ * `<LocalAppData>\Temp\<N>` (sesiones de Escritorio remoto) o `<Windows>\Temp`, con las anclas
+ * reales (nunca del entorno). Además no puede ser una raíz de unidad, una ruta UNC, el perfil o un
+ * ancestro suyo, ni estar en una carpeta conocida (Documentos, Escritorio, Descargas, Imágenes,
+ * Música, Vídeos, OneDrive), aunque esté movida a otra unidad. `ausente` si no existe.
  */
 export async function validarTemp(
   temp: string,
   ctx: ContextoTemp,
   lec: Pick<LecturaDisco, 'canonica'>,
-): Promise<'valido' | 'invalido' | 'ausente'> {
+): Promise<EstadoTemp> {
+  const invalido = { estado: 'invalido' } as const;
+  const perfil = normalizarRuta(ctx.perfil);
+  const local = normalizarRuta(ctx.local);
+  if (perfil === '' || esRaizUnidad(perfil) || !conUnidad(perfil) || !conUnidad(local)) {
+    return invalido;
+  }
   const cruda = normalizarRuta(temp);
-  if (esUnc(cruda) || esRaizUnidad(cruda) || !conUnidad(cruda)) return 'invalido';
+  if (esUnc(cruda) || esRaizUnidad(cruda) || !conUnidad(cruda)) return invalido;
   const real = await lec.canonica(temp);
-  if (real === null) return 'ausente';
+  if (real === null) return { estado: 'ausente' };
   const n = normalizarRuta(real);
-  if (esUnc(n) || esRaizUnidad(n) || !conUnidad(n)) return 'invalido';
+  if (esUnc(n) || esRaizUnidad(n) || !conUnidad(n)) return invalido;
   const partes = n.split('/');
   const ultimo = partes[partes.length - 1] ?? '';
   const nombreOk =
     NOMBRES_TEMP.has(ultimo) ||
     (/^\d{1,4}$/.test(ultimo) && NOMBRES_TEMP.has(partes[partes.length - 2] ?? ''));
-  if (!nombreOk) return 'invalido';
-  if (ctx.perfil !== '') {
-    const perfil = normalizarRuta((await lec.canonica(ctx.perfil)) ?? ctx.perfil);
-    // El perfil o cualquier ancestro suyo (C:\Users, C:\…).
-    if (rutaDentroDe(n, perfil)) return 'invalido';
-    if (rutaDentroDe(perfil, n)) {
-      const primera = n.slice(perfil.length + 1).split('/')[0] ?? '';
-      if (CARPETAS_USUARIO.some((c) => c.toLowerCase() === primera)) return 'invalido';
-      if (primera.startsWith('onedrive')) return 'invalido';
-    }
+  if (!nombreOk) return invalido;
+  // El perfil o cualquier ancestro suyo (C:\Users, C:\…).
+  if (rutaDentroDe(n, perfil)) return invalido;
+  if (ctx.conocidas.some((c) => c !== '' && rutaDentroDe(c, n))) return invalido;
+  if (rutaDentroDe(perfil, n)) {
+    const primera = n.slice(perfil.length + 1).split('/')[0] ?? '';
+    if (CARPETAS_USUARIO.some((c) => c.toLowerCase() === primera)) return invalido;
+    if (primera.startsWith('onedrive')) return invalido;
   }
-  if (ctx.local !== '') {
-    const local = normalizarRuta((await lec.canonica(ctx.local)) ?? ctx.local);
-    const resto = n.startsWith(`${local}/`) ? n.slice(local.length + 1) : null;
-    if (resto !== null && /^temp(?:\/\d{1,4})?$/.test(resto)) return 'valido';
+  const resto = n.startsWith(`${local}/`) ? n.slice(local.length + 1) : null;
+  if (resto !== null && /^temp(?:\/\d{1,4})?$/.test(resto)) return { estado: 'valido', real };
+  const windows = normalizarRuta(ctx.windows);
+  if (conUnidad(windows) && !esRaizUnidad(windows) && n === `${windows}/temp`) {
+    return { estado: 'valido', real };
   }
-  if (ctx.tmpdir !== '') {
-    const tmp = normalizarRuta((await lec.canonica(ctx.tmpdir)) ?? ctx.tmpdir);
-    if (n === tmp) return 'valido';
-  }
-  return 'invalido';
+  return invalido;
 }
 
-/** `hija` está estrictamente dentro de `padre` (con sus rutas reales si existen). */
-async function dentroEstricto(
-  padre: string,
-  hija: string,
-  lec: Pick<LecturaDisco, 'canonica'>,
-): Promise<boolean> {
-  if (padre === '' || hija === '') return false;
-  const p = normalizarRuta((await lec.canonica(padre)) ?? padre);
-  const h = normalizarRuta((await lec.canonica(hija)) ?? hija);
-  return conUnidad(h) && !esUnc(h) && h.startsWith(`${p}/`);
-}
+const estrictamenteDentro = (padre: string, hija: string): boolean => {
+  const p = normalizarRuta(padre);
+  const h = normalizarRuta(hija);
+  return p !== '' && conUnidad(h) && !esUnc(h) && h.startsWith(`${p}/`);
+};
 
 async function existentes(rutas: string[], lec: LecturaDisco): Promise<string[]> {
   const res: string[] = [];
@@ -245,49 +320,69 @@ async function cachesFirefox(local: string, roaming: string, lec: LecturaDisco):
 /**
  * Todas las categorías con sus rutas. `carpetaDatos` es la carpeta de datos activa de WolfCore
  * Dev: de ella salen solo `tmp` (descargas en caché) y `logs` (registros), nunca `data` ni
- * `respaldos`.
+ * `respaldos`. Del entorno solo se lee TEMP (o TMP), que es lo que se valida; las anclas
+ * (`AnclasLimpieza`) vienen de la plataforma y, si faltan, TEMP queda `temp-no-seguro`, las
+ * cachés de navegador no se ofrecen y Prefetch sale sin rutas. Cada categoría lleva sus anclas
+ * reales: el núcleo exige que cada raíz cuelgue de una sin enlaces por el camino.
  */
 export async function rutasLimpiezaWindows(
   env: NodeJS.ProcessEnv,
   carpetaDatos: string,
-  lec: LecturaDisco = lecturaReal,
-  temporalDelProceso: string = tmpdir(),
+  lec: LecturaDisco,
+  anclas: AnclasLimpieza | null,
 ): Promise<RutasCategoriaLimpieza[]> {
-  const perfil = env.USERPROFILE ?? '';
-  // LOCALAPPDATA y APPDATA solo valen si están dentro del perfil del usuario; si no, las
-  // categorías que salen de ellas no se ofrecen.
-  const local = (await dentroEstricto(perfil, env.LOCALAPPDATA ?? '', lec))
-    ? (env.LOCALAPPDATA ?? '')
-    : '';
-  const roaming = (await dentroEstricto(perfil, env.APPDATA ?? '', lec)) ? (env.APPDATA ?? '') : '';
-  // La carpeta de Windows es la de System32 un nivel por encima (la misma que usa el resto).
-  const windir = path.win32.dirname(rutaSistema32(env));
-  const temp = env.TEMP ?? env.TMP ?? temporalDelProceso;
+  const real = async (r: string): Promise<string> =>
+    r === '' ? '' : ((await lec.canonica(r)) ?? '');
+  const perfil = anclas ? await real(anclas.perfil) : '';
+  const perfilOk = conUnidad(normalizarRuta(perfil)) && !esRaizUnidad(normalizarRuta(perfil));
+  // LocalAppData y Roaming solo valen dentro del perfil del usuario.
+  const localR = anclas && perfilOk ? await real(anclas.local) : '';
+  const local = estrictamenteDentro(perfil, localR) ? localR : '';
+  const roamingR = anclas && perfilOk ? await real(anclas.roaming) : '';
+  const roaming = estrictamenteDentro(perfil, roamingR) ? roamingR : '';
+  const windowsR = anclas ? await real(anclas.windows) : '';
+  const windows =
+    conUnidad(normalizarRuta(windowsR)) && !esRaizUnidad(normalizarRuta(windowsR)) ? windowsR : '';
+  const conocidas: string[] = [];
+  for (const c of anclas?.conocidas ?? []) conocidas.push((await lec.canonica(c)) ?? c);
+  const temp = env.TEMP ?? env.TMP ?? '';
   const res: RutasCategoriaLimpieza[] = [];
   const agregar = (
     categoria: CategoriaLimpieza,
     rutas: string[],
+    anclasCat: string[],
     requiereAdmin = false,
     navegador?: NavegadorLimpieza,
   ): void => {
-    res.push({ categoria, rutas, requiereAdmin, ...(navegador ? { navegador } : {}) });
+    res.push({
+      categoria,
+      rutas,
+      requiereAdmin,
+      anclas: anclasCat.filter((a) => a !== ''),
+      ...(navegador ? { navegador } : {}),
+    });
   };
-  const estadoTemp = await validarTemp(temp, { local, perfil, tmpdir: temporalDelProceso }, lec);
-  if (estadoTemp === 'invalido') {
+  const estadoTemp: EstadoTemp =
+    perfilOk && local !== ''
+      ? await validarTemp(temp, { perfil, local, windows, conocidas }, lec)
+      : { estado: 'invalido' };
+  if (estadoTemp.estado === 'invalido') {
     res.push({ categoria: 'temp', rutas: [], requiereAdmin: false, bloqueo: 'temp-no-seguro' });
   } else {
-    agregar('temp', estadoTemp === 'valido' ? [temp] : []);
+    agregar('temp', estadoTemp.estado === 'valido' ? [estadoTemp.real] : [], [local, windows]);
   }
   if (local !== '') {
     agregar(
       'cache-chrome',
       await cachesChromium(path.win32.join(local, 'Google', 'Chrome', 'User Data'), lec),
+      [local],
       false,
       'chrome',
     );
     agregar(
       'cache-edge',
       await cachesChromium(path.win32.join(local, 'Microsoft', 'Edge', 'User Data'), lec),
+      [local],
       false,
       'edge',
     );
@@ -297,15 +392,43 @@ export async function rutasLimpiezaWindows(
         path.win32.join(local, 'BraveSoftware', 'Brave-Browser', 'User Data'),
         lec,
       ),
+      [local],
       false,
       'brave',
     );
-    agregar('cache-firefox', await cachesFirefox(local, roaming || local, lec), false, 'firefox');
+    agregar(
+      'cache-firefox',
+      await cachesFirefox(local, roaming || local, lec),
+      [local, roaming],
+      false,
+      'firefox',
+    );
   }
-  agregar('wolfcore-descargas', [path.win32.join(carpetaDatos, 'tmp')]);
-  agregar('wolfcore-registros', [path.win32.join(carpetaDatos, 'logs')]);
-  agregar('prefetch', [path.win32.join(windir, 'Prefetch')], true);
+  agregar('wolfcore-descargas', [path.win32.join(carpetaDatos, 'tmp')], [carpetaDatos]);
+  agregar('wolfcore-registros', [path.win32.join(carpetaDatos, 'logs')], [carpetaDatos]);
+  // Prefetch, de la carpeta de Windows real (nunca de %SystemRoot%).
+  agregar(
+    'prefetch',
+    windows === '' ? [] : [path.win32.join(windows, 'Prefetch')],
+    [windows],
+    true,
+  );
   return res;
+}
+
+/** Script que dice el tipo de una unidad (`Win32_LogicalDisk.DriveType`; 3 = disco fijo local). */
+export const scriptTipoUnidad = (letra: string): string =>
+  [
+    "$ErrorActionPreference = 'Stop'",
+    "$ProgressPreference = 'SilentlyContinue'",
+    `$d = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='${letra}:'"`,
+    '[Console]::Out.Write([int]$d.DriveType)',
+  ].join('\n');
+
+/** Letra de unidad de una ruta (`C`), o null si no tiene (UNC, relativa…). */
+export function letraUnidad(ruta: string): string | null {
+  const m = /^([A-Za-z]):[\\/]/.exec(ruta);
+  return m ? m[1]!.toUpperCase() : null;
 }
 
 /** Script que dice si el proceso actual tiene el token de administrador (no pide elevación). */

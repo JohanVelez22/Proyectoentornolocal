@@ -343,6 +343,12 @@ export interface RutasCategoriaLimpieza {
    * ruta UNC…): la categoría sale bloqueada y `rutas` viene vacía.
    */
   bloqueo?: 'temp-no-seguro';
+  /**
+   * Carpetas reales de las que tiene que colgar cada raíz (LocalAppData, Roaming, Windows, la de
+   * datos). Si vienen, el núcleo exige que la ruta real de la raíz sea la del ancla más la ruta
+   * relativa esperada y que ningún tramo desde el ancla sea un enlace o una unión.
+   */
+  anclas?: string[];
 }
 
 /** Un proceso del usuario tal como lo da `Plataforma.procesosDelUsuario()` (D36). */
