@@ -193,6 +193,21 @@ try {
     } else
       registro(`ok   ${nombre} (${ruta}): ${largo} caracteres, ${medidas.ancho}x${medidas.alto}`);
   }
+  // Editor de código (D43): se abre la herramienta para que CodeMirror monte y meta sus estilos con
+  // la CSP real de la ventana; cualquier aviso de CSP o error de consola hace fallar la prueba.
+  await ventana.evaluate(() => {
+    location.hash = '#/herramientas';
+  });
+  try {
+    await ventana.waitForSelector('[data-herramienta="editor"]', { timeout: 30_000 });
+    // Clic por DOM: un diálogo del primer uso puede cubrir la tarjeta y no importa para esta prueba.
+    await ventana.evaluate(() => document.querySelector('[data-herramienta="editor"]')?.click());
+    await ventana.waitForSelector('.cm-editor .cm-content', { state: 'attached', timeout: 30_000 });
+    const rol = await ventana.getAttribute('.cm-content', 'role');
+    registro(`ok   Editor de código: CodeMirror montó (role=${rol})`);
+  } catch (e) {
+    falla(`El editor de código no montó: ${e}`);
+  }
   await ventana.waitForTimeout(500);
 
   if (consola.length > 0) {

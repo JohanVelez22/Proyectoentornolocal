@@ -418,6 +418,11 @@ export type {
   TablaVersiones,
   TipoRespaldoDatos,
 };
+/** Resultado de guardar en el editor de código (D43): lo que la ventana sabe resolver va tipado. */
+export type ResultadoGuardarEditor =
+  | ({ estado: 'guardado' } & ResultadoGuardarArchivo)
+  | { estado: 'cambiado' }
+  | { estado: 'reforzar' };
 /** Una copia de `data/<servicio>/` por sus ids (nunca por su ruta). */
 export interface RefRespaldoDatos {
   servicio: IdServicioDatos;
@@ -1455,10 +1460,10 @@ export interface ApiEntorno {
     abrir(ruta: string, opciones?: OpcionesAbrirArchivo): Promise<ResultadoAbrirArchivo>;
     /**
      * Guarda con `confirmado: true`, la huella del archivo al abrirlo, copia previa y escritura
-     * atómica. Si el archivo cambió por fuera da `editor.archivo_cambiado`; `sobrescribir` es una
-     * confirmación aparte.
+     * atómica. Si el archivo cambió por fuera devuelve `cambiado` (no escribe nada); `sobrescribir`
+     * es una confirmación aparte. Si falta el refuerzo de un archivo delicado devuelve `reforzar`.
      */
-    guardar(ruta: string, opciones: OpcionesGuardarArchivo): Promise<ResultadoGuardarArchivo>;
+    guardar(ruta: string, opciones: OpcionesGuardarArchivo): Promise<ResultadoGuardarEditor>;
   };
   captura: {
     /** Configuración, estado del sistema y del atajo global (D35). */

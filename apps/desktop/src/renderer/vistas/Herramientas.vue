@@ -178,6 +178,7 @@ onBeforeRouteLeave(() => confirmarSalida());
         :key="c"
         type="button"
         class="tarjeta"
+        :data-herramienta="c"
         :aria-label="`${t.abrir}: ${t.lista[c].nombre}`"
         @click="abierta = c"
       >

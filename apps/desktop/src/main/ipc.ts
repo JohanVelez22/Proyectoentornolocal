@@ -1934,9 +1934,20 @@ const TABLA: Record<RutaIpc, Manejador> = {
     const v = validarAbrirEditor(ruta, opciones, s.elegidas);
     return n.abrirArchivoEditor(v.ruta, v.opciones);
   },
-  'editorCodigo.guardar': (n, s, ruta, opciones) => {
+  // Los dos rechazos que la ventana sabe resolver (el archivo cambió por fuera, o falta el refuerzo)
+  // salen como resultado tipado: el código de un error no cruza el puente del preload.
+  'editorCodigo.guardar': async (n, s, ruta, opciones) => {
     const v = validarGuardarEditor(ruta, opciones, s.elegidas);
-    return n.guardarArchivoEditor(v.ruta, v.opciones);
+    try {
+      return { estado: 'guardado', ...(await n.guardarArchivoEditor(v.ruta, v.opciones)) };
+    } catch (e) {
+      if (e instanceof ErrorWolf && e.codigo === 'editor.archivo_cambiado')
+        return { estado: 'cambiado' };
+      if (e instanceof ErrorWolf && e.codigo === 'editor.confirmacion_reforzada') {
+        return { estado: 'reforzar' };
+      }
+      throw e;
+    }
   },
   'herramientas.optimizarPdf': (n, s, origen, destino) =>
     n.optimizarPdf(

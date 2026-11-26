@@ -60,9 +60,6 @@ function notificarError(e: unknown): void {
   });
 }
 
-const codigoDe = (e: unknown): string | undefined =>
-  e !== null && typeof e === 'object' ? (e as { codigo?: string }).codigo : undefined;
-
 function crearVista(): void {
   if (!host.value || vista.value) return;
   vista.value = new EditorView({ parent: host.value, state: estadoVacio() });
@@ -175,29 +172,30 @@ async function guardar(sobrescribir = false): Promise<void> {
   try {
     const r = await api().editorCodigo.guardar(rutaElegida.value, {
       contenido: v.state.doc.toString(),
-      huella: a.huella,
+      // Copia plana: un proxy reactivo de Vue no se puede clonar por el IPC.
+      huella: { tamano: a.huella.tamano, mtimeMs: a.huella.mtimeMs, hash: a.huella.hash },
       eol: a.eol,
       bom: a.bom,
       confirmado: true,
       ...(sensible.value ? { confirmadoRiesgo: true } : {}),
       ...(sobrescribir ? { sobrescribir: true } : {}),
     });
-    archivo.value = { ...a, huella: r.huella };
-    modificado.value = false;
-    panel.value = null;
-    aviso.value = { tipo: 'ok', texto: `${t.guardado} ${t.copiaPrevia(r.copia)}` };
-  } catch (e) {
-    if (codigoDe(e) === 'editor.archivo_cambiado') {
+    if (r.estado === 'cambiado') {
       panel.value = 'cambio-externo';
-    } else if (codigoDe(e) === 'editor.confirmacion_reforzada') {
+    } else if (r.estado === 'reforzar') {
       // El texto nuevo trae un secreto que el archivo no tenía: se pide el refuerzo.
       archivo.value = { ...a, riesgos: [...new Set<RiesgoEditor>([...a.riesgos, 'secreto'])] };
       escrito.value = '';
       panel.value = 'refuerzo';
     } else {
+      archivo.value = { ...a, huella: r.huella };
+      modificado.value = false;
       panel.value = null;
-      notificarError(e);
+      aviso.value = { tipo: 'ok', texto: `${t.guardado} ${t.copiaPrevia(r.copia)}` };
     }
+  } catch (e) {
+    panel.value = null;
+    notificarError(e);
   } finally {
     ocupado.value = null;
   }

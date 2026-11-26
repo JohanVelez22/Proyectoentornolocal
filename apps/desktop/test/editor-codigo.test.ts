@@ -1,12 +1,13 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
-import { MAX_BYTES_EDITOR } from '@pel/core';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+import { ErrorWolf, MAX_BYTES_EDITOR } from '@pel/core';
 import { es } from '../src/renderer/i18n/es';
 import { en } from '../src/renderer/i18n/en';
 import { fr } from '../src/renderer/i18n/fr';
 import { pt } from '../src/renderer/i18n/pt';
+import { registrarIpc, type IpcMainLike, type NucleoIpc, type VentanaLike } from '../src/main/ipc';
 import { RutasElegidas, validarAbrirEditor, validarGuardarEditor } from '../src/main/validacion';
 
 const dir = mkdtempSync(join(tmpdir(), 'pel-editor-val-'));
@@ -127,5 +128,86 @@ describe('editor de código: textos en los cuatro idiomas (D43)', () => {
     ]);
     for (const p of patrones) expect(textos.match(p) ?? []).toEqual([]);
     expect(textos).toMatch(/vous/i);
+  });
+});
+
+describe('rutas editorCodigo.* (D43)', () => {
+  type Manejador = (evento: unknown, ...args: unknown[]) => unknown;
+
+  function preparar(guardar: (...a: unknown[]) => Promise<unknown>) {
+    const canales = new Map<string, Manejador>();
+    const ipcMain: IpcMainLike = {
+      handle: (canal, fn) => void canales.set(canal, fn as Manejador),
+    };
+    const nucleo = {
+      eventos: { on: () => () => undefined },
+      abrirArchivoEditor: vi.fn(async () => ({
+        estado: 'confirmar',
+        nombre: 'a.txt',
+        riesgos: ['secreto'],
+      })),
+      guardarArchivoEditor: vi.fn(guardar),
+    } as unknown as NucleoIpc;
+    const ventana: VentanaLike = {
+      isDestroyed: () => false,
+      webContents: { send: () => undefined },
+    };
+    const sistema = {
+      elegirCarpeta: vi.fn(),
+      elegirArchivo: vi.fn(async () => archivo),
+      abrirUrl: vi.fn(),
+      abrirCarpeta: vi.fn(),
+      copiar: vi.fn(),
+      version: vi.fn(async () => '1'),
+      guardarArchivo: vi.fn(async () => null),
+      elegirArchivos: vi.fn(async () => []),
+    };
+    registrarIpc(nucleo, ipcMain, ventana, sistema, undefined, undefined, {});
+    const llamar = (ruta: string, ...a: unknown[]): unknown =>
+      canales.get(`entorno:${ruta}`)!({}, ...a);
+    return { llamar, nucleo };
+  }
+
+  it('la ruta tiene que salir del diálogo: sin elegirla antes, ni abrir ni guardar llegan al núcleo', async () => {
+    const t = preparar(async () => ({ huella, copia: 'c' }));
+    expect(await t.llamar('editorCodigo.abrir', archivo, {})).toMatchObject({ ok: false });
+    expect(await t.llamar('editorCodigo.guardar', archivo, guardado)).toMatchObject({ ok: false });
+    expect(t.nucleo.abrirArchivoEditor).not.toHaveBeenCalled();
+    expect(t.nucleo.guardarArchivoEditor).not.toHaveBeenCalled();
+    await t.llamar('sistema.elegirArchivo');
+    expect(await t.llamar('editorCodigo.abrir', archivo, {})).toMatchObject({
+      ok: true,
+      valor: { estado: 'confirmar' },
+    });
+  });
+
+  it('guardar devuelve el resultado, y los dos rechazos que la ventana resuelve salen tipados', async () => {
+    const casos: [string, Error | null, unknown][] = [
+      ['guardado', null, { estado: 'guardado', huella, copia: 'c' }],
+      ['cambiado', new ErrorWolf('editor.archivo_cambiado', 'x'), { estado: 'cambiado' }],
+      ['reforzar', new ErrorWolf('editor.confirmacion_reforzada', 'x'), { estado: 'reforzar' }],
+    ];
+    for (const [nombre, error, esperado] of casos) {
+      const t = preparar(async () => {
+        if (error) throw error;
+        return { huella, copia: 'c' };
+      });
+      await t.llamar('sistema.elegirArchivo');
+      expect(await t.llamar('editorCodigo.guardar', archivo, guardado), nombre).toEqual({
+        ok: true,
+        valor: esperado,
+      });
+    }
+  });
+
+  it('cualquier otro error del núcleo sigue siendo un error (con su código)', async () => {
+    const t = preparar(async () => {
+      throw new ErrorWolf('editor.archivo_env', 'No se edita.');
+    });
+    await t.llamar('sistema.elegirArchivo');
+    expect(await t.llamar('editorCodigo.guardar', archivo, guardado)).toMatchObject({
+      ok: false,
+      error: { codigo: 'editor.archivo_env' },
+    });
   });
 });
