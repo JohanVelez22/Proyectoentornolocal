@@ -42,11 +42,20 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Empaquetar (sin instalador)
-        run: npm run dist:dir -w @pel/desktop
-      - name: Prueba de humo (Linux, con pantalla virtual)
+      - name: Compilar (electron-vite + CLI)
+        run: npm run build -w @pel/desktop
+      - name: Prueba de humo sobre out/ (Linux, con pantalla virtual)
         if: runner.os == 'Linux'
-        run: xvfb-run -a npm run humo -w @pel/desktop
-      - name: Prueba de humo
+        run: xvfb-run -a npm run humo -w @pel/desktop -- --out
+      - name: Prueba de humo sobre out/
         if: runner.os != 'Linux'
+        run: npm run humo -w @pel/desktop -- --out
+      - name: Empaquetar (sin instalador)
+        if: always()
+        run: npm run dist:dir -w @pel/desktop
+      - name: Prueba de humo del empaquetado (Linux, con pantalla virtual)
+        if: runner.os == 'Linux' && always()
+        run: xvfb-run -a npm run humo -w @pel/desktop
+      - name: Prueba de humo del empaquetado
+        if: runner.os != 'Linux' && always()
         run: npm run humo -w @pel/desktop
