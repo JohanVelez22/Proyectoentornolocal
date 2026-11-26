@@ -32,7 +32,12 @@ function carpetasReales(): string[] {
   if (local) lista.push(path.join(local, NOMBRE));
   lista.push(path.join(os.homedir(), 'AppData', 'Local', NOMBRE));
   lista.push(path.join(os.homedir(), 'Library', 'Application Support', NOMBRE));
-  lista.push(path.join(env.WOLFCORE_XDG_ORIGINAL || env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), NOMBRE));
+  lista.push(
+    path.join(
+      env.WOLFCORE_XDG_ORIGINAL || env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'),
+      NOMBRE,
+    ),
+  );
   return [...new Set(lista.map(comparable))];
 }
 
