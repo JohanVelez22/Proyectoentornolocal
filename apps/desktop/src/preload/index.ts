@@ -453,6 +453,12 @@ const api: ApiEntorno = {
     detener: (sitioId, procesoId) => invocar('procesos.detener', sitioId, procesoId),
     estados: (sitioId) => invocar('procesos.estados', sitioId),
   },
+  reverb: {
+    estado: (sitioId) => invocar('reverb.estado', sitioId),
+    activar: (sitioId, confirmado) => invocar('reverb.activar', sitioId, confirmado),
+    desactivar: (sitioId) => invocar('reverb.desactivar', sitioId),
+    variables: (sitioId) => invocar('reverb.variables', sitioId),
+  },
   preferencias: {
     leer: () => invocar('preferencias.leer'),
     guardar: (cambios) => invocar('preferencias.guardar', cambios),

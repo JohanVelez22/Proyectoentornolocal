@@ -189,3 +189,4 @@ export * from './tareas/cron';
 export * from './tareas/comando';
 export * from './tareas/gestor';
 export * from './tareas/programador';
+export * from './proyectos/reverb';

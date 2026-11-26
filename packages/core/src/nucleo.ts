@@ -250,6 +250,7 @@ import {
   type TipoRuntime,
 } from './runtimes/runtimes';
 import {
+  idSupervisor,
   ProcesosProyecto,
   separarIdSupervisor,
   type EstadoProcesoProyecto,
@@ -295,6 +296,7 @@ import {
   type ResultadoCrearProyecto,
 } from './proyectos/crear';
 import { GestorEnv } from './proyectos/env/gestor';
+import { ReverbSitio, type EstadoReverb } from './proyectos/reverb';
 import { esUsuarioDeProyecto, usuarioDeProyecto } from './bd/usuarioProyecto';
 import { errorUsuarioEnUso } from './bd/clienteMysql';
 import type { SecretosReceta } from './proyectos/pasos';
@@ -3497,6 +3499,45 @@ export class Nucleo {
 
   async runtimesProyecto(sitioId: string): Promise<RuntimesProyecto> {
     return this.runtimes.paraProyecto(await this.sitioPorId(sitioId));
+  }
+
+  // ---- Laravel Reverb por sitio (D45a) ----
+
+  private reverbSitio(): ReverbSitio {
+    const pasos = this.depsPasos;
+    if (!pasos) throw new Error('Los pasos de receta no están disponibles.');
+    return new ReverbSitio({
+      sitio: async (id) => (await this.sitios.listar()).find((s) => s.id === id),
+      guardarProcesos: async (sitio, procesos) => {
+        const { id, ...resto } = sitio;
+        await this.guardarSitio({ ...resto, procesos }, id);
+      },
+      puertoLibre: (o) => pasos.puertoLibre(o),
+      iniciar: (s, p) => this.procesos.iniciar(s, p),
+      detener: (s, p) => this.procesos.detener(s, p),
+      estado: (s, p) => this.supervisor.estado(idSupervisor(s, p)),
+    });
+  }
+
+  estadoReverb(sitioId: string): Promise<EstadoReverb> {
+    return this.reverbSitio().estado(sitioId);
+  }
+
+  /** Da de alta Reverb en el sitio (solo `--host=127.0.0.1` y un puerto libre) y lo enciende. */
+  activarReverb(sitioId: string, confirmado: boolean): Promise<{ puerto: number }> {
+    return this.reverbSitio().activar(sitioId, confirmado);
+  }
+
+  desactivarReverb(sitioId: string): Promise<void> {
+    return this.reverbSitio().desactivar(sitioId);
+  }
+
+  /**
+   * Variables `REVERB_*` propuestas para el `.env`. Solo las propone: se escriben con el gestor
+   * de `.env` (`env.vistaPrevia` y `env.guardar`, con confirmación).
+   */
+  variablesReverb(sitioId: string): Promise<Record<string, string>> {
+    return this.reverbSitio().variables(sitioId);
   }
 
   iniciarProceso(sitioId: string, procesoId: string): Promise<void> {

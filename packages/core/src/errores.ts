@@ -295,6 +295,12 @@ export const PARAMETROS_ERROR = {
   'tareas.carpeta': [],
   'tareas.en_curso': [],
   'tareas.demasiadas': ['maximo'],
+  // Reverb por sitio (D45a)
+  'reverb.no_laravel': [],
+  'reverb.no_confiado': [],
+  'reverb.sin_paquete': [],
+  'reverb.sin_confirmar': [],
+  'reverb.sin_activar': [],
   // servidor de órdenes de la CLI `wolf` (D31)
   'cli.no_autorizado': [],
   'cli.orden_desconocida': [],

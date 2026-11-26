@@ -1791,6 +1791,12 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'procesos.detener': (n, _s, sitioId, procesoId) =>
     n.detenerProceso(idCorto(sitioId, 'sitio'), idCorto(procesoId, 'proceso', 64)),
   'procesos.estados': (n, _s, sitioId) => n.estadosProcesos(idCorto(sitioId, 'sitio')),
+  'reverb.estado': (n, _s, sitioId) => n.estadoReverb(idCorto(sitioId, 'sitio')),
+  // Solo `true` de verdad confirma (el núcleo responde `reverb.sin_confirmar` si no).
+  'reverb.activar': (n, _s, sitioId, confirmado) =>
+    n.activarReverb(idCorto(sitioId, 'sitio'), confirmado === true),
+  'reverb.desactivar': (n, _s, sitioId) => n.desactivarReverb(idCorto(sitioId, 'sitio')),
+  'reverb.variables': (n, _s, sitioId) => n.variablesReverb(idCorto(sitioId, 'sitio')),
 
   // ---- Preferencias de la interfaz ----
   'preferencias.leer': async (n, s) => {

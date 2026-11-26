@@ -248,6 +248,10 @@ function nucleoFalso() {
         'iniciarProceso',
         'detenerProceso',
         'estadosProcesos',
+        'estadoReverb',
+        'activarReverb',
+        'desactivarReverb',
+        'variablesReverb',
         'sugerenciasProyectos',
         'cambiarCarpetaVigilada',
         'iniciarMetricas',
@@ -957,6 +961,10 @@ describe('registrarIpc', () => {
         'procesos.iniciar',
         'procesos.detener',
         'procesos.estados',
+        'reverb.estado',
+        'reverb.activar',
+        'reverb.desactivar',
+        'reverb.variables',
         'preferencias.leer',
         'preferencias.guardar',
         'vigilar.sugerencias',
@@ -1606,6 +1614,10 @@ describe('IPC de la Etapa B', () => {
         'iniciarProceso',
         'detenerProceso',
         'estadosProcesos',
+        'estadoReverb',
+        'activarReverb',
+        'desactivarReverb',
+        'variablesReverb',
         'cambiarCarpetaVigilada',
         'ultimasMetricas',
         'seguirRegistro',
@@ -1635,6 +1647,10 @@ describe('IPC de la Etapa B', () => {
       expect(f['guardarConfigProyecto']).toHaveBeenCalledWith(carpeta, { version: 1 });
       await llamar('proyectos.ejecutarReceta', 's1', { soloPaso: 'migrar', otra: 'x' });
       expect(f['ejecutarReceta']).toHaveBeenCalledWith('s1', { soloPaso: 'migrar' });
+      await llamar('reverb.activar', 's1', 'true');
+      expect(f['activarReverb']).toHaveBeenLastCalledWith('s1', false);
+      await llamar('reverb.activar', 's1', true);
+      expect(f['activarReverb']).toHaveBeenLastCalledWith('s1', true);
       await llamar('procesos.iniciar', 's1', 'web');
       expect(f['iniciarProceso']).toHaveBeenCalledWith('s1', 'web');
       await llamar('runtimes.instalados', 'node');

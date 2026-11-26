@@ -302,6 +302,12 @@ export const pt: Textos = {
         'Não foi possível concluir a operação com {elemento}. Veja Serviços e os registros.',
       'workspaces.base_no_responde':
         '{elemento} não foi iniciado porque o banco de dados desse projeto não responde.',
+      'reverb.no_laravel': 'O Reverb só está disponível em projetos Laravel.',
+      'reverb.no_confiado': 'Marque «Confio neste repositório» no projeto para ligar o Reverb.',
+      'reverb.sin_paquete':
+        'Falta o pacote laravel/reverb: instale-o com composer require laravel/reverb.',
+      'reverb.sin_confirmar': 'Confirme que quer ligar o Reverb.',
+      'reverb.sin_activar': 'Ligue o Reverb no projeto primeiro.',
       'tareas.cron_invalida':
         'A expressão cron não é válida. Use 5 campos: minuto, hora, dia do mês, mês e dia da semana (por exemplo, 0 3 * * *).',
       'tareas.comando_invalido':

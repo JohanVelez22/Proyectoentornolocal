@@ -310,6 +310,13 @@ export const fr: Textos = {
         'L’opération n’a pas pu aboutir pour {elemento}. Consultez Services et ses journaux.',
       'workspaces.base_no_responde':
         '{elemento} n’a pas démarré car la base de données de ce projet ne répond pas.',
+      'reverb.no_laravel': 'Reverb n’est disponible que dans les projets Laravel.',
+      'reverb.no_confiado':
+        'Cochez « Je fais confiance à ce dépôt » sur le projet pour activer Reverb.',
+      'reverb.sin_paquete':
+        'Le paquet laravel/reverb est absent : installez-le avec composer require laravel/reverb.',
+      'reverb.sin_confirmar': 'Confirmez que vous voulez activer Reverb.',
+      'reverb.sin_activar': 'Activez d’abord Reverb dans le projet.',
       'tareas.cron_invalida':
         'L’expression cron n’est pas valide. Utilisez 5 champs : minute, heure, jour du mois, mois et jour de la semaine (par exemple, 0 3 * * *).',
       'tareas.comando_invalido':

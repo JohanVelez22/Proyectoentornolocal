@@ -34,6 +34,7 @@ import type {
   EntornoSistema,
   EstadoMcp,
   EstadoProcesoPublico,
+  EstadoReverb,
   EstadoReceta,
   FuenteRegistroPublica,
   MuestraSistema,
@@ -272,6 +273,7 @@ export type {
   EntornoSistema,
   EstadoMcp,
   EstadoProcesoPublico,
+  EstadoReverb,
   EstadoReceta,
   FuenteRegistroPublica,
   MuestraSistema,
@@ -1343,6 +1345,15 @@ export interface ApiEntorno {
     /** Sin la ruta del log (se ve con `registros`, fuente `proy-<sitio>-<proceso>`). */
     estados(sitioId: string): Promise<EstadoProcesoPublico[]>;
   };
+  /** Laravel Reverb por sitio (D45a): proceso con `--host=127.0.0.1`, solo en sitios de confianza. */
+  reverb: {
+    estado(sitioId: string): Promise<EstadoReverb>;
+    /** Da de alta el proceso con un puerto libre y lo enciende; exige `confirmado === true`. */
+    activar(sitioId: string, confirmado: true): Promise<{ puerto: number }>;
+    desactivar(sitioId: string): Promise<void>;
+    /** Variables `REVERB_*` propuestas; se escriben con el gestor de `.env` (vista previa y confirmación). */
+    variables(sitioId: string): Promise<Record<string, string>>;
+  };
   preferencias: {
     /**
      * Tema, idioma, acento y asistente visto. La primera vez el idioma sale del sistema
@@ -1920,6 +1931,10 @@ export const RUTAS_IPC = [
   'procesos.iniciar',
   'procesos.detener',
   'procesos.estados',
+  'reverb.estado',
+  'reverb.activar',
+  'reverb.desactivar',
+  'reverb.variables',
   'preferencias.leer',
   'preferencias.guardar',
   'vigilar.sugerencias',
