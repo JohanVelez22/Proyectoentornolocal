@@ -37,6 +37,14 @@ export interface Reparacion {
   comandoManual?: string;
 }
 
+/** Una línea que el usuario puede marcar o desmarcar antes de aplicar la reparación. */
+export interface ElementoHallazgo {
+  /** Lo que se envía de vuelta en la selección (nombre de la regla, id de la copia…). */
+  clave: string;
+  /** Texto completo de lo que se cambiará, con todos sus campos. */
+  texto: string;
+}
+
 export interface Hallazgo {
   /** Estable entre revisiones: `<revisión>:<clave>`. */
   id: string;
@@ -47,6 +55,11 @@ export interface Hallazgo {
   /** Lo que se vio (proceso, línea del archivo, final del log…), tal cual para mostrar. */
   evidencia: string;
   reparacion?: Reparacion;
+  /**
+   * Lo que la reparación cambiará, uno por uno: el diálogo los muestra con una casilla cada uno
+   * (todos marcados) y `reparar` recibe solo los marcados.
+   */
+  elementos?: ElementoHallazgo[];
   /** Otra reparación posible (p. ej. con IIS: mover el puerto propio en vez de detenerlo). */
   alternativa?: Reparacion;
 }
@@ -61,7 +74,7 @@ export interface ResultadoReparacion {
 
 /** Hallazgo con su reparación ejecutable (solo dentro del Doctor; nunca sale por IPC). */
 export interface HallazgoInterno extends Hallazgo {
-  aplicar?: () => Promise<ResultadoReparacion>;
+  aplicar?: (seleccion?: string[]) => Promise<ResultadoReparacion>;
   aplicarAlternativa?: () => Promise<ResultadoReparacion>;
 }
 

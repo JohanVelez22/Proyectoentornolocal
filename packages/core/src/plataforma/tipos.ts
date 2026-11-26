@@ -1,4 +1,9 @@
-import type { ReglaExportada, ReglaPorQuitar, ReglaPorRestaurar } from './firewallCambiosWin';
+import type {
+  ReglaExportada,
+  ReglaPorQuitar,
+  ReglaPorRestaurar,
+  RegistroProtegido,
+} from './firewallCambiosWin';
 import type { PerfilRed, ReglasEntrada } from './firewallWin';
 import type { Readable } from 'node:stream';
 import type { LanzadorOculto } from './lanzarOculto';
@@ -261,11 +266,20 @@ export interface CapacidadesPlataforma {
   exportarReglasFirewall(nombres: string[]): Promise<ReglaExportada[] | null>;
   /**
    * D46: quita reglas por su `Name` exacto, con elevación (UAC). El script elevado vuelve a
-   * comprobar cada una (entrada, Allow, mismo programa, bajo `raiz`) y salta las que no cuadran.
+   * comprobar cada una (entrada, Allow, mismo programa, bajo `raiz`), guarda su copia completa en
+   * la carpeta protegida (solo escriben Administradores y SYSTEM) y salta las que no cuadran.
    * `ok: true` no dice cuáles se quitaron: se comprueba con `exportarReglasFirewall`.
    */
   quitarReglasFirewall(reglas: ReglaPorQuitar[]): Promise<ResultadoEscritura>;
-  /** D46: recrea reglas exportadas, con elevación y las mismas comprobaciones de programa. */
+  /**
+   * Copias protegidas de las reglas quitadas (solo lectura; null si no se pudo leer). Es lo
+   * único de lo que se puede recrear una regla: el JSON de `etc/` es solo para mostrar.
+   */
+  leerAlmacenFirewall(): Promise<RegistroProtegido[] | null>;
+  /**
+   * D46: recrea reglas desde la carpeta protegida, con elevación. El script elevado comprueba la
+   * carpeta, que la huella de la copia sea la que se mostró y cada campo antes de crear nada.
+   */
   restaurarReglasFirewall(reglas: ReglaPorRestaurar[]): Promise<ResultadoEscritura>;
   /**
    * Ruta de `soffice` si LibreOffice YA está instalado (WolfCore Dev nunca lo instala ni lo

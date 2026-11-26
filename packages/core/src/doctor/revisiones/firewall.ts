@@ -1,10 +1,12 @@
-import type { ReglaEntrada } from '../../plataforma/firewallWin';
+import { esReglaAcotada, type ReglaEntrada } from '../../plataforma/firewallWin';
+import type { ReglaExportada } from '../../plataforma/firewallCambiosWin';
 import {
   clasificarReal,
   quitarReglasPeligrosas,
   restaurables,
   restaurarReglas,
   type Objetivo,
+  type ObjetivoRestaurar,
 } from '../firewallCambios';
 import type { DepsDoctor, HallazgoInterno } from '../tipos';
 import { origenDeRegla, type Origen } from './firewallOrigen';
@@ -25,6 +27,21 @@ const linea = (x: {
   programa: string;
 }): string =>
   `${x.nombreVisible || x.nombre} [${x.nombre}] · ${x.programa} · ${x.perfil || '?'} · Inbound/Allow`;
+
+/** Todos los campos de lo que se va a crear al restaurar: protocolo, puertos, direcciones, perfil… */
+const lineaRestaurar = (r: ReglaExportada): string =>
+  [
+    `${r.nombreVisible || r.nombre} [${r.nombre}]`,
+    r.programa,
+    `perfil ${r.perfil || '?'}`,
+    `${r.direccion}/${r.accion}`,
+    `protocolo ${r.protocolo}`,
+    `puerto local ${r.puertoLocal.join(',') || 'Any'}`,
+    `puerto remoto ${r.puertoRemoto.join(',') || 'Any'}`,
+    `dirección local ${r.direccionLocal.join(',') || 'Any'}`,
+    `dirección remota ${r.direccionRemota.join(',') || 'Any'}`,
+    r.habilitada ? 'habilitada' : 'deshabilitada',
+  ].join(' · ');
 
 /**
  * Reglas de entrada Allow para nginx, PHP, bases de datos y demás servicios de WolfCore Dev.
@@ -50,14 +67,19 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
   }
   const propias: ReglaEntrada[] = [];
   const pruebas: ReglaEntrada[] = [];
+  const acotadas: ReglaEntrada[] = [];
   const ajenas: ReglaEntrada[] = [];
   for (const x of r.reglas) {
     const o = (await clasificarReal(d, x.programa)).origen;
-    (o === 'propia' ? propias : o === 'prueba' ? pruebas : ajenas).push(x);
+    if (o === 'ajena') ajenas.push(x);
+    // Las acotadas a la red local (las que recomienda la propia app) no son peligrosas: se
+    // muestran aparte, sin botón.
+    else if (esReglaAcotada(x)) acotadas.push(x);
+    else (o === 'propia' ? propias : pruebas).push(x);
   }
   const mias = [...propias, ...pruebas];
   if (mias.length > 0) {
-    // Lo que se muestra es exactamente lo que la reparación quita.
+    // Lo que se muestra es exactamente lo que la reparación puede quitar (y el usuario marca).
     const mostradas = mias.slice(0, MAX_REGLAS);
     const secciones = [
       ...(propias.length ? ['WolfCore Dev:', ...propias.slice(0, MAX_REGLAS).map(linea)] : []),
@@ -83,6 +105,7 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
         programa: mias[0]!.programa,
       },
       evidencia: secciones.join('\n'),
+      elementos: mostradas.map((x) => ({ clave: x.nombre, texto: linea(x) })),
       reparacion: {
         id: 'quitar-reglas-firewall',
         codigo: 'doctor.reparaciones.firewall',
@@ -94,7 +117,21 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
         }),
       },
       // Solo se llega aquí por `Doctor.reparar`, que exige `confirmacion === true`.
-      aplicar: () => quitarReglasPeligrosas(d, objetivos, { confirmado: true }),
+      aplicar: (seleccion) =>
+        quitarReglasPeligrosas(d, objetivos, {
+          confirmado: true,
+          ...(seleccion ? { seleccion } : {}),
+        }),
+    });
+  }
+  if (acotadas.length > 0) {
+    res.push({
+      id: 'firewall:reglas-acotadas',
+      revision: 'firewall',
+      gravedad: 'info',
+      codigo: 'doctor.firewall_reglas_acotadas',
+      datos: { cantidad: acotadas.length },
+      evidencia: acotadas.slice(0, MAX_REGLAS).map(linea).join('\n'),
     });
   }
   if (ajenas.length > 0) {
@@ -108,12 +145,12 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
       evidencia: ajenas.slice(0, MAX_REGLAS).map(linea).join('\n'),
     });
   }
-  // Lo que se quitó antes y se puede recrear (el registro es de WolfCore Dev, no del cortafuegos).
+  // Lo que se quitó antes y se puede recrear: solo de la copia protegida de la plataforma.
   const quitadas = (await restaurables(d)).slice(0, MAX_REGLAS);
   if (quitadas.length > 0) {
-    const objetivos: Objetivo[] = quitadas.map((x) => ({
-      nombre: x.entrada.nombre,
-      programa: x.entrada.programa,
+    const objetivos: ObjetivoRestaurar[] = quitadas.map((x) => ({
+      id: x.registro.id,
+      sha256: x.registro.sha256,
     }));
     res.push({
       id: 'firewall:quitadas',
@@ -121,16 +158,22 @@ export async function revisarFirewall(d: DepsDoctor): Promise<HallazgoInterno[]>
       gravedad: 'info',
       codigo: 'doctor.firewall_quitadas',
       datos: { cantidad: quitadas.length },
-      evidencia: quitadas
-        .map((x) => linea({ ...x.entrada, nombreVisible: x.entrada.regla.nombreVisible }))
-        .join('\n'),
+      evidencia: quitadas.map((x) => lineaRestaurar(x.registro.regla)).join('\n'),
+      elementos: quitadas.map((x) => ({
+        clave: x.registro.id,
+        texto: lineaRestaurar(x.registro.regla),
+      })),
       reparacion: {
         id: 'restaurar-reglas-firewall',
         codigo: 'doctor.reparaciones.firewall_restaurar',
         requiereAdmin: true,
         soloInforma: false,
       },
-      aplicar: () => restaurarReglas(d, objetivos, { confirmado: true }),
+      aplicar: (seleccion) =>
+        restaurarReglas(d, objetivos, {
+          confirmado: true,
+          ...(seleccion ? { seleccion } : {}),
+        }),
     });
   }
   return res;

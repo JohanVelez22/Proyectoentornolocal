@@ -37,20 +37,28 @@ import {
 import {
   interpretarPerfilRed,
   interpretarReglasEntrada,
+  NOMBRE_REGLA_LISTA,
   SCRIPT_REGLAS_ENTRADA,
   scriptPerfilRed,
   type PerfilRed,
   type ReglasEntrada,
 } from './firewallWin';
 import {
+  ARCHIVO_PROTEGIDO,
+  cuerpoQuitarReglas,
+  cuerpoRestaurarReglas,
+  DETALLE_ALMACEN_INSEGURO,
+  idRegistro,
   interpretarReglasExportadas,
+  reglaExportadaDe,
   SALIDA_FIREWALL,
+  scriptCargador,
   scriptExportarReglas,
-  scriptQuitarReglas,
-  scriptRestaurarReglas,
+  sha256Hex,
   type ReglaExportada,
   type ReglaPorQuitar,
   type ReglaPorRestaurar,
+  type RegistroProtegido,
 } from './firewallCambiosWin';
 import { crearLanzadorOculto, type LanzadorOculto } from './lanzarOculto';
 import { interpretarNetstatTodos, interpretarTasklist, interpretarTasklistTodos } from './netstat';
@@ -374,8 +382,6 @@ export interface OpcionesPlataformaWindows {
   /** Tipo de unidad (`Win32_LogicalDisk.DriveType`) de una letra; por defecto, con PowerShell. */
   tipoUnidad?: (letra: string) => Promise<number | null>;
 }
-
-const NOMBRE_REGLA_FIREWALL = /^[\w{}.\- @:()[\]]{1,200}$/;
 
 export class PlataformaWindows implements PlataformaCompleta {
   private contador = 0;
@@ -895,7 +901,7 @@ export class PlataformaWindows implements PlataformaCompleta {
       }
       case 'quitar-reglas-firewall':
         return c.nombres
-          .filter((n) => NOMBRE_REGLA_FIREWALL.test(n))
+          .filter((n) => NOMBRE_REGLA_LISTA.test(n))
           .map((n) => `Remove-NetFirewallRule -Name ${literal(n)}`)
           .join('; ');
     }
@@ -1089,24 +1095,87 @@ export class PlataformaWindows implements PlataformaCompleta {
     }
   }
 
-  /** Salida 41 del script (alguna regla se saltó) no es un fallo: quien llama relee qué quedó. */
-  private async elevarCortafuegos(script: (limite: number) => string): Promise<ResultadoEscritura> {
+  /**
+   * Corre el cuerpo de un script de cortafuegos elevado (UAC). El cuerpo va en un archivo
+   * temporal con su SHA-256 comprobado dentro del comando elevado, así que el comando no crece
+   * con el número de reglas. El plazo interno se calcula al empezar de verdad (tras esperar la
+   * cola) y deja un margen antes del límite externo, para que el script pare solo antes de que
+   * lo corten a medias.
+   */
+  private async elevarConCuerpo(
+    cuerpo: (limiteUnixMs: number) => string,
+  ): Promise<ResultadoEscritura> {
     const plazo = 180_000;
-    const r = await this.elevar(script(Date.now() + plazo), plazo);
-    if (!r.ok && r.motivo === 'error' && r.detalle === `código ${SALIDA_FIREWALL.saltadas}`) {
-      return { ok: true };
+    const margen = 30_000;
+    const tmp = path.join(
+      this.carpetaTemporal,
+      `${PREFIJO_TEMPORAL_HOSTS}${process.pid}-${++this.contador}-${randomUUID().slice(0, 8)}.txt`,
+    );
+    try {
+      const r = await this.enCola(async () => {
+        const datos = Buffer.from(cuerpo(Date.now() + plazo - margen), 'utf8');
+        await this.escribirTemporal(tmp, datos);
+        return this.elevarAhora(scriptCargador(tmp, sha256Hex(datos)), plazo);
+      });
+      if (r.ok || r.motivo !== 'error') return r;
+      const salida = /^código (\d+)$/.exec(r.detalle ?? '')?.[1];
+      // Alguna regla se saltó o se acabó el plazo a medias: no es un fallo total, quien llama
+      // relee qué quedó. Una carpeta protegida que no es de fiar sí es un fallo.
+      if (salida === String(SALIDA_FIREWALL.saltadas)) return { ok: true };
+      if (salida === String(SALIDA_FIREWALL.vencido)) return { ok: false, motivo: 'tiempo' };
+      if (salida === String(SALIDA_FIREWALL.almacenInseguro)) {
+        return { ok: false, motivo: 'error', detalle: DETALLE_ALMACEN_INSEGURO };
+      }
+      return r;
+    } catch (e) {
+      return { ok: false, motivo: 'error', detalle: e instanceof Error ? e.message : String(e) };
+    } finally {
+      await rm(tmp, { force: true }).catch(() => undefined);
     }
-    return r;
   }
 
   async quitarReglasFirewall(reglas: ReglaPorQuitar[]): Promise<ResultadoEscritura> {
     if (reglas.length === 0) return { ok: true };
-    return this.elevarCortafuegos((limite) => scriptQuitarReglas(reglas, limite));
+    return this.elevarConCuerpo((limite) => cuerpoQuitarReglas(reglas, limite));
   }
 
   async restaurarReglasFirewall(reglas: ReglaPorRestaurar[]): Promise<ResultadoEscritura> {
     if (reglas.length === 0) return { ok: true };
-    return this.elevarCortafuegos((limite) => scriptRestaurarReglas(reglas, limite));
+    return this.elevarConCuerpo((limite) => cuerpoRestaurarReglas(reglas, limite));
+  }
+
+  /**
+   * Copias protegidas de las reglas quitadas. La ruta sale de %ProgramData% solo para MOSTRAR: el
+   * script elevado calcula la suya con la API del sistema, comprueba la carpeta y exige que la
+   * huella sea la que se mostró aquí.
+   */
+  async leerAlmacenFirewall(): Promise<RegistroProtegido[] | null> {
+    const dir = path.win32.join(
+      this.entorno.ProgramData ?? 'C:\\ProgramData',
+      'WolfCoreDev',
+      'cortafuegos',
+    );
+    let nombres: string[];
+    try {
+      nombres = await readdir(dir);
+    } catch (e) {
+      return (e as NodeJS.ErrnoException).code === 'ENOENT' ? [] : null;
+    }
+    const res: RegistroProtegido[] = [];
+    for (const n of nombres) {
+      const id = ARCHIVO_PROTEGIDO.exec(n)?.[1];
+      if (!id) continue;
+      try {
+        const bytes = await readFile(path.win32.join(dir, n));
+        const regla = reglaExportadaDe(JSON.parse(bytes.toString('utf8')));
+        if (regla && idRegistro(regla.nombre) === id) {
+          res.push({ id, sha256: sha256Hex(bytes), regla });
+        }
+      } catch {
+        // un archivo ilegible no se ofrece
+      }
+    }
+    return res;
   }
 
   async perfilesFirefox(): Promise<PerfilFirefoxSistema[]> {

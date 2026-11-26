@@ -121,6 +121,7 @@ export class Doctor {
     hallazgoId: string,
     confirmacion: true,
     reparacionId?: string,
+    seleccion?: string[],
   ): Promise<ResultadoReparacion> {
     if (confirmacion !== true) return { ok: false, codigo: 'doctor.confirmacion_requerida' };
     const previa = this.reparando.get(hallazgoId);
@@ -133,8 +134,15 @@ export class Doctor {
     if (!rep || rep.soloInforma || !aplicar || (!principal && rep.id !== reparacionId)) {
       return { ok: false, codigo: 'doctor.solo_informa' };
     }
+    // La selección solo puede nombrar elementos que el hallazgo mostró.
+    if (seleccion !== undefined) {
+      const validas = new Set(h.elementos?.map((x) => x.clave));
+      if (!Array.isArray(seleccion) || !seleccion.every((x) => validas.has(x))) {
+        return { ok: false, codigo: 'doctor.hallazgo_desconocido' };
+      }
+    }
     const p = (async (): Promise<ResultadoReparacion> => {
-      const r = await aplicar();
+      const r = await aplicar(seleccion);
       if (r.ok) this.guardar([h.revision], await this.correr(h.revision));
       return r;
     })();

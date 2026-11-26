@@ -33,6 +33,32 @@ export function origenDeRegla(
   if (p.includes('%') || p.includes('..') || !/^([a-z]:)?\//.test(p)) return 'ajena';
   if (bajo(p, normalizar(carpetaDatos))) return 'propia';
   const tmp = normalizar(carpetaTemporal);
-  if ((bajo(p, tmp) || /\/temp\//.test(p)) && RESTO_PRUEBA.test(p)) return 'prueba';
+  // Un resto de pruebas tiene que colgar de la carpeta temporal indicada (no vale cualquier
+  // carpeta llamada `temp`).
+  if (bajo(p, tmp) && RESTO_PRUEBA.test(p.slice(tmp.length))) return 'prueba';
   return 'ajena';
+}
+
+/**
+ * Carpeta `pel-*` (o `scratchpad/ngx*`) de un resto de pruebas que contiene al programa, bajo la
+ * carpeta temporal. Las dos rutas ya vienen resueltas (con `realpath`). null si no hay.
+ */
+export function raizDePrueba(programa: string, carpetaTemporal: string): string | null {
+  const tmp = carpetaTemporal.replace(/[\\/]+$/, '');
+  const norm = (x: string): string => x.replaceAll('\\', '/').toLowerCase();
+  if (!norm(programa).startsWith(`${norm(tmp)}/`)) return null;
+  const partes = programa
+    .slice(tmp.length)
+    .split(/[\\/]+/)
+    .filter(Boolean);
+  // El último trozo es el programa: la carpeta tiene que ser anterior.
+  for (let i = 0; i < partes.length - 1; i++) {
+    const t = partes[i]!.toLowerCase();
+    const propia = /^(pel-int-|pel-etapa-|pel-vhost-real-)/.test(t);
+    const scratch = i > 0 && partes[i - 1]!.toLowerCase() === 'scratchpad' && t.startsWith('ngx');
+    if (propia || scratch) {
+      return [tmp, ...partes.slice(0, i + 1)].join(programa.includes('\\') ? '\\' : '/');
+    }
+  }
+  return null;
 }

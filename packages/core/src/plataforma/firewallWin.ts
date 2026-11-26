@@ -14,6 +14,12 @@ export interface ReglaEntrada {
   /** `Public`, `Private`, `Domain`, `Any` o varios separados por coma. */
   perfil: string;
   programa: string;
+  /** Protocolo (`TCP`, `UDP`, `Any`, un número…); vacío si no se pudo leer. */
+  protocolo?: string;
+  /** Puertos locales separados por coma (`Any` si todos). */
+  puertoLocal?: string;
+  /** Direcciones remotas separadas por coma (`Any`, `LocalSubnet`…). */
+  direccionRemota?: string;
 }
 
 export interface ReglasEntrada {
@@ -59,15 +65,20 @@ export const PROGRAMAS_VIGILADOS = [
 
 /**
  * Reglas de entrada habilitadas con acción Allow cuyo programa es uno vigilado. Una línea por
- * regla: `Name<TAB>DisplayName<TAB>Profile<TAB>Program`.
+ * regla: `Name<TAB>DisplayName<TAB>Profile<TAB>Program<TAB>Protocol<TAB>LocalPort<TAB>RemoteAddress`.
  */
 export const SCRIPT_REGLAS_ENTRADA = [
   "$ErrorActionPreference = 'Stop'",
+  // Con un PSModulePath heredado de PowerShell 7, Windows PowerShell no cargaba NetSecurity.
+  "$env:PSModulePath = [IO.Path]::Combine([Environment]::SystemDirectory, 'WindowsPowerShell', 'v1.0', 'Modules')",
   String.raw`$filtros = Get-NetFirewallApplicationFilter | Where-Object { $_.Program -match '(?i)\\(${PROGRAMAS_VIGILADOS.join('|')})\.exe$' }`,
   'foreach ($f in $filtros) {',
   '  $r = $f | Get-NetFirewallRule',
   "  if ($r.Direction -eq 'Inbound' -and $r.Action -eq 'Allow' -and $r.Enabled -eq 'True') {",
-  '    [Console]::Out.WriteLine(($r.Name, $r.DisplayName, [string]$r.Profile, $f.Program) -join [string][char]9)',
+  '    $pf = $r | Get-NetFirewallPortFilter; $af = $r | Get-NetFirewallAddressFilter',
+  '    $lp = @($pf.LocalPort | ForEach-Object { [string]$_ }) -join [string][char]44',
+  '    $ra = @($af.RemoteAddress | ForEach-Object { [string]$_ }) -join [string][char]44',
+  '    [Console]::Out.WriteLine(($r.Name, $r.DisplayName, [string]$r.Profile, $f.Program, [string]$pf.Protocol, $lp, $ra) -join [string][char]9)',
   '  }',
   '}',
 ].join('\n');
@@ -84,14 +95,42 @@ export const NOMBRE_REGLA_LISTA = /^[^\x00-\x1f*?[\]`'"‘’‚‛]{1,400}$/;
 export function interpretarReglasEntrada(salida: string): ReglaEntrada[] {
   const res: ReglaEntrada[] = [];
   for (const linea of salida.split(/\r?\n/)) {
-    const [nombre, nombreVisible, perfil, programa] = linea.split('\t');
+    const [nombre, nombreVisible, perfil, programa, protocolo, puertoLocal, direccionRemota] =
+      linea.split('\t');
     if (!nombre || !programa || !NOMBRE_REGLA_LISTA.test(nombre)) continue;
     res.push({
       nombre,
       nombreVisible: (nombreVisible ?? '').slice(0, 200),
       perfil: (perfil ?? '').slice(0, 60),
       programa: programa.slice(0, 500),
+      ...(protocolo !== undefined
+        ? {
+            protocolo: protocolo.slice(0, 20),
+            puertoLocal: (puertoLocal ?? '').slice(0, 200),
+            direccionRemota: (direccionRemota ?? '').slice(0, 200),
+          }
+        : {}),
     });
   }
   return res;
+}
+
+/**
+ * Regla acotada a la red local, como la que recomienda la propia app para compartir un sitio
+ * (`regla-firewall-lan`): un solo perfil Private, TCP o UDP con puertos concretos y
+ * `RemoteAddress LocalSubnet`. No deja el programa abierto a Internet: no es "peligrosa". Si
+ * falta algún dato (no se pudo leer), no se da por acotada.
+ */
+export function esReglaAcotada(r: ReglaEntrada): boolean {
+  if (r.protocolo === undefined || r.puertoLocal === undefined || r.direccionRemota === undefined) {
+    return false;
+  }
+  const puertos = r.puertoLocal.split(',').map((x) => x.trim());
+  return (
+    r.perfil.trim().toLowerCase() === 'private' &&
+    /^(tcp|udp|6|17)$/i.test(r.protocolo.trim()) &&
+    puertos.length > 0 &&
+    puertos.every((p) => /^\d{1,5}(-\d{1,5})?$/.test(p)) &&
+    r.direccionRemota.trim().toLowerCase() === 'localsubnet'
+  );
 }

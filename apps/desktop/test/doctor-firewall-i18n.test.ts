@@ -11,6 +11,8 @@ const CODIGOS = [
   'doctor.firewall_parcial',
   'doctor.firewall_sin_cambios',
   'doctor.firewall_registro_fallido',
+  'doctor.firewall_reglas_acotadas',
+  'doctor.firewall_almacen_inseguro',
 ] as const;
 
 describe('Doctor: cortafuegos (D46) en es, en, pt y fr', () => {
@@ -19,10 +21,12 @@ describe('Doctor: cortafuegos (D46) en es, en, pt y fr', () => {
       const errores = t.errores.codigos as Record<string, string>;
       for (const c of CODIGOS) expect(errores[c], c).toBeTruthy();
       expect(errores['doctor.firewall_quitadas']).toContain('{cantidad}');
+      expect(errores['doctor.firewall_reglas_acotadas']).toContain('{cantidad}');
       const d = t.doctor;
       const rep = d.reparaciones as Record<string, string>;
       expect(rep.firewall).toContain('cortafuegos-quitadas.json');
-      expect(rep.firewall_restaurar).toContain('cortafuegos-quitadas.json');
+      expect(rep.firewall_restaurar).toBeTruthy();
+      expect(d.dialogo.sinSeleccion).toBeTruthy();
       expect(d.dialogo.reglas).toBeTruthy();
       expect(d.dialogo.reglasNota).toBeTruthy();
     });
@@ -32,6 +36,8 @@ describe('Doctor: cortafuegos (D46) en es, en, pt y fr', () => {
     const f = fr.doctor;
     const textos = [
       f.dialogo.reglasNota,
+      f.dialogo.reglas,
+      f.dialogo.sinSeleccion,
       (f.reparaciones as Record<string, string>).firewall_restaurar,
       (fr.errores.codigos as Record<string, string>)['doctor.firewall_quitadas'],
       (fr.errores.codigos as Record<string, string>)['doctor.firewall_parcial'],

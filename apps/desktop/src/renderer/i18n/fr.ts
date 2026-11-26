@@ -685,6 +685,10 @@ export const fr: Textos = {
         'Impossible de vérifier le pare-feu de Windows (les droits d’administrateur peuvent être nécessaires).',
       'doctor.firewall_reglas_ajenas':
         'Il y a {cantidad} règle(s) entrante(s) d’autres programmes (FlyEnv, Laragon, XAMPP ou autres) pour nginx, PHP ou des bases de données sur les profils {perfiles}. Elles ne sont pas de WolfCore Dev : elles sont seulement affichées et jamais supprimées d’ici.',
+      'doctor.firewall_reglas_acotadas':
+        'Il y a {cantidad} règle(s) de programmes de WolfCore Dev limitées au réseau local (profil privé uniquement, sous-réseau local et ports précis), comme celles que l’application recommande elle-même pour partager un site. Elles sont seulement affichées : elles ne sont pas supprimées d’ici.',
+      'doctor.firewall_almacen_inseguro':
+        'La copie protégée des règles n’est pas fiable (autorisations ou contenu différents de ce qui était affiché) : aucune règle n’a été créée ni modifiée.',
       'doctor.firewall_quitadas':
         'WolfCore Dev a supprimé auparavant {cantidad} règle(s) du pare-feu et en a gardé une copie : vous pouvez les recréer si besoin.',
       'doctor.firewall_parcial':
@@ -4210,7 +4214,8 @@ export const fr: Textos = {
       titulo: 'Confirmer la réparation',
       queHara: 'Voici ce qui sera fait :',
       admin: 'Windows vous demandera l’autorisation administrateur.',
-      reglas: 'Règles concernées (la liste exacte) :',
+      reglas: 'Règles concernées : décochez celles que vous ne voulez pas toucher.',
+      sinSeleccion: 'Cochez au moins une règle pour continuer.',
       reglasNota:
         'Rien ne change sans votre confirmation et l’autorisation administrateur. Si une règle a changé depuis son affichage, elle est ignorée.',
       puerto: (p: string | number) => `Le nouveau port sera ${p}.`,
@@ -4233,7 +4238,8 @@ export const fr: Textos = {
       vcredist: 'Visual C++',
       'enlazador-msvc': 'Éditeur de liens C++',
       antivirus: 'Antivirus',
-      firewall: 'Pare-feu',
+      firewall:
+        'Supprimer les règles que vous cochez, une par une et par leur nom exact. Une copie est d’abord notée dans etc/cortafuegos-quitadas.json (pour affichage seulement) et une autre, protégée, dans un dossier que seuls les administrateurs peuvent modifier. Les règles des autres programmes ne sont jamais touchées.',
       servicios: 'Services',
     },
     reparaciones: {
@@ -4262,7 +4268,7 @@ export const fr: Textos = {
       firewall:
         'Supprimer ces règles entrantes du pare-feu, une par une et par leur nom exact. Une copie est d’abord enregistrée dans etc/cortafuegos-quitadas.json pour pouvoir les recréer. Les règles des autres programmes ne sont jamais touchées.',
       firewall_restaurar:
-        'Recréer les règles supprimées auparavant, telles qu’elles étaient (d’après la copie de etc/cortafuegos-quitadas.json). Ces programmes pourront de nouveau recevoir des connexions du réseau.',
+        'Recréer les règles que vous cochez, avec les mêmes programme, profil, protocole, ports et adresses que ceux affichés, à partir de la copie protégée (et non du fichier de etc/). Ces programmes pourront de nouveau recevoir des connexions du réseau.',
       reintentar_servicio: 'Redémarrer le service.',
       firefox_confianza:
         'Ajouter dans le user.js de chaque profil Firefox la préférence qui fait confiance à l’autorité de Windows, avec une copie préalable. prefs.js n’est pas touché et les profils ouverts sont ignorés.',

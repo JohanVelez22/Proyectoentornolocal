@@ -654,6 +654,10 @@ export const pt: Textos = {
         'Não foi possível verificar o firewall do Windows (pode ser preciso ser administrador).',
       'doctor.firewall_reglas_ajenas':
         'Há {cantidad} regra(s) de entrada de outros programas (FlyEnv, Laragon, XAMPP ou outros) para nginx, PHP ou bancos de dados nos perfis {perfiles}. Não são do WolfCore Dev: só são mostradas e nunca removidas daqui.',
+      'doctor.firewall_reglas_acotadas':
+        'Há {cantidad} regra(s) de programas do WolfCore Dev limitadas à rede local (só perfil privado, sub-rede local e portas específicas), como as que o próprio aplicativo recomenda para compartilhar um site. Só são mostradas: não são removidas daqui.',
+      'doctor.firewall_almacen_inseguro':
+        'A cópia protegida das regras não é confiável (permissões ou conteúdo diferentes do que foi mostrado): nenhuma regra foi criada nem alterada.',
       'doctor.firewall_quitadas':
         'O WolfCore Dev removeu antes {cantidad} regra(s) do firewall e guardou uma cópia: você pode recriá-las se precisar.',
       'doctor.firewall_parcial':
@@ -4106,7 +4110,8 @@ export const pt: Textos = {
       titulo: 'Confirmar o reparo',
       queHara: 'Isto é o que será feito:',
       admin: 'O Windows vai pedir permissão de administrador.',
-      reglas: 'Regras afetadas (a lista exata):',
+      reglas: 'Regras afetadas: desmarque as que não quiser tocar.',
+      sinSeleccion: 'Marque pelo menos uma regra para continuar.',
       reglasNota:
         'Nada muda sem a sua confirmação e a permissão de administrador. Se uma regra mudou depois de ser mostrada, ela é ignorada.',
       puerto: (p: string | number) => `A nova porta será ${p}.`,
@@ -4129,7 +4134,8 @@ export const pt: Textos = {
       vcredist: 'Visual C++',
       'enlazador-msvc': 'Vinculador C++',
       antivirus: 'Antivírus',
-      firewall: 'Firewall',
+      firewall:
+        'Remover as regras marcadas, uma por uma e pelo nome exato. Antes é anotada uma cópia em etc/cortafuegos-quitadas.json (só para exibição) e outra, protegida, em uma pasta que só os administradores podem escrever. As regras de outros programas nunca são tocadas.',
       servicios: 'Serviços',
     },
     reparaciones: {
@@ -4158,7 +4164,7 @@ export const pt: Textos = {
       firewall:
         'Remover essas regras de entrada do firewall, uma por uma e pelo nome exato. Antes é guardada uma cópia em etc/cortafuegos-quitadas.json para poder recriá-las. As regras de outros programas nunca são tocadas.',
       firewall_restaurar:
-        'Recriar as regras removidas antes, exatamente como estavam (segundo a cópia em etc/cortafuegos-quitadas.json). Esses programas voltarão a poder receber conexões da rede.',
+        'Recriar as regras marcadas, com o mesmo programa, perfil, protocolo, portas e endereços que são mostrados, a partir da cópia protegida (não do arquivo em etc/). Esses programas voltarão a poder receber conexões da rede.',
       reintentar_servicio: 'Iniciar o serviço de novo.',
       firefox_confianza:
         'Adicionar no user.js de cada perfil do Firefox a preferência que confia na autoridade do Windows, com uma cópia prévia. O prefs.js não é tocado e os perfis abertos são pulados.',

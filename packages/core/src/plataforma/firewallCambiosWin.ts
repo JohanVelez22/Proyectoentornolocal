@@ -1,11 +1,21 @@
 /**
  * D46: scripts que cambian el cortafuegos de Windows (quitar y recrear reglas de entrada Allow
- * peligrosas de WolfCore Dev) y la lectura que las exporta. Solo los corre la plataforma, ELEVADOS
- * (UAC), tras la confirmación explícita del usuario: nunca en segundo plano ni por su cuenta.
- * Siempre actúan por el `Name` exacto de cada regla (sin comodines) y, justo antes de tocarla,
- * vuelven a comprobar dentro del script elevado que sigue siendo de entrada, Allow y con un
- * programa vigilado bajo la carpeta de WolfCore Dev (con uniones y nombres 8.3 resueltos).
+ * peligrosas de WolfCore Dev) y la lectura que las exporta. Solo los corre la plataforma,
+ * ELEVADOS (UAC), tras la confirmación explícita del usuario: nunca en segundo plano ni por su
+ * cuenta.
+ *
+ * - Siempre por el `Name` exacto de cada regla (sin comodines) y, justo antes de tocarla, el
+ *   script elevado vuelve a comprobar que sigue siendo de entrada, Allow y con un programa
+ *   vigilado (`.exe`) bajo la raíz de WolfCore Dev (uniones y nombres 8.3 resueltos).
+ * - La copia con la que se puede recrear una regla NO sale de ningún archivo que el usuario (o
+ *   un programa suyo) pueda editar: la guarda el propio script elevado en
+ *   `%ProgramData%\WolfCoreDev\cortafuegos`, con la herencia cortada y solo escritura para
+ *   Administradores y SYSTEM. El script de restaurar solo lee de ahí, comprueba esa carpeta y
+ *   el SHA-256 de lo que se mostró al usuario, y valida cada campo antes de crear nada.
+ * - El cuerpo de cada script viaja en un archivo temporal con SHA-256 comprobado dentro del
+ *   comando elevado (como el flujo de hosts): el comando no crece con el número de reglas.
  */
+import { createHash } from 'node:crypto';
 import { NOMBRE_REGLA_LISTA, PROGRAMAS_VIGILADOS } from './firewallWin';
 
 /** Regla completa tal como se exportó antes de quitarla (para poder recrearla). */
@@ -26,22 +36,53 @@ export interface ReglaExportada {
   direccionRemota: string[];
 }
 
+/** Dónde puede estar la raíz de una regla: la carpeta de datos o un resto de pruebas bajo TEMP. */
+export type TipoRaiz = 'propia' | 'prueba';
+
 /** Una regla que el script elevado debe quitar solo si sigue siendo la misma. */
 export interface ReglaPorQuitar {
+  /** Identificador de su copia protegida (`idRegistro(nombre)`). */
+  id: string;
   nombre: string;
   /** Programa tal como lo vio el usuario en la lista: si cambió, no se toca. */
   programa: string;
   /** Carpeta (ya resuelta) bajo la que tiene que seguir el programa. */
   raiz: string;
+  tipo: TipoRaiz;
+  /** Carpeta temporal (ya resuelta): la raíz de un resto de pruebas tiene que estar bajo ella. */
+  temporal: string;
+}
+
+/** Copia protegida de una regla quitada: lo único de lo que se puede recrear. */
+export interface RegistroProtegido {
+  id: string;
+  /** SHA-256 (hex) del archivo tal como está en la carpeta protegida. */
+  sha256: string;
+  regla: ReglaExportada;
 }
 
 export interface ReglaPorRestaurar {
-  regla: ReglaExportada;
+  id: string;
+  /** SHA-256 de la copia protegida que se mostró al usuario: si cambió, no se crea nada. */
+  sha256: string;
   raiz: string;
+  tipo: TipoRaiz;
+  temporal: string;
 }
 
-/** Salida propia del script elevado: alguna regla se saltó (no es un fallo total). */
-export const SALIDA_FIREWALL = { saltadas: 41, vencido: 11 } as const;
+/** Salidas propias de los scripts elevados de este módulo. */
+export const SALIDA_FIREWALL = {
+  vencido: 11,
+  sinTemporal: 12,
+  temporalAlterado: 13,
+  /** La carpeta protegida no es de fiar (permisos, dueño o enlace): no se tocó nada. */
+  almacenInseguro: 21,
+  /** Alguna regla se saltó o no se pudo cambiar (no es un fallo total). */
+  saltadas: 41,
+} as const;
+
+/** `detalle` con el que la plataforma informa que la carpeta protegida no es de fiar. */
+export const DETALLE_ALMACEN_INSEGURO = 'almacen-inseguro';
 
 /**
  * Nombre que se puede pasar a `-Name` sin que actúe como patrón (ver `NOMBRE_REGLA_LISTA`): lo
@@ -49,8 +90,39 @@ export const SALIDA_FIREWALL = { saltadas: 41, vencido: 11 } as const;
  */
 export const NOMBRE_REGLA_EXACTO = NOMBRE_REGLA_LISTA;
 
+/** Identificador estable de la copia protegida de una regla (nombre de archivo, sin nada raro). */
+export const idRegistro = (nombre: string): string =>
+  createHash('sha256').update(nombre, 'utf8').digest('hex').slice(0, 32);
+
+export const sha256Hex = (b: Buffer | string): string =>
+  createHash('sha256').update(b).digest('hex');
+
 const lit = (t: string): string => `'${t.replace(/['‘’‚‛]/g, '$&$&')}'`;
 const lista = (xs: string[]): string => `@(${xs.map(lit).join(', ')})`;
+
+const PREAMBULO = [
+  "$ErrorActionPreference = 'Stop'",
+  // Con un PSModulePath heredado de PowerShell 7, Windows PowerShell no cargaba NetSecurity.
+  "$env:PSModulePath = [IO.Path]::Combine([Environment]::SystemDirectory, 'WindowsPowerShell', 'v1.0', 'Modules')",
+];
+export const PREAMBULO_MODULOS = PREAMBULO[1]!;
+
+/** `$o`: la regla `$r` exportada con todo lo necesario para recrearla. */
+const FUNCION_EXPORTAR = [
+  'function Export-ReglaWolf($r) {',
+  '  $a = $r | Get-NetFirewallApplicationFilter',
+  '  $p = $r | Get-NetFirewallPortFilter',
+  '  $d = $r | Get-NetFirewallAddressFilter',
+  '  [ordered]@{',
+  '    nombre = [string]$r.Name; nombreVisible = [string]$r.DisplayName; descripcion = [string]$r.Description',
+  '    habilitada = ([string]$r.Enabled -eq [string]$true); perfil = [string]$r.Profile',
+  '    direccion = [string]$r.Direction; accion = [string]$r.Action; programa = [string]$a.Program',
+  '    protocolo = [string]$p.Protocol',
+  '    puertoLocal = @($p.LocalPort | ForEach-Object { [string]$_ }); puertoRemoto = @($p.RemotePort | ForEach-Object { [string]$_ })',
+  '    direccionLocal = @($d.LocalAddress | ForEach-Object { [string]$_ }); direccionRemota = @($d.RemoteAddress | ForEach-Object { [string]$_ })',
+  '  }',
+  '}',
+];
 
 /**
  * Una línea JSON por regla que existe (con cualquier dirección o acción) con todo lo necesario
@@ -60,24 +132,13 @@ export function scriptExportarReglas(nombres: string[]): string {
   for (const n of nombres) {
     if (!NOMBRE_REGLA_EXACTO.test(n)) throw new Error(`Nombre de regla no válido: ${n}`);
   }
-  const texto = (e: string): string => `@(${e} | ForEach-Object { [string]$_ })`;
   return [
-    "$ErrorActionPreference = 'Stop'",
+    ...PREAMBULO,
+    ...FUNCION_EXPORTAR,
     `foreach ($n in ${lista(nombres)}) {`,
     '  $r = Get-NetFirewallRule -Name $n -ErrorAction SilentlyContinue',
     '  if ($null -eq $r) { continue }',
-    '  $a = $r | Get-NetFirewallApplicationFilter',
-    '  $p = $r | Get-NetFirewallPortFilter',
-    '  $d = $r | Get-NetFirewallAddressFilter',
-    '  $o = [ordered]@{',
-    '    nombre = [string]$r.Name; nombreVisible = [string]$r.DisplayName; descripcion = [string]$r.Description',
-    '    habilitada = ([string]$r.Enabled -eq [string]$true); perfil = [string]$r.Profile',
-    '    direccion = [string]$r.Direction; accion = [string]$r.Action; programa = [string]$a.Program',
-    '    protocolo = [string]$p.Protocol',
-    `    puertoLocal = ${texto('$p.LocalPort')}; puertoRemoto = ${texto('$p.RemotePort')}`,
-    `    direccionLocal = ${texto('$d.LocalAddress')}; direccionRemota = ${texto('$d.RemoteAddress')}`,
-    '  }',
-    '  [Console]::Out.WriteLine(($o | ConvertTo-Json -Compress))',
+    '  [Console]::Out.WriteLine((Export-ReglaWolf $r | ConvertTo-Json -Compress))',
     '}',
   ].join('\n');
 }
@@ -86,7 +147,7 @@ const esTexto = (v: unknown, max: number): v is string => typeof v === 'string' 
 const esLista = (v: unknown): v is string[] =>
   Array.isArray(v) && v.length <= 64 && v.every((x) => esTexto(x, 200));
 
-/** Comprueba la forma de una regla exportada (del script o del registro en disco); null si no la tiene. */
+/** Comprueba la forma de una regla exportada (del script o de la copia en disco). */
 export function reglaExportadaDe(v: unknown): ReglaExportada | null {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return null;
   const o = v as Record<string, unknown>;
@@ -125,7 +186,7 @@ export function reglaExportadaDe(v: unknown): ReglaExportada | null {
   };
 }
 
-/** Lee una línea JSON del script anterior; null si no tiene la forma esperada. */
+/** Lee una línea JSON del script de exportar; null si no tiene la forma esperada. */
 export function interpretarReglaExportada(linea: string): ReglaExportada | null {
   try {
     return reglaExportadaDe(JSON.parse(linea));
@@ -148,10 +209,14 @@ export function interpretarReglasExportadas(salida: string): ReglaExportada[] {
 const PERFILES = new Set(['any', 'domain', 'private', 'public']);
 const TOKEN_PUERTO = /^(any|\d{1,5}(-\d{1,5})?|[A-Za-z]{2,30})$/;
 const TOKEN_DIRECCION = /^[\w.:/*-]{1,100}$/;
+const PROTOCOLO = /^(any|tcp|udp|\d{1,3})$/i;
+
+/** ¿El protocolo lleva puertos? (TCP o UDP, por nombre o por número). */
+export const protocoloConPuertos = (p: string): boolean => /^(tcp|udp|6|17)$/i.test(p);
 
 /**
  * ¿Se puede recrear esta regla? Solo una de entrada Allow con campos de forma conocida: lo que
- * sale de un archivo editable a mano nunca se pasa tal cual a PowerShell.
+ * sale de un archivo nunca se pasa tal cual a PowerShell.
  */
 export function reglaRestaurable(r: ReglaExportada): boolean {
   return (
@@ -160,17 +225,11 @@ export function reglaRestaurable(r: ReglaExportada): boolean {
     r.accion.toLowerCase() === 'allow' &&
     r.programa !== '' &&
     r.perfil.split(',').every((x) => PERFILES.has(x.trim().toLowerCase())) &&
-    /^(any|tcp|udp|\d{1,3})$/i.test(r.protocolo) &&
+    PROTOCOLO.test(r.protocolo) &&
     [...r.puertoLocal, ...r.puertoRemoto].every((x) => TOKEN_PUERTO.test(x)) &&
     [...r.direccionLocal, ...r.direccionRemota].every((x) => TOKEN_DIRECCION.test(x))
   );
 }
-
-const PREAMBULO = [
-  "$ErrorActionPreference = 'Stop'",
-  // Con un PSModulePath heredado de PowerShell 7, Windows PowerShell no cargaba NetSecurity.
-  "$env:PSModulePath = [IO.Path]::Combine([Environment]::SystemDirectory, 'WindowsPowerShell', 'v1.0', 'Modules')",
-];
 
 /**
  * `WolfRuta.Real`: ruta real (uniones y enlaces resueltos, nombres 8.3 expandidos) de lo que
@@ -209,16 +268,85 @@ export const AYUDA_RUTA = [
 
 const VIGILADOS_PS = `@(${PROGRAMAS_VIGILADOS.map(lit).join(', ')})`;
 
-/** Comprobación común (quitar y restaurar): el programa sigue bajo `$raiz` y es un vigilado. */
+/** Carpetas temporales de pruebas de WolfCore (mismo patrón que `origenDeRegla`). */
+const PATRON_PRUEBA = '^(pel-int-|pel-etapa-|pel-vhost-real-)';
+
+/**
+ * Comprobación común (quitar y restaurar): el programa es un `.exe` vigilado y, con uniones y
+ * 8.3 resueltos, sigue bajo `$raiz`. Para un resto de pruebas, `$raiz` además tiene que ser una
+ * carpeta `pel-*` (o `scratchpad\ngx*`) que cuelga de la carpeta temporal `$tmp`.
+ */
 const FUNCION_PROGRAMA_PROPIO = [
   `$vigilados = ${VIGILADOS_PS}`,
-  'function Test-ProgramaPropio([string]$prog, [string]$raiz) {',
+  'function Test-ProgramaPropio([string]$prog, [string]$raiz, [string]$tipo, [string]$tmp) {',
   '  if ([string]::IsNullOrWhiteSpace($prog) -or $prog.Contains([string][char]37)) { return $false }',
   '  $real = [WolfRuta]::Real($prog); $base = [WolfRuta]::Real($raiz)',
   '  if (-not $real -or -not $base) { return $false }',
   '  $rl = $real.ToLowerInvariant(); $bl = $base.ToLowerInvariant().TrimEnd([char]92)',
   '  if (-not $rl.StartsWith($bl + [string][char]92)) { return $false }',
-  '  return ($vigilados -contains [IO.Path]::GetFileNameWithoutExtension($rl))',
+  "  if ([IO.Path]::GetExtension($rl) -ne '.exe') { return $false }",
+  '  if ($vigilados -notcontains [IO.Path]::GetFileNameWithoutExtension($rl)) { return $false }',
+  "  if ($tipo -eq 'prueba') {",
+  '    $t = [WolfRuta]::Real($tmp)',
+  '    if (-not $t) { return $false }',
+  '    $tl = $t.ToLowerInvariant().TrimEnd([char]92)',
+  '    if (-not $bl.StartsWith($tl + [string][char]92)) { return $false }',
+  '    $hoja = [IO.Path]::GetFileName($bl); $padre = [IO.Path]::GetFileName([IO.Path]::GetDirectoryName($bl))',
+  `    return (($hoja -match '${PATRON_PRUEBA}') -or (($padre -eq 'scratchpad') -and ($hoja -match '^ngx')))`,
+  '  }',
+  "  return ($tipo -eq 'propia')",
+  '}',
+];
+
+const FUNCION_HUELLA =
+  'function Get-HuellaWolf([byte[]]$x) { $s = [Security.Cryptography.SHA256]::Create(); try { [BitConverter]::ToString($s.ComputeHash($x)).Replace([string][char]45, [string]::Empty).ToLowerInvariant() } finally { $s.Dispose() } }';
+
+/** Carpeta protegida: solo Administradores y SYSTEM escriben; el resto, como mucho, lee. */
+const ALMACEN = [
+  "$sidSistema = 'S-1-5-18'; $sidAdmins = 'S-1-5-32-544'; $sidUsuarios = 'S-1-5-32-545'",
+  "$baseAlmacen = [IO.Path]::Combine([Environment]::GetFolderPath('CommonApplicationData'), 'WolfCoreDev')",
+  "$dirAlmacen = [IO.Path]::Combine($baseAlmacen, 'cortafuegos')",
+  "$derechosPeligrosos = [Security.AccessControl.FileSystemRights]'WriteData, AppendData, WriteExtendedAttributes, WriteAttributes, Delete, DeleteSubdirectoriesAndFiles, ChangePermissions, TakeOwnership'",
+  // ¿Es de confianza? Ni enlaces, ni dueño que no sea Administradores/SYSTEM, ni nadie más con
+  // derecho de escritura; en carpetas, además, con la herencia cortada.
+  'function Test-ProtegidoWolf($info, [bool]$carpeta) {',
+  '  if (-not $info.Exists) { return $false }',
+  '  if (($info.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { return $false }',
+  '  $a = $info.GetAccessControl()',
+  '  if ($carpeta -and -not $a.AreAccessRulesProtected) { return $false }',
+  '  $dueno = $a.GetOwner([Security.Principal.SecurityIdentifier]).Value',
+  '  if (@($sidSistema, $sidAdmins) -notcontains $dueno) { return $false }',
+  '  foreach ($r in $a.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {',
+  "    if ($r.AccessControlType -ne 'Allow') { continue }",
+  '    if (@($sidSistema, $sidAdmins) -contains $r.IdentityReference.Value) { continue }',
+  '    if (($r.FileSystemRights -band $derechosPeligrosos) -ne 0) { return $false }',
+  '  }',
+  '  return $true',
+  '}',
+  'function Test-AlmacenWolf() {',
+  '  return ((Test-ProtegidoWolf ([IO.DirectoryInfo]::new($baseAlmacen)) $true) -and (Test-ProtegidoWolf ([IO.DirectoryInfo]::new($dirAlmacen)) $true))',
+  '}',
+];
+
+/** Crea (o corrige) las dos carpetas con la ACL protegida. Solo el script de quitar. */
+const CREAR_ALMACEN = [
+  'function Initialize-AlmacenWolf() {',
+  '  foreach ($x in @($baseAlmacen, $dirAlmacen)) {',
+  '    $null = [IO.Directory]::CreateDirectory($x)',
+  '    $i = [IO.DirectoryInfo]::new($x)',
+  '    if (($i.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { return }',
+  '    $a = $i.GetAccessControl()',
+  '    $a.SetAccessRuleProtection($true, $false)',
+  '    foreach ($r in @($a.GetAccessRules($true, $false, [Security.Principal.SecurityIdentifier]))) { $null = $a.RemoveAccessRuleSpecific($r) }',
+  "    $h = [Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit'",
+  '    $n = [Security.AccessControl.PropagationFlags]::None',
+  '    $allow = [Security.AccessControl.AccessControlType]::Allow',
+  '    $a.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidSistema), [Security.AccessControl.FileSystemRights]::FullControl, $h, $n, $allow))',
+  '    $a.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidAdmins), [Security.AccessControl.FileSystemRights]::FullControl, $h, $n, $allow))',
+  '    $a.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidUsuarios), [Security.AccessControl.FileSystemRights]::ReadAndExecute, $h, $n, $allow))',
+  '    try { $a.SetOwner([Security.Principal.SecurityIdentifier]::new($sidAdmins)) } catch { }',
+  '    $i.SetAccessControl($a)',
+  '  }',
   '}',
 ];
 
@@ -229,97 +357,162 @@ const comprobarPlazo = (limiteUnixMs: number | null): string[] =>
         `if ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() -gt ${Math.floor(limiteUnixMs)}) { exit ${SALIDA_FIREWALL.vencido} }`,
       ];
 
+/** Antes de CADA regla: si venció el plazo, se para sin tocar más (el resto queda sin hacer). */
+const PLAZO_POR_REGLA = (limiteUnixMs: number | null): string[] =>
+  limiteUnixMs === null
+    ? []
+    : [
+        `  if ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() -gt ${Math.floor(limiteUnixMs)}) { $vencido = $true; break }`,
+      ];
+
 /**
- * Script ELEVADO que quita reglas por su `Name` exacto. Para cada una, justo antes de borrar,
- * vuelve a comprobar que sigue siendo de entrada y Allow, con el MISMO programa que vio el
- * usuario, y que ese programa (con uniones y 8.3 resueltos) sigue bajo la raíz de WolfCore Dev.
- * Si algo no cuadra la salta sin tocarla; al final sale con `SALIDA_FIREWALL.saltadas`.
+ * Comando elevado (corto y de tamaño fijo): lee el cuerpo del script del archivo temporal,
+ * comprueba su SHA-256 (incrustado aquí, que no se puede cambiar) y lo ejecuta. Un archivo
+ * alterado o que ya no está sale sin ejecutar nada.
  */
-export function scriptQuitarReglas(reglas: ReglaPorQuitar[], limiteUnixMs: number | null): string {
+export function scriptCargador(archivo: string, sha256: string): string {
+  return [
+    ...PREAMBULO,
+    FUNCION_HUELLA,
+    `$t = ${lit(archivo)}`,
+    `if (-not [IO.File]::Exists($t)) { exit ${SALIDA_FIREWALL.sinTemporal} }`,
+    '$b = [IO.File]::ReadAllBytes($t)',
+    `if ((Get-HuellaWolf $b) -ne ${lit(sha256.toLowerCase())}) { exit ${SALIDA_FIREWALL.temporalAlterado} }`,
+    '& ([scriptblock]::Create([Text.UTF8Encoding]::new($false).GetString($b)))',
+    'exit $LASTEXITCODE',
+  ].join('\n');
+}
+
+/**
+ * Cuerpo ELEVADO que quita reglas por su `Name` exacto. Para cada una, justo antes de borrar,
+ * vuelve a comprobar que sigue siendo de entrada y Allow, con el MISMO programa que vio el
+ * usuario, y que ese programa sigue bajo la raíz. Antes de borrarla guarda su copia completa en
+ * la carpeta protegida (si no puede, no la borra). Revisa el plazo antes de cada regla.
+ */
+export function cuerpoQuitarReglas(reglas: ReglaPorQuitar[], limiteUnixMs: number | null): string {
   for (const r of reglas) {
     if (!NOMBRE_REGLA_EXACTO.test(r.nombre)) {
       throw new Error(`Nombre de regla no válido: ${r.nombre}`);
     }
+    if (!/^[0-9a-f]{32}$/.test(r.id)) throw new Error(`Identificador no válido: ${r.id}`);
   }
   const filas = reglas.map(
     (r) =>
-      `  [pscustomobject]@{ n = ${lit(r.nombre)}; p = ${lit(r.programa)}; r = ${lit(r.raiz)} }`,
+      `  [pscustomobject]@{ n = ${lit(r.nombre)}; p = ${lit(r.programa)}; r = ${lit(r.raiz)}; k = ${lit(r.tipo)}; t = ${lit(r.temporal)}; i = ${lit(r.id)} }`,
   );
   return [
     ...PREAMBULO,
     ...comprobarPlazo(limiteUnixMs),
+    FUNCION_HUELLA,
     ...AYUDA_RUTA,
     ...FUNCION_PROGRAMA_PROPIO,
-    '$saltadas = 0',
+    ...FUNCION_EXPORTAR,
+    ...ALMACEN,
+    ...CREAR_ALMACEN,
+    'Initialize-AlmacenWolf',
+    `if (-not (Test-AlmacenWolf)) { exit ${SALIDA_FIREWALL.almacenInseguro} }`,
+    '$saltadas = 0; $vencido = $false',
     '$reglas = @(',
     filas.join(',\n'),
     ')',
     'foreach ($e in $reglas) {',
+    ...PLAZO_POR_REGLA(limiteUnixMs),
     '  try {',
     '    $r = Get-NetFirewallRule -Name $e.n -ErrorAction Stop',
     '    $f = @($r | Get-NetFirewallApplicationFilter)',
     "    $igual = ($r.Direction -eq 'Inbound') -and ($r.Action -eq 'Allow') -and ($f.Count -eq 1) -and ([string]$f[0].Program -eq $e.p)",
-    '    if ($igual -and (Test-ProgramaPropio ([string]$f[0].Program) $e.r)) {',
-    '      Remove-NetFirewallRule -Name $e.n -ErrorAction Stop',
+    '    if ($igual -and (Test-ProgramaPropio ([string]$f[0].Program) $e.r $e.k $e.t)) {',
+    '      $json = Export-ReglaWolf $r | ConvertTo-Json -Compress',
+    '      $bytes = [Text.UTF8Encoding]::new($false).GetBytes($json)',
+    "      $archivo = [IO.Path]::Combine($dirAlmacen, $e.i + '.json')",
+    '      [IO.File]::WriteAllBytes($archivo, $bytes)',
+    '      if ((Get-HuellaWolf ([IO.File]::ReadAllBytes($archivo))) -eq (Get-HuellaWolf $bytes)) {',
+    '        Remove-NetFirewallRule -Name $e.n -ErrorAction Stop',
+    '      } else { $saltadas++ }',
     '    } else { $saltadas++ }',
     '  } catch { $saltadas++ }',
     '}',
+    `if ($vencido) { exit ${SALIDA_FIREWALL.vencido} }`,
     `if ($saltadas -gt 0) { exit ${SALIDA_FIREWALL.saltadas} }`,
     'exit 0',
   ].join('\n');
 }
 
-/** Script ELEVADO que recrea reglas exportadas, con las mismas comprobaciones de programa. */
-export function scriptRestaurarReglas(
+/** Validación en el propio script de lo que se va a crear (misma que `reglaRestaurable`). */
+const FUNCION_RESTAURABLE = [
+  'function Test-ReglaRestaurable($x) {',
+  "  if ([string]$x.nombre -notmatch '^[^\\x00-\\x1f*?\\[\\]`]{1,400}$') { return $false }",
+  "  if (([string]$x.direccion -ne 'Inbound') -or ([string]$x.accion -ne 'Allow')) { return $false }",
+  '  if ([string]::IsNullOrWhiteSpace([string]$x.programa)) { return $false }',
+  "  foreach ($t in ([string]$x.perfil -split ',')) { if (@('any', 'domain', 'private', 'public') -notcontains $t.Trim().ToLowerInvariant()) { return $false } }",
+  "  if ([string]$x.protocolo -notmatch '^(any|tcp|udp|\\d{1,3})$') { return $false }",
+  "  foreach ($t in (@($x.puertoLocal) + @($x.puertoRemoto))) { if ([string]$t -notmatch '^(any|\\d{1,5}(-\\d{1,5})?|[A-Za-z]{2,30})$') { return $false } }",
+  "  foreach ($t in (@($x.direccionLocal) + @($x.direccionRemota))) { if ([string]$t -notmatch '^[\\w.:/*-]{1,100}$') { return $false } }",
+  '  return $true',
+  '}',
+];
+
+/**
+ * Cuerpo ELEVADO que recrea reglas. Lee SOLO de la carpeta protegida (que comprueba antes:
+ * dueño, enlaces, ACL), por id, y solo si el SHA-256 del archivo es el que se mostró al usuario.
+ * Valida cada campo y el programa antes de crear la regla; lo que no cuadra se salta.
+ */
+export function cuerpoRestaurarReglas(
   reglas: ReglaPorRestaurar[],
   limiteUnixMs: number | null,
 ): string {
-  for (const { regla } of reglas) {
-    if (!reglaRestaurable(regla)) throw new Error(`Regla no restaurable: ${regla.nombre}`);
+  for (const r of reglas) {
+    if (!/^[0-9a-f]{32}$/.test(r.id)) throw new Error(`Identificador no válido: ${r.id}`);
+    if (!/^[0-9a-f]{64}$/.test(r.sha256)) throw new Error(`Huella no válida: ${r.sha256}`);
   }
-  const sinAny = (xs: string[]): string[] => xs.filter((x) => x.toLowerCase() !== 'any');
-  const bloques = reglas.map(({ regla: r, raiz }) => {
-    const protocolo = r.protocolo.toLowerCase();
-    const conPuertos = protocolo === 'tcp' || protocolo === 'udp';
-    const args = [
-      `-Name ${lit(r.nombre)}`,
-      `-DisplayName ${lit(r.nombreVisible || r.nombre)}`,
-      `-Description ${lit(r.descripcion)}`,
-      `-Enabled ${r.habilitada ? 'True' : 'False'}`,
-      `-Profile ${lista(r.perfil.split(',').map((x) => x.trim()))}`,
-      '-Direction Inbound',
-      '-Action Allow',
-      `-Program ${lit(r.programa)}`,
-      `-Protocol ${lit(r.protocolo)}`,
-      ...(conPuertos && sinAny(r.puertoLocal).length
-        ? [`-LocalPort ${lista(sinAny(r.puertoLocal))}`]
-        : []),
-      ...(conPuertos && sinAny(r.puertoRemoto).length
-        ? [`-RemotePort ${lista(sinAny(r.puertoRemoto))}`]
-        : []),
-      ...(sinAny(r.direccionLocal).length
-        ? [`-LocalAddress ${lista(sinAny(r.direccionLocal))}`]
-        : []),
-      ...(sinAny(r.direccionRemota).length
-        ? [`-RemoteAddress ${lista(sinAny(r.direccionRemota))}`]
-        : []),
-    ];
-    return [
-      '  try {',
-      `    if ($null -ne (Get-NetFirewallRule -Name ${lit(r.nombre)} -ErrorAction SilentlyContinue)) { $saltadas++ }`,
-      `    elseif (Test-ProgramaPropio ${lit(r.programa)} ${lit(raiz)}) { $null = New-NetFirewallRule ${args.join(' ')} -ErrorAction Stop }`,
-      '    else { $saltadas++ }',
-      '  } catch { $saltadas++ }',
-    ].join('\n');
-  });
+  const filas = reglas.map(
+    (r) =>
+      `  [pscustomobject]@{ i = ${lit(r.id)}; h = ${lit(r.sha256)}; r = ${lit(r.raiz)}; k = ${lit(r.tipo)}; t = ${lit(r.temporal)} }`,
+  );
   return [
     ...PREAMBULO,
     ...comprobarPlazo(limiteUnixMs),
+    FUNCION_HUELLA,
     ...AYUDA_RUTA,
     ...FUNCION_PROGRAMA_PROPIO,
-    '$saltadas = 0',
-    ...bloques,
+    ...ALMACEN,
+    ...FUNCION_RESTAURABLE,
+    `if (-not (Test-AlmacenWolf)) { exit ${SALIDA_FIREWALL.almacenInseguro} }`,
+    '$saltadas = 0; $vencido = $false',
+    '$reglas = @(',
+    filas.join(',\n'),
+    ')',
+    'foreach ($e in $reglas) {',
+    ...PLAZO_POR_REGLA(limiteUnixMs),
+    '  try {',
+    "    $archivo = [IO.Path]::Combine($dirAlmacen, $e.i + '.json')",
+    '    if (-not (Test-ProtegidoWolf ([IO.FileInfo]::new($archivo)) $false)) { $saltadas++; continue }',
+    '    $bytes = [IO.File]::ReadAllBytes($archivo)',
+    '    if ((Get-HuellaWolf $bytes) -ne $e.h) { $saltadas++; continue }',
+    '    $x = [Text.UTF8Encoding]::new($false).GetString($bytes) | ConvertFrom-Json',
+    '    if (-not (Test-ReglaRestaurable $x)) { $saltadas++; continue }',
+    '    if ($null -ne (Get-NetFirewallRule -Name ([string]$x.nombre) -ErrorAction SilentlyContinue)) { $saltadas++; continue }',
+    '    if (-not (Test-ProgramaPropio ([string]$x.programa) $e.r $e.k $e.t)) { $saltadas++; continue }',
+    '    $p = [ordered]@{',
+    '      Name = [string]$x.nombre; Direction = "Inbound"; Action = "Allow"; Program = [string]$x.programa',
+    '      Enabled = $(if ($x.habilitada) { "True" } else { "False" }); Profile = @(([string]$x.perfil -split ",") | ForEach-Object { $_.Trim() })',
+    '      Protocol = [string]$x.protocolo',
+    '    }',
+    '    if ([string]$x.nombreVisible -ne "") { $p.DisplayName = [string]$x.nombreVisible } else { $p.DisplayName = [string]$x.nombre }',
+    '    if ([string]$x.descripcion -ne "") { $p.Description = [string]$x.descripcion }',
+    "    $conPuertos = @('tcp', 'udp', '6', '17') -contains ([string]$x.protocolo).ToLowerInvariant()",
+    "    $lp = @($x.puertoLocal | Where-Object { [string]$_ -ne 'Any' }); if ($conPuertos -and $lp.Count -gt 0) { $p.LocalPort = $lp }",
+    "    $rp = @($x.puertoRemoto | Where-Object { [string]$_ -ne 'Any' }); if ($conPuertos -and $rp.Count -gt 0) { $p.RemotePort = $rp }",
+    "    $la = @($x.direccionLocal | Where-Object { [string]$_ -ne 'Any' }); if ($la.Count -gt 0) { $p.LocalAddress = $la }",
+    "    $ra = @($x.direccionRemota | Where-Object { [string]$_ -ne 'Any' }); if ($ra.Count -gt 0) { $p.RemoteAddress = $ra }",
+    '    $null = New-NetFirewallRule @p -ErrorAction Stop',
+    '  } catch { $saltadas++ }',
+    '}',
+    `if ($vencido) { exit ${SALIDA_FIREWALL.vencido} }`,
     `if ($saltadas -gt 0) { exit ${SALIDA_FIREWALL.saltadas} }`,
     'exit 0',
   ].join('\n');
 }
+
+/** Nombre del archivo de la copia protegida: solo 32 hex y `.json`. */
+export const ARCHIVO_PROTEGIDO = /^([0-9a-f]{32})\.json$/;

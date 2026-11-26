@@ -1,6 +1,14 @@
 import { ErrorWolf } from '../errores';
-import type { ReglaExportada, ReglaPorQuitar, ReglaPorRestaurar } from './firewallCambiosWin';
-import type { PerfilRed, ReglasEntrada } from './firewallWin';
+import {
+  DETALLE_ALMACEN_INSEGURO,
+  reglaRestaurable,
+  sha256Hex,
+  type ReglaExportada,
+  type ReglaPorQuitar,
+  type ReglaPorRestaurar,
+  type RegistroProtegido,
+} from './firewallCambiosWin';
+import { PROGRAMAS_VIGILADOS, type PerfilRed, type ReglasEntrada } from './firewallWin';
 import { resolverReal } from './rutaReal';
 import { desinstalarEnCarpeta } from './rustupRegistro';
 import { chmod, mkdir, rename, writeFile } from 'node:fs/promises';
@@ -523,18 +531,24 @@ export class PlataformaFalsa implements PlataformaCompleta {
       direccion: 'Inbound',
       accion: 'Allow',
       programa: r.programa,
-      protocolo: 'Any',
-      puertoLocal: ['Any'],
+      protocolo: r.protocolo ?? 'Any',
+      puertoLocal: r.puertoLocal ? r.puertoLocal.split(',') : ['Any'],
       puertoRemoto: ['Any'],
       direccionLocal: ['Any'],
-      direccionRemota: ['Any'],
+      direccionRemota: r.direccionRemota ? r.direccionRemota.split(',') : ['Any'],
       ...this.reglasFirewallDetalle.get(r.nombre),
     }));
     return [...deLista, ...this.reglasFirewallExtra.map((r) => ({ ...r }))];
   }
 
+  /** Lecturas de `exportarReglasFirewall` hechas; con `exportarFallaTras`, las siguientes dan null. */
+  exportaciones = 0;
+  exportarFallaTras: number | null = null;
+
   async exportarReglasFirewall(nombres: string[]): Promise<ReglaExportada[] | null> {
+    this.exportaciones++;
     if (this.exportarFirewallFalla) return null;
+    if (this.exportarFallaTras !== null && this.exportaciones > this.exportarFallaTras) return null;
     const pedidas = new Set(nombres);
     return this.reglasFirewallCompletas().filter((r) => pedidas.has(r.nombre));
   }
@@ -548,10 +562,45 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return p !== null && r !== null && this.rutaFirewall(p).startsWith(`${this.rutaFirewall(r)}/`);
   }
 
+  /** Como `Test-ProgramaPropio` del script: `.exe` vigilado, bajo la raíz y, en pruebas, `pel-*` bajo TEMP. */
+  private async programaPropio(
+    programa: string,
+    r: { raiz: string; tipo: 'propia' | 'prueba'; temporal: string },
+  ): Promise<boolean> {
+    if (!(await this.bajoRaiz(programa, r.raiz))) return false;
+    const m = /([^/\\]+)\.exe$/i.exec(programa);
+    if (!m || !(PROGRAMAS_VIGILADOS as readonly string[]).includes(m[1]!.toLowerCase())) {
+      return false;
+    }
+    if (r.tipo === 'propia') return true;
+    const [ra, t] = await Promise.all([resolverReal(r.raiz), resolverReal(r.temporal)]);
+    if (ra === null || t === null) return false;
+    const raiz = this.rutaFirewall(ra);
+    if (!raiz.startsWith(`${this.rutaFirewall(t)}/`)) return false;
+    const partes = raiz.split('/');
+    const hoja = partes.at(-1) ?? '';
+    return (
+      /^(pel-int-|pel-etapa-|pel-vhost-real-)/.test(hoja) ||
+      (partes.at(-2) === 'scratchpad' && hoja.startsWith('ngx'))
+    );
+  }
+
+  /** Copias protegidas: el "archivo" es el JSON de la regla y su huella la de esos bytes. */
+  readonly almacenProtegido = new Map<string, { texto: string; regla: ReglaExportada }>();
+  /** Simula una carpeta protegida que no es de fiar (permisos o dueño cambiados). */
+  almacenInseguro = false;
+  /** Reglas cuya copia protegida no se puede escribir (el script no las borra). */
+  readonly firewallNoGuardables = new Set<string>();
+  /** Pruebas: lo que devuelve `leerAlmacenFirewall` (null = no se pudo leer). */
+  almacenIlegible = false;
+
   async quitarReglasFirewall(reglas: ReglaPorQuitar[]): Promise<ResultadoEscritura> {
     this.pedidosQuitarReglas.push(reglas.map((r) => ({ ...r })));
     if (this.uacCancelado) return { ok: false, motivo: 'cancelado' };
     this.alElevarFirewall?.();
+    if (this.almacenInseguro) {
+      return { ok: false, motivo: 'error', detalle: DETALLE_ALMACEN_INSEGURO };
+    }
     // Igual que el script elevado: vuelve a mirar cada regla y salta la que ya no cuadra.
     for (const r of reglas) {
       const actual = this.reglasFirewallCompletas().find((x) => x.nombre === r.nombre);
@@ -560,11 +609,14 @@ export class PlataformaFalsa implements PlataformaCompleta {
         actual.direccion.toLowerCase() !== 'inbound' ||
         actual.accion.toLowerCase() !== 'allow' ||
         this.rutaFirewall(actual.programa) !== this.rutaFirewall(r.programa) ||
-        !(await this.bajoRaiz(actual.programa, r.raiz)) ||
+        !(await this.programaPropio(actual.programa, r)) ||
+        this.firewallNoGuardables.has(r.nombre) ||
         this.firewallNoBorrables.has(r.nombre)
       ) {
         continue;
       }
+      // Primero la copia protegida, luego el borrado.
+      this.almacenProtegido.set(r.id, { texto: JSON.stringify(actual), regla: { ...actual } });
       this.reglasEntrada = {
         ...this.reglasEntrada,
         reglas: this.reglasEntrada.reglas.filter((x) => x.nombre !== r.nombre),
@@ -574,13 +626,30 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return { ok: true };
   }
 
+  async leerAlmacenFirewall(): Promise<RegistroProtegido[] | null> {
+    if (this.almacenIlegible) return null;
+    return [...this.almacenProtegido].map(([id, v]) => ({
+      id,
+      sha256: sha256Hex(v.texto),
+      regla: { ...v.regla },
+    }));
+  }
+
   async restaurarReglasFirewall(reglas: ReglaPorRestaurar[]): Promise<ResultadoEscritura> {
-    this.pedidosRestaurarReglas.push(reglas.map((r) => ({ regla: { ...r.regla }, raiz: r.raiz })));
+    this.pedidosRestaurarReglas.push(reglas.map((r) => ({ ...r })));
     if (this.uacCancelado) return { ok: false, motivo: 'cancelado' };
     this.alElevarFirewall?.();
-    for (const { regla, raiz } of reglas) {
+    if (this.almacenInseguro) {
+      return { ok: false, motivo: 'error', detalle: DETALLE_ALMACEN_INSEGURO };
+    }
+    for (const r of reglas) {
+      // Solo de la carpeta protegida, por id, y solo si la huella es la que se mostró.
+      const guardada = this.almacenProtegido.get(r.id);
+      if (!guardada || sha256Hex(guardada.texto) !== r.sha256) continue;
+      const regla = guardada.regla;
+      if (!reglaRestaurable(regla)) continue;
       if (this.reglasFirewallCompletas().some((x) => x.nombre === regla.nombre)) continue;
-      if (!(await this.bajoRaiz(regla.programa, raiz))) continue;
+      if (!(await this.programaPropio(regla.programa, r))) continue;
       this.reglasEntrada = {
         ...this.reglasEntrada,
         reglas: [

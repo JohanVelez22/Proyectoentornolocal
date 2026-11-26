@@ -105,6 +105,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'reglasEntradaPermitidas',
   'exportarReglasFirewall',
   'quitarReglasFirewall',
+  'leerAlmacenFirewall',
   'restaurarReglasFirewall',
   'libreOffice',
   'capturaDisponible',

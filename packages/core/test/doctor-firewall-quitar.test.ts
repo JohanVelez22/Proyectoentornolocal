@@ -7,11 +7,22 @@ import { Doctor, type DepsDoctor, type Hallazgo } from '../src/doctor/doctor';
 import { quitarReglasPeligrosas, rutaRegistro } from '../src/doctor/firewallCambios';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
 import {
+  cuerpoQuitarReglas,
+  cuerpoRestaurarReglas,
+  idRegistro,
+  scriptCargador,
   scriptExportarReglas,
-  scriptQuitarReglas,
-  scriptRestaurarReglas,
   type ReglaExportada,
+  type ReglaPorQuitar,
 } from '../src/plataforma/firewallCambiosWin';
+import { SCRIPT_REGLAS_ENTRADA } from '../src/plataforma/firewallWin';
+import {
+  codificarComando,
+  PREFIJO_TEMPORAL_HOSTS,
+  scriptElevar,
+} from '../src/plataforma/hostsAdmin';
+import type { Ejecutor } from '../src/plataforma/tipos';
+import { PlataformaWindows } from '../src/plataforma/win';
 
 /** Cortafuegos SIMULADO (PlataformaFalsa): el real de la máquina no se toca en ninguna prueba. */
 
@@ -19,13 +30,14 @@ let dir: string;
 let datos: string;
 let plat: PlataformaFalsa;
 
-const deps = (): DepsDoctor =>
+const deps = (extra: Partial<DepsDoctor> = {}): DepsDoctor =>
   ({
     plataforma: plat,
     carpetaDatos: datos,
     carpetaRespaldos: join(datos, 'etc', 'respaldos'),
     carpetaTemporal: join(dir, 'tmp'),
     ahora: () => new Date('2026-11-26T10:00:00Z'),
+    ...extra,
   }) as unknown as DepsDoctor;
 
 const regla = (nombre: string, programa: string, perfil = 'Public, Private') => ({
@@ -37,6 +49,8 @@ const regla = (nombre: string, programa: string, perfil = 'Public, Private') => 
 
 const revisar = async (d: Doctor): Promise<Hallazgo[]> => d.revisar(['firewall']);
 const quitar = (hs: Hallazgo[]): Hallazgo => hs.find((x) => x.id === 'firewall:reglas-entrada')!;
+const guardadas = (d: Doctor): Hallazgo | undefined =>
+  d.ultimo().find((x) => x.id === 'firewall:quitadas');
 const nombresEnPie = (): string[] => plat.reglasEntrada.reglas.map((r) => r.nombre).sort();
 const leerLog = async (): Promise<{ reglas: { nombre: string; regla: ReglaExportada }[] }> =>
   JSON.parse(await readFile(rutaRegistro(datos), 'utf8')) as never;
@@ -66,6 +80,7 @@ describe('D46: quitar reglas peligrosas del cortafuegos (simulado)', () => {
     for (const t of ['{A-1}', nginx, 'Public, Private', 'Inbound/Allow', '{B-2}', mysqld]) {
       expect(h.evidencia).toContain(t);
     }
+    expect(h.elementos!.map((e) => e.clave).sort()).toEqual(['{A-1}', '{B-2}']);
     expect(h.evidencia).not.toContain('FLY-1');
     expect(hs.find((x) => x.id === 'firewall:reglas-ajenas')!.evidencia).toContain('FLY-1');
   });
@@ -92,9 +107,13 @@ describe('D46: quitar reglas peligrosas del cortafuegos (simulado)', () => {
     const h = quitar(await revisar(d));
     expect(await d.reparar(h.id, true)).toEqual({ ok: true });
     expect(plat.pedidosQuitarReglas).toHaveLength(1);
-    expect(plat.pedidosQuitarReglas[0]!.map((r) => r.nombre).sort()).toEqual(['{A-1}', '{B-2}']);
+    const pedido = plat.pedidosQuitarReglas[0]!;
+    expect(pedido.map((r) => r.nombre).sort()).toEqual(['{A-1}', '{B-2}']);
+    expect(pedido[0]).toMatchObject({
+      tipo: 'propia',
+      id: expect.stringMatching(/^[0-9a-f]{32}$/),
+    });
     expect(nombresEnPie()).toEqual(['{FLY-1}']);
-    // La revisión posterior ya no ofrece quitar nada.
     expect(d.ultimo().some((x) => x.id === 'firewall:reglas-entrada')).toBe(false);
   });
 
@@ -187,7 +206,7 @@ describe('D46: quitar reglas peligrosas del cortafuegos (simulado)', () => {
     expect(nombresEnPie()).toEqual(['{A-1}', '{FLY-1}']);
   });
 
-  it('guarda el registro con la regla completa ANTES de borrar, de forma atómica', async () => {
+  it('apunta el registro (para mostrar) ANTES de borrar, de forma atómica, y el script guarda la copia protegida', async () => {
     plat.reglasFirewallDetalle.set('{A-1}', {
       protocolo: 'TCP',
       puertoLocal: ['80', '443'],
@@ -197,10 +216,8 @@ describe('D46: quitar reglas peligrosas del cortafuegos (simulado)', () => {
     let visto: unknown = null;
     let antesBorrar: string[] = [];
     plat.alElevarFirewall = () => {
-      visto = JSON.parse(
-        // Mientras se espera el UAC el archivo ya existe en disco.
-        readFileSync(rutaRegistro(datos), 'utf8'),
-      );
+      // Mientras se espera el UAC el registro ya existe en disco y la regla sigue en pie.
+      visto = JSON.parse(readFileSync(rutaRegistro(datos), 'utf8'));
       antesBorrar = nombresEnPie();
     };
     const d = new Doctor(deps());
@@ -210,16 +227,17 @@ describe('D46: quitar reglas peligrosas del cortafuegos (simulado)', () => {
     const previo = visto as { reglas: { nombre: string }[] };
     expect(previo.reglas.map((x) => x.nombre).sort()).toEqual(['{A-1}', '{B-2}']);
     const log = await leerLog();
-    const a = log.reglas.find((x) => x.nombre === '{A-1}')!;
-    expect(a).toMatchObject({
+    expect(log.reglas.find((x) => x.nombre === '{A-1}')).toMatchObject({
       nombre: '{A-1}',
       programa: nginx,
       perfil: 'Public, Private',
       fecha: '2026-11-26T10:00:00.000Z',
       regla: { protocolo: 'TCP', puertoLocal: ['80', '443'], direccionRemota: ['LocalSubnet'] },
     });
-    // Sin temporales de la escritura atómica.
     expect((await readdir(join(datos, 'etc'))).filter((n) => n.includes('.pel-tmp-'))).toEqual([]);
+    expect([...plat.almacenProtegido.keys()].sort()).toEqual(
+      [idRegistro('{A-1}'), idRegistro('{B-2}')].sort(),
+    );
   });
 
   it('si el registro no se puede escribir, no se borra nada ni se pide el UAC', async () => {
@@ -256,6 +274,14 @@ describe('D46: quitar reglas peligrosas del cortafuegos (simulado)', () => {
     expect((await leerLog()).reglas.map((x) => x.nombre)).toEqual(['{A-1}']);
   });
 
+  it('si el script no puede guardar la copia protegida de una regla, no la borra', async () => {
+    plat.firewallNoGuardables.add('{A-1}');
+    const d = new Doctor(deps());
+    const h = quitar(await revisar(d));
+    expect(await d.reparar(h.id, true)).toEqual({ ok: true, aviso: 'doctor.firewall_parcial' });
+    expect(nombresEnPie()).toEqual(['{A-1}', '{FLY-1}']);
+  });
+
   it('si ninguna se pudo quitar, es un fallo (no "parcial")', async () => {
     plat.firewallNoBorrables.add('{A-1}');
     plat.firewallNoBorrables.add('{B-2}');
@@ -273,21 +299,148 @@ describe('D46: quitar reglas peligrosas del cortafuegos (simulado)', () => {
     const d = new Doctor(deps());
     const h = quitar(await revisar(d));
     expect(await d.reparar(h.id, true)).toEqual({ ok: true });
-    const nombres = await readdir(join(datos, 'etc'));
-    expect(nombres.some((n) => n.includes('.ilegible-'))).toBe(true);
+    expect((await readdir(join(datos, 'etc'))).some((n) => n.includes('.ilegible-'))).toBe(true);
     expect((await leerLog()).reglas).toHaveLength(2);
   });
 
-  describe('restaurar', () => {
-    it('recrea lo quitado con la misma confirmación y vacía el registro', async () => {
-      plat.reglasFirewallDetalle.set('{A-1}', { protocolo: 'TCP', puertoLocal: ['8080'] });
+  describe('selección regla por regla', () => {
+    it('solo quita las marcadas', async () => {
+      const d = new Doctor(deps());
+      const h = quitar(await revisar(d));
+      expect(await d.reparar(h.id, true, undefined, ['{A-1}'])).toEqual({ ok: true });
+      expect(nombresEnPie()).toEqual(['{B-2}', '{FLY-1}']);
+      expect(plat.pedidosQuitarReglas[0]!.map((x) => x.nombre)).toEqual(['{A-1}']);
+    });
+
+    it('una selección con algo que no se mostró se rechaza; una vacía no hace nada', async () => {
+      const d = new Doctor(deps());
+      const h = quitar(await revisar(d));
+      expect(await d.reparar(h.id, true, undefined, ['{FLY-1}'])).toEqual({
+        ok: false,
+        codigo: 'doctor.hallazgo_desconocido',
+      });
+      expect(await d.reparar(h.id, true, undefined, [])).toEqual({
+        ok: false,
+        codigo: 'doctor.firewall_sin_cambios',
+      });
+      expect(plat.pedidosQuitarReglas).toEqual([]);
+      expect(nombresEnPie()).toEqual(['{A-1}', '{B-2}', '{FLY-1}']);
+    });
+  });
+
+  describe('reglas acotadas a la red local (las que recomienda la propia app)', () => {
+    const acotada = (nombre: string, o: Record<string, string> = {}) => ({
+      ...regla(nombre, nginx, 'Private'),
+      protocolo: 'TCP',
+      puertoLocal: '8100',
+      direccionRemota: 'LocalSubnet',
+      ...o,
+    });
+
+    it('salen aparte, sin botón ni en la lista de peligrosas', async () => {
+      plat.reglasEntrada = { ok: true, reglas: [acotada('{L-1}'), regla('{A-1}', nginx)] };
+      const hs = await revisar(new Doctor(deps()));
+      const a = hs.find((x) => x.id === 'firewall:reglas-acotadas')!;
+      expect(a).toMatchObject({ gravedad: 'info', datos: { cantidad: 1 } });
+      expect(a.reparacion).toBeUndefined();
+      expect(a.evidencia).toContain('{L-1}');
+      expect(quitar(hs).elementos!.map((e) => e.clave)).toEqual(['{A-1}']);
+    });
+
+    it('si no cumple TODO (perfil, protocolo, puertos y subred local) sigue siendo peligrosa', async () => {
+      plat.reglasEntrada = {
+        ok: true,
+        reglas: [
+          acotada('{X-1}', { direccionRemota: 'Any' }),
+          acotada('{X-2}', { puertoLocal: 'Any' }),
+          { ...acotada('{X-3}'), perfil: 'Private, Public' },
+          acotada('{X-4}', { protocolo: 'Any' }),
+          acotada('{X-5}', { direccionRemota: 'LocalSubnet,Internet' }),
+          regla('{X-6}', nginx, 'Private'),
+        ],
+      };
+      const hs = await revisar(new Doctor(deps()));
+      expect(hs.some((x) => x.id === 'firewall:reglas-acotadas')).toBe(false);
+      expect(quitar(hs).elementos).toHaveLength(6);
+    });
+  });
+
+  describe('restos de pruebas: raíz real bajo la carpeta temporal', () => {
+    it('la raíz del script elevado es la carpeta pel-* que contiene al programa', async () => {
+      const tmp = join(dir, 'tmp');
+      const p1 = join(tmp, 'pel-int-abc', 'bin', 'nginx.exe');
+      const p2 = join(tmp, 'claude', 'scratchpad', 'ngx1', 'nginx.exe');
+      plat.reglasEntrada = { ok: true, reglas: [regla('{T-1}', p1), regla('{T-2}', p2)] };
+      const d = new Doctor(deps());
+      const h = quitar(await revisar(d));
+      expect(h.datos).toMatchObject({ cantidad: 2 });
+      expect(await d.reparar(h.id, true)).toEqual({ ok: true });
+      const pedido = plat.pedidosQuitarReglas[0]!;
+      const t1 = pedido.find((x) => x.nombre === '{T-1}')!;
+      const t2 = pedido.find((x) => x.nombre === '{T-2}')!;
+      expect(t1).toMatchObject({ tipo: 'prueba' });
+      expect(t1.raiz.replaceAll('\\', '/').toLowerCase()).toMatch(/\/tmp\/pel-int-abc$/);
+      expect(t2.raiz.replaceAll('\\', '/').toLowerCase()).toMatch(/\/scratchpad\/ngx1$/);
+      expect(t1.temporal.replaceAll('\\', '/').toLowerCase()).toMatch(/\/tmp$/);
+    });
+
+    it('una carpeta pel-* fuera de la temporal indicada, aunque se llame "temp", es ajena', async () => {
+      plat.reglasEntrada = {
+        ok: true,
+        reglas: [
+          regla('{T-3}', join(dir, 'Temp', 'pel-int-abc', 'nginx.exe')),
+          regla('{T-4}', 'C:/Users/yo/AppData/Local/Temp/pel-int-abc/nginx.exe'),
+        ],
+      };
+      const hs = await revisar(new Doctor(deps()));
+      expect(hs.map((x) => x.id)).toEqual(['firewall:reglas-ajenas']);
+    });
+  });
+
+  describe('resultado cuando no se puede comprobar qué quedó (M1, M2)', () => {
+    it('si falla la relectura, no se da por hecho: aviso parcial', async () => {
+      const d = new Doctor(deps());
+      const h = quitar(await revisar(d));
+      // 1 lectura antes de empezar la reparación; la de después ya falla.
+      plat.exportarFallaTras = plat.exportaciones + 1;
+      expect(await d.reparar(h.id, true)).toEqual({ ok: true, aviso: 'doctor.firewall_parcial' });
+    });
+
+    it('tras un plazo vencido el registro no se poda (quizá sí se quitó algo)', async () => {
+      const d = new Doctor(deps());
+      const h = quitar(await revisar(d));
+      plat.quitarReglasFirewall = async () => ({ ok: false, motivo: 'tiempo' });
+      const r = await d.reparar(h.id, true);
+      expect(r.ok).toBe(false);
+      expect((await leerLog()).reglas.map((x) => x.nombre).sort()).toEqual(['{A-1}', '{B-2}']);
+    });
+  });
+
+  describe('restaurar: solo desde la copia protegida', () => {
+    it('recrea lo quitado con los mismos campos, con la misma confirmación', async () => {
+      plat.reglasFirewallDetalle.set('{A-1}', {
+        protocolo: 'TCP',
+        puertoLocal: ['8080'],
+        direccionRemota: ['LocalSubnet'],
+      });
       const d = new Doctor(deps());
       await d.reparar(quitar(await revisar(d)).id, true);
       expect(nombresEnPie()).toEqual(['{FLY-1}']);
-      const hs = d.ultimo();
-      const q = hs.find((x) => x.id === 'firewall:quitadas')!;
+      const q = guardadas(d)!;
       expect(q.reparacion).toMatchObject({ soloInforma: false, requiereAdmin: true });
-      expect(q.evidencia).toContain('{A-1}');
+      // El diálogo muestra todos los campos de lo que se va a crear.
+      const linea = q.elementos!.find((e) => e.texto.includes('{A-1}'))!.texto;
+      for (const t of [
+        nginx,
+        'perfil Public, Private',
+        'Inbound/Allow',
+        'protocolo TCP',
+        'puerto local 8080',
+        'dirección remota LocalSubnet',
+        'habilitada',
+      ]) {
+        expect(linea).toContain(t);
+      }
       expect(await d.reparar(q.id, false as unknown as true)).toEqual({
         ok: false,
         codigo: 'doctor.confirmacion_requerida',
@@ -295,125 +448,402 @@ describe('D46: quitar reglas peligrosas del cortafuegos (simulado)', () => {
       expect(plat.pedidosRestaurarReglas).toEqual([]);
       expect(await d.reparar(q.id, true)).toEqual({ ok: true });
       expect(nombresEnPie()).toEqual(['{A-1}', '{B-2}', '{FLY-1}']);
-      expect(plat.pedidosRestaurarReglas).toHaveLength(1);
+      expect(plat.pedidosRestaurarReglas[0]![0]).toMatchObject({
+        sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+      });
       expect((await leerLog()).reglas).toEqual([]);
     });
 
-    it('un UAC cancelado al restaurar no recrea nada y conserva el registro', async () => {
+    it('se puede elegir una sola', async () => {
+      const d = new Doctor(deps());
+      await d.reparar(quitar(await revisar(d)).id, true);
+      const q = guardadas(d)!;
+      await d.reparar(q.id, true, undefined, [idRegistro('{B-2}')]);
+      expect(nombresEnPie()).toEqual(['{B-2}', '{FLY-1}']);
+    });
+
+    it('un UAC cancelado al restaurar no recrea nada', async () => {
       const d = new Doctor(deps());
       await d.reparar(quitar(await revisar(d)).id, true);
       plat.uacCancelado = true;
-      const q = d.ultimo().find((x) => x.id === 'firewall:quitadas')!;
+      const q = guardadas(d)!;
       expect(await d.reparar(q.id, true)).toEqual({
         ok: false,
         codigo: 'doctor.reparacion_cancelada',
       });
       expect(nombresEnPie()).toEqual(['{FLY-1}']);
-      expect((await leerLog()).reglas).toHaveLength(2);
     });
 
-    it('un registro editado a mano con un programa ajeno no se ofrece ni se recrea', async () => {
+    it('C1: una entrada falsificada en el JSON de etc/ no ofrece ni crea nada', async () => {
       await mkdir(join(datos, 'etc'), { recursive: true });
       const base = (await plat.exportarReglasFirewall(['{A-1}']))![0]!;
-      const malas = [
-        { ...base, nombre: '{X-1}', programa: FLY },
-        { ...base, nombre: '{X-2}', accion: 'Block' },
-        { ...base, nombre: '{X-3}', puertoLocal: ["80'; calc; '"] },
-      ];
+      const falsa = {
+        ...base,
+        nombre: '{EVIL-1}',
+        perfil: 'Any',
+        programa: join(datos, 'bin', 'renombrado', 'nginx.exe'),
+        puertoLocal: ['Any'],
+        direccionRemota: ['Any'],
+      };
       await writeFile(
         rutaRegistro(datos),
         JSON.stringify({
           version: 1,
-          reglas: malas.map((r) => ({
-            fecha: 'x',
-            nombre: r.nombre,
-            programa: r.programa,
-            perfil: r.perfil,
-            regla: r,
-          })),
+          reglas: [
+            {
+              fecha: 'x',
+              nombre: falsa.nombre,
+              programa: falsa.programa,
+              perfil: 'Any',
+              regla: falsa,
+            },
+          ],
         }),
       );
-      const hs = await revisar(new Doctor(deps()));
-      expect(hs.some((x) => x.id === 'firewall:quitadas')).toBe(false);
+      const d = new Doctor(deps());
+      await revisar(d);
+      expect(guardadas(d)).toBeUndefined();
+      expect(await d.reparar('firewall:quitadas', true)).toEqual({
+        ok: false,
+        codigo: 'doctor.hallazgo_desconocido',
+      });
+      expect(plat.pedidosRestaurarReglas).toEqual([]);
+      expect(nombresEnPie()).toEqual(['{A-1}', '{B-2}', '{FLY-1}']);
+    });
+
+    it('C1: si la copia protegida cambia entre la revisión y la aplicación, no se crea nada', async () => {
+      const d = new Doctor(deps());
+      await d.reparar(quitar(await revisar(d)).id, true);
+      const q = guardadas(d)!;
+      // Alguien con permisos cambia lo protegido (perfil Any, todo abierto) tras mostrarse.
+      const id = idRegistro('{A-1}');
+      const e = plat.almacenProtegido.get(id)!;
+      const abierta = { ...e.regla, perfil: 'Any', direccionRemota: ['Any'] };
+      plat.almacenProtegido.set(id, { texto: JSON.stringify(abierta), regla: abierta });
+      expect(await d.reparar(q.id, true)).toEqual({
+        ok: false,
+        codigo: 'doctor.firewall_almacen_inseguro',
+      });
+      expect(plat.pedidosRestaurarReglas).toEqual([]);
+      expect(nombresEnPie()).toEqual(['{FLY-1}']);
+    });
+
+    it('C1: lo que cambia dentro del propio script elevado (huella distinta) tampoco crea nada', async () => {
+      const d = new Doctor(deps());
+      await d.reparar(quitar(await revisar(d)).id, true);
+      const q = guardadas(d)!;
+      const id = idRegistro('{A-1}');
+      plat.alElevarFirewall = () => {
+        const e = plat.almacenProtegido.get(id)!;
+        const otra = { ...e.regla, perfil: 'Any' };
+        plat.almacenProtegido.set(id, { texto: JSON.stringify(otra), regla: otra });
+      };
+      await d.reparar(q.id, true, undefined, [id]);
+      expect(nombresEnPie()).toEqual(['{FLY-1}']);
+    });
+
+    it('C1: una carpeta protegida que no es de fiar impide quitar y restaurar', async () => {
+      const d = new Doctor(deps());
+      plat.almacenInseguro = true;
+      const h = quitar(await revisar(d));
+      expect(await d.reparar(h.id, true)).toEqual({
+        ok: false,
+        codigo: 'doctor.firewall_almacen_inseguro',
+      });
+      expect(nombresEnPie()).toEqual(['{A-1}', '{B-2}', '{FLY-1}']);
+      plat.almacenInseguro = false;
+      await d.reparar(h.id, true);
+      plat.almacenInseguro = true;
+      expect(await d.reparar(guardadas(d)!.id, true)).toEqual({
+        ok: false,
+        codigo: 'doctor.firewall_almacen_inseguro',
+      });
+      expect(nombresEnPie()).toEqual(['{FLY-1}']);
+    });
+
+    it('una copia protegida con un programa ajeno no se ofrece', async () => {
+      const base = (await plat.exportarReglasFirewall(['{A-1}']))![0]!;
+      const ajena = { ...base, nombre: '{X-1}', programa: FLY };
+      plat.almacenProtegido.set(idRegistro('{X-1}'), {
+        texto: JSON.stringify(ajena),
+        regla: ajena,
+      });
+      const d = new Doctor(deps());
+      await revisar(d);
+      expect(guardadas(d)).toBeUndefined();
     });
   });
 
-  describe('scripts del cortafuegos real (solo se comprueba su texto: nunca se ejecutan)', () => {
-    const base = { nombre: '{AAAA-1}', programa: 'C:\\Datos\\bin\\nginx.exe', raiz: 'C:\\Datos' };
-
-    it('quitar actúa por Name exacto y vuelve a comprobar entrada, Allow, programa y raíz', () => {
-      const s = scriptQuitarReglas([base], 1_800_000_000_000);
-      expect(s).toContain('Remove-NetFirewallRule -Name $e.n');
-      expect(s).not.toMatch(/-DisplayName|-Program\b|\*/);
-      expect(s).toContain("$r.Direction -eq 'Inbound'");
-      expect(s).toContain("$r.Action -eq 'Allow'");
-      expect(s).toContain('[WolfRuta]::Real');
-      expect(s).toContain("n = '{AAAA-1}'");
-      expect(s).toContain('exit 41');
-      expect(s).toContain('exit 11');
+  describe('nombres de regla que crea Windows (con barras, dos puntos y llaves)', () => {
+    it('se listan y se quitan por su Name exacto', async () => {
+      const nombre = `TCP Query User{88DB9641-6D7E-41E6-8660-45595C147EA6}${nginx}`;
+      plat.reglasEntrada = { ok: true, reglas: [regla(nombre, nginx)] };
+      const d = new Doctor(deps());
+      const h = quitar(await revisar(d));
+      expect(h.evidencia).toContain(nombre);
+      expect(await d.reparar(h.id, true)).toEqual({ ok: true });
+      expect(plat.reglasEntrada.reglas).toEqual([]);
     });
 
-    it('rechaza nombres con comodines o comillas', () => {
-      for (const n of ['*', 'a?b', '[a]', "a'; calc", 'a\nb', '']) {
-        expect(() => scriptQuitarReglas([{ ...base, nombre: n }], null)).toThrow(/no válido/);
-        expect(() => scriptExportarReglas([n])).toThrow(/no válido/);
+    it('un nombre que actuaría como patrón (comodines o comillas) no se quita desde aquí', async () => {
+      for (const n of ['*', '{A}*', 'a?b', '[ab]', "x'; calc; '", 'a`b']) {
+        plat.reglasEntrada = { ok: true, reglas: [regla(n, nginx)] };
+        const r = await quitarReglasPeligrosas(deps(), [{ nombre: n, programa: nginx }], {
+          confirmado: true,
+        });
+        expect(r.ok, n).toBe(false);
+        expect(plat.pedidosQuitarReglas).toEqual([]);
       }
     });
+  });
+});
 
-    it('restaurar solo recrea reglas de entrada Allow de forma conocida', () => {
+describe('D46: scripts del cortafuegos real (solo se comprueba su texto: nunca se ejecutan)', () => {
+  const base: ReglaPorQuitar = {
+    id: idRegistro('{AAAA-1}'),
+    nombre: '{AAAA-1}',
+    programa: 'C:\\Datos\\bin\\nginx.exe',
+    raiz: 'C:\\Datos',
+    tipo: 'propia',
+    temporal: 'C:\\Temp',
+  };
+
+  it('quitar actúa por Name exacto y vuelve a comprobar entrada, Allow, programa, .exe y raíz', () => {
+    const s = cuerpoQuitarReglas([base], 1_800_000_000_000);
+    expect(s).toContain('Remove-NetFirewallRule -Name $e.n');
+    expect(s).not.toMatch(/-DisplayName|-Program\b/);
+    expect(s).toContain("$r.Direction -eq 'Inbound'");
+    expect(s).toContain("$r.Action -eq 'Allow'");
+    expect(s).toContain('[WolfRuta]::Real');
+    expect(s).toContain("GetExtension($rl) -ne '.exe'");
+    expect(s).toContain("n = '{AAAA-1}'");
+    expect(s).toContain('exit 41');
+    expect(s).toContain('exit 11');
+  });
+
+  it('M1: revisa el plazo antes de CADA regla y para sin tocar más', () => {
+    const s = cuerpoQuitarReglas(
+      [base, { ...base, nombre: '{B}', id: idRegistro('{B}') }],
+      1_800_000_000_000,
+    );
+    const fila = s.indexOf('foreach ($e in $reglas) {');
+    const plazo = s.indexOf('1800000000000) { $vencido = $true; break }');
+    const borrar = s.indexOf('Remove-NetFirewallRule');
+    expect(fila).toBeGreaterThan(0);
+    expect(plazo).toBeGreaterThan(fila);
+    expect(plazo).toBeLessThan(borrar);
+    expect(s).toContain('if ($vencido) { exit 11 }');
+  });
+
+  it('I3: el resto de pruebas exige una carpeta pel-* (o scratchpad\\ngx*) bajo la temporal', () => {
+    const s = cuerpoQuitarReglas(
+      [{ ...base, tipo: 'prueba', raiz: 'C:\\Temp\\pel-int-x', temporal: 'C:\\Temp' }],
+      null,
+    );
+    expect(s).toContain("$tipo -eq 'prueba'");
+    expect(s).toContain('^(pel-int-|pel-etapa-|pel-vhost-real-)');
+    expect(s).toContain("'scratchpad'");
+    expect(s).toContain("k = 'prueba'");
+    expect(s).toContain('$bl.StartsWith($tl +');
+  });
+
+  it('C1: la copia va a una carpeta protegida (herencia cortada, solo Administradores y SYSTEM escriben)', () => {
+    const s = cuerpoQuitarReglas([base], null);
+    expect(s).toContain("GetFolderPath('CommonApplicationData')");
+    expect(s).toContain("'WolfCoreDev'");
+    expect(s).toContain("'cortafuegos'");
+    expect(s).toContain('SetAccessRuleProtection($true, $false)');
+    expect(s).toContain('RemoveAccessRuleSpecific');
+    expect(s).toMatch(/\$sidSistema\), \[Security\.AccessControl\.FileSystemRights\]::FullControl/);
+    expect(s).toMatch(/\$sidAdmins\), \[Security\.AccessControl\.FileSystemRights\]::FullControl/);
+    expect(s).toMatch(
+      /\$sidUsuarios\), \[Security\.AccessControl\.FileSystemRights\]::ReadAndExecute/,
+    );
+    expect(s).toContain('SetOwner');
+    expect(s).toContain("'S-1-5-18'");
+    expect(s).toContain("'S-1-5-32-544'");
+    // Se comprueba la carpeta antes de guardar nada, y la copia se guarda antes de borrar.
+    expect(s.indexOf('Test-AlmacenWolf)) { exit 21 }')).toBeLessThan(s.indexOf('WriteAllBytes'));
+    expect(s.indexOf('WriteAllBytes')).toBeLessThan(s.indexOf('Remove-NetFirewallRule'));
+  });
+
+  it('C1: restaurar lee SOLO de la carpeta protegida, por id, y exige carpeta, archivo y huella', () => {
+    const r = {
+      id: idRegistro('{AAAA-1}'),
+      sha256: 'a'.repeat(64),
+      raiz: 'C:\\Datos',
+      tipo: 'propia' as const,
+      temporal: 'C:\\Temp',
+    };
+    const s = cuerpoRestaurarReglas([r], null);
+    expect(s).toContain('Test-AlmacenWolf)) { exit 21 }');
+    expect(s).toContain("[IO.Path]::Combine($dirAlmacen, $e.i + '.json')");
+    expect(s).toContain('Test-ProtegidoWolf ([IO.FileInfo]::new($archivo)) $false');
+    expect(s).toContain('(Get-HuellaWolf $bytes) -ne $e.h');
+    expect(s).toContain(`h = '${'a'.repeat(64)}'`);
+    expect(s).toContain('Test-ReglaRestaurable $x');
+    // Nada de la regla sale del Doctor: no hay puertos, direcciones ni perfil incrustados.
+    expect(s).not.toMatch(/-Profile 'Any'|LocalSubnet/);
+    expect(s).toContain('New-NetFirewallRule @p');
+    expect(() => cuerpoRestaurarReglas([{ ...r, sha256: 'xx' }], null)).toThrow(/Huella/);
+    expect(() => cuerpoRestaurarReglas([{ ...r, id: '../x' }], null)).toThrow(/Identificador/);
+  });
+
+  it('C1: la comprobación de la carpeta rechaza enlaces, dueños ajenos y escritura de otros', () => {
+    const s = cuerpoRestaurarReglas([], null);
+    expect(s).toContain('ReparsePoint');
+    expect(s).toContain('AreAccessRulesProtected');
+    expect(s).toContain('GetOwner([Security.Principal.SecurityIdentifier])');
+    expect(s).toContain('WriteData, AppendData');
+    expect(s).toContain('ChangePermissions, TakeOwnership');
+  });
+
+  it('M6: el protocolo numérico (6, 17) también lleva puertos', () => {
+    const s = cuerpoRestaurarReglas([], null);
+    expect(s).toContain("@('tcp', 'udp', '6', '17')");
+  });
+
+  it('M4: la lectura y la exportación fijan el PSModulePath de Windows PowerShell', () => {
+    for (const s of [SCRIPT_REGLAS_ENTRADA, scriptExportarReglas(['{A-1}'])]) {
+      expect(s).toContain('$env:PSModulePath = ');
+      expect(s).toContain("'WindowsPowerShell', 'v1.0', 'Modules'");
+    }
+  });
+
+  it('rechaza nombres con comodines o comillas', () => {
+    for (const n of ['*', 'a?b', '[a]', "a'; calc", 'a\nb', '']) {
+      expect(() => cuerpoQuitarReglas([{ ...base, nombre: n }], null)).toThrow(/no válido/);
+      expect(() => scriptExportarReglas([n])).toThrow(/no válido/);
+    }
+  });
+
+  it('I2: el comando elevado mide lo mismo con 1 que con 100 reglas (el cuerpo va en un archivo)', async () => {
+    const tmp = await carpetaTemporal('pel-d46-win-');
+    const comandos: string[] = [];
+    const archivos: { nombre: string; texto: string; huella: string }[] = [];
+    const ejecutor: Ejecutor = async (_c, args) => {
+      const externo = args.join(' ');
+      comandos.push(externo);
+      const interno = Buffer.from(
+        /-EncodedCommand ([A-Za-z0-9+/=]+)/.exec(externo)![1]!,
+        'base64',
+      ).toString('utf16le');
+      const huella = /-ne '([0-9a-f]{64})'/.exec(interno)![1]!;
+      const nombre = (await readdir(tmp)).find((n) => n.startsWith(PREFIJO_TEMPORAL_HOSTS))!;
+      archivos.push({ nombre, texto: await readFile(join(tmp, nombre), 'utf8'), huella });
+      return { codigo: 0, stdout: '', stderr: '' };
+    };
+    const p = new PlataformaWindows(ejecutor, undefined, { carpetaTemporal: tmp, entorno: {} });
+    const hacer = (n: number): ReglaPorQuitar[] =>
+      Array.from({ length: n }, (_, i) => ({
+        ...base,
+        nombre: `TCP Query User{${String(i).padStart(8, '0')}-AAAA}C:\\Users\\alguien\\AppData\\Local\\WolfCoreDev\\bin\\nginx\\1.28\\nginx.exe`,
+        id: idRegistro(`r${i}`),
+      }));
+    await p.quitarReglasFirewall(hacer(1));
+    await p.quitarReglasFirewall(hacer(100));
+    expect(comandos).toHaveLength(2);
+    // El comando que se ve en la línea de comandos no crece y queda muy por debajo del límite.
+    expect(Math.abs(comandos[0]!.length - comandos[1]!.length)).toBeLessThan(40);
+    expect(comandos[1]!.length).toBeLessThan(12_000);
+    // El cuerpo sí crece, pero va en un archivo cuya huella está en el comando elevado.
+    expect(archivos[1]!.texto.length).toBeGreaterThan(archivos[0]!.texto.length * 3);
+    for (const a of archivos) {
+      const { createHash } = await import('node:crypto');
+      expect(createHash('sha256').update(a.texto, 'utf8').digest('hex')).toBe(a.huella);
+    }
+    // Sin restos: el temporal se borra al terminar.
+    expect((await readdir(tmp)).filter((n) => n.startsWith(PREFIJO_TEMPORAL_HOSTS))).toEqual([]);
+  });
+
+  it('M1: el plazo del script deja margen antes del límite externo', async () => {
+    const tmp = await carpetaTemporal('pel-d46-win-');
+    let cuerpo = '';
+    let opciones: { timeoutMs?: number } | undefined;
+    const ejecutor: Ejecutor = async (_c, _a, o) => {
+      opciones = o;
+      const nombre = (await readdir(tmp)).find((n) => n.startsWith(PREFIJO_TEMPORAL_HOSTS))!;
+      cuerpo = await readFile(join(tmp, nombre), 'utf8');
+      return { codigo: 0, stdout: '', stderr: '' };
+    };
+    const p = new PlataformaWindows(ejecutor, undefined, { carpetaTemporal: tmp, entorno: {} });
+    const antes = Date.now();
+    await p.quitarReglasFirewall([base]);
+    const limite = Number(/ToUnixTimeMilliseconds\(\) -gt (\d+)\)/.exec(cuerpo)![1]);
+    const margen = antes + opciones!.timeoutMs! - limite;
+    expect(margen).toBeGreaterThanOrEqual(25_000);
+  });
+
+  it('salidas del script elevado: parcial es éxito a medias, vencido es tiempo, carpeta no fiable es error', async () => {
+    const tmp = await carpetaTemporal('pel-d46-win-');
+    const con = (codigo: number): PlataformaWindows =>
+      new PlataformaWindows(async () => ({ codigo, stdout: '', stderr: '' }), undefined, {
+        carpetaTemporal: tmp,
+        entorno: {},
+      });
+    expect(await con(41).quitarReglasFirewall([base])).toEqual({ ok: true });
+    expect(await con(11).quitarReglasFirewall([base])).toEqual({ ok: false, motivo: 'tiempo' });
+    expect(await con(21).quitarReglasFirewall([base])).toEqual({
+      ok: false,
+      motivo: 'error',
+      detalle: 'almacen-inseguro',
+    });
+    expect(await con(10).quitarReglasFirewall([base])).toEqual({ ok: false, motivo: 'cancelado' });
+  });
+
+  it('el cargador comprueba el SHA-256 del cuerpo antes de ejecutarlo', () => {
+    const s = scriptCargador('C:\\Temp\\pel-hosts-1-1-a.txt', 'B'.repeat(64));
+    expect(s).toContain('exit 12');
+    expect(s).toContain('exit 13');
+    expect(s).toContain(`-ne '${'b'.repeat(64)}'`);
+    expect(s.indexOf('exit 13')).toBeLessThan(s.indexOf('[scriptblock]::Create'));
+    expect(scriptElevar(codificarComando(s)).length).toBeLessThan(4000);
+  });
+});
+
+describe.skipIf(process.platform !== 'win32')(
+  'D46: lectura de la carpeta protegida (solo en Windows: usa rutas de Windows)',
+  () => {
+    it('lee solo archivos <id>.json con un id que cuadra con el nombre de la regla, con su huella', async () => {
+      const pd = await carpetaTemporal('pel-d46-pd-');
+      const almacen = join(pd, 'WolfCoreDev', 'cortafuegos');
+      await mkdir(almacen, { recursive: true });
       const r: ReglaExportada = {
         nombre: '{AAAA-1}',
         nombreVisible: 'nginx',
-        descripcion: "it's",
+        descripcion: '',
         habilitada: true,
-        perfil: 'Public, Private',
+        perfil: 'Private',
         direccion: 'Inbound',
         accion: 'Allow',
-        programa: base.programa,
+        programa: 'C:/Datos/bin/nginx.exe',
         protocolo: 'TCP',
         puertoLocal: ['80'],
         puertoRemoto: ['Any'],
         direccionLocal: ['Any'],
         direccionRemota: ['LocalSubnet'],
       };
-      const s = scriptRestaurarReglas([{ regla: r, raiz: base.raiz }], null);
-      expect(s).toContain('New-NetFirewallRule -Name');
-      expect(s).toContain("-Description 'it''s'");
-      expect(s).toContain("-Profile @('Public', 'Private')");
-      expect(s).toContain("-LocalPort @('80')");
-      expect(s).not.toContain('-RemotePort');
-      expect(() =>
-        scriptRestaurarReglas([{ regla: { ...r, accion: 'Block' }, raiz: base.raiz }], null),
-      ).toThrow();
-      expect(() =>
-        scriptRestaurarReglas(
-          [{ regla: { ...r, puertoLocal: ["1'; x; '"] }, raiz: base.raiz }],
-          null,
-        ),
-      ).toThrow();
+      const texto = JSON.stringify(r);
+      await writeFile(join(almacen, `${idRegistro('{AAAA-1}')}.json`), texto);
+      // Un archivo cuyo id no es el del nombre, uno roto y uno con otro nombre: no se ofrecen.
+      await writeFile(join(almacen, `${'0'.repeat(32)}.json`), texto);
+      await writeFile(join(almacen, `${idRegistro('{BBBB-2}')}.json`), '{ roto');
+      await writeFile(join(almacen, 'notas.txt'), 'x');
+      const p = new PlataformaWindows(undefined, undefined, { entorno: { ProgramData: pd } });
+      const res = await p.leerAlmacenFirewall();
+      expect(res).toHaveLength(1);
+      expect(res![0]).toMatchObject({ id: idRegistro('{AAAA-1}'), regla: r });
+      const { createHash } = await import('node:crypto');
+      expect(res![0]!.sha256).toBe(createHash('sha256').update(texto).digest('hex'));
     });
-  });
-});
 
-describe('D46: nombres de regla que crea Windows (con barras, dos puntos y llaves)', () => {
-  it('se listan y se quitan por su Name exacto', async () => {
-    const nombre = `TCP Query User{88DB9641-6D7E-41E6-8660-45595C147EA6}${nginx}`;
-    plat.reglasEntrada = { ok: true, reglas: [regla(nombre, nginx)] };
-    const d = new Doctor(deps());
-    const h = quitar(await revisar(d));
-    expect(h.evidencia).toContain(nombre);
-    expect(await d.reparar(h.id, true)).toEqual({ ok: true });
-    expect(plat.reglasEntrada.reglas).toEqual([]);
-  });
-
-  it('un nombre que actuaría como patrón (comodines o comillas) no se quita desde aquí', async () => {
-    for (const n of ['*', '{A}*', 'a?b', '[ab]', "x'; calc; '", 'a`b']) {
-      plat.reglasEntrada = { ok: true, reglas: [regla(n, nginx)] };
-      const r = await quitarReglasPeligrosas(deps(), [{ nombre: n, programa: nginx }], {
-        confirmado: true,
-      });
-      expect(r.ok, n).toBe(false);
-      expect(plat.pedidosQuitarReglas).toEqual([]);
-    }
-  });
-});
+    it('sin carpeta no hay copias; una carpeta ilegible da null', async () => {
+      const pd = await carpetaTemporal('pel-d46-pd-');
+      const p = new PlataformaWindows(undefined, undefined, { entorno: { ProgramData: pd } });
+      expect(await p.leerAlmacenFirewall()).toEqual([]);
+      await mkdir(join(pd, 'WolfCoreDev'), { recursive: true });
+      await writeFile(join(pd, 'WolfCoreDev', 'cortafuegos'), 'no es una carpeta');
+      expect(await p.leerAlmacenFirewall()).toBeNull();
+    });
+  },
+);

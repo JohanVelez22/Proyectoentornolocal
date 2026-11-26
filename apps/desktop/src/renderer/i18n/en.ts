@@ -642,6 +642,10 @@ export const en: Textos = {
         'Could not check the Windows firewall (administrator rights may be needed).',
       'doctor.firewall_reglas_ajenas':
         "There are {cantidad} inbound rule(s) from other programs (FlyEnv, Laragon, XAMPP or others) for nginx, PHP or databases on the profiles {perfiles}. They are not WolfCore Dev's: they are only shown and never removed from here.",
+      'doctor.firewall_reglas_acotadas':
+        'There are {cantidad} rule(s) for WolfCore Dev programs limited to the local network (private profile only, local subnet and specific ports), like the ones the app itself recommends for sharing a site. They are only shown: they are not removed from here.',
+      'doctor.firewall_almacen_inseguro':
+        'The protected copy of the rules cannot be trusted (permissions or contents differ from what was shown): no rule was created or changed.',
       'doctor.firewall_quitadas':
         'WolfCore Dev removed {cantidad} firewall rule(s) earlier and kept a copy: you can recreate them if you need them.',
       'doctor.firewall_parcial':
@@ -4069,7 +4073,8 @@ export const en: Textos = {
       titulo: 'Confirm the fix',
       queHara: 'This is what will be done:',
       admin: 'Windows will ask for administrator permission.',
-      reglas: 'Affected rules (the exact list):',
+      reglas: 'Affected rules: untick the ones you do not want to touch.',
+      sinSeleccion: 'Tick at least one rule to continue.',
       reglasNota:
         'Nothing changes without your confirmation and the administrator permission. If a rule changed after it was shown, it is skipped.',
       puerto: (p: string | number) => `The new port will be ${p}.`,
@@ -4092,7 +4097,8 @@ export const en: Textos = {
       vcredist: 'Visual C++',
       'enlazador-msvc': 'C++ linker',
       antivirus: 'Antivirus',
-      firewall: 'Firewall',
+      firewall:
+        'Remove the rules you tick, one by one and by their exact name. First a copy is noted in etc/cortafuegos-quitadas.json (for display only) and another, protected, in a folder that only administrators can write to. Rules of other programs are never touched.',
       servicios: 'Services',
     },
     reparaciones: {
@@ -4121,7 +4127,7 @@ export const en: Textos = {
       firewall:
         'Remove those inbound firewall rules, one by one and by their exact name. A copy is saved first in etc/cortafuegos-quitadas.json so they can be recreated. Rules of other programs are never touched.',
       firewall_restaurar:
-        'Recreate the rules that were removed earlier, exactly as they were (from the copy in etc/cortafuegos-quitadas.json). Those programs will be able to accept network connections again.',
+        'Recreate the rules you tick, with the same program, profile, protocol, ports and addresses that are shown, from the protected copy (not from the file in etc/). Those programs will be able to accept network connections again.',
       reintentar_servicio: 'Start the service again.',
       firefox_confianza:
         'Add to the user.js of each Firefox profile the preference that trusts the Windows authority, with a copy first. prefs.js is not touched and open profiles are skipped.',
