@@ -458,6 +458,13 @@ export const fr: Textos = {
         'Le PDF est protégé par un mot de passe et ne peut pas être optimisé.',
       'herramientas.pdf_plazo': 'Le PDF a pris plus de {segundos} s et a été annulé.',
       'herramientas.salida_ocupada': 'Aucun nom libre n’a été trouvé pour le nouveau fichier.',
+      'captura.atajo_invalido':
+        'Ce raccourci n’est pas valide : utilisez Ctrl, Alt, Maj ou Super avec une lettre, un chiffre ou une touche F.',
+      'captura.atajo_ocupado': 'Le raccourci {atajo} est déjà utilisé par un autre programme.',
+      'captura.no_disponible': 'La capture d’écran n’est pas disponible sur cet ordinateur.',
+      'captura.permiso_denegado': 'L’autorisation d’enregistrement de l’écran manque.',
+      'captura.sin_imagen': 'Il n’y a aucune image à capturer.',
+      'captura.imagen_invalida': 'L’image de la capture n’est pas valide.',
       'conversor.formato': 'Cette conversion n’est pas disponible.',
       'conversor.archivo_invalido':
         'Le fichier est endommagé ou n’est pas du type indiqué par son extension.',
@@ -3296,6 +3303,79 @@ export const fr: Textos = {
       } as Record<string, string>,
     },
   },
+  captura: {
+    barra: 'Outils de dessin',
+    herramientas: {
+      recuadro: 'Rectangle',
+      flecha: 'Flèche',
+      linea: 'Ligne',
+      resaltador: 'Surligneur',
+      texto: 'Texte',
+      pixelar: 'Pixeliser',
+    },
+    deshacer: 'Annuler',
+    rehacer: 'Rétablir',
+    copiar: 'Copier',
+    guardar: 'Enregistrer…',
+    alConversor: 'Envoyer au convertisseur d’images',
+    cerrar: 'Annuler (Échap)',
+    nuevaSeleccion: 'Nouvelle sélection',
+    color: 'Couleur',
+    grosor: 'Épaisseur',
+    formato: 'Format',
+    cargando: 'Préparation de la capture…',
+    guiaRegion: 'Faites glisser pour choisir la zone. Échap annule.',
+    guiaVentana: 'Choisissez la fenêtre à capturer. Échap annule.',
+    sinVentanas: 'Aucune fenêtre ne peut être capturée.',
+    textoPlaceholder: 'Saisissez puis appuyez sur Entrée',
+    copiada: 'Copiée dans le presse-papiers',
+    guardada: (archivo: string) => `Enregistrée dans ${archivo}`,
+    errorCargar: 'Impossible d’ouvrir la capture.',
+    errorCopiar: 'Impossible de copier l’image.',
+    errorGuardar: 'Impossible d’enregistrer l’image.',
+    errorConversor: 'Impossible d’envoyer l’image au convertisseur.',
+    dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
+    panel: {
+      ayuda:
+        'Tout se passe sur cet ordinateur : la capture n’est envoyée à aucun service et n’est pas écrite sur le disque tant que vous ne l’enregistrez pas. Les fenêtres de WolfCore Dev se cachent un instant pour ne pas apparaître sur l’image.',
+      region: 'Région',
+      regionAyuda: 'Faites glisser sur l’écran pour choisir la zone.',
+      ventana: 'Fenêtre',
+      ventanaAyuda: 'Choisissez l’une des fenêtres ouvertes.',
+      pantalla: 'Plein écran',
+      pantallaAyuda: 'L’écran où se trouve le curseur.',
+      atajoActivo: (atajo: string) => `Raccourci global actif : ${atajo} (région).`,
+      atajoInactivo: 'Il n’y a pas de raccourci global. Activez-le dans les Réglages.',
+      noDisponible: 'La capture d’écran n’est pas disponible sur cet ordinateur.',
+      permisoDenegado:
+        'L’autorisation d’enregistrement de l’écran manque. Activez-la pour WolfCore Dev dans les réglages du système.',
+      ocupada: 'Une capture est déjà en cours.',
+    },
+    ajustes: {
+      titulo: 'Capture d’écran',
+      descripcion:
+        'Région, fenêtre ou plein écran avec un éditeur rapide. C’est 100 % local : rien n’est envoyé ni enregistré tant que vous ne le décidez pas.',
+      activar: 'Raccourci global',
+      activarAyuda:
+        'Désactivé par défaut. Une fois activé, il n’est enregistré que si aucun autre programme ne l’utilise, et il est libéré à la fermeture de WolfCore Dev.',
+      atajo: 'Combinaison',
+      grabar: 'Modifier',
+      grabando: 'Appuyez sur la combinaison…',
+      grabandoAyuda:
+        'Utilisez Ctrl, Alt, Maj ou Super avec une lettre, un chiffre ou une touche F.',
+      formato: 'Format à l’enregistrement',
+      activado: (atajo: string) => `Raccourci ${atajo} activé.`,
+      desactivado: 'Raccourci désactivé.',
+      ocupado: (atajo: string) =>
+        `Le raccourci ${atajo} est déjà utilisé par un autre programme et rien n’a été modifié. Essayez une autre combinaison.`,
+      ocupadoInicio:
+        'Le raccourci enregistré est déjà utilisé par un autre programme et n’a pas été enregistré. Choisissez une autre combinaison.',
+      sinPermiso:
+        'Sur macOS, l’autorisation d’enregistrement de l’écran est requise ; elle sera demandée à la première capture.',
+      formatoGuardado: 'Format enregistré.',
+    },
+  },
+
   herramientas: {
     descripcion:
       'Utilitaires du quotidien. Ils fonctionnent hors connexion et sans services externes.',
@@ -3371,6 +3451,10 @@ export const fr: Textos = {
       conversor: {
         nombre: 'Convertisseur de documents',
         descripcion: 'Convertir Word, Excel, PDF, CSV et Markdown sans quitter cet ordinateur.',
+      },
+      captura: {
+        nombre: 'Capture d’écran',
+        descripcion: 'Région, fenêtre ou plein écran, avec éditeur rapide.',
       },
     },
     errores: {
@@ -3689,6 +3773,7 @@ export const fr: Textos = {
       errorProcesar: 'Impossible de traiter l’image.',
       sufijoConvertida: '-convertie',
       sufijoComprimida: '-compressee',
+      nombreCaptura: 'capture-d-ecran',
       dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
       ahorro: (porcentaje: number) =>
         porcentaje > 0

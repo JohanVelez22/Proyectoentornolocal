@@ -6,6 +6,7 @@ import {
   app,
   clipboard,
   dialog,
+  globalShortcut,
   Notification,
   ipcMain,
   nativeTheme,
@@ -45,6 +46,8 @@ import {
 import { carpetaExistente, urlAbrible, urlHttp } from './validacion';
 import { imprimirHtmlAPdf } from './conversorPdf';
 import { crearEjecutorUtilityProcess } from './conversorProceso';
+import { registrarIpcCaptura, ServicioCaptura } from './captura';
+import { crearDepsElectron } from './capturaElectron';
 
 // El Node de Electron prueba cada dirección (IPv6 e IPv4) solo 250 ms antes de pasar a la
 // siguiente: con conexiones lentas ninguna llega a tiempo y `fetch` falla con
@@ -58,6 +61,8 @@ let saliendo = false;
 let cierreSistema: Promise<void> | null = null;
 let idioma: IdiomaUi | null = null;
 let accionesBandeja: AccionesBandeja | null = null;
+/** Captura de pantalla (D35): su atajo global se libera al cerrar. */
+let captura: ServicioCaptura | null = null;
 /** Workspaces del menú de la bandeja (se rearma al cambiar el estado o al editarlos). */
 let workspacesBandeja: WorkspaceBandeja[] = [];
 
@@ -251,6 +256,7 @@ function cerrarPorSistema(topeMs: number): Promise<void> {
     } catch (e) {
       console.error('Error al cerrar el núcleo:', e);
     }
+    captura?.liberar();
     bandeja?.destroy();
     app.exit();
   })();
@@ -282,6 +288,7 @@ const salida = crearSalida({
     } catch (e) {
       console.error('Error al cerrar el núcleo:', e);
     }
+    captura?.liberar();
     bandeja?.destroy();
     app.exit();
   },
@@ -339,6 +346,8 @@ if (errorCarpetaDatos !== null) {
     if (orden) void ordenes.ejecutar(orden);
     else mostrarVentana();
   });
+  // Último recurso: pase lo que pase, el atajo global no queda registrado al salir.
+  app.on('will-quit', () => captura?.liberar());
   // Cierre iniciado por el sistema u otra vía (no por nuestro diálogo): se apaga todo.
   app.on('before-quit', (e) => {
     if (saliendo) return;
@@ -445,6 +454,32 @@ if (errorCarpetaDatos !== null) {
     n.eventos.on('aviso:nuevo', (a) => void notificador.mostrar(a, textoAviso(idioma, a)));
     // Una acción destructiva pedida por un cliente MCP trae la ventana al frente.
     n.eventos.on('mcp:confirmar', () => mostrarVentana());
+    // Captura de pantalla (D35): el atajo global solo se registra si el usuario lo activó; si otro
+    // programa lo usa no se pisa (aviso nativo) y se libera al cerrar.
+    const servicioCaptura = new ServicioCaptura({
+      atajos: globalShortcut,
+      ...crearDepsElectron({
+        nucleo: () => n,
+        ventanaPrincipal: () => ventana,
+        idioma: () => idioma,
+        textos: () => textosMain(idioma),
+        carpetaPreload: join(__dirname, '../preload'),
+        carpetaRenderer: join(__dirname, '../renderer'),
+        alConversor: (info) => {
+          n.eventos.emit('captura:imagen', info);
+          mostrarVentana();
+        },
+        registrarError: (e) => console.error('Captura de pantalla:', e),
+      }),
+    });
+    captura = servicioCaptura;
+    registrarIpcCaptura(ipcMain, servicioCaptura);
+    try {
+      const cfg = await n.capturaConfig();
+      if (cfg.atajo) servicioCaptura.registrarAtajo(cfg.atajo, true);
+    } catch (e) {
+      console.error('No se pudo registrar el atajo de captura:', e);
+    }
     registrarIpc(
       n,
       ipcMain,
@@ -455,6 +490,7 @@ if (errorCarpetaDatos !== null) {
       {
         secretos,
         metricas,
+        captura: servicioCaptura,
         idiomaSistema: () => app.getLocale(),
         aplicarPreferencias,
         alCambiarWorkspaces: programarMenuBandeja,

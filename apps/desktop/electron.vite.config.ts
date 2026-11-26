@@ -22,11 +22,27 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     // Con sandbox:true el preload debe ser CommonJS.
     build: {
-      rollupOptions: { output: { format: 'cjs', entryFileNames: '[name].cjs' } },
+      rollupOptions: {
+        // Además del puente de la app, el de la ventana de captura (D35), con sus propios canales.
+        input: {
+          index: resolve(__dirname, 'src/preload/index.ts'),
+          captura: resolve(__dirname, 'src/preload/captura.ts'),
+        },
+        output: { format: 'cjs', entryFileNames: '[name].cjs' },
+      },
     },
   },
   renderer: {
     plugins: [vue()],
     resolve: { alias: { '@': resolve(__dirname, 'src/renderer') } },
+    build: {
+      rollupOptions: {
+        // La ventana principal y la de captura (D35) son dos páginas.
+        input: {
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          captura: resolve(__dirname, 'src/renderer/captura/index.html'),
+        },
+      },
+    },
   },
 });

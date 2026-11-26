@@ -9,6 +9,7 @@ import type {
   ComandoManual,
   EditorDisponible,
   EstadoAntivirus,
+  EstadoCaptura,
   IdCatalogo,
   IdTerminal,
   InstalacionAjena,
@@ -350,6 +351,13 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async libreOffice(): Promise<string | null> {
     return this.libreOfficeRuta;
+  }
+
+  /** Lo que devuelve capturaDisponible (por defecto, disponible sin permiso que pedir). */
+  estadoCaptura: EstadoCaptura = { disponible: true, permiso: 'no_aplica' };
+
+  async capturaDisponible(): Promise<EstadoCaptura> {
+    return { ...this.estadoCaptura };
   }
 
   async reglasEntradaPermitidas(): Promise<ReglasEntrada> {

@@ -160,6 +160,7 @@ watch(
 );
 
 let bajaAviso: (() => void) | null = null;
+let bajaCaptura: (() => void) | null = null;
 
 onMounted(() => {
   // El historial no es imprescindible: si no carga, la campana queda en cero.
@@ -178,6 +179,11 @@ onMounted(() => {
   });
   // Avisos que llegan después (p. ej. un servicio automático que no encendió).
   bajaAviso = api().on('aviso:inicio', () => void mostrarAvisoInicio());
+  // Una captura de pantalla pasó al conversor de imágenes (D35): se abre esa herramienta.
+  bajaCaptura = api().on('captura:imagen', () => {
+    solicitudes.herramienta = 'imagenes';
+    void router.push({ name: 'herramientas' });
+  });
 });
 
 /** Aviso del arranque (p. ej. la migración de la carpeta de datos): queda hasta que se cierra. */
@@ -193,6 +199,7 @@ async function mostrarAvisoInicio(): Promise<void> {
 }
 onBeforeUnmount(() => {
   bajaAviso?.();
+  bajaCaptura?.();
   avisos.detener();
   detenerEntorno();
 });

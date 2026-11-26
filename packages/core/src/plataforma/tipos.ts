@@ -258,6 +258,18 @@ export interface CapacidadesPlataforma {
    * descarga); null si no. Solo mira archivos: no ejecuta nada.
    */
   libreOffice(): Promise<string | null>;
+  /**
+   * ¿Puede la app capturar la pantalla en este sistema? `permiso` es el del sistema para grabar
+   * la pantalla: `no_aplica` donde no existe (Windows), `concedido`, `denegado` o `pendiente`
+   * (macOS aún no lo ha pedido). Solo consulta: nunca captura ni muestra diálogos.
+   */
+  capturaDisponible(): Promise<EstadoCaptura>;
+}
+
+/** Resultado de `Plataforma.capturaDisponible()` (D35). */
+export interface EstadoCaptura {
+  disponible: boolean;
+  permiso: 'no_aplica' | 'concedido' | 'denegado' | 'pendiente';
 }
 
 /**

@@ -21,6 +21,7 @@ import {
   quitarClave,
   SNIPPETS_NGINX,
   validarUrlGit,
+  type CambiosCaptura,
   type CambiosPreferenciasUi,
   type Nucleo,
   type OpcionesReceta,
@@ -30,6 +31,8 @@ import {
   FORMATOS_CONVERSOR,
 } from '@pel/core';
 import { idiomaDeLocale } from '../shared/idiomas';
+import type { ResultadoAtajo } from '../shared/captura';
+import type { ServicioCaptura } from './captura';
 import { SECRETOS_NO_DISPONIBLES, type AlmacenSecretos } from './secretos';
 import {
   CANAL_EVENTO,
@@ -126,6 +129,7 @@ import {
   nombreBase,
   nombreModelo,
   objetoPlano,
+  modoCaptura,
   puertoHttps,
   puertoUsuario,
   ramaPhp,
@@ -493,9 +497,30 @@ function confirmacionContenedor(a: AccionContenedor, v: unknown): void {
   }
 }
 
+/** Lo que la ventana principal usa de la captura (`ServicioCaptura`, D35). */
+export type CapturaIpc = Pick<
+  ServicioCaptura,
+  'estadoUi' | 'registrarAtajo' | 'iniciar' | 'tomarPendiente'
+>;
+
+/** Sin servicio de captura (pruebas): nada se captura y no hay atajo. */
+const CAPTURA_NO_DISPONIBLE: CapturaIpc = {
+  estadoUi: async () => ({
+    config: { atajo: null, formato: 'png' },
+    sistema: { disponible: false, permiso: 'no_aplica' },
+    atajoActivo: false,
+    atajoOcupado: false,
+  }),
+  registrarAtajo: () => ({ ok: true }),
+  iniciar: async () => ({ ok: false, codigo: 'captura.no_disponible' }),
+  tomarPendiente: () => null,
+};
+
 export interface OpcionesIpc {
   secretos?: SecretosIpc;
   metricas?: ControlMetricas;
+  /** Captura de pantalla (D35); sin ella, la captura no está disponible. */
+  captura?: CapturaIpc;
   seguimientos?: Seguimientos;
   contenedores?: SeguimientosContenedores;
   /** Carpeta de proyectos sin carpeta vigilada (`C:\\Proyectos`); se puede cambiar en pruebas. */
@@ -513,6 +538,7 @@ type Contexto = ApiSistema & {
   elegidas: RutasElegidas;
   secretos: SecretosIpc;
   metricas: ControlMetricas;
+  captura: CapturaIpc;
   seguimientos: Seguimientos;
   contenedores: SeguimientosContenedores;
   /** webContents que hizo la llamada (para atar los seguimientos de registros). */
@@ -1843,6 +1869,26 @@ const TABLA: Record<RutaIpc, Manejador> = {
       s.elegidas.exigir(destino, 'archivo', 'guardar'),
       bytesAcotados(datos, LIMITES_IMAGEN.bytesSalida, 'imagen'),
     ),
+  // ---- Captura de pantalla (D35) ----
+  'captura.leer': (_n, s) => s.captura.estadoUi(),
+  // El atajo se registra ANTES de guardarlo: si otro programa lo usa no se pisa ni se guarda.
+  'captura.guardarConfig': async (n, s, cambios) => {
+    const c = objetoPlano<CambiosCaptura>(cambios, 'captura');
+    const previo = await n.capturaConfig();
+    let atajo: ResultadoAtajo = { ok: true };
+    if (c.atajo !== undefined) {
+      atajo = s.captura.registrarAtajo(c.atajo);
+      if (!atajo.ok) return { config: previo, atajo };
+    }
+    try {
+      return { config: await n.guardarCapturaConfig(c), atajo };
+    } catch (e) {
+      if (c.atajo !== undefined) s.captura.registrarAtajo(previo.atajo);
+      throw e;
+    }
+  },
+  'captura.iniciar': (_n, s, modo) => s.captura.iniciar(modoCaptura(modo)),
+  'captura.tomarPendiente': (_n, s) => s.captura.tomarPendiente(),
   'herramientas.comprimirZip': (n, s, origenes, destino) =>
     n.comprimirZip(
       listaTextos(origenes, 200, 1024, 'orígenes').map((r) => {
@@ -2073,6 +2119,7 @@ export function registrarIpc(
     elegidas,
     secretos: opciones.secretos ?? SECRETOS_NO_DISPONIBLES,
     metricas: opciones.metricas ?? new ControlMetricas(nucleo),
+    captura: opciones.captura ?? CAPTURA_NO_DISPONIBLE,
     seguimientos,
     contenedores,
     carpetaProyectosPorDefecto:

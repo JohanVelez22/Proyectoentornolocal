@@ -166,6 +166,13 @@ export const PARAMETROS_ERROR = {
   'conversor.libreoffice_ausente': [],
   'conversor.libreoffice_fallo': [],
   'conversor.pdf_no_disponible': [],
+  // captura de pantalla (D35)
+  'captura.atajo_invalido': [],
+  'captura.atajo_ocupado': ['atajo'],
+  'captura.no_disponible': [],
+  'captura.permiso_denegado': [],
+  'captura.sin_imagen': [],
+  'captura.imagen_invalida': [],
   // acceso a la base con Adminer o phpMyAdmin (D18)
   'acceso_bd.datos_invalidos': [],
   'acceso_bd.sin_base': [],

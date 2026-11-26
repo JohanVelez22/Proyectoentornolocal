@@ -462,6 +462,42 @@ export const CambiosPreferenciasUiSchema = z.strictObject({
 });
 export type CambiosPreferenciasUi = z.infer<typeof CambiosPreferenciasUiSchema>;
 
+/** Formatos en que se guarda una captura de pantalla (D35). */
+export const FORMATOS_CAPTURA = ['png', 'jpg'] as const;
+export type FormatoCaptura = (typeof FORMATOS_CAPTURA)[number];
+/** Atajo global que se propone al activar la captura (no se registra hasta que el usuario lo activa). */
+export const ATAJO_CAPTURA_POR_DEFECTO = 'Ctrl+Shift+S';
+
+/**
+ * Atajo global de Electron (aceleradora): al menos un modificador y una tecla (letra, dígito o
+ * F1-F24). Lo que no encaje aquí no llega nunca a `globalShortcut`.
+ */
+const ATAJO_CAPTURA = /^(?:(?:Ctrl|Alt|Shift|Super)\+){1,3}(?:[A-Z0-9]|F(?:[1-9]|1[0-9]|2[0-4]))$/;
+export function esAtajoCaptura(v: unknown): v is string {
+  if (typeof v !== 'string' || !ATAJO_CAPTURA.test(v)) return false;
+  const mods = v.split('+').slice(0, -1);
+  return new Set(mods).size === mods.length;
+}
+
+/**
+ * Captura de pantalla (`config.json` → `captura`). `atajo` null = sin atajo global: es lo que
+ * hay hasta que el usuario lo activa. Un valor raro cae al por defecto en vez de dañar el config.
+ */
+export const CapturaConfigSchema = z
+  .object({
+    atajo: z.string().refine(esAtajoCaptura).nullable().default(null).catch(null),
+    formato: z.enum(FORMATOS_CAPTURA).default('png').catch('png'),
+  })
+  .prefault({});
+export type CapturaConfig = z.infer<typeof CapturaConfigSchema>;
+
+/** Cambios que pide la interfaz: estrictos. */
+export const CambiosCapturaSchema = z.strictObject({
+  atajo: z.string().refine(esAtajoCaptura).nullable().optional(),
+  formato: z.enum(FORMATOS_CAPTURA).optional(),
+});
+export type CambiosCaptura = z.infer<typeof CambiosCapturaSchema>;
+
 /**
  * Rango pasivo de FTP por defecto: fuera de los puertos efímeros de Windows (49152-65535), donde
  * el sistema puede estar usando cualquiera de ellos para conexiones salientes.
@@ -727,6 +763,8 @@ export const ConfigSchema = z.object({
   workspaces: ListaWorkspacesSchema,
   /** Preferencias de la interfaz (tema, idioma, acento, asistente de primer uso). */
   ui: PreferenciasUiSchema.catch(() => PreferenciasUiSchema.parse({})),
+  /** Captura de pantalla (D35): atajo global opcional y formato al guardar. */
+  captura: CapturaConfigSchema.catch(() => CapturaConfigSchema.parse({})),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 

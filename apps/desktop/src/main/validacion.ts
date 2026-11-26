@@ -1,5 +1,6 @@
 import { stat } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
+import { MODOS_CAPTURA, type ModoCaptura } from '../shared/captura';
 import {
   CLAVES_RAPIDAS,
   LIMITE_MANUAL,
@@ -171,6 +172,14 @@ export function huellaDeTarea(v: unknown): string {
 export function idNoVacio(v: unknown, nombre = 'id'): string {
   if (typeof v !== 'string' || v.trim() === '') throw new Error(`Argumento no válido: ${nombre}`);
   return v;
+}
+
+/** Modo de captura de pantalla (D35): solo uno de los tres. */
+export function modoCaptura(v: unknown): ModoCaptura {
+  if (typeof v !== 'string' || !(MODOS_CAPTURA as readonly string[]).includes(v)) {
+    throw new Error('Argumento no válido: modo');
+  }
+  return v as ModoCaptura;
 }
 
 export function objetoPlano<T extends object>(v: unknown, nombre = 'objeto'): T {

@@ -9,7 +9,7 @@ import {
   NSlider,
   useMessage,
 } from 'naive-ui';
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { api } from '../../api';
 import { useAccion } from '../../composables/useAccion';
 import { textos } from '../../i18n';
@@ -100,6 +100,39 @@ async function elegir(): Promise<void> {
   }
 }
 
+/**
+ * Una captura de pantalla enviada desde el editor (D35): llega en memoria, nunca por un archivo
+ * temporal, y se entrega una sola vez.
+ */
+async function recogerCaptura(): Promise<void> {
+  let pendiente;
+  try {
+    pendiente = await api().captura.tomarPendiente();
+  } catch {
+    return;
+  }
+  if (!pendiente) return;
+  limpiarResultado();
+  origen.value = {
+    nombre: `${t.nombreCaptura}.png`,
+    tipo: 'png',
+    ancho: pendiente.ancho,
+    alto: pendiente.alto,
+    bytes: pendiente.bytes,
+  };
+  try {
+    await dibujarMiniatura(origen.value);
+  } catch {
+    error.value = t.errorAbrir;
+  }
+}
+
+let bajaCaptura: (() => void) | null = null;
+onMounted(() => {
+  void recogerCaptura();
+  bajaCaptura = api().on('captura:imagen', () => void recogerCaptura());
+});
+
 async function procesar(): Promise<void> {
   const o = origen.value;
   if (!o) return;
@@ -165,6 +198,7 @@ const puedeProcesar = computed(
 );
 
 onBeforeUnmount(() => {
+  bajaCaptura?.();
   origen.value = null;
   resultado.value = null;
 });

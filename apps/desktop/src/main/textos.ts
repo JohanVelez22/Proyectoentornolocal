@@ -29,6 +29,13 @@ const TEXTOS = {
       'carpeta de datos de prueba, sin tocar hosts, PATH ni certificados del sistema',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS no es una carpeta de datos válida: debe ser absoluta, no del sistema y distinta de la carpeta real (y de la anterior). La app se cierra sin tocar nada.',
+    capturaAtajoOcupado:
+      'El atajo {atajo} ya lo usa otro programa y no se pisó. La captura de pantalla queda sin atajo global: elija otro en Ajustes.',
+    capturaPermisoTitulo: 'Permiso para grabar la pantalla',
+    capturaPermisoTexto:
+      'Para capturar la pantalla, macOS pide que WolfCore Dev tenga el permiso de grabación de pantalla. Ábralo en Ajustes del Sistema (Privacidad y seguridad), active WolfCore Dev y vuelva a intentarlo. Nada de lo capturado sale de este equipo.',
+    capturaAbrirPreferencias: 'Abrir los ajustes',
+    capturaNoDisponible: 'La captura de pantalla no está disponible en este equipo.',
   },
   en: {
     abrir: 'Open',
@@ -57,6 +64,13 @@ const TEXTOS = {
       'test data folder, without touching the system hosts, PATH or certificates',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS is not a valid data folder: it must be absolute, not a system folder and different from the real one (and the previous one). The app closes without touching anything.',
+    capturaAtajoOcupado:
+      'The shortcut {atajo} is already used by another program and was left alone. Screen capture has no global shortcut: choose another in Settings.',
+    capturaPermisoTitulo: 'Screen recording permission',
+    capturaPermisoTexto:
+      'To capture the screen, macOS needs WolfCore Dev to have the screen recording permission. Open it in System Settings (Privacy & Security), turn on WolfCore Dev and try again. Nothing you capture leaves this computer.',
+    capturaAbrirPreferencias: 'Open settings',
+    capturaNoDisponible: 'Screen capture is not available on this computer.',
   },
   pt: {
     abrir: 'Abrir',
@@ -85,6 +99,13 @@ const TEXTOS = {
       'pasta de dados de teste, sem tocar o hosts, o PATH nem os certificados do sistema',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS não é uma pasta de dados válida: deve ser absoluta, não do sistema e diferente da pasta real (e da anterior). O app fecha sem tocar em nada.',
+    capturaAtajoOcupado:
+      'O atalho {atajo} já é usado por outro programa e não foi alterado. A captura de tela fica sem atalho global: escolha outro em Ajustes.',
+    capturaPermisoTitulo: 'Permissão para gravar a tela',
+    capturaPermisoTexto:
+      'Para capturar a tela, o macOS exige que o WolfCore Dev tenha a permissão de gravação de tela. Abra-a em Ajustes do Sistema (Privacidade e segurança), ative o WolfCore Dev e tente de novo. Nada do que for capturado sai deste computador.',
+    capturaAbrirPreferencias: 'Abrir os ajustes',
+    capturaNoDisponible: 'A captura de tela não está disponível neste computador.',
   },
   fr: {
     abrir: 'Ouvrir',
@@ -113,6 +134,13 @@ const TEXTOS = {
       'dossier de données de test, sans toucher au hosts, au PATH ni aux certificats du système',
     carpetaDatosInvalida:
       "WOLFCORE_DATOS n'est pas un dossier de données valide : il doit être absolu, hors des dossiers système et différent du dossier réel (et du précédent). L'application se ferme sans rien toucher.",
+    capturaAtajoOcupado:
+      'Le raccourci {atajo} est déjà utilisé par un autre programme et n’a pas été modifié. La capture d’écran n’a plus de raccourci global : choisissez-en un autre dans les Réglages.',
+    capturaPermisoTitulo: 'Autorisation d’enregistrer l’écran',
+    capturaPermisoTexto:
+      'Pour capturer l’écran, macOS exige que WolfCore Dev ait l’autorisation d’enregistrement de l’écran. Ouvrez-la dans les Réglages Système (Confidentialité et sécurité), activez WolfCore Dev et réessayez. Rien de ce qui est capturé ne quitte cet ordinateur.',
+    capturaAbrirPreferencias: 'Ouvrir les réglages',
+    capturaNoDisponible: 'La capture d’écran n’est pas disponible sur cet ordinateur.',
   },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 

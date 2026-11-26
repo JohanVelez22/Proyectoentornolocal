@@ -440,6 +440,13 @@ export const es = {
       'herramientas.pdf_cifrado': 'El PDF está protegido con contraseña y no se puede optimizar.',
       'herramientas.pdf_plazo': 'El PDF tardó más de {segundos} s y se canceló.',
       'herramientas.salida_ocupada': 'No se encontró un nombre libre para el archivo nuevo.',
+      'captura.atajo_invalido':
+        'Ese atajo no es válido: use Ctrl, Alt, Mayús o Super con una letra, un número o una tecla F.',
+      'captura.atajo_ocupado': 'El atajo {atajo} ya lo usa otro programa.',
+      'captura.no_disponible': 'La captura de pantalla no está disponible en este equipo.',
+      'captura.permiso_denegado': 'Falta el permiso de grabación de pantalla.',
+      'captura.sin_imagen': 'No hay ninguna imagen para capturar.',
+      'captura.imagen_invalida': 'La imagen de la captura no es válida.',
       'conversor.formato': 'Esa conversión no está disponible.',
       'conversor.archivo_invalido':
         'El archivo está dañado o no es del tipo que indica su extensión.',
@@ -3216,6 +3223,78 @@ export const es = {
       } as Record<string, string>,
     },
   },
+  captura: {
+    barra: 'Herramientas de dibujo',
+    herramientas: {
+      recuadro: 'Recuadro',
+      flecha: 'Flecha',
+      linea: 'Línea',
+      resaltador: 'Resaltador',
+      texto: 'Texto',
+      pixelar: 'Pixelar',
+    },
+    deshacer: 'Deshacer',
+    rehacer: 'Rehacer',
+    copiar: 'Copiar',
+    guardar: 'Guardar…',
+    alConversor: 'Enviar al conversor de imágenes',
+    cerrar: 'Cancelar (Esc)',
+    nuevaSeleccion: 'Nueva selección',
+    color: 'Color',
+    grosor: 'Grosor',
+    formato: 'Formato',
+    cargando: 'Preparando la captura…',
+    guiaRegion: 'Arrastre para elegir la zona. Esc cancela.',
+    guiaVentana: 'Elija la ventana que quiere capturar. Esc cancela.',
+    sinVentanas: 'No hay ventanas que se puedan capturar.',
+    textoPlaceholder: 'Escriba y pulse Intro',
+    copiada: 'Copiada al portapapeles',
+    guardada: (archivo: string) => `Guardada en ${archivo}`,
+    errorCargar: 'No se pudo abrir la captura.',
+    errorCopiar: 'No se pudo copiar la imagen.',
+    errorGuardar: 'No se pudo guardar la imagen.',
+    errorConversor: 'No se pudo enviar la imagen al conversor.',
+    dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
+    panel: {
+      ayuda:
+        'Todo ocurre en este equipo: la captura no se sube a ningún servicio y no se guarda en disco hasta que usted la guarda. Las ventanas de WolfCore Dev se ocultan un instante para no salir en la imagen.',
+      region: 'Región',
+      regionAyuda: 'Arrastre sobre la pantalla para elegir la zona.',
+      ventana: 'Ventana',
+      ventanaAyuda: 'Elija una de las ventanas abiertas.',
+      pantalla: 'Pantalla completa',
+      pantallaAyuda: 'La pantalla donde está el cursor.',
+      atajoActivo: (atajo: string) => `Atajo global activo: ${atajo} (región).`,
+      atajoInactivo: 'No hay atajo global. Se activa en Ajustes.',
+      noDisponible: 'La captura de pantalla no está disponible en este equipo.',
+      permisoDenegado:
+        'Falta el permiso de grabación de pantalla. Actívelo para WolfCore Dev en los ajustes del sistema.',
+      ocupada: 'Ya hay una captura en curso.',
+    },
+    ajustes: {
+      titulo: 'Captura de pantalla',
+      descripcion:
+        'Región, ventana o pantalla completa con un editor rápido. Es 100 % local: nada se sube ni se guarda hasta que usted lo decide.',
+      activar: 'Atajo global',
+      activarAyuda:
+        'Desactivado por defecto. Al activarlo se registra solo si ningún otro programa lo usa, y se libera al cerrar WolfCore Dev.',
+      atajo: 'Combinación',
+      grabar: 'Cambiar',
+      grabando: 'Pulse la combinación…',
+      grabandoAyuda: 'Use Ctrl, Alt, Mayús o Super con una letra, un número o una tecla F.',
+      formato: 'Formato al guardar',
+      activado: (atajo: string) => `Atajo ${atajo} activado.`,
+      desactivado: 'Atajo desactivado.',
+      ocupado: (atajo: string) =>
+        `El atajo ${atajo} ya lo usa otro programa y no se cambió nada. Pruebe con otra combinación.`,
+      ocupadoInicio:
+        'El atajo guardado ya lo usa otro programa y no se registró. Elija otra combinación.',
+      sinPermiso:
+        'En macOS hace falta el permiso de grabación de pantalla; se le pedirá la primera vez que capture.',
+      formatoGuardado: 'Formato guardado.',
+    },
+  },
+
   herramientas: {
     descripcion: 'Utilidades para el día a día. Funcionan sin conexión y sin servicios externos.',
     buscar: 'Buscar herramienta…',
@@ -3281,6 +3360,10 @@ export const es = {
       conversor: {
         nombre: 'Conversor de documentos',
         descripcion: 'Convertir Word, Excel, PDF, CSV y Markdown sin salir de este equipo.',
+      },
+      captura: {
+        nombre: 'Captura de pantalla',
+        descripcion: 'Región, ventana o pantalla completa, con editor rápido.',
       },
     },
     errores: {
@@ -3596,6 +3679,7 @@ export const es = {
       errorProcesar: 'No se pudo procesar la imagen.',
       sufijoConvertida: '-convertida',
       sufijoComprimida: '-comprimida',
+      nombreCaptura: 'captura-de-pantalla',
       dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
       ahorro: (porcentaje: number) =>
         porcentaje > 0

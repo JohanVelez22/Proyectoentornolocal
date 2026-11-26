@@ -433,6 +433,13 @@ export const en: Textos = {
       'herramientas.pdf_cifrado': 'The PDF is password-protected and cannot be optimized.',
       'herramientas.pdf_plazo': 'The PDF took longer than {segundos} s and was cancelled.',
       'herramientas.salida_ocupada': 'No free name was found for the new file.',
+      'captura.atajo_invalido':
+        'That shortcut is not valid: use Ctrl, Alt, Shift or Super with a letter, a number or an F key.',
+      'captura.atajo_ocupado': 'The shortcut {atajo} is already used by another program.',
+      'captura.no_disponible': 'Screen capture is not available on this computer.',
+      'captura.permiso_denegado': 'The screen recording permission is missing.',
+      'captura.sin_imagen': 'There is no image to capture.',
+      'captura.imagen_invalida': 'The capture image is not valid.',
       'conversor.formato': 'That conversion is not available.',
       'conversor.archivo_invalido': 'The file is damaged or is not the type its extension says.',
       'conversor.archivo_grande': 'The file is too large (up to {maximo}).',
@@ -3187,6 +3194,78 @@ export const en: Textos = {
       } as Record<string, string>,
     },
   },
+  captura: {
+    barra: 'Drawing tools',
+    herramientas: {
+      recuadro: 'Box',
+      flecha: 'Arrow',
+      linea: 'Line',
+      resaltador: 'Highlighter',
+      texto: 'Text',
+      pixelar: 'Pixelate',
+    },
+    deshacer: 'Undo',
+    rehacer: 'Redo',
+    copiar: 'Copy',
+    guardar: 'Save…',
+    alConversor: 'Send to the image converter',
+    cerrar: 'Cancel (Esc)',
+    nuevaSeleccion: 'New selection',
+    color: 'Color',
+    grosor: 'Thickness',
+    formato: 'Format',
+    cargando: 'Preparing the capture…',
+    guiaRegion: 'Drag to choose the area. Esc cancels.',
+    guiaVentana: 'Choose the window you want to capture. Esc cancels.',
+    sinVentanas: 'There are no windows that can be captured.',
+    textoPlaceholder: 'Type and press Enter',
+    copiada: 'Copied to the clipboard',
+    guardada: (archivo: string) => `Saved to ${archivo}`,
+    errorCargar: 'The capture could not be opened.',
+    errorCopiar: 'The image could not be copied.',
+    errorGuardar: 'The image could not be saved.',
+    errorConversor: 'The image could not be sent to the converter.',
+    dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
+    panel: {
+      ayuda:
+        'Everything happens on this computer: the capture is not uploaded to any service and is not saved to disk until you save it. WolfCore Dev windows hide for a moment so they do not appear in the image.',
+      region: 'Region',
+      regionAyuda: 'Drag over the screen to choose the area.',
+      ventana: 'Window',
+      ventanaAyuda: 'Pick one of the open windows.',
+      pantalla: 'Full screen',
+      pantallaAyuda: 'The screen where the cursor is.',
+      atajoActivo: (atajo: string) => `Global shortcut active: ${atajo} (region).`,
+      atajoInactivo: 'There is no global shortcut. Turn it on in Settings.',
+      noDisponible: 'Screen capture is not available on this computer.',
+      permisoDenegado:
+        'The screen recording permission is missing. Turn it on for WolfCore Dev in the system settings.',
+      ocupada: 'A capture is already in progress.',
+    },
+    ajustes: {
+      titulo: 'Screen capture',
+      descripcion:
+        'Region, window or full screen with a quick editor. It is 100% local: nothing is uploaded or saved until you decide.',
+      activar: 'Global shortcut',
+      activarAyuda:
+        'Off by default. When turned on it is registered only if no other program uses it, and it is released when WolfCore Dev closes.',
+      atajo: 'Combination',
+      grabar: 'Change',
+      grabando: 'Press the combination…',
+      grabandoAyuda: 'Use Ctrl, Alt, Shift or Super with a letter, a number or an F key.',
+      formato: 'Format when saving',
+      activado: (atajo: string) => `Shortcut ${atajo} turned on.`,
+      desactivado: 'Shortcut turned off.',
+      ocupado: (atajo: string) =>
+        `The shortcut ${atajo} is already used by another program and nothing was changed. Try another combination.`,
+      ocupadoInicio:
+        'The saved shortcut is already used by another program and was not registered. Choose another combination.',
+      sinPermiso:
+        'On macOS the screen recording permission is required; you will be asked the first time you capture.',
+      formatoGuardado: 'Format saved.',
+    },
+  },
+
   herramientas: {
     descripcion: 'Everyday utilities. They work offline and without external services.',
     buscar: 'Search tools…',
@@ -3252,6 +3331,10 @@ export const en: Textos = {
       conversor: {
         nombre: 'Document converter',
         descripcion: 'Convert Word, Excel, PDF, CSV and Markdown without leaving this computer.',
+      },
+      captura: {
+        nombre: 'Screen capture',
+        descripcion: 'Region, window or full screen, with a quick editor.',
       },
     },
     errores: {
@@ -3566,6 +3649,7 @@ export const en: Textos = {
       errorProcesar: 'The image could not be processed.',
       sufijoConvertida: '-converted',
       sufijoComprimida: '-compressed',
+      nombreCaptura: 'screenshot',
       dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
       ahorro: (porcentaje: number) =>
         porcentaje > 0

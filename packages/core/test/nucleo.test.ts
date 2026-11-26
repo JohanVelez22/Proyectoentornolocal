@@ -1456,6 +1456,25 @@ describe('Nucleo (Etapa B)', () => {
     expect((await n.preferenciasUi()).tema).toBe('oscuro');
   });
 
+  it('guarda la configuración de la captura (D35) validada y por campos', async () => {
+    const n = await crear();
+    expect(await n.capturaConfig()).toEqual({ atajo: null, formato: 'png' });
+    expect(await n.guardarCapturaConfig({ atajo: 'Ctrl+Shift+S' })).toEqual({
+      atajo: 'Ctrl+Shift+S',
+      formato: 'png',
+    });
+    expect(await n.guardarCapturaConfig({ formato: 'jpg' })).toEqual({
+      atajo: 'Ctrl+Shift+S',
+      formato: 'jpg',
+    });
+    expect((await n.guardarCapturaConfig({ atajo: null })).atajo).toBeNull();
+    await expect(n.guardarCapturaConfig({ atajo: 'S' })).rejects.toMatchObject({
+      codigo: 'captura.atajo_invalido',
+    });
+    expect(await n.capturaConfig()).toEqual({ atajo: null, formato: 'jpg' });
+    expect(await n.capturaDisponible()).toHaveProperty('disponible');
+  });
+
   it('al cerrar detiene vigilancia, métricas y registros antes que el MCP', async () => {
     const n = await crear();
     const orden: string[] = [];

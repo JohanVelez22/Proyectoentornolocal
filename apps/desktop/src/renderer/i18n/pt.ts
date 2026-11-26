@@ -443,6 +443,13 @@ export const pt: Textos = {
       'herramientas.pdf_cifrado': 'O PDF está protegido por senha e não pode ser otimizado.',
       'herramientas.pdf_plazo': 'O PDF demorou mais de {segundos} s e foi cancelado.',
       'herramientas.salida_ocupada': 'Não foi encontrado um nome livre para o novo arquivo.',
+      'captura.atajo_invalido':
+        'Esse atalho não é válido: use Ctrl, Alt, Shift ou Super com uma letra, um número ou uma tecla F.',
+      'captura.atajo_ocupado': 'O atalho {atajo} já é usado por outro programa.',
+      'captura.no_disponible': 'A captura de tela não está disponível neste computador.',
+      'captura.permiso_denegado': 'Falta a permissão de gravação de tela.',
+      'captura.sin_imagen': 'Não há nenhuma imagem para capturar.',
+      'captura.imagen_invalida': 'A imagem da captura não é válida.',
       'conversor.formato': 'Essa conversão não está disponível.',
       'conversor.archivo_invalido':
         'O arquivo está danificado ou não é do tipo indicado pela extensão.',
@@ -3221,6 +3228,78 @@ export const pt: Textos = {
       } as Record<string, string>,
     },
   },
+  captura: {
+    barra: 'Ferramentas de desenho',
+    herramientas: {
+      recuadro: 'Retângulo',
+      flecha: 'Seta',
+      linea: 'Linha',
+      resaltador: 'Marca-texto',
+      texto: 'Texto',
+      pixelar: 'Pixelar',
+    },
+    deshacer: 'Desfazer',
+    rehacer: 'Refazer',
+    copiar: 'Copiar',
+    guardar: 'Salvar…',
+    alConversor: 'Enviar ao conversor de imagens',
+    cerrar: 'Cancelar (Esc)',
+    nuevaSeleccion: 'Nova seleção',
+    color: 'Cor',
+    grosor: 'Espessura',
+    formato: 'Formato',
+    cargando: 'Preparando a captura…',
+    guiaRegion: 'Arraste para escolher a área. Esc cancela.',
+    guiaVentana: 'Escolha a janela que quer capturar. Esc cancela.',
+    sinVentanas: 'Não há janelas que possam ser capturadas.',
+    textoPlaceholder: 'Digite e pressione Enter',
+    copiada: 'Copiada para a área de transferência',
+    guardada: (archivo: string) => `Salva em ${archivo}`,
+    errorCargar: 'Não foi possível abrir a captura.',
+    errorCopiar: 'Não foi possível copiar a imagem.',
+    errorGuardar: 'Não foi possível salvar a imagem.',
+    errorConversor: 'Não foi possível enviar a imagem ao conversor.',
+    dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
+    panel: {
+      ayuda:
+        'Tudo acontece neste computador: a captura não é enviada a nenhum serviço e não é salva no disco até que você a salve. As janelas do WolfCore Dev se escondem por um instante para não aparecerem na imagem.',
+      region: 'Região',
+      regionAyuda: 'Arraste sobre a tela para escolher a área.',
+      ventana: 'Janela',
+      ventanaAyuda: 'Escolha uma das janelas abertas.',
+      pantalla: 'Tela inteira',
+      pantallaAyuda: 'A tela onde está o cursor.',
+      atajoActivo: (atajo: string) => `Atalho global ativo: ${atajo} (região).`,
+      atajoInactivo: 'Não há atalho global. Ative-o em Ajustes.',
+      noDisponible: 'A captura de tela não está disponível neste computador.',
+      permisoDenegado:
+        'Falta a permissão de gravação de tela. Ative-a para o WolfCore Dev nos ajustes do sistema.',
+      ocupada: 'Já há uma captura em andamento.',
+    },
+    ajustes: {
+      titulo: 'Captura de tela',
+      descripcion:
+        'Região, janela ou tela inteira com um editor rápido. É 100 % local: nada é enviado nem salvo até que você decida.',
+      activar: 'Atalho global',
+      activarAyuda:
+        'Desativado por padrão. Ao ativá-lo, ele só é registrado se nenhum outro programa o usar, e é liberado ao fechar o WolfCore Dev.',
+      atajo: 'Combinação',
+      grabar: 'Alterar',
+      grabando: 'Pressione a combinação…',
+      grabandoAyuda: 'Use Ctrl, Alt, Shift ou Super com uma letra, um número ou uma tecla F.',
+      formato: 'Formato ao salvar',
+      activado: (atajo: string) => `Atalho ${atajo} ativado.`,
+      desactivado: 'Atalho desativado.',
+      ocupado: (atajo: string) =>
+        `O atalho ${atajo} já é usado por outro programa e nada foi alterado. Tente outra combinação.`,
+      ocupadoInicio:
+        'O atalho salvo já é usado por outro programa e não foi registrado. Escolha outra combinação.',
+      sinPermiso:
+        'No macOS é necessária a permissão de gravação de tela; ela será pedida na primeira captura.',
+      formatoGuardado: 'Formato salvo.',
+    },
+  },
+
   herramientas: {
     descripcion: 'Utilitários para o dia a dia. Funcionam sem conexão e sem serviços externos.',
     buscar: 'Buscar ferramenta…',
@@ -3289,6 +3368,10 @@ export const pt: Textos = {
       conversor: {
         nombre: 'Conversor de documentos',
         descripcion: 'Converta Word, Excel, PDF, CSV e Markdown sem sair deste computador.',
+      },
+      captura: {
+        nombre: 'Captura de tela',
+        descripcion: 'Região, janela ou tela inteira, com editor rápido.',
       },
     },
     errores: {
@@ -3603,6 +3686,7 @@ export const pt: Textos = {
       errorProcesar: 'Não foi possível processar a imagem.',
       sufijoConvertida: '-convertida',
       sufijoComprimida: '-comprimida',
+      nombreCaptura: 'captura-de-tela',
       dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
       ahorro: (porcentaje: number) =>
         porcentaje > 0

@@ -1,9 +1,12 @@
 /// <reference types="vite/client" />
 import type { ApiEntorno } from '../shared/api';
+import type { ApiVentanaCaptura } from '../shared/captura';
 
 declare global {
   interface Window {
     entorno: ApiEntorno;
+    /** Solo existe en la ventana de captura (D35). */
+    captura: ApiVentanaCaptura;
   }
 }
 

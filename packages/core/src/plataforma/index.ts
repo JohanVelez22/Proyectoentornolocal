@@ -10,6 +10,7 @@ export type {
   Ejecutor,
   EditorDisponible,
   EstadoAntivirus,
+  EstadoCaptura,
   EstadoServicioSistema,
   IdCatalogo,
   Lanzador,
@@ -95,6 +96,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'perfilRedDe',
   'reglasEntradaPermitidas',
   'libreOffice',
+  'capturaDisponible',
 ];
 
 /**

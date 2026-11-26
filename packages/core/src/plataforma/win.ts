@@ -65,6 +65,7 @@ import type {
   AccesoPathUsuario,
   ComandoManual,
   EstadoAntivirus,
+  EstadoCaptura,
   Ejecutor,
   IdCatalogo,
   InstalacionAjena,
@@ -881,6 +882,11 @@ export class PlataformaWindows implements PlataformaCompleta {
       if (this.existeRuta(ruta)) return ruta;
     }
     return null;
+  }
+
+  /** Windows no pide permiso para capturar la pantalla (`desktopCapturer` basta). */
+  async capturaDisponible(): Promise<EstadoCaptura> {
+    return { disponible: true, permiso: 'no_aplica' };
   }
 
   async reglasEntradaPermitidas(): Promise<ReglasEntrada> {

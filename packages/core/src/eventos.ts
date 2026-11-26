@@ -86,6 +86,8 @@ export type EventosNucleo = {
   'busqueda:resultado': LoteBusqueda;
   /** La búsqueda terminó (con su resumen) o falló (con su error). Siempre llega una vez. */
   'busqueda:fin': FinBusqueda;
+  /** Una captura de pantalla espera en el proceso principal para el conversor de imágenes (D35). */
+  'captura:imagen': { ancho: number; alto: number };
 };
 
 export class Eventos<M extends Record<string, unknown>> {

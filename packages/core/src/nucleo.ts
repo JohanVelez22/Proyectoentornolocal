@@ -105,6 +105,7 @@ import { GestorSmtp } from './correo/gestorSmtp';
 import { completarPlataforma, crearPlataforma } from './plataforma/index';
 import type {
   EditorDisponible,
+  EstadoCaptura,
   IdEditor,
   IdTerminal,
   PlataformaCompleta,
@@ -217,9 +218,12 @@ import type {
   TipoSitio,
 } from './tipos';
 import {
+  CambiosCapturaSchema,
   CambiosPreferenciasUiSchema,
   IDS_SERVICIO_DATOS,
   TIPOS_CON_PHP,
+  type CambiosCaptura,
+  type CapturaConfig,
   type CambiosPreferenciasUi,
   type PreferenciasUi,
 } from './tipos';
@@ -3474,6 +3478,35 @@ export class Nucleo {
       res = nuevas;
     });
     return res ?? (await this.config.leer()).ui;
+  }
+
+  // ---- Captura de pantalla (D35) ----
+
+  /** Atajo y formato de la captura (`config.json` → `captura`). */
+  async capturaConfig(): Promise<CapturaConfig> {
+    return (await this.config.leer()).captura;
+  }
+
+  /** Guarda solo los campos dados (validados) y devuelve la configuración resultante. */
+  async guardarCapturaConfig(cambios: CambiosCaptura): Promise<CapturaConfig> {
+    const p = CambiosCapturaSchema.safeParse(cambios);
+    if (!p.success) {
+      throw new ErrorWolf('captura.atajo_invalido', 'El atajo de captura no es válido.');
+    }
+    let res: CapturaConfig | null = null;
+    await this.sitios.modificarConfig((c) => {
+      const nueva: CapturaConfig = { ...c.captura };
+      if (p.data.atajo !== undefined) nueva.atajo = p.data.atajo;
+      if (p.data.formato !== undefined) nueva.formato = p.data.formato;
+      c.captura = nueva;
+      res = nueva;
+    });
+    return res ?? (await this.config.leer()).captura;
+  }
+
+  /** ¿Se puede capturar la pantalla aquí y está el permiso del sistema? */
+  capturaDisponible(): Promise<EstadoCaptura> {
+    return this.plataforma.capturaDisponible();
   }
 
   // ---- Métricas y registros ----

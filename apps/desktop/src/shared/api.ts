@@ -184,7 +184,16 @@ import type {
   DestinoLimpieza,
   SeleccionLimpieza,
   VersionEnPapelera,
+  CambiosCaptura,
+  CapturaConfig,
 } from '@pel/core';
+import type {
+  EstadoCapturaUi,
+  ImagenPendiente,
+  ModoCaptura,
+  ResultadoAtajo,
+  ResultadoIniciarCaptura,
+} from './captura';
 
 export type {
   AccionContenedor,
@@ -366,6 +375,8 @@ export type {
   DestinoLimpieza,
   SeleccionLimpieza,
   VersionEnPapelera,
+  CambiosCaptura,
+  CapturaConfig,
   EstadoInstancia,
   IdInstancia,
   PlanActualizar,
@@ -1372,6 +1383,21 @@ export interface ApiEntorno {
       destino: string,
     ): Promise<{ destino: string; bytes: number }>;
   };
+  captura: {
+    /** Configuración, estado del sistema y del atajo global (D35). */
+    leer(): Promise<EstadoCapturaUi>;
+    /**
+     * Guarda el atajo (null = sin atajo) y el formato. Si otro programa ya usa el atajo no se pisa:
+     * `atajo.ok` es false con `captura.atajo_ocupado` y no se guarda nada.
+     */
+    guardarConfig(
+      cambios: CambiosCaptura,
+    ): Promise<{ config: CapturaConfig; atajo: ResultadoAtajo }>;
+    /** Abre la captura (región, ventana o pantalla completa); las ventanas de la app se ocultan. */
+    iniciar(modo: ModoCaptura): Promise<ResultadoIniciarCaptura>;
+    /** La imagen que la captura dejó para el conversor de imágenes; se entrega una sola vez. */
+    tomarPendiente(): Promise<ImagenPendiente | null>;
+  };
   buscar: {
     /**
      * Empieza una búsqueda en segundo plano y devuelve su id. La raíz es la carpeta de un
@@ -1793,6 +1819,10 @@ export const RUTAS_IPC = [
   'herramientas.optimizarPdf',
   'herramientas.conversionesDocumento',
   'herramientas.convertirDocumento',
+  'captura.leer',
+  'captura.guardarConfig',
+  'captura.iniciar',
+  'captura.tomarPendiente',
   'buscar.iniciar',
   'buscar.cancelar',
   'mcp.estado',
@@ -1846,6 +1876,13 @@ export const RUTAS_IPC = [
 /** Lo que manda el asistente de nuevo proyecto: la carpeta es la padre (de un diálogo). */
 export type PedidoProyectoIpc = Omit<PedidoProyecto, 'carpeta'> & { carpetaPadre: string };
 
+export type {
+  EstadoCapturaUi,
+  ImagenPendiente,
+  ModoCaptura,
+  ResultadoAtajo,
+  ResultadoIniciarCaptura,
+} from './captura';
 export type RutaIpc = (typeof RUTAS_IPC)[number];
 
 /** Lo que manda la interfaz: la raíz va aparte (proyecto o diálogo). */
@@ -1877,4 +1914,5 @@ export const EVENTOS_IPC = [
   'contenedor:lineas',
   'busqueda:resultado',
   'busqueda:fin',
+  'captura:imagen',
 ] as const satisfies readonly (keyof EventosNucleo)[];

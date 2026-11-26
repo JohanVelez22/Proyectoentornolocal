@@ -2,6 +2,7 @@
 import {
   Archive,
   Brush,
+  Camera,
   DocumentAttach,
   CodeSlash,
   Desktop,
@@ -49,6 +50,7 @@ const componentes: Record<Clave, Component> = {
   imagenes: defineAsyncComponent(() => import('../componentes/herramientas/Imagenes.vue')),
   comprimir: defineAsyncComponent(() => import('../componentes/herramientas/Comprimir.vue')),
   conversor: defineAsyncComponent(() => import('../componentes/herramientas/Conversor.vue')),
+  captura: defineAsyncComponent(() => import('../componentes/herramientas/CapturaPantalla.vue')),
 };
 
 const iconos: Record<Clave, Component> = {
@@ -71,6 +73,7 @@ const iconos: Record<Clave, Component> = {
   imagenes: Image,
   comprimir: Archive,
   conversor: DocumentAttach,
+  captura: Camera,
 };
 
 /** Paneles que necesitan más ancho (dos columnas o tablas). */
