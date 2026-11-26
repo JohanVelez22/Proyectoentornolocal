@@ -179,10 +179,9 @@ export class EditorCodigo {
 
   constructor(private readonly deps: DepsEditorCodigo) {}
 
+  /** Sin distinguir mayúsculas: en un sistema que sí las distingue solo se ata de más (también hace falta la misma huella). */
   private claveRuta(real: string): string {
-    return process.platform === 'win32' || process.platform === 'darwin'
-      ? real.toLowerCase()
-      : real;
+    return real.toLowerCase();
   }
 
   private entregar(real: string, h: HuellaArchivo): void {
