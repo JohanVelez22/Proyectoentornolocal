@@ -424,6 +424,21 @@ describe('optimizador de RAM: modos', () => {
     expect(plan.sinDatosActividad).toBe(true);
   });
 
+  it('con puertos conocidos, una conexión del PID del servicio por otro puerto también cuenta como uso (M3)', async () => {
+    const falsa = escenario();
+    falsa.conexiones = [{ puertoLocal: 41000, puertoRemoto: 41001, pid: 1000 }];
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, {
+        servicios: async () => [
+          servicio('mysql', 200 * MB, 40, { puertos: [3306], pid: 1000 }),
+          servicio('redis', 50 * MB, 40, { puertos: [6379], pid: 1001 }),
+        ],
+      }),
+    );
+    const plan = await o.planMemoria('moderado');
+    expect(plan.acciones.map((a) => a.id)).toEqual(['detener-inactivo:redis']);
+  });
+
   it('al aplicar se vuelve a mirar si hay conexiones: ocupado se salta, y sin poder leerlas también', async () => {
     const falsa = escenario();
     const detenidos: string[] = [];
@@ -734,6 +749,87 @@ describe('optimizador de RAM: se comprueba justo antes de actuar', () => {
     const plan = await o.planMemoria('profundo');
     const r = await aplicar(o, plan, ['cerrar-programa:100']);
     expect(r.resultados[0]).toMatchObject({ estado: 'pedido', liberado: 0 });
+  });
+
+  it('si no aparece en la relectura pero la consulta puntual dice que sigue (misma hora), no se afirma que cerró (M2)', async () => {
+    const falsa = escenario();
+    const original = falsa.procesosUsuario.map((p) => ({ ...p }));
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, {
+        esperar: async () => {
+          // Lista parcial: sin el 100, que en realidad sigue vivo.
+          falsa.procesosUsuario = original.filter((p) => p.pid !== 100);
+          falsa.inicioDeProceso = async () => 'inicio-100';
+        },
+      }),
+    );
+    const plan = await o.planMemoria('profundo');
+    const r = await aplicar(o, plan, ['cerrar-programa:100']);
+    expect(r.resultados[0]).toMatchObject({ estado: 'pedido', liberado: 0 });
+  });
+
+  it('si la consulta puntual dice que no existe, o falla, se afirma (o no) que cerró (M2)', async () => {
+    const falsa = escenario();
+    falsa.cierranAlPedir.add(100);
+    const o = new OptimizadorMemoria(depsBase(falsa));
+    const plan = await o.planMemoria('profundo');
+    const r = await aplicar(o, plan, ['cerrar-programa:100']);
+    expect(r.resultados[0]).toMatchObject({ estado: 'hecho', liberado: 900 * MB });
+    expect(falsa.consultasPid).toEqual([100]);
+
+    const falsa2 = escenario();
+    falsa2.cierranAlPedir.add(100);
+    falsa2.fallaConsultaPid = true;
+    const o2 = new OptimizadorMemoria(depsBase(falsa2));
+    const plan2 = await o2.planMemoria('profundo');
+    const r2 = await aplicar(o2, plan2, ['cerrar-programa:100']);
+    expect(r2.resultados[0]).toMatchObject({ estado: 'pedido', liberado: 0 });
+  });
+
+  it('si falla el árbol de procesos, el plan marca listadoFallido y al aplicar se salta por protegido (I3)', async () => {
+    const falsa = escenario();
+    const o = new OptimizadorMemoria(depsBase(falsa));
+    const plan = await o.planMemoria('profundo');
+    expect(plan.acciones.some((a) => a.tipo === 'cerrar-programa')).toBe(true);
+    const original = falsa.descendientes.bind(falsa);
+    falsa.descendientes = async () => {
+      throw new Error('sin árbol');
+    };
+    const r = await aplicar(o, plan, ['cerrar-programa:100']);
+    expect(r.resultados[0]).toMatchObject({ estado: 'saltado', motivo: 'protegido' });
+    expect(falsa.cierresIntentados).toEqual([]);
+
+    const o2 = new OptimizadorMemoria(depsBase(falsa));
+    const plan2 = await o2.planMemoria('profundo');
+    expect(plan2.listadoFallido).toBe(true);
+    expect(plan2.acciones.filter((a) => a.tipo === 'cerrar-programa')).toEqual([]);
+    falsa.descendientes = original;
+  });
+
+  it('un plan que dejó de ser el último mientras esperaba su turno en la cola caduca (M1)', async () => {
+    const falsa = escenario();
+    let soltar!: () => void;
+    const puerta = new Promise<void>((r) => (soltar = r));
+    const vaciadas: string[] = [];
+    const lenta: CacheApp = {
+      ...cache('lenta', MB, vaciadas),
+      vaciar: async () => {
+        await puerta;
+        vaciadas.push('lenta');
+        return MB;
+      },
+    };
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, { caches: () => [lenta, cache('otra', MB, vaciadas)] }),
+    );
+    const plan = await o.planMemoria('liviano');
+    const p1 = o.aplicarMemoria(plan.id, ['cache-app:lenta'], true);
+    const p2 = o.aplicarMemoria(plan.id, ['cache-app:otra'], true).catch((e: unknown) => e);
+    await o.planMemoria('liviano');
+    soltar();
+    await p1;
+    expect(await p2).toMatchObject({ codigo: 'memoria.plan_caducado' });
+    expect(vaciadas).toEqual(['lenta']);
   });
 
   it('un programa elevado (o con permisos que no permiten el cierre) se informa como no_se_pudo', async () => {
@@ -1153,6 +1249,89 @@ describe('implementación de Windows: solo lee y cierra con amabilidad', () => {
     ]);
     expect(llamadas[0]!.cmd).toMatch(/System32.NETSTAT\.EXE$/i);
     expect(interpretarNetstatEstablecidas('basura\n  TCP  x  y')).toEqual([]);
+  });
+
+  it('netstat se llama con -ano y sin -p (que solo lista IPv4); con salida mixta ve IPv4 e IPv6 y descarta UDP (C1)', async () => {
+    const llamadas: string[][] = [];
+    const w = new ProcesosUsuarioWindows(
+      async (_cmd, args) => {
+        llamadas.push(args);
+        return {
+          codigo: 0,
+          stdout: [
+            '',
+            'Conexiones activas',
+            '  Proto  Dirección local        Dirección remota       Estado           PID',
+            '  TCP    0.0.0.0:3306           0.0.0.0:0              LISTENING       1234',
+            '  TCP    [::]:3306              [::]:0                 LISTENING       1234',
+            '  TCP    127.0.0.1:51000        127.0.0.1:3306         ESTABLISHED     777',
+            '  TCP    [::1]:52000            [::1]:3306             ESTABLISHED     888',
+            '  UDP    0.0.0.0:5353           *:*                                    999',
+            '  UDP    [::]:5353              *:*                                    999',
+          ].join('\r\n'),
+          stderr: '',
+        };
+      },
+      { SystemRoot: 'C:\\Windows' },
+    );
+    const c = await w.conexiones();
+    expect(llamadas).toEqual([['-ano']]);
+    expect(c).toEqual([
+      { puertoLocal: 51000, puertoRemoto: 3306, pid: 777 },
+      { puertoLocal: 52000, puertoRemoto: 3306, pid: 888 },
+    ]);
+  });
+
+  it('una salida parcial de netstat no se toma por completa (I1)', async () => {
+    const parcial = [
+      '  TCP    127.0.0.1:51000        127.0.0.1:3306         ESTABLISHED     777',
+    ].join('\r\n');
+    const conCodigo = new ProcesosUsuarioWindows(
+      async () => ({ codigo: 1, stdout: parcial, stderr: 'fallo' }),
+      {},
+    );
+    await expect(conCodigo.conexiones()).rejects.toMatchObject({ codigo: 'memoria.no_disponible' });
+    const sinFilas = new ProcesosUsuarioWindows(
+      async () => ({ codigo: 0, stdout: 'Conexiones activas\r\n\r\n', stderr: '' }),
+      {},
+    );
+    await expect(sinFilas.conexiones()).rejects.toMatchObject({ codigo: 'memoria.no_disponible' });
+    // Solo filas en LISTENING cuentan como una lectura válida (sin conexiones en curso).
+    const soloEscucha = new ProcesosUsuarioWindows(
+      async () => ({
+        codigo: 0,
+        stdout: '  TCP    0.0.0.0:3306           0.0.0.0:0              LISTENING       1234',
+        stderr: '',
+      }),
+      {},
+    );
+    expect(await soloEscucha.conexiones()).toEqual([]);
+  });
+
+  it('"elevado" se detecta con Process.Handle (StartTime no falla con permisos limitados) en el listado y en el cierre (I2)', async () => {
+    const listado = scriptProcesosUsuario(1);
+    expect(listado).toContain('.Handle');
+    expect(listado).not.toContain('.StartTime');
+    const cierre = scriptCerrarVentana(4321, '133700000000000000', 'C:\\a.exe');
+    const iHandle = cierre.indexOf('$p.Handle');
+    expect(iHandle).toBeGreaterThan(-1);
+    expect(iHandle).toBeLessThan(cierre.indexOf('CloseMainWindow()'));
+    expect(cierre.slice(iHandle, iHandle + 80)).toContain("'NO_SE_PUDO'");
+  });
+
+  it('inicioDe devuelve la hora de inicio, null si no existe y falla si no se puede consultar', async () => {
+    let salida = '133700000000000000';
+    let codigo = 0;
+    const w = new ProcesosUsuarioWindows(async () => ({ codigo, stdout: salida, stderr: '' }), {});
+    expect(await w.inicioDe(10)).toBe('133700000000000000');
+    salida = 'NO_EXISTE';
+    expect(await w.inicioDe(10)).toBeNull();
+    salida = 'raro';
+    await expect(w.inicioDe(10)).rejects.toMatchObject({ codigo: 'memoria.no_disponible' });
+    salida = '1';
+    codigo = 1;
+    await expect(w.inicioDe(10)).rejects.toMatchObject({ codigo: 'memoria.no_disponible' });
+    await expect(w.inicioDe(0)).rejects.toBeInstanceOf(ErrorWolf);
   });
 
   it('las carpetas protegidas incluyen Windows y Windows Defender', () => {

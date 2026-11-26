@@ -13,6 +13,7 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   CapacidadesPlataforma,
   | 'procesosDelUsuario'
   | 'cerrarVentanaPrincipal'
+  | 'inicioDeProceso'
   | 'identidadActual'
   | 'rutasProtegidas'
   | 'conexionesActivas'
@@ -24,6 +25,9 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
 > = {
   procesosDelUsuario: async () => [],
   cerrarVentanaPrincipal: async () => 'no-se-pudo',
+  inicioDeProceso: async () => {
+    throw noDisponible();
+  },
   identidadActual: async () => {
     throw noDisponible();
   },

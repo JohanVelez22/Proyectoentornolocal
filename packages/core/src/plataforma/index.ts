@@ -107,6 +107,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'capturaDisponible',
   'procesosDelUsuario',
   'cerrarVentanaPrincipal',
+  'inicioDeProceso',
   'identidadActual',
   'rutasProtegidas',
   'conexionesActivas',

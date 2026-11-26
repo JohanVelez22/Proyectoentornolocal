@@ -279,6 +279,11 @@ export interface CapacidadesPlataforma {
    */
   cerrarVentanaPrincipal(pid: number, inicio: string, ruta: string): Promise<EstadoCierre>;
   /**
+   * Consulta puntual de un PID: su hora de inicio (la misma forma que `ProcesoUsuario.inicio`) o
+   * `null` si no existe. Falla si no se puede consultar: quien llama no afirma nada.
+   */
+  inicioDeProceso(pid: number): Promise<string | null>;
+  /**
    * Conexiones TCP establecidas ahora mismo (para no detener un servicio que alguien está usando).
    * Falla si no se pueden leer: quien llama debe tratar eso como "no se sabe" y no actuar.
    */

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import { codificarPowerShell } from './pathUsuarioWin';
-import { interpretarNetstatEstablecidas } from './netstat';
+import { interpretarNetstatEstablecidas, interpretarNetstatTodos } from './netstat';
 import { rutaPowerShell, rutaSistema32 } from './procesosWin';
 import type {
   ConexionActiva,
@@ -31,8 +31,9 @@ const SEP = '|';
  * se hace en WMI y no procesando todo con `Where-Object`).
  *
  * `elevado`: solo para los que tienen ventana (los únicos candidatos). Un proceso que este usuario
- * no puede abrir para consultarlo (`StartTime` falla con acceso denegado) es uno elevado o
- * protegido: no se puede ni inspeccionar ni cerrarle la ventana (UIPI), y se trata como protegido.
+ * no puede abrir con todos los derechos (`Process.Handle` falla con acceso denegado) es uno
+ * elevado o protegido: no se puede ni inspeccionar ni cerrarle la ventana (UIPI), y se trata como
+ * protegido. (`StartTime` no sirve: solo pide PROCESS_QUERY_LIMITED_INFORMATION y no falla.)
  * Leer el nivel de integridad del token exigiría compilar código C# (`Add-Type`), que no es barato.
  */
 export function scriptProcesosUsuario(sesion: number): string {
@@ -52,7 +53,7 @@ export function scriptProcesosUsuario(sesion: number): string {
     '    $v = 0; if ($vent.ContainsKey([int]$_.ProcessId)) { $v = 1 }',
     '    $s = 0; if ($serv.ContainsKey([int]$_.ProcessId)) { $s = 1 }',
     '    $e = 0',
-    '    if ($v -eq 1) { try { $null = [System.Diagnostics.Process]::GetProcessById([int]$_.ProcessId).StartTime } catch { $e = 1 } }',
+    '    if ($v -eq 1) { try { $null = [System.Diagnostics.Process]::GetProcessById([int]$_.ProcessId).Handle } catch { $e = 1 } }',
     `    [Console]::Out.WriteLine(($_.ProcessId, $_.SessionId, $c, $_.WorkingSetSize, $v, $s, $e, (B $_.Name), (B $_.ExecutablePath)) -join '${SEP}')`,
     '  }',
     '}',
@@ -106,6 +107,7 @@ export function scriptCerrarVentana(pid: number, inicio: string, ruta: string): 
     `if (Get-CimInstance Win32_Service -Filter 'ProcessId=${pid}') { ${salida('CAMBIO')} }`,
     `$p = Get-Process -Id ${pid} -ErrorAction SilentlyContinue`,
     `if (-not $p -or $p.MainWindowHandle -eq 0) { ${salida('SIN_VENTANA')} }`,
+    `try { $null = $p.Handle } catch { ${salida('NO_SE_PUDO')} }`,
     `try { $t = $p.StartTime.ToFileTimeUtc() } catch { ${salida('NO_SE_PUDO')} }`,
     `if ([math]::Abs($t - [int64]${inicio}) -gt 100000) { ${salida('CAMBIO')} }`,
     `if ($p.CloseMainWindow()) { ${salida('CERRADO')} } else { ${salida('NO_SE_PUDO')} }`,
@@ -223,14 +225,50 @@ export class ProcesosUsuarioWindows {
     }
   }
 
-  /** Conexiones TCP en curso (`netstat -ano`); falla si no se pueden leer. */
+  /**
+   * Hora de inicio (`ToFileTimeUtc`, como `ProcesoUsuario.inicio`) del PID, o null si no existe.
+   * Falla si no se puede consultar.
+   */
+  async inicioDe(pid: number): Promise<string | null> {
+    if (!Number.isInteger(pid) || pid <= 0) {
+      throw new ErrorWolf('memoria.no_disponible', 'PID no válido.');
+    }
+    try {
+      const script = [
+        "$ErrorActionPreference = 'Stop'",
+        `$w = Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}'`,
+        `if (-not $w) { [Console]::Out.Write('NO_EXISTE'); exit 0 }`,
+        `if (-not $w.CreationDate) { exit 3 }`,
+        '[Console]::Out.Write($w.CreationDate.ToFileTimeUtc())',
+      ].join('\n');
+      const r = await this.ejecutar(rutaPowerShell(this.env), codificarPowerShell(script), {
+        timeoutMs: 20_000,
+      });
+      if (r.codigo !== 0) throw new Error(r.stderr.trim());
+      const t = r.stdout.trim();
+      if (t === 'NO_EXISTE') return null;
+      if (/^\d+$/.test(t)) return t;
+      throw new Error('salida inesperada');
+    } catch {
+      throw new ErrorWolf('memoria.no_disponible', 'No se pudo consultar el proceso.');
+    }
+  }
+
+  /**
+   * Conexiones TCP en curso (`netstat -ano`, sin `-p`: `-p TCP` solo lista IPv4 y un cliente en
+   * `[::1]` quedaría sin verse); falla si no se pueden leer o la salida no parece completa.
+   */
   async conexiones(): Promise<ConexionActiva[]> {
     try {
-      const r = await this.ejecutar(rutaSistema32(this.env, 'NETSTAT.EXE'), ['-ano', '-p', 'TCP'], {
+      const r = await this.ejecutar(rutaSistema32(this.env, 'NETSTAT.EXE'), ['-ano'], {
         timeoutMs: 15_000,
       });
-      if (r.codigo !== 0 && r.stdout.trim() === '') throw new Error(r.stderr.trim());
-      return interpretarNetstatEstablecidas(r.stdout);
+      // Una salida parcial (código de error) o sin una sola fila TCP no es una lectura completa.
+      if (r.codigo !== 0) throw new Error(r.stderr.trim());
+      const enCurso = interpretarNetstatEstablecidas(r.stdout);
+      const escuchando = interpretarNetstatTodos(r.stdout).filter((f) => f.protocolo === 'TCP');
+      if (enCurso.length + escuchando.length === 0) throw new Error('sin filas TCP');
+      return enCurso;
     } catch {
       throw new ErrorWolf('memoria.no_disponible', 'No se pudieron leer las conexiones.');
     }

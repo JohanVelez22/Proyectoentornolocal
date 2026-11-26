@@ -916,6 +916,11 @@ export class PlataformaWindows implements PlataformaCompleta {
     return this.procesosUsuario().cerrarVentana(pid, inicio, ruta);
   }
 
+  /** Hora de inicio de un PID (consulta puntual) o null si no existe. */
+  inicioDeProceso(pid: number): Promise<string | null> {
+    return this.procesosUsuario().inicioDe(pid);
+  }
+
   /** Conexiones TCP en curso (para no detener un servicio que se está usando). */
   conexionesActivas(): Promise<ConexionActiva[]> {
     return this.procesosUsuario().conexiones();

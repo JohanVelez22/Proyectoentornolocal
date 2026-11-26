@@ -426,6 +426,16 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return this.resultadoCierre;
   }
 
+  /** Consultas puntuales por PID (M2); `fallaConsultaPid` simula no poder consultar. */
+  readonly consultasPid: number[] = [];
+  fallaConsultaPid = false;
+
+  async inicioDeProceso(pid: number): Promise<string | null> {
+    this.consultasPid.push(pid);
+    if (this.fallaConsultaPid) throw new ErrorWolf('memoria.no_disponible', 'consulta fallida');
+    return this.procesosUsuario.find((x) => x.pid === pid)?.inicio ?? null;
+  }
+
   async conexionesActivas(): Promise<ConexionActiva[]> {
     if (this.fallaConexiones) throw new ErrorWolf('memoria.no_disponible', 'sin conexiones');
     return this.conexiones.map((c) => ({ ...c }));

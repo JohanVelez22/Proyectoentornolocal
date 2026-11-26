@@ -134,6 +134,7 @@ export interface DepsMemoria {
     PlataformaCompleta,
     | 'procesosDelUsuario'
     | 'cerrarVentanaPrincipal'
+    | 'inicioDeProceso'
     | 'identidadActual'
     | 'rutasProtegidas'
     | 'descendientes'
@@ -307,7 +308,10 @@ function enUso(s: ServicioPropio, conexiones: ConexionActiva[]): boolean | null 
     return s.pid === null ? null : conexiones.some((c) => c.pid === s.pid);
   }
   return conexiones.some(
-    (c) => s.puertos.includes(c.puertoLocal) || s.puertos.includes(c.puertoRemoto),
+    (c) =>
+      s.puertos.includes(c.puertoLocal) ||
+      s.puertos.includes(c.puertoRemoto) ||
+      (s.pid !== null && c.pid === s.pid),
   );
 }
 
@@ -357,13 +361,11 @@ export class OptimizadorMemoria {
     const raicesFly = procesos.filter(esFlyEnv).map((p) => p.pid);
     const propios = new Set<number>(raicesPropias);
     const fly = new Set<number>(raicesFly);
-    try {
-      const desc = await this.d.plataforma.descendientes([...raicesPropias, ...raicesFly]);
-      for (const r of raicesPropias) for (const h of desc.get(r) ?? []) propios.add(h);
-      for (const r of raicesFly) for (const h of desc.get(r) ?? []) fly.add(h);
-    } catch {
-      // Sin el árbol, igualmente se protegen la app, lo supervisado, FlyEnv y lo de sus carpetas.
-    }
+    // Sin el árbol se protegería de menos: si falla, el error sube (en el plan, `listadoFallido`;
+    // al aplicar, el programa se salta como protegido).
+    const desc = await this.d.plataforma.descendientes([...raicesPropias, ...raicesFly]);
+    for (const r of raicesPropias) for (const h of desc.get(r) ?? []) propios.add(h);
+    for (const r of raicesFly) for (const h of desc.get(r) ?? []) fly.add(h);
     return {
       usuario: yo.usuario,
       sesion: yo.sesion,
@@ -525,7 +527,11 @@ export class OptimizadorMemoria {
     confirmar(confirmado);
     const plan = this.ultimo;
     if (!plan || plan.id !== planId || this.caducado(plan)) throw planCaducado();
-    const r = this.enCurso.then(() => this.aplicar(plan, ids));
+    const r = this.enCurso.then(() => {
+      // Al llegar su turno, otro plan pudo haber reemplazado a este.
+      if (this.ultimo !== plan) throw planCaducado();
+      return this.aplicar(plan, ids);
+    });
     this.enCurso = r.catch(() => undefined);
     return r;
   }
@@ -614,8 +620,9 @@ export class OptimizadorMemoria {
         case 'cerrar-programa': {
           const p = a.programa!;
           if (p.inicio === null || p.ruta === null) return salto('cambio');
-          const ctx = await lectura.contexto();
-          if (motivoProtegido(p, ctx) !== null) return salto('protegido');
+          // Sin poder leer el contexto (p. ej. el árbol de procesos) no se sabe qué protege: se salta.
+          const ctx = await lectura.contexto().catch(() => null);
+          if (ctx === null || motivoProtegido(p, ctx) !== null) return salto('protegido');
           // Todo lo demás (mismo pid, dueño, sesión, inicio, ruta, ventana) lo comprueba la
           // plataforma dentro de la misma operación que pide el cierre.
           const e = await this.d.plataforma.cerrarVentanaPrincipal(p.pid, p.inicio, p.ruta);
@@ -657,11 +664,18 @@ export class OptimizadorMemoria {
       const a = plan.acciones.get(r.id);
       const p = a?.programa;
       if (!a || !p) continue;
-      const vivo = lista.some((x) => x.pid === p.pid && x.inicio === p.inicio);
-      if (!vivo) {
-        r.estado = 'hecho';
-        r.liberado = a.publica.memoria;
+      if (lista.some((x) => x.pid === p.pid && x.inicio === p.inicio)) continue;
+      // Que no salga en la lista no prueba que cerró (la lectura puede ser parcial): se confirma
+      // con una consulta puntual. Existe con la misma hora: sigue vivo. No existe: cerró. Otra
+      // hora: el PID lo heredó otro programa, el nuestro cerró. Si la consulta falla, nada se afirma.
+      try {
+        const inicio = await this.d.plataforma.inicioDeProceso(p.pid);
+        if (inicio !== null && inicio === p.inicio) continue;
+      } catch {
+        continue;
       }
+      r.estado = 'hecho';
+      r.liberado = a.publica.memoria;
     }
   }
 }
