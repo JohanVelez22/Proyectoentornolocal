@@ -1,4 +1,4 @@
-import { lstat } from 'node:fs/promises';
+import { lstat, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import type { EstadoProceso } from '../procesos/supervisor';
@@ -76,6 +76,13 @@ export async function hayPaqueteReverb(carpeta: string): Promise<boolean> {
   try {
     const d = await lstat(dir);
     if (d.isSymbolicLink() || !d.isDirectory()) return false;
+    // Ningún tramo puede ser un enlace o unión (p. ej. `vendor` apuntando fuera): la ruta real
+    // de la carpeta es exactamente la esperada dentro del proyecto.
+    const [real, raiz] = await Promise.all([realpath(dir), realpath(carpeta)]);
+    const esperada = path.join(raiz, 'vendor', 'laravel', 'reverb');
+    // `path.relative` ya distingue mayúsculas según el sistema de archivos del SO.
+    const igual = path.relative(esperada, real) === '';
+    if (!igual) return false;
     const c = await lstat(path.join(dir, 'composer.json'));
     return c.isFile() && !c.isSymbolicLink();
   } catch {

@@ -3,7 +3,12 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { Almacen, AlmacenCredenciales, migrarCredenciales } from './almacen';
+import {
+  Almacen,
+  AlmacenCredenciales,
+  migrarCredenciales,
+  retirarCredencialesMinio,
+} from './almacen';
 import {
   BasesDeDatos,
   type BaseListada,
@@ -1217,6 +1222,7 @@ export class Nucleo {
         puertosInternosVhost(cfg, id, await instalador.instalados('php')),
     });
     await migrarCredenciales(rutas, almacen, credenciales);
+    await retirarCredencialesMinio(credenciales).catch(() => undefined);
     // Servicios de datos a instancias (`mysql` → `mysql@8.4`) antes de readoptar los procesos.
     let avisoInstancias: string | null = null;
     try {

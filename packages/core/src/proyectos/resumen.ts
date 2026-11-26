@@ -143,7 +143,10 @@ export async function buscarPuertoLibre(o: {
   const reservados = new Set(o.reservados);
   const probar = o.probar ?? puertoLibreAhora;
   const pref = o.preferido;
-  if (pref && !reservados.has(pref) && (await probar(pref))) return pref;
+  // El preferido solo vale entre 1024 y 65535: nunca un puerto privilegiado ni uno fuera de rango.
+  if (pref && pref >= 1024 && pref <= 65535 && !reservados.has(pref) && (await probar(pref))) {
+    return pref;
+  }
   for (let p = PRIMER_PUERTO_PROYECTO; p <= ULTIMO_PUERTO_PROYECTO; p++) {
     if (reservados.has(p)) continue;
     if (await probar(p)) return p;

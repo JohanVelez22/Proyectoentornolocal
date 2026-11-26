@@ -7,6 +7,7 @@ import { CatalogoVivo, listaFija, validarIndice } from '../src/catalogo/vivo';
 import { fuenteMeilisearch } from '../src/catalogo/fuentes/github';
 import { IndiceMalformado, type ContextoFuente } from '../src/catalogo/fuentes/tipos';
 import { FUENTES_VERSIONES } from '../src/catalogo/vivo';
+import { AlmacenCredenciales, retirarCredencialesMinio } from '../src/almacen';
 import { ArchivoCredencialesSchema, ConfigSchema } from '../src/tipos';
 import { entornoDelHijo } from '../src/procesos/entorno';
 import { Rutas } from '../src/rutas';
@@ -266,5 +267,19 @@ describe('M2: la huella en vivo debe coincidir con la fijada', () => {
     expect(r.origen).toBe('fija');
     expect(r.versiones.map((v) => v.sha256)).toEqual([fijaMeili().sha256]);
     expect((await c.buscar('meilisearch', fijaMeili().version))?.sha256).toBe(fijaMeili().sha256);
+  });
+
+  it('N2: la migración borra solo las credenciales minio* y es idempotente', async () => {
+    const rutas = new Rutas(base);
+    await rutas.asegurar();
+    const alm = new AlmacenCredenciales(rutas);
+    const c = { usuario: 'u', clave: 'CLAVE-DE-PRUEBA-FALSA-0000' };
+    await alm.guardar('mysql', c);
+    await alm.guardar('minio' as never, c);
+    await alm.guardar('minio@actual' as never, c);
+    await alm.guardar('redis@8', c);
+    await retirarCredencialesMinio(alm);
+    await retirarCredencialesMinio(alm);
+    expect(Object.keys(await alm.todas()).sort()).toEqual(['mysql', 'redis@8']);
   });
 });

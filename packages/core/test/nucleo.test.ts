@@ -1644,6 +1644,14 @@ describe('Nucleo (Etapa B)', () => {
     expect(n.editorVhost).toBeDefined();
   });
 
+  it('N5: buscarPuertoLibre no acepta un preferido privilegiado o fuera de rango', async () => {
+    const probar = async () => true;
+    expect(await buscarPuertoLibre({ reservados: [], preferido: 80, probar })).toBe(8000);
+    expect(await buscarPuertoLibre({ reservados: [], preferido: 1023, probar })).toBe(8000);
+    expect(await buscarPuertoLibre({ reservados: [], preferido: 70000, probar })).toBe(8000);
+    expect(await buscarPuertoLibre({ reservados: [], preferido: 1024, probar })).toBe(1024);
+  });
+
   it('buscarPuertoLibre respeta el preferido y salta los reservados y los ocupados', async () => {
     const ocupados = new Set([8001]);
     const probar = async (p: number): Promise<boolean> => !ocupados.has(p);

@@ -194,3 +194,15 @@ export async function migrarCredenciales(
   // ConfigSchema ya no tiene "credenciales": guardar lo deja fuera.
   await almacen.guardar(await almacen.leer());
 }
+
+/**
+ * MinIO se retiró del catálogo (proyecto archivado): una sola vez, y de forma idempotente, se
+ * borran sus credenciales (`minio` y `minio@…`) de etc/credenciales.json. Sus carpetas `bin/minio`
+ * y `data/minio` NO se tocan: pueden ser datos del usuario.
+ */
+export async function retirarCredencialesMinio(credenciales: AlmacenCredenciales): Promise<void> {
+  const claves = Object.keys(await credenciales.todas()).filter(
+    (k) => k === 'minio' || k.startsWith('minio@'),
+  );
+  for (const k of claves) await credenciales.borrar(k as ClaveCredencial);
+}

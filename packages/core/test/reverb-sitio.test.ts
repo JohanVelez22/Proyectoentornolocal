@@ -254,6 +254,22 @@ describe('M4: vendor/laravel/reverb debe ser una carpeta de verdad', () => {
     }
   });
 
+  it('N6: rechaza que un tramo anterior (vendor) sea un enlace que sale del proyecto', async () => {
+    const fuera = mkdtempSync(path.join(tmpdir(), 'pel-reverb-fuera-'));
+    try {
+      mkdirSync(path.join(fuera, 'laravel', 'reverb'), { recursive: true });
+      writeFileSync(path.join(fuera, 'laravel', 'reverb', 'composer.json'), '{}');
+      try {
+        symlinkSync(fuera, path.join(carpeta, 'vendor'), 'junction');
+      } catch {
+        return; // sin permiso para crear enlaces: no se puede probar aquí
+      }
+      expect(await hayPaqueteReverb(carpeta)).toBe(false);
+    } finally {
+      rmSync(fuera, { recursive: true, force: true });
+    }
+  });
+
   it('acepta la carpeta normal y rechaza un archivo con ese nombre', async () => {
     conPaquete();
     expect(await hayPaqueteReverb(carpeta)).toBe(true);
