@@ -165,6 +165,17 @@ export function validarIndice(
       { servicio },
     );
   }
+  const vistas = new Set<string>();
+  for (const v of r.data as VersionDisponible[]) {
+    if (vistas.has(v.version)) {
+      throw new ErrorWolf(
+        'catalogo.indice_invalido',
+        `El índice de versiones de ${servicio} repite la versión ${v.version}`,
+        { servicio },
+      );
+    }
+    vistas.add(v.version);
+  }
   return r.data as VersionDisponible[];
 }
 
@@ -201,26 +212,45 @@ export function listaFija(servicio: ServicioInstalable): VersionDisponible[] {
 }
 
 /**
- * Una versión que el índice en vivo trae con la misma URL que la lista fija debe traer también
- * la misma huella fuerte (mismo algoritmo). Si cambió, el binario publicado ya no es el que se
- * fijó al armar el catálogo: se descarta el índice entero (caché o lista fija) y nunca se instala
- * con una huella nueva sin que nadie lo note.
+ * La lista fija manda sobre el índice en vivo para las versiones que ya fijó con huella fuerte. La
+ * entrada fija se busca solo por versión (un tag sin `v` u otro espejo no la esquiva):
+ * - misma URL y mismo algoritmo con otro valor: el binario publicado cambió, se descarta el índice
+ *   entero (`IndiceMalformado`: caché o lista fija);
+ * - otra URL u otro algoritmo (NuGet publica SHA-512 y se fijó SHA-256): no hay con qué comparar,
+ *   así que la entrada se queda con la URL y la huella fijadas. Nunca se instala con una huella
+ *   nueva sin que nadie lo note.
  */
-export function verificarContraListaFija(
+export function aplicarListaFija(
   servicio: ServicioInstalable,
   versiones: readonly VersionDisponible[],
-): void {
+): VersionDisponible[] {
   const fija = listaFija(servicio);
-  for (const v of versiones) {
-    const f = fija.find((x) => x.version === v.version && x.url === v.url);
-    if (!f || !huellaFuerte(f.huella) || !huellaFuerte(v.huella)) continue;
-    if (f.huella!.algoritmo !== v.huella!.algoritmo) continue;
-    if (f.huella!.valor.toLowerCase() !== v.huella!.valor.toLowerCase()) {
-      throw new IndiceMalformado(
-        `La huella en vivo de ${servicio} ${v.version} no coincide con la fijada en el catálogo`,
-      );
+  return versiones.map((v) => {
+    const f = fija.find((x) => x.version === v.version);
+    if (!f || !huellaFuerte(f.huella)) return v;
+    const mismaUrl = v.url === f.url;
+    if (mismaUrl && !huellaFuerte(v.huella)) return v; // `conHuellaFija` la completa
+    if (mismaUrl && v.huella!.algoritmo === f.huella!.algoritmo) {
+      if (v.huella!.valor.toLowerCase() !== f.huella!.valor.toLowerCase()) {
+        throw new IndiceMalformado(
+          `La huella en vivo de ${servicio} ${v.version} no coincide con la fijada en el catálogo`,
+        );
+      }
+      return v;
     }
-  }
+    const resto = { ...v };
+    delete resto.huellaDiferida;
+    delete resto.subcarpeta;
+    return {
+      ...resto,
+      url: f.url,
+      sha256: f.sha256,
+      huella: f.huella ?? null,
+      formato: f.formato,
+      ...(f.subcarpeta ? { subcarpeta: f.subcarpeta } : {}),
+      ...(f.ejecutable ? { ejecutable: f.ejecutable } : {}),
+    };
+  });
 }
 
 export interface FiltroVersiones {
@@ -357,9 +387,11 @@ export class CatalogoVivo {
         ...(cache?.validadores ? { validadores: cache.validadores } : {}),
         ...(cache?.notas ? { notas: cache.notas } : {}),
       };
-      const versiones = validarIndice(servicio, await fuente.listar(ctx));
+      const versiones = aplicarListaFija(
+        servicio,
+        validarIndice(servicio, await fuente.listar(ctx)),
+      );
       if (versiones.length === 0) throw new Error('El índice no trae versiones');
-      verificarContraListaFija(servicio, versiones);
       const fecha = this.ahora.toISOString();
       await this.cache.guardar(servicio, fecha, versiones, guardar).catch(() => undefined);
       return { versiones: this.conHuellaFija(servicio, versiones), origen: 'vivo', fecha };

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { listarVersiones, type VersionDisponible } from '../src/catalogo/catalogo';
-import { CatalogoVivo, listaFija } from '../src/catalogo/vivo';
+import { CatalogoVivo, listaFija, validarIndice } from '../src/catalogo/vivo';
 import { fuenteMeilisearch } from '../src/catalogo/fuentes/github';
 import { IndiceMalformado, type ContextoFuente } from '../src/catalogo/fuentes/tipos';
 import { FUENTES_VERSIONES } from '../src/catalogo/vivo';
@@ -210,6 +210,54 @@ describe('M2: la huella en vivo debe coincidir con la fijada', () => {
   it('con la misma huella, el índice en vivo vale', async () => {
     const c = await catalogoCon(enVivo(fijaMeili().sha256!));
     expect((await c.listar('meilisearch')).origen).toBe('vivo');
+  });
+
+  it('N1: un tag sin la v (otra URL) con otra huella no esquiva la fijada', async () => {
+    const f = fijaMeili();
+    const c = await catalogoCon({
+      ...enVivo('e'.repeat(64)),
+      url: f.url.replace('/download/v', '/download/'),
+    });
+    const r = await c.listar('meilisearch');
+    const v = r.versiones.find((x) => x.version === f.version)!;
+    expect(v.url).toBe(f.url);
+    expect(v.sha256).toBe(f.sha256);
+    expect(v.huella).toEqual(f.huella);
+    expect((await c.buscar('meilisearch', f.version))?.sha256).toBe(f.sha256);
+  });
+
+  it('N1: otro algoritmo (sha512 en vez del sha256 fijado) se queda con la huella fijada', async () => {
+    const f = fijaMeili();
+    const c = await catalogoCon({
+      ...f,
+      huella: { algoritmo: 'sha512', valor: 'd'.repeat(128) },
+      sha256: null,
+      origen: 'vivo',
+    });
+    const r = await c.listar('meilisearch');
+    expect(r.versiones[0]!.huella).toEqual(f.huella);
+    expect(r.versiones[0]!.sha256).toBe(f.sha256);
+  });
+
+  it('N1: una versión repetida (la mala primero) invalida el índice', async () => {
+    const buena = fijaMeili();
+    const mala = enVivo('f'.repeat(64));
+    expect(() => validarIndice('meilisearch', [mala, buena])).toThrow(
+      expect.objectContaining({ codigo: 'catalogo.indice_invalido' }),
+    );
+    const rutas = new Rutas(base);
+    await rutas.asegurar();
+    const c = new CatalogoVivo(rutas, { idCatalogo: () => 'win-x64' }, fetch, {
+      ahora: () => HOY,
+      fuentes: {
+        meilisearch: {
+          servicio: 'meilisearch',
+          hostsIndice: ['api.github.com'],
+          listar: async () => [mala, buena],
+        },
+      },
+    });
+    expect((await c.listar('meilisearch')).origen).toBe('fija');
   });
 
   it('con otra huella para la misma versión y URL, se usa la lista fija y no la nueva', async () => {
