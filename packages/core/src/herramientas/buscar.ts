@@ -466,6 +466,10 @@ export async function buscar(
     /** Resultados del archivo: salen al terminar, porque un secreto puede aparecer en un trozo tardío. */
     const pendientes: Omit<ResultadoBusqueda, 'id'>[] = [];
     let colaPrevia = '';
+    /** Cuántas coincidencias caben aún en el tope de la búsqueda: `pendientes` nunca lo pasa. */
+    const restante = (): number => limites.coincidencias - resumen.coincidencias;
+    /** Se llenó el cupo con este archivo: se deja de leer y la búsqueda queda truncada. */
+    let lleno = false;
 
     const vaciar = (): void => {
       if (senal.aborted) return;
@@ -493,6 +497,11 @@ export async function buscar(
       if (hasta > revisadas) {
         const lote = lineas.slice(revisadas, hasta);
         for (const h of comparar(lote)) {
+          // Un archivo con millones de coincidencias no acumula más de lo que cabe en el tope.
+          if (pendientes.length >= restante()) {
+            lleno = true;
+            break;
+          }
           const idx = revisadas + h.i;
           const { texto: extracto, inicio } = extractoDe(lineas[idx]!, h.col);
           pendientes.push({
@@ -519,6 +528,8 @@ export async function buscar(
       }
     };
 
+    let fallo: unknown = null;
+    let terminado = false;
     try {
       for await (const trozo of flujo) {
         const buf = trozo as Buffer;
@@ -526,7 +537,8 @@ export async function buscar(
           sondeado = true;
           if (buf.subarray(0, BYTES_SONDEO).includes(0)) {
             resumen.omitidos++;
-            return;
+            terminado = true;
+            break;
           }
         }
         leidos += buf.length;
@@ -535,24 +547,33 @@ export async function buscar(
         if (leidos > limites.bytesPorArchivo) {
           // Creció mientras se leía: se deja lo ya revisado.
           resumen.omitidos++;
-          return;
+          terminado = true;
+          break;
         }
         revisar();
         const texto = decodificador.write(buf);
         // Un secreto en el contenido (también partido entre dos trozos) vuelve sensible el archivo.
         if (!estado.sensible && detector.porContenido(colaPrevia + texto)) estado.sensible = true;
         colaPrevia = texto.slice(-400);
-        procesar(texto, false);
+        // Con el cupo lleno ya no se busca, pero se sigue leyendo (solo para ver si el archivo resulta
+        // sensible más adelante: entonces lo que ya está pendiente sale oculto).
+        if (!lleno) procesar(texto, false);
+        else if (estado.sensible) break;
       }
-      procesar(decodificador.end(), true);
+      if (!terminado && !lleno) procesar(decodificador.end(), true);
     } catch (e) {
-      if (e instanceof Corte || e instanceof ErrorWolf) throw e;
-      // Archivo bloqueado o que desapareció: se sigue con el siguiente.
-      resumen.omitidos++;
+      fallo = e;
     } finally {
       flujo.destroy();
-      vaciar();
     }
+    // Un error del propio archivo (expresión lenta o inválida) o una cancelación salen tal cual: no se
+    // vuelcan los pendientes ni se deja que otro corte tape el error original.
+    if (fallo instanceof ErrorWolf) throw fallo;
+    if (fallo instanceof Corte && fallo.motivo === 'cancelado') throw fallo;
+    // Archivo bloqueado o que desapareció: se sigue con el siguiente.
+    if (fallo !== null && !(fallo instanceof Corte)) resumen.omitidos++;
+    vaciar();
+    if (fallo instanceof Corte) throw fallo;
   };
 
   /** Ruta REAL de algo que se recorre desde la raíz (no hay enlaces dentro: se parte de `raizReal`). */
