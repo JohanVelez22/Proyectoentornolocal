@@ -120,7 +120,7 @@ const estiloZona = computed(() => {
 const estiloTarjeta = computed(() => {
   const z = zona.value;
   if (!z) return null;
-  const ancho = Math.min(440, window.innerWidth - 32);
+  const ancho = Math.min(480, window.innerWidth - 32);
   if (z.x < 320) {
     const alto = 300;
     const top = Math.max(16, Math.min(z.y - 8, window.innerHeight - alto - 16));
@@ -231,7 +231,7 @@ const estiloTarjeta = computed(() => {
 .tarjeta.centrada {
   left: 50%;
   top: 50%;
-  width: min(440px, calc(100vw - 32px));
+  width: min(480px, calc(100vw - 32px));
   transform: translate(-50%, -50%);
 }
 .cabecera {
@@ -295,8 +295,13 @@ h2 {
 .botones {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  /* Siempre en una sola fila: «Saltar» a la izquierda y el resto agrupado a la derecha. */
+  flex-wrap: nowrap;
   gap: 8px;
+}
+.botones :deep(.n-button) {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .espacio {
   flex: 1;

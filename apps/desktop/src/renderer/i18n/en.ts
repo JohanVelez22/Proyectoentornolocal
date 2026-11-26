@@ -5650,7 +5650,7 @@ export const en: Textos = {
     paso: (n: number, total: number) => `Step ${n} of ${total}`,
     anterior: 'Back',
     siguiente: 'Next',
-    saltar: 'Skip tour',
+    saltar: 'Skip',
     terminar: 'Get started',
     cerrar: 'Close the tour',
     reabrir: 'Press Esc to leave. You can watch it again from Settings › Appearance.',

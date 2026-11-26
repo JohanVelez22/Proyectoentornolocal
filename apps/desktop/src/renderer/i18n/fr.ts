@@ -5836,7 +5836,7 @@ export const fr: Textos = {
     paso: (n: number, total: number) => `Étape ${n} sur ${total}`,
     anterior: 'Précédent',
     siguiente: 'Suivant',
-    saltar: 'Passer la visite',
+    saltar: 'Passer',
     terminar: 'Commencer',
     cerrar: 'Fermer la visite',
     reabrir: 'Appuyez sur Échap pour quitter. Vous pouvez la revoir depuis Réglages › Apparence.',

@@ -5686,7 +5686,7 @@ export const pt: Textos = {
     paso: (n: number, total: number) => `Passo ${n} de ${total}`,
     anterior: 'Anterior',
     siguiente: 'Próximo',
-    saltar: 'Pular tour',
+    saltar: 'Pular',
     terminar: 'Começar',
     cerrar: 'Fechar o tour',
     reabrir: 'Pressione Esc para sair. Você pode ver o tour de novo em Configurações › Aparência.',

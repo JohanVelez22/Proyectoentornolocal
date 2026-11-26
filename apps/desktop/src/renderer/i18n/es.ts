@@ -5678,7 +5678,7 @@ export const es = {
     paso: (n: number, total: number) => `Paso ${n} de ${total}`,
     anterior: 'Anterior',
     siguiente: 'Siguiente',
-    saltar: 'Saltar recorrido',
+    saltar: 'Saltar',
     terminar: 'Empezar',
     cerrar: 'Cerrar el recorrido',
     reabrir: 'Pulse Esc para salir. Puede volver a verlo desde Ajustes › Apariencia.',

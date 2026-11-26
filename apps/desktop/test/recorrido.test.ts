@@ -40,6 +40,16 @@ describe('Recorrido de bienvenida (D38b)', () => {
     expect(vue).toContain('t.siguiente');
   });
 
+  it('los botones del pie caben en una sola fila a 960 px: sin salto de línea y «Saltar» corto (D38c)', () => {
+    expect(vue).toMatch(/\.botones \{[^}]*flex-wrap: nowrap/);
+    expect(vue).toMatch(/\.botones :deep\(\.n-button\) \{[^}]*white-space: nowrap/);
+    // «Saltar» es una palabra; el resto del pie conserva su texto completo.
+    for (const [id, d] of Object.entries(diccionarios)) {
+      expect(d.asistenteInicio.saltar.length, id).toBeLessThanOrEqual(8);
+      expect(d.asistenteInicio.saltar, id).not.toMatch(/\s/);
+    }
+  });
+
   it('la barra lateral marca cada entrada con data-nav y Ajustes puede reabrir el recorrido', () => {
     expect(fuente('componentes', 'Marco.vue')).toContain("{ 'data-nav': k }");
     expect(fuente('componentes', 'SeccionApariencia.vue')).toContain(
