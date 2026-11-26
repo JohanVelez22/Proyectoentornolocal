@@ -58,7 +58,8 @@ if (datos && datos.trim() !== '') {
 }
 
 if (!process.env.WOLFCORE_GUARDIAN_SANDBOX) {
-  const sandbox = mkdtempSync(path.join(os.tmpdir(), 'wolfcore-pruebas-'));
+  // Sin «wolf» en el nombre: captura-servicio.test.ts vigila carpetas nuevas /captura|wolf/ en el TEMP.
+  const sandbox = mkdtempSync(path.join(os.tmpdir(), 'pel-guardian-datos-'));
   process.env.WOLFCORE_LOCALAPPDATA_ORIGINAL = process.env.LOCALAPPDATA ?? '';
   process.env.WOLFCORE_XDG_ORIGINAL = process.env.XDG_DATA_HOME ?? '';
   process.env.LOCALAPPDATA = path.join(sandbox, 'Local');
