@@ -8,11 +8,12 @@
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "dev": "vite build -c vite.cli.config.ts && electron-vite dev",
+    "build:cli": "vite build -c vite.cli.config.ts",
+    "build": "electron-vite build && vite build -c vite.cli.config.ts",
     "preview": "electron-vite preview",
-    "dist": "electron-vite build && electron-builder --config electron-builder.yml",
-    "dist:win": "electron-vite build && electron-builder --win --config electron-builder.yml",
+    "dist": "electron-vite build && vite build -c vite.cli.config.ts && electron-builder --config electron-builder.yml",
+    "dist:win": "electron-vite build && vite build -c vite.cli.config.ts && electron-builder --win --config electron-builder.yml",
     "test": "vitest run",
     "typecheck": "vue-tsc --noEmit -p tsconfig.json"
   },
