@@ -1640,12 +1640,14 @@ export interface ApiEntorno {
     revisar(ids?: IdRevision[]): Promise<Hallazgo[]>;
     /**
      * Aplica la reparación del hallazgo. `confirmacion` sale SOLO del diálogo que mostró qué se
-     * hará; `reparacionId` elige la alternativa (`cambiar-puerto`).
+     * hará; `reparacionId` elige la alternativa (`cambiar-puerto`); `seleccion` son las claves de
+     * `Hallazgo.elementos` que el usuario dejó marcadas (todas si no se indica).
      */
     reparar(
       hallazgoId: string,
       confirmacion: true,
       reparacionId?: 'cambiar-puerto',
+      seleccion?: string[],
     ): Promise<ResultadoReparacion>;
     ultimo(): Promise<Hallazgo[]>;
   };

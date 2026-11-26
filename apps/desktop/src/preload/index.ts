@@ -350,8 +350,10 @@ const api: ApiEntorno = {
   },
   doctor: {
     revisar: (ids) => invocar('doctor.revisar', ids),
-    reparar: (id, confirmacion, reparacionId) =>
-      invocar('doctor.reparar', id, confirmacion, reparacionId),
+    reparar: (id, confirmacion, reparacionId, seleccion) =>
+      seleccion === undefined
+        ? invocar('doctor.reparar', id, confirmacion, reparacionId)
+        : invocar('doctor.reparar', id, confirmacion, reparacionId, seleccion),
     ultimo: () => invocar('doctor.ultimo'),
   },
   confianza: {

@@ -68,6 +68,7 @@ export const useDoctor = defineStore('doctor', () => {
     hallazgoId: string,
     confirmacion: true,
     reparacionId?: 'cambiar-puerto',
+    seleccion?: string[],
   ): Promise<void> {
     const previa = enCurso.get(hallazgoId);
     if (previa) return previa;
@@ -75,11 +76,10 @@ export const useDoctor = defineStore('doctor', () => {
     const p = (async () => {
       let fin: EstadoReparacion;
       try {
-        const r: ResultadoReparacion = await api().doctor.reparar(
-          hallazgoId,
-          confirmacion,
-          reparacionId,
-        );
+        const r: ResultadoReparacion =
+          seleccion === undefined
+            ? await api().doctor.reparar(hallazgoId, confirmacion, reparacionId)
+            : await api().doctor.reparar(hallazgoId, confirmacion, reparacionId, seleccion);
         fin = r.ok
           ? {
               estado: 'hecha',

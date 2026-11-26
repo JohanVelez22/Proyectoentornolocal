@@ -2093,12 +2093,16 @@ const TABLA: Record<RutaIpc, Manejador> = {
 
   // ---- Doctor y confianza de la CA ----
   'doctor.revisar': (n, _s, ids) => n.doctor.revisar(idsRevision(ids)),
-  'doctor.reparar': (n, _s, id, confirmacion, reparacionId) =>
-    n.doctor.reparar(
-      textoAcotado(id, 1, 200, 'hallazgo'),
-      confirmado(confirmacion),
-      alternativaDoctor(reparacionId),
-    ),
+  'doctor.reparar': (n, _s, id, confirmacion, reparacionId, seleccion) => {
+    const hallazgo = textoAcotado(id, 1, 200, 'hallazgo');
+    const conf = confirmado(confirmacion);
+    const alternativa = alternativaDoctor(reparacionId);
+    const marcadas = seleccionDoctor(seleccion);
+    // Sin selección, la llamada es la de siempre (solo tres argumentos).
+    return marcadas === undefined
+      ? n.doctor.reparar(hallazgo, conf, alternativa)
+      : n.doctor.reparar(hallazgo, conf, alternativa, marcadas);
+  },
   'doctor.ultimo': (n) => n.doctor.ultimo(),
   'confianza.estado': (n) => n.estadoConfianza(),
   'confianza.nodeGlobal': (n, _s, activar, confirmacion) => {
@@ -2138,6 +2142,16 @@ function alternativaDoctor(v: unknown): 'cambiar-puerto' | undefined {
   if (v === undefined) return undefined;
   if (v !== 'cambiar-puerto') throw new Error('Argumento no válido: reparación');
   return v;
+}
+
+/**
+ * Elementos marcados en el diálogo de una reparación (reglas del cortafuegos…): una lista de
+ * textos acotados. El núcleo además comprueba que todos sean elementos que el hallazgo mostró.
+ */
+function seleccionDoctor(v: unknown): string[] | undefined {
+  if (v === undefined) return undefined;
+  if (!Array.isArray(v) || v.length > 200) throw new Error('Argumento no válido: selección');
+  return (v as unknown[]).map((x) => textoAcotado(x, 1, 400, 'selección'));
 }
 
 /** Cambios de preferencias de avisos del renderer, validados contra la lista de tipos. */

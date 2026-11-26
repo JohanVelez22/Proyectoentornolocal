@@ -50,6 +50,17 @@ function pedir(h: Hallazgo, alternativa: boolean): void {
   const reparacion = alternativa ? h.alternativa : h.reparacion;
   if (!reparacion || reparacion.soloInforma) return;
   pedido.value = { hallazgo: h, reparacion, alternativa };
+  // Reglas del cortafuegos: todas empiezan marcadas; el usuario desmarca las que no quiere tocar.
+  marcadas.value = new Set((h.elementos ?? []).map((e) => e.clave));
+}
+
+/** Elementos que el usuario puede marcar o desmarcar en el diálogo (D46). */
+const marcadas = ref<Set<string>>(new Set());
+function alternar(clave: string, v: boolean): void {
+  const n = new Set(marcadas.value);
+  if (v) n.add(clave);
+  else n.delete(clave);
+  marcadas.value = n;
 }
 
 const puertoNuevo = computed(() => {
@@ -58,18 +69,29 @@ const puertoNuevo = computed(() => {
   return p.hallazgo.datos['alternativo'] ?? null;
 });
 
-/** Cortafuegos (D46): el diálogo muestra la lista exacta de reglas antes de confirmar. */
-const conLista = computed(() => {
-  const id = pedido.value?.reparacion.id;
-  return id === 'quitar-reglas-firewall' || id === 'restaurar-reglas-firewall';
-});
+/** Hallazgo con elementos (reglas del cortafuegos, D46): el diálogo los lista, uno por uno, con casilla. */
+const conLista = computed(() => (pedido.value?.hallazgo.elementos?.length ?? 0) > 0);
+const sinSeleccion = computed(() => conLista.value && marcadas.value.size === 0);
 
 /** Única vía a `reparar`: el botón "Aplicar" del diálogo, que pasa la confirmación explícita. */
 function aplicar(): void {
   const p = pedido.value;
   if (!p) return;
   pedido.value = null;
-  void doctor.reparar(p.hallazgo.id, true, p.alternativa ? 'cambiar-puerto' : undefined);
+  const alternativa = p.alternativa ? 'cambiar-puerto' : undefined;
+  if (p.hallazgo.elementos?.length) {
+    // Solo lo marcado, en el orden en que se mostró.
+    const marcado = p.hallazgo.elementos.filter((e) => marcadas.value.has(e.clave));
+    if (marcado.length === 0) return;
+    void doctor.reparar(
+      p.hallazgo.id,
+      true,
+      alternativa,
+      marcado.map((e) => e.clave),
+    );
+    return;
+  }
+  void doctor.reparar(p.hallazgo.id, true, alternativa);
 }
 
 /** Lleva a la tarjeta del servicio o del proyecto del hallazgo y la resalta (D41). */
@@ -251,7 +273,19 @@ const firefoxActivos = computed(() => conf.value?.firefox.some((p) => p.activo) 
         <p class="que-hara">{{ textoReparacion(pedido.reparacion.codigo) }}</p>
         <template v-if="conLista">
           <p>{{ t.dialogo.reglas }}</p>
-          <pre class="lista-exacta">{{ pedido.hallazgo.evidencia }}</pre>
+          <ul class="lista-exacta">
+            <li v-for="e in pedido.hallazgo.elementos" :key="e.clave">
+              <NCheckbox
+                :checked="marcadas.has(e.clave)"
+                @update:checked="(v: boolean) => alternar(e.clave, v)"
+              >
+                <code>{{ e.texto }}</code>
+              </NCheckbox>
+            </li>
+          </ul>
+          <NAlert v-if="sinSeleccion" type="warning" :show-icon="false">
+            {{ t.dialogo.sinSeleccion }}
+          </NAlert>
           <p>{{ t.dialogo.reglasNota }}</p>
         </template>
         <p v-if="puertoNuevo !== null">{{ t.dialogo.puerto(puertoNuevo) }}</p>
@@ -262,7 +296,9 @@ const firefoxActivos = computed(() => conf.value?.firefox.some((p) => p.activo) 
       <template #footer>
         <NSpace justify="end">
           <NButton @click="pedido = null">{{ t.dialogo.cancelar }}</NButton>
-          <NButton type="primary" @click="aplicar">{{ t.dialogo.aplicar }}</NButton>
+          <NButton type="primary" :disabled="sinSeleccion" @click="aplicar">
+            {{ t.dialogo.aplicar }}
+          </NButton>
         </NSpace>
       </template>
     </NModal>
@@ -374,7 +410,13 @@ h3 {
   color: inherit;
   font-size: 12px;
   line-height: 1.5;
-  white-space: pre-wrap;
+  list-style: none;
   overflow-wrap: anywhere;
+}
+.lista-exacta li {
+  padding: 4px 0;
+}
+.lista-exacta code {
+  white-space: pre-wrap;
 }
 </style>

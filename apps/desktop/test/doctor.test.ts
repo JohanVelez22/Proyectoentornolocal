@@ -107,6 +107,27 @@ describe('IPC del Doctor y de la confianza', () => {
     expect(nucleo.doctor.reparar).toHaveBeenLastCalledWith('puertos:80', true, 'cambiar-puerto');
   });
 
+  it('reparar: la selección de reglas (D46) es una lista de textos acotados', async () => {
+    const { nucleo, llamar } = montarIpc();
+    for (const mala of ['{A-1}', [1], [''], ['x'.repeat(401)], new Array(201).fill('a'), {}]) {
+      expect(await llamar('doctor.reparar', 'firewall:x', true, undefined, mala)).toMatchObject({
+        ok: false,
+      });
+    }
+    // Sin confirmación no pasa nada aunque lleve selección.
+    expect(await llamar('doctor.reparar', 'firewall:x', false, undefined, ['a'])).toMatchObject({
+      ok: false,
+    });
+    expect(nucleo.doctor.reparar).not.toHaveBeenCalled();
+    await llamar('doctor.reparar', 'firewall:x', true, undefined, ['{A-1}', '{B-2}']);
+    expect(nucleo.doctor.reparar).toHaveBeenLastCalledWith('firewall:x', true, undefined, [
+      '{A-1}',
+      '{B-2}',
+    ]);
+    await llamar('doctor.reparar', 'firewall:x', true, undefined, []);
+    expect(nucleo.doctor.reparar).toHaveBeenLastCalledWith('firewall:x', true, undefined, []);
+  });
+
   it('Node global y Firefox exigen confirmación explícita', async () => {
     const { nucleo, llamar } = montarIpc();
     expect(await llamar('confianza.nodeGlobal', true)).toMatchObject({ ok: false });
