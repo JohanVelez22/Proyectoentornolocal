@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Play, Server, Stop } from '@vicons/ionicons5';
-import { NButton, NCard, NEmpty, NIcon, NSkeleton, NSpace, NTab, NTabs } from 'naive-ui';
+import { NButton, NCard, NIcon, NSkeleton, NSpace, NTab, NTabs } from 'naive-ui';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import type { ServicioVersiones } from '../../shared/api';
@@ -13,7 +13,7 @@ import VersionesServicio from '../componentes/VersionesServicio.vue';
 import Php from './Php.vue';
 import { useAccion } from '../composables/useAccion';
 import { useFoco } from '../composables/useFoco';
-import IlustracionVacia from '../componentes/IlustracionVacia.vue';
+import EstadoVacio from '../componentes/EstadoVacio.vue';
 import { textos } from '../i18n';
 import { useServicios, type GrupoServicios, type InstalableCatalogo } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
@@ -166,14 +166,17 @@ onMounted(() => {
       </NSpace>
     </div>
 
-    <div v-if="servicios.cargado && servicios.nadaInstalado" class="vacio">
-      <NEmpty :description="t.vacio" size="large">
-        <template #icon><IlustracionVacia :icono="Server" /></template>
-        <template #extra>
-          <NButton size="small" type="primary" @click="irAInstalar">{{ t.irAInstalar }}</NButton>
-        </template>
-      </NEmpty>
-    </div>
+    <EstadoVacio
+      v-if="servicios.cargado && servicios.nadaInstalado"
+      marco
+      :icono="Server"
+      :titulo="textos.estadosVacios.serviciosVacio.titulo"
+      :texto="textos.estadosVacios.serviciosVacio.texto"
+    >
+      <NButton size="small" type="primary" @click="irAInstalar">
+        {{ textos.estadosVacios.serviciosVacio.accion }}
+      </NButton>
+    </EstadoVacio>
 
     <!-- Mientras llega la primera foto se reserva el espacio de las tarjetas (sin saltos). -->
     <section v-if="!servicios.cargado" class="grupo" aria-busy="true">

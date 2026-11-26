@@ -16,7 +16,6 @@ import {
 } from '@vicons/ionicons5';
 import {
   NButton,
-  NEmpty,
   NForm,
   NFormItem,
   NIcon,
@@ -32,7 +31,6 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import type { DisponibilidadAdminer, MotorBd, MotorSql, ObjetivoSqlIpc } from '../../shared/api';
 import { api } from '../api';
-import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import DialogoConexion from '../componentes/DialogoConexion.vue';
 import DialogoImportar from '../componentes/DialogoImportar.vue';
 import DialogoNuevaBase from '../componentes/DialogoNuevaBase.vue';
@@ -281,14 +279,17 @@ function irAServicios(): void {
     </div>
 
     <!-- Sin ningún motor propio instalado -->
-    <div v-if="instaladosListos && servicios.cargado && !motores.length" class="vacio">
-      <NEmpty :description="t.vacio" size="large">
-        <template #icon><IlustracionVacia :icono="Layers" /></template>
-        <template #extra>
-          <NButton size="small" type="primary" @click="irAServicios">{{ t.irAServicios }}</NButton>
-        </template>
-      </NEmpty>
-    </div>
+    <EstadoVacio
+      v-if="instaladosListos && servicios.cargado && !motores.length"
+      marco
+      :icono="Layers"
+      :titulo="textos.estadosVacios.basesSinMotor.titulo"
+      :texto="textos.estadosVacios.basesSinMotor.texto"
+    >
+      <NButton size="small" type="primary" @click="irAServicios">
+        {{ textos.estadosVacios.basesSinMotor.accion }}
+      </NButton>
+    </EstadoVacio>
 
     <div v-else-if="!activo" aria-busy="true">
       <NSkeleton text :width="280" />

@@ -474,7 +474,7 @@ export const es = {
       'disco.categoria_invalida': 'Esa categoría de limpieza no existe.',
       'disco.ruta_vetada':
         'La categoría toca una ruta protegida (datos, respaldos, proyectos o FlyEnv); no se limpió nada.',
-      'disco.sin_analisis': 'Vuelve a analizar antes de limpiar: el análisis caducó o falta.',
+      'disco.sin_analisis': 'Analice de nuevo antes de limpiar: el análisis caducó o falta.',
       'disco.ocupada': 'Ya hay un análisis o una limpieza en curso.',
       'disco.sin_registro': 'No se pudo crear el registro de la limpieza; no se borró nada.',
       'editor.sin_confirmar': 'Confirma el guardado antes de continuar.',
@@ -494,7 +494,7 @@ export const es = {
         'Ese archivo no se abrió en el editor (o su versión cambió): ábrelo de nuevo.',
       'editor.eol_mixto': 'El archivo mezcla saltos de línea: confirma normalizarlos para guardar.',
       'editor.contenido_invalido': 'El contenido no es texto válido.',
-      'editor.huella_invalida': 'Falta la huella del archivo abierto: vuelve a abrirlo.',
+      'editor.huella_invalida': 'Falta la huella del archivo abierto: ábralo de nuevo.',
       'editor.archivo_cambiado':
         'El archivo cambió fuera del editor desde que se abrió. Recárgalo o confirma sobrescribirlo.',
       'editor.copia_fallo': 'No se pudo hacer la copia previa ({codigo}); no se guardó nada.',
@@ -503,7 +503,7 @@ export const es = {
       'memoria.sin_confirmar': 'Confirma la acción en el diálogo antes de continuar.',
       'memoria.modo_invalido': 'Ese modo de optimización no existe.',
       'memoria.plan_caducado':
-        'La lista caducó o ya no es la actual. Vuelve a verla antes de aplicar.',
+        'La lista caducó o ya no es la actual. Vea la lista de nuevo antes de aplicar.',
       'memoria.no_disponible':
         'El optimizador de memoria no está disponible aquí o no pudo leer el sistema.',
       'conversor.archivo_invalido':
@@ -4199,8 +4199,7 @@ export const es = {
       vcredist: 'Visual C++',
       'enlazador-msvc': 'Enlazador de C++',
       antivirus: 'Antivirus',
-      firewall:
-        'Quitar las reglas que marque, una por una y por su nombre exacto. Antes se apunta una copia en etc/cortafuegos-quitadas.json (solo para mostrar) y otra, protegida, en una carpeta que solo pueden escribir los administradores. Las reglas de otros programas nunca se tocan.',
+      firewall: 'Cortafuegos',
       servicios: 'Servicios',
     },
     reparaciones: {
@@ -4940,7 +4939,7 @@ export const es = {
     cambioExterno: {
       titulo: 'El archivo cambió fuera del editor',
       texto:
-        'Otro programa lo modificó desde que lo abriste, así que no se guardó nada. Puedes recargarlo (se pierden tus cambios) o sobrescribirlo con lo que tienes aquí.',
+        'Otro programa lo modificó desde que lo abrió, así que no se guardó nada. Puede recargarlo (se pierden sus cambios) o sobrescribirlo con lo que tiene aquí.',
       recargar: 'Recargar y descartar mis cambios',
       sobrescribir: 'Sobrescribir…',
       sobrescribirTitulo: 'Sobrescribir el archivo',
@@ -4991,7 +4990,7 @@ export const es = {
       temp: {
         nombre: 'Archivos temporales',
         ayuda:
-          'Los de tu carpeta TEMP con más de 24 horas. Se borran definitivamente; se regeneran solos.',
+          'Los de su carpeta TEMP con más de 24 horas. Se borran definitivamente; se regeneran solos.',
       },
       'cache-chrome': {
         nombre: 'Caché de Google Chrome',
@@ -5058,7 +5057,7 @@ export const es = {
     saltados: (n: number) => `Se saltaron ${n} archivos`,
     cancelado: 'Limpieza cancelada: lo ya borrado se queda borrado.',
     topeEjecucion:
-      'Se llegó al tope de archivos de una ejecución: vuelve a analizar y limpiar para seguir.',
+      'Se llegó al tope de archivos de una ejecución: analice y limpie de nuevo para seguir.',
     registroFallido:
       'No se pudo seguir escribiendo el registro de la limpieza, así que se paró: lo ya borrado está anotado hasta ese punto.',
     motivos: {
@@ -5526,6 +5525,18 @@ export const es = {
   },
   /** Estados vacíos que guían: qué es, por qué está vacío y la acción principal (D38b). */
   estadosVacios: {
+    basesSinMotor: {
+      titulo: 'Aún no hay un motor de bases de datos',
+      texto:
+        'Instale MySQL, MariaDB, PostgreSQL o MongoDB desde Servicios para crear y administrar las bases de sus proyectos.',
+      accion: 'Ir a Servicios',
+    },
+    serviciosVacio: {
+      titulo: 'Todavía no hay servicios instalados',
+      texto:
+        'Los servicios (Nginx, PHP, bases de datos…) son lo que hace funcionar sus sitios. Empiece por Nginx y PHP, o por una base de datos.',
+      accion: 'Instalar un servicio',
+    },
     registrosSinFuentes: {
       titulo: 'Aún no hay registros',
       texto:

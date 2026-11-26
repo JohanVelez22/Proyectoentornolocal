@@ -4314,8 +4314,7 @@ export const fr: Textos = {
       vcredist: 'Visual C++',
       'enlazador-msvc': 'Éditeur de liens C++',
       antivirus: 'Antivirus',
-      firewall:
-        'Supprimer les règles que vous cochez, une par une et par leur nom exact. Une copie est d’abord notée dans etc/cortafuegos-quitadas.json (pour affichage seulement) et une autre, protégée, dans un dossier que seuls les administrateurs peuvent modifier. Les règles des autres programmes ne sont jamais touchées.',
+      firewall: 'Pare-feu',
       servicios: 'Services',
     },
     reparaciones: {
@@ -5681,6 +5680,18 @@ export const fr: Textos = {
   },
   /** Estados vacíos que guían: qué es, por qué está vacío y la acción principal (D38b). */
   estadosVacios: {
+    basesSinMotor: {
+      titulo: 'Aucun moteur de base de données pour le moment',
+      texto:
+        'Installez MySQL, MariaDB, PostgreSQL ou MongoDB depuis Services pour créer et gérer les bases de vos projets.',
+      accion: 'Aller à Services',
+    },
+    serviciosVacio: {
+      titulo: 'Aucun service installé pour le moment',
+      texto:
+        'Les services (Nginx, PHP, bases de données…) font fonctionner vos sites. Commencez par Nginx et PHP, ou par une base de données.',
+      accion: 'Installer un service',
+    },
     registrosSinFuentes: {
       titulo: 'Aucun journal pour le moment',
       texto:

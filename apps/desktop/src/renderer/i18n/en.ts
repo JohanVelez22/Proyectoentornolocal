@@ -4171,8 +4171,7 @@ export const en: Textos = {
       vcredist: 'Visual C++',
       'enlazador-msvc': 'C++ linker',
       antivirus: 'Antivirus',
-      firewall:
-        'Remove the rules you tick, one by one and by their exact name. First a copy is noted in etc/cortafuegos-quitadas.json (for display only) and another, protected, in a folder that only administrators can write to. Rules of other programs are never touched.',
+      firewall: 'Firewall',
       servicios: 'Services',
     },
     reparaciones: {
@@ -5501,6 +5500,18 @@ export const en: Textos = {
   },
   /** Estados vacíos que guían: qué es, por qué está vacío y la acción principal (D38b). */
   estadosVacios: {
+    basesSinMotor: {
+      titulo: 'No database engine yet',
+      texto:
+        'Install MySQL, MariaDB, PostgreSQL or MongoDB from Services to create and manage your projects’ databases.',
+      accion: 'Go to Services',
+    },
+    serviciosVacio: {
+      titulo: 'No services installed yet',
+      texto:
+        'Services (Nginx, PHP, databases…) are what make your sites run. Start with Nginx and PHP, or with a database.',
+      accion: 'Install a service',
+    },
     registrosSinFuentes: {
       titulo: 'No logs yet',
       texto:

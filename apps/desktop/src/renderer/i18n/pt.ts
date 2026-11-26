@@ -4207,8 +4207,7 @@ export const pt: Textos = {
       vcredist: 'Visual C++',
       'enlazador-msvc': 'Vinculador C++',
       antivirus: 'Antivírus',
-      firewall:
-        'Remover as regras marcadas, uma por uma e pelo nome exato. Antes é anotada uma cópia em etc/cortafuegos-quitadas.json (só para exibição) e outra, protegida, em uma pasta que só os administradores podem escrever. As regras de outros programas nunca são tocadas.',
+      firewall: 'Firewall',
       servicios: 'Serviços',
     },
     reparaciones: {
@@ -5535,6 +5534,18 @@ export const pt: Textos = {
   },
   /** Estados vacíos que guían: qué es, por qué está vacío y la acción principal (D38b). */
   estadosVacios: {
+    basesSinMotor: {
+      titulo: 'Ainda não há um motor de banco de dados',
+      texto:
+        'Instale MySQL, MariaDB, PostgreSQL ou MongoDB em Serviços para criar e administrar os bancos dos seus projetos.',
+      accion: 'Ir para Serviços',
+    },
+    serviciosVacio: {
+      titulo: 'Ainda não há serviços instalados',
+      texto:
+        'Os serviços (Nginx, PHP, bancos de dados…) fazem seus sites funcionarem. Comece pelo Nginx e pelo PHP, ou por um banco de dados.',
+      accion: 'Instalar um serviço',
+    },
     registrosSinFuentes: {
       titulo: 'Ainda não há registros',
       texto:
