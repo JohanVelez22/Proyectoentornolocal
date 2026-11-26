@@ -61,6 +61,7 @@ const componentes: Record<Clave, Component> = {
   guiaTuneles: defineAsyncComponent(() => import('../componentes/herramientas/GuiaTuneles.vue')),
   guiaHttp: defineAsyncComponent(() => import('../componentes/herramientas/GuiaHttp.vue')),
   editor: defineAsyncComponent(() => import('../componentes/herramientas/EditorCodigo.vue')),
+  diffCarpetas: defineAsyncComponent(() => import('../componentes/herramientas/DiffCarpetas.vue')),
 };
 
 const iconos: Record<Clave, Component> = {
@@ -88,6 +89,7 @@ const iconos: Record<Clave, Component> = {
   guiaTuneles: Book,
   guiaHttp: Book,
   editor: Create,
+  diffCarpetas: GitCompare,
 };
 
 /** Paneles que necesitan más ancho (dos columnas o tablas). */
@@ -103,6 +105,7 @@ const ANCHAS: Clave[] = [
   'guiaTuneles',
   'guiaHttp',
   'editor',
+  'diffCarpetas',
 ];
 
 const busqueda = ref('');

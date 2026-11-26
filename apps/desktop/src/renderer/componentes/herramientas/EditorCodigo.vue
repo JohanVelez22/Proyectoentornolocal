@@ -273,6 +273,10 @@ watch(
 
 watch(modificado, (v) => {
   solicitudes.editorSinGuardar = v;
+  // El proceso principal lo necesita para preguntar al salir desde la bandeja (D44, M-A).
+  void api()
+    .editorCodigo.avisarCambios(v)
+    .catch(() => undefined);
 });
 
 watch(oscuro, (v) => {
@@ -305,6 +309,9 @@ onBeforeUnmount(() => {
   vista.value?.destroy();
   vista.value = null;
   solicitudes.editorSinGuardar = false;
+  void api()
+    .editorCodigo.avisarCambios(false)
+    .catch(() => undefined);
 });
 </script>
 
