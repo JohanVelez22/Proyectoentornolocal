@@ -1,7 +1,7 @@
 import { ErrorWolf } from '../errores';
 import type { PerfilRed, ReglasEntrada } from './firewallWin';
 import { desinstalarEnCarpeta } from './rustupRegistro';
-import { chmod, mkdir, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { LanzadorOculto } from './lanzarOculto';
 import { descendientesDeHijos } from './procesosWin';
@@ -15,6 +15,8 @@ import type {
   EstadoCierre,
   IdentidadUsuario,
   ProcesoUsuario,
+  NavegadorLimpieza,
+  RutasCategoriaLimpieza,
   IdCatalogo,
   IdTerminal,
   InstalacionAjena,
@@ -435,6 +437,49 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   rutasProtegidas(): string[] {
     return [...this.carpetasProtegidas];
+  }
+
+  // ---- Limpieza de disco (D37): todo apunta a un árbol temporal que pone la prueba ----
+
+  /** Lo que devuelve `rutasLimpieza` (la prueba lo llena con rutas de su carpeta temporal). */
+  limpieza: RutasCategoriaLimpieza[] = [];
+  /** Navegadores "abiertos"; null = no se puede saber (la lectura falla). */
+  navegadoresAbiertosFalsos: NavegadorLimpieza[] | null = [];
+  administrador = false;
+  /** Papelera falsa: si es true, `aPapelera` registra y MUEVE el archivo a `papeleraDestino`. */
+  papeleraDisponible = true;
+  readonly enPapelera: string[] = [];
+  /** Carpeta que recibe lo "enviado a la papelera" (si no, solo se registra y se deja donde está). */
+  papeleraDestino: string | null = null;
+
+  async rutasLimpieza(): Promise<RutasCategoriaLimpieza[]> {
+    return this.limpieza.map((c) => ({ ...c, rutas: [...c.rutas] }));
+  }
+
+  async navegadoresAbiertos(): Promise<NavegadorLimpieza[]> {
+    if (this.navegadoresAbiertosFalsos === null) throw new Error('no se pudo leer');
+    return [...this.navegadoresAbiertosFalsos];
+  }
+
+  async esAdministrador(): Promise<boolean> {
+    return this.administrador;
+  }
+
+  async aPapelera(ruta: string): Promise<boolean> {
+    if (!this.papeleraDisponible) return false;
+    this.enPapelera.push(ruta);
+    if (this.papeleraDestino !== null) {
+      await mkdir(this.papeleraDestino, { recursive: true });
+      await rename(
+        ruta,
+        path.join(this.papeleraDestino, `${this.enPapelera.length}-${path.basename(ruta)}`),
+      );
+    }
+    return true;
+  }
+
+  registrarPapelera(): void {
+    // La falsa no usa la de la app: `aPapelera` ya registra lo enviado.
   }
 
   async reglasEntradaPermitidas(): Promise<ReglasEntrada> {

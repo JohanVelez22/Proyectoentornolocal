@@ -20,6 +20,7 @@ import {
   Time,
   Pulse,
   Text,
+  TrashBin,
 } from '@vicons/ionicons5';
 import { NDrawer, NDrawerContent, NEmpty, NIcon, NInput } from 'naive-ui';
 import { computed, defineAsyncComponent, ref, watch, type Component } from 'vue';
@@ -51,6 +52,9 @@ const componentes: Record<Clave, Component> = {
   comprimir: defineAsyncComponent(() => import('../componentes/herramientas/Comprimir.vue')),
   conversor: defineAsyncComponent(() => import('../componentes/herramientas/Conversor.vue')),
   captura: defineAsyncComponent(() => import('../componentes/herramientas/CapturaPantalla.vue')),
+  limpiezaDisco: defineAsyncComponent(
+    () => import('../componentes/herramientas/LimpiezaDisco.vue'),
+  ),
 };
 
 const iconos: Record<Clave, Component> = {
@@ -74,10 +78,20 @@ const iconos: Record<Clave, Component> = {
   comprimir: Archive,
   conversor: DocumentAttach,
   captura: Camera,
+  limpiezaDisco: TrashBin,
 };
 
 /** Paneles que necesitan más ancho (dos columnas o tablas). */
-const ANCHAS: Clave[] = ['diff', 'puertos', 'regex', 'json', 'markdown', 'buscar', 'contrasenas'];
+const ANCHAS: Clave[] = [
+  'diff',
+  'puertos',
+  'regex',
+  'json',
+  'markdown',
+  'buscar',
+  'contrasenas',
+  'limpiezaDisco',
+];
 
 const busqueda = ref('');
 const abierta = ref<Clave | null>(null);

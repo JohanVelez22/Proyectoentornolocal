@@ -45,8 +45,14 @@ import {
 import { crearLanzadorOculto, type LanzadorOculto } from './lanzarOculto';
 import { interpretarNetstatTodos, interpretarTasklist, interpretarTasklistTodos } from './netstat';
 import { aBase64, codificarPowerShell, PathUsuarioWindows } from './pathUsuarioWin';
-import { ProcesosWindows, descendientesEnTabla, rutaSistema32 } from './procesosWin';
+import {
+  ProcesosWindows,
+  descendientesEnTabla,
+  rutaPowerShell,
+  rutaSistema32,
+} from './procesosWin';
 import { ProcesosUsuarioWindows } from './procesosUsuarioWin';
+import { navegadoresDeProcesos, rutasLimpiezaWindows, SCRIPT_ES_ADMIN } from './limpiezaWin';
 import {
   abrirTerminalWindows,
   leerRutaDockerRegistro,
@@ -71,6 +77,8 @@ import type {
   EstadoCierre,
   IdentidadUsuario,
   ProcesoUsuario,
+  NavegadorLimpieza,
+  RutasCategoriaLimpieza,
   Ejecutor,
   IdCatalogo,
   InstalacionAjena,
@@ -919,6 +927,47 @@ export class PlataformaWindows implements PlataformaCompleta {
 
   rutasProtegidas(): string[] {
     return this.procesosUsuario().rutasProtegidas();
+  }
+
+  // ---- Limpieza de disco (D37) ----
+
+  private enviarAPapelera: ((ruta: string) => Promise<void>) | null = null;
+
+  rutasLimpieza(carpetaDatos: string): Promise<RutasCategoriaLimpieza[]> {
+    return rutasLimpiezaWindows(this.entorno, carpetaDatos, undefined, this.carpetaTemporal);
+  }
+
+  /** Navegadores abiertos según la lista de procesos del usuario; si no se lee, falla. */
+  async navegadoresAbiertos(): Promise<NavegadorLimpieza[]> {
+    const procesos = await this.procesosUsuario().listar();
+    return navegadoresDeProcesos(procesos.map((p) => p.nombre));
+  }
+
+  async esAdministrador(): Promise<boolean> {
+    try {
+      const r = await this.ejecutar(
+        rutaPowerShell(this.entorno),
+        codificarPowerShell(SCRIPT_ES_ADMIN),
+        { timeoutMs: 20_000 },
+      );
+      return r.codigo === 0 && r.stdout.trim().toLowerCase() === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  registrarPapelera(enviar: (ruta: string) => Promise<void>): void {
+    this.enviarAPapelera = enviar;
+  }
+
+  async aPapelera(ruta: string): Promise<boolean> {
+    if (!this.enviarAPapelera) return false;
+    try {
+      await this.enviarAPapelera(ruta);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async reglasEntradaPermitidas(): Promise<ReglasEntrada> {

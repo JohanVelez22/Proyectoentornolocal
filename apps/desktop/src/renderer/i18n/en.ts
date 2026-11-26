@@ -443,6 +443,13 @@ export const en: Textos = {
       'captura.sin_imagen': 'There is no image to capture.',
       'captura.imagen_invalida': 'The capture image is not valid.',
       'conversor.formato': 'That conversion is not available.',
+      'disco.sin_confirmar': 'Confirm the cleanup in the dialog before continuing.',
+      'disco.categoria_invalida': 'That cleanup category does not exist.',
+      'disco.ruta_vetada':
+        'The category touches a protected path (data, backups, projects or FlyEnv); nothing was cleaned.',
+      'disco.sin_analisis': 'Analyze again before cleaning: the analysis expired or is missing.',
+      'disco.ocupada': 'An analysis or cleanup is already running.',
+      'disco.sin_registro': 'The cleanup log could not be created; nothing was deleted.',
       'memoria.sin_confirmar': 'Confirm the action in the dialog before continuing.',
       'memoria.modo_invalido': 'That optimization mode does not exist.',
       'memoria.plan_caducado':
@@ -3353,6 +3360,11 @@ export const en: Textos = {
         nombre: 'Screen capture',
         descripcion: 'Region, window or full screen, with a quick editor.',
       },
+      limpiezaDisco: {
+        nombre: 'Disk cleanup',
+        descripcion:
+          'Analyze and delete temp files and regenerable caches, with a preview and confirmation.',
+      },
     },
     errores: {
       jsonVacio: 'Type or paste some JSON.',
@@ -4555,6 +4567,93 @@ export const en: Textos = {
       no_se_pudo: 'The close request could not be sent (the program runs with elevated rights)',
     },
     otraVez: 'Start over',
+  },
+  limpiezaDisco: {
+    intro:
+      'First it analyzes and shows how much each item takes. Nothing is deleted until you confirm, and it never runs on its own or in the background.',
+    analizar: 'Analyze',
+    analizando: 'Analyzing…',
+    cancelarAnalisis: 'Cancel',
+    vacio: 'There is nothing to clean.',
+    categorias: {
+      temp: {
+        nombre: 'Temporary files',
+        ayuda:
+          'Files in your TEMP folder older than 24 hours. Deleted permanently; they regenerate on their own.',
+      },
+      'cache-chrome': {
+        nombre: 'Google Chrome cache',
+        ayuda: 'Only the cache folders of each profile; never cookies, passwords or history.',
+      },
+      'cache-edge': {
+        nombre: 'Microsoft Edge cache',
+        ayuda: 'Only the cache folders of each profile; never cookies, passwords or history.',
+      },
+      'cache-brave': {
+        nombre: 'Brave cache',
+        ayuda: 'Only the cache folders of each profile; never cookies, passwords or history.',
+      },
+      'cache-firefox': {
+        nombre: 'Firefox cache',
+        ayuda: 'Only the cache2 folder of each profile; never cookies, passwords or history.',
+      },
+      'wolfcore-descargas': {
+        nombre: 'WolfCore Dev cached downloads',
+        ayuda: 'Loose archives that are no longer used. Sent to the recycle bin.',
+      },
+      'wolfcore-registros': {
+        nombre: 'WolfCore Dev logs',
+        ayuda: 'Logs older than 30 days. Sent to the recycle bin.',
+      },
+      prefetch: {
+        nombre: 'Windows Prefetch',
+        ayuda:
+          'Optional. Windows regenerates it, but it needs WolfCore Dev to run as administrator.',
+      },
+    },
+    bloqueos: {
+      'navegador-abierto': 'Browser open: close it to clean its cache',
+      'requiere-admin': 'Requires running WolfCore Dev as administrator',
+      'ruta-vetada': 'Protected path: not cleaned',
+    },
+    borradoDefinitivo: 'Deleted permanently (they regenerate on their own)',
+    borradoPapelera: 'Sent to the system recycle bin',
+    archivos: (n: number) => (n === 1 ? '1 file' : `${n} files`),
+    carpetas: 'By folder',
+    truncado: 'The analysis stopped at the file limit: there is more than shown.',
+    marcadas: (n: number, t: number) => `${n} of ${t} categories selected`,
+    total: (b: string) => `About ${b} would be freed`,
+    limpiar: 'Clean selected',
+    confirmarTitulo: 'Clean these categories?',
+    confirmarTexto: (n: number) => `${n} categories will be cleaned.`,
+    confirmarDefinitivo: 'TEMP and caches are deleted permanently (they regenerate on their own).',
+    confirmarPapelera: 'WolfCore Dev logs and downloads go to the recycle bin.',
+    confirmarPrefetch:
+      'Prefetch: Windows regenerates it, but the first launches of programs may be a bit slower.',
+    confirmar: 'Yes, clean',
+    cancelar: 'Cancel',
+    detener: 'Stop cleaning',
+    resultadoTitulo: 'Result',
+    liberado: (b: string) => `Freed: ${b}`,
+    enPapelera: (b: string) =>
+      `Of that, ${b} is in the recycle bin (the space returns when you empty it).`,
+    saltados: (n: number) => `${n} files were skipped`,
+    cancelado: 'Cleanup cancelled: what was already deleted stays deleted.',
+    topeEjecucion: 'The per-run file limit was reached: analyze and clean again to continue.',
+    motivos: {
+      'en-uso': 'In use',
+      enlace: 'Link or reparse point (not followed)',
+      protegido: 'Protected (.env, FlyEnv or similar)',
+      cambio: 'Changed since the analysis',
+      'sin-papelera': 'No recycle bin available',
+      ilegible: 'Could not be read',
+      error: 'Error while deleting',
+    },
+    verRegistros: 'View the logs',
+    registroEn: (r: string) => `Log of this cleanup: ${r}`,
+    otraVez: 'Start over',
+    protegidas:
+      'Never touched: data, backups, projects, databases or .env files. Links are not followed and nothing outside the paths in this list is touched.',
   },
   barra: {
     paleta: 'Search or run a command',

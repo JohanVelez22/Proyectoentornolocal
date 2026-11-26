@@ -1,7 +1,7 @@
 import type * as childProcess from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Almacen, AlmacenCredenciales, migrarCredenciales } from './almacen';
 import {
@@ -261,6 +261,11 @@ import {
   type ResultadoMemoria,
   type ServicioPropio,
 } from './sistema/memoria';
+import {
+  LimpiezaDisco,
+  type ResultadoLimpiezaDisco,
+  type ResumenCategoria,
+} from './sistema/limpiezaDisco';
 import {
   escribirConfigProyecto,
   leerConfigProyecto,
@@ -782,6 +787,7 @@ export class Nucleo {
   /** Cachés propias que el optimizador de RAM sabe vaciar (las que registra la app). */
   private readonly cachesApp = new Map<string, CacheApp>();
   private readonly optimizadorMemoria: OptimizadorMemoria;
+  private readonly limpiezaDisco: LimpiezaDisco;
 
   private constructor(
     readonly rutas: Rutas,
@@ -845,6 +851,12 @@ export class Nucleo {
           ? this.procesos.detener(p.sitioId, p.procesoId)
           : this.servicios.detener(id as IdServicio);
       },
+    });
+    this.limpiezaDisco = new LimpiezaDisco({
+      plataforma: this.plataforma,
+      carpetaDatos: () => this.rutas.base,
+      rutasVetadas: () => this.rutasVetadasLimpieza(),
+      carpetaRegistro: () => this.rutas.logs('limpieza'),
     });
     this.registros = m.registros;
     this.errores = new VisorErrores({
@@ -3564,6 +3576,57 @@ export class Nucleo {
   /** Aplica las acciones elegidas del plan `planId` (vigente 5 min); exige `confirmado === true`. */
   aplicarMemoria(planId: string, ids: string[], confirmado: true): Promise<ResultadoMemoria> {
     return this.optimizadorMemoria.aplicarMemoria(planId, ids, confirmado);
+  }
+
+  // ---- Limpieza de disco (D37) ----
+
+  /** La app dice cómo se manda un archivo a la papelera (en Electron, `shell.trashItem`). */
+  registrarPapelera(enviar: (ruta: string) => Promise<void>): void {
+    this.plataforma.registrarPapelera(enviar);
+  }
+
+  /** Lista qué se limpiaría y cuánto pesa (solo lee). Sin categorías = todas. */
+  analizarLimpieza(categorias: readonly string[] = []): Promise<ResumenCategoria[]> {
+    return this.limpiezaDisco.analizar(categorias);
+  }
+
+  /** Limpia las categorías elegidas tras un análisis; exige `confirmado === true`. */
+  limpiarDisco(categorias: readonly string[], confirmado: true): Promise<ResultadoLimpiezaDisco> {
+    return this.limpiezaDisco.limpiar(categorias, confirmado);
+  }
+
+  /** Carpeta de los registros de lo borrado (se crea si falta, para poder abrirla). */
+  async carpetaRegistroLimpieza(): Promise<string> {
+    const carpeta = this.rutas.logs('limpieza');
+    await mkdir(carpeta, { recursive: true });
+    return carpeta;
+  }
+
+  /** Corta el análisis o la limpieza en curso. */
+  cancelarLimpieza(): void {
+    this.limpiezaDisco.cancelar();
+  }
+
+  /** Lo que la limpieza nunca toca: datos, respaldos, proyectos y el resto de lo propio. */
+  private async rutasVetadasLimpieza(): Promise<string[]> {
+    const carpetas = [
+      'data',
+      'respaldos',
+      'run',
+      'etc',
+      'instantaneas',
+      'papelera',
+      'ca',
+      'certs',
+      'bin',
+      'tools',
+    ];
+    const res: string[] = [];
+    for (const base of new Set([this.rutas.base, this.plataforma.carpetaDatos()])) {
+      for (const c of carpetas) res.push(path.join(base, c));
+    }
+    for (const s of await this.sitios.listar()) res.push(s.carpeta);
+    return res;
   }
 
   private pidsSupervisados(): number[] {

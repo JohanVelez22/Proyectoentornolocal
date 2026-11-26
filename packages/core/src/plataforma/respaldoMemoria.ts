@@ -16,6 +16,11 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   | 'identidadActual'
   | 'rutasProtegidas'
   | 'conexionesActivas'
+  | 'rutasLimpieza'
+  | 'navegadoresAbiertos'
+  | 'esAdministrador'
+  | 'aPapelera'
+  | 'registrarPapelera'
 > = {
   procesosDelUsuario: async () => [],
   cerrarVentanaPrincipal: async () => 'no-se-pudo',
@@ -27,4 +32,10 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   conexionesActivas: async () => {
     throw noDisponible();
   },
+  // Limpieza de disco (D37): fuera de Windows aún no hay rutas conocidas, así que no hay nada.
+  rutasLimpieza: async () => [],
+  navegadoresAbiertos: async () => [],
+  esAdministrador: async () => false,
+  aPapelera: async () => false,
+  registrarPapelera: () => undefined,
 };

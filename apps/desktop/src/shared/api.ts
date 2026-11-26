@@ -191,6 +191,10 @@ import type {
   PlanMemoria,
   ResultadoAccionMemoria,
   ResultadoMemoria,
+  CategoriaLimpieza,
+  ResumenCategoria,
+  ResultadoLimpiezaDisco,
+  ResultadoCategoriaLimpieza,
 } from '@pel/core';
 import type {
   EstadoCapturaUi,
@@ -387,6 +391,10 @@ export type {
   ResultadoMemoria,
   AccionMemoria,
   ResultadoAccionMemoria,
+  CategoriaLimpieza,
+  ResumenCategoria,
+  ResultadoLimpiezaDisco,
+  ResultadoCategoriaLimpieza,
   EstadoInstancia,
   IdInstancia,
   PlanActualizar,
@@ -1407,6 +1415,22 @@ export interface ApiEntorno {
      */
     aplicar(planId: string, ids: string[], confirmado: true): Promise<ResultadoMemoria>;
   };
+  limpiezaDisco: {
+    /**
+     * Mide lo que se limpiaría (solo lee): por categoría, archivos, bytes y tamaño por carpeta.
+     * Sin categorías, todas. Las cachés de un navegador abierto vienen bloqueadas.
+     */
+    analizar(categorias?: CategoriaLimpieza[]): Promise<ResumenCategoria[]>;
+    /**
+     * Limpia las categorías elegidas, ya analizadas. `confirmado` debe ser `true`. Solo toca rutas
+     * seguras conocidas; nunca sigue enlaces ni toca datos, respaldos ni proyectos.
+     */
+    limpiar(categorias: CategoriaLimpieza[], confirmado: true): Promise<ResultadoLimpiezaDisco>;
+    /** Corta el análisis o la limpieza en curso. */
+    cancelar(): Promise<void>;
+    /** Abre la carpeta con los registros de lo borrado. */
+    abrirRegistros(): Promise<void>;
+  };
   captura: {
     /** Configuración, estado del sistema y del atajo global (D35). */
     leer(): Promise<EstadoCapturaUi>;
@@ -1845,6 +1869,10 @@ export const RUTAS_IPC = [
   'herramientas.convertirDocumento',
   'memoria.plan',
   'memoria.aplicar',
+  'limpiezaDisco.analizar',
+  'limpiezaDisco.limpiar',
+  'limpiezaDisco.cancelar',
+  'limpiezaDisco.abrirRegistros',
   'captura.leer',
   'captura.guardarConfig',
   'captura.iniciar',

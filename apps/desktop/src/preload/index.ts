@@ -495,6 +495,12 @@ const api: ApiEntorno = {
     plan: (modo) => invocar('memoria.plan', modo),
     aplicar: (planId, ids, confirmado) => invocar('memoria.aplicar', planId, ids, confirmado),
   },
+  limpiezaDisco: {
+    analizar: (categorias) => invocar('limpiezaDisco.analizar', categorias),
+    limpiar: (categorias, confirmado) => invocar('limpiezaDisco.limpiar', categorias, confirmado),
+    cancelar: () => invocar('limpiezaDisco.cancelar'),
+    abrirRegistros: () => invocar('limpiezaDisco.abrirRegistros'),
+  },
   captura: {
     leer: () => invocar('captura.leer'),
     guardarConfig: (cambios) => invocar('captura.guardarConfig', cambios),

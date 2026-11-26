@@ -14,6 +14,9 @@ export type {
   EstadoCaptura,
   IdentidadUsuario,
   ProcesoUsuario,
+  CategoriaLimpieza,
+  NavegadorLimpieza,
+  RutasCategoriaLimpieza,
   EstadoCierre,
   ConexionActiva,
   EstadoServicioSistema,
@@ -107,6 +110,11 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'identidadActual',
   'rutasProtegidas',
   'conexionesActivas',
+  'rutasLimpieza',
+  'navegadoresAbiertos',
+  'esAdministrador',
+  'aPapelera',
+  'registrarPapelera',
 ];
 
 /**

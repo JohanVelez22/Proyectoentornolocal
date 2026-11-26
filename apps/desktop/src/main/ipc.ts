@@ -1918,6 +1918,15 @@ const TABLA: Record<RutaIpc, Manejador> = {
       listaTextos(ids, MAX_ACCIONES_MEMORIA, MAX_LARGO_ID_MEMORIA, 'acciones'),
       confirmado(confirmacion),
     ),
+  // ---- Limpieza de disco (D37): análisis visible primero, y solo se limpia con confirmación ----
+  'limpiezaDisco.analizar': (n, _s, categorias) =>
+    n.analizarLimpieza(
+      categorias === undefined ? [] : listaTextos(categorias, 8, 40, 'categorias'),
+    ),
+  'limpiezaDisco.limpiar': (n, _s, categorias, confirmacion) =>
+    n.limpiarDisco(listaTextos(categorias, 8, 40, 'categorias'), confirmado(confirmacion)),
+  'limpiezaDisco.cancelar': async (n) => n.cancelarLimpieza(),
+  'limpiezaDisco.abrirRegistros': async (n, s) => s.abrirCarpeta(await n.carpetaRegistroLimpieza()),
   'herramientas.optimizarPdf': (n, s, origen, destino) =>
     n.optimizarPdf(
       s.elegidas.exigir(origen, 'archivo'),

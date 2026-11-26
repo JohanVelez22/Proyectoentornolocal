@@ -180,6 +180,13 @@ export const PARAMETROS_ERROR = {
   'memoria.modo_invalido': [],
   'memoria.plan_caducado': [],
   'memoria.no_disponible': [],
+  // limpieza de disco (D37)
+  'disco.sin_confirmar': [],
+  'disco.categoria_invalida': [],
+  'disco.ruta_vetada': ['categoria'],
+  'disco.sin_analisis': [],
+  'disco.ocupada': [],
+  'disco.sin_registro': [],
   // acceso a la base con Adminer o phpMyAdmin (D18)
   'acceso_bd.datos_invalidos': [],
   'acceso_bd.sin_base': [],

@@ -446,6 +446,9 @@ if (errorCarpetaDatos !== null) {
         return antes;
       },
     });
+    // Limpieza de disco (D37): los registros y las descargas de WolfCore Dev van a la papelera del
+    // sistema (son pocos archivos); TEMP y las cachés de navegador se borran definitivamente.
+    n.registrarPapelera((ruta) => shell.trashItem(ruta));
     // Métricas solo con la ventana visible (oculta en la bandeja o minimizada: en pausa).
     const metricas = new ControlMetricas(n);
     const visible = (): void => metricas.visibilidad(v.isVisible() && !v.isMinimized());

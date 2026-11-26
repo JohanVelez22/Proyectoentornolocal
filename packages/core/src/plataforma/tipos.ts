@@ -290,6 +290,49 @@ export interface CapacidadesPlataforma {
    * antivirus integrado…). Solo lee el entorno.
    */
   rutasProtegidas(): string[];
+  /**
+   * Rutas que la limpieza de disco (D37) puede tocar, por categoría. Es la ÚNICA lista de la que
+   * sale lo que se borra: el núcleo no sale de ella. `carpetaDatos` es la activa (la de
+   * `WOLFCORE_DATOS` o la de siempre) y de ella salen solo `wolfcore-descargas` y
+   * `wolfcore-registros`. En las cachés de navegador solo vienen las carpetas `Cache`,
+   * `Code Cache`, `GPUCache` y `cache2` que existen en cada perfil. Solo lee.
+   */
+  rutasLimpieza(carpetaDatos: string): Promise<RutasCategoriaLimpieza[]>;
+  /**
+   * Navegadores con algún proceso abierto del usuario. FALLA si no se puede saber: quien llama
+   * trata un fallo como "todos abiertos" (nunca se limpia a ciegas).
+   */
+  navegadoresAbiertos(): Promise<NavegadorLimpieza[]>;
+  /** ¿Se ejecuta con permisos de administrador? Solo consulta; nunca pide elevación. */
+  esAdministrador(): Promise<boolean>;
+  /**
+   * Manda un archivo a la papelera del sistema. La papelera la pone la app (en Electron,
+   * `shell.trashItem` desde main) con `registrarPapelera`. Devuelve false si no hay papelera o
+   * no se pudo: en ese caso quien llama NO borra el archivo.
+   */
+  aPapelera(ruta: string): Promise<boolean>;
+  /** La app inyecta aquí cómo se manda algo a la papelera. */
+  registrarPapelera(enviar: (ruta: string) => Promise<void>): void;
+}
+
+export type CategoriaLimpieza =
+  | 'temp'
+  | 'cache-chrome'
+  | 'cache-edge'
+  | 'cache-brave'
+  | 'cache-firefox'
+  | 'wolfcore-descargas'
+  | 'wolfcore-registros'
+  | 'prefetch';
+
+export type NavegadorLimpieza = 'chrome' | 'edge' | 'brave' | 'firefox';
+
+export interface RutasCategoriaLimpieza {
+  categoria: CategoriaLimpieza;
+  rutas: string[];
+  /** true si limpiarla exige ejecutar como administrador (Prefetch). */
+  requiereAdmin: boolean;
+  navegador?: NavegadorLimpieza;
 }
 
 /** Un proceso del usuario tal como lo da `Plataforma.procesosDelUsuario()` (D36). */

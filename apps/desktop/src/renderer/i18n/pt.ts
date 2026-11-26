@@ -453,6 +453,13 @@ export const pt: Textos = {
       'captura.sin_imagen': 'Não há nenhuma imagem para capturar.',
       'captura.imagen_invalida': 'A imagem da captura não é válida.',
       'conversor.formato': 'Essa conversão não está disponível.',
+      'disco.sin_confirmar': 'Confirme a limpeza na caixa de diálogo antes de continuar.',
+      'disco.categoria_invalida': 'Essa categoria de limpeza não existe.',
+      'disco.ruta_vetada':
+        'A categoria toca um caminho protegido (dados, backups, projetos ou FlyEnv); nada foi limpo.',
+      'disco.sin_analisis': 'Analise de novo antes de limpar: a análise expirou ou não existe.',
+      'disco.ocupada': 'Já há uma análise ou limpeza em andamento.',
+      'disco.sin_registro': 'Não foi possível criar o registro da limpeza; nada foi apagado.',
       'memoria.sin_confirmar': 'Confirme a ação no diálogo antes de continuar.',
       'memoria.modo_invalido': 'Esse modo de otimização não existe.',
       'memoria.plan_caducado':
@@ -3389,6 +3396,11 @@ export const pt: Textos = {
         nombre: 'Captura de tela',
         descripcion: 'Região, janela ou tela inteira, com editor rápido.',
       },
+      limpiezaDisco: {
+        nombre: 'Limpeza de disco',
+        descripcion:
+          'Analisa e apaga temporários e caches regeneráveis, com lista prévia e confirmação.',
+      },
     },
     errores: {
       jsonVacio: 'Digite ou cole um JSON.',
@@ -4594,6 +4606,93 @@ export const pt: Textos = {
       no_se_pudo: 'Não foi possível pedir o fechamento (o programa tem permissões elevadas)',
     },
     otraVez: 'Recomeçar',
+  },
+  limpiezaDisco: {
+    intro:
+      'Primeiro se analisa e se vê quanto ocupa cada item. Nada é apagado até você confirmar, e nunca roda sozinho nem em segundo plano.',
+    analizar: 'Analisar',
+    analizando: 'Analisando…',
+    cancelarAnalisis: 'Cancelar',
+    vacio: 'Não há nada para limpar.',
+    categorias: {
+      temp: {
+        nombre: 'Arquivos temporários',
+        ayuda:
+          'Os da sua pasta TEMP com mais de 24 horas. São apagados definitivamente; se regeneram sozinhos.',
+      },
+      'cache-chrome': {
+        nombre: 'Cache do Google Chrome',
+        ayuda: 'Somente as pastas de cache de cada perfil; nunca cookies, senhas nem histórico.',
+      },
+      'cache-edge': {
+        nombre: 'Cache do Microsoft Edge',
+        ayuda: 'Somente as pastas de cache de cada perfil; nunca cookies, senhas nem histórico.',
+      },
+      'cache-brave': {
+        nombre: 'Cache do Brave',
+        ayuda: 'Somente as pastas de cache de cada perfil; nunca cookies, senhas nem histórico.',
+      },
+      'cache-firefox': {
+        nombre: 'Cache do Firefox',
+        ayuda: 'Somente a pasta cache2 de cada perfil; nunca cookies, senhas nem histórico.',
+      },
+      'wolfcore-descargas': {
+        nombre: 'Downloads em cache do WolfCore Dev',
+        ayuda: 'Pacotes compactados soltos que não são mais usados. Vão para a lixeira.',
+      },
+      'wolfcore-registros': {
+        nombre: 'Registros do WolfCore Dev',
+        ayuda: 'Registros com mais de 30 dias. Vão para a lixeira.',
+      },
+      prefetch: {
+        nombre: 'Prefetch do Windows',
+        ayuda:
+          'Opcional. O Windows o regenera, mas exige executar o WolfCore Dev como administrador.',
+      },
+    },
+    bloqueos: {
+      'navegador-abierto': 'Navegador aberto: feche-o para limpar o cache',
+      'requiere-admin': 'Exige executar o WolfCore Dev como administrador',
+      'ruta-vetada': 'Caminho protegido: não é limpo',
+    },
+    borradoDefinitivo: 'Apagados definitivamente (se regeneram sozinhos)',
+    borradoPapelera: 'Vão para a lixeira do sistema',
+    archivos: (n: number) => (n === 1 ? '1 arquivo' : `${n} arquivos`),
+    carpetas: 'Por pasta',
+    truncado: 'A análise parou no limite de arquivos: há mais do que o mostrado.',
+    marcadas: (n: number, t: number) => `${n} de ${t} categorias marcadas`,
+    total: (b: string) => `Seriam liberados cerca de ${b}`,
+    limpiar: 'Limpar o marcado',
+    confirmarTitulo: 'Limpar estas categorias?',
+    confirmarTexto: (n: number) => `${n} categorias serão limpas.`,
+    confirmarDefinitivo: 'TEMP e caches são apagados definitivamente (se regeneram sozinhos).',
+    confirmarPapelera: 'Registros e downloads do WolfCore Dev vão para a lixeira.',
+    confirmarPrefetch:
+      'Prefetch: o Windows o regenera, mas as primeiras aberturas de programas podem ficar um pouco mais lentas.',
+    confirmar: 'Sim, limpar',
+    cancelar: 'Cancelar',
+    detener: 'Parar a limpeza',
+    resultadoTitulo: 'Resultado',
+    liberado: (b: string) => `Liberado: ${b}`,
+    enPapelera: (b: string) => `Disso, ${b} estão na lixeira (o espaço volta ao esvaziá-la).`,
+    saltados: (n: number) => `${n} arquivos foram ignorados`,
+    cancelado: 'Limpeza cancelada: o que já foi apagado continua apagado.',
+    topeEjecucion:
+      'Chegou-se ao limite de arquivos por execução: analise e limpe de novo para continuar.',
+    motivos: {
+      'en-uso': 'Em uso',
+      enlace: 'Link ou ponto de reanálise (não é seguido)',
+      protegido: 'Protegido (.env, FlyEnv ou similar)',
+      cambio: 'Mudou desde a análise',
+      'sin-papelera': 'Não há lixeira disponível',
+      ilegible: 'Não foi possível ler',
+      error: 'Erro ao apagar',
+    },
+    verRegistros: 'Ver os registros',
+    registroEn: (r: string) => `Registro desta limpeza: ${r}`,
+    otraVez: 'Recomeçar',
+    protegidas:
+      'Nunca se toca: dados, backups, projetos, bancos nem arquivos .env. Links não são seguidos e nada fora dos caminhos desta lista é tocado.',
   },
   barra: {
     paleta: 'Buscar ou executar um comando',

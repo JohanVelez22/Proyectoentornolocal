@@ -468,6 +468,13 @@ export const fr: Textos = {
       'captura.sin_imagen': 'Il n’y a aucune image à capturer.',
       'captura.imagen_invalida': 'L’image de la capture n’est pas valide.',
       'conversor.formato': 'Cette conversion n’est pas disponible.',
+      'disco.sin_confirmar': 'Confirmez le nettoyage dans la boîte de dialogue avant de continuer.',
+      'disco.categoria_invalida': 'Cette catégorie de nettoyage n’existe pas.',
+      'disco.ruta_vetada':
+        'La catégorie touche un chemin protégé (données, sauvegardes, projets ou FlyEnv) ; rien n’a été nettoyé.',
+      'disco.sin_analisis': 'Analysez de nouveau avant de nettoyer : l’analyse a expiré ou manque.',
+      'disco.ocupada': 'Une analyse ou un nettoyage est déjà en cours.',
+      'disco.sin_registro': 'Le journal du nettoyage n’a pas pu être créé ; rien n’a été supprimé.',
       'memoria.sin_confirmar': 'Confirmez l’action dans la boîte de dialogue avant de continuer.',
       'memoria.modo_invalido': 'Ce mode d’optimisation n’existe pas.',
       'memoria.plan_caducado':
@@ -3472,6 +3479,11 @@ export const fr: Textos = {
         nombre: 'Capture d’écran',
         descripcion: 'Région, fenêtre ou plein écran, avec éditeur rapide.',
       },
+      limpiezaDisco: {
+        nombre: 'Nettoyage du disque',
+        descripcion:
+          'Analyse et supprime les fichiers temporaires et les caches régénérables, avec aperçu et confirmation.',
+      },
     },
     errores: {
       jsonVacio: 'Saisissez ou collez un JSON.',
@@ -4699,6 +4711,100 @@ export const fr: Textos = {
         'La demande de fermeture n’a pas pu être envoyée (le programme a des droits élevés)',
     },
     otraVez: 'Recommencer',
+  },
+  limpiezaDisco: {
+    intro:
+      'On analyse d’abord et on voit ce que chaque élément occupe. Rien n’est supprimé tant que vous n’avez pas confirmé, et rien ne tourne seul ni en arrière-plan.',
+    analizar: 'Analyser',
+    analizando: 'Analyse…',
+    cancelarAnalisis: 'Annuler',
+    vacio: 'Il n’y a rien à nettoyer.',
+    categorias: {
+      temp: {
+        nombre: 'Fichiers temporaires',
+        ayuda:
+          'Ceux de votre dossier TEMP de plus de 24 heures. Supprimés définitivement ; ils se régénèrent seuls.',
+      },
+      'cache-chrome': {
+        nombre: 'Cache de Google Chrome',
+        ayuda:
+          'Seulement les dossiers de cache de chaque profil ; jamais les cookies, mots de passe ni historique.',
+      },
+      'cache-edge': {
+        nombre: 'Cache de Microsoft Edge',
+        ayuda:
+          'Seulement les dossiers de cache de chaque profil ; jamais les cookies, mots de passe ni historique.',
+      },
+      'cache-brave': {
+        nombre: 'Cache de Brave',
+        ayuda:
+          'Seulement les dossiers de cache de chaque profil ; jamais les cookies, mots de passe ni historique.',
+      },
+      'cache-firefox': {
+        nombre: 'Cache de Firefox',
+        ayuda:
+          'Seulement le dossier cache2 de chaque profil ; jamais les cookies, mots de passe ni historique.',
+      },
+      'wolfcore-descargas': {
+        nombre: 'Téléchargements en cache de WolfCore Dev',
+        ayuda: 'Archives isolées qui ne servent plus. Envoyées à la corbeille.',
+      },
+      'wolfcore-registros': {
+        nombre: 'Journaux de WolfCore Dev',
+        ayuda: 'Journaux de plus de 30 jours. Envoyés à la corbeille.',
+      },
+      prefetch: {
+        nombre: 'Prefetch de Windows',
+        ayuda:
+          'Facultatif. Windows le régénère, mais il faut lancer WolfCore Dev en administrateur.',
+      },
+    },
+    bloqueos: {
+      'navegador-abierto': 'Navigateur ouvert : fermez-le pour nettoyer son cache',
+      'requiere-admin': 'Nécessite de lancer WolfCore Dev en administrateur',
+      'ruta-vetada': 'Chemin protégé : non nettoyé',
+    },
+    borradoDefinitivo: 'Supprimés définitivement (ils se régénèrent seuls)',
+    borradoPapelera: 'Envoyés à la corbeille du système',
+    archivos: (n: number) => (n === 1 ? '1 fichier' : `${n} fichiers`),
+    carpetas: 'Par dossier',
+    truncado:
+      'L’analyse s’est arrêtée à la limite de fichiers : il y en a plus que ce qui est affiché.',
+    marcadas: (n: number, t: number) => `${n} catégories cochées sur ${t}`,
+    total: (b: string) => `Environ ${b} seraient libérés`,
+    limpiar: 'Nettoyer la sélection',
+    confirmarTitulo: 'Nettoyer ces catégories ?',
+    confirmarTexto: (n: number) => `${n} catégories seront nettoyées.`,
+    confirmarDefinitivo:
+      'TEMP et les caches sont supprimés définitivement (ils se régénèrent seuls).',
+    confirmarPapelera: 'Les journaux et téléchargements de WolfCore Dev vont à la corbeille.',
+    confirmarPrefetch:
+      'Prefetch : Windows le régénère, mais les premiers lancements de programmes peuvent être un peu plus lents.',
+    confirmar: 'Oui, nettoyer',
+    cancelar: 'Annuler',
+    detener: 'Arrêter le nettoyage',
+    resultadoTitulo: 'Résultat',
+    liberado: (b: string) => `Libéré : ${b}`,
+    enPapelera: (b: string) =>
+      `Dont ${b} dans la corbeille (l’espace revient quand vous la videz).`,
+    saltados: (n: number) => `${n} fichiers ont été ignorés`,
+    cancelado: 'Nettoyage annulé : ce qui a déjà été supprimé reste supprimé.',
+    topeEjecucion:
+      'La limite de fichiers par exécution est atteinte : analysez et nettoyez de nouveau pour continuer.',
+    motivos: {
+      'en-uso': 'Utilisé',
+      enlace: 'Lien ou point d’analyse (non suivi)',
+      protegido: 'Protégé (.env, FlyEnv ou similaire)',
+      cambio: 'Modifié depuis l’analyse',
+      'sin-papelera': 'Aucune corbeille disponible',
+      ilegible: 'Illisible',
+      error: 'Erreur de suppression',
+    },
+    verRegistros: 'Voir les journaux',
+    registroEn: (r: string) => `Journal de ce nettoyage : ${r}`,
+    otraVez: 'Recommencer',
+    protegidas:
+      'Jamais touchés : données, sauvegardes, projets, bases ni fichiers .env. Les liens ne sont pas suivis et rien en dehors des chemins de cette liste n’est touché.',
   },
   barra: {
     paleta: 'Rechercher ou exécuter une commande',
