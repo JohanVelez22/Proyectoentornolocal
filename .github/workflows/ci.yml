@@ -22,11 +22,15 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
-  # Prueba de humo sobre la app EMPAQUETADA (electron-builder --dir: sin instalador ni firma): arranca
-  # con una carpeta de datos nueva y recorre las vistas principales. Falla si la ventana queda en
-  # blanco, si una vista sale vacía o si hay errores o avisos (CSP incluidos) en la consola. El CI
-  # normal no lo veía: el build ocultaba un renderer que en `npm run dev` salía en blanco.
+  # Empaquetado (electron-builder --dir: sin instalador ni firma) en los tres sistemas y prueba de humo
+  # sobre la app empaquetada y sobre out/. La prueba solo corre en Windows: el núcleo aún no tiene
+  # plataforma para macOS ni Linux ("Plataforma aún no soportada (fase 4)": la app muestra un error y
+  # se cierra, no hay ventana que recorrer; lo vimos en CI al probarlo). En Windows arranca con una
+  # carpeta de datos nueva, recorre las vistas y falla con ventana en blanco, vista vacía o errores o
+  # avisos de consola (CSP incluidos). El CI normal no lo veía: el build ocultaba un renderer que
+  # en `npm run dev` salía en blanco.
   humo:
+    name: empaquetado y humo (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -44,18 +48,11 @@ jobs:
       - run: npm ci
       - name: Compilar (electron-vite + CLI)
         run: npm run build -w @pel/desktop
-      - name: Prueba de humo sobre out/ (Linux, con pantalla virtual)
-        if: runner.os == 'Linux'
-        run: xvfb-run -a npm run humo -w @pel/desktop -- --out
-      - name: Prueba de humo sobre out/
-        if: runner.os != 'Linux'
+      - name: Prueba de humo sobre out/ (solo Windows)
+        if: runner.os == 'Windows'
         run: npm run humo -w @pel/desktop -- --out
       - name: Empaquetar (sin instalador)
-        if: always()
         run: npm run dist:dir -w @pel/desktop
-      - name: Prueba de humo del empaquetado (Linux, con pantalla virtual)
-        if: runner.os == 'Linux' && always()
-        run: xvfb-run -a npm run humo -w @pel/desktop
-      - name: Prueba de humo del empaquetado
-        if: runner.os != 'Linux' && always()
+      - name: Prueba de humo del empaquetado (solo Windows)
+        if: runner.os == 'Windows'
         run: npm run humo -w @pel/desktop

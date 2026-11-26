@@ -5,10 +5,13 @@
 //
 //   node scripts/humo.mjs [--salida <carpeta de electron-builder>] [--out]
 //
-// En Linux se lanza sin sandbox de Chromium (el CI no instala chrome-sandbox con SUID) y debe correr
-// bajo xvfb-run.
+// Solo en Windows: el núcleo todavía no tiene plataforma para macOS ni Linux (`crearPlataforma`
+// lanza "Plataforma aún no soportada (fase 4)", la app muestra un error y se cierra), así que ahí
+// no hay ventana que recorrer. El CI empaqueta en los tres sistemas y corre esta prueba en Windows.
+// Cuando haya plataforma para ellos, basta quitar el aviso de abajo (en Linux hace falta xvfb-run y
+// `--no-sandbox`, ya previstos).
 import { chromium } from 'playwright-core';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -19,6 +22,13 @@ const DESKTOP = path.join(AQUI, '..');
 const args = process.argv.slice(2);
 const opcion = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : undefined);
 const usarOut = args.includes('--out');
+
+if (process.platform !== 'win32' && !args.includes('--forzar')) {
+  console.error(
+    'La prueba de humo solo corre en Windows (el núcleo aún no soporta otras plataformas). Use --forzar para intentarlo.',
+  );
+  process.exit(2);
+}
 const salida = path.resolve(opcion('--salida') ?? path.join(DESKTOP, 'release'));
 
 const VISTAS = [
@@ -73,44 +83,7 @@ const falla = (m) => {
 const registro = (m) => console.log(m);
 
 /** Si no se puede conectar: qué responde el puerto de depuración y cómo está el proceso. */
-async function pausarYMirar(urlWs) {
-  try {
-    const ws = new WebSocket(urlWs);
-    await new Promise((res, rej) => {
-      ws.onopen = res;
-      ws.onerror = () => rej(new Error('no abre'));
-      setTimeout(() => rej(new Error('sin respuesta al abrir')), 8000);
-    });
-    const pila = await new Promise((res) => {
-      ws.onmessage = (m) => {
-        const d = JSON.parse(String(m.data));
-        if (d.method === 'Debugger.paused') res(d.params.callFrames);
-      };
-      ws.send(JSON.stringify({ id: 1, method: 'Debugger.enable' }));
-      ws.send(JSON.stringify({ id: 2, method: 'Debugger.pause' }));
-      setTimeout(() => res(null), 15_000);
-    });
-    if (!pila)
-      return console.error(
-        'diagnóstico JS: el hilo principal no se detuvo en 15 s (bloqueado fuera de JS).',
-      );
-    const lineas = pila
-      .slice(0, 18)
-      .map(
-        (f) =>
-          `  ${f.functionName || '(anónima)'} ${String(f.url).split('/').slice(-2).join('/')}:${f.location.lineNumber + 1}`,
-      );
-    console.error(
-      `diagnóstico JS (pila del hilo principal):${String.fromCharCode(10)}${lineas.join(String.fromCharCode(10))}`,
-    );
-    ws.close();
-  } catch (e) {
-    console.error(`diagnóstico JS: ${e}`);
-  }
-}
-
-async function diagnosticar(puerto, pid, urlInspector) {
-  if (urlInspector) await pausarYMirar(urlInspector);
+async function diagnosticar(puerto) {
   for (const ruta of ['json/version', 'json/list']) {
     try {
       const r = await fetch(`http://127.0.0.1:${puerto}/${ruta}`, {
@@ -120,36 +93,6 @@ async function diagnosticar(puerto, pid, urlInspector) {
     } catch (e) {
       console.error(`diagnóstico ${ruta}: ${e}`);
     }
-  }
-  if (process.platform === 'linux' && pid) {
-    const r = spawnSync(
-      'bash',
-      [
-        '-c',
-        `for t in /proc/${pid}/task/*; do echo "$(cat $t/comm) $(cat $t/wchan 2>&1)"; done | sort | uniq -c`,
-      ],
-      { encoding: 'utf8' },
-    );
-    console.error(`diagnóstico hilos:
-${r.stdout}${r.stderr}`);
-  }
-  if (process.platform === 'linux' && pid && process.env.CI) {
-    // Pila nativa del hilo principal (gdb sin símbolos de Electron, pero con los de V8 y Node exportados).
-    spawnSync('sudo', ['-n', 'apt-get', 'install', '-y', '-qq', 'gdb'], {
-      encoding: 'utf8',
-      timeout: 120_000,
-    });
-    const r = spawnSync(
-      'sudo',
-      ['-n', 'gdb', '-p', String(pid), '-batch', '-ex', 'thread 1', '-ex', 'bt 30'],
-      { encoding: 'utf8', timeout: 90_000 },
-    );
-    console.error(`diagnóstico gdb:${String.fromCharCode(10)}${r.stdout}${r.stderr}`);
-  }
-  if (process.platform === 'darwin' && pid) {
-    const r = spawnSync('sample', [String(pid), '2'], { encoding: 'utf8', timeout: 30_000 });
-    console.error(`diagnóstico sample:
-${(r.stdout ?? '').split(String.fromCharCode(10)).slice(0, 70).join(String.fromCharCode(10))}`);
   }
 }
 
@@ -164,11 +107,11 @@ try {
   if (usarOut) {
     registro(`Arrancando out/ con Electron (datos aislados en ${datos})`);
     exe = (await import('electron')).default;
-    argsApp = [...comunes, '--inspect=0', `--remote-debugging-port=${puerto}`, '.'];
+    argsApp = [...comunes, `--remote-debugging-port=${puerto}`, '.'];
   } else {
     exe = buscarEjecutable();
     registro(`Arrancando ${exe} (datos aislados en ${datos})`);
-    argsApp = [...comunes, '--inspect=0', `--remote-debugging-port=${puerto}`];
+    argsApp = [...comunes, `--remote-debugging-port=${puerto}`];
     cwd = path.dirname(exe);
   }
   // Se arranca la app a mano y se conecta por CDP: `_electron.launch` espera al inspector de Node y
@@ -191,8 +134,7 @@ try {
   try {
     browser = await chromium.connectOverCDP(ws, { timeout: 60_000 });
   } catch (e) {
-    const mi = /Debugger listening on (ws:\/\/\S+)/.exec(salidaApp.join(''));
-    await diagnosticar(puerto, proc.pid, mi?.[1]);
+    await diagnosticar(puerto);
     throw e;
   }
   const contexto = browser.contexts()[0];
