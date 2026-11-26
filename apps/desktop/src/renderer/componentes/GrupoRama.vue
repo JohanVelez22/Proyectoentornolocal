@@ -6,7 +6,7 @@ import { textos } from '../i18n';
 import { conInterruptor, type FilaVersion as Fila } from '../stores/versiones';
 import FilaVersion from './FilaVersion.vue';
 
-/** Una rama en la pestaña "Versiones": cabecera con su soporte y fin de soporte, y sus filas. */
+/** Una serie en la pestaña "Versiones": cabecera con su soporte y fin de soporte, y su cuadrícula de tarjetas. */
 const props = defineProps<{
   tabla: TablaVersiones;
   rama: TablaVersiones['ramas'][number];
@@ -47,7 +47,7 @@ const finTexto = computed(() => {
   return Date.parse(f) < Date.now() ? t.finSoportePasado(f) : t.finSoporte(f);
 });
 
-/** Instancia que ya usa otra versión de esta rama (servicios de datos). */
+/** Instancia que ya usa otra versión de esta serie (servicios de datos). */
 const instanciaDeRama = computed(
   () => props.rama.versiones.find((f) => f.instancia)?.instancia ?? null,
 );
@@ -62,11 +62,12 @@ const instanciaDeRama = computed(
       </NTag>
       <small v-if="finTexto">{{ finTexto }}</small>
     </header>
-    <div role="table" :aria-label="cabecera">
+    <div class="cuadricula" role="list" :aria-label="cabecera">
       <FilaVersion
         v-for="f in rama.versiones"
         :key="f.version"
         :fila="f"
+        :servicio="tabla.servicio"
         :interruptor="tabla.interruptor"
         :con-interruptor="conInterruptor(tabla, f)"
         :instancia-de-rama="tabla.interruptor === 'instancias' ? instanciaDeRama : null"
@@ -109,5 +110,12 @@ const instanciaDeRama = computed(
 .cabeza small {
   font-size: 12px;
   opacity: 0.6;
+}
+/* Tarjetas que se reparten el ancho disponible: más columnas en ventanas anchas, una en estrechas. */
+.cuadricula {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 10px;
+  align-items: stretch;
 }
 </style>

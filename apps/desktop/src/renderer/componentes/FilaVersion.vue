@@ -7,16 +7,18 @@ import { textos } from '../i18n';
 import type { FilaVersion } from '../stores/versiones';
 
 /**
- * Una versión en la pestaña "Versiones": marcas (instalada, encendida, con actualización, sin
+ * Una versión en la pestaña "Versiones", como tarjeta de la cuadrícula: marcas (instalada, encendida, con actualización, sin
  * huella o con firma verificada), Instalar/Desinstalar, interruptor (si el servicio lo tiene), puerto de la instancia
  * y estrella de predeterminada.
  */
 const props = defineProps<{
   fila: FilaVersion;
+  /** Servicio de la tarjeta: arma el destino de `?foco=`. */
+  servicio: string;
   interruptor: TablaVersiones['interruptor'];
   /** Se puede encender (ver `conInterruptor`). */
   conInterruptor: boolean;
-  /** Otra versión de la rama ya tiene la instancia: se ofrece "Usar esta versión". */
+  /** Otra versión de la misma serie ya tiene la instancia: se ofrece "Usar esta versión". */
   instanciaDeRama: string | null;
   resaltada: boolean;
   ocupada: boolean;
@@ -54,8 +56,13 @@ const huellaTexto = computed(() =>
 </script>
 
 <template>
-  <div class="fila" :class="{ resaltada, instalada: f.instalada }" role="row">
-    <div class="version" role="cell">
+  <article
+    class="tarjeta"
+    :class="{ resaltada, instalada: f.instalada }"
+    role="listitem"
+    :data-foco="`version:${servicio}:${f.version}`"
+  >
+    <div class="version">
       <span class="numero">{{ f.version }}</span>
       <NTag v-if="f.instalada" size="small" :bordered="false" type="success">{{
         t.marcas.instalada
@@ -96,7 +103,7 @@ const huellaTexto = computed(() =>
       </NTooltip>
     </div>
 
-    <div class="acciones" role="cell">
+    <div class="acciones">
       <template v-if="f.instancia && interruptor === 'instancias'">
         <span class="etiqueta-puerto">{{ t.puerto }}</span>
         <NInputNumber
@@ -198,23 +205,21 @@ const huellaTexto = computed(() =>
         {{ t.desinstalar }}
       </NButton>
     </div>
-  </div>
+  </article>
 </template>
 
 <style scoped>
-.fila {
+.tarjeta {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  border-radius: 10px;
 }
-.fila + .fila {
-  border-top: 1px solid rgba(128, 128, 128, 0.16);
-}
-.fila.resaltada {
+.tarjeta.resaltada {
   background: rgba(var(--acento-rgb), 0.12);
 }
 .version {
@@ -226,11 +231,11 @@ const huellaTexto = computed(() =>
 }
 .numero {
   font-family: var(--fuente-mono);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
-  min-width: 72px;
+  margin-right: 4px;
 }
-.fila:not(.instalada) .numero {
+.tarjeta:not(.instalada) .numero {
   opacity: 0.75;
 }
 .acciones {
@@ -238,7 +243,7 @@ const huellaTexto = computed(() =>
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  margin-left: auto;
+  min-width: 0;
 }
 .etiqueta-puerto {
   font-size: 12px;
