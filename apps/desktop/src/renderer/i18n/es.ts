@@ -2213,6 +2213,8 @@ export const es = {
   },
   reverb: {
     titulo: 'Reverb',
+    modificado:
+      'El proceso de Reverb de este proyecto no tiene el comando de WolfCore Dev (otro host, programa o puerto). Al encenderlo se reemplaza por el propio, que solo escucha en 127.0.0.1.',
     ayuda: 'WebSockets de Laravel, solo en 127.0.0.1.',
     puerto: (p: number) => 'Puerto {p}'.replace('{p}', String(p)),
     interruptor: (dominio: string) => 'Encender o apagar Reverb de {d}'.replace('{d}', dominio),

@@ -126,6 +126,7 @@ async function proponer(): Promise<void> {
         {{ t.proponer }}
       </NButton>
     </div>
+    <p v-if="estado.modificado" class="modificado" role="note">{{ t.modificado }}</p>
   </div>
 </template>
 
@@ -155,6 +156,9 @@ async function proponer(): Promise<void> {
 .puerto {
   font-family: var(--fuente-mono);
   font-size: 12px;
+}
+.modificado {
+  margin: 0;
 }
 .ayuda {
   min-width: 0;

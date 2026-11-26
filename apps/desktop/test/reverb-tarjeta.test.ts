@@ -17,6 +17,7 @@ const estado = (o: Partial<EstadoReverb> = {}): EstadoReverb => ({
   disponible: true,
   motivo: null,
   activo: false,
+  modificado: false,
   puerto: null,
   estado: 'apagado',
   ...o,

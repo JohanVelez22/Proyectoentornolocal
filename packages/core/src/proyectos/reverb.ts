@@ -1,9 +1,9 @@
+import { lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import type { EstadoProceso } from '../procesos/supervisor';
 import { validarComandoTarea } from '../tareas/comando';
 import type { ProcesoProyecto, Sitio } from '../tipos';
-import { existe } from './archivos';
 
 /** Id del proceso de Reverb dentro del sitio (`proy-<sitio>-reverb`). */
 export const ID_PROCESO_REVERB = 'reverb';
@@ -60,6 +60,29 @@ export function variablesReverb(puerto: number): Record<string, string> {
   };
 }
 
+/** ¿El proceso es exactamente el comando propio de Reverb para su puerto? */
+export function esComandoPropio(p: ProcesoProyecto): boolean {
+  if (p.puerto === null) return false;
+  const propio = comandoReverb(p.puerto);
+  return p.comando.length === propio.length && p.comando.every((a, i) => a === propio[i]);
+}
+
+/**
+ * `vendor/laravel/reverb` existe y es una carpeta de verdad (no un enlace ni una unión que lleve
+ * fuera del proyecto) con su `composer.json` como archivo normal.
+ */
+export async function hayPaqueteReverb(carpeta: string): Promise<boolean> {
+  const dir = path.join(carpeta, 'vendor', 'laravel', 'reverb');
+  try {
+    const d = await lstat(dir);
+    if (d.isSymbolicLink() || !d.isDirectory()) return false;
+    const c = await lstat(path.join(dir, 'composer.json'));
+    return c.isFile() && !c.isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
 export type MotivoSinReverb = 'reverb.no_laravel' | 'reverb.no_confiado' | 'reverb.sin_paquete';
 
 export interface EstadoReverb {
@@ -68,6 +91,11 @@ export interface EstadoReverb {
   motivo: MotivoSinReverb | null;
   /** El proceso está dado de alta en el sitio. */
   activo: boolean;
+  /**
+   * El proceso `reverb` del sitio no tiene el comando propio (otro host, otro programa, otro
+   * puerto…): alguien lo cambió. «Encender» lo reemplaza por el comando propio.
+   */
+  modificado: boolean;
   puerto: number | null;
   estado: EstadoProceso;
 }
@@ -98,8 +126,7 @@ export class ReverbSitio {
   private async motivo(s: Sitio): Promise<MotivoSinReverb | null> {
     if (s.tipo !== 'laravel') return 'reverb.no_laravel';
     if (s.confiado !== true || s.pendiente) return 'reverb.no_confiado';
-    const paquete = path.join(s.carpeta, 'vendor', 'laravel', 'reverb', 'composer.json');
-    return (await existe(paquete)) ? null : 'reverb.sin_paquete';
+    return (await hayPaqueteReverb(s.carpeta)) ? null : 'reverb.sin_paquete';
   }
 
   async estado(sitioId: string): Promise<EstadoReverb> {
@@ -110,6 +137,7 @@ export class ReverbSitio {
       disponible: motivo === null,
       motivo,
       activo: p !== undefined,
+      modificado: p !== undefined && !esComandoPropio(p),
       puerto: p?.puerto ?? null,
       estado: this.d.estado(sitioId, ID_PROCESO_REVERB),
     };
@@ -124,14 +152,20 @@ export class ReverbSitio {
     const motivo = await this.motivo(s);
     if (motivo !== null) throw new ErrorWolf(motivo, 'Este proyecto no admite Reverb.');
     const previo = s.procesos.find((x) => x.id === ID_PROCESO_REVERB);
-    let puerto = previo?.puerto ?? null;
-    if (puerto === null) {
-      puerto = await this.d.puertoLibre({
-        reservados: s.procesos.filter((x) => x.puerto !== null).map((x) => x.puerto!),
-        preferido: PUERTO_REVERB_PREFERIDO,
-        sitioId,
-      });
+    // Un proceso `reverb` que ya existe no se toma por bueno: puede estar vivo con otro comando
+    // (otro host, otro programa). Antes de cambiar nada se detiene por su PID (el supervisor).
+    if (previo !== undefined || this.d.estado(sitioId, ID_PROCESO_REVERB) !== 'apagado') {
+      await this.d.detener(sitioId, ID_PROCESO_REVERB);
     }
+    // Siempre un puerto que el núcleo da por libre (respeta los reservados, los pools de PHP y el
+    // mínimo de 1024); el del proceso anterior solo es la preferencia.
+    const puerto = await this.d.puertoLibre({
+      reservados: s.procesos
+        .filter((x) => x.id !== ID_PROCESO_REVERB && x.puerto !== null)
+        .map((x) => x.puerto!),
+      preferido: previo?.puerto ?? PUERTO_REVERB_PREFERIDO,
+      sitioId,
+    });
     // Siempre el comando propio: un proceso `reverb` editado a mano no se conserva.
     const proceso = procesoReverb(puerto);
     const resto = s.procesos.filter((x) => x.id !== ID_PROCESO_REVERB);

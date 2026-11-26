@@ -295,7 +295,7 @@ import {
   type ResultadoCrearProyecto,
 } from './proyectos/crear';
 import { GestorEnv } from './proyectos/env/gestor';
-import { ReverbSitio, type EstadoReverb } from './proyectos/reverb';
+import { ID_PROCESO_REVERB, ReverbSitio, type EstadoReverb } from './proyectos/reverb';
 import { esUsuarioDeProyecto, usuarioDeProyecto } from './bd/usuarioProyecto';
 import { errorUsuarioEnUso } from './bd/clienteMysql';
 import type { SecretosReceta } from './proyectos/pasos';
@@ -4740,6 +4740,17 @@ export class Nucleo {
     // Lo mismo si deja de ser de confianza (o si cambia: la huella se toma de nuevo).
     if (previo && (previo.carpeta !== resto.carpeta || previo.confiado !== resto.confiado)) {
       this.programador.abortarSitio(previo.id);
+    }
+    // Sin la confianza del usuario no corre código del proyecto: el proceso de Reverb se detiene y se quita.
+    if (
+      previo?.confiado === true &&
+      resto.confiado !== true &&
+      resto.procesos.some((p) => p.id === ID_PROCESO_REVERB)
+    ) {
+      await this.procesos.detener(previo.id, ID_PROCESO_REVERB).catch((e) => {
+        console.error('No se pudo detener Reverb al perder la confianza:', mensajeDe(e));
+      });
+      resto.procesos = resto.procesos.filter((p) => p.id !== ID_PROCESO_REVERB);
     }
     if (previo && previo.carpeta !== resto.carpeta && previo.tareas?.length) {
       resto.tareas = previo.tareas.map((t) => ({ ...t, confirmada: null }));
