@@ -36,6 +36,7 @@ import { textos } from '../i18n';
 import { categoriaDe, esServicioDatos, puertoAlternativo, useServicios } from '../stores/servicios';
 import EstadoPunto from './EstadoPunto.vue';
 import { formatearTamano } from '../utilidades/bd';
+import { destinoVersion } from '../utilidades/foco';
 import { useRouter } from 'vue-router';
 import { esServicioConVersiones } from '../stores/versiones';
 
@@ -57,10 +58,8 @@ const servicioVersiones = computed(() => {
 });
 function abrirVersiones(): void {
   if (servicioVersiones.value) {
-    void router.push({
-      name: 'servicios.versiones',
-      params: { servicio: servicioVersiones.value },
-    });
+    // Cae sobre la tarjeta de la versión que usa este servicio (si se conoce).
+    void router.push(destinoVersion(servicioVersiones.value, props.servicio.version));
   }
 }
 /** Con varias instancias, cuántas y cuántas encendidas. */

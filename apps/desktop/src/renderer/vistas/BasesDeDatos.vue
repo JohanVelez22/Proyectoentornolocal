@@ -29,7 +29,7 @@ import {
   NTooltip,
 } from 'naive-ui';
 import { computed, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import type { DisponibilidadAdminer, MotorBd, MotorSql, ObjetivoSqlIpc } from '../../shared/api';
 import { api } from '../api';
 import IlustracionVacia from '../componentes/IlustracionVacia.vue';
@@ -45,9 +45,11 @@ import ResultadoOperacion from '../componentes/ResultadoOperacion.vue';
 import SeccionPgvector from '../componentes/SeccionPgvector.vue';
 import SelectorInstancia from '../componentes/SelectorInstancia.vue';
 import { useAccion } from '../composables/useAccion';
+import { useFoco } from '../composables/useFoco';
 import { textos } from '../i18n';
 import { LIMITE_LINEAS, useBd } from '../stores/bd';
 import { useServicios } from '../stores/servicios';
+import { destinoServicio, focoBase, motorDeFocoBase } from '../utilidades/foco';
 import {
   confirmacionValida,
   esMotorSql,
@@ -58,6 +60,7 @@ import {
 
 const t = textos.bd;
 const router = useRouter();
+const route = useRoute();
 const servicios = useServicios();
 const bd = useBd();
 const { ejecutar, ocupado } = useAccion();
@@ -74,13 +77,34 @@ const motores = computed<MotorBd[]>(() =>
   }),
 );
 const activo = ref<MotorBd | null>(null);
+/** Motor que pide `?foco=base:<motor>:<nombre>`: se elige su pestaña antes de buscar la fila. */
+const motorPedido = ref<MotorBd | null>(null);
 watch(
   motores,
   (lista) => {
+    const pedido = motorPedido.value;
+    if (pedido && lista.includes(pedido)) {
+      activo.value = pedido;
+      motorPedido.value = null;
+      return;
+    }
     if (!activo.value || !lista.includes(activo.value)) activo.value = lista[0] ?? null;
   },
   { immediate: true },
 );
+
+// Debe ir antes de `useFoco()`: lee el motor del foco antes de que la ruta lo quite.
+watch(
+  () => route.query['foco'],
+  (f) => {
+    const m = motorDeFocoBase(f);
+    if (!m || !(MOTORES as readonly string[]).includes(m)) return;
+    if (motores.value.includes(m as MotorBd)) activo.value = m as MotorBd;
+    else motorPedido.value = m as MotorBd;
+  },
+  { immediate: true },
+);
+useFoco();
 
 const nombre = (m: MotorBd): string => t.motores[m] ?? m;
 const estadoDe = (m: MotorBd) => servicios.porId[m];
@@ -244,7 +268,8 @@ async function borrar(): Promise<void> {
 }
 
 function irAServicios(): void {
-  void router.push({ name: 'servicios' });
+  // Con un motor elegido, cae sobre su tarjeta (el servicio apagado que hay que encender).
+  void router.push(activo.value ? destinoServicio(activo.value) : { name: 'servicios' });
 }
 </script>
 
@@ -458,7 +483,11 @@ function irAServicios(): void {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="b in bases" :key="b.nombre">
+            <tr
+              v-for="b in bases"
+              :key="b.nombre"
+              :data-foco="activo ? focoBase(activo, b.nombre) : undefined"
+            >
               <td class="nombre">{{ b.nombre }}</td>
               <td class="num">{{ formatearTamano(b.tamanoBytes) }}</td>
               <td class="acc">

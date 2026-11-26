@@ -400,6 +400,8 @@ describe('Servicios: puerto ocupado', () => {
       tipo: 'puerto-ocupado',
       codigo: 'avisos.puerto_ocupado',
       datos: { fuente: 'ftp', puerto: 2121, nombre: 'otro.exe' },
+      // El aviso lleva a la tarjeta del servicio y la resalta (D41).
+      accion: { ruta: 'servicios', foco: 'servicio:ftp' },
     });
   });
 });

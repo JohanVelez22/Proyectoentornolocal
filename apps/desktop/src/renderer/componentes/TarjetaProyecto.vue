@@ -43,6 +43,7 @@ import type {
   TerminalDisponible,
 } from '../../shared/api';
 import { avisoEditorSustituido } from '../utilidades/editores';
+import { destinoBase } from '../utilidades/foco';
 import { textoPma } from '../utilidades/phpmyadmin';
 import { api } from '../api';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
@@ -374,16 +375,27 @@ const opcionesBd = computed<DropdownOption[]>(() => [
   motorBase.value === 'postgresql'
     ? { key: 'phpmyadmin', label: tp.tarjeta.opcionPhpMyAdminSoloMysql, disabled: true }
     : { key: 'phpmyadmin', label: tp.tarjeta.opcionPhpMyAdmin },
+  // La base del proyecto en la pantalla Bases de datos (se resalta su fila).
+  ...(motorBase.value && baseDetectada.value
+    ? [{ key: 'verBases', label: tp.tarjeta.verEnBases }]
+    : []),
 ]);
 async function cambiarMenuBd(mostrar: boolean): Promise<void> {
   if (mostrar) {
     const r = await ejecutar('bdMenu', () => api().adminer.proyecto(props.sitio.id));
     motorBase.value = r?.base?.motor ?? null;
+    baseDetectada.value = r?.base?.base ?? null;
   }
   menuBd.value = mostrar;
 }
 function elegirBd(k: string | number): void {
   menuBd.value = false;
+  if (k === 'verBases') {
+    if (motorBase.value && baseDetectada.value) {
+      void router.push(destinoBase(motorBase.value, baseDetectada.value));
+    }
+    return;
+  }
   void abrirBaseDatos(k as HerramientaBd);
 }
 function abrirCarpeta(): void {

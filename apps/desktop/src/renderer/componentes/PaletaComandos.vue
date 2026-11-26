@@ -2,7 +2,7 @@
 import { Search } from '@vicons/ionicons5';
 import { NIcon, NInput, NModal, NTag } from 'naive-ui';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, type RouteLocationRaw } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { useOperacionWorkspace } from '../composables/useOperacionWorkspace';
@@ -20,7 +20,9 @@ import {
   moverSeleccion,
   type Comando,
 } from '../utilidades/paleta';
+import { destinoServicio, destinoSitio, destinoVersion } from '../utilidades/foco';
 import { ordenarSitios, urlLocal } from '../utilidades/sitios';
+import { SERVICIOS_CON_VERSIONES } from '../stores/versiones';
 
 /**
  * Paleta de comandos (Ctrl+K): ir a pantallas, encender o apagar servicios, abrir sitios, traer
@@ -49,6 +51,10 @@ const visible = computed({
 function ir(nombre: string): void {
   void router.push({ name: nombre });
 }
+/** Navega a una tarjeta concreta: la pantalla se desplaza hasta ella y la resalta (D41). */
+function irA(destino: RouteLocationRaw): void {
+  void router.push(destino);
+}
 
 const comandos = computed<Comando[]>(() => {
   const r: Comando[] = [];
@@ -63,6 +69,14 @@ const comandos = computed<Comando[]>(() => {
   }
   for (const s of servicios.lista) {
     if (s.estado === 'externo') continue;
+    r.push({
+      id: `ir-servicio-${s.id}`,
+      grupo: 'servicios',
+      titulo: t.irAServicio(s.nombre),
+      detalle: s.version ?? undefined,
+      claves: 'ir ver go',
+      ejecutar: () => irA(destinoServicio(s.id)),
+    });
     const vivo = s.estado === 'encendido' || s.estado === 'iniciando';
     r.push({
       id: `servicio-${s.id}`,
@@ -100,6 +114,16 @@ const comandos = computed<Comando[]>(() => {
       ejecutar: () => void operarWorkspace(w, accion),
     });
   }
+  // Versiones de cada servicio: cae sobre la tarjeta de la versión que usa, si se conoce.
+  for (const k of SERVICIOS_CON_VERSIONES) {
+    r.push({
+      id: `versiones-${k}`,
+      grupo: 'servicios',
+      titulo: t.versionesDe(textos.versiones.servicios[k]),
+      claves: 'versions versoes versions',
+      ejecutar: () => irA(destinoVersion(k, servicios.porId[k]?.version ?? null)),
+    });
+  }
   const puertoNginx = servicios.porId['nginx']?.puertos[0];
   for (const s of ordenarSitios(sitios.lista)) {
     const nombre = s.nombre || s.dominio;
@@ -113,6 +137,14 @@ const comandos = computed<Comando[]>(() => {
           api().sistema.abrirUrl(urlLocal(s.dominio, puertoNginx)),
         ),
     });
+    r.push({
+      id: `ir-${s.id}`,
+      grupo: 'proyectos',
+      titulo: t.irAProyecto(nombre),
+      detalle: s.dominio,
+      claves: 'ir ver go',
+      ejecutar: () => irA(destinoSitio(s.id)),
+    });
     if (s.git) {
       r.push({
         id: `traer-${s.id}`,
@@ -123,7 +155,7 @@ const comandos = computed<Comando[]>(() => {
         ejecutar: () => {
           // Lo hace la tarjeta del proyecto: así muestra los pasos sugeridos como siempre.
           solicitudes.traerCambios = s.id;
-          ir('proyectos');
+          irA(destinoSitio(s.id));
         },
       });
     }

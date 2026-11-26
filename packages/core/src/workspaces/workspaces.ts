@@ -330,7 +330,7 @@ export class Workspaces {
           // Texto corto y sin separadores de ruta (el aviso nunca lleva rutas).
           nombres: nombresCortos(fallos.map((f) => f.elemento)),
         },
-        accion: { ruta: 'inicio' },
+        accion: { ruta: 'inicio', foco: `workspace:${w.id}` },
       });
     } catch {
       // Un aviso que no se pudo publicar no cambia el resultado.

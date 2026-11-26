@@ -272,7 +272,7 @@ export class Servicios {
           tipo: 'puerto-ocupado',
           codigo: 'avisos.puerto_ocupado',
           datos: { fuente: id, puerto: e.puerto, nombre: e.nombre },
-          accion: { ruta: 'servicios' },
+          accion: { ruta: 'servicios', foco: `servicio:${id}` },
         });
       }
       if (!(e instanceof ErrorDetenidoAlIniciar)) throw e;

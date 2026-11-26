@@ -25,6 +25,7 @@ import { useFoco } from '../composables/useFoco';
 import { solicitudes } from '../composables/solicitudes';
 import { useNoLeidos } from '../composables/useNoLeidos';
 import { textos } from '../i18n';
+import { destinoServicio, destinoTunel } from '../utilidades/foco';
 import { useHosts } from '../stores/hosts';
 import { useIa } from '../stores/ia';
 import { useServicios } from '../stores/servicios';
@@ -266,7 +267,14 @@ function abrir(url: string): void {
         </template>
         <ul v-if="servicios.lista.length" class="lista">
           <li v-for="s in servicios.lista" :key="s.id" :data-foco="`servicio:${s.id}`">
-            <span class="nombre">{{ s.nombre }}</span>
+            <button
+              type="button"
+              class="nombre enlace"
+              :title="t.servicios.irA(s.nombre)"
+              @click="router.push(destinoServicio(s.id))"
+            >
+              {{ s.nombre }}
+            </button>
             <span class="meta">{{ s.puertos.join(' · ') }}</span>
             <EstadoPunto :estado="s.estado" />
           </li>
@@ -278,7 +286,14 @@ function abrir(url: string): void {
         <ul v-if="listaTuneles.length" class="lista">
           <li v-for="tun in listaTuneles" :key="tun.sitioId" :data-foco="`sitio:${tun.sitioId}`">
             <span class="nombre">
-              {{ tun.nombre }}
+              <button
+                type="button"
+                class="enlace"
+                :title="t.tuneles.irA(tun.nombre)"
+                @click="router.push(destinoTunel(tun.sitioId))"
+              >
+                {{ tun.nombre }}
+              </button>
               <a class="url" href="#" @click.prevent="abrir(tun.url)">{{ tun.url }}</a>
             </span>
             <NSpace size="small" :wrap="false">
@@ -428,6 +443,20 @@ function abrir(url: string): void {
   display: flex;
   flex-direction: column;
   font-weight: 500;
+}
+.enlace {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.enlace:hover,
+.enlace:focus-visible {
+  text-decoration: underline;
 }
 .meta {
   font-family: var(--fuente-mono);

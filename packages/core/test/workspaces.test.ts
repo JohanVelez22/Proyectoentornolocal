@@ -161,7 +161,11 @@ describe('workspaces: iniciar', () => {
     expect(await ws.estado('a')).toBe('parcial');
     // El fallo también se publica como aviso (desde la bandeja no hay otra forma de verlo).
     expect(avisos).toHaveLength(1);
-    expect(avisos[0]).toMatchObject({ codigo: 'avisos.workspace_fallos' });
+    expect(avisos[0]).toMatchObject({
+      codigo: 'avisos.workspace_fallos',
+      // El aviso lleva a la tarjeta del workspace y la resalta (D41).
+      accion: { ruta: 'inicio', foco: 'workspace:a' },
+    });
   });
 
   it('conserva el código de un ErrorWolf (p. ej. un proceso sin confianza)', async () => {

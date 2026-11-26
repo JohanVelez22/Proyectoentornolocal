@@ -1195,12 +1195,14 @@ export const pt: Textos = {
     servicios: {
       titulo: 'Serviços',
       ver: 'Ver serviços',
+      irA: (nombre: string) => `Ir ao serviço ${nombre}`,
       vacio: 'Ainda não há serviços instalados.',
     },
     tuneles: {
       titulo: 'Túneis ativos',
       vacio: 'Não há túneis abertos. Você pode abrir um em Projetos.',
       sitioDesconocido: 'Site sem nome',
+      irA: (nombre: string) => `Ir ao projeto ${nombre}`,
     },
   },
   servicios: {
@@ -2899,6 +2901,7 @@ export const pt: Textos = {
         'Revise a receita e marque "Confio neste repositório" no assistente para poder executá-la.',
       runtimes: 'Avisos de versões',
       verRegistros: 'Ver registros',
+      verEnBases: 'Ver em Bancos de dados',
       abrirAgente: 'Abrir um agente de IA',
       vscode: 'Editor',
       vscodeAyuda: 'Abrir a pasta do projeto no editor padrão',
@@ -3921,6 +3924,7 @@ export const pt: Textos = {
     copiar: 'Copiar comando',
     copiado: 'Comando copiado.',
     reparar: 'Reparar',
+    ver: 'Ver',
     alternativa: 'Mover a porta do WolfCore Dev',
     soloInforma: 'O WolfCore Dev não muda isto por conta própria: siga as instruções.',
     dialogo: {
@@ -4750,6 +4754,9 @@ export const pt: Textos = {
     detenerWorkspace: (n: string) => `Desligar o workspace ${n}`,
     abrirSitio: (nombre: string) => `Abrir ${nombre} no navegador`,
     traerCambios: (nombre: string) => `Trazer mudanças em ${nombre}`,
+    irAServicio: (nombre: string) => `Ir ao serviço ${nombre}`,
+    irAProyecto: (nombre: string) => `Ir ao projeto ${nombre}`,
+    versionesDe: (nombre: string) => `Versões de ${nombre}`,
     abrirHerramienta: (nombre: string) => `Abrir ${nombre}`,
     clonar: 'Clonar um repositório do GitHub',
     agregarProyecto: 'Adicionar um projeto',

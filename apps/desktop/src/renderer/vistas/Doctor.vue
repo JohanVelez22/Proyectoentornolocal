@@ -13,6 +13,7 @@ import {
   useMessage,
 } from 'naive-ui';
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import type { Hallazgo, Reparacion } from '../../shared/api';
 import { api } from '../api';
 import TarjetaHallazgo from '../componentes/TarjetaHallazgo.vue';
@@ -20,10 +21,11 @@ import { useAccion } from '../composables/useAccion';
 import { useFoco } from '../composables/useFoco';
 import { textos } from '../i18n';
 import { useDoctor } from '../stores/doctor';
-import { textoReparacion } from '../utilidades/doctor';
+import { destinoHallazgo, textoReparacion } from '../utilidades/doctor';
 import { traducirError } from '../utilidades/errores';
 
 const t = textos.doctor;
+const router = useRouter();
 const tc = textos.doctor.confianza;
 const doctor = useDoctor();
 const message = useMessage();
@@ -64,6 +66,11 @@ function aplicar(): void {
   void doctor.reparar(p.hallazgo.id, true, p.alternativa ? 'cambiar-puerto' : undefined);
 }
 
+/** Lleva a la tarjeta del servicio o del proyecto del hallazgo y la resalta (D41). */
+function verTarjeta(h: Hallazgo): void {
+  const destino = destinoHallazgo(h);
+  if (destino) void router.push(destino);
+}
 function copiar(comando: string): void {
   void ejecutar('copiar', () => api().sistema.copiar(comando), { exito: t.copiado });
 }
@@ -152,6 +159,7 @@ const firefoxActivos = computed(() => conf.value?.firefox.some((p) => p.activo) 
         :reparacion="doctor.reparaciones[h.id]"
         @pedir="(alt) => pedir(h, alt)"
         @copiar="copiar"
+        @ver="verTarjeta(h)"
       />
     </section>
 

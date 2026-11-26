@@ -35,7 +35,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { argsDeAviso, useVersiones } from '../stores/versiones';
-import { rutaConFoco } from '../utilidades/foco';
+import { destinoVersion, rutaConFoco } from '../utilidades/foco';
 import { solicitudes } from '../composables/solicitudes';
 import AsistenteInicio from './AsistenteInicio.vue';
 import BotonMemoria from './BotonMemoria.vue';
@@ -139,8 +139,9 @@ function abrirAviso(a: Aviso): void {
       void router.push(foco ? rutaConFoco(ruta, foco) : { name: ruta });
       return;
     }
+    // La pestaña se desplaza hasta la tarjeta de la versión nueva y la resalta (D41).
     void router
-      .push({ name: ruta, params: { servicio: args.servicio } })
+      .push(destinoVersion(args.servicio, args.version))
       .then(() => versiones.abrirDesdeAviso(args))
       .catch(() => undefined);
     return;

@@ -5,7 +5,7 @@ import { computed } from 'vue';
 import type { Hallazgo } from '../../shared/api';
 import { textos } from '../i18n';
 import type { EstadoReparacion } from '../stores/doctor';
-import { textoReparacion } from '../utilidades/doctor';
+import { destinoHallazgo, textoReparacion } from '../utilidades/doctor';
 import { traducirError } from '../utilidades/errores';
 
 /**
@@ -16,6 +16,7 @@ const props = defineProps<{ hallazgo: Hallazgo; reparacion?: EstadoReparacion }>
 const emit = defineEmits<{
   pedir: [alternativa: boolean];
   copiar: [comando: string];
+  ver: [];
 }>();
 
 const t = textos.doctor;
@@ -27,6 +28,8 @@ const titulo = computed(() =>
 const rep = computed(() => props.hallazgo.reparacion);
 /** `doctor.reparaciones.<clave>` del núcleo → texto de lo que hará la reparación. */
 const queHara = computed(() => textoReparacion(rep.value?.codigo));
+/** Hallazgo de un servicio o de un proyecto: "Ver" lleva a su tarjeta. */
+const tieneTarjeta = computed(() => destinoHallazgo(props.hallazgo) !== null);
 const aplicando = computed(() => props.reparacion?.estado === 'aplicando');
 const resultado = computed(() => {
   const r = props.reparacion;
@@ -51,6 +54,9 @@ const resultado = computed(() => {
       </NTag>
       <strong>{{ titulo }}</strong>
     </header>
+    <div v-if="tieneTarjeta" class="ver">
+      <NButton quaternary size="small" @click="emit('ver')">{{ t.ver }}</NButton>
+    </div>
     <p class="evidencia">
       <span class="etiqueta">{{ t.evidencia }}:</span> <code>{{ hallazgo.evidencia }}</code>
     </p>
@@ -124,6 +130,9 @@ const resultado = computed(() => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+.ver {
+  margin-top: 6px;
 }
 .evidencia {
   margin: 8px 0 0;

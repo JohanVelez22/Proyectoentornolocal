@@ -1242,12 +1242,14 @@ export const fr: Textos = {
     servicios: {
       titulo: 'Services',
       ver: 'Voir les services',
+      irA: (nombre: string) => `Aller au service ${nombre}`,
       vacio: 'Aucun service n’est encore installé.',
     },
     tuneles: {
       titulo: 'Tunnels actifs',
       vacio: 'Aucun tunnel ouvert. Vous pouvez en ouvrir un depuis Projets.',
       sitioDesconocido: 'Site sans nom',
+      irA: (nombre: string) => `Aller au projet ${nombre}`,
     },
   },
   servicios: {
@@ -2966,6 +2968,7 @@ export const fr: Textos = {
         'Examinez la recette et cochez "Je fais confiance à ce dépôt" dans l’assistant pour pouvoir l’exécuter.',
       runtimes: 'Avis de versions',
       verRegistros: 'Voir les journaux',
+      verEnBases: 'Voir dans Bases de données',
       abrirAgente: 'Ouvrir un agent d’IA',
       vscode: 'Éditeur',
       vscodeAyuda: 'Ouvrir le dossier du projet dans l’éditeur par défaut',
@@ -4011,6 +4014,7 @@ export const fr: Textos = {
     copiar: 'Copier la commande',
     copiado: 'Commande copiée.',
     reparar: 'Réparer',
+    ver: 'Voir',
     alternativa: 'Déplacer le port de WolfCore Dev',
     soloInforma: 'WolfCore Dev ne modifie pas cela de lui-même : suivez les indications.',
     dialogo: {
@@ -4863,6 +4867,9 @@ export const fr: Textos = {
     detenerWorkspace: (n: string) => `Arrêter le workspace ${n}`,
     abrirSitio: (nombre: string) => `Ouvrir ${nombre} dans le navigateur`,
     traerCambios: (nombre: string) => `Récupérer les changements de ${nombre}`,
+    irAServicio: (nombre: string) => `Aller au service ${nombre}`,
+    irAProyecto: (nombre: string) => `Aller au projet ${nombre}`,
+    versionesDe: (nombre: string) => `Versions de ${nombre}`,
     abrirHerramienta: (nombre: string) => `Ouvrir ${nombre}`,
     clonar: 'Cloner un dépôt depuis GitHub',
     agregarProyecto: 'Ajouter un projet',

@@ -11,6 +11,7 @@ import { textos as tx } from '../i18n';
 import { useServicios, type InstalableCatalogo } from '../stores/servicios';
 import { useRouter } from 'vue-router';
 import { esServicioConVersiones, useVersiones } from '../stores/versiones';
+import { destinoVersion } from '../utilidades/foco';
 
 const props = defineProps<{ servicio: InstalableCatalogo }>();
 
@@ -79,7 +80,7 @@ async function instalar(): Promise<void> {
     const s = props.servicio;
     pestanaVersiones.elegirServicio(s);
     pestanaVersiones.resaltada = v.version;
-    await router.push({ name: 'servicios.versiones', params: { servicio: s } });
+    await router.push(destinoVersion(s, v.version));
     await ejecutar('versiones', async () => {
       await pestanaVersiones.cargar();
       await pestanaVersiones.pedirInstalar(v.version);

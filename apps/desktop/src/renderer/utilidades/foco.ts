@@ -97,3 +97,44 @@ export function aplicarFoco(doc: DocumentoFoco, id: string, o: OpcionesFoco): ()
     resaltado = null;
   };
 }
+
+/* ───── Ids de foco y destinos de navegación (todos los caminos usan estos) ───── */
+
+export const focoServicio = (id: string): string => `servicio:${id}`;
+export const focoSitio = (id: string): string => `sitio:${id}`;
+export const focoVersion = (servicio: string, version: string): string =>
+  `version:${servicio}:${version}`;
+export const focoBase = (motor: string, nombre: string): string => `base:${motor}:${nombre}`;
+
+/** Servicios → tarjeta del servicio. */
+export function destinoServicio(id: string): RouteLocationRaw {
+  return rutaConFoco('servicios', focoServicio(id));
+}
+
+/** Proyectos → tarjeta del proyecto. */
+export function destinoSitio(id: string): RouteLocationRaw {
+  return rutaConFoco('proyectos', focoSitio(id));
+}
+
+/** Túneles → fila del sitio con túnel. */
+export function destinoTunel(sitioId: string): RouteLocationRaw {
+  return rutaConFoco('tuneles', focoSitio(sitioId));
+}
+
+/** Servicios → pestaña Versiones del servicio, con la tarjeta de la versión si se conoce. */
+export function destinoVersion(servicio: string, version?: string | null): RouteLocationRaw {
+  const base = { name: 'servicios.versiones', params: { servicio } };
+  return version ? { ...base, query: { foco: focoVersion(servicio, version) } } : base;
+}
+
+/** Bases de datos → fila de la base (la vista elige antes la pestaña del motor). */
+export function destinoBase(motor: string, nombre: string): RouteLocationRaw {
+  return rutaConFoco('basesDeDatos', focoBase(motor, nombre));
+}
+
+/** Motor de un foco `base:<motor>:<nombre>`, o null si el foco no es de una base. */
+export function motorDeFocoBase(foco: unknown): string | null {
+  if (typeof foco !== 'string') return null;
+  const m = /^base:([^:]+):./.exec(foco);
+  return m ? m[1]! : null;
+}
