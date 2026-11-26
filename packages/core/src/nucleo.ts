@@ -13,11 +13,13 @@ import {
   BasesDeDatos,
   type BaseListada,
   type DatosConexion,
+  type DatosConexionVista,
   type MotorBd,
   type ObjetivoBd,
   type OpcionesCrearBase,
   type ResultadoCrear,
 } from './bd/basesDeDatos';
+import { vistaConexion } from './bd/env';
 import { migrarInstancias } from './migraciones/instancias';
 import { puertosConfigurados } from './servicios/instancias';
 import type { RespaldoDatos, TipoRespaldoDatos } from './servicios/actualizar';
@@ -2135,14 +2137,34 @@ export class Nucleo {
     return this.cerrojoBases.con(motor, nombre, () => this.bd.borrar(motor, nombre, confirmacion));
   }
 
-  /** Datos de conexión del motor, con su clave (solo para "Datos de conexión"). */
+  /** Datos de conexión del motor, con su clave (uso interno: nunca llega tal cual a la interfaz). */
   conexionBd(motor: ObjetivoBd): Promise<DatosConexion> {
     return this.bd.conexion(motor);
   }
 
+  /** «Datos de conexión» para la interfaz: sin la clave (solo si hay una). */
+  async vistaConexionBd(motor: ObjetivoBd): Promise<DatosConexionVista> {
+    return vistaConexion(await this.bd.conexion(motor));
+  }
+
+  /** La clave del motor, al pulsar «Mostrar» o «Copiar» en el diálogo (null si no usa clave). */
+  async revelarClaveBd(motor: ObjetivoBd): Promise<string | null> {
+    return (await this.bd.conexion(motor)).clave;
+  }
+
+  /** «Datos de conexión» de Meilisearch para la interfaz: sin la master key. */
+  async vistaConexionServicio(ref: 'meilisearch' | IdInstancia): Promise<DatosConexionVista> {
+    return vistaConexion(await this.conexionServicio(ref));
+  }
+
+  /** La master key de Meilisearch, al pulsar «Mostrar» o «Copiar». Nunca va a logs ni a una URL. */
+  async revelarClaveServicio(ref: 'meilisearch' | IdInstancia): Promise<string | null> {
+    return (await this.conexionServicio(ref)).clave;
+  }
+
   /**
-   * "Datos de conexión" de Meilisearch (host, puerto y master key). Solo Meilisearch (o una de sus
-   * instancias): la clave llega al diálogo y se muestra con «Mostrar»; nunca va a logs ni a una URL.
+   * Datos de conexión de Meilisearch (host, puerto y master key), de uso interno. Solo Meilisearch
+   * (o una de sus instancias). La interfaz recibe `vistaConexionServicio` y pide la clave aparte.
    */
   async conexionServicio(ref: 'meilisearch' | IdInstancia): Promise<DatosConexion> {
     const servicio = ref === 'meilisearch' ? ref : parsearInstancia(ref).servicio;
@@ -2177,8 +2199,10 @@ export class Nucleo {
     base: string,
     tipoProyecto: TipoSitio | 'generico',
     envActual?: string,
+    /** Solo `revelar: true` (clic en «Copiar .env») incluye la clave; por defecto sale enmascarada. */
+    o: { revelar?: boolean } = {},
   ): Promise<string> {
-    return this.bd.bloqueEnv(motor, base, tipoProyecto, envActual);
+    return this.bd.bloqueEnv(motor, base, tipoProyecto, envActual, o.revelar !== true);
   }
 
   /**
@@ -2186,11 +2210,16 @@ export class Nucleo {
    * del renderer), se lee su `.env` (máx. 256 KB; si no hay, vacío) para respetar las variables
    * que ya usa, y se usa el tipo del sitio. Devuelve solo el bloque generado, nunca el `.env`.
    */
-  async bloqueEnvSitio(sitioId: string, motor: ObjetivoBd, base: string): Promise<string> {
+  async bloqueEnvSitio(
+    sitioId: string,
+    motor: ObjetivoBd,
+    base: string,
+    o: { revelar?: boolean } = {},
+  ): Promise<string> {
     const sitio = (await this.config.leer()).sitios.find((s) => s.id === sitioId);
     if (!sitio) throw new Error('El sitio ya no existe.');
     const envActual = (await leerEnvAcotado(path.join(sitio.carpeta, '.env'))) ?? '';
-    return this.bd.bloqueEnv(motor, base, sitio.tipo, envActual);
+    return this.bd.bloqueEnv(motor, base, sitio.tipo, envActual, o.revelar !== true);
   }
 
   /**

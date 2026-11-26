@@ -12,6 +12,20 @@ export interface DatosConexion {
   instancia?: IdInstancia;
 }
 
+/**
+ * Lo que la interfaz recibe de los datos de conexión: todo menos la clave. La clave solo sale por
+ * las rutas «revelar» (un clic en «Mostrar» o «Copiar»), igual que el valor de una variable .env.
+ */
+export type DatosConexionVista = Omit<DatosConexion, 'clave'> & { tieneClave: boolean };
+
+export function vistaConexion(d: DatosConexion): DatosConexionVista {
+  const { clave, ...resto } = d;
+  return { ...resto, tieneClave: clave !== null };
+}
+
+/** En lugar de la clave en el bloque `.env` que ve la interfaz (el bloque completo se pide aparte). */
+export const MASCARA_CLAVE = '************';
+
 const CI4 = /^\s*#?\s*database\.default\.\w+\s*=/m;
 const DB_LARAVEL = /^[ \t]*DB_[A-Z_]+[ \t]*=/m;
 const CON_LARAVEL = /^[ \t]*DB_CONNECTION[ \t]*=/m;
@@ -74,6 +88,8 @@ export function bloqueEnv(
   tipo: TipoSitio | 'generico',
   datos: DatosConexion,
   envActual = '',
+  /** La clave sale como `MASCARA_CLAVE`: para mostrar el bloque sin pasar el secreto. */
+  enmascarar = false,
 ): string {
   for (const v of [base, datos.usuario, datos.clave ?? '']) {
     if (/[\r\n]/.test(v)) throw new Error('Valor no válido para .env');
@@ -85,7 +101,7 @@ export function bloqueEnv(
   const ci4 = tipo === 'codeigniter4' || (tipo === 'codeigniter3' && CI4.test(envActual));
   // CodeIgniter 3 sin el formato de CI4: el lector propio de index.php (sin escapes).
   const estilo: EstiloEnv = ci4 ? 'ci4' : tipo === 'codeigniter3' ? 'literal' : 'dotenv';
-  const clave = valorEnv(datos.clave ?? '', estilo);
+  const clave = enmascarar ? MASCARA_CLAVE : valorEnv(datos.clave ?? '', estilo);
   const usuario = valorEnv(datos.usuario, estilo);
   const bd = valorEnv(base, estilo);
   if (ci4) {

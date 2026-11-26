@@ -30,7 +30,14 @@ import {
 import { bloqueEnv, type DatosConexion, type MotorBd } from './env';
 import { nombreEjecutable } from '../plataforma/sistema';
 
-export { bloqueEnv, type DatosConexion, type MotorBd } from './env';
+export {
+  bloqueEnv,
+  MASCARA_CLAVE,
+  vistaConexion,
+  type DatosConexion,
+  type DatosConexionVista,
+  type MotorBd,
+} from './env';
 
 export interface BaseListada {
   nombre: string;
@@ -186,9 +193,10 @@ export class BasesDeDatos {
     base: string,
     tipoProyecto: TipoSitio | 'generico',
     envActual?: string,
+    enmascarar = false,
   ): Promise<string> {
     const x = await this.conexion(objetivo);
-    return bloqueEnv(motorDe(objetivo), base, tipoProyecto, x, envActual);
+    return bloqueEnv(motorDe(objetivo), base, tipoProyecto, x, envActual, enmascarar);
   }
 
   private async conMysql<T>(objetivo: ObjetivoBd, fn: (c: ClienteMysql) => Promise<T>): Promise<T> {
