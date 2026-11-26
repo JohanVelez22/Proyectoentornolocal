@@ -70,7 +70,6 @@ export * from './servicios/mailpit';
 export * from './servicios/correo/captadores';
 export * from './servicios/ollama';
 export * from './servicios/meilisearch';
-export * from './servicios/minio';
 export * from './bd/clientePostgres';
 export * from './bd/basesDeDatos';
 export * from './sitios/urlbase';

@@ -67,7 +67,6 @@ function apiFalsa(general: Partial<EstadoGeneral> = {}) {
               'papercut',
               'ollama',
               'meilisearch',
-              'minio',
             ].map((id) => [id, { version: null, puerto: 1, autoIniciar: id === 'mysql' }]),
           ),
         },

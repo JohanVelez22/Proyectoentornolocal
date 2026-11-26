@@ -28,7 +28,6 @@ export const INSTALABLES_CATALOGO = [
   'papercut',
   'ollama',
   'meilisearch',
-  'minio',
 ] as const satisfies readonly ServicioInstalable[];
 export type InstalableCatalogo = (typeof INSTALABLES_CATALOGO)[number];
 
@@ -48,7 +47,6 @@ export const IDS_DATOS: readonly IdServicioDatos[] = [
   'papercut',
   'ollama',
   'meilisearch',
-  'minio',
 ];
 
 /** Captadores de correo locales (D21): se agrupan en Correo y nunca corren dos a la vez. */

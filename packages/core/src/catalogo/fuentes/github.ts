@@ -44,13 +44,8 @@ export interface OpcionesGithub {
   prefijoTag?: string;
   dueno: string;
   repo: string;
-  /** Nombre del asset de Windows x64 para esa versión (y su etiqueta, por si el nombre la usa). */
-  asset: (version: string, tag: string) => string;
-  /**
-   * Versión de una etiqueta que no es `v<versión>` (MinIO: `RELEASE.2025-09-07T16-13-09Z`).
-   * Devuelve null para saltarla. Si falta, se usa `prefijoTag` o la `v` opcional.
-   */
-  versionDeTag?: (tag: string) => string | null;
+  /** Nombre del asset de Windows x64 para esa versión. */
+  asset: (version: string) => string;
   formato: FormatoPaquete;
   subcarpeta?: (version: string) => string;
   ejecutable: string;
@@ -167,11 +162,7 @@ export function fuenteGithub(o: OpcionesGithub): FuenteVersiones {
           throw new IndiceMalformado(`La última release de ${o.repo} es una prerelease`);
         }
         let version = r.tag_name.replace(/^v/, '');
-        if (o.versionDeTag !== undefined) {
-          const v = o.versionDeTag(r.tag_name);
-          if (v === null) continue;
-          version = v;
-        } else if (o.prefijoTag !== undefined) {
+        if (o.prefijoTag !== undefined) {
           if (!r.tag_name.startsWith(o.prefijoTag)) continue;
           version = r.tag_name.slice(o.prefijoTag.length);
         }
@@ -183,7 +174,7 @@ export function fuenteGithub(o: OpcionesGithub): FuenteVersiones {
             throw new IndiceMalformado(`Asset de ${o.repo} fuera del repositorio esperado`);
           }
         }
-        const asset = r.assets.find((a) => a.name === o.asset(version, r.tag_name));
+        const asset = r.assets.find((a) => a.name === o.asset(version));
         if (!asset) continue;
         if (
           !urlExactaDeAsset(asset.browser_download_url, o.dueno, o.repo, r.tag_name, asset.name)
@@ -337,22 +328,4 @@ export const fuenteMeilisearch = fuenteGithub({
   asset: () => nombreEjecutable('meilisearch-windows-amd64'),
   formato: 'exe',
   ejecutable: nombreEjecutable('meilisearch'),
-});
-
-/**
- * MinIO: el proyecto está archivado y `dl.min.io` ya no sirve binarios; la última release con
- * `.exe` oficial en GitHub es `RELEASE.2025-09-07T16-13-09Z` (con `.sha256sum` y `digest`). La
- * etiqueta se convierte en versión `2025.09.07T16-13-09Z` (cumple la clave de carpeta).
- */
-export const fuenteMinio = fuenteGithub({
-  servicio: 'minio',
-  dueno: 'minio',
-  repo: 'minio',
-  versionDeTag: (tag) => {
-    const m = /^RELEASE\.(\d{4})-(\d{2})-(\d{2})T(\d{2}-\d{2}-\d{2})Z$/.exec(tag);
-    return m ? `${m[1]}.${m[2]}.${m[3]}T${m[4]}Z` : null;
-  },
-  asset: (_v, tag) => nombreEjecutable(`minio.windows-amd64.${tag}`),
-  formato: 'exe',
-  ejecutable: nombreEjecutable('minio'),
 });

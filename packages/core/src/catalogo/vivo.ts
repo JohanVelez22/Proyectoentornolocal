@@ -38,7 +38,6 @@ import {
   fuenteMongosh,
   fuenteOllama,
   fuenteMeilisearch,
-  fuenteMinio,
   fuenteRedis,
 } from './fuentes/github';
 import { fuenteMariadb } from './fuentes/mariadb';
@@ -78,7 +77,6 @@ export const FUENTES_VERSIONES: Partial<Record<ServicioInstalable, FuenteVersion
   papercut: fuentePapercut,
   ollama: fuenteOllama,
   meilisearch: fuenteMeilisearch,
-  minio: fuenteMinio,
   cloudflared: fuenteCloudflared,
   redis: fuenteRedis,
   mongosh: fuenteMongosh,

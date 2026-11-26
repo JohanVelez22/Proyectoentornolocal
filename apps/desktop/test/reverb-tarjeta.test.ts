@@ -60,24 +60,8 @@ describe('tarjeta de Reverb (D45a)', () => {
   });
 
   it('francés con «vous»: nada de «tu», «ton» ni imperativos de tutoiement', () => {
-    const textos = JSON.stringify(fr.reverb) + fr.servicios.avisoMinio;
+    const textos = JSON.stringify(fr.reverb);
     expect(textos).not.toMatch(/\b(tu|ton|ta|tes|toi)\b/i);
-  });
-
-  it('el aviso de MinIO dice que está archivado, solo escucha en local y no guardar datos reales', () => {
-    for (const x of [es, en, pt, fr]) {
-      const aviso = x.servicios.avisoMinio;
-      const detalle = x.instalar.servicios['minio']!.detalle;
-      for (const texto of [aviso, detalle]) {
-        expect(texto).toContain('127.0.0.1');
-        expect(texto.length).toBeGreaterThan(60);
-      }
-    }
-    expect(es.servicios.avisoMinio).toMatch(/archivado/);
-    expect(es.servicios.avisoMinio).toMatch(/datos reales/);
-    expect(en.servicios.avisoMinio).toMatch(/real data/);
-    expect(pt.servicios.avisoMinio).toMatch(/dados reais/);
-    expect(fr.servicios.avisoMinio).toMatch(/données réelles/);
   });
 
   it('contraste: la tarjeta no atenúa el texto con opacity (hereda el color del tema)', () => {

@@ -3,14 +3,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { listarVersiones } from '../src/catalogo/catalogo';
-import { fuenteMeilisearch, fuenteMinio } from '../src/catalogo/fuentes/github';
+import { fuenteMeilisearch } from '../src/catalogo/fuentes/github';
 import { IndiceMalformado, type ContextoFuente } from '../src/catalogo/fuentes/tipos';
 import { FUENTES_VERSIONES } from '../src/catalogo/vivo';
+import { ArchivoCredencialesSchema, ConfigSchema } from '../src/tipos';
 import { Rutas } from '../src/rutas';
 import { DEFINICIONES } from '../src/servicios/datos';
 import type { CtxServicio } from '../src/servicios/definicion';
 import { argsMeilisearch, defMeilisearch } from '../src/servicios/meilisearch';
-import { argsMinio, defMinio, PUERTO_CONSOLA_MINIO } from '../src/servicios/minio';
 import { esIdInstancia } from '../src/servicios/instancias';
 import { fetchFalso, HOY, type Ruta } from './catalogo-falso';
 
@@ -50,14 +50,13 @@ const asset = (repo: string, tag: string, name: string, c: string) => ({
 });
 
 const URL_MEILI = 'https://api.github.com/repos/meilisearch/meilisearch/releases?per_page=10';
-const URL_MINIO = 'https://api.github.com/repos/minio/minio/releases?per_page=10';
 const ctxFuente = (rutas: Record<string, Ruta>): ContextoFuente => ({
   f: fetchFalso(rutas).f,
   idCatalogo: 'win-x64',
   ahora: HOY,
 });
 
-describe('fuentes de Meilisearch y MinIO', () => {
+describe('fuente de Meilisearch', () => {
   it('Meilisearch: el binario de la release con la huella del digest', async () => {
     const tag = 'v1.58.0';
     const r = [
@@ -81,28 +80,6 @@ describe('fuentes de Meilisearch y MinIO', () => {
     });
   });
 
-  it('MinIO: salta la release sin binario y convierte la etiqueta en versión', async () => {
-    const nueva = 'RELEASE.2025-10-15T17-29-55Z';
-    const vieja = 'RELEASE.2025-09-07T16-13-09Z';
-    const r = [
-      { tag_name: nueva, draft: false, prerelease: false, assets: [] },
-      {
-        tag_name: vieja,
-        draft: false,
-        prerelease: false,
-        assets: [asset('minio/minio', vieja, `minio.windows-amd64.${vieja}.exe`, 'c')],
-      },
-    ];
-    const v = await fuenteMinio.listar(ctxFuente({ [URL_MINIO]: JSON.stringify(r) }));
-    expect(v).toHaveLength(1);
-    expect(v[0]).toMatchObject({
-      servicio: 'minio',
-      version: '2025.09.07T16-13-09Z',
-      url: `https://github.com/minio/minio/releases/download/${vieja}/minio.windows-amd64.${vieja}.exe`,
-      huella: { algoritmo: 'sha256', valor: 'c'.repeat(64) },
-    });
-  });
-
   it('un asset fuera del repositorio esperado descarta el índice', async () => {
     const malo = {
       name: 'meilisearch-windows-amd64.exe',
@@ -117,8 +94,7 @@ describe('fuentes de Meilisearch y MinIO', () => {
 
   it('están registradas en el catálogo en vivo y en la lista fija con huella SHA-256', async () => {
     expect(FUENTES_VERSIONES.meilisearch).toBe(fuenteMeilisearch);
-    expect(FUENTES_VERSIONES.minio).toBe(fuenteMinio);
-    for (const s of ['meilisearch', 'minio'] as const) {
+    for (const s of ['meilisearch'] as const) {
       const lista = await listarVersiones(s);
       expect(lista).toHaveLength(1);
       expect(lista[0]!.sha256).toMatch(/^[0-9a-f]{64}$/);
@@ -142,41 +118,43 @@ describe('Meilisearch: arranque', () => {
   });
 });
 
-describe('MinIO: arranque', () => {
-  it('API y consola solo en 127.0.0.1; usuario y clave por entorno secreto', async () => {
-    const def = defMinio();
-    const c = ctx('minio', '2025.09.07T16-13-09Z', 19000, () => 'actual');
-    await def.inicializar(c);
-    const p = await def.proceso(c);
-    expect(p.args[p.args.indexOf('--address') + 1]).toBe('127.0.0.1:19000');
-    expect(p.args[p.args.indexOf('--console-address') + 1]).toBe(
-      `127.0.0.1:${PUERTO_CONSOLA_MINIO}`,
-    );
-    // Nada de ":19001" sin host (escucharía en todas las interfaces).
-    for (const a of p.args) expect(/^:\d+$/.test(a)).toBe(false);
-    expect(p.envSecreto).toEqual({
-      MINIO_ROOT_USER: USUARIO_FALSO,
-      MINIO_ROOT_PASSWORD: CLAVE_FALSA,
-    });
-    const visible = JSON.stringify({ args: p.args, env: p.env });
-    expect(visible).not.toContain(CLAVE_FALSA);
-    expect(visible).not.toContain(USUARIO_FALSO);
-    expect(def.puertosExtra).toEqual([PUERTO_CONSOLA_MINIO]);
-    expect(argsMinio(c.datos, 19050)).toContain('127.0.0.1:19050');
-  });
-
-  it('los puertos quedan fuera del rango de PHP (9000-9999)', () => {
-    expect(defMinio().puertoPorDefecto).toBeGreaterThan(9999);
-    expect(PUERTO_CONSOLA_MINIO).toBeGreaterThan(9999);
+describe('registro', () => {
+  it('Meilisearch está registrado y admite instancias', () => {
+    const ids = DEFINICIONES.map((d) => d.id);
+    expect(ids).toContain('meilisearch');
+    expect(esIdInstancia('meilisearch@1.58')).toBe(true);
+    // MinIO ya no es un servicio: su id de instancia no es válido.
+    expect(esIdInstancia('minio@actual')).toBe(false);
   });
 });
 
-describe('registro', () => {
-  it('ambos servicios están registrados y admiten instancias', () => {
-    const ids = DEFINICIONES.map((d) => d.id);
-    expect(ids).toContain('meilisearch');
-    expect(ids).toContain('minio');
-    expect(esIdInstancia('meilisearch@1.58')).toBe(true);
-    expect(esIdInstancia('minio@actual')).toBe(true);
+describe('config guardada con MinIO (retirado del catálogo)', () => {
+  it('se ignora sin romper la configuración', () => {
+    const cfg = ConfigSchema.parse({
+      servicios: {
+        datos: {
+          mysql: { version: '8.4.1', puerto: 3306, autoIniciar: true },
+          minio: {
+            version: '2025.09.07T16-13-09Z',
+            puerto: 19000,
+            autoIniciar: true,
+            instancias: { actual: { version: '2025.09.07T16-13-09Z', puerto: 19000 } },
+          },
+        },
+      },
+    });
+    expect(Object.keys(cfg.servicios.datos)).not.toContain('minio');
+    expect(cfg.servicios.datos.mysql).toMatchObject({ version: '8.4.1', autoIniciar: true });
+  });
+
+  it('las credenciales viejas de MinIO no invalidan etc/credenciales.json', () => {
+    const r = ArchivoCredencialesSchema.parse({
+      mysql: { usuario: 'root', clave: 'CLAVE-DE-PRUEBA-FALSA-0000' },
+      minio: { usuario: 'minio', clave: 'CLAVE-DE-PRUEBA-FALSA-0000' },
+      'minio@actual': { usuario: 'minio', clave: 'CLAVE-DE-PRUEBA-FALSA-0000' },
+    });
+    expect(r.mysql?.usuario).toBe('root');
+    // Se conservan tal cual (el archivo no se pierde) pero nadie las usa.
+    expect(Object.keys(r)).toContain('minio');
   });
 });

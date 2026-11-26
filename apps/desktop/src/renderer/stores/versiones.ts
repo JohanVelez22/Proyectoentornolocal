@@ -44,7 +44,6 @@ export const SERVICIOS_CON_VERSIONES: readonly ServicioVersiones[] = [
   'papercut',
   'ollama',
   'meilisearch',
-  'minio',
   'cloudflared',
 ];
 

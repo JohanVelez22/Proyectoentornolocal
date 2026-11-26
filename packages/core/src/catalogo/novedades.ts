@@ -23,7 +23,6 @@ export const SERVICIOS_NOVEDADES: readonly ServicioInstalable[] = [
   'papercut',
   'ollama',
   'meilisearch',
-  'minio',
   'cloudflared',
 ];
 

@@ -62,7 +62,6 @@ const gruposInstalar: { titulo: string; servicios: InstalableCatalogo[] }[] = [
       'papercut',
       'ollama',
       'meilisearch',
-      'minio',
       'cloudflared',
     ],
   },

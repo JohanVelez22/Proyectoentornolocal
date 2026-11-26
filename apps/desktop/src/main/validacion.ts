@@ -220,7 +220,6 @@ const INSTALABLES = [
   'papercut',
   'ollama',
   'meilisearch',
-  'minio',
   'node',
   'python',
   'java',

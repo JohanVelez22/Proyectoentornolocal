@@ -1307,7 +1307,6 @@ export const pt: Textos = {
         papercut: 'todos os e-mails capturados pelo Papercut SMTP',
         ollama: 'todos os modelos baixados do Ollama',
         meilisearch: 'todos os índices do Meilisearch',
-        minio: 'todos os buckets e objetos do MinIO',
       } as Record<string, string>,
       texto: (que: string) =>
         `Serão apagados ${que}. Não é possível desfazer. O programa continua instalado.`,
@@ -1370,8 +1369,6 @@ export const pt: Textos = {
     puertos: 'Portas',
     pid: 'PID',
     sinVersion: 'sem versão',
-    avisoMinio:
-      'O MinIO é um projeto arquivado: já não recebe atualizações de segurança. Só escuta em 127.0.0.1; não guarde aqui dados reais.',
     sinPuertos: '—',
     terminado: 'Terminou sem erros',
     externo: 'Administrado fora do WolfCore Dev',
@@ -1653,11 +1650,6 @@ export const pt: Textos = {
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Busca para o Laravel Scout (github.com/meilisearch)',
-      },
-      minio: {
-        nombre: 'MinIO',
-        detalle:
-          'Armazenamento S3 (github.com/minio). Projeto arquivado: já não recebe atualizações de segurança; só escuta em 127.0.0.1. Não guarde dados reais.',
       },
       composer: { nombre: 'Composer', detalle: 'Dependências do PHP (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Administrador web de bancos de dados' },
@@ -4462,7 +4454,6 @@ export const pt: Textos = {
       papercut: 'Papercut SMTP',
       ollama: 'Ollama',
       meilisearch: 'Meilisearch',
-      minio: 'MinIO',
       cloudflared: 'cloudflared',
       java: 'Java',
       dotnet: '.NET',

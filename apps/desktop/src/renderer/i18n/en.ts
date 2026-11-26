@@ -1296,7 +1296,6 @@ export const en: Textos = {
         papercut: 'all emails caught by Papercut SMTP',
         ollama: 'all models downloaded by Ollama',
         meilisearch: 'all Meilisearch indexes',
-        minio: 'all MinIO buckets and objects',
       } as Record<string, string>,
       texto: (que: string) =>
         `This deletes ${que}. It cannot be undone. The program stays installed.`,
@@ -1359,8 +1358,6 @@ export const en: Textos = {
     puertos: 'Ports',
     pid: 'PID',
     sinVersion: 'no version',
-    avisoMinio:
-      'MinIO is an archived project: it no longer gets security updates. It only listens on 127.0.0.1; do not store real data here.',
     sinPuertos: '—',
     terminado: 'Finished without errors',
     externo: 'Managed outside WolfCore Dev',
@@ -1636,11 +1633,6 @@ export const en: Textos = {
       meilisearch: {
         nombre: 'Meilisearch',
         detalle: 'Search for Laravel Scout (github.com/meilisearch)',
-      },
-      minio: {
-        nombre: 'MinIO',
-        detalle:
-          'S3 storage (github.com/minio). Archived project: it no longer gets security updates; it only listens on 127.0.0.1. Do not store real data.',
       },
       composer: { nombre: 'Composer', detalle: 'PHP dependencies (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Web database manager' },
@@ -4424,7 +4416,6 @@ export const en: Textos = {
       papercut: 'Papercut SMTP',
       ollama: 'Ollama',
       meilisearch: 'Meilisearch',
-      minio: 'MinIO',
       cloudflared: 'cloudflared',
       java: 'Java',
       dotnet: '.NET',

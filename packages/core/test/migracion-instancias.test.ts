@@ -45,7 +45,6 @@ const CONFIG_VIEJO = {
       mailpit: { version: '1.29.0', puerto: 1025, autoIniciar: true },
       ollama: { version: null, puerto: 11434, autoIniciar: false },
       meilisearch: { version: null, puerto: 7700, autoIniciar: false },
-      minio: { version: null, puerto: 19000, autoIniciar: false },
     },
   },
   /** Una versión futura de la app agrega campos que esta no conoce. */
