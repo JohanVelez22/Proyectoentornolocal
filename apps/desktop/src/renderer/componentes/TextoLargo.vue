@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Copy } from '@vicons/ionicons5';
 import { NButton, NIcon, NTooltip, useMessage } from 'naive-ui';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { api } from '../api';
 import { textos } from '../i18n';
 import { partirParaRecorte } from '../utilidades/recorte';
@@ -43,6 +43,11 @@ onMounted(() => {
     observador.observe(inicio.value);
   }
 });
+// Otro texto puede caber o no: se vuelve a medir cuando el DOM ya lo muestra.
+watch(
+  () => props.texto,
+  () => nextTick(medir),
+);
 onBeforeUnmount(() => observador?.disconnect());
 
 function mostrar(): void {

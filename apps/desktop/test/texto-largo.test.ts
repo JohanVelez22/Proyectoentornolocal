@@ -53,6 +53,11 @@ describe('TextoLargo: legible entero con teclado y copiable', () => {
     expect(v).toContain('trigger="manual"');
   });
 
+  it('si cambia el texto, vuelve a medir (ya no queda enfocable ni con globo por un texto anterior)', () => {
+    expect(v).toMatch(/watch\(\s*\(\) => props\.texto,\s*\(\) => nextTick\(medir\),?\s*\)/);
+    expect(v).toMatch(/import {[^}]*nextTick[^}]*watch[^}]*} from 'vue'/s);
+  });
+
   it('el final nunca se encoge y el inicio sí, con puntos suspensivos', () => {
     expect(v).toMatch(/\.inicio \{[^}]*text-overflow: ellipsis/);
     expect(v).toMatch(/\.fin \{[^}]*flex-shrink: 0/);
