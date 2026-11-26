@@ -585,9 +585,9 @@ export class PlataformaFalsa implements PlataformaCompleta {
     );
   }
 
-  /** Copias protegidas: el "archivo" es el JSON de la regla y su huella la de esos bytes. */
+  /** Registro simulado (`HKLM\SOFTWARE\WolfCoreDev\Cortafuegos`): un valor por id con el JSON de la regla; su huella es la de ese texto. */
   readonly almacenProtegido = new Map<string, { texto: string; regla: ReglaExportada }>();
-  /** Simula una carpeta protegida que no es de fiar (permisos o dueño cambiados). */
+  /** Simula una clave del registro que no es de fiar (dueño o DACL distintos). */
   almacenInseguro = false;
   /** Reglas cuya copia protegida no se puede escribir (el script no las borra). */
   readonly firewallNoGuardables = new Set<string>();
@@ -663,6 +663,8 @@ export class PlataformaFalsa implements PlataformaCompleta {
         ],
       };
       this.reglasFirewallDetalle.set(regla.nombre, { ...regla });
+      // Recreada: su copia protegida ya no hace falta.
+      this.almacenProtegido.delete(r.id);
     }
     return { ok: true };
   }

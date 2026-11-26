@@ -44,14 +44,13 @@ import {
   type ReglasEntrada,
 } from './firewallWin';
 import {
-  ARCHIVO_PROTEGIDO,
   cuerpoQuitarReglas,
   cuerpoRestaurarReglas,
   DETALLE_ALMACEN_INSEGURO,
-  idRegistro,
+  interpretarAlmacen,
   interpretarReglasExportadas,
-  reglaExportadaDe,
   SALIDA_FIREWALL,
+  SCRIPT_LEER_ALMACEN,
   scriptCargador,
   scriptExportarReglas,
   sha256Hex,
@@ -1145,37 +1144,19 @@ export class PlataformaWindows implements PlataformaCompleta {
   }
 
   /**
-   * Copias protegidas de las reglas quitadas. La ruta sale de %ProgramData% solo para MOSTRAR: el
-   * script elevado calcula la suya con la API del sistema, comprueba la carpeta y exige que la
-   * huella sea la que se mostró aquí.
+   * Copias protegidas de las reglas quitadas, leídas SIN elevar de la clave fija del registro
+   * (`RUTA_CLAVE_ALMACEN`) solo para mostrarlas. El script elevado vuelve a leer la clave,
+   * comprueba su dueño y su DACL y exige que la huella sea la que se mostró aquí.
    */
   async leerAlmacenFirewall(): Promise<RegistroProtegido[] | null> {
-    const dir = path.win32.join(
-      this.entorno.ProgramData ?? 'C:\\ProgramData',
-      'WolfCoreDev',
-      'cortafuegos',
-    );
-    let nombres: string[];
     try {
-      nombres = await readdir(dir);
-    } catch (e) {
-      return (e as NodeJS.ErrnoException).code === 'ENOENT' ? [] : null;
+      const r = await this.ejecutar('powershell', codificarPowerShell(SCRIPT_LEER_ALMACEN), {
+        timeoutMs: 30_000,
+      });
+      return r.codigo === 0 ? interpretarAlmacen(r.stdout) : null;
+    } catch {
+      return null;
     }
-    const res: RegistroProtegido[] = [];
-    for (const n of nombres) {
-      const id = ARCHIVO_PROTEGIDO.exec(n)?.[1];
-      if (!id) continue;
-      try {
-        const bytes = await readFile(path.win32.join(dir, n));
-        const regla = reglaExportadaDe(JSON.parse(bytes.toString('utf8')));
-        if (regla && idRegistro(regla.nombre) === id) {
-          res.push({ id, sha256: sha256Hex(bytes), regla });
-        }
-      } catch {
-        // un archivo ilegible no se ofrece
-      }
-    }
-    return res;
   }
 
   async perfilesFirefox(): Promise<PerfilFirefoxSistema[]> {

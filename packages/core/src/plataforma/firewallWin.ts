@@ -65,7 +65,8 @@ export const PROGRAMAS_VIGILADOS = [
 
 /**
  * Reglas de entrada habilitadas con acción Allow cuyo programa es uno vigilado. Una línea por
- * regla: `Name<TAB>DisplayName<TAB>Profile<TAB>Program<TAB>Protocol<TAB>LocalPort<TAB>RemoteAddress`.
+ * regla, como JSON compacto (`ConvertTo-Json -Compress`): un DisplayName con tabuladores o saltos
+ * de línea no puede mover campos ni hacer pasar una regla por otra.
  */
 export const SCRIPT_REGLAS_ENTRADA = [
   "$ErrorActionPreference = 'Stop'",
@@ -76,9 +77,8 @@ export const SCRIPT_REGLAS_ENTRADA = [
   '  $r = $f | Get-NetFirewallRule',
   "  if ($r.Direction -eq 'Inbound' -and $r.Action -eq 'Allow' -and $r.Enabled -eq 'True') {",
   '    $pf = $r | Get-NetFirewallPortFilter; $af = $r | Get-NetFirewallAddressFilter',
-  '    $lp = @($pf.LocalPort | ForEach-Object { [string]$_ }) -join [string][char]44',
-  '    $ra = @($af.RemoteAddress | ForEach-Object { [string]$_ }) -join [string][char]44',
-  '    [Console]::Out.WriteLine(($r.Name, $r.DisplayName, [string]$r.Profile, $f.Program, [string]$pf.Protocol, $lp, $ra) -join [string][char]9)',
+  '    $o = [ordered]@{ nombre = [string]$r.Name; nombreVisible = [string]$r.DisplayName; perfil = [string]$r.Profile; programa = [string]$f.Program; protocolo = [string]$pf.Protocol; puertoLocal = @($pf.LocalPort | ForEach-Object { [string]$_ }); direccionRemota = @($af.RemoteAddress | ForEach-Object { [string]$_ }) }',
+  '    [Console]::Out.WriteLine(($o | ConvertTo-Json -Compress))',
   '  }',
   '}',
 ].join('\n');
@@ -92,22 +92,43 @@ export const SCRIPT_REGLAS_ENTRADA = [
 // eslint-disable-next-line no-control-regex
 export const NOMBRE_REGLA_LISTA = /^[^\x00-\x1f*?[\]`'"‘’‚‛]{1,400}$/;
 
+const texto = (v: unknown, max: number): string | null =>
+  typeof v === 'string' && v.length <= max ? v : null;
+const listaTexto = (v: unknown): string[] | null =>
+  Array.isArray(v) && v.length <= 64 && v.every((x) => typeof x === 'string' && x.length <= 200)
+    ? (v as string[])
+    : null;
+
+/** Una línea JSON por regla; lo que no tiene la forma esperada se descarta. */
 export function interpretarReglasEntrada(salida: string): ReglaEntrada[] {
   const res: ReglaEntrada[] = [];
   for (const linea of salida.split(/\r?\n/)) {
-    const [nombre, nombreVisible, perfil, programa, protocolo, puertoLocal, direccionRemota] =
-      linea.split('\t');
+    if (!linea.trim()) continue;
+    let o: Record<string, unknown>;
+    try {
+      const v: unknown = JSON.parse(linea);
+      if (typeof v !== 'object' || v === null || Array.isArray(v)) continue;
+      o = v as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    const nombre = texto(o.nombre, 400);
+    const programa = texto(o.programa, 500);
+    const puertos = listaTexto(o.puertoLocal);
+    const remotas = listaTexto(o.direccionRemota);
+    const protocolo = texto(o.protocolo, 20);
     if (!nombre || !programa || !NOMBRE_REGLA_LISTA.test(nombre)) continue;
     res.push({
       nombre,
-      nombreVisible: (nombreVisible ?? '').slice(0, 200),
-      perfil: (perfil ?? '').slice(0, 60),
-      programa: programa.slice(0, 500),
-      ...(protocolo !== undefined
+      nombreVisible: (texto(o.nombreVisible, 2000) ?? '').slice(0, 200),
+      perfil: (texto(o.perfil, 200) ?? '').slice(0, 60),
+      programa,
+      // Si falta o viene mal cualquiera de los tres, no hay datos de alcance: nunca "acotada".
+      ...(protocolo !== null && puertos !== null && remotas !== null
         ? {
-            protocolo: protocolo.slice(0, 20),
-            puertoLocal: (puertoLocal ?? '').slice(0, 200),
-            direccionRemota: (direccionRemota ?? '').slice(0, 200),
+            protocolo,
+            puertoLocal: puertos.join(',').slice(0, 200),
+            direccionRemota: remotas.join(',').slice(0, 200),
           }
         : {}),
     });
@@ -121,6 +142,15 @@ export function interpretarReglasEntrada(salida: string): ReglaEntrada[] {
  * `RemoteAddress LocalSubnet`. No deja el programa abierto a Internet: no es "peligrosa". Si
  * falta algún dato (no se pudo leer), no se da por acotada.
  */
+/** Un puerto, o un rango que cubre como mucho 100 puertos. */
+function puertoAcotado(p: string): boolean {
+  const m = /^(\d{1,5})(?:-(\d{1,5}))?$/.exec(p);
+  if (!m) return false;
+  const desde = Number(m[1]);
+  const hasta = m[2] === undefined ? desde : Number(m[2]);
+  return desde >= 1 && hasta <= 65535 && hasta >= desde && hasta - desde + 1 <= 100;
+}
+
 export function esReglaAcotada(r: ReglaEntrada): boolean {
   if (r.protocolo === undefined || r.puertoLocal === undefined || r.direccionRemota === undefined) {
     return false;
@@ -130,7 +160,7 @@ export function esReglaAcotada(r: ReglaEntrada): boolean {
     r.perfil.trim().toLowerCase() === 'private' &&
     /^(tcp|udp|6|17)$/i.test(r.protocolo.trim()) &&
     puertos.length > 0 &&
-    puertos.every((p) => /^\d{1,5}(-\d{1,5})?$/.test(p)) &&
+    puertos.every(puertoAcotado) &&
     r.direccionRemota.trim().toLowerCase() === 'localsubnet'
   );
 }

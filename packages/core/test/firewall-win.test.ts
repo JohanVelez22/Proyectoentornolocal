@@ -8,6 +8,8 @@ import {
   scriptPerfilRed,
 } from '../src/plataforma/firewallWin';
 
+const json = (o: Record<string, unknown>): string => JSON.stringify(o);
+
 describe('lecturas del cortafuegos y del perfil de red (solo lectura)', () => {
   it('el script de reglas solo lee: nada de New-, Set-, Remove- ni Disable-', () => {
     expect(SCRIPT_REGLAS_ENTRADA).toContain('Get-NetFirewallApplicationFilter');
@@ -18,12 +20,24 @@ describe('lecturas del cortafuegos y del perfil de red (solo lectura)', () => {
     }
   });
 
-  it('interpreta una regla por línea y descarta lo que no encaja', () => {
+  it('interpreta una regla por línea (JSON) y descarta lo que no encaja', () => {
     const salida = [
-      '{AAAA-1}\tnginx.exe\tPublic, Private\tC:/x/nginx.exe',
-      '{BBBB-2}\tpostgres\tPrivate\tC:/x/postgres.exe',
+      json({
+        nombre: '{AAAA-1}',
+        nombreVisible: 'nginx.exe',
+        perfil: 'Public, Private',
+        programa: 'C:/x/nginx.exe',
+      }),
+      json({
+        nombre: '{BBBB-2}',
+        nombreVisible: 'postgres',
+        perfil: 'Private',
+        programa: 'C:/x/postgres.exe',
+      }),
       'linea rara',
-      "x'; calc\tmal\tAny\tC:/x/php.exe",
+      '[1,2]',
+      json({ nombre: "x'; calc", nombreVisible: 'mal', perfil: 'Any', programa: 'C:/x/php.exe' }),
+      json({ nombre: '{SIN-PROGRAMA}', perfil: 'Any' }),
       '',
     ].join('\r\n');
     expect(interpretarReglasEntrada(salida)).toEqual([
@@ -40,6 +54,31 @@ describe('lecturas del cortafuegos y del perfil de red (solo lectura)', () => {
         programa: 'C:/x/postgres.exe',
       },
     ]);
+  });
+
+  it('N2: el listado sale como JSON, no como campos separados por tabuladores', () => {
+    expect(SCRIPT_REGLAS_ENTRADA).toContain('ConvertTo-Json -Compress');
+    expect(SCRIPT_REGLAS_ENTRADA).not.toContain('[char]9');
+  });
+
+  it('N2: un DisplayName con tabuladores o saltos de línea no mueve campos ni hace pasar una regla por acotada', () => {
+    // Con el formato antiguo, este nombre visible habría desplazado perfil y alcance.
+    const hostil = 'x\tPrivate\tC:/x/nginx.exe\tTCP\t8100\tLocalSubnet\nfalsa';
+    const [r, ...resto] = interpretarReglasEntrada(
+      json({
+        nombre: '{H-1}',
+        nombreVisible: hostil,
+        perfil: 'Public, Private',
+        programa: 'C:/x/nginx.exe',
+        protocolo: 'Any',
+        puertoLocal: ['Any'],
+        direccionRemota: ['Any'],
+      }),
+    );
+    expect(resto).toEqual([]);
+    expect(r!.perfil).toBe('Public, Private');
+    expect(r!.protocolo).toBe('Any');
+    expect(esReglaAcotada(r!)).toBe(false);
   });
 
   it('el script del perfil solo acepta una IPv4 y solo lee', () => {
@@ -74,13 +113,21 @@ describe('lecturas del cortafuegos y del perfil de red (solo lectura)', () => {
 });
 
 describe('reglas acotadas a la red local (I1)', () => {
-  const linea = (...c: string[]): string => c.join(String.fromCharCode(9));
-  const leer = (s: string) => interpretarReglasEntrada(s)[0]!;
+  const regla = (o: Record<string, unknown> = {}): string =>
+    json({
+      nombre: '{A}',
+      nombreVisible: 'nginx',
+      perfil: 'Private',
+      programa: 'C:/w/nginx.exe',
+      protocolo: 'TCP',
+      puertoLocal: ['8100'],
+      direccionRemota: ['LocalSubnet'],
+      ...o,
+    });
+  const leer = (l: string) => interpretarReglasEntrada(l)[0]!;
 
   it('lee protocolo, puertos locales y direcciones remotas', () => {
-    const r = leer(
-      linea('{A}', 'nginx', 'Private', 'C:/w/nginx.exe', 'TCP', '8100', 'LocalSubnet'),
-    );
+    const r = leer(regla());
     expect(r).toMatchObject({
       protocolo: 'TCP',
       puertoLocal: '8100',
@@ -89,31 +136,49 @@ describe('reglas acotadas a la red local (I1)', () => {
     expect(esReglaAcotada(r)).toBe(true);
   });
 
-  it('con una línea antigua (sin esas columnas) no se da por acotada', () => {
-    const r = leer(linea('{A}', 'nginx', 'Private', 'C:/w/nginx.exe'));
-    expect(r.protocolo).toBeUndefined();
-    expect(esReglaAcotada(r)).toBe(false);
+  it('sin datos de alcance (o mal formados) no se da por acotada', () => {
+    for (const o of [
+      { protocolo: undefined },
+      { puertoLocal: undefined },
+      { direccionRemota: 'LocalSubnet' },
+      { puertoLocal: 'Any' },
+    ]) {
+      const r = leer(regla(o));
+      expect(esReglaAcotada(r), JSON.stringify(o)).toBe(false);
+    }
   });
 
   it('cualquier cosa más abierta no es acotada', () => {
-    const base = ['{A}', 'nginx', 'Private', 'C:/w/nginx.exe', 'TCP', '8100', 'LocalSubnet'];
-    const con = (i: number, v: string): string[] => base.map((x, j) => (j === i ? v : x));
-    for (const [i, v] of [
-      [2, 'Private, Public'],
-      [2, 'Any'],
-      [4, 'Any'],
-      [5, 'Any'],
-      [5, '80,Any'],
-      [6, 'Any'],
-      [6, 'LocalSubnet,10.0.0.1'],
-      [6, ''],
+    for (const o of [
+      { perfil: 'Private, Public' },
+      { perfil: 'Any' },
+      { protocolo: 'Any' },
+      { puertoLocal: ['Any'] },
+      { puertoLocal: ['80', 'Any'] },
+      { direccionRemota: ['Any'] },
+      { direccionRemota: ['LocalSubnet', '10.0.0.1'] },
+      { direccionRemota: [] },
+    ]) {
+      expect(esReglaAcotada(leer(regla(o))), JSON.stringify(o)).toBe(false);
+    }
+  });
+
+  it('N3: un rango de puertos solo cuenta si cubre como mucho 100 puertos', () => {
+    for (const [p, bien] of [
+      ['8100-8199', true],
+      ['8100-8200', false],
+      ['1-65535', false],
+      ['1024-65535', false],
+      ['0-10', false],
+      ['9000-8000', false],
+      ['8100', true],
     ] as const) {
-      expect(esReglaAcotada(leer(linea(...con(i, v)))), `${i}=${v}`).toBe(false);
+      expect(esReglaAcotada(leer(regla({ puertoLocal: [p] }))), p).toBe(bien);
     }
   });
 
   it('los nombres que crea Windows (con barras y dos puntos) se leen', () => {
     const n = 'TCP Query User{88DB9641-6D7E-41E6-8660-45595C147EA6}C:/users/x/app/nginx.exe';
-    expect(leer(linea(n, 'nginx.exe', 'Private', 'C:/users/x/app/nginx.exe')).nombre).toBe(n);
+    expect(leer(regla({ nombre: n })).nombre).toBe(n);
   });
 });

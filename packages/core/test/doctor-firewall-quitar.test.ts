@@ -10,6 +10,9 @@ import {
   cuerpoQuitarReglas,
   cuerpoRestaurarReglas,
   idRegistro,
+  RUTA_CLAVE_ALMACEN,
+  SCRIPT_LEER_ALMACEN,
+  sha256Hex,
   scriptCargador,
   scriptExportarReglas,
   type ReglaExportada,
@@ -647,27 +650,66 @@ describe('D46: scripts del cortafuegos real (solo se comprueba su texto: nunca s
     expect(s).toContain('$bl.StartsWith($tl +');
   });
 
-  it('C1: la copia va a una carpeta protegida (herencia cortada, solo Administradores y SYSTEM escriben)', () => {
-    const s = cuerpoQuitarReglas([base], null);
-    expect(s).toContain("GetFolderPath('CommonApplicationData')");
-    expect(s).toContain("'WolfCoreDev'");
-    expect(s).toContain("'cortafuegos'");
-    expect(s).toContain('SetAccessRuleProtection($true, $false)');
-    expect(s).toContain('RemoveAccessRuleSpecific');
-    expect(s).toMatch(/\$sidSistema\), \[Security\.AccessControl\.FileSystemRights\]::FullControl/);
-    expect(s).toMatch(/\$sidAdmins\), \[Security\.AccessControl\.FileSystemRights\]::FullControl/);
-    expect(s).toMatch(
-      /\$sidUsuarios\), \[Security\.AccessControl\.FileSystemRights\]::ReadAndExecute/,
-    );
-    expect(s).toContain('SetOwner');
-    expect(s).toContain("'S-1-5-18'");
-    expect(s).toContain("'S-1-5-32-544'");
-    // Se comprueba la carpeta antes de guardar nada, y la copia se guarda antes de borrar.
-    expect(s.indexOf('Test-AlmacenWolf)) { exit 21 }')).toBeLessThan(s.indexOf('WriteAllBytes'));
-    expect(s.indexOf('WriteAllBytes')).toBeLessThan(s.indexOf('Remove-NetFirewallRule'));
+  it('N1: la copia va al registro (HKLM), no al sistema de archivos', () => {
+    const q = cuerpoQuitarReglas([base], null);
+    const r = cuerpoRestaurarReglas([], null);
+    for (const s of [q, r]) {
+      // La clave es una constante: sale del mismo sitio para mostrar y para el script elevado.
+      expect(s).toContain(`$rutaClave = '${RUTA_CLAVE_ALMACEN}'`);
+      expect(s).toContain('[Microsoft.Win32.Registry]::LocalMachine');
+      // Nada de ProgramData, carpetas, archivos ni variables de entorno del usuario.
+      expect(s).not.toMatch(
+        /ProgramData|CommonApplicationData|WriteAllBytes|ReadAllBytes\(\$archivo|\$env:(?!PSModulePath)/,
+      );
+      expect(s).not.toContain('Initialize-AlmacenWolf');
+      expect(s).not.toContain('Test-AlmacenWolf');
+    }
+    expect(SCRIPT_LEER_ALMACEN).toContain(RUTA_CLAVE_ALMACEN);
+    expect(RUTA_CLAVE_ALMACEN).toBe('SOFTWARE\\WolfCoreDev\\Cortafuegos');
   });
 
-  it('C1: restaurar lee SOLO de la carpeta protegida, por id, y exige carpeta, archivo y huella', () => {
+  it('N1: quitar guarda la copia como REG_SZ, la verifica y solo entonces borra la regla', () => {
+    const s = cuerpoQuitarReglas([base], null);
+    const crear = s.indexOf('Open-ClaveWolf $true');
+    const escribir = s.indexOf(
+      '$k.SetValue($e.i, $json, [Microsoft.Win32.RegistryValueKind]::String)',
+    );
+    const leer = s.indexOf('$leido = [string]$k.GetValue($e.i, $null)');
+    const verificar = s.indexOf('$leido -ceq $json');
+    const borrar = s.indexOf('Remove-NetFirewallRule -Name $e.n');
+    expect(crear).toBeGreaterThan(0);
+    expect(escribir).toBeGreaterThan(crear);
+    expect(leer).toBeGreaterThan(escribir);
+    expect(verificar).toBeGreaterThan(leer);
+    expect(borrar).toBeGreaterThan(verificar);
+    // Si la clave no es de confianza se sale con 21 ANTES de tocar ninguna regla.
+    expect(s.indexOf('exit 21')).toBeGreaterThan(crear);
+    expect(s.indexOf('exit 21')).toBeLessThan(s.indexOf('foreach ($e in $reglas)'));
+  });
+
+  it('N1: la clave debe tener dueño Administradores/SYSTEM y solo ellos escriben; si no, salida 21', () => {
+    const s = cuerpoQuitarReglas([base], null);
+    expect(s).toContain("'S-1-5-18'");
+    expect(s).toContain("'S-1-5-32-544'");
+    expect(s).toContain('GetOwner([Security.Principal.SecurityIdentifier])');
+    expect(s).toContain('@($sidSistema, $sidAdmins) -notcontains $dueno');
+    expect(s).toContain(
+      'SetValue, CreateSubKey, CreateLink, Delete, ChangePermissions, TakeOwnership',
+    );
+    expect(s).toContain('-band $derechosPeligrosos');
+    // También la clave superior, y una clave que ya existía se comprueba, no se reescribe.
+    expect(s).toContain('$base = $hklm.OpenSubKey($rutaBase)');
+    expect(s).toContain('(-not $baseBien) -or (-not (Test-ClaveWolf $k))');
+    expect(s).toContain('if ($nueva) {');
+    // Una clave nueva lleva ACL propia: herencia cortada, SYSTEM y Administradores total, Users lectura.
+    expect(s).toContain('SetAccessRuleProtection($true, $false)');
+    expect(s).toMatch(/\$sidSistema\), \[Security\.AccessControl\.RegistryRights\]::FullControl/);
+    expect(s).toMatch(/\$sidAdmins\), \[Security\.AccessControl\.RegistryRights\]::FullControl/);
+    expect(s).toMatch(/\$sidUsuarios\), \[Security\.AccessControl\.RegistryRights\]::ReadKey/);
+    expect(s).toContain('exit 21');
+  });
+
+  it('N1: restaurar lee SOLO de esa clave, por id, y exige clave de confianza, huella y campos', () => {
     const r = {
       id: idRegistro('{AAAA-1}'),
       sha256: 'a'.repeat(64),
@@ -676,26 +718,22 @@ describe('D46: scripts del cortafuegos real (solo se comprueba su texto: nunca s
       temporal: 'C:\\Temp',
     };
     const s = cuerpoRestaurarReglas([r], null);
-    expect(s).toContain('Test-AlmacenWolf)) { exit 21 }');
-    expect(s).toContain("[IO.Path]::Combine($dirAlmacen, $e.i + '.json')");
-    expect(s).toContain('Test-ProtegidoWolf ([IO.FileInfo]::new($archivo)) $false');
+    expect(s).toContain('Open-ClaveWolf $false');
+    expect(s).toContain('exit 21');
+    expect(s.indexOf('exit 21')).toBeLessThan(s.indexOf('foreach ($e in $reglas)'));
+    expect(s).toContain('$k.GetValue($e.i, $null)');
     expect(s).toContain('(Get-HuellaWolf $bytes) -ne $e.h');
     expect(s).toContain(`h = '${'a'.repeat(64)}'`);
     expect(s).toContain('Test-ReglaRestaurable $x');
     // Nada de la regla sale del Doctor: no hay puertos, direcciones ni perfil incrustados.
     expect(s).not.toMatch(/-Profile 'Any'|LocalSubnet/);
     expect(s).toContain('New-NetFirewallRule @p');
+    // N4: recreada la regla, se borra su copia.
+    expect(s.indexOf('New-NetFirewallRule @p')).toBeLessThan(
+      s.indexOf('$k.DeleteValue($e.i, $false)'),
+    );
     expect(() => cuerpoRestaurarReglas([{ ...r, sha256: 'xx' }], null)).toThrow(/Huella/);
     expect(() => cuerpoRestaurarReglas([{ ...r, id: '../x' }], null)).toThrow(/Identificador/);
-  });
-
-  it('C1: la comprobación de la carpeta rechaza enlaces, dueños ajenos y escritura de otros', () => {
-    const s = cuerpoRestaurarReglas([], null);
-    expect(s).toContain('ReparsePoint');
-    expect(s).toContain('AreAccessRulesProtected');
-    expect(s).toContain('GetOwner([Security.Principal.SecurityIdentifier])');
-    expect(s).toContain('WriteData, AppendData');
-    expect(s).toContain('ChangePermissions, TakeOwnership');
   });
 
   it('M6: el protocolo numérico (6, 17) también lleva puertos', () => {
@@ -801,49 +839,74 @@ describe('D46: scripts del cortafuegos real (solo se comprueba su texto: nunca s
   });
 });
 
-describe.skipIf(process.platform !== 'win32')(
-  'D46: lectura de la carpeta protegida (solo en Windows: usa rutas de Windows)',
-  () => {
-    it('lee solo archivos <id>.json con un id que cuadra con el nombre de la regla, con su huella', async () => {
-      const pd = await carpetaTemporal('pel-d46-pd-');
-      const almacen = join(pd, 'WolfCoreDev', 'cortafuegos');
-      await mkdir(almacen, { recursive: true });
-      const r: ReglaExportada = {
-        nombre: '{AAAA-1}',
-        nombreVisible: 'nginx',
-        descripcion: '',
-        habilitada: true,
-        perfil: 'Private',
-        direccion: 'Inbound',
-        accion: 'Allow',
-        programa: 'C:/Datos/bin/nginx.exe',
-        protocolo: 'TCP',
-        puertoLocal: ['80'],
-        puertoRemoto: ['Any'],
-        direccionLocal: ['Any'],
-        direccionRemota: ['LocalSubnet'],
-      };
-      const texto = JSON.stringify(r);
-      await writeFile(join(almacen, `${idRegistro('{AAAA-1}')}.json`), texto);
-      // Un archivo cuyo id no es el del nombre, uno roto y uno con otro nombre: no se ofrecen.
-      await writeFile(join(almacen, `${'0'.repeat(32)}.json`), texto);
-      await writeFile(join(almacen, `${idRegistro('{BBBB-2}')}.json`), '{ roto');
-      await writeFile(join(almacen, 'notas.txt'), 'x');
-      const p = new PlataformaWindows(undefined, undefined, { entorno: { ProgramData: pd } });
-      const res = await p.leerAlmacenFirewall();
-      expect(res).toHaveLength(1);
-      expect(res![0]).toMatchObject({ id: idRegistro('{AAAA-1}'), regla: r });
-      const { createHash } = await import('node:crypto');
-      expect(res![0]!.sha256).toBe(createHash('sha256').update(texto).digest('hex'));
-    });
+describe('D46: lectura de la copia protegida (registro simulado)', () => {
+  const exportada: ReglaExportada = {
+    nombre: '{AAAA-1}',
+    nombreVisible: 'nginx',
+    descripcion: '',
+    habilitada: true,
+    perfil: 'Private',
+    direccion: 'Inbound',
+    accion: 'Allow',
+    programa: 'C:/Datos/bin/nginx.exe',
+    protocolo: 'TCP',
+    puertoLocal: ['80'],
+    puertoRemoto: ['Any'],
+    direccionLocal: ['Any'],
+    direccionRemota: ['LocalSubnet'],
+  };
+  const texto = JSON.stringify(exportada);
+  const con = (codigo: number, stdout: string): PlataformaWindows =>
+    new PlataformaWindows(async () => ({ codigo, stdout, stderr: '' }), undefined, { entorno: {} });
 
-    it('sin carpeta no hay copias; una carpeta ilegible da null', async () => {
-      const pd = await carpetaTemporal('pel-d46-pd-');
-      const p = new PlataformaWindows(undefined, undefined, { entorno: { ProgramData: pd } });
-      expect(await p.leerAlmacenFirewall()).toEqual([]);
-      await mkdir(join(pd, 'WolfCoreDev'), { recursive: true });
-      await writeFile(join(pd, 'WolfCoreDev', 'cortafuegos'), 'no es una carpeta');
-      expect(await p.leerAlmacenFirewall()).toBeNull();
-    });
-  },
-);
+  it('lee id, huella (SHA-256 del texto) y regla; descarta lo que no cuadra', async () => {
+    const id = idRegistro('{AAAA-1}');
+    const salida = [
+      `${id} ${texto}`,
+      `${'0'.repeat(32)} ${texto}`,
+      `${idRegistro('{BBBB-2}')} { roto`,
+      'sin-id {}',
+      '',
+    ].join('\r\n');
+    const res = await con(0, salida).leerAlmacenFirewall();
+    expect(res).toHaveLength(1);
+    expect(res![0]).toMatchObject({ id, regla: exportada });
+    expect(res![0]!.sha256).toBe(sha256Hex(texto));
+  });
+
+  it('sin la clave no hay copias; un fallo de lectura da null', async () => {
+    expect(await con(0, '').leerAlmacenFirewall()).toEqual([]);
+    expect(await con(1, '').leerAlmacenFirewall()).toBeNull();
+    const p = new PlataformaWindows(
+      async () => {
+        throw new Error('sin PowerShell');
+      },
+      undefined,
+      { entorno: {} },
+    );
+    expect(await p.leerAlmacenFirewall()).toBeNull();
+  });
+
+  it('el script de lectura no eleva ni cambia nada: solo abre la clave para leer', () => {
+    expect(SCRIPT_LEER_ALMACEN).not.toMatch(
+      /\b(New|Set|Remove|Add)-|SetValue|DeleteValue|CreateSubKey|runas/,
+    );
+    expect(SCRIPT_LEER_ALMACEN).toContain('OpenSubKey(');
+    expect(SCRIPT_LEER_ALMACEN).toContain('GetValueNames()');
+  });
+
+  it('el registro simulado de PlataformaFalsa guarda al quitar y borra la copia al restaurar (N4)', async () => {
+    plat.reglasEntrada = { ok: true, reglas: [regla('{A-1}', nginx)] };
+    const d = new Doctor(deps());
+    await d.reparar(quitar(await revisar(d)).id, true);
+    expect([...plat.almacenProtegido.keys()]).toEqual([idRegistro('{A-1}')]);
+    expect(await plat.leerAlmacenFirewall()).toHaveLength(1);
+    await d.reparar(guardadas(d)!.id, true);
+    expect(nombresEnPie()).toEqual(['{A-1}']);
+    expect(plat.almacenProtegido.size).toBe(0);
+    expect(await plat.leerAlmacenFirewall()).toEqual([]);
+    // Ya no hay nada que restaurar.
+    await revisar(d);
+    expect(guardadas(d)).toBeUndefined();
+  });
+});

@@ -8,10 +8,12 @@
  *   script elevado vuelve a comprobar que sigue siendo de entrada, Allow y con un programa
  *   vigilado (`.exe`) bajo la raíz de WolfCore Dev (uniones y nombres 8.3 resueltos).
  * - La copia con la que se puede recrear una regla NO sale de ningún archivo que el usuario (o
- *   un programa suyo) pueda editar: la guarda el propio script elevado en
- *   `%ProgramData%\WolfCoreDev\cortafuegos`, con la herencia cortada y solo escritura para
- *   Administradores y SYSTEM. El script de restaurar solo lee de ahí, comprueba esa carpeta y
- *   el SHA-256 de lo que se mostró al usuario, y valida cada campo antes de crear nada.
+ *   un programa suyo) pueda editar ni plantar: la guarda el propio script elevado en el registro,
+ *   `HKLM\SOFTWARE\WolfCoreDev\Cortafuegos` (un valor REG_SZ por regla). Un usuario normal no puede
+ *   crear claves ahí y los valores no admiten enlaces. El script comprueba que la clave es de
+ *   Administradores o SYSTEM y que solo ellos pueden escribirla (si no, sale con 21 sin tocar
+ *   nada); el de restaurar solo lee de ahí, comprueba el SHA-256 de lo que se mostró al usuario
+ *   y valida cada campo antes de crear nada.
  * - El cuerpo de cada script viaja en un archivo temporal con SHA-256 comprobado dentro del
  *   comando elevado (como el flujo de hosts): el comando no crece con el número de reglas.
  */
@@ -301,54 +303,106 @@ const FUNCION_PROGRAMA_PROPIO = [
 const FUNCION_HUELLA =
   'function Get-HuellaWolf([byte[]]$x) { $s = [Security.Cryptography.SHA256]::Create(); try { [BitConverter]::ToString($s.ComputeHash($x)).Replace([string][char]45, [string]::Empty).ToLowerInvariant() } finally { $s.Dispose() } }';
 
-/** Carpeta protegida: solo Administradores y SYSTEM escriben; el resto, como mucho, lee. */
+/**
+ * Clave del registro donde el script elevado guarda la copia de cada regla quitada: un valor
+ * `REG_SZ` por regla, con el id como nombre y el JSON de la regla. Es una CONSTANTE: la usan igual
+ * la lectura para mostrar y los scripts elevados (nada sale de variables de entorno). Un usuario
+ * normal no puede crear claves bajo `HKLM\SOFTWARE` y los valores del registro no admiten
+ * enlaces: no hay enlaces simbólicos, uniones, archivos plantados ni handles previos.
+ */
+export const RUTA_BASE_ALMACEN = 'SOFTWARE\\WolfCoreDev';
+export const RUTA_CLAVE_ALMACEN = 'SOFTWARE\\WolfCoreDev\\Cortafuegos';
+
+/**
+ * Comprobación de la clave (y de la superior): el dueño es Administradores o SYSTEM y en su DACL
+ * solo ellos (y TrustedInstaller) pueden escribir, borrar o cambiar permisos. Una clave que no
+ * cumple no se usa: el script sale con 21 sin tocar nada.
+ */
 const ALMACEN = [
   "$sidSistema = 'S-1-5-18'; $sidAdmins = 'S-1-5-32-544'; $sidUsuarios = 'S-1-5-32-545'",
-  "$baseAlmacen = [IO.Path]::Combine([Environment]::GetFolderPath('CommonApplicationData'), 'WolfCoreDev')",
-  "$dirAlmacen = [IO.Path]::Combine($baseAlmacen, 'cortafuegos')",
-  "$derechosPeligrosos = [Security.AccessControl.FileSystemRights]'WriteData, AppendData, WriteExtendedAttributes, WriteAttributes, Delete, DeleteSubdirectoriesAndFiles, ChangePermissions, TakeOwnership'",
-  // ¿Es de confianza? Ni enlaces, ni dueño que no sea Administradores/SYSTEM, ni nadie más con
-  // derecho de escritura; en carpetas, además, con la herencia cortada.
-  'function Test-ProtegidoWolf($info, [bool]$carpeta) {',
-  '  if (-not $info.Exists) { return $false }',
-  '  if (($info.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { return $false }',
-  '  $a = $info.GetAccessControl()',
-  '  if ($carpeta -and -not $a.AreAccessRulesProtected) { return $false }',
+  "$sidInstalador = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'; $sidCreador = 'S-1-3-0'",
+  `$rutaBase = '${RUTA_BASE_ALMACEN}'`,
+  `$rutaClave = '${RUTA_CLAVE_ALMACEN}'`,
+  "$derechosPeligrosos = [Security.AccessControl.RegistryRights]'SetValue, CreateSubKey, CreateLink, Delete, ChangePermissions, TakeOwnership'",
+  '$hklm = [Microsoft.Win32.Registry]::LocalMachine',
+  'function Test-ClaveWolf($k) {',
+  '  if ($null -eq $k) { return $false }',
+  '  $a = $k.GetAccessControl()',
   '  $dueno = $a.GetOwner([Security.Principal.SecurityIdentifier]).Value',
   '  if (@($sidSistema, $sidAdmins) -notcontains $dueno) { return $false }',
   '  foreach ($r in $a.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {',
   "    if ($r.AccessControlType -ne 'Allow') { continue }",
-  '    if (@($sidSistema, $sidAdmins) -contains $r.IdentityReference.Value) { continue }',
-  '    if (($r.FileSystemRights -band $derechosPeligrosos) -ne 0) { return $false }',
+  // Lo que solo se hereda a las subclaves (CREATOR OWNER) no cuenta para esta clave.
+  '    if (($r.PropagationFlags -band [Security.AccessControl.PropagationFlags]::InheritOnly) -ne 0) { continue }',
+  // CREATOR OWNER solo da derechos al dueño, que ya se comprobó que es de confianza.
+  '    if (@($sidSistema, $sidAdmins, $sidInstalador, $sidCreador) -contains $r.IdentityReference.Value) { continue }',
+  '    if (($r.RegistryRights -band $derechosPeligrosos) -ne 0) { return $false }',
   '  }',
   '  return $true',
   '}',
-  'function Test-AlmacenWolf() {',
-  '  return ((Test-ProtegidoWolf ([IO.DirectoryInfo]::new($baseAlmacen)) $true) -and (Test-ProtegidoWolf ([IO.DirectoryInfo]::new($dirAlmacen)) $true))',
+  // Abre la clave con derecho de escritura. `$crear`: si no existía, la crea y le pone una ACL
+  // propia (herencia cortada; SYSTEM y Administradores control total, Users solo lectura).
+  'function Open-ClaveWolf([bool]$crear) {',
+  '  $previa = $hklm.OpenSubKey($rutaClave)',
+  '  $nueva = ($null -eq $previa)',
+  '  if ($null -ne $previa) { $previa.Dispose() }',
+  '  if ($nueva) {',
+  '    if (-not $crear) { return $null }',
+  '    $hklm.CreateSubKey($rutaClave).Dispose()',
+  '  }',
+  '  $k = $hklm.OpenSubKey($rutaClave, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, [Security.AccessControl.RegistryRights]::FullControl)',
+  '  if ($null -eq $k) { return $null }',
+  '  if ($nueva) {',
+  '    $a = $k.GetAccessControl()',
+  '    $a.SetAccessRuleProtection($true, $false)',
+  '    foreach ($r in @($a.GetAccessRules($true, $false, [Security.Principal.SecurityIdentifier]))) { $null = $a.RemoveAccessRuleSpecific($r) }',
+  "    $h = [Security.AccessControl.InheritanceFlags]'ContainerInherit'",
+  '    $n = [Security.AccessControl.PropagationFlags]::None',
+  '    $allow = [Security.AccessControl.AccessControlType]::Allow',
+  '    $a.AddAccessRule([Security.AccessControl.RegistryAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidSistema), [Security.AccessControl.RegistryRights]::FullControl, $h, $n, $allow))',
+  '    $a.AddAccessRule([Security.AccessControl.RegistryAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidAdmins), [Security.AccessControl.RegistryRights]::FullControl, $h, $n, $allow))',
+  '    $a.AddAccessRule([Security.AccessControl.RegistryAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidUsuarios), [Security.AccessControl.RegistryRights]::ReadKey, $h, $n, $allow))',
+  '    try { $a.SetOwner([Security.Principal.SecurityIdentifier]::new($sidAdmins)) } catch { }',
+  '    $k.SetAccessControl($a)',
+  '  }',
+  '  $base = $hklm.OpenSubKey($rutaBase)',
+  '  $baseBien = Test-ClaveWolf $base',
+  '  if ($null -ne $base) { $base.Dispose() }',
+  '  if ((-not $baseBien) -or (-not (Test-ClaveWolf $k))) { $k.Dispose(); return $null }',
+  '  return $k',
   '}',
 ];
 
-/** Crea (o corrige) las dos carpetas con la ACL protegida. Solo el script de quitar. */
-const CREAR_ALMACEN = [
-  'function Initialize-AlmacenWolf() {',
-  '  foreach ($x in @($baseAlmacen, $dirAlmacen)) {',
-  '    $null = [IO.Directory]::CreateDirectory($x)',
-  '    $i = [IO.DirectoryInfo]::new($x)',
-  '    if (($i.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { return }',
-  '    $a = $i.GetAccessControl()',
-  '    $a.SetAccessRuleProtection($true, $false)',
-  '    foreach ($r in @($a.GetAccessRules($true, $false, [Security.Principal.SecurityIdentifier]))) { $null = $a.RemoveAccessRuleSpecific($r) }',
-  "    $h = [Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit'",
-  '    $n = [Security.AccessControl.PropagationFlags]::None',
-  '    $allow = [Security.AccessControl.AccessControlType]::Allow',
-  '    $a.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidSistema), [Security.AccessControl.FileSystemRights]::FullControl, $h, $n, $allow))',
-  '    $a.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidAdmins), [Security.AccessControl.FileSystemRights]::FullControl, $h, $n, $allow))',
-  '    $a.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidUsuarios), [Security.AccessControl.FileSystemRights]::ReadAndExecute, $h, $n, $allow))',
-  '    try { $a.SetOwner([Security.Principal.SecurityIdentifier]::new($sidAdmins)) } catch { }',
-  '    $i.SetAccessControl($a)',
-  '  }',
+/**
+ * Lectura SIN elevar, solo para mostrar: una línea por copia, `<id> <json>`. No cambia nada. El
+ * script elevado vuelve a leer la clave y exige que su SHA-256 sea el de lo mostrado.
+ */
+export const SCRIPT_LEER_ALMACEN = [
+  "$ErrorActionPreference = 'Stop'",
+  `$k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('${RUTA_CLAVE_ALMACEN}')`,
+  'if ($null -eq $k) { exit 0 }',
+  'foreach ($n in $k.GetValueNames()) {',
+  '  $v = $k.GetValue($n, $null)',
+  '  if ($v -is [string]) { [Console]::Out.WriteLine($n + [string][char]32 + $v) }',
   '}',
-];
+].join('\n');
+
+/** Lee la salida de `SCRIPT_LEER_ALMACEN`: id, huella (SHA-256 del texto UTF-8) y regla válida. */
+export function interpretarAlmacen(salida: string): RegistroProtegido[] {
+  const res: RegistroProtegido[] = [];
+  for (const l of salida.split(/\r?\n/)) {
+    const i = l.indexOf(' ');
+    if (i !== 32) continue;
+    const id = l.slice(0, 32);
+    if (!/^[0-9a-f]{32}$/.test(id)) continue;
+    const texto = l.slice(33);
+    const regla = interpretarReglaExportada(texto);
+    if (regla && idRegistro(regla.nombre) === id) {
+      res.push({ id, sha256: sha256Hex(texto), regla });
+    }
+  }
+  return res;
+}
 
 const comprobarPlazo = (limiteUnixMs: number | null): string[] =>
   limiteUnixMs === null
@@ -408,9 +462,8 @@ export function cuerpoQuitarReglas(reglas: ReglaPorQuitar[], limiteUnixMs: numbe
     ...FUNCION_PROGRAMA_PROPIO,
     ...FUNCION_EXPORTAR,
     ...ALMACEN,
-    ...CREAR_ALMACEN,
-    'Initialize-AlmacenWolf',
-    `if (-not (Test-AlmacenWolf)) { exit ${SALIDA_FIREWALL.almacenInseguro} }`,
+    '$k = Open-ClaveWolf $true',
+    `if ($null -eq $k) { exit ${SALIDA_FIREWALL.almacenInseguro} }`,
     '$saltadas = 0; $vencido = $false',
     '$reglas = @(',
     filas.join(',\n'),
@@ -423,10 +476,9 @@ export function cuerpoQuitarReglas(reglas: ReglaPorQuitar[], limiteUnixMs: numbe
     "    $igual = ($r.Direction -eq 'Inbound') -and ($r.Action -eq 'Allow') -and ($f.Count -eq 1) -and ([string]$f[0].Program -eq $e.p)",
     '    if ($igual -and (Test-ProgramaPropio ([string]$f[0].Program) $e.r $e.k $e.t)) {',
     '      $json = Export-ReglaWolf $r | ConvertTo-Json -Compress',
-    '      $bytes = [Text.UTF8Encoding]::new($false).GetBytes($json)',
-    "      $archivo = [IO.Path]::Combine($dirAlmacen, $e.i + '.json')",
-    '      [IO.File]::WriteAllBytes($archivo, $bytes)',
-    '      if ((Get-HuellaWolf ([IO.File]::ReadAllBytes($archivo))) -eq (Get-HuellaWolf $bytes)) {',
+    '      $k.SetValue($e.i, $json, [Microsoft.Win32.RegistryValueKind]::String)',
+    '      $leido = [string]$k.GetValue($e.i, $null)',
+    '      if (($leido -ceq $json) -and ((Get-HuellaWolf ([Text.UTF8Encoding]::new($false).GetBytes($leido))) -eq (Get-HuellaWolf ([Text.UTF8Encoding]::new($false).GetBytes($json))))) {',
     '        Remove-NetFirewallRule -Name $e.n -ErrorAction Stop',
     '      } else { $saltadas++ }',
     '    } else { $saltadas++ }',
@@ -477,7 +529,8 @@ export function cuerpoRestaurarReglas(
     ...FUNCION_PROGRAMA_PROPIO,
     ...ALMACEN,
     ...FUNCION_RESTAURABLE,
-    `if (-not (Test-AlmacenWolf)) { exit ${SALIDA_FIREWALL.almacenInseguro} }`,
+    '$k = Open-ClaveWolf $false',
+    `if ($null -eq $k) { exit ${SALIDA_FIREWALL.almacenInseguro} }`,
     '$saltadas = 0; $vencido = $false',
     '$reglas = @(',
     filas.join(',\n'),
@@ -485,11 +538,11 @@ export function cuerpoRestaurarReglas(
     'foreach ($e in $reglas) {',
     ...PLAZO_POR_REGLA(limiteUnixMs),
     '  try {',
-    "    $archivo = [IO.Path]::Combine($dirAlmacen, $e.i + '.json')",
-    '    if (-not (Test-ProtegidoWolf ([IO.FileInfo]::new($archivo)) $false)) { $saltadas++; continue }',
-    '    $bytes = [IO.File]::ReadAllBytes($archivo)',
+    '    $texto = $k.GetValue($e.i, $null)',
+    '    if ($texto -isnot [string]) { $saltadas++; continue }',
+    '    $bytes = [Text.UTF8Encoding]::new($false).GetBytes($texto)',
     '    if ((Get-HuellaWolf $bytes) -ne $e.h) { $saltadas++; continue }',
-    '    $x = [Text.UTF8Encoding]::new($false).GetString($bytes) | ConvertFrom-Json',
+    '    $x = $texto | ConvertFrom-Json',
     '    if (-not (Test-ReglaRestaurable $x)) { $saltadas++; continue }',
     '    if ($null -ne (Get-NetFirewallRule -Name ([string]$x.nombre) -ErrorAction SilentlyContinue)) { $saltadas++; continue }',
     '    if (-not (Test-ProgramaPropio ([string]$x.programa) $e.r $e.k $e.t)) { $saltadas++; continue }',
@@ -506,6 +559,7 @@ export function cuerpoRestaurarReglas(
     "    $la = @($x.direccionLocal | Where-Object { [string]$_ -ne 'Any' }); if ($la.Count -gt 0) { $p.LocalAddress = $la }",
     "    $ra = @($x.direccionRemota | Where-Object { [string]$_ -ne 'Any' }); if ($ra.Count -gt 0) { $p.RemoteAddress = $ra }",
     '    $null = New-NetFirewallRule @p -ErrorAction Stop',
+    '    $k.DeleteValue($e.i, $false)',
     '  } catch { $saltadas++ }',
     '}',
     `if ($vencido) { exit ${SALIDA_FIREWALL.vencido} }`,
@@ -513,6 +567,3 @@ export function cuerpoRestaurarReglas(
     'exit 0',
   ].join('\n');
 }
-
-/** Nombre del archivo de la copia protegida: solo 32 hex y `.json`. */
-export const ARCHIVO_PROTEGIDO = /^([0-9a-f]{32})\.json$/;
