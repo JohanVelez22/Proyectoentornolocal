@@ -3453,6 +3453,11 @@ export const pt: Textos = {
         nombre: 'Editor de código',
         descripcion: 'Edite arquivos de texto com realce, cópia prévia e salvamento confirmado.',
       },
+      diffCarpetas: {
+        nombre: 'Diff de pastas',
+        descripcion:
+          'Compara duas pastas: só em uma, só na outra e diferentes, com o diff de cada arquivo.',
+      },
     },
     errores: {
       jsonVacio: 'Digite ou cole um JSON.',
@@ -3677,7 +3682,7 @@ export const pt: Textos = {
       regex: 'Expressão regular',
       mayusculas: 'Diferenciar maiúsculas',
       incluir: 'Só arquivos (separe com vírgulas, ex.: *.php)',
-      excluir: 'Ignorar (separe com vírgulas)',
+      excluir: 'Ignorar também (separe com vírgulas)',
       buscar: 'Buscar',
       cancelar: 'Cancelar',
       buscando: 'Buscando…',
@@ -3685,9 +3690,74 @@ export const pt: Textos = {
       truncado: 'Há mais resultados do que os exibidos: refine a busca.',
       cancelada: 'Busca cancelada.',
       abrir: 'Abrir no editor',
+      incluirPesadas: 'Incluir pastas pesadas (node_modules, vendor, .git…)',
+      contexto: 'Linhas de contexto',
+      grupoNombres: (n: number) => `Por nome (${n})`,
+      grupoContenido: (n: number) => `Por conteúdo (${n})`,
+      carpeta: 'pasta',
+      listaAria: 'Resultados da busca',
+      atajos: '↑ ↓ para mover, Enter para abrir no editor, Esc para cancelar ou voltar ao texto.',
+      mostrarMas: (n: number) => `Mostrar mais ${n}`,
+      linea: (n: number) => `linha ${n}`,
+      sinGrupo: 'Sem resultados neste grupo.',
+      topeBytes: 'O limite de leitura foi atingido: refine a busca.',
       coincidencias: (n: number) => `${n} ${n === 1 ? 'correspondência' : 'correspondências'}`,
       resumen: (archivos: number, examinados: number) =>
         `em ${archivos} ${archivos === 1 ? 'arquivo' : 'arquivos'} (${examinados} verificados)`,
+    },
+    diffCarpetas: {
+      explicacion:
+        'Compara duas pastas sem alterar nada nelas: o que só está em uma, o que só está na outra e o que é diferente. Não segue links e trabalha em um processo separado.',
+      carpetaA: 'Pasta A',
+      carpetaB: 'Pasta B',
+      elegir: 'Escolher pasta',
+      sinElegir: 'Não escolhida',
+      comparar: 'Comparar',
+      comparando: 'Comparando…',
+      cancelar: 'Cancelar',
+      cancelada: 'Comparação cancelada.',
+      iguales: 'As duas pastas são iguais.',
+      grupoSoloA: 'Só em A',
+      grupoSoloB: 'Só em B',
+      grupoDistintos: 'Diferentes',
+      grupo: (nombre: string, n: number) => `${nombre} (${n})`,
+      vacio: 'Nenhum',
+      resumen: (a: number, b: number, iguales: number) =>
+        `A: ${a} arquivos · B: ${b} arquivos · ${iguales} iguais`,
+      truncado:
+        'Um limite foi atingido (arquivos, profundidade ou tamanho): a lista não está completa.',
+      recortado: (mostrados: number, total: number) =>
+        `Há mais arquivos do que os exibidos (${mostrados} de ${total}).`,
+      sinComparar: (n: number) =>
+        `${n} arquivos grandes com o mesmo tamanho não foram comparados pelo conteúdo.`,
+      omitidos: (n: number) => `${n} links, junções ou itens especiais foram ignorados.`,
+      motivoTamano: 'tamanho diferente',
+      motivoContenido: 'mesmo tamanho, conteúdo diferente',
+      tamano: (a: string, b: string) => `A: ${a} · B: ${b}`,
+      elegirArchivo: 'Escolha um arquivo «diferente» da lista para ver a diferença.',
+      soloEnUno: (lado: string) => `Este arquivo só existe em ${lado}.`,
+      cargando: 'Lendo os arquivos…',
+      binario: 'Os arquivos são diferentes, mas não são de texto: o diff não é exibido.',
+      tope: (kb: number) =>
+        `Os arquivos são diferentes, mas passam de ${kb} KB: o diff de texto não é exibido.`,
+      demasiadoDistinto: 'Os arquivos são tão diferentes que o diff linha a linha não é exibido.',
+      saltos: {
+        lf: 'LF',
+        crlf: 'CRLF',
+        mixto: 'quebras de linha mistas',
+        ninguno: 'sem quebras de linha',
+      },
+      saltosDistintos: (a: string, b: string) => `Quebras de linha: A usa ${a} e B usa ${b}.`,
+      soloSaltos: 'O texto é o mesmo: só mudam as quebras de linha (ou o BOM).',
+      resumenArchivo: (agregadas: number, quitadas: number) =>
+        `${agregadas} linhas adicionadas, ${quitadas} removidas`,
+      truncadoArchivo: 'Só as primeiras linhas são exibidas.',
+      lineasIguales: (n: number) => `… ${n} linhas iguais …`,
+      abrirA: 'Abrir A no editor',
+      abrirB: 'Abrir B no editor',
+      atajos: '↑ ↓ para mover, Enter para ver a diferença, Esc para cancelar.',
+      listaAria: (grupo: string) => `Arquivos: ${grupo}`,
+      detalleAria: 'Diferenças do arquivo',
     },
     infoArchivo: {
       elegir: 'Escolher arquivo',
@@ -4714,8 +4784,9 @@ export const pt: Textos = {
       aceptar: 'Aceito normalizar as quebras de linha',
     },
     envGestor: {
-      aviso: 'Os arquivos .env são editados nas variáveis do projeto, com o fluxo de segredos.',
-      boton: 'Abrir as variáveis do projeto',
+      aviso:
+        'Os arquivos .env são editados nas variáveis do projeto, com o fluxo de segredos. O botão abre o .env da raiz do projeto, que pode não ser o arquivo que você tentou abrir.',
+      boton: 'Abrir o .env da raiz do projeto',
     },
     huellaPerdida:
       'Salvo, mas não foi possível ler a nova impressão digital: o arquivo foi recarregado.',

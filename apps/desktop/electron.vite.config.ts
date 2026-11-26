@@ -16,6 +16,8 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/main/index.ts'),
           conversorTrabajo: resolve(__dirname, 'src/main/conversorTrabajo.ts'),
+          // Y el del diff de carpetas (D44).
+          diffTrabajo: resolve(__dirname, 'src/main/diffTrabajo.ts'),
         },
       },
     },

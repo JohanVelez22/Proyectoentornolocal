@@ -503,6 +503,15 @@ const api: ApiEntorno = {
     elegir: () => invocar('editorCodigo.elegir'),
     abrir: (ruta, opciones) => invocar('editorCodigo.abrir', ruta, opciones),
     guardar: (ruta, opciones) => invocar('editorCodigo.guardar', ruta, opciones),
+    avisarCambios: (sinGuardar) => invocar('editorCodigo.avisarCambios', sinGuardar),
+  },
+  diffCarpetas: {
+    comparar: (a, b) => invocar('diffCarpetas.comparar', a, b),
+    cancelar: () => invocar('diffCarpetas.cancelar'),
+    archivo: (idComparacion, idEntrada) =>
+      invocar('diffCarpetas.archivo', idComparacion, idEntrada),
+    prepararEditor: (idComparacion, idEntrada, lado) =>
+      invocar('diffCarpetas.prepararEditor', idComparacion, idEntrada, lado),
   },
   captura: {
     leer: () => invocar('captura.leer'),
@@ -513,6 +522,8 @@ const api: ApiEntorno = {
   buscar: {
     iniciar: (opciones) => invocar('buscar.iniciar', opciones),
     cancelar: (id) => invocar('buscar.cancelar', id),
+    prepararEditor: (idBusqueda, idResultado) =>
+      invocar('buscar.prepararEditor', idBusqueda, idResultado),
   },
   mcp: {
     estado: () => invocar('mcp.estado'),

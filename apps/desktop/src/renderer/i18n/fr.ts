@@ -278,14 +278,16 @@ export const fr: Textos = {
       'buscar.regex_lenta':
         'L’expression régulière est trop lente : simplifiez-la ou utilisez du texte littéral.',
       'buscar.demasiadas': '{maximo} recherches sont déjà en cours : annulez-en une ou patientez.',
-      'buscar.ruta_vetada': 'Ce dossier contient des données de WolfCore Dev : il n’est pas exploré.',
+      'buscar.ruta_vetada':
+        'Ce dossier contient des données de WolfCore Dev : il n’est pas exploré.',
       'buscar.resultado_caducado': 'Ce résultat n’est plus disponible : relancez la recherche.',
       'buscar.resultado_invalido': 'Ce résultat ne peut pas être ouvert.',
       'diff.raiz_invalida': 'Choisissez deux dossiers existants qui ne sont pas des liens.',
       'diff.ruta_vetada': 'Ce dossier contient des données de WolfCore Dev : il n’est pas comparé.',
       'diff.cancelado': 'Comparaison annulée.',
       'diff.plazo': 'La comparaison a duré plus de {segundos} s et a été annulée.',
-      'diff.memoria': 'La comparaison nécessite trop de mémoire (plus de {maximo}) et a été annulée.',
+      'diff.memoria':
+        'La comparaison nécessite trop de mémoire (plus de {maximo}) et a été annulée.',
       'diff.ocupado': 'Une comparaison est déjà en cours : annulez-la ou patientez.',
       'diff.caducado': 'Cette comparaison n’est plus disponible : relancez-la.',
       'diff.archivo_invalido': 'Ce fichier ne peut plus être comparé : il a changé ou a disparu.',
@@ -3541,6 +3543,11 @@ export const fr: Textos = {
         descripcion:
           'Modifiez des fichiers texte avec coloration, copie préalable et enregistrement confirmé.',
       },
+      diffCarpetas: {
+        nombre: 'Différences de dossiers',
+        descripcion:
+          'Compare deux dossiers : seulement dans l’un, seulement dans l’autre et différents, avec les différences de chaque fichier.',
+      },
     },
     errores: {
       jsonVacio: 'Saisissez ou collez un JSON.',
@@ -3767,7 +3774,7 @@ export const fr: Textos = {
       regex: 'Expression régulière',
       mayusculas: 'Respecter la casse',
       incluir: 'Fichiers seulement (séparés par des virgules, ex. *.php)',
-      excluir: 'Ignorer (séparés par des virgules)',
+      excluir: 'Ignorer aussi (séparés par des virgules)',
       buscar: 'Chercher',
       cancelar: 'Annuler',
       buscando: 'Recherche…',
@@ -3775,9 +3782,78 @@ export const fr: Textos = {
       truncado: 'Il y a plus de résultats que ceux affichés : affinez la recherche.',
       cancelada: 'Recherche annulée.',
       abrir: 'Ouvrir dans l’éditeur',
+      incluirPesadas: 'Inclure les dossiers lourds (node_modules, vendor, .git…)',
+      contexto: 'Lignes de contexte',
+      grupoNombres: (n: number) => `Par nom (${n})`,
+      grupoContenido: (n: number) => `Par contenu (${n})`,
+      carpeta: 'dossier',
+      listaAria: 'Résultats de la recherche',
+      atajos:
+        '↑ ↓ pour vous déplacer, Entrée pour ouvrir dans l’éditeur, Échap pour annuler ou revenir au texte.',
+      mostrarMas: (n: number) => `Afficher ${n} de plus`,
+      linea: (n: number) => `ligne ${n}`,
+      sinGrupo: 'Aucun résultat dans ce groupe.',
+      topeBytes: 'La limite de lecture est atteinte : affinez la recherche.',
       coincidencias: (n: number) => `${n} ${n === 1 ? 'correspondance' : 'correspondances'}`,
       resumen: (archivos: number, examinados: number) =>
         `dans ${archivos} ${archivos === 1 ? 'fichier' : 'fichiers'} (${examinados} examinés)`,
+    },
+    diffCarpetas: {
+      explicacion:
+        'Compare deux dossiers sans rien modifier dedans : ce qui n’est que dans l’un, ce qui n’est que dans l’autre et ce qui diffère. Il ne suit pas les liens et travaille dans un processus séparé.',
+      carpetaA: 'Dossier A',
+      carpetaB: 'Dossier B',
+      elegir: 'Choisir un dossier',
+      sinElegir: 'Non choisi',
+      comparar: 'Comparer',
+      comparando: 'Comparaison en cours…',
+      cancelar: 'Annuler',
+      cancelada: 'Comparaison annulée.',
+      iguales: 'Les deux dossiers sont identiques.',
+      grupoSoloA: 'Seulement dans A',
+      grupoSoloB: 'Seulement dans B',
+      grupoDistintos: 'Différents',
+      grupo: (nombre: string, n: number) => `${nombre} (${n})`,
+      vacio: 'Aucun',
+      resumen: (a: number, b: number, iguales: number) =>
+        `A : ${a} fichiers · B : ${b} fichiers · ${iguales} identiques`,
+      truncado:
+        'Une limite a été atteinte (fichiers, profondeur ou taille) : la liste n’est pas complète.',
+      recortado: (mostrados: number, total: number) =>
+        `Il y a plus de fichiers que ceux affichés (${mostrados} sur ${total}).`,
+      sinComparar: (n: number) =>
+        `${n} gros fichiers de même taille n’ont pas été comparés par leur contenu.`,
+      omitidos: (n: number) => `${n} liens, jonctions ou éléments spéciaux ont été ignorés.`,
+      motivoTamano: 'taille différente',
+      motivoContenido: 'même taille, contenu différent',
+      tamano: (a: string, b: string) => `A : ${a} · B : ${b}`,
+      elegirArchivo: 'Choisissez un fichier « différent » dans la liste pour voir sa différence.',
+      soloEnUno: (lado: string) => `Ce fichier n’existe que dans ${lado}.`,
+      cargando: 'Lecture des fichiers…',
+      binario:
+        'Les fichiers sont différents, mais ce ne sont pas des textes : la différence n’est pas affichée.',
+      tope: (kb: number) =>
+        `Les fichiers sont différents, mais dépassent ${kb} Ko : la différence de texte n’est pas affichée.`,
+      demasiadoDistinto:
+        'Les fichiers sont si différents que la comparaison ligne à ligne n’est pas affichée.',
+      saltos: {
+        lf: 'LF',
+        crlf: 'CRLF',
+        mixto: 'sauts de ligne mélangés',
+        ninguno: 'aucun saut de ligne',
+      },
+      saltosDistintos: (a: string, b: string) =>
+        `Sauts de ligne : A utilise ${a} et B utilise ${b}.`,
+      soloSaltos: 'Le texte est le même : seuls les sauts de ligne (ou le BOM) changent.',
+      resumenArchivo: (agregadas: number, quitadas: number) =>
+        `${agregadas} lignes ajoutées, ${quitadas} supprimées`,
+      truncadoArchivo: 'Seules les premières lignes sont affichées.',
+      lineasIguales: (n: number) => `… ${n} lignes identiques …`,
+      abrirA: 'Ouvrir A dans l’éditeur',
+      abrirB: 'Ouvrir B dans l’éditeur',
+      atajos: '↑ ↓ pour vous déplacer, Entrée pour voir la différence, Échap pour annuler.',
+      listaAria: (grupo: string) => `Fichiers : ${grupo}`,
+      detalleAria: 'Différences du fichier',
     },
     infoArchivo: {
       elegir: 'Choisir un fichier',
@@ -4826,8 +4902,8 @@ export const fr: Textos = {
     },
     envGestor: {
       aviso:
-        'Les fichiers .env se modifient dans les variables du projet, avec leur circuit des secrets.',
-      boton: 'Ouvrir les variables du projet',
+        'Les fichiers .env se modifient dans les variables du projet, avec leur circuit des secrets. Le bouton ouvre le .env à la racine du projet, qui n’est peut-être pas le fichier que vous avez essayé d’ouvrir.',
+      boton: 'Ouvrir le .env à la racine du projet',
     },
     huellaPerdida:
       'Enregistré, mais la nouvelle empreinte n’a pas pu être lue : le fichier a été rechargé.',

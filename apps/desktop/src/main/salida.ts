@@ -27,6 +27,10 @@ export interface DepsSalida {
   saliendo: () => boolean;
   /** Muestra el diálogo modal de `padre` y devuelve el botón elegido. */
   preguntar: (padre: VentanaSalida) => Promise<number>;
+  /** ¿El editor de código tiene cambios sin guardar? (lo avisa la ventana; D44, M-A). */
+  sinGuardar?: () => boolean;
+  /** Pregunta si se sale perdiendo esos cambios: `true` = salir de todos modos. */
+  preguntarSinGuardar?: (padre: VentanaSalida) => Promise<boolean>;
   /** Cierra el núcleo (apagando o no los servicios) y sale de la app. */
   terminar: (detenerServicios: boolean) => Promise<void>;
 }
@@ -61,6 +65,8 @@ export function crearSalida(d: DepsSalida): { salir(): Promise<void>; preguntand
     let r: number;
     try {
       alFrente(v);
+      // Con cambios sin guardar en el editor, antes de apagar nada se pregunta si se pierden.
+      if (d.sinGuardar?.() && d.preguntarSinGuardar && !(await d.preguntarSinGuardar(v))) return;
       r = await d.preguntar(v);
     } catch (e) {
       console.error('No se pudo mostrar el diálogo de salida:', e);

@@ -536,6 +536,8 @@ export interface OpcionesIpc {
   aplicarPreferencias?: (p: PreferenciasUi) => void;
   /** Se llama tras guardar, borrar, encender o apagar un workspace (la bandeja rearma su menú). */
   alCambiarWorkspaces?: () => void;
+  /** La ventana avisa si el editor de código tiene cambios sin guardar (D44, M-A). */
+  alCambiarEditorSinGuardar?: (sinGuardar: boolean) => void;
 }
 
 /** Lo que ve cada manejador además del núcleo: el sistema, las rutas elegidas y el emisor. */
@@ -552,6 +554,7 @@ type Contexto = ApiSistema & {
   idiomaSistema: () => string;
   aplicarPreferencias: (p: PreferenciasUi) => void;
   alCambiarWorkspaces: () => void;
+  alCambiarEditorSinGuardar: (sinGuardar: boolean) => void;
 };
 
 /** Opciones de ejecución de receta: ids acotados y receta validada (archivos de diálogos). */
@@ -602,6 +605,9 @@ async function sitioExistente(n: NucleoIpc, v: unknown): Promise<string> {
   return id;
 }
 
+/** Número de resultado o de archivo (los que el núcleo numera): entero positivo y acotado. */
+const enteroPositivo = (v: unknown, nombre: string): number => enteroEn(v, 1, 1_000_000, nombre);
+
 /** Lista de patrones opcional: ausente o vacía = ninguno. */
 const patrones = (v: unknown, nombre: string): string[] =>
   v === undefined || (Array.isArray(v) && v.length === 0) ? [] : listaTextos(v, 50, 200, nombre);
@@ -640,6 +646,10 @@ async function opcionesBusqueda(
     mayusculas: booleano(o['mayusculas'], 'mayúsculas'),
     incluir: patrones(o['incluir'], 'incluir'),
     excluir: patrones(o['excluir'], 'excluir'),
+    ...(o['contexto'] === undefined ? {} : { contexto: enteroEn(o['contexto'], 0, 5, 'contexto') }),
+    ...(o['incluirPesadas'] === undefined
+      ? {}
+      : { incluirPesadas: booleano(o['incluirPesadas'], 'incluirPesadas') }),
   };
 }
 
@@ -1957,6 +1967,26 @@ const TABLA: Record<RutaIpc, Manejador> = {
       throw e;
     }
   },
+  // La ventana avisa de los cambios sin guardar para que «Salir» de la bandeja pregunte.
+  'editorCodigo.avisarCambios': (_n, s, sinGuardar) =>
+    s.alCambiarEditorSinGuardar(booleano(sinGuardar, 'sinGuardar')),
+  // ---- Diff de carpetas (D44): carpetas de un diálogo, resultados por número, solo lectura ----
+  'diffCarpetas.comparar': (n, s, a, b) =>
+    n.diffCarpetas.comparar(s.elegidas.exigir(a, 'carpeta'), s.elegidas.exigir(b, 'carpeta')),
+  'diffCarpetas.cancelar': (n) => n.diffCarpetas.cancelar(),
+  'diffCarpetas.archivo': (n, _s, id, idEntrada) =>
+    n.diffCarpetas.archivo(idCorto(id, 'comparación', 64), enteroPositivo(idEntrada, 'archivo')),
+  'diffCarpetas.prepararEditor': async (n, s, id, idEntrada, lado) => {
+    if (lado !== 'a' && lado !== 'b') throw new Error('Argumento no válido: lado');
+    return s.elegidas.registrar(
+      await n.diffCarpetas.rutaParaEditor(
+        idCorto(id, 'comparación', 64),
+        enteroPositivo(idEntrada, 'archivo'),
+        lado,
+      ),
+      'editor',
+    ) as string;
+  },
   'herramientas.optimizarPdf': (n, s, origen, destino) =>
     n.optimizarPdf(
       s.elegidas.exigir(origen, 'archivo'),
@@ -1968,6 +1998,16 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'buscar.iniciar': async (n, s, opciones) =>
     n.iniciarBusqueda(await opcionesBusqueda(n, s.elegidas, opciones)),
   'buscar.cancelar': (n, _s, id) => n.cancelarBusqueda(idCorto(id, 'búsqueda', 64)),
+  // D44: la ruta de un resultado la pone el núcleo, nunca la ventana. Este proceso la registra con
+  // el propósito 'editor' (el único que el editor de código acepta) y la devuelve.
+  'buscar.prepararEditor': async (n, s, idBusqueda, idResultado) =>
+    s.elegidas.registrar(
+      await n.rutaDeResultadoBusqueda(
+        idCorto(idBusqueda, 'búsqueda', 64),
+        enteroPositivo(idResultado, 'resultado'),
+      ),
+      'editor',
+    ) as string,
 
   // ---- Servidor MCP ----
   'mcp.estado': (n) => n.estadoMcp(),
@@ -2177,6 +2217,7 @@ export function registrarIpc(
     idiomaSistema: opciones.idiomaSistema ?? (() => 'es'),
     aplicarPreferencias: opciones.aplicarPreferencias ?? (() => undefined),
     alCambiarWorkspaces: opciones.alCambiarWorkspaces ?? (() => undefined),
+    alCambiarEditorSinGuardar: opciones.alCambiarEditorSinGuardar ?? (() => undefined),
   };
   for (const [ruta, fn] of Object.entries(TABLA) as [RutaIpc, Manejador][]) {
     ipcMain.handle(`${PREFIJO_CANAL}${ruta}`, async (e, ...args) => {

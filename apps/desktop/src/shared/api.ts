@@ -199,6 +199,12 @@ import type {
   OpcionesGuardarArchivo,
   ResultadoAbrirArchivo,
   ResultadoGuardarArchivo,
+  ComparacionCarpetas,
+  EntradaDiffUi,
+  ResultadoArchivoDiff,
+  ResumenCarpetas,
+  FilaDiffTexto,
+  GrupoDiff,
   ArchivoEditor,
   RiesgoEditor,
   HuellaArchivo,
@@ -409,6 +415,12 @@ export type {
   OpcionesGuardarArchivo,
   ResultadoAbrirArchivo,
   ResultadoGuardarArchivo,
+  ComparacionCarpetas,
+  EntradaDiffUi,
+  ResultadoArchivoDiff,
+  ResumenCarpetas,
+  FilaDiffTexto,
+  GrupoDiff,
   EstadoInstancia,
   IdInstancia,
   PlanActualizar,
@@ -1467,6 +1479,27 @@ export interface ApiEntorno {
      * es una confirmación aparte. Si falta el refuerzo de un archivo delicado devuelve `reforzar`.
      */
     guardar(ruta: string, opciones: OpcionesGuardarArchivo): Promise<ResultadoGuardarEditor>;
+    /**
+     * La ventana avisa si el editor tiene cambios sin guardar: así «Salir» de la bandeja pregunta
+     * antes de perderlos (el cierre de sesión del sistema nunca se bloquea).
+     */
+    avisarCambios(sinGuardar: boolean): Promise<void>;
+  };
+  diffCarpetas: {
+    /**
+     * Compara dos carpetas elegidas con el diálogo nativo (`sistema.elegirCarpeta`). Corre en un
+     * proceso aparte, con topes y solo lectura; no sigue enlaces. Una a la vez.
+     */
+    comparar(a: string, b: string): Promise<ComparacionCarpetas>;
+    /** Cancela la comparación o el diff de archivo en curso; false si no había. */
+    cancelar(): Promise<boolean>;
+    /** Diff de texto de un archivo del grupo «distintos» (por su número, nunca por su ruta). */
+    archivo(idComparacion: string, idEntrada: number): Promise<ResultadoArchivoDiff>;
+    /**
+     * Prepara abrir un archivo de la comparación en el editor de código: el proceso principal
+     * registra la ruta (propósito «editor») y la devuelve para `abrirEnEditor`.
+     */
+    prepararEditor(idComparacion: string, idEntrada: number, lado: 'a' | 'b'): Promise<string>;
   };
   captura: {
     /** Configuración, estado del sistema y del atajo global (D35). */
@@ -1493,6 +1526,12 @@ export interface ApiEntorno {
     iniciar(opciones: OpcionesBusquedaIpc): Promise<string>;
     /** Cancela la búsqueda; false si ya había terminado. */
     cancelar(id: string): Promise<boolean>;
+    /**
+     * Prepara abrir un resultado en el editor de código (D43): el proceso principal toma la ruta
+     * del resultado que produjo el núcleo (por su número, nunca la aporta la ventana), la registra
+     * con el propósito «editor» y la devuelve para `abrirEnEditor`. Caduca a los 15 minutos.
+     */
+    prepararEditor(idBusqueda: string, idResultado: number): Promise<string>;
   };
   mcp: {
     estado(): Promise<EstadoMcp>;
@@ -1913,12 +1952,18 @@ export const RUTAS_IPC = [
   'editorCodigo.elegir',
   'editorCodigo.abrir',
   'editorCodigo.guardar',
+  'editorCodigo.avisarCambios',
+  'diffCarpetas.comparar',
+  'diffCarpetas.cancelar',
+  'diffCarpetas.archivo',
+  'diffCarpetas.prepararEditor',
   'captura.leer',
   'captura.guardarConfig',
   'captura.iniciar',
   'captura.tomarPendiente',
   'buscar.iniciar',
   'buscar.cancelar',
+  'buscar.prepararEditor',
   'mcp.estado',
   'mcp.iniciar',
   'mcp.detener',
@@ -1980,7 +2025,7 @@ export type {
 export type RutaIpc = (typeof RUTAS_IPC)[number];
 
 /** Lo que manda la interfaz: la raíz va aparte (proyecto o diálogo). */
-export type OpcionesBusquedaIpc = Omit<OpcionesBusqueda, 'raiz'> &
+export type OpcionesBusquedaIpc = Omit<OpcionesBusqueda, 'raiz' | 'vetadas'> &
   ({ sitioId: string; rutaElegida?: undefined } | { rutaElegida: string; sitioId?: undefined });
 
 export const EVENTOS_IPC = [

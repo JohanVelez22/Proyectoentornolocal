@@ -47,6 +47,7 @@ import {
 import { carpetaExistente, urlAbrible, urlHttp } from './validacion';
 import { imprimirHtmlAPdf } from './conversorPdf';
 import { crearEjecutorUtilityProcess } from './conversorProceso';
+import { crearEjecutorDiffUtilityProcess } from './diffProceso';
 import { registrarIpcCaptura, ServicioCaptura } from './captura';
 import { crearDepsElectron } from './capturaElectron';
 
@@ -60,6 +61,8 @@ let bandeja: Tray | null = null;
 let nucleo: Nucleo | null = null;
 let saliendo = false;
 let cierreSistema: Promise<void> | null = null;
+/** La ventana avisa si el editor de código tiene cambios sin guardar (D44, M-A). */
+let editorSinGuardar = false;
 let idioma: IdiomaUi | null = null;
 let accionesBandeja: AccionesBandeja | null = null;
 /** Captura de pantalla (D35): su atajo global se libera al cerrar. */
@@ -287,6 +290,23 @@ function cerrarPorSistema(topeMs: number): Promise<void> {
 const salida = crearSalida({
   ventana: () => ventana,
   saliendo: () => saliendo,
+  sinGuardar: () => editorSinGuardar,
+  // Salir desde la bandeja no pasa por `beforeunload`: sin esto se perderían los cambios sin avisar.
+  // (El cierre de sesión del sistema va por `cerrarPorSistema` y nunca se bloquea.)
+  preguntarSinGuardar: async (padre) => {
+    const t = textosMain(idioma);
+    const r = await dialog.showMessageBox(padre as BrowserWindow, {
+      type: 'warning',
+      title: t.sinGuardarTitulo,
+      message: t.sinGuardarTitulo,
+      detail: t.sinGuardarTexto,
+      buttons: [t.sinGuardarSalir, t.sinGuardarSeguir],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+    });
+    return r.response === 0;
+  },
   preguntar: async (padre) => {
     const t = textosMain(idioma);
     // Modal de la ventana (traída al frente y encima de todo por `crearSalida`): no puede quedar
@@ -388,6 +408,8 @@ if (errorCarpetaDatos !== null) {
         imprimirPdf: imprimirHtmlAPdf,
         // Lo pesado del conversor y la optimización de PDF corren en un utilityProcess aparte.
         ejecutorConversor: crearEjecutorUtilityProcess(join(__dirname, 'conversorTrabajo.js')),
+        // El diff de carpetas (D44) recorre las carpetas en un utilityProcess, nunca aquí.
+        ejecutorDiff: crearEjecutorDiffUtilityProcess(join(__dirname, 'diffTrabajo.js')),
         servidorCli: {
           version: app.getVersion(),
           // El cliente `wolf` compilado (out/cli/wolf.cjs, dentro del paquete) y el ejecutable que lo
@@ -538,6 +560,9 @@ if (errorCarpetaDatos !== null) {
         idiomaSistema: () => app.getLocale(),
         aplicarPreferencias,
         alCambiarWorkspaces: programarMenuBandeja,
+        alCambiarEditorSinGuardar: (hay) => {
+          editorSinGuardar = hay;
+        },
       },
     );
     n.iniciarSondeo();
