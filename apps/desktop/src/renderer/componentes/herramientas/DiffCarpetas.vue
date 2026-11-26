@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { NAlert, NButton } from 'naive-ui';
+import { BYTES_TEXTO_DIFF } from '@pel/core';
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
 import type {
   ComparacionCarpetas,
@@ -203,10 +204,8 @@ const saltosB = computed(() =>
 const saltosDifieren = computed(
   () => archivoDiff.value?.tipo === 'texto' && saltosA.value !== saltosB.value,
 );
-const kbTope = computed(() => {
-  const d = archivoDiff.value;
-  return d?.tipo === 'tope' ? Math.round(2048) : 0;
-});
+// El tope de texto sale del mismo valor que usa el núcleo (no un número suelto en la ventana).
+const kbTope = Math.round(BYTES_TEXTO_DIFF / 1024);
 
 onBeforeUnmount(() => {
   turno++;
@@ -340,7 +339,8 @@ onBeforeUnmount(() => {
         </p>
         <p v-else-if="cargandoArchivo" class="herr-tenue" role="status">{{ t.cargando }}</p>
         <template v-else-if="archivoDiff">
-          <p v-if="archivoDiff.tipo === 'binario'" class="herr-tenue">{{ t.binario }}</p>
+          <p v-if="archivoDiff.tipo === 'sensible'" class="herr-aviso">{{ t.sensible }}</p>
+          <p v-else-if="archivoDiff.tipo === 'binario'" class="herr-tenue">{{ t.binario }}</p>
           <p v-else-if="archivoDiff.tipo === 'tope'" class="herr-tenue">{{ t.tope(kbTope) }}</p>
           <p v-else-if="archivoDiff.tipo === 'demasiado-distinto'" class="herr-tenue">
             {{ t.demasiadoDistinto }}

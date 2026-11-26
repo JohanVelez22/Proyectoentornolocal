@@ -3790,6 +3790,8 @@ export const fr: Textos = {
       listaAria: 'Résultats de la recherche',
       atajos:
         '↑ ↓ pour vous déplacer, Entrée pour ouvrir dans l’éditeur, Échap pour annuler ou revenir au texte.',
+      sensible: (n: number) =>
+        `Fichier sensible : correspondance à la ligne ${n} (son contenu n’est pas affiché).`,
       mostrarMas: (n: number) => `Afficher ${n} de plus`,
       linea: (n: number) => `ligne ${n}`,
       sinGrupo: 'Aucun résultat dans ce groupe.',
@@ -3832,6 +3834,8 @@ export const fr: Textos = {
       cargando: 'Lecture des fichiers…',
       binario:
         'Les fichiers sont différents, mais ce ne sont pas des textes : la différence n’est pas affichée.',
+      sensible:
+        'Fichier sensible (.env, clés ou données réelles) : il est différent, mais son contenu n’est pas affiché. Vous pouvez l’ouvrir dans l’éditeur, qui demande une confirmation renforcée.',
       tope: (kb: number) =>
         `Les fichiers sont différents, mais dépassent ${kb} Ko : la différence de texte n’est pas affichée.`,
       demasiadoDistinto:
@@ -3844,7 +3848,8 @@ export const fr: Textos = {
       },
       saltosDistintos: (a: string, b: string) =>
         `Sauts de ligne : A utilise ${a} et B utilise ${b}.`,
-      soloSaltos: 'Le texte est le même : seuls les sauts de ligne (ou le BOM) changent.',
+      soloSaltos:
+        'Le texte des lignes est le même : seuls les sauts de ligne (y compris celui de la fin du fichier) ou le BOM changent.',
       resumenArchivo: (agregadas: number, quitadas: number) =>
         `${agregadas} lignes ajoutées, ${quitadas} supprimées`,
       truncadoArchivo: 'Seules les premières lignes sont affichées.',

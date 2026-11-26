@@ -3688,6 +3688,8 @@ export const es = {
       listaAria: 'Resultados de la búsqueda',
       atajos:
         '↑ ↓ para moverse, Enter para abrir en el editor, Esc para cancelar o volver al texto.',
+      sensible: (n: number) =>
+        `Archivo sensible: coincidencia en la línea ${n} (no se muestra su contenido).`,
       mostrarMas: (n: number) => `Mostrar ${n} más`,
       linea: (n: number) => `línea ${n}`,
       sinGrupo: 'Sin resultados en este grupo.',
@@ -3728,6 +3730,8 @@ export const es = {
       soloEnUno: (lado: string) => `Este archivo solo existe en ${lado}.`,
       cargando: 'Leyendo los archivos…',
       binario: 'Los archivos son distintos, pero no son de texto: no se muestra el diff.',
+      sensible:
+        'Archivo sensible (.env, claves o datos reales): es distinto, pero no se muestra su contenido. Puede abrirlo en el editor, que pide una confirmación reforzada.',
       tope: (kb: number) =>
         `Los archivos son distintos, pero pasan de ${kb} KB: no se muestra el diff de texto.`,
       demasiadoDistinto: 'Los archivos son tan distintos que no se muestra el diff línea a línea.',
@@ -3738,7 +3742,8 @@ export const es = {
         ninguno: 'sin saltos de línea',
       },
       saltosDistintos: (a: string, b: string) => `Saltos de línea: A usa ${a} y B usa ${b}.`,
-      soloSaltos: 'El texto es el mismo: solo cambian los saltos de línea (o el BOM).',
+      soloSaltos:
+        'El texto de las líneas es el mismo: solo cambian los saltos de línea (incluido el del final del archivo) o el BOM.',
       resumenArchivo: (agregadas: number, quitadas: number) =>
         `${agregadas} líneas agregadas, ${quitadas} quitadas`,
       truncadoArchivo: 'Se muestran solo las primeras filas.',

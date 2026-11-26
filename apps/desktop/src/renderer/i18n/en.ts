@@ -3661,6 +3661,7 @@ export const en: Textos = {
       carpeta: 'folder',
       listaAria: 'Search results',
       atajos: '↑ ↓ to move, Enter to open in the editor, Esc to cancel or go back to the text.',
+      sensible: (n: number) => `Sensitive file: match on line ${n} (its content is not shown).`,
       mostrarMas: (n: number) => `Show ${n} more`,
       linea: (n: number) => `line ${n}`,
       sinGrupo: 'No results in this group.',
@@ -3701,6 +3702,8 @@ export const en: Textos = {
       soloEnUno: (lado: string) => `This file only exists in ${lado}.`,
       cargando: 'Reading the files…',
       binario: 'The files are different, but they are not text: the diff is not shown.',
+      sensible:
+        'Sensitive file (.env, keys or real data): it is different, but its content is not shown. You can open it in the editor, which asks for a reinforced confirmation.',
       tope: (kb: number) =>
         `The files are different, but they are over ${kb} KB: the text diff is not shown.`,
       demasiadoDistinto: 'The files are so different that the line-by-line diff is not shown.',
@@ -3711,7 +3714,8 @@ export const en: Textos = {
         ninguno: 'no line endings',
       },
       saltosDistintos: (a: string, b: string) => `Line endings: A uses ${a} and B uses ${b}.`,
-      soloSaltos: 'The text is the same: only the line endings (or the BOM) change.',
+      soloSaltos:
+        'The text of the lines is the same: only the line endings (including the one at the end of the file) or the BOM change.',
       resumenArchivo: (agregadas: number, quitadas: number) =>
         `${agregadas} lines added, ${quitadas} removed`,
       truncadoArchivo: 'Only the first rows are shown.',

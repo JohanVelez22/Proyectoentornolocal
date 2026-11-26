@@ -2025,7 +2025,7 @@ export type {
 export type RutaIpc = (typeof RUTAS_IPC)[number];
 
 /** Lo que manda la interfaz: la raíz va aparte (proyecto o diálogo). */
-export type OpcionesBusquedaIpc = Omit<OpcionesBusqueda, 'raiz' | 'vetadas'> &
+export type OpcionesBusquedaIpc = Omit<OpcionesBusqueda, 'raiz' | 'vetadas' | 'sitios'> &
   ({ sitioId: string; rutaElegida?: undefined } | { rutaElegida: string; sitioId?: undefined });
 
 export const EVENTOS_IPC = [

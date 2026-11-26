@@ -198,6 +198,17 @@ try {
   await ventana.evaluate(() => {
     location.hash = '#/herramientas';
   });
+  // Diff de carpetas (D44): solo se abre la herramienta; la consola tiene que seguir limpia.
+  try {
+    await ventana.waitForSelector('[data-herramienta="diffCarpetas"]', { timeout: 30_000 });
+    await ventana.evaluate(() =>
+      document.querySelector('[data-herramienta="diffCarpetas"]')?.click(),
+    );
+    await ventana.waitForSelector('.n-drawer .herr', { state: 'attached', timeout: 30_000 });
+    registro('ok   Diff de carpetas: la herramienta abrió');
+  } catch (e) {
+    falla(`El diff de carpetas no abrió: ${e}`);
+  }
   try {
     await ventana.waitForSelector('[data-herramienta="editor"]', { timeout: 30_000 });
     // Clic por DOM: un diálogo del primer uso puede cubrir la tarjeta y no importa para esta prueba.

@@ -457,7 +457,13 @@ function partes(r: ResultadoBusqueda): { antes: string; mid: string; despues: st
               @click="elegido = r.id"
               @dblclick="abrirResultado(r)"
             >
-              <div class="vista">
+              <div v-if="r.sensible" class="vista">
+                <div class="linea encontrada">
+                  <span class="pos">{{ r.linea }}</span>
+                  <em>{{ t.sensible(r.linea ?? 0) }}</em>
+                </div>
+              </div>
+              <div v-else class="vista">
                 <div v-for="(l, k) in r.antes" :key="`a${k}`" class="linea contexto">
                   <span class="pos">{{ (r.linea ?? 0) - r.antes.length + k }}</span>
                   <code>{{ l }}</code>

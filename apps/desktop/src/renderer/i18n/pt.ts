@@ -3697,6 +3697,8 @@ export const pt: Textos = {
       carpeta: 'pasta',
       listaAria: 'Resultados da busca',
       atajos: '↑ ↓ para mover, Enter para abrir no editor, Esc para cancelar ou voltar ao texto.',
+      sensible: (n: number) =>
+        `Arquivo sensível: ocorrência na linha ${n} (o conteúdo não é exibido).`,
       mostrarMas: (n: number) => `Mostrar mais ${n}`,
       linea: (n: number) => `linha ${n}`,
       sinGrupo: 'Sem resultados neste grupo.',
@@ -3738,6 +3740,8 @@ export const pt: Textos = {
       soloEnUno: (lado: string) => `Este arquivo só existe em ${lado}.`,
       cargando: 'Lendo os arquivos…',
       binario: 'Os arquivos são diferentes, mas não são de texto: o diff não é exibido.',
+      sensible:
+        'Arquivo sensível (.env, chaves ou dados reais): é diferente, mas o conteúdo não é exibido. Você pode abri-lo no editor, que pede uma confirmação reforçada.',
       tope: (kb: number) =>
         `Os arquivos são diferentes, mas passam de ${kb} KB: o diff de texto não é exibido.`,
       demasiadoDistinto: 'Os arquivos são tão diferentes que o diff linha a linha não é exibido.',
@@ -3748,7 +3752,8 @@ export const pt: Textos = {
         ninguno: 'sem quebras de linha',
       },
       saltosDistintos: (a: string, b: string) => `Quebras de linha: A usa ${a} e B usa ${b}.`,
-      soloSaltos: 'O texto é o mesmo: só mudam as quebras de linha (ou o BOM).',
+      soloSaltos:
+        'O texto das linhas é o mesmo: só mudam as quebras de linha (inclusive a do fim do arquivo) ou o BOM.',
       resumenArchivo: (agregadas: number, quitadas: number) =>
         `${agregadas} linhas adicionadas, ${quitadas} removidas`,
       truncadoArchivo: 'Só as primeiras linhas são exibidas.',

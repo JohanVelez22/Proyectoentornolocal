@@ -286,6 +286,15 @@ const MSG: MensajeDiff = {
   },
 };
 
+const MSG_ARCHIVO: MensajeDiff = {
+  op: 'archivo',
+  a: 'a',
+  b: 'b',
+  rel: 'x.txt',
+  sitios: [],
+  lim: MSG.lim,
+};
+
 async function codigoDe(p: Promise<unknown>): Promise<string> {
   try {
     await p;
@@ -317,7 +326,7 @@ describe('supervisor del diff (D44)', () => {
   it('devuelve lo que contesta el proceso y lo termina; rechaza respuestas con forma inválida', async () => {
     const p = new Falso();
     const ejecutar = crearEjecutorDiffSupervisado({ lanzar: () => p, memoriaDe: () => 1 });
-    const r = ejecutar(MSG, { plazoMs: 5000 });
+    const r = ejecutar(MSG_ARCHIVO, { plazoMs: 5000 });
     p.contestar({ ok: true, datos: { tipo: 'binario' } });
     expect(await r).toEqual({ ok: true, datos: { tipo: 'binario' } });
     expect(p.matado).toBe(true);
@@ -367,14 +376,14 @@ describe('supervisor del diff (D44)', () => {
   it('solo una operación a la vez', async () => {
     const p = new Falso();
     const ejecutar = crearEjecutorDiffSupervisado({ lanzar: () => p, memoriaDe: () => 1 });
-    const primera = ejecutar(MSG, { plazoMs: 5000 });
-    expect(await codigoDe(ejecutar(MSG, { plazoMs: 5000 }))).toBe('diff.ocupado');
-    p.contestar({ ok: true, datos: {} });
+    const primera = ejecutar(MSG_ARCHIVO, { plazoMs: 5000 });
+    expect(await codigoDe(ejecutar(MSG_ARCHIVO, { plazoMs: 5000 }))).toBe('diff.ocupado');
+    p.contestar({ ok: true, datos: { tipo: 'binario' } });
     await primera;
     const q = new Falso();
     const otra = crearEjecutorDiffSupervisado({ lanzar: () => q, memoriaDe: () => 1 });
-    const x = otra(MSG, { plazoMs: 5000 });
-    q.contestar({ ok: true, datos: {} });
+    const x = otra(MSG_ARCHIVO, { plazoMs: 5000 });
+    q.contestar({ ok: true, datos: { tipo: 'binario' } });
     await x;
   });
 });
@@ -412,13 +421,16 @@ describe('el diff corre FUERA del proceso principal (proceso real)', () => {
 
   it('contesta desde otro proceso (otro PID) y el proceso muere al terminar', async () => {
     const r = real(
-      `process.on('message', () => process.send({ ok: true, datos: { pid: process.pid } }));`,
+      `process.on('message', () => process.send({ ok: true, datos: { tipo: 'tope', bytesA: process.pid, bytesB: 0 } }));`,
     );
-    const resp = await crearEjecutorDiffSupervisado({ lanzar: r.lanzar, memoriaDe: () => 1 })(MSG, {
-      plazoMs: 10_000,
-    });
+    const resp = await crearEjecutorDiffSupervisado({ lanzar: r.lanzar, memoriaDe: () => 1 })(
+      MSG_ARCHIVO,
+      {
+        plazoMs: 10_000,
+      },
+    );
     expect(resp.ok).toBe(true);
-    const hijo = (resp as unknown as { datos: { pid: number } }).datos.pid;
+    const hijo = (resp as unknown as { datos: { bytesA: number } }).datos.bytesA;
     expect(hijo).not.toBe(process.pid);
     expect(hijo).toBe(r.pid());
     for (let i = 0; i < 50 && vivo(hijo); i++) await new Promise((x) => setTimeout(x, 100));
@@ -545,5 +557,146 @@ describe('textos de D44 en los cuatro idiomas', () => {
       ])
         expect(k.length, id).toBeGreaterThan(5);
     }
+  });
+});
+
+/* ───────────── Segunda ronda ───────────── */
+
+describe('M-3: el supervisor valida la forma de lo que contesta el trabajador', () => {
+  const entrada = { ruta: 'a/b.txt', tamanoA: 1, tamanoB: null };
+  const resumen = {
+    archivosA: 1,
+    archivosB: 0,
+    iguales: 0,
+    sinComparar: 0,
+    omitidos: 0,
+    truncado: false,
+    recortado: false,
+    totalSoloA: 1,
+    totalSoloB: 0,
+    totalDistintos: 0,
+  };
+  const carpetasOk = { soloA: [entrada], soloB: [], distintos: [], resumen };
+
+  async function responder(op: MensajeDiff['op'], respuesta: unknown): Promise<string> {
+    const p = new Falso();
+    const ejecutar = crearEjecutorDiffSupervisado({ lanzar: () => p, memoriaDe: () => 1 });
+    const m = { ...MSG, op } as MensajeDiff;
+    const pr = ejecutar(m, { plazoMs: 5000 });
+    p.contestar(respuesta);
+    return codigoDe(pr);
+  }
+
+  it('acepta una respuesta bien formada de cada operación', async () => {
+    expect(await responder('carpetas', { ok: true, datos: carpetasOk })).toBe('sin-error');
+    for (const datos of [
+      { tipo: 'binario' },
+      { tipo: 'sensible' },
+      { tipo: 'tope', bytesA: 1, bytesB: 2 },
+      { tipo: 'demasiado-distinto' },
+      {
+        tipo: 'texto',
+        filas: [{ tipo: 'agregada', numA: null, numB: 1, texto: 'x' }],
+        agregadas: 1,
+        quitadas: 0,
+        truncado: false,
+        soloSaltos: false,
+        saltosA: 'lf',
+        saltosB: 'crlf',
+      },
+    ]) {
+      expect(await responder('archivo', { ok: true, datos })).toBe('sin-error');
+    }
+  });
+
+  it('rechaza arrays que no lo son, rutas que no son texto y tipos inventados', async () => {
+    const malas: unknown[] = [
+      { ...carpetasOk, soloA: 'no-es-array' },
+      { ...carpetasOk, soloA: [{ ...entrada, ruta: 42 }] },
+      { ...carpetasOk, distintos: [{ ...entrada, ruta: '' }] },
+      { ...carpetasOk, soloB: [{ ...entrada, tamanoA: 'grande' }] },
+      { ...carpetasOk, soloA: Array.from({ length: 5001 }, () => entrada) },
+      { ...carpetasOk, resumen: { ...resumen, truncado: 'si' } },
+      { ...carpetasOk, resumen: null },
+      { soloA: [], soloB: [] },
+    ];
+    for (const datos of malas) {
+      expect(await responder('carpetas', { ok: true, datos }), JSON.stringify(datos)).toBe(
+        'diff.fallo',
+      );
+    }
+    for (const datos of [
+      { tipo: 'inventado' },
+      { tipo: 'tope', bytesA: 'x', bytesB: 2 },
+      { tipo: 'texto', filas: 'no' },
+      {
+        tipo: 'texto',
+        filas: [{ tipo: 'agregada', numA: null, numB: 1, texto: 7 }],
+        agregadas: 1,
+        quitadas: 0,
+        truncado: false,
+        soloSaltos: false,
+        saltosA: 'lf',
+        saltosB: 'lf',
+      },
+    ]) {
+      expect(await responder('archivo', { ok: true, datos }), JSON.stringify(datos)).toBe(
+        'diff.fallo',
+      );
+    }
+    // Una respuesta de archivo no vale para una comparación de carpetas, ni al revés.
+    expect(await responder('carpetas', { ok: true, datos: { tipo: 'binario' } })).toBe(
+      'diff.fallo',
+    );
+    expect(await responder('archivo', { ok: true, datos: carpetasOk })).toBe('diff.fallo');
+  });
+});
+
+describe('M-6: el aviso de cambios sin guardar se reinicia al recargar o si muere la ventana', () => {
+  it('did-start-navigation (marco principal) y render-process-gone ponen editorSinGuardar a false', async () => {
+    const { readFileSync } = await import('node:fs');
+    const fuente = readFileSync(join(__dirname, '..', 'src', 'main', 'index.ts'), 'utf8');
+    expect(fuente).toMatch(
+      /on\('did-start-navigation', \(d\) => \{\s*if \(d\.isMainFrame && !d\.isSameDocument\) editorSinGuardar = false;/,
+    );
+    expect(fuente).toMatch(/on\('render-process-gone', \(\) => \{\s*editorSinGuardar = false;/);
+  });
+});
+
+describe('Segunda ronda: textos y IPC', () => {
+  it('el aviso de archivo sensible existe en los cuatro idiomas, en Buscar y en el diff', () => {
+    for (const [id, d] of Object.entries({ es, en, pt, fr })) {
+      expect(d.herramientas.busqueda.sensible(7), id).toContain('7');
+      expect(d.herramientas.diffCarpetas.sensible.length, id).toBeGreaterThan(30);
+    }
+  });
+
+  it('M-9: el texto de «solo saltos» cubre también el salto del final del archivo', () => {
+    expect(es.herramientas.diffCarpetas.soloSaltos).toMatch(/final del archivo/);
+    expect(en.herramientas.diffCarpetas.soloSaltos).toMatch(/end of the file/);
+    expect(pt.herramientas.diffCarpetas.soloSaltos).toMatch(/fim do arquivo/);
+    expect(fr.herramientas.diffCarpetas.soloSaltos).toMatch(/fin du fichier/);
+  });
+
+  it('buscar.iniciar ignora un `sitios` o `vetadas` puesto por la ventana', async () => {
+    const t = preparar({
+      iniciarBusqueda: vi.fn(() => 'b1'),
+      sitios: { listar: vi.fn(async () => [{ id: 's1', carpeta: dir }]) },
+    });
+    await t.llamar('buscar.iniciar', {
+      sitioId: 's1',
+      consulta: 'x',
+      modo: 'ambos',
+      regex: false,
+      mayusculas: false,
+      incluir: [],
+      excluir: [],
+      sitios: 'cualquier-cosa',
+      vetadas: [],
+    });
+    const llamada = (t.nucleo.iniciarBusqueda as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as Record<string, unknown>;
+    expect(llamada['sitios']).toBeUndefined();
+    expect(llamada['vetadas']).toBeUndefined();
   });
 });

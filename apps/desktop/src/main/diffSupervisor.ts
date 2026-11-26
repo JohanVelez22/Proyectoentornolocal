@@ -32,14 +32,98 @@ export const LIMITE_MEMORIA_DIFF = 512 * 1024 * 1024;
 const MB = 1024 * 1024;
 const CODIGOS_CONOCIDOS: ReadonlySet<string> = new Set(CODIGOS_ERROR);
 
-/** Valida lo que contesta el proceso de trabajo. */
-function respuestaValida(r: unknown): r is RespuestaDiff {
-  if (typeof r !== 'object' || r === null) return false;
-  const o = r as Record<string, unknown>;
-  if (o.ok === true) return typeof o.datos === 'object' && o.datos !== null;
-  if (o.ok !== false) return false;
-  if (typeof o.codigo !== 'string' || !CODIGOS_CONOCIDOS.has(o.codigo)) return false;
-  return o.datos === undefined || (typeof o.datos === 'object' && o.datos !== null);
+const esObjeto = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+const numeroONulo = (v: unknown): boolean =>
+  v === null || (typeof v === 'number' && Number.isFinite(v));
+const MAX_ENTRADAS = 5_000;
+const MAX_FILAS = 5_000;
+
+function entradaValida(e: unknown): boolean {
+  if (!esObjeto(e)) return false;
+  return (
+    typeof e.ruta === 'string' &&
+    e.ruta.length > 0 &&
+    e.ruta.length <= 4096 &&
+    numeroONulo(e.tamanoA) &&
+    numeroONulo(e.tamanoB) &&
+    (e.motivo === undefined || e.motivo === 'tamano' || e.motivo === 'contenido')
+  );
+}
+
+function carpetasValidas(d: Record<string, unknown>): boolean {
+  for (const g of ['soloA', 'soloB', 'distintos']) {
+    const lista = d[g];
+    if (!Array.isArray(lista) || lista.length > MAX_ENTRADAS || !lista.every(entradaValida)) {
+      return false;
+    }
+  }
+  const r = d.resumen;
+  if (!esObjeto(r)) return false;
+  const numeros = [
+    'archivosA',
+    'archivosB',
+    'iguales',
+    'sinComparar',
+    'omitidos',
+    'totalSoloA',
+    'totalSoloB',
+    'totalDistintos',
+  ];
+  return (
+    numeros.every((k) => typeof r[k] === 'number' && Number.isFinite(r[k])) &&
+    typeof r.truncado === 'boolean' &&
+    typeof r.recortado === 'boolean'
+  );
+}
+
+const SALTOS = ['lf', 'crlf', 'mixto', 'ninguno'];
+const TIPOS_FILA = ['igual', 'quitada', 'agregada', 'salto'];
+
+function archivoValido(d: Record<string, unknown>): boolean {
+  switch (d.tipo) {
+    case 'binario':
+    case 'sensible':
+    case 'demasiado-distinto':
+      return true;
+    case 'tope':
+      return typeof d.bytesA === 'number' && typeof d.bytesB === 'number';
+    case 'texto':
+      return (
+        Array.isArray(d.filas) &&
+        d.filas.length <= MAX_FILAS &&
+        d.filas.every(
+          (f) =>
+            esObjeto(f) &&
+            TIPOS_FILA.includes(f.tipo as string) &&
+            numeroONulo(f.numA) &&
+            numeroONulo(f.numB) &&
+            typeof f.texto === 'string' &&
+            f.texto.length <= 1000,
+        ) &&
+        typeof d.agregadas === 'number' &&
+        typeof d.quitadas === 'number' &&
+        typeof d.truncado === 'boolean' &&
+        typeof d.soloSaltos === 'boolean' &&
+        SALTOS.includes(d.saltosA as string) &&
+        SALTOS.includes(d.saltosB as string)
+      );
+    default:
+      return false;
+  }
+}
+
+/** Valida lo que contesta el proceso de trabajo, según lo que se le pidió (no se confía en su forma). */
+function respuestaValida(r: unknown, op: MensajeDiff['op']): r is RespuestaDiff {
+  if (!esObjeto(r)) return false;
+  if (r.ok === true) {
+    return (
+      esObjeto(r.datos) && (op === 'carpetas' ? carpetasValidas(r.datos) : archivoValido(r.datos))
+    );
+  }
+  if (r.ok !== false) return false;
+  if (typeof r.codigo !== 'string' || !CODIGOS_CONOCIDOS.has(r.codigo)) return false;
+  return r.datos === undefined || esObjeto(r.datos);
 }
 
 export function crearEjecutorDiffSupervisado(o: OpcionesSupervisorDiff): EjecutorDiff {
@@ -112,7 +196,7 @@ export function crearEjecutorDiffSupervisado(o: OpcionesSupervisorDiff): Ejecuto
 
       proceso.onMessage((r) =>
         cerrar(() => {
-          if (respuestaValida(r)) resolve(r);
+          if (respuestaValida(r, m.op)) resolve(r);
           else reject(new ErrorWolf('diff.fallo', 'Respuesta no válida del proceso.'));
         }),
       );
