@@ -4502,6 +4502,7 @@ export const es = {
     rama: (r: string) => r,
     cabecera: (servicio: string, r: string) => `${servicio} ${r}`,
     mostrarTodas: 'Mostrar todas',
+    anteriores: (n: number) => `Parches anteriores (${n})`,
     origen: {
       vivo: 'En línea',
       cache: (h: number) => (h < 1 ? 'Caché de hace menos de 1 h' : `Caché de hace ${h} h`),

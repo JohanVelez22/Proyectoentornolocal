@@ -37,6 +37,30 @@ export function candidatosFoco(id: string): string[] {
   return m ? [id, `sitio:${m[1]!}`] : [id];
 }
 
+/** Un desplegable nativo (<details>) y lo mínimo que se usa de él. */
+export interface Plegable {
+  open: boolean;
+}
+/** Elemento que sabe cuál es su desplegable plegado más cercano. */
+export interface ElementoEnPlegable {
+  closest(selector: string): Plegable | null;
+}
+
+/**
+ * Abre los desplegables plegados (<details>) que contienen al elemento, de dentro hacia fuera, para
+ * que el foco pueda desplazarse hasta él (p. ej. un parche anterior en Versiones). Devuelve
+ * cuántos abrió.
+ */
+export function abrirPlegados(el: ElementoEnPlegable): number {
+  let abiertos = 0;
+  for (let d = el.closest('details:not([open])'); d; d = el.closest('details:not([open])')) {
+    d.open = true;
+    abiertos++;
+    if (abiertos > 20) break; // sin ciclos infinitos con un documento raro
+  }
+  return abiertos;
+}
+
 /** Lo mínimo que se usa de un elemento del documento (en las pruebas, uno falso). */
 export interface ElementoFoco {
   scrollIntoView(opciones: { block: 'center'; behavior?: 'smooth' | 'auto' }): void;

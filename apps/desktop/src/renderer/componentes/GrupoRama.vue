@@ -4,9 +4,13 @@ import { computed } from 'vue';
 import type { TablaVersiones } from '../../shared/api';
 import { textos } from '../i18n';
 import { conInterruptor, type FilaVersion as Fila } from '../stores/versiones';
+import { partirRama } from '../utilidades/versionesCompactas';
 import FilaVersion from './FilaVersion.vue';
 
-/** Una serie en la pestaña "Versiones": cabecera con su soporte y fin de soporte, y su cuadrícula de tarjetas. */
+/**
+ * Una versión menor (8.4, 22…) en la pestaña "Versiones": cabecera con su soporte y fin de soporte,
+ * el último parche en una cuadrícula compacta y, plegados en un desplegable, los parches anteriores.
+ */
 const props = defineProps<{
   tabla: TablaVersiones;
   rama: TablaVersiones['ramas'][number];
@@ -51,6 +55,24 @@ const finTexto = computed(() => {
 const instanciaDeRama = computed(
   () => props.rama.versiones.find((f) => f.instancia)?.instancia ?? null,
 );
+
+const partes = computed(() => partirRama(props.rama.versiones));
+/** El desplegable nace abierto si la versión resaltada (la de un aviso) está dentro. */
+const abrirAnteriores = computed(
+  () => !!props.resaltada && partes.value.anteriores.some((f) => f.version === props.resaltada),
+);
+
+function argumentos(f: Fila) {
+  return {
+    fila: f,
+    servicio: props.tabla.servicio,
+    interruptor: props.tabla.interruptor,
+    conInterruptor: conInterruptor(props.tabla, f),
+    instanciaDeRama: props.tabla.interruptor === 'instancias' ? instanciaDeRama.value : null,
+    resaltada: props.resaltada === f.version,
+    ocupada: props.ocupada,
+  };
+}
 </script>
 
 <template>
@@ -64,15 +86,9 @@ const instanciaDeRama = computed(
     </header>
     <div class="cuadricula" role="list" :aria-label="cabecera">
       <FilaVersion
-        v-for="f in rama.versiones"
+        v-for="f in partes.visibles"
         :key="f.version"
-        :fila="f"
-        :servicio="tabla.servicio"
-        :interruptor="tabla.interruptor"
-        :con-interruptor="conInterruptor(tabla, f)"
-        :instancia-de-rama="tabla.interruptor === 'instancias' ? instanciaDeRama : null"
-        :resaltada="resaltada === f.version"
-        :ocupada="ocupada"
+        v-bind="argumentos(f)"
         @instalar="emit('instalar', f.version)"
         @desinstalar="emit('desinstalar', f.version)"
         @encender="(v) => emit('encender', f.version, v)"
@@ -83,6 +99,24 @@ const instanciaDeRama = computed(
         @resolver="emit('resolver', f)"
       />
     </div>
+    <details v-if="partes.anteriores.length" class="anteriores" :open="abrirAnteriores">
+      <summary>{{ t.anteriores(partes.anteriores.length) }}</summary>
+      <div class="cuadricula" role="list" :aria-label="t.anteriores(partes.anteriores.length)">
+        <FilaVersion
+          v-for="f in partes.anteriores"
+          :key="f.version"
+          v-bind="argumentos(f)"
+          @instalar="emit('instalar', f.version)"
+          @desinstalar="emit('desinstalar', f.version)"
+          @encender="(v) => emit('encender', f.version, v)"
+          @predeterminar="emit('predeterminar', f.version)"
+          @actualizar="emit('actualizar', f)"
+          @usar="emit('usar', f.version)"
+          @puerto="(p) => emit('puerto', f, p)"
+          @resolver="emit('resolver', f)"
+        />
+      </div>
+    </details>
   </section>
 </template>
 
@@ -93,7 +127,7 @@ const instanciaDeRama = computed(
   padding: 10px 12px;
 }
 .rama + .rama {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 .cabeza {
   display: flex;
@@ -111,11 +145,32 @@ const instanciaDeRama = computed(
   font-size: 12px;
   opacity: 0.72;
 }
-/* Tarjetas que se reparten el ancho disponible: más columnas en ventanas anchas, una en estrechas. */
+/* Tarjetas compactas que se reparten el ancho: unas 5 o 6 columnas a 1280 px, una en estrechas. */
 .cuadricula {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
   align-items: stretch;
+}
+.anteriores {
+  margin-top: 8px;
+}
+.anteriores > summary {
+  width: fit-content;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--texto-enlace);
+  cursor: pointer;
+}
+.anteriores > summary:hover {
+  background: rgba(var(--acento-rgb), 0.1);
+}
+.anteriores > summary:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+.anteriores[open] > summary {
+  margin-bottom: 8px;
 }
 </style>

@@ -4621,6 +4621,7 @@ export const fr: Textos = {
     rama: (r: string) => r,
     cabecera: (servicio: string, r: string) => `${servicio} ${r}`,
     mostrarTodas: 'Tout afficher',
+    anteriores: (n: number) => `Correctifs précédents (${n})`,
     origen: {
       vivo: 'En ligne',
       cache: (h: number) => (h < 1 ? 'Cache datant de moins d’1 h' : `Cache datant de ${h} h`),

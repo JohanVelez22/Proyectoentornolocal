@@ -4511,6 +4511,7 @@ export const pt: Textos = {
     rama: (r: string) => r,
     cabecera: (servicio: string, r: string) => `${servicio} ${r}`,
     mostrarTodas: 'Mostrar todas',
+    anteriores: (n: number) => `Patches anteriores (${n})`,
     origen: {
       vivo: 'Online',
       cache: (h: number) => (h < 1 ? 'Cache de menos de 1 h atrás' : `Cache de ${h} h atrás`),

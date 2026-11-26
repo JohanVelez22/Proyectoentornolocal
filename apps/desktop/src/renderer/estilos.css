@@ -36,12 +36,14 @@ body {
   --texto-aviso: #b45309;
   --texto-error: #dc2626;
   --texto-enlace: #4f5bd5;
+  --texto-peligro: #b91c1c;
 }
 :root[data-tema='oscuro'] {
   --texto-ok: #4ade80;
   --texto-aviso: #fbbf24;
   --texto-error: #f87171;
   --texto-enlace: #8b93ff;
+  --texto-peligro: #fca5a5;
 }
 
 /* Barra de desplazamiento discreta en ambos temas. */

@@ -4475,6 +4475,7 @@ export const en: Textos = {
     rama: (r: string) => r,
     cabecera: (servicio: string, r: string) => `${servicio} ${r}`,
     mostrarTodas: 'Show all',
+    anteriores: (n: number) => `Earlier patches (${n})`,
     origen: {
       vivo: 'Online',
       cache: (h: number) => (h < 1 ? 'Cached less than 1 h ago' : `Cached ${h} h ago`),

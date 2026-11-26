@@ -1,12 +1,15 @@
 import { onBeforeUnmount, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { aplicarFoco, type ElementoFoco } from '../utilidades/foco';
+import { abrirPlegados, aplicarFoco, type ElementoFoco } from '../utilidades/foco';
 
 const documentoReal = {
   buscar(id: string): ElementoFoco | null {
     // El id se compara como atributo (no como selector): un id raro no rompe nada.
     for (const el of document.querySelectorAll<HTMLElement>('[data-foco]')) {
-      if (el.dataset['foco'] === id) return el;
+      if (el.dataset['foco'] !== id) continue;
+      // Dentro de un desplegable plegado (parches anteriores) no se vería: se abre.
+      abrirPlegados(el);
+      return el;
     }
     return null;
   },

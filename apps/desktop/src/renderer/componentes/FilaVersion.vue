@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { LockClosed, ShieldCheckmark, Star, StarOutline, Warning } from '@vicons/ionicons5';
-import { NButton, NIcon, NInputNumber, NSwitch, NTag, NTooltip } from 'naive-ui';
+import { NButton, NIcon, NInputNumber, NSwitch, NTooltip } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
 import type { TablaVersiones } from '../../shared/api';
 import { textos } from '../i18n';
 import type { FilaVersion } from '../stores/versiones';
 
 /**
- * Una versión en la pestaña "Versiones", como tarjeta de la cuadrícula: marcas (instalada, encendida, con actualización, sin
- * huella o con firma verificada), Instalar/Desinstalar, interruptor (si el servicio lo tiene), puerto de la instancia
- * y estrella de predeterminada.
+ * Una versión en la pestaña "Versiones", como tarjeta compacta: versión y firma en una línea con
+ * Instalar (pequeño, a la derecha) y, si está instalada, una segunda línea con sus marcas y
+ * acciones (encender, puerto, predeterminada, desinstalar).
  */
 const props = defineProps<{
   fila: FilaVersion;
@@ -62,53 +62,55 @@ const huellaTexto = computed(() =>
     role="listitem"
     :data-foco="`version:${servicio}:${f.version}`"
   >
-    <div class="version">
-      <span class="numero">{{ f.version }}</span>
-      <NTag v-if="f.instalada" size="small" :bordered="false" type="success">{{
-        t.marcas.instalada
-      }}</NTag>
-      <NTag v-if="f.encendida" size="small" :bordered="false" type="info">{{
-        t.marcas.encendida
-      }}</NTag>
-      <NTag v-if="f.actualizacion" size="small" :bordered="false" type="warning">
-        {{ t.marcas.actualizacion(f.actualizacion) }}
-      </NTag>
-      <NTag v-if="f.bloqueada" size="small" :bordered="false" type="error">
-        <template #icon
-          ><NIcon><LockClosed /></NIcon
-        ></template>
-        {{ t.marcas.bloqueada }}
-      </NTag>
+    <!-- Una sola línea: versión, firma y, a la derecha, Instalar (o la marca de instalada). -->
+    <div class="linea">
+      <span class="numero" :title="f.version">{{ f.version }}</span>
       <NTooltip v-if="f.huella === 'firmada'">
         <template #trigger>
-          <NTag size="small" :bordered="false" type="success" class="huella">
-            <template #icon
-              ><NIcon><ShieldCheckmark /></NIcon
-            ></template>
-            {{ t.marcas.firmada }}
-          </NTag>
+          <span class="firma ok" role="img" :aria-label="t.marcas.firmada" tabindex="0">
+            <NIcon :size="16"><ShieldCheckmark /></NIcon>
+          </span>
         </template>
         {{ t.ayudaFirmada }}
       </NTooltip>
-      <NTooltip v-if="huellaTexto && !f.instalada">
+      <NTooltip v-else-if="huellaTexto && !f.instalada">
         <template #trigger>
-          <NTag size="small" :bordered="false" type="warning" class="huella">
-            <template #icon
-              ><NIcon><Warning /></NIcon
-            ></template>
-            {{ huellaTexto }}
-          </NTag>
+          <span class="firma aviso" role="img" :aria-label="huellaTexto" tabindex="0">
+            <NIcon :size="16"><Warning /></NIcon>
+          </span>
         </template>
         {{ t.ayudaSinHuella }}
       </NTooltip>
+      <span class="espacio" />
+      <span v-if="f.instalada" class="marca ok">{{ t.marcas.instalada }}</span>
+      <NButton
+        v-else
+        size="tiny"
+        type="primary"
+        :disabled="ocupada"
+        :aria-label="`${t.instalar} ${f.version}`"
+        @click="emit('instalar')"
+      >
+        {{ t.instalar }}
+      </NButton>
     </div>
 
-    <div class="acciones">
+    <!-- Lo que se puede hacer con una versión instalada (no ocupa sitio en las demás). -->
+    <div v-if="f.instalada" class="extras">
+      <span v-if="f.encendida" class="marca info">{{ t.marcas.encendida }}</span>
+      <span v-if="f.actualizacion" class="marca aviso">
+        {{ t.marcas.actualizacion(f.actualizacion) }}
+      </span>
+      <span v-if="f.bloqueada" class="marca peligro">
+        <NIcon :size="12"><LockClosed /></NIcon>
+        {{ t.marcas.bloqueada }}
+      </span>
+
       <template v-if="f.instancia && interruptor === 'instancias'">
         <span class="etiqueta-puerto">{{ t.puerto }}</span>
         <NInputNumber
           v-model:value="puerto"
-          size="small"
+          size="tiny"
           class="puerto"
           :min="1024"
           :max="65535"
@@ -129,27 +131,25 @@ const huellaTexto = computed(() =>
 
       <NButton
         v-if="f.bloqueada"
-        size="small"
+        size="tiny"
         type="error"
-        secondary
         :disabled="ocupada"
         @click="emit('resolver')"
       >
         {{ t.resolver }}
       </NButton>
       <NButton
-        v-if="f.instalada && f.actualizacion"
-        size="small"
+        v-if="f.actualizacion"
+        size="tiny"
         type="warning"
-        secondary
         :disabled="ocupada || f.bloqueada"
         @click="emit('actualizar')"
       >
         {{ t.actualizar }}
       </NButton>
-      <NTooltip v-if="f.instalada && !f.instancia && instanciaDeRama">
+      <NTooltip v-if="!f.instancia && instanciaDeRama">
         <template #trigger>
-          <NButton size="small" secondary :disabled="ocupada" @click="emit('usar')">{{
+          <NButton size="tiny" secondary :disabled="ocupada" @click="emit('usar')">{{
             t.usarEsta
           }}</NButton>
         </template>
@@ -165,10 +165,10 @@ const huellaTexto = computed(() =>
         @update:value="(v: boolean) => emit('encender', v)"
       />
 
-      <NTooltip v-if="f.instalada && (interruptor !== 'instancias' || f.instancia)">
+      <NTooltip v-if="interruptor !== 'instancias' || f.instancia">
         <template #trigger>
           <NButton
-            size="small"
+            size="tiny"
             quaternary
             circle
             :type="f.predeterminada ? 'warning' : 'default'"
@@ -186,20 +186,11 @@ const huellaTexto = computed(() =>
       </NTooltip>
 
       <NButton
-        v-if="!f.instalada"
-        size="small"
-        type="primary"
-        secondary
-        :disabled="ocupada"
-        @click="emit('instalar')"
-      >
-        {{ t.instalar }}
-      </NButton>
-      <NButton
-        v-else
-        size="small"
+        size="tiny"
         quaternary
+        class="desinstalar"
         :disabled="ocupada || f.encendida"
+        :aria-label="`${t.desinstalar} ${f.version}`"
         @click="emit('desinstalar')"
       >
         {{ t.desinstalar }}
@@ -212,44 +203,85 @@ const huellaTexto = computed(() =>
 .tarjeta {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
-  padding: 12px;
+  padding: 7px 9px;
   border: 1px solid rgba(128, 128, 128, 0.2);
-  border-radius: 10px;
+  border-radius: 9px;
 }
 .tarjeta.resaltada {
   background: rgba(var(--acento-rgb), 0.12);
 }
-.version {
+.linea {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 6px;
   min-width: 0;
 }
 .numero {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--fuente-mono);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  margin-right: 4px;
 }
 .tarjeta:not(.instalada) .numero {
-  opacity: 0.75;
+  opacity: 0.85;
 }
-.acciones {
+.espacio {
+  flex: 1;
+}
+.firma {
+  display: inline-flex;
+  flex: none;
+  border-radius: 4px;
+  cursor: help;
+}
+.firma:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+.extras {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px 6px;
   min-width: 0;
+}
+/* Marcas: texto con los colores de contraste AA de cada tema y un borde del mismo color. */
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 11.5px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.ok {
+  color: var(--texto-ok);
+}
+.info {
+  color: var(--texto-enlace);
+}
+.aviso {
+  color: var(--texto-aviso);
+}
+.peligro {
+  color: var(--texto-peligro);
 }
 .etiqueta-puerto {
   font-size: 12px;
-  opacity: 0.72;
+  opacity: 0.75;
 }
 .puerto {
-  width: 84px;
+  width: 70px;
+}
+.desinstalar {
+  margin-left: auto;
 }
 </style>
