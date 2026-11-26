@@ -179,3 +179,12 @@ export function enmascarar(valor: string): string {
   if (valor === '') return '';
   return valor.length >= 12 ? `••••${valor.slice(-4)}` : '••••';
 }
+
+/**
+ * ¿Este nombre de archivo es un `.env` (`.env`, `.env.local`, `.env.example`, `prod.env`…)? Esos
+ * archivos solo se tocan por el gestor de variables, con su flujo de secretos (D16); el editor de
+ * código (D43) y la limpieza de disco (D37) los dejan en paz. Sin distinguir mayúsculas.
+ */
+export function esNombreArchivoEnv(nombre: string): boolean {
+  return /^\.env/i.test(nombre) || /\.env$/i.test(nombre);
+}

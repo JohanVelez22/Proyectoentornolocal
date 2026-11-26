@@ -263,6 +263,13 @@ export class Rutas {
   phpIni(version: string): string {
     return path.join(this.base, 'etc', 'php', version, 'php.ini');
   }
+  /**
+   * Copias previas del editor de código (D43): `editor-copias/<huella de la ruta>/<marca>-<nombre>`.
+   * Viven en la carpeta de datos, nunca junto al archivo del usuario.
+   */
+  editorCopias(): string {
+    return path.join(this.base, 'editor-copias');
+  }
   logs(...p: string[]): string {
     return path.join(this.base, 'logs', ...p);
   }

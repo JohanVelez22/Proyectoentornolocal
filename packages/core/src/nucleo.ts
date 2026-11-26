@@ -267,6 +267,13 @@ import {
   type ResumenCategoria,
 } from './sistema/limpiezaDisco';
 import {
+  EditorCodigo,
+  type OpcionesAbrirArchivo,
+  type OpcionesGuardarArchivo,
+  type ResultadoAbrirArchivo,
+  type ResultadoGuardarArchivo,
+} from './herramientas/editorCodigo';
+import {
   escribirConfigProyecto,
   leerConfigProyecto,
   ConfigProyectoSchema,
@@ -788,6 +795,7 @@ export class Nucleo {
   private readonly cachesApp = new Map<string, CacheApp>();
   private readonly optimizadorMemoria: OptimizadorMemoria;
   private readonly limpiezaDisco: LimpiezaDisco;
+  private readonly editorCodigo: EditorCodigo;
 
   private constructor(
     readonly rutas: Rutas,
@@ -857,6 +865,11 @@ export class Nucleo {
       carpetaDatos: () => this.rutas.base,
       rutasVetadas: () => this.rutasVetadasLimpieza(),
       carpetaRegistro: () => this.rutas.logs('limpieza'),
+    });
+    this.editorCodigo = new EditorCodigo({
+      carpetaCopias: () => this.rutas.editorCopias(),
+      carpetasPropias: () => [...new Set([this.rutas.base, this.plataforma.carpetaDatos()])],
+      sitios: () => this.sitios.listar(),
     });
     this.registros = m.registros;
     this.errores = new VisorErrores({
@@ -3607,6 +3620,28 @@ export class Nucleo {
     this.limpiezaDisco.cancelar();
   }
 
+  // ---- Editor de código (D43) ----
+
+  /**
+   * Abre un archivo de texto elegido en un diálogo. Rechaza `.env`, binarios, archivos grandes y
+   * lo que hay dentro de la carpeta de datos; con forma de secreto o de un sitio con datos reales
+   * devuelve `confirmar` (sin contenido) hasta que llegue `confirmadoRiesgo`.
+   */
+  abrirArchivoEditor(
+    ruta: string,
+    opciones: OpcionesAbrirArchivo = {},
+  ): Promise<ResultadoAbrirArchivo> {
+    return this.editorCodigo.abrir(ruta, opciones);
+  }
+
+  /** Guarda con copia previa y escritura atómica; exige `confirmado === true` y la huella al abrir. */
+  guardarArchivoEditor(
+    ruta: string,
+    opciones: OpcionesGuardarArchivo,
+  ): Promise<ResultadoGuardarArchivo> {
+    return this.editorCodigo.guardar(ruta, opciones);
+  }
+
   /** Lo que la limpieza nunca toca: datos, respaldos, proyectos y el resto de lo propio. */
   private async rutasVetadasLimpieza(): Promise<string[]> {
     const carpetas = [
@@ -3620,6 +3655,7 @@ export class Nucleo {
       'certs',
       'bin',
       'tools',
+      'editor-copias',
     ];
     const res: string[] = [];
     for (const base of new Set([this.rutas.base, this.plataforma.carpetaDatos()])) {
