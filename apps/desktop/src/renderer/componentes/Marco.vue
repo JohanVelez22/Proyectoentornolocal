@@ -328,10 +328,9 @@ onBeforeUnmount(() => {
 }
 .marca-texto span {
   font-size: 11px;
-  opacity: 0.6;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  opacity: 0.72;
+  /* El lema entero, en dos líneas si hace falta: nunca con puntos suspensivos. */
+  line-height: 1.25;
 }
 .principal {
   height: 100vh;
@@ -409,13 +408,13 @@ onBeforeUnmount(() => {
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .buscador kbd {
   flex: none;
   font-family: var(--fuente);
   font-size: 11px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .pastilla-texto {
   display: none;

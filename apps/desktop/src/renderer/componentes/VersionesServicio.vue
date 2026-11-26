@@ -318,7 +318,8 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
   width: 170px;
 }
 .filtro-serie {
-  width: 150px;
+  /* "Toutes les versions" / "Todas as versões" ya no se cortan con puntos suspensivos. */
+  width: 200px;
 }
 .derecha {
   display: flex;
@@ -329,7 +330,7 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
 .descripcion {
   margin: 0 0 12px;
   font-size: 13px;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 .esqueleto {
   margin-bottom: 12px;
@@ -345,7 +346,7 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
 }
 .vacio {
   font-size: 13px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 .lista {
   list-style: none;
@@ -367,6 +368,6 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
 }
 .tam {
   margin-left: auto;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 </style>
