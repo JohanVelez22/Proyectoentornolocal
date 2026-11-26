@@ -11,6 +11,9 @@ import {
   MAX_BYTES_INI,
   NOMBRE_EXTENSION_PHP,
   ErrorWolf,
+  MAX_BYTES_EDITOR,
+  type OpcionesAbrirArchivo,
+  type OpcionesGuardarArchivo,
   tokenTunelValido,
   IDS_PROVEEDOR_TUNEL,
   dominioPublicoValido,
@@ -1945,6 +1948,74 @@ export function validarImportarPerfil(
       ...(envProyectos ? { envProyectos } : {}),
       huella: o['huella'],
       confirmado: true,
+    },
+  };
+}
+
+/* ───────────── Editor de código (D43) ───────────── */
+
+/** Abrir en el editor: la ruta sale de un diálogo; solo `confirmadoRiesgo` como opción. */
+export function validarAbrirEditor(
+  ruta: unknown,
+  opciones: unknown,
+  elegidas: RutasElegidas,
+): { ruta: string; opciones: OpcionesAbrirArchivo } {
+  const r = elegidas.exigir(ruta, 'archivo');
+  const o = objetoPlano<Record<string, unknown>>(opciones ?? {}, 'editor');
+  soloClaves(o, ['confirmadoRiesgo'], 'editor');
+  return {
+    ruta: r,
+    opciones:
+      o['confirmadoRiesgo'] === undefined
+        ? {}
+        : { confirmadoRiesgo: booleano(o['confirmadoRiesgo'], 'confirmadoRiesgo') },
+  };
+}
+
+/**
+ * Guardar desde el editor: la ruta sale de un diálogo y el texto, la huella y las banderas se
+ * acotan aquí. `confirmado` pasa tal cual: el núcleo exige `true` exacto (`editor.sin_confirmar`).
+ */
+export function validarGuardarEditor(
+  ruta: unknown,
+  opciones: unknown,
+  elegidas: RutasElegidas,
+): { ruta: string; opciones: OpcionesGuardarArchivo } {
+  const r = elegidas.exigir(ruta, 'archivo');
+  const o = objetoPlano<Record<string, unknown>>(opciones, 'editor');
+  soloClaves(
+    o,
+    ['contenido', 'huella', 'eol', 'bom', 'confirmado', 'confirmadoRiesgo', 'sobrescribir'],
+    'editor',
+  );
+  const contenido = o['contenido'];
+  if (typeof contenido !== 'string' || contenido.length > MAX_BYTES_EDITOR) {
+    throw new Error('Argumento no válido: contenido');
+  }
+  const h = objetoPlano<Record<string, unknown>>(o['huella'], 'huella');
+  soloClaves(h, ['tamano', 'mtimeMs', 'hash'], 'huella');
+  const mtimeMs = h['mtimeMs'];
+  if (typeof mtimeMs !== 'number' || !Number.isFinite(mtimeMs)) {
+    throw new Error('Argumento no válido: huella');
+  }
+  const hash = textoAcotado(h['hash'], 64, 64, 'huella');
+  if (!/^[0-9a-f]{64}$/.test(hash)) throw new Error('Argumento no válido: huella');
+  const eol = o['eol'];
+  if (eol !== 'lf' && eol !== 'crlf') throw new Error('Argumento no válido: eol');
+  return {
+    ruta: r,
+    opciones: {
+      contenido,
+      huella: { tamano: enteroEn(h['tamano'], 0, MAX_BYTES_EDITOR, 'huella'), mtimeMs, hash },
+      eol,
+      bom: booleano(o['bom'], 'bom'),
+      confirmado: o['confirmado'] as true,
+      ...(o['confirmadoRiesgo'] === undefined
+        ? {}
+        : { confirmadoRiesgo: booleano(o['confirmadoRiesgo'], 'confirmadoRiesgo') }),
+      ...(o['sobrescribir'] === undefined
+        ? {}
+        : { sobrescribir: booleano(o['sobrescribir'], 'sobrescribir') }),
     },
   };
 }

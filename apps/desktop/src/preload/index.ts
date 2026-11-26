@@ -501,6 +501,10 @@ const api: ApiEntorno = {
     cancelar: () => invocar('limpiezaDisco.cancelar'),
     abrirRegistros: () => invocar('limpiezaDisco.abrirRegistros'),
   },
+  editorCodigo: {
+    abrir: (ruta, opciones) => invocar('editorCodigo.abrir', ruta, opciones),
+    guardar: (ruta, opciones) => invocar('editorCodigo.guardar', ruta, opciones),
+  },
   captura: {
     leer: () => invocar('captura.leer'),
     guardarConfig: (cambios) => invocar('captura.guardarConfig', cambios),

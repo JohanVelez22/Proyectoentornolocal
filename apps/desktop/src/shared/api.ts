@@ -195,6 +195,13 @@ import type {
   ResumenCategoria,
   ResultadoLimpiezaDisco,
   ResultadoCategoriaLimpieza,
+  OpcionesAbrirArchivo,
+  OpcionesGuardarArchivo,
+  ResultadoAbrirArchivo,
+  ResultadoGuardarArchivo,
+  ArchivoEditor,
+  RiesgoEditor,
+  HuellaArchivo,
 } from '@pel/core';
 import type {
   EstadoCapturaUi,
@@ -395,6 +402,13 @@ export type {
   ResumenCategoria,
   ResultadoLimpiezaDisco,
   ResultadoCategoriaLimpieza,
+  ArchivoEditor,
+  RiesgoEditor,
+  HuellaArchivo,
+  OpcionesAbrirArchivo,
+  OpcionesGuardarArchivo,
+  ResultadoAbrirArchivo,
+  ResultadoGuardarArchivo,
   EstadoInstancia,
   IdInstancia,
   PlanActualizar,
@@ -1431,6 +1445,21 @@ export interface ApiEntorno {
     /** Abre la carpeta con los registros de lo borrado. */
     abrirRegistros(): Promise<void>;
   };
+  editorCodigo: {
+    /**
+     * Abre un archivo de texto elegido en un diálogo nativo (`sistema.elegirArchivo`). Nunca un
+     * `.env`, un binario, uno de más de 2 MB ni nada de la carpeta de datos de WolfCore. Con forma
+     * de secreto o de un sitio con datos reales devuelve `confirmar` (sin contenido) hasta que
+     * llegue `confirmadoRiesgo: true`.
+     */
+    abrir(ruta: string, opciones?: OpcionesAbrirArchivo): Promise<ResultadoAbrirArchivo>;
+    /**
+     * Guarda con `confirmado: true`, la huella del archivo al abrirlo, copia previa y escritura
+     * atómica. Si el archivo cambió por fuera da `editor.archivo_cambiado`; `sobrescribir` es una
+     * confirmación aparte.
+     */
+    guardar(ruta: string, opciones: OpcionesGuardarArchivo): Promise<ResultadoGuardarArchivo>;
+  };
   captura: {
     /** Configuración, estado del sistema y del atajo global (D35). */
     leer(): Promise<EstadoCapturaUi>;
@@ -1873,6 +1902,8 @@ export const RUTAS_IPC = [
   'limpiezaDisco.limpiar',
   'limpiezaDisco.cancelar',
   'limpiezaDisco.abrirRegistros',
+  'editorCodigo.abrir',
+  'editorCodigo.guardar',
   'captura.leer',
   'captura.guardarConfig',
   'captura.iniciar',

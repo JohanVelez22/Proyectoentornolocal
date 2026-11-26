@@ -117,6 +117,8 @@ import {
   validarPedidoProyecto,
   validarExportarPerfil,
   validarVistaPreviaPerfil,
+  validarAbrirEditor,
+  validarGuardarEditor,
   validarImportarPerfil,
   opcionesPlantilla,
   idPlantilla,
@@ -1927,6 +1929,15 @@ const TABLA: Record<RutaIpc, Manejador> = {
     n.limpiarDisco(listaTextos(categorias, 8, 40, 'categorias'), confirmado(confirmacion)),
   'limpiezaDisco.cancelar': async (n) => n.cancelarLimpieza(),
   'limpiezaDisco.abrirRegistros': async (n, s) => s.abrirCarpeta(await n.carpetaRegistroLimpieza()),
+  // ---- Editor de código (D43): la ruta sale de un diálogo; guardar exige confirmado === true ----
+  'editorCodigo.abrir': (n, s, ruta, opciones) => {
+    const v = validarAbrirEditor(ruta, opciones, s.elegidas);
+    return n.abrirArchivoEditor(v.ruta, v.opciones);
+  },
+  'editorCodigo.guardar': (n, s, ruta, opciones) => {
+    const v = validarGuardarEditor(ruta, opciones, s.elegidas);
+    return n.guardarArchivoEditor(v.ruta, v.opciones);
+  },
   'herramientas.optimizarPdf': (n, s, origen, destino) =>
     n.optimizarPdf(
       s.elegidas.exigir(origen, 'archivo'),
