@@ -15,6 +15,8 @@ export default defineConfig({
   test: {
     include: ['test/**/*.test.ts'],
     exclude: ['test/integracion/**', '**/node_modules/**'],
+    // Guardián: ninguna prueba usa la carpeta de datos real (ver el archivo).
+    setupFiles: ['test/soporte/guardian-datos-reales.ts'],
     testTimeout: 30_000,
     hookTimeout: 30_000,
     maxWorkers: Math.max(2, Math.floor(availableParallelism() / 2)),

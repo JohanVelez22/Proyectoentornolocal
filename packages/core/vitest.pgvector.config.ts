@@ -7,6 +7,8 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     include: ['test/integracion/pgvector.int.test.ts'],
+    // Guardián: ninguna prueba usa la carpeta de datos real.
+    setupFiles: ['test/soporte/guardian-datos-reales.ts'],
     testTimeout: 120 * 60_000,
     hookTimeout: 10 * 60_000,
     fileParallelism: false,
