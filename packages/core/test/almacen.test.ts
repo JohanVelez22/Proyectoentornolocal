@@ -261,6 +261,16 @@ describe('AlmacenCredenciales: escritura atómica y permisos (D38c)', () => {
     expect(await nombres()).toEqual(['credenciales.json', 'otra-cosa.tmp']);
   });
 
+  it('preparar(): si no se puede borrar un temporal, igual restringe el archivo existente', async () => {
+    await mkdir(join(rutas.base, 'etc'), { recursive: true });
+    await writeFile(rutas.credenciales(), '{}');
+    // Un directorio con el patrón del temporal: `rm` sin `recursive` falla (EISDIR/EPERM).
+    await mkdir(join(rutas.base, 'etc', '.credenciales-1-abc.tmp'));
+    const restringir = vi.fn(async () => true);
+    await new AlmacenCredenciales(rutas, undefined, { restringir }).preparar();
+    expect(restringir).toHaveBeenCalledWith(rutas.credenciales());
+  });
+
   it('preparar() sin archivo no falla ni crea nada', async () => {
     const restringir = vi.fn(async () => true);
     await new AlmacenCredenciales(rutas, undefined, { restringir }).preparar();

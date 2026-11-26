@@ -183,15 +183,22 @@ export class AlmacenCredenciales {
     return this.serializar(async () => {
       const archivo = this.rutas.credenciales();
       const dir = path.dirname(archivo);
+      let nombres: string[];
       try {
-        for (const n of await readdir(dir)) {
-          if (TEMPORAL_CREDENCIALES.test(n) || n === `${path.basename(archivo)}.tmp`) {
-            await rm(path.join(dir, n), { force: true });
-          }
+        nombres = await readdir(dir);
+      } catch {
+        return; // sin carpeta: nada que barrer ni proteger
+      }
+      // Un temporal que no se deja borrar (EBUSY, EPERM, un directorio) no impide proteger el archivo.
+      for (const n of nombres) {
+        if (TEMPORAL_CREDENCIALES.test(n) || n === `${path.basename(archivo)}.tmp`) {
+          await rm(path.join(dir, n), { force: true }).catch(() => undefined);
         }
+      }
+      try {
         await stat(archivo);
       } catch {
-        return; // sin carpeta o sin archivo: nada que proteger
+        return; // sin archivo: nada que proteger
       }
       if (!(await this.restringir(archivo))) this.opciones.alFallarProteccion?.();
     });
