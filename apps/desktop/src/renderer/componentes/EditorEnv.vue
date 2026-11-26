@@ -30,7 +30,7 @@ const props = defineProps<{
 const emit = defineEmits<{ cerrar: [] }>();
 
 type Bloque = NonNullable<PedidoEnv['bloques']>[number];
-const BLOQUES: Bloque[] = ['bd', 'correo', 'ia', 'redis'];
+const BLOQUES: Bloque[] = ['bd', 'correo', 'ia', 'redis', 'meilisearch'];
 
 const t = textos.env;
 const message = useMessage();

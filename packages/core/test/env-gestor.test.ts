@@ -285,6 +285,39 @@ describe('GestorEnv', () => {
     expect(t).toContain('REDIS_PORT=6379');
   });
 
+  it('I1: el bloque de Meilisearch lleva su clave, enmascarada en la vista previa', async () => {
+    const CLAVE_MEILI = 'CLAVE-MEILI-DE-PRUEBA-FALSA-1234';
+    const conMeili = new GestorEnv({
+      sitio: async (id) => (id === sitio.id ? sitio : undefined),
+      carpetaRespaldos: () => respaldos,
+      versionado: async () => versionado,
+      puertos: async () => ({ correo: 1025, redis: 6379 }),
+      meilisearch: async () => ({ puerto: 7701, clave: CLAVE_MEILI }),
+    });
+    await writeFile(env(), 'A=1\n');
+    const previa = await conMeili.vistaPrevia(sitio.id, { bloques: ['meilisearch'] });
+    expect(previa.diff).toContain('SCOUT_DRIVER=meilisearch');
+    expect(previa.diff).toContain('MEILISEARCH_HOST=http://127.0.0.1:7701');
+    expect(previa.diff).toContain('MEILISEARCH_KEY=••••');
+    expect(previa.diff).not.toContain(CLAVE_MEILI);
+    // Nada se escribió con la vista previa.
+    expect(await readFile(env(), 'utf8')).toBe('A=1\n');
+    // Ver el .env después de guardar tampoco la devuelve.
+    await conMeili.guardar(sitio.id, { bloques: ['meilisearch'] }, true);
+    expect(await readFile(env(), 'utf8')).toContain(`MEILISEARCH_KEY=${CLAVE_MEILI}`);
+    const v = await conMeili.ver(sitio.id);
+    expect(JSON.stringify(v)).not.toContain(CLAVE_MEILI);
+    expect(v.filas.find((f) => f.clave === 'MEILISEARCH_KEY')).toMatchObject({ secreta: true });
+  });
+
+  it('el bloque de Meilisearch sin Meilisearch instalado da env.meilisearch_no_disponible', async () => {
+    await writeFile(env(), 'A=1\n');
+    await expect(gestor.vistaPrevia(sitio.id, { bloques: ['meilisearch'] })).rejects.toMatchObject({
+      codigo: 'env.meilisearch_no_disponible',
+    });
+    expect(await readFile(env(), 'utf8')).toBe('A=1\n');
+  });
+
   it('bloque de correo: apunta al captador elegido y no se aplica con proveedor SMTP (D21)', async () => {
     await writeFile(env(), 'A=1\n');
     await gestor.guardar(sitio.id, { bloques: ['correo'] }, true);

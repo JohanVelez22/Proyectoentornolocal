@@ -349,6 +349,7 @@ export const PARAMETROS_ERROR = {
   'env.cambio_externo': [],
   'env.usuario_compartido': ['base', 'proyecto'],
   'env.sin_confirmar': [],
+  'env.meilisearch_no_disponible': [],
   'env.versionado': [],
   'env.versionado_desconocido': [],
   'env.copia_invalida': [],

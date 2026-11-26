@@ -1144,6 +1144,16 @@ export function objetivoBd(v: unknown): { objetivo: MotorBd | IdInstancia; motor
   return { objetivo: m, motor: m };
 }
 
+/**
+ * Servicio con "Datos de conexión" propios: solo Meilisearch o una de sus instancias. No se mezcla
+ * con `objetivoBd` (que son motores de base de datos con respaldo, usuarios y bases).
+ */
+export function objetivoConexionServicio(v: unknown): 'meilisearch' | IdInstancia {
+  if (v === 'meilisearch') return v;
+  if (esIdInstancia(v) && parsearInstancia(v).servicio === 'meilisearch') return v;
+  throw new Error('Argumento no válido: servicio');
+}
+
 /** Como `objetivoBd`, sin MongoDB (respaldar, restaurar, importar). */
 export function objetivoSql(v: unknown): {
   objetivo: Exclude<MotorBd, 'mongodb'> | IdInstancia;
@@ -1432,7 +1442,7 @@ export function versionWordpress(v: unknown): string {
 /* ───────────── Gestor de .env (D16) ───────────── */
 
 const CLAVE_ENV = /^[A-Za-z_][A-Za-z0-9_.]{0,127}$/;
-const BLOQUES_ENV_IPC = ['bd', 'correo', 'ia', 'redis'] as const;
+const BLOQUES_ENV_IPC = ['bd', 'correo', 'ia', 'redis', 'meilisearch'] as const;
 
 /** Nombre de una variable del .env. Los mensajes de error nunca repiten el valor recibido. */
 export function claveEnv(v: unknown): string {
@@ -1475,7 +1485,7 @@ export function pedidoEnv(v: unknown): PedidoEnv {
     const b = o['bloques'];
     if (
       !Array.isArray(b) ||
-      b.length > 4 ||
+      b.length > 5 ||
       !(b as unknown[]).every((x) => (BLOQUES_ENV_IPC as readonly unknown[]).includes(x))
     ) {
       malo();

@@ -3,7 +3,7 @@ import { Copy, Eye, EyeOff } from '@vicons/ionicons5';
 import { NButton, NFormItem, NIcon, NModal, NSkeleton, NTooltip, useMessage } from 'naive-ui';
 import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
-import type { DatosConexion, MotorBd } from '../../shared/api';
+import type { DatosConexion, IdInstancia, MotorBd } from '../../shared/api';
 import { api } from '../api';
 import { useBd } from '../stores/bd';
 import { useAccion } from '../composables/useAccion';
@@ -11,7 +11,12 @@ import { textos } from '../i18n';
 import { useSitios } from '../stores/sitios';
 
 /** Datos de conexión de una base y su bloque .env. La clave solo vive mientras está abierto. */
-const props = defineProps<{ motor: MotorBd; base: string }>();
+const props = defineProps<{
+  motor?: MotorBd;
+  base?: string;
+  /** Meilisearch (o una de sus instancias): host, puerto y master key, sin usuario ni base. */
+  servicio?: 'meilisearch' | IdInstancia;
+}>();
 const mostrar = defineModel<boolean>('show', { required: true });
 const bd = useBd();
 
@@ -30,7 +35,9 @@ const verClave = ref(false);
 const sitioId = ref<string>(GENERICO);
 
 /** MongoDB solo tiene MONGODB_URI: no depende del proyecto. */
-const conSitios = computed(() => props.motor !== 'mongodb' && sitios.lista.length > 0);
+const conSitios = computed(
+  () => props.servicio === undefined && props.motor !== 'mongodb' && sitios.lista.length > 0,
+);
 const opcionesSitio = computed(() => [
   ...[...sitios.lista]
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
@@ -51,7 +58,8 @@ const filas = computed(() => {
   if (d.usuario) f.push({ clave: 'usuario', etiqueta: t.usuario, valor: d.usuario });
   if (d.clave !== null)
     f.push({ clave: 'clave', etiqueta: t.clave, valor: d.clave, secreto: true });
-  f.push({ clave: 'base', etiqueta: t.base, valor: props.base });
+  if (props.servicio === undefined)
+    f.push({ clave: 'base', etiqueta: t.base, valor: props.base ?? '' });
   return f;
 });
 
@@ -62,11 +70,14 @@ function olvidar(): void {
 }
 
 async function cargarBloque(): Promise<void> {
+  if (props.servicio !== undefined || props.motor === undefined) return;
+  const motor = props.motor;
+  const base = props.base ?? '';
   const id = sitioId.value;
   const b = await ejecutar('bloque', () =>
     id === GENERICO
-      ? api().bd.bloqueEnv(bd.objetivo(props.motor), props.base, 'generico')
-      : api().bd.bloqueEnvSitio(id, bd.objetivo(props.motor), props.base),
+      ? api().bd.bloqueEnv(bd.objetivo(motor), base, 'generico')
+      : api().bd.bloqueEnvSitio(id, bd.objetivo(motor), base),
   );
   // Si se cambió de sitio mientras tanto, este bloque ya no vale.
   if (id !== sitioId.value) return;
@@ -77,7 +88,11 @@ watch(mostrar, async (v) => {
   olvidar();
   if (!v) return;
   sitioId.value = GENERICO;
-  const d = await ejecutar('datos', () => api().bd.conexion(bd.objetivo(props.motor)));
+  const d = await ejecutar('datos', () =>
+    props.servicio !== undefined
+      ? api().servicios.conexion(props.servicio)
+      : api().bd.conexion(bd.objetivo(props.motor!)),
+  );
   if (!mostrar.value) return;
   datos.value = d ?? null;
   if (d) await cargarBloque();
@@ -99,7 +114,7 @@ function copiar(texto: string): void {
   <NModal
     v-model:show="mostrar"
     preset="card"
-    :title="t.titulo(base)"
+    :title="servicio !== undefined ? t.tituloServicio : t.titulo(base ?? '')"
     size="small"
     :bordered="false"
     :style="{ width: '540px', maxWidth: 'calc(100vw - 32px)' }"
@@ -162,7 +177,8 @@ function copiar(texto: string): void {
         />
       </NFormItem>
 
-      <div class="env">
+      <p v-if="servicio !== undefined" class="nota-servicio" role="note">{{ t.notaMeilisearch }}</p>
+      <div v-else class="env">
         <div class="env-cabeza">
           <span>{{ t.env }}</span>
           <NButton
@@ -234,6 +250,11 @@ function copiar(texto: string): void {
   white-space: pre-wrap;
   word-break: break-all;
   user-select: text;
+}
+.nota-servicio {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 .tenue {
   font-size: 12px;

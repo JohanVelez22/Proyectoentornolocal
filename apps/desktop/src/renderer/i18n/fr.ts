@@ -404,6 +404,8 @@ export const fr: Textos = {
         'La base {base} est aussi utilisée par le projet {proyecto} : confirmez si vous voulez partager son utilisateur.',
       'env.cambio_externo':
         'Le .env a changé depuis l’aperçu : vérifiez-le de nouveau avant d’enregistrer.',
+      'env.meilisearch_no_disponible':
+        'Meilisearch n’est pas installé : installez-le dans Services.',
       'env.sin_confirmar': 'Confirmez que vous voulez enregistrer les modifications du .env.',
       'env.versionado':
         'Git suit déjà le .env de ce projet : le prochain commit enverrait ses valeurs. Confirmez séparément pour continuer.',
@@ -1423,6 +1425,7 @@ export const fr: Textos = {
     puertos: 'Ports',
     pid: 'PID',
     sinVersion: 'sans version',
+    datosConexion: 'Données de connexion',
     sinPuertos: '—',
     terminado: 'Terminé sans erreur',
     externo: 'Géré hors de WolfCore Dev',
@@ -1630,6 +1633,9 @@ export const fr: Textos = {
       boton: 'Sauvegarder',
     },
     dialogoConexion: {
+      tituloServicio: 'Connexion à Meilisearch',
+      notaMeilisearch:
+        'Pour l’utiliser dans un projet : Variables (.env) → Ajouter un bloc → Meilisearch. Un aperçu avec la clé masquée s’affiche et une confirmation est demandée. La clé appartient uniquement à cet ordinateur.',
       sitio: 'Projet',
       sitioAyuda:
         'Le .env du site est lu pour reprendre les variables qu’il contient déjà (par exemple CodeIgniter 4). Son contenu n’est ni affiché ni copié.',
@@ -4544,6 +4550,8 @@ export const fr: Textos = {
   },
   versiones: {
     pestana: 'Versions',
+    avisoMeilisearch:
+      'Chaque version mineure de Meilisearch a ses propres données. Si vous passez à une autre version mineure (par exemple de 1.58 à 1.59), vos index et la MEILISEARCH_KEY seront nouveaux : vous devrez réindexer et mettre à jour le .env de vos projets.',
     pestanaServicios: 'Services',
     elegirServicio: 'Service',
     servicios: {
@@ -5518,6 +5526,7 @@ export const fr: Textos = {
       correo: 'Courrier',
       ia: 'IA',
       redis: 'Redis',
+      meilisearch: 'Meilisearch (avec sa clé)',
     },
     usuarioPropio: {
       titulo: 'Utiliser un utilisateur dédié',

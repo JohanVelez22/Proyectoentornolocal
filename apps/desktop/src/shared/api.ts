@@ -698,6 +698,8 @@ export interface ApiEntorno {
     iniciarTodo(): Promise<void>;
     /** Cierra primero los túneles (devolviendo los .env) y luego detiene los servicios. */
     detenerTodo(): Promise<void>;
+    /** Host, puerto y master key de Meilisearch (o de una de sus instancias), para «Datos de conexión». */
+    conexion(ref: 'meilisearch' | IdInstancia): Promise<DatosConexion>;
     /** 1024–65535 y libre; reinicia el servicio si estaba encendido. */
     /** Devuelve los proyectos cuyo .env todavía usa el puerto anterior (no se tocan). */
     cambiarPuerto(id: IdServicioDatos, puerto: number): Promise<{ proyectos: string[] }>;
@@ -1737,6 +1739,7 @@ export const RUTAS_IPC = [
   'bd.crear',
   'bd.borrar',
   'bd.conexion',
+  'servicios.conexion',
   'bd.bloqueEnv',
   'bd.bloqueEnvSitio',
   'bd.carpetaRespaldos',

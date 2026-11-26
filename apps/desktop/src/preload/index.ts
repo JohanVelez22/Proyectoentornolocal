@@ -82,6 +82,7 @@ const api: ApiEntorno = {
     detener: (id) => invocar('servicios.detener', id),
     iniciarTodo: () => invocar('servicios.iniciarTodo'),
     detenerTodo: () => invocar('servicios.detenerTodo'),
+    conexion: (ref) => invocar('servicios.conexion', ref),
     cambiarPuerto: (id, puerto) => invocar('servicios.cambiarPuerto', id, puerto),
     borrarDatos: (id, confirmacion) => invocar('servicios.borrarDatos', id, confirmacion),
     autoIniciar: (id, valor) => invocar('servicios.autoIniciar', id, valor),

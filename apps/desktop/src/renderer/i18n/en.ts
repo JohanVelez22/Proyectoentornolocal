@@ -381,6 +381,7 @@ export const en: Textos = {
         'Database {base} is also used by project {proyecto}: confirm whether you want to share its user.',
       'env.cambio_externo':
         'The .env changed after the preview was shown: review it again before saving.',
+      'env.meilisearch_no_disponible': 'Meilisearch is not installed: install it in Services.',
       'env.sin_confirmar': 'Confirm that you want to save the .env changes.',
       'env.versionado':
         'Git already tracks this project’s .env: the next commit would upload its values. Confirm separately to continue.',
@@ -1358,6 +1359,7 @@ export const en: Textos = {
     puertos: 'Ports',
     pid: 'PID',
     sinVersion: 'no version',
+    datosConexion: 'Connection details',
     sinPuertos: '—',
     terminado: 'Finished without errors',
     externo: 'Managed outside WolfCore Dev',
@@ -1561,6 +1563,9 @@ export const en: Textos = {
       boton: 'Back up',
     },
     dialogoConexion: {
+      tituloServicio: 'Connection to Meilisearch',
+      notaMeilisearch:
+        'To use it in a project: Variables (.env) → Add a block → Meilisearch. A preview with the key masked is shown and confirmation is required. The key only belongs to this computer.',
       sitio: 'Project',
       sitioAyuda:
         "The site's .env is read to use the variables it already has (for example, CodeIgniter 4). Its content is not shown or copied.",
@@ -4399,6 +4404,8 @@ export const en: Textos = {
   },
   versiones: {
     pestana: 'Versions',
+    avisoMeilisearch:
+      'Each Meilisearch minor version has its own data. If you switch to another minor version (for example, from 1.58 to 1.59), its indexes and the MEILISEARCH_KEY will be new: you will need to reindex and update your projects’ .env.',
     pestanaServicios: 'Services',
     elegirServicio: 'Service',
     servicios: {
@@ -5342,6 +5349,7 @@ export const en: Textos = {
       correo: 'Mail',
       ia: 'AI',
       redis: 'Redis',
+      meilisearch: 'Meilisearch (with its key)',
     },
     usuarioPropio: {
       titulo: 'Use own user',

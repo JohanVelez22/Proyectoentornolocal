@@ -387,6 +387,7 @@ export const es = {
         'La base {base} también la usa el proyecto {proyecto}: confirme si quiere compartir su usuario.',
       'env.cambio_externo':
         'El .env cambió desde que se mostró la vista previa: revíselo de nuevo antes de guardar.',
+      'env.meilisearch_no_disponible': 'Meilisearch no está instalado: instálelo en Servicios.',
       'env.sin_confirmar': 'Confirme que quiere guardar los cambios del .env.',
       'env.versionado':
         'Git ya sigue el .env de este proyecto: el próximo commit subiría sus valores. Confirme aparte para continuar.',
@@ -1367,6 +1368,7 @@ export const es = {
     puertos: 'Puertos',
     pid: 'PID',
     sinVersion: 'sin versión',
+    datosConexion: 'Datos de conexión',
     sinPuertos: '—',
     terminado: 'Terminó sin errores',
     externo: 'Administrado fuera de WolfCore Dev',
@@ -1574,6 +1576,9 @@ export const es = {
       boton: 'Respaldar',
     },
     dialogoConexion: {
+      tituloServicio: 'Conexión a Meilisearch',
+      notaMeilisearch:
+        'Para usarla en un proyecto: Variables (.env) → Agregar un bloque → Meilisearch. Se muestra una vista previa con la clave enmascarada y se pide confirmación. La clave es solo de este equipo.',
       sitio: 'Proyecto',
       sitioAyuda:
         'Se lee el .env del sitio para usar las variables que ya tiene (por ejemplo, CodeIgniter 4). Su contenido no se muestra ni se copia.',
@@ -4426,6 +4431,8 @@ export const es = {
   },
   versiones: {
     pestana: 'Versiones',
+    avisoMeilisearch:
+      'Cada versión menor de Meilisearch tiene sus propios datos. Si cambia a otra versión menor (por ejemplo, de 1.58 a 1.59), sus índices y la MEILISEARCH_KEY serán nuevos: tendrá que reindexar y actualizar el .env de sus proyectos.',
     pestanaServicios: 'Servicios',
     elegirServicio: 'Servicio',
     servicios: {
@@ -5368,6 +5375,7 @@ export const es = {
       correo: 'Correo',
       ia: 'IA',
       redis: 'Redis',
+      meilisearch: 'Meilisearch (con su clave)',
     },
     usuarioPropio: {
       titulo: 'Usar usuario propio',

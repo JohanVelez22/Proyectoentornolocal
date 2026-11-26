@@ -389,6 +389,7 @@ export const pt: Textos = {
         'O banco {base} também é usado pelo projeto {proyecto}: confirme se quer compartilhar o usuário dele.',
       'env.cambio_externo':
         'O .env mudou depois que a pré-visualização foi mostrada: revise-o de novo antes de salvar.',
+      'env.meilisearch_no_disponible': 'O Meilisearch não está instalado: instale-o em Serviços.',
       'env.sin_confirmar': 'Confirme que quer salvar as alterações do .env.',
       'env.versionado':
         'O git já acompanha o .env deste projeto: o próximo commit enviaria seus valores. Confirme à parte para continuar.',
@@ -1369,6 +1370,7 @@ export const pt: Textos = {
     puertos: 'Portas',
     pid: 'PID',
     sinVersion: 'sem versão',
+    datosConexion: 'Dados de conexão',
     sinPuertos: '—',
     terminado: 'Terminou sem erros',
     externo: 'Administrado fora do WolfCore Dev',
@@ -1575,6 +1577,9 @@ export const pt: Textos = {
       boton: 'Fazer backup',
     },
     dialogoConexion: {
+      tituloServicio: 'Conexão com o Meilisearch',
+      notaMeilisearch:
+        'Para usá-la em um projeto: Variáveis (.env) → Adicionar um bloco → Meilisearch. Mostra-se uma prévia com a chave mascarada e pede-se confirmação. A chave é só deste computador.',
       sitio: 'Projeto',
       sitioAyuda:
         'O .env do site é lido para usar as variáveis que ele já tem (por exemplo, CodeIgniter 4). O conteúdo não é exibido nem copiado.',
@@ -4437,6 +4442,8 @@ export const pt: Textos = {
   },
   versiones: {
     pestana: 'Versões',
+    avisoMeilisearch:
+      'Cada versão menor do Meilisearch tem seus próprios dados. Se mudar para outra versão menor (por exemplo, de 1.58 para 1.59), seus índices e a MEILISEARCH_KEY serão novos: será preciso reindexar e atualizar o .env dos seus projetos.',
     pestanaServicios: 'Serviços',
     elegirServicio: 'Serviço',
     servicios: {
@@ -5377,6 +5384,7 @@ export const pt: Textos = {
       correo: 'E-mail',
       ia: 'IA',
       redis: 'Redis',
+      meilisearch: 'Meilisearch (com a chave)',
     },
     usuarioPropio: {
       titulo: 'Usar usuário próprio',

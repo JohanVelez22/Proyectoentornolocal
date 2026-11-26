@@ -155,6 +155,7 @@ import {
   versionCatalogo,
   idInstanciaIpc,
   objetivoBd,
+  objetivoConexionServicio,
   objetivoSql,
   opcionesActualizar,
   opcionesNuevaRama,
@@ -1018,6 +1019,8 @@ const TABLA: Record<RutaIpc, Manejador> = {
   // bd.crear (clave generada del usuario nuevo), ftp.activar, ftp.regenerarClave y
   // ftp.credenciales (clave FTP del sitio).
   'bd.conexion': (n, _s, motor) => n.conexionBd(objetivoBd(motor).objetivo),
+  // Datos de conexión de Meilisearch (master key): igual que bd.conexion, no se registra.
+  'servicios.conexion': (n, _s, ref) => n.conexionServicio(objetivoConexionServicio(ref)),
   'bd.bloqueEnv': (n, _s, motor, base, tipo, envActual) => {
     const { objetivo, motor: m } = objetivoBd(motor);
     return n.bloqueEnvBd(

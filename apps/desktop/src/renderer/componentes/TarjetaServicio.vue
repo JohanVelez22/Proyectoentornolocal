@@ -4,6 +4,7 @@ import {
   CodeSlash,
   CloudUpload,
   EllipsisHorizontal,
+  KeyOutline,
   Layers,
   Mail,
   Power,
@@ -27,6 +28,7 @@ import {
   useNotification,
   type DropdownOption,
 } from 'naive-ui';
+import DialogoConexion from './DialogoConexion.vue';
 import MenuDesplegable from './MenuDesplegable.vue';
 import { computed, h, ref, type Component } from 'vue';
 import type { EstadoServicio } from '../../shared/api';
@@ -169,9 +171,15 @@ async function borrarDatos(): Promise<void> {
   if (ok) dialogoBorrar.value = false;
 }
 
+// ---- Datos de conexión (Meilisearch) ----
+const dialogoConexion = ref(false);
+
 // ---- Menú ⋯ ----
 const iconoMenu = (c: Component) => () => h(NIcon, null, { default: () => h(c) });
 const opciones = computed<DropdownOption[]>(() => [
+  ...(props.servicio.id === 'meilisearch'
+    ? [{ key: 'conexion', label: t.datosConexion, icon: iconoMenu(KeyOutline) }]
+    : []),
   {
     key: 'puerto',
     label: t.cambiarPuerto,
@@ -196,6 +204,7 @@ const textoBorrar = computed(() =>
 
 function elegir(clave: string): void {
   if (tarjetaOcupada.value) return;
+  if (clave === 'conexion') dialogoConexion.value = true;
   if (clave === 'puerto') abrirDialogoPuerto();
   if (clave === 'borrar') {
     confirmacion.value = '';
@@ -504,6 +513,11 @@ function cambiarRedLocal(valor: boolean): void {
         </div>
       </template>
     </NModal>
+    <DialogoConexion
+      v-if="servicio.id === 'meilisearch'"
+      v-model:show="dialogoConexion"
+      servicio="meilisearch"
+    />
   </article>
 </template>
 

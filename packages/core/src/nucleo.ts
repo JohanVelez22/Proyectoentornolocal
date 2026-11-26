@@ -931,6 +931,13 @@ export class Nucleo {
         const cfg = await this.config.leer();
         return { correo: puertoSmtpElegido(cfg), redis: datos.redis.puerto };
       },
+      meilisearch: async () => {
+        const m = (await this.config.leer()).servicios.datos.meilisearch;
+        if (m.version === null && !Object.keys(m.instancias ?? {}).length) return null;
+        // La clave se genera la primera vez; el renderer nunca la recibe (el diff va enmascarado).
+        const c = await this.servicios.datos.credenciales('meilisearch');
+        return { puerto: m.puerto, clave: c.clave };
+      },
     });
     this.workspaces = new Workspaces({
       leerConfig: () => this.config.leer(),
@@ -2114,6 +2121,38 @@ export class Nucleo {
   /** Datos de conexión del motor, con su clave (solo para "Datos de conexión"). */
   conexionBd(motor: ObjetivoBd): Promise<DatosConexion> {
     return this.bd.conexion(motor);
+  }
+
+  /**
+   * "Datos de conexión" de Meilisearch (host, puerto y master key). Solo Meilisearch (o una de sus
+   * instancias): la clave llega al diálogo y se muestra con «Mostrar»; nunca va a logs ni a una URL.
+   */
+  async conexionServicio(ref: 'meilisearch' | IdInstancia): Promise<DatosConexion> {
+    const servicio = ref === 'meilisearch' ? ref : parsearInstancia(ref).servicio;
+    if (servicio !== 'meilisearch') {
+      throw new ErrorWolf('servicios.desconocido', 'Ese servicio no tiene datos de conexión.', {
+        id: String(ref).slice(0, 40),
+      });
+    }
+    const lista = await this.servicios.datos.listaInstancias('meilisearch');
+    const inst =
+      ref === 'meilisearch'
+        ? (lista.find((i) => i.predeterminada) ?? lista[0])
+        : lista.find((i) => i.id === ref);
+    if (!inst) {
+      throw new ErrorWolf('servicios.no_instalado', 'Meilisearch no está instalado.', {
+        nombre: 'Meilisearch',
+      });
+    }
+    // La clave se genera la primera vez (igual que al arrancar): así también se ve antes de encender.
+    const cred = await this.servicios.datos.credenciales(inst.id);
+    return {
+      host: '127.0.0.1',
+      puerto: inst.puerto,
+      usuario: '',
+      clave: cred.clave,
+      instancia: inst.id,
+    };
   }
 
   bloqueEnvBd(

@@ -88,6 +88,8 @@ export interface DepsGestorEnv {
   carpetaRespaldos: () => string;
   versionado: (carpeta: string) => Promise<boolean | null>;
   puertos: () => Promise<{ correo: number | null; redis: number | null }>;
+  /** Puerto y master key de Meilisearch, o null si no está instalado. Nunca va al renderer. */
+  meilisearch?: () => Promise<{ puerto: number; clave: string } | null>;
 }
 
 /** Lee un archivo de texto del proyecto: null si no existe; enlaces y archivos enormes se rechazan. */
@@ -226,6 +228,16 @@ export class GestorEnv {
       // Un proyecto que envía por un proveedor SMTP remoto (D22) no recibe el bloque del captador.
       if (b === 'correo' && s.correo?.modo === 'smtp') continue;
       const puertos = await this.d.puertos();
+      let meilisearch: ContextoPlantillaEnv['meilisearch'] = null;
+      if (b === 'meilisearch') {
+        meilisearch = (await this.d.meilisearch?.()) ?? null;
+        if (meilisearch === null) {
+          throw new ErrorWolf(
+            'env.meilisearch_no_disponible',
+            'Meilisearch no está instalado: instálelo en Servicios.',
+          );
+        }
+      }
       const base = await leerBaseDelProyecto(s.carpeta).catch(() => null);
       const contexto: ContextoPlantillaEnv = {
         tipo: s.tipo,
@@ -238,6 +250,7 @@ export class GestorEnv {
             }
           : null,
         ...puertos,
+        meilisearch,
       };
       // Un bloque solo agrega las variables que faltan: nunca pisa una que ya está (una clave
       // escrita por el usuario no se vacía).

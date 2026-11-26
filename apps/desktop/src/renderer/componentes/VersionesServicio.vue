@@ -3,6 +3,7 @@ import { CloudOffline, Refresh, TrashOutline } from '@vicons/ionicons5';
 import {
   NButton,
   NCheckbox,
+  NAlert,
   NEmpty,
   NIcon,
   NSkeleton,
@@ -180,6 +181,9 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
 
 <template>
   <div class="versiones">
+    <NAlert v-if="servicio === 'meilisearch'" type="info" :show-icon="false" class="aviso-meili">
+      {{ t.avisoMeilisearch }}
+    </NAlert>
     <div class="barra">
       <Desplegable
         size="small"
@@ -369,5 +373,8 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
 .tam {
   margin-left: auto;
   opacity: 0.76;
+}
+.aviso-meili {
+  margin-bottom: 12px;
 }
 </style>
