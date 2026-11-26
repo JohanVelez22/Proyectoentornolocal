@@ -1,6 +1,7 @@
 import { ErrorWolf } from '../errores';
 import type { ReglaExportada, ReglaPorQuitar, ReglaPorRestaurar } from './firewallCambiosWin';
 import type { PerfilRed, ReglasEntrada } from './firewallWin';
+import { resolverReal } from './rutaReal';
 import { desinstalarEnCarpeta } from './rustupRegistro';
 import { chmod, mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -541,6 +542,12 @@ export class PlataformaFalsa implements PlataformaCompleta {
   private rutaFirewall = (p: string): string =>
     p.replaceAll('\\', '/').replace(/\/+$/, '').toLowerCase();
 
+  /** Como el script elevado: el programa, con uniones resueltas, sigue bajo la raíz. */
+  private async bajoRaiz(programa: string, raiz: string): Promise<boolean> {
+    const [p, r] = await Promise.all([resolverReal(programa), resolverReal(raiz)]);
+    return p !== null && r !== null && this.rutaFirewall(p).startsWith(`${this.rutaFirewall(r)}/`);
+  }
+
   async quitarReglasFirewall(reglas: ReglaPorQuitar[]): Promise<ResultadoEscritura> {
     this.pedidosQuitarReglas.push(reglas.map((r) => ({ ...r })));
     if (this.uacCancelado) return { ok: false, motivo: 'cancelado' };
@@ -548,13 +555,12 @@ export class PlataformaFalsa implements PlataformaCompleta {
     // Igual que el script elevado: vuelve a mirar cada regla y salta la que ya no cuadra.
     for (const r of reglas) {
       const actual = this.reglasFirewallCompletas().find((x) => x.nombre === r.nombre);
-      const raiz = this.rutaFirewall(r.raiz);
       if (
         !actual ||
         actual.direccion.toLowerCase() !== 'inbound' ||
         actual.accion.toLowerCase() !== 'allow' ||
         this.rutaFirewall(actual.programa) !== this.rutaFirewall(r.programa) ||
-        !this.rutaFirewall(actual.programa).startsWith(`${raiz}/`) ||
+        !(await this.bajoRaiz(actual.programa, r.raiz)) ||
         this.firewallNoBorrables.has(r.nombre)
       ) {
         continue;
@@ -574,7 +580,7 @@ export class PlataformaFalsa implements PlataformaCompleta {
     this.alElevarFirewall?.();
     for (const { regla, raiz } of reglas) {
       if (this.reglasFirewallCompletas().some((x) => x.nombre === regla.nombre)) continue;
-      if (!this.rutaFirewall(regla.programa).startsWith(`${this.rutaFirewall(raiz)}/`)) continue;
+      if (!(await this.bajoRaiz(regla.programa, raiz))) continue;
       this.reglasEntrada = {
         ...this.reglasEntrada,
         reglas: [

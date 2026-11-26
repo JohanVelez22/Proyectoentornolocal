@@ -9,7 +9,7 @@
  * carpeta de datos de WolfCore Dev o es un resto de sus pruebas. Nunca por patrón ni por nombre
  * de programa: siempre por el `Name` exacto.
  */
-import { mkdir, readFile, realpath, rename } from 'node:fs/promises';
+import { mkdir, readFile, rename } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {
@@ -18,6 +18,7 @@ import {
   reglaRestaurable,
   type ReglaExportada,
 } from '../plataforma/firewallCambiosWin';
+import { resolverReal } from '../plataforma/rutaReal';
 import { escribirAtomico } from '../sitios/urlbase';
 import { segunEscritura, YA_RESUELTO } from './revisiones/comun';
 import { origenDeRegla, type Origen } from './revisiones/firewallOrigen';
@@ -43,30 +44,6 @@ export interface Objetivo {
 
 export const rutaRegistro = (carpetaDatos: string): string =>
   path.join(carpetaDatos, 'etc', ARCHIVO_REGISTRO);
-
-/**
- * Ruta real: uniones y enlaces resueltos y nombres 8.3 expandidos de lo que exista; lo que falte
- * al final se añade tal cual. null si no se puede resolver; en una ruta que este sistema no
- * considera absoluta (rutas de otro sistema en las pruebas) no hay nada que resolver: se
- * devuelve la misma.
- */
-export async function resolverReal(ruta: string): Promise<string | null> {
-  if (!path.isAbsolute(ruta)) return ruta;
-  let actual = ruta;
-  const resto: string[] = [];
-  for (;;) {
-    try {
-      return path.join(await realpath(actual), ...resto);
-    } catch (e) {
-      const codigo = (e as NodeJS.ErrnoException).code;
-      if (codigo !== 'ENOENT' && codigo !== 'ENOTDIR') return null;
-      const padre = path.dirname(actual);
-      if (padre === actual) return null;
-      resto.unshift(path.basename(actual));
-      actual = padre;
-    }
-  }
-}
 
 /**
  * De quién es la regla, con uniones y 8.3 resueltos. Lo que cuelga léxicamente de la carpeta de
