@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { IDIOMAS_UI } from './constantesUi';
 import { TIPOS_AVISO, type TipoAviso } from './avisos/tipos';
 import { ID_PROVEEDOR_SMTP, ListaProveedoresSmtpSchema } from './correo/proveedores';
 import { TunelSitioSchema } from './tuneles/proveedor';
@@ -427,9 +428,7 @@ export type ArchivoCredenciales = Partial<Record<ClaveCredencial, Credenciales>>
 /** Temas de la interfaz: 'sistema' sigue al de Windows. */
 export const TEMAS_UI = ['sistema', 'claro', 'oscuro'] as const;
 export type TemaUi = (typeof TEMAS_UI)[number];
-/** Idiomas de la interfaz. */
-export const IDIOMAS_UI = ['es', 'en', 'pt', 'fr'] as const;
-export type IdiomaUi = (typeof IDIOMAS_UI)[number];
+export { IDIOMAS_UI, ATAJO_CAPTURA_POR_DEFECTO, type IdiomaUi } from './constantesUi';
 /** Acento de la interfaz: un color #rrggbb. */
 export const ACENTO_UI = /^#[0-9a-f]{6}$/i;
 
@@ -465,11 +464,6 @@ export type CambiosPreferenciasUi = z.infer<typeof CambiosPreferenciasUiSchema>;
 /** Formatos en que se guarda una captura de pantalla (D35). */
 export const FORMATOS_CAPTURA = ['png', 'jpg'] as const;
 export type FormatoCaptura = (typeof FORMATOS_CAPTURA)[number];
-/**
- * Atajo global que se propone al activar la captura (no se registra hasta que el usuario lo
- * activa). Ctrl+Alt+Mayús+S: tres modificadores, no choca con nada común y es válido.
- */
-export const ATAJO_CAPTURA_POR_DEFECTO = 'Ctrl+Alt+Shift+S';
 
 /**
  * Forma de un atajo global de Electron (aceleradora): de uno a tres modificadores y una tecla

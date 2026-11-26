@@ -11,4 +11,4 @@ export {
   nombreTunelValido,
   tokenTunelValido,
 } from './tuneles/proveedor';
-export { ATAJO_CAPTURA_POR_DEFECTO, IDIOMAS_UI } from './tipos';
+export { ATAJO_CAPTURA_POR_DEFECTO, IDIOMAS_UI } from './constantesUi';
