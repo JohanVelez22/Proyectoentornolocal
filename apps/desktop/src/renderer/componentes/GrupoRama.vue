@@ -126,8 +126,8 @@ function argumentos(f: Fila) {
   border-radius: 12px;
   padding: 10px 12px;
 }
-.rama + .rama {
-  margin-top: 10px;
+.rama {
+  min-width: 0;
 }
 .cabeza {
   display: flex;
@@ -145,7 +145,7 @@ function argumentos(f: Fila) {
   font-size: 12px;
   opacity: 0.72;
 }
-/* Tarjetas compactas que se reparten el ancho: unas 5 o 6 columnas a 1280 px, una en estrechas. */
+/* Dentro de un grupo (unos 280 px) cada parche ocupa su línea: versión, firma e Instalar. */
 .cuadricula {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

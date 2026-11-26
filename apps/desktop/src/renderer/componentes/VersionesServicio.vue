@@ -228,7 +228,7 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
       <NSkeleton v-for="n in 2" :key="n" :height="120" :sharp="false" class="esqueleto" />
     </div>
     <NEmpty v-else-if="!v.tabla || !v.tabla.ramas.length" :description="t.vacio" />
-    <template v-else>
+    <div v-else class="grupos">
       <GrupoRama
         v-for="r in v.tabla.ramas"
         :key="r.rama"
@@ -245,7 +245,7 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
         @puerto="puerto"
         @resolver="resolver"
       />
-    </template>
+    </div>
 
     <section v-if="v.conInstancias" class="respaldos" aria-labelledby="titulo-respaldos">
       <h3 id="titulo-respaldos">{{ t.respaldos.titulo }}</h3>
@@ -339,6 +339,13 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
 .esqueleto {
   margin-bottom: 12px;
   border-radius: 12px;
+}
+/* Un grupo por versión mayor: 3 o 4 por fila a 1280 px, uno solo en ventanas estrechas. */
+.grupos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+  align-items: start;
 }
 .respaldos {
   margin-top: 22px;

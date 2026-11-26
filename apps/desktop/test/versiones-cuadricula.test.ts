@@ -22,6 +22,16 @@ describe('Versiones en cuadrícula (D41, compacta en D38a)', () => {
     expect(grupo).toContain('class="cuadricula" role="list"');
   });
 
+  it('los grupos de versión mayor se reparten el ancho en una cuadrícula de minmax(280px, 1fr) (D38b)', () => {
+    const v = fuente('componentes', 'VersionesServicio.vue');
+    expect(v).toMatch(
+      /\.grupos\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(280px,\s*1fr\)\)/,
+    );
+    expect(v).toContain('class="grupos"');
+    // El grupo ya no se estira a todo el ancho ni se apila con margen.
+    expect(grupo).not.toContain('.rama + .rama');
+  });
+
   it('cada versión es una tarjeta (listitem) y no una fila de tabla', () => {
     expect(tarjeta).toContain('role="listitem"');
     expect(tarjeta).not.toContain('role="row"');
