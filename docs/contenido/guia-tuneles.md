@@ -6,11 +6,15 @@ Esta guía explica cómo mostrar un sitio que corre en tu computadora (por ejemp
 
 ## 0. En WolfCore Dev: lo más fácil
 
-No necesitas escribir comandos. En la tarjeta de tu sitio activa el interruptor **Túnel** y elige el proveedor. La app se encarga de lo demás:
+No necesitas escribir comandos. En **Proyectos**, en la tarjeta de tu sitio, activa el interruptor **Túnel**. La app se encarga de lo demás:
+- **te pide confirmación antes de publicar** (botón **Publicar**): el sitio queda en internet mientras el túnel siga abierto. En los sitios marcados como **Tiene datos reales de clientes** el aviso es más fuerte, y con Expose directamente no se permite;
+- usa por defecto el túnel rápido de Cloudflare (sin cuenta). Para elegir otro proveedor (Cloudflare con nombre, ngrok, Expose o Tailscale) pulsa el engranaje **Opciones del túnel**, junto al interruptor;
+- necesita Nginx encendido y, con Cloudflare, cloudflared instalado desde **Servicios**; si falta algo, el interruptor te lo indica;
 - abre el túnel hacia tu sitio local con su dominio `.test` correcto;
-- ajusta la URL de tu `.env` (por ejemplo `APP_URL`) mientras el túnel está abierto, y la deja como estaba al cerrarlo;
-- te muestra el enlace y su código QR, en **Herramientas → QR**;
-- **bloquea o exige una confirmación reforzada** en los sitios marcados con datos reales de clientes.
+- si el sitio tiene configurada una **Variable de URL base** (en Laravel se detecta `APP_URL`), escribe el enlace público en tu `.env` mientras el túnel está abierto y lo deja como estaba al cerrarlo;
+- muestra el enlace en la tarjeta, con los botones **Abrir el enlace público**, **Copiar el enlace público**, **Mostrar el código QR del enlace** y **Renovar (nuevo enlace)**. El código QR también está en **Herramientas → Generador de QR**.
+
+Para cerrarlo, apaga el interruptor **Túnel**. La vista **Túneles** lista los que están abiertos.
 
 Los comandos de esta guía sirven para entender qué pasa por debajo o para usar los túneles fuera de la app.
 
@@ -204,10 +208,11 @@ Ahí verás en vivo cada petición que llega por el túnel (cabeceras, JSON, có
 **Nunca compartas un servidor FTP clásico (puerto 21) mediante un túnel a internet:**
 - El protocolo FTP estándar envía **el usuario, la contraseña y los archivos en texto plano (sin cifrar)**, además de usar múltiples puertos dinámicos para transferir datos que suelen fallar a través de túneles HTTP.
 - Exponer FTP a internet abre una superficie de ataque innecesaria sobre los archivos de tu equipo.
+- Por eso **WolfCore Dev no ofrece un túnel TCP de ngrok para FTP**: un túnel TCP público dejaría la clave a la vista de cualquiera que pueda observar el tráfico.
 
 ### Alternativas recomendadas
-- **En la misma oficina o casa (red local):** comparte los archivos dentro de tu red privada sin salir a internet.
-- **Transferencia cifrada:** usa **SFTP** (sobre SSH) o **FTPS** (FTP con TLS) con cuentas dedicadas y contraseñas fuertes, o simplemente sincroniza el código mediante **Git** (GitHub/GitLab/Bitbucket).
+- **En la misma oficina o casa (red local):** usa el interruptor **Red local** de tu sitio, o el FTP con la red local activada, para compartir los archivos dentro de tu red privada sin salir a internet.
+- **Transferencia cifrada:** **SFTP** (sobre SSH) o **FTPS** (FTP con TLS) con cuentas dedicadas y contraseñas fuertes. WolfCore Dev lo incorporará más adelante. Mientras tanto, también puedes sincronizar el código con **Git** (GitHub/GitLab/Bitbucket).
 
 ---
 

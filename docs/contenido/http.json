@@ -13,6 +13,16 @@
         "resumen": "Requests data from the server without changing anything.",
         "explicacion": "Used to read pages, images, or lists of records. It is safe (it does not alter server state) and idempotent (repeating it produces the same result with no side effects).",
         "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/productos?categoria=libros\n\nResponse:\nHTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"items\":[{\"id\":1,\"titulo\":\"Local guide\"}]}"
+      },
+      "pt": {
+        "resumen": "Pede dados ao servidor sem modificar nada.",
+        "explicacion": "Usa-se para ler páginas, imagens ou listas de registros. É seguro (não altera o estado do servidor) e idempotente (repeti-lo várias vezes produz o mesmo resultado, sem efeitos colaterais).",
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/api/productos?categoria=libros\n\nResposta:\nHTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"items\":[{\"id\":1,\"titulo\":\"Guia local\"}]}"
+      },
+      "fr": {
+        "resumen": "Demande des données au serveur sans rien modifier.",
+        "explicacion": "Sert à lire des pages, des images ou des listes d'enregistrements. Il est sûr (il ne change pas l'état du serveur) et idempotent (le répéter plusieurs fois produit le même résultat, sans effets secondaires).",
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/api/productos?categoria=libros\n\nRéponse :\nHTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"items\":[{\"id\":1,\"titulo\":\"Guide local\"}]}"
       }
     },
     {
@@ -28,6 +38,16 @@
         "resumen": "Sends data to create a new resource or trigger an action.",
         "explicacion": "Used when submitting forms, signing in, or creating records. It is not safe because it modifies server data, and not idempotent because sending it twice can create duplicate records.",
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/tareas \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"titulo\":\"Check backup\",\"usuario\":\"demo\"}'\n\nResponse:\nHTTP/1.1 201 Created\nLocation: /api/tareas/42\n\n{\"id\":42,\"titulo\":\"Check backup\"}"
+      },
+      "pt": {
+        "resumen": "Envia dados para criar um recurso novo ou disparar uma ação.",
+        "explicacion": "Usa-se ao enviar formulários, fazer login ou criar registros. Não é seguro porque modifica dados no servidor, e não é idempotente porque enviá-lo duas vezes pode criar dois registros repetidos.",
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/api/tareas \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"titulo\":\"Revisar backup\",\"usuario\":\"demo\"}'\n\nResposta:\nHTTP/1.1 201 Created\nLocation: /api/tareas/42\n\n{\"id\":42,\"titulo\":\"Revisar backup\"}"
+      },
+      "fr": {
+        "resumen": "Envoie des données pour créer une nouvelle ressource ou déclencher une action.",
+        "explicacion": "Sert à envoyer des formulaires, à se connecter ou à créer des enregistrements. Il n'est pas sûr car il modifie des données sur le serveur, et il n'est pas idempotent car l'envoyer deux fois peut créer deux enregistrements en double.",
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/api/tareas \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"titulo\":\"Vérifier la sauvegarde\",\"usuario\":\"demo\"}'\n\nRéponse :\nHTTP/1.1 201 Created\nLocation: /api/tareas/42\n\n{\"id\":42,\"titulo\":\"Vérifier la sauvegarde\"}"
       }
     },
     {
@@ -43,6 +63,16 @@
         "resumen": "Completely replaces an existing resource (or creates it at that URL).",
         "explicacion": "Unlike PATCH (which only updates selected fields), PUT expects the full object and replaces the previous version. It is not safe because it modifies data, but it is idempotent: sending the same PUT once or ten times leaves the resource in the exact same state.",
         "ejemplo": "Request:\ncurl -i -X PUT http://mi-sitio.test/api/usuarios/7 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":true}'\n\nResponse:\nHTTP/1.1 200 OK\n\n{\"id\":7,\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":true}"
+      },
+      "pt": {
+        "resumen": "Substitui por completo um recurso existente (ou o cria naquele endereço).",
+        "explicacion": "Diferente do PATCH (que altera apenas alguns campos), o PUT espera o objeto completo e substitui tudo o que existia. Não é seguro porque modifica dados, mas é idempotente: enviar o mesmo PUT uma ou dez vezes deixa o recurso exatamente igual.",
+        "ejemplo": "Requisição:\ncurl -i -X PUT http://mi-sitio.test/api/usuarios/7 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":true}'\n\nResposta:\nHTTP/1.1 200 OK\n\n{\"id\":7,\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":true}"
+      },
+      "fr": {
+        "resumen": "Remplace entièrement une ressource existante (ou la crée à cette adresse).",
+        "explicacion": "Contrairement à PATCH (qui ne modifie que certains champs), PUT attend l'objet complet et remplace tout ce qui existait. Il n'est pas sûr car il modifie des données, mais il est idempotent : envoyer le même PUT une ou dix fois laisse la ressource exactement dans le même état.",
+        "ejemplo": "Requête :\ncurl -i -X PUT http://mi-sitio.test/api/usuarios/7 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":true}'\n\nRéponse :\nHTTP/1.1 200 OK\n\n{\"id\":7,\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":true}"
       }
     },
     {
@@ -58,6 +88,16 @@
         "resumen": "Applies a partial update to a resource without resending the whole object.",
         "explicacion": "Unlike PUT (which replaces the whole object), PATCH sends only the fields you want to change. It is not safe because it modifies data, and by specification it is not guaranteed to be idempotent (for example, an operation that adds +1 to a counter changes the result on each repeat).",
         "ejemplo": "Request:\ncurl -i -X PATCH http://mi-sitio.test/api/usuarios/7 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"activo\":false}'\n\nResponse:\nHTTP/1.1 200 OK\n\n{\"id\":7,\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":false}"
+      },
+      "pt": {
+        "resumen": "Aplica uma mudança parcial a um recurso sem reenviá-lo inteiro.",
+        "explicacion": "Diferente do PUT (que substitui o objeto todo), o PATCH envia apenas os campos que você quer alterar. Não é seguro porque modifica dados e, pelo padrão, não há garantia de que seja idempotente (por exemplo, uma operação como somar +1 a um contador muda o resultado a cada repetição).",
+        "ejemplo": "Requisição:\ncurl -i -X PATCH http://mi-sitio.test/api/usuarios/7 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"activo\":false}'\n\nResposta:\nHTTP/1.1 200 OK\n\n{\"id\":7,\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":false}"
+      },
+      "fr": {
+        "resumen": "Applique une modification partielle à une ressource sans la renvoyer en entier.",
+        "explicacion": "Contrairement à PUT (qui remplace tout l'objet), PATCH n'envoie que les champs que tu veux modifier. Il n'est pas sûr car il modifie des données, et selon la norme il n'est pas garanti idempotent (par exemple, une opération comme ajouter +1 à un compteur change le résultat à chaque répétition).",
+        "ejemplo": "Requête :\ncurl -i -X PATCH http://mi-sitio.test/api/usuarios/7 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"activo\":false}'\n\nRéponse :\nHTTP/1.1 200 OK\n\n{\"id\":7,\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":false}"
       }
     },
     {
@@ -73,6 +113,16 @@
         "resumen": "Deletes the resource at the given URL.",
         "explicacion": "It is not safe because it removes data on the server, but it is idempotent: deleting an already deleted resource leaves the server in the same final state (the resource still does not exist, even if the second attempt returns 404).",
         "ejemplo": "Request:\ncurl -i -X DELETE http://mi-sitio.test/api/tareas/42\n\nResponse:\nHTTP/1.1 204 No Content"
+      },
+      "pt": {
+        "resumen": "Remove o recurso indicado no endereço.",
+        "explicacion": "Não é seguro porque apaga informações no servidor, mas é idempotente: apagar um recurso já removido deixa o servidor no mesmo estado final (o recurso continua não existindo, embora a segunda tentativa devolva 404).",
+        "ejemplo": "Requisição:\ncurl -i -X DELETE http://mi-sitio.test/api/tareas/42\n\nResposta:\nHTTP/1.1 204 No Content"
+      },
+      "fr": {
+        "resumen": "Supprime la ressource indiquée dans l'adresse.",
+        "explicacion": "Il n'est pas sûr car il efface des informations sur le serveur, mais il est idempotent : supprimer une ressource déjà supprimée laisse le serveur dans le même état final (la ressource n'existe toujours pas, même si la deuxième tentative renvoie 404).",
+        "ejemplo": "Requête :\ncurl -i -X DELETE http://mi-sitio.test/api/tareas/42\n\nRéponse :\nHTTP/1.1 204 No Content"
       }
     },
     {
@@ -88,6 +138,16 @@
         "resumen": "Just like GET, but returns only headers with no response body.",
         "explicacion": "Useful to check whether a file exists, how large it is, or when it last changed without downloading the whole body. It is safe and idempotent because it only reads metadata.",
         "ejemplo": "Request:\ncurl -I http://mi-sitio.test/descargas/manual.pdf\n\nResponse:\nHTTP/1.1 200 OK\nContent-Type: application/pdf\nContent-Length: 245120"
+      },
+      "pt": {
+        "resumen": "Igual ao GET, mas devolve apenas os cabeçalhos, sem o corpo.",
+        "explicacion": "Serve para verificar se um arquivo existe, quanto pesa ou quando mudou sem baixá-lo inteiro. É seguro e idempotente porque apenas consulta metadados.",
+        "ejemplo": "Requisição:\ncurl -I http://mi-sitio.test/descargas/manual.pdf\n\nResposta:\nHTTP/1.1 200 OK\nContent-Type: application/pdf\nContent-Length: 245120"
+      },
+      "fr": {
+        "resumen": "Identique à GET, mais ne renvoie que les en-têtes, sans le corps.",
+        "explicacion": "Sert à vérifier si un fichier existe, quelle est sa taille ou quand il a changé, sans le télécharger en entier. Il est sûr et idempotent car il ne consulte que des métadonnées.",
+        "ejemplo": "Requête :\ncurl -I http://mi-sitio.test/descargas/manual.pdf\n\nRéponse :\nHTTP/1.1 200 OK\nContent-Type: application/pdf\nContent-Length: 245120"
       }
     },
     {
@@ -103,6 +163,66 @@
         "resumen": "Asks the server which HTTP methods and permissions a URL supports.",
         "explicacion": "Browsers send it automatically before certain cross-origin requests (CORS preflight) to verify which methods and headers the server allows. It is safe and idempotent because it changes nothing.",
         "ejemplo": "Request:\ncurl -i -X OPTIONS http://mi-sitio.test/api/tareas \\\n  -H \"Origin: http://app.ejemplo.com\"\n\nResponse:\nHTTP/1.1 204 No Content\nAllow: GET, POST, OPTIONS\nAccess-Control-Allow-Methods: GET, POST, OPTIONS"
+      },
+      "pt": {
+        "resumen": "Pergunta ao servidor quais métodos e permissões uma rota aceita.",
+        "explicacion": "Os navegadores o enviam automaticamente antes de certas requisições entre domínios diferentes (preflight de CORS) para confirmar quais métodos e cabeçalhos o servidor permite. É seguro e idempotente porque não altera nada.",
+        "ejemplo": "Requisição:\ncurl -i -X OPTIONS http://mi-sitio.test/api/tareas \\\n  -H \"Origin: http://app.ejemplo.com\"\n\nResposta:\nHTTP/1.1 204 No Content\nAllow: GET, POST, OPTIONS\nAccess-Control-Allow-Methods: GET, POST, OPTIONS"
+      },
+      "fr": {
+        "resumen": "Demande au serveur quelles méthodes et quelles autorisations une route accepte.",
+        "explicacion": "Les navigateurs l'envoient automatiquement avant certaines requêtes entre domaines différents (preflight CORS) pour confirmer quelles méthodes et quels en-têtes le serveur autorise. Il est sûr et idempotent car il ne change rien.",
+        "ejemplo": "Requête :\ncurl -i -X OPTIONS http://mi-sitio.test/api/tareas \\\n  -H \"Origin: http://app.ejemplo.com\"\n\nRéponse :\nHTTP/1.1 204 No Content\nAllow: GET, POST, OPTIONS\nAccess-Control-Allow-Methods: GET, POST, OPTIONS"
+      }
+    },
+    {
+      "nombre": "CONNECT",
+      "seguro": false,
+      "idempotente": false,
+      "es": {
+        "resumen": "Pide a un proxy que abra un túnel TCP hacia otro servidor.",
+        "explicacion": "Casi nunca lo usarás en una app: lo envían los navegadores y las herramientas cuando pasan por un proxy para abrir una conexión HTTPS (el proxy solo reenvía bytes cifrados). No es seguro ni idempotente: cada petición abre una conexión nueva. En tu código de aplicación normalmente no lo implementas ni lo recibes.",
+        "ejemplo": "Petición (hacia un proxy):\ncurl -i -x http://proxy.ejemplo.test:3128 https://api.ejemplo.test/\n\nLo que el cliente envía al proxy:\nCONNECT api.ejemplo.test:443 HTTP/1.1\nHost: api.ejemplo.test:443\n\nRespuesta:\nHTTP/1.1 200 Connection Established"
+      },
+      "en": {
+        "resumen": "Asks a proxy to open a TCP tunnel to another server.",
+        "explicacion": "You will almost never use it in an app: browsers and tools send it when going through a proxy to open an HTTPS connection (the proxy only forwards encrypted bytes). It is neither safe nor idempotent: each request opens a new connection. In your own application code you normally neither implement nor receive it.",
+        "ejemplo": "Request (to a proxy):\ncurl -i -x http://proxy.ejemplo.test:3128 https://api.ejemplo.test/\n\nWhat the client sends to the proxy:\nCONNECT api.ejemplo.test:443 HTTP/1.1\nHost: api.ejemplo.test:443\n\nResponse:\nHTTP/1.1 200 Connection Established"
+      },
+      "pt": {
+        "resumen": "Pede a um proxy que abra um túnel TCP até outro servidor.",
+        "explicacion": "Quase nunca você vai usá-lo em um app: é enviado por navegadores e ferramentas quando passam por um proxy para abrir uma conexão HTTPS (o proxy apenas repassa bytes criptografados). Não é seguro nem idempotente: cada requisição abre uma conexão nova. No código da sua aplicação normalmente você não o implementa nem o recebe.",
+        "ejemplo": "Requisição (para um proxy):\ncurl -i -x http://proxy.ejemplo.test:3128 https://api.ejemplo.test/\n\nO que o cliente envia ao proxy:\nCONNECT api.ejemplo.test:443 HTTP/1.1\nHost: api.ejemplo.test:443\n\nResposta:\nHTTP/1.1 200 Connection Established"
+      },
+      "fr": {
+        "resumen": "Demande à un proxy d'ouvrir un tunnel TCP vers un autre serveur.",
+        "explicacion": "Tu ne l'utiliseras presque jamais dans une application : ce sont les navigateurs et les outils qui l'envoient lorsqu'ils passent par un proxy pour ouvrir une connexion HTTPS (le proxy ne fait que transmettre des octets chiffrés). Il n'est ni sûr ni idempotent : chaque requête ouvre une nouvelle connexion. Dans le code de ton application, normalement tu ne l'implémentes pas et tu ne le reçois pas.",
+        "ejemplo": "Requête (vers un proxy) :\ncurl -i -x http://proxy.ejemplo.test:3128 https://api.ejemplo.test/\n\nCe que le client envoie au proxy :\nCONNECT api.ejemplo.test:443 HTTP/1.1\nHost: api.ejemplo.test:443\n\nRéponse :\nHTTP/1.1 200 Connection Established"
+      }
+    },
+    {
+      "nombre": "TRACE",
+      "seguro": true,
+      "idempotente": true,
+      "es": {
+        "resumen": "Devuelve la misma petición que recibió el servidor, para diagnóstico.",
+        "explicacion": "Sirve para ver cómo llega una petición después de pasar por proxies. Es seguro e idempotente porque solo hace eco, pero casi nunca se usa en una app y suele estar desactivado por seguridad: podía permitir robar cabeceras sensibles (como cookies) en ataques de tipo Cross-Site Tracing. Si tu servidor responde 405 o 501, es lo esperado.",
+        "ejemplo": "Petición:\ncurl -i -X TRACE http://mi-sitio.test/\n\nRespuesta (servidor con TRACE desactivado):\nHTTP/1.1 405 Method Not Allowed\nAllow: GET, POST, HEAD, OPTIONS"
+      },
+      "en": {
+        "resumen": "Returns the same request the server received, for diagnostics.",
+        "explicacion": "It is used to see how a request arrives after going through proxies. It is safe and idempotent because it only echoes, but it is almost never used in an app and is usually disabled for security: it could let attackers steal sensitive headers (such as cookies) through Cross-Site Tracing attacks. If your server answers 405 or 501, that is expected.",
+        "ejemplo": "Request:\ncurl -i -X TRACE http://mi-sitio.test/\n\nResponse (server with TRACE disabled):\nHTTP/1.1 405 Method Not Allowed\nAllow: GET, POST, HEAD, OPTIONS"
+      },
+      "pt": {
+        "resumen": "Devolve a mesma requisição que o servidor recebeu, para diagnóstico.",
+        "explicacion": "Serve para ver como uma requisição chega depois de passar por proxies. É seguro e idempotente porque apenas devolve o eco, mas quase nunca é usado em um app e costuma estar desativado por segurança: podia permitir o roubo de cabeçalhos sensíveis (como cookies) em ataques do tipo Cross-Site Tracing. Se o seu servidor responder 405 ou 501, é o esperado.",
+        "ejemplo": "Requisição:\ncurl -i -X TRACE http://mi-sitio.test/\n\nResposta (servidor com TRACE desativado):\nHTTP/1.1 405 Method Not Allowed\nAllow: GET, POST, HEAD, OPTIONS"
+      },
+      "fr": {
+        "resumen": "Renvoie la même requête que celle reçue par le serveur, pour le diagnostic.",
+        "explicacion": "Sert à voir comment une requête arrive après avoir traversé des proxies. Il est sûr et idempotent car il se contente de renvoyer un écho, mais il n'est presque jamais utilisé dans une application et il est généralement désactivé pour des raisons de sécurité : il pouvait permettre de voler des en-têtes sensibles (comme les cookies) lors d'attaques de type Cross-Site Tracing. Si ton serveur répond 405 ou 501, c'est normal.",
+        "ejemplo": "Requête :\ncurl -i -X TRACE http://mi-sitio.test/\n\nRéponse (serveur avec TRACE désactivé) :\nHTTP/1.1 405 Method Not Allowed\nAllow: GET, POST, HEAD, OPTIONS"
       }
     }
   ],
@@ -132,6 +252,28 @@
           "Not an error; the client automatically proceeds to send the request body."
         ],
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/archivos -H \"Expect: 100-continue\" -F \"file=@demo.zip\"\n\nResponse:\nHTTP/1.1 100 Continue\n\nHTTP/1.1 201 Created"
+      },
+      "pt": {
+        "resumen": "O servidor recebeu os cabeçalhos e o cliente pode enviar o corpo.",
+        "explicacion": "É uma resposta intermediária usada ao enviar arquivos grandes: o cliente avisa com Expect: 100-continue antes de mandar os dados, para economizar banda caso o servidor fosse rejeitar a requisição.",
+        "causasComunes": [
+          "Envios grandes com curl ou clientes HTTP que mandam o cabeçalho Expect: 100-continue."
+        ],
+        "comoSolucionar": [
+          "Não é um erro; o cliente continua automaticamente enviando o corpo da requisição."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/api/archivos -H \"Expect: 100-continue\" -F \"file=@demo.zip\"\n\nResposta:\nHTTP/1.1 100 Continue\n\nHTTP/1.1 201 Created"
+      },
+      "fr": {
+        "resumen": "Le serveur a reçu les en-têtes et le client peut envoyer le corps.",
+        "explicacion": "C'est une réponse intermédiaire utilisée lors de l'envoi de gros fichiers : le client prévient avec Expect: 100-continue avant d'envoyer les données, afin d'économiser de la bande passante si le serveur devait rejeter la requête.",
+        "causasComunes": [
+          "Envois volumineux avec curl ou des clients HTTP qui envoient l'en-tête Expect: 100-continue."
+        ],
+        "comoSolucionar": [
+          "Ce n'est pas une erreur ; le client poursuit automatiquement en envoyant le corps de la requête."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/api/archivos -H \"Expect: 100-continue\" -F \"file=@demo.zip\"\n\nRéponse :\nHTTP/1.1 100 Continue\n\nHTTP/1.1 201 Created"
       }
     },
     {
@@ -159,6 +301,28 @@
           "Not an error; confirms the protocol upgrade succeeded."
         ],
         "ejemplo": "Request:\nGET /ws HTTP/1.1\nHost: mi-sitio.test\nUpgrade: websocket\nConnection: Upgrade\n\nResponse:\nHTTP/1.1 101 Switching Protocols\nUpgrade: websocket\nConnection: Upgrade"
+      },
+      "pt": {
+        "resumen": "O servidor aceita mudar para outro protocolo, como WebSocket.",
+        "explicacion": "Acontece quando o navegador pede para atualizar uma conexão HTTP normal para WebSocket (por exemplo, em chats ao vivo ou no hot reload do Vite).",
+        "causasComunes": [
+          "Conexão com um servidor WebSocket (Vite HMR, Laravel Reverb, FastAPI WebSockets)."
+        ],
+        "comoSolucionar": [
+          "Não é um erro; indica que a mudança de protocolo foi concluída com sucesso."
+        ],
+        "ejemplo": "Requisição:\nGET /ws HTTP/1.1\nHost: mi-sitio.test\nUpgrade: websocket\nConnection: Upgrade\n\nResposta:\nHTTP/1.1 101 Switching Protocols\nUpgrade: websocket\nConnection: Upgrade"
+      },
+      "fr": {
+        "resumen": "Le serveur accepte de passer à un autre protocole, comme WebSocket.",
+        "explicacion": "Se produit lorsque le navigateur demande de faire évoluer une connexion HTTP normale vers WebSocket (par exemple dans les chats en direct ou le rechargement à chaud de Vite).",
+        "causasComunes": [
+          "Connexion à un serveur WebSocket (Vite HMR, Laravel Reverb, FastAPI WebSockets)."
+        ],
+        "comoSolucionar": [
+          "Ce n'est pas une erreur ; cela indique que le changement de protocole s'est bien terminé."
+        ],
+        "ejemplo": "Requête :\nGET /ws HTTP/1.1\nHost: mi-sitio.test\nUpgrade: websocket\nConnection: Upgrade\n\nRéponse :\nHTTP/1.1 101 Switching Protocols\nUpgrade: websocket\nConnection: Upgrade"
       }
     },
     {
@@ -186,6 +350,28 @@
           "No action needed; the request succeeded."
         ],
         "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/salud\n\nResponse:\nHTTP/1.1 200 OK\n\n{\"estado\":\"ok\"}"
+      },
+      "pt": {
+        "resumen": "A requisição foi concluída com sucesso.",
+        "explicacion": "É a resposta mais comum quando tudo dá certo: o servidor entrega a página HTML, o JSON ou o arquivo solicitado.",
+        "causasComunes": [
+          "Leitura ou atualização de um recurso feita corretamente."
+        ],
+        "comoSolucionar": [
+          "Não requer ação; a operação foi bem-sucedida."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/api/salud\n\nResposta:\nHTTP/1.1 200 OK\n\n{\"estado\":\"ok\"}"
+      },
+      "fr": {
+        "resumen": "La requête s'est terminée avec succès.",
+        "explicacion": "C'est la réponse la plus courante quand tout se passe bien : le serveur renvoie la page HTML, le JSON ou le fichier demandé.",
+        "causasComunes": [
+          "Lecture ou mise à jour réussie d'une ressource."
+        ],
+        "comoSolucionar": [
+          "Aucune action requise ; l'opération a réussi."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/api/salud\n\nRéponse :\nHTTP/1.1 200 OK\n\n{\"estado\":\"ok\"}"
       }
     },
     {
@@ -213,6 +399,28 @@
           "No action needed; read the response body or Location header for the new ID."
         ],
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: application/json\" -d '{\"texto\":\"Hello\"}'\n\nResponse:\nHTTP/1.1 201 Created\nLocation: /api/notas/15\n\n{\"id\":15,\"texto\":\"Hello\"}"
+      },
+      "pt": {
+        "resumen": "Um recurso novo foi criado com sucesso.",
+        "explicacion": "Costuma ser devolvido após um POST bem-sucedido em uma API REST e muitas vezes inclui o cabeçalho Location com o endereço do novo registro.",
+        "causasComunes": [
+          "Criação de um usuário, pedido ou registro por meio de POST."
+        ],
+        "comoSolucionar": [
+          "Não requer ação; confira o corpo ou o cabeçalho Location para obter o ID criado."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: application/json\" -d '{\"texto\":\"Olá\"}'\n\nResposta:\nHTTP/1.1 201 Created\nLocation: /api/notas/15\n\n{\"id\":15,\"texto\":\"Olá\"}"
+      },
+      "fr": {
+        "resumen": "Une nouvelle ressource a été créée avec succès.",
+        "explicacion": "Elle est généralement renvoyée après un POST réussi dans une API REST et inclut souvent l'en-tête Location avec l'adresse du nouvel enregistrement.",
+        "causasComunes": [
+          "Création d'un utilisateur, d'une commande ou d'un enregistrement via POST."
+        ],
+        "comoSolucionar": [
+          "Aucune action requise ; consulte le corps ou l'en-tête Location pour obtenir l'ID créé."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: application/json\" -d '{\"texto\":\"Bonjour\"}'\n\nRéponse :\nHTTP/1.1 201 Created\nLocation: /api/notas/15\n\n{\"id\":15,\"texto\":\"Bonjour\"}"
       }
     },
     {
@@ -240,6 +448,28 @@
           "Not an error; poll a status endpoint if you need to track completion."
         ],
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/reportes/exportar\n\nResponse:\nHTTP/1.1 202 Accepted\n\n{\"trabajoId\":\"job-102\",\"estado\":\"queued\"}"
+      },
+      "pt": {
+        "resumen": "A requisição foi aceita, mas será processada em segundo plano.",
+        "explicacion": "Indica que o servidor recebeu a ordem (por exemplo, gerar um relatório pesado ou enviar e-mails em fila) e a executará depois, sem bloquear o usuário.",
+        "causasComunes": [
+          "Tarefas enviadas para filas no Laravel, Celery ou trabalhos em segundo plano do FastAPI."
+        ],
+        "comoSolucionar": [
+          "Não é um erro; consulte um endpoint de status se precisar saber quando o trabalho termina."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/api/reportes/exportar\n\nResposta:\nHTTP/1.1 202 Accepted\n\n{\"trabajoId\":\"job-102\",\"estado\":\"en_cola\"}"
+      },
+      "fr": {
+        "resumen": "La requête a été acceptée, mais elle sera traitée en arrière-plan.",
+        "explicacion": "Indique que le serveur a reçu l'ordre (par exemple générer un rapport lourd ou envoyer des e-mails mis en file d'attente) et qu'il l'exécutera plus tard sans bloquer l'utilisateur.",
+        "causasComunes": [
+          "Tâches envoyées à des files d'attente dans Laravel, Celery ou des tâches en arrière-plan de FastAPI."
+        ],
+        "comoSolucionar": [
+          "Ce n'est pas une erreur ; interroge un endpoint d'état si tu as besoin de savoir quand le travail se termine."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/api/reportes/exportar\n\nRéponse :\nHTTP/1.1 202 Accepted\n\n{\"trabajoId\":\"job-102\",\"estado\":\"en_file\"}"
       }
     },
     {
@@ -267,6 +497,28 @@
           "Not an error; in fetch(), avoid calling res.json() on a 204 response because the body is empty."
         ],
         "ejemplo": "Request:\ncurl -i -X DELETE http://mi-sitio.test/api/notas/15\n\nResponse:\nHTTP/1.1 204 No Content"
+      },
+      "pt": {
+        "resumen": "A operação deu certo e não há conteúdo para devolver.",
+        "explicacion": "Muito comum após um DELETE ou um salvamento em que o cliente não precisa de nenhum JSON de volta. A resposta não deve ter corpo.",
+        "causasComunes": [
+          "Exclusão de um registro ou resposta a uma requisição OPTIONS de CORS."
+        ],
+        "comoSolucionar": [
+          "Não é um erro; no fetch(), não chame res.json() quando o status for 204, porque o corpo está vazio."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X DELETE http://mi-sitio.test/api/notas/15\n\nResposta:\nHTTP/1.1 204 No Content"
+      },
+      "fr": {
+        "resumen": "L'opération a réussi et il n'y a aucun contenu à renvoyer.",
+        "explicacion": "Très courant après un DELETE ou une sauvegarde où le client n'a besoin d'aucun JSON en retour. La réponse ne doit pas avoir de corps.",
+        "causasComunes": [
+          "Suppression d'un enregistrement ou réponse à une requête OPTIONS de CORS."
+        ],
+        "comoSolucionar": [
+          "Ce n'est pas une erreur ; avec fetch(), n'appelle pas res.json() quand le statut est 204, car le corps est vide."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X DELETE http://mi-sitio.test/api/notas/15\n\nRéponse :\nHTTP/1.1 204 No Content"
       }
     },
     {
@@ -294,6 +546,28 @@
           "Not an error; normal behavior for media streaming and resumable downloads."
         ],
         "ejemplo": "Request:\ncurl -i -H \"Range: bytes=0-1023\" http://mi-sitio.test/media/demo.mp4\n\nResponse:\nHTTP/1.1 206 Partial Content\nContent-Range: bytes 0-1023/1048576"
+      },
+      "pt": {
+        "resumen": "O servidor envia apenas uma parte do arquivo solicitado.",
+        "explicacion": "É usado ao reproduzir vídeo/áudio com barra de progresso ou ao retomar downloads interrompidos usando o cabeçalho Range.",
+        "causasComunes": [
+          "Players de mídia HTML5 ou gerenciadores de download que pedem intervalos de bytes."
+        ],
+        "comoSolucionar": [
+          "Não é um erro; é o comportamento normal para streaming e downloads retomáveis."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -H \"Range: bytes=0-1023\" http://mi-sitio.test/media/demo.mp4\n\nResposta:\nHTTP/1.1 206 Partial Content\nContent-Range: bytes 0-1023/1048576"
+      },
+      "fr": {
+        "resumen": "Le serveur n'envoie qu'une partie du fichier demandé.",
+        "explicacion": "Utilisé pour lire une vidéo ou un audio avec une barre de progression, ou pour reprendre des téléchargements interrompus grâce à l'en-tête Range.",
+        "causasComunes": [
+          "Lecteurs multimédias HTML5 ou gestionnaires de téléchargement qui demandent des plages d'octets."
+        ],
+        "comoSolucionar": [
+          "Ce n'est pas une erreur ; c'est le comportement normal pour le streaming et les téléchargements reprenables."
+        ],
+        "ejemplo": "Requête :\ncurl -i -H \"Range: bytes=0-1023\" http://mi-sitio.test/media/demo.mp4\n\nRéponse :\nHTTP/1.1 206 Partial Content\nContent-Range: bytes 0-1023/1048576"
       }
     },
     {
@@ -321,6 +595,28 @@
           "Update links to the new URL; if testing locally after changing a rule, clear your browser cache."
         ],
         "ejemplo": "Request:\ncurl -i http://mi-sitio.test/blog-viejo\n\nResponse:\nHTTP/1.1 301 Moved Permanently\nLocation: https://mi-sitio.test/blog"
+      },
+      "pt": {
+        "resumen": "O recurso mudou de endereço de forma permanente.",
+        "explicacion": "Indica ao navegador e aos buscadores que usem sempre a nova URL informada em Location. Os navegadores costumam guardar o 301 em cache, então pode demorar para sumir se foi um engano.",
+        "causasComunes": [
+          "Redirecionamento de HTTP para HTTPS ou mudança definitiva de rota no Nginx."
+        ],
+        "comoSolucionar": [
+          "Atualize seus links para a nova URL; se você testa em local e mudou a regra, limpe o cache do navegador."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/blog-viejo\n\nResposta:\nHTTP/1.1 301 Moved Permanently\nLocation: https://mi-sitio.test/blog"
+      },
+      "fr": {
+        "resumen": "La ressource a changé d'adresse de façon permanente.",
+        "explicacion": "Indique au navigateur et aux moteurs de recherche d'utiliser toujours la nouvelle URL indiquée dans Location. Les navigateurs mettent souvent le 301 en cache, il peut donc être long à disparaître s'il s'agissait d'une erreur.",
+        "causasComunes": [
+          "Redirection de HTTP vers HTTPS ou changement définitif de route dans Nginx."
+        ],
+        "comoSolucionar": [
+          "Mets à jour tes liens vers la nouvelle URL ; si tu testes en local et que tu as modifié la règle, vide le cache du navigateur."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/blog-viejo\n\nRéponse :\nHTTP/1.1 301 Moved Permanently\nLocation: https://mi-sitio.test/blog"
       }
     },
     {
@@ -350,6 +646,30 @@
           "If an API call returns 302, include Accept: application/json so the framework returns a JSON error instead of redirecting."
         ],
         "ejemplo": "Request:\ncurl -i http://mi-sitio.test/panel\n\nResponse:\nHTTP/1.1 302 Found\nLocation: http://mi-sitio.test/login"
+      },
+      "pt": {
+        "resumen": "Redirecionamento temporário para outro endereço.",
+        "explicacion": "Muito usado em frameworks web (como Laravel ou CodeIgniter) para enviar o usuário para /login quando ele não está autenticado, ou levá-lo de volta a uma página depois de enviar um formulário.",
+        "causasComunes": [
+          "Middleware de autenticação que redireciona para o formulário de login.",
+          "Falha de validação em um formulário web do Laravel que redireciona de volta."
+        ],
+        "comoSolucionar": [
+          "Se você chama uma rota de API e recebe 302, adicione o cabeçalho Accept: application/json para ver o erro real em JSON."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/panel\n\nResposta:\nHTTP/1.1 302 Found\nLocation: http://mi-sitio.test/login"
+      },
+      "fr": {
+        "resumen": "Redirection temporaire vers une autre adresse.",
+        "explicacion": "Très utilisée dans les frameworks web (comme Laravel ou CodeIgniter) pour envoyer l'utilisateur vers /login lorsqu'il n'est pas connecté, ou pour le ramener à une page après l'envoi d'un formulaire.",
+        "causasComunes": [
+          "Middleware d'authentification qui redirige vers le formulaire de connexion.",
+          "Échec de validation d'un formulaire web Laravel qui redirige en arrière."
+        ],
+        "comoSolucionar": [
+          "Si tu appelles une route d'API et reçois un 302, ajoute l'en-tête Accept: application/json pour voir la vraie erreur en JSON."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/panel\n\nRéponse :\nHTTP/1.1 302 Found\nLocation: http://mi-sitio.test/login"
       }
     },
     {
@@ -377,6 +697,28 @@
           "Expected behavior; follow the Location header with a GET request."
         ],
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/pedidos -d \"item=1\"\n\nResponse:\nHTTP/1.1 303 See Other\nLocation: http://mi-sitio.test/pedidos/gracias"
+      },
+      "pt": {
+        "resumen": "Redireciona sempre com GET para o resultado de uma operação.",
+        "explicacion": "É usado após um POST (padrão Post/Redirect/Get) para que, se o usuário recarregar a página, o navegador faça um GET e não reenvie o formulário.",
+        "causasComunes": [
+          "Resposta após processar um formulário ou criar um recurso em um app web."
+        ],
+        "comoSolucionar": [
+          "Comportamento esperado; siga o cabeçalho Location com uma requisição GET."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/pedidos -d \"item=1\"\n\nResposta:\nHTTP/1.1 303 See Other\nLocation: http://mi-sitio.test/pedidos/gracias"
+      },
+      "fr": {
+        "resumen": "Redirige toujours avec GET vers le résultat d'une opération.",
+        "explicacion": "Utilisé après un POST (modèle Post/Redirect/Get) pour que, si l'utilisateur recharge la page, le navigateur fasse un GET et ne renvoie pas le formulaire.",
+        "causasComunes": [
+          "Réponse après le traitement d'un formulaire ou la création d'une ressource dans une application web."
+        ],
+        "comoSolucionar": [
+          "Comportement attendu ; suis l'en-tête Location avec une requête GET."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/pedidos -d \"item=1\"\n\nRéponse :\nHTTP/1.1 303 See Other\nLocation: http://mi-sitio.test/pedidos/gracias"
       }
     },
     {
@@ -404,6 +746,28 @@
           "Not an error; if you do not see recent edits during development, do a hard reload (Ctrl+Shift+R)."
         ],
         "ejemplo": "Request:\ncurl -i -H \"If-None-Match: \\\"v123\\\"\" http://mi-sitio.test/app.css\n\nResponse:\nHTTP/1.1 304 Not Modified"
+      },
+      "pt": {
+        "resumen": "O arquivo não mudou; use a cópia em cache.",
+        "explicacion": "O navegador pergunta se um CSS, JS ou imagem mudou (usando ETag ou If-Modified-Since). Se continua igual, o servidor responde 304 sem reenviar o arquivo.",
+        "causasComunes": [
+          "Carregamento repetido de arquivos estáticos servidos pelo Nginx."
+        ],
+        "comoSolucionar": [
+          "Não é um erro; se você não vê mudanças recentes em desenvolvimento, faça um recarregamento forçado (Ctrl+Shift+R)."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -H \"If-None-Match: \\\"v123\\\"\" http://mi-sitio.test/app.css\n\nResposta:\nHTTP/1.1 304 Not Modified"
+      },
+      "fr": {
+        "resumen": "Le fichier n'a pas changé ; utilise la copie en cache.",
+        "explicacion": "Le navigateur demande si un CSS, un JS ou une image a changé (avec ETag ou If-Modified-Since). Si rien n'a changé, le serveur répond 304 sans renvoyer le fichier.",
+        "causasComunes": [
+          "Chargement répété de fichiers statiques servis par Nginx."
+        ],
+        "comoSolucionar": [
+          "Ce n'est pas une erreur ; si tu ne vois pas les changements récents en développement, fais un rechargement forcé (Ctrl+Shift+R)."
+        ],
+        "ejemplo": "Requête :\ncurl -i -H \"If-None-Match: \\\"v123\\\"\" http://mi-sitio.test/app.css\n\nRéponse :\nHTTP/1.1 304 Not Modified"
       }
     },
     {
@@ -433,6 +797,30 @@
           "Call the exact URL with or without the trailing slash to avoid extra redirects in your API."
         ],
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/items -d '{\"nombre\":\"demo\"}'\n\nResponse:\nHTTP/1.1 307 Temporary Redirect\nLocation: http://mi-sitio.test/api/items/"
+      },
+      "pt": {
+        "resumen": "Redirecionamento temporário que mantém exatamente o mesmo método HTTP.",
+        "explicacion": "Diferente do 302 (em que muitos clientes transformam POST em GET), o 307 garante que um POST continue sendo POST na nova URL.",
+        "causasComunes": [
+          "FastAPI redirecionando rotas com ou sem barra final (/items para /items/).",
+          "Redirecionamento temporário em endpoints de API."
+        ],
+        "comoSolucionar": [
+          "Use a URL exata, com ou sem barra final, para evitar saltos extras na sua API."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/api/items -d '{\"nombre\":\"demo\"}'\n\nResposta:\nHTTP/1.1 307 Temporary Redirect\nLocation: http://mi-sitio.test/api/items/"
+      },
+      "fr": {
+        "resumen": "Redirection temporaire qui conserve exactement la même méthode HTTP.",
+        "explicacion": "Contrairement au 302 (où beaucoup de clients transforment un POST en GET), le 307 garantit qu'un POST reste un POST sur la nouvelle URL.",
+        "causasComunes": [
+          "FastAPI qui redirige les routes avec ou sans barre oblique finale (/items vers /items/).",
+          "Redirection temporaire sur des endpoints d'API."
+        ],
+        "comoSolucionar": [
+          "Utilise l'URL exacte, avec ou sans barre oblique finale, pour éviter des sauts supplémentaires dans ton API."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/api/items -d '{\"nombre\":\"demo\"}'\n\nRéponse :\nHTTP/1.1 307 Temporary Redirect\nLocation: http://mi-sitio.test/api/items/"
       }
     },
     {
@@ -460,6 +848,28 @@
           "Update your client to call the permanent URL directly."
         ],
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/v1/webhooks -d '{}'\n\nResponse:\nHTTP/1.1 308 Permanent Redirect\nLocation: https://mi-sitio.test/v2/webhooks"
+      },
+      "pt": {
+        "resumen": "Redirecionamento permanente que preserva o método HTTP original.",
+        "explicacion": "É a versão permanente do 307: move a rota de forma definitiva sem mudar POST/PUT para GET.",
+        "causasComunes": [
+          "Migração definitiva de um endpoint de API para HTTPS ou para uma versão nova (/v1 para /v2)."
+        ],
+        "comoSolucionar": [
+          "Atualize o cliente para apontar diretamente para a URL definitiva."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/v1/webhooks -d '{}'\n\nResposta:\nHTTP/1.1 308 Permanent Redirect\nLocation: https://mi-sitio.test/v2/webhooks"
+      },
+      "fr": {
+        "resumen": "Redirection permanente qui conserve la méthode HTTP d'origine.",
+        "explicacion": "C'est la version permanente du 307 : elle déplace la route de façon définitive sans transformer POST/PUT en GET.",
+        "causasComunes": [
+          "Migration définitive d'un endpoint d'API vers HTTPS ou vers une nouvelle version (/v1 vers /v2)."
+        ],
+        "comoSolucionar": [
+          "Mets à jour le client pour qu'il pointe directement vers l'URL définitive."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/v1/webhooks -d '{}'\n\nRéponse :\nHTTP/1.1 308 Permanent Redirect\nLocation: https://mi-sitio.test/v2/webhooks"
       }
     },
     {
@@ -493,6 +903,34 @@
           "Check URL parameters and inspect the error message returned by the server."
         ],
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: application/json\" -d '{bad_json}'\n\nResponse:\nHTTP/1.1 400 Bad Request\n\n{\"error\":\"Invalid JSON\"}"
+      },
+      "pt": {
+        "resumen": "O servidor não entendeu a requisição porque ela tem um formato incorreto.",
+        "explicacion": "Algo no que você enviou (JSON quebrado, parâmetro mal escrito ou cabeçalho inválido) impede o servidor de processá-la.",
+        "causasComunes": [
+          "JSON com vírgulas a mais ou aspas mal fechadas enviado ao Laravel ou FastAPI.",
+          "Cabeçalho Host inválido ou URL mal codificada rejeitada pelo Nginx.",
+          "Parâmetros obrigatórios com formato inválido no CodeIgniter."
+        ],
+        "comoSolucionar": [
+          "Valide o JSON que você envia e confira o cabeçalho Content-Type: application/json.",
+          "Confira os parâmetros da URL e leia a mensagem de detalhe que o servidor devolve."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: application/json\" -d '{mal_json}'\n\nResposta:\nHTTP/1.1 400 Bad Request\n\n{\"error\":\"JSON inválido\"}"
+      },
+      "fr": {
+        "resumen": "Le serveur n'a pas compris la requête car son format est incorrect.",
+        "explicacion": "Quelque chose dans ce que tu as envoyé (JSON cassé, paramètre mal écrit ou en-tête invalide) empêche le serveur de la traiter.",
+        "causasComunes": [
+          "JSON avec des virgules en trop ou des guillemets mal fermés envoyé à Laravel ou FastAPI.",
+          "En-tête Host invalide ou URL mal encodée rejetée par Nginx.",
+          "Paramètres obligatoires au format invalide dans CodeIgniter."
+        ],
+        "comoSolucionar": [
+          "Valide le JSON que tu envoies et vérifie l'en-tête Content-Type: application/json.",
+          "Vérifie les paramètres de l'URL et lis le message de détail renvoyé par le serveur."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: application/json\" -d '{mal_json}'\n\nRéponse :\nHTTP/1.1 400 Bad Request\n\n{\"error\":\"JSON invalide\"}"
       }
     },
     {
@@ -526,6 +964,34 @@
           "For cookie-based fetch() requests, pass credentials: 'include' and check cookie domain settings."
         ],
         "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/perfil\n\nResponse:\nHTTP/1.1 401 Unauthorized\n\n{\"message\":\"Unauthenticated.\"}"
+      },
+      "pt": {
+        "resumen": "Você precisa fazer login ou enviar credenciais válidas.",
+        "explicacion": "Embora o nome diga Unauthorized, na verdade significa 'não autenticado': o servidor não sabe quem você é ou o seu token expirou.",
+        "causasComunes": [
+          "Falta o cabeçalho Authorization: Bearer TU_TOKEN no Laravel Sanctum ou FastAPI.",
+          "Cookie de sessão ausente ou expirado no Laravel ou CodeIgniter.",
+          "O Nginx descartou o cabeçalho Authorization ao repassar a requisição ao PHP-FPM."
+        ],
+        "comoSolucionar": [
+          "Envie o token correto em Authorization: Bearer TU_TOKEN ou faça login novamente.",
+          "Em requisições com cookies (fetch), use credentials: 'include' e verifique o domínio dos cookies."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/api/perfil\n\nResposta:\nHTTP/1.1 401 Unauthorized\n\n{\"message\":\"Unauthenticated.\"}"
+      },
+      "fr": {
+        "resumen": "Tu dois te connecter ou envoyer des identifiants valides.",
+        "explicacion": "Bien que le nom dise Unauthorized, cela signifie en réalité « non authentifié » : le serveur ne sait pas qui tu es ou ton token a expiré.",
+        "causasComunes": [
+          "L'en-tête Authorization: Bearer TU_TOKEN est absent dans Laravel Sanctum ou FastAPI.",
+          "Cookie de session absent ou expiré dans Laravel ou CodeIgniter.",
+          "Nginx a supprimé l'en-tête Authorization en transmettant la requête à PHP-FPM."
+        ],
+        "comoSolucionar": [
+          "Envoie le bon token dans Authorization: Bearer TU_TOKEN ou reconnecte-toi.",
+          "Pour les requêtes avec cookies (fetch), utilise credentials: 'include' et vérifie le domaine des cookies."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/api/perfil\n\nRéponse :\nHTTP/1.1 401 Unauthorized\n\n{\"message\":\"Unauthenticated.\"}"
       }
     },
     {
@@ -559,6 +1025,34 @@
           "Check the roles and permissions assigned to the 'demo' user in your authorization logic."
         ],
         "ejemplo": "Request:\ncurl -i -H \"Authorization: Bearer TU_TOKEN\" http://mi-sitio.test/api/admin/ajustes\n\nResponse:\nHTTP/1.1 403 Forbidden\n\n{\"message\":\"This action is unauthorized.\"}"
+      },
+      "pt": {
+        "resumen": "O servidor sabe quem você é, mas você não tem permissão para entrar ali.",
+        "explicacion": "Diferente do 401 (não identificado), o 403 significa acesso proibido: sua conta não tem o papel necessário ou o servidor web bloqueia essa pasta.",
+        "causasComunes": [
+          "O Nginx aponta para uma pasta sem index.php/index.html e com listagem de diretórios desativada.",
+          "Policy ou Gate no Laravel, ou filtro de papéis no CodeIgniter/FastAPI, devolvendo false.",
+          "Permissões insuficientes em arquivos ou pastas do projeto."
+        ],
+        "comoSolucionar": [
+          "Verifique se a raiz pública do site aponta para public/ (Laravel/CodeIgniter) e se o index.php existe.",
+          "Revise os papéis e permissões do usuário 'demo' na sua política de autorização."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -H \"Authorization: Bearer TU_TOKEN\" http://mi-sitio.test/api/admin/ajustes\n\nResposta:\nHTTP/1.1 403 Forbidden\n\n{\"message\":\"Esta ação não está autorizada.\"}"
+      },
+      "fr": {
+        "resumen": "Le serveur sait qui tu es, mais tu n'as pas la permission d'accéder à cette ressource.",
+        "explicacion": "Contrairement au 401 (non identifié), le 403 signifie accès interdit : ton compte n'a pas le rôle nécessaire ou le serveur web bloque ce dossier.",
+        "causasComunes": [
+          "Nginx pointe vers un dossier sans index.php/index.html et avec le listage des répertoires désactivé.",
+          "Policy ou Gate dans Laravel, ou filtre de rôles dans CodeIgniter/FastAPI, qui renvoie false.",
+          "Permissions insuffisantes sur les fichiers ou dossiers du projet."
+        ],
+        "comoSolucionar": [
+          "Vérifie que la racine publique du site pointe vers public/ (Laravel/CodeIgniter) et que index.php existe.",
+          "Vérifie les rôles et permissions de l'utilisateur 'demo' dans ta politique d'autorisation."
+        ],
+        "ejemplo": "Requête :\ncurl -i -H \"Authorization: Bearer TU_TOKEN\" http://mi-sitio.test/api/admin/ajustes\n\nRéponse :\nHTTP/1.1 403 Forbidden\n\n{\"message\":\"Cette action n'est pas autorisée.\"}"
       }
     },
     {
@@ -592,6 +1086,34 @@
           "Ensure Nginx forwards non-file routes to your framework's index.php."
         ],
         "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/usuarios/9999\n\nResponse:\nHTTP/1.1 404 Not Found\n\n{\"message\":\"User not found\"}"
+      },
+      "pt": {
+        "resumen": "O endereço ou o registro que você procura não existe.",
+        "explicacion": "O servidor respondeu corretamente, mas não encontrou nenhuma rota nem arquivo que corresponda à URL pedida.",
+        "causasComunes": [
+          "Erro de digitação na rota ou falta de defini-la em routes/web.php, routes/api.php (Laravel), Routes.php (CodeIgniter) ou no router do FastAPI.",
+          "Falta try_files $uri $uri/ /index.php?$query_string; no Nginx para rotas amigáveis.",
+          "Registro não encontrado no banco de dados (findOrFail no Laravel)."
+        ],
+        "comoSolucionar": [
+          "Liste as rotas registradas (php artisan route:list ou /docs no FastAPI) e confira maiúsculas/minúsculas e prefixos (/api).",
+          "Certifique-se de que o Nginx encaminha as rotas para o index.php do framework."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/api/usuarios/9999\n\nResposta:\nHTTP/1.1 404 Not Found\n\n{\"message\":\"Usuário não encontrado\"}"
+      },
+      "fr": {
+        "resumen": "L'adresse ou l'enregistrement que tu cherches n'existe pas.",
+        "explicacion": "Le serveur a répondu correctement, mais n'a trouvé aucune route ni aucun fichier correspondant à l'URL demandée.",
+        "causasComunes": [
+          "Faute de frappe dans la route, ou route non définie dans routes/web.php, routes/api.php (Laravel), Routes.php (CodeIgniter) ou dans le routeur de FastAPI.",
+          "Il manque try_files $uri $uri/ /index.php?$query_string; dans Nginx pour les URL propres.",
+          "Enregistrement introuvable en base de données (findOrFail dans Laravel)."
+        ],
+        "comoSolucionar": [
+          "Liste les routes enregistrées (php artisan route:list ou /docs dans FastAPI) et vérifie les majuscules et les préfixes (/api).",
+          "Assure-toi que Nginx redirige les routes vers le index.php du framework."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/api/usuarios/9999\n\nRéponse :\nHTTP/1.1 404 Not Found\n\n{\"message\":\"Utilisateur introuvable\"}"
       }
     },
     {
@@ -621,6 +1143,30 @@
           "Check the Allow response header and align the request method with the route definition."
         ],
         "ejemplo": "Request:\ncurl -i -X DELETE http://mi-sitio.test/api/salud\n\nResponse:\nHTTP/1.1 405 Method Not Allowed\nAllow: GET, HEAD"
+      },
+      "pt": {
+        "resumen": "A rota existe, mas não aceita esse método HTTP.",
+        "explicacion": "Por exemplo, você fez um GET em uma rota que só aceita POST, ou um POST em uma rota que só aceita PUT.",
+        "causasComunes": [
+          "Formulário HTML enviando POST para uma rota definida como Route::get() no Laravel ou @app.get() no FastAPI.",
+          "Falta o campo _method=PUT/DELETE em formulários HTML do Laravel ou CodeIgniter."
+        ],
+        "comoSolucionar": [
+          "Confira o cabeçalho Allow da resposta e mude o método na sua requisição ou na definição da rota."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X DELETE http://mi-sitio.test/api/salud\n\nResposta:\nHTTP/1.1 405 Method Not Allowed\nAllow: GET, HEAD"
+      },
+      "fr": {
+        "resumen": "La route existe, mais elle n'accepte pas cette méthode HTTP.",
+        "explicacion": "Par exemple, tu as fait un GET sur une route qui n'accepte que POST, ou un POST sur une route qui n'accepte que PUT.",
+        "causasComunes": [
+          "Formulaire HTML qui envoie un POST vers une route définie avec Route::get() dans Laravel ou @app.get() dans FastAPI.",
+          "Le champ _method=PUT/DELETE est absent des formulaires HTML de Laravel ou CodeIgniter."
+        ],
+        "comoSolucionar": [
+          "Consulte l'en-tête Allow de la réponse et change la méthode de ta requête ou la définition de la route."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X DELETE http://mi-sitio.test/api/salud\n\nRéponse :\nHTTP/1.1 405 Method Not Allowed\nAllow: GET, HEAD"
       }
     },
     {
@@ -648,6 +1194,28 @@
           "Set the Accept header to application/json or */* to match what the endpoint supports."
         ],
         "ejemplo": "Request:\ncurl -i -H \"Accept: application/xml\" http://mi-sitio.test/api/notas\n\nResponse:\nHTTP/1.1 406 Not Acceptable"
+      },
+      "pt": {
+        "resumen": "O servidor não consegue devolver o formato pedido no cabeçalho Accept.",
+        "explicacion": "O cliente pediu um tipo de resposta específico (por exemplo, application/xml) que o servidor não suporta para essa rota.",
+        "causasComunes": [
+          "Cabeçalho Accept incompatível enviado a um controller do CodeIgniter ou Laravel com negociação de conteúdo."
+        ],
+        "comoSolucionar": [
+          "Mude o cabeçalho Accept para application/json ou */* conforme o que o endpoint suportar."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -H \"Accept: application/xml\" http://mi-sitio.test/api/notas\n\nResposta:\nHTTP/1.1 406 Not Acceptable"
+      },
+      "fr": {
+        "resumen": "Le serveur ne peut pas renvoyer le format demandé dans l'en-tête Accept.",
+        "explicacion": "Le client a demandé un type de réponse précis (par exemple application/xml) que le serveur ne prend pas en charge pour cette route.",
+        "causasComunes": [
+          "En-tête Accept incompatible envoyé à un contrôleur CodeIgniter ou Laravel avec négociation de contenu."
+        ],
+        "comoSolucionar": [
+          "Change l'en-tête Accept en application/json ou */* selon ce que prend en charge l'endpoint."
+        ],
+        "ejemplo": "Requête :\ncurl -i -H \"Accept: application/xml\" http://mi-sitio.test/api/notas\n\nRéponse :\nHTTP/1.1 406 Not Acceptable"
       }
     },
     {
@@ -677,6 +1245,30 @@
           "Retry the request and check Nginx client_body_timeout / client_header_timeout for large uploads."
         ],
         "ejemplo": "Request:\n(Slow connection stalled mid-upload)\n\nResponse:\nHTTP/1.1 408 Request Timeout"
+      },
+      "pt": {
+        "resumen": "O cliente demorou demais para terminar de enviar a requisição.",
+        "explicacion": "O servidor abriu a conexão e esperou, mas o cliente não enviou o restante dos dados antes do limite de tempo.",
+        "causasComunes": [
+          "Conexão lenta ou instável ao enviar arquivos grandes para o Nginx.",
+          "Cliente que abre uma conexão HTTP e a deixa inativa."
+        ],
+        "comoSolucionar": [
+          "Tente a requisição novamente e confira client_body_timeout / client_header_timeout no Nginx se você envia arquivos grandes."
+        ],
+        "ejemplo": "Requisição:\n(Conexão lenta interrompida no meio do envio)\n\nResposta:\nHTTP/1.1 408 Request Timeout"
+      },
+      "fr": {
+        "resumen": "Le client a mis trop de temps à finir d'envoyer la requête.",
+        "explicacion": "Le serveur a ouvert la connexion et a attendu, mais le client n'a pas envoyé le reste des données avant la limite de temps.",
+        "causasComunes": [
+          "Connexion lente ou instable lors de l'envoi de gros fichiers vers Nginx.",
+          "Client qui ouvre une connexion HTTP et la laisse inactive."
+        ],
+        "comoSolucionar": [
+          "Réessaie la requête et vérifie client_body_timeout / client_header_timeout dans Nginx si tu envoies de gros fichiers."
+        ],
+        "ejemplo": "Requête :\n(Connexion lente interrompue en plein envoi)\n\nRéponse :\nHTTP/1.1 408 Request Timeout"
       }
     },
     {
@@ -706,6 +1298,30 @@
           "Check if the record already exists before creating it, or reload the latest version before saving."
         ],
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/usuarios -H \"Content-Type: application/json\" -d '{\"email\":\"demo@ejemplo.com\"}'\n\nResponse:\nHTTP/1.1 409 Conflict\n\n{\"error\":\"Email is already registered\"}"
+      },
+      "pt": {
+        "resumen": "A requisição entra em conflito com o estado atual do recurso.",
+        "explicacion": "Costuma acontecer ao tentar criar algo duplicado (como um e-mail já cadastrado) ou ao editar um registro que outra pessoa modificou antes.",
+        "causasComunes": [
+          "Violação de índice único no banco de dados tratada no Laravel, CodeIgniter ou FastAPI.",
+          "Edição simultânea com controle de versão otimista."
+        ],
+        "comoSolucionar": [
+          "Verifique se o registro já existe antes de inseri-lo ou recarregue o recurso para obter a versão atual."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/api/usuarios -H \"Content-Type: application/json\" -d '{\"email\":\"demo@ejemplo.com\"}'\n\nResposta:\nHTTP/1.1 409 Conflict\n\n{\"error\":\"O e-mail já está cadastrado\"}"
+      },
+      "fr": {
+        "resumen": "La requête entre en conflit avec l'état actuel de la ressource.",
+        "explicacion": "Cela arrive souvent lorsqu'on tente de créer un doublon (comme un e-mail déjà enregistré) ou de modifier un enregistrement que quelqu'un d'autre a modifié avant.",
+        "causasComunes": [
+          "Violation d'un index unique en base de données gérée dans Laravel, CodeIgniter ou FastAPI.",
+          "Modification simultanée avec contrôle de version optimiste."
+        ],
+        "comoSolucionar": [
+          "Vérifie si l'enregistrement existe déjà avant de l'insérer, ou recharge la ressource pour obtenir sa version actuelle."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/api/usuarios -H \"Content-Type: application/json\" -d '{\"email\":\"demo@ejemplo.com\"}'\n\nRéponse :\nHTTP/1.1 409 Conflict\n\n{\"error\":\"L'e-mail est déjà enregistré\"}"
       }
     },
     {
@@ -733,6 +1349,28 @@
           "Stop requesting the old URL and generate a new link or migrate to the active API version."
         ],
         "ejemplo": "Request:\ncurl -i http://mi-sitio.test/descargas/expired-token\n\nResponse:\nHTTP/1.1 410 Gone\n\n{\"message\":\"This link has expired\"}"
+      },
+      "pt": {
+        "resumen": "O recurso existiu antes, mas foi removido definitivamente.",
+        "explicacion": "É mais específico que um 404: avisa ao cliente e aos buscadores que essa página ou versão da API não voltará.",
+        "causasComunes": [
+          "Link de download temporário expirado ou versão antiga da API desativada."
+        ],
+        "comoSolucionar": [
+          "Pare de usar esse link e solicite um novo, ou migre para a versão vigente da API."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/descargas/token-vencido\n\nResposta:\nHTTP/1.1 410 Gone\n\n{\"message\":\"Este link já expirou\"}"
+      },
+      "fr": {
+        "resumen": "La ressource a existé, mais elle a été supprimée définitivement.",
+        "explicacion": "C'est plus précis qu'un 404 : il avertit le client et les moteurs de recherche que cette page ou cette version d'API ne reviendra pas.",
+        "causasComunes": [
+          "Lien de téléchargement temporaire expiré ou ancienne version d'API retirée."
+        ],
+        "comoSolucionar": [
+          "Arrête d'utiliser ce lien et demandes-en un nouveau, ou migre vers la version actuelle de l'API."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/descargas/token-vencido\n\nRéponse :\nHTTP/1.1 410 Gone\n\n{\"message\":\"Ce lien a expiré\"}"
       }
     },
     {
@@ -762,6 +1400,30 @@
           "Increase client_max_body_size in Nginx (e.g. 50M) and raise upload_max_filesize and post_max_size in php.ini, then restart Nginx and PHP-FPM."
         ],
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/subir -F \"archivo=@large-video.mp4\"\n\nResponse:\nHTTP/1.1 413 Request Entity Too Large"
+      },
+      "pt": {
+        "resumen": "O arquivo ou os dados que você enviou superam o tamanho máximo permitido.",
+        "explicacion": "Muito frequente ao enviar imagens, PDFs ou backups SQL grandes sem ajustar os limites do servidor.",
+        "causasComunes": [
+          "client_max_body_size muito baixo no Nginx (por padrão 1 MB).",
+          "upload_max_filesize ou post_max_size baixos no php.ini (PHP-FPM / Laravel / CodeIgniter)."
+        ],
+        "comoSolucionar": [
+          "Aumente client_max_body_size no Nginx (por exemplo, 50M) e ajuste upload_max_filesize e post_max_size no php.ini; depois reinicie o Nginx e o PHP-FPM."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/api/subir -F \"archivo=@video-grande.mp4\"\n\nResposta:\nHTTP/1.1 413 Request Entity Too Large"
+      },
+      "fr": {
+        "resumen": "Le fichier ou les données que tu as envoyés dépassent la taille maximale autorisée.",
+        "explicacion": "Très fréquent lors de l'envoi d'images, de PDF ou de grosses sauvegardes SQL sans avoir ajusté les limites du serveur.",
+        "causasComunes": [
+          "client_max_body_size trop bas dans Nginx (1 Mo par défaut).",
+          "upload_max_filesize ou post_max_size trop bas dans php.ini (PHP-FPM / Laravel / CodeIgniter)."
+        ],
+        "comoSolucionar": [
+          "Augmente client_max_body_size dans Nginx (par exemple 50M) et ajuste upload_max_filesize et post_max_size dans php.ini, puis redémarre Nginx et PHP-FPM."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/api/subir -F \"archivo=@video-grande.mp4\"\n\nRéponse :\nHTTP/1.1 413 Request Entity Too Large"
       }
     },
     {
@@ -791,12 +1453,96 @@
           "Send the expected Content-Type header (such as application/json or multipart/form-data)."
         ],
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: text/plain\" -d 'hello'\n\nResponse:\nHTTP/1.1 415 Unsupported Media Type"
+      },
+      "pt": {
+        "resumen": "O servidor não aceita o formato (Content-Type) que você enviou.",
+        "explicacion": "Por exemplo, você enviou texto simples ou um formulário quando a API exige JSON.",
+        "causasComunes": [
+          "Falta o cabeçalho Content-Type: application/json ao chamar o FastAPI ou uma API do Laravel/CodeIgniter.",
+          "Envio de um arquivo com MIME não suportado."
+        ],
+        "comoSolucionar": [
+          "Adicione o cabeçalho Content-Type correto (como application/json ou multipart/form-data)."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: text/plain\" -d 'hola'\n\nResposta:\nHTTP/1.1 415 Unsupported Media Type"
+      },
+      "fr": {
+        "resumen": "Le serveur n'accepte pas le format (Content-Type) que tu as envoyé.",
+        "explicacion": "Par exemple, tu as envoyé du texte brut ou un formulaire alors que l'API exige du JSON.",
+        "causasComunes": [
+          "L'en-tête Content-Type: application/json est absent lors de l'appel à FastAPI ou à une API Laravel/CodeIgniter.",
+          "Envoi d'un fichier dont le type MIME n'est pas pris en charge."
+        ],
+        "comoSolucionar": [
+          "Ajoute l'en-tête Content-Type correct (comme application/json ou multipart/form-data)."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: text/plain\" -d 'hola'\n\nRéponse :\nHTTP/1.1 415 Unsupported Media Type"
+      }
+    },
+    {
+      "codigo": 418,
+      "nombre": "I'm a teapot",
+      "familia": "4xx",
+      "estandar": false,
+      "broma": true,
+      "es": {
+        "resumen": "Código de broma: «soy una tetera y no puedo preparar café».",
+        "explicacion": "Nació como una broma del 1 de abril (RFC 2324, el protocolo de control de cafeteras de Hyper Text) y no es un código estándar de uso real. Algunos frameworks, servicios y pruebas lo devuelven a propósito, por ejemplo para rechazar bots o como respuesta de ejemplo.",
+        "causasComunes": [
+          "Una ruta de pruebas o un huevo de Pascua del framework que responde 418 a propósito.",
+          "Un servicio o firewall que lo usa para rechazar bots o peticiones sospechosas."
+        ],
+        "comoSolucionar": [
+          "No es un error de tu red: revisa si tu código o el servicio al que llamas lo devuelve a propósito y qué condición lo activa.",
+          "Si lo recibes de un servicio ajeno, trátalo como un rechazo genérico (4xx) y no reintentes en bucle."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/cafe\n\nRespuesta:\nHTTP/1.1 418 I'm a teapot\n\n{\"message\":\"Solo preparo té.\"}"
+      },
+      "en": {
+        "resumen": "A joke code: \"I'm a teapot and cannot brew coffee\".",
+        "explicacion": "It began as an April Fools' joke (RFC 2324, the Hyper Text Coffee Pot Control Protocol) and is not a standard code for real use. Some frameworks, services and tests return it on purpose, for example to reject bots or as a sample response.",
+        "causasComunes": [
+          "A test route or a framework easter egg that answers 418 on purpose.",
+          "A service or firewall using it to reject bots or suspicious requests."
+        ],
+        "comoSolucionar": [
+          "It is not a network problem: check whether your code or the service you call returns it on purpose and what condition triggers it.",
+          "If you receive it from a third-party service, treat it as a generic 4xx rejection and do not retry in a loop."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/cafe\n\nResponse:\nHTTP/1.1 418 I'm a teapot\n\n{\"message\":\"I only brew tea.\"}"
+      },
+      "pt": {
+        "resumen": "Código de brincadeira: «sou um bule de chá e não posso preparar café».",
+        "explicacion": "Nasceu como uma piada de 1º de abril (RFC 2324, o protocolo de controle de cafeteiras Hyper Text) e não é um código padrão de uso real. Alguns frameworks, serviços e testes o devolvem de propósito, por exemplo para rejeitar bots ou como resposta de exemplo.",
+        "causasComunes": [
+          "Uma rota de testes ou um easter egg do framework que responde 418 de propósito.",
+          "Um serviço ou firewall que o usa para rejeitar bots ou requisições suspeitas."
+        ],
+        "comoSolucionar": [
+          "Não é um erro da sua rede: verifique se o seu código ou o serviço que você chama o devolve de propósito e qual condição o ativa.",
+          "Se você o recebe de um serviço de terceiros, trate-o como uma rejeição genérica (4xx) e não tente de novo em loop."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/cafe\n\nResposta:\nHTTP/1.1 418 I'm a teapot\n\n{\"message\":\"Só preparo chá.\"}"
+      },
+      "fr": {
+        "resumen": "Code de plaisanterie : « je suis une théière et je ne peux pas préparer de café ».",
+        "explicacion": "Il est né comme une blague du 1er avril (RFC 2324, le protocole de contrôle de cafetières Hyper Text) et ce n'est pas un code standard d'usage réel. Certains frameworks, services et tests le renvoient volontairement, par exemple pour rejeter des bots ou comme réponse d'exemple.",
+        "causasComunes": [
+          "Une route de test ou un easter egg du framework qui répond 418 volontairement.",
+          "Un service ou un pare-feu qui l'utilise pour rejeter des bots ou des requêtes suspectes."
+        ],
+        "comoSolucionar": [
+          "Ce n'est pas un problème de ton réseau : vérifie si ton code ou le service que tu appelles le renvoie volontairement, et quelle condition le déclenche.",
+          "Si tu le reçois d'un service tiers, traite-le comme un rejet générique (4xx) et ne réessaie pas en boucle."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/cafe\n\nRéponse :\nHTTP/1.1 418 I'm a teapot\n\n{\"message\":\"Je ne prépare que du thé.\"}"
       }
     },
     {
       "codigo": 419,
       "nombre": "Page Expired (Laravel)",
       "familia": "4xx",
+      "estandar": false,
       "es": {
         "resumen": "Código no estándar usado por Laravel cuando falta o caducó el token CSRF o la sesión.",
         "explicacion": "No forma parte del estándar HTTP oficial, pero lo verás a menudo en Laravel al enviar un formulario cuya sesión venció o sin la directiva @csrf.",
@@ -824,6 +1570,34 @@
           "Check APP_URL, SESSION_DOMAIN, and SESSION_SECURE_COOKIE in .env, run php artisan config:clear, and reload."
         ],
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/contacto -d \"mensaje=Hello\"\n\nResponse:\nHTTP/1.1 419 Page Expired\n\n{\"message\":\"CSRF token mismatch.\"}"
+      },
+      "pt": {
+        "resumen": "Código não padrão usado pelo Laravel quando o token CSRF ou a sessão está ausente ou expirou.",
+        "explicacion": "Não faz parte do padrão HTTP oficial, mas você o verá com frequência no Laravel ao enviar um formulário cuja sessão expirou ou sem a diretiva @csrf.",
+        "causasComunes": [
+          "Falta @csrf dentro de um formulário <form method=\"POST\"> no Blade.",
+          "O cookie de sessão não é salvo (SESSION_DOMAIN, SESSION_SECURE_COOKIE ou domínio diferente ao abrir um túnel).",
+          "Pasta storage/framework/sessions sem permissão de escrita ou aba aberta por horas."
+        ],
+        "comoSolucionar": [
+          "Adicione @csrf no formulário ou envie o cabeçalho X-CSRF-TOKEN em requisições AJAX.",
+          "Confira APP_URL, SESSION_DOMAIN e SESSION_SECURE_COOKIE no .env, limpe o cache (php artisan config:clear) e recarregue a página."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/contacto -d \"mensaje=Olá\"\n\nResposta:\nHTTP/1.1 419 Page Expired\n\n{\"message\":\"CSRF token mismatch.\"}"
+      },
+      "fr": {
+        "resumen": "Code non standard utilisé par Laravel lorsque le token CSRF ou la session est absent ou a expiré.",
+        "explicacion": "Il ne fait pas partie de la norme HTTP officielle, mais tu le verras souvent dans Laravel lors de l'envoi d'un formulaire dont la session a expiré ou sans la directive @csrf.",
+        "causasComunes": [
+          "@csrf manquant dans un formulaire <form method=\"POST\"> en Blade.",
+          "Le cookie de session n'est pas enregistré (SESSION_DOMAIN, SESSION_SECURE_COOKIE ou domaine différent lors de l'ouverture d'un tunnel).",
+          "Dossier storage/framework/sessions sans droits d'écriture, ou onglet resté ouvert pendant des heures."
+        ],
+        "comoSolucionar": [
+          "Ajoute @csrf dans le formulaire ou envoie l'en-tête X-CSRF-TOKEN dans les requêtes AJAX.",
+          "Vérifie APP_URL, SESSION_DOMAIN et SESSION_SECURE_COOKIE dans .env, vide le cache (php artisan config:clear) et recharge la page."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/contacto -d \"mensaje=Bonjour\"\n\nRéponse :\nHTTP/1.1 419 Page Expired\n\n{\"message\":\"CSRF token mismatch.\"}"
       }
     },
     {
@@ -855,6 +1629,89 @@
           "Inspect the errors/detail field in the JSON response to see which field failed and why."
         ],
         "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/usuarios -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"email\":\"not-an-email\"}'\n\nResponse:\nHTTP/1.1 422 Unprocessable Content\n\n{\"errors\":{\"email\":[\"The email field must be a valid email address.\"]}}"
+      },
+      "pt": {
+        "resumen": "O formato é válido, mas os dados não passaram na validação.",
+        "explicacion": "É o código favorito do Laravel e do FastAPI quando o JSON está bem formado, mas falta um campo obrigatório, um e-mail é inválido ou um número está fora do intervalo.",
+        "causasComunes": [
+          "Erro de validação em FormRequest / Validator do Laravel.",
+          "Erro de schema do Pydantic no FastAPI (tipo de dado incorreto ou campo ausente).",
+          "Regras de validação falhando no CodeIgniter."
+        ],
+        "comoSolucionar": [
+          "Leia o objeto errors/detail do JSON de resposta para ver exatamente qual campo falhou e por quê."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST http://mi-sitio.test/api/usuarios -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"email\":\"no-es-correo\"}'\n\nResposta:\nHTTP/1.1 422 Unprocessable Content\n\n{\"errors\":{\"email\":[\"O campo email deve ser um e-mail válido.\"]}}"
+      },
+      "fr": {
+        "resumen": "Le format est valide, mais les données n'ont pas passé la validation.",
+        "explicacion": "C'est le code préféré de Laravel et FastAPI lorsque le JSON est bien formé, mais qu'un champ obligatoire manque, qu'un e-mail est invalide ou qu'un nombre est hors limites.",
+        "causasComunes": [
+          "Erreur de validation dans un FormRequest / Validator de Laravel.",
+          "Erreur de schéma Pydantic dans FastAPI (type de donnée incorrect ou champ manquant).",
+          "Règles de validation en échec dans CodeIgniter."
+        ],
+        "comoSolucionar": [
+          "Lis l'objet errors/detail du JSON de réponse pour voir exactement quel champ a échoué et pourquoi."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST http://mi-sitio.test/api/usuarios -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"email\":\"no-es-correo\"}'\n\nRéponse :\nHTTP/1.1 422 Unprocessable Content\n\n{\"errors\":{\"email\":[\"Le champ email doit être une adresse e-mail valide.\"]}}"
+      }
+    },
+    {
+      "codigo": 425,
+      "nombre": "Too Early",
+      "familia": "4xx",
+      "es": {
+        "resumen": "El servidor no quiere procesar una petición que podría repetirse.",
+        "explicacion": "Se usa con TLS 1.3 y datos «0-RTT» (envío temprano): como esa petición inicial podría ser reenviada por un atacante, el servidor prefiere que el cliente la repita cuando la conexión ya esté asentada. En la práctica casi nunca lo verás al desarrollar una app.",
+        "causasComunes": [
+          "Un proxy o CDN con TLS 1.3 y 0-RTT que rechaza peticiones no seguras enviadas demasiado pronto (por ejemplo un POST).",
+          "Un servidor configurado para no aceptar datos tempranos en ciertas rutas."
+        ],
+        "comoSolucionar": [
+          "Repite la petición: los navegadores y muchos clientes lo hacen solos al recibir 425.",
+          "Si controlas el servidor, revisa la configuración de 0-RTT (early data) de tu proxy."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST https://mi-sitio.test/api/pagos -d \"monto=10\"\n\nRespuesta:\nHTTP/1.1 425 Too Early\n\n(vuelve a enviar la misma petición y el servidor la acepta)"
+      },
+      "en": {
+        "resumen": "The server will not process a request that might be replayed.",
+        "explicacion": "It is used with TLS 1.3 and \"0-RTT\" (early data): since that first request could be replayed by an attacker, the server prefers that the client repeat it once the connection is established. In practice you will almost never see it while building an app.",
+        "causasComunes": [
+          "A proxy or CDN with TLS 1.3 and 0-RTT that rejects unsafe requests sent too early (for example a POST).",
+          "A server configured not to accept early data on certain routes."
+        ],
+        "comoSolucionar": [
+          "Repeat the request: browsers and many clients do it automatically on a 425.",
+          "If you control the server, review the 0-RTT (early data) setting of your proxy."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST https://mi-sitio.test/api/pagos -d \"monto=10\"\n\nResponse:\nHTTP/1.1 425 Too Early\n\n(send the same request again and the server accepts it)"
+      },
+      "pt": {
+        "resumen": "O servidor não quer processar uma requisição que poderia ser repetida.",
+        "explicacion": "É usado com TLS 1.3 e dados «0-RTT» (envio antecipado): como essa requisição inicial poderia ser reenviada por um atacante, o servidor prefere que o cliente a repita quando a conexão já estiver estabelecida. Na prática, você quase nunca verá isso ao desenvolver um app.",
+        "causasComunes": [
+          "Um proxy ou CDN com TLS 1.3 e 0-RTT que rejeita requisições não seguras enviadas cedo demais (por exemplo, um POST).",
+          "Um servidor configurado para não aceitar dados antecipados em certas rotas."
+        ],
+        "comoSolucionar": [
+          "Repita a requisição: os navegadores e muitos clientes fazem isso sozinhos ao receber 425.",
+          "Se você controla o servidor, revise a configuração de 0-RTT (early data) do seu proxy."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X POST https://mi-sitio.test/api/pagos -d \"monto=10\"\n\nResposta:\nHTTP/1.1 425 Too Early\n\n(envie a mesma requisição novamente e o servidor a aceita)"
+      },
+      "fr": {
+        "resumen": "Le serveur ne veut pas traiter une requête qui pourrait être rejouée.",
+        "explicacion": "Il est utilisé avec TLS 1.3 et les données « 0-RTT » (envoi anticipé) : comme cette requête initiale pourrait être rejouée par un attaquant, le serveur préfère que le client la répète une fois la connexion bien établie. En pratique, tu ne le verras presque jamais en développant une application.",
+        "causasComunes": [
+          "Un proxy ou un CDN avec TLS 1.3 et 0-RTT qui rejette les requêtes non sûres envoyées trop tôt (par exemple un POST).",
+          "Un serveur configuré pour ne pas accepter les données anticipées sur certaines routes."
+        ],
+        "comoSolucionar": [
+          "Répète la requête : les navigateurs et de nombreux clients le font automatiquement en recevant un 425.",
+          "Si tu contrôles le serveur, vérifie la configuration du 0-RTT (early data) de ton proxy."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X POST https://mi-sitio.test/api/pagos -d \"monto=10\"\n\nRéponse :\nHTTP/1.1 425 Too Early\n\n(renvoie la même requête et le serveur l'accepte)"
       }
     },
     {
@@ -886,6 +1743,89 @@
           "Check the Retry-After header to see when to retry and make sure your frontend is not looping requests."
         ],
         "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/buscar?q=demo\n\nResponse:\nHTTP/1.1 429 Too Many Requests\nRetry-After: 30\n\n{\"message\":\"Too Many Attempts.\"}"
+      },
+      "pt": {
+        "resumen": "Você fez requisições demais em pouco tempo.",
+        "explicacion": "O servidor ativou um limite de velocidade (rate limit) para se proteger de loops infinitos ou abuso.",
+        "causasComunes": [
+          "Middleware throttle no Laravel (por exemplo, 60 requisições por minuto).",
+          "Um useEffect ou watcher no frontend chamando a API em loop infinito.",
+          "Regra limit_req no Nginx ou limitador no FastAPI."
+        ],
+        "comoSolucionar": [
+          "Confira o cabeçalho Retry-After para saber quanto esperar e verifique se o seu frontend não dispara requisições repetidas."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/api/buscar?q=demo\n\nResposta:\nHTTP/1.1 429 Too Many Requests\nRetry-After: 30\n\n{\"message\":\"Too Many Attempts.\"}"
+      },
+      "fr": {
+        "resumen": "Tu as fait trop de requêtes en très peu de temps.",
+        "explicacion": "Le serveur a activé une limite de débit (rate limit) pour se protéger des boucles infinies ou des abus.",
+        "causasComunes": [
+          "Middleware throttle dans Laravel (par exemple 60 requêtes par minute).",
+          "Un useEffect ou un watcher côté frontend qui appelle l'API en boucle infinie.",
+          "Règle limit_req dans Nginx ou limiteur dans FastAPI."
+        ],
+        "comoSolucionar": [
+          "Consulte l'en-tête Retry-After pour savoir combien de temps attendre et vérifie que ton frontend ne déclenche pas de requêtes répétées."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/api/buscar?q=demo\n\nRéponse :\nHTTP/1.1 429 Too Many Requests\nRetry-After: 30\n\n{\"message\":\"Too Many Attempts.\"}"
+      }
+    },
+    {
+      "codigo": 451,
+      "nombre": "Unavailable For Legal Reasons",
+      "familia": "4xx",
+      "es": {
+        "resumen": "El contenido no está disponible por una razón legal.",
+        "explicacion": "El servidor sabe que el recurso existe, pero no puede mostrarlo por una orden legal, una ley o una restricción regional (el número alude a la novela «Fahrenheit 451»). Es distinto de 403: aquí la causa es legal, no un permiso de la cuenta.",
+        "causasComunes": [
+          "Contenido bloqueado por una orden judicial, derechos de autor o normas de un país.",
+          "Un servicio que restringe el acceso según la región del visitante."
+        ],
+        "comoSolucionar": [
+          "Lee el cuerpo de la respuesta: suele explicar quién bloquea el contenido y por qué.",
+          "Como desarrollador no se arregla con código: solo puedes mostrar un mensaje claro al usuario."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/articulos/demo\n\nRespuesta:\nHTTP/1.1 451 Unavailable For Legal Reasons\n\n{\"message\":\"Contenido no disponible en tu región.\"}"
+      },
+      "en": {
+        "resumen": "The content is unavailable for a legal reason.",
+        "explicacion": "The server knows the resource exists but cannot show it because of a legal order, a law or a regional restriction (the number is a nod to the novel \"Fahrenheit 451\"). It differs from 403: here the cause is legal, not an account permission.",
+        "causasComunes": [
+          "Content blocked by a court order, copyright or a country's rules.",
+          "A service that restricts access depending on the visitor's region."
+        ],
+        "comoSolucionar": [
+          "Read the response body: it usually explains who blocks the content and why.",
+          "As a developer it cannot be fixed with code: you can only show the user a clear message."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/articulos/demo\n\nResponse:\nHTTP/1.1 451 Unavailable For Legal Reasons\n\n{\"message\":\"Content not available in your region.\"}"
+      },
+      "pt": {
+        "resumen": "O conteúdo não está disponível por motivo legal.",
+        "explicacion": "O servidor sabe que o recurso existe, mas não pode exibi-lo por uma ordem judicial, uma lei ou uma restrição regional (o número remete ao romance «Fahrenheit 451»). É diferente do 403: aqui a causa é legal, não uma permissão da conta.",
+        "causasComunes": [
+          "Conteúdo bloqueado por ordem judicial, direitos autorais ou normas de um país.",
+          "Um serviço que restringe o acesso conforme a região do visitante."
+        ],
+        "comoSolucionar": [
+          "Leia o corpo da resposta: costuma explicar quem bloqueia o conteúdo e por quê.",
+          "Como desenvolvedor, isso não se resolve com código: você só pode mostrar uma mensagem clara ao usuário."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/articulos/demo\n\nResposta:\nHTTP/1.1 451 Unavailable For Legal Reasons\n\n{\"message\":\"Conteúdo indisponível na sua região.\"}"
+      },
+      "fr": {
+        "resumen": "Le contenu n'est pas disponible pour une raison légale.",
+        "explicacion": "Le serveur sait que la ressource existe, mais ne peut pas l'afficher à cause d'une décision de justice, d'une loi ou d'une restriction régionale (le nombre fait référence au roman « Fahrenheit 451 »). C'est différent du 403 : ici la cause est légale, pas une permission du compte.",
+        "causasComunes": [
+          "Contenu bloqué par une décision de justice, des droits d'auteur ou les règles d'un pays.",
+          "Un service qui restreint l'accès selon la région du visiteur."
+        ],
+        "comoSolucionar": [
+          "Lis le corps de la réponse : il explique généralement qui bloque le contenu et pourquoi.",
+          "En tant que développeur, cela ne se règle pas avec du code : tu peux seulement afficher un message clair à l'utilisateur."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/articulos/demo\n\nRéponse :\nHTTP/1.1 451 Unavailable For Legal Reasons\n\n{\"message\":\"Contenu non disponible dans ta région.\"}"
       }
     },
     {
@@ -919,6 +1859,34 @@
           "Locally, enable debug mode (APP_DEBUG=true in Laravel or CI_ENVIRONMENT=development in CodeIgniter) during development only."
         ],
         "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/facturas\n\nResponse:\nHTTP/1.1 500 Internal Server Error\n\n{\"message\":\"Server Error\"}"
+      },
+      "pt": {
+        "resumen": "Ocorreu um erro inesperado dentro do código do servidor.",
+        "explicacion": "É um erro genérico: algo falhou ao executar a sua aplicação (uma exceção não tratada, falta uma variável de ambiente ou o banco de dados não responde).",
+        "causasComunes": [
+          "Exceção do PHP ou falta de APP_KEY / conexão com o BD no Laravel (confira storage/logs/laravel.log).",
+          "Erro em controller ou permissões de writable/ no CodeIgniter (confira writable/logs/).",
+          "Exceção de Python não tratada no FastAPI (confira o console do uvicorn)."
+        ],
+        "comoSolucionar": [
+          "Abra os registros (logs) da aplicação e do PHP-FPM/uvicorn para ver a linha exata do erro.",
+          "Em local, ative o modo debug (APP_DEBUG=true no Laravel ou CI_ENVIRONMENT=development no CodeIgniter) somente durante o desenvolvimento."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/api/facturas\n\nResposta:\nHTTP/1.1 500 Internal Server Error\n\n{\"message\":\"Server Error\"}"
+      },
+      "fr": {
+        "resumen": "Une erreur inattendue s'est produite dans le code du serveur.",
+        "explicacion": "C'est une erreur générique : quelque chose a échoué lors de l'exécution de ton application (une exception non interceptée, une variable d'environnement manquante ou une base de données qui ne répond pas).",
+        "causasComunes": [
+          "Exception PHP, ou APP_KEY / connexion à la BD manquante dans Laravel (consulte storage/logs/laravel.log).",
+          "Erreur dans un contrôleur ou permissions de writable/ dans CodeIgniter (consulte writable/logs/).",
+          "Exception Python non interceptée dans FastAPI (consulte la console d'uvicorn)."
+        ],
+        "comoSolucionar": [
+          "Ouvre les journaux (logs) de l'application et de PHP-FPM/uvicorn pour voir la ligne exacte de l'erreur.",
+          "En local, active le mode debug (APP_DEBUG=true dans Laravel ou CI_ENVIRONMENT=development dans CodeIgniter) uniquement pendant le développement."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/api/facturas\n\nRéponse :\nHTTP/1.1 500 Internal Server Error\n\n{\"message\":\"Server Error\"}"
       }
     },
     {
@@ -946,6 +1914,28 @@
           "Verify you are using a standard HTTP method (GET, POST, PUT, PATCH, DELETE) and that the endpoint is implemented."
         ],
         "ejemplo": "Request:\ncurl -i -X PROPFIND http://mi-sitio.test/api/notas\n\nResponse:\nHTTP/1.1 501 Not Implemented"
+      },
+      "pt": {
+        "resumen": "O servidor não suporta a funcionalidade ou o método necessário para atender a requisição.",
+        "explicacion": "Indica que o servidor web ou a API ainda não implementa esse método ou recurso.",
+        "causasComunes": [
+          "Método HTTP pouco comum enviado ao Nginx ou a um endpoint marcado como não implementado no FastAPI/Laravel."
+        ],
+        "comoSolucionar": [
+          "Verifique se você usa um método HTTP padrão (GET, POST, PUT, PATCH, DELETE) e se o endpoint está implementado."
+        ],
+        "ejemplo": "Requisição:\ncurl -i -X PROPFIND http://mi-sitio.test/api/notas\n\nResposta:\nHTTP/1.1 501 Not Implemented"
+      },
+      "fr": {
+        "resumen": "Le serveur ne prend pas en charge la fonctionnalité ou la méthode nécessaire pour traiter la requête.",
+        "explicacion": "Indique que le serveur web ou l'API n'implémente pas encore cette méthode ou cette fonctionnalité.",
+        "causasComunes": [
+          "Méthode HTTP peu courante envoyée à Nginx ou à un endpoint marqué comme non implémenté dans FastAPI/Laravel."
+        ],
+        "comoSolucionar": [
+          "Vérifie que tu utilises une méthode HTTP standard (GET, POST, PUT, PATCH, DELETE) et que l'endpoint est implémenté."
+        ],
+        "ejemplo": "Requête :\ncurl -i -X PROPFIND http://mi-sitio.test/api/notas\n\nRéponse :\nHTTP/1.1 501 Not Implemented"
       }
     },
     {
@@ -979,6 +1969,34 @@
           "Check the Nginx error log to see which upstream connection was refused."
         ],
         "ejemplo": "Request:\ncurl -i http://mi-sitio.test/\n\nResponse:\nHTTP/1.1 502 Bad Gateway\nServer: nginx"
+      },
+      "pt": {
+        "resumen": "O Nginx (ou o proxy) não conseguiu obter uma resposta válida do servidor do seu app.",
+        "explicacion": "Seu site tem duas peças: o Nginx recebe a visita e a repassa ao PHP-FPM, Node ou FastAPI. O 502 significa que o Nginx está vivo, mas a peça de trás está desligada, em outra porta ou fechou de repente.",
+        "causasComunes": [
+          "O PHP está parado (php-cgi no Windows, PHP-FPM no Linux e macOS) ou escuta em uma porta diferente da configurada no Nginx (muito comum no Laravel e CodeIgniter).",
+          "Uvicorn/FastAPI ou o servidor Node não foi iniciado atrás do proxy do Nginx.",
+          "Túnel (cloudflared/ngrok) apontando para uma porta local em que não há nada escutando."
+        ],
+        "comoSolucionar": [
+          "Inicie o PHP-FPM, o uvicorn ou o serviço do seu projeto e confira se a porta coincide com fastcgi_pass ou proxy_pass no Nginx.",
+          "Revise o registro de erros do Nginx para ver exatamente qual conexão foi recusada."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/\n\nResposta:\nHTTP/1.1 502 Bad Gateway\nServer: nginx"
+      },
+      "fr": {
+        "resumen": "Nginx (ou le proxy) n'a pas pu obtenir de réponse valide du serveur de ton application.",
+        "explicacion": "Ton site comporte deux éléments : Nginx reçoit la visite et la transmet à PHP-FPM, Node ou FastAPI. Le 502 signifie que Nginx fonctionne, mais que l'élément derrière est arrêté, sur un autre port ou s'est fermé brutalement.",
+        "causasComunes": [
+          "PHP est arrêté (php-cgi sous Windows, PHP-FPM sous Linux et macOS) ou écoute sur un port différent de celui configuré dans Nginx (très courant dans Laravel et CodeIgniter).",
+          "Uvicorn/FastAPI ou le serveur Node n'est pas démarré derrière le proxy Nginx.",
+          "Tunnel (cloudflared/ngrok) qui pointe vers un port local où rien n'écoute."
+        ],
+        "comoSolucionar": [
+          "Démarre PHP-FPM, uvicorn ou le service de ton projet et vérifie que le port correspond à fastcgi_pass ou proxy_pass dans Nginx.",
+          "Consulte le journal d'erreurs de Nginx pour voir exactement quelle connexion a été refusée."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/\n\nRéponse :\nHTTP/1.1 502 Bad Gateway\nServer: nginx"
       }
     },
     {
@@ -1010,6 +2028,32 @@
           "Wait a moment and check whether a stuck request is occupying PHP-FPM or FastAPI workers."
         ],
         "ejemplo": "Request:\ncurl -i http://mi-sitio.test/\n\nResponse:\nHTTP/1.1 503 Service Unavailable\nRetry-After: 60"
+      },
+      "pt": {
+        "resumen": "O serviço está temporariamente fora do ar ou em manutenção.",
+        "explicacion": "O servidor funciona, mas agora não consegue atender visitas porque está em modo de manutenção ou sobrecarregado.",
+        "causasComunes": [
+          "Laravel em modo de manutenção após executar php artisan down.",
+          "Processos PHP-FPM ocupados demais ou servidor iniciando."
+        ],
+        "comoSolucionar": [
+          "No Laravel, execute php artisan up para sair do modo de manutenção.",
+          "Espere alguns segundos e verifique se algum processo está bloqueando os workers do PHP-FPM ou do FastAPI."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/\n\nResposta:\nHTTP/1.1 503 Service Unavailable\nRetry-After: 60"
+      },
+      "fr": {
+        "resumen": "Le service est temporairement hors ligne ou en maintenance.",
+        "explicacion": "Le serveur fonctionne, mais il ne peut pas traiter de visites pour le moment car il est en mode maintenance ou saturé.",
+        "causasComunes": [
+          "Laravel en mode maintenance après l'exécution de php artisan down.",
+          "Trop de processus PHP-FPM occupés ou serveur en cours de démarrage."
+        ],
+        "comoSolucionar": [
+          "Dans Laravel, exécute php artisan up pour quitter le mode maintenance.",
+          "Attends quelques secondes et vérifie si un processus bloque les workers de PHP-FPM ou FastAPI."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/\n\nRéponse :\nHTTP/1.1 503 Service Unavailable\nRetry-After: 60"
       }
     },
     {
@@ -1043,6 +2087,34 @@
           "When debugging with Xdebug or running heavy local imports, temporarily raise fastcgi_read_timeout / proxy_read_timeout in Nginx and max_execution_time in php.ini."
         ],
         "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/reporte-anual\n\nResponse:\nHTTP/1.1 504 Gateway Timeout\nServer: nginx"
+      },
+      "pt": {
+        "resumen": "O Nginx esperou demais pela resposta da sua aplicação e encerrou a espera.",
+        "explicacion": "Diferente do 502 (o serviço de trás não responde), no 504 o serviço aceitou a requisição, mas demorou mais que o limite configurado.",
+        "causasComunes": [
+          "Consulta SQL muito lenta, loop infinito ou requisição externa travada no Laravel, CodeIgniter ou FastAPI.",
+          "Sessão de depuração com Xdebug pausada em um breakpoint por mais tempo do que o Nginx permite.",
+          "fastcgi_read_timeout ou proxy_read_timeout curtos demais no Nginx."
+        ],
+        "comoSolucionar": [
+          "Revise consultas lentas ou chamadas HTTP externas sem timeout no seu código.",
+          "Se você depura com Xdebug ou importa dados pesados em local, aumente temporariamente fastcgi_read_timeout / proxy_read_timeout no Nginx e max_execution_time no php.ini."
+        ],
+        "ejemplo": "Requisição:\ncurl -i http://mi-sitio.test/api/reporte-anual\n\nResposta:\nHTTP/1.1 504 Gateway Timeout\nServer: nginx"
+      },
+      "fr": {
+        "resumen": "Nginx a trop attendu la réponse de ton application et a abandonné l'attente.",
+        "explicacion": "Contrairement au 502 (le service derrière ne répond pas), avec le 504 le service a bien accepté la requête mais a mis plus de temps que la limite configurée.",
+        "causasComunes": [
+          "Requête SQL très lente, boucle infinie ou appel externe bloqué dans Laravel, CodeIgniter ou FastAPI.",
+          "Session de débogage Xdebug en pause sur un point d'arrêt plus longtemps que ce que Nginx autorise.",
+          "fastcgi_read_timeout ou proxy_read_timeout trop courts dans Nginx."
+        ],
+        "comoSolucionar": [
+          "Vérifie les requêtes lentes ou les appels HTTP externes sans timeout dans ton code.",
+          "Si tu débogues avec Xdebug ou importes des données lourdes en local, augmente temporairement fastcgi_read_timeout / proxy_read_timeout dans Nginx et max_execution_time dans php.ini."
+        ],
+        "ejemplo": "Requête :\ncurl -i http://mi-sitio.test/api/reporte-anual\n\nRéponse :\nHTTP/1.1 504 Gateway Timeout\nServer: nginx"
       }
     }
   ]
