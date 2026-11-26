@@ -150,6 +150,8 @@ export * from './monitor/registros';
 export * from './herramientas/puertos';
 export * from './herramientas/bom';
 export * from './herramientas/buscar';
+export * from './herramientas/diffCarpetas';
+export * from './herramientas/diffCarpetasServicio';
 export * from './herramientas/imagenes';
 export * from './herramientas/pdf';
 export * from './herramientas/zip';

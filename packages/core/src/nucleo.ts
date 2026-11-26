@@ -346,6 +346,8 @@ import {
   type ImprimirPdf,
 } from './conversor/conversor';
 import { Busquedas, type OpcionesBusqueda } from './herramientas/buscar';
+import { ejecutarDiffEnProceso, type EjecutorDiff } from './herramientas/diffCarpetas';
+import { DiffCarpetas } from './herramientas/diffCarpetasServicio';
 import { emitirCertificadoLibre } from './herramientas/certificadosLibres';
 import { entornoSistema, PLAZO_VERSION_MS, type EntornoSistema } from './herramientas/entorno';
 import { muestraSistemaWindows } from './plataforma/win';
@@ -383,6 +385,11 @@ export interface OpcionesNucleo {
    * aplicación, con plazo y vigilancia de su memoria). Sin él no se ofrece ninguna conversión.
    */
   ejecutorConversor?: EjecutorTrabajo;
+  /**
+   * Proceso de trabajo del diff de carpetas (D44, `utilityProcess` en la aplicación). Sin él se usa
+   * el mismo proceso (solo para pruebas).
+   */
+  ejecutorDiff?: EjecutorDiff;
   /** Para pruebas: lanzador de los comandos con streaming (pasos de receta, git). */
   lanzar?: Lanzador;
   /** PID del proceso principal y de su padre (por defecto, los de este proceso). */
@@ -485,6 +492,7 @@ interface ModulosNucleo {
   lanzarEditor?: LanzadorSeparado;
   imprimirPdf?: ImprimirPdf;
   ejecutorConversor?: EjecutorTrabajo;
+  ejecutorDiff?: EjecutorDiff;
   /** Editor del vhost de cada sitio (reglas propias o vhost completo, con nginx -t y vuelta atrás). */
   editorVhost: EditorVhost;
   /** php.ini de cada rama (editor con prueba, copia y vuelta atrás). */
@@ -717,6 +725,7 @@ export class Nucleo {
   private readonly lanzarEditor: LanzadorSeparado | undefined;
   private readonly imprimirPdf: ImprimirPdf | undefined;
   private readonly ejecutorConversor: EjecutorTrabajo | undefined;
+  private readonly ejecutorDiff: EjecutorDiff | undefined;
   /** Puerto de Ollama según la configuración (ClienteOllama lo lee de forma síncrona). */
   private readonly puertoOllama: { valor: number };
   /** Servidor MCP local; se maneja con iniciarMcp/detenerMcp (que guardan `mcp.activo`). */
@@ -819,6 +828,7 @@ export class Nucleo {
     this.lanzarEditor = m.lanzarEditor;
     this.imprimirPdf = m.imprimirPdf;
     this.ejecutorConversor = m.ejecutorConversor;
+    this.ejecutorDiff = m.ejecutorDiff;
     this.bd = m.bd;
     this.respaldos = m.respaldos;
     this.pgvector = m.pgvector;
@@ -1572,6 +1582,7 @@ export class Nucleo {
       ...(o.lanzarEditor ? { lanzarEditor: o.lanzarEditor } : {}),
       ...(o.imprimirPdf ? { imprimirPdf: o.imprimirPdf } : {}),
       ...(o.ejecutorConversor ? { ejecutorConversor: o.ejecutorConversor } : {}),
+      ...(o.ejecutorDiff ? { ejecutorDiff: o.ejecutorDiff } : {}),
       iniPhp,
       poolsSitio: pools,
       ajustesPhpSitio,
@@ -3880,6 +3891,16 @@ export class Nucleo {
 
   cancelarBusqueda(id: string): boolean {
     return this.busquedas.cancelar(id);
+  }
+
+  private diffCarpetasServ?: DiffCarpetas;
+
+  /** Diff de carpetas (D44): solo lectura, en el proceso de trabajo, con topes y cancelable. */
+  get diffCarpetas(): DiffCarpetas {
+    return (this.diffCarpetasServ ??= new DiffCarpetas({
+      ejecutor: this.ejecutorDiff ?? ejecutarDiffEnProceso,
+      carpetasPropias: () => this.carpetasPropias(),
+    }));
   }
 
   /** Certificado firmado por la CA local; devuelve los PEM (no escribe nada). */
