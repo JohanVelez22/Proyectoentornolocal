@@ -14,7 +14,9 @@ import {
 import type { IdiomaUi, Nucleo } from '@pel/core';
 import type { ImagenCaptura, ModoCaptura, VentanaCapturable } from '../shared/captura';
 import {
+  denegarPermisos,
   opcionesVentanaCaptura,
+  vigilarVentana,
   type DepsCaptura,
   type FuentesCaptura,
   type VentanaCaptura,
@@ -31,6 +33,8 @@ import type { TextosMain } from './textos';
 const MAX_VENTANAS = 40;
 /** Lado mínimo (px) de una ventana que vale la pena ofrecer. */
 const LADO_MINIMO = 48;
+/** Tamaño de las miniaturas de la lista del modo ventana (la captura real se pide al elegir). */
+const MINIATURA_VENTANA = { width: 640, height: 400 } as const;
 /** Espera tras ocultar la ventana de la app para que el sistema repinte antes de capturar. */
 const ESPERA_OCULTAR_MS = 220;
 
@@ -61,6 +65,12 @@ const esperar = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, 
 export function crearDepsElectron(o: OpcionesCapturaElectron): Omit<DepsCaptura, 'atajos'> {
   /** La pantalla que se capturó: la ventana de captura se abre justo encima. */
   let zona = screen.getPrimaryDisplay().bounds;
+  /** Tamaño en píxeles de esa pantalla: tope para capturar una ventana a tamaño real. */
+  let pixelesZona = { width: 1920, height: 1080 };
+
+  /** Ventanas de esta app (nunca se ofrecen ni se capturan). */
+  const propias = (): Set<string> =>
+    new Set(BrowserWindow.getAllWindows().map((w) => w.getMediaSourceId()));
 
   return {
     estado: () => o.nucleo().capturaDisponible(),
@@ -82,10 +92,14 @@ export function crearDepsElectron(o: OpcionesCapturaElectron): Omit<DepsCaptura,
     async ocultarPropias() {
       const v = o.ventanaPrincipal();
       if (!v || v.isDestroyed() || !v.isVisible() || v.isMinimized()) return () => undefined;
+      // Se recuerda si estaba maximizada para devolverla tal cual estaba.
+      const maximizada = v.isMaximized();
       v.hide();
       await esperar(ESPERA_OCULTAR_MS);
       return () => {
-        if (!v.isDestroyed()) v.showInactive();
+        if (v.isDestroyed()) return;
+        v.showInactive();
+        if (maximizada && !v.isMaximized()) v.maximize();
       };
     },
     async fuentes(modo: ModoCaptura): Promise<FuentesCaptura> {
@@ -93,27 +107,44 @@ export function crearDepsElectron(o: OpcionesCapturaElectron): Omit<DepsCaptura,
       zona = display.bounds;
       const ancho = Math.round(display.size.width * display.scaleFactor);
       const alto = Math.round(display.size.height * display.scaleFactor);
+      pixelesZona = { width: ancho, height: alto };
+      if (modo === 'ventana') {
+        // Solo la lista, con miniaturas pequeñas: la pantalla entera no se pide ni se envía.
+        const fuentes = await desktopCapturer.getSources({
+          types: ['window'],
+          thumbnailSize: MINIATURA_VENTANA,
+          fetchWindowIcons: false,
+        });
+        const ventanas: VentanaCapturable[] = [];
+        // Nunca se ofrecen las ventanas de esta app (ya están ocultas o cerradas).
+        const mias = propias();
+        for (const s of fuentes) {
+          if (!s.id.startsWith('window:') || mias.has(s.id) || s.name.trim() === '') continue;
+          const img = aImagen(s);
+          if (img) ventanas.push({ ...img, id: s.id, nombre: s.name.slice(0, 120) });
+          if (ventanas.length >= MAX_VENTANAS) break;
+        }
+        return { pantalla: null, ventanas };
+      }
       const fuentes = await desktopCapturer.getSources({
-        types: modo === 'ventana' ? ['screen', 'window'] : ['screen'],
+        types: ['screen'],
         thumbnailSize: { width: ancho, height: alto },
         fetchWindowIcons: false,
       });
       const pantallas = fuentes.filter((s) => s.id.startsWith('screen:'));
       const pantalla =
         pantallas.find((s) => s.display_id === String(display.id)) ?? pantallas[0] ?? null;
-      const ventanas: VentanaCapturable[] = [];
-      if (modo === 'ventana') {
-        // Nunca se ofrecen las ventanas de esta app (ya están ocultas o cerradas).
-        const propias = new Set(BrowserWindow.getAllWindows().map((w) => w.getMediaSourceId()));
-        for (const s of fuentes) {
-          if (!s.id.startsWith('window:') || propias.has(s.id) || s.name.trim() === '') continue;
-          const img = aImagen(s);
-          if (img) ventanas.push({ ...img, id: s.id, nombre: s.name.slice(0, 120) });
-          if (ventanas.length >= MAX_VENTANAS) break;
-        }
-      }
-      // En el modo ventana la pantalla entera no hace falta: no se codifica ni se envía.
-      return { pantalla: pantalla && modo !== 'ventana' ? aImagen(pantalla) : null, ventanas };
+      return { pantalla: pantalla ? aImagen(pantalla) : null, ventanas: [] };
+    },
+    async capturarVentana(id: string) {
+      if (!id.startsWith('window:') || propias().has(id)) return null;
+      const fuentes = await desktopCapturer.getSources({
+        types: ['window'],
+        thumbnailSize: pixelesZona,
+        fetchWindowIcons: false,
+      });
+      const s = fuentes.find((x) => x.id === id);
+      return s ? aImagen(s) : null;
     },
     crearVentana(): VentanaCaptura {
       const v = new BrowserWindow(
@@ -125,9 +156,27 @@ export function crearDepsElectron(o: OpcionesCapturaElectron): Omit<DepsCaptura,
       v.setAlwaysOnTop(true, 'screen-saver');
       v.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
       v.webContents.on('will-navigate', (e) => e.preventDefault());
+      // Sin ningún permiso (cámara, ubicación, notificaciones...) en su sesión, que es solo de memoria.
+      denegarPermisos(v.webContents.session);
       v.once('ready-to-show', () => {
         v.show();
         v.focus();
+      });
+      // Si no carga, muere o se cuelga, se destruye: no puede quedar una ventana encima de todo.
+      vigilarVentana({
+        alListaParaMostrar: (fn) => v.once('ready-to-show', fn),
+        alFallar: (fn) => {
+          v.webContents.on('did-fail-load', (_e, codigo, _descripcion, _url, principal) => {
+            // -3 = carga abortada (una navegación bloqueada a propósito), no un fallo.
+            if (principal && codigo !== -3) fn();
+          });
+          v.webContents.on('render-process-gone', () => fn());
+          v.on('unresponsive', () => fn());
+        },
+        alCerrar: (fn) => v.once('closed', fn),
+        destruir: () => {
+          if (!v.isDestroyed()) v.destroy();
+        },
       });
       const dev = process.env['ELECTRON_RENDERER_URL'];
       if (dev) void v.loadURL(`${dev}/captura/index.html`);

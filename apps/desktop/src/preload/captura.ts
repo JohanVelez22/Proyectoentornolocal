@@ -7,6 +7,7 @@ import { CANALES_CAPTURA, type ApiVentanaCaptura } from '../shared/captura';
  */
 const api: ApiVentanaCaptura = {
   datos: () => ipcRenderer.invoke(CANALES_CAPTURA.datos),
+  ventana: (id) => ipcRenderer.invoke(CANALES_CAPTURA.ventana, id),
   copiar: (bytes) => ipcRenderer.invoke(CANALES_CAPTURA.copiar, bytes),
   guardar: (bytes, formato) => ipcRenderer.invoke(CANALES_CAPTURA.guardar, bytes, formato),
   alConversor: (bytes) => ipcRenderer.invoke(CANALES_CAPTURA.alConversor, bytes),

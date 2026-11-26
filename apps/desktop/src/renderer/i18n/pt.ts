@@ -445,6 +445,8 @@ export const pt: Textos = {
       'herramientas.salida_ocupada': 'Não foi encontrado um nome livre para o novo arquivo.',
       'captura.atajo_invalido':
         'Esse atalho não é válido: use Ctrl, Alt, Shift ou Super com uma letra, um número ou uma tecla F.',
+      'captura.atajo_no_permitido':
+        'Esse atalho não é permitido: use Ctrl ou Super com outro modificador (Ctrl+Alt sem Shift é AltGr e tira o @) e evite atalhos comuns como Ctrl+C ou Alt+F4.',
       'captura.atajo_ocupado': 'O atalho {atajo} já é usado por outro programa.',
       'captura.no_disponible': 'A captura de tela não está disponível neste computador.',
       'captura.permiso_denegado': 'Falta a permissão de gravação de tela.',
@@ -3238,10 +3240,15 @@ export const pt: Textos = {
       resaltador: 'Marca-texto',
       texto: 'Texto',
       pixelar: 'Pixelar',
+      pixelarAyuda: 'Pixelar (não é seguro para dados sensíveis: use Ocultar)',
+      ocultar: 'Ocultar',
+      ocultarAyuda: 'Ocultar com um preenchimento sólido (recomendado para dados sensíveis)',
     },
     deshacer: 'Desfazer',
     rehacer: 'Refazer',
     copiar: 'Copiar',
+    copiarAyuda:
+      'Copiar para a área de transferência. A área de transferência do Windows pode guardá-la no histórico ou sincronizá-la com outros dispositivos.',
     guardar: 'Salvar…',
     alConversor: 'Enviar ao conversor de imagens',
     cerrar: 'Cancelar (Esc)',
@@ -3260,6 +3267,7 @@ export const pt: Textos = {
     errorCopiar: 'Não foi possível copiar a imagem.',
     errorGuardar: 'Não foi possível salvar a imagem.',
     errorConversor: 'Não foi possível enviar a imagem ao conversor.',
+    errorVentana: 'Não foi possível capturar essa janela.',
     dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
     panel: {
       ayuda:
@@ -3287,7 +3295,8 @@ export const pt: Textos = {
       atajo: 'Combinação',
       grabar: 'Alterar',
       grabando: 'Pressione a combinação…',
-      grabandoAyuda: 'Use Ctrl, Alt, Shift ou Super com uma letra, um número ou uma tecla F.',
+      grabandoAyuda:
+        'Use Ctrl ou Super com outro modificador (por exemplo Ctrl+Alt+Shift) e uma letra, um número ou uma tecla F. Evite atalhos comuns como Ctrl+C.',
       formato: 'Formato ao salvar',
       activado: (atajo: string) => `Atalho ${atajo} ativado.`,
       desactivado: 'Atalho desativado.',

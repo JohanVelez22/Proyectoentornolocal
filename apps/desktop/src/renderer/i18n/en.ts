@@ -435,6 +435,8 @@ export const en: Textos = {
       'herramientas.salida_ocupada': 'No free name was found for the new file.',
       'captura.atajo_invalido':
         'That shortcut is not valid: use Ctrl, Alt, Shift or Super with a letter, a number or an F key.',
+      'captura.atajo_no_permitido':
+        'That shortcut is not allowed: use Ctrl or Super with another modifier (Ctrl+Alt without Shift is AltGr and breaks typing @) and avoid common shortcuts such as Ctrl+C or Alt+F4.',
       'captura.atajo_ocupado': 'The shortcut {atajo} is already used by another program.',
       'captura.no_disponible': 'Screen capture is not available on this computer.',
       'captura.permiso_denegado': 'The screen recording permission is missing.',
@@ -3205,10 +3207,15 @@ export const en: Textos = {
       resaltador: 'Highlighter',
       texto: 'Text',
       pixelar: 'Pixelate',
+      pixelarAyuda: 'Pixelate (not safe for sensitive data: use Hide)',
+      ocultar: 'Hide',
+      ocultarAyuda: 'Hide with a solid fill (recommended for sensitive data)',
     },
     deshacer: 'Undo',
     rehacer: 'Redo',
     copiar: 'Copy',
+    copiarAyuda:
+      'Copy to the clipboard. The Windows clipboard may keep it in its history or sync it to other devices.',
     guardar: 'Save…',
     alConversor: 'Send to the image converter',
     cerrar: 'Cancel (Esc)',
@@ -3227,6 +3234,7 @@ export const en: Textos = {
     errorCopiar: 'The image could not be copied.',
     errorGuardar: 'The image could not be saved.',
     errorConversor: 'The image could not be sent to the converter.',
+    errorVentana: 'That window could not be captured.',
     dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
     panel: {
       ayuda:
@@ -3254,7 +3262,8 @@ export const en: Textos = {
       atajo: 'Combination',
       grabar: 'Change',
       grabando: 'Press the combination…',
-      grabandoAyuda: 'Use Ctrl, Alt, Shift or Super with a letter, a number or an F key.',
+      grabandoAyuda:
+        'Use Ctrl or Super with another modifier (for example Ctrl+Alt+Shift) and a letter, a number or an F key. Avoid common shortcuts such as Ctrl+C.',
       formato: 'Format when saving',
       activado: (atajo: string) => `Shortcut ${atajo} turned on.`,
       desactivado: 'Shortcut turned off.',

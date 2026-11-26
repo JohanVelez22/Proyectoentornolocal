@@ -23,7 +23,7 @@ export interface DatosCaptura {
   idioma: IdiomaUi;
   /** La pantalla bajo el cursor (modos `region` y `pantalla`). */
   pantalla: ImagenCaptura | null;
-  /** Las ventanas abiertas con su vista (modo `ventana`). */
+  /** Las ventanas abiertas con una miniatura (modo `ventana`); el tamaño real se pide al elegir. */
   ventanas: VentanaCapturable[];
 }
 
@@ -57,6 +57,8 @@ export interface ImagenPendiente {
 /** Puente de la ventana de captura (`preload/captura.ts`); es otro contexto que la ventana principal. */
 export interface ApiVentanaCaptura {
   datos(): Promise<DatosCaptura | null>;
+  /** Modo ventana: la ventana elegida (id de la lista ofrecida) a tamaño real. */
+  ventana(id: string): Promise<ImagenCaptura>;
   copiar(bytes: Uint8Array): Promise<void>;
   /** Abre "Guardar como"; null si se canceló. Nunca pisa un archivo existente. */
   guardar(bytes: Uint8Array, formato: FormatoCaptura): Promise<{ archivo: string } | null>;
@@ -68,6 +70,7 @@ export interface ApiVentanaCaptura {
 export const CANALES_CAPTURA = {
   datos: 'captura:datos',
   copiar: 'captura:copiar',
+  ventana: 'captura:ventana',
   guardar: 'captura:guardar',
   alConversor: 'captura:al-conversor',
   cerrar: 'captura:cerrar',

@@ -442,6 +442,8 @@ export const es = {
       'herramientas.salida_ocupada': 'No se encontró un nombre libre para el archivo nuevo.',
       'captura.atajo_invalido':
         'Ese atajo no es válido: use Ctrl, Alt, Mayús o Super con una letra, un número o una tecla F.',
+      'captura.atajo_no_permitido':
+        'Ese atajo no se permite: use Ctrl o Super con otro modificador (Ctrl+Alt sin Mayús es AltGr y quita la @) y evite atajos comunes como Ctrl+C o Alt+F4.',
       'captura.atajo_ocupado': 'El atajo {atajo} ya lo usa otro programa.',
       'captura.no_disponible': 'La captura de pantalla no está disponible en este equipo.',
       'captura.permiso_denegado': 'Falta el permiso de grabación de pantalla.',
@@ -3233,10 +3235,15 @@ export const es = {
       resaltador: 'Resaltador',
       texto: 'Texto',
       pixelar: 'Pixelar',
+      pixelarAyuda: 'Pixelar (no es seguro para datos sensibles: use Ocultar)',
+      ocultar: 'Ocultar',
+      ocultarAyuda: 'Ocultar con un relleno sólido (recomendado para datos sensibles)',
     },
     deshacer: 'Deshacer',
     rehacer: 'Rehacer',
     copiar: 'Copiar',
+    copiarAyuda:
+      'Copiar al portapapeles. El portapapeles de Windows puede guardarlo en su historial o sincronizarlo con otros equipos.',
     guardar: 'Guardar…',
     alConversor: 'Enviar al conversor de imágenes',
     cerrar: 'Cancelar (Esc)',
@@ -3255,6 +3262,7 @@ export const es = {
     errorCopiar: 'No se pudo copiar la imagen.',
     errorGuardar: 'No se pudo guardar la imagen.',
     errorConversor: 'No se pudo enviar la imagen al conversor.',
+    errorVentana: 'No se pudo capturar esa ventana.',
     dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
     panel: {
       ayuda:
@@ -3282,7 +3290,8 @@ export const es = {
       atajo: 'Combinación',
       grabar: 'Cambiar',
       grabando: 'Pulse la combinación…',
-      grabandoAyuda: 'Use Ctrl, Alt, Mayús o Super con una letra, un número o una tecla F.',
+      grabandoAyuda:
+        'Use Ctrl o Super con otro modificador (por ejemplo Ctrl+Alt+Mayús) y una letra, un número o una tecla F. Evite los atajos comunes como Ctrl+C.',
       formato: 'Formato al guardar',
       activado: (atajo: string) => `Atajo ${atajo} activado.`,
       desactivado: 'Atajo desactivado.',

@@ -34,14 +34,28 @@ export const COLORES_DIBUJO = [
 ] as const;
 export const COLOR_RESALTADOR = '#facc15';
 export const GROSORES_DIBUJO = [2, 4, 8] as const;
-/** Lado del bloque del pixelado, en píxeles de la imagen. */
-export const BLOQUE_PIXELADO = 12;
+/** Lado mínimo del bloque del pixelado, en píxeles de la imagen. */
+export const BLOQUE_PIXELADO_MIN = 16;
+/** Color del relleno de "Ocultar": opaco, no deja nada del original debajo. */
+export const COLOR_OCULTAR = '#000000';
+
+/**
+ * Lado del bloque del pixelado, en píxeles de la imagen: nunca menos de 16, ni de 16 píxeles de
+ * pantalla (`factor` = píxeles de imagen por píxel CSS), ni de un cuarto del alto de la zona. Así un
+ * texto pequeño queda en 4 bloques de alto como mucho y no se puede leer.
+ */
+export function bloquePixelado(altoRect: number, factor: number = 1): number {
+  const f = Number.isFinite(factor) && factor > 0 ? factor : 1;
+  const alto = Number.isFinite(altoRect) && altoRect > 0 ? altoRect : 0;
+  return Math.max(BLOQUE_PIXELADO_MIN, Math.round(BLOQUE_PIXELADO_MIN * f), Math.round(alto / 4));
+}
 export const LIMITE_DESHACER = 50;
 /** Tope de caracteres de un texto (el campo del editor también lo respeta). */
 export const MAX_TEXTO = 200;
 
 /** Herramientas del editor rápido. */
-export type HerramientaCaptura = 'recuadro' | 'flecha' | 'linea' | 'resaltar' | 'texto' | 'pixelar';
+export type HerramientaCaptura =
+  'recuadro' | 'flecha' | 'linea' | 'resaltar' | 'texto' | 'pixelar' | 'ocultar';
 
 export type Anotacion =
   | { tipo: 'recuadro'; rect: Rect; color: string; grosor: number }
@@ -56,7 +70,9 @@ export type Anotacion =
     }
   | { tipo: 'resaltar'; rect: Rect; color: string }
   | { tipo: 'texto'; pos: Punto; texto: string; color: string; tam: number }
-  | { tipo: 'pixelar'; rect: Rect; tam: number };
+  | { tipo: 'pixelar'; rect: Rect; tam: number }
+  /** Relleno sólido: lo recomendado para datos sensibles (el pixelado conserva el color medio). */
+  | { tipo: 'ocultar'; rect: Rect };
 
 /** Rectángulo con ancho y alto positivos a partir de dos esquinas cualesquiera. */
 export function normalizarRect(a: Punto, b: Punto): Rect {
@@ -103,14 +119,41 @@ export function texto(pos: Punto, contenido: string, color: string, tam: number)
   return { tipo: 'texto', pos: { ...pos }, texto: contenido.slice(0, MAX_TEXTO), color, tam };
 }
 
-export function pixelado(a: Punto, b: Punto, tam: number = BLOQUE_PIXELADO): Anotacion {
-  return { tipo: 'pixelar', rect: normalizarRect(a, b), tam };
+/** Pixelado de la zona entre dos esquinas; el bloque sale de `bloquePixelado`. */
+export function pixelado(a: Punto, b: Punto, factor: number = 1): Anotacion {
+  const rect = normalizarRect(a, b);
+  return { tipo: 'pixelar', rect, tam: bloquePixelado(rect.alto, factor) };
+}
+
+export function ocultar(a: Punto, b: Punto): Anotacion {
+  return { tipo: 'ocultar', rect: normalizarRect(a, b) };
+}
+
+/** Rectángulo entero que cubre `rect` por completo (sin bordes a medias por los decimales). */
+export function rectEntero(rect: Rect): Rect {
+  const x = Math.floor(rect.x);
+  const y = Math.floor(rect.y);
+  return {
+    x,
+    y,
+    ancho: Math.ceil(rect.x + rect.ancho) - x,
+    alto: Math.ceil(rect.y + rect.alto) - y,
+  };
+}
+
+/** Límites de los bloques en un lado de `n` píxeles: bloques de al menos `lado` (el resto se reparte). */
+function limites(n: number, lado: number): number[] {
+  const bloques = Math.max(1, Math.floor(n / lado));
+  const l: number[] = [];
+  for (let i = 0; i <= bloques; i++) l.push(Math.round((i * n) / bloques));
+  return l;
 }
 
 /**
- * Pixelado: dentro de `rect` (recortado a la imagen) cada bloque de `tam`×`tam` píxeles, contado
- * desde la esquina del rectángulo, se rellena con el promedio de sus colores. Devuelve una copia:
- * la imagen que llega no se modifica.
+ * Pixelado: dentro de `rect` (recortado a la imagen) cada bloque se rellena con el promedio de sus
+ * colores. Los bloques miden como mínimo `tam` píxeles por lado (si la zona es menor, es un solo
+ * bloque): el sobrante se reparte entre todos en vez de dejar una tira fina en el borde, que
+ * conservaría el detalle. Devuelve una copia: la imagen que llega no se modifica.
  */
 export function pixelar(imagen: ImagenRgba, rect: Rect, tam: number): ImagenRgba {
   const salida: ImagenRgba = {
@@ -123,16 +166,21 @@ export function pixelar(imagen: ImagenRgba, rect: Rect, tam: number): ImagenRgba
   const y0 = Math.max(0, Math.floor(rect.y));
   const x1 = Math.min(imagen.ancho, Math.ceil(rect.x + rect.ancho));
   const y1 = Math.min(imagen.alto, Math.ceil(rect.y + rect.alto));
-  for (let by = y0; by < y1; by += lado) {
-    for (let bx = x0; bx < x1; bx += lado) {
-      const bx1 = Math.min(bx + lado, x1);
-      const by1 = Math.min(by + lado, y1);
+  if (x1 <= x0 || y1 <= y0) return salida;
+  const xs = limites(x1 - x0, lado).map((v) => v + x0);
+  const ys = limites(y1 - y0, lado).map((v) => v + y0);
+  for (let j = 0; j < ys.length - 1; j++) {
+    for (let i = 0; i < xs.length - 1; i++) {
+      const bx = xs[i]!;
+      const by = ys[j]!;
+      const bx1 = xs[i + 1]!;
+      const by1 = ys[j + 1]!;
       const suma = [0, 0, 0, 0];
       let n = 0;
       for (let y = by; y < by1; y++) {
         for (let x = bx; x < bx1; x++) {
-          const i = (y * imagen.ancho + x) * 4;
-          for (let c = 0; c < 4; c++) suma[c]! += imagen.datos[i + c]!;
+          const k = (y * imagen.ancho + x) * 4;
+          for (let c = 0; c < 4; c++) suma[c]! += imagen.datos[k + c]!;
           n++;
         }
       }
@@ -140,8 +188,8 @@ export function pixelar(imagen: ImagenRgba, rect: Rect, tam: number): ImagenRgba
       const prom = suma.map((s) => Math.round(s / n));
       for (let y = by; y < by1; y++) {
         for (let x = bx; x < bx1; x++) {
-          const i = (y * imagen.ancho + x) * 4;
-          for (let c = 0; c < 4; c++) salida.datos[i + c] = prom[c]!;
+          const k = (y * imagen.ancho + x) * 4;
+          for (let c = 0; c < 4; c++) salida.datos[k + c] = prom[c]!;
         }
       }
     }
@@ -208,6 +256,14 @@ export function dibujarAnotacion(ctx: Contexto2D, a: Anotacion): void {
       ctx.textBaseline = 'top';
       ctx.fillText(a.texto, a.pos.x, a.pos.y);
       break;
+    case 'ocultar': {
+      // Relleno opaco y sobre un rectángulo entero: no queda ni un borde a medias con el original.
+      const r = rectEntero(a.rect);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = COLOR_OCULTAR;
+      ctx.fillRect(r.x, r.y, r.ancho, r.alto);
+      break;
+    }
     case 'pixelar':
       break;
   }
@@ -270,6 +326,13 @@ export class PilaDeshacer<T> {
 
   get puedeRehacer(): boolean {
     return this.indice < this.estados.length - 1;
+  }
+
+  /** Vacía el historial y empieza de nuevo en `inicial` (por ejemplo, al elegir otra zona). */
+  reiniciar(inicial: T): T {
+    this.estados = [inicial];
+    this.indice = 0;
+    return inicial;
   }
 
   hacer(estado: T): T {

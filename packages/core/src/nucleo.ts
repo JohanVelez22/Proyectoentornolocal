@@ -220,6 +220,7 @@ import type {
 import {
   CambiosCapturaSchema,
   CambiosPreferenciasUiSchema,
+  motivoAtajoCaptura,
   IDS_SERVICIO_DATOS,
   TIPOS_CON_PHP,
   type CambiosCaptura,
@@ -3489,6 +3490,12 @@ export class Nucleo {
 
   /** Guarda solo los campos dados (validados) y devuelve la configuración resultante. */
   async guardarCapturaConfig(cambios: CambiosCaptura): Promise<CapturaConfig> {
+    if (motivoAtajoCaptura((cambios as { atajo?: unknown }).atajo) === 'no_permitido') {
+      throw new ErrorWolf(
+        'captura.atajo_no_permitido',
+        'Ese atajo no se permite: use Ctrl o Super con otro modificador y evite los atajos comunes.',
+      );
+    }
     const p = CambiosCapturaSchema.safeParse(cambios);
     if (!p.success) {
       throw new ErrorWolf('captura.atajo_invalido', 'El atajo de captura no es válido.');

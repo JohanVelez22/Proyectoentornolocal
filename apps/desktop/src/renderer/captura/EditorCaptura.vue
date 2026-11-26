@@ -7,6 +7,7 @@ import {
   Close,
   CopyOutline,
   Crop,
+  EyeOffOutline,
   Grid,
   ImageOutline,
   Remove,
@@ -46,13 +47,29 @@ defineEmits<{
 
 const t = textos.captura;
 
-const HERRAMIENTAS: { id: HerramientaCaptura; icono: Component; nombre: () => string }[] = [
+const HERRAMIENTAS: {
+  id: HerramientaCaptura;
+  icono: Component;
+  nombre: () => string;
+  ayuda?: () => string;
+}[] = [
   { id: 'recuadro', icono: SquareOutline, nombre: () => t.herramientas.recuadro },
   { id: 'flecha', icono: ArrowForward, nombre: () => t.herramientas.flecha },
   { id: 'linea', icono: Remove, nombre: () => t.herramientas.linea },
   { id: 'resaltar', icono: Brush, nombre: () => t.herramientas.resaltador },
   { id: 'texto', icono: Text, nombre: () => t.herramientas.texto },
-  { id: 'pixelar', icono: Grid, nombre: () => t.herramientas.pixelar },
+  {
+    id: 'pixelar',
+    icono: Grid,
+    nombre: () => t.herramientas.pixelar,
+    ayuda: () => t.herramientas.pixelarAyuda,
+  },
+  {
+    id: 'ocultar',
+    icono: EyeOffOutline,
+    nombre: () => t.herramientas.ocultar,
+    ayuda: () => t.herramientas.ocultarAyuda,
+  },
 ];
 </script>
 
@@ -65,7 +82,7 @@ const HERRAMIENTAS: { id: HerramientaCaptura; icono: Component; nombre: () => st
         type="button"
         class="boton"
         :class="{ activo: herramienta === h.id }"
-        :title="h.nombre()"
+        :title="h.ayuda ? h.ayuda() : h.nombre()"
         :aria-label="h.nombre()"
         :aria-pressed="herramienta === h.id"
         @click="$emit('update:herramienta', h.id)"
@@ -156,7 +173,7 @@ const HERRAMIENTAS: { id: HerramientaCaptura; icono: Component; nombre: () => st
         type="button"
         class="boton"
         :disabled="ocupado"
-        :title="t.copiar"
+        :title="t.copiarAyuda"
         :aria-label="t.copiar"
         @click="$emit('copiar')"
       >

@@ -10,6 +10,7 @@ import {
   PilaDeshacer,
   flecha,
   linea,
+  ocultar,
   pixelado,
   recuadro,
   renderizar,
@@ -156,9 +157,8 @@ async function usarImagen(bitmap: ImageBitmap, region: boolean): Promise<void> {
   base.value?.close();
   base.value = bitmap;
   tam.value = { ancho: bitmap.width, alto: bitmap.height };
-  anotaciones.value = [];
   trazo.value = null;
-  pila.hacer([]);
+  anotaciones.value = pila.reiniciar([]);
   sincronizarPila();
   seleccion.value = region ? null : { x: 0, y: 0, ancho: bitmap.width, alto: bitmap.height };
   fase.value = region ? 'seleccion' : 'edicion';
@@ -207,16 +207,23 @@ function dibujarMiniatura(b: ImageBitmap, c: HTMLCanvasElement | undefined): voi
   c.getContext('2d')?.drawImage(b, 0, 0, c.width, c.height);
 }
 
+/** La lista solo trae miniaturas: la ventana elegida se pide a tamaño real al proceso principal. */
 async function elegirVentana(i: number): Promise<void> {
   const v = vistas.value[i];
-  if (!v) return;
-  // Se conserva el bitmap elegido y se sueltan los demás.
-  const elegido = v.bitmap;
-  vistas.value.forEach((x, j) => {
-    if (j !== i) x.bitmap.close();
-  });
-  vistas.value = [];
-  await usarImagen(elegido, false);
+  if (!v || ocupado.value) return;
+  ocupado.value = true;
+  aviso.value = null;
+  try {
+    const img = await window.captura.ventana(v.ventana.id);
+    const bitmap = await aBitmap(img.png);
+    vistas.value.forEach((x) => x.bitmap.close());
+    vistas.value = [];
+    await usarImagen(bitmap, false);
+  } catch {
+    aviso.value = t.errorVentana;
+  } finally {
+    ocupado.value = false;
+  }
 }
 
 // ---- Ratón ----
@@ -258,8 +265,10 @@ function construir(a: Punto, b: Punto): Anotacion {
       return linea(a, b, color.value, g);
     case 'resaltar':
       return resaltar(a, b);
+    case 'ocultar':
+      return ocultar(a, b);
     default:
-      return pixelado(a, b);
+      return pixelado(a, b, factor.value);
   }
 }
 
@@ -341,7 +350,9 @@ function rehacer(): void {
 
 function reseleccionar(): void {
   seleccion.value = null;
-  hacer([]);
+  // Las anotaciones de la selección anterior no pueden volver con "Deshacer": se vacía el historial.
+  anotaciones.value = pila.reiniciar([]);
+  sincronizarPila();
   trazo.value = null;
   fase.value = 'seleccion';
   pintar();
@@ -487,7 +498,6 @@ onBeforeUnmount(() => {
             aria-hidden="true"
           ></canvas>
           <span class="nombre">{{ v.ventana.nombre }}</span>
-          <span class="medida">{{ t.dimensiones(v.ventana.ancho, v.ventana.alto) }}</span>
         </button>
       </div>
     </section>
@@ -682,9 +692,5 @@ body,
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
-}
-.medida {
-  font-size: 11px;
-  opacity: 0.7;
 }
 </style>

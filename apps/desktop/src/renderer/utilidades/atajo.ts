@@ -1,7 +1,7 @@
 /**
- * Convierte una pulsación de teclas en un atajo global de Electron (`Ctrl+Shift+S`) para el
+ * Convierte una pulsación de teclas en un atajo global de Electron (`Ctrl+Alt+Shift+S`) para el
  * selector de Ajustes. Devuelve null si falta un modificador o la tecla no sirve (solo letras,
- * dígitos y F1-F24); el núcleo vuelve a validar el resultado.
+ * dígitos y F1-F24); el núcleo valida el resultado (exige Ctrl o Super, rechaza AltGr y los atajos comunes).
  */
 export interface PulsacionTeclado {
   code: string;

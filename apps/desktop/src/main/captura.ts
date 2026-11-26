@@ -1,8 +1,8 @@
 import {
   dimensionesImagen,
   ErrorWolf,
-  esAtajoCaptura,
   LIMITES_IMAGEN,
+  motivoAtajoCaptura,
   type CapturaConfig,
   type EstadoCaptura,
   type FormatoCaptura,
@@ -66,6 +66,7 @@ export function opcionesVentanaCaptura(o: OpcionesVentanaCaptura): {
     webSecurity: boolean;
     allowRunningInsecureContent: boolean;
     spellcheck: boolean;
+    partition: string;
   };
 } {
   return {
@@ -90,8 +91,95 @@ export function opcionesVentanaCaptura(o: OpcionesVentanaCaptura): {
       webSecurity: true,
       allowRunningInsecureContent: false,
       spellcheck: false,
+      partition: PARTICION_CAPTURA,
     },
   };
+}
+
+/**
+ * Sesión propia de la ventana de captura. Sin el prefijo `persist:` vive solo en memoria: no deja
+ * cookies, caché ni almacenamiento en disco, y sus permisos se pueden cerrar sin tocar los de la app.
+ */
+export const PARTICION_CAPTURA = 'wolf-captura';
+
+/** Plazo para obtener las fuentes de `desktopCapturer` (pantalla o ventanas). */
+export const PLAZO_FUENTES_MS = 10_000;
+/** Plazo desde que se pide cargar la ventana de captura hasta `ready-to-show`. */
+export const PLAZO_CARGA_VENTANA_MS = 10_000;
+/** Lo que espera en memoria una captura enviada al conversor antes de olvidarse. */
+export const CADUCIDAD_PENDIENTE_MS = 2 * 60_000;
+
+/** Lo que se usa de una sesión de Electron para cerrarle los permisos. */
+export interface SesionPermisos {
+  setPermissionRequestHandler(
+    fn: (webContents: unknown, permiso: string, devolver: (concedido: boolean) => void) => void,
+  ): void;
+  setPermissionCheckHandler(fn: () => boolean): void;
+}
+
+/** La ventana de captura no necesita ningún permiso (cámara, ubicación, notificaciones...). */
+export function denegarPermisos(sesion: SesionPermisos): void {
+  sesion.setPermissionRequestHandler((_wc, _permiso, devolver) => devolver(false));
+  sesion.setPermissionCheckHandler(() => false);
+}
+
+/** Lo que `vigilarVentana` necesita de la ventana nativa (en las pruebas, un doble). */
+export interface VentanaVigilable {
+  /** Se dispara una vez cuando la página está lista para mostrarse (`ready-to-show`). */
+  alListaParaMostrar(fn: () => void): void;
+  /**
+   * La carga falló (`did-fail-load` de la página principal), el proceso de la página murió
+   * (`render-process-gone`) o dejó de responder (`unresponsive`).
+   */
+  alFallar(fn: () => void): void;
+  /** La ventana ya se cerró o se destruyó. */
+  alCerrar(fn: () => void): void;
+  destruir(): void;
+}
+
+/**
+ * Una ventana de captura que no carga, que muere o que se cuelga no puede quedar flotando sobre
+ * todo el escritorio: se destruye (su cierre libera el estado del servicio). También se destruye
+ * si no está lista para mostrarse en `plazoMs`.
+ */
+export function vigilarVentana(
+  v: VentanaVigilable,
+  plazoMs: number = PLAZO_CARGA_VENTANA_MS,
+): void {
+  let cerrada = false;
+  const destruir = (): void => {
+    if (cerrada) return;
+    cerrada = true;
+    clearTimeout(temporizador);
+    v.destruir();
+  };
+  const temporizador = setTimeout(destruir, plazoMs);
+  v.alListaParaMostrar(() => clearTimeout(temporizador));
+  v.alFallar(destruir);
+  v.alCerrar(() => {
+    cerrada = true;
+    clearTimeout(temporizador);
+  });
+}
+
+/** Rechaza con `captura.no_disponible` si `p` no termina en `ms`. */
+export function conPlazo<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolver, rechazar) => {
+    const t = setTimeout(
+      () => rechazar(new ErrorWolf('captura.no_disponible', 'La captura tardó demasiado.')),
+      ms,
+    );
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolver(v);
+      },
+      (e: unknown) => {
+        clearTimeout(t);
+        rechazar(e);
+      },
+    );
+  });
 }
 
 /** Lo que el servicio necesita de la ventana de captura. */
@@ -117,8 +205,13 @@ export interface DepsCaptura {
   estado(): Promise<EstadoCaptura>;
   /** Permiso real del sistema si el proceso principal lo conoce mejor (macOS). */
   permisoSistema?(): EstadoCaptura['permiso'] | null;
-  /** Pantalla bajo el cursor y, según el modo, las ventanas; con las propias ya ocultas. */
+  /**
+   * Pantalla bajo el cursor (región y pantalla) o, en modo ventana, solo la lista de ventanas con
+   * miniaturas pequeñas; con las propias ya ocultas.
+   */
   fuentes(modo: ModoCaptura): Promise<FuentesCaptura>;
+  /** La ventana elegida a tamaño real (id de la lista ya ofrecida), o null si ya no está. */
+  capturarVentana(id: string): Promise<ImagenCaptura | null>;
   /** Oculta las ventanas de la app y devuelve cómo volver a mostrarlas. */
   ocultarPropias(): Promise<() => void>;
   /** Abre la ventana de captura (con protección de contenido: no sale en otras capturas). */
@@ -184,6 +277,16 @@ export function validarImagenCaptura(v: unknown, formato?: FormatoCaptura): Uint
   return v;
 }
 
+/**
+ * La extensión del archivo debe coincidir con el formato de los bytes: si falta o es otra, se añade
+ * la correcta (`foto.txt` → `foto.txt.png`) en vez de guardar un PNG con nombre de otro tipo.
+ */
+export function destinoConExtension(elegido: string, formato: FormatoCaptura): string {
+  const ext = /\.([A-Za-z0-9]{1,5})$/.exec(elegido)?.[1]?.toLowerCase();
+  const validas = formato === 'jpg' ? ['jpg', 'jpeg'] : ['png'];
+  return ext !== undefined && validas.includes(ext) ? elegido : `${elegido}.${formato}`;
+}
+
 export function esFormatoCaptura(v: unknown): v is FormatoCaptura {
   return v === 'png' || v === 'jpg';
 }
@@ -195,6 +298,8 @@ export class ServicioCaptura {
   private ventana: VentanaCaptura | null = null;
   private datos: DatosCaptura | null = null;
   private pendiente: ImagenPendiente | null = null;
+  private caducaPendiente: ReturnType<typeof setTimeout> | null = null;
+  private capturandoVentana = false;
 
   constructor(private readonly deps: DepsCaptura) {}
 
@@ -211,7 +316,14 @@ export class ServicioCaptura {
       this.ocupado = false;
       return { ok: true };
     }
-    if (!esAtajoCaptura(atajo)) {
+    const motivo = motivoAtajoCaptura(atajo);
+    if (motivo === 'no_permitido') {
+      throw new ErrorWolf(
+        'captura.atajo_no_permitido',
+        'Ese atajo no se permite: use Ctrl o Super con otro modificador y evite los atajos comunes.',
+      );
+    }
+    if (motivo !== null) {
       throw new ErrorWolf('captura.atajo_invalido', 'El atajo de captura no es válido.');
     }
     if (atajo === this.registrado) return { ok: true };
@@ -220,9 +332,13 @@ export class ServicioCaptura {
       ok =
         !this.deps.atajos.isRegistered(atajo) &&
         this.deps.atajos.register(atajo, () => {
-          void this.iniciar('region').then((r) => {
-            if (!r.ok && r.codigo === 'captura.no_disponible') this.deps.registrarError?.(r.codigo);
-          });
+          void this.iniciar('region')
+            .then((r) => {
+              if (!r.ok && r.codigo === 'captura.no_disponible') {
+                this.deps.registrarError?.(r.codigo);
+              }
+            })
+            .catch((e: unknown) => this.deps.registrarError?.(e));
         });
     } catch (e) {
       this.deps.registrarError?.(e);
@@ -254,14 +370,17 @@ export class ServicioCaptura {
       const restaurar = await this.deps.ocultarPropias();
       let fuentes: FuentesCaptura;
       try {
-        fuentes = await this.deps.fuentes(modo);
+        fuentes = await conPlazo(this.deps.fuentes(modo), PLAZO_FUENTES_MS);
       } catch (e) {
         this.deps.registrarError?.(e);
         return { ok: false, codigo: 'captura.no_disponible' };
       } finally {
         restaurar();
       }
-      if (!fuentes.pantalla && fuentes.ventanas.length === 0) {
+      // En modo ventana la lista vacía es un resultado válido ("no hay ventanas"): se abre la
+      // ventana de captura y ella lo explica. En los demás modos sin imagen no hay nada que editar.
+      const sinNada = modo === 'ventana' ? fuentes.ventanas.length === 0 : !fuentes.pantalla;
+      if (sinNada && (modo !== 'ventana' || permiso === 'pendiente')) {
         // Sin imagen: en macOS sin permiso el sistema devuelve vacío en vez de un error.
         if (permiso === 'pendiente') {
           await this.deps.explicarPermiso();
@@ -270,15 +389,18 @@ export class ServicioCaptura {
         return { ok: false, codigo: 'captura.no_disponible' };
       }
       const cfg = await this.deps.config();
-      this.datos = {
+      const datos: DatosCaptura = {
         modo,
         formato: cfg.formato,
         idioma: this.deps.idioma(),
-        pantalla: fuentes.pantalla,
-        ventanas: fuentes.ventanas,
+        // En modo ventana la pantalla entera no se envía: solo las miniaturas de la lista.
+        pantalla: modo === 'ventana' ? null : fuentes.pantalla,
+        ventanas: modo === 'ventana' ? fuentes.ventanas : [],
       };
+      // Los datos se asignan solo cuando la ventana se creó: si `crearVentana` falla no queda nada.
       const v = this.deps.crearVentana();
       this.ventana = v;
+      this.datos = datos;
       v.alCerrar(() => {
         if (this.ventana === v) {
           this.ventana = null;
@@ -310,7 +432,7 @@ export class ServicioCaptura {
     const sugerido = nombreSugerido(this.deps.ahora?.() ?? new Date(), formato);
     const elegido = await this.deps.pedirDestino(sugerido, formato, this.ventana);
     if (elegido === null) return null;
-    const destino = /\.[A-Za-z0-9]{1,5}$/.test(elegido) ? elegido : `${elegido}.${formato}`;
+    const destino = destinoConExtension(elegido, formato);
     const r = await this.deps.guardarImagen(destino, datos);
     return { archivo: r.archivo };
   }
@@ -319,7 +441,11 @@ export class ServicioCaptura {
   alConversor(bytes: unknown): void {
     const datos = validarImagenCaptura(bytes);
     const d = dimensionesImagen(datos)!;
+    this.soltarPendiente();
     this.pendiente = { bytes: datos, ancho: d.ancho, alto: d.alto };
+    // Una captura que nadie recoge no se queda en memoria: caduca a los 2 minutos.
+    this.caducaPendiente = setTimeout(() => this.soltarPendiente(), CADUCIDAD_PENDIENTE_MS);
+    this.caducaPendiente.unref?.();
     this.deps.alConversor({ ancho: d.ancho, alto: d.alto });
     this.cerrar();
   }
@@ -327,8 +453,52 @@ export class ServicioCaptura {
   /** Entrega la imagen pendiente una sola vez. */
   tomarPendiente(): ImagenPendiente | null {
     const p = this.pendiente;
-    this.pendiente = null;
+    this.soltarPendiente();
     return p;
+  }
+
+  private soltarPendiente(): void {
+    if (this.caducaPendiente) clearTimeout(this.caducaPendiente);
+    this.caducaPendiente = null;
+    this.pendiente = null;
+  }
+
+  /**
+   * Modo ventana: la ventana elegida a tamaño real. Solo vale un id de la lista ya ofrecida a esta
+   * ventana de captura; el resto es un error, no una captura de lo que pida el renderer.
+   */
+  async capturarVentana(id: unknown): Promise<ImagenCaptura> {
+    const d = this.datos;
+    if (
+      typeof id !== 'string' ||
+      !this.ventana ||
+      !d ||
+      d.modo !== 'ventana' ||
+      !d.ventanas.some((v) => v.id === id)
+    ) {
+      throw new ErrorWolf('captura.sin_imagen', 'Esa ventana no está en la lista.');
+    }
+    if (this.capturandoVentana) {
+      throw new ErrorWolf('captura.sin_imagen', 'Ya se está capturando una ventana.');
+    }
+    this.capturandoVentana = true;
+    const v = this.ventana;
+    try {
+      let img: ImagenCaptura | null;
+      try {
+        img = await conPlazo(this.deps.capturarVentana(id), PLAZO_FUENTES_MS);
+      } catch (e) {
+        this.deps.registrarError?.(e);
+        throw new ErrorWolf('captura.no_disponible', 'No se pudo capturar la ventana.');
+      }
+      if (this.ventana !== v) throw new ErrorWolf('captura.sin_imagen', 'La captura se cerró.');
+      if (!img) throw new ErrorWolf('captura.sin_imagen', 'Esa ventana ya no se puede capturar.');
+      const png = validarImagenCaptura(img.png, 'png');
+      const dim = dimensionesImagen(png)!;
+      return { png, ancho: dim.ancho, alto: dim.alto };
+    } finally {
+      this.capturandoVentana = false;
+    }
   }
 
   cerrar(): void {
@@ -357,7 +527,7 @@ export class ServicioCaptura {
       }
     }
     this.registrado = null;
-    this.pendiente = null;
+    this.soltarPendiente();
     this.cerrar();
   }
 }
@@ -374,13 +544,25 @@ export function registrarIpcCaptura(ipc: IpcCapturaLike, servicio: ServicioCaptu
   const solo =
     <A extends unknown[], R>(fn: (...a: A) => R) =>
     (e: unknown, ...a: unknown[]): R => {
-      const emisor = (e as { sender?: unknown } | null)?.sender;
-      if (!servicio.esVentana(emisor)) throw new Error('Origen no permitido');
+      const ev = e as { sender?: { mainFrame?: unknown }; senderFrame?: unknown } | null;
+      const emisor = ev?.sender;
+      // Debe ser la página de la ventana de captura y su marco principal (no un iframe).
+      if (
+        !servicio.esVentana(emisor) ||
+        ev?.senderFrame === undefined ||
+        ev.senderFrame !== emisor?.mainFrame
+      ) {
+        throw new Error('Origen no permitido');
+      }
       return fn(...(a as A));
     };
   ipc.handle(
     CANALES_CAPTURA.datos,
     solo(() => servicio.datosSesion()),
+  );
+  ipc.handle(
+    CANALES_CAPTURA.ventana,
+    solo((id: unknown) => servicio.capturarVentana(id)),
   );
   ipc.handle(
     CANALES_CAPTURA.copiar,

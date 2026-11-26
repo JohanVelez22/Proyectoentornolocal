@@ -4,14 +4,23 @@ import { join } from 'node:path';
 import { guardarImagen, PlataformaFalsa } from '@pel/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  CADUCIDAD_PENDIENTE_MS,
+  conPlazo,
   CSP_CAPTURA,
+  denegarPermisos,
+  destinoConExtension,
   nombreSugerido,
   opcionesVentanaCaptura,
+  PARTICION_CAPTURA,
+  PLAZO_CARGA_VENTANA_MS,
+  PLAZO_FUENTES_MS,
   registrarIpcCaptura,
   ServicioCaptura,
   validarImagenCaptura,
+  vigilarVentana,
   type DepsCaptura,
   type VentanaCaptura,
+  type VentanaVigilable,
 } from '../src/main/captura';
 import { CANALES_CAPTURA } from '../src/shared/captura';
 
@@ -49,7 +58,7 @@ interface Prueba {
   servicio: ServicioCaptura;
   plataforma: PlataformaFalsa;
   registrados: Map<string, () => void>;
-  ventanas: { cerrada: boolean; alCerrar: (() => void)[]; emisor: object }[];
+  ventanas: { cerrada: boolean; alCerrar: (() => void)[]; emisor: { mainFrame: object } }[];
   avisos: string[];
   eventos: string[];
 }
@@ -78,12 +87,13 @@ function armar(sobre: Partial<DepsCaptura> = {}, ocupados: string[] = []): Prueb
           ? [{ id: 'window:1', nombre: 'Editor', png: PNG_1X1, ancho: 1, alto: 1 }]
           : [],
     }),
+    capturarVentana: async () => ({ png: PNG_1X1, ancho: 1, alto: 1 }),
     ocultarPropias: async () => {
       eventos.push('ocultar');
       return () => void eventos.push('restaurar');
     },
     crearVentana: () => {
-      const v = { cerrada: false, alCerrar: [] as (() => void)[], emisor: {} };
+      const v = { cerrada: false, alCerrar: [] as (() => void)[], emisor: { mainFrame: {} } };
       ventanas.push(v);
       eventos.push('ventana');
       const w: VentanaCaptura = {
@@ -124,30 +134,30 @@ describe('atajo global', () => {
 
   it('activarlo lo registra y null lo quita', () => {
     const p = armar();
-    expect(p.servicio.registrarAtajo('Ctrl+Shift+S')).toEqual({ ok: true });
-    expect([...p.registrados.keys()]).toEqual(['Ctrl+Shift+S']);
+    expect(p.servicio.registrarAtajo('Ctrl+Alt+Shift+S')).toEqual({ ok: true });
+    expect([...p.registrados.keys()]).toEqual(['Ctrl+Alt+Shift+S']);
     expect(p.servicio.registrarAtajo(null)).toEqual({ ok: true });
     expect(p.registrados.size).toBe(0);
   });
 
   it('si choca con otro programa avisa y no lo pisa', async () => {
-    const p = armar({}, ['Ctrl+Shift+S']);
-    expect(p.servicio.registrarAtajo('Ctrl+Shift+S', true)).toEqual({
+    const p = armar({}, ['Ctrl+Alt+Shift+S']);
+    expect(p.servicio.registrarAtajo('Ctrl+Alt+Shift+S', true)).toEqual({
       ok: false,
       codigo: 'captura.atajo_ocupado',
     });
     expect(p.registrados.size).toBe(0);
-    expect(p.avisos).toEqual(['Ctrl+Shift+S']);
+    expect(p.avisos).toEqual(['Ctrl+Alt+Shift+S']);
     const ui = await p.servicio.estadoUi();
     expect(ui.atajoOcupado).toBe(true);
     expect(ui.atajoActivo).toBe(false);
   });
 
   it('un cambio que choca deja el atajo anterior funcionando y sin aviso nativo', async () => {
-    const p = armar({}, ['Alt+F9']);
-    p.servicio.registrarAtajo('Ctrl+Shift+S');
-    expect(p.servicio.registrarAtajo('Alt+F9').codigo).toBe('captura.atajo_ocupado');
-    expect([...p.registrados.keys()]).toEqual(['Ctrl+Shift+S']);
+    const p = armar({}, ['Ctrl+Shift+F9']);
+    p.servicio.registrarAtajo('Ctrl+Alt+Shift+S');
+    expect(p.servicio.registrarAtajo('Ctrl+Shift+F9').codigo).toBe('captura.atajo_ocupado');
+    expect([...p.registrados.keys()]).toEqual(['Ctrl+Alt+Shift+S']);
     expect(p.avisos).toEqual([]);
     const ui = await p.servicio.estadoUi();
     expect(ui.atajoActivo).toBe(true);
@@ -156,9 +166,9 @@ describe('atajo global', () => {
 
   it('cambiar a otro atajo libre suelta el anterior', () => {
     const p = armar();
-    p.servicio.registrarAtajo('Ctrl+Shift+S');
-    p.servicio.registrarAtajo('Alt+F9');
-    expect([...p.registrados.keys()]).toEqual(['Alt+F9']);
+    p.servicio.registrarAtajo('Ctrl+Alt+Shift+S');
+    p.servicio.registrarAtajo('Ctrl+Shift+F9');
+    expect([...p.registrados.keys()]).toEqual(['Ctrl+Shift+F9']);
   });
 
   it('un atajo con forma rara ni llega al sistema', () => {
@@ -167,19 +177,44 @@ describe('atajo global', () => {
     expect(p.registrados.size).toBe(0);
   });
 
+  it('un atajo poco seguro se rechaza en el núcleo con captura.atajo_no_permitido y no llega al sistema', () => {
+    const p = armar();
+    for (const malo of ['Ctrl+Shift+S', 'Ctrl+C', 'Alt+F4', 'Alt+F9', 'Shift+F9', 'Ctrl+Alt+Q']) {
+      expect(() => p.servicio.registrarAtajo(malo), malo).toThrow(
+        expect.objectContaining({ codigo: 'captura.atajo_no_permitido' }),
+      );
+    }
+    expect(p.registrados.size).toBe(0);
+    expect(p.servicio.registrarAtajo('Ctrl+Alt+Shift+S')).toEqual({ ok: true });
+  });
+
   it('liberar suelta el atajo', () => {
     const p = armar();
-    p.servicio.registrarAtajo('Ctrl+Shift+S');
+    p.servicio.registrarAtajo('Ctrl+Alt+Shift+S');
     p.servicio.liberar();
     expect(p.registrados.size).toBe(0);
   });
 
   it('al pulsarlo abre la captura de región', async () => {
     const p = armar();
-    p.servicio.registrarAtajo('Ctrl+Shift+S');
-    p.registrados.get('Ctrl+Shift+S')!();
+    p.servicio.registrarAtajo('Ctrl+Alt+Shift+S');
+    p.registrados.get('Ctrl+Alt+Shift+S')!();
     await vi.waitFor(() => expect(p.ventanas.length).toBe(1));
     expect(p.servicio.datosSesion()?.modo).toBe('region');
+  });
+
+  it('si lanzar la captura con el atajo falla, el error queda en el registro y no sin atender', async () => {
+    const errores: unknown[] = [];
+    const p = armar({
+      estado: () => Promise.reject(new Error('sin estado')),
+      registrarError: (e) => void errores.push(e),
+    });
+    p.servicio.registrarAtajo('Ctrl+Alt+Shift+S');
+    p.registrados.get('Ctrl+Alt+Shift+S')!();
+    await vi.waitFor(() => expect(errores.length).toBe(1));
+    expect(errores[0]).toMatchObject({ message: 'sin estado' });
+    // Y no quedó bloqueada: la siguiente captura sí puede empezar.
+    expect(await armar().servicio.iniciar('region')).toEqual({ ok: true });
   });
 });
 
@@ -199,6 +234,28 @@ describe('iniciar la captura', () => {
     const d = p.servicio.datosSesion()!;
     expect(d.pantalla).toBeNull();
     expect(d.ventanas.map((v) => v.nombre)).toEqual(['Editor']);
+  });
+
+  it('el modo ventana sin ventanas abre la ventana de captura (que muestra sinVentanas), no no_disponible', async () => {
+    const p = armar({ fuentes: async () => ({ pantalla: null, ventanas: [] }) });
+    expect(await p.servicio.iniciar('ventana')).toEqual({ ok: true });
+    expect(p.servicio.datosSesion()).toMatchObject({
+      modo: 'ventana',
+      ventanas: [],
+      pantalla: null,
+    });
+    expect(p.ventanas.length).toBe(1);
+  });
+
+  it('el modo ventana nunca manda la pantalla entera aunque la fuente la traiga', async () => {
+    const p = armar({
+      fuentes: async () => ({
+        pantalla: { png: PNG_1X1, ancho: 1, alto: 1 },
+        ventanas: [{ id: 'window:1', nombre: 'A', png: PNG_1X1, ancho: 1, alto: 1 }],
+      }),
+    });
+    await p.servicio.iniciar('ventana');
+    expect(p.servicio.datosSesion()!.pantalla).toBeNull();
   });
 
   it('solo una captura a la vez, y al cerrar se puede otra', async () => {
@@ -256,6 +313,27 @@ describe('iniciar la captura', () => {
     expect(p.servicio.datosSesion()).toBeNull();
   });
 
+  it('si crear la ventana falla no queda nada: ni datos, ni ventana, ni captura en curso', async () => {
+    let falla = true;
+    let crear: () => VentanaCaptura = () => {
+      throw new Error('no se pudo crear');
+    };
+    const p = armar({ crearVentana: () => crear() });
+    crear = () => {
+      if (falla) throw new Error('no se pudo crear');
+      return {
+        esDe: () => false,
+        cerrar: () => undefined,
+        alCerrar: () => undefined,
+      };
+    };
+    await expect(p.servicio.iniciar('region')).rejects.toThrow('no se pudo crear');
+    expect(p.servicio.datosSesion()).toBeNull();
+    expect(p.servicio.esVentana({})).toBe(false);
+    falla = false;
+    expect(await p.servicio.iniciar('region')).toEqual({ ok: true });
+  });
+
   it('la ventana de captura se crea después de capturar: no sale en su propia imagen', async () => {
     const p = armar();
     await p.servicio.iniciar('region');
@@ -297,6 +375,22 @@ describe('salida de la captura', () => {
     await p.servicio.iniciar('pantalla');
     await p.servicio.guardar(PNG_1X1, 'png');
     expect(guardar.mock.calls[0]![0]).toBe('C:/Capturas/mia.png');
+  });
+
+  it('si la extensión no coincide con el formato se añade la correcta', () => {
+    const casos: [string, 'png' | 'jpg', string][] = [
+      ['C:/c/mia.txt', 'png', 'C:/c/mia.txt.png'],
+      ['C:/c/mia.jpg', 'png', 'C:/c/mia.jpg.png'],
+      ['C:/c/mia.PNG', 'png', 'C:/c/mia.PNG'],
+      ['C:/c/mia.png', 'jpg', 'C:/c/mia.png.jpg'],
+      ['C:/c/mia.jpeg', 'jpg', 'C:/c/mia.jpeg'],
+      ['C:/c/mia.JPG', 'jpg', 'C:/c/mia.JPG'],
+      ['C:/c/mia', 'jpg', 'C:/c/mia.jpg'],
+      ['C:/c/mia.', 'png', 'C:/c/mia..png'],
+    ];
+    for (const [entrada, formato, esperado] of casos) {
+      expect(destinoConExtension(entrada, formato), entrada).toBe(esperado);
+    }
   });
 
   it('guardar exige una ventana abierta y un formato válido', async () => {
@@ -378,13 +472,19 @@ describe('validarImagenCaptura', () => {
 });
 
 describe('canales de la ventana de captura', () => {
+  /** Evento IPC de la página principal de la ventana de captura. */
+  const deLaPagina = (p: Prueba): { sender: object; senderFrame: object } => ({
+    sender: p.ventanas[0]!.emisor,
+    senderFrame: p.ventanas[0]!.emisor.mainFrame,
+  });
+
   function canales(p: Prueba): Map<string, (e: unknown, ...a: unknown[]) => unknown> {
     const m = new Map<string, (e: unknown, ...a: unknown[]) => unknown>();
     registrarIpcCaptura({ handle: (c, f) => void m.set(c, f) }, p.servicio);
     return m;
   }
 
-  it('registra exactamente sus cinco canales', () => {
+  it('registra exactamente sus seis canales', () => {
     const c = canales(armar());
     expect([...c.keys()].sort()).toEqual(Object.values(CANALES_CAPTURA).sort());
   });
@@ -395,8 +495,15 @@ describe('canales de la ventana de captura', () => {
     // Sin ventana abierta, nadie puede usarlos.
     expect(() => c.get(CANALES_CAPTURA.datos)!({ sender: {} })).toThrow(/Origen no permitido/);
     await p.servicio.iniciar('region');
-    const propia = { sender: p.ventanas[0]!.emisor };
+    const propia = deLaPagina(p);
     expect(c.get(CANALES_CAPTURA.datos)!(propia)).toMatchObject({ modo: 'region' });
+    // La misma página pero desde un iframe (otro marco) tampoco: hace falta el marco principal.
+    expect(() => c.get(CANALES_CAPTURA.datos)!({ sender: propia.sender, senderFrame: {} })).toThrow(
+      /Origen no permitido/,
+    );
+    expect(() => c.get(CANALES_CAPTURA.datos)!({ sender: propia.sender })).toThrow(
+      /Origen no permitido/,
+    );
     // Ni la ventana principal ni otra página.
     for (const [canal, fn] of c) {
       expect(() => fn({ sender: {} }, PNG_1X1, 'png'), canal).toThrow(/Origen no permitido/);
@@ -404,11 +511,70 @@ describe('canales de la ventana de captura', () => {
     }
   });
 
+  it('el canal ventana captura solo un id de la lista ya ofrecida, y solo en modo ventana', async () => {
+    const pedidas: string[] = [];
+    const p = armar({
+      capturarVentana: async (id) => {
+        pedidas.push(id);
+        return { png: PNG_1X1, ancho: 1, alto: 1 };
+      },
+    });
+    const c = canales(p);
+    await p.servicio.iniciar('ventana');
+    const ev = deLaPagina(p);
+    expect(await c.get(CANALES_CAPTURA.ventana)!(ev, 'window:1')).toMatchObject({
+      ancho: 1,
+      alto: 1,
+    });
+    expect(pedidas).toEqual(['window:1']);
+    // Un id que no estaba en la lista, o que no es un texto, ni se pide al sistema.
+    for (const malo of ['window:999', 'screen:0', '', 7, null, { id: 'window:1' }]) {
+      await expect(c.get(CANALES_CAPTURA.ventana)!(ev, malo), String(malo)).rejects.toMatchObject({
+        codigo: 'captura.sin_imagen',
+      });
+    }
+    expect(pedidas).toEqual(['window:1']);
+    // Otro emisor: ni siquiera con un id válido.
+    expect(() => c.get(CANALES_CAPTURA.ventana)!({ sender: {} }, 'window:1')).toThrow(
+      /Origen no permitido/,
+    );
+  });
+
+  it('el canal ventana no sirve fuera del modo ventana', async () => {
+    const p = armar();
+    const c = canales(p);
+    await p.servicio.iniciar('region');
+    await expect(c.get(CANALES_CAPTURA.ventana)!(deLaPagina(p), 'window:1')).rejects.toMatchObject({
+      codigo: 'captura.sin_imagen',
+    });
+  });
+
+  it('si la ventana ya no se puede capturar da captura.sin_imagen; si el sistema falla, no_disponible', async () => {
+    const errores: unknown[] = [];
+    let modo: 'nada' | 'falla' = 'nada';
+    const p = armar({
+      capturarVentana: async () => {
+        if (modo === 'falla') throw new Error('sistema');
+        return null;
+      },
+      registrarError: (e) => void errores.push(e),
+    });
+    await p.servicio.iniciar('ventana');
+    await expect(p.servicio.capturarVentana('window:1')).rejects.toMatchObject({
+      codigo: 'captura.sin_imagen',
+    });
+    modo = 'falla';
+    await expect(p.servicio.capturarVentana('window:1')).rejects.toMatchObject({
+      codigo: 'captura.no_disponible',
+    });
+    expect(errores.length).toBe(1);
+  });
+
   it('cerrar desde la ventana la cierra', async () => {
     const p = armar();
     const c = canales(p);
     await p.servicio.iniciar('region');
-    c.get(CANALES_CAPTURA.cerrar)!({ sender: p.ventanas[0]!.emisor });
+    c.get(CANALES_CAPTURA.cerrar)!(deLaPagina(p));
     expect(p.ventanas[0]!.cerrada).toBe(true);
   });
 });
@@ -444,10 +610,10 @@ describe('seguridad de la ventana de captura', () => {
     expect(html).not.toMatch(/https?:\/\//);
   });
 
-  it('el puente de la ventana solo expone sus cinco funciones, por sus canales', () => {
+  it('el puente de la ventana solo expone sus seis funciones, por sus canales', () => {
     const src = readFileSync(join(RAIZ, 'preload/captura.ts'), 'utf8');
     expect(src).toContain("exposeInMainWorld('captura'");
-    expect(src.match(/ipcRenderer\.invoke\(/g)).toHaveLength(5);
+    expect(src.match(/ipcRenderer\.invoke\(/g)).toHaveLength(6);
     expect(src).not.toMatch(/ipcRenderer\.(send|on|sendSync)\(/);
     expect(src).not.toMatch(/require\(|process\./);
   });
@@ -457,6 +623,50 @@ describe('seguridad de la ventana de captura', () => {
     expect(src).toContain('setContentProtection(true)');
     expect(src).toContain("setWindowOpenHandler(() => ({ action: 'deny' }))");
     expect(src).toContain("on('will-navigate'");
+    // Sin permisos y con sesión propia, y vigilada: no queda colgada.
+    expect(src).toContain('denegarPermisos(v.webContents.session)');
+    expect(src).toContain('vigilarVentana(');
+    for (const ev of ["'did-fail-load'", "'render-process-gone'", "'unresponsive'"]) {
+      expect(src, ev).toContain(ev);
+    }
+  });
+
+  it('el modo ventana pide solo ventanas con miniaturas pequeñas y la real con otro getSources', () => {
+    const src = readFileSync(join(RAIZ, 'main/capturaElectron.ts'), 'utf8');
+    expect(src).toContain("types: ['window']");
+    expect(src).not.toMatch(/types: \[[^\]]*'screen'[^\]]*'window'/);
+    expect(src).toContain('MINIATURA_VENTANA = { width: 640, height: 400 }');
+    expect(src.match(/desktopCapturer\.getSources\(/g)!.length).toBe(3);
+  });
+
+  it('la ventana de captura usa una partición propia en memoria (no persist:)', () => {
+    const o = opcionesVentanaCaptura({
+      preload: '/p/captura.cjs',
+      zona: { x: 0, y: 0, width: 10, height: 10 },
+    });
+    expect(o.webPreferences.partition).toBe(PARTICION_CAPTURA);
+    expect(PARTICION_CAPTURA.startsWith('persist:')).toBe(false);
+  });
+
+  it('denegarPermisos niega todo: peticiones y comprobaciones', () => {
+    let pedir: ((wc: unknown, perm: string, cb: (ok: boolean) => void) => void) | null = null;
+    let comprobar: (() => boolean) | null = null;
+    denegarPermisos({
+      setPermissionRequestHandler: (fn) => void (pedir = fn),
+      setPermissionCheckHandler: (fn) => void (comprobar = fn),
+    });
+    for (const permiso of [
+      'media',
+      'geolocation',
+      'notifications',
+      'clipboard-read',
+      'display-capture',
+    ]) {
+      const respuestas: boolean[] = [];
+      pedir!({}, permiso, (ok) => respuestas.push(ok));
+      expect(respuestas, permiso).toEqual([false]);
+    }
+    expect(comprobar!()).toBe(false);
   });
 
   it('el código de la captura no usa red, procesos ni escribe archivos', () => {
@@ -485,5 +695,173 @@ describe('seguridad de la ventana de captura', () => {
     expect(src).toContain('if (cfg.atajo) servicioCaptura.registrarAtajo(cfg.atajo, true)');
     expect(src.match(/captura\?\.liberar\(\)/g)!.length).toBeGreaterThanOrEqual(3);
     expect(existsSync(join(RAIZ, 'main/captura.ts'))).toBe(true);
+  });
+});
+
+describe('la ventana de captura no se cuelga', () => {
+  /** Ventana nativa falsa con los eventos que vigila el servicio. */
+  function nativaFalsa() {
+    const n = {
+      destruida: 0,
+      lista: [] as (() => void)[],
+      fallos: [] as (() => void)[],
+      cierres: [] as (() => void)[],
+    };
+    const vigilable: VentanaVigilable = {
+      alListaParaMostrar: (fn) => void n.lista.push(fn),
+      alFallar: (fn) => void n.fallos.push(fn),
+      alCerrar: (fn) => void n.cierres.push(fn),
+      destruir: () => {
+        n.destruida++;
+        // Destruir una ventana de Electron emite 'closed'.
+        n.cierres.forEach((f) => f());
+      },
+    };
+    return { n, vigilable };
+  }
+
+  /** Servicio cuya ventana de captura es una nativa falsa vigilada como en Electron. */
+  function conNativa(sobre: Partial<DepsCaptura> = {}) {
+    const nativa = nativaFalsa();
+    const p = armar({
+      crearVentana: () => {
+        vigilarVentana(nativa.vigilable);
+        return {
+          esDe: () => true,
+          cerrar: () => nativa.vigilable.destruir(),
+          alCerrar: (fn) => nativa.vigilable.alCerrar(fn),
+        };
+      },
+      ...sobre,
+    });
+    return { p, ...nativa };
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('si la carga falla, la ventana se destruye y todo queda libre', async () => {
+    const { p, n } = conNativa();
+    expect(await p.servicio.iniciar('region')).toEqual({ ok: true });
+    expect(p.eventos).toEqual(['ocultar', 'restaurar']);
+    n.fallos[0]!();
+    expect(n.destruida).toBe(1);
+    expect(p.servicio.datosSesion()).toBeNull();
+    expect(p.servicio.esVentana({})).toBe(false);
+    // `iniciando` y `ventana` libres: se puede capturar otra vez.
+    expect(await p.servicio.iniciar('region')).toEqual({ ok: true });
+  });
+
+  it('si el proceso muere o no responde después de mostrarse, también se destruye (una sola vez)', async () => {
+    const { p, n } = conNativa();
+    await p.servicio.iniciar('pantalla');
+    n.lista[0]!();
+    n.fallos[0]!();
+    n.fallos[0]!();
+    expect(n.destruida).toBe(1);
+    expect(p.servicio.datosSesion()).toBeNull();
+  });
+
+  it('si no está lista en 10 s se destruye; si lo está, el plazo ya no la toca', async () => {
+    vi.useFakeTimers();
+    const colgada = conNativa();
+    await colgada.p.servicio.iniciar('region');
+    vi.advanceTimersByTime(PLAZO_CARGA_VENTANA_MS - 1);
+    expect(colgada.n.destruida).toBe(0);
+    vi.advanceTimersByTime(1);
+    expect(colgada.n.destruida).toBe(1);
+    expect(colgada.p.servicio.datosSesion()).toBeNull();
+
+    const buena = conNativa();
+    await buena.p.servicio.iniciar('region');
+    buena.n.lista[0]!();
+    vi.advanceTimersByTime(PLAZO_CARGA_VENTANA_MS * 3);
+    expect(buena.n.destruida).toBe(0);
+    expect(buena.p.servicio.datosSesion()).not.toBeNull();
+  });
+
+  it('cerrar la ventana a tiempo cancela el plazo', async () => {
+    vi.useFakeTimers();
+    const { p, n } = conNativa();
+    await p.servicio.iniciar('region');
+    p.servicio.cerrar();
+    expect(n.destruida).toBe(1);
+    vi.advanceTimersByTime(PLAZO_CARGA_VENTANA_MS * 2);
+    expect(n.destruida).toBe(1);
+  });
+
+  it('getSources que nunca resuelve: a los 10 s da no_disponible y la ventana principal vuelve', async () => {
+    vi.useFakeTimers();
+    const errores: unknown[] = [];
+    const p = armar({
+      fuentes: () => new Promise(() => undefined),
+      registrarError: (e) => void errores.push(e),
+    });
+    const r = p.servicio.iniciar('region');
+    await vi.advanceTimersByTimeAsync(PLAZO_FUENTES_MS - 1);
+    expect(p.eventos).toEqual(['ocultar']);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await r).toEqual({ ok: false, codigo: 'captura.no_disponible' });
+    expect(p.eventos).toEqual(['ocultar', 'restaurar']);
+    expect(errores.length).toBe(1);
+    expect(p.ventanas.length).toBe(0);
+    // `iniciando` y `ventana` quedaron libres.
+    p.servicio['deps'].fuentes = async () => ({
+      pantalla: { png: PNG_1X1, ancho: 1, alto: 1 },
+      ventanas: [],
+    });
+    expect(await p.servicio.iniciar('region')).toEqual({ ok: true });
+  });
+
+  it('capturar la ventana elegida que nunca responde también da no_disponible a los 10 s', async () => {
+    vi.useFakeTimers();
+    const p = armar({
+      capturarVentana: () => new Promise(() => undefined),
+      registrarError: () => undefined,
+    });
+    await p.servicio.iniciar('ventana');
+    const r = p.servicio.capturarVentana('window:1');
+    const visto = expect(r).rejects.toMatchObject({ codigo: 'captura.no_disponible' });
+    await vi.advanceTimersByTimeAsync(PLAZO_FUENTES_MS);
+    await visto;
+    // Y se puede volver a intentar.
+    p.servicio['deps'].capturarVentana = async () => ({ png: PNG_1X1, ancho: 1, alto: 1 });
+    await expect(p.servicio.capturarVentana('window:1')).resolves.toMatchObject({ ancho: 1 });
+  });
+
+  it('conPlazo deja pasar lo que llega a tiempo y lo que rechaza', async () => {
+    await expect(conPlazo(Promise.resolve(7), 50)).resolves.toBe(7);
+    await expect(conPlazo(Promise.reject(new Error('x')), 50)).rejects.toThrow('x');
+  });
+});
+
+describe('captura pendiente del conversor', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('caduca a los 2 minutos', async () => {
+    vi.useFakeTimers();
+    const p = armar();
+    await p.servicio.iniciar('pantalla');
+    p.servicio.alConversor(PNG_1X1);
+    vi.advanceTimersByTime(CADUCIDAD_PENDIENTE_MS - 1);
+    expect(p.servicio['pendiente']).not.toBeNull();
+    vi.advanceTimersByTime(1);
+    expect(p.servicio.tomarPendiente()).toBeNull();
+  });
+
+  it('recogerla a tiempo la entrega y cancela el plazo; otra captura reinicia el plazo', async () => {
+    vi.useFakeTimers();
+    const p = armar();
+    await p.servicio.iniciar('pantalla');
+    p.servicio.alConversor(PNG_1X1);
+    vi.advanceTimersByTime(CADUCIDAD_PENDIENTE_MS - 10);
+    await p.servicio.iniciar('pantalla');
+    p.servicio.alConversor(PNG_1X1);
+    vi.advanceTimersByTime(CADUCIDAD_PENDIENTE_MS - 10);
+    expect(p.servicio.tomarPendiente()).not.toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

@@ -460,6 +460,8 @@ export const fr: Textos = {
       'herramientas.salida_ocupada': 'Aucun nom libre n’a été trouvé pour le nouveau fichier.',
       'captura.atajo_invalido':
         'Ce raccourci n’est pas valide : utilisez Ctrl, Alt, Maj ou Super avec une lettre, un chiffre ou une touche F.',
+      'captura.atajo_no_permitido':
+        'Ce raccourci n’est pas autorisé : utilisez Ctrl ou Super avec un autre modificateur (Ctrl+Alt sans Maj est AltGr et empêche de taper @) et évitez les raccourcis courants comme Ctrl+C ou Alt+F4.',
       'captura.atajo_ocupado': 'Le raccourci {atajo} est déjà utilisé par un autre programme.',
       'captura.no_disponible': 'La capture d’écran n’est pas disponible sur cet ordinateur.',
       'captura.permiso_denegado': 'L’autorisation d’enregistrement de l’écran manque.',
@@ -3314,10 +3316,15 @@ export const fr: Textos = {
       resaltador: 'Surligneur',
       texto: 'Texte',
       pixelar: 'Pixeliser',
+      pixelarAyuda: 'Pixeliser (peu sûr pour des données sensibles : utilisez Masquer)',
+      ocultar: 'Masquer',
+      ocultarAyuda: 'Masquer avec un aplat opaque (recommandé pour les données sensibles)',
     },
     deshacer: 'Annuler',
     rehacer: 'Rétablir',
     copiar: 'Copier',
+    copiarAyuda:
+      'Copier dans le presse-papiers. Le presse-papiers de Windows peut le conserver dans son historique ou le synchroniser avec d’autres appareils.',
     guardar: 'Enregistrer…',
     alConversor: 'Envoyer au convertisseur d’images',
     cerrar: 'Annuler (Échap)',
@@ -3336,6 +3343,7 @@ export const fr: Textos = {
     errorCopiar: 'Impossible de copier l’image.',
     errorGuardar: 'Impossible d’enregistrer l’image.',
     errorConversor: 'Impossible d’envoyer l’image au convertisseur.',
+    errorVentana: 'Impossible de capturer cette fenêtre.',
     dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
     panel: {
       ayuda:
@@ -3364,7 +3372,7 @@ export const fr: Textos = {
       grabar: 'Modifier',
       grabando: 'Appuyez sur la combinaison…',
       grabandoAyuda:
-        'Utilisez Ctrl, Alt, Maj ou Super avec une lettre, un chiffre ou une touche F.',
+        'Utilisez Ctrl ou Super avec un autre modificateur (par exemple Ctrl+Alt+Maj) et une lettre, un chiffre ou une touche F. Évitez les raccourcis courants comme Ctrl+C.',
       formato: 'Format à l’enregistrement',
       activado: (atajo: string) => `Raccourci ${atajo} activé.`,
       desactivado: 'Raccourci désactivé.',

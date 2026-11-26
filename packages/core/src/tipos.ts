@@ -465,18 +465,61 @@ export type CambiosPreferenciasUi = z.infer<typeof CambiosPreferenciasUiSchema>;
 /** Formatos en que se guarda una captura de pantalla (D35). */
 export const FORMATOS_CAPTURA = ['png', 'jpg'] as const;
 export type FormatoCaptura = (typeof FORMATOS_CAPTURA)[number];
-/** Atajo global que se propone al activar la captura (no se registra hasta que el usuario lo activa). */
-export const ATAJO_CAPTURA_POR_DEFECTO = 'Ctrl+Shift+S';
+/**
+ * Atajo global que se propone al activar la captura (no se registra hasta que el usuario lo
+ * activa). Ctrl+Alt+Mayús+S: tres modificadores, no choca con nada común y es válido.
+ */
+export const ATAJO_CAPTURA_POR_DEFECTO = 'Ctrl+Alt+Shift+S';
 
 /**
- * Atajo global de Electron (aceleradora): al menos un modificador y una tecla (letra, dígito o
- * F1-F24). Lo que no encaje aquí no llega nunca a `globalShortcut`.
+ * Forma de un atajo global de Electron (aceleradora): de uno a tres modificadores y una tecla
+ * (letra, dígito o F1-F24). Lo que no encaje aquí no llega nunca a `globalShortcut`.
  */
-const ATAJO_CAPTURA = /^(?:(?:Ctrl|Alt|Shift|Super)\+){1,3}(?:[A-Z0-9]|F(?:[1-9]|1[0-9]|2[0-4]))$/;
+const FORMA_ATAJO_CAPTURA =
+  /^(?:(?:Ctrl|Alt|Shift|Super)\+){1,3}(?:[A-Z0-9]|F(?:[1-9]|1[0-9]|2[0-4]))$/;
+
+/**
+ * Atajos del sistema y de casi cualquier programa que un atajo global no debe quitar (forma
+ * canónica: modificadores en orden Ctrl, Alt, Shift, Super). Ctrl+Alt+Supr no puede escribirse
+ * con la forma de arriba (Supr no es una tecla admitida), pero se deja anotado.
+ */
+const ATAJOS_COMUNES: ReadonlySet<string> = new Set([
+  ...['A', 'C', 'V', 'X', 'Z', 'Y', 'S', 'P', 'F', 'N', 'W', 'T', 'O'].map((k) => `Ctrl+${k}`),
+  ...['S', 'T', 'N', 'Z'].map((k) => `Ctrl+Shift+${k}`),
+  'Alt+F4',
+  'Ctrl+Alt+Supr',
+]);
+
+export type MotivoAtajoCaptura = 'invalido' | 'no_permitido';
+
+/**
+ * Por qué se rechaza un atajo (null = vale). `invalido`: no tiene la forma de un atajo.
+ * `no_permitido`: la tiene, pero es poco seguro como atajo global:
+ *  - exige Ctrl o Super y al menos dos modificadores (Super solo vale);
+ *  - Ctrl+Alt sin Mayús es AltGr en los teclados europeos: con él se pierde la @ y otros símbolos;
+ *  - ni los atajos comunes (copiar, pegar, guardar, cerrar...).
+ */
+export function motivoAtajoCaptura(v: unknown): MotivoAtajoCaptura | null {
+  if (typeof v !== 'string' || !FORMA_ATAJO_CAPTURA.test(v)) return 'invalido';
+  const partes = v.split('+');
+  const tecla = partes.pop()!;
+  const mods = new Set(partes);
+  if (mods.size !== partes.length) return 'invalido';
+  const ctrl = mods.has('Ctrl');
+  const alt = mods.has('Alt');
+  const shift = mods.has('Shift');
+  const sup = mods.has('Super');
+  if (!ctrl && !sup) return 'no_permitido';
+  if (mods.size < 2 && !(sup && mods.size === 1)) return 'no_permitido';
+  if (ctrl && alt && !shift) return 'no_permitido';
+  const canonico = [ctrl && 'Ctrl', alt && 'Alt', shift && 'Shift', sup && 'Super', tecla]
+    .filter((x): x is string => typeof x === 'string')
+    .join('+');
+  return ATAJOS_COMUNES.has(canonico) ? 'no_permitido' : null;
+}
+
 export function esAtajoCaptura(v: unknown): v is string {
-  if (typeof v !== 'string' || !ATAJO_CAPTURA.test(v)) return false;
-  const mods = v.split('+').slice(0, -1);
-  return new Set(mods).size === mods.length;
+  return motivoAtajoCaptura(v) === null;
 }
 
 /**
