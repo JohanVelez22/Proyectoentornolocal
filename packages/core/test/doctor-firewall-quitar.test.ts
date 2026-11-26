@@ -656,7 +656,7 @@ describe('D46: scripts del cortafuegos real (solo se comprueba su texto: nunca s
     for (const s of [q, r]) {
       // La clave es una constante: sale del mismo sitio para mostrar y para el script elevado.
       expect(s).toContain(`$rutaClave = '${RUTA_CLAVE_ALMACEN}'`);
-      expect(s).toContain('[Microsoft.Win32.Registry]::LocalMachine');
+      expect(s).toContain('[Microsoft.Win32.RegistryHive]::LocalMachine');
       // Nada de ProgramData, carpetas, archivos ni variables de entorno del usuario.
       expect(s).not.toMatch(
         /ProgramData|CommonApplicationData|WriteAllBytes|ReadAllBytes\(\$archivo|\$env:(?!PSModulePath)/,

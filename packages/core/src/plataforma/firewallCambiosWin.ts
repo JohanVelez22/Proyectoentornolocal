@@ -106,8 +106,11 @@ const PREAMBULO = [
   "$ErrorActionPreference = 'Stop'",
   // Con un PSModulePath heredado de PowerShell 7, Windows PowerShell no cargaba NetSecurity.
   "$env:PSModulePath = [IO.Path]::Combine([Environment]::SystemDirectory, 'WindowsPowerShell', 'v1.0', 'Modules')",
+  '[Console]::OutputEncoding = [Text.Encoding]::UTF8',
 ];
 export const PREAMBULO_MODULOS = PREAMBULO[1]!;
+/** La salida se lee en Node como UTF-8: con una página OEM (850) los acentos y el € llegarían rotos. */
+export const CODIFICACION_UTF8 = '[Console]::OutputEncoding = [Text.Encoding]::UTF8';
 
 /** `$o`: la regla `$r` exportada con todo lo necesario para recrearla. */
 const FUNCION_EXPORTAR = [
@@ -323,20 +326,24 @@ const ALMACEN = [
   "$sidInstalador = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'; $sidCreador = 'S-1-3-0'",
   `$rutaBase = '${RUTA_BASE_ALMACEN}'`,
   `$rutaClave = '${RUTA_CLAVE_ALMACEN}'`,
-  "$derechosPeligrosos = [Security.AccessControl.RegistryRights]'SetValue, CreateSubKey, CreateLink, Delete, ChangePermissions, TakeOwnership'",
-  '$hklm = [Microsoft.Win32.Registry]::LocalMachine',
+  // Más GENERIC_ALL (0x10000000) y GENERIC_WRITE (0x40000000), que una ACE puede traer sin mapear.
+  // Como entero: un enum de PowerShell no admite esos bits genéricos, que no tienen nombre.
+  "$derechosPeligrosos = [int][Security.AccessControl.RegistryRights]'SetValue, CreateSubKey, CreateLink, Delete, ChangePermissions, TakeOwnership' -bor 0x50000000",
+  // Siempre la vista de 64 bits: la misma clave para leer, comprobar y escribir.
+  '$hklm = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry64)',
   'function Test-ClaveWolf($k) {',
   '  if ($null -eq $k) { return $false }',
+  // Si la máscara de derechos peligrosos no se pudo calcular, nada es de confianza.
+  '  if ($derechosPeligrosos -eq 0) { return $false }',
   '  $a = $k.GetAccessControl()',
   '  $dueno = $a.GetOwner([Security.Principal.SecurityIdentifier]).Value',
   '  if (@($sidSistema, $sidAdmins) -notcontains $dueno) { return $false }',
   '  foreach ($r in $a.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {',
   "    if ($r.AccessControlType -ne 'Allow') { continue }",
-  // Lo que solo se hereda a las subclaves (CREATOR OWNER) no cuenta para esta clave.
-  '    if (($r.PropagationFlags -band [Security.AccessControl.PropagationFlags]::InheritOnly) -ne 0) { continue }',
+  // También cuentan las ACE que solo se heredan: lo que se herede a una clave nueva viene de ahí.
   // CREATOR OWNER solo da derechos al dueño, que ya se comprobó que es de confianza.
   '    if (@($sidSistema, $sidAdmins, $sidInstalador, $sidCreador) -contains $r.IdentityReference.Value) { continue }',
-  '    if (($r.RegistryRights -band $derechosPeligrosos) -ne 0) { return $false }',
+  '    if (([int]$r.RegistryRights -band $derechosPeligrosos) -ne 0) { return $false }',
   '  }',
   '  return $true',
   '}',
@@ -348,23 +355,23 @@ const ALMACEN = [
   '  if ($null -ne $previa) { $previa.Dispose() }',
   '  if ($nueva) {',
   '    if (-not $crear) { return $null }',
-  '    $hklm.CreateSubKey($rutaClave).Dispose()',
-  '  }',
-  '  $k = $hklm.OpenSubKey($rutaClave, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, [Security.AccessControl.RegistryRights]::FullControl)',
-  '  if ($null -eq $k) { return $null }',
-  '  if ($nueva) {',
-  '    $a = $k.GetAccessControl()',
-  '    $a.SetAccessRuleProtection($true, $false)',
-  '    foreach ($r in @($a.GetAccessRules($true, $false, [Security.Principal.SecurityIdentifier]))) { $null = $a.RemoveAccessRuleSpecific($r) }',
+  // Primero la clave superior (con lo que herede de HKLM\\SOFTWARE: se comprueba más abajo) y
+  // luego la propia con su seguridad completa en la MISMA llamada: no hay un instante con la ACL
+  // heredada.
+  '    $hklm.CreateSubKey($rutaBase).Dispose()',
+  '    $seg = [Security.AccessControl.RegistrySecurity]::new()',
+  '    $seg.SetAccessRuleProtection($true, $false)',
   "    $h = [Security.AccessControl.InheritanceFlags]'ContainerInherit'",
   '    $n = [Security.AccessControl.PropagationFlags]::None',
   '    $allow = [Security.AccessControl.AccessControlType]::Allow',
-  '    $a.AddAccessRule([Security.AccessControl.RegistryAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidSistema), [Security.AccessControl.RegistryRights]::FullControl, $h, $n, $allow))',
-  '    $a.AddAccessRule([Security.AccessControl.RegistryAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidAdmins), [Security.AccessControl.RegistryRights]::FullControl, $h, $n, $allow))',
-  '    $a.AddAccessRule([Security.AccessControl.RegistryAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidUsuarios), [Security.AccessControl.RegistryRights]::ReadKey, $h, $n, $allow))',
-  '    try { $a.SetOwner([Security.Principal.SecurityIdentifier]::new($sidAdmins)) } catch { }',
-  '    $k.SetAccessControl($a)',
+  '    $seg.AddAccessRule([Security.AccessControl.RegistryAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidSistema), [Security.AccessControl.RegistryRights]::FullControl, $h, $n, $allow))',
+  '    $seg.AddAccessRule([Security.AccessControl.RegistryAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidAdmins), [Security.AccessControl.RegistryRights]::FullControl, $h, $n, $allow))',
+  '    $seg.AddAccessRule([Security.AccessControl.RegistryAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sidUsuarios), [Security.AccessControl.RegistryRights]::ReadKey, $h, $n, $allow))',
+  '    try { $seg.SetOwner([Security.Principal.SecurityIdentifier]::new($sidAdmins)) } catch { }',
+  '    $hklm.CreateSubKey($rutaClave, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, $seg).Dispose()',
   '  }',
+  '  $k = $hklm.OpenSubKey($rutaClave, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, [Security.AccessControl.RegistryRights]::FullControl)',
+  '  if ($null -eq $k) { return $null }',
   '  $base = $hklm.OpenSubKey($rutaBase)',
   '  $baseBien = Test-ClaveWolf $base',
   '  if ($null -ne $base) { $base.Dispose() }',
@@ -379,7 +386,9 @@ const ALMACEN = [
  */
 export const SCRIPT_LEER_ALMACEN = [
   "$ErrorActionPreference = 'Stop'",
-  `$k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('${RUTA_CLAVE_ALMACEN}')`,
+  CODIFICACION_UTF8,
+  '$hklm = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry64)',
+  `$k = $hklm.OpenSubKey('${RUTA_CLAVE_ALMACEN}')`,
   'if ($null -eq $k) { exit 0 }',
   'foreach ($n in $k.GetValueNames()) {',
   '  $v = $k.GetValue($n, $null)',
@@ -529,6 +538,10 @@ export function cuerpoRestaurarReglas(
     ...FUNCION_PROGRAMA_PROPIO,
     ...ALMACEN,
     ...FUNCION_RESTAURABLE,
+    // Sin clave no hay nada que recrear: "sin cambios", no una clave que no es de fiar.
+    '$existe = $hklm.OpenSubKey($rutaClave)',
+    `if ($null -eq $existe) { exit ${SALIDA_FIREWALL.saltadas} }`,
+    '$existe.Dispose()',
     '$k = Open-ClaveWolf $false',
     `if ($null -eq $k) { exit ${SALIDA_FIREWALL.almacenInseguro} }`,
     '$saltadas = 0; $vencido = $false',

@@ -70,6 +70,8 @@ export const PROGRAMAS_VIGILADOS = [
  */
 export const SCRIPT_REGLAS_ENTRADA = [
   "$ErrorActionPreference = 'Stop'",
+  // La salida se lee en Node como UTF-8: con una página OEM (850) los acentos llegarían rotos.
+  '[Console]::OutputEncoding = [Text.Encoding]::UTF8',
   // Con un PSModulePath heredado de PowerShell 7, Windows PowerShell no cargaba NetSecurity.
   "$env:PSModulePath = [IO.Path]::Combine([Environment]::SystemDirectory, 'WindowsPowerShell', 'v1.0', 'Modules')",
   String.raw`$filtros = Get-NetFirewallApplicationFilter | Where-Object { $_.Program -match '(?i)\\(${PROGRAMAS_VIGILADOS.join('|')})\.exe$' }`,
