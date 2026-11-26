@@ -44,6 +44,7 @@ import {
 } from './sesion';
 import { carpetaExistente, urlAbrible, urlHttp } from './validacion';
 import { imprimirHtmlAPdf } from './conversorPdf';
+import { crearEjecutorUtilityProcess } from './conversorProceso';
 
 // El Node de Electron prueba cada dirección (IPv6 e IPv4) solo 250 ms antes de pasar a la
 // siguiente: con conexiones lentas ninguna llega a tiempo y `fetch` falla con
@@ -352,6 +353,8 @@ if (errorCarpetaDatos !== null) {
         ...(carpetaDatos ? { base: carpetaDatos, aislado: true } : {}),
         // md → pdf y html → pdf del conversor (D34): Chromium sin red ni JavaScript.
         imprimirPdf: imprimirHtmlAPdf,
+        // Lo pesado del conversor y la optimización de PDF corren en un utilityProcess aparte.
+        ejecutorConversor: crearEjecutorUtilityProcess(join(__dirname, 'conversorTrabajo.js')),
         servidorCli: {
           version: app.getVersion(),
           // El cliente `wolf` compilado (out/cli/wolf.cjs, dentro del paquete) y el ejecutable que lo

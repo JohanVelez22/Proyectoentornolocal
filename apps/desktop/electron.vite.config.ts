@@ -8,6 +8,15 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin({ exclude: ['@pel/core'] })],
     resolve: { alias: { '@pel/core': core } },
+    build: {
+      rollupOptions: {
+        // Además de la app, el proceso de trabajo del conversor (`utilityProcess`, D34).
+        input: {
+          index: resolve(__dirname, 'src/main/index.ts'),
+          conversorTrabajo: resolve(__dirname, 'src/main/conversorTrabajo.ts'),
+        },
+      },
+    },
   },
   preload: {
     plugins: [externalizeDepsPlugin()],

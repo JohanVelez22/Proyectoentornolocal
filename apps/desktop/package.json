@@ -25,6 +25,7 @@
     "bcryptjs": "3.0.3",
     "diff": "9.0.0",
     "exceljs": "4.4.0",
+    "jszip": "3.10.2",
     "mammoth": "1.13.0",
     "markdown-it": "15.0.3",
     "naive-ui": "^2.45.3",

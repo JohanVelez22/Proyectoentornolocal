@@ -458,6 +458,9 @@ export const pt: Textos = {
       'conversor.libreoffice_ausente':
         'Essa conversão precisa do LibreOffice, que não está instalado neste computador (o WolfCore Dev não o instala).',
       'conversor.libreoffice_fallo': 'O LibreOffice não conseguiu converter o documento.',
+      'conversor.limite_celdas': 'A tabela tem células demais (até {maximo}).',
+      'conversor.memoria':
+        'O arquivo precisa de memória demais (mais de {maximo}) e foi cancelado.',
       'conversor.pdf_no_disponible': 'A impressão em PDF não está disponível no momento.',
       'herramientas.imagen_pixeles':
         'A imagem tem pixels demais no total ({ancho}×{alto} px; até {maximo}) e não é aberta por segurança.',
@@ -3654,7 +3657,7 @@ export const pt: Textos = {
       sinLibreOffice:
         'Se instalar o LibreOffice, também poderá converter odt, pptx e doc (o WolfCore Dev não o instala).',
       limites:
-        'Há limites de segurança: até 50 MB, 120 s, 200.000 linhas e 1000 colunas; arquivos que parecem uma bomba ZIP ou trazem entidades XML são rejeitados.',
+        'Há limites de segurança: até 50 MB (10 MB para md e html), 120 s, 200.000 linhas, 1000 colunas e 5 milhões de células; arquivos que parecem uma bomba ZIP ou trazem entidades XML são rejeitados.',
       guardado: (archivo: string) => `Salvo em ${archivo}`,
     },
     contrasenas: {

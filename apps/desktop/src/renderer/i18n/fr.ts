@@ -473,6 +473,9 @@ export const fr: Textos = {
       'conversor.libreoffice_ausente':
         'Cette conversion nécessite LibreOffice, qui n’est pas installé sur cet ordinateur (WolfCore Dev ne l’installe pas).',
       'conversor.libreoffice_fallo': 'LibreOffice n’a pas pu convertir le document.',
+      'conversor.limite_celdas': 'Le tableau a trop de cellules (jusqu’à {maximo}).',
+      'conversor.memoria':
+        'Le fichier nécessite trop de mémoire (plus de {maximo}) et a été annulé.',
       'conversor.pdf_no_disponible': 'L’impression en PDF n’est pas disponible pour le moment.',
       'herramientas.imagen_pixeles':
         'L’image compte trop de pixels au total ({ancho}×{alto} px ; jusqu’à {maximo}) et n’est pas ouverte par sécurité.',
@@ -3740,7 +3743,7 @@ export const fr: Textos = {
       sinLibreOffice:
         'Si vous installez LibreOffice, vous pourrez aussi convertir odt, pptx et doc (WolfCore Dev ne l’installe pas).',
       limites:
-        'Des limites de sécurité s’appliquent : jusqu’à 50 Mo, 120 s, 200 000 lignes et 1000 colonnes ; les fichiers qui ressemblent à une bombe ZIP ou contiennent des entités XML sont refusés.',
+        'Des limites de sécurité s’appliquent : jusqu’à 50 Mo (10 Mo pour md et html), 120 s, 200 000 lignes, 1000 colonnes et 5 millions de cellules ; les fichiers qui ressemblent à une bombe ZIP ou contiennent des entités XML sont refusés.',
       guardado: (archivo: string) => `Enregistré dans ${archivo}`,
     },
     contrasenas: {

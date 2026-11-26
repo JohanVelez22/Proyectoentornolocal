@@ -47,7 +47,7 @@ describe('empaquetado del conversor', () => {
   );
 
   it('mammoth, exceljs, pdfjs-dist, pdf-lib y todas sus dependencias están en asarUnpack', () => {
-    const faltan = cierre(['mammoth', 'exceljs', 'pdfjs-dist', 'pdf-lib'])
+    const faltan = cierre(['mammoth', 'exceljs', 'pdfjs-dist', 'pdf-lib', 'jszip'])
       .map((n) => `node_modules/${n}`)
       .filter((n) => !desempaquetados.has(n));
     expect(faltan).toEqual([]);
