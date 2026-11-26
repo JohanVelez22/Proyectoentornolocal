@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import type { FileHandle } from 'node:fs/promises';
 import { lstat, mkdir, open, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -16,16 +16,20 @@ import { escribirAtomico, type OpcionesEscritura } from '../sitios/urlbase';
  * - La ruta ya viene de un diálogo nativo (lo exige el proceso principal). Aquí se resuelve con
  *   `realpath` y se comprueba la ruta REAL: nunca se abre ni se guarda algo dentro de la carpeta
  *   de datos de WolfCore (`data`, `respaldos`, `etc`, …), aunque se llegue por un enlace o una
- *   unión; se guarda sobre la ruta real, así un enlace sigue siendo un enlace.
+ *   unión; se guarda sobre la ruta real, así un enlace sigue siendo un enlace. Las rutas UNC
+ *   (`\\servidor\recurso`), pedidas o reales, se rechazan: se saltarían el veto y los sitios.
  * - Nunca un `.env` (ni `.env.*`, ni `*.env`): van al gestor de variables (D16), con su flujo de
  *   secretos. Se mira el nombre pedido y el nombre real.
- * - Tope de tamaño y nada de binarios (bytes NUL o UTF-8 inválido).
- * - Un archivo con forma de secreto (clave privada, token, credenciales…) o de un sitio con
- *   `datosReales` exige una confirmación reforzada, al abrir y otra vez al guardar.
- * - Guardar exige `confirmado === true`, compara la huella (tamaño, fecha y hash) del archivo al
- *   abrirlo con la actual (si cambió por fuera, `editor.archivo_cambiado`; sobrescribir es una
- *   confirmación aparte), deja una copia previa en la carpeta de datos de WolfCore (con tope y
- *   rotación) y escribe con un temporal más `rename`. Si la copia falla, no se escribe.
+ * - Tope de tamaño y nada de binarios (bytes NUL) ni de archivos que no son UTF-8.
+ * - Un archivo con forma de secreto (clave privada, token, credenciales…), de un sitio con
+ *   `datosReales` o con enlaces duros exige una confirmación reforzada, al abrir y otra vez al
+ *   guardar. Si no se puede leer la lista de sitios, se falla cerrado.
+ * - Guardar solo vale sobre un archivo que `abrir` entregó (ruta real y huella), incluso al
+ *   sobrescribir; exige `confirmado === true`, compara la huella (tamaño, fecha y hash) del
+ *   archivo al abrirlo con la actual (si cambió por fuera, `editor.archivo_cambiado`; sobrescribir
+ *   es una confirmación aparte), deja una copia previa en la carpeta de datos de WolfCore (con
+ *   tope y rotación) y escribe con un temporal más `rename`. Si la copia falla, no se escribe.
+ * - Un archivo con saltos de línea mezclados solo se guarda con `aceptarNormalizar === true`.
  */
 
 /** Copias previas que se guardan por archivo; al pasar este número se borran las más viejas. */
@@ -33,7 +37,10 @@ export const MAX_COPIAS_POR_ARCHIVO = 5;
 /** Archivos distintos con copias; al pasar este número se borran los de copias más viejas. */
 export const MAX_ARCHIVOS_CON_COPIAS = 200;
 
-export type RiesgoEditor = 'secreto' | 'datos-reales';
+export type RiesgoEditor = 'secreto' | 'datos-reales' | 'enlace-duro';
+
+/** Saltos de línea del archivo: `mixto` si mezcla CRLF y LF o trae `\r` sueltos. */
+export type SaltosLinea = 'lf' | 'crlf' | 'mixto';
 
 /** Lo que tenía el archivo al leerlo: si algo de esto cambia, alguien lo tocó por fuera. */
 export interface HuellaArchivo {
@@ -50,7 +57,7 @@ export interface ArchivoEditor {
   /** Texto con saltos `\n` (el original se restaura al guardar según `eol`). */
   contenido: string;
   huella: HuellaArchivo;
-  eol: 'lf' | 'crlf';
+  eol: SaltosLinea;
   bom: boolean;
   /** Lo que se confirmó con refuerzo al abrir (vacío si nada). */
   riesgos: RiesgoEditor[];
@@ -62,7 +69,7 @@ export type ResultadoAbrirArchivo =
   | { estado: 'confirmar'; nombre: string; riesgos: RiesgoEditor[] };
 
 export interface OpcionesAbrirArchivo {
-  /** Confirmación reforzada de abrir un archivo con forma de secreto o de un sitio con datos reales. */
+  /** Confirmación reforzada de abrir un archivo con forma de secreto, de datos reales o con enlaces duros. */
   confirmadoRiesgo?: boolean;
 }
 
@@ -70,16 +77,19 @@ export interface OpcionesGuardarArchivo extends OpcionesAbrirArchivo {
   contenido: string;
   /** Huella que devolvió `abrir` (o el último `guardar`). */
   huella: HuellaArchivo;
-  eol: 'lf' | 'crlf';
+  eol: SaltosLinea;
   bom: boolean;
   /** Debe ser `true`: guardar es una acción confirmada por el usuario. */
   confirmado: true;
   /** Confirmación aparte: guardar aunque el archivo haya cambiado por fuera. */
   sobrescribir?: boolean;
+  /** Confirma normalizar a LF los saltos de un archivo con saltos mezclados. */
+  aceptarNormalizar?: boolean;
 }
 
 export interface ResultadoGuardarArchivo {
-  huella: HuellaArchivo;
+  /** `null` si no se pudo leer la huella nueva: hay que volver a abrir el archivo. */
+  huella: HuellaArchivo | null;
   /** Ruta de la copia previa (en la carpeta de datos de WolfCore). */
   copia: string;
 }
@@ -89,8 +99,8 @@ export interface DepsEditorCodigo {
   carpetaCopias: () => string;
   /** Carpetas de datos de WolfCore: nada de lo que hay dentro se abre ni se guarda. */
   carpetasPropias: () => readonly string[];
-  /** Sitios registrados (su carpeta y si tienen datos reales). */
-  sitios: () => Promise<readonly { carpeta: string; datosReales: boolean }[]>;
+  /** Sitios registrados (su carpeta, su id y si tienen datos reales). */
+  sitios: () => Promise<readonly { carpeta: string; datosReales: boolean; id?: string }[]>;
   ahora?: () => number;
   /** Inyectable para pruebas. */
   renombrar?: OpcionesEscritura['renombrar'];
@@ -101,6 +111,7 @@ const NOMBRE_SECRETO =
   /^(?:id_(?:rsa|dsa|ecdsa|ed25519)|credentials?(?:\..*)?|\.netrc|_netrc|\.npmrc|\.pgpass|\.htpasswd|\.git-credentials|auth\.json|secrets?(?:\..*)?|.*\.(?:pem|key|p12|pfx|ppk|jks|keystore|kdbx|asc|gpg))$/i;
 
 const tieneControles = (t: string): boolean => [...t].some((c) => c.charCodeAt(0) < 0x20);
+const esUnc = (r: string): boolean => /^[\\/]{2}/.test(r);
 
 function errorFs(
   codigo: 'editor.lectura_fallo' | 'editor.escritura_fallo' | 'editor.copia_fallo',
@@ -142,14 +153,58 @@ const demasiadoGrande = (): ErrorWolf =>
     maximo: '2 MB',
   });
 
+/** Saltos de línea de un texto ya decodificado. */
+export function saltosDe(texto: string): SaltosLinea {
+  const crlf = (texto.match(/\r\n/g) ?? []).length;
+  const lf = (texto.match(/(?<!\r)\n/g) ?? []).length;
+  const cr = (texto.match(/\r(?!\n)/g) ?? []).length;
+  if (cr > 0 || (crlf > 0 && lf > 0)) return 'mixto';
+  return crlf > 0 ? 'crlf' : 'lf';
+}
+
+const claveHuella = (h: HuellaArchivo): string => `${h.tamano}:${h.mtimeMs}:${h.hash}`;
+/** Rutas con huellas entregadas que se recuerdan, y huellas por ruta. */
+const MAX_RUTAS_ENTREGADAS = 500;
+const MAX_HUELLAS_POR_RUTA = 16;
+
+interface SitioEncontrado {
+  carpeta: string;
+  datosReales: boolean;
+  id: string | undefined;
+}
+
 export class EditorCodigo {
+  /** Rutas reales y huellas que entregó `abrir` (o un guardado): guardar solo vale sobre ellas. */
+  private readonly entregadas = new Map<string, string[]>();
+
   constructor(private readonly deps: DepsEditorCodigo) {}
+
+  private claveRuta(real: string): string {
+    return process.platform === 'win32' || process.platform === 'darwin'
+      ? real.toLowerCase()
+      : real;
+  }
+
+  private entregar(real: string, h: HuellaArchivo): void {
+    const k = this.claveRuta(real);
+    const lista = (this.entregadas.get(k) ?? []).filter((x) => x !== claveHuella(h));
+    lista.push(claveHuella(h));
+    this.entregadas.delete(k);
+    this.entregadas.set(k, lista.slice(-MAX_HUELLAS_POR_RUTA));
+    while (this.entregadas.size > MAX_RUTAS_ENTREGADAS) {
+      this.entregadas.delete(this.entregadas.keys().next().value as string);
+    }
+  }
+
+  private fueEntregada(real: string, h: HuellaArchivo): boolean {
+    return this.entregadas.get(this.claveRuta(real))?.includes(claveHuella(h)) === true;
+  }
 
   /** Abre el archivo. Con riesgos sin confirmar devuelve `confirmar` y NO el contenido. */
   async abrir(ruta: string, o: OpcionesAbrirArchivo = {}): Promise<ResultadoAbrirArchivo> {
-    const { real, sitio } = await this.resolver(ruta);
+    const { real, sitio, enlaces } = await this.resolver(ruta);
     const { datos, huella } = await this.leer(real);
-    const riesgos = this.riesgos(real, sitio, [datos]);
+    const riesgos = this.riesgos(real, sitio, [datos], enlaces);
     if (riesgos.length > 0 && o.confirmadoRiesgo !== true) {
       return { estado: 'confirmar', nombre: path.basename(real), riesgos };
     }
@@ -158,12 +213,14 @@ export class EditorCodigo {
     try {
       texto = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(datos);
     } catch {
-      throw this.binario();
+      throw new ErrorWolf(
+        'editor.codificacion',
+        'El archivo no está en UTF-8: el editor no lo abre para no dañarlo.',
+      );
     }
     const bom = texto.startsWith('﻿');
     if (bom) texto = texto.slice(1);
-    const crlf = (texto.match(/\r\n/g) ?? []).length;
-    const lf = (texto.match(/(?<!\r)\n/g) ?? []).length;
+    this.entregar(real, huella);
     return {
       estado: 'abierto',
       archivo: {
@@ -171,7 +228,7 @@ export class EditorCodigo {
         nombre: path.basename(real),
         contenido: texto.replace(/\r\n?/g, '\n'),
         huella,
-        eol: crlf > lf ? 'crlf' : 'lf',
+        eol: saltosDe(texto),
         bom,
         riesgos,
       },
@@ -197,7 +254,7 @@ export class EditorCodigo {
     if (
       typeof o.contenido !== 'string' ||
       Buffer.from(o.contenido, 'utf8').toString('utf8') !== o.contenido ||
-      (o.eol !== 'lf' && o.eol !== 'crlf') ||
+      (o.eol !== 'lf' && o.eol !== 'crlf' && o.eol !== 'mixto') ||
       typeof o.bom !== 'boolean'
     ) {
       throw new ErrorWolf('editor.contenido_invalido', 'El contenido no es texto válido.');
@@ -208,13 +265,21 @@ export class EditorCodigo {
     const datos = Buffer.from(texto, 'utf8');
     if (datos.length > MAX_BYTES_EDITOR) throw demasiadoGrande();
 
-    const { real, sitio } = await this.resolver(ruta);
+    const { real, sitio, enlaces } = await this.resolver(ruta);
+    // Solo se guarda sobre lo que `abrir` entregó, también al sobrescribir.
+    if (!this.fueEntregada(real, h as HuellaArchivo)) {
+      throw new ErrorWolf(
+        'editor.no_abierto',
+        'Ese archivo no se abrió en el editor (o se abrió con otra versión): ábralo de nuevo.',
+      );
+    }
     const actual = await this.leer(real);
-    const riesgos = this.riesgos(real, sitio, [actual.datos, datos]);
+    const riesgos = this.riesgos(real, sitio, [actual.datos, datos], enlaces);
     if (riesgos.length > 0 && o.confirmadoRiesgo !== true) {
       throw new ErrorWolf(
         'editor.confirmacion_reforzada',
-        'Este archivo parece guardar secretos o es de un sitio con datos reales: confirme con refuerzo para guardarlo.',
+        'Este archivo parece guardar secretos, es de un sitio con datos reales o tiene enlaces duros: confirme con refuerzo para guardarlo.',
+        { riesgos: riesgos.join(',') },
       );
     }
     const igual = (a: HuellaArchivo): boolean =>
@@ -222,32 +287,58 @@ export class EditorCodigo {
     if (o.sobrescribir !== true && !igual(actual.huella)) {
       throw this.cambiado();
     }
+    if (
+      (o.eol === 'mixto' || saltosDe(actual.datos.toString('utf8')) === 'mixto') &&
+      o.aceptarNormalizar !== true
+    ) {
+      throw new ErrorWolf(
+        'editor.eol_mixto',
+        'El archivo mezcla saltos de línea: confirme normalizarlos para guardar.',
+      );
+    }
 
     // Copia previa del contenido que hay AHORA en disco; si falla, no se escribe nada.
-    const copia = await this.copiar(real, actual.datos).catch((e: unknown) => {
-      throw errorFs('editor.copia_fallo', e);
-    });
-
-    // Justo antes de escribir, una última mirada: lo único que queda abierto es el instante del rename.
-    if (o.sobrescribir !== true) {
-      const ahora = await this.leer(real);
-      if (!igual(ahora.huella)) throw this.cambiado();
-    }
+    let copia: string | null = null;
     try {
-      await escribirAtomico(
-        real,
-        datos,
-        this.deps.renombrar ? { renombrar: this.deps.renombrar } : {},
-      );
-    } catch (e) {
-      throw errorFs('editor.escritura_fallo', e);
+      copia = await this.copiar(real, actual.datos).catch((e: unknown) => {
+        throw errorFs('editor.copia_fallo', e);
+      });
+
+      // Justo antes de escribir, una última mirada: lo único que queda abierto es el instante del rename.
+      if (o.sobrescribir !== true) {
+        const ahora = await this.leer(real);
+        if (!igual(ahora.huella)) throw this.cambiado();
+      }
+      try {
+        await escribirAtomico(
+          real,
+          datos,
+          this.deps.renombrar ? { renombrar: this.deps.renombrar } : {},
+        );
+      } catch (e) {
+        throw errorFs('editor.escritura_fallo', e);
+      }
+    } finally {
+      // También si el guardado se aborta: la copia ya existe y cuenta para el tope.
+      if (copia !== null) await this.rotar(path.dirname(copia)).catch(() => undefined);
     }
-    const info = await stat(real).catch(() => null);
-    await this.rotar(path.dirname(copia)).catch(() => undefined);
-    return {
-      huella: { tamano: datos.length, mtimeMs: info?.mtimeMs ?? 0, hash: hashDe(datos) },
-      copia,
-    };
+    const huella = await this.huellaNueva(real, datos);
+    if (huella) this.entregar(real, huella);
+    return { huella, copia };
+  }
+
+  /** Huella del archivo recién escrito; `null` si no se puede leer (la ventana lo vuelve a abrir). */
+  private async huellaNueva(real: string, datos: Buffer): Promise<HuellaArchivo | null> {
+    try {
+      const info = await stat(real);
+      return { tamano: datos.length, mtimeMs: info.mtimeMs, hash: hashDe(datos) };
+    } catch {
+      try {
+        return (await this.leer(real)).huella;
+      } catch {
+        return null;
+      }
+    }
   }
 
   private cambiado(): ErrorWolf {
@@ -264,10 +355,10 @@ export class EditorCodigo {
     );
   }
 
-  /** Ruta real validada y el sitio al que pertenece, si alguno. */
+  /** Ruta real validada, el sitio al que pertenece (si alguno) y cuántos enlaces duros tiene. */
   private async resolver(
     ruta: string,
-  ): Promise<{ real: string; sitio: { carpeta: string; datosReales: boolean } | null }> {
+  ): Promise<{ real: string; sitio: SitioEncontrado | null; enlaces: number }> {
     const invalida = (): ErrorWolf =>
       new ErrorWolf('editor.ruta_invalida', 'La ruta del archivo no es válida.');
     if (
@@ -276,7 +367,8 @@ export class EditorCodigo {
       ruta.length > 1024 ||
       tieneControles(ruta) ||
       !path.isAbsolute(ruta) ||
-      /^[\\/]{2}[.?][\\/]/.test(ruta) ||
+      // UNC (`\\servidor\recurso`), `\\.\` y `\\?\`: se saltarían el veto y los sitios.
+      esUnc(ruta) ||
       // Flujos alternativos de NTFS (`archivo:flujo`): nada de dos puntos fuera de la unidad.
       ruta.slice(/^[A-Za-z]:/.test(ruta) ? 2 : 0).includes(':')
     ) {
@@ -292,26 +384,39 @@ export class EditorCodigo {
       }
       throw errorFs('editor.lectura_fallo', e);
     }
+    // Una unidad mapeada o un enlace pueden terminar en un recurso de red.
+    if (esUnc(real)) throw invalida();
     const nombres = [path.basename(ruta), path.basename(real)];
-    const sitios = await this.deps.sitios().catch(() => []);
-    let sitio: { carpeta: string; datosReales: boolean } | null = null;
+    // Si no se puede saber de qué sitio es el archivo, no se abre: falla cerrado.
+    const sitios = await this.deps.sitios().catch((e: unknown) => {
+      throw new ErrorWolf(
+        'editor.lectura_fallo',
+        'No se pudo comprobar a qué sitio pertenece el archivo.',
+        { codigo: 'SITIOS' },
+        { cause: e },
+      );
+    });
+    let sitio: SitioEncontrado | null = null;
+    let enRaiz: string | undefined;
     for (const s of sitios) {
       const carpeta = await mejorRealpath(s.carpeta);
       if (
         rutaDentroDe(carpeta, real) &&
         (sitio === null || carpeta.length > sitio.carpeta.length)
       ) {
-        sitio = { carpeta, datosReales: s.datosReales };
+        sitio = { carpeta, datosReales: s.datosReales, id: s.id };
       }
       // `env` (CodeIgniter 4) en la raíz del sitio es el `.env` de ese sitio.
       if (path.dirname(real).toLowerCase() === carpeta.toLowerCase()) {
         if (nombres.some((n) => n.toLowerCase() === 'env')) nombres.push('.env');
+        enRaiz = s.id;
       }
     }
     if (nombres.some(esNombreArchivoEnv)) {
       throw new ErrorWolf(
         'editor.archivo_env',
         'Los archivos .env se gestionan desde las variables del proyecto, no desde el editor.',
+        { sitio: (sitio?.id ?? enRaiz ?? '').slice(0, 128) },
       );
     }
     for (const propia of this.deps.carpetasPropias()) {
@@ -329,7 +434,7 @@ export class EditorCodigo {
     if (!info.isFile()) {
       throw new ErrorWolf('editor.no_regular', 'Solo se editan archivos normales.');
     }
-    return { real, sitio };
+    return { real, sitio, enlaces: info.nlink };
   }
 
   private async leer(real: string): Promise<{ datos: Buffer; huella: HuellaArchivo }> {
@@ -357,12 +462,16 @@ export class EditorCodigo {
     real: string,
     sitio: { datosReales: boolean } | null,
     contenidos: readonly Buffer[],
+    enlaces: number,
   ): RiesgoEditor[] {
     const res: RiesgoEditor[] = [];
     if (NOMBRE_SECRETO.test(path.basename(real)) || contenidos.some((c) => llevaSecreto(c))) {
       res.push('secreto');
     }
     if (sitio?.datosReales === true) res.push('datos-reales');
+    // Otro nombre del mismo archivo (que no se ve desde aquí) podría ser un .env o algo de data:
+    // guardar con rename lo rompería. Se trata como sensible.
+    if (enlaces > 1) res.push('enlace-duro');
     return res;
   }
 
@@ -381,7 +490,8 @@ export class EditorCodigo {
       .basename(real)
       .replace(/[^\w.-]+/g, '_')
       .slice(0, 80);
-    const destino = path.join(carpeta, `${marca}-${nombre}`);
+    // Sufijo aleatorio: dos copias en el mismo milisegundo no chocan.
+    const destino = path.join(carpeta, `${marca}-${randomBytes(3).toString('hex')}-${nombre}`);
     await writeFile(destino, datos, { flag: 'wx' });
     return destino;
   }

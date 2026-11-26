@@ -147,7 +147,7 @@ describe('EditorCodigo: abrir', () => {
     const nul = e.archivo('a.bin', Buffer.from([0x50, 0x4b, 0, 3]));
     expect(await e.codigo(e.editor.abrir(nul))).toBe('editor.binario');
     const malo = e.archivo('b.txt', Buffer.from([0x61, 0xff, 0xfe, 0x62]));
-    expect(await e.codigo(e.editor.abrir(malo))).toBe('editor.binario');
+    expect(await e.codigo(e.editor.abrir(malo))).toBe('editor.codificacion');
   });
 
   it('aplica el tope de tamaño', async () => {
@@ -267,9 +267,9 @@ describe('EditorCodigo: guardar', () => {
     expect(e.copias()).toEqual([res.copia]);
     expect(readdirSync(e.proyecto)).toEqual(['a.txt']);
     // La huella devuelta vale para el siguiente guardado.
-    const otra = await e.editor.guardar(r, { ...e.guardarCon(a, 'cuatro\n'), huella: res.huella });
+    const otra = await e.editor.guardar(r, { ...e.guardarCon(a, 'cuatro\n'), huella: res.huella! });
     expect(readFileSync(r, 'utf8')).toBe('cuatro\r\n');
-    expect(otra.huella.hash).not.toBe(res.huella.hash);
+    expect(otra.huella!.hash).not.toBe(res.huella!.hash);
   });
 
   it('conserva el BOM', async () => {
@@ -354,7 +354,9 @@ describe('EditorCodigo: guardar', () => {
       carpetasPropias: () => [e.datos],
       sitios: async () => [],
     });
-    const a = await e.abrirOk(r);
+    const abierto = await editor.abrir(r);
+    if (abierto.estado !== 'abierto') throw new Error('no se abrió');
+    const a = abierto.archivo;
     expect(await e.codigo(editor.guardar(r, e.guardarCon(a, 'dos\n')))).toBe('editor.copia_fallo');
     expect(readFileSync(r, 'utf8')).toBe('uno\n');
   });
@@ -387,7 +389,7 @@ describe('EditorCodigo: guardar', () => {
         bom: false,
         confirmado: true,
       });
-      huella = res.huella;
+      huella = res.huella!;
     }
     const contenidos = e
       .copias()
