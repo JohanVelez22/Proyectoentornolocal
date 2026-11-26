@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Almacen, AlmacenCredenciales } from '../src/almacen';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { migrarInstancias, type DepsMigracionInstancias } from '../src/migraciones/instancias';
@@ -341,6 +341,29 @@ describe('migrarInstancias (Review Focus 7: los datos nunca se pierden)', () => 
     expect(crudo.sitios).toEqual(CONFIG_VIEJO.sitios);
   });
 
+  it('restringe al usuario la copia de credenciales.json (la ACL heredada no la protege)', async () => {
+    const restringir = vi.fn(async () => true);
+    await migrarInstancias(
+      deps({ credenciales: new AlmacenCredenciales(rutas, undefined, { restringir }) }),
+    );
+    const c = path.join(base, 'etc', 'respaldos', 'pre-instancias-20261123-100000');
+    expect(restringir).toHaveBeenCalledWith(path.join(c, 'credenciales.json'));
+  });
+
+  it('si no se puede restringir la copia, avisa como el almacén y la copia se conserva', async () => {
+    const alFallarProteccion = vi.fn();
+    const restringir = vi.fn(async (r: string) => !r.includes('pre-instancias'));
+    const antes = await readFile(rutas.credenciales(), 'utf8');
+    await migrarInstancias(
+      deps({
+        credenciales: new AlmacenCredenciales(rutas, undefined, { restringir, alFallarProteccion }),
+      }),
+    );
+    expect(alFallarProteccion).toHaveBeenCalledTimes(1);
+    const c = path.join(base, 'etc', 'respaldos', 'pre-instancias-20261123-100000');
+    expect(await readFile(path.join(c, 'credenciales.json'), 'utf8')).toBe(antes);
+  });
+
   it('si falla al escribir, todo queda como estaba', async () => {
     const antes = {
       config: await readFile(rutas.config(), 'utf8'),
@@ -351,6 +374,7 @@ describe('migrarInstancias (Review Focus 7: los datos nunca se pierden)', () => 
     const d = deps({
       credenciales: {
         todas: () => real.todas(),
+        proteger: (r) => real.proteger(r),
         importar: async (x) => {
           await real.importar(x);
           throw new Error('disco lleno');

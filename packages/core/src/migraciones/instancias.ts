@@ -20,7 +20,7 @@ import {
 
 export interface DepsMigracionInstancias {
   rutas: Rutas;
-  credenciales: Pick<AlmacenCredenciales, 'todas' | 'importar'>;
+  credenciales: Pick<AlmacenCredenciales, 'todas' | 'importar' | 'proteger'>;
   /** Renombra el registro del proceso vivo (`mysql` → `mysql@8.4`) para readoptarlo. */
   supervisor: { renombrarRegistro(viejo: string, nuevo: string, o?: OpcionesRenombrar): void };
   definiciones: () => readonly DefServicio[];
@@ -339,6 +339,8 @@ async function migrarConfig(d: DepsMigracionInstancias): Promise<{ migradas: IdI
     if (!existsSync(original)) continue;
     const copia = path.join(carpeta, path.basename(original));
     await copyFile(original, copia);
+    // La copia de las credenciales trae la ACL heredada de la carpeta: se restringe como el original.
+    if (original === d.rutas.credenciales()) await d.credenciales.proteger(copia);
     copias.push({ original, copia });
   }
   // Los puertos que reciben las instancias (por si una versión anterior de la app los pierde).

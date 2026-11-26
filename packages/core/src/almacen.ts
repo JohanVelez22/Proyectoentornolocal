@@ -204,6 +204,14 @@ export class AlmacenCredenciales {
     });
   }
 
+  /**
+   * Deja una copia de las credenciales (p. ej. el respaldo previo a una migración) legible solo por
+   * el usuario actual. Nunca lanza: si no se puede, avisa igual que al guardar y la copia se conserva.
+   */
+  async proteger(ruta: string): Promise<void> {
+    if (!(await this.restringir(ruta))) this.opciones.alFallarProteccion?.();
+  }
+
   private async restringir(ruta: string): Promise<boolean> {
     try {
       return (await this.opciones.restringir?.(ruta)) ?? true;
