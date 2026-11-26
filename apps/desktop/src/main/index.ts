@@ -392,6 +392,8 @@ if (errorCarpetaDatos !== null) {
       });
     } catch (e) {
       const detalle = e instanceof Error ? e.message : String(e);
+      // Antes del diálogo (que bloquea): así el motivo queda también en la salida y en los registros.
+      console.error('No se pudo iniciar el núcleo:', e);
       dialog.showErrorBox('WolfCore Dev', `No se pudo iniciar el núcleo: ${detalle}`);
       app.exit(1);
       return;
