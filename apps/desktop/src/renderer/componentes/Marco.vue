@@ -29,16 +29,7 @@ import {
   type MenuOption,
 } from 'naive-ui';
 import type { Aviso } from '../../shared/api';
-import {
-  computed,
-  h,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  watch,
-  type Component,
-  type HTMLAttributes,
-} from 'vue';
+import { computed, h, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
