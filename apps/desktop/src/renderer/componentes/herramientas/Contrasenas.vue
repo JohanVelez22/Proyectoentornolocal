@@ -55,6 +55,9 @@ const objetivo = computed(() => (motor.value ? bd.objetivo(motor.value) : null))
 const bases = computed(() => (motor.value ? (bd.bases[motor.value] ?? null) : null));
 const base = ref<string | null>(null);
 
+/** Debe existir antes del `watch` con `immediate` de abajo: lo usa al correr (antes fallaba al abrir). */
+const resultado = ref<ResultadoAuditoria | null>(null);
+
 watch(
   [motor, encendido],
   () => {
@@ -74,7 +77,6 @@ const columnaUsuario = ref('email');
 const columnaHash = ref('password');
 const esquema = ref('');
 const esPostgres = computed(() => motor.value === 'postgresql');
-const resultado = ref<ResultadoAuditoria | null>(null);
 /** Selección con la que se revisó (la que usan las acciones de restablecer). */
 const revisada = ref<{ base: string; seleccion: SeleccionAuditoria } | null>(null);
 
@@ -327,7 +329,7 @@ const opcionesBase = computed(() =>
 .nota {
   margin: 0;
   font-size: 12.5px;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 .aviso {
   margin: 0;
