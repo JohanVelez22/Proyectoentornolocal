@@ -433,6 +433,21 @@ export const en: Textos = {
       'herramientas.pdf_cifrado': 'The PDF is password-protected and cannot be optimized.',
       'herramientas.pdf_plazo': 'The PDF took longer than {segundos} s and was cancelled.',
       'herramientas.salida_ocupada': 'No free name was found for the new file.',
+      'conversor.formato': 'That conversion is not available.',
+      'conversor.archivo_invalido': 'The file is damaged or is not the type its extension says.',
+      'conversor.archivo_grande': 'The file is too large (up to {maximo}).',
+      'conversor.archivo_peligroso':
+        'The file looks like a ZIP bomb or has been tampered with (too much content, XML entities or invalid names) and is not opened for safety.',
+      'conversor.limite_filas': 'The table has too many rows (up to {maximo}).',
+      'conversor.limite_columnas': 'The table has too many columns (up to {maximo}).',
+      'conversor.limite_paginas': 'The PDF has too many pages (up to {maximo}).',
+      'conversor.pdf_cifrado': 'The PDF is password-protected and cannot be converted.',
+      'conversor.plazo': 'The conversion took more than {segundos} s and was cancelled.',
+      'conversor.cancelado': 'Conversion cancelled.',
+      'conversor.libreoffice_ausente':
+        'That conversion needs LibreOffice, which is not installed on this computer (WolfCore Dev does not install it).',
+      'conversor.libreoffice_fallo': 'LibreOffice could not convert the document.',
+      'conversor.pdf_no_disponible': 'Printing to PDF is not available right now.',
       'herramientas.fuera_de_la_ca':
         'The WolfCore Dev CA only signs .test domains, localhost and local addresses: {dominio} cannot be included.',
       'perfiles.frase_requerida':
@@ -3225,6 +3240,10 @@ export const en: Textos = {
         nombre: 'ZIP and PDF',
         descripcion: 'Compress files and folders to ZIP and optimize PDFs.',
       },
+      conversor: {
+        nombre: 'Document converter',
+        descripcion: 'Convert Word, Excel, PDF, CSV and Markdown without leaving this computer.',
+      },
     },
     errores: {
       jsonVacio: 'Type or paste some JSON.',
@@ -3562,6 +3581,23 @@ export const en: Textos = {
         `${n} ${n === 1 ? 'link or special file was not included' : 'links or special files were not included'}.`,
       archivos: (n: number) => `${n} ${n === 1 ? 'file' : 'files'}`,
       ahorro: (porcentaje: number) => `${porcentaje}% smaller`,
+      guardado: (archivo: string) => `Saved to ${archivo}`,
+    },
+    conversor: {
+      ayuda:
+        'Conversion happens on this computer: the document is not uploaded anywhere. The original is not modified; the result is a new file and an existing one is never overwritten.',
+      elegir: 'Choose document',
+      tipoNoSoportado:
+        'There are no conversions for that file type. docx, xlsx, csv, md, html and pdf are supported (and odt, pptx and doc with LibreOffice).',
+      convertirA: 'Convert to',
+      convertir: 'Convert…',
+      convirtiendo: 'Converting…',
+      avisoLibreOffice:
+        'This conversion uses LibreOffice, which is already installed on this computer. WolfCore Dev does not install or download it: it opens it without a window and with a temporary profile.',
+      sinLibreOffice:
+        'If you install LibreOffice you can also convert odt, pptx and doc (WolfCore Dev does not install it).',
+      limites:
+        'There are safety limits: up to 50 MB, 120 s, 200,000 rows and 1,000 columns; files that look like a ZIP bomb or carry XML entities are rejected.',
       guardado: (archivo: string) => `Saved to ${archivo}`,
     },
     contrasenas: {

@@ -869,6 +869,20 @@ export class PlataformaWindows implements PlataformaCompleta {
     }
   }
 
+  /** LibreOffice ya instalado en Program Files (solo comprueba que soffice exista). */
+  async libreOffice(): Promise<string | null> {
+    const bases = [
+      this.entorno.ProgramFiles,
+      this.entorno.ProgramW6432,
+      this.entorno['ProgramFiles(x86)'],
+    ].filter((d): d is string => typeof d === 'string' && d !== '');
+    for (const b of bases) {
+      const ruta = path.win32.join(b, 'LibreOffice', 'program', 'soffice.exe');
+      if (this.existeRuta(ruta)) return ruta;
+    }
+    return null;
+  }
+
   async reglasEntradaPermitidas(): Promise<ReglasEntrada> {
     try {
       const r = await this.ejecutar('powershell', codificarPowerShell(SCRIPT_REGLAS_ENTRADA), {

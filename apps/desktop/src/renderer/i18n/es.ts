@@ -440,6 +440,22 @@ export const es = {
       'herramientas.pdf_cifrado': 'El PDF está protegido con contraseña y no se puede optimizar.',
       'herramientas.pdf_plazo': 'El PDF tardó más de {segundos} s y se canceló.',
       'herramientas.salida_ocupada': 'No se encontró un nombre libre para el archivo nuevo.',
+      'conversor.formato': 'Esa conversión no está disponible.',
+      'conversor.archivo_invalido':
+        'El archivo está dañado o no es del tipo que indica su extensión.',
+      'conversor.archivo_grande': 'El archivo pesa demasiado (hasta {maximo}).',
+      'conversor.archivo_peligroso':
+        'El archivo parece un ZIP bomba o está manipulado (demasiado contenido, entidades XML o nombres no válidos) y no se abre por seguridad.',
+      'conversor.limite_filas': 'La tabla tiene demasiadas filas (hasta {maximo}).',
+      'conversor.limite_columnas': 'La tabla tiene demasiadas columnas (hasta {maximo}).',
+      'conversor.limite_paginas': 'El PDF tiene demasiadas páginas (hasta {maximo}).',
+      'conversor.pdf_cifrado': 'El PDF está protegido con contraseña y no se puede convertir.',
+      'conversor.plazo': 'La conversión tardó más de {segundos} s y se canceló.',
+      'conversor.cancelado': 'Conversión cancelada.',
+      'conversor.libreoffice_ausente':
+        'Esa conversión necesita LibreOffice y no está instalado en este equipo (WolfCore Dev no lo instala).',
+      'conversor.libreoffice_fallo': 'LibreOffice no pudo convertir el documento.',
+      'conversor.pdf_no_disponible': 'La impresión a PDF no está disponible en este momento.',
       'herramientas.fuera_de_la_ca':
         'La CA de WolfCore Dev solo firma dominios .test, localhost y direcciones locales: {dominio} no se puede incluir.',
       'perfiles.frase_requerida':
@@ -3253,6 +3269,10 @@ export const es = {
         nombre: 'ZIP y PDF',
         descripcion: 'Comprimir archivos y carpetas a ZIP y optimizar PDF.',
       },
+      conversor: {
+        nombre: 'Conversor de documentos',
+        descripcion: 'Convertir Word, Excel, PDF, CSV y Markdown sin salir de este equipo.',
+      },
     },
     errores: {
       jsonVacio: 'Escriba o pegue un JSON.',
@@ -3591,6 +3611,23 @@ export const es = {
         `${n} ${n === 1 ? 'enlace o archivo especial no se incluyó' : 'enlaces o archivos especiales no se incluyeron'}.`,
       archivos: (n: number) => `${n} ${n === 1 ? 'archivo' : 'archivos'}`,
       ahorro: (porcentaje: number) => `${porcentaje} % menos`,
+      guardado: (archivo: string) => `Guardado en ${archivo}`,
+    },
+    conversor: {
+      ayuda:
+        'Se convierte en este equipo: el documento no se sube a ningún sitio. El original no se modifica; el resultado es un archivo nuevo y nunca se sobrescribe uno existente.',
+      elegir: 'Elegir documento',
+      tipoNoSoportado:
+        'No hay conversiones para ese tipo de archivo. Se admiten docx, xlsx, csv, md, html y pdf (y odt, pptx y doc con LibreOffice).',
+      convertirA: 'Convertir a',
+      convertir: 'Convertir…',
+      convirtiendo: 'Convirtiendo…',
+      avisoLibreOffice:
+        'Esta conversión usa LibreOffice, que ya está instalado en este equipo. WolfCore Dev no lo instala ni lo descarga: lo abre sin ventana y con un perfil temporal.',
+      sinLibreOffice:
+        'Si instala LibreOffice también podrá convertir odt, pptx y doc (WolfCore Dev no lo instala).',
+      limites:
+        'Por seguridad hay límites: hasta 50 MB, 120 s, 200 000 filas y 1000 columnas; los archivos que parecen un ZIP bomba o traen entidades XML se rechazan.',
       guardado: (archivo: string) => `Guardado en ${archivo}`,
     },
     contrasenas: {

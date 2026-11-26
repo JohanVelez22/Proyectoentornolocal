@@ -94,6 +94,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'tailscale',
   'perfilRedDe',
   'reglasEntradaPermitidas',
+  'libreOffice',
 ];
 
 /**

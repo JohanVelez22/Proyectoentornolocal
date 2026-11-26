@@ -253,6 +253,11 @@ export interface CapacidadesPlataforma {
   perfilRedDe(ip: string): Promise<PerfilRed | null>;
   /** Reglas de entrada Allow para nginx, PHP, MySQL y PostgreSQL. Solo lee. */
   reglasEntradaPermitidas(): Promise<ReglasEntrada>;
+  /**
+   * Ruta de `soffice` si LibreOffice YA está instalado (WolfCore Dev nunca lo instala ni lo
+   * descarga); null si no. Solo mira archivos: no ejecuta nada.
+   */
+  libreOffice(): Promise<string | null>;
 }
 
 /**

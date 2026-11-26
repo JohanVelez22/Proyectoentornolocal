@@ -345,6 +345,13 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return this.perfiles.get(ip) ?? null;
   }
 
+  /** Lo que devuelve libreOffice (por defecto, no instalado). */
+  libreOfficeRuta: string | null = null;
+
+  async libreOffice(): Promise<string | null> {
+    return this.libreOfficeRuta;
+  }
+
   async reglasEntradaPermitidas(): Promise<ReglasEntrada> {
     return { ok: this.reglasEntrada.ok, reglas: this.reglasEntrada.reglas.map((r) => ({ ...r })) };
   }

@@ -307,6 +307,13 @@ import { limpiarBom, type ResultadoBom } from './herramientas/bom';
 import { guardarImagen, leerImagen, type ImagenLeida } from './herramientas/imagenes';
 import { optimizarPdf, type ResultadoPdf } from './herramientas/pdf';
 import { comprimirZip, type ResultadoZip } from './herramientas/zip';
+import {
+  conversionesDisponibles,
+  convertir,
+  type Conversion,
+  type Formato,
+  type ImprimirPdf,
+} from './conversor/conversor';
 import { Busquedas, type OpcionesBusqueda } from './herramientas/buscar';
 import { emitirCertificadoLibre } from './herramientas/certificadosLibres';
 import { entornoSistema, PLAZO_VERSION_MS, type EntornoSistema } from './herramientas/entorno';
@@ -335,6 +342,11 @@ export interface OpcionesNucleo {
   migracion?: typeof migrarCarpetaDatos;
   /** Para pruebas: quien lanza el editor (por defecto, un proceso separado real). */
   lanzarEditor?: LanzadorSeparado;
+  /**
+   * Imprime un HTML saneado a PDF (md y html → pdf del conversor, D34). Lo aporta la aplicación
+   * con el Chromium de Electron, sin red ni JavaScript; sin esto esas conversiones no se ofrecen.
+   */
+  imprimirPdf?: ImprimirPdf;
   /** Para pruebas: lanzador de los comandos con streaming (pasos de receta, git). */
   lanzar?: Lanzador;
   /** PID del proceso principal y de su padre (por defecto, los de este proceso). */
@@ -435,6 +447,7 @@ interface ModulosNucleo {
   /** Plataforma completa (lo que una parcial de prueba no tenga lo pone la de Windows). */
   plataforma: PlataformaCompleta;
   lanzarEditor?: LanzadorSeparado;
+  imprimirPdf?: ImprimirPdf;
   /** Editor del vhost de cada sitio (reglas propias o vhost completo, con nginx -t y vuelta atrás). */
   editorVhost: EditorVhost;
   /** php.ini de cada rama (editor con prueba, copia y vuelta atrás). */
@@ -665,6 +678,7 @@ export class Nucleo {
   private readonly almacenCredenciales: AlmacenCredenciales;
   private readonly plataforma: PlataformaCompleta;
   private readonly lanzarEditor: LanzadorSeparado | undefined;
+  private readonly imprimirPdf: ImprimirPdf | undefined;
   /** Puerto de Ollama según la configuración (ClienteOllama lo lee de forma síncrona). */
   private readonly puertoOllama: { valor: number };
   /** Servidor MCP local; se maneja con iniciarMcp/detenerMcp (que guardan `mcp.activo`). */
@@ -760,6 +774,7 @@ export class Nucleo {
     this.avisos = m.avisos;
     this.plataforma = m.plataforma;
     this.lanzarEditor = m.lanzarEditor;
+    this.imprimirPdf = m.imprimirPdf;
     this.bd = m.bd;
     this.respaldos = m.respaldos;
     this.pgvector = m.pgvector;
@@ -1483,6 +1498,7 @@ export class Nucleo {
       cerrojoBases,
       editorVhost,
       ...(o.lanzarEditor ? { lanzarEditor: o.lanzarEditor } : {}),
+      ...(o.imprimirPdf ? { imprimirPdf: o.imprimirPdf } : {}),
       iniPhp,
       poolsSitio: pools,
       ajustesPhpSitio,
@@ -3525,6 +3541,33 @@ export class Nucleo {
   /** PDF re-guardado en un hilo aparte; solo deja archivo si pesa menos que el original. */
   optimizarPdf(origen: string, destino: string): Promise<ResultadoPdf> {
     return optimizarPdf(origen, destino);
+  }
+
+  /** Conversiones de documentos que se pueden ofrecer ahora (LibreOffice solo si está instalado). */
+  async conversionesDocumento(): Promise<{ conversiones: Conversion[]; libreOffice: boolean }> {
+    const lo = await this.plataforma.libreOffice();
+    return {
+      conversiones: conversionesDisponibles({
+        libreOffice: lo,
+        imprimirPdf: this.imprimirPdf !== undefined,
+      }),
+      libreOffice: lo !== null,
+    };
+  }
+
+  /**
+   * Convierte un documento en este equipo (D34). `origen` sale de un diálogo "Abrir" y `destino`
+   * de uno "Guardar"; nunca se pisa un archivo existente.
+   */
+  async convertirDocumento(
+    origen: string,
+    a: Formato,
+    destino: string,
+  ): Promise<{ destino: string; bytes: number }> {
+    return convertir({ origen, a, destino }, undefined, {
+      libreOffice: await this.plataforma.libreOffice(),
+      ...(this.imprimirPdf ? { imprimirPdf: this.imprimirPdf } : {}),
+    });
   }
 
   private busquedasEnCurso?: Busquedas;
