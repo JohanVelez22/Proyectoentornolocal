@@ -178,6 +178,8 @@ export const es = {
         'El usuario {usuario} ya existe con otra clave. Use su clave actual: no se cambia para no dejar sin conexión a otros proyectos.',
       'bd.mongosh_faltante': 'Falta mongosh: instálelo desde Servicios para administrar MongoDB.',
       'tuneles.sitio_no_encontrado': 'No se encontró el proyecto.',
+      'tuneles.sitio_no_confiable':
+        '{dominio} no es de confianza todavía: marque «Confío en este repositorio» en el proyecto antes de publicarlo.',
       'tuneles.confirmacion_requerida':
         'Publicar {dominio} en internet exige confirmarlo en WolfCore Dev.',
       'tuneles.confirmacion_obsoleta':
@@ -1828,6 +1830,8 @@ export const es = {
     error: 'El túnel falló',
     sinNginx: 'Encienda Nginx primero',
     sinCloudflared: 'Instale cloudflared en Servicios',
+    sinConfianza:
+      'Este proyecto no es de confianza: marque «Confío en este repositorio» para poder publicarlo.',
     abrirUrl: 'Abrir el enlace público',
     copiarUrl: 'Copiar el enlace público',
     verQr: 'Mostrar el código QR del enlace',
@@ -4182,12 +4186,16 @@ export const es = {
       hosts_faltan: 'Faltan en hosts: {dominios}',
       hosts_solo_lectura: '{ruta}: atributo de solo lectura',
       path_repetidas: 'Repetidas: {entradas}',
-      path_delante: '{entrada} está antes que las herramientas de WolfCore Dev y también tiene {programa}',
-      antivirus_sin_leer: 'El antivirus está activo; no se pudieron leer sus exclusiones (hace falta administrador).',
-      antivirus_sin_exclusion: 'El antivirus está activo y la carpeta de datos de WolfCore Dev no está excluida.',
+      path_delante:
+        '{entrada} está antes que las herramientas de WolfCore Dev y también tiene {programa}',
+      antivirus_sin_leer:
+        'El antivirus está activo; no se pudieron leer sus exclusiones (hace falta administrador).',
+      antivirus_sin_exclusion:
+        'El antivirus está activo y la carpeta de datos de WolfCore Dev no está excluida.',
       enlazador_ausente: 'No se encontraron las herramientas de C++ de Visual Studio Build Tools.',
       vcredist_ausente: 'No está instalado Microsoft Visual C++ 2015-2022 (x64).',
-      firewall_no_comprobado: 'No se pudieron leer las reglas del cortafuegos (puede hacer falta administrador).',
+      firewall_no_comprobado:
+        'No se pudieron leer las reglas del cortafuegos (puede hacer falta administrador).',
       firewall_reglas: 'WolfCore Dev: {propias} · Restos de pruebas de WolfCore: {pruebas}',
       firewall_acotadas: 'Reglas acotadas a la red local:',
       firewall_ajenas: 'Reglas de otros programas:',

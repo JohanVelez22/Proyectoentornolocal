@@ -1,4 +1,8 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { sitioPublicable } from '@pel/core';
+import { textos } from '../src/renderer/i18n';
 import type { DatosSitio, EstadoHttps, Sitio } from '../src/shared/api';
 import {
   armarDominio,
@@ -11,6 +15,7 @@ import {
   filtrarSitios,
   limpiarDatos,
   motivoTunelBloqueado,
+  sitioNoConfiable,
   confirmacionDeTunel,
   tunelConfirmadoDe,
   usaCloudflared,
@@ -503,5 +508,35 @@ describe('confirmación de túnel: revisión de D24', () => {
       nombre: 'wolf-dev',
       dominio: 'demo.midominio.com',
     });
+  });
+});
+
+describe('túnel y sitios que no son de confianza (D38c)', () => {
+  it('motivoTunelBloqueado explica la falta de confianza antes que lo demás, salvo con el túnel ya abierto', () => {
+    const base = { nginx: 'encendido' as const, cloudflaredInstalado: true, noConfiable: true };
+    expect(motivoTunelBloqueado({ ...base, tunel: 'apagado' })).toBe(textos.tunel.sinConfianza);
+    expect(motivoTunelBloqueado({ ...base, tunel: 'error' })).toBe(textos.tunel.sinConfianza);
+    // Si por lo que sea ya hay uno abierto, siempre se puede cerrar.
+    expect(motivoTunelBloqueado({ ...base, tunel: 'activo' })).toBeNull();
+    expect(motivoTunelBloqueado({ ...base, noConfiable: false, tunel: 'apagado' })).toBeNull();
+  });
+
+  it('la regla del renderer es la misma que la del núcleo', () => {
+    for (const origen of [undefined, 'perfil'] as const)
+      for (const confiado of [false, true])
+        for (const pendiente of [undefined, null, 'carpeta'] as const) {
+          const s = { origen, confiado, pendiente };
+          expect(sitioNoConfiable(s), JSON.stringify(s)).toBe(!sitioPublicable(s));
+        }
+  });
+
+  it('el interruptor del túnel queda deshabilitado con la explicación (no hay otra vía en la tarjeta)', () => {
+    const v = readFileSync(
+      path.join(__dirname, '..', 'src', 'renderer', 'componentes', 'InterruptorTunel.vue'),
+      'utf8',
+    );
+    expect(v).toContain('noConfiable: sitioNoConfiable(props.sitio)');
+    expect(v).toMatch(/:disabled="!!bloqueo/);
+    expect(v).toMatch(/<NTooltip :disabled="!bloqueo"/);
   });
 });

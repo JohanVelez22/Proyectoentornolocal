@@ -79,6 +79,7 @@ export const PARAMETROS_ERROR = {
   'bd.usuario_en_uso': ['usuario'],
   // túneles, hosts y HTTPS
   'tuneles.sitio_no_encontrado': [],
+  'tuneles.sitio_no_confiable': ['dominio'],
   'tuneles.cloudflared_no_instalado': [],
   'tuneles.confirmacion_requerida': ['dominio'],
   'tuneles.confirmacion_obsoleta': ['dominio'],

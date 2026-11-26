@@ -253,10 +253,21 @@ export function confirmacionDeTunel(sitio: Pick<Sitio, 'datosReales' | 'dominio'
 }
 
 /**
+ * ¿Se puede publicar el sitio? Misma regla que `sitioPublicable` del núcleo (el renderer no
+ * importa el núcleo; una prueba compara ambas): un sitio de un perfil sin «Confío…» o con la
+ * carpeta pendiente no se publica.
+ */
+export function sitioNoConfiable(s: Pick<Sitio, 'origen' | 'confiado' | 'pendiente'>): boolean {
+  return !!s.pendiente || (s.origen === 'perfil' && s.confiado !== true);
+}
+
+/**
  * Motivo por el que no se puede abrir (o reintentar tras un error) un túnel, o null si se puede.
  * Un túnel activo o abriéndose nunca se bloquea: siempre se puede cerrar.
  */
 export function motivoTunelBloqueado(o: {
+  /** El sitio no es de confianza (ver `sitioPublicable`): no se publica, ni confirmado. */
+  noConfiable?: boolean;
   nginx: EstadoNginx;
   /** undefined mientras no se sabe (no se bloquea: el núcleo igual lo explica). */
   cloudflaredInstalado: boolean | undefined;
@@ -264,6 +275,7 @@ export function motivoTunelBloqueado(o: {
 }): string | null {
   // Activo o abriéndose siempre se puede cerrar; apagado o con error se va a (re)abrir.
   if (o.tunel === 'activo' || o.tunel === 'iniciando') return null;
+  if (o.noConfiable) return textos.tunel.sinConfianza;
   if (o.cloudflaredInstalado === false) return textos.tunel.sinCloudflared;
   if (o.nginx !== 'encendido') return textos.tunel.sinNginx;
   return null;

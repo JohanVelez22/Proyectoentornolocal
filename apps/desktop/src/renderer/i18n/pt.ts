@@ -182,6 +182,8 @@ export const pt: Textos = {
         'O usuário {usuario} já existe com outra senha. Use a senha atual dele: ela não é alterada para não deixar outros projetos sem conexão.',
       'bd.mongosh_faltante': 'Falta o mongosh: instale-o em Serviços para administrar o MongoDB.',
       'tuneles.sitio_no_encontrado': 'O projeto não foi encontrado.',
+      'tuneles.sitio_no_confiable':
+        '{dominio} ainda não é confiável: marque «Confio neste repositório» no projeto antes de publicá-lo.',
       'tuneles.confirmacion_requerida':
         'Publicar {dominio} na internet exige confirmação no WolfCore Dev.',
       'tuneles.confirmacion_obsoleta':
@@ -1829,6 +1831,8 @@ export const pt: Textos = {
     error: 'O túnel falhou',
     sinNginx: 'Ligue o Nginx primeiro',
     sinCloudflared: 'Instale o cloudflared em Serviços',
+    sinConfianza:
+      'Este projeto não é confiável: marque «Confio neste repositório» para poder publicá-lo.',
     abrirUrl: 'Abrir o link público',
     copiarUrl: 'Copiar o link público',
     verQr: 'Mostrar o código QR do link',
@@ -4191,11 +4195,15 @@ export const pt: Textos = {
       hosts_solo_lectura: '{ruta}: atributo somente leitura',
       path_repetidas: 'Repetidas: {entradas}',
       path_delante: '{entrada} vem antes das ferramentas do WolfCore Dev e também tem {programa}',
-      antivirus_sin_leer: 'O antivírus está ativo; não foi possível ler as suas exclusões (é preciso ser administrador).',
-      antivirus_sin_exclusion: 'O antivírus está ativo e a pasta de dados do WolfCore Dev não está excluída.',
-      enlazador_ausente: 'Não foram encontradas as ferramentas de C++ do Visual Studio Build Tools.',
+      antivirus_sin_leer:
+        'O antivírus está ativo; não foi possível ler as suas exclusões (é preciso ser administrador).',
+      antivirus_sin_exclusion:
+        'O antivírus está ativo e a pasta de dados do WolfCore Dev não está excluída.',
+      enlazador_ausente:
+        'Não foram encontradas as ferramentas de C++ do Visual Studio Build Tools.',
       vcredist_ausente: 'O Microsoft Visual C++ 2015-2022 (x64) não está instalado.',
-      firewall_no_comprobado: 'Não foi possível ler as regras do firewall (pode ser preciso ser administrador).',
+      firewall_no_comprobado:
+        'Não foi possível ler as regras do firewall (pode ser preciso ser administrador).',
       firewall_reglas: 'WolfCore Dev: {propias} · Restos de testes do WolfCore: {pruebas}',
       firewall_acotadas: 'Regras limitadas à rede local:',
       firewall_ajenas: 'Regras de outros programas:',

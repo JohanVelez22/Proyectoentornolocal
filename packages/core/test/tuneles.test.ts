@@ -169,6 +169,37 @@ describe('Tuneles.abrir', () => {
     },
   );
 
+  it('un sitio importado de un perfil sin confiar no se publica, ni siquiera confirmado', async () => {
+    sitios = [sitio({ origen: 'perfil', confiado: false })];
+    const t = crear();
+    for (const o of [undefined, SI]) {
+      await expect(t.abrir('wolf', o)).rejects.toMatchObject({
+        codigo: 'tuneles.sitio_no_confiable',
+        datos: { dominio: 'wolf.test' },
+      });
+      await expect(t.renovar('wolf', o)).rejects.toMatchObject({
+        codigo: 'tuneles.sitio_no_confiable',
+      });
+    }
+    expect(iniciados).toEqual([]);
+    expect(detenidos).toEqual([]);
+  });
+
+  it('un sitio con la carpeta pendiente tampoco se publica', async () => {
+    sitios = [sitio({ origen: 'perfil', confiado: true, pendiente: 'carpeta' })];
+    await expect(crear().abrir('wolf', SI)).rejects.toMatchObject({
+      codigo: 'tuneles.sitio_no_confiable',
+    });
+    expect(iniciados).toEqual([]);
+  });
+
+  it('un sitio de perfil en el que el usuario confió sí se publica; uno propio también', async () => {
+    sitios = [sitio({ origen: 'perfil', confiado: true })];
+    await expect(crear().abrir('wolf', SI)).resolves.toMatchObject({ estado: 'activo' });
+    sitios = [sitio()];
+    await expect(crear().abrir('wolf', SI)).resolves.toMatchObject({ estado: 'activo' });
+  });
+
   it('si el túnel confirmado ya no es el del sitio (MCP), no se abre', async () => {
     const t = crear();
     await expect(

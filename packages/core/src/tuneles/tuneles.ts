@@ -6,6 +6,7 @@ import type { Instalador } from '../catalogo/instalador';
 import type { Eventos, EventosNucleo } from '../eventos';
 import { ErrorDetenidoAlIniciar, type Supervisor } from '../procesos/supervisor';
 import type { Rutas } from '../rutas';
+import { sitioPublicable } from '../sitios/confianza';
 import type { GestorSitios } from '../sitios/sitios';
 import type { UrlBase } from '../sitios/urlbase';
 import type { Config, EstadoTunel, Sitio } from '../tipos';
@@ -317,6 +318,14 @@ export class Tuneles {
    * se abre (lo confirmado no es lo que se publicaría).
    */
   private exigirConfirmacion(sitio: Sitio, o: OpcionesAbrirTunel): void {
+    // Antes que la confirmación: lo que no es de confianza no se publica ni con permiso.
+    if (!sitioPublicable(sitio)) {
+      throw new ErrorWolf(
+        'tuneles.sitio_no_confiable',
+        `${sitio.dominio}: no es de confianza (marque «Confío en este repositorio») y no se publica.`,
+        { dominio: sitio.dominio },
+      );
+    }
     if (o.confirmado !== true) {
       // Tailscale Serve no publica en internet: su aviso no lo dice.
       if (alcanceDe(sitio.tunel) === 'tailnet') {

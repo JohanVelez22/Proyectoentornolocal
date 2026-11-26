@@ -22,6 +22,7 @@ export * from './errores';
 export * from './rutas';
 export * from './almacen';
 export * from './eventos';
+export * from './sitios/confianza';
 export * from './sitios/detectar';
 export * from './sitios/sitios';
 export * from './https/ca';

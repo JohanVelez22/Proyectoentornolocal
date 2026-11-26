@@ -178,6 +178,8 @@ export const en: Textos = {
         'User {usuario} already exists with another password. Use its current password: it is not changed so other projects keep connecting.',
       'bd.mongosh_faltante': 'mongosh is missing: install it from Services to manage MongoDB.',
       'tuneles.sitio_no_encontrado': 'The project was not found.',
+      'tuneles.sitio_no_confiable':
+        '{dominio} is not trusted yet: tick «I trust this repository» in the project before publishing it.',
       'tuneles.confirmacion_requerida':
         'Publishing {dominio} on the internet must be confirmed in WolfCore Dev.',
       'tuneles.confirmacion_obsoleta':
@@ -1812,6 +1814,8 @@ export const en: Textos = {
     error: 'The tunnel failed',
     sinNginx: 'Start Nginx first',
     sinCloudflared: 'Install cloudflared in Services',
+    sinConfianza:
+      'This project is not trusted: tick «I trust this repository» to be able to publish it.',
     abrirUrl: 'Open the public link',
     copiarUrl: 'Copy the public link',
     verQr: 'Show the QR code of the link',
@@ -4155,8 +4159,10 @@ export const en: Textos = {
       hosts_solo_lectura: '{ruta}: read-only attribute',
       path_repetidas: 'Repeated: {entradas}',
       path_delante: '{entrada} comes before the WolfCore Dev tools and also has {programa}',
-      antivirus_sin_leer: 'The antivirus is active; its exclusions could not be read (administrator needed).',
-      antivirus_sin_exclusion: 'The antivirus is active and the WolfCore Dev data folder is not excluded.',
+      antivirus_sin_leer:
+        'The antivirus is active; its exclusions could not be read (administrator needed).',
+      antivirus_sin_exclusion:
+        'The antivirus is active and the WolfCore Dev data folder is not excluded.',
       enlazador_ausente: 'The C++ tools of Visual Studio Build Tools were not found.',
       vcredist_ausente: 'Microsoft Visual C++ 2015-2022 (x64) is not installed.',
       firewall_no_comprobado: 'The firewall rules could not be read (administrator may be needed).',

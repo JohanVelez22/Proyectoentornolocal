@@ -7,7 +7,7 @@ import { useTunel } from '../composables/useTunel';
 import { textos } from '../i18n';
 import { useServicios } from '../stores/servicios';
 import { useTuneles } from '../stores/tuneles';
-import { motivoTunelBloqueado, usaCloudflared } from '../utilidades/sitios';
+import { motivoTunelBloqueado, sitioNoConfiable, usaCloudflared } from '../utilidades/sitios';
 import DialogoQr from './DialogoQr.vue';
 import DialogoTunel from './DialogoTunel.vue';
 
@@ -45,6 +45,7 @@ const cloudflared = computed(() => {
 });
 const bloqueo = computed(() =>
   motivoTunelBloqueado({
+    noConfiable: sitioNoConfiable(props.sitio),
     nginx: servicios.porId['nginx']?.estado,
     cloudflaredInstalado: cloudflared.value,
     tunel: fase.value === 'apagado' ? 'apagado' : tunel.value.estado,

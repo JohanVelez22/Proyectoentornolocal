@@ -186,6 +186,8 @@ export const fr: Textos = {
         'L’utilisateur {usuario} existe déjà avec un autre mot de passe. Utilisez son mot de passe actuel : il n’est pas changé pour ne pas couper l’accès d’autres projets.',
       'bd.mongosh_faltante': 'mongosh manque : installez-le depuis Services pour gérer MongoDB.',
       'tuneles.sitio_no_encontrado': 'Le projet est introuvable.',
+      'tuneles.sitio_no_confiable':
+        '{dominio} n’est pas encore de confiance : cochez « Je fais confiance à ce dépôt » dans le projet avant de le publier.',
       'tuneles.confirmacion_requerida':
         'Publier {dominio} sur Internet doit être confirmé dans WolfCore Dev.',
       'tuneles.confirmacion_obsoleta':
@@ -1889,6 +1891,8 @@ export const fr: Textos = {
     error: 'Le tunnel a échoué',
     sinNginx: 'Allumez d’abord Nginx',
     sinCloudflared: 'Installez cloudflared dans Services',
+    sinConfianza:
+      'Ce projet n’est pas de confiance : cochez « Je fais confiance à ce dépôt » pour pouvoir le publier.',
     abrirUrl: 'Ouvrir le lien public',
     copiarUrl: 'Copier le lien public',
     verQr: 'Afficher le code QR du lien',
@@ -4297,12 +4301,16 @@ export const fr: Textos = {
       hosts_faltan: 'Absents du fichier hosts : {dominios}',
       hosts_solo_lectura: '{ruta} : attribut en lecture seule',
       path_repetidas: 'En double : {entradas}',
-      path_delante: '{entrada} se trouve avant les outils de WolfCore Dev et contient aussi {programa}',
-      antivirus_sin_leer: "L'antivirus est actif ; ses exclusions n'ont pas pu être lues (droits d'administrateur requis).",
-      antivirus_sin_exclusion: "L'antivirus est actif et le dossier de données de WolfCore Dev n'est pas exclu.",
+      path_delante:
+        '{entrada} se trouve avant les outils de WolfCore Dev et contient aussi {programa}',
+      antivirus_sin_leer:
+        "L'antivirus est actif ; ses exclusions n'ont pas pu être lues (droits d'administrateur requis).",
+      antivirus_sin_exclusion:
+        "L'antivirus est actif et le dossier de données de WolfCore Dev n'est pas exclu.",
       enlazador_ausente: 'Les outils C++ de Visual Studio Build Tools sont introuvables.',
       vcredist_ausente: "Microsoft Visual C++ 2015-2022 (x64) n'est pas installé.",
-      firewall_no_comprobado: "Les règles du pare-feu n'ont pas pu être lues (les droits d'administrateur peuvent être requis).",
+      firewall_no_comprobado:
+        "Les règles du pare-feu n'ont pas pu être lues (les droits d'administrateur peuvent être requis).",
       firewall_reglas: 'WolfCore Dev : {propias} · Restes de tests de WolfCore : {pruebas}',
       firewall_acotadas: 'Règles limitées au réseau local :',
       firewall_ajenas: "Règles d'autres programmes :",
