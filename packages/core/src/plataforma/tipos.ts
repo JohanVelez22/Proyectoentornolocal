@@ -1,3 +1,4 @@
+import type { ReglaExportada, ReglaPorQuitar, ReglaPorRestaurar } from './firewallCambiosWin';
 import type { PerfilRed, ReglasEntrada } from './firewallWin';
 import type { Readable } from 'node:stream';
 import type { LanzadorOculto } from './lanzarOculto';
@@ -253,6 +254,19 @@ export interface CapacidadesPlataforma {
   perfilRedDe(ip: string): Promise<PerfilRed | null>;
   /** Reglas de entrada Allow para nginx, PHP, MySQL y PostgreSQL. Solo lee. */
   reglasEntradaPermitidas(): Promise<ReglasEntrada>;
+  /**
+   * Exporta las reglas con esos `Name` exactos (de cualquier dirección o acción) con todo lo
+   * necesario para recrearlas; las que no existen no aparecen. null si no se pudo leer. Solo lee.
+   */
+  exportarReglasFirewall(nombres: string[]): Promise<ReglaExportada[] | null>;
+  /**
+   * D46: quita reglas por su `Name` exacto, con elevación (UAC). El script elevado vuelve a
+   * comprobar cada una (entrada, Allow, mismo programa, bajo `raiz`) y salta las que no cuadran.
+   * `ok: true` no dice cuáles se quitaron: se comprueba con `exportarReglasFirewall`.
+   */
+  quitarReglasFirewall(reglas: ReglaPorQuitar[]): Promise<ResultadoEscritura>;
+  /** D46: recrea reglas exportadas, con elevación y las mismas comprobaciones de programa. */
+  restaurarReglasFirewall(reglas: ReglaPorRestaurar[]): Promise<ResultadoEscritura>;
   /**
    * Ruta de `soffice` si LibreOffice YA está instalado (WolfCore Dev nunca lo instala ni lo
    * descarga); null si no. Solo mira archivos: no ejecuta nada.

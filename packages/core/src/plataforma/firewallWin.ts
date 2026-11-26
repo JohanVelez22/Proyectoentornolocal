@@ -1,6 +1,6 @@
 /**
- * Lecturas de solo lectura del cortafuegos y del perfil de red de Windows. Nada de lo de aquí
- * cambia una regla: WolfCore Dev solo lee y, si algo sobra, muestra un comando que el usuario
+ * Lecturas del cortafuegos y del perfil de red de Windows. Nada de lo de aquí
+ * cambia una regla (los cambios de D46 viven en firewallCambiosWin.ts). Si algo sobra se muestra un comando que el usuario
  * corre él mismo como administrador.
  */
 
@@ -43,7 +43,19 @@ export function interpretarPerfilRed(salida: string): PerfilRed | null {
 }
 
 /** Ejecutables de WolfCore Dev que no deberían tener una regla de entrada propia. */
-export const PROGRAMAS_VIGILADOS = ['nginx', 'php-cgi', 'php', 'mysqld', 'postgres'] as const;
+export const PROGRAMAS_VIGILADOS = [
+  'nginx',
+  'php-cgi',
+  'php',
+  'mysqld',
+  'mariadbd',
+  'postgres',
+  'mongod',
+  'redis-server',
+  'mailpit',
+  'meilisearch',
+  'inbucket',
+] as const;
 
 /**
  * Reglas de entrada habilitadas con acción Allow cuyo programa es uno vigilado. Una línea por
@@ -60,13 +72,20 @@ export const SCRIPT_REGLAS_ENTRADA = [
   '}',
 ].join('\n');
 
-const NOMBRE_REGLA = /^[\w{}.\- @:()[\]]{1,200}$/;
+/**
+ * Nombre de regla aceptado. Windows crea las del aviso "permitir acceso" con nombres como
+ * `TCP Query User{GUID}C:\ruta\nginx.exe` (barras, dos puntos y llaves). Sin comodines
+ * (`* ? [ ]`), comillas, acento grave ni caracteres de control: así nunca actúa como patrón ni
+ * rompe un literal de PowerShell.
+ */
+// eslint-disable-next-line no-control-regex
+export const NOMBRE_REGLA_LISTA = /^[^\x00-\x1f*?[\]`'"‘’‚‛]{1,400}$/;
 
 export function interpretarReglasEntrada(salida: string): ReglaEntrada[] {
   const res: ReglaEntrada[] = [];
   for (const linea of salida.split(/\r?\n/)) {
     const [nombre, nombreVisible, perfil, programa] = linea.split('\t');
-    if (!nombre || !programa || !NOMBRE_REGLA.test(nombre)) continue;
+    if (!nombre || !programa || !NOMBRE_REGLA_LISTA.test(nombre)) continue;
     res.push({
       nombre,
       nombreVisible: (nombreVisible ?? '').slice(0, 200),

@@ -42,6 +42,16 @@ import {
   type PerfilRed,
   type ReglasEntrada,
 } from './firewallWin';
+import {
+  interpretarReglasExportadas,
+  SALIDA_FIREWALL,
+  scriptExportarReglas,
+  scriptQuitarReglas,
+  scriptRestaurarReglas,
+  type ReglaExportada,
+  type ReglaPorQuitar,
+  type ReglaPorRestaurar,
+} from './firewallCambiosWin';
 import { crearLanzadorOculto, type LanzadorOculto } from './lanzarOculto';
 import { interpretarNetstatTodos, interpretarTasklist, interpretarTasklistTodos } from './netstat';
 import { aBase64, codificarPowerShell, PathUsuarioWindows } from './pathUsuarioWin';
@@ -1060,6 +1070,43 @@ export class PlataformaWindows implements PlataformaCompleta {
     } catch {
       return { ok: false, reglas: [] };
     }
+  }
+
+  async exportarReglasFirewall(nombres: string[]): Promise<ReglaExportada[] | null> {
+    if (nombres.length === 0) return [];
+    try {
+      const r = await this.ejecutar(
+        'powershell',
+        codificarPowerShell(scriptExportarReglas(nombres)),
+        {
+          timeoutMs: 60_000,
+        },
+      );
+      if (r.codigo !== 0) return null;
+      return interpretarReglasExportadas(r.stdout);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Salida 41 del script (alguna regla se saltó) no es un fallo: quien llama relee qué quedó. */
+  private async elevarCortafuegos(script: (limite: number) => string): Promise<ResultadoEscritura> {
+    const plazo = 180_000;
+    const r = await this.elevar(script(Date.now() + plazo), plazo);
+    if (!r.ok && r.motivo === 'error' && r.detalle === `código ${SALIDA_FIREWALL.saltadas}`) {
+      return { ok: true };
+    }
+    return r;
+  }
+
+  async quitarReglasFirewall(reglas: ReglaPorQuitar[]): Promise<ResultadoEscritura> {
+    if (reglas.length === 0) return { ok: true };
+    return this.elevarCortafuegos((limite) => scriptQuitarReglas(reglas, limite));
+  }
+
+  async restaurarReglasFirewall(reglas: ReglaPorRestaurar[]): Promise<ResultadoEscritura> {
+    if (reglas.length === 0) return { ok: true };
+    return this.elevarCortafuegos((limite) => scriptRestaurarReglas(reglas, limite));
   }
 
   async perfilesFirefox(): Promise<PerfilFirefoxSistema[]> {

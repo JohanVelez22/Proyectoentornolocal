@@ -9,6 +9,8 @@ export const BLOQUEOS_AISLADO = [
   'variableUsuario',
   'pathUsuario.escribir',
   'detenerServicioSistema',
+  'quitarReglasFirewall',
+  'restaurarReglasFirewall',
   'instalarVcRedist',
   'limpiarEntradaRustup',
   'firefoxActivar',
@@ -40,6 +42,8 @@ export function aislarPlataforma<T extends object>(
     quitarCertificadoUsuario: negado('quitarCertificadoUsuario'),
     variableUsuario: negado('variableUsuario'),
     detenerServicioSistema: negado('detenerServicioSistema'),
+    quitarReglasFirewall: negado('quitarReglasFirewall'),
+    restaurarReglasFirewall: negado('restaurarReglasFirewall'),
     instalarVcRedist: negado('instalarVcRedist'),
     // Sin perfiles de Firefox a la vista, `ConfianzaCa.firefoxActivar` no toca ningún `user.js`
     // real (son del usuario, no de la carpeta de datos de prueba).

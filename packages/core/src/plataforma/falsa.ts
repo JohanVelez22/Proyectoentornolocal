@@ -1,4 +1,5 @@
 import { ErrorWolf } from '../errores';
+import type { ReglaExportada, ReglaPorQuitar, ReglaPorRestaurar } from './firewallCambiosWin';
 import type { PerfilRed, ReglasEntrada } from './firewallWin';
 import { desinstalarEnCarpeta } from './rustupRegistro';
 import { chmod, mkdir, rename, writeFile } from 'node:fs/promises';
@@ -104,6 +105,21 @@ export class PlataformaFalsa implements PlataformaCompleta {
   perfiles = new Map<string, PerfilRed>();
   /** Lo que devuelve `reglasEntradaPermitidas`. */
   reglasEntrada: ReglasEntrada = { ok: true, reglas: [] };
+  /** Reglas que existen pero no salen en `reglasEntrada` (p. ej. una que pasó a Block). */
+  reglasFirewallExtra: ReglaExportada[] = [];
+  /** Datos de la regla completa por `Name` (lo que no se indique, valores de una regla de entrada Allow). */
+  readonly reglasFirewallDetalle = new Map<string, Partial<ReglaExportada>>();
+  /** Simula el UAC: true = el usuario contesta que no. */
+  uacCancelado = false;
+  /** Reglas que el "script elevado" no consigue borrar (error de Windows). */
+  readonly firewallNoBorrables = new Set<string>();
+  /** Lo que ocurre mientras el usuario contesta el UAC (cambios entre la lista y el borrado). */
+  alElevarFirewall: (() => void) | null = null;
+  /** Pedidos de quitar y de restaurar reglas que llegaron a elevarse. */
+  readonly pedidosQuitarReglas: ReglaPorQuitar[][] = [];
+  readonly pedidosRestaurarReglas: ReglaPorRestaurar[][] = [];
+  /** `exportarReglasFirewall` devuelve null (no se pudo leer). */
+  exportarFirewallFalla = false;
   /** Lo que devuelve `tailscale` (por defecto, no instalado). */
   tailscaleEstado: { ruta: string | null; sesion: boolean } = { ruta: null, sesion: false };
   /** Archivos que se pidió restringir al usuario. */
@@ -494,6 +510,86 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async reglasEntradaPermitidas(): Promise<ReglasEntrada> {
     return { ok: this.reglasEntrada.ok, reglas: this.reglasEntrada.reglas.map((r) => ({ ...r })) };
+  }
+
+  private reglasFirewallCompletas(): ReglaExportada[] {
+    const deLista = this.reglasEntrada.reglas.map((r): ReglaExportada => ({
+      nombre: r.nombre,
+      nombreVisible: r.nombreVisible,
+      descripcion: '',
+      habilitada: true,
+      perfil: r.perfil,
+      direccion: 'Inbound',
+      accion: 'Allow',
+      programa: r.programa,
+      protocolo: 'Any',
+      puertoLocal: ['Any'],
+      puertoRemoto: ['Any'],
+      direccionLocal: ['Any'],
+      direccionRemota: ['Any'],
+      ...this.reglasFirewallDetalle.get(r.nombre),
+    }));
+    return [...deLista, ...this.reglasFirewallExtra.map((r) => ({ ...r }))];
+  }
+
+  async exportarReglasFirewall(nombres: string[]): Promise<ReglaExportada[] | null> {
+    if (this.exportarFirewallFalla) return null;
+    const pedidas = new Set(nombres);
+    return this.reglasFirewallCompletas().filter((r) => pedidas.has(r.nombre));
+  }
+
+  private rutaFirewall = (p: string): string =>
+    p.replaceAll('\\', '/').replace(/\/+$/, '').toLowerCase();
+
+  async quitarReglasFirewall(reglas: ReglaPorQuitar[]): Promise<ResultadoEscritura> {
+    this.pedidosQuitarReglas.push(reglas.map((r) => ({ ...r })));
+    if (this.uacCancelado) return { ok: false, motivo: 'cancelado' };
+    this.alElevarFirewall?.();
+    // Igual que el script elevado: vuelve a mirar cada regla y salta la que ya no cuadra.
+    for (const r of reglas) {
+      const actual = this.reglasFirewallCompletas().find((x) => x.nombre === r.nombre);
+      const raiz = this.rutaFirewall(r.raiz);
+      if (
+        !actual ||
+        actual.direccion.toLowerCase() !== 'inbound' ||
+        actual.accion.toLowerCase() !== 'allow' ||
+        this.rutaFirewall(actual.programa) !== this.rutaFirewall(r.programa) ||
+        !this.rutaFirewall(actual.programa).startsWith(`${raiz}/`) ||
+        this.firewallNoBorrables.has(r.nombre)
+      ) {
+        continue;
+      }
+      this.reglasEntrada = {
+        ...this.reglasEntrada,
+        reglas: this.reglasEntrada.reglas.filter((x) => x.nombre !== r.nombre),
+      };
+      this.reglasFirewallExtra = this.reglasFirewallExtra.filter((x) => x.nombre !== r.nombre);
+    }
+    return { ok: true };
+  }
+
+  async restaurarReglasFirewall(reglas: ReglaPorRestaurar[]): Promise<ResultadoEscritura> {
+    this.pedidosRestaurarReglas.push(reglas.map((r) => ({ regla: { ...r.regla }, raiz: r.raiz })));
+    if (this.uacCancelado) return { ok: false, motivo: 'cancelado' };
+    this.alElevarFirewall?.();
+    for (const { regla, raiz } of reglas) {
+      if (this.reglasFirewallCompletas().some((x) => x.nombre === regla.nombre)) continue;
+      if (!this.rutaFirewall(regla.programa).startsWith(`${this.rutaFirewall(raiz)}/`)) continue;
+      this.reglasEntrada = {
+        ...this.reglasEntrada,
+        reglas: [
+          ...this.reglasEntrada.reglas,
+          {
+            nombre: regla.nombre,
+            nombreVisible: regla.nombreVisible,
+            perfil: regla.perfil,
+            programa: regla.programa,
+          },
+        ],
+      };
+      this.reglasFirewallDetalle.set(regla.nombre, { ...regla });
+    }
+    return { ok: true };
   }
 
   async tailscale(): Promise<{ ruta: string | null; sesion: boolean }> {
