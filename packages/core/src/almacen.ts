@@ -1,4 +1,5 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
+import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { renombrarConReintentos } from './https/confianza';
 import type { Rutas } from './rutas';
@@ -69,6 +70,22 @@ export class Almacen {
 
 type Encolar = <T>(fn: () => Promise<T>) => Promise<T>;
 
+export interface OpcionesCredenciales {
+  /**
+   * Deja el archivo legible solo por el usuario actual (`Plataforma.restringirAlUsuario`: icacls
+   * sin herencia en Windows). Se aplica al temporal vacío, antes de escribir un solo secreto, y
+   * como el temporal reemplaza al archivo, la restricción viaja con él.
+   */
+  restringir?: (ruta: string) => Promise<boolean>;
+  /** Se llama (una vez por escritura) si no se pudo restringir: los datos igual se guardaron. */
+  alFallarProteccion?: () => void;
+  /** Renombrado del temporal al definitivo (pruebas; por defecto, con reintentos de Windows). */
+  renombrar?: (origen: string, destino: string) => Promise<void>;
+}
+
+/** Temporales de las escrituras de credenciales (el `.tmp` fijo de versiones anteriores aparte). */
+const TEMPORAL_CREDENCIALES = /^\.credenciales-[\w-]+\.tmp$/;
+
 /**
  * Credenciales de los servicios propios en etc/credenciales.json: separadas de config.json para
  * que un config corrupto o reiniciado no las pierda y para que `config.leer` (expuesto a la UI)
@@ -81,6 +98,7 @@ export class AlmacenCredenciales {
     private readonly rutas: Rutas,
     /** Cola común con las escrituras de config.json; por defecto, una propia. */
     private readonly encolar?: Encolar,
+    private readonly opciones: OpcionesCredenciales = {},
   ) {}
 
   private serializar<T>(fn: () => Promise<T>): Promise<T> {
@@ -156,13 +174,68 @@ export class AlmacenCredenciales {
     });
   }
 
+  /**
+   * Al iniciar: barre los temporales que dejó una escritura cortada y restringe al usuario el
+   * archivo que ya existía (de una versión anterior, con la ACL heredada de la carpeta). Nunca
+   * lanza: si no se puede, se informa y los datos quedan como estaban.
+   */
+  preparar(): Promise<void> {
+    return this.serializar(async () => {
+      const archivo = this.rutas.credenciales();
+      const dir = path.dirname(archivo);
+      try {
+        for (const n of await readdir(dir)) {
+          if (TEMPORAL_CREDENCIALES.test(n) || n === `${path.basename(archivo)}.tmp`) {
+            await rm(path.join(dir, n), { force: true });
+          }
+        }
+        await stat(archivo);
+      } catch {
+        return; // sin carpeta o sin archivo: nada que proteger
+      }
+      if (!(await this.restringir(archivo))) this.opciones.alFallarProteccion?.();
+    });
+  }
+
+  private async restringir(ruta: string): Promise<boolean> {
+    try {
+      return (await this.opciones.restringir?.(ruta)) ?? true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Escritura atómica: temporal único en la misma carpeta (mismo volumen, así el renombrado es
+   * atómico), creado vacío y con permiso 600, restringido al usuario ANTES de escribir los
+   * secretos, sincronizado a disco y renombrado sobre el definitivo. Si algo falla, el temporal se
+   * borra y el archivo anterior queda intacto.
+   */
   private async escribir(datos: ArchivoCredenciales): Promise<void> {
     const archivo = this.rutas.credenciales();
-    await mkdir(path.dirname(archivo), { recursive: true });
-    const tmp = `${archivo}.tmp`;
+    const dir = path.dirname(archivo);
+    await mkdir(dir, { recursive: true });
+    const tmp = path.join(
+      dir,
+      `.credenciales-${process.pid}-${randomBytes(6).toString('hex')}.tmp`,
+    );
     const texto = JSON.stringify(ArchivoCredencialesSchema.parse(datos), null, 2) + '\n';
-    await writeFile(tmp, texto, 'utf8');
-    await rename(tmp, archivo);
+    let protegido = false;
+    try {
+      const f = await open(tmp, 'wx', 0o600);
+      try {
+        protegido = await this.restringir(tmp);
+        await f.writeFile(texto, 'utf8');
+        await f.sync();
+      } finally {
+        await f.close();
+      }
+      await (this.opciones.renombrar ?? renombrarConReintentos)(tmp, archivo);
+    } catch (e) {
+      await rm(tmp, { force: true }).catch(() => undefined);
+      throw e;
+    }
+    if (!protegido) this.opciones.alFallarProteccion?.();
   }
 }
 

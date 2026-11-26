@@ -46,6 +46,39 @@ describe.skipIf(process.platform !== 'win32')('PlataformaWindows real (solo Wind
     }
   }, 30_000);
 
+  it('AlmacenCredenciales (D38c): el archivo creado y el reescrito quedan solo para este usuario, sin herencia y sin restos', async () => {
+    const { mkdtemp, readdir, rm } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const path = await import('node:path');
+    const { execFileSync } = await import('node:child_process');
+    const { AlmacenCredenciales } = await import('../src/almacen');
+    const { Rutas } = await import('../src/rutas');
+    // Carpeta temporal propia: nunca la carpeta de datos real.
+    const carpeta = await mkdtemp(path.join(tmpdir(), 'pel-acl-cred-'));
+    try {
+      const rutas = new Rutas(carpeta);
+      const plat = new PlataformaWindows();
+      let fallos = 0;
+      const c = new AlmacenCredenciales(rutas, undefined, {
+        restringir: (ruta) => plat.restringirAlUsuario(ruta),
+        alFallarProteccion: () => fallos++,
+      });
+      const aclDe = () =>
+        execFileSync('icacls', [rutas.credenciales()], { encoding: 'utf8', windowsHide: true });
+      await c.guardar('mysql', { usuario: 'root', clave: 'clave-de-prueba' });
+      expect(aclDe()).not.toContain('(I)');
+      expect(aclDe()).toContain(process.env.USERNAME ?? '');
+      // Reescribir (otro temporal que reemplaza al archivo) conserva la restricción.
+      await c.guardar('mcp', { usuario: 'mcp', clave: 'otra-falsa' });
+      expect(aclDe()).not.toContain('(I)');
+      expect(await c.leer('mcp')).toEqual({ usuario: 'mcp', clave: 'otra-falsa' });
+      expect(fallos).toBe(0);
+      expect(await readdir(path.join(carpeta, 'etc'))).toEqual(['credenciales.json']);
+    } finally {
+      await rm(carpeta, { recursive: true, force: true });
+    }
+  }, 60_000);
+
   it('rangosReservados devuelve rangos válidos (o ninguno)', async () => {
     const r = await new PlataformaWindows().rangosReservados('tcp');
     for (const x of r) {

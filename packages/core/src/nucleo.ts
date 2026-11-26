@@ -1083,7 +1083,17 @@ export class Nucleo {
     // eslint-disable-next-line prefer-const
     let pools!: PoolsSitio;
     const https = new GestorHttps({ rutas, plataforma, pidNginx: () => supervisor.pid('nginx') });
-    const credenciales = new AlmacenCredenciales(rutas, (fn) => sitios.enCola(fn));
+    const credenciales = new AlmacenCredenciales(rutas, (fn) => sitios.enCola(fn), {
+      // etc/credenciales.json solo para este usuario (icacls sin herencia en Windows).
+      restringir: (ruta) => plat.restringirAlUsuario(ruta),
+      alFallarProteccion: () =>
+        avisos.publicar({
+          nivel: 'aviso',
+          tipo: 'doctor',
+          codigo: 'avisos.credenciales_sin_proteccion',
+          datos: { fuente: 'credenciales' },
+        }),
+    });
     const phpEncendido = async (rama: string): Promise<boolean> => {
       const n = (await leerConfig()).servicios.php.trabajadores;
       return Array.from({ length: n }, (_, i) => i).some(
@@ -1222,6 +1232,7 @@ export class Nucleo {
         puertosInternosVhost(cfg, id, await instalador.instalados('php')),
     });
     await migrarCredenciales(rutas, almacen, credenciales);
+    await credenciales.preparar();
     await retirarCredencialesMinio(credenciales).catch(() => undefined);
     // Servicios de datos a instancias (`mysql` → `mysql@8.4`) antes de readoptar los procesos.
     let avisoInstancias: string | null = null;

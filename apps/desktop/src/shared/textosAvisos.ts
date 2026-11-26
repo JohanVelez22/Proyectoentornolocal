@@ -110,6 +110,11 @@ const ES: Diccionario = {
       titulo: 'Un certificado venció',
       cuerpo: `El certificado de ${limpio(d['fuente'], 'un sitio')} ya no es válido. Regenérelo.`,
     }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'Las claves guardadas no quedaron protegidas',
+      cuerpo:
+        'No se pudo dejar el archivo de claves de WolfCore Dev legible solo para su usuario de Windows. Los datos están a salvo, pero revise los permisos de la carpeta de datos.',
+    }),
     'avisos.php_sitio_fallo': (d) => ({
       titulo: 'El PHP propio de un sitio no arrancó',
       cuerpo: `El PHP de ${limpio(d['fuente'], 'un sitio')} no arrancó (puede que su puerto lo use otro programa). Revise la sección PHP de su tarjeta.`,
@@ -284,6 +289,11 @@ const EN: Diccionario = {
       titulo: 'A certificate expired',
       cuerpo: `The certificate for ${limpio(d['fuente'], 'a site')} is no longer valid. Regenerate it.`,
     }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'The saved keys were not protected',
+      cuerpo:
+        'WolfCore Dev could not make its keys file readable only by your Windows user. Your data is safe, but please check the permissions of the data folder.',
+    }),
     'avisos.php_sitio_fallo': (d) => ({
       titulo: "A site's own PHP did not start",
       cuerpo: `The PHP of ${limpio(d['fuente'], 'a site')} did not start (another program may be using its port). Check the PHP section of its card.`,
@@ -450,6 +460,11 @@ const PT: Diccionario = {
     'avisos.certificado_vencido': (d) => ({
       titulo: 'Um certificado venceu',
       cuerpo: `O certificado de ${limpio(d['fuente'], 'um site')} não é mais válido. Gere-o de novo.`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'As chaves guardadas não ficaram protegidas',
+      cuerpo:
+        'Não foi possível deixar o arquivo de chaves do WolfCore Dev legível apenas para o seu usuário do Windows. Os dados estão a salvo, mas confira as permissões da pasta de dados.',
     }),
     'avisos.php_sitio_fallo': (d) => ({
       titulo: 'O PHP próprio de um site não iniciou',
@@ -630,6 +645,11 @@ const FR: Diccionario = {
     'avisos.certificado_vencido': (d) => ({
       titulo: 'Un certificat a expiré',
       cuerpo: `Le certificat de ${limpio(d['fuente'], 'un site')} n’est plus valide. Régénérez-le.`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'Les clés enregistrées ne sont pas protégées',
+      cuerpo:
+        'WolfCore Dev n’a pas pu rendre son fichier de clés lisible uniquement par votre utilisateur Windows. Vos données sont en sécurité, mais vérifiez les autorisations du dossier de données.',
     }),
     'avisos.php_sitio_fallo': (d) => ({
       titulo: 'Le PHP propre d’un site n’a pas démarré',

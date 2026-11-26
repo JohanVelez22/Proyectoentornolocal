@@ -1,6 +1,6 @@
-import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { carpetaTemporal } from './temporales';
 import { mkdir } from 'node:fs/promises';
 import { Almacen, AlmacenCredenciales } from '../src/almacen';
@@ -172,6 +172,99 @@ describe('AlmacenCredenciales', () => {
     expect(await c.leer('mysql')).toBeNull();
     const archivos = await readdir(join(rutas.base, 'etc'));
     expect(archivos.some((f) => f.startsWith('credenciales.corrupto-'))).toBe(true);
+  });
+});
+
+describe('AlmacenCredenciales: escritura atómica y permisos (D38c)', () => {
+  const nombres = async () =>
+    (await readdir(join(rutas.base, 'etc'), { withFileTypes: true }))
+      .filter((e) => e.isFile())
+      .map((e) => e.name)
+      .sort();
+
+  it('el temporal va en la misma carpeta, se restringe vacío antes de escribir y no deja restos', async () => {
+    const vistos: { ruta: string; bytes: number }[] = [];
+    const restringir = vi.fn(async (ruta: string) => {
+      vistos.push({ ruta, bytes: (await stat(ruta)).size });
+      return true;
+    });
+    const alFallar = vi.fn();
+    const c = new AlmacenCredenciales(rutas, undefined, {
+      restringir,
+      alFallarProteccion: alFallar,
+    });
+    await c.guardar('mysql', { usuario: 'root', clave: 'clave-de-prueba' });
+    await c.guardar('mcp', { usuario: 'mcp', clave: 'otra-falsa' });
+    // Dos escrituras, dos temporales distintos, cada uno vacío cuando se le puso la ACL.
+    expect(vistos).toHaveLength(2);
+    for (const v of vistos) {
+      expect(v.bytes).toBe(0);
+      expect(join(v.ruta, '..')).toBe(join(rutas.credenciales(), '..'));
+      expect(v.ruta).not.toBe(rutas.credenciales());
+    }
+    expect(vistos[0]!.ruta).not.toBe(vistos[1]!.ruta);
+    expect(alFallar).not.toHaveBeenCalled();
+    expect(await nombres()).toEqual(['credenciales.json']);
+    expect(JSON.parse(await readFile(rutas.credenciales(), 'utf8'))).toMatchObject({
+      mysql: { clave: 'clave-de-prueba' },
+      mcp: { usuario: 'mcp' },
+    });
+  });
+
+  it('si la ACL falla (false o excepción) los datos se guardan igual y se informa una vez por escritura', async () => {
+    for (const restringir of [
+      async () => false,
+      async () => {
+        throw new Error('icacls no está');
+      },
+    ]) {
+      const alFallar = vi.fn();
+      const c = new AlmacenCredenciales(rutas, undefined, {
+        restringir,
+        alFallarProteccion: alFallar,
+      });
+      await c.guardar('mysql', { usuario: 'root', clave: 'clave-de-prueba' });
+      expect(alFallar).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(await readFile(rutas.credenciales(), 'utf8')).mysql.clave).toBe(
+        'clave-de-prueba',
+      );
+      expect(await nombres()).toEqual(['credenciales.json']);
+    }
+  });
+
+  it('si el renombrado falla: no quedan restos y el archivo anterior sigue intacto', async () => {
+    const buenas = new AlmacenCredenciales(rutas);
+    await buenas.guardar('mysql', { usuario: 'root', clave: 'clave-de-prueba' });
+    const antes = await readFile(rutas.credenciales(), 'utf8');
+    const rota = new AlmacenCredenciales(rutas, undefined, {
+      renombrar: async () => {
+        throw Object.assign(new Error('disco lleno'), { code: 'ENOSPC' });
+      },
+    });
+    await expect(rota.guardar('mcp', { usuario: 'mcp', clave: 'k' })).rejects.toThrow(
+      'disco lleno',
+    );
+    expect(await readFile(rutas.credenciales(), 'utf8')).toBe(antes);
+    expect(await nombres()).toEqual(['credenciales.json']);
+  });
+
+  it('preparar(): restringe el archivo que ya existía y barre temporales viejos', async () => {
+    await mkdir(join(rutas.base, 'etc'), { recursive: true });
+    await writeFile(rutas.credenciales(), '{}');
+    await writeFile(`${rutas.credenciales()}.tmp`, 'resto de una versión anterior');
+    await writeFile(join(rutas.base, 'etc', '.credenciales-1-abc.tmp'), 'resto');
+    await writeFile(join(rutas.base, 'etc', 'otra-cosa.tmp'), 'no es nuestro');
+    const restringir = vi.fn(async () => true);
+    const c = new AlmacenCredenciales(rutas, undefined, { restringir });
+    await c.preparar();
+    expect(restringir).toHaveBeenCalledWith(rutas.credenciales());
+    expect(await nombres()).toEqual(['credenciales.json', 'otra-cosa.tmp']);
+  });
+
+  it('preparar() sin archivo no falla ni crea nada', async () => {
+    const restringir = vi.fn(async () => true);
+    await new AlmacenCredenciales(rutas, undefined, { restringir }).preparar();
+    expect(restringir).not.toHaveBeenCalled();
   });
 });
 

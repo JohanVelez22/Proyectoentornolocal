@@ -397,3 +397,22 @@ describe('store de avisos', () => {
     expect(oyentes.get('aviso:abrir')!.size).toBe(0);
   });
 });
+
+describe('aviso de credenciales sin proteger (D38c)', () => {
+  it('tiene texto propio en es, en, pt y fr y no menciona rutas', () => {
+    const a = {
+      tipo: 'doctor' as const,
+      codigo: 'avisos.credenciales_sin_proteccion',
+      datos: { fuente: 'credenciales' },
+    };
+    const genericos = new Set<string>();
+    for (const id of ['es', 'en', 'pt', 'fr'] as const) {
+      const t = textoAviso(id, a);
+      const g = textoAviso(id, { ...a, codigo: 'otro' });
+      expect(t.titulo, id).not.toBe(g.titulo);
+      expect(t.cuerpo, id).not.toMatch(/[\/]|credenciales\.json/);
+      genericos.add(t.titulo);
+    }
+    expect(genericos.size).toBe(4);
+  });
+});
