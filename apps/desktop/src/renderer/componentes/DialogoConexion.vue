@@ -3,14 +3,18 @@ import { Copy, Eye, EyeOff } from '@vicons/ionicons5';
 import { NButton, NFormItem, NIcon, NModal, NSkeleton, NTooltip, useMessage } from 'naive-ui';
 import Desplegable from './Desplegable.vue';
 import { computed, ref, watch } from 'vue';
-import type { DatosConexion, IdInstancia, MotorBd } from '../../shared/api';
+import type { DatosConexionVista, IdInstancia, MotorBd } from '../../shared/api';
 import { api } from '../api';
 import { useBd } from '../stores/bd';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { useSitios } from '../stores/sitios';
 
-/** Datos de conexión de una base y su bloque .env. La clave solo vive mientras está abierto. */
+/**
+ * Datos de conexión de una base y su bloque .env. La clave NO llega con los datos: el diálogo
+ * muestra una máscara y la pide aparte al pulsar «Mostrar» o «Copiar» (mismo modelo que
+ * `env.revelar`). Una vez revelada solo vive mientras el diálogo está abierto y visible.
+ */
 const props = defineProps<{
   motor?: MotorBd;
   base?: string;
@@ -28,9 +32,13 @@ const message = useMessage();
 const sitios = useSitios();
 const { ejecutar, ocupado } = useAccion();
 
-const datos = ref<DatosConexion | null>(null);
+const datos = ref<DatosConexionVista | null>(null);
+/** Bloque .env con la clave enmascarada (el completo solo se pide al copiarlo). */
 const bloque = ref('');
-const verClave = ref(false);
+/** La clave, solo mientras el usuario la tiene a la vista; null = oculta (y no está en memoria). */
+const claveVisible = ref<string | null>(null);
+const verClave = computed(() => claveVisible.value !== null);
+const MASCARA = '••••••••••••';
 /** Id del sitio cuyo .env se toma como referencia, o GENERICO. */
 const sitioId = ref<string>(GENERICO);
 
@@ -56,8 +64,14 @@ const filas = computed(() => {
     { clave: 'puerto', etiqueta: t.puerto, valor: String(d.puerto) },
   ];
   if (d.usuario) f.push({ clave: 'usuario', etiqueta: t.usuario, valor: d.usuario });
-  if (d.clave !== null)
-    f.push({ clave: 'clave', etiqueta: t.clave, valor: d.clave, secreto: true });
+  if (d.tieneClave) {
+    f.push({
+      clave: 'clave',
+      etiqueta: t.clave,
+      valor: claveVisible.value ?? MASCARA,
+      secreto: true,
+    });
+  }
   if (props.servicio === undefined)
     f.push({ clave: 'base', etiqueta: t.base, valor: props.base ?? '' });
   return f;
@@ -66,7 +80,27 @@ const filas = computed(() => {
 function olvidar(): void {
   datos.value = null;
   bloque.value = '';
-  verClave.value = false;
+  claveVisible.value = null;
+}
+
+/** Pide la clave al núcleo (un solo clic en «Mostrar» o «Copiar»); undefined si falló o no hay. */
+async function pedirClave(): Promise<string | undefined> {
+  const v = await ejecutar('revelar', () =>
+    props.servicio !== undefined
+      ? api().servicios.revelarSecreto(props.servicio)
+      : api().bd.revelar(bd.objetivo(props.motor!)),
+  );
+  return v ?? undefined;
+}
+
+async function alternarClave(): Promise<void> {
+  if (claveVisible.value !== null) {
+    claveVisible.value = null;
+    return;
+  }
+  const v = await pedirClave();
+  // Si se cerró el diálogo mientras tanto, la clave no se guarda.
+  if (v !== undefined && mostrar.value) claveVisible.value = v;
 }
 
 async function cargarBloque(): Promise<void> {
@@ -108,6 +142,33 @@ function copiar(texto: string): void {
     message.success(textos.acciones.copiado);
   });
 }
+
+/** «Copiar» de la fila de la clave: la pide en ese momento (y no la deja a la vista). */
+function copiarClave(): void {
+  void ejecutar('copiar', async () => {
+    const v = claveVisible.value ?? (await pedirClave());
+    if (v === undefined) return;
+    await api().sistema.copiar(v);
+    message.success(textos.acciones.copiado);
+  });
+}
+
+/** «Copiar .env»: el bloque completo (con la clave) se pide en ese momento. */
+function copiarEnv(): void {
+  if (props.motor === undefined) return;
+  const motor = props.motor;
+  const base = props.base ?? '';
+  const id = sitioId.value;
+  void ejecutar('copiar', async () => {
+    const completo = await api().bd.revelarBloqueEnv(
+      bd.objetivo(motor),
+      base,
+      id === GENERICO ? null : id,
+    );
+    await api().sistema.copiar(completo);
+    message.success(textos.acciones.copiado);
+  });
+}
 </script>
 
 <template>
@@ -127,7 +188,7 @@ function copiar(texto: string): void {
         <div v-for="f in filas" :key="f.clave" class="dato">
           <dt>{{ f.etiqueta }}</dt>
           <dd>
-            <code>{{ f.secreto && !verClave ? '••••••••••••' : f.valor }}</code>
+            <code>{{ f.valor }}</code>
             <NTooltip v-if="f.secreto">
               <template #trigger>
                 <NButton
@@ -135,7 +196,7 @@ function copiar(texto: string): void {
                   quaternary
                   circle
                   :aria-label="verClave ? t.ocultar : t.mostrar"
-                  @click="verClave = !verClave"
+                  @click="alternarClave"
                 >
                   <template #icon>
                     <NIcon><EyeOff v-if="verClave" /><Eye v-else /></NIcon>
@@ -151,7 +212,7 @@ function copiar(texto: string): void {
                   quaternary
                   circle
                   :aria-label="t.copiarDato(f.etiqueta.toLowerCase())"
-                  @click="copiar(f.valor)"
+                  @click="f.secreto ? copiarClave() : copiar(f.valor)"
                 >
                   <template #icon
                     ><NIcon><Copy /></NIcon
@@ -162,7 +223,7 @@ function copiar(texto: string): void {
             </NTooltip>
           </dd>
         </div>
-        <div v-if="datos.clave === null" class="dato">
+        <div v-if="!datos.tieneClave" class="dato">
           <dt>{{ t.clave }}</dt>
           <dd class="tenue">{{ t.sinClave }}</dd>
         </div>
@@ -185,7 +246,7 @@ function copiar(texto: string): void {
             size="tiny"
             secondary
             :disabled="!bloque || ocupado('bloque')"
-            @click="copiar(bloque)"
+            @click="copiarEnv"
           >
             <template #icon
               ><NIcon><Copy /></NIcon

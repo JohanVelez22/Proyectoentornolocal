@@ -1015,12 +1015,27 @@ const TABLA: Record<RutaIpc, Manejador> = {
       textoAcotado(confirmacion, 0, 64, 'confirmación'),
     );
   },
-  // Rutas que devuelven secretos (nunca se registran): bd.conexion (clave del motor),
-  // bd.crear (clave generada del usuario nuevo), ftp.activar, ftp.regenerarClave y
-  // ftp.credenciales (clave FTP del sitio).
-  'bd.conexion': (n, _s, motor) => n.conexionBd(objetivoBd(motor).objetivo),
-  // Datos de conexión de Meilisearch (master key): igual que bd.conexion, no se registra.
-  'servicios.conexion': (n, _s, ref) => n.conexionServicio(objetivoConexionServicio(ref)),
+  // Rutas que devuelven secretos (nunca se registran): bd.revelar (clave del motor),
+  // bd.revelarBloqueEnv (bloque .env con la clave), servicios.revelarSecreto (master key de
+  // Meilisearch), bd.crear (clave generada del usuario nuevo), ftp.activar, ftp.regenerarClave y
+  // ftp.credenciales (clave FTP del sitio). `bd.conexion` y `servicios.conexion` NO llevan la
+  // clave: devuelven host, puerto, usuario y `tieneClave`; la clave se pide aparte, al pulsar
+  // «Mostrar» o «Copiar» (mismo modelo que `env.revelar`).
+  'bd.conexion': (n, _s, motor) => n.vistaConexionBd(objetivoBd(motor).objetivo),
+  'bd.revelar': (n, _s, motor) => n.revelarClaveBd(objetivoBd(motor).objetivo),
+  'bd.revelarBloqueEnv': (n, _s, motor, base, sitioId) => {
+    const { objetivo, motor: m } = objetivoBd(motor);
+    if (sitioId === null || sitioId === undefined) {
+      return n.bloqueEnvBd(objetivo, nombreBase(m, base), 'generico', undefined, {
+        revelar: true,
+      });
+    }
+    return n.bloqueEnvSitio(textoAcotado(sitioId, 1, 128, 'sitio'), objetivo, nombreBase(m, base), {
+      revelar: true,
+    });
+  },
+  'servicios.conexion': (n, _s, ref) => n.vistaConexionServicio(objetivoConexionServicio(ref)),
+  'servicios.revelarSecreto': (n, _s, ref) => n.revelarClaveServicio(objetivoConexionServicio(ref)),
   'bd.bloqueEnv': (n, _s, motor, base, tipo, envActual) => {
     const { objetivo, motor: m } = objetivoBd(motor);
     return n.bloqueEnvBd(

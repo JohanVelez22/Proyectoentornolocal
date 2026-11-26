@@ -88,6 +88,7 @@ import type {
   Config,
   Credenciales,
   DatosConexion,
+  DatosConexionVista,
   DisponibilidadAdminer,
   DisponibilidadPhpMyAdmin,
   HerramientaBd,
@@ -321,6 +322,7 @@ export type {
   Config,
   Credenciales,
   DatosConexion,
+  DatosConexionVista,
   DisponibilidadAdminer,
   DisponibilidadPhpMyAdmin,
   HerramientaBd,
@@ -709,8 +711,13 @@ export interface ApiEntorno {
     iniciarTodo(): Promise<void>;
     /** Cierra primero los túneles (devolviendo los .env) y luego detiene los servicios. */
     detenerTodo(): Promise<void>;
-    /** Host, puerto y master key de Meilisearch (o de una de sus instancias), para «Datos de conexión». */
-    conexion(ref: 'meilisearch' | IdInstancia): Promise<DatosConexion>;
+    /** Host y puerto de Meilisearch (o de una de sus instancias), para «Datos de conexión»: sin la master key. */
+    conexion(ref: 'meilisearch' | IdInstancia): Promise<DatosConexionVista>;
+    /**
+     * La master key, solo al pulsar «Mostrar» o «Copiar» (como `env.revelar`): no se registra ni
+     * emite eventos. null si no hay.
+     */
+    revelarSecreto(ref: 'meilisearch' | IdInstancia): Promise<string | null>;
     /** 1024–65535 y libre; reinicia el servicio si estaba encendido. */
     /** Devuelve los proyectos cuyo .env todavía usa el puerto anterior (no se tocan). */
     cambiarPuerto(id: IdServicioDatos, puerto: number): Promise<{ proyectos: string[] }>;
@@ -772,8 +779,15 @@ export interface ApiEntorno {
     ): Promise<ResultadoCrear>;
     /** `confirmacion` debe ser el nombre exacto de la base. */
     borrar(motor: ObjetivoBdIpc, nombre: string, confirmacion: string): Promise<void>;
-    /** Datos de conexión con la clave: solo para el diálogo "Datos de conexión". */
-    conexion(motor: ObjetivoBdIpc): Promise<DatosConexion>;
+    /** Datos de conexión SIN la clave (solo `tieneClave`): para el diálogo "Datos de conexión". */
+    conexion(motor: ObjetivoBdIpc): Promise<DatosConexionVista>;
+    /** La clave del motor, solo al pulsar «Mostrar» o «Copiar» (como `env.revelar`). null si no usa clave. */
+    revelar(motor: ObjetivoBdIpc): Promise<string | null>;
+    /**
+     * El bloque .env completo, con la clave: solo para «Copiar .env». `sitioId` null = bloque
+     * genérico. `bloqueEnv` y `bloqueEnvSitio` lo devuelven con la clave enmascarada.
+     */
+    revelarBloqueEnv(motor: ObjetivoBdIpc, base: string, sitioId: string | null): Promise<string>;
     bloqueEnv(
       motor: ObjetivoBdIpc,
       base: string,
@@ -1752,7 +1766,10 @@ export const RUTAS_IPC = [
   'bd.crear',
   'bd.borrar',
   'bd.conexion',
+  'bd.revelar',
+  'bd.revelarBloqueEnv',
   'servicios.conexion',
+  'servicios.revelarSecreto',
   'bd.bloqueEnv',
   'bd.bloqueEnvSitio',
   'bd.carpetaRespaldos',

@@ -83,6 +83,7 @@ const api: ApiEntorno = {
     iniciarTodo: () => invocar('servicios.iniciarTodo'),
     detenerTodo: () => invocar('servicios.detenerTodo'),
     conexion: (ref) => invocar('servicios.conexion', ref),
+    revelarSecreto: (ref) => invocar('servicios.revelarSecreto', ref),
     cambiarPuerto: (id, puerto) => invocar('servicios.cambiarPuerto', id, puerto),
     borrarDatos: (id, confirmacion) => invocar('servicios.borrarDatos', id, confirmacion),
     autoIniciar: (id, valor) => invocar('servicios.autoIniciar', id, valor),
@@ -98,6 +99,9 @@ const api: ApiEntorno = {
     crear: (motor, nombre, opciones) => invocar('bd.crear', motor, nombre, opciones),
     borrar: (motor, nombre, confirmacion) => invocar('bd.borrar', motor, nombre, confirmacion),
     conexion: (motor) => invocar('bd.conexion', motor),
+    revelar: (motor) => invocar('bd.revelar', motor),
+    revelarBloqueEnv: (motor, base, sitioId) =>
+      invocar('bd.revelarBloqueEnv', motor, base, sitioId),
     bloqueEnv: (motor, base, tipo, envActual) =>
       invocar('bd.bloqueEnv', motor, base, tipo, envActual),
     bloqueEnvSitio: (sitioId, motor, base) => invocar('bd.bloqueEnvSitio', sitioId, motor, base),

@@ -31,7 +31,9 @@ describe('I1: datos de conexión y bloque .env de Meilisearch', () => {
       path.resolve(__dirname, '../src/renderer/componentes/DialogoConexion.vue'),
       'utf8',
     );
-    expect(origen).toContain("f.secreto && !verClave ? '••••••••••••' : f.valor");
+    // D38c: la máscara es el valor por omisión; la clave real solo está con «Mostrar» pulsado.
+    expect(origen).toContain('valor: claveVisible.value ?? MASCARA');
+    expect(origen).toContain("const MASCARA = '••••••••••••'");
     expect(origen).toMatch(/if \(props\.servicio === undefined\)\s+f\.push\(\{ clave: 'base'/);
   });
 });

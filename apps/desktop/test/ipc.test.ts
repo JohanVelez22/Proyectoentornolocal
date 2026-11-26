@@ -179,7 +179,10 @@ function nucleoFalso() {
         'borrarBase',
         'conexionBd',
         'conexionServicio',
-        'conexionServicio',
+        'vistaConexionBd',
+        'revelarClaveBd',
+        'vistaConexionServicio',
+        'revelarClaveServicio',
         'bloqueEnvBd',
         'bloqueEnvSitio',
         'carpetaRespaldos',
@@ -748,7 +751,10 @@ describe('registrarIpc', () => {
         'bd.crear',
         'bd.borrar',
         'bd.conexion',
+        'bd.revelar',
+        'bd.revelarBloqueEnv',
         'servicios.conexion',
+        'servicios.revelarSecreto',
         'bd.bloqueEnv',
         'bd.bloqueEnvSitio',
         'bd.carpetaRespaldos',
@@ -1062,6 +1068,12 @@ describe('registrarIpc', () => {
         ['bd.crear', ['mysql', 'x', { usuario: 'u', clave: 'c', cambiarClave: 'si' }]],
         ['bd.borrar', ['mysql', 'x', 42]],
         ['bd.conexion', ['redis']],
+        ['bd.revelar', ['redis']],
+        ['bd.revelarBloqueEnv', ['mysql', 'a;DROP', null]],
+        ['bd.revelarBloqueEnv', ['mysql', 'x', 42]],
+        ['bd.revelarBloqueEnv', ['mysql', 'x', 'demo' + String.fromCharCode(10)]],
+        ['servicios.revelarSecreto', ['redis']],
+        ['servicios.revelarSecreto', ['mysql@8.4']],
         ['bd.bloqueEnv', ['mysql', 'x', 'rails']],
         ['bd.tieneTablas', ['mongodb', 'x']],
         ['bd.formato', [path.join(carpeta, 'no-existe.sql')]],
@@ -1117,7 +1129,8 @@ describe('registrarIpc', () => {
       'listarBases',
       'crearBase',
       'borrarBase',
-      'conexionBd',
+      'vistaConexionBd',
+      'revelarClaveBd',
       'bloqueEnvBd',
       'tieneTablas',
       'formatoRespaldo',
@@ -3835,5 +3848,100 @@ describe('IPC de la red local (D25)', () => {
     expect(crudo.caMovil.abrir).toHaveBeenLastCalledWith({ ip: '192.168.1.50' });
     await llamar('lan.cerrarCaMovil');
     expect(crudo.caMovil.cerrar).toHaveBeenCalled();
+  });
+});
+
+describe('D38c: «Datos de conexión» no lleva secretos; la clave sale solo por las rutas de revelar', () => {
+  const CLAVE = 'clave-falsa-de-prueba-123';
+
+  function montar() {
+    const { ipcMain, canales } = ipcFalso();
+    const { nucleo, crudo } = nucleoFalso();
+    const f = crudo as unknown as Record<string, Mock>;
+    registrarIpc(nucleo, ipcMain, ventanaFalsa().ventana, sistema);
+    const llamar = (ruta: string, ...a: unknown[]) =>
+      canales.get(`entorno:${ruta}`)!({}, ...a) as Promise<{ ok: boolean; valor?: unknown }>;
+    return { f, llamar };
+  }
+
+  it('bd.conexion y servicios.conexion devuelven la vista del núcleo (sin clave) y nada más', async () => {
+    const { f, llamar } = montar();
+    const vista = { host: '127.0.0.1', puerto: 3306, usuario: 'root', tieneClave: true };
+    f['vistaConexionBd']!.mockResolvedValue(vista);
+    f['vistaConexionServicio']!.mockResolvedValue({ ...vista, puerto: 7700, usuario: '' });
+    const a = await llamar('bd.conexion', 'mysql');
+    const b = await llamar('servicios.conexion', 'meilisearch');
+    expect(a).toEqual({ ok: true, valor: vista });
+    expect(JSON.stringify([a, b])).not.toContain(CLAVE);
+    // El IPC normal nunca pide la versión con clave al núcleo.
+    expect(f['conexionBd']).not.toHaveBeenCalled();
+    expect(f['conexionServicio']).not.toHaveBeenCalled();
+    expect(f['revelarClaveBd']).not.toHaveBeenCalled();
+    expect(f['revelarClaveServicio']).not.toHaveBeenCalled();
+  });
+
+  it('bd.bloqueEnv y bd.bloqueEnvSitio piden el bloque enmascarado (sin la opción revelar)', async () => {
+    const { f, llamar } = montar();
+    f['bloqueEnvBd']!.mockResolvedValue('DB_PASSWORD=************\n');
+    f['bloqueEnvSitio']!.mockResolvedValue('DB_PASSWORD=************\n');
+    await llamar('bd.bloqueEnv', 'mysql', 'tienda', 'laravel');
+    await llamar('bd.bloqueEnvSitio', 'demo', 'mysql', 'tienda');
+    expect(f['bloqueEnvBd']).toHaveBeenCalledWith('mysql', 'tienda', 'laravel', undefined);
+    expect(f['bloqueEnvSitio']).toHaveBeenCalledWith('demo', 'mysql', 'tienda');
+  });
+
+  it('bd.revelar y servicios.revelarSecreto devuelven la clave y validan su entrada', async () => {
+    const { f, llamar } = montar();
+    f['revelarClaveBd']!.mockResolvedValue(CLAVE);
+    f['revelarClaveServicio']!.mockResolvedValue(CLAVE);
+    expect(await llamar('bd.revelar', 'mysql@8.4')).toEqual({ ok: true, valor: CLAVE });
+    expect(await llamar('servicios.revelarSecreto', 'meilisearch')).toEqual({
+      ok: true,
+      valor: CLAVE,
+    });
+    expect(f['revelarClaveBd']).toHaveBeenCalledWith('mysql@8.4');
+    expect(f['revelarClaveServicio']).toHaveBeenCalledWith('meilisearch');
+    for (const [ruta, arg] of [
+      ['bd.revelar', 'redis'],
+      ['bd.revelar', { motor: 'mysql' }],
+      ['bd.revelar', undefined],
+      ['servicios.revelarSecreto', 'mysql'],
+      ['servicios.revelarSecreto', 'redis@8'],
+      ['servicios.revelarSecreto', '../meilisearch'],
+    ] as [string, unknown][]) {
+      expect((await llamar(ruta, arg)).ok, `${ruta} ${JSON.stringify(arg)}`).toBe(false);
+    }
+    expect(f['revelarClaveBd']).toHaveBeenCalledTimes(1);
+    expect(f['revelarClaveServicio']).toHaveBeenCalledTimes(1);
+  });
+
+  it('bd.revelarBloqueEnv pide el bloque completo (revelar: true), genérico o de un sitio', async () => {
+    const { f, llamar } = montar();
+    const completo = `DB_PASSWORD=${CLAVE}\n`;
+    f['bloqueEnvBd']!.mockResolvedValue(completo);
+    f['bloqueEnvSitio']!.mockResolvedValue(completo);
+    expect(await llamar('bd.revelarBloqueEnv', 'mysql', 'tienda', null)).toEqual({
+      ok: true,
+      valor: completo,
+    });
+    expect(f['bloqueEnvBd']).toHaveBeenCalledWith('mysql', 'tienda', 'generico', undefined, {
+      revelar: true,
+    });
+    expect(await llamar('bd.revelarBloqueEnv', 'mysql', 'tienda', 'demo')).toEqual({
+      ok: true,
+      valor: completo,
+    });
+    expect(f['bloqueEnvSitio']).toHaveBeenCalledWith('demo', 'mysql', 'tienda', { revelar: true });
+    for (const malo of [
+      ['oracle', 'tienda', null],
+      ['mysql', 'a;DROP', null],
+      ['mysql', 'tienda', 42],
+      ['mysql', 'tienda', ''],
+      ['mysql', 'tienda', 'x'.repeat(129)],
+    ]) {
+      expect((await llamar('bd.revelarBloqueEnv', ...malo)).ok, JSON.stringify(malo)).toBe(false);
+    }
+    expect(f['bloqueEnvBd']).toHaveBeenCalledTimes(1);
+    expect(f['bloqueEnvSitio']).toHaveBeenCalledTimes(1);
   });
 });
