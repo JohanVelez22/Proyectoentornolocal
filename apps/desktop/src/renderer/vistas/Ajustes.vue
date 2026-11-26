@@ -598,8 +598,13 @@ async function aplicarPath(activar: boolean): Promise<void> {
   gap: 16px;
 }
 .descripcion {
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   opacity: 0.75;
+}
+/* Columna de formulario centrada: en ventanas anchas no deja la mitad derecha vacía. */
+.ajustes {
+  max-width: 760px;
+  margin-inline: auto;
 }
 .tarjeta {
   border-radius: 12px;

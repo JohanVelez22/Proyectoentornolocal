@@ -403,7 +403,7 @@ function limpiar(): void {
 }
 .descripcion {
   margin: 0;
-  opacity: 0.8;
+  opacity: 0.75;
 }
 .pestanas {
   flex: 1;

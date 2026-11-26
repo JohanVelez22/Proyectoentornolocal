@@ -265,7 +265,7 @@ watch(
 .descripcion {
   margin: 0;
   max-width: 640px;
-  opacity: 0.85;
+  opacity: 0.75;
 }
 .cargando,
 .vacio {

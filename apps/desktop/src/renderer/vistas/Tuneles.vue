@@ -235,7 +235,7 @@ const columnas: DataTableColumns<Fila> = [
 
 <style scoped>
 .descripcion {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   opacity: 0.75;
 }
 .explicacion {

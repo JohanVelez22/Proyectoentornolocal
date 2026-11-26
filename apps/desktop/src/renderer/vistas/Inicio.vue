@@ -25,6 +25,7 @@ import { useFoco } from '../composables/useFoco';
 import { solicitudes } from '../composables/solicitudes';
 import { useNoLeidos } from '../composables/useNoLeidos';
 import { textos } from '../i18n';
+import { nombreServicio } from '../utilidades/nombreServicio';
 import { destinoServicio, destinoTunel } from '../utilidades/foco';
 import { useHosts } from '../stores/hosts';
 import { useIa } from '../stores/ia';
@@ -273,7 +274,7 @@ function abrir(url: string): void {
               :title="t.servicios.irA(s.nombre)"
               @click="router.push(destinoServicio(s.id))"
             >
-              {{ s.nombre }}
+              {{ nombreServicio(s.nombre) }}
             </button>
             <span class="meta">{{ s.puertos.join(' · ') }}</span>
             <EstadoPunto :estado="s.estado" />

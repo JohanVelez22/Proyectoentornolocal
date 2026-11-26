@@ -264,7 +264,7 @@ function cambiarNiveles(v: (string | number)[]): void {
   gap: 12px;
 }
 .descripcion {
-  margin: 0 0 6px;
+  margin: 0 0 16px;
   opacity: 0.75;
 }
 .barra {

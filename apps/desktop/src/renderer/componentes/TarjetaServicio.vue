@@ -35,6 +35,7 @@ import type { EstadoServicio } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
+import { nombreServicio } from '../utilidades/nombreServicio';
 import { categoriaDe, esServicioDatos, puertoAlternativo, useServicios } from '../stores/servicios';
 import EstadoPunto from './EstadoPunto.vue';
 import { formatearTamano } from '../utilidades/bd';
@@ -275,7 +276,7 @@ function cambiarRedLocal(valor: boolean): void {
         ><NIcon :size="18"><component :is="icono" /></NIcon
       ></span>
       <div class="titulo">
-        <h3>{{ servicio.nombre }}</h3>
+        <h3>{{ nombreServicio(servicio.nombre) }}</h3>
         <span class="version">{{ servicio.version ?? t.sinVersion }}</span>
       </div>
       <EstadoPunto :estado="servicio.estado" />

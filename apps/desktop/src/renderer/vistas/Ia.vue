@@ -731,7 +731,7 @@ const filasConexion = computed(() => [
 
 <style scoped>
 .descripcion {
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   opacity: 0.75;
 }
 .nube {
