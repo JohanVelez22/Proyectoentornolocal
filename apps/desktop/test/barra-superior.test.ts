@@ -30,9 +30,13 @@ describe('buscador general centrado en la barra superior (D41)', () => {
   });
 
   it('la barra es una cuadrícula título | buscador | controles con el buscador de 480 a 560 px', () => {
-    const r = regla('.cabecera');
+    const r = regla('.fila-cabecera');
     expect(r).toContain('display: grid');
-    const m = /grid-template-columns:\s*1fr minmax\(0,\s*(\d+)px\)\s*1fr/.exec(r);
+    // Los dos lados miden lo mismo (--lado): el buscador queda en el centro de la barra.
+    const m =
+      /grid-template-columns:\s*minmax\(var\(--lado\),\s*1fr\)\s*minmax\(0,\s*(\d+)px\)\s*minmax\(var\(--lado\),\s*1fr\)/.exec(
+        r,
+      );
     expect(m).not.toBeNull();
     const maximo = Number(m![1]);
     expect(maximo).toBeGreaterThanOrEqual(480);

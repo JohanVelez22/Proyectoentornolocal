@@ -242,33 +242,36 @@ onBeforeUnmount(() => {
 
     <NLayout class="principal">
       <NLayoutHeader class="cabecera">
-        <h1>{{ titulo }}</h1>
-        <!-- Buscador general (Ctrl+K) centrado en la barra; en ventanas estrechas queda como icono. -->
-        <div class="cabecera-centro">
-          <button
-            type="button"
-            class="buscador"
-            :aria-label="textos.barra.paleta"
-            :title="textos.barra.paleta"
-            @click="solicitudes.paleta = true"
-          >
-            <NIcon :size="16" aria-hidden="true"><IconoBuscar /></NIcon>
-            <span class="buscador-texto">{{ textos.barra.paleta }}</span>
-            <kbd>{{ textos.barra.atajoPaleta }}</kbd>
-          </button>
-        </div>
-        <div class="cabecera-acciones">
-          <BotonMemoria @abrir="panelMemoria = true" />
-          <CampanaAvisos @abrir="panelAvisos = true" />
-          <SelectorIdioma compacto />
-          <SelectorTema compacto />
-          <div
-            class="pastilla"
-            :class="{ viva: pastilla.tono === 'viva', alerta: pastilla.tono === 'alerta' }"
-            role="status"
-          >
-            <span class="pastilla-punto" aria-hidden="true" />
-            {{ pastilla.texto }}
+        <div class="fila-cabecera">
+          <h1>{{ titulo }}</h1>
+          <!-- Buscador general (Ctrl+K) centrado en la barra; en ventanas estrechas queda como icono. -->
+          <div class="cabecera-centro">
+            <button
+              type="button"
+              class="buscador"
+              :aria-label="textos.barra.paleta"
+              :title="textos.barra.paleta"
+              @click="solicitudes.paleta = true"
+            >
+              <NIcon :size="16" aria-hidden="true"><IconoBuscar /></NIcon>
+              <span class="buscador-texto">{{ textos.barra.paleta }}</span>
+              <kbd>{{ textos.barra.atajoPaleta }}</kbd>
+            </button>
+          </div>
+          <div class="cabecera-acciones">
+            <BotonMemoria @abrir="panelMemoria = true" />
+            <CampanaAvisos @abrir="panelAvisos = true" />
+            <SelectorIdioma compacto />
+            <SelectorTema compacto />
+            <div
+              class="pastilla"
+              :class="{ viva: pastilla.tono === 'viva', alerta: pastilla.tono === 'alerta' }"
+              role="status"
+              :title="pastilla.texto"
+            >
+              <span class="pastilla-punto" aria-hidden="true" />
+              <span class="pastilla-texto">{{ pastilla.texto }}</span>
+            </div>
           </div>
         </div>
       </NLayoutHeader>
@@ -333,17 +336,24 @@ onBeforeUnmount(() => {
 .principal {
   height: 100vh;
 }
-/* Título a la izquierda, buscador centrado y controles a la derecha. */
+/*
+ * Título a la izquierda, buscador centrado y controles a la derecha. Las dos columnas de los lados
+ * miden lo mismo (--lado), así el buscador queda en el centro de la barra y no del hueco que sobra.
+ */
 .cabecera {
-  display: grid;
-  grid-template-columns: 1fr minmax(0, 520px) 1fr;
-  align-items: center;
-  column-gap: 16px;
   height: 60px;
   padding: 0 28px;
   container-type: inline-size;
   /* La barra arrastra la ventana; el buscador y los controles no (ver más abajo). */
   -webkit-app-region: drag;
+}
+.fila-cabecera {
+  --lado: 280px;
+  display: grid;
+  grid-template-columns: minmax(var(--lado), 1fr) minmax(0, 520px) minmax(var(--lado), 1fr);
+  align-items: center;
+  column-gap: 16px;
+  height: 100%;
 }
 .cabecera h1 {
   margin: 0;
@@ -407,6 +417,22 @@ onBeforeUnmount(() => {
   font-size: 11px;
   opacity: 0.7;
 }
+.pastilla-texto {
+  display: none;
+  white-space: nowrap;
+}
+/* Ventana ancha: sobra sitio para el texto de la pastilla de estado. */
+@container (min-width: 1440px) {
+  .fila-cabecera {
+    --lado: 470px;
+  }
+  .pastilla {
+    padding: 5px 12px;
+  }
+  .pastilla-texto {
+    display: inline;
+  }
+}
 /* Ventana estrecha: el buscador pasa a un icono y deja su sitio al título y a los controles. */
 @container (max-width: 900px) {
   .buscador {
@@ -426,7 +452,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 12px;
+  padding: 8px;
   border-radius: 999px;
   font-size: 12px;
   border: 1px solid rgba(128, 128, 128, 0.22);

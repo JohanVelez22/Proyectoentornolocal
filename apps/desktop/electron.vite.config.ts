@@ -3,6 +3,8 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import vue from '@vitejs/plugin-vue';
 
 const core = resolve(__dirname, '../../packages/core/src/index.ts');
+// La ventana usa solo una parte pura del núcleo (ver `cliente.ts`): el índice no cabe en una página.
+const coreRenderer = resolve(__dirname, '../../packages/core/src/cliente.ts');
 
 export default defineConfig({
   main: {
@@ -34,7 +36,7 @@ export default defineConfig({
   },
   renderer: {
     plugins: [vue()],
-    resolve: { alias: { '@': resolve(__dirname, 'src/renderer') } },
+    resolve: { alias: { '@': resolve(__dirname, 'src/renderer'), '@pel/core': coreRenderer } },
     build: {
       rollupOptions: {
         // La ventana principal y la de captura (D35) son dos páginas.

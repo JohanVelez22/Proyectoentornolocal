@@ -138,7 +138,13 @@ const ETIQUETA_DNS = /^(?!-)[a-z0-9-]{1,63}(?<!-)$/i;
 /** Hosts que nunca son un proveedor remoto: el propio equipo o la red local por nombre. */
 const SUFIJOS_LOCALES = ['.localhost', '.local', '.internal', '.lan', '.home', '.localdomain'];
 
-const REDES_NO_PUBLICAS = (() => {
+/**
+ * Se arma al primer uso, no al cargar el módulo: el renderer importa `@pel/core` y `node:net` no
+ * existe allí (`new BlockList()` al importar dejaba la ventana en blanco).
+ */
+let redesNoPublicas: BlockList | null = null;
+function redesNoPublicasLista(): BlockList {
+  if (redesNoPublicas) return redesNoPublicas;
   const l = new BlockList();
   for (const [red, bits] of [
     ['0.0.0.0', 8],
@@ -164,8 +170,9 @@ const REDES_NO_PUBLICAS = (() => {
   ] as const) {
     l.addSubnet(red, bits, 'ipv6');
   }
+  redesNoPublicas = l;
   return l;
-})();
+}
 
 /** Los 16 bytes de una IPv6 (admite `::` y un final con IPv4 punteada), o null si no es válida. */
 function bytesIpv6(ip: string): number[] | null {
@@ -216,7 +223,7 @@ export function esDireccionNoPublica(ip: string): boolean {
     const interna = bytes ? ipv4Embebida(bytes) : null;
     if (interna !== null) return esDireccionNoPublica(interna);
   }
-  return REDES_NO_PUBLICAS.check(limpia, v === 4 ? 'ipv4' : 'ipv6');
+  return redesNoPublicasLista().check(limpia, v === 4 ? 'ipv4' : 'ipv6');
 }
 
 /** Un host con forma válida: nombre DNS o IP, sin esquema, puerto, ruta ni credenciales. */

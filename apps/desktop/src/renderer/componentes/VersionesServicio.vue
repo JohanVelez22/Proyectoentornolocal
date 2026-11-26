@@ -191,7 +191,7 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
       />
       <Desplegable
         size="small"
-        class="rama"
+        class="filtro-serie"
         :value="v.rama ?? ''"
         :options="opcionesRama"
         :aria-label="t.filtroRama"
@@ -317,7 +317,7 @@ function pedirBorrarRespaldo(r: RespaldoDatos): void {
 .servicio {
   width: 170px;
 }
-.rama {
+.filtro-serie {
   width: 150px;
 }
 .derecha {
