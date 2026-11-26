@@ -13,3 +13,6 @@ export type IdiomaUi = (typeof IDIOMAS_UI)[number];
  * activa). Ctrl+Alt+Mayús+S: tres modificadores, no choca con nada común y es válido.
  */
 export const ATAJO_CAPTURA_POR_DEFECTO = 'Ctrl+Alt+Shift+S';
+
+/** Tope de tamaño de un archivo que abre o guarda el editor de código (D43). */
+export const MAX_BYTES_EDITOR = 2 * 1024 * 1024;

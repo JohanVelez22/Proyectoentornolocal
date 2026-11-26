@@ -10,11 +10,11 @@ import {
 } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { MAX_BYTES_EDITOR } from '../src/constantesUi';
 import { ErrorWolf } from '../src/errores';
 import {
   EditorCodigo,
   MAX_ARCHIVOS_CON_COPIAS,
-  MAX_BYTES_EDITOR,
   MAX_COPIAS_POR_ARCHIVO,
   type DepsEditorCodigo,
   type OpcionesGuardarArchivo,

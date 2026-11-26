@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { FileHandle } from 'node:fs/promises';
 import { lstat, mkdir, open, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { MAX_BYTES_EDITOR } from '../constantesUi';
 import { ErrorWolf } from '../errores';
 import { rutaDentroDe } from '../plataforma/sistema';
 import { llevaSecreto } from '../proyectos/plantillas';
@@ -27,8 +28,6 @@ import { escribirAtomico, type OpcionesEscritura } from '../sitios/urlbase';
  *   rotación) y escribe con un temporal más `rename`. Si la copia falla, no se escribe.
  */
 
-/** Tope de tamaño de un archivo que se abre o se guarda. */
-export const MAX_BYTES_EDITOR = 2 * 1024 * 1024;
 /** Copias previas que se guardan por archivo; al pasar este número se borran las más viejas. */
 export const MAX_COPIAS_POR_ARCHIVO = 5;
 /** Archivos distintos con copias; al pasar este número se borran los de copias más viejas. */
