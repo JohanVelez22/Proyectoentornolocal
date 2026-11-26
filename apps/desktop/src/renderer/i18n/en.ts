@@ -448,6 +448,13 @@ export const en: Textos = {
         'That conversion needs LibreOffice, which is not installed on this computer (WolfCore Dev does not install it).',
       'conversor.libreoffice_fallo': 'LibreOffice could not convert the document.',
       'conversor.pdf_no_disponible': 'Printing to PDF is not available right now.',
+      'herramientas.imagen_pixeles':
+        'The image has too many pixels in total ({ancho}×{alto} px; up to {maximo}) and is not opened for safety.',
+      'herramientas.zip_cambio': 'A file changed while it was being compressed: try again.',
+      'herramientas.pdf_demasiado_complejo':
+        'The PDF is too complex (it would inflate more memory than allowed) and was cancelled.',
+      'herramientas.salida_denegada':
+        'It is not possible to write to that location: check the permission or that the folder exists.',
       'herramientas.fuera_de_la_ca':
         'The WolfCore Dev CA only signs .test domains, localhost and local addresses: {dominio} cannot be included.',
       'perfiles.frase_requerida':
@@ -3521,6 +3528,8 @@ export const en: Textos = {
       ocultar: 'Hide',
       aviso:
         'The QR code contains the password as is: anyone who sees or photographs it can join your network. It is generated here, never saved, and cleared when you close this panel.',
+      avisoPng:
+        'The PNG you download also carries the password inside the code: keep it where only you can see it.',
       escribala:
         'You type the password: WolfCore Dev never reads the Wi-Fi passwords stored in the system.',
       errorSsid: 'Type the network name (up to 32 characters).',
@@ -3553,9 +3562,15 @@ export const en: Textos = {
       sinMejora: 'The result is not smaller than the original: try another quality or format.',
       errorAbrir: 'The image could not be opened on this computer.',
       errorProcesar: 'The image could not be processed.',
+      sufijoConvertida: '-converted',
+      sufijoComprimida: '-compressed',
       dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
       ahorro: (porcentaje: number) =>
-        porcentaje > 0 ? `${porcentaje}% smaller` : `${-porcentaje}% larger`,
+        porcentaje > 0
+          ? `${porcentaje}% smaller`
+          : porcentaje < 0
+            ? `${-porcentaje}% larger`
+            : 'no change',
       guardado: (archivo: string) => `Saved to ${archivo}`,
     },
     comprimir: {
@@ -3570,17 +3585,23 @@ export const en: Textos = {
       creando: 'Creating…',
       pdf: 'Optimize PDF',
       pdfAyuda:
-        'It is saved again with object streams, in a separate thread. The file is only created if it is smaller; password-protected PDFs are not opened. The original is not touched.',
+        'It is saved again with object streams, in a separate thread. The file is only created if it is smaller; password-protected PDFs are not opened. The original is not touched. Note: saving again loses digital signatures and PDF/A conformance.',
       elegirPdf: 'Choose PDF',
       optimizar: 'Optimize…',
       optimizando: 'Optimizing…',
       antes: 'Before',
       despues: 'After',
       sinMejora: 'The PDF would not get smaller: no file was created.',
+      sufijoOptimizado: '-optimized',
       omitidos: (n: number) =>
-        `${n} ${n === 1 ? 'link or special file was not included' : 'links or special files were not included'}.`,
+        `${n} ${n === 1 ? 'link, unreadable folder or special file was not included' : 'links, unreadable folders or special files were not included'}.`,
       archivos: (n: number) => `${n} ${n === 1 ? 'file' : 'files'}`,
-      ahorro: (porcentaje: number) => `${porcentaje}% smaller`,
+      ahorro: (porcentaje: number) =>
+        porcentaje > 0
+          ? `${porcentaje}% smaller`
+          : porcentaje < 0
+            ? `${-porcentaje}% larger`
+            : 'no change',
       guardado: (archivo: string) => `Saved to ${archivo}`,
     },
     conversor: {

@@ -66,7 +66,7 @@ async function optimizar(): Promise<void> {
   if (!origen) return;
   const base = nombreDe(origen).replace(/\.pdf$/i, '');
   const destino = await ejecutar('pdf', () =>
-    api().sistema.guardarArchivo(`${base}-optimizado.pdf`),
+    api().sistema.guardarArchivo(`${base}${t.sufijoOptimizado}.pdf`),
   );
   if (!destino) return;
   const r = await ejecutar('pdf', () => api().herramientas.optimizarPdf(origen, destino));

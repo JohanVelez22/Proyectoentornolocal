@@ -18,7 +18,7 @@ import { errorWifi, textoQrWifi, type SeguridadWifi } from '../../utilidades/qrW
 const t = textos.herramientas.qrWifi;
 const message = useMessage();
 
-// La contraseña vive solo en este componente: no va a un store, ni a localStorage, ni a los
+// La contraseña vive solo en este componente: no va a ningún almacén, ni persistente ni de sesión, ni a los
 // registros, y se borra al cerrar el panel.
 const ssid = ref('');
 const clave = ref('');
@@ -96,7 +96,11 @@ onBeforeUnmount(() => {
     <NAlert type="warning" :show-icon="false">{{ t.aviso }}</NAlert>
     <div>
       <div class="herr-etiqueta">{{ t.ssid }}</div>
-      <NInput v-model:value="ssid" :maxlength="32" show-count autocomplete="off" />
+      <NInput
+        v-model:value="ssid"
+        :maxlength="32"
+        :input-props="{ spellcheck: false, autocomplete: 'off' }"
+      />
     </div>
     <div>
       <div class="herr-etiqueta">{{ t.seguridad }}</div>
@@ -113,7 +117,7 @@ onBeforeUnmount(() => {
           v-model:value="clave"
           :type="verClave ? 'text' : 'password'"
           :maxlength="64"
-          autocomplete="off"
+          :input-props="{ spellcheck: false, autocomplete: 'off' }"
           class="campo"
         />
         <NButton secondary @click="verClave = !verClave">{{
@@ -128,6 +132,7 @@ onBeforeUnmount(() => {
     <div v-if="imagen" class="qr">
       <!-- El texto alternativo no repite la red ni la contraseña. -->
       <img :src="imagen" :alt="t.alt" width="240" height="240" />
+      <p class="herr-tenue">{{ t.avisoPng }}</p>
       <NButton type="primary" @click="descargar">
         <template #icon
           ><NIcon><Download /></NIcon

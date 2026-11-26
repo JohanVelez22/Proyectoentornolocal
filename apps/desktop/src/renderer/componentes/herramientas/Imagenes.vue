@@ -15,7 +15,7 @@ import { useAccion } from '../../composables/useAccion';
 import { textos } from '../../i18n';
 import { pngsAIco, TAMANOS_ICO } from '../../utilidades/ico';
 import {
-  abrirBitmap,
+  abrirBitmapVerificado,
   bitmapAPng,
   comprimirBitmap,
   cuadradoAPng,
@@ -54,7 +54,7 @@ const sugerido = computed(() => {
   const r = resultado.value;
   if (!r) return '';
   const sufijo =
-    accion.value === 'ico' ? '' : accion.value === 'png' ? '-convertida' : '-comprimida';
+    accion.value === 'ico' ? '' : accion.value === 'png' ? t.sufijoConvertida : t.sufijoComprimida;
   return `${nombreBase.value}${sufijo}.${r.extension}`;
 });
 
@@ -69,7 +69,7 @@ async function dibujarMiniatura(o: Origen): Promise<void> {
   await nextTick();
   const lienzo = miniatura.value;
   if (!lienzo) return;
-  const b = await abrirBitmap(o.bytes, o.tipo);
+  const b = await abrirBitmapVerificado(o.bytes, o.tipo, o);
   try {
     const f = Math.min(1, 160 / Math.max(b.width, b.height));
     lienzo.width = Math.max(1, Math.round(b.width * f));
@@ -107,7 +107,7 @@ async function procesar(): Promise<void> {
   await ejecutar('procesar', async () => {
     let bitmap: ImageBitmap;
     try {
-      bitmap = await abrirBitmap(o.bytes, o.tipo);
+      bitmap = await abrirBitmapVerificado(o.bytes, o.tipo, o);
     } catch {
       error.value = t.errorAbrir;
       return;

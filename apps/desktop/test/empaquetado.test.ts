@@ -46,8 +46,8 @@ describe('empaquetado del conversor', () => {
     [...yml.matchAll(/^\s+-\s+(node_modules\/\S+)\/\*\*\s*$/gm)].map((m) => m[1]!),
   );
 
-  it('mammoth, exceljs, pdfjs-dist y todas sus dependencias están en asarUnpack', () => {
-    const faltan = cierre(['mammoth', 'exceljs', 'pdfjs-dist'])
+  it('mammoth, exceljs, pdfjs-dist, pdf-lib y todas sus dependencias están en asarUnpack', () => {
+    const faltan = cierre(['mammoth', 'exceljs', 'pdfjs-dist', 'pdf-lib'])
       .map((n) => `node_modules/${n}`)
       .filter((n) => !desempaquetados.has(n));
     expect(faltan).toEqual([]);
@@ -57,7 +57,7 @@ describe('empaquetado del conversor', () => {
     const pkg = JSON.parse(readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')) as {
       dependencies: Record<string, string>;
     };
-    for (const n of ['mammoth', 'exceljs', 'pdfjs-dist']) {
+    for (const n of ['mammoth', 'exceljs', 'pdfjs-dist', 'pdf-lib']) {
       expect(pkg.dependencies[n], n).toMatch(/^\d+\.\d+\.\d+$/); // versión fija
     }
   });

@@ -346,7 +346,7 @@ describe('imágenes', () => {
     expect(await codigoDe(leerImagen(ancha))).toBe('herramientas.imagen_dimensiones');
     const grande = path.join(dir, 'grande.png');
     writeFileSync(grande, pngConCabecera(10_000, 10_000));
-    expect(await codigoDe(leerImagen(grande))).toBe('herramientas.imagen_dimensiones');
+    expect(await codigoDe(leerImagen(grande))).toBe('herramientas.imagen_pixeles');
   });
 
   it('lee una imagen normal y rechaza lo que no es imagen o pesa de más', async () => {

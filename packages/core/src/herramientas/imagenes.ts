@@ -50,6 +50,47 @@ function vista(b: Uint8Array): DataView {
   return new DataView(b.buffer, b.byteOffset, b.byteLength);
 }
 
+/**
+ * GIF: la pantalla lógica puede ser de 1×1 y traer un cuadro de 13000×13000, y los decodificadores
+ * usan el cuadro. Se recorren los bloques (con tope de pasos y sin salirse del archivo) y se toma
+ * el mayor entre la pantalla y `izquierda+ancho` / `arriba+alto` de cada cuadro.
+ */
+function dimensionesGif(b: Uint8Array, v: DataView): DimensionesImagen {
+  let ancho = v.getUint16(6, true);
+  let alto = v.getUint16(8, true);
+  const tablaGlobal = b.length > 10 && (b[10]! & 0x80) !== 0;
+  let i = 13 + (tablaGlobal ? 3 * 2 ** ((b[10]! & 7) + 1) : 0);
+  /** Salta los subbloques de datos hasta el terminador; false si el archivo acaba antes. */
+  const saltarSubbloques = (): boolean => {
+    while (i < b.length) {
+      const n = b[i++]!;
+      if (n === 0) return true;
+      i += n;
+    }
+    return false;
+  };
+  for (let pasos = 0; pasos < 10_000 && i < b.length; pasos++) {
+    const tipo = b[i++]!;
+    if (tipo === 0x3b) break;
+    if (tipo === 0x21) {
+      i++; // etiqueta de la extensión
+      if (!saltarSubbloques()) break;
+    } else if (tipo === 0x2c) {
+      if (i + 9 > b.length) break;
+      ancho = Math.max(ancho, v.getUint16(i, true) + v.getUint16(i + 4, true));
+      alto = Math.max(alto, v.getUint16(i + 2, true) + v.getUint16(i + 6, true));
+      const banderas = b[i + 8]!;
+      i += 9;
+      if (banderas & 0x80) i += 3 * 2 ** ((banderas & 7) + 1);
+      i++; // tamaño mínimo del código LZW
+      if (!saltarSubbloques()) break;
+    } else {
+      break;
+    }
+  }
+  return { tipo: 'gif', ancho, alto };
+}
+
 /** Dimensiones declaradas en la cabecera, o null si no es un formato admitido o está truncada. */
 export function dimensionesImagen(b: Uint8Array): DimensionesImagen | null {
   const v = vista(b);
@@ -58,7 +99,7 @@ export function dimensionesImagen(b: Uint8Array): DimensionesImagen | null {
     return { tipo: 'png', ancho: v.getUint32(16), alto: v.getUint32(20) };
   }
   if (b.length >= 10 && (ascii(b, 0, 'GIF87a') || ascii(b, 0, 'GIF89a'))) {
-    return { tipo: 'gif', ancho: v.getUint16(6, true), alto: v.getUint16(8, true) };
+    return dimensionesGif(b, v);
   }
   if (b.length >= 26 && ascii(b, 0, 'BM')) {
     // BITMAPCOREHEADER (12 bytes) usa 16 bits; el resto, 32 con signo (alto negativo = de arriba).
@@ -163,15 +204,22 @@ export async function leerImagen(
   }
   const dim = dimensionesImagen(bytes);
   if (!dim || dim.ancho < 1 || dim.alto < 1) throw noImagen();
-  if (
-    dim.ancho > LIMITES_IMAGEN.ladoMax ||
-    dim.alto > LIMITES_IMAGEN.ladoMax ||
-    dim.ancho * dim.alto > LIMITES_IMAGEN.pixelesMax
-  ) {
+  if (dim.ancho > LIMITES_IMAGEN.ladoMax || dim.alto > LIMITES_IMAGEN.ladoMax) {
     throw new ErrorWolf(
       'herramientas.imagen_dimensiones',
-      'La imagen tiene demasiados píxeles para abrirla de forma segura.',
+      'La imagen es demasiado ancha o alta para abrirla de forma segura.',
       { ancho: dim.ancho, alto: dim.alto, maximo: LIMITES_IMAGEN.ladoMax },
+    );
+  }
+  if (dim.ancho * dim.alto > LIMITES_IMAGEN.pixelesMax) {
+    throw new ErrorWolf(
+      'herramientas.imagen_pixeles',
+      'La imagen tiene demasiados píxeles en total para abrirla de forma segura.',
+      {
+        ancho: dim.ancho,
+        alto: dim.alto,
+        maximo: `${Math.round(LIMITES_IMAGEN.pixelesMax / 1_000_000)} Mpx`,
+      },
     );
   }
   return { ...dim, nombre: path.basename(ruta), bytes };

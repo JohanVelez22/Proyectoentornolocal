@@ -32,6 +32,44 @@ export function porcentajeAhorro(antes: number, despues: number): number {
   return Math.round(((antes - despues) / antes) * 100);
 }
 
+/** Mismos límites que el núcleo (`LIMITES_IMAGEN`). */
+export const LIMITE_LADO = 12_000;
+export const LIMITE_PIXELES = 64_000_000;
+
+/**
+ * Comprobación posterior a la decodificación: el bitmap no puede ser mayor que lo que declaró la
+ * cabecera (que el núcleo ya validó) ni salirse de los límites. Menor sí vale: algunos formatos
+ * (GIF, ICO) se decodifican con un tamaño distinto del que declaran.
+ */
+export function bitmapAceptable(
+  b: { width: number; height: number },
+  declarado: { ancho: number; alto: number },
+): boolean {
+  return (
+    b.width >= 1 &&
+    b.height >= 1 &&
+    b.width <= declarado.ancho &&
+    b.height <= declarado.alto &&
+    b.width <= LIMITE_LADO &&
+    b.height <= LIMITE_LADO &&
+    b.width * b.height <= LIMITE_PIXELES
+  );
+}
+
+/** Decodifica y comprueba el tamaño; si no es aceptable, libera el bitmap y rechaza. */
+export async function abrirBitmapVerificado(
+  bytes: Uint8Array,
+  tipo: string,
+  declarado: { ancho: number; alto: number },
+): Promise<ImageBitmap> {
+  const b = await abrirBitmap(bytes, tipo);
+  if (!bitmapAceptable(b, declarado)) {
+    b.close();
+    throw new Error('decoded size not acceptable');
+  }
+  return b;
+}
+
 export async function abrirBitmap(bytes: Uint8Array, tipo: string): Promise<ImageBitmap> {
   const mime = MIME_IMAGEN[tipo] ?? 'application/octet-stream';
   return createImageBitmap(new Blob([bytes as BlobPart], { type: mime }));

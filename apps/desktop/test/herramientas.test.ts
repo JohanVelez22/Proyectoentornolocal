@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { describe, expect, it } from 'vitest';
 import { en } from '../src/renderer/i18n/en';
@@ -6,7 +8,11 @@ import { fr } from '../src/renderer/i18n/fr';
 import { pt } from '../src/renderer/i18n/pt';
 import { errorWifi, textoQrWifi } from '../src/renderer/utilidades/qrWifi';
 import { pngsAIco, TAMANOS_ICO } from '../src/renderer/utilidades/ico';
-import { escalar, porcentajeAhorro } from '../src/renderer/utilidades/imagenCanvas';
+import {
+  bitmapAceptable,
+  escalar,
+  porcentajeAhorro,
+} from '../src/renderer/utilidades/imagenCanvas';
 import {
   aBase64,
   agregarAcotado,
@@ -405,8 +411,8 @@ describe('QR de Wi-Fi', () => {
 
   it('una red abierta no lleva contraseña, aunque haya una escrita', () => {
     expect(
-      textoQrWifi({ ssid: 'Cafe', clave: 'no-debe-ir', seguridad: 'nopass', oculta: false }),
-    ).toBe('WIFI:T:nopass;S:Cafe;;');
+      textoQrWifi({ ssid: 'Bar', clave: 'no-debe-ir', seguridad: 'nopass', oculta: false }),
+    ).toBe('WIFI:T:nopass;S:Bar;;');
   });
 
   it('escapa la barra invertida, ; , : y las comillas en el nombre y la contraseña', () => {
@@ -505,5 +511,78 @@ describe('compresión de imágenes (cálculos)', () => {
     expect(porcentajeAhorro(1000, 250)).toBe(75);
     expect(porcentajeAhorro(1000, 1200)).toBe(-20);
     expect(porcentajeAhorro(0, 5)).toBe(0);
+  });
+});
+
+describe('revisión de D33 (renderer)', () => {
+  it('el nombre de la red mide 32 bytes en UTF-8, no 32 caracteres', () => {
+    expect(errorWifi({ ssid: 'x'.repeat(32), clave: 'x'.repeat(8), seguridad: 'WPA' })).toBeNull();
+    expect(errorWifi({ ssid: 'ñ'.repeat(17), clave: 'x'.repeat(8), seguridad: 'WPA' })).toBe(
+      'ssid',
+    );
+    expect(errorWifi({ ssid: 'ñ'.repeat(16), clave: 'x'.repeat(8), seguridad: 'WPA' })).toBeNull();
+  });
+
+  it('una clave WPA de 64 caracteres vale solo si es hexadecimal (PSK)', () => {
+    expect(errorWifi({ ssid: 'Casa', clave: 'a1'.repeat(32), seguridad: 'WPA' })).toBeNull();
+    expect(errorWifi({ ssid: 'Casa', clave: 'g'.repeat(64), seguridad: 'WPA' })).toBe('claveWpa');
+  });
+
+  it('un nombre de red que parece hexadecimal va entre comillas', () => {
+    expect(
+      textoQrWifi({ ssid: 'cafe', clave: 'x'.repeat(8), seguridad: 'WPA', oculta: false }),
+    ).toBe('WIFI:T:WPA;S:"cafe";P:xxxxxxxx;;');
+    expect(
+      textoQrWifi({ ssid: 'Casa', clave: 'x'.repeat(8), seguridad: 'WPA', oculta: false }),
+    ).toBe('WIFI:T:WPA;S:Casa;P:xxxxxxxx;;');
+  });
+
+  it('la clave centinela solo está en el texto del QR, no en el alt, los registros ni el almacenamiento', () => {
+    const centinela = 'centinela-secreta-d33';
+    const texto = textoQrWifi({ ssid: 'Casa', clave: centinela, seguridad: 'WPA', oculta: false });
+    expect(texto).toContain(centinela);
+    expect(
+      textoQrWifi({ ssid: 'Casa', clave: centinela, seguridad: 'nopass', oculta: false }),
+    ).not.toContain(centinela);
+    const fuente = readFileSync(
+      path.join(__dirname, '../src/renderer/componentes/herramientas/QrWifi.vue'),
+      'utf8',
+    );
+    expect(fuente).not.toMatch(/localStorage|sessionStorage|console\.|useStorage|defineStore/);
+    expect(fuente).toContain(':alt="t.alt"');
+    expect(fuente).toContain('spellcheck: false');
+    for (const t of [es, en, pt, fr]) expect(t.herramientas.qrWifi.alt).not.toMatch(/\{|\$/);
+  });
+
+  it('el bitmap decodificado no puede ser mayor que lo que declaró la cabecera ni salirse de los límites', () => {
+    const declarado = { ancho: 100, alto: 50 };
+    expect(bitmapAceptable({ width: 100, height: 50 }, declarado)).toBe(true);
+    expect(bitmapAceptable({ width: 60, height: 50 }, declarado)).toBe(true);
+    expect(bitmapAceptable({ width: 101, height: 50 }, declarado)).toBe(false);
+    expect(bitmapAceptable({ width: 100, height: 51 }, declarado)).toBe(false);
+    expect(
+      bitmapAceptable({ width: 13_000, height: 13_000 }, { ancho: 13_000, alto: 13_000 }),
+    ).toBe(false);
+    expect(
+      bitmapAceptable({ width: 10_000, height: 10_000 }, { ancho: 10_000, alto: 10_000 }),
+    ).toBe(false);
+    expect(bitmapAceptable({ width: 0, height: 5 }, { ancho: 5, alto: 5 })).toBe(false);
+  });
+
+  it('el ahorro dice "sin cambio" si es cero y distingue si pesa más, en los 4 idiomas', () => {
+    for (const t of [es, en, pt, fr]) {
+      for (const f of [t.herramientas.imagenes.ahorro, t.herramientas.comprimir.ahorro]) {
+        expect(f(25)).toMatch(/25/);
+        expect(f(-20)).toMatch(/20/);
+        expect(f(-20)).not.toBe(f(20));
+        expect(f(-20)).not.toMatch(/-/);
+        expect(f(0)).not.toMatch(/0/);
+      }
+      expect(t.herramientas.imagenes.sufijoConvertida).toMatch(/^-/);
+      expect(t.herramientas.imagenes.sufijoComprimida).toMatch(/^-/);
+      expect(t.herramientas.comprimir.sufijoOptimizado).toMatch(/^-/);
+      expect(t.herramientas.comprimir.pdfAyuda).toMatch(/PDF\/A/);
+      expect(t.herramientas.qrWifi.avisoPng).not.toBe('');
+    }
   });
 });

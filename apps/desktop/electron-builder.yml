@@ -9,11 +9,14 @@ files:
 # `Worker` con `eval`: fuera del .asar para que la ruta sea la de un archivo real.
 asarUnpack:
   - node_modules/bcryptjs/**
+  # pdf-lib (D33) y sus dependencias también: el hilo que optimiza PDF las carga igual.
   # El conversor de documentos (D34) corre en un `Worker` con `eval` que carga mammoth, exceljs y
   # pdfjs-dist por su ruta absoluta: ellos y TODAS sus dependencias fuera del .asar. Lo exige
   # `test/empaquetado.test.ts` (calcula la lista desde node_modules).
   - node_modules/@fast-csv/format/**
   - node_modules/@fast-csv/parse/**
+  - node_modules/@pdf-lib/standard-fonts/**
+  - node_modules/@pdf-lib/upng/**
   - node_modules/@xmldom/xmldom/**
   - node_modules/archiver/**
   - node_modules/archiver-utils/**
@@ -141,6 +144,7 @@ asarUnpack:
   - node_modules/own-keys/**
   - node_modules/pako/**
   - node_modules/path-is-absolute/**
+  - node_modules/pdf-lib/**
   - node_modules/pdfjs-dist/**
   - node_modules/possible-typed-array-names/**
   - node_modules/process-nextick-args/**

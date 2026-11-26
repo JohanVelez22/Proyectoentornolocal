@@ -474,6 +474,13 @@ export const fr: Textos = {
         'Cette conversion nécessite LibreOffice, qui n’est pas installé sur cet ordinateur (WolfCore Dev ne l’installe pas).',
       'conversor.libreoffice_fallo': 'LibreOffice n’a pas pu convertir le document.',
       'conversor.pdf_no_disponible': 'L’impression en PDF n’est pas disponible pour le moment.',
+      'herramientas.imagen_pixeles':
+        'L’image compte trop de pixels au total ({ancho}×{alto} px ; jusqu’à {maximo}) et n’est pas ouverte par sécurité.',
+      'herramientas.zip_cambio': 'Un fichier a changé pendant la compression : réessayez.',
+      'herramientas.pdf_demasiado_complejo':
+        'Le PDF est trop complexe (il gonflerait plus de mémoire que permis) et a été annulé.',
+      'herramientas.salida_denegada':
+        'Impossible d’écrire à cet emplacement : vérifiez l’autorisation ou que le dossier existe.',
       'herramientas.fuera_de_la_ca':
         'La CA de WolfCore Dev ne signe que les domaines .test, localhost et les adresses locales : {dominio} ne peut pas être inclus.',
       'perfiles.frase_requerida':
@@ -3642,6 +3649,8 @@ export const fr: Textos = {
       ocultar: 'Masquer',
       aviso:
         'Le code QR contient le mot de passe tel quel : quiconque le voit ou le photographie peut se connecter à votre réseau. Il est généré ici, jamais enregistré, et effacé à la fermeture de ce panneau.',
+      avisoPng:
+        'Le PNG téléchargé contient lui aussi le mot de passe dans le code : gardez-le là où vous seul le voyez.',
       escribala:
         'C’est vous qui saisissez le mot de passe : WolfCore Dev ne lit jamais les mots de passe Wi-Fi enregistrés dans le système.',
       errorSsid: 'Saisissez le nom du réseau (32 caractères au maximum).',
@@ -3675,9 +3684,15 @@ export const fr: Textos = {
         'Le résultat n’est pas plus léger que l’original : essayez une autre qualité ou un autre format.',
       errorAbrir: 'Impossible d’ouvrir l’image sur cet ordinateur.',
       errorProcesar: 'Impossible de traiter l’image.',
+      sufijoConvertida: '-convertie',
+      sufijoComprimida: '-compressee',
       dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
       ahorro: (porcentaje: number) =>
-        porcentaje > 0 ? `${porcentaje} % de moins` : `${-porcentaje} % de plus`,
+        porcentaje > 0
+          ? `${porcentaje} % de moins`
+          : porcentaje < 0
+            ? `${-porcentaje} % de plus`
+            : 'sans changement',
       guardado: (archivo: string) => `Enregistré dans ${archivo}`,
     },
     comprimir: {
@@ -3692,17 +3707,23 @@ export const fr: Textos = {
       creando: 'Création…',
       pdf: 'Optimiser un PDF',
       pdfAyuda:
-        'Il est réenregistré avec des flux d’objets, dans un thread séparé. Le fichier n’est créé que s’il est plus léger ; les PDF protégés par mot de passe ne sont pas ouverts. L’original n’est pas touché.',
+        'Il est réenregistré avec des flux d’objets, dans un thread séparé. Le fichier n’est créé que s’il est plus léger ; les PDF protégés par mot de passe ne sont pas ouverts. L’original n’est pas touché. Attention : le réenregistrement fait perdre les signatures numériques et la conformité PDF/A.',
       elegirPdf: 'Choisir un PDF',
       optimizar: 'Optimiser…',
       optimizando: 'Optimisation…',
       antes: 'Avant',
       despues: 'Après',
       sinMejora: 'Le PDF ne serait pas plus léger : aucun fichier n’a été créé.',
+      sufijoOptimizado: '-optimise',
       omitidos: (n: number) =>
-        `${n} ${n === 1 ? 'lien ou fichier spécial n’a pas été inclus' : 'liens ou fichiers spéciaux n’ont pas été inclus'}.`,
+        `${n} ${n === 1 ? 'lien, dossier illisible ou fichier spécial n’a pas été inclus' : 'liens, dossiers illisibles ou fichiers spéciaux n’ont pas été inclus'}.`,
       archivos: (n: number) => `${n} ${n === 1 ? 'fichier' : 'fichiers'}`,
-      ahorro: (porcentaje: number) => `${porcentaje} % de moins`,
+      ahorro: (porcentaje: number) =>
+        porcentaje > 0
+          ? `${porcentaje} % de moins`
+          : porcentaje < 0
+            ? `${-porcentaje} % de plus`
+            : 'sans changement',
       guardado: (archivo: string) => `Enregistré dans ${archivo}`,
     },
     conversor: {
