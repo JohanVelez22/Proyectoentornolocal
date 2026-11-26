@@ -129,6 +129,25 @@ describe('I2: saltos de línea mezclados', () => {
     expect(readFileSync(r, 'utf8')).toBe('uno\ndos\ntres\n');
   });
 
+  it('M-B: si los saltos en disco ya no son los de la ventana, sobrescribir pide aceptarNormalizar', async () => {
+    const e = await escenario();
+    const r = e.archivo('c.txt', 'uno\r\ndos\r\n');
+    const a = await e.abrirOk(r);
+    expect(a.eol).toBe('crlf');
+    // Alguien lo reescribe por fuera con LF (no mixto) mientras la ventana sigue creyendo CRLF.
+    writeFileSync(r, 'uno\ndos\ntres\n');
+    expect(
+      await e.codigo(e.editor.guardar(r, e.guardarCon(a, 'uno\ndos\n', { sobrescribir: true }))),
+    ).toBe('editor.archivo_cambiado');
+    expect(readFileSync(r, 'utf8')).toBe('uno\ndos\ntres\n');
+    // Con la confirmación aparte de normalizar, sí se guarda.
+    await e.editor.guardar(
+      r,
+      e.guardarCon(a, 'uno\ndos\n', { sobrescribir: true, aceptarNormalizar: true }),
+    );
+    expect(readFileSync(r, 'utf8')).toBe('uno\r\ndos\r\n');
+  });
+
   it('un renderer que diga lf sobre un archivo mixto no esquiva la confirmación', async () => {
     const e = await escenario();
     const r = e.archivo('m.txt', 'a\r\nb\nc\n');

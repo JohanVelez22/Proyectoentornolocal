@@ -286,10 +286,19 @@ export class EditorCodigo {
     if (o.sobrescribir !== true && !igual(actual.huella)) {
       throw this.cambiado();
     }
+    const saltosEnDisco = saltosDe(actual.datos.toString('utf8'));
+    // Los saltos que hay AHORA en disco no son los que la ventana conocía (p. ej. el archivo pasó de
+    // CRLF a LF por fuera, y se guarda con sobrescribir): guardar cambiaría los saltos de todo el
+    // archivo, así que sin `aceptarNormalizar` se responde `cambiado`.
     if (
-      (o.eol === 'mixto' || saltosDe(actual.datos.toString('utf8')) === 'mixto') &&
+      saltosEnDisco !== 'mixto' &&
+      o.eol !== 'mixto' &&
+      saltosEnDisco !== o.eol &&
       o.aceptarNormalizar !== true
     ) {
+      throw this.cambiado();
+    }
+    if ((o.eol === 'mixto' || saltosEnDisco === 'mixto') && o.aceptarNormalizar !== true) {
       throw new ErrorWolf(
         'editor.eol_mixto',
         'El archivo mezcla saltos de línea: confirme normalizarlos para guardar.',
