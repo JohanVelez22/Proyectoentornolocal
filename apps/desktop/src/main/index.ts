@@ -254,10 +254,11 @@ function crearVentana(rutas: Rutas): BrowserWindow {
     if (elegido === 0) e.preventDefault();
     else saliendo = false;
   });
-  // El aviso de «cambios sin guardar» del editor vale mientras viva la página: si se recarga (ya
-  // pasó el `beforeunload`) o el proceso de la ventana muere, el editor deja de existir.
-  v.webContents.on('did-start-navigation', (d) => {
-    if (d.isMainFrame && !d.isSameDocument) editorSinGuardar = false;
+  // El aviso de «cambios sin guardar» del editor vale mientras viva la página: cuando una navegación
+  // del marco principal YA se confirmó (el `beforeunload` pasó y la página nueva reemplazó a la
+  // anterior) el editor dejó de existir. `did-navigate` no se emite si la navegación se cancela.
+  v.webContents.on('did-navigate', () => {
+    editorSinGuardar = false;
   });
   v.webContents.on('render-process-gone', () => {
     editorSinGuardar = false;

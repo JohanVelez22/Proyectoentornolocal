@@ -653,12 +653,12 @@ describe('M-3: el supervisor valida la forma de lo que contesta el trabajador', 
 });
 
 describe('M-6: el aviso de cambios sin guardar se reinicia al recargar o si muere la ventana', () => {
-  it('did-start-navigation (marco principal) y render-process-gone ponen editorSinGuardar a false', async () => {
+  it('did-navigate (navegación confirmada) y render-process-gone ponen editorSinGuardar a false', async () => {
     const { readFileSync } = await import('node:fs');
     const fuente = readFileSync(join(__dirname, '..', 'src', 'main', 'index.ts'), 'utf8');
-    expect(fuente).toMatch(
-      /on\('did-start-navigation', \(d\) => \{\s*if \(d\.isMainFrame && !d\.isSameDocument\) editorSinGuardar = false;/,
-    );
+    expect(fuente).toMatch(/on\('did-navigate', \(\) => \{\s*editorSinGuardar = false;/);
+    // No se reinicia al EMPEZAR la navegación: si el usuario cancela el aviso, el editor sigue vivo.
+    expect(fuente).not.toMatch(/did-start-navigation/);
     expect(fuente).toMatch(/on\('render-process-gone', \(\) => \{\s*editorSinGuardar = false;/);
   });
 });
