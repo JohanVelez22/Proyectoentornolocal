@@ -3612,6 +3612,75 @@ export const fr: Textos = {
         descripcion:
           'Compare deux dossiers : seulement dans l’un, seulement dans l’autre et différents, avec les différences de chaque fichier.',
       },
+      grabarPantalla: {
+        nombre: 'Enregistrer l’écran',
+        descripcion: 'Ouvre l’enregistreur déjà fourni avec votre système.',
+      },
+    },
+    secciones: {
+      codigo: 'Code',
+      red: 'Réseau',
+      seguridad: 'Sécurité',
+      archivos: 'Fichiers et médias',
+      sistema: 'Système',
+    },
+    tarjetas: {
+      comparar: {
+        nombre: 'Comparer',
+        descripcion: 'Textes et dossiers : les différences côte à côte.',
+      },
+      qr: {
+        nombre: 'QR',
+        descripcion:
+          'À partir d’un texte ou d’un lien, ou pour que d’autres rejoignent votre Wi-Fi.',
+      },
+      guias: {
+        nombre: 'Guides',
+        descripcion: 'HTTP et tunnels, avec des exemples et des commandes à copier.',
+      },
+    },
+    pestanas: {
+      diff: 'Textes',
+      diffCarpetas: 'Dossiers',
+      qr: 'QR',
+      qrWifi: 'Wi-Fi',
+      guiaHttp: 'HTTP',
+      guiaTuneles: 'Tunnels',
+    },
+    grabar: {
+      ayuda:
+        'WolfCore Dev n’a pas d’enregistreur propre : il ouvre celui que votre système fournit déjà. La vidéo est enregistrée là où cet outil la range.',
+      abrir: 'Ouvrir l’enregistreur',
+      abierta:
+        'L’Outil Capture d’écran est ouvert. Choisissez la zone de l’écran et cliquez sur Démarrer.',
+      noSePudo:
+        'Impossible d’ouvrir l’Outil Capture d’écran d’ici. Utilisez l’un des raccourcis du guide.',
+      guiaTitulo: 'Comment enregistrer sur votre système',
+      guias: {
+        windows: {
+          titulo: 'Windows',
+          pasos: [
+            'Appuyez sur Win + Maj + R pour enregistrer avec l’Outil Capture d’écran.',
+            'S’il n’est pas à jour, appuyez sur Win + Alt + R pour enregistrer avec la Xbox Game Bar.',
+            'Arrêtez l’enregistrement avec le bouton de la barre qui apparaît en haut.',
+          ],
+        },
+        macos: {
+          titulo: 'macOS',
+          pasos: [
+            'Appuyez sur Cmd + Maj + 5 pour ouvrir la barre de capture.',
+            'Choisissez d’enregistrer tout l’écran ou une partie sélectionnée.',
+            'Cliquez sur Enregistrer puis, pour terminer, sur le bouton d’arrêt de la barre des menus.',
+          ],
+        },
+        linux: {
+          titulo: 'Linux',
+          pasos: [
+            'Chaque bureau fournit son enregistreur : dans GNOME, Ctrl + Alt + Maj + R ; dans KDE, Spectacle.',
+            'Si vous n’en avez aucun, installez OBS Studio ou SimpleScreenRecorder depuis votre gestionnaire de paquets.',
+          ],
+        },
+      },
     },
     errores: {
       jsonVacio: 'Saisissez ou collez un JSON.',
@@ -4214,6 +4283,7 @@ export const fr: Textos = {
     copiado: 'Commande copiée.',
     reparar: 'Réparer',
     ver: 'Voir',
+    verPuertos: 'Voir les ports',
     alternativa: 'Déplacer le port de WolfCore Dev',
     soloInforma: 'WolfCore Dev ne modifie pas cela de lui-même : suivez les indications.',
     dialogo: {

@@ -38,7 +38,20 @@ const VISTAS = [
   ['Sitios / Proyectos', '#/proyectos'],
   ['Bases de datos', '#/bases-de-datos'],
   ['Herramientas', '#/herramientas'],
+  // D38a: PHP dentro de Servicios y Agentes dentro de IA (con su pestaña).
+  ['Servicios / PHP', '#/servicios/php'],
+  ['IA / Agentes', '#/ia/agentes'],
+  ['IA / Nube', '#/ia/nube'],
+  ['IA / Modelos locales', '#/ia/local'],
   ['Ajustes', '#/ajustes'],
+];
+
+/** Rutas viejas que ya no son pantalla: tienen que terminar en su pestaña nueva. */
+const REDIRECCIONES = [
+  ['#/php', '#/servicios/php'],
+  ['#/agentes', '#/ia/agentes'],
+  ['#/ia-local', '#/ia/local'],
+  ['#/sitios', '#/proyectos'],
 ];
 
 /** El ejecutable de la app empaquetada dentro de la carpeta de salida de electron-builder. */
@@ -193,16 +206,36 @@ try {
     } else
       registro(`ok   ${nombre} (${ruta}): ${largo} caracteres, ${medidas.ancho}x${medidas.alto}`);
   }
+  // D38a: la barra lateral tiene 11 entradas más Ajustes (Contenedores queda oculto por defecto).
+  const entradas = await ventana.evaluate(() => document.querySelectorAll('.n-menu-item').length);
+  if (entradas !== 12) falla(`La barra lateral tiene ${entradas} entradas (se esperaban 12).`);
+  else registro('ok   barra lateral: 11 entradas y Ajustes');
+  for (const [viejo, nuevo] of REDIRECCIONES) {
+    await ventana.evaluate((h) => {
+      location.hash = h;
+    }, viejo);
+    await ventana.waitForTimeout(600);
+    const llego = await ventana.evaluate(() => location.hash.split('?')[0]);
+    if (llego !== nuevo)
+      falla(`La ruta vieja ${viejo} terminó en ${llego} (se esperaba ${nuevo}).`);
+    else registro(`ok   redirección ${viejo} -> ${llego}`);
+  }
   // Editor de código (D43): se abre la herramienta para que CodeMirror monte y meta sus estilos con
   // la CSP real de la ventana; cualquier aviso de CSP o error de consola hace fallar la prueba.
   await ventana.evaluate(() => {
     location.hash = '#/herramientas';
   });
-  // Diff de carpetas (D44): solo se abre la herramienta; la consola tiene que seguir limpia.
+  // Diff de carpetas (D44): está en la pestaña «Carpetas» de la tarjeta Comparar (D38a); solo se
+  // abre la herramienta y la consola tiene que seguir limpia.
   try {
-    await ventana.waitForSelector('[data-herramienta="diffCarpetas"]', { timeout: 30_000 });
+    await ventana.waitForSelector('[data-herramienta="comparar"]', { timeout: 30_000 });
+    await ventana.evaluate(() => document.querySelector('[data-herramienta="comparar"]')?.click());
+    await ventana.waitForSelector('.n-drawer .n-tabs-tab[data-name="diffCarpetas"]', {
+      state: 'attached',
+      timeout: 30_000,
+    });
     await ventana.evaluate(() =>
-      document.querySelector('[data-herramienta="diffCarpetas"]')?.click(),
+      document.querySelector('.n-drawer .n-tabs-tab[data-name="diffCarpetas"]')?.click(),
     );
     await ventana.waitForSelector('.n-drawer .herr', { state: 'attached', timeout: 30_000 });
     registro('ok   Diff de carpetas: la herramienta abrió');

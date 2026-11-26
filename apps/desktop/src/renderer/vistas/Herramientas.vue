@@ -15,7 +15,6 @@ import {
   Key,
   LockClosed,
   QrCode,
-  Wifi,
   Search,
   ShieldCheckmark,
   SwapVertical,
@@ -23,17 +22,26 @@ import {
   Pulse,
   Text,
   TrashBin,
+  Videocam,
 } from '@vicons/ionicons5';
-import { NDrawer, NDrawerContent, NEmpty, NIcon, NInput, useDialog } from 'naive-ui';
+import { NDrawer, NDrawerContent, NEmpty, NIcon, NInput, NTab, NTabs, useDialog } from 'naive-ui';
 import { computed, defineAsyncComponent, ref, watch, type Component } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
 import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import { solicitudes } from '../composables/solicitudes';
 import { textos } from '../i18n';
+import {
+  HERRAMIENTAS_ANCHAS,
+  SECCIONES_HERRAMIENTAS,
+  TARJETAS_POR_SECCION,
+  pestanasDe,
+  resolverHerramienta,
+} from '../utilidades/herramientasSecciones';
 
 const t = textos.herramientas;
 type Clave = keyof typeof t.lista;
 
+/** Componente de cada herramienta (las de una pestaña se muestran dentro de su tarjeta). */
 const componentes: Record<Clave, Component> = {
   qr: defineAsyncComponent(() => import('../componentes/herramientas/Qr.vue')),
   json: defineAsyncComponent(() => import('../componentes/herramientas/Json.vue')),
@@ -55,6 +63,9 @@ const componentes: Record<Clave, Component> = {
   comprimir: defineAsyncComponent(() => import('../componentes/herramientas/Comprimir.vue')),
   conversor: defineAsyncComponent(() => import('../componentes/herramientas/Conversor.vue')),
   captura: defineAsyncComponent(() => import('../componentes/herramientas/CapturaPantalla.vue')),
+  grabarPantalla: defineAsyncComponent(
+    () => import('../componentes/herramientas/GrabarPantalla.vue'),
+  ),
   limpiezaDisco: defineAsyncComponent(
     () => import('../componentes/herramientas/LimpiezaDisco.vue'),
   ),
@@ -64,11 +75,12 @@ const componentes: Record<Clave, Component> = {
   diffCarpetas: defineAsyncComponent(() => import('../componentes/herramientas/DiffCarpetas.vue')),
 };
 
-const iconos: Record<Clave, Component> = {
+/** Icono de cada tarjeta (las unificadas, `comparar` y `guias`, tienen el suyo). */
+const iconos: Record<string, Component> = {
   qr: QrCode,
   json: CodeSlash,
   regex: Text,
-  diff: GitCompare,
+  comparar: GitCompare,
   tiempo: Time,
   puertos: SwapVertical,
   bom: Brush,
@@ -80,63 +92,68 @@ const iconos: Record<Clave, Component> = {
   websocket: Pulse,
   buscar: Search,
   contrasenas: LockClosed,
-  qrWifi: Wifi,
   imagenes: Image,
   comprimir: Archive,
   conversor: DocumentAttach,
   captura: Camera,
+  grabarPantalla: Videocam,
   limpiezaDisco: TrashBin,
-  guiaTuneles: Book,
-  guiaHttp: Book,
+  guias: Book,
   editor: Create,
-  diffCarpetas: GitCompare,
 };
 
-/** Paneles que necesitan más ancho (dos columnas o tablas). */
-const ANCHAS: Clave[] = [
-  'diff',
-  'puertos',
-  'regex',
-  'json',
-  'markdown',
-  'buscar',
-  'contrasenas',
-  'limpiezaDisco',
-  'guiaTuneles',
-  'guiaHttp',
-  'editor',
-  'diffCarpetas',
-];
+/** Nombre y descripción de una tarjeta: las unificadas tienen los suyos; el resto, los de su herramienta. */
+function textoDe(tarjeta: string): { nombre: string; descripcion: string } {
+  if (tarjeta in t.tarjetas) return t.tarjetas[tarjeta as keyof typeof t.tarjetas];
+  return t.lista[tarjeta as Clave];
+}
 
 const busqueda = ref('');
-const abierta = ref<Clave | null>(null);
+/** Tarjeta abierta en el cajón y, si tiene pestañas, la herramienta que se ve. */
+const abierta = ref<string | null>(null);
+const herramienta = ref<string | null>(null);
 
 const normalizar = (s: string): string => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
-const lista = computed(() => {
+/** Lo que busca el buscador de una tarjeta: su texto y el de cada herramienta de sus pestañas. */
+function pajar(tarjeta: string): string {
+  const propios = textoDe(tarjeta);
+  const pestanas = pestanasDe(tarjeta).map((p) => t.lista[p as Clave]);
+  return normalizar([propios, ...pestanas].map((x) => `${x.nombre} ${x.descripcion}`).join(' '));
+}
+
+/** Secciones con las tarjetas que coinciden con la búsqueda (las vacías no se muestran). */
+const secciones = computed(() => {
   const q = normalizar(busqueda.value.trim());
-  return (Object.keys(t.lista) as Clave[]).filter((c) => {
-    if (!q) return true;
-    const h = t.lista[c];
-    return normalizar(`${h.nombre} ${h.descripcion}`).includes(q);
-  });
+  return SECCIONES_HERRAMIENTAS.map((id) => ({
+    id,
+    tarjetas: TARJETAS_POR_SECCION[id].filter((c) => !q || pajar(c).includes(q)),
+  })).filter((s) => s.tarjetas.length > 0);
 });
 
-// Pedido de la paleta de comandos o de una alerta de Inicio (p. ej. 'puertos').
+function abrir(tarjeta: string, dentro?: string): void {
+  abierta.value = tarjeta;
+  herramienta.value = dentro ?? pestanasDe(tarjeta)[0] ?? tarjeta;
+}
+
+// Pedido de la paleta de comandos, de `abrirEnEditor` o de una alerta de Inicio (p. ej. 'puertos').
+// Los ids viejos (`diff`, `diffCarpetas`, `qrWifi`, `guiaTuneles`, `guiaHttp`) abren la tarjeta
+// unificada en su pestaña.
 watch(
   () => solicitudes.herramienta,
   (c) => {
     if (!c) return;
     solicitudes.herramienta = null;
-    if (!(c in componentes)) return;
+    const destino = resolverHerramienta(c);
+    if (!destino) return;
     // Cambiar de herramienta desde Ctrl+K con cambios sin guardar en el editor: se pregunta antes.
-    if (abierta.value === 'editor' && c !== 'editor') {
+    if (herramienta.value === 'editor' && destino.herramienta !== 'editor') {
       void confirmarSalida().then((ok) => {
-        if (ok) abierta.value = c as Clave;
+        if (ok) abrir(destino.tarjeta, destino.herramienta);
       });
       return;
     }
-    abierta.value = c as Clave;
+    abrir(destino.tarjeta, destino.herramienta);
   },
   { immediate: true },
 );
@@ -166,10 +183,19 @@ const visible = computed({
   set: (v: boolean) => {
     if (v) return;
     void confirmarSalida().then((ok) => {
-      if (ok) abierta.value = null;
+      if (ok) {
+        abierta.value = null;
+        herramienta.value = null;
+      }
     });
   },
 });
+
+const pestanas = computed(() => (abierta.value ? pestanasDe(abierta.value) : []));
+const ancha = computed(
+  () => !!herramienta.value && HERRAMIENTAS_ANCHAS.includes(herramienta.value),
+);
+const esEditor = computed(() => herramienta.value === 'editor');
 
 onBeforeRouteLeave(() => confirmarSalida());
 </script>
@@ -183,38 +209,60 @@ onBeforeRouteLeave(() => confirmarSalida());
       ></template>
     </NInput>
 
-    <div v-if="lista.length" class="rejilla">
-      <button
-        v-for="c in lista"
-        :key="c"
-        type="button"
-        class="tarjeta"
-        :data-herramienta="c"
-        :aria-label="`${t.abrir}: ${t.lista[c].nombre}`"
-        @click="abierta = c"
+    <template v-if="secciones.length">
+      <section
+        v-for="s in secciones"
+        :key="s.id"
+        class="seccion"
+        :aria-labelledby="`herr-seccion-${s.id}`"
       >
-        <span class="icono"
-          ><NIcon :size="20"><component :is="iconos[c]" /></NIcon
-        ></span>
-        <span class="texto">
-          <strong>{{ t.lista[c].nombre }}</strong>
-          <span>{{ t.lista[c].descripcion }}</span>
-        </span>
-      </button>
-    </div>
+        <h2 :id="`herr-seccion-${s.id}`">{{ t.secciones[s.id] }}</h2>
+        <div class="rejilla">
+          <button
+            v-for="c in s.tarjetas"
+            :key="c"
+            type="button"
+            class="tarjeta"
+            :data-herramienta="c"
+            :aria-label="`${t.abrir}: ${textoDe(c).nombre}`"
+            @click="abrir(c)"
+          >
+            <span class="icono"
+              ><NIcon :size="20"><component :is="iconos[c]" /></NIcon
+            ></span>
+            <span class="texto">
+              <strong>{{ textoDe(c).nombre }}</strong>
+              <span>{{ textoDe(c).descripcion }}</span>
+            </span>
+          </button>
+        </div>
+      </section>
+    </template>
     <NEmpty v-else :description="t.sinResultados" class="vacio">
       <template #icon><IlustracionVacia :icono="Search" pequena /></template>
     </NEmpty>
 
     <NDrawer
       v-model:show="visible"
-      :width="abierta && ANCHAS.includes(abierta) ? 'min(1000px, 92vw)' : 'min(620px, 92vw)'"
+      :width="ancha ? 'min(1000px, 92vw)' : 'min(620px, 92vw)'"
       placement="right"
-      :close-on-esc="abierta !== 'editor'"
-      :mask-closable="abierta !== 'editor'"
+      :close-on-esc="!esEditor"
+      :mask-closable="!esEditor"
     >
-      <NDrawerContent v-if="abierta" :title="t.lista[abierta].nombre" closable>
-        <component :is="componentes[abierta]" />
+      <NDrawerContent v-if="abierta && herramienta" :title="textoDe(abierta).nombre" closable>
+        <NTabs
+          v-if="pestanas.length"
+          v-model:value="herramienta"
+          type="line"
+          size="small"
+          class="pestanas"
+          :aria-label="textoDe(abierta).nombre"
+        >
+          <NTab v-for="p in pestanas" :key="p" :name="p">{{
+            t.pestanas[p as keyof typeof t.pestanas]
+          }}</NTab>
+        </NTabs>
+        <component :is="componentes[herramienta as Clave]" :key="herramienta" />
       </NDrawerContent>
     </NDrawer>
   </div>
@@ -229,10 +277,24 @@ onBeforeRouteLeave(() => confirmarSalida());
   max-width: 420px;
   margin-bottom: 18px;
 }
+.seccion {
+  margin-bottom: 22px;
+}
+.seccion h2 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
 .rejilla {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
+}
+.pestanas {
+  margin-bottom: 12px;
 }
 .tarjeta {
   display: flex;

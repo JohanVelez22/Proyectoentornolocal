@@ -3484,6 +3484,73 @@ export const en: Textos = {
         descripcion:
           'Compares two folders: only in one, only in the other and different, with each file’s diff.',
       },
+      grabarPantalla: {
+        nombre: 'Record screen',
+        descripcion: 'Opens the recorder your system already includes.',
+      },
+    },
+    secciones: {
+      codigo: 'Code',
+      red: 'Network',
+      seguridad: 'Security',
+      archivos: 'Files and media',
+      sistema: 'System',
+    },
+    tarjetas: {
+      comparar: {
+        nombre: 'Compare',
+        descripcion: 'Texts and folders: the differences side by side.',
+      },
+      qr: {
+        nombre: 'QR',
+        descripcion: 'From a text or link, or so others can join your Wi-Fi.',
+      },
+      guias: {
+        nombre: 'Guides',
+        descripcion: 'HTTP and tunnels, with examples and commands to copy.',
+      },
+    },
+    pestanas: {
+      diff: 'Texts',
+      diffCarpetas: 'Folders',
+      qr: 'QR',
+      qrWifi: 'Wi-Fi',
+      guiaHttp: 'HTTP',
+      guiaTuneles: 'Tunnels',
+    },
+    grabar: {
+      ayuda:
+        'WolfCore Dev has no recorder of its own: it opens the one your system already includes. The video is saved wherever that tool saves it.',
+      abrir: 'Open the recorder',
+      abierta: 'Snipping Tool opened. Pick the screen area and press Start.',
+      noSePudo:
+        'Snipping Tool could not be opened from here. Use one of the shortcuts in the guide.',
+      guiaTitulo: 'How to record on your system',
+      guias: {
+        windows: {
+          titulo: 'Windows',
+          pasos: [
+            'Press Win + Shift + R to record with Snipping Tool.',
+            'If your Snipping Tool is not up to date, press Win + Alt + R to record with the Xbox Game Bar.',
+            'Stop the recording with the button on the bar that appears at the top.',
+          ],
+        },
+        macos: {
+          titulo: 'macOS',
+          pasos: [
+            'Press Cmd + Shift + 5 to open the capture bar.',
+            'Choose to record the entire screen or a selected portion.',
+            'Press Record and, to finish, the stop button in the menu bar.',
+          ],
+        },
+        linux: {
+          titulo: 'Linux',
+          pasos: [
+            'Each desktop includes a recorder: in GNOME, Ctrl + Alt + Shift + R; in KDE, Spectacle.',
+            'If you have none, install OBS Studio or SimpleScreenRecorder from your package manager.',
+          ],
+        },
+      },
     },
     errores: {
       jsonVacio: 'Type or paste some JSON.',
@@ -4073,6 +4140,7 @@ export const en: Textos = {
     copiado: 'Command copied.',
     reparar: 'Fix',
     ver: 'View',
+    verPuertos: 'View ports',
     alternativa: 'Move the WolfCore Dev port',
     soloInforma: 'WolfCore Dev does not change this on its own: follow the instructions.',
     dialogo: {

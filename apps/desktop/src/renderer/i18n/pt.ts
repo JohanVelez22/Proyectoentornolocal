@@ -3519,6 +3519,72 @@ export const pt: Textos = {
         descripcion:
           'Compara duas pastas: só em uma, só na outra e diferentes, com o diff de cada arquivo.',
       },
+      grabarPantalla: {
+        nombre: 'Gravar tela',
+        descripcion: 'Abre o gravador que o seu sistema já traz.',
+      },
+    },
+    secciones: {
+      codigo: 'Código',
+      red: 'Rede',
+      seguridad: 'Segurança',
+      archivos: 'Arquivos e mídia',
+      sistema: 'Sistema',
+    },
+    tarjetas: {
+      comparar: {
+        nombre: 'Comparar',
+        descripcion: 'Textos e pastas: as diferenças lado a lado.',
+      },
+      qr: {
+        nombre: 'QR',
+        descripcion: 'De um texto ou link, ou para que outros entrem no seu Wi-Fi.',
+      },
+      guias: {
+        nombre: 'Guias',
+        descripcion: 'HTTP e túneis, com exemplos e comandos para copiar.',
+      },
+    },
+    pestanas: {
+      diff: 'Textos',
+      diffCarpetas: 'Pastas',
+      qr: 'QR',
+      qrWifi: 'Wi-Fi',
+      guiaHttp: 'HTTP',
+      guiaTuneles: 'Túneis',
+    },
+    grabar: {
+      ayuda:
+        'O WolfCore Dev não tem gravador próprio: abre o que o seu sistema já traz. O vídeo fica onde essa ferramenta o salvar.',
+      abrir: 'Abrir o gravador',
+      abierta: 'A Ferramenta de Recorte foi aberta. Escolha a área da tela e clique em Iniciar.',
+      noSePudo: 'Não foi possível abrir a Ferramenta de Recorte daqui. Use um dos atalhos do guia.',
+      guiaTitulo: 'Como gravar no seu sistema',
+      guias: {
+        windows: {
+          titulo: 'Windows',
+          pasos: [
+            'Pressione Win + Shift + R para gravar com a Ferramenta de Recorte.',
+            'Se ela não estiver atualizada, pressione Win + Alt + R para gravar com a Xbox Game Bar.',
+            'Pare a gravação com o botão da barra que aparece no alto.',
+          ],
+        },
+        macos: {
+          titulo: 'macOS',
+          pasos: [
+            'Pressione Cmd + Shift + 5 para abrir a barra de captura.',
+            'Escolha gravar a tela inteira ou uma parte selecionada.',
+            'Clique em Gravar e, para terminar, no botão de parar da barra de menus.',
+          ],
+        },
+        linux: {
+          titulo: 'Linux',
+          pasos: [
+            'Cada ambiente traz seu gravador: no GNOME, Ctrl + Alt + Shift + R; no KDE, o Spectacle.',
+            'Se não tiver nenhum, instale o OBS Studio ou o SimpleScreenRecorder pelo gerenciador de pacotes.',
+          ],
+        },
+      },
     },
     errores: {
       jsonVacio: 'Digite ou cole um JSON.',
@@ -4110,6 +4176,7 @@ export const pt: Textos = {
     copiado: 'Comando copiado.',
     reparar: 'Reparar',
     ver: 'Ver',
+    verPuertos: 'Ver portas',
     alternativa: 'Mover a porta do WolfCore Dev',
     soloInforma: 'O WolfCore Dev não muda isto por conta própria: siga as instruções.',
     dialogo: {

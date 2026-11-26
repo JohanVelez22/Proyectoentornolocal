@@ -2,6 +2,8 @@
 import { Copy, ShieldCheckmark } from '@vicons/ionicons5';
 import { NAlert, NButton, NIcon, NSpace, NTag } from 'naive-ui';
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { solicitudes } from '../composables/solicitudes';
 import type { Hallazgo } from '../../shared/api';
 import { textos } from '../i18n';
 import type { EstadoReparacion } from '../stores/doctor';
@@ -20,6 +22,7 @@ const emit = defineEmits<{
 }>();
 
 const t = textos.doctor;
+const router = useRouter();
 const TONO = { error: 'error', aviso: 'warning', info: 'info' } as const;
 
 const titulo = computed(() =>
@@ -30,6 +33,12 @@ const rep = computed(() => props.hallazgo.reparacion);
 const queHara = computed(() => textoReparacion(rep.value?.codigo));
 /** Hallazgo de un servicio o de un proyecto: "Ver" lleva a su tarjeta. */
 const tieneTarjeta = computed(() => destinoHallazgo(props.hallazgo) !== null);
+/** Conflicto de puertos: la tabla de quién escucha en cada puerto es la herramienta Puertos. */
+const esDePuertos = computed(() => props.hallazgo.revision === 'puertos');
+function verPuertos(): void {
+  solicitudes.herramienta = 'puertos';
+  void router.push({ name: 'herramientas' });
+}
 const aplicando = computed(() => props.reparacion?.estado === 'aplicando');
 const resultado = computed(() => {
   const r = props.reparacion;
@@ -54,8 +63,13 @@ const resultado = computed(() => {
       </NTag>
       <strong>{{ titulo }}</strong>
     </header>
-    <div v-if="tieneTarjeta" class="ver">
-      <NButton quaternary size="small" @click="emit('ver')">{{ t.ver }}</NButton>
+    <div v-if="tieneTarjeta || esDePuertos" class="ver">
+      <NButton v-if="tieneTarjeta" quaternary size="small" @click="emit('ver')">{{
+        t.ver
+      }}</NButton>
+      <NButton v-if="esDePuertos" quaternary size="small" @click="verPuertos">{{
+        t.verPuertos
+      }}</NButton>
     </div>
     <p class="evidencia">
       <span class="etiqueta">{{ t.evidencia }}:</span> <code>{{ hallazgo.evidencia }}</code>
