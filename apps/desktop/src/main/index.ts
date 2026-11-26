@@ -338,6 +338,9 @@ if (errorCarpetaDatos !== null) {
   dialog.showErrorBox('WolfCore Dev', t.carpetaDatosInvalida);
   app.exit(1);
 } else if (!app.requestSingleInstanceLock()) {
+  console.error(
+    'Ya hay otra instancia con esta carpeta de datos (o no se pudo tomar el candado): se cierra.',
+  );
   app.quit();
 } else {
   // Otra instancia: con --iniciar-todo/--detener-todo ejecuta la orden aquí; si no, muestra la

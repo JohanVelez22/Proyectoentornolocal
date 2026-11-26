@@ -84,14 +84,22 @@ async function diagnosticar(puerto, pid) {
       console.error(`diagnóstico ${ruta}: ${e}`);
     }
   }
-  if (process.platform !== 'win32' && pid) {
-    for (const ps of [
-      ['-o', 'pid,stat,pcpu,time,comm', '-p', String(pid)],
-      ['-o', 'pid,stat,pcpu,comm', '--ppid', String(pid)],
-    ]) {
-      const r = spawnSync('ps', ps, { encoding: 'utf8' });
-      console.error(`diagnóstico ps: ${r.stdout}${r.stderr}`);
-    }
+  if (process.platform === 'linux' && pid) {
+    const r = spawnSync(
+      'bash',
+      [
+        '-c',
+        `for t in /proc/${pid}/task/*; do echo "$(cat $t/comm) $(cat $t/wchan 2>&1)"; done | sort | uniq -c`,
+      ],
+      { encoding: 'utf8' },
+    );
+    console.error(`diagnóstico hilos:
+${r.stdout}${r.stderr}`);
+  }
+  if (process.platform === 'darwin' && pid) {
+    const r = spawnSync('sample', [String(pid), '2'], { encoding: 'utf8', timeout: 30_000 });
+    console.error(`diagnóstico sample:
+${(r.stdout ?? '').split(String.fromCharCode(10)).slice(0, 70).join(String.fromCharCode(10))}`);
   }
 }
 

@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   restaurarUrlBaseSincrono,
@@ -73,6 +74,9 @@ export interface AppConRutas {
  */
 export function usarCarpetaDatos(app: AppConRutas, base: string): string {
   const userData = join(base, 'electron');
+  // El candado de instancia única (macOS y Linux guardan ahí un socket y un enlace) se toma en esa
+  // carpeta: mejor que ya exista antes de pedirlo.
+  mkdirSync(userData, { recursive: true });
   app.setPath('userData', userData);
   return userData;
 }
