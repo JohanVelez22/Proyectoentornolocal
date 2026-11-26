@@ -348,6 +348,10 @@ export const pt: Textos = {
         'Não foi possível restringir o arquivo do token ao usuário atual: a CLI não é ativada.',
       'cli.carpeta_ajena':
         'A pasta run/ da pasta de dados pertence a outro usuário: a CLI não é ativada.',
+      'cli.ruta_invalida': 'O caminho do WolfCore Dev tem caracteres que o wolf.cmd não aceita.',
+      'cli.path_aislado':
+        'Com uma pasta de dados de teste (WOLFCORE_DATOS) o PATH do usuário não é alterado.',
+      'cli.sin_cliente': 'Esta versão do WolfCore Dev não traz o cliente wolf (falta compilá-lo).',
       'cli.error': 'Não foi possível concluir o comando: {detalle}',
       'proyectos.carpeta_no_vacia':
         'A pasta do projeto já tem arquivos: escolha outra ou esvazie-a.',
@@ -3088,6 +3092,28 @@ export const pt: Textos = {
       ci3: (sitio: string) => `${sitio}: CodeIgniter`,
       proceso: (sitio: string, proceso: string) => `${sitio}: ${proceso}`,
     },
+  },
+  cli: {
+    titulo: 'Terminal: comando wolf',
+    descripcion:
+      'Gerencie o WolfCore Dev pelo PowerShell, cmd ou Git Bash: wolf status, wolf use php@8.4, wolf share, wolf logs. Só funciona com o app aberto.',
+    activo: 'Disponível no PATH',
+    enPathSinServidor: 'No PATH, servidor desligado',
+    inactivo: 'Não está no PATH',
+    agregarBoton: 'Adicionar wolf ao PATH',
+    quitarBoton: 'Remover wolf do PATH',
+    agregarTitulo: 'Adicionar o wolf ao PATH do usuário?',
+    agregarTexto:
+      'O comando wolf será copiado para a pasta de dados do WolfCore Dev, essa pasta será adicionada ao PATH do seu usuário (uma cópia do PATH original é guardada) e um servidor local será ligado em 127.0.0.1, que só atende o wolf com uma chave que muda a cada início. Publicar um site na internet ou mudar o PHP de todos os terminais é sempre confirmado também na janela do app. Você pode removê-lo quando quiser.',
+    agregar: 'Adicionar',
+    quitarTitulo: 'Remover o wolf do PATH?',
+    quitarTexto:
+      'A pasta do wolf será removida do PATH do seu usuário, o servidor local será desligado e o comando copiado será apagado. Os terminais abertos não mudam.',
+    quitar: 'Remover',
+    listoTitulo: 'Comando wolf atualizado',
+    ayuda: 'Abra um terminal novo depois de adicioná-lo. O servidor só escuta em 127.0.0.1.',
+    aislado: 'Com uma pasta de dados de teste (WOLFCORE_DATOS) o PATH não é alterado.',
+    errorCargar: (detalle: string) => `Não foi possível ler o estado do wolf: ${detalle}`,
   },
   mcp: {
     titulo: 'Servidor MCP',

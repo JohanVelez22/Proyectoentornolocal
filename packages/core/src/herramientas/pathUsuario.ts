@@ -10,6 +10,8 @@ export const AVISO_TERMINAL_NUEVA = 'Abra una terminal nueva para ver el cambio.
 
 export interface DepsPathUsuario {
   rutas: Rutas;
+  /** La carpeta que se agrega y se quita (por defecto `tools/bin`; la CLI usa `bin/cli`). */
+  entrada?: string;
   /** Acceso al PATH del usuario (`Plataforma.pathUsuario`). */
   acceso?: AccesoPathUsuario;
   /** Sin `acceso`: el de Windows con este ejecutor (compatibilidad con las pruebas anteriores). */
@@ -26,7 +28,7 @@ export const respaldoPathUsuario = (rutas: Rutas): string =>
   path.join(rutas.base, 'etc', 'path-usuario.respaldo.txt');
 
 /**
- * Agrega o quita tools/bin del PATH del USUARIO sin tocar las demás entradas. La lectura y la
+ * Agrega o quita una carpeta propia (por defecto tools/bin) del PATH del USUARIO sin tocar las demás entradas. La lectura y la
  * escritura (con respaldo del valor original) son de la plataforma.
  */
 export class PathUsuario {
@@ -42,7 +44,7 @@ export class PathUsuario {
   }
 
   private entrada(): string {
-    return this.d.rutas.herramientas('bin');
+    return this.d.entrada ?? this.d.rutas.herramientas('bin');
   }
 
   /** Valor actual tal cual ('' si el usuario no tiene Path); falla si no se puede leer. */

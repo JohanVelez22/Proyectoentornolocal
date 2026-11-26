@@ -339,6 +339,10 @@ export const en: Textos = {
         'The token file could not be restricted to the current user: the CLI is not enabled.',
       'cli.carpeta_ajena':
         'The run/ folder of the data folder belongs to another user: the CLI is not enabled.',
+      'cli.ruta_invalida': 'The WolfCore Dev path has characters that wolf.cmd cannot hold.',
+      'cli.path_aislado': 'With a test data folder (WOLFCORE_DATOS) the user PATH is not changed.',
+      'cli.sin_cliente':
+        'This build of WolfCore Dev does not include the wolf client (it still has to be built).',
       'cli.error': 'The command could not be completed: {detalle}',
       'proyectos.carpeta_no_vacia':
         'The project folder already has files: choose another one or empty it.',
@@ -3056,6 +3060,28 @@ export const en: Textos = {
       ci3: (sitio: string) => `${sitio}: CodeIgniter`,
       proceso: (sitio: string, proceso: string) => `${sitio}: ${proceso}`,
     },
+  },
+  cli: {
+    titulo: 'Terminal: wolf command',
+    descripcion:
+      'Manage WolfCore Dev from PowerShell, cmd or Git Bash: wolf status, wolf use php@8.4, wolf share, wolf logs. It only works while the app is open.',
+    activo: 'Available in the PATH',
+    enPathSinServidor: 'In the PATH, server off',
+    inactivo: 'Not in the PATH',
+    agregarBoton: 'Add wolf to the PATH',
+    quitarBoton: 'Remove wolf from the PATH',
+    agregarTitulo: 'Add wolf to the user PATH?',
+    agregarTexto:
+      'The wolf command will be copied to the WolfCore Dev data folder, that folder will be added to your user PATH (a copy of the original PATH is kept) and a local server will start on 127.0.0.1 that only answers wolf, with a key that changes on every start. Publishing a site on the internet or changing the PHP of all terminals is always confirmed in the app window as well. You can remove it at any time.',
+    agregar: 'Add',
+    quitarTitulo: 'Remove wolf from the PATH?',
+    quitarTexto:
+      'The wolf folder will be removed from your user PATH, the local server will stop and the copied command will be deleted. Terminals that are already open do not change.',
+    quitar: 'Remove',
+    listoTitulo: 'wolf command updated',
+    ayuda: 'Open a new terminal after adding it. The server only listens on 127.0.0.1.',
+    aislado: 'With a test data folder (WOLFCORE_DATOS) the PATH is not touched.',
+    errorCargar: (detalle: string) => `Could not read the wolf status: ${detalle}`,
   },
   mcp: {
     titulo: 'MCP server',

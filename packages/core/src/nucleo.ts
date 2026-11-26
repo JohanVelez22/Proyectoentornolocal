@@ -151,6 +151,12 @@ import type { OperacionesCli, SolicitudCli } from './cli/ordenes';
 import { ConfirmadorCli } from './cli/confirmador';
 import { ServidorCli } from './cli/servidor';
 import {
+  clienteCliInstalado,
+  instalarClienteCli,
+  quitarClienteCli,
+  type OrigenClienteCli,
+} from './herramientas/clienteCli';
+import {
   VisorErrores,
   type ErrorAgrupado,
   type FiltroErrores,
@@ -358,6 +364,11 @@ export interface OpcionesNucleo {
      */
     confirmar?: (s: SolicitudCli) => Promise<boolean>;
     plazoConfirmacionMs?: number;
+    /**
+     * De dónde sale el cliente `wolf` (D32): al agregarlo al PATH se copia a `bin/cli/` con la
+     * ruta real de la app. Sin esto, agregar `wolf` al PATH falla con `cli.sin_cliente`.
+     */
+    cliente?: OrigenClienteCli;
   };
 }
 
@@ -649,6 +660,8 @@ export class Nucleo {
   readonly depuracion: ReceptorDumps;
   /** Servidor de órdenes de la CLI `wolf` (D31); solo escucha si `OpcionesNucleo.servidorCli`. */
   readonly cli: ServidorCli;
+  /** El PATH del usuario con la carpeta del cliente (`bin/cli`), aparte de la de PHP (`tools/bin`). */
+  readonly pathCli: PathUsuario;
   private opcionesCli: NonNullable<OpcionesNucleo['servidorCli']> = { version: '0.0.0' };
   private readonly confirmadorCli = new ConfirmadorCli({
     preguntar: (s) => this.opcionesCli.confirmar?.(s) ?? Promise.resolve(false),
@@ -859,6 +872,11 @@ export class Nucleo {
       puerto: async () => (await this.config.leer()).depuracion.puerto,
       emitir: (d) => this.eventos.emit('dump:nuevo', d),
       restringir: (ruta) => this.plataforma.restringirAlUsuario(ruta),
+    });
+    this.pathCli = new PathUsuario({
+      rutas: this.rutas,
+      entrada: this.rutas.cliCliente(),
+      acceso: this.plataforma.pathUsuario({ respaldo: respaldoPathUsuario(this.rutas) }),
     });
     this.cli = new ServidorCli({
       rutas: this.rutas,
@@ -1740,6 +1758,12 @@ export class Nucleo {
           nucleo.avisosPendientes.push(`No se pudo iniciar el servidor de la CLI: ${mensajeDe(e)}`);
         });
       }
+    }
+    // Una actualización puede cambiar la ruta de la app: `wolf.cmd` se reescribe si ya estaba instalado.
+    if (o.servidorCli?.cliente && !nucleo.aislado && (await clienteCliInstalado(rutas))) {
+      await instalarClienteCli(rutas, o.servidorCli.cliente).catch((e: unknown) => {
+        nucleo.avisosPendientes.push(`No se pudo actualizar el cliente wolf: ${mensajeDe(e)}`);
+      });
     }
     // Apagada (o sin servidor): ningún `cli.json` de una sesión anterior se queda con un token vivo.
     if (!nucleo.cli.estado().activo)
@@ -3068,6 +3092,59 @@ export class Nucleo {
       await rm(this.rutas.cliJson(), { force: true }).catch(() => undefined);
     }
     return this.estadoCli();
+  }
+
+  /** El botón "Agregar wolf al PATH" de Ajustes: ¿está en el PATH, instalado y encendido? */
+  async estadoCliPath(): Promise<{
+    enPath: boolean;
+    instalado: boolean;
+    activo: boolean;
+    ajuste: boolean;
+    aislado: boolean;
+  }> {
+    const e = await this.estadoCli();
+    return {
+      enPath: await this.pathCli.estado(),
+      instalado: await clienteCliInstalado(this.rutas),
+      ...e,
+      aislado: this.aislado,
+    };
+  }
+
+  /**
+   * Agrega (o quita) `wolf` del PATH del usuario (la interfaz ya confirmó). Agregar copia el
+   * cliente a `bin/cli/`, agrega esa carpeta con copia del PATH original y enciende `cli.activo`;
+   * quitar la saca del PATH, apaga `cli.activo` (sin servidor ni `cli.json`) y borra el cliente.
+   * Con otra carpeta de datos (`WOLFCORE_DATOS`) no se toca nada: ni el PATH ni la CLI.
+   */
+  async cambiarCliPath(activar: boolean): Promise<{ aviso: string }> {
+    if (this.aislado) {
+      throw new ErrorWolf(
+        'cli.path_aislado',
+        'Con una carpeta de datos de prueba (WOLFCORE_DATOS) no se cambia el PATH del usuario.',
+      );
+    }
+    if (activar) {
+      const cliente = this.opcionesCli.cliente;
+      if (!cliente || !existsSync(cliente.script)) {
+        throw new ErrorWolf('cli.sin_cliente', 'Esta versión no trae el cliente wolf.');
+      }
+      // Primero lo que puede fallar sin dejar rastro (sin proteger el token, la CLI no se activa).
+      await this.activarCli(true);
+      try {
+        await instalarClienteCli(this.rutas, cliente);
+        return await this.pathCli.agregar();
+      } catch (e) {
+        await this.activarCli(false).catch(() => undefined);
+        await quitarClienteCli(this.rutas);
+        throw e;
+      }
+    }
+    // Si el PATH no se puede cambiar, nada se apaga: el usuario sigue con la CLI como estaba.
+    const r = await this.pathCli.quitar();
+    await this.activarCli(false);
+    await quitarClienteCli(this.rutas);
+    return r;
   }
 
   // ---- Proyectos: detección, wolfcore.yml y recetas ----

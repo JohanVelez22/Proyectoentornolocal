@@ -141,6 +141,13 @@ export class Rutas {
   cliJson(): string {
     return path.join(this.base, 'run', 'cli.json');
   }
+  /**
+   * Carpeta del cliente `wolf` (D32): `bin/cli/wolf.cmd` y `wolf.cjs`. Es la entrada que se agrega
+   * al PATH del usuario (aparte de `tools/bin`, la de PHP y Composer).
+   */
+  cliCliente(): string {
+    return path.join(this.base, 'bin', 'cli');
+  }
   /** Credenciales de los servicios propios (fuera de config.json). */
   credenciales(): string {
     return path.join(this.base, 'etc', 'credenciales.json');

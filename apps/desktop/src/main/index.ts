@@ -349,6 +349,13 @@ if (errorCarpetaDatos !== null) {
         ...(carpetaDatos ? { base: carpetaDatos, aislado: true } : {}),
         servidorCli: {
           version: app.getVersion(),
+          // El cliente `wolf` compilado (out/cli/wolf.cjs, dentro del paquete) y el ejecutable que lo
+          // corre como Node. Sin empaquetar, `wolf.cmd` también recibe la carpeta de la app (`--abrir`).
+          cliente: {
+            exe: process.execPath,
+            script: join(app.getAppPath(), 'out', 'cli', 'wolf.cjs'),
+            ...(app.isPackaged ? {} : { carpetaApp: app.getAppPath() }),
+          },
           abrirUrl: (url) => shell.openExternal(urlHttp(url)),
           // Publicar un sitio o cambiar el PHP global lo decide esta ventana, nunca la terminal.
           confirmar: crearConfirmarCli({

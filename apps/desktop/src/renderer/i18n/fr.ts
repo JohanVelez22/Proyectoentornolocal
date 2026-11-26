@@ -357,6 +357,12 @@ export const fr: Textos = {
         'Impossible de restreindre le fichier du jeton à l’utilisateur actuel : la CLI n’est pas activée.',
       'cli.carpeta_ajena':
         'Le dossier run/ du dossier de données appartient à un autre utilisateur : la CLI n’est pas activée.',
+      'cli.ruta_invalida':
+        'Le chemin de WolfCore Dev contient des caractères que wolf.cmd n’accepte pas.',
+      'cli.path_aislado':
+        'Avec un dossier de données de test (WOLFCORE_DATOS), le PATH de l’utilisateur n’est pas modifié.',
+      'cli.sin_cliente':
+        'Cette version de WolfCore Dev n’inclut pas le client wolf (il reste à le compiler).',
       'cli.error': 'La commande n’a pas pu être terminée : {detalle}',
       'proyectos.carpeta_no_vacia':
         'Le dossier du projet contient déjà des fichiers : choisissez-en un autre ou videz-le.',
@@ -3158,6 +3164,29 @@ export const fr: Textos = {
       ci3: (sitio: string) => `${sitio} : CodeIgniter`,
       proceso: (sitio: string, proceso: string) => `${sitio} : ${proceso}`,
     },
+  },
+  cli: {
+    titulo: 'Terminal : commande wolf',
+    descripcion:
+      'Pilotez WolfCore Dev depuis PowerShell, cmd ou Git Bash : wolf status, wolf use php@8.4, wolf share, wolf logs. Cela ne fonctionne que si l’application est ouverte.',
+    activo: 'Disponible dans le PATH',
+    enPathSinServidor: 'Dans le PATH, serveur arrêté',
+    inactivo: 'Pas dans le PATH',
+    agregarBoton: 'Ajouter wolf au PATH',
+    quitarBoton: 'Retirer wolf du PATH',
+    agregarTitulo: 'Ajouter wolf au PATH de l’utilisateur ?',
+    agregarTexto:
+      'La commande wolf sera copiée dans le dossier de données de WolfCore Dev, ce dossier sera ajouté au PATH de votre utilisateur (une copie du PATH d’origine est conservée) et un serveur local démarrera sur 127.0.0.1, qui ne répond qu’à wolf avec une clé qui change à chaque démarrage. Publier un site sur internet ou changer le PHP de tous les terminaux est toujours confirmé aussi dans la fenêtre de l’application. Vous pouvez le retirer à tout moment.',
+    agregar: 'Ajouter',
+    quitarTitulo: 'Retirer wolf du PATH ?',
+    quitarTexto:
+      'Le dossier de wolf sera retiré du PATH de votre utilisateur, le serveur local sera arrêté et la commande copiée sera supprimée. Les terminaux déjà ouverts ne changent pas.',
+    quitar: 'Retirer',
+    listoTitulo: 'Commande wolf mise à jour',
+    ayuda:
+      'Ouvrez un nouveau terminal après l’avoir ajouté. Le serveur n’écoute que sur 127.0.0.1.',
+    aislado: 'Avec un dossier de données de test (WOLFCORE_DATOS), le PATH n’est pas modifié.',
+    errorCargar: (detalle: string) => `Impossible de lire l’état de wolf : ${detalle}`,
   },
   mcp: {
     titulo: 'Serveur MCP',

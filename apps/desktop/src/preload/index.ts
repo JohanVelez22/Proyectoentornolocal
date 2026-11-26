@@ -177,6 +177,10 @@ const api: ApiEntorno = {
     estado: () => invocar('path.estado'),
     cambiar: (activar) => invocar('path.cambiar', activar),
   },
+  cli: {
+    estado: () => invocar('cli.estado'),
+    cambiarPath: (agregar) => invocar('cli.cambiarPath', agregar),
+  },
   adminer: {
     instalar: () => invocar('adminer.instalar'),
     disponibilidad: () => invocar('adminer.disponibilidad'),

@@ -1140,6 +1140,8 @@ const TABLA: Record<RutaIpc, Manejador> = {
     n.cambiarTerminalPorDefecto(idTerminal(terminal)),
   'path.estado': (n) => n.estadoPathUsuario(),
   'path.cambiar': (n, _s, activar) => n.cambiarPathUsuario(booleano(activar, 'activar')),
+  'cli.estado': (n) => n.estadoCliPath(),
+  'cli.cambiarPath': (n, _s, agregar) => n.cambiarCliPath(booleano(agregar, 'agregar')),
   'adminer.instalar': (n) => n.instalarAdminer(),
   'adminer.disponibilidad': (n) => n.disponibilidadAdminer(),
   'adminer.proyecto': (n, _s, id) => n.adminerProyecto(idNoVacio(id)),

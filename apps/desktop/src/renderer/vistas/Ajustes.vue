@@ -31,6 +31,7 @@ import { api } from '../api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import SeccionApariencia from '../componentes/SeccionApariencia.vue';
 import SeccionAvisos from '../componentes/SeccionAvisos.vue';
+import SeccionCli from '../componentes/SeccionCli.vue';
 import SeccionMcp from '../componentes/SeccionMcp.vue';
 import SeccionPerfiles from '../componentes/SeccionPerfiles.vue';
 import { mensajeDeError, useAccion } from '../composables/useAccion';
@@ -567,6 +568,8 @@ async function aplicarPath(activar: boolean): Promise<void> {
         </NFormItem>
       </NForm>
     </NCard>
+
+    <SeccionCli />
 
     <SeccionMcp />
 

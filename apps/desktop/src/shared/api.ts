@@ -466,6 +466,18 @@ export type {
 
 export type DatosSitio = Omit<Sitio, 'id'>;
 
+/** El cliente `wolf` (D32): su carpeta en el PATH, si está copiado y si el servidor de órdenes escucha. */
+export interface EstadoCliPath {
+  enPath: boolean;
+  instalado: boolean;
+  /** El servidor de órdenes escucha ahora. */
+  activo: boolean;
+  /** El ajuste `cli.activo`. */
+  ajuste: boolean;
+  /** Carpeta de datos de prueba (`WOLFCORE_DATOS`): el PATH no se toca. */
+  aislado: boolean;
+}
+
 export interface ApiSistema {
   /** Abre el selector de carpetas; devuelve null si se cancela. */
   elegirCarpeta(): Promise<string | null>;
@@ -804,6 +816,11 @@ export interface ApiEntorno {
   path: {
     estado(): Promise<boolean>;
     cambiar(activar: boolean): Promise<{ aviso: string }>;
+  };
+  /** El cliente `wolf` de la terminal (D32): su entrada en el PATH y el servidor de órdenes. */
+  cli: {
+    estado(): Promise<EstadoCliPath>;
+    cambiarPath(agregar: boolean): Promise<{ aviso: string }>;
   };
   adminer: {
     instalar(): Promise<void>;
@@ -1550,6 +1567,8 @@ export const RUTAS_IPC = [
   'terminal.cambiarPorDefecto',
   'path.estado',
   'path.cambiar',
+  'cli.estado',
+  'cli.cambiarPath',
   'adminer.instalar',
   'adminer.disponibilidad',
   'adminer.url',

@@ -238,6 +238,9 @@ export const PARAMETROS_ERROR = {
   'cli.fuente_no_existe': [],
   'cli.token_no_protegido': [],
   'cli.carpeta_ajena': [],
+  'cli.ruta_invalida': [],
+  'cli.path_aislado': [],
+  'cli.sin_cliente': [],
   'cli.error': ['detalle'],
   // proyectos nuevos (D12)
   'proyectos.carpeta_no_vacia': [],
