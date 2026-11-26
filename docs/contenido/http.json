@@ -1,0 +1,1049 @@
+{
+  "metodos": [
+    {
+      "nombre": "GET",
+      "seguro": true,
+      "idempotente": true,
+      "es": {
+        "resumen": "Pide datos al servidor sin modificar nada.",
+        "explicacion": "Se usa para leer páginas, imágenes o listas de registros. Es seguro (no cambia el estado del servidor) e idempotente (repetirlo varias veces produce el mismo resultado sin efectos secundarios).",
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/api/productos?categoria=libros\n\nRespuesta:\nHTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"items\":[{\"id\":1,\"titulo\":\"Guía local\"}]}"
+      },
+      "en": {
+        "resumen": "Requests data from the server without changing anything.",
+        "explicacion": "Used to read pages, images, or lists of records. It is safe (it does not alter server state) and idempotent (repeating it produces the same result with no side effects).",
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/productos?categoria=libros\n\nResponse:\nHTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"items\":[{\"id\":1,\"titulo\":\"Local guide\"}]}"
+      }
+    },
+    {
+      "nombre": "POST",
+      "seguro": false,
+      "idempotente": false,
+      "es": {
+        "resumen": "Envía datos para crear un recurso nuevo o disparar una acción.",
+        "explicacion": "Se usa al enviar formularios, iniciar sesión o crear registros. No es seguro porque modifica datos en el servidor, y no es idempotente porque enviarlo dos veces puede crear dos registros repetidos.",
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/api/tareas \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"titulo\":\"Revisar respaldo\",\"usuario\":\"demo\"}'\n\nRespuesta:\nHTTP/1.1 201 Created\nLocation: /api/tareas/42\n\n{\"id\":42,\"titulo\":\"Revisar respaldo\"}"
+      },
+      "en": {
+        "resumen": "Sends data to create a new resource or trigger an action.",
+        "explicacion": "Used when submitting forms, signing in, or creating records. It is not safe because it modifies server data, and not idempotent because sending it twice can create duplicate records.",
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/tareas \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"titulo\":\"Check backup\",\"usuario\":\"demo\"}'\n\nResponse:\nHTTP/1.1 201 Created\nLocation: /api/tareas/42\n\n{\"id\":42,\"titulo\":\"Check backup\"}"
+      }
+    },
+    {
+      "nombre": "PUT",
+      "seguro": false,
+      "idempotente": true,
+      "es": {
+        "resumen": "Reemplaza por completo un recurso existente (o lo crea en esa dirección).",
+        "explicacion": "A diferencia de PATCH (que solo cambia algunos campos), PUT espera el objeto completo y sustituye todo lo anterior. No es seguro porque modifica datos, pero sí es idempotente: enviar el mismo PUT una o diez veces deja el recurso exactamente igual.",
+        "ejemplo": "Petición:\ncurl -i -X PUT http://mi-sitio.test/api/usuarios/7 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":true}'\n\nRespuesta:\nHTTP/1.1 200 OK\n\n{\"id\":7,\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":true}"
+      },
+      "en": {
+        "resumen": "Completely replaces an existing resource (or creates it at that URL).",
+        "explicacion": "Unlike PATCH (which only updates selected fields), PUT expects the full object and replaces the previous version. It is not safe because it modifies data, but it is idempotent: sending the same PUT once or ten times leaves the resource in the exact same state.",
+        "ejemplo": "Request:\ncurl -i -X PUT http://mi-sitio.test/api/usuarios/7 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":true}'\n\nResponse:\nHTTP/1.1 200 OK\n\n{\"id\":7,\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":true}"
+      }
+    },
+    {
+      "nombre": "PATCH",
+      "seguro": false,
+      "idempotente": false,
+      "es": {
+        "resumen": "Aplica un cambio parcial a un recurso sin reenviarlo entero.",
+        "explicacion": "A diferencia de PUT (que reemplaza todo el objeto), PATCH solo envía los campos que quieres cambiar. No es seguro porque modifica datos, y por estándar no se garantiza que sea idempotente (por ejemplo, una operación como sumar +1 a un contador cambia el resultado cada vez que se repite).",
+        "ejemplo": "Petición:\ncurl -i -X PATCH http://mi-sitio.test/api/usuarios/7 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"activo\":false}'\n\nRespuesta:\nHTTP/1.1 200 OK\n\n{\"id\":7,\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":false}"
+      },
+      "en": {
+        "resumen": "Applies a partial update to a resource without resending the whole object.",
+        "explicacion": "Unlike PUT (which replaces the whole object), PATCH sends only the fields you want to change. It is not safe because it modifies data, and by specification it is not guaranteed to be idempotent (for example, an operation that adds +1 to a counter changes the result on each repeat).",
+        "ejemplo": "Request:\ncurl -i -X PATCH http://mi-sitio.test/api/usuarios/7 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"activo\":false}'\n\nResponse:\nHTTP/1.1 200 OK\n\n{\"id\":7,\"nombre\":\"demo\",\"rol\":\"editor\",\"activo\":false}"
+      }
+    },
+    {
+      "nombre": "DELETE",
+      "seguro": false,
+      "idempotente": true,
+      "es": {
+        "resumen": "Elimina el recurso indicado en la dirección.",
+        "explicacion": "No es seguro porque borra información en el servidor, pero sí es idempotente: borrar un recurso ya eliminado deja el servidor en el mismo estado final (el recurso sigue sin existir, aunque el segundo intento devuelva 404).",
+        "ejemplo": "Petición:\ncurl -i -X DELETE http://mi-sitio.test/api/tareas/42\n\nRespuesta:\nHTTP/1.1 204 No Content"
+      },
+      "en": {
+        "resumen": "Deletes the resource at the given URL.",
+        "explicacion": "It is not safe because it removes data on the server, but it is idempotent: deleting an already deleted resource leaves the server in the same final state (the resource still does not exist, even if the second attempt returns 404).",
+        "ejemplo": "Request:\ncurl -i -X DELETE http://mi-sitio.test/api/tareas/42\n\nResponse:\nHTTP/1.1 204 No Content"
+      }
+    },
+    {
+      "nombre": "HEAD",
+      "seguro": true,
+      "idempotente": true,
+      "es": {
+        "resumen": "Igual que GET, pero solo devuelve las cabeceras sin el cuerpo.",
+        "explicacion": "Sirve para comprobar si un archivo existe, cuánto pesa o cuándo cambió sin descargarlo entero. Es seguro e idempotente porque únicamente consulta metadatos.",
+        "ejemplo": "Petición:\ncurl -I http://mi-sitio.test/descargas/manual.pdf\n\nRespuesta:\nHTTP/1.1 200 OK\nContent-Type: application/pdf\nContent-Length: 245120"
+      },
+      "en": {
+        "resumen": "Just like GET, but returns only headers with no response body.",
+        "explicacion": "Useful to check whether a file exists, how large it is, or when it last changed without downloading the whole body. It is safe and idempotent because it only reads metadata.",
+        "ejemplo": "Request:\ncurl -I http://mi-sitio.test/descargas/manual.pdf\n\nResponse:\nHTTP/1.1 200 OK\nContent-Type: application/pdf\nContent-Length: 245120"
+      }
+    },
+    {
+      "nombre": "OPTIONS",
+      "seguro": true,
+      "idempotente": true,
+      "es": {
+        "resumen": "Pregunta al servidor qué métodos y permisos admite una ruta.",
+        "explicacion": "Los navegadores lo envían automáticamente antes de ciertas peticiones entre dominios distintos (preflight de CORS) para confirmar qué métodos y cabeceras permite el servidor. Es seguro e idempotente porque no cambia nada.",
+        "ejemplo": "Petición:\ncurl -i -X OPTIONS http://mi-sitio.test/api/tareas \\\n  -H \"Origin: http://app.ejemplo.com\"\n\nRespuesta:\nHTTP/1.1 204 No Content\nAllow: GET, POST, OPTIONS\nAccess-Control-Allow-Methods: GET, POST, OPTIONS"
+      },
+      "en": {
+        "resumen": "Asks the server which HTTP methods and permissions a URL supports.",
+        "explicacion": "Browsers send it automatically before certain cross-origin requests (CORS preflight) to verify which methods and headers the server allows. It is safe and idempotent because it changes nothing.",
+        "ejemplo": "Request:\ncurl -i -X OPTIONS http://mi-sitio.test/api/tareas \\\n  -H \"Origin: http://app.ejemplo.com\"\n\nResponse:\nHTTP/1.1 204 No Content\nAllow: GET, POST, OPTIONS\nAccess-Control-Allow-Methods: GET, POST, OPTIONS"
+      }
+    }
+  ],
+  "codigos": [
+    {
+      "codigo": 100,
+      "nombre": "Continue",
+      "familia": "1xx",
+      "es": {
+        "resumen": "El servidor recibió las cabeceras y el cliente puede enviar el cuerpo.",
+        "explicacion": "Es una respuesta intermedia usada al subir archivos grandes: el cliente avisa con Expect: 100-continue antes de mandar los datos para ahorrar ancho de banda si el servidor fuera a rechazar la petición.",
+        "causasComunes": [
+          "Subidas grandes con curl o clientes HTTP que envían la cabecera Expect: 100-continue."
+        ],
+        "comoSolucionar": [
+          "No es un error; el cliente continúa automáticamente enviando el cuerpo de la petición."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/api/archivos -H \"Expect: 100-continue\" -F \"file=@demo.zip\"\n\nRespuesta:\nHTTP/1.1 100 Continue\n\nHTTP/1.1 201 Created"
+      },
+      "en": {
+        "resumen": "The server received the headers and the client may send the request body.",
+        "explicacion": "An interim response used for large uploads: the client sends Expect: 100-continue before uploading data so it avoids wasting bandwidth if the server would reject the request.",
+        "causasComunes": [
+          "Large uploads via curl or HTTP clients that send an Expect: 100-continue header."
+        ],
+        "comoSolucionar": [
+          "Not an error; the client automatically proceeds to send the request body."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/archivos -H \"Expect: 100-continue\" -F \"file=@demo.zip\"\n\nResponse:\nHTTP/1.1 100 Continue\n\nHTTP/1.1 201 Created"
+      }
+    },
+    {
+      "codigo": 101,
+      "nombre": "Switching Protocols",
+      "familia": "1xx",
+      "es": {
+        "resumen": "El servidor acepta cambiar a otro protocolo, como WebSocket.",
+        "explicacion": "Ocurre cuando el navegador pide actualizar una conexión HTTP normal a WebSocket (por ejemplo en chats en vivo o recarga en caliente de Vite).",
+        "causasComunes": [
+          "Conexión a un servidor WebSocket (Vite HMR, Laravel Reverb, FastAPI WebSockets)."
+        ],
+        "comoSolucionar": [
+          "No es un error; indica que el cambio de protocolo se completó correctamente."
+        ],
+        "ejemplo": "Petición:\nGET /ws HTTP/1.1\nHost: mi-sitio.test\nUpgrade: websocket\nConnection: Upgrade\n\nRespuesta:\nHTTP/1.1 101 Switching Protocols\nUpgrade: websocket\nConnection: Upgrade"
+      },
+      "en": {
+        "resumen": "The server agrees to switch to another protocol, such as WebSocket.",
+        "explicacion": "Occurs when the browser asks to upgrade a standard HTTP connection to WebSocket (for example in live chats or Vite hot reload).",
+        "causasComunes": [
+          "Connecting to a WebSocket endpoint (Vite HMR, Laravel Reverb, FastAPI WebSockets)."
+        ],
+        "comoSolucionar": [
+          "Not an error; confirms the protocol upgrade succeeded."
+        ],
+        "ejemplo": "Request:\nGET /ws HTTP/1.1\nHost: mi-sitio.test\nUpgrade: websocket\nConnection: Upgrade\n\nResponse:\nHTTP/1.1 101 Switching Protocols\nUpgrade: websocket\nConnection: Upgrade"
+      }
+    },
+    {
+      "codigo": 200,
+      "nombre": "OK",
+      "familia": "2xx",
+      "es": {
+        "resumen": "La petición se completó con éxito.",
+        "explicacion": "Es la respuesta más habitual cuando todo sale bien: el servidor entrega la página HTML, el JSON o el archivo solicitado.",
+        "causasComunes": [
+          "Lectura o actualización correcta de un recurso."
+        ],
+        "comoSolucionar": [
+          "No requiere acción; la operación fue exitosa."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/api/salud\n\nRespuesta:\nHTTP/1.1 200 OK\n\n{\"estado\":\"ok\"}"
+      },
+      "en": {
+        "resumen": "The request succeeded.",
+        "explicacion": "The most common success response: the server returns the requested HTML page, JSON payload, or file.",
+        "causasComunes": [
+          "Successful read or update of a resource."
+        ],
+        "comoSolucionar": [
+          "No action needed; the request succeeded."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/salud\n\nResponse:\nHTTP/1.1 200 OK\n\n{\"estado\":\"ok\"}"
+      }
+    },
+    {
+      "codigo": 201,
+      "nombre": "Created",
+      "familia": "2xx",
+      "es": {
+        "resumen": "Se creó un recurso nuevo correctamente.",
+        "explicacion": "Suele devolverse tras un POST exitoso en una API REST y a menudo incluye la cabecera Location con la dirección del nuevo registro.",
+        "causasComunes": [
+          "Creación de un usuario, pedido o registro mediante POST."
+        ],
+        "comoSolucionar": [
+          "No requiere acción; comprueba el cuerpo o la cabecera Location para obtener el ID creado."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: application/json\" -d '{\"texto\":\"Hola\"}'\n\nRespuesta:\nHTTP/1.1 201 Created\nLocation: /api/notas/15\n\n{\"id\":15,\"texto\":\"Hola\"}"
+      },
+      "en": {
+        "resumen": "A new resource was created successfully.",
+        "explicacion": "Typically returned after a successful POST in a REST API and often includes a Location header pointing to the newly created record.",
+        "causasComunes": [
+          "Creating a user, order, or record via POST."
+        ],
+        "comoSolucionar": [
+          "No action needed; read the response body or Location header for the new ID."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: application/json\" -d '{\"texto\":\"Hello\"}'\n\nResponse:\nHTTP/1.1 201 Created\nLocation: /api/notas/15\n\n{\"id\":15,\"texto\":\"Hello\"}"
+      }
+    },
+    {
+      "codigo": 202,
+      "nombre": "Accepted",
+      "familia": "2xx",
+      "es": {
+        "resumen": "La petición se aceptó, pero se procesará en segundo plano.",
+        "explicacion": "Indica que el servidor recibió la orden (por ejemplo generar un reporte pesado o enviar correos en cola) y la ejecutará después sin bloquear al usuario.",
+        "causasComunes": [
+          "Tareas enviadas a colas en Laravel, Celery o trabajos en segundo plano de FastAPI."
+        ],
+        "comoSolucionar": [
+          "No es un error; consulta un endpoint de estado si necesitas saber cuándo termina el trabajo."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/api/reportes/exportar\n\nRespuesta:\nHTTP/1.1 202 Accepted\n\n{\"trabajoId\":\"job-102\",\"estado\":\"en_cola\"}"
+      },
+      "en": {
+        "resumen": "The request was accepted for background processing.",
+        "explicacion": "Indicates the server received the job (such as generating a heavy report or queuing emails) and will finish it asynchronously without blocking the client.",
+        "causasComunes": [
+          "Jobs dispatched to queues in Laravel, Celery, or FastAPI background tasks."
+        ],
+        "comoSolucionar": [
+          "Not an error; poll a status endpoint if you need to track completion."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/reportes/exportar\n\nResponse:\nHTTP/1.1 202 Accepted\n\n{\"trabajoId\":\"job-102\",\"estado\":\"queued\"}"
+      }
+    },
+    {
+      "codigo": 204,
+      "nombre": "No Content",
+      "familia": "2xx",
+      "es": {
+        "resumen": "La operación tuvo éxito y no hay contenido que devolver.",
+        "explicacion": "Muy común tras un DELETE o un guardado donde el cliente no necesita ningún JSON de vuelta. La respuesta no debe llevar cuerpo.",
+        "causasComunes": [
+          "Eliminación de un registro o respuesta a una petición OPTIONS de CORS."
+        ],
+        "comoSolucionar": [
+          "No es un error; en fetch(), no llames a res.json() cuando el estado es 204 porque el cuerpo está vacío."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X DELETE http://mi-sitio.test/api/notas/15\n\nRespuesta:\nHTTP/1.1 204 No Content"
+      },
+      "en": {
+        "resumen": "The operation succeeded and there is no body to return.",
+        "explicacion": "Very common after a DELETE or update where the client does not need JSON back. The response carries no body.",
+        "causasComunes": [
+          "Deleting a record or responding to a CORS OPTIONS preflight request."
+        ],
+        "comoSolucionar": [
+          "Not an error; in fetch(), avoid calling res.json() on a 204 response because the body is empty."
+        ],
+        "ejemplo": "Request:\ncurl -i -X DELETE http://mi-sitio.test/api/notas/15\n\nResponse:\nHTTP/1.1 204 No Content"
+      }
+    },
+    {
+      "codigo": 206,
+      "nombre": "Partial Content",
+      "familia": "2xx",
+      "es": {
+        "resumen": "El servidor envía solo una parte del archivo solicitado.",
+        "explicacion": "Se usa al reproducir video/audio con barra de avance o al reanudar descargas interrumpidas usando la cabecera Range.",
+        "causasComunes": [
+          "Reproductores multimedia HTML5 o gestores de descargas que piden rangos de bytes."
+        ],
+        "comoSolucionar": [
+          "No es un error; es el comportamiento normal para streaming y descargas reanudables."
+        ],
+        "ejemplo": "Petición:\ncurl -i -H \"Range: bytes=0-1023\" http://mi-sitio.test/media/demo.mp4\n\nRespuesta:\nHTTP/1.1 206 Partial Content\nContent-Range: bytes 0-1023/1048576"
+      },
+      "en": {
+        "resumen": "The server returns only a requested slice of the file.",
+        "explicacion": "Used when seeking in video/audio players or resuming interrupted downloads via the Range header.",
+        "causasComunes": [
+          "HTML5 media players or download managers requesting byte ranges."
+        ],
+        "comoSolucionar": [
+          "Not an error; normal behavior for media streaming and resumable downloads."
+        ],
+        "ejemplo": "Request:\ncurl -i -H \"Range: bytes=0-1023\" http://mi-sitio.test/media/demo.mp4\n\nResponse:\nHTTP/1.1 206 Partial Content\nContent-Range: bytes 0-1023/1048576"
+      }
+    },
+    {
+      "codigo": 301,
+      "nombre": "Moved Permanently",
+      "familia": "3xx",
+      "es": {
+        "resumen": "El recurso cambió de dirección de forma permanente.",
+        "explicacion": "Indica al navegador y a los buscadores que usen siempre la nueva URL indicada en Location. Los navegadores suelen guardar en caché el 301, así que puede tardar en borrarse si fue un error.",
+        "causasComunes": [
+          "Redirección de HTTP a HTTPS o cambio definitivo de ruta en Nginx."
+        ],
+        "comoSolucionar": [
+          "Actualiza tus enlaces a la nueva URL; si pruebas en local y cambiaste la regla, limpia la caché del navegador."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/blog-viejo\n\nRespuesta:\nHTTP/1.1 301 Moved Permanently\nLocation: https://mi-sitio.test/blog"
+      },
+      "en": {
+        "resumen": "The resource has permanently moved to a new URL.",
+        "explicacion": "Tells browsers and search engines to always use the new URL in the Location header. Browsers aggressively cache 301 responses, so mistakes can linger.",
+        "causasComunes": [
+          "Redirecting HTTP to HTTPS or permanently renaming a route in Nginx."
+        ],
+        "comoSolucionar": [
+          "Update links to the new URL; if testing locally after changing a rule, clear your browser cache."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/blog-viejo\n\nResponse:\nHTTP/1.1 301 Moved Permanently\nLocation: https://mi-sitio.test/blog"
+      }
+    },
+    {
+      "codigo": 302,
+      "nombre": "Found",
+      "familia": "3xx",
+      "es": {
+        "resumen": "Redirección temporal hacia otra dirección.",
+        "explicacion": "Muy usada en frameworks web (como Laravel o CodeIgniter) para enviar al usuario a /login cuando no ha iniciado sesión, o devolverlo a una página tras enviar un formulario.",
+        "causasComunes": [
+          "Middleware de autenticación que redirige al formulario de inicio de sesión.",
+          "Fallo de validación en un formulario web de Laravel que redirige atrás."
+        ],
+        "comoSolucionar": [
+          "Si llamas a una ruta de API y recibes 302, agrega la cabecera Accept: application/json para ver el error real en JSON."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/panel\n\nRespuesta:\nHTTP/1.1 302 Found\nLocation: http://mi-sitio.test/login"
+      },
+      "en": {
+        "resumen": "Temporary redirect to another URL.",
+        "explicacion": "Heavily used in web frameworks (such as Laravel or CodeIgniter) to send unauthenticated users to /login or redirect after form submission.",
+        "causasComunes": [
+          "Authentication middleware redirecting to the login page.",
+          "Laravel web form validation failing and redirecting back."
+        ],
+        "comoSolucionar": [
+          "If an API call returns 302, include Accept: application/json so the framework returns a JSON error instead of redirecting."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/panel\n\nResponse:\nHTTP/1.1 302 Found\nLocation: http://mi-sitio.test/login"
+      }
+    },
+    {
+      "codigo": 303,
+      "nombre": "See Other",
+      "familia": "3xx",
+      "es": {
+        "resumen": "Redirige siempre con GET al resultado de una operación.",
+        "explicacion": "Se usa tras un POST (patrón Post/Redirect/Get) para que, si el usuario recarga la página, el navegador haga un GET y no vuelva a enviar el formulario.",
+        "causasComunes": [
+          "Respuesta tras procesar un formulario o crear un recurso en una app web."
+        ],
+        "comoSolucionar": [
+          "Comportamiento esperado; sigue la cabecera Location con una petición GET."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/pedidos -d \"item=1\"\n\nRespuesta:\nHTTP/1.1 303 See Other\nLocation: http://mi-sitio.test/pedidos/gracias"
+      },
+      "en": {
+        "resumen": "Redirects the client to fetch the result using GET.",
+        "explicacion": "Used after a POST (Post/Redirect/Get pattern) so refreshing the page performs a GET instead of resubmitting the form.",
+        "causasComunes": [
+          "Response after processing a web form or creating a resource."
+        ],
+        "comoSolucionar": [
+          "Expected behavior; follow the Location header with a GET request."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/pedidos -d \"item=1\"\n\nResponse:\nHTTP/1.1 303 See Other\nLocation: http://mi-sitio.test/pedidos/gracias"
+      }
+    },
+    {
+      "codigo": 304,
+      "nombre": "Not Modified",
+      "familia": "3xx",
+      "es": {
+        "resumen": "El archivo no ha cambiado; usa la copia en caché.",
+        "explicacion": "El navegador pregunta si un CSS, JS o imagen cambió (usando ETag o If-Modified-Since). Si sigue igual, el servidor responde 304 sin reenviar el archivo.",
+        "causasComunes": [
+          "Carga repetida de archivos estáticos servidos por Nginx."
+        ],
+        "comoSolucionar": [
+          "No es un error; si no ves cambios recientes en desarrollo, haz una recarga forzada (Ctrl+Shift+R)."
+        ],
+        "ejemplo": "Petición:\ncurl -i -H \"If-None-Match: \\\"v123\\\"\" http://mi-sitio.test/app.css\n\nRespuesta:\nHTTP/1.1 304 Not Modified"
+      },
+      "en": {
+        "resumen": "The resource has not changed; use the cached copy.",
+        "explicacion": "The browser asks whether a CSS, JS, or image changed (via ETag or If-Modified-Since). If unchanged, the server answers 304 without resending the file.",
+        "causasComunes": [
+          "Repeated requests for static assets served by Nginx."
+        ],
+        "comoSolucionar": [
+          "Not an error; if you do not see recent edits during development, do a hard reload (Ctrl+Shift+R)."
+        ],
+        "ejemplo": "Request:\ncurl -i -H \"If-None-Match: \\\"v123\\\"\" http://mi-sitio.test/app.css\n\nResponse:\nHTTP/1.1 304 Not Modified"
+      }
+    },
+    {
+      "codigo": 307,
+      "nombre": "Temporary Redirect",
+      "familia": "3xx",
+      "es": {
+        "resumen": "Redirección temporal que mantiene exactamente el mismo método HTTP.",
+        "explicacion": "A diferencia del 302 (donde muchos clientes convierten POST en GET), el 307 garantiza que un POST siga siendo POST en la nueva URL.",
+        "causasComunes": [
+          "FastAPI redirigiendo rutas con o sin barra final (/items a /items/).",
+          "Redirección temporal en endpoints de API."
+        ],
+        "comoSolucionar": [
+          "Usa la URL exacta con o sin barra final para evitar saltos extra en tu API."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/api/items -d '{\"nombre\":\"demo\"}'\n\nRespuesta:\nHTTP/1.1 307 Temporary Redirect\nLocation: http://mi-sitio.test/api/items/"
+      },
+      "en": {
+        "resumen": "Temporary redirect that preserves the exact HTTP method.",
+        "explicacion": "Unlike 302 (where many clients turn POST into GET), 307 guarantees that a POST remains a POST at the target URL.",
+        "causasComunes": [
+          "FastAPI redirecting routes with or without a trailing slash (/items to /items/).",
+          "Temporary redirection on API endpoints."
+        ],
+        "comoSolucionar": [
+          "Call the exact URL with or without the trailing slash to avoid extra redirects in your API."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/items -d '{\"nombre\":\"demo\"}'\n\nResponse:\nHTTP/1.1 307 Temporary Redirect\nLocation: http://mi-sitio.test/api/items/"
+      }
+    },
+    {
+      "codigo": 308,
+      "nombre": "Permanent Redirect",
+      "familia": "3xx",
+      "es": {
+        "resumen": "Redirección permanente que conserva el método HTTP original.",
+        "explicacion": "Es la versión permanente del 307: mueve la ruta de forma definitiva sin cambiar POST/PUT a GET.",
+        "causasComunes": [
+          "Migración definitiva de un endpoint de API a HTTPS o a una versión nueva (/v1 a /v2)."
+        ],
+        "comoSolucionar": [
+          "Actualiza el cliente para apuntar directamente a la URL definitiva."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/v1/webhooks -d '{}'\n\nRespuesta:\nHTTP/1.1 308 Permanent Redirect\nLocation: https://mi-sitio.test/v2/webhooks"
+      },
+      "en": {
+        "resumen": "Permanent redirect that preserves the original HTTP method.",
+        "explicacion": "The permanent counterpart of 307: moves the route permanently without turning POST/PUT into GET.",
+        "causasComunes": [
+          "Permanent migration of an API endpoint to HTTPS or a new version (/v1 to /v2)."
+        ],
+        "comoSolucionar": [
+          "Update your client to call the permanent URL directly."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/v1/webhooks -d '{}'\n\nResponse:\nHTTP/1.1 308 Permanent Redirect\nLocation: https://mi-sitio.test/v2/webhooks"
+      }
+    },
+    {
+      "codigo": 400,
+      "nombre": "Bad Request",
+      "familia": "4xx",
+      "es": {
+        "resumen": "El servidor no entendió la petición porque tiene un formato incorrecto.",
+        "explicacion": "Algo en lo que enviaste (JSON roto, parámetro mal escrito o cabecera inválida) impide que el servidor la procese.",
+        "causasComunes": [
+          "JSON con comas de más o comillas mal cerradas enviado a Laravel o FastAPI.",
+          "Cabecera Host inválida o URL mal codificada rechazada por Nginx.",
+          "Parámetros obligatorios con formato inválido en CodeIgniter."
+        ],
+        "comoSolucionar": [
+          "Valida el JSON que envías y revisa la cabecera Content-Type: application/json.",
+          "Comprueba los parámetros de la URL y lee el mensaje de detalle que devuelve el servidor."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: application/json\" -d '{mal_json}'\n\nRespuesta:\nHTTP/1.1 400 Bad Request\n\n{\"error\":\"JSON inválido\"}"
+      },
+      "en": {
+        "resumen": "The server could not understand the request due to malformed syntax.",
+        "explicacion": "Something in your request (broken JSON, malformed query parameter, or invalid header) prevents the server from processing it.",
+        "causasComunes": [
+          "Trailing commas or broken quotes in JSON sent to Laravel or FastAPI.",
+          "Invalid Host header or malformed URL rejected by Nginx.",
+          "Missing or badly formatted parameters in CodeIgniter."
+        ],
+        "comoSolucionar": [
+          "Validate your JSON payload and verify the Content-Type: application/json header.",
+          "Check URL parameters and inspect the error message returned by the server."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: application/json\" -d '{bad_json}'\n\nResponse:\nHTTP/1.1 400 Bad Request\n\n{\"error\":\"Invalid JSON\"}"
+      }
+    },
+    {
+      "codigo": 401,
+      "nombre": "Unauthorized",
+      "familia": "4xx",
+      "es": {
+        "resumen": "Necesitas iniciar sesión o enviar credenciales válidas.",
+        "explicacion": "Aunque el nombre dice Unauthorized, en realidad significa 'no autenticado': el servidor no sabe quién eres o tu token venció.",
+        "causasComunes": [
+          "Falta la cabecera Authorization: Bearer TU_TOKEN en Laravel Sanctum o FastAPI.",
+          "Cookie de sesión ausente o caducada en Laravel o CodeIgniter.",
+          "Nginx descartó la cabecera Authorization al pasar la petición a PHP-FPM."
+        ],
+        "comoSolucionar": [
+          "Envía el token correcto en Authorization: Bearer TU_TOKEN o vuelve a iniciar sesión.",
+          "En peticiones con cookies (fetch), usa credentials: 'include' y verifica el dominio de cookies."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/api/perfil\n\nRespuesta:\nHTTP/1.1 401 Unauthorized\n\n{\"message\":\"Unauthenticated.\"}"
+      },
+      "en": {
+        "resumen": "You need to sign in or send valid credentials.",
+        "explicacion": "Despite the name Unauthorized, it really means unauthenticated: the server does not know who you are or your token expired.",
+        "causasComunes": [
+          "Missing Authorization: Bearer TU_TOKEN header in Laravel Sanctum or FastAPI.",
+          "Missing or expired session cookie in Laravel or CodeIgniter.",
+          "Nginx stripping the Authorization header before forwarding to PHP-FPM."
+        ],
+        "comoSolucionar": [
+          "Send a valid Authorization: Bearer TU_TOKEN header or sign in again.",
+          "For cookie-based fetch() requests, pass credentials: 'include' and check cookie domain settings."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/perfil\n\nResponse:\nHTTP/1.1 401 Unauthorized\n\n{\"message\":\"Unauthenticated.\"}"
+      }
+    },
+    {
+      "codigo": 403,
+      "nombre": "Forbidden",
+      "familia": "4xx",
+      "es": {
+        "resumen": "El servidor sabe quién eres, pero no tienes permiso para entrar ahí.",
+        "explicacion": "A diferencia del 401 (no identificado), el 403 significa acceso prohibido: tu cuenta no tiene el rol necesario o el servidor web bloquea esa carpeta.",
+        "causasComunes": [
+          "Nginx apunta a una carpeta sin index.php/index.html y con listado de directorios desactivado.",
+          "Policy o Gate en Laravel o filtro de roles en CodeIgniter/FastAPI devolviendo false.",
+          "Permisos insuficientes en archivos o carpetas del proyecto."
+        ],
+        "comoSolucionar": [
+          "Verifica que la raíz pública del sitio apunte a public/ (Laravel/CodeIgniter) y exista index.php.",
+          "Revisa los roles y permisos del usuario 'demo' en tu política de autorización."
+        ],
+        "ejemplo": "Petición:\ncurl -i -H \"Authorization: Bearer TU_TOKEN\" http://mi-sitio.test/api/admin/ajustes\n\nRespuesta:\nHTTP/1.1 403 Forbidden\n\n{\"message\":\"Esta acción no está autorizada.\"}"
+      },
+      "en": {
+        "resumen": "The server knows who you are, but you do not have permission.",
+        "explicacion": "Unlike 401 (not signed in), 403 means access is denied: your account lacks the required role or the web server blocks that directory.",
+        "causasComunes": [
+          "Nginx pointing to a folder without index.php/index.html while directory listing is off.",
+          "A Laravel Policy/Gate or CodeIgniter/FastAPI role check returning false.",
+          "Insufficient file or folder permissions on disk."
+        ],
+        "comoSolucionar": [
+          "Verify the site document root points to public/ (Laravel/CodeIgniter) and index.php exists.",
+          "Check the roles and permissions assigned to the 'demo' user in your authorization logic."
+        ],
+        "ejemplo": "Request:\ncurl -i -H \"Authorization: Bearer TU_TOKEN\" http://mi-sitio.test/api/admin/ajustes\n\nResponse:\nHTTP/1.1 403 Forbidden\n\n{\"message\":\"This action is unauthorized.\"}"
+      }
+    },
+    {
+      "codigo": 404,
+      "nombre": "Not Found",
+      "familia": "4xx",
+      "es": {
+        "resumen": "La dirección o el registro que buscas no existe.",
+        "explicacion": "El servidor respondió correctamente, pero no encontró ninguna ruta ni archivo que coincida con la URL pedida.",
+        "causasComunes": [
+          "Error tipográfico en la ruta o falta definirla en routes/web.php, routes/api.php (Laravel), Routes.php (CodeIgniter) o en el router de FastAPI.",
+          "Falta try_files $uri $uri/ /index.php?$query_string; en Nginx para rutas amigables.",
+          "Registro no encontrado en base de datos (findOrFail en Laravel)."
+        ],
+        "comoSolucionar": [
+          "Lista las rutas registradas (php artisan route:list o /docs en FastAPI) y revisa mayúsculas y prefijos (/api).",
+          "Asegúrate de que Nginx reenvíe las rutas al index.php del framework."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/api/usuarios/9999\n\nRespuesta:\nHTTP/1.1 404 Not Found\n\n{\"message\":\"Usuario no encontrado\"}"
+      },
+      "en": {
+        "resumen": "The requested URL or record does not exist.",
+        "explicacion": "The server answered properly, but no route or file matched the requested path.",
+        "causasComunes": [
+          "Typo in the URL or missing route in routes/web.php, routes/api.php (Laravel), Routes.php (CodeIgniter), or FastAPI router.",
+          "Missing try_files $uri $uri/ /index.php?$query_string; in Nginx for pretty URLs.",
+          "Database record not found (e.g. findOrFail in Laravel)."
+        ],
+        "comoSolucionar": [
+          "List registered routes (php artisan route:list or /docs in FastAPI) and check casing and prefixes (/api).",
+          "Ensure Nginx forwards non-file routes to your framework's index.php."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/usuarios/9999\n\nResponse:\nHTTP/1.1 404 Not Found\n\n{\"message\":\"User not found\"}"
+      }
+    },
+    {
+      "codigo": 405,
+      "nombre": "Method Not Allowed",
+      "familia": "4xx",
+      "es": {
+        "resumen": "La ruta existe, pero no acepta ese método HTTP.",
+        "explicacion": "Por ejemplo, hiciste un GET a una ruta que solo acepta POST, o un POST a una ruta que solo acepta PUT.",
+        "causasComunes": [
+          "Formulario HTML enviando POST a una ruta definida como Route::get() en Laravel o @app.get() en FastAPI.",
+          "Falta el campo _method=PUT/DELETE en formularios HTML de Laravel o CodeIgniter."
+        ],
+        "comoSolucionar": [
+          "Revisa la cabecera Allow de la respuesta y cambia el método en tu petición o en la definición de la ruta."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X DELETE http://mi-sitio.test/api/salud\n\nRespuesta:\nHTTP/1.1 405 Method Not Allowed\nAllow: GET, HEAD"
+      },
+      "en": {
+        "resumen": "The route exists, but does not allow that HTTP method.",
+        "explicacion": "For example, you sent a GET to a route that only accepts POST, or a POST to a route that expects PUT.",
+        "causasComunes": [
+          "HTML form sending POST to a Route::get() in Laravel or @app.get() in FastAPI.",
+          "Missing _method=PUT/DELETE spoof field in Laravel or CodeIgniter HTML forms."
+        ],
+        "comoSolucionar": [
+          "Check the Allow response header and align the request method with the route definition."
+        ],
+        "ejemplo": "Request:\ncurl -i -X DELETE http://mi-sitio.test/api/salud\n\nResponse:\nHTTP/1.1 405 Method Not Allowed\nAllow: GET, HEAD"
+      }
+    },
+    {
+      "codigo": 406,
+      "nombre": "Not Acceptable",
+      "familia": "4xx",
+      "es": {
+        "resumen": "El servidor no puede devolver el formato pedido en la cabecera Accept.",
+        "explicacion": "El cliente pidió un tipo de respuesta concreto (por ejemplo application/xml) que el servidor no soporta para esa ruta.",
+        "causasComunes": [
+          "Cabecera Accept incompatible enviada a un controlador de CodeIgniter o Laravel con negociación de contenido."
+        ],
+        "comoSolucionar": [
+          "Cambia la cabecera Accept a application/json o */* según lo que soporte el endpoint."
+        ],
+        "ejemplo": "Petición:\ncurl -i -H \"Accept: application/xml\" http://mi-sitio.test/api/notas\n\nRespuesta:\nHTTP/1.1 406 Not Acceptable"
+      },
+      "en": {
+        "resumen": "The server cannot produce a response matching the Accept header.",
+        "explicacion": "The client requested a specific format (such as application/xml) that the endpoint cannot generate.",
+        "causasComunes": [
+          "Incompatible Accept header sent to a CodeIgniter or Laravel content-negotiated endpoint."
+        ],
+        "comoSolucionar": [
+          "Set the Accept header to application/json or */* to match what the endpoint supports."
+        ],
+        "ejemplo": "Request:\ncurl -i -H \"Accept: application/xml\" http://mi-sitio.test/api/notas\n\nResponse:\nHTTP/1.1 406 Not Acceptable"
+      }
+    },
+    {
+      "codigo": 408,
+      "nombre": "Request Timeout",
+      "familia": "4xx",
+      "es": {
+        "resumen": "El cliente tardó demasiado en terminar de enviar la petición.",
+        "explicacion": "El servidor abrió la conexión y esperó, pero el cliente no envió el resto de los datos antes del límite de tiempo.",
+        "causasComunes": [
+          "Conexión lenta o inestable al subir archivos grandes a Nginx.",
+          "Cliente que abre una conexión HTTP y la deja inactiva."
+        ],
+        "comoSolucionar": [
+          "Reintenta la petición y revisa client_body_timeout / client_header_timeout en Nginx si subes archivos grandes."
+        ],
+        "ejemplo": "Petición:\n(Conexión lenta interrumpida a mitad de subida)\n\nRespuesta:\nHTTP/1.1 408 Request Timeout"
+      },
+      "en": {
+        "resumen": "The client took too long to finish sending the request.",
+        "explicacion": "The server waited for the client to complete sending the request, but the timeout expired first.",
+        "causasComunes": [
+          "Slow or unstable connection while uploading large files to Nginx.",
+          "Client opening a connection and leaving it idle."
+        ],
+        "comoSolucionar": [
+          "Retry the request and check Nginx client_body_timeout / client_header_timeout for large uploads."
+        ],
+        "ejemplo": "Request:\n(Slow connection stalled mid-upload)\n\nResponse:\nHTTP/1.1 408 Request Timeout"
+      }
+    },
+    {
+      "codigo": 409,
+      "nombre": "Conflict",
+      "familia": "4xx",
+      "es": {
+        "resumen": "La petición choca con el estado actual del recurso.",
+        "explicacion": "Suele ocurrir al intentar crear algo duplicado (como un correo ya registrado) o al editar un registro que alguien más modificó antes.",
+        "causasComunes": [
+          "Violación de índice único en base de datos manejada en Laravel, CodeIgniter o FastAPI.",
+          "Edición simultánea con control de versiones optimista."
+        ],
+        "comoSolucionar": [
+          "Verifica si el registro ya existe antes de insertarlo o recarga el recurso para obtener su versión actual."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/api/usuarios -H \"Content-Type: application/json\" -d '{\"email\":\"demo@ejemplo.com\"}'\n\nRespuesta:\nHTTP/1.1 409 Conflict\n\n{\"error\":\"El correo ya está registrado\"}"
+      },
+      "en": {
+        "resumen": "The request conflicts with the current state of the resource.",
+        "explicacion": "Common when trying to create a duplicate entry (such as an already registered email) or updating a record modified by someone else.",
+        "causasComunes": [
+          "Unique constraint violation handled in Laravel, CodeIgniter, or FastAPI.",
+          "Concurrent edit failing an optimistic concurrency check."
+        ],
+        "comoSolucionar": [
+          "Check if the record already exists before creating it, or reload the latest version before saving."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/usuarios -H \"Content-Type: application/json\" -d '{\"email\":\"demo@ejemplo.com\"}'\n\nResponse:\nHTTP/1.1 409 Conflict\n\n{\"error\":\"Email is already registered\"}"
+      }
+    },
+    {
+      "codigo": 410,
+      "nombre": "Gone",
+      "familia": "4xx",
+      "es": {
+        "resumen": "El recurso existió antes, pero fue eliminado definitivamente.",
+        "explicacion": "Es más específico que un 404: avisa al cliente y a los buscadores que esa página o versión de API ya no volverá.",
+        "causasComunes": [
+          "Enlace de descarga temporal vencido o versión antigua de API retirada."
+        ],
+        "comoSolucionar": [
+          "Deja de usar ese enlace y solicita uno nuevo o migra a la versión vigente de la API."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/descargas/token-vencido\n\nRespuesta:\nHTTP/1.1 410 Gone\n\n{\"message\":\"Este enlace ya caducó\"}"
+      },
+      "en": {
+        "resumen": "The resource used to exist but has been permanently removed.",
+        "explicacion": "More specific than 404: tells clients and search engines that the page or API version will not come back.",
+        "causasComunes": [
+          "Expired one-time download link or retired API version."
+        ],
+        "comoSolucionar": [
+          "Stop requesting the old URL and generate a new link or migrate to the active API version."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/descargas/expired-token\n\nResponse:\nHTTP/1.1 410 Gone\n\n{\"message\":\"This link has expired\"}"
+      }
+    },
+    {
+      "codigo": 413,
+      "nombre": "Content Too Large",
+      "familia": "4xx",
+      "es": {
+        "resumen": "El archivo o los datos que enviaste superan el tamaño máximo permitido.",
+        "explicacion": "Muy frecuente al subir imágenes, PDFs o respaldos SQL grandes sin ajustar los límites del servidor.",
+        "causasComunes": [
+          "client_max_body_size muy bajo en Nginx (por defecto 1 MB).",
+          "upload_max_filesize o post_max_size bajos en php.ini (PHP-FPM / Laravel / CodeIgniter)."
+        ],
+        "comoSolucionar": [
+          "Sube client_max_body_size en Nginx (por ejemplo 50M) y ajusta upload_max_filesize y post_max_size en php.ini, luego reinicia Nginx y PHP-FPM."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/api/subir -F \"archivo=@video-grande.mp4\"\n\nRespuesta:\nHTTP/1.1 413 Request Entity Too Large"
+      },
+      "en": {
+        "resumen": "The uploaded file or request body exceeds the server size limit.",
+        "explicacion": "Very common when uploading large images, PDFs, or SQL dumps without raising server limits.",
+        "causasComunes": [
+          "Nginx client_max_body_size is too small (defaults to 1 MB).",
+          "Low upload_max_filesize or post_max_size in php.ini (PHP-FPM / Laravel / CodeIgniter)."
+        ],
+        "comoSolucionar": [
+          "Increase client_max_body_size in Nginx (e.g. 50M) and raise upload_max_filesize and post_max_size in php.ini, then restart Nginx and PHP-FPM."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/subir -F \"archivo=@large-video.mp4\"\n\nResponse:\nHTTP/1.1 413 Request Entity Too Large"
+      }
+    },
+    {
+      "codigo": 415,
+      "nombre": "Unsupported Media Type",
+      "familia": "4xx",
+      "es": {
+        "resumen": "El servidor no acepta el formato (Content-Type) que enviaste.",
+        "explicacion": "Por ejemplo, enviaste texto plano o formulario cuando la API exige JSON.",
+        "causasComunes": [
+          "Falta la cabecera Content-Type: application/json al llamar a FastAPI o a una API de Laravel/CodeIgniter.",
+          "Subir un archivo con MIME no admitido."
+        ],
+        "comoSolucionar": [
+          "Agrega la cabecera Content-Type correcta (como application/json o multipart/form-data)."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: text/plain\" -d 'hola'\n\nRespuesta:\nHTTP/1.1 415 Unsupported Media Type"
+      },
+      "en": {
+        "resumen": "The server does not support the request's Content-Type format.",
+        "explicacion": "For example, you sent plain text or form data when the API expects JSON.",
+        "causasComunes": [
+          "Missing Content-Type: application/json when calling FastAPI or a Laravel/CodeIgniter API.",
+          "Uploading a file with an unsupported MIME type."
+        ],
+        "comoSolucionar": [
+          "Send the expected Content-Type header (such as application/json or multipart/form-data)."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/notas -H \"Content-Type: text/plain\" -d 'hello'\n\nResponse:\nHTTP/1.1 415 Unsupported Media Type"
+      }
+    },
+    {
+      "codigo": 419,
+      "nombre": "Page Expired (Laravel)",
+      "familia": "4xx",
+      "es": {
+        "resumen": "Código no estándar usado por Laravel cuando falta o caducó el token CSRF o la sesión.",
+        "explicacion": "No forma parte del estándar HTTP oficial, pero lo verás a menudo en Laravel al enviar un formulario cuya sesión venció o sin la directiva @csrf.",
+        "causasComunes": [
+          "Falta @csrf dentro de un formulario <form method=\"POST\"> en Blade.",
+          "La cookie de sesión no se guarda (SESSION_DOMAIN, SESSION_SECURE_COOKIE o dominio distinto al abrir un túnel).",
+          "Carpeta storage/framework/sessions sin permisos de escritura o pestaña abierta durante horas."
+        ],
+        "comoSolucionar": [
+          "Añade @csrf en el formulario o envía la cabecera X-CSRF-TOKEN en peticiones AJAX.",
+          "Revisa APP_URL, SESSION_DOMAIN y SESSION_SECURE_COOKIE en .env, limpia caché (php artisan config:clear) y recarga la página."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/contacto -d \"mensaje=Hola\"\n\nRespuesta:\nHTTP/1.1 419 Page Expired\n\n{\"message\":\"CSRF token mismatch.\"}"
+      },
+      "en": {
+        "resumen": "Non-standard Laravel code when the CSRF token or session is missing or expired.",
+        "explicacion": "Not part of the official HTTP standard, but very common in Laravel when submitting a form whose session expired or that is missing @csrf.",
+        "causasComunes": [
+          "Missing @csrf inside a Blade <form method=\"POST\">.",
+          "Session cookie not being stored (mismatched SESSION_DOMAIN, SESSION_SECURE_COOKIE, or tunnel hostname).",
+          "Unwritable storage/framework/sessions folder or a form tab left open for hours."
+        ],
+        "comoSolucionar": [
+          "Include @csrf in the form or send the X-CSRF-TOKEN header on AJAX requests.",
+          "Check APP_URL, SESSION_DOMAIN, and SESSION_SECURE_COOKIE in .env, run php artisan config:clear, and reload."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/contacto -d \"mensaje=Hello\"\n\nResponse:\nHTTP/1.1 419 Page Expired\n\n{\"message\":\"CSRF token mismatch.\"}"
+      }
+    },
+    {
+      "codigo": 422,
+      "nombre": "Unprocessable Content",
+      "familia": "4xx",
+      "es": {
+        "resumen": "El formato es válido, pero los datos no pasaron la validación.",
+        "explicacion": "Es el código favorito de Laravel y FastAPI cuando el JSON está bien formado, pero falta un campo obligatorio, un correo es inválido o un número está fuera de rango.",
+        "causasComunes": [
+          "Error de validación en FormRequest / Validator de Laravel.",
+          "Error de esquema Pydantic en FastAPI (tipo de dato incorrecto o campo faltante).",
+          "Reglas de validación fallidas en CodeIgniter."
+        ],
+        "comoSolucionar": [
+          "Lee el objeto errors/detail del JSON de respuesta para ver exactamente qué campo falló y por qué."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X POST http://mi-sitio.test/api/usuarios -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"email\":\"no-es-correo\"}'\n\nRespuesta:\nHTTP/1.1 422 Unprocessable Content\n\n{\"errors\":{\"email\":[\"El campo email debe ser un correo válido.\"]}}"
+      },
+      "en": {
+        "resumen": "The request syntax is valid, but the data failed validation.",
+        "explicacion": "The standard error code in Laravel and FastAPI when the JSON parses fine, but a required field is missing, an email is invalid, or a value has the wrong type.",
+        "causasComunes": [
+          "Validation failure in a Laravel FormRequest or Validator.",
+          "Pydantic schema validation error in FastAPI (wrong type or missing field).",
+          "Validation rule failure in CodeIgniter."
+        ],
+        "comoSolucionar": [
+          "Inspect the errors/detail field in the JSON response to see which field failed and why."
+        ],
+        "ejemplo": "Request:\ncurl -i -X POST http://mi-sitio.test/api/usuarios -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"email\":\"not-an-email\"}'\n\nResponse:\nHTTP/1.1 422 Unprocessable Content\n\n{\"errors\":{\"email\":[\"The email field must be a valid email address.\"]}}"
+      }
+    },
+    {
+      "codigo": 429,
+      "nombre": "Too Many Requests",
+      "familia": "4xx",
+      "es": {
+        "resumen": "Has hecho demasiadas peticiones en muy poco tiempo.",
+        "explicacion": "El servidor activó un límite de velocidad (rate limit) para protegerse de bucles infinitos o abuso.",
+        "causasComunes": [
+          "Middleware throttle en Laravel (por ejemplo 60 peticiones por minuto).",
+          "Un useEffect o watcher en frontend llamando a la API en bucle infinito.",
+          "Regla limit_req en Nginx o limitador en FastAPI."
+        ],
+        "comoSolucionar": [
+          "Revisa la cabecera Retry-After para saber cuánto esperar y comprueba que tu frontend no dispare peticiones repetidas."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/api/buscar?q=demo\n\nRespuesta:\nHTTP/1.1 429 Too Many Requests\nRetry-After: 30\n\n{\"message\":\"Too Many Attempts.\"}"
+      },
+      "en": {
+        "resumen": "You have sent too many requests in a short period.",
+        "explicacion": "The server triggered a rate limit to protect itself from infinite loops or abuse.",
+        "causasComunes": [
+          "Laravel throttle middleware (e.g. 60 requests per minute).",
+          "Frontend useEffect or watcher firing API calls in an infinite loop.",
+          "Nginx limit_req rule or FastAPI rate limiter."
+        ],
+        "comoSolucionar": [
+          "Check the Retry-After header to see when to retry and make sure your frontend is not looping requests."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/buscar?q=demo\n\nResponse:\nHTTP/1.1 429 Too Many Requests\nRetry-After: 30\n\n{\"message\":\"Too Many Attempts.\"}"
+      }
+    },
+    {
+      "codigo": 500,
+      "nombre": "Internal Server Error",
+      "familia": "5xx",
+      "es": {
+        "resumen": "Ocurrió un error inesperado dentro del código del servidor.",
+        "explicacion": "Es un error genérico: algo falló al ejecutar tu aplicación (una excepción no capturada, falta una variable de entorno o la base de datos no responde).",
+        "causasComunes": [
+          "Excepción de PHP o falta APP_KEY / conexión de BD en Laravel (revisa storage/logs/laravel.log).",
+          "Error en controlador o permisos de writable/ en CodeIgniter (revisa writable/logs/).",
+          "Excepción de Python no capturada en FastAPI (revisa la consola de uvicorn)."
+        ],
+        "comoSolucionar": [
+          "Abre los registros (logs) de la aplicación y de PHP-FPM/uvicorn para ver la línea exacta del error.",
+          "En local, activa el modo debug (APP_DEBUG=true en Laravel o CI_ENVIRONMENT=development en CodeIgniter) solo durante el desarrollo."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/api/facturas\n\nRespuesta:\nHTTP/1.1 500 Internal Server Error\n\n{\"message\":\"Server Error\"}"
+      },
+      "en": {
+        "resumen": "An unexpected error occurred inside the server code.",
+        "explicacion": "A catch-all error: something crashed while running your app (an unhandled exception, missing environment variable, or database failure).",
+        "causasComunes": [
+          "PHP exception or missing APP_KEY / DB connection in Laravel (check storage/logs/laravel.log).",
+          "Controller error or unwritable writable/ folder in CodeIgniter (check writable/logs/).",
+          "Unhandled Python exception in FastAPI (check the uvicorn terminal output)."
+        ],
+        "comoSolucionar": [
+          "Inspect the application and PHP-FPM/uvicorn logs to find the exact stack trace.",
+          "Locally, enable debug mode (APP_DEBUG=true in Laravel or CI_ENVIRONMENT=development in CodeIgniter) during development only."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/facturas\n\nResponse:\nHTTP/1.1 500 Internal Server Error\n\n{\"message\":\"Server Error\"}"
+      }
+    },
+    {
+      "codigo": 501,
+      "nombre": "Not Implemented",
+      "familia": "5xx",
+      "es": {
+        "resumen": "El servidor no soporta la funcionalidad o método necesario para atender la petición.",
+        "explicacion": "Indica que el servidor web o la API todavía no implementa ese método o característica.",
+        "causasComunes": [
+          "Método HTTP poco común enviado a Nginx o a un endpoint marcado como no implementado en FastAPI/Laravel."
+        ],
+        "comoSolucionar": [
+          "Comprueba que usas un método HTTP estándar (GET, POST, PUT, PATCH, DELETE) y que el endpoint esté implementado."
+        ],
+        "ejemplo": "Petición:\ncurl -i -X PROPFIND http://mi-sitio.test/api/notas\n\nRespuesta:\nHTTP/1.1 501 Not Implemented"
+      },
+      "en": {
+        "resumen": "The server does not support the method or feature needed to fulfill the request.",
+        "explicacion": "Indicates the web server or API has not implemented that HTTP method or capability.",
+        "causasComunes": [
+          "Unusual HTTP method sent to Nginx or an unimplemented stub endpoint in FastAPI/Laravel."
+        ],
+        "comoSolucionar": [
+          "Verify you are using a standard HTTP method (GET, POST, PUT, PATCH, DELETE) and that the endpoint is implemented."
+        ],
+        "ejemplo": "Request:\ncurl -i -X PROPFIND http://mi-sitio.test/api/notas\n\nResponse:\nHTTP/1.1 501 Not Implemented"
+      }
+    },
+    {
+      "codigo": 502,
+      "nombre": "Bad Gateway",
+      "familia": "5xx",
+      "es": {
+        "resumen": "Nginx (o el proxy) no pudo obtener una respuesta válida del servidor de tu app.",
+        "explicacion": "Tu sitio tiene dos piezas: Nginx recibe la visita y se la pasa a PHP-FPM, Node o FastAPI. El 502 significa que Nginx está vivo, pero la pieza de atrás está apagada, en otro puerto o se cerró de golpe.",
+        "causasComunes": [
+          "PHP está detenido (php-cgi en Windows, PHP-FPM en Linux y macOS) o escucha en un puerto distinto al configurado en Nginx (muy común en Laravel y CodeIgniter).",
+          "Uvicorn/FastAPI o el servidor Node no está iniciado detrás del proxy de Nginx.",
+          "Túnel (cloudflared/ngrok) apuntando a un puerto local donde no hay nada escuchando."
+        ],
+        "comoSolucionar": [
+          "Inicia PHP-FPM, uvicorn o el servicio de tu proyecto y comprueba que el puerto coincida con fastcgi_pass o proxy_pass en Nginx.",
+          "Revisa el registro de errores de Nginx para ver exactamente qué conexión fue rechazada."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/\n\nRespuesta:\nHTTP/1.1 502 Bad Gateway\nServer: nginx"
+      },
+      "en": {
+        "resumen": "Nginx (or the proxy) could not get a valid response from your app server.",
+        "explicacion": "Your site has two layers: Nginx receives the request and forwards it to PHP-FPM, Node, or FastAPI. A 502 means Nginx is running, but the backend service is stopped, on a different port, or crashed.",
+        "causasComunes": [
+          "PHP is stopped (php-cgi on Windows, PHP-FPM on Linux and macOS) or listening on a different port than configured in Nginx (very common in Laravel and CodeIgniter).",
+          "Uvicorn/FastAPI or the Node server is not running behind the Nginx proxy.",
+          "A tunnel (cloudflared/ngrok) pointing to a local port where nothing is listening."
+        ],
+        "comoSolucionar": [
+          "Start PHP-FPM, uvicorn, or your project service and verify its port matches fastcgi_pass or proxy_pass in Nginx.",
+          "Check the Nginx error log to see which upstream connection was refused."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/\n\nResponse:\nHTTP/1.1 502 Bad Gateway\nServer: nginx"
+      }
+    },
+    {
+      "codigo": 503,
+      "nombre": "Service Unavailable",
+      "familia": "5xx",
+      "es": {
+        "resumen": "El servicio está temporalmente fuera de línea o en mantenimiento.",
+        "explicacion": "El servidor funciona, pero ahora mismo no puede atender visitas porque está en modo mantenimiento o saturado.",
+        "causasComunes": [
+          "Laravel en modo mantenimiento tras ejecutar php artisan down.",
+          "Demasiados procesos PHP-FPM ocupados o servidor arrancando."
+        ],
+        "comoSolucionar": [
+          "En Laravel, ejecuta php artisan up para salir del modo mantenimiento.",
+          "Espera unos segundos y revisa si algún proceso está bloqueando los trabajadores de PHP-FPM o FastAPI."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/\n\nRespuesta:\nHTTP/1.1 503 Service Unavailable\nRetry-After: 60"
+      },
+      "en": {
+        "resumen": "The service is temporarily offline or in maintenance mode.",
+        "explicacion": "The server is reachable, but cannot handle requests right now because it is in maintenance mode or overloaded.",
+        "causasComunes": [
+          "Laravel in maintenance mode after running php artisan down.",
+          "All PHP-FPM workers busy or backend still starting up."
+        ],
+        "comoSolucionar": [
+          "In Laravel, run php artisan up to exit maintenance mode.",
+          "Wait a moment and check whether a stuck request is occupying PHP-FPM or FastAPI workers."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/\n\nResponse:\nHTTP/1.1 503 Service Unavailable\nRetry-After: 60"
+      }
+    },
+    {
+      "codigo": 504,
+      "nombre": "Gateway Timeout",
+      "familia": "5xx",
+      "es": {
+        "resumen": "Nginx esperó demasiado a que respondiera tu aplicación y cortó la espera.",
+        "explicacion": "A diferencia del 502 (el servicio de atrás no responde), en el 504 el servicio sí aceptó la petición pero tardó más del límite configurado.",
+        "causasComunes": [
+          "Consulta SQL muy lenta, bucle infinito o petición externa colgada en Laravel, CodeIgniter o FastAPI.",
+          "Sesión de depuración con Xdebug pausada en un punto de interrupción más tiempo del que permite Nginx.",
+          "fastcgi_read_timeout o proxy_read_timeout demasiado cortos en Nginx."
+        ],
+        "comoSolucionar": [
+          "Revisa consultas lentas o llamadas HTTP externas sin timeout en tu código.",
+          "Si depuras con Xdebug o importas datos pesados en local, aumenta temporalmente fastcgi_read_timeout / proxy_read_timeout en Nginx y max_execution_time en php.ini."
+        ],
+        "ejemplo": "Petición:\ncurl -i http://mi-sitio.test/api/reporte-anual\n\nRespuesta:\nHTTP/1.1 504 Gateway Timeout\nServer: nginx"
+      },
+      "en": {
+        "resumen": "Nginx waited too long for your application to respond and timed out.",
+        "explicacion": "Unlike 502 (backend unreachable), 504 means the backend accepted the request but took longer than the configured timeout.",
+        "causasComunes": [
+          "Slow SQL query, infinite loop, or hanging external HTTP call in Laravel, CodeIgniter, or FastAPI.",
+          "An Xdebug session paused at a breakpoint longer than Nginx allows.",
+          "Nginx fastcgi_read_timeout or proxy_read_timeout set too low."
+        ],
+        "comoSolucionar": [
+          "Profile slow queries and add timeouts to outgoing HTTP requests in your code.",
+          "When debugging with Xdebug or running heavy local imports, temporarily raise fastcgi_read_timeout / proxy_read_timeout in Nginx and max_execution_time in php.ini."
+        ],
+        "ejemplo": "Request:\ncurl -i http://mi-sitio.test/api/reporte-anual\n\nResponse:\nHTTP/1.1 504 Gateway Timeout\nServer: nginx"
+      }
+    }
+  ]
+}
