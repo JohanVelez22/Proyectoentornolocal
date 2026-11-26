@@ -1,6 +1,7 @@
 import { crearLanzadorOculto, type LanzadorOculto } from './lanzarOculto';
 import { sistemaActual } from './sistema';
 import type { CapacidadesPlataforma, Plataforma, PlataformaCompleta } from './tipos';
+import { RESPALDO_MEMORIA_NEUTRO } from './respaldoMemoria';
 import { PlataformaWindows } from './win';
 
 export type {
@@ -13,6 +14,8 @@ export type {
   EstadoCaptura,
   IdentidadUsuario,
   ProcesoUsuario,
+  EstadoCierre,
+  ConexionActiva,
   EstadoServicioSistema,
   IdCatalogo,
   Lanzador,
@@ -103,6 +106,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'cerrarVentanaPrincipal',
   'identidadActual',
   'rutasProtegidas',
+  'conexionesActivas',
 ];
 
 /**
@@ -114,13 +118,19 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
 export function completarPlataforma(
   p: Plataforma,
   respaldo: PlataformaCompleta,
+  sistema: NodeJS.Platform = sistemaActual(),
 ): PlataformaCompleta {
   const faltan = CAPACIDADES.filter((k) => typeof p[k] !== 'function');
   if (faltan.length === 0) return p as PlataformaCompleta;
   const res = Object.create(p) as Record<string, unknown>;
   for (const k of faltan) {
-    const fn = respaldo[k] as (...a: unknown[]) => unknown;
-    res[k] = (...a: unknown[]) => fn.apply(respaldo, a);
+    // Fuera de Windows, las del optimizador de RAM no se piden a PowerShell: respaldo neutro.
+    const neutro = sistema !== 'win32' && k in RESPALDO_MEMORIA_NEUTRO;
+    const origen = (neutro ? RESPALDO_MEMORIA_NEUTRO : respaldo) as unknown as Record<
+      string,
+      (...a: unknown[]) => unknown
+    >;
+    res[k] = (...a: unknown[]) => origen[k]!.apply(origen, a);
   }
   return res as unknown as PlataformaCompleta;
 }

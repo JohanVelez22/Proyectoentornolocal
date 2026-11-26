@@ -436,6 +436,8 @@ if (errorCarpetaDatos !== null) {
     n.registrarCacheApp({
       id: 'sesion',
       etiqueta: 'Sesión de Electron',
+      // La caché HTTP vive en disco: libera espacio, no RAM.
+      unidad: 'disco',
       estimar: () => session.defaultSession.getCacheSize().catch(() => 0),
       vaciar: async () => {
         const antes = await session.defaultSession.getCacheSize().catch(() => 0);

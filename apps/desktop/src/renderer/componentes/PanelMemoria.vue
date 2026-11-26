@@ -37,8 +37,22 @@ const MODOS: ModoMemoria[] = ['liviano', 'moderado', 'profundo'];
 
 const acciones = computed(() => plan.value?.acciones ?? []);
 const marcadas = computed(() => acciones.value.filter((a) => marcas[a.id]));
-const estimado = computed(() => marcadas.value.reduce((suma, a) => suma + a.memoria, 0));
+/** Lo que liberaría lo marcado, por separado: la RAM y el disco (la caché HTTP no es RAM). */
+const estimado = computed(() =>
+  marcadas.value.filter((a) => a.unidad === 'ram').reduce((suma, a) => suma + a.memoria, 0),
+);
+const estimadoDisco = computed(() =>
+  marcadas.value.filter((a) => a.unidad === 'disco').reduce((suma, a) => suma + a.memoria, 0),
+);
+/** Lo que la confirmación nombra: los programas a los que se pedirá cerrar y los servicios a detener. */
+const aCerrar = computed(() =>
+  marcadas.value.filter((a) => a.tipo === 'cerrar-programa').map((a) => a.etiqueta),
+);
+const aDetener = computed(() =>
+  marcadas.value.filter((a) => a.tipo === 'detener-inactivo').map((a) => a.etiqueta),
+);
 const hayProgramas = computed(() => acciones.value.some((a) => a.tipo === 'cerrar-programa'));
+const hayServicios = computed(() => acciones.value.some((a) => a.tipo === 'detener-inactivo'));
 
 /** Una lista distinta empieza de cero: lo que había en pantalla ya no vale. */
 function reiniciar(): void {
@@ -64,12 +78,16 @@ async function ver(): Promise<void> {
 
 async function aplicar(): Promise<void> {
   const ids = marcadas.value.map((a) => a.id);
+  const planId = plan.value?.id;
   confirmando.value = false;
-  if (ids.length === 0) return;
-  const r = await ejecutar('memoria-aplicar', () => api().memoria.aplicar(ids, true));
+  if (ids.length === 0 || !planId) return;
+  const r = await ejecutar('memoria-aplicar', () => api().memoria.aplicar(planId, ids, true));
   if (r) {
     resultado.value = r;
     plan.value = null;
+  } else {
+    // El plan caducó o ya no es el actual: lo que se ve ya no vale; hay que mirar la lista otra vez.
+    reiniciar();
   }
 }
 
@@ -82,7 +100,14 @@ function nombre(a: { id: string; tipo: string; etiqueta: string }): string {
   return a.etiqueta;
 }
 
-const TONO = { hecho: 'success', saltado: 'warning', error: 'error' } as const;
+const TONO = {
+  hecho: 'success',
+  pedido: 'info',
+  saltado: 'warning',
+  error: 'error',
+} as const;
+
+const hayPedidos = computed(() => resultado.value?.resultados.some((r) => r.estado === 'pedido'));
 </script>
 
 <template>
@@ -93,6 +118,10 @@ const TONO = { hecho: 'success', saltado: 'warning', error: 'error' } as const;
       <section v-if="resultado" class="resultado" aria-live="polite">
         <h3>{{ t.resultadoTitulo }}</h3>
         <p>{{ t.liberado(formatoBytes(resultado.liberado)) }}</p>
+        <p v-if="resultado.liberadoDisco > 0">
+          {{ t.liberadoDisco(formatoBytes(resultado.liberadoDisco)) }}
+        </p>
+        <p v-if="hayPedidos" class="motivo">{{ t.notaPedido }}</p>
         <ul class="lista">
           <li v-for="r in resultado.resultados" :key="r.id" class="fila">
             <NTag size="small" :type="TONO[r.estado]" :bordered="false">
@@ -119,6 +148,9 @@ const TONO = { hecho: 'success', saltado: 'warning', error: 'error' } as const;
         </NButton>
 
         <template v-if="plan">
+          <NAlert v-if="plan.listadoFallido" type="warning" :bordered="false" class="nota">
+            {{ t.listadoFallido }}
+          </NAlert>
           <NAlert v-if="plan.sinDatosActividad" type="info" :bordered="false" class="nota">
             {{ t.sinDatos }}
           </NAlert>
@@ -139,9 +171,15 @@ const TONO = { hecho: 'success', saltado: 'warning', error: 'error' } as const;
             <NAlert v-if="hayProgramas" type="warning" :bordered="false" class="nota">
               {{ t.avisoCerrar }}
             </NAlert>
+            <NAlert v-if="hayServicios" type="info" :bordered="false" class="nota">
+              {{ t.avisoDetener }}
+            </NAlert>
             <p class="resumen">
               {{ t.marcadas(marcadas.length, acciones.length) }} ·
               {{ t.estimado(formatoBytes(estimado)) }}
+            </p>
+            <p v-if="estimadoDisco > 0" class="resumen">
+              {{ t.estimadoDisco(formatoBytes(estimadoDisco)) }}
             </p>
             <div v-if="!confirmando" class="acciones">
               <NButton
@@ -156,6 +194,8 @@ const TONO = { hecho: 'success', saltado: 'warning', error: 'error' } as const;
             <div v-else class="confirmar" role="alertdialog" :aria-label="t.confirmarTitulo">
               <strong>{{ t.confirmarTitulo }}</strong>
               <p>{{ t.confirmarTexto(marcadas.length) }}</p>
+              <p v-if="aCerrar.length > 0">{{ t.confirmarCerrar(aCerrar.join(', ')) }}</p>
+              <p v-if="aDetener.length > 0">{{ t.confirmarDetener(aDetener.join(', ')) }}</p>
               <div class="acciones">
                 <NButton
                   type="warning"

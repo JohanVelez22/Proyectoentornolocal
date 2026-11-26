@@ -445,6 +445,10 @@ export const en: Textos = {
       'conversor.formato': 'That conversion is not available.',
       'memoria.sin_confirmar': 'Confirm the action in the dialog before continuing.',
       'memoria.modo_invalido': 'That optimization mode does not exist.',
+      'memoria.plan_caducado':
+        'The list expired or is no longer the current one. Show it again before applying.',
+      'memoria.no_disponible':
+        'The memory optimizer is not available here or could not read the system.',
       'conversor.archivo_invalido': 'The file is damaged or is not the type its extension says.',
       'conversor.archivo_grande': 'The file is too large (up to {maximo}).',
       'conversor.archivo_peligroso':
@@ -4494,8 +4498,10 @@ export const en: Textos = {
     modo: 'Mode',
     modos: { liviano: 'Light', moderado: 'Moderate', profundo: 'Deep' },
     descripciones: {
-      liviano: 'Only clears the app and session caches. It stops and closes nothing.',
-      moderado: 'Also offers to leave a single PHP worker and to stop idle WolfCore Dev services.',
+      liviano:
+        'Only clears the app session cache: it frees disk, not RAM. It stops and closes nothing.',
+      moderado:
+        'Also offers to leave a single PHP worker and to stop WolfCore Dev services with no activity or connections. Services start unchecked.',
       profundo:
         'Also lists your own memory-hungry programs so you can ask them to close their window. They start unchecked.',
     },
@@ -4509,33 +4515,44 @@ export const en: Textos = {
       'cerrar-programa': 'Ask it to close its window',
     },
     caches: {
-      sesion: 'Application session cache',
-      nucleo: 'Monitor samples kept in memory',
+      sesion: 'HTTP cache of the application session',
     },
-    estimado: (cantidad: string) => `About ${cantidad} would be freed`,
+    estimado: (cantidad: string) => `About ${cantidad} of RAM would be freed`,
+    estimadoDisco: (cantidad: string) => `Plus about ${cantidad} of disk (the cache is not RAM)`,
     marcadas: (n: number, total: number) => `${n} of ${total} checked`,
     sinDatos:
       'There is not enough activity data yet to offer stopping services or reducing PHP. Leave Home open for a few minutes and look again.',
+    listadoFallido:
+      'The list of open programs could not be read: this list may be incomplete. Try again.',
+    avisoDetener:
+      'Idle services start unchecked: stopping one cuts off whatever uses it. Only those with no connections right now are listed.',
     avisoCerrar:
       'Programs are only asked to close their window, like clicking the X: they may ask whether to save. A program is never forced or terminated.',
     protegidos:
-      'System programs, Windows services, other users, FlyEnv and WolfCore Dev never appear.',
+      'System programs, Windows services, elevated programs, other users, FlyEnv, PhpWebStudy and WolfCore Dev (or anything they launch) never appear.',
     aplicar: 'Apply the checked ones',
     confirmarTitulo: 'Apply these actions?',
     confirmarTexto: (n: number) =>
       n === 1 ? '1 action from the list will run.' : `${n} actions from the list will run.`,
+    confirmarCerrar: (nombres: string) =>
+      `These programs will be asked to close their window: ${nombres}.`,
+    confirmarDetener: (nombres: string) => `These services will be stopped: ${nombres}.`,
     confirmar: 'Yes, apply',
     cancelar: 'Cancel',
     resultadoTitulo: 'Result',
-    liberado: (cantidad: string) => `Estimated: about ${cantidad} freed`,
-    estados: { hecho: 'Done', saltado: 'Skipped', error: 'Failed' },
+    liberado: (cantidad: string) => `Estimated: about ${cantidad} of RAM freed`,
+    liberadoDisco: (cantidad: string) => `Plus about ${cantidad} of disk`,
+    notaPedido:
+      'Waiting for you: the window was asked to close and the program is still open (it may be asking whether to save). It is not counted as freed.',
+    estados: { hecho: 'Done', pedido: 'Waiting for you', saltado: 'Skipped', error: 'Failed' },
     motivos: {
       no_en_plan: 'It was not in the list',
       protegido: 'It is a protected program',
       cambio: 'It changed since the list was shown',
       sin_ventana: 'It no longer has a window to close',
       ya_apagado: 'There was nothing left to reduce',
-      ocupado: 'It was busy',
+      ocupado: 'It was busy (it has connections)',
+      no_se_pudo: 'The close request could not be sent (the program runs with elevated rights)',
     },
     otraVez: 'Start over',
   },

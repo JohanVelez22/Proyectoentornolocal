@@ -1,24 +1,31 @@
+import { mkdirSync, symlinkSync } from 'node:fs';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { ErrorWolf } from '../src/errores';
 import { Eventos, type EventosNucleo } from '../src/eventos';
 import { Nucleo } from '../src/nucleo';
 import { carpetaTemporal } from './temporales';
 import { Metricas } from '../src/monitor/metricas';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
+import { completarPlataforma } from '../src/plataforma/index';
+import { interpretarNetstatEstablecidas } from '../src/plataforma/netstat';
 import {
   interpretarProcesosUsuario,
   ProcesosUsuarioWindows,
   scriptCerrarVentana,
+  scriptProcesosUsuario,
 } from '../src/plataforma/procesosUsuarioWin';
-import type { Ejecutor, ProcesoUsuario } from '../src/plataforma/tipos';
+import type { Ejecutor, PlataformaCompleta, ProcesoUsuario } from '../src/plataforma/tipos';
 import { ServicioPhp } from '../src/servicios/php';
 import {
+  MAX_ACCIONES_MEMORIA,
   motivoProtegido,
   OptimizadorMemoria,
   type CacheApp,
   type DepsMemoria,
+  type PlanMemoria,
   type PoolReducible,
   type ServicioPropio,
 } from '../src/sistema/memoria';
@@ -79,6 +86,7 @@ function escenario() {
     proc({ pid: 231, nombre: 'otra-sesion.exe', sesion: 0 }),
     proc({ pid: 232, nombre: 'servicio.exe', servicio: true }),
     proc({ pid: 233, nombre: 'sinruta.exe', ruta: null }),
+    proc({ pid: 234, nombre: 'elevado.exe', elevado: true }),
   ];
   // WolfCore Dev (220) tiene un hijo (221) que ningún nombre delata.
   falsa.hijos.set(220, [221]);
@@ -96,13 +104,21 @@ function depsBase(falsa: PlataformaFalsa, extra: Partial<DepsMemoria> = {}): Dep
     reducirPool: async () => 0,
     servicios: async () => [],
     detenerServicio: async () => undefined,
+    // Sin esperar de verdad los 3 s del cierre.
+    esperar: async () => undefined,
     ...extra,
   };
 }
 
-const cache = (id: string, bytes: number, vaciadas: string[]): CacheApp => ({
+const cache = (
+  id: string,
+  bytes: number,
+  vaciadas: string[],
+  unidad: 'ram' | 'disco' = 'ram',
+): CacheApp => ({
   id,
   etiqueta: id,
+  unidad,
   estimar: async () => bytes,
   vaciar: async () => {
     vaciadas.push(id);
@@ -110,15 +126,19 @@ const cache = (id: string, bytes: number, vaciadas: string[]): CacheApp => ({
   },
 });
 
+/** Plan y aplicación en un paso, con el id del plan. */
+const aplicar = (o: OptimizadorMemoria, plan: PlanMemoria, ids: string[]) =>
+  o.aplicarMemoria(plan.id, ids, true);
+
 describe('optimizador de RAM: lista protegida', () => {
-  it('en profundo, ningún plan contiene protegidos, ajenos, FlyEnv ni WolfCore Dev', async () => {
+  it('en profundo, ningún plan contiene protegidos, ajenos, elevados, FlyEnv ni WolfCore Dev', async () => {
     const falsa = escenario();
     const o = new OptimizadorMemoria(depsBase(falsa));
     const plan = await o.planMemoria('profundo');
     const pids = plan.acciones.filter((a) => a.tipo === 'cerrar-programa').map((a) => a.id);
     expect(pids.sort()).toEqual(['cerrar-programa:100', 'cerrar-programa:101']);
     for (const prohibido of [
-      200, 201, 202, 203, 204, 205, 206, 210, 211, 212, 220, 221, 222, 230, 231, 232, 233,
+      200, 201, 202, 203, 204, 205, 206, 210, 211, 212, 220, 221, 222, 230, 231, 232, 233, 234,
     ]) {
       expect(pids, `pid ${prohibido}`).not.toContain(`cerrar-programa:${prohibido}`);
     }
@@ -131,9 +151,11 @@ describe('optimizador de RAM: lista protegida', () => {
       rutasSistema: ['C:\\Windows', 'C:\\Program Files\\Windows Defender'],
       rutasPropias: ['C:\\Users\\yo\\AppData\\Local\\WolfCoreDev'],
       pidsPropios: new Set([221]),
+      pidsFlyEnv: new Set([777]),
     };
     expect(motivoProtegido(proc({ pid: 100, nombre: 'chrome.exe' }), ctx)).toBeNull();
     expect(motivoProtegido(proc({ pid: 221, nombre: 'x.exe' }), ctx)).toBe('wolfcore');
+    expect(motivoProtegido(proc({ pid: 777, nombre: 'x.exe' }), ctx)).toBe('protegido');
     expect(motivoProtegido(proc({ pid: 230, nombre: 'x.exe', usuario: 'otro' }), ctx)).toBe(
       'otro-usuario',
     );
@@ -142,6 +164,9 @@ describe('optimizador de RAM: lista protegida', () => {
     );
     expect(motivoProtegido(proc({ pid: 232, nombre: 'x.exe', servicio: true }), ctx)).toBe(
       'servicio',
+    );
+    expect(motivoProtegido(proc({ pid: 234, nombre: 'x.exe', elevado: true }), ctx)).toBe(
+      'elevado',
     );
     expect(motivoProtegido(proc({ pid: 233, nombre: 'x.exe', ruta: null }), ctx)).toBe('sin-ruta');
     expect(motivoProtegido(proc({ pid: 4, nombre: 'System' }), ctx)).toBe('sistema');
@@ -159,6 +184,53 @@ describe('optimizador de RAM: lista protegida', () => {
     expect(
       motivoProtegido(proc({ pid: 303, nombre: 'a.exe', ruta: 'C:\\x\\phpwebstudy\\a.exe' }), ctx),
     ).toBe('protegido');
+  });
+
+  it('los prefijos de ruta larga (\\\\?\\ y \\??\\) no esconden una carpeta protegida', () => {
+    const ctx = {
+      usuario: 'S-1-5-21-yo',
+      sesion: 1,
+      rutasSistema: ['C:\\Windows'],
+      rutasPropias: ['C:\\Users\\yo\\AppData\\Local\\WolfCoreDev'],
+      pidsPropios: new Set<number>(),
+    };
+    for (const ruta of [
+      '\\\\?\\C:\\Windows\\a.exe',
+      '\\??\\C:\\Windows\\a.exe',
+      '\\\\?\\c:\\WINDOWS\\Sub\\a.exe',
+    ]) {
+      expect(motivoProtegido(proc({ pid: 310, nombre: 'a.exe', ruta }), ctx), ruta).toBe('sistema');
+    }
+    expect(
+      motivoProtegido(
+        proc({
+          pid: 311,
+          nombre: 'a.exe',
+          ruta: '\\\\?\\C:\\Users\\yo\\AppData\\Local\\WolfCoreDev\\a.exe',
+        }),
+        ctx,
+      ),
+    ).toBe('wolfcore');
+  });
+
+  it('una carpeta propia que es un enlace (o unión) se protege también por su ruta real', async () => {
+    const base = await carpetaTemporal('pel-mem-real-');
+    const real = path.join(base, 'real');
+    const enlace = path.join(base, 'enlace');
+    mkdirSync(real);
+    try {
+      symlinkSync(real, enlace, 'junction');
+    } catch {
+      return; // sin permiso para crear enlaces en este equipo: no hay nada que probar
+    }
+    const falsa = escenario();
+    falsa.procesosUsuario.push(
+      proc({ pid: 400, nombre: 'viaje.exe', ruta: path.join(real, 'viaje.exe') }),
+    );
+    const plan = await new OptimizadorMemoria(
+      depsBase(falsa, { rutasPropias: () => [enlace] }),
+    ).planMemoria('profundo');
+    expect(plan.acciones.map((a) => a.id)).not.toContain('cerrar-programa:400');
   });
 
   it('un hijo de WolfCore Dev que no se llama como él se protege por el árbol de procesos', async () => {
@@ -179,6 +251,22 @@ describe('optimizador de RAM: lista protegida', () => {
     ).planMemoria('profundo');
     expect(plan.acciones.map((a) => a.id)).not.toContain('cerrar-programa:250');
   });
+
+  it('FlyEnv y PhpWebStudy protegen todo su árbol de procesos, no solo lo que se llama como ellos', async () => {
+    const falsa = escenario();
+    falsa.procesosUsuario.push(
+      proc({ pid: 260, nombre: 'mariadbd.exe', ruta: 'D:\\datos\\bin\\mariadbd.exe' }),
+      proc({ pid: 261, nombre: 'nieto.exe', ruta: 'D:\\datos\\bin\\nieto.exe' }),
+    );
+    // 211 es de PhpWebStudy (por su ruta) y 210 de FlyEnv (por su nombre): sus hijos y nietos también.
+    falsa.hijos.set(210, [260]);
+    falsa.hijos.set(260, [261]);
+    const plan = await new OptimizadorMemoria(depsBase(falsa)).planMemoria('profundo');
+    const ids = plan.acciones.map((a) => a.id);
+    expect(ids).not.toContain('cerrar-programa:260');
+    expect(ids).not.toContain('cerrar-programa:261');
+    expect(ids).toContain('cerrar-programa:100');
+  });
 });
 
 describe('optimizador de RAM: modos', () => {
@@ -198,19 +286,20 @@ describe('optimizador de RAM: modos', () => {
     }
   });
 
+  it('un programa sin hora de inicio legible no se propone (no se podría reconocer)', async () => {
+    const falsa = escenario();
+    falsa.procesosUsuario.find((p) => p.pid === 100)!.inicio = null;
+    const plan = await new OptimizadorMemoria(depsBase(falsa)).planMemoria('profundo');
+    expect(plan.acciones.map((a) => a.id)).not.toContain('cerrar-programa:100');
+  });
+
   it('liviano solo vacía cachés: no lee procesos, no detiene ni cierra nada', async () => {
     const falsa = escenario();
     const vaciadas: string[] = [];
-    let leidos = 0;
-    const original = falsa.procesosDelUsuario.bind(falsa);
-    falsa.procesosDelUsuario = async () => {
-      leidos++;
-      return original();
-    };
     const detenidos: string[] = [];
     const o = new OptimizadorMemoria(
       depsBase(falsa, {
-        caches: () => [cache('sesion', 30 * MB, vaciadas), cache('nucleo', 1 * MB, vaciadas)],
+        caches: () => [cache('sesion', 30 * MB, vaciadas), cache('otra', 1 * MB, vaciadas)],
         pools: async () => [pool('8.4', 60 * MB)],
         reducirPool: async (v) => {
           detenidos.push(`pool:${v}`);
@@ -226,18 +315,43 @@ describe('optimizador de RAM: modos', () => {
     expect(plan.acciones.map((a) => a.tipo)).toEqual(['cache-app', 'cache-app']);
     expect(plan.acciones.every((a) => a.marcada)).toBe(true);
     expect(plan.estimado).toBe(31 * MB);
-    const r = await o.aplicarMemoria(
+    const r = await aplicar(
+      o,
+      plan,
       plan.acciones.map((a) => a.id),
-      true,
     );
-    expect(vaciadas.sort()).toEqual(['nucleo', 'sesion']);
+    expect(vaciadas.sort()).toEqual(['otra', 'sesion']);
     expect(r.liberado).toBe(31 * MB);
     expect(detenidos).toEqual([]);
     expect(falsa.cierresPedidos).toEqual([]);
-    expect(leidos).toBe(0);
+    expect(falsa.listados).toBe(0);
   });
 
-  it('moderado propone reducir el pool y detener lo propio que lleva inactivo el tiempo debido', async () => {
+  it('la caché HTTP (disco) no cuenta como RAM: se muestra y se informa aparte', async () => {
+    const falsa = escenario();
+    const vaciadas: string[] = [];
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, {
+        caches: () => [cache('sesion', 30 * MB, vaciadas, 'disco'), cache('ram', 2 * MB, vaciadas)],
+      }),
+    );
+    const plan = await o.planMemoria('liviano');
+    expect(plan.acciones.map((a) => [a.id, a.unidad])).toEqual([
+      ['cache-app:sesion', 'disco'],
+      ['cache-app:ram', 'ram'],
+    ]);
+    expect(plan.estimado).toBe(2 * MB);
+    expect(plan.estimadoDisco).toBe(30 * MB);
+    const r = await aplicar(
+      o,
+      plan,
+      plan.acciones.map((a) => a.id),
+    );
+    expect(r.liberado).toBe(2 * MB);
+    expect(r.liberadoDisco).toBe(30 * MB);
+  });
+
+  it('moderado propone reducir el pool y detener lo propio inactivo, y los servicios salen desmarcados', async () => {
     const falsa = escenario();
     const hechos: string[] = [];
     const o = new OptimizadorMemoria(
@@ -259,10 +373,79 @@ describe('optimizador de RAM: modos', () => {
     );
     const plan = await o.planMemoria('moderado');
     expect(plan.acciones.map((a) => a.id)).toEqual(['reducir-pool:8.4', 'detener-inactivo:mysql']);
+    expect(plan.acciones.map((a) => a.marcada)).toEqual([true, false]);
     // postgresql y 8.3 no llevan el tiempo; mailpit apenas se observa: no se afirma nada.
     expect(plan.sinDatosActividad).toBe(true);
-    await o.aplicarMemoria(['reducir-pool:8.4', 'detener-inactivo:mysql'], true);
+    await aplicar(o, plan, ['reducir-pool:8.4', 'detener-inactivo:mysql']);
     expect(hechos).toEqual(['pool:8.4', 'detener:mysql']);
+  });
+
+  it('un servicio con conexiones establecidas a su puerto no se propone, y sin poder saberlo tampoco', async () => {
+    const falsa = escenario();
+    const deps = depsBase(falsa, {
+      servicios: async () => [
+        servicio('mysql', 200 * MB, 40, { puertos: [3306] }),
+        servicio('redis', 50 * MB, 40, { puertos: [6379], pid: 77 }),
+      ],
+    });
+    // Un cliente conectado a mysql: ese lado local es el servidor; el otro, el cliente.
+    falsa.conexiones = [{ puertoLocal: 3306, puertoRemoto: 51000, pid: 5 }];
+    const plan = await new OptimizadorMemoria(deps).planMemoria('moderado');
+    expect(plan.acciones.map((a) => a.id)).toEqual(['detener-inactivo:redis']);
+    // La conexión vista desde el cliente (puerto remoto = el del servicio) también cuenta.
+    falsa.conexiones = [{ puertoLocal: 51000, puertoRemoto: 6379, pid: 9 }];
+    const plan2 = await new OptimizadorMemoria(deps).planMemoria('moderado');
+    expect(plan2.acciones.map((a) => a.id)).toEqual(['detener-inactivo:mysql']);
+    // Sin poder leer las conexiones no se propone detener nada.
+    falsa.fallaConexiones = true;
+    const plan3 = await new OptimizadorMemoria(deps).planMemoria('moderado');
+    expect(plan3.acciones).toEqual([]);
+    expect(plan3.sinDatosActividad).toBe(true);
+  });
+
+  it('sin puertos conocidos, las conexiones se buscan por el PID del servicio; sin ninguno de los dos, no se propone', async () => {
+    const falsa = escenario();
+    falsa.conexiones = [{ puertoLocal: 40000, puertoRemoto: 40001, pid: 77 }];
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, {
+        servicios: async () => [
+          servicio('trabajador', 10 * MB, 40, { puertos: [], pid: 77 }),
+          servicio('otro', 10 * MB, 40, { puertos: [], pid: 78 }),
+          servicio('ciego', 10 * MB, 40, { puertos: [], pid: null }),
+        ],
+      }),
+    );
+    const plan = await o.planMemoria('moderado');
+    expect(plan.acciones.map((a) => a.id)).toEqual(['detener-inactivo:otro']);
+    expect(plan.sinDatosActividad).toBe(true);
+  });
+
+  it('al aplicar se vuelve a mirar si hay conexiones: ocupado se salta, y sin poder leerlas también', async () => {
+    const falsa = escenario();
+    const detenidos: string[] = [];
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, {
+        servicios: async () => [servicio('mysql', 200 * MB, 40, { puertos: [3306] })],
+        detenerServicio: async (id) => {
+          detenidos.push(id);
+        },
+      }),
+    );
+    let plan = await o.planMemoria('moderado');
+    falsa.conexiones = [{ puertoLocal: 3306, puertoRemoto: 52000, pid: 5 }];
+    let r = await aplicar(o, plan, ['detener-inactivo:mysql']);
+    expect(r.resultados[0]).toMatchObject({ estado: 'saltado', motivo: 'ocupado' });
+    falsa.conexiones = [];
+    plan = await o.planMemoria('moderado');
+    falsa.fallaConexiones = true;
+    r = await aplicar(o, plan, ['detener-inactivo:mysql']);
+    expect(r.resultados[0]).toMatchObject({ estado: 'saltado', motivo: 'ocupado' });
+    expect(detenidos).toEqual([]);
+    falsa.fallaConexiones = false;
+    plan = await o.planMemoria('moderado');
+    r = await aplicar(o, plan, ['detener-inactivo:mysql']);
+    expect(r.resultados[0]).toMatchObject({ estado: 'hecho' });
+    expect(detenidos).toEqual(['mysql']);
   });
 
   it('un servicio que volvió a tener actividad entre el plan y la aplicación no se detiene', async () => {
@@ -279,12 +462,83 @@ describe('optimizador de RAM: modos', () => {
     );
     const plan = await o.planMemoria('moderado');
     inactivo = 1;
-    const r = await o.aplicarMemoria(
+    const r = await aplicar(
+      o,
+      plan,
       plan.acciones.map((a) => a.id),
-      true,
     );
     expect(detenidos).toEqual([]);
     expect(r.resultados[0]).toMatchObject({ estado: 'saltado', motivo: 'cambio' });
+  });
+
+  it('reducir-pool vuelve a leer los pools al aplicar y exige la inactividad otra vez', async () => {
+    const falsa = escenario();
+    let actual: PoolReducible[] = [pool('8.4', 60 * MB)];
+    const reducidos: string[] = [];
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, {
+        pools: async () => actual,
+        reducirPool: async (v) => {
+          reducidos.push(v);
+          return 3;
+        },
+      }),
+    );
+    // Hubo actividad entre el plan y la aplicación.
+    let plan = await o.planMemoria('moderado');
+    actual = [pool('8.4', 60 * MB, { inactivoMs: 30_000 })];
+    let r = await aplicar(o, plan, ['reducir-pool:8.4']);
+    expect(r.resultados[0]).toMatchObject({ estado: 'saltado', motivo: 'cambio' });
+    // Ya no tiene varios trabajadores.
+    actual = [pool('8.4', 60 * MB)];
+    plan = await o.planMemoria('moderado');
+    actual = [pool('8.4', 0, { trabajadores: 1 })];
+    r = await aplicar(o, plan, ['reducir-pool:8.4']);
+    expect(r.resultados[0]).toMatchObject({ estado: 'saltado', motivo: 'ya_apagado' });
+    // Sin la lectura de actividad (null) tampoco.
+    actual = [pool('8.4', 60 * MB)];
+    plan = await o.planMemoria('moderado');
+    actual = [pool('8.4', 60 * MB, { inactivoMs: null })];
+    r = await aplicar(o, plan, ['reducir-pool:8.4']);
+    expect(r.resultados[0]).toMatchObject({ estado: 'saltado', motivo: 'cambio' });
+    expect(reducidos).toEqual([]);
+    // Todo en regla: se reduce.
+    actual = [pool('8.4', 60 * MB)];
+    plan = await o.planMemoria('moderado');
+    r = await aplicar(o, plan, ['reducir-pool:8.4']);
+    expect(r.resultados[0]).toMatchObject({ estado: 'hecho', liberado: 60 * MB });
+    expect(reducidos).toEqual(['8.4']);
+  });
+
+  it('las cachés se aplican al final, después de pools, servicios y programas', async () => {
+    const falsa = escenario();
+    const orden: string[] = [];
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, {
+        caches: () => [cache('sesion', MB, orden)],
+        pools: async () => [pool('8.4', 60 * MB)],
+        reducirPool: async () => {
+          orden.push('pool');
+          return 1;
+        },
+        servicios: async () => [servicio('mysql', 200 * MB, 40)],
+        detenerServicio: async () => {
+          orden.push('detener');
+        },
+      }),
+    );
+    const plan = await o.planMemoria('profundo');
+    const ids = [
+      'cache-app:sesion',
+      'cerrar-programa:100',
+      'detener-inactivo:mysql',
+      'reducir-pool:8.4',
+    ];
+    const r = await aplicar(o, plan, ids);
+    expect(orden).toEqual(['pool', 'detener', 'sesion']);
+    expect(falsa.cierresPedidos).toEqual([100]);
+    // Los resultados salen en el orden pedido, aunque se hayan aplicado en otro.
+    expect(r.resultados.map((x) => x.id)).toEqual(ids);
   });
 
   it('sin `confirmado === true` falla y no toca nada', async () => {
@@ -296,7 +550,7 @@ describe('optimizador de RAM: modos', () => {
     const plan = await o.planMemoria('liviano');
     const ids = plan.acciones.map((a) => a.id);
     for (const malo of [undefined, false, 'true', 1, null]) {
-      await expect(o.aplicarMemoria(ids, malo as never)).rejects.toMatchObject({
+      await expect(o.aplicarMemoria(plan.id, ids, malo as never)).rejects.toMatchObject({
         codigo: 'memoria.sin_confirmar',
       });
     }
@@ -306,41 +560,188 @@ describe('optimizador de RAM: modos', () => {
     });
   });
 
-  it('solo se aplica lo que estaba en el último plan: un id inventado se salta', async () => {
+  it('solo se aplica lo que estaba en el plan: un id inventado se salta y tiene tipo desconocido', async () => {
     const falsa = escenario();
     const o = new OptimizadorMemoria(depsBase(falsa));
-    await o.planMemoria('profundo');
-    const r = await o.aplicarMemoria(
-      ['cerrar-programa:200', 'cerrar-programa:9999', 'basura'],
-      true,
-    );
+    const plan0 = await o.planMemoria('profundo');
+    const r = await aplicar(o, plan0, ['cerrar-programa:200', 'cerrar-programa:9999', 'basura']);
     expect(r.resultados.map((x) => x.motivo)).toEqual(['no_en_plan', 'no_en_plan', 'no_en_plan']);
+    // Un id que no es de ningún tipo conocido no se hace pasar por "cerrar-programa".
+    expect(r.resultados.map((x) => x.tipo)).toEqual([
+      'cerrar-programa',
+      'cerrar-programa',
+      'desconocido',
+    ]);
     expect(falsa.cierresPedidos).toEqual([]);
     // Lo ya aplicado tampoco se repite sin un plan nuevo.
     const plan = await o.planMemoria('profundo');
-    await o.aplicarMemoria(['cerrar-programa:100'], true);
-    const otra = await o.aplicarMemoria(['cerrar-programa:100'], true);
+    await aplicar(o, plan, ['cerrar-programa:100']);
+    const otra = await aplicar(o, plan, ['cerrar-programa:100']);
     expect(otra.resultados[0]!.motivo).toBe('no_en_plan');
     expect(falsa.cierresPedidos).toEqual([100]);
     expect(plan.acciones.length).toBeGreaterThan(0);
   });
 });
 
-describe('optimizador de RAM: se vuelve a comprobar justo antes de actuar', () => {
+describe('optimizador de RAM: el plan tiene id, caduca y respeta los topes', () => {
+  it('un id de plan que no es el último, o ninguno, falla con memoria.plan_caducado', async () => {
+    const falsa = escenario();
+    const vaciadas: string[] = [];
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, { caches: () => [cache('sesion', MB, vaciadas)] }),
+    );
+    await expect(o.aplicarMemoria('nada', ['cache-app:sesion'], true)).rejects.toMatchObject({
+      codigo: 'memoria.plan_caducado',
+    });
+    const viejo = await o.planMemoria('liviano');
+    const nuevo = await o.planMemoria('liviano');
+    expect(nuevo.id).not.toBe(viejo.id);
+    await expect(aplicar(o, viejo, ['cache-app:sesion'])).rejects.toMatchObject({
+      codigo: 'memoria.plan_caducado',
+    });
+    expect(vaciadas).toEqual([]);
+    await aplicar(o, nuevo, ['cache-app:sesion']);
+    expect(vaciadas).toEqual(['sesion']);
+  });
+
+  it('a los 5 minutos el plan caduca; antes, no', async () => {
+    const falsa = escenario();
+    const vaciadas: string[] = [];
+    let ahora = 1_000_000;
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, { caches: () => [cache('sesion', MB, vaciadas)], ahora: () => ahora }),
+    );
+    let plan = await o.planMemoria('liviano');
+    ahora += 5 * 60_000;
+    await aplicar(o, plan, ['cache-app:sesion']);
+    expect(vaciadas).toEqual(['sesion']);
+    plan = await o.planMemoria('liviano');
+    ahora += 5 * 60_000 + 1;
+    await expect(aplicar(o, plan, ['cache-app:sesion'])).rejects.toMatchObject({
+      codigo: 'memoria.plan_caducado',
+    });
+    expect(vaciadas).toEqual(['sesion']);
+  });
+
+  it('las acciones aplicadas se borran del plan capturado, no del plan nuevo que se pidió entretanto', async () => {
+    const falsa = escenario();
+    let soltar: () => void = () => undefined;
+    const puerta = new Promise<void>((r) => {
+      soltar = r;
+    });
+    const vaciadas: string[] = [];
+    const lenta: CacheApp = {
+      id: 'sesion',
+      etiqueta: 'sesion',
+      estimar: async () => MB,
+      vaciar: async () => {
+        await puerta;
+        vaciadas.push('sesion');
+        return MB;
+      },
+    };
+    const o = new OptimizadorMemoria(depsBase(falsa, { caches: () => [lenta] }));
+    const p1 = await o.planMemoria('liviano');
+    const enCurso = aplicar(o, p1, ['cache-app:sesion']);
+    const p2 = await o.planMemoria('liviano');
+    soltar();
+    await enCurso;
+    // El plan 2 sigue entero: lo que terminó el plan 1 no le quitó su acción.
+    const r = await aplicar(o, p2, ['cache-app:sesion']);
+    expect(r.resultados[0]).toMatchObject({ estado: 'hecho' });
+    expect(vaciadas).toEqual(['sesion', 'sesion']);
+  });
+
+  it('el plan tiene como mucho 60 acciones, de ids de como mucho 100 caracteres', async () => {
+    const falsa = escenario();
+    const vaciadas: string[] = [];
+    const muchas = Array.from({ length: 80 }, (_, i) => cache(`c${i}`, MB, vaciadas));
+    const largo = cache('x'.repeat(120), MB, vaciadas);
+    const o = new OptimizadorMemoria(depsBase(falsa, { caches: () => [largo, ...muchas] }));
+    const plan = await o.planMemoria('liviano');
+    expect(plan.acciones).toHaveLength(MAX_ACCIONES_MEMORIA);
+    expect(plan.acciones.every((a) => a.id.length <= 100)).toBe(true);
+    expect(plan.acciones.map((a) => a.id)).not.toContain(`cache-app:${'x'.repeat(120)}`);
+  });
+
+  it('si no se puede leer la lista de programas, el plan lo dice (y no inventa una vacía)', async () => {
+    const falsa = escenario();
+    falsa.fallaListado = true;
+    const plan = await new OptimizadorMemoria(depsBase(falsa)).planMemoria('profundo');
+    expect(plan.listadoFallido).toBe(true);
+    expect(plan.acciones).toEqual([]);
+    falsa.fallaListado = false;
+    const ok = await new OptimizadorMemoria(depsBase(falsa)).planMemoria('profundo');
+    expect(ok.listadoFallido).toBe(false);
+  });
+});
+
+describe('optimizador de RAM: se comprueba justo antes de actuar', () => {
   async function planYMuta(mutar: (f: PlataformaFalsa) => void) {
     const falsa = escenario();
     const o = new OptimizadorMemoria(depsBase(falsa));
-    await o.planMemoria('profundo');
+    const plan = await o.planMemoria('profundo');
     mutar(falsa);
-    const r = await o.aplicarMemoria(['cerrar-programa:100'], true);
-    return { falsa, resultado: r.resultados[0]! };
+    const r = await aplicar(o, plan, ['cerrar-programa:100']);
+    return { falsa, resultado: r.resultados[0]!, r };
   }
 
-  it('sin cambios, pide un cierre amable por PID y nada más', async () => {
+  it('sin cambios, pide un cierre amable por PID con su inicio y su ruta, y nada más', async () => {
     const { falsa, resultado } = await planYMuta(() => undefined);
-    expect(resultado).toMatchObject({ estado: 'hecho', motivo: null });
+    // Pedido, no cerrado: el programa sigue abierto, así que no suma nada.
+    expect(resultado).toMatchObject({ estado: 'pedido', motivo: null, liberado: 0 });
     expect(falsa.cierresPedidos).toEqual([100]);
+    expect(falsa.cierresIntentados).toEqual([
+      { pid: 100, inicio: 'inicio-100', ruta: 'C:\\Users\\yo\\AppData\\Local\\chrome.exe' },
+    ]);
     expect(falsa.matados).toEqual([]);
+  });
+
+  it('si a los 3 s el programa ya no está, se cuenta su memoria; si sigue, queda esperando al usuario', async () => {
+    const falsa = escenario();
+    falsa.cierranAlPedir.add(100);
+    const esperas: number[] = [];
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, {
+        esperar: async (ms) => {
+          esperas.push(ms);
+        },
+      }),
+    );
+    const plan = await o.planMemoria('profundo');
+    const r = await aplicar(o, plan, ['cerrar-programa:100', 'cerrar-programa:101']);
+    expect(esperas).toEqual([3000]);
+    expect(r.resultados[0]).toMatchObject({ estado: 'hecho', liberado: 900 * MB });
+    expect(r.resultados[1]).toMatchObject({ estado: 'pedido', liberado: 0 });
+    expect(r.liberado).toBe(900 * MB);
+  });
+
+  it('si no se puede volver a leer la lista, no se afirma que se cerró', async () => {
+    const falsa = escenario();
+    falsa.cierranAlPedir.add(100);
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, {
+        esperar: async () => {
+          falsa.fallaListado = true;
+        },
+      }),
+    );
+    // La lectura del contexto ya ocurrió antes de la espera.
+    const plan = await o.planMemoria('profundo');
+    const r = await aplicar(o, plan, ['cerrar-programa:100']);
+    expect(r.resultados[0]).toMatchObject({ estado: 'pedido', liberado: 0 });
+  });
+
+  it('un programa elevado (o con permisos que no permiten el cierre) se informa como no_se_pudo', async () => {
+    const { resultado } = await (async () => {
+      const falsa = escenario();
+      falsa.resultadoCierre = 'no-se-pudo';
+      const o = new OptimizadorMemoria(depsBase(falsa));
+      const plan = await o.planMemoria('profundo');
+      const r = await aplicar(o, plan, ['cerrar-programa:100']);
+      return { resultado: r.resultados[0]! };
+    })();
+    expect(resultado).toMatchObject({ estado: 'saltado', motivo: 'no_se_pudo', liberado: 0 });
   });
 
   it('un pid reutilizado por otro programa (otra ruta) se salta', async () => {
@@ -367,7 +768,7 @@ describe('optimizador de RAM: se vuelve a comprobar justo antes de actuar', () =
     expect(falsa.cierresPedidos).toEqual([]);
   });
 
-  it('si ahora resulta protegido (otro usuario, bajo Windows, ruta de FlyEnv), se salta', async () => {
+  it('si ahora es de otro usuario, otra sesión o un servicio, la comprobación de la plataforma lo salta', async () => {
     for (const mutar of [
       (p: ProcesoUsuario) => void (p.usuario = 'S-1-5-21-otro'),
       (p: ProcesoUsuario) => void (p.sesion = 0),
@@ -375,22 +776,65 @@ describe('optimizador de RAM: se vuelve a comprobar justo antes de actuar', () =
     ]) {
       const falsa = escenario();
       const o = new OptimizadorMemoria(depsBase(falsa));
-      await o.planMemoria('profundo');
+      const plan = await o.planMemoria('profundo');
       mutar(falsa.procesosUsuario.find((p) => p.pid === 100)!);
-      const r = await o.aplicarMemoria(['cerrar-programa:100'], true);
-      expect(r.resultados[0]).toMatchObject({ estado: 'saltado', motivo: 'protegido' });
+      const r = await aplicar(o, plan, ['cerrar-programa:100']);
+      expect(r.resultados[0]).toMatchObject({ estado: 'saltado', motivo: 'cambio' });
       expect(falsa.cierresPedidos).toEqual([]);
     }
   });
 
-  it('sin hora de inicio legible no se puede asegurar que sea el mismo: se salta', async () => {
+  it('si entre el plan y la aplicación pasa a ser hijo de WolfCore Dev o de FlyEnv, se salta por protegido', async () => {
+    for (const raiz of [220, 210]) {
+      const falsa = escenario();
+      const o = new OptimizadorMemoria(depsBase(falsa));
+      const plan = await o.planMemoria('profundo');
+      falsa.hijos.set(raiz, [100]);
+      const r = await aplicar(o, plan, ['cerrar-programa:100']);
+      expect(r.resultados[0], `raíz ${raiz}`).toMatchObject({
+        estado: 'saltado',
+        motivo: 'protegido',
+      });
+      expect(falsa.cierresIntentados).toEqual([]);
+    }
+  });
+
+  it('el contexto se lee una sola vez por aplicación, y cada programa se verifica solo con el cierre', async () => {
     const falsa = escenario();
-    falsa.procesosUsuario.find((p) => p.pid === 100)!.inicio = null;
+    let identidades = 0;
+    const idOriginal = falsa.identidadActual.bind(falsa);
+    falsa.identidadActual = async () => {
+      identidades++;
+      return idOriginal();
+    };
+    let descendientes = 0;
+    const descOriginal = falsa.descendientes.bind(falsa);
+    falsa.descendientes = async (pids) => {
+      descendientes++;
+      return descOriginal(pids);
+    };
     const o = new OptimizadorMemoria(depsBase(falsa));
-    await o.planMemoria('profundo');
-    const r = await o.aplicarMemoria(['cerrar-programa:100'], true);
-    expect(r.resultados[0]).toMatchObject({ estado: 'saltado', motivo: 'cambio' });
-    expect(falsa.cierresPedidos).toEqual([]);
+    const plan = await o.planMemoria('profundo');
+    identidades = 0;
+    descendientes = 0;
+    falsa.listados = 0;
+    await aplicar(o, plan, ['cerrar-programa:100', 'cerrar-programa:101']);
+    expect(identidades).toBe(1);
+    expect(descendientes).toBe(1);
+    // Una lectura para el contexto y otra, a los 3 s, para ver si cerraron: no una por programa.
+    expect(falsa.listados).toBe(2);
+    expect(falsa.cierresIntentados.map((c) => c.pid)).toEqual([100, 101]);
+  });
+
+  it('una aplicación sin programas no lee la lista de procesos', async () => {
+    const falsa = escenario();
+    const vaciadas: string[] = [];
+    const o = new OptimizadorMemoria(
+      depsBase(falsa, { caches: () => [cache('sesion', MB, vaciadas)] }),
+    );
+    const plan = await o.planMemoria('liviano');
+    await aplicar(o, plan, ['cache-app:sesion']);
+    expect(falsa.listados).toBe(0);
   });
 
   it('nunca se llama a "matar": la falsa falla la prueba si ocurre', async () => {
@@ -399,13 +843,16 @@ describe('optimizador de RAM: se vuelve a comprobar justo antes de actuar', () =
     await expect(falsa.matarArbol(100)).rejects.toThrow(/PROHIBIDO/);
     const o = new OptimizadorMemoria(depsBase(falsa));
     const plan = await o.planMemoria('profundo');
-    await o.aplicarMemoria(
+    await aplicar(
+      o,
+      plan,
       plan.acciones.map((a) => a.id),
-      true,
     );
-    await o.aplicarMemoria(
-      plan.acciones.filter((a) => a.tipo === 'cerrar-programa').map((a) => a.id),
-      true,
+    const plan2 = await o.planMemoria('profundo');
+    await aplicar(
+      o,
+      plan2,
+      plan2.acciones.filter((a) => a.tipo === 'cerrar-programa').map((a) => a.id),
     );
     expect(falsa.matados).toEqual([]);
   });
@@ -434,6 +881,8 @@ function servicio(
     memoria,
     inactivoMs: minutosInactivo * 60_000,
     observadoMs: 60 * 60_000,
+    puertos: [3306],
+    pid: 1000,
     ...o,
   };
 }
@@ -476,22 +925,12 @@ describe('Metricas: inactividad observada', () => {
     ahora += 60 * 60_000;
     await m.muestrear();
     expect(m.observadoMs('php-8.4-0')).toBe(0);
-    // Las muestras guardadas se pueden vaciar.
-    expect(m.tamanoCache()).toBeGreaterThan(0);
-    m.vaciarCache();
-    expect(m.tamanoCache()).toBe(0);
   });
 });
 
 describe('ServicioPhp.reducirAUno', () => {
-  it('deja encendido el trabajador 0 y detiene los demás por su id', async () => {
-    const estados = new Map<string, string>([
-      ['php-8.4-0', 'encendido'],
-      ['php-8.4-1', 'encendido'],
-      ['php-8.4-2', 'encendido'],
-      ['php-8.4-3', 'apagado'],
-      ['php-8.3-0', 'encendido'],
-    ]);
+  function php(encendidos: string[]) {
+    const estados = new Map<string, string>(encendidos.map((id) => [id, 'encendido']));
     const detenidos: string[] = [];
     const sup = {
       estado: (id: string) => estados.get(id) ?? 'apagado',
@@ -500,35 +939,53 @@ describe('ServicioPhp.reducirAUno', () => {
         estados.set(id, 'apagado');
       },
     };
-    const php = new ServicioPhp(
+    const servicio = new ServicioPhp(
       {} as never,
       {} as never,
       sup as never,
       {} as never,
       (async () => ({})) as never,
     );
-    expect(php.trabajadoresEncendidos('8.4')).toEqual([0, 1, 2]);
-    expect(await php.reducirAUno('8.4')).toBe(2);
+    return { servicio, detenidos };
+  }
+
+  it('deja encendido el primer trabajador encendido y detiene los demás por su id', async () => {
+    const { servicio, detenidos } = php(['php-8.4-0', 'php-8.4-1', 'php-8.4-2', 'php-8.3-0']);
+    expect(servicio.trabajadoresEncendidos('8.4')).toEqual([0, 1, 2]);
+    expect(await servicio.reducirAUno('8.4')).toBe(2);
     expect(detenidos).toEqual(['php-8.4-1', 'php-8.4-2']);
-    expect(await php.reducirAUno('8.4')).toBe(0);
-    expect(php.trabajadoresEncendidos('8.3')).toEqual([0]);
+    expect(await servicio.reducirAUno('8.4')).toBe(0);
+    expect(servicio.trabajadoresEncendidos('8.3')).toEqual([0]);
+  });
+
+  it('si los encendidos son [1, 2] conserva el 1 (no el índice 0, que está apagado)', async () => {
+    const { servicio, detenidos } = php(['php-8.4-1', 'php-8.4-2']);
+    expect(servicio.trabajadoresEncendidos('8.4')).toEqual([1, 2]);
+    expect(await servicio.reducirAUno('8.4')).toBe(1);
+    expect(detenidos).toEqual(['php-8.4-2']);
+    expect(servicio.trabajadoresEncendidos('8.4')).toEqual([1]);
   });
 });
 
 describe('implementación de Windows: solo lee y cierra con amabilidad', () => {
   const b64 = (t: string): string => Buffer.from(t, 'utf8').toString('base64');
+  const decodificar = (args: string[]): string =>
+    Buffer.from(args[args.indexOf('-EncodedCommand') + 1] ?? '', 'base64').toString('utf16le');
 
   it('interpreta la salida y descarta líneas raras', () => {
     const salida = [
-      `100|1|133000000000000000|943718400|1|0|${b64('chrome.exe')}|${b64('C:\\Program Files\\Google\\chrome.exe')}`,
-      `101|1||1024|0|1|${b64('serv.exe')}|`,
+      `100|1|133000000000000000|943718400|1|0|0|${b64('chrome.exe')}|${b64('C:\\Program Files\\Google\\chrome.exe')}`,
+      `101|1||1024|0|1|0|${b64('serv.exe')}|`,
+      `104|1|5|10|1|0|1|${b64('alto.exe')}|${b64('C:\\alto.exe')}`,
       'basura',
-      `abc|1|1|1|1|1|${b64('x')}|${b64('C:\\x')}`,
-      `102|1|5|10|1|0|***|${b64('C:\\x')}`,
-      `103|1|5|10|1|0|${b64('rel.exe')}|${b64('relativa\\rel.exe')}`,
+      `abc|1|1|1|1|1|0|${b64('x')}|${b64('C:\\x')}`,
+      `102|1|5|10|1|0|0|***|${b64('C:\\x')}`,
+      `103|1|5|10|1|0|0|${b64('rel.exe')}|${b64('relativa\\rel.exe')}`,
+      // Con el formato anterior (sin la columna de elevado) no se acepta.
+      `105|1|5|10|1|0|${b64('viejo.exe')}|${b64('C:\\viejo.exe')}`,
     ].join('\r\n');
     const l = interpretarProcesosUsuario(salida);
-    expect(l.map((p) => p.pid)).toEqual([100, 101, 103]);
+    expect(l.map((p) => p.pid)).toEqual([100, 101, 104, 103]);
     expect(l[0]).toMatchObject({
       nombre: 'chrome.exe',
       ruta: 'C:\\Program Files\\Google\\chrome.exe',
@@ -536,19 +993,19 @@ describe('implementación de Windows: solo lee y cierra con amabilidad', () => {
       memoria: 943718400,
       ventana: true,
       servicio: false,
+      elevado: false,
     });
     expect(l[1]).toMatchObject({ ruta: null, inicio: null, ventana: false, servicio: true });
+    // Los que este usuario no pudo abrir (elevados) llegan marcados.
+    expect(l[2]).toMatchObject({ pid: 104, elevado: true });
     // Una ruta que no es absoluta no se acepta: el proceso queda sin ruta (y, por tanto, protegido).
-    expect(l[2]!.ruta).toBeNull();
+    expect(l[3]!.ruta).toBeNull();
   });
 
-  it('lista con PowerShell de System32 por ruta absoluta, filtra por usuario y sesión y no cambia nada', async () => {
+  it('lista con PowerShell de System32 por ruta absoluta, filtrando en WMI por la sesión, y no cambia nada', async () => {
     const llamadas: { cmd: string; script: string }[] = [];
     const ejecutor: Ejecutor = async (cmd, args) => {
-      const script = Buffer.from(
-        args[args.indexOf('-EncodedCommand') + 1] ?? '',
-        'base64',
-      ).toString('utf16le');
+      const script = decodificar(args);
       llamadas.push({ cmd, script });
       if (script.includes('GetCurrent().User.Value') && !script.includes('Win32_Process')) {
         return { codigo: 0, stdout: 'S-1-5-21-1-2-3-1001|2\r\n', stderr: '' };
@@ -556,8 +1013,8 @@ describe('implementación de Windows: solo lee y cierra con amabilidad', () => {
       return {
         codigo: 0,
         stdout: [
-          `100|2|11|1000|1|0|${b64('a.exe')}|${b64('C:\\a.exe')}`,
-          `101|0|11|1000|1|0|${b64('b.exe')}|${b64('C:\\b.exe')}`,
+          `100|2|11|1000|1|0|0|${b64('a.exe')}|${b64('C:\\a.exe')}`,
+          `101|0|11|1000|1|0|0|${b64('b.exe')}|${b64('C:\\b.exe')}`,
         ].join('\n'),
         stderr: '',
       };
@@ -573,37 +1030,125 @@ describe('implementación de Windows: solo lee y cierra con amabilidad', () => {
     }
     const script = llamadas.map((c) => c.script).join('\n');
     expect(script).toContain('Win32_Process');
+    expect(script).toContain('-Filter "SessionId=2"');
+    expect(script).not.toContain('Where-Object');
     expect(script).toContain('GetOwnerSid');
     expect(script).not.toMatch(/Stop-Process|taskkill|Terminate|\.Kill\(|Remove-|Set-/i);
   });
 
-  it('si no se puede leer, la lista queda vacía (nunca se propone a ciegas)', async () => {
+  it('el script de listado solo acepta una sesión entera', () => {
+    expect(scriptProcesosUsuario(0)).toContain('SessionId=0');
+    for (const malo of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => scriptProcesosUsuario(malo)).toThrow();
+    }
+  });
+
+  it('si no se puede leer, falla con un error del catálogo (no una lista vacía que parezca cierta)', async () => {
     const w = new ProcesosUsuarioWindows(async () => ({ codigo: 1, stdout: '', stderr: 'x' }), {});
-    expect(await w.listar()).toEqual([]);
+    await expect(w.listar()).rejects.toMatchObject({ codigo: 'memoria.no_disponible' });
+    await expect(w.identidad()).rejects.toBeInstanceOf(ErrorWolf);
     const w2 = new ProcesosUsuarioWindows(async () => {
       throw new Error('sin powershell');
     }, {});
-    expect(await w2.listar()).toEqual([]);
-    expect(await w2.cerrarVentana(5)).toBe(false);
+    await expect(w2.listar()).rejects.toMatchObject({ codigo: 'memoria.no_disponible' });
+    expect(await w2.cerrarVentana(5, '133000000000000000', 'C:\\a.exe')).toBe('no-se-pudo');
+    await expect(w2.conexiones()).rejects.toMatchObject({ codigo: 'memoria.no_disponible' });
   });
 
-  it('cerrarVentana pide CloseMainWindow por PID (nunca por nombre) y rechaza PIDs raros', async () => {
-    const scripts: string[] = [];
-    const w = new ProcesosUsuarioWindows(async (_c, args) => {
-      scripts.push(
-        Buffer.from(args[args.indexOf('-EncodedCommand') + 1] ?? '', 'base64').toString('utf16le'),
-      );
-      return { codigo: 0, stdout: 'SI', stderr: '' };
-    }, {});
-    expect(await w.cerrarVentana(4321)).toBe(true);
-    expect(scripts[0]).toContain('CloseMainWindow()');
-    expect(scripts[0]).toContain('-Id 4321');
-    expect(scripts[0]).not.toMatch(/-Name|Stop-Process|taskkill|Kill/i);
-    for (const malo of [0, -1, 1.5, Number.NaN]) {
-      expect(await w.cerrarVentana(malo)).toBe(false);
-      expect(() => scriptCerrarVentana(malo)).toThrow();
+  it('el script de cierre comprueba pid, hora de inicio y ruta antes de CloseMainWindow, en el mismo script', () => {
+    const inicio = '133700000000000000';
+    const ruta = 'C:\\Users\\yo\\Prográma ñ\\a.exe';
+    const s = scriptCerrarVentana(4321, inicio, ruta);
+    expect(s).toContain('-Id 4321');
+    expect(s).toContain(`[int64]${inicio}`);
+    expect(s).toContain(Buffer.from(ruta, 'utf8').toString('base64'));
+    // Nada de la ruta va en claro dentro del script.
+    expect(s).not.toContain('Prográma');
+    const iClose = s.indexOf('CloseMainWindow()');
+    expect(iClose).toBeGreaterThan(s.indexOf('CreationDate'));
+    expect(iClose).toBeGreaterThan(s.indexOf('ExecutablePath'));
+    expect(iClose).toBeGreaterThan(s.indexOf('StartTime'));
+    for (const estado of ['CERRADO', 'CAMBIO', 'SIN_VENTANA', 'NO_SE_PUDO']) {
+      expect(s).toContain(`'${estado}'`);
     }
-    expect(scripts).toHaveLength(1);
+    expect(s).not.toMatch(/-Name|Stop-Process|taskkill|Kill|Terminate/i);
+    // Entradas que no son lo que dicen no llegan a formar un script.
+    for (const [pid, i, r] of [
+      [0, inicio, ruta],
+      [-1, inicio, ruta],
+      [1.5, inicio, ruta],
+      [Number.NaN, inicio, ruta],
+      [10, '', ruta],
+      [10, '12abc', ruta],
+      [10, '1; Stop-Process', ruta],
+      [10, '0', ruta],
+      [10, '99999999999999999999', ruta],
+      [10, '9223372036854775808', ruta],
+      [10, inicio, ''],
+    ] as [number, string, string][]) {
+      expect(() => scriptCerrarVentana(pid, i, r), `${pid} ${i} ${r}`).toThrow();
+    }
+  });
+
+  it('cerrarVentana distingue cerrado-pedido, cambio, sin-ventana y no-se-pudo', async () => {
+    const scripts: string[] = [];
+    let salida = 'CERRADO';
+    let codigo = 0;
+    const w = new ProcesosUsuarioWindows(async (_c, args) => {
+      scripts.push(decodificar(args));
+      return { codigo, stdout: salida, stderr: '' };
+    }, {});
+    const llamar = () => w.cerrarVentana(4321, '133700000000000000', 'C:\\a.exe');
+    expect(await llamar()).toBe('cerrado-pedido');
+    salida = 'CAMBIO';
+    expect(await llamar()).toBe('cambio');
+    salida = 'SIN_VENTANA';
+    expect(await llamar()).toBe('sin-ventana');
+    salida = 'NO_SE_PUDO';
+    expect(await llamar()).toBe('no-se-pudo');
+    // Una salida rara o un código de error nunca se toman por un cierre.
+    salida = 'SI';
+    expect(await llamar()).toBe('no-se-pudo');
+    salida = 'CERRADO';
+    codigo = 1;
+    expect(await llamar()).toBe('no-se-pudo');
+    expect(scripts[0]).toContain('CloseMainWindow()');
+    // Con datos que no valen, ni siquiera se ejecuta nada.
+    const antes = scripts.length;
+    for (const malo of [0, -1, 1.5, Number.NaN]) {
+      expect(await w.cerrarVentana(malo, '133700000000000000', 'C:\\a.exe')).toBe('no-se-pudo');
+    }
+    expect(await w.cerrarVentana(5, 'no-es-numero', 'C:\\a.exe')).toBe('no-se-pudo');
+    expect(scripts).toHaveLength(antes);
+  });
+
+  it('las conexiones se leen con NETSTAT de System32 y se ignoran las que se están cerrando', async () => {
+    const llamadas: { cmd: string; args: string[] }[] = [];
+    const w = new ProcesosUsuarioWindows(
+      async (cmd, args) => {
+        llamadas.push({ cmd, args });
+        return {
+          codigo: 0,
+          stdout: [
+            '  TCP    0.0.0.0:3306           0.0.0.0:0              LISTENING       1234',
+            '  TCP    127.0.0.1:3306         127.0.0.1:51000        ESTABLISHED     1234',
+            '  TCP    127.0.0.1:51000        127.0.0.1:3306         ESTABLECIDO     777',
+            '  TCP    127.0.0.1:3306         127.0.0.1:51001        TIME_WAIT       0',
+            '  TCP    127.0.0.1:3306         127.0.0.1:51002        CLOSE_WAIT      1234',
+            '  TCP    [::1]:6379             [::1]:52000            ÉTABLI          555',
+          ].join('\r\n'),
+          stderr: '',
+        };
+      },
+      { SystemRoot: 'C:\\Windows' },
+    );
+    expect(await w.conexiones()).toEqual([
+      { puertoLocal: 3306, puertoRemoto: 51000, pid: 1234 },
+      { puertoLocal: 51000, puertoRemoto: 3306, pid: 777 },
+      { puertoLocal: 6379, puertoRemoto: 52000, pid: 555 },
+    ]);
+    expect(llamadas[0]!.cmd).toMatch(/System32.NETSTAT\.EXE$/i);
+    expect(interpretarNetstatEstablecidas('basura\n  TCP  x  y')).toEqual([]);
   });
 
   it('las carpetas protegidas incluyen Windows y Windows Defender', () => {
@@ -617,10 +1162,47 @@ describe('implementación de Windows: solo lee y cierra con amabilidad', () => {
   });
 });
 
+describe('fuera de Windows: respaldo neutro de las capacidades del optimizador', () => {
+  it('lista vacía, cierre que no se pudo e identidad con un ErrorWolf del catálogo', async () => {
+    // Una plataforma parcial (como las de prueba) en Linux: lo que falta no se pide a PowerShell.
+    const llamadas: string[] = [];
+    const respaldoWindows = new Proxy({} as PlataformaCompleta, {
+      get: (_o, k) => {
+        llamadas.push(String(k));
+        return () => {
+          throw new Error('no debe llamarse');
+        };
+      },
+    });
+    const parcial = { rutaHosts: () => 'x' } as never;
+    const p = completarPlataforma(parcial, respaldoWindows, 'linux');
+    expect(await p.procesosDelUsuario()).toEqual([]);
+    expect(await p.cerrarVentanaPrincipal(10, '1', 'C:\\a.exe')).toBe('no-se-pudo');
+    expect(p.rutasProtegidas()).toEqual([]);
+    const e = await p.identidadActual().catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(ErrorWolf);
+    expect(e).toMatchObject({ codigo: 'memoria.no_disponible' });
+    await expect(p.conexionesActivas()).rejects.toBeInstanceOf(ErrorWolf);
+    expect(llamadas).toEqual([]);
+  });
+
+  it('en Windows sigue usando la implementación de Windows', async () => {
+    const respaldo = {
+      procesosDelUsuario: async () => [{ pid: 1 }],
+    } as unknown as PlataformaCompleta;
+    const p = completarPlataforma({ rutaHosts: () => 'x' } as never, respaldo, 'win32');
+    expect(await p.procesosDelUsuario()).toEqual([{ pid: 1 }]);
+  });
+});
+
 describe('guardia: el optimizador no tiene cómo matar', () => {
   const PROHIBIDO =
     /taskkill|Stop-Process|TerminateProcess|matarArbol|process\.kill|\.Kill\(|\bkill\(/i;
-  for (const rel of ['sistema/memoria.ts', 'plataforma/procesosUsuarioWin.ts']) {
+  for (const rel of [
+    'sistema/memoria.ts',
+    'plataforma/procesosUsuarioWin.ts',
+    'plataforma/respaldoMemoria.ts',
+  ]) {
     it(`${rel} no contiene ninguna forma de terminar un proceso`, () => {
       const codigo = sinComentarios(readFileSync(path.join(SRC, rel), 'utf8'));
       expect(codigo).not.toMatch(PROHIBIDO);
@@ -634,7 +1216,7 @@ describe('guardia: el optimizador no tiene cómo matar', () => {
 });
 
 describe('Nucleo: optimizador de RAM', () => {
-  it('liviano vacía la caché que registra la app y la del núcleo; profundo no lista lo protegido', async () => {
+  it('liviano vacía la caché que registra la app (la de métricas ya no se ofrece); profundo no lista lo protegido', async () => {
     const base = await carpetaTemporal('pel-mem-');
     const falsa = escenario();
     falsa.hijos.set(process.pid, [221]);
@@ -651,14 +1233,14 @@ describe('Nucleo: optimizador de RAM', () => {
       const vaciadas: string[] = [];
       n.registrarCacheApp(cache('sesion', 5 * MB, vaciadas));
       const plan = await n.planMemoria('liviano');
-      expect(plan.acciones.map((a) => a.id)).toEqual(['cache-app:nucleo', 'cache-app:sesion']);
+      expect(plan.acciones.map((a) => a.id)).toEqual(['cache-app:sesion']);
       await expect(
-        n.aplicarMemoria(['cache-app:sesion'], undefined as never),
+        n.aplicarMemoria(plan.id, ['cache-app:sesion'], undefined as never),
       ).rejects.toMatchObject({
         codigo: 'memoria.sin_confirmar',
       });
       expect(vaciadas).toEqual([]);
-      const r = await n.aplicarMemoria(['cache-app:sesion'], true);
+      const r = await n.aplicarMemoria(plan.id, ['cache-app:sesion'], true);
       expect(vaciadas).toEqual(['sesion']);
       expect(r.liberado).toBe(5 * MB);
 
@@ -670,6 +1252,10 @@ describe('Nucleo: optimizador de RAM', () => {
       ]);
       expect(cerrar.every((a) => !a.marcada)).toBe(true);
       expect(falsa.matados).toEqual([]);
+      // Un plan viejo ya no vale.
+      await expect(n.aplicarMemoria(plan.id, ['cache-app:sesion'], true)).rejects.toMatchObject({
+        codigo: 'memoria.plan_caducado',
+      });
     } finally {
       await n.cerrar({ detenerServicios: false });
     }

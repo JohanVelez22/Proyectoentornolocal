@@ -178,6 +178,8 @@ export const PARAMETROS_ERROR = {
   // optimizador de RAM (D36)
   'memoria.sin_confirmar': [],
   'memoria.modo_invalido': [],
+  'memoria.plan_caducado': [],
+  'memoria.no_disponible': [],
   // acceso a la base con Adminer o phpMyAdmin (D18)
   'acceso_bd.datos_invalidos': [],
   'acceso_bd.sin_base': [],

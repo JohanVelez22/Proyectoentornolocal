@@ -1,3 +1,4 @@
+import { ErrorWolf } from '../errores';
 import type { PerfilRed, ReglasEntrada } from './firewallWin';
 import { desinstalarEnCarpeta } from './rustupRegistro';
 import { chmod, mkdir, writeFile } from 'node:fs/promises';
@@ -10,6 +11,8 @@ import type {
   EditorDisponible,
   EstadoAntivirus,
   EstadoCaptura,
+  ConexionActiva,
+  EstadoCierre,
   IdentidadUsuario,
   ProcesoUsuario,
   IdCatalogo,
@@ -376,15 +379,54 @@ export class PlataformaFalsa implements PlataformaCompleta {
   /** PIDs a los que se pidió cerrar la ventana (nunca se mata nada). */
   readonly cierresPedidos: number[] = [];
 
+  /** Qué contesta `cerrarVentanaPrincipal` cuando el proceso es el esperado (para simular UIPI). */
+  resultadoCierre: EstadoCierre = 'cerrado-pedido';
+  /** Los PIDs que, tras pedirles el cierre, desaparecen (el usuario no cancela). */
+  cierranAlPedir = new Set<number>();
+  /** Si es true, `procesosDelUsuario` falla (listado fallido). */
+  fallaListado = false;
+  /** Veces que se leyó la lista de procesos. */
+  listados = 0;
+  /** Conexiones TCP en curso que ve `conexionesActivas`; `fallaConexiones` simula no poder leerlas. */
+  conexiones: ConexionActiva[] = [];
+  fallaConexiones = false;
+  /** Veces que se pidió cerrar (con lo que se comprobó), aunque se saltara. */
+  readonly cierresIntentados: { pid: number; inicio: string; ruta: string }[] = [];
+
   async procesosDelUsuario(): Promise<ProcesoUsuario[]> {
+    this.listados++;
+    if (this.fallaListado) throw new ErrorWolf('memoria.no_disponible', 'listado fallido');
     return this.procesosUsuario.map((p) => ({ ...p }));
   }
 
-  async cerrarVentanaPrincipal(pid: number): Promise<boolean> {
+  /** Imita al script real: comprueba pid, dueño, sesión, inicio, ruta y servicio antes de cerrar. */
+  async cerrarVentanaPrincipal(pid: number, inicio: string, ruta: string): Promise<EstadoCierre> {
+    this.cierresIntentados.push({ pid, inicio, ruta });
     const p = this.procesosUsuario.find((x) => x.pid === pid);
-    if (!p || !p.ventana) return false;
-    this.cierresPedidos.push(pid);
-    return true;
+    if (
+      !p ||
+      p.usuario !== this.identidad.usuario ||
+      p.sesion !== this.identidad.sesion ||
+      p.servicio === true ||
+      p.inicio !== inicio ||
+      (p.ruta ?? '').toLowerCase() !== ruta.toLowerCase()
+    ) {
+      return 'cambio';
+    }
+    if (!p.ventana) return 'sin-ventana';
+    if (p.elevado === true) return 'no-se-pudo';
+    if (this.resultadoCierre === 'cerrado-pedido') {
+      this.cierresPedidos.push(pid);
+      if (this.cierranAlPedir.has(pid)) {
+        this.procesosUsuario = this.procesosUsuario.filter((x) => x.pid !== pid);
+      }
+    }
+    return this.resultadoCierre;
+  }
+
+  async conexionesActivas(): Promise<ConexionActiva[]> {
+    if (this.fallaConexiones) throw new ErrorWolf('memoria.no_disponible', 'sin conexiones');
+    return this.conexiones.map((c) => ({ ...c }));
   }
 
   async identidadActual(): Promise<IdentidadUsuario> {

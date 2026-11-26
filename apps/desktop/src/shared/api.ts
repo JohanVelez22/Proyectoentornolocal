@@ -1401,10 +1401,11 @@ export interface ApiEntorno {
      */
     plan(modo: ModoMemoria): Promise<PlanMemoria>;
     /**
-     * Aplica las acciones elegidas del último plan. `confirmado` debe ser `true`. Nunca mata
-     * procesos: a un programa solo se le pide cerrar su ventana.
+     * Aplica las acciones elegidas del plan `planId` (el que devolvió `plan`; vale 5 minutos y solo
+     * el último). `confirmado` debe ser `true`. Nunca mata procesos: a un programa solo se le pide
+     * cerrar su ventana, y su memoria solo cuenta si de verdad se cerró.
      */
-    aplicar(ids: string[], confirmado: true): Promise<ResultadoMemoria>;
+    aplicar(planId: string, ids: string[], confirmado: true): Promise<ResultadoMemoria>;
   };
   captura: {
     /** Configuración, estado del sistema y del atajo global (D35). */

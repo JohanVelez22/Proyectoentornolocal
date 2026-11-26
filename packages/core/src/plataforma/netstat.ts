@@ -1,3 +1,5 @@
+import type { ConexionActiva } from './tipos';
+
 export type ProtocoloPuerto = 'TCP' | 'UDP';
 
 /** Un socket en escucha (TCP) o abierto (UDP) según `netstat -ano`. */
@@ -64,4 +66,28 @@ export function interpretarTasklist(salida: string): { pid: number; nombre: stri
     if (m) return { pid: Number(m[2]), nombre: m[1] ?? '' };
   }
   return null;
+}
+
+/** Estados TCP que ya no son una conversación en curso (los nombres en inglés no se traducen). */
+const ESTADOS_INACTIVOS =
+  /^(TIME_WAIT|CLOSE_WAIT|FIN_WAIT_?[12]|LAST_ACK|CLOSING|SYN_SENT|SYN_RCVD|SYN_RECEIVED|CLOSED|DELETE_TCB|BOUND)$/i;
+
+/**
+ * Conexiones TCP en curso de `netstat -ano`: las que tienen destino remoto y no están cerrándose.
+ * El texto del estado sale localizado ("ESTABLECIDO"), así que por prudencia cuenta como en curso
+ * cualquier estado que no sea uno de los conocidos de cierre o de espera.
+ */
+export function interpretarNetstatEstablecidas(salida: string): ConexionActiva[] {
+  const res: ConexionActiva[] = [];
+  for (const linea of salida.split(/\r?\n/)) {
+    const c = linea.trim().split(/\s+/);
+    if (c[0]?.toUpperCase() !== 'TCP' || c.length < 5) continue;
+    const local = separarDireccion(c[1] ?? '');
+    const remoto = separarDireccion(c[2] ?? '');
+    const pidTexto = c[c.length - 1] ?? '';
+    if (!local || !remoto || remoto.puerto === 0 || !/^\d+$/.test(pidTexto)) continue;
+    if (ESTADOS_INACTIVOS.test(c[3] ?? '')) continue;
+    res.push({ puertoLocal: local.puerto, puertoRemoto: remoto.puerto, pid: Number(pidTexto) });
+  }
+  return res;
 }

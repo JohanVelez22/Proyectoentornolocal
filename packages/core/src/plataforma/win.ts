@@ -67,6 +67,8 @@ import type {
   ComandoManual,
   EstadoAntivirus,
   EstadoCaptura,
+  ConexionActiva,
+  EstadoCierre,
   IdentidadUsuario,
   ProcesoUsuario,
   Ejecutor,
@@ -902,8 +904,13 @@ export class PlataformaWindows implements PlataformaCompleta {
   }
 
   /** Cierre amable (CloseMainWindow) por PID: nunca termina el proceso. */
-  cerrarVentanaPrincipal(pid: number): Promise<boolean> {
-    return this.procesosUsuario().cerrarVentana(pid);
+  cerrarVentanaPrincipal(pid: number, inicio: string, ruta: string): Promise<EstadoCierre> {
+    return this.procesosUsuario().cerrarVentana(pid, inicio, ruta);
+  }
+
+  /** Conexiones TCP en curso (para no detener un servicio que se está usando). */
+  conexionesActivas(): Promise<ConexionActiva[]> {
+    return this.procesosUsuario().conexiones();
   }
 
   identidadActual(): Promise<IdentidadUsuario> {

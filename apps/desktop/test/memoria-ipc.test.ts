@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { MAX_ACCIONES_MEMORIA, MAX_LARGO_ID_MEMORIA } from '@pel/core';
 import { registrarIpc, type IpcMainLike, type NucleoIpc, type VentanaLike } from '../src/main/ipc';
 
 // Rutas `memoria.*` (D36): el modo y la confirmación se validan en la frontera, y la lista de
@@ -63,15 +64,17 @@ describe('rutas memoria.*', () => {
   it('aplicar exige confirmación exactamente true y no toca el núcleo sin ella', async () => {
     const t = preparar();
     for (const malo of [undefined, false, 'true', 1, null, {}]) {
-      expect(await t.llamar('memoria.aplicar', ['cache-app:sesion'], malo)).toMatchObject({
-        ok: false,
-      });
+      expect(await t.llamar('memoria.aplicar', 'plan-1', ['cache-app:sesion'], malo)).toMatchObject(
+        {
+          ok: false,
+        },
+      );
     }
     expect(t.nucleo.aplicarMemoria).not.toHaveBeenCalled();
-    expect(await t.llamar('memoria.aplicar', ['cache-app:sesion'], true)).toMatchObject({
+    expect(await t.llamar('memoria.aplicar', 'plan-1', ['cache-app:sesion'], true)).toMatchObject({
       ok: true,
     });
-    expect(t.nucleo.aplicarMemoria).toHaveBeenCalledWith(['cache-app:sesion'], true);
+    expect(t.nucleo.aplicarMemoria).toHaveBeenCalledWith('plan-1', ['cache-app:sesion'], true);
   });
 
   it('aplicar rechaza listas vacías, enormes o con elementos que no son texto', async () => {
@@ -83,11 +86,25 @@ describe('rutas memoria.*', () => {
       [1],
       [''],
       ['x'.repeat(101)],
-      Array.from({ length: 61 }, (_, i) => `cerrar-programa:${i}`),
+      Array.from({ length: MAX_ACCIONES_MEMORIA + 1 }, (_, i) => `cerrar-programa:${i}`),
     ]) {
-      expect(await t.llamar('memoria.aplicar', malo, true)).toMatchObject({ ok: false });
+      expect(await t.llamar('memoria.aplicar', 'plan-1', malo, true)).toMatchObject({ ok: false });
     }
     expect(t.nucleo.aplicarMemoria).not.toHaveBeenCalled();
+  });
+
+  it('aplicar exige el id del plan, y acepta justo el tope de acciones que el plan genera', async () => {
+    const t = preparar();
+    for (const malo of [undefined, '', null, 3, 'x'.repeat(101)]) {
+      expect(await t.llamar('memoria.aplicar', malo, ['cache-app:sesion'], true)).toMatchObject({
+        ok: false,
+      });
+    }
+    expect(t.nucleo.aplicarMemoria).not.toHaveBeenCalled();
+    const justo = Array.from({ length: MAX_ACCIONES_MEMORIA }, (_, i) => `cerrar-programa:${i}`);
+    expect(await t.llamar('memoria.aplicar', 'plan-1', justo, true)).toMatchObject({ ok: true });
+    const largo = `detener-inactivo:${'x'.repeat(MAX_LARGO_ID_MEMORIA - 17)}`;
+    expect(await t.llamar('memoria.aplicar', 'plan-1', [largo], true)).toMatchObject({ ok: true });
   });
 
   it('no hay ruta que reciba un pid, un nombre de proceso ni una ruta de archivo', () => {

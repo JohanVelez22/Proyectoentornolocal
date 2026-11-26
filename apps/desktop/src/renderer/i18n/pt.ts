@@ -455,6 +455,10 @@ export const pt: Textos = {
       'conversor.formato': 'Essa conversão não está disponível.',
       'memoria.sin_confirmar': 'Confirme a ação no diálogo antes de continuar.',
       'memoria.modo_invalido': 'Esse modo de otimização não existe.',
+      'memoria.plan_caducado':
+        'A lista expirou ou já não é a atual. Veja-a de novo antes de aplicar.',
+      'memoria.no_disponible':
+        'O otimizador de memória não está disponível aqui ou não conseguiu ler o sistema.',
       'conversor.archivo_invalido':
         'O arquivo está danificado ou não é do tipo indicado pela extensão.',
       'conversor.archivo_grande': 'O arquivo é grande demais (até {maximo}).',
@@ -4529,9 +4533,10 @@ export const pt: Textos = {
     modo: 'Modo',
     modos: { liviano: 'Leve', moderado: 'Moderado', profundo: 'Profundo' },
     descripciones: {
-      liviano: 'Só limpa os caches do aplicativo e da sessão. Não para nem fecha nada.',
+      liviano:
+        'Só limpa o cache da sessão do aplicativo: libera disco, não RAM. Não para nem fecha nada.',
       moderado:
-        'Também oferece deixar um único trabalhador do PHP e parar serviços ociosos do WolfCore Dev.',
+        'Também oferece deixar um único trabalhador do PHP e parar serviços do WolfCore Dev sem atividade nem conexões. Os serviços começam desmarcados.',
       profundo:
         'Também lista seus programas que mais usam memória para pedir que fechem a janela. Começam desmarcados.',
     },
@@ -4545,33 +4550,48 @@ export const pt: Textos = {
       'cerrar-programa': 'Pedir que feche a janela',
     },
     caches: {
-      sesion: 'Cache da sessão do aplicativo',
-      nucleo: 'Amostras guardadas do monitor',
+      sesion: 'Cache HTTP da sessão do aplicativo',
     },
-    estimado: (cantidad: string) => `Seriam liberados cerca de ${cantidad}`,
+    estimado: (cantidad: string) => `Seriam liberados cerca de ${cantidad} de RAM`,
+    estimadoDisco: (cantidad: string) => `E cerca de ${cantidad} de disco (o cache não é RAM)`,
     marcadas: (n: number, total: number) => `${n} de ${total} marcadas`,
     sinDatos:
       'Ainda não há dados de atividade suficientes para propor parar serviços ou reduzir o PHP. Deixe o Início aberto por alguns minutos e olhe de novo.',
+    listadoFallido:
+      'Não foi possível ler a lista de programas abertos: esta lista pode estar incompleta. Tente de novo.',
+    avisoDetener:
+      'Os serviços sem atividade começam desmarcados: parar um corta o que o usa. Só aparecem os que não têm conexões agora.',
     avisoCerrar:
       'Aos programas só se pede que fechem a janela, como ao clicar no X: eles podem perguntar se você quer salvar. Nunca se força nem se encerra um programa.',
     protegidos:
-      'Nunca aparecem programas do sistema, serviços do Windows, de outros usuários, FlyEnv nem WolfCore Dev.',
+      'Nunca aparecem programas do sistema, serviços do Windows, programas elevados, de outros usuários, FlyEnv, PhpWebStudy nem WolfCore Dev (nem o que eles iniciam).',
     aplicar: 'Aplicar o marcado',
     confirmarTitulo: 'Aplicar estas ações?',
     confirmarTexto: (n: number) =>
       n === 1 ? 'Será feita 1 ação da lista.' : `Serão feitas ${n} ações da lista.`,
+    confirmarCerrar: (nombres: string) => `Será pedido que fechem a janela: ${nombres}.`,
+    confirmarDetener: (nombres: string) => `Estes serviços serão parados: ${nombres}.`,
     confirmar: 'Sim, aplicar',
     cancelar: 'Cancelar',
     resultadoTitulo: 'Resultado',
-    liberado: (cantidad: string) => `Estimado: cerca de ${cantidad} liberados`,
-    estados: { hecho: 'Feito', saltado: 'Ignorado', error: 'Falhou' },
+    liberado: (cantidad: string) => `Estimado: cerca de ${cantidad} de RAM liberados`,
+    liberadoDisco: (cantidad: string) => `Além disso, cerca de ${cantidad} de disco`,
+    notaPedido:
+      'Aguardando o usuário: foi pedido que a janela fechasse e o programa continua aberto (talvez pergunte se você quer salvar). Não conta como liberado.',
+    estados: {
+      hecho: 'Feito',
+      pedido: 'Aguardando o usuário',
+      saltado: 'Ignorado',
+      error: 'Falhou',
+    },
     motivos: {
       no_en_plan: 'Não estava na lista',
       protegido: 'É um programa protegido',
       cambio: 'Mudou desde que a lista foi mostrada',
       sin_ventana: 'Já não tem uma janela para fechar',
       ya_apagado: 'Já não havia nada para reduzir',
-      ocupado: 'Estava ocupado',
+      ocupado: 'Estava ocupado (tem conexões)',
+      no_se_pudo: 'Não foi possível pedir o fechamento (o programa tem permissões elevadas)',
     },
     otraVez: 'Recomeçar',
   },

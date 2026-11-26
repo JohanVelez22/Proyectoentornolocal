@@ -779,7 +779,7 @@ export class Nucleo {
    * guarda, la registra ni la emite.
    */
   private proveedorClaveBd: (sitioId: string) => Promise<string | null> = async () => null;
-  /** Cachés propias que el optimizador de RAM sabe vaciar (la del núcleo y las que registra la app). */
+  /** Cachés propias que el optimizador de RAM sabe vaciar (las que registra la app). */
   private readonly cachesApp = new Map<string, CacheApp>();
   private readonly optimizadorMemoria: OptimizadorMemoria;
 
@@ -829,16 +829,6 @@ export class Nucleo {
     this.github = m.github;
     this.vigilante = m.vigilante;
     this.metricas = m.metricas;
-    this.registrarCacheApp({
-      id: 'nucleo',
-      etiqueta: 'Núcleo',
-      estimar: async () => this.metricas.tamanoCache(),
-      vaciar: async () => {
-        const antes = this.metricas.tamanoCache();
-        this.metricas.vaciarCache();
-        return antes;
-      },
-    });
     this.optimizadorMemoria = new OptimizadorMemoria({
       plataforma: this.plataforma,
       rutasPropias: () => [this.rutas.base, path.dirname(process.execPath)],
@@ -3571,9 +3561,9 @@ export class Nucleo {
     return this.optimizadorMemoria.planMemoria(modo);
   }
 
-  /** Aplica las acciones elegidas del último plan; exige `confirmado === true`. */
-  aplicarMemoria(ids: string[], confirmado: true): Promise<ResultadoMemoria> {
-    return this.optimizadorMemoria.aplicarMemoria(ids, confirmado);
+  /** Aplica las acciones elegidas del plan `planId` (vigente 5 min); exige `confirmado === true`. */
+  aplicarMemoria(planId: string, ids: string[], confirmado: true): Promise<ResultadoMemoria> {
+    return this.optimizadorMemoria.aplicarMemoria(planId, ids, confirmado);
   }
 
   private pidsSupervisados(): number[] {
@@ -3609,29 +3599,42 @@ export class Nucleo {
     return res;
   }
 
-  /** Servicios de datos, instancias y procesos de proyecto encendidos (no nginx, FTP ni PHP). */
+  /**
+   * Servicios de datos, instancias y procesos de proyecto encendidos (no nginx, FTP ni PHP). La
+   * actividad se lee de lo observado de CADA proceso (`inactividadMs`), nunca del búfer de
+   * muestras: la memoria sí sale de la última muestra, pero solo para mostrarla.
+   */
   private async serviciosPropiosEncendidos(): Promise<ServicioPropio[]> {
     const ultima = this.metricas.ultimos(1).at(-1);
-    const porPid = new Map((ultima?.procesos ?? []).map((p) => [p.pid, p]));
+    const ramPorId = new Map((ultima?.procesos ?? []).map((p) => [p.id, p.ramBytes]));
     const res: ServicioPropio[] = [];
-    const agregar = (id: string, nombre: string, pid: number | null): void => {
-      const m = pid === null ? undefined : porPid.get(pid);
+    // Id con el que el supervisor (y, por tanto, Metricas) conoce a cada PID encendido.
+    const idPorPid = new Map<number, string>();
+    for (const sid of this.supervisor.ids()) {
+      const pid = this.supervisor.pid(sid);
+      if (pid !== null) idPorPid.set(pid, sid);
+    }
+    const agregar = (id: string, nombre: string, pid: number | null, puertos: number[]): void => {
+      const sid = (pid === null ? undefined : idPorPid.get(pid)) ?? id;
       res.push({
         id,
         nombre,
-        memoria: m?.ramBytes ?? 0,
-        inactivoMs: m ? this.metricas.inactividadMs(m.id) : null,
-        observadoMs: m ? this.metricas.observadoMs(m.id) : null,
+        memoria: ramPorId.get(sid) ?? 0,
+        inactivoMs: this.metricas.inactividadMs(sid),
+        observadoMs: this.metricas.observadoMs(sid),
+        puertos,
+        pid,
       });
     };
     for (const s of await this.servicios.estados()) {
       if (s.id === 'nginx' || s.id === 'ftp' || s.id.startsWith('php-')) continue;
       if (s.instancias && s.instancias.length > 0) {
         for (const i of s.instancias) {
-          if (i.estado === 'encendido') agregar(i.id, `${s.nombre} ${i.version}`, i.pid);
+          if (i.estado === 'encendido')
+            agregar(i.id, `${s.nombre} ${i.version}`, i.pid, [i.puerto]);
         }
       } else if (s.estado === 'encendido') {
-        agregar(s.id, s.nombre, s.pid);
+        agregar(s.id, s.nombre, s.pid, s.puertos);
       }
     }
     return res;

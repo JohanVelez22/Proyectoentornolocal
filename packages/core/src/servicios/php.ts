@@ -290,14 +290,14 @@ export class ServicioPhp {
   }
 
   /**
-   * Deja encendido solo el primer trabajador de la rama (D36): detiene con normalidad los demás
-   * por su id del supervisor. Volver al tamaño normal es reiniciar la rama (`iniciar`). Devuelve
-   * cuántos detuvo.
+   * Deja encendido solo el primer trabajador que esté encendido de la rama (D36; no necesariamente
+   * el 0: si los encendidos son [1, 2], se queda el 1): detiene con normalidad los demás por su id
+   * del supervisor. Volver al tamaño normal es reiniciar la rama (`iniciar`). Devuelve cuántos
+   * detuvo.
    */
   async reducirAUno(version: string): Promise<number> {
     let n = 0;
-    for (const i of this.trabajadoresEncendidos(version)) {
-      if (i === 0) continue;
+    for (const i of this.trabajadoresEncendidos(version).slice(1)) {
       await this.supervisor.detener(this.idTrabajador(version, i));
       n++;
     }

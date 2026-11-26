@@ -241,16 +241,6 @@ export class Metricas {
     return a === undefined ? null : Math.max(0, this.ahora() - a.visto);
   }
 
-  /** Bytes que ocupan, a grandes rasgos, las muestras guardadas (para el optimizador de RAM). */
-  tamanoCache(): number {
-    return this.bufer.reduce((t, m) => t + 512 + m.procesos.length * 160, 0);
-  }
-
-  /** Olvida las muestras guardadas (no la actividad observada ni el muestreo en curso). */
-  vaciarCache(): void {
-    this.bufer = [];
-  }
-
   private anotarActividad(m: MuestraSistema): void {
     if (this.marcaAnterior !== null && m.marca - this.marcaAnterior > this.intervaloMs * 5) {
       this.actividad.clear();

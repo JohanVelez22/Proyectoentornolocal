@@ -493,7 +493,7 @@ const api: ApiEntorno = {
   },
   memoria: {
     plan: (modo) => invocar('memoria.plan', modo),
-    aplicar: (ids, confirmado) => invocar('memoria.aplicar', ids, confirmado),
+    aplicar: (planId, ids, confirmado) => invocar('memoria.aplicar', planId, ids, confirmado),
   },
   captura: {
     leer: () => invocar('captura.leer'),

@@ -470,6 +470,10 @@ export const fr: Textos = {
       'conversor.formato': 'Cette conversion n’est pas disponible.',
       'memoria.sin_confirmar': 'Confirmez l’action dans la boîte de dialogue avant de continuer.',
       'memoria.modo_invalido': 'Ce mode d’optimisation n’existe pas.',
+      'memoria.plan_caducado':
+        'La liste a expiré ou n’est plus la liste actuelle. Affichez-la de nouveau avant d’appliquer.',
+      'memoria.no_disponible':
+        'L’optimiseur de mémoire n’est pas disponible ici ou n’a pas pu lire le système.',
       'conversor.archivo_invalido':
         'Le fichier est endommagé ou n’est pas du type indiqué par son extension.',
       'conversor.archivo_grande': 'Le fichier est trop volumineux (jusqu’à {maximo}).',
@@ -4630,9 +4634,9 @@ export const fr: Textos = {
     modos: { liviano: 'Léger', moderado: 'Modéré', profundo: 'Approfondi' },
     descripciones: {
       liviano:
-        'Vide seulement les caches de l’application et de sa session. N’arrête ni ne ferme rien.',
+        'Vide seulement le cache de la session de l’application : il libère du disque, pas de la RAM. N’arrête ni ne ferme rien.',
       moderado:
-        'Propose aussi de ne garder qu’un seul processus PHP et d’arrêter les services inactifs de WolfCore Dev.',
+        'Propose aussi de ne garder qu’un seul processus PHP et d’arrêter les services de WolfCore Dev sans activité ni connexions. Les services sont décochés.',
       profundo:
         'Liste aussi vos programmes gourmands en mémoire pour leur demander de fermer leur fenêtre. Ils sont décochés.',
     },
@@ -4646,35 +4650,53 @@ export const fr: Textos = {
       'cerrar-programa': 'Demander de fermer sa fenêtre',
     },
     caches: {
-      sesion: 'Cache de la session de l’application',
-      nucleo: 'Échantillons du moniteur en mémoire',
+      sesion: 'Cache HTTP de la session de l’application',
     },
-    estimado: (cantidad: string) => `Environ ${cantidad} seraient libérés`,
+    estimado: (cantidad: string) => `Environ ${cantidad} de RAM seraient libérés`,
+    estimadoDisco: (cantidad: string) =>
+      `Et environ ${cantidad} de disque (le cache n’est pas de la RAM)`,
     marcadas: (n: number, total: number) => `${n} sur ${total} cochées`,
     sinDatos:
       'Il n’y a pas encore assez de données d’activité pour proposer d’arrêter des services ou de réduire PHP. Laissez Accueil ouvert quelques minutes et regardez à nouveau.',
+    listadoFallido:
+      'La liste des programmes ouverts n’a pas pu être lue : cette liste peut être incomplète. Réessayez.',
+    avisoDetener:
+      'Les services inactifs sont décochés : en arrêter un coupe ce qui l’utilise. Seuls ceux sans connexion en ce moment sont listés.',
     avisoCerrar:
       'On demande seulement aux programmes de fermer leur fenêtre, comme en cliquant sur la croix : ils peuvent demander s’il faut enregistrer. Un programme n’est jamais forcé ni terminé.',
     protegidos:
-      'Les programmes système, les services Windows, ceux d’autres utilisateurs, FlyEnv et WolfCore Dev n’apparaissent jamais.',
+      'Les programmes système, les services Windows, les programmes élevés, ceux d’autres utilisateurs, FlyEnv, PhpWebStudy et WolfCore Dev (ni ce qu’ils lancent) n’apparaissent jamais.',
     aplicar: 'Appliquer la sélection',
     confirmarTitulo: 'Appliquer ces actions ?',
     confirmarTexto: (n: number) =>
       n === 1
         ? '1 action de la liste sera exécutée.'
         : `${n} actions de la liste seront exécutées.`,
+    confirmarCerrar: (nombres: string) =>
+      `On demandera à ces programmes de fermer leur fenêtre : ${nombres}.`,
+    confirmarDetener: (nombres: string) => `Ces services seront arrêtés : ${nombres}.`,
     confirmar: 'Oui, appliquer',
     cancelar: 'Annuler',
     resultadoTitulo: 'Résultat',
-    liberado: (cantidad: string) => `Estimation : environ ${cantidad} libérés`,
-    estados: { hecho: 'Fait', saltado: 'Ignoré', error: 'Échec' },
+    liberado: (cantidad: string) => `Estimation : environ ${cantidad} de RAM libérés`,
+    liberadoDisco: (cantidad: string) => `Et environ ${cantidad} de disque`,
+    notaPedido:
+      'En attente de l’utilisateur : on a demandé de fermer la fenêtre et le programme est toujours ouvert (il demande peut-être d’enregistrer). Ce n’est pas compté comme libéré.',
+    estados: {
+      hecho: 'Fait',
+      pedido: 'En attente de l’utilisateur',
+      saltado: 'Ignoré',
+      error: 'Échec',
+    },
     motivos: {
       no_en_plan: 'Ce n’était pas dans la liste',
       protegido: 'C’est un programme protégé',
       cambio: 'Cela a changé depuis l’affichage de la liste',
       sin_ventana: 'Il n’a plus de fenêtre à fermer',
       ya_apagado: 'Il n’y avait plus rien à réduire',
-      ocupado: 'Il était occupé',
+      ocupado: 'Il était occupé (il a des connexions)',
+      no_se_pudo:
+        'La demande de fermeture n’a pas pu être envoyée (le programme a des droits élevés)',
     },
     otraVez: 'Recommencer',
   },

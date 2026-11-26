@@ -273,10 +273,16 @@ export interface CapacidadesPlataforma {
   /**
    * Pide al proceso `pid` que cierre su ventana principal, como al pulsar la X (cierre amable: el
    * programa puede preguntar si guarda). Nunca termina ni mata el proceso ni actúa por nombre.
-   * Devuelve false si el proceso ya no existe, no tiene ventana o no es del usuario y la sesión
-   * actuales.
+   * `inicio` (hora de creación) y `ruta` (ejecutable) son lo que el optimizador vio al listarlo:
+   * se comprueban dentro de la misma operación, justo antes de pedir el cierre, para no cerrar
+   * otro programa que heredó el PID.
    */
-  cerrarVentanaPrincipal(pid: number): Promise<boolean>;
+  cerrarVentanaPrincipal(pid: number, inicio: string, ruta: string): Promise<EstadoCierre>;
+  /**
+   * Conexiones TCP establecidas ahora mismo (para no detener un servicio que alguien está usando).
+   * Falla si no se pueden leer: quien llama debe tratar eso como "no se sabe" y no actuar.
+   */
+  conexionesActivas(): Promise<ConexionActiva[]>;
   /** Usuario (identificador estable) y sesión del proceso actual. */
   identidadActual(): Promise<IdentidadUsuario>;
   /**
@@ -303,6 +309,21 @@ export interface ProcesoUsuario {
   usuario: string;
   /** true si es un servicio del sistema (la plataforma lo sabe; el optimizador lo protege). */
   servicio?: boolean;
+  /**
+   * true si la plataforma no pudo abrir el proceso (típico de uno elevado, de mayor integridad):
+   * no se puede ni inspeccionar ni cerrarle la ventana, así que se protege.
+   */
+  elevado?: boolean;
+}
+
+/** Resultado de `cerrarVentanaPrincipal`. */
+export type EstadoCierre = 'cerrado-pedido' | 'cambio' | 'sin-ventana' | 'no-se-pudo';
+
+/** Una conexión TCP establecida (`netstat -ano`): puertos de cada extremo y PID que la tiene. */
+export interface ConexionActiva {
+  puertoLocal: number;
+  puertoRemoto: number;
+  pid: number;
 }
 
 export interface IdentidadUsuario {

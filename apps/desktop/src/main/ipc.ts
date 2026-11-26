@@ -30,6 +30,8 @@ import {
   LIMITES_IMAGEN,
   FORMATOS_CONVERSOR,
   MODOS_MEMORIA,
+  MAX_ACCIONES_MEMORIA,
+  MAX_LARGO_ID_MEMORIA,
 } from '@pel/core';
 import { idiomaDeLocale } from '../shared/idiomas';
 import type { ResultadoAtajo } from '../shared/captura';
@@ -1910,8 +1912,12 @@ const TABLA: Record<RutaIpc, Manejador> = {
     ),
   // ---- Optimizador de RAM (D36): la lista siempre se ve antes y se aplica solo con confirmación ----
   'memoria.plan': (n, _s, modo) => n.planMemoria(unoDe(modo, MODOS_MEMORIA, 'modo')),
-  'memoria.aplicar': (n, _s, ids, confirmacion) =>
-    n.aplicarMemoria(listaTextos(ids, 60, 100, 'acciones'), confirmado(confirmacion)),
+  'memoria.aplicar': (n, _s, planId, ids, confirmacion) =>
+    n.aplicarMemoria(
+      textoAcotado(planId, 1, 100, 'plan'),
+      listaTextos(ids, MAX_ACCIONES_MEMORIA, MAX_LARGO_ID_MEMORIA, 'acciones'),
+      confirmado(confirmacion),
+    ),
   'herramientas.optimizarPdf': (n, s, origen, destino) =>
     n.optimizarPdf(
       s.elegidas.exigir(origen, 'archivo'),
