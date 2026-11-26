@@ -333,7 +333,10 @@ describe('limpieza de disco: limpiar', () => {
     const { l, f, falsa } = await escenario();
     await l.analizar(['wolfcore-descargas', 'wolfcore-registros']);
     const r = await l.limpiar(['wolfcore-descargas', 'wolfcore-registros'], true);
-    expect(falsa.enPapelera.sort()).toEqual([f.zip, f.logViejo].sort());
+    expect(falsa.enPapelera.map((x) => path.basename(x)).sort()).toEqual([
+      'paquete.zip',
+      'viejo.log',
+    ]);
     expect(r.enPapelera).toBe(5800);
     expect(existe(f.zip)).toBe(false);
     expect(existe(f.logViejo)).toBe(false);
@@ -491,7 +494,9 @@ describe('limpieza de disco: limpiar', () => {
     const r2 = await e.l.limpiar(['wolfcore-registros'], true);
     expect(r2.registro).not.toBe(r1.registro);
     expect(existe(r2.registro)).toBe(true);
-    expect(e.falsa.enPapelera.some((x) => x === r2.registro)).toBe(false);
+    expect(e.falsa.enPapelera.some((x) => path.basename(x) === path.basename(r2.registro))).toBe(
+      false,
+    );
   });
 
   it('el registro se limita a 5000 rutas y después solo cuenta el total', async () => {

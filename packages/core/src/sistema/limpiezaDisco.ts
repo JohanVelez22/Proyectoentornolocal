@@ -533,7 +533,12 @@ export class LimpiezaDisco {
           'No se pudo crear el registro de la limpieza; no se borró nada.',
         );
       }
-      const excluir = new Set([normalizar(registro.ruta)]);
+      // Se excluye por su ruta real: el escaneo trabaja con rutas canónicas (en macOS, /var es
+      // /private/var; en Windows, nombres cortos).
+      const excluir = new Set([
+        normalizar(registro.ruta),
+        normalizar(await realpath(registro.ruta).catch(() => registro.ruta)),
+      ]);
       const rutasBorradas: string[] = [];
       let totalRutas = 0;
       const resultado: ResultadoLimpiezaDisco = {
