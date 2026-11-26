@@ -1,8 +1,9 @@
-import type { Dirent } from 'node:fs';
+import type { Dirent, Stats } from 'node:fs';
 import { lstat, mkdir, readdir, realpath, rmdir, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import { abrirNuevo } from '../herramientas/salidaNueva';
+import { normalizarRuta } from '../plataforma/limpiezaWin';
 import type {
   CategoriaLimpieza,
   NavegadorLimpieza,
@@ -13,21 +14,27 @@ import type {
 /**
  * Limpieza de disco (D37). Reglas que no se negocian:
  *
- * - Solo se toca lo que devuelve `Plataforma.rutasLimpieza()`. Cada raíz se canoniza y todo lo que
- *   se borra es descendiente de ella, comprobado otra vez justo antes de borrar.
+ * - Solo se toca lo que devuelve `Plataforma.rutasLimpieza()`. Una raíz que es un enlace o una
+ *   unión, o cuya ruta real no es la de su padre real más su nombre (ella o su padre redirigen a
+ *   otro sitio), se rechaza. Todo lo que se borra es descendiente de la raíz real, comprobado
+ *   otra vez justo antes de borrar, junto con la ruta real de la carpeta que lo contiene.
  * - No se siguen enlaces simbólicos, uniones ni ningún punto de reanálisis: con `lstat`, y un
  *   directorio solo se baja si su ruta real es la que se esperaba. Lo que no cuadra se salta.
- * - Rutas vetadas (datos y respaldos de WolfCore, proyectos de los sitios, `C:\\Proyectos`, lo que
- *   contenga FlyEnv o PhpWebStudy, y cualquier `.env`): si una raíz las contiene o está dentro de
- *   una, TODA la categoría se aborta con `limpieza.ruta_vetada` y no se borra nada. Un `.env` o un
- *   FlyEnv suelto dentro de una raíz válida no se toca y se cuenta como saltado.
- * - Con el navegador abierto su caché queda bloqueada; se comprueba otra vez antes de borrar. Si
- *   no se puede saber, se trata como abierto.
+ * - Rutas vetadas (datos y respaldos de WolfCore, proyectos de los sitios, `<unidad>:\Proyectos`
+ *   y `\\servidor\recurso\Proyectos`, lo que contenga FlyEnv o PhpWebStudy, y cualquier `.env`):
+ *   si una raíz las contiene o está dentro de una, la categoría se aborta con
+ *   `limpieza.ruta_vetada`. Antes de empezar a borrar, eso aborta la ejecución entera; si aparece
+ *   a mitad, se marca esa categoría y se sigue con las demás. Un `.env` o un FlyEnv suelto dentro
+ *   de una raíz válida no se toca y se cuenta como saltado.
+ * - Con el navegador abierto su caché queda bloqueada; se comprueba otra vez antes de cada raíz.
+ *   Si no se puede saber, se trata como abierto.
  * - Nada ocurre solo: `analizar` solo lee y `limpiar` exige `confirmado === true` y un análisis
- *   previo reciente de cada categoría.
+ *   previo reciente de cada categoría. Solo se borra lo que ya cumplía la regla de edad en el
+ *   momento del análisis.
  * - Archivos en uso (EBUSY, EPERM, EACCES): se saltan y se cuentan. Hay un tope de archivos por
  *   ejecución y se puede cancelar.
- * - Cada ejecución deja un registro de texto en la carpeta de registros de WolfCore Dev.
+ * - Cada ejecución deja un registro de texto en la carpeta de registros de WolfCore Dev, escrito
+ *   a medida que se borra; si no se puede escribir, se deja de borrar.
  */
 
 export const CATEGORIAS_LIMPIEZA = [
@@ -41,7 +48,8 @@ export const CATEGORIAS_LIMPIEZA = [
   'prefetch',
 ] as const satisfies readonly CategoriaLimpieza[];
 
-export type BloqueoLimpieza = 'navegador-abierto' | 'requiere-admin' | 'ruta-vetada';
+export type BloqueoLimpieza =
+  'navegador-abierto' | 'requiere-admin' | 'ruta-vetada' | 'temp-no-seguro';
 
 export type MotivoSaltoLimpieza =
   'en-uso' | 'enlace' | 'protegido' | 'cambio' | 'sin-papelera' | 'ilegible' | 'error';
@@ -49,6 +57,8 @@ export type MotivoSaltoLimpieza =
 export const HORA_MS = 3_600_000;
 export const EDAD_TEMP_MS = 24 * HORA_MS;
 export const EDAD_REGISTROS_MS = 30 * 24 * HORA_MS;
+/** Los registros de la propia limpieza (`logs/limpieza`) con más edad que esto se purgan solos. */
+export const EDAD_PURGA_REGISTROS_LIMPIEZA_MS = 90 * 24 * HORA_MS;
 /** Tope de archivos que borra una ejecución; el resto queda para la siguiente. */
 export const MAX_ARCHIVOS_LIMPIEZA = 50_000;
 /** Tope de archivos que cuenta un análisis. */
@@ -57,14 +67,22 @@ export const MAX_ARCHIVOS_ANALISIS = 200_000;
 export const VIGENCIA_ANALISIS_MS = 30 * 60_000;
 /** Líneas de rutas que lleva el registro; después, solo el total. */
 export const MAX_RUTAS_REGISTRO = 5000;
+/** Cada cuántas rutas borradas se escriben en el registro (y al terminar cada categoría). */
+export const LOTE_REGISTRO = 200;
 
 /** Únicas carpetas de un perfil de navegador que se limpian. */
 const CARPETAS_CACHE = new Set(['cache', 'code cache', 'gpucache', 'cache2']);
 
 interface Regla {
   recursiva: boolean;
-  /** Solo archivos con más edad que esto (por fecha de modificación). */
+  /** Solo archivos con más edad que esto. */
   edadMs: number | null;
+  /**
+   * `mtime`: por la fecha de modificación. `reciente`: por la más reciente de modificación,
+   * creación y cambio (en TEMP, un archivo copiado o extraído conserva una fecha de
+   * modificación antigua aunque acabe de llegar).
+   */
+  edadPor: 'mtime' | 'reciente';
   nombre?: RegExp;
   /** `papelera`: a la papelera del sistema (pocos archivos); si no, se borra definitivamente. */
   borrado: 'papelera' | 'definitivo';
@@ -78,6 +96,7 @@ const REGLAS: Readonly<Record<CategoriaLimpieza, Regla>> = {
   temp: {
     recursiva: true,
     edadMs: EDAD_TEMP_MS,
+    edadPor: 'reciente',
     borrado: 'definitivo',
     marcada: true,
     carpetasVacias: true,
@@ -91,6 +110,7 @@ const REGLAS: Readonly<Record<CategoriaLimpieza, Regla>> = {
   'wolfcore-descargas': {
     recursiva: false,
     edadMs: HORA_MS,
+    edadPor: 'mtime',
     nombre: /\.(?:zip|7z|tar|gz|tgz|xz|bz2|parcial)$/i,
     borrado: 'papelera',
     marcada: false,
@@ -99,6 +119,7 @@ const REGLAS: Readonly<Record<CategoriaLimpieza, Regla>> = {
   'wolfcore-registros': {
     recursiva: true,
     edadMs: EDAD_REGISTROS_MS,
+    edadPor: 'mtime',
     borrado: 'papelera',
     marcada: false,
     carpetasVacias: false,
@@ -106,6 +127,7 @@ const REGLAS: Readonly<Record<CategoriaLimpieza, Regla>> = {
   prefetch: {
     recursiva: false,
     edadMs: null,
+    edadPor: 'mtime',
     nombre: /\.pf$/i,
     borrado: 'definitivo',
     marcada: false,
@@ -117,6 +139,7 @@ function cache(): Regla {
   return {
     recursiva: true,
     edadMs: null,
+    edadPor: 'mtime',
     borrado: 'definitivo',
     marcada: true,
     carpetasVacias: true,
@@ -138,7 +161,7 @@ export interface ResumenCategoria {
   marcada: boolean;
   /** `papelera` (registros y descargas de WolfCore) o `definitivo` (se regenera sola). */
   borrado: 'papelera' | 'definitivo';
-  /** Tamaño por carpeta (una por cada ruta de la categoría). */
+  /** Tamaño por carpeta (una por cada ruta aceptada de la categoría). */
   carpetas: CarpetaAnalizada[];
   /** true si el análisis se cortó en el tope de archivos. */
   truncado: boolean;
@@ -166,6 +189,15 @@ export interface ResultadoLimpiezaDisco {
   truncado: boolean;
   /** Ruta del registro de lo borrado. */
   registro: string;
+  /** true si el registro dejó de poder escribirse: la limpieza se paró ahí. */
+  registroFallido: boolean;
+}
+
+/** Registro abierto de una ejecución: se escribe por partes, a medida que se borra. */
+export interface RegistroLimpieza {
+  ruta: string;
+  escribir(texto: string): Promise<void>;
+  cerrar(): Promise<void>;
 }
 
 export interface DepsLimpiezaDisco {
@@ -187,12 +219,16 @@ export interface DepsLimpiezaDisco {
   topeArchivos?: number;
   /** Cómo se borra un archivo (por defecto `unlink`; las pruebas simulan archivos en uso). */
   borrar?: (ruta: string) => Promise<void>;
+  /** Cómo se abre el registro (por defecto, un archivo nuevo; las pruebas simulan fallos). */
+  abrirRegistro?: (destino: string) => Promise<RegistroLimpieza>;
+  /** Se llama justo antes de comprobar y borrar cada archivo (solo lo usan las pruebas). */
+  antesDeBorrar?: (ruta: string) => Promise<void> | void;
 }
 
-/** Siempre vetado, sin depender de quien configure el núcleo. */
+/** Siempre vetado, sin depender de quien configure el núcleo (y `Proyectos` en cualquier unidad). */
 const VETADAS_FIJAS = ['C:/Proyectos'];
 
-const normalizar = (r: string): string => r.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+const normalizar = normalizarRuta;
 
 function dentroDe(padre: string, hija: string): boolean {
   const p = normalizar(padre);
@@ -200,7 +236,19 @@ function dentroDe(padre: string, hija: string): boolean {
   return h === p || h.startsWith(`${p}/`);
 }
 
-const esEnv = (nombre: string): boolean => /^\.env(?:\..*)?$/i.test(nombre);
+/**
+ * `<X>:\Proyectos` en cualquier unidad y `\\servidor\recurso\Proyectos` (también
+ * `\\localhost\C$\Proyectos`): ¿la ruta está dentro o la contiene?
+ */
+function tocaProyectos(ruta: string): boolean {
+  const n = normalizar(ruta);
+  const m = /^([a-z]:)(?:\/|$)/.exec(n) ?? /^(\/\/[^/]+\/[^/]+)(?:\/|$)/.exec(n);
+  if (m === null) return false;
+  const v = `${m[1]}/proyectos`;
+  return dentroDe(v, n) || dentroDe(n, v);
+}
+
+const esEnv = (nombre: string): boolean => /^\.env/i.test(nombre) || /\.env$/i.test(nombre);
 const esAjeno = (ruta: string): boolean => /flyenv|phpwebstudy/i.test(ruta);
 
 const MOTIVOS_EN_USO = new Set(['EBUSY', 'EPERM', 'EACCES', 'ETXTBSY']);
@@ -210,19 +258,30 @@ interface Candidato {
   bytes: number;
 }
 
-interface Escaneo {
-  archivos: Candidato[];
-  bytes: number;
-  directorios: string[];
-  saltados: Partial<Record<MotivoSaltoLimpieza, number>>;
-  truncado: boolean;
-}
+type Saltar = (m: MotivoSaltoLimpieza, n?: number) => void;
 
 class Cancelada extends Error {}
+
+const ultimoComponente = (r: string): string =>
+  r
+    .split(/[\\/]+/)
+    .filter((t) => t !== '')
+    .pop() ?? '';
+
+async function registroEnArchivo(destino: string): Promise<RegistroLimpieza> {
+  const { ruta, handle } = await abrirNuevo(destino);
+  return {
+    ruta,
+    // `writeFile` sobre el handle escribe desde la posición actual: cada llamada añade.
+    escribir: (texto) => handle.writeFile(texto, 'utf8'),
+    cerrar: () => handle.close(),
+  };
+}
 
 export class LimpiezaDisco {
   private ocupada = false;
   private control: AbortController | null = null;
+  /** Hora del último análisis de cada categoría (la referencia de edad al limpiar). */
   private readonly analizadas = new Map<CategoriaLimpieza, number>();
 
   constructor(private readonly d: DepsLimpiezaDisco) {}
@@ -258,53 +317,102 @@ export class LimpiezaDisco {
     return [...res];
   }
 
+  /** La ruta está vetada, dentro de algo vetado o contiene algo vetado. */
+  private vetada(ruta: string, vetos: readonly string[]): boolean {
+    return (
+      esAjeno(ruta) ||
+      tocaProyectos(ruta) ||
+      vetos.some((v) => dentroDe(v, ruta) || dentroDe(ruta, v))
+    );
+  }
+
   private async rutasDe(categoria: CategoriaLimpieza): Promise<RutasCategoriaLimpieza | null> {
     const todas = await this.d.plataforma.rutasLimpieza(this.d.carpetaDatos());
     return todas.find((c) => c.categoria === categoria) ?? null;
   }
 
   /**
-   * Comprueba cada raíz de la categoría y devuelve las canónicas (las que existen). Si alguna
-   * está vetada o contiene algo vetado, aborta la categoría completa.
+   * Ruta real de `r` si ni ella ni su padre son un enlace o una unión: la real de `r` tiene que
+   * ser la real de su padre más su nombre, y lo mismo el padre con el abuelo. Se compara con el
+   * padre ya resuelto para que un nombre corto 8.3 (`RUNNER~1`) o `/var` → `/private/var` más
+   * arriba no rechace una raíz legítima. null si no cuadra.
+   */
+  private async realSinRedirigir(r: string): Promise<string | null> {
+    const real = await realpath(r).catch(() => null);
+    if (real === null) return null;
+    const padre = path.dirname(r);
+    if (padre === r) return real;
+    const lp = await lstat(padre).catch(() => null);
+    if (lp === null || lp.isSymbolicLink() || !lp.isDirectory()) return null;
+    const realPadre = await realpath(padre).catch(() => null);
+    if (realPadre === null) return null;
+    if (normalizar(real) !== normalizar(path.join(realPadre, path.basename(r)))) return null;
+    const abuelo = path.dirname(padre);
+    if (abuelo !== padre) {
+      const realAbuelo = await realpath(abuelo).catch(() => null);
+      if (
+        realAbuelo === null ||
+        normalizar(realPadre) !== normalizar(path.join(realAbuelo, path.basename(padre)))
+      ) {
+        return null;
+      }
+    }
+    return real;
+  }
+
+  /**
+   * Comprueba cada raíz de la categoría y devuelve las reales (las que existen y no redirigen).
+   * Una raíz que es un enlace, una unión o no es una carpeta se rechaza (motivo `enlace`). Si
+   * alguna está vetada o contiene algo vetado, lanza `disco.ruta_vetada` (la categoría entera).
    */
   private async raicesSeguras(
     categoria: CategoriaLimpieza,
     ruta: RutasCategoriaLimpieza,
     vetos: string[],
-  ): Promise<string[]> {
+  ): Promise<{ raices: string[]; saltados: Partial<Record<MotivoSaltoLimpieza, number>> }> {
     const vetada = (): ErrorWolf =>
       new ErrorWolf('disco.ruta_vetada', 'La categoría toca una ruta protegida; no se limpia.', {
         categoria,
       });
-    const res: string[] = [];
+    const raices: string[] = [];
+    const saltados: Partial<Record<MotivoSaltoLimpieza, number>> = {};
+    const saltar = (m: MotivoSaltoLimpieza): void => {
+      saltados[m] = (saltados[m] ?? 0) + 1;
+    };
+    const esCache = (r: string): boolean => CARPETAS_CACHE.has(ultimoComponente(r).toLowerCase());
     for (const r of ruta.rutas) {
       if (!path.isAbsolute(r) && !/^[A-Za-z]:[\\/]/.test(r)) throw vetada();
-      const crudas = [normalizar(r)];
-      let canonica: string | null = null;
-      try {
-        canonica = await realpath(r);
-        crudas.push(normalizar(canonica));
-      } catch {
-        canonica = null;
+      if (this.vetada(r, vetos)) throw vetada();
+      if (ruta.navegador !== undefined && !esCache(r)) throw vetada();
+      const lr = await lstat(r).catch((e: unknown) =>
+        (e as { code?: string }).code === 'ENOENT' ? ('ausente' as const) : null,
+      );
+      if (lr === 'ausente') continue;
+      if (lr === null) {
+        saltar('ilegible');
+        continue;
       }
-      for (const n of crudas) {
-        if (esAjeno(n)) throw vetada();
-        if (vetos.some((v) => dentroDe(v, n) || dentroDe(n, v))) throw vetada();
+      if (lr.isSymbolicLink() || !lr.isDirectory()) {
+        saltar('enlace');
+        continue;
       }
-      if (ruta.navegador !== undefined) {
-        const ultimo =
-          r
-            .split(/[\\/]+/)
-            .filter((t) => t !== '')
-            .pop() ?? '';
-        if (!CARPETAS_CACHE.has(ultimo.toLowerCase())) throw vetada();
+      const real = await this.realSinRedirigir(r);
+      if (real === null) {
+        saltar('enlace');
+        continue;
       }
-      if (canonica !== null) res.push(canonica);
+      if (this.vetada(real, vetos)) throw vetada();
+      if (ruta.navegador !== undefined && !esCache(real)) {
+        saltar('enlace');
+        continue;
+      }
+      if (!raices.some((x) => normalizar(x) === normalizar(real))) raices.push(real);
     }
-    return res;
+    return { raices, saltados };
   }
 
   private async bloqueo(ruta: RutasCategoriaLimpieza): Promise<BloqueoLimpieza | null> {
+    if (ruta.bloqueo !== undefined) return ruta.bloqueo;
     if (ruta.navegador !== undefined && (await this.navegadorAbierto(ruta.navegador))) {
       return 'navegador-abierto';
     }
@@ -323,33 +431,32 @@ export class LimpiezaDisco {
     }
   }
 
-  private aceptaArchivo(r: Regla, nombre: string, mtimeMs: number): boolean {
+  /** ¿El archivo cumple la regla? La edad se mide respecto a `referencia` (hora del análisis). */
+  private aceptaArchivo(r: Regla, nombre: string, st: Stats, referencia: number): boolean {
     if (r.nombre && !r.nombre.test(nombre)) return false;
-    if (r.edadMs !== null && !(this.ahora() - mtimeMs > r.edadMs)) return false;
-    return true;
+    if (r.edadMs === null) return true;
+    const marca =
+      r.edadPor === 'reciente' ? Math.max(st.mtimeMs, st.birthtimeMs || 0, st.ctimeMs) : st.mtimeMs;
+    return referencia - marca > r.edadMs;
   }
 
   /**
-   * Recorre una raíz canónica sin seguir enlaces. Los archivos que pasan la regla van a la lista.
+   * Recorre una raíz real sin seguir enlaces, carpeta a carpeta: por cada una llama a
+   * `porCarpeta` con sus archivos que pasan la regla ANTES de bajar a las subcarpetas, así que
+   * la limpieza borra a medida que recorre (no hay una lista vieja de todo el árbol). Si
+   * `porCarpeta` devuelve false, se para. Una subcarpeta vetada lanza `disco.ruta_vetada`.
    * `excluir`: rutas (normalizadas) que nunca se listan (el registro de esta ejecución).
    */
-  private async escanear(
+  private async recorrer(
     raiz: string,
     regla: Regla,
     vetos: string[],
-    tope: number,
+    referencia: number,
     excluir: ReadonlySet<string>,
     senal: AbortSignal,
-  ): Promise<Escaneo> {
-    const res: Escaneo = { archivos: [], bytes: 0, directorios: [], saltados: {}, truncado: false };
-    const saltar = (m: MotivoSaltoLimpieza): void => {
-      res.saltados[m] = (res.saltados[m] ?? 0) + 1;
-    };
-    const lr = await lstat(raiz).catch(() => null);
-    if (lr === null || lr.isSymbolicLink() || !lr.isDirectory()) {
-      if (lr !== null) saltar('enlace');
-      return res;
-    }
+    saltar: Saltar,
+    porCarpeta: (dir: string, archivos: Candidato[]) => Promise<boolean>,
+  ): Promise<void> {
     const pila = [raiz];
     while (pila.length > 0) {
       if (senal.aborted) throw new Cancelada();
@@ -361,6 +468,8 @@ export class LimpiezaDisco {
         saltar('ilegible');
         continue;
       }
+      const archivos: Candidato[] = [];
+      const subcarpetas: string[] = [];
       for (const e of entradas) {
         const completa = path.join(dir, e.name);
         if (esEnv(e.name) || esAjeno(completa)) {
@@ -380,28 +489,23 @@ export class LimpiezaDisco {
             saltar('enlace');
             continue;
           }
-          if (vetos.some((v) => dentroDe(v, real) || dentroDe(real, v))) {
+          if (this.vetada(real, vetos)) {
             throw new ErrorWolf('disco.ruta_vetada', 'La categoría toca una ruta protegida.', {
               categoria: 'desconocida',
             });
           }
-          res.directorios.push(completa);
-          pila.push(completa);
+          subcarpetas.push(completa);
         } else if (st.isFile()) {
           if (excluir.has(normalizar(completa))) continue;
-          if (!this.aceptaArchivo(regla, e.name, st.mtimeMs)) continue;
-          if (res.archivos.length >= tope) {
-            res.truncado = true;
-            return res;
-          }
-          res.archivos.push({ ruta: completa, bytes: st.size });
-          res.bytes += st.size;
+          if (!this.aceptaArchivo(regla, e.name, st, referencia)) continue;
+          archivos.push({ ruta: completa, bytes: st.size });
         } else {
           saltar('enlace');
         }
       }
+      if (!(await porCarpeta(dir, archivos))) return;
+      for (let i = subcarpetas.length - 1; i >= 0; i--) pila.push(subcarpetas[i]!);
     }
-    return res;
   }
 
   private entrar(): AbortSignal {
@@ -430,6 +534,7 @@ export class LimpiezaDisco {
       for (const categoria of pedidas) {
         if (senal.aborted) break;
         const regla = REGLAS[categoria];
+        const hora = this.ahora();
         const base: ResumenCategoria = {
           categoria,
           archivos: 0,
@@ -448,7 +553,7 @@ export class LimpiezaDisco {
         base.bloqueada = await this.bloqueo(ruta);
         let raices: string[];
         try {
-          raices = await this.raicesSeguras(categoria, ruta, vetos);
+          raices = (await this.raicesSeguras(categoria, ruta, vetos)).raices;
         } catch (e) {
           if (!(e instanceof ErrorWolf)) throw e;
           base.bloqueada = 'ruta-vetada';
@@ -457,30 +562,47 @@ export class LimpiezaDisco {
         }
         try {
           for (const raiz of raices) {
-            const e = await this.escanear(
+            const carpeta: CarpetaAnalizada = { ruta: raiz, archivos: 0, bytes: 0 };
+            await this.recorrer(
               raiz,
               regla,
               vetos,
-              MAX_ARCHIVOS_ANALISIS - base.archivos,
+              hora,
               new Set(),
               senal,
+              () => undefined,
+              async (_dir, archivos) => {
+                const cabe = MAX_ARCHIVOS_ANALISIS - base.archivos;
+                const tomados = archivos.length > cabe ? archivos.slice(0, cabe) : archivos;
+                for (const a of tomados) {
+                  carpeta.archivos++;
+                  carpeta.bytes += a.bytes;
+                  base.archivos++;
+                  base.bytes += a.bytes;
+                }
+                if (archivos.length > cabe) {
+                  base.truncado = true;
+                  return false;
+                }
+                return true;
+              },
             );
-            base.archivos += e.archivos.length;
-            base.bytes += e.bytes;
-            base.truncado ||= e.truncado;
-            base.carpetas.push({ ruta: raiz, archivos: e.archivos.length, bytes: e.bytes });
-            if (e.truncado) break;
+            base.carpetas.push(carpeta);
+            if (base.truncado) break;
           }
         } catch (e) {
           if (e instanceof Cancelada) break;
           if (e instanceof ErrorWolf) {
             base.bloqueada = 'ruta-vetada';
+            base.archivos = 0;
+            base.bytes = 0;
+            base.carpetas = [];
             res.push(base);
             continue;
           }
           throw e;
         }
-        this.analizadas.set(categoria, this.ahora());
+        this.analizadas.set(categoria, hora);
         res.push(base);
       }
       return res;
@@ -490,8 +612,9 @@ export class LimpiezaDisco {
   }
 
   /**
-   * Borra lo listado por `analizar` en las categorías dadas. Exige `confirmado === true` y que
-   * cada categoría se haya analizado hace poco.
+   * Borra lo que listaría `analizar` en las categorías dadas, carpeta a carpeta. Exige
+   * `confirmado === true` y que cada categoría se haya analizado hace poco; solo borra lo que ya
+   * cumplía la regla de edad a la hora de ese análisis.
    */
   async limpiar(categorias: readonly string[], confirmado: true): Promise<ResultadoLimpiezaDisco> {
     if ((confirmado as unknown) !== true) {
@@ -501,46 +624,72 @@ export class LimpiezaDisco {
     if (pedidas.length === 0) {
       throw new ErrorWolf('disco.categoria_invalida', 'No hay ninguna categoría elegida.');
     }
+    const horas = new Map<CategoriaLimpieza, number>();
     for (const c of pedidas) {
       const t = this.analizadas.get(c);
       if (t === undefined || this.ahora() - t > VIGENCIA_ANALISIS_MS) {
         throw new ErrorWolf('disco.sin_analisis', 'Analiza antes de limpiar.');
       }
+      horas.set(c, t);
     }
     const senal = this.entrar();
     try {
-      const vetos = await this.vetos();
+      const vetosIniciales = await this.vetos();
       // Todo se valida ANTES de borrar nada: una categoría con rutas vetadas aborta la ejecución.
       const plan: {
         categoria: CategoriaLimpieza;
         ruta: RutasCategoriaLimpieza;
         raices: string[];
+        rechazadas: Partial<Record<MotivoSaltoLimpieza, number>>;
       }[] = [];
       for (const categoria of pedidas) {
         const ruta = await this.rutasDe(categoria);
         if (ruta === null) continue;
-        plan.push({ categoria, ruta, raices: await this.raicesSeguras(categoria, ruta, vetos) });
+        const { raices, saltados } = await this.raicesSeguras(categoria, ruta, vetosIniciales);
+        plan.push({ categoria, ruta, raices, rechazadas: saltados });
       }
       const carpetaRegistro = this.d.carpetaRegistro();
       const sello = new Date(this.ahora()).toISOString().replace(/[:.]/g, '-');
-      let registro: Awaited<ReturnType<typeof abrirNuevo>>;
+      let registro: RegistroLimpieza;
       try {
         await mkdir(carpetaRegistro, { recursive: true });
-        registro = await abrirNuevo(path.join(carpetaRegistro, `limpieza-${sello}.log`));
-      } catch {
+        registro = await (this.d.abrirRegistro ?? registroEnArchivo)(
+          path.join(carpetaRegistro, `limpieza-${sello}.log`),
+        );
+      } catch (e) {
         throw new ErrorWolf(
           'disco.sin_registro',
           'No se pudo crear el registro de la limpieza; no se borró nada.',
+          undefined,
+          { cause: e },
         );
       }
-      // Se excluye por su ruta real: el escaneo trabaja con rutas canónicas (en macOS, /var es
-      // /private/var; en Windows, nombres cortos).
+      try {
+        await registro.escribir(
+          [
+            `Limpieza de disco ${new Date(this.ahora()).toISOString()}`,
+            `Categorias pedidas: ${plan.map((p) => p.categoria).join(', ') || '(ninguna)'}`,
+            '',
+            'Rutas borradas:',
+            '',
+          ].join('\n'),
+        );
+      } catch (e) {
+        await registro.cerrar().catch(() => undefined);
+        throw new ErrorWolf(
+          'disco.sin_registro',
+          'No se pudo escribir el registro de la limpieza; no se borró nada.',
+          undefined,
+          { cause: e },
+        );
+      }
+      await this.purgarRegistros(carpetaRegistro, registro.ruta);
+      // Se excluye por su ruta real: el recorrido trabaja con rutas reales (en macOS, /var es
+      // /private/var; en Windows, sin nombres cortos).
       const excluir = new Set([
         normalizar(registro.ruta),
         normalizar(await realpath(registro.ruta).catch(() => registro.ruta)),
       ]);
-      const rutasBorradas: string[] = [];
-      let totalRutas = 0;
       const resultado: ResultadoLimpiezaDisco = {
         liberados: 0,
         enPapelera: 0,
@@ -550,14 +699,42 @@ export class LimpiezaDisco {
         cancelado: false,
         truncado: false,
         registro: registro.ruta,
+        registroFallido: false,
       };
+      // Registro incremental: las rutas se escriben por lotes; si falla, se deja de borrar.
+      let pendientes: string[] = [];
+      let rutasEscritas = 0;
+      let totalRutas = 0;
+      const volcar = async (extra: string[] = []): Promise<boolean> => {
+        if (resultado.registroFallido) return false;
+        const lineas = [...pendientes, ...extra];
+        pendientes = [];
+        if (lineas.length === 0) return true;
+        try {
+          await registro.escribir(`${lineas.join('\n')}\n`);
+          return true;
+        } catch {
+          resultado.registroFallido = true;
+          return false;
+        }
+      };
+      const anotar = async (linea: string): Promise<boolean> => {
+        totalRutas++;
+        if (rutasEscritas >= MAX_RUTAS_REGISTRO) return true;
+        rutasEscritas++;
+        pendientes.push(linea);
+        return pendientes.length >= LOTE_REGISTRO ? volcar() : true;
+      };
+      const tope = this.d.topeArchivos ?? MAX_ARCHIVOS_LIMPIEZA;
       try {
-        for (const { categoria, ruta, raices } of plan) {
+        for (const { categoria, ruta, raices, rechazadas } of plan) {
           if (senal.aborted) {
             resultado.cancelado = true;
             break;
           }
+          if (resultado.registroFallido || resultado.truncado) break;
           const regla = REGLAS[categoria];
+          const referencia = horas.get(categoria)!;
           const cat: ResultadoCategoriaLimpieza = {
             categoria,
             archivos: 0,
@@ -567,76 +744,113 @@ export class LimpiezaDisco {
             bloqueada: await this.bloqueo(ruta),
           };
           resultado.categorias.push(cat);
-          if (cat.bloqueada !== null) continue;
-          const saltar = (m: MotivoSaltoLimpieza, n = 1): void => {
+          const saltar: Saltar = (m, n = 1) => {
             cat.motivos[m] = (cat.motivos[m] ?? 0) + n;
             cat.saltados += n;
             resultado.saltados += n;
           };
-          for (const raiz of raices) {
-            const restante = (this.d.topeArchivos ?? MAX_ARCHIVOS_LIMPIEZA) - resultado.archivos;
-            if (restante <= 0) {
-              resultado.truncado = true;
-              break;
-            }
-            let e: Escaneo;
+          if (cat.bloqueada === null) {
+            for (const [m, n] of Object.entries(rechazadas)) saltar(m as MotivoSaltoLimpieza, n);
+            // Los vetos se vuelven a leer por categoría: un sitio pudo registrarse mientras tanto.
+            const vetos = await this.vetos();
             try {
-              e = await this.escanear(raiz, regla, vetos, restante, excluir, senal);
+              for (const raiz of raices) {
+                if (resultado.archivos >= tope) {
+                  resultado.truncado = true;
+                  break;
+                }
+                // El navegador pudo abrirse mientras tanto: se vuelve a comprobar en cada raíz.
+                if (ruta.navegador !== undefined && (await this.navegadorAbierto(ruta.navegador))) {
+                  cat.bloqueada = 'navegador-abierto';
+                  break;
+                }
+                const tocadas = new Set<string>();
+                try {
+                  await this.recorrer(
+                    raiz,
+                    regla,
+                    vetos,
+                    referencia,
+                    excluir,
+                    senal,
+                    saltar,
+                    async (_dir, archivos) => {
+                      for (const f of archivos) {
+                        if (senal.aborted) {
+                          resultado.cancelado = true;
+                          return false;
+                        }
+                        if (resultado.archivos >= tope) {
+                          resultado.truncado = true;
+                          return false;
+                        }
+                        const r = await this.borrarUno(f.ruta, raiz, regla, vetos, referencia);
+                        if (r.estado === 'saltado') {
+                          saltar(r.motivo);
+                          continue;
+                        }
+                        if (r.estado === 'ausente') continue;
+                        cat.archivos++;
+                        cat.bytes += r.bytes;
+                        resultado.archivos++;
+                        resultado.liberados += r.bytes;
+                        if (r.estado === 'papelera') resultado.enPapelera += r.bytes;
+                        if (regla.carpetasVacias) {
+                          for (
+                            let p = path.dirname(f.ruta);
+                            dentroDe(raiz, p) && normalizar(p) !== normalizar(raiz);
+                            p = path.dirname(p)
+                          ) {
+                            tocadas.add(p);
+                          }
+                        }
+                        const ok = await anotar(
+                          r.estado === 'papelera' ? `${f.ruta}  (papelera)` : f.ruta,
+                        );
+                        if (!ok) return false;
+                      }
+                      return true;
+                    },
+                  );
+                } finally {
+                  if (regla.carpetasVacias) await this.quitarVacias(tocadas, raiz, vetos);
+                }
+                if (resultado.cancelado || resultado.truncado || resultado.registroFallido) break;
+              }
             } catch (err) {
               if (err instanceof Cancelada) {
                 resultado.cancelado = true;
-                break;
-              }
-              throw err;
-            }
-            for (const [m, n] of Object.entries(e.saltados)) {
-              saltar(m as MotivoSaltoLimpieza, n);
-            }
-            if (e.truncado) resultado.truncado = true;
-            // El navegador pudo abrirse mientras se escaneaba: se vuelve a comprobar ya.
-            if (ruta.navegador !== undefined && (await this.navegadorAbierto(ruta.navegador))) {
-              cat.bloqueada = 'navegador-abierto';
-              break;
-            }
-            const tocadas = new Set<string>();
-            for (const f of e.archivos) {
-              if (senal.aborted) {
-                resultado.cancelado = true;
-                break;
-              }
-              const r = await this.borrarUno(f.ruta, raiz, regla, vetos);
-              if (r.estado === 'saltado') {
-                saltar(r.motivo);
-                continue;
-              }
-              if (r.estado === 'ausente') continue;
-              cat.archivos++;
-              cat.bytes += r.bytes;
-              resultado.archivos++;
-              resultado.liberados += r.bytes;
-              if (r.estado === 'papelera') resultado.enPapelera += r.bytes;
-              totalRutas++;
-              if (rutasBorradas.length < MAX_RUTAS_REGISTRO) {
-                rutasBorradas.push(r.estado === 'papelera' ? `${f.ruta}  (papelera)` : f.ruta);
-              }
-              if (regla.carpetasVacias) {
-                for (
-                  let p = path.dirname(f.ruta);
-                  dentroDe(raiz, p) && normalizar(p) !== normalizar(raiz);
-                  p = path.dirname(p)
-                ) {
-                  tocadas.add(p);
-                }
+              } else if (err instanceof ErrorWolf) {
+                // Una ruta vetada a mitad: esta categoría se para y se sigue con las demás.
+                cat.bloqueada = 'ruta-vetada';
+              } else {
+                throw err;
               }
             }
-            if (regla.carpetasVacias) await this.quitarVacias(tocadas, raiz, vetos);
-            if (resultado.cancelado) break;
           }
+          await volcar([this.lineaCategoria(cat)]);
+          if (resultado.cancelado) break;
         }
       } finally {
-        await this.escribirRegistro(registro.handle, resultado, rutasBorradas, totalRutas).catch(
-          () => undefined,
-        );
+        const resumen = [
+          '',
+          `Archivos: ${resultado.archivos}`,
+          `Bytes: ${resultado.liberados} (a la papelera: ${resultado.enPapelera})`,
+          `Saltados: ${resultado.saltados}`,
+          `Cancelada: ${resultado.cancelado ? 'si' : 'no'}`,
+          `Tope de archivos alcanzado: ${resultado.truncado ? 'si' : 'no'}`,
+          `Rutas en el registro: ${rutasEscritas} de ${totalRutas}`,
+          ...(totalRutas > rutasEscritas
+            ? [`... y ${totalRutas - rutasEscritas} mas (solo el total)`]
+            : []),
+          '',
+        ];
+        await volcar(resumen);
+        try {
+          await registro.cerrar();
+        } catch {
+          resultado.registroFallido = true;
+        }
       }
       return resultado;
     } finally {
@@ -644,11 +858,29 @@ export class LimpiezaDisco {
     }
   }
 
+  private lineaCategoria(c: ResultadoCategoriaLimpieza): string {
+    const motivos = Object.entries(c.motivos)
+      .map(([m, n]) => `${m}=${n}`)
+      .join(' ');
+    return `  ${c.categoria}: ${c.archivos} archivos, ${c.bytes} bytes, ${c.saltados} saltados${motivos ? ` (${motivos})` : ''}${c.bloqueada ? `, bloqueada: ${c.bloqueada}` : ''}`;
+  }
+
+  /**
+   * La carpeta que contiene `ruta` sigue siendo la que se recorrió: su ruta real es ella misma
+   * (ninguna carpeta intermedia se cambió por un enlace o una unión) y está dentro de la raíz.
+   */
+  private async carpetaIntacta(ruta: string, raiz: string): Promise<boolean> {
+    const dir = path.dirname(ruta);
+    const real = await realpath(dir).catch(() => null);
+    return real !== null && normalizar(real) === normalizar(dir) && dentroDe(raiz, real);
+  }
+
   private async borrarUno(
     ruta: string,
     raiz: string,
     regla: Regla,
     vetos: string[],
+    referencia: number,
   ): Promise<
     | { estado: 'borrado' | 'papelera'; bytes: number }
     | { estado: 'ausente' }
@@ -659,17 +891,25 @@ export class LimpiezaDisco {
       return { estado: 'saltado', motivo: 'protegido' };
     }
     const nombre = path.basename(ruta);
-    if (esEnv(nombre) || esAjeno(ruta) || vetos.some((v) => dentroDe(v, ruta))) {
+    if (esEnv(nombre) || this.vetada(ruta, vetos)) {
       return { estado: 'saltado', motivo: 'protegido' };
     }
+    await this.d.antesDeBorrar?.(ruta);
+    // La carpeta del archivo no puede haberse cambiado por una unión desde que se recorrió.
+    // Queda una carrera residual entre esta comprobación y el `unlink`: Node no tiene `openat`
+    // ni `unlinkat` relativos a un descriptor de carpeta, así que no se puede borrar "dentro de
+    // la carpeta ya comprobada". La ventana es de microsegundos y exige reemplazar una carpeta
+    // del usuario a propósito justo entonces.
+    if (!(await this.carpetaIntacta(ruta, raiz))) return { estado: 'saltado', motivo: 'enlace' };
     const st = await lstat(ruta).catch((e: unknown) =>
       (e as { code?: string }).code === 'ENOENT' ? 'ausente' : null,
     );
     if (st === 'ausente') return { estado: 'ausente' };
     if (st === null) return { estado: 'saltado', motivo: 'ilegible' };
     if (st.isSymbolicLink() || !st.isFile()) return { estado: 'saltado', motivo: 'enlace' };
-    if (!this.aceptaArchivo(regla, nombre, st.mtimeMs))
+    if (!this.aceptaArchivo(regla, nombre, st, referencia)) {
       return { estado: 'saltado', motivo: 'cambio' };
+    }
     if (regla.borrado === 'papelera') {
       const ok = await this.d.plataforma.aPapelera(ruta);
       return ok
@@ -691,45 +931,34 @@ export class LimpiezaDisco {
     const orden = [...tocadas].sort((a, b) => b.length - a.length);
     for (const dir of orden) {
       if (!dentroDe(raiz, dir) || normalizar(dir) === normalizar(raiz)) continue;
-      if (vetos.some((v) => dentroDe(v, dir) || dentroDe(dir, v)) || esAjeno(dir)) continue;
+      if (this.vetada(dir, vetos)) continue;
       const st = await lstat(dir).catch(() => null);
       if (st === null || st.isSymbolicLink() || !st.isDirectory()) continue;
+      // Ni la carpeta ni ninguna de las que la contienen se cambió por una unión (misma carrera
+      // residual que en `borrarUno`).
+      const real = await realpath(dir).catch(() => null);
+      if (real === null || normalizar(real) !== normalizar(dir)) continue;
+      if (!(await this.carpetaIntacta(dir, raiz))) continue;
       await rmdir(dir).catch(() => undefined);
     }
   }
 
-  private async escribirRegistro(
-    handle: Awaited<ReturnType<typeof abrirNuevo>>['handle'],
-    r: ResultadoLimpiezaDisco,
-    rutas: string[],
-    total: number,
-  ): Promise<void> {
-    const lineas = [
-      `Limpieza de disco ${new Date(this.ahora()).toISOString()}`,
-      `Categorias: ${r.categorias.map((c) => c.categoria).join(', ') || '(ninguna)'}`,
-      `Archivos: ${r.archivos}`,
-      `Bytes: ${r.liberados} (a la papelera: ${r.enPapelera})`,
-      `Saltados: ${r.saltados}`,
-      `Cancelada: ${r.cancelado ? 'si' : 'no'}`,
-      `Tope de archivos alcanzado: ${r.truncado ? 'si' : 'no'}`,
-      '',
-      'Por categoria:',
-      ...r.categorias.map((c) => {
-        const motivos = Object.entries(c.motivos)
-          .map(([m, n]) => `${m}=${n}`)
-          .join(' ');
-        return `  ${c.categoria}: ${c.archivos} archivos, ${c.bytes} bytes, ${c.saltados} saltados${motivos ? ` (${motivos})` : ''}${c.bloqueada ? `, bloqueada: ${c.bloqueada}` : ''}`;
-      }),
-      '',
-      `Rutas borradas (${Math.min(rutas.length, total)} de ${total}):`,
-      ...rutas,
-      ...(total > rutas.length ? [`... y ${total - rutas.length} mas (solo el total)`] : []),
-      '',
-    ];
+  /** Borra los registros de limpieza de más de 90 días (nunca el que se acaba de abrir). */
+  private async purgarRegistros(carpeta: string, actual: string): Promise<void> {
+    let nombres: string[];
     try {
-      await handle.writeFile(lineas.join('\n'), 'utf8');
-    } finally {
-      await handle.close();
+      nombres = await readdir(carpeta);
+    } catch {
+      return;
+    }
+    for (const n of nombres) {
+      if (!/^limpieza-.*\.log$/i.test(n)) continue;
+      const r = path.join(carpeta, n);
+      if (normalizar(r) === normalizar(actual)) continue;
+      const st = await lstat(r).catch(() => null);
+      if (st === null || st.isSymbolicLink() || !st.isFile()) continue;
+      if (this.ahora() - st.mtimeMs <= EDAD_PURGA_REGISTROS_LIMPIEZA_MS) continue;
+      await unlink(r).catch(() => undefined);
     }
   }
 }

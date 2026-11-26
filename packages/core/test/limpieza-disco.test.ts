@@ -4,6 +4,8 @@ import {
   readFileSync,
   readdirSync,
   realpathSync,
+  renameSync,
+  rmSync,
   symlinkSync,
   utimesSync,
   writeFileSync,
@@ -13,7 +15,11 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ErrorWolf } from '../src/errores';
 import { PlataformaFalsa } from '../src/plataforma/falsa';
-import { nombresPerfilesFirefox, rutasLimpiezaWindows } from '../src/plataforma/limpiezaWin';
+import {
+  nombresPerfilesFirefox,
+  rutasLimpiezaWindows,
+  validarTemp,
+} from '../src/plataforma/limpiezaWin';
 import type { CategoriaLimpieza, RutasCategoriaLimpieza } from '../src/plataforma/tipos';
 import {
   CATEGORIAS_LIMPIEZA,
@@ -24,12 +30,18 @@ import { carpetaTemporal } from './temporales';
 
 const HORA = 3_600_000;
 const DIA = 24 * HORA;
+/**
+ * Hora de referencia de las pruebas, un año por delante: en TEMP la edad cuenta también la fecha
+ * de creación y la de cambio (que `utimes` deja en "ahora"), así que con esta referencia esas
+ * fechas reales quedan viejas y manda la fecha de modificación que pone `archivo`.
+ */
+const T0 = Date.now() + 365 * DIA;
 
-/** Crea un archivo con `bytes` bytes y una antigüedad (horas) dada. */
+/** Crea un archivo con `bytes` bytes y una antigüedad (horas) dada respecto a `T0`. */
 function archivo(ruta: string, bytes: number, horas = 100): string {
   mkdirSync(path.dirname(ruta), { recursive: true });
   writeFileSync(ruta, Buffer.alloc(bytes, 7));
-  const t = new Date(Date.now() - horas * HORA);
+  const t = new Date(T0 - horas * HORA);
   utimesSync(ruta, t, t);
   return ruta;
 }
@@ -109,6 +121,7 @@ async function escenario(extra: Partial<DepsLimpiezaDisco> = {}) {
       proyecto,
     ],
     carpetaRegistro: () => path.join(datos, 'logs', 'limpieza'),
+    ahora: () => T0,
     ...extra,
   });
   return { raiz, p, rutas, f, falsa, l, limpieza, datos };
@@ -234,7 +247,7 @@ describe('limpieza de disco: limpiar', () => {
     const { l, f } = await escenario();
     expect(await codigo(l.limpiar(['temp'], true))).toBe('disco.sin_analisis');
     expect(existe(f.tempViejo)).toBe(true);
-    let ahora = Date.now();
+    let ahora = T0;
     const e = await escenario({ ahora: () => ahora });
     await e.l.analizar(['temp']);
     ahora += 31 * 60_000;
@@ -486,7 +499,7 @@ describe('limpieza de disco: limpiar', () => {
   });
 
   it('el registro de la ejecución en curso nunca se lista para borrar (aunque sea "viejo")', async () => {
-    let ahora = Date.now();
+    let ahora = T0;
     const e = await escenario({ ahora: () => ahora });
     await e.l.analizar(['wolfcore-registros']);
     const r1 = await e.l.limpiar(['wolfcore-registros'], true);
@@ -509,7 +522,7 @@ describe('limpieza de disco: limpiar', () => {
       const r = path.join(rutas.temp, 'masa', `a${i}.tmp`);
       mkdirSync(path.dirname(r), { recursive: true });
       writeFileSync(r, 'x');
-      const t = new Date(Date.now() - 100 * HORA);
+      const t = new Date(T0 - 100 * HORA);
       utimesSync(r, t, t);
     }
     await l.analizar(['temp']);
@@ -580,6 +593,7 @@ describe('limpieza de disco: rutas de Windows', () => {
         {
           LOCALAPPDATA: local,
           APPDATA: roaming,
+          USERPROFILE: raiz,
           TEMP: path.join(raiz, 'Temp'),
           SystemRoot: path.join(raiz, 'Win'),
         },
@@ -612,4 +626,370 @@ describe('limpieza de disco: rutas de Windows', () => {
       );
     },
   );
+});
+
+/** Crea una unión (en Windows; en el resto, un enlace simbólico). false si no se puede. */
+function union(objetivo: string, enlace: string): boolean {
+  try {
+    mkdirSync(path.dirname(enlace), { recursive: true });
+    symlinkSync(objetivo, enlace, 'junction');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Ruta real en minúsculas y con `/`, para buscar un centinela en lo que devuelve `analizar`. */
+const forma = (r: string): string => realpathSync.native(r).replace(/\\/g, '/').toLowerCase();
+
+describe('limpieza de disco: raíces enlazadas (revisión de D37)', () => {
+  it('una carpeta Cache que es una unión a otra carpeta se rechaza: el centinela ni se lista ni se borra', async (ctx) => {
+    const e = await escenario();
+    const documentos = e.p('usuario', 'Documentos');
+    const centinela = archivo(path.join(documentos, 'tesis.docx'), 777, 9999);
+    const cache = path.join(e.rutas.chrome, 'Profile 2', 'Cache');
+    if (!union(documentos, cache)) return ctx.skip();
+    e.falsa.limpieza = e.falsa.limpieza.map((c) =>
+      c.categoria === 'cache-chrome' ? { ...c, rutas: [...c.rutas, cache] } : c,
+    );
+    const [c] = await e.l.analizar(['cache-chrome']);
+    expect(c!.archivos).toBe(4);
+    expect(c!.bytes).toBe(2500);
+    expect(c!.carpetas.map((x) => x.ruta.replace(/\\/g, '/').toLowerCase())).not.toContain(
+      forma(documentos),
+    );
+    expect(c!.carpetas).toHaveLength(4);
+    const r = await e.l.limpiar(['cache-chrome'], true);
+    expect(r.categorias[0]!.motivos.enlace).toBeGreaterThanOrEqual(1);
+    expect(existe(centinela)).toBe(true);
+    expect(existe(e.f.chromeCache)).toBe(false);
+  });
+
+  it('un perfil que es una unión (su Cache es real pero está en otro sitio) también se rechaza', async (ctx) => {
+    const e = await escenario();
+    const ajena = e.p('usuario', 'Documentos');
+    const centinela = archivo(path.join(ajena, 'Cache', 'foto.jpg'), 900, 9999);
+    const perfil = path.join(e.rutas.chrome, 'Profile 3');
+    if (!union(ajena, perfil)) return ctx.skip();
+    e.falsa.limpieza = e.falsa.limpieza.map((c) =>
+      c.categoria === 'cache-chrome'
+        ? { ...c, rutas: [...c.rutas, path.join(perfil, 'Cache')] }
+        : c,
+    );
+    const [c] = await e.l.analizar(['cache-chrome']);
+    expect(c!.archivos).toBe(4);
+    await e.l.limpiar(['cache-chrome'], true);
+    expect(existe(centinela)).toBe(true);
+  });
+
+  it('una raíz de TEMP que es una unión se rechaza: el centinela queda y no aparece en el análisis', async (ctx) => {
+    const e = await escenario();
+    const destino = e.p('usuario', 'Documents');
+    const centinela = archivo(path.join(destino, 'contrato.pdf'), 1234, 9999);
+    const temp = e.p('usuario', 'TempEnlazado', 'Temp');
+    if (!union(destino, temp)) return ctx.skip();
+    e.falsa.limpieza = e.falsa.limpieza.map((c) =>
+      c.categoria === 'temp' ? { ...c, rutas: [temp] } : c,
+    );
+    const [t] = await e.l.analizar(['temp']);
+    expect([t!.archivos, t!.bytes, t!.carpetas.length]).toEqual([0, 0, 0]);
+    const r = await e.l.limpiar(['temp'], true);
+    expect(r.archivos).toBe(0);
+    expect(r.categorias[0]!.motivos.enlace).toBe(1);
+    expect(existe(centinela)).toBe(true);
+  });
+
+  it('una subcarpeta cambiada por una unión entre el recorrido y el borrado no se sigue', async (ctx) => {
+    const centinelas = await carpetaTemporal('pel-limpieza-centinela-');
+    const centinela = archivo(path.join(centinelas, 'hondo', 'viejo2.tmp'), 200, 9999);
+    const prueba = `${centinelas}-prueba`;
+    if (!union(centinelas, prueba)) return ctx.skip();
+    rmSync(prueba);
+    let cambiada = false;
+    const e = await escenario({
+      antesDeBorrar: (ruta) => {
+        if (cambiada || !ruta.endsWith('viejo2.tmp')) return;
+        cambiada = true;
+        const sub = path.join(e.rutas.temp, 'sub');
+        renameSync(sub, path.join(e.rutas.temp, 'sub-movida'));
+        symlinkSync(centinelas, sub, 'junction');
+      },
+    });
+    await e.l.analizar(['temp']);
+    const r = await e.l.limpiar(['temp'], true);
+    expect(cambiada).toBe(true);
+    expect(existe(centinela)).toBe(true);
+    expect(r.categorias[0]!.motivos.enlace).toBeGreaterThanOrEqual(1);
+    // Lo que había de verdad (ya movido) no estaba en su sitio: tampoco se tocó.
+    expect(existe(path.join(e.rutas.temp, 'sub-movida', 'hondo', 'viejo2.tmp'))).toBe(true);
+    expect(existe(e.f.tempViejo)).toBe(false);
+  });
+});
+
+describe('limpieza de disco: TEMP validado (revisión de D37)', () => {
+  // Rutas de Windows simuladas: `canonica` devuelve la misma ruta (o null si "no existe").
+  const lec = (ausentes: string[] = []) => ({
+    canonica: async (r: string) => (ausentes.includes(r) ? null : r),
+  });
+  const ctx = {
+    perfil: 'C:\\Users\\ana',
+    local: 'C:\\Users\\ana\\AppData\\Local',
+    tmpdir: 'C:\\Users\\ana\\AppData\\Local\\Temp',
+  };
+
+  it('rechaza TEMP en Documents, en una raíz de unidad, en UNC, en el perfil o un ancestro', async () => {
+    for (const temp of [
+      'C:\\Users\\ana\\Documents\\Temp',
+      'C:\\Users\\ana\\Documentos\\Temp',
+      'C:\\Users\\ana\\Desktop\\Tmp',
+      'C:\\Users\\ana\\OneDrive - Empresa\\Temp',
+      'D:\\',
+      'D:',
+      '\\\\servidor\\recurso\\Temp',
+      '\\\\localhost\\C$\\Users\\ana\\AppData\\Local\\Temp',
+      '\\\\?\\UNC\\servidor\\recurso\\Temp',
+      'C:\\Users\\ana',
+      'C:\\Users',
+      'C:\\Users\\ana\\AppData\\Local\\Programas',
+      'Temp',
+    ]) {
+      expect(await validarTemp(temp, ctx, lec()), temp).toBe('invalido');
+    }
+  });
+
+  it('ni siendo os.tmpdir() vale una carpeta del usuario o una que no se llama Temp', async () => {
+    const docs = 'C:\\Users\\ana\\Documents\\Temp';
+    expect(await validarTemp(docs, { ...ctx, tmpdir: docs }, lec())).toBe('invalido');
+    const nombre = 'D:\\Datos\\Cosas';
+    expect(await validarTemp(nombre, { ...ctx, tmpdir: nombre }, lec())).toBe('invalido');
+  });
+
+  it('acepta %LOCALAPPDATA%\\Temp, su subcarpeta numérica y la de os.tmpdir()', async () => {
+    expect(await validarTemp('C:\\Users\\ana\\AppData\\Local\\Temp', ctx, lec())).toBe('valido');
+    expect(await validarTemp('C:\\Users\\ana\\AppData\\Local\\Temp\\2', ctx, lec())).toBe('valido');
+    expect(await validarTemp('\\\\?\\C:\\Users\\ana\\AppData\\Local\\Temp', ctx, lec())).toBe(
+      'valido',
+    );
+    const otro = 'D:\\Sistema\\Temp';
+    expect(await validarTemp(otro, ctx, lec())).toBe('invalido');
+    expect(await validarTemp(otro, { ...ctx, tmpdir: otro }, lec())).toBe('valido');
+    expect(await validarTemp(ctx.tmpdir, ctx, lec([ctx.tmpdir]))).toBe('ausente');
+  });
+
+  it('rutasLimpiezaWindows bloquea TEMP no seguro y no ofrece cachés si LOCALAPPDATA sale del perfil', async () => {
+    const lectura = {
+      subcarpetas: async () => [],
+      existeCarpeta: async () => false,
+      leerTexto: async () => null,
+      canonica: async (r: string) => r,
+    };
+    const base = {
+      USERPROFILE: 'C:\\Users\\ana',
+      LOCALAPPDATA: 'C:\\Users\\ana\\AppData\\Local',
+      APPDATA: 'C:\\Users\\ana\\AppData\\Roaming',
+      SystemRoot: 'D:\\Win',
+    };
+    let r = await rutasLimpiezaWindows(
+      { ...base, TEMP: 'C:\\Users\\ana\\Documents' },
+      'C:\\datos',
+      lectura,
+      'C:\\Users\\ana\\Documents',
+    );
+    const temp = r.find((x) => x.categoria === 'temp')!;
+    expect(temp.bloqueo).toBe('temp-no-seguro');
+    expect(temp.rutas).toEqual([]);
+    // Prefetch sale de la carpeta de System32 un nivel por encima.
+    expect(r.find((x) => x.categoria === 'prefetch')!.rutas).toEqual(['D:\\Win\\Prefetch']);
+    expect(r.some((x) => x.categoria === 'cache-chrome')).toBe(true);
+    r = await rutasLimpiezaWindows(
+      { ...base, TEMP: 'C:\\Users\\ana\\AppData\\Local\\Temp' },
+      'C:\\datos',
+      lectura,
+      'C:\\otro',
+    );
+    expect(r.find((x) => x.categoria === 'temp')).toEqual({
+      categoria: 'temp',
+      rutas: ['C:\\Users\\ana\\AppData\\Local\\Temp'],
+      requiereAdmin: false,
+    });
+    r = await rutasLimpiezaWindows(
+      { ...base, LOCALAPPDATA: 'D:\\Local', TEMP: 'D:\\Local\\Temp' },
+      'C:\\datos',
+      lectura,
+      'C:\\otro',
+    );
+    expect(r.some((x) => x.categoria === 'cache-chrome')).toBe(false);
+    expect(r.find((x) => x.categoria === 'temp')!.bloqueo).toBe('temp-no-seguro');
+  });
+
+  it('una categoría que la plataforma marca como TEMP no seguro queda bloqueada y no se borra nada', async () => {
+    const e = await escenario();
+    e.falsa.limpieza = e.falsa.limpieza.map((c) =>
+      c.categoria === 'temp' ? { ...c, rutas: [], bloqueo: 'temp-no-seguro' as const } : c,
+    );
+    const [t] = await e.l.analizar(['temp']);
+    expect(t!.bloqueada).toBe('temp-no-seguro');
+    const r = await e.l.limpiar(['temp'], true);
+    expect(r.categorias[0]!.bloqueada).toBe('temp-no-seguro');
+    expect(existe(e.f.tempViejo)).toBe(true);
+  });
+
+  it('Proyectos está vetado en cualquier unidad y en rutas UNC, igual que una raíz de unidad', async () => {
+    const e = await escenario();
+    for (const raiz of [
+      'D:\\Proyectos\\app\\tmp',
+      'E:\\',
+      '\\\\localhost\\C$\\Proyectos',
+      '\\\\servidor\\recurso\\Proyectos\\web',
+    ]) {
+      e.falsa.limpieza = e.falsa.limpieza.map((c) =>
+        c.categoria === 'temp' ? { ...c, rutas: [raiz] } : c,
+      );
+      const [t] = await e.l.analizar(['temp']);
+      expect(t!.bloqueada, raiz).toBe('ruta-vetada');
+    }
+  });
+});
+
+describe('limpieza de disco: registro, edades y vetos (revisión de D37)', () => {
+  /** Registro en memoria que falla en la escritura número `fallaEn` (1 = la cabecera). */
+  function registroFalso(fallaEn: number | null) {
+    const escrito: string[] = [];
+    let n = 0;
+    return {
+      escrito,
+      abrir: async (destino: string) => ({
+        ruta: destino,
+        escribir: async (t: string) => {
+          n++;
+          if (n === fallaEn) throw Object.assign(new Error('disco lleno'), { code: 'ENOSPC' });
+          escrito.push(t);
+        },
+        cerrar: async () => undefined,
+      }),
+    };
+  }
+
+  function masa(temp: string, n: number): string[] {
+    const res: string[] = [];
+    for (let i = 0; i < n; i++) res.push(archivo(path.join(temp, 'masa', `m${i}.tmp`), 1, 100));
+    return res;
+  }
+
+  it('el registro se escribe por lotes a medida que se borra', async () => {
+    const reg = registroFalso(null);
+    const e = await escenario({ abrirRegistro: reg.abrir });
+    masa(e.rutas.temp, 450);
+    await e.l.analizar(['temp']);
+    const r = await e.l.limpiar(['temp'], true);
+    expect(r.registroFallido).toBe(false);
+    expect(reg.escrito[0]).toContain('Limpieza de disco');
+    expect(reg.escrito[0]).not.toContain('.tmp');
+    // Cabecera, dos lotes de 200, el resto con la línea de la categoría y el resumen.
+    expect(reg.escrito.length).toBeGreaterThanOrEqual(4);
+    expect(reg.escrito[1]!.split('\n').filter((x) => x.endsWith('.tmp'))).toHaveLength(200);
+    expect(reg.escrito.join('')).toContain('temp: 452 archivos');
+  });
+
+  it('si el registro deja de escribirse, se para de borrar y se avisa', async () => {
+    const reg = registroFalso(2);
+    const e = await escenario({ abrirRegistro: reg.abrir });
+    const archivos = masa(e.rutas.temp, 450);
+    e.falsa.administrador = true;
+    await e.l.analizar(['temp', 'prefetch']);
+    const r = await e.l.limpiar(['temp', 'prefetch'], true);
+    expect(r.registroFallido).toBe(true);
+    expect(r.archivos).toBe(200);
+    expect(archivos.filter(existe).length).toBeGreaterThanOrEqual(250);
+    // La categoría siguiente ya no se toca.
+    expect(existe(e.f.pf)).toBe(true);
+  });
+
+  it('si ni la cabecera del registro se escribe, no se borra nada', async () => {
+    const reg = registroFalso(1);
+    const e = await escenario({ abrirRegistro: reg.abrir });
+    await e.l.analizar(['temp']);
+    expect(await codigo(e.l.limpiar(['temp'], true))).toBe('disco.sin_registro');
+    expect(existe(e.f.tempViejo)).toBe(true);
+  });
+
+  it('TEMP: un archivo con fecha de modificación antigua pero creado o cambiado hace poco no se borra', async () => {
+    // Aquí "ahora" es la hora real: la creación y el cambio del archivo son de hace un instante.
+    const e = await escenario({ ahora: () => Date.now() });
+    const copiado = path.join(e.rutas.temp, 'extraido', 'setup.msi');
+    mkdirSync(path.dirname(copiado), { recursive: true });
+    writeFileSync(copiado, Buffer.alloc(64, 1));
+    const viejo = new Date(Date.now() - 100 * DIA);
+    utimesSync(copiado, viejo, viejo);
+    const [t] = await e.l.analizar(['temp']);
+    expect(t!.archivos).toBe(0);
+    await e.l.limpiar(['temp'], true);
+    expect(existe(copiado)).toBe(true);
+  });
+
+  it('variantes de .env (.envrc, .env-viejo, produccion.env) nunca se tocan', async () => {
+    const e = await escenario();
+    const envs = ['.envrc', '.env-viejo', 'produccion.env', 'APP.ENV'].map((n) =>
+      archivo(path.join(e.rutas.temp, 'conf', n), 5, 500),
+    );
+    const [t] = await e.l.analizar(['temp']);
+    expect(t!.archivos).toBe(2);
+    const r = await e.l.limpiar(['temp'], true);
+    expect(r.categorias[0]!.motivos.protegido).toBe(4);
+    for (const x of envs) expect(existe(x)).toBe(true);
+  });
+
+  it('solo se borra lo que ya cumplía la edad a la hora del análisis', async () => {
+    let ahora = T0;
+    const e = await escenario({ ahora: () => ahora });
+    // Con 23,9 h en el análisis no se borra, aunque al limpiar (20 min después) ya pase de 24 h.
+    const casi = archivo(path.join(e.rutas.temp, 'casi.tmp'), 9, 23.9);
+    await e.l.analizar(['temp']);
+    ahora += 20 * 60_000;
+    const r = await e.l.limpiar(['temp'], true);
+    expect(r.archivos).toBe(2);
+    expect(existe(casi)).toBe(true);
+    expect(existe(e.f.tempNuevo)).toBe(true);
+    expect(existe(e.f.tempViejo)).toBe(false);
+  });
+
+  it('una ruta vetada que aparece a mitad marca esa categoría y se sigue con las demás', async () => {
+    let vetarSub = false;
+    const e = await escenario();
+    const l = new LimpiezaDisco({
+      plataforma: e.falsa,
+      carpetaDatos: () => e.datos,
+      rutasVetadas: async () => (vetarSub ? [path.join(e.rutas.temp, 'sub', 'hondo')] : []),
+      carpetaRegistro: () => path.join(e.datos, 'logs', 'limpieza'),
+      ahora: () => T0,
+    });
+    await l.analizar(['prefetch', 'temp']);
+    // Prefetch va primero: al comprobar el administrador, "se registra un sitio" dentro de TEMP.
+    e.falsa.esAdministrador = async () => {
+      vetarSub = true;
+      return true;
+    };
+    const r = await l.limpiar(['prefetch', 'temp'], true);
+    const [pf, temp] = r.categorias;
+    expect(pf!.archivos).toBe(1);
+    expect(existe(e.f.pf)).toBe(false);
+    expect(temp!.bloqueada).toBe('ruta-vetada');
+    expect(existe(e.f.tempSub)).toBe(true);
+    expect(r.archivos).toBeGreaterThanOrEqual(1);
+    expect(readFileSync(r.registro, 'utf8')).toContain('bloqueada: ruta-vetada');
+  });
+
+  it('los registros de limpieza de más de 90 días se purgan al abrir uno nuevo', async () => {
+    const e = await escenario();
+    const carpeta = path.join(e.datos, 'logs', 'limpieza');
+    const viejo = archivo(path.join(carpeta, 'limpieza-viejo.log'), 10, 100 * 24);
+    const reciente = archivo(path.join(carpeta, 'limpieza-reciente.log'), 10, 10 * 24);
+    const ajeno = archivo(path.join(carpeta, 'otra-cosa.log'), 10, 100 * 24);
+    await e.l.analizar(['temp']);
+    const r = await e.l.limpiar(['temp'], true);
+    expect(existe(viejo)).toBe(false);
+    expect(existe(reciente)).toBe(true);
+    expect(existe(ajeno)).toBe(true);
+    expect(existe(r.registro)).toBe(true);
+  });
 });

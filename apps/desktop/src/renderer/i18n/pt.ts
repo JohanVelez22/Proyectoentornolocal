@@ -4651,9 +4651,12 @@ export const pt: Textos = {
       },
     },
     bloqueos: {
-      'navegador-abierto': 'Navegador aberto: feche-o para limpar o cache',
+      'navegador-abierto':
+        'Navegador aberto ou em segundo plano: feche-o por completo para limpar o cache (no Edge, desative também a inicialização rápida e as extensões em segundo plano)',
       'requiere-admin': 'Exige executar o WolfCore Dev como administrador',
       'ruta-vetada': 'Caminho protegido: não é limpo',
+      'temp-no-seguro':
+        'A variável TEMP aponta para uma pasta que não é a temporária do usuário (Documentos, uma unidade inteira, um caminho de rede…): não é limpa',
     },
     borradoDefinitivo: 'Apagados definitivamente (se regeneram sozinhos)',
     borradoPapelera: 'Vão para a lixeira do sistema',
@@ -4679,6 +4682,8 @@ export const pt: Textos = {
     cancelado: 'Limpeza cancelada: o que já foi apagado continua apagado.',
     topeEjecucion:
       'Chegou-se ao limite de arquivos por execução: analise e limpe de novo para continuar.',
+    registroFallido:
+      'Não foi possível continuar escrevendo o registro da limpeza, então ela parou: o que foi apagado está anotado até esse ponto.',
     motivos: {
       'en-uso': 'Em uso',
       enlace: 'Link ou ponto de reanálise (não é seguido)',

@@ -367,4 +367,14 @@ describe('perfiles (D26): motivos y avisos en los cuatro idiomas', () => {
       }
     }
   });
+
+  it('limpieza de disco: el navegador abierto avisa del segundo plano y del inicio rápido de Edge, y TEMP no seguro tiene texto', () => {
+    for (const t of [es, en, pt, fr]) {
+      const b = t.limpiezaDisco.bloqueos;
+      expect(b['navegador-abierto']).toMatch(/Edge/);
+      expect(b['navegador-abierto']).toMatch(/segundo plano|background|arrière-plan/i);
+      expect(b['temp-no-seguro']).toMatch(/TEMP/);
+      expect(t.limpiezaDisco.registroFallido.length).toBeGreaterThan(20);
+    }
+  });
 });

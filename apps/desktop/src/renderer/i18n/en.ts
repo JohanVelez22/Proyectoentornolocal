@@ -4612,9 +4612,12 @@ export const en: Textos = {
       },
     },
     bloqueos: {
-      'navegador-abierto': 'Browser open: close it to clean its cache',
+      'navegador-abierto':
+        'Browser open or running in the background: close it completely to clean its cache (in Edge, also turn off startup boost and background extensions)',
       'requiere-admin': 'Requires running WolfCore Dev as administrator',
       'ruta-vetada': 'Protected path: not cleaned',
+      'temp-no-seguro':
+        'The TEMP variable points to a folder that is not the user temporary folder (Documents, a whole drive, a network path…): not cleaned',
     },
     borradoDefinitivo: 'Deleted permanently (they regenerate on their own)',
     borradoPapelera: 'Sent to the system recycle bin',
@@ -4640,6 +4643,8 @@ export const en: Textos = {
     saltados: (n: number) => `${n} files were skipped`,
     cancelado: 'Cleanup cancelled: what was already deleted stays deleted.',
     topeEjecucion: 'The per-run file limit was reached: analyze and clean again to continue.',
+    registroFallido:
+      'The cleanup log could no longer be written, so the cleanup stopped: what was deleted is logged up to that point.',
     motivos: {
       'en-uso': 'In use',
       enlace: 'Link or reparse point (not followed)',

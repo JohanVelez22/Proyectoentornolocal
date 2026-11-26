@@ -4641,9 +4641,12 @@ export const es = {
       },
     },
     bloqueos: {
-      'navegador-abierto': 'Navegador abierto: ciérralo para limpiar su caché',
+      'navegador-abierto':
+        'Navegador abierto o en segundo plano: ciérralo del todo para limpiar su caché (en Edge, desactiva también el inicio rápido y las extensiones en segundo plano)',
       'requiere-admin': 'Requiere ejecutar WolfCore Dev como administrador',
       'ruta-vetada': 'Ruta protegida: no se limpia',
+      'temp-no-seguro':
+        'La variable TEMP apunta a una carpeta que no es la temporal del usuario (Documentos, una unidad entera, una ruta de red…): no se limpia',
     },
     borradoDefinitivo: 'Se borran definitivamente (se regeneran solas)',
     borradoPapelera: 'Van a la papelera del sistema',
@@ -4670,6 +4673,8 @@ export const es = {
     cancelado: 'Limpieza cancelada: lo ya borrado se queda borrado.',
     topeEjecucion:
       'Se llegó al tope de archivos de una ejecución: vuelve a analizar y limpiar para seguir.',
+    registroFallido:
+      'No se pudo seguir escribiendo el registro de la limpieza, así que se paró: lo ya borrado está anotado hasta ese punto.',
     motivos: {
       'en-uso': 'En uso',
       enlace: 'Enlace o punto de reanálisis (no se sigue)',

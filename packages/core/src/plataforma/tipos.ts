@@ -338,6 +338,11 @@ export interface RutasCategoriaLimpieza {
   /** true si limpiarla exige ejecutar como administrador (Prefetch). */
   requiereAdmin: boolean;
   navegador?: NavegadorLimpieza;
+  /**
+   * La plataforma no se fía de la ruta (TEMP apunta a Documentos, a una raíz de unidad, a una
+   * ruta UNC…): la categoría sale bloqueada y `rutas` viene vacía.
+   */
+  bloqueo?: 'temp-no-seguro';
 }
 
 /** Un proceso del usuario tal como lo da `Plataforma.procesosDelUsuario()` (D36). */

@@ -4760,9 +4760,12 @@ export const fr: Textos = {
       },
     },
     bloqueos: {
-      'navegador-abierto': 'Navigateur ouvert : fermez-le pour nettoyer son cache',
+      'navegador-abierto':
+        'Navigateur ouvert ou en arrière-plan : fermez-le complètement pour nettoyer son cache (dans Edge, désactivez aussi le boost de démarrage et les extensions en arrière-plan)',
       'requiere-admin': 'Nécessite de lancer WolfCore Dev en administrateur',
       'ruta-vetada': 'Chemin protégé : non nettoyé',
+      'temp-no-seguro':
+        'La variable TEMP pointe vers un dossier qui n’est pas le dossier temporaire de l’utilisateur (Documents, un lecteur entier, un chemin réseau…) : non nettoyé',
     },
     borradoDefinitivo: 'Supprimés définitivement (ils se régénèrent seuls)',
     borradoPapelera: 'Envoyés à la corbeille du système',
@@ -4791,6 +4794,8 @@ export const fr: Textos = {
     cancelado: 'Nettoyage annulé : ce qui a déjà été supprimé reste supprimé.',
     topeEjecucion:
       'La limite de fichiers par exécution est atteinte : analysez et nettoyez de nouveau pour continuer.',
+    registroFallido:
+      'Le journal du nettoyage ne pouvait plus être écrit, le nettoyage s’est donc arrêté : ce qui a été supprimé est consigné jusqu’à ce point.',
     motivos: {
       'en-uso': 'Utilisé',
       enlace: 'Lien ou point d’analyse (non suivi)',

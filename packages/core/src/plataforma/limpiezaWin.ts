@@ -1,5 +1,7 @@
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { lstat, readFile, readdir, realpath } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { rutaSistema32 } from './procesosWin';
 import type { CategoriaLimpieza, NavegadorLimpieza, RutasCategoriaLimpieza } from './tipos';
 
 /**
@@ -49,28 +51,39 @@ export function nombresPerfilesFirefox(ini: string): string[] {
 }
 
 export interface LecturaDisco {
-  /** Nombres de las subcarpetas (no enlaces) de `dir`; [] si no existe. */
+  /** Nombres de las subcarpetas (no enlaces ni uniones, con `lstat`) de `dir`; [] si no existe. */
   subcarpetas(dir: string): Promise<string[]>;
+  /** true solo si es una carpeta de verdad (con `lstat`: un enlace o una unión no cuenta). */
   existeCarpeta(dir: string): Promise<boolean>;
   leerTexto(archivo: string): Promise<string | null>;
+  /** Ruta real (sin enlaces ni nombres cortos 8.3); null si no existe o no se puede leer. */
+  canonica(ruta: string): Promise<string | null>;
 }
+
+const esCarpetaReal = async (r: string): Promise<boolean> => {
+  try {
+    const st = await lstat(r);
+    return st.isDirectory() && !st.isSymbolicLink();
+  } catch {
+    return false;
+  }
+};
 
 export const lecturaReal: LecturaDisco = {
   async subcarpetas(dir) {
     try {
       const e = await readdir(dir, { withFileTypes: true });
-      return e.filter((x) => x.isDirectory() && !x.isSymbolicLink()).map((x) => x.name);
+      const res: string[] = [];
+      for (const x of e) {
+        if (!x.isDirectory() || x.isSymbolicLink()) continue;
+        if (await esCarpetaReal(path.join(dir, x.name))) res.push(x.name);
+      }
+      return res;
     } catch {
       return [];
     }
   },
-  async existeCarpeta(dir) {
-    try {
-      return (await stat(dir)).isDirectory();
-    } catch {
-      return false;
-    }
-  },
+  existeCarpeta: esCarpetaReal,
   async leerTexto(archivo) {
     try {
       return await readFile(archivo, 'utf8');
@@ -78,7 +91,123 @@ export const lecturaReal: LecturaDisco = {
       return null;
     }
   },
+  async canonica(ruta) {
+    try {
+      return await realpath(ruta);
+    } catch {
+      return null;
+    }
+  },
 };
+
+/**
+ * Forma comparable de una ruta: barras `/`, sin barra final, en minúsculas y sin el prefijo
+ * `\\?\` (`\\?\UNC\` vuelve a ser `//servidor/...`).
+ */
+export function normalizarRuta(r: string): string {
+  let s = r.replace(/\\/g, '/');
+  if (/^\/\/\?\/unc\//i.test(s)) s = `//${s.slice(8)}`;
+  else if (s.startsWith('//?/')) s = s.slice(4);
+  return s.replace(/\/+$/, '').toLowerCase();
+}
+
+/** `hija` es `padre` o está dentro (comparando rutas normalizadas). */
+export function rutaDentroDe(padre: string, hija: string): boolean {
+  const p = normalizarRuta(padre);
+  const h = normalizarRuta(hija);
+  return h === p || h.startsWith(`${p}/`);
+}
+
+/** Ruta UNC (`\\servidor\recurso`, también `\\localhost\C$`), ya normalizada. */
+const esUnc = (n: string): boolean => n.startsWith('//');
+/** Raíz de una unidad (`C:`, `C:\`), ya normalizada. */
+const esRaizUnidad = (n: string): boolean => /^[a-z]:$/.test(n);
+const conUnidad = (n: string): boolean => /^[a-z]:\//.test(n);
+
+/** Carpetas conocidas del perfil que TEMP nunca puede ser (ni estar dentro de ellas). */
+export const CARPETAS_USUARIO = [
+  'Documents',
+  'Desktop',
+  'Downloads',
+  'Pictures',
+  'Music',
+  'Videos',
+  'Documentos',
+  'Escritorio',
+  'Descargas',
+  'Imágenes',
+  'Música',
+  'Vídeos',
+] as const;
+
+const NOMBRES_TEMP = new Set(['temp', 'tmp']);
+
+export interface ContextoTemp {
+  /** `%LOCALAPPDATA%` (ya validado dentro del perfil) o '' si no vale. */
+  local: string;
+  /** `%USERPROFILE%` o '' si no se conoce. */
+  perfil: string;
+  /** `os.tmpdir()` del proceso. */
+  tmpdir: string;
+}
+
+/**
+ * ¿Se puede limpiar `temp` como carpeta TEMP? Solo si su ruta real es `%LOCALAPPDATA%\Temp` (o
+ * una subcarpeta numérica, `Temp\2`, la de las sesiones de Escritorio remoto) o la de
+ * `os.tmpdir()`, su nombre es `Temp` o `Tmp` y no es una raíz de unidad, una ruta UNC, el perfil
+ * del usuario o un ancestro suyo, ni está en Documentos, Escritorio, Descargas, Imágenes, Música,
+ * Vídeos u OneDrive. `ausente` si no existe (no hay nada que limpiar).
+ */
+export async function validarTemp(
+  temp: string,
+  ctx: ContextoTemp,
+  lec: Pick<LecturaDisco, 'canonica'>,
+): Promise<'valido' | 'invalido' | 'ausente'> {
+  const cruda = normalizarRuta(temp);
+  if (esUnc(cruda) || esRaizUnidad(cruda) || !conUnidad(cruda)) return 'invalido';
+  const real = await lec.canonica(temp);
+  if (real === null) return 'ausente';
+  const n = normalizarRuta(real);
+  if (esUnc(n) || esRaizUnidad(n) || !conUnidad(n)) return 'invalido';
+  const partes = n.split('/');
+  const ultimo = partes[partes.length - 1] ?? '';
+  const nombreOk =
+    NOMBRES_TEMP.has(ultimo) ||
+    (/^\d{1,4}$/.test(ultimo) && NOMBRES_TEMP.has(partes[partes.length - 2] ?? ''));
+  if (!nombreOk) return 'invalido';
+  if (ctx.perfil !== '') {
+    const perfil = normalizarRuta((await lec.canonica(ctx.perfil)) ?? ctx.perfil);
+    // El perfil o cualquier ancestro suyo (C:\Users, C:\…).
+    if (rutaDentroDe(n, perfil)) return 'invalido';
+    if (rutaDentroDe(perfil, n)) {
+      const primera = n.slice(perfil.length + 1).split('/')[0] ?? '';
+      if (CARPETAS_USUARIO.some((c) => c.toLowerCase() === primera)) return 'invalido';
+      if (primera.startsWith('onedrive')) return 'invalido';
+    }
+  }
+  if (ctx.local !== '') {
+    const local = normalizarRuta((await lec.canonica(ctx.local)) ?? ctx.local);
+    const resto = n.startsWith(`${local}/`) ? n.slice(local.length + 1) : null;
+    if (resto !== null && /^temp(?:\/\d{1,4})?$/.test(resto)) return 'valido';
+  }
+  if (ctx.tmpdir !== '') {
+    const tmp = normalizarRuta((await lec.canonica(ctx.tmpdir)) ?? ctx.tmpdir);
+    if (n === tmp) return 'valido';
+  }
+  return 'invalido';
+}
+
+/** `hija` está estrictamente dentro de `padre` (con sus rutas reales si existen). */
+async function dentroEstricto(
+  padre: string,
+  hija: string,
+  lec: Pick<LecturaDisco, 'canonica'>,
+): Promise<boolean> {
+  if (padre === '' || hija === '') return false;
+  const p = normalizarRuta((await lec.canonica(padre)) ?? padre);
+  const h = normalizarRuta((await lec.canonica(hija)) ?? hija);
+  return conUnidad(h) && !esUnc(h) && h.startsWith(`${p}/`);
+}
 
 async function existentes(rutas: string[], lec: LecturaDisco): Promise<string[]> {
   const res: string[] = [];
@@ -122,12 +251,18 @@ export async function rutasLimpiezaWindows(
   env: NodeJS.ProcessEnv,
   carpetaDatos: string,
   lec: LecturaDisco = lecturaReal,
-  temporalPorDefecto = 'C:\\Windows\\Temp',
+  temporalDelProceso: string = tmpdir(),
 ): Promise<RutasCategoriaLimpieza[]> {
-  const local = env.LOCALAPPDATA ?? '';
-  const roaming = env.APPDATA ?? '';
-  const windir = env.SystemRoot ?? env.SYSTEMROOT ?? env.windir ?? 'C:\\Windows';
-  const temp = env.TEMP ?? env.TMP ?? temporalPorDefecto;
+  const perfil = env.USERPROFILE ?? '';
+  // LOCALAPPDATA y APPDATA solo valen si están dentro del perfil del usuario; si no, las
+  // categorías que salen de ellas no se ofrecen.
+  const local = (await dentroEstricto(perfil, env.LOCALAPPDATA ?? '', lec))
+    ? (env.LOCALAPPDATA ?? '')
+    : '';
+  const roaming = (await dentroEstricto(perfil, env.APPDATA ?? '', lec)) ? (env.APPDATA ?? '') : '';
+  // La carpeta de Windows es la de System32 un nivel por encima (la misma que usa el resto).
+  const windir = path.win32.dirname(rutaSistema32(env));
+  const temp = env.TEMP ?? env.TMP ?? temporalDelProceso;
   const res: RutasCategoriaLimpieza[] = [];
   const agregar = (
     categoria: CategoriaLimpieza,
@@ -137,7 +272,12 @@ export async function rutasLimpiezaWindows(
   ): void => {
     res.push({ categoria, rutas, requiereAdmin, ...(navegador ? { navegador } : {}) });
   };
-  agregar('temp', [temp]);
+  const estadoTemp = await validarTemp(temp, { local, perfil, tmpdir: temporalDelProceso }, lec);
+  if (estadoTemp === 'invalido') {
+    res.push({ categoria: 'temp', rutas: [], requiereAdmin: false, bloqueo: 'temp-no-seguro' });
+  } else {
+    agregar('temp', estadoTemp === 'valido' ? [temp] : []);
+  }
   if (local !== '') {
     agregar(
       'cache-chrome',

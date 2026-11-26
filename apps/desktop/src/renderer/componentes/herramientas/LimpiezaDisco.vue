@@ -72,6 +72,7 @@ const BLOQUEO = {
   'navegador-abierto': 'warning',
   'requiere-admin': 'info',
   'ruta-vetada': 'error',
+  'temp-no-seguro': 'error',
 } as const;
 
 const motivos = computed(() =>
@@ -117,6 +118,9 @@ const motivos = computed(() =>
       </NAlert>
       <NAlert v-if="resultado.truncado" type="info" :bordered="false" class="nota">
         {{ t.topeEjecucion }}
+      </NAlert>
+      <NAlert v-if="resultado.registroFallido" type="error" :bordered="false" class="nota">
+        {{ t.registroFallido }}
       </NAlert>
       <p class="herr-tenue registro">{{ t.registroEn(resultado.registro) }}</p>
       <div class="acciones">
