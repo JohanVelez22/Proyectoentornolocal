@@ -3,6 +3,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   symlinkSync,
   utimesSync,
   writeFileSync,
@@ -468,14 +469,17 @@ describe('limpieza de disco: limpiar', () => {
 
   it('deja un registro sin secretos con las rutas borradas', async () => {
     const { l, datos, f, rutas } = await escenario();
+    // El registro lleva rutas canónicas (en Windows, sin nombres cortos; en macOS, /private/var).
+    const viejo = realpathSync.native(f.tempViejo);
+    const nuevo = realpathSync.native(f.tempNuevo);
     await l.analizar(['temp', 'wolfcore-registros']);
     const r = await l.limpiar(['temp', 'wolfcore-registros'], true);
     expect(path.dirname(r.registro)).toBe(path.join(datos, 'logs', 'limpieza'));
     const txt = readFileSync(r.registro, 'utf8');
     expect(txt).toContain('temp: 2 archivos');
-    expect(txt).toContain(f.tempViejo);
+    expect(txt).toContain(viejo);
     expect(txt).toContain('Bytes: 1100');
-    expect(txt).not.toContain(f.tempNuevo);
+    expect(txt).not.toContain(nuevo);
     expect(txt).not.toContain(rutas.padre);
     expect(existe(r.registro)).toBe(true);
     expect(readdirSync(path.join(datos, 'logs', 'limpieza'))).toHaveLength(1);
