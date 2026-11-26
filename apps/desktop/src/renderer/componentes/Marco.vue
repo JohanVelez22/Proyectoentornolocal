@@ -244,20 +244,21 @@ onBeforeUnmount(() => {
     <NLayout class="principal">
       <NLayoutHeader class="cabecera">
         <h1>{{ titulo }}</h1>
-        <div class="cabecera-acciones">
-          <NButton
-            size="small"
-            secondary
-            class="boton-paleta"
+        <!-- Buscador general (Ctrl+K) centrado en la barra; en ventanas estrechas queda como icono. -->
+        <div class="cabecera-centro">
+          <button
+            type="button"
+            class="buscador"
             :aria-label="textos.barra.paleta"
             :title="textos.barra.paleta"
             @click="solicitudes.paleta = true"
           >
-            <template #icon
-              ><NIcon><IconoBuscar /></NIcon
-            ></template>
+            <NIcon :size="16" aria-hidden="true"><IconoBuscar /></NIcon>
+            <span class="buscador-texto">{{ textos.barra.paleta }}</span>
             <kbd>{{ textos.barra.atajoPaleta }}</kbd>
-          </NButton>
+          </button>
+        </div>
+        <div class="cabecera-acciones">
           <BotonMemoria @abrir="panelMemoria = true" />
           <CampanaAvisos @abrir="panelAvisos = true" />
           <SelectorIdioma compacto />
@@ -333,32 +334,93 @@ onBeforeUnmount(() => {
 .principal {
   height: 100vh;
 }
+/* Título a la izquierda, buscador centrado y controles a la derecha. */
 .cabecera {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 520px) 1fr;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  column-gap: 16px;
   height: 60px;
   padding: 0 28px;
+  container-type: inline-size;
+  /* La barra arrastra la ventana; el buscador y los controles no (ver más abajo). */
+  -webkit-app-region: drag;
 }
 .cabecera h1 {
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 19px;
   font-weight: 650;
   letter-spacing: -0.015em;
 }
+.cabecera-centro {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
 .cabecera-acciones {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+  -webkit-app-region: no-drag;
 }
-.boton-paleta {
-  margin-right: 4px;
+.buscador {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 520px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(128, 128, 128, 0.28);
+  border-radius: 999px;
+  background: rgba(128, 128, 128, 0.07);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: text;
+  -webkit-app-region: no-drag;
 }
-.boton-paleta kbd {
+.buscador:hover {
+  border-color: rgba(var(--acento-rgb), 0.6);
+}
+.buscador:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+.buscador-texto {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.65;
+}
+.buscador kbd {
+  flex: none;
   font-family: var(--fuente);
   font-size: 11px;
   opacity: 0.7;
+}
+/* Ventana estrecha: el buscador pasa a un icono y deja su sitio al título y a los controles. */
+@container (max-width: 900px) {
+  .buscador {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .buscador-texto,
+  .buscador kbd {
+    display: none;
+  }
 }
 .pastilla {
   margin-left: 6px;
