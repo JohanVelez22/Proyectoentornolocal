@@ -224,6 +224,8 @@ export const PARAMETROS_ERROR = {
   'cli.confirmacion_rechazada': [],
   'cli.confirmacion_vencida': [],
   'cli.tunel_fallo': [],
+  'cli.inicio_fallo': [],
+  'cli.parada_fallo': [],
   'cli.interno': [],
   'cli.proveedor_distinto': ['proveedor'],
   'cli.sitio_no_encontrado': ['sitio'],
@@ -235,6 +237,7 @@ export const PARAMETROS_ERROR = {
   'cli.version_no_instalada': ['servicio', 'version'],
   'cli.fuente_no_existe': [],
   'cli.token_no_protegido': [],
+  'cli.carpeta_ajena': [],
   'cli.error': ['detalle'],
   // proyectos nuevos (D12)
   'proyectos.carpeta_no_vacia': [],

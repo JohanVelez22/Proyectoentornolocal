@@ -326,6 +326,10 @@ export const pt: Textos = {
       'cli.confirmacion_vencida':
         'Ninguém confirmou a tempo na janela do WolfCore Dev: nada foi feito.',
       'cli.tunel_fallo': 'Não foi possível abrir o túnel. Veja o registro dele no WolfCore Dev.',
+      'cli.inicio_fallo':
+        'Não foi possível iniciar tudo o que foi pedido. Veja os registros no WolfCore Dev.',
+      'cli.parada_fallo':
+        'Não foi possível parar tudo o que foi pedido. Veja os registros no WolfCore Dev.',
       'cli.interno': 'Erro interno do servidor da CLI.',
       'cli.proveedor_distinto':
         'O site usa outro provedor de túnel ({proveedor}). Revise e confirme de novo.',
@@ -342,6 +346,8 @@ export const pt: Textos = {
       'cli.fuente_no_existe': 'Esse registro ainda não existe.',
       'cli.token_no_protegido':
         'Não foi possível restringir o arquivo do token ao usuário atual: a CLI não é ativada.',
+      'cli.carpeta_ajena':
+        'A pasta run/ da pasta de dados pertence a outro usuário: a CLI não é ativada.',
       'cli.error': 'Não foi possível concluir o comando: {detalle}',
       'proyectos.carpeta_no_vacia':
         'A pasta do projeto já tem arquivos: escolha outra ou esvazie-a.',

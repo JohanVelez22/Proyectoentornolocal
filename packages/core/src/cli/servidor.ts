@@ -71,6 +71,13 @@ export interface DepsServidorCli {
   operaciones: OperacionesCli;
   /** `Plataforma.restringirAlUsuario`: el archivo del token solo lo lee el usuario actual. */
   restringir: (ruta: string, o?: { carpeta?: boolean }) => Promise<boolean>;
+  /**
+   * Solo con una carpeta de datos de prueba (`WOLFCORE_DATOS`, que puede ser cualquiera): ¿el dueño
+   * de `run/` es el usuario actual? Una carpeta de otro usuario se rechaza: su dueño podría
+   * cambiarle los permisos y leer el token. Sin esta función no se comprueba (la carpeta de datos
+   * normal vive en el perfil del usuario).
+   */
+  duenoEsUsuario?: (ruta: string) => Promise<boolean>;
   /** Versión de la app y el idioma (de `Config.ui.idioma`). */
   version: () => Promise<{ app: string; idioma: string | null }>;
   /** Para pruebas: plazos distintos de los de `PLAZOS_ORDEN_MS`. */
@@ -221,6 +228,12 @@ export class ServidorCli {
         return st.isDirectory() && !st.isSymbolicLink();
       };
       if (!(await esReal())) throw sinProteger();
+      if (this.d.duenoEsUsuario && !(await this.d.duenoEsUsuario(carpeta).catch(() => false))) {
+        throw new ErrorWolf(
+          'cli.carpeta_ajena',
+          'La carpeta run/ es de otro usuario: la CLI no se activa.',
+        );
+      }
       if (!(await this.d.restringir(carpeta, { carpeta: true }).catch(() => false))) {
         throw sinProteger();
       }

@@ -322,6 +322,10 @@ export const es = {
       'cli.confirmacion_vencida':
         'Nadie confirmó en la ventana de WolfCore Dev a tiempo: no se hizo nada.',
       'cli.tunel_fallo': 'No se pudo abrir el túnel. Revise su registro en WolfCore Dev.',
+      'cli.inicio_fallo':
+        'No se pudo iniciar todo lo pedido. Revise los registros en WolfCore Dev.',
+      'cli.parada_fallo':
+        'No se pudo detener todo lo pedido. Revise los registros en WolfCore Dev.',
       'cli.interno': 'Error interno del servidor de la CLI.',
       'cli.proveedor_distinto':
         'El sitio usa otro proveedor de túnel ({proveedor}). Revise y confirme de nuevo.',
@@ -339,6 +343,8 @@ export const es = {
       'cli.fuente_no_existe': 'Ese registro todavía no existe.',
       'cli.token_no_protegido':
         'No se pudo restringir el archivo del token al usuario actual: la CLI no se activa.',
+      'cli.carpeta_ajena':
+        'La carpeta run/ de la carpeta de datos es de otro usuario: la CLI no se activa.',
       'cli.error': 'No se pudo completar la orden: {detalle}',
       'proyectos.carpeta_no_vacia':
         'La carpeta del proyecto ya tiene archivos: elija otra o vacíela.',

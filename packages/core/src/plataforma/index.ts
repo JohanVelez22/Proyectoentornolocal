@@ -89,6 +89,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'antivirus',
   'comandoManual',
   'restringirAlUsuario',
+  'duenoEsUsuario',
   'instalacionesAjenas',
   'tailscale',
   'perfilRedDe',

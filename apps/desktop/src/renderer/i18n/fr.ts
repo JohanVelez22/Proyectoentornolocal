@@ -334,6 +334,10 @@ export const fr: Textos = {
         'Personne n’a confirmé à temps dans la fenêtre de WolfCore Dev : rien n’a été fait.',
       'cli.tunel_fallo':
         'Le tunnel n’a pas pu être ouvert. Consultez son journal dans WolfCore Dev.',
+      'cli.inicio_fallo':
+        'Tout ce qui était demandé n’a pas pu être démarré. Consultez les journaux dans WolfCore Dev.',
+      'cli.parada_fallo':
+        'Tout ce qui était demandé n’a pas pu être arrêté. Consultez les journaux dans WolfCore Dev.',
       'cli.interno': 'Erreur interne du serveur de la CLI.',
       'cli.proveedor_distinto':
         'Le site utilise un autre fournisseur de tunnel ({proveedor}). Vérifiez et confirmez à nouveau.',
@@ -351,6 +355,8 @@ export const fr: Textos = {
       'cli.fuente_no_existe': 'Ce journal n’existe pas encore.',
       'cli.token_no_protegido':
         'Impossible de restreindre le fichier du jeton à l’utilisateur actuel : la CLI n’est pas activée.',
+      'cli.carpeta_ajena':
+        'Le dossier run/ du dossier de données appartient à un autre utilisateur : la CLI n’est pas activée.',
       'cli.error': 'La commande n’a pas pu être terminée : {detalle}',
       'proyectos.carpeta_no_vacia':
         'Le dossier du projet contient déjà des fichiers : choisissez-en un autre ou videz-le.',

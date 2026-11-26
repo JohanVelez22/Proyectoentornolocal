@@ -554,7 +554,23 @@ const resultadoWorkspace = (r: ResultadoWorkspace[]) =>
   }));
 
 /** Enciende o apaga con las mismas puertas de siempre: la confianza de las recetas y de los sitios importados siguen vigentes. */
-const arrancar =
+const arrancar = (encender: boolean): Orden<'iniciar'> => {
+  const orden = arrancarSinFiltro(encender);
+  return async (ops, a) => {
+    try {
+      return await orden(ops, a);
+    } catch (e) {
+      // Un error con código ya viene limpio. Uno suelto (de un proceso) puede traer la línea de
+      // órdenes con un secreto: no se repite su texto (queda en el registro del servicio).
+      if (e instanceof ErrorWolf) throw e;
+      throw encender
+        ? falla('cli.inicio_fallo', 'No se pudo iniciar.')
+        : falla('cli.parada_fallo', 'No se pudo detener.');
+    }
+  };
+};
+
+const arrancarSinFiltro =
   (encender: boolean): Orden<'iniciar'> =>
   async (ops, a) => {
     if (a.workspace !== undefined) {

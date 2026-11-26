@@ -230,6 +230,11 @@ export interface CapacidadesPlataforma {
    * quien llama decide si sigue (la carpeta de datos ya es del usuario).
    */
   restringirAlUsuario(ruta: string, o?: { carpeta?: boolean }): Promise<boolean>;
+  /**
+   * ¿El dueño de la ruta es el usuario actual (por SID en Windows)? Una carpeta ajena puede ser
+   * cambiada por su dueño aunque la ACL diga otra cosa. Sin poder comprobarlo, false.
+   */
+  duenoEsUsuario(ruta: string): Promise<boolean>;
   // Con `carpeta: true` el permiso se hereda a lo que se cree dentro (`(OI)(CI)` en Windows).
   /**
    * Instalaciones de Laragon, XAMPP y Herd en sus rutas conocidas (solo comprueba que la carpeta

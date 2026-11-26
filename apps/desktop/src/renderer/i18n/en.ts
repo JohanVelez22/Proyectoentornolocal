@@ -316,6 +316,10 @@ export const en: Textos = {
       'cli.confirmacion_vencida':
         'Nobody confirmed in the WolfCore Dev window in time: nothing was done.',
       'cli.tunel_fallo': 'The tunnel could not be opened. Check its log in WolfCore Dev.',
+      'cli.inicio_fallo':
+        'Not everything requested could be started. Check the logs in WolfCore Dev.',
+      'cli.parada_fallo':
+        'Not everything requested could be stopped. Check the logs in WolfCore Dev.',
       'cli.interno': 'Internal error in the CLI server.',
       'cli.proveedor_distinto':
         'The site uses a different tunnel provider ({proveedor}). Review it and confirm again.',
@@ -333,6 +337,8 @@ export const en: Textos = {
       'cli.fuente_no_existe': 'That log does not exist yet.',
       'cli.token_no_protegido':
         'The token file could not be restricted to the current user: the CLI is not enabled.',
+      'cli.carpeta_ajena':
+        'The run/ folder of the data folder belongs to another user: the CLI is not enabled.',
       'cli.error': 'The command could not be completed: {detalle}',
       'proyectos.carpeta_no_vacia':
         'The project folder already has files: choose another one or empty it.',

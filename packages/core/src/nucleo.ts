@@ -864,6 +864,9 @@ export class Nucleo {
       rutas: this.rutas,
       operaciones: this.operacionesCli(),
       restringir: (ruta, o) => this.plataforma.restringirAlUsuario(ruta, o),
+      // Con otra carpeta de datos (WOLFCORE_DATOS) el dueño de run/ tiene que ser el usuario.
+      duenoEsUsuario: (ruta) =>
+        this.aislado ? this.plataforma.duenoEsUsuario(ruta) : Promise.resolve(true),
       version: async () => ({
         app: this.opcionesCli.version,
         idioma: (await this.config.leer()).ui.idioma,

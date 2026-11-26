@@ -323,6 +323,14 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return this.antivirusEstado;
   }
 
+  /** Pruebas: false simula una carpeta cuyo dueño es otro usuario. */
+  duenoPropio = true;
+  readonly duenosComprobados: string[] = [];
+  async duenoEsUsuario(ruta: string): Promise<boolean> {
+    this.duenosComprobados.push(ruta);
+    return this.duenoPropio;
+  }
+
   async restringirAlUsuario(ruta: string, o: { carpeta?: boolean } = {}): Promise<boolean> {
     this.restringidos.push(ruta);
     if (o.carpeta) this.restringidasCarpetas.push(ruta);

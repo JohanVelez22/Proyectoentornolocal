@@ -802,6 +802,24 @@ export class PlataformaWindows implements PlataformaCompleta {
     }
   }
 
+  /** Dueño de la ruta (SID) contra el SID del usuario actual, en un solo PowerShell. */
+  async duenoEsUsuario(ruta: string): Promise<boolean> {
+    const script = [
+      "$ErrorActionPreference = 'Stop'",
+      `$o = (Get-Acl -LiteralPath '${ruta.replace(/'/g, "''")}').GetOwner([System.Security.Principal.SecurityIdentifier]).Value`,
+      '$yo = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value',
+      "if ($o -eq $yo) { [Console]::Out.Write('SI') } else { [Console]::Out.Write('NO') }",
+    ].join('\n');
+    try {
+      const r = await this.ejecutar('powershell', codificarPowerShell(script), {
+        timeoutMs: 20_000,
+      });
+      return r.codigo === 0 && r.stdout.trim() === 'SI';
+    } catch {
+      return false;
+    }
+  }
+
   comandoManual(c: ComandoManual): string {
     switch (c.tipo) {
       case 'liberar-rangos':

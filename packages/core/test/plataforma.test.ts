@@ -735,3 +735,23 @@ describe('restringirAlUsuario (ACL del archivo del token)', () => {
     expect(p.restringidos).toEqual(['/d/run/x.tmp']);
   });
 });
+
+describe('duenoEsUsuario (Windows con ejecutor falso)', () => {
+  it('es true solo con la salida SI; un error o NO es false; la ruta va escapada', async () => {
+    const { PlataformaWindows } = await import('../src/plataforma/index');
+    const guiones: string[] = [];
+    const crear = (stdout: string, codigo = 0) =>
+      new PlataformaWindows(
+        (async (_cmd: string, args: string[]) => {
+          guiones.push(Buffer.from(args[args.length - 1]!, 'base64').toString('utf16le'));
+          return { codigo, stdout, stderr: '' };
+        }) as never,
+        () => false,
+        { entorno: {} },
+      );
+    expect(await crear('SI').duenoEsUsuario("C:/datos/o'brien/run")).toBe(true);
+    expect(guiones[0]).toContain("'C:/datos/o''brien/run'");
+    expect(await crear('NO').duenoEsUsuario('C:/x')).toBe(false);
+    expect(await crear('SI', 1).duenoEsUsuario('C:/x')).toBe(false);
+  });
+});

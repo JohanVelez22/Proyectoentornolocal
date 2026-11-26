@@ -1220,6 +1220,21 @@ describe('revisión D31 · C1: la ventana de la app decide (compartir y usar --g
     await vi.waitFor(async () => expect(await c.pedir(s)).not.toBe('ocupado'));
   });
 
+  it('ConfirmadorCli: a lo sumo 5 diálogos por minuto; luego vuelve a abrir', async () => {
+    const s: SolicitudCli = { tipo: 'php-global', version: '8.4' };
+    let t = 1000;
+    const preguntar = vi.fn(async () => false);
+    const c = new ConfirmadorCli({ preguntar, ahora: () => t });
+    for (let i = 0; i < 5; i++) expect(await c.pedir(s)).toBe('rechazada');
+    expect(await c.pedir(s)).toBe('ocupado');
+    expect(preguntar).toHaveBeenCalledTimes(5);
+    t += 59_000;
+    expect(await c.pedir(s)).toBe('ocupado');
+    t += 2_000;
+    expect(await c.pedir(s)).toBe('rechazada');
+    expect(preguntar).toHaveBeenCalledTimes(6);
+  });
+
   it('con el núcleo: sin ventana o con la ventana rechazando, el túnel no se abre', async () => {
     const dir = await carpetaTemporal('pel-cli-ventana-');
     const cfg = ConfigSchema.parse({
@@ -1482,6 +1497,11 @@ describe('revisión D31 · M5: banderas con prefijo y saltos de línea', () => {
     expect(enmascararSecretos('mi--token valor')).toBe('mi--token valor');
     expect(enmascararSecretos('--tokenizer fast')).toBe('--tokenizer fast');
   });
+
+  it('con = enmascara aunque el valor empiece por guion (--token=-abc)', () => {
+    expect(enmascararSecretos(`--token=-${CENTINELA}`)).not.toContain(CENTINELA);
+    expect(enmascararSecretos('--token=-abc')).toBe('--token=***');
+  });
 });
 
 describe('revisión D31 · M7 y M8', () => {
@@ -1524,5 +1544,59 @@ describe('revisión D31 · M7 y M8', () => {
       n: { clave: 'main' },
       l: [{ ok: 1 }],
     });
+  });
+});
+
+describe('arrastre D31 · fallos de iniciar y detener', () => {
+  it('un error suelto sale con su código propio y sin el texto del proceso', async () => {
+    const ops = operacionesFalsas();
+    ops.iniciarTodo = vi.fn(async () => {
+      throw new Error(`mysql no arrancó: --token ${CENTINELA} password=${CENTINELA}`);
+    });
+    ops.detenerServicio = vi.fn(async () => {
+      throw new Error(`nginx: ${CENTINELA}`);
+    });
+    const m = await montar({ ops });
+    const a = await m.orden('iniciar', {});
+    expect(a.json.error).toEqual({ codigo: 'cli.inicio_fallo' });
+    const b = await m.orden('detener', { servicio: 'nginx' });
+    expect(b.json.error).toEqual({ codigo: 'cli.parada_fallo' });
+    expect(a.texto + b.texto).not.toContain(CENTINELA);
+  });
+});
+
+describe('arrastre D31 · dueño de run/ en modo aislado', () => {
+  it('rechaza una carpeta run/ de otro usuario y no deja archivo ni puerto', async () => {
+    const dir = await carpetaTemporal('pel-cli-dueno-');
+    const rutas = new Rutas(path.join(dir, 'datos'));
+    const dueno = vi.fn(async () => false);
+    const s = new ServidorCli({
+      rutas,
+      operaciones: operacionesFalsas(),
+      restringir: async () => true,
+      duenoEsUsuario: dueno,
+      version: async () => ({ app: '1', idioma: 'es' }),
+    });
+    servidores.push(s);
+    await expect(s.iniciar()).rejects.toMatchObject({ codigo: 'cli.carpeta_ajena' });
+    expect(dueno).toHaveBeenCalledWith(path.dirname(rutas.cliJson()));
+    expect(s.estado().activo).toBe(false);
+    await expect(readFile(rutas.cliJson(), 'utf8')).rejects.toThrow();
+  });
+
+  it('con el dueño correcto arranca; sin la función (carpeta normal) no se comprueba', async () => {
+    const dir = await carpetaTemporal('pel-cli-dueno2-');
+    for (const duenoEsUsuario of [async () => true, undefined]) {
+      const s = new ServidorCli({
+        rutas: new Rutas(path.join(dir, String(Math.random()))),
+        operaciones: operacionesFalsas(),
+        restringir: async () => true,
+        ...(duenoEsUsuario ? { duenoEsUsuario } : {}),
+        version: async () => ({ app: '1', idioma: 'es' }),
+      });
+      servidores.push(s);
+      await s.iniciar();
+      expect(s.estado().activo).toBe(true);
+    }
   });
 });
