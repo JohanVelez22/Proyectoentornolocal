@@ -27,6 +27,7 @@ import type { ApiSistema } from '../shared/api';
 import { Notificador } from './notificaciones';
 import { textoAviso } from '../shared/textosAvisos';
 import { crearBandeja, menuBandeja, type AccionesBandeja, type WorkspaceBandeja } from './bandeja';
+import { crearConfirmarCli } from './confirmarCli';
 import { idiomaDeLocale, textosMain } from './textos';
 import { programarDoctorAlIniciar } from './doctorInicio';
 import { ControlMetricas, registrarIpc } from './ipc';
@@ -349,6 +350,11 @@ if (errorCarpetaDatos !== null) {
         servidorCli: {
           version: app.getVersion(),
           abrirUrl: (url) => shell.openExternal(urlHttp(url)),
+          // Publicar un sitio o cambiar el PHP global lo decide esta ventana, nunca la terminal.
+          confirmar: crearConfirmarCli({
+            mostrar: (o) => dialog.showMessageBox(o),
+            textos: () => textosMain(idioma),
+          }),
         },
       });
     } catch (e) {
