@@ -10,6 +10,7 @@ import FilaInstalar from '../componentes/FilaInstalar.vue';
 import TarjetaHerramienta from '../componentes/TarjetaHerramienta.vue';
 import TarjetaServicio from '../componentes/TarjetaServicio.vue';
 import VersionesServicio from '../componentes/VersionesServicio.vue';
+import Php from './Php.vue';
 import { useAccion } from '../composables/useAccion';
 import { useFoco } from '../composables/useFoco';
 import IlustracionVacia from '../componentes/IlustracionVacia.vue';
@@ -27,8 +28,14 @@ const route = useRoute();
 const router = useRouter();
 const versiones = useVersiones();
 
-/** Pestaña activa: "Servicios" o "Versiones" (ruta `servicios.versiones`). */
-const pestana = computed(() => (route.name === 'servicios.versiones' ? 'versiones' : 'servicios'));
+/** Pestaña activa: Servicios, Versiones (ruta `servicios.versiones`) o PHP (ruta `servicios.php`). */
+const pestana = computed(() =>
+  route.name === 'servicios.versiones'
+    ? 'versiones'
+    : route.name === 'servicios.php'
+      ? 'php'
+      : 'servicios',
+);
 /** Servicio de la pestaña Versiones: el de la ruta o el último elegido. */
 const servicioVersiones = computed<ServicioVersiones>(() => {
   const p = route.params['servicio'];
@@ -40,7 +47,8 @@ function cambiarPestana(p: string): void {
       name: 'servicios.versiones',
       params: { servicio: servicioVersiones.value },
     });
-  } else void router.push({ name: 'servicios' });
+  } else if (p === 'php') void router.push({ name: 'servicios.php' });
+  else void router.push({ name: 'servicios' });
 }
 function elegirServicioVersiones(s: ServicioVersiones): void {
   void router.push({ name: 'servicios.versiones', params: { servicio: s } });
@@ -115,8 +123,10 @@ onMounted(() => {
   >
     <NTab name="servicios">{{ textos.versiones.pestanaServicios }}</NTab>
     <NTab name="versiones">{{ textos.versiones.pestana }}</NTab>
+    <NTab name="php">{{ textos.nav.php }}</NTab>
   </NTabs>
-  <template v-if="pestana === 'versiones'">
+  <Php v-if="pestana === 'php'" />
+  <template v-else-if="pestana === 'versiones'">
     <VersionesServicio :servicio="servicioVersiones" @elegir="elegirServicioVersiones" />
     <div class="limpieza">
       <NButton size="small" secondary @click="limpiando = true">

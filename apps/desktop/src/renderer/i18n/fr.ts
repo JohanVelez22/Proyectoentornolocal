@@ -2621,6 +2621,12 @@ export const fr: Textos = {
       errorLista: 'Impossible de lire la liste des fournisseurs',
     },
     local: { titulo: 'IA locale (Ollama)' },
+    pestanas: {
+      etiqueta: 'Sections IA',
+      agentes: 'Agents',
+      nube: 'Cloud',
+      local: 'Modèles locaux',
+    },
     tipos: {
       ollama: 'Ollama',
       hermes: 'Hermes (Nous Research)',

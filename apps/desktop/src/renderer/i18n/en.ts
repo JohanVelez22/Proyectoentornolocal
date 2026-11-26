@@ -2531,6 +2531,12 @@ export const en: Textos = {
       errorLista: 'Could not read the provider list',
     },
     local: { titulo: 'Local AI (Ollama)' },
+    pestanas: {
+      etiqueta: 'AI sections',
+      agentes: 'Agents',
+      nube: 'Cloud',
+      local: 'Local models',
+    },
     tipos: {
       ollama: 'Ollama',
       hermes: 'Hermes (Nous Research)',

@@ -8,7 +8,7 @@ import { useAccion } from '../composables/useAccion';
 import { useOperacionWorkspace } from '../composables/useOperacionWorkspace';
 import { solicitudes } from '../composables/solicitudes';
 import { IDIOMAS, textos } from '../i18n';
-import { SECCIONES_NAV } from '../navegacion';
+import { ACCESOS_NAV, SECCIONES_NAV } from '../navegacion';
 import { usePreferencias, type TemaUi } from '../stores/preferencias';
 import { useServicios } from '../stores/servicios';
 import { useSitios } from '../stores/sitios';
@@ -65,6 +65,16 @@ const comandos = computed<Comando[]>(() => {
       titulo: t.irA(textos.nav[k]),
       claves: k,
       ejecutar: () => ir(k),
+    });
+  }
+  // PHP y Agentes ya no tienen entrada en la barra lateral: la paleta sigue llevando a ellos.
+  for (const a of ACCESOS_NAV) {
+    r.push({
+      id: `ir-${a.id}`,
+      grupo: 'navegacion',
+      titulo: t.irA(textos.nav[a.id]),
+      claves: a.id,
+      ejecutar: () => irA(a.destino),
     });
   }
   for (const s of servicios.lista) {

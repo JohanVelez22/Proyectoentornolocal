@@ -1,8 +1,8 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router';
-import type { Textos } from './i18n';
 import Inicio from './vistas/Inicio.vue';
+import { PANTALLAS, REDIRECCIONES, RUTA_DESCONOCIDA, type SeccionNav } from './rutas';
 
-export type SeccionNav = Exclude<keyof Textos['nav'], 'contraer' | 'expandir'>;
+export type { SeccionNav } from './rutas';
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -10,104 +10,34 @@ declare module 'vue-router' {
   }
 }
 
+/** Vista de cada pantalla (se cargan al visitarlas, salvo Inicio). */
+const VISTAS: Record<string, RouteRecordRaw['component']> = {
+  inicio: Inicio,
+  proyectos: () => import('./vistas/Proyectos.vue'),
+  servicios: () => import('./vistas/Servicios.vue'),
+  'servicios.versiones': () => import('./vistas/Servicios.vue'),
+  'servicios.php': () => import('./vistas/Servicios.vue'),
+  basesDeDatos: () => import('./vistas/BasesDeDatos.vue'),
+  correo: () => import('./vistas/Correo.vue'),
+  ia: () => import('./vistas/Ia.vue'),
+  tuneles: () => import('./vistas/Tuneles.vue'),
+  contenedores: () => import('./vistas/Contenedores.vue'),
+  herramientas: () => import('./vistas/Herramientas.vue'),
+  depuracion: () => import('./vistas/Depuracion.vue'),
+  doctor: () => import('./vistas/Doctor.vue'),
+  registros: () => import('./vistas/Registros.vue'),
+  ajustes: () => import('./vistas/Ajustes.vue'),
+};
+
 const rutas: RouteRecordRaw[] = [
-  { path: '/', name: 'inicio', component: Inicio, meta: { seccion: 'inicio' } },
-  {
-    path: '/proyectos',
-    name: 'proyectos',
-    component: () => import('./vistas/Proyectos.vue'),
-    meta: { seccion: 'proyectos' },
-  },
-  // La pantalla se llamaba "Sitios": los enlaces viejos siguen funcionando.
-  { path: '/sitios', redirect: '/proyectos' },
-  {
-    path: '/agentes',
-    name: 'agentes',
-    component: () => import('./vistas/Agentes.vue'),
-    meta: { seccion: 'agentes' },
-  },
-  {
-    path: '/servicios',
-    name: 'servicios',
-    component: () => import('./vistas/Servicios.vue'),
-    meta: { seccion: 'servicios' },
-  },
-  // Pestaña "Versiones" de un servicio (el nombre coincide con la acción de los avisos).
-  {
-    path: '/servicios/versiones/:servicio?',
-    name: 'servicios.versiones',
-    component: () => import('./vistas/Servicios.vue'),
-    meta: { seccion: 'servicios' },
-  },
-  {
-    path: '/bases-de-datos',
-    name: 'basesDeDatos',
-    component: () => import('./vistas/BasesDeDatos.vue'),
-    meta: { seccion: 'basesDeDatos' },
-  },
-  {
-    path: '/correo',
-    name: 'correo',
-    component: () => import('./vistas/Correo.vue'),
-    meta: { seccion: 'correo' },
-  },
-  {
-    path: '/php',
-    name: 'php',
-    component: () => import('./vistas/Php.vue'),
-    meta: { seccion: 'php' },
-  },
-  {
-    path: '/ia',
-    name: 'ia',
-    component: () => import('./vistas/Ia.vue'),
-    meta: { seccion: 'ia' },
-  },
-  // La pantalla se llamaba "IA local": los enlaces viejos siguen funcionando.
-  { path: '/ia-local', redirect: '/ia' },
-  {
-    path: '/tuneles',
-    name: 'tuneles',
-    component: () => import('./vistas/Tuneles.vue'),
-    meta: { seccion: 'tuneles' },
-  },
-  {
-    path: '/contenedores',
-    name: 'contenedores',
-    component: () => import('./vistas/Contenedores.vue'),
-    meta: { seccion: 'contenedores' },
-  },
-  {
-    path: '/herramientas',
-    name: 'herramientas',
-    component: () => import('./vistas/Herramientas.vue'),
-    meta: { seccion: 'herramientas' },
-  },
-  {
-    path: '/depuracion',
-    name: 'depuracion',
-    component: () => import('./vistas/Depuracion.vue'),
-    meta: { seccion: 'depuracion' },
-  },
-  {
-    path: '/doctor',
-    name: 'doctor',
-    component: () => import('./vistas/Doctor.vue'),
-    meta: { seccion: 'doctor' },
-  },
-  {
-    path: '/registros',
-    name: 'registros',
-    component: () => import('./vistas/Registros.vue'),
-    meta: { seccion: 'registros' },
-  },
-  {
-    path: '/ajustes',
-    name: 'ajustes',
-    component: () => import('./vistas/Ajustes.vue'),
-    meta: { seccion: 'ajustes' },
-  },
-  { path: '/:resto(.*)*', redirect: '/' },
+  ...PANTALLAS.map((p): RouteRecordRaw => ({
+    path: p.path,
+    name: p.name,
+    component: VISTAS[p.name]!,
+    meta: { seccion: p.seccion },
+  })),
+  ...REDIRECCIONES,
+  RUTA_DESCONOCIDA,
 ];
 
 /** Historial con hash: en producción la ventana carga un archivo local (file://). */

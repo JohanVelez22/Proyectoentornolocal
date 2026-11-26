@@ -72,6 +72,7 @@ import EditorVhost from './EditorVhost.vue';
 import SeccionFtpSitio from './SeccionFtpSitio.vue';
 import SeccionTareasSitio from './SeccionTareasSitio.vue';
 import SeccionPhpSitio from './SeccionPhpSitio.vue';
+import { destinoIa } from '../rutas';
 
 const props = defineProps<{ sitio: Sitio }>();
 const emit = defineEmits<{
@@ -139,7 +140,7 @@ function elegir(clave: string | number): void {
   else if (clave === 'env') emit('verEnv', props.sitio);
   else if (clave === 'plantilla') emit('guardarPlantilla', props.sitio);
   else if (clave === 'agente')
-    void router.push({ name: 'agentes', query: { sitio: props.sitio.id } });
+    void router.push({ ...destinoIa('agentes'), query: { sitio: props.sitio.id } });
   else if (clave === 'borrar') confirmarBorrar();
 }
 

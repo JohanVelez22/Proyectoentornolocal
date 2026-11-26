@@ -22,6 +22,8 @@ import {
   NProgress,
   NSkeleton,
   NSpin,
+  NTab,
+  NTabs,
   NTooltip,
   useDialog,
   useMessage,
@@ -29,15 +31,17 @@ import {
 } from 'naive-ui';
 import Desplegable from '../componentes/Desplegable.vue';
 import { computed, h, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import type { ModeloOllama, ProveedorIaPublico } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
+import Agentes from './Agentes.vue';
 import DialogoEnvIa from '../componentes/DialogoEnvIa.vue';
 import DialogoProveedorIa from '../componentes/DialogoProveedorIa.vue';
 import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import TarjetaProveedorIa from '../componentes/TarjetaProveedorIa.vue';
 import { formatearFecha, textos } from '../i18n';
+import { destinoIa, PESTANAS_IA, type PestanaIa } from '../rutas';
 import { porcentaje, useIa, type DescargaIa } from '../stores/ia';
 import { useServicios } from '../stores/servicios';
 import { formatearTamano } from '../utilidades/bd';
@@ -50,6 +54,16 @@ const tn = textos.ia;
 const td = t.descargar;
 const tp = t.progreso;
 const router = useRouter();
+const route = useRoute();
+
+/** Pestaña activa (ruta `/ia/:pestana?`): sin pestaña, la primera. */
+const pestana = computed<PestanaIa>(() => {
+  const p = route.params['pestana'];
+  return PESTANAS_IA.find((x) => x === p) ?? 'agentes';
+});
+function cambiarPestana(p: string): void {
+  void router.push({ ...destinoIa(p as PestanaIa), query: route.query });
+}
 const dialog = useDialog();
 const message = useMessage();
 const servicios = useServicios();
@@ -315,368 +329,384 @@ const filasConexion = computed(() => [
 
 <template>
   <div class="ia">
-    <p class="descripcion">{{ tn.descripcion }}</p>
+    <NTabs
+      :value="pestana"
+      type="line"
+      size="small"
+      class="pestanas"
+      :aria-label="tn.pestanas.etiqueta"
+      @update:value="cambiarPestana"
+    >
+      <NTab v-for="p in PESTANAS_IA" :key="p" :name="p">{{ tn.pestanas[p] }}</NTab>
+    </NTabs>
+
+    <Agentes v-if="pestana === 'agentes'" />
 
     <!-- IA en la nube -->
-    <section class="nube" :aria-busy="ia.proveedores === null">
-      <header class="cabeza">
-        <h2>{{ tn.nube.titulo }}</h2>
-        <NButton size="small" type="primary" secondary class="agregar" @click="nuevoProveedor">
-          <template #icon
-            ><NIcon><Add /></NIcon
-          ></template>
-          {{ tn.nube.agregar }}
-        </NButton>
-      </header>
-      <NAlert v-if="ia.errorProveedores" type="error" :title="tn.nube.errorLista">
-        {{ ia.errorProveedores }}
-      </NAlert>
-      <NSkeleton v-else-if="ia.proveedores === null" height="120px" class="esqueleto" />
-      <p v-else-if="!ia.proveedores.length" class="sin-modelos">{{ tn.nube.vacio }}</p>
-      <div v-else class="tarjetas">
-        <TarjetaProveedorIa
-          v-for="p in ia.proveedores"
-          :key="p.id"
-          :proveedor="p"
-          :prueba="ia.pruebas[p.id]"
-          :mensaje="ia.mensajes[p.id]"
-          :modelos="ia.modelosDe(p.id)"
-          :modelos-gratis="ia.modelosGratisDe(p.id)"
-          @probar="ia.probarConexion(p.id)"
-          @probar-mensaje="(m: string) => pedirMensaje(p, m)"
-          @usar="usarEnProyecto(p)"
-          @editar="editarProveedor(p)"
-          @borrar="pedirBorrado(p, 'proveedor')"
-        />
-      </div>
-    </section>
-    <DialogoProveedorIa
-      v-model:show="dialogoProveedor"
-      :proveedor="enEdicion"
-      @borrar-clave="(p: ProveedorIaPublico) => pedirBorrado(p, 'clave')"
-    />
-    <DialogoEnvIa v-if="paraEnv" v-model:show="dialogoEnv" :proveedor="paraEnv" />
-
-    <h2 class="titulo-local">{{ tn.local.titulo }}</h2>
-    <p class="descripcion">{{ t.descripcion }}</p>
-
-    <NSkeleton v-if="!instaladosListos && !servicio" height="120px" class="esqueleto" />
-
-    <!-- Sin instalar -->
-    <div v-else-if="sinInstalar" class="vacio">
-      <NEmpty size="large">
-        <template #icon><IlustracionVacia :icono="Sparkles" /></template>
-        <template #default>
-          <strong class="vacio-titulo">{{ t.sinInstalarTitulo }}</strong>
-          <span class="vacio-texto">{{ t.sinInstalar }}</span>
-        </template>
-        <template #extra>
-          <NButton type="primary" @click="irAServicios">{{ t.irAServicios }}</NButton>
-        </template>
-      </NEmpty>
-    </div>
-
-    <!-- Apagado, encendiéndose o con error -->
-    <div v-else-if="!encendido" class="apagado">
-      <span class="apagado-icono"
-        ><NIcon :size="22"><Power /></NIcon
-      ></span>
-      <div class="apagado-texto">
-        <strong>
-          {{
-            servicio?.estado === 'iniciando'
-              ? t.iniciando
-              : servicio?.estado === 'error'
-                ? t.errorTitulo
-                : t.apagadoTitulo
-          }}
-        </strong>
-        <span v-if="servicio?.estado === 'error' && servicio.mensaje" class="apagado-mensaje">
-          {{ servicio.mensaje }}
-        </span>
-        <span v-else>{{ t.apagado }}</span>
-      </div>
-      <div class="apagado-botones">
-        <NButton
-          size="small"
-          type="primary"
-          :loading="ocupado('encender') || servicio?.estado === 'iniciando'"
-          :disabled="servicio?.estado === 'iniciando'"
-          @click="encender"
-        >
-          <template #icon
-            ><NIcon><Power /></NIcon
-          ></template>
-          {{ t.encender }}
-        </NButton>
-        <NButton size="small" quaternary @click="irAServicios">{{ t.verServicios }}</NButton>
-      </div>
-    </div>
-
-    <!-- Modelos instalados -->
-    <section v-if="encendido" class="bloque-ui" :aria-busy="ia.cargandoModelos">
-      <header class="cabeza">
-        <h2>{{ t.modelos }}</h2>
-        <span class="tenue">{{ ia.modelos ? t.total(ia.modelos.length) : '' }}</span>
-        <NTooltip>
-          <template #trigger>
-            <span class="espacio" tabindex="0">
-              {{ t.espacio }}:
-              <strong>{{
-                ia.espacio === null ? textos.inicioExtra.sinDato : formatearTamano(ia.espacio)
-              }}</strong>
-            </span>
-          </template>
-          {{ t.espacioAyuda }}
-        </NTooltip>
-        <NTooltip>
-          <template #trigger>
-            <NButton
-              quaternary
-              circle
-              size="small"
-              :aria-label="t.recargar"
-              :loading="ia.cargandoModelos"
-              @click="ia.cargarModelos()"
-            >
-              <template #icon
-                ><NIcon><Refresh /></NIcon
-              ></template>
-            </NButton>
-          </template>
-          {{ t.recargar }}
-        </NTooltip>
-      </header>
-
-      <NAlert v-if="ia.errorModelos" type="error" :title="t.errorModelos">
-        {{ ia.errorModelos }}
-      </NAlert>
-      <NSkeleton v-else-if="!ia.modelos" text :repeat="3" />
-      <p v-else-if="!ia.modelos.length" class="sin-modelos">{{ t.sinModelos }}</p>
-      <ul v-else class="modelos">
-        <li v-for="m in ia.modelos" :key="m.nombre">
-          <span class="modelo-nombre">{{ m.nombre }}</span>
-          <span class="modelo-tamano">{{ formatearTamano(m.tamanoBytes) }}</span>
-          <span class="modelo-fecha tenue">{{ fecha(m.modificado) }}</span>
-          <span class="modelo-acciones">
-            <NTooltip>
-              <template #trigger>
-                <NButton
-                  size="tiny"
-                  quaternary
-                  circle
-                  :aria-label="t.probarDe(m.nombre)"
-                  @click="elegirParaProbar(m)"
-                >
-                  <template #icon
-                    ><NIcon><ChatbubbleEllipses /></NIcon
-                  ></template>
-                </NButton>
-              </template>
-              {{ t.probarDe(m.nombre) }}
-            </NTooltip>
-            <NTooltip>
-              <template #trigger>
-                <NButton
-                  size="tiny"
-                  quaternary
-                  circle
-                  :aria-label="t.borrarDe(m.nombre)"
-                  :loading="ocupado(`borrar-${m.nombre}`)"
-                  @click="confirmarBorrar(m)"
-                >
-                  <template #icon
-                    ><NIcon><TrashOutline /></NIcon
-                  ></template>
-                </NButton>
-              </template>
-              {{ t.borrarDe(m.nombre) }}
-            </NTooltip>
-          </span>
-        </li>
-      </ul>
-    </section>
-
-    <!-- Descargar -->
-    <section v-if="encendido || descargas.length" class="bloque-ui">
-      <header class="cabeza">
-        <h2>{{ td.titulo }}</h2>
-      </header>
-      <form v-if="encendido" class="descargar" @submit.prevent="pedirDescarga">
-        <label class="campo-etiqueta" for="ia-modelo-nuevo">{{ td.campo }}</label>
-        <div class="fila-campo">
-          <NInput
-            v-model:value="nombreNuevo"
-            :input-props="{ id: 'ia-modelo-nuevo', spellcheck: false, autocomplete: 'off' }"
-            :placeholder="td.placeholder"
-            :status="intentado && errorNombre ? 'error' : undefined"
-            class="mono"
-            clearable
-          />
-          <NButton type="primary" attr-type="submit" :disabled="!puedeDescargar">
+    <template v-else-if="pestana === 'nube'">
+      <p class="descripcion">{{ tn.descripcion }}</p>
+      <section class="nube" :aria-busy="ia.proveedores === null">
+        <header class="cabeza">
+          <h2>{{ tn.nube.titulo }}</h2>
+          <NButton size="small" type="primary" secondary class="agregar" @click="nuevoProveedor">
             <template #icon
-              ><NIcon><CloudDownload /></NIcon
+              ><NIcon><Add /></NIcon
             ></template>
-            {{ td.boton }}
+            {{ tn.nube.agregar }}
           </NButton>
+        </header>
+        <NAlert v-if="ia.errorProveedores" type="error" :title="tn.nube.errorLista">
+          {{ ia.errorProveedores }}
+        </NAlert>
+        <NSkeleton v-else-if="ia.proveedores === null" height="120px" class="esqueleto" />
+        <p v-else-if="!ia.proveedores.length" class="sin-modelos">{{ tn.nube.vacio }}</p>
+        <div v-else class="tarjetas">
+          <TarjetaProveedorIa
+            v-for="p in ia.proveedores"
+            :key="p.id"
+            :proveedor="p"
+            :prueba="ia.pruebas[p.id]"
+            :mensaje="ia.mensajes[p.id]"
+            :modelos="ia.modelosDe(p.id)"
+            :modelos-gratis="ia.modelosGratisDe(p.id)"
+            @probar="ia.probarConexion(p.id)"
+            @probar-mensaje="(m: string) => pedirMensaje(p, m)"
+            @usar="usarEnProyecto(p)"
+            @editar="editarProveedor(p)"
+            @borrar="pedirBorrado(p, 'proveedor')"
+          />
         </div>
-        <small v-if="errorNombre" class="error-campo">{{ errorNombre }}</small>
-        <small v-else class="tenue">{{ td.ayuda }}</small>
-        <div v-if="ia.sugeridos.length" class="sugerencias">
-          <NTooltip v-for="s in ia.sugeridos" :key="s">
+      </section>
+      <DialogoProveedorIa
+        v-model:show="dialogoProveedor"
+        :proveedor="enEdicion"
+        @borrar-clave="(p: ProveedorIaPublico) => pedirBorrado(p, 'clave')"
+      />
+      <DialogoEnvIa v-if="paraEnv" v-model:show="dialogoEnv" :proveedor="paraEnv" />
+    </template>
+
+    <template v-else>
+      <h2 class="titulo-local">{{ tn.local.titulo }}</h2>
+      <p class="descripcion">{{ t.descripcion }}</p>
+
+      <NSkeleton v-if="!instaladosListos && !servicio" height="120px" class="esqueleto" />
+
+      <!-- Sin instalar -->
+      <div v-else-if="sinInstalar" class="vacio">
+        <NEmpty size="large">
+          <template #icon><IlustracionVacia :icono="Sparkles" /></template>
+          <template #default>
+            <strong class="vacio-titulo">{{ t.sinInstalarTitulo }}</strong>
+            <span class="vacio-texto">{{ t.sinInstalar }}</span>
+          </template>
+          <template #extra>
+            <NButton type="primary" @click="irAServicios">{{ t.irAServicios }}</NButton>
+          </template>
+        </NEmpty>
+      </div>
+
+      <!-- Apagado, encendiéndose o con error -->
+      <div v-else-if="!encendido" class="apagado">
+        <span class="apagado-icono"
+          ><NIcon :size="22"><Power /></NIcon
+        ></span>
+        <div class="apagado-texto">
+          <strong>
+            {{
+              servicio?.estado === 'iniciando'
+                ? t.iniciando
+                : servicio?.estado === 'error'
+                  ? t.errorTitulo
+                  : t.apagadoTitulo
+            }}
+          </strong>
+          <span v-if="servicio?.estado === 'error' && servicio.mensaje" class="apagado-mensaje">
+            {{ servicio.mensaje }}
+          </span>
+          <span v-else>{{ t.apagado }}</span>
+        </div>
+        <div class="apagado-botones">
+          <NButton
+            size="small"
+            type="primary"
+            :loading="ocupado('encender') || servicio?.estado === 'iniciando'"
+            :disabled="servicio?.estado === 'iniciando'"
+            @click="encender"
+          >
+            <template #icon
+              ><NIcon><Power /></NIcon
+            ></template>
+            {{ t.encender }}
+          </NButton>
+          <NButton size="small" quaternary @click="irAServicios">{{ t.verServicios }}</NButton>
+        </div>
+      </div>
+
+      <!-- Modelos instalados -->
+      <section v-if="encendido" class="bloque-ui" :aria-busy="ia.cargandoModelos">
+        <header class="cabeza">
+          <h2>{{ t.modelos }}</h2>
+          <span class="tenue">{{ ia.modelos ? t.total(ia.modelos.length) : '' }}</span>
+          <NTooltip>
+            <template #trigger>
+              <span class="espacio" tabindex="0">
+                {{ t.espacio }}:
+                <strong>{{
+                  ia.espacio === null ? textos.inicioExtra.sinDato : formatearTamano(ia.espacio)
+                }}</strong>
+              </span>
+            </template>
+            {{ t.espacioAyuda }}
+          </NTooltip>
+          <NTooltip>
             <template #trigger>
               <NButton
+                quaternary
+                circle
                 size="small"
-                secondary
-                round
-                class="mono"
-                :disabled="instalado(s) || ia.enCurso(s)"
-                @click="elegirSugerencia(s)"
+                :aria-label="t.recargar"
+                :loading="ia.cargandoModelos"
+                @click="ia.cargarModelos()"
               >
-                {{ s }}
+                <template #icon
+                  ><NIcon><Refresh /></NIcon
+                ></template>
               </NButton>
             </template>
-            {{ td.sugerenciaAyuda[s] ?? s }}
+            {{ t.recargar }}
           </NTooltip>
-        </div>
-      </form>
+        </header>
 
-      <ul v-if="descargas.length" class="descargas" aria-live="polite">
-        <li v-for="d in descargas" :key="d.modelo" :class="`estado-${d.estado}`">
-          <div class="descarga-cabeza">
-            <strong class="mono">{{ d.modelo }}</strong>
-            <span v-if="d.estado === 'descargando' || d.estado === 'cancelando'" class="tenue">
-              {{ textoProgreso(d) }}
+        <NAlert v-if="ia.errorModelos" type="error" :title="t.errorModelos">
+          {{ ia.errorModelos }}
+        </NAlert>
+        <NSkeleton v-else-if="!ia.modelos" text :repeat="3" />
+        <p v-else-if="!ia.modelos.length" class="sin-modelos">{{ t.sinModelos }}</p>
+        <ul v-else class="modelos">
+          <li v-for="m in ia.modelos" :key="m.nombre">
+            <span class="modelo-nombre">{{ m.nombre }}</span>
+            <span class="modelo-tamano">{{ formatearTamano(m.tamanoBytes) }}</span>
+            <span class="modelo-fecha tenue">{{ fecha(m.modificado) }}</span>
+            <span class="modelo-acciones">
+              <NTooltip>
+                <template #trigger>
+                  <NButton
+                    size="tiny"
+                    quaternary
+                    circle
+                    :aria-label="t.probarDe(m.nombre)"
+                    @click="elegirParaProbar(m)"
+                  >
+                    <template #icon
+                      ><NIcon><ChatbubbleEllipses /></NIcon
+                    ></template>
+                  </NButton>
+                </template>
+                {{ t.probarDe(m.nombre) }}
+              </NTooltip>
+              <NTooltip>
+                <template #trigger>
+                  <NButton
+                    size="tiny"
+                    quaternary
+                    circle
+                    :aria-label="t.borrarDe(m.nombre)"
+                    :loading="ocupado(`borrar-${m.nombre}`)"
+                    @click="confirmarBorrar(m)"
+                  >
+                    <template #icon
+                      ><NIcon><TrashOutline /></NIcon
+                    ></template>
+                  </NButton>
+                </template>
+                {{ t.borrarDe(m.nombre) }}
+              </NTooltip>
             </span>
-            <span v-else-if="d.estado === 'listo'" class="ok">{{ tp.listo(d.modelo) }}</span>
-            <span v-else-if="d.estado === 'cancelado'" class="tenue">{{
-              tp.cancelado(d.modelo)
-            }}</span>
-            <span v-else class="error">{{ tp.error(d.modelo) }}: {{ d.error }}</span>
-            <NButton
-              v-if="d.estado === 'descargando' || d.estado === 'cancelando'"
-              size="tiny"
-              secondary
-              class="accion-descarga"
-              :aria-label="tp.cancelarDe(d.modelo)"
-              :loading="d.estado === 'cancelando'"
-              :disabled="d.estado === 'cancelando'"
-              @click="cancelar(d)"
-            >
-              {{ textos.acciones.cancelar }}
+          </li>
+        </ul>
+      </section>
+
+      <!-- Descargar -->
+      <section v-if="encendido || descargas.length" class="bloque-ui">
+        <header class="cabeza">
+          <h2>{{ td.titulo }}</h2>
+        </header>
+        <form v-if="encendido" class="descargar" @submit.prevent="pedirDescarga">
+          <label class="campo-etiqueta" for="ia-modelo-nuevo">{{ td.campo }}</label>
+          <div class="fila-campo">
+            <NInput
+              v-model:value="nombreNuevo"
+              :input-props="{ id: 'ia-modelo-nuevo', spellcheck: false, autocomplete: 'off' }"
+              :placeholder="td.placeholder"
+              :status="intentado && errorNombre ? 'error' : undefined"
+              class="mono"
+              clearable
+            />
+            <NButton type="primary" attr-type="submit" :disabled="!puedeDescargar">
+              <template #icon
+                ><NIcon><CloudDownload /></NIcon
+              ></template>
+              {{ td.boton }}
             </NButton>
-            <NTooltip v-else>
+          </div>
+          <small v-if="errorNombre" class="error-campo">{{ errorNombre }}</small>
+          <small v-else class="tenue">{{ td.ayuda }}</small>
+          <div v-if="ia.sugeridos.length" class="sugerencias">
+            <NTooltip v-for="s in ia.sugeridos" :key="s">
               <template #trigger>
                 <NButton
-                  size="tiny"
-                  quaternary
-                  circle
-                  class="accion-descarga"
-                  :aria-label="tp.descartarDe(d.modelo)"
-                  @click="ia.descartar(d.modelo)"
+                  size="small"
+                  secondary
+                  round
+                  class="mono"
+                  :disabled="instalado(s) || ia.enCurso(s)"
+                  @click="elegirSugerencia(s)"
                 >
-                  <template #icon
-                    ><NIcon><Close /></NIcon
-                  ></template>
+                  {{ s }}
                 </NButton>
               </template>
-              {{ tp.descartar }}
+              {{ td.sugerenciaAyuda[s] ?? s }}
             </NTooltip>
           </div>
-          <NProgress
-            v-if="d.estado === 'descargando' || d.estado === 'cancelando'"
-            type="line"
-            :percentage="porcentaje(d) ?? 0"
-            :processing="porcentaje(d) === null"
-            :show-indicator="porcentaje(d) !== null"
-            :height="8"
-            :aria-label="textoProgreso(d)"
+        </form>
+
+        <ul v-if="descargas.length" class="descargas" aria-live="polite">
+          <li v-for="d in descargas" :key="d.modelo" :class="`estado-${d.estado}`">
+            <div class="descarga-cabeza">
+              <strong class="mono">{{ d.modelo }}</strong>
+              <span v-if="d.estado === 'descargando' || d.estado === 'cancelando'" class="tenue">
+                {{ textoProgreso(d) }}
+              </span>
+              <span v-else-if="d.estado === 'listo'" class="ok">{{ tp.listo(d.modelo) }}</span>
+              <span v-else-if="d.estado === 'cancelado'" class="tenue">{{
+                tp.cancelado(d.modelo)
+              }}</span>
+              <span v-else class="error">{{ tp.error(d.modelo) }}: {{ d.error }}</span>
+              <NButton
+                v-if="d.estado === 'descargando' || d.estado === 'cancelando'"
+                size="tiny"
+                secondary
+                class="accion-descarga"
+                :aria-label="tp.cancelarDe(d.modelo)"
+                :loading="d.estado === 'cancelando'"
+                :disabled="d.estado === 'cancelando'"
+                @click="cancelar(d)"
+              >
+                {{ textos.acciones.cancelar }}
+              </NButton>
+              <NTooltip v-else>
+                <template #trigger>
+                  <NButton
+                    size="tiny"
+                    quaternary
+                    circle
+                    class="accion-descarga"
+                    :aria-label="tp.descartarDe(d.modelo)"
+                    @click="ia.descartar(d.modelo)"
+                  >
+                    <template #icon
+                      ><NIcon><Close /></NIcon
+                    ></template>
+                  </NButton>
+                </template>
+                {{ tp.descartar }}
+              </NTooltip>
+            </div>
+            <NProgress
+              v-if="d.estado === 'descargando' || d.estado === 'cancelando'"
+              type="line"
+              :percentage="porcentaje(d) ?? 0"
+              :processing="porcentaje(d) === null"
+              :show-indicator="porcentaje(d) !== null"
+              :height="8"
+              :aria-label="textoProgreso(d)"
+            />
+          </li>
+        </ul>
+      </section>
+
+      <!-- Probar -->
+      <section v-if="encendido" class="bloque-ui">
+        <header class="cabeza">
+          <h2>{{ t.prueba.titulo }}</h2>
+        </header>
+        <p v-if="ia.modelos && !ia.modelos.length" class="sin-modelos">{{ t.prueba.sinModelos }}</p>
+        <form v-else class="probar" @submit.prevent="probar">
+          <Desplegable
+            v-model:value="modeloPrueba"
+            :options="opcionesModelo"
+            :placeholder="t.prueba.elegir"
+            :aria-label="t.prueba.modelo"
+            class="probar-modelo"
           />
-        </li>
-      </ul>
-    </section>
-
-    <!-- Probar -->
-    <section v-if="encendido" class="bloque-ui">
-      <header class="cabeza">
-        <h2>{{ t.prueba.titulo }}</h2>
-      </header>
-      <p v-if="ia.modelos && !ia.modelos.length" class="sin-modelos">{{ t.prueba.sinModelos }}</p>
-      <form v-else class="probar" @submit.prevent="probar">
-        <Desplegable
-          v-model:value="modeloPrueba"
-          :options="opcionesModelo"
-          :placeholder="t.prueba.elegir"
-          :aria-label="t.prueba.modelo"
-          class="probar-modelo"
-        />
-        <NInput
-          v-model:value="prompt"
-          :input-props="{ id: 'ia-prompt', 'aria-label': t.prueba.prompt }"
-          :placeholder="t.prueba.placeholder"
-          :disabled="probando"
-          :maxlength="4000"
-          class="probar-prompt"
-        />
-        <NButton type="primary" attr-type="submit" :disabled="!puedeProbar" :loading="probando">
-          <template #icon
-            ><NIcon><Send /></NIcon
-          ></template>
-          {{ t.prueba.enviar }}
-        </NButton>
-      </form>
-      <div v-if="probando || respuesta !== null" class="respuesta" aria-live="polite">
-        <span class="campo-etiqueta">{{ t.prueba.respuesta }}</span>
-        <NSpin v-if="probando" :size="14" :description="t.prueba.pensando" class="pensando" />
-        <pre v-else class="respuesta-texto">{{ respuesta }}</pre>
-      </div>
-    </section>
-
-    <!-- Conexión -->
-    <section v-if="!sinInstalar" class="bloque-ui">
-      <header class="cabeza">
-        <h2>{{ t.conexion.titulo }}</h2>
-      </header>
-      <dl class="datos">
-        <div v-for="f in filasConexion" :key="f.clave" class="dato">
-          <dt>{{ f.etiqueta }}</dt>
-          <dd>
-            <code>{{ f.valor ?? textos.inicioExtra.sinDato }}</code>
-            <NTooltip v-if="f.valor">
-              <template #trigger>
-                <NButton
-                  size="tiny"
-                  quaternary
-                  circle
-                  :aria-label="t.conexion.copiarDato(f.etiqueta.toLowerCase())"
-                  @click="copiar(f.valor)"
-                >
-                  <template #icon
-                    ><NIcon><Copy /></NIcon
-                  ></template>
-                </NButton>
-              </template>
-              {{ t.conexion.copiarDato(f.etiqueta.toLowerCase()) }}
-            </NTooltip>
-          </dd>
+          <NInput
+            v-model:value="prompt"
+            :input-props="{ id: 'ia-prompt', 'aria-label': t.prueba.prompt }"
+            :placeholder="t.prueba.placeholder"
+            :disabled="probando"
+            :maxlength="4000"
+            class="probar-prompt"
+          />
+          <NButton type="primary" attr-type="submit" :disabled="!puedeProbar" :loading="probando">
+            <template #icon
+              ><NIcon><Send /></NIcon
+            ></template>
+            {{ t.prueba.enviar }}
+          </NButton>
+        </form>
+        <div v-if="probando || respuesta !== null" class="respuesta" aria-live="polite">
+          <span class="campo-etiqueta">{{ t.prueba.respuesta }}</span>
+          <NSpin v-if="probando" :size="14" :description="t.prueba.pensando" class="pensando" />
+          <pre v-else class="respuesta-texto">{{ respuesta }}</pre>
         </div>
-      </dl>
-      <div class="env-cabeza">
-        <span>{{ t.conexion.env }}</span>
-        <NButton size="tiny" secondary :disabled="!bloque" @click="bloque && copiar(bloque)">
-          <template #icon
-            ><NIcon><Copy /></NIcon
-          ></template>
-          {{ t.conexion.copiarEnv }}
-        </NButton>
-      </div>
-      <pre class="bloque">{{ bloque ?? textos.inicioExtra.sinDato }}</pre>
-      <small class="tenue">{{ t.conexion.envAyuda }}</small>
-      <p class="etapa-b">
-        <NIcon aria-hidden="true"><InformationCircle /></NIcon>
-        <span>{{ t.etapaB }}</span>
-      </p>
-    </section>
+      </section>
+
+      <!-- Conexión -->
+      <section v-if="!sinInstalar" class="bloque-ui">
+        <header class="cabeza">
+          <h2>{{ t.conexion.titulo }}</h2>
+        </header>
+        <dl class="datos">
+          <div v-for="f in filasConexion" :key="f.clave" class="dato">
+            <dt>{{ f.etiqueta }}</dt>
+            <dd>
+              <code>{{ f.valor ?? textos.inicioExtra.sinDato }}</code>
+              <NTooltip v-if="f.valor">
+                <template #trigger>
+                  <NButton
+                    size="tiny"
+                    quaternary
+                    circle
+                    :aria-label="t.conexion.copiarDato(f.etiqueta.toLowerCase())"
+                    @click="copiar(f.valor)"
+                  >
+                    <template #icon
+                      ><NIcon><Copy /></NIcon
+                    ></template>
+                  </NButton>
+                </template>
+                {{ t.conexion.copiarDato(f.etiqueta.toLowerCase()) }}
+              </NTooltip>
+            </dd>
+          </div>
+        </dl>
+        <div class="env-cabeza">
+          <span>{{ t.conexion.env }}</span>
+          <NButton size="tiny" secondary :disabled="!bloque" @click="bloque && copiar(bloque)">
+            <template #icon
+              ><NIcon><Copy /></NIcon
+            ></template>
+            {{ t.conexion.copiarEnv }}
+          </NButton>
+        </div>
+        <pre class="bloque">{{ bloque ?? textos.inicioExtra.sinDato }}</pre>
+        <small class="tenue">{{ t.conexion.envAyuda }}</small>
+        <p class="etapa-b">
+          <NIcon aria-hidden="true"><InformationCircle /></NIcon>
+          <span>{{ t.etapaB }}</span>
+        </p>
+      </section>
+    </template>
   </div>
 </template>
 
@@ -698,6 +728,9 @@ const filasConexion = computed(() => [
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 14px;
+}
+.pestanas {
+  margin-bottom: 14px;
 }
 .titulo-local {
   margin: 0 0 4px;

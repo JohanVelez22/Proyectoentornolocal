@@ -2549,6 +2549,12 @@ export const es = {
       errorLista: 'No se pudo leer la lista de proveedores',
     },
     local: { titulo: 'IA local (Ollama)' },
+    pestanas: {
+      etiqueta: 'Secciones de IA',
+      agentes: 'Agentes',
+      nube: 'Nube',
+      local: 'Modelos locales',
+    },
     tipos: {
       ollama: 'Ollama',
       hermes: 'Hermes (Nous Research)',

@@ -46,7 +46,7 @@ import PaletaComandos from './PaletaComandos.vue';
 import SelectorIdioma from './SelectorIdioma.vue';
 import SelectorTema from './SelectorTema.vue';
 import { idioma, textos } from '../i18n';
-import { GRUPOS_NAV } from '../navegacion';
+import { gruposVisibles } from '../navegacion';
 import { usePreferencias } from '../stores/preferencias';
 import { useSitios } from '../stores/sitios';
 import type { SeccionNav } from '../router';
@@ -98,7 +98,7 @@ const item = (k: SeccionNav): MenuOption => ({
 });
 /** Barra lateral agrupada (se rearma al cambiar de idioma). */
 const opciones = computed<MenuOption[]>(() => [
-  ...GRUPOS_NAV.map((g) => ({
+  ...gruposVisibles(preferencias.seccionesAvanzadas).map((g) => ({
     type: 'group' as const,
     key: `grupo-${g.grupo}`,
     label: textos.navGrupos[g.grupo],
