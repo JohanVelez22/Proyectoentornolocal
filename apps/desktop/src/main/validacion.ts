@@ -219,6 +219,8 @@ const INSTALABLES = [
   'inbucket',
   'papercut',
   'ollama',
+  'meilisearch',
+  'minio',
   'node',
   'python',
   'java',

@@ -24,6 +24,8 @@ export type ServicioInstalable =
   | 'inbucket'
   | 'papercut'
   | 'ollama'
+  | 'meilisearch'
+  | 'minio'
   | 'composer'
   | 'adminer'
   | 'phpmyadmin'
@@ -59,6 +61,8 @@ export const EJECUTABLE_POR_SERVICIO: Record<ServicioInstalable, string> = {
   inbucket: nombreEjecutable('inbucket'),
   papercut: nombreEjecutable('Papercut.Service'),
   ollama: nombreEjecutable('ollama'),
+  meilisearch: nombreEjecutable('meilisearch'),
+  minio: nombreEjecutable('minio'),
   composer: 'composer.phar',
   adminer: 'adminer.php',
   phpmyadmin: 'index.php',
@@ -221,6 +225,8 @@ export const CatalogoSchema = z.object({
   inbucket: Lista,
   papercut: Lista,
   ollama: Lista,
+  meilisearch: Lista,
+  minio: Lista,
   composer: Lista,
   adminer: Lista,
   phpmyadmin: Lista,

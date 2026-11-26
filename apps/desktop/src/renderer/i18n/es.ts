@@ -1297,6 +1297,8 @@ export const es = {
         inbucket: 'todos los correos atrapados por Inbucket',
         papercut: 'todos los correos atrapados por Papercut SMTP',
         ollama: 'todos los modelos descargados de Ollama',
+        meilisearch: 'todos los índices de Meilisearch',
+        minio: 'todos los objetos y buckets de MinIO',
       } as Record<string, string>,
       texto: (que: string) =>
         `Se borran ${que}. No se puede deshacer. El programa sigue instalado.`,
@@ -1638,6 +1640,14 @@ export const es = {
         detalle: 'Correo de prueba (github.com/ChangemakerStudios)',
       },
       ollama: { nombre: 'Ollama', detalle: 'IA local (ollama.com)' },
+      meilisearch: {
+        nombre: 'Meilisearch',
+        detalle: 'Búsqueda para Laravel Scout (github.com/meilisearch)',
+      },
+      minio: {
+        nombre: 'MinIO',
+        detalle: 'Almacenamiento S3, proyecto archivado (github.com/minio)',
+      },
       composer: { nombre: 'Composer', detalle: 'Dependencias de PHP (getcomposer.org)' },
       adminer: { nombre: 'Adminer', detalle: 'Administrador web de bases de datos' },
       phpmyadmin: { nombre: 'phpMyAdmin', detalle: 'Administrador web de MySQL (phpmyadmin.net)' },
@@ -4405,6 +4415,8 @@ export const es = {
       inbucket: 'Inbucket',
       papercut: 'Papercut SMTP',
       ollama: 'Ollama',
+      meilisearch: 'Meilisearch',
+      minio: 'MinIO',
       cloudflared: 'cloudflared',
       java: 'Java',
       dotnet: '.NET',

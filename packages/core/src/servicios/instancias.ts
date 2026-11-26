@@ -14,7 +14,7 @@ export type { EstadoInstancia, IdInstancia } from '../tipos';
 
 /** `<servicio>@<clave>` (la clave sigue `CLAVE_INSTANCIA`). */
 export const ID_INSTANCIA =
-  /^(mysql|mariadb|postgresql|redis|mongodb|mailpit|ollama)@([0-9a-z][0-9a-z.]{0,15})$/;
+  /^(mysql|mariadb|postgresql|redis|mongodb|mailpit|ollama|meilisearch|minio)@([0-9a-z][0-9a-z.]{0,15})$/;
 
 /** ¿Es un id de instancia bien formado? (no dice si existe). */
 export function esIdInstancia(id: unknown): id is IdInstancia {

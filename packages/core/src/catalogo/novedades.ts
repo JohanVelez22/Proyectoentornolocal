@@ -22,6 +22,8 @@ export const SERVICIOS_NOVEDADES: readonly ServicioInstalable[] = [
   'inbucket',
   'papercut',
   'ollama',
+  'meilisearch',
+  'minio',
   'cloudflared',
 ];
 
@@ -30,6 +32,7 @@ const CLAVE_INSTANCIA: Partial<Record<ServicioInstalable, (v: string) => string>
   mysql: claveMayorMenor,
   mariadb: claveMayorMenor,
   mongodb: claveMayorMenor,
+  meilisearch: claveMayorMenor,
   postgresql: claveMayor,
   redis: claveMayor,
 };

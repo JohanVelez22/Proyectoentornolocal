@@ -144,6 +144,8 @@ export const NOMBRE_SERVICIO: Record<IdServicioDatos, string> = {
   inbucket: 'Inbucket',
   papercut: 'Papercut SMTP',
   ollama: 'Ollama',
+  meilisearch: 'Meilisearch',
+  minio: 'MinIO',
 };
 
 export const USUARIO_POR_DEFECTO: Record<IdServicioDatos, string> = {
@@ -157,6 +159,8 @@ export const USUARIO_POR_DEFECTO: Record<IdServicioDatos, string> = {
   inbucket: 'inbucket',
   papercut: 'papercut',
   ollama: 'ollama',
+  meilisearch: 'meilisearch',
+  minio: 'minio',
 };
 
 /** Puertos de la aplicación (HTTPS, Adminer, FTP, PHP) que ningún servicio de datos puede tomar. */

@@ -166,6 +166,8 @@ describe('Config de servicios de datos', () => {
       inbucket: { version: null, puerto: 1025, autoIniciar: false },
       papercut: { version: null, puerto: 1025, autoIniciar: false },
       ollama: { version: null, puerto: 11434, autoIniciar: false },
+      meilisearch: { version: null, puerto: 7700, autoIniciar: false },
+      minio: { version: null, puerto: 19000, autoIniciar: false },
     });
     // Las credenciales viven en etc/credenciales.json, nunca en config.json.
     expect(c).not.toHaveProperty('credenciales');

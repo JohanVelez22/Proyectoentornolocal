@@ -43,11 +43,20 @@ export const SERVICIOS_CON_VERSIONES: readonly ServicioVersiones[] = [
   'inbucket',
   'papercut',
   'ollama',
+  'meilisearch',
+  'minio',
   'cloudflared',
 ];
 
 /** Servicios de datos con instancias (varias versiones encendidas, cada una en su puerto). */
-const CON_INSTANCIAS = new Set<string>(['mysql', 'mariadb', 'postgresql', 'redis', 'mongodb']);
+const CON_INSTANCIAS = new Set<string>([
+  'mysql',
+  'mariadb',
+  'postgresql',
+  'redis',
+  'mongodb',
+  'meilisearch',
+]);
 
 export function esServicioConVersiones(s: unknown): s is ServicioVersiones {
   return typeof s === 'string' && (SERVICIOS_CON_VERSIONES as readonly string[]).includes(s);

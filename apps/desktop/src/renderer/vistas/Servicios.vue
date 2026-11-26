@@ -55,7 +55,16 @@ const gruposInstalar: { titulo: string; servicios: InstalableCatalogo[] }[] = [
   },
   {
     titulo: textos.instalar.grupos.otros,
-    servicios: ['mailpit', 'smtp4dev', 'inbucket', 'papercut', 'ollama', 'cloudflared'],
+    servicios: [
+      'mailpit',
+      'smtp4dev',
+      'inbucket',
+      'papercut',
+      'ollama',
+      'meilisearch',
+      'minio',
+      'cloudflared',
+    ],
   },
 ];
 const seccionInstalar = ref<HTMLElement | null>(null);

@@ -295,6 +295,8 @@ export const IDS_SERVICIO_DATOS = [
   'inbucket',
   'papercut',
   'ollama',
+  'meilisearch',
+  'minio',
 ] as const;
 export type IdServicioDatos = (typeof IDS_SERVICIO_DATOS)[number];
 
@@ -312,6 +314,9 @@ export const PUERTOS_POR_DEFECTO: Record<IdServicioDatos, number> = {
   inbucket: 1025,
   papercut: 1025,
   ollama: 11434,
+  meilisearch: 7700,
+  // Fuera de 9000-9999 (reservado a los pools de PHP): API 19000 y consola 19001.
+  minio: 19000,
 };
 
 /**
@@ -561,7 +566,7 @@ export const ID_WORKSPACE = /^[a-z0-9][a-z0-9_-]{0,39}$/;
 const ID_SITIO_WS = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/;
 const ID_PROCESO_WS = /^[A-Za-z0-9][A-Za-z0-9_]{0,59}$/;
 const ID_INSTANCIA_WS = new RegExp(
-  `^(mysql|mariadb|postgresql|redis|mongodb|mailpit|ollama)@([0-9a-z][0-9a-z.]{0,15})$`,
+  `^(mysql|mariadb|postgresql|redis|mongodb|mailpit|ollama|meilisearch|minio)@([0-9a-z][0-9a-z.]{0,15})$`,
 );
 /** Máximo de elementos por workspace y de workspaces en total. */
 export const MAX_ELEMENTOS_WORKSPACE = 40;
@@ -712,6 +717,8 @@ export const ConfigSchema = z.object({
           inbucket: servicioDatos(PUERTOS_POR_DEFECTO.inbucket),
           papercut: servicioDatos(PUERTOS_POR_DEFECTO.papercut),
           ollama: servicioDatos(PUERTOS_POR_DEFECTO.ollama),
+          meilisearch: servicioDatos(PUERTOS_POR_DEFECTO.meilisearch),
+          minio: servicioDatos(PUERTOS_POR_DEFECTO.minio),
         })
         .prefault({}),
     })

@@ -241,6 +241,8 @@ import './servicios/bd/mongodb';
 import './servicios/mailpit';
 import './servicios/correo/captadores';
 import './servicios/ollama';
+import './servicios/meilisearch';
+import './servicios/minio';
 import {
   esTipoRuntime,
   Runtimes,
@@ -5095,9 +5097,9 @@ export class Nucleo {
   }
 }
 
-/** Servicios de datos con una sola versión activa: los captadores de correo y Ollama. */
-function esServicioUnico(s: string): s is IdCaptador | 'ollama' {
-  return s === 'ollama' || esIdCaptador(s);
+/** Servicios de datos con una sola versión activa: los captadores de correo, Ollama y MinIO. */
+function esServicioUnico(s: string): s is IdCaptador | 'ollama' | 'minio' {
+  return s === 'ollama' || s === 'minio' || esIdCaptador(s);
 }
 
 /**
