@@ -366,6 +366,7 @@ const api: ApiEntorno = {
     elegirCarpeta: () => invocar('sistema.elegirCarpeta'),
     elegirArchivo: () => invocar('sistema.elegirArchivo'),
     abrirUrl: (url) => invocar('sistema.abrirUrl', url),
+    abrirGrabadora: () => invocar('sistema.abrirGrabadora'),
     abrirCarpeta: (ruta) => invocar('sistema.abrirCarpeta', ruta),
     copiar: (texto) => invocar('sistema.copiar', texto),
     version: () => invocar('sistema.version'),

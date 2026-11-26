@@ -41,6 +41,7 @@ function preparar(nucleoExtra: Record<string, unknown> = {}) {
     elegirCarpeta: vi.fn(async () => dir),
     elegirArchivo: vi.fn(async () => archivo),
     abrirUrl: vi.fn(),
+    abrirGrabadora: vi.fn(),
     abrirCarpeta: vi.fn(),
     copiar: vi.fn(),
     version: vi.fn(async () => '1'),

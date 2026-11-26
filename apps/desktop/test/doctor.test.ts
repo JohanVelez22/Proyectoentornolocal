@@ -48,6 +48,7 @@ function montarIpc() {
       elegirCarpeta: vi.fn(),
       elegirArchivo: vi.fn(),
       abrirUrl: vi.fn(),
+      abrirGrabadora: vi.fn(),
       abrirCarpeta: vi.fn(),
       copiar: vi.fn(),
       version: vi.fn(),

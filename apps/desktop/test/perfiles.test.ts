@@ -528,6 +528,7 @@ describe('perfiles (D27): rutas IPC', () => {
       elegirCarpeta: vi.fn(),
       elegirArchivo: vi.fn(),
       abrirUrl: vi.fn(),
+      abrirGrabadora: vi.fn(),
       abrirCarpeta: vi.fn(),
       copiar: vi.fn(),
       version: vi.fn(),

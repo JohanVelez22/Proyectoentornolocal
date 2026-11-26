@@ -45,6 +45,7 @@ import {
   usarCarpetaDatos,
 } from './sesion';
 import { carpetaExistente, urlAbrible, urlHttp } from './validacion';
+import { abrirGrabadora } from './grabadora';
 import { imprimirHtmlAPdf } from './conversorPdf';
 import { crearEjecutorUtilityProcess } from './conversorProceso';
 import { crearEjecutorDiffUtilityProcess } from './diffProceso';
@@ -109,6 +110,7 @@ const sistema: ApiSistema = {
       throw e;
     }
   },
+  abrirGrabadora: () => abrirGrabadora(process.platform, (uri) => shell.openExternal(uri)),
   async abrirCarpeta(ruta) {
     const error = await shell.openPath(await carpetaExistente(ruta));
     if (error) throw new Error(error);

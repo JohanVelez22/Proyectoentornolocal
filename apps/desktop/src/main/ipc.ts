@@ -1607,6 +1607,8 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'sistema.elegirCarpeta': async (_n, s) => s.elegidas.registrar(await s.elegirCarpeta()),
   'sistema.elegirArchivo': async (_n, s) => s.elegidas.registrar(await s.elegirArchivo()),
   'sistema.abrirUrl': (_n, s, url) => s.abrirUrl(urlAbrible(url)),
+  // Sin argumentos: el URI de la grabadora es fijo y vive en el proceso principal.
+  'sistema.abrirGrabadora': (_n, s) => s.abrirGrabadora(),
   'sistema.abrirCarpeta': async (_n, s, ruta) => s.abrirCarpeta(await carpetaExistente(ruta)),
   'sistema.copiar': (_n, s, t) => s.copiar(texto(t, 'texto')),
   'sistema.version': (_n, s) => s.version(),

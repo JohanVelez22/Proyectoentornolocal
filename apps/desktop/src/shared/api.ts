@@ -551,6 +551,12 @@ export interface EstadoCliPath {
   aislado: boolean;
 }
 
+/** Resultado de abrir la grabadora de pantalla nativa (D38a). */
+export interface ResultadoGrabadora {
+  /** true si el sistema aceptó abrir Recortes; false = la ventana muestra la guía de atajos. */
+  abierta: boolean;
+}
+
 export interface ApiSistema {
   /** Abre el selector de carpetas; devuelve null si se cancela. */
   elegirCarpeta(): Promise<string | null>;
@@ -558,6 +564,11 @@ export interface ApiSistema {
   elegirArchivo(): Promise<string | null>;
   /** Solo http/https. */
   abrirUrl(url: string): Promise<void>;
+  /**
+   * Abre la grabadora de pantalla nativa: en Windows, Recortes en modo grabación (URI fijo, solo
+   * desde el proceso principal); en otros sistemas no hace nada (`abierta: false`, hay guía).
+   */
+  abrirGrabadora(): Promise<ResultadoGrabadora>;
   abrirCarpeta(ruta: string): Promise<void>;
   copiar(texto: string): Promise<void>;
   version(): Promise<string>;
@@ -1889,6 +1900,7 @@ export const RUTAS_IPC = [
   'sistema.elegirCarpeta',
   'sistema.elegirArchivo',
   'sistema.abrirUrl',
+  'sistema.abrirGrabadora',
   'sistema.abrirCarpeta',
   'sistema.copiar',
   'sistema.version',
