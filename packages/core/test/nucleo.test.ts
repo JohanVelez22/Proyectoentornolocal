@@ -588,6 +588,30 @@ describe('Nucleo', () => {
       expect(cerrar).not.toHaveBeenCalled();
     });
 
+    it('quitar «Confío» a un sitio de un perfil cierra el túnel (ya no es publicable)', async () => {
+      const n = await crear();
+      await n.guardarSitio(datos({ urlBaseVar: 'APP_URL', origen: 'perfil', confiado: true }));
+      await abrirTunelFalso(n);
+      const cerrar = vi.spyOn(n.tuneles, 'cerrar');
+      await n.guardarSitio(
+        datos({ urlBaseVar: 'APP_URL', origen: 'perfil', confiado: false }),
+        'demo',
+      );
+      expect(cerrar).toHaveBeenCalledWith('demo');
+    });
+
+    it('un sitio de un perfil que sigue confiado conserva el túnel', async () => {
+      const n = await crear();
+      await n.guardarSitio(datos({ urlBaseVar: 'APP_URL', origen: 'perfil', confiado: true }));
+      await abrirTunelFalso(n);
+      const cerrar = vi.spyOn(n.tuneles, 'cerrar');
+      await n.guardarSitio(
+        datos({ urlBaseVar: 'APP_URL', origen: 'perfil', confiado: true, nota: 'x' }),
+        'demo',
+      );
+      expect(cerrar).not.toHaveBeenCalled();
+    });
+
     it('cambio de dominio también cierra el túnel', async () => {
       const n = await crear();
       await n.guardarSitio(datos({ urlBaseVar: 'APP_URL' }));

@@ -240,6 +240,20 @@ export class Tuneles {
     for (const r of registros) {
       const id = PREFIJO + r.sitioId;
       if (this.d.supervisor.estado(id) !== 'apagado' && this.d.supervisor.pid(id) === r.pid) {
+        // Un sitio que dejó de ser publicable (se quitó «Confío» con la app cerrada) no se readopta.
+        const sitio = await this.buscar(r.sitioId);
+        if (sitio && !sitioPublicable(sitio)) {
+          this.cerrando.add(r.sitioId);
+          try {
+            await this.d.supervisor.detener(id);
+          } catch (e) {
+            console.error('No se pudo detener el túnel de un sitio no publicable:', e);
+          } finally {
+            this.cerrando.delete(r.sitioId);
+          }
+          muertos.push(r);
+          continue;
+        }
         vivos.push(r);
         this.fijar({ sitioId: r.sitioId, estado: 'activo', url: r.url });
       } else {

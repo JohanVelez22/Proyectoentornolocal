@@ -405,6 +405,33 @@ describe('Tuneles cierre inesperado, renovar y restauración', () => {
     );
   });
 
+  it('restaurar detiene un túnel vivo cuyo sitio dejó de ser publicable y devuelve el .env', async () => {
+    const original = 'A=1\n';
+    writeFileSync(env(), original);
+    sitios = [sitio({ origen: 'perfil', confiado: true })];
+    const t = crear();
+    await t.abrir('wolf', SI);
+    // El usuario quitó «Confío» mientras la app estaba cerrada: el proceso sigue vivo.
+    sitios = [sitio({ origen: 'perfil', confiado: false })];
+    const t2 = crear();
+    await t2.restaurar();
+    expect(detenidos).toContain('tunel-wolf');
+    expect(t2.estados()).toEqual([]);
+    expect(readFileSync(env(), 'utf8')).toBe(original);
+    expect(JSON.parse(readFileSync(path.join(rutas.base, 'run', 'tuneles.json'), 'utf8'))).toEqual(
+      [],
+    );
+  });
+
+  it('restaurar readopta el túnel vivo de un sitio publicable', async () => {
+    const t = crear();
+    await t.abrir('wolf', SI);
+    const t2 = crear();
+    await t2.restaurar();
+    expect(detenidos).not.toContain('tunel-wolf');
+    expect(t2.estados()).toEqual([expect.objectContaining({ sitioId: 'wolf', estado: 'activo' })]);
+  });
+
   it('restaurar descarta túneles cuyo proceso ya no vive y devuelve el .env', async () => {
     const original = 'A=1\n';
     writeFileSync(env(), original);

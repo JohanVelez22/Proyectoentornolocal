@@ -93,6 +93,7 @@ import { ServidorFtp } from './ftp/servidorFtp';
 import { GestorHosts } from './hosts/hosts';
 import { GestorHttps, type EstadoHttps, type ResultadoCA } from './https/certificados';
 import { ConfianzaCa, type EstadoConfianza, type ResultadoFirefox } from './https/confianza';
+import { sitioPublicable } from './sitios/confianza';
 import { AccesoBd, type HerramientaBd } from './herramientas/accesoBd';
 import { Adminer } from './herramientas/adminer';
 import { PhpMyAdmin } from './herramientas/phpmyadmin';
@@ -4928,7 +4929,10 @@ export class Nucleo {
     const cambia =
       actual.carpeta !== datos.carpeta ||
       (actual.urlBaseVar ?? null) !== (datos.urlBaseVar ?? null) ||
-      actual.dominio !== datos.dominio.trim().toLowerCase();
+      actual.dominio !== datos.dominio.trim().toLowerCase() ||
+      // Un sitio que deja de ser de confianza (p. ej. se quita «Confío» a uno de un perfil) ya no
+      // se publica: el túnel abierto se cierra.
+      (sitioPublicable(actual) && !sitioPublicable({ ...actual, ...datos }));
     if (cambia) await this.tuneles.cerrar(id);
   }
 
