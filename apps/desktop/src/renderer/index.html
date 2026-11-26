@@ -3,12 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <!--
-      connect-src admite ws:/wss: solo para el cliente WebSocket de Herramientas, que conecta a la
-      URL que escribe el usuario (validada como ws:// o wss://). http(s) sigue limitado a 'self'.
+      CSP de la ventana principal: solo lo propio.
+      - script-src 'self' explícito, sin 'unsafe-inline' ni 'unsafe-eval' (zod se configura con
+        `jitless` en main.ts para no probar `new Function`, que la CSP bloquea).
+      - style-src admite 'unsafe-inline' porque Naive UI inyecta sus estilos en tiempo de ejecución
+        con etiquetas <style> (css-render) y, en desarrollo, Vite hace lo mismo con los de los
+        componentes; no hay una variante con nonce o hash. Los scripts no tienen esa excepción.
+      - connect-src admite ws:/wss: solo para el cliente WebSocket de Herramientas, que conecta a
+        la URL que escribe el usuario (validada como ws:// o wss://). http(s) sigue limitado a
+        'self'.
+      - img-src con data: (códigos QR e iconos pequeños); font-src, worker-src 'self'. Sin plugins,
+        sin <base>, sin envío de formularios y sin marcos.
+      test/csp.test.ts vigila estas reglas.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WolfCore Dev</title>
