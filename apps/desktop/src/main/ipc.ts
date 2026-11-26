@@ -27,6 +27,7 @@ import {
   type PreferenciasUi,
   PRESETS_SMTP,
   LIMITES_IMAGEN,
+  FORMATOS_CONVERSOR,
 } from '@pel/core';
 import { idiomaDeLocale } from '../shared/idiomas';
 import { SECRETOS_NO_DISPONIBLES, type AlmacenSecretos } from './secretos';
@@ -1849,6 +1850,15 @@ const TABLA: Record<RutaIpc, Manejador> = {
         if (!s.elegidas.tiene(r)) throw new Error('Elija los archivos o carpetas desde el diálogo');
         return r;
       }),
+      s.elegidas.exigir(destino, 'archivo', 'guardar'),
+    ),
+  // Conversor de documentos (D34): el origen sale de un diálogo "Abrir", el destino de uno "Guardar"
+  // y el formato es de una lista fija. El núcleo no pisa nada y fuerza la extensión del formato.
+  'herramientas.conversionesDocumento': (n) => n.conversionesDocumento(),
+  'herramientas.convertirDocumento': (n, s, origen, a, destino) =>
+    n.convertirDocumento(
+      s.elegidas.exigir(origen, 'archivo'),
+      unoDe(a, FORMATOS_CONVERSOR, 'formato'),
       s.elegidas.exigir(destino, 'archivo', 'guardar'),
     ),
   'herramientas.optimizarPdf': (n, s, origen, destino) =>

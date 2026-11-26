@@ -43,6 +43,7 @@ import {
   usarCarpetaDatos,
 } from './sesion';
 import { carpetaExistente, urlAbrible, urlHttp } from './validacion';
+import { imprimirHtmlAPdf } from './conversorPdf';
 
 // El Node de Electron prueba cada dirección (IPv6 e IPv4) solo 250 ms antes de pasar a la
 // siguiente: con conexiones lentas ninguna llega a tiempo y `fetch` falla con
@@ -349,6 +350,8 @@ if (errorCarpetaDatos !== null) {
       // carpeta de datos (run/cli.json). `abrirUrl` solo recibe la dirección de un sitio (http/https).
       nucleo = await Nucleo.crear({
         ...(carpetaDatos ? { base: carpetaDatos, aislado: true } : {}),
+        // md → pdf y html → pdf del conversor (D34): Chromium sin red ni JavaScript.
+        imprimirPdf: imprimirHtmlAPdf,
         servidorCli: {
           version: app.getVersion(),
           // El cliente `wolf` compilado (out/cli/wolf.cjs, dentro del paquete) y el ejecutable que lo

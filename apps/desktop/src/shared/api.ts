@@ -47,6 +47,8 @@ import type {
   ImagenLeida,
   ResultadoPdf,
   ResultadoZip,
+  Conversion,
+  Formato,
   ResultadoBusqueda,
   ResumenBusqueda,
   OpcionesBusqueda,
@@ -252,6 +254,8 @@ export type {
   ImagenLeida,
   ResultadoPdf,
   ResultadoZip,
+  Conversion,
+  Formato,
   ResultadoBusqueda,
   ResumenBusqueda,
   OpcionesBusqueda,
@@ -1352,6 +1356,21 @@ export interface ApiEntorno {
      * (`mejoro: false` y `archivo: null` si no).
      */
     optimizarPdf(origen: string, destino: string): Promise<ResultadoPdf>;
+    /**
+     * Conversiones de documentos disponibles (D34). Las de `libreoffice` solo aparecen si
+     * LibreOffice ya está instalado (WolfCore Dev no lo instala); `libreOffice` dice si lo está.
+     */
+    conversionesDocumento(): Promise<{ conversiones: Conversion[]; libreOffice: boolean }>;
+    /**
+     * Convierte un documento elegido con `sistema.elegirArchivo` al formato `a`, en un archivo
+     * nuevo junto al destino de `sistema.guardarArchivo` (nunca pisa uno existente; la extensión
+     * siempre es la de `a`). Todo en este equipo, con límites contra archivos maliciosos.
+     */
+    convertirDocumento(
+      origen: string,
+      a: Formato,
+      destino: string,
+    ): Promise<{ destino: string; bytes: number }>;
   };
   buscar: {
     /**
@@ -1772,6 +1791,8 @@ export const RUTAS_IPC = [
   'herramientas.guardarImagen',
   'herramientas.comprimirZip',
   'herramientas.optimizarPdf',
+  'herramientas.conversionesDocumento',
+  'herramientas.convertirDocumento',
   'buscar.iniciar',
   'buscar.cancelar',
   'mcp.estado',

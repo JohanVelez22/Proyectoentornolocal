@@ -487,6 +487,9 @@ const api: ApiEntorno = {
     guardarImagen: (destino, datos) => invocar('herramientas.guardarImagen', destino, datos),
     comprimirZip: (origenes, destino) => invocar('herramientas.comprimirZip', origenes, destino),
     optimizarPdf: (origen, destino) => invocar('herramientas.optimizarPdf', origen, destino),
+    conversionesDocumento: () => invocar('herramientas.conversionesDocumento'),
+    convertirDocumento: (origen, a, destino) =>
+      invocar('herramientas.convertirDocumento', origen, a, destino),
   },
   buscar: {
     iniciar: (opciones) => invocar('buscar.iniciar', opciones),

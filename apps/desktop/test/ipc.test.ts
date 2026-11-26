@@ -262,6 +262,8 @@ function nucleoFalso() {
         'guardarImagen',
         'comprimirZip',
         'optimizarPdf',
+        'conversionesDocumento',
+        'convertirDocumento',
         'iniciarBusqueda',
         'cancelarBusqueda',
         'emitirCertificadoLibre',
@@ -976,6 +978,8 @@ describe('registrarIpc', () => {
         'herramientas.guardarImagen',
         'herramientas.comprimirZip',
         'herramientas.optimizarPdf',
+        'herramientas.conversionesDocumento',
+        'herramientas.convertirDocumento',
         'mcp.estado',
         'mcp.iniciar',
         'mcp.detener',
@@ -1848,6 +1852,43 @@ describe('IPC de la Etapa B', () => {
       expect(f['guardarImagen']).toHaveBeenCalledTimes(1);
       expect((await llamar('herramientas.optimizarPdf', pdf, destino)).ok).toBe(false);
       expect(f['optimizarPdf']).not.toHaveBeenCalled();
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
+  });
+
+  it('el conversor de documentos solo acepta rutas de diálogos y formatos de la lista', async () => {
+    const { f, llamar } = montar();
+    const carpeta = mkdtempSync(path.join(os.tmpdir(), 'pel-ipcd34-'));
+    const origen = path.join(carpeta, 'a.docx');
+    const destino = path.join(carpeta, 'a.md');
+    try {
+      expect((await llamar('herramientas.convertirDocumento', origen, 'md', destino)).ok).toBe(
+        false,
+      );
+      sistema.elegirArchivo.mockResolvedValueOnce(origen);
+      await llamar('sistema.elegirArchivo');
+      sistema.guardarArchivo.mockResolvedValueOnce(destino);
+      await llamar('sistema.guardarArchivo', 'a.md');
+      // Una ruta de "guardar" no sirve como origen ni una de "abrir" como destino.
+      expect((await llamar('herramientas.convertirDocumento', destino, 'md', destino)).ok).toBe(
+        false,
+      );
+      expect((await llamar('herramientas.convertirDocumento', origen, 'md', origen)).ok).toBe(
+        false,
+      );
+      // El formato es de una lista fija.
+      for (const malo of ['exe', 'bat', '', null, 5, '../md']) {
+        expect((await llamar('herramientas.convertirDocumento', origen, malo, destino)).ok).toBe(
+          false,
+        );
+      }
+      expect(f['convertirDocumento']).not.toHaveBeenCalled();
+      expect((await llamar('herramientas.convertirDocumento', origen, 'md', destino)).ok).toBe(
+        true,
+      );
+      expect(f['convertirDocumento']).toHaveBeenCalledWith(origen, 'md', destino);
+      expect((await llamar('herramientas.conversionesDocumento')).ok).toBe(true);
     } finally {
       rmSync(carpeta, { recursive: true, force: true });
     }

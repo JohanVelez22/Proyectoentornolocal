@@ -2,6 +2,7 @@
 import {
   Archive,
   Brush,
+  DocumentAttach,
   CodeSlash,
   Desktop,
   DocumentText,
@@ -47,6 +48,7 @@ const componentes: Record<Clave, Component> = {
   qrWifi: defineAsyncComponent(() => import('../componentes/herramientas/QrWifi.vue')),
   imagenes: defineAsyncComponent(() => import('../componentes/herramientas/Imagenes.vue')),
   comprimir: defineAsyncComponent(() => import('../componentes/herramientas/Comprimir.vue')),
+  conversor: defineAsyncComponent(() => import('../componentes/herramientas/Conversor.vue')),
 };
 
 const iconos: Record<Clave, Component> = {
@@ -68,6 +70,7 @@ const iconos: Record<Clave, Component> = {
   qrWifi: Wifi,
   imagenes: Image,
   comprimir: Archive,
+  conversor: DocumentAttach,
 };
 
 /** Paneles que necesitan más ancho (dos columnas o tablas). */
