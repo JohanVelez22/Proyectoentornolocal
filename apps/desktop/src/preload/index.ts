@@ -4,10 +4,10 @@ import {
   EVENTOS_IPC,
   PREFIJO_CANAL,
   type ApiEntorno,
-  type DatosError,
   type ResultadoIpc,
   type RutaIpc,
 } from '../shared/api';
+import { rechazoDe } from '../shared/errorIpc';
 import { crearBusEventos } from './eventos';
 
 const bus = crearBusEventos(ipcRenderer, CANAL_EVENTO, EVENTOS_IPC);
@@ -15,10 +15,8 @@ const bus = crearBusEventos(ipcRenderer, CANAL_EVENTO, EVENTOS_IPC);
 async function invocar<T>(ruta: RutaIpc, ...args: unknown[]): Promise<T> {
   const r = (await ipcRenderer.invoke(`${PREFIJO_CANAL}${ruta}`, ...args)) as ResultadoIpc<T>;
   if (!r.ok) {
-    const e = new Error(r.error.mensaje) as Error & { codigo?: string; datos?: DatosError };
-    if (r.error.codigo) e.codigo = r.error.codigo;
-    if (r.error.datos) e.datos = r.error.datos;
-    throw e;
+    // Objeto plano: el puente descartaría `codigo` y `datos` de un Error (ver shared/errorIpc.ts).
+    throw rechazoDe(r.error);
   }
   return r.valor;
 }

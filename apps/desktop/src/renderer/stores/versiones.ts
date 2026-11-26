@@ -11,6 +11,7 @@ import type {
   TablaVersiones,
 } from '../../shared/api';
 import { api } from '../api';
+import { mensajeDeError } from '../utilidades/errores';
 import { textos } from '../i18n';
 
 /** Una fila de la tabla (la forma la da el núcleo). */
@@ -231,7 +232,7 @@ export const useVersiones = defineStore('versiones', () => {
           .catch(() => []);
       } else respaldos.value = [];
     } catch (e) {
-      error.value = e instanceof Error ? e.message : String(e);
+      error.value = mensajeDeError(e);
       throw e;
     } finally {
       cargando.value = false;
