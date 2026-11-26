@@ -44,6 +44,9 @@ import type {
   RecetaPropuesta,
   RepoGithub,
   ResultadoBom,
+  ImagenLeida,
+  ResultadoPdf,
+  ResultadoZip,
   ResultadoBusqueda,
   ResumenBusqueda,
   OpcionesBusqueda,
@@ -246,6 +249,9 @@ export type {
   RecetaPropuesta,
   RepoGithub,
   ResultadoBom,
+  ImagenLeida,
+  ResultadoPdf,
+  ResultadoZip,
   ResultadoBusqueda,
   ResumenBusqueda,
   OpcionesBusqueda,
@@ -1324,6 +1330,28 @@ export interface ApiEntorno {
     emitirCertificado(dominios: string[], destino: string): Promise<CertificadoGuardado>;
     /** PATH, versiones de las herramientas y variables (los valores secretos llegan enmascarados). */
     entorno(): Promise<EntornoSistema>;
+    /**
+     * Imagen elegida con `sistema.elegirArchivo`: bytes más dimensiones y tipo leídos de la
+     * cabecera. Rechaza lo que pesa más de 30 MB o supera 12000 px por lado (bombas de
+     * descompresión) sin decodificarlo.
+     */
+    leerImagen(ruta: string): Promise<ImagenLeida>;
+    /**
+     * Guarda el resultado de una conversión o compresión en un archivo nuevo junto al destino
+     * elegido con `sistema.guardarArchivo` (si existe, `nombre (1)`); la extensión debe ser de
+     * imagen y coincidir con el contenido.
+     */
+    guardarImagen(destino: string, datos: Uint8Array): Promise<{ archivo: string; bytes: number }>;
+    /**
+     * Comprime archivos y carpetas (elegidos en diálogos) a un `.zip` nuevo sin seguir enlaces y
+     * sin pisar uno existente. Devuelve el peso antes y después.
+     */
+    comprimirZip(origenes: string[], destino: string): Promise<ResultadoZip>;
+    /**
+     * Optimiza un PDF en un hilo aparte; solo escribe el archivo nuevo si pesa menos
+     * (`mejoro: false` y `archivo: null` si no).
+     */
+    optimizarPdf(origen: string, destino: string): Promise<ResultadoPdf>;
   };
   buscar: {
     /**
@@ -1740,6 +1768,10 @@ export const RUTAS_IPC = [
   'herramientas.limpiarBom',
   'herramientas.emitirCertificado',
   'herramientas.entorno',
+  'herramientas.leerImagen',
+  'herramientas.guardarImagen',
+  'herramientas.comprimirZip',
+  'herramientas.optimizarPdf',
   'buscar.iniciar',
   'buscar.cancelar',
   'mcp.estado',

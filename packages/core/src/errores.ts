@@ -134,6 +134,18 @@ export const PARAMETROS_ERROR = {
   'herramientas.dominio_invalido': [],
   'herramientas.fuera_de_la_ca': ['dominio'],
   'herramientas.demasiados_dominios': ['maximo'],
+  // imágenes, ZIP y PDF (D33)
+  'herramientas.imagen_tipo': [],
+  'herramientas.imagen_grande': ['maximo'],
+  'herramientas.imagen_dimensiones': ['ancho', 'alto', 'maximo'],
+  'herramientas.zip_sin_archivos': [],
+  'herramientas.zip_demasiados': ['maximo'],
+  'herramientas.zip_grande': ['maximo'],
+  'herramientas.pdf_invalido': [],
+  'herramientas.pdf_grande': ['maximo'],
+  'herramientas.pdf_cifrado': [],
+  'herramientas.pdf_plazo': ['segundos'],
+  'herramientas.salida_ocupada': [],
   // acceso a la base con Adminer o phpMyAdmin (D18)
   'acceso_bd.datos_invalidos': [],
   'acceso_bd.sin_base': [],

@@ -26,6 +26,7 @@ import {
   type OpcionesReceta,
   type PreferenciasUi,
   PRESETS_SMTP,
+  LIMITES_IMAGEN,
 } from '@pel/core';
 import { idiomaDeLocale } from '../shared/idiomas';
 import { SECRETOS_NO_DISPONIBLES, type AlmacenSecretos } from './secretos';
@@ -99,6 +100,7 @@ import {
   idNoVacio,
   idEditor,
   idTerminal,
+  bytesAcotados,
   listaTextos,
   MAX_BYTES_RECETA,
   MAX_PASOS_RECETA,
@@ -1832,6 +1834,28 @@ const TABLA: Record<RutaIpc, Manejador> = {
   },
   // Sin argumentos; el núcleo ya enmascara los valores con nombre de secreto.
   'herramientas.entorno': (n) => n.entornoSistema(),
+  // Imágenes, ZIP y PDF (D33): toda ruta sale de un diálogo (lectura = abrir; escritura = guardar)
+  // y el núcleo nunca pisa un archivo existente. Los bytes de la imagen tienen tope.
+  'herramientas.leerImagen': (n, s, ruta) => n.leerImagen(s.elegidas.exigir(ruta, 'archivo')),
+  'herramientas.guardarImagen': (n, s, destino, datos) =>
+    n.guardarImagen(
+      s.elegidas.exigir(destino, 'archivo', 'guardar'),
+      bytesAcotados(datos, LIMITES_IMAGEN.bytesSalida, 'imagen'),
+    ),
+  'herramientas.comprimirZip': (n, s, origenes, destino) =>
+    n.comprimirZip(
+      listaTextos(origenes, 200, 1024, 'orígenes').map((r) => {
+        // Archivos (elegirArchivos) o carpetas (elegirCarpeta): siempre de un diálogo.
+        if (!s.elegidas.tiene(r)) throw new Error('Elija los archivos o carpetas desde el diálogo');
+        return r;
+      }),
+      s.elegidas.exigir(destino, 'archivo', 'guardar'),
+    ),
+  'herramientas.optimizarPdf': (n, s, origen, destino) =>
+    n.optimizarPdf(
+      s.elegidas.exigir(origen, 'archivo'),
+      s.elegidas.exigir(destino, 'archivo', 'guardar'),
+    ),
 
   // La raíz es la carpeta de un proyecto (por id) o una ruta elegida en un diálogo; el resto son
   // textos y banderas acotados. Vuelve enseguida con el id: los resultados llegan por eventos.

@@ -4,6 +4,9 @@ import { en } from '../src/renderer/i18n/en';
 import { es } from '../src/renderer/i18n/es';
 import { fr } from '../src/renderer/i18n/fr';
 import { pt } from '../src/renderer/i18n/pt';
+import { errorWifi, textoQrWifi } from '../src/renderer/utilidades/qrWifi';
+import { pngsAIco, TAMANOS_ICO } from '../src/renderer/utilidades/ico';
+import { escalar, porcentajeAhorro } from '../src/renderer/utilidades/imagenCanvas';
 import {
   aBase64,
   agregarAcotado,
@@ -387,5 +390,120 @@ describe('herramienta Buscar', () => {
       }
       expect(t.errores.codigos['buscar.demasiadas']).toContain('{maximo}');
     }
+  });
+});
+
+describe('QR de Wi-Fi', () => {
+  it('arma el texto WIFI: con la seguridad y la red oculta', () => {
+    expect(
+      textoQrWifi({ ssid: 'Casa', clave: 'secreto123', seguridad: 'WPA', oculta: false }),
+    ).toBe('WIFI:T:WPA;S:Casa;P:secreto123;;');
+    expect(textoQrWifi({ ssid: 'Casa', clave: 'secreto123', seguridad: 'WEP', oculta: true })).toBe(
+      'WIFI:T:WEP;S:Casa;P:secreto123;H:true;;',
+    );
+  });
+
+  it('una red abierta no lleva contraseña, aunque haya una escrita', () => {
+    expect(
+      textoQrWifi({ ssid: 'Cafe', clave: 'no-debe-ir', seguridad: 'nopass', oculta: false }),
+    ).toBe('WIFI:T:nopass;S:Cafe;;');
+  });
+
+  it('escapa la barra invertida, ; , : y las comillas en el nombre y la contraseña', () => {
+    const t = textoQrWifi({
+      ssid: 'a;b,c:d"e\\f',
+      clave: 'p;q,r:s"t\\u',
+      seguridad: 'WPA',
+      oculta: false,
+    });
+    expect(t).toBe('WIFI:T:WPA;S:a\\;b\\,c\\:d\\"e\\\\f;P:p\\;q\\,r\\:s\\"t\\\\u;;');
+    // La barra se escapa primero: una `\;` del usuario no se convierte en un separador.
+    expect(textoQrWifi({ ssid: 'x\\;', clave: 'y', seguridad: 'WPA', oculta: false })).toBe(
+      'WIFI:T:WPA;S:x\\\\\\;;P:y;;',
+    );
+  });
+
+  it('valida el nombre y la contraseña antes de generar', () => {
+    expect(errorWifi({ ssid: '', clave: 'x'.repeat(8), seguridad: 'WPA' })).toBe('ssid');
+    expect(errorWifi({ ssid: 'x'.repeat(33), clave: 'x'.repeat(8), seguridad: 'WPA' })).toBe(
+      'ssid',
+    );
+    expect(errorWifi({ ssid: 'Casa', clave: '', seguridad: 'WPA' })).toBe('clave');
+    expect(errorWifi({ ssid: 'Casa', clave: 'corta', seguridad: 'WPA' })).toBe('claveWpa');
+    expect(errorWifi({ ssid: 'Casa', clave: 'x'.repeat(64), seguridad: 'WPA' })).toBe('claveWpa');
+    expect(errorWifi({ ssid: 'Casa', clave: 'x'.repeat(8), seguridad: 'WPA' })).toBeNull();
+    expect(errorWifi({ ssid: 'Casa', clave: '', seguridad: 'nopass' })).toBeNull();
+  });
+
+  it('tiene sus textos y avisos en es, en, pt y fr', () => {
+    for (const t of [es, en, pt, fr]) {
+      expect(t.herramientas.lista.qrWifi.nombre).not.toBe('');
+      expect(t.herramientas.qrWifi.aviso).not.toBe('');
+      expect(t.herramientas.imagenes.ahorro(30)).toMatch(/30/);
+      expect(t.herramientas.comprimir.omitidos(2)).toMatch(/2/);
+    }
+  });
+});
+
+describe('imagen a ICO', () => {
+  const png = (n: number): { tamano: number; datos: Uint8Array } => ({
+    tamano: n,
+    datos: new Uint8Array([
+      0x89,
+      0x50,
+      0x4e,
+      0x47,
+      ...Array.from({ length: n }, (_, i) => i % 251),
+    ]),
+  });
+
+  it('escribe la cabecera ICONDIR y los desplazamientos de cada imagen', () => {
+    const a = png(10);
+    const b = png(256);
+    const ico = pngsAIco([
+      { tamano: 16, datos: a.datos },
+      { tamano: 256, datos: b.datos },
+    ]);
+    const v = new DataView(ico.buffer, ico.byteOffset, ico.byteLength);
+    expect([...ico.subarray(0, 4)]).toEqual([0, 0, 1, 0]);
+    expect(v.getUint16(4, true)).toBe(2);
+    // Entrada 1: 16×16, 32 bits, tamaño y desplazamiento.
+    expect(ico[6]).toBe(16);
+    expect(ico[7]).toBe(16);
+    expect(v.getUint16(10, true)).toBe(1);
+    expect(v.getUint16(12, true)).toBe(32);
+    expect(v.getUint32(14, true)).toBe(a.datos.length);
+    expect(v.getUint32(18, true)).toBe(6 + 16 * 2);
+    // Entrada 2: 256 se escribe como 0.
+    expect(ico[22]).toBe(0);
+    expect(ico[23]).toBe(0);
+    expect(v.getUint32(30, true)).toBe(b.datos.length);
+    expect(v.getUint32(34, true)).toBe(6 + 16 * 2 + a.datos.length);
+    expect(ico.length).toBe(6 + 16 * 2 + a.datos.length + b.datos.length);
+    expect([...ico.subarray(38, 38 + a.datos.length)]).toEqual([...a.datos]);
+    expect([...ico.subarray(38 + a.datos.length)]).toEqual([...b.datos]);
+  });
+
+  it('rechaza tamaños no admitidos, listas vacías y datos que no son PNG', () => {
+    expect(() => pngsAIco([])).toThrow();
+    expect(() => pngsAIco([{ tamano: 20, datos: png(4).datos }])).toThrow();
+    expect(() => pngsAIco([{ tamano: 16, datos: new Uint8Array([1, 2, 3, 4, 5]) }])).toThrow();
+    expect(() => pngsAIco([png(4), png(4)].map((p) => ({ ...p, tamano: 16 })))).toThrow();
+    expect(TAMANOS_ICO).toEqual([16, 32, 48, 64, 128, 256]);
+  });
+});
+
+describe('compresión de imágenes (cálculos)', () => {
+  it('limita el lado mayor sin agrandar y conserva la proporción', () => {
+    expect(escalar(4000, 2000, 1000)).toEqual({ ancho: 1000, alto: 500 });
+    expect(escalar(500, 300, 1000)).toEqual({ ancho: 500, alto: 300 });
+    expect(escalar(500, 300, null)).toEqual({ ancho: 500, alto: 300 });
+    expect(escalar(10_000, 1, 100)).toEqual({ ancho: 100, alto: 1 });
+  });
+
+  it('el ahorro es el porcentaje entero y es negativo si pesa más', () => {
+    expect(porcentajeAhorro(1000, 250)).toBe(75);
+    expect(porcentajeAhorro(1000, 1200)).toBe(-20);
+    expect(porcentajeAhorro(0, 5)).toBe(0);
   });
 });

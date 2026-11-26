@@ -429,6 +429,20 @@ export const pt: Textos = {
         'WOLFCORE_DATOS não é uma pasta de dados válida: deve ser absoluta, não do sistema e diferente da pasta real.',
       'perfiles.confirmar_reemplazar_ca':
         'O perfil traz uma CA e este computador já tem a sua: compare a impressão digital e confirme à parte que deseja substituí-la (somente se for a sua própria CA).',
+      'herramientas.imagen_tipo':
+        'Esse arquivo não é uma imagem compatível (PNG, JPG, WebP, GIF, BMP ou ICO) ou o conteúdo não corresponde ao tipo.',
+      'herramientas.imagen_grande': 'A imagem é grande demais (até {maximo}).',
+      'herramientas.imagen_dimensiones':
+        'A imagem é grande demais ({ancho}×{alto} px; até {maximo} px por lado) e não é aberta por segurança.',
+      'herramientas.zip_sin_archivos':
+        'Não há arquivos para comprimir (os links não são seguidos).',
+      'herramientas.zip_demasiados': 'Há arquivos demais para comprimir (até {maximo}).',
+      'herramientas.zip_grande': 'O que você quer comprimir é grande demais (até {maximo}).',
+      'herramientas.pdf_invalido': 'O arquivo não é um PDF que possa ser otimizado.',
+      'herramientas.pdf_grande': 'O PDF é grande demais (até {maximo}).',
+      'herramientas.pdf_cifrado': 'O PDF está protegido por senha e não pode ser otimizado.',
+      'herramientas.pdf_plazo': 'O PDF demorou mais de {segundos} s e foi cancelado.',
+      'herramientas.salida_ocupada': 'Não foi encontrado um nome livre para o novo arquivo.',
       'herramientas.fuera_de_la_ca':
         'A CA do WolfCore Dev só assina domínios .test, localhost e endereços locais: {dominio} não pode ser incluído.',
       'perfiles.frase_requerida':
@@ -3234,6 +3248,18 @@ export const pt: Textos = {
         nombre: 'Senhas',
         descripcion: 'Medir uma senha e rever as contas fracas das suas bases.',
       },
+      qrWifi: {
+        nombre: 'QR de Wi-Fi',
+        descripcion: 'Código QR para que outros se conectem à sua rede.',
+      },
+      imagenes: {
+        nombre: 'Imagens',
+        descripcion: 'Converter para ICO ou PNG e comprimir JPEG ou WebP.',
+      },
+      comprimir: {
+        nombre: 'ZIP e PDF',
+        descripcion: 'Comprimir arquivos e pastas em ZIP e otimizar PDF.',
+      },
     },
     errores: {
       jsonVacio: 'Digite ou cole um JSON.',
@@ -3499,6 +3525,80 @@ export const pt: Textos = {
       binario: (n: number) => `[binário, ${n} bytes]`,
       vacio: 'Ainda sem mensagens.',
       tope: 'São guardadas as últimas 500 mensagens; cada uma é mostrada até 10 KB.',
+    },
+    qrWifi: {
+      ssid: 'Nome da rede (SSID)',
+      clave: 'Senha',
+      seguridad: 'Segurança',
+      segWpa: 'WPA / WPA2 / WPA3',
+      segWep: 'WEP',
+      segNinguna: 'Sem senha',
+      oculta: 'Rede oculta',
+      mostrar: 'Mostrar',
+      ocultar: 'Ocultar',
+      aviso:
+        'O código QR contém a senha como está: quem o vir ou fotografar pode se conectar à sua rede. Ele é gerado aqui, não é salvo e é apagado ao fechar este painel.',
+      escribala:
+        'Você digita a senha: o WolfCore Dev nunca lê as senhas de Wi-Fi guardadas no sistema.',
+      errorSsid: 'Digite o nome da rede (até 32 caracteres).',
+      errorClave: 'Digite a senha.',
+      errorClaveWpa: 'Uma senha WPA tem entre 8 e 63 caracteres.',
+      vacio: 'Preencha os dados para ver o código.',
+      alt: 'Código QR para conectar à rede Wi-Fi',
+      descargar: 'Baixar PNG',
+      descargado: 'QR salvo',
+      largo: 'Os dados são longos demais para um QR.',
+    },
+    imagenes: {
+      elegir: 'Escolher imagem',
+      ayuda:
+        'É processada neste computador (até 30 MB e 12000 px por lado). O original não é modificado: o resultado é um arquivo novo.',
+      original: 'Original',
+      accion: 'O que fazer',
+      aIco: 'Converter para ICO',
+      aPng: 'Converter para PNG',
+      comprimir: 'Comprimir',
+      tamanos: 'Tamanhos do ICO',
+      formato: 'Formato',
+      calidad: 'Qualidade',
+      ladoMax: 'Lado máximo em px (vazio = o original)',
+      procesar: 'Processar',
+      procesando: 'Processando…',
+      guardar: 'Salvar como…',
+      antes: 'Antes',
+      despues: 'Depois',
+      sinMejora: 'O resultado não é menor que o original: tente outra qualidade ou formato.',
+      errorAbrir: 'Não foi possível abrir a imagem neste computador.',
+      errorProcesar: 'Não foi possível processar a imagem.',
+      dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
+      ahorro: (porcentaje: number) =>
+        porcentaje > 0 ? `${porcentaje} % menor` : `${-porcentaje} % maior`,
+      guardado: (archivo: string) => `Salvo em ${archivo}`,
+    },
+    comprimir: {
+      zip: 'Comprimir em ZIP',
+      zipAyuda:
+        'Escolha arquivos ou pastas. Os links não são seguidos e o ZIP é um arquivo novo: nunca se sobrescreve um existente.',
+      agregarArchivos: 'Adicionar arquivos',
+      agregarCarpeta: 'Adicionar pasta',
+      quitar: 'Remover',
+      vacio: 'Nada escolhido ainda.',
+      crearZip: 'Criar ZIP…',
+      creando: 'Criando…',
+      pdf: 'Otimizar PDF',
+      pdfAyuda:
+        'É salvo de novo com fluxos de objetos, em uma thread separada. O arquivo só é criado se for menor; PDFs protegidos por senha não são abertos. O original não é tocado.',
+      elegirPdf: 'Escolher PDF',
+      optimizar: 'Otimizar…',
+      optimizando: 'Otimizando…',
+      antes: 'Antes',
+      despues: 'Depois',
+      sinMejora: 'O PDF não ficaria menor: nenhum arquivo foi criado.',
+      omitidos: (n: number) =>
+        `${n} ${n === 1 ? 'link ou arquivo especial não foi incluído' : 'links ou arquivos especiais não foram incluídos'}.`,
+      archivos: (n: number) => `${n} ${n === 1 ? 'arquivo' : 'arquivos'}`,
+      ahorro: (porcentaje: number) => `${porcentaje} % menor`,
+      guardado: (archivo: string) => `Salvo em ${archivo}`,
     },
     contrasenas: {
       pestanaFortaleza: 'Força',

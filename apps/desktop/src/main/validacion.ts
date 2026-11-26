@@ -558,6 +558,14 @@ export function listaTextos(
   return v.map((x) => textoAcotado(x, 1, maxLargo, nombre));
 }
 
+/** Bytes que manda la interfaz (una imagen): `Uint8Array` no vacío y con tope. */
+export function bytesAcotados(v: unknown, max: number, nombre = 'datos'): Uint8Array {
+  if (!(v instanceof Uint8Array) || v.byteLength === 0 || v.byteLength > max) {
+    throw new Error(`Argumento no válido: ${nombre}`);
+  }
+  return v;
+}
+
 /** Tamaño máximo (JSON) de una receta o de un wolfcore.yml que manda la interfaz. */
 export const MAX_BYTES_RECETA = 64 * 1024;
 /** Pasos como máximo en una receta que manda la interfaz. */

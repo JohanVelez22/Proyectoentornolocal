@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import {
+  Archive,
   Brush,
   CodeSlash,
   Desktop,
   DocumentText,
   GitCompare,
+  Image,
   InformationCircle,
   Key,
   LockClosed,
   QrCode,
+  Wifi,
   Search,
   ShieldCheckmark,
   SwapVertical,
@@ -41,6 +44,9 @@ const componentes: Record<Clave, Component> = {
   websocket: defineAsyncComponent(() => import('../componentes/herramientas/WebSocket.vue')),
   buscar: defineAsyncComponent(() => import('../componentes/herramientas/Buscar.vue')),
   contrasenas: defineAsyncComponent(() => import('../componentes/herramientas/Contrasenas.vue')),
+  qrWifi: defineAsyncComponent(() => import('../componentes/herramientas/QrWifi.vue')),
+  imagenes: defineAsyncComponent(() => import('../componentes/herramientas/Imagenes.vue')),
+  comprimir: defineAsyncComponent(() => import('../componentes/herramientas/Comprimir.vue')),
 };
 
 const iconos: Record<Clave, Component> = {
@@ -59,6 +65,9 @@ const iconos: Record<Clave, Component> = {
   websocket: Pulse,
   buscar: Search,
   contrasenas: LockClosed,
+  qrWifi: Wifi,
+  imagenes: Image,
+  comprimir: Archive,
 };
 
 /** Paneles que necesitan más ancho (dos columnas o tablas). */

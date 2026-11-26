@@ -443,6 +443,21 @@ export const fr: Textos = {
         "WOLFCORE_DATOS n'est pas un dossier de données valide : il doit être absolu, hors des dossiers système et différent du dossier réel.",
       'perfiles.confirmar_reemplazar_ca':
         "Le profil contient une CA et cet ordinateur a déjà la sienne : comparez l'empreinte et confirmez séparément que vous voulez la remplacer (uniquement s'il s'agit de votre propre CA).",
+      'herramientas.imagen_tipo':
+        'Ce fichier n’est pas une image prise en charge (PNG, JPG, WebP, GIF, BMP ou ICO) ou son contenu ne correspond pas à son type.',
+      'herramientas.imagen_grande': 'L’image est trop lourde (jusqu’à {maximo}).',
+      'herramientas.imagen_dimensiones':
+        'L’image est trop grande ({ancho}×{alto} px ; jusqu’à {maximo} px par côté) et n’est pas ouverte par sécurité.',
+      'herramientas.zip_sin_archivos':
+        'Il n’y a aucun fichier à compresser (les liens ne sont pas suivis).',
+      'herramientas.zip_demasiados': 'Il y a trop de fichiers à compresser (jusqu’à {maximo}).',
+      'herramientas.zip_grande': 'Ce que vous voulez compresser est trop lourd (jusqu’à {maximo}).',
+      'herramientas.pdf_invalido': 'Le fichier n’est pas un PDF pouvant être optimisé.',
+      'herramientas.pdf_grande': 'Le PDF est trop lourd (jusqu’à {maximo}).',
+      'herramientas.pdf_cifrado':
+        'Le PDF est protégé par un mot de passe et ne peut pas être optimisé.',
+      'herramientas.pdf_plazo': 'Le PDF a pris plus de {segundos} s et a été annulé.',
+      'herramientas.salida_ocupada': 'Aucun nom libre n’a été trouvé pour le nouveau fichier.',
       'herramientas.fuera_de_la_ca':
         'La CA de WolfCore Dev ne signe que les domaines .test, localhost et les adresses locales : {dominio} ne peut pas être inclus.',
       'perfiles.frase_requerida':
@@ -3315,6 +3330,18 @@ export const fr: Textos = {
         nombre: 'Mots de passe',
         descripcion: 'Mesurer un mot de passe et repérer les comptes faibles de vos bases.',
       },
+      qrWifi: {
+        nombre: 'QR Wi-Fi',
+        descripcion: 'Code QR pour que d’autres se connectent à votre réseau.',
+      },
+      imagenes: {
+        nombre: 'Images',
+        descripcion: 'Convertir en ICO ou PNG et compresser en JPEG ou WebP.',
+      },
+      comprimir: {
+        nombre: 'ZIP et PDF',
+        descripcion: 'Compresser fichiers et dossiers en ZIP et optimiser les PDF.',
+      },
     },
     errores: {
       jsonVacio: 'Saisissez ou collez un JSON.',
@@ -3582,6 +3609,81 @@ export const fr: Textos = {
       binario: (n: number) => `[binaire, ${n} octets]`,
       vacio: 'Pas encore de messages.',
       tope: 'Les 500 derniers messages sont conservés ; chacun est affiché jusqu’à 10 Ko.',
+    },
+    qrWifi: {
+      ssid: 'Nom du réseau (SSID)',
+      clave: 'Mot de passe',
+      seguridad: 'Sécurité',
+      segWpa: 'WPA / WPA2 / WPA3',
+      segWep: 'WEP',
+      segNinguna: 'Sans mot de passe',
+      oculta: 'Réseau masqué',
+      mostrar: 'Afficher',
+      ocultar: 'Masquer',
+      aviso:
+        'Le code QR contient le mot de passe tel quel : quiconque le voit ou le photographie peut se connecter à votre réseau. Il est généré ici, jamais enregistré, et effacé à la fermeture de ce panneau.',
+      escribala:
+        'C’est vous qui saisissez le mot de passe : WolfCore Dev ne lit jamais les mots de passe Wi-Fi enregistrés dans le système.',
+      errorSsid: 'Saisissez le nom du réseau (32 caractères au maximum).',
+      errorClave: 'Saisissez le mot de passe.',
+      errorClaveWpa: 'Un mot de passe WPA compte entre 8 et 63 caractères.',
+      vacio: 'Remplissez les champs pour voir le code.',
+      alt: 'Code QR pour se connecter au réseau Wi-Fi',
+      descargar: 'Télécharger le PNG',
+      descargado: 'QR enregistré',
+      largo: 'Les données sont trop longues pour un code QR.',
+    },
+    imagenes: {
+      elegir: 'Choisir une image',
+      ayuda:
+        'Traitée sur cet ordinateur (jusqu’à 30 Mo et 12000 px par côté). L’original n’est pas modifié : le résultat est un nouveau fichier.',
+      original: 'Original',
+      accion: 'Que faire',
+      aIco: 'Convertir en ICO',
+      aPng: 'Convertir en PNG',
+      comprimir: 'Compresser',
+      tamanos: 'Tailles de l’ICO',
+      formato: 'Format',
+      calidad: 'Qualité',
+      ladoMax: 'Côté maximal en px (vide = l’original)',
+      procesar: 'Traiter',
+      procesando: 'Traitement…',
+      guardar: 'Enregistrer sous…',
+      antes: 'Avant',
+      despues: 'Après',
+      sinMejora:
+        'Le résultat n’est pas plus léger que l’original : essayez une autre qualité ou un autre format.',
+      errorAbrir: 'Impossible d’ouvrir l’image sur cet ordinateur.',
+      errorProcesar: 'Impossible de traiter l’image.',
+      dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
+      ahorro: (porcentaje: number) =>
+        porcentaje > 0 ? `${porcentaje} % de moins` : `${-porcentaje} % de plus`,
+      guardado: (archivo: string) => `Enregistré dans ${archivo}`,
+    },
+    comprimir: {
+      zip: 'Compresser en ZIP',
+      zipAyuda:
+        'Choisissez des fichiers ou des dossiers. Les liens ne sont pas suivis et le ZIP est un nouveau fichier : un fichier existant n’est jamais écrasé.',
+      agregarArchivos: 'Ajouter des fichiers',
+      agregarCarpeta: 'Ajouter un dossier',
+      quitar: 'Retirer',
+      vacio: 'Rien n’est encore choisi.',
+      crearZip: 'Créer le ZIP…',
+      creando: 'Création…',
+      pdf: 'Optimiser un PDF',
+      pdfAyuda:
+        'Il est réenregistré avec des flux d’objets, dans un thread séparé. Le fichier n’est créé que s’il est plus léger ; les PDF protégés par mot de passe ne sont pas ouverts. L’original n’est pas touché.',
+      elegirPdf: 'Choisir un PDF',
+      optimizar: 'Optimiser…',
+      optimizando: 'Optimisation…',
+      antes: 'Avant',
+      despues: 'Après',
+      sinMejora: 'Le PDF ne serait pas plus léger : aucun fichier n’a été créé.',
+      omitidos: (n: number) =>
+        `${n} ${n === 1 ? 'lien ou fichier spécial n’a pas été inclus' : 'liens ou fichiers spéciaux n’ont pas été inclus'}.`,
+      archivos: (n: number) => `${n} ${n === 1 ? 'fichier' : 'fichiers'}`,
+      ahorro: (porcentaje: number) => `${porcentaje} % de moins`,
+      guardado: (archivo: string) => `Enregistré dans ${archivo}`,
     },
     contrasenas: {
       pestanaFortaleza: 'Robustesse',

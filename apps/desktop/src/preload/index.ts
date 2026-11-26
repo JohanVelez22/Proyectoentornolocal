@@ -483,6 +483,10 @@ const api: ApiEntorno = {
     emitirCertificado: (dominios, destino) =>
       invocar('herramientas.emitirCertificado', dominios, destino),
     entorno: () => invocar('herramientas.entorno'),
+    leerImagen: (ruta) => invocar('herramientas.leerImagen', ruta),
+    guardarImagen: (destino, datos) => invocar('herramientas.guardarImagen', destino, datos),
+    comprimirZip: (origenes, destino) => invocar('herramientas.comprimirZip', origenes, destino),
+    optimizarPdf: (origen, destino) => invocar('herramientas.optimizarPdf', origen, destino),
   },
   buscar: {
     iniciar: (opciones) => invocar('buscar.iniciar', opciones),

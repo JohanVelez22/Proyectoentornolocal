@@ -304,6 +304,9 @@ import {
   type PuertoEnUso,
 } from './herramientas/puertos';
 import { limpiarBom, type ResultadoBom } from './herramientas/bom';
+import { guardarImagen, leerImagen, type ImagenLeida } from './herramientas/imagenes';
+import { optimizarPdf, type ResultadoPdf } from './herramientas/pdf';
+import { comprimirZip, type ResultadoZip } from './herramientas/zip';
 import { Busquedas, type OpcionesBusqueda } from './herramientas/buscar';
 import { emitirCertificadoLibre } from './herramientas/certificadosLibres';
 import { entornoSistema, PLAZO_VERSION_MS, type EntornoSistema } from './herramientas/entorno';
@@ -3502,6 +3505,26 @@ export class Nucleo {
   /** Quita el BOM de UTF-8 (con copia .bak-bom); `rutas` vienen de un diálogo. */
   limpiarBom(rutas: string[], simular: boolean): Promise<ResultadoBom[]> {
     return limpiarBom(rutas, { simular });
+  }
+
+  /** Imagen elegida en un diálogo, con dimensiones y peso ya acotados (no se decodifica aquí). */
+  leerImagen(ruta: string): Promise<ImagenLeida> {
+    return leerImagen(ruta);
+  }
+
+  /** Guarda una imagen convertida o comprimida en un archivo nuevo (nunca pisa uno existente). */
+  guardarImagen(destino: string, datos: Uint8Array): Promise<{ archivo: string; bytes: number }> {
+    return guardarImagen(destino, datos);
+  }
+
+  /** `.zip` nuevo con los archivos y carpetas elegidos; no sigue enlaces ni pisa el destino. */
+  comprimirZip(origenes: string[], destino: string): Promise<ResultadoZip> {
+    return comprimirZip({ origenes, destino });
+  }
+
+  /** PDF re-guardado en un hilo aparte; solo deja archivo si pesa menos que el original. */
+  optimizarPdf(origen: string, destino: string): Promise<ResultadoPdf> {
+    return optimizarPdf(origen, destino);
   }
 
   private busquedasEnCurso?: Busquedas;

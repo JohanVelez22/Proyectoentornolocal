@@ -258,6 +258,10 @@ function nucleoFalso() {
         'puertosEnUso',
         'finalizarProceso',
         'limpiarBom',
+        'leerImagen',
+        'guardarImagen',
+        'comprimirZip',
+        'optimizarPdf',
         'iniciarBusqueda',
         'cancelarBusqueda',
         'emitirCertificadoLibre',
@@ -968,6 +972,10 @@ describe('registrarIpc', () => {
         'buscar.cancelar',
         'herramientas.emitirCertificado',
         'herramientas.entorno',
+        'herramientas.leerImagen',
+        'herramientas.guardarImagen',
+        'herramientas.comprimirZip',
+        'herramientas.optimizarPdf',
         'mcp.estado',
         'mcp.iniciar',
         'mcp.detener',
@@ -1784,6 +1792,62 @@ describe('IPC de la Etapa B', () => {
       await llamar('sistema.elegirArchivos');
       expect((await llamar('herramientas.limpiarBom', [a], true)).ok).toBe(true);
       expect(f['limpiarBom']).toHaveBeenCalledWith([a], true);
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
+  });
+
+  it('imágenes, ZIP y PDF solo aceptan rutas de diálogos, con el propósito correcto', async () => {
+    const { f, llamar } = montar();
+    const carpeta = mkdtempSync(path.join(os.tmpdir(), 'pel-ipcd33-'));
+    const imagen = path.join(carpeta, 'a.png');
+    const pdf = path.join(carpeta, 'a.pdf');
+    const destino = path.join(carpeta, 'salida.zip');
+    const destinoImg = path.join(carpeta, 'salida.ico');
+    try {
+      // Sin diálogo, ninguna ruta sirve: ni para leer ni para escribir.
+      expect((await llamar('herramientas.leerImagen', imagen)).ok).toBe(false);
+      expect((await llamar('herramientas.comprimirZip', [carpeta], destino)).ok).toBe(false);
+      expect((await llamar('herramientas.optimizarPdf', pdf, destino)).ok).toBe(false);
+      sistema.elegirArchivo.mockResolvedValueOnce(imagen);
+      await llamar('sistema.elegirArchivo');
+      sistema.elegirCarpeta.mockResolvedValueOnce(carpeta);
+      await llamar('sistema.elegirCarpeta');
+      sistema.guardarArchivo.mockResolvedValueOnce(destino);
+      await llamar('sistema.guardarArchivo', 'salida.zip');
+      sistema.guardarArchivo.mockResolvedValueOnce(destinoImg);
+      await llamar('sistema.guardarArchivo', 'salida.ico');
+      expect((await llamar('herramientas.leerImagen', imagen)).ok).toBe(true);
+      expect(f['leerImagen']).toHaveBeenCalledWith(imagen);
+      // Una ruta de "guardar" no sirve para leer, ni una de "abrir" como destino.
+      expect((await llamar('herramientas.leerImagen', destino)).ok).toBe(false);
+      expect((await llamar('herramientas.comprimirZip', [carpeta], imagen)).ok).toBe(false);
+      expect(
+        (await llamar('herramientas.comprimirZip', [path.join(carpeta, 'x')], destino)).ok,
+      ).toBe(false);
+      expect((await llamar('herramientas.comprimirZip', [], destino)).ok).toBe(false);
+      expect((await llamar('herramientas.comprimirZip', [carpeta, imagen], destino)).ok).toBe(true);
+      expect(f['comprimirZip']).toHaveBeenCalledWith([carpeta, imagen], destino);
+      // Los bytes de la imagen: solo Uint8Array no vacío y con tope.
+      expect(
+        (await llamar('herramientas.guardarImagen', destinoImg, new Uint8Array([1, 2]))).ok,
+      ).toBe(true);
+      expect(f['guardarImagen']).toHaveBeenCalledTimes(1);
+      for (const malo of [
+        [1, 2],
+        'texto',
+        new Uint8Array(0),
+        null,
+        new Uint8Array(61 * 1024 * 1024),
+      ]) {
+        expect((await llamar('herramientas.guardarImagen', destinoImg, malo)).ok).toBe(false);
+      }
+      expect((await llamar('herramientas.guardarImagen', imagen, new Uint8Array([1]))).ok).toBe(
+        false,
+      );
+      expect(f['guardarImagen']).toHaveBeenCalledTimes(1);
+      expect((await llamar('herramientas.optimizarPdf', pdf, destino)).ok).toBe(false);
+      expect(f['optimizarPdf']).not.toHaveBeenCalled();
     } finally {
       rmSync(carpeta, { recursive: true, force: true });
     }
