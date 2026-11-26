@@ -301,6 +301,37 @@ export const es = {
       'tareas.carpeta': 'No existe la carpeta del proyecto: la tarea no se puede ejecutar.',
       'tareas.en_curso': 'La tarea ya se está ejecutando.',
       'tareas.demasiadas': 'Hay demasiadas tareas en este proyecto (máximo {maximo}).',
+      'cli.no_autorizado':
+        'La orden de la CLI no está autorizada: vuelva a ejecutarla con la app de WolfCore Dev abierta.',
+      'cli.orden_desconocida': 'WolfCore Dev no conoce esa orden de la CLI.',
+      'cli.argumentos_invalidos': 'Los argumentos de la orden no son válidos.',
+      'cli.solicitud_grande': 'La solicitud es demasiado grande (máximo {maximo} bytes).',
+      'cli.formato_no_admitido': 'La solicitud no tiene el formato que acepta la CLI.',
+      'cli.plazo':
+        'La orden tardó demasiado: puede que siga en curso. Revise el estado en WolfCore Dev.',
+      'cli.ocupado':
+        'WolfCore Dev está atendiendo demasiadas órdenes de la CLI: espere un momento.',
+      'cli.requiere_confirmacion':
+        'Esta orden publica o cambia algo y exige confirmarla (--si) en {sitio}.',
+      'cli.requiere_confirmacion_datos_reales':
+        '{sitio} tiene datos reales: para publicarlo, confirme escribiendo su dominio ({dominio}).',
+      'cli.proveedor_distinto':
+        'El sitio usa otro proveedor de túnel ({proveedor}). Revise y confirme de nuevo.',
+      'cli.sitio_no_encontrado': 'El sitio {sitio} no existe.',
+      'cli.carpeta_invalida':
+        'La carpeta no existe, es del sistema o es la carpeta de datos de WolfCore Dev.',
+      'cli.carpeta_sin_sitio':
+        'Esa carpeta no pertenece a ningún sitio de WolfCore Dev: vincúlela primero.',
+      'cli.ya_vinculada': 'Esa carpeta ya es el sitio {sitio}.',
+      'cli.tipo_no_soportado':
+        'Los proyectos de tipo {tipo} se crean desde la interfaz de WolfCore Dev.',
+      'cli.sitio_sin_php': 'El sitio {sitio} no usa PHP.',
+      'cli.version_no_instalada':
+        '{servicio} {version} no está instalado. Instálelo desde Servicios.',
+      'cli.fuente_no_existe': 'Ese registro todavía no existe.',
+      'cli.token_no_protegido':
+        'No se pudo restringir el archivo del token al usuario actual: la CLI no se activa.',
+      'cli.error': 'No se pudo completar la orden: {detalle}',
       'proyectos.carpeta_no_vacia':
         'La carpeta del proyecto ya tiene archivos: elija otra o vacíela.',
       'secretos.sin_cifrado':

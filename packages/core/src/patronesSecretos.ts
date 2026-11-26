@@ -8,6 +8,11 @@ export const PATRONES_SECRETOS: readonly (readonly [RegExp, string])[] = [
   [/(:\/\/)[^\s/@:]+:[^\s/@]*@/g, '$1***@'],
   // password=…, PASSWORD=…, DB_PASSWORD=…, --password=…
   [/(password\s*=\s*)("[^"]*"|'[^']*'|\S+)/gi, '$1***'],
+  // Valores de banderas de línea de órdenes: --token X, --authtoken=X, --api-key X, --secret X
+  [
+    /(--(?:auth-?token|token|api-?key|secret|password|passwd)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi,
+    '$1***',
+  ],
   // Clave pegada de mysql: -pclave
   // (un puerto pegado, `-p3000`, no: es el de vite, next o php -S)
   [/(^|\s)-p(?!\d{1,5}(?:\s|$))(?=\S)\S+/g, '$1-p***'],

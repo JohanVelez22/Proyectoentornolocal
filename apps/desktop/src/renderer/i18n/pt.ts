@@ -306,6 +306,35 @@ export const pt: Textos = {
       'tareas.carpeta': 'A pasta do projeto não existe: a tarefa não pode ser executada.',
       'tareas.en_curso': 'A tarefa já está em execução.',
       'tareas.demasiadas': 'Há tarefas demais neste projeto (máximo {maximo}).',
+      'cli.no_autorizado':
+        'O comando da CLI não está autorizado: execute-o de novo com o app WolfCore Dev aberto.',
+      'cli.orden_desconocida': 'O WolfCore Dev não conhece esse comando da CLI.',
+      'cli.argumentos_invalidos': 'Os argumentos do comando não são válidos.',
+      'cli.solicitud_grande': 'A solicitação é grande demais (máximo de {maximo} bytes).',
+      'cli.formato_no_admitido': 'A solicitação não tem o formato que a CLI aceita.',
+      'cli.plazo':
+        'O comando demorou demais: pode ainda estar em andamento. Veja o estado no WolfCore Dev.',
+      'cli.ocupado': 'O WolfCore Dev está atendendo comandos da CLI demais: aguarde um momento.',
+      'cli.requiere_confirmacion':
+        'Este comando publica ou altera algo e exige confirmação (--si) em {sitio}.',
+      'cli.requiere_confirmacion_datos_reales':
+        '{sitio} tem dados reais: para publicá-lo, confirme digitando o domínio ({dominio}).',
+      'cli.proveedor_distinto':
+        'O site usa outro provedor de túnel ({proveedor}). Revise e confirme de novo.',
+      'cli.sitio_no_encontrado': 'O site {sitio} não existe.',
+      'cli.carpeta_invalida':
+        'A pasta não existe, é do sistema ou é a pasta de dados do WolfCore Dev.',
+      'cli.carpeta_sin_sitio':
+        'Essa pasta não pertence a nenhum site do WolfCore Dev: vincule-a primeiro.',
+      'cli.ya_vinculada': 'Essa pasta já é o site {sitio}.',
+      'cli.tipo_no_soportado':
+        'Projetos do tipo {tipo} são criados pela interface do WolfCore Dev.',
+      'cli.sitio_sin_php': 'O site {sitio} não usa PHP.',
+      'cli.version_no_instalada': '{servicio} {version} não está instalado. Instale-o em Serviços.',
+      'cli.fuente_no_existe': 'Esse registro ainda não existe.',
+      'cli.token_no_protegido':
+        'Não foi possível restringir o arquivo do token ao usuário atual: a CLI não é ativada.',
+      'cli.error': 'Não foi possível concluir o comando: {detalle}',
       'proyectos.carpeta_no_vacia':
         'A pasta do projeto já tem arquivos: escolha outra ou esvazie-a.',
       'secretos.sin_cifrado':

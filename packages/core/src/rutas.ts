@@ -36,7 +36,7 @@ function dentroDe(padre: string, hija: string): boolean {
  * Files, ProgramData, `Users` o el perfil entero (sí una carpeta dentro de él, como AppData), y
  * las del sistema en Linux y macOS.
  */
-function esCarpetaDeSistema(ruta: string): boolean {
+export function esCarpetaDeSistema(ruta: string): boolean {
   const n = normalizarRuta(ruta);
   if (n === '' || /^[a-z]:$/.test(n)) return true;
   if (
@@ -133,6 +133,13 @@ export class Rutas {
       throw new Error(`Clave de datos no válida: ${clave}`);
     }
     return path.join(this.base, 'data', servicio, clave);
+  }
+  /**
+   * Puerto y token del servidor de órdenes de la CLI `wolf` (D31): `run/cli.json`, restringido al
+   * usuario, regenerado en cada arranque y borrado al cerrar. Cada carpeta de datos tiene el suyo.
+   */
+  cliJson(): string {
+    return path.join(this.base, 'run', 'cli.json');
   }
   /** Credenciales de los servicios propios (fuera de config.json). */
   credenciales(): string {

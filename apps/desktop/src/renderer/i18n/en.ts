@@ -296,6 +296,36 @@ export const en: Textos = {
       'tareas.carpeta': 'The project folder does not exist: the task cannot run.',
       'tareas.en_curso': 'The task is already running.',
       'tareas.demasiadas': 'This project has too many tasks (maximum {maximo}).',
+      'cli.no_autorizado':
+        'The CLI command is not authorized: run it again with the WolfCore Dev app open.',
+      'cli.orden_desconocida': 'WolfCore Dev does not know that CLI command.',
+      'cli.argumentos_invalidos': 'The command arguments are not valid.',
+      'cli.solicitud_grande': 'The request is too large (maximum {maximo} bytes).',
+      'cli.formato_no_admitido': 'The request does not have the format the CLI accepts.',
+      'cli.plazo':
+        'The command took too long: it may still be running. Check its status in WolfCore Dev.',
+      'cli.ocupado': 'WolfCore Dev is handling too many CLI commands: wait a moment.',
+      'cli.requiere_confirmacion':
+        'This command publishes or changes something and must be confirmed (--si) for {sitio}.',
+      'cli.requiere_confirmacion_datos_reales':
+        '{sitio} has real data: to publish it, confirm by typing its domain ({dominio}).',
+      'cli.proveedor_distinto':
+        'The site uses a different tunnel provider ({proveedor}). Review it and confirm again.',
+      'cli.sitio_no_encontrado': 'The site {sitio} does not exist.',
+      'cli.carpeta_invalida':
+        'The folder does not exist, is a system folder or is the WolfCore Dev data folder.',
+      'cli.carpeta_sin_sitio':
+        'That folder does not belong to any WolfCore Dev site: link it first.',
+      'cli.ya_vinculada': 'That folder is already the site {sitio}.',
+      'cli.tipo_no_soportado':
+        'Projects of type {tipo} are created from the WolfCore Dev interface.',
+      'cli.sitio_sin_php': 'The site {sitio} does not use PHP.',
+      'cli.version_no_instalada':
+        '{servicio} {version} is not installed. Install it from Services.',
+      'cli.fuente_no_existe': 'That log does not exist yet.',
+      'cli.token_no_protegido':
+        'The token file could not be restricted to the current user: the CLI is not enabled.',
+      'cli.error': 'The command could not be completed: {detalle}',
       'proyectos.carpeta_no_vacia':
         'The project folder already has files: choose another one or empty it.',
       'secretos.sin_cifrado':

@@ -147,6 +147,8 @@ import { ErrorWolf } from './errores';
 import { Contenedores } from './contenedores/contenedores';
 import { ServidorMcp, type EstadoMcp, type OperacionesMcp } from './mcp/servidor';
 import { asegurarArchivosDepuracion, rutasDepuracion } from './depuracion/prepend';
+import type { OperacionesCli } from './cli/ordenes';
+import { ServidorCli } from './cli/servidor';
 import {
   VisorErrores,
   type ErrorAgrupado,
@@ -340,6 +342,12 @@ export interface OpcionesNucleo {
    * arranque). Después, cada 24 h.
    */
   retrasoNovedadesMs?: number;
+  /**
+   * Enciende el servidor de órdenes de la CLI `wolf` (D31) al arrancar: 127.0.0.1, puerto
+   * aleatorio y token en `run/cli.json`. Solo lo pide la aplicación (las pruebas no lo encienden).
+   * `abrirUrl` abre una dirección en el navegador del usuario (orden `open`).
+   */
+  servidorCli?: { version: string; abrirUrl?: (url: string) => Promise<void> };
 }
 
 /** Fuente de registro tal como la ve la interfaz: sin la ruta del archivo. */
@@ -628,6 +636,9 @@ export class Nucleo {
   readonly mcp: ServidorMcp;
   /** Receptor de dumps (127.0.0.1); se maneja con activarDepuracion (que guarda `depuracion.activa`). */
   readonly depuracion: ReceptorDumps;
+  /** Servidor de órdenes de la CLI `wolf` (D31); solo escucha si `OpcionesNucleo.servidorCli`. */
+  readonly cli: ServidorCli;
+  private opcionesCli: NonNullable<OpcionesNucleo['servidorCli']> = { version: '0.0.0' };
   readonly runtimes: Runtimes;
   /** Motor de recetas con los pasos reales registrados. */
   readonly recetas: EjecutorRecetas;
@@ -833,6 +844,15 @@ export class Nucleo {
       puerto: async () => (await this.config.leer()).depuracion.puerto,
       emitir: (d) => this.eventos.emit('dump:nuevo', d),
       restringir: (ruta) => this.plataforma.restringirAlUsuario(ruta),
+    });
+    this.cli = new ServidorCli({
+      rutas: this.rutas,
+      operaciones: this.operacionesCli(),
+      restringir: (ruta) => this.plataforma.restringirAlUsuario(ruta),
+      version: async () => ({
+        app: this.opcionesCli.version,
+        idioma: (await this.config.leer()).ui.idioma,
+      }),
     });
   }
 
@@ -1693,6 +1713,13 @@ export class Nucleo {
     } else {
       // El token de una sesión que se cortó no debe quedar: otro programa podría usar ese puerto.
       await rm(rutasDepuracion(rutas).receptor, { force: true }).catch(() => undefined);
+    }
+    if (o.servidorCli) {
+      nucleo.opcionesCli = o.servidorCli;
+      // Sin poder proteger el token, la CLI no se activa: queda como aviso.
+      await nucleo.cli.iniciar().catch((e: unknown) => {
+        nucleo.avisosPendientes.push(`No se pudo iniciar el servidor de la CLI: ${mensajeDe(e)}`);
+      });
     }
     if ((await leerConfig()).mcp.activo) {
       // Un puerto ocupado no impide el arranque: queda como aviso.
@@ -2930,6 +2957,67 @@ export class Nucleo {
       abrirTunel: (sitioId, tunel) =>
         this.tuneles.abrir(sitioId, { confirmado: true, tunelConfirmado: tunel }),
       cerrarTunel: (sitioId) => this.tuneles.cerrar(sitioId),
+    };
+  }
+
+  /**
+   * Lo que publican las órdenes de la CLI `wolf` (D31): los mismos métodos que usa la ventana, así
+   * cada orden pasa por las mismas puertas (confirmación de túneles, validación de sitios,
+   * confianza de las recetas…). No hay nada que repare ni que borre.
+   */
+  private operacionesCli(): OperacionesCli {
+    return {
+      carpetaDatos: () => this.rutas.base,
+      sitios: () => this.sitios.listar(),
+      puertosWeb: async () => {
+        const c = await this.config.leer();
+        return { http: c.servicios.nginx.puerto, https: c.https.puerto };
+      },
+      idioma: async () => (await this.config.leer()).ui.idioma,
+      estadoServicios: () => this.servicios.estados(),
+      estadosTuneles: () => this.tuneles.estados(),
+      detectar: (carpeta) => this.detectarProyecto(carpeta),
+      guardarSitio: (datos, id) => this.guardarSitio(datos, id),
+      cambiarCarpetaVigilada: (carpeta) => this.cambiarCarpetaVigilada(carpeta),
+      sugerenciasProyectos: () => this.sugerenciasProyectos(),
+      phpInstaladas: () => this.instalador.instalados('php'),
+      runtimesInstalados: (tipo) => this.runtimes.instalados(tipo as TipoRuntime),
+      cambiarPhpPorDefecto: (rama) => this.cambiarPhpPorDefecto(rama),
+      // La misma puerta que la ventana y el MCP: sin `confirmado: true` no se abre nada.
+      abrirTunel: (sitioId, o) => this.tuneles.abrir(sitioId, o),
+      cerrarTunel: (sitioId) => this.tuneles.cerrar(sitioId),
+      revisarDoctor: () => this.doctor.revisar(),
+      fuentesRegistro: () => this.registros.fuentes(),
+      leerRegistro: (id, lineas) => this.registros.leerFinal(id, lineas),
+      seguirRegistro: async (id, alLineas) => {
+        const baja = this.eventos.on('registro:lineas', (e) => {
+          if (e.id === id) alLineas(e.lineas);
+        });
+        try {
+          const dejar = await this.registros.seguir(id);
+          return () => {
+            baja();
+            dejar();
+          };
+        } catch (e) {
+          baja();
+          throw e;
+        }
+      },
+      workspaces: () => this.workspaces.lista(),
+      iniciarWorkspace: (id) => this.workspaces.iniciar(id),
+      detenerWorkspace: (id) => this.workspaces.detener(id),
+      iniciarServicio: async (id) => this.servicios.iniciar(await this.idServicioMcp(id)),
+      detenerServicio: async (id) => this.servicios.detener(await this.idServicioMcp(id)),
+      iniciarTodo: () => this.iniciarTodo(),
+      detenerTodo: () => this.detenerTodo(),
+      caConfiable: async () => (await this.https.estado()).caInstalada,
+      abrirUrl: async (url) => {
+        const abrir = this.opcionesCli.abrirUrl;
+        if (!abrir) return false;
+        await abrir(url);
+        return true;
+      },
     };
   }
 
@@ -4411,6 +4499,9 @@ export class Nucleo {
     // Las tareas en curso se cancelan (solo el árbol de cada una) antes de apagar nada más.
     await this.programador.detener().catch((e: unknown) => {
       console.error('No se pudo detener el planificador de tareas:', mensajeDe(e));
+    });
+    await this.cli.detener().catch((e: unknown) => {
+      console.error('No se pudo detener el servidor de la CLI:', mensajeDe(e));
     });
     await this.mcp.detener().catch((e: unknown) => {
       console.error('No se pudo detener el servidor MCP:', mensajeDe(e));

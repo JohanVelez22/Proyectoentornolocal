@@ -313,6 +313,36 @@ export const fr: Textos = {
       'tareas.carpeta': 'Le dossier du projet n’existe pas : la tâche ne peut pas s’exécuter.',
       'tareas.en_curso': 'La tâche est déjà en cours d’exécution.',
       'tareas.demasiadas': 'Ce projet a trop de tâches (maximum {maximo}).',
+      'cli.no_autorizado':
+        'La commande de la CLI n’est pas autorisée : relancez-la avec l’application WolfCore Dev ouverte.',
+      'cli.orden_desconocida': 'WolfCore Dev ne connaît pas cette commande de la CLI.',
+      'cli.argumentos_invalidos': 'Les arguments de la commande ne sont pas valides.',
+      'cli.solicitud_grande': 'La requête est trop volumineuse (maximum {maximo} octets).',
+      'cli.formato_no_admitido': 'La requête n’a pas le format accepté par la CLI.',
+      'cli.plazo':
+        'La commande a pris trop de temps : elle est peut-être encore en cours. Vérifiez son état dans WolfCore Dev.',
+      'cli.ocupado': 'WolfCore Dev traite trop de commandes de la CLI : patientez un instant.',
+      'cli.requiere_confirmacion':
+        'Cette commande publie ou modifie quelque chose et doit être confirmée (--si) pour {sitio}.',
+      'cli.requiere_confirmacion_datos_reales':
+        '{sitio} contient des données réelles : pour le publier, confirmez en saisissant son domaine ({dominio}).',
+      'cli.proveedor_distinto':
+        'Le site utilise un autre fournisseur de tunnel ({proveedor}). Vérifiez et confirmez à nouveau.',
+      'cli.sitio_no_encontrado': 'Le site {sitio} n’existe pas.',
+      'cli.carpeta_invalida':
+        'Le dossier n’existe pas, est un dossier système ou est le dossier de données de WolfCore Dev.',
+      'cli.carpeta_sin_sitio':
+        'Ce dossier n’appartient à aucun site WolfCore Dev : liez-le d’abord.',
+      'cli.ya_vinculada': 'Ce dossier est déjà le site {sitio}.',
+      'cli.tipo_no_soportado':
+        'Les projets de type {tipo} se créent depuis l’interface de WolfCore Dev.',
+      'cli.sitio_sin_php': 'Le site {sitio} n’utilise pas PHP.',
+      'cli.version_no_instalada':
+        '{servicio} {version} n’est pas installé. Installez-le depuis Services.',
+      'cli.fuente_no_existe': 'Ce journal n’existe pas encore.',
+      'cli.token_no_protegido':
+        'Impossible de restreindre le fichier du jeton à l’utilisateur actuel : la CLI n’est pas activée.',
+      'cli.error': 'La commande n’a pas pu être terminée : {detalle}',
       'proyectos.carpeta_no_vacia':
         'Le dossier du projet contient déjà des fichiers : choisissez-en un autre ou videz-le.',
       'secretos.sin_cifrado':
