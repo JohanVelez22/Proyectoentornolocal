@@ -71,6 +71,14 @@ import {
 import { ProcesosUsuarioWindows } from './procesosUsuarioWin';
 import { interpretarUnidades, SCRIPT_UNIDADES } from './unidadesWin';
 import {
+  interpretarEquipo,
+  interpretarNvidiaSmi,
+  SCRIPT_EQUIPO,
+  SCRIPT_NVIDIA_SMI,
+  type GpuNvidia,
+} from './equipoWin';
+import { equipoDesconocido, type InfoEquipo } from '../equipo/tipos';
+import {
   type AnclasLimpieza,
   interpretarAnclas,
   lecturaReal,
@@ -1075,6 +1083,25 @@ export class PlataformaWindows implements PlataformaCompleta {
       return r.codigo === 0 ? interpretarUnidades(r.stdout) : [];
     } catch {
       return [];
+    }
+  }
+
+  async infoEquipo(): Promise<InfoEquipo> {
+    const ps = rutaPowerShell(this.entorno);
+    try {
+      const [principal, smi] = await Promise.all([
+        this.ejecutar(ps, codificarPowerShell(SCRIPT_EQUIPO), { timeoutMs: 25_000 }),
+        // nvidia-smi puede tardar o no existir: con su propio plazo, y sin él se sigue igual.
+        this.ejecutar(ps, codificarPowerShell(SCRIPT_NVIDIA_SMI), { timeoutMs: 8_000 }).then(
+          (r): GpuNvidia[] => (r.codigo === 0 ? interpretarNvidiaSmi(r.stdout) : []),
+          (): GpuNvidia[] => [],
+        ),
+      ]);
+      return principal.codigo === 0
+        ? interpretarEquipo(principal.stdout, smi)
+        : equipoDesconocido();
+    } catch {
+      return equipoDesconocido();
     }
   }
 

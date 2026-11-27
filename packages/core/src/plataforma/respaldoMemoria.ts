@@ -1,3 +1,4 @@
+import { equipoDesconocido } from '../equipo/tipos';
 import { ErrorWolf } from '../errores';
 import type { CapacidadesPlataforma } from './tipos';
 
@@ -22,6 +23,7 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   | 'navegadoresAbiertos'
   | 'esAdministrador'
   | 'unidadesLocales'
+  | 'infoEquipo'
   | 'aPapelera'
   | 'registrarPapelera'
 > = {
@@ -44,6 +46,7 @@ export const RESPALDO_MEMORIA_NEUTRO: Pick<
   navegadoresAbiertos: async () => [],
   esAdministrador: async () => false,
   unidadesLocales: async () => [],
+  infoEquipo: async () => equipoDesconocido(),
   aPapelera: async () => false,
   registrarPapelera: () => undefined,
 };

@@ -107,6 +107,14 @@ import {
 } from './herramientas/editor';
 import type { LanzadorSeparado } from './plataforma/terminalWin';
 import { Terminal } from './herramientas/terminal';
+import { DetectorEquipo } from './equipo/detector';
+import {
+  clasificarModelo,
+  sugerirParaEquipo,
+  type CompatibilidadModelo,
+  type SugerenciaEquipo,
+} from './equipo/modelosIa';
+import type { InfoEquipo } from './equipo/tipos';
 import { ClienteOllama, SUGERIDOS, type InfoDescargaOllama, type ModeloOllama } from './ia/ollama';
 import { bloqueEnvIa, limpiarRespaldosEnv } from './ia/envIa';
 import { GestorIa } from './ia/gestorIa';
@@ -2712,6 +2720,48 @@ export class Nucleo {
   /** Tamaño del modelo y espacio libre, para avisar ANTES de descargar (no baja nada). */
   infoDescargaModelo(nombre: string): Promise<InfoDescargaOllama> {
     return this.ollama.infoDescarga(nombre);
+  }
+
+  private detectorEquipoServ?: DetectorEquipo;
+
+  /** Datos del equipo (D55): una sola lectura, con caché y plazo; lo que falle queda «desconocido». */
+  infoEquipo(forzar = false): Promise<InfoEquipo> {
+    this.detectorEquipoServ ??= new DetectorEquipo({ leer: () => this.plataforma.infoEquipo() });
+    return this.detectorEquipoServ.obtener(forzar);
+  }
+
+  /**
+   * «¿Qué modelo cabe en su equipo?» (D55): clasifica cada modelo con su tamaño (el instalado, o el
+   * del registro de Ollama) y el equipo, y sugiere un tamaño. Solo avisa: nada bloquea una descarga.
+   */
+  async compatibilidadModelos(
+    nombres: string[],
+  ): Promise<{ sugerencia: SugerenciaEquipo; modelos: CompatibilidadModelo[] }> {
+    const equipo = await this.infoEquipo();
+    let instalados: ModeloOllama[] = [];
+    try {
+      await this.refrescarPuertoOllama();
+      instalados = await this.ollama.modelos();
+    } catch {
+      /* Ollama apagado: se miden solo los del registro */
+    }
+    const sinLatest = (n: string): string => n.toLowerCase().replace(/:latest$/, '');
+    const modelos = await Promise.all(
+      nombres.map(async (nombre) => {
+        const ya = instalados.find((m) => sinLatest(m.nombre) === sinLatest(nombre));
+        if (ya) {
+          return clasificarModelo({ nombre, tamanoBytes: ya.tamanoBytes, instalado: true }, equipo);
+        }
+        const info = await this.ollama
+          .infoDescarga(nombre)
+          .catch((): InfoDescargaOllama => ({ tamanoBytes: null, libreBytes: null }));
+        return clasificarModelo(
+          { nombre, tamanoBytes: info.tamanoBytes, libreDiscoBytes: info.libreBytes },
+          equipo,
+        );
+      }),
+    );
+    return { sugerencia: sugerirParaEquipo(equipo), modelos };
   }
 
   cancelarDescargaModelo(nombre: string): boolean {

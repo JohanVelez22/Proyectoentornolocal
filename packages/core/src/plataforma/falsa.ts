@@ -1,3 +1,4 @@
+import { equipoDesconocido, type InfoEquipo } from '../equipo/tipos';
 import { ErrorWolf } from '../errores';
 import {
   DETALLE_ALMACEN_INSEGURO,
@@ -525,6 +526,13 @@ export class PlataformaFalsa implements PlataformaCompleta {
 
   async unidadesLocales(): Promise<UnidadDisco[]> {
     return this.unidades.map((u) => ({ ...u }));
+  }
+
+  /** Lo que devuelve `infoEquipo` (la prueba pone aquí el equipo). */
+  equipo: InfoEquipo = equipoDesconocido();
+
+  async infoEquipo(): Promise<InfoEquipo> {
+    return structuredClone(this.equipo);
   }
 
   async aPapelera(ruta: string): Promise<boolean> {

@@ -7,6 +7,7 @@ import type {
 import type { PerfilRed, ReglasEntrada } from './firewallWin';
 import type { Readable } from 'node:stream';
 import type { LanzadorOculto } from './lanzarOculto';
+import type { InfoEquipo } from '../equipo/tipos';
 
 export type ResultadoEscritura =
   | { ok: true }
@@ -360,6 +361,12 @@ export interface CapacidadesPlataforma {
    * con su etiqueta y su espacio. Solo consulta; si no se puede saber, una lista vacía.
    */
   unidadesLocales(): Promise<UnidadDisco[]>;
+  /**
+   * Datos del equipo (D55): SO, CPU, RAM, GPU con su VRAM, discos y placa. Solo consulta, sin
+   * administrador y sin números de serie ni identificadores. Nunca falla: lo que no se pueda leer
+   * va como `null` (la lectura entera fallida, un equipo desconocido).
+   */
+  infoEquipo(): Promise<InfoEquipo>;
   /**
    * Manda un archivo a la papelera del sistema. La papelera la pone la app (en Electron,
    * `shell.trashItem` desde main) con `registrarPapelera`. Devuelve false si no hay papelera o
