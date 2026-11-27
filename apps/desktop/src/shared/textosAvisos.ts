@@ -1671,7 +1671,186 @@ const JA: Diccionario = {
   },
 };
 
-const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH, ja: JA } satisfies Record<IdiomaUi, Diccionario>;
+const KO: Diccionario = {
+  porCodigo: {
+    'avisos.servicio_caido': (d) => ({
+      titulo: '서비스가 오류로 중지되었습니다',
+      cuerpo: `${limpio(d['nombre'], '서비스')}의 작동이 중지되었습니다. 자세한 내용을 보려면 WolfCore Dev를 여십시오.`,
+    }),
+    'avisos.iniciar_todo_fallos': (d) => ({
+      titulo: '모두 시작에서 일부 서비스를 시작하지 못했습니다',
+      cuerpo: `시작하지 못함: ${limpio(d['nombres'], '일부 서비스')}. 자세한 내용을 보려면 서비스를 여십시오.`,
+    }),
+    'avisos.workspace_fallos': (d) => ({
+      titulo: '워크스페이스의 일부 항목을 시작하지 못했습니다',
+      cuerpo: `${limpio(d['nombre'], '워크스페이스')}: ${limpio(d['nombres'], '일부 항목')}을(를) 시작하지 못했습니다. 시작된 항목을 보려면 홈을 여십시오.`,
+    }),
+    'avisos.workspace_fallos_detener': (d) => ({
+      titulo: '워크스페이스의 일부 항목을 중지하지 못했습니다',
+      cuerpo: `${limpio(d['nombre'], '워크스페이스')}: ${limpio(d['nombres'], '일부 항목')}을(를) 중지하지 못했습니다. 계속 실행 중인 항목을 보려면 홈을 여십시오.`,
+    }),
+    'avisos.tarea_fallo': (d) => ({
+      titulo:
+        d['motivo'] === 'tiempo'
+          ? '예약된 작업의 실행 시간이 초과되었습니다'
+          : '예약된 작업이 실패했습니다',
+      cuerpo: `${limpio(d['nombre'], '작업')}(${limpio(d['sitio'], '프로젝트')})이(가) ${d['motivo'] === 'tiempo' ? '최대 실행 시간을 초과하여 중지되었습니다' : '오류로 종료되었습니다'}. 로그를 보려면 프로젝트를 여십시오.`,
+    }),
+    'avisos.tarea_bloqueada': (d) => ({
+      titulo: '예약된 작업이 실행되지 않았습니다',
+      cuerpo: `${limpio(d['nombre'], '작업')}(${limpio(d['sitio'], '프로젝트')}): ${
+        {
+          aislado: '테스트 데이터 폴더에서는 작업 실행이 허용되지 않았습니다',
+          no_confiado: '프로젝트가 신뢰됨으로 표시되지 않았습니다',
+          receta_cambio: '신뢰한 이후 프로젝트 레시피가 변경되었습니다',
+          sin_confirmar: '명령 확인이 필요합니다',
+          comando_invalido: '허용되지 않는 명령입니다',
+          cron_invalida: '일정 표현식이 올바르지 않습니다',
+          carpeta: '프로젝트 폴더가 존재하지 않습니다',
+        }[String(d['motivo'])] ?? '조건을 충족하지 않습니다'
+      }.`,
+    }),
+    'avisos.puerto_ocupado': (d) => ({
+      titulo: '포트가 사용 중입니다',
+      cuerpo: `${limpio(d['puerto'], '?')} 포트를 ${limpio(d['nombre'], '다른 프로그램')}에서 사용 중이어서 서비스를 시작할 수 없습니다.`,
+    }),
+    'avisos.proceso_error': (d) => ({
+      titulo: '프로젝트 프로세스가 오류로 종료되었습니다',
+      cuerpo: `${limpio(d['nombre'], '프로세스')}의 작동이 중지되었습니다. 로그를 확인하십시오.`,
+    }),
+    'avisos.proceso_terminado': (d) => ({
+      titulo: '프로세스가 종료되었습니다',
+      cuerpo: `${limpio(d['nombre'], '프로세스')}이(가) 오류 없이 종료되었습니다.`,
+    }),
+    'avisos.proceso_fallo': (d) => ({
+      titulo: '프로세스가 실패했습니다',
+      cuerpo: `${limpio(d['nombre'], '프로세스')}이(가) 오류로 종료되었습니다${d['codigoSalida'] !== undefined ? ` (코드 ${limpio(d['codigoSalida'], '?')})` : ''}. 로그를 확인하십시오.`,
+    }),
+    'avisos.receta_terminada': (d) => ({
+      titulo: '레시피가 완료되었습니다',
+      cuerpo: `${limpio(d['sitio'], '프로젝트')}의 레시피가 오류 없이 완료되었습니다.`,
+    }),
+    'avisos.receta_fallo': (d) => ({
+      titulo: '레시피가 실패했습니다',
+      cuerpo: `${limpio(d['sitio'], '프로젝트')}의 레시피가 오류로 중단되었습니다. 해당 단계를 보려면 프로젝트를 여십시오.`,
+    }),
+    'avisos.tunel_caido': (d) => ({
+      titulo: '터널 연결이 끊어졌습니다',
+      cuerpo: `${limpio(d['fuente'], '프로젝트')}의 터널 작동이 중지되었습니다.`,
+    }),
+    'avisos.contenedor_detenido': (d) => ({
+      titulo: '컨테이너가 중지되었습니다',
+      cuerpo: `${limpio(d['nombre'], '컨테이너')}(${limpio(d['motor'], 'Docker')})가 요청 없이 중지되었습니다${d['codigoSalida'] !== undefined ? ` (코드 ${limpio(d['codigoSalida'], '?')})` : ''}.`,
+    }),
+    'avisos.ca_por_vencer': (d) => ({
+      titulo: '인증 기관(CA)의 만료가 임박했습니다',
+      cuerpo: `${limpio(d['dias'], '?')}일 후 만료됩니다. 다시 생성하고 신뢰 설정을 다시 적용하십시오.`,
+    }),
+    'avisos.certificado_por_vencer': (d) => ({
+      titulo: '인증서의 만료가 임박했습니다',
+      cuerpo: `${limpio(d['fuente'], '사이트')}의 인증서가 ${limpio(d['dias'], '?')}일 후 만료됩니다.`,
+    }),
+    'avisos.certificado_vencido': (d) => ({
+      titulo: '인증서가 만료되었습니다',
+      cuerpo: `${limpio(d['fuente'], '사이트')}의 인증서가 더 이상 유효하지 않습니다. 다시 생성하십시오.`,
+    }),
+    'avisos.php_sitio_fallo': (d) => ({
+      titulo: '사이트 전용 PHP를 시작하지 못했습니다',
+      cuerpo: `${limpio(d['fuente'], '사이트')}의 PHP를 시작하지 못했습니다(포트가 다른 프로그램에서 사용 중일 수 있습니다). 사이트 카드의 PHP 섹션을 확인하십시오.`,
+    }),
+    'avisos.php_sitio_sin_puertos': (d) => ({
+      titulo: '사이트 전용 PHP에 사용할 포트가 없습니다',
+      cuerpo: `${limpio(d['fuente'], '사이트')}가 자체 설정 없이 해당 버전의 공유 PHP를 사용합니다. 전용 PHP에 사용할 빈 포트가 없습니다.`,
+    }),
+    'avisos.php_sitio_descartados': (d) => ({
+      titulo: 'PHP 설정이 무시되었습니다',
+      cuerpo: `${limpio(d['fuente'], '사이트')}의 일부 PHP 설정이 유효하지 않아 적용되지 않았습니다: ${limpio(d['claves'], 'PHP 섹션을 확인하십시오')}.`,
+    }),
+    'avisos.lan_red_cambio': (d) => ({
+      titulo: '로컬 네트워크 공유가 중지되었습니다',
+      cuerpo: `네트워크가 변경되어 ${limpio(d['fuente'], '사이트')}의 공유가 중지되었습니다.`,
+    }),
+    'avisos.vhost_reglas_descartadas': (d) => ({
+      titulo: 'Nginx 규칙이 무시되었습니다',
+      cuerpo: `${limpio(d['fuente'], '사이트')}의 사용자 정의 규칙이 검증을 통과하지 못해(폴더, 도메인 또는 포트 변경) vhost에서 제외되었습니다. Nginx 섹션에서 확인하십시오.`,
+    }),
+    'avisos.vhost_manual_descartado': (d) => ({
+      titulo: '직접 작성한 vhost가 사용되지 않습니다',
+      cuerpo: `${limpio(d['fuente'], '사이트')}의 직접 작성한 vhost가 검증을 통과하지 못해(폴더, 도메인 또는 포트 변경) 자동 생성된 vhost를 사용합니다. Nginx 섹션에서 확인하십시오.`,
+    }),
+    'avisos.rustup_entrada_ajena': () => ({
+      titulo: 'rustup이 이미 다른 위치에 설치되어 있습니다',
+      cuerpo:
+        'WolfCore Dev의 Rust를 자체 폴더에 설치했습니다. Windows에 이미 다른 설치를 가리키는 rustup 제거 항목이 있어 변경하지 않았습니다.',
+    }),
+    'avisos.version_nueva': (d) => ({
+      titulo: `${limpio(d['servicio'], '서비스')}의 새 버전이 있습니다`,
+      cuerpo: `${limpio(d['nueva'], '새 버전')}이(가) 출시되었습니다(현재 ${limpio(d['actual'], '다른 버전')}). 업데이트하려면 서비스 → 버전에서 여십시오. 자동으로 설치되지 않습니다.`,
+      accion: '업데이트',
+    }),
+    'avisos.version_nueva_sin_huella': (d) => ({
+      titulo: `${limpio(d['servicio'], '서비스')}의 새 버전이 있습니다`,
+      cuerpo: `${limpio(d['nueva'], '새 버전')}이(가) 출시되었지만(현재 ${limpio(d['actual'], '다른 버전')}) 공개된 해시가 없어 다운로드를 검증할 수 없습니다. 서비스 → 버전에서 확인하십시오. 설치 시 확인이 필요합니다.`,
+    }),
+    'avisos.rama_nueva_sin_huella': (d) => ({
+      titulo: `${limpio(d['servicio'], '서비스')}의 새 주요 버전`,
+      cuerpo: `${limpio(d['nueva'], '새 주요 버전')}은(는) 현재 사용 중인 버전(${limpio(d['actual'], '?')})보다 최신이지만 공개된 해시가 없어 다운로드를 검증할 수 없습니다. 서비스 → 버전에서 확인하십시오. 설치 시 확인이 필요합니다.`,
+    }),
+    'avisos.rama_nueva': (d) => ({
+      titulo: `${limpio(d['servicio'], '서비스')}의 새 주요 버전`,
+      cuerpo: `${limpio(d['nueva'], '새 주요 버전')}은(는) 현재 사용 중인 버전(${limpio(d['actual'], '?')})보다 최신입니다. 데이터를 건드리지 않고 별도로 설치됩니다.`,
+      accion: '업데이트',
+    }),
+    'doctor.hallazgos': (d) => ({
+      titulo: 'Doctor가 환경에서 오류를 발견했습니다',
+      cuerpo: `환경 작동을 방해할 수 있는 ${limpio(d['errores'], '여러')}개의 문제가 있습니다. 해결 방법을 보려면 Doctor를 여십시오.`,
+    }),
+  },
+  porTipo: {
+    'servicio-caido': {
+      titulo: '서비스가 중지되었습니다',
+      cuerpo: '자세한 내용을 보려면 WolfCore Dev를 여십시오.',
+    },
+    'puerto-ocupado': {
+      titulo: '포트가 사용 중입니다',
+      cuerpo: '자세한 내용을 보려면 WolfCore Dev를 여십시오.',
+    },
+    'certificado-por-vencer': {
+      titulo: '인증서의 만료가 임박했습니다',
+      cuerpo: '자세한 내용을 보려면 WolfCore Dev를 여십시오.',
+    },
+    'tunel-caido': {
+      titulo: '터널 연결이 끊어졌습니다',
+      cuerpo: '자세한 내용을 보려면 WolfCore Dev를 여십시오.',
+    },
+    'proceso-error': {
+      titulo: '프로세스가 오류로 종료되었습니다',
+      cuerpo: '자세한 내용을 보려면 WolfCore Dev를 여십시오.',
+    },
+    'proceso-terminado': {
+      titulo: '프로세스가 종료되었습니다',
+      cuerpo: '자세한 내용을 보려면 WolfCore Dev를 여십시오.',
+    },
+    'receta-terminada': {
+      titulo: '레시피가 완료되었습니다',
+      cuerpo: '자세한 내용을 보려면 WolfCore Dev를 여십시오.',
+    },
+    doctor: {
+      titulo: 'Doctor가 문제를 발견했습니다',
+      cuerpo: '확인하려면 WolfCore Dev를 여십시오.',
+    },
+    'contenedor-detenido': {
+      titulo: '컨테이너가 중지되었습니다',
+      cuerpo: '자세한 내용을 보려면 WolfCore Dev를 여십시오.',
+    },
+    'version-nueva': {
+      titulo: '새 버전이 있습니다',
+      cuerpo: '업데이트하려면 WolfCore Dev를 여십시오.',
+    },
+  },
+};
+
+const DICCIONARIOS = { es: ES, en: EN, pt: PT, fr: FR, de: DE, it: IT, ru: RU, zh: ZH, ja: JA, ko: KO } satisfies Record<IdiomaUi, Diccionario>;
 
 export const CODIGOS_AVISO = Object.keys(ES.porCodigo);
 
@@ -1686,6 +1865,7 @@ export const CODIGOS_AVISO_POR_IDIOMA: Record<IdiomaUi, string[]> = {
   ru: Object.keys(RU.porCodigo),
   zh: Object.keys(ZH.porCodigo),
   ja: Object.keys(JA.porCodigo),
+  ko: Object.keys(KO.porCodigo),
 };
 
 export function textoAviso(

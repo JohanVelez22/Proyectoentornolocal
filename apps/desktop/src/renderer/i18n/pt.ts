@@ -5759,7 +5759,7 @@ export const pt: Textos = {
     tema: 'Tema',
     temas: { sistema: 'Sistema', claro: 'Claro', oscuro: 'Escuro' },
     idioma: 'Idioma',
-    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語' },
+    idiomas: { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', it: 'Italiano', ru: 'Русский', zh: '中文 简体', ja: '日本語', ko: '한국어' },
     acento: 'Cor de destaque',
     acentos: {
       indigo: 'Índigo',

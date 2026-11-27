@@ -299,6 +299,34 @@ const TEXTOS = {
     carpetaDatosInvalida:
       'WOLFCORE_DATOS は有効なデータフォルダではありません。絶対パスであり、システムフォルダでなく、本来の（および以前の）フォルダと異なる必要があります。何も変更せず終了します。',
   },
+  ko: {
+    abrir: '열기',
+    iniciarTodo: '모두 시작',
+    detenerTodo: '모두 중지',
+    salir: '종료',
+    workspaces: '워크스페이스',
+    workspaceParcial: '부분 실행',
+    preguntaApagar: '서비스를 중지하시겠습니까?',
+    siApagar: '예, 중지합니다',
+    noApagar: '아니요, 실행 상태로 둡니다',
+    cancelar: '취소',
+    cliTitulo: '터미널 명령 (wolf)',
+    cliTunelInternet:
+      '터미널 명령이 {proveedor}을(를) 통해 {dominio}을(를) 인터넷에 공개하려고 합니다. 링크가 있는 누구나 볼 수 있습니다.',
+    cliTunelTailnet:
+      '터미널 명령이 {dominio}을(를) tailnet 기기와 공유하려고 합니다 ({proveedor}).',
+    cliPublicoEn: '공개 주소: https://{publico}',
+    cliDatosReales:
+      '주의: {dominio}에는 실제 데이터가 있습니다. 계속하려면 아래에서 정확한 도메인을 선택하십시오. 요청한 작업이 아니라면 취소하십시오.',
+    cliPublicar: '공개',
+    cliPhpGlobal:
+      '터미널 명령이 모든 터미널의 PHP를 버전 {version}(으)로 변경하려고 합니다.',
+    cliCambiar: '변경',
+    carpetaDatosAislada:
+      '테스트 데이터 폴더입니다. 시스템 hosts, PATH 및 인증서는 변경하지 않습니다',
+    carpetaDatosInvalida:
+      'WOLFCORE_DATOS가 올바른 데이터 폴더가 아닙니다. 절대 경로여야 하며, 시스템 폴더가 아니어야 하고, 실제 데이터 폴더(및 이전 폴더)와 달라야 합니다. 아무것도 변경하지 않고 앱을 종료합니다.',
+  },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
 export type TextosMain = (typeof TEXTOS)['es'];
