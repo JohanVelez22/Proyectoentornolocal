@@ -8,7 +8,7 @@ La pantalla **IA** reúne en tres pestañas (**Agentes**, **Nube** y **Modelos l
 
 ### 1. Instalar, registrar y abrir Agentes de IA (`IA → Agentes`)
 
-1. Abra **IA** en la barra lateral y seleccione la pestaña **Agentes** (también accesible desde `Ctrl+K` escribiendo `Agentes`, o desde el menú `…` → **Abrir agente** en cualquier tarjeta de proyecto).
+1. Abra **IA** en la barra lateral y seleccione la pestaña **Agentes** (también accesible desde `Ctrl+K` escribiendo `Agentes`, o desde el menú `…` → **Abrir un agente de IA** en cualquier tarjeta de proyecto).
 2. WolfCore Dev detecta agentes compatibles (**Claude Code**, **Codex CLI**, **Hermes Agent**, **Opencode**, **Gemini CLI**, **Qwen Code**, **GitHub Copilot CLI** y **Antigravity CLI**) indicando si están instalados, su origen (propio, npm global o sistema) y si el MCP está registrado.
 3. Si desea instalar un agente soportado por npm, pulse **Instalar** y confirme: se instala aislado con el Node de WolfCore Dev en su carpeta de datos, sin tocar su npm global. Para los que no tienen instalador con huella fija, pulse **Guía de instalación**.
 4. Para conectar el agente con sus sitios, servicios y bases de datos, pulse **Registrar MCP** y confirme:

@@ -27,8 +27,8 @@ La pantalla **Proyectos** centraliza todos sus sitios locales `.test`: crear pro
 1. En **Proyectos**, pulse **Agregar proyecto** (o **Nuevo** según el estado de la lista).
 2. Elija una de las tres vías:
    - **GitHub:** conecte con GitHub CLI (`gh`) o con un token personal (guardado cifrado con `safeStorage`, nunca en la URL ni en `.git/config`) y elija el repositorio a clonar.
-   - **URL de git:** pegue la URL de un repositorio remoto sin usuario ni contraseña en la URL.
-   - **Carpeta existente:** elija la carpeta del proyecto en su disco, o pulse la opción para **agregar sin receta** con el formulario manual.
+   - **URL de Git:** pegue la URL de un repositorio remoto sin usuario ni contraseña en la URL.
+   - **Carpeta:** elija la carpeta del proyecto en su disco, o pulse la opción para **agregar sin receta** con el formulario manual.
 3. Si activó una **carpeta vigilada** (por ejemplo `C:\Proyectos`), las subcarpetas nuevas que parezcan proyectos aparecen como sugerencias arriba de la lista para vincularlas con un clic.
 
 ### 3. Recetas, confianza en el repositorio y `wolfcore.yml`
@@ -93,7 +93,7 @@ Cada tarjeta en **Proyectos** ofrece acciones rápidas y paneles desplegables:
 - **PHP por sitio y Xdebug:** permite fijar valores de `php.ini` exclusivos del sitio y activar Xdebug (`debug`, `develop`, `coverage`, `profile`, `trace`, puerto `9003` por defecto, `client_host=127.0.0.1`) en un pool propio, con opción de generar o fusionar `.vscode/launch.json`.
 - **Editor de vhost de Nginx:** muestra el vhost generado, permite añadir **reglas propias** con fragmentos listos (CORS, caché de estáticos, límite de subida, SPA, cabeceras de seguridad, WebSocket) o editar en modo avanzado. Antes de aplicar, valida con `nginx -t` en una copia temporal y conserva historial de 10 copias.
 - **FTP por sitio:** activa el acceso FTP encerrado en la carpeta del sitio (puerto `2121`, solo modo pasivo), con opción de **Solo lectura**, **Regenerar clave**, copiar la dirección `ftp://<usuario>@<host>:<puerto>/` (sin contraseña) y código QR.
-- **Menú (`…`):** **Editar**, **Duplicar**, **Ver registros**, **Variables .env…**, **Guardar como plantilla…**, **Abrir agente** y **Borrar** (quitar un sitio de WolfCore Dev nunca borra su carpeta del disco).
+- **Menú (`…`):** **Editar**, **Duplicar**, **Ver registros**, **Variables .env…**, **Guardar como plantilla…**, **Abrir un agente de IA** y **Borrar** (quitar un sitio de WolfCore Dev nunca borra su carpeta del disco).
 
 [CAPTURA: Tarjeta de un proyecto en Proyectos mostrando enlaces HTTPS, botones de Editor/Terminal/Base, interruptores de Túnel/Red local y menú de acciones]
 
