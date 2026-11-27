@@ -34,7 +34,7 @@ export type TarjetaConPestanas = keyof typeof PESTANAS_TARJETA;
  */
 export const TARJETAS_POR_SECCION: Record<SeccionHerramientas, readonly string[]> = {
   codigo: ['editor', 'buscar', 'comparar', 'regex', 'json', 'markdown'],
-  red: ['puertos', 'websocket', 'certificados', 'guias'],
+  red: ['clienteHttp', 'puertos', 'websocket', 'certificados', 'guias'],
   seguridad: ['contrasenas', 'cripto', 'entorno'],
   archivos: [
     'imagenes',
@@ -94,5 +94,6 @@ export const HERRAMIENTAS_ANCHAS: readonly string[] = [
   'limpiezaDisco',
   'guiaTuneles',
   'guiaHttp',
+  'clienteHttp',
   'editor',
 ];

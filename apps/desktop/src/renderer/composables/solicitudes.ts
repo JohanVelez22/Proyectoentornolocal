@@ -1,3 +1,4 @@
+import type { PeticionHttp } from '@pel/core';
 import { reactive } from 'vue';
 
 /**
@@ -8,6 +9,8 @@ import { reactive } from 'vue';
 export const solicitudes = reactive({
   /** Herramienta que debe abrir la pantalla Herramientas (p. ej. 'puertos'). */
   herramienta: null as string | null,
+  /** Petición que el cliente HTTP debe cargar (la pide `abrirConPeticion`, D49). */
+  peticionHttp: null as Partial<PeticionHttp> | null,
   /** Archivo que el editor de código (D43) debe abrir; lo pide `abrirEnEditor`. */
   archivoEditor: null as string | null,
   /** El editor de código tiene cambios sin guardar (para avisar al cerrar o salir). */

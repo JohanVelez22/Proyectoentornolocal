@@ -8,6 +8,7 @@ import {
   DocumentAttach,
   CodeSlash,
   Desktop,
+  Globe,
   DocumentText,
   GitCompare,
   Image,
@@ -43,6 +44,7 @@ type Clave = keyof typeof t.lista;
 
 /** Componente de cada herramienta (las de una pestaña se muestran dentro de su tarjeta). */
 const componentes: Record<Clave, Component> = {
+  clienteHttp: defineAsyncComponent(() => import('../componentes/herramientas/ClienteHttp.vue')),
   qr: defineAsyncComponent(() => import('../componentes/herramientas/Qr.vue')),
   json: defineAsyncComponent(() => import('../componentes/herramientas/Json.vue')),
   regex: defineAsyncComponent(() => import('../componentes/herramientas/Regex.vue')),
@@ -77,6 +79,7 @@ const componentes: Record<Clave, Component> = {
 
 /** Icono de cada tarjeta (las unificadas, `comparar` y `guias`, tienen el suyo). */
 const iconos: Record<string, Component> = {
+  clienteHttp: Globe,
   qr: QrCode,
   json: CodeSlash,
   regex: Text,
