@@ -51,6 +51,7 @@ async function elegir(i: Idioma): Promise<void> {
 <template>
   <MenuDesplegable
     v-if="compacto"
+    alinear-fin
     trigger="click"
     :options="opciones"
     :value="idioma"
@@ -131,6 +132,22 @@ async function elegir(i: Idioma): Promise<void> {
   font-weight: 600;
 }
 
+.opcion[lang='ja'] .nombre {
+  font-family: 'Yu Gothic UI', 'Yu Gothic', sans-serif;
+}
+.opcion[lang='zh'] .nombre {
+  font-family: 'Microsoft YaHei', sans-serif;
+}
+.opcion[lang='ko'] .nombre {
+  font-family: 'Malgun Gothic', sans-serif;
+}
+.opcion[lang='hi'] .nombre {
+  font-family: 'Nirmala UI', sans-serif;
+}
+.opcion[lang='th'] .nombre {
+  font-family: 'Leelawadee UI', sans-serif;
+}
+
 .aviso {
   font-size: 11px;
   line-height: 1.3;
@@ -142,6 +159,30 @@ async function elegir(i: Idioma): Promise<void> {
 /* Las etiquetas del menú las pinta Naive fuera de este componente: sin `scoped`. */
 .idioma-nombre {
   font-weight: 600;
+}
+
+/* La opción de Naive tiene altura fija: con el aviso debajo del nombre hay que dejarla crecer. */
+.n-dropdown-option:has(.idioma-aviso) .n-dropdown-option-body {
+  height: auto;
+  padding-block: 4px;
+  line-height: 1.3;
+}
+
+/* Cada nombre nativo con una fuente propia de su escritura, incluso fuera de su idioma. */
+.n-dropdown-option[lang='ja'] .idioma-nombre {
+  font-family: 'Yu Gothic UI', 'Yu Gothic', sans-serif;
+}
+.n-dropdown-option[lang='zh'] .idioma-nombre {
+  font-family: 'Microsoft YaHei', sans-serif;
+}
+.n-dropdown-option[lang='ko'] .idioma-nombre {
+  font-family: 'Malgun Gothic', sans-serif;
+}
+.n-dropdown-option[lang='hi'] .idioma-nombre {
+  font-family: 'Nirmala UI', sans-serif;
+}
+.n-dropdown-option[lang='th'] .idioma-nombre {
+  font-family: 'Leelawadee UI', sans-serif;
 }
 
 .idioma-aviso {
