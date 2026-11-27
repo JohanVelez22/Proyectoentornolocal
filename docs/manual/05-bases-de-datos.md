@@ -58,7 +58,7 @@ Puertos predeterminados (y alternativos sugeridos si otro programa los ocupa):
 ### 6. Inspeccionar esquema y consultas lentas
 
 - **Ver esquema:** en la fila de una base, pulse **Ver esquema** para explorar tablas, vistas, columnas, tipos, claves primarias (`PK`), índices y relaciones de entrada y salida en modo **solo lectura** (no lee ninguna fila de datos).
-- **Consultas lentas:** pulse **Consultas lentas** en la barra del motor SQL para activar el registro de consultas que superen el umbral en segundos que usted elija (por ejemplo, `1` segundo). Por privacidad, los valores literales aparecen reemplazados por `?` y se bloquea mostrar literales cuando el servidor tiene bases marcadas con datos reales o la consulta no puede atribuirse con seguridad.
+- **Consultas lentas:** pulse **Consultas lentas** en la barra del motor SQL. En el diálogo **Consultas lentas de <motor>** verá el estado del registro, el campo **Anotar consultas de más de (segundos)** y los botones **Activar el registro**, **Cambiar el tiempo** y **Desactivar el registro** (afecta a todo el servidor, por lo que pide confirmación). Las columnas son **Duración**, **Filas examinadas**, **Base**, **Fecha** y **Consulta**. Por privacidad, los valores literales aparecen reemplazados por `?` y se bloquea mostrarlos (**Ver literal**) cuando el servidor tiene bases marcadas con datos reales o la consulta no puede atribuirse con seguridad.
 
 [CAPTURA: Diálogo Ver esquema mostrando la lista de tablas a la izquierda y columnas, índices y relaciones a la derecha]
 
