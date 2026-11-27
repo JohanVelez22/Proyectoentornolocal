@@ -592,7 +592,12 @@ const filasConexion = computed(() => [
               class="mono"
               clearable
             />
-            <NButton type="primary" attr-type="submit" :disabled="!puedeDescargar">
+            <NButton
+              type="primary"
+              attr-type="submit"
+              :disabled="!puedeDescargar"
+              :loading="consultando"
+            >
               <template #icon
                 ><NIcon><CloudDownload /></NIcon
               ></template>
