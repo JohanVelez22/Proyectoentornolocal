@@ -1121,8 +1121,517 @@ export const trExtra: TextosParciales = {
           guardar: 'Kaydetme ve geri alma',
           remoto: 'Yerel uzak depo',
         },
-        archivos: { titulo: 'Alıştırma dosyaları' },
+        archivos: {
+          titulo: 'Alıştırma dosyaları',
+          ayuda: 'Yalnızca bu dosyalar düzenlenebilir, en fazla 2000 karakterlik metinle.',
+          guardar: 'Dosyayı kaydet',
+          guardado: 'Dosya kaydedildi.',
+          areaTexto: (n) => `${n} içeriği`,
+        },
+        salida: 'Çıktı',
+        salidaVacia: "git'in yanıtını burada görmek için bir komuta basın.",
+        codigo: (n) => (n === 0 ? 'Sorunsuz tamamlandı' : `${n} koduyla tamamlandı`),
+        truncada: 'Çıktı kesildi.',
+        historial: 'Geçmiş',
+        historialVacio: 'Henüz commit yok: git init, git add ve git commit çalıştırın.',
+        conflicto: {
+          titulo: 'Yönlendirmeli alıştırma: bir çakışma',
+          intro:
+            'İki dal aynı satırı değiştirir. Çakışmanın nasıl göründüğünü ve nasıl çözüldüğünü göreceksiniz.',
+          paso: (n, total) => `Adım ${n} / ${total}`,
+          ejecutar: 'Bu adımı çalıştır',
+          hecho: 'Tamam',
+          reempezar: 'Baştan başla',
+          esperado: 'Git çakışmayı bildirdi: bu adımda beklenen budur.',
+          elegir: {
+            mia: "main'dekini koru (yeşil)",
+            otra: "rama-a'dakini koru (kırmızı)",
+            ambas: 'İkisini de koru',
+          },
+          final: 'Tamam: bir çakışmayı çözdünüz. Geçmişe bakın.',
+          pasos: [
+            {
+              titulo: 'Laboratuvarı hazırla',
+              texto:
+                'Laboratuvar sıfırlanır ve colores.txt (“color: azul”) ile ilk commit yapılır.',
+            },
+            {
+              titulo: 'Satırı rama-a üzerinde değiştir',
+              texto: 'rama-a dalı oluşturulur, satır “color: rojo” olur ve commit edilir.',
+            },
+            {
+              titulo: 'Aynı satırı main üzerinde değiştir',
+              texto: 'main dalına dönülür, satır “color: verde” olur ve commit edilir.',
+            },
+            {
+              titulo: 'Birleştirmeyi dene',
+              texto:
+                'rama-a, main ile birleştirilir. Git hangi satırı koruyacağını bilemez ve bir çakışma bırakır.',
+            },
+            {
+              titulo: 'Bir sürüm seç',
+              texto:
+                'Satırın hangi sürümünü koruyacağınızı seçin. colores.txt artık çakışma işaretlerini içerir.',
+            },
+            {
+              titulo: 'Çözümü onayla',
+              texto: 'colores.txt hazırlanır (add) ve birleştirmeyi kapatan commit yapılır.',
+            },
+          ],
+        },
       },
     },
+  },
+  editorCodigo: {
+    intro: (mb) =>
+      `En fazla ${mb} MB'a kadar metin dosyaları için söz dizimi vurgulamalı hafif bir düzenleyici. Dosyayı sistem iletişim kutusunda seçin; kaydetme her zaman onay ister ve önce WolfCore Dev veri klasörüne bir kopya bırakır.`,
+    abrir: 'Dosya aç…',
+    abriendo: 'Açılıyor…',
+    guardar: 'Kaydet',
+    guardando: 'Kaydediliyor…',
+    recargar: 'Diskten yeniden yükle',
+    vacio: 'Düzenlemeye başlamak için bir dosya açın.',
+    sinCambios: 'Değişiklik yok',
+    conCambios: 'Kaydedilmemiş değişiklikler',
+    posicion: (linea, columna) => `Satır ${linea}, sütun ${columna}`,
+    areaTexto: (nombre) => `Kod düzenleyici: ${nombre}`,
+    salirTeclado: "Düzenleyiciden klavyeyle çıkmak için Esc'e, ardından Tab'a basın.",
+    guardado: 'Dosya kaydedildi.',
+    copiaPrevia: (ruta) => `Yedek kopya: ${ruta}`,
+    cancelar: 'İptal',
+    enlaceDuro:
+      'Bu dosyanın diskte birden fazla adı var (sabit bağlantı). Kaydetmek bu bağlantıyı koparır: diğer adlar eski içeriği korur.',
+    saltosMixtos: {
+      aviso: "Bu dosyada karışık satır sonları var. Kaydetmek hepsini LF'ye normalleştirir.",
+      aceptar: 'Satır sonlarının normalleştirilmesini kabul ediyorum',
+    },
+    envGestor: {
+      aviso:
+        '.env dosyaları, gizli değer akışıyla birlikte proje değişkenlerinde düzenlenir. Düğme, projenin kök dizinindeki .env dosyasını açar; bu, açmaya çalıştığınız dosya olmayabilir.',
+      boton: 'Projenin kök dizinindeki .env dosyasını aç',
+    },
+    huellaPerdida: 'Kaydedildi, ancak yeni parmak izi okunamadı: dosya yeniden yüklendi.',
+    confirmarGuardar: {
+      titulo: 'Değişiklikleri kaydet',
+      texto: (nombre) =>
+        `${nombre} yazılmak üzere. Önce, diskte şu an bulunanın bir kopyası WolfCore Dev veri klasörüne kaydedilir.`,
+      boton: 'Yedek kopyayla kaydet',
+    },
+    refuerzo: {
+      abrirTitulo: 'Hassas dosya',
+      guardarTitulo: 'Hassas bir dosyayı kaydet',
+      secreto:
+        'Bu dosya gizli bilgiler (özel anahtarlar, belirteçler veya kimlik bilgileri) içeriyor gibi görünüyor. İçeriği ekranda gösterilecek.',
+      datosReales:
+        'Bu dosya, gerçek veri içerdiği işaretlenmiş bir siteye ait. Yanlış bir değişiklik gerçek bilgileri etkileyebilir.',
+      instruccion: (nombre) => `Devam etmek için dosya adını yazın: ${nombre}`,
+      etiqueta: 'Dosya adı',
+      abrirBoton: 'Yine de aç',
+      guardarBoton: 'Yine de kaydet',
+    },
+    cambioExterno: {
+      titulo: 'Dosya düzenleyicinin dışında değişti',
+      texto:
+        'Siz açtığınızdan beri başka bir program onu değiştirdi, bu yüzden hiçbir şey kaydedilmedi. Yeniden yükleyebilirsiniz (değişiklikleriniz kaybolur) veya buradakilerle üzerine yazabilirsiniz.',
+      recargar: 'Yeniden yükle ve değişikliklerimi at',
+      sobrescribir: 'Üzerine yaz…',
+      sobrescribirTitulo: 'Dosyanın üzerine yaz',
+      sobrescribirTexto:
+        'Diğer programın yaptığı değişiklikler kaybolacak. Şu anki içeriği yedek kopyada kalacak.',
+      sobrescribirBoton: 'Evet, üzerine yaz',
+      volver: 'Geri dön',
+    },
+    descartar: {
+      titulo: 'Kaydedilmemiş değişiklikler',
+      texto: 'Düzenleyicide kaydedilmemiş değişiklikler var. Devam ederseniz kaybolurlar.',
+      confirmar: 'Değişiklikleri at',
+      seguir: 'Düzenlemeye devam et',
+    },
+    cm: {
+      'Control character': 'Denetim karakteri',
+      'Selection deleted': 'Seçim silindi',
+      'Go to line': 'Satıra git',
+      go: 'git',
+      Find: 'Bul',
+      Replace: 'Değiştir',
+      next: 'sonraki',
+      previous: 'önceki',
+      all: 'tümü',
+      'match case': 'büyük/küçük harf',
+      regexp: 'düzenli ifade',
+      'by word': 'sözcüğe göre',
+      replace: 'değiştir',
+      'replace all': 'tümünü değiştir',
+      close: 'kapat',
+      'current match': 'geçerli eşleşme',
+      'on line': 'satırda',
+      'replaced match on line $': '$. satırdaki eşleşme değiştirildi',
+      'replaced $ matches': '$ eşleşme değiştirildi',
+      'folded code': 'katlanmış kod',
+      unfold: 'katlamayı aç',
+      to: '-',
+    },
+  },
+  limpiezaDisco: {
+    intro:
+      'Önce çözümler ve her öğenin ne kadar yer kapladığını gösterir. Siz onaylayana kadar hiçbir şey silinmez ve kendiliğinden veya arka planda asla çalışmaz.',
+    analizar: 'Çözümle',
+    analizando: 'Çözümleniyor…',
+    cancelarAnalisis: 'İptal',
+    vacio: 'Temizlenecek bir şey yok.',
+    categorias: {
+      temp: {
+        nombre: 'Geçici dosyalar',
+        ayuda:
+          'TEMP klasörünüzdeki 24 saatten eski dosyalar. Kalıcı olarak silinir; kendiliğinden yeniden oluşurlar.',
+      },
+      'cache-chrome': {
+        nombre: 'Google Chrome önbelleği',
+        ayuda: 'Yalnızca her profilin önbellek klasörleri; çerezler, parolalar veya geçmiş asla.',
+      },
+      'cache-edge': {
+        nombre: 'Microsoft Edge önbelleği',
+        ayuda: 'Yalnızca her profilin önbellek klasörleri; çerezler, parolalar veya geçmiş asla.',
+      },
+      'cache-brave': {
+        nombre: 'Brave önbelleği',
+        ayuda: 'Yalnızca her profilin önbellek klasörleri; çerezler, parolalar veya geçmiş asla.',
+      },
+      'cache-firefox': {
+        nombre: 'Firefox önbelleği',
+        ayuda: 'Yalnızca her profilin cache2 klasörü; çerezler, parolalar veya geçmiş asla.',
+      },
+      'wolfcore-descargas': {
+        nombre: 'WolfCore Dev önbelleğe alınmış indirmeleri',
+        ayuda: 'Artık kullanılmayan başıboş arşivler. Geri dönüşüm kutusuna gönderilir.',
+      },
+      'wolfcore-registros': {
+        nombre: 'WolfCore Dev günlükleri',
+        ayuda: '30 günden eski günlükler. Geri dönüşüm kutusuna gönderilir.',
+      },
+      prefetch: {
+        nombre: 'Windows Prefetch',
+        ayuda:
+          "İsteğe bağlı. Windows onu yeniden oluşturur, ancak WolfCore Dev'in yönetici olarak çalışmasını gerektirir.",
+      },
+    },
+    bloqueos: {
+      'navegador-abierto':
+        "Tarayıcı açık veya arka planda çalışıyor: önbelleğini temizlemek için tamamen kapatın (Edge'de başlangıç hızlandırmasını ve arka plan uzantılarını da kapatın)",
+      'requiere-admin': "WolfCore Dev'in yönetici olarak çalıştırılmasını gerektirir",
+      'ruta-vetada': 'Korumalı yol: temizlenmedi',
+      'temp-no-seguro':
+        'TEMP değişkeni kullanıcının geçici klasörü olmayan bir klasöre işaret ediyor (Belgeler, bir sürücünün tamamı, bir ağ yolu…): temizlenmedi',
+    },
+    borradoDefinitivo: 'Kalıcı olarak silinir (kendiliğinden yeniden oluşurlar)',
+    borradoPapelera: 'Sistem geri dönüşüm kutusuna gönderilir',
+    archivos: (n) => (n === 1 ? '1 dosya' : `${n} dosya`),
+    carpetas: 'Klasöre göre',
+    truncado: 'Çözümleme dosya sınırında durdu: gösterilenden fazlası var.',
+    marcadas: (n, t) => `${t} kategoriden ${n} tanesi seçili`,
+    total: (b) => `Yaklaşık ${b} boşaltılacak`,
+    limpiar: 'Seçilenleri temizle',
+    confirmarTitulo: 'Bu kategoriler temizlensin mi?',
+    confirmarTexto: (n) => `${n} kategori temizlenecek.`,
+    confirmarDefinitivo:
+      'TEMP ve önbellekler kalıcı olarak silinir (kendiliğinden yeniden oluşurlar).',
+    confirmarPapelera: 'WolfCore Dev günlükleri ve indirmeleri geri dönüşüm kutusuna gider.',
+    confirmarPrefetch:
+      'Prefetch: Windows onu yeniden oluşturur, ancak programların ilk açılışları biraz daha yavaş olabilir.',
+    confirmar: 'Evet, temizle',
+    cancelar: 'İptal',
+    detener: 'Temizliği durdur',
+    resultadoTitulo: 'Sonuç',
+    liberado: (b) => `Boşaltılan: ${b}`,
+    enPapelera: (b) =>
+      `Bunun ${b} kadarı geri dönüşüm kutusunda (boşalttığınızda alan geri gelir).`,
+    saltados: (n) => `${n} dosya atlandı`,
+    cancelado: 'Temizlik iptal edildi: zaten silinenler silinmiş kalır.',
+    topeEjecucion:
+      'Çalıştırma başına dosya sınırına ulaşıldı: devam etmek için yeniden çözümleyin ve temizleyin.',
+    registroFallido:
+      'Temizlik günlüğü artık yazılamadı, bu yüzden temizlik durdu: silinenler o noktaya kadar günlüğe kaydedildi.',
+    motivos: {
+      'en-uso': 'Kullanımda',
+      enlace: 'Bağlantı veya yeniden ayrıştırma noktası (izlenmedi)',
+      protegido: 'Korumalı (.env, FlyEnv veya benzeri)',
+      cambio: 'Çözümlemeden sonra değişti',
+      'sin-papelera': 'Geri dönüşüm kutusu kullanılamıyor',
+      ilegible: 'Okunamadı',
+      error: 'Silinirken hata',
+    },
+    verRegistros: 'Günlükleri görüntüle',
+    registroEn: (r) => `Bu temizliğin günlüğü: ${r}`,
+    otraVez: 'Baştan başla',
+    protegidas:
+      'Asla dokunulmaz: veriler, yedekler, projeler, veritabanları veya .env dosyaları. Bağlantılar izlenmez ve bu listedeki yolların dışındaki hiçbir şeye dokunulmaz.',
+  },
+  preferencias: {
+    asistente: 'Karşılama turu',
+    asistenteAyuda:
+      'Ana ekranların turunu yeniden izleyin: hizmetler, projeler, veritabanları, araçlar ve Doctor.',
+    asistenteAbrir: 'Turu izle',
+    avanzadas: 'Gelişmiş bölümleri göster',
+    avanzadasAyuda:
+      'Kenar çubuğuna Kapsayıcılar gibi nadiren kullanılan ekranları ekler. Ctrl+K ile de erişilebilirler.',
+  },
+  paleta: {
+    irAServicio: (nombre) => `${nombre} hizmetine git`,
+    irAProyecto: (nombre) => `${nombre} projesine git`,
+    versionesDe: (nombre) => `${nombre} sürümleri`,
+    asistente: 'Karşılama turunu izle',
+  },
+  env: { bloques: { meilisearch: 'Meilisearch (anahtarıyla birlikte)' } },
+  estadosVacios: {
+    basesSinMotor: {
+      titulo: 'Henüz veritabanı motoru yok',
+      texto:
+        'Projelerinizin veritabanlarını oluşturmak ve yönetmek için Hizmetler bölümünden MySQL, MariaDB, PostgreSQL veya MongoDB yükleyin.',
+      accion: 'Hizmetlere git',
+    },
+    serviciosVacio: {
+      titulo: 'Henüz yüklü hizmet yok',
+      texto:
+        'Hizmetler (Nginx, PHP, veritabanları…) sitelerinizi çalıştıran şeylerdir. Nginx ve PHP ile veya bir veritabanıyla başlayın.',
+      accion: 'Hizmet yükle',
+    },
+    registrosSinFuentes: {
+      titulo: 'Henüz günlük yok',
+      texto:
+        'Bir hizmet, site veya işlem ilk satırını yazar yazmaz günlükler görünür. Bir hizmeti açın ve geri dönün.',
+      accion: 'Hizmetlere git',
+    },
+    registrosElegir: {
+      titulo: 'Bir günlük seçin',
+      texto: 'Satırlarını canlı izlemek için yukarıdaki seçiciden bir kaynak seçin.',
+      accion: '',
+    },
+    depuracionVacio: {
+      titulo: 'Henüz döküm gelmedi',
+      texto:
+        'Bir site dump(), dd() veya wd() çalıştırdığında döküm burada anında görünür. Sitenizi açın ve o kodu çalıştırın.',
+      accion: '',
+    },
+    depuracionApagado: {
+      titulo: 'Yakalama kapalı',
+      texto:
+        'Yakalama açıkken sitelerinizin dump() ve dd() çağrıları tarayıcıya dokunmadan buraya ulaşır. Açın ve bir site başlatın.',
+      accion: 'Yakalamayı aç',
+    },
+    depuracionElegir: {
+      titulo: 'Bir döküm seçin',
+      texto: "İçeriğini, dosyasını ve kaynak URL'sini görmek için listeden bir döküm seçin.",
+      accion: '',
+    },
+    erroresVacio: {
+      titulo: 'Günlüklerde hata yok',
+      texto:
+        'PHP, Nginx ve proje hataları yazılır yazılmaz burada gruplanmış olarak görünür. Boş liste iyi haberdir.',
+      accion: '',
+    },
+    erroresElegir: {
+      titulo: 'Bir hata seçin',
+      texto: 'İzini görmek ve dosyayı düzenleyicide açmak için listeden bir hata seçin.',
+      accion: '',
+    },
+    doctorSinRevision: {
+      titulo: 'Henüz denetim yapılmadı',
+      texto:
+        'Doctor bağlantı noktalarını, hosts dosyasını, sertifikaları ve sürümleri denetler ve başarısız olanın nasıl düzeltileceğini söyler. İlk denetimi çalıştırın.',
+      accion: 'Şimdi denetle',
+    },
+    doctorSinHallazgos: {
+      titulo: 'Her şey yolunda',
+      texto: 'Son denetimde sorun bulunmadı. Bir şey yanıt vermeyi bırakırsa yeniden denetleyin.',
+      accion: 'Yeniden denetle',
+    },
+    contenedoresVacio: {
+      titulo: 'Kapsayıcı yok',
+      texto:
+        "Bu bilgisayardaki Docker veya Podman kapsayıcıları burada görünür. docker run veya docker compose ile bir tane oluşturun ve Yenile'ye basın.",
+      accion: 'Yenile',
+    },
+    avisos: {
+      titulo: 'Bildirim yok',
+      texto:
+        'Hizmet kesintileri, meşgul bağlantı noktaları ve süresi dolmak üzere olan sertifikalar burada görünecek.',
+      accion: '',
+    },
+    instantaneas: {
+      titulo: 'Henüz anlık görüntü yok',
+      texto:
+        'Anlık görüntü, bir şeyler ters giderse geri dönebilmeniz için bu veritabanının durumunu kaydeder. İlkini yukarıdaki düğmeyle alın.',
+      accion: '',
+    },
+    basesSinBases: {
+      titulo: 'Bu sunucunun kendine ait veritabanı yok',
+      texto: 'Projeniz için bir veritabanı oluşturun veya mevcut bir dökümü içe aktarın.',
+      accion: 'Veritabanı oluştur',
+    },
+    iaNube: {
+      titulo: 'Henüz yapay zekâ sağlayıcısı yok',
+      texto:
+        'Bir sağlayıcı (OpenAI, Anthropic, OpenRouter ve diğerleri) ajanlarınızın bulut modellerini kullanmasını sağlar. Anahtar bu bilgisayarda şifreli olarak saklanır.',
+      accion: 'Sağlayıcı ekle',
+    },
+    iaSinModelos: {
+      titulo: 'Henüz yerel model yok',
+      texto: 'Çevrimdışı kullanmak için aşağıdaki listeden bir model indirin.',
+      accion: '',
+    },
+    versiones: {
+      titulo: 'Gösterilecek sürüm yok',
+      texto: 'Liste resmî katalogdan indirilir. Bağlantınızı denetleyin ve listeyi yenileyin.',
+      accion: 'Listeyi yenile',
+    },
+    buscar: {
+      titulo: 'Eşleşme yok',
+      texto:
+        'Klasörde aramanızla eşleşen bir şey yok. Başka sözcükler deneyin, “Büyük/küçük harf” işaretini kaldırın veya dosya süzgeçlerini gözden geçirin.',
+      accion: '',
+    },
+  },
+  asistenteInicio: {
+    titulo: 'Karşılama turu',
+    saltar: 'Atla',
+    terminar: 'Başla',
+    cerrar: 'Turu kapat',
+    reabrir: "Çıkmak için Esc'e basın. Ayarlar › Görünüm bölümünden yeniden izleyebilirsiniz.",
+    ir: (destino) => `${destino} bölümüne git`,
+    pasos: {
+      bienvenida: {
+        titulo: "WolfCore Dev'e hoş geldiniz",
+        texto:
+          "Yerel geliştirme ortamınız tek bir pencerede: hizmetler, HTTPS'li .test siteleri, veritabanları, e-posta ve araçlar. Bu tur bir dakika sürer ve bilgisayarınızda hiçbir şeyi değiştirmez.",
+      },
+      servicios: {
+        titulo: 'Hizmetler',
+        texto:
+          'Nginx, PHP ve veritabanlarını buradan bir anahtarla açın. Henüz yüklü değillerse Sürümler sekmesi onları doğrulanmış bir sağlama toplamıyla indirir.',
+      },
+      proyectos: {
+        titulo: 'Projeler',
+        texto:
+          "Yeni bir proje oluşturun veya bir klasörü ya da depoyu içe aktarın. Her site HTTPS'li kendi .test adresini alır.",
+      },
+      bases: {
+        titulo: 'Veritabanları',
+        texto:
+          'Uygulamadan çıkmadan veritabanları oluşturun, dökümleri içe ve dışa aktarın, yedekleyin ve geri yükleyin.',
+      },
+      herramientas: {
+        titulo: 'Araçlar ve Ctrl+K',
+        texto:
+          "Düzenleyici, arama, karşılaştırma, parolalar, görüntüler ve daha fazlası, bölümlere göre gruplanmış. İhtiyacınız olana atlamak için herhangi bir ekranda Ctrl+K'ye basın.",
+      },
+      doctor: {
+        titulo: 'Doctor',
+        texto:
+          'Bağlantı noktalarını, hosts dosyasını, sertifikaları ve sürümleri denetler ve başarısız olanın nasıl düzeltileceğini önerir. Bir şey yanıt vermediğinde açın.',
+      },
+      listo: {
+        titulo: 'Hepsi hazır',
+        texto:
+          'Bir hizmeti açarak veya ilk projenizi oluşturarak başlayın. Bu turu Ayarlar › Görünüm bölümünden yeniden izleyebilirsiniz.',
+      },
+    },
+  },
+  perfiles: {
+    asistente: {
+      versiones: { sustituida: (v) => `Artık katalogda yok: yerine ${v} yüklenecek.` },
+      resultado: { sustituida: (v) => `Profildeki sürüm yerine ${v} yüklendi.` },
+    },
+    motivos: {
+      version_sustituida:
+        'Bu sürüm artık katalogda yok: aynı ikincil sürümün (örneğin 8.3) en yenisi yüklendi.',
+    },
+  },
+  consultasLentas: {
+    boton: 'Yavaş sorgular',
+    titulo: (motor) => `${motor} üzerindeki yavaş sorgular`,
+    descripcion: 'Seçtiğiniz süreden uzun süren sorgular, en yavaştan en hızlıya.',
+    cargando: 'Yavaş sorgular yükleniyor…',
+    estadoTitulo: 'Günlük durumu',
+    estadoActivo: (s) => `Günlük kaydı açık: ${s} sn'yi aşan sorgular kaydedilir.`,
+    estadoApagado: 'Günlük kaydı kapalı.',
+    noGestionada:
+      'WolfCore Dev bu sunucuyu yönetmiyor (örneğin başka bir programın başlattığı): burada yalnızca görüntüleyebilir, değiştiremezsiniz.',
+    umbral: 'Şundan uzun süren sorguları kaydet (saniye)',
+    activar: 'Günlük kaydını aç',
+    aplicarUmbral: 'Süreyi değiştir',
+    desactivar: 'Günlük kaydını kapat',
+    actualizar: 'Günlüğü yeniden oku',
+    confirmarTitulo: 'Yavaş sorgu günlüğünü değiştir',
+    confirmarActivar: (motor, s) =>
+      `Günlük kaydı tüm ${motor} sunucusu için açılacak (${s} sn'yi aşan sorgular) ve yapılandırmasına kaydedilecek. Tüm veritabanlarını etkiler.`,
+    confirmarDesactivar: (motor) =>
+      `Günlük kaydı tüm ${motor} sunucusu için kapatılacak ve yapılandırmasına kaydedilecek. Daha önce kaydedilenler saklanır.`,
+    confirmarBoton: 'Değişikliği onayla',
+    cancelar: 'İptal',
+    activado: 'Yavaş sorgu günlüğü açıldı',
+    desactivado: 'Yavaş sorgu günlüğü kapatıldı',
+    privacidad:
+      'SQL, değerleri “?” ile değiştirilmiş olarak gösterilir, çünkü gerçek müşteri verileri içerebilir. Bunların hiçbiri bu bilgisayardan çıkmaz veya uygulama günlüklerine yazılmaz.',
+    columnas: {
+      duracion: 'Süre',
+      filas: 'İncelenen satırlar',
+      base: 'Veritabanı',
+      fecha: 'Tarih',
+      sql: 'Sorgu',
+      acciones: 'İşlemler',
+    },
+    sinBase: 'Atfedilmedi',
+    verLiteral: 'Değişmezi göster',
+    ocultarLiteral: 'Değişmezi gizle',
+    literalAviso: 'SQL olduğu gibi, değerleriyle',
+    sqlOculto: 'SQL gizli',
+    sqlOcultoAyuda:
+      'Bu sorgu gerçek verileri riske atmadan gösterilemez: bu sunucuda gerçek veri içeren veritabanları var veya sorgu güvenle bir veritabanına atfedilemiyor.',
+    copiar: 'Kopyala',
+    copiado: 'Sorgu kopyalandı',
+    truncado: (n) => `Günlüğün sonundan (son 5 MB) en fazla ${n} en yavaş sorgu gösteriliyor.`,
+    vacioTitulo: 'Henüz yavaş sorgu kaydedilmedi',
+    vacioTextoApagado:
+      'Günlük kaydını açın ve sitelerinizi kullanın: seçilen süreden uzun süren sorgular burada görünecek.',
+    vacioTextoActivo:
+      'Şimdiye kadar hiçbir sorgu seçilen süreyi aşmadı. Sitelerinizi kullanın ve günlüğü yeniden okuyun.',
+  },
+  esquemaBd: {
+    boton: 'Şemayı görüntüle',
+    titulo: (base) => `${base} şeması`,
+    descripcion:
+      'Salt okunur: tablolar, sütunlar, anahtarlar ve ilişkiler. Tablolarınızdaki hiçbir veri okunmaz.',
+    cargando: 'Şema okunuyor…',
+    error: 'Veritabanı şeması okunamadı.',
+    reintentar: 'Yeniden dene',
+    buscar: 'Bir tablo ara',
+    tablas: (n) => plural(n, 'tablo', 'tablo'),
+    vista: 'görünüm',
+    truncado: (n) => `Liste ${n} tabloya kısaltıldı: veritabanında daha fazlası var.`,
+    sinResultados: 'Aramayla eşleşen tablo yok.',
+    elegir: 'Sütunlarını, anahtarlarını ve ilişkilerini görmek için listeden bir tablo seçin.',
+    columnas: 'Sütunlar',
+    indices: 'Dizinler',
+    sinIndices: 'Bu tablonun dizini yok.',
+    relaciones: 'İlişkiler',
+    sinRelaciones: 'Bu tablonun diğerleriyle ilişkisi yok.',
+    salientes: 'Başvurduğu',
+    entrantes: 'Başvurulan',
+    alBorrar: 'Silindiğinde:',
+    alActualizar: 'Güncellendiğinde:',
+    irA: (tabla) => `${tabla} tablosuna git`,
+    col: {
+      nombre: 'Sütun',
+      tipo: 'Tür',
+      nulo: 'Boş olabilir',
+      defecto: 'Varsayılan',
+      clave: 'Anahtar',
+    },
+    si: 'Evet',
+    no: 'Hayır',
+    pk: 'PK',
+    unico: 'benzersiz',
+    vacioTitulo: 'Bu veritabanında tablo yok',
+    vacioTexto: 'Tablolar oluşturduğunuzda (örneğin proje geçişlerinizle) burada görünecek.',
   },
 };
