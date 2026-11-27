@@ -12,7 +12,7 @@
 // `--no-sandbox`, ya previstos).
 import { Buffer } from 'node:buffer';
 import { chromium } from 'playwright-core';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import http from 'node:http';
 import {
   existsSync,
@@ -111,6 +111,9 @@ const env = {
 };
 delete env.ELECTRON_RENDERER_URL;
 delete env.ELECTRON_RUN_AS_NODE;
+// La CLI `wolf` (D31) viene apagada por defecto: se enciende en la carpeta de datos de prueba para
+// comprobar el servidor de órdenes y el cliente contra esta instancia (nunca contra la real).
+writeFileSync(path.join(datos, 'config.json'), JSON.stringify({ cli: { activo: true } }));
 const comunes = process.platform === 'linux' ? ['--no-sandbox', '--disable-gpu'] : [];
 
 const fallos = [];
@@ -137,6 +140,7 @@ async function diagnosticar(puerto) {
 let proc = null;
 let browser = null;
 const salidaApp = [];
+const sitiosTemporales = [];
 try {
   const puerto = String(9400 + Math.floor(Math.random() * 400));
   let exe;
@@ -470,6 +474,99 @@ try {
   } catch (e) {
     falla(`Compartir carpeta o archivo no funcionó: ${e}`);
   }
+  // Proyecto estático (el mínimo de «crear un proyecto»): se guarda el sitio con la carpeta de
+  // prueba y aparece en la lista. Con WOLFCORE_DATOS el hosts real no se escribe.
+  try {
+    const carpetaSitio = mkdtempSync(path.join(tmpdir(), 'wolfcore-humo-sitio-'));
+    writeFileSync(path.join(carpetaSitio, 'index.html'), '<title>humo</title>hola');
+    sitiosTemporales.push(carpetaSitio);
+    const creado = await ventana.evaluate(async (carpeta) => {
+      const r = await window.entorno.sitios.guardar({
+        nombre: 'Humo estatico',
+        dominio: 'humo-estatico.test',
+        alias: [],
+        carpeta,
+        tipo: 'estatico',
+        php: null,
+        puertoProxy: null,
+        reglasExtra: '',
+        urlBaseVar: null,
+        datosReales: false,
+        https: false,
+        redirigirHttps: false,
+        confiado: false,
+        git: null,
+        procesos: [],
+        runtimes: {},
+        nota: '',
+      });
+      const lista = await window.entorno.sitios.listar();
+      return { id: r.sitio.id, esta: lista.some((x) => x.dominio === 'humo-estatico.test') };
+    }, carpetaSitio);
+    if (!creado.id || !creado.esta) falla('El proyecto estático no quedó en la lista de sitios.');
+    else registro('ok   proyecto estático: creado y en la lista de sitios');
+  } catch (e) {
+    falla(`No se pudo crear el proyecto estático: ${e}`);
+  }
+  // `wolf status --json` contra ESTA instancia (WOLFCORE_DATOS): el cliente real, con el Electron
+  // empaquetado como Node (ELECTRON_RUN_AS_NODE), igual que lo lanza el wolf.exe de la app.
+  try {
+    const archivoCli = path.join(datos, 'run', 'cli.json');
+    for (let i = 0; i < 60 && !existsSync(archivoCli); i++)
+      await new Promise((r) => setTimeout(r, 500));
+    if (!existsSync(archivoCli)) throw new Error('el servidor de órdenes no escribió run/cli.json');
+    const script = usarOut
+      ? path.join(DESKTOP, 'out', 'cli', 'wolf.cjs')
+      : path.join(path.dirname(exe), 'resources', 'app.asar', 'out', 'cli', 'wolf.cjs');
+    const salidaCli = execFileSync(exe, [script, 'status', '--json'], {
+      encoding: 'utf8',
+      windowsHide: true,
+      timeout: 90_000,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...env, ELECTRON_RUN_AS_NODE: '1' },
+    });
+    const estado = JSON.parse(salidaCli);
+    if (typeof estado !== 'object' || estado === null) throw new Error('salida inesperada');
+    if (!/nginx/.test(salidaCli)) throw new Error('la salida no lista los servicios');
+    registro(
+      `ok   wolf status --json: respondió contra esta instancia (${salidaCli.length} bytes)`,
+    );
+  } catch (e) {
+    falla(`wolf status no respondió contra esta instancia: ${String(e).slice(0, 400)}`);
+  }
+  // Captura (D35): sin abrir la captura de pantalla (ocultaría las ventanas y fotografiaría el
+  // escritorio real), se comprueba que el servicio responde con su estado y su atajo.
+  try {
+    const cap = await ventana.evaluate(() => window.entorno.captura.leer());
+    if (typeof cap !== 'object' || cap === null) throw new Error('sin estado');
+    registro(`ok   captura: el servicio responde (${Object.keys(cap).join(', ')})`);
+  } catch (e) {
+    falla(`La captura no respondió: ${e}`);
+  }
+  // Sin consolas: ningún proceso de la app (ni sus hijos) tiene una ventana visible que no sea la
+  // principal (una consola de cmd, PowerShell o Node parpadearía al usuario).
+  if (process.platform === 'win32' && proc?.pid) {
+    try {
+      const salida = execFileSync(
+        'powershell',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `$todos = Get-CimInstance Win32_Process; $ids = @(${proc.pid}); do { $n = @($todos | Where-Object { $ids -contains $_.ParentProcessId -and $ids -notcontains $_.ProcessId } | ForEach-Object { $_.ProcessId }); $ids += $n } while ($n.Count -gt 0); Get-Process -Id $ids -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -and $_.Id -ne ${proc.pid} } | ForEach-Object { $_.ProcessName + '|' + $_.MainWindowTitle }`,
+        ],
+        { encoding: 'utf8', windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] },
+      )
+        .split(String.fromCharCode(10))
+        .map((l) => l.trim())
+        .filter(Boolean);
+      if (salida.length > 0)
+        falla(`Hay ventanas visibles de procesos hijos (consolas): ${salida.join(', ')}`);
+      else registro('ok   sin consolas: ningún proceso hijo tiene ventana visible');
+    } catch (e) {
+      falla(`No se pudo comprobar las consolas: ${e}`);
+    }
+  }
   await ventana.waitForTimeout(500);
 
   if (consola.length > 0) {
@@ -498,6 +595,7 @@ try {
   try {
     rmSync(datos, { recursive: true, force: true });
     rmSync(discoHumo, { recursive: true, force: true });
+    for (const c of sitiosTemporales) rmSync(c, { recursive: true, force: true });
   } catch {
     /* un archivo aún abierto en Windows: es una carpeta temporal */
   }
