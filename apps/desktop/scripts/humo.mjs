@@ -438,6 +438,28 @@ try {
   } catch (e) {
     falla(`Uso del disco no funcionó: ${e}`);
   }
+  // Compartir carpeta o archivo (D52): solo abre la tarjeta y comprueba el estado vacío. NO elige
+  // nada ni comparte: no se abre ningún túnel ni se publica nada.
+  try {
+    await ventana.keyboard.press('Escape');
+    await ventana.waitForSelector('.n-drawer', { state: 'detached', timeout: 15_000 });
+    await ventana.waitForSelector('[data-herramienta="compartir"]', { timeout: 30_000 });
+    await ventana.evaluate(() => document.querySelector('[data-herramienta="compartir"]')?.click());
+    await ventana.waitForSelector('[data-testid="compartir-elegir-carpeta"]', {
+      state: 'attached',
+      timeout: 30_000,
+    });
+    const vacio = await ventana.evaluate(
+      () => document.querySelector('.compartir .estado-vacio') !== null,
+    );
+    const activa = await ventana.evaluate(
+      () => document.querySelector('[data-testid="compartir-activa"]') !== null,
+    );
+    if (!vacio || activa) falla('Compartir: la tarjeta no mostró el estado vacío al abrirse');
+    else registro('ok   Compartir carpeta o archivo: la tarjeta abre vacía (sin compartir nada)');
+  } catch (e) {
+    falla(`Compartir carpeta o archivo no funcionó: ${e}`);
+  }
   await ventana.waitForTimeout(500);
 
   if (consola.length > 0) {
