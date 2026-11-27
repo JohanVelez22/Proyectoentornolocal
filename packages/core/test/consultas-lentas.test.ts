@@ -339,11 +339,18 @@ describe('SQL de activación', () => {
     expect(sql.map((s) => s.sql)).toEqual([
       'ALTER SYSTEM SET log_min_duration_statement = 1500',
       "ALTER SYSTEM SET log_line_prefix = '%m [%p] db=%d '",
+      // El filtro del visor depende de los textos en inglés (`duration:`, `statement:`).
+      "ALTER SYSTEM SET lc_messages = 'C'",
       'SELECT pg_catalog.pg_reload_conf()',
     ]);
     sql.length = 0;
     await bd.lentasAplicar('postgresql', { activo: false, segundos: 1, archivo: '' });
-    expect(sql[0]!.sql).toBe('ALTER SYSTEM RESET log_min_duration_statement');
+    expect(sql.map((s) => s.sql)).toEqual([
+      'ALTER SYSTEM RESET log_min_duration_statement',
+      'ALTER SYSTEM RESET log_line_prefix',
+      'ALTER SYSTEM RESET lc_messages',
+      'SELECT pg_catalog.pg_reload_conf()',
+    ]);
   });
 
   it('leer el estado no cambia nada (solo SELECT)', async () => {

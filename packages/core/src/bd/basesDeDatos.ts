@@ -636,9 +636,12 @@ export class BasesDeDatos {
         if (a.activo) {
           await c.consultar(`ALTER SYSTEM SET log_min_duration_statement = ${ms}`);
           await c.consultar("ALTER SYSTEM SET log_line_prefix = '%m [%p] db=%d '");
+          // El filtro de los registros reconoce los textos en inglés de las líneas del log.
+          await c.consultar("ALTER SYSTEM SET lc_messages = 'C'");
         } else {
           await c.consultar('ALTER SYSTEM RESET log_min_duration_statement');
           await c.consultar('ALTER SYSTEM RESET log_line_prefix');
+          await c.consultar('ALTER SYSTEM RESET lc_messages');
         }
         await c.consultar('SELECT pg_catalog.pg_reload_conf()');
       }, objetivo);
