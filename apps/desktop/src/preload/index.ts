@@ -563,6 +563,14 @@ const api: ApiEntorno = {
     cancelar: () => invocar('discoUso.cancelar'),
     abrirCarpeta: (idAnalisis, idFila) => invocar('discoUso.abrirCarpeta', idAnalisis, idFila),
   },
+  compartir: {
+    elegir: (tipo) => invocar('compartir.elegir', tipo),
+    estado: () => invocar('compartir.estado'),
+    accesos: () => invocar('compartir.accesos'),
+    iniciar: (ruta, duracion, proveedor, confirmado) =>
+      invocar('compartir.iniciar', ruta, duracion, proveedor, confirmado),
+    detener: () => invocar('compartir.detener'),
+  },
   captura: {
     leer: () => invocar('captura.leer'),
     guardarConfig: (cambios) => invocar('captura.guardarConfig', cambios),

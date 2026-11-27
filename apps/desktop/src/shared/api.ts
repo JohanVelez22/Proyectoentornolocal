@@ -225,6 +225,11 @@ import type {
   CarpetaTopUi,
   ProgresoUsoDisco,
   UnidadDisco,
+  EstadoCompartir,
+  AccesoCompartido,
+  DuracionCompartir,
+  ProveedorCompartir,
+  FinCompartir,
   ArchivoEditor,
   RiesgoEditor,
   HuellaArchivo,
@@ -449,6 +454,11 @@ export type {
   CarpetaTopUi,
   ProgresoUsoDisco,
   UnidadDisco,
+  EstadoCompartir,
+  AccesoCompartido,
+  DuracionCompartir,
+  ProveedorCompartir,
+  FinCompartir,
   EstadoInstancia,
   IdInstancia,
   PlanActualizar,
@@ -1643,6 +1653,28 @@ export interface ApiEntorno {
      */
     abrirCarpeta(idAnalisis: string, idFila: number): Promise<void>;
   };
+  compartir: {
+    /**
+     * Elige con el diálogo nativo lo que se va a compartir (una carpeta o un archivo); la ruta solo
+     * sirve para `iniciar` si salió de aquí. null si se cancela.
+     */
+    elegir(tipo: 'carpeta' | 'archivo'): Promise<string | null>;
+    estado(): Promise<EstadoCompartir>;
+    /** Últimos accesos (hasta 200); los nuevos llegan por `compartir:acceso`. */
+    accesos(): Promise<AccesoCompartido[]>;
+    /**
+     * Publica en internet, por un túnel, lo elegido. `confirmado` solo vale `true` tras el diálogo
+     * de la ventana (ruta exacta y vencimiento); el núcleo lo exige y vuelve a validar la ruta.
+     */
+    iniciar(
+      ruta: string,
+      duracionMin: DuracionCompartir,
+      proveedor: ProveedorCompartir,
+      confirmado: true,
+    ): Promise<EstadoCompartir>;
+    /** «Dejar de compartir»: cierra el servidor y el túnel. */
+    detener(): Promise<EstadoCompartir>;
+  };
   captura: {
     /** Configuración, estado del sistema y del atajo global (D35). */
     leer(): Promise<EstadoCapturaUi>;
@@ -2138,6 +2170,11 @@ export const RUTAS_IPC = [
   'discoUso.analizarUnidad',
   'discoUso.cancelar',
   'discoUso.abrirCarpeta',
+  'compartir.elegir',
+  'compartir.estado',
+  'compartir.accesos',
+  'compartir.iniciar',
+  'compartir.detener',
   'captura.leer',
   'captura.guardarConfig',
   'captura.iniciar',
@@ -2243,5 +2280,7 @@ export const EVENTOS_IPC = [
   'busqueda:resultado',
   'busqueda:fin',
   'disco:progreso',
+  'compartir:estado',
+  'compartir:acceso',
   'captura:imagen',
 ] as const satisfies readonly (keyof EventosNucleo)[];

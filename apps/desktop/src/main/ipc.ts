@@ -2081,6 +2081,22 @@ const TABLA: Record<RutaIpc, Manejador> = {
     s.abrirCarpeta(
       await n.usoDisco.carpetaDe(idCorto(id, 'análisis', 64), enteroPositivo(fila, 'fila')),
     ),
+  // ---- Compartir carpeta o archivo (D52): publica en internet; la ruta solo sale del diálogo ----
+  'compartir.elegir': async (_n, s, tipo) => {
+    if (tipo !== 'carpeta' && tipo !== 'archivo') throw new Error('Argumento no válido: tipo');
+    const ruta = tipo === 'carpeta' ? await s.elegirCarpeta() : await s.elegirArchivo();
+    return s.elegidas.registrar(ruta, 'compartir');
+  },
+  'compartir.estado': (n) => n.compartir.estado(),
+  'compartir.accesos': (n) => n.compartir.accesos(),
+  'compartir.iniciar': (n, s, ruta, duracion, proveedor, confirmacion) =>
+    n.compartir.iniciar({
+      ruta: s.elegidas.exigir(ruta, 'carpeta', 'compartir'),
+      duracionMin: enteroPositivo(duracion, 'duración'),
+      proveedor: textoAcotado(proveedor, 1, 40, 'proveedor'),
+      confirmado: confirmado(confirmacion),
+    }),
+  'compartir.detener': (n) => n.compartir.detener(),
   'herramientas.optimizarPdf': (n, s, origen, destino) =>
     n.optimizarPdf(
       s.elegidas.exigir(origen, 'archivo'),

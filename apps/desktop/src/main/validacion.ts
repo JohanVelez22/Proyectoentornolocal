@@ -479,7 +479,7 @@ export function ramaPhp(v: unknown): string | null {
 }
 
 /** Para qué se eligió una ruta: `abrir` (leer, diálogo de abrir) o `guardar` (destino). */
-export type PropositoRuta = 'abrir' | 'guardar' | 'editor';
+export type PropositoRuta = 'abrir' | 'guardar' | 'editor' | 'compartir';
 
 /**
  * Rutas que el usuario eligió en los diálogos de esta sesión. Las rutas que leen o escriben
