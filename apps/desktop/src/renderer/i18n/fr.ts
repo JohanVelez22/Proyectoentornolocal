@@ -1453,7 +1453,8 @@ export const fr: Textos = {
     sinParaEncender: 'Aucun service installé à démarrer',
     /** Bandeau quand il n’y a que des moteurs externes (D54a). */
     franjaExternos: {
-      texto: 'Vous n’avez pas encore installé le serveur web ni PHP. Les moteurs externes ont été détectés automatiquement.',
+      texto:
+        'Vous n’avez pas encore installé le serveur web ni PHP. Les moteurs externes ont été détectés automatiquement.',
       accion: 'Installer Nginx et PHP',
     },
     externos: {
@@ -3412,6 +3413,22 @@ export const fr: Textos = {
       `Graphique de la mémoire des 5 dernières minutes ; actuellement ${valor}`,
     graficaRed: (bajada: string, subida: string) =>
       `Graphique du réseau des 5 dernières minutes ; réception ${bajada}, envoi ${subida}`,
+    insignias: { memoriaAlta: 'Mémoire élevée' },
+    discos: {
+      titulo: 'Espace disque',
+      leyendo: 'Lecture des disques…',
+      sistema: 'Système',
+      datos: 'Données de WolfCore',
+      ambos: 'Système et données de WolfCore',
+      libre: (unidad: string, libre: string, pct: number) =>
+        `${unidad} · ${libre} libres (${pct} %)`,
+      poco: 'Peu d’espace libre',
+      casiLleno: 'Presque plus d’espace',
+      liberar: 'Libérer de l’espace',
+      versiones: 'Nettoyer les versions inutilisées',
+      temporales: 'Nettoyer les fichiers temporaires et caches de WolfCore',
+      ocupaMas: 'Voir ce qui occupe le plus de place',
+    },
     alertas: {
       titulo: 'Alertes',
       conflicto: (servicio: string, puerto: number, programa: string, pid: number) =>
@@ -3420,6 +3437,10 @@ export const fr: Textos = {
         `La mémoire de l’ordinateur est à ${porcentaje} %. Éteignez ce que vous n’utilisez pas pour que tout réponde mieux.`,
       huerfano: (pid: number, puertos: number[]) =>
         `Un php-cgi qui n’appartient pas à WolfCore Dev (PID ${pid}) écoute sur ${puertos.join(', ')} : il date d’une session précédente.`,
+      grupo: (n: number) => `Problèmes détectés (${n})`,
+      verTodos: (n: number) => `Voir les ${n}`,
+      verMenos: 'Voir moins',
+      masAcciones: 'Plus d’actions',
       finalizar: 'Terminer le processus',
       finalizarTitulo: 'Terminer ce processus ?',
       finalizarTexto: (nombre: string, pid: number) =>
@@ -3438,6 +3459,7 @@ export const fr: Textos = {
       puerto: 'Port',
       encendido: 'Allumé',
       acciones: 'Actions',
+      resto: 'Autres services',
       detener: 'Arrêter',
       registros: 'Voir les journaux',
       servicio: 'Service',

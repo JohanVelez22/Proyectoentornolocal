@@ -1381,7 +1381,8 @@ export const en: Textos = {
     sinParaEncender: 'There are no installed services to start',
     /** Strip shown when only external engines exist (D54a). */
     franjaExternos: {
-      texto: 'You have not installed the web server or PHP yet. External engines were detected automatically.',
+      texto:
+        'You have not installed the web server or PHP yet. External engines were detected automatically.',
       accion: 'Install Nginx and PHP',
     },
     externos: {
@@ -3295,6 +3296,21 @@ export const en: Textos = {
     graficaRam: (valor: string) => `Memory chart for the last 5 minutes; now ${valor}`,
     graficaRed: (bajada: string, subida: string) =>
       `Network chart for the last 5 minutes; download ${bajada}, upload ${subida}`,
+    insignias: { memoriaAlta: 'High memory' },
+    discos: {
+      titulo: 'Disk space',
+      leyendo: 'Reading the disks…',
+      sistema: 'System',
+      datos: 'WolfCore data',
+      ambos: 'System and WolfCore data',
+      libre: (unidad: string, libre: string, pct: number) => `${unidad} · ${libre} free (${pct} %)`,
+      poco: 'Low free space',
+      casiLleno: 'Almost out of space',
+      liberar: 'Free up space',
+      versiones: 'Clean up unused versions',
+      temporales: 'Clean up WolfCore temporary files and caches',
+      ocupaMas: 'See what takes the most space',
+    },
     alertas: {
       titulo: 'Alerts',
       conflicto: (servicio: string, puerto: number, programa: string, pid: number) =>
@@ -3303,6 +3319,10 @@ export const en: Textos = {
         `System memory is at ${porcentaje} %. Stop what you are not using so everything responds better.`,
       huerfano: (pid: number, puertos: number[]) =>
         `A php-cgi that does not belong to WolfCore Dev (PID ${pid}) is listening on ${puertos.join(', ')}: it is left over from a previous session.`,
+      grupo: (n: number) => `Problems found (${n})`,
+      verTodos: (n: number) => `Show all ${n}`,
+      verMenos: 'Show less',
+      masAcciones: 'More actions',
       finalizar: 'End process',
       finalizarTitulo: 'End this process?',
       finalizarTexto: (nombre: string, pid: number) =>
@@ -3321,6 +3341,7 @@ export const en: Textos = {
       puerto: 'Port',
       encendido: 'Running',
       acciones: 'Actions',
+      resto: 'Other services',
       detener: 'Stop',
       registros: 'View logs',
       servicio: 'Service',

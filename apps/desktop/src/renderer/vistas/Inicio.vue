@@ -17,7 +17,6 @@ import { useRouter } from 'vue-router';
 import { api } from '../api';
 import AvisoHosts from '../componentes/AvisoHosts.vue';
 import DialogoWorkspace from '../componentes/DialogoWorkspace.vue';
-import EstadoPunto from '../componentes/EstadoPunto.vue';
 import PanelRendimiento from '../componentes/PanelRendimiento.vue';
 import TarjetaWorkspace from '../componentes/TarjetaWorkspace.vue';
 import { useAccion } from '../composables/useAccion';
@@ -25,8 +24,7 @@ import { useFoco } from '../composables/useFoco';
 import { solicitudes } from '../composables/solicitudes';
 import { useNoLeidos } from '../composables/useNoLeidos';
 import { textos } from '../i18n';
-import { nombreServicio } from '../utilidades/nombreServicio';
-import { destinoServicio, destinoTunel } from '../utilidades/foco';
+import { destinoTunel } from '../utilidades/foco';
 import { useHosts } from '../stores/hosts';
 import { useIa } from '../stores/ia';
 import { useServicios } from '../stores/servicios';
@@ -122,10 +120,11 @@ const tiles = computed<Tile[]>(() => [
   {
     clave: 'servicios',
     etiqueta: t.tiles.servicios,
-    valor: servicios.encendidos,
-    detalle: t.tiles.serviciosDe(servicios.lista.length),
+    // La misma cuenta que Servicios y la pastilla de la cabecera.
+    valor: servicios.resumen.encendidos,
+    detalle: t.tiles.serviciosDe(servicios.resumen.total),
     icono: Server,
-    tono: servicios.encendidos > 0 ? 'ok' : 'neutro',
+    tono: servicios.resumen.encendidos > 0 ? 'ok' : 'neutro',
     destino: 'servicios',
   },
   {
@@ -260,29 +259,6 @@ function abrir(url: string): void {
     <DialogoWorkspace v-model:show="dialogoWorkspace" :workspace="enEdicion" />
 
     <div class="columnas">
-      <NCard :title="t.servicios.titulo" size="small" class="tarjeta">
-        <template #header-extra>
-          <NButton text type="primary" @click="router.push({ name: 'servicios' })">
-            {{ t.servicios.ver }}
-          </NButton>
-        </template>
-        <ul v-if="servicios.lista.length" class="lista">
-          <li v-for="s in servicios.lista" :key="s.id" :data-foco="`servicio:${s.id}`">
-            <button
-              type="button"
-              class="nombre enlace"
-              :title="t.servicios.irA(s.nombre)"
-              @click="router.push(destinoServicio(s.id))"
-            >
-              {{ nombreServicio(s.nombre) }}
-            </button>
-            <span class="meta">{{ s.puertos.join(' · ') }}</span>
-            <EstadoPunto :estado="s.estado" />
-          </li>
-        </ul>
-        <p v-else class="vacio">{{ t.servicios.vacio }}</p>
-      </NCard>
-
       <NCard :title="t.tuneles.titulo" size="small" class="tarjeta">
         <ul v-if="listaTuneles.length" class="lista">
           <li v-for="tun in listaTuneles" :key="tun.sitioId" :data-foco="`sitio:${tun.sitioId}`">
@@ -417,8 +393,8 @@ function abrir(url: string): void {
 }
 .columnas {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--wc-esp-4);
 }
 .tarjeta {
   border-radius: 12px;
@@ -480,9 +456,6 @@ function abrir(url: string): void {
 @media (max-width: 1080px) {
   .tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .columnas {
-    grid-template-columns: 1fr;
   }
 }
 </style>

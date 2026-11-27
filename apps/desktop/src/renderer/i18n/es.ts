@@ -3319,6 +3319,22 @@ export const es = {
     graficaRam: (valor: string) => `Gráfica de memoria de los últimos 5 minutos; ahora ${valor}`,
     graficaRed: (bajada: string, subida: string) =>
       `Gráfica de red de los últimos 5 minutos; bajada ${bajada}, subida ${subida}`,
+    insignias: { memoriaAlta: 'Memoria alta' },
+    discos: {
+      titulo: 'Espacio en disco',
+      leyendo: 'Leyendo los discos…',
+      sistema: 'Sistema',
+      datos: 'Datos de WolfCore',
+      ambos: 'Sistema y datos de WolfCore',
+      libre: (unidad: string, libre: string, pct: number) =>
+        `${unidad} · ${libre} libres (${pct} %)`,
+      poco: 'Poco espacio libre',
+      casiLleno: 'Casi sin espacio',
+      liberar: 'Liberar espacio',
+      versiones: 'Limpiar versiones sin uso',
+      temporales: 'Limpiar temporales y cachés de WolfCore',
+      ocupaMas: 'Ver qué ocupa más',
+    },
     alertas: {
       titulo: 'Alertas',
       conflicto: (servicio: string, puerto: number, programa: string, pid: number) =>
@@ -3327,6 +3343,10 @@ export const es = {
         `La memoria del equipo está al ${porcentaje} %. Apague lo que no use para que todo responda mejor.`,
       huerfano: (pid: number, puertos: number[]) =>
         `Hay un php-cgi que no es de WolfCore Dev (PID ${pid}) escuchando en ${puertos.join(', ')}: quedó de una sesión anterior.`,
+      grupo: (n: number) => `Problemas detectados (${n})`,
+      verTodos: (n: number) => `Ver los ${n}`,
+      verMenos: 'Ver menos',
+      masAcciones: 'Más acciones',
       finalizar: 'Finalizar proceso',
       finalizarTitulo: '¿Finalizar este proceso?',
       finalizarTexto: (nombre: string, pid: number) =>
@@ -3345,6 +3365,7 @@ export const es = {
       puerto: 'Puerto',
       encendido: 'Encendido',
       acciones: 'Acciones',
+      resto: 'Resto de servicios',
       detener: 'Detener',
       registros: 'Ver registros',
       servicio: 'Servicio',

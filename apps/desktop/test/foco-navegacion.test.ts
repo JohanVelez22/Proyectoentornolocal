@@ -73,7 +73,9 @@ describe('destinos con foco (D41)', () => {
 
 describe('una prueba por camino de navegación', () => {
   it('panel de inicio → servicio', () => {
-    expect(plano('vistas', 'Inicio.vue')).toContain('router.push(destinoServicio(s.id))');
+    expect(plano('componentes', 'TarjetaServiciosProcesos.vue')).toContain(
+      'router.push(destinoServicio(s.id))',
+    );
   });
 
   it('panel de inicio → proyecto con túnel', () => {
