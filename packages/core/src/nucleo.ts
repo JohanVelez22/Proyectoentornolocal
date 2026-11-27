@@ -156,6 +156,7 @@ import { ErrorWolf } from './errores';
 import { Contenedores } from './contenedores/contenedores';
 import { ServidorMcp, type EstadoMcp, type OperacionesMcp } from './mcp/servidor';
 import { asegurarArchivosDepuracion, rutasDepuracion } from './depuracion/prepend';
+import { asegurarEscuchaLocal } from './proyectos/escuchaLocal';
 import type { OperacionesCli, SolicitudCli } from './cli/ordenes';
 import { ConfirmadorCli } from './cli/confirmador';
 import { ServidorCli } from './cli/servidor';
@@ -1355,7 +1356,20 @@ export class Nucleo {
       plataforma: plat,
       carpetaRespaldos: carpetaRespaldosDoctor(rutas),
     });
+    const puertosHerramienta = new HerramientasPuertos({
+      ejecutar: exec,
+      // Supervisor (servicios y procesos de proyecto): sus hijos también cuentan como propios.
+      pidsPropios: () =>
+        supervisor
+          .ids()
+          .map((id) => supervisor.pid(id))
+          .filter((p): p is number => p !== null),
+      ...(o.pidApp !== undefined ? { pidApp: o.pidApp } : {}),
+      ...(o.pidPadre !== undefined ? { pidPadre: o.pidPadre } : {}),
+    });
     procesos = new ProcesosProyecto({
+      escuchaLocal: () => asegurarEscuchaLocal(rutas),
+      escuchas: (pid) => puertosHerramienta.escuchasTcpDelArbol(pid),
       confianza,
       depuracion: {
         carpetaPython: async () => (await asegurarArchivosDepuracion(rutas)).carpetaPython,
@@ -1784,17 +1798,7 @@ export class Nucleo {
         confianza,
         avisos,
       }),
-      puertos: new HerramientasPuertos({
-        ejecutar: exec,
-        // Supervisor (servicios y procesos de proyecto): sus hijos también cuentan como propios.
-        pidsPropios: () =>
-          supervisor
-            .ids()
-            .map((id) => supervisor.pid(id))
-            .filter((p): p is number => p !== null),
-        ...(o.pidApp !== undefined ? { pidApp: o.pidApp } : {}),
-        ...(o.pidPadre !== undefined ? { pidPadre: o.pidPadre } : {}),
-      }),
+      puertos: puertosHerramienta,
       catalogoVivo: (catalogoRef = new CatalogoVivo(rutas, plat, o.fetch ?? fetch)),
       contenedores: new Contenedores({
         exec,

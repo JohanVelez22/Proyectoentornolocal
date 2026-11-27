@@ -16,10 +16,18 @@ import {
   type ProcesoProyecto,
   type Sitio,
 } from '../tipos';
+import type { FilaNetstat } from '../plataforma/netstat';
 import type { Lanzador } from '../plataforma/tipos';
 import { validarComandoTarea } from '../tareas/comando';
 import { existe } from './archivos';
-import { entornoProyecto, resolverPrograma, usaPhp, type DepsEntorno } from './pasos/comun';
+import {
+  entornoProyecto,
+  nombrePrograma,
+  resolverPrograma,
+  usaPhp,
+  type DepsEntorno,
+} from './pasos/comun';
+import { nodeOptionsConEscuchaLocal } from './escuchaLocal';
 import { MENSAJE_NO_CONFIADO, sanear } from './recetas';
 
 /**
@@ -81,7 +89,25 @@ export interface DepsProcesosProyecto extends DepsEntorno {
    * con `capturaDumps` la reciben en su PYTHONPATH.
    */
   depuracion?: { carpetaPython(): Promise<string> };
+  /**
+   * Ruta de la precarga de Node que fuerza `127.0.0.1` (`escucha-local.cjs`, ya escrita). Con
+   * ella, los procesos de `node`, `npm` y `npx` que tienen puerto la reciben en `NODE_OPTIONS`.
+   */
+  escuchaLocal?: () => Promise<string>;
+  /**
+   * Escuchas TCP del proceso `pid` y de su árbol (`HerramientasPuertos.escuchasTcpDelArbol`).
+   * Con ella, los procesos de Rails, Spring Boot, ASP.NET Core y Node que son destino del proxy
+   * se vigilan: si escuchan fuera de 127.0.0.1 y ::1 se detienen.
+   */
+  escuchas?: (pid: number) => Promise<FilaNetstat[]>;
+  /** Cada cuánto y cuántas veces se mira (por omisión cada 1 s, 120 veces; pruebas). */
+  vigilancia?: { intervaloMs?: number; intentos?: number };
 }
+
+/** Tipos de sitio cuyo proceso destino del proxy debe escuchar solo en local. */
+const TIPOS_VIGILADOS: readonly string[] = ['rails', 'springboot', 'aspnet', 'node'];
+/** Direcciones donde se permite escuchar (netstat las da sin corchetes). */
+const DIRECCIONES_LOCALES = new Set(['127.0.0.1', '::1']);
 
 export interface EstadoProcesoProyecto {
   sitioId: string;
@@ -186,7 +212,71 @@ export class ProcesosProyecto {
     } catch (e) {
       // Detenido mientras arrancaba: es una parada normal, no un error.
       if (!(e instanceof ErrorDetenidoAlIniciar)) throw e;
+      return;
     }
+    if (
+      this.d.escuchas &&
+      TIPOS_VIGILADOS.includes(sitio.tipo) &&
+      proceso.proxy &&
+      proceso.puerto !== null
+    ) {
+      void this.vigilarEscucha(id, gen, sitio, proceso, proceso.puerto);
+    }
+  }
+
+  /**
+   * Cuando el puerto del proceso ya escucha, revisa todas las escuchas TCP de su árbol. Una que no
+   * sea 127.0.0.1 ni ::1 (el framework ignoró `--urls`, `HOST` o la precarga) detiene el proceso,
+   * por su PID y su árbol, y deja el aviso `procesos.escucha_publica`. Nunca lanza.
+   */
+  private async vigilarEscucha(
+    id: string,
+    gen: number,
+    sitio: Sitio,
+    proceso: ProcesoProyecto,
+    puerto: number,
+  ): Promise<void> {
+    const { intervaloMs = 1000, intentos = 120 } = this.d.vigilancia ?? {};
+    const sup = this.d.supervisor;
+    try {
+      for (let i = 0; i < intentos; i++) {
+        await new Promise((r) => setTimeout(r, intervaloMs));
+        if ((this.generacion.get(id) ?? 0) !== gen) return;
+        const estado = sup.estado(id);
+        if (estado === 'apagado' || estado === 'error') return;
+        const pid = sup.pid(id);
+        if (pid === null) continue;
+        let filas: FilaNetstat[];
+        try {
+          filas = await this.d.escuchas!(pid);
+        } catch {
+          continue;
+        }
+        if (!filas.some((f) => f.puerto === puerto)) continue;
+        const publica = filas.find((f) => !DIRECCIONES_LOCALES.has(f.direccion));
+        if (publica) await this.cortarPorEscucha(id, sitio, proceso, publica);
+        return;
+      }
+    } catch (e) {
+      console.error('No se pudo vigilar la escucha del proceso:', mensajeDe(e));
+    }
+  }
+
+  private async cortarPorEscucha(
+    id: string,
+    sitio: Sitio,
+    proceso: ProcesoProyecto,
+    f: FilaNetstat,
+  ): Promise<void> {
+    const err = new ErrorWolf(
+      'procesos.escucha_publica',
+      `${nombreProceso(proceso)} escuchaba en ${f.direccion}:${f.puerto}, abierto a la red; se detuvo. Solo puede escuchar en 127.0.0.1.`,
+      { direccion: f.direccion, puerto: f.puerto },
+    );
+    await this.detenerId(id);
+    this.fallos.set(id, err.message);
+    await this.escribirLog(this.rutaLog(sitio.id, proceso.id), [err.message]);
+    this.d.eventos?.emit('proceso:terminado', { id, sitioId: sitio.id, codigo: null });
   }
 
   async detener(sitioId: string, procesoId: string): Promise<void> {
@@ -423,6 +513,21 @@ export class ProcesosProyecto {
           .filter((x): x is string => !!x)
           .join(path.delimiter);
         cambios['WOLFCORE_SITIO'] = sitio.id;
+      }
+    }
+    // Los servidores de Node (Express, Nest) ignoran HOST: una precarga propia fuerza 127.0.0.1.
+    if (
+      p.puerto !== null &&
+      this.d.escuchaLocal &&
+      ['node', 'npm', 'npx'].includes(nombrePrograma(p.comando[0]!))
+    ) {
+      try {
+        const ruta = await this.d.escuchaLocal();
+        const previo = cambios.NODE_OPTIONS ?? (this.d.entorno ?? process.env).NODE_OPTIONS;
+        cambios.NODE_OPTIONS = nodeOptionsConEscuchaLocal(previo, ruta);
+      } catch (e) {
+        // Sin la precarga, la vigilancia de escuchas sigue protegiendo.
+        console.error('No se pudo preparar la precarga de escucha local:', mensajeDe(e));
       }
     }
     const avisos = entorno.avisos.map((a) => sanear(a));

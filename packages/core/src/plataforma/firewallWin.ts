@@ -61,6 +61,11 @@ export const PROGRAMAS_VIGILADOS = [
   'mailpit',
   'meilisearch',
   'inbucket',
+  // Runtimes de los proyectos (Express, Spring Boot, ASP.NET Core, Rails): D47.
+  'node',
+  'java',
+  'dotnet',
+  'ruby',
 ] as const;
 
 /**

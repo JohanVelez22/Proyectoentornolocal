@@ -1,4 +1,8 @@
-import { interpretarNetstatTodos, type ProtocoloPuerto } from '../plataforma/netstat';
+import {
+  interpretarNetstatTodos,
+  type FilaNetstat,
+  type ProtocoloPuerto,
+} from '../plataforma/netstat';
 import { ErrorWolf } from '../errores';
 export { interpretarTablaProcesos, type ProcesoTabla } from '../plataforma/procesosWin';
 import { hijosPorPadre, ProcesosWindows, type ProcesoTabla } from '../plataforma/procesosWin';
@@ -107,7 +111,12 @@ export class HerramientasPuertos {
    * eso solo lo vuelve más difícil de finalizar, nunca más fácil.
    */
   private propios(tabla: Map<number, ProcesoTabla> | null): Set<number> {
-    const res = new Set<number>([this.pidApp, ...(this.d.pidsPropios?.() ?? [])]);
+    return this.conDescendientes([this.pidApp, ...(this.d.pidsPropios?.() ?? [])], tabla);
+  }
+
+  /** Los PIDs dados y todos sus descendientes según la tabla (solo ellos si no hay tabla). */
+  private conDescendientes(raices: number[], tabla: Map<number, ProcesoTabla> | null): Set<number> {
+    const res = new Set<number>(raices);
     if (!tabla) return res;
     const hijos = hijosPorPadre(tabla);
     const pendientes = [...res];
@@ -120,6 +129,16 @@ export class HerramientasPuertos {
       }
     }
     return res;
+  }
+
+  /**
+   * Escuchas TCP del proceso `pid` y de todo su árbol (los hijos que lanzó: `npm` → `node`,
+   * `mvn` → `java`). Sin la tabla de procesos no se pueden saber los hijos y solo cuenta `pid`.
+   */
+  async escuchasTcpDelArbol(pid: number): Promise<FilaNetstat[]> {
+    const filas = interpretarNetstatTodos(await this.sistema.netstat());
+    const arbol = this.conDescendientes([pid], await this.tablaProcesos());
+    return filas.filter((f) => f.protocolo === 'TCP' && arbol.has(f.pid));
   }
 
   async puertosEnUso(): Promise<PuertoEnUso[]> {

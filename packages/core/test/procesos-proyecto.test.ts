@@ -99,6 +99,8 @@ interface OpcionesArmado {
   depuracion?: DepsProcesosProyecto['depuracion'];
   entorno?: NodeJS.ProcessEnv;
   eventos?: Eventos<EventosNucleo>;
+  /** Dependencias extra (escuchas, precarga de Node, vigilancia). */
+  extra?: Partial<DepsProcesosProyecto>;
 }
 
 async function armar(o: OpcionesArmado = {}): Promise<Armado> {
@@ -146,6 +148,7 @@ async function armar(o: OpcionesArmado = {}): Promise<Armado> {
     ...(o.eventos ? { eventos: o.eventos } : {}),
     ...(o.confianza ? { confianza: o.confianza } : {}),
     ...(o.depuracion ? { depuracion: o.depuracion } : {}),
+    ...(o.extra ?? {}),
   });
   return { base, carpeta, rutas, sitios, sup, procesos, nodeDir, pythonDir, phpExe, phpIni };
 }
@@ -813,5 +816,127 @@ describe('D11: proceso de un proyecto Deno con su runtime', () => {
     expect(def.env?.KOTLIN_HOME).toBe(kotlin);
     expect(def.env?.JAVA_HOME).toBe(java);
     expect(pathDe(def).slice(0, 2)).toEqual([join(java, 'bin'), join(kotlin, 'bin')]);
+  });
+});
+
+/* ───────────── D47: escucha solo en local ───────────── */
+
+describe('D47: precarga de Node y vigilancia de las escuchas', () => {
+  const fila = (direccion: string, puerto: number, pid = 4242) => ({
+    protocolo: 'TCP' as const,
+    direccion,
+    puerto,
+    pid,
+  });
+  const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const vigilado = (puerto = 8123) =>
+    proceso({ id: 'servidor', puerto, proxy: true, comando: ['npm', 'run', 'start'] });
+
+  it('npm con puerto recibe NODE_OPTIONS con la precarga, sumada a la del usuario', async () => {
+    const a = await armar({
+      procesos: [vigilado()],
+      entorno: { Path: 'C:/Windows', NODE_OPTIONS: '--max-old-space-size=512' },
+      extra: { escuchaLocal: async () => 'C:/datos con espacio/escucha-local.cjs' },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    expect(a.sup.iniciados[0]!.env?.NODE_OPTIONS).toBe(
+      '--max-old-space-size=512 --require "C:/datos con espacio/escucha-local.cjs"',
+    );
+  });
+
+  it('un proceso que no es de Node, o sin puerto, no recibe la precarga', async () => {
+    const a = await armar({
+      procesos: [
+        proceso({ id: 'rails', puerto: 8124, comando: ['python', '-m', 'http.server'] }),
+        proceso({ id: 'cola', comando: ['npm', 'run', 'queue'] }),
+      ],
+      extra: { escuchaLocal: async () => 'C:/p.cjs' },
+    });
+    await a.procesos.iniciar('demo', 'rails');
+    await a.procesos.iniciar('demo', 'cola');
+    expect(a.sup.iniciados.every((d) => d.env?.NODE_OPTIONS === undefined)).toBe(true);
+  });
+
+  it('una escucha en 0.0.0.0 detiene el proceso por su id y deja el aviso con la dirección', async () => {
+    const eventos = new Eventos<EventosNucleo>();
+    const terminados: string[] = [];
+    eventos.on('proceso:terminado', (e) => terminados.push(e.id));
+    const a = await armar({
+      sitio: { tipo: 'rails' },
+      procesos: [vigilado()],
+      eventos,
+      extra: {
+        escuchas: async () => [fila('127.0.0.1', 9229), fila('0.0.0.0', 8123)],
+        vigilancia: { intervaloMs: 1, intentos: 50 },
+      },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(60);
+    expect(a.sup.detenidos).toEqual(['proy-demo-servidor']);
+    const [e] = await a.procesos.estados('demo');
+    expect(e!.estado).toBe('error');
+    expect(e!.mensaje).toMatch(/0\.0\.0\.0:8123/);
+    expect(terminados).toEqual(['proy-demo-servidor']);
+  });
+
+  it('también corta una escucha en :: ; una en 127.0.0.1 o ::1 sigue', async () => {
+    for (const [dir, corta] of [
+      ['::', true],
+      ['127.0.0.1', false],
+      ['::1', false],
+    ] as const) {
+      const a = await armar({
+        sitio: { tipo: 'springboot' },
+        procesos: [vigilado()],
+        extra: {
+          escuchas: async () => [fila(dir, 8123)],
+          vigilancia: { intervaloMs: 1, intentos: 50 },
+        },
+      });
+      await a.procesos.iniciar('demo', 'servidor');
+      await esperar(40);
+      expect(a.sup.detenidos.length > 0).toBe(corta);
+    }
+  });
+
+  it('sin el puerto escuchando todavía no decide; no vigila procesos que no son destino del proxy', async () => {
+    let llamadas = 0;
+    const a = await armar({
+      sitio: { tipo: 'aspnet' },
+      procesos: [vigilado(), proceso({ id: 'otro', puerto: 8200, proxy: false })],
+      extra: {
+        escuchas: async () => {
+          llamadas++;
+          return [fila('0.0.0.0', 9999)];
+        },
+        vigilancia: { intervaloMs: 1, intentos: 20 },
+      },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(40);
+    expect(a.sup.detenidos).toEqual([]);
+    expect(llamadas).toBeGreaterThan(0);
+    const antes = llamadas;
+    await a.procesos.iniciar('demo', 'otro');
+    await esperar(20);
+    expect(llamadas - antes).toBeLessThan(25); // solo el primero sigue mirando
+  });
+
+  it('un sitio de otro tipo (Laravel, estático…) no se vigila', async () => {
+    let llamadas = 0;
+    const a = await armar({
+      sitio: { tipo: 'laravel', php: '8.4' },
+      procesos: [vigilado()],
+      extra: {
+        escuchas: async () => {
+          llamadas++;
+          return [fila('0.0.0.0', 8123)];
+        },
+        vigilancia: { intervaloMs: 1, intentos: 20 },
+      },
+    });
+    await a.procesos.iniciar('demo', 'servidor');
+    await esperar(30);
+    expect(llamadas).toBe(0);
   });
 });
