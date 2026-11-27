@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   Compartir,
   MAX_ACCESOS,
+  MAX_ACCESOS_POR_SEGUNDO,
+  REVISION_MS,
   type DepsCompartir,
   type EstadoCompartir,
   type TunelAbierto,
@@ -30,6 +32,7 @@ let plazos: Array<{ fn: () => void; ms: number; cancelado: boolean }>;
 let fallaTunel: Error | null;
 let sitios: { carpeta: string; datosReales: boolean }[];
 let c: Compartir;
+let reloj: number;
 
 const SI = true;
 const DEPS = (): DepsCompartir => ({
@@ -50,7 +53,7 @@ const DEPS = (): DepsCompartir => ({
   sitios: async () => sitios,
   alEstado: (e) => estados.push(e),
   alAcceso: (a) => accesos.push(a),
-  ahora: () => 1_000_000,
+  ahora: () => reloj,
   programar: (fn, ms) => {
     const p = { fn, ms, cancelado: false };
     plazos.push(p);
@@ -94,6 +97,7 @@ beforeEach(() => {
   compartido = path.join(inicio, 'Descargas');
   for (const d of [datos, sistema, compartido]) mkdirSync(d, { recursive: true });
   writeFileSync(path.join(compartido, 'foto.txt'), 'contenido');
+  reloj = 1_000_000;
   estados = [];
   accesos = [];
   tuneles = [];
@@ -158,7 +162,8 @@ describe('ciclo de vida', () => {
     expect(e.fase).toBe('activa');
     expect(e.url).toMatch(/^https:\/\/falso-simulado\.trycloudflare\.com\/[A-Za-z0-9_-]{22}\/$/);
     expect(e.expira).toBe(1_000_000 + 60 * 60_000);
-    expect(plazos[0]!.ms).toBe(3_600_000);
+    // El vencimiento se revisa por el reloj, cada 15 s (un temporizador largo no cuenta lo suspendido).
+    expect(plazos[0]!.ms).toBe(REVISION_MS);
     expect(estados.map((x) => x.fase)).toEqual(['iniciando', 'activa']);
     const r = await pedir(e.url!);
     expect(r.codigo).toBe(200);
@@ -211,7 +216,8 @@ describe('ciclo de vida', () => {
   it('al vencer se cierran el servidor y el túnel', async () => {
     await iniciar();
     const puerto = tuneles[0]!.puerto;
-    plazos[0]!.fn();
+    reloj += 60 * 60_000;
+    plazos.at(-1)!.fn();
     await new Promise((r) => setTimeout(r, 50));
     expect(c.estado().fase).toBe('inactiva');
     expect(c.estado().fin).toBe('vencio');
@@ -283,11 +289,49 @@ describe('ciclo de vida', () => {
   });
 });
 
+describe('vencimiento por el reloj', () => {
+  it('antes de vencer, el temporizador solo se reprograma', async () => {
+    await iniciar();
+    reloj += 10 * 60_000;
+    plazos.at(-1)!.fn();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(c.estado().fase).toBe('activa');
+    expect(plazos.length).toBe(2);
+    expect(plazos[0]!.cancelado).toBe(false);
+  });
+
+  it('tras suspender el equipo (el temporizador no corrió), el servidor ya no responde', async () => {
+    const e = await iniciar();
+    const r1 = await pedir(e.url!);
+    expect(r1.codigo).toBe(200);
+    reloj += 61 * 60_000; // pasó la hora y el temporizador no se enteró
+    const r2 = await pedir(e.url!);
+    expect(r2.codigo).toBe(404);
+    // y en cuanto el temporizador corre, se cierra todo
+    plazos.at(-1)!.fn();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(c.estado().fin).toBe('vencio');
+  });
+});
+
 describe('registro de accesos', () => {
+  it('una avalancha de peticiones no inunda el registro', async () => {
+    const e = await iniciar();
+    for (let i = 0; i < MAX_ACCESOS_POR_SEGUNDO + 30; i++) await pedir(`${e.url}x${i}`);
+    expect(c.accesos()).toHaveLength(MAX_ACCESOS_POR_SEGUNDO);
+    expect(accesos).toHaveLength(MAX_ACCESOS_POR_SEGUNDO);
+    reloj += 1500;
+    await pedir(e.url!);
+    expect(c.accesos()).toHaveLength(MAX_ACCESOS_POR_SEGUNDO + 1);
+  });
+
   it('guarda un tope y nunca muestra el token', async () => {
     const e = await iniciar();
     const token = new URL(e.url!).pathname.split('/')[1]!;
-    for (let i = 0; i < MAX_ACCESOS + 25; i++) await pedir(`${e.url}n${i}.txt`);
+    for (let i = 0; i < MAX_ACCESOS + 25; i++) {
+      reloj += 100;
+      await pedir(`${e.url}n${i}.txt`);
+    }
     expect(c.accesos()).toHaveLength(MAX_ACCESOS);
     expect(JSON.stringify(c.accesos())).not.toContain(token);
     expect(accesos.length).toBe(MAX_ACCESOS + 25);

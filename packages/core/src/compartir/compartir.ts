@@ -29,6 +29,10 @@ export type DuracionCompartir = (typeof DURACIONES_MIN)[number];
 export const PROVEEDORES_COMPARTIR = ['cloudflare-rapido', 'ngrok'] as const;
 export type ProveedorCompartir = (typeof PROVEEDORES_COMPARTIR)[number];
 export const MAX_ACCESOS = 200;
+/** Cada cuánto se revisa el vencimiento por la hora del reloj (un temporizador no cuenta lo suspendido). */
+export const REVISION_MS = 15_000;
+/** Tope de accesos anotados por segundo: una avalancha de peticiones no inunda el registro ni la ventana. */
+export const MAX_ACCESOS_POR_SEGUNDO = 50;
 
 export type FinCompartir = 'usuario' | 'vencio' | 'tunel' | 'cierre';
 
@@ -102,6 +106,7 @@ export class Compartir {
   private cancelarPlazo: (() => void) | null = null;
   /** Se incrementa en cada inicio y cada parada: invalida un inicio que sigue en curso. */
   private generacion = 0;
+  private ventanaAccesos = { desde: 0, n: 0 };
 
   constructor(private readonly d: DepsCompartir) {}
 
@@ -142,6 +147,7 @@ export class Compartir {
     }
     const gen = ++this.generacion;
     this.accesosRecientes = [];
+    this.ventanaAccesos = { desde: 0, n: 0 };
     this.fijar({ ...INACTIVA, fase: 'iniciando', ruta: o.ruta, proveedor, duracionMin });
     let servidor: ServidorCompartir | null = null;
     let tunel: TunelAbierto | null = null;
@@ -155,6 +161,7 @@ export class Compartir {
         token,
         detector,
         alAcceso: (a) => this.anotar(gen, a),
+        ahora: () => this.ahora(),
       });
       if (gen !== this.generacion) {
         await servidor.cerrar();
@@ -168,15 +175,15 @@ export class Compartir {
         await servidor.cerrar();
         return this.estado();
       }
-      const ahora = (this.d.ahora ?? Date.now)();
+      const ahora = this.ahora();
       const ms = duracionMin * 60_000;
+      const expira = ahora + ms;
       const base = tunel.url.replace(/\/+$/, '');
       const sufijo = tipo === 'archivo' ? encodeURIComponent(path.basename(real)) : '';
       this.servidor = servidor;
       this.tunel = tunel;
-      this.cancelarPlazo = (this.d.programar ?? programarPorDefecto)(() => {
-        if (gen === this.generacion) void this.parar('vencio');
-      }, ms);
+      servidor.fijarExpira(expira);
+      this.vigilar(gen, expira);
       this.fijar({
         fase: 'activa',
         ruta: o.ruta,
@@ -184,7 +191,7 @@ export class Compartir {
         proveedor,
         duracionMin,
         url: `${base}/${token}/${sufijo}`,
-        expira: ahora + ms,
+        expira,
         fin: null,
       });
       return this.estado();
@@ -194,6 +201,23 @@ export class Compartir {
       if (gen === this.generacion) this.fijar({ ...INACTIVA });
       throw e;
     }
+  }
+
+  private ahora(): number {
+    return (this.d.ahora ?? Date.now)();
+  }
+
+  /**
+   * Vigila el vencimiento por la hora del reloj, cada pocos segundos: un temporizador largo no cuenta
+   * el tiempo con el equipo suspendido y la compartición viviría de más.
+   */
+  private vigilar(gen: number, expira: number): void {
+    const espera = Math.max(1, Math.min(REVISION_MS, expira - this.ahora()));
+    this.cancelarPlazo = (this.d.programar ?? programarPorDefecto)(() => {
+      if (gen !== this.generacion) return;
+      if (this.ahora() >= expira) void this.parar('vencio');
+      else this.vigilar(gen, expira);
+    }, espera);
   }
 
   /** «Dejar de compartir»: cierra el túnel y el servidor. Sin nada compartido, no hace nada. */
@@ -223,6 +247,10 @@ export class Compartir {
 
   private anotar(gen: number, a: AccesoCompartido): void {
     if (gen !== this.generacion) return;
+    // Tope por segundo: una avalancha de peticiones (con o sin el token) no inunda el registro.
+    const v = this.ventanaAccesos;
+    if (a.hora - v.desde >= 1000 || a.hora < v.desde) this.ventanaAccesos = { desde: a.hora, n: 0 };
+    if (++this.ventanaAccesos.n > MAX_ACCESOS_POR_SEGUNDO) return;
     this.accesosRecientes.push(a);
     if (this.accesosRecientes.length > MAX_ACCESOS) {
       this.accesosRecientes.splice(0, this.accesosRecientes.length - MAX_ACCESOS);

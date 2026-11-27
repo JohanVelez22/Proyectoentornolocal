@@ -59,6 +59,11 @@ export interface OpcionesServidor {
   alAcceso: (a: AccesoCompartido) => void;
   maxConexiones?: number;
   ahora?: () => number;
+  /**
+   * Momento (ms desde 1970) a partir del cual todo da 404, aunque el temporizador de quien lo creó
+   * no haya corrido (p. ej. tras suspender el equipo).
+   */
+  expira?: number;
 }
 
 const CABECERAS_COMUNES: Record<string, string> = {
@@ -130,6 +135,7 @@ export class ServidorCompartir {
       };
       const noEncontrado = (ruta: string | null) => vacia(404, ruta);
 
+      if (o.expira !== undefined && ahora() >= o.expira) return noEncontrado(null);
       const url = req.url ?? '';
       const q = url.indexOf('?');
       const camino = q >= 0 ? url.slice(0, q) : url;
@@ -249,7 +255,10 @@ export class ServidorCompartir {
       } catch {
         return null;
       }
-      if (info.isDirectory()) return { tipo: 'carpeta', real, relativa: tramos };
+      if (info.isDirectory()) {
+        // Una carpeta de un sitio con datos reales (o con nombre de secreto) tampoco se abre.
+        return o.detector.porRuta(real, 0) ? null : { tipo: 'carpeta', real, relativa: tramos };
+      }
       if (info.isFile()) return { tipo: 'archivo', real, relativa: tramos };
       return null;
     }
@@ -281,6 +290,7 @@ export class ServidorCompartir {
         const info = await lstat(real).catch(() => null);
         if (!info) continue;
         if (info.isDirectory()) {
+          if (o.detector.porRuta(abs, 0) || o.detector.porRuta(real, 0)) continue;
           entradas.push({ nombre, carpeta: true, bytes: null });
         } else if (info.isFile()) {
           if (o.detector.porRuta(abs, info.nlink) || o.detector.porRuta(real, info.nlink)) continue;
@@ -331,6 +341,11 @@ export class ServidorCompartir {
       });
     });
     return new ServidorCompartir(o, servidor, (servidor.address() as AddressInfo).port);
+  }
+
+  /** Fija el vencimiento (ms desde 1970): desde ahí, todo da 404. */
+  fijarExpira(expira: number): void {
+    this.o.expira = expira;
   }
 
   /** Cierra el servidor y corta toda conexión, incluso una descarga en curso. */

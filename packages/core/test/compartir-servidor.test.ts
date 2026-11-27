@@ -326,6 +326,36 @@ describe('cabeceras', () => {
   });
 });
 
+describe('vencimiento', () => {
+  it('pasado el vencimiento todo da 404 y se puede fijar después de iniciar', async () => {
+    let ahora = 1000;
+    const s = await ServidorCompartir.iniciar({
+      raiz,
+      tipo: 'carpeta',
+      token: TOKEN,
+      detector: crearDetectorSensible([]),
+      alAcceso: (a) => accesos.push(a),
+      ahora: () => ahora,
+    });
+    servidores.push(s);
+    expect((await pedir(s.puerto, `/${TOKEN}/a.txt`)).codigo).toBe(200);
+    s.fijarExpira(2000);
+    expect((await pedir(s.puerto, `/${TOKEN}/a.txt`)).codigo).toBe(200);
+    ahora = 2000;
+    expect((await pedir(s.puerto, `/${TOKEN}/a.txt`)).codigo).toBe(404);
+    expect((await pedir(s.puerto, `/${TOKEN}/`)).codigo).toBe(404);
+  });
+});
+
+describe('carpetas de un sitio con datos reales dentro de lo compartido', () => {
+  it('ni se listan ni se abren', async () => {
+    const sitio = path.join(raiz, 'sub');
+    const s = await iniciar({ sitios: [{ carpeta: sitio, datosReales: true }] });
+    expect((await pedir(s.puerto, `/${TOKEN}/`)).cuerpo.toString()).not.toContain('href="sub/"');
+    expect((await pedir(s.puerto, `/${TOKEN}/sub/`)).codigo).toBe(404);
+  });
+});
+
 describe('un solo archivo', () => {
   it('se sirve por su nombre y nada más', async () => {
     const s = await iniciar({ raiz: path.join(raiz, 'a.txt'), tipo: 'archivo' });
