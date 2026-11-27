@@ -12,6 +12,17 @@ const comunes = {
   borderRadiusSmall: '6px',
 };
 
+/**
+ * Objetivos de clic (D54a, I9): cerrar de 32 px, interruptor de 24 px de alto. Los botones de
+ * solo icono y las casillas se resuelven en `estilos.css`.
+ */
+const objetivosDeClic = {
+  Drawer: { closeSize: '32px', closeIconSize: '18px' },
+  Dialog: { closeSize: '32px', closeIconSize: '18px' },
+  Card: { closeSize: '32px', closeIconSize: '18px' },
+  Switch: { railHeightMedium: '24px', railWidthMedium: '44px' },
+} as const;
+
 /** Acentos que se ofrecen en Ajustes; `null` en la configuración es el índigo de siempre. */
 export const ACENTOS = [
   { id: 'indigo', claro: '#4f5bd5', oscuro: '#8b93ff' },
@@ -119,7 +130,10 @@ export function temaDe(oscuro: boolean, acento: string | null): GlobalThemeOverr
       },
       Empty: { textColor: 'rgba(255, 255, 255, 0.66)' },
       Layout: { siderColor: '#17181d', headerColor: '#121317', color: '#121317' },
-      Card: { color: '#1a1b21', borderColor: '#2a2c34' },
+      Card: { ...objetivosDeClic.Card, color: '#1a1b21', borderColor: '#2a2c34' },
+      Drawer: objetivosDeClic.Drawer,
+      Dialog: objetivosDeClic.Dialog,
+      Switch: objetivosDeClic.Switch,
     };
   }
   return {
@@ -158,7 +172,10 @@ export function temaDe(oscuro: boolean, acento: string | null): GlobalThemeOverr
     },
     Empty: { textColor: '#59606a' },
     Layout: { siderColor: '#fbfbfc', headerColor: '#f5f6f8', color: '#f5f6f8' },
-    Card: { borderColor: '#e6e8ec' },
+    Card: { ...objetivosDeClic.Card, borderColor: '#e6e8ec' },
+    Drawer: objetivosDeClic.Drawer,
+    Dialog: objetivosDeClic.Dialog,
+    Switch: objetivosDeClic.Switch,
   };
 }
 
