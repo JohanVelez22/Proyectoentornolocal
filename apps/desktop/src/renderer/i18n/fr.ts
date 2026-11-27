@@ -6761,7 +6761,7 @@ export const fr: Textos = {
       sitio_repetido: 'Le site est répété dans le profil.',
       no_disponible: "Cette version n'est plus dans le catalogue.",
       version_sustituida:
-        "Cette version n'est plus dans le catalogue : la dernière de sa branche a été installée.",
+        "Cette version n'est plus dans le catalogue : la plus récente de la même version mineure (par exemple 8.3) a été installée.",
       huella_debil:
         "Cette version n'a pas d'empreinte forte : installez-la à la main depuis Versions.",
       tope_descargas:

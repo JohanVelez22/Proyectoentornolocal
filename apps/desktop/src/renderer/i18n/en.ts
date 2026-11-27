@@ -6551,7 +6551,7 @@ export const en: Textos = {
       sitio_repetido: 'The site is repeated in the profile.',
       no_disponible: 'That version is no longer in the catalog.',
       version_sustituida:
-        'That version is no longer in the catalog: the latest of its branch was installed.',
+        'That version is no longer in the catalog: the newest one of the same minor version (for example, 8.3) was installed.',
       huella_debil: 'That version has no strong checksum: install it by hand from Versions.',
       tope_descargas:
         'Not downloaded to avoid too many downloads at once: install it from Versions.',
