@@ -4480,7 +4480,7 @@ export const ru: TextosParciales = {
       de: 'Deutsch',
       it: 'Italiano',
       ru: 'Русский',
-      zh: '中文 简体',
+      zh: '简体中文',
       ja: '日本語',
       ko: '한국어',
       hi: 'हिन्दी',
