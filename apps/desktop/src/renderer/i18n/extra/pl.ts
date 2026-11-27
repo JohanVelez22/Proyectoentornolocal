@@ -17,11 +17,11 @@ export const plExtra: TextosParciales = {
     lema: 'Lokalne środowisko, gotowe do pracy',
   },
   resumenGlobal: {
-    cortoApagado: 'Wszystko wyłączone',
+    cortoApagado: 'Wszystko wył.',
     cortoEncendidos: (n: number) => `${n} uruchomione`,
     cortoErrores: (n: number) => plural(n, 'z błędem', 'z błędami', 'z błędami'),
     cortoCargando: 'Łączenie…',
-    cortoSinConexion: 'Brak połączenia',
+    cortoSinConexion: 'Brak łączności',
     irAServicios: 'Otwórz Usługi',
   },
   acciones: {

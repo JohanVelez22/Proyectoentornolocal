@@ -15,7 +15,7 @@ export const itExtra: TextosParciales = {
     cortoApagado: 'Tutto spento',
     cortoEncendidos: (n) => `${n} attivi`,
     cortoErrores: (n) => plural(n, 'con errore', 'con errori'),
-    cortoCargando: 'Connessione in corso…',
+    cortoCargando: 'Connessione…',
     cortoSinConexion: 'Offline',
     irAServicios: 'Apri Servizi',
   },

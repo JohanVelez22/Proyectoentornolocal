@@ -1581,7 +1581,7 @@ export const ruExtra: TextosParciales = {
   },
   asistenteInicio: {
     titulo: 'Приветственный тур',
-    saltar: 'Пропустить',
+    saltar: 'Пропуск',
     terminar: 'Начать работу',
     cerrar: 'Закрыть тур',
     reabrir:

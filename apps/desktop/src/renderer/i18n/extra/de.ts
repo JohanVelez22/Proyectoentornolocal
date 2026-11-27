@@ -16,7 +16,7 @@ export const deExtra: TextosParciales = {
     cortoApagado: 'Alles aus',
     cortoEncendidos: (n) => `${n} aktiv`,
     cortoErrores: (n) => plural(n, 'mit Fehler', 'mit Fehlern'),
-    cortoCargando: 'Verbindung wird hergestellt…',
+    cortoCargando: 'Verbinde…',
     cortoSinConexion: 'Offline',
     irAServicios: 'Dienste öffnen',
   },
@@ -1611,7 +1611,7 @@ export const deExtra: TextosParciales = {
   },
   asistenteInicio: {
     titulo: 'Willkommensrundgang',
-    saltar: 'Überspringen',
+    saltar: 'Später',
     terminar: 'Los geht’s',
     cerrar: 'Rundgang schließen',
     reabrir:

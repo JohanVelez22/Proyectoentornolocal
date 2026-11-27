@@ -12,7 +12,7 @@ export const idExtra: TextosParciales = {
   resumenGlobal: {
     cortoApagado: 'Semua mati',
     cortoEncendidos: (n) => `${n} berjalan`,
-    cortoErrores: (n) => plural(n, 'dengan kesalahan'),
+    cortoErrores: (n) => plural(n, 'bermasalah'),
     cortoCargando: 'Menyambung…',
     cortoSinConexion: 'Luring',
     irAServicios: 'Buka Layanan',

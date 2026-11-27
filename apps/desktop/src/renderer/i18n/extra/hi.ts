@@ -12,8 +12,8 @@ export const hiExtra: TextosParciales = {
   resumenGlobal: {
     cortoApagado: 'सब बंद',
     cortoEncendidos: (n) => `${n} चालू`,
-    cortoErrores: (n) => plural(n, 'त्रुटि के साथ', 'त्रुटियों के साथ'),
-    cortoCargando: 'कनेक्ट हो रहा है…',
+    cortoErrores: (n) => plural(n, 'में त्रुटि', 'में त्रुटि'),
+    cortoCargando: 'जुड़ रहा…',
     cortoSinConexion: 'ऑफ़लाइन',
     irAServicios: 'सेवाएँ खोलें',
   },

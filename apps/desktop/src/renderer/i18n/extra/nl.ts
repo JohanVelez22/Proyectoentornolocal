@@ -16,7 +16,7 @@ export const nlExtra: TextosParciales = {
     cortoApagado: 'Alles uit',
     cortoEncendidos: (n) => `${n} actief`,
     cortoErrores: (n) => plural(n, 'met fout', 'met fouten'),
-    cortoCargando: 'Verbinding maken…',
+    cortoCargando: 'Verbinden…',
     cortoSinConexion: 'Offline',
     irAServicios: 'Diensten openen',
   },
@@ -1597,7 +1597,7 @@ export const nlExtra: TextosParciales = {
   },
   asistenteInicio: {
     titulo: 'Welkomstrondleiding',
-    saltar: 'Overslaan',
+    saltar: 'Later',
     terminar: 'Aan de slag',
     cerrar: 'Rondleiding sluiten',
     reabrir: 'Druk op Esc om te verlaten. U kunt hem opnieuw bekijken via Instellingen › Weergave.',

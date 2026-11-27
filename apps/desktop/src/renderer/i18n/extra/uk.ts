@@ -1569,7 +1569,7 @@ export const ukExtra: TextosParciales = {
   },
   asistenteInicio: {
     titulo: 'Вітальний тур',
-    saltar: 'Пропустити',
+    saltar: 'Пропуск',
     terminar: 'Почати роботу',
     cerrar: 'Закрити тур',
     reabrir:
