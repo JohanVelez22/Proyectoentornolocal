@@ -222,6 +222,13 @@ export class PlataformaFalsa implements PlataformaCompleta {
     return this.o.carpetaDatos ?? '/datos-falsos/WolfCoreDev';
   }
 
+  /** Lo que devuelve `carpetasDelSistema` (la prueba pone aquí las suyas). */
+  carpetasSistema: string[] = [];
+
+  carpetasDelSistema(): string[] {
+    return [...this.carpetasSistema];
+  }
+
   carpetaInicio(): string {
     return this.o.carpetaInicio ?? '/inicio-falso';
   }

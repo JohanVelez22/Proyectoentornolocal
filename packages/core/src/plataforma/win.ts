@@ -436,6 +436,18 @@ export class PlataformaWindows implements PlataformaCompleta {
     return this.entorno.USERPROFILE || homedir();
   }
 
+  carpetasDelSistema(): string[] {
+    const e = this.entorno;
+    const lista = [
+      e.SystemRoot || e.windir || 'C:\\Windows',
+      e.ProgramFiles || 'C:\\Program Files',
+      e['ProgramFiles(x86)'] || 'C:\\Program Files (x86)',
+      e.ProgramW6432 || '',
+      e.ProgramData || 'C:\\ProgramData',
+    ];
+    return [...new Set(lista.filter((r) => r !== ''))];
+  }
+
   idCatalogo(): IdCatalogo {
     return this.arquitectura === 'arm64' ? 'win-arm64' : 'win-x64';
   }

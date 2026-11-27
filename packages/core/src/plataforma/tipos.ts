@@ -157,6 +157,11 @@ export interface CapacidadesPlataforma {
   carpetaDatos(): string;
   /** Carpeta personal del usuario (`~/.claude`, `~/.codex`, perfiles de Firefox…). */
   carpetaInicio(): string;
+  /**
+   * Carpetas del propio sistema operativo (en Windows: Windows, Program Files y ProgramData):
+   * «Compartir» (D52) no las publica nunca. Solo consulta; sin las variables, las rutas habituales.
+   */
+  carpetasDelSistema(): string[];
   idCatalogo(): IdCatalogo;
   /** Nombre del archivo ejecutable (`php` → `php.exe` en Windows). */
   nombreEjecutable(base: string): string;

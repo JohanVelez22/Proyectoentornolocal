@@ -72,6 +72,7 @@ export function crearPlataforma(): Plataforma {
 const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'carpetaDatos',
   'carpetaInicio',
+  'carpetasDelSistema',
   'idCatalogo',
   'nombreEjecutable',
   'buscarEjecutable',
