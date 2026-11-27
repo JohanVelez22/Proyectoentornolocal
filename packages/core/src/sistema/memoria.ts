@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { realpathSync } from 'node:fs';
+import { nombreDeRuta } from '../rutas/nombreDeRuta';
 import { ErrorWolf } from '../errores';
 import type { ConexionActiva, PlataformaCompleta, ProcesoUsuario } from '../plataforma/tipos';
 
@@ -285,7 +286,7 @@ export function motivoProtegido(p: ProcesoUsuario, c: ContextoProteccion): strin
   for (const f of FRAGMENTOS_PROTEGIDOS) {
     if (rutaMin.includes(f) || nombreMin.includes(f)) return 'protegido';
   }
-  if (NOMBRES_PROTEGIDOS.includes(nombreBase(p.ruta.replace(/\\/g, '/').split('/').pop() ?? ''))) {
+  if (NOMBRES_PROTEGIDOS.includes(nombreBase(nombreDeRuta(p.ruta)))) {
     return 'sistema';
   }
   for (const s of c.rutasSistema) if (dentroDe(p.ruta, s)) return 'sistema';

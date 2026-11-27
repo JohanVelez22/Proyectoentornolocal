@@ -1,5 +1,6 @@
 import { realpath } from 'node:fs/promises';
 import path from 'node:path';
+import { nombreDeRuta } from '../rutas/nombreDeRuta';
 import { rutaDentroDe } from '../plataforma/sistema';
 import { esNombreArchivoEnv } from '../proyectos/env/leer';
 import { llevaSecreto } from '../proyectos/plantillas';
@@ -42,7 +43,7 @@ export async function sitiosConRutasReales(
 export function crearDetectorSensible(sitios: readonly SitioSensible[]): DetectorSensible {
   return {
     porRuta(ruta, enlaces) {
-      const nombre = path.basename(ruta);
+      const nombre = nombreDeRuta(ruta);
       if (esNombreArchivoEnv(nombre) || NOMBRE_SECRETO.test(nombre)) return true;
       if (enlaces > 1) return true;
       const carpeta = path.dirname(ruta).toLowerCase();

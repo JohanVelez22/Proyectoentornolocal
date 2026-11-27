@@ -225,6 +225,18 @@ describe('EditorCodigo: confirmación reforzada', () => {
     }
   });
 
+  // En Windows `\` no cabe en un nombre; fuera de él sí, y el nombre se toma tras la última barra de cualquier tipo.
+  it.skipIf(process.platform === 'win32')(
+    'un nombre con ruta de Windows (\\) se clasifica por su último tramo: .env se rechaza y un secreto pide refuerzo',
+    async () => {
+      const e = await escenario();
+      const env = e.archivo('copia\\.env', 'A=1\n');
+      expect(await e.codigo(e.editor.abrir(env))).toBe('editor.archivo_env');
+      const pem = e.archivo('copia\\servidor.pem', 'contenido inocente\n');
+      expect((await e.editor.abrir(pem)).estado).toBe('confirmar');
+    },
+  );
+
   it('un sitio con datosReales pide refuerzo aunque el archivo sea común, al abrir y al guardar', async () => {
     const e = await escenario({}, (p) => [{ carpeta: p, datosReales: true }]);
     const r = e.archivo('index.php', '<?php echo 1;\n');

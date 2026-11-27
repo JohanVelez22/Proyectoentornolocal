@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { lstat, open } from 'node:fs/promises';
 import path from 'node:path';
+import { nombreDeRuta } from '../rutas/nombreDeRuta';
 import { nombreSensibleCompartir, tipoDe } from '../compartir/contenido';
 import { ErrorWolf } from '../errores';
 import type { AtributosArchivo, PlataformaCompleta } from '../plataforma/tipos';
@@ -58,8 +59,7 @@ export function validarRutaInfo(ruta: unknown): string {
 
 /** Archivos con credenciales o claves: de ellos solo se muestran los metadatos. */
 export function esArchivoSensible(ruta: string): boolean {
-  // Nombre tras la última barra, sea `\` o `/`: `path.basename` del sistema no separa por `\` fuera de Windows.
-  const nombre = ruta.split(/[\\/]/).pop() ?? ruta;
+  const nombre = nombreDeRuta(ruta);
   return (
     esNombreArchivoEnv(nombre) || NOMBRE_SECRETO.test(nombre) || nombreSensibleCompartir(nombre)
   );
@@ -200,7 +200,7 @@ export async function leerInfoRuta(ruta: unknown, deps: DepsInfoRuta): Promise<I
   const real = validarRutaInfo(ruta);
   const e = await estadoDe(real);
   const esArchivo = e.isFile();
-  const nombre = path.basename(real) || real;
+  const nombre = nombreDeRuta(real) || real;
   const sensible = esArchivo && esArchivoSensible(real);
   let mime: string | null = esArchivo ? mimePorExtension(nombre) : null;
   let imagen: DimensionesImagen | null = null;

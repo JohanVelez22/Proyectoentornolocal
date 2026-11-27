@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { FileHandle } from 'node:fs/promises';
 import { lstat, mkdir, open, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { nombreDeRuta } from '../rutas/nombreDeRuta';
 import { MAX_BYTES_EDITOR } from '../constantesUi';
 import { ErrorWolf } from '../errores';
 import { rutaDentroDe } from '../plataforma/sistema';
@@ -394,7 +395,7 @@ export class EditorCodigo {
     }
     // Una unidad mapeada o un enlace pueden terminar en un recurso de red.
     if (esUnc(real)) throw invalida();
-    const nombres = [path.basename(ruta), path.basename(real)];
+    const nombres = [nombreDeRuta(ruta), nombreDeRuta(real)];
     // Si no se puede saber de qué sitio es el archivo, no se abre: falla cerrado.
     const sitios = await this.deps.sitios().catch((e: unknown) => {
       throw new ErrorWolf(
@@ -473,7 +474,7 @@ export class EditorCodigo {
     enlaces: number,
   ): RiesgoEditor[] {
     const res: RiesgoEditor[] = [];
-    if (NOMBRE_SECRETO.test(path.basename(real)) || contenidos.some((c) => llevaSecreto(c))) {
+    if (NOMBRE_SECRETO.test(nombreDeRuta(real)) || contenidos.some((c) => llevaSecreto(c))) {
       res.push('secreto');
     }
     if (sitio?.datosReales === true) res.push('datos-reales');

@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { nombreDeRuta } from '../rutas/nombreDeRuta';
 import type { DetectorSensible } from '../herramientas/archivoSensible';
 
 /**
@@ -78,7 +79,7 @@ export const nombreSensibleCompartir = (nombre: string): boolean => NOMBRE_SENSI
 export function detectorCompartir(base: DetectorSensible): DetectorSensible {
   return {
     porRuta: (ruta, enlaces) =>
-      nombreSensibleCompartir(path.basename(ruta)) || base.porRuta(ruta, enlaces),
+      nombreSensibleCompartir(nombreDeRuta(ruta)) || base.porRuta(ruta, enlaces),
     porContenido: (c) => base.porContenido(c),
   };
 }
