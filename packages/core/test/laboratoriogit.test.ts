@@ -10,7 +10,7 @@ import {
 } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PARAMETROS_ERROR } from '../src/errores';
 import { Git } from '../src/git/git';
 import {
@@ -22,6 +22,8 @@ import {
 } from '../src/git/laboratorio';
 
 // Laboratorio de práctica de Git (D50). Todo en carpetas temporales; nunca se ejecuta git en el repo del proyecto.
+// Cada prueba con git real lanza muchos procesos: con la máquina cargada necesita más de 5 s.
+vi.setConfig({ testTimeout: 60_000 });
 const rutaGit = new Git().buscar('git');
 const hayGit = rutaGit !== null;
 
@@ -31,7 +33,7 @@ beforeEach(() => {
   base = mkdtempSync(path.join(os.tmpdir(), 'pel-labgit-'));
   raiz = path.join(base, 'laboratorio-git');
 });
-afterEach(() => rmSync(base, { recursive: true, force: true }));
+afterEach(() => rmSync(base, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }));
 
 interface Llamada {
   cmd: string;

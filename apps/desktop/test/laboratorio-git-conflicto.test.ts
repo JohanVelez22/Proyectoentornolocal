@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { Git, LaboratorioGit } from '@pel/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   accionesDelPaso,
   ejecutarPaso,
@@ -13,12 +13,14 @@ import {
 } from '../src/renderer/utilidades/conflictoGuiado';
 
 // Ejercicio guiado del laboratorio de Git (D50), con el git real en una carpeta temporal.
+// Cada prueba lanza muchos procesos de git: con la máquina cargada necesita más de 5 s.
+vi.setConfig({ testTimeout: 60_000 });
 const rutaGit = new Git().buscar('git');
 let dir: string;
 beforeEach(() => {
   dir = mkdtempSync(path.join(os.tmpdir(), 'pel-labconf-'));
 });
-afterEach(() => rmSync(dir, { recursive: true, force: true }));
+afterEach(() => rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }));
 
 describe('pasos del ejercicio del conflicto', () => {
   it('solo usan órdenes de la lista cerrada del núcleo y archivos de práctica', async () => {
