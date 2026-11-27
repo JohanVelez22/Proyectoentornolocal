@@ -150,6 +150,7 @@ export const PARAMETROS_ERROR = {
   'laboratoriogit.archivo_invalido': [],
   'laboratoriogit.contenido_invalido': [],
   'laboratoriogit.ruta_insegura': [],
+  'laboratoriogit.fallo_sistema': [],
   // herramientas
   'herramientas.pid_invalido': [],
   'herramientas.pid_sistema': ['pid'],

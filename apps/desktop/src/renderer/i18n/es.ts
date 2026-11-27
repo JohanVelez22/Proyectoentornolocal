@@ -283,6 +283,8 @@ export const es = {
       'laboratoriogit.contenido_invalido': 'El contenido debe ser texto de hasta 2000 caracteres.',
       'laboratoriogit.ruta_insegura':
         'La carpeta del laboratorio no es la esperada, así que no se toca.',
+      'laboratoriogit.fallo_sistema':
+        'El sistema no permitió preparar o usar la carpeta del laboratorio. Pruebe «Reiniciar laboratorio».',
       'herramientas.pid_invalido': 'El PID no es válido.',
       'herramientas.pid_sistema': 'El PID {pid} es del sistema y no se puede finalizar.',
       'herramientas.proceso_propio':

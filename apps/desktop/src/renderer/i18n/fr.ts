@@ -295,6 +295,8 @@ export const fr: Textos = {
         'Le contenu doit être du texte de 2000 caractères au plus.',
       'laboratoriogit.ruta_insegura':
         'Le dossier du laboratoire n’est pas celui attendu : on n’y touche pas.',
+      'laboratoriogit.fallo_sistema':
+        'Le système n’a pas permis de préparer ou d’utiliser le dossier du laboratoire. Essayez « Réinitialiser le laboratoire ».',
       'herramientas.pid_invalido': 'Le PID n’est pas valide.',
       'herramientas.pid_sistema': 'Le PID {pid} appartient au système et ne peut pas être terminé.',
       'herramientas.proceso_propio':

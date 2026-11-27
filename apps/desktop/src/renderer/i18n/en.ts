@@ -282,6 +282,8 @@ export const en: Textos = {
       'laboratoriogit.contenido_invalido': 'The content must be text of up to 2000 characters.',
       'laboratoriogit.ruta_insegura':
         'The lab folder is not the expected one, so it is left alone.',
+      'laboratoriogit.fallo_sistema':
+        'The system did not allow the lab folder to be prepared or used. Try «Reset lab».',
       'herramientas.pid_invalido': 'The PID is not valid.',
       'herramientas.pid_sistema': 'PID {pid} belongs to the system and cannot be ended.',
       'herramientas.proceso_propio': 'You cannot end WolfCore Dev or the process that started it.',

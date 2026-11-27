@@ -312,7 +312,18 @@ export class LaboratorioGit {
 
   /** Las operaciones se hacen de una en una. */
   private serie<T>(fn: () => Promise<T>): Promise<T> {
-    const r = this.cola.then(fn, fn);
+    // Un error de Node (mkdir, realpath, rm…) lleva la ruta con el usuario de Windows: al renderer
+    // solo llega un código sin ruta; el detalle va al registro de la app.
+    const envuelta = (): Promise<T> =>
+      fn().catch((e: unknown) => {
+        if (e instanceof ErrorWolf) throw e;
+        console.error('Laboratorio de Git:', e);
+        throw new ErrorWolf(
+          'laboratoriogit.fallo_sistema',
+          'El sistema no permitió preparar o usar la carpeta del laboratorio.',
+        );
+      });
+    const r = this.cola.then(envuelta, envuelta);
     this.cola = r.catch(() => undefined);
     return r;
   }

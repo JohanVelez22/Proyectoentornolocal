@@ -286,6 +286,26 @@ describe('reiniciar borra solo el laboratorio', () => {
   });
 });
 
+describe('errores del sistema sin rutas (D50, revisión M1)', () => {
+  it('un fallo de Node al preparar no lleva la ruta del laboratorio al mensaje', async () => {
+    // La raíz cuelga de un archivo: mkdir falla con ENOTDIR/ENOENT, cuyo mensaje lleva la ruta.
+    const archivo = path.join(base, 'soy-un-archivo');
+    writeFileSync(archivo, 'x');
+    const lab = new LaboratorioGit({
+      raiz: path.join(archivo, 'laboratorio-git'),
+      buscarGit: () => 'C:\\git\\git.exe',
+      ejecutar: falso().ejecutar,
+    });
+    const e = await lab.estado().then(
+      () => null,
+      (err: unknown) => err as { codigo?: string; message?: string },
+    );
+    expect(e?.codigo).toBe('laboratoriogit.fallo_sistema');
+    expect(String(e?.message)).not.toContain(base);
+    expect(JSON.stringify(e)).not.toContain('soy-un-archivo');
+  });
+});
+
 describe('archivos de práctica con enlace duro (D50, revisión M2)', () => {
   it('un archivo de práctica con nlink>1 no se lee ni se sobrescribe', async () => {
     const lab = crear(falso());

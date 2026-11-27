@@ -287,6 +287,8 @@ export const pt: Textos = {
       'laboratoriogit.contenido_invalido': 'O conteúdo deve ser texto de até 2000 caracteres.',
       'laboratoriogit.ruta_insegura':
         'A pasta do laboratório não é a esperada, então não será tocada.',
+      'laboratoriogit.fallo_sistema':
+        'O sistema não permitiu preparar ou usar a pasta do laboratório. Experimente «Reiniciar laboratório».',
       'herramientas.pid_invalido': 'O PID não é válido.',
       'herramientas.pid_sistema': 'O PID {pid} é do sistema e não pode ser encerrado.',
       'herramientas.proceso_propio':
