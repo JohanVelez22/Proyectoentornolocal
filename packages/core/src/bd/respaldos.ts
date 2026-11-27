@@ -25,7 +25,13 @@ import { NOMBRE_SERVICIO } from '../servicios/definicion';
 import { esIdInstancia } from '../servicios/instancias';
 import type { EstadoInstancia, EstadoServicio } from '../tipos';
 import { motorDe, type BasesDeDatos, type ObjetivoBd } from './basesDeDatos';
-import { DivisorSentencias, rechazoDatos, validarSentenciaDatos } from './datosAjenos';
+import {
+  abreTransaccion,
+  confirmaTransaccion,
+  DivisorSentencias,
+  rechazoDatos,
+  validarSentenciaDatos,
+} from './datosAjenos';
 import { ClienteMysql, validarNombreBd, type FabricaConexion } from './clienteMysql';
 import {
   definerMysql,
@@ -2641,12 +2647,18 @@ export class Respaldos {
     const divisor = new DivisorSentencias();
     const entrada = this.flujoSql(fuente, 'mysql', s, total, { soloDatos: true });
     pipeline(entrada, divisor).catch(() => undefined);
+    // Una transacción abierta con AUTOCOMMIT=0 que no se confirma perdería los datos al cerrar la
+    // conexión: un volcado así (cortado o manipulado) se rechaza entero.
+    let sinConfirmar = false;
     try {
       for await (const sentencia of divisor as AsyncIterable<string>) {
         if (senal?.aborted) throw razonDe(senal);
         validarSentenciaDatos(sentencia);
+        if (abreTransaccion(sentencia)) sinConfirmar = true;
+        else if (confirmaTransaccion(sentencia)) sinConfirmar = false;
         if (ejecutar) await ejecutar(sentencia);
       }
+      if (sinConfirmar) throw rechazoDatos('transacción sin COMMIT');
     } catch (e) {
       divisor.destroy();
       if (e instanceof ErrorWolf) throw e;

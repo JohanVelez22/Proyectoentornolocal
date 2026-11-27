@@ -277,6 +277,11 @@ function validarSet(cuerpoCrudo: string, original: string): void {
 const PELIGROSAS =
   /\b(?:SLEEP|BENCHMARK|GET_LOCK|RELEASE_LOCK|LOAD_FILE|WAIT_FOR_EXECUTED_GTID_SET)\s*\(|\bSELECT\b|\bINTO\s+(?:OUT|DUMP)FILE\b/i;
 
+/** Las sentencias exactas con que MariaDB 13.1 abre y cierra la transacción del volcado. */
+export const abreTransaccion = (s: string): boolean =>
+  /^SET\s+@OLD_AUTOCOMMIT\s*=\s*@@AUTOCOMMIT\s*,\s*@@AUTOCOMMIT\s*=\s*0$/i.test(s.trim());
+export const confirmaTransaccion = (s: string): boolean => /^COMMIT$/i.test(s.trim());
+
 /**
  * Una sentencia de un volcado de solo datos: `INSERT INTO`, o un `SET` de la lista cerrada de
  * `mysqldump` (con o sin la envoltura `/*!NNNNN … *\/`). Todo lo demás se rechaza: LOCK TABLES y
@@ -297,8 +302,8 @@ export function validarSentenciaDatos(sentencia: string): void {
   // MariaDB 13.1 envuelve los INSERT en una transacción con estas tres sentencias exactas; ninguna
   // otra forma de COMMIT ni de AUTOCOMMIT se acepta (siguen rechazadas más abajo).
   if (
-    /^COMMIT$/i.test(s) ||
-    /^SET\s+@OLD_AUTOCOMMIT\s*=\s*@@AUTOCOMMIT\s*,\s*@@AUTOCOMMIT\s*=\s*0$/i.test(s) ||
+    confirmaTransaccion(s) ||
+    abreTransaccion(s) ||
     /^SET\s+AUTOCOMMIT\s*=\s*@OLD_AUTOCOMMIT$/i.test(s)
   ) {
     return;

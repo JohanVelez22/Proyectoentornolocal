@@ -499,6 +499,25 @@ describe('Respaldos.importarAjeno', () => {
     }
   });
 
+  it('un volcado con AUTOCOMMIT=0 y sin COMMIT final se rechaza: los datos no se confirmarían (D39, M1)', async () => {
+    datos = [
+      'SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;',
+      "INSERT INTO `usuarios` VALUES (1,'Ana');",
+      'SET AUTOCOMMIT=@OLD_AUTOCOMMIT;',
+    ].join('\n');
+    await expect(armar().importarAjeno('mysql', origen, 'tienda')).rejects.toMatchObject({
+      codigo: 'bd.datos_no_permitidos',
+    });
+    // Con su COMMIT sigue entrando.
+    datos = [
+      'SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;',
+      "INSERT INTO `usuarios` VALUES (1,'Ana');",
+      'COMMIT;',
+      'SET AUTOCOMMIT=@OLD_AUTOCOMMIT;',
+    ].join('\n');
+    await armar().importarAjeno('mysql', origen, 'tienda');
+  });
+
   it('un error del servidor al cargar reinicia la base (todo o nada) sin mostrar claves', async () => {
     fallaConsulta = /^INSERT/;
     const e = await armar()
