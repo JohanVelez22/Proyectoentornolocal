@@ -565,9 +565,10 @@ export class BasesDeDatos {
       }
     }
     validarNombreBd(base);
-    const c = new ClienteMysql(this.d.fabricas?.mysql, {
-      senal: AbortSignal.timeout(PLAZO_ESQUEMA_MS),
-    });
+    // El plazo aborta con el error del catálogo del visor (no con «importar.cancelado»).
+    const control = new AbortController();
+    const fin = setTimeout(() => control.abort(fallo()), PLAZO_ESQUEMA_MS);
+    const c = new ClienteMysql(this.d.fabricas?.mysql, { senal: control.signal });
     try {
       await c.conectar({
         host: x.host,
@@ -580,6 +581,7 @@ export class BasesDeDatos {
     } catch (e) {
       throw e instanceof ErrorWolf ? e : fallo();
     } finally {
+      clearTimeout(fin);
       await c.cerrar();
     }
   }

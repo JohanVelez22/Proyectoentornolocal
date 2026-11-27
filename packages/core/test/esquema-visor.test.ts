@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BasesDeDatos } from '../src/bd/basesDeDatos';
 import { MAX_TABLAS_ESQUEMA } from '../src/bd/esquema';
 import type { Ejecutor } from '../src/plataforma/tipos';
@@ -28,7 +28,7 @@ interface Reg {
 }
 
 function armar(
-  filas: (motor: string, sql: string) => Record<string, unknown>[],
+  filas: (motor: string, sql: string) => Record<string, unknown>[] | Promise<Record<string, unknown>[]>,
   bases = ['tienda_falsa'],
 ) {
   const reg: Reg[] = [];
@@ -41,7 +41,7 @@ function armar(
         let r: Record<string, unknown>[];
         if (s.includes('pg_database') || s.includes('information_schema.schemata')) {
           r = bases.map((nombre) => ({ nombre, tam: 0 }));
-        } else r = filas(motor, s);
+        } else r = await filas(motor, s);
         return motor === 'pg' ? { rows: r } : [r];
       },
       end: async () => undefined,
@@ -295,5 +295,25 @@ describe('visor de esquema: PostgreSQL', () => {
     await expect(bd.esquema('postgresql', 'inventada')).rejects.toMatchObject({
       codigo: 'bd.esquema_base_no_existe',
     });
+  });
+});
+
+describe('visor de esquema: plazo total', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('MySQL: si el servidor no responde, el error es bd.esquema_lectura_fallo y no «importar.cancelado»', async () => {
+    vi.useFakeTimers();
+    const { bd } = armar((m, sql) =>
+      sql.includes('information_schema.TABLES')
+        ? new Promise<Record<string, unknown>[]>(() => undefined)
+        : mysqlFilas(m, sql),
+    );
+    const r = bd.esquema('mysql', 'tienda_falsa');
+    const visto = r.then(
+      () => null,
+      (e: unknown) => e,
+    );
+    await vi.advanceTimersByTimeAsync(16_000);
+    expect(await visto).toMatchObject({ codigo: 'bd.esquema_lectura_fallo' });
   });
 });
