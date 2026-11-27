@@ -709,7 +709,9 @@ describe('proceso:terminado', () => {
   it('un término sin código conocido lo marca con sinCodigo (D39)', async () => {
     const { a, emitidos } = await montar();
     a.sup.terminar('proy-demo-vite', null, true);
-    expect(emitidos).toEqual([{ id: 'proy-demo-vite', sitioId: 'demo', codigo: null, sinCodigo: true }]);
+    expect(emitidos).toEqual([
+      { id: 'proy-demo-vite', sitioId: 'demo', codigo: null, sinCodigo: true },
+    ]);
   });
 
   it('ignora lo que no es un proceso de proyecto (servicios, túneles)', async () => {
