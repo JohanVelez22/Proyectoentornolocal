@@ -176,7 +176,9 @@ export const useServicios = defineStore('servicios', () => {
   const grupos = computed<GrupoServicios[]>(() =>
     CATEGORIAS.map((categoria) => ({
       categoria,
-      servicios: visibles.value.filter((s) => s.estado !== 'externo' && categoriaDe(s) === categoria),
+      servicios: visibles.value.filter(
+        (s) => s.estado !== 'externo' && categoriaDe(s) === categoria,
+      ),
     })).filter((g) => g.servicios.length > 0),
   );
 
