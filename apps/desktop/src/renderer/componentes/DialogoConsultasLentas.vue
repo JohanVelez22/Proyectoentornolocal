@@ -15,8 +15,8 @@ import EstadoVacio from './EstadoVacio.vue';
 
 /**
  * Consultas lentas de una instancia de MySQL, MariaDB o PostgreSQL (D45b). El SQL llega con los
- * valores cambiados por «?»: «Ver literal» pide el SQL tal cual al núcleo, que lo rechaza si la base
- * tiene datos reales. Activar o desactivar es un cambio de todo el servidor y pide confirmación.
+ * valores cambiados por «?»: «Ver literal» pide el SQL tal cual al núcleo, que lo rechaza si alguna base
+ * del servidor tiene datos reales; en ese caso el SQL con anomalías llega como null («SQL oculto»). Activar o desactivar es un cambio de todo el servidor y pide confirmación.
  */
 const props = defineProps<{
   motor: MotorSql;
@@ -110,9 +110,11 @@ function ocultarLiteral(id: string): void {
   literales.value = resto;
 }
 
-function copiar(id: string, normalizado: string): void {
+function copiar(id: string, normalizado: string | null): void {
+  const texto = literales.value[id] ?? normalizado;
+  if (texto === null) return;
   void ejecutar('copiar', async () => {
-    await api().sistema.copiar(literales.value[id] ?? normalizado);
+    await api().sistema.copiar(texto);
     message.success(t.copiado);
   });
 }
@@ -268,7 +270,13 @@ const MAX = 500;
               <td>{{ e.base ?? t.sinBase }}</td>
               <td class="fecha">{{ fecha(e.fecha) }}</td>
               <td class="sql-celda">
-                <code class="sql" :class="{ literal: literales[e.id] !== undefined }">{{
+                <NTooltip v-if="literales[e.id] === undefined && e.sqlNormalizado === null">
+                  <template #trigger>
+                    <code class="sql oculto-sql">{{ t.sqlOculto }}</code>
+                  </template>
+                  {{ t.sqlOcultoAyuda }}
+                </NTooltip>
+                <code v-else class="sql" :class="{ literal: literales[e.id] !== undefined }">{{
                   literales[e.id] ?? e.sqlNormalizado
                 }}</code>
                 <span v-if="literales[e.id] !== undefined" class="etiqueta-literal">{{
@@ -307,6 +315,7 @@ const MAX = 500;
                         quaternary
                         circle
                         :aria-label="t.copiar"
+                        :disabled="e.sqlNormalizado === null && literales[e.id] === undefined"
                         @click="copiar(e.id, e.sqlNormalizado)"
                       >
                         <template #icon
@@ -425,6 +434,10 @@ const MAX = 500;
 .sql-celda {
   min-width: 260px;
   max-width: 440px;
+}
+.oculto-sql {
+  font-style: italic;
+  opacity: 0.8;
 }
 .sql {
   display: block;

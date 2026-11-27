@@ -197,7 +197,9 @@ export class ConsultasLentas {
       if (motor !== 'postgresql') {
         // El slow log lleva SQL con sus literales: carpeta propia, solo del usuario.
         await mkdir(path.dirname(archivo), { recursive: true });
-        await this.d.restringir(carpetaLogLento(this.d.rutas), { carpeta: true }).catch(() => false);
+        await this.d
+          .restringir(carpetaLogLento(this.d.rutas), { carpeta: true })
+          .catch(() => false);
       }
       const antes = await this.d.bd.lentasEstado(o);
       await this.d.bd.lentasAplicar(o, { activo: a.activo, segundos, archivo });
@@ -237,7 +239,8 @@ export class ConsultasLentas {
       return;
     }
     for (const n of nombres) {
-      if (/^lentas-.*\.log$/i.test(n)) await rm(path.join(carpeta, n), { force: true }).catch(() => undefined);
+      if (/^lentas-.*\.log$/i.test(n))
+        await rm(path.join(carpeta, n), { force: true }).catch(() => undefined);
     }
   }
 

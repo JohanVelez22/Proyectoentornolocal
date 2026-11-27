@@ -802,7 +802,6 @@ export interface ApiEntorno {
      * sus variables) y devuelve solo el bloque generado.
      */
     bloqueEnvSitio(sitioId: string, motor: ObjetivoBdIpc, base: string): Promise<string>;
-    /** Carpeta real de respaldos y copias de seguridad automáticas (Documentos\WolfCore Dev\Respaldos). */
     /** Consultas lentas (D45b): estado global del servidor (sin SQL). */
     lentasEstado(motor: ObjetivoSqlIpc): Promise<EstadoConsultasLentas>;
     /** Cambio global del servidor: exige `confirmado: true` (solo instancias de WolfCore). */
@@ -812,10 +811,11 @@ export interface ApiEntorno {
     ): Promise<EstadoConsultasLentas>;
     /** Las más lentas primero, con el SQL normalizado (sin literales). */
     lentasLeer(motor: ObjetivoSqlIpc): Promise<ConsultasLentasLeidas>;
-    /** El SQL tal cual de una entrada; el núcleo lo rechaza si la base tiene datos reales. */
+    /** El SQL tal cual de una entrada; el núcleo lo rechaza si alguna base del servidor tiene datos reales. */
     lentasLiteral(motor: ObjetivoSqlIpc, id: string): Promise<string>;
     /** Esquema (solo metadatos) de una base: tablas, columnas, claves, índices y relaciones. */
     esquema(motor: ObjetivoSqlIpc, base: string): Promise<EsquemaBase>;
+    /** Carpeta real de respaldos y copias de seguridad automáticas (Documentos\WolfCore Dev\Respaldos). */
     carpetaRespaldos(): Promise<string>;
     tieneTablas(motor: ObjetivoSqlIpc, base: string): Promise<boolean>;
     formato(archivo: string): Promise<FormatoRespaldo>;

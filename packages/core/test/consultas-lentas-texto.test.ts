@@ -58,7 +58,7 @@ describe('normalizarSql', () => {
     const t0 = Date.now();
     const r = normalizarSql("'" + "''".repeat(50_000) + ' ' + '?, '.repeat(20_000) + '?', 'mysql');
     expect(Date.now() - t0).toBeLessThan(2000);
-    expect(r.length).toBeLessThanOrEqual(MAX_SQL_NORMALIZADO + 1);
+    expect(r!.length).toBeLessThanOrEqual(MAX_SQL_NORMALIZADO + 1);
   });
 });
 

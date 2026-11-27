@@ -13,13 +13,13 @@ import { carpetaTemporal } from './temporales';
 
 const PG = [
   '2026-11-26 10:00:00.000 CET [1] db=a LOG:  listening on IPv4 address "127.0.0.1", port 5432',
-  "2026-11-26 10:00:01.000 CET [2] db=a LOG:  duration: 2000.1 ms  statement: SELECT * FROM t",
+  '2026-11-26 10:00:01.000 CET [2] db=a LOG:  duration: 2000.1 ms  statement: SELECT * FROM t',
   "\tWHERE p = 'X_REAL'",
   "\t AND q = 'Y_REAL'",
-  "2026-11-26 10:00:02.000 CET [2] db=a LOG:  duration: 5.0 ms  execute <unnamed>: SELECT $1",
+  '2026-11-26 10:00:02.000 CET [2] db=a LOG:  duration: 5.0 ms  execute <unnamed>: SELECT $1',
   "2026-11-26 10:00:02.000 CET [2] db=a DETAIL:  parameters: $1 = 'X_REAL'",
   '2026-11-26 10:00:03.000 CET [3] db=a LOG:  checkpoint starting: time',
-  "2026-11-26 10:00:04.000 CET [3] db=a ERROR:  falla",
+  '2026-11-26 10:00:04.000 CET [3] db=a ERROR:  falla',
   "2026-11-26 10:00:04.000 CET [3] db=a STATEMENT:  SELECT 'X_REAL'",
 ].join('\n');
 

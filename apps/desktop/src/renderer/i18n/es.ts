@@ -6092,6 +6092,9 @@ export const es = {
     verLiteral: 'Ver literal',
     ocultarLiteral: 'Ocultar literal',
     literalAviso: 'SQL tal cual, con sus valores',
+    sqlOculto: 'SQL oculto',
+    sqlOcultoAyuda:
+      'No se puede mostrar esta consulta sin riesgo de enseñar datos: este servidor tiene bases con datos reales.',
     copiar: 'Copiar',
     copiado: 'Consulta copiada',
     truncado: (n: number) =>

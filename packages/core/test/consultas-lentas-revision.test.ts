@@ -38,7 +38,7 @@ describe('normalizarSql: casos concretos (todos los servidores)', () => {
 
   it('un identificador sin cerrar no se copia: se trata como fallo (null)', () => {
     expect(normalizarSql("SELECT `a FROM t WHERE p='X_REAL'", 'mysql')).toBeNull();
-    expect(normalizarSql('SELECT "a FROM t WHERE p=\'X_REAL\'', 'postgresql')).toBeNull();
+    expect(normalizarSql("SELECT \"a FROM t WHERE p='X_REAL'", 'postgresql')).toBeNull();
   });
 
   it('sigue normalizando lo normal', () => {
@@ -51,8 +51,8 @@ describe('normalizarSql: casos concretos (todos los servidores)', () => {
 describe('normalizarSql: modo estricto (servidor con datosReales)', () => {
   const nulos: [string, 'mysql' | 'postgresql'][] = [
     ["SELECT 'abc X_REAL", 'mysql'], // cadena sin cerrar
-    ["SELECT `abc X_REAL", 'mysql'], // identificador sin cerrar
-    ["SELECT 1 /* abc X_REAL", 'mysql'], // comentario sin cerrar
+    ['SELECT `abc X_REAL', 'mysql'], // identificador sin cerrar
+    ['SELECT 1 /* abc X_REAL', 'mysql'], // comentario sin cerrar
     ["SELECT 1 FROM t WHERE x = 'C:\\' , 'X_REAL' --", 'mysql'], // NO_BACKSLASH_ESCAPES
     ["SELECT 'a\\'b X_REAL'", 'mysql'], // \ delante de una comilla
     ["SELECT 'a\\'b X_REAL'", 'postgresql'],
@@ -74,8 +74,10 @@ describe('normalizarSql: modo estricto (servidor con datosReales)', () => {
   }
 
   it('una consulta limpia sale igual que en el modo normal', () => {
-    const q = "SELECT a, \"b\" FROM t WHERE c = 'x' AND d = 4 -- nota";
-    expect(normalizarSql(q, 'postgresql', estricto)).toBe('SELECT a, "b" FROM t WHERE c = ? AND d = ?');
+    const q = 'SELECT a, "b" FROM t WHERE c = \'x\' AND d = 4 -- nota';
+    expect(normalizarSql(q, 'postgresql', estricto)).toBe(
+      'SELECT a, "b" FROM t WHERE c = ? AND d = ?',
+    );
     expect(normalizarSql('SELECT * FROM t WHERE c = "x" # n', 'mysql', estricto)).toBe(
       'SELECT * FROM t WHERE c = ?',
     );
@@ -142,14 +144,9 @@ describe('parsearMysql: metadatos solo en la cabecera', () => {
 
   it('una entrada que termina con una cadena sin cerrar y la siguiente: dudosas; la tercera no', () => {
     const r = parsearMysql(
-      [
-        ...CAB(['use a;']),
-        "SELECT 'sin cerrar",
-        ...CAB(),
-        'SELECT 2;',
-        ...CAB(),
-        'SELECT 3;',
-      ].join('\n'),
+      [...CAB(['use a;']), "SELECT 'sin cerrar", ...CAB(), 'SELECT 2;', ...CAB(), 'SELECT 3;'].join(
+        '\n',
+      ),
     );
     expect(r.map((e) => e.dudosa)).toEqual([true, true, false]);
   });
@@ -305,7 +302,9 @@ describe('P2: modo estricto en el servidor con datosReales', () => {
 
   it('sin datos reales una entrada limpia se normaliza como siempre', async () => {
     const a = armar({ texto: slow('tienda_falsa', "SELECT * FROM t WHERE a = 'x'") });
-    expect((await a.c.leer('mysql')).entradas[0]!.sqlNormalizado).toBe('SELECT * FROM t WHERE a = ?');
+    expect((await a.c.leer('mysql')).entradas[0]!.sqlNormalizado).toBe(
+      'SELECT * FROM t WHERE a = ?',
+    );
   });
 });
 

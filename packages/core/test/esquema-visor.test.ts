@@ -28,7 +28,10 @@ interface Reg {
 }
 
 function armar(
-  filas: (motor: string, sql: string) => Record<string, unknown>[] | Promise<Record<string, unknown>[]>,
+  filas: (
+    motor: string,
+    sql: string,
+  ) => Record<string, unknown>[] | Promise<Record<string, unknown>[]>,
   bases = ['tienda_falsa'],
 ) {
   const reg: Reg[] = [];

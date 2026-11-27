@@ -89,6 +89,33 @@ describe('visor de esquema: diálogo', () => {
   });
 });
 
+describe('SQL oculto (política «ante la duda, ocultar»)', () => {
+  const v = fuente(
+    'apps',
+    'desktop',
+    'src',
+    'renderer',
+    'componentes',
+    'DialogoConsultasLentas.vue',
+  );
+
+  it('una entrada con sqlNormalizado null muestra «SQL oculto» y no se puede copiar', () => {
+    expect(v).toContain('e.sqlNormalizado === null');
+    expect(v).toContain('t.sqlOculto');
+    expect(v).toMatch(/:disabled="e\.sqlNormalizado === null/);
+  });
+
+  it('el texto existe en los 4 idiomas', () => {
+    for (const l of ['es', 'en', 'pt', 'fr']) {
+      const t = fuente('apps', 'desktop', 'src', 'renderer', 'i18n', `${l}.ts`);
+      expect(t, l).toMatch(/sqlOculto: '/);
+      expect(t, l).toMatch(/sqlOcultoAyuda:/);
+    }
+  });
+});
+
+// La prueba de comportamiento de que el MCP `leer_registro` y el visor no sacan SQL crudo de las
+// consultas lentas (PostgreSQL ni el slow log de MySQL) está en packages/core/test/registros-lentas.test.ts.
 describe('privacidad: nada de esto sale por la CLI ni el MCP', () => {
   it('ni la CLI ni el MCP del núcleo tocan consultas lentas ni el esquema', () => {
     const dirs = [
