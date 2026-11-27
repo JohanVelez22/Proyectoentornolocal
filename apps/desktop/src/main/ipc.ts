@@ -36,6 +36,7 @@ import {
   MODOS_MEMORIA,
   MAX_ACCIONES_MEMORIA,
   MAX_LARGO_ID_MEMORIA,
+  validarRutaInfo,
 } from '@pel/core';
 import { idiomaDeLocale } from '../shared/idiomas';
 import type { ResultadoAtajo } from '../shared/captura';
@@ -2076,8 +2077,22 @@ const TABLA: Record<RutaIpc, Manejador> = {
   },
   // ---- Uso del disco (D51): solo lectura; carpeta de un diálogo o unidad de la lista ----
   'discoUso.unidades': (n) => n.usoDisco.unidades(),
+  // Una carpeta elegida con el diálogo o soltada en la ventana (`infoArchivo.registrar`).
   'discoUso.analizar': (n, s, carpeta) =>
-    n.usoDisco.analizar(s.elegidas.exigir(carpeta, 'carpeta')),
+    n.usoDisco.analizar(s.elegidas.exigirAlguno(carpeta, 'carpeta', ['abrir', 'info'])),
+  // ---- Info de archivo (D55): solo lectura; la ruta sale de un archivo elegido o soltado ----
+  // Soltar o elegir con el selector es una elección explícita del usuario: la ruta (que el preload
+  // saca del `File`) se valida, se comprueba que existe y se registra con el propósito 'info'. Las
+  // demás llamadas siguen exigiendo una ruta ya registrada.
+  'infoArchivo.registrar': async (n, s, ruta) => {
+    const info = await n.infoRuta(validarRutaInfo(ruta));
+    s.elegidas.registrar(info.ruta, 'info');
+    return info;
+  },
+  'infoArchivo.hashes': (n, s, ruta) =>
+    n.hashesRuta(s.elegidas.exigir(ruta, 'archivo', 'info')),
+  'infoArchivo.carpeta': (n, s, ruta) =>
+    n.usoDisco.analizar(s.elegidas.exigir(ruta, 'carpeta', 'info')),
   'discoUso.analizarUnidad': (n, _s, ruta) =>
     n.usoDisco.analizarUnidad(textoAcotado(ruta, 3, 260, 'unidad')),
   'discoUso.cancelar': (n) => n.usoDisco.cancelar(),

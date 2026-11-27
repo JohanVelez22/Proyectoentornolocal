@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import {
   CANAL_EVENTO,
   EVENTOS_IPC,
@@ -558,6 +558,16 @@ const api: ApiEntorno = {
       invocar('diffCarpetas.archivo', idComparacion, idEntrada),
     prepararEditor: (idComparacion, idEntrada, lado) =>
       invocar('diffCarpetas.prepararEditor', idComparacion, idEntrada, lado),
+  },
+  infoArchivo: {
+    // La ruta sale del propio `File` (solo el preload puede pedirla); el renderer no la escribe.
+    elegir: (archivo) =>
+      invocar(
+        'infoArchivo.registrar',
+        webUtils.getPathForFile(archivo as Parameters<typeof webUtils.getPathForFile>[0]),
+      ),
+    hashes: (ruta) => invocar('infoArchivo.hashes', ruta),
+    carpeta: (ruta) => invocar('infoArchivo.carpeta', ruta),
   },
   discoUso: {
     unidades: () => invocar('discoUso.unidades'),

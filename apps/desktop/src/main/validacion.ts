@@ -487,7 +487,7 @@ export function ramaPhp(v: unknown): string | null {
 }
 
 /** Para qué se eligió una ruta: `abrir` (leer, diálogo de abrir) o `guardar` (destino). */
-export type PropositoRuta = 'abrir' | 'guardar' | 'editor' | 'compartir';
+export type PropositoRuta = 'abrir' | 'guardar' | 'editor' | 'compartir' | 'info';
 
 /**
  * Rutas que el usuario eligió en los diálogos de esta sesión. Las rutas que leen o escriben
@@ -516,6 +516,17 @@ export class RutasElegidas {
   /** ¿Se eligió esta ruta en un diálogo con ese propósito? */
   tiene(ruta: string, proposito: PropositoRuta = 'abrir'): boolean {
     return this.rutas.get(this.clave(ruta))?.has(proposito) === true;
+  }
+
+  /** Como `exigir`, pero vale cualquiera de esos propósitos (p. ej. una carpeta elegida o soltada). */
+  exigirAlguno(
+    v: unknown,
+    tipo: 'archivo' | 'carpeta',
+    propositos: readonly [PropositoRuta, ...PropositoRuta[]],
+  ): string {
+    const t = texto(v, tipo);
+    const alguno = propositos.find((p) => this.tiene(t, p));
+    return alguno ? t : this.exigir(v, tipo, propositos[0]);
   }
 
   exigir(v: unknown, tipo: 'archivo' | 'carpeta', proposito: PropositoRuta = 'abrir'): string {

@@ -55,6 +55,8 @@ import type {
   RepoGithub,
   ResultadoBom,
   ImagenLeida,
+  InfoRuta,
+  HashesArchivo,
   ResultadoPdf,
   ResultadoZip,
   Conversion,
@@ -313,6 +315,8 @@ export type {
   RepoGithub,
   ResultadoBom,
   ImagenLeida,
+  InfoRuta,
+  HashesArchivo,
   ResultadoPdf,
   ResultadoZip,
   Conversion,
@@ -1657,6 +1661,23 @@ export interface ApiEntorno {
      */
     prepararEditor(idComparacion: string, idEntrada: number, lado: 'a' | 'b'): Promise<string>;
   };
+  infoArchivo: {
+    /**
+     * Registra un archivo o una carpeta que el usuario eligió con el selector de archivos o soltó
+     * en la ventana (D55) y devuelve sus metadatos. El preload saca la ruta del `File` con
+     * `webUtils.getPathForFile`: el renderer nunca escribe una ruta. El proceso principal la
+     * valida (absoluta, local, sin prefijos de dispositivo ni UNC, sin enlaces) y comprueba que
+     * existe. Solo lectura.
+     */
+    elegir(archivo: unknown): Promise<InfoRuta>;
+    /** MD5, SHA-1 y SHA-256 de un archivo registrado con `elegir` (hasta 200 MB). */
+    hashes(ruta: string): Promise<HashesArchivo>;
+    /**
+     * Tamaño, archivos y subcarpetas de una carpeta registrada con `elegir`, con el análisis de
+     * Uso del disco (proceso aparte, cancelable con `discoUso.cancelar`, sin seguir enlaces).
+     */
+    carpeta(ruta: string): Promise<AnalisisDisco>;
+  };
   discoUso: {
     /** Unidades locales que se pueden analizar (discos fijos y extraíbles). */
     unidades(): Promise<UnidadDisco[]>;
@@ -2201,6 +2222,9 @@ export const RUTAS_IPC = [
   'diffCarpetas.cancelar',
   'diffCarpetas.archivo',
   'diffCarpetas.prepararEditor',
+  'infoArchivo.registrar',
+  'infoArchivo.hashes',
+  'infoArchivo.carpeta',
   'discoUso.unidades',
   'discoUso.analizar',
   'discoUso.analizarUnidad',
