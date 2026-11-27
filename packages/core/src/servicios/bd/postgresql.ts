@@ -5,6 +5,7 @@ import type { DefProceso } from '../../procesos/supervisor';
 import { claveMayor } from '../../rutas';
 import { registrarDefinicion } from '../datos';
 import type { CtxServicio, DefServicio } from '../definicion';
+import { FiltroLentasPg } from '../../monitor/ocultarLentas';
 import { nombreEjecutable } from '../../plataforma/sistema';
 
 // El zip de EDB trae todo bajo pgsql/ (ver `ejecutable` del catálogo).
@@ -84,6 +85,8 @@ export function defPostgresql(): DefServicio {
         puerto: c.puerto,
         log: c.rutas.logs('postgresql.log'),
         reiniciar: false,
+        // La cola del log va a mensajes de error, al MCP y a la CLI: sin SQL de consultas lentas.
+        filtrarLog: (lineas) => new FiltroLentasPg().procesar(lineas),
       };
     },
 

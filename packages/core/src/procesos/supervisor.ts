@@ -60,6 +60,12 @@ export interface DefProceso {
   exigirInicio?: boolean;
   /** Puerto que se muestra en el estado (`puertos`) sin usarse como sonda de salud. */
   puertoInformativo?: number;
+  /**
+   * Filtra las líneas del log antes de que su cola pase a `mensaje` (errores de arranque, MCP,
+   * CLI, estado): PostgreSQL oculta ahí el SQL de las consultas lentas. Cada llamada empieza de
+   * cero, «dentro de una sentencia» (la cola puede empezar a mitad de una).
+   */
+  filtrarLog?: (lineas: string[]) => string[];
 }
 
 /** Mensaje de un proceso sin reinicio que terminó bien (código 0); la interfaz lo traduce. */
@@ -626,7 +632,7 @@ export class Supervisor {
       entrada.mensaje = MENSAJE_TERMINADO;
     } else {
       entrada.estado = 'error';
-      entrada.mensaje = this.colaLog(def.log) || motivo || 'El proceso terminó de forma inesperada';
+      entrada.mensaje = this.colaLog(def) || motivo || 'El proceso terminó de forma inesperada';
     }
     for (const fn of this.oyentesTermino) {
       try {
@@ -691,7 +697,7 @@ export class Supervisor {
             console.error('No se pudo cerrar el proceso que no respondió:', e);
           }
           entrada.estado = 'error';
-          entrada.mensaje = this.colaLog(entrada.def.log) || 'El servicio no responde';
+          entrada.mensaje = this.colaLog(entrada.def) || 'El servicio no responde';
           this.guardarEstado();
         }
         this.emitir(entrada);
@@ -740,15 +746,17 @@ export class Supervisor {
     if (entrada.pid === pid) entrada.creado = creado;
   }
 
-  private colaLog(archivo: string): string {
+  private colaLog(def: DefProceso): string {
     try {
+      const archivo = def.log;
       // Línea a línea: una en cp1252 (Python sin UTF-8) no rompe las demás.
       const lineas = readFileSync(archivo)
         .toString('latin1')
         .split(/\r?\n/)
         .map((l) => decodificarLinea(Buffer.from(l, 'latin1')));
       while (lineas.length > 0 && lineas[lineas.length - 1] === '') lineas.pop();
-      return lineas.slice(-LINEAS_LOG).join('\n');
+      const vistas = def.filtrarLog ? def.filtrarLog(lineas) : lineas;
+      return vistas.slice(-LINEAS_LOG).join('\n');
     } catch {
       return '';
     }
