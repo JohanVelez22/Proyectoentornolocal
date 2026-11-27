@@ -615,12 +615,17 @@ describe('respaldo en inglés (idiomas con traducción incompleta)', () => {
   const leer = (d: unknown, ruta: string): unknown =>
     ruta.split('.').reduce<unknown>((v, k) => (v as Record<string, unknown> | undefined)?.[k], d);
 
-  /** Primera ruta de hoja que `en` tiene y el idioma no (la que cubre el respaldo). */
-  function primeraFaltante(id: (typeof AUTOMATICOS)[number]): string {
-    const propias = hojasTexto(fuentes[id]);
-    const ruta = Object.keys(hojasTexto(en)).find((r) => !(r in propias));
-    if (!ruta) throw new Error(`${id} ya está completo: la prueba necesita una clave que falte`);
-    return ruta;
+  /** Ruta de hoja que se quita a propósito para simular una traducción incompleta. */
+  const RUTA_QUITADA = 'nav.proyectos';
+
+  /** Copia profunda del idioma sin `RUTA_QUITADA`: no depende de que algún idioma real esté incompleto. */
+  function sinClave(d: unknown): unknown {
+    const copia = JSON.parse(
+      JSON.stringify(d, (_k, v: unknown) => (typeof v === 'function' ? undefined : v)),
+    ) as Record<string, Record<string, unknown>>;
+    const [a, b] = RUTA_QUITADA.split('.') as [string, string];
+    delete copia[a]?.[b];
+    return copia;
   }
 
   it('completar() deja lo traducido, rellena lo que falta con en y descarta lo que sobra', () => {
@@ -645,9 +650,26 @@ describe('respaldo en inglés (idiomas con traducción incompleta)', () => {
 
   it('un idioma al que le falta una clave muestra el texto en inglés', () => {
     for (const id of AUTOMATICOS) {
-      const ruta = primeraFaltante(id);
-      expect(leer(fuentes[id], ruta), `${id}:${ruta}`).toBeUndefined();
-      expect(leer(diccionarios[id], ruta), `${id}:${ruta}`).toBe(leer(en, ruta));
+      const parcial = sinClave(fuentes[id]);
+      expect(leer(parcial, RUTA_QUITADA), id).toBeUndefined();
+      const completo = completar(en, parcial);
+      expect(leer(completo, RUTA_QUITADA), id).toBe(leer(en, RUTA_QUITADA));
+      // Lo demás del idioma se conserva.
+      expect(completo.nav.inicio, id).toBe(fuentes[id].nav?.inicio);
+    }
+  });
+
+  it('ningún idioma deja un texto vacío donde el inglés tiene texto', () => {
+    const hojasEn = hojasTexto(en);
+    for (const id of IDIOMAS_UI) {
+      const hojas = hojasTexto(diccionarios[id]);
+      const vacias = Object.entries(hojas)
+        .filter(
+          ([ruta, t]) =>
+            typeof t === 'string' && t.trim() === '' && String(hojasEn[ruta] ?? '').trim() !== '',
+        )
+        .map(([ruta]) => ruta);
+      expect(vacias, id).toEqual([]);
     }
   });
 
@@ -662,12 +684,15 @@ describe('respaldo en inglés (idiomas con traducción incompleta)', () => {
   it('los textos activos (proxy `textos`) también caen al inglés al cambiar de idioma', async () => {
     const { cambiarIdioma, idioma, textos } = await import('../src/renderer/i18n');
     const antes = idioma.value;
+    const original = diccionarios.de;
     try {
+      // Se sustituye un momento el diccionario cargado por uno al que le falta una clave.
+      diccionarios.de = completar(en, sinClave(fuentes.de));
       cambiarIdioma('de');
-      const ruta = primeraFaltante('de');
-      expect(leer(textos, ruta)).toBe(leer(en, ruta));
+      expect(leer(textos, RUTA_QUITADA)).toBe(leer(en, RUTA_QUITADA));
       expect(textos.nav.inicio).toBe(fuentes.de.nav?.inicio);
     } finally {
+      diccionarios.de = original;
       cambiarIdioma(antes);
     }
   });
