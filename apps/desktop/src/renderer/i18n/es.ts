@@ -2486,6 +2486,9 @@ export const es = {
     verQr: 'Mostrar el código QR de la dirección',
     qrTitulo: 'Dirección FTP de este sitio',
     qrAviso: 'El código solo lleva la dirección, no la clave.',
+    compartirNota:
+      'El FTP solo se usa en la red local: no se comparte por un túnel de internet porque envía la clave y los archivos sin cifrar.',
+    compartirIr: 'Compartir una carpeta o un archivo con un enlace temporal',
   },
   correo: {
     descripcion:

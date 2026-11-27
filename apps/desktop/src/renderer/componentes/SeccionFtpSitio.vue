@@ -12,8 +12,10 @@ import {
 } from '@vicons/ionicons5';
 import { NButton, NIcon, NSkeleton, NSwitch, NTooltip, useDialog } from 'naive-ui';
 import { computed, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import type { Credenciales, Sitio } from '../../shared/api';
 import { api } from '../api';
+import { solicitudes } from '../composables/solicitudes';
 import { useAccion } from '../composables/useAccion';
 import { textos } from '../i18n';
 import { useServicios } from '../stores/servicios';
@@ -26,6 +28,7 @@ const t = textos.ftpSitio;
 const HOST = '127.0.0.1';
 const PUERTO_FTP_POR_DEFECTO = 2121;
 
+const router = useRouter();
 const servicios = useServicios();
 const sitios = useSitios();
 const dialog = useDialog();
@@ -163,6 +166,12 @@ watch(
   { immediate: true },
 );
 
+/** FTP no se comparte por túnel: la alternativa es Herramientas › Compartir carpeta o archivo. */
+function irACompartir(): void {
+  solicitudes.herramienta = 'compartir';
+  void router.push({ name: 'herramientas' });
+}
+
 function abrirCliente(): void {
   const u = urlFtp.value;
   if (!u) return;
@@ -222,6 +231,13 @@ const filas = computed(() => {
         </template>
         <span v-else class="tenue">{{ t.apagadoAyuda }}</span>
       </div>
+    </div>
+
+    <div class="compartir-nota">
+      <small class="tenue">{{ t.compartirNota }}</small>
+      <NButton size="tiny" text type="primary" data-testid="ftp-ir-compartir" @click="irACompartir">
+        {{ t.compartirIr }}
+      </NButton>
     </div>
 
     <div v-if="activo && abierto" :id="idPanel" class="panel">
@@ -401,6 +417,13 @@ const filas = computed(() => {
 }
 .tenue {
   opacity: 0.72;
+}
+.compartir-nota {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin-top: 2px;
 }
 .desplegar {
   font-size: 12px;

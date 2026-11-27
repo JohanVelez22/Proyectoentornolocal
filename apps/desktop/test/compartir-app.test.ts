@@ -200,3 +200,23 @@ describe('textos de D52 en los cuatro idiomas', () => {
     expect(textoFr).not.toMatch(/\b(tu|ton|ta|tes|choisis|utilise)\b/i);
   });
 });
+
+describe('D39: la tarjeta FTP lleva a «Compartir carpeta o archivo»', () => {
+  const seccion = readFileSync(
+    join(__dirname, '..', 'src', 'renderer', 'componentes', 'SeccionFtpSitio.vue'),
+    'utf8',
+  );
+
+  it('explica en los cuatro idiomas por qué FTP no se comparte por túnel y enlaza a la herramienta', () => {
+    for (const idioma of [es, en, fr, pt]) {
+      expect(idioma.ftpSitio.compartirNota.length).toBeGreaterThan(40);
+      expect(idioma.ftpSitio.compartirIr.length).toBeGreaterThan(10);
+    }
+    expect(es.ftpSitio.compartirNota).toContain('sin cifrar');
+    expect(seccion).toContain("solicitudes.herramienta = 'compartir'");
+    expect(seccion).toContain("router.push({ name: 'herramientas' })");
+    // El texto va por el catálogo, no escrito en el componente.
+    expect(seccion).toContain('t.compartirNota');
+    expect(seccion).toContain('t.compartirIr');
+  });
+});

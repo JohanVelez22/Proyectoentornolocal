@@ -2468,6 +2468,9 @@ export const en: Textos = {
     verQr: 'Show the QR code of the address',
     qrTitulo: 'FTP address of this site',
     qrAviso: 'The code only carries the address, not the password.',
+    compartirNota:
+      'FTP is for the local network only: it is not shared through an internet tunnel because it sends the password and files unencrypted.',
+    compartirIr: 'Share a folder or file with a temporary link',
   },
   correo: {
     descripcion:
