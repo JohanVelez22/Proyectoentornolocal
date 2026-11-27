@@ -811,6 +811,8 @@ describe('registrarIpc', () => {
         'clienteHttp.importarCurl',
         'clienteHttp.limpiarHistorial',
         'clienteHttp.revelar',
+        'ejemploHttp.iniciar',
+        'ejemploHttp.detener',
         'cli.cambiarPath',
         'adminer.instalar',
         'adminer.disponibilidad',

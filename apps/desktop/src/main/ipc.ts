@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import {
   CLAVES_RAPIDAS,
   ClienteHttp,
+  ServidorEjemplo,
   ACCIONES_CONTENEDOR,
   esMotorContenedores,
   validarIdContenedor,
@@ -528,6 +529,8 @@ export interface OpcionesIpc {
   secretos?: SecretosIpc;
   /** Cliente HTTP (D48); sin él se crea uno con la carpeta de datos del núcleo (pruebas). */
   clienteHttp?: ClienteHttp;
+  /** Servidor de ejemplo de la guía HTTP (D49); sin él se crea uno propio (se apaga con la ventana). */
+  servidorEjemplo?: ServidorEjemplo;
   metricas?: ControlMetricas;
   /** Captura de pantalla (D35); sin ella, la captura no está disponible. */
   captura?: CapturaIpc;
@@ -551,6 +554,8 @@ type Contexto = ApiSistema & {
   secretos: SecretosIpc;
   /** Cliente HTTP de Herramientas: solo el usuario lo usa; ni el MCP ni la CLI lo exponen. */
   clienteHttp: () => ClienteHttp;
+  /** Servidor de ejemplo de la guía HTTP (127.0.0.1): solo la ventana lo usa, ni el MCP ni la CLI. */
+  servidorEjemplo: ServidorEjemplo;
   metricas: ControlMetricas;
   captura: CapturaIpc;
   seguimientos: Seguimientos;
@@ -1985,6 +1990,9 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'clienteHttp.revelar': (_n, s, ref) => s.clienteHttp().revelar(ref),
   'clienteHttp.copiarComoCurl': (_n, s, p, e, i) => s.clienteHttp().copiarComoCurl(p, e ?? null, i),
   'clienteHttp.importarCurl': (_n, s, t) => s.clienteHttp().importarCurl(t),
+  // ---- Servidor de ejemplo de la guía HTTP (D49): solo 127.0.0.1, arranca con «Probar». ----
+  'ejemploHttp.iniciar': async (_n, s) => ({ puerto: await s.servidorEjemplo.iniciar() }),
+  'ejemploHttp.detener': (_n, s) => s.servidorEjemplo.detener(),
   'memoria.plan': (n, _s, modo) => n.planMemoria(unoDe(modo, MODOS_MEMORIA, 'modo')),
   'memoria.aplicar': (n, _s, planId, ids, confirmacion) =>
     n.aplicarMemoria(
@@ -2303,11 +2311,13 @@ export function registrarIpc(
   const contenedores = opciones.contenedores ?? new SeguimientosContenedores();
   const secretos = opciones.secretos ?? SECRETOS_NO_DISPONIBLES;
   let clienteHttp: ClienteHttp | null = opciones.clienteHttp ?? null;
+  const servidorEjemplo = opciones.servidorEjemplo ?? new ServidorEjemplo();
   const contexto: Omit<Contexto, 'emisor'> = {
     ...sistema,
     elegidas,
     secretos,
     clienteHttp: () => (clienteHttp ??= crearClienteHttp(nucleo, secretos)),
+    servidorEjemplo,
     metricas: opciones.metricas ?? new ControlMetricas(nucleo),
     captura: opciones.captura ?? CAPTURA_NO_DISPONIBLE,
     seguimientos,
@@ -2345,5 +2355,6 @@ export function registrarIpc(
     bajas.forEach((b) => b());
     seguimientos.dejarTodo();
     contenedores.dejarTodo();
+    void servidorEjemplo.detener();
   };
 }

@@ -271,6 +271,7 @@ export const en: Textos = {
       'clientehttp.curl_grande': 'The curl text is too large (64 KB at most).',
       'clientehttp.no_existe': 'The item no longer exists.',
       'clientehttp.limite': 'The limit of stored items was reached.',
+      'ejemplohttp.no_arranca': 'The example server could not be started.',
       'herramientas.pid_invalido': 'The PID is not valid.',
       'herramientas.pid_sistema': 'PID {pid} belongs to the system and cannot be ended.',
       'herramientas.proceso_propio': 'You cannot end WolfCore Dev or the process that started it.',
@@ -5135,6 +5136,10 @@ export const en: Textos = {
       solucion: 'How to fix it',
       ejemplo: 'Example',
       copiarEjemplo: 'Copy the example',
+      probar: 'Try it',
+      probarTitulo: 'Try this example in the HTTP client (nothing is sent until you press Send)',
+      servidorActivo: (puerto: number) =>
+        `Example server running at 127.0.0.1:${puerto} while you use the guide or the HTTP client. It is reachable from this computer only and stops when you leave or after 10 min unused.`,
       sinTraduccion: 'Not translated into this language: shown in English.',
       familias: {
         '1xx': '1xx Informational',

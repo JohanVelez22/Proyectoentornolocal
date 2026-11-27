@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { Copy, Search } from '@vicons/ionicons5';
-import { NButton, NEmpty, NIcon, NInput, NTag } from 'naive-ui';
-import { computed, ref } from 'vue';
+import { NButton, NEmpty, NIcon, NInput, NTag, useMessage } from 'naive-ui';
+import { computed, onBeforeUnmount, ref } from 'vue';
+import { probar, servidorEjemplo, soltarEjemplo } from '../../composables/servidorEjemplo';
 import { useCopiar } from '../../composables/useHerramienta';
 import { idioma, textos } from '../../i18n';
+import AvisoServidorEjemplo from './AvisoServidorEjemplo.vue';
+import { mensajeDeError } from '../../utilidades/errores';
+import { peticionDeCodigo, peticionDeMetodo, tienePrueba } from '../../utilidades/ejemplosHttp';
 import {
   contenidoHttp,
   FAMILIAS,
@@ -16,6 +20,22 @@ import {
 /** Guía HTTP (D42): contenido estático empaquetado, buscable por número, nombre y texto. */
 const t = textos.guias.http;
 const copiar = useCopiar();
+const message = useMessage();
+
+/**
+ * «Probar» arranca el servidor de ejemplo (127.0.0.1) y abre el cliente HTTP con la petición
+ * rellena; el cliente lo apaga al cerrarse. Si la guía se cierra sin haber pasado al cliente, se apaga aquí.
+ */
+async function ensayar(
+  crear: (puerto: number) => ReturnType<typeof peticionDeCodigo>,
+): Promise<void> {
+  try {
+    await probar(crear);
+  } catch (e) {
+    message.error(mensajeDeError(e));
+  }
+}
+onBeforeUnmount(() => soltarEjemplo('guia'));
 
 const modo = ref<'codigos' | 'metodos'>('codigos');
 const consulta = ref('');
@@ -52,6 +72,8 @@ const total = computed(() =>
         {{ t.verMetodos }}
       </NButton>
     </div>
+
+    <AvisoServidorEjemplo />
 
     <NInput v-model:value="consulta" clearable :placeholder="t.buscar" :aria-label="t.buscar">
       <template #prefix
@@ -122,6 +144,19 @@ const total = computed(() =>
               ></template>
             </NButton>
           </div>
+          <div v-if="true" class="probar">
+            <NButton
+              size="small"
+              secondary
+              type="primary"
+              :loading="servidorEjemplo.iniciando"
+              :title="t.probarTitulo"
+              :data-testid="`probar-codigo-${c.codigo}`"
+              @click="ensayar((p) => peticionDeCodigo(c.codigo, p))"
+            >
+              {{ t.probar }}
+            </NButton>
+          </div>
         </div>
       </details>
     </template>
@@ -155,6 +190,19 @@ const total = computed(() =>
               <template #icon
                 ><NIcon><Copy /></NIcon
               ></template>
+            </NButton>
+          </div>
+          <div v-if="tienePrueba(m.nombre)" class="probar">
+            <NButton
+              size="small"
+              secondary
+              type="primary"
+              :loading="servidorEjemplo.iniciando"
+              :title="t.probarTitulo"
+              :data-testid="`probar-metodo-${m.nombre}`"
+              @click="ensayar((p) => peticionDeMetodo(m.nombre, p)!)"
+            >
+              {{ t.probar }}
             </NButton>
           </div>
         </div>
@@ -217,6 +265,9 @@ const total = computed(() =>
   background: rgba(128, 128, 128, 0.12);
   font-family: var(--fuente-mono);
   font-size: 12.5px;
+}
+.probar {
+  margin-top: 8px;
 }
 .copiar {
   position: absolute;

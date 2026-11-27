@@ -522,6 +522,10 @@ const api: ApiEntorno = {
     copiarComoCurl: (p, e, i) => invocar('clienteHttp.copiarComoCurl', p, e, i),
     importarCurl: (t) => invocar('clienteHttp.importarCurl', t),
   },
+  ejemploHttp: {
+    iniciar: () => invocar('ejemploHttp.iniciar'),
+    detener: () => invocar('ejemploHttp.detener'),
+  },
   memoria: {
     plan: (modo) => invocar('memoria.plan', modo),
     aplicar: (planId, ids, confirmado) => invocar('memoria.aplicar', planId, ids, confirmado),

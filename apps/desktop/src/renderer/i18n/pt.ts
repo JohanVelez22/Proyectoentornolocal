@@ -276,6 +276,7 @@ export const pt: Textos = {
       'clientehttp.curl_grande': 'O texto do curl é grande demais (máximo de 64 KB).',
       'clientehttp.no_existe': 'O item não existe mais.',
       'clientehttp.limite': 'O limite de itens guardados foi atingido.',
+      'ejemplohttp.no_arranca': 'Não foi possível iniciar o servidor de exemplo.',
       'herramientas.pid_invalido': 'O PID não é válido.',
       'herramientas.pid_sistema': 'O PID {pid} é do sistema e não pode ser encerrado.',
       'herramientas.proceso_propio':
@@ -5177,6 +5178,11 @@ export const pt: Textos = {
       solucion: 'Como resolver',
       ejemplo: 'Exemplo',
       copiarEjemplo: 'Copiar o exemplo',
+      probar: 'Testar',
+      probarTitulo:
+        'Testar este exemplo no cliente HTTP (nada é enviado até você clicar em Enviar)',
+      servidorActivo: (puerto: number) =>
+        `Servidor de exemplo ativo em 127.0.0.1:${puerto} enquanto você usa o guia ou o cliente HTTP. Só é acessível a partir deste computador e para ao sair ou após 10 min sem uso.`,
       sinTraduccion: 'Sem tradução para este idioma: exibido em inglês.',
       familias: {
         '1xx': '1xx Informativos',

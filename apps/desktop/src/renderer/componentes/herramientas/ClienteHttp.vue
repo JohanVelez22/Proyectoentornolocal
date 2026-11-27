@@ -22,8 +22,9 @@ import {
   NTag,
   useMessage,
 } from 'naive-ui';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { api, plano } from '../../api';
+import { retenerEjemplo, soltarEjemplo } from '../../composables/servidorEjemplo';
 import { solicitudes } from '../../composables/solicitudes';
 import { formatearFecha, textos } from '../../i18n';
 import { desdeHistorial, sinReferencias } from '../../utilidades/clienteHttp';
@@ -31,6 +32,7 @@ import { mensajeDeError } from '../../utilidades/errores';
 import Desplegable from '../Desplegable.vue';
 import EstadoVacio from '../EstadoVacio.vue';
 import TextoLargo from '../TextoLargo.vue';
+import AvisoServidorEjemplo from './AvisoServidorEjemplo.vue';
 import CampoSecreto from './clientehttp/CampoSecreto.vue';
 import EditorPares from './clientehttp/EditorPares.vue';
 import PanelEntornos from './clientehttp/PanelEntornos.vue';
@@ -90,7 +92,9 @@ function tomarPrecargada(): void {
   seccion.value = 'peticion';
 }
 watch(() => solicitudes.peticionHttp, tomarPrecargada);
+onBeforeUnmount(() => soltarEjemplo('cliente'));
 onMounted(() => {
+  retenerEjemplo('cliente');
   tomarPrecargada();
   void cargar();
 });
@@ -343,6 +347,7 @@ function etiquetaHistorial(e: EstadoClienteHttp['historial'][number]): string {
 
 <template>
   <div class="herr" @keydown.ctrl.enter.prevent="enviar" @keydown.meta.enter.prevent="enviar">
+    <AvisoServidorEjemplo />
     <div class="herr-fila barra">
       <NTabs
         v-model:value="seccion"

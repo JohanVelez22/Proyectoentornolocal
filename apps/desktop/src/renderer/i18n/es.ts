@@ -272,6 +272,7 @@ export const es = {
       'clientehttp.curl_grande': 'El texto de curl es demasiado grande (máximo 64 KB).',
       'clientehttp.no_existe': 'El elemento ya no existe.',
       'clientehttp.limite': 'Se alcanzó el límite de elementos guardados.',
+      'ejemplohttp.no_arranca': 'No se pudo iniciar el servidor de ejemplo.',
       'herramientas.pid_invalido': 'El PID no es válido.',
       'herramientas.pid_sistema': 'El PID {pid} es del sistema y no se puede finalizar.',
       'herramientas.proceso_propio':
@@ -5163,6 +5164,10 @@ export const es = {
       solucion: 'Cómo solucionarlo',
       ejemplo: 'Ejemplo',
       copiarEjemplo: 'Copiar el ejemplo',
+      probar: 'Probar',
+      probarTitulo: 'Probar este ejemplo en el cliente HTTP (no se envía hasta que pulse Enviar)',
+      servidorActivo: (puerto: number) =>
+        `Servidor de ejemplo activo en 127.0.0.1:${puerto} mientras use la guía o el cliente HTTP. Solo se puede acceder desde este equipo; se apaga al salir o tras 10 min sin uso.`,
       sinTraduccion: 'Sin traducción a este idioma: se muestra en inglés.',
       familias: {
         '1xx': '1xx Informativos',

@@ -1520,6 +1520,14 @@ export interface ApiEntorno {
     ): Promise<string>;
     importarCurl(texto: string): Promise<{ peticion: PeticionHttp; avisos: AvisoCurl[] }>;
   };
+  /**
+   * Servidor de ejemplo de la guía HTTP (D49): escucha solo en 127.0.0.1 y en un puerto aleatorio;
+   * arranca al pulsar «Probar», se apaga al cerrar la guía o tras 10 min sin uso.
+   */
+  ejemploHttp: {
+    iniciar(): Promise<{ puerto: number }>;
+    detener(): Promise<void>;
+  };
   memoria: {
     /**
      * Lista lo que se podría liberar en ese modo (solo lee). `cerrar-programa` viene desmarcado y
@@ -2058,6 +2066,8 @@ export const RUTAS_IPC = [
   'clienteHttp.revelar',
   'clienteHttp.copiarComoCurl',
   'clienteHttp.importarCurl',
+  'ejemploHttp.iniciar',
+  'ejemploHttp.detener',
   'memoria.plan',
   'memoria.aplicar',
   'limpiezaDisco.analizar',
