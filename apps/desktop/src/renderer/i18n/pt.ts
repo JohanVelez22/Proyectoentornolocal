@@ -4351,7 +4351,8 @@ export const pt: Textos = {
       incompleto:
         'Alguns itens não foram contados: links, acessos negados ou pastas grandes demais.',
       raizUnidadTitulo: 'Analisar a unidade inteira?',
-      raizUnidadTexto: 'Você vai analisar {ruta}, uma unidade inteira. Pode demorar muito e percorre todo o conteúdo. Continuar?',
+      raizUnidadTexto:
+        'Você vai analisar {ruta}, uma unidade inteira. Pode demorar muito e percorre todo o conteúdo. Continuar?',
       raizUnidadAnalizar: 'Analisar',
     },
     clienteHttp: {

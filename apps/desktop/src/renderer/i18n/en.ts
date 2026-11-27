@@ -4308,7 +4308,8 @@ export const en: Textos = {
       incompleto:
         'Some items were not counted: links, denied access or folders that are too large.',
       raizUnidadTitulo: 'Analyze the whole drive?',
-      raizUnidadTexto: 'You are about to analyze {ruta}, an entire drive. It can take a long time and reads through all of its contents. Continue?',
+      raizUnidadTexto:
+        'You are about to analyze {ruta}, an entire drive. It can take a long time and reads through all of its contents. Continue?',
       raizUnidadAnalizar: 'Analyze',
     },
     clienteHttp: {

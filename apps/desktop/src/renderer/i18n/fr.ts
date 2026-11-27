@@ -4464,7 +4464,8 @@ export const fr: Textos = {
       incompleto:
         'Certains éléments n’ont pas été comptés : liens, accès refusés ou dossiers trop volumineux.',
       raizUnidadTitulo: 'Analyser tout le lecteur ?',
-      raizUnidadTexto: 'Vous allez analyser {ruta}, un lecteur entier. Cela peut être très long et parcourt tout son contenu. Continuer ?',
+      raizUnidadTexto:
+        'Vous allez analyser {ruta}, un lecteur entier. Cela peut être très long et parcourt tout son contenu. Continuer ?',
       raizUnidadAnalizar: 'Analyser',
     },
     clienteHttp: {
