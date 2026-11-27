@@ -26,7 +26,7 @@ WolfCore Dev incluye tres pantallas en el grupo **Utilidades** para diagnosticar
 En la revisión **Cortafuegos**, Doctor lee las reglas de entrada de Windows y le avisa cuando alguna deja programas de WolfCore Dev (nginx, PHP o bases de datos) abiertos a la red:
 
 1. Pulse **Reparar** en el hallazgo de cortafuegos. Se abre **Confirmar la reparación** con la lista **Reglas afectadas: desmarque las que no quiera tocar** y el botón **Aplicar**.
-2. La reparación **Quitar esas reglas de entrada del cortafuegos** elimina las reglas peligrosas una por una y por su nombre exacto. Antes se guarda una copia protegida en `etc/cortafuegos-quitadas.json` para poder recrearlas, y Windows pide permiso de administrador. Nada cambia hasta que confirme.
+2. La reparación **Quitar esas reglas de entrada del cortafuegos** elimina las reglas peligrosas una por una y por su nombre exacto. Antes se guarda una copia protegida en el registro de Windows (`HKLM\SOFTWARE\WolfCoreDev\Cortafuegos`, que solo puede modificar un administrador) para poder recrearlas, y Windows pide permiso de administrador. Nada cambia hasta que confirme.
 3. Las reglas de **otros programas** (FlyEnv, Laragon, XAMPP u otros) y las **acotadas a la red local** solo se muestran: **nunca se quitan desde aquí**.
 4. Si antes quitó reglas, el hallazgo **Reglas quitadas que se pueden restaurar** permite volver a crearlas con los mismos programa, perfil, protocolo, puertos y direcciones a partir de la copia protegida.
 
