@@ -362,6 +362,8 @@ import {
 import { Busquedas, type OpcionesBusqueda } from './herramientas/buscar';
 import { ejecutarDiffEnProceso, type EjecutorDiff } from './herramientas/diffCarpetas';
 import { DiffCarpetas } from './herramientas/diffCarpetasServicio';
+import { ejecutarUsoDiscoEnProceso, type EjecutorUsoDisco } from './herramientas/usoDisco';
+import { UsoDisco } from './herramientas/usoDiscoServicio';
 import { emitirCertificadoLibre } from './herramientas/certificadosLibres';
 import { entornoSistema, PLAZO_VERSION_MS, type EntornoSistema } from './herramientas/entorno';
 import { muestraSistemaWindows } from './plataforma/win';
@@ -404,6 +406,11 @@ export interface OpcionesNucleo {
    * el mismo proceso (solo para pruebas).
    */
   ejecutorDiff?: EjecutorDiff;
+  /**
+   * Proceso de trabajo de «Uso del disco» (D51, `utilityProcess` en la aplicación). Sin él se usa
+   * el mismo proceso (solo para pruebas).
+   */
+  ejecutorUsoDisco?: EjecutorUsoDisco;
   /** Para pruebas: lanzador de los comandos con streaming (pasos de receta, git). */
   lanzar?: Lanzador;
   /** PID del proceso principal y de su padre (por defecto, los de este proceso). */
@@ -507,6 +514,7 @@ interface ModulosNucleo {
   imprimirPdf?: ImprimirPdf;
   ejecutorConversor?: EjecutorTrabajo;
   ejecutorDiff?: EjecutorDiff;
+  ejecutorUsoDisco?: EjecutorUsoDisco;
   /** Editor del vhost de cada sitio (reglas propias o vhost completo, con nginx -t y vuelta atrás). */
   editorVhost: EditorVhost;
   /** php.ini de cada rama (editor con prueba, copia y vuelta atrás). */
@@ -741,6 +749,7 @@ export class Nucleo {
   private readonly imprimirPdf: ImprimirPdf | undefined;
   private readonly ejecutorConversor: EjecutorTrabajo | undefined;
   private readonly ejecutorDiff: EjecutorDiff | undefined;
+  private readonly ejecutorUsoDisco: EjecutorUsoDisco | undefined;
   /** Puerto de Ollama según la configuración (ClienteOllama lo lee de forma síncrona). */
   private readonly puertoOllama: { valor: number };
   /** Servidor MCP local; se maneja con iniciarMcp/detenerMcp (que guardan `mcp.activo`). */
@@ -845,6 +854,7 @@ export class Nucleo {
     this.imprimirPdf = m.imprimirPdf;
     this.ejecutorConversor = m.ejecutorConversor;
     this.ejecutorDiff = m.ejecutorDiff;
+    this.ejecutorUsoDisco = m.ejecutorUsoDisco;
     this.bd = m.bd;
     this.respaldos = m.respaldos;
     this.pgvector = m.pgvector;
@@ -1641,6 +1651,7 @@ export class Nucleo {
       ...(o.imprimirPdf ? { imprimirPdf: o.imprimirPdf } : {}),
       ...(o.ejecutorConversor ? { ejecutorConversor: o.ejecutorConversor } : {}),
       ...(o.ejecutorDiff ? { ejecutorDiff: o.ejecutorDiff } : {}),
+      ...(o.ejecutorUsoDisco ? { ejecutorUsoDisco: o.ejecutorUsoDisco } : {}),
       iniPhp,
       poolsSitio: pools,
       ajustesPhpSitio,
@@ -4059,6 +4070,20 @@ export class Nucleo {
     }));
   }
 
+  private usoDiscoServ?: UsoDisco;
+
+  /**
+   * Uso del disco (D51): solo lectura, en el proceso de trabajo, con progreso y cancelable. Las
+   * unidades salen de la plataforma; las carpetas, del diálogo nativo (lo comprueba el IPC).
+   */
+  get usoDisco(): UsoDisco {
+    return (this.usoDiscoServ ??= new UsoDisco({
+      ejecutor: this.ejecutorUsoDisco ?? ejecutarUsoDiscoEnProceso,
+      unidades: () => this.plataforma.unidadesLocales(),
+      progreso: (p) => this.eventos.emit('disco:progreso', p),
+    }));
+  }
+
   /** Certificado firmado por la CA local; devuelve los PEM (no escribe nada). */
   emitirCertificadoLibre(dominios: string[]): Promise<{ certPem: string; clavePem: string }> {
     return emitirCertificadoLibre(dominios, { rutas: this.rutas });
@@ -5183,6 +5208,7 @@ export class Nucleo {
     // Buscar y el diff de carpetas leen disco y, en el diff, hay un proceso de trabajo: se cortan.
     this.busquedasEnCurso?.cancelarTodas();
     this.diffCarpetasServ?.cancelar();
+    this.usoDiscoServ?.cancelar();
     // Un UAC abierto no debe sobrevivir a la app: se corta la PowerShell que lo espera.
     this.hosts.cancelarElevacion();
     if (this.temporizador) clearInterval(this.temporizador);

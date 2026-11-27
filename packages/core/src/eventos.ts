@@ -2,6 +2,7 @@ import type { Aviso } from './avisos/avisos';
 import type { LineasContenedor } from './contenedores/contenedores';
 import type { MotorBd } from './bd/env';
 import type { FinBusqueda, LoteBusqueda } from './herramientas/buscar';
+import type { ProgresoUsoDisco } from './herramientas/usoDisco';
 import type { ResumenDump } from './depuracion/receptor';
 import type { CierreConfirmacion, SolicitudConfirmacion } from './mcp/servidor';
 import type { MuestraSistema } from './monitor/metricas';
@@ -86,6 +87,8 @@ export type EventosNucleo = {
   'busqueda:resultado': LoteBusqueda;
   /** La búsqueda terminó (con su resumen) o falló (con su error). Siempre llega una vez. */
   'busqueda:fin': FinBusqueda;
+  /** Avance del análisis de «Uso del disco» en curso (archivos, carpetas y bytes vistos). */
+  'disco:progreso': ProgresoUsoDisco;
   /** Una captura de pantalla espera en el proceso principal para el conversor de imágenes (D35). */
   'captura:imagen': { ancho: number; alto: number };
 };

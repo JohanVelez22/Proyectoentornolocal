@@ -161,7 +161,7 @@ export type EjecutorUsoDisco = (
 ) => Promise<RespuestaUsoDisco>;
 
 /** Para pruebas: sustitutos de las lecturas (p. ej. para simular un acceso denegado). */
-export interface DepsUsoDisco {
+export interface DepsLecturaUsoDisco {
   opendir?: typeof opendir;
   lstat?: typeof lstat;
 }
@@ -170,7 +170,7 @@ export interface OpcionesEscaneo {
   alProgreso?: (p: ProgresoUsoDisco) => void;
   senal?: AbortSignal;
   ahora?: () => number;
-  deps?: DepsUsoDisco;
+  deps?: DepsLecturaUsoDisco;
 }
 
 /** Inserta en una lista ordenada de mayor a menor y la mantiene en `max` elementos. */
