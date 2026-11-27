@@ -55,6 +55,8 @@ async function escribirIni(c: CtxServicio, v: VarianteMysql): Promise<string> {
   const lentas = ajuste?.activo
     ? { segundos: ajuste.segundos, archivo: rutaLogLento(c.rutas, v, clave) }
     : undefined;
+  // mysqld no crea la carpeta del slow log: si falta, el registro no arranca.
+  if (lentas) await mkdir(path.dirname(lentas.archivo), { recursive: true });
   await writeFile(ini, contenidoIni(v, c.datos, c.puerto, lentas), 'utf8');
   return ini;
 }

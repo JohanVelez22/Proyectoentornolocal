@@ -3,6 +3,7 @@
  * las líneas `duration:` de PostgreSQL). Solo lee texto: no ejecuta nada. El SQL se entrega crudo
  * (con sus literales); quien lo muestra lo normaliza o exige el permiso de verlo.
  */
+import { sqlSinCerrar } from './normalizar';
 
 export interface EntradaLentaCruda {
   duracionMs: number;
@@ -11,6 +12,11 @@ export interface EntradaLentaCruda {
   base: string | null;
   fecha: string | null;
   sql: string;
+  /**
+   * El parser no está seguro de haber partido bien la entrada (una cadena o un identificador sin
+   * cerrar la deja a medias). Quien muestra el SQL en modo estricto no lo enseña.
+   */
+  dudosa?: boolean;
 }
 
 /** Fecha de MariaDB (`251126 10:00:00`) a `2025-11-26 10:00:00`; la ISO de MySQL se deja igual. */
@@ -23,21 +29,27 @@ function fechaMysql(t: string): string | null {
 
 export function parsearMysql(texto: string): EntradaLentaCruda[] {
   const salida: EntradaLentaCruda[] = [];
-  let actual: (EntradaLentaCruda & { lineas: string[]; visto: boolean }) | null = null;
+  let actual: (EntradaLentaCruda & { lineas: string[]; visto: boolean; dudosa: boolean }) | null =
+    null;
   let hora: string | null = null;
   let dbActual: string | null = null;
+  // La entrada anterior acabó con algo sin cerrar: esta es, con toda probabilidad, su continuación.
+  let siguienteDudosa = false;
   const cerrar = (): void => {
     if (actual?.visto) {
       const sql = actual.lineas.join('\n').trim().replace(/;$/, '').trim();
       if (sql !== '') {
+        const sinCerrar = sqlSinCerrar(sql, 'mysql');
         salida.push({
           duracionMs: actual.duracionMs,
           filasExaminadas: actual.filasExaminadas,
           base: actual.base,
           fecha: actual.fecha,
           sql,
+          dudosa: actual.dudosa || sinCerrar,
         });
-      }
+        siguienteDudosa = sinCerrar;
+      } else siguienteDudosa = false;
     }
     actual = null;
   };
@@ -58,10 +70,18 @@ export function parsearMysql(texto: string): EntradaLentaCruda[] {
         sql: '',
         lineas: [],
         visto: false,
+        dudosa: siguienteDudosa,
       };
+      siguienteDudosa = false;
       continue;
     }
     if (!actual) continue;
+    // Los metadatos (`# …`, `use`, `SET timestamp`) solo valen en la cabecera de la entrada, antes
+    // de la primera línea de SQL; después son SQL (el texto de una consulta no puede cambiar la base).
+    if (actual.lineas.length > 0) {
+      actual.lineas.push(linea);
+      continue;
+    }
     if (linea.startsWith('# Query_time:')) {
       const t = /Query_time:\s*([0-9.]+)/.exec(linea);
       const f = /Rows_examined:\s*(\d+)/.exec(linea);
@@ -136,6 +156,7 @@ export function parsearPostgres(texto: string): EntradaLentaCruda[] {
       base,
       fecha: f ? f[1]! : null,
       sql: m[2] ?? '',
+      dudosa: false,
     };
   }
   cerrar();

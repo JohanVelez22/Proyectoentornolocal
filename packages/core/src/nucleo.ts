@@ -1393,6 +1393,7 @@ export class Nucleo {
       ubicacion: (o) => servicios.datos.ubicacionInstancia(o),
       esDatosReales: (instancia, base) =>
         baseDeDatosReales({ sitios: () => sitios.listar(), baseDe: baseDeSitio }, instancia, base),
+      restringir: (ruta, opc) => plat.restringirAlUsuario(ruta, opc),
     });
     const auditoriaClaves = new AuditoriaClaves({
       rutas,

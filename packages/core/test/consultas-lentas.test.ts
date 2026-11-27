@@ -68,6 +68,7 @@ function armar(opts: {
       return { servicio: motor, claveDatos: '8.4', log };
     },
     esDatosReales: async (_o, base) => (opts.datosReales ?? []).includes(base),
+    restringir: async () => true,
     leerCola: async () =>
       opts.texto === null || opts.texto === undefined
         ? null
@@ -110,7 +111,7 @@ describe('activar y desactivar (cambio global)', () => {
       segundos: 1,
       archivo: rutaLogLento(rutas, 'mysql', '8.4'),
     });
-    expect(path.dirname(aplicadas[0]!.archivo)).toBe(path.resolve(rutas.logs()));
+    expect(path.dirname(aplicadas[0]!.archivo)).toBe(path.resolve(rutas.logs('lentas')));
     expect(JSON.parse(readFileSync(rutaAjuste(rutas, 'mysql', '8.4'), 'utf8'))).toEqual({
       activo: true,
       segundos: 1,
@@ -201,40 +202,38 @@ describe('«Ver literal» y datos reales', () => {
     SLOW('no_existe_falsa', '4', "SELECT * FROM c WHERE z = 'valor-falso-c'"),
   ].join('\n');
 
-  it('una base sin datos reales entrega el literal', async () => {
-    const { c } = armar({ texto, datosReales: ['otra_falsa'] });
+  it('un servidor sin bases de sitios con datosReales entrega el literal', async () => {
+    const { c } = armar({ texto });
     const r = await c.leer('mysql');
     const ok = r.entradas.find((e) => e.base === 'tienda_falsa')!;
     expect(ok.literalPermitido).toBe(true);
     expect(await c.literal('mysql', ok.id)).toBe("SELECT * FROM a WHERE x = 'valor-falso-a'");
   });
 
-  it('una base de un sitio con datosReales: no se ofrece y el núcleo rechaza con un error del catálogo', async () => {
+  it('con una base de un sitio con datosReales en el servidor, ninguna entrada ofrece literal y el núcleo rechaza con un error del catálogo', async () => {
     const { c } = armar({ texto, datosReales: ['otra_falsa'] });
     const r = await c.leer('mysql');
-    const real = r.entradas.find((e) => e.base === 'otra_falsa')!;
-    expect(real.literalPermitido).toBe(false);
-    expect(real.sqlNormalizado).toBe('SELECT * FROM b WHERE y = ?');
-    await expect(c.literal('mysql', real.id)).rejects.toMatchObject({
-      codigo: 'bd.lentas_literal_no_permitido',
-    });
+    for (const e of r.entradas) {
+      expect(e.literalPermitido).toBe(false);
+      await expect(c.literal('mysql', e.id)).rejects.toMatchObject({
+        codigo: 'bd.lentas_literal_no_permitido',
+      });
+    }
+    // el SQL sigue saliendo normalizado
+    expect(r.entradas.find((e) => e.base === 'otra_falsa')!.sqlNormalizado).toBe(
+      'SELECT * FROM b WHERE y = ?',
+    );
   });
 
-  it('una entrada que no se atribuye a una base conocida se trata igual', async () => {
+  it('la atribución de la entrada es informativa: sin base o con una base desconocida no cambia el permiso', async () => {
     const { c } = armar({ texto });
     const r = await c.leer('mysql');
     const rara = r.entradas.find((e) => e.base === 'no_existe_falsa')!;
-    expect(rara.literalPermitido).toBe(false);
-    await expect(c.literal('mysql', rara.id)).rejects.toMatchObject({
-      codigo: 'bd.lentas_literal_no_permitido',
-    });
+    expect(rara.literalPermitido).toBe(true);
     const sinBase = armar({ texto: SLOW(null, '2', "SELECT 'valor-falso-d'") });
     const e = (await sinBase.c.leer('mysql')).entradas[0]!;
     expect(e.base).toBeNull();
-    expect(e.literalPermitido).toBe(false);
-    await expect(sinBase.c.literal('mysql', e.id)).rejects.toMatchObject({
-      codigo: 'bd.lentas_literal_no_permitido',
-    });
+    expect(e.literalPermitido).toBe(true);
   });
 
   it('si no se puede saber si la base tiene datos reales, se rechaza', async () => {

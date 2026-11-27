@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, open } from 'node:fs/promises';
+import { mkdir, open, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../../errores';
 import type { Rutas } from '../../rutas';
@@ -7,6 +7,7 @@ import type { IdInstancia, IdServicioDatos } from '../../tipos';
 import type { ObjetivoBd } from '../basesDeDatos';
 import { motorDe } from '../basesDeDatos';
 import {
+  carpetaLogLento,
   guardarAjuste,
   rutaAjuste,
   rutaLogLento,
@@ -28,9 +29,15 @@ export interface EntradaLenta {
   filasExaminadas: number | null;
   base: string | null;
   fecha: string | null;
-  /** SQL con los literales cambiados por `?`. Es lo único que se entrega por defecto. */
-  sqlNormalizado: string;
-  /** Se puede pedir el SQL tal cual (la base es conocida y no tiene datos reales). */
+  /**
+   * SQL con los literales cambiados por `?`. Es lo único que se entrega por defecto. `null` si no
+   * se puede garantizar que no lleve datos («SQL oculto»).
+   */
+  sqlNormalizado: string | null;
+  /**
+   * Se puede pedir el SQL tal cual: solo si NINGUNA base del servidor es de un sitio con
+   * `datosReales`. No depende de la base a la que se atribuya la entrada (esa es informativa).
+   */
   literalPermitido: boolean;
 }
 
@@ -71,6 +78,8 @@ export interface DepsConsultasLentas {
   ubicacion(o: IdInstancia | IdServicioDatos): Promise<UbicacionInstancia>;
   /** ¿La base es la de un sitio con `datosReales`? (ante la duda, true). */
   esDatosReales(o: ObjetivoBd, base: string): Promise<boolean>;
+  /** Deja un archivo o carpeta legible solo por el usuario (`Plataforma.restringirAlUsuario`). */
+  restringir: (ruta: string, o?: { carpeta?: boolean }) => Promise<boolean>;
   /** Cola del archivo (para pruebas). Por defecto lee los últimos `maxBytes` de la ruta. */
   leerCola?: (
     ruta: string,
@@ -122,8 +131,8 @@ const huella = (e: EntradaLentaCruda): string =>
 /**
  * Consultas lentas de MySQL, MariaDB y PostgreSQL (D45b). Activar o desactivar es un cambio GLOBAL
  * del servidor: exige `confirmado === true` y solo se hace en instancias de WolfCore. El SQL sale
- * normalizado (sin literales); el literal solo se entrega si la base es conocida y no pertenece a
- * un sitio con `datosReales`. Nada de esto va a logs, ni a la CLI ni al MCP.
+ * normalizado (sin literales; en modo estricto, o «oculto», si el servidor tiene bases de un sitio
+ * con `datosReales`); el literal solo se entrega si ninguna base del servidor lo es. Nada de esto va a logs, ni a la CLI ni al MCP.
  */
 export class ConsultasLentas {
   constructor(private readonly d: DepsConsultasLentas) {}
@@ -185,7 +194,11 @@ export class ConsultasLentas {
     const archivo = rutaLogLento(this.d.rutas, u.servicio, u.claveDatos);
     const ajuste = rutaAjuste(this.d.rutas, u.servicio, u.claveDatos);
     try {
-      if (motor !== 'postgresql') await mkdir(path.dirname(archivo), { recursive: true });
+      if (motor !== 'postgresql') {
+        // El slow log lleva SQL con sus literales: carpeta propia, solo del usuario.
+        await mkdir(path.dirname(archivo), { recursive: true });
+        await this.d.restringir(carpetaLogLento(this.d.rutas), { carpeta: true }).catch(() => false);
+      }
       const antes = await this.d.bd.lentasEstado(o);
       await this.d.bd.lentasAplicar(o, { activo: a.activo, segundos, archivo });
       if (motor !== 'postgresql') {
@@ -207,7 +220,25 @@ export class ConsultasLentas {
       if (e instanceof ErrorWolf) throw e;
       throw new ErrorWolf('bd.lentas_fallo', 'No se pudo cambiar el registro de consultas lentas.');
     }
+    if (motor !== 'postgresql') {
+      await this.d.restringir(archivo).catch(() => false);
+      await this.borrarLogsAntiguos();
+    }
     return this.estado(o);
+  }
+
+  /** Los `logs/lentas-*.log` de la ubicación antigua (visibles como fuente): es un log, se borra. */
+  private async borrarLogsAntiguos(): Promise<void> {
+    const carpeta = this.d.rutas.logs();
+    let nombres: string[];
+    try {
+      nombres = await readdir(carpeta);
+    } catch {
+      return;
+    }
+    for (const n of nombres) {
+      if (/^lentas-.*\.log$/i.test(n)) await rm(path.join(carpeta, n), { force: true }).catch(() => undefined);
+    }
   }
 
   private async cruda(
@@ -225,29 +256,22 @@ export class ConsultasLentas {
     return { entradas, recortado: cola.recortado, sinArchivo: false };
   }
 
-  /** ¿Se puede mostrar el literal de una entrada? Base conocida y sin datos reales. */
-  private async literalPermitido(
-    o: ObjetivoBd,
-    e: EntradaLentaCruda,
-    conocidas: Set<string>,
-    memo: Map<string, boolean>,
-  ): Promise<boolean> {
-    if (e.base === null || !conocidas.has(e.base.toLowerCase())) return false;
-    const k = e.base.toLowerCase();
-    let v = memo.get(k);
-    if (v === undefined) {
-      v = !(await this.d.esDatosReales(o, e.base).catch(() => true));
-      memo.set(k, v);
-    }
-    return v;
-  }
-
-  private async basesConocidas(o: ObjetivoBd): Promise<Set<string>> {
+  /**
+   * ¿Alguna base de este servidor es la de un sitio con `datosReales`? Ante la duda (no se pueden
+   * listar las bases, o no se puede saber de una), sí. Cuando hay una, nada del servidor se
+   * muestra con sus valores, sea cual sea la base a la que el registro atribuya la consulta.
+   */
+  private async servidorConDatosReales(o: ObjetivoBd): Promise<boolean> {
+    let bases: { nombre: string }[];
     try {
-      return new Set((await this.d.bd.listar(o)).map((b) => b.nombre.toLowerCase()));
+      bases = await this.d.bd.listar(o);
     } catch {
-      return new Set();
+      return true;
     }
+    for (const b of bases) {
+      if (await this.d.esDatosReales(o, b.nombre).catch(() => true)) return true;
+    }
+    return false;
   }
 
   /** Las más lentas primero, con el SQL normalizado. */
@@ -257,45 +281,41 @@ export class ConsultasLentas {
     const { entradas, recortado, sinArchivo } = await this.cruda(o);
     const orden = [...entradas].sort((x, y) => y.duracionMs - x.duracionMs);
     const tope = orden.slice(0, MAX_ENTRADAS_LENTAS);
-    const conocidas = await this.basesConocidas(o);
-    const memo = new Map<string, boolean>();
+    const real = await this.servidorConDatosReales(o);
     const salida: EntradaLenta[] = [];
     for (const e of tope) {
+      // Modo estricto: ante cualquier anomalía (o si el parser dudó), el SQL no se enseña.
+      const sqlNormalizado =
+        real && e.dudosa === true ? null : normalizarSql(e.sql, dialecto, { estricto: real });
       salida.push({
         id: huella(e),
         duracionMs: e.duracionMs,
         filasExaminadas: e.filasExaminadas,
         base: e.base,
         fecha: e.fecha,
-        sqlNormalizado: normalizarSql(e.sql, dialecto),
-        literalPermitido: await this.literalPermitido(o, e, conocidas, memo),
+        sqlNormalizado,
+        literalPermitido: !real,
       });
     }
     return { entradas: salida, truncado: recortado || orden.length > tope.length, sinArchivo };
   }
 
   /**
-   * El SQL tal cual de una entrada. Se rechaza (con un error del catálogo) si la base es de un
-   * sitio con `datosReales` o si la entrada no se puede atribuir a una base conocida.
+   * El SQL tal cual de una entrada. Se rechaza (con un error del catálogo) si alguna base del
+   * servidor es de un sitio con `datosReales`: la atribución de la entrada no decide nada.
    */
   async literal(o: ObjetivoBd, id: string): Promise<string> {
     this.soloSql(o);
+    if (await this.servidorConDatosReales(o)) {
+      throw new ErrorWolf(
+        'bd.lentas_literal_no_permitido',
+        'No se muestra el SQL con sus valores: el servidor tiene bases con datos reales.',
+      );
+    }
     const { entradas } = await this.cruda(o);
     const e = entradas.find((x) => huella(x) === id);
     if (!e) {
       throw new ErrorWolf('bd.lentas_entrada_no_existe', 'Esa consulta ya no está en el registro.');
-    }
-    const permitido = await this.literalPermitido(
-      o,
-      e,
-      await this.basesConocidas(o),
-      new Map<string, boolean>(),
-    );
-    if (!permitido) {
-      throw new ErrorWolf(
-        'bd.lentas_literal_no_permitido',
-        'No se muestra el SQL con sus valores: la base tiene datos reales o no se puede atribuir.',
-      );
     }
     return e.sql;
   }
