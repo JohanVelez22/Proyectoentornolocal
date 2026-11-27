@@ -913,6 +913,19 @@ const DE: Diccionario = {
       titulo: 'Doctor hat Fehler in der Umgebung gefunden',
       cuerpo: `${limpio(d['errores'], 'Mehrere')} Probleme können die Umgebung beeinträchtigen. Öffnen Sie Doctor, um sie zu beheben.`,
     }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'Ein Prozess wurde beendet',
+      cuerpo: `${limpio(d['nombre'], 'Ein Prozess')} wurde beendet (Exit-Code unbekannt). Ob es gut verlief, ließ sich nicht feststellen: Prüfen Sie die Protokolle.`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'Die gespeicherten Schlüssel waren nicht geschützt',
+      cuerpo:
+        'WolfCore Dev konnte die Schlüsseldatei nicht nur für Ihren Windows-Benutzer lesbar machen. Ihre Daten sind sicher, aber prüfen Sie bitte die Berechtigungen des Datenordners.',
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'Websites ohne HTTPS',
+      cuerpo: `${limpio(d['fuente'], 'Einige Websites')} sind auf HTTP zurückgefallen: Port ${limpio(d['puerto'], '443')} wird von ${limpio(d['ocupadoPor'], 'einem anderen Programm')} verwendet. Schließen Sie es oder ändern Sie den HTTPS-Port in den Einstellungen, dann kehrt HTTPS beim nächsten Anwenden zurück.`,
+    }),
   },
   porTipo: {
     'servicio-caido': {
@@ -1091,6 +1104,19 @@ const IT: Diccionario = {
     'doctor.hallazgos': (d) => ({
       titulo: 'Doctor ha rilevato errori nell’ambiente',
       cuerpo: `Ci sono ${limpio(d['errores'], 'diversi')} problemi che possono impedire il funzionamento dell’ambiente. Apra Doctor per vedere come risolverli.`,
+    }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'Un processo è terminato',
+      cuerpo: `${limpio(d['nombre'], 'Un processo')} è terminato (codice di uscita sconosciuto). Non è stato possibile stabilire se sia andato a buon fine: controlli i suoi log.`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'Le chiavi salvate non erano protette',
+      cuerpo:
+        'WolfCore Dev non è riuscito a rendere il file delle chiavi leggibile solo dal suo utente Windows. I suoi dati sono al sicuro, ma controlli i permessi della cartella dei dati.',
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'Siti senza HTTPS',
+      cuerpo: `${limpio(d['fuente'], 'Alcuni siti')} sono tornati a HTTP: la porta ${limpio(d['puerto'], '443')} è usata da ${limpio(d['ocupadoPor'], 'un altro programma')}. Lo chiuda o cambi la porta HTTPS in Impostazioni e HTTPS tornerà alla prossima applicazione.`,
     }),
   },
   porTipo: {
@@ -1271,6 +1297,19 @@ const RU: Diccionario = {
       titulo: 'Doctor обнаружил ошибки в среде',
       cuerpo: `Найдено ${limpio(d['errores'], 'несколько')} проблем, мешающих работе среды. Откройте Doctor, чтобы узнать, как их исправить.`,
     }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'Процесс завершён',
+      cuerpo: `${limpio(d['nombre'], 'Процесс')} завершился (код выхода неизвестен). Определить, успешно ли он прошёл, не удалось: проверьте его журналы.`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'Сохранённые ключи не были защищены',
+      cuerpo:
+        'WolfCore Dev не удалось сделать файл ключей доступным для чтения только вашему пользователю Windows. Ваши данные в безопасности, но проверьте права доступа к папке данных.',
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'Сайты без HTTPS',
+      cuerpo: `${limpio(d['fuente'], 'Некоторые сайты')} переключились на HTTP: порт ${limpio(d['puerto'], '443')} занят программой ${limpio(d['ocupadoPor'], 'другая программа')}. Закройте её или измените порт HTTPS в настройках, и HTTPS вернётся при следующем применении.`,
+    }),
   },
   porTipo: {
     'servicio-caido': {
@@ -1446,6 +1485,19 @@ const ZH: Diccionario = {
     'doctor.hallazgos': (d) => ({
       titulo: 'Doctor 在环境中发现了错误',
       cuerpo: `共有 ${limpio(d['errores'], '多项')} 问题可能影响环境运行。请打开 Doctor 查看修复方式。`,
+    }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: '进程已结束',
+      cuerpo: `${limpio(d['nombre'], '某个进程')} 已结束（退出码未知）。无法确定其是否运行正常：请查看其日志。`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: '已保存的密钥未受保护',
+      cuerpo:
+        'WolfCore Dev 无法将其密钥文件设置为仅限您的 Windows 用户读取。您的数据是安全的，但请检查数据文件夹的权限。',
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: '站点未启用 HTTPS',
+      cuerpo: `${limpio(d['fuente'], '部分站点')} 已回退到 HTTP：端口 ${limpio(d['puerto'], '443')} 被 ${limpio(d['ocupadoPor'], '其他程序')} 占用。请关闭该程序，或在设置中更改 HTTPS 端口，下次应用时 HTTPS 将恢复。`,
     }),
   },
   porTipo: {
@@ -1626,6 +1678,19 @@ const JA: Diccionario = {
       titulo: 'Doctor が環境のエラーを検出しました',
       cuerpo: `環境の動作を妨げる問題が ${limpio(d['errores'], '複数')} 件あります。Doctor を開いて修復方法を確認してください。`,
     }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'プロセスが終了しました',
+      cuerpo: `${limpio(d['nombre'], 'プロセス')} が終了しました（終了コードは不明）。正常に完了したかどうか判断できませんでした。ログを確認してください。`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: '保存されたキーが保護されていませんでした',
+      cuerpo:
+        'WolfCore Dev はキーのファイルを Windows ユーザーのみが読み取れる状態にできませんでした。データは安全ですが、データフォルダーのアクセス許可を確認してください。',
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'HTTPS が使えないサイト',
+      cuerpo: `${limpio(d['fuente'], '一部のサイト')} は HTTP に切り替わりました。ポート ${limpio(d['puerto'], '443')} は ${limpio(d['ocupadoPor'], '別のプログラム')} が使用しています。そのプログラムを閉じるか、設定で HTTPS のポートを変更すると、次回の適用時に HTTPS が戻ります。`,
+    }),
   },
   porTipo: {
     'servicio-caido': {
@@ -1804,6 +1869,19 @@ const KO: Diccionario = {
     'doctor.hallazgos': (d) => ({
       titulo: 'Doctor가 환경에서 오류를 발견했습니다',
       cuerpo: `환경 작동을 방해할 수 있는 ${limpio(d['errores'], '여러')}개의 문제가 있습니다. 해결 방법을 보려면 Doctor를 여십시오.`,
+    }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: '프로세스가 종료되었습니다',
+      cuerpo: `${limpio(d['nombre'], '프로세스')}이(가) 종료되었습니다(종료 코드를 알 수 없음). 정상적으로 끝났는지 확인할 수 없었습니다. 로그를 확인하세요.`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: '저장된 키가 보호되지 않았습니다',
+      cuerpo:
+        'WolfCore Dev가 키 파일을 Windows 사용자만 읽을 수 있도록 설정하지 못했습니다. 데이터는 안전하지만 데이터 폴더의 권한을 확인해 주세요.',
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'HTTPS를 사용하지 않는 사이트',
+      cuerpo: `${limpio(d['fuente'], '일부 사이트')}이(가) HTTP로 전환되었습니다. 포트 ${limpio(d['puerto'], '443')}을(를) ${limpio(d['ocupadoPor'], '다른 프로그램')}이(가) 사용 중입니다. 해당 프로그램을 닫거나 설정에서 HTTPS 포트를 변경하면 다음 적용 시 HTTPS가 복구됩니다.`,
     }),
   },
   porTipo: {
@@ -1984,6 +2062,19 @@ const HI: Diccionario = {
       titulo: 'Doctor को परिवेश में त्रुटियाँ मिलीं',
       cuerpo: `${limpio(d['errores'], 'कई')} समस्याएँ हैं जो परिवेश के काम करने में बाधा डाल सकती हैं। इन्हें ठीक करने का तरीका देखने के लिए Doctor खोलें।`,
     }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'एक प्रक्रिया समाप्त हो गई',
+      cuerpo: `${limpio(d['nombre'], 'एक प्रक्रिया')} समाप्त हो गई (एग्ज़िट कोड अज्ञात)। यह तय नहीं हो सका कि वह सही ढंग से चली या नहीं: उसके लॉग जाँचें।`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'सहेजी गई कुंजियाँ सुरक्षित नहीं थीं',
+      cuerpo:
+        'WolfCore Dev अपनी कुंजियों की फ़ाइल को केवल आपके Windows उपयोगकर्ता के लिए पढ़ने योग्य नहीं बना सका। आपका डेटा सुरक्षित है, लेकिन कृपया डेटा फ़ोल्डर की अनुमतियाँ जाँच लें।',
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'बिना HTTPS वाली साइटें',
+      cuerpo: `${limpio(d['fuente'], 'कुछ साइटें')} HTTP पर लौट गईं: पोर्ट ${limpio(d['puerto'], '443')} का उपयोग ${limpio(d['ocupadoPor'], 'कोई अन्य प्रोग्राम')} कर रहा है। उसे बंद करें या सेटिंग्स में HTTPS पोर्ट बदलें, तो अगली बार लागू करने पर HTTPS वापस आ जाएगा।`,
+    }),
   },
   porTipo: {
     'servicio-caido': {
@@ -2162,6 +2253,19 @@ const TR: Diccionario = {
     'doctor.hallazgos': (d) => ({
       titulo: 'Doctor ortamda hatalar buldu',
       cuerpo: `Ortamın çalışmasını engelleyebilecek ${limpio(d['errores'], 'birkaç')} sorun var. Nasıl onaracağınızı görmek için Doctor bölümünü açın.`,
+    }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'Bir işlem tamamlandı',
+      cuerpo: `${limpio(d['nombre'], 'Bir işlem')} tamamlandı (çıkış kodu bilinmiyor). İyi gidip gitmediği belirlenemedi: kayıtlarını kontrol edin.`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'Kaydedilen anahtarlar korunmuyordu',
+      cuerpo:
+        'WolfCore Dev, anahtar dosyasını yalnızca Windows kullanıcınızın okuyabileceği hale getiremedi. Verileriniz güvende, ancak lütfen veri klasörünün izinlerini kontrol edin.',
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'HTTPS’siz siteler',
+      cuerpo: `${limpio(d['fuente'], 'Bazı siteler')} HTTP’ye döndü: ${limpio(d['puerto'], '443')} numaralı bağlantı noktası ${limpio(d['ocupadoPor'], 'başka bir program')} tarafından kullanılıyor. Onu kapatın veya Ayarlar’dan HTTPS bağlantı noktasını değiştirin; bir sonraki uygulamada HTTPS geri gelir.`,
     }),
   },
   porTipo: {
@@ -2342,6 +2446,19 @@ const ID: Diccionario = {
       titulo: 'Doctor menemukan kesalahan pada lingkungan',
       cuerpo: `Ada ${limpio(d['errores'], 'beberapa')} masalah yang dapat menghambat kerja lingkungan. Buka Doctor untuk melihat cara memperbaikinya.`,
     }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'Proses telah selesai',
+      cuerpo: `${limpio(d['nombre'], 'Sebuah proses')} selesai (kode keluar tidak diketahui). Tidak dapat ditentukan apakah berjalan dengan baik: periksa lognya.`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'Kunci yang tersimpan tidak terlindungi',
+      cuerpo:
+        'WolfCore Dev tidak dapat membuat berkas kuncinya hanya dapat dibaca oleh pengguna Windows Anda. Data Anda aman, tetapi mohon periksa izin folder data.',
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'Situs tanpa HTTPS',
+      cuerpo: `${limpio(d['fuente'], 'Beberapa situs')} kembali ke HTTP: port ${limpio(d['puerto'], '443')} dipakai oleh ${limpio(d['ocupadoPor'], 'program lain')}. Tutup program tersebut atau ubah port HTTPS di Pengaturan, dan HTTPS akan kembali pada penerapan berikutnya.`,
+    }),
   },
   porTipo: {
     'servicio-caido': {
@@ -2520,6 +2637,19 @@ const PL: Diccionario = {
     'doctor.hallazgos': (d) => ({
       titulo: 'Doctor wykrył błędy w środowisku',
       cuerpo: `Wykryto ${limpio(d['errores'], 'kilka')} problemów, które mogą uniemożliwić działanie środowiska. Otwórz Doctor, aby zobaczyć sposoby naprawy.`,
+    }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'Proces zakończył działanie',
+      cuerpo: `${limpio(d['nombre'], 'Proces')} zakończył działanie (kod wyjścia nieznany). Nie udało się ustalić, czy poszło dobrze: sprawdź jego logi.`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'Zapisane klucze nie były chronione',
+      cuerpo:
+        'WolfCore Dev nie mógł sprawić, aby plik z kluczami był czytelny tylko dla Twojego użytkownika Windows. Twoje dane są bezpieczne, ale sprawdź uprawnienia folderu danych.',
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'Strony bez HTTPS',
+      cuerpo: `${limpio(d['fuente'], 'Niektóre strony')} wróciły do HTTP: port ${limpio(d['puerto'], '443')} jest używany przez ${limpio(d['ocupadoPor'], 'inny program')}. Zamknij go lub zmień port HTTPS w Ustawieniach, a HTTPS wróci przy następnym zastosowaniu.`,
     }),
   },
   porTipo: {
@@ -2700,6 +2830,19 @@ const NL: Diccionario = {
       titulo: 'Doctor heeft fouten in de omgeving gevonden',
       cuerpo: `Er zijn ${limpio(d['errores'], 'meerdere')} problemen die kunnen verhinderen dat de omgeving werkt. Open Doctor om te zien hoe u deze kunt oplossen.`,
     }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'Een proces is voltooid',
+      cuerpo: `${limpio(d['nombre'], 'Een proces')} is voltooid (exitcode onbekend). Of het goed is gegaan, kon niet worden vastgesteld: controleer de logboeken.`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'De opgeslagen sleutels waren niet beschermd',
+      cuerpo:
+        'WolfCore Dev kon het sleutelbestand niet alleen leesbaar maken voor uw Windows-gebruiker. Uw gegevens zijn veilig, maar controleer de rechten van de gegevensmap.',
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'Sites zonder HTTPS',
+      cuerpo: `${limpio(d['fuente'], 'Sommige sites')} zijn teruggevallen op HTTP: poort ${limpio(d['puerto'], '443')} wordt gebruikt door ${limpio(d['ocupadoPor'], 'een ander programma')}. Sluit dat af of wijzig de HTTPS-poort bij Instellingen, en HTTPS keert terug bij de volgende toepassing.`,
+    }),
   },
   porTipo: {
     'servicio-caido': {
@@ -2878,6 +3021,19 @@ const UK: Diccionario = {
     'doctor.hallazgos': (d) => ({
       titulo: 'Doctor виявив помилки в середовищі',
       cuerpo: `Виявлено проблем: ${limpio(d['errores'], 'кілька')}, які можуть завадити роботі середовища. Відкрийте Doctor, щоб дізнатися, як їх виправити.`,
+    }),
+    'avisos.proceso_sin_codigo': (d) => ({
+      titulo: 'Процес завершився',
+      cuerpo: `${limpio(d['nombre'], 'Процес')}: завершено (код виходу невідомий). Визначити, чи все минуло успішно, не вдалося: перевірте його журнали.`,
+    }),
+    'avisos.credenciales_sin_proteccion': () => ({
+      titulo: 'Збережені ключі не були захищені',
+      cuerpo:
+        'WolfCore Dev не вдалося зробити файл ключів доступним для читання лише вашому користувачу Windows. Ваші дані в безпеці, але перевірте, будь ласка, права доступу до папки даних.',
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'Сайти без HTTPS',
+      cuerpo: `${limpio(d['fuente'], 'Деякі сайти')} повернулися до HTTP: порт ${limpio(d['puerto'], '443')} використовує ${limpio(d['ocupadoPor'], 'інша програма')}. Закрийте її або змініть порт HTTPS у налаштуваннях, і HTTPS повернеться під час наступного застосування.`,
     }),
   },
   porTipo: {

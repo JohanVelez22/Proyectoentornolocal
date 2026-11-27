@@ -185,6 +185,18 @@ const TEXTOS = {
     carpetaDatosAislada: 'Testdatenordner, ohne hosts, PATH oder Systemzertifikate zu verändern',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS ist kein gültiger Datenordner: Er muss absolut sein, kein Systemordner und verschieden vom echten (und vorherigen) Ordner. Die App wird ohne Änderungen geschlossen.',
+    sinGuardarTitulo: 'Nicht gespeicherte Änderungen',
+    sinGuardarTexto:
+      'Der Code-Editor hat nicht gespeicherte Änderungen. Wenn Sie fortfahren, gehen sie verloren.',
+    sinGuardarSalir: 'Ohne Speichern beenden',
+    sinGuardarSeguir: 'Weiter bearbeiten',
+    capturaAtajoOcupado:
+      'Das Tastenkürzel {atajo} wird bereits von einem anderen Programm verwendet und wurde nicht überschrieben. Die Bildschirmaufnahme hat kein globales Tastenkürzel: Wählen Sie in den Einstellungen ein anderes.',
+    capturaPermisoTitulo: 'Berechtigung zur Bildschirmaufzeichnung',
+    capturaPermisoTexto:
+      'Zum Aufnehmen des Bildschirms verlangt macOS, dass WolfCore Dev die Berechtigung zur Bildschirmaufzeichnung hat. Öffnen Sie sie in den Systemeinstellungen (Datenschutz & Sicherheit), aktivieren Sie WolfCore Dev und versuchen Sie es erneut. Nichts von dem, was Sie aufnehmen, verlässt diesen Computer.',
+    capturaAbrirPreferencias: 'Einstellungen öffnen',
+    capturaNoDisponible: 'Die Bildschirmaufnahme ist auf diesem Computer nicht verfügbar.',
   },
   it: {
     abrir: 'Apri',
@@ -213,6 +225,17 @@ const TEXTOS = {
       'cartella dati di test, senza modificare hosts, PATH né certificati di sistema',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS non è una cartella dati valida: deve essere assoluta, non di sistema e diversa dalla cartella reale (e dalla precedente). L’app si chiude senza modificare nulla.',
+    sinGuardarTitulo: 'Modifiche non salvate',
+    sinGuardarTexto: "L'editor di codice ha modifiche non salvate. Se continua, andranno perse.",
+    sinGuardarSalir: 'Esci senza salvare',
+    sinGuardarSeguir: 'Continua a modificare',
+    capturaAtajoOcupado:
+      "La scorciatoia {atajo} è già usata da un altro programma e non è stata sovrascritta. L'acquisizione dello schermo resta senza scorciatoia globale: ne scelga un'altra in Impostazioni.",
+    capturaPermisoTitulo: 'Autorizzazione per la registrazione dello schermo',
+    capturaPermisoTexto:
+      "Per acquisire lo schermo, macOS richiede che WolfCore Dev abbia l'autorizzazione per la registrazione dello schermo. La apra in Impostazioni di Sistema (Privacy e sicurezza), attivi WolfCore Dev e riprovi. Nulla di ciò che acquisisce lascia questo computer.",
+    capturaAbrirPreferencias: 'Apri le impostazioni',
+    capturaNoDisponible: "L'acquisizione dello schermo non è disponibile su questo computer.",
   },
   ru: {
     abrir: 'Открыть',
@@ -239,6 +262,18 @@ const TEXTOS = {
     carpetaDatosAislada: 'тестовая папка данных без изменения hosts, PATH и системных сертификатов',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS не является допустимой папкой данных: путь должен быть абсолютным, не системным и отличным от основной (и предыдущей) папки. Приложение закрывается без изменений.',
+    sinGuardarTitulo: 'Несохранённые изменения',
+    sinGuardarTexto:
+      'В редакторе кода есть несохранённые изменения. Если вы продолжите, они будут потеряны.',
+    sinGuardarSalir: 'Выйти без сохранения',
+    sinGuardarSeguir: 'Продолжить редактирование',
+    capturaAtajoOcupado:
+      'Сочетание клавиш {atajo} уже используется другой программой и не было изменено. У захвата экрана нет глобального сочетания: выберите другое в настройках.',
+    capturaPermisoTitulo: 'Разрешение на запись экрана',
+    capturaPermisoTexto:
+      'Чтобы захватывать экран, macOS требует, чтобы у WolfCore Dev было разрешение на запись экрана. Откройте его в «Системных настройках» (Конфиденциальность и безопасность), включите WolfCore Dev и повторите попытку. Ничто из захваченного не покидает этот компьютер.',
+    capturaAbrirPreferencias: 'Открыть настройки',
+    capturaNoDisponible: 'Захват экрана недоступен на этом компьютере.',
   },
   zh: {
     abrir: '打开',
@@ -264,6 +299,17 @@ const TEXTOS = {
     carpetaDatosAislada: '测试数据文件夹，不修改系统 hosts、PATH 或证书',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS 不是有效的数据文件夹：必须为绝对路径、非系统目录且不同于真实（及先前的）文件夹。应用将关闭且不做任何更改。',
+    sinGuardarTitulo: '有未保存的更改',
+    sinGuardarTexto: '代码编辑器中有未保存的更改。如果继续，这些更改将丢失。',
+    sinGuardarSalir: '不保存并退出',
+    sinGuardarSeguir: '继续编辑',
+    capturaAtajoOcupado:
+      '快捷键 {atajo} 已被其他程序占用，未作更改。屏幕截图目前没有全局快捷键：请在设置中选择其他快捷键。',
+    capturaPermisoTitulo: '屏幕录制权限',
+    capturaPermisoTexto:
+      '要截取屏幕，macOS 需要 WolfCore Dev 拥有屏幕录制权限。请在“系统设置”（隐私与安全性）中打开该权限，启用 WolfCore Dev 后重试。您截取的任何内容都不会离开此电脑。',
+    capturaAbrirPreferencias: '打开设置',
+    capturaNoDisponible: '此电脑无法使用屏幕截图。',
   },
   ja: {
     abrir: '開く',
@@ -291,6 +337,17 @@ const TEXTOS = {
     carpetaDatosAislada: 'テスト用データフォルダ（システムの hosts・PATH・証明書は変更されません）',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS は有効なデータフォルダではありません。絶対パスであり、システムフォルダでなく、本来の（および以前の）フォルダと異なる必要があります。何も変更せず終了します。',
+    sinGuardarTitulo: '未保存の変更',
+    sinGuardarTexto: 'コードエディターに未保存の変更があります。続行すると失われます。',
+    sinGuardarSalir: '保存せずに終了',
+    sinGuardarSeguir: '編集を続ける',
+    capturaAtajoOcupado:
+      'ショートカット {atajo} は他のプログラムで使用されているため、変更されませんでした。画面キャプチャにはグローバルショートカットがありません。設定で別のものを選んでください。',
+    capturaPermisoTitulo: '画面収録の権限',
+    capturaPermisoTexto:
+      '画面をキャプチャするには、macOS で WolfCore Dev に画面収録の権限が必要です。システム設定（プライバシーとセキュリティ）で権限を開き、WolfCore Dev をオンにして、もう一度お試しください。キャプチャした内容がこのコンピューターの外に出ることはありません。',
+    capturaAbrirPreferencias: '設定を開く',
+    capturaNoDisponible: 'このコンピューターでは画面キャプチャを利用できません。',
   },
   ko: {
     abrir: '열기',
@@ -318,6 +375,18 @@ const TEXTOS = {
       '테스트 데이터 폴더입니다. 시스템 hosts, PATH 및 인증서는 변경하지 않습니다',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS가 올바른 데이터 폴더가 아닙니다. 절대 경로여야 하며, 시스템 폴더가 아니어야 하고, 실제 데이터 폴더(및 이전 폴더)와 달라야 합니다. 아무것도 변경하지 않고 앱을 종료합니다.',
+    sinGuardarTitulo: '저장되지 않은 변경 사항',
+    sinGuardarTexto:
+      '코드 편집기에 저장되지 않은 변경 사항이 있습니다. 계속하면 변경 사항이 사라집니다.',
+    sinGuardarSalir: '저장하지 않고 나가기',
+    sinGuardarSeguir: '계속 편집',
+    capturaAtajoOcupado:
+      '단축키 {atajo}은(는) 이미 다른 프로그램에서 사용 중이라 변경하지 않았습니다. 화면 캡처에는 전역 단축키가 없습니다. 설정에서 다른 단축키를 선택하세요.',
+    capturaPermisoTitulo: '화면 기록 권한',
+    capturaPermisoTexto:
+      '화면을 캡처하려면 macOS에서 WolfCore Dev에 화면 기록 권한이 필요합니다. 시스템 설정(개인정보 보호 및 보안)에서 권한을 열고 WolfCore Dev를 켠 다음 다시 시도하세요. 캡처한 내용은 이 컴퓨터를 벗어나지 않습니다.',
+    capturaAbrirPreferencias: '설정 열기',
+    capturaNoDisponible: '이 컴퓨터에서는 화면 캡처를 사용할 수 없습니다.',
   },
   hi: {
     abrir: 'खोलें',
@@ -344,6 +413,17 @@ const TEXTOS = {
     carpetaDatosAislada: 'परीक्षण डेटा फ़ोल्डर, बिना hosts, PATH या सिस्टम प्रमाणपत्रों में बदलाव किए',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS एक मान्य डेटा फ़ोल्डर नहीं है: यह पूर्ण पथ होना चाहिए, सिस्टम फ़ोल्डर नहीं होना चाहिए और वास्तविक फ़ोल्डर (तथा पिछले फ़ोल्डर) से भिन्न होना चाहिए। ऐप बिना किसी बदलाव के बंद हो रहा है।',
+    sinGuardarTitulo: 'बिना सहेजे बदलाव',
+    sinGuardarTexto: 'कोड एडिटर में बिना सहेजे बदलाव हैं। यदि आप आगे बढ़ते हैं, तो वे खो जाएँगे।',
+    sinGuardarSalir: 'बिना सहेजे बाहर निकलें',
+    sinGuardarSeguir: 'संपादन जारी रखें',
+    capturaAtajoOcupado:
+      'शॉर्टकट {atajo} का उपयोग पहले से किसी अन्य प्रोग्राम द्वारा किया जा रहा है, इसलिए उसे नहीं बदला गया। स्क्रीन कैप्चर के लिए कोई ग्लोबल शॉर्टकट नहीं है: सेटिंग्स में कोई दूसरा चुनें।',
+    capturaPermisoTitulo: 'स्क्रीन रिकॉर्डिंग की अनुमति',
+    capturaPermisoTexto:
+      'स्क्रीन कैप्चर करने के लिए macOS में WolfCore Dev को स्क्रीन रिकॉर्डिंग की अनुमति चाहिए। इसे सिस्टम सेटिंग्स (गोपनीयता और सुरक्षा) में खोलें, WolfCore Dev चालू करें और फिर से प्रयास करें। आप जो कुछ कैप्चर करते हैं, वह इस कंप्यूटर से बाहर नहीं जाता।',
+    capturaAbrirPreferencias: 'सेटिंग्स खोलें',
+    capturaNoDisponible: 'इस कंप्यूटर पर स्क्रीन कैप्चर उपलब्ध नहीं है।',
   },
   tr: {
     abrir: 'Aç',
@@ -371,6 +451,18 @@ const TEXTOS = {
     carpetaDatosAislada: 'test veri klasörü; hosts, PATH ve sistem sertifikalarına dokunulmaz',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS geçerli bir veri klasörü değil: mutlak olmalı, sistem klasörü olmamalı ve gerçek (ve önceki) klasörden farklı olmalıdır. Uygulama hiçbir şeye dokunmadan kapanıyor.',
+    sinGuardarTitulo: 'Kaydedilmemiş değişiklikler',
+    sinGuardarTexto:
+      'Kod düzenleyicide kaydedilmemiş değişiklikler var. Devam ederseniz kaybolurlar.',
+    sinGuardarSalir: 'Kaydetmeden çık',
+    sinGuardarSeguir: 'Düzenlemeye devam et',
+    capturaAtajoOcupado:
+      '{atajo} kısayolu zaten başka bir program tarafından kullanılıyor ve değiştirilmedi. Ekran yakalamanın genel bir kısayolu yok: Ayarlar’dan başka bir tane seçin.',
+    capturaPermisoTitulo: 'Ekran kaydı izni',
+    capturaPermisoTexto:
+      'Ekranı yakalamak için macOS, WolfCore Dev’in ekran kaydı iznine sahip olmasını ister. İzni Sistem Ayarları’nda (Gizlilik ve Güvenlik) açın, WolfCore Dev’i etkinleştirin ve yeniden deneyin. Yakaladığınız hiçbir şey bu bilgisayardan çıkmaz.',
+    capturaAbrirPreferencias: 'Ayarları aç',
+    capturaNoDisponible: 'Ekran yakalama bu bilgisayarda kullanılamıyor.',
   },
   id: {
     abrir: 'Buka',
@@ -399,6 +491,18 @@ const TEXTOS = {
       'folder data uji coba, tanpa mengubah hosts, PATH, maupun sertifikat sistem',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS bukan folder data yang valid: harus berupa jalur absolut, bukan folder sistem, dan berbeda dari folder data asli (maupun sebelumnya). Aplikasi ditutup tanpa mengubah apa pun.',
+    sinGuardarTitulo: 'Perubahan belum disimpan',
+    sinGuardarTexto:
+      'Editor kode memiliki perubahan yang belum disimpan. Jika Anda melanjutkan, perubahan itu akan hilang.',
+    sinGuardarSalir: 'Keluar tanpa menyimpan',
+    sinGuardarSeguir: 'Lanjutkan mengedit',
+    capturaAtajoOcupado:
+      'Pintasan {atajo} sudah dipakai program lain dan tidak diubah. Tangkapan layar tidak memiliki pintasan global: pilih pintasan lain di Pengaturan.',
+    capturaPermisoTitulo: 'Izin perekaman layar',
+    capturaPermisoTexto:
+      'Untuk menangkap layar, macOS mengharuskan WolfCore Dev memiliki izin perekaman layar. Buka izin tersebut di Pengaturan Sistem (Privasi & Keamanan), aktifkan WolfCore Dev, lalu coba lagi. Tidak ada hasil tangkapan yang keluar dari komputer ini.',
+    capturaAbrirPreferencias: 'Buka pengaturan',
+    capturaNoDisponible: 'Tangkapan layar tidak tersedia di komputer ini.',
   },
   pl: {
     abrir: 'Otwórz',
@@ -427,6 +531,18 @@ const TEXTOS = {
       'testowy folder danych — bez modyfikowania pliku hosts, PATH ani certyfikatów systemowych',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS nie jest prawidłowym folderem danych: ścieżka musi być bezwzględna, nie może być folderem systemowym i musi różnić się od rzeczywistego (oraz poprzedniego) folderu. Aplikacja zamknie się bez wprowadzania zmian.',
+    sinGuardarTitulo: 'Niezapisane zmiany',
+    sinGuardarTexto:
+      'Edytor kodu zawiera niezapisane zmiany. Jeśli kontynuujesz, zostaną utracone.',
+    sinGuardarSalir: 'Wyjdź bez zapisywania',
+    sinGuardarSeguir: 'Kontynuuj edycję',
+    capturaAtajoOcupado:
+      'Skrót {atajo} jest już używany przez inny program i nie został zmieniony. Przechwytywanie ekranu nie ma globalnego skrótu: wybierz inny w Ustawieniach.',
+    capturaPermisoTitulo: 'Uprawnienie do nagrywania ekranu',
+    capturaPermisoTexto:
+      'Aby przechwytywać ekran, macOS wymaga, aby WolfCore Dev miał uprawnienie do nagrywania ekranu. Otwórz je w Ustawieniach systemowych (Prywatność i ochrona), włącz WolfCore Dev i spróbuj ponownie. Nic z tego, co przechwycisz, nie opuszcza tego komputera.',
+    capturaAbrirPreferencias: 'Otwórz ustawienia',
+    capturaNoDisponible: 'Przechwytywanie ekranu nie jest dostępne na tym komputerze.',
   },
   nl: {
     abrir: 'Openen',
@@ -454,6 +570,18 @@ const TEXTOS = {
     carpetaDatosAislada: 'testgegevensmap, zonder hosts, PATH of systeemcertificaten aan te raken',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS is geen geldige gegevensmap: deze moet absoluut zijn, geen systeemmap zijn en verschillen van de echte map (en de vorige). De app sluit af zonder iets te wijzigen.',
+    sinGuardarTitulo: 'Niet-opgeslagen wijzigingen',
+    sinGuardarTexto:
+      'De code-editor heeft niet-opgeslagen wijzigingen. Als u doorgaat, gaan ze verloren.',
+    sinGuardarSalir: 'Afsluiten zonder opslaan',
+    sinGuardarSeguir: 'Verder bewerken',
+    capturaAtajoOcupado:
+      'De sneltoets {atajo} wordt al door een ander programma gebruikt en is met rust gelaten. Schermopname heeft geen globale sneltoets: kies een andere bij Instellingen.',
+    capturaPermisoTitulo: 'Toestemming voor schermopname',
+    capturaPermisoTexto:
+      'Om het scherm vast te leggen vereist macOS dat WolfCore Dev toestemming voor schermopname heeft. Open die bij Systeeminstellingen (Privacy en beveiliging), schakel WolfCore Dev in en probeer het opnieuw. Niets van wat u vastlegt verlaat deze computer.',
+    capturaAbrirPreferencias: 'Instellingen openen',
+    capturaNoDisponible: 'Schermopname is niet beschikbaar op deze computer.',
   },
   uk: {
     abrir: 'Відкрити',
@@ -480,6 +608,17 @@ const TEXTOS = {
     carpetaDatosAislada: 'тестова папка даних, без змін у hosts, PATH чи системних сертифікатах',
     carpetaDatosInvalida:
       'WOLFCORE_DATOS не є дійсною папкою даних: шлях має бути абсолютним, не системним і відрізнятися від основної папки (та від попередньої). Програма закриється, нічого не змінюючи.',
+    sinGuardarTitulo: 'Незбережені зміни',
+    sinGuardarTexto: 'У редакторі коду є незбережені зміни. Якщо ви продовжите, їх буде втрачено.',
+    sinGuardarSalir: 'Вийти без збереження',
+    sinGuardarSeguir: 'Продовжити редагування',
+    capturaAtajoOcupado:
+      'Комбінацію клавіш {atajo} уже використовує інша програма, і її не було змінено. Для захоплення екрана немає глобальної комбінації: виберіть іншу в налаштуваннях.',
+    capturaPermisoTitulo: 'Дозвіл на запис екрана',
+    capturaPermisoTexto:
+      'Щоб захоплювати екран, macOS вимагає, щоб WolfCore Dev мав дозвіл на запис екрана. Відкрийте його в «Системних налаштуваннях» (Конфіденційність і безпека), увімкніть WolfCore Dev і спробуйте ще раз. Ніщо із захопленого не залишає цей комп’ютер.',
+    capturaAbrirPreferencias: 'Відкрити налаштування',
+    capturaNoDisponible: 'Захоплення екрана недоступне на цьому комп’ютері.',
   },
 } satisfies Record<IdiomaUi, Record<string, string>>;
 
