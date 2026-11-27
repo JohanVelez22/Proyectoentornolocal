@@ -285,6 +285,47 @@ try {
     servidorHttp.closeAllConnections();
     servidorHttp.close();
   }
+  // Guía HTTP (D49): «Probar» de un código arranca el servidor de ejemplo, abre el cliente con la
+  // petición rellena (no se envía sola) y, al enviarla, vuelve el 404 de 127.0.0.1.
+  try {
+    await ventana.evaluate(() => {
+      location.hash = '#/herramientas';
+    });
+    await ventana.waitForSelector('[data-herramienta="guias"]', { timeout: 30_000 });
+    await ventana.evaluate(() => document.querySelector('[data-herramienta="guias"]')?.click());
+    await ventana.waitForSelector('.n-drawer .n-tabs-tab[data-name="guiaHttp"]', {
+      state: 'attached',
+      timeout: 30_000,
+    });
+    await ventana.evaluate(() =>
+      document.querySelector('.n-drawer .n-tabs-tab[data-name="guiaHttp"]')?.click(),
+    );
+    await ventana.waitForSelector('[data-testid="probar-codigo-404"]', {
+      state: 'attached',
+      timeout: 30_000,
+    });
+    await ventana.evaluate(() => {
+      const b = document.querySelector('[data-testid="probar-codigo-404"]');
+      b?.closest('details')?.setAttribute('open', '');
+      b?.click();
+    });
+    await ventana.waitForSelector('[data-testid="http-url"] input', { timeout: 30_000 });
+    const url = await ventana.inputValue('[data-testid="http-url"] input');
+    if (!/^http:\/\/127\.0\.0\.1:\d+\/estado\/404$/.test(url))
+      falla(`«Probar» no rellenó la URL del servidor de ejemplo: ${url}`);
+    if ((await ventana.locator('[data-testid="http-resumen"]').count()) > 0)
+      falla('«Probar» envió la petición sin que el usuario pulsara Enviar.');
+    await ventana.press('[data-testid="http-url"] input', 'Control+Enter');
+    await ventana.waitForSelector('[data-testid="http-resumen"]', { timeout: 30_000 });
+    const resumen = await ventana.textContent('[data-testid="http-resumen"]');
+    const cuerpo404 = await ventana.textContent('[data-testid="http-cuerpo"]');
+    if (!/404/.test(`${resumen} ${cuerpo404}`))
+      falla(`El ejemplo 404 no devolvió un 404: ${resumen} ${cuerpo404}`);
+    else
+      registro('ok   Guía HTTP: «Probar» 404 abrió el cliente y el servidor de ejemplo respondió');
+  } catch (e) {
+    falla(`La guía HTTP (Probar) no funcionó: ${e}`);
+  }
   await ventana.waitForTimeout(500);
 
   if (consola.length > 0) {
