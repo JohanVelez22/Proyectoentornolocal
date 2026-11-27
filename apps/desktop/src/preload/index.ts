@@ -508,6 +508,20 @@ const api: ApiEntorno = {
     convertirDocumento: (origen, a, destino) =>
       invocar('herramientas.convertirDocumento', origen, a, destino),
   },
+  clienteHttp: {
+    estado: () => invocar('clienteHttp.estado'),
+    enviar: (p, o) => invocar('clienteHttp.enviar', p, o),
+    cancelar: (id) => invocar('clienteHttp.cancelar', id),
+    guardarPeticion: (p) => invocar('clienteHttp.guardarPeticion', p),
+    borrarPeticion: (id) => invocar('clienteHttp.borrarPeticion', id),
+    guardarEntorno: (e) => invocar('clienteHttp.guardarEntorno', e),
+    borrarEntorno: (id) => invocar('clienteHttp.borrarEntorno', id),
+    activarEntorno: (id) => invocar('clienteHttp.activarEntorno', id),
+    limpiarHistorial: () => invocar('clienteHttp.limpiarHistorial'),
+    revelar: (ref) => invocar('clienteHttp.revelar', ref),
+    copiarComoCurl: (p, e, i) => invocar('clienteHttp.copiarComoCurl', p, e, i),
+    importarCurl: (t) => invocar('clienteHttp.importarCurl', t),
+  },
   memoria: {
     plan: (modo) => invocar('memoria.plan', modo),
     aplicar: (planId, ids, confirmado) => invocar('memoria.aplicar', planId, ids, confirmado),

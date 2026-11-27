@@ -1,8 +1,9 @@
 import { existsSync } from 'node:fs';
-import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import {
   CLAVES_RAPIDAS,
+  ClienteHttp,
   ACCIONES_CONTENEDOR,
   esMotorContenedores,
   validarIdContenedor,
@@ -525,6 +526,8 @@ const CAPTURA_NO_DISPONIBLE: CapturaIpc = {
 
 export interface OpcionesIpc {
   secretos?: SecretosIpc;
+  /** Cliente HTTP (D48); sin él se crea uno con la carpeta de datos del núcleo (pruebas). */
+  clienteHttp?: ClienteHttp;
   metricas?: ControlMetricas;
   /** Captura de pantalla (D35); sin ella, la captura no está disponible. */
   captura?: CapturaIpc;
@@ -546,6 +549,8 @@ export interface OpcionesIpc {
 type Contexto = ApiSistema & {
   elegidas: RutasElegidas;
   secretos: SecretosIpc;
+  /** Cliente HTTP de Herramientas: solo el usuario lo usa; ni el MCP ni la CLI lo exponen. */
+  clienteHttp: () => ClienteHttp;
   metricas: ControlMetricas;
   captura: CapturaIpc;
   seguimientos: Seguimientos;
@@ -1963,6 +1968,23 @@ const TABLA: Record<RutaIpc, Manejador> = {
       s.elegidas.exigir(destino, 'archivo', 'guardar'),
     ),
   // ---- Optimizador de RAM (D36): la lista siempre se ve antes y se aplica solo con confirmación ----
+  // ---- Cliente HTTP (D48): pide a cualquier host (también 127.0.0.1 y la LAN), solo a pedido del
+  // usuario desde la ventana. Los datos se validan en el núcleo; los secretos solo pasan por main. ----
+  'clienteHttp.estado': (_n, s) => s.clienteHttp().estado(),
+  'clienteHttp.enviar': (_n, s, p, o) => {
+    const op = o === undefined ? {} : objetoPlano<Record<string, unknown>>(o, 'opciones');
+    return s.clienteHttp().enviar(p, { entornoId: op['entornoId'], idEnvio: op['idEnvio'] });
+  },
+  'clienteHttp.cancelar': (_n, s, id) => s.clienteHttp().cancelar(id),
+  'clienteHttp.guardarPeticion': (_n, s, p) => s.clienteHttp().guardarPeticion(p),
+  'clienteHttp.borrarPeticion': (_n, s, id) => s.clienteHttp().borrarPeticion(id),
+  'clienteHttp.guardarEntorno': (_n, s, e) => s.clienteHttp().guardarEntorno(e),
+  'clienteHttp.borrarEntorno': (_n, s, id) => s.clienteHttp().borrarEntorno(id),
+  'clienteHttp.activarEntorno': (_n, s, id) => s.clienteHttp().activarEntorno(id),
+  'clienteHttp.limpiarHistorial': (_n, s) => s.clienteHttp().limpiarHistorial(),
+  'clienteHttp.revelar': (_n, s, ref) => s.clienteHttp().revelar(ref),
+  'clienteHttp.copiarComoCurl': (_n, s, p, e, i) => s.clienteHttp().copiarComoCurl(p, e ?? null, i),
+  'clienteHttp.importarCurl': (_n, s, t) => s.clienteHttp().importarCurl(t),
   'memoria.plan': (n, _s, modo) => n.planMemoria(unoDe(modo, MODOS_MEMORIA, 'modo')),
   'memoria.aplicar': (n, _s, planId, ids, confirmacion) =>
     n.aplicarMemoria(
@@ -2246,6 +2268,27 @@ function aError(e: unknown): ResultadoIpc<never> {
   };
 }
 
+/**
+ * Cliente HTTP con la carpeta de datos del núcleo (`etc/clientehttp`), los valores secretos en
+ * `AlmacenSecretos` (ids `http:<hex>`), la CA de WolfCore y los dominios de sus sitios.
+ */
+function crearClienteHttp(n: NucleoIpc, secretos: SecretosIpc): ClienteHttp {
+  const id = (i: string): `http:${string}` => i as `http:${string}`;
+  return new ClienteHttp({
+    carpeta: n.rutas.clienteHttp(),
+    secretos: {
+      guardar: (i, v) => secretos.guardar(id(i), v),
+      leer: (i) => secretos.leer(id(i)),
+      borrar: (i) => secretos.borrar(id(i)),
+    },
+    caWolf: async () => {
+      const ruta = n.rutas.caCrt();
+      return existsSync(ruta) ? readFile(ruta, 'utf8') : null;
+    },
+    dominiosWolf: async () => (await n.sitios.listar()).flatMap((x) => [x.dominio, ...x.alias]),
+  });
+}
+
 /** Registra los canales `entorno:<ruta>` y reenvía los eventos del núcleo a la ventana. */
 export function registrarIpc(
   nucleo: NucleoIpc,
@@ -2258,10 +2301,13 @@ export function registrarIpc(
 ): () => void {
   const seguimientos = opciones.seguimientos ?? new Seguimientos();
   const contenedores = opciones.contenedores ?? new SeguimientosContenedores();
+  const secretos = opciones.secretos ?? SECRETOS_NO_DISPONIBLES;
+  let clienteHttp: ClienteHttp | null = opciones.clienteHttp ?? null;
   const contexto: Omit<Contexto, 'emisor'> = {
     ...sistema,
     elegidas,
-    secretos: opciones.secretos ?? SECRETOS_NO_DISPONIBLES,
+    secretos,
+    clienteHttp: () => (clienteHttp ??= crearClienteHttp(nucleo, secretos)),
     metricas: opciones.metricas ?? new ControlMetricas(nucleo),
     captura: opciones.captura ?? CAPTURA_NO_DISPONIBLE,
     seguimientos,

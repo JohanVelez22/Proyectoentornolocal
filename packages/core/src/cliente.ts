@@ -17,3 +17,12 @@ export {
   IDIOMAS_UI,
   MAX_BYTES_EDITOR,
 } from './constantesUi';
+export {
+  MAX_COLECCION_HTTP,
+  MAX_CURL,
+  MAX_HISTORIAL_HTTP,
+  METODOS_HTTP,
+  PLAZO_HTTP_DEFECTO_SEG,
+  PLAZO_HTTP_MAX_SEG,
+} from './clientehttp/tipos';
+export { esNombreSecreto, esSoloVariables } from './clientehttp/sensibles';

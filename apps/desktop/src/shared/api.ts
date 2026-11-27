@@ -1,5 +1,10 @@
 import type {
   AccionContenedor,
+  AvisoCurl,
+  EntornoHttp,
+  EstadoClienteHttp,
+  PeticionHttp,
+  RespuestaHttp,
   Contenedor,
   EstadoMotor,
   LineasContenedor,
@@ -1487,6 +1492,34 @@ export interface ApiEntorno {
       destino: string,
     ): Promise<{ destino: string; bytes: number }>;
   };
+  /**
+   * Cliente HTTP de Herramientas (D48). Las peticiones salen del proceso principal, que compone la
+   * petición e inserta los secretos: el renderer solo ve referencias (`ref`) y nunca un valor
+   * guardado. `revelar` es la única vía para ver uno (botón «Mostrar»).
+   */
+  clienteHttp: {
+    estado(): Promise<EstadoClienteHttp>;
+    /** `idEnvio` permite cancelarla con `cancelar`. */
+    enviar(
+      peticion: PeticionHttp,
+      opciones?: { entornoId?: string | null; idEnvio?: string },
+    ): Promise<RespuestaHttp>;
+    cancelar(idEnvio: string): Promise<void>;
+    guardarPeticion(peticion: PeticionHttp): Promise<PeticionHttp>;
+    borrarPeticion(id: string): Promise<void>;
+    guardarEntorno(entorno: EntornoHttp): Promise<EntornoHttp>;
+    borrarEntorno(id: string): Promise<void>;
+    activarEntorno(id: string | null): Promise<void>;
+    limpiarHistorial(): Promise<void>;
+    revelar(ref: string): Promise<string | null>;
+    /** Sin `incluirCredenciales`, los valores secretos salen como `<secreto>`. */
+    copiarComoCurl(
+      peticion: PeticionHttp,
+      entornoId: string | null,
+      incluirCredenciales: boolean,
+    ): Promise<string>;
+    importarCurl(texto: string): Promise<{ peticion: PeticionHttp; avisos: AvisoCurl[] }>;
+  };
   memoria: {
     /**
      * Lista lo que se podría liberar en ese modo (solo lee). `cerrar-programa` viene desmarcado y
@@ -2013,6 +2046,18 @@ export const RUTAS_IPC = [
   'herramientas.optimizarPdf',
   'herramientas.conversionesDocumento',
   'herramientas.convertirDocumento',
+  'clienteHttp.estado',
+  'clienteHttp.enviar',
+  'clienteHttp.cancelar',
+  'clienteHttp.guardarPeticion',
+  'clienteHttp.borrarPeticion',
+  'clienteHttp.guardarEntorno',
+  'clienteHttp.borrarEntorno',
+  'clienteHttp.activarEntorno',
+  'clienteHttp.limpiarHistorial',
+  'clienteHttp.revelar',
+  'clienteHttp.copiarComoCurl',
+  'clienteHttp.importarCurl',
   'memoria.plan',
   'memoria.aplicar',
   'limpiezaDisco.analizar',

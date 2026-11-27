@@ -20,10 +20,16 @@ export interface CifradoSeguro {
  * `github` (token de GitHub), `ia:<id del proveedor>` (clave de un proveedor de IA),
  * `bd:<id del sitio>` (clave del usuario propio de la base de un proyecto) o
  * `smtp:<id del proveedor>` (clave de un proveedor SMTP remoto) o `tunel:<proveedor>[:<túnel>]`
- * (credencial de un túnel, p. ej. `tunel:cloudflare-nombre:<nombre del túnel>`).
+ * (credencial de un túnel, p. ej. `tunel:cloudflare-nombre:<nombre del túnel>`) o `http:<16 hex>`
+ * (valor secreto del cliente HTTP de Herramientas: autenticación, cabeceras o variables).
  */
 export type IdSecreto =
-  'github' | `ia:${string}` | `bd:${string}` | `smtp:${string}` | `tunel:${string}`;
+  | 'github'
+  | `ia:${string}`
+  | `bd:${string}`
+  | `smtp:${string}`
+  | `tunel:${string}`
+  | `http:${string}`;
 
 /** Lo único que ve el renderer de un secreto: si hay uno y sus 4 últimos caracteres. */
 export interface EstadoSecreto {
@@ -50,6 +56,9 @@ const ID_TUNEL = /^(cloudflare-nombre|ngrok|expose)(?::([a-z0-9][a-z0-9-]{0,62})
 /** Ids de sitio (el slug del dominio): minúsculas, números y guiones. */
 const ID_SITIO_BD = /^[a-z0-9][a-z0-9-]{0,127}$/;
 
+/** Ids del cliente HTTP: 16 caracteres hexadecimales. */
+const ID_HTTP = /^[a-f0-9]{16}$/;
+
 /** `github` → `github.bin`; `ia:openai` → `ia-openai.bin`. Lanza si el id no es válido. */
 function archivoDe(id: IdSecreto): string {
   if (id === 'github') return 'github.bin';
@@ -61,6 +70,9 @@ function archivoDe(id: IdSecreto): string {
   }
   if (typeof id === 'string' && id.startsWith('smtp:') && ID_PROVEEDOR_SMTP.test(id.slice(5))) {
     return `smtp-${id.slice(5)}.bin`;
+  }
+  if (typeof id === 'string' && id.startsWith('http:') && ID_HTTP.test(id.slice(5))) {
+    return `http-${id.slice(5)}.bin`;
   }
   if (typeof id === 'string' && id.startsWith('tunel:')) {
     const m = ID_TUNEL.exec(id.slice(6));
@@ -156,7 +168,9 @@ export class AlmacenSecretos {
     const destino = this.ruta(id);
     const v = typeof valor === 'string' ? valor.trim() : '';
     if (id === 'github') validarToken(v);
-    else if (!(id.startsWith('smtp:') ? VALOR_SMTP : VALOR_VALIDO).test(v)) {
+    else if (
+      !(id.startsWith('smtp:') || id.startsWith('http:') ? VALOR_SMTP : VALOR_VALIDO).test(v)
+    ) {
       throw new Error(MENSAJE_VALOR);
     }
     this.exigirCifrado();
