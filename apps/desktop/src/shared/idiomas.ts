@@ -22,7 +22,7 @@ export const IDIOMAS: readonly InfoIdioma[] = [
   { id: 'de', nombreNativo: 'Deutsch', localeIntl: 'de-DE' },
   { id: 'it', nombreNativo: 'Italiano', localeIntl: 'it-IT' },
   { id: 'ru', nombreNativo: 'Русский', localeIntl: 'ru-RU' },
-  { id: 'zh', nombreNativo: '中文 简体', localeIntl: 'zh-CN' },
+  { id: 'zh', nombreNativo: '简体中文', localeIntl: 'zh-CN' },
   { id: 'ja', nombreNativo: '日本語', localeIntl: 'ja-JP' },
   { id: 'ko', nombreNativo: '한국어', localeIntl: 'ko-KR' },
   { id: 'hi', nombreNativo: 'हिन्दी', localeIntl: 'hi-IN' },
