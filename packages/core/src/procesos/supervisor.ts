@@ -53,6 +53,13 @@ export interface DefProceso {
   log: string;
   reiniciar: boolean;
   /**
+   * Proceso que puede terminar por sí mismo (un script, un build, una migración). Si muere sin
+   * código de salida conocido (lanzador oculto de Windows: lo ve el sondeo) y sin reinicio, se tiene
+   * por terminado, no por caído. Un servicio (nginx, postgresql…) sin este campo que muere así sí
+   * queda en `error`.
+   */
+  terminaSolo?: boolean;
+  /**
    * Al readoptar exige, además del PID y el ejecutable, la misma hora de creación
    * (`Plataforma.inicioProceso`). Para ejecutables comunes (node.exe, python.exe) cuyo PID puede
    * haber pasado a otro programa: si no coincide o no se puede leer, se olvida sin matar nada.
@@ -630,11 +637,13 @@ export class Supervisor {
       }, espera);
       return;
     }
-    // Sin código y sin motivo de fallo (ni señal ni error de lanzamiento): con el lanzador oculto
+    // Sin código y sin motivo de fallo (ni señal ni error de lanzamiento) de un proceso que puede
+    // terminar solo: con el lanzador oculto
     // de Windows el proceso no es hijo nuestro, su muerte la ve el sondeo y el código de salida
     // no se puede recuperar (el PID es de un nieto de PowerShell). Se tiene por terminado, no por
     // caído: «falló» sin saberlo sería un aviso falso (D39).
-    const sinCodigo = codigo === null && motivo === undefined && !def.reiniciar;
+    const sinCodigo =
+      codigo === null && motivo === undefined && !def.reiniciar && def.terminaSolo === true;
     if ((codigo === 0 && !def.reiniciar) || sinCodigo) {
       // Terminó por sí mismo (un script, una migración, un build): no es una caída.
       entrada.estado = 'apagado';

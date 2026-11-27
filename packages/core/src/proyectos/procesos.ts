@@ -655,6 +655,7 @@ export class ProcesosProyecto {
       ...(p.puerto === null ? {} : { puertoInformativo: p.puerto }),
       log,
       reiniciar: p.reiniciar,
+      terminaSolo: true,
     };
   }
 

@@ -201,6 +201,8 @@ describe('iniciar', () => {
     expect(a.sup.iniciados).toHaveLength(1);
     const def = a.sup.iniciados[0]!;
     expect(def.id).toBe('proy-demo-vite');
+    // Un proceso de proyecto puede terminar solo: sin código conocido no se tiene por caído (D39).
+    expect(def.terminaSolo).toBe(true);
     expect(def.comando).toBe(join(a.nodeDir, 'node.exe'));
     expect(def.args).toEqual([
       join(a.nodeDir, 'node_modules', 'npm', 'bin', 'npm-cli.js'),

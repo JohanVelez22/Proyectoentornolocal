@@ -377,11 +377,19 @@ describe('Supervisor', () => {
     await s.cerrar();
   });
 
-  it('salida sin código ni señal sin reinicio (lanzador oculto) queda apagado, no en error (D39)', async () => {
+  it('un servicio (sin terminaSolo) que muere sin código sigue en error', async () => {
+    const s = crear();
+    await s.iniciar(def({ reiniciar: false }));
+    morir(hijos[0]!, null);
+    expect(s.estado('nginx')).toBe('error');
+    await s.cerrar();
+  });
+
+  it('un proceso que puede terminar solo, sin código ni señal ni reinicio (lanzador oculto), queda apagado, no en error (D39)', async () => {
     const s = crear();
     const fn = vi.fn();
     s.alTerminar(fn);
-    await s.iniciar(def({ reiniciar: false }));
+    await s.iniciar(def({ reiniciar: false, terminaSolo: true }));
     morir(hijos[0]!, null);
     expect(s.estado('nginx')).toBe('apagado');
     expect(s.mensaje('nginx')).toBe(MENSAJE_TERMINADO);
