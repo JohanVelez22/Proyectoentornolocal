@@ -89,6 +89,7 @@ describe('Almacen', () => {
       asistenteVisto: false,
       avisoCostoAgentes: false,
       seccionesAvanzadas: false,
+      animacionInicio: true,
     });
     const archivos = await readdir(join(rutas.config(), '..'));
     expect(archivos.some((f) => f.startsWith('config.corrupto'))).toBe(false);
@@ -110,6 +111,7 @@ describe('Almacen', () => {
       asistenteVisto: false,
       avisoCostoAgentes: false,
       seccionesAvanzadas: false,
+      animacionInicio: true,
     });
     await writeFile(rutas.config(), JSON.stringify({ ui: 'texto', https: { puerto: 8443 } }));
     const d = await new Almacen(rutas).leer();
@@ -117,6 +119,18 @@ describe('Almacen', () => {
     expect(d.ui.tema).toBe('sistema');
     const archivos = await readdir(join(rutas.config(), '..'));
     expect(archivos.some((f) => f.startsWith('config.corrupto'))).toBe(false);
+  });
+  it('animacionInicio (D56): una `ui` anterior sin el campo la recibe activada; false se conserva y un valor raro vuelve a activada', async () => {
+    await writeFile(rutas.config(), JSON.stringify({ ui: { tema: 'oscuro', asistenteVisto: true } }));
+    let d = await new Almacen(rutas).leer();
+    expect(d.ui.animacionInicio).toBe(true);
+    expect(d.ui.tema).toBe('oscuro');
+    await writeFile(rutas.config(), JSON.stringify({ ui: { animacionInicio: false } }));
+    d = await new Almacen(rutas).leer();
+    expect(d.ui.animacionInicio).toBe(false);
+    await writeFile(rutas.config(), JSON.stringify({ ui: { animacionInicio: 'no' } }));
+    d = await new Almacen(rutas).leer();
+    expect(d.ui.animacionInicio).toBe(true);
   });
   it('JSON corrupto se renombra y devuelve la config por defecto', async () => {
     await writeFile(rutas.config(), '{no es json');

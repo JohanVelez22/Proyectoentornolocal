@@ -1490,6 +1490,7 @@ describe('Nucleo (Etapa B)', () => {
       asistenteVisto: false,
       avisoCostoAgentes: false,
       seccionesAvanzadas: false,
+      animacionInicio: true,
     });
     expect(await n.guardarPreferenciasUi({ avisoCostoAgentes: true })).toMatchObject({
       avisoCostoAgentes: true,

@@ -464,6 +464,11 @@ export const PreferenciasUiSchema = z
     avisoCostoAgentes: z.boolean().default(false).catch(false),
     /** Muestra en la barra lateral las secciones avanzadas (hoy, Contenedores). */
     seccionesAvanzadas: z.boolean().default(false).catch(false),
+    /**
+     * Animación del logo al abrir la aplicación (D56). Activada por defecto: una configuración
+     * anterior sin el campo la recibe activada (el valor por defecto es la migración).
+     */
+    animacionInicio: z.boolean().default(true).catch(true),
   })
   .prefault({});
 export type PreferenciasUi = z.infer<typeof PreferenciasUiSchema>;
@@ -476,6 +481,7 @@ export const CambiosPreferenciasUiSchema = z.strictObject({
   asistenteVisto: z.boolean().optional(),
   avisoCostoAgentes: z.boolean().optional(),
   seccionesAvanzadas: z.boolean().optional(),
+  animacionInicio: z.boolean().optional(),
 });
 export type CambiosPreferenciasUi = z.infer<typeof CambiosPreferenciasUiSchema>;
 
