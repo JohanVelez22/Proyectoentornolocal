@@ -10,6 +10,7 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { rutaAjuste } from '../src/bd/consultasLentas/ajustes';
 import { ClienteMysql, esPermisoDeSuBase, validarNombreBd } from '../src/bd/clienteMysql';
 import type { Ejecutor } from '../src/plataforma/tipos';
 import { Rutas } from '../src/rutas';
@@ -163,6 +164,29 @@ describe('defMysql', () => {
     expect(p2.comando).toBe(path.join(c.bin, 'bin', 'mysqld.exe'));
     expect(p2.puerto).toBe(3308);
     expect(JSON.stringify(p2)).not.toContain(CLAVE);
+  });
+
+  it('con las consultas lentas activas, el arranque crea logs/lentas restringida al usuario', async () => {
+    const restringidas: string[] = [];
+    const c = {
+      ...ctx('mysql', ejecutorFalso()),
+      restringir: async (ruta: string) => {
+        restringidas.push(ruta);
+        return true;
+      },
+    };
+    const clave = path.basename(c.datos);
+    const ajuste = rutaAjuste(c.rutas, 'mysql', clave);
+    mkdirSync(path.dirname(ajuste), { recursive: true });
+    writeFileSync(ajuste, JSON.stringify({ activo: true, segundos: 1 }));
+    await defMysql('mysql').proceso(c);
+    const carpeta = c.rutas.logs('lentas');
+    expect(existsSync(carpeta)).toBe(true);
+    expect(restringidas).toContain(carpeta);
+    // Apagadas: no se crea nada.
+    const apagado = ctx('mariadb', ejecutorFalso());
+    await defMysql('mariadb').proceso(apagado);
+    expect(restringidas).toHaveLength(1);
   });
 
   it('detenerLimpio usa mysqladmin shutdown con la clave solo en el entorno', async () => {

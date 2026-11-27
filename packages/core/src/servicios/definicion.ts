@@ -81,6 +81,8 @@ export interface CtxServicio {
    */
   credenciales: Credenciales;
   exec: Ejecutor;
+  /** `Plataforma.restringirAlUsuario`: deja una carpeta o archivo legible solo por el usuario. */
+  restringir?: (ruta: string, o?: { carpeta?: boolean }) => Promise<boolean>;
 }
 
 export interface DefServicio {
@@ -633,6 +635,8 @@ export class ServiciosDatos {
       version,
       credenciales: await this.credencialesDe(inst.credencial, def.id),
       exec: this.d.exec,
+      restringir: async (ruta, o) =>
+        (await this.d.plataforma.restringirAlUsuario?.(ruta, o)) ?? false,
     };
   }
 
