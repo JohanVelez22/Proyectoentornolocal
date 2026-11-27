@@ -26,6 +26,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { api, plano } from '../../api';
 import { solicitudes } from '../../composables/solicitudes';
 import { formatearFecha, textos } from '../../i18n';
+import { desdeHistorial, sinReferencias } from '../../utilidades/clienteHttp';
 import { mensajeDeError } from '../../utilidades/errores';
 import Desplegable from '../Desplegable.vue';
 import EstadoVacio from '../EstadoVacio.vue';
@@ -83,7 +84,7 @@ function tomarPrecargada(): void {
   const p = solicitudes.peticionHttp;
   if (!p) return;
   solicitudes.peticionHttp = null;
-  borrador.value = { ...vacia(), ...plano(p), id: '' };
+  borrador.value = sinReferencias({ ...vacia(), ...plano(p) });
   respuesta.value = null;
   error.value = null;
   seccion.value = 'peticion';
@@ -184,8 +185,8 @@ function aviso(a: AvisoCurl): string {
   return typeof f === 'function' ? f(a.dato ?? '') : f;
 }
 
-function abrir(p: PeticionHttp): void {
-  borrador.value = plano(p);
+function abrir(p: PeticionHttp, delHistorial = false): void {
+  borrador.value = delHistorial ? desdeHistorial(plano(p)) : plano(p);
   respuesta.value = null;
   error.value = null;
   avisos.value = [];
@@ -195,7 +196,8 @@ function abrir(p: PeticionHttp): void {
 async function borrarPeticion(id: string): Promise<void> {
   try {
     await api().clienteHttp.borrarPeticion(id);
-    if (borrador.value.id === id) borrador.value = { ...borrador.value, id: '' };
+    // La petición abierta ya no existe: el borrador deja de tener su id y sus referencias.
+    if (borrador.value.id === id) borrador.value = sinReferencias(borrador.value);
     message.success(t.coleccion.borrada);
     await cargar();
   } catch (e) {
@@ -566,7 +568,7 @@ function etiquetaHistorial(e: EstadoClienteHttp['historial'][number]): string {
               <span class="herr-tenue">{{ formatearFecha(h.fecha, formatoHistorial) }}</span>
               <TextoLargo :texto="h.peticion.url" mono :copiable="false" />
             </span>
-            <NButton size="small" secondary @click="abrir(h.peticion)">{{
+            <NButton size="small" secondary @click="abrir(h.peticion, true)">{{
               t.historial.abrir
             }}</NButton>
           </li>

@@ -259,7 +259,7 @@ export const pt: Textos = {
       'clientehttp.secreto_faltante':
         'Falta um valor secreto guardado: digite-o de novo e salve a requisição ou o ambiente.',
       'clientehttp.secreto_no_guardado':
-        'Não foi possível guardar um valor secreto: ele deve ser ASCII visível, sem quebras de linha, e a criptografia do sistema deve estar disponível.',
+        'Não foi possível guardar um valor secreto: ele não pode ter quebras de linha nem passar de 16 KB, e a criptografia do sistema deve estar disponível.',
       'clientehttp.url_invalida': 'A URL não é válida.',
       'clientehttp.url_con_credenciales':
         'A URL não pode levar usuário nem senha: use a aba de autenticação.',
@@ -4007,6 +4007,7 @@ export const pt: Textos = {
         agregar: 'Adicionar linha',
         quitar: 'Remover linha',
         activa: 'Linha ativa',
+        falta: 'Falta o segredo: digite-o para poder enviar.',
       },
       cuerpo: {
         tipo: 'Tipo de corpo',

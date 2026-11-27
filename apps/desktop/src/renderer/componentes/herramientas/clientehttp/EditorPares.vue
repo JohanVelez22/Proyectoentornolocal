@@ -9,7 +9,8 @@ import CampoSecreto from './CampoSecreto.vue';
 const filas = defineModel<ParHttp[]>({ required: true });
 const t = textos.herramientas.clienteHttp;
 
-const esSecreto = (f: ParHttp): boolean => f.ref !== undefined || esNombreSecreto(f.clave);
+const esSecreto = (f: ParHttp): boolean =>
+  f.ref !== undefined || f.faltante === true || esNombreSecreto(f.clave);
 
 function agregar(): void {
   filas.value = [...filas.value, { clave: '', valor: '', activo: true }];
@@ -45,6 +46,7 @@ function quitar(i: number): void {
           :placeholder="t.par.valor"
           :aria-label="t.par.valor"
         />
+        <p v-if="f.faltante && !f.valor" class="herr-error falta" role="alert">{{ t.par.falta }}</p>
       </div>
       <NButton size="small" quaternary circle :aria-label="t.par.quitar" @click="quitar(i)">
         <template #icon
@@ -77,5 +79,8 @@ function quitar(i: number): void {
 }
 .fila :deep(.n-checkbox) {
   margin-top: 5px;
+}
+.falta {
+  margin: 2px 0 0;
 }
 </style>

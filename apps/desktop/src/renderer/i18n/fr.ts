@@ -266,7 +266,7 @@ export const fr: Textos = {
       'clientehttp.secreto_faltante':
         'Une valeur secrète enregistrée est manquante : saisissez-la de nouveau et enregistrez la requête ou l’environnement.',
       'clientehttp.secreto_no_guardado':
-        'Une valeur secrète n’a pas pu être enregistrée : elle doit être en ASCII visible, sans saut de ligne, et le chiffrement du système doit être disponible.',
+        'Une valeur secrète n’a pas pu être enregistrée : elle ne peut pas contenir de saut de ligne ni dépasser 16 Ko, et le chiffrement du système doit être disponible.',
       'clientehttp.url_invalida': 'L’URL n’est pas valide.',
       'clientehttp.url_con_credenciales':
         'L’URL ne peut pas contenir d’utilisateur ni de mot de passe : utilisez l’onglet d’authentification.',
@@ -4110,6 +4110,7 @@ export const fr: Textos = {
         agregar: 'Ajouter une ligne',
         quitar: 'Retirer la ligne',
         activa: 'Ligne active',
+        falta: 'Le secret est manquant : saisissez-le pour pouvoir envoyer.',
       },
       cuerpo: {
         tipo: 'Type de corps',

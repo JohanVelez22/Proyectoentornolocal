@@ -254,7 +254,7 @@ export const en: Textos = {
       'clientehttp.secreto_faltante':
         'A stored secret value is missing: type it again and save the request or the environment.',
       'clientehttp.secreto_no_guardado':
-        'A secret value could not be stored: it must be visible ASCII without line breaks, and the system encryption must be available.',
+        'A secret value could not be stored: it cannot have line breaks or exceed 16 KB, and the system encryption must be available.',
       'clientehttp.url_invalida': 'The URL is not valid.',
       'clientehttp.url_con_credenciales':
         'The URL cannot carry a user or password: use the authentication tab.',
@@ -3969,6 +3969,7 @@ export const en: Textos = {
         agregar: 'Add row',
         quitar: 'Remove row',
         activa: 'Row enabled',
+        falta: 'The secret is missing: type it to be able to send.',
       },
       cuerpo: {
         tipo: 'Body type',

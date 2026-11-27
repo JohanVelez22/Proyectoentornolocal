@@ -255,7 +255,7 @@ export const es = {
       'clientehttp.secreto_faltante':
         'Falta un valor secreto guardado: vuelva a escribirlo y guarde la petición o el entorno.',
       'clientehttp.secreto_no_guardado':
-        'No se pudo guardar un valor secreto: debe ser ASCII visible, sin saltos de línea, y el cifrado del sistema debe estar disponible.',
+        'No se pudo guardar un valor secreto: no puede tener saltos de línea ni pasar de 16 KB, y el cifrado del sistema debe estar disponible.',
       'clientehttp.url_invalida': 'La URL no es válida.',
       'clientehttp.url_con_credenciales':
         'La URL no puede llevar usuario ni contraseña: use la pestaña de autenticación.',
@@ -3998,6 +3998,7 @@ export const es = {
         agregar: 'Agregar fila',
         quitar: 'Quitar fila',
         activa: 'Fila activa',
+        falta: 'Falta el secreto: escríbalo para poder enviar.',
       },
       cuerpo: {
         tipo: 'Tipo de cuerpo',

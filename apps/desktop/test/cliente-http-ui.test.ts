@@ -86,3 +86,58 @@ describe('AlmacenSecretos: valores del cliente HTTP (http:<id>)', () => {
     }
   });
 });
+
+describe('cliente HTTP: referencias y historial en la interfaz (revisión D48)', () => {
+  const base = {
+    id: 'a1b2c3d4e5f60718',
+    nombre: 'p',
+    metodo: 'GET',
+    url: 'http://127.0.0.1:1/',
+    params: [],
+    cabeceras: [
+      { clave: 'Authorization', valor: '', activo: true, ref: 'http:0123456789abcdef' },
+      { clave: 'X-Nota', valor: 'visible', activo: true },
+    ],
+    cuerpo: { tipo: 'ninguno' },
+    auth: { tipo: 'bearer', ref: 'http:fedcba9876543210' },
+    plazoSeg: 5,
+    ignorarCertificado: false,
+  } as const;
+
+  it('sinReferencias quita id y refs y marca «falta el secreto» (abrirConPeticion, petición borrada)', async () => {
+    const { sinReferencias } = await import('../src/renderer/utilidades/clienteHttp');
+    const r = sinReferencias(structuredClone(base) as never);
+    expect(r.id).toBe('');
+    expect(r.cabeceras[0]).toEqual({
+      clave: 'Authorization',
+      valor: '',
+      activo: true,
+      faltante: true,
+    });
+    expect(r.cabeceras[1]).toEqual({ clave: 'X-Nota', valor: 'visible', activo: true });
+    expect(r.auth).toEqual({ tipo: 'bearer' });
+  });
+
+  it('desdeHistorial pasa los *** a filas vacías «falta el secreto»', async () => {
+    const { desdeHistorial } = await import('../src/renderer/utilidades/clienteHttp');
+    const r = desdeHistorial({
+      ...structuredClone(base),
+      cabeceras: [
+        { clave: 'Authorization', valor: '***', activo: true },
+        { clave: 'Cookie', valor: '***', activo: true },
+        { clave: 'X-Nota', valor: '***', activo: true },
+      ],
+      auth: { tipo: 'basic', usuario: 'yo' },
+    } as never);
+    expect(r.id).toBe('');
+    expect(r.cabeceras[0]).toEqual({
+      clave: 'Authorization',
+      valor: '',
+      activo: true,
+      faltante: true,
+    });
+    expect(r.cabeceras[1]).toMatchObject({ valor: '', faltante: true });
+    // Un nombre que no es secreto conserva su valor literal.
+    expect(r.cabeceras[2]).toMatchObject({ valor: '***' });
+  });
+});
