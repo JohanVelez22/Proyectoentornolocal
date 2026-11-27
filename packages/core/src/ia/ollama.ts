@@ -1,4 +1,4 @@
-import { readdir, stat } from 'node:fs/promises';
+import { readdir, stat, statfs } from 'node:fs/promises';
 import path from 'node:path';
 import type { ProgresoIa } from '../eventos';
 import { forma, numero, objeto, pedirJsonIa } from './http';
@@ -20,6 +20,8 @@ const NOMBRE_VALIDO = NOMBRE_MODELO_OLLAMA;
 const MS_LISTA = 5_000;
 const MS_PROBAR = 120_000;
 const MS_SIN_DATOS = 60_000;
+const REGISTRO_POR_DEFECTO = 'https://registry.ollama.ai';
+const MS_REGISTRO = 8_000;
 const MS_ENTRE_EVENTOS = 100; // como mucho 10 eventos por segundo y modelo
 
 export interface ModeloOllama {
@@ -44,6 +46,16 @@ export interface OpcionesOllama {
   emitir?: (p: ProgresoIa) => void;
   fetch?: Fetch;
   ahora?: () => number;
+  /** Registro de modelos de Ollama (solo para saber el tamaño antes de descargar). */
+  registro?: () => string;
+  /** Bytes libres de la unidad de `ruta` (por omisión `statfs`; pruebas). */
+  espacioLibre?: (ruta: string) => Promise<number>;
+}
+
+/** Lo que se muestra antes de descargar; `null` = no se pudo saber. */
+export interface InfoDescargaOllama {
+  tamanoBytes: number | null;
+  libreBytes: number | null;
 }
 
 export class ErrorOllama extends Error {
@@ -155,6 +167,71 @@ export class ClienteOllama {
     );
     const d = await this.leerJson<{ response?: unknown }>(r);
     return typeof d.response === 'string' ? d.response : '';
+  }
+
+  /**
+   * Tamaño de un modelo (suma de las capas de su manifiesto en el registro de Ollama; no baja
+   * nada) y espacio libre de la unidad de los modelos. Lo que no se pueda saber, va como `null`.
+   */
+  async infoDescarga(nombre: string): Promise<InfoDescargaOllama> {
+    this.validar(nombre);
+    const [tamanoBytes, libreBytes] = await Promise.all([
+      this.tamanoEnRegistro(nombre),
+      this.libre(),
+    ]);
+    return { tamanoBytes, libreBytes };
+  }
+
+  private async tamanoEnRegistro(nombre: string): Promise<number | null> {
+    const dos = nombre.toLowerCase().split(':');
+    const tramos = dos[0]!.split('/');
+    if (dos.length > 2 || tramos.length > 2 || tramos.some((t) => t === '')) return null;
+    const ruta = tramos.length === 1 ? `library/${tramos[0]}` : tramos.join('/');
+    const url = `${(this.op.registro ?? (() => REGISTRO_POR_DEFECTO))()}/v2/${ruta}/manifests/${dos[1] || 'latest'}`;
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), MS_REGISTRO);
+    try {
+      const r = await this.peticion(url, {
+        headers: { accept: 'application/vnd.docker.distribution.manifest.v2+json' },
+        signal: ctl.signal,
+      });
+      if (!r.ok) return null;
+      const m = (await r.json()) as { config?: { size?: unknown }; layers?: unknown };
+      if (!Array.isArray(m.layers)) return null;
+      let total = typeof m.config?.size === 'number' ? m.config.size : 0;
+      for (const l of m.layers) {
+        const n = (l as { size?: unknown } | null)?.size;
+        if (typeof n !== 'number' || !Number.isFinite(n) || n < 0) return null;
+        total += n;
+      }
+      return total > 0 ? total : null;
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  private async libre(): Promise<number | null> {
+    // La carpeta de modelos puede no existir aún: se mide la primera que exista hacia arriba.
+    let dir = this.op.modelosDir();
+    try {
+      for (let i = 0; i < 12; i++) {
+        try {
+          await stat(dir);
+          break;
+        } catch {
+          const padre = path.dirname(dir);
+          if (padre === dir) break;
+          dir = padre;
+        }
+      }
+      if (this.op.espacioLibre) return await this.op.espacioLibre(dir);
+      const s = await statfs(dir);
+      return Number(s.bavail) * Number(s.bsize);
+    } catch {
+      return null;
+    }
   }
 
   /** Aborta la descarga en curso; false si no había ninguna. */

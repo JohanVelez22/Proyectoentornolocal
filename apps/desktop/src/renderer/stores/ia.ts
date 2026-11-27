@@ -26,6 +26,15 @@ export function faseDe(estado: string): FaseIa {
   return 'descargando';
 }
 
+/** ¿Cabe el modelo en el disco? Solo se dice «no cabe» cuando se sabe con certeza. */
+export function veredictoEspacio(i: {
+  tamanoBytes: number | null;
+  libreBytes: number | null;
+}): 'sin-espacio' | 'ok' | 'desconocido' {
+  if (i.tamanoBytes === null || i.libreBytes === null) return 'desconocido';
+  return i.tamanoBytes > i.libreBytes ? 'sin-espacio' : 'ok';
+}
+
 /** 0–100, o null mientras Ollama no informa el total. */
 export function porcentaje(p: { completado: number; total: number }): number | null {
   if (!(p.total > 0)) return null;
@@ -136,6 +145,17 @@ export const useIa = defineStore('ia', () => {
       errorModelos.value = mensajeDeError(e);
     } finally {
       cargandoModelos.value = false;
+    }
+  }
+
+  /** Tamaño del modelo y espacio libre antes de descargar; sin datos si el núcleo no puede. */
+  async function infoDescarga(
+    nombre: string,
+  ): Promise<{ tamanoBytes: number | null; libreBytes: number | null }> {
+    try {
+      return await api().ia.infoDescarga(nombre);
+    } catch {
+      return { tamanoBytes: null, libreBytes: null };
     }
   }
 
@@ -368,6 +388,7 @@ export const useIa = defineStore('ia', () => {
     cargandoModelos,
     errorModelos,
     espacio,
+    infoDescarga,
     sugeridos,
     descargas,
     activas,

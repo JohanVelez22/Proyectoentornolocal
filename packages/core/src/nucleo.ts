@@ -106,7 +106,7 @@ import {
 } from './herramientas/editor';
 import type { LanzadorSeparado } from './plataforma/terminalWin';
 import { Terminal } from './herramientas/terminal';
-import { ClienteOllama, SUGERIDOS, type ModeloOllama } from './ia/ollama';
+import { ClienteOllama, SUGERIDOS, type InfoDescargaOllama, type ModeloOllama } from './ia/ollama';
 import { bloqueEnvIa, limpiarRespaldosEnv } from './ia/envIa';
 import { GestorIa } from './ia/gestorIa';
 import { GestorSmtp } from './correo/gestorSmtp';
@@ -2692,6 +2692,11 @@ export class Nucleo {
   async descargarModelo(nombre: string): Promise<void> {
     await this.refrescarPuertoOllama();
     return this.ollama.descargar(nombre);
+  }
+
+  /** Tamaño del modelo y espacio libre, para avisar ANTES de descargar (no baja nada). */
+  infoDescargaModelo(nombre: string): Promise<InfoDescargaOllama> {
+    return this.ollama.infoDescarga(nombre);
   }
 
   cancelarDescargaModelo(nombre: string): boolean {

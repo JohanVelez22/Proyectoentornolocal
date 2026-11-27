@@ -226,6 +226,7 @@ const api: ApiEntorno = {
     borrar: (nombre) => invocar('ia.borrar', nombre),
     probar: (nombre, texto) => invocar('ia.probar', nombre, texto),
     espacioUsado: () => invocar('ia.espacioUsado'),
+    infoDescarga: (nombre) => invocar('ia.infoDescarga', nombre),
     bloqueEnv: () => invocar('ia.bloqueEnv'),
     sugeridos: () => invocar('ia.sugeridos'),
     proveedores: () => invocar('ia.proveedores'),

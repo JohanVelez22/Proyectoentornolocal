@@ -2849,8 +2849,14 @@ export const es = {
       yaInstalado: 'Ese modelo ya está instalado',
       enCurso: 'Ese modelo ya se está descargando',
       confirmarTitulo: (modelo: string) => `¿Descargar ${modelo}?`,
-      confirmarTexto:
-        'Los modelos suelen pesar varios GB (de 1 a más de 40 según el tamaño). Ollama no informa el tamaño antes de empezar: lo verá en la barra de progreso y puede cancelar en cualquier momento.',
+      confirmarTexto: 'Puede cancelar la descarga en cualquier momento; lo ya bajado se descarta.',
+      tamano: (t: string) => `Tamaño de la descarga: ${t}.`,
+      tamanoDesconocido:
+        'No se pudo consultar el tamaño (sin conexión al registro de Ollama). Los modelos suelen pesar de 1 a más de 40 GB.',
+      libre: (l: string) => `Espacio libre en el disco de los modelos: ${l}.`,
+      libreDesconocido: 'No se pudo medir el espacio libre del disco.',
+      sinEspacio: (t: string, l: string) =>
+        `No hay espacio suficiente: el modelo pesa ${t} y quedan ${l} libres. Libere espacio o elija un modelo más pequeño.`,
       confirmar: 'Descargar',
     },
     progreso: {

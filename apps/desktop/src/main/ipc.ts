@@ -1271,6 +1271,7 @@ const TABLA: Record<RutaIpc, Manejador> = {
   'lan.cerrarCaMovil': (n) => n.caMovil.cerrar(),
   'ia.modelos': (n) => n.modelosIa(),
   'ia.descargar': (n, _s, nombre) => n.descargarModelo(nombreModelo(nombre)),
+  'ia.infoDescarga': (n, _s, nombre) => n.infoDescargaModelo(nombreModelo(nombre)),
   'ia.cancelar': (n, _s, nombre) => n.cancelarDescargaModelo(nombreModelo(nombre)),
   'ia.borrar': (n, _s, nombre) => n.borrarModelo(nombreModelo(nombre)),
   'ia.probar': (n, _s, nombre, prompt) =>

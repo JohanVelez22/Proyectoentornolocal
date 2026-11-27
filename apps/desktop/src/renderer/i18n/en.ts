@@ -2829,7 +2829,14 @@ export const en: Textos = {
       enCurso: 'That model is already downloading',
       confirmarTitulo: (modelo: string) => `Download ${modelo}?`,
       confirmarTexto:
-        'Models usually take several GB (from 1 to over 40 depending on size). Ollama does not report the size before starting: you will see it in the progress bar and can cancel at any time.',
+        'You can cancel the download at any time; what was already downloaded is discarded.',
+      tamano: (t: string) => `Download size: ${t}.`,
+      tamanoDesconocido:
+        'The size could not be checked (no connection to the Ollama registry). Models usually take 1 to over 40 GB.',
+      libre: (l: string) => `Free space on the models disk: ${l}.`,
+      libreDesconocido: 'The free disk space could not be measured.',
+      sinEspacio: (t: string, l: string) =>
+        `Not enough space: the model takes ${t} and only ${l} is free. Free some space or choose a smaller model.`,
       confirmar: 'Download',
     },
     progreso: {

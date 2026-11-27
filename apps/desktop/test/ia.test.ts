@@ -14,7 +14,7 @@ import {
 } from '@pel/core';
 import { en } from '../src/renderer/i18n/en';
 import { es } from '../src/renderer/i18n/es';
-import { faseDe, porcentaje, useIa } from '../src/renderer/stores/ia';
+import { faseDe, porcentaje, useIa, veredictoEspacio } from '../src/renderer/stores/ia';
 import {
   claveEnmascarada,
   idDeNombre,
@@ -74,6 +74,7 @@ function apiFalsa() {
       borrar: vi.fn(async () => undefined),
       probar: vi.fn(async () => 'Hola'),
       espacioUsado: vi.fn(async () => 1024),
+      infoDescarga: vi.fn(async () => ({ tamanoBytes: 2_000_000_000, libreBytes: 50_000_000_000 })),
       bloqueEnv: vi.fn(async () => 'OLLAMA_BASE_URL=http://127.0.0.1:11434'),
       sugeridos: vi.fn(async () => ['llama3.2']),
       proveedores: vi.fn(async (): Promise<ProveedorIaPublico[]> => [PROVEEDOR]),
@@ -385,5 +386,27 @@ describe('utilidades de IA en la nube', () => {
     );
     expect(claveEnmascarada({ clave: { configurada: true, final: 'wxyz' } })).toBe('••••wxyz');
     expect(claveEnmascarada({ clave: { configurada: false, final: null } })).toBeNull();
+  });
+});
+
+describe('aviso de tamaño y espacio libre antes de descargar', () => {
+  it('veredictoEspacio: sin espacio solo si se sabe que no cabe', () => {
+    expect(veredictoEspacio({ tamanoBytes: 10, libreBytes: 5 })).toBe('sin-espacio');
+    expect(veredictoEspacio({ tamanoBytes: 5, libreBytes: 5 })).toBe('ok');
+    expect(veredictoEspacio({ tamanoBytes: null, libreBytes: 5 })).toBe('desconocido');
+    expect(veredictoEspacio({ tamanoBytes: 5, libreBytes: null })).toBe('desconocido');
+  });
+
+  it('la store pide el tamaño al núcleo y, si falla, devuelve «no se pudo saber»', async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const api = { ia: { infoDescarga: vi.fn(async () => ({ tamanoBytes: 7, libreBytes: 9 })) } };
+    vi.stubGlobal('window', { entorno: api });
+    const ia = useIa();
+    expect(await ia.infoDescarga('llama3.2')).toEqual({ tamanoBytes: 7, libreBytes: 9 });
+    expect(api.ia.infoDescarga).toHaveBeenCalledWith('llama3.2');
+    api.ia.infoDescarga.mockRejectedValueOnce(new Error('x'));
+    expect(await ia.infoDescarga('llama3.2')).toEqual({ tamanoBytes: null, libreBytes: null });
+    vi.unstubAllGlobals();
   });
 });

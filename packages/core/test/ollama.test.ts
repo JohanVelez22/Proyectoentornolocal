@@ -223,3 +223,73 @@ describe('ClienteOllama', () => {
     expect(SUGERIDOS).toEqual(['llama3.2', 'qwen2.5-coder', 'mistral', 'nomic-embed-text']);
   });
 });
+
+describe('ClienteOllama.infoDescarga (tamaño y espacio libre antes de descargar)', () => {
+  const manifiesto = {
+    config: { size: 500 },
+    layers: [{ size: 2_000_000_000 }, { size: 1_000 }, { size: 400 }],
+  };
+
+  it('suma el manifiesto del registro y da el espacio libre del disco de los modelos', async () => {
+    const urls: string[] = [];
+    const { c } = cliente(
+      async (url) => {
+        urls.push(url);
+        return json(manifiesto);
+      },
+      { registro: () => 'http://127.0.0.1:1', espacioLibre: async () => 5_000_000_000 },
+    );
+    const r = await c.infoDescarga('llama3.2');
+    expect(urls).toEqual(['http://127.0.0.1:1/v2/library/llama3.2/manifests/latest']);
+    expect(r).toEqual({ tamanoBytes: 2_000_001_900, libreBytes: 5_000_000_000 });
+  });
+
+  it('entiende usuario/modelo:etiqueta', async () => {
+    const urls: string[] = [];
+    const { c } = cliente(
+      async (url) => {
+        urls.push(url);
+        return json(manifiesto);
+      },
+      { registro: () => 'http://127.0.0.1:1', espacioLibre: async () => 1 },
+    );
+    await c.infoDescarga('qwen/qwen2.5:0.5b');
+    expect(urls).toEqual(['http://127.0.0.1:1/v2/qwen/qwen2.5/manifests/0.5b']);
+  });
+
+  it('sin red o con respuesta rara: tamaño null, y el espacio libre se da igual', async () => {
+    for (const f of [
+      async () => {
+        throw new TypeError('fetch failed');
+      },
+      async () => json({}, 404),
+      async () => json({ layers: 'x' }),
+    ]) {
+      const { c } = cliente(f as never, { espacioLibre: async () => 7 });
+      expect(await c.infoDescarga('mistral')).toEqual({ tamanoBytes: null, libreBytes: 7 });
+    }
+  });
+
+  it('si no se puede medir el espacio libre, libreBytes es null; el nombre se valida', async () => {
+    const { c } = cliente(async () => json(manifiesto), {
+      espacioLibre: async () => {
+        throw new Error('sin statfs');
+      },
+    });
+    expect((await c.infoDescarga('llama3.2')).libreBytes).toBeNull();
+    await expect(c.infoDescarga('../x')).rejects.toThrow('Nombre de modelo no válido');
+  });
+
+  it('no llama a /api/pull ni descarga nada', async () => {
+    const urls: string[] = [];
+    const { c } = cliente(
+      async (url) => {
+        urls.push(url);
+        return json(manifiesto);
+      },
+      { espacioLibre: async () => 1 },
+    );
+    await c.infoDescarga('llama3.2');
+    expect(urls.some((u) => u.includes('/api/'))).toBe(false);
+  });
+});

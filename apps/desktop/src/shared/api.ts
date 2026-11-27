@@ -114,6 +114,7 @@ import type {
   FormatoRespaldo,
   IdCaptador,
   IdServicioDatos,
+  InfoDescargaOllama,
   ModeloOllama,
   MotorBd,
   OpcionesCrearBase,
@@ -365,6 +366,7 @@ export type {
   FormatoRespaldo,
   IdCaptador,
   IdServicioDatos,
+  InfoDescargaOllama,
   ModeloOllama,
   MotorBd,
   OpcionesCrearBase,
@@ -1030,6 +1032,8 @@ export interface ApiEntorno {
     borrar(nombre: string): Promise<void>;
     probar(nombre: string, texto: string): Promise<string>;
     espacioUsado(): Promise<number>;
+    /** Tamaño del modelo (registro de Ollama) y espacio libre, antes de descargar; null = no se pudo saber. */
+    infoDescarga(nombre: string): Promise<InfoDescargaOllama>;
     bloqueEnv(): Promise<string>;
     sugeridos(): Promise<string[]>;
     /* ── IA en la nube (la clave nunca vuelve a la interfaz) ── */
@@ -1987,6 +1991,7 @@ export const RUTAS_IPC = [
   'ia.borrar',
   'ia.probar',
   'ia.espacioUsado',
+  'ia.infoDescarga',
   'ia.bloqueEnv',
   'ia.sugeridos',
   'ia.proveedores',

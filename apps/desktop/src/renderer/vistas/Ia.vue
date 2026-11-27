@@ -42,7 +42,7 @@ import IlustracionVacia from '../componentes/IlustracionVacia.vue';
 import TarjetaProveedorIa from '../componentes/TarjetaProveedorIa.vue';
 import { formatearFecha, textos } from '../i18n';
 import { destinoIa, PESTANAS_IA, type PestanaIa } from '../rutas';
-import { porcentaje, useIa, type DescargaIa } from '../stores/ia';
+import { porcentaje, useIa, veredictoEspacio, type DescargaIa } from '../stores/ia';
 import { useServicios } from '../stores/servicios';
 import { formatearTamano } from '../utilidades/bd';
 
@@ -243,13 +243,44 @@ function elegirSugerencia(n: string): void {
   nombreNuevo.value = n;
 }
 
-function pedirDescarga(): void {
+const consultando = ref(false);
+
+/** Antes de descargar se consulta el tamaño del modelo y el espacio libre, y se avisa. */
+async function pedirDescarga(): Promise<void> {
   intentado.value = true;
-  if (!puedeDescargar.value) return;
+  if (!puedeDescargar.value || consultando.value) return;
   const n = nombreNuevo.value.trim();
+  consultando.value = true;
+  const info = await ia.infoDescarga(n).finally(() => {
+    consultando.value = false;
+  });
+  if (veredictoEspacio(info) === 'sin-espacio') {
+    dialog.warning({
+      title: td.confirmarTitulo(n),
+      content: td.sinEspacio(formatearTamano(info.tamanoBytes!), formatearTamano(info.libreBytes!)),
+      positiveText: textos.acciones.cerrar,
+      autoFocus: false,
+    });
+    return;
+  }
   dialog.info({
     title: td.confirmarTitulo(n),
-    content: td.confirmarTexto,
+    content: () =>
+      h('div', { class: 'descargar-aviso', 'data-testid': 'ia-aviso-descarga' }, [
+        h(
+          'p',
+          info.tamanoBytes === null
+            ? td.tamanoDesconocido
+            : td.tamano(formatearTamano(info.tamanoBytes)),
+        ),
+        h(
+          'p',
+          info.libreBytes === null
+            ? td.libreDesconocido
+            : td.libre(formatearTamano(info.libreBytes)),
+        ),
+        h('small', td.confirmarTexto),
+      ]),
     positiveText: td.confirmar,
     negativeText: textos.acciones.cancelar,
     autoFocus: false,

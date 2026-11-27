@@ -2929,7 +2929,14 @@ export const fr: Textos = {
       enCurso: 'Ce modèle est déjà en cours de téléchargement',
       confirmarTitulo: (modelo: string) => `Télécharger ${modelo} ?`,
       confirmarTexto:
-        'Les modèles pèsent souvent plusieurs Go (de 1 à plus de 40 selon la taille). Ollama n’indique pas la taille avant de commencer : vous la verrez dans la barre de progression et pourrez annuler à tout moment.',
+        'Vous pouvez annuler le téléchargement à tout moment ; ce qui a déjà été téléchargé est supprimé.',
+      tamano: (t: string) => `Taille du téléchargement : ${t}.`,
+      tamanoDesconocido:
+        'Impossible de consulter la taille (pas de connexion au registre d’Ollama). Les modèles pèsent en général de 1 à plus de 40 Go.',
+      libre: (l: string) => `Espace libre sur le disque des modèles : ${l}.`,
+      libreDesconocido: 'Impossible de mesurer l’espace libre du disque.',
+      sinEspacio: (t: string, l: string) =>
+        `Espace insuffisant : le modèle pèse ${t} et il reste ${l} de libre. Libérez de l’espace ou choisissez un modèle plus petit.`,
       confirmar: 'Télécharger',
     },
     progreso: {
