@@ -1,0 +1,1078 @@
+{
+  "temas": [
+    {
+      "id": "configuracion",
+      "grupo": "basico",
+      "nombre": "git config",
+      "peligroso": false,
+      "es": {
+        "titulo": "Configurar su identidad",
+        "resumen": "Defina su nombre y su correo, que Git guarda en cada commit que usted haga.",
+        "explicacion": "Git firma cada commit con un nombre y un correo. Con --global se guardan para todos sus repositorios; sin esa opción, solo para el actual. Con git config --list puede ver todo lo configurado.",
+        "ejemplo": "git config --global user.name \"Persona Ejemplo\"\ngit config --global user.email \"ejemplo@ejemplo.invalid\"\ngit config --list\nuser.name=Persona Ejemplo\nuser.email=ejemplo@ejemplo.invalid",
+        "erroresComunes": [
+          "Author identity unknown: Git no tiene su nombre ni su correo. Ejecute los dos comandos git config --global de arriba y repita el commit.",
+          "El commit sale con otro nombre: una configuración local del repositorio pisa la global. Revise con git config user.name dentro del repositorio y corríjala sin --global."
+        ]
+      },
+      "en": {
+        "titulo": "Set up your identity",
+        "resumen": "Set your name and email, which Git stores in every commit you make.",
+        "explicacion": "Git signs each commit with a name and an email. With --global they are saved for all your repositories; without it, only for the current one. Use git config --list to see everything that is set.",
+        "ejemplo": "git config --global user.name \"Persona Ejemplo\"\ngit config --global user.email \"ejemplo@ejemplo.invalid\"\ngit config --list\nuser.name=Persona Ejemplo\nuser.email=ejemplo@ejemplo.invalid",
+        "erroresComunes": [
+          "Author identity unknown: Git has neither your name nor your email. Run the two git config --global commands above and repeat the commit.",
+          "The commit shows a different name: a local repository setting overrides the global one. Check with git config user.name inside the repository and fix it without --global."
+        ]
+      },
+      "pt": {
+        "titulo": "Configurar sua identidade",
+        "resumen": "Defina seu nome e seu e-mail, que o Git guarda em cada commit que você fizer.",
+        "explicacion": "O Git assina cada commit com um nome e um e-mail. Com --global eles valem para todos os seus repositórios; sem essa opção, apenas para o atual. Use git config --list para ver tudo o que está configurado.",
+        "ejemplo": "git config --global user.name \"Persona Ejemplo\"\ngit config --global user.email \"ejemplo@ejemplo.invalid\"\ngit config --list\nuser.name=Persona Ejemplo\nuser.email=ejemplo@ejemplo.invalid",
+        "erroresComunes": [
+          "Author identity unknown: o Git não tem seu nome nem seu e-mail. Execute os dois comandos git config --global acima e repita o commit.",
+          "O commit sai com outro nome: uma configuração local do repositório sobrepõe a global. Confira com git config user.name dentro do repositório e corrija sem --global."
+        ]
+      },
+      "fr": {
+        "titulo": "Configurer votre identité",
+        "resumen": "Définissez votre nom et votre courriel, que Git enregistre dans chaque commit que vous faites.",
+        "explicacion": "Git signe chaque commit avec un nom et un courriel. Avec --global, ils valent pour tous vos dépôts ; sans cette option, seulement pour le dépôt courant. Utilisez git config --list pour voir tout ce qui est défini.",
+        "ejemplo": "git config --global user.name \"Persona Ejemplo\"\ngit config --global user.email \"ejemplo@ejemplo.invalid\"\ngit config --list\nuser.name=Persona Ejemplo\nuser.email=ejemplo@ejemplo.invalid",
+        "erroresComunes": [
+          "Author identity unknown : Git n'a ni votre nom ni votre courriel. Exécutez les deux commandes git config --global ci-dessus, puis refaites le commit.",
+          "Le commit porte un autre nom : un réglage local du dépôt écrase le réglage global. Vérifiez avec git config user.name dans le dépôt et corrigez-le sans --global."
+        ]
+      }
+    },
+    {
+      "id": "repositorios",
+      "grupo": "basico",
+      "nombre": "git init / git clone",
+      "peligroso": false,
+      "es": {
+        "titulo": "Crear u obtener un repositorio",
+        "resumen": "git init crea un repositorio nuevo; git clone copia uno que ya existe.",
+        "explicacion": "Use git init dentro de una carpeta para empezar a versionarla. Use git clone con una dirección para descargar un proyecto completo con todo su historial. Ambos crean la carpeta oculta .git, donde Git guarda todo.",
+        "ejemplo": "mkdir mi-proyecto && cd mi-proyecto\ngit init\nInitialized empty Git repository in .../mi-proyecto/.git/\ngit clone https://github.com/usuario-ejemplo/mi-proyecto.git\nCloning into 'mi-proyecto'...",
+        "erroresComunes": [
+          "fatal: destination path 'mi-proyecto' already exists: la carpeta de destino ya existe y no está vacía. Elija otro nombre o borre la carpeta vacía.",
+          "fatal: not a git repository: está fuera de un repositorio. Entre a la carpeta correcta con cd o ejecute git init."
+        ]
+      },
+      "en": {
+        "titulo": "Create or get a repository",
+        "resumen": "git init creates a new repository; git clone copies one that already exists.",
+        "explicacion": "Use git init inside a folder to start tracking it. Use git clone with an address to download a whole project with its full history. Both create the hidden .git folder, where Git stores everything.",
+        "ejemplo": "mkdir mi-proyecto && cd mi-proyecto\ngit init\nInitialized empty Git repository in .../mi-proyecto/.git/\ngit clone https://github.com/usuario-ejemplo/mi-proyecto.git\nCloning into 'mi-proyecto'...",
+        "erroresComunes": [
+          "fatal: destination path 'mi-proyecto' already exists: the target folder exists and is not empty. Pick another name or delete the empty folder.",
+          "fatal: not a git repository: you are outside a repository. Move into the right folder with cd or run git init."
+        ]
+      },
+      "pt": {
+        "titulo": "Criar ou obter um repositório",
+        "resumen": "git init cria um repositório novo; git clone copia um que já existe.",
+        "explicacion": "Use git init dentro de uma pasta para começar a versioná-la. Use git clone com um endereço para baixar um projeto completo com todo o histórico. Ambos criam a pasta oculta .git, onde o Git guarda tudo.",
+        "ejemplo": "mkdir mi-proyecto && cd mi-proyecto\ngit init\nInitialized empty Git repository in .../mi-proyecto/.git/\ngit clone https://github.com/usuario-ejemplo/mi-proyecto.git\nCloning into 'mi-proyecto'...",
+        "erroresComunes": [
+          "fatal: destination path 'mi-proyecto' already exists: a pasta de destino já existe e não está vazia. Escolha outro nome ou apague a pasta vazia.",
+          "fatal: not a git repository: você está fora de um repositório. Entre na pasta correta com cd ou execute git init."
+        ]
+      },
+      "fr": {
+        "titulo": "Créer ou obtenir un dépôt",
+        "resumen": "git init crée un nouveau dépôt ; git clone copie un dépôt qui existe déjà.",
+        "explicacion": "Utilisez git init dans un dossier pour commencer à le versionner. Utilisez git clone avec une adresse pour télécharger un projet complet avec tout son historique. Les deux créent le dossier caché .git, où Git stocke tout.",
+        "ejemplo": "mkdir mi-proyecto && cd mi-proyecto\ngit init\nInitialized empty Git repository in .../mi-proyecto/.git/\ngit clone https://github.com/usuario-ejemplo/mi-proyecto.git\nCloning into 'mi-proyecto'...",
+        "erroresComunes": [
+          "fatal: destination path 'mi-proyecto' already exists : le dossier de destination existe et n'est pas vide. Choisissez un autre nom ou supprimez le dossier vide.",
+          "fatal: not a git repository : vous êtes hors d'un dépôt. Placez-vous dans le bon dossier avec cd ou exécutez git init."
+        ]
+      }
+    },
+    {
+      "id": "estado-add-commit",
+      "grupo": "basico",
+      "nombre": "git status / add / commit",
+      "peligroso": false,
+      "es": {
+        "titulo": "Estado, add y commit",
+        "resumen": "Prepare sus cambios con git add y guárdelos como una foto con git commit.",
+        "explicacion": "El área de preparación (staging) es una sala de espera: allí reúne los cambios que irán en el próximo commit. git status muestra qué cambió y qué está preparado. git commit -m guarda lo preparado, con un mensaje, en el historial.",
+        "ejemplo": "git status\ngit add index.php\ngit commit -m \"Agrega la página de inicio\"\n[main 3f2a9c1] Agrega la página de inicio\n 1 file changed, 12 insertions(+)",
+        "erroresComunes": [
+          "nothing to commit, working tree clean: no hay cambios que guardar. Edite un archivo y vuelva a ejecutar git status.",
+          "no changes added to commit: modificó archivos pero no los preparó. Ejecute git add archivo (o git add .) antes del commit.",
+          "Archivo nuevo ausente del commit: los archivos sin seguimiento no entran solos. Agréguelos con git add."
+        ]
+      },
+      "en": {
+        "titulo": "Status, add and commit",
+        "resumen": "Stage your changes with git add and save them as a snapshot with git commit.",
+        "explicacion": "The staging area is a waiting room: you gather there the changes that will go into the next commit. git status shows what changed and what is staged. git commit -m saves what is staged, with a message, into the history.",
+        "ejemplo": "git status\ngit add index.php\ngit commit -m \"Add the home page\"\n[main 3f2a9c1] Add the home page\n 1 file changed, 12 insertions(+)",
+        "erroresComunes": [
+          "nothing to commit, working tree clean: there is nothing to save. Edit a file and run git status again.",
+          "no changes added to commit: you modified files but did not stage them. Run git add file (or git add .) before the commit.",
+          "A new file is missing from the commit: untracked files do not join on their own. Add them with git add."
+        ]
+      },
+      "pt": {
+        "titulo": "Status, add e commit",
+        "resumen": "Prepare suas alterações com git add e guarde-as como uma foto com git commit.",
+        "explicacion": "A área de preparação (staging) é uma sala de espera: nela você reúne as alterações que irão no próximo commit. git status mostra o que mudou e o que está preparado. git commit -m guarda o que está preparado, com uma mensagem, no histórico.",
+        "ejemplo": "git status\ngit add index.php\ngit commit -m \"Adiciona a página inicial\"\n[main 3f2a9c1] Adiciona a página inicial\n 1 file changed, 12 insertions(+)",
+        "erroresComunes": [
+          "nothing to commit, working tree clean: não há nada para guardar. Edite um arquivo e execute git status de novo.",
+          "no changes added to commit: você alterou arquivos, mas não os preparou. Execute git add arquivo (ou git add .) antes do commit.",
+          "Arquivo novo ausente do commit: arquivos não rastreados não entram sozinhos. Adicione-os com git add."
+        ]
+      },
+      "fr": {
+        "titulo": "Statut, add et commit",
+        "resumen": "Préparez vos modifications avec git add et enregistrez-les comme un instantané avec git commit.",
+        "explicacion": "La zone de préparation (staging) est une salle d'attente : vous y rassemblez les modifications du prochain commit. git status montre ce qui a changé et ce qui est préparé. git commit -m enregistre ce qui est préparé, avec un message, dans l'historique.",
+        "ejemplo": "git status\ngit add index.php\ngit commit -m \"Ajoute la page d'accueil\"\n[main 3f2a9c1] Ajoute la page d'accueil\n 1 file changed, 12 insertions(+)",
+        "erroresComunes": [
+          "nothing to commit, working tree clean : il n'y a rien à enregistrer. Modifiez un fichier puis relancez git status.",
+          "no changes added to commit : vous avez modifié des fichiers sans les préparer. Exécutez git add fichier (ou git add .) avant le commit.",
+          "Un nouveau fichier manque dans le commit : les fichiers non suivis n'entrent pas seuls. Ajoutez-les avec git add."
+        ]
+      }
+    },
+    {
+      "id": "historial-diff",
+      "grupo": "basico",
+      "nombre": "git log / git diff",
+      "peligroso": false,
+      "es": {
+        "titulo": "Historial y diferencias",
+        "resumen": "git log muestra los commits; git diff muestra qué líneas cambiaron.",
+        "explicacion": "Use git log --oneline --graph --all --decorate para ver un resumen del historial con sus ramas. git diff muestra los cambios sin preparar, y git diff --staged los que ya están preparados. Salga de la vista larga con la tecla q.",
+        "ejemplo": "git log --oneline --graph --all --decorate\n* 3f2a9c1 (HEAD -> main) Agrega la página de inicio\n* a1b2c3d Primer commit\ngit diff\ngit diff --staged",
+        "erroresComunes": [
+          "git diff no muestra nada: los cambios ya están preparados con git add. Use git diff --staged para verlos.",
+          "La pantalla queda detenida con dos puntos (:): es el paginador. Pulse q para salir."
+        ]
+      },
+      "en": {
+        "titulo": "History and differences",
+        "resumen": "git log lists commits; git diff shows which lines changed.",
+        "explicacion": "Use git log --oneline --graph --all --decorate to see a short history with its branches. git diff shows unstaged changes, and git diff --staged shows those already staged. Leave the long view with the q key.",
+        "ejemplo": "git log --oneline --graph --all --decorate\n* 3f2a9c1 (HEAD -> main) Add the home page\n* a1b2c3d First commit\ngit diff\ngit diff --staged",
+        "erroresComunes": [
+          "git diff shows nothing: the changes are already staged with git add. Use git diff --staged to see them.",
+          "The screen stops at a colon (:): it is the pager. Press q to leave."
+        ]
+      },
+      "pt": {
+        "titulo": "Histórico e diferenças",
+        "resumen": "git log lista os commits; git diff mostra quais linhas mudaram.",
+        "explicacion": "Use git log --oneline --graph --all --decorate para ver um histórico resumido com suas ramificações. git diff mostra as alterações não preparadas, e git diff --staged mostra as que já estão preparadas. Saia da visão longa com a tecla q.",
+        "ejemplo": "git log --oneline --graph --all --decorate\n* 3f2a9c1 (HEAD -> main) Adiciona a página inicial\n* a1b2c3d Primeiro commit\ngit diff\ngit diff --staged",
+        "erroresComunes": [
+          "git diff não mostra nada: as alterações já estão preparadas com git add. Use git diff --staged para vê-las.",
+          "A tela para em dois pontos (:): é o paginador. Pressione q para sair."
+        ]
+      },
+      "fr": {
+        "titulo": "Historique et différences",
+        "resumen": "git log liste les commits ; git diff montre quelles lignes ont changé.",
+        "explicacion": "Utilisez git log --oneline --graph --all --decorate pour voir un historique abrégé avec ses branches. git diff montre les modifications non préparées, et git diff --staged celles déjà préparées. Quittez la vue longue avec la touche q.",
+        "ejemplo": "git log --oneline --graph --all --decorate\n* 3f2a9c1 (HEAD -> main) Ajoute la page d'accueil\n* a1b2c3d Premier commit\ngit diff\ngit diff --staged",
+        "erroresComunes": [
+          "git diff n'affiche rien : les modifications sont déjà préparées avec git add. Utilisez git diff --staged pour les voir.",
+          "L'écran s'arrête sur deux-points (:) : c'est le paginateur. Appuyez sur q pour quitter."
+        ]
+      }
+    },
+    {
+      "id": "ramas",
+      "grupo": "ramas",
+      "nombre": "git branch / git switch",
+      "peligroso": false,
+      "es": {
+        "titulo": "Crear y cambiar de rama",
+        "resumen": "Una rama es una línea de trabajo aparte; git switch -c crea una y se mueve a ella.",
+        "explicacion": "Las ramas permiten probar cambios sin tocar la rama principal. git branch lista las ramas. git switch nombre cambia de rama, y git switch -c nombre la crea y entra en ella.",
+        "ejemplo": "git branch\n* main\ngit switch -c nueva-funcion\nSwitched to a new branch 'nueva-funcion'\ngit switch main",
+        "erroresComunes": [
+          "error: Your local changes would be overwritten: tiene cambios sin guardar que chocan con la otra rama. Haga commit o use git stash antes de cambiar.",
+          "fatal: a branch named 'nueva-funcion' already exists: ese nombre ya existe. Use otro nombre o entre con git switch nueva-funcion."
+        ]
+      },
+      "en": {
+        "titulo": "Create and switch branches",
+        "resumen": "A branch is a separate line of work; git switch -c creates one and moves to it.",
+        "explicacion": "Branches let you try changes without touching the main branch. git branch lists branches. git switch name changes branch, and git switch -c name creates it and enters it.",
+        "ejemplo": "git branch\n* main\ngit switch -c nueva-funcion\nSwitched to a new branch 'nueva-funcion'\ngit switch main",
+        "erroresComunes": [
+          "error: Your local changes would be overwritten: you have unsaved changes that clash with the other branch. Commit or use git stash before switching.",
+          "fatal: a branch named 'nueva-funcion' already exists: that name is taken. Use another name or enter it with git switch nueva-funcion."
+        ]
+      },
+      "pt": {
+        "titulo": "Criar e trocar de ramo",
+        "resumen": "Um ramo é uma linha de trabalho separada; git switch -c cria um e passa para ele.",
+        "explicacion": "Os ramos permitem testar alterações sem mexer no ramo principal. git branch lista os ramos. git switch nome troca de ramo, e git switch -c nome o cria e entra nele.",
+        "ejemplo": "git branch\n* main\ngit switch -c nueva-funcion\nSwitched to a new branch 'nueva-funcion'\ngit switch main",
+        "erroresComunes": [
+          "error: Your local changes would be overwritten: você tem alterações não guardadas que entram em conflito com o outro ramo. Faça commit ou use git stash antes de trocar.",
+          "fatal: a branch named 'nueva-funcion' already exists: esse nome já existe. Use outro nome ou entre com git switch nueva-funcion."
+        ]
+      },
+      "fr": {
+        "titulo": "Créer et changer de branche",
+        "resumen": "Une branche est une ligne de travail séparée ; git switch -c en crée une et s'y place.",
+        "explicacion": "Les branches permettent d'essayer des modifications sans toucher à la branche principale. git branch liste les branches. git switch nom change de branche, et git switch -c nom la crée et y entre.",
+        "ejemplo": "git branch\n* main\ngit switch -c nueva-funcion\nSwitched to a new branch 'nueva-funcion'\ngit switch main",
+        "erroresComunes": [
+          "error: Your local changes would be overwritten : vous avez des modifications non enregistrées qui entrent en conflit avec l'autre branche. Faites un commit ou utilisez git stash avant de changer.",
+          "fatal: a branch named 'nueva-funcion' already exists : ce nom existe déjà. Utilisez un autre nom ou entrez-y avec git switch nueva-funcion."
+        ]
+      }
+    },
+    {
+      "id": "merge",
+      "grupo": "ramas",
+      "nombre": "git merge",
+      "peligroso": false,
+      "es": {
+        "titulo": "Fusionar ramas con merge",
+        "resumen": "git merge trae a la rama actual los commits de otra rama.",
+        "explicacion": "Colóquese en la rama que recibirá los cambios y ejecute git merge con el nombre de la otra. Si la rama actual no avanzó, Git hace un avance rápido (fast-forward) y solo mueve el puntero. Si ambas avanzaron, crea un commit de fusión que une las dos historias.",
+        "ejemplo": "git switch main\ngit merge nueva-funcion\nUpdating a1b2c3d..9e8f7a6\nFast-forward\n index.php | 3 +++",
+        "erroresComunes": [
+          "CONFLICT (content): ambas ramas cambiaron las mismas líneas. Resuelva el conflicto (tema siguiente) o cancele con git merge --abort.",
+          "Already up to date: la rama ya contiene esos commits. No hay nada que fusionar."
+        ]
+      },
+      "en": {
+        "titulo": "Merge branches",
+        "resumen": "git merge brings the commits of another branch into the current one.",
+        "explicacion": "Move to the branch that will receive the changes and run git merge with the other branch name. If the current branch did not advance, Git does a fast-forward and only moves the pointer. If both advanced, it creates a merge commit that joins the two histories.",
+        "ejemplo": "git switch main\ngit merge nueva-funcion\nUpdating a1b2c3d..9e8f7a6\nFast-forward\n index.php | 3 +++",
+        "erroresComunes": [
+          "CONFLICT (content): both branches changed the same lines. Resolve the conflict (next topic) or cancel with git merge --abort.",
+          "Already up to date: the branch already contains those commits. There is nothing to merge."
+        ]
+      },
+      "pt": {
+        "titulo": "Mesclar ramos com merge",
+        "resumen": "git merge traz para o ramo atual os commits de outro ramo.",
+        "explicacion": "Vá para o ramo que receberá as alterações e execute git merge com o nome do outro. Se o ramo atual não avançou, o Git faz um avanço rápido (fast-forward) e apenas move o ponteiro. Se ambos avançaram, cria um commit de mesclagem que une as duas histórias.",
+        "ejemplo": "git switch main\ngit merge nueva-funcion\nUpdating a1b2c3d..9e8f7a6\nFast-forward\n index.php | 3 +++",
+        "erroresComunes": [
+          "CONFLICT (content): os dois ramos alteraram as mesmas linhas. Resolva o conflito (próximo tema) ou cancele com git merge --abort.",
+          "Already up to date: o ramo já contém esses commits. Não há nada para mesclar."
+        ]
+      },
+      "fr": {
+        "titulo": "Fusionner avec merge",
+        "resumen": "git merge amène dans la branche courante les commits d'une autre branche.",
+        "explicacion": "Placez-vous sur la branche qui recevra les modifications et exécutez git merge avec le nom de l'autre. Si la branche courante n'a pas avancé, Git fait une avance rapide (fast-forward) et déplace seulement le pointeur. Si les deux ont avancé, il crée un commit de fusion qui réunit les deux historiques.",
+        "ejemplo": "git switch main\ngit merge nueva-funcion\nUpdating a1b2c3d..9e8f7a6\nFast-forward\n index.php | 3 +++",
+        "erroresComunes": [
+          "CONFLICT (content) : les deux branches ont modifié les mêmes lignes. Résolvez le conflit (sujet suivant) ou annulez avec git merge --abort.",
+          "Already up to date : la branche contient déjà ces commits. Il n'y a rien à fusionner."
+        ]
+      }
+    },
+    {
+      "id": "conflictos",
+      "grupo": "ramas",
+      "nombre": "git merge --abort",
+      "peligroso": false,
+      "es": {
+        "titulo": "Resolver un conflicto",
+        "resumen": "Un conflicto aparece cuando dos ramas cambian las mismas líneas; usted elige qué queda.",
+        "explicacion": "Git marca el archivo con <<<<<<< (su versión), ======= (separador) y >>>>>>> (la otra versión). Edite el archivo, deje el texto final y borre las tres marcas. Luego use git add y git commit; si prefiere empezar de nuevo, ejecute git merge --abort.",
+        "ejemplo": "<<<<<<< HEAD\nTítulo actual\n=======\nTítulo nuevo\n>>>>>>> nueva-funcion\ngit add index.php\ngit commit\ngit merge --abort",
+        "erroresComunes": [
+          "El sitio falla tras la fusión: quedaron marcas <<<<<<< dentro del archivo. Búsquelas y elimínelas antes de hacer git add.",
+          "error: Committing is not possible because you have unmerged files: falta marcar algún archivo como resuelto. Ejecute git add en cada uno y repita git commit."
+        ]
+      },
+      "en": {
+        "titulo": "Resolve a conflict",
+        "resumen": "A conflict appears when two branches change the same lines; you choose what stays.",
+        "explicacion": "Git marks the file with <<<<<<< (your version), ======= (separator) and >>>>>>> (the other version). Edit the file, keep the final text and delete the three markers. Then use git add and git commit; if you prefer to start over, run git merge --abort.",
+        "ejemplo": "<<<<<<< HEAD\nCurrent title\n=======\nNew title\n>>>>>>> nueva-funcion\ngit add index.php\ngit commit\ngit merge --abort",
+        "erroresComunes": [
+          "The site breaks after the merge: <<<<<<< markers were left inside the file. Search for them and remove them before git add.",
+          "error: Committing is not possible because you have unmerged files: some file is not marked as resolved. Run git add on each one and repeat git commit."
+        ]
+      },
+      "pt": {
+        "titulo": "Resolver um conflito",
+        "resumen": "Um conflito surge quando dois ramos alteram as mesmas linhas; você escolhe o que fica.",
+        "explicacion": "O Git marca o arquivo com <<<<<<< (sua versão), ======= (separador) e >>>>>>> (a outra versão). Edite o arquivo, deixe o texto final e apague as três marcas. Depois use git add e git commit; se preferir recomeçar, execute git merge --abort.",
+        "ejemplo": "<<<<<<< HEAD\nTítulo atual\n=======\nTítulo novo\n>>>>>>> nueva-funcion\ngit add index.php\ngit commit\ngit merge --abort",
+        "erroresComunes": [
+          "O site quebra após a mesclagem: sobraram marcas <<<<<<< dentro do arquivo. Procure-as e remova-as antes do git add.",
+          "error: Committing is not possible because you have unmerged files: falta marcar algum arquivo como resolvido. Execute git add em cada um e repita git commit."
+        ]
+      },
+      "fr": {
+        "titulo": "Résoudre un conflit",
+        "resumen": "Un conflit apparaît quand deux branches modifient les mêmes lignes ; vous choisissez ce qui reste.",
+        "explicacion": "Git marque le fichier avec <<<<<<< (votre version), ======= (séparateur) et >>>>>>> (l'autre version). Modifiez le fichier, gardez le texte final et supprimez les trois marques. Ensuite, utilisez git add et git commit ; si vous préférez recommencer, exécutez git merge --abort.",
+        "ejemplo": "<<<<<<< HEAD\nTitre actuel\n=======\nNouveau titre\n>>>>>>> nueva-funcion\ngit add index.php\ngit commit\ngit merge --abort",
+        "erroresComunes": [
+          "Le site plante après la fusion : des marques <<<<<<< sont restées dans le fichier. Cherchez-les et supprimez-les avant git add.",
+          "error: Committing is not possible because you have unmerged files : un fichier n'est pas marqué comme résolu. Exécutez git add sur chacun puis refaites git commit."
+        ]
+      }
+    },
+    {
+      "id": "stash",
+      "grupo": "ramas",
+      "nombre": "git stash",
+      "peligroso": false,
+      "es": {
+        "titulo": "Guardar cambios en el cajón",
+        "resumen": "git stash guarda sus cambios sin commit para dejar el área limpia y recuperarlos después.",
+        "explicacion": "Úselo cuando deba cambiar de rama y no quiera hacer commit de algo a medias. git stash push guarda los cambios, git stash list los enumera y git stash pop los devuelve y los quita de la lista.",
+        "ejemplo": "git stash push -m \"trabajo a medias\"\ngit stash list\nstash@{0}: On main: trabajo a medias\ngit switch otra-rama\ngit stash pop",
+        "erroresComunes": [
+          "CONFLICT al ejecutar git stash pop: los cambios guardados chocan con el código actual. Resuelva el conflicto como en una fusión; el stash se conserva hasta entonces.",
+          "No local changes to save: no había nada que guardar. Los archivos nuevos sin seguimiento requieren la opción -u."
+        ]
+      },
+      "en": {
+        "titulo": "Put changes in the drawer",
+        "resumen": "git stash saves your uncommitted changes so you get a clean tree and can bring them back later.",
+        "explicacion": "Use it when you must switch branches and do not want to commit half-done work. git stash push saves the changes, git stash list lists them, and git stash pop brings them back and removes them from the list.",
+        "ejemplo": "git stash push -m \"work in progress\"\ngit stash list\nstash@{0}: On main: work in progress\ngit switch otra-rama\ngit stash pop",
+        "erroresComunes": [
+          "CONFLICT when running git stash pop: the saved changes clash with the current code. Resolve the conflict as in a merge; the stash is kept until then.",
+          "No local changes to save: there was nothing to save. New untracked files need the -u option."
+        ]
+      },
+      "pt": {
+        "titulo": "Guardar alterações na gaveta",
+        "resumen": "git stash guarda suas alterações sem commit para deixar a área limpa e recuperá-las depois.",
+        "explicacion": "Use-o quando precisar trocar de ramo e não quiser fazer commit de algo pela metade. git stash push guarda as alterações, git stash list as lista e git stash pop as devolve e as remove da lista.",
+        "ejemplo": "git stash push -m \"trabalho pela metade\"\ngit stash list\nstash@{0}: On main: trabalho pela metade\ngit switch otra-rama\ngit stash pop",
+        "erroresComunes": [
+          "CONFLICT ao executar git stash pop: as alterações guardadas entram em conflito com o código atual. Resolva o conflito como em uma mesclagem; o stash é mantido até lá.",
+          "No local changes to save: não havia nada para guardar. Arquivos novos não rastreados exigem a opção -u."
+        ]
+      },
+      "fr": {
+        "titulo": "Mettre les modifications de côté",
+        "resumen": "git stash met de côté vos modifications non validées pour obtenir un dossier propre et les retrouver plus tard.",
+        "explicacion": "Utilisez-le quand vous devez changer de branche sans vouloir valider un travail inachevé. git stash push met les modifications de côté, git stash list les énumère et git stash pop les restitue et les retire de la liste.",
+        "ejemplo": "git stash push -m \"travail en cours\"\ngit stash list\nstash@{0}: On main: travail en cours\ngit switch otra-rama\ngit stash pop",
+        "erroresComunes": [
+          "CONFLICT lors de git stash pop : les modifications mises de côté entrent en conflit avec le code actuel. Résolvez le conflit comme pour une fusion ; le stash est conservé jusque-là.",
+          "No local changes to save : il n'y avait rien à mettre de côté. Les nouveaux fichiers non suivis demandent l'option -u."
+        ]
+      }
+    },
+    {
+      "id": "restore",
+      "grupo": "deshacer",
+      "nombre": "git restore",
+      "peligroso": false,
+      "es": {
+        "titulo": "Descartar o sacar de preparación",
+        "resumen": "git restore devuelve un archivo a su último commit; con --staged solo lo saca de la preparación.",
+        "explicacion": "git restore archivo descarta los cambios que usted hizo en ese archivo y no se pueden recuperar. git restore --staged archivo quita el archivo del área de preparación pero conserva sus cambios. Revise con git status antes de ejecutarlo.",
+        "ejemplo": "git restore --staged index.php\ngit restore index.php\ngit status\nnothing to commit, working tree clean",
+        "erroresComunes": [
+          "Perdió una edición tras git restore archivo: ese comando descarta el trabajo sin guardar. Para solo desmarcar, use --staged.",
+          "error: pathspec 'index.php' did not match: el nombre no coincide con ningún archivo. Revise la ruta con git status."
+        ]
+      },
+      "en": {
+        "titulo": "Discard or unstage",
+        "resumen": "git restore returns a file to its last commit; with --staged it only unstages it.",
+        "explicacion": "git restore file discards the changes you made to that file, and they cannot be recovered. git restore --staged file removes the file from the staging area but keeps your changes. Check with git status before you run it.",
+        "ejemplo": "git restore --staged index.php\ngit restore index.php\ngit status\nnothing to commit, working tree clean",
+        "erroresComunes": [
+          "You lost an edit after git restore file: that command discards unsaved work. To only unstage, use --staged.",
+          "error: pathspec 'index.php' did not match: the name matches no file. Check the path with git status."
+        ]
+      },
+      "pt": {
+        "titulo": "Descartar ou tirar da preparação",
+        "resumen": "git restore devolve um arquivo ao último commit; com --staged apenas o tira da preparação.",
+        "explicacion": "git restore arquivo descarta as alterações que você fez nesse arquivo, e elas não podem ser recuperadas. git restore --staged arquivo remove o arquivo da área de preparação, mas mantém suas alterações. Confira com git status antes de executar.",
+        "ejemplo": "git restore --staged index.php\ngit restore index.php\ngit status\nnothing to commit, working tree clean",
+        "erroresComunes": [
+          "Você perdeu uma edição após git restore arquivo: esse comando descarta o trabalho não guardado. Para apenas desmarcar, use --staged.",
+          "error: pathspec 'index.php' did not match: o nome não corresponde a nenhum arquivo. Confira o caminho com git status."
+        ]
+      },
+      "fr": {
+        "titulo": "Annuler ou retirer de la préparation",
+        "resumen": "git restore remet un fichier dans son dernier commit ; avec --staged, il le retire seulement de la préparation.",
+        "explicacion": "git restore fichier annule les modifications que vous avez faites dans ce fichier, et elles ne se récupèrent pas. git restore --staged fichier retire le fichier de la zone de préparation mais garde vos modifications. Vérifiez avec git status avant de l'exécuter.",
+        "ejemplo": "git restore --staged index.php\ngit restore index.php\ngit status\nnothing to commit, working tree clean",
+        "erroresComunes": [
+          "Vous avez perdu une modification après git restore fichier : cette commande annule le travail non enregistré. Pour simplement retirer de la préparation, utilisez --staged.",
+          "error: pathspec 'index.php' did not match : le nom ne correspond à aucun fichier. Vérifiez le chemin avec git status."
+        ]
+      }
+    },
+    {
+      "id": "reset-soft",
+      "grupo": "deshacer",
+      "nombre": "git reset --soft",
+      "peligroso": false,
+      "es": {
+        "titulo": "Deshacer el último commit",
+        "resumen": "git reset --soft HEAD~1 anula el último commit pero deja sus cambios preparados.",
+        "explicacion": "Sirve cuando hizo un commit demasiado pronto o con un mensaje equivocado y aún no lo ha subido. El commit desaparece del historial, pero los archivos y la preparación quedan intactos. Después puede hacer un commit nuevo y correcto.",
+        "ejemplo": "git log --oneline\n3f2a9c1 Mensaje equivocado\ngit reset --soft HEAD~1\ngit status\nChanges to be committed: index.php\ngit commit -m \"Mensaje correcto\"",
+        "erroresComunes": [
+          "Hizo reset de un commit ya subido: el remoto tendrá una historia distinta y el push será rechazado. Si el commit ya se compartió, use git revert.",
+          "Retrocedió más commits de los previstos: HEAD~2 retrocede dos. Use git reflog para ver dónde estaba y volver con git reset --soft."
+        ]
+      },
+      "en": {
+        "titulo": "Undo the last commit",
+        "resumen": "git reset --soft HEAD~1 cancels the last commit but keeps its changes staged.",
+        "explicacion": "Use it when you committed too early or with a wrong message and have not pushed yet. The commit disappears from the history, but your files and the staging area stay intact. Then you can make a new, correct commit.",
+        "ejemplo": "git log --oneline\n3f2a9c1 Wrong message\ngit reset --soft HEAD~1\ngit status\nChanges to be committed: index.php\ngit commit -m \"Correct message\"",
+        "erroresComunes": [
+          "You reset a commit that was already pushed: the remote will have a different history and the push will be rejected. If the commit was shared, use git revert.",
+          "You went back more commits than planned: HEAD~2 goes back two. Use git reflog to see where you were and return with git reset --soft."
+        ]
+      },
+      "pt": {
+        "titulo": "Desfazer o último commit",
+        "resumen": "git reset --soft HEAD~1 anula o último commit, mas deixa suas alterações preparadas.",
+        "explicacion": "Serve quando você fez um commit cedo demais ou com a mensagem errada e ainda não o enviou. O commit some do histórico, mas os arquivos e a preparação continuam intactos. Depois você pode fazer um commit novo e correto.",
+        "ejemplo": "git log --oneline\n3f2a9c1 Mensagem errada\ngit reset --soft HEAD~1\ngit status\nChanges to be committed: index.php\ngit commit -m \"Mensagem correta\"",
+        "erroresComunes": [
+          "Você fez reset de um commit já enviado: o remoto terá uma história diferente e o push será rejeitado. Se o commit já foi compartilhado, use git revert.",
+          "Você voltou mais commits do que o previsto: HEAD~2 volta dois. Use git reflog para ver onde estava e retorne com git reset --soft."
+        ]
+      },
+      "fr": {
+        "titulo": "Annuler le dernier commit",
+        "resumen": "git reset --soft HEAD~1 annule le dernier commit mais garde ses modifications préparées.",
+        "explicacion": "Utilisez-le si vous avez validé trop tôt ou avec un mauvais message, sans avoir encore poussé. Le commit disparaît de l'historique, mais vos fichiers et la zone de préparation restent intacts. Vous pouvez ensuite faire un commit nouveau et correct.",
+        "ejemplo": "git log --oneline\n3f2a9c1 Mauvais message\ngit reset --soft HEAD~1\ngit status\nChanges to be committed: index.php\ngit commit -m \"Bon message\"",
+        "erroresComunes": [
+          "Vous avez réinitialisé un commit déjà poussé : le dépôt distant aura un historique différent et le push sera refusé. Si le commit a été partagé, utilisez git revert.",
+          "Vous avez reculé de plus de commits que prévu : HEAD~2 recule de deux. Utilisez git reflog pour voir où vous étiez et revenez avec git reset --soft."
+        ]
+      }
+    },
+    {
+      "id": "revert",
+      "grupo": "deshacer",
+      "nombre": "git revert",
+      "peligroso": false,
+      "es": {
+        "titulo": "Revertir un commit con seguridad",
+        "resumen": "git revert crea un commit nuevo que deshace otro, sin reescribir el historial.",
+        "explicacion": "Es la forma segura de deshacer algo que ya se compartió: el commit original sigue en el historial y se añade uno que invierte sus cambios. Use git log --oneline para hallar el identificador del commit. Puede subir el resultado con un push normal.",
+        "ejemplo": "git log --oneline\n3f2a9c1 Agrega un cambio con error\ngit revert 3f2a9c1\n[main 7d6e5f4] Revert \"Agrega un cambio con error\"\ngit push",
+        "erroresComunes": [
+          "error: could not revert: hay un conflicto con cambios posteriores. Resuélvalo, ejecute git add y luego git revert --continue, o cancele con git revert --abort.",
+          "Revirtió el commit equivocado: ejecute git revert sobre ese nuevo commit de reversión para volver a aplicar el cambio."
+        ]
+      },
+      "en": {
+        "titulo": "Revert a commit safely",
+        "resumen": "git revert creates a new commit that undoes another one, without rewriting history.",
+        "explicacion": "It is the safe way to undo something already shared: the original commit stays in the history and a new one reverses its changes. Use git log --oneline to find the commit identifier. You can push the result with a normal push.",
+        "ejemplo": "git log --oneline\n3f2a9c1 Add a change with a bug\ngit revert 3f2a9c1\n[main 7d6e5f4] Revert \"Add a change with a bug\"\ngit push",
+        "erroresComunes": [
+          "error: could not revert: there is a conflict with later changes. Resolve it, run git add and then git revert --continue, or cancel with git revert --abort.",
+          "You reverted the wrong commit: run git revert on that new revert commit to apply the change again."
+        ]
+      },
+      "pt": {
+        "titulo": "Reverter um commit com segurança",
+        "resumen": "git revert cria um commit novo que desfaz outro, sem reescrever o histórico.",
+        "explicacion": "É a forma segura de desfazer algo já compartilhado: o commit original continua no histórico e um novo inverte suas alterações. Use git log --oneline para achar o identificador do commit. Você pode enviar o resultado com um push normal.",
+        "ejemplo": "git log --oneline\n3f2a9c1 Adiciona uma alteração com erro\ngit revert 3f2a9c1\n[main 7d6e5f4] Revert \"Adiciona uma alteração com erro\"\ngit push",
+        "erroresComunes": [
+          "error: could not revert: há um conflito com alterações posteriores. Resolva-o, execute git add e depois git revert --continue, ou cancele com git revert --abort.",
+          "Você reverteu o commit errado: execute git revert nesse novo commit de reversão para aplicar a alteração de novo."
+        ]
+      },
+      "fr": {
+        "titulo": "Annuler un commit sans risque",
+        "resumen": "git revert crée un nouveau commit qui annule un autre, sans réécrire l'historique.",
+        "explicacion": "C'est la façon sûre d'annuler ce qui a déjà été partagé : le commit d'origine reste dans l'historique et un nouveau inverse ses modifications. Utilisez git log --oneline pour trouver l'identifiant du commit. Vous pouvez pousser le résultat avec un push normal.",
+        "ejemplo": "git log --oneline\n3f2a9c1 Ajoute une modification fautive\ngit revert 3f2a9c1\n[main 7d6e5f4] Revert \"Ajoute une modification fautive\"\ngit push",
+        "erroresComunes": [
+          "error: could not revert : il y a un conflit avec des modifications ultérieures. Résolvez-le, exécutez git add puis git revert --continue, ou annulez avec git revert --abort.",
+          "Vous avez annulé le mauvais commit : exécutez git revert sur ce nouveau commit d'annulation pour réappliquer la modification."
+        ]
+      }
+    },
+    {
+      "id": "operaciones-peligrosas",
+      "grupo": "deshacer",
+      "nombre": "git reset --hard / git push --force",
+      "peligroso": true,
+      "es": {
+        "titulo": "Operaciones peligrosas",
+        "resumen": "ATENCIÓN: reset --hard borra cambios sin guardar y push --force reescribe la historia remota.",
+        "explicacion": "ATENCIÓN: git reset --hard descarta todos los cambios sin commit y no se recuperan. git push --force sobrescribe la historia del remoto y puede borrar el trabajo de otras personas. Antes, haga una rama de respaldo, prefiera git revert o, si es imprescindible, use git push --force-with-lease; git reflog ayuda a recuperar commits perdidos.",
+        "ejemplo": "git branch respaldo\ngit reset --hard HEAD~1\nHEAD is now at a1b2c3d Primer commit\ngit push --force-with-lease\ngit reflog\ngit reset --hard 3f2a9c1",
+        "erroresComunes": [
+          "Los cambios sin commit desaparecieron tras reset --hard: nunca estuvieron en el historial y no se recuperan. Haga commit o git stash antes de usarlo.",
+          "rejected (stale info) con --force-with-lease: alguien subió commits que usted no tiene. Ejecute git fetch, revise y decida; no recurra a --force.",
+          "Un compañero perdió commits tras su push --force: la historia remota fue reescrita. Recupérelos con git reflog desde un clon que los tenga y avísele al equipo."
+        ]
+      },
+      "en": {
+        "titulo": "Dangerous operations",
+        "resumen": "WARNING: reset --hard erases unsaved changes and push --force rewrites remote history.",
+        "explicacion": "WARNING: git reset --hard discards all uncommitted changes and they cannot be recovered. git push --force overwrites the remote history and can erase other people's work. First make a backup branch, prefer git revert or, if it is essential, use git push --force-with-lease; git reflog helps recover lost commits.",
+        "ejemplo": "git branch respaldo\ngit reset --hard HEAD~1\nHEAD is now at a1b2c3d First commit\ngit push --force-with-lease\ngit reflog\ngit reset --hard 3f2a9c1",
+        "erroresComunes": [
+          "Uncommitted changes vanished after reset --hard: they were never in the history and cannot be recovered. Commit or git stash before using it.",
+          "rejected (stale info) with --force-with-lease: someone pushed commits you do not have. Run git fetch, review and decide; do not fall back to --force.",
+          "A teammate lost commits after your push --force: the remote history was rewritten. Recover them with git reflog from a clone that has them and tell the team."
+        ]
+      },
+      "pt": {
+        "titulo": "Operações perigosas",
+        "resumen": "ATENÇÃO: reset --hard apaga alterações não guardadas e push --force reescreve a história remota.",
+        "explicacion": "ATENÇÃO: git reset --hard descarta todas as alterações sem commit, e elas não são recuperadas. git push --force sobrescreve a história do remoto e pode apagar o trabalho de outras pessoas. Antes, crie um ramo de backup, prefira git revert ou, se for indispensável, use git push --force-with-lease; git reflog ajuda a recuperar commits perdidos.",
+        "ejemplo": "git branch respaldo\ngit reset --hard HEAD~1\nHEAD is now at a1b2c3d Primeiro commit\ngit push --force-with-lease\ngit reflog\ngit reset --hard 3f2a9c1",
+        "erroresComunes": [
+          "As alterações sem commit sumiram após reset --hard: elas nunca estiveram no histórico e não se recuperam. Faça commit ou git stash antes de usá-lo.",
+          "rejected (stale info) com --force-with-lease: alguém enviou commits que você não tem. Execute git fetch, revise e decida; não recorra a --force.",
+          "Um colega perdeu commits após seu push --force: a história remota foi reescrita. Recupere-os com git reflog em um clone que os tenha e avise a equipe."
+        ]
+      },
+      "fr": {
+        "titulo": "Opérations dangereuses",
+        "resumen": "ATTENTION : reset --hard efface les modifications non enregistrées et push --force réécrit l'historique distant.",
+        "explicacion": "ATTENTION : git reset --hard annule toutes les modifications non validées, et elles ne se récupèrent pas. git push --force écrase l'historique du dépôt distant et peut effacer le travail d'autres personnes. Avant, créez une branche de sauvegarde, préférez git revert ou, si c'est indispensable, utilisez git push --force-with-lease ; git reflog aide à retrouver des commits perdus.",
+        "ejemplo": "git branch respaldo\ngit reset --hard HEAD~1\nHEAD is now at a1b2c3d Premier commit\ngit push --force-with-lease\ngit reflog\ngit reset --hard 3f2a9c1",
+        "erroresComunes": [
+          "Les modifications non validées ont disparu après reset --hard : elles n'ont jamais été dans l'historique et ne se récupèrent pas. Faites un commit ou git stash avant de l'utiliser.",
+          "rejected (stale info) avec --force-with-lease : quelqu'un a poussé des commits que vous n'avez pas. Exécutez git fetch, examinez et décidez ; ne retombez pas sur --force.",
+          "Un collègue a perdu des commits après votre push --force : l'historique distant a été réécrit. Retrouvez-les avec git reflog depuis un clone qui les a et prévenez l'équipe."
+        ]
+      }
+    },
+    {
+      "id": "remotos",
+      "grupo": "remotos",
+      "nombre": "git remote",
+      "peligroso": false,
+      "es": {
+        "titulo": "Conectar con un remoto",
+        "resumen": "Un remoto es una copia del repositorio en otro lugar; origin es su nombre habitual.",
+        "explicacion": "git remote add origin dirección registra el remoto con el nombre origin. git remote -v lista los remotos con sus direcciones. Con git clone, origin ya queda configurado.",
+        "ejemplo": "git remote add origin https://github.com/usuario-ejemplo/mi-proyecto.git\ngit remote -v\norigin  https://github.com/usuario-ejemplo/mi-proyecto.git (fetch)\norigin  https://github.com/usuario-ejemplo/mi-proyecto.git (push)",
+        "erroresComunes": [
+          "error: remote origin already exists: ya hay un remoto con ese nombre. Cámbielo con git remote set-url origin dirección.",
+          "fatal: 'origin' does not appear to be a git repository: no hay remoto o la dirección es incorrecta. Revise con git remote -v."
+        ]
+      },
+      "en": {
+        "titulo": "Connect to a remote",
+        "resumen": "A remote is a copy of the repository somewhere else; origin is its usual name.",
+        "explicacion": "git remote add origin address registers the remote with the name origin. git remote -v lists remotes with their addresses. With git clone, origin is already set up.",
+        "ejemplo": "git remote add origin https://github.com/usuario-ejemplo/mi-proyecto.git\ngit remote -v\norigin  https://github.com/usuario-ejemplo/mi-proyecto.git (fetch)\norigin  https://github.com/usuario-ejemplo/mi-proyecto.git (push)",
+        "erroresComunes": [
+          "error: remote origin already exists: a remote with that name is already there. Change it with git remote set-url origin address.",
+          "fatal: 'origin' does not appear to be a git repository: there is no remote or the address is wrong. Check with git remote -v."
+        ]
+      },
+      "pt": {
+        "titulo": "Conectar a um remoto",
+        "resumen": "Um remoto é uma cópia do repositório em outro lugar; origin é seu nome habitual.",
+        "explicacion": "git remote add origin endereço registra o remoto com o nome origin. git remote -v lista os remotos com seus endereços. Com git clone, o origin já vem configurado.",
+        "ejemplo": "git remote add origin https://github.com/usuario-ejemplo/mi-proyecto.git\ngit remote -v\norigin  https://github.com/usuario-ejemplo/mi-proyecto.git (fetch)\norigin  https://github.com/usuario-ejemplo/mi-proyecto.git (push)",
+        "erroresComunes": [
+          "error: remote origin already exists: já existe um remoto com esse nome. Altere-o com git remote set-url origin endereço.",
+          "fatal: 'origin' does not appear to be a git repository: não há remoto ou o endereço está incorreto. Confira com git remote -v."
+        ]
+      },
+      "fr": {
+        "titulo": "Se connecter à un dépôt distant",
+        "resumen": "Un dépôt distant est une copie du dépôt ailleurs ; origin en est le nom habituel.",
+        "explicacion": "git remote add origin adresse enregistre le dépôt distant sous le nom origin. git remote -v liste les dépôts distants avec leurs adresses. Avec git clone, origin est déjà configuré.",
+        "ejemplo": "git remote add origin https://github.com/usuario-ejemplo/mi-proyecto.git\ngit remote -v\norigin  https://github.com/usuario-ejemplo/mi-proyecto.git (fetch)\norigin  https://github.com/usuario-ejemplo/mi-proyecto.git (push)",
+        "erroresComunes": [
+          "error: remote origin already exists : un dépôt distant porte déjà ce nom. Modifiez-le avec git remote set-url origin adresse.",
+          "fatal: 'origin' does not appear to be a git repository : il n'y a pas de dépôt distant ou l'adresse est fausse. Vérifiez avec git remote -v."
+        ]
+      }
+    },
+    {
+      "id": "fetch-pull",
+      "grupo": "remotos",
+      "nombre": "git fetch / git pull",
+      "peligroso": false,
+      "es": {
+        "titulo": "Traer cambios: fetch y pull",
+        "resumen": "git fetch descarga novedades sin tocar su trabajo; git pull las descarga y las fusiona.",
+        "explicacion": "git fetch actualiza su copia del remoto pero no cambia su rama, así puede revisar antes. git pull es fetch más merge. Si su rama y la remota avanzaron por separado hay divergencia; git pull --rebase reaplica sus commits encima de los remotos.",
+        "ejemplo": "git fetch origin\ngit log --oneline main..origin/main\ngit pull\nUpdating a1b2c3d..9e8f7a6\ngit pull --rebase",
+        "erroresComunes": [
+          "hint: You have divergent branches: su rama y la remota avanzaron por separado. Elija git pull --rebase o git pull --no-rebase y resuelva conflictos si aparecen.",
+          "error: Your local changes would be overwritten by merge: hay cambios sin guardar. Haga commit o git stash antes de git pull."
+        ]
+      },
+      "en": {
+        "titulo": "Bring changes: fetch and pull",
+        "resumen": "git fetch downloads news without touching your work; git pull downloads and merges them.",
+        "explicacion": "git fetch updates your copy of the remote but does not change your branch, so you can review first. git pull is fetch plus merge. If your branch and the remote one advanced separately, they have diverged; git pull --rebase replays your commits on top of the remote ones.",
+        "ejemplo": "git fetch origin\ngit log --oneline main..origin/main\ngit pull\nUpdating a1b2c3d..9e8f7a6\ngit pull --rebase",
+        "erroresComunes": [
+          "hint: You have divergent branches: your branch and the remote one advanced separately. Choose git pull --rebase or git pull --no-rebase and resolve conflicts if they appear.",
+          "error: Your local changes would be overwritten by merge: you have unsaved changes. Commit or git stash before git pull."
+        ]
+      },
+      "pt": {
+        "titulo": "Trazer alterações: fetch e pull",
+        "resumen": "git fetch baixa novidades sem mexer no seu trabalho; git pull as baixa e as mescla.",
+        "explicacion": "git fetch atualiza sua cópia do remoto, mas não muda seu ramo, assim você pode revisar antes. git pull é fetch mais merge. Se seu ramo e o remoto avançaram separadamente, há divergência; git pull --rebase reaplica seus commits sobre os do remoto.",
+        "ejemplo": "git fetch origin\ngit log --oneline main..origin/main\ngit pull\nUpdating a1b2c3d..9e8f7a6\ngit pull --rebase",
+        "erroresComunes": [
+          "hint: You have divergent branches: seu ramo e o remoto avançaram separadamente. Escolha git pull --rebase ou git pull --no-rebase e resolva conflitos, se surgirem.",
+          "error: Your local changes would be overwritten by merge: há alterações não guardadas. Faça commit ou git stash antes do git pull."
+        ]
+      },
+      "fr": {
+        "titulo": "Récupérer : fetch et pull",
+        "resumen": "git fetch télécharge les nouveautés sans toucher à votre travail ; git pull les télécharge et les fusionne.",
+        "explicacion": "git fetch met à jour votre copie du dépôt distant mais ne change pas votre branche, ce qui vous laisse examiner avant. git pull équivaut à fetch puis merge. Si votre branche et la branche distante ont avancé séparément, elles ont divergé ; git pull --rebase rejoue vos commits au-dessus des commits distants.",
+        "ejemplo": "git fetch origin\ngit log --oneline main..origin/main\ngit pull\nUpdating a1b2c3d..9e8f7a6\ngit pull --rebase",
+        "erroresComunes": [
+          "hint: You have divergent branches : votre branche et la branche distante ont avancé séparément. Choisissez git pull --rebase ou git pull --no-rebase et résolvez les conflits s'il y en a.",
+          "error: Your local changes would be overwritten by merge : des modifications ne sont pas enregistrées. Faites un commit ou git stash avant git pull."
+        ]
+      }
+    },
+    {
+      "id": "push",
+      "grupo": "remotos",
+      "nombre": "git push",
+      "peligroso": false,
+      "es": {
+        "titulo": "Subir cambios con push",
+        "resumen": "git push envía sus commits al remoto; -u deja la rama enlazada para los próximos push.",
+        "explicacion": "La primera vez en una rama use git push -u origin nombre-de-rama, que además enlaza la rama local con la remota (--set-upstream). Después basta con git push. Si el remoto tiene commits más nuevos, Git rechaza el envío.",
+        "ejemplo": "git push -u origin main\nEnumerating objects: 5, done.\nTo https://github.com/usuario-ejemplo/mi-proyecto.git\n * [new branch]      main -> main\nbranch 'main' set up to track 'origin/main'.",
+        "erroresComunes": [
+          "! [rejected] (fetch first): el remoto tiene commits que usted no tiene. Ejecute git pull (o git pull --rebase), resuelva lo necesario y repita git push. No use --force.",
+          "fatal: The current branch has no upstream branch: falta enlazar la rama. Ejecute git push -u origin nombre-de-rama.",
+          "Authentication failed: credenciales no válidas o caducadas. Revise el tema de llave SSH o token."
+        ]
+      },
+      "en": {
+        "titulo": "Upload with push",
+        "resumen": "git push sends your commits to the remote; -u links the branch for future pushes.",
+        "explicacion": "The first time on a branch use git push -u origin branch-name, which also links the local branch to the remote one (--set-upstream). After that, git push is enough. If the remote has newer commits, Git rejects the upload.",
+        "ejemplo": "git push -u origin main\nEnumerating objects: 5, done.\nTo https://github.com/usuario-ejemplo/mi-proyecto.git\n * [new branch]      main -> main\nbranch 'main' set up to track 'origin/main'.",
+        "erroresComunes": [
+          "! [rejected] (fetch first): the remote has commits you do not have. Run git pull (or git pull --rebase), resolve what is needed and repeat git push. Do not use --force.",
+          "fatal: The current branch has no upstream branch: the branch is not linked yet. Run git push -u origin branch-name.",
+          "Authentication failed: invalid or expired credentials. See the SSH key or token topic."
+        ]
+      },
+      "pt": {
+        "titulo": "Enviar alterações com push",
+        "resumen": "git push envia seus commits ao remoto; -u deixa o ramo vinculado para os próximos push.",
+        "explicacion": "Na primeira vez em um ramo use git push -u origin nome-do-ramo, que também vincula o ramo local ao remoto (--set-upstream). Depois, basta git push. Se o remoto tiver commits mais novos, o Git rejeita o envio.",
+        "ejemplo": "git push -u origin main\nEnumerating objects: 5, done.\nTo https://github.com/usuario-ejemplo/mi-proyecto.git\n * [new branch]      main -> main\nbranch 'main' set up to track 'origin/main'.",
+        "erroresComunes": [
+          "! [rejected] (fetch first): o remoto tem commits que você não tem. Execute git pull (ou git pull --rebase), resolva o necessário e repita git push. Não use --force.",
+          "fatal: The current branch has no upstream branch: falta vincular o ramo. Execute git push -u origin nome-do-ramo.",
+          "Authentication failed: credenciais inválidas ou expiradas. Veja o tema de chave SSH ou token."
+        ]
+      },
+      "fr": {
+        "titulo": "Envoyer avec push",
+        "resumen": "git push envoie vos commits au dépôt distant ; -u lie la branche pour les prochains push.",
+        "explicacion": "La première fois sur une branche, utilisez git push -u origin nom-de-branche, qui lie aussi la branche locale à la branche distante (--set-upstream). Ensuite, git push suffit. Si le dépôt distant a des commits plus récents, Git refuse l'envoi.",
+        "ejemplo": "git push -u origin main\nEnumerating objects: 5, done.\nTo https://github.com/usuario-ejemplo/mi-proyecto.git\n * [new branch]      main -> main\nbranch 'main' set up to track 'origin/main'.",
+        "erroresComunes": [
+          "! [rejected] (fetch first) : le dépôt distant a des commits que vous n'avez pas. Exécutez git pull (ou git pull --rebase), résolvez ce qu'il faut et refaites git push. N'utilisez pas --force.",
+          "fatal: The current branch has no upstream branch : la branche n'est pas encore liée. Exécutez git push -u origin nom-de-branche.",
+          "Authentication failed : identifiants invalides ou expirés. Consultez le sujet clé SSH ou jeton."
+        ]
+      }
+    },
+    {
+      "id": "gitignore",
+      "grupo": "basico",
+      "nombre": ".gitignore",
+      "peligroso": false,
+      "es": {
+        "titulo": "Ignorar archivos con .gitignore",
+        "resumen": ".gitignore lista lo que Git no debe seguir: dependencias, registros y archivos secretos.",
+        "explicacion": "Escriba un patrón por línea; por ejemplo, vendor/ ignora una carpeta y *.log ignora todos los registros. Nunca suba el archivo .env ni llaves o claves: agréguelos aquí antes del primer commit. Si un archivo ya estaba versionado, .gitignore no lo suelta; use git rm --cached archivo.",
+        "ejemplo": ".env\nvendor/\nnode_modules/\n*.log\ngit rm --cached .env\ngit commit -m \"Deja de seguir .env\"",
+        "erroresComunes": [
+          "El archivo sigue apareciendo en git status: ya estaba versionado. Use git rm --cached archivo y haga commit; el archivo queda en su disco.",
+          "Subió un .env con claves: cambiar el .gitignore no basta. Revoque y cambie esas claves de inmediato, porque siguen en el historial."
+        ]
+      },
+      "en": {
+        "titulo": "Ignore files with .gitignore",
+        "resumen": ".gitignore lists what Git should not track: dependencies, logs and secret files.",
+        "explicacion": "Write one pattern per line; for example, vendor/ ignores a folder and *.log ignores all logs. Never push the .env file or keys: add them here before the first commit. If a file was already tracked, .gitignore does not release it; use git rm --cached file.",
+        "ejemplo": ".env\nvendor/\nnode_modules/\n*.log\ngit rm --cached .env\ngit commit -m \"Stop tracking .env\"",
+        "erroresComunes": [
+          "The file still shows in git status: it was already tracked. Use git rm --cached file and commit; the file stays on your disk.",
+          "You pushed an .env with keys: changing .gitignore is not enough. Revoke and replace those keys right away, because they remain in the history."
+        ]
+      },
+      "pt": {
+        "titulo": "Ignorar arquivos com .gitignore",
+        "resumen": ".gitignore lista o que o Git não deve rastrear: dependências, logs e arquivos secretos.",
+        "explicacion": "Escreva um padrão por linha; por exemplo, vendor/ ignora uma pasta e *.log ignora todos os logs. Nunca envie o arquivo .env nem chaves: inclua-os aqui antes do primeiro commit. Se um arquivo já era rastreado, o .gitignore não o solta; use git rm --cached arquivo.",
+        "ejemplo": ".env\nvendor/\nnode_modules/\n*.log\ngit rm --cached .env\ngit commit -m \"Para de rastrear o .env\"",
+        "erroresComunes": [
+          "O arquivo continua aparecendo no git status: ele já era rastreado. Use git rm --cached arquivo e faça commit; o arquivo permanece no seu disco.",
+          "Você enviou um .env com chaves: alterar o .gitignore não basta. Revogue e troque essas chaves imediatamente, pois elas continuam no histórico."
+        ]
+      },
+      "fr": {
+        "titulo": "Ignorer des fichiers avec .gitignore",
+        "resumen": ".gitignore liste ce que Git ne doit pas suivre : dépendances, journaux et fichiers secrets.",
+        "explicacion": "Écrivez un motif par ligne ; par exemple, vendor/ ignore un dossier et *.log ignore tous les journaux. Ne poussez jamais le fichier .env ni des clés : ajoutez-les ici avant le premier commit. Si un fichier était déjà suivi, .gitignore ne le libère pas ; utilisez git rm --cached fichier.",
+        "ejemplo": ".env\nvendor/\nnode_modules/\n*.log\ngit rm --cached .env\ngit commit -m \"Arrête de suivre .env\"",
+        "erroresComunes": [
+          "Le fichier apparaît encore dans git status : il était déjà suivi. Utilisez git rm --cached fichier puis faites un commit ; le fichier reste sur votre disque.",
+          "Vous avez poussé un .env avec des clés : modifier .gitignore ne suffit pas. Révoquez et remplacez ces clés tout de suite, car elles restent dans l'historique."
+        ]
+      }
+    },
+    {
+      "id": "tags",
+      "grupo": "remotos",
+      "nombre": "git tag",
+      "peligroso": false,
+      "es": {
+        "titulo": "Etiquetar versiones con tags",
+        "resumen": "Un tag marca un commit como una versión, por ejemplo v1.0.0.",
+        "explicacion": "El tag ligero es solo un nombre; el anotado (-a) guarda además autor, fecha y mensaje, y es el recomendado para versiones. git push no sube los tags solos: use git push origin nombre-del-tag o git push --tags.",
+        "ejemplo": "git tag v1.0.0\ngit tag -a v1.1.0 -m \"Versión 1.1.0\"\ngit tag\ngit push origin v1.1.0\n * [new tag]         v1.1.0 -> v1.1.0",
+        "erroresComunes": [
+          "El tag no aparece en GitHub: git push no envía tags. Ejecute git push origin nombre-del-tag.",
+          "fatal: tag 'v1.0.0' already exists: ese nombre ya existe. Elija otro número de versión; no reutilice versiones ya publicadas."
+        ]
+      },
+      "en": {
+        "titulo": "Mark versions with tags",
+        "resumen": "A tag marks a commit as a version, for example v1.0.0.",
+        "explicacion": "A lightweight tag is just a name; an annotated one (-a) also stores author, date and message, and is the recommended kind for releases. git push does not upload tags on its own: use git push origin tag-name or git push --tags.",
+        "ejemplo": "git tag v1.0.0\ngit tag -a v1.1.0 -m \"Version 1.1.0\"\ngit tag\ngit push origin v1.1.0\n * [new tag]         v1.1.0 -> v1.1.0",
+        "erroresComunes": [
+          "The tag does not show on GitHub: git push does not send tags. Run git push origin tag-name.",
+          "fatal: tag 'v1.0.0' already exists: that name exists. Pick another version number; do not reuse published versions."
+        ]
+      },
+      "pt": {
+        "titulo": "Marcar versões com tags",
+        "resumen": "Uma tag marca um commit como uma versão, por exemplo v1.0.0.",
+        "explicacion": "A tag leve é apenas um nome; a anotada (-a) também guarda autor, data e mensagem, e é a recomendada para versões. git push não envia as tags sozinho: use git push origin nome-da-tag ou git push --tags.",
+        "ejemplo": "git tag v1.0.0\ngit tag -a v1.1.0 -m \"Versão 1.1.0\"\ngit tag\ngit push origin v1.1.0\n * [new tag]         v1.1.0 -> v1.1.0",
+        "erroresComunes": [
+          "A tag não aparece no GitHub: git push não envia tags. Execute git push origin nome-da-tag.",
+          "fatal: tag 'v1.0.0' already exists: esse nome já existe. Escolha outro número de versão; não reutilize versões já publicadas."
+        ]
+      },
+      "fr": {
+        "titulo": "Marquer des versions avec les tags",
+        "resumen": "Un tag marque un commit comme une version, par exemple v1.0.0.",
+        "explicacion": "Le tag léger est un simple nom ; le tag annoté (-a) enregistre aussi l'auteur, la date et un message, et c'est celui qu'on recommande pour les versions. git push n'envoie pas les tags tout seul : utilisez git push origin nom-du-tag ou git push --tags.",
+        "ejemplo": "git tag v1.0.0\ngit tag -a v1.1.0 -m \"Version 1.1.0\"\ngit tag\ngit push origin v1.1.0\n * [new tag]         v1.1.0 -> v1.1.0",
+        "erroresComunes": [
+          "Le tag n'apparaît pas sur GitHub : git push n'envoie pas les tags. Exécutez git push origin nom-du-tag.",
+          "fatal: tag 'v1.0.0' already exists : ce nom existe déjà. Choisissez un autre numéro de version ; ne réutilisez pas une version déjà publiée."
+        ]
+      }
+    },
+    {
+      "id": "github-repositorio",
+      "grupo": "github",
+      "nombre": "gh repo create",
+      "peligroso": false,
+      "es": {
+        "titulo": "Crear un repositorio en GitHub",
+        "resumen": "Cree el repositorio en el sitio web o con gh, conéctelo con remote add y haga el primer push.",
+        "explicacion": "En github.com use New repository, escriba el nombre y déjelo vacío (sin README si ya tiene código). Con la herramienta gh puede hacerlo desde la terminal con gh repo create. Luego enlace su carpeta con git remote add origin y suba con git push -u origin main.",
+        "ejemplo": "git remote add origin https://github.com/usuario-ejemplo/mi-proyecto.git\ngit branch -M main\ngit push -u origin main\n# o, con la herramienta gh:\ngh repo create mi-proyecto --private --source=. --push",
+        "erroresComunes": [
+          "remote: Repository not found: la dirección es incorrecta o no tiene permiso. Revise el nombre con git remote -v y su sesión de GitHub.",
+          "error: src refspec main does not match any: aún no hay commits. Haga al menos un commit antes de git push."
+        ]
+      },
+      "en": {
+        "titulo": "Create a GitHub repository",
+        "resumen": "Create the repository on the website or with gh, link it with remote add and do the first push.",
+        "explicacion": "On github.com use New repository, type the name and leave it empty (no README if you already have code). With the gh tool you can do it from the terminal with gh repo create. Then link your folder with git remote add origin and upload with git push -u origin main.",
+        "ejemplo": "git remote add origin https://github.com/usuario-ejemplo/mi-proyecto.git\ngit branch -M main\ngit push -u origin main\n# or, with the gh tool:\ngh repo create mi-proyecto --private --source=. --push",
+        "erroresComunes": [
+          "remote: Repository not found: the address is wrong or you lack permission. Check the name with git remote -v and your GitHub sign-in.",
+          "error: src refspec main does not match any: there are no commits yet. Make at least one commit before git push."
+        ]
+      },
+      "pt": {
+        "titulo": "Criar um repositório no GitHub",
+        "resumen": "Crie o repositório no site ou com gh, conecte-o com remote add e faça o primeiro push.",
+        "explicacion": "Em github.com use New repository, digite o nome e deixe-o vazio (sem README se você já tem código). Com a ferramenta gh você pode fazer isso no terminal com gh repo create. Depois vincule sua pasta com git remote add origin e envie com git push -u origin main.",
+        "ejemplo": "git remote add origin https://github.com/usuario-ejemplo/mi-proyecto.git\ngit branch -M main\ngit push -u origin main\n# ou, com a ferramenta gh:\ngh repo create mi-proyecto --private --source=. --push",
+        "erroresComunes": [
+          "remote: Repository not found: o endereço está incorreto ou você não tem permissão. Confira o nome com git remote -v e sua sessão do GitHub.",
+          "error: src refspec main does not match any: ainda não há commits. Faça pelo menos um commit antes do git push."
+        ]
+      },
+      "fr": {
+        "titulo": "Créer un dépôt sur GitHub",
+        "resumen": "Créez le dépôt sur le site ou avec gh, reliez-le avec remote add et faites le premier push.",
+        "explicacion": "Sur github.com, utilisez New repository, saisissez le nom et laissez-le vide (sans README si vous avez déjà du code). Avec l'outil gh, vous pouvez le faire dans le terminal avec gh repo create. Reliez ensuite votre dossier avec git remote add origin et envoyez avec git push -u origin main.",
+        "ejemplo": "git remote add origin https://github.com/usuario-ejemplo/mi-proyecto.git\ngit branch -M main\ngit push -u origin main\n# ou, avec l'outil gh :\ngh repo create mi-proyecto --private --source=. --push",
+        "erroresComunes": [
+          "remote: Repository not found : l'adresse est fausse ou vous n'avez pas la permission. Vérifiez le nom avec git remote -v et votre session GitHub.",
+          "error: src refspec main does not match any : il n'y a pas encore de commit. Faites au moins un commit avant git push."
+        ]
+      }
+    },
+    {
+      "id": "github-ssh-token",
+      "grupo": "github",
+      "nombre": "ssh-keygen / token",
+      "peligroso": false,
+      "es": {
+        "titulo": "Autenticarse: llave SSH o token",
+        "resumen": "Conéctese a GitHub con una llave SSH o con un token personal, nunca con su contraseña.",
+        "explicacion": "Con SSH, genere la llave con ssh-keygen, copie la pública (.pub) en Settings > SSH and GPG keys y pruebe con ssh -T git@github.com. Con token, cree uno fine-grained en Settings > Developer settings con el mínimo permiso y una fecha de caducidad. REGLA: el token nunca se escribe en un archivo, nunca va en la dirección del remoto (https://<SU_TOKEN>@... está prohibido) ni en el historial de comandos; use un administrador de credenciales o gh auth login.",
+        "ejemplo": "ssh-keygen -t ed25519 -C \"ejemplo@ejemplo.invalid\"\n# agregue el contenido de id_ed25519.pub en Settings > SSH and GPG keys\nssh -T git@github.com\nHi usuario-ejemplo! You've successfully authenticated\n# con token: gh auth login (pegue <SU_TOKEN> solo cuando se lo pida)",
+        "erroresComunes": [
+          "Permission denied (publickey): GitHub no reconoce la llave. Verifique que subió la llave pública (.pub), no la privada, y que el agente ssh la tiene cargada.",
+          "Escribió el token en la URL del remoto o en un archivo: quítelo ya con git remote set-url origin dirección-sin-token, revoque ese token en GitHub y cree otro.",
+          "remote: Invalid username or token: el token caducó o no tiene permiso sobre ese repositorio. Cree uno nuevo con el permiso mínimo necesario."
+        ]
+      },
+      "en": {
+        "titulo": "Sign in: SSH key or token",
+        "resumen": "Connect to GitHub with an SSH key or a personal token, never with your password.",
+        "explicacion": "With SSH, generate the key with ssh-keygen, copy the public one (.pub) into Settings > SSH and GPG keys and test with ssh -T git@github.com. With a token, create a fine-grained one in Settings > Developer settings with the least permission and an expiry date. RULE: the token is never written in a file, never goes in the remote address (https://<YOUR_TOKEN>@... is forbidden) nor in the command history; use a credential manager or gh auth login.",
+        "ejemplo": "ssh-keygen -t ed25519 -C \"ejemplo@ejemplo.invalid\"\n# add the content of id_ed25519.pub in Settings > SSH and GPG keys\nssh -T git@github.com\nHi usuario-ejemplo! You've successfully authenticated\n# with a token: gh auth login (paste <YOUR_TOKEN> only when asked)",
+        "erroresComunes": [
+          "Permission denied (publickey): GitHub does not recognize the key. Check that you uploaded the public key (.pub), not the private one, and that the ssh agent has it loaded.",
+          "You typed the token in the remote URL or in a file: remove it now with git remote set-url origin address-without-token, revoke that token on GitHub and create another.",
+          "remote: Invalid username or token: the token expired or lacks permission on that repository. Create a new one with the minimum permission needed."
+        ]
+      },
+      "pt": {
+        "titulo": "Autenticar: chave SSH ou token",
+        "resumen": "Conecte-se ao GitHub com uma chave SSH ou um token pessoal, nunca com sua senha.",
+        "explicacion": "Com SSH, gere a chave com ssh-keygen, copie a pública (.pub) em Settings > SSH and GPG keys e teste com ssh -T git@github.com. Com token, crie um fine-grained em Settings > Developer settings com a permissão mínima e uma data de expiração. REGRA: o token nunca é escrito em um arquivo, nunca vai no endereço do remoto (https://<SEU_TOKEN>@... é proibido) nem no histórico de comandos; use um gerenciador de credenciais ou gh auth login.",
+        "ejemplo": "ssh-keygen -t ed25519 -C \"ejemplo@ejemplo.invalid\"\n# adicione o conteúdo de id_ed25519.pub em Settings > SSH and GPG keys\nssh -T git@github.com\nHi usuario-ejemplo! You've successfully authenticated\n# com token: gh auth login (cole <SEU_TOKEN> somente quando for pedido)",
+        "erroresComunes": [
+          "Permission denied (publickey): o GitHub não reconhece a chave. Confira se você enviou a chave pública (.pub), não a privada, e se o agente ssh a carregou.",
+          "Você escreveu o token na URL do remoto ou em um arquivo: remova-o já com git remote set-url origin endereço-sem-token, revogue esse token no GitHub e crie outro.",
+          "remote: Invalid username or token: o token expirou ou não tem permissão nesse repositório. Crie um novo com a permissão mínima necessária."
+        ]
+      },
+      "fr": {
+        "titulo": "S'authentifier : clé SSH ou jeton",
+        "resumen": "Connectez-vous à GitHub avec une clé SSH ou un jeton personnel, jamais avec votre mot de passe.",
+        "explicacion": "Avec SSH, générez la clé avec ssh-keygen, copiez la clé publique (.pub) dans Settings > SSH and GPG keys et testez avec ssh -T git@github.com. Avec un jeton, créez-en un fine-grained dans Settings > Developer settings avec la permission minimale et une date d'expiration. RÈGLE : le jeton n'est jamais écrit dans un fichier, ne figure jamais dans l'adresse du dépôt distant (https://<VOTRE_JETON>@... est interdit) ni dans l'historique des commandes ; utilisez un gestionnaire d'identifiants ou gh auth login.",
+        "ejemplo": "ssh-keygen -t ed25519 -C \"ejemplo@ejemplo.invalid\"\n# ajoutez le contenu de id_ed25519.pub dans Settings > SSH and GPG keys\nssh -T git@github.com\nHi usuario-ejemplo! You've successfully authenticated\n# avec un jeton : gh auth login (collez <VOTRE_JETON> seulement quand on vous le demande)",
+        "erroresComunes": [
+          "Permission denied (publickey) : GitHub ne reconnaît pas la clé. Vérifiez que vous avez envoyé la clé publique (.pub), pas la privée, et que l'agent ssh l'a chargée.",
+          "Vous avez saisi le jeton dans l'URL du dépôt distant ou dans un fichier : retirez-le tout de suite avec git remote set-url origin adresse-sans-jeton, révoquez ce jeton sur GitHub et créez-en un autre.",
+          "remote: Invalid username or token : le jeton a expiré ou n'a pas la permission sur ce dépôt. Créez-en un nouveau avec la permission minimale nécessaire."
+        ]
+      }
+    },
+    {
+      "id": "pull-request",
+      "grupo": "github",
+      "nombre": "Pull Request",
+      "peligroso": false,
+      "es": {
+        "titulo": "Pull request paso a paso",
+        "resumen": "Un pull request propone fusionar su rama en otra y deja que otras personas la revisen.",
+        "explicacion": "Trabaje en una rama aparte, súbala con git push -u origin nombre-de-rama y abra el pull request desde el aviso de GitHub o con gh pr create. Atienda las observaciones de la revisión con nuevos commits en la misma rama. Cuando lo aprueben, haga el merge y borre la rama.",
+        "ejemplo": "git switch -c arreglo-login\ngit commit -am \"Corrige el login\"\ngit push -u origin arreglo-login\ngh pr create --title \"Corrige el login\" --body \"Explica el cambio\"\n# tras el merge:\ngit switch main && git pull && git branch -d arreglo-login",
+        "erroresComunes": [
+          "No aparece el botón de Compare & pull request: la rama no se subió o ya existe un PR. Ejecute git push -u origin nombre-de-rama y revise la pestaña Pull requests.",
+          "This branch has conflicts that must be resolved: main avanzó. Traiga main a su rama con git merge main, resuelva y suba de nuevo."
+        ]
+      },
+      "en": {
+        "titulo": "Pull request step by step",
+        "resumen": "A pull request proposes merging your branch into another and lets other people review it.",
+        "explicacion": "Work on a separate branch, push it with git push -u origin branch-name and open the pull request from the GitHub notice or with gh pr create. Answer review comments with new commits on the same branch. When it is approved, merge it and delete the branch.",
+        "ejemplo": "git switch -c fix-login\ngit commit -am \"Fix the login\"\ngit push -u origin fix-login\ngh pr create --title \"Fix the login\" --body \"Explains the change\"\n# after the merge:\ngit switch main && git pull && git branch -d fix-login",
+        "erroresComunes": [
+          "The Compare & pull request button does not show: the branch was not pushed or a PR already exists. Run git push -u origin branch-name and check the Pull requests tab.",
+          "This branch has conflicts that must be resolved: main moved on. Bring main into your branch with git merge main, resolve and push again."
+        ]
+      },
+      "pt": {
+        "titulo": "Pull request passo a passo",
+        "resumen": "Um pull request propõe mesclar seu ramo em outro e permite que outras pessoas o revisem.",
+        "explicacion": "Trabalhe em um ramo separado, envie-o com git push -u origin nome-do-ramo e abra o pull request pelo aviso do GitHub ou com gh pr create. Atenda aos comentários da revisão com novos commits no mesmo ramo. Quando for aprovado, faça o merge e apague o ramo.",
+        "ejemplo": "git switch -c corrige-login\ngit commit -am \"Corrige o login\"\ngit push -u origin corrige-login\ngh pr create --title \"Corrige o login\" --body \"Explica a alteração\"\n# após o merge:\ngit switch main && git pull && git branch -d corrige-login",
+        "erroresComunes": [
+          "O botão Compare & pull request não aparece: o ramo não foi enviado ou já existe um PR. Execute git push -u origin nome-do-ramo e confira a aba Pull requests.",
+          "This branch has conflicts that must be resolved: o main avançou. Traga o main para o seu ramo com git merge main, resolva e envie de novo."
+        ]
+      },
+      "fr": {
+        "titulo": "Pull request pas à pas",
+        "resumen": "Une pull request propose de fusionner votre branche dans une autre et permet à d'autres personnes de la relire.",
+        "explicacion": "Travaillez sur une branche séparée, poussez-la avec git push -u origin nom-de-branche et ouvrez la pull request depuis l'avis de GitHub ou avec gh pr create. Répondez aux remarques de la relecture par de nouveaux commits sur la même branche. Une fois approuvée, fusionnez puis supprimez la branche.",
+        "ejemplo": "git switch -c correctif-login\ngit commit -am \"Corrige la connexion\"\ngit push -u origin correctif-login\ngh pr create --title \"Corrige la connexion\" --body \"Explique la modification\"\n# après la fusion :\ngit switch main && git pull && git branch -d correctif-login",
+        "erroresComunes": [
+          "Le bouton Compare & pull request n'apparaît pas : la branche n'a pas été poussée ou une PR existe déjà. Exécutez git push -u origin nom-de-branche et vérifiez l'onglet Pull requests.",
+          "This branch has conflicts that must be resolved : main a avancé. Ramenez main dans votre branche avec git merge main, résolvez puis poussez de nouveau."
+        ]
+      }
+    },
+    {
+      "id": "issues",
+      "grupo": "github",
+      "nombre": "Issues",
+      "peligroso": false,
+      "es": {
+        "titulo": "Issues: tareas y errores",
+        "resumen": "Un issue es una tarea, un error o una idea registrada en GitHub, con su número.",
+        "explicacion": "Sirve para planificar y discutir trabajo en un solo lugar; cada issue tiene un número como #12. Si escribe Closes #12 en un commit o en la descripción de un pull request, GitHub cierra el issue al fusionar. También funcionan Fixes #12 y Resolves #12.",
+        "ejemplo": "git commit -m \"Corrige el error de inicio de sesión. Closes #12\"\n# en la descripción de un pull request:\nCloses #12\ngh issue list\n#12  Error al iniciar sesión",
+        "erroresComunes": [
+          "El issue no se cerró solo: la frase debe estar en un commit de la rama principal o en la descripción del PR, y con la palabra clave exacta. Cierre el issue a mano si hace falta.",
+          "Se cerró el issue equivocado: el número no era el correcto. Reábralo y corrija el texto del PR antes del merge."
+        ]
+      },
+      "en": {
+        "titulo": "Issues: tasks and bugs",
+        "resumen": "An issue is a task, bug or idea recorded on GitHub, with its own number.",
+        "explicacion": "It lets you plan and discuss work in one place; each issue has a number like #12. If you write Closes #12 in a commit or in a pull request description, GitHub closes the issue on merge. Fixes #12 and Resolves #12 also work.",
+        "ejemplo": "git commit -m \"Fix the sign-in bug. Closes #12\"\n# in a pull request description:\nCloses #12\ngh issue list\n#12  Sign-in error",
+        "erroresComunes": [
+          "The issue did not close by itself: the phrase must be in a commit on the default branch or in the PR description, with the exact keyword. Close the issue by hand if needed.",
+          "The wrong issue closed: the number was not the right one. Reopen it and fix the PR text before the merge."
+        ]
+      },
+      "pt": {
+        "titulo": "Issues: tarefas e erros",
+        "resumen": "Um issue é uma tarefa, um erro ou uma ideia registrada no GitHub, com seu número.",
+        "explicacion": "Serve para planejar e discutir o trabalho em um só lugar; cada issue tem um número como #12. Se você escrever Closes #12 em um commit ou na descrição de um pull request, o GitHub fecha o issue ao mesclar. Fixes #12 e Resolves #12 também funcionam.",
+        "ejemplo": "git commit -m \"Corrige o erro de login. Closes #12\"\n# na descrição de um pull request:\nCloses #12\ngh issue list\n#12  Erro ao entrar",
+        "erroresComunes": [
+          "O issue não fechou sozinho: a frase deve estar em um commit do ramo principal ou na descrição do PR, com a palavra-chave exata. Feche o issue manualmente, se preciso.",
+          "Fechou o issue errado: o número não era o correto. Reabra-o e corrija o texto do PR antes do merge."
+        ]
+      },
+      "fr": {
+        "titulo": "Issues : tâches et bogues",
+        "resumen": "Un issue est une tâche, un bogue ou une idée consignée sur GitHub, avec son numéro.",
+        "explicacion": "Il sert à planifier et à discuter le travail au même endroit ; chaque issue a un numéro comme #12. Si vous écrivez Closes #12 dans un commit ou dans la description d'une pull request, GitHub ferme l'issue à la fusion. Fixes #12 et Resolves #12 fonctionnent aussi.",
+        "ejemplo": "git commit -m \"Corrige le bogue de connexion. Closes #12\"\n# dans la description d'une pull request :\nCloses #12\ngh issue list\n#12  Erreur de connexion",
+        "erroresComunes": [
+          "L'issue ne s'est pas fermé seul : la phrase doit figurer dans un commit de la branche principale ou dans la description de la PR, avec le mot-clé exact. Fermez l'issue à la main si nécessaire.",
+          "Le mauvais issue s'est fermé : le numéro n'était pas le bon. Rouvrez-le et corrigez le texte de la PR avant la fusion."
+        ]
+      }
+    },
+    {
+      "id": "fork",
+      "grupo": "github",
+      "nombre": "Fork / upstream",
+      "peligroso": false,
+      "es": {
+        "titulo": "Fork y repositorio original",
+        "resumen": "Un fork es su copia de un repositorio ajeno, donde puede trabajar y proponer cambios.",
+        "explicacion": "Pulse Fork en GitHub, clone su fork y agregue el original como remoto upstream. Para mantenerlo al día, traiga los cambios de upstream y súbalos a su origin. Para aportar, abra un pull request desde su fork hacia el original.",
+        "ejemplo": "git clone https://github.com/usuario-ejemplo/mi-proyecto.git\ngit remote add upstream https://github.com/original-ejemplo/mi-proyecto.git\ngit fetch upstream\ngit merge upstream/main\ngit push origin main",
+        "erroresComunes": [
+          "fatal: remote upstream already exists: ya agregó ese remoto. Verifique con git remote -v.",
+          "Su fork quedó atrasado: no se actualiza solo. Ejecute git fetch upstream, fusione upstream/main y suba a origin."
+        ]
+      },
+      "en": {
+        "titulo": "Fork and original repository",
+        "resumen": "A fork is your own copy of someone else's repository, where you can work and propose changes.",
+        "explicacion": "Click Fork on GitHub, clone your fork and add the original as the upstream remote. To keep it up to date, bring in the changes from upstream and push them to your origin. To contribute, open a pull request from your fork to the original.",
+        "ejemplo": "git clone https://github.com/usuario-ejemplo/mi-proyecto.git\ngit remote add upstream https://github.com/original-ejemplo/mi-proyecto.git\ngit fetch upstream\ngit merge upstream/main\ngit push origin main",
+        "erroresComunes": [
+          "fatal: remote upstream already exists: you already added that remote. Check with git remote -v.",
+          "Your fork fell behind: it does not update by itself. Run git fetch upstream, merge upstream/main and push to origin."
+        ]
+      },
+      "pt": {
+        "titulo": "Fork e repositório original",
+        "resumen": "Um fork é sua própria cópia de um repositório alheio, onde você pode trabalhar e propor alterações.",
+        "explicacion": "Clique em Fork no GitHub, clone seu fork e adicione o original como remoto upstream. Para mantê-lo atualizado, traga as alterações do upstream e envie-as ao seu origin. Para contribuir, abra um pull request do seu fork para o original.",
+        "ejemplo": "git clone https://github.com/usuario-ejemplo/mi-proyecto.git\ngit remote add upstream https://github.com/original-ejemplo/mi-proyecto.git\ngit fetch upstream\ngit merge upstream/main\ngit push origin main",
+        "erroresComunes": [
+          "fatal: remote upstream already exists: você já adicionou esse remoto. Confira com git remote -v.",
+          "Seu fork ficou atrasado: ele não se atualiza sozinho. Execute git fetch upstream, mescle upstream/main e envie ao origin."
+        ]
+      },
+      "fr": {
+        "titulo": "Fork et dépôt d'origine",
+        "resumen": "Un fork est votre propre copie du dépôt de quelqu'un d'autre, où vous pouvez travailler et proposer des modifications.",
+        "explicacion": "Cliquez sur Fork dans GitHub, clonez votre fork et ajoutez le dépôt d'origine comme dépôt distant upstream. Pour le garder à jour, récupérez les changements d'upstream et poussez-les vers votre origin. Pour contribuer, ouvrez une pull request de votre fork vers le dépôt d'origine.",
+        "ejemplo": "git clone https://github.com/usuario-ejemplo/mi-proyecto.git\ngit remote add upstream https://github.com/original-ejemplo/mi-proyecto.git\ngit fetch upstream\ngit merge upstream/main\ngit push origin main",
+        "erroresComunes": [
+          "fatal: remote upstream already exists : vous avez déjà ajouté ce dépôt distant. Vérifiez avec git remote -v.",
+          "Votre fork a pris du retard : il ne se met pas à jour seul. Exécutez git fetch upstream, fusionnez upstream/main et poussez vers origin."
+        ]
+      }
+    },
+    {
+      "id": "github-actions",
+      "grupo": "github",
+      "nombre": "GitHub Actions",
+      "peligroso": false,
+      "es": {
+        "titulo": "Flujo básico de GitHub Actions",
+        "resumen": "Un archivo YAML en .github/workflows ejecuta pruebas automáticamente en cada push o pull request.",
+        "explicacion": "Cree .github/workflows/ci.yml con los eventos (on), un trabajo y sus pasos: descargar el código con checkout y correr las pruebas. Los resultados aparecen en la pestaña Actions y en el pull request. Las claves y contraseñas se guardan en Settings > Secrets and variables y se leen como secrets.NOMBRE; nunca las escriba en el YAML.",
+        "ejemplo": "name: CI\non: [push, pull_request]\njobs:\n  pruebas:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm ci && npm test",
+        "erroresComunes": [
+          "El flujo no se ejecuta: el archivo no está exactamente en .github/workflows/ o el YAML tiene errores de sangría. Revise la ruta y los espacios.",
+          "Expusó una clave en el YAML: elimínela, revóquela y guárdela como secreto en Settings > Secrets; en el flujo use secrets.NOMBRE."
+        ]
+      },
+      "en": {
+        "titulo": "Basic GitHub Actions workflow",
+        "resumen": "A YAML file in .github/workflows runs tests automatically on every push or pull request.",
+        "explicacion": "Create .github/workflows/ci.yml with the events (on), a job and its steps: fetch the code with checkout and run the tests. Results appear in the Actions tab and on the pull request. Keys and passwords are stored in Settings > Secrets and variables and read as secrets.NAME; never write them in the YAML.",
+        "ejemplo": "name: CI\non: [push, pull_request]\njobs:\n  tests:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm ci && npm test",
+        "erroresComunes": [
+          "The workflow does not run: the file is not exactly in .github/workflows/ or the YAML has indentation errors. Check the path and the spaces.",
+          "You exposed a key in the YAML: remove it, revoke it and store it as a secret in Settings > Secrets; in the workflow use secrets.NAME."
+        ]
+      },
+      "pt": {
+        "titulo": "Fluxo básico do GitHub Actions",
+        "resumen": "Um arquivo YAML em .github/workflows executa testes automaticamente a cada push ou pull request.",
+        "explicacion": "Crie .github/workflows/ci.yml com os eventos (on), um trabalho e seus passos: baixar o código com checkout e rodar os testes. Os resultados aparecem na aba Actions e no pull request. Chaves e senhas ficam em Settings > Secrets and variables e são lidas como secrets.NOME; nunca as escreva no YAML.",
+        "ejemplo": "name: CI\non: [push, pull_request]\njobs:\n  testes:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm ci && npm test",
+        "erroresComunes": [
+          "O fluxo não executa: o arquivo não está exatamente em .github/workflows/ ou o YAML tem erros de indentação. Confira o caminho e os espaços.",
+          "Você expôs uma chave no YAML: remova-a, revogue-a e guarde-a como segredo em Settings > Secrets; no fluxo use secrets.NOME."
+        ]
+      },
+      "fr": {
+        "titulo": "Flux GitHub Actions de base",
+        "resumen": "Un fichier YAML dans .github/workflows lance les tests automatiquement à chaque push ou pull request.",
+        "explicacion": "Créez .github/workflows/ci.yml avec les événements (on), un job et ses étapes : récupérer le code avec checkout et lancer les tests. Les résultats apparaissent dans l'onglet Actions et sur la pull request. Les clés et mots de passe se stockent dans Settings > Secrets and variables et se lisent avec secrets.NOM ; ne les écrivez jamais dans le YAML.",
+        "ejemplo": "name: CI\non: [push, pull_request]\njobs:\n  tests:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm ci && npm test",
+        "erroresComunes": [
+          "Le flux ne s'exécute pas : le fichier n'est pas exactement dans .github/workflows/ ou le YAML a des erreurs d'indentation. Vérifiez le chemin et les espaces.",
+          "Vous avez exposé une clé dans le YAML : supprimez-la, révoquez-la et stockez-la comme secret dans Settings > Secrets ; dans le flux, utilisez secrets.NOM."
+        ]
+      }
+    }
+  ]
+}

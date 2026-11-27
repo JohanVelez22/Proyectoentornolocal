@@ -123,3 +123,84 @@ describe('francés con «vous» (sin tuteo)', () => {
     expect(tuteos(md)).toEqual([]);
   });
 });
+
+describe('esquema de docs/contenido/git.json (D50)', () => {
+  const git = JSON.parse(readFileSync(join(RAIZ, 'git.json'), 'utf8')) as { temas: Json[] };
+  const GRUPOS = ['basico', 'ramas', 'deshacer', 'remotos', 'github'];
+
+  it('solo trae temas, con id único, grupo válido y los 4 idiomas completos', () => {
+    expect(claves(git as unknown as Json)).toEqual(['temas']);
+    const ids = new Set<string>();
+    for (const t of git.temas) {
+      const id = String(t.id);
+      expect(ids.has(id), `${id} repetido`).toBe(false);
+      ids.add(id);
+      expect(claves(t), id).toEqual(['en', 'es', 'fr', 'grupo', 'id', 'nombre', 'peligroso', 'pt']);
+      expect(id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+      expect(GRUPOS).toContain(t.grupo);
+      expect(textoNoVacio(t.nombre), `${id} nombre`).toBe(true);
+      expect(typeof t.peligroso, `${id} peligroso`).toBe('boolean');
+      for (const l of IDIOMAS) {
+        const x = t[l] as Json;
+        expect(claves(x), `${id} ${l}`).toEqual([
+          'ejemplo',
+          'erroresComunes',
+          'explicacion',
+          'resumen',
+          'titulo',
+        ]);
+        for (const k of ['titulo', 'resumen', 'explicacion', 'ejemplo'])
+          expect(textoNoVacio(x[k]), `${id} ${l} ${k}`).toBe(true);
+        expect(listaDeTextos(x.erroresComunes), `${id} ${l} erroresComunes`).toBe(true);
+      }
+    }
+  });
+
+  it('cubre los temas pedidos y solo las operaciones peligrosas llevan el aviso', () => {
+    const ids = git.temas.map((t) => String(t.id));
+    for (const id of [
+      'configuracion',
+      'repositorios',
+      'estado-add-commit',
+      'historial-diff',
+      'ramas',
+      'merge',
+      'conflictos',
+      'stash',
+      'restore',
+      'reset-soft',
+      'revert',
+      'operaciones-peligrosas',
+      'remotos',
+      'fetch-pull',
+      'push',
+      'gitignore',
+      'tags',
+      'github-repositorio',
+      'github-ssh-token',
+      'pull-request',
+      'issues',
+      'fork',
+      'github-actions',
+    ])
+      expect(ids, id).toContain(id);
+    expect(git.temas.filter((t) => t.peligroso).map((t) => t.id)).toEqual([
+      'operaciones-peligrosas',
+    ]);
+  });
+
+  it('los ejemplos son ficticios: ningún token con aspecto real ni credenciales en una URL', () => {
+    const todo = JSON.stringify(git);
+    expect(todo).not.toMatch(/gh[pousr]_[A-Za-z0-9]{10,}|github_pat_|\b[A-Fa-f0-9]{40}\b/);
+    expect(todo).not.toMatch(/https?:\/\/[^\s"/@]+:[^\s"/@]*@/);
+    // El token solo aparece como marcador, y el consejo de la URL es una prohibición.
+    for (const t of git.temas) {
+      for (const l of IDIOMAS) {
+        const ej = String((t[l] as Json).ejemplo);
+        expect(ej, `${String(t.id)} ${l}`).not.toMatch(
+          /https:\/\/<?[A-Za-z_]*(?:TOKEN|JETON)[A-Za-z_]*>?@/,
+        );
+      }
+    }
+  });
+});
