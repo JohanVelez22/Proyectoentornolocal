@@ -9,6 +9,7 @@ Este capítulo resume cómo **WolfCore Dev** protege sus credenciales, proyectos
 1. **Todo corre en local (`127.0.0.1`) por defecto:** Nginx local, MySQL, MariaDB, PostgreSQL, Redis, MongoDB, Mailpit y demás captadores, Ollama, Adminer, phpMyAdmin, receptor de Depuración, servidor MCP y servidor CLI escuchan únicamente en `127.0.0.1`. Nada se expone a la red ni a internet sin una acción y confirmación suyas.
 2. **Secretos cifrados y nunca exportados:**
    - Las claves de IA en la nube, el token de GitHub, las claves SMTP y los tokens de túneles (ngrok/Expose) se almacenan cifrados mediante `safeStorage` en `etc/secretos/`, nunca en `config.json`, URLs, registros ni eventos.
+   - Los secretos del **Cliente HTTP** (tokens, contraseñas y claves de API) también van cifrados: la colección, el historial y los entornos solo guardan una referencia, y el historial oculta las cabeceras sensibles.
    - Al exportar una **plantilla** o un **perfil `.wolfperfil`**, jamás se incluyen claves, tokens ni contraseñas (si incluye bases de datos o la CA en un perfil, se cifran con scrypt + AES-256-GCM usando la frase que usted elija).
    - Al usar **Abrir en Adminer** o **phpMyAdmin** desde un proyecto, el acceso autenticado usa un token de un solo uso canjeado en el servidor (la contraseña nunca pasa por la URL).
    - El token del **Servidor MCP** (`WOLFCORE_MCP_TOKEN`) nunca se escribe en los archivos de configuración de los agentes; solo se inyecta en la terminal abierta desde WolfCore Dev.
@@ -26,6 +27,8 @@ Este capítulo resume cómo **WolfCore Dev** protege sus credenciales, proyectos
    - Las descargas sin huella fuerte (o WordPress con SHA-1) muestran una advertencia clara y solo se instalan si usted acepta explícitamente el riesgo.
 6. **Confirmación y copias previas antes de cambios delicados:**
    - Modificar `php.ini`, vhosts de Nginx, `.env`, `.gitignore`, archivos de agentes, restaurar bases sobre bases con tablas, actualizar versiones, importar perfiles o reparar con Doctor siempre muestra qué va a cambiar y crea copias previas antes de escribir.
+   - **Cortafuegos:** Doctor nunca cambia el Firewall de Windows por su cuenta. Solo quita las reglas de entrada de programas de WolfCore Dev abiertas a la red que usted marque, una por una, tras confirmar y con el permiso de administrador de Windows, y antes guarda una copia en el registro protegido (`HKLM`, que solo un administrador puede modificar) con la que puede recrearlas. Las reglas de otros programas y las acotadas a la red local solo se muestran.
+   - **Compartir carpeta o archivo** rechaza `.env*`, claves, `.git`, `.ssh`, datos de programas, archivos con secretos, la carpeta de datos de WolfCore Dev, la raíz de una unidad y la carpeta de usuario entera; el enlace es de solo lectura, lleva un código secreto, vence en 15 minutos, 1 hora o 4 horas y un archivo comprimido se publica sin revisar su interior.
    - WolfCore Dev nunca detiene, mata ni modifica programas externos (como FlyEnv), nunca toca reglas de cortafuegos de otros programas y nunca sigue enlaces simbólicos al limpiar disco o versiones.
 
 ## Paso a paso para trabajar de forma segura
