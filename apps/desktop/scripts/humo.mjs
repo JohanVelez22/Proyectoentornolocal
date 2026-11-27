@@ -94,8 +94,9 @@ function buscarEjecutable() {
 
 const datos = mkdtempSync(path.join(tmpdir(), 'wolfcore-humo-'));
 // Uso del disco (D51): una carpeta temporal con tamaños conocidos. El diálogo nativo no se puede
-// manejar desde aquí: con la carpeta de datos aislada, `WOLFCORE_HUMO_CARPETA` hace que
-// «Elegir carpeta» devuelva esa (el proceso principal la registra y la valida igual que a una elegida).
+// manejar desde aquí: con la carpeta de datos aislada, el argumento `--wolfcore-humo` y esta carpeta
+// (dentro de la temporal y con este prefijo), `WOLFCORE_HUMO_CARPETA` hace que «Elegir carpeta»
+// devuelva esa (el proceso principal la registra y la valida igual que a una elegida).
 const discoHumo = mkdtempSync(path.join(tmpdir(), 'wolfcore-humo-disco-'));
 mkdirSync(path.join(discoHumo, 'sub'));
 writeFileSync(path.join(discoHumo, 'a.bin'), Buffer.alloc(1000));
@@ -144,11 +145,11 @@ try {
   if (usarOut) {
     registro(`Arrancando out/ con Electron (datos aislados en ${datos})`);
     exe = (await import('electron')).default;
-    argsApp = [...comunes, `--remote-debugging-port=${puerto}`, '.'];
+    argsApp = [...comunes, `--remote-debugging-port=${puerto}`, '--wolfcore-humo', '.'];
   } else {
     exe = buscarEjecutable();
     registro(`Arrancando ${exe} (datos aislados en ${datos})`);
-    argsApp = [...comunes, `--remote-debugging-port=${puerto}`];
+    argsApp = [...comunes, `--remote-debugging-port=${puerto}`, '--wolfcore-humo'];
     cwd = path.dirname(exe);
   }
   // Se arranca la app a mano y se conecta por CDP: `_electron.launch` espera al inspector de Node y

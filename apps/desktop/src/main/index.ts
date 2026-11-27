@@ -49,6 +49,7 @@ import { abrirGrabadora } from './grabadora';
 import { imprimirHtmlAPdf } from './conversorPdf';
 import { crearEjecutorUtilityProcess } from './conversorProceso';
 import { crearEjecutorDiffUtilityProcess } from './diffProceso';
+import { carpetaDeHumo } from './carpetaHumo';
 import { crearEjecutorDiscoUtilityProcess } from './discoProceso';
 import { registrarIpcCaptura, ServicioCaptura } from './captura';
 import { crearDepsElectron } from './capturaElectron';
@@ -83,9 +84,12 @@ const rutaIconoBandeja = join(
 
 const sistema: ApiSistema = {
   async elegirCarpeta() {
-    // Solo la prueba de humo (carpeta de datos aislada): sin diálogo, la carpeta que ella prepara.
-    const deHumo = process.env['WOLFCORE_DATOS'] ? process.env['WOLFCORE_HUMO_CARPETA'] : undefined;
-    if (deHumo) return deHumo;
+    // Solo la prueba de humo (tres condiciones a la vez, ver `carpetaHumo.ts`): sin diálogo.
+    const deHumo = await carpetaDeHumo(process.env, process.argv);
+    if (deHumo) {
+      console.warn(`[humo] «Elegir carpeta» devuelve la carpeta de la prueba de humo: ${deHumo}`);
+      return deHumo;
+    }
     const r = ventana
       ? await dialog.showOpenDialog(ventana, { properties: ['openDirectory'] })
       : await dialog.showOpenDialog({ properties: ['openDirectory'] });
