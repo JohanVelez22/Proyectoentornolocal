@@ -2,7 +2,7 @@
 
 ## Para qué sirve
 
-La pantalla **IA** reúne en tres pestañas todo lo relacionado con inteligencia artificial: gestionar **Agentes** de programación en terminal conectados al servidor MCP de WolfCore Dev, configurar proveedores de **IA en la nube** con claves cifradas y ejecutar modelos locales sin conexión con **Ollama**.
+La pantalla **IA** reúne en tres pestañas (**Agentes**, **Nube** y **Modelos locales**) todo lo relacionado con inteligencia artificial: gestionar **Agentes** de programación en terminal conectados al servidor MCP de WolfCore Dev, configurar proveedores de **IA en la nube** con claves cifradas y ejecutar modelos locales sin conexión con **Ollama**.
 
 ## Paso a paso
 
@@ -24,18 +24,18 @@ La pantalla **IA** reúne en tres pestañas todo lo relacionado con inteligencia
 2. Use **Copiar configuración para Claude Code** si desea pegarla manualmente, o **Regenerar token** para invalidar al instante el token anterior.
 3. Cuando un agente conectado por MCP intenta realizar una acción delicada (borrar o restaurar una base, correr una receta, finalizar un proceso o limpiar volcados), aparece un diálogo modal **Un asistente pide confirmación** en WolfCore Dev con botones **Aprobar** y **Rechazar**.
 
-### 3. Configurar proveedores de IA en la nube (`IA → IA en la nube`)
+### 3. Configurar proveedores de IA en la nube (`IA → Nube`)
 
-1. En **IA**, abra la pestaña de proveedores en la nube y pulse **Agregar proveedor**.
+1. En **IA**, abra la pestaña **Nube** (su título es **IA en la nube**) y pulse **Agregar proveedor**.
 2. Elija entre **OpenAI**, **Anthropic**, **Gemini**, **Hermes** (Nous Research) o un preset **compatible con OpenAI** (como OpenRouter, Groq, LM Studio, Kilo, OmniRouter o FreeLLMAPI).
 3. Escriba su clave API: se guarda cifrada con `safeStorage` en `etc/secretos/` (nunca en `config.json`, URLs ni registros; la interfaz solo muestra los 4 últimos caracteres).
 4. Pulse **Probar conexión** (gratis: lista modelos y mide latencia; permite filtrar modelos gratuitos) o **Probar un mensaje** (pide confirmación previa porque consume tokens).
 5. Pulse **Usar en un proyecto** para escribir el bloque `.env` del proveedor (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `AI_MODEL`, etc.) con vista previa enmascarada, copia previa y protección de `.gitignore`.
 
-### 4. Usar IA local con Ollama (`IA → IA local`)
+### 4. Usar IA local con Ollama (`IA → Modelos locales`)
 
 1. Instale **Ollama** desde **Servicios** y enciéndalo (corre solo en `127.0.0.1:11434`, con modelos en `data/ollama/actual/models`).
-2. En **IA**, abra la pestaña de IA local.
+2. En **IA**, abra la pestaña **Modelos locales** (su título es **IA local (Ollama)**).
 3. Elija una sugerencia (`llama3.2`, `qwen2.5-coder`, `mistral`, `nomic-embed-text`) o escriba el nombre del modelo y pulse **Descargar** (los modelos pueden ocupar de 1 a más de 40 GB).
 4. Pruebe cualquier modelo instalado con un mensaje desde la sección de prueba o copie los datos de conexión (`http://127.0.0.1:11434` y el endpoint compatible con OpenAI `http://127.0.0.1:11434/v1`).
 
