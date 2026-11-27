@@ -533,7 +533,7 @@ function etiquetaHistorial(e: EstadoClienteHttp['historial'][number]): string {
           <NTag size="small" :bordered="false">{{ p.metodo }}</NTag>
           <span class="nombre-item">
             <strong>{{ p.nombre }}</strong>
-            <TextoLargo :texto="p.url" mono />
+            <TextoLargo :texto="p.url" mono :copiable="false" />
           </span>
           <NButton size="small" secondary @click="abrir(p)">{{ t.coleccion.abrir }}</NButton>
           <NButton size="small" quaternary type="error" @click="borrarPeticion(p.id)">{{
@@ -564,7 +564,7 @@ function etiquetaHistorial(e: EstadoClienteHttp['historial'][number]): string {
             <span class="nombre-item">
               <strong>{{ etiquetaHistorial(h) }}</strong>
               <span class="herr-tenue">{{ formatearFecha(h.fecha, formatoHistorial) }}</span>
-              <TextoLargo :texto="h.peticion.url" mono />
+              <TextoLargo :texto="h.peticion.url" mono :copiable="false" />
             </span>
             <NButton size="small" secondary @click="abrir(h.peticion)">{{
               t.historial.abrir
