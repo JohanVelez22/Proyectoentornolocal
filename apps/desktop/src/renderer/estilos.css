@@ -12,6 +12,30 @@
   --sobre-acento: #fff;
   /* Duración de las transiciones de la interfaz. */
   --transicion: 150ms;
+
+  /*
+   * Escala de diseño (D54, hallazgo I1). Se usa en lo que se toca; no hay migración masiva.
+   * Letra: etiquetas y metadatos, descripciones y ayudas, texto base, título de tarjeta,
+   * título de pantalla y cifras de Inicio.
+   */
+  --wc-texto-xs: 12px;
+  --wc-texto-sm: 13px;
+  --wc-texto-md: 14px;
+  --wc-texto-lg: 16px;
+  --wc-texto-xl: 20px;
+  --wc-texto-2xl: 28px;
+  /* Espaciado. */
+  --wc-esp-1: 4px;
+  --wc-esp-2: 8px;
+  --wc-esp-3: 12px;
+  --wc-esp-4: 16px;
+  --wc-esp-6: 24px;
+  --wc-esp-8: 32px;
+  /* Radios: botones y campos, avisos y bloques internos, tarjetas y cajones, píldoras. */
+  --wc-radio-sm: 6px;
+  --wc-radio-md: 10px;
+  --wc-radio-lg: 14px;
+  --wc-radio-completo: 999px;
 }
 
 html,

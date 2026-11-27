@@ -121,7 +121,6 @@ export const useServicios = defineStore('servicios', () => {
   let bajas: (() => void)[] = [];
 
   const lista = computed(() => Object.values(porId.value).sort(orden));
-  const encendidos = computed(() => lista.value.filter((s) => s.estado === 'encendido').length);
 
   /** Solo los grupos con servicios, en el orden de `CATEGORIAS`. */
   /**
@@ -138,6 +137,33 @@ export const useServicios = defineStore('servicios', () => {
         !(s.id === 'nginx' && nginxSinInstalar.value && s.estado === 'apagado'),
     ),
   );
+  /** Motores que corren fuera de WolfCore Dev (se detectan solos; van en su propia franja). */
+  const externos = computed(() => visibles.value.filter((s) => s.estado === 'externo'));
+  /**
+   * Los que "Iniciar todo" puede encender: propios, instalados y parados. No cuentan los externos,
+   * el FTP integrado (arranca con sus proyectos) ni las herramientas.
+   */
+  const porArrancar = computed(() =>
+    visibles.value.filter(
+      (s) =>
+        (s.estado === 'apagado' || s.estado === 'error') &&
+        s.id !== 'ftp' &&
+        s.categoria !== 'herramienta',
+    ),
+  );
+  /**
+   * Fuente única de "qué hay y cómo está" para Servicios, Inicio y la pastilla de la cabecera:
+   * todos cuentan sobre `visibles`, nunca sobre `lista` (que trae Nginx sin instalar y los procesos
+   * de proyecto).
+   */
+  const resumen = computed(() => ({
+    total: visibles.value.length,
+    encendidos: visibles.value.filter((s) => s.estado === 'encendido').length,
+    conError: visibles.value.filter((s) => s.estado === 'error').length,
+    externos: externos.value.length,
+    porArrancar: porArrancar.value.length,
+  }));
+  const encendidos = computed(() => resumen.value.encendidos);
   /** Ningún servicio propio instalado (los externos y el FTP integrado no cuentan). */
   const nadaInstalado = computed(
     () =>
@@ -148,7 +174,7 @@ export const useServicios = defineStore('servicios', () => {
   const grupos = computed<GrupoServicios[]>(() =>
     CATEGORIAS.map((categoria) => ({
       categoria,
-      servicios: visibles.value.filter((s) => categoriaDe(s) === categoria),
+      servicios: visibles.value.filter((s) => s.estado !== 'externo' && categoriaDe(s) === categoria),
     })).filter((g) => g.servicios.length > 0),
   );
 
@@ -243,6 +269,9 @@ export const useServicios = defineStore('servicios', () => {
     redLocalFtp,
     lista,
     visibles,
+    externos,
+    porArrancar,
+    resumen,
     nadaInstalado,
     grupos,
     encendidos,

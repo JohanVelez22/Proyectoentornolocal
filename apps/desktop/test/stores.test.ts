@@ -368,4 +368,40 @@ describe('stores de la interfaz', () => {
     servicios.instalados['nginx'] = ['1.28.0'];
     expect(servicios.nadaInstalado).toBe(false);
   });
+  it('una sola fuente de "instalado": Servicios, Inicio y la pastilla cuentan lo mismo (D54a)', async () => {
+    const servicios = useServicios();
+    servicios.instalados['nginx'] = [];
+    servicios.instalados['php'] = [];
+    servicios.hidratar([
+      nginx,
+      { ...nginx, id: 'ftp', nombre: 'FTP', categoria: 'herramienta', puertos: [2121] },
+      {
+        ...nginx,
+        id: 'mysql',
+        nombre: 'MySQL (externo)',
+        categoria: 'bd',
+        estado: 'externo',
+        puertos: [3306],
+      },
+      // Un proceso de proyecto llega por el mismo evento, pero no es un servicio de la lista.
+      { ...nginx, id: 'proy-a-web', nombre: 'web', categoria: 'proyecto', estado: 'encendido' },
+    ]);
+    // Nginx sin instalar y apagado no cuenta; el proceso de proyecto tampoco.
+    expect(servicios.visibles.map((s) => s.id)).toEqual(['ftp', 'mysql']);
+    expect(servicios.resumen.total).toBe(servicios.visibles.length);
+    expect(servicios.resumen.encendidos).toBe(0);
+    expect(servicios.encendidos).toBe(servicios.resumen.encendidos);
+    expect(servicios.resumen.externos).toBe(1);
+    // Los externos van en su franja y no en los grupos de tarjetas.
+    expect(servicios.externos.map((s) => s.id)).toEqual(['mysql']);
+    expect(servicios.grupos.flatMap((g) => g.servicios.map((s) => s.id))).toEqual(['ftp']);
+    // Nada propio que arrancar: "Iniciar todo" queda desactivado.
+    expect(servicios.porArrancar).toEqual([]);
+
+    // Un servicio con error y otro encendido se cuentan igual en todas partes.
+    servicios.aplicar({ ...nginx, estado: 'encendido' });
+    servicios.aplicar({ ...nginx, id: 'redis', nombre: 'Redis', categoria: 'bd', estado: 'error' });
+    expect(servicios.resumen).toMatchObject({ total: 4, encendidos: 1, conError: 1 });
+    expect(servicios.porArrancar.map((s) => s.id)).toEqual(['redis']);
+  });
 });
