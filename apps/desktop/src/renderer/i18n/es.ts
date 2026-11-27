@@ -6400,6 +6400,7 @@ export const es = {
         instalada: 'Ya instalada',
         descargar: 'Se descargará con su huella verificada',
         pendienteDebil: 'Pendiente: sin huella fuerte, instálela a mano',
+        sustituida: (v: string) => `Ya no está en el catálogo: se instalará ${v} en su lugar.`,
         pendienteFuera: 'Pendiente: ya no está en el catálogo',
         huellas: {
           fuerte: 'Huella SHA-256 o SHA-512',
@@ -6549,6 +6550,7 @@ export const es = {
         },
         descartadosWorkspace: (lista: string) => `No existe aquí y se quitó: ${lista}`,
         workspacesInvalidos: (n: number) => `${n} workspaces no válidos no se importaron.`,
+        sustituida: (v: string) => `Se instaló ${v} en lugar de la versión del perfil.`,
         puerto: (de: number, a: number) => `Puerto ${de} → ${a}`,
         copiaEnv: (ruta: string) => `Copia del .env: ${ruta}`,
       },
@@ -6573,6 +6575,8 @@ export const es = {
       dominio_en_uso: 'Otro sitio de este equipo ya usa ese dominio.',
       sitio_repetido: 'El sitio está repetido en el perfil.',
       no_disponible: 'Esa versión ya no está en el catálogo.',
+      version_sustituida:
+        "Esa versión ya no está en el catálogo: se instaló la última de su rama.",
       huella_debil: 'Esa versión no tiene una huella fuerte: instálela a mano desde Versiones.',
       tope_descargas:
         'No se descargó para no hacer demasiadas descargas a la vez: instálela desde Versiones.',

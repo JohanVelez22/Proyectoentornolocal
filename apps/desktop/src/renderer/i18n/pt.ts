@@ -6411,6 +6411,7 @@ export const pt: Textos = {
         instalada: 'Já instalada',
         descargar: 'Será baixada com a impressão digital verificada',
         pendienteDebil: 'Pendente: sem impressão digital forte, instale-a manualmente',
+        sustituida: (v: string) => `Não está mais no catálogo: ${v} será instalada no lugar.`,
         pendienteFuera: 'Pendente: não está mais no catálogo',
         huellas: {
           fuerte: 'Impressão digital SHA-256 ou SHA-512',
@@ -6561,6 +6562,7 @@ export const pt: Textos = {
         },
         descartadosWorkspace: (lista: string) => `Não existe aqui e foi removido: ${lista}`,
         workspacesInvalidos: (n: number) => `${n} workspaces inválidos não foram importados.`,
+        sustituida: (v: string) => `${v} foi instalada no lugar da versão do perfil.`,
         puerto: (de: number, a: number) => `Porta ${de} → ${a}`,
         copiaEnv: (ruta: string) => `Cópia do .env: ${ruta}`,
       },
@@ -6585,6 +6587,8 @@ export const pt: Textos = {
       dominio_en_uso: 'Outro site deste computador já usa esse domínio.',
       sitio_repetido: 'O site está repetido no perfil.',
       no_disponible: 'Essa versão já não está no catálogo.',
+      version_sustituida:
+        "Essa versão não está mais no catálogo: foi instalada a última do seu ramo.",
       huella_debil: 'Essa versão não tem uma impressão forte: instale-a à mão em Versões.',
       tope_descargas:
         'Não foi baixada para não fazer downloads demais de uma vez: instale-a em Versões.',

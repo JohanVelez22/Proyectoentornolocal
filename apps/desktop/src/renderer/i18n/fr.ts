@@ -6577,6 +6577,7 @@ export const fr: Textos = {
         instalada: 'Déjà installée',
         descargar: 'Sera téléchargée avec son empreinte vérifiée',
         pendienteDebil: "En attente : pas d'empreinte forte, installez-la à la main",
+        sustituida: (v: string) => `Elle n'est plus dans le catalogue : ${v} sera installée à la place.`,
         pendienteFuera: "En attente : elle n'est plus dans le catalogue",
         huellas: {
           fuerte: 'Empreinte SHA-256 ou SHA-512',
@@ -6731,6 +6732,7 @@ export const fr: Textos = {
         },
         descartadosWorkspace: (lista: string) => `N’existe pas ici et a été retiré : ${lista}`,
         workspacesInvalidos: (n: number) => `${n} workspaces non valides n’ont pas été importés.`,
+        sustituida: (v: string) => `${v} a été installée à la place de la version du profil.`,
         puerto: (de: number, a: number) => `Port ${de} → ${a}`,
         copiaEnv: (ruta: string) => `Copie du .env : ${ruta}`,
       },
@@ -6757,6 +6759,8 @@ export const fr: Textos = {
       dominio_en_uso: 'Un autre site de cet ordinateur utilise déjà ce domaine.',
       sitio_repetido: 'Le site est répété dans le profil.',
       no_disponible: "Cette version n'est plus dans le catalogue.",
+      version_sustituida:
+        "Cette version n'est plus dans le catalogue : la dernière de sa branche a été installée.",
       huella_debil:
         "Cette version n'a pas d'empreinte forte : installez-la à la main depuis Versions.",
       tope_descargas:

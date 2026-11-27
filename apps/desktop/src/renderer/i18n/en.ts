@@ -6372,6 +6372,7 @@ export const en: Textos = {
         instalada: 'Already installed',
         descargar: 'Will be downloaded with its fingerprint verified',
         pendienteDebil: 'Pending: no strong fingerprint, install it by hand',
+        sustituida: (v: string) => `It is no longer in the catalog: ${v} will be installed instead.`,
         pendienteFuera: 'Pending: it is no longer in the catalog',
         huellas: {
           fuerte: 'SHA-256 or SHA-512 fingerprint',
@@ -6524,6 +6525,7 @@ export const en: Textos = {
         },
         descartadosWorkspace: (lista: string) => `Does not exist here and was removed: ${lista}`,
         workspacesInvalidos: (n: number) => `${n} invalid workspaces were not imported.`,
+        sustituida: (v: string) => `${v} was installed instead of the profile's version.`,
         puerto: (de: number, a: number) => `Port ${de} → ${a}`,
         copiaEnv: (ruta: string) => `.env copy: ${ruta}`,
       },
@@ -6547,6 +6549,8 @@ export const en: Textos = {
       dominio_en_uso: 'Another site on this computer already uses that domain.',
       sitio_repetido: 'The site is repeated in the profile.',
       no_disponible: 'That version is no longer in the catalog.',
+      version_sustituida:
+        "That version is no longer in the catalog: the latest of its branch was installed.",
       huella_debil: 'That version has no strong checksum: install it by hand from Versions.',
       tope_descargas:
         'Not downloaded to avoid too many downloads at once: install it from Versions.',
