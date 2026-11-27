@@ -10,7 +10,9 @@ La pantalla **Ajustes** reúne todas las preferencias del entorno (tema, idioma,
 
 1. Abra **Ajustes** en la parte inferior de la barra lateral.
 2. En **Apariencia e idioma**:
-   - Elija **Tema** (**Sistema**, **Claro** u **Oscuro**), **Idioma** y **Color de acento** (**Índigo**, **Azul**, **Verde**, **Violeta**, **Naranja**, **Rosa** o personalizado). Los cambios se aplican al instante.
+   - Elija **Tema** (**Sistema**, **Claro** u **Oscuro**), **Idioma** y **Color de acento** (**Índigo**, **Azul**, **Verde**, **Violeta**, **Naranja**, **Rosa** o personalizado). Los cambios se aplican al instante y se guardan en este equipo.
+   - **Idioma:** la interfaz está disponible en **16 idiomas**, y cada uno se muestra con su nombre nativo para que pueda reconocerlo aunque la interfaz esté en otro: Español, English, Português, Français, Deutsch, Italiano, Русский, 简体中文, 日本語, 한국어, हिन्दी, Türkçe, Bahasa Indonesia, Polski, Nederlands y Українська. Puede cambiarlo aquí o con el botón **Cambiar idioma** de la barra superior. Los cuatro primeros (español, inglés, portugués y francés) tienen traducción propia y completa; los otros doce llevan junto a su nombre el aviso **Traducción automática revisada** (en el idioma que esté usando y, al pasar el cursor, en el propio idioma). Si a un idioma le falta algún texto, ese texto se muestra en inglés; la guía de HTTP y la de Git avisan **Sin traducción a este idioma: se muestra en inglés** cuando una entrada no está traducida.
+   - La primera vez que abre WolfCore Dev, el idioma se toma del idioma de su sistema si es uno de los 16; si no, se usa español. Al cambiar de idioma, el menú de la bandeja y los diálogos de la aplicación también cambian.
    - Pulse **Ver el recorrido** para repetir el **Recorrido de bienvenida**.
    - Active **Mostrar secciones avanzadas** si desea ver en la barra lateral pantallas menos habituales como **Contenedores**.
 3. En **Avisos**:
@@ -29,7 +31,7 @@ En las tarjetas centrales de **Ajustes**:
   - **Puerto de Adminer** (dirección fija `127.0.0.1:8090`).
   - **Terminal predeterminada** (PowerShell u otra terminal instalada) y **Editor predeterminado** (VS Code, Cursor, Windsurf, PhpStorm, Sublime Text, Zed o Notepad++).
   - **PATH del usuario:** pulse **Agregar al PATH del usuario** para exponer `php` y `composer` de WolfCore Dev en cualquier terminal nueva (sin requerir administrador).
-- **Terminal: comando wolf**, **Captura de pantalla** y **Servidor MCP:** controlan la CLI `wolf`, el atajo global de captura y el servidor MCP.
+- **Terminal: comando wolf**, **Captura de pantalla** y **Servidor MCP:** controlan la CLI `wolf`, el atajo global de captura y el servidor MCP. La ayuda de `wolf` solo existe en español, inglés, portugués y francés (ver [12 · CLI `wolf`](12-cli-wolf.md)).
 
 [CAPTURA: Pantalla Ajustes mostrando Apariencia e idioma, HTTPS, Terminal y herramientas y Respaldo y perfiles]
 

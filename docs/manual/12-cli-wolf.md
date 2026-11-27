@@ -40,7 +40,7 @@ La interfaz de línea de órdenes **`wolf`** permite controlar WolfCore Dev desd
 - `--json`: devuelve salida estructurada en JSON (sin secretos; todos los textos pasan por enmascaramiento).
 - `--abrir`: si WolfCore Dev está cerrado, lo abre y espera a que responda.
 - `--si`: omite la pregunta interactiva en la terminal, **pero nunca omite la confirmación en la ventana de WolfCore Dev** para acciones sensibles (`wolf share` o `wolf use php@<v> --global`).
-- `-h` / `--help`: muestra la ayuda en el idioma configurado en la aplicación.
+- `-h` / `--help`: muestra la ayuda en el idioma configurado en la aplicación, siempre que sea español, inglés, portugués o francés (la línea de órdenes solo está traducida a esos cuatro). Con cualquiera de los otros doce idiomas de la interfaz, la ayuda sale en el idioma del sistema si es uno de esos cuatro y, si no, en español.
 
 Códigos de salida estables:
 
