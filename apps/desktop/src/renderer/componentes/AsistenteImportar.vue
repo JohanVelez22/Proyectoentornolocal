@@ -46,7 +46,7 @@ const resultado = ref<ResultadoImportar | null>(null);
 const errorImportar = ref<string | null>(null);
 const cancelando = ref(false);
 
-const destinos = computed(() => destinosBd(servicios.lista));
+const destinos = computed(() => destinosBd(servicios.visibles));
 const opcionesDestino = computed(() =>
   destinos.value.map((d) => ({
     value: d.value,

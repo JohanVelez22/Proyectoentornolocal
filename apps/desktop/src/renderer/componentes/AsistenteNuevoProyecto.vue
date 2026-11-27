@@ -89,7 +89,7 @@ const bases = computed(() =>
   opcionesBase(
     form.tipo,
     form.pgvector && form.tipo === 'fastapi',
-    servicios.lista,
+    servicios.visibles,
     form.plantilla,
   ),
 );

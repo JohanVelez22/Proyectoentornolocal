@@ -66,13 +66,13 @@ async function cargarOpciones(): Promise<void> {
     const instancias = await api().instancias.lista();
     opciones.value = opcionesElementos(
       instancias,
-      servicios.lista.map((s) => s.id),
+      servicios.visibles.map((s) => s.id),
       sitios.lista,
     );
   } catch {
     opciones.value = opcionesElementos(
       [],
-      servicios.lista.map((s) => s.id),
+      servicios.visibles.map((s) => s.id),
       sitios.lista,
     );
   } finally {

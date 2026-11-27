@@ -77,7 +77,7 @@ const comandos = computed<Comando[]>(() => {
       ejecutar: () => irA(a.destino),
     });
   }
-  for (const s of servicios.lista) {
+  for (const s of servicios.visibles) {
     if (s.estado === 'externo') continue;
     r.push({
       id: `ir-servicio-${s.id}`,

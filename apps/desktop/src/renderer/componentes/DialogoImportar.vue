@@ -73,7 +73,7 @@ function olvidarClave(): void {
 watch(mostrar, (v) => {
   olvidarClave();
   if (!v) return;
-  const s = origenSugerido(props.motor, servicios.lista);
+  const s = origenSugerido(props.motor, servicios.visibles);
   paso.value = 'datos';
   host.value = s.host;
   puerto.value = s.puerto;
