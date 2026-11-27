@@ -387,6 +387,16 @@ try {
         undefined,
         { timeout: 60_000 },
       );
+      // Tras mostrar la salida de init, la vista sigue ocupada refrescando el estado y sus botones
+      // están desactivados: un clic en ese momento se pierde. Se espera a que status esté activo.
+      await ventana.waitForFunction(
+        () => {
+          const b = document.querySelector('[data-testid="lab-status"]');
+          return b !== null && !b.hasAttribute('disabled');
+        },
+        undefined,
+        { timeout: 60_000 },
+      );
       await ventana.evaluate(() => document.querySelector('[data-testid="lab-status"]')?.click());
       await ventana.waitForFunction(
         () =>
