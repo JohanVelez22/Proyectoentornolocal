@@ -19,6 +19,7 @@ async function crear() {
   mkdirSync(usuario, { recursive: true });
   const plataforma = new PlataformaFalsa({ carpetaDatos: base });
   nucleo = await Nucleo.crear({
+    barrerHuerfanos: false,
     base,
     aislado: true,
     plataforma,

@@ -860,6 +860,7 @@ describe('Nucleo.crearProyecto (estático, de punta a punta)', () => {
 
   const crear = async (): Promise<Nucleo> => {
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base: path.join(base, 'datos'),
       plataforma: plataforma(),
       sonda: async () => false,

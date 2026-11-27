@@ -39,6 +39,7 @@ async function montar(confirmar?: () => Promise<boolean>) {
     }),
   );
   const n = await Nucleo.crear({
+    barrerHuerfanos: false,
     base,
     plataforma: new PlataformaFalsa({ carpetaDatos: dir, carpetaInicio: dir }),
     sonda: async () => false,

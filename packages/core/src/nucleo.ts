@@ -381,6 +381,11 @@ export interface OpcionesNucleo {
    */
   aislado?: boolean;
   plataforma?: Plataforma;
+  /**
+   * Cierra al arrancar los `cloudflared` huérfanos de una sesión anterior (por defecto `true`).
+   * Las pruebas con la plataforma real lo ponen a `false`: nunca consultan los procesos del equipo.
+   */
+  barrerHuerfanos?: boolean;
   fetch?: typeof fetch;
   /** Para pruebas: reemplazos de procesos hijos y de ejecución de comandos. */
   spawn?: typeof childProcess.spawn;
@@ -1331,6 +1336,7 @@ export class Nucleo {
       urlBase,
       eventos,
       plataforma: plat,
+      barrerHuerfanos: o.barrerHuerfanos !== false,
       ejecutor: o.ejecutor ?? ejecutorPorDefecto,
       lanzar: o.lanzar ?? lanzadorPorDefecto,
       // Server de Nginx propio de un túnel (Tailscale): valida y recarga con el resto de la config.

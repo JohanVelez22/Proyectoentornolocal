@@ -66,6 +66,7 @@ const falsa = (): Plataforma => ({
 const editoresLanzados: { cmd: string; args: string[]; cwd: string }[] = [];
 const crear = async (): Promise<Nucleo> => {
   const n = await Nucleo.crear({
+    barrerHuerfanos: false,
     base,
     plataforma,
     sonda: async () => false,
@@ -263,6 +264,7 @@ describe('Nucleo', () => {
     writeFileSync(hostsArchivo, '127.0.0.1 localhost\r\n');
     const visto: EstadoHosts[] = [];
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma,
       sonda: async () => false,
@@ -757,8 +759,28 @@ describe('Nucleo', () => {
 });
 
 describe('Nucleo.crear y la migración de la carpeta de datos', () => {
+  it('crear no espera al barrido de cloudflared huérfanos', async () => {
+    let consultado = false;
+    const n = await Nucleo.crear({
+      base,
+      plataforma: {
+        ...plataforma,
+        // Un listado de procesos que nunca responde no puede retrasar el arranque.
+        procesosDelUsuario: () => {
+          consultado = true;
+          return new Promise(() => undefined);
+        },
+      } as Plataforma,
+      sonda: async () => false,
+      fetch: (async () => new Response('{}')) as typeof fetch,
+    });
+    nucleos.push(n);
+    expect(consultado).toBe(true);
+  });
+
   it('sin base usa la carpeta que devuelve la migración y expone el aviso', async () => {
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       plataforma,
       sonda: async () => false,
       fetch: (async () => new Response('{}')) as typeof fetch,
@@ -902,6 +924,7 @@ describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
   it('Ollama usa el puerto configurado, la carpeta data/ollama/actual/models y emite ia:progreso', async () => {
     const urls: string[] = [];
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma,
       sonda: async () => false,
@@ -934,6 +957,7 @@ describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
 
   it('Mailpit usa el fetch del núcleo', async () => {
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma,
       sonda: async () => false,
@@ -988,6 +1012,7 @@ describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
     vi.spyOn(Servicios.prototype, 'iniciar').mockRejectedValue(new Error('puerto 1025 ocupado'));
     const avisos: string[] = [];
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma,
       sonda: async () => false,
@@ -1003,6 +1028,7 @@ describe('Nucleo expone y cablea los módulos de la Etapa A', () => {
 
   it('el aviso de la migración se entrega una sola vez', async () => {
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       plataforma,
       sonda: async () => false,
       fetch: (async () => new Response('{}')) as typeof fetch,
@@ -1540,6 +1566,7 @@ describe('Nucleo (Etapa B)', () => {
 
   it('crearSitioProyecto crea el sitio con los datos de sitio-crear, su proceso y su puerto', async () => {
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma,
       sonda: async () => false,
@@ -1730,6 +1757,7 @@ describe('Nucleo: PHP por defecto al detectar (QA 4)', () => {
 describe('Nucleo: puerto automático al guardar FastAPI/Node (QA 3)', () => {
   const nucleoConPuertos = async (): Promise<Nucleo> => {
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma,
       sonda: async () => false,

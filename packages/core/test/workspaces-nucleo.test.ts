@@ -18,6 +18,7 @@ async function crear(config: unknown): Promise<Nucleo> {
   await mkdir(base, { recursive: true });
   await writeFile(path.join(base, 'config.json'), JSON.stringify(config, null, 2));
   nucleo = await Nucleo.crear({
+    barrerHuerfanos: false,
     base,
     plataforma: new PlataformaFalsa({ carpetaDatos: dir, carpetaInicio: dir }),
     sonda: async () => false,

@@ -17,6 +17,7 @@ async function crear(ejecutorDiff?: EjecutorDiff) {
   const base = path.join(raiz, 'datos');
   mkdirSync(base, { recursive: true });
   nucleo = await Nucleo.crear({
+    barrerHuerfanos: false,
     base,
     aislado: true,
     plataforma: new PlataformaFalsa({ carpetaDatos: base }),

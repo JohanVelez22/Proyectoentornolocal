@@ -571,6 +571,7 @@ describe('Nucleo: limpieza de versiones (D30)', () => {
       JSON.stringify(ConfigSchema.parse({ sitios }), null, 2),
     );
     nucleo = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma: new PlataformaFalsa({ carpetaDatos: dir, carpetaInicio: dir }),
       sonda: async () => false,

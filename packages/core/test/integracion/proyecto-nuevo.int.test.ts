@@ -59,6 +59,7 @@ describe.skipIf(!esWindows || !hayRed)('Nuevo proyecto con Composer real', () =>
     for (const d of [proyectos, documentos]) mkdirSync(d, { recursive: true });
     writeFileSync(hostsCopia, '127.0.0.1 localhost\r\n');
     nucleo = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma: plataformaSegura(hostsCopia, documentos),
       fetch: fetchConCache(log),

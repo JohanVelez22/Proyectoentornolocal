@@ -63,7 +63,9 @@ describe('Tuneles.restaurar: cloudflared huérfanos', () => {
       proceso(14, path.join(base, 'cloudflared.exe')),
     ];
     propios = { 'tunel-wolf': 11 };
-    await crear().restaurar();
+    const t = crear();
+    await t.restaurar();
+    await t.esperarBarrido();
     expect(plat.matados).toEqual([10]);
   });
 
@@ -75,13 +77,44 @@ describe('Tuneles.restaurar: cloudflared huérfanos', () => {
       void (await original(pid));
       return 'otra';
     };
-    await crear().restaurar();
+    const t = crear();
+    await t.restaurar();
+    await t.esperarBarrido();
     expect(plat.matados).toEqual([]);
   });
 
   it('si no se puede listar, arranca igual', async () => {
     plat.fallaListado = true;
-    await expect(crear().restaurar()).resolves.toBeUndefined();
+    const t = crear();
+    await expect(t.restaurar()).resolves.toBeUndefined();
+    await t.esperarBarrido();
     expect(plat.matados).toEqual([]);
+  });
+
+  it('restaurar no espera al barrido (aunque el listado de procesos no responda)', async () => {
+    plat.procesosDelUsuario = () => new Promise(() => undefined);
+    await expect(crear().restaurar()).resolves.toBeUndefined();
+  });
+
+  it('con barrerHuerfanos: false no consulta los procesos', async () => {
+    const t = new Tuneles({
+      supervisor: {
+        ids: () => [],
+        pid: () => null,
+        estado: () => 'apagado',
+        alSalir: () => undefined,
+      } as never,
+      sitios: { listar: async () => [] },
+      almacen: { leer: async () => ({}) } as never,
+      instalador: { instalados: async () => [] } as never,
+      rutas,
+      urlBase: { restaurarPorId: async () => undefined } as never,
+      eventos: new Eventos<EventosNucleo>(),
+      plataforma: plat as never,
+      barrerHuerfanos: false,
+    });
+    await t.restaurar();
+    await t.esperarBarrido();
+    expect(plat.listados).toBe(0);
   });
 });

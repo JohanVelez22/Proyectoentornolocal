@@ -178,6 +178,7 @@ function plataformaEtapaD(
 }
 
 const opcionesNucleo = (b: string, plataforma: Plataforma) => ({
+  barrerHuerfanos: false,
   base: b,
   plataforma,
   fetch: fetchConCache(log),
@@ -473,6 +474,7 @@ describe.skipIf(!esWindows || !hayRed)('Etapa D: integración real en Windows', 
       };
       mkdirSync(baseFirma, { recursive: true });
       nucleoFirma = await Nucleo.crear({
+        barrerHuerfanos: false,
         ...opcionesNucleo(baseFirma, plataformaEtapaD(hostsCopia2)),
         fetch: mala,
       });

@@ -143,6 +143,7 @@ async function catalogoVivo(x: Nucleo, servicio: Parameters<Nucleo['listarCatalo
 }
 
 const opcionesNucleo = (b: string) => ({
+  barrerHuerfanos: false,
   base: b,
   plataforma: plataformaEtapaC(),
   fetch: fetchConCache(log),

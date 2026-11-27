@@ -895,6 +895,7 @@ describe('Nucleo: contenedores', () => {
     let salida = PS_DOCKER;
     const { exec } = cliFalsa({ ...DOCKER_OK, 'ps -a': () => ({ codigo: 0, stdout: salida }) });
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma,
       ejecutor: exec,

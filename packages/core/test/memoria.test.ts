@@ -1406,6 +1406,7 @@ describe('Nucleo: optimizador de RAM', () => {
     // Su carpeta de datos real no es la temporal de la prueba: se quita el mysqld de ejemplo.
     falsa.procesosUsuario = falsa.procesosUsuario.filter((p) => p.pid !== 222);
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma: falsa,
       sonda: async () => false,

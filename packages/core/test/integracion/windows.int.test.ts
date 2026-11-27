@@ -146,7 +146,7 @@ describe.skipIf(!esWindows)('integración real en Windows', () => {
     mkdirSync(proyectos, { recursive: true });
     writeFileSync(hostsCopia, '127.0.0.1 localhost\r\n::1 localhost\r\n');
     log('base temporal:', base);
-    nucleo = await Nucleo.crear({ base, plataforma: plataformaSegura() });
+    nucleo = await Nucleo.crear({ barrerHuerfanos: false, base, plataforma: plataformaSegura() });
     const cfg = await nucleo.config.leer();
     await nucleo.guardarAjustes({
       puerto: PUERTO,

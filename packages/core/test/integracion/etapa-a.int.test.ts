@@ -360,6 +360,7 @@ describe.skipIf(!esWindows)('Etapa A: integración real en Windows', () => {
     writeFileSync(hostsCopia, '127.0.0.1 localhost\r\n');
     log('base temporal:', base);
     nucleo = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma: plataformaSegura(hostsCopia, documentos),
       fetch: fetchConCache(log),

@@ -25,6 +25,7 @@ async function crear(o: { aislado?: boolean; cliente?: boolean } = {}) {
   const plat = new PlataformaFalsa({ carpetaDatos: dir, carpetaInicio: dir });
   plat.path = [...PATH_INICIAL];
   const n = await Nucleo.crear({
+    barrerHuerfanos: false,
     base,
     plataforma: plat,
     sonda: async () => false,

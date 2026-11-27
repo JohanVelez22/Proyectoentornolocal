@@ -21,6 +21,7 @@ describe('WOLFCORE_DATOS: carpeta de datos aislada (D26)', () => {
     const plataforma = new PlataformaFalsa({ carpetaDatos: dir, rutaHosts: hosts });
     const escribir = vi.spyOn(plataforma, 'escribirComoAdmin');
     nucleo = await Nucleo.crear({
+      barrerHuerfanos: false,
       base: path.join(dir, 'datos'),
       aislado: true,
       plataforma,
@@ -39,6 +40,7 @@ describe('WOLFCORE_DATOS: carpeta de datos aislada (D26)', () => {
     await writeFile(hosts, '127.0.0.1 localhost\n');
     const plataforma = new PlataformaFalsa({ carpetaDatos: dir, rutaHosts: hosts });
     nucleo = await Nucleo.crear({
+      barrerHuerfanos: false,
       base: path.join(dir, 'datos'),
       plataforma,
       sonda: async () => false,

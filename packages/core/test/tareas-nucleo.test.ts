@@ -39,6 +39,7 @@ async function crear(
   await writeFile(path.join(base, 'config.json'), JSON.stringify(cfg, null, 2));
   const lanzar = vi.fn<Lanzador>(async () => ({ codigo: 0 }));
   nucleo = await Nucleo.crear({
+    barrerHuerfanos: false,
     base,
     plataforma: new PlataformaFalsa({ carpetaDatos: dir, carpetaInicio: dir }),
     sonda: async () => false,

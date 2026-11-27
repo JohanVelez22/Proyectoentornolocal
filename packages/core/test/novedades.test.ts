@@ -244,6 +244,7 @@ describe('Nucleo: revisión de versiones nuevas', () => {
 
   const crearNucleo = async (base: string, f: typeof fetch): Promise<Nucleo> =>
     Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma: new PlataformaFalsa({ carpetaDatos: base, carpetaInicio: base }),
       sonda: async () => false,

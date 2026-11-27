@@ -61,6 +61,7 @@ async function crear(): Promise<Nucleo> {
   });
   await writeFile(path.join(base, 'config.json'), JSON.stringify(cfg, null, 2));
   nucleo = await Nucleo.crear({
+    barrerHuerfanos: false,
     base,
     plataforma: new PlataformaFalsa({ carpetaDatos: dir, carpetaInicio: dir }),
     sonda: async () => false,

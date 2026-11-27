@@ -29,6 +29,7 @@ describe('Nucleo: Compartir (D52)', () => {
     mkdirSync(roaming, { recursive: true });
     falsa.carpetasDePerfil = [roaming];
     nucleo = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       aislado: true,
       plataforma: falsa,

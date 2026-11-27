@@ -798,6 +798,7 @@ async function crearNucleo(
   );
   await extra.aPreparar?.(base, dir);
   const n = await Nucleo.crear({
+    barrerHuerfanos: false,
     base,
     plataforma: new PlataformaFalsa({ carpetaDatos: dir, carpetaInicio: dir }),
     sonda: async () => false,
@@ -1091,6 +1092,7 @@ describe('servidor de órdenes de la CLI (D31): con el núcleo', () => {
     const base = path.join(dir, 'datos');
     await mkdir(base, { recursive: true });
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma: new PlataformaFalsa({ carpetaDatos: dir, carpetaInicio: dir }),
       sonda: async () => false,
@@ -1281,6 +1283,7 @@ describe('revisión D31 · C1: el servidor es opcional (cli.activo apagado por d
     );
     expect(ConfigSchema.parse({}).cli.activo).toBe(false);
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma: new PlataformaFalsa({ carpetaDatos: dir, carpetaInicio: dir }),
       sonda: async () => false,

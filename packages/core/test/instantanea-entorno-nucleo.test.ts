@@ -35,6 +35,7 @@ async function crear(
   await writeFile(path.join(base, 'config.json'), JSON.stringify(ConfigSchema.parse({}), null, 2));
   plataforma = new PlataformaFalsa({ carpetaDatos: dir, carpetaInicio: dir });
   nucleo = await Nucleo.crear({
+    barrerHuerfanos: false,
     base,
     plataforma,
     sonda: async () => false,
@@ -189,6 +190,7 @@ async function reabrir(n: Nucleo, fetchFn: typeof fetch): Promise<Nucleo> {
   const base = n.rutas.base;
   await n.cerrar({ detenerServicios: false });
   return Nucleo.crear({
+    barrerHuerfanos: false,
     base,
     plataforma,
     sonda: async () => false,

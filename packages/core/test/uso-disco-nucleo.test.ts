@@ -19,6 +19,7 @@ describe('Nucleo: Uso del disco (D51)', () => {
     const falsa = new PlataformaFalsa({ carpetaDatos: base });
     falsa.unidades = [{ ruta: 'C:\\', etiqueta: 'Windows', tipo: 'fijo', total: 10, libre: 5 }];
     nucleo = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       aislado: true,
       plataforma: falsa,

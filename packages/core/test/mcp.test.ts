@@ -1260,6 +1260,7 @@ describe('Nucleo: servidor MCP', () => {
       carpetaDocumentos: async () => base,
     };
     return Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma,
       sonda: async () => false,

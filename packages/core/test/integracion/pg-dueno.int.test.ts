@@ -64,6 +64,7 @@ describe.skipIf(!esWindows)('PostgreSQL: dueño tras restaurar (real)', () => {
     mkdirSync(path.join(base, 'docs'), { recursive: true });
     writeFileSync(path.join(base, 'hosts'), '127.0.0.1 localhost\r\n');
     nucleo = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma: plataformaSegura(path.join(base, 'hosts'), path.join(base, 'docs')),
       fetch: fetchConCache(log),

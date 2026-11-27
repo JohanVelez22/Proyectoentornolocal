@@ -50,6 +50,7 @@ describe('Nucleo.abrirBaseProyecto (D18)', () => {
   /** Un núcleo con Adminer y phpMyAdmin "listos" y un servidor de datos falso en el 3307. */
   const crear = async (): Promise<Nucleo> => {
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base: path.join(base, 'datos'),
       plataforma: plataforma(),
       sonda: async () => false,

@@ -358,6 +358,7 @@ describe('reversión y marca de la app', () => {
     const plat = new PlataformaFalsa({ carpetaDatos: dir, carpetaInicio: dir });
     plat.path = ['C:\\Windows'];
     const n = await Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma: plat,
       sonda: async () => false,

@@ -494,6 +494,7 @@ describe('Nucleo: captura de dumps por sitio', () => {
       carpetaDocumentos: async () => base,
     } as unknown as Plataforma;
     return Nucleo.crear({
+      barrerHuerfanos: false,
       base,
       plataforma,
       sonda: async () => false,

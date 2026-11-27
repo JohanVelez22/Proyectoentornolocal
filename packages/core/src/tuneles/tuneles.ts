@@ -57,6 +57,11 @@ export interface DepsTuneles {
   lanzar?: Lanzador;
   /** El almacén de secretos del proceso principal (puede fijarse después del arranque). */
   secretos?: () => SecretosTunel | null;
+  /**
+   * Al arrancar, busca y cierra los `cloudflared` huérfanos de una sesión anterior. Por defecto
+   * `true` (la app); las pruebas lo apagan para no consultar los procesos reales del equipo.
+   */
+  barrerHuerfanos?: boolean;
   /** Guarda el proveedor elegido de un sitio (sin tocar nada más del sitio). */
   guardarTunel?: (sitioId: string, tunel: TunelSitio | null) => Promise<void>;
 }
@@ -429,7 +434,15 @@ export class Tuneles {
     }
     this.escribirRegistros(vivos);
     await this.barrerHuerfanos(new Set(vivos.map((v) => v.sitioId)));
-    await this.cerrarCloudflaredHuerfanos();
+    // Diferido y sin esperar: listar los procesos del equipo no debe retrasar el arranque.
+    if (this.d.barrerHuerfanos !== false) this.barrido = this.cerrarCloudflaredHuerfanos();
+  }
+
+  private barrido: Promise<void> | null = null;
+
+  /** Espera al barrido de huérfanos lanzado por `restaurar` (para las pruebas). */
+  async esperarBarrido(): Promise<void> {
+    await this.barrido;
   }
 
   /**
