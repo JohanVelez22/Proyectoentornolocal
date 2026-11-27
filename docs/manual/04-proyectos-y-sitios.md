@@ -33,12 +33,13 @@ La pantalla **Proyectos** centraliza todos sus sitios locales `.test`: crear pro
 
 ### 3. Recetas, confianza en el repositorio y `wolfcore.yml`
 
-Al detectar un proyecto (Laravel, CodeIgniter 3/4, Symfony, FastAPI, Node, WordPress o estático), WolfCore Dev propone una **receta** de pasos editable (Composer, `.env`, `key:generate`, crear o restaurar base, migraciones, `storage:link`, `npm ci` / `build`, `.venv` / `pip`, sitio HTTPS):
+Al detectar un proyecto (Laravel, CodeIgniter 3/4, Symfony, FastAPI, Node/Express/Nest, Rails, Spring Boot, ASP.NET Core, WordPress o estático), WolfCore Dev propone una **receta** de pasos editable (Composer, `.env`, `key:generate`, crear o restaurar base, migraciones, `storage:link`, `npm ci` / `build`, `.venv` / `pip`, `bundle`, `mvn`/`gradle`, `dotnet restore`, sitio HTTPS):
 
 1. Revise cada paso propuesto antes de ejecutar.
 2. Marque **Confío en este repositorio**. Sin esa marca, WolfCore Dev nunca ejecuta comandos, recetas ni procesos del proyecto.
-3. Si el repositorio incluye un archivo `wolfcore.yml` en la raíz (que fija tipo, dominio, versiones de PHP/Node/Python, procesos o tareas) y la receta cambia después de haber confiado, la tarjeta le avisa para **Revisar la receta** antes de volver a correrla.
+3. Si el repositorio incluye un archivo `wolfcore.yml` en la raíz (que fija tipo, dominio, versiones de PHP/Node/Python/Ruby/Java/.NET o procesos y tareas) y la receta cambia después de haber confiado, la tarjeta le avisa para **Revisar la receta** antes de volver a correrla.
 4. Puede usar **Traer cambios** en el panel Git de la tarjeta para hacer `git fetch` y avance rápido seguro (si hay cambios locales o ramas divergentes, no toca nada y avisa).
+5. En proyectos que no son PHP, el **runtime** (Node, Python, Java, .NET, Go, Rust, Bun, Deno, Zig, Kotlin, Dart, Ruby, Maven o Gradle) se elige en la tarjeta del proyecto y se instala desde **Servicios → Versiones**; los servidores de las recetas (Rails, Spring Boot, ASP.NET Core, Express/Nest) arrancan solo en `127.0.0.1` y se comprueba que no escuchen en toda la red.
 
 ### 4. Importar desde Laragon, XAMPP o Herd
 

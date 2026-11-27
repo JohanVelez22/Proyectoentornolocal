@@ -41,7 +41,7 @@ Los workspaces le evitan encender 3 o 4 servicios uno por uno cada mañana:
 2. En la parte superior dispone de dos botones globales:
    - **Iniciar todo:** enciende en orden las versiones de PHP en uso, Nginx, las instancias de base de datos predeterminadas o usadas por proyectos (esperando a que respondan) y los procesos con inicio automático. **Nunca abre túneles públicos.**
    - **Detener todo:** apaga todos los servicios administrados y cierra los túneles activos.
-3. Debajo encontrará las tarjetas agrupadas por categoría (Web, Bases de datos, Otros servicios y Herramientas como **Composer**, **Adminer** y **phpMyAdmin**).
+3. Debajo encontrará las tarjetas agrupadas por categoría (**Web**, **PHP**, **Bases de datos**, **Correo**, **IA** y **Herramientas**, con utilidades como **Composer**, **Adminer** y **phpMyAdmin**).
 4. Use el interruptor o botón de **Encender** / **Apagar** de cada tarjeta para controlar un servicio de forma individual.
 5. Al final de la pantalla, la tarjeta de instalación rápida le permite instalar servicios web (`Nginx`, `PHP`), bases de datos (`MySQL`, `MariaDB`, `PostgreSQL`, `Redis`, `MongoDB`, `mongosh`) y otros (`Mailpit`, `smtp4dev`, `Inbucket`, `Papercut SMTP`, `Ollama`, `Meilisearch`, `cloudflared`).
 

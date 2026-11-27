@@ -2,7 +2,7 @@
 
 ## Para qué sirve
 
-La pestaña **Servicios → Versiones** permite instalar, actualizar, desinstalar y administrar múltiples versiones de servicios y lenguajes (PHP, Nginx, MySQL, MariaDB, PostgreSQL, Redis, MongoDB, Node.js, Python, Composer, captadores de correo, Ollama, cloudflared, Java, .NET, Go, Rust, Bun, Deno, Zig, Kotlin y Dart), manteniendo instancias paralelas aisladas y verificando cada descarga.
+La pestaña **Servicios → Versiones** permite instalar, actualizar, desinstalar y administrar múltiples versiones de servicios y lenguajes (PHP, Nginx, MySQL, MariaDB, PostgreSQL, Redis, MongoDB, Node.js, Python, Composer, captadores de correo, Ollama, cloudflared, Java, .NET, Go, Rust, Bun, Deno, Zig, Kotlin, Dart, Ruby, Maven y Gradle), manteniendo instancias paralelas aisladas y verificando cada descarga.
 
 ## Paso a paso
 
@@ -33,7 +33,7 @@ El comportamiento al tener varias versiones instaladas depende del tipo de servi
 - **Instancias paralelas (MySQL, MariaDB, PostgreSQL, Redis, MongoDB):** cada versión principal (por ejemplo, `postgresql@16` y `postgresql@17`) tiene su propia carpeta `data/<servicio>/<versión>`, sus propias credenciales y su propio puerto. Puede encender varias al mismo tiempo.
 - **Pool propio por versión (PHP):** cada versión principal encendida corre su propio grupo de procesos `php-cgi`, así un proyecto puede usar PHP 8.3 y otro PHP 8.4 a la vez.
 - **Versión única activa (Nginx, captadores de correo, etc.):** puede instalar varias versiones, pero solo una permanece encendida a la vez.
-- **Lenguajes por proyecto (Node.js, Python, Java, .NET, Go, Rust, Bun, Deno, Zig, Kotlin, Dart):** no se encienden como servicio; cada proyecto usa la versión que solicita o la marcada como predeterminada.
+- **Lenguajes y herramientas por proyecto (Node.js, Python, Java, .NET, Go, Rust, Bun, Deno, Zig, Kotlin, Dart, Ruby, Maven, Gradle):** no se encienden como servicio; cada proyecto usa la versión que solicita o la marcada como predeterminada. Maven y Gradle se lanzan con un JDK de WolfCore Dev (instale Java desde la lista de servicios).
 
 Para definir qué versión usarán los proyectos nuevos y las recetas:
 
