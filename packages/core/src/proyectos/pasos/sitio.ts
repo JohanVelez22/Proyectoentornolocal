@@ -99,7 +99,7 @@ export async function prepararProcesos(
   return procesos;
 }
 
-/** Puerto del proxy de un sitio FastAPI/Node: el del proceso destino, si hay. */
+/** Puerto del proxy de un sitio con proceso (FastAPI, Node, Rails…): el del proceso destino, si hay. */
 export function puertoProxyCon(
   tipo: TipoSitio,
   procesos: readonly ProcesoProyecto[],
@@ -137,7 +137,8 @@ export async function asignarPuertoProxy(
   datos: Omit<Sitio, 'id'>,
   sitioId?: string,
 ): Promise<Omit<Sitio, 'id'>> {
-  if (datos.tipo !== 'fastapi' && datos.tipo !== 'node') return datos;
+  // `proxy` es el sitio con puerto escrito a mano: sin procesos a los que asignarlo.
+  if (datos.tipo === 'proxy' || !TIPOS_PROXY.includes(datos.tipo)) return datos;
   const marcado = datos.procesos.find((p) => p.proxy);
   const hayConPuerto = datos.procesos.some((p) => p.puerto !== null);
   const objetivo =

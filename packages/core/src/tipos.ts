@@ -16,6 +16,9 @@ export const TIPOS_SITIO = [
   'wordpress',
   'fastapi',
   'node',
+  'rails',
+  'springboot',
+  'aspnet',
 ] as const;
 export type TipoSitio = (typeof TIPOS_SITIO)[number];
 
@@ -28,7 +31,14 @@ export const TIPOS_CON_PHP: readonly TipoSitio[] = [
   'personalizado',
 ];
 /** Tipos que Nginx sirve como proxy inverso hacia un puerto local. */
-export const TIPOS_PROXY: readonly TipoSitio[] = ['proxy', 'fastapi', 'node'];
+export const TIPOS_PROXY: readonly TipoSitio[] = [
+  'proxy',
+  'fastapi',
+  'node',
+  'rails',
+  'springboot',
+  'aspnet',
+];
 
 /**
  * Comando de larga duración del proyecto (npm run dev, queue:work, uvicorn…), supervisado.
@@ -226,6 +236,9 @@ export const SitioSchema = z.object({
       zig: z.string().min(1).optional(),
       kotlin: z.string().min(1).optional(),
       dart: z.string().min(1).optional(),
+      ruby: z.string().min(1).optional(),
+      maven: z.string().min(1).optional(),
+      gradle: z.string().min(1).optional(),
     })
     .default({}),
   /**
@@ -788,6 +801,9 @@ export const ConfigSchema = z.object({
             'zig',
             'kotlin',
             'dart',
+            'ruby',
+            'maven',
+            'gradle',
             'composer',
             'cloudflared',
           ]),

@@ -15,6 +15,9 @@ export const LENGUAJES_PROYECTO = [
   'zig',
   'kotlin',
   'dart',
+  'ruby',
+  'maven',
+  'gradle',
 ] as const;
 export type LenguajeProyecto = (typeof LENGUAJES_PROYECTO)[number];
 
@@ -309,6 +312,61 @@ async function pedidoKotlin(carpeta: string, nombres: Set<string>): Promise<Pedi
   return kt ? { version: null, origen: kt, minimo: true } : null;
 }
 
+/** "3.3" de `3.3.5` o `ruby-3.3.5`: Ruby se fija por rama (el parche lo da el instalador). */
+const RAMA_RUBY = /^(?:ruby-)?(\d{1,2})\.(\d{1,2})(?:\.\d{1,3})?(?:-p\d{1,4})?$/;
+
+async function pedidoRuby(carpeta: string, nombres: Set<string>): Promise<PedidoLenguaje | null> {
+  const archivo = lineas((await leer(path.join(carpeta, '.ruby-version'))) ?? '').find(
+    (l) => l !== '' && !l.startsWith('#'),
+  );
+  const m = archivo === undefined ? null : RAMA_RUBY.exec(archivo);
+  if (m) return { version: `${m[1]}.${m[2]}`, origen: '.ruby-version', minimo: false };
+  const gemfile = await leer(path.join(carpeta, 'Gemfile'));
+  if (gemfile !== null) {
+    for (const l of lineas(gemfile)) {
+      // `ruby "3.3.5"` fija la rama; `ruby ">= 3.2"` o `~> 3.2` es un mínimo.
+      const g = /^ruby[ \t(]+["']([~><=! ]{0,3})(\d{1,2})\.(\d{1,2})/.exec(l);
+      if (g) return { version: `${g[2]}.${g[3]}`, origen: 'Gemfile', minimo: g[1]!.trim() !== '' };
+    }
+    return { version: null, origen: 'Gemfile', minimo: false };
+  }
+  return nombres.has('.ruby-version')
+    ? { version: null, origen: '.ruby-version', minimo: false }
+    : null;
+}
+
+/** "8.14" de `distributionUrl=https\://services.gradle.org/distributions/gradle-8.14.3-bin.zip`. */
+function ramaDeDistribucion(texto: string | null, patron: RegExp): string | null {
+  if (texto === null) return null;
+  for (const l of lineas(texto)) {
+    if (!l.startsWith('distributionUrl')) continue;
+    const m = patron.exec(l);
+    if (m) return `${m[1]}.${m[2]}`;
+  }
+  return null;
+}
+
+async function pedidoMaven(carpeta: string): Promise<PedidoLenguaje | null> {
+  if ((await leer(path.join(carpeta, 'pom.xml'))) === null) return null;
+  const rama = ramaDeDistribucion(
+    await leer(path.join(carpeta, '.mvn', 'wrapper', 'maven-wrapper.properties')),
+    /apache-maven-(\d{1,2})\.(\d{1,2})/,
+  );
+  return { version: rama, origen: 'pom.xml', minimo: false };
+}
+
+async function pedidoGradle(carpeta: string, nombres: Set<string>): Promise<PedidoLenguaje | null> {
+  const marca = ['build.gradle.kts', 'build.gradle', 'settings.gradle.kts', 'settings.gradle'].find(
+    (n) => nombres.has(n),
+  );
+  if (!marca) return null;
+  const rama = ramaDeDistribucion(
+    await leer(path.join(carpeta, 'gradle', 'wrapper', 'gradle-wrapper.properties')),
+    /gradle-(\d{1,2})\.(\d{1,2})/,
+  );
+  return { version: rama, origen: marca, minimo: false };
+}
+
 /** Lo que dice un `pubspec.yaml` (línea a línea, sin retroceso). */
 interface Pubspec {
   /** El proyecto usa Flutter (que trae su propio Dart). */
@@ -373,7 +431,8 @@ export async function esProyectoFlutter(carpeta: string): Promise<boolean> {
  * Lo que piden los archivos de la carpeta para Java (`pom.xml`, `build.gradle(.kts)`), .NET
  * (`global.json`, `*.csproj`, `*.sln`), Go (`go.mod`), Rust (`rust-toolchain(.toml)`, `Cargo.toml`),
  * Bun (`bun.lock(b)`, `bunfig.toml`, `.bun-version`), Deno (`deno.json(c)`, `.dvmrc`), Zig (`build.zig`,
- * `.zigversion`), Kotlin (Gradle o Maven con Kotlin, `*.kt`) y Dart (`pubspec.yaml`).
+ * `.zigversion`), Kotlin (Gradle o Maven con Kotlin, `*.kt`), Dart (`pubspec.yaml`), Ruby
+ * (`Gemfile`, `.ruby-version`), Maven (`pom.xml`) y Gradle (`build.gradle(.kts)`).
  * Solo está la clave de los lenguajes que el proyecto usa; su `version` es null si el archivo no
  * dice cuál. Lee solo la raíz de la carpeta y archivos de hasta 64 KB (y 20 proyectos de .NET).
  */
@@ -400,5 +459,11 @@ export async function pedidosLenguajes(
   if (kotlin) res.kotlin = kotlin;
   const dart = await pedidoDart(carpeta);
   if (dart) res.dart = dart;
+  const ruby = await pedidoRuby(carpeta, nombres);
+  if (ruby) res.ruby = ruby;
+  const maven = await pedidoMaven(carpeta);
+  if (maven) res.maven = maven;
+  const gradle = await pedidoGradle(carpeta, nombres);
+  if (gradle) res.gradle = gradle;
   return res;
 }

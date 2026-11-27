@@ -326,6 +326,8 @@ describe('iniciar', () => {
     expect(def.env?.PYTHONIOENCODING).toBe('utf-8');
     expect(def.env?.VIRTUAL_ENV).toBe(join(a.carpeta, 'admin', '.venv'));
     expect(def.env?.PORT).toBe('8001');
+    // Los servidores que leen HOST (Express, Nest) escuchan solo en 127.0.0.1.
+    expect(def.env?.HOST).toBe('127.0.0.1');
   });
 
   it('python usa el del .venv; php lleva su php.ini y PHPRC', async () => {

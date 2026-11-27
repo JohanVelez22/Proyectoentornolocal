@@ -20,6 +20,9 @@ export const TIPOS_RUNTIME = [
   'zig',
   'kotlin',
   'dart',
+  'ruby',
+  'maven',
+  'gradle',
 ] as const;
 export type TipoRuntime = (typeof TIPOS_RUNTIME)[number];
 export type VersionesRuntime = Partial<Record<TipoRuntime, string>>;
@@ -86,6 +89,12 @@ export function variablesRuntime(
       return o.datos ? { ZIG_GLOBAL_CACHE_DIR: path.join(o.datos, 'cache', 'zig') } : {};
     case 'kotlin':
       return { KOTLIN_HOME: carpeta };
+    case 'ruby':
+      return {};
+    case 'maven':
+      return { MAVEN_HOME: carpeta };
+    case 'gradle':
+      return { GRADLE_HOME: carpeta };
     case 'dart':
       return o.datos ? { PUB_CACHE: path.join(o.datos, 'cache', 'pub') } : {};
     default:
@@ -341,6 +350,9 @@ const NOMBRE: Record<TipoRuntime, string> = {
   zig: 'Zig',
   kotlin: 'Kotlin',
   dart: 'Dart',
+  ruby: 'Ruby',
+  maven: 'Maven',
+  gradle: 'Gradle',
 };
 
 /** Pistas de Java, .NET, Go, Rust, Bun, Deno, Zig, Kotlin y Dart a partir de lo que piden los archivos del proyecto. */
@@ -419,6 +431,12 @@ export class Runtimes implements ResolutorRuntimes {
     // Kotlin compila con un Java: si el proyecto usa Kotlin, Java entra aunque no lo pida ningún
     // archivo suyo (con la versión que cumpla, o la LTS más nueva).
     const usaKotlin = sitio.runtimes?.kotlin !== undefined || lenguajes.kotlin !== undefined;
+    // Maven y Gradle también se ejecutan con un Java.
+    const usaHerramientaJava = ['maven', 'gradle'].some(
+      (t) =>
+        sitio.runtimes?.[t as 'maven' | 'gradle'] !== undefined ||
+        lenguajes[t as 'maven' | 'gradle'] !== undefined,
+    );
     for (const tipo of TIPOS_RUNTIME) {
       const elegir = tipo === 'java' ? elegirJava : elegirVersion;
       const pistas: PistaRuntime[] = [];
@@ -431,7 +449,13 @@ export class Runtimes implements ResolutorRuntimes {
         // Java, .NET, Go y Rust solo entran al entorno si el proyecto los usa (lo dice un
         // archivo suyo o lo fijó el sitio): no se suman al PATH de todos los proyectos.
         const delArchivo = lenguajes[tipo];
-        if (!delSitio && delArchivo === undefined && !(tipo === 'java' && usaKotlin)) continue;
+        if (
+          !delSitio &&
+          delArchivo === undefined &&
+          !(tipo === 'java' && (usaKotlin || usaHerramientaJava))
+        ) {
+          continue;
+        }
         pistas.push(...(delArchivo ?? []));
       }
       const instaladas = await this.instalados(tipo);
@@ -456,6 +480,13 @@ export class Runtimes implements ResolutorRuntimes {
         );
       } else {
         res.avisos.push(`${pide}. Instálelo desde Servicios.`);
+      }
+    }
+    for (const t of ['maven', 'gradle'] as const) {
+      if (res[t] && !res.java) {
+        res.avisos.push(
+          `${NOMBRE[t]} necesita un JDK y no hay ninguno instalado. Instale Java (Temurin) desde Servicios.`,
+        );
       }
     }
     if (res.kotlin && !res.java) {
@@ -519,6 +550,10 @@ export class Runtimes implements ResolutorRuntimes {
     if (v.zig) salida.push(this.rutaBin('zig', v.zig));
     if (v.kotlin) salida.push(path.join(this.rutaBin('kotlin', v.kotlin), 'bin'));
     if (v.dart) salida.push(path.join(this.rutaBin('dart', v.dart), 'bin'));
+    // Ruby, Maven y Gradle: su `bin` (en Ruby también quedan ahí los ejecutables de las gemas).
+    if (v.ruby) salida.push(path.join(this.rutaBin('ruby', v.ruby), 'bin'));
+    if (v.maven) salida.push(path.join(this.rutaBin('maven', v.maven), 'bin'));
+    if (v.gradle) salida.push(path.join(this.rutaBin('gradle', v.gradle), 'bin'));
     return salida;
   }
 }

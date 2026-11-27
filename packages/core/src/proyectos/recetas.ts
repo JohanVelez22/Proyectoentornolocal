@@ -99,6 +99,36 @@ export function procesoUvicorn(
   };
 }
 
+const ID_PROCESO_ARRANQUE: Partial<Record<Deteccion['tipo'], string>> = {
+  rails: 'rails',
+  springboot: 'spring',
+  aspnet: 'dotnet',
+  node: 'servidor',
+};
+
+/**
+ * Proceso del servidor de un proyecto Rails, Spring Boot, ASP.NET Core, Express o Nest: el
+ * comando de arranque detectado (plantilla fija con `{puerto}`, solo 127.0.0.1) como destino del
+ * proxy. Sin `{puerto}` en el comando (npm), el puerto se asigna al guardar el sitio y el proceso
+ * lo recibe en `PORT` y `HOST`. null si la detección no trae comando.
+ */
+export function procesoDeArranque(
+  det: Pick<Deteccion, 'tipo' | 'arranque'>,
+): ProcesoProyecto | null {
+  const id = ID_PROCESO_ARRANQUE[det.tipo];
+  if (!id || !det.arranque || det.arranque.length === 0) return null;
+  return {
+    id,
+    nombre: id,
+    comando: [...det.arranque],
+    cwd: 'raiz',
+    autoIniciar: true,
+    reiniciar: true,
+    puerto: null,
+    proxy: true,
+  };
+}
+
 /**
  * Receta por defecto según la detección (spec 3.1). El id de cada paso es su tipo. El sitio se
  * crea siempre con HTTPS. En FastAPI el "proceso uvicorn" va dentro de `sitio-crear`
@@ -125,6 +155,10 @@ export function recetaPorDefecto(det: Deteccion): PasoReceta[] {
     if (!det.tienePackageJson) return;
     paso('npm-ci', 'Instalar dependencias de Node (npm ci)');
     if (det.scriptsNpm.includes('build')) paso('npm-build', 'Compilar recursos (npm run build)');
+  };
+  const procesosDe = (d: Deteccion): Record<string, unknown> => {
+    const p = procesoDeArranque(d);
+    return p ? { procesos: [p] } : {};
   };
   const sitio = (args: Record<string, unknown> = {}): void =>
     paso('sitio-crear', `Crear el sitio ${det.dominioSugerido}`, {
@@ -164,10 +198,21 @@ export function recetaPorDefecto(det: Deteccion): PasoReceta[] {
       if (det.pgvector) paso('pgvector-activar', 'Activar pgvector en la base');
       sitio({ procesos: [procesoUvicorn(det)] });
       break;
+    case 'rails':
+      // Las gemas con extensiones nativas piden el Devkit (MSYS2): paso manual, ver Versiones.
+      paso('comando', 'Instalar gemas (bundle install)', {
+        args: { comando: ['ruby', '-S', 'bundle', 'install'] },
+      });
+      sitio(procesosDe(det));
+      break;
+    case 'springboot':
+    case 'aspnet':
+      sitio(procesosDe(det));
+      break;
     default:
       if (det.tieneComposer) composer();
       npm();
-      sitio();
+      sitio(det.tipo === 'node' ? procesosDe(det) : {});
   }
   return receta;
 }

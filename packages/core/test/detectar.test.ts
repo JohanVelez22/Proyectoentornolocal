@@ -12,6 +12,16 @@ async function carpeta(nombre: string): Promise<string> {
   return dir;
 }
 
+/** Maven y Gradle (D47) tienen su propia prueba: aquí solo importan los lenguajes. */
+const sinHerramientas = <T extends object | undefined>(r: T): T => {
+  if (!r) return r;
+  const { maven: _m, gradle: _g, ruby: _r, ...resto } = r as Record<string, unknown>;
+  void _m;
+  void _g;
+  void _r;
+  return resto as T;
+};
+
 describe('detectarProyecto', () => {
   it('detecta laravel con la versión de PHP', async () => {
     const d = await carpeta('WolfCore System');
@@ -80,7 +90,7 @@ describe('D5: Java, .NET, Go y Rust en la detección ampliada', () => {
   const det = async (archivos: Record<string, string>) => {
     const d = await carpeta('proy');
     for (const [n, t] of Object.entries(archivos)) await writeFile(join(d, n), t);
-    return (await detectarAmpliada(d, { pgvector: false })).runtimesPedidos;
+    return sinHerramientas((await detectarAmpliada(d, { pgvector: false })).runtimesPedidos);
   };
 
   it('sin archivos de esos lenguajes no hay ninguna clave', async () => {
@@ -170,7 +180,7 @@ describe('D5 revisión: archivos hostiles no congelan la detección', () => {
     const d = await carpeta('proy');
     for (const [n, t] of Object.entries(archivos)) await writeFile(join(d, n), t);
     const t0 = Date.now();
-    const r = (await detectarAmpliada(d, { pgvector: false })).runtimesPedidos;
+    const r = sinHerramientas((await detectarAmpliada(d, { pgvector: false })).runtimesPedidos);
     return { r, ms: Date.now() - t0 };
   };
   const MB = 1024 * 1024;
@@ -229,7 +239,7 @@ describe('D11: Bun, Deno, Zig, Kotlin y Dart en la detección ampliada', () => {
   const det = async (archivos: Record<string, string>) => {
     const d = await carpeta('proy');
     for (const [n, t] of Object.entries(archivos)) await writeFile(join(d, n), t);
-    return (await detectarAmpliada(d, { pgvector: false })).runtimesPedidos;
+    return sinHerramientas((await detectarAmpliada(d, { pgvector: false })).runtimesPedidos);
   };
 
   it('Bun: bun.lock(b), bunfig.toml, .bun-version y packageManager', async () => {

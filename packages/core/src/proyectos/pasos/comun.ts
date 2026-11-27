@@ -6,6 +6,7 @@ import { MENSAJE_CANCELADO } from '../../plataforma/lanzar';
 import { ErrorWolf } from '../../errores';
 import type { Lanzador } from '../../plataforma/tipos';
 import type { Rutas } from '../../rutas';
+import { lanzamientoGradle, lanzamientoMaven } from '../../runtimes/lanzadoresJava';
 import { TIPOS_RUNTIME, type Runtimes, type VersionesRuntime } from '../../runtimes/runtimes';
 import type { Sitio } from '../../tipos';
 import { existe } from '../archivos';
@@ -344,6 +345,44 @@ export async function resolverPrograma(
         cmd: (await existe(pythonVenv(carpeta))) ? pythonVenv(carpeta) : pythonExe(d, h),
         args: resto,
       };
+    case 'ruby':
+    case 'dotnet': {
+      // Mismo aviso claro que Node y Python si el proyecto no tiene ese runtime instalado.
+      const version = h.versiones[nombre];
+      if (!version) {
+        throw new Error(
+          `No hay ${nombre === 'ruby' ? 'Ruby' : '.NET'} instalado para este proyecto: instálelo desde Servicios.`,
+        );
+      }
+      const exe =
+        nombre === 'ruby' ? path.join('bin', nombreEjecutable('ruby')) : nombreEjecutable('dotnet');
+      return { cmd: path.join(d.runtimes.rutaBin(nombre, version), exe), args: resto };
+    }
+    case 'mvn':
+    case 'gradle': {
+      // `mvn.cmd` y `gradle.bat` necesitan shell: se lanza el JDK con los jar de la herramienta.
+      const tipo = nombre === 'mvn' ? 'maven' : 'gradle';
+      const version = h.versiones[tipo];
+      if (!version) {
+        throw new Error(
+          `No hay ${tipo === 'maven' ? 'Maven' : 'Gradle'} instalado para este proyecto: instálelo desde Servicios.`,
+        );
+      }
+      if (!h.versiones.java) {
+        throw new Error(
+          'No hay un JDK instalado para este proyecto: instale Java desde Servicios.',
+        );
+      }
+      const java = path.join(
+        d.runtimes.rutaBin('java', h.versiones.java),
+        'bin',
+        nombreEjecutable('java'),
+      );
+      const raiz = d.runtimes.rutaBin(tipo, version);
+      return tipo === 'maven'
+        ? lanzamientoMaven(raiz, java, carpeta, resto)
+        : lanzamientoGradle(raiz, java, resto);
+    }
     default:
       return { cmd: programa!, args: resto };
   }

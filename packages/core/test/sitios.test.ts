@@ -293,6 +293,17 @@ describe('GestorSitios robustez', () => {
     expect(ramasEnUso(await g.listar())).toEqual(['8.4']);
   });
 
+  it('rails, springboot y aspnet son sitios de proxy: no piden PHP y necesitan puerto', async () => {
+    const g = gestor();
+    for (const tipo of ['rails', 'springboot', 'aspnet'] as const) {
+      await expect(g.crear(datos(`${tipo}.test`, { tipo }))).rejects.toThrow(
+        'necesita un puerto de proxy o un proceso con puerto',
+      );
+      const s = await g.crear(datos(`${tipo}-ok.test`, { tipo, puertoProxy: 8123 }));
+      expect(s.php).toBeNull();
+    }
+  });
+
   it('fastapi y node necesitan un puerto de proxy o un proceso con puerto', async () => {
     const g = gestor();
     await expect(g.crear(datos('api.test', { tipo: 'fastapi' }))).rejects.toThrow(

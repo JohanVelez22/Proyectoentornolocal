@@ -157,7 +157,10 @@ export function generarVhost(s: Sitio, o: OpcionesVhost): string {
       cuerpo = bloqueProxy(s.puertoProxy);
       break;
     case 'fastapi':
-    case 'node': {
+    case 'node':
+    case 'rails':
+    case 'springboot':
+    case 'aspnet': {
       const puerto = puertoDelProxy(s);
       if (puerto === null) {
         throw new Error(

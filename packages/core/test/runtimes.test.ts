@@ -285,7 +285,7 @@ describe('D5: Java, .NET, Go y Rust como runtimes', () => {
     writeFileSync(path.join(tc, 'lib', 'rustlib', 'multirust-channel-manifest.toml'), '');
   };
 
-  it('TIPOS_RUNTIME tiene los once (D5 y D11) y esTipoRuntime solo acepta esos', () => {
+  it('TIPOS_RUNTIME tiene los catorce (D5, D11 y D47) y esTipoRuntime solo acepta esos', () => {
     expect([...TIPOS_RUNTIME]).toEqual([
       'node',
       'python',
@@ -298,9 +298,13 @@ describe('D5: Java, .NET, Go y Rust como runtimes', () => {
       'zig',
       'kotlin',
       'dart',
+      'ruby',
+      'maven',
+      'gradle',
     ]);
     expect(esTipoRuntime('go')).toBe(true);
-    expect(esTipoRuntime('ruby')).toBe(false);
+    expect(esTipoRuntime('ruby')).toBe(true);
+    expect(esTipoRuntime('php')).toBe(false);
     expect(esTipoRuntime(undefined)).toBe(false);
   });
 

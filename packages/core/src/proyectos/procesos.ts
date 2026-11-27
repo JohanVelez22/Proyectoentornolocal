@@ -438,8 +438,9 @@ export class ProcesosProyecto {
       comando,
       args,
       cwd,
-      // PORT: muchos servidores de Node (y otros) toman de ahí el puerto asignado.
-      env: p.puerto === null ? cambios : { ...cambios, PORT: String(p.puerto) },
+      // PORT y HOST: Express, Nest y otros servidores toman de ahí el puerto asignado y escuchan
+      // solo en 127.0.0.1.
+      env: p.puerto === null ? cambios : { ...cambios, PORT: String(p.puerto), HOST: '127.0.0.1' },
       // Sin `puerto`: es informativo (proxy) y no sirve de sonda de salud; vite o un servidor
       // que escucha en otra interfaz o tarda en abrirlo no deben morir por eso.
       exigirInicio: true,

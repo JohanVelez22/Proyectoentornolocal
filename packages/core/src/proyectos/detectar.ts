@@ -43,6 +43,12 @@ export interface Deteccion {
   subcarpeta?: string | null;
   /** Módulo ASGI para uvicorn (`app.main:app`, `main:app`…); null si no se encontró. */
   moduloAsgi?: string | null;
+  /**
+   * Comando de arranque del servidor del proyecto (Rails, Spring Boot, ASP.NET Core, Express o
+   * Nest), sin shell, con `{puerto}` donde va el puerto libre; null si el tipo no lo trae.
+   * Opcional para las detecciones guardadas.
+   */
+  arranque?: string[] | null;
 }
 
 async function leerJson(ruta: string): Promise<Record<string, unknown> | null> {
@@ -377,6 +383,74 @@ export async function moduloAsgi(carpeta: string): Promise<string | null> {
   return primero;
 }
 
+/** `--server.address=127.0.0.1 --server.port={puerto}` de Spring Boot. */
+const ARGS_SPRING = '--server.address=127.0.0.1 --server.port={puerto}';
+
+/** Un `.csproj` de la raíz con el SDK web (`Microsoft.NET.Sdk.Web`): un ASP.NET Core. */
+async function esAspnet(carpeta: string): Promise<boolean> {
+  let nombres: string[];
+  try {
+    nombres = (await readdir(carpeta)).filter((n) => /\.csproj$/i.test(n)).slice(0, 20);
+  } catch {
+    return false;
+  }
+  for (const n of nombres) {
+    const t = await leerTexto(join(carpeta, n));
+    if (t !== null && /Sdk\s*=\s*["']Microsoft\.NET\.Sdk\.Web["']/.test(t)) return true;
+  }
+  return false;
+}
+
+/**
+ * Rails (`Gemfile` con `gem "rails"` y `bin/rails`), Spring Boot (`pom.xml` o `build.gradle(.kts)`
+ * con spring-boot) y ASP.NET Core (`.csproj` con `Microsoft.NET.Sdk.Web`), con su comando de
+ * arranque: solo en 127.0.0.1 y en el puerto `{puerto}`. Los comandos son plantillas fijas de
+ * WolfCore Dev: nada del repositorio se copia a ellos.
+ */
+async function frameworkConProceso(
+  carpeta: string,
+): Promise<{ tipo: TipoSitio; arranque: string[] } | null> {
+  const gemfile = await leerTexto(join(carpeta, 'Gemfile'));
+  if (
+    gemfile !== null &&
+    /^\s*gem\s+["']rails["']/m.test(gemfile) &&
+    (await existe(join(carpeta, 'bin', 'rails')))
+  ) {
+    return {
+      tipo: 'rails',
+      arranque: ['ruby', 'bin/rails', 'server', '-b', '127.0.0.1', '-p', '{puerto}'],
+    };
+  }
+  const pom = await leerTexto(join(carpeta, 'pom.xml'));
+  if (pom !== null && pom.includes('spring-boot')) {
+    return {
+      tipo: 'springboot',
+      arranque: ['mvn', 'spring-boot:run', `-Dspring-boot.run.arguments=${ARGS_SPRING}`],
+    };
+  }
+  for (const n of ['build.gradle.kts', 'build.gradle']) {
+    const g = await leerTexto(join(carpeta, n));
+    if (g !== null && /org\.springframework\.boot|spring-boot/.test(g)) {
+      return {
+        tipo: 'springboot',
+        arranque: ['gradle', 'bootRun', '--no-daemon', `--args=${ARGS_SPRING}`],
+      };
+    }
+  }
+  if (await esAspnet(carpeta)) {
+    return { tipo: 'aspnet', arranque: ['dotnet', 'run', '--urls', 'http://127.0.0.1:{puerto}'] };
+  }
+  return null;
+}
+
+/** Express o Nest: `npm run start` o, si no hay, `npm run start:dev`; null si no hay ninguno. */
+function arranqueNpm(pkg: Record<string, unknown> | null): string[] | null {
+  const s = pkg?.scripts;
+  const scripts = s && typeof s === 'object' ? Object.keys(s) : [];
+  const nombre = ['start', 'start:dev'].find((n) => scripts.includes(n));
+  return nombre ? ['npm', 'run', nombre] : null;
+}
+
 /** Subcarpetas (un nivel) que se miran cuando la raíz no dice qué es; tope para repos grandes. */
 const MAX_SUBCARPETAS = 40;
 
@@ -399,6 +473,8 @@ async function subcarpetaFastapi(carpeta: string): Promise<string | null> {
 
 interface TipoDetectado {
   tipo: TipoSitio;
+  /** Comando de arranque del servidor (ver `Deteccion.arranque`). */
+  arranque?: string[] | null;
   urlBaseVar: string | null;
   php: string | null;
   /** Motor de la base leído de la configuración del framework (CI3: database.php). */
@@ -433,14 +509,23 @@ async function tipoDe(
     return { tipo: 'wordpress', urlBaseVar: null, php: null };
   }
   if (await pideFastapi(carpeta)) return { tipo: 'fastapi', urlBaseVar: null, php: null };
+  const web = await frameworkConProceso(carpeta);
+  if (web) return { tipo: web.tipo, urlBaseVar: null, php: null, arranque: web.arranque };
   const indexPhp = await hay('index.php');
   const deps = dependencias(pkg);
   if (
     !indexPhp &&
     !(await hay('composer.json')) &&
-    ['vite', 'next', 'nuxt'].some((d) => deps.has(d))
+    ['vite', 'next', 'nuxt', 'express', '@nestjs/core'].some((d) => deps.has(d))
   ) {
-    return { tipo: 'node', urlBaseVar: null, php: null };
+    // Solo Express y Nest traen comando de arranque (Vite, Next y Nuxt se arrancan a mano).
+    const servidor = ['express', '@nestjs/core'].some((d) => deps.has(d));
+    return {
+      tipo: 'node',
+      urlBaseVar: null,
+      php: null,
+      ...(servidor ? { arranque: arranqueNpm(pkg) } : {}),
+    };
   }
   if (!indexPhp && !pkg) {
     // Repositorio con la app en una subcarpeta (p. ej. el FastAPI en admin/).
@@ -462,7 +547,14 @@ export async function detectarProyecto(
 ): Promise<Deteccion> {
   const composer = await leerJson(join(carpeta, 'composer.json'));
   const pkg = await leerJson(join(carpeta, 'package.json'));
-  const { tipo, urlBaseVar, php, motor, subcarpeta = null } = await tipoDe(carpeta, composer, pkg);
+  const {
+    tipo,
+    urlBaseVar,
+    php,
+    motor,
+    subcarpeta = null,
+    arranque = null,
+  } = await tipoDe(carpeta, composer, pkg);
   const app = subcarpeta ? join(carpeta, subcarpeta) : carpeta;
   const pistas = await pistasArchivos(app);
   const servicios = serviciosDeEnv(await variablesEnv(app));
@@ -490,5 +582,6 @@ export async function detectarProyecto(
     urlBaseVar,
     subcarpeta,
     moduloAsgi: tipo === 'fastapi' ? await moduloAsgi(app) : null,
+    ...(arranque ? { arranque } : {}),
   };
 }
