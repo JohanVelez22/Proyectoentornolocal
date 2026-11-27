@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { ErrorWolf } from '../errores';
 import { enmascararSecretos } from '../patronesSecretos';
@@ -10,6 +10,7 @@ import { ejecutar, hostConCaWolf, raicesConCa } from './red';
 import {
   MARCA_SECRETO,
   MASCARA,
+  enmascararJson,
   esNombreSecreto,
   esSoloVariables,
   urlSinSecretos,
@@ -49,6 +50,23 @@ export interface DepsClienteHttp {
   escribir?: (destino: string, datos: Buffer) => Promise<void>;
   /** Aviso de un archivo ignorado (p. ej. por tamaño); por defecto, la consola del proceso. */
   avisar?: (mensaje: string) => void;
+}
+
+/** Lo que el historial guarda de un cuerpo y de cada valor: poco, y nunca más de esto. */
+const MAX_CUERPO_HISTORIAL = 8 * 1024;
+const MAX_VALOR_HISTORIAL = 2 * 1024;
+/** Archivos de datos más grandes que esto se ignoran (no se leen). */
+const MAX_ARCHIVO_DATOS = 20 * 1024 * 1024;
+
+/** Cuerpo JSON o raw para el historial: sin claves secretas, sin patrones de secretos y recortado. */
+function textoParaHistorial(c: {
+  tipo: 'json' | 'raw';
+  texto: string;
+  tipoContenido?: string;
+}): string {
+  const esJson = c.tipo === 'json' || /json/i.test(c.tipoContenido ?? '');
+  const texto = esJson ? (enmascararJson(c.texto, MASCARA) ?? c.texto) : c.texto;
+  return enmascararSecretos(texto).slice(0, MAX_CUERPO_HISTORIAL);
 }
 
 /** Lo que una operación creó o sobrescribió en el almacén, para deshacerla si falla. */
@@ -152,6 +170,15 @@ export class ClienteHttp {
 
   private async leerJson(nombre: string): Promise<unknown> {
     try {
+      const { size } = await stat(this.ruta(nombre));
+      if (size > MAX_ARCHIVO_DATOS) {
+        // No se lee: se aparta (para no pisarlo al guardar) y se avisa.
+        (this.d.avisar ?? ((m: string) => console.warn(m)))(
+          `Cliente HTTP: ${nombre} pesa más de 20 MB y se ignora (se movió a ${nombre}.excedido).`,
+        );
+        await rename(this.ruta(nombre), `${this.ruta(nombre)}.excedido`).catch(() => undefined);
+        return null;
+      }
       return JSON.parse(await readFile(this.ruta(nombre), 'utf8')) as unknown;
     } catch {
       return null;
@@ -459,7 +486,11 @@ export class ClienteHttp {
         x.ref !== undefined || (esNombreSecreto(x.clave) && !esSoloVariables(x.valor));
       return {
         clave: x.clave,
-        valor: secreto ? (x.valor === '' && !x.ref ? '' : MASCARA) : enmascararSecretos(x.valor),
+        valor: secreto
+          ? x.valor === '' && !x.ref
+            ? ''
+            : MASCARA
+          : enmascararSecretos(x.valor).slice(0, MAX_VALOR_HISTORIAL),
         activo: x.activo,
       };
     };
@@ -468,14 +499,14 @@ export class ClienteHttp {
     return {
       ...p,
       id: '',
-      url: urlSinSecretos(p.url),
+      url: urlSinSecretos(p.url).slice(0, MAX_VALOR_HISTORIAL),
       params: p.params.map(par),
       cabeceras: p.cabeceras.map(par),
       cuerpo:
         c.tipo === 'form' || c.tipo === 'multipart'
           ? { tipo: c.tipo, campos: c.campos.map(par) }
           : c.tipo === 'json' || c.tipo === 'raw'
-            ? { ...c, texto: enmascararSecretos(c.texto) }
+            ? { ...c, texto: textoParaHistorial(c) }
             : c,
       auth: sinSecreto(a),
     };

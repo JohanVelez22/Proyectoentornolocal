@@ -9,10 +9,62 @@ const SIEMPRE = new Set([
   'set-cookie',
 ]);
 
-/** ¿El nombre (de cabecera, parámetro, campo o variable) es de un valor secreto? */
+/** Palabras sueltas de un nombre (`X-Session`, `authCode`, `csrf_token`) que lo hacen secreto. */
+const PALABRAS_SECRETAS = new Set([
+  'session',
+  'sessionid',
+  'sid',
+  'auth',
+  'jwt',
+  'code',
+  'sig',
+  'signature',
+  'csrf',
+  'xsrf',
+]);
+
+/** ¿El nombre (de cabecera, parámetro, campo, clave JSON o variable) es de un valor secreto? */
 export function esNombreSecreto(nombre: string): boolean {
   const n = nombre.trim();
-  return SIEMPRE.has(n.toLowerCase()) || NOMBRE_VARIABLE_SECRETA.test(n);
+  const minuscula = n.toLowerCase();
+  if (SIEMPRE.has(minuscula) || NOMBRE_VARIABLE_SECRETA.test(n)) return true;
+  if (/session|csrf|xsrf|signature|jwt/.test(minuscula)) return true;
+  return n
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .some((w) => PALABRAS_SECRETAS.has(w));
+}
+
+/**
+ * Un texto JSON con el valor de toda clave de nombre secreto (a cualquier profundidad) cambiado
+ * por `marca`. null si no es JSON o si no hay nada que ocultar (entonces se deja el texto tal cual).
+ */
+export function enmascararJson(texto: string, marca: string): string | null {
+  let valor: unknown;
+  try {
+    valor = JSON.parse(texto);
+  } catch {
+    return null;
+  }
+  let cambio = false;
+  const recorrer = (x: unknown): unknown => {
+    if (Array.isArray(x)) return x.map(recorrer);
+    if (x !== null && typeof x === 'object') {
+      return Object.fromEntries(
+        Object.entries(x).map(([k, v]) => {
+          if (esNombreSecreto(k)) {
+            cambio = true;
+            return [k, marca];
+          }
+          return [k, recorrer(v)];
+        }),
+      );
+    }
+    return x;
+  };
+  const r = recorrer(valor);
+  return cambio ? JSON.stringify(r, null, texto.includes('\n') ? 2 : undefined) : null;
 }
 
 /** Cabeceras que nunca acompañan a una redirección a otro origen. */

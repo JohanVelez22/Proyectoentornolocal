@@ -1,6 +1,12 @@
 import { randomBytes } from 'node:crypto';
 import { ErrorWolf } from '../errores';
-import { MARCA_SECRETO, esNombreSecreto, esSoloVariables, splitConsulta } from './sensibles';
+import {
+  MARCA_SECRETO,
+  enmascararJson,
+  esNombreSecreto,
+  esSoloVariables,
+  splitConsulta,
+} from './sensibles';
 import { MAX_CUERPO_PETICION, type MetodoHttp, type ParHttp, type PeticionHttp } from './tipos';
 import { NOMBRE_CABECERA } from './validar';
 import { sustituir } from './variables';
@@ -197,10 +203,14 @@ export async function componer(
 
   let cuerpo: CuerpoResuelto = { tipo: 'ninguno' };
   const c = p.cuerpo;
+  const sinClaves = (texto: string, tipo: string): string =>
+    ctx.incluirSecretos || !/json/i.test(tipo)
+      ? texto
+      : (enmascararJson(texto, MARCA_SECRETO) ?? texto);
   if (c.tipo === 'json') {
     cuerpo = {
       tipo: 'texto',
-      texto: sustituir(c.texto, ctx.variables),
+      texto: sinClaves(sustituir(c.texto, ctx.variables), 'json'),
       tipoContenido: 'application/json',
     };
   } else if (c.tipo === 'raw') {
@@ -212,7 +222,11 @@ export async function componer(
         nombre: 'Content-Type',
       });
     }
-    cuerpo = { tipo: 'texto', texto: sustituir(c.texto, ctx.variables), tipoContenido };
+    cuerpo = {
+      tipo: 'texto',
+      texto: sinClaves(sustituir(c.texto, ctx.variables), tipoContenido),
+      tipoContenido,
+    };
   } else if (c.tipo === 'form' || c.tipo === 'multipart') {
     cuerpo = { tipo: c.tipo, campos: await lista(c.campos, ctx, secretos) };
   }

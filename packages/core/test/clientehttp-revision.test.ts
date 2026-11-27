@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
 import type { AddressInfo } from 'node:net';
@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ClienteHttp, type PeticionHttp, type SecretosHttp } from '../src';
+import { esNombreSecreto } from '../src/clientehttp/sensibles';
 import { emitirCertificado, generarCA } from '../src/https/ca';
 
 // Correcciones de la revisión opus de D48. Todo contra 127.0.0.1 con puerto aleatorio; los
@@ -380,5 +381,112 @@ describe('el Content-Type del cuerpo raw no admite saltos de línea', () => {
         { entornoId: e.id },
       ),
     ).rejects.toMatchObject({ codigo: 'clientehttp.cabecera_invalida' });
+  });
+});
+
+describe('M5: más nombres sensibles, también en el cuerpo JSON', () => {
+  it('reconoce sesión, sid, auth, jwt, code, sig, signature y csrf, sin falsos obvios', () => {
+    for (const n of [
+      'session',
+      'X-Session',
+      'sessionId',
+      'sid',
+      'auth',
+      'X-Auth',
+      'jwt',
+      'code',
+      'authCode',
+      'sig',
+      'Signature',
+      'X-CSRF-Token',
+      'xsrf-header',
+    ]) {
+      expect(esNombreSecreto(n), n).toBe(true);
+    }
+    for (const n of ['Accept', 'codec', 'author', 'page', 'X-Request-Id', 'sidebar']) {
+      expect(esNombreSecreto(n), n).toBe(false);
+    }
+  });
+
+  it('el historial enmascara cabeceras, consulta y claves JSON con nombre de secreto', async () => {
+    const puerto = await servidor(eco);
+    const cuerpo = JSON.stringify({
+      password: 'hunter2-falsa',
+      ok: 'visible',
+      nested: { session: 'SESION-falsa', lista: [{ jwt: 'JWT-falso', n: 1 }] },
+    });
+    await cliente.enviar(
+      peticion(`http://127.0.0.1:${puerto}/?code=OAUTHCODE-falso&sig=FIRMA-falsa&q=ver`, {
+        metodo: 'POST',
+        cabeceras: [{ clave: 'X-Session', valor: 'SESION-123-falsa', activo: true }],
+        cuerpo: { tipo: 'json', texto: cuerpo },
+      }),
+    );
+    const h = readFileSync(path.join(carpeta, 'historial.json'), 'utf8');
+    for (const s of ['hunter2', 'SESION', 'OAUTHCODE', 'FIRMA', 'JWT-falso']) {
+      expect(h, s).not.toContain(s);
+    }
+    expect(h).toContain('visible');
+    expect(h).toContain('q');
+  });
+
+  it('copiar como curl sin credenciales también oculta esas claves del cuerpo y las cabeceras', async () => {
+    const curl = await cliente.copiarComoCurl(
+      peticion('http://h.test/', {
+        metodo: 'POST',
+        cabeceras: [{ clave: 'X-Session', valor: 'SESION-falsa', activo: true }],
+        cuerpo: {
+          tipo: 'json',
+          texto: '{"token":"tok-falso","nombre":"Ana","a":{"csrf":"c-falso"}}',
+        },
+      }),
+      null,
+      false,
+    );
+    expect(curl).not.toContain('falso');
+    expect(curl).toContain('Ana');
+    expect(curl).toContain('<secreto>');
+    // Con credenciales, el cuerpo sale tal cual.
+    expect(
+      await cliente.copiarComoCurl(
+        peticion('http://h.test/', {
+          metodo: 'POST',
+          cuerpo: { tipo: 'json', texto: '{"token":"tok-falso"}' },
+        }),
+        null,
+        true,
+      ),
+    ).toContain('tok-falso');
+  });
+});
+
+describe('M8: tamaño del historial y de los archivos de datos', () => {
+  it('recorta a 8 KB el cuerpo guardado en el historial', async () => {
+    const puerto = await servidor(eco);
+    await cliente.enviar(
+      peticion(`http://127.0.0.1:${puerto}/`, {
+        metodo: 'POST',
+        cuerpo: { tipo: 'raw', texto: 'x'.repeat(100_000), tipoContenido: 'text/plain' },
+      }),
+    );
+    const [h] = (await cliente.estado()).historial;
+    const c = h!.peticion.cuerpo;
+    expect(c.tipo === 'raw' ? c.texto.length : -1).toBeLessThanOrEqual(8192);
+    expect(readFileSync(path.join(carpeta, 'historial.json')).length).toBeLessThan(40_000);
+  });
+
+  it('ignora con aviso (y no lee) un archivo de datos de más de 20 MB', async () => {
+    const avisos: string[] = [];
+    const c = new ClienteHttp({
+      carpeta,
+      secretos,
+      caWolf: async () => null,
+      dominiosWolf: async () => [],
+      avisar: (m) => avisos.push(m),
+    });
+    await c.guardarPeticion(peticion('http://h.test/', { nombre: 'uno' }));
+    writeFileSync(path.join(carpeta, 'coleccion.json'), Buffer.alloc(21 * 1024 * 1024, 32));
+    expect((await c.estado()).coleccion).toEqual([]);
+    expect(avisos.some((m) => m.includes('coleccion.json'))).toBe(true);
   });
 });
