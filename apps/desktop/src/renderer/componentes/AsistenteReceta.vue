@@ -787,7 +787,8 @@ function alCambiarVisible(v: boolean): void {
 }
 .rejilla {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  /* 190 px: «Whichever is detected» y «Java 21.0.13.1» no se recortan en la ventana de 760 px. */
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 10px 12px;
 }
 .campo {
