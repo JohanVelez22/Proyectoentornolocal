@@ -8,7 +8,13 @@ import {
   type DetectorSensible,
 } from '../herramientas/archivoSensible';
 import { rutaComparable, rutaDentroDe } from '../plataforma/sistema';
-import { CARPETAS_PROHIBIDAS, esCarpetaProhibida } from './contenido';
+import {
+  CARPETAS_PROHIBIDAS,
+  detectorCompartir,
+  esBinarioGrande,
+  esCarpetaDeClaves,
+  esCarpetaProhibida,
+} from './contenido';
 import { MAX_ANALISIS_BYTES, ServidorCompartir, type AccesoCompartido } from './servidor';
 
 /**
@@ -29,6 +35,8 @@ export type DuracionCompartir = (typeof DURACIONES_MIN)[number];
 export const PROVEEDORES_COMPARTIR = ['cloudflare-rapido', 'ngrok'] as const;
 export type ProveedorCompartir = (typeof PROVEEDORES_COMPARTIR)[number];
 export const MAX_ACCESOS = 200;
+/** Lo máximo que `parar` espera a que un inicio abortado termine de limpiar. */
+const ESPERA_ABORTO_MS = 10_000;
 /** Cada cuánto se revisa el vencimiento por la hora del reloj (un temporizador no cuenta lo suspendido). */
 export const REVISION_MS = 15_000;
 /** Tope de accesos anotados por segundo: una avalancha de peticiones no inunda el registro ni la ventana. */
@@ -40,6 +48,8 @@ export interface EstadoCompartir {
   fase: 'inactiva' | 'iniciando' | 'activa';
   /** Ruta exacta compartida (la que se confirmó). */
   ruta: string | null;
+  /** La ruta real (con `realpath`) cuando difiere de la elegida (enlaces, uniones, nombres 8.3). */
+  rutaReal: string | null;
   tipo: 'carpeta' | 'archivo' | null;
   proveedor: ProveedorCompartir | null;
   duracionMin: DuracionCompartir | null;
@@ -58,11 +68,18 @@ export interface TunelAbierto {
 
 export interface DepsCompartir {
   /** Abre un túnel hacia `127.0.0.1:puerto`; `alCaer` se llama si el túnel muere por su cuenta. */
-  tunel(puerto: number, proveedor: ProveedorCompartir, alCaer: () => void): Promise<TunelAbierto>;
+  tunel(
+    puerto: number,
+    proveedor: ProveedorCompartir,
+    alCaer: () => void,
+    senal: AbortSignal,
+  ): Promise<TunelAbierto>;
   /** Carpetas de datos de WolfCore Dev (la de siempre y la de `WOLFCORE_DATOS`). */
   carpetasPropias: () => readonly string[];
   carpetaInicio: () => string;
   carpetasSistema: () => readonly string[];
+  /** `%APPDATA%`, `%LOCALAPPDATA%` y `<inicio>\AppData`: ni se comparten ni lo de dentro. */
+  carpetasPerfil: () => readonly string[];
   sitios: () => Promise<readonly { carpeta: string; datosReales: boolean }[]>;
   alEstado: (e: EstadoCompartir) => void;
   alAcceso: (a: AccesoCompartido) => void;
@@ -81,6 +98,7 @@ export interface OpcionesCompartir {
 const INACTIVA: EstadoCompartir = {
   fase: 'inactiva',
   ruta: null,
+  rutaReal: null,
   tipo: null,
   proveedor: null,
   duracionMin: null,
@@ -107,6 +125,8 @@ export class Compartir {
   /** Se incrementa en cada inicio y cada parada: invalida un inicio que sigue en curso. */
   private generacion = 0;
   private ventanaAccesos = { desde: 0, n: 0 };
+  /** El inicio en curso (si lo hay): `parar` lo aborta y espera a que termine de limpiar. */
+  private inicio: { control: AbortController; hecho: Promise<void> } | null = null;
 
   constructor(private readonly d: DepsCompartir) {}
 
@@ -146,6 +166,27 @@ export class Compartir {
       );
     }
     const gen = ++this.generacion;
+    const control = new AbortController();
+    const trabajo = this.arrancar(o, gen, duracionMin, proveedor, control);
+    const hecho = trabajo.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.inicio = { control, hecho };
+    try {
+      return await trabajo;
+    } finally {
+      if (this.inicio?.hecho === hecho) this.inicio = null;
+    }
+  }
+
+  private async arrancar(
+    o: OpcionesCompartir,
+    gen: number,
+    duracionMin: DuracionCompartir,
+    proveedor: ProveedorCompartir,
+    control: AbortController,
+  ): Promise<EstadoCompartir> {
     this.accesosRecientes = [];
     this.ventanaAccesos = { desde: 0, n: 0 };
     this.fijar({ ...INACTIVA, fase: 'iniciando', ruta: o.ruta, proveedor, duracionMin });
@@ -154,12 +195,14 @@ export class Compartir {
     try {
       const { real, tipo, detector } = await this.validar(o.ruta);
       if (gen !== this.generacion) return this.estado();
+      const rutaReal = mismaRuta(o.ruta, real) ? null : real;
       const token = randomBytes(16).toString('base64url');
       servidor = await ServidorCompartir.iniciar({
         raiz: real,
         tipo,
         token,
         detector,
+        proveedor,
         alAcceso: (a) => this.anotar(gen, a),
         ahora: () => this.ahora(),
       });
@@ -167,9 +210,14 @@ export class Compartir {
         await servidor.cerrar();
         return this.estado();
       }
-      tunel = await this.d.tunel(servidor.puerto, proveedor, () => {
-        if (gen === this.generacion) void this.parar('tunel');
-      });
+      tunel = await this.d.tunel(
+        servidor.puerto,
+        proveedor,
+        () => {
+          if (gen === this.generacion) void this.parar('tunel');
+        },
+        control.signal,
+      );
       if (gen !== this.generacion) {
         await tunel.cerrar().catch(() => undefined);
         await servidor.cerrar();
@@ -187,6 +235,7 @@ export class Compartir {
       this.fijar({
         fase: 'activa',
         ruta: o.ruta,
+        rutaReal,
         tipo,
         proveedor,
         duracionMin,
@@ -198,7 +247,9 @@ export class Compartir {
     } catch (e) {
       if (tunel) await tunel.cerrar().catch(() => undefined);
       if (servidor) await servidor.cerrar().catch(() => undefined);
-      if (gen === this.generacion) this.fijar({ ...INACTIVA });
+      // Se pidió dejar de compartir mientras se abría: no es un error, `parar` ya lo dejó todo cerrado.
+      if (control.signal.aborted || gen !== this.generacion) return this.estado();
+      this.fijar({ ...INACTIVA });
       throw e;
     }
   }
@@ -220,6 +271,17 @@ export class Compartir {
     }, espera);
   }
 
+  /**
+   * Lo que se publicaría con esta ruta: la valida igual que `iniciar` (así los rechazos salen antes
+   * de confirmar) y devuelve la ruta real, que la confirmación enseña si difiere de la elegida.
+   */
+  async vista(
+    ruta: string,
+  ): Promise<{ ruta: string; real: string; tipo: 'carpeta' | 'archivo'; difiere: boolean }> {
+    const { real, tipo } = await this.validar(ruta);
+    return { ruta, real, tipo, difiere: !mismaRuta(ruta, real) };
+  }
+
   /** «Dejar de compartir»: cierra el túnel y el servidor. Sin nada compartido, no hace nada. */
   detener(): Promise<EstadoCompartir> {
     return this.parar('usuario');
@@ -233,6 +295,8 @@ export class Compartir {
   private async parar(fin: FinCompartir): Promise<EstadoCompartir> {
     if (this.estadoActual.fase === 'inactiva') return this.estado();
     this.generacion++;
+    const inicio = this.inicio;
+    inicio?.control.abort();
     this.cancelarPlazo?.();
     this.cancelarPlazo = null;
     const tunel = this.tunel;
@@ -242,6 +306,18 @@ export class Compartir {
     this.fijar({ ...INACTIVA, fin });
     // El servidor se cierra siempre, aunque el túnel no responda al cerrarse.
     await Promise.allSettled([tunel?.cerrar(), servidor?.cerrar()]);
+    // Un inicio en curso termina de cerrar lo suyo (túnel y servidor a medio abrir) antes de volver:
+    // así un `iniciar` inmediato no se encuentra el túnel anterior todavía ocupado.
+    if (inicio) {
+      let plazo: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
+        inicio.hecho,
+        new Promise<void>((ok) => {
+          plazo = setTimeout(ok, ESPERA_ABORTO_MS);
+        }),
+      ]);
+      clearTimeout(plazo);
+    }
     return this.estado();
   }
 
@@ -322,6 +398,17 @@ export class Compartir {
         }
       }
     }
+    for (const per of this.d.carpetasPerfil()) {
+      for (const p of await conReal(per)) {
+        // Dentro del perfil de programas (AppData) o una carpeta que lo contenga.
+        if (rutas.some((r) => rutaDentroDe(p, r) || rutaDentroDe(r, p))) {
+          throw new ErrorWolf(
+            'compartir.carpeta_perfil',
+            'Los datos de los programas del usuario (AppData) no se comparten.',
+          );
+        }
+      }
+    }
     const sitios = await this.d.sitios();
     const rutasSitios = await sitiosConRutasReales(sitios);
     for (const s of rutasSitios) {
@@ -332,15 +419,29 @@ export class Compartir {
         );
       }
     }
+    const perfil = (): ErrorWolf =>
+      new ErrorWolf(
+        'compartir.carpeta_perfil',
+        'Los datos de los programas del usuario (AppData) no se comparten.',
+      );
     const secretos = (): ErrorWolf =>
       new ErrorWolf(
         'compartir.carpeta_secretos',
         'Esa carpeta guarda claves (.ssh, .aws, .git…): no se comparte.',
       );
+    // Claves (.ssh, .git…): en cualquier tramo de la ruta. Datos de programas (.claude, .config…):
+    // en los tramos dentro de la carpeta del usuario (o el último, si está fuera de ella).
+    const inicios = await conReal(this.d.carpetaInicio());
     for (const r of rutas) {
-      if (r.split(/[\\/]/).some((t) => esCarpetaProhibida(t))) throw secretos();
+      const tramos = r.split(/[\\/]/);
+      if (tramos.some((t) => esCarpetaDeClaves(t))) throw secretos();
+      const base = inicios.find((i) => rutaDentroDe(i, r));
+      const propios = base
+        ? path.relative(base, r).split(path.sep).filter(Boolean)
+        : tramos.slice(-1);
+      if (propios.some((t) => esCarpetaProhibida(t))) throw perfil();
     }
-    const detector = crearDetectorSensible(rutasSitios);
+    const detector = detectorCompartir(crearDetectorSensible(rutasSitios));
     if (info.isDirectory()) {
       const nombres = await readdir(real).catch(() => [] as string[]);
       if (
@@ -356,6 +457,12 @@ export class Compartir {
         'Ese archivo parece guardar un secreto o datos reales: no se comparte.',
       );
     if (rutas.some((r) => detector.porRuta(r, info.nlink))) throw sensible();
+    if (info.size > MAX_ANALISIS_BYTES && !esBinarioGrande(path.basename(ruta))) {
+      throw new ErrorWolf(
+        'compartir.archivo_grande',
+        'Ese archivo es demasiado grande para revisarlo y no es un medio ni un paquete: no se comparte.',
+      );
+    }
     const fh = await open(real, 'r').catch(() => null);
     if (!fh) throw invalida();
     try {

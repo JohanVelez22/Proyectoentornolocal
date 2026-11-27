@@ -448,6 +448,16 @@ export class PlataformaWindows implements PlataformaCompleta {
     return [...new Set(lista.filter((r) => r !== ''))];
   }
 
+  carpetasPerfil(): string[] {
+    const e = this.entorno;
+    const lista = [
+      e.APPDATA || '',
+      e.LOCALAPPDATA || '',
+      path.win32.join(this.carpetaInicio(), 'AppData'),
+    ];
+    return [...new Set(lista.filter((r) => r !== ''))];
+  }
+
   idCatalogo(): IdCatalogo {
     return this.arquitectura === 'arm64' ? 'win-arm64' : 'win-x64';
   }

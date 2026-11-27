@@ -73,6 +73,7 @@ const CAPACIDADES: readonly (keyof CapacidadesPlataforma)[] = [
   'carpetaDatos',
   'carpetaInicio',
   'carpetasDelSistema',
+  'carpetasPerfil',
   'idCatalogo',
   'nombreEjecutable',
   'buscarEjecutable',

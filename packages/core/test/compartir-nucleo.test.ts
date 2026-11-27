@@ -20,6 +20,9 @@ describe('Nucleo: Compartir (D52)', () => {
     for (const d of [base, inicio, sistema]) mkdirSync(d, { recursive: true });
     const falsa = new PlataformaFalsa({ carpetaDatos: base, carpetaInicio: inicio });
     falsa.carpetasSistema = [sistema];
+    const roaming = path.join(inicio, 'AppData', 'Roaming');
+    mkdirSync(roaming, { recursive: true });
+    falsa.carpetasDePerfil = [roaming];
     nucleo = await Nucleo.crear({
       base,
       aislado: true,
@@ -46,6 +49,7 @@ describe('Nucleo: Compartir (D52)', () => {
     await expect(pedir(base)).rejects.toMatchObject({ codigo: 'compartir.carpeta_datos' });
     await expect(pedir(inicio)).rejects.toMatchObject({ codigo: 'compartir.carpeta_usuario' });
     await expect(pedir(sistema)).rejects.toMatchObject({ codigo: 'compartir.carpeta_sistema' });
+    await expect(pedir(roaming)).rejects.toMatchObject({ codigo: 'compartir.carpeta_perfil' });
     // Lo válido llega hasta el túnel, que aquí falla porque cloudflared no está instalado.
     await expect(pedir(ok)).rejects.toMatchObject({ codigo: 'tuneles.cloudflared_no_instalado' });
     expect(nucleo.compartir.estado().fase).toBe('inactiva');

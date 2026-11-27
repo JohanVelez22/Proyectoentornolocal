@@ -218,7 +218,9 @@ export class Tuneles {
     puerto: number,
     idProveedor: 'cloudflare-rapido' | 'ngrok',
     alCaer: () => void,
+    senal?: AbortSignal,
   ): Promise<TunelPuerto> {
+    if (senal?.aborted) throw new ErrorWolf('compartir.tunel_cerrado', 'El túnel se cerró.');
     if (!Number.isInteger(puerto) || puerto < 1 || puerto > 65535) {
       throw new ErrorWolf('compartir.fallo', 'Puerto no válido.');
     }
@@ -265,6 +267,8 @@ export class Tuneles {
         await this.limpiarProveedores(ID_EFIMERO);
       }
     };
+    // Cancelar mientras se abre: detiene el proceso por su id y corta la espera de la URL.
+    senal?.addEventListener('abort', () => void detener().catch(() => undefined), { once: true });
     try {
       const l = await proveedor.abrir(sitio, { cloudflared, puertoNginx: puerto, logCloudflared });
       if (l.secretos?.length) this.secretosVivos.set(ID_EFIMERO, l.secretos);
@@ -282,7 +286,7 @@ export class Tuneles {
       const limite = Date.now() + this.esperaMs;
       for (;;) {
         // Se cerró (o cayó) mientras esperaba la URL.
-        if (this.efimero !== estado) {
+        if (this.efimero !== estado || senal?.aborted) {
           throw new ErrorWolf('compartir.tunel_cerrado', 'El túnel se cerró.');
         }
         const texto = [leerTexto(logCloudflared), leerTexto(logSalida)].join('\n');

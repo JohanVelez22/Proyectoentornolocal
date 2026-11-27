@@ -162,6 +162,12 @@ export interface CapacidadesPlataforma {
    * «Compartir» (D52) no las publica nunca. Solo consulta; sin las variables, las rutas habituales.
    */
   carpetasDelSistema(): string[];
+  /**
+   * Carpetas del perfil del usuario donde los programas guardan sus datos y claves (en Windows:
+   * `%APPDATA%`, `%LOCALAPPDATA%` y `<inicio>AppData`): «Compartir» (D52) no publica ninguna ni lo
+   * que hay dentro. Solo consulta.
+   */
+  carpetasPerfil(): string[];
   idCatalogo(): IdCatalogo;
   /** Nombre del archivo ejecutable (`php` → `php.exe` en Windows). */
   nombreEjecutable(base: string): string;

@@ -225,6 +225,13 @@ export class PlataformaFalsa implements PlataformaCompleta {
   /** Lo que devuelve `carpetasDelSistema` (la prueba pone aquí las suyas). */
   carpetasSistema: string[] = [];
 
+  /** Lo que devuelve `carpetasPerfil` (la prueba pone aquí las suyas). */
+  carpetasDePerfil: string[] = [];
+
+  carpetasPerfil(): string[] {
+    return [...this.carpetasDePerfil];
+  }
+
   carpetasDelSistema(): string[] {
     return [...this.carpetasSistema];
   }

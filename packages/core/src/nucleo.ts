@@ -4094,10 +4094,12 @@ export class Nucleo {
    */
   get compartir(): Compartir {
     return (this.compartirServ ??= new Compartir({
-      tunel: (puerto, proveedor, alCaer) => this.tuneles.abrirPuerto(puerto, proveedor, alCaer),
+      tunel: (puerto, proveedor, alCaer, senal) =>
+        this.tuneles.abrirPuerto(puerto, proveedor, alCaer, senal),
       carpetasPropias: () => this.carpetasPropias(),
       carpetaInicio: () => this.plataforma.carpetaInicio(),
       carpetasSistema: () => this.plataforma.carpetasDelSistema(),
+      carpetasPerfil: () => this.plataforma.carpetasPerfil(),
       sitios: () => this.sitios.listar(),
       alEstado: (e) => this.eventos.emit('compartir:estado', e),
       alAcceso: (a) => this.eventos.emit('compartir:acceso', a),

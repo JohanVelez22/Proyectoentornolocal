@@ -319,6 +319,8 @@ export const PARAMETROS_ERROR = {
   'compartir.sitio_datos_reales': [],
   'compartir.carpeta_secretos': [],
   'compartir.carpeta_sistema': [],
+  'compartir.carpeta_perfil': [],
+  'compartir.archivo_grande': [],
   'compartir.archivo_sensible': [],
   'compartir.tunel_sin_url': ['segundos'],
   'compartir.tunel_cerrado': [],

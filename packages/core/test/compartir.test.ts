@@ -33,6 +33,7 @@ let fallaTunel: Error | null;
 let sitios: { carpeta: string; datosReales: boolean }[];
 let c: Compartir;
 let reloj: number;
+let perfilCarpetas: string[];
 
 const SI = true;
 const DEPS = (): DepsCompartir => ({
@@ -50,6 +51,7 @@ const DEPS = (): DepsCompartir => ({
   carpetasPropias: () => [datos],
   carpetaInicio: () => inicio,
   carpetasSistema: () => [sistema],
+  carpetasPerfil: () => perfilCarpetas,
   sitios: async () => sitios,
   alEstado: (e) => estados.push(e),
   alAcceso: (a) => accesos.push(a),
@@ -98,6 +100,7 @@ beforeEach(() => {
   for (const d of [datos, sistema, compartido]) mkdirSync(d, { recursive: true });
   writeFileSync(path.join(compartido, 'foto.txt'), 'contenido');
   reloj = 1_000_000;
+  perfilCarpetas = [];
   estados = [];
   accesos = [];
   tuneles = [];
@@ -261,7 +264,9 @@ describe('ciclo de vida', () => {
     const abierto = { cerrado: 0 };
     c = new Compartir({
       ...deps,
-      tunel: async () => {
+      tunel: async (_p, _pr, _al, senal) => {
+        // Un túnel que se abría cuando llega la cancelación: termina de abrirse y hay que cerrarlo.
+        senal.addEventListener('abort', () => soltar());
         await espera;
         return {
           url: 'https://x.trycloudflare.com',
@@ -441,5 +446,170 @@ describe('rechazos', () => {
     await codigoDe(iniciar(datos));
     expect(c.estado().fase).toBe('inactiva');
     expect(tuneles).toHaveLength(0);
+  });
+});
+
+describe('datos de los programas del usuario (AppData y carpetas de configuración)', () => {
+  beforeEach(() => {
+    mkdirSync(path.join(inicio, 'AppData', 'Roaming', 'Mozilla', 'Firefox'), { recursive: true });
+    mkdirSync(path.join(inicio, 'AppData', 'Local'), { recursive: true });
+    perfilCarpetas = [path.join(inicio, 'AppData'), path.join(inicio, 'AppData', 'Roaming')];
+  });
+
+  it('AppData, Roaming y lo que hay dentro se rechazan', async () => {
+    const roaming = path.join(inicio, 'AppData', 'Roaming');
+    // (`AppData` entera contiene la carpeta de datos de esta prueba: la rechaza antes por ese motivo.)
+    for (const r of [
+      roaming,
+      path.join(roaming, 'Mozilla'),
+      path.join(roaming, 'Mozilla', 'Firefox'),
+      path.join(inicio, 'AppData', 'Local'),
+    ]) {
+      expect(await codigoDe(iniciar(r)), r).toBe('compartir.carpeta_perfil');
+    }
+    expect(tuneles).toHaveLength(0);
+  });
+
+  it('un archivo dentro de Roaming también', async () => {
+    const f = path.join(inicio, 'AppData', 'Roaming', 'Mozilla', 'Firefox', 'cookies.sqlite');
+    writeFileSync(f, 'SQLite format 3 falso');
+    expect(await codigoDe(iniciar(f))).toBe('compartir.carpeta_perfil');
+  });
+
+  it('una unión hacia Roaming no lo esquiva', async () => {
+    const union = path.join(compartido, 'atajo-roaming');
+    symlinkSync(path.join(inicio, 'AppData', 'Roaming'), union, 'junction');
+    expect(await codigoDe(iniciar(union))).toBe('compartir.carpeta_perfil');
+  });
+
+  it.each([
+    '.claude',
+    '.codex',
+    '.config',
+    '.npm',
+    '.m2',
+    '.gradle',
+    '.cargo',
+    '.nuget',
+    '.vscode',
+    '.idea',
+    '.mozilla',
+  ])('%s en la carpeta del usuario y lo de dentro se rechazan', async (n) => {
+    const d = path.join(inicio, n);
+    mkdirSync(path.join(d, 'sub'), { recursive: true });
+    expect(await codigoDe(iniciar(d))).toBe('compartir.carpeta_perfil');
+    expect(await codigoDe(iniciar(path.join(d, 'sub')))).toBe('compartir.carpeta_perfil');
+  });
+
+  it('fuera de la carpeta del usuario, una carpeta con ese nombre también se rechaza', async () => {
+    const d = path.join(base, 'otro', '.claude');
+    mkdirSync(d, { recursive: true });
+    expect(await codigoDe(iniciar(d))).toBe('compartir.carpeta_perfil');
+  });
+
+  it('una carpeta normal con cookies.sqlite y key4.db se comparte (esos archivos no se sirven)', async () => {
+    writeFileSync(path.join(compartido, 'cookies.sqlite'), 'SQLite format 3 falso');
+    writeFileSync(path.join(compartido, 'key4.db'), 'SQLite format 3 falso');
+    const e = await iniciar();
+    const u = new URL(e.url!);
+    for (const n of ['cookies.sqlite', 'key4.db']) {
+      expect((await pedir(`${u.origin}${u.pathname}${n}`)).codigo, n).toBe(404);
+    }
+    const l = (await pedir(e.url!)).cuerpo;
+    expect(l).not.toContain('cookies.sqlite');
+    expect(l).not.toContain('key4.db');
+  });
+
+  it('un proyecto con .vscode o .idea en su raíz se puede compartir (esas carpetas no salen)', async () => {
+    mkdirSync(path.join(compartido, '.vscode'));
+    mkdirSync(path.join(compartido, '.idea'));
+    const e = await iniciar();
+    expect((await pedir(e.url!)).cuerpo).not.toContain('.vscode');
+  });
+
+  it('un archivo de texto de más de 8 MB no se comparte; un paquete sí', async () => {
+    writeFileSync(path.join(compartido, 'volcado.txt'), Buffer.alloc(8 * 1024 * 1024 + 10, 65));
+    writeFileSync(path.join(compartido, 'copia.zip'), Buffer.alloc(8 * 1024 * 1024 + 10, 65));
+    expect(await codigoDe(iniciar(path.join(compartido, 'volcado.txt')))).toBe(
+      'compartir.archivo_grande',
+    );
+    expect(await codigoDe(iniciar(path.join(compartido, 'copia.zip')))).toBeNull();
+  });
+});
+
+describe('ruta real y vista previa', () => {
+  it('vista da la ruta real y avisa de que difiere si hay una unión de por medio', async () => {
+    const union = path.join(inicio, 'enlace-a-descargas');
+    symlinkSync(compartido, union, 'junction');
+    const v = await c.vista(union);
+    expect(v.difiere).toBe(true);
+    expect(v.real).toBe(compartido);
+    expect(v.ruta).toBe(union);
+    const n = await c.vista(compartido);
+    expect(n.difiere).toBe(false);
+  });
+
+  it('vista rechaza lo mismo que iniciar, antes de confirmar nada', async () => {
+    expect(await codigoDe(c.vista(datos))).toBe('compartir.carpeta_datos');
+    expect(tuneles).toHaveLength(0);
+  });
+
+  it('el estado trae la ruta real cuando difiere, y null cuando no', async () => {
+    const union = path.join(inicio, 'enlace-a-descargas');
+    symlinkSync(compartido, union, 'junction');
+    const e = await iniciar(union);
+    expect(e.ruta).toBe(union);
+    expect(e.rutaReal).toBe(compartido);
+    await c.detener();
+    expect((await iniciar(compartido)).rutaReal).toBeNull();
+  });
+});
+
+describe('dejar de compartir mientras se abre el túnel', () => {
+  it('parar durante «iniciando» aborta la apertura, cierra todo y deja iniciar de nuevo sin «ocupado»', async () => {
+    let abortado = false;
+    let abiertos = 0;
+    const deps = DEPS();
+    let modo: 'colgado' | 'normal' = 'colgado';
+    c = new Compartir({
+      ...deps,
+      tunel: (puerto, proveedor, alCaer, senal) => {
+        if (modo === 'normal') return deps.tunel(puerto, proveedor, alCaer, senal);
+        return new Promise((_ok, mal) => {
+          senal.addEventListener('abort', () => {
+            abortado = true;
+            mal(new Error('abortado por el usuario'));
+          });
+        });
+      },
+    });
+    const primero = iniciar();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(c.estado().fase).toBe('iniciando');
+    const fin = await c.detener();
+    expect(fin.fase).toBe('inactiva');
+    expect(abortado).toBe(true);
+    // el primer iniciar termina sin error (se canceló a propósito)
+    expect((await primero).fase).toBe('inactiva');
+    modo = 'normal';
+    abiertos++;
+    const segundo = await iniciar();
+    expect(segundo.fase).toBe('activa');
+    expect(tuneles).toHaveLength(abiertos);
+  });
+
+  it('el tunel recibe una señal que sigue sin abortar mientras todo va bien', async () => {
+    let senal: AbortSignal | null = null;
+    const deps = DEPS();
+    c = new Compartir({
+      ...deps,
+      tunel: (p, pr, al, s) => {
+        senal = s;
+        return deps.tunel(p, pr, al, s);
+      },
+    });
+    await iniciar();
+    expect(senal!.aborted).toBe(false);
+    await c.detener();
   });
 });

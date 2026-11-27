@@ -140,4 +140,27 @@ describe('Tuneles.abrirPuerto', () => {
     }
     expect(iniciados).toEqual([]);
   });
+
+  it('una señal abortada mientras espera la URL corta la espera y detiene el proceso por su id', async () => {
+    escribir = false;
+    const t = crear();
+    const control = new AbortController();
+    const p = t.abrirPuerto(1111, 'cloudflare-rapido', () => undefined, control.signal);
+    await new Promise((r) => setTimeout(r, 30));
+    control.abort();
+    await expect(p).rejects.toMatchObject({ codigo: 'compartir.tunel_cerrado' });
+    expect(detenidos).toContain('tunel-compartir_efimero');
+    // quedó libre
+    escribir = true;
+    await expect(t.abrirPuerto(2222, 'cloudflare-rapido', () => undefined)).resolves.toBeTruthy();
+  });
+
+  it('con la señal ya abortada ni lanza el proceso', async () => {
+    const control = new AbortController();
+    control.abort();
+    await expect(
+      crear().abrirPuerto(1111, 'cloudflare-rapido', () => undefined, control.signal),
+    ).rejects.toMatchObject({ codigo: 'compartir.tunel_cerrado' });
+    expect(iniciados).toEqual([]);
+  });
 });
