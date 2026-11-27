@@ -83,6 +83,9 @@ const rutaIconoBandeja = join(
 
 const sistema: ApiSistema = {
   async elegirCarpeta() {
+    // Solo la prueba de humo (carpeta de datos aislada): sin diálogo, la carpeta que ella prepara.
+    const deHumo = process.env['WOLFCORE_DATOS'] ? process.env['WOLFCORE_HUMO_CARPETA'] : undefined;
+    if (deHumo) return deHumo;
     const r = ventana
       ? await dialog.showOpenDialog(ventana, { properties: ['openDirectory'] })
       : await dialog.showOpenDialog({ properties: ['openDirectory'] });

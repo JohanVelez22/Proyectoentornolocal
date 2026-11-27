@@ -173,7 +173,7 @@ function irAVersiones(): void {
           }}</small>
         </span>
       </NButton>
-      <NButton secondary :disabled="analizando" @click="elegirCarpeta">{{
+      <NButton secondary :disabled="analizando" data-testid="disco-elegir" @click="elegirCarpeta">{{
         t.elegirCarpeta
       }}</NButton>
     </div>
@@ -214,7 +214,7 @@ function irAVersiones(): void {
         :texto="t.sinContenido.texto"
       />
       <template v-else>
-        <p class="herr-ok resumen">
+        <p class="herr-ok resumen" data-testid="disco-resumen">
           {{
             t.resumen(
               formatoBytes(analisis.total),
@@ -293,7 +293,11 @@ function irAVersiones(): void {
                   ></template>
                 </NButton>
                 <span v-else class="sin-flecha" />
+                <span v-if="f.nodo.tipo === 'otros'" class="herr-tenue">{{
+                  nombreDe(f.nodo)
+                }}</span>
                 <TextoLargo
+                  v-else
                   :texto="f.nivel === 0 ? f.nodo.ruta : nombreDe(f.nodo)"
                   :copiable="false"
                   :cola="18"

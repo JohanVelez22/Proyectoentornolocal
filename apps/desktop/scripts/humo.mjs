@@ -10,10 +10,19 @@
 // no hay ventana que recorrer. El CI empaqueta en los tres sistemas y corre esta prueba en Windows.
 // Cuando haya plataforma para ellos, basta quitar el aviso de abajo (en Linux hace falta xvfb-run y
 // `--no-sandbox`, ya previstos).
+import { Buffer } from 'node:buffer';
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
 import http from 'node:http';
-import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -84,7 +93,21 @@ function buscarEjecutable() {
 }
 
 const datos = mkdtempSync(path.join(tmpdir(), 'wolfcore-humo-'));
-const env = { ...process.env, WOLFCORE_DATOS: datos, ELECTRON_ENABLE_LOGGING: '1' };
+// Uso del disco (D51): una carpeta temporal con tamaños conocidos. El diálogo nativo no se puede
+// manejar desde aquí: con la carpeta de datos aislada, `WOLFCORE_HUMO_CARPETA` hace que
+// «Elegir carpeta» devuelva esa (el proceso principal la registra y la valida igual que a una elegida).
+const discoHumo = mkdtempSync(path.join(tmpdir(), 'wolfcore-humo-disco-'));
+mkdirSync(path.join(discoHumo, 'sub'));
+writeFileSync(path.join(discoHumo, 'a.bin'), Buffer.alloc(1000));
+writeFileSync(path.join(discoHumo, 'sub', 'b.bin'), Buffer.alloc(2500));
+writeFileSync(path.join(discoHumo, 'sub', 'c.txt'), Buffer.alloc(4096));
+const TOTAL_DISCO_HUMO = 7596;
+const env = {
+  ...process.env,
+  WOLFCORE_DATOS: datos,
+  WOLFCORE_HUMO_CARPETA: discoHumo,
+  ELECTRON_ENABLE_LOGGING: '1',
+};
 delete env.ELECTRON_RENDERER_URL;
 delete env.ELECTRON_RUN_AS_NODE;
 const comunes = process.platform === 'linux' ? ['--no-sandbox', '--disable-gpu'] : [];
@@ -386,6 +409,34 @@ try {
       .catch(() => '');
     falla(`La guía de Git (laboratorio) no funcionó: ${e} [${vista}]`);
   }
+  // Uso del disco (D51): abre la tarjeta, analiza la carpeta temporal por la interfaz y comprueba
+  // el total exacto con el mismo IPC (el recorrido corre en su utilityProcess).
+  try {
+    await ventana.keyboard.press('Escape');
+    await ventana.waitForSelector('.n-drawer', { state: 'detached', timeout: 15_000 });
+    await ventana.waitForSelector('[data-herramienta="usoDisco"]', { timeout: 30_000 });
+    await ventana.evaluate(() => document.querySelector('[data-herramienta="usoDisco"]')?.click());
+    await ventana.waitForSelector('[data-testid="disco-elegir"]', {
+      state: 'attached',
+      timeout: 30_000,
+    });
+    await ventana.evaluate(() => document.querySelector('[data-testid="disco-elegir"]')?.click());
+    await ventana.waitForSelector('[data-testid="disco-resumen"]', {
+      state: 'attached',
+      timeout: 60_000,
+    });
+    const total = await ventana.evaluate(async () => {
+      const carpeta = await window.entorno.sistema.elegirCarpeta();
+      const r = await window.entorno.discoUso.analizar(carpeta);
+      return r.total;
+    });
+    if (total !== TOTAL_DISCO_HUMO)
+      falla(`Uso del disco: el total fue ${total} y debía ser ${TOTAL_DISCO_HUMO}`);
+    else
+      registro(`ok   Uso del disco: analizó una carpeta temporal (${total} bytes) en su proceso`);
+  } catch (e) {
+    falla(`Uso del disco no funcionó: ${e}`);
+  }
   await ventana.waitForTimeout(500);
 
   if (consola.length > 0) {
@@ -413,6 +464,7 @@ try {
   }
   try {
     rmSync(datos, { recursive: true, force: true });
+    rmSync(discoHumo, { recursive: true, force: true });
   } catch {
     /* un archivo aún abierto en Windows: es una carpeta temporal */
   }
