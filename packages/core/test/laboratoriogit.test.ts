@@ -174,7 +174,7 @@ describe('entorno y argumentos de cada ejecución', () => {
     expect(l.env.PATH).toBe('/bin');
     // El cwd es el realpath de la carpeta de trabajo (en macOS /var es /private/var; en Windows el
     // temporal puede venir con nombres cortos 8.3).
-    const real = realpathSync(raiz);
+    const real = realpathSync.native(raiz);
     expect(l.cwd!.toLowerCase().startsWith(real.toLowerCase() + path.sep)).toBe(true);
     expect(path.basename(l.cwd!)).toBe('trabajo');
     const a = l.args.join(' ');
