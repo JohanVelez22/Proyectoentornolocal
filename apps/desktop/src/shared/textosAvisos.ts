@@ -2508,26 +2508,26 @@ const PL: Diccionario = {
   porCodigo: {
     'avisos.servicio_caido': (d) => ({
       titulo: 'Usługa zatrzymała się z błędem',
-      cuerpo: `${limpio(d['nombre'], 'Usługa')} przestała działać. Otwórz WolfCore Dev, aby zobaczyć szczegóły.`,
+      cuerpo: `${limpio(d['nombre'], 'Usługa')} przestała działać. Szczegóły w WolfCore Dev.`,
     }),
     'avisos.iniciar_todo_fallos': (d) => ({
       titulo: 'Nie udało się uruchomić wszystkich usług',
-      cuerpo: `Nie uruchomiono: ${limpio(d['nombres'], 'niektórych usług')}. Otwórz Usługi, aby zobaczyć szczegóły.`,
+      cuerpo: `Nie uruchomiono: ${limpio(d['nombres'], 'niektórych usług')}. Szczegóły w sekcji Usługi.`,
     }),
     'avisos.workspace_fallos': (d) => ({
       titulo: 'Przestrzeń robocza nie mogła uruchomić wszystkich elementów',
-      cuerpo: `${limpio(d['nombre'], 'Przestrzeń robocza')}: nie uruchomiono ${limpio(d['nombres'], 'niektórych elementów')}. Otwórz Start, aby sprawdzić, co działa.`,
+      cuerpo: `${limpio(d['nombre'], 'Przestrzeń robocza')}: nie uruchomiono ${limpio(d['nombres'], 'niektórych elementów')}. Stan w sekcji Start.`,
     }),
     'avisos.workspace_fallos_detener': (d) => ({
       titulo: 'Przestrzeń robocza nie mogła zatrzymać wszystkich elementów',
-      cuerpo: `${limpio(d['nombre'], 'Przestrzeń robocza')}: nie zatrzymano ${limpio(d['nombres'], 'niektórych elementów')}. Otwórz Start, aby sprawdzić, co nadal działa.`,
+      cuerpo: `${limpio(d['nombre'], 'Przestrzeń robocza')}: nie zatrzymano ${limpio(d['nombres'], 'niektórych elementów')}. Stan w sekcji Start.`,
     }),
     'avisos.tarea_fallo': (d) => ({
       titulo:
         d['motivo'] === 'tiempo'
           ? 'Zaplanowane zadanie trwało zbyt długo'
           : 'Zaplanowane zadanie zakończyło się niepowodzeniem',
-      cuerpo: `${limpio(d['nombre'], 'Zadanie')} (${limpio(d['sitio'], 'projekt')}) ${d['motivo'] === 'tiempo' ? 'przekroczyło maksymalny czas wykonania i zostało zatrzymane' : 'zakończyło się błędem'}. Otwórz projekt, aby zobaczyć dziennik.`,
+      cuerpo: `${limpio(d['nombre'], 'Zadanie')} (${limpio(d['sitio'], 'projekt')}) ${d['motivo'] === 'tiempo' ? 'przekroczyło maksymalny czas wykonania i zostało zatrzymane' : 'zakończyło się błędem'}. Dziennik w projekcie.`,
     }),
     'avisos.tarea_bloqueada': (d) => ({
       titulo: 'Zaplanowane zadanie nie zostało wykonane',
@@ -2549,7 +2549,7 @@ const PL: Diccionario = {
     }),
     'avisos.proceso_error': (d) => ({
       titulo: 'Proces projektu zakończył się błędem',
-      cuerpo: `${limpio(d['nombre'], 'Proces')} przestał działać. Sprawdź jego dzienniki.`,
+      cuerpo: `${limpio(d['nombre'], 'Proces')} przestał działać. Szczegóły w jego dziennikach.`,
     }),
     'avisos.proceso_terminado': (d) => ({
       titulo: 'Proces zakończył działanie',
@@ -2557,7 +2557,7 @@ const PL: Diccionario = {
     }),
     'avisos.proceso_fallo': (d) => ({
       titulo: 'Proces zakończył się niepowodzeniem',
-      cuerpo: `${limpio(d['nombre'], 'Proces')} zakończył się błędem${d['codigoSalida'] !== undefined ? ` (kod ${limpio(d['codigoSalida'], '?')})` : ''}. Sprawdź jego dzienniki.`,
+      cuerpo: `${limpio(d['nombre'], 'Proces')} zakończył się błędem${d['codigoSalida'] !== undefined ? ` (kod ${limpio(d['codigoSalida'], '?')})` : ''}. Szczegóły w jego dziennikach.`,
     }),
     'avisos.receta_terminada': (d) => ({
       titulo: 'Przepis zakończony',
@@ -2565,7 +2565,7 @@ const PL: Diccionario = {
     }),
     'avisos.receta_fallo': (d) => ({
       titulo: 'Przepis zakończył się niepowodzeniem',
-      cuerpo: `Przepis projektu ${limpio(d['sitio'], 'projekt')} zatrzymał się z błędem. Otwórz projekt, aby sprawdzić krok.`,
+      cuerpo: `Przepis projektu ${limpio(d['sitio'], 'projekt')} zatrzymał się z błędem. Szczegóły kroku w projekcie.`,
     }),
     'avisos.tunel_caido': (d) => ({
       titulo: 'Tunel został przerwany',
@@ -2589,7 +2589,7 @@ const PL: Diccionario = {
     }),
     'avisos.php_sitio_fallo': (d) => ({
       titulo: 'Dedykowane PHP strony nie uruchomiło się',
-      cuerpo: `PHP dla ${limpio(d['fuente'], 'strony')} nie uruchomiło się (port może być używany przez inny program). Sprawdź sekcję PHP na karcie strony.`,
+      cuerpo: `PHP dla ${limpio(d['fuente'], 'strony')} nie uruchomiło się (port może być używany przez inny program). Szczegóły w sekcji PHP na karcie strony.`,
     }),
     'avisos.php_sitio_sin_puertos': (d) => ({
       titulo: 'Brak wolnych portów dla PHP strony',
@@ -2605,11 +2605,11 @@ const PL: Diccionario = {
     }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Odrzucono reguły Nginx',
-      cuerpo: `Własne reguły dla ${limpio(d['fuente'], 'strony')} nie przechodzą już weryfikacji (zmienił się folder, domeny lub porty) i zostały pominięte w pliku vhost. Sprawdź je w sekcji Nginx.`,
+      cuerpo: `Własne reguły dla ${limpio(d['fuente'], 'strony')} nie przechodzą już weryfikacji (zmienił się folder, domeny lub porty) i zostały pominięte w pliku vhost. Szczegóły w sekcji Nginx.`,
     }),
     'avisos.vhost_manual_descartado': (d) => ({
       titulo: 'Ręczny plik vhost nie jest używany',
-      cuerpo: `Ręczny plik vhost dla ${limpio(d['fuente'], 'strony')} nie przechodzi już weryfikacji (zmienił się folder, domeny lub porty): używany jest wygenerowany plik vhost. Sprawdź go w sekcji Nginx.`,
+      cuerpo: `Ręczny plik vhost dla ${limpio(d['fuente'], 'strony')} nie przechodzi już weryfikacji (zmienił się folder, domeny lub porty): używany jest wygenerowany plik vhost. Szczegóły w sekcji Nginx.`,
     }),
     'avisos.rustup_entrada_ajena': () => ({
       titulo: 'Program rustup był już zainstalowany w innym miejscu',
@@ -2618,16 +2618,16 @@ const PL: Diccionario = {
     }),
     'avisos.version_nueva': (d) => ({
       titulo: `Dostępna jest nowa wersja usługi ${limpio(d['servicio'], 'usługi')}`,
-      cuerpo: `Opublikowano wersję ${limpio(d['nueva'], 'nową wersję')} (zainstalowana: ${limpio(d['actual'], 'inna')}). Otwórz Usługi → Wersje, aby zaktualizować; nic nie instaluje się automatycznie.`,
+      cuerpo: `Opublikowano wersję ${limpio(d['nueva'], 'nową wersję')} (zainstalowana: ${limpio(d['actual'], 'inna')}). Aktualizacja w Usługi → Wersje; nic nie instaluje się automatycznie.`,
       accion: 'Aktualizuj',
     }),
     'avisos.version_nueva_sin_huella': (d) => ({
       titulo: `Dostępna jest nowa wersja usługi ${limpio(d['servicio'], 'usługi')}`,
-      cuerpo: `Opublikowano wersję ${limpio(d['nueva'], 'nową wersję')} (zainstalowana: ${limpio(d['actual'], 'inna')}), bez opublikowanej sumy kontrolnej: nie można zweryfikować pobierania. Sprawdź w Usługi → Wersje; instalacja wymaga potwierdzenia.`,
+      cuerpo: `Opublikowano wersję ${limpio(d['nueva'], 'nową wersję')} (zainstalowana: ${limpio(d['actual'], 'inna')}), bez opublikowanej sumy kontrolnej: nie można zweryfikować pobierania. Szczegóły w Usługi → Wersje; instalacja wymaga potwierdzenia.`,
     }),
     'avisos.rama_nueva_sin_huella': (d) => ({
       titulo: `Nowa główna wersja usługi ${limpio(d['servicio'], 'usługi')}`,
-      cuerpo: `Wersja ${limpio(d['nueva'], 'nowa główna wersja')} jest nowsza od używanej (${limpio(d['actual'], '?')}), bez opublikowanej sumy kontrolnej: nie można zweryfikować pobierania. Sprawdź w Usługi → Wersje; instalacja wymaga potwierdzenia.`,
+      cuerpo: `Wersja ${limpio(d['nueva'], 'nowa główna wersja')} jest nowsza od używanej (${limpio(d['actual'], '?')}), bez opublikowanej sumy kontrolnej: nie można zweryfikować pobierania. Szczegóły w Usługi → Wersje; instalacja wymaga potwierdzenia.`,
     }),
     'avisos.rama_nueva': (d) => ({
       titulo: `Nowa główna wersja usługi ${limpio(d['servicio'], 'usługi')}`,
@@ -2636,7 +2636,7 @@ const PL: Diccionario = {
     }),
     'doctor.hallazgos': (d) => ({
       titulo: 'Doctor wykrył błędy w środowisku',
-      cuerpo: `Wykryto ${limpio(d['errores'], 'kilka')} problemów, które mogą uniemożliwić działanie środowiska. Otwórz Doctor, aby zobaczyć sposoby naprawy.`,
+      cuerpo: `Wykryto ${limpio(d['errores'], 'kilka')} problemów, które mogą uniemożliwić działanie środowiska. Sposoby naprawy w Doctor.`,
     }),
     'avisos.proceso_sin_codigo': (d) => ({
       titulo: 'Proces zakończył działanie',
@@ -2645,7 +2645,7 @@ const PL: Diccionario = {
     'avisos.credenciales_sin_proteccion': () => ({
       titulo: 'Zapisane klucze nie były chronione',
       cuerpo:
-        'WolfCore Dev nie mógł sprawić, aby plik z kluczami był czytelny tylko dla Twojego użytkownika Windows. Twoje dane są bezpieczne, ale sprawdź uprawnienia folderu danych.',
+        'WolfCore Dev nie mógł sprawić, aby plik z kluczami był czytelny tylko dla bieżącego użytkownika Windows. Dane są bezpieczne, ale należy sprawdzić uprawnienia folderu danych.',
     }),
     'avisos.https_quitado': (d) => ({
       titulo: 'Strony bez HTTPS',
@@ -2655,43 +2655,43 @@ const PL: Diccionario = {
   porTipo: {
     'servicio-caido': {
       titulo: 'Usługa zatrzymała się',
-      cuerpo: 'Otwórz WolfCore Dev, aby zobaczyć szczegóły.',
+      cuerpo: 'Szczegóły w WolfCore Dev.',
     },
     'puerto-ocupado': {
       titulo: 'Port jest zajęty',
-      cuerpo: 'Otwórz WolfCore Dev, aby zobaczyć szczegóły.',
+      cuerpo: 'Szczegóły w WolfCore Dev.',
     },
     'certificado-por-vencer': {
       titulo: 'Certyfikat wkrótce wygaśnie',
-      cuerpo: 'Otwórz WolfCore Dev, aby zobaczyć szczegóły.',
+      cuerpo: 'Szczegóły w WolfCore Dev.',
     },
     'tunel-caido': {
       titulo: 'Tunel został przerwany',
-      cuerpo: 'Otwórz WolfCore Dev, aby zobaczyć szczegóły.',
+      cuerpo: 'Szczegóły w WolfCore Dev.',
     },
     'proceso-error': {
       titulo: 'Proces zakończył się błędem',
-      cuerpo: 'Otwórz WolfCore Dev, aby zobaczyć szczegóły.',
+      cuerpo: 'Szczegóły w WolfCore Dev.',
     },
     'proceso-terminado': {
       titulo: 'Proces zakończył działanie',
-      cuerpo: 'Otwórz WolfCore Dev, aby zobaczyć szczegóły.',
+      cuerpo: 'Szczegóły w WolfCore Dev.',
     },
     'receta-terminada': {
       titulo: 'Przepis zakończony',
-      cuerpo: 'Otwórz WolfCore Dev, aby zobaczyć szczegóły.',
+      cuerpo: 'Szczegóły w WolfCore Dev.',
     },
     doctor: {
       titulo: 'Doctor wykrył problemy',
-      cuerpo: 'Otwórz WolfCore Dev, aby je sprawdzić.',
+      cuerpo: 'Szczegóły w WolfCore Dev.',
     },
     'contenedor-detenido': {
       titulo: 'Kontener zatrzymał się',
-      cuerpo: 'Otwórz WolfCore Dev, aby zobaczyć szczegóły.',
+      cuerpo: 'Szczegóły w WolfCore Dev.',
     },
     'version-nueva': {
       titulo: 'Dostępna jest nowa wersja',
-      cuerpo: 'Otwórz WolfCore Dev, aby zaktualizować.',
+      cuerpo: 'Aktualizacja w WolfCore Dev.',
     },
   },
 };

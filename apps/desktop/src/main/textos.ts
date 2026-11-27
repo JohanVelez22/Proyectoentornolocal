@@ -522,7 +522,7 @@ const TEXTOS = {
       'Polecenie terminala chce udostępnić {dominio} urządzeniom w sieci tailnet ({proveedor}).',
     cliPublicoEn: 'Adres publiczny: https://{publico}',
     cliDatosReales:
-      'UWAGA: {dominio} zawiera RZECZYWISTE DANE. Aby kontynuować, wybierz poniżej dokładną domenę. Jeśli to nie było zamierzone, anuluj.',
+      'UWAGA: {dominio} zawiera RZECZYWISTE DANE. Aby kontynuować, należy wybrać poniżej dokładną domenę. Jeśli to nie było zamierzone, należy anulować.',
     cliPublicar: 'Opublikuj',
     cliPhpGlobal:
       'Polecenie terminala chce zmienić wersję PHP we wszystkich terminalach na {version}.',
@@ -533,14 +533,14 @@ const TEXTOS = {
       'WOLFCORE_DATOS nie jest prawidłowym folderem danych: ścieżka musi być bezwzględna, nie może być folderem systemowym i musi różnić się od rzeczywistego (oraz poprzedniego) folderu. Aplikacja zamknie się bez wprowadzania zmian.',
     sinGuardarTitulo: 'Niezapisane zmiany',
     sinGuardarTexto:
-      'Edytor kodu zawiera niezapisane zmiany. Jeśli kontynuujesz, zostaną utracone.',
+      'Edytor kodu zawiera niezapisane zmiany. Kontynuowanie spowoduje utratę zmian.',
     sinGuardarSalir: 'Wyjdź bez zapisywania',
     sinGuardarSeguir: 'Kontynuuj edycję',
     capturaAtajoOcupado:
-      'Skrót {atajo} jest już używany przez inny program i nie został zmieniony. Przechwytywanie ekranu nie ma globalnego skrótu: wybierz inny w Ustawieniach.',
+      'Skrót {atajo} jest już używany przez inny program i nie został zmieniony. Przechwytywanie ekranu nie ma globalnego skrótu: należy wybrać inny w Ustawieniach.',
     capturaPermisoTitulo: 'Uprawnienie do nagrywania ekranu',
     capturaPermisoTexto:
-      'Aby przechwytywać ekran, macOS wymaga, aby WolfCore Dev miał uprawnienie do nagrywania ekranu. Otwórz je w Ustawieniach systemowych (Prywatność i ochrona), włącz WolfCore Dev i spróbuj ponownie. Nic z tego, co przechwycisz, nie opuszcza tego komputera.',
+      'Aby przechwytywać ekran, macOS wymaga, aby WolfCore Dev miał uprawnienie do nagrywania ekranu. Należy włączyć WolfCore Dev w Ustawieniach systemowych (Prywatność i ochrona) i spróbować ponownie. Nic z przechwyconych treści nie opuszcza tego komputera.',
     capturaAbrirPreferencias: 'Otwórz ustawienia',
     capturaNoDisponible: 'Przechwytywanie ekranu nie jest dostępne na tym komputerze.',
   },

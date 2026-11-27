@@ -14,7 +14,7 @@ const plural = (n: number, one: string, few: string, many: string): string => {
  */
 export const plExtra: TextosParciales = {
   app: {
-    lema: 'Twoje lokalne środowisko, gotowe do pracy',
+    lema: 'Lokalne środowisko, gotowe do pracy',
   },
   resumenGlobal: {
     cortoApagado: 'Wszystko wyłączone',
@@ -29,26 +29,27 @@ export const plExtra: TextosParciales = {
   },
   errores: {
     codigos: {
-      'servicios.no_encendio': 'Nie udało się uruchomić: {nombre}. Sprawdź Usługi i ich dzienniki.',
+      'servicios.no_encendio':
+        'Nie udało się uruchomić: {nombre}. Należy sprawdzić Usługi i ich dzienniki.',
       'tuneles.sitio_no_confiable':
-        'Strona {dominio} nie jest jeszcze zaufana: zaznacz w projekcie „Ufam temu repozytorium”, zanim ją opublikujesz.',
+        'Strona {dominio} nie jest jeszcze zaufana: przed publikacją należy zaznaczyć w projekcie „Ufam temu repozytorium”.',
       'clientehttp.peticion_invalida': 'Nieprawidłowe dane w żądaniu: {campo}.',
       'clientehttp.variable_sin_definir':
         'Zmienna „{nombre}” nie jest zdefiniowana w aktywnym środowisku.',
       'clientehttp.secreto_faltante':
-        'Brakuje zapisanej wartości tajnej: wpisz ją ponownie i zapisz żądanie lub środowisko.',
+        'Brakuje zapisanej wartości tajnej: należy wpisać ją ponownie i zapisać żądanie lub środowisko.',
       'clientehttp.secreto_no_guardado':
         'Nie udało się zapisać wartości tajnej: nie może zawierać podziałów wiersza ani przekraczać 16 KB, a szyfrowanie systemowe musi być dostępne.',
       'clientehttp.url_invalida': 'Adres URL jest nieprawidłowy.',
       'clientehttp.url_con_credenciales':
-        'Adres URL nie może zawierać użytkownika ani hasła: użyj karty uwierzytelniania.',
+        'Adres URL nie może zawierać użytkownika ani hasła: należy użyć karty uwierzytelniania.',
       'clientehttp.protocolo': 'Akceptowane są tylko adresy URL z http:// i https://.',
       'clientehttp.cabecera_invalida': 'Nagłówek „{nombre}” jest nieprawidłowy.',
       'clientehttp.cuerpo_grande': 'Treść żądania jest większa niż 1 MB.',
       'clientehttp.plazo': 'Żądanie przekroczyło limit czasu {segundos} s.',
       'clientehttp.cancelado': 'Żądanie anulowane.',
       'clientehttp.sin_conexion':
-        'Nie udało się połączyć ({motivo}). Sprawdź adres, port i czy serwer działa.',
+        'Nie udało się połączyć ({motivo}). Należy sprawdzić adres, port i czy serwer działa.',
       'clientehttp.certificado': 'Nie udało się zweryfikować certyfikatu serwera ({motivo}).',
       'clientehttp.demasiadas_redirecciones': 'Więcej niż {max} przekierowań z rzędu.',
       'clientehttp.curl_invalido': 'Ten tekst nie jest prawidłowym poleceniem curl.',
@@ -67,29 +68,30 @@ export const plExtra: TextosParciales = {
       'laboratoriogit.ruta_insegura':
         'Folder laboratorium nie jest tym oczekiwanym, więc nie jest ruszany.',
       'laboratoriogit.fallo_sistema':
-        'System nie pozwolił przygotować ani użyć folderu laboratorium. Spróbuj „Zresetuj laboratorium”.',
+        'System nie pozwolił przygotować ani użyć folderu laboratorium. Należy spróbować „Zresetuj laboratorium”.',
       'buscar.ruta_vetada': 'Ten folder zawiera dane WolfCore Dev: nie jest przeszukiwany.',
       'buscar.resultado_caducado': 'Ten wynik nie jest już dostępny: wyszukaj ponownie.',
       'buscar.resultado_invalido': 'Tego wyniku nie można otworzyć.',
-      'diff.raiz_invalida': 'Wybierz dwa istniejące foldery, które nie są dowiązaniami.',
+      'diff.raiz_invalida': 'Należy wybrać dwa istniejące foldery, które nie są dowiązaniami.',
       'diff.ruta_vetada': 'Ten folder zawiera dane WolfCore Dev: nie jest porównywany.',
       'diff.cancelado': 'Porównanie anulowane.',
       'diff.plazo': 'Porównanie trwało dłużej niż {segundos} s i zostało anulowane.',
       'diff.memoria': 'Porównanie wymaga zbyt dużo pamięci (ponad {maximo}) i zostało anulowane.',
-      'diff.ocupado': 'Porównanie już trwa: anuluj je lub poczekaj.',
+      'diff.ocupado': 'Porównanie już trwa: należy anulować je lub poczekać.',
       'diff.caducado': 'To porównanie nie jest już dostępne: porównaj ponownie.',
       'diff.archivo_invalido': 'Tego pliku nie można już porównać: zmienił się lub zniknął.',
       'diff.fallo': 'Porównanie nie powiodło się.',
       'compartir.confirmacion_requerida':
         'Udostępnienie w internecie trzeba potwierdzić w oknie WolfCore Dev.',
       'compartir.ocupado': 'Coś jest już udostępnione: najpierw zatrzymaj udostępnianie.',
-      'compartir.ruta_invalida': 'Wybierz istniejący folder lub plik.',
-      'compartir.duracion_invalida': 'Wybierz 15 minut, 1 godzinę lub 4 godziny.',
-      'compartir.proveedor_invalido': 'Ten tunel nie jest obsługiwany: użyj Cloudflare lub ngrok.',
+      'compartir.ruta_invalida': 'Należy wybrać istniejący folder lub plik.',
+      'compartir.duracion_invalida': 'Należy wybrać 15 minut, 1 godzinę lub 4 godziny.',
+      'compartir.proveedor_invalido':
+        'Ten tunel nie jest obsługiwany: należy użyć Cloudflare lub ngrok.',
       'compartir.raiz_unidad':
-        'Katalog główny dysku nie jest udostępniany. Wybierz folder wewnątrz niego.',
+        'Katalog główny dysku nie jest udostępniany. Należy wybrać folder wewnątrz niego.',
       'compartir.carpeta_usuario':
-        'Cały folder osobisty (ani folder, który go zawiera) nie jest udostępniany. Wybierz podfolder.',
+        'Cały folder osobisty (ani folder, który go zawiera) nie jest udostępniany. Należy wybrać podfolder.',
       'compartir.carpeta_datos': 'Folder danych WolfCore Dev nie jest udostępniany.',
       'compartir.sitio_datos_reales':
         'Strona z prawdziwymi danymi (ani nic w jej wnętrzu) nie jest udostępniana.',
@@ -103,25 +105,26 @@ export const plExtra: TextosParciales = {
       'compartir.archivo_grande':
         'Ten plik jest zbyt duży, by go sprawdzić, i nie jest plikiem multimedialnym ani pakietem: nie jest udostępniany.',
       'compartir.tunel_sin_url':
-        'Tunel nie podał swojego adresu w ciągu {segundos} s. Spróbuj ponownie.',
+        'Tunel nie podał swojego adresu w ciągu {segundos} s. Należy spróbować ponownie.',
       'compartir.tunel_cerrado': 'Tunel zamknął się, zanim zdążył się otworzyć.',
       'compartir.fallo': 'Nie udało się udostępnić.',
-      'disco.raiz_invalida': 'Wybierz istniejący folder lub dysk, który można odczytać.',
+      'disco.raiz_invalida': 'Należy wybrać istniejący folder lub dysk, który można odczytać.',
       'disco.cancelado': 'Analiza anulowana.',
       'disco.plazo': 'Analiza trwała dłużej niż {minutos} min i została anulowana.',
       'disco.memoria': 'Analiza wymaga zbyt dużo pamięci (ponad {maximo}).',
-      'disco.ocupado': 'Analiza już trwa: anuluj ją lub poczekaj.',
+      'disco.ocupado': 'Analiza już trwa: należy anulować ją lub poczekać.',
       'disco.caducado': 'Ta analiza nie jest już dostępna: przeanalizuj ponownie.',
       'disco.entrada_invalida': 'Tego folderu już nie ma lub się zmienił: przeanalizuj ponownie.',
       'disco.fallo': 'Analiza nie powiodła się.',
       'reverb.no_laravel': 'Reverb jest dostępny tylko w projektach Laravel.',
-      'reverb.no_confiado': 'Zaznacz w projekcie „Ufam temu repozytorium”, aby włączyć Reverb.',
+      'reverb.no_confiado':
+        'Należy zaznaczyć w projekcie „Ufam temu repozytorium”, aby włączyć Reverb.',
       'reverb.sin_paquete':
-        'Brakuje pakietu laravel/reverb: zainstaluj go poleceniem composer require laravel/reverb.',
-      'reverb.sin_confirmar': 'Potwierdź, że chcesz włączyć Reverb.',
+        'Brakuje pakietu laravel/reverb: należy zainstalować go poleceniem composer require laravel/reverb.',
+      'reverb.sin_confirmar': 'Należy potwierdzić włączenie Reverb.',
       'reverb.sin_activar': 'Najpierw włącz Reverb w projekcie.',
       'env.meilisearch_no_disponible':
-        'Meilisearch nie jest zainstalowany: zainstaluj go w Usługach.',
+        'Meilisearch nie jest zainstalowany: należy zainstalować go w Usługach.',
       'bd.lentas_confirmar':
         'Zmiana rejestrowania wolnych zapytań wpływa na cały serwer: trzeba ją potwierdzić. Nic nie zmieniono.',
       'bd.lentas_umbral_invalido': 'Czas musi mieścić się między 0,1 a 60 sekundami.',
@@ -131,22 +134,23 @@ export const plExtra: TextosParciales = {
         'SQL nie jest pokazywany z wartościami: baza danych zawiera prawdziwe dane lub zapytania nie da się przypisać do znanej bazy danych.',
       'bd.lentas_entrada_no_existe': 'Tego zapytania nie ma już w dzienniku. Odczytaj je ponownie.',
       'bd.lentas_fallo':
-        'Nie udało się odczytać ani zmienić dziennika wolnych zapytań. Sprawdź, czy serwer działa.',
+        'Nie udało się odczytać ani zmienić dziennika wolnych zapytań. Należy sprawdzić, czy serwer działa.',
       'bd.esquema_base_no_existe': 'Ta baza danych nie istnieje na tym serwerze.',
       'bd.esquema_motor_no_soportado':
         'Podgląd schematu jest przeznaczony dla MySQL, MariaDB i PostgreSQL.',
       'bd.esquema_lectura_fallo':
-        'Nie udało się odczytać schematu bazy danych. Sprawdź, czy serwer działa.',
+        'Nie udało się odczytać schematu bazy danych. Należy sprawdzić, czy serwer działa.',
       'captura.atajo_invalido':
-        'Ten skrót jest nieprawidłowy: użyj Ctrl, Alt, Shift lub Super z literą, cyfrą albo klawiszem F.',
+        'Ten skrót jest nieprawidłowy: należy użyć Ctrl, Alt, Shift lub Super z literą, cyfrą albo klawiszem F.',
       'captura.atajo_no_permitido':
-        'Ten skrót jest niedozwolony: użyj Ctrl lub Super z innym modyfikatorem (Ctrl+Alt bez Shift to AltGr i psuje pisanie @) i unikaj popularnych skrótów, takich jak Ctrl+C czy Alt+F4.',
+        'Ten skrót jest niedozwolony: należy użyć Ctrl lub Super z innym modyfikatorem (Ctrl+Alt bez Shift to AltGr i psuje pisanie @) i unikać popularnych skrótów, takich jak Ctrl+C czy Alt+F4.',
       'captura.atajo_ocupado': 'Skrót {atajo} jest już używany przez inny program.',
       'captura.no_disponible': 'Przechwytywanie ekranu nie jest dostępne na tym komputerze.',
       'captura.permiso_denegado': 'Brakuje uprawnienia do nagrywania ekranu.',
       'captura.sin_imagen': 'Brak obrazu do przechwycenia.',
       'captura.imagen_invalida': 'Obraz przechwycenia jest nieprawidłowy.',
-      'disco.sin_confirmar': 'Potwierdź czyszczenie w oknie dialogowym, zanim przejdziesz dalej.',
+      'disco.sin_confirmar':
+        'Przed kontynuowaniem należy potwierdzić czyszczenie w oknie dialogowym.',
       'disco.categoria_invalida': 'Taka kategoria czyszczenia nie istnieje.',
       'disco.ruta_vetada':
         'Kategoria dotyka chronionej ścieżki (dane, kopie zapasowe, projekty lub FlyEnv); nic nie wyczyszczono.',
@@ -154,9 +158,9 @@ export const plExtra: TextosParciales = {
         'Przeanalizuj ponownie przed czyszczeniem: analiza wygasła lub jej brakuje.',
       'disco.ocupada': 'Analiza lub czyszczenie już trwa.',
       'disco.sin_registro': 'Nie udało się utworzyć dziennika czyszczenia; nic nie usunięto.',
-      'editor.sin_confirmar': 'Potwierdź zapis, zanim przejdziesz dalej.',
+      'editor.sin_confirmar': 'Przed kontynuowaniem należy potwierdzić zapis.',
       'editor.confirmacion_reforzada':
-        'Ten plik wygląda na zawierający sekrety lub należący do strony z prawdziwymi danymi: aby go zapisać, potwierdź dodatkową kontrolą.',
+        'Ten plik wygląda na zawierający sekrety lub należący do strony z prawdziwymi danymi: aby go zapisać, należy potwierdzić dodatkową kontrolą.',
       'editor.ruta_invalida': 'Ścieżka pliku jest nieprawidłowa.',
       'editor.no_existe': 'Plik nie istnieje.',
       'editor.no_regular': 'Można edytować tylko zwykłe pliki.',
@@ -168,24 +172,26 @@ export const plExtra: TextosParciales = {
       'editor.codificacion':
         'Plik nie jest w kodowaniu UTF-8: edytor go nie otwiera, aby go nie uszkodzić.',
       'editor.no_abierto':
-        'Ten plik nie został otwarty w edytorze (lub jego wersja się zmieniła): otwórz go ponownie.',
+        'Ten plik nie został otwarty w edytorze (lub jego wersja się zmieniła): należy otworzyć go ponownie.',
       'editor.eol_mixto':
-        'Plik miesza różne zakończenia wierszy: aby zapisać, potwierdź ich ujednolicenie.',
+        'Plik miesza różne zakończenia wierszy: aby zapisać, należy potwierdzić ich ujednolicenie.',
       'editor.contenido_invalido': 'Zawartość nie jest prawidłowym tekstem.',
-      'editor.huella_invalida': 'Brakuje odcisku otwartego pliku: otwórz go ponownie.',
+      'editor.huella_invalida': 'Brakuje odcisku otwartego pliku: należy otworzyć go ponownie.',
       'editor.archivo_cambiado':
-        'Plik zmienił się poza edytorem od chwili otwarcia. Wczytaj go ponownie lub potwierdź nadpisanie.',
+        'Plik zmienił się poza edytorem od chwili otwarcia. Należy wczytać go ponownie lub potwierdzić nadpisanie.',
       'editor.copia_fallo': 'Nie udało się wykonać kopii zapasowej ({codigo}); nic nie zapisano.',
       'editor.lectura_fallo': 'Nie udało się odczytać pliku ({codigo}).',
       'editor.escritura_fallo':
         'Nie udało się zapisać pliku ({codigo}). Oryginał nie został tknięty.',
-      'memoria.sin_confirmar': 'Potwierdź działanie w oknie dialogowym, zanim przejdziesz dalej.',
+      'memoria.sin_confirmar':
+        'Przed kontynuowaniem należy potwierdzić działanie w oknie dialogowym.',
       'memoria.modo_invalido': 'Taki tryb optymalizacji nie istnieje.',
       'memoria.plan_caducado':
-        'Lista wygasła lub nie jest już aktualna. Pokaż ją ponownie przed zastosowaniem.',
+        'Lista wygasła lub nie jest już aktualna. Należy pokazać ją ponownie przed zastosowaniem.',
       'memoria.no_disponible':
         'Optymalizator pamięci nie jest tu dostępny lub nie mógł odczytać systemu.',
-      'conversor.ocupado': 'Jedna konwersja już trwa, a kolejna czeka: poczekaj, aż się zakończy.',
+      'conversor.ocupado':
+        'Jedna konwersja już trwa, a kolejna czeka: należy poczekać, aż się zakończy.',
       'doctor.firewall_reglas_acotadas':
         'Liczba reguł dla programów WolfCore Dev ograniczonych do sieci lokalnej: {cantidad} (tylko profil prywatny, podsieć lokalna i określone porty), takich jak te, które aplikacja sama zaleca do udostępniania strony. Są tylko pokazane: stąd nie są usuwane.',
       'doctor.firewall_almacen_inseguro':
@@ -193,7 +199,7 @@ export const plExtra: TextosParciales = {
       'doctor.firewall_quitadas':
         'WolfCore Dev usunął wcześniej reguły zapory ({cantidad}) i zachował kopię: w razie potrzeby można je utworzyć ponownie.',
       'doctor.firewall_parcial':
-        'Część reguł usunięto, a inne nie: zmieniły się od pokazania listy, nie należały do WolfCore Dev lub Windows nie pozwolił ich usunąć. Sprawdź listę.',
+        'Część reguł usunięto, a inne nie: zmieniły się od pokazania listy, nie należały do WolfCore Dev lub Windows nie pozwolił ich usunąć. Należy sprawdzić listę.',
       'doctor.firewall_sin_cambios':
         'Żadna reguła nie została zmieniona: nie zgadzają się już z pokazanymi lub nie udało się ich zmienić.',
       'doctor.firewall_registro_fallido':
@@ -202,16 +208,17 @@ export const plExtra: TextosParciales = {
         'Pobrany pakiet nie jest bezpieczny (ścieżki poza folderem, dowiązania lub nadmierny rozmiar).',
       'catalogo.extraccion_fallo': 'Nie udało się odczytać ani wypakować pobranego pakietu .7z.',
       'runtimes.falta_runtime':
-        '{nombre} nie jest zainstalowany dla tego projektu: zainstaluj go w Usługach.',
-      'runtimes.falta_jdk': 'Dla tego projektu nie zainstalowano JDK: zainstaluj Javę w Usługach.',
+        '{nombre} nie jest zainstalowany dla tego projektu: należy zainstalować go w Usługach.',
+      'runtimes.falta_jdk':
+        'Dla tego projektu nie zainstalowano JDK: należy zainstalować Javę w Usługach.',
       'runtimes.instalacion_incompleta':
-        'Instalacja {nombre} jest niekompletna: zainstaluj ją ponownie w Usługach.',
+        'Instalacja {nombre} jest niekompletna: należy zainstalować ją ponownie w Usługach.',
       'procesos.escucha_publica':
         'Proces nasłuchuje na {direccion}:{puerto} ({programa}) i jest otwarty na sieć. Został zatrzymany: może nasłuchiwać tylko na 127.0.0.1.',
       'procesos.escucha_publica_livereload':
-        'Proces nasłuchuje na {direccion}:{puerto} ({programa}) i jest otwarty na sieć. Został zatrzymany: może nasłuchiwać tylko na 127.0.0.1. To LiveReload ze Spring DevTools: wyłącz go przez spring.devtools.livereload.enabled=false.',
+        'Proces nasłuchuje na {direccion}:{puerto} ({programa}) i jest otwarty na sieć. Został zatrzymany: może nasłuchiwać tylko na 127.0.0.1. To LiveReload ze Spring DevTools: należy wyłączyć go przez spring.devtools.livereload.enabled=false.',
       'procesos.escucha_publica_inspector':
-        'Proces nasłuchuje na {direccion}:{puerto} ({programa}) i jest otwarty na sieć. Został zatrzymany: może nasłuchiwać tylko na 127.0.0.1. To inspektor Node: użyj --inspect=127.0.0.1.',
+        'Proces nasłuchuje na {direccion}:{puerto} ({programa}) i jest otwarty na sieć. Został zatrzymany: może nasłuchiwać tylko na 127.0.0.1. To inspektor Node: należy użyć --inspect=127.0.0.1.',
     },
   },
   inicio: {
@@ -235,7 +242,7 @@ export const plExtra: TextosParciales = {
       accion: 'Zainstaluj Nginx i PHP',
     },
     externos: {
-      titulo: 'Wykryto na Twoim komputerze',
+      titulo: 'Wykryto na tym komputerze',
       ayuda: 'Zarządza nimi inny program; WolfCore Dev tylko je pokazuje.',
     },
     ftp: {
@@ -244,7 +251,7 @@ export const plExtra: TextosParciales = {
       compartir: {
         enlace: 'Udostępnij folder lub plik…',
         ayuda:
-          'FTP nie jest udostępniany przez tunel: jest niezaszyfrowany, a tunel przenosi tylko HTTP. Aby opublikować coś w internecie, użyj „Udostępnij folder lub plik” (HTTP, tylko do odczytu); FTP pozostaje w sieci lokalnej.',
+          'FTP nie jest udostępniany przez tunel: jest niezaszyfrowany, a tunel przenosi tylko HTTP. Aby opublikować coś w internecie, należy użyć „Udostępnij folder lub plik” (HTTP, tylko do odczytu); FTP pozostaje w sieci lokalnej.',
       },
     },
     datosConexion: 'Dane połączenia',
@@ -266,7 +273,7 @@ export const plExtra: TextosParciales = {
   },
   tunel: {
     sinConfianza:
-      'Ten projekt nie jest zaufany: zaznacz „Ufam temu repozytorium”, aby móc go opublikować.',
+      'Ten projekt nie jest zaufany: należy zaznaczyć „Ufam temu repozytorium”, aby móc go opublikować.',
   },
   tuneles: {
     irAProyectos: 'Przejdź do Projektów',
@@ -326,7 +333,7 @@ export const plExtra: TextosParciales = {
       libre: (l: string) => `Wolne miejsce na dysku modeli: ${l}.`,
       libreDesconocido: 'Nie udało się zmierzyć wolnego miejsca na dysku.',
       sinEspacio: (t: string, l: string) =>
-        `Za mało miejsca: model zajmuje ${t}, a wolne jest tylko ${l}. Zwolnij miejsce lub wybierz mniejszy model.`,
+        `Za mało miejsca: model zajmuje ${t}, a wolne jest tylko ${l}. Należy zwolnić miejsce lub wybrać mniejszy model.`,
     },
   },
   proyectos: {
@@ -395,7 +402,7 @@ export const plExtra: TextosParciales = {
     formato: 'Format',
     cargando: 'Przygotowywanie przechwycenia…',
     guiaRegion: 'Przeciągnij, aby wybrać obszar. Esc anuluje.',
-    guiaVentana: 'Wybierz okno do przechwycenia. Esc anuluje.',
+    guiaVentana: 'Należy wybrać okno do przechwycenia. Esc anuluje.',
     sinVentanas: 'Brak okien, które można przechwycić.',
     textoPlaceholder: 'Wpisz tekst i naciśnij Enter',
     copiada: 'Skopiowano do schowka',
@@ -408,24 +415,24 @@ export const plExtra: TextosParciales = {
     dimensiones: (ancho: number, alto: number) => `${ancho}×${alto} px`,
     panel: {
       ayuda:
-        'Wszystko dzieje się na tym komputerze: przechwycenie nie jest wysyłane do żadnej usługi i nie jest zapisywane na dysku, dopóki go nie zapiszesz. Okna WolfCore Dev na chwilę się chowają, by nie pojawiły się na obrazie.',
+        'Wszystko dzieje się na tym komputerze: przechwycenie nie jest wysyłane do żadnej usługi i nie jest zapisywane na dysku, dopóki nie zostanie zapisane. Okna WolfCore Dev na chwilę się chowają, by nie pojawiły się na obrazie.',
       region: 'Obszar',
       regionAyuda: 'Przeciągnij po ekranie, aby wybrać obszar.',
       ventana: 'Okno',
-      ventanaAyuda: 'Wybierz jedno z otwartych okien.',
+      ventanaAyuda: 'Należy wybrać jedno z otwartych okien.',
       pantalla: 'Cały ekran',
       pantallaAyuda: 'Ekran, na którym znajduje się kursor.',
       atajoActivo: (atajo: string) => `Skrót globalny aktywny: ${atajo} (obszar).`,
-      atajoInactivo: 'Brak skrótu globalnego. Włącz go w Ustawieniach.',
+      atajoInactivo: 'Brak skrótu globalnego. Należy włączyć go w Ustawieniach.',
       noDisponible: 'Przechwytywanie ekranu nie jest dostępne na tym komputerze.',
       permisoDenegado:
-        'Brakuje uprawnienia do nagrywania ekranu. Włącz je dla WolfCore Dev w ustawieniach systemu.',
+        'Brakuje uprawnienia do nagrywania ekranu. Należy włączyć je dla WolfCore Dev w ustawieniach systemu.',
       ocupada: 'Przechwytywanie już trwa.',
     },
     ajustes: {
       titulo: 'Przechwytywanie ekranu',
       descripcion:
-        'Obszar, okno lub cały ekran z szybkim edytorem. Działa w 100% lokalnie: nic nie jest wysyłane ani zapisywane, dopóki nie zdecydujesz.',
+        'Obszar, okno lub cały ekran z szybkim edytorem. Działa w 100% lokalnie: nic nie jest wysyłane ani zapisywane, dopóki nie zapadnie decyzja.',
       activar: 'Skrót globalny',
       activarAyuda:
         'Domyślnie wyłączony. Po włączeniu jest rejestrowany tylko wtedy, gdy nie używa go inny program, i jest zwalniany przy zamknięciu WolfCore Dev.',
@@ -433,16 +440,16 @@ export const plExtra: TextosParciales = {
       grabar: 'Zmień',
       grabando: 'Naciśnij kombinację…',
       grabandoAyuda:
-        'Użyj Ctrl lub Super z innym modyfikatorem (na przykład Ctrl+Alt+Shift) i literą, cyfrą lub klawiszem F. Unikaj popularnych skrótów, takich jak Ctrl+C.',
+        'Należy użyć Ctrl lub Super z innym modyfikatorem (na przykład Ctrl+Alt+Shift) i literą, cyfrą lub klawiszem F. Należy unikać popularnych skrótów, takich jak Ctrl+C.',
       formato: 'Format przy zapisie',
       activado: (atajo: string) => `Skrót ${atajo} włączony.`,
       desactivado: 'Skrót wyłączony.',
       ocupado: (atajo: string) =>
-        `Skrót ${atajo} jest już używany przez inny program i nic nie zmieniono. Spróbuj innej kombinacji.`,
+        `Skrót ${atajo} jest już używany przez inny program i nic nie zmieniono. Należy spróbować innej kombinacji.`,
       ocupadoInicio:
-        'Zapisany skrót jest już używany przez inny program i nie został zarejestrowany. Wybierz inną kombinację.',
+        'Zapisany skrót jest już używany przez inny program i nie został zarejestrowany. Należy wybrać inną kombinację.',
       sinPermiso:
-        'W macOS wymagane jest uprawnienie do nagrywania ekranu; zostaniesz o nie poproszony przy pierwszym przechwyceniu.',
+        'W macOS wymagane jest uprawnienie do nagrywania ekranu; system poprosi o nie przy pierwszym przechwyceniu.',
       formatoGuardado: 'Format zapisany.',
     },
   },
@@ -450,7 +457,7 @@ export const plExtra: TextosParciales = {
     lista: {
       clienteHttp: {
         nombre: 'Klient HTTP',
-        descripcion: 'Wypróbuj API: żądania, środowiska, kolekcje i historia.',
+        descripcion: 'Wypróbowywanie API: żądania, środowiska, kolekcje i historia.',
       },
       captura: {
         nombre: 'Przechwytywanie ekranu',
@@ -511,7 +518,7 @@ export const plExtra: TextosParciales = {
       },
       qr: {
         nombre: 'QR',
-        descripcion: 'Z tekstu lub linku albo aby inni mogli dołączyć do Twojego Wi-Fi.',
+        descripcion: 'Z tekstu lub linku albo aby inni mogli dołączyć do sieci Wi-Fi.',
       },
       guias: {
         nombre: 'Przewodniki',
@@ -531,32 +538,32 @@ export const plExtra: TextosParciales = {
       ayuda:
         'WolfCore Dev nie ma własnej nagrywarki: otwiera tę, którą system już zawiera. Wideo zapisuje się tam, gdzie zapisuje je to narzędzie.',
       abrir: 'Otwórz nagrywarkę',
-      abierta: 'Otwarto Narzędzie do wycinania. Wybierz obszar ekranu i naciśnij Rozpocznij.',
+      abierta: 'Otwarto Narzędzie do wycinania. Należy wybrać obszar ekranu i nacisnąć Rozpocznij.',
       noSePudo:
-        'Nie udało się stąd otworzyć Narzędzia do wycinania. Użyj jednego ze skrótów z przewodnika.',
-      guiaTitulo: 'Jak nagrywać w Twoim systemie',
+        'Nie udało się stąd otworzyć Narzędzia do wycinania. Należy użyć jednego ze skrótów z przewodnika.',
+      guiaTitulo: 'Jak nagrywać w systemie',
       guias: {
         windows: {
           titulo: 'Windows',
           pasos: [
-            'Naciśnij Win + Shift + R, aby nagrywać Narzędziem do wycinania.',
-            'Jeśli Twoje Narzędzie do wycinania nie jest aktualne, naciśnij Win + Alt + R, aby nagrywać paskiem gier Xbox.',
-            'Zatrzymaj nagrywanie przyciskiem na pasku, który pojawi się u góry.',
+            'Należy nacisnąć Win + Shift + R, aby nagrywać Narzędziem do wycinania.',
+            'Jeśli Narzędzie do wycinania nie jest aktualne, należy nacisnąć Win + Alt + R, aby nagrywać paskiem gier Xbox.',
+            'Należy zatrzymać nagrywanie przyciskiem na pasku, który pojawi się u góry.',
           ],
         },
         macos: {
           titulo: 'macOS',
           pasos: [
-            'Naciśnij Cmd + Shift + 5, aby otworzyć pasek przechwytywania.',
-            'Wybierz nagrywanie całego ekranu lub zaznaczonego fragmentu.',
-            'Naciśnij Nagraj, a aby zakończyć — przycisk zatrzymania na pasku menu.',
+            'Należy nacisnąć Cmd + Shift + 5, aby otworzyć pasek przechwytywania.',
+            'Należy wybrać nagrywanie całego ekranu lub zaznaczonego fragmentu.',
+            'Należy nacisnąć Nagraj, a aby zakończyć — przycisk zatrzymania na pasku menu.',
           ],
         },
         linux: {
           titulo: 'Linux',
           pasos: [
             'Każde środowisko graficzne ma nagrywarkę: w GNOME Ctrl + Alt + Shift + R, w KDE Spectacle.',
-            'Jeśli nie masz żadnej, zainstaluj OBS Studio lub SimpleScreenRecorder z menedżera pakietów.',
+            'Jeśli żadna nie jest dostępna, należy zainstalować OBS Studio lub SimpleScreenRecorder z menedżera pakietów.',
           ],
         },
       },
@@ -595,7 +602,7 @@ export const plExtra: TextosParciales = {
     },
     compartir: {
       explicacion:
-        'Publikuje folder lub plik z tego komputera w internecie tymczasowym linkiem. Tylko do odczytu: każdy, kto ma link, może przeglądać i pobierać, ale nie przesyłać ani niczego zmieniać. Link zawiera tajny kod, wygasa o wybranej przez Ciebie porze i zamyka się po zamknięciu WolfCore Dev. Pliki .env, klucze, folder .git i strony z prawdziwymi danymi nigdy nie są udostępniane.',
+        'Publikuje folder lub plik z tego komputera w internecie tymczasowym linkiem. Tylko do odczytu: każdy, kto ma link, może przeglądać i pobierać, ale nie przesyłać ani niczego zmieniać. Link zawiera tajny kod, wygasa o wybranej porze i zamyka się po zamknięciu WolfCore Dev. Pliki .env, klucze, folder .git i strony z prawdziwymi danymi nigdy nie są udostępniane.',
       eleccion: 'Co udostępnić',
       elegirCarpeta: 'Wybierz folder…',
       elegirArchivo: 'Wybierz plik…',
@@ -609,16 +616,16 @@ export const plExtra: TextosParciales = {
       tunel: 'Tunel',
       tuneles: {
         'cloudflare-rapido': 'Cloudflare (szybki, bez konta)',
-        ngrok: 'ngrok (z Twoim tokenem)',
+        ngrok: 'ngrok (z tokenem)',
       },
-      ngrokSinToken: 'ngrok potrzebuje Twojego tokenu: zapisz go w opcjach tunelu jakiejś strony.',
+      ngrokSinToken: 'ngrok potrzebuje tokenu: należy zapisać go w opcjach tunelu jakiejś strony.',
       compartir: 'Udostępnij…',
       sinFtp:
         'FTP nie jest udostępniany przez tunel: jest niezaszyfrowany, a tunel przenosi tylko HTTP.',
       vacio: {
         titulo: 'Nic nie jest udostępnione',
         texto:
-          'Wybierz folder lub plik, aby otrzymać tymczasowy link publiczny. Nic nie jest publikowane, dopóki tego nie potwierdzisz.',
+          'Należy wybrać folder lub plik, aby otrzymać tymczasowy link publiczny. Nic nie jest publikowane, dopóki nie zostanie to potwierdzone.',
       },
       grandes:
         'Pliki tekstowe lub pliki nieznanego typu większe niż 8 MB nie są udostępniane, ponieważ nie da się ich w pełni sprawdzić; obrazy, dźwięk, wideo i pakiety (zip, 7z, gz, pdf) są. Na liście są oznaczone.',
@@ -665,7 +672,7 @@ export const plExtra: TextosParciales = {
       unidades: 'Dyski',
       unidad: (ruta: string, etiqueta: string) => (etiqueta ? `${ruta} ${etiqueta}` : ruta),
       espacioUnidad: (libre: string, total: string) => `wolne ${libre} z ${total}`,
-      sinUnidades: 'Nie udało się odczytać listy dysków. Możesz wybrać folder.',
+      sinUnidades: 'Nie udało się odczytać listy dysków. Można wybrać folder.',
       elegirCarpeta: 'Wybierz folder…',
       analizando: 'Analizowanie…',
       leyendo: 'Odczyt',
@@ -722,13 +729,14 @@ export const plExtra: TextosParciales = {
       limpieza: {
         titulo: 'Zwolnij miejsce',
         texto:
-          'To narzędzie tylko mierzy. Aby usunąć pliki tymczasowe i odtwarzalne pamięci podręczne lub nieużywane wersje usług, skorzystaj z tego, co już istnieje:',
+          'To narzędzie tylko mierzy. Aby usunąć pliki tymczasowe i odtwarzalne pamięci podręczne lub nieużywane wersje usług, należy skorzystać z tego, co już istnieje:',
         temporales: 'Czyszczenie dysku',
         versiones: 'Nieużywane wersje (Usługi)',
       },
       vacio: {
         titulo: 'Brak analizy',
-        texto: 'Wybierz dysk lub folder, aby zobaczyć, co zajmuje miejsce. Nic nie jest zmieniane.',
+        texto:
+          'Należy wybrać dysk lub folder, aby zobaczyć, co zajmuje miejsce. Nic nie jest zmieniane.',
       },
       sinContenido: {
         titulo: 'Nie ma czego liczyć',
@@ -764,7 +772,7 @@ export const plExtra: TextosParciales = {
       motivoTamano: 'inny rozmiar',
       motivoContenido: 'ten sam rozmiar, inna zawartość',
       tamano: (a: string, b: string) => `A: ${a} · B: ${b}`,
-      elegirArchivo: 'Wybierz z listy plik „różny”, aby zobaczyć jego różnicę.',
+      elegirArchivo: 'Należy wybrać z listy plik „różny”, aby zobaczyć jego różnicę.',
       soloEnUno: (lado: string) => `Ten plik istnieje tylko w ${lado}.`,
       cargando: 'Odczytywanie plików…',
       binario: 'Pliki są różne, ale nie są tekstowe: różnica nie jest pokazywana.',
@@ -815,7 +823,7 @@ export const plExtra: TextosParciales = {
       nombre: 'Nazwa',
       nombrePlaceholder: 'Nazwa żądania',
       guardada: 'Żądanie zapisane',
-      ayudaVariables: 'Użyj {{variable}}, aby pobierać wartości z wybranego środowiska.',
+      ayudaVariables: 'Należy użyć {{variable}}, aby pobierać wartości z wybranego środowiska.',
       secciones: {
         params: 'Parametry',
         cabeceras: 'Nagłówki',
@@ -829,7 +837,7 @@ export const plExtra: TextosParciales = {
         agregar: 'Dodaj wiersz',
         quitar: 'Usuń wiersz',
         activa: 'Wiersz włączony',
-        falta: 'Brakuje sekretu: wpisz go, aby móc wysłać.',
+        falta: 'Brakuje sekretu: należy wpisać go, aby móc wysłać.',
       },
       cuerpo: {
         tipo: 'Typ treści',
@@ -859,7 +867,7 @@ export const plExtra: TextosParciales = {
           'Wartość jest przechowywana zaszyfrowana przez system; kolekcja, historia i środowiska zachowują tylko odwołanie do niej.',
       },
       secreto: {
-        guardado: 'Zapisano (zaszyfrowane). Wpisz, aby zastąpić.',
+        guardado: 'Zapisano (zaszyfrowane). Należy wpisać, aby zastąpić.',
         mostrar: 'Pokaż',
         ocultar: 'Ukryj',
         quitar: 'Usuń',
@@ -884,7 +892,7 @@ export const plExtra: TextosParciales = {
         cabeceras: 'Nagłówki',
         redirecciones: 'Przekierowania',
         vacioTitulo: 'Brak odpowiedzi',
-        vacioTexto: 'Wpisz adres URL i naciśnij Wyślij. Żądanie wychodzi z WolfCore Dev.',
+        vacioTexto: 'Należy wpisać adres URL i nacisnąć Wyślij. Żądanie wychodzi z WolfCore Dev.',
         binario: (bytes: number, tipo: string) =>
           `Dane binarne, ${bytes} bajtów, typ ${tipo || 'nieznany'}.`,
         sinCuerpo: 'Odpowiedź nie ma treści.',
@@ -909,7 +917,7 @@ export const plExtra: TextosParciales = {
         importar: 'Importuj curl',
         importarTitulo: 'Importuj polecenie curl',
         importarAyuda:
-          'Wklej polecenie curl. Jest czytane tylko jako tekst: nic nie jest uruchamiane. Dane uwierzytelniające trafiają do zaszyfrowanego magazynu.',
+          'Należy wkleić polecenie curl. Jest czytane tylko jako tekst: nic nie jest uruchamiane. Dane uwierzytelniające trafiają do zaszyfrowanego magazynu.',
         importarPlaceholder:
           "curl -X POST https://api.example.test/path -H 'Accept: application/json'",
         importarBoton: 'Importuj',
@@ -918,7 +926,7 @@ export const plExtra: TextosParciales = {
           opcion_ignorada: (d: string) => `Opcja zignorowana: ${d}`,
           archivo_ignorado: (d: string) => `Pliki z dysku nie są odczytywane: ${d}`,
           inseguro_ignorado:
-            '-k/--insecure zignorowano. Jeśli go potrzebujesz, włącz ręcznie „Ignoruj błędy certyfikatu”.',
+            '-k/--insecure zignorowano. Jeśli jest potrzebna, należy włączyć ręcznie „Ignoruj błędy certyfikatu”.',
           comando_cortado:
             'Wszystko, co następuje po operatorze powłoki (|, ;, &, >), zostało zignorowane.',
           sin_evaluar:
@@ -932,7 +940,7 @@ export const plExtra: TextosParciales = {
       },
       coleccion: {
         vacioTitulo: 'Kolekcja jest pusta',
-        vacioTexto: 'Zapisz żądanie lub zaimportuj polecenie curl, aby mieć je pod ręką.',
+        vacioTexto: 'Należy zapisać żądanie lub zaimportować polecenie curl, aby mieć je pod ręką.',
         abrir: 'Otwórz',
         borrar: 'Usuń',
         borrada: 'Żądanie usunięte',
@@ -962,7 +970,7 @@ export const plExtra: TextosParciales = {
         borrado: 'Środowisko usunięte',
         usar: 'Użyj tego środowiska',
         activo: 'Aktywne',
-        sinNombre: 'Wpisz nazwę środowiska.',
+        sinNombre: 'Należy wpisać nazwę środowiska.',
       },
     },
     imagenes: {
@@ -1007,10 +1015,10 @@ export const plExtra: TextosParciales = {
     ver: 'Zobacz',
     verPuertos: 'Zobacz porty',
     dialogo: {
-      reglas: 'Dotknięte reguły: odznacz te, których nie chcesz ruszać.',
-      sinSeleccion: 'Zaznacz co najmniej jedną regułę, aby kontynuować.',
+      reglas: 'Dotknięte reguły: należy odznaczyć te, których nie należy ruszać.',
+      sinSeleccion: 'Należy zaznaczyć co najmniej jedną regułę, aby kontynuować.',
       reglasNota:
-        'Nic się nie zmieni bez Twojego potwierdzenia i uprawnienia administratora. Jeśli reguła zmieniła się po pokazaniu, zostanie pominięta.',
+        'Nic się nie zmieni bez potwierdzenia i uprawnienia administratora. Jeśli reguła zmieniła się po pokazaniu, zostanie pominięta.',
     },
     reparaciones: {
       firewall:
@@ -1021,13 +1029,13 @@ export const plExtra: TextosParciales = {
   },
   versiones: {
     avisoMaven:
-      'WolfCore Dev uruchamia Mavena bezpośrednio z JDK i ze względów bezpieczeństwa nie czyta .mvn/jvm.config ani zmiennej MAVEN_OPTS. Jeśli Twój projekt ich potrzebuje, uruchom Mavena z terminala.',
+      'WolfCore Dev uruchamia Mavena bezpośrednio z JDK i ze względów bezpieczeństwa nie czyta .mvn/jvm.config ani zmiennej MAVEN_OPTS. Jeśli projekt ich potrzebuje, należy uruchomić Mavena z terminala.',
     avisoRuby:
-      'Ruby jest instalowany bez Devkit (MSYS2) i bez ruszania Twojego PATH ani rejestru Windows: nie ma instalatora. Gemy z rozszerzeniami natywnymi bez gotowego pliku binarnego wymagają Devkit. To krok ręczny: otwórz terminal z projektu i uruchom „ridk install” (instaluje MSYS2 na Twoim komputerze i pobiera dane z internetu).',
+      'Ruby jest instalowany bez Devkit (MSYS2) i bez ruszania PATH ani rejestru Windows: nie ma instalatora. Gemy z rozszerzeniami natywnymi bez gotowego pliku binarnego wymagają Devkit. To krok ręczny: należy otworzyć terminal z projektu i uruchomić „ridk install” (instaluje MSYS2 na tym komputerze i pobiera dane z internetu).',
     avisoJdk:
-      'Maven i Gradle działają z JDK od WolfCore Dev, a żadne nie jest jeszcze zainstalowane. Zainstaluj Javę (Temurin) z listy usług.',
+      'Maven i Gradle działają z JDK od WolfCore Dev, a żadne nie jest jeszcze zainstalowane. Należy zainstalować Javę (Temurin) z listy usług.',
     avisoMeilisearch:
-      'Każda wersja minor Meilisearch ma własne dane. Jeśli przełączysz się na inną wersję minor (na przykład z 1.58 na 1.59), jej indeksy i MEILISEARCH_KEY będą nowe: trzeba będzie ponownie zaindeksować i zaktualizować .env Twoich projektów.',
+      'Każda wersja minor Meilisearch ma własne dane. Po przełączeniu na inną wersję minor (na przykład z 1.58 na 1.59), jej indeksy i MEILISEARCH_KEY będą nowe: trzeba będzie ponownie zaindeksować i zaktualizować .env projektów.',
     servicios: {
       meilisearch: 'Meilisearch',
       ruby: 'Ruby',
@@ -1041,7 +1049,7 @@ export const plExtra: TextosParciales = {
     tituloBoton: 'Optymalizuj pamięć',
     titulo: 'Optymalizator pamięci',
     intro:
-      'Wybierz tryb i przejrzyj listę. Nic nie jest zamykane ani zatrzymywane, dopóki nie potwierdzisz, i nigdy nie działa samo.',
+      'Należy wybrać tryb i przejrzeć listę. Nic nie jest zamykane ani zatrzymywane, dopóki nie zostanie to potwierdzone, i nigdy nie działa samo.',
     modo: 'Tryb',
     modos: {
       liviano: 'Lekki',
@@ -1054,7 +1062,7 @@ export const plExtra: TextosParciales = {
       moderado:
         'Dodatkowo proponuje pozostawienie jednego procesu roboczego PHP i zatrzymanie usług WolfCore Dev bez aktywności i połączeń. Usługi są początkowo niezaznaczone.',
       profundo:
-        'Dodatkowo wyświetla Twoje własne programy zużywające dużo pamięci, abyś mógł poprosić je o zamknięcie okna. Są początkowo niezaznaczone.',
+        'Dodatkowo wyświetla własne programy zużywające dużo pamięci, aby można było poprosić je o zamknięcie okna. Są początkowo niezaznaczone.',
     },
     ver: 'Pokaż listę',
     revisando: 'Sprawdzanie…',
@@ -1073,9 +1081,9 @@ export const plExtra: TextosParciales = {
       `Plus około ${cantidad} na dysku (pamięć podręczna to nie RAM)`,
     marcadas: (n: number, total: number) => `Zaznaczono ${n} z ${total}`,
     sinDatos:
-      'Nie ma jeszcze dość danych o aktywności, aby zaproponować zatrzymanie usług lub zmniejszenie PHP. Zostaw Start otwarty na kilka minut i spójrz ponownie.',
+      'Nie ma jeszcze dość danych o aktywności, aby zaproponować zatrzymanie usług lub zmniejszenie PHP. Należy zostawić Start otwarty na kilka minut i spojrzeć ponownie.',
     listadoFallido:
-      'Nie udało się odczytać listy otwartych programów: ta lista może być niekompletna. Spróbuj ponownie.',
+      'Nie udało się odczytać listy otwartych programów: ta lista może być niekompletna. Należy spróbować ponownie.',
     avisoDetener:
       'Bezczynne usługi są początkowo niezaznaczone: zatrzymanie usługi odcina wszystko, co z niej korzysta. Wymienione są tylko te, które w tej chwili nie mają połączeń.',
     avisoCerrar:
@@ -1097,10 +1105,10 @@ export const plExtra: TextosParciales = {
     liberado: (cantidad: string) => `Szacunkowo: zwolniono około ${cantidad} pamięci RAM`,
     liberadoDisco: (cantidad: string) => `Plus około ${cantidad} na dysku`,
     notaPedido:
-      'Czeka na Ciebie: okno poproszono o zamknięcie, a program nadal jest otwarty (może pytać, czy zapisać dane). Nie jest liczone jako zwolnione.',
+      'Oczekuje na reakcję: okno poproszono o zamknięcie, a program nadal jest otwarty (może pytać, czy zapisać dane). Nie jest liczone jako zwolnione.',
     estados: {
       hecho: 'Gotowe',
-      pedido: 'Czeka na Ciebie',
+      pedido: 'Oczekuje na reakcję',
       saltado: 'Pominięto',
       error: 'Niepowodzenie',
     },
@@ -1141,9 +1149,9 @@ export const plExtra: TextosParciales = {
       copiarEjemplo: 'Kopiuj przykład',
       probar: 'Wypróbuj',
       probarTitulo:
-        'Wypróbuj ten przykład w kliencie HTTP (nic nie jest wysyłane, dopóki nie naciśniesz Wyślij)',
+        'Wypróbuj ten przykład w kliencie HTTP (nic nie jest wysyłane, dopóki nie zostanie naciśnięty Wyślij)',
       servidorActivo: (puerto: number) =>
-        `Przykładowy serwer działa pod adresem 127.0.0.1:${puerto}, dopóki korzystasz z przewodnika lub klienta HTTP. Jest dostępny tylko z tego komputera i zatrzymuje się, gdy wyjdziesz lub po 10 min bez użycia.`,
+        `Przykładowy serwer działa pod adresem 127.0.0.1:${puerto}, dopóki używany jest przewodnik lub klient HTTP. Jest dostępny tylko z tego komputera i zatrzymuje się po wyjściu lub po 10 min bez użycia.`,
       sinTraduccion: 'Nieprzetłumaczone na ten język: pokazano po angielsku.',
       familias: {
         '1xx': '1xx Informacyjne',
@@ -1177,11 +1185,11 @@ export const plExtra: TextosParciales = {
       irLaboratorio: 'Poćwicz w laboratorium',
       lab: {
         intro:
-          'Repozytorium ćwiczeniowe i lokalne „zdalne repozytorium” w folderze należącym do WolfCore Dev. Nie korzysta z internetu ani GitHuba i nie rusza Twoich projektów ani ustawień git.',
+          'Repozytorium ćwiczeniowe i lokalne „zdalne repozytorium” w folderze należącym do WolfCore Dev. Nie korzysta z internetu ani GitHuba i nie rusza projektów ani ustawień git.',
         sinGit: {
           titulo: 'Git nie jest zainstalowany',
           texto:
-            'Laboratorium używa git z Twojego systemu i bez niego się nie otworzy. Zainstaluj Git i ponownie otwórz tę kartę; WolfCore Dev niczego za Ciebie nie instaluje.',
+            'Laboratorium używa git z systemu i bez niego się nie otworzy. Należy zainstalować Git i ponownie otworzyć tę kartę; WolfCore Dev niczego nie instaluje samodzielnie.',
         },
         cargando: 'Przygotowywanie laboratorium…',
         reiniciar: 'Zresetuj laboratorium',
@@ -1208,15 +1216,15 @@ export const plExtra: TextosParciales = {
           areaTexto: (n: string) => `Zawartość ${n}`,
         },
         salida: 'Wynik',
-        salidaVacia: 'Naciśnij polecenie, aby zobaczyć tutaj odpowiedź git.',
+        salidaVacia: 'Należy nacisnąć polecenie, aby zobaczyć tutaj odpowiedź git.',
         codigo: (n: number) => (n === 0 ? 'Zakończono pomyślnie' : `Zakończono z kodem ${n}`),
         truncada: 'Wynik został obcięty.',
         historial: 'Historia',
-        historialVacio: 'Nie ma jeszcze commitów: uruchom git init, git add i git commit.',
+        historialVacio: 'Nie ma jeszcze commitów: należy uruchomić git init, git add i git commit.',
         conflicto: {
           titulo: 'Ćwiczenie z przewodnikiem: konflikt',
           intro:
-            'Dwie gałęzie zmieniają ten sam wiersz. Zobaczysz, jak powstaje konflikt i jak go rozwiązać.',
+            'Dwie gałęzie zmieniają ten sam wiersz. Widać, jak powstaje konflikt i jak go rozwiązać.',
           paso: (n: number, total: number) => `Krok ${n} z ${total}`,
           ejecutar: 'Wykonaj ten krok',
           hecho: 'Gotowe',
@@ -1227,7 +1235,7 @@ export const plExtra: TextosParciales = {
             otra: 'Zachowaj ten z rama-a (czerwony)',
             ambas: 'Zachowaj oba',
           },
-          final: 'Gotowe: rozwiązano konflikt. Zobacz historię.',
+          final: 'Gotowe: konflikt rozwiązano. Można obejrzeć historię.',
           pasos: [
             {
               titulo: 'Przygotuj laboratorium',
@@ -1251,7 +1259,7 @@ export const plExtra: TextosParciales = {
             {
               titulo: 'Wybierz wersję',
               texto:
-                'Wybierz, którą wersję wiersza zachować. colores.txt zawiera teraz znaczniki konfliktu.',
+                'Należy wybrać, którą wersję wiersza zachować. colores.txt zawiera teraz znaczniki konfliktu.',
             },
             {
               titulo: 'Potwierdź rozwiązanie',
@@ -1265,18 +1273,18 @@ export const plExtra: TextosParciales = {
   },
   editorCodigo: {
     intro: (mb: number) =>
-      `Lekki edytor z podświetlaniem dla plików tekstowych do ${mb} MB. Wybierz plik w oknie systemowym; zapis zawsze prosi o potwierdzenie i najpierw zostawia kopię w folderze danych WolfCore Dev.`,
+      `Lekki edytor z podświetlaniem dla plików tekstowych do ${mb} MB. Należy wybrać plik w oknie systemowym; zapis zawsze prosi o potwierdzenie i najpierw zostawia kopię w folderze danych WolfCore Dev.`,
     abrir: 'Otwórz plik…',
     abriendo: 'Otwieranie…',
     guardar: 'Zapisz',
     guardando: 'Zapisywanie…',
     recargar: 'Wczytaj ponownie z dysku',
-    vacio: 'Otwórz plik, aby zacząć edycję.',
+    vacio: 'Należy otworzyć plik, aby zacząć edycję.',
     sinCambios: 'Bez zmian',
     conCambios: 'Niezapisane zmiany',
     posicion: (linea: number, columna: number) => `Wiersz ${linea}, kolumna ${columna}`,
     areaTexto: (nombre: string) => `Edytor kodu: ${nombre}`,
-    salirTeclado: 'Aby opuścić edytor klawiaturą, naciśnij Esc, a potem Tab.',
+    salirTeclado: 'Aby opuścić edytor klawiaturą, należy nacisnąć Esc, a potem Tab.',
     guardado: 'Plik zapisany.',
     copiaPrevia: (ruta: string) => `Kopia zapasowa: ${ruta}`,
     cancelar: 'Anuluj',
@@ -1306,7 +1314,7 @@ export const plExtra: TextosParciales = {
         'Ten plik wygląda na zawierający sekrety (klucze prywatne, tokeny lub dane uwierzytelniające). Jego zawartość zostanie pokazana na ekranie.',
       datosReales:
         'Ten plik należy do strony oznaczonej jako zawierająca prawdziwe dane. Błędna zmiana może wpłynąć na prawdziwe informacje.',
-      instruccion: (nombre: string) => `Aby kontynuować, wpisz nazwę pliku: ${nombre}`,
+      instruccion: (nombre: string) => `Aby kontynuować, należy wpisać nazwę pliku: ${nombre}`,
       etiqueta: 'Nazwa pliku',
       abrirBoton: 'Otwórz mimo to',
       guardarBoton: 'Zapisz mimo to',
@@ -1314,7 +1322,7 @@ export const plExtra: TextosParciales = {
     cambioExterno: {
       titulo: 'Plik zmienił się poza edytorem',
       texto:
-        'Inny program zmodyfikował go od chwili otwarcia, więc nic nie zapisano. Możesz wczytać go ponownie (Twoje zmiany zostaną utracone) lub nadpisać tym, co masz tutaj.',
+        'Inny program zmodyfikował go od chwili otwarcia, więc nic nie zapisano. Można wczytać go ponownie (zmiany zostaną utracone) lub nadpisać tym, co jest w edytorze.',
       recargar: 'Wczytaj ponownie i odrzuć moje zmiany',
       sobrescribir: 'Nadpisz…',
       sobrescribirTitulo: 'Nadpisz plik',
@@ -1325,7 +1333,7 @@ export const plExtra: TextosParciales = {
     },
     descartar: {
       titulo: 'Niezapisane zmiany',
-      texto: 'W edytorze są niezapisane zmiany. Jeśli kontynuujesz, zostaną utracone.',
+      texto: 'W edytorze są niezapisane zmiany. Kontynuowanie spowoduje ich utratę.',
       confirmar: 'Odrzuć zmiany',
       seguir: 'Kontynuuj edycję',
     },
@@ -1356,7 +1364,7 @@ export const plExtra: TextosParciales = {
   },
   limpiezaDisco: {
     intro:
-      'Najpierw analizuje i pokazuje, ile zajmuje każda pozycja. Nic nie jest usuwane, dopóki nie potwierdzisz, i nigdy nie działa samo ani w tle.',
+      'Najpierw analizuje i pokazuje, ile zajmuje każda pozycja. Nic nie jest usuwane, dopóki nie zostanie to potwierdzone, i nigdy nie działa samo ani w tle.',
     analizar: 'Analizuj',
     analizando: 'Analizowanie…',
     cancelarAnalisis: 'Anuluj',
@@ -1365,7 +1373,7 @@ export const plExtra: TextosParciales = {
       temp: {
         nombre: 'Pliki tymczasowe',
         ayuda:
-          'Pliki w Twoim folderze TEMP starsze niż 24 godziny. Usuwane na stałe; tworzą się ponownie same.',
+          'Pliki w folderze TEMP starsze niż 24 godziny. Usuwane na stałe; tworzą się ponownie same.',
       },
       'cache-chrome': {
         nombre: 'Pamięć podręczna Google Chrome',
@@ -1432,7 +1440,7 @@ export const plExtra: TextosParciales = {
     saltados: (n: number) => `Pominięto plików: ${n}`,
     cancelado: 'Czyszczenie anulowane: to, co już usunięto, pozostaje usunięte.',
     topeEjecucion:
-      'Osiągnięto limit plików na jedno uruchomienie: przeanalizuj i wyczyść ponownie, aby kontynuować.',
+      'Osiągnięto limit plików na jedno uruchomienie: aby kontynuować, należy ponownie przeanalizować i wyczyścić.',
     registroFallido:
       'Nie udało się już zapisywać dziennika czyszczenia, więc czyszczenie zatrzymano: to, co usunięto, jest zapisane w dzienniku do tego momentu.',
     motivos: {
@@ -1474,41 +1482,41 @@ export const plExtra: TextosParciales = {
     basesSinMotor: {
       titulo: 'Brak jeszcze silnika baz danych',
       texto:
-        'Zainstaluj MySQL, MariaDB, PostgreSQL lub MongoDB w Usługach, aby tworzyć bazy danych swoich projektów i nimi zarządzać.',
+        'Należy zainstalować MySQL, MariaDB, PostgreSQL lub MongoDB w Usługach, aby tworzyć bazy danych swoich projektów i nimi zarządzać.',
       accion: 'Przejdź do Usług',
     },
     serviciosVacio: {
       titulo: 'Nie zainstalowano jeszcze żadnych usług',
       texto:
-        'Usługi (Nginx, PHP, bazy danych…) sprawiają, że Twoje strony działają. Zacznij od Nginx i PHP lub od bazy danych.',
+        'Usługi (Nginx, PHP, bazy danych…) sprawiają, że strony działają. Należy zacząć od Nginx i PHP lub od bazy danych.',
       accion: 'Zainstaluj usługę',
     },
     registrosSinFuentes: {
       titulo: 'Brak dzienników',
       texto:
-        'Dzienniki pojawiają się, gdy tylko usługa, strona lub proces zapisze pierwszy wiersz. Włącz usługę i wróć.',
+        'Dzienniki pojawiają się, gdy tylko usługa, strona lub proces zapisze pierwszy wiersz. Należy włączyć usługę i wrócić.',
       accion: 'Przejdź do Usług',
     },
     registrosElegir: {
       titulo: 'Wybierz dziennik',
-      texto: 'Wybierz źródło w selektorze powyżej, aby śledzić jego wiersze na żywo.',
+      texto: 'Należy wybrać źródło w selektorze powyżej, aby śledzić jego wiersze na żywo.',
       accion: '',
     },
     depuracionVacio: {
       titulo: 'Nie nadeszły jeszcze żadne zrzuty',
       texto:
-        'Gdy strona wykonuje dump(), dd() lub wd(), zrzut pojawia się tutaj natychmiast. Otwórz swoją stronę i uruchom ten kod.',
+        'Gdy strona wykonuje dump(), dd() lub wd(), zrzut pojawia się tutaj natychmiast. Należy otworzyć swoją stronę i uruchomić ten kod.',
       accion: '',
     },
     depuracionApagado: {
       titulo: 'Przechwytywanie jest wyłączone',
       texto:
-        'Przy włączonym przechwytywaniu wywołania dump() i dd() Twoich stron trafiają tutaj bez ruszania przeglądarki. Włącz je i uruchom stronę.',
+        'Przy włączonym przechwytywaniu wywołania dump() i dd() stron trafiają tutaj bez ruszania przeglądarki. Należy włączyć je i uruchomić stronę.',
       accion: 'Włącz przechwytywanie',
     },
     depuracionElegir: {
       titulo: 'Wybierz zrzut',
-      texto: 'Wybierz zrzut z listy, aby zobaczyć jego zawartość, plik i źródłowy adres URL.',
+      texto: 'Należy wybrać zrzut z listy, aby zobaczyć jego zawartość, plik i źródłowy adres URL.',
       accion: '',
     },
     erroresVacio: {
@@ -1519,25 +1527,25 @@ export const plExtra: TextosParciales = {
     },
     erroresElegir: {
       titulo: 'Wybierz błąd',
-      texto: 'Wybierz błąd z listy, aby zobaczyć jego ślad i otworzyć plik w edytorze.',
+      texto: 'Należy wybrać błąd z listy, aby zobaczyć jego ślad i otworzyć plik w edytorze.',
       accion: '',
     },
     doctorSinRevision: {
       titulo: 'Nie uruchomiono jeszcze żadnej kontroli',
       texto:
-        'Doctor sprawdza porty, hosts, certyfikaty i wersje oraz podpowiada, jak naprawić to, co nie działa. Uruchom pierwszą kontrolę.',
+        'Doctor sprawdza porty, hosts, certyfikaty i wersje oraz podpowiada, jak naprawić to, co nie działa. Należy uruchomić pierwszą kontrolę.',
       accion: 'Sprawdź teraz',
     },
     doctorSinHallazgos: {
       titulo: 'Wszystko w porządku',
       texto:
-        'Ostatnia kontrola nie wykryła problemów. Sprawdź ponownie, jeśli coś przestanie odpowiadać.',
+        'Ostatnia kontrola nie wykryła problemów. Należy sprawdzić ponownie, jeśli coś przestanie odpowiadać.',
       accion: 'Sprawdź ponownie',
     },
     contenedoresVacio: {
       titulo: 'Brak kontenerów',
       texto:
-        'Kontenery Docker lub Podman z tego komputera pojawiają się tutaj. Utwórz kontener poleceniem docker run lub docker compose i naciśnij Odśwież.',
+        'Kontenery Docker lub Podman z tego komputera pojawiają się tutaj. Należy utworzyć kontener poleceniem docker run lub docker compose i nacisnąć Odśwież.',
       accion: 'Odśwież',
     },
     avisos: {
@@ -1548,34 +1556,35 @@ export const plExtra: TextosParciales = {
     instantaneas: {
       titulo: 'Brak migawek',
       texto:
-        'Migawka zapisuje stan tej bazy danych, abyś mógł do niego wrócić, jeśli coś pójdzie nie tak. Zrób pierwszą przyciskiem powyżej.',
+        'Migawka zapisuje stan tej bazy danych, aby można było do niego wrócić, jeśli coś pójdzie nie tak. Pierwszą można utworzyć przyciskiem powyżej.',
       accion: '',
     },
     basesSinBases: {
       titulo: 'Ten serwer nie ma własnych baz danych',
-      texto: 'Utwórz bazę danych dla swojego projektu lub zaimportuj istniejący zrzut.',
+      texto: 'Należy utworzyć bazę danych dla swojego projektu lub zaimportować istniejący zrzut.',
       accion: 'Utwórz bazę danych',
     },
     iaNube: {
       titulo: 'Brak dostawców AI',
       texto:
-        'Dostawca (OpenAI, Anthropic, OpenRouter i inni) pozwala Twoim agentom korzystać z modeli w chmurze. Klucz jest przechowywany zaszyfrowany na tym komputerze.',
+        'Dostawca (OpenAI, Anthropic, OpenRouter i inni) pozwala agentom korzystać z modeli w chmurze. Klucz jest przechowywany zaszyfrowany na tym komputerze.',
       accion: 'Dodaj dostawcę',
     },
     iaSinModelos: {
       titulo: 'Brak modeli lokalnych',
-      texto: 'Pobierz model z listy poniżej, aby używać go offline.',
+      texto: 'Należy pobrać model z listy poniżej, aby używać go offline.',
       accion: '',
     },
     versiones: {
       titulo: 'Brak wersji do pokazania',
-      texto: 'Lista jest pobierana z oficjalnego katalogu. Sprawdź połączenie i odśwież listę.',
+      texto:
+        'Lista jest pobierana z oficjalnego katalogu. Należy sprawdzić połączenie i odświeżyć listę.',
       accion: 'Odśwież listę',
     },
     buscar: {
       titulo: 'Brak dopasowań',
       texto:
-        'Nic w folderze nie pasuje do Twojego wyszukiwania. Spróbuj innych słów, odznacz „Rozróżniaj wielkość liter” lub sprawdź filtry plików.',
+        'Nic w folderze nie pasuje do wyszukiwania. Należy spróbować innych słów, odznaczyć „Rozróżniaj wielkość liter” lub sprawdzić filtry plików.',
       accion: '',
     },
   },
@@ -1584,43 +1593,43 @@ export const plExtra: TextosParciales = {
     saltar: 'Pomiń',
     terminar: 'Zaczynamy',
     cerrar: 'Zamknij wycieczkę',
-    reabrir: 'Naciśnij Esc, aby wyjść. Możesz obejrzeć ją ponownie w Ustawienia › Wygląd.',
+    reabrir: 'Należy nacisnąć Esc, aby wyjść. Można ją obejrzeć ponownie w Ustawienia › Wygląd.',
     ir: (destino: string) => `Przejdź: ${destino}`,
     pasos: {
       bienvenida: {
         titulo: 'Witamy w WolfCore Dev',
         texto:
-          'Twoje lokalne środowisko programistyczne w jednym oknie: usługi, strony .test z HTTPS, bazy danych, poczta i narzędzia. Wycieczka trwa minutę i niczego nie zmienia na Twoim komputerze.',
+          'Lokalne środowisko programistyczne w jednym oknie: usługi, strony .test z HTTPS, bazy danych, poczta i narzędzia. Wycieczka trwa minutę i niczego nie zmienia na tym komputerze.',
       },
       servicios: {
         titulo: 'Usługi',
         texto:
-          'Tutaj przełącznikiem włączysz Nginx, PHP i bazy danych. Jeśli nie są jeszcze zainstalowane, karta Wersje pobierze je ze zweryfikowaną sumą kontrolną.',
+          'Tutaj przełącznikiem włącza się Nginx, PHP i bazy danych. Jeśli nie są jeszcze zainstalowane, karta Wersje pobierze je ze zweryfikowaną sumą kontrolną.',
       },
       proyectos: {
         titulo: 'Projekty',
         texto:
-          'Utwórz nowy projekt lub zaimportuj folder albo repozytorium. Każda strona dostaje własny adres .test z HTTPS.',
+          'Należy utworzyć nowy projekt lub zaimportować folder albo repozytorium. Każda strona dostaje własny adres .test z HTTPS.',
       },
       bases: {
         titulo: 'Bazy danych',
         texto:
-          'Twórz bazy danych, importuj i eksportuj zrzuty oraz wykonuj kopie zapasowe i przywracaj je bez wychodzenia z aplikacji.',
+          'Tworzenie baz danych, import i eksport zrzutów oraz kopie zapasowe i ich przywracanie bez wychodzenia z aplikacji.',
       },
       herramientas: {
         titulo: 'Narzędzia i Ctrl+K',
         texto:
-          'Edytor, wyszukiwanie, porównywanie, hasła, obrazy i więcej, pogrupowane według sekcji. Naciśnij Ctrl+K na dowolnym ekranie, aby przejść do tego, czego potrzebujesz.',
+          'Edytor, wyszukiwanie, porównywanie, hasła, obrazy i więcej, pogrupowane według sekcji. Należy nacisnąć Ctrl+K na dowolnym ekranie, aby przejść do tego, czego potrzebujesz.',
       },
       doctor: {
         titulo: 'Doctor',
         texto:
-          'Sprawdza porty, hosts, certyfikaty i wersje oraz podpowiada, jak naprawić to, co nie działa. Otwórz go, gdy coś nie odpowiada.',
+          'Sprawdza porty, hosts, certyfikaty i wersje oraz podpowiada, jak naprawić to, co nie działa. Należy otworzyć go, gdy coś nie odpowiada.',
       },
       listo: {
         titulo: 'Wszystko gotowe',
         texto:
-          'Zacznij od włączenia usługi lub utworzenia pierwszego projektu. Możesz obejrzeć tę wycieczkę ponownie w Ustawienia › Wygląd.',
+          'Należy zacząć od włączenia usługi lub utworzenia pierwszego projektu. Tę wycieczkę można obejrzeć ponownie w Ustawienia › Wygląd.',
       },
     },
   },
@@ -1642,8 +1651,7 @@ export const plExtra: TextosParciales = {
   consultasLentas: {
     boton: 'Wolne zapytania',
     titulo: (motor: string) => `Wolne zapytania w ${motor}`,
-    descripcion:
-      'Zapytania trwające dłużej niż wybrany przez Ciebie czas, od najwolniejszego do najszybszego.',
+    descripcion: 'Zapytania trwające dłużej niż wybrany czas, od najwolniejszego do najszybszego.',
     cargando: 'Wczytywanie wolnych zapytań…',
     estadoTitulo: 'Stan dziennika',
     estadoActivo: (s: string) =>
@@ -1688,15 +1696,15 @@ export const plExtra: TextosParciales = {
       `Pokazano co najwyżej ${n} najwolniejszych zapytań z końca dziennika (ostatnie 5 MB).`,
     vacioTitulo: 'Nie zapisano jeszcze wolnych zapytań',
     vacioTextoApagado:
-      'Włącz rejestrowanie i korzystaj ze swoich stron: zapytania trwające dłużej niż wybrany czas pojawią się tutaj.',
+      'Należy włączyć rejestrowanie i korzystać ze swoich stron: zapytania trwające dłużej niż wybrany czas pojawią się tutaj.',
     vacioTextoActivo:
-      'Jak dotąd żadne zapytanie nie przekroczyło wybranego czasu. Korzystaj ze swoich stron i ponownie odczytaj dziennik.',
+      'Jak dotąd żadne zapytanie nie przekroczyło wybranego czasu. Należy korzystać ze stron i ponownie odczytać dziennik.',
   },
   esquemaBd: {
     boton: 'Zobacz schemat',
     titulo: (base: string) => `Schemat ${base}`,
     descripcion:
-      'Tylko do odczytu: tabele, kolumny, klucze i relacje. Dane z Twoich tabel nie są odczytywane.',
+      'Tylko do odczytu: tabele, kolumny, klucze i relacje. Dane z tabel nie są odczytywane.',
     cargando: 'Odczytywanie schematu…',
     error: 'Nie udało się odczytać schematu bazy danych.',
     reintentar: 'Spróbuj ponownie',
@@ -1705,7 +1713,7 @@ export const plExtra: TextosParciales = {
     vista: 'widok',
     truncado: (n: number) => `Listę obcięto do ${n} tabel: baza danych ma ich więcej.`,
     sinResultados: 'Żadna tabela nie pasuje do wyszukiwania.',
-    elegir: 'Wybierz tabelę z listy, aby zobaczyć jej kolumny, klucze i relacje.',
+    elegir: 'Należy wybrać tabelę z listy, aby zobaczyć jej kolumny, klucze i relacje.',
     columnas: 'Kolumny',
     indices: 'Indeksy',
     sinIndices: 'Ta tabela nie ma indeksów.',
@@ -1728,8 +1736,7 @@ export const plExtra: TextosParciales = {
     pk: 'PK',
     unico: 'unikalny',
     vacioTitulo: 'Ta baza danych nie ma tabel',
-    vacioTexto:
-      'Gdy utworzysz tabele (na przykład migracjami swojego projektu), pojawią się tutaj.',
+    vacioTexto: 'Po utworzeniu tabel (na przykład migracjami swojego projektu), pojawią się tutaj.',
   },
   sitios: {
     tipos: {
