@@ -6268,7 +6268,7 @@ export const fr: Textos = {
     literalAviso: 'SQL tel quel, avec ses valeurs',
     sqlOculto: 'SQL masqué',
     sqlOcultoAyuda:
-      'Cette requête ne peut pas être affichée sans risque de montrer des données : ce serveur contient des bases avec des données réelles.',
+      'Cette requête ne peut pas être affichée sans risque de montrer des données : ce serveur contient des bases avec des données réelles ou la requête ne peut pas être attribuée de façon sûre à une base.',
     copiar: 'Copier',
     copiado: 'Requête copiée',
     truncado: (n: number) =>

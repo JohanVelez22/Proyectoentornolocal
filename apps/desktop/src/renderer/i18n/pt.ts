@@ -6103,7 +6103,7 @@ export const pt: Textos = {
     literalAviso: 'SQL original, com os valores',
     sqlOculto: 'SQL oculto',
     sqlOcultoAyuda:
-      'Esta consulta não pode ser mostrada sem risco de expor dados: este servidor tem bancos com dados reais.',
+      'Esta consulta não pode ser mostrada sem risco de expor dados: este servidor tem bancos com dados reais ou a consulta não pode ser atribuída com segurança a um banco.',
     copiar: 'Copiar',
     copiado: 'Consulta copiada',
     truncado: (n: number) =>

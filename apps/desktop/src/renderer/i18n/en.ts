@@ -6068,7 +6068,7 @@ export const en: Textos = {
     literalAviso: 'SQL as is, with its values',
     sqlOculto: 'SQL hidden',
     sqlOcultoAyuda:
-      'This query cannot be shown without risking real data: this server has databases with real data.',
+      'This query cannot be shown without risking real data: this server has databases with real data or the query cannot be safely attributed to a database.',
     copiar: 'Copy',
     copiado: 'Query copied',
     truncado: (n: number) =>

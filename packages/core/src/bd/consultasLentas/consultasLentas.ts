@@ -36,7 +36,7 @@ export interface EntradaLenta {
   sqlNormalizado: string | null;
   /**
    * Se puede pedir el SQL tal cual: solo si NINGUNA base del servidor es de un sitio con
-   * `datosReales`. No depende de la base a la que se atribuya la entrada (esa es informativa).
+   * `datosReales`, la entrada se atribuye a una base que existe y el parser no dudó de ella.
    */
   literalPermitido: boolean;
 }
@@ -260,21 +260,33 @@ export class ConsultasLentas {
   }
 
   /**
-   * ¿Alguna base de este servidor es la de un sitio con `datosReales`? Ante la duda (no se pueden
-   * listar las bases, o no se puede saber de una), sí. Cuando hay una, nada del servidor se
-   * muestra con sus valores, sea cual sea la base a la que el registro atribuya la consulta.
+   * Contexto de seguridad del servidor: ¿alguna de sus bases es la de un sitio con `datosReales`?
+   * Ante la duda (no se pueden listar las bases, o no se puede saber de una), sí. Con `real`, nada
+   * del servidor se muestra con sus valores, sea cual sea la base a la que el registro atribuya la
+   * consulta. `bases` son las que existen hoy (en minúsculas).
    */
-  private async servidorConDatosReales(o: ObjetivoBd): Promise<boolean> {
-    let bases: { nombre: string }[];
+  private async contexto(o: ObjetivoBd): Promise<{ real: boolean; bases: Set<string> }> {
+    let lista: { nombre: string }[];
     try {
-      bases = await this.d.bd.listar(o);
+      lista = await this.d.bd.listar(o);
     } catch {
-      return true;
+      return { real: true, bases: new Set() };
     }
-    for (const b of bases) {
-      if (await this.d.esDatosReales(o, b.nombre).catch(() => true)) return true;
+    for (const b of lista) {
+      if (await this.d.esDatosReales(o, b.nombre).catch(() => true)) {
+        return { real: true, bases: new Set() };
+      }
     }
-    return false;
+    return { real: false, bases: new Set(lista.map((b) => b.nombre.toLowerCase())) };
+  }
+
+  /**
+   * Ante la duda, ocultar. Una entrada solo tiene literal (y se normaliza con el modo laxo) si el
+   * servidor no tiene datos reales, el registro la atribuye a una base que existe y el parser no
+   * dudó de ella.
+   */
+  private fiable(ctx: { real: boolean; bases: Set<string> }, e: EntradaLentaCruda): boolean {
+    return !ctx.real && e.base !== null && ctx.bases.has(e.base.toLowerCase()) && e.dudosa !== true;
   }
 
   /** Las más lentas primero, con el SQL normalizado. */
@@ -284,12 +296,14 @@ export class ConsultasLentas {
     const { entradas, recortado, sinArchivo } = await this.cruda(o);
     const orden = [...entradas].sort((x, y) => y.duracionMs - x.duracionMs);
     const tope = orden.slice(0, MAX_ENTRADAS_LENTAS);
-    const real = await this.servidorConDatosReales(o);
+    const ctx = await this.contexto(o);
     const salida: EntradaLenta[] = [];
     for (const e of tope) {
-      // Modo estricto: ante cualquier anomalía (o si el parser dudó), el SQL no se enseña.
+      // Modo estricto salvo en una entrada fiable: ante cualquier anomalía (o si el parser dudó),
+      // el SQL no se enseña.
+      const fiable = this.fiable(ctx, e);
       const sqlNormalizado =
-        real && e.dudosa === true ? null : normalizarSql(e.sql, dialecto, { estricto: real });
+        e.dudosa === true ? null : normalizarSql(e.sql, dialecto, { estricto: !fiable });
       salida.push({
         id: huella(e),
         duracionMs: e.duracionMs,
@@ -297,7 +311,7 @@ export class ConsultasLentas {
         base: e.base,
         fecha: e.fecha,
         sqlNormalizado,
-        literalPermitido: !real,
+        literalPermitido: fiable,
       });
     }
     return { entradas: salida, truncado: recortado || orden.length > tope.length, sinArchivo };
@@ -305,11 +319,13 @@ export class ConsultasLentas {
 
   /**
    * El SQL tal cual de una entrada. Se rechaza (con un error del catálogo) si alguna base del
-   * servidor es de un sitio con `datosReales`: la atribución de la entrada no decide nada.
+   * servidor es de un sitio con `datosReales`, si la entrada no se atribuye a una base que existe
+   * o si el parser dudó de ella.
    */
   async literal(o: ObjetivoBd, id: string): Promise<string> {
     this.soloSql(o);
-    if (await this.servidorConDatosReales(o)) {
+    const ctx = await this.contexto(o);
+    if (ctx.real) {
       throw new ErrorWolf(
         'bd.lentas_literal_no_permitido',
         'No se muestra el SQL con sus valores: el servidor tiene bases con datos reales.',
@@ -319,6 +335,12 @@ export class ConsultasLentas {
     const e = entradas.find((x) => huella(x) === id);
     if (!e) {
       throw new ErrorWolf('bd.lentas_entrada_no_existe', 'Esa consulta ya no está en el registro.');
+    }
+    if (!this.fiable(ctx, e)) {
+      throw new ErrorWolf(
+        'bd.lentas_literal_no_permitido',
+        'No se muestra el SQL con sus valores: no se puede atribuir con seguridad a una base.',
+      );
     }
     return e.sql;
   }

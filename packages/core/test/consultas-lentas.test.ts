@@ -225,15 +225,18 @@ describe('«Ver literal» y datos reales', () => {
     );
   });
 
-  it('la atribución de la entrada es informativa: sin base o con una base desconocida no cambia el permiso', async () => {
+  it('una entrada sin base conocida (desconocida o sin use) no ofrece literal aunque el servidor no tenga datos reales', async () => {
     const { c } = armar({ texto });
     const r = await c.leer('mysql');
     const rara = r.entradas.find((e) => e.base === 'no_existe_falsa')!;
-    expect(rara.literalPermitido).toBe(true);
+    expect(rara.literalPermitido).toBe(false);
+    await expect(c.literal('mysql', rara.id)).rejects.toMatchObject({
+      codigo: 'bd.lentas_literal_no_permitido',
+    });
     const sinBase = armar({ texto: SLOW(null, '2', "SELECT 'valor-falso-d'") });
     const e = (await sinBase.c.leer('mysql')).entradas[0]!;
     expect(e.base).toBeNull();
-    expect(e.literalPermitido).toBe(true);
+    expect(e.literalPermitido).toBe(false);
   });
 
   it('si no se puede saber si la base tiene datos reales, se rechaza', async () => {

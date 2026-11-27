@@ -214,13 +214,11 @@ function armar(o: {
 }
 
 describe('P1: el literal se decide por servidor', () => {
-  it('ninguna base con datosReales: el literal se permite aunque la entrada no tenga base', async () => {
-    const a = armar({ texto: slow(null, "SELECT 'valor-falso'") });
+  it('ninguna base con datosReales y la entrada atribuida a una base conocida: el literal se permite', async () => {
+    const a = armar({ texto: slow('tienda_falsa', "SELECT 'valor-falso'") });
     const e = (await a.c.leer('mysql')).entradas[0]!;
     expect(e.literalPermitido).toBe(true);
     expect(await a.c.literal('mysql', e.id)).toBe("SELECT 'valor-falso'");
-    const b = armar({ texto: slow('tienda_falsa', "SELECT 'valor-falso'") });
-    expect((await b.c.leer('mysql')).entradas[0]!.literalPermitido).toBe(true);
   });
 
   it('con una base real en el servidor ninguna entrada ofrece literal, sea cual sea su atribución', async () => {
@@ -262,6 +260,59 @@ describe('P1: el literal se decide por servidor', () => {
     await expect(a.c.literal('postgresql', e.id)).rejects.toMatchObject({
       codigo: 'bd.lentas_literal_no_permitido',
     });
+  });
+});
+
+describe('I3: literal y modo estricto también por entrada', () => {
+  const ANOMALA = String.raw`SELECT 1 FROM t WHERE x = 'C:\' , 'X_REAL' --`;
+
+  it('servidor sin datosReales, entrada de una base que ya no existe: sin literal y en estricto', async () => {
+    const a = armar({ texto: slow('borrada_falsa', ANOMALA) });
+    const e = (await a.c.leer('mysql')).entradas[0]!;
+    expect(e.base).toBe('borrada_falsa');
+    expect(e.literalPermitido).toBe(false);
+    expect(e.sqlNormalizado).toBeNull();
+    await expect(a.c.literal('mysql', e.id)).rejects.toMatchObject({
+      codigo: 'bd.lentas_literal_no_permitido',
+    });
+  });
+
+  it('entrada sin use (base desconocida): sin literal y en estricto', async () => {
+    const a = armar({ texto: slow(null, ANOMALA) });
+    const e = (await a.c.leer('mysql')).entradas[0]!;
+    expect(e.base).toBeNull();
+    expect(e.literalPermitido).toBe(false);
+    expect(e.sqlNormalizado).toBeNull();
+    await expect(a.c.literal('mysql', e.id)).rejects.toMatchObject({
+      codigo: 'bd.lentas_literal_no_permitido',
+    });
+  });
+
+  it('entrada dudosa del parser en un servidor sin datosReales: sin literal y sin SQL', async () => {
+    const texto = [
+      ...CAB(['use tienda_falsa;']),
+      "INSERT INTO n (t) VALUES ('hola",
+      ...CAB(),
+      "dato falso X_REAL');",
+    ].join(String.fromCharCode(10));
+    const a = armar({ texto });
+    const r = await a.c.leer('mysql');
+    expect(r.entradas.length).toBeGreaterThan(0);
+    for (const e of r.entradas) {
+      expect(e.literalPermitido).toBe(false);
+      expect(e.sqlNormalizado).toBeNull();
+      await expect(a.c.literal('mysql', e.id)).rejects.toMatchObject({
+        codigo: 'bd.lentas_literal_no_permitido',
+      });
+    }
+    expect(JSON.stringify(r)).not.toContain('X_REAL');
+  });
+
+  it('base conocida, sin datosReales y sin dudas: literal permitido y normalizado normal', async () => {
+    const a = armar({ texto: slow('tienda_falsa', "SELECT * FROM t WHERE a = 'x'") });
+    const e = (await a.c.leer('mysql')).entradas[0]!;
+    expect(e.literalPermitido).toBe(true);
+    expect(e.sqlNormalizado).toBe('SELECT * FROM t WHERE a = ?');
   });
 });
 
