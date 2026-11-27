@@ -11,6 +11,7 @@ import {
 } from 'naive-ui';
 import { computed, h, onMounted, type Component, type HTMLAttributes } from 'vue';
 import { useRouter } from 'vue-router';
+import { solicitudes } from '../composables/solicitudes';
 import type { EstadoTunel, Sitio } from '../../shared/api';
 import EstadoPunto from '../componentes/EstadoPunto.vue';
 import { useFoco } from '../composables/useFoco';
@@ -36,6 +37,12 @@ interface Fila extends EstadoTunel {
   dominio: string;
   datosReales: boolean;
   tunel: Sitio['tunel'];
+}
+
+/** «Compartir carpeta o archivo» vive en Herramientas › Red. */
+function irACompartir(): void {
+  solicitudes.herramienta = 'compartir';
+  void router.push({ name: 'herramientas' });
 }
 
 const filas = computed<Fila[]>(() =>
@@ -198,6 +205,13 @@ const columnas: DataTableColumns<Fila> = [
   <div class="tuneles">
     <p class="descripcion">{{ t.descripcion }}</p>
 
+    <p class="compartir-enlace">
+      <NButton text type="primary" data-testid="tuneles-compartir" @click="irACompartir">{{
+        t.compartir.enlace
+      }}</NButton>
+      <span class="compartir-ayuda">{{ t.compartir.ayuda }}</span>
+    </p>
+
     <NAlert type="info" :show-icon="true" class="explicacion">
       <template #icon
         ><NIcon><InformationCircle /></NIcon
@@ -234,6 +248,17 @@ const columnas: DataTableColumns<Fila> = [
 </template>
 
 <style scoped>
+.compartir-enlace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0 0 12px;
+}
+.compartir-ayuda {
+  font-size: 12px;
+  opacity: 0.72;
+}
 .descripcion {
   margin: 0 0 16px;
   opacity: 0.75;

@@ -316,6 +316,25 @@ export const en: Textos = {
       'diff.caducado': 'That comparison is no longer available: compare again.',
       'diff.archivo_invalido': 'That file can no longer be compared: it changed or disappeared.',
       'diff.fallo': 'The comparison failed.',
+      'compartir.confirmacion_requerida':
+        'Sharing on the internet must be confirmed in the WolfCore Dev window.',
+      'compartir.ocupado': 'Something is already shared: stop sharing first.',
+      'compartir.ruta_invalida': 'Choose a folder or a file that exists.',
+      'compartir.duracion_invalida': 'Choose 15 minutes, 1 hour or 4 hours.',
+      'compartir.proveedor_invalido': 'That tunnel is not supported: use Cloudflare or ngrok.',
+      'compartir.raiz_unidad': 'The root of a drive is not shared. Choose a folder inside it.',
+      'compartir.carpeta_usuario':
+        'The whole personal folder (or one that contains it) is not shared. Choose a subfolder.',
+      'compartir.carpeta_datos': 'The WolfCore Dev data folder is not shared.',
+      'compartir.sitio_datos_reales':
+        'A site with real data (or anything inside it) is not shared.',
+      'compartir.carpeta_secretos': 'That folder holds keys (.ssh, .aws, .git…) and is not shared.',
+      'compartir.carpeta_sistema': 'System folders are not shared.',
+      'compartir.archivo_sensible':
+        'That file looks like it holds a secret or real data and is not shared.',
+      'compartir.tunel_sin_url': 'The tunnel did not give its address in {segundos} s. Try again.',
+      'compartir.tunel_cerrado': 'The tunnel closed before it finished opening.',
+      'compartir.fallo': 'Could not share.',
       'disco.raiz_invalida': 'Choose a folder or drive that exists and can be read.',
       'disco.cancelado': 'Analysis cancelled.',
       'disco.plazo': 'The analysis took more than {minutos} min and was cancelled.',
@@ -1403,6 +1422,11 @@ export const en: Textos = {
       avisoConfirmar: 'Allow',
       redLocalActivada: 'FTP accepts connections from the local network',
       redLocalDesactivada: 'FTP only accepts connections from this computer',
+      compartir: {
+        enlace: 'Share folder or file…',
+        ayuda:
+          'FTP is not shared through a tunnel: it is unencrypted and the tunnel only carries HTTP. To publish something on the internet use “Share folder or file” (HTTP, read-only); FTP stays on the local network.',
+      },
     },
     composer: {
       nombre: 'Composer',
@@ -2007,6 +2031,10 @@ export const en: Textos = {
     vacio: "Turn on a site's tunnel switch to get a public link.",
     irASitios: 'Go to Sites',
     sinNombre: 'Deleted site',
+    compartir: {
+      enlace: 'Share folder or file…',
+      ayuda: 'Publishes a folder or a single file (read-only), without needing a site.',
+    },
   },
   ajustes: {
     titulo: 'Settings',
@@ -3573,6 +3601,10 @@ export const en: Textos = {
         nombre: 'Code editor',
         descripcion: 'Edit text files with highlighting, a backup copy and confirmed saving.',
       },
+      compartir: {
+        nombre: 'Share folder or file',
+        descripcion: 'Publish a folder or a file on the internet with a temporary, read-only link.',
+      },
       usoDisco: {
         nombre: 'Disk usage',
         descripcion:
@@ -3897,6 +3929,58 @@ export const en: Textos = {
       coincidencias: (n: number) => `${n} ${n === 1 ? 'match' : 'matches'}`,
       resumen: (archivos: number, examinados: number) =>
         `in ${archivos} ${archivos === 1 ? 'file' : 'files'} (${examinados} checked)`,
+    },
+    compartir: {
+      explicacion:
+        'Publishes a folder or a file from this computer on the internet with a temporary link. It is read-only: anyone with the link can view and download, not upload or change anything. The link carries a secret code, expires at the time you choose and closes when you quit WolfCore Dev. .env files, keys, the .git folder and sites with real data are never shared.',
+      eleccion: 'What to share',
+      elegirCarpeta: 'Choose folder…',
+      elegirArchivo: 'Choose file…',
+      elegido: 'Chosen',
+      duracion: 'Stop sharing in',
+      duraciones: { m15: '15 minutes', h1: '1 hour', h4: '4 hours' },
+      tunel: 'Tunnel',
+      tuneles: {
+        'cloudflare-rapido': 'Cloudflare (quick, no account)',
+        ngrok: 'ngrok (with your token)',
+      },
+      ngrokSinToken: 'ngrok needs your token: save it in the tunnel options of a site.',
+      compartir: 'Share…',
+      sinFtp:
+        'FTP is not shared through a tunnel: it is unencrypted and the tunnel only carries HTTP.',
+      vacio: {
+        titulo: 'Nothing is shared',
+        texto:
+          'Choose a folder or a file to get a temporary public link. Nothing is published until you confirm it.',
+      },
+      confirmar: {
+        titulo: 'Share on the internet',
+        pregunta: 'Publish this on the internet?',
+        ruta: 'Exact path',
+        aviso: (hasta: string) =>
+          `It will be public on the internet until ${hasta}. Anyone with the link will be able to view and download what is shared.`,
+        boton: 'Share on the internet',
+      },
+      abriendo: 'Opening the tunnel…',
+      activa: 'Sharing',
+      enlace: 'Public link',
+      copiar: 'Copy link',
+      qr: 'QR code of the link',
+      vence: (hasta: string, restan: string) => `Expires at ${hasta} (${restan})`,
+      restan: (min: number) => (min <= 1 ? 'less than 1 minute' : `${min} min`),
+      dejar: 'Stop sharing',
+      fin: {
+        vencio: 'Time is up: the server and the tunnel were closed.',
+        tunel: 'The tunnel closed and sharing stopped.',
+      },
+      registro: {
+        titulo: 'Accesses',
+        ayuda: 'The latest 200, in memory only. They never show the secret code of the link.',
+        vacioTitulo: 'No accesses yet',
+        vacioTexto: 'Each time someone opens the link it will appear here.',
+        col: { hora: 'Time', ip: 'IP', ruta: 'Path', codigo: 'Code' },
+        sinPermiso: '(without the right code)',
+      },
     },
     usoDisco: {
       explicacion:

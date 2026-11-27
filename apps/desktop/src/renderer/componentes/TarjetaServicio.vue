@@ -31,6 +31,7 @@ import {
 import DialogoConexion from './DialogoConexion.vue';
 import MenuDesplegable from './MenuDesplegable.vue';
 import { computed, h, ref, type Component } from 'vue';
+import { solicitudes } from '../composables/solicitudes';
 import type { EstadoServicio } from '../../shared/api';
 import { api } from '../api';
 import { useAccion } from '../composables/useAccion';
@@ -244,6 +245,12 @@ function cambiarAutoIniciar(valor: boolean): void {
 }
 
 // ---- FTP ----
+/** El FTP no se comparte por túnel; para internet, «Compartir carpeta o archivo» (HTTP). */
+function irACompartir(): void {
+  solicitudes.herramienta = 'compartir';
+  void router.push({ name: 'herramientas' });
+}
+
 function cambiarRedLocal(valor: boolean): void {
   const aplicar = (): Promise<unknown> =>
     ejecutar('redLocal', () => servicios.cambiarRedLocal(valor), {
@@ -390,6 +397,10 @@ function cambiarRedLocal(valor: boolean): void {
         <span>{{ t.ftp.redLocal }}</span>
       </label>
       <small class="ayuda">{{ t.ftp.redLocalAyuda }}</small>
+      <small class="ayuda">{{ t.ftp.compartir.ayuda }}</small>
+      <NButton text type="primary" size="small" data-testid="ftp-compartir" @click="irACompartir">{{
+        t.ftp.compartir.enlace
+      }}</NButton>
     </div>
 
     <footer class="pie">

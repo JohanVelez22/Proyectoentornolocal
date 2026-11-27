@@ -22,7 +22,7 @@ describe('Herramientas por secciones (D38a)', () => {
     expect(SECCIONES_HERRAMIENTAS).toEqual(['codigo', 'red', 'seguridad', 'archivos', 'sistema']);
     expect(TARJETAS_POR_SECCION).toEqual({
       codigo: ['editor', 'buscar', 'comparar', 'regex', 'json', 'markdown'],
-      red: ['clienteHttp', 'puertos', 'websocket', 'certificados', 'guias'],
+      red: ['clienteHttp', 'puertos', 'websocket', 'certificados', 'compartir', 'guias'],
       seguridad: ['contrasenas', 'cripto', 'entorno'],
       archivos: [
         'imagenes',

@@ -319,6 +319,27 @@ export const es = {
       'diff.caducado': 'Esa comparación ya no está disponible: vuelva a comparar.',
       'diff.archivo_invalido': 'Ese archivo ya no se puede comparar: cambió o desapareció.',
       'diff.fallo': 'La comparación falló.',
+      'compartir.confirmacion_requerida':
+        'Compartir en internet exige confirmarlo en la ventana de WolfCore Dev.',
+      'compartir.ocupado': 'Ya hay algo compartido: deje de compartir primero.',
+      'compartir.ruta_invalida': 'Elija una carpeta o un archivo que exista.',
+      'compartir.duracion_invalida': 'Elija 15 minutos, 1 hora o 4 horas.',
+      'compartir.proveedor_invalido': 'Ese túnel no se admite: use Cloudflare o ngrok.',
+      'compartir.raiz_unidad': 'La raíz de una unidad no se comparte. Elija una carpeta de dentro.',
+      'compartir.carpeta_usuario':
+        'La carpeta personal entera (o una que la contenga) no se comparte. Elija una subcarpeta.',
+      'compartir.carpeta_datos': 'La carpeta de datos de WolfCore Dev no se comparte.',
+      'compartir.sitio_datos_reales':
+        'Un sitio con datos reales (ni nada de lo que hay dentro) no se comparte.',
+      'compartir.carpeta_secretos':
+        'Esa carpeta guarda claves (.ssh, .aws, .git…) y no se comparte.',
+      'compartir.carpeta_sistema': 'Las carpetas del sistema no se comparten.',
+      'compartir.archivo_sensible':
+        'Ese archivo parece guardar un secreto o datos reales y no se comparte.',
+      'compartir.tunel_sin_url':
+        'El túnel no dio su dirección en {segundos} s. Inténtelo de nuevo.',
+      'compartir.tunel_cerrado': 'El túnel se cerró antes de terminar de abrirse.',
+      'compartir.fallo': 'No se pudo compartir.',
       'disco.raiz_invalida': 'Elija una carpeta o unidad que exista y se pueda leer.',
       'disco.cancelado': 'Análisis cancelado.',
       'disco.plazo': 'El análisis tardó más de {minutos} min y se canceló.',
@@ -1413,6 +1434,11 @@ export const es = {
       avisoConfirmar: 'Permitir',
       redLocalActivada: 'El FTP acepta conexiones de la red local',
       redLocalDesactivada: 'El FTP solo acepta conexiones de este equipo',
+      compartir: {
+        enlace: 'Compartir carpeta o archivo…',
+        ayuda:
+          'El FTP no se comparte por túnel: va sin cifrar y el túnel solo deja pasar HTTP. Para publicar algo en internet use «Compartir carpeta o archivo» (HTTP, de solo lectura); el FTP queda para la red local.',
+      },
     },
     composer: {
       nombre: 'Composer',
@@ -2023,6 +2049,10 @@ export const es = {
     vacio: 'Encienda el interruptor de túnel de un sitio para obtener un enlace público.',
     irASitios: 'Ir a Sitios',
     sinNombre: 'Sitio borrado',
+    compartir: {
+      enlace: 'Compartir carpeta o archivo…',
+      ayuda: 'Publica una carpeta o un archivo suelto (solo lectura), sin necesidad de un sitio.',
+    },
   },
   ajustes: {
     titulo: 'Ajustes',
@@ -3600,6 +3630,11 @@ export const es = {
         nombre: 'Editor de código',
         descripcion: 'Edita archivos de texto con resaltado, copia previa y guardado confirmado.',
       },
+      compartir: {
+        nombre: 'Compartir carpeta o archivo',
+        descripcion:
+          'Publica una carpeta o un archivo con un enlace temporal en internet, de solo lectura.',
+      },
       usoDisco: {
         nombre: 'Uso del disco',
         descripcion:
@@ -3926,6 +3961,57 @@ export const es = {
       coincidencias: (n: number) => `${n} ${n === 1 ? 'coincidencia' : 'coincidencias'}`,
       resumen: (archivos: number, examinados: number) =>
         `en ${archivos} ${archivos === 1 ? 'archivo' : 'archivos'} (${examinados} revisados)`,
+    },
+    compartir: {
+      explicacion:
+        'Publica en internet, con un enlace temporal, una carpeta o un archivo de este equipo. Es de solo lectura: quien tenga el enlace puede ver y descargar, no subir ni cambiar nada. El enlace lleva un código secreto, vence a la hora que elija y se cierra al salir de WolfCore Dev. Nunca se comparten archivos .env, claves, la carpeta .git ni sitios con datos reales.',
+      eleccion: 'Qué compartir',
+      elegirCarpeta: 'Elegir carpeta…',
+      elegirArchivo: 'Elegir archivo…',
+      elegido: 'Elegido',
+      duracion: 'Dejar de compartir en',
+      duraciones: { m15: '15 minutos', h1: '1 hora', h4: '4 horas' },
+      tunel: 'Túnel',
+      tuneles: {
+        'cloudflare-rapido': 'Cloudflare (rápido, sin cuenta)',
+        ngrok: 'ngrok (con su token)',
+      },
+      ngrokSinToken: 'ngrok necesita su token: guárdelo en las opciones del túnel de un sitio.',
+      compartir: 'Compartir…',
+      sinFtp: 'El FTP no se comparte por túnel: va sin cifrar y el túnel solo deja pasar HTTP.',
+      vacio: {
+        titulo: 'No hay nada compartido',
+        texto:
+          'Elija una carpeta o un archivo para obtener un enlace público temporal. Nada se publica hasta que lo confirme.',
+      },
+      confirmar: {
+        titulo: 'Compartir en internet',
+        pregunta: '¿Publicar esto en internet?',
+        ruta: 'Ruta exacta',
+        aviso: (hasta: string) =>
+          `Quedará público en internet hasta las ${hasta}. Cualquiera que tenga el enlace podrá ver y descargar lo compartido.`,
+        boton: 'Compartir en internet',
+      },
+      abriendo: 'Abriendo el túnel…',
+      activa: 'Compartiendo',
+      enlace: 'Enlace público',
+      copiar: 'Copiar enlace',
+      qr: 'Código QR del enlace',
+      vence: (hasta: string, restan: string) => `Vence a las ${hasta} (${restan})`,
+      restan: (min: number) => (min <= 1 ? 'menos de 1 minuto' : `${min} min`),
+      dejar: 'Dejar de compartir',
+      fin: {
+        vencio: 'El tiempo terminó: se cerraron el servidor y el túnel.',
+        tunel: 'El túnel se cerró y se dejó de compartir.',
+      },
+      registro: {
+        titulo: 'Accesos',
+        ayuda: 'Los últimos 200, solo en memoria. Nunca muestran el código secreto del enlace.',
+        vacioTitulo: 'Aún no hay accesos',
+        vacioTexto: 'Cada vez que alguien abra el enlace aparecerá aquí.',
+        col: { hora: 'Hora', ip: 'IP', ruta: 'Ruta', codigo: 'Código' },
+        sinPermiso: '(sin el código correcto)',
+      },
     },
     usoDisco: {
       explicacion:

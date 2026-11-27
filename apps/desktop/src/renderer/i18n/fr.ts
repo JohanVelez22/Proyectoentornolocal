@@ -332,6 +332,28 @@ export const fr: Textos = {
       'diff.caducado': 'Cette comparaison n’est plus disponible : relancez-la.',
       'diff.archivo_invalido': 'Ce fichier ne peut plus être comparé : il a changé ou a disparu.',
       'diff.fallo': 'La comparaison a échoué.',
+      'compartir.confirmacion_requerida':
+        'Le partage sur internet doit être confirmé dans la fenêtre de WolfCore Dev.',
+      'compartir.ocupado': 'Quelque chose est déjà partagé : arrêtez d’abord le partage.',
+      'compartir.ruta_invalida': 'Choisissez un dossier ou un fichier existant.',
+      'compartir.duracion_invalida': 'Choisissez 15 minutes, 1 heure ou 4 heures.',
+      'compartir.proveedor_invalido':
+        'Ce tunnel n’est pas pris en charge : utilisez Cloudflare ou ngrok.',
+      'compartir.raiz_unidad':
+        'La racine d’un lecteur ne se partage pas. Choisissez un dossier à l’intérieur.',
+      'compartir.carpeta_usuario':
+        'Le dossier personnel entier (ou un dossier qui le contient) ne se partage pas. Choisissez un sous-dossier.',
+      'compartir.carpeta_datos': 'Le dossier de données de WolfCore Dev ne se partage pas.',
+      'compartir.sitio_datos_reales':
+        'Un site avec des données réelles (ni rien de ce qu’il contient) ne se partage pas.',
+      'compartir.carpeta_secretos':
+        'Ce dossier contient des clés (.ssh, .aws, .git…) et ne se partage pas.',
+      'compartir.carpeta_sistema': 'Les dossiers du système ne se partagent pas.',
+      'compartir.archivo_sensible':
+        'Ce fichier semble contenir un secret ou des données réelles et ne se partage pas.',
+      'compartir.tunel_sin_url': 'Le tunnel n’a pas donné son adresse en {segundos} s. Réessayez.',
+      'compartir.tunel_cerrado': 'Le tunnel s’est fermé avant d’avoir fini de s’ouvrir.',
+      'compartir.fallo': 'Impossible de partager.',
       'disco.raiz_invalida': 'Choisissez un dossier ou un lecteur existant et lisible.',
       'disco.cancelado': 'Analyse annulée.',
       'disco.plazo': 'L’analyse a duré plus de {minutos} min et a été annulée.',
@@ -1472,6 +1494,11 @@ export const fr: Textos = {
       avisoConfirmar: 'Autoriser',
       redLocalActivada: 'Le FTP accepte les connexions du réseau local',
       redLocalDesactivada: 'Le FTP n’accepte que les connexions de cet ordinateur',
+      compartir: {
+        enlace: 'Partager un dossier ou un fichier…',
+        ayuda:
+          'Le FTP ne se partage pas par tunnel : il circule sans chiffrement et le tunnel ne laisse passer que le HTTP. Pour publier quelque chose sur internet, utilisez « Partager un dossier ou un fichier » (HTTP, en lecture seule) ; le FTP reste réservé au réseau local.',
+      },
     },
     composer: {
       nombre: 'Composer',
@@ -2089,6 +2116,10 @@ export const fr: Textos = {
     vacio: 'Activez l’interrupteur de tunnel d’un site pour obtenir un lien public.',
     irASitios: 'Aller à Sites',
     sinNombre: 'Site supprimé',
+    compartir: {
+      enlace: 'Partager un dossier ou un fichier…',
+      ayuda: 'Publie un dossier ou un fichier seul (lecture seule), sans avoir besoin d’un site.',
+    },
   },
   ajustes: {
     titulo: 'Réglages',
@@ -3705,6 +3736,11 @@ export const fr: Textos = {
         descripcion:
           'Modifiez des fichiers texte avec coloration, copie préalable et enregistrement confirmé.',
       },
+      compartir: {
+        nombre: 'Partager un dossier ou un fichier',
+        descripcion:
+          'Publiez un dossier ou un fichier sur internet avec un lien temporaire, en lecture seule.',
+      },
       usoDisco: {
         nombre: 'Utilisation du disque',
         descripcion:
@@ -4036,6 +4072,60 @@ export const fr: Textos = {
       coincidencias: (n: number) => `${n} ${n === 1 ? 'correspondance' : 'correspondances'}`,
       resumen: (archivos: number, examinados: number) =>
         `dans ${archivos} ${archivos === 1 ? 'fichier' : 'fichiers'} (${examinados} examinés)`,
+    },
+    compartir: {
+      explicacion:
+        'Publie sur internet, avec un lien temporaire, un dossier ou un fichier de cet ordinateur. C’est en lecture seule : celui qui a le lien peut consulter et télécharger, mais pas envoyer ni modifier quoi que ce soit. Le lien contient un code secret, expire à l’heure que vous choisissez et se ferme quand vous quittez WolfCore Dev. Les fichiers .env, les clés, le dossier .git et les sites avec des données réelles ne sont jamais partagés.',
+      eleccion: 'Que partager',
+      elegirCarpeta: 'Choisir un dossier…',
+      elegirArchivo: 'Choisir un fichier…',
+      elegido: 'Choisi',
+      duracion: 'Arrêter le partage dans',
+      duraciones: { m15: '15 minutes', h1: '1 heure', h4: '4 heures' },
+      tunel: 'Tunnel',
+      tuneles: {
+        'cloudflare-rapido': 'Cloudflare (rapide, sans compte)',
+        ngrok: 'ngrok (avec votre jeton)',
+      },
+      ngrokSinToken:
+        'ngrok a besoin de votre jeton : enregistrez-le dans les options du tunnel d’un site.',
+      compartir: 'Partager…',
+      sinFtp:
+        'Le FTP ne se partage pas par tunnel : il circule sans chiffrement et le tunnel ne laisse passer que le HTTP.',
+      vacio: {
+        titulo: 'Rien n’est partagé',
+        texto:
+          'Choisissez un dossier ou un fichier pour obtenir un lien public temporaire. Rien n’est publié tant que vous ne l’avez pas confirmé.',
+      },
+      confirmar: {
+        titulo: 'Partager sur internet',
+        pregunta: 'Publier ceci sur internet ?',
+        ruta: 'Chemin exact',
+        aviso: (hasta: string) =>
+          `Ce sera public sur internet jusqu’à ${hasta}. Toute personne ayant le lien pourra consulter et télécharger ce qui est partagé.`,
+        boton: 'Partager sur internet',
+      },
+      abriendo: 'Ouverture du tunnel…',
+      activa: 'Partage en cours',
+      enlace: 'Lien public',
+      copiar: 'Copier le lien',
+      qr: 'Code QR du lien',
+      vence: (hasta: string, restan: string) => `Expire à ${hasta} (${restan})`,
+      restan: (min: number) => (min <= 1 ? 'moins d’une minute' : `${min} min`),
+      dejar: 'Arrêter le partage',
+      fin: {
+        vencio: 'Le temps est écoulé : le serveur et le tunnel ont été fermés.',
+        tunel: 'Le tunnel s’est fermé et le partage a pris fin.',
+      },
+      registro: {
+        titulo: 'Accès',
+        ayuda:
+          'Les 200 derniers, en mémoire seulement. Ils n’affichent jamais le code secret du lien.',
+        vacioTitulo: 'Aucun accès pour l’instant',
+        vacioTexto: 'Chaque fois que quelqu’un ouvrira le lien, il apparaîtra ici.',
+        col: { hora: 'Heure', ip: 'IP', ruta: 'Chemin', codigo: 'Code' },
+        sinPermiso: '(sans le bon code)',
+      },
     },
     usoDisco: {
       explicacion:

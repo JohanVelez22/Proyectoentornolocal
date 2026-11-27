@@ -323,6 +323,27 @@ export const pt: Textos = {
       'diff.caducado': 'Essa comparação não está mais disponível: compare de novo.',
       'diff.archivo_invalido': 'Esse arquivo não pode mais ser comparado: mudou ou desapareceu.',
       'diff.fallo': 'A comparação falhou.',
+      'compartir.confirmacion_requerida':
+        'Compartilhar na internet exige confirmação na janela do WolfCore Dev.',
+      'compartir.ocupado': 'Já há algo compartilhado: deixe de compartilhar primeiro.',
+      'compartir.ruta_invalida': 'Escolha uma pasta ou um arquivo que exista.',
+      'compartir.duracion_invalida': 'Escolha 15 minutos, 1 hora ou 4 horas.',
+      'compartir.proveedor_invalido': 'Esse túnel não é aceito: use Cloudflare ou ngrok.',
+      'compartir.raiz_unidad':
+        'A raiz de uma unidade não é compartilhada. Escolha uma pasta dentro dela.',
+      'compartir.carpeta_usuario':
+        'A pasta pessoal inteira (ou uma que a contenha) não é compartilhada. Escolha uma subpasta.',
+      'compartir.carpeta_datos': 'A pasta de dados do WolfCore Dev não é compartilhada.',
+      'compartir.sitio_datos_reales':
+        'Um site com dados reais (nem nada dentro dele) não é compartilhado.',
+      'compartir.carpeta_secretos':
+        'Essa pasta guarda chaves (.ssh, .aws, .git…) e não é compartilhada.',
+      'compartir.carpeta_sistema': 'As pastas do sistema não são compartilhadas.',
+      'compartir.archivo_sensible':
+        'Esse arquivo parece guardar um segredo ou dados reais e não é compartilhado.',
+      'compartir.tunel_sin_url': 'O túnel não deu o seu endereço em {segundos} s. Tente de novo.',
+      'compartir.tunel_cerrado': 'O túnel foi fechado antes de terminar de abrir.',
+      'compartir.fallo': 'Não foi possível compartilhar.',
       'disco.raiz_invalida': 'Escolha uma pasta ou unidade que exista e possa ser lida.',
       'disco.cancelado': 'Análise cancelada.',
       'disco.plazo': 'A análise demorou mais de {minutos} min e foi cancelada.',
@@ -1415,6 +1436,11 @@ export const pt: Textos = {
       avisoConfirmar: 'Permitir',
       redLocalActivada: 'O FTP aceita conexões da rede local',
       redLocalDesactivada: 'O FTP só aceita conexões deste computador',
+      compartir: {
+        enlace: 'Compartilhar pasta ou arquivo…',
+        ayuda:
+          'O FTP não é compartilhado por túnel: vai sem criptografia e o túnel só deixa passar HTTP. Para publicar algo na internet use «Compartilhar pasta ou arquivo» (HTTP, somente leitura); o FTP fica para a rede local.',
+      },
     },
     composer: {
       nombre: 'Composer',
@@ -2024,6 +2050,10 @@ export const pt: Textos = {
     vacio: 'Ligue o interruptor de túnel de um site para obter um link público.',
     irASitios: 'Ir para Sites',
     sinNombre: 'Site apagado',
+    compartir: {
+      enlace: 'Compartilhar pasta ou arquivo…',
+      ayuda: 'Publica uma pasta ou um arquivo avulso (somente leitura), sem precisar de um site.',
+    },
   },
   ajustes: {
     titulo: 'Configurações',
@@ -3609,6 +3639,11 @@ export const pt: Textos = {
         nombre: 'Editor de código',
         descripcion: 'Edite arquivos de texto com realce, cópia prévia e salvamento confirmado.',
       },
+      compartir: {
+        nombre: 'Compartilhar pasta ou arquivo',
+        descripcion:
+          'Publica uma pasta ou um arquivo na internet com um link temporário, somente leitura.',
+      },
       usoDisco: {
         nombre: 'Uso do disco',
         descripcion:
@@ -3934,6 +3969,58 @@ export const pt: Textos = {
       coincidencias: (n: number) => `${n} ${n === 1 ? 'correspondência' : 'correspondências'}`,
       resumen: (archivos: number, examinados: number) =>
         `em ${archivos} ${archivos === 1 ? 'arquivo' : 'arquivos'} (${examinados} verificados)`,
+    },
+    compartir: {
+      explicacion:
+        'Publica na internet, com um link temporário, uma pasta ou um arquivo deste computador. É somente leitura: quem tiver o link pode ver e baixar, mas não enviar nem alterar nada. O link leva um código secreto, vence na hora que escolher e é fechado ao sair do WolfCore Dev. Arquivos .env, chaves, a pasta .git e sites com dados reais nunca são compartilhados.',
+      eleccion: 'O que compartilhar',
+      elegirCarpeta: 'Escolher pasta…',
+      elegirArchivo: 'Escolher arquivo…',
+      elegido: 'Escolhido',
+      duracion: 'Deixar de compartilhar em',
+      duraciones: { m15: '15 minutos', h1: '1 hora', h4: '4 horas' },
+      tunel: 'Túnel',
+      tuneles: {
+        'cloudflare-rapido': 'Cloudflare (rápido, sem conta)',
+        ngrok: 'ngrok (com o seu token)',
+      },
+      ngrokSinToken: 'O ngrok precisa do seu token: guarde-o nas opções do túnel de um site.',
+      compartir: 'Compartilhar…',
+      sinFtp:
+        'O FTP não é compartilhado por túnel: vai sem criptografia e o túnel só deixa passar HTTP.',
+      vacio: {
+        titulo: 'Nada está compartilhado',
+        texto:
+          'Escolha uma pasta ou um arquivo para obter um link público temporário. Nada é publicado até que você confirme.',
+      },
+      confirmar: {
+        titulo: 'Compartilhar na internet',
+        pregunta: 'Publicar isto na internet?',
+        ruta: 'Caminho exato',
+        aviso: (hasta: string) =>
+          `Ficará público na internet até as ${hasta}. Qualquer pessoa com o link poderá ver e baixar o que for compartilhado.`,
+        boton: 'Compartilhar na internet',
+      },
+      abriendo: 'Abrindo o túnel…',
+      activa: 'Compartilhando',
+      enlace: 'Link público',
+      copiar: 'Copiar link',
+      qr: 'Código QR do link',
+      vence: (hasta: string, restan: string) => `Vence às ${hasta} (${restan})`,
+      restan: (min: number) => (min <= 1 ? 'menos de 1 minuto' : `${min} min`),
+      dejar: 'Deixar de compartilhar',
+      fin: {
+        vencio: 'O tempo acabou: o servidor e o túnel foram fechados.',
+        tunel: 'O túnel foi fechado e o compartilhamento terminou.',
+      },
+      registro: {
+        titulo: 'Acessos',
+        ayuda: 'Os últimos 200, somente na memória. Nunca mostram o código secreto do link.',
+        vacioTitulo: 'Ainda não há acessos',
+        vacioTexto: 'Cada vez que alguém abrir o link, aparecerá aqui.',
+        col: { hora: 'Hora', ip: 'IP', ruta: 'Caminho', codigo: 'Código' },
+        sinPermiso: '(sem o código correto)',
+      },
     },
     usoDisco: {
       explicacion:

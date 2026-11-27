@@ -22,6 +22,7 @@ import {
   Time,
   Pulse,
   PieChart,
+  ShareSocial,
   Text,
   TrashBin,
   Videocam,
@@ -70,6 +71,7 @@ const componentes: Record<Clave, Component> = {
     () => import('../componentes/herramientas/GrabarPantalla.vue'),
   ),
   usoDisco: defineAsyncComponent(() => import('../componentes/herramientas/UsoDisco.vue')),
+  compartir: defineAsyncComponent(() => import('../componentes/herramientas/Compartir.vue')),
   limpiezaDisco: defineAsyncComponent(
     () => import('../componentes/herramientas/LimpiezaDisco.vue'),
   ),
@@ -104,6 +106,7 @@ const iconos: Record<string, Component> = {
   captura: Camera,
   grabarPantalla: Videocam,
   usoDisco: PieChart,
+  compartir: ShareSocial,
   limpiezaDisco: TrashBin,
   guias: Book,
   editor: Create,
