@@ -135,6 +135,10 @@ const ES: Diccionario = {
       titulo: 'Se dejó de compartir en la red local',
       cuerpo: `La red cambió: se dejó de compartir ${limpio(d['fuente'], 'un sitio')}.`,
     }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'Sitios sin HTTPS',
+      cuerpo: `${limpio(d['fuente'], 'Algunos sitios')} pasó a HTTP: el puerto ${limpio(d['puerto'], '443')} lo ocupa ${limpio(d['ocupadoPor'], 'otro programa')}. Ciérrelo o cambie el puerto HTTPS en Ajustes y el HTTPS volverá al aplicar.`,
+    }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Reglas de Nginx descartadas',
       cuerpo: `Las reglas propias de ${limpio(d['fuente'], 'un sitio')} ya no pasan la revisión (cambió su carpeta, sus dominios o los puertos) y quedaron fuera de su vhost. Revíselas en su sección Nginx.`,
@@ -318,6 +322,10 @@ const EN: Diccionario = {
       titulo: 'Sharing on the local network stopped',
       cuerpo: `The network changed: stopped sharing ${limpio(d['fuente'], 'a site')}.`,
     }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'Sites without HTTPS',
+      cuerpo: `${limpio(d['fuente'], 'Some sites')} fell back to HTTP: port ${limpio(d['puerto'], '443')} is used by ${limpio(d['ocupadoPor'], 'another program')}. Close it or change the HTTPS port in Settings and HTTPS will return on the next apply.`,
+    }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Custom Nginx rules discarded',
       cuerpo: `The custom rules of ${limpio(d['fuente'], 'a site')} no longer pass the check (its folder, domains or ports changed) and were left out of its vhost. Review them in its Nginx section.`,
@@ -493,6 +501,10 @@ const PT: Diccionario = {
     'avisos.lan_red_cambio': (d) => ({
       titulo: 'O compartilhamento na rede local parou',
       cuerpo: `A rede mudou: parou de compartilhar ${limpio(d['fuente'], 'um site')}.`,
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'Sites sem HTTPS',
+      cuerpo: `${limpio(d['fuente'], 'Alguns sites')} voltou para HTTP: a porta ${limpio(d['puerto'], '443')} está ocupada por ${limpio(d['ocupadoPor'], 'outro programa')}. Feche-o ou mude a porta HTTPS em Configurações e o HTTPS volta ao aplicar.`,
     }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Regras do Nginx descartadas',
@@ -682,6 +694,10 @@ const FR: Diccionario = {
     'avisos.lan_red_cambio': (d) => ({
       titulo: 'Le partage sur le réseau local s’est arrêté',
       cuerpo: `Le réseau a changé : le partage de ${limpio(d['fuente'], 'un site')} a été arrêté.`,
+    }),
+    'avisos.https_quitado': (d) => ({
+      titulo: 'Sites sans HTTPS',
+      cuerpo: `${limpio(d['fuente'], 'Certains sites')} est repassé en HTTP : le port ${limpio(d['puerto'], '443')} est utilisé par ${limpio(d['ocupadoPor'], 'un autre programme')}. Fermez-le ou changez le port HTTPS dans les Réglages et le HTTPS reviendra à la prochaine application.`,
     }),
     'avisos.vhost_reglas_descartadas': (d) => ({
       titulo: 'Règles Nginx ignorées',

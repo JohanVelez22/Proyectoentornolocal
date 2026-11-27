@@ -20,6 +20,8 @@ let duenos: Map<number, { pid: number; nombre: string }>;
 let resultadoInstalar: { ok: true } | { ok: false; motivo: 'cancelado'; detalle?: string };
 let pidNginx: number | null;
 let hijosNginx: Map<number, number[]>;
+let descendientesFalla: boolean;
+let rutasProceso: Map<number, string>;
 
 beforeEach(() => {
   base = mkdtempSync(path.join(os.tmpdir(), 'pel-https-'));
@@ -30,6 +32,8 @@ beforeEach(() => {
   resultadoInstalar = { ok: true };
   pidNginx = null;
   hijosNginx = new Map();
+  descendientesFalla = false;
+  rutasProceso = new Map();
 });
 afterEach(() => rmSync(base, { recursive: true, force: true }));
 
@@ -50,7 +54,11 @@ function gestorHttps(ahora?: () => Date): GestorHttps {
       },
       certificadoInstalado: async () => instalados.length > 0 && quitados.length === 0,
       duenosDePuertos: async () => duenos,
-      descendientes: async (pids) => new Map(pids.map((p) => [p, hijosNginx.get(p) ?? []])),
+      descendientes: async (pids) => {
+        if (descendientesFalla) throw new Error('sin memoria');
+        return new Map(pids.map((p) => [p, hijosNginx.get(p) ?? []]));
+      },
+      rutaProceso: async (pid) => rutasProceso.get(pid) ?? null,
     },
   });
 }
@@ -176,6 +184,30 @@ describe('GestorHttps', () => {
     expect(await g.puertoUsable(443)).toBe(false);
   });
 
+  it('ocupantePuerto: si no se puede saber quién es el dueño no se concluye «otro programa» (D40)', async () => {
+    const g = gestorHttps();
+    pidNginx = 10;
+    duenos.set(443, { pid: 11, nombre: 'nginx.exe' });
+    descendientesFalla = true;
+    expect(await g.ocupantePuerto(443)).toBeNull();
+    expect(await g.puertoUsable(443)).toBe(true);
+    expect((await g.estadoPuerto(443)).estado).toBe('desconocido');
+  });
+
+  it('ocupantePuerto: un nginx.exe bajo nuestro bin/nginx es nuestro aunque no esté en la lista de hijos (D40)', async () => {
+    const g = gestorHttps();
+    pidNginx = 10;
+    duenos.set(443, { pid: 11, nombre: 'nginx.exe' });
+    rutasProceso.set(11, path.join(rutas.bin('nginx', '1.28.0'), 'nginx.exe'));
+    expect(await g.puertoUsable(443)).toBe(true);
+    // También sin maestro conocido (el supervisor aún no lo registró).
+    pidNginx = null;
+    expect(await g.puertoUsable(443)).toBe(true);
+    // Un nginx.exe de otra carpeta (FlyEnv) sigue siendo ajeno.
+    rutasProceso.set(11, 'C:\FlyEnv\nginx\nginx.exe');
+    expect(await g.puertoUsable(443)).toBe(false);
+  });
+
   it('puertoUsable: libre y propio sí; ocupado por otro no', async () => {
     const g = gestorHttps();
     expect(await g.puertoUsable(443)).toBe(true);
@@ -188,7 +220,9 @@ describe('GestorHttps', () => {
 
 describe('aplicar con HTTPS', () => {
   const carpeta = () => path.join(base, 'sitio');
-  function montar(): { g: GestorSitios; https: GestorHttps } {
+  function montar(
+    avisarHttpsQuitado?: (a: { sitios: string[]; puerto: number; ocupadoPor: string }) => void,
+  ): { g: GestorSitios; https: GestorHttps } {
     mkdirSync(carpeta(), { recursive: true });
     const https = gestorHttps();
     const g = new GestorSitios({
@@ -203,6 +237,7 @@ describe('aplicar con HTTPS', () => {
       instalador: { instalado: async () => true, instalados: async () => ['1.28.0'] },
       eventos: new Eventos<EventosNucleo>(),
       https,
+      ...(avisarHttpsQuitado ? { avisarHttpsQuitado } : {}),
     });
     return { g, https };
   }
@@ -249,6 +284,50 @@ describe('aplicar con HTTPS', () => {
     expect(vhost()).toContain(
       `ssl_certificate "${path.join(base, 'certs', 'a.crt').replace(/\\/g, '/')}";`,
     );
+  });
+
+  it('con descendientes fallando los vhosts conservan el 443 (D40)', async () => {
+    const { g, https } = montar();
+    await https.instalarCA();
+    await g.crear(nuevo({}));
+    await g.aplicar();
+    expect(vhost()).toContain('listen 127.0.0.1:443 ssl;');
+    pidNginx = 10;
+    duenos.set(443, { pid: 11, nombre: 'nginx.exe' });
+    descendientesFalla = true;
+    const r = await g.aplicar();
+    expect(r.httpsPendiente).toEqual([]);
+    expect(vhost()).toContain('listen 127.0.0.1:443 ssl;');
+  });
+
+  it('con el worker hijo del maestro en el 443 el HTTPS es usable (D40)', async () => {
+    const { g, https } = montar();
+    await https.instalarCA();
+    await g.crear(nuevo({}));
+    pidNginx = 10;
+    duenos.set(443, { pid: 11, nombre: 'nginx.exe' });
+    hijosNginx.set(10, [11]);
+    const r = await g.aplicar();
+    expect(r.httpsPendiente).toEqual([]);
+    expect(vhost()).toContain('listen 127.0.0.1:443 ssl;');
+  });
+
+  it('si otro programa ocupa el 443 se quita el HTTPS pero con aviso (D40)', async () => {
+    const avisos: { sitios: string[]; puerto: number; ocupadoPor: string }[] = [];
+    const { g, https } = montar((a) => avisos.push(a));
+    await https.instalarCA();
+    await g.crear(nuevo({}));
+    await g.aplicar();
+    expect(vhost()).toContain('listen 127.0.0.1:443 ssl;');
+    expect(avisos).toEqual([]);
+    duenos.set(443, { pid: 99, nombre: 'FlyEnv.exe' });
+    const r = await g.aplicar();
+    expect(r.httpsPendiente).toEqual(['a']);
+    expect(vhost()).not.toContain('443 ssl');
+    expect(avisos).toEqual([{ sitios: ['a'], puerto: 443, ocupadoPor: 'FlyEnv.exe' }]);
+    // Un sitio que nunca tuvo HTTPS en su vhost no repite el aviso.
+    await g.aplicar();
+    expect(avisos).toHaveLength(1);
   });
 
   it('con el 443 ocupado no hay ssl y el sitio queda en httpsPendiente (HTTP sigue)', async () => {

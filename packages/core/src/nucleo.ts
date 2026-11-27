@@ -1250,6 +1250,13 @@ export class Nucleo {
               : 'avisos.vhost_reglas_descartadas',
           datos: { fuente: a.sitio },
         }),
+      avisarHttpsQuitado: (a) =>
+        avisos.publicar({
+          nivel: 'aviso',
+          tipo: 'proceso-error',
+          codigo: 'avisos.https_quitado',
+          datos: { fuente: a.sitios.join(', '), puerto: a.puerto, ocupadoPor: a.ocupadoPor },
+        }),
       puertosInternos: async (cfg, id) =>
         puertosInternosVhost(cfg, id, await instalador.instalados('php')),
     });
@@ -4562,6 +4569,10 @@ export class Nucleo {
       buscarVersion: (servicio, version) =>
         this.catalogoVivo.buscar(servicio as ServicioInstalable, version),
       versionInstalada: versionEn,
+      versionesDeRama: async (servicio, rama) =>
+        (await this.catalogoVivo.listar(servicio as ServicioInstalable, { rama })).versiones,
+      ramaInstalada: async (servicio, rama) =>
+        (await this.instalador.instalados(servicio)).includes(rama),
       // La importación ya tomó su instantánea: las versiones que instala no toman otra. Una
       // actualización que el usuario lance mientras tanto sí (la opción es de esta llamada).
       instalarVersion: (v) => this.instalador.instalar(v, { sinInstantaneaEntorno: true }),

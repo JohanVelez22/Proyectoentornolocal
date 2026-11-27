@@ -35,9 +35,12 @@ export interface DepsSitios {
   instalador: Pick<Instalador, 'instalado' | 'instalados'>;
   eventos: Pick<Eventos<EventosNucleo>, 'emit'>;
   /** Sin esto, ningún sitio sale con HTTPS. */
-  https?: Pick<GestorHttps, 'caCreada' | 'puertoUsable' | 'asegurarCertificado'>;
+  https?: Pick<GestorHttps, 'caCreada' | 'puertoUsable' | 'asegurarCertificado'> &
+    Partial<Pick<GestorHttps, 'ocupantePuerto'>>;
   /** Reglas propias o vhost manual guardados que ya no pasan la revisión (se descartan). */
   avisarVhost?: (a: { sitio: string; modo: ModoVhost; motivo: string }) => void;
+  /** Sitios que tenían HTTPS en su vhost y lo pierden al aplicar (el aviso nunca debe faltar). */
+  avisarHttpsQuitado?: (a: { sitios: string[]; puerto: number; ocupadoPor: string }) => void;
   /** Puertos de los servicios internos que un vhost no puede usar de destino (sin los del sitio). */
   puertosInternos?: (cfg: Config, sitioId: string) => number[] | Promise<number[]>;
 }
@@ -538,6 +541,7 @@ export class GestorSitios {
 
     let nginx: { ok: boolean; salida: string };
     const httpsPendiente: string[] = [];
+    const pierdeHttps: string[] = [];
     try {
       const httpsUsable = await this.httpsUsable(cfg);
       const vigentes = new Set(cfg.sitios.map((s) => `${s.id}.conf`));
@@ -547,7 +551,12 @@ export class GestorSitios {
       const personalizados: { s: Sitio; contenido: string; plano: string; modo: ModoVhost }[] = [];
       for (const s of cfg.sitios) {
         const v = await this.vhostCon(s, cfg, httpsUsable);
-        if (v.httpsPendiente) httpsPendiente.push(s.id);
+        if (v.httpsPendiente) {
+          httpsPendiente.push(s.id);
+          if (/^\s*listen\s[^;]*\bssl\b/m.test(previo.get(`${s.id}.conf`) ?? '')) {
+            pierdeHttps.push(s.id);
+          }
+        }
         if (v.modo)
           personalizados.push({ s, contenido: v.contenido, plano: v.plano, modo: v.modo });
         await writeFile(this.d.rutas.vhost(s.id), v.contenido, 'utf8');
@@ -596,6 +605,15 @@ No se pudo restaurar la configuración anterior: ${e instanceof Error ? e.messag
           };
         }
       }
+    }
+
+    if (nginx.ok && pierdeHttps.length > 0) {
+      const ocupante = await this.d.https?.ocupantePuerto?.(cfg.https.puerto).catch(() => null);
+      this.d.avisarHttpsQuitado?.({
+        sitios: pierdeHttps,
+        puerto: cfg.https.puerto,
+        ocupadoPor: ocupante?.nombre ?? '',
+      });
     }
 
     return { nginx, httpsPendiente, sitios: cfg.sitios };
