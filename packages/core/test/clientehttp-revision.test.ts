@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ClienteHttp, type PeticionHttp, type SecretosHttp } from '../src';
+import { importarCurl } from '../src/clientehttp/curl';
 import { esNombreSecreto } from '../src/clientehttp/sensibles';
 import { emitirCertificado, generarCA } from '../src/https/ca';
 
@@ -488,5 +489,56 @@ describe('M8: tamaño del historial y de los archivos de datos', () => {
     writeFileSync(path.join(carpeta, 'coleccion.json'), Buffer.alloc(21 * 1024 * 1024, 32));
     expect((await c.estado()).coleccion).toEqual([]);
     expect(avisos.some((m) => m.includes('coleccion.json'))).toBe(true);
+  });
+});
+
+describe('M7: importador de curl', () => {
+  const sinAvisos = (c: string): string[] => importarCurl(c).avisos.map((a) => a.codigo);
+
+  it('separa las opciones cortas agrupadas', () => {
+    const a = importarCurl('curl -sX POST https://h.test/a');
+    expect(a.peticion.metodo).toBe('POST');
+    expect(a.avisos).toEqual([]);
+    expect(importarCurl('curl -sSL https://h.test/a').avisos).toEqual([]);
+    expect(importarCurl('curl -sXPUT https://h.test/a').peticion.metodo).toBe('PUT');
+    const b = importarCurl("curl -sH 'Accept: x/y' -sd 'a=1' https://h.test/a");
+    expect(b.peticion.cabeceras[0]).toMatchObject({ clave: 'Accept', valor: 'x/y' });
+    expect(b.peticion.metodo).toBe('POST');
+    expect(importarCurl('curl -sIL https://h.test/a').peticion.metodo).toBe('HEAD');
+  });
+
+  it('una opción larga desconocida consume su valor si no parece una opción ni una URL', () => {
+    const a = importarCurl('curl --raro valor https://h.test/x');
+    expect(a.peticion.url).toBe('https://h.test/x');
+    expect(a.avisos.map((x) => x.codigo)).toEqual(['opcion_ignorada']);
+    // Si lo siguiente es una URL o una opción, no se consume.
+    expect(importarCurl('curl --raro https://h.test/y').peticion.url).toBe('https://h.test/y');
+    expect(importarCurl('curl --raro -H "A: b" https://h.test/z').peticion.cabeceras).toHaveLength(
+      1,
+    );
+    expect(importarCurl('curl --raro=valor https://h.test/w').peticion.url).toBe(
+      'https://h.test/w',
+    );
+    // Una opción sin valor conocida no consume nada.
+    expect(importarCurl('curl --compressed https://h.test/v').peticion.url).toBe(
+      'https://h.test/v',
+    );
+  });
+
+  it('-G pasa los datos a la consulta y deja un GET', () => {
+    const a = importarCurl('curl -G -d a=1 --data-urlencode "b=x y" https://h.test/p');
+    expect(a.peticion.metodo).toBe('GET');
+    expect(a.peticion.cuerpo).toEqual({ tipo: 'ninguno' });
+    expect(a.peticion.url).toBe('https://h.test/p?a=1&b=x%20y');
+    expect(importarCurl('curl --get -d c=3 "https://h.test/p?z=9"').peticion.url).toBe(
+      'https://h.test/p?z=9&c=3',
+    );
+    expect(sinAvisos('curl -G -d a=1 https://h.test/p')).toEqual([]);
+  });
+
+  it('un -H con CR/LF avisa al importar y no entra', () => {
+    const r = importarCurl("curl -H $'X: a\r\nY: b' https://h.test/");
+    expect(r.peticion.cabeceras).toEqual([]);
+    expect(r.avisos.map((a) => a.codigo)).toContain('cabecera_invalida');
   });
 });

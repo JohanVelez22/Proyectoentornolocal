@@ -163,12 +163,12 @@ export class Rutas {
   tokenGithub(): string {
     return path.join(this.base, 'etc', 'github.token');
   }
-  /** Secretos cifrados con safeStorage (token de GitHub, claves de IA): etc/secretos/. */
   /** Colecciones, entornos e historial del cliente HTTP (D48); sin valores secretos. */
   clienteHttp(): string {
     return path.join(this.base, 'etc', 'clientehttp');
   }
 
+  /** Secretos cifrados con safeStorage (token de GitHub, claves de IA): etc/secretos/. */
   secretos(): string {
     return path.join(this.base, 'etc', 'secretos');
   }

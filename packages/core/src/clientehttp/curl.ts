@@ -233,6 +233,30 @@ const SIN_VALOR_SILENCIADAS = new Set([
 
 const corto = (s: string): string => s.slice(0, 40);
 
+/** Opciones cortas que llevan valor: en un grupo (`-sX POST`), lo que sigue es su valor. */
+const CORTAS_CON_VALOR = 'XHduFbAemTExoKcDPwrCyYzU';
+
+/** `-sSL` → `-s -S -L`; `-sXPOST` → `-s -XPOST`; `-XPOST` y `-H'A: b'` se dejan como están. */
+function expandirCorta(t: string): string[] {
+  if (t.startsWith('--') || t.length <= 2 || !/^-[A-Za-z]/.test(t)) return [t];
+  const r: string[] = [];
+  for (let k = 1; k < t.length; k++) {
+    const c = t[k]!;
+    if (CORTAS_CON_VALOR.includes(c)) {
+      r.push(`-${c}${t.slice(k + 1)}`);
+      break;
+    }
+    r.push(`-${c}`);
+  }
+  return r;
+}
+
+/** ¿Lo que sigue a una opción desconocida es una opción o una URL (y no su valor)? */
+const pareceOpcionOUrl = (v: string): boolean =>
+  v.startsWith('-') ||
+  /^[a-z][a-z0-9+.-]*:\/\//i.test(v) ||
+  /^(localhost|[\w-]+(\.[\w-]+)+)(:\d+)?(\/\S*)?$/i.test(v);
+
 function decodificarForm(s: string): string {
   try {
     return decodeURIComponent(s.replace(/\+/g, ' '));
@@ -268,8 +292,13 @@ export function importarCurl(texto: string): ImportacionCurl {
   let plazoSeg = PLAZO_HTTP_DEFECTO_SEG;
   let cabeza = false;
   let json = false;
+  let get = false;
 
   const aCabecera = (linea: string): void => {
+    if (/[\r\n\0]/.test(linea)) {
+      avisos.push({ codigo: 'cabecera_invalida', dato: corto(linea.split(/[\r\n\0]/)[0] ?? '') });
+      return;
+    }
     const i = linea.indexOf(':');
     const nombre = (i < 0 ? linea : linea.slice(0, i)).trim();
     const valor = i < 0 ? '' : linea.slice(i + 1).trim();
@@ -298,6 +327,8 @@ export function importarCurl(texto: string): ImportacionCurl {
   const valorDe = (i: number): string | null => tokens[i + 1] ?? null;
 
   for (let i = 1; i < tokens.length; i++) {
+    const grupo = expandirCorta(tokens[i]!);
+    if (grupo.length !== 1 || grupo[0] !== tokens[i]) tokens.splice(i, 1, ...grupo);
     const t = tokens[i]!;
     let opcion = t;
     let adjunto: string | null = null;
@@ -307,7 +338,7 @@ export function importarCurl(texto: string): ImportacionCurl {
         opcion = t.slice(0, e);
         adjunto = t.slice(e + 1);
       }
-    } else if (/^-[A-Za-z]./.test(t) && /^-[XHduFbAemT]/.test(t)) {
+    } else if (/^-[A-Za-z]./.test(t) && CORTAS_CON_VALOR.includes(t[1]!)) {
       opcion = t.slice(0, 2);
       adjunto = t.slice(2);
     }
@@ -402,6 +433,10 @@ export function importarCurl(texto: string): ImportacionCurl {
       case '--head':
         cabeza = true;
         break;
+      case '-G':
+      case '--get':
+        get = true;
+        break;
       case '--url': {
         const v = tomar() ?? '';
         if (url === null) url = v;
@@ -417,6 +452,11 @@ export function importarCurl(texto: string): ImportacionCurl {
         if (opcion.startsWith('-') && opcion.length > 1) {
           avisos.push({ codigo: 'opcion_ignorada', dato: corto(opcion) });
           if (CON_VALOR_IGNORADAS.has(opcion)) tomar();
+          else if (opcion.startsWith('--') && adjunto === null) {
+            // Una opción larga desconocida se come su valor si no parece otra opción ni una URL.
+            const v = valorDe(i);
+            if (v !== null && !pareceOpcionOUrl(v)) i++;
+          }
         } else if (url === null && /^[^\s]+$/.test(opcion)) {
           url = opcion;
         } else {
@@ -431,6 +471,12 @@ export function importarCurl(texto: string): ImportacionCurl {
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) {
     avisos.push({ codigo: 'url_sin_esquema' });
     url = `http://${url}`;
+  }
+
+  // -G: los datos van a la consulta y la petición es un GET.
+  if (get && datos.length > 0) {
+    url += `${url.includes('?') ? '&' : '?'}${datos.join('&')}`;
+    datos.length = 0;
   }
 
   // Cuerpo según el Content-Type (que el cliente pone solo).
