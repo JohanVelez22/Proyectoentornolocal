@@ -410,6 +410,95 @@ describe('Respaldos.importarAjeno', () => {
     });
   });
 
+  it('acepta el volcado real de MariaDB 11.4.14 (INSERT con una fila por línea y /*M!100616 SET NOTE_VERBOSITY*/), hallado en la prueba real de la Etapa D', async () => {
+    datos = [
+      '/*M!999999\\- enable the sandbox mode */ ',
+      '-- MariaDB dump 10.19-11.4.14-MariaDB, for Win64 (AMD64)',
+      '--',
+      '-- Host: 127.0.0.1    Database: tienda_db',
+      '-- ------------------------------------------------------',
+      '-- Server version	11.4.14-MariaDB',
+      '',
+      '/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;',
+      '/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;',
+      '/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;',
+      '/*!40101 SET NAMES utf8mb4 */;',
+      '/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;',
+      "/*!40103 SET TIME_ZONE='+00:00' */;",
+      '/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;',
+      "/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;",
+      '/*M!100616 SET @OLD_NOTE_VERBOSITY=@@NOTE_VERBOSITY, NOTE_VERBOSITY=0 */;',
+      '',
+      '--',
+      '-- Dumping data for table `productos`',
+      '--',
+      '',
+      'INSERT INTO `productos` VALUES',
+      "(1,'café'),",
+      "(2,'té'),",
+      "(3,'mate');",
+      '/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;',
+      '',
+      '/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;',
+      '/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;',
+      '/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;',
+      '/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;',
+      '/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;',
+      '/*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;',
+      '',
+      '-- Dump completed on 2026-11-27  6:48:18',
+      '',
+    ].join('\n');
+    await armar().importarAjeno('mysql', origen, 'tienda');
+    expect(eventos).not.toContain('reiniciar:tienda');
+    // Solo esas dos sentencias de MariaDB: cualquier otro comentario ejecutable de MariaDB se rechaza.
+    datos = "/*M!100616 SET GLOBAL x=1 */;\nINSERT INTO `usuarios` VALUES (1,'Ana');";
+    await expect(armar().importarAjeno('mysql', origen, 'tienda')).rejects.toMatchObject({
+      codigo: 'bd.datos_no_permitidos',
+    });
+  });
+
+  it('acepta el volcado de MariaDB 13.1 (SET sin envoltura, AUTOCOMMIT=0 y COMMIT), hallado en la prueba real de la Etapa D', async () => {
+    datos = [
+      '/*M!999999\\- enable the sandbox mode */ ',
+      '-- MariaDB dump 10.20-13.1.2-MariaDB, for Win64 (AMD64)',
+      'SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT;',
+      'SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS;',
+      'SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION;',
+      'SET NAMES utf8mb4;',
+      'SET @OLD_TIME_ZONE=@@TIME_ZONE;',
+      "SET TIME_ZONE='+00:00';",
+      'SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;',
+      'SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;',
+      "SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO';",
+      '/*M!100616 SET @OLD_NOTE_VERBOSITY=@@NOTE_VERBOSITY, NOTE_VERBOSITY=0 */;',
+      'SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;',
+      'INSERT INTO `usuarios` VALUES',
+      "(1,'Ana'),",
+      "(2,'Luis');",
+      'COMMIT;',
+      'SET AUTOCOMMIT=@OLD_AUTOCOMMIT;',
+      'SET TIME_ZONE=@OLD_TIME_ZONE;',
+      'SET SQL_MODE=@OLD_SQL_MODE;',
+      '/*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;',
+      '-- Dump completed on 2026-11-27  6:52:27',
+    ].join('\n');
+    await armar().importarAjeno('mysql', origen, 'tienda');
+    expect(eventos).not.toContain('reiniciar:tienda');
+    // Solo esas sentencias exactas: otros AUTOCOMMIT, COMMIT con opciones o SET GLOBAL se rechazan.
+    for (const mala of [
+      'SET AUTOCOMMIT=1;',
+      'SET GLOBAL autocommit=0;',
+      'COMMIT AND CHAIN;',
+      'SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=1;',
+    ]) {
+      datos = mala + '\nINSERT INTO `usuarios` VALUES (1,' + "'Ana');";
+      await expect(armar().importarAjeno('mysql', origen, 'tienda'), mala).rejects.toMatchObject({
+        codigo: 'bd.datos_no_permitidos',
+      });
+    }
+  });
+
   it('un error del servidor al cargar reinicia la base (todo o nada) sin mostrar claves', async () => {
     fallaConsulta = /^INSERT/;
     const e = await armar()

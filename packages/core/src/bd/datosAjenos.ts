@@ -285,6 +285,24 @@ const PELIGROSAS =
  */
 export function validarSentenciaDatos(sentencia: string): void {
   const s = sentencia.trim();
+  // MariaDB 11.4 (y 10.11.8 o posteriores) abre y cierra el volcado con NOTE_VERBOSITY, dentro de un
+  // comentario ejecutable propio (`/*M!`): solo esas dos sentencias exactas, y nada más con `/*M!`.
+  if (
+    /^\/\*M!\d+\s+SET\s+(?:@OLD_NOTE_VERBOSITY=@@NOTE_VERBOSITY,\s*NOTE_VERBOSITY=0|NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY)\s*\*\/$/.test(
+      s,
+    )
+  ) {
+    return;
+  }
+  // MariaDB 13.1 envuelve los INSERT en una transacción con estas tres sentencias exactas; ninguna
+  // otra forma de COMMIT ni de AUTOCOMMIT se acepta (siguen rechazadas más abajo).
+  if (
+    /^COMMIT$/i.test(s) ||
+    /^SET\s+@OLD_AUTOCOMMIT\s*=\s*@@AUTOCOMMIT\s*,\s*@@AUTOCOMMIT\s*=\s*0$/i.test(s) ||
+    /^SET\s+AUTOCOMMIT\s*=\s*@OLD_AUTOCOMMIT$/i.test(s)
+  ) {
+    return;
+  }
   const envuelta = /^\/\*!\d*\s+([^]*?)\s*\*\/$/.exec(s);
   const interior = envuelta ? envuelta[1]! : s;
   if (envuelta && /\/\*|\*\//.test(interior)) throw rechazoDatos('comentario anidado', s);

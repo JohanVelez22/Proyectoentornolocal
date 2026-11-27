@@ -721,12 +721,23 @@ function lineaDeDatos(texto: string): boolean {
   if (/^\/\*(?!!|M!)(?:(?!\*\/)[^])*\*\/$/.test(l)) return true;
   // Primera línea de un volcado de MariaDB reciente (modo sandbox): solo un comentario.
   if (/^\/\*M!999999\\-[^]*\*\/\s*;?$/.test(l)) return true;
+  // MariaDB 11.4 y las 10.11.8 o posteriores abren y cierran el volcado con NOTE_VERBOSITY: solo
+  // esas dos sentencias exactas (MariaDB las trata como comentario ejecutable propio, `/*M!`).
+  if (
+    /^\/\*M!\d+\s+SET\s+(?:@OLD_NOTE_VERBOSITY=@@NOTE_VERBOSITY,\s*NOTE_VERBOSITY=0|NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY)\s*\*\/\s*;$/.test(
+      l,
+    )
+  ) {
+    return true;
+  }
   if (
     /^(?:INSERT|REPLACE)\s+(?:(?:LOW_PRIORITY|DELAYED|HIGH_PRIORITY|IGNORE)\s+)*INTO\s/i.test(l)
   ) {
     return true;
   }
   if (/^(?:LOCK|UNLOCK)\s+TABLES\b/i.test(l)) return true;
+  // MariaDB 13.1 cierra la transacción de los INSERT con COMMIT (el SET de AUTOCOMMIT lo valida el divisor).
+  if (/^COMMIT\s*;$/i.test(l)) return true;
   if (
     /^(?:\/\*!\d+\s+)?ALTER\s+TABLE\s+\S+\s+(?:DISABLE|ENABLE)\s+KEYS\s*(?:\*\/)?\s*;$/i.test(l)
   ) {
