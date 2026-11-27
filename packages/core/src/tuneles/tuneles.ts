@@ -10,7 +10,7 @@ import { sitioPublicable } from '../sitios/confianza';
 import type { GestorSitios } from '../sitios/sitios';
 import type { UrlBase } from '../sitios/urlbase';
 import { SitioSchema, type Config, type EstadoTunel, type Sitio } from '../tipos';
-import { nombreEjecutable } from '../plataforma/sistema';
+import { nombreEjecutable, rutaDentroDe } from '../plataforma/sistema';
 import type { Ejecutor, Lanzador, PlataformaCompleta } from '../plataforma/tipos';
 import { enmascararSecretos } from '../patronesSecretos';
 import { CloudflareNombre, detalleSeguro } from './cloudflareNombre';
@@ -40,7 +40,16 @@ export interface DepsTuneles {
   opts?: { esperaMs?: number; intervaloMs?: number };
   /** Para el túnel con nombre (cuenta y credenciales); sin ellos solo hay Cloudflare rápido. */
   plataforma?: Pick<PlataformaCompleta, 'restringirAlUsuario'> &
-    Partial<Pick<PlataformaCompleta, 'buscarEjecutable' | 'tailscale'>>;
+    Partial<
+      Pick<
+        PlataformaCompleta,
+        | 'buscarEjecutable'
+        | 'tailscale'
+        | 'procesosDelUsuario'
+        | 'inicioDeProceso'
+        | 'matarArbol'
+      >
+    >;
   ejecutor?: Ejecutor;
   /** El `php` CLI de la app (para ejecutar `expose.phar`); null si no hay PHP instalado. */
   phpCli?: () => Promise<string | null>;
@@ -424,6 +433,46 @@ export class Tuneles {
     }
     this.escribirRegistros(vivos);
     await this.barrerHuerfanos(new Set(vivos.map((v) => v.sitioId)));
+    await this.cerrarCloudflaredHuerfanos();
+  }
+
+  /**
+   * Si la app murió de golpe, sus `cloudflared` (Compartir y túneles de sitio) siguen vivos con el
+   * túnel público abierto. Al arrancar se cierran, por PID, los que ya no controla el supervisor.
+   * Solo si la ruta completa del ejecutable es `bin/cloudflared/**` de ESTA carpeta de datos y la
+   * hora de creación sigue siendo la que se listó justo antes de cerrar (un PID reutilizado no
+   * coincide). Nunca por nombre de imagen ni fuera de la carpeta de datos.
+   */
+  private async cerrarCloudflaredHuerfanos(): Promise<void> {
+    const p = this.d.plataforma;
+    if (!p?.procesosDelUsuario || !p.matarArbol) return;
+    try {
+      const propios = new Set<number>();
+      for (const id of this.d.supervisor.ids()) {
+        const pid = this.d.supervisor.pid(id);
+        if (pid !== null) propios.add(pid);
+      }
+      const raiz = path.join(this.d.rutas.base, 'bin', 'cloudflared');
+      const nombre = nombreEjecutable('cloudflared').toLowerCase();
+      for (const proc of await p.procesosDelUsuario()) {
+        if (propios.has(proc.pid) || proc.ruta === null || proc.inicio === null) continue;
+        if (proc.servicio === true || proc.elevado === true) continue;
+        if (path.basename(proc.ruta).toLowerCase() !== nombre) continue;
+        if (!rutaDentroDe(raiz, proc.ruta)) continue;
+        try {
+          // Se vuelve a mirar la hora de creación justo antes de cerrar.
+          if (p.inicioDeProceso && (await p.inicioDeProceso(proc.pid)) !== proc.inicio) continue;
+          await p.matarArbol(proc.pid);
+          console.warn(
+            `Se cerró un cloudflared huérfano (PID ${proc.pid}, ${proc.ruta}): lo dejó una sesión que terminó sin cierre ordenado.`,
+          );
+        } catch (e) {
+          console.error(`No se pudo cerrar el cloudflared huérfano (PID ${proc.pid}):`, e);
+        }
+      }
+    } catch (e) {
+      console.error('No se pudieron buscar cloudflared huérfanos:', e);
+    }
   }
 
   /**
