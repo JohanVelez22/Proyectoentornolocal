@@ -4582,7 +4582,21 @@ export class Nucleo {
         const lista = await this.servicios.datos.listaInstancias(servicioDe(instancia));
         const i = lista.find((x) => x.id === instancia);
         if (!i) throw new Error('La instancia no existe.');
-        if (i.estado !== 'encendido') await this.servicios.iniciar(instancia as IdInstancia);
+        if (i.estado === 'encendido') return;
+        await this.servicios.iniciar(instancia as IdInstancia);
+        // `iniciar` vuelve con el proceso lanzado, antes de que la sonda lo dé por encendido: sin
+        // esperar, la primera consulta de bases decía «encienda la instancia» (D39).
+        const limite = Date.now() + 90_000;
+        for (;;) {
+          const ahora = (await this.servicios.datos.listaInstancias(servicioDe(instancia))).find(
+            (x) => x.id === instancia,
+          );
+          if (ahora?.estado === 'encendido') return;
+          if (ahora?.estado === 'error' || Date.now() > limite) {
+            throw new Error('La instancia no llegó a encenderse.');
+          }
+          await new Promise((r) => setTimeout(r, 500));
+        }
       },
       basesDe: async (instancia) =>
         (await this.bd.listar(instancia as IdInstancia)).map((b) => b.nombre),
